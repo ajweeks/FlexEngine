@@ -211,6 +211,24 @@ namespace flex
 		u32 changedButtons = m_GamepadStates[gamepadIndex].buttonStates ^ pStates;
 		m_GamepadStates[gamepadIndex].buttonsPressed = changedButtons & m_GamepadStates[gamepadIndex].buttonStates;
 		m_GamepadStates[gamepadIndex].buttonsReleased = changedButtons & (~m_GamepadStates[gamepadIndex].buttonStates);
+
+		for (i32 i = 0; i < GAMEPAD_BUTTON_COUNT; ++i)
+		{
+			if (IsGamepadButtonPressed(gamepadIndex, (GamepadButton)i))
+			{
+				Action gamepadButtonAction = GetActionFromGamepadButton((GamepadButton)i);
+				if (gamepadButtonAction != Action::_NONE)
+				{
+					for (auto iter = m_ActionCallbacks.begin(); iter != m_ActionCallbacks.end(); ++iter)
+					{
+						if (iter->first->Execute(gamepadButtonAction) == EventReply::CONSUMED)
+						{
+							break;
+						}
+					}
+				}
+			}
+		}
 	}
 
 	GamepadState& InputManager::GetGamepadState(i32 gamepadIndex)
@@ -668,12 +686,62 @@ namespace flex
 
 		if (!io.WantCaptureMouse)
 		{
-			for (auto iter = m_MouseButtonCallbacks.begin(); iter != m_MouseButtonCallbacks.end(); ++iter)
+			// Call callbacks present in m_ActionCallbacks & m_MouseButtonCallbacks according to priorities
+			auto actionIter = m_ActionCallbacks.end();
+			auto mouseButtonIter = m_MouseButtonCallbacks.begin();
+			Action mouseButtonAction = Action::_NONE;
+
+			if (action == KeyAction::PRESS)
 			{
-				if (iter->first->Execute(mouseButton, action) == EventReply::CONSUMED)
+				mouseButtonAction = GetActionFromMouseButton(mouseButton);
+				if (mouseButtonAction != Action::_NONE)
 				{
-					break;
+					actionIter = m_ActionCallbacks.begin();
 				}
+			}
+
+			bool bEventsInQueue = (actionIter != m_ActionCallbacks.end()) ||
+								  (mouseButtonIter != m_MouseButtonCallbacks.end());
+			while (bEventsInQueue)
+			{
+				if (actionIter == m_ActionCallbacks.end())
+				{
+					if (mouseButtonIter->first->Execute(mouseButton, action) == EventReply::CONSUMED)
+					{
+						break;
+					}
+					++mouseButtonIter;
+				}
+				else if (mouseButtonIter == m_MouseButtonCallbacks.end())
+				{
+					if (actionIter->first->Execute(mouseButtonAction) == EventReply::CONSUMED)
+					{
+						break;
+					}
+					++actionIter;
+				}
+				else
+				{
+					if (actionIter->second >= mouseButtonIter->second)
+					{
+						if (actionIter->first->Execute(mouseButtonAction) == EventReply::CONSUMED)
+						{
+							break;
+						}
+						++actionIter;
+					}
+					else
+					{
+						if (mouseButtonIter->first->Execute(mouseButton, action) == EventReply::CONSUMED)
+						{
+							break;
+						}
+						++mouseButtonIter;
+					}
+				}
+
+				bEventsInQueue = (actionIter != m_ActionCallbacks.end()) ||
+								 (mouseButtonIter != m_MouseButtonCallbacks.end());
 			}
 		}
 	}
@@ -717,12 +785,62 @@ namespace flex
 
 		if (!io.WantCaptureKeyboard)
 		{
-			for (auto iter = m_KeyEventCallbacks.begin(); iter != m_KeyEventCallbacks.end(); ++iter)
+			// Call callbacks present in m_ActionCallbacks & m_KeyEventCallbacks according to priorities
+			auto actionIter = m_ActionCallbacks.end();
+			auto keyEventIter = m_KeyEventCallbacks.begin();
+			Action keyPressAction = Action::_NONE;
+
+			if (action == KeyAction::PRESS)
 			{
-				if (iter->first->Execute(keyCode, action, mods) == EventReply::CONSUMED)
+				keyPressAction = GetActionFromKeyCode(keyCode);
+				if (keyPressAction != Action::_NONE)
 				{
-					break;
+					actionIter = m_ActionCallbacks.begin();
 				}
+			}
+
+			bool bEventsInQueue = (actionIter != m_ActionCallbacks.end()) ||
+								  (keyEventIter != m_KeyEventCallbacks.end());
+			while (bEventsInQueue)
+			{
+				if (actionIter == m_ActionCallbacks.end())
+				{
+					if (keyEventIter->first->Execute(keyCode, action, mods) == EventReply::CONSUMED)
+					{
+						break;
+					}
+					++keyEventIter;
+				}
+				else if (keyEventIter == m_KeyEventCallbacks.end())
+				{
+					if (actionIter->first->Execute(keyPressAction) == EventReply::CONSUMED)
+					{
+						break;
+					}
+					++actionIter;
+				}
+				else
+				{
+					if (actionIter->second >= keyEventIter->second)
+					{
+						if (actionIter->first->Execute(keyPressAction) == EventReply::CONSUMED)
+						{
+							break;
+						}
+						++actionIter;
+					}
+					else
+					{
+						if (keyEventIter->first->Execute(keyCode, action, mods) == EventReply::CONSUMED)
+						{
+							break;
+						}
+						++keyEventIter;
+					}
+				}
+
+				bEventsInQueue = (actionIter != m_ActionCallbacks.end()) ||
+								 (keyEventIter != m_KeyEventCallbacks.end());
 			}
 		}
 	}
@@ -1084,6 +1202,54 @@ namespace flex
 		m_KeyEventCallbacks.erase(found);
 	}
 
+	void InputManager::BindActionCallback(ICallbackAction* callback, i32 priority)
+	{
+		for (auto callbackPair : m_ActionCallbacks)
+		{
+			if (callbackPair.first == callback)
+			{
+				PrintWarn("Attempted to bind action callback multiple times!\n");
+				return;
+			}
+		}
+
+		bool bAdded = false;
+		for (auto iter = m_ActionCallbacks.begin(); iter != m_ActionCallbacks.end(); ++iter)
+		{
+			if (iter->second < priority)
+			{
+				m_ActionCallbacks.insert(iter, Pair<ICallbackAction*, i32>(callback, priority));
+				bAdded = true;
+				break;
+			}
+		}
+		if (!bAdded)
+		{
+			m_ActionCallbacks.push_back(Pair<ICallbackAction*, i32>(callback, priority));
+		}
+	}
+
+	void InputManager::UnbindActionCallback(ICallbackAction* callback)
+	{
+		auto found = m_ActionCallbacks.end();
+		for (auto iter = m_ActionCallbacks.begin(); iter != m_ActionCallbacks.end(); ++iter)
+		{
+			if (iter->first == callback)
+			{
+				found = iter;
+				break;
+			}
+		}
+
+		if (found == m_ActionCallbacks.end())
+		{
+			PrintWarn("Attempted to unbind action callback that isn't present in callback list!\n");
+			return;
+		}
+
+		m_ActionCallbacks.erase(found);
+	}
+
 	void InputManager::DrawImGuiKeyMapper(bool* bOpen)
 	{
 		if (ImGui::Begin("Key Mapper", bOpen))
@@ -1277,6 +1443,45 @@ namespace flex
 		{
 			PrintWarn("Failed to save input bindings file to %s\n", s_InputBindingFilePath.c_str());
 		}
+	}
+
+	Action InputManager::GetActionFromKeyCode(KeyCode keyCode)
+	{
+		for (i32 i = 0; i < (i32)Action::_NONE; ++i)
+		{
+			if (m_InputBindings[i].keyCode == keyCode)
+			{
+				return (Action)i;
+			}
+		}
+
+		return Action::_NONE;
+	}
+
+	Action InputManager::GetActionFromMouseButton(MouseButton button)
+	{
+		for (i32 i = 0; i < (i32)Action::_NONE; ++i)
+		{
+			if (m_InputBindings[i].mouseButton == button)
+			{
+				return (Action)i;
+			}
+		}
+
+		return Action::_NONE;
+	}
+
+	Action InputManager::GetActionFromGamepadButton(GamepadButton button)
+	{
+		for (i32 i = 0; i < (i32)Action::_NONE; ++i)
+		{
+			if (m_InputBindings[i].gamepadButton == button)
+			{
+				return (Action)i;
+			}
+		}
+
+		return Action::_NONE;
 	}
 
 } // namespace flex

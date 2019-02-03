@@ -162,6 +162,13 @@
 			"flipNormalZ" : false,
 			"flipU" : false,
 			"flipV" : false
+		},
+		{
+			"file" : "earth.glb",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
 		}
 	]
 }

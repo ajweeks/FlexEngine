@@ -3421,7 +3421,7 @@ namespace flex
 					TypeChar(' ');
 					return EventReply::CONSUMED;
 				}
-				if (keyCode == KeyCode::KEY_ESCAPE)
+				if (keyCode == KeyCode::KEY_TAB)
 				{
 					TypeChar(' ');
 					TypeChar(' ');

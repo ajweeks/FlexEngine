@@ -159,6 +159,11 @@ namespace flex
 		bool m_bRunning = false;
 
 		bool m_bRenderImGui = true;
+		// This value should be set to true on input callbacks
+		// to ensure that m_bRenderImGui doesn't change during
+		// a single frame, which would cause an uneven number of
+		// window pushes/pops
+		bool m_bToggleRenderImGui = false;
 
 		bool m_bRenderEditorObjects = true;
 		bool m_bUpdateProfilerFrame = false;

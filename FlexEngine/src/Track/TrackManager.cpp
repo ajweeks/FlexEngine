@@ -52,6 +52,7 @@ namespace flex
 	{
 		const JSONObject& tracksObj = obj.GetObject("tracks");
 
+		m_Tracks.reserve(tracksObj.fields.size());
 		for (const JSONField& field : tracksObj.fields)
 		{
 			m_Tracks.push_back(BezierCurveList::InitializeFromJSON(field.value.objectValue));

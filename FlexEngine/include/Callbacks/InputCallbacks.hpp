@@ -84,8 +84,36 @@ namespace flex
 		}
 
 	private:
-		CallbackFunction func;
 		T* inst;
+		CallbackFunction func;
+	};
+
+	class ICallbackAction
+	{
+	public:
+		virtual EventReply Execute(Action action) = 0;
+	};
+
+	template<typename T>
+	class ActionCallback : public ICallbackAction
+	{
+	public:
+		using CallbackFunction = EventReply(T::*)(Action);
+
+		ActionCallback(T* inst, CallbackFunction func) :
+			inst(inst),
+			func(func)
+		{
+		}
+
+		virtual EventReply Execute(Action action) override
+		{
+			return (inst->*func)(action);
+		}
+
+	private:
+		T* inst;
+		CallbackFunction func;
 	};
 
 } // namespace flex

@@ -29,7 +29,8 @@ IGNORE_WARNINGS_POP
 
 namespace flex
 {
-	PlayerController::PlayerController()
+	PlayerController::PlayerController() :
+		m_ActionCallback(this, &PlayerController::OnActionEvent)
 	{
 	}
 
@@ -46,45 +47,39 @@ namespace flex
 			   m_PlayerIndex == 1);
 
 		m_Player->UpdateIsPossessed();
+
+		g_InputManager->BindActionCallback(&m_ActionCallback, 15);
 	}
 
 	void PlayerController::Destroy()
 	{
+		g_InputManager->UnbindActionCallback(&m_ActionCallback);
 	}
 
 	void PlayerController::Update()
 	{
 		// TODO: Make frame-rate-independent!
 
-		bool bAttemptingInteract = g_InputManager->GetActionPressed(Action::INTERACT);
-
 		btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
+
+		const real moveLR = g_InputManager->GetActionAxisValue(Action::MOVE_LEFT) + g_InputManager->GetActionAxisValue(Action::MOVE_RIGHT);
+		const real moveFB = g_InputManager->GetActionAxisValue(Action::MOVE_FORWARD) + g_InputManager->GetActionAxisValue(Action::MOVE_BACKWARD);
+		const real lookLR = g_InputManager->GetActionAxisValue(Action::LOOK_LEFT) + g_InputManager->GetActionAxisValue(Action::LOOK_RIGHT);
+		//const real lookUD = g_InputManager->GetActionAxisValue(Action::LOOK_UP) + g_InputManager->GetActionAxisValue(Action::LOOK_DOWN);
 
 		if (m_Player->m_bPossessed)
 		{
 			if (m_Player->m_TrackRidingID == InvalidTrackID)
 			{
-				if (g_InputManager->GetActionPressed(Action::ENTER_TRACK_BUILD_MODE))
-				{
-					m_Player->m_bPlacingTrack = !m_Player->m_bPlacingTrack;
-					m_Player->m_bEditingTrack = false;
-				}
-
-				if (g_InputManager->GetActionPressed(Action::ENTER_TRACK_EDIT_MODE))
-				{
-					m_Player->m_bEditingTrack = !m_Player->m_bEditingTrack;
-					m_Player->m_bPlacingTrack = false;
-				}
-
 				TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
 
 				if (m_Player->m_bPlacingTrack)
 				{
 					glm::vec3 reticlePos = m_Player->GetTrackPlacementReticlePosWS(1.0f);
 
-					if (bAttemptingInteract)
+					if (m_bAttemptInteract)
 					{
-						bAttemptingInteract = false;
+						m_bAttemptInteract = false;
 
 						// Place new node
 						m_Player->m_CurvePlacing.points[m_Player->m_CurveNodesPlaced++] = reticlePos;
@@ -116,8 +111,10 @@ namespace flex
 						}
 					}
 
-					if (g_InputManager->GetActionPressed(Action::COMPLETE_TRACK))
+					if (m_bAttemptCompleteTrack)
 					{
+						m_bAttemptCompleteTrack = false;
+
 						m_Player->m_CurveNodesPlaced = 0;
 						m_Player->m_CurvePlacing.points[0] = m_Player->m_CurvePlacing.points[1] = m_Player->m_CurvePlacing.points[2] = m_Player->m_CurvePlacing.points[3] = VEC3_ZERO;
 
@@ -150,9 +147,9 @@ namespace flex
 				{
 					// TODO: Snap to points other than the one we are editing
 					glm::vec3 reticlePos = m_Player->GetTrackPlacementReticlePosWS(m_Player->m_TrackEditingID == InvalidTrackID ? 1.0f : 0.0f, true);
-					if (bAttemptingInteract)
+					if (m_bAttemptInteract)
 					{
-						bAttemptingInteract = false;
+						m_bAttemptInteract = false;
 
 						if (m_Player->m_TrackEditingCurveIdx == -1)
 						{
@@ -269,14 +266,14 @@ namespace flex
 					debugDrawer->drawTriangle(ToBtVec3(v1 + o), ToBtVec3(v2 + o), ToBtVec3(v3 + o), btVector3(0.9f, 0.3f, 0.2f), 1.0f);
 				}
 
-				if (bAttemptingInteract)
+				if (m_bAttemptInteract)
 				{
 					if (m_Player->m_ObjectInteractingWith)
 					{
 						// Toggle interaction when already interacting
 						m_Player->m_ObjectInteractingWith->SetInteractingWith(nullptr);
 						m_Player->SetInteractingWith(nullptr);
-						bAttemptingInteract = false;
+						m_bAttemptInteract = false;
 					}
 					else
 					{
@@ -284,49 +281,19 @@ namespace flex
 						{
 							nearestInteractable->SetInteractingWith(m_Player);
 							m_Player->SetInteractingWith(nearestInteractable);
-							bAttemptingInteract = false;
+							m_bAttemptInteract = false;
 						}
 					}
 				}
 			}
 
-			if (g_InputManager->GetActionPressed(Action::TOGGLE_TABLET))
-			{
-				m_Player->m_bTabletUp = !m_Player->m_bTabletUp;
-			}
-
-			// TEMP:
-			if (g_InputManager->GetKeyPressed(KeyCode::KEY_C))
-			{
-				BaseScene* scene = g_SceneManager->CurrentScene();
-				CartID cartID = scene->GetCartManager()->CreateCart(scene->GetUniqueObjectName("Cart_", 2));
-				Cart* cart = scene->GetCartManager()->GetCart(cartID);
-				cart->SetVisible(false);
-				m_Player->m_Inventory.push_back(cart);
-			}
-
-			if (g_InputManager->GetKeyPressed(KeyCode::KEY_V))
-			{
-				BaseScene* scene = g_SceneManager->CurrentScene();
-				CartID cartID = scene->GetCartManager()->CreateEngineCart(scene->GetUniqueObjectName("EngineCart_", 2));
-				EngineCart* engineCart = (EngineCart*)scene->GetCartManager()->GetCart(cartID);
-				engineCart->SetVisible(false);
-				m_Player->m_Inventory.push_back(engineCart);
-			}
-
-			if (g_InputManager->GetKeyPressed(KeyCode::KEY_B))
-			{
-				MobileLiquidBox* box = new MobileLiquidBox();
-				g_SceneManager->CurrentScene()->AddObjectAtEndOFFrame(box);
-				box->SetVisible(false);
-				m_Player->m_Inventory.push_back(box);
-			}
-
 			if (!m_Player->m_Inventory.empty())
 			{
 				// Place item from inventory
-				if (g_InputManager->GetActionPressed(Action::PLACE_ITEM))
+				if (m_bAttemptPlaceItemFromInventory)
 				{
+					m_bAttemptPlaceItemFromInventory = false;
+
 					GameObject* obj = m_Player->m_Inventory[0];
 					bool bPlaced = false;
 
@@ -425,15 +392,15 @@ namespace flex
 				return;
 			}
 
-			if (bAttemptingInteract)
+			if (m_bAttemptInteract)
 			{
 				if (m_Player->m_TrackRidingID == InvalidTrackID)
 				{
 					real distAlongTrack = -1.0f;
 					TrackID trackInRangeIndex = trackManager->GetTrackInRangeID(transform->GetWorldPosition(), m_Player->m_TrackAttachMinDist, &distAlongTrack);
-					if (trackInRangeIndex != -1)
+					if (trackInRangeIndex != InvalidTrackID)
 					{
-						bAttemptingInteract = false;
+						m_bAttemptInteract = false;
 
 						m_Player->AttachToTrack(trackInRangeIndex, distAlongTrack);
 
@@ -442,7 +409,7 @@ namespace flex
 				}
 				else
 				{
-					bAttemptingInteract = false;
+					m_bAttemptInteract = false;
 					m_Player->DetachFromTrack();
 				}
 			}
@@ -456,21 +423,20 @@ namespace flex
 		{
 			if (m_Player->m_TrackRidingID != InvalidTrackID)
 			{
-				real moveForward = g_InputManager->GetActionAxisValue(Action::MOVE_FORWARD);
-				real moveBackward = g_InputManager->GetActionAxisValue(Action::MOVE_BACKWARD);
 
 				glm::vec3 newCurveDir = trackManager->GetTrack(m_Player->m_TrackRidingID)->GetCurveDirectionAt(m_Player->m_DistAlongTrack);
 				static glm::vec3 pCurveDir = newCurveDir;
 
+				real move = moveFB;
+
+				const bool bReversing = (move < 0.0f);
+
 				if (!m_Player->IsFacingDownTrack())
 				{
-					moveForward = -moveForward;
-					moveBackward = -moveBackward;
+					move = -move;
 				}
 
-				const bool bReversing = (moveBackward < 0.0f);
-
-				real targetDDist = (moveForward + moveBackward) * m_Player->m_TrackMoveSpeed * g_DeltaTime;
+				real targetDDist = move * m_Player->m_TrackMoveSpeed * g_DeltaTime;
 				real pDist = m_Player->m_DistAlongTrack;
 				m_Player->m_DistAlongTrack = trackManager->AdvanceTAlongTrack(m_Player->m_TrackRidingID,
 					targetDDist, m_Player->m_DistAlongTrack);
@@ -487,16 +453,8 @@ namespace flex
 			}
 			else if (!m_Player->GetObjectInteractingWith())
 			{
-				real moveForward = g_InputManager->GetActionAxisValue(Action::MOVE_FORWARD);
-				real moveBackward = g_InputManager->GetActionAxisValue(Action::MOVE_BACKWARD);
-				real moveLeft = g_InputManager->GetActionAxisValue(Action::MOVE_LEFT);
-				real moveRight = g_InputManager->GetActionAxisValue(Action::MOVE_RIGHT);
-
-				real moveH = moveLeft + moveRight;
-				real moveV = moveBackward + moveForward;
-
-				force += ToBtVec3(transform->GetRight()) * m_MoveAcceleration * moveH;
-				force += ToBtVec3(transform->GetForward()) * m_MoveAcceleration * moveV;
+				force += ToBtVec3(transform->GetRight()) * m_MoveAcceleration * moveLR;
+				force += ToBtVec3(transform->GetForward()) * m_MoveAcceleration * moveFB;
 			}
 		}
 
@@ -540,7 +498,7 @@ namespace flex
 			!m_Player->IsBeingInteractedWith() &&
 			m_Player->m_TrackRidingID == InvalidTrackID)
 		{
-			real lookH = g_InputManager->GetActionAxisValue(Action::LOOK_LEFT) + g_InputManager->GetActionAxisValue(Action::LOOK_RIGHT);
+			real lookH = lookLR;
 			if (m_Player->IsRidingTrack())
 			{
 				lookH += g_InputManager->GetActionAxisValue(Action::MOVE_LEFT) + g_InputManager->GetActionAxisValue(Action::MOVE_RIGHT);
@@ -558,6 +516,11 @@ namespace flex
 
 			m_Player->AddToPitch(lookV * m_RotateVSpeed * g_DeltaTime);
 		}
+
+
+		m_bAttemptCompleteTrack = false;
+		m_bAttemptPlaceItemFromInventory = false;
+		m_bAttemptInteract = false;
 	}
 
 	void PlayerController::ResetTransformAndVelocities()
@@ -590,14 +553,15 @@ namespace flex
 		TrackID newTrackID = m_Player->m_TrackRidingID;
 		real newDistAlongTrack = m_Player->m_DistAlongTrack;
 		LookDirection desiredDir = LookDirection::CENTER;
-		const real lookH = g_InputManager->GetActionAxisValue(Action::LOOK_LEFT) + g_InputManager->GetActionAxisValue(Action::LOOK_RIGHT);
-		const real lookV = g_InputManager->GetActionAxisValue(Action::LOOK_DOWN) + g_InputManager->GetActionAxisValue(Action::LOOK_UP);
 
-		if (lookH > 0.5f)
+		const real moveLR = g_InputManager->GetActionAxisValue(Action::MOVE_LEFT) + g_InputManager->GetActionAxisValue(Action::MOVE_RIGHT);
+		const real lookLR = g_InputManager->GetActionAxisValue(Action::LOOK_LEFT) + g_InputManager->GetActionAxisValue(Action::LOOK_RIGHT);
+
+		if (lookLR > 0.5f)
 		{
 			desiredDir = LookDirection::RIGHT;
 		}
-		else if (lookH < -0.5f)
+		else if (lookLR < -0.5f)
 		{
 			desiredDir = LookDirection::LEFT;
 		}
@@ -631,10 +595,9 @@ namespace flex
 		newPos += glm::vec3(0.0f, m_Player->m_Height / 2.0f, 0.0f);
 		m_Player->GetTransform()->SetWorldPosition(newPos);
 
-		real moveH = g_InputManager->GetActionAxisValue(Action::MOVE_LEFT) + g_InputManager->GetActionAxisValue(Action::MOVE_RIGHT);
 
-		bool bTurningRight = moveH > m_TurnStartStickXThreshold;
-		bool bTurningLeft = moveH < -m_TurnStartStickXThreshold;
+		bool bTurningRight = moveLR > m_TurnStartStickXThreshold;
+		bool bTurningLeft = moveLR < -m_TurnStartStickXThreshold;
 		m_DirTurning = bTurningRight ? TurningDir::RIGHT : bTurningLeft ? TurningDir::LEFT : TurningDir::NONE;
 
 		if (m_DirTurning != TurningDir::NONE || m_SecondsAttemptingToTurn < 0.0f)
@@ -662,6 +625,93 @@ namespace flex
 		BaseCamera* cam = g_CameraManager->CurrentCamera();
 		FirstPersonCamera* fpCam = dynamic_cast<FirstPersonCamera*>(cam);
 		m_Mode = (fpCam == nullptr) ? Mode::THIRD_PERSON : Mode::FIRST_PERSON;
+	}
+
+	EventReply PlayerController::OnActionEvent(Action action)
+	{
+		if (action == Action::ENTER_TRACK_BUILD_MODE)
+		{
+			if (m_Player->m_bPossessed && m_Player->m_TrackRidingID == InvalidTrackID)
+			{
+				m_Player->m_bPlacingTrack = !m_Player->m_bPlacingTrack;
+				m_Player->m_bEditingTrack = false;
+				return EventReply::CONSUMED;
+			}
+		}
+
+		if (action == Action::ENTER_TRACK_EDIT_MODE)
+		{
+			if (m_Player->m_bPossessed && m_Player->m_TrackRidingID == InvalidTrackID)
+			{
+				m_Player->m_bEditingTrack = !m_Player->m_bEditingTrack;
+				m_Player->m_bPlacingTrack = false;
+				return EventReply::CONSUMED;
+			}
+		}
+
+		if (action == Action::COMPLETE_TRACK)
+		{
+			if (m_Player->m_bPossessed && m_Player->m_TrackRidingID == InvalidTrackID)
+			{
+				m_bAttemptCompleteTrack = true;
+				return EventReply::CONSUMED;
+			}
+		}
+
+		if (g_InputManager->GetActionPressed(Action::TOGGLE_TABLET))
+		{
+			m_Player->m_bTabletUp = !m_Player->m_bTabletUp;
+			return EventReply::CONSUMED;
+		}
+
+		if (action == Action::PLACE_ITEM)
+		{
+			if (m_Player->m_bPossessed && !m_Player->m_Inventory.empty())
+			{
+				m_bAttemptPlaceItemFromInventory = true;
+				return EventReply::CONSUMED;
+			}
+		}
+
+		if (action == Action::INTERACT)
+		{
+			m_bAttemptInteract = true;
+			// TODO: Determine if we can interact with anything here to allow
+			// others to consume this event in the case we don't want it
+			return EventReply::CONSUMED;
+		}
+
+		// TODO: Set flags here and move "real" code to Update?
+		if (action == Action::DBG_ADD_CART_TO_INV)
+		{
+			BaseScene* scene = g_SceneManager->CurrentScene();
+			CartID cartID = scene->GetCartManager()->CreateCart(scene->GetUniqueObjectName("Cart_", 2));
+			Cart* cart = scene->GetCartManager()->GetCart(cartID);
+			cart->SetVisible(false);
+			m_Player->m_Inventory.push_back(cart);
+			return EventReply::CONSUMED;
+		}
+
+		if (action == Action::DBG_ADD_ENGINE_CART_TO_INV)
+		{
+			BaseScene* scene = g_SceneManager->CurrentScene();
+			CartID cartID = scene->GetCartManager()->CreateEngineCart(scene->GetUniqueObjectName("EngineCart_", 2));
+			EngineCart* engineCart = (EngineCart*)scene->GetCartManager()->GetCart(cartID);
+			engineCart->SetVisible(false);
+			m_Player->m_Inventory.push_back(engineCart);
+			return EventReply::CONSUMED;
+		}
+
+		if (action == Action::DBG_ADD_LIQUID_BOX_TO_INV)
+		{
+			MobileLiquidBox* box = new MobileLiquidBox();
+			g_SceneManager->CurrentScene()->AddObjectAtEndOFFrame(box);
+			box->SetVisible(false);
+			m_Player->m_Inventory.push_back(box);
+			return EventReply::CONSUMED;
+		}
+
+		return EventReply::UNCONSUMED;
 	}
 
 } // namespace flex

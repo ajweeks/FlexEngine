@@ -10,6 +10,7 @@ namespace flex
 	class ICallbackMouseButton;
 	class ICallbackMouseMoved;
 	class ICallbackKeyEvent;
+	class ICallbackAction;
 
 	/*
 	* There are three main ways of retrieving input:
@@ -95,6 +96,9 @@ namespace flex
 		void BindKeyEventCallback(ICallbackKeyEvent* callback, i32 priority);
 		void UnbindKeyEventCallback(ICallbackKeyEvent* callback);
 
+		void BindActionCallback(ICallbackAction* callback, i32 priority);
+		void UnbindActionCallback(ICallbackAction* callback);
+
 		void DrawImGuiKeyMapper(bool* bOpen);
 
 		static i32 s_JoystickDisconnected;
@@ -103,6 +107,10 @@ namespace flex
 		void HandleRadialDeadZone(real* x, real* y);
 		void LoadInputBindingsFromFile();
 		void SaveInputBindingsToFile();
+
+		Action GetActionFromKeyCode(KeyCode keyCode);
+		Action GetActionFromMouseButton(MouseButton button);
+		Action GetActionFromGamepadButton(GamepadButton button);
 
 		static const i32 GAMEPAD_BUTTON_COUNT = (i32)GamepadButton::_NONE;
 		static const i32 MOUSE_BUTTON_COUNT = (i32)MouseButton::_NONE;
@@ -115,6 +123,7 @@ namespace flex
 		std::vector<Pair<ICallbackMouseButton*, i32>> m_MouseButtonCallbacks;
 		std::vector<Pair<ICallbackMouseMoved*, i32>> m_MouseMovedCallbacks;
 		std::vector<Pair<ICallbackKeyEvent*, i32>> m_KeyEventCallbacks;
+		std::vector<Pair<ICallbackAction*, i32>> m_ActionCallbacks;
 
 		u32 m_MouseButtonStates;
 		u32 m_MouseButtonsPressed;

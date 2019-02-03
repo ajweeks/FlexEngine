@@ -485,8 +485,11 @@ namespace flex
 		DBG_CAM_LOOK_RIGHT,
 		DBG_CAM_ZOOM,
 
-		_NONE,
-		COUNT = _NONE
+		DBG_ADD_CART_TO_INV,
+		DBG_ADD_ENGINE_CART_TO_INV,
+		DBG_ADD_LIQUID_BOX_TO_INV,
+
+		_NONE
 	};
 
 	static constexpr const char* ActionStrings[] =
@@ -541,6 +544,10 @@ namespace flex
 		"DBG CAM Look left",
 		"DBG CAM Look right",
 		"DBG CAM Zoom",
+
+		"DBG Add cart to inventory",
+		"DBG Add engine cart to inventory",
+		"DBG Add liquid box to inventory",
 
 		"None"
 	};

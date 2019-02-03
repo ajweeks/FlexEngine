@@ -90,8 +90,10 @@ namespace flex
 
 
 	FlexEngine::FlexEngine() :
-		mouseButtonCallback(this, &FlexEngine::OnMouseButtonEvent),
-		mouseMovedCallback(this, &FlexEngine::OnMouseMovedEvent)
+		m_MouseButtonCallback(this, &FlexEngine::OnMouseButtonEvent),
+		m_MouseMovedCallback(this, &FlexEngine::OnMouseMovedEvent),
+		m_KeyEventCallback(this, &FlexEngine::OnKeyEvent),
+		m_ActionCallback(this, &FlexEngine::OnActionEvent)
 	{
 		// TODO: Add custom seeding for different random systems
 		std::srand((u32)time(NULL));
@@ -266,8 +268,10 @@ namespace flex
 
 		// TODO: Specify a certain level of priority when registering us to prevent
 		// the DebugCamera from having higher priority than us after switching cams
-		g_InputManager->BindMouseButtonCallback(&mouseButtonCallback, 99);
-		g_InputManager->BindMouseMovedCallback(&mouseMovedCallback, 99);
+		g_InputManager->BindMouseButtonCallback(&m_MouseButtonCallback, 99);
+		g_InputManager->BindMouseMovedCallback(&m_MouseMovedCallback, 99);
+		g_InputManager->BindKeyEventCallback(&m_KeyEventCallback, 10);
+		g_InputManager->BindActionCallback(&m_ActionCallback, 10);
 
 		if (s_AudioSourceIDs.empty())
 		{
@@ -313,8 +317,10 @@ namespace flex
 		// TODO: Time engine destruction using non-glfw timer
 		// TODO: Destroy things in opposite order of their creations
 
-		g_InputManager->UnbindMouseButtonCallback(&mouseButtonCallback);
-		g_InputManager->UnbindMouseMovedCallback(&mouseMovedCallback);
+		g_InputManager->UnbindMouseButtonCallback(&m_MouseButtonCallback);
+		g_InputManager->UnbindMouseMovedCallback(&m_MouseMovedCallback);
+		g_InputManager->UnbindKeyEventCallback(&m_KeyEventCallback);
+		g_InputManager->UnbindActionCallback(&m_ActionCallback);
 
 		SaveCommonSettingsToDisk(false);
 		g_Window->SaveToConfig();
@@ -777,9 +783,11 @@ namespace flex
 		{
 			sec now = Time::CurrentSeconds();
 
-			// This variable should be the one changed during this frame so we always
-			// end frames that we start, next frame we will begin using the new value
-			bool renderImGuiNextFrame = m_bRenderImGui;
+			if (m_bToggleRenderImGui)
+			{
+				m_bToggleRenderImGui = false;
+				m_bRenderImGui = !m_bRenderImGui;
+			}
 
 			sec frameEndTime = now;
 			sec dt = frameEndTime - frameStartTime;
@@ -800,18 +808,6 @@ namespace flex
 			{
 				g_InputManager->ClearAllInputs();
 			}
-
-			// Disabled for now since we only support Open GL
-#if 0
-			if (g_InputManager->GetKeyPressed(KeyCode::KEY_T))
-			{
-				g_InputManager->Update();
-				g_InputManager->PostUpdate();
-				g_InputManager->ClearAllInputs();
-				CycleRenderer();
-				continue;
-			}
-#endif
 
 #if COMPILE_RENDERDOC_API
 			if (m_RenderDocAPI && m_bRenderDocTriggerCaptureNextFrame)
@@ -854,151 +850,6 @@ namespace flex
 				{
 					HandleGizmoHover();
 				}
-			}
-
-			// TODO: Use keypress callback
-			if (g_InputManager->GetActionPressed(Action::PAUSE))
-			{
-				if (m_CurrentlySelectedObjects.empty())
-				{
-					m_bSimulationPaused = !m_bSimulationPaused;
-				}
-				else
-				{
-					DeselectCurrentlySelectedObjects();
-				}
-			}
-
-#if COMPILE_RENDERDOC_API
-			if (m_RenderDocAPI &&
-				!m_bRenderDocCapturingFrame &&
-				!m_bRenderDocTriggerCaptureNextFrame &&
-				g_InputManager->GetKeyPressed(KeyCode::KEY_F9))
-			{
-				m_bRenderDocTriggerCaptureNextFrame = true;
-			}
-#endif
-
-			if (g_InputManager->GetKeyPressed(KeyCode::KEY_F5))
-			{
-				m_bSimulationPaused = false;
-				m_bSimulateNextFrame = true;
-			}
-
-			if (g_InputManager->GetKeyPressed(KeyCode::KEY_F10))
-			{
-				m_bSimulationPaused = true;
-				m_bSimulateNextFrame = true;
-			}
-
-			if (g_InputManager->GetKeyPressed(KeyCode::KEY_G))
-			{
-				g_Renderer->ToggleRenderGrid();
-			}
-
-			if (g_InputManager->GetActionPressed(Action::EDITOR_RENAME_SELECTED))
-			{
-				bWantRenameActiveElement = !bWantRenameActiveElement;
-			}
-
-			if (g_InputManager->GetKeyPressed(KeyCode::KEY_F1, true))
-			{
-				renderImGuiNextFrame = !renderImGuiNextFrame;
-			}
-
-			if (g_InputManager->GetKeyPressed(KeyCode::KEY_DELETE))
-			{
-				if (!m_CurrentlySelectedObjects.empty())
-				{
-					g_SceneManager->CurrentScene()->DestroyObjectsAtEndOfFrame(m_CurrentlySelectedObjects);
-
-					DeselectCurrentlySelectedObjects();
-				}
-			}
-
-			if (g_InputManager->GetActionPressed(Action::DBG_ENTER_NEXT_SCENE))
-			{
-				g_SceneManager->SetNextSceneActiveAndInit();
-			}
-			else if (g_InputManager->GetActionPressed(Action::DBG_ENTER_PREV_SCENE))
-			{
-				g_SceneManager->SetPreviousSceneActiveAndInit();
-			}
-
-			if (g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_CONTROL) &&
-				g_InputManager->GetKeyPressed(KeyCode::KEY_R))
-			{
-				g_Renderer->ReloadShaders();
-			}
-			else if (g_InputManager->GetKeyPressed(KeyCode::KEY_R))
-			{
-				g_InputManager->ClearAllInputs();
-
-				g_SceneManager->ReloadCurrentScene();
-			}
-
-			if (g_InputManager->GetKeyPressed(KeyCode::KEY_P))
-			{
-				PhysicsDebuggingSettings& settings = g_Renderer->GetPhysicsDebuggingSettings();
-				settings.DrawWireframe = !settings.DrawWireframe;
-			}
-
-			const bool bAltDown = g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_ALT) || g_InputManager->GetKeyDown(KeyCode::KEY_RIGHT_ALT);
-			if (g_InputManager->GetKeyPressed(KeyCode::KEY_F11) ||
-				(bAltDown && g_InputManager->GetKeyPressed(KeyCode::KEY_ENTER)))
-			{
-				g_Window->ToggleFullscreen();
-			}
-
-			if (g_InputManager->GetKeyPressed(KeyCode::KEY_F) && !m_CurrentlySelectedObjects.empty())
-			{
-				glm::vec3 minPos(FLT_MAX);
-				glm::vec3 maxPos(FLT_MIN);
-				for (GameObject* gameObject : m_CurrentlySelectedObjects)
-				{
-					MeshComponent* mesh = gameObject->GetMeshComponent();
-					if (mesh)
-					{
-						Transform* transform = gameObject->GetTransform();
-						glm::vec3 min = transform->GetWorldTransform() * glm::vec4(mesh->m_MinPoint, 1.0f);
-						glm::vec3 max = transform->GetWorldTransform() * glm::vec4(mesh->m_MaxPoint, 1.0f);
-						minPos = glm::min(minPos, min);
-						maxPos = glm::max(maxPos, max);
-					}
-				}
-
-				if (minPos.x != FLT_MAX && maxPos.x != FLT_MIN)
-				{
-					glm::vec3 sphereCenterWS = minPos + (maxPos - minPos) / 2.0f;
-					real sphereRadius = glm::length(maxPos - minPos) / 2.0f;
-
-					BaseCamera* cam = g_CameraManager->CurrentCamera();
-
-					glm::vec3 currentOffset = cam->GetPosition() - sphereCenterWS;
-					glm::vec3 newOffset = glm::normalize(currentOffset) * sphereRadius * 2.0f;
-
-					cam->SetPosition(sphereCenterWS + newOffset);
-					cam->LookAt(sphereCenterWS);
-				}
-			}
-
-			if (g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_CONTROL) &&
-				g_InputManager->GetKeyPressed(KeyCode::KEY_A))
-			{
-				SelectAll();
-			}
-
-			if (g_InputManager->GetActionPressed(Action::EDITOR_SELECT_TRANSLATE_GIZMO))
-			{
-				SetTransformState(TransformState::TRANSLATE);
-			}
-			if (g_InputManager->GetActionPressed(Action::EDITOR_SELECT_ROTATE_GIZMO))
-			{
-				SetTransformState(TransformState::ROTATE);
-			}
-			if (g_InputManager->GetActionPressed(Action::EDITOR_SELECT_SCALE_GIZMO))
-			{
-				SetTransformState(TransformState::SCALE);
 			}
 
 			Profiler::Update();
@@ -1058,72 +909,12 @@ namespace flex
 				m_TransformGizmo->SetVisible(false);
 			}
 
-			if (g_InputManager->GetKeyPressed(KeyCode::KEY_S) &&
-				g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_CONTROL))
-			{
-				g_SceneManager->CurrentScene()->SerializeToFile(true);
-			}
-
-			if (g_InputManager->GetKeyPressed(KeyCode::KEY_D) &&
-				g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_CONTROL))
-			{
-				if (!m_CurrentlySelectedObjects.empty())
-				{
-					std::vector<GameObject*> newSelectedGameObjects;
-
-					for (GameObject* gameObject : m_CurrentlySelectedObjects)
-					{
-						GameObject* duplicatedObject = gameObject->CopySelfAndAddToScene(nullptr, true);
-
-						duplicatedObject->AddSelfAndChildrenToVec(newSelectedGameObjects);
-					}
-
-					DeselectCurrentlySelectedObjects();
-
-					m_CurrentlySelectedObjects = newSelectedGameObjects;
-					CalculateSelectedObjectsCenter();
-				}
-			}
-
-			CalculateSelectedObjectsCenter();
-
-			if (g_InputManager->GetKeyPressed(KeyCode::KEY_4))
-			{
-				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_01]);
-			}
-			if (g_InputManager->GetKeyPressed(KeyCode::KEY_5))
-			{
-				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_02]);
-			}
-			if (g_InputManager->GetKeyPressed(KeyCode::KEY_6))
-			{
-				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_03]);
-			}
-			if (g_InputManager->GetKeyPressed(KeyCode::KEY_7))
-			{
-				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_04]);
-			}
-			if (g_InputManager->GetKeyPressed(KeyCode::KEY_8))
-			{
-				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_05]);
-			}
-			if (g_InputManager->GetKeyPressed(KeyCode::KEY_9))
-			{
-				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_06]);
-			}
-			if (g_InputManager->GetKeyPressed(KeyCode::KEY_0))
-			{
-				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_07]);
-			}
-
 			g_Window->Update();
 
 			if (bSimulateFrame)
 			{
 				g_SceneManager->CurrentScene()->LateUpdate();
 			}
-
-			bool bWriteProfilingResultsToFile = g_InputManager->GetKeyPressed(KeyCode::KEY_K);
 
 			g_Renderer->Update();
 
@@ -1164,13 +955,12 @@ namespace flex
 			}
 #endif
 
-			// We can update this now that the renderer has had a chance to end the frame
-			m_bRenderImGui = renderImGuiNextFrame;
-
 			if (!m_bRenderImGui)
 			{
 				// Prevent mouse from being ignored while hovering over invisible ImGui elements
 				ImGui::GetIO().WantCaptureMouse = false;
+				ImGui::GetIO().WantCaptureKeyboard = false;
+				ImGui::GetIO().WantSetMousePos = false;
 			}
 
 			m_SecondsSinceLastCommonSettingsFileSave += g_DeltaTime;
@@ -1189,8 +979,9 @@ namespace flex
 
 			m_bUpdateProfilerFrame = false;
 
-			if (bWriteProfilingResultsToFile)
+			if (m_bWriteProfilerResultsToFile)
 			{
+				m_bWriteProfilerResultsToFile = false;
 				Profiler::PrintResultsToFile();
 			}
 		}
@@ -1936,6 +1727,16 @@ namespace flex
 		}
 	}
 
+	bool FlexEngine::GetWantRenameActiveElement() const
+	{
+		return m_bWantRenameActiveElement;
+	}
+
+	void FlexEngine::ClearWantRenameActiveElement()
+	{
+		m_bWantRenameActiveElement = false;
+	}
+
 	TransformState FlexEngine::GetTransformState() const
 	{
 		return m_CurrentTransformGizmoState;
@@ -1979,46 +1780,6 @@ namespace flex
 			IntToString(EngineVersionMinor) + "." +
 			IntToString(EngineVersionPatch);
 	}
-
-#if COMPILE_RENDERDOC_API
-	void FlexEngine::SetupRenderDocAPI()
-	{
-		std::string dllPath = RelativePathToAbsolute(ROOT_LOCATION "lib/Debug/renderdoc.dll");
-		if (FileExists(dllPath))
-		{
-			HMODULE renderDocModule = GetModuleHandleA(dllPath.c_str());
-
-			if (renderDocModule == NULL)
-			{
-				renderDocModule = LoadLibraryA(dllPath.c_str());
-			}
-
-			if (renderDocModule == NULL)
-			{
-				PrintWarn("Found render doc dll but failed to load it\n");
-				return;
-			}
-
-			pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)GetProcAddress(renderDocModule, "RENDERDOC_GetAPI");
-			int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_3_0, (void **)&m_RenderDocAPI);
-			assert(ret == 1);
-
-			i32 major = 0, minor = 0, patch = 0;
-			m_RenderDocAPI->GetAPIVersion(&major, &minor, &patch);
-			Print("RenderDoc API v%i.%i.%i connected, F9 to capture\n", major, minor, patch);
-
-			std::string dateStr = GetDateString_YMDHMS();
-			std::string captureFilePath = RelativePathToAbsolute(SAVED_LOCATION "RenderDocCaptures/FlexEngine_" + dateStr);
-			m_RenderDocAPI->SetCaptureFilePathTemplate(captureFilePath.c_str());
-
-			m_RenderDocAPI->MaskOverlayBits(eRENDERDOC_Overlay_None, 0);
-			m_RenderDocAPI->SetCaptureKeys(nullptr, 0);
-			m_RenderDocAPI->SetFocusToggleKeys(nullptr, 0);
-
-			m_RenderDocAPI->SetCaptureOptionU32(eRENDERDOC_Option_DebugOutputMute, 1);
-		}
-	}
-#endif
 
 	EventReply FlexEngine::OnMouseButtonEvent(MouseButton button, KeyAction action)
 	{
@@ -2089,6 +1850,307 @@ namespace flex
 		}
 		return EventReply::UNCONSUMED;
 	}
+
+	EventReply FlexEngine::OnKeyEvent(KeyCode keyCode, KeyAction action, i32 modifiers)
+	{
+		const bool bControlDown = (modifiers & (i32)InputModifier::CONTROL) > 0;
+		const bool bAltDown = (modifiers & (i32)InputModifier::ALT) > 0;
+
+		if (action == KeyAction::PRESS)
+		{
+			// Disabled for now since we only support Open GL
+#if 0
+			if (keyCode == KeyCode::KEY_T)
+			{
+				g_InputManager->Update();
+				g_InputManager->PostUpdate();
+				g_InputManager->ClearAllInputs();
+				CycleRenderer();
+				return EventReply::CONSUMED;
+			}
+#endif
+
+#if COMPILE_RENDERDOC_API
+			if (m_RenderDocAPI &&
+				!m_bRenderDocCapturingFrame &&
+				!m_bRenderDocTriggerCaptureNextFrame &&
+				keyCode == KeyCode::KEY_F9)
+			{
+				m_bRenderDocTriggerCaptureNextFrame = true;
+				return EventReply::CONSUMED;
+			}
+#endif
+
+			if (keyCode == KeyCode::KEY_F5)
+			{
+				m_bSimulationPaused = false;
+				m_bSimulateNextFrame = true;
+				return EventReply::CONSUMED;
+			}
+
+			if (keyCode == KeyCode::KEY_F10)
+			{
+				m_bSimulationPaused = true;
+				m_bSimulateNextFrame = true;
+				return EventReply::CONSUMED;
+			}
+
+			if (keyCode == KeyCode::KEY_G)
+			{
+				g_Renderer->ToggleRenderGrid();
+				return EventReply::CONSUMED;
+			}
+
+			// TODO: Handle elsewhere to handle ignoring ImGuiIO::WantCaptureKeyboard?
+			if (keyCode == KeyCode::KEY_F1)
+			{
+				m_bToggleRenderImGui = true;
+				return EventReply::CONSUMED;
+			}
+
+			if (keyCode == KeyCode::KEY_DELETE)
+			{
+				if (!m_CurrentlySelectedObjects.empty())
+				{
+					g_SceneManager->CurrentScene()->DestroyObjectsAtEndOfFrame(m_CurrentlySelectedObjects);
+
+					DeselectCurrentlySelectedObjects();
+					return EventReply::CONSUMED;
+				}
+			}
+
+			if (keyCode == KeyCode::KEY_R)
+			{
+				if (bControlDown)
+				{
+					g_Renderer->ReloadShaders();
+					return EventReply::CONSUMED;
+				}
+				else
+				{
+					g_InputManager->ClearAllInputs();
+
+					g_SceneManager->ReloadCurrentScene();
+					return EventReply::CONSUMED;
+				}
+			}
+
+			if (keyCode == KeyCode::KEY_P)
+			{
+				PhysicsDebuggingSettings& settings = g_Renderer->GetPhysicsDebuggingSettings();
+				settings.DrawWireframe = !settings.DrawWireframe;
+				return EventReply::CONSUMED;
+			}
+
+			if (keyCode == KeyCode::KEY_F11 ||
+				(bAltDown && keyCode == KeyCode::KEY_ENTER))
+			{
+				g_Window->ToggleFullscreen();
+				return EventReply::CONSUMED;
+			}
+
+			if (keyCode == KeyCode::KEY_F && !m_CurrentlySelectedObjects.empty())
+			{
+				glm::vec3 minPos(FLT_MAX);
+				glm::vec3 maxPos(FLT_MIN);
+				for (GameObject* gameObject : m_CurrentlySelectedObjects)
+				{
+					MeshComponent* mesh = gameObject->GetMeshComponent();
+					if (mesh)
+					{
+						Transform* transform = gameObject->GetTransform();
+						glm::vec3 min = transform->GetWorldTransform() * glm::vec4(mesh->m_MinPoint, 1.0f);
+						glm::vec3 max = transform->GetWorldTransform() * glm::vec4(mesh->m_MaxPoint, 1.0f);
+						minPos = glm::min(minPos, min);
+						maxPos = glm::max(maxPos, max);
+					}
+				}
+
+				if (minPos.x != FLT_MAX && maxPos.x != FLT_MIN)
+				{
+					glm::vec3 sphereCenterWS = minPos + (maxPos - minPos) / 2.0f;
+					real sphereRadius = glm::length(maxPos - minPos) / 2.0f;
+
+					BaseCamera* cam = g_CameraManager->CurrentCamera();
+
+					glm::vec3 currentOffset = cam->GetPosition() - sphereCenterWS;
+					glm::vec3 newOffset = glm::normalize(currentOffset) * sphereRadius * 2.0f;
+
+					cam->SetPosition(sphereCenterWS + newOffset);
+					cam->LookAt(sphereCenterWS);
+				}
+				return EventReply::CONSUMED;
+			}
+
+			if (bControlDown && keyCode == KeyCode::KEY_A)
+			{
+				SelectAll();
+				return EventReply::CONSUMED;
+			}
+
+			if (bControlDown && keyCode == KeyCode::KEY_S)
+			{
+				g_SceneManager->CurrentScene()->SerializeToFile(true);
+				return EventReply::CONSUMED;
+			}
+
+			if (bControlDown && keyCode == KeyCode::KEY_D)
+			{
+				if (!m_CurrentlySelectedObjects.empty())
+				{
+					std::vector<GameObject*> newSelectedGameObjects;
+
+					for (GameObject* gameObject : m_CurrentlySelectedObjects)
+					{
+						GameObject* duplicatedObject = gameObject->CopySelfAndAddToScene(nullptr, true);
+
+						duplicatedObject->AddSelfAndChildrenToVec(newSelectedGameObjects);
+					}
+
+					DeselectCurrentlySelectedObjects();
+
+					m_CurrentlySelectedObjects = newSelectedGameObjects;
+					CalculateSelectedObjectsCenter();
+				}
+				return EventReply::CONSUMED;
+			}
+
+			if (keyCode == KeyCode::KEY_4)
+			{
+				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_01]);
+				return EventReply::CONSUMED;
+			}
+			if (keyCode == KeyCode::KEY_5)
+			{
+				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_02]);
+				return EventReply::CONSUMED;
+			}
+			if (keyCode == KeyCode::KEY_6)
+			{
+				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_03]);
+				return EventReply::CONSUMED;
+			}
+			if (keyCode == KeyCode::KEY_7)
+			{
+				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_04]);
+				return EventReply::CONSUMED;
+			}
+			if (keyCode == KeyCode::KEY_8)
+			{
+				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_05]);
+				return EventReply::CONSUMED;
+			}
+			if (keyCode == KeyCode::KEY_9)
+			{
+				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_06]);
+				return EventReply::CONSUMED;
+			}
+			if (keyCode == KeyCode::KEY_0)
+			{
+				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_07]);
+				return EventReply::CONSUMED;
+			}
+
+			if (keyCode == KeyCode::KEY_K)
+			{
+				m_bWriteProfilerResultsToFile = true;
+				return EventReply::CONSUMED;
+			}
+		}
+
+		return EventReply::UNCONSUMED;
+	}
+
+	EventReply FlexEngine::OnActionEvent(Action action)
+	{
+		if (action == Action::EDITOR_RENAME_SELECTED)
+		{
+			m_bWantRenameActiveElement = !m_bWantRenameActiveElement;
+			return EventReply::CONSUMED;
+		}
+
+		if (action == Action::DBG_ENTER_NEXT_SCENE)
+		{
+			g_SceneManager->SetNextSceneActiveAndInit();
+			return EventReply::CONSUMED;
+		}
+		else if (action == Action::DBG_ENTER_PREV_SCENE)
+		{
+			g_SceneManager->SetPreviousSceneActiveAndInit();
+			return EventReply::CONSUMED;
+		}
+
+		if (action == Action::EDITOR_SELECT_TRANSLATE_GIZMO)
+		{
+			SetTransformState(TransformState::TRANSLATE);
+			return EventReply::CONSUMED;
+		}
+		if (action == Action::EDITOR_SELECT_ROTATE_GIZMO)
+		{
+			SetTransformState(TransformState::ROTATE);
+			return EventReply::CONSUMED;
+		}
+		if (action == Action::EDITOR_SELECT_SCALE_GIZMO)
+		{
+			SetTransformState(TransformState::SCALE);
+			return EventReply::CONSUMED;
+		}
+
+		if (action == Action::PAUSE)
+		{
+			if (m_CurrentlySelectedObjects.empty())
+			{
+				m_bSimulationPaused = !m_bSimulationPaused;
+			}
+			else
+			{
+				DeselectCurrentlySelectedObjects();
+			}
+			return EventReply::CONSUMED;
+		}
+
+		return EventReply::UNCONSUMED;
+	}
+
+#if COMPILE_RENDERDOC_API
+	void FlexEngine::SetupRenderDocAPI()
+	{
+		std::string dllPath = RelativePathToAbsolute(ROOT_LOCATION "lib/Debug/renderdoc.dll");
+		if (FileExists(dllPath))
+		{
+			HMODULE renderDocModule = GetModuleHandleA(dllPath.c_str());
+
+			if (renderDocModule == NULL)
+			{
+				renderDocModule = LoadLibraryA(dllPath.c_str());
+			}
+
+			if (renderDocModule == NULL)
+			{
+				PrintWarn("Found render doc dll but failed to load it\n");
+				return;
+			}
+
+			pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)GetProcAddress(renderDocModule, "RENDERDOC_GetAPI");
+			int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_3_0, (void **)&m_RenderDocAPI);
+			assert(ret == 1);
+
+			i32 major = 0, minor = 0, patch = 0;
+			m_RenderDocAPI->GetAPIVersion(&major, &minor, &patch);
+			Print("RenderDoc API v%i.%i.%i connected, F9 to capture\n", major, minor, patch);
+
+			std::string dateStr = GetDateString_YMDHMS();
+			std::string captureFilePath = RelativePathToAbsolute(SAVED_LOCATION "RenderDocCaptures/FlexEngine_" + dateStr);
+			m_RenderDocAPI->SetCaptureFilePathTemplate(captureFilePath.c_str());
+
+			m_RenderDocAPI->MaskOverlayBits(eRENDERDOC_Overlay_None, 0);
+			m_RenderDocAPI->SetCaptureKeys(nullptr, 0);
+			m_RenderDocAPI->SetFocusToggleKeys(nullptr, 0);
+
+			m_RenderDocAPI->SetCaptureOptionU32(eRENDERDOC_Option_DebugOutputMute, 1);
+		}
+	}
+#endif
 
 	bool FlexEngine::HandleGizmoHover()
 	{

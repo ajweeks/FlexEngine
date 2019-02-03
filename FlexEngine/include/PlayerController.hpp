@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Helpers.hpp" // For TurningDir
+#include "Callbacks/InputCallbacks.hpp"
 
 namespace flex
 {
@@ -27,6 +28,9 @@ namespace flex
 	private:
 		void SnapPosToTrack(real pDistAlongTrack, bool bReversingDownTrack);
 
+		EventReply OnActionEvent(Action action);
+		ActionCallback<PlayerController> m_ActionCallback;
+
 		real m_MoveAcceleration = 120.0f;
 		real m_MaxMoveSpeed = 20.0f;
 		real m_RotateHSpeed = 4.0f;
@@ -44,6 +48,10 @@ namespace flex
 		const sec m_TurnAroundCooldown = 0.5f;
 
 		TurningDir m_DirTurning = TurningDir::NONE;
+
+		bool m_bAttemptCompleteTrack = false;
+		bool m_bAttemptPlaceItemFromInventory = false;
+		bool m_bAttemptInteract = false;
 
 		enum class Mode
 		{

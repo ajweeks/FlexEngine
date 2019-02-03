@@ -25,7 +25,8 @@ namespace flex
 
 		glm::vec2 m_MouseDragDist;
 
-		bool m_bDraggingMouse = false;
+		bool m_bDraggingLMB = false;
+		bool m_bDraggingMMB = false;
 		bool m_bOrbiting = false;
 
 		glm::vec3 m_DragStartPosition;
