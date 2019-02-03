@@ -3,6 +3,8 @@
 #include <vector>
 #include <stack>
 
+#include "Callbacks/InputCallbacks.hpp"
+
 namespace flex
 {
 	class BaseCamera;
@@ -10,6 +12,8 @@ namespace flex
 	class CameraManager final
 	{
 	public:
+		CameraManager();
+
 		void Initialize();
 		void Destroy();
 		void Update();
@@ -33,6 +37,9 @@ namespace flex
 		void DrawImGuiObjects();
 
 	private:
+		EventReply OnActionEvent(Action action);
+		ActionCallback<CameraManager> m_ActionCallback;
+
 		BaseCamera* GetCameraByName(const std::string& name);
 		i32 GetCameraIndex(BaseCamera* camera);
 

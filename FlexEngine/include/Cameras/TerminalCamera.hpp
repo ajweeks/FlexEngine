@@ -15,6 +15,7 @@ namespace flex
 
 		virtual void Update() override;
 
+		// Called prior to transitioning in (with a valid Terminal*), or after transitioning out (with nullptr)
 		void SetTerminal(Terminal* terminal);
 
 		void TransitionOut();
@@ -22,8 +23,8 @@ namespace flex
 	private:
 		Terminal* m_Terminal = nullptr;
 		glm::vec3 m_TargetPos;
-		real m_TargetPitch;
-		real m_TargetYaw;
+		real m_TargetPitch = -1.0f;
+		real m_TargetYaw = -1.0f;
 
 		// Non-serialized fields
 		real m_LerpSpeed = 8.0f;

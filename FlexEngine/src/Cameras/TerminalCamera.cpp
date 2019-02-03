@@ -5,7 +5,10 @@
 #include "Cameras/CameraManager.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp" // For MoveTowards
+#include "Player.hpp"
+#include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
+#include "Scene/SceneManager.hpp"
 
 namespace flex
 {
@@ -33,6 +36,8 @@ namespace flex
 				if (m_bTransitioningOut)
 				{
 					m_bTransitioningOut = false;
+					m_Terminal->SetInteractingWith(nullptr);
+					g_SceneManager->CurrentScene()->GetPlayer(0)->SetInteractingWith(nullptr);
 					g_CameraManager->PopCamera();
 				}
 			}
@@ -58,13 +63,16 @@ namespace flex
 
 	void TerminalCamera::SetTerminal(Terminal* terminal)
 	{
-		m_Terminal = terminal;
 		if (terminal == nullptr)
 		{
-			TransitionOut();
+			m_Terminal->SetCamera(nullptr);
+			m_Terminal = nullptr;
 		}
 		else
 		{
+			m_Terminal = terminal;
+			m_Terminal->SetCamera(this);
+
 			m_StartingPitch = m_Pitch;
 			m_StartingYaw = m_Yaw;
 			m_StartingPos = m_Position;

@@ -142,7 +142,6 @@ namespace flex
 		return WindowMode::WINDOWED;
 	}
 
-	// Callbacks
 	void Window::KeyCallback(KeyCode keycode, KeyAction action, i32 mods)
 	{
 		g_InputManager->KeyCallback(keycode, action, mods);

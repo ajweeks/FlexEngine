@@ -8,6 +8,11 @@
 
 namespace flex
 {
+	CameraManager::CameraManager() :
+		m_ActionCallback(this, &CameraManager::OnActionEvent)
+	{
+	}
+
 	void CameraManager::Initialize()
 	{
 		BaseCamera* camera = CurrentCamera();
@@ -15,6 +20,9 @@ namespace flex
 
 		camera->Initialize();
 		camera->OnPossess();
+
+		g_InputManager->BindActionCallback(&m_ActionCallback, 12);
+
 		m_bInitialized = true;
 	}
 
@@ -32,29 +40,13 @@ namespace flex
 		}
 		m_Cameras.clear();
 
+		g_InputManager->UnbindActionCallback(&m_ActionCallback);
+
 		m_bInitialized = false;
 	}
 
 	void CameraManager::Update()
 	{
-		if (g_InputManager->GetActionPressed(Action::DBG_SWITCH_TO_PREV_CAM))
-		{
-			i32 newIdx = GetCameraIndex(m_CameraStack.top()) - 1;
-			if (newIdx < 0)
-			{
-				newIdx += (i32)m_Cameras.size();
-			}
-			SetCamera(m_Cameras[newIdx], false);
-		}
-		else if (g_InputManager->GetActionPressed(Action::DBG_SWITCH_TO_NEXT_CAM))
-		{
-			i32 newIdx = GetCameraIndex(m_CameraStack.top()) + 1;
-			if (newIdx >= (i32)m_Cameras.size())
-			{
-				newIdx -= (i32)m_Cameras.size();
-			}
-			SetCamera(m_Cameras[newIdx], false);
-		}
 	}
 
 	void CameraManager::OnSceneChanged()
@@ -304,6 +296,32 @@ namespace flex
 		to->SetPitch(from->GetPitch());
 		to->SetYaw(from->GetYaw());
 		to->SetFOV(from->GetFOV());
+	}
+
+	EventReply CameraManager::OnActionEvent(Action action)
+	{
+		if (action == Action::DBG_SWITCH_TO_PREV_CAM)
+		{
+			i32 newIdx = GetCameraIndex(m_CameraStack.top()) - 1;
+			if (newIdx < 0)
+			{
+				newIdx += (i32)m_Cameras.size();
+			}
+			SetCamera(m_Cameras[newIdx], false);
+			return EventReply::CONSUMED;
+		}
+		else if (action == Action::DBG_SWITCH_TO_NEXT_CAM)
+		{
+			i32 newIdx = GetCameraIndex(m_CameraStack.top()) + 1;
+			if (newIdx >= (i32)m_Cameras.size())
+			{
+				newIdx -= (i32)m_Cameras.size();
+			}
+			SetCamera(m_Cameras[newIdx], false);
+			return EventReply::CONSUMED;
+		}
+
+		return EventReply::UNCONSUMED;
 	}
 
 } // namespace flex

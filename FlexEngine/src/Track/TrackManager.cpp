@@ -653,11 +653,11 @@ namespace flex
 	{
 		PROFILE_AUTO("TrackManager DrawDebug");
 
-		Player* m_Player0 = g_SceneManager->CurrentScene()->GetPlayer(0);
-		BezierCurveList* trackRiding = (m_Player0->m_TrackRidingID == InvalidTrackID ? nullptr : &m_Tracks[(i32)m_Player0->m_TrackRidingID]);
+		Player* player0 = g_SceneManager->CurrentScene()->GetPlayer(0);
+		BezierCurveList* trackRiding = (player0->m_TrackRidingID == InvalidTrackID ? nullptr : &m_Tracks[(i32)player0->m_TrackRidingID]);
 		real distAlongClosestTrack = -1.0f;
-		TrackID closestTrackID = GetTrackInRangeID(m_Player0->GetTransform()->GetWorldPosition(),
-			m_Player0->m_TrackAttachMinDist, &distAlongClosestTrack);
+		TrackID closestTrackID = GetTrackInRangeID(player0->GetTransform()->GetWorldPosition(),
+			player0->m_TrackAttachMinDist, &distAlongClosestTrack);
 		for (i32 i = 0; i < (i32)m_Tracks.size(); ++i)
 		{
 			btVector4 highlightColour(0.8f, 0.84f, 0.22f, 1.0f);
@@ -666,7 +666,7 @@ namespace flex
 			{
 				if (&m_Tracks[i] == trackRiding)
 				{
-					distAlongTrack = m_Player0->GetDistAlongTrack();
+					distAlongTrack = player0->GetDistAlongTrack();
 				}
 			}
 			else

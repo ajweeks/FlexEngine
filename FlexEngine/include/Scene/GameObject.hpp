@@ -483,7 +483,8 @@ namespace flex
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
 
 		virtual bool AllowInteractionWith(GameObject* gameObject) override;
-		virtual void SetInteractingWith(GameObject* gameObject) override;
+
+		void SetCamera(TerminalCamera* camera);
 
 	protected:
 		void TypeChar(char c);

@@ -3283,17 +3283,9 @@ namespace flex
 		return false;
 	}
 
-	void Terminal::SetInteractingWith(GameObject* gameObject)
+	void Terminal::SetCamera(TerminalCamera* camera)
 	{
-		if (gameObject == nullptr)
-		{
-			m_Camera = nullptr;
-		}
-		else
-		{
-			m_Camera = (TerminalCamera*)gameObject;
-		}
-		GameObject::SetInteractingWith(gameObject);
+		m_Camera = camera;
 	}
 
 	void Terminal::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID)
@@ -3389,7 +3381,6 @@ namespace flex
 
 	}
 
-	// TODO: Move to Terminal
 	EventReply Terminal::OnKeyEvent(KeyCode keyCode, KeyAction action, i32 modifiers)
 	{
 		if (m_Camera != nullptr)
@@ -3405,7 +3396,7 @@ namespace flex
 					m_Camera->TransitionOut();
 					return EventReply::CONSUMED;
 				}
-				if (kC >= (i32)KeyCode::KEY_APOSTROPHE && kC < (i32)KeyCode::KEY_RIGHT_BRACKET)
+				if (kC >= (i32)KeyCode::KEY_APOSTROPHE && kC <= (i32)KeyCode::KEY_RIGHT_BRACKET)
 				{
 					char c = KeyCodeStrings[(i32)keyCode][0];
 					// TODO: Handle symbols
