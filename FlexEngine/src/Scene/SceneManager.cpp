@@ -421,7 +421,7 @@ namespace flex
 			BaseScene* currentScene = CurrentScene();
 
 			const std::string currentSceneNameStr(currentScene->GetName() + (currentScene->IsUsingSaveFile() ? " (saved)" : " (default)"));
-			ImGui::Text(currentSceneNameStr.c_str());
+			ImGui::Text("%s", currentSceneNameStr.c_str());
 
 			DoSceneContextMenu(currentScene);
 
@@ -800,7 +800,7 @@ namespace flex
 
 				ImGui::PushStyleColor(ImGuiCol_Text, g_WarningTextColor);
 				std::string textStr = "Are you sure you want to permanently delete " + sceneName + "? (both the default & saved files)";
-				ImGui::Text(textStr.c_str());
+				ImGui::Text("%s", textStr.c_str());
 				ImGui::PopStyleColor();
 
 				ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);

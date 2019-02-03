@@ -110,8 +110,6 @@ namespace flex
 
 		void DrawImGuiObjects();
 
-		u32 GetPID() const;
-
 		bool GetVSyncEnabled() const;
 		void SetVSyncEnabled(bool bEnabled);
 
@@ -169,8 +167,6 @@ namespace flex
 		real m_SecondsSinceTitleUpdate = 0.0f;
 
 		CursorMode m_CursorMode = CursorMode::NORMAL;
-
-		u32 m_PID;
 
 	private:
 		std::string GenerateWindowTitle();

@@ -72,9 +72,11 @@ namespace flex
 		TransformState GetTransformState() const;
 		void SetTransformState(TransformState state);
 
-		bool bWantRenameActiveElement = false;
+		bool GetWantRenameActiveElement() const;
+		void ClearWantRenameActiveElement();
 
-		bool bHasGLDebugExtension = false;
+		static bool s_bHasGLDebugExtension;
+		u32 mainProcessID = 0;
 
 	private:
 		enum class RendererID
@@ -86,10 +88,16 @@ namespace flex
 		};
 
 		EventReply OnMouseButtonEvent(MouseButton button, KeyAction action);
-		MouseButtonCallback<FlexEngine> mouseButtonCallback;
+		MouseButtonCallback<FlexEngine> m_MouseButtonCallback;
 
 		EventReply OnMouseMovedEvent(const glm::vec2& dMousePos);
-		MouseMovedCallback<FlexEngine> mouseMovedCallback;
+		MouseMovedCallback<FlexEngine> m_MouseMovedCallback;
+
+		EventReply OnKeyEvent(KeyCode keyCode, KeyAction action, i32 modifiers);
+		KeyEventCallback<FlexEngine> m_KeyEventCallback;
+
+		EventReply OnActionEvent(Action action);
+		ActionCallback<FlexEngine> m_ActionCallback;
 
 		// True for one frame after the mouse has been released after being pressed at the same location
 		glm::vec2i m_LMBDownPos;
@@ -157,7 +165,6 @@ namespace flex
 
 		const sec m_MinDT = 0.0001f;
 		const sec m_MaxDT = 1.0f;
-		const sec m_StepDT = 1.0f / 60.0f;
 
 		bool m_bSimulationPaused = false;
 		bool m_bSimulateNextFrame = false;
@@ -169,7 +176,9 @@ namespace flex
 		real m_ImGuiMainWindowWidth = 350.0f;
 
 		RendererID m_RendererIndex = RendererID::_LAST_ELEMENT;
-		std::string m_RendererName = "";
+		std::string m_RendererName;
+		std::string m_CompilerName;
+		std::string m_CompilerVersion;
 
 		// Indexed using SoundEffect enum
 		static std::vector<AudioSourceID> s_AudioSourceIDs;
@@ -231,6 +240,10 @@ namespace flex
 		bool m_bDemoWindowShowing = false;
 		bool m_bInputMapperShowing = false;
 
+		bool m_bWriteProfilerResultsToFile = false;
+
+		bool m_bWantRenameActiveElement = false;
+
 		std::vector<Spring<glm::vec3>> m_TestSprings;
 		real m_SpringTimer = 0.0f;
 
@@ -243,8 +256,6 @@ namespace flex
 
 		sec SecSinceLogSave = 0.0f;
 		sec LogSaveRate = 5.0f;
-
-		i32 m_MainProcessID = -1;
 
 		FlexEngine(const FlexEngine&) = delete;
 		FlexEngine& operator=(const FlexEngine&) = delete;

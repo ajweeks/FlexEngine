@@ -4,11 +4,6 @@
 #include <thread>
 #include <future>
 
-#pragma warning(push, 0)
-//#include <glad/glad.h>
-//#include <GLFW/glfw3.h>
-#pragma warning(pop)
-
 #include "Graphics/RendererTypes.hpp"
 #include "Helpers.hpp"
 #include "Types.hpp"
@@ -168,13 +163,13 @@ namespace flex
 
 		struct ImageInfo
 		{
-			i32 width;
-			i32 height;
-			i32 channelCount;
+			u32 width;
+			u32 height;
+			u32 channelCount;
 		};
 
-		bool GenerateGLTexture_Empty(u32& textureID, const glm::vec2i& dimensions, bool generateMipMaps, GLenum internalFormat, GLenum format, GLenum type);
-		bool GenerateGLTexture_EmptyWithParams(u32& textureID, const glm::vec2i& dimensions, bool generateMipMaps, GLenum internalFormat, GLenum format, GLenum type, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter);
+		bool GenerateGLTexture_Empty(u32& textureID, const glm::vec2u& dimensions, bool generateMipMaps, GLenum internalFormat, GLenum format, GLenum type);
+		bool GenerateGLTexture_EmptyWithParams(u32& textureID, const glm::vec2u& dimensions, bool generateMipMaps, GLenum internalFormat, GLenum format, GLenum type, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter);
 		bool GenerateGLTexture(u32& textureID, const std::string& filePath, i32 requestedChannelCount, bool flipVertically, bool generateMipMaps, ImageInfo* infoOut = nullptr);
 		bool GenerateGLTextureWithParams(u32& textureID, const std::string& filePath, i32 requestedChannelCount, bool flipVertically, bool generateMipMaps, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter, ImageInfo* infoOut = nullptr);
 		bool GenerateHDRGLTexture(u32& textureID, const std::string& filePath, i32 requestedChannelCount, bool flipVertically, bool generateMipMaps, ImageInfo* infoOut = nullptr);
@@ -231,12 +226,12 @@ namespace flex
 			void Destroy();
 			void SetParameters(TextureParameters params);
 
-			glm::vec2i GetResolution();
+			glm::vec2u GetResolution();
 
 			// Returns true if regenerated
 			// If this is a framebuffer texture, upscaling won't work properly
 			// unless it is reattached to the framebuffer object
-			bool Resize(glm::vec2i newSize);
+			bool Resize(const glm::vec2u& newSize);
 
 			std::string GetRelativeFilePath() const;
 			std::string GetName() const;
@@ -251,9 +246,9 @@ namespace flex
 		public:
 			GLuint handle = 0;
 
-			i32 width = 0;
-			i32 height = 0;
-			i32 channelCount = 0;
+			u32 width = 0;
+			u32 height = 0;
+			u32 channelCount = 0;
 
 			i32 internalFormat = 0x1907; // GL_RGB;
 			GLenum format = 0x1907; // GL_RGB;

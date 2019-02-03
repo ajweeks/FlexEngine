@@ -3,11 +3,11 @@
 #include <array>
 #include <map>
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include <glm/gtc/quaternion.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/vec4.hpp>
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #include "Functors.hpp"
 #include "JSONTypes.hpp"

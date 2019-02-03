@@ -1,6 +1,6 @@
 #include "stdafx.hpp"
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 
 // dear imgui: Platform Binding for GLFW
 // This needs to be used along with a Renderer (e.g. OpenGL3, Vulkan..)
@@ -675,4 +675,4 @@ static void ImGui_ImplGlfw_ShutdownPlatformInterface()
 {
 }
 
-#pragma warning(pop)
+IGNORE_WARNINGS_POP

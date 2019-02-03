@@ -1,6 +1,6 @@
 #include "stdafx.hpp"
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 
 // dear imgui: Renderer for Vulkan
 // This needs to be used along with a Platform Binding (e.g. GLFW, SDL, Win32, custom..)
@@ -1263,4 +1263,4 @@ void ImGui_ImplVulkan_ShutdownPlatformInterface()
     ImGui::DestroyPlatformWindows();
 }
 
-#pragma warning(pop)
+IGNORE_WARNINGS_POP

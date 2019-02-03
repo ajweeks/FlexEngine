@@ -17,9 +17,23 @@
 
 #define VC_EXTRALEAN
 
+#define BT_NO_SIMD_OPERATOR_OVERLOADS
 #define NOMINMAX
 #define GLFW_INCLUDE_NONE
 #define IMGUI_DISABLE_OBSOLETE_FUNCTIONS 1
+
+#if defined(__clang__)
+#define IGNORE_WARNINGS_PUSH \
+		_Pragma("clang diagnostic push") \
+		_Pragma("clang diagnostic ignored \"-Weverything\"")
+#define IGNORE_WARNINGS_POP _Pragma("clang diagnostic pop")
+#elif defined(_MSC_VER)
+#define IGNORE_WARNINGS_PUSH __pragma(warning(push, 0))
+#define IGNORE_WARNINGS_POP __pragma(warning(pop))
+#else
+	// Unhandled compiler
+	#error
+#endif
 
 //#pragma warning(disable : 4201) // nonstandard extension used: nameless struct/union
 //#pragma warning(disable : 4820) // bytes' bytes padding added after construct 'member_name'
@@ -48,22 +62,22 @@
 #include "Logger.hpp"
 #include "Types.hpp"
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include <ft2build.h>
 #include FT_FREETYPE_H
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #if COMPILE_VULKAN
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
 #include <vulkan/vulkan.hpp>
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 #endif // COMPILE_VULKAN
 
 #if COMPILE_OPEN_GL
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #define GLFW_EXPOSE_NATIVE_WIN32
 
 #if COMPILE_IMGUI
@@ -84,7 +98,7 @@ namespace flex
 
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 #endif // COMPILE_OPEN_GL
 
 
@@ -103,7 +117,7 @@ namespace flex
 #define btAssert(e) assert(e)
 #endif
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #define GLM_FORCE_LEFT_HANDED
@@ -112,7 +126,7 @@ namespace flex
 #define GLM_ENABLE_EXPERIMENTAL
 
 #include <glm/glm.hpp>
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #define PI (glm::pi<real>())
 #define TWO_PI (glm::two_pi<real>())
@@ -141,9 +155,9 @@ namespace flex
 #if COMPILE_OPEN_GL
 #ifdef DEBUG
 #define GL_PUSH_DEBUG_GROUP(str) \
-if (g_EngineInstance->bHasGLDebugExtension) { glPushDebugGroupKHR(GL_DEBUG_SOURCE_APPLICATION, 0, -1, str); }
+if (FlexEngine::s_bHasGLDebugExtension) { glPushDebugGroupKHR(GL_DEBUG_SOURCE_APPLICATION, 0, -1, str); }
 #define GL_POP_DEBUG_GROUP() \
-if (g_EngineInstance->bHasGLDebugExtension) { glPopDebugGroupKHR(); }
+if (FlexEngine::s_bHasGLDebugExtension) { glPopDebugGroupKHR(); }
 #else
 #define GL_PUSH_DEBUG_GROUP(str)
 #define GL_POP_DEBUG_GROUP()
@@ -195,4 +209,5 @@ namespace flex
 namespace glm
 {
 	using vec2i = tvec2<flex::i32>;
+	using vec2u = tvec2<flex::u32>;
 }

@@ -1,8 +1,8 @@
 #pragma once
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include <glm/vec4.hpp>
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 namespace flex
 {

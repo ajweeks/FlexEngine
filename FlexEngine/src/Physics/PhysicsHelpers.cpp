@@ -2,15 +2,15 @@
 
 #include "Physics/PhysicsHelpers.hpp"
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include <BulletCollision/CollisionShapes/btCollisionShape.h>
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 namespace flex
 {
 	std::string CollisionShapeTypeToString(int shapeType)
 	{
-		for (i32 i = 0; i < ARRAY_LENGTH(g_CollisionTypes); ++i)
+		for (u32 i = 0; i < ARRAY_LENGTH(g_CollisionTypes); ++i)
 		{
 			if ((int)g_CollisionTypes[i] == shapeType)
 			{
@@ -25,7 +25,7 @@ namespace flex
 	BroadphaseNativeTypes StringToCollisionShapeType(const std::string& str)
 	{
 		const char* cStr = str.c_str();
-		for (i32 i = 0; i < ARRAY_LENGTH(g_CollisionTypeStrs); ++i)
+		for (u32 i = 0; i < ARRAY_LENGTH(g_CollisionTypeStrs); ++i)
 		{
 			if (strcmp(g_CollisionTypeStrs[i], cStr) == 0)
 			{

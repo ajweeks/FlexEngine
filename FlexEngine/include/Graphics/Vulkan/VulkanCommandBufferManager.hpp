@@ -2,9 +2,9 @@
 
 #include <vector>
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include <vulkan/vulkan.hpp>
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 namespace flex
 {

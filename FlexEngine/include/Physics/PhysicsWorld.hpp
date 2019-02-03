@@ -2,12 +2,12 @@
 
 #include <set>
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include <BulletCollision/CollisionDispatch/btCollisionWorld.h>
 
 #include <LinearMath/btScalar.h>
 #include <LinearMath/btVector3.h>
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 class btDiscreteDynamicsWorld;
 class btDynamicsWorld;

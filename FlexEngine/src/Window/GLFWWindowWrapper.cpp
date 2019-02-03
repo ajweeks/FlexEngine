@@ -49,7 +49,7 @@ namespace flex
 			Print("%i joysticks connected on bootup\n", numJoysticksConnected);
 		}
 
-		m_PID = (u32)GetCurrentProcessId();
+		g_EngineInstance->mainProcessID = (u32)GetCurrentProcessId();
 
 		// TODO: Look into supporting system-DPI awareness
 		//SetProcessDPIAware();
@@ -189,7 +189,7 @@ namespace flex
 
 		if (GLAD_GL_KHR_debug)
 		{
-			g_EngineInstance->bHasGLDebugExtension = true;
+			FlexEngine::s_bHasGLDebugExtension = true;
 		}
 
 		Print("OpenGL loaded\n");

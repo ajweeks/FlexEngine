@@ -2,7 +2,7 @@
 
 #include "Physics/RigidBody.hpp"
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include <BulletDynamics/Dynamics/btRigidBody.h>
 #include <BulletCollision/CollisionShapes/btCollisionShape.h>
 #include <BulletDynamics/ConstraintSolver/btFixedConstraint.h>
@@ -11,7 +11,7 @@
 #include <LinearMath/btDefaultMotionState.h>
 
 #include <glm/gtc/matrix_transform.hpp>
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #include "Physics/PhysicsManager.hpp"
 #include "Physics/PhysicsWorld.hpp"

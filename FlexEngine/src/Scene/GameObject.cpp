@@ -1,6 +1,6 @@
 #include "stdafx.hpp"
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include <BulletCollision/CollisionShapes/btBoxShape.h>
 #include <BulletCollision/CollisionShapes/btCapsuleShape.h>
 #include <BulletCollision/CollisionShapes/btCollisionShape.h>
@@ -13,7 +13,7 @@
 
 #include <LinearMath/btIDebugDraw.h>
 #include <LinearMath/btTransform.h>
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #include "Scene/GameObject.hpp"
 #include "Audio/AudioManager.hpp"
@@ -765,11 +765,9 @@ namespace flex
 		//	}
 		//}
 
-		ImGui::Text(m_Name.c_str());
+		ImGui::Text("%s", m_Name.c_str());
 
-		DoImGuiContextMenu(true);
-
-		if (!this)
+		if (DoImGuiContextMenu(true))
 		{
 			// Early return if object was just deleted
 			return;
@@ -800,8 +798,6 @@ namespace flex
 
 				ImGui::EndPopup();
 			}
-
-			static int transformSpace = 0;
 
 			static glm::vec3 sRot = glm::degrees((glm::eulerAngles(m_Transform.GetLocalRotation())));
 
@@ -974,7 +970,7 @@ namespace flex
 				if (ImGui::BeginCombo("Shape", shapeTypeStr.c_str()))
 				{
 					i32 selectedColliderShape = -1;
-					for (i32 i = 0; i < ARRAY_LENGTH(g_CollisionTypes); ++i)
+					for (i32 i = 0; i < (i32)ARRAY_LENGTH(g_CollisionTypes); ++i)
 					{
 						if (g_CollisionTypes[i] == shape->getShapeType())
 						{
@@ -989,7 +985,7 @@ namespace flex
 					}
 					else
 					{
-						for (i32 i = 0; i < ARRAY_LENGTH(g_CollisionTypes); ++i)
+						for (i32 i = 0; i < (i32)ARRAY_LENGTH(g_CollisionTypes); ++i)
 						{
 							bool bSelected = (i == selectedColliderShape);
 							const char* colliderShapeName = g_CollisionTypeStrs[i];
@@ -999,7 +995,8 @@ namespace flex
 								{
 									selectedColliderShape = i;
 
-									switch (g_CollisionTypes[selectedColliderShape])
+									BroadphaseNativeTypes collisionShapeType = g_CollisionTypes[selectedColliderShape];
+									switch (collisionShapeType)
 									{
 									case BOX_SHAPE_PROXYTYPE:
 									{
@@ -1025,6 +1022,10 @@ namespace flex
 									{
 										btConeShape* newShape = new btConeShape(1.0f, 1.0f);
 										SetCollisionShape(newShape);
+									} break;
+									default:
+									{
+										PrintError("Unhandled BroadphaseNativeType in GameObject::DrawImGuiObjects: %d\n", (i32)collisionShapeType);
 									} break;
 									}
 								}
@@ -1173,14 +1174,14 @@ namespace flex
 		}
 	}
 
-	void GameObject::DoImGuiContextMenu(bool bActive)
+	bool GameObject::DoImGuiContextMenu(bool bActive)
 	{
 		static const char* renameObjectPopupLabel = "##rename-game-object";
 		static const char* renameObjectButtonStr = "Rename";
 		static const char* duplicateObjectButtonStr = "Duplicate...";
-		static const char* deletePopupStr = "Delete object";
 		static const char* deleteButtonStr = "Delete";
-		static const char* deleteCancelButtonStr = "Cancel";
+
+		bool bDeletedSelf = false;
 
 		// TODO: Prevent name collisions
 		std::string contextMenuIDStr = "context window game object " + m_Name;
@@ -1190,10 +1191,10 @@ namespace flex
 		bool bRefreshNameField = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup) &&
 			ImGui::IsMouseClicked(1);
 
-		if (bActive && g_EngineInstance->bWantRenameActiveElement)
+		if (bActive && g_EngineInstance->GetWantRenameActiveElement())
 		{
 			ImGui::OpenPopup(contextMenuIDStr.c_str());
-			g_EngineInstance->bWantRenameActiveElement = false;
+			g_EngineInstance->ClearWantRenameActiveElement();
 			bRefreshNameField = true;
 		}
 		if (bRefreshNameField)
@@ -1234,57 +1235,24 @@ namespace flex
 
 			if (ImGui::Button(deleteButtonStr))
 			{
-				ImGui::OpenPopup(deletePopupStr);
-			}
-
-			if (ImGui::BeginPopupModal(deletePopupStr, NULL,
-				ImGuiWindowFlags_AlwaysAutoResize |
-				ImGuiWindowFlags_NoSavedSettings |
-				ImGuiWindowFlags_NoNavInputs))
-			{
-				static std::string objectName = m_Name;
-
-				ImGui::PushStyleColor(ImGuiCol_Text, g_WarningTextColor);
-				std::string textStr = "Are you sure you want to permanently delete " + objectName + "?";
-				ImGui::Text(textStr.c_str());
-				ImGui::PopStyleColor();
-
-				ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
-				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
-				ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
-				if (ImGui::Button(deleteButtonStr))
+				if (g_SceneManager->CurrentScene()->DestroyGameObject(this, true))
 				{
-					if (g_SceneManager->CurrentScene()->DestroyGameObject(this, true))
-					{
-						ImGui::CloseCurrentPopup();
-					}
-					else
-					{
-						PrintWarn("Failed to delete game object: %s\n", m_Name.c_str());
-					}
+					bDeletedSelf = true;
 				}
-				ImGui::PopStyleColor();
-				ImGui::PopStyleColor();
-				ImGui::PopStyleColor();
-
-				ImGui::SameLine();
-
-				if (ImGui::Button(deleteCancelButtonStr))
+				else
 				{
-					ImGui::CloseCurrentPopup();
+					PrintWarn("Failed to delete game object: %s\n", m_Name.c_str());
 				}
-
-				ImGui::EndPopup();
 			}
 
 			ImGui::EndPopup();
 		}
+
+		return bDeletedSelf;
 	}
 
 	bool GameObject::DoDuplicateGameObjectButton(const char* buttonName)
 	{
-		static const char* duplicateObjectButtonStr = "Duplicate";
-
 		if (ImGui::Button(buttonName))
 		{
 			GameObject* newGameObject = CopySelfAndAddToScene(nullptr, true);
@@ -3269,7 +3237,7 @@ namespace flex
 
 	void Terminal::Initialize()
 	{
-		g_InputManager->BindKeyEventCallback(&m_KeyEventCallback, 1);
+		g_InputManager->BindKeyEventCallback(&m_KeyEventCallback, 20);
 
 		GameObject::Initialize();
 	}
@@ -3428,9 +3396,9 @@ namespace flex
 		{
 			if (action == KeyAction::PRESS)
 			{
-				const bool bCapsLock = modifiers & (i32)InputModifier::CAPS_LOCK;
-				const bool bShiftDown = modifiers & (i32)InputModifier::SHIFT;
-				const bool bCtrlDown = modifiers & (i32)InputModifier::CONTROL;
+				const bool bCapsLock = (modifiers & (i32)InputModifier::CAPS_LOCK) > 0;
+				const bool bShiftDown = (modifiers & (i32)InputModifier::SHIFT) > 0;
+				const bool bCtrlDown = (modifiers & (i32)InputModifier::CONTROL) > 0;
 				i32 kC = (i32)keyCode;
 				if (keyCode == KeyCode::KEY_ESCAPE)
 				{

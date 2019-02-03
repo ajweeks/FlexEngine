@@ -6,14 +6,14 @@
 #include <stdio.h> // For gcvt, fopen
 #include <iomanip> // for setprecision
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include <glm/gtx/matrix_decompose.hpp>
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image.h"
 #include "stb_image_write.h"
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #include "FlexEngine.hpp" // For FlexEngine::s_CurrentWorkingDirectory
 #include "Graphics/Renderer.hpp" // For Renderer::MAX_TEXTURE_DIM
@@ -27,7 +27,7 @@
 
 namespace flex
 {
-	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount, bool flipVertically, i32* channelCountOut /* = nullptr */)
+	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount, bool flipVertically, u32* channelCountOut /* = nullptr */)
 	{
 		assert(requestedChannelCount == 3 ||
 			   requestedChannelCount == 4);
@@ -40,16 +40,16 @@ namespace flex
 
 		stbi_set_flip_vertically_on_load(flipVertically);
 
-		i32 channels;
+		i32 channelCount;
 		unsigned char* data = stbi_load(filePath.c_str(),
 										&result.width,
 										&result.height,
-										&channels,
+										&channelCount,
 										(requestedChannelCount == 4  ? STBI_rgb_alpha : STBI_rgb));
 
 		if (channelCountOut)
 		{
-			*channelCountOut = channels;
+			*channelCountOut = (u32)channelCount;
 		}
 
 		if (data == 0)
@@ -60,8 +60,8 @@ namespace flex
 		}
 		else
 		{
-			assert(result.width <= Renderer::MAX_TEXTURE_DIM);
-			assert(result.height <= Renderer::MAX_TEXTURE_DIM);
+			assert((u32)result.width <= Renderer::MAX_TEXTURE_DIM);
+			assert((u32)result.height <= Renderer::MAX_TEXTURE_DIM);
 
 			result.pixels = static_cast<unsigned char*>(data);
 		}
@@ -88,11 +88,15 @@ namespace flex
 
 		stbi_set_flip_vertically_on_load(flipVertically);
 
+		i32 tempW, tempH, tempC;
 		pixels = stbi_loadf(filePath.c_str(),
-							&width,
-							&height,
-							&channelCount,
+							&tempW,
+							&tempH,
+							&tempC,
 							(requestedChannelCount == 4 ? STBI_rgb_alpha : STBI_rgb));
+
+		width = (u32)tempW;
+		height = (u32)tempH;
 
 		channelCount = 4;
 
@@ -104,7 +108,6 @@ namespace flex
 
 		assert(width <= Renderer::MAX_TEXTURE_DIM);
 		assert(height <= Renderer::MAX_TEXTURE_DIM);
-		assert(channelCount > 0);
 
 		return true;
 	}
@@ -327,7 +330,7 @@ namespace flex
 	{
 		ShellExecute(NULL, "open", absoluteDirectory.c_str(), NULL, NULL, SW_SHOWDEFAULT);
 
-		// OR
+		// Alternative:
 		// system("explorer C:\\");
 	}
 
@@ -339,32 +342,27 @@ namespace flex
 
 	bool OpenFileDialog(const std::string& windowTitle, const std::string& absoluteDirectory, std::string& outSelectedAbsFilePath, char filter[] /* = nullptr */)
 	{
-		//TaskDialog(NULL, NULL, L"Open somethin", L"D:\\", NULL, TDCBF_OK_BUTTON, TD_INFORMATION_ICON, NULL);
-		//return false;
-
-		OPENFILENAME ofna = {};
-		ofna.lStructSize = sizeof(OPENFILENAME);
-		ofna.lpstrInitialDir = absoluteDirectory.c_str();
-		ofna.nMaxFile = ARRAY_SIZE(filter);
-		if (ofna.nMaxFile && filter)
+		OPENFILENAME openFileName = {};
+		openFileName.lStructSize = sizeof(OPENFILENAME);
+		openFileName.lpstrInitialDir = absoluteDirectory.c_str();
+		openFileName.nMaxFile = strlen(filter);
+		if (openFileName.nMaxFile && filter)
 		{
-			ofna.lpstrFilter = filter;
+			openFileName.lpstrFilter = filter;
 		}
-		ofna.nFilterIndex = 0;
+		openFileName.nFilterIndex = 0;
 		const i32 MAX_FILE_PATH_LEN = 512;
 		char fileBuf[MAX_FILE_PATH_LEN];
 		memset(fileBuf, '\0', MAX_FILE_PATH_LEN);
-		ofna.lpstrFile = fileBuf;
-		ofna.nMaxFile = MAX_FILE_PATH_LEN;
-		ofna.lpstrTitle = windowTitle.c_str();
-		ofna.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
-		bool bSuccess = GetOpenFileName(&ofna) == 1;
+		openFileName.lpstrFile = fileBuf;
+		openFileName.nMaxFile = MAX_FILE_PATH_LEN;
+		openFileName.lpstrTitle = windowTitle.c_str();
+		openFileName.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+		bool bSuccess = GetOpenFileName(&openFileName) == 1;
 
-		if (ofna.lpstrFile)
+		if (openFileName.lpstrFile)
 		{
-			//ofna.nFileOffset;
-			//ofna.nFileExtension;
-			outSelectedAbsFilePath = ofna.lpstrFile;
+			outSelectedAbsFilePath = openFileName.lpstrFile;
 		}
 
 		return bSuccess;

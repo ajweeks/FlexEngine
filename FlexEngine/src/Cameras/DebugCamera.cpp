@@ -2,10 +2,10 @@
 
 #include "Cameras/DebugCamera.hpp"
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/vec2.hpp>
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #include "Cameras/CameraManager.hpp"
 #include "FlexEngine.hpp"
@@ -19,11 +19,11 @@ namespace flex
 {
 	DebugCamera::DebugCamera(real FOV, real zNear, real zFar) :
 		BaseCamera("debug", false, FOV, zNear, zFar),
-		m_MoveVel(0.0f),
-		m_TurnVel(0.0f),
 		mouseButtonCallback(this, &DebugCamera::OnMouseButtonEvent),
 		mouseMovedCallback(this, &DebugCamera::OnMouseMovedEvent),
-		m_MouseDragDist(0.0f)
+		m_MouseDragDist(0.0f),
+		m_MoveVel(0.0f),
+		m_TurnVel(0.0f)
 	{
 	}
 
@@ -62,8 +62,8 @@ namespace flex
 		bool bOrbiting = false;
 		glm::vec3 orbitingCenter(0.0f);
 
-		const bool bModFaster = g_InputManager->GetActionDown(Action::EDITOR_MOD_FASTER);
-		const bool bModSlower = g_InputManager->GetActionDown(Action::EDITOR_MOD_SLOWER);
+		const bool bModFaster = g_InputManager->GetActionDown(Action::EDITOR_MOD_FASTER) > 0;
+		const bool bModSlower = g_InputManager->GetActionDown(Action::EDITOR_MOD_SLOWER) > 0;
 
 		const real moveSpeedMultiplier = bModFaster ? m_MoveSpeedFastMultiplier : bModSlower ? m_MoveSpeedSlowMultiplier : 1.0f;
 		const real turnSpeedMultiplier = bModFaster ? m_TurnSpeedFastMultiplier : bModSlower ? m_TurnSpeedSlowMultiplier : 1.0f;
@@ -86,11 +86,17 @@ namespace flex
 		// If someone else handled the mouse up event we'll never release
 		if (!g_InputManager->IsMouseButtonDown(MouseButton::LEFT))
 		{
-			m_bDraggingMouse = false;
+			m_bDraggingLMB = false;
+		}
+
+		// If someone else handled the mouse up event we'll never release
+		if (!g_InputManager->IsMouseButtonDown(MouseButton::MIDDLE))
+		{
+			m_bDraggingMMB = false;
 		}
 
 		bool bPOribiting = m_bOrbiting;
-		m_bOrbiting = g_InputManager->GetActionDown(Action::EDITOR_ORBIT);
+		m_bOrbiting = g_InputManager->GetActionDown(Action::EDITOR_ORBIT) > 0;
 
 		if (bOrbiting == false && bPOribiting == true)
 		{
@@ -98,7 +104,7 @@ namespace flex
 			m_TurnVel = VEC2_ZERO;
 		}
 
-		if (m_bDraggingMouse)
+		if (m_bDraggingLMB)
 		{
 			if (m_bOrbiting)
 			{
@@ -152,12 +158,7 @@ namespace flex
 			translation += m_Up * moveD;
 		}
 
-		// TODO: Handle in action callback
-		if (g_InputManager->IsMouseButtonPressed(MouseButton::MIDDLE))
-		{
-			m_DragStartPosition = m_Position;
-		}
-		else
+		if (m_bDraggingMMB)
 		{
 			// TODO: Handle in action callback
 			if (g_InputManager->IsMouseButtonDown(MouseButton::MIDDLE))
@@ -175,7 +176,6 @@ namespace flex
 			translation += m_Forward * scrollDistance * m_ScrollDollySpeed;
 		}
 
-		// TODO: Handle in action callback
 		if (g_InputManager->IsMouseButtonDown(MouseButton::RIGHT))
 		{
 			glm::vec2 zoom = g_InputManager->GetMouseMovement();
@@ -200,6 +200,7 @@ namespace flex
 			LookAt(orbitingCenter);
 		}
 
+		// TODO: Incorporate lag in frame-rate-indepedent way that doesn't change max vel
 		m_MoveVel *= m_MoveLag;
 		m_TurnVel *= m_TurnLag;
 
@@ -216,23 +217,34 @@ namespace flex
 			if (action == KeyAction::PRESS)
 			{
 				m_MouseDragDist = VEC2_ZERO;
-				m_bDraggingMouse = true;
+				m_bDraggingLMB = true;
 				return EventReply::UNCONSUMED;
 			}
 			else if (action == KeyAction::RELEASE)
 			{
 				m_MouseDragDist = VEC2_ZERO;
-				m_bDraggingMouse = false;
+				m_bDraggingLMB = false;
 				return EventReply::UNCONSUMED;
 			}
 		}
-
+		else if (button == MouseButton::MIDDLE)
+		{
+			if (action == KeyAction::PRESS)
+			{
+				m_DragStartPosition = m_Position;
+				m_bDraggingMMB = true;
+			}
+			else
+			{
+				m_bDraggingMMB = false;
+			}
+		}
 		return EventReply::UNCONSUMED;
 	}
 
 	EventReply DebugCamera::OnMouseMovedEvent(const glm::vec2& dMousePos)
 	{
-		if (m_bDraggingMouse)
+		if (m_bDraggingLMB)
 		{
 			m_MouseDragDist = dMousePos;
 			return EventReply::CONSUMED;

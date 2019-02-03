@@ -3,9 +3,9 @@
 
 #include "Graphics/Vulkan/VulkanHelpers.hpp"
 
-#pragma warning(push, 0) // Don't generate warnings for third party code
+IGNORE_WARNINGS_PUSH // Don't generate warnings for third party code
 #include "stb_image.h"
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #include "Graphics/Vulkan/VulkanCommandBufferManager.hpp"
 #include "Graphics/Vulkan/VulkanDevice.hpp"

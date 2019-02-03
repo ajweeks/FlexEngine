@@ -5,9 +5,9 @@
 #include <vector>
 #include <sstream>
 
-#pragma warning(push, 0) // Don't generate warnings for 3rd party code
+IGNORE_WARNINGS_PUSH // Don't generate warnings for 3rd party code
 #include <vulkan/vulkan.hpp>
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #include "Graphics/Renderer.hpp"
 #include "VulkanBuffer.hpp"

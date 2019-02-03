@@ -3,7 +3,7 @@
 
 #include "Graphics/GL/GLRenderer.hpp"
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 
 #include <glm/gtx/quaternion.hpp>
@@ -16,7 +16,7 @@
 #include "ImGui/imgui_impl_glfw.h"
 #include "ImGui/imgui_impl_opengl3.h"
 #endif
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
@@ -139,7 +139,7 @@ namespace flex
 			m_CaptureViews =
 			{
 				glm::lookAtRH(VEC3_ZERO, glm::vec3(1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-				glm::lookAtRH(VEC3_ZERO, glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+				glm::lookAtRH(VEC3_ZERO, glm::vec3(-1.0f, 0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
 				glm::lookAtRH(VEC3_ZERO, glm::vec3(0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)),
 				glm::lookAtRH(VEC3_ZERO, glm::vec3(0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f)),
 				glm::lookAtRH(VEC3_ZERO, glm::vec3(0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
@@ -5877,8 +5877,6 @@ namespace flex
 
 		void GLRenderer::DrawAssetBrowserImGui(bool* bShowing)
 		{
-			static i32 MAX_CHAR_COUNT = 128;
-
 			ImGui::SetNextWindowSize(ImVec2(400.0f, 350.0f), ImGuiCond_FirstUseEver);
 			if (ImGui::Begin("Asset browser", bShowing))
 			{
@@ -6142,7 +6140,7 @@ namespace flex
 
 									ImGui::SetDragDropPayload(m_MaterialPayloadCStr, data, size);
 
-									ImGui::Text(m_Materials[i].material.name.c_str());
+									ImGui::Text("%s", m_Materials[i].material.name.c_str());
 
 									ImGui::EndDragDropSource();
 								}
@@ -6290,8 +6288,9 @@ namespace flex
 				if (ImGui::CollapsingHeader("Meshes"))
 				{
 					static i32 selectedMeshIndex = 0;
-					const i32 MAX_NAME_LEN = 128;
-					static std::string selectedMeshName = "";
+					//const i32 MAX_NAME_LEN = 128;
+					// TODO: Implement mesh naming
+					//static std::string selectedMeshName = "";
 					static bool bUpdateName = true;
 
 					std::string selectedMeshRelativeFilePath;
@@ -6400,7 +6399,7 @@ namespace flex
 
 										ImGui::SetDragDropPayload(m_MeshPayloadCStr, data, size);
 
-										ImGui::Text(meshFileName.c_str());
+										ImGui::Text("%s", meshFileName.c_str());
 
 										ImGui::EndDragDropSource();
 									}
@@ -6622,7 +6621,8 @@ namespace flex
 				MeshComponent* mesh = gameObject->GetMeshComponent();
 				if (mesh)
 				{
-					switch (mesh->GetType())
+					MeshComponent::Type meshType = mesh->GetType();
+					switch (meshType)
 					{
 					case MeshComponent::Type::FILE:
 					{
@@ -6739,6 +6739,10 @@ namespace flex
 
 							ImGui::EndCombo();
 						}
+					} break;
+					default:
+					{
+						PrintError("Unhandled MeshComponent::Type in GLRenderer::DrawImGuiForRenderID: %d\n", (i32)meshType);
 					} break;
 					}
 				}
@@ -6995,7 +6999,7 @@ namespace flex
 
 						ImGui::SetDragDropPayload(m_GameObjectPayloadCStr, data, size);
 
-						ImGui::Text(dragDropText.c_str());
+						ImGui::Text("%s", dragDropText.c_str());
 
 						ImGui::EndDragDropSource();
 					}

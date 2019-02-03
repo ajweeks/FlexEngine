@@ -2,13 +2,13 @@
 
 #include "Physics/PhysicsWorld.hpp"
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include <BulletCollision/CollisionDispatch/btCollisionObject.h>
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 #include <BulletDynamics/Dynamics/btRigidBody.h>
 
 #include <LinearMath/btVector3.h>
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
@@ -147,7 +147,7 @@ namespace flex
 		m_World->rayTest(rayStart, rayEnd, rayCallback);
 		if (rayCallback.hasHit())
 		{
-			btVector3 pickPos = rayCallback.m_hitPointWorld;
+			//btVector3 pickPos = rayCallback.m_hitPointWorld;
 			btRigidBody* body = (btRigidBody*)btRigidBody::upcast(rayCallback.m_collisionObject);
 			if (body)
 			{

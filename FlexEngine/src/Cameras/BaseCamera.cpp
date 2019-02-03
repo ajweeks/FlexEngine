@@ -2,10 +2,10 @@
 
 #include "Cameras/BaseCamera.hpp"
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/vec2.hpp>
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #include "Helpers.hpp"
 #include "Player.hpp"
@@ -17,6 +17,7 @@
 namespace flex
 {
 	BaseCamera::BaseCamera(const std::string& cameraName, bool bIsGameplayCam, real FOV, real zNear, real zFar) :
+		bIsGameplayCam(bIsGameplayCam),
 		m_Name(cameraName),
 		m_View(MAT4_ZERO),
 		m_Proj(MAT4_ZERO),
@@ -37,8 +38,7 @@ namespace flex
 		m_GamepadRotationSpeed(2.0f),
 		m_Position(VEC3_ZERO),
 		m_Yaw(0.0f),
-		m_Pitch(0.0f),
-		bIsGameplayCam(bIsGameplayCam)
+		m_Pitch(0.0f)
 	{
 		ResetOrientation();
 		CalculateAxisVectorsFromPitchAndYaw();

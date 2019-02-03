@@ -5,7 +5,7 @@
 #include <stdlib.h> // For srand, rand
 #include <time.h> // For time
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include <BulletCollision/CollisionShapes/btCylinderShape.h>
 #include <BulletDynamics/Dynamics/btDynamicsWorld.h>
 
@@ -21,7 +21,7 @@
 #if COMPILE_IMGUI
 #include "imgui_internal.h"
 #endif
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #include "Audio/AudioManager.hpp"
 #include "Cameras/CameraManager.hpp"
@@ -65,6 +65,8 @@ extern "C"
 
 namespace flex
 {
+	bool FlexEngine::s_bHasGLDebugExtension = false;
+
 	const u32 FlexEngine::EngineVersionMajor = 0;
 	const u32 FlexEngine::EngineVersionMinor = 8;
 	const u32 FlexEngine::EngineVersionPatch = 1;
@@ -132,6 +134,38 @@ namespace flex
 
 		InitializeLogger();
 
+#if defined(__clang__)
+		m_CompilerName = "Clang";
+
+		m_CompilerVersion =
+			IntToString(__clang_major__) + '.' +
+			IntToString(__clang_minor__) + '.' +
+			IntToString(__clang_patchlevel__);
+#elif defined(_MSC_VER)
+		m_CompilerName = "MSVC";
+
+	#if _MSC_VER >= 1920 // TODO: Double check this value once Microsoft publishes VS2019 fully
+			m_CompilerVersion = "2019";
+	#elif _MSC_VER >= 1910
+			m_CompilerVersion = "2017";
+	#elif _MSC_VER >= 1900
+			m_CompilerVersion = "2015";
+	#elif _MSC_VER >= 1800
+			m_CompilerVersion = "2013";
+	#else
+			m_CompilerVersion = "Unknown";
+	#endif
+#elif defined(__GNUC__)
+		m_CompilerName = "GCC";
+
+		m_CompilerVersion =
+			IntToString(__GNUC__) + '.' +
+			IntToString(__GNUC_MINOR__ ) +
+#else
+		m_CompilerName = "Unknown";
+		m_CompilerVersion = "Unknown";
+#endif
+
 #if DEBUG
 		const char* configStr = "Debug";
 #elif DEVELOPMENT
@@ -143,7 +177,7 @@ namespace flex
 #endif
 
 		std::string nowStr = GetDateString_YMDHMS();
-		Print("FlexEngine [%s] - Config: [%s x32]\n", nowStr.c_str(), configStr);
+		Print("FlexEngine [%s] - Config: [%s x32] - Compiler: [%s %s]\n", nowStr.c_str(), configStr, m_CompilerName.c_str(), m_CompilerVersion.c_str());
 
 		assert(m_RendererCount > 0); // At least one renderer must be enabled! (see stdafx.h)
 		Print("%i renderer%s enabled, Current renderer: %s\n",
@@ -2174,6 +2208,10 @@ namespace flex
 					allMat.colorMultiplier = hoverColor;
 				}
 			} break;
+			default:
+			{
+				PrintError("Unhandled transform state in FlexEngine::HandleGizmoHover\n");
+			} break;
 			}
 		}
 		else
@@ -2281,6 +2319,10 @@ namespace flex
 			{
 				allMat.colorMultiplier = selectedColor;
 			}
+		} break;
+		default:
+		{
+			PrintError("Unhandled transform state in FlexEngine::HandleGizmoClick\n");
 		} break;
 		}
 	}
@@ -2547,6 +2589,10 @@ namespace flex
 					gameObject->GetTransform()->Scale(dScale);
 				}
 			}
+		} break;
+		default:
+		{
+			PrintError("Unhandled transform state in FlexEngine::HandleGizmoMovement\n");
 		} break;
 		}
 

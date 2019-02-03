@@ -2,13 +2,13 @@
 
 #include "Cameras/OverheadCamera.hpp"
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/rotate_vector.hpp> // for rotateY
 #include <glm/vec2.hpp>
 
 #include <LinearMath/btIDebugDraw.h>
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"

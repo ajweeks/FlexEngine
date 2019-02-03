@@ -3,12 +3,12 @@
 
 #include "Graphics/GL/GLHelpers.hpp"
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include "stb_image.h"
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
@@ -18,12 +18,12 @@ namespace flex
 {
 	namespace gl
 	{
-		bool GenerateGLTexture_Empty(u32& textureID, const glm::vec2i& dimensions, bool generateMipMaps, GLenum internalFormat, GLenum format, GLenum type)
+		bool GenerateGLTexture_Empty(u32& textureID, const glm::vec2u& dimensions, bool generateMipMaps, GLenum internalFormat, GLenum format, GLenum type)
 		{
 			return GenerateGLTexture_EmptyWithParams(textureID, dimensions, generateMipMaps, internalFormat, format, type, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR);
 		}
 
-		bool GenerateGLTexture_EmptyWithParams(u32& textureID, const glm::vec2i& dimensions, bool generateMipMaps, GLenum internalFormat, GLenum format, GLenum type, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter)
+		bool GenerateGLTexture_EmptyWithParams(u32& textureID, const glm::vec2u& dimensions, bool generateMipMaps, GLenum internalFormat, GLenum format, GLenum type, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter)
 		{
 			assert(dimensions.x <= Renderer::MAX_TEXTURE_DIM);
 			assert(dimensions.y <= Renderer::MAX_TEXTURE_DIM);
@@ -83,7 +83,7 @@ namespace flex
 			assert(requestedChannelCount == 3 ||
 				   requestedChannelCount == 4);
 
-			i32 channelCount = 0;
+			u32 channelCount = 0;
 			GLFWimage image = LoadGLFWimage(filePath, requestedChannelCount, flipVertically, &channelCount);
 
 			if (!image.pixels)
@@ -234,10 +234,6 @@ namespace flex
 
 			if (createInfo.textureGBufferIDs && !createInfo.textureGBufferIDs->empty())
 			{
-				const GLint gbufInternalFormat = GL_RGBA16F;
-				const GLenum gbufFormat = GL_RGBA;
-				const GLenum gbufType = GL_FLOAT;
-
 				i32 binding = 0;
 
 				// Generate GBuffers
@@ -249,7 +245,7 @@ namespace flex
 					for (i32 i = 0; i < 6; i++)
 					{
 						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gbuffer.internalFormat,
-									 (GLsizei)createInfo.textureSize.x, (GLsizei)createInfo.textureSize.y, 0, gbuffer.format, gbufType, nullptr);
+									 (GLsizei)createInfo.textureSize.x, (GLsizei)createInfo.textureSize.y, 0, gbuffer.format, GL_FLOAT, nullptr);
 					}
 
 					glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -341,8 +337,8 @@ namespace flex
 							 bool bFlipVertically,
 							 bool bGenerateMipMaps,
 							 bool bHDR) :
-			channelCount(channelCount),
 			relativeFilePath(relativeFilePath),
+			channelCount(channelCount),
 			bHasMipMaps(bGenerateMipMaps),
 			bFlipVerticallyOnLoad(bFlipVertically),
 			bHDR(bHDR)
@@ -363,7 +359,7 @@ namespace flex
 			assert(!bLoaded);
 
 			bool bSucceeded = GenerateGLTexture_Empty(handle,
-													  glm::vec2i(width, height),
+													  glm::vec2u(width, height),
 													  bHasMipMaps,
 													  internalFormat,
 													  format,
@@ -398,7 +394,6 @@ namespace flex
 				width = infoOut.width;
 				height = infoOut.height;
 				channelCount = infoOut.channelCount;
-				this->bHDR = bHDR;
 
 				bLoaded = true;
 			}
@@ -436,9 +431,9 @@ namespace flex
 			bLoaded = false;
 		}
 
-		glm::vec2i GLTexture::GetResolution()
+		glm::vec2u GLTexture::GetResolution()
 		{
-			return glm::vec2i(width, height);
+			return glm::vec2u(width, height);
 		}
 
 		void GLTexture::SetParameters(TextureParameters params)
@@ -482,11 +477,12 @@ namespace flex
 			m_Parameters = params;
 		}
 
-		bool GLTexture::Resize(glm::vec2i newSize)
+		bool GLTexture::Resize(const glm::vec2u& newSize)
 		{
 			if (newSize.x > width || newSize.y > height)
 			{
-				width = newSize.x; height = newSize.y;
+				width = newSize.x;
+				height = newSize.y;
 				glDeleteTextures(1, &handle);
 				glGenTextures(1, &handle);
 				Build();
@@ -499,7 +495,8 @@ namespace flex
 			}
 			else
 			{
-				width = newSize.x; height = newSize.y;
+				width = newSize.x;
+				height = newSize.y;
 				Build();
 
 				return false;

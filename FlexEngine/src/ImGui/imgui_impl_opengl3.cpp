@@ -1,6 +1,6 @@
 #include "stdafx.hpp"
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 
 // dear imgui: Renderer for OpenGL3 / OpenGL ES2 / OpenGL ES3 (modern OpenGL with shaders / programmatic pipeline)
 // This needs to be used along with a Platform Binding (e.g. GLFW, SDL, Win32, custom..)
@@ -583,4 +583,4 @@ static void ImGui_ImplOpenGL3_ShutdownPlatformInterface()
     ImGui::DestroyPlatformWindows();
 }
 
-#pragma warning(pop)
+IGNORE_WARNINGS_POP

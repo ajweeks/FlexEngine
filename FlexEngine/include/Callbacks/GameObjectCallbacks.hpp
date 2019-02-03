@@ -28,7 +28,7 @@ namespace flex
 		}
 
 	private:
-		CallbackFunction mFunction;
 		T* mObject;
+		CallbackFunction mFunction;
 	};
 } // namespace flex

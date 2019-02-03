@@ -34,7 +34,7 @@ namespace flex
 
 		if (f)
 		{
-			fprintf(f, "\0");
+			fprintf(f, "%c", '\0');
 			fclose(f);
 		}
 	}
@@ -49,7 +49,7 @@ namespace flex
 		if (f)
 		{
 			std::string fileContents(g_LogBuffer.str());
-			fprintf(f, fileContents.c_str());
+			fprintf(f, "%s", fileContents.c_str());
 			fclose(f);
 		}
 	}

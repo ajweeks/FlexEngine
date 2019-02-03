@@ -1,10 +1,10 @@
 #pragma once
 #if COMPILE_OPEN_GL || COMPILE_VULKAN
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #include "Window.hpp"
 
@@ -61,8 +61,6 @@ namespace flex
 
 	private:
 
-		real m_PreviousFrameTime = 0;
-
 		GLFWWindowWrapper(const GLFWWindowWrapper&) = delete;
 		GLFWWindowWrapper& operator=(const GLFWWindowWrapper&) = delete;
 	};
@@ -78,6 +76,7 @@ namespace flex
 	void GLFWMouseButtonCallback(GLFWwindow* glfwWindow, i32 button, i32 action, i32 mods);
 	void GLFWWindowFocusCallback(GLFWwindow* glfwWindow, i32 focused);
 	void GLFWCursorPosCallback(GLFWwindow* glfwWindow, double x, double y);
+	void GLFWScrollCallback(GLFWwindow* glfwWindow, double xoffset, double yoffset);
 	void GLFWWindowSizeCallback(GLFWwindow* glfwWindow, i32 width, i32 height);
 	void GLFWWindowPosCallback(GLFWwindow* glfwWindow, i32 newX, i32 newY);
 	void GLFWFramebufferSizeCallback(GLFWwindow* glfwWindow, i32 width, i32 height);

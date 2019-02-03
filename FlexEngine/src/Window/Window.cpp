@@ -361,11 +361,6 @@ namespace flex
 		}
 	}
 
-	glm::u32 Window::GetPID() const
-	{
-		return m_PID;
-	}
-
 	bool Window::GetVSyncEnabled() const
 	{
 		return m_bVSyncEnabled;

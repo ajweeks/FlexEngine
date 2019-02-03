@@ -2,14 +2,14 @@
 
 #include "Graphics/Renderer.hpp"
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 
 #if COMPILE_IMGUI
 #include "imgui.h"
 #include "imgui_internal.h"
 #endif
 
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"

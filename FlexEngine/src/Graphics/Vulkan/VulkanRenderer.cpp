@@ -3,7 +3,7 @@
 
 #include "Graphics/Vulkan/VulkanRenderer.hpp"
 
-#pragma warning(push, 0) // Don't generate warnings for third party code
+IGNORE_WARNINGS_PUSH // Don't generate warnings for third party code
 #include "stb_image.h"
 
 #include <glm/gtc/matrix_transform.hpp>
@@ -12,7 +12,7 @@
 #include "ImGui/imgui_impl_glfw_vulkan.h"
 
 #include "BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h"
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #include "Cameras/CameraManager.hpp"
 #include "Cameras/BaseCamera.hpp"

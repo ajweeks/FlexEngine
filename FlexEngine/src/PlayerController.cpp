@@ -2,7 +2,7 @@
 
 #include "PlayerController.hpp"
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include <BulletCollision/CollisionDispatch/btCollisionWorld.h>
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 #include <BulletDynamics/Dynamics/btRigidBody.h>
@@ -11,12 +11,12 @@
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtx/vector_angle.hpp>
 #include <LinearMath/btIDebugDraw.h>
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #include "Audio/AudioManager.hpp"
 #include "Cameras/CameraManager.hpp"
-#include "Cameras/OverheadCamera.hpp"
 #include "Cameras/FirstPersonCamera.hpp"
+#include "Cameras/OverheadCamera.hpp"
 #include "Graphics/Renderer.hpp"
 #include "InputManager.hpp"
 #include "Physics/PhysicsTypeConversions.hpp"
@@ -508,9 +508,6 @@ namespace flex
 			debugDrawer->drawLine(rbPos, rbPos + ToBtVec3(forward) * lineLength, btVector3(0.0f, 0.0f, 1.0f));
 			debugDrawer->drawLine(rbPos, rbPos + ToBtVec3(right) * lineLength, btVector3(1.0f, 0.0f, 0.0f));
 		}
-
-		btQuaternion orientation = rb->getOrientation();
-		glm::vec3 euler = glm::eulerAngles(ToQuaternion(orientation));
 
 		rb->applyCentralForce(force);
 

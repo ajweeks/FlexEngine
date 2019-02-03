@@ -31,18 +31,14 @@ namespace flex
 		real m_MaxMoveSpeed = 20.0f;
 		real m_RotateHSpeed = 4.0f;
 		real m_RotateVSpeed = 1.3f;
-		real m_RotateFriction = 0.03f;
-		// How quickly to turn towards direction of movement
-		real m_RotationSnappiness = 80.0f;
 		// If the player has a velocity magnitude of this value or lower, their
 		// rotation speed will linearly decrease as their velocity approaches 0
-		real m_MaxSlowDownRotationSpeedVel = 10.0f;
+		// TODO: Use again
+		//real m_MaxSlowDownRotationSpeedVel = 10.0f;
 
 		sec m_SecondsAttemptingToTurn = 0.0f;
 		// How large the joystick x value must be to enter a turning state
 		const real m_TurnStartStickXThreshold = 0.7f;
-		// How large the dot product between our forward and the track forward must be to turn around
-		const real m_MinForDotTurnThreshold = 0.03f;
 		const sec m_AttemptToTurnTimeThreshold = 0.2f;
 		// How long after completing a turn around the player can start accumulating turn time again
 		const sec m_TurnAroundCooldown = 0.5f;

@@ -2,10 +2,10 @@
 
 #include "Cameras/FirstPersonCamera.hpp"
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/vec2.hpp>
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #include "Helpers.hpp"
 #include "Player.hpp"
@@ -67,8 +67,6 @@ namespace flex
 		}
 
 		Transform* playerTransform = m_Player->GetTransform();
-
-		glm::vec3 targetSpot = playerTransform->GetWorldPosition();
 
 		m_Forward = m_Player->GetLookDirection();
 		m_Right = playerTransform->GetRight();

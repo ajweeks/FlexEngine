@@ -2,11 +2,11 @@
 
 #include "Managers/CartManager.hpp"
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include <glm/gtx/norm.hpp> // For distance2
 
 #include <LinearMath/btIDebugDraw.h>
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #include "FlexEngine.hpp"
 #include "Graphics/Renderer.hpp"
@@ -110,8 +110,8 @@ namespace flex
 	}
 
 	CartManager::CartManager(BaseScene* owningScene) :
-		m_OwningScene(owningScene),
-		m_OnGameObjectDestroyedCallback(this, &CartManager::OnGameObjectDestroyed)
+		m_OnGameObjectDestroyedCallback(this, &CartManager::OnGameObjectDestroyed),
+		m_OwningScene(owningScene)
 	{
 	}
 

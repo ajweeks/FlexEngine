@@ -1,10 +1,10 @@
 #pragma once
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #define TINYGLTF_NO_STB_IMAGE
 #define TINYGLTF_NO_STB_IMAGE_WRITE
 #include <tiny_gltf/tiny_gltf.h>
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #include "Types.hpp"
 

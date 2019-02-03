@@ -2,11 +2,11 @@
 
 #include "Scene/BaseScene.hpp"
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 
 #include <glm/gtx/norm.hpp> // for distance2
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #include "Audio/AudioManager.hpp"
 #include "Callbacks/GameObjectCallbacks.hpp"

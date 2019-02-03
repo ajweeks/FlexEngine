@@ -2,6 +2,7 @@
 
 #include "Profiler.hpp"
 
+#include "FlexEngine.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
@@ -210,8 +211,9 @@ namespace flex
 
 			if (s_bRecordingTrace)
 			{
-				i32 PID = (i32)g_Window->GetPID();
+				i32 PID = (i32)g_EngineInstance->mainProcessID;
 
+				// TODO: Only output this info at file write time to prevent out of memory exceptions
 				JSONObject obj = {};
 				obj.fields.emplace_back("name", JSONValue(blockName));
 				obj.fields.emplace_back("ph", JSONValue("X"));

@@ -2,7 +2,7 @@
 
 #include "Transform.hpp"
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/matrix_decompose.hpp>
@@ -10,7 +10,7 @@
 #include <glm/vec3.hpp>
 
 #include "BulletDynamics/Dynamics/btRigidBody.h"
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #include "Helpers.hpp"
 #include "Physics/RigidBody.hpp"

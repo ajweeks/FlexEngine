@@ -28,8 +28,8 @@ namespace flex
 		}
 
 	private:
-		CallbackFunction func;
 		T* inst;
+		CallbackFunction func;
 	};
 
 	class ICallbackMouseMoved
@@ -56,8 +56,8 @@ namespace flex
 		}
 
 	private:
-		CallbackFunction func;
 		T* inst;
+		CallbackFunction func;
 	};
 
 	class ICallbackKeyEvent

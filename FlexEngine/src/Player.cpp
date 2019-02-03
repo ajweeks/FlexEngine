@@ -2,7 +2,7 @@
 
 #include "Player.hpp"
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include <BulletCollision/CollisionDispatch/btCollisionWorld.h>
 #include <BulletCollision/CollisionShapes/btCapsuleShape.h>
 
@@ -13,7 +13,7 @@
 
 #include <glm/gtx/rotate_vector.hpp>
 #include <glm/gtx/norm.hpp> // For distance2
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #include <queue>
 
@@ -249,7 +249,7 @@ namespace flex
 			ImGui::Indent();
 			for (GameObject* gameObject : m_Inventory)
 			{
-				ImGui::Text(gameObject->GetName().c_str());
+				ImGui::Text("%s", gameObject->GetName().c_str());
 			}
 			ImGui::Unindent();
 

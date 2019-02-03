@@ -1128,7 +1128,7 @@ namespace flex
 
 				ImGui::Columns(numCols);
 
-				ImGui::Text(ActionStrings[i]);
+				ImGui::Text("%s", ActionStrings[i]);
 				ImGui::NextColumn();
 
 				if (binding.keyCode != KeyCode::_NONE)

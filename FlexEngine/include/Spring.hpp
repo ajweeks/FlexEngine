@@ -36,12 +36,12 @@ namespace flex
 #if 0 // No sub-stepping
 			return TickImplementation(dt);
 #else // Enforce max dt per sub-step to ensure framerate-independent behaviour
-			const i32 maxUpdates = 8;
+			const i32 maxStepCount = 8;
 			const real maxDt = 1.0f / 60.0f;
 			real stepCountF = glm::ceil(dt / maxDt);
 			real substepDt = dt / stepCountF;
 
-			i32 stepCount = (i32)stepCountF;
+			i32 stepCount = glm::min((i32)stepCountF, maxStepCount);
 			for (i32 i = 0; i < stepCount; i++)
 			{
 				TickImplementation(substepDt);

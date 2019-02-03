@@ -41,7 +41,6 @@ namespace flex
 
 		// Where we point at on the ground
 		glm::vec3 m_TargetLookAtPos;
-		glm::vec3 m_TargetLookAtDir;
 		glm::vec3 m_Vel;
 
 	};

@@ -5,7 +5,7 @@
 // Must be included above tiny_gltf
 #include "Scene/LoadedMesh.hpp"
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #define TINYGLTF_IMPLEMENTATION
 #define TINYGLTF_NO_STB_IMAGE
 #define TINYGLTF_NO_STB_IMAGE_WRITE
@@ -13,7 +13,7 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp> // For make_vec3
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
@@ -261,7 +261,7 @@ namespace flex
 			return false;
 		}
 
-		const real angleEpsilon = 0.9999f;
+		//const real angleEpsilon = 0.9999f;
 		const i32 vertCount = (i32)createInfo.normals.size();
 
 		if (!createInfo.tangents.empty() ||

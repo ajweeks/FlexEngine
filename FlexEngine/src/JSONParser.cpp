@@ -288,7 +288,7 @@ namespace flex
 		}
 		else
 		{
-			PrintError("Unhandled opening bracket type: %c\n" + openingBracket);
+			PrintError("Unhandled opening bracket type: %c\n", openingBracket);
 			return -1;
 		}
 

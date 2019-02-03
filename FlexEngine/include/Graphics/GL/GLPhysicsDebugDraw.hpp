@@ -1,11 +1,11 @@
 #pragma once
 #if COMPILE_OPEN_GL
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include <glad/glad.h>
 
 #include "LinearMath/btIDebugDraw.h"
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #include "Graphics/VertexBufferData.hpp"
 

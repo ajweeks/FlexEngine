@@ -6,7 +6,7 @@ namespace flex
 {
 	static const char* SEPARATOR_STR = ", ";
 
-	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount = 3, bool flipVertically = false, i32* channelCountOut = nullptr);
+	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount = 3, bool flipVertically = false, u32* channelCountOut = nullptr);
 	void DestroyGLFWimage(GLFWimage& image);
 
 	bool FileExists(const std::string& filePath);
@@ -172,7 +172,7 @@ namespace flex
 	template<class T>
 	inline typename std::vector<T>::const_iterator Find(const std::vector<T>& vec, const T& t)
 	{
-		for (std::vector<T>::const_iterator iter = vec.begin(); iter != vec.end(); ++iter)
+		for (typename std::vector<T>::const_iterator iter = vec.begin(); iter != vec.end(); ++iter)
 		{
 			if (*iter == t)
 			{
@@ -188,9 +188,9 @@ namespace flex
 		bool Load(const std::string& hdrFilePath, i32 requestedChannelCount, bool flipVertically);
 		void Free();
 
-		i32 width;
-		i32 height;
-		i32 channelCount;
+		u32 width;
+		u32 height;
+		u32 channelCount;
 		std::string filePath;
 		real* pixels;
 	};

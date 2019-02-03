@@ -3,11 +3,11 @@
 
 #include "Track/TrackManager.hpp"
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include "LinearMath/btIDebugDraw.h"
 
 #include <glm/gtx/norm.hpp> // For distance2
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
@@ -314,7 +314,7 @@ namespace flex
 		i32 junctionIndex = -1;
 		i32 curveIndex = -1;
 		TrackState newTrackState = TrackState::_NONE;
-		glm::vec3 newPoint = GetPointOnTrack(trackID, queryDist, distAlongTrack, desiredDir,
+		GetPointOnTrack(trackID, queryDist, distAlongTrack, desiredDir,
 			bReversingDownTrack, &newTrackID, &newDist, &junctionIndex, &curveIndex, &newTrackState, false);
 
 		if (junctionIndex == -1)
