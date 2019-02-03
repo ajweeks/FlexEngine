@@ -3,7 +3,6 @@
 #include "Cameras/TerminalCamera.hpp"
 
 #include "Cameras/CameraManager.hpp"
-#include "Graphics/Renderer.hpp"
 #include "Helpers.hpp" // For MoveTowards
 #include "Player.hpp"
 #include "Scene/BaseScene.hpp"
@@ -45,20 +44,6 @@ namespace flex
 
 		CalculateAxisVectorsFromPitchAndYaw();
 		RecalculateViewProjection();
-
-		if (m_Terminal != nullptr)
-		{
-			std::string str = m_Terminal->str;
-
-			g_Renderer->SetFont(g_Renderer->m_FntUbuntuCondensedWS);
-
-			Transform* termTransform = m_Terminal->GetTransform();
-			glm::vec3 pos = termTransform->GetWorldPosition() +
-				termTransform->GetForward() * 1.1f +
-				termTransform->GetUp() * 0.75f;
-			glm::quat rot = termTransform->GetWorldRotation();
-			g_Renderer->DrawStringWS(str, glm::vec4(1.0f), pos, rot, 0.75f);
-		}
 	}
 
 	void TerminalCamera::SetTerminal(Terminal* terminal)

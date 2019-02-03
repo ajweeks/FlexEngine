@@ -4921,7 +4921,7 @@ namespace flex
 				RESOURCE_LOCATION  "fonts/UbuntuCondensed-Regular-24",
 				RESOURCE_LOCATION  "fonts/SourceCodePro-regular-14",
 				RESOURCE_LOCATION  "fonts/gant-regular-10",
-				RESOURCE_LOCATION  "fonts/gant-regular-64",
+				RESOURCE_LOCATION  "fonts/gant-regular-50",
 			};
 
 			i16 fontSizes[] = {
@@ -4929,7 +4929,7 @@ namespace flex
 				24,
 				14,
 				10,
-				64,
+				50,
 			};
 
 			BitmapFont** fonts[] = {

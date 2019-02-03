@@ -165,8 +165,7 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "1.407, 0.630, 17.208",
-				"rot" : "0.000, -0.000, -0.000"
+				"pos" : "1.407, 0.630, 17.208"
 			},
 			"material" : "Terminal Copper",
 			"collider" : 
@@ -185,7 +184,14 @@
 			},
 			"terminal" : 
 			{
-				"str" : "blah"
+				"str" : "OTEXT E
+DITOR1111
+SD
+WHYHELLOTHERE
+- - == ==--=--=-==
+/\/\\\/\/\//\\\/\/\\\/\/\
+WMMWMWMMWMMWMWM
+            DES       THO        DAH"
 			}
 		}
 	]

@@ -479,6 +479,8 @@ namespace flex
 
 		virtual void Initialize() override;
 		virtual void Destroy() override;
+		virtual void Update() override;
+		virtual void DrawImGuiObjects() override;
 
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
 
@@ -490,7 +492,7 @@ namespace flex
 		void TypeChar(char c);
 		void DeleteChar(); // (backspace)
 		void DeleteCharInFront(); // (delete)
-		void ClearStr();
+		void Clear();
 
 		void MoveCursorToStart();
 		void MoveCursorToStartOfLine();
@@ -501,19 +503,26 @@ namespace flex
 		void MoveCursorUp();
 		void MoveCursorDown();
 
+		void ClampCursorX();
+
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
 		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
 
 	private:
 		friend TerminalCamera;
 
-		std::string str;
-		i32 cursor = 0;
-
-		TerminalCamera* m_Camera = nullptr;
-
-		KeyEventCallback<Terminal> m_KeyEventCallback;
 		EventReply OnKeyEvent(KeyCode keyCode, KeyAction action, i32 modifiers);
+		KeyEventCallback<Terminal> m_KeyEventCallback;
+
+		std::vector<std::string> lines;
+		glm::vec2i cursor;
+
+		// Non-serialized fields:
+		TerminalCamera* m_Camera = nullptr;
+		const i32 m_CharsWide = 20;
+
+		const sec m_CursorBlinkRate = 0.6f;
+		sec m_CursorBlinkTimer = 0.0f;
 
 	};
 

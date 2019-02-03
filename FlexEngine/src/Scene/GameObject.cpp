@@ -3218,7 +3218,8 @@ namespace flex
 
 	Terminal::Terminal(const std::string& name) :
 		GameObject(name, GameObjectType::TERMINAL),
-		m_KeyEventCallback(this, &Terminal::OnKeyEvent)
+		m_KeyEventCallback(this, &Terminal::OnKeyEvent),
+		cursor(0, 0)
 	{
 		m_bInteractable = true;
 
@@ -3247,6 +3248,64 @@ namespace flex
 		g_InputManager->UnbindKeyEventCallback(&m_KeyEventCallback);
 
 		GameObject::Destroy();
+	}
+
+	void Terminal::Update()
+	{
+		m_CursorBlinkTimer += g_DeltaTime;
+		bool bRenderCursor = (m_ObjectInteractingWith != nullptr);
+		if (fmod(m_CursorBlinkTimer, m_CursorBlinkRate) > m_CursorBlinkRate / 2.0f)
+		{
+			bRenderCursor = false;
+		}
+		bool bRenderText = !lines.empty();
+
+		if (bRenderCursor || bRenderText)
+		{
+			BitmapFont* font = g_Renderer->m_FntUbuntuCondensedWS;
+			g_Renderer->SetFont(font);
+
+			const real letterSpacing = 0.75f;
+			const glm::vec3 right = m_Transform.GetRight();
+			const glm::vec3 up = m_Transform.GetUp();
+			const glm::vec3 forward = m_Transform.GetForward();
+
+			glm::vec3 pos = m_Transform.GetWorldPosition() +
+				right * 0.85f +
+				up * 1.65f +
+				forward * 1.05f;
+
+			glm::quat rot = m_Transform.GetWorldRotation();
+			real lineHeight = 0.2f;
+
+			if (bRenderCursor)
+			{
+				real cursorXO = g_Renderer->GetStringWidth(lines[cursor.y].substr(0, cursor.x), font, letterSpacing, false);
+				glm::vec3 cursorPos = pos;
+				// TODO: Get rid of magic number
+				real magic = 0.00355f;
+				cursorPos += right * (cursorXO * -magic) + up * (cursor.y * -lineHeight);
+				g_Renderer->DrawStringWS("|", glm::vec4(1.0f), cursorPos, rot, letterSpacing);
+			}
+
+			if (bRenderText)
+			{
+				for (const std::string& line : lines)
+				{
+					g_Renderer->DrawStringWS(line, glm::vec4(1.0f), pos, rot, letterSpacing);
+					pos.y -= lineHeight;
+				}
+			}
+		}
+	}
+
+	void Terminal::DrawImGuiObjects()
+	{
+		GameObject::DrawImGuiObjects();
+
+		ImGui::Text("Cursor: %d, %d", cursor.x, cursor.y);
+		ImGui::Text("Lines: %d", lines.size());
+		ImGui::Text("Current line len: %d", lines[cursor.y].size());
 	}
 
 	GameObject* Terminal::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
@@ -3294,13 +3353,26 @@ namespace flex
 		UNREFERENCED_PARAMETER(matID);
 
 		JSONObject obj = parentObject.GetObject("terminal");
-		str = obj.GetString("str");
-		cursor = (i32)str.size();
+		std::string str = obj.GetString("str");
+
+		lines = Split(str, '\n');
+
+		MoveCursorToEnd();
 	}
 
 	void Terminal::SerializeUniqueFields(JSONObject& parentObject) const
 	{
 		JSONObject terminalObj = {};
+
+		std::string str = "";
+		for (i32 i = 0; i < (i32)lines.size(); ++i)
+		{
+			str += lines[i];
+			if (i < (i32)lines.size() - 1)
+			{
+				str.push_back('\n');
+			}
+		}
 
 		terminalObj.fields.emplace_back("str", JSONValue(str));
 
@@ -3309,76 +3381,183 @@ namespace flex
 
 	void Terminal::TypeChar(char c)
 	{
-		str.insert(str.begin() + cursor, c);
-		cursor += 1;
+		m_CursorBlinkTimer = 0.0f;
+		std::string& curLine = lines[cursor.y];
+
+		if (c == '\n')
+		{
+			// Move remainder of line onto newline
+			std::string remainderOfLine = curLine.substr(cursor.x);
+			curLine.erase(curLine.begin() + cursor.x, curLine.end());
+			lines.insert(lines.begin() + cursor.y + 1, remainderOfLine);
+			cursor.x = 0;
+			MoveCursorDown();
+		}
+		else
+		{
+			// TODO: Enforce screen width
+			if (cursor.x == (i32)curLine.size())
+			{
+				curLine.push_back(c);
+			}
+			else
+			{
+				curLine.insert(curLine.begin() + cursor.x, c);
+			}
+			MoveCursorRight();
+		}
 	}
 
 	void Terminal::DeleteChar()
 	{
-		if (!str.empty() && cursor > 0)
+		m_CursorBlinkTimer = 0.0f;
+		if (lines.empty() || (cursor.x == 0 && cursor.y == 0))
 		{
-			str.erase(str.begin() + cursor - 1);
-			cursor -= 1;
+			return;
+		}
+
+		if (cursor.x == 0)
+		{
+			if (lines[cursor.y].empty())
+			{
+				lines.erase(lines.begin() + cursor.y);
+				cursor.x = INT_MAX;
+				MoveCursorUp();
+			}
+			else
+			{
+				if (cursor.y > 0)
+				{
+					// Move current line up to previous
+					const i32 prevLinePLen = (i32)lines[cursor.y - 1].size();
+					lines[cursor.y - 1].append(lines[cursor.y]);
+					// TODO: Enforce screen width
+					lines.erase(lines.begin() + cursor.y);
+					cursor.x = prevLinePLen;
+					MoveCursorUp();
+				}
+			}
+		}
+		else
+		{
+			lines[cursor.y].erase(lines[cursor.y].begin() + cursor.x - 1);
+			cursor.x -= 1;
+			ClampCursorX();
 		}
 	}
 
 	void Terminal::DeleteCharInFront()
 	{
-		if (cursor < (i32)str.size())
+		m_CursorBlinkTimer = 0.0f;
+		if (lines.empty() || (cursor.x == (i32)lines[cursor.y].size() && cursor.y == (i32)lines.size() - 1))
 		{
-			str.erase(str.begin() + cursor);
+			return;
+		}
+
+		if (cursor.x == (i32)lines[cursor.y].size())
+		{
+			if (cursor.y < (i32)lines.size() - 1)
+			{
+				// Move next line up into current
+				lines[cursor.y].append(lines[cursor.y + 1]);
+				lines.erase(lines.begin() + cursor.y + 1);
+				// TODO: Enforce screen width
+			}
+		}
+		else
+		{
+			lines[cursor.y].erase(lines[cursor.y].begin() + cursor.x);
 		}
 	}
 
-	void Terminal::ClearStr()
+	void Terminal::Clear()
 	{
-		str.clear();
+		m_CursorBlinkTimer = 0.0f;
+		lines.clear();
+		cursor.x = cursor.y = 0;
 	}
 
 	void Terminal::MoveCursorToStart()
 	{
-		cursor = 0;
+		m_CursorBlinkTimer = 0.0f;
+		cursor.y = 0;
+		cursor.x = 0;
 	}
 
 	void Terminal::MoveCursorToStartOfLine()
 	{
-
+		m_CursorBlinkTimer = 0.0f;
+		cursor.x = 0;
 	}
 
 	void Terminal::MoveCursorToEnd()
 	{
-		cursor = (i32)str.size() - 1;
+		m_CursorBlinkTimer = 0.0f;
+		cursor.y = (i32)lines.size() - 1;
+		cursor.x = (i32)lines[cursor.y].size();
 	}
 
 	void Terminal::MoveCursorToEndOfLine()
 	{
-
+		m_CursorBlinkTimer = 0.0f;
+		cursor.x = (i32)lines[cursor.y].size();
 	}
 
 	void Terminal::MoveCursorLeft()
 	{
-		if (cursor > 0)
+		m_CursorBlinkTimer = 0.0f;
+		if (lines.empty() || (cursor.x == 0 && cursor.y == 0))
 		{
-			cursor -= 1;
+			return;
+		}
+
+		cursor.x -= 1;
+		if (cursor.x < 0 && cursor.y > 0)
+		{
+			cursor.x = INT_MAX;
+			MoveCursorUp();
 		}
 	}
 
 	void Terminal::MoveCursorRight()
 	{
-		if (cursor < (i32)str.size())
+		m_CursorBlinkTimer = 0.0f;
+		if (lines.empty() || (cursor.x == (i32)lines[cursor.y].size() && cursor.y == (i32)lines.size() - 1))
 		{
-			cursor += 1;
+			return;
+		}
+
+		cursor.x += 1;
+		if (cursor.x > (i32)lines[cursor.y].size() && cursor.y < (i32)lines.size() - 1)
+		{
+			cursor.x = 0;
+			MoveCursorDown();
 		}
 	}
 
 	void Terminal::MoveCursorUp()
 	{
-
+		m_CursorBlinkTimer = 0.0f;
+		if (cursor.y > 0)
+		{
+			cursor.y -= 1;
+			ClampCursorX();
+		}
 	}
 
 	void Terminal::MoveCursorDown()
 	{
+		m_CursorBlinkTimer = 0.0f;
+		if (cursor.y < (i32)lines.size() - 1)
+		{
+			cursor.y += 1;
+			ClampCursorX();
+		}
+	}
 
+	void Terminal::ClampCursorX()
+	{
+		cursor.x = glm::clamp(cursor.x, 0, (i32)lines[cursor.y].size());
 	}
 
 	EventReply Terminal::OnKeyEvent(KeyCode keyCode, KeyAction action, i32 modifiers)
