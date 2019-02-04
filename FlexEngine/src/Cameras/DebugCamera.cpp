@@ -25,6 +25,7 @@ namespace flex
 		m_MoveVel(0.0f),
 		m_TurnVel(0.0f)
 	{
+		ResetOrientation();
 	}
 
 	DebugCamera::~DebugCamera()
@@ -35,7 +36,6 @@ namespace flex
 	{
 		if (!m_bInitialized)
 		{
-			ResetOrientation();
 			RecalculateViewProjection();
 
 			g_InputManager->BindMouseButtonCallback(&mouseButtonCallback, 10);

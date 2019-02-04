@@ -846,7 +846,8 @@ namespace flex
 			else
 			{
 				m_bDraggingGizmo = false;
-				if (!m_CurrentlySelectedObjects.empty())
+				if (!g_CameraManager->CurrentCamera()->bIsGameplayCam &&
+					!m_CurrentlySelectedObjects.empty())
 				{
 					HandleGizmoHover();
 				}
