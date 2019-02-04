@@ -3414,7 +3414,7 @@ namespace flex
 		}
 	}
 
-	void Terminal::DeleteChar()
+	void Terminal::DeleteChar(bool bDeleteUpToNextBreak /* = false */)
 	{
 		m_CursorBlinkTimer = 0.0f;
 		if (lines.empty() || (cursor.x == 0 && cursor.y == 0))
@@ -3422,60 +3422,71 @@ namespace flex
 			return;
 		}
 
+		std::string& curLine = lines[cursor.y];
+
 		if (cursor.x == 0)
 		{
-			if (lines[cursor.y].empty())
+			if (cursor.y > 0)
 			{
+				// Move current line up to previous
+				const i32 prevLinePLen = (i32)lines[cursor.y - 1].size();
+				lines[cursor.y - 1].append(curLine);
+				// TODO: Enforce screen width
 				lines.erase(lines.begin() + cursor.y);
-				cursor.x = INT_MAX;
+				cursor.x = prevLinePLen;
 				MoveCursorUp();
 				cursorMaxX = cursor.x;
-			}
-			else
-			{
-				if (cursor.y > 0)
-				{
-					// Move current line up to previous
-					const i32 prevLinePLen = (i32)lines[cursor.y - 1].size();
-					lines[cursor.y - 1].append(lines[cursor.y]);
-					// TODO: Enforce screen width
-					lines.erase(lines.begin() + cursor.y);
-					cursor.x = prevLinePLen;
-					MoveCursorUp();
-					cursorMaxX = cursor.x;
-				}
 			}
 		}
 		else
 		{
-			lines[cursor.y].erase(lines[cursor.y].begin() + cursor.x - 1);
-			cursor.x -= 1;
+			if (bDeleteUpToNextBreak)
+			{
+				i32 newX = glm::max(GetIdxOfPrevBreak(cursor.y, cursor.x), 0);
+				curLine.erase(curLine.begin() + newX, curLine.begin() + cursor.x);
+				cursor.x = newX;
+			}
+			else
+			{
+				curLine.erase(curLine.begin() + cursor.x - 1);
+				cursor.x -= 1;
+			}
 			cursorMaxX = cursor.x;
 			ClampCursorX();
 		}
 	}
 
-	void Terminal::DeleteCharInFront()
+	void Terminal::DeleteCharInFront(bool bDeleteUpToNextBreak /* = false */)
 	{
 		m_CursorBlinkTimer = 0.0f;
-		if (lines.empty() || (cursor.x == (i32)lines[cursor.y].size() && cursor.y == (i32)lines.size() - 1))
+		std::string& curLine = lines[cursor.y];
+		if (lines.empty() || (cursor.x == (i32)curLine.size() && cursor.y == (i32)lines.size() - 1))
 		{
 			return;
 		}
 
-		if (cursor.x == (i32)lines[cursor.y].size())
+		if (cursor.x == (i32)curLine.size())
 		{
 			if (cursor.y < (i32)lines.size() - 1)
 			{
 				// Move next line up into current
-				lines[cursor.y].append(lines[cursor.y + 1]);
+				curLine.append(lines[cursor.y + 1]);
 				lines.erase(lines.begin() + cursor.y + 1);
 				// TODO: Enforce screen width
 			}
 		}
 		else
 		{
-			lines[cursor.y].erase(lines[cursor.y].begin() + cursor.x);
+
+			if (bDeleteUpToNextBreak)
+			{
+				i32 newX = GetIdxOfNextBreak(cursor.y, cursor.x);
+				curLine.erase(curLine.begin() + cursor.x, curLine.begin() + newX);
+			}
+			else
+			{
+				curLine.erase(curLine.begin() + cursor.x);
+			}
 		}
 	}
 
@@ -3533,15 +3544,7 @@ namespace flex
 			}
 			else
 			{
-				while (cursor.x > 0 && !SkipOverChar(lines[cursor.y].at(cursor.x - 1)))
-				{
-					cursor.x -= 1;
-				}
-
-				while (cursor.x > 0 && SkipOverChar(lines[cursor.y].at(cursor.x - 1)))
-				{
-					cursor.x -= 1;
-				}
+				cursor.x = glm::max(GetIdxOfPrevBreak(cursor.y, cursor.x), 0);
 			}
 		}
 		else
@@ -3575,15 +3578,7 @@ namespace flex
 			}
 			else
 			{
-				while (cursor.x < (i32)curLine.size() && !SkipOverChar(curLine.at(cursor.x)))
-				{
-					cursor.x += 1;
-				}
-
-				while (cursor.x < (i32)curLine.size() && SkipOverChar(curLine.at(cursor.x)))
-				{
-					cursor.x += 1;
-				}
+				cursor.x = GetIdxOfNextBreak(cursor.y, cursor.x);
 			}
 		}
 		else
@@ -3646,6 +3641,42 @@ namespace flex
 		return false;
 	}
 
+	i32 Terminal::GetIdxOfNextBreak(i32 y, i32 startX)
+	{
+		std::string& line = lines[y];
+
+		i32 result = startX;
+		while (result < (i32)line.size() && !SkipOverChar(line.at(result)))
+		{
+			result += 1;
+		}
+
+		while (result < (i32)line.size() && SkipOverChar(line.at(result)))
+		{
+			result += 1;
+		}
+
+		return result;
+	}
+
+	i32 Terminal::GetIdxOfPrevBreak(i32 y, i32 startX)
+	{
+		std::string& line = lines[y];
+
+		i32 result = startX;
+		while (result > 0 && !SkipOverChar(line.at(result - 1)))
+		{
+			result -= 1;
+		}
+
+		while (result > 0 && SkipOverChar(line.at(result - 1)))
+		{
+			result -= 1;
+		}
+
+		return result - 1;
+	}
+
 	EventReply Terminal::OnKeyEvent(KeyCode keyCode, KeyAction action, i32 modifiers)
 	{
 		if (m_Camera != nullptr)
@@ -3699,12 +3730,12 @@ namespace flex
 				}
 				if (keyCode == KeyCode::KEY_BACKSPACE)
 				{
-					DeleteChar();
+					DeleteChar(bCtrlDown);
 					return EventReply::CONSUMED;
 				}
 				if (keyCode == KeyCode::KEY_DELETE)
 				{
-					DeleteCharInFront();
+					DeleteCharInFront(bCtrlDown);
 					return EventReply::CONSUMED;
 				}
 				if (keyCode == KeyCode::KEY_HOME)

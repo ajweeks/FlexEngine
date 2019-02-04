@@ -490,8 +490,8 @@ namespace flex
 
 	protected:
 		void TypeChar(char c);
-		void DeleteChar(); // (backspace)
-		void DeleteCharInFront(); // (delete)
+		void DeleteChar(bool bDeleteUpToNextBreak = false); // (backspace)
+		void DeleteCharInFront(bool bDeleteUpToNextBreak = false); // (delete)
 		void Clear();
 
 		void MoveCursorToStart();
@@ -512,6 +512,8 @@ namespace flex
 		friend TerminalCamera;
 
 		bool SkipOverChar(char c);
+		i32 GetIdxOfNextBreak(i32 y, i32 startX);
+		i32 GetIdxOfPrevBreak(i32 y, i32 startX);
 
 		EventReply OnKeyEvent(KeyCode keyCode, KeyAction action, i32 modifiers);
 		KeyEventCallback<Terminal> m_KeyEventCallback;
@@ -524,7 +526,7 @@ namespace flex
 
 		// Non-serialized fields:
 		TerminalCamera* m_Camera = nullptr;
-		const i32 m_CharsWide = 20;
+		const i32 m_CharsWide = 45;
 
 		const sec m_CursorBlinkRate = 0.6f;
 		sec m_CursorBlinkTimer = 0.0f;
