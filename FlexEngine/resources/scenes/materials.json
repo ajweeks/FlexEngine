@@ -345,6 +345,14 @@
 			"const metallic" : 1.000000,
 			"const roughness" : 0.170000,
 			"const ao" : 1.000000
+		},
+		{
+			"name" : "terminal display",
+			"shader" : "pbr",
+			"const albedo" : "0.004, 0.004, 0.006",
+			"const metallic" : 0.000000,
+			"const roughness" : 0.000000,
+			"const ao" : 0.000000
 		}
 	]
 }

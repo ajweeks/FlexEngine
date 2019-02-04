@@ -4,16 +4,6 @@
 	"objects" : 
 	[
 		{
-			"name" : "sphere",
-			"type" : "object",
-			"visible" : true,
-			"transform" : 
-			{
-			},
-			"mesh" : "",
-			"material" : "pbr chrome"
-		},
-		{
 			"name" : "ground plane",
 			"type" : "object",
 			"visible" : true,
@@ -165,7 +155,7 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "1.407, 0.630, 17.208"
+				"pos" : "1.407, 0.630, 17.228"
 			},
 			"material" : "Terminal Copper",
 			"collider" : 
@@ -185,17 +175,17 @@
 			"terminal" : 
 			{
 				"str" : "int a = i1;
-void main()asdjfklsdjfklsdfjklsdfjklsdfjklsdfjk
+void main()asdjfklsdjfklsdfjklsdfjklsdfjklsdfj
 {
-thisisaverylonglinewithnospacestotestmymagicnum
-it seems to work very very well  even withtabs!
+thisisaverylonglinewithnospacestotestamagicnu
+it seems to work very  well  even  with  tabs
   a += 1;
   b = a*a;
 }
 o1 = a;es
 asd
 asd
-asd
+asd==
 sad
 asd
 -=asd
@@ -203,9 +193,24 @@ sad
 asd
 asd
 asd
-ads
-asd"
-			}
+---------------------------------------------
+r0: 1   r1: 13  r2: 0  r3: 1             [x]"
+			},
+			"children" : 
+			[
+				{
+					"name" : "screen",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "0.000, 0.933, 0.484",
+						"scale" : "1.760, 1.790, 1.000"
+					},
+					"mesh" : "cube",
+					"material" : "terminal display"
+				}
+			]
 		}
 	]
 }

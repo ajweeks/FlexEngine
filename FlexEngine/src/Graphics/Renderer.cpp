@@ -422,8 +422,8 @@ namespace flex
 				m_PostProcessSettings.brightness.b / maxBrightness, 1));
 
 			static const char* offsetStr = "Offset (RGB)";
-			real minOffset = -0.35f;
-			real maxOffset = 0.35f;
+			real minOffset = -0.065f;
+			real maxOffset = 0.065f;
 			ImGui::SliderFloat3(offsetStr, &m_PostProcessSettings.offset.r, minOffset, maxOffset);
 			ImGui::SameLine();
 			ImGui::ColorButton("##2", ImVec4(
@@ -432,7 +432,7 @@ namespace flex
 				(m_PostProcessSettings.offset.b - minOffset) / (maxOffset - minOffset), 1));
 
 			static const char* saturationStr = "Saturation";
-			const real maxSaturation = 2.0f;
+			const real maxSaturation = 1.5f;
 			ImGui::SliderFloat(saturationStr, &m_PostProcessSettings.saturation, 0.0f, maxSaturation);
 			ImGui::SameLine();
 			ImGui::ColorButton("##3", ImVec4(
