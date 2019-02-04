@@ -58,7 +58,7 @@ namespace flex
 		return kerningVec;
 	}
 
-	i16 BitmapFont::GetFontSize() const
+	i16 BitmapFont::GetSize() const
 	{
 		return m_FontSize;
 	}

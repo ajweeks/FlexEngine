@@ -498,8 +498,8 @@ namespace flex
 		void MoveCursorToStartOfLine();
 		void MoveCursorToEnd();
 		void MoveCursorToEndOfLine();
-		void MoveCursorLeft();
-		void MoveCursorRight();
+		void MoveCursorLeft(bool bSkipToNextBreak = false);
+		void MoveCursorRight(bool bSkipToNextBreak = false);
 		void MoveCursorUp();
 		void MoveCursorDown();
 
@@ -511,11 +511,16 @@ namespace flex
 	private:
 		friend TerminalCamera;
 
+		bool SkipOverChar(char c);
+
 		EventReply OnKeyEvent(KeyCode keyCode, KeyAction action, i32 modifiers);
 		KeyEventCallback<Terminal> m_KeyEventCallback;
 
 		std::vector<std::string> lines;
 		glm::vec2i cursor;
+		// Keeps track of the cursor x to be able to position the cursor correctly
+		// after moving from a long line, over a short line, onto a longer line again
+		i32 cursorMaxX = 0;
 
 		// Non-serialized fields:
 		TerminalCamera* m_Camera = nullptr;
@@ -523,6 +528,8 @@ namespace flex
 
 		const sec m_CursorBlinkRate = 0.6f;
 		sec m_CursorBlinkTimer = 0.0f;
+
+
 
 	};
 

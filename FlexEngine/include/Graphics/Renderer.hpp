@@ -179,10 +179,9 @@ namespace flex
 		static const u32 MAX_POINT_LIGHT_COUNT = 4;
 
 		BitmapFont* m_FntUbuntuCondensedSS = nullptr;
-		BitmapFont* m_FntUbuntuCondensedWS = nullptr;
+		BitmapFont* m_FntSourceCodeProWS = nullptr;
 		BitmapFont* m_FntSourceCodeProSS = nullptr;
 		BitmapFont* m_FntGantSS = nullptr;
-		BitmapFont* m_FntGantWS = nullptr;
 
 	protected:
 		std::vector<PointLight*> m_PointLights;

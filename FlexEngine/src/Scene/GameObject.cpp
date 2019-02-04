@@ -19,6 +19,7 @@ IGNORE_WARNINGS_POP
 #include "Audio/AudioManager.hpp"
 #include "Cameras/TerminalCamera.hpp"
 #include "FlexEngine.hpp"
+#include "Graphics/BitmapFont.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
@@ -3262,7 +3263,7 @@ namespace flex
 
 		if (bRenderCursor || bRenderText)
 		{
-			BitmapFont* font = g_Renderer->m_FntUbuntuCondensedWS;
+			BitmapFont* font = g_Renderer->m_FntSourceCodeProWS;
 			g_Renderer->SetFont(font);
 
 			const real letterSpacing = 0.75f;
@@ -3271,19 +3272,19 @@ namespace flex
 			const glm::vec3 forward = m_Transform.GetForward();
 
 			glm::vec3 pos = m_Transform.GetWorldPosition() +
-				right * 0.85f +
+				right * 0.80f +
 				up * 1.65f +
-				forward * 1.05f;
+				forward * 1.02f;
 
 			glm::quat rot = m_Transform.GetWorldRotation();
-			real lineHeight = 0.2f;
+			real lineHeight = 0.075f;
 
 			if (bRenderCursor)
 			{
 				real cursorXO = g_Renderer->GetStringWidth(lines[cursor.y].substr(0, cursor.x), font, letterSpacing, false);
 				glm::vec3 cursorPos = pos;
 				// TODO: Get rid of magic number
-				real magic = 0.00355f;
+				real magic = 0.00376f / 24.0f * font->GetSize();
 				cursorPos += right * (cursorXO * -magic) + up * (cursor.y * -lineHeight);
 				g_Renderer->DrawStringWS("|", glm::vec4(1.0f), cursorPos, rot, letterSpacing);
 			}
@@ -3304,6 +3305,7 @@ namespace flex
 		GameObject::DrawImGuiObjects();
 
 		ImGui::Text("Cursor: %d, %d", cursor.x, cursor.y);
+		ImGui::Text("Max x: %d", cursorMaxX);
 		ImGui::Text("Lines: %d", lines.size());
 		ImGui::Text("Current line len: %d", lines[cursor.y].size());
 	}
@@ -3390,8 +3392,11 @@ namespace flex
 			std::string remainderOfLine = curLine.substr(cursor.x);
 			curLine.erase(curLine.begin() + cursor.x, curLine.end());
 			lines.insert(lines.begin() + cursor.y + 1, remainderOfLine);
+			m_CursorBlinkTimer = 0.0f;
+			cursor.y += 1;
 			cursor.x = 0;
-			MoveCursorDown();
+			ClampCursorX();
+			cursorMaxX = cursor.x;
 		}
 		else
 		{
@@ -3405,6 +3410,7 @@ namespace flex
 				curLine.insert(curLine.begin() + cursor.x, c);
 			}
 			MoveCursorRight();
+			cursorMaxX = cursor.x;
 		}
 	}
 
@@ -3423,6 +3429,7 @@ namespace flex
 				lines.erase(lines.begin() + cursor.y);
 				cursor.x = INT_MAX;
 				MoveCursorUp();
+				cursorMaxX = cursor.x;
 			}
 			else
 			{
@@ -3435,6 +3442,7 @@ namespace flex
 					lines.erase(lines.begin() + cursor.y);
 					cursor.x = prevLinePLen;
 					MoveCursorUp();
+					cursorMaxX = cursor.x;
 				}
 			}
 		}
@@ -3442,6 +3450,7 @@ namespace flex
 		{
 			lines[cursor.y].erase(lines[cursor.y].begin() + cursor.x - 1);
 			cursor.x -= 1;
+			cursorMaxX = cursor.x;
 			ClampCursorX();
 		}
 	}
@@ -3474,7 +3483,7 @@ namespace flex
 	{
 		m_CursorBlinkTimer = 0.0f;
 		lines.clear();
-		cursor.x = cursor.y = 0;
+		cursor.x = cursor.y = cursorMaxX = 0;
 	}
 
 	void Terminal::MoveCursorToStart()
@@ -3482,12 +3491,14 @@ namespace flex
 		m_CursorBlinkTimer = 0.0f;
 		cursor.y = 0;
 		cursor.x = 0;
+		cursorMaxX = cursor.x;
 	}
 
 	void Terminal::MoveCursorToStartOfLine()
 	{
 		m_CursorBlinkTimer = 0.0f;
 		cursor.x = 0;
+		cursorMaxX = cursor.x;
 	}
 
 	void Terminal::MoveCursorToEnd()
@@ -3495,15 +3506,17 @@ namespace flex
 		m_CursorBlinkTimer = 0.0f;
 		cursor.y = (i32)lines.size() - 1;
 		cursor.x = (i32)lines[cursor.y].size();
+		cursorMaxX = cursor.x;
 	}
 
 	void Terminal::MoveCursorToEndOfLine()
 	{
 		m_CursorBlinkTimer = 0.0f;
 		cursor.x = (i32)lines[cursor.y].size();
+		cursorMaxX = cursor.x;
 	}
 
-	void Terminal::MoveCursorLeft()
+	void Terminal::MoveCursorLeft(bool bSkipToNextBreak /* = false */)
 	{
 		m_CursorBlinkTimer = 0.0f;
 		if (lines.empty() || (cursor.x == 0 && cursor.y == 0))
@@ -3511,36 +3524,93 @@ namespace flex
 			return;
 		}
 
-		cursor.x -= 1;
-		if (cursor.x < 0 && cursor.y > 0)
+		if (bSkipToNextBreak)
 		{
-			cursor.x = INT_MAX;
-			MoveCursorUp();
+			if (cursor.x == 0  && cursor.y > 0)
+			{
+				cursor.x = INT_MAX;
+				MoveCursorUp();
+			}
+			else
+			{
+				while (cursor.x > 0 && !SkipOverChar(lines[cursor.y].at(cursor.x - 1)))
+				{
+					cursor.x -= 1;
+				}
+
+				while (cursor.x > 0 && SkipOverChar(lines[cursor.y].at(cursor.x - 1)))
+				{
+					cursor.x -= 1;
+				}
+			}
 		}
+		else
+		{
+			cursor.x -= 1;
+			if (cursor.x < 0 && cursor.y > 0)
+			{
+				cursor.x = INT_MAX;
+				MoveCursorUp();
+			}
+		}
+		cursorMaxX = cursor.x;
 	}
 
-	void Terminal::MoveCursorRight()
+	void Terminal::MoveCursorRight(bool bSkipToNextBreak /* = false */)
 	{
 		m_CursorBlinkTimer = 0.0f;
-		if (lines.empty() || (cursor.x == (i32)lines[cursor.y].size() && cursor.y == (i32)lines.size() - 1))
+		std::string& curLine = lines[cursor.y];
+		if (lines.empty() || (cursor.x == (i32)curLine.size() && cursor.y == (i32)lines.size() - 1))
 		{
 			return;
 		}
 
-		cursor.x += 1;
-		if (cursor.x > (i32)lines[cursor.y].size() && cursor.y < (i32)lines.size() - 1)
+		if (bSkipToNextBreak)
 		{
-			cursor.x = 0;
-			MoveCursorDown();
+			if (cursor.x == (i32)curLine.size() && cursor.y < (i32)lines.size() - 1)
+			{
+				cursor.x = 0;
+				cursorMaxX = cursor.x;
+				MoveCursorDown();
+			}
+			else
+			{
+				while (cursor.x < (i32)curLine.size() && !SkipOverChar(curLine.at(cursor.x)))
+				{
+					cursor.x += 1;
+				}
+
+				while (cursor.x < (i32)curLine.size() && SkipOverChar(curLine.at(cursor.x)))
+				{
+					cursor.x += 1;
+				}
+			}
 		}
+		else
+		{
+			cursor.x += 1;
+			if (cursor.x > (i32)curLine.size() && cursor.y < (i32)lines.size() - 1)
+			{
+				cursor.x = 0;
+				cursorMaxX = 0;
+				MoveCursorDown();
+			}
+		}
+		cursorMaxX = cursor.x;
 	}
 
 	void Terminal::MoveCursorUp()
 	{
 		m_CursorBlinkTimer = 0.0f;
-		if (cursor.y > 0)
+		if (cursor.y == 0)
+		{
+			cursor.x = 0;
+			cursorMaxX = cursor.x;
+		}
+		else
 		{
 			cursor.y -= 1;
+			cursor.x = glm::min(glm::max(cursor.x, cursorMaxX), (i32)lines[cursor.y].size());
 			ClampCursorX();
 		}
 	}
@@ -3548,9 +3618,15 @@ namespace flex
 	void Terminal::MoveCursorDown()
 	{
 		m_CursorBlinkTimer = 0.0f;
-		if (cursor.y < (i32)lines.size() - 1)
+		if (cursor.y == (i32)lines.size() - 1)
+		{
+			cursor.x = (i32)lines[cursor.y].size();
+			cursorMaxX = cursor.x;
+		}
+		else
 		{
 			cursor.y += 1;
+			cursor.x = glm::min(glm::max(cursor.x, cursorMaxX), (i32)lines[cursor.y].size());
 			ClampCursorX();
 		}
 	}
@@ -3560,11 +3636,21 @@ namespace flex
 		cursor.x = glm::clamp(cursor.x, 0, (i32)lines[cursor.y].size());
 	}
 
+	bool Terminal::SkipOverChar(char c)
+	{
+		if (isalpha(c) || isdigit(c))
+		{
+			return true;
+		}
+
+		return false;
+	}
+
 	EventReply Terminal::OnKeyEvent(KeyCode keyCode, KeyAction action, i32 modifiers)
 	{
 		if (m_Camera != nullptr)
 		{
-			if (action == KeyAction::PRESS)
+			if (action == KeyAction::PRESS || action == KeyAction::REPEAT)
 			{
 				const bool bCapsLock = (modifiers & (i32)InputModifier::CAPS_LOCK) > 0;
 				const bool bShiftDown = (modifiers & (i32)InputModifier::SHIFT) > 0;
@@ -3578,10 +3664,19 @@ namespace flex
 				if (kC >= (i32)KeyCode::KEY_APOSTROPHE && kC <= (i32)KeyCode::KEY_RIGHT_BRACKET)
 				{
 					char c = KeyCodeStrings[(i32)keyCode][0];
-					// TODO: Handle symbols
-					if (bShiftDown || bCapsLock)
+					if (isalpha(c))
 					{
-						c = (char)toupper(c);
+						if (!bShiftDown && !bCapsLock)
+						{
+							c = (char)tolower(c);
+						}
+					}
+					else
+					{
+						if (bShiftDown)
+						{
+							c = InputManager::GetShiftModifiedKeyCode(c);
+						}
 					}
 					TypeChar(c);
 					return EventReply::CONSUMED;
@@ -3638,12 +3733,12 @@ namespace flex
 				}
 				if (keyCode == KeyCode::KEY_LEFT)
 				{
-					MoveCursorLeft();
+					MoveCursorLeft(bCtrlDown);
 					return EventReply::CONSUMED;
 				}
 				if (keyCode == KeyCode::KEY_RIGHT)
 				{
-					MoveCursorRight();
+					MoveCursorRight(bCtrlDown);
 					return EventReply::CONSUMED;
 				}
 				if (keyCode == KeyCode::KEY_UP)

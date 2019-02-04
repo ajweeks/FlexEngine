@@ -1982,7 +1982,7 @@ namespace flex
 				PhysicsDebugRender();
 			}
 
-			SetFont(m_FntGantWS);
+			SetFont(m_FntSourceCodeProWS);
 			real s = g_SecElapsedSinceProgramStart * 3.5f;
 			DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(1.0f), 1.0f), glm::vec3(2.0f, 1.5f, 0.0f), QUAT_UNIT, 0.0f);
 			DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.95f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 1) * 0.05f, 1.5f + sin(s + 0.3f * 1) * 0.05f, -0.075f * 1), QUAT_UNIT, 0.0f);
@@ -3708,7 +3708,7 @@ namespace flex
 			for (BitmapFont* font : m_FontsSS)
 			{
 				real textScale = glm::max(2.0f / (real)frameBufferSize.x, 2.0f / (real)frameBufferSize.y) *
-					(font->GetFontSize() / 12.0f);
+					(font->GetSize() / 12.0f);
 
 				font->m_BufferStart = (i32)(textVertices.size());
 				font->m_BufferSize = 0;
@@ -3850,7 +3850,7 @@ namespace flex
 			for (BitmapFont* font : m_FontsWS)
 			{
 				real textScale = glm::max(2.0f / (real)frameBufferSize.x, 2.0f / (real)frameBufferSize.y) *
-					(font->GetFontSize() / 12.0f);
+					(font->GetSize() / 12.0f);
 
 				font->m_BufferStart = (i32)(textVertices.size());
 				font->m_BufferSize = 0;
@@ -4909,35 +4909,31 @@ namespace flex
 			// TODO: Save these strings in a config file?
 			std::string fontFilePaths[] = {
 				RESOURCE_LOCATION  "fonts/UbuntuCondensed-Regular.ttf",
-				RESOURCE_LOCATION  "fonts/UbuntuCondensed-Regular.ttf",
 				RESOURCE_LOCATION  "fonts/SourceCodePro-regular.ttf",
-				RESOURCE_LOCATION  "fonts/gant.ttf",
+				RESOURCE_LOCATION  "fonts/SourceCodePro-regular.ttf",
 				RESOURCE_LOCATION  "fonts/gant.ttf",
 			};
 
 			std::string extension = ".png";
 			std::string renderedTextureFilePaths[] = {
 				RESOURCE_LOCATION  "fonts/UbuntuCondensed-Regular-24",
-				RESOURCE_LOCATION  "fonts/UbuntuCondensed-Regular-24",
+				RESOURCE_LOCATION  "fonts/SourceCodePro-regular-16",
 				RESOURCE_LOCATION  "fonts/SourceCodePro-regular-14",
 				RESOURCE_LOCATION  "fonts/gant-regular-10",
-				RESOURCE_LOCATION  "fonts/gant-regular-50",
 			};
 
 			i16 fontSizes[] = {
 				24,
-				24,
+				16,
 				14,
 				10,
-				50,
 			};
 
 			BitmapFont** fonts[] = {
 				&m_FntUbuntuCondensedSS,
-				&m_FntUbuntuCondensedWS,
+				&m_FntSourceCodeProWS,
 				&m_FntSourceCodeProSS,
 				&m_FntGantSS,
-				&m_FntGantWS,
 			};
 
 			bool bScreenSpace[] = {
@@ -4945,7 +4941,6 @@ namespace flex
 				false,
 				true,
 				true,
-				false,
 			};
 
 			std::string DPIStr = FloatToString(g_Monitor->DPI.x, 0) + "DPI";

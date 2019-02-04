@@ -42,7 +42,7 @@ namespace flex
 		FontMetric* GetMetric(wchar_t character);
 		void SetMetric(const FontMetric& metric, wchar_t character);
 
-		i16 GetFontSize() const;
+		i16 GetSize() const;
 		bool UseKerning() const;
 
 		void SetTextureSize(const glm::vec2i& texSize);

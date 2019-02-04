@@ -101,6 +101,8 @@ namespace flex
 
 		void DrawImGuiKeyMapper(bool* bOpen);
 
+		static char GetShiftModifiedKeyCode(char c);
+
 		static i32 s_JoystickDisconnected;
 
 	private:
