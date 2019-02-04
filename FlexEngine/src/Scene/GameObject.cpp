@@ -3235,6 +3235,8 @@ namespace flex
 		{
 			PrintWarn("Failed to load terminal mesh!\n");
 		}
+
+		m_Transform.UpdateParentTransform();
 	}
 
 	void Terminal::Initialize()
@@ -3272,9 +3274,9 @@ namespace flex
 			const glm::vec3 forward = m_Transform.GetForward();
 
 			glm::vec3 pos = m_Transform.GetWorldPosition() +
-				right * 0.80f +
+				right * 0.8f +
 				up * 1.65f +
-				forward * 1.02f;
+				forward * 0.992f;
 
 			glm::quat rot = m_Transform.GetWorldRotation();
 			real lineHeight = 0.075f;

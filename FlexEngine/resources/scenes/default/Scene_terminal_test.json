@@ -155,7 +155,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "1.407, 0.630, 17.228"
+				"pos" : "2.064, 0.630, 7.183",
+				"rot" : "-3.142, -0.354, -3.142"
 			},
 			"material" : "Terminal Copper",
 			"collider" : 
@@ -166,9 +167,9 @@
 			},
 			"rigid body" : 
 			{
-				"mass" : 39.409000,
-				"kinematic" : false,
-				"static" : false,
+				"mass" : 0.000000,
+				"kinematic" : true,
+				"static" : true,
 				"mask" : 1,
 				"group" : 1
 			},

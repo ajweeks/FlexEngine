@@ -66,9 +66,9 @@ namespace flex
 			m_TargetPos = terminalTransform->GetWorldPosition() +
 				terminalTransform->GetUp() * 1.0f +
 				terminalTransform->GetForward() * 4.0f;
-			glm::vec3 dPos = m_TargetPos - terminalTransform->GetWorldPosition();
+			glm::vec3 targetForward = glm::normalize(terminalTransform->GetWorldPosition() - m_TargetPos);
 			m_TargetPitch = 0.0f;
-			m_TargetYaw = -atan2(dPos.z, dPos.x);
+			m_TargetYaw = atan2(targetForward.z, targetForward.x);
 			m_bTransitioningIn = true;
 		}
 	}

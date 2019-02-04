@@ -255,10 +255,11 @@ namespace flex
 
 				if (nearestInteractable != nullptr)
 				{
-					glm::vec3 c = nearestInteractable->GetTransform()->GetWorldPosition();
-					glm::vec3 v1 = c + glm::vec3(1.0f, 0.0f, 1.0f);
-					glm::vec3 v2 = c + glm::vec3(-1.0f, 0.0f, 1.0f);
-					glm::vec3 v3 = c + glm::vec3(0.0f, 0.0f, -1.0f);
+					Transform* t = nearestInteractable->GetTransform();
+					glm::vec3 c = t->GetWorldPosition();
+					glm::vec3 v1 = c + t->GetRight() + t->GetForward();
+					glm::vec3 v2 = c - t->GetRight() + t->GetForward();
+					glm::vec3 v3 = c - t->GetForward();
 					debugDrawer->drawTriangle(ToBtVec3(v1), ToBtVec3(v2), ToBtVec3(v3), btVector3(0.9f, 0.3f, 0.2f), 1.0f);
 					glm::vec3 o(0.0f, sin(g_SecElapsedSinceProgramStart) + 1.0f, 0.0f);
 					debugDrawer->drawTriangle(ToBtVec3(v1 + o), ToBtVec3(v2 + o), ToBtVec3(v3 + o), btVector3(0.9f, 0.3f, 0.2f), 1.0f);

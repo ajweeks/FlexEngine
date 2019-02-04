@@ -315,8 +315,9 @@ namespace flex
 			struct TextVertex3D
 			{
 				glm::vec3 pos;
-				glm::vec2 uv;
 				glm::vec4 color;
+				glm::vec3 tangent;
+				glm::vec2 uv;
 				glm::vec4 charSizePixelsCharSizeNorm; // RG: char size in pixels, BA: char size in [0, 1] in screenspace
 				i32 channel; // uses extra ints slot
 			};

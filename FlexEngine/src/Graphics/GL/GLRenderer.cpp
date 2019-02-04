@@ -3561,14 +3561,15 @@ namespace flex
 				i32 bufferSize = 500;
 				glBufferData(GL_ARRAY_BUFFER, bufferSize, NULL, GL_DYNAMIC_DRAW);
 
-				glEnableVertexAttribArray(0);
-				glEnableVertexAttribArray(1);
-				glEnableVertexAttribArray(2);
-				glEnableVertexAttribArray(3);
-				glEnableVertexAttribArray(4);
 
 				if (bScreenSpace)
 				{
+					glEnableVertexAttribArray(0);
+					glEnableVertexAttribArray(1);
+					glEnableVertexAttribArray(2);
+					glEnableVertexAttribArray(3);
+					glEnableVertexAttribArray(4);
+
 					glVertexAttribPointer(0, (GLint)2, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex2D), (GLvoid*)offsetof(TextVertex2D, pos));
 					glVertexAttribPointer(1, (GLint)4, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex2D), (GLvoid*)offsetof(TextVertex2D, color));
 					glVertexAttribPointer(2, (GLint)2, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex2D), (GLvoid*)offsetof(TextVertex2D, uv));
@@ -3577,11 +3578,19 @@ namespace flex
 				}
 				else
 				{
+					glEnableVertexAttribArray(0);
+					glEnableVertexAttribArray(1);
+					glEnableVertexAttribArray(2);
+					glEnableVertexAttribArray(3);
+					glEnableVertexAttribArray(4);
+					glEnableVertexAttribArray(5);
+
 					glVertexAttribPointer(0, (GLint)3, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex3D), (GLvoid*)offsetof(TextVertex3D, pos));
 					glVertexAttribPointer(1, (GLint)4, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex3D), (GLvoid*)offsetof(TextVertex3D, color));
-					glVertexAttribPointer(2, (GLint)2, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex3D), (GLvoid*)offsetof(TextVertex3D, uv));
-					glVertexAttribPointer(3, (GLint)4, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex3D), (GLvoid*)offsetof(TextVertex3D, charSizePixelsCharSizeNorm));
-					glVertexAttribIPointer(4, (GLint)1, GL_INT, (GLsizei)sizeof(TextVertex3D), (GLvoid*)offsetof(TextVertex3D, channel));
+					glVertexAttribPointer(2, (GLint)3, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex3D), (GLvoid*)offsetof(TextVertex3D, tangent));
+					glVertexAttribPointer(3, (GLint)2, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex3D), (GLvoid*)offsetof(TextVertex3D, uv));
+					glVertexAttribPointer(4, (GLint)4, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex3D), (GLvoid*)offsetof(TextVertex3D, charSizePixelsCharSizeNorm));
+					glVertexAttribIPointer(5, (GLint)1, GL_INT, (GLsizei)sizeof(TextVertex3D), (GLvoid*)offsetof(TextVertex3D, channel));
 				}
 			}
 
@@ -3859,6 +3868,8 @@ namespace flex
 				{
 					std::string currentStr = textCache.str;
 
+					const glm::vec3 tangent = glm::rotate(textCache.rot, VEC3_RIGHT);
+
 					real totalAdvanceX = 0;
 
 					char prevChar = ' ';
@@ -3878,7 +3889,9 @@ namespace flex
 									continue;
 								}
 
-								glm::vec3 pos = textCache.pos + glm::vec3(totalAdvanceX + metric->offsetX, -metric->offsetY, 0.0f) * textScale;
+								glm::vec3 pos = textCache.pos +
+									tangent * (totalAdvanceX + metric->offsetX) * textScale +
+									VEC3_UP * (real)(-metric->offsetY) * textScale;
 
 								if (font->UseKerning())
 								{
@@ -3897,10 +3910,11 @@ namespace flex
 
 								i32 texChannel = (i32)metric->channel;
 
-								TextVertex3D vert{};
+								TextVertex3D vert = {};
 								vert.pos = pos;
-								vert.uv = metric->texCoord;
 								vert.color = textCache.color;
+								vert.tangent = tangent;
+								vert.uv = metric->texCoord;
 								vert.charSizePixelsCharSizeNorm = charSizePixelsCharSizeNorm;
 								vert.channel = texChannel;
 
