@@ -112,7 +112,7 @@
 			"shader" : "pbr",
 			"const albedo" : "0.390, 0.350, 0.320",
 			"const metallic" : 0.000000,
-			"const roughness" : 0.100000,
+			"const roughness" : 0.090000,
 			"const ao" : 1.000000
 		},
 		{
@@ -200,7 +200,7 @@
 			"shader" : "pbr",
 			"const albedo" : "0.388, 0.349, 0.322",
 			"const metallic" : 1.000000,
-			"const roughness" : 1.000000,
+			"const roughness" : 0.920000,
 			"const ao" : 1.000000
 		},
 		{

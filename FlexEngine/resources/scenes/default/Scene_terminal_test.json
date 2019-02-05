@@ -156,7 +156,7 @@
 			"transform" : 
 			{
 				"pos" : "2.064, 0.630, 7.183",
-				"rot" : "-3.142, -0.354, -3.142"
+				"rot" : "3.141, -0.354, 3.141"
 			},
 			"material" : "Terminal Copper",
 			"collider" : 
@@ -175,27 +175,27 @@
 			},
 			"terminal" : 
 			{
-				"str" : "int a = i1;
-void main()asdjfklsdjfklsdfjklsdfjklsdfjklsdfj
-{
-thisisaverylonglinewithnospacestotestamagicnu
-it seems to work very  well  even  with  tabs
-  a += 1;
-  b = a*a;
-}
-o1 = a;es
-asd
-asd
-asd==
-sad
-asd
--=asd
-sad
-asd
-asd
-asd
----------------------------------------------
-r0: 1   r1: 13  r2: 0  r3: 1             [x]"
+				"str" : "int var = 0;
+int iat = 55;
+int _9a78a89 = 980912123131;
+ int   ab    =i1 ;  int abs=10;
+int b = ab;   
+/*int c =   0  ;   
+int d=1901;
+*/ int naughtyNum=99; // test comment
+int h=ab;   
+//int   e = c + ab      ;
+
+//jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj
+//iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii
+//hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh
+//gggggggggggggggggggggggggggggggggg
+//fffffffffffffffffffffffffffffffffff
+//eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+//dddddddddddddddddddddddddddddddddd
+//ccccccccccccccccccccccccccccccccc
+//bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+//aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 			},
 			"children" : 
 			[

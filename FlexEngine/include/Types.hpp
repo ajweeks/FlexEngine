@@ -60,6 +60,7 @@ namespace flex
 	using TrackID = u32;
 	using CartID = u32;
 	using CartChainID = u32;
+	using VariableID = u32;
 
 #define InvalidRenderID ((RenderID)u32_max)
 #define InvalidShaderID ((ShaderID)u32_max)
@@ -70,6 +71,7 @@ namespace flex
 #define InvalidTrackID ((TrackID)u32_max)
 #define InvalidCartID ((CartChainID)u32_max)
 #define InvalidCartChainID ((CartChainID)u32_max)
+#define InvalidVariableID ((VariableID)u32_max)
 
 	//template<bool> struct StaticAssert;
 	//template<> struct StaticAssert<true> {};

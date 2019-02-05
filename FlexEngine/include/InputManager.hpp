@@ -121,7 +121,7 @@ namespace flex
 		std::map<KeyCode, Key> m_Keys;
 
 		// Contains one entry for each entry in the Action enum
-		std::vector<InputBinding> m_InputBindings;
+		InputBinding m_InputBindings[(i32)Action::_NONE + 1];
 		std::vector<Pair<ICallbackMouseButton*, i32>> m_MouseButtonCallbacks;
 		std::vector<Pair<ICallbackMouseMoved*, i32>> m_MouseMovedCallbacks;
 		std::vector<Pair<ICallbackKeyEvent*, i32>> m_KeyEventCallbacks;

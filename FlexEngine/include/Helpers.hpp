@@ -53,6 +53,8 @@ namespace flex
 	*/
 	bool ParseWAVFile(const std::string& filePath, i32* format, u8** data, i32* size, i32* freq);
 
+	std::string TrimStartAndEnd(const std::string& str);
+
 	/* Interpret 4 bytes starting at ptr as an unsigned 32-bit int */
 	u32 Parse32u(char* ptr);
 	/* Interpret 2 bytes starting at ptr as an unsigned 16-bit int */
@@ -114,8 +116,8 @@ namespace flex
 
 	std::string FloatToString(real f, i32 precision);
 
-	// String will be padded with '0's to be at least minChars long (excluding a leading '-' for negative numbers)
-	std::string IntToString(i32 i, u16 minChars = 0);
+	// String will be padded to be at least minChars long (excluding a leading '-' for negative numbers)
+	std::string IntToString(i32 i, u16 minChars = 0, char pad = '0');
 
 	std::string Vec2ToString(glm::vec2 vec, i32 precision);
 	std::string Vec3ToString(glm::vec3 vec, i32 precision);

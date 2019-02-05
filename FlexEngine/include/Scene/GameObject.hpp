@@ -511,14 +511,104 @@ namespace flex
 	private:
 		friend TerminalCamera;
 
+		EventReply OnKeyEvent(KeyCode keyCode, KeyAction action, i32 modifiers);
+		KeyEventCallback<Terminal> m_KeyEventCallback;
+
 		bool SkipOverChar(char c);
 		i32 GetIdxOfNextBreak(i32 y, i32 startX);
 		i32 GetIdxOfPrevBreak(i32 y, i32 startX);
 
-		EventReply OnKeyEvent(KeyCode keyCode, KeyAction action, i32 modifiers);
-		KeyEventCallback<Terminal> m_KeyEventCallback;
+		enum class BasicType
+		{
+			INT,
+			BOOL,
+			FLOAT,
+			VAR,
+			REG,
+			INPUT,
+			OUTPUT,
+
+			// uint
+			// short
+			// byte
+			// double
+			// string ?
+		};
+
+		enum class Operator
+		{
+			ADD,
+			SUB,
+			MUL,
+			DIV,
+			MOD,
+			ASSIGN,
+			B_AND,
+			B_OR,
+			B_XOR,
+
+			/*
+			- [] operator
+			- unary operands
+			- +=, -=, *=, /=
+			- ! operator
+			- parentheses
+			- power
+			- fmod
+			*/
+
+			_NONE
+		};
+
+		struct Value
+		{
+			BasicType type;
+
+			VariableID id = InvalidVariableID;
+			std::string name;
+			int intVal;
+			bool boolVal;
+			float realVal;
+			VariableID varVal;
+		};
+
+		struct TreeNode
+		{
+			Value val;
+			Operator op = Operator::_NONE;
+			TreeNode* leaf1 = nullptr;
+			TreeNode* leaf2 = nullptr;
+		};
+
+		struct Error
+		{
+			Error(i32 num, const std::string& str) :
+				lineNumber(num),
+				str(str)
+			{}
+
+			i32 lineNumber;
+			std::string str;
+		};
+
+		std::vector<Error> errors;
+
+		TreeNode ASTroot = {};
+		std::vector<Value> variables;
+
+		void ParseCode();
+		VariableID ResolveVariableName(const std::string& variableName);
+
+		bool IsKeyword(const std::string& str) const;
+		bool IsValidIdentifier(const std::string& str) const;
+		bool IsValidNumeral(const std::string& str) const;
+		bool ContainsSpaces(const std::string& str) const;
+
+		std::vector<std::string> keywords;
 
 		std::vector<std::string> lines;
+		bool bParsePassed = false;
+
 		glm::vec2i cursor;
 		// Keeps track of the cursor x to be able to position the cursor correctly
 		// after moving from a long line, over a short line, onto a longer line again
@@ -530,8 +620,6 @@ namespace flex
 
 		const sec m_CursorBlinkRate = 0.6f;
 		sec m_CursorBlinkTimer = 0.0f;
-
-
 
 	};
 

@@ -1370,7 +1370,6 @@ namespace flex
 			PrintWarn("Unexpected number of inputs found in input-bindings.ini! (%d expected, %d found)\n", actionCount, rootObject.fields.size());
 		}
 
-		m_InputBindings.resize(actionCount);
 		for (u32 i = 0; i < actionCount; ++i)
 		{
 			const JSONObject& child = rootObject.GetObject(ActionStrings[i]);
@@ -1415,21 +1414,23 @@ namespace flex
 	{
 		JSONObject rootObject = {};
 
-		for (u32 i = 0; i < m_InputBindings.size(); ++i)
+		for (u32 i = 0; i < (i32)Action::_NONE; ++i)
 		{
+			const InputBinding& binding = m_InputBindings[i];
+
 			JSONObject bindingObj = {};
 
-			i32 keyCode = m_InputBindings[i].keyCode == KeyCode::_NONE ? -1 : (i32)m_InputBindings[i].keyCode;
+			i32 keyCode = binding.keyCode == KeyCode::_NONE ? -1 : (i32)binding.keyCode;
 			bindingObj.fields.emplace_back("key code", JSONValue(keyCode));
-			i32 mouseButton = m_InputBindings[i].mouseButton == MouseButton::_NONE ? -1 : (i32)m_InputBindings[i].mouseButton;
+			i32 mouseButton = binding.mouseButton == MouseButton::_NONE ? -1 : (i32)binding.mouseButton;
 			bindingObj.fields.emplace_back("mouse button", JSONValue(mouseButton));
-			i32 mouseAxis = m_InputBindings[i].mouseAxis == MouseAxis::_NONE ? -1 : (i32)m_InputBindings[i].mouseAxis;
+			i32 mouseAxis = binding.mouseAxis == MouseAxis::_NONE ? -1 : (i32)binding.mouseAxis;
 			bindingObj.fields.emplace_back("mouse axis", JSONValue(mouseAxis));
-			i32 gamepadButton = m_InputBindings[i].gamepadButton == GamepadButton::_NONE ? -1 : (i32)m_InputBindings[i].gamepadButton;
+			i32 gamepadButton = binding.gamepadButton == GamepadButton::_NONE ? -1 : (i32)binding.gamepadButton;
 			bindingObj.fields.emplace_back("gamepad button", JSONValue(gamepadButton));
-			i32 gamepadAxis = m_InputBindings[i].gamepadAxis == GamepadAxis::_NONE ? -1 : (i32)m_InputBindings[i].gamepadAxis;
+			i32 gamepadAxis = binding.gamepadAxis == GamepadAxis::_NONE ? -1 : (i32)binding.gamepadAxis;
 			bindingObj.fields.emplace_back("gamepad axis", JSONValue(gamepadAxis));
-			bindingObj.fields.emplace_back("negative", JSONValue(m_InputBindings[i].bNegative));
+			bindingObj.fields.emplace_back("negative", JSONValue(binding.bNegative));
 
 			rootObject.fields.emplace_back(ActionStrings[i], JSONValue(bindingObj));
 		}

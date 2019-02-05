@@ -2262,8 +2262,7 @@ namespace flex
 			valve->rotation = dist;
 		}
 
-		glm::vec3 newPos = startingPos +
-			dist * moveAxis;
+		glm::vec3 newPos = startingPos + dist * moveAxis;
 
 		if (m_RigidBody)
 		{
@@ -3242,6 +3241,7 @@ namespace flex
 	void Terminal::Initialize()
 	{
 		g_InputManager->BindKeyEventCallback(&m_KeyEventCallback, 20);
+		ParseCode();
 
 		GameObject::Initialize();
 	}
@@ -3261,6 +3261,10 @@ namespace flex
 		{
 			bRenderCursor = false;
 		}
+		if (!g_Window->HasFocus())
+		{
+			bRenderCursor = false;
+		}
 		bool bRenderText = !lines.empty();
 
 		if (bRenderCursor || bRenderText)
@@ -3268,37 +3272,50 @@ namespace flex
 			BitmapFont* font = g_Renderer->m_FntSourceCodeProWS;
 			g_Renderer->SetFont(font);
 
-			const real letterSpacing = 0.75f;
+			const real letterSpacing = 0.9f;
 			const glm::vec3 right = m_Transform.GetRight();
 			const glm::vec3 up = m_Transform.GetUp();
 			const glm::vec3 forward = m_Transform.GetForward();
 
-			glm::vec3 pos = m_Transform.GetWorldPosition() +
-				right * 0.8f +
-				up * 1.65f +
+			const real width = 1.4f;
+			const real height = 1.65f;
+			const glm::vec3 posTL = m_Transform.GetWorldPosition() +
+				right * (width / 2.0f) +
+				up * height +
 				forward * 0.992f;
 
-			glm::quat rot = m_Transform.GetWorldRotation();
-			real lineHeight = 0.075f;
+			glm::vec3 pos = posTL;
+
+			const glm::quat rot = m_Transform.GetWorldRotation();
+			const real lineHeight = 0.075f;
+			const real magic = 0.000183f * font->GetSize();
+			const real lineNoWidth = 1.75f * lineHeight;
 
 			if (bRenderCursor)
 			{
 				real cursorXO = g_Renderer->GetStringWidth(lines[cursor.y].substr(0, cursor.x), font, letterSpacing, false);
+				// TODO: Get rid of magic numbers
+				cursorXO -= 0.01f;
 				glm::vec3 cursorPos = pos;
-				// TODO: Get rid of magic number
-				real magic = 0.00376f / 24.0f * font->GetSize();
 				cursorPos += right * (cursorXO * -magic) + up * (cursor.y * -lineHeight);
 				g_Renderer->DrawStringWS("|", glm::vec4(1.0f), cursorPos, rot, letterSpacing);
 			}
 
 			if (bRenderText)
 			{
-				for (const std::string& line : lines)
+				glm::vec4 lineNumberColor(0.4f, 0.4f, 0.4f, 1.0f);
+				glm::vec4 textColor(0.95f, 0.95f, 0.95f, 1.0f);
+				for (i32 lineNumber = 0; lineNumber < (i32)lines.size(); ++lineNumber)
 				{
-					g_Renderer->DrawStringWS(line, glm::vec4(1.0f), pos, rot, letterSpacing);
+					g_Renderer->DrawStringWS(IntToString(lineNumber, 2, ' '), lineNumberColor, pos + right * lineNoWidth, rot, letterSpacing);
+					g_Renderer->DrawStringWS(lines[lineNumber], textColor, pos, rot, letterSpacing);
 					pos.y -= lineHeight;
 				}
 			}
+
+			glm::vec3 posBR = posTL - (right * width * 0.92f) - (up * height * 0.92f);
+			glm::vec4 col = bParsePassed ? glm::vec4(0.3f, 0.8f, 0.3f, 1.0f) : glm::vec4(0.8f, 0.3f, 0.3f, 1.0f);
+			g_Renderer->DrawStringWS("#", col, posBR, rot, letterSpacing);
 		}
 	}
 
@@ -3306,10 +3323,45 @@ namespace flex
 	{
 		GameObject::DrawImGuiObjects();
 
-		ImGui::Text("Cursor: %d, %d", cursor.x, cursor.y);
-		ImGui::Text("Max x: %d", cursorMaxX);
-		ImGui::Text("Lines: %d", lines.size());
-		ImGui::Text("Current line len: %d", lines[cursor.y].size());
+		if (ImGui::Begin("Terminal"))
+		{
+			ImGui::Text("Cursor: %d, %d", cursor.x, cursor.y);
+			ImGui::Text("Max x: %d", cursorMaxX);
+			ImGui::Text("Lines: %d", lines.size());
+			ImGui::Text("Current line len: %d", lines[cursor.y].size());
+
+
+			if (ImGui::BeginChild("Variables", ImVec2(0.0f, 220.0f), true))
+			{
+				for (const Value& var : variables)
+				{
+					ImGui::Text("ID: %2d, Type: %d, Name: %s", var.id, var.type, var.name.c_str());
+				}
+			}
+			ImGui::EndChild();
+
+			ImGui::Text("Errors: %d", errors.size());
+			if (ImGui::BeginChild("Success", ImVec2(0.0f, 220.0f), true))
+			{
+				if (errors.empty())
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 1.0f, 0.5f, 1.0f));
+					ImGui::Text("Success");
+					ImGui::PopStyleColor();
+				}
+				else
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.5f, 0.5f, 1.0f));
+					for (const Error& e : errors)
+					{
+						ImGui::Text("%2d, %s", e.lineNumber, e.str.c_str());
+					}
+					ImGui::PopStyleColor();
+				}
+			}
+			ImGui::EndChild();
+		}
+		ImGui::End();
 	}
 
 	GameObject* Terminal::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
@@ -3335,7 +3387,6 @@ namespace flex
 			glm::vec3 dPos = m_Transform.GetWorldPosition() - playerTransform->GetWorldPosition();
 			real FoP = glm::dot(m_Transform.GetForward(), glm::normalize(dPos));
 			real FoF = glm::dot(m_Transform.GetForward(), playerTransform->GetForward());
-			//Print("FoP: %.2f, FoF: %.2f\n", FoP, FoF);
 			// Ensure player is looking our direction and in front of us
 			if (FoF < -0.15f && FoP < -0.35f)
 			{
@@ -3414,6 +3465,7 @@ namespace flex
 			MoveCursorRight();
 			cursorMaxX = cursor.x;
 		}
+		ParseCode();
 	}
 
 	void Terminal::DeleteChar(bool bDeleteUpToNextBreak /* = false */)
@@ -3456,6 +3508,7 @@ namespace flex
 			cursorMaxX = cursor.x;
 			ClampCursorX();
 		}
+		ParseCode();
 	}
 
 	void Terminal::DeleteCharInFront(bool bDeleteUpToNextBreak /* = false */)
@@ -3490,6 +3543,7 @@ namespace flex
 				curLine.erase(curLine.begin() + cursor.x);
 			}
 		}
+		ParseCode();
 	}
 
 	void Terminal::Clear()
@@ -3679,6 +3733,265 @@ namespace flex
 		return result - 1;
 	}
 
+	void Terminal::ParseCode()
+	{
+		variables.clear();
+		errors.clear();
+
+		bParsePassed = true;
+
+		keywords = {
+			"int",
+			"bool"
+		};
+
+		Value val = {};
+		val.type = BasicType::REG;
+		for (i32 i = 0; i < 4; ++i)
+		{
+			val.id = (VariableID)variables.size();
+			val.name = "r" + std::to_string(i);
+			val.intVal = i;
+			variables.push_back(val);
+		}
+
+		val.type = BasicType::INPUT;
+		for (i32 i = 0; i < 4; ++i)
+		{
+			val.id = (VariableID)variables.size();
+			val.name = "i" + std::to_string(i);
+			val.intVal = i;
+			variables.push_back(val);
+		}
+
+		val.type = BasicType::OUTPUT;
+		for (i32 i = 0; i < 4; ++i)
+		{
+			val.id = (VariableID)variables.size();
+			val.name = "o" + std::to_string(i);
+			val.intVal = i;
+			variables.push_back(val);
+		}
+
+		i32 blockCommentDepth = 0;
+		for (i32 lineNumber = 0; lineNumber < (i32)lines.size(); ++lineNumber)
+		{
+			// NOTE: Copy string so we can edit it without changing the source
+			std::string line = lines[lineNumber];
+
+			if (TrimStartAndEnd(line).empty())
+			{
+				continue;
+			}
+
+			u32 blockCommentStartIdx = line.find("/*");
+			if (blockCommentStartIdx != std::string::npos)
+			{
+				blockCommentDepth += 1;
+			}
+
+			u32 blockCommentEndIdx = line.find("*/");
+			if (blockCommentEndIdx != std::string::npos)
+			{
+				if (blockCommentDepth - 1 < 0)
+				{
+					bParsePassed = false;
+					errors.emplace_back(lineNumber, "Missing closing block comment \"*/\"");
+				}
+
+				blockCommentDepth = glm::max(blockCommentDepth - 1, 0);
+				if (blockCommentDepth == 0)
+				{
+					line = line.substr(blockCommentEndIdx + 2);
+				}
+			}
+
+			if (blockCommentDepth > 0)
+			{
+				continue;
+			}
+
+			if (TrimStartAndEnd(line).empty())
+			{
+				continue;
+			}
+
+			u32 lineCommentIdx = line.find("//");
+			if (lineCommentIdx != std::string::npos)
+			{
+				if (TrimStartAndEnd(line.substr(0, lineCommentIdx)).empty())
+				{
+					continue;
+				}
+				line = line.substr(0, lineCommentIdx);
+			}
+
+			u32 intIdx = line.find("int");
+			if (intIdx != std::string::npos)
+			{
+				Value variable = {};
+				variable.id = (VariableID)variables.size();
+				u32 eqIdx = line.find("=", intIdx + 3);
+				u32 semiIdx = line.find(";", intIdx + 3);
+				if (eqIdx == std::string::npos)
+				{
+					variable.name = line.substr(intIdx + 3, semiIdx - intIdx + 3);
+				}
+				else
+				{
+					std::string intValStr = TrimStartAndEnd(line.substr(eqIdx + 1, semiIdx - eqIdx - 1));
+					if (ContainsSpaces(intValStr) || intValStr.empty())
+					{
+						bParsePassed = false;
+						errors.emplace_back(lineNumber, "Invalid integer value: " + intValStr);
+					}
+					else
+					{
+						i32 cIdx = 0;
+						if (intValStr[0] == '-')
+						{
+							cIdx += 1;
+							if (intValStr.size() == 1)
+							{
+								bParsePassed = false;
+								errors.emplace_back(lineNumber, "Invalid integer value: " + intValStr);
+							}
+						}
+
+						if (bParsePassed)
+						{
+							if (isdigit(intValStr[cIdx]))
+							{
+								variable.type = BasicType::INT;
+
+								if (IsValidNumeral(intValStr))
+								{
+									variable.intVal = atoi(intValStr.c_str());
+								}
+								else
+								{
+									errors.emplace_back(lineNumber, "Invalid integer value: " + intValStr);
+									bParsePassed = false;
+									variable.intVal = i32_max;
+								}
+							}
+							else
+							{
+								variable.type = BasicType::VAR;
+								variable.varVal = ResolveVariableName(intValStr);
+								if (variable.varVal == InvalidVariableID)
+								{
+									bParsePassed = false;
+									errors.emplace_back(lineNumber, "Couldn't resolve: " + variable.name);
+								}
+							}
+						}
+
+						variable.name = TrimStartAndEnd(line.substr(intIdx + 4, eqIdx - (intIdx + 4)));
+					}
+
+					if (!IsValidIdentifier(variable.name))
+					{
+						errors.emplace_back(lineNumber, "Invalid variable name: " + variable.name);
+						variable.name = "";
+						bParsePassed = false;
+					}
+				}
+
+				variables.push_back(variable);
+			}
+		}
+
+		if (blockCommentDepth != 0)
+		{
+			bParsePassed = false;
+			errors.emplace_back(-1, "Malformed block comments");
+		}
+
+		const char* programSuccessStr = bParsePassed ? "correct" : "broken";
+		Print("Parsing complete, program appears %s\n", programSuccessStr);
+
+		if (!errors.empty())
+		{
+			PrintError("%d errors:\n", errors.size());
+			for (const Error& e : errors)
+			{
+				PrintError("  %02i  %s\n", e.lineNumber, e.str.c_str());
+			}
+		}
+	}
+
+	VariableID Terminal::ResolveVariableName(const std::string& variableName)
+	{
+		if (IsKeyword(variableName))
+		{
+			return InvalidVariableID;
+		}
+
+		for (const Value& v : variables)
+		{
+			if (variableName.compare(v.name) == 0)
+			{
+				return v.id;
+			}
+		}
+		return InvalidVariableID;
+	}
+
+	bool Terminal::IsKeyword(const std::string& str) const
+	{
+		for (const std::string& keyword : keywords)
+		{
+			if (str.compare(keyword) == 0)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	bool Terminal::IsValidIdentifier(const std::string& str) const
+	{
+		if (IsKeyword(str) || str.empty() || isdigit(str[0]))
+		{
+			return false;
+		}
+
+		for (char c : str)
+		{
+			if (isspace(c) || (!isalpha(c) && !isdigit(c) && c != '_'))
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	bool Terminal::ContainsSpaces(const std::string& str) const
+	{
+		for (char c : str)
+		{
+			if (isspace(c))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	bool Terminal::IsValidNumeral(const std::string& str) const
+	{
+		for (char c : str)
+		{
+			if (!isdigit(c))
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
 	EventReply Terminal::OnKeyEvent(KeyCode keyCode, KeyAction action, i32 modifiers)
 	{
 		if (m_Camera != nullptr)
@@ -3688,17 +4001,26 @@ namespace flex
 				const bool bCapsLock = (modifiers & (i32)InputModifier::CAPS_LOCK) > 0;
 				const bool bShiftDown = (modifiers & (i32)InputModifier::SHIFT) > 0;
 				const bool bCtrlDown = (modifiers & (i32)InputModifier::CONTROL) > 0;
-				i32 kC = (i32)keyCode;
+				if (keyCode == KeyCode::KEY_F7)
+				{
+					ParseCode();
+					return flex::EventReply::CONSUMED;
+				}
 				if (keyCode == KeyCode::KEY_ESCAPE)
 				{
 					m_Camera->TransitionOut();
 					return EventReply::CONSUMED;
 				}
-				if (kC >= (i32)KeyCode::KEY_APOSTROPHE && kC <= (i32)KeyCode::KEY_RIGHT_BRACKET)
+				if ((i32)keyCode >= (i32)KeyCode::KEY_APOSTROPHE && (i32)keyCode <= (i32)KeyCode::KEY_RIGHT_BRACKET)
 				{
 					char c = KeyCodeStrings[(i32)keyCode][0];
 					if (isalpha(c))
 					{
+						if (bCtrlDown)
+						{
+							return EventReply::UNCONSUMED;
+						}
+
 						if (!bShiftDown && !bCapsLock)
 						{
 							c = (char)tolower(c);

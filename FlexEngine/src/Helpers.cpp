@@ -124,7 +124,7 @@ namespace flex
 		return stream.str();
 	}
 
-	std::string IntToString(i32 i, u16 minChars)
+	std::string IntToString(i32 i, u16 minChars/* = 0 */, char pad /* = '0' */)
 	{
 		std::string result = std::to_string(glm::abs(i));
 
@@ -132,7 +132,7 @@ namespace flex
 		{
 			if (result.length() < minChars)
 			{
-				result = "-" + std::string(minChars - result.length(), '0') + result;
+				result = "-" + std::string(minChars - result.length(), pad) + result;
 			}
 			else
 			{
@@ -143,7 +143,7 @@ namespace flex
 		{
 			if (result.length() < minChars)
 			{
-				result = std::string(minChars - result.length(), '0') + result;
+				result = std::string(minChars - result.length(), pad) + result;
 			}
 		}
 
@@ -654,6 +654,28 @@ namespace flex
 		*freq = samplesPerSec;
 
 		return true;
+	}
+
+	std::string TrimStartAndEnd(const std::string& str)
+	{
+		if (str.empty())
+		{
+			return str;
+		}
+
+		auto iter = str.begin();
+		while (iter != str.end() - 1 && isspace(*iter))
+		{
+			++iter;
+		}
+
+		auto riter = str.end() - 1;
+		while (riter != iter && isspace(*riter))
+		{
+			--riter;
+		}
+
+		return std::string(iter, riter + 1);
 	}
 
 	u32 Parse32u(char* ptr)

@@ -9,10 +9,12 @@
 			"visible" : true,
 			"transform" : 
 			{
+				"rot" : "-3.142, 1.408, -3.142"
 			},
 			"material" : "skybox 01",
 			"skybox info" : 
 			{
+				"rot" : "-3.14, 1.41, -3.14"
 			}
 		},
 		{
@@ -316,24 +318,56 @@
 		{
 			"name" : "Directional Light",
 			"type" : "directional light",
-			"visible" : true,
+			"visible" : false,
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "1.195, -0.973, -2.522"
+				"rot" : "1.195, -1.308, -2.522"
 			},
 			"directional light info" : 
 			{
-				"rotation" : "1.195, -0.973, -2.522",
+				"rotation" : "1.195, -1.308, -2.522",
 				"pos" : "0.000, 15.000, 0.000",
 				"color" : "1.00, 1.00, 1.00",
-				"enabled" : true,
-				"brightness" : 5.000000,
+				"enabled" : false,
+				"brightness" : 1.552000,
 				"cast shadows" : true,
-				"shadow darkness" : 0.000000,
+				"shadow darkness" : 1.000000,
 				"shadow map near" : -80.000000,
 				"shadow map far" : 100.000000,
 				"shadow map zoom" : 30.000000
+			}
+		},
+		{
+			"name" : "PointLight_00",
+			"type" : "point light",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "32.752, 13.554, -20.837"
+			},
+			"point light info" : 
+			{
+				"pos" : "32.752, 13.554, -20.837",
+				"color" : "1.00, 1.00, 1.00",
+				"enabled" : true,
+				"brightness" : 500.000000
+			}
+		},
+		{
+			"name" : "PointLight_01",
+			"type" : "point light",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "31.325, 13.227, 29.397"
+			},
+			"point light info" : 
+			{
+				"pos" : "31.325, 13.227, 29.397",
+				"color" : "1.00, 1.00, 1.00",
+				"enabled" : true,
+				"brightness" : 500.000000
 			}
 		}
 	]
