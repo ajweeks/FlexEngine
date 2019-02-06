@@ -3745,6 +3745,8 @@ namespace flex
 			"bool"
 		};
 
+		strtok_s()
+
 		Value val = {};
 		val.type = BasicType::REG;
 		for (i32 i = 0; i < 4; ++i)

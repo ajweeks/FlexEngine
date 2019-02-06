@@ -471,6 +471,29 @@ namespace flex
 
 	};
 
+	struct TokenString
+	{
+		std::string str;
+	};
+
+	struct TokenContext
+	{
+		const char* buffer;
+		i32 bufferLen;
+		std::string errorReason;
+		char const* bufferPtr = nullptr;
+		i32 lineNumber;
+
+	};
+
+	struct Tokenizer
+	{
+
+		TokenString GetNextToken();
+
+		std::string fileContents;
+	};
+
 	class Terminal : public GameObject
 	{
 	public:
