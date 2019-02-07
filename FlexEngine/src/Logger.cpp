@@ -117,11 +117,6 @@ namespace flex
 
 	void Print(const char* str, va_list argList)
 	{
-		if (!g_bEnableLogToConsole)
-		{
-			return;
-		}
-
 		static char s_buffer[MAX_CHARS];
 
 		vsnprintf(s_buffer, MAX_CHARS, str, argList);

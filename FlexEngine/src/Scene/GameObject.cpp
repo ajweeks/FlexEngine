@@ -3211,6 +3211,368 @@ namespace flex
 		UNREFERENCED_PARAMETER(parentObject);
 	}
 
+	bool TokenContext::CanNextCharBeLabelPart() const
+	{
+		if (!HasNextChar())
+		{
+			return false;
+		}
+
+		char next = PeekNextChar();
+		if (isalpha(next) || next == '_')
+		{
+			return true;
+		}
+
+		return false;
+	}
+
+	TokenType TokenContext::AttemptParseKeyword(const char* keywordStr, TokenType keywordType)
+	{
+		i32 keywordPos = 1; // Assume first letter is already consumed
+		char c = ConsumeNextChar();
+		while (keywordPos < (i32)strlen(keywordStr) && c == keywordStr[keywordPos])
+		{
+			c = ConsumeNextChar();
+			++keywordPos;
+		}
+
+		if (keywordPos == (i32)strlen(keywordStr))
+		{
+			return keywordType;
+		}
+
+		// Not this keyword, must be a label
+		while (CanNextCharBeLabelPart())
+		{
+			ConsumeNextChar();
+		}
+		return TokenType::LABEL;
+	}
+
+	TokenType TokenContext::AttemptParseKeywords(const char* potentialKeywordStrs[], TokenType potentialKeywordTypes[], i32 keywordPositions[], i32 potentialCount)
+	{
+		for (i32 i = 0; i < potentialCount; ++i)
+		{
+			keywordPositions[i] = 1;
+		}
+
+		i32 matchedKeywordIndex = -1;
+		char c = ConsumeNextChar();
+		bool bMatched = true;
+		while (bMatched)
+		{
+			bMatched = false;
+			for (i32 i = 0; i < potentialCount; ++i)
+			{
+				if (keywordPositions[i] != -1)
+				{
+					if (c == potentialKeywordStrs[i][keywordPositions[i]])
+					{
+						bMatched = true;
+						if (++keywordPositions[i] >= (i32)strlen(potentialKeywordStrs[i]))
+						{
+							if (!HasNextChar() || isspace(PeekNextChar()))
+							{
+								matchedKeywordIndex = i;
+								break;
+							}
+							else
+							{
+								keywordPositions[i] = -1;
+								bMatched = false;
+							}
+						}
+					}
+					else
+					{
+						keywordPositions[i] = -1;
+					}
+				}
+			}
+
+			if (matchedKeywordIndex != -1)
+			{
+				return potentialKeywordTypes[matchedKeywordIndex];
+			}
+
+			if (bMatched)
+			{
+
+				c = ConsumeNextChar();
+			}
+			else
+			{
+				// Doesn't match any keywords, must be a label
+
+				while (CanNextCharBeLabelPart())
+				{
+					ConsumeNextChar();
+				}
+				return TokenType::LABEL;
+			}
+		}
+
+	}
+
+	Tokenizer::Tokenizer(const std::string& code) :
+		str(code)
+	{
+		context = {};
+		context.buffer = context.bufferPtr = (char*)str.c_str();
+		context.bufferLen = (i32)code.size();
+	}
+
+	TokenString Tokenizer::GetNextToken()
+	{
+		//char delim[] = " ,.\t\n";
+		//char* token = nullptr;
+		//char* str_context = nullptr;
+		//token = strtok_s(str, delim, &str_context);
+
+		//while (token != nullptr)
+		//{
+		//	Print("%s\n", (const char*)token);
+		//	token = strtok_s(NULL, delim, &str_context);
+		//}
+
+		ConsumeWhitespaceAndComments();
+
+		char const* const tokenStart = context.bufferPtr;
+		i32 tokenLineNum = context.lineNumber;
+		i32 tokenLinePos = context.linePos;
+
+		TokenType nextTokenType = TokenType::_NONE;
+
+		if (context.HasNextChar())
+		{
+			char c = context.ConsumeNextChar();
+
+			switch (c)
+			{
+			// Keywords:
+			case 't':
+				nextTokenType = context.AttemptParseKeyword("true", TokenType::KEY_TRUE);
+				break;
+			case 'f':
+				nextTokenType = context.AttemptParseKeyword("false", TokenType::KEY_FALSE);
+				break;
+			case 'b':
+			{
+				const char* potentialKeywords[] = { "bool", "break" };
+				TokenType potentialTokenTypes[] = { TokenType::KEY_BOOL, TokenType::KEY_BREAK };
+				i32 pos[] = { 0, 0 };
+				nextTokenType = context.AttemptParseKeywords(potentialKeywords, potentialTokenTypes, pos, ARRAY_LENGTH(pos));
+			} break;
+			case 'i':
+			{
+				const char* potentialKeywords[] = { "int", "if" };
+				TokenType potentialTokenTypes[] = { TokenType::KEY_INT, TokenType::KEY_IF };
+				i32 pos[] = { 0, 0 };
+				nextTokenType = context.AttemptParseKeywords(potentialKeywords, potentialTokenTypes, pos, ARRAY_LENGTH(pos));
+			} break;
+			case 'e':
+			{
+				const char* potentialKeywords[] = { "else", "elif" };
+				TokenType potentialTokenTypes[] = { TokenType::KEY_ELSE, TokenType::KEY_ELIF };
+				i32 pos[] = { 0, 0 };
+				nextTokenType = context.AttemptParseKeywords(potentialKeywords, potentialTokenTypes, pos, ARRAY_LENGTH(pos));
+			} break;
+			case 'd':
+				nextTokenType = context.AttemptParseKeyword("do", TokenType::KEY_DO);
+				break;
+			case 'w':
+				nextTokenType = context.AttemptParseKeyword("while", TokenType::KEY_WHILE);
+				break;
+			case '{':
+				nextTokenType = TokenType::OPEN_BRACKET;
+				break;
+			case '}':
+				nextTokenType = TokenType::CLOSE_BRACKET;
+				break;
+			case '(':
+				nextTokenType = TokenType::OPEN_PAREN;
+				break;
+			case ')':
+				nextTokenType = TokenType::CLOSE_PAREN;
+				break;
+			case '[':
+				nextTokenType = TokenType::OPEN_SQUARE_BRACKET;
+				break;
+			case ']':
+				nextTokenType = TokenType::CLOSE_SQUARE_BRACKET;
+				break;
+			case ':':
+				nextTokenType = IsNextChar(':', TokenType::DOUBLE_COLON, TokenType::SINGLE_COLON);
+				break;
+			case ';':
+				nextTokenType = TokenType::SEMICOLON;
+				break;
+			case '!':
+				nextTokenType = IsNextChar('=', TokenType::NOT_EQUAL_TEST, TokenType::BANG);
+				break;
+			case '?':
+				nextTokenType = TokenType::TERNARY;
+				break;
+			case '=':
+				nextTokenType = IsNextChar('=', TokenType::EQUAL_TEST, TokenType::ASSIGNMENT);
+				break;
+			case '>':
+				nextTokenType = IsNextChar('=', TokenType::GREATER_EQ, TokenType::GREATER);
+				break;
+			case '<':
+				nextTokenType = IsNextChar('=', TokenType::LESS_EQ, TokenType::LESS);
+				break;
+			case '+':
+				nextTokenType = IsNextChar('=', TokenType::ADD_ASSIGN, TokenType::ADD);
+				break;
+			case '-':
+				nextTokenType = IsNextChar('=', TokenType::SUBTRACT_ASSIGN, TokenType::SUBTRACT);
+				break;
+			case '*':
+				nextTokenType = IsNextChar('=', TokenType::MULTIPLY_ASSIGN, TokenType::MULTIPLY);
+				break;
+			case '/':
+				nextTokenType = IsNextChar('=', TokenType::DIVIDE_ASSIGN, TokenType::DIVIDE);
+				break;
+			case '%':
+				nextTokenType = IsNextChar('=', TokenType::MODULO_ASSIGN, TokenType::MODULO);
+				break;
+			case '&':
+				if (context.PeekNextChar() == '=')
+				{
+					nextTokenType = TokenType::BINARY_AND_ASSIGN;
+				}
+				else
+				{
+					nextTokenType = IsNextChar('&', TokenType::BOOLEAN_AND, TokenType::BINARY_AND);
+				}
+				break;
+			case '|':
+				if (context.PeekNextChar() == '=')
+				{
+					nextTokenType = TokenType::BINARY_OR_ASSIGN;
+				}
+				else
+				{
+					nextTokenType = IsNextChar('|', TokenType::BOOLEAN_OR, TokenType::BINARY_OR);
+				}
+				break;
+			case '^':
+				nextTokenType = IsNextChar('=', TokenType::BINARY_XOR_ASSIGN, TokenType::BINARY_XOR);
+				break;
+			default:
+				if (isalpha(c) || c == '_')
+				{
+					nextTokenType = TokenType::LABEL;
+					while (context.CanNextCharBeLabelPart())
+					{
+						context.ConsumeNextChar();
+					}
+				}
+				else if (isdigit(c))
+				{
+					nextTokenType = TokenType::NUMBER;
+					while (isdigit(context.PeekNextChar()))
+					{
+						context.ConsumeNextChar();
+					}
+				}
+				else
+				{
+					PrintError("Unrecognized token: %s\n", c);
+					nextTokenType = TokenType::_NONE;
+				}
+				break;
+			}
+		}
+
+		TokenString tokenString = {};
+		tokenString.lineNum = tokenLineNum;
+		tokenString.linePos = tokenLinePos;
+		tokenString.charPtr = tokenStart;
+		tokenString.len = (context.bufferPtr - tokenStart);
+		tokenString.type = nextTokenType;
+		tokenString.TokenID = nextTokenID++;
+		return tokenString;
+	}
+
+	void Tokenizer::ConsumeWhitespaceAndComments()
+	{
+		while (context.GetRemainingLength() > 1)
+		{
+			char c0 = context.PeekChar(0);
+			char c1 = context.PeekChar(1);
+
+			if (isspace(c0))
+			{
+				context.ConsumeNextChar();
+				continue;
+			}
+			else if (c0 == '/' && c1 == '/')
+			{
+				// Consume remainder of line
+				while (context.HasNextChar())
+				{
+					char c = context.ConsumeNextChar();
+					if (c == '\n')
+					{
+						break;
+					}
+				}
+			}
+			else if (c0 == '/' && c1 == '*')
+			{
+				context.ConsumeNextChar();
+				context.ConsumeNextChar();
+				// Consume (potentially nested) block comment(s)
+				i32 levelsDeep = 1;
+				while (context.HasNextChar())
+				{
+					char bc0 = context.ConsumeNextChar();
+					char bc1 = context.PeekNextChar();
+					if (bc0 == '/' && bc1 == '*')
+					{
+						levelsDeep++;
+						context.ConsumeNextChar();
+					}
+					else if (bc0 == '*' && bc1 == '/')
+					{
+						levelsDeep--;
+						context.ConsumeNextChar();
+					}
+
+					if (levelsDeep == 0)
+					{
+						break;
+					}
+				}
+
+				if (levelsDeep != 0)
+				{
+					context.errorReason = "Uneven number of block comment opens/closes";
+				}
+			}
+			else
+			{
+				return;
+			}
+		}
+	}
+
+	TokenType Tokenizer::IsNextChar(char c, TokenType ifYes, TokenType ifNo)
+	{
+		if (context.HasNextChar() && context.PeekNextChar() == c)
+		{
+			context.ConsumeNextChar();
+			return ifYes;
+		}
+		else
+		{
+			return ifNo;
+		}
+	}
+
 	Terminal::Terminal() :
 		Terminal(g_SceneManager->CurrentScene()->GetUniqueObjectName("Terminal_", 2))
 	{
@@ -3331,35 +3693,35 @@ namespace flex
 			ImGui::Text("Current line len: %d", lines[cursor.y].size());
 
 
-			if (ImGui::BeginChild("Variables", ImVec2(0.0f, 220.0f), true))
-			{
-				for (const Value& var : variables)
-				{
-					ImGui::Text("ID: %2d, Type: %d, Name: %s", var.id, var.type, var.name.c_str());
-				}
-			}
-			ImGui::EndChild();
+			//if (ImGui::BeginChild("Variables", ImVec2(0.0f, 220.0f), true))
+			//{
+			//	for (const Value& var : variables)
+			//	{
+			//		ImGui::Text("ID: %2d, Type: %d, Name: %s", var.id, var.type, var.name.c_str());
+			//	}
+			//}
+			//ImGui::EndChild();
 
-			ImGui::Text("Errors: %d", errors.size());
-			if (ImGui::BeginChild("Success", ImVec2(0.0f, 220.0f), true))
-			{
-				if (errors.empty())
-				{
-					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 1.0f, 0.5f, 1.0f));
-					ImGui::Text("Success");
-					ImGui::PopStyleColor();
-				}
-				else
-				{
-					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.5f, 0.5f, 1.0f));
-					for (const Error& e : errors)
-					{
-						ImGui::Text("%2d, %s", e.lineNumber, e.str.c_str());
-					}
-					ImGui::PopStyleColor();
-				}
-			}
-			ImGui::EndChild();
+			//ImGui::Text("Errors: %d", errors.size());
+			//if (ImGui::BeginChild("Success", ImVec2(0.0f, 220.0f), true))
+			//{
+			//	if (errors.empty())
+			//	{
+			//		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 1.0f, 0.5f, 1.0f));
+			//		ImGui::Text("Success");
+			//		ImGui::PopStyleColor();
+			//	}
+			//	else
+			//	{
+			//		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.5f, 0.5f, 1.0f));
+			//		for (const Error& e : errors)
+			//		{
+			//			ImGui::Text("%2d, %s", e.lineNumber, e.str.c_str());
+			//		}
+			//		ImGui::PopStyleColor();
+			//	}
+			//}
+			//ImGui::EndChild();
 		}
 		ImGui::End();
 	}
@@ -3735,263 +4097,39 @@ namespace flex
 
 	void Terminal::ParseCode()
 	{
-		variables.clear();
-		errors.clear();
-
 		bParsePassed = true;
 
-		keywords = {
-			"int",
-			"bool"
-		};
-
-		strtok_s()
-
-		Value val = {};
-		val.type = BasicType::REG;
-		for (i32 i = 0; i < 4; ++i)
+		std::string str;
+		for (const std::string& line : lines)
 		{
-			val.id = (VariableID)variables.size();
-			val.name = "r" + std::to_string(i);
-			val.intVal = i;
-			variables.push_back(val);
+			str.append(line);
+			str.push_back('\n');
 		}
 
-		val.type = BasicType::INPUT;
-		for (i32 i = 0; i < 4; ++i)
+		Tokenizer tokenizer(str);
+
+		Print("\nTokens found in code:\n");
+		while (tokenizer.context.HasNextChar())
 		{
-			val.id = (VariableID)variables.size();
-			val.name = "i" + std::to_string(i);
-			val.intVal = i;
-			variables.push_back(val);
+			if (!tokenizer.context.errorReason.empty())
+			{
+				PrintError("Error encountered while parsing code: %s\n", tokenizer.context.errorReason.c_str());
+				bParsePassed = false;
+				break;
+			}
+			TokenString tokenStr = tokenizer.GetNextToken();
+			Print("Type: %d, str: %s\n", (i32)tokenStr.type, tokenStr.ToString().c_str());
 		}
+		Print("\n");
 
-		val.type = BasicType::OUTPUT;
-		for (i32 i = 0; i < 4; ++i)
+		if (!bParsePassed)
 		{
-			val.id = (VariableID)variables.size();
-			val.name = "o" + std::to_string(i);
-			val.intVal = i;
-			variables.push_back(val);
+			//PrintError("%d errors:\n", errors.size());
+			//for (const Error& e : errors)
+			//{
+			//	PrintError("  %02i  %s\n", e.lineNumber, e.str.c_str());
+			//}
 		}
-
-		i32 blockCommentDepth = 0;
-		for (i32 lineNumber = 0; lineNumber < (i32)lines.size(); ++lineNumber)
-		{
-			// NOTE: Copy string so we can edit it without changing the source
-			std::string line = lines[lineNumber];
-
-			if (TrimStartAndEnd(line).empty())
-			{
-				continue;
-			}
-
-			u32 blockCommentStartIdx = line.find("/*");
-			if (blockCommentStartIdx != std::string::npos)
-			{
-				blockCommentDepth += 1;
-			}
-
-			u32 blockCommentEndIdx = line.find("*/");
-			if (blockCommentEndIdx != std::string::npos)
-			{
-				if (blockCommentDepth - 1 < 0)
-				{
-					bParsePassed = false;
-					errors.emplace_back(lineNumber, "Missing closing block comment \"*/\"");
-				}
-
-				blockCommentDepth = glm::max(blockCommentDepth - 1, 0);
-				if (blockCommentDepth == 0)
-				{
-					line = line.substr(blockCommentEndIdx + 2);
-				}
-			}
-
-			if (blockCommentDepth > 0)
-			{
-				continue;
-			}
-
-			if (TrimStartAndEnd(line).empty())
-			{
-				continue;
-			}
-
-			u32 lineCommentIdx = line.find("//");
-			if (lineCommentIdx != std::string::npos)
-			{
-				if (TrimStartAndEnd(line.substr(0, lineCommentIdx)).empty())
-				{
-					continue;
-				}
-				line = line.substr(0, lineCommentIdx);
-			}
-
-			u32 intIdx = line.find("int");
-			if (intIdx != std::string::npos)
-			{
-				Value variable = {};
-				variable.id = (VariableID)variables.size();
-				u32 eqIdx = line.find("=", intIdx + 3);
-				u32 semiIdx = line.find(";", intIdx + 3);
-				if (eqIdx == std::string::npos)
-				{
-					variable.name = line.substr(intIdx + 3, semiIdx - intIdx + 3);
-				}
-				else
-				{
-					std::string intValStr = TrimStartAndEnd(line.substr(eqIdx + 1, semiIdx - eqIdx - 1));
-					if (ContainsSpaces(intValStr) || intValStr.empty())
-					{
-						bParsePassed = false;
-						errors.emplace_back(lineNumber, "Invalid integer value: " + intValStr);
-					}
-					else
-					{
-						i32 cIdx = 0;
-						if (intValStr[0] == '-')
-						{
-							cIdx += 1;
-							if (intValStr.size() == 1)
-							{
-								bParsePassed = false;
-								errors.emplace_back(lineNumber, "Invalid integer value: " + intValStr);
-							}
-						}
-
-						if (bParsePassed)
-						{
-							if (isdigit(intValStr[cIdx]))
-							{
-								variable.type = BasicType::INT;
-
-								if (IsValidNumeral(intValStr))
-								{
-									variable.intVal = atoi(intValStr.c_str());
-								}
-								else
-								{
-									errors.emplace_back(lineNumber, "Invalid integer value: " + intValStr);
-									bParsePassed = false;
-									variable.intVal = i32_max;
-								}
-							}
-							else
-							{
-								variable.type = BasicType::VAR;
-								variable.varVal = ResolveVariableName(intValStr);
-								if (variable.varVal == InvalidVariableID)
-								{
-									bParsePassed = false;
-									errors.emplace_back(lineNumber, "Couldn't resolve: " + variable.name);
-								}
-							}
-						}
-
-						variable.name = TrimStartAndEnd(line.substr(intIdx + 4, eqIdx - (intIdx + 4)));
-					}
-
-					if (!IsValidIdentifier(variable.name))
-					{
-						errors.emplace_back(lineNumber, "Invalid variable name: " + variable.name);
-						variable.name = "";
-						bParsePassed = false;
-					}
-				}
-
-				variables.push_back(variable);
-			}
-		}
-
-		if (blockCommentDepth != 0)
-		{
-			bParsePassed = false;
-			errors.emplace_back(-1, "Malformed block comments");
-		}
-
-		const char* programSuccessStr = bParsePassed ? "correct" : "broken";
-		Print("Parsing complete, program appears %s\n", programSuccessStr);
-
-		if (!errors.empty())
-		{
-			PrintError("%d errors:\n", errors.size());
-			for (const Error& e : errors)
-			{
-				PrintError("  %02i  %s\n", e.lineNumber, e.str.c_str());
-			}
-		}
-	}
-
-	VariableID Terminal::ResolveVariableName(const std::string& variableName)
-	{
-		if (IsKeyword(variableName))
-		{
-			return InvalidVariableID;
-		}
-
-		for (const Value& v : variables)
-		{
-			if (variableName.compare(v.name) == 0)
-			{
-				return v.id;
-			}
-		}
-		return InvalidVariableID;
-	}
-
-	bool Terminal::IsKeyword(const std::string& str) const
-	{
-		for (const std::string& keyword : keywords)
-		{
-			if (str.compare(keyword) == 0)
-			{
-				return true;
-			}
-		}
-		return false;
-	}
-
-	bool Terminal::IsValidIdentifier(const std::string& str) const
-	{
-		if (IsKeyword(str) || str.empty() || isdigit(str[0]))
-		{
-			return false;
-		}
-
-		for (char c : str)
-		{
-			if (isspace(c) || (!isalpha(c) && !isdigit(c) && c != '_'))
-			{
-				return false;
-			}
-		}
-
-		return true;
-	}
-
-	bool Terminal::ContainsSpaces(const std::string& str) const
-	{
-		for (char c : str)
-		{
-			if (isspace(c))
-			{
-				return true;
-			}
-		}
-		return false;
-	}
-
-	bool Terminal::IsValidNumeral(const std::string& str) const
-	{
-		for (char c : str)
-		{
-			if (!isdigit(c))
-			{
-				return false;
-			}
-		}
-		return true;
 	}
 
 	EventReply Terminal::OnKeyEvent(KeyCode keyCode, KeyAction action, i32 modifiers)

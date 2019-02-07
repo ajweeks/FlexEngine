@@ -471,27 +471,230 @@ namespace flex
 
 	};
 
+	enum class BasicType
+	{
+		INT,
+		BOOL,
+		FLOAT,
+		VAR,
+		REG,
+		INPUT,
+		OUTPUT,
+
+		// uint
+		// short
+		// byte
+		// double
+		// string ?
+	};
+
+	enum class Operator
+	{
+		ADD,
+		SUB,
+		MUL,
+		DIV,
+		MOD,
+		ASSIGN,
+		B_AND,
+		B_OR,
+		B_XOR,
+
+		/*
+		- [] operator
+		- unary operands
+		- +=, -=, *=, /=
+		- ! operator
+		- parentheses
+		- power
+		- fmod
+		*/
+
+		_NONE
+	};
+
+	struct Value
+	{
+		BasicType type;
+
+		VariableID id = InvalidVariableID;
+		std::string name;
+		int intVal;
+		bool boolVal;
+		float realVal;
+		VariableID varVal;
+	};
+
+	struct TreeNode
+	{
+		Value val;
+		Operator op = Operator::_NONE;
+		TreeNode* leaf1 = nullptr;
+		TreeNode* leaf2 = nullptr;
+	};
+
+	struct Error
+	{
+		Error(i32 num, const std::string& str) :
+			lineNumber(num),
+			str(str)
+		{}
+
+		i32 lineNumber;
+		std::string str;
+	};
+
+	enum class TokenType
+	{
+		LABEL,
+		SINGLE_COLON,
+		DOUBLE_COLON,
+		SEMICOLON,
+		BANG,
+		TERNARY,
+		NUMBER,
+		ASSIGNMENT,
+		//FUNCTION_DEF,
+		//FUNCITON_CALL,
+		OPEN_PAREN,
+		CLOSE_PAREN,
+		OPEN_BRACKET,
+		CLOSE_BRACKET,
+		OPEN_SQUARE_BRACKET,
+		CLOSE_SQUARE_BRACKET,
+		ADD,
+		ADD_ASSIGN,
+		SUBTRACT,
+		SUBTRACT_ASSIGN,
+		MULTIPLY,
+		MULTIPLY_ASSIGN,
+		DIVIDE,
+		DIVIDE_ASSIGN,
+		MODULO,
+		MODULO_ASSIGN,
+		LESS,
+		LESS_EQ,
+		GREATER,
+		GREATER_EQ,
+		EQUAL_TEST,
+		NOT_EQUAL_TEST,
+		BOOLEAN_AND,
+		BOOLEAN_OR,
+		BINARY_AND,
+		BINARY_AND_ASSIGN,
+		BINARY_OR,
+		BINARY_OR_ASSIGN,
+		BINARY_XOR,
+		BINARY_XOR_ASSIGN,
+
+		// Keywords:
+		//KEY_RETURN,
+		KEY_INT,
+		//KEY_FLOAT,
+		KEY_BOOL,
+		//KEY_STRING,
+		KEY_TRUE,
+		KEY_FALSE,
+		KEY_IF,
+		KEY_ELIF,
+		KEY_ELSE,
+		KEY_DO,
+		KEY_WHILE,
+		KEY_BREAK,
+
+		_NONE
+	};
+
+	struct Token
+	{
+		TokenType type;
+		union
+		{
+			int intVal;
+			bool boolVal;
+			float floatVal;
+			//std::string strVal;
+			//void* voidVal;
+		} data;
+	};
+
 	struct TokenString
 	{
-		std::string str;
+		i32 lineNum;
+		i32 linePos;
+		i32 TokenID;
+		TokenType type;
+		char const* charPtr;
+		i32 len;
+
+		std::string ToString()
+		{
+			return std::string(charPtr, len);
+		}
 	};
 
 	struct TokenContext
 	{
-		const char* buffer;
-		i32 bufferLen;
-		std::string errorReason;
+		const char* buffer = nullptr;
+		i32 bufferLen = -1;
 		char const* bufferPtr = nullptr;
-		i32 lineNumber;
+		std::string errorReason;
+		i32 linePos = 0;
+		i32 lineNumber = 0;
+
+		char ConsumeNextChar()
+		{
+			char nextChar = bufferPtr[0];
+			bufferPtr++;
+			linePos++;
+			if (nextChar == '\n')
+			{
+				linePos = 0;
+				lineNumber++;
+			}
+			return nextChar;
+		}
+
+		char PeekNextChar() const
+		{
+			return bufferPtr[0];
+		}
+
+		char PeekChar(i32 index) const
+		{
+			return bufferPtr[index];
+		}
+
+		i32 GetRemainingLength() const
+		{
+			return bufferLen - (bufferPtr - buffer);
+		}
+
+		bool HasNextChar() const
+		{
+			return GetRemainingLength() > 0;
+		}
+
+		bool CanNextCharBeLabelPart() const;
+
+		TokenType AttemptParseKeyword(const char* keywordStr, TokenType keywordType);
+		TokenType AttemptParseKeywords(const char* potentialKeywordStrs[], TokenType potentialKeywordTypes[], i32 pos[], i32 potentialCount);
 
 	};
 
 	struct Tokenizer
 	{
+		Tokenizer(const std::string& code);
 
 		TokenString GetNextToken();
 
-		std::string fileContents;
+		void ConsumeWhitespaceAndComments();
+		TokenType IsNextChar(char c, TokenType ifYes, TokenType ifNo);
+
+		std::string str;
+		TokenContext context;
+
+		i32 nextTokenID = 0;
 	};
 
 	class Terminal : public GameObject
@@ -541,93 +744,7 @@ namespace flex
 		i32 GetIdxOfNextBreak(i32 y, i32 startX);
 		i32 GetIdxOfPrevBreak(i32 y, i32 startX);
 
-		enum class BasicType
-		{
-			INT,
-			BOOL,
-			FLOAT,
-			VAR,
-			REG,
-			INPUT,
-			OUTPUT,
-
-			// uint
-			// short
-			// byte
-			// double
-			// string ?
-		};
-
-		enum class Operator
-		{
-			ADD,
-			SUB,
-			MUL,
-			DIV,
-			MOD,
-			ASSIGN,
-			B_AND,
-			B_OR,
-			B_XOR,
-
-			/*
-			- [] operator
-			- unary operands
-			- +=, -=, *=, /=
-			- ! operator
-			- parentheses
-			- power
-			- fmod
-			*/
-
-			_NONE
-		};
-
-		struct Value
-		{
-			BasicType type;
-
-			VariableID id = InvalidVariableID;
-			std::string name;
-			int intVal;
-			bool boolVal;
-			float realVal;
-			VariableID varVal;
-		};
-
-		struct TreeNode
-		{
-			Value val;
-			Operator op = Operator::_NONE;
-			TreeNode* leaf1 = nullptr;
-			TreeNode* leaf2 = nullptr;
-		};
-
-		struct Error
-		{
-			Error(i32 num, const std::string& str) :
-				lineNumber(num),
-				str(str)
-			{}
-
-			i32 lineNumber;
-			std::string str;
-		};
-
-		std::vector<Error> errors;
-
-		TreeNode ASTroot = {};
-		std::vector<Value> variables;
-
 		void ParseCode();
-		VariableID ResolveVariableName(const std::string& variableName);
-
-		bool IsKeyword(const std::string& str) const;
-		bool IsValidIdentifier(const std::string& str) const;
-		bool IsValidNumeral(const std::string& str) const;
-		bool ContainsSpaces(const std::string& str) const;
-
-		std::vector<std::string> keywords;
 
 		std::vector<std::string> lines;
 		bool bParsePassed = false;
