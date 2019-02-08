@@ -3219,7 +3219,7 @@ namespace flex
 		}
 
 		char next = PeekNextChar();
-		if (isalpha(next) || next == '_')
+		if (isalpha(next) || isdigit(next) || next == '_')
 		{
 			return true;
 		}
@@ -3313,6 +3313,7 @@ namespace flex
 			}
 		}
 
+		return TokenType::_NONE;
 	}
 
 	Tokenizer::Tokenizer(const std::string& code) :
@@ -3461,6 +3462,46 @@ namespace flex
 			case '^':
 				nextTokenType = IsNextChar('=', TokenType::BINARY_XOR_ASSIGN, TokenType::BINARY_XOR);
 				break;
+			case '\\':
+				if (context.HasNextChar())
+				{
+					// Escaped char
+					context.ConsumeNextChar();
+				}
+				else
+				{
+					context.errorReason = "Input ended with a single backslash";
+				}
+				break;
+			case '\'':
+				nextTokenType = TokenType::STRING;
+				while (context.HasNextChar())
+				{
+					if (context.ConsumeNextChar() == '\'')
+					{
+						break;
+					}
+				}
+				break;
+			case'\"':
+				nextTokenType = TokenType::STRING;
+				while (context.HasNextChar())
+				{
+					if (context.ConsumeNextChar() == '\"')
+					{
+						break;
+					}
+				}
+				break;
+			case '.':
+				nextTokenType = TokenType::DOT;
+				break;
+			case '~':
+				nextTokenType = TokenType::TILDE;
+				break;
+			case '`':
+				nextTokenType = TokenType::BACK_QUOTE;
+				break;
 			default:
 				if (isalpha(c) || c == '_')
 				{
@@ -3480,7 +3521,7 @@ namespace flex
 				}
 				else
 				{
-					PrintError("Unrecognized token: %s\n", c);
+					PrintError("Unrecognized token: %c\n", c);
 					nextTokenType = TokenType::_NONE;
 				}
 				break;
@@ -3556,6 +3597,13 @@ namespace flex
 			else
 			{
 				return;
+			}
+		}
+		if (context.HasNextChar())
+		{
+			if (isspace(context.PeekNextChar()))
+			{
+				context.ConsumeNextChar();
 			}
 		}
 	}
@@ -4108,7 +4156,7 @@ namespace flex
 
 		Tokenizer tokenizer(str);
 
-		Print("\nTokens found in code:\n");
+		i32 tokenCount = 0;
 		while (tokenizer.context.HasNextChar())
 		{
 			if (!tokenizer.context.errorReason.empty())
@@ -4118,9 +4166,13 @@ namespace flex
 				break;
 			}
 			TokenString tokenStr = tokenizer.GetNextToken();
-			Print("Type: %d, str: %s\n", (i32)tokenStr.type, tokenStr.ToString().c_str());
+			if (tokenStr.type != TokenType::_NONE)
+			{
+				++tokenCount;
+			}
+			//Print("Type: %d, str: %s\n", (i32)tokenStr.type, tokenStr.ToString().c_str());
 		}
-		Print("\n");
+		Print("Tokens found in code: %d\n", tokenCount);
 
 		if (!bParsePassed)
 		{
@@ -4176,6 +4228,98 @@ namespace flex
 					TypeChar(c);
 					return EventReply::CONSUMED;
 				}
+				if (keyCode >= KeyCode::KEY_KP_0 && keyCode <= KeyCode::KEY_KP_9)
+				{
+					if (bShiftDown)
+					{
+						if (keyCode == KeyCode::KEY_KP_1)
+						{
+							// End
+							if (bCtrlDown)
+							{
+								MoveCursorToEnd();
+							}
+							else
+							{
+								MoveCursorToEndOfLine();
+							}
+						}
+						if (keyCode == KeyCode::KEY_KP_3)
+						{
+							// TODO: Pg Down
+						}
+						if (keyCode == KeyCode::KEY_KP_7)
+						{
+							// Home
+							if (bCtrlDown)
+							{
+								MoveCursorToStart();
+							}
+							else
+							{
+								MoveCursorToStartOfLine();
+							}
+						}
+						if (keyCode == KeyCode::KEY_KP_9)
+						{
+							// TODO: Pg Up
+						}
+						if (keyCode == KeyCode::KEY_KP_2)
+						{
+							MoveCursorDown();
+						}
+						if (keyCode == KeyCode::KEY_KP_4)
+						{
+							MoveCursorLeft();
+						}
+						if (keyCode == KeyCode::KEY_KP_6)
+						{
+							MoveCursorRight();
+						}
+						if (keyCode == KeyCode::KEY_KP_8)
+						{
+							MoveCursorUp();
+						}
+					}
+					else
+					{
+						char c = '0' + ((i32)keyCode - (i32)KeyCode::KEY_KP_0);
+						TypeChar(c);
+					}
+					return EventReply::CONSUMED;
+				}
+				if (keyCode == KeyCode::KEY_KP_MULTIPLY)
+				{
+					TypeChar('*');
+					return EventReply::CONSUMED;
+				}
+				if (keyCode == KeyCode::KEY_KP_DIVIDE)
+				{
+					TypeChar('/');
+					return EventReply::CONSUMED;
+				}
+				if (keyCode == KeyCode::KEY_KP_ADD)
+				{
+					TypeChar('+');
+					return EventReply::CONSUMED;
+				}
+				if (keyCode == KeyCode::KEY_KP_SUBTRACT)
+				{
+					TypeChar('-');
+					return EventReply::CONSUMED;
+				}
+				if (keyCode == KeyCode::KEY_KP_DECIMAL)
+				{
+					if (bShiftDown)
+					{
+						DeleteCharInFront(bCtrlDown);
+					}
+					else
+					{
+						TypeChar('.');
+					}
+					return EventReply::CONSUMED;
+				}
 				if (keyCode == KeyCode::KEY_SPACE)
 				{
 					TypeChar(' ');
@@ -4187,7 +4331,8 @@ namespace flex
 					TypeChar(' ');
 					return EventReply::CONSUMED;
 				}
-				if (keyCode == KeyCode::KEY_ENTER)
+				if (keyCode == KeyCode::KEY_ENTER ||
+					keyCode == KeyCode::KEY_KP_ENTER)
 				{
 					TypeChar('\n');
 					return EventReply::CONSUMED;

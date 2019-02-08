@@ -586,6 +586,10 @@ namespace flex
 		BINARY_OR_ASSIGN,
 		BINARY_XOR,
 		BINARY_XOR_ASSIGN,
+		STRING,
+		TILDE,
+		BACK_QUOTE,
+		DOT,
 
 		// Keywords:
 		//KEY_RETURN,
@@ -644,6 +648,8 @@ namespace flex
 
 		char ConsumeNextChar()
 		{
+			assert((bufferPtr + 1 - buffer) <= bufferLen);
+
 			char nextChar = bufferPtr[0];
 			bufferPtr++;
 			linePos++;
@@ -657,11 +663,15 @@ namespace flex
 
 		char PeekNextChar() const
 		{
+			assert((bufferPtr - buffer) <= bufferLen);
+
 			return bufferPtr[0];
 		}
 
 		char PeekChar(i32 index) const
 		{
+			assert(index >= 0 && index < GetRemainingLength());
+
 			return bufferPtr[index];
 		}
 
