@@ -134,12 +134,15 @@ namespace flex
 		i32 size = (i32)(sampleRate * length);
 		u8* data = (u8*)malloc((u32)size);
 
+		// See http://iquilezles.org/apps/soundtoy/index.html for more patterns
 		for (i32 i = 0; i < size; ++i)
 		{
 			real t = (real)i / (real)(size - 1);
-			t -= fmod(t, 0.5f); // Linear fade in/out
+			//t -= fmod(t, 0.5f); // Linear fade in/out
 			//t = pow(sin(t* PI), 0.01f); // Sinusodal fade in/out
-			data[i] = (u8)((sin((real)i / freq) * t * 0.5f + 0.5f) * 255.0f);
+			real y = 6.0f * t * exp(-2.0f * t) * sin(freq * t);
+			y *= 0.8f + 0.2f * cos(16.0f * t);
+			data[i] = (u8)(y * 255.0f);
 		}
 
 		ALenum error = alGetError();

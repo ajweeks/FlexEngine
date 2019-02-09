@@ -278,13 +278,13 @@ namespace flex
 			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(RESOURCE_LOCATION  "audio/dud_dud_dud_dud.wav"));
 			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(RESOURCE_LOCATION  "audio/drmapan.wav"));
 			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(RESOURCE_LOCATION  "audio/blip.wav"));
-			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 10.20f));
-			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 9.091f));
-			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 8.099f));
-			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 7.645f));
-			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 6.811f));
-			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 6.068f));
-			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 5.727f));
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 100.727f));
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 200.068f));
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 300.811f));
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 400.645f));
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 500.099f));
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 600.091f));
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 700.20f));
 		}
 
 		i32 springCount = 6;
