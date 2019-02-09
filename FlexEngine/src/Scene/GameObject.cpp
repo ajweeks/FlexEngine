@@ -3298,7 +3298,6 @@ namespace flex
 
 			if (bMatched)
 			{
-
 				c = ConsumeNextChar();
 			}
 			else
@@ -3326,17 +3325,6 @@ namespace flex
 
 	TokenString Tokenizer::GetNextToken()
 	{
-		//char delim[] = " ,.\t\n";
-		//char* token = nullptr;
-		//char* str_context = nullptr;
-		//token = strtok_s(str, delim, &str_context);
-
-		//while (token != nullptr)
-		//{
-		//	Print("%s\n", (const char*)token);
-		//	token = strtok_s(NULL, delim, &str_context);
-		//}
-
 		ConsumeWhitespaceAndComments();
 
 		char const* const tokenStart = context.bufferPtr;
@@ -3385,6 +3373,8 @@ namespace flex
 			case 'w':
 				nextTokenType = context.AttemptParseKeyword("while", TokenType::KEY_WHILE);
 				break;
+
+			// Non-keywords
 			case '{':
 				nextTokenType = TokenType::OPEN_BRACKET;
 				break;
@@ -3465,7 +3455,7 @@ namespace flex
 			case '\\':
 				if (context.HasNextChar())
 				{
-					// Escaped char
+					// Escaped char (unhandled)
 					context.ConsumeNextChar();
 				}
 				else
@@ -3474,25 +3464,29 @@ namespace flex
 				}
 				break;
 			case '\'':
+			{
 				nextTokenType = TokenType::STRING;
 				while (context.HasNextChar())
 				{
-					if (context.ConsumeNextChar() == '\'')
+					char cn = context.ConsumeNextChar();
+					if (cn == '\\' || cn == '\'')
 					{
 						break;
 					}
 				}
-				break;
+			} break;
 			case'\"':
+			{
 				nextTokenType = TokenType::STRING;
 				while (context.HasNextChar())
 				{
-					if (context.ConsumeNextChar() == '\"')
+					char cn = context.ConsumeNextChar();
+					if (cn == '\\' || cn == '\"')
 					{
 						break;
 					}
 				}
-				break;
+			} break;
 			case '.':
 				nextTokenType = TokenType::DOT;
 				break;
@@ -3698,7 +3692,7 @@ namespace flex
 
 			const glm::quat rot = m_Transform.GetWorldRotation();
 			const real lineHeight = 0.075f;
-			const real magic = 0.000183f * font->GetSize();
+			const real magicF = magic * font->GetSize();
 			const real lineNoWidth = 1.75f * lineHeight;
 
 			if (bRenderCursor)
@@ -3707,7 +3701,7 @@ namespace flex
 				// TODO: Get rid of magic numbers
 				cursorXO -= 0.01f;
 				glm::vec3 cursorPos = pos;
-				cursorPos += right * (cursorXO * -magic) + up * (cursor.y * -lineHeight);
+				cursorPos += right * (cursorXO * -magicF) + up * (cursor.y * -lineHeight);
 				g_Renderer->DrawStringWS("|", glm::vec4(1.0f), cursorPos, rot, letterSpacing);
 			}
 
@@ -3740,6 +3734,7 @@ namespace flex
 			ImGui::Text("Lines: %d", lines.size());
 			ImGui::Text("Current line len: %d", lines[cursor.y].size());
 
+			//ImGui::SliderFloat("Magic", &magic, 0.0001f, 0.01f);
 
 			//if (ImGui::BeginChild("Variables", ImVec2(0.0f, 220.0f), true))
 			//{
@@ -4170,7 +4165,6 @@ namespace flex
 			{
 				++tokenCount;
 			}
-			//Print("Type: %d, str: %s\n", (i32)tokenStr.type, tokenStr.ToString().c_str());
 		}
 		Print("Tokens found in code: %d\n", tokenCount);
 
@@ -4280,13 +4274,19 @@ namespace flex
 						{
 							MoveCursorUp();
 						}
+
+						return EventReply::CONSUMED;
 					}
 					else
 					{
-						char c = '0' + ((i32)keyCode - (i32)KeyCode::KEY_KP_0);
-						TypeChar(c);
+						if (!bCtrlDown)
+						{
+							char c = (char)('0' + ((i32)keyCode - (i32)KeyCode::KEY_KP_0));
+							TypeChar(c);
+							return EventReply::CONSUMED;
+						}
 					}
-					return EventReply::CONSUMED;
+					return EventReply::UNCONSUMED;
 				}
 				if (keyCode == KeyCode::KEY_KP_MULTIPLY)
 				{

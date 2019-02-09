@@ -178,24 +178,8 @@
 				"str" : "int var = 0;
 int iat = 55;
 int _9a78a89 = 980912123131;
- int   ab    =i1 ;  int abs=10;
-int b = ab;   
-/*int c =   0  ;   
-int d=1901;
-*/ int naughtyNum=99; // test comment
 int h=ab;   
-//int   e = c + ab      ;
-
-//jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj
-//iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii
-//hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh
-//gggggggggggggggggggggggggggggggggg
-//fffffffffffffffffffffffffffffffffff
-//eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-//dddddddddddddddddddddddddddddddddd
-//ccccccccccccccccccccccccccccccccc
-//bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-//aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+bool falsey = false;"
 			},
 			"children" : 
 			[

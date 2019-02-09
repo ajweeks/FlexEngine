@@ -759,6 +759,8 @@ namespace flex
 		std::vector<std::string> lines;
 		bool bParsePassed = false;
 
+		real magic = 0.000155f;
+
 		glm::vec2i cursor;
 		// Keeps track of the cursor x to be able to position the cursor correctly
 		// after moving from a long line, over a short line, onto a longer line again

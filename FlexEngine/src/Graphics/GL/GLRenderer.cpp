@@ -45,7 +45,9 @@ namespace flex
 {
 	namespace gl
 	{
-		GLRenderer::GLRenderer()
+		GLRenderer::GLRenderer() :
+			m_KeyEventCallback(this, &GLRenderer::OnKeyEvent),
+			m_ActionCallback(this, &GLRenderer::OnActionEvent)
 		{
 			m_DefaultSettingsFilePathAbs = RelativePathToAbsolute(ROOT_LOCATION  "saved/config/default-renderer-settings.ini");
 			m_SettingsFilePathAbs = RelativePathToAbsolute(SAVED_LOCATION "config/renderer-settings.ini");
@@ -62,6 +64,9 @@ namespace flex
 			LoadSettingsFromDisk();
 
 			SetVSyncEnabled(g_Window->GetVSyncEnabled());
+
+			g_InputManager->BindKeyEventCallback(&m_KeyEventCallback, 13);
+			g_InputManager->BindActionCallback(&m_ActionCallback, 13);
 
 			m_OffscreenTexture0Handle = {};
 			m_OffscreenTexture0Handle.internalFormat = GL_RGBA16F;
@@ -480,6 +485,9 @@ namespace flex
 
 		void GLRenderer::Destroy()
 		{
+			g_InputManager->UnbindKeyEventCallback(&m_KeyEventCallback);
+			g_InputManager->UnbindActionCallback(&m_ActionCallback);
+
 			glDeleteVertexArrays(1, &m_TextQuadSS_VAO);
 			glDeleteBuffers(1, &m_TextQuadSS_VBO);
 
@@ -1936,14 +1944,10 @@ namespace flex
 				RecaptureReflectionProbe();
 			}
 
-			if (g_InputManager->GetKeyDown(KeyCode::KEY_U))
+			if (m_bCaptureReflectionProbes)
 			{
+				m_bCaptureReflectionProbes = false;
 				RecaptureReflectionProbe();
-			}
-
-			if (g_InputManager->GetActionPressed(Action::TAKE_SCREENSHOT))
-			{
-				m_bCaptureScreenshot = true;
 			}
 		}
 
@@ -2681,68 +2685,6 @@ namespace flex
 				DrawSpriteQuad(drawInfo);
 			}
 			m_QueuedSSSprites.clear();
-
-			//static glm::vec3 pos(0.01f, -0.01f, 0.0f);
-
-			//if (g_InputManager->GetKeyDown(KeyCode::KEY_RIGHT))
-			//{
-			//	pos.x += g_DeltaTime * 1.0f;
-			//}
-			//if (g_InputManager->GetKeyDown(KeyCode::KEY_LEFT))
-			//{
-			//	pos.x -= g_DeltaTime * 1.0f;
-			//}
-			//if (g_InputManager->GetKeyDown(KeyCode::KEY_UP))
-			//{
-			//	pos.y += g_DeltaTime * 1.0f;
-			//}
-			//if (g_InputManager->GetKeyDown(KeyCode::KEY_DOWN))
-			//{
-			//	pos.y -= g_DeltaTime * 1.0f;
-			//}
-
-			//glm::vec4 color(1.0f);
-			//
-			//SpriteQuadDrawInfo drawInfo = {};
-			//drawInfo.bScreenSpace = true;
-			//drawInfo.bReadDepth = false;
-			//drawInfo.bWriteDepth = false;
-			//drawInfo.pos = pos;
-			//drawInfo.scale = glm::vec3(1.0, -1.0, 1.0f);
-			//drawInfo.materialID = m_SpriteMatID;
-			//drawInfo.anchor = AnchorPoint::WHOLE;
-			//drawInfo.inputTextureHandle = m_WorkTexture->handle;
-			//drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
-			//DrawSpriteQuad(drawInfo);
-
-			//drawInfo.scale = glm::vec3(0.25f, -0.25f, 1.0f);
-			//drawInfo.anchor = AnchorPoint::BOTTOM_LEFT;
-			//DrawSpriteQuad(drawInfo);
-
-			//drawInfo.anchor = AnchorPoint::LEFT;
-			//DrawSpriteQuad(drawInfo);
-
-			//drawInfo.anchor = AnchorPoint::TOP_LEFT;
-			//DrawSpriteQuad(drawInfo);
-
-			//drawInfo.anchor = AnchorPoint::TOP;
-			//DrawSpriteQuad(drawInfo);
-
-			//drawInfo.color = glm::vec4(1.0f, sin(g_SecElapsedSinceProgramStart) * 0.3f + 0.7f, 0.5f, 1.0f);
-			//drawInfo.anchor = AnchorPoint::TOP_RIGHT;
-			//DrawSpriteQuad(drawInfo);
-
-			//drawInfo.anchor = AnchorPoint::RIGHT;
-			//DrawSpriteQuad(drawInfo);
-
-			//drawInfo.anchor = AnchorPoint::BOTTOM_RIGHT;
-			//DrawSpriteQuad(drawInfo);
-
-			//drawInfo.anchor = AnchorPoint::BOTTOM;
-			//DrawSpriteQuad(drawInfo);
-
-			//drawInfo.anchor = AnchorPoint::CENTER;
-			//DrawSpriteQuad(drawInfo);
 
 			GL_POP_DEBUG_GROUP();
 		}
@@ -7162,6 +7104,30 @@ namespace flex
 			return m_RenderObjects.size();
 		}
 
+		EventReply GLRenderer::OnKeyEvent(KeyCode keyCode, KeyAction action, i32 modifiers)
+		{
+			if (action == KeyAction::PRESS)
+			{
+				if (keyCode == KeyCode::KEY_U && modifiers == 0)
+				{
+					m_bCaptureReflectionProbes = true;
+					return EventReply::CONSUMED;
+				}
+
+			}
+
+			return EventReply::UNCONSUMED;
+		}
+
+		EventReply GLRenderer::OnActionEvent(Action action)
+		{
+			if (action == Action::TAKE_SCREENSHOT)
+			{
+				m_bCaptureScreenshot = true;
+				return EventReply::CONSUMED;
+			}
+			return EventReply::UNCONSUMED;
+		}
 
 		void SetClipboardText(void* userData, const char* text)
 		{

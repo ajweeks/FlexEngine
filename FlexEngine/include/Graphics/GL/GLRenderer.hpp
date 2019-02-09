@@ -5,6 +5,7 @@
 
 #include <map>
 
+#include "Callbacks/InputCallbacks.hpp"
 #include "GLHelpers.hpp"
 #include "Graphics/VertexBufferData.hpp"
 
@@ -243,6 +244,12 @@ namespace flex
 
 			void DrawLoadingTextureQuad();
 
+			EventReply OnKeyEvent(KeyCode keyCode, KeyAction action, i32 modifiers);
+			KeyEventCallback<GLRenderer> m_KeyEventCallback;
+
+			EventReply OnActionEvent(Action action);
+			ActionCallback<GLRenderer> m_ActionCallback;
+
 			std::map<MaterialID, GLMaterial> m_Materials;
 			std::vector<GLRenderObject*> m_RenderObjects;
 
@@ -389,6 +396,7 @@ namespace flex
 			bool m_bRebatchRenderObjects = true;
 
 			bool m_bCaptureScreenshot = false;
+			bool m_bCaptureReflectionProbes = false;
 
 			GameObject* m_Grid = nullptr;
 			GameObject* m_WorldOrigin = nullptr;
