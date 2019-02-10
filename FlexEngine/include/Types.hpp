@@ -95,7 +95,7 @@ namespace flex
 		_NONE
 	};
 
-	static constexpr const char* GameObjectTypeStrings[] =
+	static const char* GameObjectTypeStrings[] =
 	{
 		"object",
 		"point light",
@@ -170,7 +170,7 @@ namespace flex
 		_NONE
 	};
 
-	static constexpr const char* TrackStateStrs[] =
+	static const char* TrackStateStrs[] =
 	{
 		"Facing forward",
 		"Facing backward",

@@ -24,7 +24,7 @@ namespace flex
 		_NONE
 	};
 
-	static constexpr const char* WindowModeStrings[] =
+	static const char* WindowModeStrings[] =
 	{
 		"Windowed",
 		"Windowed Fullscreen",

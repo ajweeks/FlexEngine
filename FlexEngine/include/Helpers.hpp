@@ -86,6 +86,8 @@ namespace flex
 	glm::vec3 Lerp(const glm::vec3& a, const glm::vec3& b, real t);
 	glm::vec4 Lerp(const glm::vec4& a, const glm::vec4& b, real t);
 
+	i32 ParseInt(const std::string& intStr);
+
 	/* Parses a single float, returns -1.0f if incorrectly formatted */
 	real ParseFloat(const std::string& floatStr);
 

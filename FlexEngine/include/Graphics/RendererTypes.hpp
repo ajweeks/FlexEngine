@@ -135,7 +135,7 @@ namespace flex
 		_NONE
 	};
 
-	static constexpr const char* DataTypeStrings[] =
+	static const char* DataTypeStrings[] =
 	{
 		"bool",
 		"byte",

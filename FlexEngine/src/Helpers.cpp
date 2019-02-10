@@ -826,6 +826,11 @@ namespace flex
 		return a * (1.0f - t) + b * t;
 	}
 
+	glm::i32 ParseInt(const std::string& intStr)
+	{
+		return (i32)atoi(intStr.c_str());
+	}
+
 	real ParseFloat(const std::string& floatStr)
 	{
 		if (floatStr.empty())
