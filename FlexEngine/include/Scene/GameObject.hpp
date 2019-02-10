@@ -471,24 +471,7 @@ namespace flex
 
 	};
 
-	enum class BasicType
-	{
-		INT,
-		BOOL,
-		FLOAT,
-		VAR,
-		REG,
-		INPUT,
-		OUTPUT,
-
-		// uint
-		// short
-		// byte
-		// double
-		// string ?
-	};
-
-	enum class Operator
+	enum class OperatorType
 	{
 		ADD,
 		SUB,
@@ -496,9 +479,17 @@ namespace flex
 		DIV,
 		MOD,
 		ASSIGN,
-		B_AND,
-		B_OR,
-		B_XOR,
+		BIN_AND,
+		BIN_OR,
+		BIN_XOR,
+		EQUAL,
+		NOT_EQUAL,
+		GREATER,
+		GREATER_EQUAL,
+		LESS,
+		LESS_EQUAL,
+		BOOLEAN_AND,
+		BOOLEAN_OR,
 
 		/*
 		- [] operator
@@ -513,24 +504,17 @@ namespace flex
 		_NONE
 	};
 
-	struct Value
-	{
-		BasicType type;
+	struct Tokenizer;
+	struct Value;
+	struct Expression;
+	struct Statement;
+	struct IfStatement;
+	struct WhileStatement;
+	enum class TypeName;
 
-		VariableID id = InvalidVariableID;
-		std::string name;
-		int intVal;
-		bool boolVal;
-		float realVal;
-		VariableID varVal;
-	};
-
-	struct TreeNode
+	struct Operator
 	{
-		Value val;
-		Operator op = Operator::_NONE;
-		TreeNode* leaf1 = nullptr;
-		TreeNode* leaf2 = nullptr;
+		static OperatorType Parse(Tokenizer& tokenizer);
 	};
 
 	struct Error
@@ -546,13 +530,17 @@ namespace flex
 
 	enum class TokenType
 	{
-		LABEL,
+		ROOT,
+
+		IDENTIFIER,
 		SINGLE_COLON,
 		DOUBLE_COLON,
 		SEMICOLON,
 		BANG,
 		TERNARY,
-		NUMBER,
+		INT_LITERAL,
+		FLOAT_LITERAL,
+		BOOL_LITERAL,
 		ASSIGNMENT,
 		//FUNCTION_DEF,
 		//FUNCITON_CALL,
@@ -572,12 +560,12 @@ namespace flex
 		DIVIDE_ASSIGN,
 		MODULO,
 		MODULO_ASSIGN,
-		LESS,
-		LESS_EQ,
-		GREATER,
-		GREATER_EQ,
 		EQUAL_TEST,
 		NOT_EQUAL_TEST,
+		GREATER,
+		GREATER_EQUAL,
+		LESS,
+		LESS_EQUAL,
 		BOOLEAN_AND,
 		BOOLEAN_OR,
 		BINARY_AND,
@@ -591,7 +579,7 @@ namespace flex
 		BACK_QUOTE,
 		DOT,
 
-		// Keywords:
+		KEYWORDS_START, // Not a valid type!
 		//KEY_RETURN,
 		KEY_INT,
 		//KEY_FLOAT,
@@ -605,106 +593,410 @@ namespace flex
 		KEY_DO,
 		KEY_WHILE,
 		KEY_BREAK,
+		//KEY_CONST,
+		KEYWORDS_END, // Not a valid type!
 
 		_NONE
 	};
 
-	struct Token
+	static const char* g_KeywordStrings[] =
 	{
-		TokenType type;
-		union
-		{
-			int intVal;
-			bool boolVal;
-			float floatVal;
-			//std::string strVal;
-			//void* voidVal;
-		} data;
+		//"return",
+		"int",
+		//"float",
+		"bool",
+		"true",
+		"false",
+		"if",
+		"elif",
+		"else",
+		"do",
+		"while",
+		"break",
+		//"const",
 	};
 
-	struct TokenString
+	static_assert(ARRAY_LENGTH(g_KeywordStrings) == (u32)((u32)TokenType::KEYWORDS_END - (u32)TokenType::KEYWORDS_START - 1), "Length of g_KeywordStrings must match number of keyword entries in TokenType enum");
+
+	struct Token
 	{
+		std::string ToString() const;
+
 		i32 lineNum;
 		i32 linePos;
-		i32 TokenID;
+		i32 tokenID;
 		TokenType type;
 		char const* charPtr;
 		i32 len;
-
-		std::string ToString()
-		{
-			return std::string(charPtr, len);
-		}
 	};
+
+	extern Token g_EmptyToken;
 
 	struct TokenContext
 	{
-		const char* buffer = nullptr;
-		i32 bufferLen = -1;
-		char const* bufferPtr = nullptr;
-		std::string errorReason;
-		i32 linePos = 0;
-		i32 lineNumber = 0;
+		TokenContext();
+		~TokenContext();
 
-		char ConsumeNextChar()
-		{
-			assert((bufferPtr + 1 - buffer) <= bufferLen);
+		bool HasNextChar() const;
+		char ConsumeNextChar();
+		char PeekNextChar() const;
+		char PeekChar(i32 index) const;
+		i32 GetRemainingLength() const;
 
-			char nextChar = bufferPtr[0];
-			bufferPtr++;
-			linePos++;
-			if (nextChar == '\n')
-			{
-				linePos = 0;
-				lineNumber++;
-			}
-			return nextChar;
-		}
-
-		char PeekNextChar() const
-		{
-			assert((bufferPtr - buffer) <= bufferLen);
-
-			return bufferPtr[0];
-		}
-
-		char PeekChar(i32 index) const
-		{
-			assert(index >= 0 && index < GetRemainingLength());
-
-			return bufferPtr[index];
-		}
-
-		i32 GetRemainingLength() const
-		{
-			return bufferLen - (bufferPtr - buffer);
-		}
-
-		bool HasNextChar() const
-		{
-			return GetRemainingLength() > 0;
-		}
-
-		bool CanNextCharBeLabelPart() const;
+		bool CanNextCharBeIdentifierPart() const;
 
 		TokenType AttemptParseKeyword(const char* keywordStr, TokenType keywordType);
 		TokenType AttemptParseKeywords(const char* potentialKeywordStrs[], TokenType potentialKeywordTypes[], i32 pos[], i32 potentialCount);
 
+		Value* InstantiateIdentifier(TypeName typeName, const std::string& tokenName, i32 tokenID);
+		Value* GetVarInstanceFromTokenID(i32 tokenID);
+
+		static bool IsKeyword(const char* str);
+		static bool IsKeyword(TokenType type);
+
+
+		const char* buffer = nullptr;
+		i32 bufferLen = -1;
+		char const* bufferPtr = nullptr;
+		std::string errorReason;
+		Token errorToken;
+		i32 linePos = 0;
+		i32 lineNumber = 0;
+
+		static const i32 MAX_VARS = 512;
+		Value* instantiatedVariables[MAX_VARS];
+		std::map<std::string, i32> tokenNameMap;
 	};
 
 	struct Tokenizer
 	{
 		Tokenizer(const std::string& code);
+		~Tokenizer();
 
-		TokenString GetNextToken();
+		Token PeekNextToken();
+		Token GetNextToken();
 
 		void ConsumeWhitespaceAndComments();
-		TokenType IsNextChar(char c, TokenType ifYes, TokenType ifNo);
+		TokenType Type1IfNextCharIsCElseType2(char c, TokenType ifYes, TokenType ifNo);
 
 		std::string str;
-		TokenContext context;
+		TokenContext* context = nullptr;
 
 		i32 nextTokenID = 0;
+
+		// True when we have peeked a token but not yet consumed it
+		// Prevents parsing a token multiple times when calling Peek followed by Get
+		bool bConsumedLastParsedToken = true;
+		Token lastParsedToken;
+	};
+
+	enum class TypeName
+	{
+		INT,
+		FLOAT,
+		BOOL,
+
+		_NONE
+	};
+
+	static const char* g_TypeNameStrings[] =
+	{
+		"int",
+		"float",
+		"bool",
+
+		"NONE"
+	};
+
+	static_assert(ARRAY_LENGTH(g_TypeNameStrings) == ((u32)TypeName::_NONE + 1), "Length of g_TypeNameStrings must match length of TypeName enum");
+
+	struct Type
+	{
+		static TypeName GetTypeNameFromStr(const std::string& str);
+		static TypeName Parse(Tokenizer& tokenizer);
+	};
+
+	struct Node
+	{
+		Node(const Token& token);
+
+		Token token;
+	};
+
+	enum class ValueType
+	{
+		OPERATION,
+		INT_LITERAL,
+		FLOAT_LITERAL,
+		BOOL_LITERAL,
+		IDENTIFIER,
+
+		INT_RAW,
+		FLOAT_RAW,
+		BOOL_RAW,
+		//EQUALITY_TEST,
+		//FUNC_CALL,
+		//STRING_LITERAL,
+		NONE
+	};
+
+	TypeName ValueTypeToTypeName(ValueType valueType);
+
+	struct IntLiteral : public Node
+	{
+		IntLiteral(const Token& token, i32 value);
+
+		static IntLiteral* Parse(Tokenizer& tokenizer);
+
+		operator i32()
+		{
+			return value;
+		}
+
+		i32 value = 0;
+	};
+
+	struct FloatLiteral : public Node
+	{
+		FloatLiteral(const Token& token, real value);
+
+		static FloatLiteral* Parse(Tokenizer& tokenizer);
+
+		operator real()
+		{
+			return value;
+		}
+
+		real value = 0.0f;
+	};
+
+	struct BoolLiteral : public Node
+	{
+		BoolLiteral(const Token& token, bool value);
+
+		static BoolLiteral* Parse(Tokenizer& tokenizer);
+
+		operator bool()
+		{
+			return value;
+		}
+
+		bool value = false;
+	};
+
+	struct Identifier : public Node
+	{
+		Identifier(const Token& token, const std::string& identifierStr);
+
+		static Identifier* Parse(Tokenizer& tokenizer);
+
+		std::string identifierStr;
+	};
+
+	//struct EqualityTest : public Node
+	//{
+	//	EqualityTest(const Token& token, Expression* lhs, Expression* rhs, OperatorType op);
+
+	//	bool Evaluate(TokenContext& context);
+	//	static EqualityTest* Parse(Tokenizer& tokenizer);
+
+	//	Expression* lhs = nullptr;
+	//	Expression* rhs = nullptr;
+	//	OperatorType op = OperatorType::_NONE;
+	//};
+
+	struct Operation : public Node
+	{
+		Operation(const Token& token, Expression* lhs, OperatorType op, Expression* rhs);
+
+		OperatorType op;
+		Expression* lhs;
+		Expression* rhs;
+
+		// Returns the result of the comparison, or the new value of the lhs of the assignment
+		Value* Evaluate(TokenContext& context);
+		static Operation* Parse(Tokenizer& tokenizer);
+
+	};
+
+	struct Value
+	{
+		Value(Operation* opearation);
+		Value(BoolLiteral* boolLiteral);
+		Value(IntLiteral* intLiteral);
+		Value(FloatLiteral* floatLiteral);
+		Value(Identifier* identifierValue);
+		Value(i32 intRaw);
+		Value(real floatRaw);
+		Value(bool boolRaw);
+		Value();
+
+		ValueType type;
+
+		union Val
+		{
+			Operation* operation;
+			BoolLiteral* boolLiteral;
+			IntLiteral* intLiteral;
+			FloatLiteral* floatLiteral;
+			Identifier* identifierValue;
+			i32 intRaw;
+			real floatRaw;
+			bool boolRaw;
+			void* nullValue;
+
+			Val(Operation* operation) : operation(operation) {}
+			Val(BoolLiteral* boolLiteral) : boolLiteral(boolLiteral) {}
+			Val(IntLiteral* intLiteral) : intLiteral(intLiteral) {}
+			Val(FloatLiteral* floatLiteral) : floatLiteral(floatLiteral) {}
+			Val(Identifier* identifierValue) : identifierValue(identifierValue) {}
+			Val(i32 intRaw) : intRaw(intRaw) {}
+			Val(real floatRaw) : floatRaw(floatRaw) {}
+			Val(bool boolRaw) : boolRaw(boolRaw) {}
+			Val() : nullValue(nullptr) {}
+		} val;
+	};
+
+	struct Expression : public Node
+	{
+		Expression(Tokenizer& tokenizer, const Token& token, Operation* opearation);
+		Expression(Tokenizer& tokenizer, const Token& token, BoolLiteral* boolValue);
+		Expression(Tokenizer& tokenizer, const Token& token, IntLiteral* intValue);
+		Expression(Tokenizer& tokenizer, const Token& token, FloatLiteral* floatValue);
+		Expression(Tokenizer& tokenizer, const Token& token, Identifier* identifierValue);
+
+		Value value;
+
+		// Returns a pointer to the result of this expression
+		Value* Evaluate(TokenContext& context);
+		bool Compare(TokenContext& context, Expression* other, OperatorType op);
+
+		static Expression* Parse(Tokenizer& tokenizer);
+		static Expression* SingleParse(Tokenizer& tokenizer);
+	};
+
+	struct Assignment : public Node
+	{
+		// If typename is specified, this assignment will instantiate var on evaluation
+		// Otherwise, assignment is to pre-existing variable
+		Assignment(const Token& token,
+			Identifier* identifier,
+			Expression* rhs,
+			TypeName typeName = TypeName::_NONE);
+
+		TypeName typeName; // Optional, not used when re-assigning
+		Identifier* identifier;
+		Expression* rhs; // If null, this assignment is actually just a declaration
+		// TODO: Mutability?
+
+		void Evaluate(TokenContext& context);
+		// Should be called when tokenizer is pointing at char past '='
+		static Assignment* Parse(Tokenizer& tokenizer);
+	};
+
+	enum class StatementType
+	{
+		ASSIGNMENT,
+		IF,
+		ELIF,
+		ELSE,
+		WHILE,
+		NONE
+	};
+
+	struct Statement : public Node
+	{
+		Statement(const Token& token, Assignment* assignment);
+		Statement(const Token& token, StatementType type, IfStatement* ifStatement);
+		Statement(const Token& token, Statement* elseStatement);
+		Statement(const Token& token, WhileStatement* whileStatement);
+		//Statement(const Token& token, Operation* operation);
+
+		StatementType type;
+		// TODO: Rename
+		union Contents
+		{
+			Assignment* assignment;
+			IfStatement* ifStatement;
+			Statement* elseStatement;
+			WhileStatement* whileStatement;
+			//Operation* operation;
+
+			Contents(Assignment* assignment) : assignment(assignment) {}
+			Contents(IfStatement* ifStatement) : ifStatement(ifStatement) {}
+			Contents(Statement* elseStatement) : elseStatement(elseStatement) {}
+			Contents(WhileStatement* whileStatement) : whileStatement(whileStatement) {}
+			//Contents(Operation* operation) : operation(operation) {}
+		} contents;
+
+		void Evaluate(TokenContext& context);
+		static Statement* Parse(Tokenizer& tokenizer);
+	};
+
+	enum class IfFalseAction
+	{
+		ELSE,
+		ELIF,
+		NONE
+	};
+
+	struct IfStatement : public Node
+	{
+		IfStatement(const Token& token, Expression* condition, Statement* body, IfStatement* elseIfStatement);
+		IfStatement(const Token& token, Expression* condition, Statement* body, Statement* elseStatement);
+		IfStatement(const Token& token, Expression* condition, Statement* body);
+
+		union IfFalse
+		{
+			void* nothingStatement;
+			IfStatement* elseIfStatement;
+			Statement* elseStatement;
+
+			IfFalse() : nothingStatement(nullptr) {}
+			IfFalse(IfStatement* elseIfStatement) : elseIfStatement(elseIfStatement) {}
+			IfFalse(Statement* elseStatement) : elseStatement(elseStatement) {}
+		} ifFalseStatement;
+
+		IfFalseAction ifFalseAction;
+		Expression* condition;
+		Statement* body;
+
+		void Evaluate(TokenContext& context);
+		static IfStatement* Parse(Tokenizer& tokenizer);
+	};
+
+	struct WhileStatement : public Node
+	{
+		WhileStatement(const Token& token, Expression* condition, Statement* body);
+
+		Expression* condition;
+		Statement* body;
+		Statement* nextStatement = nullptr;
+
+		void Evaluate(TokenContext& context);
+		static WhileStatement* Parse(Tokenizer& tokenizer);
+	};
+
+	struct RootItem
+	{
+		RootItem(Statement* statement, RootItem* nextItem);
+
+		Statement* statement;
+		RootItem* nextItem;
+
+		void Evaluate(TokenContext& context);
+		static RootItem* Parse(Tokenizer& tokenizer);
+	};
+
+	struct AST
+	{
+		AST(Tokenizer* tokenizer);
+
+		void Create();
+		void Evaluate();
+
+		RootItem* rootItem = nullptr;
+		Tokenizer* tokenizer = nullptr;
 	};
 
 	class Terminal : public GameObject
@@ -755,6 +1047,10 @@ namespace flex
 		i32 GetIdxOfPrevBreak(i32 y, i32 startX);
 
 		void ParseCode();
+		void EvaluateCode();
+
+		AST* ast = nullptr;
+		Tokenizer* tokenizer = nullptr;
 
 		std::vector<std::string> lines;
 		bool bParsePassed = false;

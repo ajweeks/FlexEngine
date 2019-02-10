@@ -13,7 +13,7 @@ namespace flex
 		_NONE
 	};
 
-	static constexpr const char* KeyActionStrings[] =
+	static const char* KeyActionStrings[] =
 	{
 		"Press",
 		"Release",
@@ -151,7 +151,7 @@ namespace flex
 		_NONE
 	};
 
-	static constexpr const char* KeyCodeStrings[] =
+	static const char* KeyCodeStrings[] =
 	{
 		"Space",
 		"'",
@@ -292,7 +292,7 @@ namespace flex
 		_NONE		= 0,
 	};
 
-	static constexpr const char* InputModifierStrings[] =
+	static const char* InputModifierStrings[] =
 	{
 		"Shift",
 		"Control",
@@ -322,7 +322,7 @@ namespace flex
 		_NONE = MOUSE_BUTTON_8 + 1
 	};
 
-	static constexpr const char* MouseButtonStrings[] =
+	static const char* MouseButtonStrings[] =
 	{
 		"LMB",
 		"RMB",
@@ -360,7 +360,7 @@ namespace flex
 	};
 
 	// TODO: Support naming for other common gamepads
-	static constexpr const char* GamepadButtonStrings[] =
+	static const char* GamepadButtonStrings[] =
 	{
 		"A",
 		"B",
@@ -395,7 +395,7 @@ namespace flex
 		_NONE
 	};
 
-	static constexpr const char* GamepadAxisStrings[] =
+	static const char* GamepadAxisStrings[] =
 	{
 		"L Stick X",
 		"L Stick Y",
@@ -419,7 +419,7 @@ namespace flex
 		_NONE
 	};
 
-	static constexpr const char* MouseAxisStrings[] =
+	static const char* MouseAxisStrings[] =
 	{
 		"Axis X",
 		"Axis Y",
@@ -492,7 +492,7 @@ namespace flex
 		_NONE
 	};
 
-	static constexpr const char* ActionStrings[] =
+	static const char* ActionStrings[] =
 	{
 		"Move left",
 		"Move right",

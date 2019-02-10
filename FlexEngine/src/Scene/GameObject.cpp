@@ -39,6 +39,8 @@ namespace flex
 	const char* Cart::emptyCartMeshName = "cart-empty.glb";
 	const char* EngineCart::engineMeshName = "cart-engine.glb";
 
+	struct Token g_EmptyToken = Token();
+
 	RandomizedAudioSource GameObject::s_SqueakySounds;
 	AudioSourceID GameObject::s_BunkSound;
 
@@ -3211,7 +3213,34 @@ namespace flex
 		UNREFERENCED_PARAMETER(parentObject);
 	}
 
-	bool TokenContext::CanNextCharBeLabelPart() const
+	OperatorType Operator::Parse(Tokenizer& tokenizer)
+	{
+		Token token = tokenizer.GetNextToken();
+		switch (token.type)
+		{
+		case TokenType::EQUAL_TEST: return OperatorType::EQUAL;
+		case TokenType::NOT_EQUAL_TEST: return OperatorType::NOT_EQUAL;
+		case TokenType::GREATER: return OperatorType::GREATER;
+		case TokenType::GREATER_EQUAL: return OperatorType::GREATER_EQUAL;
+		case TokenType::LESS: return OperatorType::LESS;
+		case TokenType::LESS_EQUAL: return OperatorType::LESS_EQUAL;
+		case TokenType::BOOLEAN_AND: return OperatorType::BOOLEAN_AND;
+		case TokenType::BOOLEAN_OR: return OperatorType::BOOLEAN_OR;
+		default:
+		{
+			tokenizer.context->errorReason = "Unexpected operator";
+			tokenizer.context->errorToken = token;
+			return OperatorType::_NONE;
+		}
+		}
+	}
+
+	std::string Token::ToString() const
+	{
+		return std::string(charPtr, len);
+	}
+
+	bool TokenContext::CanNextCharBeIdentifierPart() const
 	{
 		if (!HasNextChar())
 		{
@@ -3237,17 +3266,17 @@ namespace flex
 			++keywordPos;
 		}
 
-		if (keywordPos == (i32)strlen(keywordStr))
+		if (keywordPos == (i32)strlen(keywordStr) && !(isalpha(c) || isdigit(c) || c == '_'))
 		{
 			return keywordType;
 		}
 
-		// Not this keyword, must be a label
-		while (CanNextCharBeLabelPart())
+		// Not this keyword, must be a identifier
+		while (CanNextCharBeIdentifierPart())
 		{
 			ConsumeNextChar();
 		}
-		return TokenType::LABEL;
+		return TokenType::IDENTIFIER;
 	}
 
 	TokenType TokenContext::AttemptParseKeywords(const char* potentialKeywordStrs[], TokenType potentialKeywordTypes[], i32 keywordPositions[], i32 potentialCount)
@@ -3302,76 +3331,201 @@ namespace flex
 			}
 			else
 			{
-				// Doesn't match any keywords, must be a label
+				// Doesn't match any keywords, must be a identifier
 
-				while (CanNextCharBeLabelPart())
+				while (CanNextCharBeIdentifierPart())
 				{
 					ConsumeNextChar();
 				}
-				return TokenType::LABEL;
+				return TokenType::IDENTIFIER;
 			}
 		}
 
 		return TokenType::_NONE;
 	}
 
+	Value* TokenContext::InstantiateIdentifier(TypeName typeName, const std::string& tokenName, i32 tokenID)
+	{
+		if (tokenNameMap.find(tokenName) != tokenNameMap.end())
+		{
+			errorReason = "Attempted to instantiate variable more than once";
+			return nullptr;
+		}
+
+		tokenNameMap.emplace(tokenName, tokenID);
+
+		// TODO: Use typeName?
+
+		assert(tokenID >= 0 && tokenID < MAX_VARS);
+		switch (typeName)
+		{
+		case TypeName::INT:
+			instantiatedVariables[tokenID] = new Value(new IntLiteral(g_EmptyToken, 0));
+			break;
+		case TypeName::FLOAT:
+			instantiatedVariables[tokenID] = new Value(new FloatLiteral(g_EmptyToken, 0.0f));
+			break;
+		case TypeName::BOOL:
+			instantiatedVariables[tokenID] = new Value(new BoolLiteral(g_EmptyToken, false));
+			break;
+		}
+		return instantiatedVariables[tokenID];
+	}
+
+	Value* TokenContext::GetVarInstanceFromTokenID(i32 tokenID)
+	{
+		assert(tokenID >= 0 && tokenID < MAX_VARS);
+		return instantiatedVariables[tokenID];
+	}
+
+	bool TokenContext::IsKeyword(const char* str)
+	{
+		for (const char* keyword : g_KeywordStrings)
+		{
+			if (strcmp(str, keyword) == 0)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	bool TokenContext::IsKeyword(TokenType type)
+	{
+		return (i32)type > (i32)TokenType::KEYWORDS_START &&
+			   (i32)type < (i32)TokenType::KEYWORDS_END;
+	}
+
+	char TokenContext::ConsumeNextChar()
+	{
+		assert((bufferPtr + 1 - buffer) <= bufferLen);
+
+		char nextChar = bufferPtr[0];
+		bufferPtr++;
+		linePos++;
+		if (nextChar == '\n')
+		{
+			linePos = 0;
+			lineNumber++;
+		}
+		return nextChar;
+	}
+
+	char TokenContext::PeekNextChar() const
+	{
+		assert((bufferPtr - buffer) <= bufferLen);
+
+		return bufferPtr[0];
+	}
+
+	char TokenContext::PeekChar(i32 index) const
+	{
+		assert(index >= 0 && index < GetRemainingLength());
+
+		return bufferPtr[index];
+
+	}
+
+	glm::i32 TokenContext::GetRemainingLength() const
+	{
+		return bufferLen - (bufferPtr - buffer);
+	}
+
+	TokenContext::TokenContext()
+	{
+		memset(instantiatedVariables, 0, sizeof(Value*) * MAX_VARS);
+	}
+
+	TokenContext::~TokenContext()
+	{
+		memset(instantiatedVariables, 0, sizeof(Value*) * MAX_VARS);
+	}
+
+	bool TokenContext::HasNextChar() const
+	{
+		return GetRemainingLength() > 0;
+	}
+
 	Tokenizer::Tokenizer(const std::string& code) :
 		str(code)
 	{
-		context = {};
-		context.buffer = context.bufferPtr = (char*)str.c_str();
-		context.bufferLen = (i32)code.size();
+		SafeDelete(context);
+
+		context = new TokenContext();
+		context->buffer = context->bufferPtr = (char*)str.c_str();
+		context->bufferLen = (i32)code.size();
 	}
 
-	TokenString Tokenizer::GetNextToken()
+	Tokenizer::~Tokenizer()
 	{
+		SafeDelete(context);
+	}
+
+	Token Tokenizer::PeekNextToken()
+	{
+		if (bConsumedLastParsedToken)
+		{
+			lastParsedToken = GetNextToken();
+			bConsumedLastParsedToken = false;
+		}
+		return lastParsedToken;
+	}
+
+	Token Tokenizer::GetNextToken()
+	{
+		if (!bConsumedLastParsedToken)
+		{
+			bConsumedLastParsedToken = true;
+			return lastParsedToken;
+		}
+
 		ConsumeWhitespaceAndComments();
 
-		char const* const tokenStart = context.bufferPtr;
-		i32 tokenLineNum = context.lineNumber;
-		i32 tokenLinePos = context.linePos;
+		char const* const tokenStart = context->bufferPtr;
+		i32 tokenLineNum = context->lineNumber;
+		i32 tokenLinePos = context->linePos;
 
 		TokenType nextTokenType = TokenType::_NONE;
 
-		if (context.HasNextChar())
+		if (context->HasNextChar())
 		{
-			char c = context.ConsumeNextChar();
+			char c = context->ConsumeNextChar();
 
 			switch (c)
 			{
 			// Keywords:
 			case 't':
-				nextTokenType = context.AttemptParseKeyword("true", TokenType::KEY_TRUE);
+				nextTokenType = context->AttemptParseKeyword("true", TokenType::KEY_TRUE);
 				break;
 			case 'f':
-				nextTokenType = context.AttemptParseKeyword("false", TokenType::KEY_FALSE);
+				nextTokenType = context->AttemptParseKeyword("false", TokenType::KEY_FALSE);
 				break;
 			case 'b':
 			{
 				const char* potentialKeywords[] = { "bool", "break" };
 				TokenType potentialTokenTypes[] = { TokenType::KEY_BOOL, TokenType::KEY_BREAK };
 				i32 pos[] = { 0, 0 };
-				nextTokenType = context.AttemptParseKeywords(potentialKeywords, potentialTokenTypes, pos, ARRAY_LENGTH(pos));
+				nextTokenType = context->AttemptParseKeywords(potentialKeywords, potentialTokenTypes, pos, ARRAY_LENGTH(pos));
 			} break;
 			case 'i':
 			{
 				const char* potentialKeywords[] = { "int", "if" };
 				TokenType potentialTokenTypes[] = { TokenType::KEY_INT, TokenType::KEY_IF };
 				i32 pos[] = { 0, 0 };
-				nextTokenType = context.AttemptParseKeywords(potentialKeywords, potentialTokenTypes, pos, ARRAY_LENGTH(pos));
+				nextTokenType = context->AttemptParseKeywords(potentialKeywords, potentialTokenTypes, pos, ARRAY_LENGTH(pos));
 			} break;
 			case 'e':
 			{
 				const char* potentialKeywords[] = { "else", "elif" };
 				TokenType potentialTokenTypes[] = { TokenType::KEY_ELSE, TokenType::KEY_ELIF };
 				i32 pos[] = { 0, 0 };
-				nextTokenType = context.AttemptParseKeywords(potentialKeywords, potentialTokenTypes, pos, ARRAY_LENGTH(pos));
+				nextTokenType = context->AttemptParseKeywords(potentialKeywords, potentialTokenTypes, pos, ARRAY_LENGTH(pos));
 			} break;
 			case 'd':
-				nextTokenType = context.AttemptParseKeyword("do", TokenType::KEY_DO);
+				nextTokenType = context->AttemptParseKeyword("do", TokenType::KEY_DO);
 				break;
 			case 'w':
-				nextTokenType = context.AttemptParseKeyword("while", TokenType::KEY_WHILE);
+				nextTokenType = context->AttemptParseKeyword("while", TokenType::KEY_WHILE);
 				break;
 
 			// Non-keywords
@@ -3394,81 +3548,81 @@ namespace flex
 				nextTokenType = TokenType::CLOSE_SQUARE_BRACKET;
 				break;
 			case ':':
-				nextTokenType = IsNextChar(':', TokenType::DOUBLE_COLON, TokenType::SINGLE_COLON);
+				nextTokenType = Type1IfNextCharIsCElseType2(':', TokenType::DOUBLE_COLON, TokenType::SINGLE_COLON);
 				break;
 			case ';':
 				nextTokenType = TokenType::SEMICOLON;
 				break;
 			case '!':
-				nextTokenType = IsNextChar('=', TokenType::NOT_EQUAL_TEST, TokenType::BANG);
+				nextTokenType = Type1IfNextCharIsCElseType2('=', TokenType::NOT_EQUAL_TEST, TokenType::BANG);
 				break;
 			case '?':
 				nextTokenType = TokenType::TERNARY;
 				break;
 			case '=':
-				nextTokenType = IsNextChar('=', TokenType::EQUAL_TEST, TokenType::ASSIGNMENT);
+				nextTokenType = Type1IfNextCharIsCElseType2('=', TokenType::EQUAL_TEST, TokenType::ASSIGNMENT);
 				break;
 			case '>':
-				nextTokenType = IsNextChar('=', TokenType::GREATER_EQ, TokenType::GREATER);
+				nextTokenType = Type1IfNextCharIsCElseType2('=', TokenType::GREATER_EQUAL, TokenType::GREATER);
 				break;
 			case '<':
-				nextTokenType = IsNextChar('=', TokenType::LESS_EQ, TokenType::LESS);
+				nextTokenType = Type1IfNextCharIsCElseType2('=', TokenType::LESS_EQUAL, TokenType::LESS);
 				break;
 			case '+':
-				nextTokenType = IsNextChar('=', TokenType::ADD_ASSIGN, TokenType::ADD);
+				nextTokenType = Type1IfNextCharIsCElseType2('=', TokenType::ADD_ASSIGN, TokenType::ADD);
 				break;
 			case '-':
-				nextTokenType = IsNextChar('=', TokenType::SUBTRACT_ASSIGN, TokenType::SUBTRACT);
+				nextTokenType = Type1IfNextCharIsCElseType2('=', TokenType::SUBTRACT_ASSIGN, TokenType::SUBTRACT);
 				break;
 			case '*':
-				nextTokenType = IsNextChar('=', TokenType::MULTIPLY_ASSIGN, TokenType::MULTIPLY);
+				nextTokenType = Type1IfNextCharIsCElseType2('=', TokenType::MULTIPLY_ASSIGN, TokenType::MULTIPLY);
 				break;
 			case '/':
-				nextTokenType = IsNextChar('=', TokenType::DIVIDE_ASSIGN, TokenType::DIVIDE);
+				nextTokenType = Type1IfNextCharIsCElseType2('=', TokenType::DIVIDE_ASSIGN, TokenType::DIVIDE);
 				break;
 			case '%':
-				nextTokenType = IsNextChar('=', TokenType::MODULO_ASSIGN, TokenType::MODULO);
+				nextTokenType = Type1IfNextCharIsCElseType2('=', TokenType::MODULO_ASSIGN, TokenType::MODULO);
 				break;
 			case '&':
-				if (context.PeekNextChar() == '=')
+				if (context->PeekNextChar() == '=')
 				{
 					nextTokenType = TokenType::BINARY_AND_ASSIGN;
 				}
 				else
 				{
-					nextTokenType = IsNextChar('&', TokenType::BOOLEAN_AND, TokenType::BINARY_AND);
+					nextTokenType = Type1IfNextCharIsCElseType2('&', TokenType::BOOLEAN_AND, TokenType::BINARY_AND);
 				}
 				break;
 			case '|':
-				if (context.PeekNextChar() == '=')
+				if (context->PeekNextChar() == '=')
 				{
 					nextTokenType = TokenType::BINARY_OR_ASSIGN;
 				}
 				else
 				{
-					nextTokenType = IsNextChar('|', TokenType::BOOLEAN_OR, TokenType::BINARY_OR);
+					nextTokenType = Type1IfNextCharIsCElseType2('|', TokenType::BOOLEAN_OR, TokenType::BINARY_OR);
 				}
 				break;
 			case '^':
-				nextTokenType = IsNextChar('=', TokenType::BINARY_XOR_ASSIGN, TokenType::BINARY_XOR);
+				nextTokenType = Type1IfNextCharIsCElseType2('=', TokenType::BINARY_XOR_ASSIGN, TokenType::BINARY_XOR);
 				break;
 			case '\\':
-				if (context.HasNextChar())
+				if (context->HasNextChar())
 				{
 					// Escaped char (unhandled)
-					context.ConsumeNextChar();
+					context->ConsumeNextChar();
 				}
 				else
 				{
-					context.errorReason = "Input ended with a single backslash";
+					context->errorReason = "Input ended with a single backslash";
 				}
 				break;
 			case '\'':
 			{
 				nextTokenType = TokenType::STRING;
-				while (context.HasNextChar())
+				while (context->HasNextChar())
 				{
-					char cn = context.ConsumeNextChar();
+					char cn = context->ConsumeNextChar();
 					if (cn == '\\' || cn == '\'')
 					{
 						break;
@@ -3478,9 +3632,9 @@ namespace flex
 			case'\"':
 			{
 				nextTokenType = TokenType::STRING;
-				while (context.HasNextChar())
+				while (context->HasNextChar())
 				{
-					char cn = context.ConsumeNextChar();
+					char cn = context->ConsumeNextChar();
 					if (cn == '\\' || cn == '\"')
 					{
 						break;
@@ -3499,18 +3653,73 @@ namespace flex
 			default:
 				if (isalpha(c) || c == '_')
 				{
-					nextTokenType = TokenType::LABEL;
-					while (context.CanNextCharBeLabelPart())
+					nextTokenType = TokenType::IDENTIFIER;
+					while (context->CanNextCharBeIdentifierPart())
 					{
-						context.ConsumeNextChar();
+						context->ConsumeNextChar();
 					}
 				}
 				else if (isdigit(c))
 				{
-					nextTokenType = TokenType::NUMBER;
-					while (isdigit(context.PeekNextChar()))
+					//i32 numIndex = 0;
+					bool bConsumedDecimal = false;
+					bool bConsumedF = false;
+					//bool bValidNum = true;
+					while (context->HasNextChar() && isdigit(context->PeekNextChar()))
 					{
-						context.ConsumeNextChar();
+						context->ConsumeNextChar();
+					}
+					//while (context->HasNextChar())
+					//{
+					//	char nc = context->PeekNextChar();
+					//	while (isdigit(nc) || nc == 'f' || nc == '.')
+					//	{
+					//		// Ensure f comes last if at all
+					//		if (nc == 'f')
+					//		{
+					//			if (numIndex == 0)
+					//			{
+					//				context->errorReason = "Found 'f' in number definition before any digits";
+					//				bValidNum = false;
+					//			}
+					//			else
+					//			{
+					//				bConsumedF = true;
+					//				if (context->HasNextChar())
+					//				{
+					//					if (!isspace(context->PeekNextChar()))
+					//					{
+					//						context->errorReason = "'f' in number definition must come last";
+					//						bValidNum = false;
+					//					}
+					//				}
+					//			}
+					//		}
+					//		// Ensure . appears only once if at all
+					//		if (nc == '.')
+					//		{
+					//			if (bConsumedDecimal)
+					//			{
+					//				context->errorReason = "Found multiple decimals in number";
+					//				bValidNum = false;
+					//			}
+					//			else
+					//			{
+					//				bConsumedDecimal = true;
+					//			}
+					//		}
+
+					//		context->ConsumeNextChar();
+					//	}
+					//}
+
+					if (bConsumedDecimal || bConsumedF)
+					{
+						nextTokenType = TokenType::FLOAT_LITERAL;
+					}
+					else
+					{
+						nextTokenType = TokenType::INT_LITERAL;
 					}
 				}
 				else
@@ -3522,34 +3731,37 @@ namespace flex
 			}
 		}
 
-		TokenString tokenString = {};
-		tokenString.lineNum = tokenLineNum;
-		tokenString.linePos = tokenLinePos;
-		tokenString.charPtr = tokenStart;
-		tokenString.len = (context.bufferPtr - tokenStart);
-		tokenString.type = nextTokenType;
-		tokenString.TokenID = nextTokenID++;
-		return tokenString;
+		Token token = {};
+		token.lineNum = tokenLineNum;
+		token.linePos = tokenLinePos;
+		token.charPtr = tokenStart;
+		token.len = (context->bufferPtr - tokenStart);
+		token.type = nextTokenType;
+		token.tokenID = nextTokenID++;
+
+		lastParsedToken = token;
+
+		return token;
 	}
 
 	void Tokenizer::ConsumeWhitespaceAndComments()
 	{
-		while (context.GetRemainingLength() > 1)
+		while (context->GetRemainingLength() > 1)
 		{
-			char c0 = context.PeekChar(0);
-			char c1 = context.PeekChar(1);
+			char c0 = context->PeekChar(0);
+			char c1 = context->PeekChar(1);
 
 			if (isspace(c0))
 			{
-				context.ConsumeNextChar();
+				context->ConsumeNextChar();
 				continue;
 			}
 			else if (c0 == '/' && c1 == '/')
 			{
 				// Consume remainder of line
-				while (context.HasNextChar())
+				while (context->HasNextChar())
 				{
-					char c = context.ConsumeNextChar();
+					char c = context->ConsumeNextChar();
 					if (c == '\n')
 					{
 						break;
@@ -3558,23 +3770,23 @@ namespace flex
 			}
 			else if (c0 == '/' && c1 == '*')
 			{
-				context.ConsumeNextChar();
-				context.ConsumeNextChar();
+				context->ConsumeNextChar();
+				context->ConsumeNextChar();
 				// Consume (potentially nested) block comment(s)
 				i32 levelsDeep = 1;
-				while (context.HasNextChar())
+				while (context->HasNextChar())
 				{
-					char bc0 = context.ConsumeNextChar();
-					char bc1 = context.PeekNextChar();
+					char bc0 = context->ConsumeNextChar();
+					char bc1 = context->PeekNextChar();
 					if (bc0 == '/' && bc1 == '*')
 					{
 						levelsDeep++;
-						context.ConsumeNextChar();
+						context->ConsumeNextChar();
 					}
 					else if (bc0 == '*' && bc1 == '/')
 					{
 						levelsDeep--;
-						context.ConsumeNextChar();
+						context->ConsumeNextChar();
 					}
 
 					if (levelsDeep == 0)
@@ -3585,7 +3797,7 @@ namespace flex
 
 				if (levelsDeep != 0)
 				{
-					context.errorReason = "Uneven number of block comment opens/closes";
+					context->errorReason = "Uneven number of block comment opens/closes";
 				}
 			}
 			else
@@ -3593,26 +3805,1123 @@ namespace flex
 				return;
 			}
 		}
-		if (context.HasNextChar())
+		if (context->HasNextChar())
 		{
-			if (isspace(context.PeekNextChar()))
+			if (isspace(context->PeekNextChar()))
 			{
-				context.ConsumeNextChar();
+				context->ConsumeNextChar();
 			}
 		}
 	}
 
-	TokenType Tokenizer::IsNextChar(char c, TokenType ifYes, TokenType ifNo)
+	TokenType Tokenizer::Type1IfNextCharIsCElseType2(char c, TokenType ifYes, TokenType ifNo)
 	{
-		if (context.HasNextChar() && context.PeekNextChar() == c)
+		if (context->HasNextChar() && context->PeekNextChar() == c)
 		{
-			context.ConsumeNextChar();
+			context->ConsumeNextChar();
 			return ifYes;
 		}
 		else
 		{
 			return ifNo;
 		}
+	}
+
+	TypeName Type::GetTypeNameFromStr(const std::string& str)
+	{
+		const char* tokenCStr = str.c_str();
+		for (i32 i = 0; i < (i32)TypeName::_NONE; ++i)
+		{
+			if (strcmp(g_TypeNameStrings[i], tokenCStr) == 0)
+			{
+				return (TypeName)i;
+			}
+		}
+		return TypeName::_NONE;
+	}
+
+	TypeName Type::Parse(Tokenizer& tokenizer)
+	{
+		Token token = tokenizer.GetNextToken();
+		std::string tokenStr = token.ToString();
+		TypeName result = GetTypeNameFromStr(tokenStr);
+		if (result != TypeName::_NONE)
+		{
+			return result;
+		}
+
+		tokenizer.context->errorReason = "Expected typename";
+		tokenizer.context->errorToken = token;
+		return TypeName::_NONE;
+	}
+
+	Node::Node(const Token& token) :
+		token(token)
+	{
+	}
+
+	TypeName ValueTypeToTypeName(ValueType valueType)
+	{
+		switch (valueType)
+		{
+		case ValueType::INT_LITERAL: return TypeName::INT;
+		case ValueType::FLOAT_LITERAL: return TypeName::FLOAT;
+		case ValueType::BOOL_LITERAL: return TypeName::BOOL;
+		default: return TypeName::_NONE;
+		}
+	}
+
+	IntLiteral::IntLiteral(const Token& token, i32 value) :
+		Node(token),
+		value(value)
+	{
+	}
+
+	IntLiteral* IntLiteral::Parse(Tokenizer& tokenizer)
+	{
+		Token token = tokenizer.GetNextToken();
+		std::string intStr = token.ToString();
+		if (token.type != TokenType::INT_LITERAL || intStr.empty())
+		{
+			tokenizer.context->errorReason = "Expected integer token";
+			tokenizer.context->errorToken = token;
+			return nullptr;
+		}
+
+		i32 value = ParseInt(intStr);
+		return new IntLiteral(token, value);
+	}
+
+	FloatLiteral::FloatLiteral(const Token& token, real value) :
+		Node(token),
+		value(value)
+	{
+	}
+
+	FloatLiteral* FloatLiteral::Parse(Tokenizer& tokenizer)
+	{
+		Token token = tokenizer.GetNextToken();
+		std::string floatStr = token.ToString();
+		if (token.type != TokenType::FLOAT_LITERAL || floatStr.empty())
+		{
+			tokenizer.context->errorReason = "Expected float token";
+			tokenizer.context->errorToken = token;
+			return nullptr;
+		}
+
+		real value = ParseFloat(floatStr);
+		return new FloatLiteral(token, value);
+	}
+
+	BoolLiteral::BoolLiteral(const Token& token, bool value) :
+		Node(token),
+		value(value)
+	{
+	}
+
+	BoolLiteral* BoolLiteral::Parse(Tokenizer& tokenizer)
+	{
+		bool value = false;
+		Token token = tokenizer.GetNextToken();
+		if (token.type == TokenType::KEY_TRUE)
+		{
+			value = true;
+		}
+		else if (token.type == TokenType::KEY_FALSE)
+		{
+			value = false;
+		}
+		else
+		{
+			tokenizer.context->errorReason = "Expected boolean token";
+			tokenizer.context->errorToken = token;
+			return nullptr;
+		}
+
+		return new BoolLiteral(token, value);
+	}
+
+	Identifier::Identifier(const Token& token, const std::string& identifierStr) :
+		Node(token),
+		identifierStr(identifierStr)
+	{
+	}
+
+	Identifier* Identifier::Parse(Tokenizer& tokenizer)
+	{
+		Token token = tokenizer.GetNextToken();
+		if (token.type != TokenType::IDENTIFIER)
+		{
+			tokenizer.context->errorReason = "Expected identifier";
+			tokenizer.context->errorToken = token;
+			return nullptr;
+		}
+
+		return new Identifier(token, token.ToString());
+	}
+
+	//EqualityTest::EqualityTest(const Token& token, Expression* lhs, Expression* rhs, OperatorType op) :
+	//	Node(token),
+	//	lhs(lhs),
+	//	rhs(rhs),
+	//	op(op)
+	//{
+	//}
+
+	//bool EqualityTest::Evaluate(TokenContext& context)
+	//{
+	//	return lhs->Compare(context, rhs, op);
+	//}
+
+	//EqualityTest* EqualityTest::Parse(Tokenizer& tokenizer)
+	//{
+	//	Token token = tokenizer.PeekNextToken();
+
+	//	Expression* lhs = nullptr;
+	//	Expression* rhs = nullptr;
+	//	OperatorType op = OperatorType::_NONE;
+
+	//	lhs = Expression::Parse(tokenizer);
+	//	op = Operator::Parse(tokenizer);
+	//	rhs = Expression::Parse(tokenizer);
+
+	//	return new EqualityTest(token, lhs, rhs, op);
+	//}
+
+	Operation::Operation(const Token& token, Expression* lhs, OperatorType op, Expression* rhs) :
+		Node(token),
+		lhs(lhs),
+		op(op),
+		rhs(rhs)
+	{
+	}
+
+	Value* Operation::Evaluate(TokenContext& context)
+	{
+		Value* lhsVar = lhs->Evaluate(context);
+		Value* rhsVar = rhs->Evaluate(context);
+		if (lhs->value.type == ValueType::IDENTIFIER)
+		{
+			TypeName lhsTypeName = Type::GetTypeNameFromStr(lhs->value.val.identifierValue->identifierStr);
+			if (lhsTypeName == TypeName::INT)
+			{
+				if (rhsVar->type == ValueType::INT_LITERAL || rhsVar->type == ValueType::IDENTIFIER)
+				{
+					if (op == OperatorType::ASSIGN)
+					{
+						lhsVar->val.intLiteral->value = (i32)(*(rhsVar->val.intLiteral));
+						return lhsVar;
+					}
+					if (op == OperatorType::BIN_AND)
+					{
+						i32 result = lhsVar->val.intLiteral->value & (i32)(*(rhsVar->val.intLiteral));
+						return new Value(result);
+					}
+					return nullptr;
+				}
+			}
+			if (lhsTypeName == TypeName::FLOAT)
+			{
+				if (rhsVar->type == ValueType::FLOAT_LITERAL || rhsVar->type == ValueType::IDENTIFIER)
+				{
+					if (op == OperatorType::ASSIGN)
+					{
+						lhsVar->val.floatLiteral->value = (real)(*(rhsVar->val.floatLiteral));
+						return lhsVar;
+					}
+					return nullptr;
+				}
+			}
+			if (lhsTypeName == TypeName::BOOL)
+			{
+				if (rhsVar->type == ValueType::BOOL_LITERAL || rhsVar->type == ValueType::IDENTIFIER)
+				{
+					if (op == OperatorType::ASSIGN)
+					{
+						lhsVar->val.boolLiteral->value = (bool)(*(rhsVar->val.boolLiteral));
+						return lhsVar;
+					}
+					return nullptr;
+				}
+			}
+
+			context.errorReason = "Attempted adding different types";
+			context.errorToken = token;
+			return nullptr;
+		}
+		if (lhs->value.type == ValueType::INT_LITERAL)
+		{
+			// Should be handled in semantic analysis step
+			assert(op != OperatorType::ASSIGN);
+
+			if (op == OperatorType::ADD)
+			{
+				i32 result = lhsVar->val.intLiteral->value + (i32)(*(rhsVar->val.intLiteral));
+				return new Value(result);
+			}
+
+		}
+
+		context.errorReason = "Malformed operation";
+		context.errorToken = token;
+		return nullptr;
+	}
+
+	Operation* Operation::Parse(Tokenizer& tokenizer)
+	{
+		Token token = tokenizer.GetNextToken();
+
+		Expression* lhs = Expression::Parse(tokenizer);
+		OperatorType op = Operator::Parse(tokenizer);
+		Expression* rhs = Expression::Parse(tokenizer);
+
+		return new Operation(token, lhs, op, rhs);
+	}
+
+	Value::Value(Operation* opearation) :
+		type(ValueType::OPERATION),
+		val(opearation)
+	{
+	}
+
+	Value::Value(BoolLiteral* boolLiteral) :
+		type(ValueType::BOOL_LITERAL),
+		val(boolLiteral)
+	{
+	}
+
+	Value::Value(IntLiteral* intLiteral) :
+		type(ValueType::INT_LITERAL),
+		val(intLiteral)
+	{
+	}
+
+	Value::Value(FloatLiteral* floatLiteral) :
+		type(ValueType::FLOAT_LITERAL),
+		val(floatLiteral)
+	{
+	}
+
+	Value::Value(Identifier* identifierValue) :
+		type(ValueType::IDENTIFIER),
+		val(identifierValue)
+	{
+	}
+
+	Value::Value(i32 intRaw) :
+		type(ValueType::INT_RAW),
+		val(intRaw)
+	{
+	}
+
+	Value::Value(real floatRaw) :
+		type(ValueType::FLOAT_RAW),
+		val(floatRaw)
+	{
+	}
+
+	Value::Value(bool boolRaw) :
+		type(ValueType::BOOL_RAW),
+		val(boolRaw)
+	{
+	}
+
+	Value::Value() :
+		type(ValueType::NONE),
+		val()
+	{
+	}
+
+	Expression::Expression(Tokenizer& tokenizer, const Token& token, Operation* opearation) :
+		Node(token),
+		value(opearation)
+	{
+	}
+
+	Expression::Expression(Tokenizer& tokenizer, const Token& token, BoolLiteral* boolValue) :
+		Node(token),
+		value(boolValue)
+	{
+	}
+
+	Expression::Expression(Tokenizer& tokenizer, const Token& token, IntLiteral* intValue) :
+		Node(token),
+		value(intValue)
+	{
+	}
+
+	Expression::Expression(Tokenizer& tokenizer, const Token& token, FloatLiteral* floatValue) :
+		Node(token),
+		value(floatValue)
+	{
+	}
+
+	Expression::Expression(Tokenizer& tokenizer, const Token& token, Identifier* identifier) :
+		Node(token),
+		value(identifier)
+	{
+	}
+
+	Value* Expression::Evaluate(TokenContext& context)
+	{
+		switch (value.type)
+		{
+		case ValueType::OPERATION:
+			return value.val.operation->Evaluate(context);
+			break;
+		case ValueType::INT_LITERAL:
+		case ValueType::FLOAT_LITERAL:
+		case ValueType::BOOL_LITERAL:
+		{
+			return &value;
+		} break;
+		case ValueType::IDENTIFIER:
+		{
+			// TODO: Apply implicit casting here when necessary
+			return context.GetVarInstanceFromTokenID(context.tokenNameMap[value.val.identifierValue->identifierStr]);
+		} break;
+		}
+
+		context.errorReason = "Unexpected expression type";
+		context.errorToken = token;
+		return nullptr;
+	}
+
+	bool Expression::Compare(TokenContext& context, Expression* other, OperatorType op)
+	{
+		if (value.type == ValueType::IDENTIFIER)
+		{
+			//IntLiteral* thisIntVal = context.GetVarInstanceFromTokenID(token.tokenID)->val.intLiteral;
+			//std::string thisIdentifierName = value.val.identifierValue->identifierStr;
+
+
+		}
+
+		if (other->value.type == value.type)
+		{
+			switch (value.type)
+			{
+			case ValueType::INT_LITERAL:
+			{
+				i32 thisIntVal = (i32)(*(context.GetVarInstanceFromTokenID(token.tokenID)->val.intLiteral));
+				i32 otherIntVal = (i32)(*(context.GetVarInstanceFromTokenID(other->token.tokenID)->val.intLiteral));
+				i32 diff = (thisIntVal - otherIntVal);
+				switch (op)
+				{
+				case OperatorType::EQUAL: return diff == 0;
+				case OperatorType::NOT_EQUAL: return diff != 0;
+				case OperatorType::GREATER: return diff > 0;
+				case OperatorType::GREATER_EQUAL: return diff >= 0;
+				case OperatorType::LESS: return diff < 0;
+				case OperatorType::LESS_EQUAL: return diff <= 0;
+				default:
+					context.errorReason = "Unexpected operator on int in expression";
+					context.errorToken = token;
+				}
+			} break;
+			case ValueType::FLOAT_LITERAL:
+			{
+				real thisFloatVal = (real)(*(context.GetVarInstanceFromTokenID(token.tokenID)->val.floatLiteral));
+				real otherFloatVal = (real)(*(context.GetVarInstanceFromTokenID(other->token.tokenID)->val.floatLiteral));
+				real diff = (thisFloatVal - otherFloatVal);
+				switch (op)
+				{
+				case OperatorType::EQUAL: return diff == 0.0f;
+				case OperatorType::NOT_EQUAL: return diff != 0.0f;
+				case OperatorType::GREATER: return diff > 0.0f;
+				case OperatorType::GREATER_EQUAL: return diff >= 0.0f;
+				case OperatorType::LESS: return diff < 0.0f;
+				case OperatorType::LESS_EQUAL: return diff <= 0.0f;
+				default:
+					context.errorReason = "Unexpected operator on float in expression";
+					context.errorToken = token;
+				}
+			} break;
+			case ValueType::BOOL_LITERAL:
+			{
+				bool thisBoolVal = (bool)(*(context.GetVarInstanceFromTokenID(token.tokenID)->val.boolLiteral));
+				bool otherBoolVal = (bool)(*(context.GetVarInstanceFromTokenID(other->token.tokenID)->val.boolLiteral));
+				switch (op)
+				{
+				case OperatorType::EQUAL: return (thisBoolVal == otherBoolVal);
+				case OperatorType::NOT_EQUAL: return (thisBoolVal != otherBoolVal);
+				case OperatorType::BOOLEAN_AND: return (thisBoolVal && otherBoolVal);
+				case OperatorType::BOOLEAN_OR: return (thisBoolVal || otherBoolVal);
+				default:
+					context.errorReason = "Unexpected operator on bool in expression";
+					context.errorToken = token;
+				}
+			} break;
+			default:
+				context.errorReason = "Unexpected expression type comparison";
+				context.errorToken = token;
+			}
+		}
+
+		return false;
+	}
+
+	Expression* Expression::Parse(Tokenizer& tokenizer)
+	{
+		return SingleParse(tokenizer);
+	}
+
+	Expression* Expression::SingleParse(Tokenizer& tokenizer)
+	{
+		Token token = tokenizer.PeekNextToken();
+		if (token.type == TokenType::IDENTIFIER)
+		{
+			Identifier* identifier = Identifier::Parse(tokenizer);
+			if (identifier == nullptr)
+			{
+				return nullptr;
+			}
+
+			Token nextToken = tokenizer.PeekNextToken();
+			if (nextToken.type == TokenType::SEMICOLON)
+			{
+				return new Expression(tokenizer, token, identifier);
+			}
+			else
+			{
+				OperatorType op = Operator::Parse(tokenizer);
+				if (op == OperatorType::_NONE)
+				{
+					tokenizer.context->errorReason = "Expected operator";
+					tokenizer.context->errorToken = token;
+					return nullptr;
+				}
+				else
+				{
+					Expression* rhs = Expression::Parse(tokenizer);
+					Expression* lhs = new Expression(tokenizer, token, identifier);
+					Operation* operation = new Operation(token, lhs, op, rhs);
+					return new Expression(tokenizer, token, operation);
+				}
+			}
+		}
+		if (token.type == TokenType::INT_LITERAL)
+		{
+			IntLiteral* intLiteral = IntLiteral::Parse(tokenizer);
+			if (intLiteral == nullptr)
+			{
+				return nullptr;
+			}
+
+			Token nextToken = tokenizer.PeekNextToken();
+			if (nextToken.type == TokenType::SEMICOLON)
+			{
+				// TODO: Check able to be ended here
+				tokenizer.GetNextToken();
+				return new Expression(tokenizer, token, intLiteral);
+			}
+			else
+			{
+				OperatorType op = Operator::Parse(tokenizer);
+				if (op == OperatorType::_NONE)
+				{
+					tokenizer.context->errorToken = token;
+					tokenizer.context->errorReason = "Expected '=' or ';' after int declaration";
+					// TODO: Memory leaks?
+					return nullptr;
+				}
+				else
+				{
+					Expression* lhs = new Expression(tokenizer, token, intLiteral);
+					Expression* rhs = Expression::Parse(tokenizer);
+					Operation* operation = new Operation(token, lhs, op, rhs);
+					return new Expression(tokenizer, token, operation);
+				}
+			}
+		}
+		if (token.type == TokenType::FLOAT_LITERAL)
+		{
+			FloatLiteral* floatLiteral = FloatLiteral::Parse(tokenizer);
+			if (floatLiteral == nullptr)
+			{
+				return nullptr;
+			}
+			return new Expression(tokenizer, token, floatLiteral);
+		}
+		if (token.type == TokenType::KEY_TRUE || token.type == TokenType::KEY_FALSE)
+		{
+			BoolLiteral* boolLiteral = BoolLiteral::Parse(tokenizer);
+			if (boolLiteral == nullptr)
+			{
+				return nullptr;
+			}
+			return new Expression(tokenizer, token, boolLiteral);
+		}
+
+		TypeName typeName = Type::Parse(tokenizer);
+		if (typeName != TypeName::_NONE)
+		{
+			Identifier* identifier = Identifier::Parse(tokenizer);
+			if (identifier == nullptr)
+			{
+				return nullptr;
+			}
+			return new Expression(tokenizer, token, identifier);
+		}
+
+		tokenizer.context->errorReason = "Unexpected expression type";
+		tokenizer.context->errorToken = token;
+		return nullptr;
+	}
+
+	Assignment::Assignment(const Token& token,
+		Identifier* identifier,
+		Expression* rhs,
+		TypeName typeName /* = TypeName::_NONE */) :
+		Node(token),
+		identifier(identifier),
+		rhs(rhs),
+		typeName(typeName)
+	{
+	}
+
+	void Assignment::Evaluate(TokenContext& context)
+	{
+		Value* var = nullptr;
+		if (typeName == TypeName::_NONE)
+		{
+			// Variable already exists
+			var = context.GetVarInstanceFromTokenID(identifier->token.tokenID);
+		}
+		else
+		{
+			// We need to instantiate var with type typeName
+			// TODO: Handle scopes?
+			var = context.InstantiateIdentifier(typeName, identifier->token.ToString(), identifier->token.tokenID);
+		}
+
+		if (rhs != nullptr)
+		{
+			switch (typeName)
+			{
+			case TypeName::INT:
+			{
+				i32 rhsResult = 0;
+				if (rhs->token.type == TokenType::IDENTIFIER)
+				{
+					Value* rhsVal = rhs->Evaluate(context);
+					if (rhsVal == nullptr)
+					{
+						PrintError("Used variable before definition: %s\n", rhs->token.ToString().c_str());
+					}
+					else
+					{
+						rhsResult = rhsVal->val.intLiteral->value;
+					}
+				}
+				else
+				{
+					rhsResult = rhs->Evaluate(context)->val.intLiteral->value;
+				}
+				var->val.intLiteral->value = rhsResult;
+			} break;
+			case TypeName::FLOAT:
+				var->val.floatLiteral->value = rhs->Evaluate(context)->val.floatLiteral->value;
+				break;
+			case TypeName::BOOL:
+				var->val.boolLiteral->value = rhs->Evaluate(context)->val.boolLiteral->value;
+				break;
+			default:
+				context.errorReason = "Unexpected typename in assignment";
+				context.errorToken = token;
+			}
+		}
+	}
+
+	Assignment* Assignment::Parse(Tokenizer& tokenizer)
+	{
+		// TODO: Safety checks
+		Token token = tokenizer.PeekNextToken();
+
+		TypeName typeName = TypeName::_NONE;
+		if (Type::GetTypeNameFromStr(token.ToString()) != TypeName::_NONE)
+		{
+			typeName = Type::Parse(tokenizer);
+		}
+
+		Identifier* lhs = Identifier::Parse(tokenizer);
+		tokenizer.GetNextToken(); // Consume '='
+		Expression* rhs = Expression::Parse(tokenizer);
+
+		//tokenizer.GetNextToken(); // Consume ;
+
+		return new Assignment(token, lhs, rhs, typeName);
+	}
+
+	Statement::Statement(const Token& token,
+		Assignment* assignment) :
+		Node(token),
+		type(StatementType::ASSIGNMENT),
+		contents(assignment)
+	{
+	}
+
+	Statement::Statement(const Token& token,
+		StatementType type,
+		IfStatement* ifStatement) :
+		Node(token),
+		type(type),
+		contents(ifStatement)
+	{
+		assert(type == StatementType::IF || type == StatementType::ELIF);
+	}
+
+	Statement::Statement(const Token& token,
+		Statement* elseStatement) :
+		Node(token),
+		type(StatementType::ELSE),
+		contents(elseStatement)
+	{
+	}
+
+	Statement::Statement(const Token& token,
+		WhileStatement* whileStatement) :
+		Node(token),
+		type(StatementType::WHILE),
+		contents(whileStatement)
+	{
+	}
+
+	//Statement::Statement(const Token& token,
+	//	Operation* operation) :
+	//	Node(token),
+	//	type(StatementType::OPERATION),
+	//	contents(operation)
+	//{
+	//}
+
+	void Statement::Evaluate(TokenContext& context)
+	{
+		switch (type)
+		{
+		case StatementType::ASSIGNMENT:
+			contents.assignment->Evaluate(context);
+			break;
+		case StatementType::IF:
+			contents.ifStatement->Evaluate(context);
+			break;
+		case StatementType::ELIF:
+		case StatementType::ELSE:
+			assert(false);
+			break;
+		case StatementType::WHILE:
+			contents.whileStatement->Evaluate(context);
+		default:
+			break;
+		}
+	}
+
+	Statement* Statement::Parse(Tokenizer& tokenizer)
+	{
+		StatementType statementType = StatementType::NONE;
+
+		IfStatement* ifStatement = nullptr;
+		Statement* elseStatement = nullptr;
+		WhileStatement* whileStatement = nullptr;
+		Assignment* assignmentStatement = nullptr;
+
+		Token token = tokenizer.PeekNextToken();
+		if (token.type == TokenType::SEMICOLON)
+		{
+			// Empty statement
+			return nullptr;
+		}
+		if (token.type == TokenType::KEY_IF)
+		{
+			statementType = StatementType::IF;
+			ifStatement = IfStatement::Parse(tokenizer);
+		}
+		else if (token.type == TokenType::KEY_ELIF)
+		{
+			// elif statements should only be parsed in IfStatement::Parse
+			tokenizer.context->errorReason = "Found elif with no matching if";
+			tokenizer.context->errorToken = token;
+		}
+		else if (token.type == TokenType::KEY_ELSE)
+		{
+			statementType = StatementType::ELSE;
+			elseStatement = Statement::Parse(tokenizer);
+		}
+		else if (token.type == TokenType::KEY_WHILE)
+		{
+			statementType = StatementType::WHILE;
+			whileStatement = WhileStatement::Parse(tokenizer);
+		}
+		else
+		{
+			// Assigning to existing instance of var
+			statementType = StatementType::ASSIGNMENT;
+			assignmentStatement = Assignment::Parse(tokenizer);
+		}
+
+		if (statementType == StatementType::NONE)
+		{
+			if (tokenizer.context->errorReason.empty())
+			{
+				tokenizer.context->errorReason = "Expected statement";
+				tokenizer.context->errorToken = token;
+			}
+			return nullptr;
+		}
+
+		Token nextToken = tokenizer.PeekNextToken();
+		if (nextToken.type == TokenType::SEMICOLON)
+		{
+			tokenizer.GetNextToken();
+		}
+		else
+		{
+			//tokenizer.context->errorReason = "Expected semicolon at end of line";
+			//tokenizer.context->errorToken = token;
+			//// TODO: Free allocated memory prior to returning?
+			//return nullptr;
+		}
+
+		//Statement* nextStatement = nullptr;
+		//if (tokenizer.context->HasNextChar())
+		//{
+		//	nextToken = tokenizer.PeekNextToken();
+		//	nextStatement = Statement::Parse(tokenizer);
+		//	if (nextStatement == nullptr)
+		//	{
+		//		return nullptr;
+		//	}
+		//}
+
+		switch (statementType)
+		{
+		case StatementType::ASSIGNMENT:
+		{
+			if (assignmentStatement != nullptr)
+			{
+				return new Statement(token, assignmentStatement);
+			}
+		} break;
+		case StatementType::IF:
+		{
+			if (ifStatement != nullptr)
+			{
+				return new Statement(token, statementType, ifStatement);
+			}
+		} break;
+		case StatementType::ELIF:
+		{
+			assert(false);
+			return nullptr;
+		} break;
+		case StatementType::ELSE:
+		{
+			if (elseStatement != nullptr)
+			{
+				return new Statement(token, elseStatement);
+			}
+		} break;
+		case StatementType::WHILE:
+		{
+			if (whileStatement != nullptr)
+			{
+				return new Statement(token, whileStatement);
+			}
+		} break;
+		}
+
+		tokenizer.context->errorReason = "Expected statement";
+		tokenizer.context->errorToken = token;
+		return nullptr;
+	}
+
+	IfStatement::IfStatement(const Token& token,
+		Expression* condition,
+		Statement* body,
+		IfStatement* elseIfStatement) :
+		Node(token),
+		ifFalseAction(IfFalseAction::ELIF),
+		condition(condition),
+		body(body),
+		ifFalseStatement(elseIfStatement)
+	{
+	}
+
+	IfStatement::IfStatement(const Token& token,
+		Expression* condition,
+		Statement* body,
+		Statement* elseStatement) :
+		Node(token),
+		ifFalseAction(IfFalseAction::ELSE),
+		condition(condition),
+		body(body),
+		ifFalseStatement(elseStatement)
+	{
+	}
+
+	IfStatement::IfStatement(const Token& token,
+		Expression* condition,
+		Statement* body) :
+		Node(token),
+		ifFalseAction(IfFalseAction::NONE),
+		condition(condition),
+		body(body),
+		ifFalseStatement()
+	{
+	}
+
+	void IfStatement::Evaluate(TokenContext& context)
+	{
+		bool bConditionResult = condition->Evaluate(context);
+		if (bConditionResult)
+		{
+			body->Evaluate(context);
+		}
+		else
+		{
+			switch (ifFalseAction)
+			{
+			case IfFalseAction::NONE:
+				break;
+			case IfFalseAction::ELSE:
+				ifFalseStatement.elseStatement->Evaluate(context);
+				break;
+			case IfFalseAction::ELIF:
+				ifFalseStatement.elseIfStatement->Evaluate(context);
+				break;
+			default:
+				context.errorReason = "Unhandled if false action";
+				context.errorToken = token;
+				break;
+			}
+		}
+	}
+
+	IfStatement* IfStatement::Parse(Tokenizer& tokenizer)
+	{
+		Token token = tokenizer.GetNextToken();
+		if (token.type != TokenType::KEY_IF && token.type != TokenType::KEY_ELIF)
+		{
+			tokenizer.context->errorReason = "Expected if or elif";
+			tokenizer.context->errorToken = token;
+			return nullptr;
+		}
+
+		Expression* condition = Expression::Parse(tokenizer);
+		if (condition == nullptr)
+		{
+			return nullptr;
+		}
+
+		// TODO: Handle single line while loops
+		{
+			Token nextToken = tokenizer.GetNextToken();
+			if (nextToken.type != TokenType::OPEN_BRACKET)
+			{
+				tokenizer.context->errorReason = "Expected '{' after if statement condition";
+				tokenizer.context->errorToken = token;
+				return nullptr;
+			}
+		}
+
+		Statement* body = Statement::Parse(tokenizer);
+		if (body == nullptr)
+		{
+			return nullptr;
+		}
+
+		{
+			Token nextToken = tokenizer.GetNextToken();
+			if (nextToken.type != TokenType::CLOSE_BRACKET)
+			{
+				tokenizer.context->errorReason = "Expected '}' after if statement body";
+				tokenizer.context->errorToken = token;
+				return nullptr;
+			}
+		}
+
+		IfStatement* elseIfStatement = nullptr;
+		Statement* elseStatement = nullptr;
+
+		Token nextToken = tokenizer.PeekNextToken();
+		if (nextToken.type == TokenType::KEY_ELIF)
+		{
+			elseIfStatement = IfStatement::Parse(tokenizer);
+		}
+		else if (nextToken.type == TokenType::KEY_ELSE)
+		{
+			elseStatement = Statement::Parse(tokenizer);
+		}
+
+		if (elseIfStatement != nullptr)
+		{
+			return new IfStatement(token, condition, body, elseIfStatement);
+		}
+		else if (elseStatement != nullptr)
+		{
+			return new IfStatement(token, condition, body, elseStatement);
+		}
+		else
+		{
+			return new IfStatement(token, condition, body);
+		}
+	}
+
+	WhileStatement::WhileStatement(const Token& token, Expression* condition, Statement* body) :
+		Node(token),
+		condition(condition),
+		body(body)
+	{
+	}
+
+	void WhileStatement::Evaluate(TokenContext& context)
+	{
+		condition->Evaluate(context);
+	}
+
+	WhileStatement* WhileStatement::Parse(Tokenizer& tokenizer)
+	{
+		Token token = tokenizer.GetNextToken();
+		if (token.type != TokenType::KEY_WHILE)
+		{
+			tokenizer.context->errorReason = "Expected while";
+			tokenizer.context->errorToken = token;
+			return nullptr;
+		}
+
+		Expression* condition = Expression::Parse(tokenizer);
+		if (condition == nullptr)
+		{
+			return nullptr;
+		}
+
+		// TODO: Handle single line while loops
+		{
+			Token nextToken = tokenizer.GetNextToken();
+			if (nextToken.type != TokenType::OPEN_BRACKET)
+			{
+				tokenizer.context->errorReason = "Expected '{' after while statement";
+				tokenizer.context->errorToken = token;
+				return nullptr;
+			}
+		}
+
+		Statement* body = Statement::Parse(tokenizer);
+		if (condition == nullptr)
+		{
+			return nullptr;
+		}
+
+		{
+			Token nextToken = tokenizer.GetNextToken();
+			if (nextToken.type != TokenType::CLOSE_BRACKET)
+			{
+				tokenizer.context->errorReason = "Expected '}' after while statement body";
+				tokenizer.context->errorToken = token;
+				return nullptr;
+			}
+		}
+
+		return new WhileStatement(token, condition, body);
+	}
+
+	RootItem::RootItem(Statement* statement, RootItem* nextItem) :
+		statement(statement),
+		nextItem(nextItem)
+	{
+	}
+
+	void RootItem::Evaluate(TokenContext& context)
+	{
+		statement->Evaluate(context);
+
+		if (!context.errorReason.empty())
+		{
+			return;
+		}
+
+		if (nextItem)
+		{
+			nextItem->Evaluate(context);
+		}
+	}
+
+	RootItem* RootItem::Parse(Tokenizer& tokenizer)
+	{
+		Statement* rootStatement = Statement::Parse(tokenizer);
+		if (rootStatement == nullptr)
+		{
+			return nullptr;
+		}
+
+		RootItem* nextItem = nullptr;
+
+		if (tokenizer.context->HasNextChar())
+		{
+			nextItem = RootItem::Parse(tokenizer);
+		}
+
+		return new RootItem(rootStatement, nextItem);
+	}
+
+	AST::AST(Tokenizer* tokenizer) :
+		tokenizer(tokenizer)
+	{
+	}
+
+	void AST::Create()
+	{
+		//Token rootTokenStr;
+		//rootTokenStr.tokenID = -1;
+		//rootTokenStr.len = 0;
+		//rootTokenStr.type = TokenType::ROOT;
+		//rootNode = new Node(rootTokenStr);
+
+		//Node* currentNode = rootNode;
+		//while (tokenizer->context->HasNextChar())
+		//{
+		//	Token nextToken = tokenizer->GetNextToken();
+		//	if (nextToken.type == TokenType::_NONE)
+		//	{
+		//		return;
+		//	}
+
+		// TODO: Clean up previous AST if exists?
+
+		Print("Creating AST\n");
+		rootItem = RootItem::Parse(*tokenizer);
+
+		RootItem* item = rootItem;
+		while (item != nullptr)
+		{
+;			Print("Statement type: %d\n", item->statement->type);
+			item = item->nextItem;
+		}
+		Print("Done creating AST\n");
+
+	}
+
+	void AST::Evaluate()
+	{
+		if (rootItem == nullptr)
+		{
+			PrintError("Attempted evaluating invalid AST!\n");
+			return;
+		}
+
+		Print("Evaluating AST\n");
+
+		RootItem* currentItem = rootItem;
+		while (currentItem != nullptr)
+		{
+			Print("Type: %d\n", currentItem->statement->type);
+
+			currentItem->statement->Evaluate(*tokenizer->context);
+
+			currentItem = currentItem->nextItem;
+		}
+
+		Print("Done evaluating AST\n");
 	}
 
 	Terminal::Terminal() :
@@ -3653,6 +4962,9 @@ namespace flex
 	void Terminal::Destroy()
 	{
 		g_InputManager->UnbindKeyEventCallback(&m_KeyEventCallback);
+
+		SafeDelete(ast);
+		SafeDelete(tokenizer);
 
 		GameObject::Destroy();
 	}
@@ -4149,19 +5461,24 @@ namespace flex
 			str.push_back('\n');
 		}
 
-		Tokenizer tokenizer(str);
+		SafeDelete(ast);
+		SafeDelete(tokenizer);
+
+		tokenizer = new Tokenizer(str);
+		ast = new AST(tokenizer);
+		ast->Create();
 
 		i32 tokenCount = 0;
-		while (tokenizer.context.HasNextChar())
+		while (tokenizer->context->HasNextChar())
 		{
-			if (!tokenizer.context.errorReason.empty())
+			if (!tokenizer->context->errorReason.empty())
 			{
-				PrintError("Error encountered while parsing code: %s\n", tokenizer.context.errorReason.c_str());
+				PrintError("Error encountered while parsing code: %s\n", tokenizer->context->errorReason.c_str());
 				bParsePassed = false;
 				break;
 			}
-			TokenString tokenStr = tokenizer.GetNextToken();
-			if (tokenStr.type != TokenType::_NONE)
+			Token token = tokenizer->GetNextToken();
+			if (token.type != TokenType::_NONE)
 			{
 				++tokenCount;
 			}
@@ -4178,6 +5495,11 @@ namespace flex
 		}
 	}
 
+	void Terminal::EvaluateCode()
+	{
+		ast->Evaluate();
+	}
+
 	EventReply Terminal::OnKeyEvent(KeyCode keyCode, KeyAction action, i32 modifiers)
 	{
 		if (m_Camera != nullptr)
@@ -4190,7 +5512,12 @@ namespace flex
 				if (keyCode == KeyCode::KEY_F7)
 				{
 					ParseCode();
-					return flex::EventReply::CONSUMED;
+					return EventReply::CONSUMED;
+				}
+				if (keyCode == KeyCode::KEY_F5)
+				{
+					EvaluateCode();
+					return EventReply::CONSUMED;
 				}
 				if (keyCode == KeyCode::KEY_ESCAPE)
 				{

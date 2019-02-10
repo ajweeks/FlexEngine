@@ -175,10 +175,11 @@
 			},
 			"terminal" : 
 			{
-				"str" : "int var = 0;
+				"str" : "int var = 10;
 int iat = 55;
 int _9a78a89 = 980912123131;
-int h=ab;   
+int h=var;
+h = var;
 bool falsey = false;"
 			},
 			"children" : 
