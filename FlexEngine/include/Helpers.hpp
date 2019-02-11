@@ -86,6 +86,8 @@ namespace flex
 	glm::vec3 Lerp(const glm::vec3& a, const glm::vec3& b, real t);
 	glm::vec4 Lerp(const glm::vec4& a, const glm::vec4& b, real t);
 
+	bool ParseBool(const std::string& intStr);
+
 	i32 ParseInt(const std::string& intStr);
 
 	/* Parses a single float, returns -1.0f if incorrectly formatted */
@@ -115,11 +117,12 @@ namespace flex
 
 	void PadEnd(std::string& str, i32 minLen, char pad);
 	void PadStart(std::string& str, i32 minLen, char pad);
+	// String will be padded to be at least minChars long (excluding a leading '-' for negative numbers)
+	std::string IntToString(i32 i, u16 minChars = 0, char pad = '0');
 
 	std::string FloatToString(real f, i32 precision);
 
-	// String will be padded to be at least minChars long (excluding a leading '-' for negative numbers)
-	std::string IntToString(i32 i, u16 minChars = 0, char pad = '0');
+	std::string BoolToString(bool b);
 
 	std::string Vec2ToString(glm::vec2 vec, i32 precision);
 	std::string Vec3ToString(glm::vec3 vec, i32 precision);

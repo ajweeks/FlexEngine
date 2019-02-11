@@ -124,6 +124,11 @@ namespace flex
 		return stream.str();
 	}
 
+	std::string BoolToString(bool b)
+	{
+		return b ? "true" : "false";
+	}
+
 	std::string IntToString(i32 i, u16 minChars/* = 0 */, char pad /* = '0' */)
 	{
 		std::string result = std::to_string(glm::abs(i));
@@ -824,6 +829,11 @@ namespace flex
 	glm::vec4 Lerp(const glm::vec4& a, const glm::vec4& b, real t)
 	{
 		return a * (1.0f - t) + b * t;
+	}
+
+	bool ParseBool(const std::string& intStr)
+	{
+		return (intStr.compare("true") == 0);
 	}
 
 	glm::i32 ParseInt(const std::string& intStr)

@@ -191,6 +191,8 @@ namespace flex
 	static const glm::mat4 MAT4_IDENTITY = glm::mat4(1.0f);
 	static const glm::mat4 MAT4_ZERO = glm::mat4(0.0f);
 
+	static const std::string EMPTY_STRING = std::string();
+
 	// These fields are defined and initialized in FlexEngine.cpp
 	extern class Window* g_Window;
 	extern class CameraManager* g_CameraManager;

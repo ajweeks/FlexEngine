@@ -3346,7 +3346,8 @@ namespace flex
 
 	Value* TokenContext::InstantiateIdentifier(TypeName typeName, const std::string& tokenName, i32 tokenID)
 	{
-		if (tokenNameMap.find(tokenName) != tokenNameMap.end())
+		if (tokenNameMap.find(tokenName) != tokenNameMap.end() ||
+			tokenIDToIndexMap.find(tokenID) != tokenIDToIndexMap.end())
 		{
 			errorReason = "Attempted to instantiate variable more than once";
 			return nullptr;
@@ -3354,28 +3355,32 @@ namespace flex
 
 		tokenNameMap.emplace(tokenName, tokenID);
 
+		const i32 nextIndex = variableCount++;
+		tokenIDToIndexMap.emplace(tokenID, nextIndex);
+
 		// TODO: Use typeName?
 
-		assert(tokenID >= 0 && tokenID < MAX_VARS);
+		assert(nextIndex >= 0 && nextIndex < MAX_VARS);
+
 		switch (typeName)
 		{
 		case TypeName::INT:
-			instantiatedVariables[tokenID] = new Value(new IntLiteral(g_EmptyToken, 0));
+			instantiatedVariables[nextIndex] = new Value(new int());
 			break;
 		case TypeName::FLOAT:
-			instantiatedVariables[tokenID] = new Value(new FloatLiteral(g_EmptyToken, 0.0f));
+			instantiatedVariables[nextIndex] = new Value(new float());
 			break;
 		case TypeName::BOOL:
-			instantiatedVariables[tokenID] = new Value(new BoolLiteral(g_EmptyToken, false));
+			instantiatedVariables[nextIndex] = new Value(new bool());
 			break;
 		}
-		return instantiatedVariables[tokenID];
+		return instantiatedVariables[nextIndex];
 	}
 
 	Value* TokenContext::GetVarInstanceFromTokenID(i32 tokenID)
 	{
 		assert(tokenID >= 0 && tokenID < MAX_VARS);
-		return instantiatedVariables[tokenID];
+		return instantiatedVariables[tokenIDToIndexMap[tokenID]];
 	}
 
 	bool TokenContext::IsKeyword(const char* str)
@@ -3864,81 +3869,11 @@ namespace flex
 	{
 		switch (valueType)
 		{
-		case ValueType::INT_LITERAL: return TypeName::INT;
-		case ValueType::FLOAT_LITERAL: return TypeName::FLOAT;
-		case ValueType::BOOL_LITERAL: return TypeName::BOOL;
+		case ValueType::INT_RAW: return TypeName::INT;
+		case ValueType::FLOAT_RAW: return TypeName::FLOAT;
+		case ValueType::BOOL_RAW: return TypeName::BOOL;
 		default: return TypeName::_NONE;
 		}
-	}
-
-	IntLiteral::IntLiteral(const Token& token, i32 value) :
-		Node(token),
-		value(value)
-	{
-	}
-
-	IntLiteral* IntLiteral::Parse(Tokenizer& tokenizer)
-	{
-		Token token = tokenizer.GetNextToken();
-		std::string intStr = token.ToString();
-		if (token.type != TokenType::INT_LITERAL || intStr.empty())
-		{
-			tokenizer.context->errorReason = "Expected integer token";
-			tokenizer.context->errorToken = token;
-			return nullptr;
-		}
-
-		i32 value = ParseInt(intStr);
-		return new IntLiteral(token, value);
-	}
-
-	FloatLiteral::FloatLiteral(const Token& token, real value) :
-		Node(token),
-		value(value)
-	{
-	}
-
-	FloatLiteral* FloatLiteral::Parse(Tokenizer& tokenizer)
-	{
-		Token token = tokenizer.GetNextToken();
-		std::string floatStr = token.ToString();
-		if (token.type != TokenType::FLOAT_LITERAL || floatStr.empty())
-		{
-			tokenizer.context->errorReason = "Expected float token";
-			tokenizer.context->errorToken = token;
-			return nullptr;
-		}
-
-		real value = ParseFloat(floatStr);
-		return new FloatLiteral(token, value);
-	}
-
-	BoolLiteral::BoolLiteral(const Token& token, bool value) :
-		Node(token),
-		value(value)
-	{
-	}
-
-	BoolLiteral* BoolLiteral::Parse(Tokenizer& tokenizer)
-	{
-		bool value = false;
-		Token token = tokenizer.GetNextToken();
-		if (token.type == TokenType::KEY_TRUE)
-		{
-			value = true;
-		}
-		else if (token.type == TokenType::KEY_FALSE)
-		{
-			value = false;
-		}
-		else
-		{
-			tokenizer.context->errorReason = "Expected boolean token";
-			tokenizer.context->errorToken = token;
-			return nullptr;
-		}
-
-		return new BoolLiteral(token, value);
 	}
 
 	Identifier::Identifier(const Token& token, const std::string& identifierStr) :
@@ -3960,34 +3895,6 @@ namespace flex
 		return new Identifier(token, token.ToString());
 	}
 
-	//EqualityTest::EqualityTest(const Token& token, Expression* lhs, Expression* rhs, OperatorType op) :
-	//	Node(token),
-	//	lhs(lhs),
-	//	rhs(rhs),
-	//	op(op)
-	//{
-	//}
-
-	//bool EqualityTest::Evaluate(TokenContext& context)
-	//{
-	//	return lhs->Compare(context, rhs, op);
-	//}
-
-	//EqualityTest* EqualityTest::Parse(Tokenizer& tokenizer)
-	//{
-	//	Token token = tokenizer.PeekNextToken();
-
-	//	Expression* lhs = nullptr;
-	//	Expression* rhs = nullptr;
-	//	OperatorType op = OperatorType::_NONE;
-
-	//	lhs = Expression::Parse(tokenizer);
-	//	op = Operator::Parse(tokenizer);
-	//	rhs = Expression::Parse(tokenizer);
-
-	//	return new EqualityTest(token, lhs, rhs, op);
-	//}
-
 	Operation::Operation(const Token& token, Expression* lhs, OperatorType op, Expression* rhs) :
 		Node(token),
 		lhs(lhs),
@@ -4005,16 +3912,16 @@ namespace flex
 			TypeName lhsTypeName = Type::GetTypeNameFromStr(lhs->value.val.identifierValue->identifierStr);
 			if (lhsTypeName == TypeName::INT)
 			{
-				if (rhsVar->type == ValueType::INT_LITERAL || rhsVar->type == ValueType::IDENTIFIER)
+				if (rhsVar->type == ValueType::INT_RAW || rhsVar->type == ValueType::IDENTIFIER)
 				{
 					if (op == OperatorType::ASSIGN)
 					{
-						lhsVar->val.intLiteral->value = (i32)(*(rhsVar->val.intLiteral));
+						lhsVar->val.intRaw = rhsVar->val.intRaw;
 						return lhsVar;
 					}
 					if (op == OperatorType::BIN_AND)
 					{
-						i32 result = lhsVar->val.intLiteral->value & (i32)(*(rhsVar->val.intLiteral));
+						i32 result = lhsVar->val.intRaw & rhsVar->val.intRaw;
 						return new Value(result);
 					}
 					return nullptr;
@@ -4022,11 +3929,11 @@ namespace flex
 			}
 			if (lhsTypeName == TypeName::FLOAT)
 			{
-				if (rhsVar->type == ValueType::FLOAT_LITERAL || rhsVar->type == ValueType::IDENTIFIER)
+				if (rhsVar->type == ValueType::FLOAT_RAW || rhsVar->type == ValueType::IDENTIFIER)
 				{
 					if (op == OperatorType::ASSIGN)
 					{
-						lhsVar->val.floatLiteral->value = (real)(*(rhsVar->val.floatLiteral));
+						lhsVar->val.floatRaw = rhsVar->val.floatRaw;
 						return lhsVar;
 					}
 					return nullptr;
@@ -4034,11 +3941,11 @@ namespace flex
 			}
 			if (lhsTypeName == TypeName::BOOL)
 			{
-				if (rhsVar->type == ValueType::BOOL_LITERAL || rhsVar->type == ValueType::IDENTIFIER)
+				if (rhsVar->type == ValueType::BOOL_RAW || rhsVar->type == ValueType::IDENTIFIER)
 				{
 					if (op == OperatorType::ASSIGN)
 					{
-						lhsVar->val.boolLiteral->value = (bool)(*(rhsVar->val.boolLiteral));
+						lhsVar->val.boolRaw = rhsVar->val.boolRaw;
 						return lhsVar;
 					}
 					return nullptr;
@@ -4049,14 +3956,14 @@ namespace flex
 			context.errorToken = token;
 			return nullptr;
 		}
-		if (lhs->value.type == ValueType::INT_LITERAL)
+		if (lhs->value.type == ValueType::INT_RAW)
 		{
 			// Should be handled in semantic analysis step
 			assert(op != OperatorType::ASSIGN);
 
 			if (op == OperatorType::ADD)
 			{
-				i32 result = lhsVar->val.intLiteral->value + (i32)(*(rhsVar->val.intLiteral));
+				i32 result = lhsVar->val.intRaw + rhsVar->val.intRaw;
 				return new Value(result);
 			}
 
@@ -4081,24 +3988,6 @@ namespace flex
 	Value::Value(Operation* opearation) :
 		type(ValueType::OPERATION),
 		val(opearation)
-	{
-	}
-
-	Value::Value(BoolLiteral* boolLiteral) :
-		type(ValueType::BOOL_LITERAL),
-		val(boolLiteral)
-	{
-	}
-
-	Value::Value(IntLiteral* intLiteral) :
-		type(ValueType::INT_LITERAL),
-		val(intLiteral)
-	{
-	}
-
-	Value::Value(FloatLiteral* floatLiteral) :
-		type(ValueType::FLOAT_LITERAL),
-		val(floatLiteral)
 	{
 	}
 
@@ -4132,33 +4021,44 @@ namespace flex
 	{
 	}
 
-	Expression::Expression(const Token& token, Operation* opearation) :
-		Node(token),
-		value(opearation)
+	std::string Value::ToString() const
 	{
+		switch (type)
+		{
+		case ValueType::INT_RAW: return IntToString(val.intRaw);
+		case ValueType::FLOAT_RAW: return FloatToString(val.floatRaw, 2);
+		case ValueType::BOOL_RAW: return BoolToString(val.boolRaw);
+		default: return EMPTY_STRING;
+		}
 	}
 
-	Expression::Expression(const Token& token, BoolLiteral* boolValue) :
+	Expression::Expression(const Token& token, Operation* operation) :
 		Node(token),
-		value(boolValue)
-	{
-	}
-
-	Expression::Expression(const Token& token, IntLiteral* intValue) :
-		Node(token),
-		value(intValue)
-	{
-	}
-
-	Expression::Expression(const Token& token, FloatLiteral* floatValue) :
-		Node(token),
-		value(floatValue)
+		value(operation)
 	{
 	}
 
 	Expression::Expression(const Token& token, Identifier* identifier) :
 		Node(token),
 		value(identifier)
+	{
+	}
+
+	Expression::Expression(const Token& token, i32 intRaw) :
+		Node(token),
+		value(intRaw)
+	{
+	}
+
+	Expression::Expression(const Token& token, real floatRaw) :
+		Node(token),
+		value(floatRaw)
+	{
+	}
+
+	Expression::Expression(const Token& token, bool boolRaw) :
+		Node(token),
+		value(boolRaw)
 	{
 	}
 
@@ -4169,9 +4069,9 @@ namespace flex
 		case ValueType::OPERATION:
 			return value.val.operation->Evaluate(context);
 			break;
-		case ValueType::INT_LITERAL:
-		case ValueType::FLOAT_LITERAL:
-		case ValueType::BOOL_LITERAL:
+		case ValueType::INT_RAW:
+		case ValueType::FLOAT_RAW:
+		case ValueType::BOOL_RAW:
 		{
 			return &value;
 		} break;
@@ -4191,8 +4091,6 @@ namespace flex
 	{
 		if (value.type == ValueType::IDENTIFIER)
 		{
-			//IntLiteral* thisIntVal = context.GetVarInstanceFromTokenID(token.tokenID)->val.intLiteral;
-			//std::string thisIdentifierName = value.val.identifierValue->identifierStr;
 
 
 		}
@@ -4201,10 +4099,10 @@ namespace flex
 		{
 			switch (value.type)
 			{
-			case ValueType::INT_LITERAL:
+			case ValueType::INT_RAW:
 			{
-				i32 thisIntVal = (i32)(*(context.GetVarInstanceFromTokenID(token.tokenID)->val.intLiteral));
-				i32 otherIntVal = (i32)(*(context.GetVarInstanceFromTokenID(other->token.tokenID)->val.intLiteral));
+				i32 thisIntVal = context.GetVarInstanceFromTokenID(token.tokenID)->val.intRaw;
+				i32 otherIntVal = context.GetVarInstanceFromTokenID(other->token.tokenID)->val.intRaw;
 				i32 diff = (thisIntVal - otherIntVal);
 				switch (op)
 				{
@@ -4219,10 +4117,10 @@ namespace flex
 					context.errorToken = token;
 				}
 			} break;
-			case ValueType::FLOAT_LITERAL:
+			case ValueType::FLOAT_RAW:
 			{
-				real thisFloatVal = (real)(*(context.GetVarInstanceFromTokenID(token.tokenID)->val.floatLiteral));
-				real otherFloatVal = (real)(*(context.GetVarInstanceFromTokenID(other->token.tokenID)->val.floatLiteral));
+				real thisFloatVal = context.GetVarInstanceFromTokenID(token.tokenID)->val.floatRaw;
+				real otherFloatVal = context.GetVarInstanceFromTokenID(other->token.tokenID)->val.floatRaw;
 				real diff = (thisFloatVal - otherFloatVal);
 				switch (op)
 				{
@@ -4237,10 +4135,10 @@ namespace flex
 					context.errorToken = token;
 				}
 			} break;
-			case ValueType::BOOL_LITERAL:
+			case ValueType::BOOL_RAW:
 			{
-				bool thisBoolVal = (bool)(*(context.GetVarInstanceFromTokenID(token.tokenID)->val.boolLiteral));
-				bool otherBoolVal = (bool)(*(context.GetVarInstanceFromTokenID(other->token.tokenID)->val.boolLiteral));
+				bool thisBoolVal = context.GetVarInstanceFromTokenID(token.tokenID)->val.boolRaw;
+				bool otherBoolVal = context.GetVarInstanceFromTokenID(other->token.tokenID)->val.boolRaw;
 				switch (op)
 				{
 				case OperatorType::EQUAL: return (thisBoolVal == otherBoolVal);
@@ -4302,18 +4200,14 @@ namespace flex
 		}
 		if (token.type == TokenType::INT_LITERAL)
 		{
-			IntLiteral* intLiteral = IntLiteral::Parse(tokenizer);
-			if (intLiteral == nullptr)
-			{
-				return nullptr;
-			}
+			i32 intRaw = ParseInt(tokenizer.GetNextToken().ToString());
 
 			Token nextToken = tokenizer.PeekNextToken();
 			if (nextToken.type == TokenType::SEMICOLON)
 			{
 				// TODO: Check able to be ended here
 				tokenizer.GetNextToken();
-				return new Expression(token, intLiteral);
+				return new Expression(token, intRaw);
 			}
 			else
 			{
@@ -4327,7 +4221,7 @@ namespace flex
 				}
 				else
 				{
-					Expression* lhs = new Expression(token, intLiteral);
+					Expression* lhs = new Expression(token, intRaw);
 					Expression* rhs = Expression::Parse(tokenizer);
 					Operation* operation = new Operation(token, lhs, op, rhs);
 					return new Expression(token, operation);
@@ -4336,21 +4230,13 @@ namespace flex
 		}
 		if (token.type == TokenType::FLOAT_LITERAL)
 		{
-			FloatLiteral* floatLiteral = FloatLiteral::Parse(tokenizer);
-			if (floatLiteral == nullptr)
-			{
-				return nullptr;
-			}
-			return new Expression(token, floatLiteral);
+			real floatRaw = ParseFloat(tokenizer.GetNextToken().ToString());
+			return new Expression(token, floatRaw);
 		}
 		if (token.type == TokenType::KEY_TRUE || token.type == TokenType::KEY_FALSE)
 		{
-			BoolLiteral* boolLiteral = BoolLiteral::Parse(tokenizer);
-			if (boolLiteral == nullptr)
-			{
-				return nullptr;
-			}
-			return new Expression(token, boolLiteral);
+			bool boolRaw = ParseBool(tokenizer.GetNextToken().ToString());
+			return new Expression(token, boolRaw);
 		}
 
 		TypeName typeName = Type::Parse(tokenizer);
@@ -4411,20 +4297,20 @@ namespace flex
 					}
 					else
 					{
-						rhsResult = rhsVal->val.intLiteral->value;
+						rhsResult = rhsVal->val.intRaw;
 					}
 				}
 				else
 				{
-					rhsResult = rhs->Evaluate(context)->val.intLiteral->value;
+					rhsResult = rhs->Evaluate(context)->val.intRaw;
 				}
-				var->val.intLiteral->value = rhsResult;
+				var->val.intRaw = rhsResult;
 			} break;
 			case TypeName::FLOAT:
-				var->val.floatLiteral->value = rhs->Evaluate(context)->val.floatLiteral->value;
+				var->val.floatRaw = rhs->Evaluate(context)->val.floatRaw;
 				break;
 			case TypeName::BOOL:
-				var->val.boolLiteral->value = rhs->Evaluate(context)->val.boolLiteral->value;
+				var->val.boolRaw = rhs->Evaluate(context)->val.boolRaw;
 				break;
 			default:
 				context.errorReason = "Unexpected typename in assignment";
@@ -4447,8 +4333,6 @@ namespace flex
 		Identifier* lhs = Identifier::Parse(tokenizer);
 		tokenizer.GetNextToken(); // Consume '='
 		Expression* rhs = Expression::Parse(tokenizer);
-
-		//tokenizer.GetNextToken(); // Consume ;
 
 		return new Assignment(token, lhs, rhs, typeName);
 	}
@@ -4914,10 +4798,9 @@ namespace flex
 		RootItem* currentItem = rootItem;
 		while (currentItem != nullptr)
 		{
-			Print("Type: %d\n", currentItem->statement->type);
+			//Print("Type: %d\n", currentItem->statement->type);
 
 			currentItem->statement->Evaluate(*tokenizer->context);
-
 			currentItem = currentItem->nextItem;
 		}
 
@@ -5050,14 +4933,16 @@ namespace flex
 
 			//ImGui::SliderFloat("Magic", &magic, 0.0001f, 0.01f);
 
-			//if (ImGui::BeginChild("Variables", ImVec2(0.0f, 220.0f), true))
-			//{
-			//	for (const Value& var : variables)
-			//	{
-			//		ImGui::Text("ID: %2d, Type: %d, Name: %s", var.id, var.type, var.name.c_str());
-			//	}
-			//}
-			//ImGui::EndChild();
+			if (ImGui::BeginChild("Variables", ImVec2(0.0f, 220.0f), true))
+			{
+				for (i32 i = 0; i < tokenizer->context->variableCount; ++i)
+				{
+					Value* val = tokenizer->context->instantiatedVariables[i];
+					std::string valStr = val->ToString();
+					ImGui::Text("%d", valStr.c_str());
+				}
+			}
+			ImGui::EndChild();
 
 			//ImGui::Text("Errors: %d", errors.size());
 			//if (ImGui::BeginChild("Success", ImVec2(0.0f, 220.0f), true))

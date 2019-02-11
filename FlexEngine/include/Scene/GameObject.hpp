@@ -664,7 +664,9 @@ namespace flex
 		i32 lineNumber = 0;
 
 		static const i32 MAX_VARS = 512;
+		i32 variableCount = 0;
 		Value* instantiatedVariables[MAX_VARS];
+		std::map<i32, i32> tokenIDToIndexMap;
 		std::map<std::string, i32> tokenNameMap;
 	};
 
@@ -726,63 +728,15 @@ namespace flex
 	enum class ValueType
 	{
 		OPERATION,
-		INT_LITERAL,
-		FLOAT_LITERAL,
-		BOOL_LITERAL,
 		IDENTIFIER,
-
 		INT_RAW,
 		FLOAT_RAW,
 		BOOL_RAW,
-		//EQUALITY_TEST,
-		//FUNC_CALL,
-		//STRING_LITERAL,
+
 		NONE
 	};
 
 	TypeName ValueTypeToTypeName(ValueType valueType);
-
-	struct IntLiteral : public Node
-	{
-		IntLiteral(const Token& token, i32 value);
-
-		static IntLiteral* Parse(Tokenizer& tokenizer);
-
-		operator i32()
-		{
-			return value;
-		}
-
-		i32 value = 0;
-	};
-
-	struct FloatLiteral : public Node
-	{
-		FloatLiteral(const Token& token, real value);
-
-		static FloatLiteral* Parse(Tokenizer& tokenizer);
-
-		operator real()
-		{
-			return value;
-		}
-
-		real value = 0.0f;
-	};
-
-	struct BoolLiteral : public Node
-	{
-		BoolLiteral(const Token& token, bool value);
-
-		static BoolLiteral* Parse(Tokenizer& tokenizer);
-
-		operator bool()
-		{
-			return value;
-		}
-
-		bool value = false;
-	};
 
 	struct Identifier : public Node
 	{
@@ -792,18 +746,6 @@ namespace flex
 
 		std::string identifierStr;
 	};
-
-	//struct EqualityTest : public Node
-	//{
-	//	EqualityTest(const Token& token, Expression* lhs, Expression* rhs, OperatorType op);
-
-	//	bool Evaluate(TokenContext& context);
-	//	static EqualityTest* Parse(Tokenizer& tokenizer);
-
-	//	Expression* lhs = nullptr;
-	//	Expression* rhs = nullptr;
-	//	OperatorType op = OperatorType::_NONE;
-	//};
 
 	struct Operation : public Node
 	{
@@ -822,23 +764,19 @@ namespace flex
 	struct Value
 	{
 		Value(Operation* opearation);
-		Value(BoolLiteral* boolLiteral);
-		Value(IntLiteral* intLiteral);
-		Value(FloatLiteral* floatLiteral);
 		Value(Identifier* identifierValue);
 		Value(i32 intRaw);
 		Value(real floatRaw);
 		Value(bool boolRaw);
 		Value();
 
+		std::string ToString() const;
+
 		ValueType type;
 
 		union Val
 		{
 			Operation* operation;
-			BoolLiteral* boolLiteral;
-			IntLiteral* intLiteral;
-			FloatLiteral* floatLiteral;
 			Identifier* identifierValue;
 			i32 intRaw;
 			real floatRaw;
@@ -846,9 +784,6 @@ namespace flex
 			void* nullValue;
 
 			Val(Operation* operation) : operation(operation) {}
-			Val(BoolLiteral* boolLiteral) : boolLiteral(boolLiteral) {}
-			Val(IntLiteral* intLiteral) : intLiteral(intLiteral) {}
-			Val(FloatLiteral* floatLiteral) : floatLiteral(floatLiteral) {}
 			Val(Identifier* identifierValue) : identifierValue(identifierValue) {}
 			Val(i32 intRaw) : intRaw(intRaw) {}
 			Val(real floatRaw) : floatRaw(floatRaw) {}
@@ -859,10 +794,10 @@ namespace flex
 
 	struct Expression : public Node
 	{
-		Expression(const Token& token, Operation* opearation);
-		Expression(const Token& token, BoolLiteral* boolValue);
-		Expression(const Token& token, IntLiteral* intValue);
-		Expression(const Token& token, FloatLiteral* floatValue);
+		Expression(const Token& token, Operation* operation);
+		Expression(const Token& token, i32 intRaw);
+		Expression(const Token& token, real floatRaw);
+		Expression(const Token& token, bool boolRaw);
 		Expression(const Token& token, Identifier* identifierValue);
 
 		Value value;
