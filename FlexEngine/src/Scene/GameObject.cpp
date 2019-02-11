@@ -4132,31 +4132,31 @@ namespace flex
 	{
 	}
 
-	Expression::Expression(Tokenizer& tokenizer, const Token& token, Operation* opearation) :
+	Expression::Expression(const Token& token, Operation* opearation) :
 		Node(token),
 		value(opearation)
 	{
 	}
 
-	Expression::Expression(Tokenizer& tokenizer, const Token& token, BoolLiteral* boolValue) :
+	Expression::Expression(const Token& token, BoolLiteral* boolValue) :
 		Node(token),
 		value(boolValue)
 	{
 	}
 
-	Expression::Expression(Tokenizer& tokenizer, const Token& token, IntLiteral* intValue) :
+	Expression::Expression(const Token& token, IntLiteral* intValue) :
 		Node(token),
 		value(intValue)
 	{
 	}
 
-	Expression::Expression(Tokenizer& tokenizer, const Token& token, FloatLiteral* floatValue) :
+	Expression::Expression(const Token& token, FloatLiteral* floatValue) :
 		Node(token),
 		value(floatValue)
 	{
 	}
 
-	Expression::Expression(Tokenizer& tokenizer, const Token& token, Identifier* identifier) :
+	Expression::Expression(const Token& token, Identifier* identifier) :
 		Node(token),
 		value(identifier)
 	{
@@ -4280,7 +4280,7 @@ namespace flex
 			Token nextToken = tokenizer.PeekNextToken();
 			if (nextToken.type == TokenType::SEMICOLON)
 			{
-				return new Expression(tokenizer, token, identifier);
+				return new Expression(token, identifier);
 			}
 			else
 			{
@@ -4294,9 +4294,9 @@ namespace flex
 				else
 				{
 					Expression* rhs = Expression::Parse(tokenizer);
-					Expression* lhs = new Expression(tokenizer, token, identifier);
+					Expression* lhs = new Expression(token, identifier);
 					Operation* operation = new Operation(token, lhs, op, rhs);
-					return new Expression(tokenizer, token, operation);
+					return new Expression(token, operation);
 				}
 			}
 		}
@@ -4313,7 +4313,7 @@ namespace flex
 			{
 				// TODO: Check able to be ended here
 				tokenizer.GetNextToken();
-				return new Expression(tokenizer, token, intLiteral);
+				return new Expression(token, intLiteral);
 			}
 			else
 			{
@@ -4327,10 +4327,10 @@ namespace flex
 				}
 				else
 				{
-					Expression* lhs = new Expression(tokenizer, token, intLiteral);
+					Expression* lhs = new Expression(token, intLiteral);
 					Expression* rhs = Expression::Parse(tokenizer);
 					Operation* operation = new Operation(token, lhs, op, rhs);
-					return new Expression(tokenizer, token, operation);
+					return new Expression(token, operation);
 				}
 			}
 		}
@@ -4341,7 +4341,7 @@ namespace flex
 			{
 				return nullptr;
 			}
-			return new Expression(tokenizer, token, floatLiteral);
+			return new Expression(token, floatLiteral);
 		}
 		if (token.type == TokenType::KEY_TRUE || token.type == TokenType::KEY_FALSE)
 		{
@@ -4350,7 +4350,7 @@ namespace flex
 			{
 				return nullptr;
 			}
-			return new Expression(tokenizer, token, boolLiteral);
+			return new Expression(token, boolLiteral);
 		}
 
 		TypeName typeName = Type::Parse(tokenizer);
@@ -4361,7 +4361,7 @@ namespace flex
 			{
 				return nullptr;
 			}
-			return new Expression(tokenizer, token, identifier);
+			return new Expression(token, identifier);
 		}
 
 		tokenizer.context->errorReason = "Unexpected expression type";
@@ -5014,16 +5014,18 @@ namespace flex
 				cursorXO -= 0.01f;
 				glm::vec3 cursorPos = pos;
 				cursorPos += right * (cursorXO * -magicF) + up * (cursor.y * -lineHeight);
-				g_Renderer->DrawStringWS("|", glm::vec4(1.0f), cursorPos, rot, letterSpacing);
+				g_Renderer->DrawStringWS("|", VEC4_ONE, cursorPos, rot, letterSpacing);
 			}
 
 			if (bRenderText)
 			{
-				glm::vec4 lineNumberColor(0.4f, 0.4f, 0.4f, 1.0f);
-				glm::vec4 textColor(0.95f, 0.95f, 0.95f, 1.0f);
+				static const glm::vec4 lineNumberColor(0.4f, 0.4f, 0.4f, 1.0f);
+				static const glm::vec4 lineNumberColorActive(0.5f, 0.5f, 0.5f, 1.0f);
+				static const glm::vec4 textColor(0.85f, 0.81f, 0.80f, 1.0f);
 				for (i32 lineNumber = 0; lineNumber < (i32)lines.size(); ++lineNumber)
 				{
-					g_Renderer->DrawStringWS(IntToString(lineNumber, 2, ' '), lineNumberColor, pos + right * lineNoWidth, rot, letterSpacing);
+					glm::vec4 lineNoCol = (lineNumber == cursor.y ? lineNumberColorActive : lineNumberColor);
+					g_Renderer->DrawStringWS(IntToString(lineNumber, 2, ' '), lineNoCol, pos + right * lineNoWidth, rot, letterSpacing);
 					g_Renderer->DrawStringWS(lines[lineNumber], textColor, pos, rot, letterSpacing);
 					pos.y -= lineHeight;
 				}

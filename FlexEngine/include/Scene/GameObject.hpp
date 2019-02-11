@@ -859,11 +859,11 @@ namespace flex
 
 	struct Expression : public Node
 	{
-		Expression(Tokenizer& tokenizer, const Token& token, Operation* opearation);
-		Expression(Tokenizer& tokenizer, const Token& token, BoolLiteral* boolValue);
-		Expression(Tokenizer& tokenizer, const Token& token, IntLiteral* intValue);
-		Expression(Tokenizer& tokenizer, const Token& token, FloatLiteral* floatValue);
-		Expression(Tokenizer& tokenizer, const Token& token, Identifier* identifierValue);
+		Expression(const Token& token, Operation* opearation);
+		Expression(const Token& token, BoolLiteral* boolValue);
+		Expression(const Token& token, IntLiteral* intValue);
+		Expression(const Token& token, FloatLiteral* floatValue);
+		Expression(const Token& token, Identifier* identifierValue);
 
 		Value value;
 
@@ -1055,7 +1055,7 @@ namespace flex
 		std::vector<std::string> lines;
 		bool bParsePassed = false;
 
-		real magic = 0.000155f;
+		real magic = 0.0001625f;
 
 		glm::vec2i cursor;
 		// Keeps track of the cursor x to be able to position the cursor correctly

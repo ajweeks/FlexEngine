@@ -349,7 +349,7 @@
 		{
 			"name" : "terminal display",
 			"shader" : "pbr",
-			"const albedo" : "0.004, 0.004, 0.006",
+			"const albedo" : "0.003, 0.003, 0.003",
 			"const metallic" : 0.000000,
 			"const roughness" : 0.000000,
 			"const ao" : 0.000000
