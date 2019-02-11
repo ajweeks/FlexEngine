@@ -34,7 +34,7 @@
 
   <Type Name="flex::Value">
     <!--<DisplayString>{val.intRaw}</DisplayString>-->
-    <DisplayString Condition="type == flex::ValueType::OPERATION">{val.operation->op}</DisplayString>
+    <DisplayString Condition="type == flex::ValueType::OPERATION">{val.operation}</DisplayString>
     <DisplayString Condition="type == flex::ValueType::INT_RAW">{val.intRaw}</DisplayString>
     <DisplayString Condition="type == flex::ValueType::FLOAT_RAW">{val.floatRaw}</DisplayString>
     <DisplayString Condition="type == flex::ValueType::BOOL_RAW">{val.boolRaw}</DisplayString>

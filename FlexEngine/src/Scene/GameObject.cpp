@@ -3365,13 +3365,13 @@ namespace flex
 		switch (typeName)
 		{
 		case TypeName::INT:
-			instantiatedVariables[nextIndex] = new Value(new int());
+			instantiatedVariables[nextIndex] = new Value(0);
 			break;
 		case TypeName::FLOAT:
-			instantiatedVariables[nextIndex] = new Value(new float());
+			instantiatedVariables[nextIndex] = new Value(0.0f);
 			break;
 		case TypeName::BOOL:
-			instantiatedVariables[nextIndex] = new Value(new bool());
+			instantiatedVariables[nextIndex] = new Value(false);
 			break;
 		}
 		return instantiatedVariables[nextIndex];
@@ -4069,20 +4069,20 @@ namespace flex
 		case ValueType::OPERATION:
 			return value.val.operation->Evaluate(context);
 			break;
+		case ValueType::IDENTIFIER:
+		{
+			// TODO: Apply implicit casting here when necessary
+			return context.GetVarInstanceFromTokenID(context.tokenNameMap[value.val.identifierValue->identifierStr]);
+		} break;
 		case ValueType::INT_RAW:
 		case ValueType::FLOAT_RAW:
 		case ValueType::BOOL_RAW:
 		{
 			return &value;
 		} break;
-		case ValueType::IDENTIFIER:
-		{
-			// TODO: Apply implicit casting here when necessary
-			return context.GetVarInstanceFromTokenID(context.tokenNameMap[value.val.identifierValue->identifierStr]);
-		} break;
 		}
 
-		context.errorReason = "Unexpected expression type";
+		context.errorReason = "Unexpected value type";
 		context.errorToken = token;
 		return nullptr;
 	}
@@ -4281,6 +4281,13 @@ namespace flex
 			var = context.InstantiateIdentifier(typeName, identifier->token.ToString(), identifier->token.tokenID);
 		}
 
+		if (var == nullptr)
+		{
+			context.errorReason = "Failed to retrieve identifier for expression!";
+			context.errorToken = token;
+			return;
+		}
+
 		if (rhs != nullptr)
 		{
 			switch (typeName)
@@ -4402,7 +4409,7 @@ namespace flex
 
 	Statement* Statement::Parse(Tokenizer& tokenizer)
 	{
-		StatementType statementType = StatementType::NONE;
+		StatementType statementType = StatementType::_NONE;
 
 		IfStatement* ifStatement = nullptr;
 		Statement* elseStatement = nullptr;
@@ -4443,7 +4450,7 @@ namespace flex
 			assignmentStatement = Assignment::Parse(tokenizer);
 		}
 
-		if (statementType == StatementType::NONE)
+		if (statementType == StatementType::_NONE)
 		{
 			if (tokenizer.context->errorReason.empty())
 			{
@@ -4774,15 +4781,14 @@ namespace flex
 
 		Print("Creating AST\n");
 		rootItem = RootItem::Parse(*tokenizer);
+		Print("Done creating AST\nStatements generated:\n");
 
 		RootItem* item = rootItem;
 		while (item != nullptr)
 		{
-;			Print("Statement type: %d\n", item->statement->type);
+;			Print("    %s\n", StatementTypeStrings[(i32)item->statement->type]);
 			item = item->nextItem;
 		}
-		Print("Done creating AST\n");
-
 	}
 
 	void AST::Evaluate()
@@ -4795,13 +4801,32 @@ namespace flex
 
 		Print("Evaluating AST\n");
 
+		bool bSuccess = true;
+
 		RootItem* currentItem = rootItem;
 		while (currentItem != nullptr)
 		{
 			//Print("Type: %d\n", currentItem->statement->type);
 
 			currentItem->statement->Evaluate(*tokenizer->context);
-			currentItem = currentItem->nextItem;
+			if (tokenizer->context->errorReason.empty())
+			{
+				currentItem = currentItem->nextItem;
+			}
+			else
+			{
+				PrintError("Evaluation of AST failed\n");
+				PrintError("Error reason: %s\n", tokenizer->context->errorReason.c_str());
+				PrintError("Error token: %s\n", tokenizer->context->errorToken.ToString().c_str());
+				lastErrorTokenLocation = glm::vec2i(tokenizer->context->errorToken.linePos, tokenizer->context->errorToken.lineNum);
+				bSuccess = false;
+				break;
+			}
+		}
+
+		if (bSuccess)
+		{
+			lastErrorTokenLocation = glm::vec2i(-1);
 		}
 
 		Print("Done evaluating AST\n");
@@ -4905,6 +4930,8 @@ namespace flex
 				static const glm::vec4 lineNumberColor(0.4f, 0.4f, 0.4f, 1.0f);
 				static const glm::vec4 lineNumberColorActive(0.5f, 0.5f, 0.5f, 1.0f);
 				static const glm::vec4 textColor(0.85f, 0.81f, 0.80f, 1.0f);
+				static const glm::vec4 errorColor(0.84f, 0.25f, 0.25f, 1.0f);
+				glm::vec3 firstLinePos = pos;
 				for (i32 lineNumber = 0; lineNumber < (i32)lines.size(); ++lineNumber)
 				{
 					glm::vec4 lineNoCol = (lineNumber == cursor.y ? lineNumberColorActive : lineNumberColor);
@@ -4912,11 +4939,19 @@ namespace flex
 					g_Renderer->DrawStringWS(lines[lineNumber], textColor, pos, rot, letterSpacing);
 					pos.y -= lineHeight;
 				}
+
+				glm::vec2i lastErrorPos = ast->lastErrorTokenLocation;
+				if (lastErrorPos.x != -1)
+				{
+					pos = firstLinePos;
+					pos.y -= lineHeight * lastErrorPos.y;
+					g_Renderer->DrawStringWS("#", errorColor, pos + right * lineNoWidth * 0.55f, rot, letterSpacing);
+				}
 			}
 
-			glm::vec3 posBR = posTL - (right * width * 0.92f) - (up * height * 0.92f);
-			glm::vec4 col = bParsePassed ? glm::vec4(0.3f, 0.8f, 0.3f, 1.0f) : glm::vec4(0.8f, 0.3f, 0.3f, 1.0f);
-			g_Renderer->DrawStringWS("#", col, posBR, rot, letterSpacing);
+			//glm::vec3 posBR = posTL - (right * width * 0.92f) - (up * height * 0.92f);
+			//glm::vec4 col = bParsePassed ? glm::vec4(0.3f, 0.8f, 0.3f, 1.0f) : glm::vec4(0.8f, 0.3f, 0.3f, 1.0f);
+			//g_Renderer->DrawStringWS("#", col, posBR, rot, letterSpacing);
 		}
 	}
 
@@ -4939,7 +4974,7 @@ namespace flex
 				{
 					Value* val = tokenizer->context->instantiatedVariables[i];
 					std::string valStr = val->ToString();
-					ImGui::Text("%d", valStr.c_str());
+					ImGui::Text("%s", valStr.c_str());
 				}
 			}
 			ImGui::EndChild();
@@ -5354,32 +5389,6 @@ namespace flex
 		tokenizer = new Tokenizer(str);
 		ast = new AST(tokenizer);
 		ast->Create();
-
-		i32 tokenCount = 0;
-		while (tokenizer->context->HasNextChar())
-		{
-			if (!tokenizer->context->errorReason.empty())
-			{
-				PrintError("Error encountered while parsing code: %s\n", tokenizer->context->errorReason.c_str());
-				bParsePassed = false;
-				break;
-			}
-			Token token = tokenizer->GetNextToken();
-			if (token.type != TokenType::_NONE)
-			{
-				++tokenCount;
-			}
-		}
-		Print("Tokens found in code: %d\n", tokenCount);
-
-		if (!bParsePassed)
-		{
-			//PrintError("%d errors:\n", errors.size());
-			//for (const Error& e : errors)
-			//{
-			//	PrintError("  %02i  %s\n", e.lineNumber, e.str.c_str());
-			//}
-		}
 	}
 
 	void Terminal::EvaluateCode()
@@ -5403,6 +5412,7 @@ namespace flex
 				}
 				if (keyCode == KeyCode::KEY_F5)
 				{
+					ParseCode();
 					EvaluateCode();
 					return EventReply::CONSUMED;
 				}

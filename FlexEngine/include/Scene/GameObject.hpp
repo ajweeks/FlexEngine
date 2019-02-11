@@ -836,8 +836,22 @@ namespace flex
 		ELIF,
 		ELSE,
 		WHILE,
-		NONE
+
+		_NONE
 	};
+
+	static const char* StatementTypeStrings[] =
+	{
+		"assignment",
+		"If",
+		"elif",
+		"else",
+		"while",
+
+		"NONE"
+	};
+
+	static_assert(ARRAY_LENGTH(StatementTypeStrings) == (u32)StatementType::_NONE + 1, "Length of StatementTypeStrings must match length of StatementType enum");
 
 	struct Statement : public Node
 	{
@@ -932,6 +946,8 @@ namespace flex
 
 		RootItem* rootItem = nullptr;
 		Tokenizer* tokenizer = nullptr;
+
+		glm::vec2i lastErrorTokenLocation = glm::vec2i(-1);
 	};
 
 	class Terminal : public GameObject
@@ -990,7 +1006,7 @@ namespace flex
 		std::vector<std::string> lines;
 		bool bParsePassed = false;
 
-		real magic = 0.0001625f;
+		real magic = 0.000161f;
 
 		glm::vec2i cursor;
 		// Keeps track of the cursor x to be able to position the cursor correctly
