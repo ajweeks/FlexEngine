@@ -3346,17 +3346,14 @@ namespace flex
 
 	Value* TokenContext::InstantiateIdentifier(TypeName typeName, const std::string& tokenName, i32 tokenID)
 	{
-		if (tokenNameMap.find(tokenName) != tokenNameMap.end() ||
-			tokenIDToIndexMap.find(tokenID) != tokenIDToIndexMap.end())
+		if (tokenIDToInstantiatedIdentifierIdx.find(tokenID) != tokenIDToInstantiatedIdentifierIdx.end())
 		{
 			errorReason = "Attempted to instantiate variable more than once";
 			return nullptr;
 		}
 
-		tokenNameMap.emplace(tokenName, tokenID);
-
 		const i32 nextIndex = variableCount++;
-		tokenIDToIndexMap.emplace(tokenID, nextIndex);
+		tokenIDToInstantiatedIdentifierIdx.emplace(tokenID, nextIndex);
 
 		// TODO: Use typeName?
 
@@ -3365,22 +3362,30 @@ namespace flex
 		switch (typeName)
 		{
 		case TypeName::INT:
-			instantiatedVariables[nextIndex] = new Value(0);
+			instantiatedIdentifiers[nextIndex].value = new Value(0);
 			break;
 		case TypeName::FLOAT:
-			instantiatedVariables[nextIndex] = new Value(0.0f);
+			instantiatedIdentifiers[nextIndex].value = new Value(0.0f);
 			break;
 		case TypeName::BOOL:
-			instantiatedVariables[nextIndex] = new Value(false);
+			instantiatedIdentifiers[nextIndex].value = new Value(false);
 			break;
+		default:
+			errorReason = "Unhandled identifier typename encountered in InstantiateIdentifier";
+			return nullptr;
 		}
-		return instantiatedVariables[nextIndex];
+		// NOTE: Enforce a copy of the string
+		instantiatedIdentifiers[nextIndex].name = std::string(tokenName.c_str());
+		instantiatedIdentifiers[nextIndex].index = nextIndex;
+		return instantiatedIdentifiers[nextIndex].value;
 	}
 
 	Value* TokenContext::GetVarInstanceFromTokenID(i32 tokenID)
 	{
 		assert(tokenID >= 0 && tokenID < MAX_VARS);
-		return instantiatedVariables[tokenIDToIndexMap[tokenID]];
+		i32 idx = tokenIDToInstantiatedIdentifierIdx[tokenID];
+		assert(idx >= 0 && idx < variableCount);
+		return instantiatedIdentifiers[idx].value;
 	}
 
 	bool TokenContext::IsKeyword(const char* str)
@@ -3438,12 +3443,16 @@ namespace flex
 
 	TokenContext::TokenContext()
 	{
-		memset(instantiatedVariables, 0, sizeof(Value*) * MAX_VARS);
+		memset(instantiatedIdentifiers, 0, sizeof(InstantiatedIdentifier) * MAX_VARS);
 	}
 
 	TokenContext::~TokenContext()
 	{
-		memset(instantiatedVariables, 0, sizeof(Value*) * MAX_VARS);
+		for (i32 i = 0; i < variableCount; ++i)
+		{
+			SafeDelete(instantiatedIdentifiers[i].value);
+		}
+		variableCount = 0;
 	}
 
 	bool TokenContext::HasNextChar() const
@@ -3903,13 +3912,19 @@ namespace flex
 	{
 	}
 
+	Operation::~Operation()
+	{
+		SafeDelete(lhs);
+		SafeDelete(rhs);
+	}
+
 	Value* Operation::Evaluate(TokenContext& context)
 	{
 		Value* lhsVar = lhs->Evaluate(context);
 		Value* rhsVar = rhs->Evaluate(context);
 		if (lhs->value.type == ValueType::IDENTIFIER)
 		{
-			TypeName lhsTypeName = Type::GetTypeNameFromStr(lhs->value.val.identifierValue->identifierStr);
+			TypeName lhsTypeName = Type::GetTypeNameFromStr(lhs->value.val.identifier->identifierStr);
 			if (lhsTypeName == TypeName::INT)
 			{
 				if (rhsVar->type == ValueType::INT_RAW || rhsVar->type == ValueType::IDENTIFIER)
@@ -3966,7 +3981,6 @@ namespace flex
 				i32 result = lhsVar->val.intRaw + rhsVar->val.intRaw;
 				return new Value(result);
 			}
-
 		}
 
 		context.errorReason = "Malformed operation";
@@ -3979,9 +3993,22 @@ namespace flex
 		Token token = tokenizer.GetNextToken();
 
 		Expression* lhs = Expression::Parse(tokenizer);
+		if (lhs == nullptr)
+		{
+			return nullptr;
+		}
 		OperatorType op = Operator::Parse(tokenizer);
+		if (op == OperatorType::_NONE)
+		{
+			SafeDelete(lhs);
+			return nullptr;
+		}
 		Expression* rhs = Expression::Parse(tokenizer);
-
+		if (rhs == nullptr)
+		{
+			SafeDelete(lhs);
+			return nullptr;
+		}
 		return new Operation(token, lhs, op, rhs);
 	}
 
@@ -3991,9 +4018,9 @@ namespace flex
 	{
 	}
 
-	Value::Value(Identifier* identifierValue) :
+	Value::Value(Identifier* identifier) :
 		type(ValueType::IDENTIFIER),
-		val(identifierValue)
+		val(identifier)
 	{
 	}
 
@@ -4019,6 +4046,27 @@ namespace flex
 		type(ValueType::NONE),
 		val()
 	{
+	}
+
+	Value::~Value()
+	{
+		switch (type)
+		{
+		case ValueType::INT_RAW:
+		case ValueType::FLOAT_RAW:
+		case ValueType::BOOL_RAW:
+			// No memory to free
+			break;
+		case ValueType::IDENTIFIER:
+			SafeDelete(val.identifier);
+			break;
+		case ValueType::OPERATION:
+			SafeDelete(val.operation);
+			break;
+		default:
+			PrintError("Unhandled statement type in ~Value(): %d\n", (i32)type);
+			break;
+		}
 	}
 
 	std::string Value::ToString() const
@@ -4062,6 +4110,10 @@ namespace flex
 	{
 	}
 
+	Expression::~Expression()
+	{
+	}
+
 	Value* Expression::Evaluate(TokenContext& context)
 	{
 		switch (value.type)
@@ -4072,7 +4124,7 @@ namespace flex
 		case ValueType::IDENTIFIER:
 		{
 			// TODO: Apply implicit casting here when necessary
-			return context.GetVarInstanceFromTokenID(context.tokenNameMap[value.val.identifierValue->identifierStr]);
+			return context.GetVarInstanceFromTokenID(token.tokenID);
 		} break;
 		case ValueType::INT_RAW:
 		case ValueType::FLOAT_RAW:
@@ -4161,11 +4213,6 @@ namespace flex
 
 	Expression* Expression::Parse(Tokenizer& tokenizer)
 	{
-		return SingleParse(tokenizer);
-	}
-
-	Expression* Expression::SingleParse(Tokenizer& tokenizer)
-	{
 		Token token = tokenizer.PeekNextToken();
 		if (token.type == TokenType::IDENTIFIER)
 		{
@@ -4187,13 +4234,25 @@ namespace flex
 				{
 					tokenizer.context->errorReason = "Expected operator";
 					tokenizer.context->errorToken = token;
+					SafeDelete(identifier);
 					return nullptr;
 				}
 				else
 				{
-					Expression* rhs = Expression::Parse(tokenizer);
 					Expression* lhs = new Expression(token, identifier);
+					Expression* rhs = Expression::Parse(tokenizer);
+					if (rhs == nullptr)
+					{
+						SafeDelete(lhs);
+						return nullptr;
+					}
 					Operation* operation = new Operation(token, lhs, op, rhs);
+					if (operation == nullptr)
+					{
+						SafeDelete(lhs);
+						SafeDelete(rhs);
+						return nullptr;
+					}
 					return new Expression(token, operation);
 				}
 			}
@@ -4216,14 +4275,24 @@ namespace flex
 				{
 					tokenizer.context->errorToken = token;
 					tokenizer.context->errorReason = "Expected '=' or ';' after int declaration";
-					// TODO: Memory leaks?
 					return nullptr;
 				}
 				else
 				{
 					Expression* lhs = new Expression(token, intRaw);
 					Expression* rhs = Expression::Parse(tokenizer);
+					if (rhs == nullptr)
+					{
+						SafeDelete(lhs);
+						return nullptr;
+					}
 					Operation* operation = new Operation(token, lhs, op, rhs);
+					if (operation == nullptr)
+					{
+						SafeDelete(lhs);
+						SafeDelete(rhs);
+						return nullptr;
+					}
 					return new Expression(token, operation);
 				}
 			}
@@ -4245,6 +4314,8 @@ namespace flex
 			Identifier* identifier = Identifier::Parse(tokenizer);
 			if (identifier == nullptr)
 			{
+				tokenizer.context->errorReason = "Unexpected identifier after typename";
+				tokenizer.context->errorToken = token;
 				return nullptr;
 			}
 			return new Expression(token, identifier);
@@ -4264,6 +4335,12 @@ namespace flex
 		rhs(rhs),
 		typeName(typeName)
 	{
+	}
+
+	Assignment::~Assignment()
+	{
+		SafeDelete(identifier);
+		SafeDelete(rhs);
 	}
 
 	void Assignment::Evaluate(TokenContext& context)
@@ -4305,6 +4382,11 @@ namespace flex
 					else
 					{
 						rhsResult = rhsVal->val.intRaw;
+						// TODO: Implement a solution like the following to prevent memory leaks on temporary variables
+						//if (rhsVal->bIsTemporary)
+						//{
+						//	SafeDelete(rhsVal);
+						//}
 					}
 				}
 				else
@@ -4320,8 +4402,9 @@ namespace flex
 				var->val.boolRaw = rhs->Evaluate(context)->val.boolRaw;
 				break;
 			default:
-				context.errorReason = "Unexpected typename in assignment";
+				context.errorReason = "Unexpected typename encountered in assignment";
 				context.errorToken = token;
+				break;
 			}
 		}
 	}
@@ -4338,9 +4421,17 @@ namespace flex
 		}
 
 		Identifier* lhs = Identifier::Parse(tokenizer);
+		if (lhs == nullptr)
+		{
+			return nullptr;
+		}
 		tokenizer.GetNextToken(); // Consume '='
 		Expression* rhs = Expression::Parse(tokenizer);
-
+		if (rhs == nullptr)
+		{
+			SafeDelete(lhs);
+			return nullptr;
+		}
 		return new Assignment(token, lhs, rhs, typeName);
 	}
 
@@ -4378,13 +4469,28 @@ namespace flex
 	{
 	}
 
-	//Statement::Statement(const Token& token,
-	//	Operation* operation) :
-	//	Node(token),
-	//	type(StatementType::OPERATION),
-	//	contents(operation)
-	//{
-	//}
+	Statement::~Statement()
+	{
+		switch (type)
+		{
+		case StatementType::ASSIGNMENT:
+			SafeDelete(contents.assignment);
+			break;
+		case StatementType::IF:
+		case StatementType::ELIF:
+			SafeDelete(contents.ifStatement);
+			break;
+		case StatementType::ELSE:
+			SafeDelete(contents.elseStatement);
+			break;
+		case StatementType::WHILE:
+			SafeDelete(contents.whileStatement);
+			break;
+		default:
+			PrintError("Unhandled statement type in ~Statement(): %d\n", (i32)type);
+			break;
+		}
+	}
 
 	void Statement::Evaluate(TokenContext& context)
 	{
@@ -4426,6 +4532,10 @@ namespace flex
 		{
 			statementType = StatementType::IF;
 			ifStatement = IfStatement::Parse(tokenizer);
+			if (ifStatement == nullptr)
+			{
+				return nullptr;
+			}
 		}
 		else if (token.type == TokenType::KEY_ELIF)
 		{
@@ -4437,17 +4547,29 @@ namespace flex
 		{
 			statementType = StatementType::ELSE;
 			elseStatement = Statement::Parse(tokenizer);
+			if (elseStatement == nullptr)
+			{
+				return nullptr;
+			}
 		}
 		else if (token.type == TokenType::KEY_WHILE)
 		{
 			statementType = StatementType::WHILE;
 			whileStatement = WhileStatement::Parse(tokenizer);
+			if (whileStatement == nullptr)
+			{
+				return nullptr;
+			}
 		}
 		else
 		{
 			// Assigning to existing instance of var
 			statementType = StatementType::ASSIGNMENT;
 			assignmentStatement = Assignment::Parse(tokenizer);
+			if (assignmentStatement == nullptr)
+			{
+				return nullptr;
+			}
 		}
 
 		if (statementType == StatementType::_NONE)
@@ -4465,40 +4587,18 @@ namespace flex
 		{
 			tokenizer.GetNextToken();
 		}
-		else
-		{
-			//tokenizer.context->errorReason = "Expected semicolon at end of line";
-			//tokenizer.context->errorToken = token;
-			//// TODO: Free allocated memory prior to returning?
-			//return nullptr;
-		}
-
-		//Statement* nextStatement = nullptr;
-		//if (tokenizer.context->HasNextChar())
-		//{
-		//	nextToken = tokenizer.PeekNextToken();
-		//	nextStatement = Statement::Parse(tokenizer);
-		//	if (nextStatement == nullptr)
-		//	{
-		//		return nullptr;
-		//	}
-		//}
 
 		switch (statementType)
 		{
 		case StatementType::ASSIGNMENT:
 		{
-			if (assignmentStatement != nullptr)
-			{
-				return new Statement(token, assignmentStatement);
-			}
+			assert(assignmentStatement != nullptr);
+			return new Statement(token, assignmentStatement);
 		} break;
 		case StatementType::IF:
 		{
-			if (ifStatement != nullptr)
-			{
-				return new Statement(token, statementType, ifStatement);
-			}
+			assert(ifStatement != nullptr);
+			return new Statement(token, statementType, ifStatement);
 		} break;
 		case StatementType::ELIF:
 		{
@@ -4507,17 +4607,13 @@ namespace flex
 		} break;
 		case StatementType::ELSE:
 		{
-			if (elseStatement != nullptr)
-			{
-				return new Statement(token, elseStatement);
-			}
+			assert(elseStatement != nullptr);
+			return new Statement(token, elseStatement);
 		} break;
 		case StatementType::WHILE:
 		{
-			if (whileStatement != nullptr)
-			{
-				return new Statement(token, whileStatement);
-			}
+			assert(whileStatement != nullptr);
+			return new Statement(token, whileStatement);
 		} break;
 		}
 
@@ -4561,10 +4657,18 @@ namespace flex
 	{
 	}
 
+	IfStatement::~IfStatement()
+	{
+		SafeDelete(condition);
+		SafeDelete(body);
+	}
+
 	void IfStatement::Evaluate(TokenContext& context)
 	{
-		bool bConditionResult = condition->Evaluate(context);
-		if (bConditionResult)
+		Value* bConditionResult = condition->Evaluate(context);
+		// TODO: Save result of bConditionResult then delete if temporary
+
+		if (bConditionResult->val.boolRaw)
 		{
 			body->Evaluate(context);
 		}
@@ -4611,6 +4715,7 @@ namespace flex
 			{
 				tokenizer.context->errorReason = "Expected '{' after if statement condition";
 				tokenizer.context->errorToken = token;
+				SafeDelete(condition);
 				return nullptr;
 			}
 		}
@@ -4627,6 +4732,8 @@ namespace flex
 			{
 				tokenizer.context->errorReason = "Expected '}' after if statement body";
 				tokenizer.context->errorToken = token;
+				SafeDelete(condition);
+				SafeDelete(body);
 				return nullptr;
 			}
 		}
@@ -4638,10 +4745,18 @@ namespace flex
 		if (nextToken.type == TokenType::KEY_ELIF)
 		{
 			elseIfStatement = IfStatement::Parse(tokenizer);
+			if (elseIfStatement == nullptr)
+			{
+				return nullptr;
+			}
 		}
 		else if (nextToken.type == TokenType::KEY_ELSE)
 		{
 			elseStatement = Statement::Parse(tokenizer);
+			if (elseStatement == nullptr)
+			{
+				return nullptr;
+			}
 		}
 
 		if (elseIfStatement != nullptr)
@@ -4665,9 +4780,22 @@ namespace flex
 	{
 	}
 
+	WhileStatement::~WhileStatement()
+	{
+		SafeDelete(condition);
+		SafeDelete(body);
+	}
+
 	void WhileStatement::Evaluate(TokenContext& context)
 	{
-		condition->Evaluate(context);
+		Value* result = condition->Evaluate(context);
+		while (result->val.boolRaw)
+		{
+			body->Evaluate(context);
+			result = condition->Evaluate(context);
+			// TODO: Delete temporary result
+			// TODO: Catch infinite loops
+		}
 	}
 
 	WhileStatement* WhileStatement::Parse(Tokenizer& tokenizer)
@@ -4693,12 +4821,13 @@ namespace flex
 			{
 				tokenizer.context->errorReason = "Expected '{' after while statement";
 				tokenizer.context->errorToken = token;
+				SafeDelete(condition);
 				return nullptr;
 			}
 		}
 
 		Statement* body = Statement::Parse(tokenizer);
-		if (condition == nullptr)
+		if (body == nullptr)
 		{
 			return nullptr;
 		}
@@ -4709,6 +4838,8 @@ namespace flex
 			{
 				tokenizer.context->errorReason = "Expected '}' after while statement body";
 				tokenizer.context->errorToken = token;
+				SafeDelete(condition);
+				SafeDelete(body);
 				return nullptr;
 			}
 		}
@@ -4720,6 +4851,12 @@ namespace flex
 		statement(statement),
 		nextItem(nextItem)
 	{
+	}
+
+	RootItem::~RootItem()
+	{
+		SafeDelete(statement);
+		SafeDelete(nextItem);
 	}
 
 	void RootItem::Evaluate(TokenContext& context)
@@ -4750,6 +4887,11 @@ namespace flex
 		if (tokenizer.context->HasNextChar())
 		{
 			nextItem = RootItem::Parse(tokenizer);
+			if (nextItem == nullptr)
+			{
+				SafeDelete(rootStatement);
+				return nullptr;
+			}
 		}
 
 		return new RootItem(rootStatement, nextItem);
@@ -4762,22 +4904,7 @@ namespace flex
 
 	void AST::Create()
 	{
-		//Token rootTokenStr;
-		//rootTokenStr.tokenID = -1;
-		//rootTokenStr.len = 0;
-		//rootTokenStr.type = TokenType::ROOT;
-		//rootNode = new Node(rootTokenStr);
-
-		//Node* currentNode = rootNode;
-		//while (tokenizer->context->HasNextChar())
-		//{
-		//	Token nextToken = tokenizer->GetNextToken();
-		//	if (nextToken.type == TokenType::_NONE)
-		//	{
-		//		return;
-		//	}
-
-		// TODO: Clean up previous AST if exists?
+		SafeDelete(rootItem);
 
 		Print("Creating AST\n");
 		rootItem = RootItem::Parse(*tokenizer);
@@ -4832,6 +4959,11 @@ namespace flex
 		Print("Done evaluating AST\n");
 	}
 
+	void AST::Destroy()
+	{
+		SafeDelete(rootItem);
+	}
+
 	Terminal::Terminal() :
 		Terminal(g_SceneManager->CurrentScene()->GetUniqueObjectName("Terminal_", 2))
 	{
@@ -4871,7 +5003,12 @@ namespace flex
 	{
 		g_InputManager->UnbindKeyEventCallback(&m_KeyEventCallback);
 
-		SafeDelete(ast);
+		if (ast != nullptr)
+		{
+			ast->Destroy();
+			SafeDelete(ast);
+		}
+
 		SafeDelete(tokenizer);
 
 		GameObject::Destroy();
@@ -4972,9 +5109,10 @@ namespace flex
 			{
 				for (i32 i = 0; i < tokenizer->context->variableCount; ++i)
 				{
-					Value* val = tokenizer->context->instantiatedVariables[i];
-					std::string valStr = val->ToString();
-					ImGui::Text("%s", valStr.c_str());
+					const TokenContext::InstantiatedIdentifier& var = tokenizer->context->instantiatedIdentifiers[i];
+					std::string valStr = var.value->ToString();
+					const char* typeNameCStr = g_TypeNameStrings[(i32)ValueTypeToTypeName(var.value->type)];
+					ImGui::Text("%s %s = %s", typeNameCStr, var.name.c_str(), valStr.c_str());
 				}
 			}
 			ImGui::EndChild();
@@ -5419,6 +5557,42 @@ namespace flex
 				if (keyCode == KeyCode::KEY_ESCAPE)
 				{
 					m_Camera->TransitionOut();
+					return EventReply::CONSUMED;
+				}
+				if (keyCode == KeyCode::KEY_SLASH)
+				{
+					if (bCtrlDown)
+					{
+						i32 pCursorPosX = cursor.x;
+						cursor.x = 0;
+						if (lines[cursor.y].size() < 2)
+						{
+							// TODO: Check line length
+							TypeChar('/');
+							TypeChar('/');
+							cursor.x = pCursorPosX + 2;
+						}
+						else
+						{
+							if (lines[cursor.y][0] == '/' && lines[cursor.y][1] == '/')
+							{
+								DeleteCharInFront(false);
+								DeleteCharInFront(false);
+								cursor.x = pCursorPosX - 2;
+							}
+							else
+							{
+								// TODO: Check line length
+								TypeChar('/');
+								TypeChar('/');
+								cursor.x = pCursorPosX + 2;
+							}
+						}
+					}
+					else
+					{
+						TypeChar('/');
+					}
 					return EventReply::CONSUMED;
 				}
 				if ((i32)keyCode >= (i32)KeyCode::KEY_APOSTROPHE && (i32)keyCode <= (i32)KeyCode::KEY_RIGHT_BRACKET)

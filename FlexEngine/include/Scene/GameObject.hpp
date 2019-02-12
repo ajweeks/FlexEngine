@@ -654,7 +654,6 @@ namespace flex
 		static bool IsKeyword(const char* str);
 		static bool IsKeyword(TokenType type);
 
-
 		const char* buffer = nullptr;
 		i32 bufferLen = -1;
 		char const* bufferPtr = nullptr;
@@ -664,10 +663,17 @@ namespace flex
 		i32 lineNumber = 0;
 
 		static const i32 MAX_VARS = 512;
+		struct InstantiatedIdentifier
+		{
+			std::string name;
+			i32 index = 0;
+			Value* value = nullptr;
+		} instantiatedIdentifiers[MAX_VARS];
 		i32 variableCount = 0;
-		Value* instantiatedVariables[MAX_VARS];
-		std::map<i32, i32> tokenIDToIndexMap;
-		std::map<std::string, i32> tokenNameMap;
+
+		std::map<i32, i32> tokenIDToInstantiatedIdentifierIdx;
+		//Value* instantiatedVariables[MAX_VARS];
+		//std::map<std::string, i32> tokenNameMap;
 	};
 
 	struct Tokenizer
@@ -750,6 +756,7 @@ namespace flex
 	struct Operation : public Node
 	{
 		Operation(const Token& token, Expression* lhs, OperatorType op, Expression* rhs);
+		~Operation();
 
 		OperatorType op;
 		Expression* lhs;
@@ -763,12 +770,13 @@ namespace flex
 
 	struct Value
 	{
+		Value();
 		Value(Operation* opearation);
 		Value(Identifier* identifierValue);
 		Value(i32 intRaw);
 		Value(real floatRaw);
 		Value(bool boolRaw);
-		Value();
+		~Value();
 
 		std::string ToString() const;
 
@@ -777,14 +785,14 @@ namespace flex
 		union Val
 		{
 			Operation* operation;
-			Identifier* identifierValue;
+			Identifier* identifier;
 			i32 intRaw;
 			real floatRaw;
 			bool boolRaw;
 			void* nullValue;
 
 			Val(Operation* operation) : operation(operation) {}
-			Val(Identifier* identifierValue) : identifierValue(identifierValue) {}
+			Val(Identifier* identifier) : identifier(identifier) {}
 			Val(i32 intRaw) : intRaw(intRaw) {}
 			Val(real floatRaw) : floatRaw(floatRaw) {}
 			Val(bool boolRaw) : boolRaw(boolRaw) {}
@@ -798,7 +806,8 @@ namespace flex
 		Expression(const Token& token, i32 intRaw);
 		Expression(const Token& token, real floatRaw);
 		Expression(const Token& token, bool boolRaw);
-		Expression(const Token& token, Identifier* identifierValue);
+		Expression(const Token& token, Identifier* identifier);
+		~Expression();
 
 		Value value;
 
@@ -807,7 +816,6 @@ namespace flex
 		bool Compare(TokenContext& context, Expression* other, OperatorType op);
 
 		static Expression* Parse(Tokenizer& tokenizer);
-		static Expression* SingleParse(Tokenizer& tokenizer);
 	};
 
 	struct Assignment : public Node
@@ -818,14 +826,14 @@ namespace flex
 			Identifier* identifier,
 			Expression* rhs,
 			TypeName typeName = TypeName::_NONE);
+		~Assignment();
 
-		TypeName typeName; // Optional, not used when re-assigning
-		Identifier* identifier;
-		Expression* rhs; // If null, this assignment is actually just a declaration
-		// TODO: Mutability?
+		TypeName typeName = TypeName::_NONE; // Optional, not used when re-assigning
+		Identifier* identifier = nullptr;
+		Expression* rhs = nullptr; // If null, this assignment is actually just a declaration
 
 		void Evaluate(TokenContext& context);
-		// Should be called when tokenizer is pointing at char past '='
+		// Should be called when tokenizer is pointing at char after '='
 		static Assignment* Parse(Tokenizer& tokenizer);
 	};
 
@@ -859,7 +867,7 @@ namespace flex
 		Statement(const Token& token, StatementType type, IfStatement* ifStatement);
 		Statement(const Token& token, Statement* elseStatement);
 		Statement(const Token& token, WhileStatement* whileStatement);
-		//Statement(const Token& token, Operation* operation);
+		~Statement();
 
 		StatementType type;
 		// TODO: Rename
@@ -869,13 +877,11 @@ namespace flex
 			IfStatement* ifStatement;
 			Statement* elseStatement;
 			WhileStatement* whileStatement;
-			//Operation* operation;
 
 			Contents(Assignment* assignment) : assignment(assignment) {}
 			Contents(IfStatement* ifStatement) : ifStatement(ifStatement) {}
 			Contents(Statement* elseStatement) : elseStatement(elseStatement) {}
 			Contents(WhileStatement* whileStatement) : whileStatement(whileStatement) {}
-			//Contents(Operation* operation) : operation(operation) {}
 		} contents;
 
 		void Evaluate(TokenContext& context);
@@ -894,6 +900,7 @@ namespace flex
 		IfStatement(const Token& token, Expression* condition, Statement* body, IfStatement* elseIfStatement);
 		IfStatement(const Token& token, Expression* condition, Statement* body, Statement* elseStatement);
 		IfStatement(const Token& token, Expression* condition, Statement* body);
+		~IfStatement();
 
 		union IfFalse
 		{
@@ -906,9 +913,9 @@ namespace flex
 			IfFalse(Statement* elseStatement) : elseStatement(elseStatement) {}
 		} ifFalseStatement;
 
-		IfFalseAction ifFalseAction;
-		Expression* condition;
-		Statement* body;
+		IfFalseAction ifFalseAction = IfFalseAction::NONE;
+		Expression* condition = nullptr;
+		Statement* body = nullptr;
 
 		void Evaluate(TokenContext& context);
 		static IfStatement* Parse(Tokenizer& tokenizer);
@@ -917,10 +924,12 @@ namespace flex
 	struct WhileStatement : public Node
 	{
 		WhileStatement(const Token& token, Expression* condition, Statement* body);
+		~WhileStatement();
 
-		Expression* condition;
-		Statement* body;
-		Statement* nextStatement = nullptr;
+		Expression* condition = nullptr;
+		Statement* body = nullptr;
+
+		// TODO: Handle Do While loops
 
 		void Evaluate(TokenContext& context);
 		static WhileStatement* Parse(Tokenizer& tokenizer);
@@ -929,9 +938,10 @@ namespace flex
 	struct RootItem
 	{
 		RootItem(Statement* statement, RootItem* nextItem);
+		~RootItem();
 
-		Statement* statement;
-		RootItem* nextItem;
+		Statement* statement = nullptr;
+		RootItem* nextItem = nullptr;
 
 		void Evaluate(TokenContext& context);
 		static RootItem* Parse(Tokenizer& tokenizer);
@@ -943,6 +953,7 @@ namespace flex
 
 		void Create();
 		void Evaluate();
+		void Destroy();
 
 		RootItem* rootItem = nullptr;
 		Tokenizer* tokenizer = nullptr;
