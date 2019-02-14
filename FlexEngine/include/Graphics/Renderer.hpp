@@ -1,8 +1,5 @@
 #pragma once
 
-#include <string>
-#include <vector>
-
 #include "Physics/PhysicsDebuggingSettings.hpp"
 #include "RendererTypes.hpp"
 

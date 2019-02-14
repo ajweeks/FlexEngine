@@ -3,10 +3,19 @@
 
 IGNORE_WARNINGS_PUSH
 #include <glad/glad.h>
-#include <GLFW/glfw3.h>
+#include <GLFW/glfw3.h> // For GLFWimage (other types are forward declared
 IGNORE_WARNINGS_POP
 
 #include "Window.hpp"
+
+struct GLFWwindow;
+struct GLFWmonitor;
+
+typedef unsigned int GLenum;
+typedef unsigned int GLuint;
+typedef int GLint;
+typedef int GLsizei;
+typedef char GLchar;
 
 namespace flex
 {

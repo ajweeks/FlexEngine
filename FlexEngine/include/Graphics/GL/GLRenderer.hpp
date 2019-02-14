@@ -3,8 +3,6 @@
 
 #include "Graphics/Renderer.hpp"
 
-#include <map>
-
 #include "Callbacks/InputCallbacks.hpp"
 #include "GLHelpers.hpp"
 #include "Graphics/VertexBufferData.hpp"
