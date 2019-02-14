@@ -208,11 +208,22 @@ namespace flex
 			AddRootObject(sphere);
 		}
 
-		m_Player0 = new Player(0, glm::vec3(0.0f, 2.0f, 0.0f));
-		AddRootObject(m_Player0);
+		bool bCreatePlayer = true;
 
-		//m_Player1 = new Player(1);
-		//AddRootObject(m_Player1);
+		// TODO: FIXME:
+		if (m_Name.compare("Scene_Gerstner") == 0)
+		{
+			bCreatePlayer = false;
+		}
+
+		if (bCreatePlayer)
+		{
+			m_Player0 = new Player(0, glm::vec3(0.0f, 2.0f, 0.0f));
+			AddRootObject(m_Player0);
+
+			//m_Player1 = new Player(1);
+			//AddRootObject(m_Player1);
+		}
 
 		for (GameObject* rootObject : m_RootObjects)
 		{

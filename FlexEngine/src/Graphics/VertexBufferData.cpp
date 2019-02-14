@@ -33,62 +33,77 @@ namespace flex
 			if (Attributes & (u32)VertexAttribute::POSITION)
 			{
 				memcpy(vertexDataP, createInfo->positions_3D.data() + i, sizeof(glm::vec3));
-				vertexDataP = (real*)vertexDataP + 3;
+				vertexDataP += 3;
 			}
 
 			if (Attributes & (u32)VertexAttribute::POSITION_2D)
 			{
 				memcpy(vertexDataP, createInfo->positions_2D.data() + i, sizeof(glm::vec2));
-				vertexDataP = (real*)vertexDataP + 2;
+				vertexDataP += 2;
 			}
 
 			if (Attributes & (u32)VertexAttribute::UV)
 			{
 				memcpy(vertexDataP, createInfo->texCoords_UV.data() + i, sizeof(glm::vec2));
-				vertexDataP = (real*)vertexDataP + 2;
+				vertexDataP += 2;
 			}
 
 			if (Attributes & (u32)VertexAttribute::COLOR_R8G8B8A8_UNORM)
 			{
 				memcpy(vertexDataP, createInfo->colors_R8G8B8A8.data() + i, sizeof(i32));
-				vertexDataP = (real*)vertexDataP + 1;
+				vertexDataP += 1;
 			}
 
 			if (Attributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)
 			{
 				memcpy(vertexDataP, createInfo->colors_R32G32B32A32.data() + i, sizeof(glm::vec4));
-				vertexDataP = (real*)vertexDataP + 4;
+				vertexDataP += 4;
 			}
 
 			if (Attributes & (u32)VertexAttribute::TANGENT)
 			{
 				memcpy(vertexDataP, createInfo->tangents.data() + i, sizeof(glm::vec3));
-				vertexDataP = (real*)vertexDataP + 3;
+				vertexDataP += 3;
 			}
 
 			if (Attributes & (u32)VertexAttribute::BITANGENT)
 			{
 				memcpy(vertexDataP, createInfo->bitangents.data() + i, sizeof(glm::vec3));
-				vertexDataP = (real*)vertexDataP + 3;
+				vertexDataP += 3;
 			}
 
 			if (Attributes & (u32)VertexAttribute::NORMAL)
 			{
 				memcpy(vertexDataP, createInfo->normals.data() + i, sizeof(glm::vec3));
-				vertexDataP = (real*)vertexDataP + 3;
+				vertexDataP += 3;
 			}
 
 			if (Attributes & (u32)VertexAttribute::EXTRA_VEC4)
 			{
 				memcpy(vertexDataP, createInfo->extraVec4s.data() + i, sizeof(glm::vec4));
-				vertexDataP = (real*)vertexDataP + 4;
+				vertexDataP += 4;
 			}
 
 			if (Attributes & (u32)VertexAttribute::EXTRA_INT)
 			{
 				memcpy(vertexDataP, createInfo->extraInts.data() + i, sizeof(i32));
-				vertexDataP = (real*)vertexDataP + 1;
+				vertexDataP += 1;
 			}
+		}
+		assert(vertexDataP == vertexData + (VertexStride / sizeof(real) * VertexCount));
+	}
+
+	void VertexBufferData::UpdatePositions(const std::vector<glm::vec3>& newPositions)
+	{
+		assert(vertexData != nullptr);
+		assert(VertexCount > 0);
+		assert(newPositions.size() == VertexCount);
+
+		real* vertexDataP = vertexData;
+		for (i32 i = 0; i < (i32)VertexCount; ++i)
+		{
+			memcpy(vertexDataP, newPositions.data() + i, sizeof(glm::vec3));
+			vertexDataP += VertexStride / sizeof(real);
 		}
 	}
 

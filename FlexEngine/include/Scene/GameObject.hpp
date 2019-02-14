@@ -471,6 +471,41 @@ namespace flex
 
 	};
 
+	class GerstnerWave : public GameObject
+	{
+	public:
+		GerstnerWave(const std::string& name);
+
+		virtual void Update() override;
+
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
+
+		virtual void DrawImGuiObjects() override;
+
+	protected:
+		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+
+		void SetWaveLength(real newWaveLength);
+
+		i32 vertSideCount = 100;
+		real size = 30.0f;
+		std::vector<glm::vec3> positions;
+
+		// TODO: Serialize
+		real a = 0.35f;
+		real waveDirTheta = 0.5f;
+		real vOffset = 1.5f;
+		real waveLen = 5.0f;
+
+		// Calculated from vars above
+		real moveSpeed = -1.0f;
+		real waveVecMag = -1.0f;
+
+		real cd = 0.0f;
+
+	};
+
 	enum class OperatorType
 	{
 		ADD,

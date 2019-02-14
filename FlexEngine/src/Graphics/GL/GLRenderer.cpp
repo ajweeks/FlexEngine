@@ -6491,6 +6491,15 @@ namespace flex
 			}
 		}
 
+		void GLRenderer::UpdateVertexData(RenderID renderID, VertexBufferData* vertexBufferData)
+		{
+			GLRenderObject* renderObject = GetRenderObject(renderID);
+
+			glBindVertexArray(renderObject->VAO);
+			glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
+			glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)vertexBufferData->VertexBufferSize, vertexBufferData->vertexData, GL_DYNAMIC_DRAW);
+		}
+
 		void GLRenderer::DrawImGuiForRenderID(RenderID renderID)
 		{
 			GLRenderObject* renderObject = GetRenderObject(renderID);

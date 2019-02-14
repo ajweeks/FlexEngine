@@ -654,10 +654,10 @@ namespace flex
 		PROFILE_AUTO("TrackManager DrawDebug");
 
 		Player* player0 = g_SceneManager->CurrentScene()->GetPlayer(0);
-		BezierCurveList* trackRiding = (player0->m_TrackRidingID == InvalidTrackID ? nullptr : &m_Tracks[(i32)player0->m_TrackRidingID]);
+		BezierCurveList* trackRiding = (player0 == nullptr ? nullptr : (player0->m_TrackRidingID == InvalidTrackID ? nullptr : &m_Tracks[(i32)player0->m_TrackRidingID]));
 		real distAlongClosestTrack = -1.0f;
-		TrackID closestTrackID = GetTrackInRangeID(player0->GetTransform()->GetWorldPosition(),
-			player0->m_TrackAttachMinDist, &distAlongClosestTrack);
+		TrackID closestTrackID = (player0 == nullptr ? 0 : GetTrackInRangeID(player0->GetTransform()->GetWorldPosition(),
+			player0->m_TrackAttachMinDist, &distAlongClosestTrack));
 		for (i32 i = 0; i < (i32)m_Tracks.size(); ++i)
 		{
 			btVector4 highlightColour(0.8f, 0.84f, 0.22f, 1.0f);

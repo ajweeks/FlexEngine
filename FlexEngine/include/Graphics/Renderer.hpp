@@ -38,6 +38,8 @@ namespace flex
 		virtual void DrawImGuiRenderObjects() = 0;
 		virtual void DrawImGuiSettings();
 
+		virtual void UpdateVertexData(RenderID renderID, VertexBufferData* vertexBufferData) = 0;
+
 		virtual void DrawImGuiForRenderID(RenderID renderID) = 0;
 
 		virtual void DrawUntexturedQuad(const glm::vec2& pos, AnchorPoint anchor, const glm::vec2& size, const glm::vec4& color) = 0;

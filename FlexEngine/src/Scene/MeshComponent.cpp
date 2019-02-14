@@ -1177,6 +1177,59 @@ namespace flex
 
 			defaultName = "Plane";
 		} break;
+		case MeshComponent::PrefabShape::GERSTNER_PLANE:
+		{
+			// TODO: Provide as input
+			i32 vertCountH = 100;
+
+			i32 vertCount = vertCountH * vertCountH;
+			vertexBufferDataCreateInfo.positions_3D.resize(vertCount);
+			vertexBufferDataCreateInfo.normals.resize(vertCount);
+			vertexBufferDataCreateInfo.tangents.resize(vertCount);
+			vertexBufferDataCreateInfo.bitangents.resize(vertCount);
+			vertexBufferDataCreateInfo.colors_R32G32B32A32.resize(vertCount);
+
+			for (i32 z = 0; z < vertCountH; ++z)
+			{
+				for (i32 x = 0; x < vertCountH; ++x)
+				{
+					i32 vertIdx = z * vertCountH + x;
+					// NOTE: Wave generation is implemented in GerstnerWave::Update
+					vertexBufferDataCreateInfo.positions_3D[vertIdx] = VEC3_ZERO;
+
+					vertexBufferDataCreateInfo.normals[vertIdx] = glm::vec3(0.0f, 1.0f, 0.0f);
+					vertexBufferDataCreateInfo.tangents[vertIdx] = glm::vec3(1.0f, 0.0f, 0.0f);
+					vertexBufferDataCreateInfo.bitangents[vertIdx] = glm::vec3(0.0f, 0.0f, 1.0f);
+					vertexBufferDataCreateInfo.colors_R32G32B32A32[vertIdx] = VEC4_ONE;
+				}
+			}
+			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
+			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::NORMAL;
+			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::TANGENT;
+			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::BITANGENT;
+			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+
+			i32 indexCount = 6 * vertCount;
+			m_Indices.resize(indexCount);
+			i32 i = 0;
+			for (i32 z = 0; z < vertCountH - 1; ++z)
+			{
+				for (i32 x = 0; x < vertCountH - 1; ++x)
+				{
+					i32 vertIdx = z * vertCountH + x;
+					m_Indices[i++] = vertIdx;
+					m_Indices[i++] = vertIdx + vertCountH;
+					m_Indices[i++] = vertIdx + 1;
+
+					vertIdx = vertIdx + 1 + vertCountH;
+					m_Indices[i++] = vertIdx;
+					m_Indices[i++] = vertIdx - vertCountH;
+					m_Indices[i++] = vertIdx - 1;
+				}
+			}
+
+			defaultName = "Gerstner Plane";
+		} break;
 		case MeshComponent::PrefabShape::UV_SPHERE:
 		{
 			// Vertices
@@ -1485,6 +1538,7 @@ namespace flex
 
 	}
 
+	// TODO: Move to string array
 	std::string MeshComponent::PrefabShapeToString(PrefabShape shape)
 	{
 		switch (shape)
@@ -1495,6 +1549,7 @@ namespace flex
 		case MeshComponent::PrefabShape::PLANE:				return "plane";
 		case MeshComponent::PrefabShape::UV_SPHERE:			return "uv sphere";
 		case MeshComponent::PrefabShape::SKYBOX:			return "skybox";
+		case MeshComponent::PrefabShape::GERSTNER_PLANE:	return "gerstner plane";
 		case MeshComponent::PrefabShape::_NONE:				return "NONE";
 		default:											return "UNHANDLED PREFAB SHAPE";
 		}
@@ -1537,6 +1592,11 @@ namespace flex
 		Transform* transform = m_OwningGameObject->GetTransform();
 		glm::vec3 transformedCenter = transform->GetWorldTransform() * glm::vec4(m_BoundingSphereCenterPoint, 1.0f);
 		return transformedCenter;
+	}
+
+	VertexBufferData* MeshComponent::GetVertexBufferData()
+	{
+		return &m_VertexBufferData;
 	}
 
 	std::string MeshComponent::GetRelativeFilePath() const

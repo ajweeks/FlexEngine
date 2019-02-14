@@ -170,6 +170,10 @@ namespace flex
 		{
 			newGameObject = new Terminal(objectName);
 		} break;
+		case GameObjectType::GERSTNER_WAVE:
+		{
+			newGameObject = new GerstnerWave(objectName);
+		} break;
 		case GameObjectType::OBJECT: // Fall through
 		case GameObjectType::_NONE:
 			newGameObject = new GameObject(objectName, gameObjectType);
@@ -3211,6 +3215,101 @@ namespace flex
 	void MobileLiquidBox::SerializeUniqueFields(JSONObject& parentObject) const
 	{
 		UNREFERENCED_PARAMETER(parentObject);
+	}
+
+	GerstnerWave::GerstnerWave(const std::string& name) :
+		GameObject(name, GameObjectType::GERSTNER_WAVE)
+	{
+		positions.resize(vertSideCount * vertSideCount);
+
+		MaterialCreateInfo matCreateInfo = {};
+		matCreateInfo.name = "Gerstner";
+		matCreateInfo.shaderName = "pbr";
+		matCreateInfo.constAlbedo = glm::vec3(0.4f, 0.5f, 0.8f);
+		matCreateInfo.constMetallic = 0.8f;
+		matCreateInfo.constRoughness = 0.01f;
+		matCreateInfo.constAO = 1.0f;
+
+		MaterialID planeMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
+
+		MeshComponent* planeMesh = SetMeshComponent(new MeshComponent(planeMatID, this));
+		planeMesh->LoadPrefabShape(MeshComponent::PrefabShape::GERSTNER_PLANE);
+
+		// Init dependent variables
+		SetWaveLength(waveLen);
+	}
+
+	GameObject* GerstnerWave::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
+	{
+		GerstnerWave* newGameObject = new GerstnerWave(GetIncrementedPostFixedStr(m_Name, "Gerstner Wave"));
+		CopyGenericFields(newGameObject, parent, bCopyChildren);
+		return newGameObject;
+	}
+
+	void GerstnerWave::DrawImGuiObjects()
+	{
+		GameObject::DrawImGuiObjects();
+
+		ImGui::Text("Gerstner");
+		ImGui::DragFloat("amplitude", &a, 0.01f);
+		if (ImGui::DragFloat("wave len", &waveLen, 0.01f))
+		{
+			SetWaveLength(waveLen);
+		}
+		ImGui::DragFloat("dir", &waveDirTheta, 0.004f);
+		ImGui::DragFloat("vertical offset", &vOffset, 0.1f);
+
+	}
+
+	void GerstnerWave::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID)
+	{
+		UNREFERENCED_PARAMETER(parentObject);
+		UNREFERENCED_PARAMETER(scene);
+		UNREFERENCED_PARAMETER(matID);
+	}
+
+	void GerstnerWave::SerializeUniqueFields(JSONObject& parentObject) const
+	{
+		UNREFERENCED_PARAMETER(parentObject);
+	}
+
+	void GerstnerWave::SetWaveLength(real newWaveLength)
+	{
+		waveLen = newWaveLength;
+
+		waveVecMag = TWO_PI / waveLen;
+		moveSpeed = glm::sqrt(9.81f * waveVecMag);
+	}
+
+	void GerstnerWave::Update()
+	{
+		const glm::vec3 startPos(-size / 2.0f, 0.0f, -size / 2.0f);
+		const glm::vec2 waveVec = glm::vec2(cos(waveDirTheta), sin(waveDirTheta)) * waveVecMag;
+		const glm::vec2 waveVecN = glm::normalize(waveVec);
+		cd += (moveSpeed * g_DeltaTime);
+		for (i32 z = 0; z < vertSideCount; ++z)
+		{
+			for (i32 x = 0; x < vertSideCount; ++x)
+			{
+				i32 vertIdx = z * vertSideCount + x;
+				glm::vec3 baseWorldPos = startPos + glm::vec3(
+					size * ((real)x / (vertSideCount - 1)),
+					vOffset,
+					size * ((real)z / (vertSideCount - 1)));
+
+				real d = glm::dot(waveVec, glm::vec2(baseWorldPos.x, baseWorldPos.z));
+				real c = cos(d + cd);
+				real s = sin(d + cd);
+				positions[vertIdx] = glm::vec3(
+					baseWorldPos.x - waveVecN.x * a * s,
+					baseWorldPos.y + a * c,
+					baseWorldPos.z - waveVecN.y * a * s);
+			}
+		}
+
+		VertexBufferData* vertexBuffer = m_MeshComponent->GetVertexBufferData();
+		vertexBuffer->UpdatePositions(positions);
+		g_Renderer->UpdateVertexData(m_RenderID, vertexBuffer);
 	}
 
 	OperatorType Operator::Parse(Tokenizer& tokenizer)

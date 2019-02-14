@@ -91,6 +91,7 @@ namespace flex
 		ENGINE_CART,
 		MOBILE_LIQUID_BOX,
 		TERMINAL,
+		GERSTNER_WAVE,
 
 		_NONE
 	};
@@ -110,6 +111,7 @@ namespace flex
 		"engine cart",
 		"mobile liquid box",
 		"terminal",
+		"gerstner wave",
 
 		"NONE"
 	};

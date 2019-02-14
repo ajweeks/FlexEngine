@@ -869,24 +869,27 @@ namespace flex
 			{
 				g_SceneManager->CurrentScene()->Update();
 				Player* p0 = g_SceneManager->CurrentScene()->GetPlayer(0);
-				glm::vec3 targetPos = p0->GetTransform()->GetWorldPosition() + p0->GetTransform()->GetForward() * -2.0f;
-				m_SpringTimer += g_DeltaTime;
-				real amplitude = 1.5f;
-				real period = 5.0f;
-				if (m_SpringTimer > period)
+				if (p0)
 				{
-					m_SpringTimer -= period;
-				}
-				targetPos.y += pow(sin(glm::clamp(m_SpringTimer - period / 2.0f, 0.0f, PI)), 40.0f) * amplitude;
-				glm::vec3 targetVel = ToVec3(p0->GetRigidBody()->GetRigidBodyInternal()->getLinearVelocity());
+					glm::vec3 targetPos = p0->GetTransform()->GetWorldPosition() + p0->GetTransform()->GetForward() * -2.0f;
+					m_SpringTimer += g_DeltaTime;
+					real amplitude = 1.5f;
+					real period = 5.0f;
+					if (m_SpringTimer > period)
+					{
+						m_SpringTimer -= period;
+					}
+					targetPos.y += pow(sin(glm::clamp(m_SpringTimer - period / 2.0f, 0.0f, PI)), 40.0f) * amplitude;
+					glm::vec3 targetVel = ToVec3(p0->GetRigidBody()->GetRigidBodyInternal()->getLinearVelocity());
 
-				for (Spring<glm::vec3>& spring : m_TestSprings)
-				{
-					spring.SetTargetPos(targetPos);
-					spring.SetTargetVel(targetVel);
+					for (Spring<glm::vec3>& spring : m_TestSprings)
+					{
+						spring.SetTargetPos(targetPos);
+						spring.SetTargetVel(targetVel);
 
-					targetPos = spring.pos;
-					targetVel = spring.vel;
+						targetPos = spring.pos;
+						targetVel = spring.vel;
+					}
 				}
 			}
 

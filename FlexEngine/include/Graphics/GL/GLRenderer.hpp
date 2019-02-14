@@ -37,6 +37,8 @@ namespace flex
 			virtual void Draw() override;
 			virtual void DrawImGuiRenderObjects() override;
 
+			virtual void UpdateVertexData(RenderID renderID, VertexBufferData* vertexBufferData) override;
+
 			virtual void DrawImGuiForRenderID(RenderID renderID) override;
 
 			virtual void DrawUntexturedQuad(const glm::vec2& pos, AnchorPoint anchor, const glm::vec2& size, const glm::vec4& color) override;

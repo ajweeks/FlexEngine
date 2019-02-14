@@ -44,6 +44,7 @@ namespace flex
 			PLANE,
 			UV_SPHERE,
 			SKYBOX,
+			GERSTNER_PLANE,
 
 			_NONE
 		};
@@ -81,6 +82,8 @@ namespace flex
 
 		real GetScaledBoundingSphereRadius() const;
 		glm::vec3 GetBoundingSphereCenterPointWS() const;
+
+		VertexBufferData* GetVertexBufferData();
 
 		glm::vec3 m_MinPoint;
 		glm::vec3 m_MaxPoint;
