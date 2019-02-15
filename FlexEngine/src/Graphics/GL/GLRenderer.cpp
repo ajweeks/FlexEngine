@@ -6409,9 +6409,7 @@ namespace flex
 		{
 			ImGui::NewLine();
 
-			ImGui::BeginChild("SelectedObject",
-							  ImVec2(0.0f, 220.0f),
-							  true);
+			ImGui::BeginChild("SelectedObject", ImVec2(0.0f, 500.0f), true);
 
 			const std::vector<GameObject*>& selectedObjects = g_EngineInstance->GetSelectedObjects();
 			if (!selectedObjects.empty())

@@ -3236,7 +3236,10 @@ namespace flex
 		planeMesh->LoadPrefabShape(MeshComponent::PrefabShape::GERSTNER_PLANE);
 
 		// Init dependent variables
-		SetWaveLength(waveLen);
+		for (i32 i = 0; i < (i32)waves.size(); ++i)
+		{
+			SetWaveLength(i, waves[i].waveLen);
+		}
 	}
 
 	GameObject* GerstnerWave::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
@@ -3250,66 +3253,164 @@ namespace flex
 	{
 		GameObject::DrawImGuiObjects();
 
-		ImGui::Text("Gerstner");
-		ImGui::DragFloat("amplitude", &a, 0.01f);
-		if (ImGui::DragFloat("wave len", &waveLen, 0.01f))
+		ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.95f, 1.0f), "Gerstner");
+
+		if (ImGui::Button("+"))
 		{
-			SetWaveLength(waveLen);
+			AddWave();
 		}
-		ImGui::DragFloat("dir", &waveDirTheta, 0.004f);
+
 		ImGui::DragFloat("vertical offset", &vOffset, 0.1f);
 
+		for (i32 i = 0; i < (i32)waves.size(); ++i)
+		{
+			std::string childName = "##wave " + IntToString(i, 2);
+
+			std::string removeStr = "-" + childName;
+			if (ImGui::Button(removeStr.c_str()))
+			{
+				RemoveWave(i);
+				break;
+			}
+
+			ImGui::SameLine();
+
+			std::string enabledStr = "enabled" + childName;
+			ImGui::Checkbox(enabledStr.c_str(), &waves[i].enabled);
+
+			std::string aStr = "amplitude" + childName;
+			ImGui::DragFloat(aStr.c_str(), &waves[i].a, 0.01f);
+			std::string waveLenStr = "wave len" + childName;
+			if (ImGui::DragFloat(waveLenStr.c_str(), &waves[i].waveLen, 0.01f))
+			{
+				SetWaveLength(i, waves[i].waveLen);
+			}
+			std::string dirStr = "dir" + childName;
+			ImGui::DragFloat(dirStr.c_str(), &waves[i].waveDirTheta, 0.004f);
+
+			ImGui::Separator();
+		}
 	}
 
 	void GerstnerWave::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID)
 	{
-		UNREFERENCED_PARAMETER(parentObject);
 		UNREFERENCED_PARAMETER(scene);
 		UNREFERENCED_PARAMETER(matID);
+		
+		JSONObject gerstnerWaveObj;
+		if (parentObject.SetObjectChecked("gerstner wave", gerstnerWaveObj))
+		{
+			vOffset = gerstnerWaveObj.GetFloat("vertical offset");
+
+			std::vector<JSONObject> waveObjs;
+			if (gerstnerWaveObj.SetObjectArrayChecked("waves", waveObjs))
+			{
+				for (const JSONObject& waveObj : waveObjs)
+				{
+					WaveInfo wave = {};
+					wave.enabled = waveObj.GetBool("enabled");
+					wave.a = waveObj.GetFloat("amplitude");
+					wave.waveDirTheta = waveObj.GetFloat("waveDir");
+					wave.waveLen = waveObj.GetFloat("waveLen");
+					waves.push_back(wave);
+				}
+			}
+		}
 	}
 
 	void GerstnerWave::SerializeUniqueFields(JSONObject& parentObject) const
 	{
-		UNREFERENCED_PARAMETER(parentObject);
+		JSONObject gerstnerWaveObj = {};
+
+		gerstnerWaveObj.fields.emplace_back("vertical offset", JSONValue(vOffset));
+
+		std::vector<JSONObject> waveObjs;
+		waveObjs.resize(waves.size());
+		for (i32 i = 0; i < (i32)waves.size(); ++i)
+		{
+			JSONObject& waveObj = waveObjs[i];
+			waveObj.fields.emplace_back("enabled", JSONValue(waves[i].enabled));
+			waveObj.fields.emplace_back("amplitude", JSONValue(waves[i].a));
+			waveObj.fields.emplace_back("waveDir", JSONValue(waves[i].waveDirTheta));
+			waveObj.fields.emplace_back("waveLen", JSONValue(waves[i].waveLen));
+		}
+
+		gerstnerWaveObj.fields.emplace_back("waves", JSONValue(waveObjs));
+
+		parentObject.fields.emplace_back("gerstner wave", JSONValue(gerstnerWaveObj));
 	}
 
-	void GerstnerWave::SetWaveLength(real newWaveLength)
+	void GerstnerWave::SetWaveLength(i32 waveIndex, real newWaveLength)
 	{
-		waveLen = newWaveLength;
+		if (waveIndex >= 0 && waveIndex < (i32)waves.size())
+		{
+			waves[waveIndex].waveLen = newWaveLength;
 
-		waveVecMag = TWO_PI / waveLen;
-		moveSpeed = glm::sqrt(9.81f * waveVecMag);
+			waves[waveIndex].waveVecMag = TWO_PI / waves[waveIndex].waveLen;
+			waves[waveIndex].moveSpeed = glm::sqrt(9.81f * waves[waveIndex].waveVecMag);
+		}
 	}
 
 	void GerstnerWave::Update()
 	{
 		const glm::vec3 startPos(-size / 2.0f, 0.0f, -size / 2.0f);
-		const glm::vec2 waveVec = glm::vec2(cos(waveDirTheta), sin(waveDirTheta)) * waveVecMag;
-		const glm::vec2 waveVecN = glm::normalize(waveVec);
-		cd += (moveSpeed * g_DeltaTime);
+
+		// Clear
 		for (i32 z = 0; z < vertSideCount; ++z)
 		{
 			for (i32 x = 0; x < vertSideCount; ++x)
 			{
-				i32 vertIdx = z * vertSideCount + x;
-				glm::vec3 baseWorldPos = startPos + glm::vec3(
+				positions[z * vertSideCount + x] = startPos + glm::vec3(
 					size * ((real)x / (vertSideCount - 1)),
 					vOffset,
 					size * ((real)z / (vertSideCount - 1)));
+			}
+		}
+		
+		// Set
+		for (WaveInfo& wave : waves)
+		{
+			if (wave.enabled)
+			{
+				const glm::vec2 waveVec = glm::vec2(cos(wave.waveDirTheta), sin(wave.waveDirTheta)) * wave.waveVecMag;
+				const glm::vec2 waveVecN = glm::normalize(waveVec);
 
-				real d = glm::dot(waveVec, glm::vec2(baseWorldPos.x, baseWorldPos.z));
-				real c = cos(d + cd);
-				real s = sin(d + cd);
-				positions[vertIdx] = glm::vec3(
-					baseWorldPos.x - waveVecN.x * a * s,
-					baseWorldPos.y + a * c,
-					baseWorldPos.z - waveVecN.y * a * s);
+				wave.accumOffset += (wave.moveSpeed * g_DeltaTime);
+
+				for (i32 z = 0; z < vertSideCount; ++z)
+				{
+					for (i32 x = 0; x < vertSideCount; ++x)
+					{
+						i32 vertIdx = z * vertSideCount + x;
+
+						real d = glm::dot(waveVec, glm::vec2(positions[vertIdx].x, positions[vertIdx].z));
+						real c = cos(d + wave.accumOffset);
+						real s = sin(d + wave.accumOffset);
+						positions[vertIdx] += glm::vec3(
+							-waveVecN.x * wave.a * s,
+							+wave.a * c,
+							-waveVecN.y * wave.a * s);
+					}
+				}
 			}
 		}
 
 		VertexBufferData* vertexBuffer = m_MeshComponent->GetVertexBufferData();
 		vertexBuffer->UpdatePositions(positions);
 		g_Renderer->UpdateVertexData(m_RenderID, vertexBuffer);
+	}
+
+	void GerstnerWave::AddWave()
+	{
+		waves.push_back({});
+	}
+
+	void GerstnerWave::RemoveWave(i32 index)
+	{
+		if (index >= 0 && index < (i32)waves.size())
+		{
+			waves.erase(waves.begin() + index);
+		}
 	}
 
 	OperatorType Operator::Parse(Tokenizer& tokenizer)

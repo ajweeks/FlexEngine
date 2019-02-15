@@ -477,6 +477,8 @@ namespace flex
 		GerstnerWave(const std::string& name);
 
 		virtual void Update() override;
+		void AddWave();
+		void RemoveWave(i32 index);
 
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
 
@@ -486,23 +488,27 @@ namespace flex
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
 		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
 
-		void SetWaveLength(real newWaveLength);
+		void SetWaveLength(i32 waveIndex, real newWaveLength);
 
 		i32 vertSideCount = 100;
 		real size = 30.0f;
 		std::vector<glm::vec3> positions;
 
-		// TODO: Serialize
-		real a = 0.35f;
-		real waveDirTheta = 0.5f;
+		struct WaveInfo
+		{
+			bool enabled = true;
+			real a = 0.35f;
+			real waveDirTheta = 0.5f;
+			real waveLen = 5.0f;
+
+			// Non-serialized, calculated from fields above
+			real moveSpeed = -1.0f;
+			real waveVecMag = -1.0f;
+			real accumOffset = 0.0f;
+		};
+
+		std::vector<WaveInfo> waves;
 		real vOffset = 1.5f;
-		real waveLen = 5.0f;
-
-		// Calculated from vars above
-		real moveSpeed = -1.0f;
-		real waveVecMag = -1.0f;
-
-		real cd = 0.0f;
 
 	};
 
