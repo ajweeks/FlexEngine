@@ -2,6 +2,7 @@
 
 #include "Audio/RandomizedAudioSource.hpp"
 #include "Callbacks/InputCallbacks.hpp"
+#include "Graphics/VertexBufferData.hpp" // For VertexBufferData::CreateInfo
 #include "Spring.hpp"
 #include "Transform.hpp"
 
@@ -488,15 +489,11 @@ namespace flex
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
 		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
 
-		void SetWaveLength(i32 waveIndex, real newWaveLength);
+		void UpdateDependentVariables(i32 waveIndex);
 
 		i32 vertSideCount = 100;
 		real size = 30.0f;
-		std::vector<glm::vec3> positions;
-		std::vector<glm::vec3> normals;
-		std::vector<glm::vec3> tangents;
-		std::vector<glm::vec3> bitangents;
-		std::vector<glm::vec4> colours;
+		VertexBufferData::CreateInfo bufferInfo;
 
 		struct WaveInfo
 		{
@@ -506,6 +503,8 @@ namespace flex
 			real waveLen = 5.0f;
 
 			// Non-serialized, calculated from fields above
+			real waveDirCos;
+			real waveDirSin;
 			real moveSpeed = -1.0f;
 			real waveVecMag = -1.0f;
 			real accumOffset = 0.0f;

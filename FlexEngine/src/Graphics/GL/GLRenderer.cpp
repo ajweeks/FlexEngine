@@ -6491,6 +6491,8 @@ namespace flex
 
 		void GLRenderer::UpdateVertexData(RenderID renderID, VertexBufferData* vertexBufferData)
 		{
+			PROFILE_AUTO("Update Vertex Data");
+
 			GLRenderObject* renderObject = GetRenderObject(renderID);
 
 			glBindVertexArray(renderObject->VAO);

@@ -3234,18 +3234,12 @@ namespace flex
 		MeshComponent* planeMesh = SetMeshComponent(new MeshComponent(planeMatID, this));
 		planeMesh->LoadPrefabShape(MeshComponent::PrefabShape::GERSTNER_PLANE);
 
-		// Init dependent variables
-		for (i32 i = 0; i < (i32)waves.size(); ++i)
-		{
-			SetWaveLength(i, waves[i].waveLen);
-		}
-
 		i32 vertCount = vertSideCount * vertSideCount;
-		positions.resize(vertCount);
-		normals.resize(vertCount);
-		tangents.resize(vertCount);
-		bitangents.resize(vertCount);
-		colours.resize(vertCount);
+		bufferInfo.positions_3D.resize(vertCount);
+		bufferInfo.normals.resize(vertCount);
+		bufferInfo.tangents.resize(vertCount);
+		bufferInfo.bitangents.resize(vertCount);
+		bufferInfo.colors_R32G32B32A32.resize(vertCount);
 
 		for (i32 z = 0; z < vertSideCount; ++z)
 		{
@@ -3253,11 +3247,16 @@ namespace flex
 			{
 				i32 vertIdx = z * vertSideCount + x;
 
-				normals[vertIdx] = glm::vec3(0.0f, 1.0f, 0.0f);
-				tangents[vertIdx] = glm::vec3(1.0f, 0.0f, 0.0f);
-				bitangents[vertIdx] = glm::vec3(0.0f, 0.0f, 1.0f);
-				colours[vertIdx] = VEC4_ONE;
+				bufferInfo.normals[vertIdx] = glm::vec3(0.0f, 1.0f, 0.0f);
+				bufferInfo.tangents[vertIdx] = glm::vec3(1.0f, 0.0f, 0.0f);
+				bufferInfo.bitangents[vertIdx] = glm::vec3(0.0f, 0.0f, 1.0f);
+				bufferInfo.colors_R32G32B32A32[vertIdx] = VEC4_ONE;
 			}
+		}
+
+		for (i32 i = 0; i < (i32)waves.size(); ++i)
+		{
+			UpdateDependentVariables(i);
 		}
 
 		bobberTarget = Spring<real>(0.0f);
@@ -3315,18 +3314,22 @@ namespace flex
 
 			ImGui::SameLine();
 
+			bool bNeedUpdate = false;
+
 			std::string enabledStr = "enabled" + childName;
 			ImGui::Checkbox(enabledStr.c_str(), &waves[i].enabled);
 
 			std::string aStr = "amplitude" + childName;
 			ImGui::DragFloat(aStr.c_str(), &waves[i].a, 0.01f);
 			std::string waveLenStr = "wave len" + childName;
-			if (ImGui::DragFloat(waveLenStr.c_str(), &waves[i].waveLen, 0.01f))
-			{
-				SetWaveLength(i, waves[i].waveLen);
-			}
+			bNeedUpdate |= ImGui::DragFloat(waveLenStr.c_str(), &waves[i].waveLen, 0.01f);
 			std::string dirStr = "dir" + childName;
-			ImGui::DragFloat(dirStr.c_str(), &waves[i].waveDirTheta, 0.004f);
+			bNeedUpdate |= ImGui::DragFloat(dirStr.c_str(), &waves[i].waveDirTheta, 0.004f);
+
+			if (bNeedUpdate)
+			{
+				UpdateDependentVariables(i);
+			}
 
 			ImGui::Separator();
 		}
@@ -3358,7 +3361,7 @@ namespace flex
 		// Init dependent variables
 		for (i32 i = 0; i < (i32)waves.size(); ++i)
 		{
-			SetWaveLength(i, waves[i].waveLen);
+			UpdateDependentVariables(i);
 		}
 	}
 
@@ -3382,22 +3385,28 @@ namespace flex
 		parentObject.fields.emplace_back("gerstner wave", JSONValue(gerstnerWaveObj));
 	}
 
-	void GerstnerWave::SetWaveLength(i32 waveIndex, real newWaveLength)
+	void GerstnerWave::UpdateDependentVariables(i32 waveIndex)
 	{
 		if (waveIndex >= 0 && waveIndex < (i32)waves.size())
 		{
-			waves[waveIndex].waveLen = newWaveLength;
-
 			waves[waveIndex].waveVecMag = TWO_PI / waves[waveIndex].waveLen;
 			waves[waveIndex].moveSpeed = glm::sqrt(9.81f * waves[waveIndex].waveVecMag);
+
+			waves[waveIndex].waveDirCos = cos(waves[waveIndex].waveDirTheta);
+			waves[waveIndex].waveDirSin = sin(waves[waveIndex].waveDirTheta);
 		}
 	}
 
 	void GerstnerWave::Update()
 	{
-		PROFILE_AUTO("Gerster update");
+		PROFILE_AUTO("Gerstner update");
 
 		const glm::vec3 startPos(-size / 2.0f, 0.0f, -size / 2.0f);
+
+		std::vector<glm::vec3>& positions = bufferInfo.positions_3D;
+		std::vector<glm::vec3>& normals = bufferInfo.normals;
+		std::vector<glm::vec3>& tangents = bufferInfo.tangents;
+		std::vector<glm::vec3>& bitangents = bufferInfo.bitangents;
 
 		// Clear positions and normals
 		for (i32 z = 0; z < vertSideCount; ++z)
@@ -3417,23 +3426,31 @@ namespace flex
 		{
 			if (wave.enabled)
 			{
-				const glm::vec2 waveVec = glm::vec2(cos(wave.waveDirTheta), sin(wave.waveDirTheta)) * wave.waveVecMag;
-				const glm::vec2 waveVecN = glm::normalize(waveVec);
+				const glm::vec3 waveVec = glm::vec3(wave.waveDirCos, 0.0f, wave.waveDirSin) * wave.waveVecMag;
+				const glm::vec3 waveVecN = glm::normalize(waveVec);
 
 				wave.accumOffset += (wave.moveSpeed * g_DeltaTime);
 
+				real TL = glm::dot(waveVec, positions[0]);
+				real TR = glm::dot(waveVec, positions[vertSideCount - 1]);
+				real BL = glm::dot(waveVec, positions[vertSideCount * vertSideCount - vertSideCount]);
+				real BR = glm::dot(waveVec, positions[vertSideCount * vertSideCount - 1]);
 				for (i32 z = 0; z < vertSideCount; ++z)
 				{
 					for (i32 x = 0; x < vertSideCount; ++x)
 					{
 						i32 vertIdx = z * vertSideCount + x;
 
-						real d = glm::dot(waveVec, glm::vec2(positions[vertIdx].x, positions[vertIdx].z));
+						//real d = glm::dot(waveVec, positions[vertIdx]);
+						real d1 = Lerp(TL, TR, (real)x / vertSideCount);
+						real d2 = Lerp(BL, BR, (real)x / vertSideCount);
+						real d = Lerp(d1, d2, (real)z / vertSideCount);
+
 						real c = cos(d + wave.accumOffset);
 						real s = sin(d + wave.accumOffset);
 						positions[vertIdx] += glm::vec3(
 							-waveVecN.x * wave.a * s,
-							+wave.a * c,
+							wave.a * c,
 							-waveVecN.y * wave.a * s);
 					}
 				}
@@ -3446,21 +3463,18 @@ namespace flex
 			for (i32 x = 1; x < vertSideCount - 1; ++x)
 			{
 				i32 vertIdx = z * vertSideCount + x;
-				tangents[vertIdx] = glm::normalize((positions[vertIdx + 1] - positions[vertIdx]) + (positions[vertIdx] - positions[vertIdx - 1]));
-				bitangents[vertIdx] = glm::normalize((positions[vertIdx + vertSideCount] - positions[vertIdx]) + (positions[vertIdx] - positions[vertIdx - vertSideCount]));
-				normals[vertIdx] = glm::cross(bitangents[vertIdx], tangents[vertIdx]);
+				bufferInfo.tangents[vertIdx] = glm::normalize((positions[vertIdx + 1] - positions[vertIdx]) + (positions[vertIdx] - positions[vertIdx - 1]));
+				bufferInfo.bitangents[vertIdx] = glm::normalize((positions[vertIdx + vertSideCount] - positions[vertIdx]) + (positions[vertIdx] - positions[vertIdx - vertSideCount]));
+				bufferInfo.normals[vertIdx] = glm::cross(bitangents[vertIdx], tangents[vertIdx]);
 			}
 		}
 
 		VertexBufferData* vertexBuffer = m_MeshComponent->GetVertexBufferData();
-		// TODO: Don't copy data into create info struct every frame!
-		VertexBufferData::CreateInfo createInfo = {};
-		createInfo.positions_3D = positions;
-		createInfo.normals = normals;
-		createInfo.tangents = tangents;
-		createInfo.bitangents = bitangents;
-		createInfo.colors_R32G32B32A32 = colours;
-		vertexBuffer->UpdateData(&createInfo);
+		bufferInfo.positions_3D = positions;
+		bufferInfo.normals = normals;
+		bufferInfo.tangents = tangents;
+		bufferInfo.bitangents = bitangents;
+		vertexBuffer->UpdateData(&bufferInfo);
 		g_Renderer->UpdateVertexData(m_RenderID, vertexBuffer);
 
 
@@ -3473,15 +3487,16 @@ namespace flex
 		glm::vec3 newPos = wavePos + glm::vec3(surfacePos.x, bobberTarget.pos + vOffset, surfacePos.z);
 		bobber->GetTransform()->SetWorldPosition(newPos);
 
-		btVector3 targetPosBT = btVector3(wavePos.x + surfacePos.x, wavePos.y + bobberTarget.targetPos, wavePos.z + surfacePos.z);
-		g_Renderer->GetDebugDrawer()->drawSphere(targetPosBT, 1.0f, btVector3(1.0f, 0.0f, 0.1f));
-		btVector3 posBT = btVector3(wavePos.x + surfacePos.x, wavePos.y + bobberTarget.pos, wavePos.z + surfacePos.z);
-		g_Renderer->GetDebugDrawer()->drawSphere(posBT, 0.7f, btVector3(0.75f, 0.5f, 0.6f));
+		//btVector3 targetPosBT = btVector3(wavePos.x + surfacePos.x, wavePos.y + bobberTarget.targetPos, wavePos.z + surfacePos.z);
+		//g_Renderer->GetDebugDrawer()->drawSphere(targetPosBT, 1.0f, btVector3(1.0f, 0.0f, 0.1f));
+		//btVector3 posBT = btVector3(wavePos.x + surfacePos.x, wavePos.y + bobberTarget.pos, wavePos.z + surfacePos.z);
+		//g_Renderer->GetDebugDrawer()->drawSphere(posBT, 0.7f, btVector3(0.75f, 0.5f, 0.6f));
 	}
 
 	void GerstnerWave::AddWave()
 	{
 		waves.push_back({});
+		UpdateDependentVariables(waves.size() - 1);
 	}
 
 	void GerstnerWave::RemoveWave(i32 index)
