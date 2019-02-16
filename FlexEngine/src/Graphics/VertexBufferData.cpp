@@ -27,6 +27,14 @@ namespace flex
 			return;
 		}
 
+		UpdateData(createInfo);
+	}
+
+	void VertexBufferData::UpdateData(CreateInfo* createInfo)
+	{
+		assert(vertexData != nullptr);
+		assert(VertexCount > 0);
+
 		real* vertexDataP = vertexData;
 		for (u32 i = 0; i < VertexCount; ++i)
 		{
@@ -91,20 +99,6 @@ namespace flex
 			}
 		}
 		assert(vertexDataP == vertexData + (VertexStride / sizeof(real) * VertexCount));
-	}
-
-	void VertexBufferData::UpdatePositions(const std::vector<glm::vec3>& newPositions)
-	{
-		assert(vertexData != nullptr);
-		assert(VertexCount > 0);
-		assert(newPositions.size() == VertexCount);
-
-		real* vertexDataP = vertexData;
-		for (i32 i = 0; i < (i32)VertexCount; ++i)
-		{
-			memcpy(vertexDataP, newPositions.data() + i, sizeof(glm::vec3));
-			vertexDataP += VertexStride / sizeof(real);
-		}
 	}
 
 	void VertexBufferData::Destroy()

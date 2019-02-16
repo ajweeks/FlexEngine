@@ -26,7 +26,7 @@ namespace flex
 		};
 
 		void Initialize(CreateInfo* createInfo);
-		void UpdatePositions(const std::vector<glm::vec3>& newPositions);
+		void UpdateData(CreateInfo* createInfo);
 		void Destroy();
 
 		void DescribeShaderVariables(Renderer* renderer, RenderID renderID);

@@ -6,7 +6,7 @@
 		{
 			"name" : "Skybox",
 			"type" : "skybox",
-			"visible" : false,
+			"visible" : true,
 			"transform" : 
 			{
 			},
@@ -32,16 +32,16 @@
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "1.195, -0.973, -2.522"
+				"rot" : "1.601, -1.514, 3.133"
 			},
 			"directional light info" : 
 			{
-				"rotation" : "1.195, -0.973, -2.522",
+				"rotation" : "1.601, -1.514, 3.133",
 				"pos" : "0.000, 15.000, 0.000",
 				"color" : "1.00, 1.00, 1.00",
 				"enabled" : true,
-				"brightness" : 5.000000,
-				"cast shadows" : true,
+				"brightness" : 2.578000,
+				"cast shadows" : false,
 				"shadow darkness" : 1.000000,
 				"shadow map near" : -80.000000,
 				"shadow map far" : 100.000000,
@@ -54,97 +54,101 @@
 			"visible" : true,
 			"transform" : 
 			{
+				"pos" : "0.000, -5.033, -16.466",
+				"scale" : "5.000, 1.000, 5.000"
 			},
 			"material" : "Gerstner",
 			"gerstner wave" : 
 			{
-				"vertical offset" : 3.900000,
 				"waves" : 
 				[
 					{
 						"enabled" : true,
-						"amplitude" : 0.440000,
+						"amplitude" : 0.480000,
 						"waveDir" : 0.500000,
 						"waveLen" : 6.900000
 					},
 					{
 						"enabled" : true,
-						"amplitude" : 0.210000,
+						"amplitude" : 0.260000,
 						"waveDir" : -0.200000,
 						"waveLen" : 6.780000
 					},
 					{
 						"enabled" : true,
-						"amplitude" : -0.050000,
-						"waveDir" : -0.012000,
-						"waveLen" : 11.870000
+						"amplitude" : 0.890000,
+						"waveDir" : -0.088000,
+						"waveLen" : 23.200001
 					},
 					{
 						"enabled" : true,
-						"amplitude" : 0.110000,
+						"amplitude" : 0.210000,
 						"waveDir" : 1.116000,
 						"waveLen" : 3.060000
 					},
 					{
 						"enabled" : true,
-						"amplitude" : 0.320000,
+						"amplitude" : 0.140000,
 						"waveDir" : -0.336000,
 						"waveLen" : 7.000000
 					},
 					{
 						"enabled" : true,
-						"amplitude" : 0.780000,
-						"waveDir" : 1.624000,
-						"waveLen" : 15.260000
+						"amplitude" : 0.180000,
+						"waveDir" : 1.856000,
+						"waveLen" : 5.210000
 					},
 					{
 						"enabled" : true,
-						"amplitude" : -0.100000,
+						"amplitude" : 0.270000,
 						"waveDir" : 0.876000,
 						"waveLen" : 6.690000
+					},
+					{
+						"enabled" : true,
+						"amplitude" : 0.230000,
+						"waveDir" : 1.064000,
+						"waveLen" : 7.600000
+					},
+					{
+						"enabled" : true,
+						"amplitude" : 0.050000,
+						"waveDir" : 0.500000,
+						"waveLen" : 1.670000
 					}
 				]
 			}
 		},
 		{
-			"name" : "Gerstner Wave",
-			"type" : "gerstner wave",
-			"visible" : true,
+			"name" : "PointLight_00",
+			"type" : "point light",
+			"visible" : false,
 			"transform" : 
 			{
-				"pos" : "0.000, 1.598, 36.189"
+				"pos" : "0.000, 26.277, -16.438"
 			},
-			"material" : "Gerstner",
-			"gerstner wave" : 
+			"point light info" : 
 			{
-				"vertical offset" : 1.500000,
-				"waves" : 
-				[
-					{
-						"enabled" : true,
-						"amplitude" : 0.350000,
-						"waveDir" : 0.500000,
-						"waveLen" : 5.000000
-					},
-					{
-						"enabled" : true,
-						"amplitude" : 0.140000,
-						"waveDir" : 1.232000,
-						"waveLen" : 3.740000
-					},
-					{
-						"enabled" : true,
-						"amplitude" : 0.150000,
-						"waveDir" : 1.448000,
-						"waveLen" : 5.000000
-					},
-					{
-						"enabled" : true,
-						"amplitude" : 0.130000,
-						"waveDir" : 0.304000,
-						"waveLen" : 5.000000
-					}
-				]
+				"pos" : "0.000, 26.277, -16.438",
+				"color" : "1.00, 1.00, 1.00",
+				"enabled" : false,
+				"brightness" : 500.000000
+			}
+		},
+		{
+			"name" : "PointLight_01",
+			"type" : "point light",
+			"visible" : false,
+			"transform" : 
+			{
+				"pos" : "0.000, 21.528, 14.364"
+			},
+			"point light info" : 
+			{
+				"pos" : "0.000, 21.528, 14.364",
+				"color" : "1.00, 1.00, 1.00",
+				"enabled" : false,
+				"brightness" : 500.000000
 			}
 		}
 	]

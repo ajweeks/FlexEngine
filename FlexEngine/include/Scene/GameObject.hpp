@@ -493,6 +493,10 @@ namespace flex
 		i32 vertSideCount = 100;
 		real size = 30.0f;
 		std::vector<glm::vec3> positions;
+		std::vector<glm::vec3> normals;
+		std::vector<glm::vec3> tangents;
+		std::vector<glm::vec3> bitangents;
+		std::vector<glm::vec4> colours;
 
 		struct WaveInfo
 		{
@@ -508,7 +512,6 @@ namespace flex
 		};
 
 		std::vector<WaveInfo> waves;
-		real vOffset = 1.5f;
 
 	};
 

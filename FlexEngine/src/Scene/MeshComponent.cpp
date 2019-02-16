@@ -1189,20 +1189,8 @@ namespace flex
 			vertexBufferDataCreateInfo.bitangents.resize(vertCount);
 			vertexBufferDataCreateInfo.colors_R32G32B32A32.resize(vertCount);
 
-			for (i32 z = 0; z < vertCountH; ++z)
-			{
-				for (i32 x = 0; x < vertCountH; ++x)
-				{
-					i32 vertIdx = z * vertCountH + x;
-					// NOTE: Wave generation is implemented in GerstnerWave::Update
-					vertexBufferDataCreateInfo.positions_3D[vertIdx] = VEC3_ZERO;
+			// NOTE: Wave generation is implemented in GerstnerWave::Update
 
-					vertexBufferDataCreateInfo.normals[vertIdx] = glm::vec3(0.0f, 1.0f, 0.0f);
-					vertexBufferDataCreateInfo.tangents[vertIdx] = glm::vec3(1.0f, 0.0f, 0.0f);
-					vertexBufferDataCreateInfo.bitangents[vertIdx] = glm::vec3(0.0f, 0.0f, 1.0f);
-					vertexBufferDataCreateInfo.colors_R32G32B32A32[vertIdx] = VEC4_ONE;
-				}
-			}
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::NORMAL;
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::TANGENT;

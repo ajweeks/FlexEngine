@@ -27,6 +27,7 @@ IGNORE_WARNINGS_POP
 #include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
 #include "Player.hpp"
+#include "Profiler.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
@@ -3220,8 +3221,6 @@ namespace flex
 	GerstnerWave::GerstnerWave(const std::string& name) :
 		GameObject(name, GameObjectType::GERSTNER_WAVE)
 	{
-		positions.resize(vertSideCount * vertSideCount);
-
 		MaterialCreateInfo matCreateInfo = {};
 		matCreateInfo.name = "Gerstner";
 		matCreateInfo.shaderName = "pbr";
@@ -3239,6 +3238,26 @@ namespace flex
 		for (i32 i = 0; i < (i32)waves.size(); ++i)
 		{
 			SetWaveLength(i, waves[i].waveLen);
+		}
+
+		i32 vertCount = vertSideCount * vertSideCount;
+		positions.resize(vertCount);
+		normals.resize(vertCount);
+		tangents.resize(vertCount);
+		bitangents.resize(vertCount);
+		colours.resize(vertCount);
+
+		for (i32 z = 0; z < vertSideCount; ++z)
+		{
+			for (i32 x = 0; x < vertSideCount; ++x)
+			{
+				i32 vertIdx = z * vertSideCount + x;
+
+				normals[vertIdx] = glm::vec3(0.0f, 1.0f, 0.0f);
+				tangents[vertIdx] = glm::vec3(1.0f, 0.0f, 0.0f);
+				bitangents[vertIdx] = glm::vec3(0.0f, 0.0f, 1.0f);
+				colours[vertIdx] = VEC4_ONE;
+			}
 		}
 	}
 
@@ -3259,8 +3278,6 @@ namespace flex
 		{
 			AddWave();
 		}
-
-		ImGui::DragFloat("vertical offset", &vOffset, 0.1f);
 
 		for (i32 i = 0; i < (i32)waves.size(); ++i)
 		{
@@ -3296,12 +3313,10 @@ namespace flex
 	{
 		UNREFERENCED_PARAMETER(scene);
 		UNREFERENCED_PARAMETER(matID);
-		
+
 		JSONObject gerstnerWaveObj;
 		if (parentObject.SetObjectChecked("gerstner wave", gerstnerWaveObj))
 		{
-			vOffset = gerstnerWaveObj.GetFloat("vertical offset");
-
 			std::vector<JSONObject> waveObjs;
 			if (gerstnerWaveObj.SetObjectArrayChecked("waves", waveObjs))
 			{
@@ -3316,13 +3331,17 @@ namespace flex
 				}
 			}
 		}
+
+		// Init dependent variables
+		for (i32 i = 0; i < (i32)waves.size(); ++i)
+		{
+			SetWaveLength(i, waves[i].waveLen);
+		}
 	}
 
 	void GerstnerWave::SerializeUniqueFields(JSONObject& parentObject) const
 	{
 		JSONObject gerstnerWaveObj = {};
-
-		gerstnerWaveObj.fields.emplace_back("vertical offset", JSONValue(vOffset));
 
 		std::vector<JSONObject> waveObjs;
 		waveObjs.resize(waves.size());
@@ -3353,21 +3372,24 @@ namespace flex
 
 	void GerstnerWave::Update()
 	{
+		PROFILE_AUTO("Gerster update");
+
 		const glm::vec3 startPos(-size / 2.0f, 0.0f, -size / 2.0f);
 
-		// Clear
+		// Clear positions and normals
 		for (i32 z = 0; z < vertSideCount; ++z)
 		{
 			for (i32 x = 0; x < vertSideCount; ++x)
 			{
 				positions[z * vertSideCount + x] = startPos + glm::vec3(
 					size * ((real)x / (vertSideCount - 1)),
-					vOffset,
+					0.0f,
 					size * ((real)z / (vertSideCount - 1)));
+				normals[z * vertSideCount + x] = VEC3_UP;
 			}
 		}
-		
-		// Set
+
+		// Calculate positions
 		for (WaveInfo& wave : waves)
 		{
 			if (wave.enabled)
@@ -3395,8 +3417,26 @@ namespace flex
 			}
 		}
 
+		// Calculate normals
+		for (i32 z = 1; z < vertSideCount - 1; ++z)
+		{
+			for (i32 x = 1; x < vertSideCount - 1; ++x)
+			{
+				i32 vertIdx = z * vertSideCount + x;
+				tangents[vertIdx] = glm::normalize((positions[vertIdx + 1] - positions[vertIdx]) + (positions[vertIdx] - positions[vertIdx - 1]));
+				bitangents[vertIdx] = glm::normalize((positions[vertIdx + vertSideCount] - positions[vertIdx]) + (positions[vertIdx] - positions[vertIdx - vertSideCount]));
+				normals[vertIdx] = glm::cross(bitangents[vertIdx], tangents[vertIdx]);
+			}
+		}
+
 		VertexBufferData* vertexBuffer = m_MeshComponent->GetVertexBufferData();
-		vertexBuffer->UpdatePositions(positions);
+		VertexBufferData::CreateInfo createInfo = {};
+		createInfo.positions_3D = positions;
+		createInfo.normals = normals;
+		createInfo.tangents = tangents;
+		createInfo.bitangents = bitangents;
+		createInfo.colors_R32G32B32A32 = colours;
+		vertexBuffer->UpdateData(&createInfo);
 		g_Renderer->UpdateVertexData(m_RenderID, vertexBuffer);
 	}
 
