@@ -54,8 +54,7 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "0.000, -5.033, -16.466",
-				"scale" : "5.000, 1.000, 5.000"
+				"pos" : "0.000, 7.622, 0.000"
 			},
 			"material" : "Gerstner",
 			"gerstner wave" : 

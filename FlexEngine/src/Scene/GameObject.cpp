@@ -3259,6 +3259,23 @@ namespace flex
 				colours[vertIdx] = VEC4_ONE;
 			}
 		}
+
+		bobberTarget = Spring<real>(0.0f);
+		bobberTarget.DR = 2.5f;
+		bobberTarget.UAF = 40.0f;
+		bobber = new GameObject("Bobber", GameObjectType::_NONE);
+		bobber->SetSerializable(false);
+		MaterialID matID = InvalidMaterialID;
+		if (!g_Renderer->GetMaterialID("pbr red", matID))
+		{
+			PrintError("Failed to find material for bobber!\n");
+		}
+		MeshComponent* mesh = bobber->SetMeshComponent(new MeshComponent(matID, bobber));
+		if (!mesh->LoadFromFile(RESOURCE("meshes/sphere.glb")))
+		{
+			PrintError("Failed to load bobber mesh\n");
+		}
+		g_SceneManager->CurrentScene()->AddRootObject(bobber);
 	}
 
 	GameObject* GerstnerWave::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
@@ -3278,6 +3295,12 @@ namespace flex
 		{
 			AddWave();
 		}
+
+		ImGui::PushItemWidth(30.0f);
+		ImGui::DragFloat("Bobber DR", &bobberTarget.DR, 0.01f);
+		ImGui::SameLine();
+		ImGui::DragFloat("UAF", &bobberTarget.UAF, 0.01f);
+		ImGui::PopItemWidth();
 
 		for (i32 i = 0; i < (i32)waves.size(); ++i)
 		{
@@ -3430,6 +3453,7 @@ namespace flex
 		}
 
 		VertexBufferData* vertexBuffer = m_MeshComponent->GetVertexBufferData();
+		// TODO: Don't copy data into create info struct every frame!
 		VertexBufferData::CreateInfo createInfo = {};
 		createInfo.positions_3D = positions;
 		createInfo.normals = normals;
@@ -3438,6 +3462,21 @@ namespace flex
 		createInfo.colors_R32G32B32A32 = colours;
 		vertexBuffer->UpdateData(&createInfo);
 		g_Renderer->UpdateVertexData(m_RenderID, vertexBuffer);
+
+
+		const glm::vec3 wavePos = m_Transform.GetWorldPosition();
+		const glm::vec3 waveScale = m_Transform.GetWorldScale();
+		glm::vec3 surfacePos = positions[positions.size() / 2 + vertSideCount / 2];
+		bobberTarget.SetTargetPos(surfacePos.y);
+		bobberTarget.Tick(g_DeltaTime);
+		real vOffset = 0.2f;
+		glm::vec3 newPos = wavePos + glm::vec3(surfacePos.x, bobberTarget.pos + vOffset, surfacePos.z);
+		bobber->GetTransform()->SetWorldPosition(newPos);
+
+		btVector3 targetPosBT = btVector3(wavePos.x + surfacePos.x, wavePos.y + bobberTarget.targetPos, wavePos.z + surfacePos.z);
+		g_Renderer->GetDebugDrawer()->drawSphere(targetPosBT, 1.0f, btVector3(1.0f, 0.0f, 0.1f));
+		btVector3 posBT = btVector3(wavePos.x + surfacePos.x, wavePos.y + bobberTarget.pos, wavePos.z + surfacePos.z);
+		g_Renderer->GetDebugDrawer()->drawSphere(posBT, 0.7f, btVector3(0.75f, 0.5f, 0.6f));
 	}
 
 	void GerstnerWave::AddWave()

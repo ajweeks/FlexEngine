@@ -1191,6 +1191,10 @@ namespace flex
 
 			// NOTE: Wave generation is implemented in GerstnerWave::Update
 
+			// Init two values so bounding sphere radius isn't zero
+			vertexBufferDataCreateInfo.positions_3D[0] = VEC3_NEG_ONE;
+			vertexBufferDataCreateInfo.positions_3D[1] = VEC3_ONE;
+
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::NORMAL;
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::TANGENT;

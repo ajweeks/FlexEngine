@@ -513,6 +513,9 @@ namespace flex
 
 		std::vector<WaveInfo> waves;
 
+		GameObject* bobber = nullptr;
+		Spring<real> bobberTarget;
+
 	};
 
 	enum class OperatorType
