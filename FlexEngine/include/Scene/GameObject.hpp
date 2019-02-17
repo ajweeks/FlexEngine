@@ -519,12 +519,12 @@ namespace flex
 
 	enum class OperatorType
 	{
+		ASSIGN,
 		ADD,
 		SUB,
 		MUL,
 		DIV,
 		MOD,
-		ASSIGN,
 		BIN_AND,
 		BIN_OR,
 		BIN_XOR,
@@ -792,11 +792,13 @@ namespace flex
 
 	struct Identifier : public Node
 	{
-		Identifier(const Token& token, const std::string& identifierStr);
+		Identifier(const Token& token, const std::string& identifierStr, TypeName type);
 
-		static Identifier* Parse(Tokenizer& tokenizer);
+		// type name will be _NONE when referencing existing identifiers
+		static Identifier* Parse(Tokenizer& tokenizer, TypeName typeName);
 
 		std::string identifierStr;
+		TypeName type;
 	};
 
 	struct Operation : public Node
@@ -819,14 +821,16 @@ namespace flex
 		Value();
 		Value(Operation* opearation);
 		Value(Identifier* identifierValue);
-		Value(i32 intRaw);
-		Value(real floatRaw);
-		Value(bool boolRaw);
+		Value(i32 intRaw, bool bTemporary);
+		Value(real floatRaw, bool bTemporary);
+		Value(bool boolRaw, bool bTemporary);
 		~Value();
 
 		std::string ToString() const;
 
 		ValueType type;
+
+		bool bIsTemporary = true;
 
 		union Val
 		{

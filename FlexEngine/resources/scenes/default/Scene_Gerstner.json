@@ -63,19 +63,19 @@
 				[
 					{
 						"enabled" : true,
-						"amplitude" : 0.480000,
+						"amplitude" : 0.310000,
 						"waveDir" : 0.500000,
 						"waveLen" : 6.900000
 					},
 					{
 						"enabled" : true,
-						"amplitude" : 0.890000,
+						"amplitude" : 0.810000,
 						"waveDir" : -0.088000,
 						"waveLen" : 23.200001
 					},
 					{
 						"enabled" : true,
-						"amplitude" : 0.210000,
+						"amplitude" : 0.190000,
 						"waveDir" : 1.116000,
 						"waveLen" : 3.060000
 					},
@@ -93,9 +93,21 @@
 					},
 					{
 						"enabled" : true,
-						"amplitude" : 0.050000,
+						"amplitude" : 0.010000,
 						"waveDir" : 0.500000,
-						"waveLen" : 1.670000
+						"waveLen" : 0.810000
+					},
+					{
+						"enabled" : true,
+						"amplitude" : 0.740000,
+						"waveDir" : 1.152000,
+						"waveLen" : 18.030001
+					},
+					{
+						"enabled" : true,
+						"amplitude" : 0.190000,
+						"waveDir" : -0.664000,
+						"waveLen" : 8.130000
 					}
 				]
 			}

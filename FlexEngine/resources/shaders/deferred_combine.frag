@@ -240,14 +240,14 @@ void main()
 
 	vec3 color = ambient + Lo;
 
+	// color = mix(color, vec3(
+	// 	min(
+	// 		mix(0.15, 0.2, max(abs(worldPos.x*0.5f),0.0)),
+	// 		fract(worldPos.y*0.5+0.25)*0.5),
+	// 	fract(worldPos.y*0.1)*0.2,
+	// 	100.0f),
+	// 		0.8f);
 
-	color = mix(color, vec3(
-		min(
-			mix(0.15, 0.2, max(abs(worldPos.x*0.5f),0.0)),
-			fract(worldPos.y*0.5+0.25)*0.5),
-		fract(worldPos.y*0.1)*0.2,
-		100.0f),
-			0.8f);
 	color *= exposure;
 
 	fragmentColor = vec4(color, 1.0);

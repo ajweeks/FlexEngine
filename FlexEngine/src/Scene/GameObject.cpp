@@ -3431,21 +3431,13 @@ namespace flex
 
 				wave.accumOffset += (wave.moveSpeed * g_DeltaTime);
 
-				real TL = glm::dot(waveVec, positions[0]);
-				real TR = glm::dot(waveVec, positions[vertSideCount - 1]);
-				real BL = glm::dot(waveVec, positions[vertSideCount * vertSideCount - vertSideCount]);
-				real BR = glm::dot(waveVec, positions[vertSideCount * vertSideCount - 1]);
 				for (i32 z = 0; z < vertSideCount; ++z)
 				{
 					for (i32 x = 0; x < vertSideCount; ++x)
 					{
 						i32 vertIdx = z * vertSideCount + x;
 
-						//real d = glm::dot(waveVec, positions[vertIdx]);
-						real d1 = Lerp(TL, TR, (real)x / vertSideCount);
-						real d2 = Lerp(BL, BR, (real)x / vertSideCount);
-						real d = Lerp(d1, d2, (real)z / vertSideCount);
-
+						real d = glm::dot(waveVec, positions[vertIdx]);
 						real c = cos(d + wave.accumOffset);
 						real s = sin(d + wave.accumOffset);
 						positions[vertIdx] += glm::vec3(
@@ -3454,6 +3446,30 @@ namespace flex
 							-waveVecN.y * wave.a * s);
 					}
 				}
+			}
+		}
+
+		// Ripple
+		glm::vec3 ripplePos = VEC3_ZERO;
+		real rippleAmp = 0.8f;
+		real rippleLen = 0.6f;
+		real rippleFadeOut = 12.0f;
+		for (i32 z = 0; z < vertSideCount; ++z)
+		{
+			for (i32 x = 0; x < vertSideCount; ++x)
+			{
+				i32 vertIdx = z * vertSideCount + x;
+
+				glm::vec3 diff = (ripplePos - positions[vertIdx]);
+				real d = glm::length(diff);
+				diff = glm::normalize(diff) * rippleLen;
+				real c = cos(g_SecElapsedSinceProgramStart * 1.8f - d);
+				real s = sin(g_SecElapsedSinceProgramStart * 1.5f - d);
+				real a = Lerp(0.0f, rippleAmp, 1.0f - glm::clamp(d / rippleFadeOut, 0.0f, 1.0f));
+				positions[vertIdx] += glm::vec3(
+					-diff.x * a * s,
+					a * c,
+					-diff.z * a * s);
 			}
 		}
 
