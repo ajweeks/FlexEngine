@@ -3528,6 +3528,14 @@ namespace flex
 		Token token = tokenizer.GetNextToken();
 		switch (token.type)
 		{
+		case TokenType::ADD: return OperatorType::ADD;
+		case TokenType::SUBTRACT: return OperatorType::SUB;
+		case TokenType::MULTIPLY: return OperatorType::MUL;
+		case TokenType::DIVIDE: return OperatorType::DIV;
+		case TokenType::MODULO: return OperatorType::MOD;
+		case TokenType::BINARY_AND: return OperatorType::BIN_AND;
+		case TokenType::BINARY_OR: return OperatorType::BIN_OR;
+		case TokenType::BINARY_XOR: return OperatorType::BIN_XOR;
 		case TokenType::EQUAL_TEST: return OperatorType::EQUAL;
 		case TokenType::NOT_EQUAL_TEST: return OperatorType::NOT_EQUAL;
 		case TokenType::GREATER: return OperatorType::GREATER;
@@ -3665,20 +3673,18 @@ namespace flex
 		const i32 nextIndex = variableCount++;
 		tokenIDToInstantiatedIdentifierIdx.emplace(tokenID, nextIndex);
 
-		// TODO: Use typeName?
-
 		assert(nextIndex >= 0 && nextIndex < MAX_VARS);
 
 		switch (typeName)
 		{
 		case TypeName::INT:
-			instantiatedIdentifiers[nextIndex].value = new Value(0);
+			instantiatedIdentifiers[nextIndex].value = new Value(0, false);
 			break;
 		case TypeName::FLOAT:
-			instantiatedIdentifiers[nextIndex].value = new Value(0.0f);
+			instantiatedIdentifiers[nextIndex].value = new Value(0.0f, false);
 			break;
 		case TypeName::BOOL:
-			instantiatedIdentifiers[nextIndex].value = new Value(false);
+			instantiatedIdentifiers[nextIndex].value = new Value(false, false);
 			break;
 		default:
 			errorReason = "Unhandled identifier typename encountered in InstantiateIdentifier";
@@ -4195,13 +4201,14 @@ namespace flex
 		}
 	}
 
-	Identifier::Identifier(const Token& token, const std::string& identifierStr) :
+	Identifier::Identifier(const Token& token, const std::string& identifierStr, TypeName type) :
 		Node(token),
-		identifierStr(identifierStr)
+		identifierStr(identifierStr),
+		type(type)
 	{
 	}
 
-	Identifier* Identifier::Parse(Tokenizer& tokenizer)
+	Identifier* Identifier::Parse(Tokenizer& tokenizer, TypeName type)
 	{
 		Token token = tokenizer.GetNextToken();
 		if (token.type != TokenType::IDENTIFIER)
@@ -4211,7 +4218,7 @@ namespace flex
 			return nullptr;
 		}
 
-		return new Identifier(token, token.ToString());
+		return new Identifier(token, token.ToString(), type);
 	}
 
 	Operation::Operation(const Token& token, Expression* lhs, OperatorType op, Expression* rhs) :
@@ -4228,74 +4235,111 @@ namespace flex
 		SafeDelete(rhs);
 	}
 
+	template<class T>
+	Value* EvaluateOperation(T* lhs, T* rhs, OperatorType op)
+	{
+		switch (op)
+		{
+		case OperatorType::ASSIGN:
+			*lhs = *rhs;
+			return nullptr;
+		case OperatorType::ADD:				return new Value(*lhs + *rhs, true);
+		case OperatorType::SUB:				return new Value(*lhs - *rhs, true);
+		case OperatorType::MUL:				return new Value(*lhs * *rhs, true);
+		case OperatorType::DIV:
+			// :grimmacing:
+			if (typeid(*lhs) == typeid(i32))
+			{
+				return new Value((i32)*lhs / (i32)*rhs, true);
+			}
+			else if (typeid(*lhs) == typeid(real))
+			{
+				return new Value((real)*lhs / (real)*rhs, true);
+			}
+			else
+			{
+				return nullptr;
+			}
+		case OperatorType::MOD:
+			if (typeid(*lhs) == typeid(float))
+			{
+				return new Value(fmod((real)*lhs, (real)*rhs), true);
+			}
+			else
+			{
+				return new Value((i32)*lhs % (i32)*rhs, true);
+			}
+		case OperatorType::BIN_AND:			return new Value((bool)*lhs & (bool)*rhs, true);
+		case OperatorType::BIN_OR:			return new Value((bool)*lhs | (bool)*rhs, true);
+		case OperatorType::BIN_XOR:			return new Value((bool)*lhs ^ (bool)*rhs, true);
+		case OperatorType::EQUAL:			return new Value(*lhs == *rhs, true);
+		case OperatorType::NOT_EQUAL:		return new Value(*lhs != *rhs, true);
+		case OperatorType::GREATER:			return new Value(*lhs > *rhs, true);
+		case OperatorType::GREATER_EQUAL:	return new Value(*lhs >= *rhs, true);
+		case OperatorType::LESS:			return new Value(*lhs < *rhs, true);
+		case OperatorType::LESS_EQUAL:		return new Value(*lhs <= *rhs, true);
+		case OperatorType::BOOLEAN_AND:		return new Value(*lhs && *rhs, true);
+		case OperatorType::BOOLEAN_OR:		return new Value(*lhs || *rhs, true);
+		default:							return nullptr;
+		}
+	}
+
 	Value* Operation::Evaluate(TokenContext& context)
 	{
+		Value* newVal = nullptr;
 		Value* lhsVar = lhs->Evaluate(context);
 		Value* rhsVar = rhs->Evaluate(context);
-		if (lhs->value.type == ValueType::IDENTIFIER)
-		{
-			TypeName lhsTypeName = Type::GetTypeNameFromStr(lhs->value.val.identifier->identifierStr);
-			if (lhsTypeName == TypeName::INT)
-			{
-				if (rhsVar->type == ValueType::INT_RAW || rhsVar->type == ValueType::IDENTIFIER)
-				{
-					if (op == OperatorType::ASSIGN)
-					{
-						lhsVar->val.intRaw = rhsVar->val.intRaw;
-						return lhsVar;
-					}
-					if (op == OperatorType::BIN_AND)
-					{
-						i32 result = lhsVar->val.intRaw & rhsVar->val.intRaw;
-						return new Value(result);
-					}
-					return nullptr;
-				}
-			}
-			if (lhsTypeName == TypeName::FLOAT)
-			{
-				if (rhsVar->type == ValueType::FLOAT_RAW || rhsVar->type == ValueType::IDENTIFIER)
-				{
-					if (op == OperatorType::ASSIGN)
-					{
-						lhsVar->val.floatRaw = rhsVar->val.floatRaw;
-						return lhsVar;
-					}
-					return nullptr;
-				}
-			}
-			if (lhsTypeName == TypeName::BOOL)
-			{
-				if (rhsVar->type == ValueType::BOOL_RAW || rhsVar->type == ValueType::IDENTIFIER)
-				{
-					if (op == OperatorType::ASSIGN)
-					{
-						lhsVar->val.boolRaw = rhsVar->val.boolRaw;
-						return lhsVar;
-					}
-					return nullptr;
-				}
-			}
 
-			context.errorReason = "Attempted adding different types";
+		// TODO: Handle implicit conversions
+		if (lhsVar->type != rhsVar->type)
+		{
+			context.errorReason = "Operation on different types";
+			context.errorToken = lhs->token;
+			if (lhsVar->bIsTemporary)
+			{
+				SafeDelete(lhsVar);
+			}
+			if (rhsVar->bIsTemporary)
+			{
+				SafeDelete(rhsVar);
+			}
+			return nullptr;
+		}
+
+		switch (lhsVar->type)
+		{
+		case ValueType::INT_RAW:
+			newVal = EvaluateOperation(&lhsVar->val.intRaw, &rhsVar->val.intRaw, op);
+			break;
+		case ValueType::FLOAT_RAW:
+			newVal = EvaluateOperation(&lhsVar->val.floatRaw, &rhsVar->val.floatRaw, op);
+			break;
+		case ValueType::BOOL_RAW:
+			newVal = EvaluateOperation(&lhsVar->val.boolRaw, &rhsVar->val.boolRaw, op);
+			break;
+		default:
+			context.errorReason = "Unexpected type name in operation";
+			context.errorToken = lhs->token;
+			break;
+		}
+
+		if (lhsVar->bIsTemporary)
+		{
+			SafeDelete(lhsVar);
+		}
+		if (rhsVar->bIsTemporary)
+		{
+			SafeDelete(rhsVar);
+		}
+
+		if (newVal == nullptr)
+		{
+			context.errorReason = "Malformed operation";
 			context.errorToken = token;
 			return nullptr;
 		}
-		if (lhs->value.type == ValueType::INT_RAW)
-		{
-			// Should be handled in semantic analysis step
-			assert(op != OperatorType::ASSIGN);
 
-			if (op == OperatorType::ADD)
-			{
-				i32 result = lhsVar->val.intRaw + rhsVar->val.intRaw;
-				return new Value(result);
-			}
-		}
-
-		context.errorReason = "Malformed operation";
-		context.errorToken = token;
-		return nullptr;
+		return newVal;
 	}
 
 	Operation* Operation::Parse(Tokenizer& tokenizer)
@@ -4322,39 +4366,45 @@ namespace flex
 		return new Operation(token, lhs, op, rhs);
 	}
 
+	Value::Value() :
+		type(ValueType::NONE),
+		bIsTemporary(true),
+		val()
+	{
+	}
+
 	Value::Value(Operation* opearation) :
 		type(ValueType::OPERATION),
+		bIsTemporary(false),
 		val(opearation)
 	{
 	}
 
 	Value::Value(Identifier* identifier) :
 		type(ValueType::IDENTIFIER),
+		bIsTemporary(false),
 		val(identifier)
 	{
 	}
 
-	Value::Value(i32 intRaw) :
+	Value::Value(i32 intRaw, bool bTemporary) :
 		type(ValueType::INT_RAW),
+		bIsTemporary(bTemporary),
 		val(intRaw)
 	{
 	}
 
-	Value::Value(real floatRaw) :
+	Value::Value(real floatRaw, bool bTemporary) :
 		type(ValueType::FLOAT_RAW),
+		bIsTemporary(bTemporary),
 		val(floatRaw)
 	{
 	}
 
-	Value::Value(bool boolRaw) :
+	Value::Value(bool boolRaw, bool bTemporary) :
 		type(ValueType::BOOL_RAW),
+		bIsTemporary(bTemporary),
 		val(boolRaw)
-	{
-	}
-
-	Value::Value() :
-		type(ValueType::NONE),
-		val()
 	{
 	}
 
@@ -4404,19 +4454,19 @@ namespace flex
 
 	Expression::Expression(const Token& token, i32 intRaw) :
 		Node(token),
-		value(intRaw)
+		value(intRaw, false)
 	{
 	}
 
 	Expression::Expression(const Token& token, real floatRaw) :
 		Node(token),
-		value(floatRaw)
+		value(floatRaw, false)
 	{
 	}
 
 	Expression::Expression(const Token& token, bool boolRaw) :
 		Node(token),
-		value(boolRaw)
+		value(boolRaw, false)
 	{
 	}
 
@@ -4430,18 +4480,13 @@ namespace flex
 		{
 		case ValueType::OPERATION:
 			return value.val.operation->Evaluate(context);
-			break;
 		case ValueType::IDENTIFIER:
-		{
 			// TODO: Apply implicit casting here when necessary
 			return context.GetVarInstanceFromTokenID(token.tokenID);
-		} break;
 		case ValueType::INT_RAW:
 		case ValueType::FLOAT_RAW:
 		case ValueType::BOOL_RAW:
-		{
 			return &value;
-		} break;
 		}
 
 		context.errorReason = "Unexpected value type";
@@ -4449,84 +4494,62 @@ namespace flex
 		return nullptr;
 	}
 
-	bool Expression::Compare(TokenContext& context, Expression* other, OperatorType op)
+	template<class T>
+	bool CompareExpression(T* lhs, T* rhs, OperatorType op, TokenContext& context)
 	{
-		if (value.type == ValueType::IDENTIFIER)
+		switch (op)
 		{
-
-
+		case OperatorType::EQUAL:			return *lhs == *rhs;
+		case OperatorType::NOT_EQUAL:		return *lhs != *rhs;
+		case OperatorType::GREATER:			return *lhs > *rhs;
+		case OperatorType::GREATER_EQUAL:	return *lhs >= *rhs;
+		case OperatorType::LESS:			return *lhs < *rhs;
+		case OperatorType::LESS_EQUAL:		return *lhs <= *rhs;
+		case OperatorType::BOOLEAN_AND:		return *lhs && *rhs;
+		case OperatorType::BOOLEAN_OR:		return *lhs || *rhs;
+		default:
+			context.errorReason = "Unexpected operator on int in expression";
+			context.errorToken = token;
 		}
-
-		if (other->value.type == value.type)
-		{
-			switch (value.type)
-			{
-			case ValueType::INT_RAW:
-			{
-				i32 thisIntVal = context.GetVarInstanceFromTokenID(token.tokenID)->val.intRaw;
-				i32 otherIntVal = context.GetVarInstanceFromTokenID(other->token.tokenID)->val.intRaw;
-				i32 diff = (thisIntVal - otherIntVal);
-				switch (op)
-				{
-				case OperatorType::EQUAL: return diff == 0;
-				case OperatorType::NOT_EQUAL: return diff != 0;
-				case OperatorType::GREATER: return diff > 0;
-				case OperatorType::GREATER_EQUAL: return diff >= 0;
-				case OperatorType::LESS: return diff < 0;
-				case OperatorType::LESS_EQUAL: return diff <= 0;
-				default:
-					context.errorReason = "Unexpected operator on int in expression";
-					context.errorToken = token;
-				}
-			} break;
-			case ValueType::FLOAT_RAW:
-			{
-				real thisFloatVal = context.GetVarInstanceFromTokenID(token.tokenID)->val.floatRaw;
-				real otherFloatVal = context.GetVarInstanceFromTokenID(other->token.tokenID)->val.floatRaw;
-				real diff = (thisFloatVal - otherFloatVal);
-				switch (op)
-				{
-				case OperatorType::EQUAL: return diff == 0.0f;
-				case OperatorType::NOT_EQUAL: return diff != 0.0f;
-				case OperatorType::GREATER: return diff > 0.0f;
-				case OperatorType::GREATER_EQUAL: return diff >= 0.0f;
-				case OperatorType::LESS: return diff < 0.0f;
-				case OperatorType::LESS_EQUAL: return diff <= 0.0f;
-				default:
-					context.errorReason = "Unexpected operator on float in expression";
-					context.errorToken = token;
-				}
-			} break;
-			case ValueType::BOOL_RAW:
-			{
-				bool thisBoolVal = context.GetVarInstanceFromTokenID(token.tokenID)->val.boolRaw;
-				bool otherBoolVal = context.GetVarInstanceFromTokenID(other->token.tokenID)->val.boolRaw;
-				switch (op)
-				{
-				case OperatorType::EQUAL: return (thisBoolVal == otherBoolVal);
-				case OperatorType::NOT_EQUAL: return (thisBoolVal != otherBoolVal);
-				case OperatorType::BOOLEAN_AND: return (thisBoolVal && otherBoolVal);
-				case OperatorType::BOOLEAN_OR: return (thisBoolVal || otherBoolVal);
-				default:
-					context.errorReason = "Unexpected operator on bool in expression";
-					context.errorToken = token;
-				}
-			} break;
-			default:
-				context.errorReason = "Unexpected expression type comparison";
-				context.errorToken = token;
-			}
-		}
-
-		return false;
 	}
+
+	//bool Expression::Compare(TokenContext& context, Expression* other, OperatorType op)
+	//{
+		//if (value.type == ValueType::IDENTIFIER)
+		//{
+
+		//	context.GetVarInstanceFromTokenID(token.tokenID)->val.identifier->;
+		//}
+
+		//if (value.type == ValueType::OPERATION)
+		//{
+		//	Value* newVal = value.val.operation->Evaluate(context);
+		//	if (newVal->type == ValueType::BOOL_RAW)
+		//	{
+		//		bool bResult = newVal->val.boolRaw;
+		//		if (newVal->bIsTemporary)
+		//		{
+		//			SafeDelete(newVal);
+		//		}
+		//		return bResult;
+		//	}
+		//	else
+		//	{
+		//		context.errorReason = "Operation expression didn't evaluate to bool value";
+		//		context.errorToken = token;
+		//		return nullptr;
+		//	}
+		//}
+
+	//	return false;
+	//}
 
 	Expression* Expression::Parse(Tokenizer& tokenizer)
 	{
 		Token token = tokenizer.PeekNextToken();
 		if (token.type == TokenType::IDENTIFIER)
 		{
-			Identifier* identifier = Identifier::Parse(tokenizer);
+			Identifier* identifier = Identifier::Parse(tokenizer, TypeName::_NONE);
 			if (identifier == nullptr)
 			{
 				return nullptr;
@@ -4621,7 +4644,7 @@ namespace flex
 		TypeName typeName = Type::Parse(tokenizer);
 		if (typeName != TypeName::_NONE)
 		{
-			Identifier* identifier = Identifier::Parse(tokenizer);
+			Identifier* identifier = Identifier::Parse(tokenizer, typeName);
 			if (identifier == nullptr)
 			{
 				tokenizer.context->errorReason = "Unexpected identifier after typename";
@@ -4655,20 +4678,46 @@ namespace flex
 
 	void Assignment::Evaluate(TokenContext& context)
 	{
-		Value* var = nullptr;
-		if (typeName == TypeName::_NONE)
+		TypeName varTypeName = typeName;
+		void* varVal = nullptr;
 		{
-			// Variable already exists
-			var = context.GetVarInstanceFromTokenID(identifier->token.tokenID);
-		}
-		else
-		{
-			// We need to instantiate var with type typeName
-			// TODO: Handle scopes?
-			var = context.InstantiateIdentifier(typeName, identifier->token.ToString(), identifier->token.tokenID);
+			Value* var = nullptr;
+			if (typeName == TypeName::_NONE)
+			{
+				// Variable already exists
+				var = context.GetVarInstanceFromTokenID(identifier->token.tokenID);
+				varTypeName = var->val.identifier->type;
+
+			}
+			else
+			{
+				// We need to instantiate var with type typeName
+				// TODO: Handle scopes?
+				var = context.InstantiateIdentifier(typeName, identifier->token.ToString(), identifier->token.tokenID);
+			}
+
+			if (var != nullptr)
+			{
+				switch (varTypeName)
+				{
+				case TypeName::INT:
+					varVal = (void*)&var->val.intRaw;
+					break;
+				case TypeName::FLOAT:
+					varVal = (void*)&var->val.floatRaw;
+					break;
+				case TypeName::BOOL:
+					varVal = (void*)&var->val.boolRaw;
+					break;
+				default:
+					context.errorReason = "Unexpected variable type name";
+					context.errorToken = token;
+					return;
+				}
+			}
 		}
 
-		if (var == nullptr)
+		if (varVal == nullptr)
 		{
 			context.errorReason = "Failed to retrieve identifier for expression!";
 			context.errorToken = token;
@@ -4677,44 +4726,40 @@ namespace flex
 
 		if (rhs != nullptr)
 		{
-			switch (typeName)
+			switch (varTypeName)
 			{
 			case TypeName::INT:
 			{
-				i32 rhsResult = 0;
-				if (rhs->token.type == TokenType::IDENTIFIER)
+				Value* rhsVal = rhs->Evaluate(context);
+				*((i32*)varVal) = rhsVal->val.intRaw;
+				if (rhsVal->bIsTemporary)
 				{
-					Value* rhsVal = rhs->Evaluate(context);
-					if (rhsVal == nullptr)
-					{
-						PrintError("Used variable before definition: %s\n", rhs->token.ToString().c_str());
-					}
-					else
-					{
-						rhsResult = rhsVal->val.intRaw;
-						// TODO: Implement a solution like the following to prevent memory leaks on temporary variables
-						//if (rhsVal->bIsTemporary)
-						//{
-						//	SafeDelete(rhsVal);
-						//}
-					}
+					SafeDelete(rhsVal);
 				}
-				else
-				{
-					rhsResult = rhs->Evaluate(context)->val.intRaw;
-				}
-				var->val.intRaw = rhsResult;
 			} break;
 			case TypeName::FLOAT:
-				var->val.floatRaw = rhs->Evaluate(context)->val.floatRaw;
-				break;
+			{
+				Value* rhsVal = rhs->Evaluate(context);
+				*((real*)varVal) = rhs->Evaluate(context)->val.floatRaw;
+				if (rhsVal->bIsTemporary)
+				{
+					SafeDelete(rhsVal);
+				}
+			} break;
 			case TypeName::BOOL:
-				var->val.boolRaw = rhs->Evaluate(context)->val.boolRaw;
-				break;
+			{
+				Value* rhsVal = rhs->Evaluate(context);
+				*((bool*)varVal) = rhs->Evaluate(context)->val.boolRaw;
+				if (rhsVal->bIsTemporary)
+				{
+					SafeDelete(rhsVal);
+				}
+			} break;
 			default:
+			{
 				context.errorReason = "Unexpected typename encountered in assignment";
 				context.errorToken = token;
-				break;
+			} break;
 			}
 		}
 	}
@@ -4730,7 +4775,7 @@ namespace flex
 			typeName = Type::Parse(tokenizer);
 		}
 
-		Identifier* lhs = Identifier::Parse(tokenizer);
+		Identifier* lhs = Identifier::Parse(tokenizer, typeName);
 		if (lhs == nullptr)
 		{
 			return nullptr;
@@ -5187,7 +5232,8 @@ namespace flex
 	RootItem* RootItem::Parse(Tokenizer& tokenizer)
 	{
 		Statement* rootStatement = Statement::Parse(tokenizer);
-		if (rootStatement == nullptr)
+		if (rootStatement == nullptr ||
+			!tokenizer.context->errorReason.empty())
 		{
 			return nullptr;
 		}
@@ -5197,7 +5243,8 @@ namespace flex
 		if (tokenizer.context->HasNextChar())
 		{
 			nextItem = RootItem::Parse(tokenizer);
-			if (nextItem == nullptr)
+			if (nextItem == nullptr ||
+				!tokenizer.context->errorReason.empty())
 			{
 				SafeDelete(rootStatement);
 				return nullptr;
@@ -5218,6 +5265,16 @@ namespace flex
 
 		Print("Creating AST\n");
 		rootItem = RootItem::Parse(*tokenizer);
+
+		if (!tokenizer->context->errorReason.empty())
+		{
+			PrintError("Creation of AST failed\n");
+			PrintError("Error reason: %s\n", tokenizer->context->errorReason.c_str());
+			PrintError("Error token: %s\n", tokenizer->context->errorToken.ToString().c_str());
+			lastErrorTokenLocation = glm::vec2i(tokenizer->context->errorToken.linePos, tokenizer->context->errorToken.lineNum);
+			return;
+		}
+
 		Print("Done creating AST\nStatements generated:\n");
 
 		RootItem* item = rootItem;
@@ -5406,7 +5463,7 @@ namespace flex
 	{
 		GameObject::DrawImGuiObjects();
 
-		if (ImGui::Begin("Terminal"))
+		ImGui::Begin("Terminal");
 		{
 			ImGui::Text("Cursor: %d, %d", cursor.x, cursor.y);
 			ImGui::Text("Max x: %d", cursorMaxX);

@@ -863,7 +863,7 @@ namespace flex
 
 		// Returns a pointer to the result of this expression
 		Value* Evaluate(TokenContext& context);
-		bool Compare(TokenContext& context, Expression* other, OperatorType op);
+		//bool Compare(TokenContext& context, Expression* other, OperatorType op);
 
 		static Expression* Parse(Tokenizer& tokenizer);
 	};

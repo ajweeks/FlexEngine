@@ -175,12 +175,12 @@
 			},
 			"terminal" : 
 			{
-				"str" : "int var = 10;
+				"str" : "int var = 100;
 int iat = 55;
 int baba = 0151;
 int a = var;
 int aba = a;
-int b = 0;
+int b = var*var*var;
 bool bbab = true;
 int _9a78a89 = 912123132;
 /*int h=var;
