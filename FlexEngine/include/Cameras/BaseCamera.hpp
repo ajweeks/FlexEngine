@@ -66,6 +66,7 @@ namespace flex
 		real exposure = 0.0f;
 
 		bool bIsGameplayCam;
+		bool bDEBUGCyclable = true;
 
 	protected:
 		// Sets m_Right, m_Up, and m_Forward based on m_Yaw and m_Pitch

@@ -102,16 +102,26 @@ namespace flex
 
 	BaseCamera* CameraManager::CycleCamera(i32 deltaIndex, bool bAlignWithPrevious)
 	{
-		i32 newIndex = GetCameraIndex(m_CameraStack.top()) + deltaIndex;
-		i32 numCameras = (i32)m_Cameras.size();
-		if (newIndex < 0)
+		assert(glm::abs(deltaIndex) == 1);
+
+		const i32 numCameras = (i32)m_Cameras.size();
+
+		const i32 desiredIndex = GetCameraIndex(m_CameraStack.top()) + deltaIndex;
+		i32 newIndex = desiredIndex;
+		i32 offset = 0;
+		do
 		{
-			newIndex += numCameras;
-		}
-		else if (newIndex >= numCameras)
-		{
-			newIndex -= numCameras;
-		}
+			newIndex = desiredIndex + offset;
+			offset += deltaIndex;
+			if (newIndex < 0)
+			{
+				newIndex += numCameras;
+			}
+			else if (newIndex >= numCameras)
+			{
+				newIndex -= numCameras;
+			}
+		} while (!m_Cameras[newIndex]->bDEBUGCyclable);
 
 		return SetCamera(m_Cameras[newIndex], bAlignWithPrevious);
 	}
@@ -203,12 +213,7 @@ namespace flex
 
 				if (ImGui::Button(arrowPrevStr))
 				{
-					i32 newIdx = GetCameraIndex(m_CameraStack.top()) - 1;
-					if (newIdx < 0)
-					{
-						newIdx += (i32)m_Cameras.size();
-					}
-					SetCamera(m_Cameras[newIdx], false);
+					CycleCamera(-1, false);
 				}
 
 				ImGui::SameLine();
@@ -220,12 +225,7 @@ namespace flex
 
 				if (ImGui::Button(arrowNextStr))
 				{
-					i32 newIdx = GetCameraIndex(m_CameraStack.top()) + 1;
-					if (newIdx >= (i32)m_Cameras.size())
-					{
-						newIdx -= (i32)m_Cameras.size();
-					}
-					SetCamera(m_Cameras[newIdx], false);
+					CycleCamera(1, false);
 				}
 			}
 
@@ -304,22 +304,12 @@ namespace flex
 	{
 		if (action == Action::DBG_SWITCH_TO_PREV_CAM)
 		{
-			i32 newIdx = GetCameraIndex(m_CameraStack.top()) - 1;
-			if (newIdx < 0)
-			{
-				newIdx += (i32)m_Cameras.size();
-			}
-			SetCamera(m_Cameras[newIdx], false);
+			CycleCamera(-1, false);
 			return EventReply::CONSUMED;
 		}
 		else if (action == Action::DBG_SWITCH_TO_NEXT_CAM)
 		{
-			i32 newIdx = GetCameraIndex(m_CameraStack.top()) + 1;
-			if (newIdx >= (i32)m_Cameras.size())
-			{
-				newIdx -= (i32)m_Cameras.size();
-			}
-			SetCamera(m_Cameras[newIdx], false);
+			CycleCamera(1, false);
 			return EventReply::CONSUMED;
 		}
 

@@ -14,6 +14,7 @@ namespace flex
 	TerminalCamera::TerminalCamera(real FOV, real zNear, real zFar) :
 		BaseCamera("terminal", true, FOV, zNear, zFar)
 	{
+		bDEBUGCyclable = false;
 	}
 
 	void TerminalCamera::Initialize()
