@@ -683,6 +683,8 @@ namespace flex
 		TokenContext();
 		~TokenContext();
 
+		void Reset();
+
 		bool HasNextChar() const;
 		char ConsumeNextChar();
 		char PeekNextChar() const;
@@ -708,13 +710,16 @@ namespace flex
 		i32 linePos = 0;
 		i32 lineNumber = 0;
 
+		std::vector<Error> errors;
+
 		static const i32 MAX_VARS = 512;
 		struct InstantiatedIdentifier
 		{
 			std::string name;
 			i32 index = 0;
 			Value* value = nullptr;
-		} instantiatedIdentifiers[MAX_VARS];
+		};
+		InstantiatedIdentifier* instantiatedIdentifiers = nullptr; // Array of length MAX_VARS
 		i32 variableCount = 0;
 
 		std::map<i32, i32> tokenIDToInstantiatedIdentifierIdx;
@@ -724,8 +729,11 @@ namespace flex
 
 	struct Tokenizer
 	{
-		Tokenizer(const std::string& code);
+		Tokenizer();
+		Tokenizer(const std::string& codeStr);
 		~Tokenizer();
+
+		void SetCodeStr(const std::string& newCodeStr);
 
 		Token PeekNextToken();
 		Token GetNextToken();
@@ -733,7 +741,6 @@ namespace flex
 		void ConsumeWhitespaceAndComments();
 		TokenType Type1IfNextCharIsCElseType2(char c, TokenType ifYes, TokenType ifNo);
 
-		std::string str;
 		TokenContext* context = nullptr;
 
 		i32 nextTokenID = 0;
@@ -1001,7 +1008,7 @@ namespace flex
 	{
 		AST(Tokenizer* tokenizer);
 
-		void Create();
+		void Generate();
 		void Evaluate();
 		void Destroy();
 

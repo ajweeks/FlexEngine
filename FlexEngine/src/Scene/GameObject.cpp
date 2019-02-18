@@ -3675,6 +3675,9 @@ namespace flex
 
 		assert(nextIndex >= 0 && nextIndex < MAX_VARS);
 
+		assert(instantiatedIdentifiers[nextIndex].index == 0);
+		assert(instantiatedIdentifiers[nextIndex].value == nullptr);
+
 		switch (typeName)
 		{
 		case TypeName::INT:
@@ -3759,16 +3762,35 @@ namespace flex
 
 	TokenContext::TokenContext()
 	{
-		memset(instantiatedIdentifiers, 0, sizeof(InstantiatedIdentifier) * MAX_VARS);
+		Reset();
 	}
 
 	TokenContext::~TokenContext()
 	{
-		for (i32 i = 0; i < variableCount; ++i)
+		delete[] instantiatedIdentifiers;
+		instantiatedIdentifiers = nullptr;
+		variableCount = 0;
+	}
+
+	void TokenContext::Reset()
+	{
+		buffer = nullptr;
+		bufferPtr = nullptr;
+		bufferLen = -1;
+		errorReason = "";
+		errorToken = g_EmptyToken;
+		linePos = 0;
+		lineNumber = 0;
+
+		errors.clear();
+
+		if (instantiatedIdentifiers != nullptr)
 		{
-			SafeDelete(instantiatedIdentifiers[i].value);
+			delete[] instantiatedIdentifiers;
 		}
 		variableCount = 0;
+		instantiatedIdentifiers = new InstantiatedIdentifier[MAX_VARS];
+		tokenIDToInstantiatedIdentifierIdx.clear();
 	}
 
 	bool TokenContext::HasNextChar() const
@@ -3776,19 +3798,37 @@ namespace flex
 		return GetRemainingLength() > 0;
 	}
 
-	Tokenizer::Tokenizer(const std::string& code) :
-		str(code)
+	Tokenizer::Tokenizer()
 	{
-		SafeDelete(context);
+		assert(context == nullptr);
 
 		context = new TokenContext();
-		context->buffer = context->bufferPtr = (char*)str.c_str();
-		context->bufferLen = (i32)code.size();
+		SetCodeStr("");
+	}
+
+	Tokenizer::Tokenizer(const std::string& codeStr)
+	{
+		assert(context == nullptr);
+
+		context = new TokenContext();
+		SetCodeStr(codeStr);
 	}
 
 	Tokenizer::~Tokenizer()
 	{
 		SafeDelete(context);
+	}
+
+	void Tokenizer::SetCodeStr(const std::string& newCodeStr)
+	{
+		assert(context != nullptr);
+
+		context->Reset();
+		context->buffer = context->bufferPtr = (char*)newCodeStr.c_str();
+		context->bufferLen = (i32)newCodeStr.size();
+		nextTokenID = 0;
+		bConsumedLastParsedToken = true;
+		lastParsedToken = g_EmptyToken;
 	}
 
 	Token Tokenizer::PeekNextToken()
@@ -4576,12 +4616,14 @@ namespace flex
 					Expression* rhs = Expression::Parse(tokenizer);
 					if (rhs == nullptr)
 					{
+						SafeDelete(identifier);
 						SafeDelete(lhs);
 						return nullptr;
 					}
 					Operation* operation = new Operation(token, lhs, op, rhs);
 					if (operation == nullptr)
 					{
+						SafeDelete(identifier);
 						SafeDelete(lhs);
 						SafeDelete(rhs);
 						return nullptr;
@@ -4766,7 +4808,6 @@ namespace flex
 
 	Assignment* Assignment::Parse(Tokenizer& tokenizer)
 	{
-		// TODO: Safety checks
 		Token token = tokenizer.PeekNextToken();
 
 		TypeName typeName = TypeName::_NONE;
@@ -5021,8 +5062,6 @@ namespace flex
 	void IfStatement::Evaluate(TokenContext& context)
 	{
 		Value* bConditionResult = condition->Evaluate(context);
-		// TODO: Save result of bConditionResult then delete if temporary
-
 		if (bConditionResult->val.boolRaw)
 		{
 			body->Evaluate(context);
@@ -5044,6 +5083,11 @@ namespace flex
 				context.errorToken = token;
 				break;
 			}
+		}
+
+		if (bConditionResult->bIsTemporary)
+		{
+			SafeDelete(bConditionResult);
 		}
 	}
 
@@ -5144,13 +5188,30 @@ namespace flex
 	void WhileStatement::Evaluate(TokenContext& context)
 	{
 		Value* result = condition->Evaluate(context);
+		i32 iterationCount = 0;
 		while (result->val.boolRaw)
 		{
 			body->Evaluate(context);
+			Value* pResult = result;
 			result = condition->Evaluate(context);
-			// TODO: Delete temporary result
-			// TODO: Catch infinite loops
+
+			assert(pResult->bIsTemporary);
+			SafeDelete(pResult);
+
+			if (result == nullptr)
+			{
+				return;
+			}
+
+			if (++iterationCount > 4'194'303)
+			{
+				context.errorReason = "Exceeded max number of iterations in while loop";
+				context.errorToken = token;
+				return;
+			}
 		}
+		assert(result->bIsTemporary);
+		SafeDelete(result);
 	}
 
 	WhileStatement* WhileStatement::Parse(Tokenizer& tokenizer)
@@ -5259,7 +5320,12 @@ namespace flex
 	{
 	}
 
-	void AST::Create()
+	void AST::Destroy()
+	{
+		SafeDelete(rootItem);
+	}
+
+	void AST::Generate()
 	{
 		SafeDelete(rootItem);
 
@@ -5272,6 +5338,7 @@ namespace flex
 			PrintError("Error reason: %s\n", tokenizer->context->errorReason.c_str());
 			PrintError("Error token: %s\n", tokenizer->context->errorToken.ToString().c_str());
 			lastErrorTokenLocation = glm::vec2i(tokenizer->context->errorToken.linePos, tokenizer->context->errorToken.lineNum);
+			tokenizer->context->errors = { Error(tokenizer->context->errorToken.lineNum, tokenizer->context->errorReason) };
 			return;
 		}
 
@@ -5314,6 +5381,7 @@ namespace flex
 				PrintError("Error token: %s\n", tokenizer->context->errorToken.ToString().c_str());
 				lastErrorTokenLocation = glm::vec2i(tokenizer->context->errorToken.linePos, tokenizer->context->errorToken.lineNum);
 				bSuccess = false;
+				tokenizer->context->errors = { Error(tokenizer->context->errorToken.lineNum, tokenizer->context->errorReason) };
 				break;
 			}
 		}
@@ -5324,11 +5392,6 @@ namespace flex
 		}
 
 		Print("Done evaluating AST\n");
-	}
-
-	void AST::Destroy()
-	{
-		SafeDelete(rootItem);
 	}
 
 	Terminal::Terminal() :
@@ -5356,6 +5419,9 @@ namespace flex
 		}
 
 		m_Transform.UpdateParentTransform();
+
+		tokenizer = new Tokenizer();
+		ast = new AST(tokenizer);
 	}
 
 	void Terminal::Initialize()
@@ -5444,12 +5510,15 @@ namespace flex
 					pos.y -= lineHeight;
 				}
 
-				glm::vec2i lastErrorPos = ast->lastErrorTokenLocation;
-				if (lastErrorPos.x != -1)
+				if (ast != nullptr)
 				{
-					pos = firstLinePos;
-					pos.y -= lineHeight * lastErrorPos.y;
-					g_Renderer->DrawStringWS("#", errorColor, pos + right * lineNoWidth * 0.55f, rot, letterSpacing);
+					glm::vec2i lastErrorPos = ast->lastErrorTokenLocation;
+					if (lastErrorPos.x != -1)
+					{
+						pos = firstLinePos;
+						pos.y -= lineHeight * lastErrorPos.y;
+						g_Renderer->DrawStringWS("#", errorColor, pos + right * lineNoWidth * 0.55f, rot, letterSpacing);
+					}
 				}
 			}
 
@@ -5484,26 +5553,24 @@ namespace flex
 			}
 			ImGui::EndChild();
 
-			//ImGui::Text("Errors: %d", errors.size());
-			//if (ImGui::BeginChild("Success", ImVec2(0.0f, 220.0f), true))
-			//{
-			//	if (errors.empty())
-			//	{
-			//		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 1.0f, 0.5f, 1.0f));
-			//		ImGui::Text("Success");
-			//		ImGui::PopStyleColor();
-			//	}
-			//	else
-			//	{
-			//		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.5f, 0.5f, 1.0f));
-			//		for (const Error& e : errors)
-			//		{
-			//			ImGui::Text("%2d, %s", e.lineNumber, e.str.c_str());
-			//		}
-			//		ImGui::PopStyleColor();
-			//	}
-			//}
-			//ImGui::EndChild();
+			ImGui::Text("Errors: %d", tokenizer->context->errors.size());
+			{
+				if (tokenizer->context->errors.empty())
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 1.0f, 0.5f, 1.0f));
+					ImGui::Text("Success");
+					ImGui::PopStyleColor();
+				}
+				else
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.5f, 0.5f, 1.0f));
+					for (const Error& e : tokenizer->context->errors)
+					{
+						ImGui::Text("%2d, %s", e.lineNumber, e.str.c_str());
+					}
+					ImGui::PopStyleColor();
+				}
+			}
 		}
 		ImGui::End();
 	}
@@ -5881,6 +5948,9 @@ namespace flex
 	{
 		bParsePassed = true;
 
+		assert(tokenizer != nullptr);
+		assert(ast != nullptr);
+
 		std::string str;
 		for (const std::string& line : lines)
 		{
@@ -5888,12 +5958,10 @@ namespace flex
 			str.push_back('\n');
 		}
 
-		SafeDelete(ast);
-		SafeDelete(tokenizer);
+		ast->Destroy();
 
-		tokenizer = new Tokenizer(str);
-		ast = new AST(tokenizer);
-		ast->Create();
+		tokenizer->SetCodeStr(str);
+		ast->Generate();
 	}
 
 	void Terminal::EvaluateCode()
