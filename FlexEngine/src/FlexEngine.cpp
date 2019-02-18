@@ -1445,7 +1445,12 @@ namespace flex
 				std::string cameraName;
 				if (rootObject.SetStringChecked("last camera type", cameraName))
 				{
-					g_CameraManager->SetCameraByName(cameraName, false);
+					if (cameraName.compare("terminal") == 0)
+					{
+						// Ensure there's a camera to pop back to after exiting the terminal
+						g_CameraManager->SetCameraByName("first-person", false);
+					}
+					g_CameraManager->PushCameraByName(cameraName, true);
 				}
 
 				JSONObject cameraTransform;

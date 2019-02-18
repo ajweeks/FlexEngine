@@ -25,14 +25,16 @@ namespace flex
 
 		void AddCamera(BaseCamera* camera, bool bSwitchTo = false);
 
-		// Clears stack and pushes the given camera onto it
-		void SetCamera(BaseCamera* camera, bool bAlignWithPrevious);
-		void CycleCamera(i32 deltaIndex, bool bAlignWithPrevious = true);
-		void SetCameraByName(const std::string& name, bool bAlignWithPrevious);
+		// Clears stack and pushes the given camera onto it, then returns a pointer to it
+		BaseCamera* SetCamera(BaseCamera* camera, bool bAlignWithPrevious);
+		BaseCamera* CycleCamera(i32 deltaIndex, bool bAlignWithPrevious = true);
+		BaseCamera* SetCameraByName(const std::string& name, bool bAlignWithPrevious);
 
-		void PushCamera(BaseCamera* camera, bool bAlignWithPrevious);
-		void PushCameraByName(const std::string& name, bool bAlignWithPrevious);
+		BaseCamera* PushCamera(BaseCamera* camera, bool bAlignWithPrevious);
+		BaseCamera* PushCameraByName(const std::string& name, bool bAlignWithPrevious);
 		void PopCamera();
+
+		BaseCamera* GetCameraByName(const std::string& name);
 
 		void DrawImGuiObjects();
 
@@ -40,7 +42,6 @@ namespace flex
 		EventReply OnActionEvent(Action action);
 		ActionCallback<CameraManager> m_ActionCallback;
 
-		BaseCamera* GetCameraByName(const std::string& name);
 		i32 GetCameraIndex(BaseCamera* camera);
 
 		/* Copies position, rotation, and FOV of "from" to "to" */

@@ -294,9 +294,18 @@ namespace flex
 			m_ObjectInteractingWith = gameObject;
 			m_bBeingInteractedWith = true;
 
-			g_CameraManager->PushCameraByName("terminal", true);
-			TerminalCamera* terminalCam = (TerminalCamera*)g_CameraManager->CurrentCamera();
+			TerminalCamera* terminalCam = dynamic_cast<TerminalCamera*>(g_CameraManager->CurrentCamera());
+			bool bNewCam = false;
+			if (terminalCam == nullptr)
+			{
+				terminalCam = (TerminalCamera*)g_CameraManager->GetCameraByName("terminal");
+				bNewCam = true;
+			}
 			terminalCam->SetTerminal(terminal);
+			if (bNewCam)
+			{
+				g_CameraManager->PushCamera(terminalCam, true);
+			}
 		}
 	}
 
@@ -325,8 +334,7 @@ namespace flex
 		BaseCamera* cam = g_CameraManager->CurrentCamera();
 		FirstPersonCamera* fpCam = dynamic_cast<FirstPersonCamera*>(cam);
 		OverheadCamera* ohCam = dynamic_cast<OverheadCamera*>(cam);
-		TerminalCamera* termCam = dynamic_cast<TerminalCamera*>(cam);
-		if (fpCam != nullptr || ohCam != nullptr || termCam != nullptr)
+		if (fpCam != nullptr || ohCam != nullptr)
 		{
 			m_bPossessed = true;
 		}

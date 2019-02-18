@@ -83,7 +83,7 @@ namespace flex
 		}
 	}
 
-	void CameraManager::SetCamera(BaseCamera* camera, bool bAlignWithPrevious)
+	BaseCamera* CameraManager::SetCamera(BaseCamera* camera, bool bAlignWithPrevious)
 	{
 		if (!m_CameraStack.empty())
 		{
@@ -97,10 +97,10 @@ namespace flex
 			m_CameraStack.pop();
 		}
 
-		PushCamera(camera, bAlignWithPrevious);
+		return PushCamera(camera, bAlignWithPrevious);
 	}
 
-	void CameraManager::CycleCamera(i32 deltaIndex, bool bAlignWithPrevious)
+	BaseCamera* CameraManager::CycleCamera(i32 deltaIndex, bool bAlignWithPrevious)
 	{
 		i32 newIndex = GetCameraIndex(m_CameraStack.top()) + deltaIndex;
 		i32 numCameras = (i32)m_Cameras.size();
@@ -113,15 +113,15 @@ namespace flex
 			newIndex -= numCameras;
 		}
 
-		SetCamera(m_Cameras[newIndex], bAlignWithPrevious);
+		return SetCamera(m_Cameras[newIndex], bAlignWithPrevious);
 	}
 
-	void CameraManager::SetCameraByName(const std::string& name, bool bAlignWithPrevious)
+	BaseCamera* CameraManager::SetCameraByName(const std::string& name, bool bAlignWithPrevious)
 	{
-		SetCamera(GetCameraByName(name), bAlignWithPrevious);
+		return SetCamera(GetCameraByName(name), bAlignWithPrevious);
 	}
 
-	void CameraManager::PushCamera(BaseCamera* camera, bool bAlignWithPrevious)
+	BaseCamera* CameraManager::PushCamera(BaseCamera* camera, bool bAlignWithPrevious)
 	{
 		assert(camera != nullptr);
 
@@ -146,11 +146,13 @@ namespace flex
 			camera->Initialize();
 			camera->OnPossess();
 		}
+
+		return camera;
 	}
 
-	void CameraManager::PushCameraByName(const std::string& name, bool bAlignWithPrevious)
+	BaseCamera* CameraManager::PushCameraByName(const std::string& name, bool bAlignWithPrevious)
 	{
-		PushCamera(GetCameraByName(name), bAlignWithPrevious);
+		return PushCamera(GetCameraByName(name), bAlignWithPrevious);
 	}
 
 	void CameraManager::PopCamera()
@@ -170,6 +172,19 @@ namespace flex
 		currentCamera = CurrentCamera();
 		currentCamera->OnPossess();
 		currentCamera->Initialize();
+	}
+
+	BaseCamera* CameraManager::GetCameraByName(const std::string& name)
+	{
+		for (i32 i = 0; i < (i32)m_Cameras.size(); ++i)
+		{
+			if (m_Cameras[i]->GetName().compare(name) == 0)
+			{
+				return m_Cameras[i];
+			}
+		}
+
+		return nullptr;
 	}
 
 	void CameraManager::DrawImGuiObjects()
@@ -262,19 +277,6 @@ namespace flex
 
 			ImGui::TreePop();
 		}
-	}
-
-	BaseCamera* CameraManager::GetCameraByName(const std::string& name)
-	{
-		for (i32 i = 0; i < (i32)m_Cameras.size(); ++i)
-		{
-			if (m_Cameras[i]->GetName().compare(name) == 0)
-			{
-				return m_Cameras[i];
-			}
-		}
-
-		return nullptr;
 	}
 
 	i32 CameraManager::GetCameraIndex(BaseCamera* camera)
