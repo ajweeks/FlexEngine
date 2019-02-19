@@ -6,7 +6,7 @@
 -- 
 
 
-solution "FlexEngine"
+solution "Flex"
 	configurations {
 		"Debug",
 		"Development",
@@ -131,9 +131,9 @@ configuration { "x32" }
 configuration {}
 
 
-startproject "FlexEngine"
+startproject "Flex"
 
-project "FlexEngine"
+project "Flex"
 	kind "ConsoleApp"
 
 	location "../build"
