@@ -3565,7 +3565,15 @@ namespace flex
 
 	TokenContext::~TokenContext()
 	{
-		delete[] instantiatedIdentifiers;
+		if (instantiatedIdentifiers != nullptr)
+		{
+			for (i32 i = 0; i < variableCount; ++i)
+			{
+				assert(instantiatedIdentifiers[i].value != nullptr);
+				delete instantiatedIdentifiers[i].value;
+			}
+			delete[] instantiatedIdentifiers;
+		}
 		instantiatedIdentifiers = nullptr;
 		variableCount = 0;
 	}
@@ -3584,6 +3592,11 @@ namespace flex
 
 		if (instantiatedIdentifiers != nullptr)
 		{
+			for (i32 i = 0; i < variableCount; ++i)
+			{
+				assert(instantiatedIdentifiers[i].value != nullptr);
+				delete instantiatedIdentifiers[i].value;
+			}
 			delete[] instantiatedIdentifiers;
 		}
 		variableCount = 0;
@@ -3752,7 +3765,6 @@ namespace flex
 			errorToken = identifierToken;
 			return nullptr;
 		}
-
 
 		const i32 nextIndex = variableCount++;
 		tokenNameToInstantiatedIdentifierIdx.emplace(tokenName, nextIndex);
@@ -5409,6 +5421,8 @@ namespace flex
 		}
 
 		bValid = true;
+
+		lastErrorTokenLocation = glm::vec2i(-1);
 
 		Print("Done creating AST\nStatements generated:\n");
 
