@@ -155,7 +155,7 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "0.473, 0.633,5.888",
+				"pos" : "0.473, 0.633, 5.888",
 				"rot" : "3.141, -0.354, 3.141"
 			},
 			"material" : "Terminal Copper",
@@ -175,13 +175,13 @@
 			},
 			"terminal" : 
 			{
-				"str" : "int var = 100;
+				"str" : "float _ = 45688.01f  ;  int aaa = 1;
+int var = 100;
 int iat = 55;
 int baba = 0151;
 int a = var;
 int aba = a;
-int a=1;
-
+int e=1;
 int b = var*var*var;
 bool bbab = true;
 int _9a78a89 = 912123132;

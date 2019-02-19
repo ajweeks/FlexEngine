@@ -3558,6 +3558,79 @@ namespace flex
 		return std::string(charPtr, len);
 	}
 
+	TokenContext::TokenContext()
+	{
+		Reset();
+	}
+
+	TokenContext::~TokenContext()
+	{
+		delete[] instantiatedIdentifiers;
+		instantiatedIdentifiers = nullptr;
+		variableCount = 0;
+	}
+
+	void TokenContext::Reset()
+	{
+		buffer = nullptr;
+		bufferPtr = nullptr;
+		bufferLen = -1;
+		errorReason = "";
+		errorToken = g_EmptyToken;
+		linePos = 0;
+		lineNumber = 0;
+
+		errors.clear();
+
+		if (instantiatedIdentifiers != nullptr)
+		{
+			delete[] instantiatedIdentifiers;
+		}
+		variableCount = 0;
+		instantiatedIdentifiers = new InstantiatedIdentifier[MAX_VARS];
+		tokenNameToInstantiatedIdentifierIdx.clear();
+	}
+
+	bool TokenContext::HasNextChar() const
+	{
+		return GetRemainingLength() > 0;
+	}
+
+	char TokenContext::ConsumeNextChar()
+	{
+		assert((bufferPtr + 1 - buffer) <= bufferLen);
+
+		char nextChar = bufferPtr[0];
+		bufferPtr++;
+		linePos++;
+		if (nextChar == '\n')
+		{
+			linePos = 0;
+			lineNumber++;
+		}
+		return nextChar;
+	}
+
+	char TokenContext::PeekNextChar() const
+	{
+		assert((bufferPtr - buffer) <= bufferLen);
+
+		return bufferPtr[0];
+	}
+
+	char TokenContext::PeekChar(i32 index) const
+	{
+		assert(index >= 0 && index < GetRemainingLength());
+
+		return bufferPtr[index];
+
+	}
+
+	glm::i32 TokenContext::GetRemainingLength() const
+	{
+		return bufferLen - (bufferPtr - buffer);
+	}
+
 	bool TokenContext::CanNextCharBeIdentifierPart() const
 	{
 		if (!HasNextChar())
@@ -3584,7 +3657,8 @@ namespace flex
 			++keywordPos;
 		}
 
-		if (keywordPos == (i32)strlen(keywordStr) && !(isalpha(c) || isdigit(c) || c == '_'))
+		const bool bCIsDelimiter = !(isalpha(c) || isdigit(c) || c == '_');
+		if (keywordPos == (i32)strlen(keywordStr) && bCIsDelimiter)
 		{
 			return keywordType;
 		}
@@ -3605,8 +3679,14 @@ namespace flex
 		}
 
 		i32 matchedKeywordIndex = -1;
-		char c = ConsumeNextChar();
+		char c = PeekNextChar();
 		bool bMatched = true;
+		if (!(isalpha(c) || isdigit(c) || c == '_'))
+		{
+			// One letter identifier followed by non-whitespace
+			return TokenType::IDENTIFIER;
+		}
+		ConsumeNextChar();
 		while (bMatched)
 		{
 			bMatched = false;
@@ -3662,16 +3742,20 @@ namespace flex
 		return TokenType::_NONE;
 	}
 
-	Value* TokenContext::InstantiateIdentifier(TypeName typeName, const std::string& tokenName, i32 tokenID)
+	Value* TokenContext::InstantiateIdentifier(const Token& identifierToken, TypeName typeName)
 	{
-		if (tokenIDToInstantiatedIdentifierIdx.find(tokenID) != tokenIDToInstantiatedIdentifierIdx.end())
+		const std::string tokenName = identifierToken.ToString();
+
+		if (tokenNameToInstantiatedIdentifierIdx.find(tokenName) != tokenNameToInstantiatedIdentifierIdx.end())
 		{
-			errorReason = "Attempted to instantiate variable more than once";
+			errorReason = "Redeclaration of type";
+			errorToken = identifierToken;
 			return nullptr;
 		}
 
+
 		const i32 nextIndex = variableCount++;
-		tokenIDToInstantiatedIdentifierIdx.emplace(tokenID, nextIndex);
+		tokenNameToInstantiatedIdentifierIdx.emplace(tokenName, nextIndex);
 
 		assert(nextIndex >= 0 && nextIndex < MAX_VARS);
 
@@ -3691,18 +3775,26 @@ namespace flex
 			break;
 		default:
 			errorReason = "Unhandled identifier typename encountered in InstantiateIdentifier";
+			errorToken = identifierToken;
 			return nullptr;
 		}
 		// NOTE: Enforce a copy of the string
-		instantiatedIdentifiers[nextIndex].name = std::string(tokenName.c_str());
+		instantiatedIdentifiers[nextIndex].name = tokenName;
 		instantiatedIdentifiers[nextIndex].index = nextIndex;
 		return instantiatedIdentifiers[nextIndex].value;
 	}
 
-	Value* TokenContext::GetVarInstanceFromTokenID(i32 tokenID)
+	Value* TokenContext::GetVarInstanceFromToken(const Token& token)
 	{
-		assert(tokenID >= 0 && tokenID < MAX_VARS);
-		i32 idx = tokenIDToInstantiatedIdentifierIdx[tokenID];
+		assert(token.tokenID >= 0 && token.tokenID < MAX_VARS);
+		std::string tokenName = token.ToString();
+		if (tokenNameToInstantiatedIdentifierIdx.find(tokenName) == tokenNameToInstantiatedIdentifierIdx.end())
+		{
+			errorReason = "Use of undefined type";
+			errorToken = token;
+			return nullptr;
+		}
+		i32 idx = tokenNameToInstantiatedIdentifierIdx[tokenName];
 		assert(idx >= 0 && idx < variableCount);
 		return instantiatedIdentifiers[idx].value;
 	}
@@ -3725,79 +3817,6 @@ namespace flex
 			   (i32)type < (i32)TokenType::KEYWORDS_END;
 	}
 
-	char TokenContext::ConsumeNextChar()
-	{
-		assert((bufferPtr + 1 - buffer) <= bufferLen);
-
-		char nextChar = bufferPtr[0];
-		bufferPtr++;
-		linePos++;
-		if (nextChar == '\n')
-		{
-			linePos = 0;
-			lineNumber++;
-		}
-		return nextChar;
-	}
-
-	char TokenContext::PeekNextChar() const
-	{
-		assert((bufferPtr - buffer) <= bufferLen);
-
-		return bufferPtr[0];
-	}
-
-	char TokenContext::PeekChar(i32 index) const
-	{
-		assert(index >= 0 && index < GetRemainingLength());
-
-		return bufferPtr[index];
-
-	}
-
-	glm::i32 TokenContext::GetRemainingLength() const
-	{
-		return bufferLen - (bufferPtr - buffer);
-	}
-
-	TokenContext::TokenContext()
-	{
-		Reset();
-	}
-
-	TokenContext::~TokenContext()
-	{
-		delete[] instantiatedIdentifiers;
-		instantiatedIdentifiers = nullptr;
-		variableCount = 0;
-	}
-
-	void TokenContext::Reset()
-	{
-		buffer = nullptr;
-		bufferPtr = nullptr;
-		bufferLen = -1;
-		errorReason = "";
-		errorToken = g_EmptyToken;
-		linePos = 0;
-		lineNumber = 0;
-
-		errors.clear();
-
-		if (instantiatedIdentifiers != nullptr)
-		{
-			delete[] instantiatedIdentifiers;
-		}
-		variableCount = 0;
-		instantiatedIdentifiers = new InstantiatedIdentifier[MAX_VARS];
-		tokenIDToInstantiatedIdentifierIdx.clear();
-	}
-
-	bool TokenContext::HasNextChar() const
-	{
-		return GetRemainingLength() > 0;
-	}
-
 	Tokenizer::Tokenizer()
 	{
 		assert(context == nullptr);
@@ -3817,15 +3836,18 @@ namespace flex
 	Tokenizer::~Tokenizer()
 	{
 		SafeDelete(context);
+		codeStrCopy = "";
 	}
 
 	void Tokenizer::SetCodeStr(const std::string& newCodeStr)
 	{
 		assert(context != nullptr);
 
+		codeStrCopy = newCodeStr;
+
 		context->Reset();
-		context->buffer = context->bufferPtr = (char*)newCodeStr.c_str();
-		context->bufferLen = (i32)newCodeStr.size();
+		context->buffer = context->bufferPtr = (char*)codeStrCopy.c_str();
+		context->bufferLen = (i32)codeStrCopy.size();
 		nextTokenID = 0;
 		bConsumedLastParsedToken = true;
 		lastParsedToken = g_EmptyToken;
@@ -4031,57 +4053,57 @@ namespace flex
 				}
 				else if (isdigit(c))
 				{
-					//i32 numIndex = 0;
+					// TODO: Handle "0x" prefix
+
 					bool bConsumedDecimal = false;
 					bool bConsumedF = false;
-					//bool bValidNum = true;
-					while (context->HasNextChar() && isdigit(context->PeekNextChar()))
-					{
-						context->ConsumeNextChar();
-					}
-					//while (context->HasNextChar())
-					//{
-					//	char nc = context->PeekNextChar();
-					//	while (isdigit(nc) || nc == 'f' || nc == '.')
-					//	{
-					//		// Ensure f comes last if at all
-					//		if (nc == 'f')
-					//		{
-					//			if (numIndex == 0)
-					//			{
-					//				context->errorReason = "Found 'f' in number definition before any digits";
-					//				bValidNum = false;
-					//			}
-					//			else
-					//			{
-					//				bConsumedF = true;
-					//				if (context->HasNextChar())
-					//				{
-					//					if (!isspace(context->PeekNextChar()))
-					//					{
-					//						context->errorReason = "'f' in number definition must come last";
-					//						bValidNum = false;
-					//					}
-					//				}
-					//			}
-					//		}
-					//		// Ensure . appears only once if at all
-					//		if (nc == '.')
-					//		{
-					//			if (bConsumedDecimal)
-					//			{
-					//				context->errorReason = "Found multiple decimals in number";
-					//				bValidNum = false;
-					//			}
-					//			else
-					//			{
-					//				bConsumedDecimal = true;
-					//			}
-					//		}
+					bool bValidNum = true;
 
-					//		context->ConsumeNextChar();
-					//	}
-					//}
+					if (context->HasNextChar())
+					{
+						bool bCharIsValid = true;
+						char nc;
+						do
+						{
+							nc = context->PeekNextChar();
+							bCharIsValid = ValidDigitChar(nc);
+
+							if (nc == 'f')
+							{
+								// Ensure f comes last if at all
+								bConsumedF = true;
+								if (context->HasNextChar())
+								{
+									char nnc = context->PeekChar(1);
+									if (ValidDigitChar(nnc))
+									{
+										context->errorReason = "Incorrectly formatted number, 'f' must be final character";
+										bValidNum = false;
+										break;
+									}
+								}
+							}
+
+							// Ensure . appears only once if at all
+							if (nc == '.')
+							{
+								if (bConsumedDecimal)
+								{
+									context->errorReason = "Incorrectly formatted number";
+									bValidNum = false;
+								}
+								else
+								{
+									bConsumedDecimal = true;
+								}
+							}
+
+							if (bCharIsValid)
+							{
+								context->ConsumeNextChar();
+							}
+						} while (bValidNum && context->HasNextChar() && bCharIsValid && !bConsumedF);
+					}
 
 					if (bConsumedDecimal || bConsumedF)
 					{
@@ -4195,6 +4217,11 @@ namespace flex
 		{
 			return ifNo;
 		}
+	}
+
+	bool Tokenizer::ValidDigitChar(char c)
+	{
+		return (isdigit(c) || c == 'f' || c == 'F' || c == '.');
 	}
 
 	TypeName Type::GetTypeNameFromStr(const std::string& str)
@@ -4522,7 +4549,7 @@ namespace flex
 			return value.val.operation->Evaluate(context);
 		case ValueType::IDENTIFIER:
 			// TODO: Apply implicit casting here when necessary
-			return context.GetVarInstanceFromTokenID(token.tokenID);
+			return context.GetVarInstanceFromToken(token);
 		case ValueType::INT_RAW:
 		case ValueType::FLOAT_RAW:
 		case ValueType::BOOL_RAW:
@@ -4558,7 +4585,7 @@ namespace flex
 		//if (value.type == ValueType::IDENTIFIER)
 		//{
 
-		//	context.GetVarInstanceFromTokenID(token.tokenID)->val.identifier->;
+		//	context.GetVarInstanceFromToken(token)->val.identifier->;
 		//}
 
 		//if (value.type == ValueType::OPERATION)
@@ -4612,14 +4639,13 @@ namespace flex
 				}
 				else
 				{
-					Expression* lhs = new Expression(token, identifier);
 					Expression* rhs = Expression::Parse(tokenizer);
 					if (rhs == nullptr)
 					{
 						SafeDelete(identifier);
-						SafeDelete(lhs);
 						return nullptr;
 					}
+					Expression* lhs = new Expression(token, identifier);
 					Operation* operation = new Operation(token, lhs, op, rhs);
 					if (operation == nullptr)
 					{
@@ -4654,13 +4680,12 @@ namespace flex
 				}
 				else
 				{
-					Expression* lhs = new Expression(token, intRaw);
 					Expression* rhs = Expression::Parse(tokenizer);
 					if (rhs == nullptr)
 					{
-						SafeDelete(lhs);
 						return nullptr;
 					}
+					Expression* lhs = new Expression(token, intRaw);
 					Operation* operation = new Operation(token, lhs, op, rhs);
 					if (operation == nullptr)
 					{
@@ -4720,22 +4745,27 @@ namespace flex
 
 	void Assignment::Evaluate(TokenContext& context)
 	{
-		TypeName varTypeName = typeName;
+		TypeName varTypeName = TypeName::_NONE;
 		void* varVal = nullptr;
 		{
 			Value* var = nullptr;
 			if (typeName == TypeName::_NONE)
 			{
-				// Variable already exists
-				var = context.GetVarInstanceFromTokenID(identifier->token.tokenID);
+				var = context.GetVarInstanceFromToken(identifier->token);
+				if (var == nullptr)
+				{
+					return;
+				}
 				varTypeName = var->val.identifier->type;
-
 			}
 			else
 			{
-				// We need to instantiate var with type typeName
-				// TODO: Handle scopes?
-				var = context.InstantiateIdentifier(typeName, identifier->token.ToString(), identifier->token.tokenID);
+				var = context.InstantiateIdentifier(identifier->token, typeName);
+				if (var == nullptr)
+				{
+					return;
+				}
+				varTypeName = typeName;
 			}
 
 			if (var != nullptr)
@@ -4761,8 +4791,6 @@ namespace flex
 
 		if (varVal == nullptr)
 		{
-			context.errorReason = "Failed to retrieve identifier for expression!";
-			context.errorToken = token;
 			return;
 		}
 
@@ -4773,6 +4801,10 @@ namespace flex
 			case TypeName::INT:
 			{
 				Value* rhsVal = rhs->Evaluate(context);
+				if (rhsVal == nullptr)
+				{
+					return;
+				}
 				*((i32*)varVal) = rhsVal->val.intRaw;
 				if (rhsVal->bIsTemporary)
 				{
@@ -4782,6 +4814,10 @@ namespace flex
 			case TypeName::FLOAT:
 			{
 				Value* rhsVal = rhs->Evaluate(context);
+				if (rhsVal == nullptr)
+				{
+					return;
+				}
 				*((real*)varVal) = rhs->Evaluate(context)->val.floatRaw;
 				if (rhsVal->bIsTemporary)
 				{
@@ -4791,6 +4827,10 @@ namespace flex
 			case TypeName::BOOL:
 			{
 				Value* rhsVal = rhs->Evaluate(context);
+				if (rhsVal == nullptr)
+				{
+					return;
+				}
 				*((bool*)varVal) = rhs->Evaluate(context)->val.boolRaw;
 				if (rhsVal->bIsTemporary)
 				{
@@ -4821,7 +4861,23 @@ namespace flex
 		{
 			return nullptr;
 		}
-		tokenizer.GetNextToken(); // Consume '='
+
+		Token equals = tokenizer.GetNextToken();
+		if (equals.type == TokenType::SEMICOLON)
+		{
+			SafeDelete(lhs);
+			tokenizer.context->errorReason = "Uninitialized variables are not supported. Add default value";
+			tokenizer.context->errorToken = token;
+			return nullptr;
+		}
+		if (equals.type != TokenType::ASSIGNMENT)
+		{
+			SafeDelete(lhs);
+			tokenizer.context->errorReason = "Expected '=' after identifier";
+			tokenizer.context->errorToken = token;
+			return nullptr;
+		}
+
 		Expression* rhs = Expression::Parse(tokenizer);
 		if (rhs == nullptr)
 		{
@@ -4919,6 +4975,13 @@ namespace flex
 		Assignment* assignmentStatement = nullptr;
 
 		Token token = tokenizer.PeekNextToken();
+
+		if (token.len == 0)
+		{
+			// Likely reached EOF
+			return nullptr;
+		}
+
 		if (token.type == TokenType::SEMICOLON)
 		{
 			// Empty statement
@@ -5323,11 +5386,14 @@ namespace flex
 	void AST::Destroy()
 	{
 		SafeDelete(rootItem);
+		bValid = false;
 	}
 
 	void AST::Generate()
 	{
 		SafeDelete(rootItem);
+
+		bValid = false;
 
 		Print("Creating AST\n");
 		rootItem = RootItem::Parse(*tokenizer);
@@ -5342,6 +5408,8 @@ namespace flex
 			return;
 		}
 
+		bValid = true;
+
 		Print("Done creating AST\nStatements generated:\n");
 
 		RootItem* item = rootItem;
@@ -5354,7 +5422,7 @@ namespace flex
 
 	void AST::Evaluate()
 	{
-		if (rootItem == nullptr)
+		if (bValid == false)
 		{
 			PrintError("Attempted evaluating invalid AST!\n");
 			return;
@@ -5517,7 +5585,7 @@ namespace flex
 					{
 						pos = firstLinePos;
 						pos.y -= lineHeight * lastErrorPos.y;
-						g_Renderer->DrawStringWS("#", errorColor, pos + right * lineNoWidth * 0.55f, rot, letterSpacing);
+						g_Renderer->DrawStringWS("#", errorColor, pos + right * lineNoWidth * 0.65f, rot, letterSpacing);
 					}
 				}
 			}

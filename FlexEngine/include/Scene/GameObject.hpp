@@ -696,8 +696,8 @@ namespace flex
 		TokenType AttemptParseKeyword(const char* keywordStr, TokenType keywordType);
 		TokenType AttemptParseKeywords(const char* potentialKeywordStrs[], TokenType potentialKeywordTypes[], i32 pos[], i32 potentialCount);
 
-		Value* InstantiateIdentifier(TypeName typeName, const std::string& tokenName, i32 tokenID);
-		Value* GetVarInstanceFromTokenID(i32 tokenID);
+		Value* InstantiateIdentifier(const Token& identifierToken, TypeName typeName);
+		Value* GetVarInstanceFromToken(const Token& token);
 
 		static bool IsKeyword(const char* str);
 		static bool IsKeyword(TokenType type);
@@ -722,9 +722,8 @@ namespace flex
 		InstantiatedIdentifier* instantiatedIdentifiers = nullptr; // Array of length MAX_VARS
 		i32 variableCount = 0;
 
-		std::map<i32, i32> tokenIDToInstantiatedIdentifierIdx;
-		//Value* instantiatedVariables[MAX_VARS];
-		//std::map<std::string, i32> tokenNameMap;
+		// TODO: Hash strings
+		std::map<std::string, i32> tokenNameToInstantiatedIdentifierIdx;
 	};
 
 	struct Tokenizer
@@ -741,6 +740,9 @@ namespace flex
 		void ConsumeWhitespaceAndComments();
 		TokenType Type1IfNextCharIsCElseType2(char c, TokenType ifYes, TokenType ifNo);
 
+		inline bool ValidDigitChar(char c);
+
+		std::string codeStrCopy;
 		TokenContext* context = nullptr;
 
 		i32 nextTokenID = 0;
@@ -1014,6 +1016,7 @@ namespace flex
 
 		RootItem* rootItem = nullptr;
 		Tokenizer* tokenizer = nullptr;
+		bool bValid = false;
 
 		glm::vec2i lastErrorTokenLocation = glm::vec2i(-1);
 	};
