@@ -4045,9 +4045,6 @@ namespace flex
 					}
 				}
 			} break;
-			case '.':
-				nextTokenType = TokenType::DOT;
-				break;
 			case '~':
 				nextTokenType = TokenType::TILDE;
 				break;
@@ -4063,13 +4060,14 @@ namespace flex
 						context->ConsumeNextChar();
 					}
 				}
-				else if (isdigit(c))
+				else if (isdigit(c) || c == '-' || c == '.')
 				{
 					// TODO: Handle "0x" prefix
 
-					bool bConsumedDecimal = false;
+					bool bConsumedDigit = isdigit(c);
+					bool bConsumedDecimal = c == '.';
 					bool bConsumedF = false;
-					bool bValidNum = true;
+					bool bValidNum = bConsumedDigit;
 
 					if (context->HasNextChar())
 					{
@@ -4079,6 +4077,12 @@ namespace flex
 						{
 							nc = context->PeekNextChar();
 							bCharIsValid = ValidDigitChar(nc);
+
+							if (isdigit(nc))
+							{
+								bConsumedDigit = true;
+								bValidNum = true;
+							}
 
 							if (nc == 'f')
 							{
@@ -4117,19 +4121,17 @@ namespace flex
 						} while (bValidNum && context->HasNextChar() && bCharIsValid && !bConsumedF);
 					}
 
-					if (bConsumedDecimal || bConsumedF)
+					if (bConsumedDigit)
 					{
-						nextTokenType = TokenType::FLOAT_LITERAL;
+						if (bConsumedDecimal || bConsumedF)
+						{
+							nextTokenType = TokenType::FLOAT_LITERAL;
+						}
+						else
+						{
+							nextTokenType = TokenType::INT_LITERAL;
+						}
 					}
-					else
-					{
-						nextTokenType = TokenType::INT_LITERAL;
-					}
-				}
-				else
-				{
-					PrintError("Unrecognized token: %c\n", c);
-					nextTokenType = TokenType::_NONE;
 				}
 				break;
 			}
@@ -4269,6 +4271,38 @@ namespace flex
 	{
 	}
 
+	// TODO: Support implicit casting
+	bool ValidOperatorOnType(OperatorType op, TypeName type)
+	{
+		switch (op)
+		{
+		case OperatorType::ADD:
+		case OperatorType::SUB:
+		case OperatorType::MUL:
+		case OperatorType::DIV:
+		case OperatorType::MOD:
+		case OperatorType::BIN_AND:
+		case OperatorType::BIN_OR:
+		case OperatorType::BIN_XOR:
+		case OperatorType::GREATER:
+		case OperatorType::GREATER_EQUAL:
+		case OperatorType::LESS:
+		case OperatorType::LESS_EQUAL:
+		case OperatorType::NEGATE:
+			return (type == TypeName::INT || type == TypeName::FLOAT);
+		case OperatorType::ASSIGN:
+		case OperatorType::EQUAL:
+		case OperatorType::NOT_EQUAL:
+			return true;
+		case OperatorType::BOOLEAN_AND:
+		case OperatorType::BOOLEAN_OR:
+			return (type == TypeName::BOOL);
+		default:
+			PrintError("Unhandled operator type in ValidOperatorOnType: %d\n", (i32)op);
+			return false;
+		}
+	}
+
 	TypeName ValueTypeToTypeName(ValueType valueType)
 	{
 		switch (valueType)
@@ -4312,6 +4346,16 @@ namespace flex
 	{
 		SafeDelete(lhs);
 		SafeDelete(rhs);
+	}
+
+	template<class T>
+	Value* EvaluateUnaryOperation(T* val, OperatorType op)
+	{
+		switch (op)
+		{
+		case OperatorType::NEGATE:			return new Value(-(*val), true);
+		default:							return nullptr;
+		}
 	}
 
 	template<class T>
@@ -4366,8 +4410,48 @@ namespace flex
 	Value* Operation::Evaluate(TokenContext& context)
 	{
 		Value* newVal = nullptr;
-		Value* lhsVar = lhs->Evaluate(context);
+
 		Value* rhsVar = rhs->Evaluate(context);
+		if (rhsVar == nullptr)
+		{
+			return nullptr;
+		}
+
+		if (lhs == nullptr)
+		{
+			switch (rhsVar->type)
+			{
+			case ValueType::INT_RAW:
+				newVal = EvaluateUnaryOperation(&rhsVar->val.intRaw, op);
+				break;
+			case ValueType::FLOAT_RAW:
+				newVal = EvaluateUnaryOperation(&rhsVar->val.floatRaw, op);
+				break;
+			case ValueType::BOOL_RAW:
+				newVal = EvaluateUnaryOperation(&rhsVar->val.boolRaw, op);
+				break;
+			default:
+				context.errorReason = "Unexpected type name in operation";
+				context.errorToken = rhs->token;
+				break;
+			}
+
+			if (rhsVar->bIsTemporary)
+			{
+				SafeDelete(rhsVar);
+			}
+
+			if (newVal == nullptr)
+			{
+				context.errorReason = "Malformed unary operation";
+				context.errorToken = rhs->token;
+				return nullptr;
+			}
+
+			return newVal;
+		}
+
+		Value* lhsVar = lhs->Evaluate(context);
 
 		// TODO: Handle implicit conversions
 		if (lhsVar->type != rhsVar->type)
@@ -4626,6 +4710,19 @@ namespace flex
 	Expression* Expression::Parse(Tokenizer& tokenizer)
 	{
 		Token token = tokenizer.PeekNextToken();
+		bool bNegative = false;
+		if (token.type == TokenType::SUBTRACT)
+		{
+			tokenizer.GetNextToken();
+			bNegative = true;
+			return new Expression(token, new Operation(token, nullptr, OperatorType::NEGATE, Expression::Parse(tokenizer)));
+		}
+
+		if (!tokenizer.context->HasNextChar())
+		{
+			return nullptr;
+		}
+
 		if (token.type == TokenType::IDENTIFIER)
 		{
 			Identifier* identifier = Identifier::Parse(tokenizer, TypeName::_NONE);
@@ -4683,15 +4780,15 @@ namespace flex
 			}
 			else
 			{
-				OperatorType op = Operator::Parse(tokenizer);
-				if (op == OperatorType::_NONE)
+				OperatorType op = OperatorType::_NONE;
+				if (ExpectOperator(tokenizer, token, &op))
 				{
-					tokenizer.context->errorToken = token;
-					tokenizer.context->errorReason = "Expected '=' or ';' after int declaration";
-					return nullptr;
-				}
-				else
-				{
+					if (!ValidOperatorOnType(op, TypeName::INT))
+					{
+						tokenizer.context->errorReason = "Invalid operator on type int";
+						tokenizer.context->errorToken = token;
+						return nullptr;
+					}
 					Expression* rhs = Expression::Parse(tokenizer);
 					if (rhs == nullptr)
 					{
@@ -4699,25 +4796,87 @@ namespace flex
 					}
 					Expression* lhs = new Expression(token, intRaw);
 					Operation* operation = new Operation(token, lhs, op, rhs);
-					if (operation == nullptr)
-					{
-						SafeDelete(lhs);
-						SafeDelete(rhs);
-						return nullptr;
-					}
 					return new Expression(token, operation);
+				}
+				else
+				{
+					return nullptr;
 				}
 			}
 		}
 		if (token.type == TokenType::FLOAT_LITERAL)
 		{
 			real floatRaw = ParseFloat(tokenizer.GetNextToken().ToString());
-			return new Expression(token, floatRaw);
+
+			Token nextToken = tokenizer.PeekNextToken();
+			if (nextToken.type == TokenType::SEMICOLON)
+			{
+				// TODO: Check able to be ended here
+				tokenizer.GetNextToken();
+				return new Expression(token, floatRaw);
+			}
+			else
+			{
+				OperatorType op = OperatorType::_NONE;
+				if (ExpectOperator(tokenizer, token, &op))
+				{
+					if (!ValidOperatorOnType(op, TypeName::FLOAT))
+					{
+						tokenizer.context->errorReason = "Invalid operator on type float";
+						tokenizer.context->errorToken = token;
+						return nullptr;
+					}
+					Expression* rhs = Expression::Parse(tokenizer);
+					if (rhs == nullptr)
+					{
+						return nullptr;
+					}
+					Expression* lhs = new Expression(token, floatRaw);
+					Operation* operation = new Operation(token, lhs, op, rhs);
+					return new Expression(token, operation);
+				}
+				else
+				{
+					return nullptr;
+				}
+			}
 		}
 		if (token.type == TokenType::KEY_TRUE || token.type == TokenType::KEY_FALSE)
 		{
 			bool boolRaw = ParseBool(tokenizer.GetNextToken().ToString());
-			return new Expression(token, boolRaw);
+
+			Token nextToken = tokenizer.PeekNextToken();
+			if (nextToken.type == TokenType::SEMICOLON)
+			{
+				// TODO: Check able to be ended here
+				tokenizer.GetNextToken();
+				return new Expression(token, boolRaw);
+			}
+			else
+			{
+				OperatorType op = OperatorType::_NONE;
+				if (ExpectOperator(tokenizer, token, &op))
+				{
+					if (!ValidOperatorOnType(op, TypeName::BOOL))
+					{
+						tokenizer.context->errorReason = "Invalid operator on type bool";
+						tokenizer.context->errorToken = token;
+						return nullptr;
+					}
+					Expression* rhs = Expression::Parse(tokenizer);
+					if (rhs == nullptr)
+					{
+						return nullptr;
+					}
+					Expression* lhs = new Expression(token, boolRaw);
+					Operation* operation = new Operation(token, lhs, op, rhs);
+					return new Expression(token, operation);
+				}
+				else
+				{
+					return nullptr;
+				}
+			}
 		}
 
 		TypeName typeName = Type::Parse(tokenizer);
@@ -4736,6 +4895,18 @@ namespace flex
 		tokenizer.context->errorReason = "Unexpected expression type";
 		tokenizer.context->errorToken = token;
 		return nullptr;
+	}
+
+	bool Expression::ExpectOperator(Tokenizer &tokenizer, Token token, OperatorType* outOp)
+	{
+		*outOp = Operator::Parse(tokenizer);
+		if (*outOp == OperatorType::_NONE)
+		{
+			tokenizer.context->errorToken = token;
+			tokenizer.context->errorReason = "Expected '=' or ';' after int declaration";
+			return false;
+		}
+		return true;
 	}
 
 	Assignment::Assignment(const Token& token,
@@ -4817,7 +4988,19 @@ namespace flex
 				{
 					return;
 				}
-				*((i32*)varVal) = rhsVal->val.intRaw;
+				if (rhsVal->type == ValueType::INT_RAW)
+				{
+					*((i32*)varVal) = rhsVal->val.intRaw;
+				}
+				else if (rhsVal->type == ValueType::FLOAT_RAW)
+				{
+					*((i32*)varVal) = (i32)rhsVal->val.floatRaw;
+				}
+				else
+				{
+					context.errorReason = "Invalid value type assigned to int";
+					context.errorToken = token;
+				}
 				if (rhsVal->bIsTemporary)
 				{
 					SafeDelete(rhsVal);
@@ -4830,7 +5013,19 @@ namespace flex
 				{
 					return;
 				}
-				*((real*)varVal) = rhs->Evaluate(context)->val.floatRaw;
+				if (rhsVal->type == ValueType::INT_RAW)
+				{
+					*((real*)varVal) = (real)rhsVal->val.intRaw;
+				}
+				else if (rhsVal->type == ValueType::FLOAT_RAW)
+				{
+					*((real*)varVal) = rhsVal->val.floatRaw;
+				}
+				else
+				{
+					context.errorReason = "Invalid value type assigned to float";
+					context.errorToken = token;
+				}
 				if (rhsVal->bIsTemporary)
 				{
 					SafeDelete(rhsVal);
@@ -4843,7 +5038,15 @@ namespace flex
 				{
 					return;
 				}
-				*((bool*)varVal) = rhs->Evaluate(context)->val.boolRaw;
+				if (rhsVal->type == ValueType::BOOL_RAW)
+				{
+					*((bool*)varVal) = rhsVal->val.boolRaw;
+				}
+				else
+				{
+					context.errorReason = "Invalid value type assigned to bool";
+					context.errorToken = token;
+				}
 				if (rhsVal->bIsTemporary)
 				{
 					SafeDelete(rhsVal);
@@ -5599,7 +5802,7 @@ namespace flex
 					{
 						pos = firstLinePos;
 						pos.y -= lineHeight * lastErrorPos.y;
-						g_Renderer->DrawStringWS("#", errorColor, pos + right * lineNoWidth * 0.65f, rot, letterSpacing);
+						g_Renderer->DrawStringWS("#", errorColor, pos + right * lineNoWidth * 0.25f, rot, letterSpacing);
 					}
 				}
 			}

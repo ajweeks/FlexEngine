@@ -175,17 +175,19 @@
 			},
 			"terminal" : 
 			{
-				"str" : "float _ = 45688.01f  ;  int aaa = 1;
+				"str" : "float _ = 1.19f;  int aaa = 0108;
 int var = 100;
 int iat = 55;
-int baba = 0151;
+float ff=_-_+_*99.;
+int i = ff;
 int a = var;
 int aba = a;
 int e=1;
 int b = var*var*var;
-bool bbab = true;
+//int negten=(1-1-1);
 int _9a78a89 = 912123132;
-/*int h=var;
+/*int h=var;/* 879 */
+// bool bool; //
 h = var;
 bool falsey = false;
 falsey =!falsey;

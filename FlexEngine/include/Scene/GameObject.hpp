@@ -517,6 +517,14 @@ namespace flex
 
 	};
 
+	struct Tokenizer;
+	struct Value;
+	struct Expression;
+	struct Statement;
+	struct IfStatement;
+	struct WhileStatement;
+	enum class TypeName;
+
 	enum class OperatorType
 	{
 		ASSIGN,
@@ -536,10 +544,10 @@ namespace flex
 		LESS_EQUAL,
 		BOOLEAN_AND,
 		BOOLEAN_OR,
+		NEGATE,
 
 		/*
 		- [] operator
-		- unary operands
 		- +=, -=, *=, /=
 		- ! operator
 		- parentheses
@@ -550,13 +558,7 @@ namespace flex
 		_NONE
 	};
 
-	struct Tokenizer;
-	struct Value;
-	struct Expression;
-	struct Statement;
-	struct IfStatement;
-	struct WhileStatement;
-	enum class TypeName;
+	bool ValidOperatorOnType(OperatorType op, TypeName type);
 
 	struct Operator
 	{
@@ -586,7 +588,6 @@ namespace flex
 		TERNARY,
 		INT_LITERAL,
 		FLOAT_LITERAL,
-		BOOL_LITERAL,
 		ASSIGNMENT,
 		//FUNCTION_DEF,
 		//FUNCITON_CALL,
@@ -623,7 +624,6 @@ namespace flex
 		STRING,
 		TILDE,
 		BACK_QUOTE,
-		DOT,
 
 		KEYWORDS_START, // Not a valid type!
 		//KEY_RETURN,
@@ -816,7 +816,7 @@ namespace flex
 		~Operation();
 
 		OperatorType op;
-		Expression* lhs;
+		Expression* lhs; // Is null when this is a unary operation
 		Expression* rhs;
 
 		// Returns the result of the comparison, or the new value of the lhs of the assignment
@@ -866,6 +866,7 @@ namespace flex
 		Expression(const Token& token, real floatRaw);
 		Expression(const Token& token, bool boolRaw);
 		Expression(const Token& token, Identifier* identifier);
+		Expression(const Token& token, TypeName type, void* value);
 		~Expression();
 
 		Value value;
@@ -875,6 +876,9 @@ namespace flex
 		//bool Compare(TokenContext& context, Expression* other, OperatorType op);
 
 		static Expression* Parse(Tokenizer& tokenizer);
+		static bool ExpectOperator(Tokenizer &tokenizer, Token token, OperatorType* outOp);
+
+
 	};
 
 	struct Assignment : public Node
