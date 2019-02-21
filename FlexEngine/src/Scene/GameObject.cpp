@@ -5750,7 +5750,7 @@ namespace flex
 			const glm::vec3 up = m_Transform.GetUp();
 			const glm::vec3 forward = m_Transform.GetForward();
 
-			const real width = 1.4f;
+			const real width = 1.3f;
 			const real height = 1.65f;
 			const glm::vec3 posTL = m_Transform.GetWorldPosition() +
 				right * (width / 2.0f) +
@@ -5760,17 +5760,17 @@ namespace flex
 			glm::vec3 pos = posTL;
 
 			const glm::quat rot = m_Transform.GetWorldRotation();
-			const real lineHeight = 0.075f;
-			const real magicF = magic * font->GetSize();
-			const real lineNoWidth = 1.75f * lineHeight;
+			real charHeight = g_Renderer->GetStringHeight("W", font, false);
+			// TODO: Get rid of magic numbers
+			const real lineHeight = charHeight * (magicY/1000.0f); // fontSize / 215.0f;
+			real charWidth = (magicX / 1000.0f) * g_Renderer->GetStringWidth("W", font, letterSpacing, false);
+			const real lineNoWidth = 2.2f * charWidth;
 
 			if (bRenderCursor)
 			{
-				real cursorXO = g_Renderer->GetStringWidth(lines[cursor.y].substr(0, cursor.x), font, letterSpacing, false);
 				// TODO: Get rid of magic numbers
-				cursorXO -= 0.01f;
 				glm::vec3 cursorPos = pos;
-				cursorPos += right * (cursorXO * -magicF) + up * (cursor.y * -lineHeight);
+				cursorPos += (-right * charWidth * (real)cursor.x) + up * (cursor.y * -lineHeight);
 				g_Renderer->DrawStringWS("|", VEC4_ONE, cursorPos, rot, letterSpacing);
 			}
 
@@ -5796,14 +5796,10 @@ namespace flex
 					{
 						pos = firstLinePos;
 						pos.y -= lineHeight * lastErrorPos.y;
-						g_Renderer->DrawStringWS("#", errorColor, pos + right * lineNoWidth * 0.25f, rot, letterSpacing);
+						g_Renderer->DrawStringWS("!", errorColor, pos + right * charWidth * 0.9f, rot, letterSpacing);
 					}
 				}
 			}
-
-			//glm::vec3 posBR = posTL - (right * width * 0.92f) - (up * height * 0.92f);
-			//glm::vec4 col = bParsePassed ? glm::vec4(0.3f, 0.8f, 0.3f, 1.0f) : glm::vec4(0.8f, 0.3f, 0.3f, 1.0f);
-			//g_Renderer->DrawStringWS("#", col, posBR, rot, letterSpacing);
 		}
 	}
 
@@ -5813,7 +5809,8 @@ namespace flex
 
 		ImGui::Begin("Terminal");
 		{
-			//ImGui::Text("Cursor: %d, %d", cursor.x, cursor.y);
+			ImGui::DragFloat("Magic X", &magicX, 0.01f);
+			ImGui::DragFloat("Magic Y", &magicY, 0.01f);
 
 			ImGui::Text("Variables");
 			if (ImGui::BeginChild("Variables", ImVec2(0.0f, 220.0f), true))
