@@ -3721,9 +3721,12 @@ namespace flex
 						bMatched = true;
 						if (++keywordPositions[i] >= (i32)strlen(potentialKeywordStrs[i]))
 						{
-							if (!HasNextChar() || isspace(PeekNextChar()))
+							bool bLastChar = (GetRemainingLength() == 1);
+							char nc = bLastChar ? ' ' : PeekChar(1);
+							if (bLastChar || !(isalpha(nc) || isdigit(nc) || nc == '_'))
 							{
 								matchedKeywordIndex = i;
+								ConsumeNextChar();
 								break;
 							}
 							else
@@ -3747,7 +3750,8 @@ namespace flex
 
 			if (bMatched)
 			{
-				c = ConsumeNextChar();
+				ConsumeNextChar();
+				c = PeekNextChar();
 			}
 			else
 			{
@@ -4855,6 +4859,10 @@ namespace flex
 			bool boolRaw = ParseBool(tokenizer.GetNextToken().ToString());
 
 			Token nextToken = tokenizer.PeekNextToken();
+			if (nextToken.type == TokenType::CLOSE_PAREN)
+			{
+				return new Expression(token, boolRaw);
+			}
 			if (nextToken.type == TokenType::SEMICOLON)
 			{
 				// TODO: Check able to be ended here
@@ -5228,12 +5236,35 @@ namespace flex
 		}
 		else if (token.type == TokenType::KEY_ELSE)
 		{
+			tokenizer.GetNextToken(); // Consume 'else'
+
+			{
+				Token nextToken = tokenizer.GetNextToken();
+				if (nextToken.type != TokenType::OPEN_BRACKET)
+				{
+					tokenizer.context->errorReason = "Expected '{' after else";
+					tokenizer.context->errorToken = token;
+					return nullptr;
+				}
+			}
+
 			statementType = StatementType::ELSE;
 			elseStatement = Statement::Parse(tokenizer);
 			if (elseStatement == nullptr)
 			{
 				return nullptr;
 			}
+
+			{
+				Token nextToken = tokenizer.GetNextToken();
+				if (nextToken.type != TokenType::CLOSE_BRACKET)
+				{
+					tokenizer.context->errorReason = "Expected '}' after else body";
+					tokenizer.context->errorToken = token;
+					return nullptr;
+				}
+			}
+
 		}
 		else if (token.type == TokenType::KEY_WHILE)
 		{
@@ -5388,13 +5419,32 @@ namespace flex
 			return nullptr;
 		}
 
+		{
+			Token nextToken = tokenizer.GetNextToken();
+			if (nextToken.type != TokenType::OPEN_PAREN)
+			{
+				tokenizer.context->errorReason = "Expected '(' after if";
+				tokenizer.context->errorToken = token;
+				return nullptr;
+			}
+		}
+
 		Expression* condition = Expression::Parse(tokenizer);
 		if (condition == nullptr)
 		{
 			return nullptr;
 		}
 
-		// TODO: Handle single line while loops
+		{
+			Token nextToken = tokenizer.GetNextToken();
+			if (nextToken.type != TokenType::CLOSE_PAREN)
+			{
+				tokenizer.context->errorReason = "Expected ')' after if statement condition";
+				tokenizer.context->errorToken = token;
+				return nullptr;
+			}
+		}
+
 		{
 			Token nextToken = tokenizer.GetNextToken();
 			if (nextToken.type != TokenType::OPEN_BRACKET)
@@ -5764,7 +5814,7 @@ namespace flex
 			// TODO: Get rid of magic numbers
 			const real lineHeight = charHeight * (magicY/1000.0f); // fontSize / 215.0f;
 			real charWidth = (magicX / 1000.0f) * g_Renderer->GetStringWidth("W", font, letterSpacing, false);
-			const real lineNoWidth = 2.2f * charWidth;
+			const real lineNoWidth = 3.0f * charWidth;
 
 			if (bRenderCursor)
 			{
@@ -5796,7 +5846,7 @@ namespace flex
 					{
 						pos = firstLinePos;
 						pos.y -= lineHeight * lastErrorPos.y;
-						g_Renderer->DrawStringWS("!", errorColor, pos + right * charWidth * 0.9f, rot, letterSpacing);
+						g_Renderer->DrawStringWS("!", errorColor, pos + right * charWidth * 1.0f, rot, letterSpacing);
 					}
 				}
 			}

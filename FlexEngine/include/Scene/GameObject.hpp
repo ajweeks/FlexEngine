@@ -1081,7 +1081,7 @@ namespace flex
 		std::vector<std::string> lines;
 		bool bParsePassed = false;
 
-		real magicX = 5.6f;
+		real magicX = 2.87f;
 		real magicY = 3.1f;
 
 		glm::vec2i cursor;
