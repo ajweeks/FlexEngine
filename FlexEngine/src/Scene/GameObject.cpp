@@ -3663,14 +3663,21 @@ namespace flex
 	TokenType TokenContext::AttemptParseKeyword(const char* keywordStr, TokenType keywordType)
 	{
 		i32 keywordPos = 1; // Assume first letter is already consumed
-		char c = ConsumeNextChar();
-		while (keywordPos < (i32)strlen(keywordStr) && c == keywordStr[keywordPos])
+		char c = PeekNextChar();
+		if (!(isalpha(c) || isdigit(c) || c == '_'))
+		{
+			// Next char is delimiter, token must be one char long
+			return TokenType::IDENTIFIER;
+		}
+
+		while (keywordPos < (i32)strlen(keywordStr) && PeekNextChar() == keywordStr[keywordPos])
 		{
 			c = ConsumeNextChar();
 			++keywordPos;
 		}
 
-		const bool bCIsDelimiter = !(isalpha(c) || isdigit(c) || c == '_');
+		char nc = PeekNextChar();
+		const bool bCIsDelimiter = !(isalpha(nc) || isdigit(nc) || nc == '_');
 		if (keywordPos == (i32)strlen(keywordStr) && bCIsDelimiter)
 		{
 			return keywordType;
@@ -3681,25 +3688,27 @@ namespace flex
 		{
 			ConsumeNextChar();
 		}
+
 		return TokenType::IDENTIFIER;
 	}
 
 	TokenType TokenContext::AttemptParseKeywords(const char* potentialKeywordStrs[], TokenType potentialKeywordTypes[], i32 keywordPositions[], i32 potentialCount)
 	{
+		char c = PeekNextChar();
+		if (!(isalpha(c) || isdigit(c) || c == '_'))
+		{
+			// Next char is delimiter, token must be one char long
+			return TokenType::IDENTIFIER;
+		}
+
 		for (i32 i = 0; i < potentialCount; ++i)
 		{
 			keywordPositions[i] = 1;
 		}
 
 		i32 matchedKeywordIndex = -1;
-		char c = PeekNextChar();
 		bool bMatched = true;
-		if (!(isalpha(c) || isdigit(c) || c == '_'))
-		{
-			// One letter identifier followed by non-whitespace
-			return TokenType::IDENTIFIER;
-		}
-		ConsumeNextChar();
+
 		while (bMatched)
 		{
 			bMatched = false;
@@ -5077,15 +5086,15 @@ namespace flex
 			return nullptr;
 		}
 
-		Token equals = tokenizer.GetNextToken();
-		if (equals.type == TokenType::SEMICOLON)
+		Token nextToken = tokenizer.GetNextToken();
+		if (nextToken.type == TokenType::SEMICOLON)
 		{
 			SafeDelete(lhs);
 			tokenizer.context->errorReason = "Uninitialized variables are not supported. Add default value";
 			tokenizer.context->errorToken = token;
 			return nullptr;
 		}
-		if (equals.type != TokenType::ASSIGNMENT)
+		if (nextToken.type != TokenType::ASSIGNMENT)
 		{
 			SafeDelete(lhs);
 			tokenizer.context->errorReason = "Expected '=' after identifier";
@@ -5610,7 +5619,6 @@ namespace flex
 
 		bValid = false;
 
-		Print("Creating AST\n");
 		rootItem = RootItem::Parse(*tokenizer);
 
 		if (!tokenizer->context->errorReason.empty())
@@ -5626,26 +5634,14 @@ namespace flex
 		bValid = true;
 
 		lastErrorTokenLocation = glm::vec2i(-1);
-
-		Print("Done creating AST\nStatements generated:\n");
-
-		RootItem* item = rootItem;
-		while (item != nullptr)
-		{
-;			Print("    %s\n", StatementTypeStrings[(i32)item->statement->type]);
-			item = item->nextItem;
-		}
 	}
 
 	void AST::Evaluate()
 	{
 		if (bValid == false)
 		{
-			PrintError("Attempted evaluating invalid AST!\n");
 			return;
 		}
-
-		Print("Evaluating AST\n");
 
 		bool bSuccess = true;
 
@@ -5675,8 +5671,6 @@ namespace flex
 		{
 			lastErrorTokenLocation = glm::vec2i(-1);
 		}
-
-		Print("Done evaluating AST\n");
 	}
 
 	Terminal::Terminal() :
@@ -5790,7 +5784,7 @@ namespace flex
 				for (i32 lineNumber = 0; lineNumber < (i32)lines.size(); ++lineNumber)
 				{
 					glm::vec4 lineNoCol = (lineNumber == cursor.y ? lineNumberColorActive : lineNumberColor);
-					g_Renderer->DrawStringWS(IntToString(lineNumber, 2, ' '), lineNoCol, pos + right * lineNoWidth, rot, letterSpacing);
+					g_Renderer->DrawStringWS(IntToString(lineNumber + 1, 2, ' '), lineNoCol, pos + right * lineNoWidth, rot, letterSpacing);
 					g_Renderer->DrawStringWS(lines[lineNumber], textColor, pos, rot, letterSpacing);
 					pos.y -= lineHeight;
 				}
@@ -5819,13 +5813,9 @@ namespace flex
 
 		ImGui::Begin("Terminal");
 		{
-			ImGui::Text("Cursor: %d, %d", cursor.x, cursor.y);
-			ImGui::Text("Max x: %d", cursorMaxX);
-			ImGui::Text("Lines: %d", lines.size());
-			ImGui::Text("Current line len: %d", lines[cursor.y].size());
+			//ImGui::Text("Cursor: %d, %d", cursor.x, cursor.y);
 
-			//ImGui::SliderFloat("Magic", &magic, 0.0001f, 0.01f);
-
+			ImGui::Text("Variables");
 			if (ImGui::BeginChild("Variables", ImVec2(0.0f, 220.0f), true))
 			{
 				for (i32 i = 0; i < tokenizer->context->variableCount; ++i)
