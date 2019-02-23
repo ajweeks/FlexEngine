@@ -1,6 +1,5 @@
 #include "stdafx.hpp"
 
-//#include "MinWindows.hpp"
 #include "FlexEngine.hpp"
 
 // Memory leak checking includes

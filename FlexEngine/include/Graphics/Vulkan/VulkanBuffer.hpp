@@ -1,7 +1,7 @@
 #pragma once
 #if COMPILE_VULKAN
 
-IGNORE_WARNINGS_PUSH // Don't generate warnings for 3rd party code    
+IGNORE_WARNINGS_PUSH
 #include <vulkan/vulkan.hpp>
 IGNORE_WARNINGS_POP
 

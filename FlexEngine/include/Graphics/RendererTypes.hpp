@@ -20,42 +20,52 @@ namespace flex
 	class VertexBufferData;
 	class GameObject;
 
-#define BIT(x) (1 << x)
-
-	enum class Uniform : i64
-	{
-		MODEL						= BIT(0),
-		MODEL_INV_TRANSPOSE			= BIT(1),
-		VIEW						= BIT(2),
-		VIEW_PROJECTION				= BIT(3),
-		PROJECTION					= BIT(4),
-		COLOR_MULTIPLIER			= BIT(5),
-		CAM_POS						= BIT(6),
-		DIR_LIGHT					= BIT(7),
-		POINT_LIGHTS				= BIT(8),
-		ALBEDO_SAMPLER				= BIT(9),
-		CONST_ALBEDO				= BIT(10),
-		METALLIC_SAMPLER			= BIT(11),
-		CONST_METALLIC				= BIT(12),
-		ROUGHNESS_SAMPLER			= BIT(13),
-		CONST_ROUGHNESS				= BIT(14),
-		AO_SAMPLER					= BIT(15),
-		CONST_AO					= BIT(16),
-		NORMAL_SAMPLER				= BIT(17),
-		ENABLE_CUBEMAP_SAMPLER		= BIT(18),
-		CUBEMAP_SAMPLER				= BIT(19),
-		IRRADIANCE_SAMPLER			= BIT(20),
-		FB_0_SAMPLER				= BIT(21),
-		FB_1_SAMPLER				= BIT(22),
-		FB_2_SAMPLER				= BIT(23),
-		TEXEL_STEP					= BIT(24),
-		SHOW_EDGES					= BIT(25),
-		LIGHT_VIEW_PROJ				= BIT(26),
-		HDR_EQUIRECTANGULAR_SAMPLER	= BIT(27),
-		EXPOSURE					= BIT(28),
-		TRANSFORM_MAT				= BIT(29),
-		TEX_SIZE					= BIT(30),
-	};
+	// Uniforms
+	const u64 U_MODEL							= (1 << 0);
+	const u64 U_MODEL_INV_TRANSPOSE				= (1 << 1);
+	const u64 U_VIEW							= (1 << 3);
+	const u64 U_VIEW_INV						= (1 << 4);
+	const u64 U_VIEW_PROJECTION					= (1 << 5);
+	const u64 U_BLEND_SHARPNESS					= (1 << 6);
+	const u64 U_MODEL_VIEW_PROJ					= (1 << 7);
+	const u64 U_PROJECTION						= (1 << 8);
+	const u64 U_COLOR_MULTIPLIER				= (1 << 9);
+	const u64 U_CAM_POS							= (1 << 10);
+	const u64 U_DIR_LIGHT						= (1 << 11);
+	const u64 U_POINT_LIGHTS					= (1 << 12);
+	const u64 U_ALBEDO_SAMPLER					= (1 << 13);
+	const u64 U_CONST_ALBEDO					= (1 << 14);
+	const u64 U_METALLIC_SAMPLER				= (1 << 15);
+	const u64 U_CONST_METALLIC					= (1 << 16);
+	const u64 U_ROUGHNESS_SAMPLER				= (1 << 17);
+	const u64 U_CONST_ROUGHNESS					= (1 << 18);
+	const u64 U_AO_SAMPLER						= (1 << 19);
+	const u64 U_CONST_AO						= (1 << 20);
+	const u64 U_NORMAL_SAMPLER					= (1 << 21);
+	const u64 U_ENABLE_CUBEMAP_SAMPLER			= (1 << 22);
+	const u64 U_ENABLE_ALBEDO_SAMPLER			= (1 << 23);
+	const u64 U_ENABLE_METALLIC_SAMPLER			= (1 << 24);
+	const u64 U_ENABLE_ROUGHNESS_SAMPLER		= (1 << 25);
+	const u64 U_ENABLE_AO_SAMPLER				= (1 << 26);
+	const u64 U_ENABLE_NORMAL_SAMPLER			= (1 << 27);
+	const u64 U_ENABLE_IRRADIANCE_SAMPLER		= (1 << 28);
+	const u64 U_CUBEMAP_SAMPLER					= (1 << 29);
+	const u64 U_IRRADIANCE_SAMPLER				= (1 << 30);
+	const u64 U_FB_0_SAMPLER					= (1 << 31);
+	const u64 U_FB_1_SAMPLER					= (1 << 32);
+	const u64 U_FB_2_SAMPLER					= (1 << 33);
+	const u64 U_TEXEL_STEP						= (1 << 34);
+	const u64 U_SHOW_EDGES						= (1 << 35);
+	const u64 U_LIGHT_VIEW_PROJ					= (1 << 36);
+	const u64 U_HDR_EQUIRECTANGULAR_SAMPLER		= (1 << 37);
+	const u64 U_BRDF_LUT_SAMPLER				= (1 << 38);
+	const u64 U_PREFILTER_MAP					= (1 << 39);
+	const u64 U_EXPOSURE						= (1 << 40);
+	const u64 U_TRANSFORM_MAT					= (1 << 41);
+	const u64 U_TEX_SIZE						= (1 << 42);
+	const u64 U_UNIFORM_BUFFER_CONSTANT			= (1 << 43);
+	const u64 U_UNIFORM_BUFFER_DYNAMIC			= (1 << 44);
+	const u64 U_TEXTURE_SCALE					= (1 << 45);
 
 	enum class ClearFlag
 	{
@@ -348,11 +358,11 @@ namespace flex
 
 	struct Uniforms
 	{
-		Uniform uniforms;
+		u64 uniforms;
 		std::map<const char*, bool, strCmp> types;
 
-		bool HasUniform(Uniform uniform) const;
-		void AddUniform(Uniform uniform);
+		bool HasUniform(u64 uniform) const;
+		void AddUniform(u64 uniform);
 	};
 
 	struct Shader

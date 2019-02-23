@@ -6,14 +6,14 @@
 
 namespace flex
 {
-	bool Uniforms::HasUniform(Uniform uniform) const
+	bool Uniforms::HasUniform(u64 uniform) const
 	{
-		return ((u64)uniforms & (u64)uniform) != 0;
+		return (uniforms & uniform) != 0;
 	}
 
-	void Uniforms::AddUniform(Uniform uniform)
+	void Uniforms::AddUniform(u64 uniform)
 	{
-		uniforms = (Uniform)((u64)uniforms | (u64)uniform);
+		uniforms = (uniforms | uniform);
 	}
 
 	Shader::Shader(const std::string& name,

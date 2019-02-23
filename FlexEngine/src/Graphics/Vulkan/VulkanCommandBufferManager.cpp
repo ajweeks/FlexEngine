@@ -95,7 +95,7 @@ namespace flex
 
 		bool VulkanCommandBufferManager::CheckCommandBuffers() const
 		{
-			for (VkCommandBuffer& cmdBuffer : m_CommandBuffers)
+			for (const VkCommandBuffer& cmdBuffer : m_CommandBuffers)
 			{
 				if (cmdBuffer == VK_NULL_HANDLE)
 				{

@@ -2,7 +2,10 @@
 
 #include "Track/BezierCurve.hpp"
 
-#include "Graphics/GL/GLPhysicsDebugDraw.hpp"
+IGNORE_WARNINGS_PUSH
+#include <LinearMath/btIDebugDraw.h>
+IGNORE_WARNINGS_POP
+
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 
@@ -26,7 +29,7 @@ namespace flex
 
 	void BezierCurve::DrawDebug(bool bHighlighted, const btVector4& baseColour, const btVector4& highlightColour) const
 	{
-		gl::GLPhysicsDebugDraw* debugDrawer = (gl::GLPhysicsDebugDraw*)g_Renderer->GetDebugDrawer();
+		btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
 
 		btVector4 lineColour = bHighlighted ? highlightColour : baseColour;
 		btVector3 pPoint = ToBtVec3(points[0]);
@@ -44,7 +47,7 @@ namespace flex
 			debugDrawer->drawLine(nPoint, nPoint + ToBtVec3(trackForward), btVector3(0.1f, 0.5f, 0.9f));
 			debugDrawer->drawLine(nPoint, nPoint + ToBtVec3(trackUp), btVector3(0.1f, 0.9f, 0.1f));
 #else
-			debugDrawer->DrawLineWithAlpha(pPoint, nPoint, lineColour);
+			//debugDrawer->DrawLineWithAlpha(pPoint, nPoint, lineColour);
 #endif
 
 			pPoint = nPoint;
@@ -52,8 +55,8 @@ namespace flex
 
 #define DRAW_HANDLES 1
 #if DRAW_HANDLES
-		debugDrawer->DrawLineWithAlpha(ToBtVec3(points[0]), ToBtVec3(points[1]), s_PointColour);
-		debugDrawer->DrawLineWithAlpha(ToBtVec3(points[2]), ToBtVec3(points[3]), s_PointColour);
+		//debugDrawer->DrawLineWithAlpha(ToBtVec3(points[0]), ToBtVec3(points[1]), s_PointColour);
+		//debugDrawer->DrawLineWithAlpha(ToBtVec3(points[2]), ToBtVec3(points[3]), s_PointColour);
 #endif
 
 		for (const glm::vec3& point : points)

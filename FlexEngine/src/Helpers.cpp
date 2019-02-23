@@ -2,6 +2,9 @@
 
 #include "Helpers.hpp"
 
+#include <commdlg.h> // For OPENFILENAME
+#include <shellapi.h> // For ShellExecute
+
 #include <direct.h> // For _getcwd
 #include <stdio.h> // For gcvt, fopen
 #include <iomanip> // for setprecision
@@ -16,7 +19,7 @@ IGNORE_WARNINGS_PUSH
 IGNORE_WARNINGS_POP
 
 #include "FlexEngine.hpp" // For FlexEngine::s_CurrentWorkingDirectory
-#include "Graphics/Renderer.hpp" // For Renderer::MAX_TEXTURE_DIM
+#include "Graphics/Renderer.hpp" // For MAX_TEXTURE_DIM
 #include "Transform.hpp"
 
 // Taken from "AL/al.h":
@@ -60,8 +63,8 @@ namespace flex
 		}
 		else
 		{
-			assert((u32)result.width <= Renderer::MAX_TEXTURE_DIM);
-			assert((u32)result.height <= Renderer::MAX_TEXTURE_DIM);
+			assert((u32)result.width <= MAX_TEXTURE_DIM);
+			assert((u32)result.height <= MAX_TEXTURE_DIM);
 
 			result.pixels = static_cast<unsigned char*>(data);
 		}
@@ -106,8 +109,8 @@ namespace flex
 			return false;
 		}
 
-		assert(width <= Renderer::MAX_TEXTURE_DIM);
-		assert(height <= Renderer::MAX_TEXTURE_DIM);
+		assert(width <= MAX_TEXTURE_DIM);
+		assert(height <= MAX_TEXTURE_DIM);
 
 		return true;
 	}

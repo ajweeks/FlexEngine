@@ -21,11 +21,11 @@ namespace flex
 
 	BitmapFont::~BitmapFont()
 	{
-		if (m_Texture)
-		{
-			m_Texture->Destroy();
-			SafeDelete(m_Texture);
-		}
+		//if (m_Texture)
+		//{
+		//	m_Texture->Destroy();
+		//	SafeDelete(m_Texture);
+		//}
 	}
 
 	bool BitmapFont::IsCharValid(wchar_t character)
@@ -73,22 +73,22 @@ namespace flex
 		m_TextureWidth = texSize.x;
 		m_TextureHeight = texSize.y;
 
-		if (m_Texture)
-		{
-			m_Texture->width = m_TextureWidth;
-			m_Texture->height = m_TextureHeight;
-		}
+		//if (m_Texture)
+		//{
+		//	m_Texture->width = m_TextureWidth;
+		//	m_Texture->height = m_TextureHeight;
+		//}
 	}
 
-	gl::GLTexture* BitmapFont::SetTexture(gl::GLTexture* newTex)
-	{
-		m_Texture = newTex;
-		return newTex;
-	}
-
-	gl::GLTexture* BitmapFont::GetTexture()
-	{
-		return m_Texture;
-	}
+	//gl::GLTexture* BitmapFont::SetTexture(gl::GLTexture* newTex)
+	//{
+	//	m_Texture = newTex;
+	//	return newTex;
+	//}
+	//
+	//gl::GLTexture* BitmapFont::GetTexture()
+	//{
+	//	//return m_Texture;
+	//}
 
 } // namespace flex

@@ -1,16 +1,9 @@
 #pragma once
 
 #include "Helpers.hpp"
-#// TODO: FIXME: GROSS: Remove!!! Ahhhh
-#include "Graphics/GL/GLRenderer.hpp"
 
 namespace flex
 {
-	namespace gl
-	{
-		struct GLTexture;
-	}
-
 	struct FontMetric
 	{
 		glm::vec2 GetKerningOffset(wchar_t leftChar, wchar_t rightChar);
@@ -47,15 +40,15 @@ namespace flex
 
 		void SetTextureSize(const glm::vec2i& texSize);
 
-		gl::GLTexture* SetTexture(gl::GLTexture* newTex);
-		gl::GLTexture* GetTexture();
+		//gl::GLTexture* SetTexture(gl::GLTexture* newTex);
+		//gl::GLTexture* GetTexture();
 
 		// TODO: Investigate crash when this value is higher (256)
 		static const i32 CHAR_COUNT = 200;
 
 	private:
 		// TODO: Remove
-		friend class flex::gl::GLRenderer;
+		//friend class flex::gl::GLRenderer;
 
 		FontMetric m_CharTable[CHAR_COUNT];
 		std::vector<TextCache> m_TextCaches;
@@ -69,7 +62,7 @@ namespace flex
 		i32 m_TextureHeight = 0;
 		i32 m_BufferStart = 0;
 		i32 m_BufferSize = 0;
-		gl::GLTexture* m_Texture = nullptr;
+		//gl::GLTexture* m_Texture = nullptr;
 		bool m_bAddedToRenderer = false;
 
 		bool m_bIsCachedFont = false;

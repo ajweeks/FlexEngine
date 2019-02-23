@@ -1,13 +1,15 @@
 #pragma once
 #if COMPILE_VULKAN
 
-#include "LinearMath\btIDebugDraw.h"
-
-#include "Types.hpp"
+IGNORE_WARNINGS_PUSH
+#include <LinearMath\btIDebugDraw.h>
+IGNORE_WARNINGS_POP
 
 #include <vector>
 
+#include "Graphics/VertexBufferData.hpp"
 #include "Transform.hpp"
+#include "Types.hpp"
 
 namespace flex
 {

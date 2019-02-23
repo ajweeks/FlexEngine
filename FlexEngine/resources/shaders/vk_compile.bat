@@ -20,8 +20,8 @@
 @ glslangvalidator -V vk_pbr.vert -o spv/vk_pbr_vert.spv
 @ glslangvalidator -V vk_pbr.frag -o spv/vk_pbr_frag.spv
 
-@ glslangvalidator -V vk_background.vert -o spv/vk_background_vert.spv
-@ glslangvalidator -V vk_background.frag -o spv/vk_background_frag.spv
+@ glslangvalidator -V vk_pbr_ws.vert -o spv/vk_pbr_ws_vert.spv
+@ glslangvalidator -V vk_pbr_ws.frag -o spv/vk_pbr_ws_frag.spv
 
 @ glslangvalidator -V vk_brdf.vert -o spv/vk_brdf_vert.spv
 @ glslangvalidator -V vk_brdf.frag -o spv/vk_brdf_frag.spv

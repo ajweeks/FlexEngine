@@ -145,7 +145,7 @@ namespace flex
 
 		struct UniformInfo
 		{
-			Uniform uniform;
+			u64 uniform;
 			const char* name;
 			i32* id;
 		};

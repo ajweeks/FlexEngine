@@ -1,16 +1,23 @@
 #pragma once
 #if COMPILE_VULKAN
 
+//IGNORE_WARNINGS_PUSH
+//#if COMPILE_IMGUI
+//#include "ImGui/imgui_impl_vulkan.h" // For ImGui_ImplVulkanH_WindowData
+//#endif // COMPILE_IMGUI
+//IGNORE_WARNINGS_POP
+
 #include <array>
 #include <map>
 
+#include "Callbacks/InputCallbacks.hpp"
 #include "Graphics/Renderer.hpp"
-#include "Graphics/Vulkan/VulkanHelpers.hpp"
 #include "VDeleter.hpp"
 #include "VulkanBuffer.hpp"
+#include "VulkanCommandBufferManager.hpp"
 #include "VulkanDevice.hpp"
+#include "VulkanHelpers.hpp"
 #include "Window/Window.hpp"
-#include "Graphics/Vulkan/VulkanCommandBufferManager.hpp"
 
 namespace flex
 {
@@ -28,53 +35,94 @@ namespace flex
 
 			virtual void Initialize() override;
 			virtual void PostInitialize() override;
+			virtual void Destroy() override;
 
-			virtual MaterialID InitializeMaterial(const MaterialCreateInfo* createInfo) override;
-			virtual u32 InitializeRenderObject(const RenderObjectCreateInfo* createInfo) override;
+			virtual MaterialID InitializeMaterial(const MaterialCreateInfo* createInfo, MaterialID matToReplace = InvalidMaterialID) override;
+			virtual TextureID InitializeTexture(const std::string& relativeFilePath, i32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR) override;
+			virtual RenderID InitializeRenderObject(const RenderObjectCreateInfo* createInfo) override;
 			virtual void PostInitializeRenderObject(RenderID renderID) override;
 
 			virtual void ClearMaterials() override;
-
-			virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) override;
-			virtual void SetClearColor(real r, real g, real b) override;
 
 			virtual void Update() override;
 			virtual void Draw() override;
 			virtual void DrawImGuiRenderObjects() override;
 
+			virtual void UpdateVertexData(RenderID renderID, VertexBufferData* vertexBufferData) override;
+
+			virtual void DrawImGuiForRenderID(RenderID renderID) override;
+
+			virtual void DrawUntexturedQuad(const glm::vec2& pos, AnchorPoint anchor, const glm::vec2& size, const glm::vec4& color) override;
+			virtual void DrawUntexturedQuadRaw(const glm::vec2& pos, const glm::vec2& size, const glm::vec4& color) override;
+			virtual void DrawSprite(const SpriteQuadDrawInfo& drawInfo) override;
+
 			virtual void UpdateRenderObjectVertexData(RenderID renderID) override;
 
 			virtual void ReloadShaders() override;
+			virtual void LoadFonts(bool bForceRender) override;
+
+			virtual void ReloadSkybox(bool bRandomizeTexture) override;
+
+			virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) override;
+			virtual void SetClearColor(real r, real g, real b) override;
 
 			virtual void OnWindowSizeChanged(i32 width, i32 height) override;
+
+			virtual void OnSceneChanged() override;
 
 			virtual bool GetRenderObjectCreateInfo(RenderID renderID, RenderObjectCreateInfo& outInfo) override;
 
 			virtual void SetVSyncEnabled(bool enableVSync) override;
-			virtual bool GetVSyncEnabled() override;
 
 			virtual u32 GetRenderObjectCount() const override;
 			virtual u32 GetRenderObjectCapacity() const override;
 
-			virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size,
-				DataType dataType, bool normalized, i32 stride, void* pointer) override;
+			virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size, DataType dataType, bool normalized, i32 stride, void* pointer) override;
 
-			virtual void SetSkyboxMesh(MeshComponent* skyboxMesh) override;
-			virtual MeshComponent* GetSkyboxMesh() override;
-
+			virtual void SetSkyboxMesh(GameObject* skyboxMesh) override;
+			virtual GameObject* GetSkyboxMesh() override;
 			virtual void SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID) override;
 
 			virtual Material& GetMaterial(MaterialID materialID) override;
 			virtual Shader& GetShader(ShaderID shaderID) override;
 
-			virtual bool GetMaterialID(const std::string& materialName, MaterialID& materialID) override;
 			virtual bool GetShaderID(const std::string& shaderName, ShaderID& shaderID) override;
+			virtual bool GetMaterialID(const std::string& materialName, MaterialID& materialID) override;
 
 			virtual void DestroyRenderObject(RenderID renderID) override;
 
 			virtual void NewFrame() override;
 
 			virtual btIDebugDraw* GetDebugDrawer() override;
+
+			virtual void SetFont(BitmapFont* font) override;
+			// Draws the given string in the center of the screen for a short period of time
+			// Passing an empty string will immediately clear the current string
+			virtual void AddEditorString(const std::string& str) override;
+			virtual void DrawStringSS(const std::string& str,
+				const glm::vec4& color,
+				AnchorPoint anchor,
+				const glm::vec2& pos, // Positional offset from anchor
+				real spacing,
+				bool bRaw = false) override;
+
+			virtual void DrawStringWS(const std::string& str,
+				const glm::vec4& color,
+				const glm::vec3& pos,
+				const glm::quat& rot,
+				real spacing,
+				bool bRaw = false) override;
+
+			virtual void SaveSettingsToDisk(bool bSaveOverDefaults = false, bool bAddEditorStr = true) override;
+			virtual void LoadSettingsFromDisk(bool bLoadDefaults = false) override;
+
+			virtual real GetStringWidth(const std::string& str, BitmapFont* font, real letterSpacing, bool bNormalized) const override;
+			virtual real GetStringHeight(const std::string& str, BitmapFont* font, bool bNormalized) const override;
+
+			virtual void DrawAssetBrowserImGui(bool* bShowing) override;
+			virtual void RecaptureReflectionProbe() override;
+			virtual u32 GetTextureHandle(TextureID textureID) const override;
+			virtual void RenderObjectStateChanged() override;
 
 		private:
 			friend VulkanPhysicsDebugDraw;
@@ -121,6 +169,7 @@ namespace flex
 			void CreateInstance();
 			void SetupDebugCallback();
 			void CreateSurface(Window* window);
+			//void SetupImGuiWindowData(ImGui_ImplVulkanH_WindowData* data, VkSurfaceKHR surface, i32 width, i32 height);
 			VkPhysicalDevice PickPhysicalDevice();
 			void CreateLogicalDevice(VkPhysicalDevice physicalDevice);
 			void CreateSwapChain(Window* window);
@@ -188,9 +237,21 @@ namespace flex
 			void UpdateConstantUniformBuffer(UniformOverrides const* overridenUniforms, size_t bufferIndex);
 			void UpdateDynamicUniformBuffer(RenderID renderID, UniformOverrides const * overridenUniforms = nullptr);
 
+			MaterialID GetNextAvailableMaterialID();
+
 			void LoadDefaultShaderCode();
 
 			void DrawImGuiForRenderObjectAndChildren(GameObject* gameObject);
+			// Returns true if object was duplicated
+			bool DoTextureSelector(const char* label, const std::vector<VulkanTexture*>& textures, i32* selectedIndex, bool* bGenerateSampler);
+			void ImGuiUpdateTextureIndexOrMaterial(bool bUpdateTextureMaterial,
+				const std::string& texturePath,
+				std::string& matTexturePath,
+				VulkanTexture* texture,
+				i32 i,
+				i32* textureIndex,
+				VkSampler* sampler);
+			void DoTexturePreviewTooltip(VulkanTexture* texture);
 
 			static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugReportFlagsEXT flags,
 				VkDebugReportObjectTypeEXT objType, u64 obj, size_t location, i32 code, const char* layerPrefix,
@@ -198,13 +259,18 @@ namespace flex
 
 			VulkanRenderObject* GetRenderObject(RenderID renderID);
 
+			u32 GetActiveRenderObjectCount() const;
+
 			/*
 			 * How many materials we expect to have *at most* at any given time
 			 * This is only used to prevent local material reference variables to
-			 * remain valid, it could (should?) also be solved by storing materials
-			 * in a linked list, rather than a dynamic array
+			 * remain valid, a more robust solution would be to store materials
+			 * in a linked list rather than a dynamic array, as well as store material IDs
+			 * rather than raw pointers
 			*/
 			static const u32 MAT_CAPACITY = 25;
+
+			//ImGui_ImplVulkanH_WindowData m_ImGuiWindowData;
 
 			std::vector<VulkanRenderObject*> m_RenderObjects;
 			std::vector<VulkanMaterial> m_Materials;
@@ -256,7 +322,6 @@ namespace flex
 
 			FrameBuffer* m_CubemapFrameBuffer = nullptr;
 			FrameBufferAttachment* m_CubemapDepthAttachment = nullptr;
-			MeshComponent* m_gBufferCubemapMesh = nullptr;
 			MaterialID m_CubemapGBufferMaterialID = InvalidMaterialID;
 
 			VDeleter<VkRenderPass> m_DeferredCombineRenderPass;
@@ -277,6 +342,13 @@ namespace flex
 
 			u32 m_DynamicAlignment = 0;
 
+			TextureID m_AlphaBGTextureID = InvalidTextureID;
+			TextureID m_LoadingTextureID = InvalidTextureID;
+			TextureID m_WorkTextureID = InvalidTextureID;
+
+			TextureID m_PointLightIconID = InvalidTextureID;
+			TextureID m_DirectionalLightIconID = InvalidTextureID;
+
 			VDeleter<VkSemaphore> m_PresentCompleteSemaphore;
 			VDeleter<VkSemaphore> m_RenderCompleteSemaphore;
 
@@ -289,7 +361,7 @@ namespace flex
 			VertexBufferData m_gBufferQuadVertexBufferData;
 			std::vector<u32> m_gBufferQuadIndices;
 
-			MeshComponent* m_SkyBoxMesh = nullptr;
+			GameObject* m_SkyBoxMesh = nullptr;
 
 			VkClearColorValue m_ClearColor;
 

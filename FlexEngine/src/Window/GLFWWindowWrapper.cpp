@@ -97,23 +97,38 @@ namespace flex
 		m_StartingPosition = m_Position;
 		m_LastWindowedPos = m_Position;
 
-#if DEBUG
-		glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
-#endif // DEBUG
-
 		// Don't hide window when losing focus in Windowed Fullscreen
 		glfwWindowHint(GLFW_AUTO_ICONIFY, GLFW_TRUE);
 		glfwWindowHint(GLFW_FOCUS_ON_SHOW, GLFW_TRUE);
 
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+		if (g_bOpenGLEnabled)
+		{
+#if DEBUG
+			glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
+#endif // DEBUG
+
+			glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+			glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+
+			glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+			glfwWindowHint(GLFW_CONTEXT_CREATION_API, GLFW_OPENGL_CORE_PROFILE);
+		}
+		else if (g_bVulkanEnabled)
+		{
+			if (glfwVulkanSupported() == GLFW_FALSE)
+			{
+				PrintError("Vulkan is not supported!\n");
+				return;
+			}
+
+			glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+		}
 
 		if (m_bMaximized)
 		{
 			glfwWindowHint(GLFW_MAXIMIZED, GL_TRUE);
 		}
 
-		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 		GLFWmonitor* monitor = NULL;
 		if (m_CurrentWindowMode == WindowMode::FULLSCREEN)
@@ -168,34 +183,42 @@ namespace flex
 		glfwFocusWindow(m_Window);
 		m_bHasFocus = true;
 
-		glfwMakeContextCurrent(m_Window);
+		if (g_bOpenGLEnabled)
+		{
+			glfwMakeContextCurrent(m_Window);
 
-		gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
+			gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
 
 #if DEBUG
-		if (glDebugMessageCallback)
-		{
-			glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-			glDebugMessageCallback(glDebugOutput, nullptr);
-			GLuint unusedIds = 0;
-			glDebugMessageControl(GL_DONT_CARE,
-								  GL_DONT_CARE,
-								  GL_DONT_CARE,
-								  0,
-								  &unusedIds,
-								  true);
-		}
+			if (glDebugMessageCallback)
+			{
+				glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+				glDebugMessageCallback(glDebugOutput, nullptr);
+				GLuint unusedIds = 0;
+				glDebugMessageControl(GL_DONT_CARE,
+					GL_DONT_CARE,
+					GL_DONT_CARE,
+					0,
+					&unusedIds,
+					true);
+			}
 #endif // DEBUG
 
-		if (GLAD_GL_KHR_debug)
-		{
-			FlexEngine::s_bHasGLDebugExtension = true;
-		}
+			if (GLAD_GL_KHR_debug)
+			{
+				FlexEngine::s_bHasGLDebugExtension = true;
+			}
 
-		Print("OpenGL loaded\n");
-		Print("Vendor:   %s\n", reinterpret_cast<const char*>(glGetString(GL_VENDOR)));
-		Print("Renderer: %s\n", reinterpret_cast<const char*>(glGetString(GL_RENDERER)));
-		Print("Version:  %s\n\n", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
+			Print("OpenGL loaded\n");
+			Print("Vendor:   %s\n", reinterpret_cast<const char*>(glGetString(GL_VENDOR)));
+			Print("Renderer: %s\n", reinterpret_cast<const char*>(glGetString(GL_RENDERER)));
+			Print("Version:  %s\n\n", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
+		}
+		else if (g_bVulkanEnabled)
+		{
+
+			Print("Vulkan loaded\n");
+		}
 
 		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION  "icons/flex-logo-03_128.png", 4));
 		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION  "icons/flex-logo-03_64.png", 4));

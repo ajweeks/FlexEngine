@@ -65,7 +65,6 @@ namespace flex
 
 			virtual u32 GetRenderObjectCount() const override;
 			virtual u32 GetRenderObjectCapacity() const override;
-			u32 GetActiveRenderObjectCount() const;
 
 			virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size, DataType dataType, bool normalized, i32 stride, void* pointer) override;
 
@@ -115,15 +114,7 @@ namespace flex
 
 			virtual u32 GetTextureHandle(TextureID textureID) const override;
 
-			// Should be called when objects need to be rebatched
 			virtual void RenderObjectStateChanged() override;
-
-			virtual void SetRenderGrid(bool bRenderGrid) override;
-
-			real GetStringWidth(const TextCache& textCache, BitmapFont* font) const;
-			real GetStringHeight(const TextCache& textCache, BitmapFont* font) const;
-
-			void ComputeDirLightViewProj(glm::mat4& outView, glm::mat4& outProj);
 
 		private:
 			struct TextureHandle
@@ -138,10 +129,6 @@ namespace flex
 
 			void DestroyRenderObject(RenderID renderID, GLRenderObject* renderObject);
 
-			/*
-			* Returns true if the parent-child tree changed during this call
-			*/
-			bool DrawGameObjectNameAndChildren(GameObject* gameObject);
 			void PhysicsDebugRender();
 
 			void GenerateReflectionProbeMaps(RenderID cubemapRenderID, MaterialID materialID);
@@ -229,8 +216,6 @@ namespace flex
 
 			void RemoveMaterial(MaterialID materialID);
 
-			// If the object gets deleted this frame *gameObjectRef gets set to nullptr
-			void DoCreateGameObjectButton(const char* buttonName, const char* popupName);
 			// Returns true if object was duplicated
 			bool DoTextureSelector(const char* label, const std::vector<GLTexture*>& textures, i32* selectedIndex, bool* bGenerateSampler);
 			void ImGuiUpdateTextureIndexOrMaterial(bool bUpdateTextureMaterial,
@@ -243,6 +228,13 @@ namespace flex
 			void DoTexturePreviewTooltip(GLTexture* texture);
 
 			void DrawLoadingTextureQuad();
+
+			u32 GetActiveRenderObjectCount() const;
+
+			real GetStringWidth(const TextCache& textCache, BitmapFont* font) const;
+			real GetStringHeight(const TextCache& textCache, BitmapFont* font) const;
+
+			void ComputeDirLightViewProj(glm::mat4& outView, glm::mat4& outProj);
 
 			EventReply OnKeyEvent(KeyCode keyCode, KeyAction action, i32 modifiers);
 			KeyEventCallback<GLRenderer> m_KeyEventCallback;
@@ -276,7 +268,7 @@ namespace flex
 			// TODO: Remove ??
 			TextureHandle m_gBuffer_PositionMetallicHandle;
 			TextureHandle m_gBuffer_NormalRoughnessHandle;
-			TextureHandle m_gBuffer_DiffuseAOHandle;
+			TextureHandle m_gBuffer_AlbedoAOHandle;
 
 			TextureHandle m_ShadowMapTexture;
 			u32 m_ShadowMapFBO = 0;
@@ -387,21 +379,6 @@ namespace flex
 			std::string m_SettingsFilePathAbs;
 
 			sec m_MonitorResCheckTimeRemaining = 0.0f;
-
-			// Must be 12 chars or less
-			const char* m_GameObjectPayloadCStr = "gameobject";
-			const char* m_MaterialPayloadCStr = "material";
-			const char* m_MeshPayloadCStr = "mesh";
-
-			bool m_bRebatchRenderObjects = true;
-
-			bool m_bCaptureScreenshot = false;
-			bool m_bCaptureReflectionProbes = false;
-
-			GameObject* m_Grid = nullptr;
-			GameObject* m_WorldOrigin = nullptr;
-			MaterialID m_GridMaterialID = InvalidMaterialID;
-			MaterialID m_WorldAxisMaterialID = InvalidMaterialID;
 
 			GLRenderer(const GLRenderer&) = delete;
 			GLRenderer& operator=(const GLRenderer&) = delete;

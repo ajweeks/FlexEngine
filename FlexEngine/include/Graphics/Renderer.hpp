@@ -122,10 +122,6 @@ namespace flex
 		// Call whenever a user-controlled field, such as visibility, changes to rebatch render objects
 		virtual void RenderObjectStateChanged() = 0;
 
-		void ToggleRenderGrid();
-		bool IsRenderingGrid() const;
-		virtual void SetRenderGrid(bool bRenderGrid);
-
 		// Pos should lie in range [-1, 1], with y increasing upward
 		// Output pos lies in range [0, 1], with y increasing downward,
 		// Output scale lies in range [0, 1] - both outputs corrected for aspect ratio
@@ -142,6 +138,10 @@ namespace flex
 
 		void SetPostProcessingEnabled(bool bEnabled);
 		bool IsPostProcessingEnabled() const;
+
+		void ToggleRenderGrid();
+		bool IsRenderingGrid() const;
+		void SetRenderGrid(bool bRenderGrid);
 
 		void SetDisplayBoundingVolumesEnabled(bool bEnabled);
 		bool IsDisplayBoundingVolumesEnabled()const;
@@ -174,15 +174,18 @@ namespace flex
 
 		PostProcessSettings& GetPostProcessSettings();
 
-		static const u32 MAX_TEXTURE_DIM = 65536;
-		static const u32 MAX_POINT_LIGHT_COUNT = 4;
-
 		BitmapFont* m_FntUbuntuCondensedSS = nullptr;
 		BitmapFont* m_FntSourceCodeProWS = nullptr;
 		BitmapFont* m_FntSourceCodeProSS = nullptr;
 		BitmapFont* m_FntGantSS = nullptr;
 
 	protected:
+		// If the object gets deleted this frame *gameObjectRef gets set to nullptr
+		void DoCreateGameObjectButton(const char* buttonName, const char* popupName);
+
+		// Returns true if the parent-child tree changed during this call
+		bool DrawImGuiGameObjectNameAndChildren(GameObject* gameObject);
+
 		std::vector<PointLight*> m_PointLights;
 		DirectionalLight* m_DirectionalLight = nullptr;
 
@@ -222,6 +225,21 @@ namespace flex
 		// Must be stored as member because ImGui will not make a copy
 		std::string m_ImGuiIniFilepathStr;
 		std::string m_ImGuiLogFilepathStr;
+
+		bool m_bRebatchRenderObjects = true;
+
+		bool m_bCaptureScreenshot = false;
+		bool m_bCaptureReflectionProbes = false;
+
+		GameObject* m_Grid = nullptr;
+		GameObject* m_WorldOrigin = nullptr;
+		MaterialID m_GridMaterialID = InvalidMaterialID;
+		MaterialID m_WorldAxisMaterialID = InvalidMaterialID;
+
+		// Must be 12 chars or less
+		const char* m_GameObjectPayloadCStr = "gameobject";
+		const char* m_MaterialPayloadCStr = "material";
+		const char* m_MeshPayloadCStr = "mesh";
 
 	private:
 		Renderer& operator=(const Renderer&) = delete;

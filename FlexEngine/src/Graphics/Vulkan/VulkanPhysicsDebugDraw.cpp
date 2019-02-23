@@ -5,10 +5,10 @@
 
 #include "Cameras/BaseCamera.hpp"
 #include "Graphics/Renderer.hpp"
+#include "Graphics/VertexAttribute.hpp"
 #include "Graphics/Vulkan/VulkanHelpers.hpp"
 #include "Graphics/Vulkan/VulkanRenderer.hpp"
 #include "Scene/GameObject.hpp"
-#include "VertexAttribute.hpp"
 
 namespace flex
 {
@@ -44,7 +44,7 @@ namespace flex
 			createInfo.colors_R32G32B32A32 = {};
 			m_VertexBufferData.Initialize(&createInfo);
 
-			m_GameObject = new GameObject("Physics Debug Draw Object", SerializableType::_NONE);
+			m_GameObject = new GameObject("Physics Debug Draw Object", GameObjectType::_NONE);
 
 			RenderObjectCreateInfo renderObjectCreateInfo = {};
 			renderObjectCreateInfo.vertexBufferData = &m_VertexBufferData;
@@ -81,16 +81,19 @@ namespace flex
 
 		void VulkanPhysicsDebugDraw::reportErrorWarning(const char* warningString)
 		{
-			PrintError("VulkanPhysicsDebugDraw > " + std::string(warningString));
+			PrintError("VulkanPhysicsDebugDraw: %s\n", warningString);
 		}
 
 		void VulkanPhysicsDebugDraw::draw3dText(const btVector3& location, const char* textString)
 		{
+			UNREFERENCED_PARAMETER(location);
+			UNREFERENCED_PARAMETER(textString);
 			// TODO: FIXME: UNIMPLEMENTED: Implement me (or don't)
 		}
 
 		void VulkanPhysicsDebugDraw::setDebugMode(int debugMode)
 		{
+			UNREFERENCED_PARAMETER(debugMode);
 			// NOTE: Call UpdateDebugMode instead of this
 		}
 
@@ -106,6 +109,11 @@ namespace flex
 
 		void VulkanPhysicsDebugDraw::drawContactPoint(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector3& color)
 		{
+			UNREFERENCED_PARAMETER(PointOnB);
+			UNREFERENCED_PARAMETER(normalOnB);
+			UNREFERENCED_PARAMETER(distance);
+			UNREFERENCED_PARAMETER(lifeTime);
+			UNREFERENCED_PARAMETER(color);
 			// TODO: FIXME: UNIMPLEMENTED: Implement me (or don't)
 		}
 
@@ -128,19 +136,19 @@ namespace flex
 			}
 			m_GameObject->SetVisible(true);
 
-			VulkanMaterial* vkMat = &m_Renderer->m_Materials[m_MaterialID];
-			VulkanShader* vkShader = &m_Renderer->m_Shaders[vkMat->material.shaderID];
-			Shader* shader = &vkShader->shader;
+			//VulkanMaterial* vkMat = &m_Renderer->m_Materials[m_MaterialID];
+			//VulkanShader* vkShader = &m_Renderer->m_Shaders[vkMat->material.shaderID];
+			//Shader* shader = &vkShader->shader;
 
 			VertexBufferData::CreateInfo createInfo = {};
 			createInfo.attributes = ((u32)VertexAttribute::POSITION | (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);
 
 			for (LineSegment& line : m_LineSegments)
 			{
-				createInfo.positions_3D.push_back(BtVec3ToVec3(line.start));
-				createInfo.positions_3D.push_back(BtVec3ToVec3(line.end));
+				createInfo.positions_3D.push_back(ToVec3(line.start));
+				createInfo.positions_3D.push_back(ToVec3(line.end));
 
-				glm::vec4 color = glm::vec4(BtVec3ToVec3(line.color), 1.0f);
+				glm::vec4 color = glm::vec4(ToVec3(line.color), 1.0f);
 				createInfo.colors_R32G32B32A32.push_back(color);
 				createInfo.colors_R32G32B32A32.push_back(color);
 			}

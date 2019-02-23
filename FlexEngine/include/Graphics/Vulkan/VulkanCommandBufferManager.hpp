@@ -3,7 +3,7 @@
 #include <vector>
 
 IGNORE_WARNINGS_PUSH
-#include <vulkan/vulkan.hpp>
+//#include <vulkan/vulkan.hpp>
 IGNORE_WARNINGS_POP
 
 namespace flex
@@ -26,7 +26,7 @@ namespace flex
 			/* Ends commandBuffer and optionally frees its memory */
 			static void FlushCommandBuffer(VulkanDevice* device, VkCommandBuffer commandBuffer, VkQueue queue, bool free);
 
-			
+
 			/* Creates a command pool used to generate command buffers */
 			void CreatePool(VkSurfaceKHR surface);
 

@@ -25,8 +25,8 @@ namespace flex
 
 		bool GenerateGLTexture_EmptyWithParams(u32& textureID, const glm::vec2u& dimensions, bool generateMipMaps, GLenum internalFormat, GLenum format, GLenum type, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter)
 		{
-			assert(dimensions.x <= Renderer::MAX_TEXTURE_DIM);
-			assert(dimensions.y <= Renderer::MAX_TEXTURE_DIM);
+			assert(dimensions.x <= MAX_TEXTURE_DIM);
+			assert(dimensions.y <= MAX_TEXTURE_DIM);
 
 
 			glGenTextures(1, &textureID);
@@ -197,7 +197,7 @@ namespace flex
 			if (createInfo.filePaths[0].empty()) // Don't generate pixel data
 			{
 				if (createInfo.textureSize.x <= 0 || createInfo.textureSize.y <= 0 ||
-					createInfo.textureSize.x >= Renderer::MAX_TEXTURE_DIM || createInfo.textureSize.y >= Renderer::MAX_TEXTURE_DIM)
+					createInfo.textureSize.x >= MAX_TEXTURE_DIM || createInfo.textureSize.y >= MAX_TEXTURE_DIM)
 				{
 					PrintError("Invalid cubemap dimensions: %.2fx%.2f\n",
 						createInfo.textureSize.x, createInfo.textureSize.y);

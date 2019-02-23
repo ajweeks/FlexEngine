@@ -50,7 +50,6 @@ void main()
     else
     {
     	albedo = constAlbedo.rgb;
-
     }
 
 	vec3 N;

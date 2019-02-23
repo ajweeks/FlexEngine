@@ -1,19 +1,14 @@
 #pragma once
 #if COMPILE_VULKAN
 
-#include <string>
-#include <vector>
-#include <sstream>
-
-IGNORE_WARNINGS_PUSH // Don't generate warnings for 3rd party code
+IGNORE_WARNINGS_PUSH
 #include <vulkan/vulkan.hpp>
 IGNORE_WARNINGS_POP
 
-#include "Graphics/Renderer.hpp"
-#include "VulkanBuffer.hpp"
-#include "VertexBufferData.hpp"
+#include "Graphics/RendererTypes.hpp"
+#include "Graphics/VertexBufferData.hpp"
 #include "VDeleter.hpp"
-
+#include "VulkanBuffer.hpp"
 
 namespace flex
 {
@@ -22,8 +17,6 @@ namespace flex
 		struct VulkanDevice;
 
 		std::string VulkanErrorString(VkResult errorCode);
-
-		static std::stringstream VkErrorSS;
 
 		inline void VK_CHECK_RESULT(VkResult result);
 
@@ -194,19 +187,19 @@ namespace flex
 			 * Creates image, image view, and sampler based on the texture at filePath
 			 * Returns size of image in bytes
 			 */
-			VkDeviceSize CreateFromTexture(const std::string& filePath, VkFormat format, bool hdr = false, u32 mipLevels = 1);
+			VkDeviceSize CreateFromTexture(const std::string& inFilePath, VkFormat format, bool hdr = false, u32 inMipLevels = 1);
 
 			/*
 			 * Creates image, image view, and sampler
 			 * Returns the size of the image
 			*/
-			VkDeviceSize CreateEmpty(VkFormat format, u32 width, u32 height, u32 mipLevels = 1, VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT);
+			VkDeviceSize CreateEmpty(VkFormat format, u32 inWidth, u32 inHeight, u32 inMipLevels = 1, VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT);
 
 			/*
 			 * Creates an empty cubemap and returns the size of the generated image
 			 * Returns the size of the image
 			*/
-			VkDeviceSize CreateCubemapEmpty(VkFormat format, u32 width, u32 height, u32 channels, u32 mipLevels, bool enableTrilinearFiltering);
+			VkDeviceSize CreateCubemapEmpty(VkFormat format, u32 inWidth, u32 inHeight, u32 inChannelCount, u32 inMipLevels, bool enableTrilinearFiltering);
 
 			/*
 			 * Creates a cubemap from the given 6 textures
@@ -322,11 +315,8 @@ namespace flex
 
 		struct VulkanMaterial
 		{
-			VulkanMaterial();
-
 			Material material = {}; // More info is stored in the generic material struct
 
-			VulkanTexture* diffuseTexture = nullptr;
 			VulkanTexture* normalTexture = nullptr;
 			VulkanTexture* cubemapTexture = nullptr;
 			VulkanTexture* albedoTexture = nullptr;
@@ -419,7 +409,6 @@ namespace flex
 			ShaderID shaderID = InvalidShaderID;
 			UniformBuffer* uniformBuffer = nullptr;
 
-			VulkanTexture* diffuseTexture = nullptr;
 			VulkanTexture* normalTexture = nullptr;
 			VulkanTexture* cubemapTexture = nullptr;
 			VulkanTexture* albedoTexture = nullptr;
@@ -431,7 +420,7 @@ namespace flex
 			VulkanTexture* brdfLUT = nullptr;
 			VulkanTexture* prefilterTexture = nullptr;
 
-			std::vector<std::pair<std::string, VkImageView*>> frameBufferViews; // Name of frame buffer paired with view i32o frame buffer
+			std::vector<std::pair<u32, VkImageView*>> frameBufferViews; // Name of frame buffer paired with view i32o frame buffer
 		};
 
 		struct ImGui_PushConstBlock

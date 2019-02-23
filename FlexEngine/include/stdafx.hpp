@@ -1,9 +1,22 @@
 #pragma once
 
 // Configuration
-#define COMPILE_OPEN_GL 1
-#define COMPILE_VULKAN 0
+#define COMPILE_OPEN_GL 0
+#define COMPILE_VULKAN 1
+
 #define COMPILE_IMGUI 1
+
+#if COMPILE_OPEN_GL
+const bool g_bOpenGLEnabled = true;
+#else
+const bool g_bOpenGLEnabled = false;
+#endif
+
+#if COMPILE_VULKAN
+const bool g_bVulkanEnabled = true;
+#else
+const bool g_bVulkanEnabled = false;
+#endif
 
 #ifdef DEBUG
 #define THOROUGH_CHECKS 1
@@ -19,8 +32,13 @@
 
 #define BT_NO_SIMD_OPERATOR_OVERLOADS
 #define NOMINMAX
+#define GLFW_EXPOSE_NATIVE_WIN32
 #define GLFW_INCLUDE_NONE
+#define IMGUI_IMPL_OPENGL_LOADER_CUSTOM
 #define IMGUI_DISABLE_OBSOLETE_FUNCTIONS 1
+#define IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS 1
+
+#define FLEX_VERSION(major, minor, patch) (((major) << 22) | ((minor) << 12) | (patch))
 
 #if defined(__clang__)
 #define IGNORE_WARNINGS_PUSH \
@@ -59,6 +77,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "MinWindows.hpp"
+
 #include "Logger.hpp"
 #include "Types.hpp"
 
@@ -69,19 +89,27 @@ IGNORE_WARNINGS_POP
 
 #if COMPILE_VULKAN
 IGNORE_WARNINGS_PUSH
+#include <vulkan/vulkan.hpp>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
-#include <vulkan/vulkan.hpp>
 IGNORE_WARNINGS_POP
 #endif // COMPILE_VULKAN
 
 #if COMPILE_OPEN_GL
 IGNORE_WARNINGS_PUSH
-#define GLFW_EXPOSE_NATIVE_WIN32
+
+#if !COMPILE_IMGUI
+#include <glad/glad.h>
+#endif // !COMPILE_IMGUI
+
+#include <GLFW/glfw3.h>
+#include <GLFW/glfw3native.h>
+IGNORE_WARNINGS_POP
+#endif // COMPILE_OPEN_GL
 
 #if COMPILE_IMGUI
-#define IMGUI_IMPL_OPENGL_LOADER_GLAD
+IGNORE_WARNINGS_PUSH
 #include "imgui.h"
 
 namespace flex
@@ -91,15 +119,8 @@ namespace flex
 	extern ImVec4 g_WarningButtonHoveredColor;
 	extern ImVec4 g_WarningButtonActiveColor;
 }
-
-#else // COMPILE_IMGUI
-#include <glad/glad.h>
-#endif // COMPILE_IMGUI
-
-#include <GLFW/glfw3.h>
-#include <GLFW/glfw3native.h>
 IGNORE_WARNINGS_POP
-#endif // COMPILE_OPEN_GL
+#endif // COMPILE_IMGUI
 
 
 #include "Physics/PhysicsTypeConversions.hpp"
@@ -192,6 +213,9 @@ namespace flex
 	static const glm::mat4 MAT4_ZERO = glm::mat4(0.0f);
 
 	static const std::string EMPTY_STRING = std::string();
+
+	static const u32 MAX_TEXTURE_DIM = 65536;
+	static const u32 MAX_POINT_LIGHT_COUNT = 4;
 
 	// These fields are defined and initialized in FlexEngine.cpp
 	extern class Window* g_Window;
