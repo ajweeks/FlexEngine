@@ -16,6 +16,44 @@ namespace flex
 		uniforms = (uniforms | uniform);
 	}
 
+	u32 Uniforms::CalculateSizeInBytes(u32 numPointLights) const
+	{
+		u32 size = 0;
+
+		if (HasUniform(U_MODEL)) size += US_MODEL;
+		if (HasUniform(U_MODEL_INV_TRANSPOSE)) size += US_MODEL_INV_TRANSPOSE;
+		if (HasUniform(U_VIEW)) size += US_VIEW;
+		if (HasUniform(U_VIEW_INV)) size += US_VIEW_INV;
+		if (HasUniform(U_VIEW_PROJECTION)) size += US_VIEW_PROJECTION;
+		if (HasUniform(U_MODEL_VIEW_PROJ)) size += US_MODEL_VIEW_PROJ;
+		if (HasUniform(U_PROJECTION)) size += US_PROJECTION;
+		if (HasUniform(U_BLEND_SHARPNESS)) size += US_BLEND_SHARPNESS;
+		if (HasUniform(U_COLOR_MULTIPLIER)) size += US_COLOR_MULTIPLIER;
+		if (HasUniform(U_CAM_POS)) size += US_CAM_POS;
+		if (HasUniform(U_DIR_LIGHT)) size += US_DIR_LIGHT;
+		if (HasUniform(U_POINT_LIGHTS)) size += US_POINT_LIGHTS * numPointLights;
+		if (HasUniform(U_CONST_ALBEDO)) size += US_CONST_ALBEDO;
+		if (HasUniform(U_CONST_METALLIC)) size += US_CONST_METALLIC;
+		if (HasUniform(U_CONST_ROUGHNESS)) size += US_CONST_ROUGHNESS;
+		if (HasUniform(U_CONST_AO)) size += US_CONST_AO;
+		if (HasUniform(U_ENABLE_CUBEMAP_SAMPLER)) size += US_ENABLE_CUBEMAP_SAMPLER;
+		if (HasUniform(U_ENABLE_ALBEDO_SAMPLER)) size += US_ENABLE_ALBEDO_SAMPLER;
+		if (HasUniform(U_ENABLE_METALLIC_SAMPLER)) size += US_ENABLE_METALLIC_SAMPLER;
+		if (HasUniform(U_ENABLE_ROUGHNESS_SAMPLER)) size += US_ENABLE_ROUGHNESS_SAMPLER;
+		if (HasUniform(U_ENABLE_AO_SAMPLER)) size += US_ENABLE_AO_SAMPLER;
+		if (HasUniform(U_ENABLE_NORMAL_SAMPLER)) size += US_ENABLE_NORMAL_SAMPLER;
+		if (HasUniform(U_ENABLE_IRRADIANCE_SAMPLER)) size += US_ENABLE_IRRADIANCE_SAMPLER;
+		if (HasUniform(U_TEXEL_STEP)) size += US_TEXEL_STEP;
+		if (HasUniform(U_SHOW_EDGES)) size += US_SHOW_EDGES;
+		if (HasUniform(U_LIGHT_VIEW_PROJ)) size += US_LIGHT_VIEW_PROJ;
+		if (HasUniform(U_EXPOSURE)) size += US_EXPOSURE;
+		if (HasUniform(U_TRANSFORM_MAT)) size += US_TRANSFORM_MAT;
+		if (HasUniform(U_TEX_SIZE)) size += US_TEX_SIZE;
+		if (HasUniform(U_TEXTURE_SCALE)) size += US_TEXTURE_SCALE;
+
+		return size;
+	}
+
 	Shader::Shader(const std::string& name,
 				   const std::string& vertexShaderFilePath,
 				   const std::string& fragmentShaderFilePath,
@@ -76,7 +114,6 @@ namespace flex
 				generateReflectionProbeMaps == other.generateReflectionProbeMaps &&
 				colorMultiplier == other.colorMultiplier &&
 				textureScale == other.textureScale
-				//pushConstantBlock.mvp == other.pushConstantBlock.mvp &&
 				);
 
 		return equal;

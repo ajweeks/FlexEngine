@@ -1058,6 +1058,7 @@ namespace flex
 
 	void FlexEngine::DrawImGuiObjects()
 	{
+		return;
 		if (m_bDemoWindowShowing)
 		{
 			ImGui::ShowDemoWindow(&m_bDemoWindowShowing);

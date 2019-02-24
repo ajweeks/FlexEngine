@@ -2,6 +2,7 @@
 
 #include "Audio/RandomizedAudioSource.hpp"
 #include "Callbacks/InputCallbacks.hpp"
+#include "Graphics/RendererTypes.hpp"
 #include "Graphics/VertexBufferData.hpp" // For VertexBufferData::CreateInfo
 #include "Spring.hpp"
 #include "Transform.hpp"
@@ -230,14 +231,7 @@ namespace flex
 		void SetRot(const glm::quat& rot);
 		glm::quat GetRot() const;
 
-		glm::vec4 color = VEC4_ONE;
-		real brightness = 1.0f;
-
-		real shadowDarkness = 1.0f;
-		bool bCastShadow = true;
-		real shadowMapNearPlane = -80.0f;
-		real shadowMapFarPlane = 100.0f;
-		real shadowMapZoom = 30.0f;
+		DirLightData data;
 
 		// DEBUG: (just for preview in ImGui)
 		u32 shadowTextureID = 0;
@@ -262,8 +256,7 @@ namespace flex
 		void SetPos(const glm::vec3& pos);
 		glm::vec3 GetPos() const;
 
-		glm::vec4 color = VEC4_ONE;
-		real brightness = 500.0f;
+		PointLightData data;
 
 	protected:
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
@@ -877,8 +870,6 @@ namespace flex
 
 		static Expression* Parse(Tokenizer& tokenizer);
 		static bool ExpectOperator(Tokenizer &tokenizer, Token token, OperatorType* outOp);
-
-
 	};
 
 	struct Assignment : public Node

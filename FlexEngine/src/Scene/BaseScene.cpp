@@ -833,8 +833,8 @@ namespace flex
 		g_SceneManager->CurrentScene()->AddRootObject(dirLight);
 		dirLight->SetRot(glm::quat(glm::vec3(130.0f, -65.0f, 120.0f)));
 		dirLight->SetPos(glm::vec3(0.0f, 15.0f, 0.0f));
-		dirLight->brightness = 5.0f;
-		g_Renderer->RegisterDirectionalLight(dirLight);
+		dirLight->data.brightness = 5.0f;
+		g_Renderer->RegisterDirectionalLight(&dirLight->data);
 	}
 
 	void BaseScene::SerializeToFile(bool bSaveOverDefault /* = false */) const

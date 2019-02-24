@@ -2509,7 +2509,7 @@ namespace flex
 
 	void DirectionalLight::Initialize()
 	{
-		g_Renderer->RegisterDirectionalLight(this);
+		g_Renderer->RegisterDirectionalLight(&data);
 
 		GameObject::Initialize();
 	}
@@ -2546,19 +2546,20 @@ namespace flex
 			if (DoImGuiRotationDragFloat3("Rotation", dirtyRot, cleanedRot))
 			{
 				m_Transform.SetLocalRotation(glm::quat(glm::radians(cleanedRot)));
+				data.dir = cleanedRot;
 			}
-			ImGui::SliderFloat("Brightness", &brightness, 0.0f, 15.0f);
-			ImGui::ColorEdit4("Color ", &color.r, colorEditFlags);
+			ImGui::SliderFloat("Brightness", &data.brightness, 0.0f, 15.0f);
+			ImGui::ColorEdit4("Color ", &data.color.r, colorEditFlags);
 
 			ImGui::Spacing();
 			ImGui::Text("Shadow");
 
-			ImGui::Checkbox("Cast shadow", &bCastShadow);
-			ImGui::SliderFloat("Shadow darkness", &shadowDarkness, 0.0f, 1.0f);
+			ImGui::Checkbox("Cast shadow", &data.bCastShadow);
+			ImGui::SliderFloat("Shadow darkness", &data.shadowDarkness, 0.0f, 1.0f);
 
-			ImGui::DragFloat("Near", &shadowMapNearPlane);
-			ImGui::DragFloat("Far", &shadowMapFarPlane);
-			ImGui::DragFloat("Zoom", &shadowMapZoom);
+			ImGui::DragFloat("Near", &data.shadowMapNearPlane);
+			ImGui::DragFloat("Far", &data.shadowMapFarPlane);
+			ImGui::DragFloat("Zoom", &data.shadowMapZoom);
 
 			if (ImGui::CollapsingHeader("Preview"))
 			{
@@ -2593,7 +2594,9 @@ namespace flex
 		if (parentObject.SetObjectChecked("directional light info", directionalLightObj))
 		{
 			std::string dirStr = directionalLightObj.GetString("rotation");
-			m_Transform.SetLocalRotation(glm::quat(ParseVec3(dirStr)));
+			glm::quat rot(ParseVec3(dirStr));
+			m_Transform.SetLocalRotation(rot);
+			data.dir = glm::eulerAngles(rot);
 
 			std::string posStr = directionalLightObj.GetString("pos");
 			if (!posStr.empty())
@@ -2601,31 +2604,31 @@ namespace flex
 				m_Transform.SetLocalPosition(ParseVec3(posStr));
 			}
 
-			directionalLightObj.SetVec4Checked("color", color);
+			directionalLightObj.SetVec4Checked("color", data.color);
 
-			directionalLightObj.SetFloatChecked("brightness", brightness);
+			directionalLightObj.SetFloatChecked("brightness", data.brightness);
 
 			if (directionalLightObj.HasField("enabled"))
 			{
 				m_bVisible = directionalLightObj.GetBool("enabled") ? 1 : 0;
 			}
 
-			directionalLightObj.SetBoolChecked("cast shadows", bCastShadow);
-			directionalLightObj.SetFloatChecked("shadow darkness", shadowDarkness);
+			directionalLightObj.SetBoolChecked("cast shadows", data.bCastShadow);
+			directionalLightObj.SetFloatChecked("shadow darkness", data.shadowDarkness);
 
 			if (directionalLightObj.HasField("shadow map near"))
 			{
-				directionalLightObj.SetFloatChecked("shadow map near", shadowMapNearPlane);
+				directionalLightObj.SetFloatChecked("shadow map near", data.shadowMapNearPlane);
 			}
 
 			if (directionalLightObj.HasField("shadow map far"))
 			{
-				directionalLightObj.SetFloatChecked("shadow map far", shadowMapFarPlane);
+				directionalLightObj.SetFloatChecked("shadow map far", data.shadowMapFarPlane);
 			}
 
 			if (directionalLightObj.HasField("shadow map zoom"))
 			{
-				directionalLightObj.SetFloatChecked("shadow map zoom", shadowMapZoom);
+				directionalLightObj.SetFloatChecked("shadow map zoom", data.shadowMapZoom);
 			}
 		}
 	}
@@ -2641,17 +2644,17 @@ namespace flex
 		std::string posStr = Vec3ToString(m_Transform.GetLocalPosition(), 3);
 		dirLightObj.fields.emplace_back("pos", JSONValue(posStr));
 
-		std::string colorStr = Vec3ToString(color, 2);
+		std::string colorStr = Vec3ToString(data.color, 2);
 		dirLightObj.fields.emplace_back("color", JSONValue(colorStr));
 
 		dirLightObj.fields.emplace_back("enabled", JSONValue(m_bVisible != 0));
-		dirLightObj.fields.emplace_back("brightness", JSONValue(brightness));
+		dirLightObj.fields.emplace_back("brightness", JSONValue(data.brightness));
 
-		dirLightObj.fields.emplace_back("cast shadows", JSONValue(bCastShadow));
-		dirLightObj.fields.emplace_back("shadow darkness", JSONValue(shadowDarkness));
-		dirLightObj.fields.emplace_back("shadow map near", JSONValue(shadowMapNearPlane));
-		dirLightObj.fields.emplace_back("shadow map far", JSONValue(shadowMapFarPlane));
-		dirLightObj.fields.emplace_back("shadow map zoom", JSONValue(shadowMapZoom));
+		dirLightObj.fields.emplace_back("cast shadows", JSONValue(data.bCastShadow));
+		dirLightObj.fields.emplace_back("shadow darkness", JSONValue(data.shadowDarkness));
+		dirLightObj.fields.emplace_back("shadow map near", JSONValue(data.shadowMapNearPlane));
+		dirLightObj.fields.emplace_back("shadow map far", JSONValue(data.shadowMapFarPlane));
+		dirLightObj.fields.emplace_back("shadow map zoom", JSONValue(data.shadowMapZoom));
 
 		parentObject.fields.emplace_back("directional light info", JSONValue(dirLightObj));
 	}
@@ -2659,37 +2662,41 @@ namespace flex
 	bool DirectionalLight::operator==(const DirectionalLight& other)
 	{
 		return other.m_Transform.GetLocalRotation() == m_Transform.GetLocalRotation() &&
-			other.m_Transform.GetLocalPosition() == m_Transform.GetLocalPosition() &&
-			other.color == color &&
+			other.data.dir == data.dir &&
+			other.data.color == data.color &&
 			other.m_bVisible == m_bVisible &&
-			other.brightness == brightness;
+			other.data.brightness == data.brightness;
 	}
 
 	void DirectionalLight::SetRot(const glm::quat& rot)
 	{
 		m_Transform.SetLocalRotation(rot);
+		data.dir = glm::eulerAngles(rot);
 	}
 
 	PointLight::PointLight(BaseScene* scene) :
-		GameObject(scene->GetUniqueObjectName("PointLight_", 2), GameObjectType::POINT_LIGHT)
+		PointLight(scene->GetUniqueObjectName("PointLight_", 2))
 	{
 	}
 
 	PointLight::PointLight(const std::string& name) :
 		GameObject(name, GameObjectType::POINT_LIGHT)
 	{
+		data.brightness = 1.0f;
+		data.color = VEC4_ONE;
+		data.pos = VEC3_ZERO;
 	}
 
 	void PointLight::Initialize()
 	{
-		g_Renderer->RegisterPointLight(this);
+		g_Renderer->RegisterPointLight(&data);
 
 		GameObject::Initialize();
 	}
 
 	void PointLight::Destroy()
 	{
-		g_Renderer->RemovePointLight(this);
+		g_Renderer->RemovePointLight(&data);
 
 		GameObject::Destroy();
 	}
@@ -2714,7 +2721,7 @@ namespace flex
 			static const char* removePointLightStr = "Delete";
 			if (ImGui::Button(removePointLightStr))
 			{
-				g_Renderer->RemovePointLight(this);
+				g_Renderer->RemovePointLight(&data);
 				bRemovedPointLight = true;
 				ImGui::CloseCurrentPopup();
 			}
@@ -2727,10 +2734,10 @@ namespace flex
 			glm::vec3 pos = m_Transform.GetLocalPosition();
 			if (ImGui::DragFloat3("Position", &pos.x, 0.1f))
 			{
-				m_Transform.SetLocalPosition(pos);
+				SetPos(pos);
 			}
-			ImGui::ColorEdit4("Color ", &color.r, colorEditFlags);
-			ImGui::SliderFloat("Brightness", &brightness, 0.0f, 1000.0f);
+			ImGui::ColorEdit4("Color ", &data.color.r, colorEditFlags);
+			ImGui::SliderFloat("Brightness", &data.brightness, 0.0f, 1000.0f);
 		}
 
 		if (bTreeOpen)
@@ -2742,6 +2749,7 @@ namespace flex
 	void PointLight::SetPos(const glm::vec3& pos)
 	{
 		m_Transform.SetLocalPosition(pos);
+		data.pos = pos;
 	}
 
 	glm::vec3 PointLight::GetPos() const
@@ -2758,11 +2766,13 @@ namespace flex
 		if (parentObject.SetObjectChecked("point light info", pointLightObj))
 		{
 			std::string posStr = pointLightObj.GetString("pos");
-			m_Transform.SetLocalPosition(glm::vec3(ParseVec3(posStr)));
+			glm::vec3 pos = glm::vec3(ParseVec3(posStr));
+			m_Transform.SetLocalPosition(pos);
+			data.pos = pos;
 
-			pointLightObj.SetVec4Checked("color", color);
+			pointLightObj.SetVec4Checked("color", data.color);
 
-			pointLightObj.SetFloatChecked("brightness", brightness);
+			pointLightObj.SetFloatChecked("brightness", data.brightness);
 
 			if (pointLightObj.HasField("enabled"))
 			{
@@ -2778,11 +2788,11 @@ namespace flex
 		std::string posStr = Vec3ToString(m_Transform.GetLocalPosition(), 3);
 		pointLightObj.fields.emplace_back("pos", JSONValue(posStr));
 
-		std::string colorStr = Vec3ToString(color, 2);
+		std::string colorStr = Vec3ToString(data.color, 2);
 		pointLightObj.fields.emplace_back("color", JSONValue(colorStr));
 
 		pointLightObj.fields.emplace_back("enabled", JSONValue(m_bVisible != 0));
-		pointLightObj.fields.emplace_back("brightness", JSONValue(brightness));
+		pointLightObj.fields.emplace_back("brightness", JSONValue(data.brightness));
 
 		parentObject.fields.emplace_back("point light info", JSONValue(pointLightObj));
 	}
@@ -2790,9 +2800,9 @@ namespace flex
 	bool PointLight::operator==(const PointLight& other)
 	{
 		return other.GetTransform()->GetLocalPosition() == m_Transform.GetLocalPosition() &&
-			other.color == color &&
+			other.data.color == data.color &&
 			other.m_bVisible == m_bVisible &&
-			other.brightness == brightness;
+			other.data.brightness == data.brightness;
 	}
 
 	Cart::Cart(CartID cartID, GameObjectType type /* = GameObjectType::CART */) :

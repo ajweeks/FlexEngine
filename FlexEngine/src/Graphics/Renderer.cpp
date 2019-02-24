@@ -19,6 +19,7 @@ IGNORE_WARNINGS_POP
 #include "Scene/GameObject.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
+#include "Window/Monitor.hpp"
 #include "Window/Window.hpp"
 
 namespace flex
@@ -29,6 +30,49 @@ namespace flex
 
 	Renderer::~Renderer()
 	{
+	}
+
+	void Renderer::Initialize()
+	{
+		// TODO: Handle changing DPI after this point
+		// TODO: Save these strings in a config file?
+		m_FontMetaDatas[0] = {
+			RESOURCE_LOCATION  "fonts/UbuntuCondensed-Regular.ttf",
+			RESOURCE_LOCATION  "fonts/UbuntuCondensed-Regular-24",
+			24,
+			true,
+			&m_FntUbuntuCondensedSS,
+		};
+
+		m_FontMetaDatas[1] = {
+			RESOURCE_LOCATION  "fonts/SourceCodePro-regular.ttf",
+			RESOURCE_LOCATION  "fonts/SourceCodePro-regular-16",
+			16,
+			false,
+			&m_FntSourceCodeProWS,
+		};
+
+		m_FontMetaDatas[2] = {
+			RESOURCE_LOCATION  "fonts/SourceCodePro-regular.ttf",
+			RESOURCE_LOCATION  "fonts/SourceCodePro-regular-14",
+			14,
+			true,
+			&m_FntSourceCodeProSS,
+		};
+
+		m_FontMetaDatas[3] = {
+			RESOURCE_LOCATION  "fonts/gant.ttf",
+			RESOURCE_LOCATION  "fonts/gant-regular-10",
+			10,
+			true,
+			&m_FntGantSS,
+		};
+
+		std::string DPIStr = FloatToString(g_Monitor->DPI.x, 0) + "DPI";
+		for (i32 i = 0; i < FONT_COUNT; ++i)
+		{
+			m_FontMetaDatas[i].renderedTextureFilePath += "-" + DPIStr + m_FontImageExtension;
+		}
 	}
 
 	void Renderer::SetReflectionProbeMaterial(MaterialID reflectionProbeMaterialID)
@@ -167,13 +211,13 @@ namespace flex
 		return m_PhysicsDebuggingSettings;
 	}
 
-	bool Renderer::RegisterDirectionalLight(DirectionalLight* dirLight)
+	bool Renderer::RegisterDirectionalLight(DirLightData* dirLight)
 	{
 		m_DirectionalLight = dirLight;
 		return true;
 	}
 
-	PointLightID Renderer::RegisterPointLight(PointLight* pointLight)
+	PointLightID Renderer::RegisterPointLight(PointLightData* pointLight)
 	{
 		if (m_PointLights.size() == MAX_POINT_LIGHT_COUNT)
 		{
@@ -190,12 +234,12 @@ namespace flex
 		m_DirectionalLight = nullptr;
 	}
 
-	void Renderer::RemovePointLight(const PointLight* pointLight)
+	void Renderer::RemovePointLight(const PointLightData* pointLight)
 	{
 		auto iter = std::find(m_PointLights.begin(), m_PointLights.end(), pointLight);
 		if (iter == m_PointLights.end())
 		{
-			PrintWarn("Attempted to remove point light which doesn't exist! %s\n", pointLight->GetName().c_str());
+			PrintWarn("Attempted to remove point light which doesn't exist!\n");
 			return;
 		}
 		m_PointLights.erase(iter);
@@ -206,12 +250,12 @@ namespace flex
 		m_PointLights.clear();
 	}
 
-	DirectionalLight* Renderer::GetDirectionalLight()
+	DirLightData* Renderer::GetDirectionalLight()
 	{
 		return m_DirectionalLight;
 	}
 
-	PointLight* Renderer::GetPointLight(PointLightID pointLight)
+	PointLightData* Renderer::GetPointLight(PointLightID pointLight)
 	{
 		return m_PointLights[pointLight];
 	}

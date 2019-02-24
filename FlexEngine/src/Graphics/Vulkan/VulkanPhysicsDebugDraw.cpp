@@ -8,6 +8,7 @@
 #include "Graphics/VertexAttribute.hpp"
 #include "Graphics/Vulkan/VulkanHelpers.hpp"
 #include "Graphics/Vulkan/VulkanRenderer.hpp"
+#include "Profiler.hpp"
 #include "Scene/GameObject.hpp"
 
 namespace flex
@@ -21,38 +22,24 @@ namespace flex
 		VulkanPhysicsDebugDraw::~VulkanPhysicsDebugDraw()
 		{
 			m_VertexBufferData.Destroy();
-
-			if (m_GameObject)
-			{
-				m_GameObject->Destroy();
-				SafeDelete(m_GameObject);
-			}
 		}
 
 		void VulkanPhysicsDebugDraw::Initialize()
 		{
 			m_Renderer = (VulkanRenderer*)(g_Renderer);
-			if (!m_Renderer->GetMaterialID("Color", m_MaterialID))
+			const std::string debugMatName = "Debug";
+			if (!m_Renderer->GetMaterialID(debugMatName, m_MaterialID))
 			{
-				PrintError("Failed to retrieve shader for Vulkan physics debug draw!");
+				MaterialCreateInfo debugMatCreateInfo = {};
+				debugMatCreateInfo.shaderName = "color";
+				debugMatCreateInfo.name = debugMatName;
+				debugMatCreateInfo.engineMaterial = true;
+				m_MaterialID = g_Renderer->InitializeMaterial(&debugMatCreateInfo);
 			}
 
 			m_VertexBufferData = {};
-			VertexBufferData::CreateInfo createInfo = {};
-			createInfo.attributes = (u32)VertexAttribute::POSITION | (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
-			createInfo.positions_3D = {};
-			createInfo.colors_R32G32B32A32 = {};
-			m_VertexBufferData.Initialize(&createInfo);
-
-			m_GameObject = new GameObject("Physics Debug Draw Object", GameObjectType::_NONE);
-
-			RenderObjectCreateInfo renderObjectCreateInfo = {};
-			renderObjectCreateInfo.vertexBufferData = &m_VertexBufferData;
-			renderObjectCreateInfo.gameObject = m_GameObject;
-			renderObjectCreateInfo.materialID = m_MaterialID;
-			renderObjectCreateInfo.visibleInSceneExplorer = false;
-
-			m_GameObject->SetRenderID(g_Renderer->InitializeRenderObject(&renderObjectCreateInfo));
+			m_VertexBufferCreateInfo = {};
+			m_VertexBufferCreateInfo.attributes = (u32)VertexAttribute::POSITION | (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
 		}
 
 		void VulkanPhysicsDebugDraw::UpdateDebugMode()
@@ -131,89 +118,78 @@ namespace flex
 		{
 			if (m_LineSegments.empty())
 			{
-				m_GameObject->SetVisible(false);
 				return;
 			}
-			m_GameObject->SetVisible(true);
 
-			//VulkanMaterial* vkMat = &m_Renderer->m_Materials[m_MaterialID];
-			//VulkanShader* vkShader = &m_Renderer->m_Shaders[vkMat->material.shaderID];
-			//Shader* shader = &vkShader->shader;
-
-			VertexBufferData::CreateInfo createInfo = {};
-			createInfo.attributes = ((u32)VertexAttribute::POSITION | (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);
-
-			for (LineSegment& line : m_LineSegments)
 			{
-				createInfo.positions_3D.push_back(ToVec3(line.start));
-				createInfo.positions_3D.push_back(ToVec3(line.end));
-
-				glm::vec4 color = glm::vec4(ToVec3(line.color), 1.0f);
-				createInfo.colors_R32G32B32A32.push_back(color);
-				createInfo.colors_R32G32B32A32.push_back(color);
+				PROFILE_AUTO("PhysicsDebugRender > Destroy previous vertex buffer");
+				m_VertexBufferData.Destroy();
 			}
 
+			{
+				PROFILE_AUTO("PhysicsDebugRender > Initialze vertex buffer");
 
-			m_VertexBufferData.Destroy(); // Destroy previous frame's buffer since it's already been drawn
+				m_VertexBufferCreateInfo.positions_3D.clear();
+				m_VertexBufferCreateInfo.colors_R32G32B32A32.clear();
 
-			m_VertexBufferData.Initialize(&createInfo);
+				m_VertexBufferCreateInfo.positions_3D.resize(m_LineSegments.size() * 2);
+				m_VertexBufferCreateInfo.colors_R32G32B32A32.resize(m_LineSegments.size() * 2);
 
-			g_Renderer->UpdateRenderObjectVertexData(m_GameObject->GetRenderID());
+				i32 i = 0;
+				for (LineSegment& line : m_LineSegments)
+				{
+					*(m_VertexBufferCreateInfo.positions_3D.data() + i) = (ToVec3(line.start));
+					*(m_VertexBufferCreateInfo.positions_3D.data() + i + 1) = (ToVec3(line.end));
 
-			//glUseProgram(glShader->program);
+					glm::vec4 color(ToVec3(line.color), 1.0f);
+					*(m_VertexBufferCreateInfo.colors_R32G32B32A32.data() + i) = (color);
+					*(m_VertexBufferCreateInfo.colors_R32G32B32A32.data() + i + 1) = (color);
 
-			//glGenVertexArrays(1, &m_VAO);
-			//glBindVertexArray(m_VAO);
+					i += 2;
+				}
 
-			//glGenBuffers(1, &m_VBO);
-			//glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
-			//glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)m_VertexBufferData.VertexBufferSize, m_VertexBufferData.vertexData, GL_STATIC_DRAW);
+				m_VertexBufferData.Initialize(&m_VertexBufferCreateInfo);
+			}
 
-
-			// Describe shader variables
+			// TODO: Draw
 			//{
-			//	real* currentLocation = (real*)0;
+			//	PROFILE_AUTO("PhysicsDebugRender > render");
 
-			//	GLint location = glGetAttribLocation(glShader->program, "in_Position");
-			//	if (location != -1)
+			//	glUseProgram(glShader->program);
+
+			//	glBindVertexArray(m_VAO);
+
+			//	glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
+			//	glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)m_VertexBufferData.VertexBufferSize, m_VertexBufferData.vertexData, GL_STREAM_DRAW);
+
+			//	// Describe shader variables (TODO: Why can't this be done just once in initialize? glBufferData)
 			//	{
-			//		glEnableVertexAttribArray((GLuint)location);
+			//		real* currentLocation = (real*)0;
 
-
-			//		glVertexAttribPointer((GLuint)location, 3, GL_FLOAT, GL_FALSE, m_VertexBufferData.VertexStride, currentLocation);
-
+			//		glVertexAttribPointer((GLuint)m_VertAttribPosLoc, 3, GL_FLOAT, GL_FALSE, m_VertexBufferData.VertexStride, currentLocation);
 			//		currentLocation += 3;
-			//	}
 
-			//	location = glGetAttribLocation(glShader->program, "in_Color");
-			//	if (location != -1)
-			//	{
-			//		glEnableVertexAttribArray((GLuint)location);
-
-			//		glVertexAttribPointer((GLuint)location, 4, GL_FLOAT, GL_FALSE, m_VertexBufferData.VertexStride, currentLocation);
-
+			//		glVertexAttribPointer((GLuint)m_VertAttribColLoc, 4, GL_FLOAT, GL_FALSE, m_VertexBufferData.VertexStride, currentLocation);
 			//		currentLocation += 4;
 			//	}
+
+			//	glm::mat4 model = MAT4_IDENTITY;
+			//	glm::mat4 proj = g_CameraManager->CurrentCamera()->GetProjection();
+			//	glm::mat4 view = g_CameraManager->CurrentCamera()->GetView();
+			//	glm::vec4 colorMultiplier = glMat->material.colorMultiplier;
+
+			//	glUniformMatrix4fv(glMat->uniformIDs.model, 1, false, &model[0][0]);
+			//	glUniformMatrix4fv(glMat->uniformIDs.view, 1, false, &view[0][0]);
+			//	glUniformMatrix4fv(glMat->uniformIDs.projection, 1, false, &proj[0][0]);
+			//	glUniform4fv(glMat->uniformIDs.colorMultiplier, 1, &colorMultiplier[0]);
+
+			//	glDepthMask(GL_FALSE);
+
+			//	glEnable(GL_BLEND);
+			//	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+			//	glDrawArrays(GL_LINES, 0, (GLsizei)m_VertexBufferData.VertexCount);
 			//}
-
-
-			//glm::mat4 model = MAT4_IDENTITY;
-			//glm::mat4 proj = g_CameraManager->CurrentCamera()->GetProjection();
-			//glm::mat4 view = g_CameraManager->CurrentCamera()->GetView();
-			//glm::mat4 MVP = proj * view * model;
-			//glm::vec4 colorMultiplier = glMat->material.colorMultiplier;
-
-			//glUniformMatrix4fv(glMat->uniformIDs.model, 1, false, &model[0][0]);
-			//glUniformMatrix4fv(glMat->uniformIDs.view, 1, false, &view[0][0]);
-			//glUniformMatrix4fv(glMat->uniformIDs.projection, 1, false, &proj[0][0]);
-			//glUniform4fv(glMat->uniformIDs.colorMultiplier, 1, &colorMultiplier[0]);
-
-
-			//glDepthMask(GL_FALSE);
-
-			//glDisable(GL_BLEND);
-
-			//glDrawArrays(GL_LINES, 0, (GLsizei)m_VertexBufferData.VertexCount);
 		}
 	} // namespace vk
 } // namespace flex

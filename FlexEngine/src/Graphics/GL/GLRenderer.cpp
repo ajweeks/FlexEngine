@@ -61,6 +61,8 @@ namespace flex
 
 		void GLRenderer::Initialize()
 		{
+			Renderer::Initialize();
+
 			LoadSettingsFromDisk();
 
 			SetVSyncEnabled(g_Window->GetVSyncEnabled());
@@ -4770,61 +4772,10 @@ namespace flex
 		{
 			PROFILE_AUTO("Load fonts");
 
-			// TODO: Save these strings in a config file?
-			std::string fontFilePaths[] = {
-				RESOURCE_LOCATION  "fonts/UbuntuCondensed-Regular.ttf",
-				RESOURCE_LOCATION  "fonts/SourceCodePro-regular.ttf",
-				RESOURCE_LOCATION  "fonts/SourceCodePro-regular.ttf",
-				RESOURCE_LOCATION  "fonts/gant.ttf",
-			};
-
-			std::string extension = ".png";
-			std::string renderedTextureFilePaths[] = {
-				RESOURCE_LOCATION  "fonts/UbuntuCondensed-Regular-24",
-				RESOURCE_LOCATION  "fonts/SourceCodePro-regular-16",
-				RESOURCE_LOCATION  "fonts/SourceCodePro-regular-14",
-				RESOURCE_LOCATION  "fonts/gant-regular-10",
-			};
-
-			i16 fontSizes[] = {
-				24,
-				16,
-				14,
-				10,
-			};
-
-			BitmapFont** fonts[] = {
-				&m_FntUbuntuCondensedSS,
-				&m_FntSourceCodeProWS,
-				&m_FntSourceCodeProSS,
-				&m_FntGantSS,
-			};
-
-			bool bScreenSpace[] = {
-				true,
-				false,
-				true,
-				true,
-			};
-
-			std::string DPIStr = FloatToString(g_Monitor->DPI.x, 0) + "DPI";
-
-			for (std::string& path : renderedTextureFilePaths)
-			{
-				path += "-" + DPIStr + extension;
-			}
-
-			i32 fontCount = ARRAY_LENGTH(fontFilePaths);
-			assert(
-				ARRAY_LENGTH(renderedTextureFilePaths) == fontCount &&
-				ARRAY_LENGTH(fonts) == fontCount &&
-				ARRAY_LENGTH(fontSizes) == fontCount &&
-				ARRAY_LENGTH(bScreenSpace) == fontCount);
-
 			m_FontsSS.clear();
 			m_FontsWS.clear();
 
-			for (i32 i = 0; i < fontCount; ++i)
+			for (i32 i = 0; i < FONT_COUNT; ++i)
 			{
 				if (*(fonts[i]) != nullptr)
 				{

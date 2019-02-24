@@ -5,12 +5,14 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
+layout (location = 0) in vec3 ex_WorldPos;
+layout (location = 1) in vec2 ex_TexCoord;
+layout (location = 2) in mat3 ex_TBN;
+
 // Updated once per frame
 layout (binding = 0) uniform UBOConstant
 {
 	mat4 viewProjection;
-	float blendSharpness;
-	float textureScale;
 } uboConstant;
 
 // Updated once per object
@@ -30,11 +32,10 @@ layout (binding = 1) uniform UBODynamic
 	bool enableRoughnessSampler;
 	bool enableAOSampler;
 	bool enableNormalSampler;
+	
+	float blendSharpness;
+	float textureScale;
 } uboDynamic;
-
-layout (location = 0) in vec3 ex_WorldPos;
-layout (location = 1) in vec2 ex_TexCoord;
-layout (location = 2) in mat3 ex_TBN;
 
 layout (binding = 2) uniform sampler2D albedoSampler;
 layout (binding = 3) uniform sampler2D metallicSampler;
@@ -48,9 +49,9 @@ layout (location = 2) out vec4 outAlbedoAO;
 
 void main() 
 {
-    vec2 uvX = ex_WorldPos.zy * uboConstant.textureScale;
-    vec2 uvY = ex_WorldPos.xz * uboConstant.textureScale;
-    vec2 uvZ = ex_WorldPos.xy * uboConstant.textureScale;
+    vec2 uvX = ex_WorldPos.zy * uboDynamic.textureScale;
+    vec2 uvY = ex_WorldPos.xz * uboDynamic.textureScale;
+    vec2 uvZ = ex_WorldPos.xy * uboDynamic.textureScale;
 
     vec3 geomNorm = ex_TBN[2];
 
@@ -60,7 +61,7 @@ void main()
 		vec3 albedoX = texture(albedoSampler, uvX).rgb * uboDynamic.constAlbedo.rgb;
 		vec3 albedoY = texture(albedoSampler, uvY).rgb * uboDynamic.constAlbedo.rgb;
 		vec3 albedoZ = texture(albedoSampler, uvZ).rgb * uboDynamic.constAlbedo.rgb;
-		vec3 blendWeights = pow(abs(geomNorm), vec3(uboConstant.blendSharpness));
+		vec3 blendWeights = pow(abs(geomNorm), vec3(uboDynamic.blendSharpness));
 		blendWeights = blendWeights / (blendWeights.x + blendWeights.y + blendWeights.z);
 		albedo = albedoX * blendWeights.x +
 				 albedoY * blendWeights.y +
@@ -77,7 +78,7 @@ void main()
 		vec3 normalX = ex_TBN * (texture(normalSampler, uvX).xyz * 2 - 1);
 		vec3 normalY = ex_TBN * (texture(normalSampler, uvY).xyz * 2 - 1);
 		vec3 normalZ = ex_TBN * (texture(normalSampler, uvZ).xyz * 2 - 1);
-		vec3 blendWeights = pow(abs(N), vec3(uboConstant.blendSharpness));
+		vec3 blendWeights = pow(abs(N), vec3(uboDynamic.blendSharpness));
 		blendWeights = blendWeights / (blendWeights.x + blendWeights.y + blendWeights.z);
 		N = normalX * blendWeights.x +
 			normalY * blendWeights.y +

@@ -28,15 +28,19 @@ IGNORE_WARNINGS_POP
 #include "FlexEngine.hpp"
 #include "Graphics/VertexAttribute.hpp"
 #include "Graphics/VertexBufferData.hpp"
+#include "Graphics/Vulkan/VulkanBuffer.hpp"
+#include "Graphics/Vulkan/VulkanDevice.hpp"
 #include "Graphics/Vulkan/VulkanPhysicsDebugDraw.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
 #include "Physics/PhysicsWorld.hpp"
+#include "Profiler.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Window/GLFWWindowWrapper.hpp"
+
 namespace flex
 {
 	namespace vk
@@ -75,6 +79,8 @@ namespace flex
 
 		void VulkanRenderer::Initialize()
 		{
+			Renderer::Initialize();
+
 			m_DepthAttachment = new FrameBufferAttachment(m_VulkanDevice->m_LogicalDevice);
 
 			VkFormat depthFormat;
@@ -164,13 +170,6 @@ namespace flex
 
 		void VulkanRenderer::PostInitialize()
 		{
-			GLFWWindowWrapper* castedWindow = dynamic_cast<GLFWWindowWrapper*>(g_Window);
-			if (castedWindow == nullptr)
-			{
-				PrintError("VulkanRenderer::PostInitialize expected g_Window to be of type GLFWWindowWrapper!\n");
-				return;
-			}
-
 			CreateDescriptorPool();
 
 			ShaderID deferredCombineShaderID;
@@ -179,7 +178,7 @@ namespace flex
 				PrintError("Failed to find deferred_combine shader!\n");
 			}
 
-			assert(m_SkyBoxMesh);
+			assert(m_SkyBoxMesh != nullptr);
 			MaterialID skyboxMaterialID = m_SkyBoxMesh->GetMeshComponent()->GetMaterialID();
 
 			// Initialize GBuffer material & mesh
@@ -222,7 +221,7 @@ namespace flex
 
 				GameObject* gBufferQuadGameObject = new GameObject("GBuffer Quad", GameObjectType::_NONE);
 				m_PersistentObjects.push_back(gBufferQuadGameObject);
-				// Don't render the g buffer normally, we'll render it separately
+				// NOTE: G-buffer isn't rendered normally, it is handled separately
 				gBufferQuadGameObject->SetVisible(false);
 
 				RenderObjectCreateInfo gBufferQuadCreateInfo = {};
@@ -281,6 +280,15 @@ namespace flex
 				CreateGraphicsPipeline(i, true);
 			}
 
+			GLFWWindowWrapper* castedWindow = dynamic_cast<GLFWWindowWrapper*>(g_Window);
+			if (castedWindow == nullptr)
+			{
+				PrintError("VulkanRenderer::PostInitialize expects g_Window to be of type GLFWWindowWrapper!\n");
+				return;
+			}
+
+			ImGui_ImplGlfw_InitForVulkan(castedWindow->GetWindow(), false);
+
 			ImGui_ImplVulkan_InitInfo initInfo = {};
 			initInfo.Instance = m_Instance;
 			initInfo.PhysicalDevice = m_VulkanDevice->m_PhysicalDevice;
@@ -316,7 +324,9 @@ namespace flex
 			VK_CHECK_RESULT(vkQueueSubmit(m_GraphicsQueue, 1, &end_info, VK_NULL_HANDLE));
 
 			VK_CHECK_RESULT(vkDeviceWaitIdle(m_VulkanDevice->m_LogicalDevice));
+			//ImGui_ImplVulkan_InvalidateFontUploadObjects();
 
+			LoadFonts(false);
 
 			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 			{
@@ -349,7 +359,7 @@ namespace flex
 				}
 				else if (renderObjectMat.material.generateIrradianceSampler)
 				{
-					GenerateCubemapFromHDR(renderObject);
+					GenerateCubemapFromHDR(renderObject, renderObjectMat.material.environmentMapPath);
 					GenerateIrradianceSampler(renderObject);
 					GeneratePrefilteredCube(renderObject);
 				}
@@ -464,7 +474,7 @@ namespace flex
 			glfwTerminate();
 		}
 
-		void VulkanRenderer::GenerateCubemapFromHDR(VulkanRenderObject* renderObject)
+		void VulkanRenderer::GenerateCubemapFromHDR(VulkanRenderObject* renderObject, const std::string& environmentMapPath)
 		{
 			if (!m_SkyBoxMesh)
 			{
@@ -482,11 +492,7 @@ namespace flex
 			equirectangularToCubeMatCreateInfo.enableHDREquirectangularSampler = true;
 			equirectangularToCubeMatCreateInfo.generateHDREquirectangularSampler = true;
 			// TODO: Make cyclable at runtime
-			equirectangularToCubeMatCreateInfo.hdrEquirectangularTexturePath =
-				//RESOURCE_LOCATION  "textures/hdri/Arches_E_PineTree/Arches_E_PineTree_3k.hdr";
-				RESOURCE_LOCATION  "textures/hdri/Factory_Catwalk/Factory_Catwalk_2k.hdr";
-				//RESOURCE_LOCATION  "textures/hdri/Ice_Lake/Ice_Lake_Ref.hdr";
-				//RESOURCE_LOCATION  "textures/hdri/Protospace_B/Protospace_B_Ref.hdr";
+			equirectangularToCubeMatCreateInfo.hdrEquirectangularTexturePath = environmentMapPath;
 			MaterialID equirectangularToCubeMatID = InitializeMaterial(&equirectangularToCubeMatCreateInfo);
 
 			const VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
@@ -1995,6 +2001,7 @@ namespace flex
 			pipelineCreateInfo.pStages = shaderStages.data();
 			pipelineCreateInfo.pVertexInputState = &emptyInputState;
 
+			// TODO: Bring shader compilation out to function
 			ShaderID brdfShaderID;
 			if (!GetShaderID("brdf", brdfShaderID))
 			{
@@ -2390,7 +2397,8 @@ namespace flex
 			renderObject->materialName = m_Materials[renderObject->materialID].material.name;
 			renderObject->gameObject = createInfo->gameObject;
 
-			if (createInfo->indices != nullptr)
+			if (createInfo->indices != nullptr &&
+				!createInfo->indices->empty())
 			{
 				renderObject->indices = createInfo->indices;
 				renderObject->indexed = true;
@@ -2408,11 +2416,12 @@ namespace flex
 
 		void VulkanRenderer::CreateUniformBuffers(VulkanShader* shader)
 		{
-			// TODO: FIXME:
-			shader->uniformBuffer.constantData.size = 1000;// shader->shader.constantBufferUniforms.CalculateSize(m_PointLights.size());
+			shader->uniformBuffer.constantData.size = shader->shader.constantBufferUniforms.CalculateSizeInBytes(m_PointLights.size());
 			if (shader->uniformBuffer.constantData.size > 0)
 			{
 				free(shader->uniformBuffer.constantData.data);
+
+				shader->uniformBuffer.constantData.size = GetAlignedUBOSize(shader->uniformBuffer.constantData.size);
 
 				shader->uniformBuffer.constantData.data = (real*)malloc(shader->uniformBuffer.constantData.size);
 				assert(shader->uniformBuffer.constantData.data);
@@ -2421,11 +2430,12 @@ namespace flex
 					VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 			}
 
-			// TODO: FIXME:
-			shader->uniformBuffer.dynamicData.size = 1000;// shader->shader.dynamicBufferUniforms.CalculateSize(m_PointLights.size());
+			shader->uniformBuffer.dynamicData.size = shader->shader.dynamicBufferUniforms.CalculateSizeInBytes(m_PointLights.size());
 			if (shader->uniformBuffer.dynamicData.size > 0 && m_RenderObjects.size() > 0)
 			{
 				if (shader->uniformBuffer.dynamicData.data) _aligned_free(shader->uniformBuffer.dynamicData.data);
+
+				shader->uniformBuffer.dynamicData.size = GetAlignedUBOSize(shader->uniformBuffer.dynamicData.size);
 
 				const size_t dynamicBufferSize = AllocateUniformBuffer(
 					shader->uniformBuffer.dynamicData.size * m_RenderObjects.size(), (void**)&shader->uniformBuffer.dynamicData.data);
@@ -2520,6 +2530,7 @@ namespace flex
 
 		void VulkanRenderer::DrawImGuiRenderObjects()
 		{
+			return;
 			ImGui::NewLine();
 
 			ImGui::BeginChild("SelectedObject", ImVec2(0.0f, 500.0f), true);
@@ -2597,7 +2608,7 @@ namespace flex
 					BaseScene* scene = g_SceneManager->CurrentScene();
 					PointLight* newPointLight = new PointLight(scene);
 					scene->AddRootObject(newPointLight);
-					RegisterPointLight(newPointLight);
+					RegisterPointLight(&newPointLight->data);
 				}
 			}
 		}
@@ -2811,7 +2822,30 @@ namespace flex
 
 		void VulkanRenderer::LoadFonts(bool bForceRender)
 		{
+			PROFILE_AUTO("Load fonts");
 
+			m_FontsSS.clear();
+			m_FontsWS.clear();
+
+			for (FontMetaData& fontMetaData : m_FontMetaDatas)
+			{
+				if (*(fontMetaData.bitmap) != nullptr)
+				{
+					delete *(fontMetaData.bitmap);
+					(*(fontMetaData.bitmap)) = nullptr;
+				}
+
+				std::string fontName = fontMetaData.filePath;
+				StripLeadingDirectories(fontName);
+				StripFileType(fontName);
+
+				LoadFont(fontMetaData.bitmap,
+					fontMetaData.size,
+					fontMetaData.filePath,
+					fontMetaData.renderedTextureFilePath,
+					bForceRender,
+					fontMetaData.bScreenSpace);
+			}
 		}
 
 		void VulkanRenderer::ReloadSkybox(bool bRandomizeTexture)
@@ -2979,12 +3013,12 @@ namespace flex
 				m_PhysicsDebugDrawer->ClearLines();
 			}
 
-			if (g_EngineInstance->IsRenderingImGui())
-			{
-				ImGui_ImplVulkan_NewFrame();
-				ImGui_ImplGlfw_NewFrame();
-				ImGui::NewFrame();
-			}
+			//if (g_EngineInstance->IsRenderingImGui())
+			//{
+			//	ImGui_ImplVulkan_NewFrame();
+			//	ImGui_ImplGlfw_NewFrame();
+			//	ImGui::NewFrame();
+			//}
 		}
 
 		btIDebugDraw* VulkanRenderer::GetDebugDrawer()
@@ -3087,6 +3121,22 @@ namespace flex
 				}
 			}
 			return capacity;
+		}
+
+		bool VulkanRenderer::LoadFont(BitmapFont** font, i16 size, const std::string& fontFilePath, const std::string& renderedFontFilePath, bool bForceRender, bool bScreenSpace)
+		{
+			return false;
+		}
+
+		u32 VulkanRenderer::GetAlignedUBOSize(u32 unalignedSize)
+		{
+			u32 alignedSize = unalignedSize;
+			const u64 nCAS = m_VulkanDevice->m_PhysicalDeviceProperties.limits.nonCoherentAtomSize;
+			if (unalignedSize % nCAS != 0)
+			{
+				alignedSize += nCAS - (alignedSize % nCAS);
+			}
+			return alignedSize;
 		}
 
 		void VulkanRenderer::UpdateRenderObjectVertexData(RenderID renderID)
@@ -3783,7 +3833,6 @@ namespace flex
 			};
 
 			std::vector<VkDescriptorSetLayoutBinding> bindings;
-			u32 binding = 0;
 
 			for (DescriptorSetInfo& descSetInfo : descriptorSets)
 			{
@@ -3791,12 +3840,11 @@ namespace flex
 					shader->shader.dynamicBufferUniforms.HasUniform(descSetInfo.uniform))
 				{
 					VkDescriptorSetLayoutBinding descSetLayoutBinding = {};
-					descSetLayoutBinding.binding = binding;
+					descSetLayoutBinding.binding = bindings.size();
 					descSetLayoutBinding.descriptorCount = 1;
 					descSetLayoutBinding.descriptorType = descSetInfo.descriptorType;
 					descSetLayoutBinding.stageFlags = descSetInfo.shaderStageFlags;
 					bindings.push_back(descSetLayoutBinding);
-					++binding;
 				}
 			}
 
@@ -4592,7 +4640,7 @@ namespace flex
 
 					if (renderObject->indexed)
 					{
-						vkCmdDrawIndexed(commandBuffer, m_VertexIndexBufferPairs[renderObjectMat.material.shaderID].indexCount, 1, renderObject->indexOffset, 0, 0);
+						vkCmdDrawIndexed(commandBuffer, renderObject->indices->size(), 1, renderObject->indexOffset, 0, 0);
 					}
 					else
 					{
@@ -4622,16 +4670,16 @@ namespace flex
 				VulkanRenderObject* gBufferObject = GetRenderObject(m_GBufferQuadRenderID);
 				VulkanMaterial* gBufferMaterial = &m_Materials[gBufferObject->materialID];
 
-				ImGui::Render();
+				//ImGui::Render();
 				//ImGui_ImplVulkanH_FrameData* fd = &m_ImGuiWindowData->Frames[m_ImGuiWindowData->FrameIndex];
 				for (size_t i = 0; i < m_CommandBufferManager.m_CommandBuffers.size(); ++i)
 				{
 					VkCommandBuffer& commandBuffer = m_CommandBufferManager.m_CommandBuffers[i];
 
-					if (g_EngineInstance->IsRenderingImGui())
-					{
-						ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
-					}
+					//if (g_EngineInstance->IsRenderingImGui())
+					//{
+					//	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
+					//}
 
 					renderPassBeginInfo.framebuffer = m_SwapChainFramebuffers[i];
 
@@ -4817,7 +4865,7 @@ namespace flex
 
 				if (renderObject->indexed)
 				{
-					vkCmdDrawIndexed(offScreenCmdBuffer, m_VertexIndexBufferPairs[renderObjectMat.material.shaderID].indexCount, 1, renderObject->indexOffset, 0, 0);
+					vkCmdDrawIndexed(offScreenCmdBuffer, renderObject->indices->size(), 1, renderObject->indexOffset, 0, 0);
 				}
 				else
 				{
@@ -5357,8 +5405,6 @@ namespace flex
 			glm::mat4 viewInv = glm::inverse(view);
 			glm::mat4 viewProjection = projection * view;
 			glm::vec4 camPos = glm::vec4(g_CameraManager->CurrentCamera()->GetPosition(), 0.0f);
-			real blendSharpness = 1.0f;
-			real textureScale = 1.0f;
 
 			if (overridenUniforms)
 			{
@@ -5386,12 +5432,12 @@ namespace flex
 
 			void* PointLightsDataStart = nullptr;
 			size_t PointLightsSize = 0;
-			size_t PointLightsMoveInBytes = 0;
+			size_t PointLightsMoveInWords = 0;
 			if (!m_PointLights.empty())
 			{
-				PointLightsDataStart = (void*)&m_PointLights[0];
-				PointLightsSize = sizeof(m_PointLights[0]) * m_PointLights.size();
-				PointLightsMoveInBytes = PointLightsSize / sizeof(real);
+				PointLightsDataStart = (void*)m_PointLights[0];
+				PointLightsSize = sizeof(*(m_PointLights[0])) * m_PointLights.size();
+				PointLightsMoveInWords = PointLightsSize / sizeof(real);
 			}
 
 			struct UniformInfo
@@ -5416,11 +5462,9 @@ namespace flex
 				{ U_VIEW_INV, (void*)&viewInv, sizeof(glm::mat4), 16 },
 				{ U_PROJECTION, (void*)&projection, sizeof(glm::mat4), 16 },
 				{ U_VIEW_PROJECTION, (void*)&viewProjection, sizeof(glm::mat4), 16 },
-				{ U_BLEND_SHARPNESS, (void*)&blendSharpness, sizeof(real), 1 },
-				{ U_TEXTURE_SCALE, (void*)&textureScale, sizeof(real), 1 },
 				{ U_CAM_POS, (void*)&camPos, sizeof(glm::vec4), 4 },
-				{ U_DIR_LIGHT, (void*)&m_DirectionalLight, sizeof(m_DirectionalLight), sizeof(m_DirectionalLight) / sizeof(real) },
-				{ U_POINT_LIGHTS, (void*)PointLightsDataStart, PointLightsSize, PointLightsMoveInBytes },
+				{ U_DIR_LIGHT, (void*)&m_DirectionalLight, sizeof(*m_DirectionalLight), sizeof(*m_DirectionalLight) / sizeof(real) },
+				{ U_POINT_LIGHTS, (void*)PointLightsDataStart, PointLightsSize, PointLightsMoveInWords },
 			};
 
 			size_t index = 0;
@@ -5437,6 +5481,7 @@ namespace flex
 
 #if  DEBUG
 			u32 calculatedSize1 = index * 4;
+			calculatedSize1 = GetAlignedUBOSize(calculatedSize1);
 			assert(calculatedSize1 == size);
 #endif // DEBUG
 
@@ -5477,6 +5522,8 @@ namespace flex
 			u32 enableNormalSampler = material.material.enableNormalSampler;
 			u32 enableCubemapSampler = material.material.enableCubemapSampler;
 			u32 enableIrradianceSampler = material.material.enableIrradianceSampler;
+			real textureScale = material.material.textureScale;
+			real blendSharpness = material.material.blendSharpness;
 
 			// TODO: Roll into array?
 			if (uniformOverrides)
@@ -5550,24 +5597,23 @@ namespace flex
 					offset += uniformBuffer.dynamicData.size;
 				}
 			}
-			u32 index = 0;
 
 			struct UniformInfo
 			{
 				UniformInfo(u64 uniform,
 					void* dataStart,
 					size_t copySize,
-					size_t moveInBytes) :
+					size_t moveInWords) :
 					uniform(uniform),
 					dataStart(dataStart),
 					copySize(copySize),
-					moveInBytes(moveInBytes)
+					moveInWords(moveInWords)
 				{}
 
 				u64 uniform;
 				void* dataStart = nullptr;
 				size_t copySize;
-				size_t moveInBytes;
+				size_t moveInWords;
 			};
 			UniformInfo uniformInfos[] = {
 				{ U_MODEL, (void*)&model, 64, 16 },
@@ -5586,14 +5632,17 @@ namespace flex
 				{ U_ENABLE_NORMAL_SAMPLER, (void*)&enableNormalSampler, 4, 1 },
 				{ U_ENABLE_CUBEMAP_SAMPLER, (void*)&enableCubemapSampler, 4, 1 },
 				{ U_ENABLE_IRRADIANCE_SAMPLER, (void*)&enableIrradianceSampler, 4, 1 },
+				{ U_BLEND_SHARPNESS, (void*)&blendSharpness, 4, 1 },
+				{ U_TEXTURE_SCALE, (void*)&textureScale, 4, 1 },
 			};
 
+			u32 index = 0;
 			for (UniformInfo& uniformInfo : uniformInfos)
 			{
 				if (dynamicUniforms.HasUniform(uniformInfo.uniform))
 				{
 					memcpy(&uniformBuffer.dynamicData.data[offset + index], uniformInfo.dataStart, uniformInfo.copySize);
-					index += uniformInfo.moveInBytes;
+					index += uniformInfo.moveInWords;
 				}
 			}
 
@@ -5602,6 +5651,7 @@ namespace flex
 
 #if  DEBUG
 			u32 calculatedSize1 = index * 4;
+			calculatedSize1 = GetAlignedUBOSize(calculatedSize1);
 			assert(calculatedSize1 == size);
 #endif // DEBUG
 
@@ -5610,7 +5660,7 @@ namespace flex
 			memcpy((void*)(dest), &uniformBuffer.dynamicData.data[offset], size);
 
 			// Flush to make changes visible to the host
-			VkMappedMemoryRange mappedMemoryRange{};
+			VkMappedMemoryRange mappedMemoryRange = {};
 			mappedMemoryRange.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
 			mappedMemoryRange.offset = offset;
 			mappedMemoryRange.memory = uniformBuffer.dynamicBuffer.m_Memory;
@@ -5746,8 +5796,7 @@ namespace flex
 
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_BLEND_SHARPNESS);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_TEXTURE_SCALE);
+
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_MODEL);
@@ -5765,6 +5814,8 @@ namespace flex
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CONST_AO);
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ENABLE_NORMAL_SAMPLER);
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_NORMAL_SAMPLER);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_BLEND_SHARPNESS);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_TEXTURE_SCALE);
 			++shaderID;
 
 			// Skybox
@@ -5817,13 +5868,13 @@ namespace flex
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_CUBEMAP_SAMPLER);
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ROUGHNESS_SAMPLER); // TODO: const roughness?
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CONST_ROUGHNESS);
 			++shaderID;
 
 			// BRDF
 			m_Shaders[shaderID].shader.deferred = false;
 			m_Shaders[shaderID].shader.subpass = 1;
-			m_Shaders[shaderID].shader.vertexAttributes = 0; // No vertex attributes! Not even position (vertex index is used)
+			m_Shaders[shaderID].shader.vertexAttributes = 0;
 
 			m_Shaders[shaderID].shader.constantBufferUniforms = {};
 
@@ -5908,11 +5959,11 @@ namespace flex
 				StripLeadingDirectories(fragFileName);
 				Print("Loading shaders %s & %s\n", vertFileName.c_str(), fragFileName.c_str());
 
-				if (!ReadFile(shader.vertexShaderFilePath, shader.vertexShaderCode, false))
+				if (!ReadFile(shader.vertexShaderFilePath, shader.vertexShaderCode, true))
 				{
 					PrintError("Could not find vertex shader %s\n", shader.name.c_str());
 				}
-				if (!ReadFile(shader.fragmentShaderFilePath, shader.fragmentShaderCode, false))
+				if (!ReadFile(shader.fragmentShaderFilePath, shader.fragmentShaderCode, true))
 				{
 					PrintError("Could not find fragment shader %s\n", shader.name.c_str());
 				}

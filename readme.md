@@ -6,15 +6,14 @@
 Flex Engine is my personal game engine which I began work on in February 2017 as a playground for learning about real-time technology. During the first year of development I focused on the renderer, but since then I have been focusing on adding support for other systems.
 
 #### Notable Features
-- Support for both Vulkan and OpenGL, switchable at runtime
+- Support for both Vulkan and OpenGL
 - Signed-distance field font generation & rendering
-- Physically Based Rendering
-- Image Based lighting
+- Physically based rendering
+- Image based lighting
 - Reflection probes
-- Scene editor
-- Custom scene file format
-- Post-processing stage
+- Scene editor with custom file format
 - Profiling tools
+- In-game scripting language
 
 ![](http://i.imgur.com/3XQGcDD.png)
 
@@ -43,13 +42,13 @@ See more screenshots [here](https://github.com/ajweeks/FlexEngine/tree/developme
 If you want to build Flex Engine on your own system, follow these steps. You an always download the latest release binaries [here](https://github.com/ajweeks/flexengine/releases) if that's what you're after.
 
 #### Requirements:
-- Visual Studio 2015
+- Visual Studio 2015 (or later)
 - [GENie](https://github.com/bkaradzic/GENie)
 
 #### Steps
-1. Recursively clone the repository using your method of choice (SourceTree, git bash, ...)
+1. Recursively clone the repository to get all submodules
 2. Ensure [GENie](https://github.com/bkaradzic/GENie) is either on your PATH, or `genie.exe` is in the `scripts/` directory
-3. Run `generate-vs-files.bat` (this simply runs the command `genie vs2015`)
+3. Run `scripts/generate-vs-*-files.bat` (this simply runs the command `genie vs2015` or `genie vs2017`)
 4. Open `build/FlexEngine.sln`
 5. Build and run!
 
@@ -70,13 +69,13 @@ Flex engine is released as open source under The MIT License. See [license.md](l
 
 ## Acknowledgements
 A huge thank you must be given to the following individuals and organizations for their incredibly useful resources:
+ - Baldur Karlsson of [github.com/baldurk/renderdoc](https://github.com/baldurk/renderdoc)
  - Alexander Overvoorde of [vulkan-tutorial.com](https://vulkan-tutorial.com/)
  - Sascha Willems of [github.com/SaschaWillems/Vulkan](https://github.com/SaschaWillems/Vulkan)
- - Baldur Karlsson of [github.com/baldurk/renderdoc](https://github.com/baldurk/renderdoc)
  - Joey de Vries of [learnopengl.com](https://learnopengl.com/)
  - Andrew Maximov for the pistol model and textures [artisaverb.info/PBT.html ](http://artisaverb.info/PBT.html)
  - [FreePBR.com](http://FreePBR.com) for the high-quality PBR textures
- - All of the open-source library authors and contributors
+ - All authors and contributors to the open-source libraries mentioned above
 
 ## Blog
  Stay (somewhat) up to date about this project on my blog at [ajweeks.com/blog](http://ajweeks.com/blog/)

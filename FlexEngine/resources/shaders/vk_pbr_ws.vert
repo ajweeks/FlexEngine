@@ -19,7 +19,6 @@ layout (location = 2) out mat3 ex_TBN;
 layout (binding = 0) uniform UBOConstant
 {
 	mat4 viewProjection;
-	float blendSharpness;
 } uboConstant;
 
 // Updated once per object
@@ -39,6 +38,9 @@ layout (binding = 1) uniform UBODynamic
 	bool enableRoughnessSampler;
 	bool enableAOSampler;
 	bool enableNormalSampler;
+	
+	float blendSharpness;
+	float textureScale;
 } uboDynamic;
 
 void main()

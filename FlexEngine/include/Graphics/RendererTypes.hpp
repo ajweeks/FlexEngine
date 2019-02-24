@@ -20,52 +20,73 @@ namespace flex
 	class VertexBufferData;
 	class GameObject;
 
+	struct DirLightData
+	{
+		glm::vec3 dir;
+		glm::vec4 color;
+		real brightness;
+
+		real shadowDarkness;
+		bool bCastShadow;
+		real shadowMapNearPlane;
+		real shadowMapFarPlane;
+		real shadowMapZoom;
+	};
+
+	struct PointLightData
+	{
+		glm::vec3 pos;
+		glm::vec4 color;
+		real brightness;
+	};
+
 	// Uniforms
-	const u64 U_MODEL							= (1 << 0);
-	const u64 U_MODEL_INV_TRANSPOSE				= (1 << 1);
-	const u64 U_VIEW							= (1 << 3);
-	const u64 U_VIEW_INV						= (1 << 4);
-	const u64 U_VIEW_PROJECTION					= (1 << 5);
-	const u64 U_BLEND_SHARPNESS					= (1 << 6);
-	const u64 U_MODEL_VIEW_PROJ					= (1 << 7);
-	const u64 U_PROJECTION						= (1 << 8);
-	const u64 U_COLOR_MULTIPLIER				= (1 << 9);
-	const u64 U_CAM_POS							= (1 << 10);
-	const u64 U_DIR_LIGHT						= (1 << 11);
-	const u64 U_POINT_LIGHTS					= (1 << 12);
-	const u64 U_ALBEDO_SAMPLER					= (1 << 13);
-	const u64 U_CONST_ALBEDO					= (1 << 14);
-	const u64 U_METALLIC_SAMPLER				= (1 << 15);
-	const u64 U_CONST_METALLIC					= (1 << 16);
-	const u64 U_ROUGHNESS_SAMPLER				= (1 << 17);
-	const u64 U_CONST_ROUGHNESS					= (1 << 18);
-	const u64 U_AO_SAMPLER						= (1 << 19);
-	const u64 U_CONST_AO						= (1 << 20);
-	const u64 U_NORMAL_SAMPLER					= (1 << 21);
-	const u64 U_ENABLE_CUBEMAP_SAMPLER			= (1 << 22);
-	const u64 U_ENABLE_ALBEDO_SAMPLER			= (1 << 23);
-	const u64 U_ENABLE_METALLIC_SAMPLER			= (1 << 24);
-	const u64 U_ENABLE_ROUGHNESS_SAMPLER		= (1 << 25);
-	const u64 U_ENABLE_AO_SAMPLER				= (1 << 26);
-	const u64 U_ENABLE_NORMAL_SAMPLER			= (1 << 27);
-	const u64 U_ENABLE_IRRADIANCE_SAMPLER		= (1 << 28);
-	const u64 U_CUBEMAP_SAMPLER					= (1 << 29);
-	const u64 U_IRRADIANCE_SAMPLER				= (1 << 30);
-	const u64 U_FB_0_SAMPLER					= (1 << 31);
-	const u64 U_FB_1_SAMPLER					= (1 << 32);
-	const u64 U_FB_2_SAMPLER					= (1 << 33);
-	const u64 U_TEXEL_STEP						= (1 << 34);
-	const u64 U_SHOW_EDGES						= (1 << 35);
-	const u64 U_LIGHT_VIEW_PROJ					= (1 << 36);
-	const u64 U_HDR_EQUIRECTANGULAR_SAMPLER		= (1 << 37);
-	const u64 U_BRDF_LUT_SAMPLER				= (1 << 38);
-	const u64 U_PREFILTER_MAP					= (1 << 39);
-	const u64 U_EXPOSURE						= (1 << 40);
-	const u64 U_TRANSFORM_MAT					= (1 << 41);
-	const u64 U_TEX_SIZE						= (1 << 42);
-	const u64 U_UNIFORM_BUFFER_CONSTANT			= (1 << 43);
-	const u64 U_UNIFORM_BUFFER_DYNAMIC			= (1 << 44);
-	const u64 U_TEXTURE_SCALE					= (1 << 45);
+	const u64 U_MODEL							= (1ull << 0); const u32 US_MODEL						= sizeof(glm::mat4);
+	const u64 U_MODEL_INV_TRANSPOSE				= (1ull << 1); const u32 US_MODEL_INV_TRANSPOSE			= sizeof(glm::mat4);
+	const u64 U_VIEW							= (1ull << 2); const u32 US_VIEW						= sizeof(glm::mat4);
+	const u64 U_VIEW_INV						= (1ull << 3); const u32 US_VIEW_INV					= sizeof(glm::mat4);
+	const u64 U_VIEW_PROJECTION					= (1ull << 4); const u32 US_VIEW_PROJECTION				= sizeof(glm::mat4);
+	const u64 U_MODEL_VIEW_PROJ					= (1ull << 5); const u32 US_MODEL_VIEW_PROJ				= sizeof(glm::mat4);
+	// 6
+	const u64 U_PROJECTION						= (1ull << 7); const u32 US_PROJECTION					= sizeof(glm::mat4);
+	const u64 U_BLEND_SHARPNESS					= (1ull << 8); const u32 US_BLEND_SHARPNESS				= sizeof(real);
+	const u64 U_COLOR_MULTIPLIER				= (1ull << 9); const u32 US_COLOR_MULTIPLIER			= sizeof(glm::vec4);
+	const u64 U_CAM_POS							= (1ull << 10); const u32 US_CAM_POS					= sizeof(glm::vec4);
+	const u64 U_DIR_LIGHT						= (1ull << 11); const u32 US_DIR_LIGHT					= sizeof(DirLightData);
+	const u64 U_POINT_LIGHTS					= (1ull << 12); const u32 US_POINT_LIGHTS				= sizeof(PointLightData);
+	const u64 U_ALBEDO_SAMPLER					= (1ull << 13); //const u32 US_ALBEDO_SAMPLER			= sizeof(glm::mat4);
+	const u64 U_CONST_ALBEDO					= (1ull << 14); const u32 US_CONST_ALBEDO				= sizeof(glm::vec4);
+	const u64 U_METALLIC_SAMPLER				= (1ull << 15); //const u32 US_METALLIC_SAMPLER			= sizeof(glm::mat4);
+	const u64 U_CONST_METALLIC					= (1ull << 16); const u32 US_CONST_METALLIC				= sizeof(real);
+	const u64 U_ROUGHNESS_SAMPLER				= (1ull << 17); //const u32 US_ROUGHNESS_SAMPLER		= sizeof(glm::mat4);
+	const u64 U_CONST_ROUGHNESS					= (1ull << 18); const u32 US_CONST_ROUGHNESS			= sizeof(real);
+	const u64 U_AO_SAMPLER						= (1ull << 19); //const u32 US_AO_SAMPLER				= sizeof(glm::mat4);
+	const u64 U_CONST_AO						= (1ull << 20); const u32 US_CONST_AO					= sizeof(real);
+	const u64 U_NORMAL_SAMPLER					= (1ull << 21); //const u32 US_NORMAL_SAMPLER			= sizeof(glm::mat4);
+	const u64 U_ENABLE_CUBEMAP_SAMPLER			= (1ull << 22); const u32 US_ENABLE_CUBEMAP_SAMPLER		= sizeof(i32);
+	const u64 U_ENABLE_ALBEDO_SAMPLER			= (1ull << 23); const u32 US_ENABLE_ALBEDO_SAMPLER		= sizeof(i32);
+	const u64 U_ENABLE_METALLIC_SAMPLER			= (1ull << 24); const u32 US_ENABLE_METALLIC_SAMPLER	= sizeof(i32);
+	const u64 U_ENABLE_ROUGHNESS_SAMPLER		= (1ull << 25); const u32 US_ENABLE_ROUGHNESS_SAMPLER	= sizeof(i32);
+	const u64 U_ENABLE_AO_SAMPLER				= (1ull << 26); const u32 US_ENABLE_AO_SAMPLER			= sizeof(i32);
+	const u64 U_ENABLE_NORMAL_SAMPLER			= (1ull << 27); const u32 US_ENABLE_NORMAL_SAMPLER		= sizeof(i32);
+	const u64 U_ENABLE_IRRADIANCE_SAMPLER		= (1ull << 28); const u32 US_ENABLE_IRRADIANCE_SAMPLER	= sizeof(i32);
+	const u64 U_CUBEMAP_SAMPLER					= (1ull << 29); //const u32 US_CUBEMAP_SAMPLER			= sizeof(glm::mat4);
+	const u64 U_IRRADIANCE_SAMPLER				= (1ull << 30); //const u32 US_IRRADIANCE_SAMPLER		= sizeof(glm::mat4);
+	const u64 U_FB_0_SAMPLER					= (1ull << 31); //const u32 US_FB_0_SAMPLER				= sizeof(glm::mat4);
+	const u64 U_FB_1_SAMPLER					= (1ull << 32); //const u32 US_FB_1_SAMPLER				= sizeof(glm::mat4);
+	const u64 U_FB_2_SAMPLER					= (1ull << 33); //const u32 US_FB_2_SAMPLER				= sizeof(glm::mat4);
+	const u64 U_TEXEL_STEP						= (1ull << 34); const u32 US_TEXEL_STEP					= sizeof(real);
+	const u64 U_SHOW_EDGES						= (1ull << 35); const u32 US_SHOW_EDGES					= sizeof(i32);
+	const u64 U_LIGHT_VIEW_PROJ					= (1ull << 36); const u32 US_LIGHT_VIEW_PROJ			= sizeof(glm::mat4);
+	const u64 U_HDR_EQUIRECTANGULAR_SAMPLER		= (1ull << 37); //const u32 US_HDR_EQUIRECTANGULAR_SAMPLER= sizeof(glm::mat4);
+	const u64 U_BRDF_LUT_SAMPLER				= (1ull << 38); //const u32 US_BRDF_LUT_SAMPLER			= sizeof(glm::mat4);
+	const u64 U_PREFILTER_MAP					= (1ull << 39); //const u32 US_PREFILTER_MAP			= sizeof(glm::mat4);
+	const u64 U_EXPOSURE						= (1ull << 40); const u32 US_EXPOSURE					= sizeof(real);
+	const u64 U_TRANSFORM_MAT					= (1ull << 41); const u32 US_TRANSFORM_MAT				= sizeof(glm::mat4);
+	const u64 U_TEX_SIZE						= (1ull << 42); const u32 US_TEX_SIZE					= sizeof(real);
+	const u64 U_UNIFORM_BUFFER_CONSTANT			= (1ull << 43); //const u32 US_UNIFORM_BUFFER_CONSTANT	= sizeof(glm::mat4);
+	const u64 U_UNIFORM_BUFFER_DYNAMIC			= (1ull << 44); //const u32 US_UNIFORM_BUFFER_DYNAMIC	= sizeof(glm::mat4);
+	const u64 U_TEXTURE_SCALE					= (1ull << 45); const u32 US_TEXTURE_SCALE				= sizeof(real);
 
 	enum class ClearFlag
 	{
@@ -328,6 +349,7 @@ namespace flex
 		bool engineMaterial = false;
 
 		real textureScale = 1.0f;
+		real blendSharpness = 1.0f;
 
 		// TODO: Make this more dynamic!
 		struct PushConstantBlock
@@ -363,6 +385,7 @@ namespace flex
 
 		bool HasUniform(u64 uniform) const;
 		void AddUniform(u64 uniform);
+		u32 CalculateSizeInBytes(u32 numPointLights) const;
 	};
 
 	struct Shader

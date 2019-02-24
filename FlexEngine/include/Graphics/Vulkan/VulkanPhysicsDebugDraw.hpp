@@ -59,8 +59,7 @@ namespace flex
 
 			// Per-frame data
 			VertexBufferData m_VertexBufferData;
-
-			GameObject* m_GameObject = nullptr;
+			VertexBufferData::CreateInfo m_VertexBufferCreateInfo;
 		};
 	} // namespace vk
 } // namespace flex

@@ -19,7 +19,7 @@ namespace flex
 		Renderer();
 		virtual ~Renderer();
 
-		virtual void Initialize() = 0;
+		virtual void Initialize();
 		virtual void PostInitialize() = 0;
 		virtual void Destroy() = 0;
 
@@ -148,15 +148,15 @@ namespace flex
 
 		PhysicsDebuggingSettings& GetPhysicsDebuggingSettings();
 
-		bool RegisterDirectionalLight(DirectionalLight* dirLight);
-		PointLightID RegisterPointLight(PointLight* pointLight);
+		bool RegisterDirectionalLight(DirLightData* dirLight);
+		PointLightID RegisterPointLight(PointLightData* pointLight);
 
 		void RemoveDirectionalLight();
-		void RemovePointLight(const PointLight* pointLight);
+		void RemovePointLight(const PointLightData* pointLight);
 		void RemoveAllPointLights();
 
-		DirectionalLight* GetDirectionalLight();
-		PointLight* GetPointLight(PointLightID pointLight);
+		DirLightData* GetDirectionalLight();
+		PointLightData* GetPointLight(PointLightID pointLight);
 		i32 GetNumPointLights();
 
 		i32 GetFramesRenderedCount() const;
@@ -178,6 +178,7 @@ namespace flex
 		BitmapFont* m_FntSourceCodeProWS = nullptr;
 		BitmapFont* m_FntSourceCodeProSS = nullptr;
 		BitmapFont* m_FntGantSS = nullptr;
+		static const i32 FONT_COUNT = 4;
 
 	protected:
 		// If the object gets deleted this frame *gameObjectRef gets set to nullptr
@@ -186,8 +187,8 @@ namespace flex
 		// Returns true if the parent-child tree changed during this call
 		bool DrawImGuiGameObjectNameAndChildren(GameObject* gameObject);
 
-		std::vector<PointLight*> m_PointLights;
-		DirectionalLight* m_DirectionalLight = nullptr;
+		std::vector<PointLightData*> m_PointLights;
+		DirLightData* m_DirectionalLight = nullptr;
 
 		struct DrawCallInfo
 		{
@@ -235,6 +236,29 @@ namespace flex
 		GameObject* m_WorldOrigin = nullptr;
 		MaterialID m_GridMaterialID = InvalidMaterialID;
 		MaterialID m_WorldAxisMaterialID = InvalidMaterialID;
+
+		std::string m_FontImageExtension = ".png";
+		struct FontMetaData
+		{
+			FontMetaData()
+			{}
+
+			FontMetaData(const std::string& filePath, const std::string& renderedTextureFilePath, i16 size,
+				bool bScreenSpace, BitmapFont** bitmap) :
+				filePath(filePath),
+				renderedTextureFilePath(renderedTextureFilePath),
+				size(size),
+				bScreenSpace(bScreenSpace),
+				bitmap(bitmap)
+			{}
+
+			std::string filePath;
+			std::string renderedTextureFilePath;
+			i16 size;
+			bool bScreenSpace;
+			BitmapFont** bitmap;
+		};
+		FontMetaData m_FontMetaDatas[FONT_COUNT];
 
 		// Must be 12 chars or less
 		const char* m_GameObjectPayloadCStr = "gameobject";

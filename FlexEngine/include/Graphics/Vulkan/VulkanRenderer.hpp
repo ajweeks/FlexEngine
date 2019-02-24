@@ -1,21 +1,14 @@
 #pragma once
 #if COMPILE_VULKAN
 
-//IGNORE_WARNINGS_PUSH
-//#if COMPILE_IMGUI
-//#include "ImGui/imgui_impl_vulkan.h" // For ImGui_ImplVulkanH_WindowData
-//#endif // COMPILE_IMGUI
-//IGNORE_WARNINGS_POP
+#include "Graphics/Renderer.hpp"
 
 #include <array>
 #include <map>
 
 #include "Callbacks/InputCallbacks.hpp"
-#include "Graphics/Renderer.hpp"
 #include "VDeleter.hpp"
-#include "VulkanBuffer.hpp"
 #include "VulkanCommandBufferManager.hpp"
-#include "VulkanDevice.hpp"
 #include "VulkanHelpers.hpp"
 #include "Window/Window.hpp"
 
@@ -26,6 +19,8 @@ namespace flex
 	namespace vk
 	{
 		class VulkanPhysicsDebugDraw;
+		struct VulkanBuffer;
+		struct VulkanDevice;
 
 		class VulkanRenderer : public Renderer
 		{
@@ -152,7 +147,7 @@ namespace flex
 				u32 enableIrradianceSampler;
 			};
 
-			void GenerateCubemapFromHDR(VulkanRenderObject* renderObject);
+			void GenerateCubemapFromHDR(VulkanRenderObject* renderObject, const std::string& environmentMapPath);
 			void GenerateIrradianceSampler(VulkanRenderObject* renderObject);
 			void GeneratePrefilteredCube(VulkanRenderObject* renderObject);
 			void GenerateBRDFLUT(VulkanTexture* brdfTexture);
@@ -260,6 +255,17 @@ namespace flex
 			VulkanRenderObject* GetRenderObject(RenderID renderID);
 
 			u32 GetActiveRenderObjectCount() const;
+
+			// Will attempt to find pre-rendered font at specified path, and
+			// only render a new file if not present or if bForceRender is true
+			bool LoadFont(BitmapFont** font,
+				i16 size,
+				const std::string& fontFilePath,
+				const std::string& renderedFontFilePath,
+				bool bForceRender,
+				bool bScreenSpace);
+
+			u32 GetAlignedUBOSize(u32 unalignedSize);
 
 			/*
 			 * How many materials we expect to have *at most* at any given time
