@@ -4229,9 +4229,8 @@ namespace flex
 		{
 			// TODO: This should be setting up the m_SwapChainFrameBuffers?
 
-			const glm::vec2i frameBufferSize = window->GetFrameBufferSize();
-			m_OffScreenFrameBuf->width = frameBufferSize.x;
-			m_OffScreenFrameBuf->height = frameBufferSize.y;
+			m_OffScreenFrameBuf->width = m_SwapChainExtent.width;
+			m_OffScreenFrameBuf->height = m_SwapChainExtent.height;
 
 			// Does *not* include depth attachment
 			const size_t frameBufferColorAttachmentCount = m_OffScreenFrameBuf->frameBufferAttachments.size();
@@ -5251,10 +5250,8 @@ namespace flex
 			}
 			else
 			{
-				i32 width, height;
-				glfwGetWindowSize(((GLFWWindowWrapper*)window)->GetWindow(), &width, &height);
-
-				VkExtent2D actualExtent = { (u32)width, (u32)height };
+				glm::vec2i size = g_Window->GetFrameBufferSize();
+				VkExtent2D actualExtent{ (u32)size.x, (u32)size.y };
 
 				actualExtent.width = std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, actualExtent.width));
 				actualExtent.height = std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, actualExtent.height));
