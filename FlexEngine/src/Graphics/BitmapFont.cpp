@@ -1,5 +1,9 @@
 #include "stdafx.hpp"
 
+#if COMPILE_OPEN_GL
+#include "Graphics/GL/GLHelpers.hpp"
+#endif
+
 #include "Graphics/BitmapFont.hpp"
 
 namespace flex
@@ -21,11 +25,13 @@ namespace flex
 
 	BitmapFont::~BitmapFont()
 	{
-		//if (m_Texture)
-		//{
-		//	m_Texture->Destroy();
-		//	SafeDelete(m_Texture);
-		//}
+#if COMPILE_OPEN_GL
+		if (m_Texture)
+		{
+			m_Texture->Destroy();
+			SafeDelete(m_Texture);
+		}
+#endif
 	}
 
 	bool BitmapFont::IsCharValid(wchar_t character)
@@ -73,22 +79,25 @@ namespace flex
 		m_TextureWidth = texSize.x;
 		m_TextureHeight = texSize.y;
 
-		//if (m_Texture)
-		//{
-		//	m_Texture->width = m_TextureWidth;
-		//	m_Texture->height = m_TextureHeight;
-		//}
+#if COMPILE_OPEN_GL
+		if (m_Texture)
+		{
+			m_Texture->width = m_TextureWidth;
+			m_Texture->height = m_TextureHeight;
+		}
+#endif
 	}
 
-	//gl::GLTexture* BitmapFont::SetTexture(gl::GLTexture* newTex)
-	//{
-	//	m_Texture = newTex;
-	//	return newTex;
-	//}
-	//
-	//gl::GLTexture* BitmapFont::GetTexture()
-	//{
-	//	//return m_Texture;
-	//}
+#if COMPILE_OPEN_GL
+	gl::GLTexture* BitmapFont::SetTexture(gl::GLTexture* newTex)
+	{
+		m_Texture = newTex;
+		return newTex;
+	}
 
+	gl::GLTexture* BitmapFont::GetTexture()
+	{
+		return m_Texture;
+	}
+#endif
 } // namespace flex

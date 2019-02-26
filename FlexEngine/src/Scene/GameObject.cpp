@@ -2563,7 +2563,7 @@ namespace flex
 
 			if (ImGui::CollapsingHeader("Preview"))
 			{
-				ImGui::Image((void*)shadowTextureID, ImVec2(256, 256));
+				ImGui::Image((void*)data.shadowTextureID, ImVec2(256, 256));
 			}
 
 			ImGui::TreePop();
@@ -2685,6 +2685,7 @@ namespace flex
 		data.brightness = 1.0f;
 		data.color = VEC4_ONE;
 		data.pos = VEC3_ZERO;
+		data.bEnabled = true;
 	}
 
 	void PointLight::Initialize()

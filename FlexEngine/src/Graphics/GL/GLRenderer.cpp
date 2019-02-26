@@ -2262,7 +2262,7 @@ namespace flex
 
 			GL_PUSH_DEBUG_GROUP("Shadow Map Depths");
 
-			if (m_DirectionalLight->bCastShadow && m_DirectionalLight->IsVisible())
+			if (m_DirectionalLight->bCastShadow && m_DirectionalLight->bEnabled)
 			{
 				GLMaterial* material = &m_Materials[m_ShadowMaterialID];
 				GLShader* shader = &m_Shaders[material->material.shaderID];
@@ -2713,35 +2713,35 @@ namespace flex
 
 				glm::vec3 camPos = cam->GetPosition();
 				glm::vec3 camUp = cam->GetUp();
-				for (PointLight* pointLight : m_PointLights)
+				for (PointLightData* pointLightData : m_PointLights)
 				{
-					if (pointLight->IsVisible())
+					if (pointLightData->bEnabled)
 					{
 						// TODO: Sort back to front? Or clear depth and then enable depth test
-						drawInfo.pos = pointLight->GetPos();
-						drawInfo.color = pointLight->color * 1.5f;
-						drawInfo.color.a = pointLight->color.a;
+						drawInfo.pos = pointLightData->pos;
+						drawInfo.color = pointLightData->color * 1.5f;
+						drawInfo.color.a = pointLightData->color.a;
 						drawInfo.textureHandleID = m_LoadedTextures[m_PointLightIconID]->handle;
-						glm::mat4 rotMat = glm::lookAt(camPos, (glm::vec3)pointLight->GetPos(), camUp);
+						glm::mat4 rotMat = glm::lookAt(camPos, pointLightData->pos, camUp);
 						drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
 						DrawSpriteQuad(drawInfo);
 					}
 				}
 
-				if (m_DirectionalLight->IsVisible())
+				if (m_DirectionalLight->bEnabled)
 				{
 					drawInfo.color = m_DirectionalLight->color * 1.5f;
 					drawInfo.color.a = m_DirectionalLight->color.a;
-					drawInfo.pos = m_DirectionalLight->GetPos();
+					drawInfo.pos = m_DirectionalLight->pos;
 					drawInfo.textureHandleID = m_LoadedTextures[m_DirectionalLightIconID]->handle;
-					glm::mat4 rotMat = glm::lookAt(camPos, (glm::vec3)m_DirectionalLight->GetPos(), camUp);
+					glm::mat4 rotMat = glm::lookAt(camPos, (glm::vec3)m_DirectionalLight->pos, camUp);
 					drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
 					DrawSpriteQuad(drawInfo);
 
-					glm::vec3 dirLightForward = VEC3_RIGHT * m_DirectionalLight->GetRot();
+					glm::vec3 dirLightForward = m_DirectionalLight->dir;
 					m_PhysicsDebugDrawer->drawLine(
-						ToBtVec3(m_DirectionalLight->GetPos()),
-						ToBtVec3(m_DirectionalLight->GetPos() - dirLightForward * 2.5f),
+						ToBtVec3(m_DirectionalLight->pos),
+						ToBtVec3(m_DirectionalLight->pos - dirLightForward * 2.5f),
 						btVector3(0.0f, 0.0f, 1.0f));
 				}
 			}
@@ -3632,7 +3632,7 @@ namespace flex
 
 		void GLRenderer::ComputeDirLightViewProj(glm::mat4& outView, glm::mat4& outProj)
 		{
-			glm::vec3 dirLightDir = VEC3_RIGHT * m_DirectionalLight->GetRot();
+			glm::vec3 dirLightDir = m_DirectionalLight->dir;
 			outView = glm::lookAt(VEC3_ZERO, -dirLightDir, VEC3_UP);
 
 			real zoom = m_DirectionalLight->shadowMapZoom;
@@ -4775,24 +4775,24 @@ namespace flex
 			m_FontsSS.clear();
 			m_FontsWS.clear();
 
-			for (i32 i = 0; i < FONT_COUNT; ++i)
+			for (FontMetaData& fontMetaData : m_FontMetaDatas)
 			{
-				if (*(fonts[i]) != nullptr)
+				if (*(fontMetaData.bitmap) != nullptr)
 				{
-					delete *(fonts[i]);
-					(*(fonts[i])) = nullptr;
+					delete *(fontMetaData.bitmap);
+					(*(fontMetaData.bitmap)) = nullptr;
 				}
 
-				std::string fontName = fontFilePaths[i];
+				std::string fontName = fontMetaData.filePath;
 				StripLeadingDirectories(fontName);
 				StripFileType(fontName);
 
-				LoadFont(fonts[i],
-						 fontSizes[i],
-						 fontFilePaths[i],
-						 renderedTextureFilePaths[i],
-						 bForceRender,
-						 bScreenSpace[i]);
+				LoadFont(fontMetaData.bitmap,
+					fontMetaData.size,
+					fontMetaData.filePath,
+					fontMetaData.renderedTextureFilePath,
+					bForceRender,
+					fontMetaData.bScreenSpace);
 			}
 		}
 
@@ -4890,11 +4890,11 @@ namespace flex
 				if (shader->shader.constantBufferUniforms.HasUniform(U_DIR_LIGHT))
 				{
 					static const char* dirLightEnabledStr = "dirLight.enabled";
-					if (m_DirectionalLight->IsVisible())
+					if (m_DirectionalLight->bEnabled)
 					{
 						SetUInt(material->material.shaderID, dirLightEnabledStr, 1);
 						static const char* dirLightDirectionStr = "dirLight.direction";
-						glm::vec4 dirLightDir = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f) * m_DirectionalLight->GetRot();
+						glm::vec4 dirLightDir(m_DirectionalLight->dir, 0.0f);
 						SetVec4f(material->material.shaderID, dirLightDirectionStr, dirLightDir);
 						static const char* dirLightColorStr = "dirLight.color";
 						SetVec4f(material->material.shaderID, dirLightColorStr, m_DirectionalLight->color * m_DirectionalLight->brightness);
@@ -4924,7 +4924,7 @@ namespace flex
 						strcat_s(enabledStr, dotEnabledStr);
 						if (i < m_PointLights.size())
 						{
-							if (m_PointLights[i]->IsVisible())
+							if (m_PointLights[i]->bEnabled)
 							{
 								SetUInt(material->material.shaderID, enabledStr, 1);
 
@@ -4932,7 +4932,7 @@ namespace flex
 								strcpy_s(positionStr, pointLightStrStart);
 								static const char* dotPositionStr = ".position";
 								strcat_s(positionStr, dotPositionStr);
-								SetVec4f(material->material.shaderID, positionStr, glm::vec4(m_PointLights[i]->GetPos(), 0.0f));
+								SetVec4f(material->material.shaderID, positionStr, glm::vec4(m_PointLights[i]->pos, 0.0f));
 
 								char colorStr[strStartLen + 6];
 								strcpy_s(colorStr, pointLightStrStart);
@@ -6335,7 +6335,7 @@ namespace flex
 					BaseScene* scene = g_SceneManager->CurrentScene();
 					PointLight* newPointLight = new PointLight(scene);
 					scene->AddRootObject(newPointLight);
-					RegisterPointLight(newPointLight);
+					RegisterPointLight(&newPointLight->data);
 				}
 			}
 		}

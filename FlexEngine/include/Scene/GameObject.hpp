@@ -233,9 +233,6 @@ namespace flex
 
 		DirLightData data;
 
-		// DEBUG: (just for preview in ImGui)
-		u32 shadowTextureID = 0;
-
 	protected:
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
 		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;

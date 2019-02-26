@@ -4,6 +4,14 @@
 
 namespace flex
 {
+#if COMPILE_OPEN_GL
+	namespace gl
+	{
+		class GLRenderer;
+		class GLTexture;
+	}
+#endif
+
 	struct FontMetric
 	{
 		glm::vec2 GetKerningOffset(wchar_t leftChar, wchar_t rightChar);
@@ -40,16 +48,18 @@ namespace flex
 
 		void SetTextureSize(const glm::vec2i& texSize);
 
-		//gl::GLTexture* SetTexture(gl::GLTexture* newTex);
-		//gl::GLTexture* GetTexture();
+#if COMPILE_OPEN_GL
+		gl::GLTexture* SetTexture(gl::GLTexture* newTex);
+		gl::GLTexture* GetTexture();
+#endif
 
 		// TODO: Investigate crash when this value is higher (256)
 		static const i32 CHAR_COUNT = 200;
 
 	private:
-		// TODO: Remove
-		//friend class flex::gl::GLRenderer;
-
+#if COMPILE_OPEN_GL
+		friend class flex::gl::GLRenderer;
+#endif
 		FontMetric m_CharTable[CHAR_COUNT];
 		std::vector<TextCache> m_TextCaches;
 
@@ -62,7 +72,9 @@ namespace flex
 		i32 m_TextureHeight = 0;
 		i32 m_BufferStart = 0;
 		i32 m_BufferSize = 0;
-		//gl::GLTexture* m_Texture = nullptr;
+#if COMPILE_OPEN_GL
+		gl::GLTexture* m_Texture = nullptr;
+#endif
 		bool m_bAddedToRenderer = false;
 
 		bool m_bIsCachedFont = false;
