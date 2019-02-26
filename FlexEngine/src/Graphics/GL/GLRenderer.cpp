@@ -8,14 +8,14 @@ IGNORE_WARNINGS_PUSH
 
 #include <glm/gtx/quaternion.hpp>
 
-#include <freetype/ftbitmap.h>
-
 #if COMPILE_IMGUI
 #include "imgui_internal.h"
 
 #include "ImGui/imgui_impl_glfw.h"
 #include "ImGui/imgui_impl_opengl3.h"
 #endif
+
+#include <freetype/ftbitmap.h>
 IGNORE_WARNINGS_POP
 
 #include "Cameras/BaseCamera.hpp"
@@ -49,9 +49,6 @@ namespace flex
 			m_KeyEventCallback(this, &GLRenderer::OnKeyEvent),
 			m_ActionCallback(this, &GLRenderer::OnActionEvent)
 		{
-			m_DefaultSettingsFilePathAbs = RelativePathToAbsolute(ROOT_LOCATION  "saved/config/default-renderer-settings.ini");
-			m_SettingsFilePathAbs = RelativePathToAbsolute(SAVED_LOCATION "config/renderer-settings.ini");
-
 			g_Renderer = this;
 		}
 
@@ -396,7 +393,7 @@ namespace flex
 											  internalFormat,
 											  format,
 											  type);
-				if (m_BRDFTexture->GenerateEmpty())
+				if (m_BRDFTexture->CreateEmpty())
 				{
 					m_LoadedTextures.push_back(m_BRDFTexture);
 					GenerateBRDFLUT(m_BRDFTexture->handle, brdfSize);
@@ -2962,7 +2959,7 @@ namespace flex
 			bool bHasText = false;
 			for (BitmapFont* font : m_FontsSS)
 			{
-				if (font->m_BufferSize > 0)
+				if (font->GetBufferSize() > 0)
 				{
 					bHasText = true;
 					break;
@@ -3015,7 +3012,7 @@ namespace flex
 
 			for (BitmapFont* font : m_FontsSS)
 			{
-				if (font->m_BufferSize > 0)
+				if (font->GetBufferSize() > 0)
 				{
 					glActiveTexture(GL_TEXTURE0);
 					glBindTexture(GL_TEXTURE_2D, font->GetTexture()->handle);
@@ -3035,7 +3032,7 @@ namespace flex
 					glm::vec2 texSize = (glm::vec2)font->GetTexture()->GetResolution();
 					glUniform2fv(fontMaterial.uniformIDs.texSize, 1, &texSize.r);
 
-					glDrawArrays(GL_POINTS, font->m_BufferStart, font->m_BufferSize);
+					glDrawArrays(GL_POINTS, font->GetBufferStart(), font->GetBufferSize());
 				}
 			}
 
@@ -3053,7 +3050,7 @@ namespace flex
 			bool bHasText = false;
 			for (BitmapFont* font : m_FontsWS)
 			{
-				if (font->m_BufferSize > 0)
+				if (font->GetBufferSize() > 0)
 				{
 					bHasText = true;
 					break;
@@ -3097,7 +3094,7 @@ namespace flex
 
 			for (BitmapFont* font : m_FontsWS)
 			{
-				if (font->m_BufferSize > 0)
+				if (font->GetBufferSize() > 0)
 				{
 					glBindTexture(GL_TEXTURE_2D, font->GetTexture()->handle);
 
@@ -3107,7 +3104,7 @@ namespace flex
 					glm::vec2 texSize = (glm::vec2)font->GetTexture()->GetResolution();
 					glUniform2fv(fontMaterial.uniformIDs.texSize, 1, &texSize.r);
 
-					glDrawArrays(GL_POINTS, font->m_BufferStart, font->m_BufferSize);
+					glDrawArrays(GL_POINTS, font->GetBufferStart(), font->GetBufferSize());
 				}
 			}
 
@@ -3121,179 +3118,29 @@ namespace flex
 								  bool bForceRender,
 								  bool bScreenSpace)
 		{
-			FT_Error error;
-			error = FT_Init_FreeType(&ft);
-			if (error != FT_Err_Ok)
-			{
-				PrintError("Could not init FreeType\n");
-				return false;
-			}
-
-			std::vector<char> fileMemory;
-			ReadFile(fontFilePath, fileMemory, true);
-
+			std::map<i32, FontMetric*> characters;
+			std::array<glm::vec2i, 4> maxPos;
 			FT_Face face;
-			error = FT_New_Memory_Face(ft, (FT_Byte*)fileMemory.data(), (FT_Long)fileMemory.size(), 0, &face);
-			if (error == FT_Err_Unknown_File_Format)
+			if (!LoadFontMetrics(fontFilePath, font, size, bScreenSpace, &characters, &maxPos, &face))
 			{
-				PrintError("Unhandled font file format: %s\n", fontFilePath.c_str());
 				return false;
 			}
-			else if (error != FT_Err_Ok || !face)
-			{
-				PrintError("Failed to create new font face: %s\n", fontFilePath.c_str());
-				return false;
-			}
-
-			error = FT_Set_Char_Size(face,
-									 0, size * 64,
-									 (FT_UInt)g_Monitor->DPI.x,
-									 (FT_UInt)g_Monitor->DPI.y);
-
-			//FT_Set_Pixel_Sizes(face, 0, fontPixelSize);
 
 			std::string fileName = fontFilePath;
 			StripLeadingDirectories(fileName);
-			Print("Loaded font file %s\n", fileName.c_str());
 
-			std::string fontName = std::string(face->family_name) + " - " + face->style_name;
-			*font = new BitmapFont(size, fontName, face->num_glyphs);
-			BitmapFont* newFont = *font; // Shortcut
+			BitmapFont* newFont = *font;
 
-			if (bScreenSpace)
-			{
-				m_FontsSS.push_back(newFont);
-			}
-			else
-			{
-				m_FontsWS.push_back(newFont);
-			}
-
-			newFont->m_bUseKerning = FT_HAS_KERNING(face) != 0;
-
-			// Atlas helper variables
-			glm::vec2i startPos[4] = { { 0.0f, 0.0f },{ 0.0f, 0.0f },{ 0.0f, 0.0f },{ 0.0f, 0.0f } };
-			glm::vec2i maxPos[4] = { { 0.0f, 0.0f },{ 0.0f, 0.0f },{ 0.0f, 0.0f },{ 0.0f, 0.0f } };
-			bool bHorizontal = false; // Direction this pass expands the map in (internal moves are !bHorizontal)
-			u32 posCount = 1; // Internal move count in this pass
-			u32 curPos = 0;   // Internal move count
-			u32 channel = 0;  // Current channel writing to
-
+			// TODO: Save in common place
+			u32 sampleDensity = 32;
 			u32 padding = 1;
 			u32 spread = 5;
-			u32 totPadding = padding + spread;
-
-			u32 sampleDensity = 32;
-
-			std::map<i32, FontMetric*> characters;
-			for (i32 c = 0; c < BitmapFont::CHAR_COUNT - 1; ++c)
-			{
-				FontMetric* metric = newFont->GetMetric((wchar_t)c);
-				if (!metric)
-				{
-					continue;
-				}
-
-				metric->character = (wchar_t)c;
-
-				u32 glyphIndex = FT_Get_Char_Index(face, c);
-				// TODO: Is this correct?
-				if (glyphIndex == 0)
-				{
-					continue;
-				}
-
-				//if (newFont->UseKerning() && glyphIndex)
-				//{
-				//	for (i32 previous = 0; previous < BitmapFont::CHAR_COUNT - 1; ++previous)
-				//	{
-				//		FT_Vector delta;
-				//
-				//		u32 prevIdx = FT_Get_Char_Index(face, previous);
-				//		FT_Get_Kerning(face, prevIdx, glyphIndex, FT_KERNING_DEFAULT, &delta);
-				//
-				//		if (delta.x != 0 || delta.y != 0)
-				//		{
-				//			std::wstring charKey(std::wstring(1, (wchar_t)previous) + std::wstring(1, (wchar_t)c));
-				//			metric->kerning[charKey] =
-				//				glm::vec2((real)delta.x / 64.0f, (real)delta.y / 64.0f);
-				//		}
-				//	}
-				//}
-
-				if (FT_Load_Glyph(face, glyphIndex, FT_LOAD_RENDER))
-				{
-					PrintError("Failed to load glyph with index %i\n", glyphIndex);
-					continue;
-				}
-
-
-				u32 width = face->glyph->bitmap.width + totPadding * 2;
-				u32 height = face->glyph->bitmap.rows + totPadding * 2;
-
-
-				metric->width = (u16)width;
-				metric->height = (u16)height;
-				metric->offsetX = (i16)(face->glyph->bitmap_left + totPadding);
-				metric->offsetY = -(i16)(face->glyph->bitmap_top + totPadding);
-				metric->advanceX = (real)face->glyph->advance.x / 64.0f;
-
-				// Generate atlas coordinates
-				metric->channel = (u8)channel;
-				metric->texCoord = startPos[channel];
-				if (bHorizontal)
-				{
-					maxPos[channel].y = std::max(maxPos[channel].y, startPos[channel].y + (i32)height);
-					startPos[channel].y += height;
-					maxPos[channel].x = std::max(maxPos[channel].x, startPos[channel].x + (i32)width);
-				}
-				else
-				{
-					maxPos[channel].x = std::max(maxPos[channel].x, startPos[channel].x + (i32)width);
-					startPos[channel].x += width;
-					maxPos[channel].y = std::max(maxPos[channel].y, startPos[channel].y + (i32)height);
-				}
-				channel++;
-				if (channel == 4)
-				{
-					channel = 0;
-					curPos++;
-					if (curPos == posCount)
-					{
-						curPos = 0;
-						bHorizontal = !bHorizontal;
-						if (bHorizontal)
-						{
-							for (u8 cha = 0; cha < 4; ++cha)
-							{
-								startPos[cha] = glm::vec2i(maxPos[cha].x, 0);
-							}
-						}
-						else
-						{
-							for (u8 cha = 0; cha < 4; ++cha)
-							{
-								startPos[cha] = glm::vec2i(0, maxPos[cha].y);
-							}
-							posCount++;
-						}
-					}
-				}
-
-				metric->bIsValid = true;
-
-				characters[c] = metric;
-			}
 
 			bool bUsingPreRenderedTexture = false;
 			if (!bForceRender)
 			{
 				if (FileExists(renderedFontFilePath))
 				{
-					TextureParameters params(false);
-					params.wrapS = GL_CLAMP_TO_EDGE;
-					params.wrapT = GL_CLAMP_TO_EDGE;
-
 					GLTexture* fontTex = newFont->SetTexture(new GLTexture(renderedFontFilePath, 4, false, false, false));
 
 					if (fontTex->LoadFromFile())
@@ -3315,7 +3162,7 @@ namespace flex
 					}
 					else
 					{
-						newFont->m_Texture = nullptr;
+						newFont->ClearTexture();
 						SafeDelete(fontTex);
 					}
 				}
@@ -3328,13 +3175,12 @@ namespace flex
 					std::max(std::max(maxPos[0].y, maxPos[1].y), std::max(maxPos[2].y, maxPos[3].y)));
 				newFont->SetTextureSize(textureSize);
 
-				//Setup rendering
 				TextureParameters params(false);
 				params.wrapS = GL_CLAMP_TO_EDGE;
 				params.wrapT = GL_CLAMP_TO_EDGE;
 
 				GLTexture* fontTex = newFont->SetTexture(new GLTexture(fileName, textureSize.x, textureSize.y, 4, GL_RGBA16F, GL_RGBA, GL_FLOAT));
-				fontTex->GenerateEmpty();
+				fontTex->CreateEmpty();
 				fontTex->Build();
 				fontTex->SetParameters(params);
 
@@ -3373,7 +3219,7 @@ namespace flex
 
 				GLRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
 
-				//Render to Glyphs atlas
+				// Render to Glyphs atlas
 				FT_Set_Pixel_Sizes(face, 0, size * sampleDensity);
 
 				for (auto& charPair : characters)
@@ -3407,7 +3253,7 @@ namespace flex
 						continue;
 					}
 
-					FT_Bitmap alignedBitmap{};
+					FT_Bitmap alignedBitmap = {};
 					if (FT_Bitmap_Convert(ft, &face->glyph->bitmap, &alignedBitmap, 4))
 					{
 						PrintError("Couldn't align free type bitmap size\n");
@@ -3571,7 +3417,8 @@ namespace flex
 		{
 			assert(m_CurrentFont != nullptr);
 
-			m_CurrentFont->m_TextCaches.emplace_back(str, anchor, pos, color, spacing, bRaw);
+			TextCache newCache(str, anchor, pos, color, spacing, bRaw);
+			m_CurrentFont->AddTextCache(newCache);
 		}
 
 		void GLRenderer::DrawStringWS(const std::string& str,
@@ -3583,7 +3430,8 @@ namespace flex
 		{
 			assert(m_CurrentFont != nullptr);
 
-			m_CurrentFont->m_TextCaches.emplace_back(str, pos, rot, color, spacing, bRaw);
+			TextCache newCache(str, pos, rot, color, spacing, bRaw);
+			m_CurrentFont->AddTextCache(newCache);
 		}
 
 		real GLRenderer::GetStringWidth(const TextCache& textCache, BitmapFont* font) const
@@ -3655,10 +3503,10 @@ namespace flex
 				real textScale = glm::max(2.0f / (real)frameBufferSize.x, 2.0f / (real)frameBufferSize.y) *
 					(font->GetSize() / 12.0f);
 
-				font->m_BufferStart = (i32)(textVertices.size());
-				font->m_BufferSize = 0;
+				font->SetBufferStart((i32)(textVertices.size()));
 
-				for (TextCache& textCache : font->m_TextCaches)
+				const std::vector<TextCache>& textCaches = font->GetTextCaches();
+				for (const TextCache& textCache : textCaches)
 				{
 					std::string currentStr = textCache.str;
 
@@ -3757,20 +3605,20 @@ namespace flex
 							}
 							else
 							{
-								PrintWarn("Attempted to draw char with invalid metric: %c in font %s\n", c, font->m_Name.c_str());
+								PrintWarn("Attempted to draw char with invalid metric: %c in font %s\n", c, font->name.c_str());
 							}
 						}
 						else
 						{
-							PrintWarn("Attempted to draw invalid char: %c in font %s\n", c, font->m_Name.c_str());
+							PrintWarn("Attempted to draw invalid char: %c in font %s\n", c, font->name.c_str());
 						}
 
 						prevChar = c;
 					}
 				}
 
-				font->m_BufferSize = (i32)(textVertices.size()) - font->m_BufferStart;
-				font->m_TextCaches.clear();
+				font->SetBufferSize((i32)(textVertices.size()) - font->GetBufferStart());
+				font->ClearCaches();
 			}
 
 			u32 bufferByteCount = (u32)(textVertices.size() * sizeof(TextVertex2D));
@@ -3797,10 +3645,10 @@ namespace flex
 				real textScale = glm::max(2.0f / (real)frameBufferSize.x, 2.0f / (real)frameBufferSize.y) *
 					(font->GetSize() / 12.0f);
 
-				font->m_BufferStart = (i32)(textVertices.size());
-				font->m_BufferSize = 0;
+				font->SetBufferStart((i32)(textVertices.size()));
 
-				for (TextCache& textCache : font->m_TextCaches)
+				const std::vector<TextCache>& caches = font->GetTextCaches();
+				for (const TextCache& textCache : caches)
 				{
 					std::string currentStr = textCache.str;
 
@@ -3860,20 +3708,20 @@ namespace flex
 							}
 							else
 							{
-								PrintWarn("Attempted to draw char with invalid metric: %c in font %s\n", c, font->m_Name.c_str());
+								PrintWarn("Attempted to draw char with invalid metric: %c in font %s\n", c, font->name.c_str());
 							}
 						}
 						else
 						{
-							PrintWarn("Attempted to draw invalid char: %c in font %s\n", c, font->m_Name.c_str());
+							PrintWarn("Attempted to draw invalid char: %c in font %s\n", c, font->name.c_str());
 						}
 
 						prevChar = c;
 					}
 				}
 
-				font->m_BufferSize = (i32)(textVertices.size()) - font->m_BufferStart;
-				font->m_TextCaches.clear();
+				font->SetBufferSize((i32)(textVertices.size()) - font->GetBufferStart());
+				font->ClearCaches();
 			}
 
 			u32 bufferByteCount = (u32)(textVertices.size() * sizeof(TextVertex3D));
@@ -5536,97 +5384,6 @@ namespace flex
 			physicsWorld->debugDrawWorld();
 
 			GL_POP_DEBUG_GROUP();
-		}
-
-		void GLRenderer::SaveSettingsToDisk(bool bSaveOverDefaults /* = false */, bool bAddEditorStr /* = true */)
-		{
-			std::string filePath = (bSaveOverDefaults ? m_DefaultSettingsFilePathAbs : m_SettingsFilePathAbs);
-
-			if (bSaveOverDefaults && FileExists(m_SettingsFilePathAbs))
-			{
-				DeleteFile(m_SettingsFilePathAbs);
-			}
-
-			if (filePath.empty())
-			{
-				PrintError("Failed to save renderer settings to disk: file path is not set!\n");
-				return;
-			}
-
-			JSONObject rootObject = {};
-			rootObject.fields.emplace_back("enable post-processing", JSONValue(m_bPostProcessingEnabled));
-			rootObject.fields.emplace_back("enable v-sync", JSONValue(m_bVSyncEnabled));
-			rootObject.fields.emplace_back("enable fxaa", JSONValue(m_PostProcessSettings.bEnableFXAA));
-			rootObject.fields.emplace_back("brightness", JSONValue(Vec3ToString(m_PostProcessSettings.brightness, 3)));
-			rootObject.fields.emplace_back("offset", JSONValue(Vec3ToString(m_PostProcessSettings.offset, 3)));
-			rootObject.fields.emplace_back("saturation", JSONValue(m_PostProcessSettings.saturation));
-
-			BaseCamera* cam = g_CameraManager->CurrentCamera();
-			rootObject.fields.emplace_back("aperture", JSONValue(cam->aperture));
-			rootObject.fields.emplace_back("shutter speed", JSONValue(cam->shutterSpeed));
-			rootObject.fields.emplace_back("light sensitivity", JSONValue(cam->lightSensitivity));
-			std::string fileContents = rootObject.Print(0);
-
-			if (WriteFile(filePath, fileContents, false))
-			{
-				if (bAddEditorStr)
-				{
-					if (bSaveOverDefaults)
-					{
-						AddEditorString("Saved default renderer settings");
-					}
-					else
-					{
-						AddEditorString("Saved renderer settings");
-					}
-				}
-			}
-		}
-
-		void GLRenderer::LoadSettingsFromDisk(bool bLoadDefaults /* = false */)
-		{
-			std::string filePath = (bLoadDefaults ? m_DefaultSettingsFilePathAbs : m_SettingsFilePathAbs);
-
-			if (!bLoadDefaults && !FileExists(m_SettingsFilePathAbs))
-			{
-				filePath = m_DefaultSettingsFilePathAbs;
-
-				if (!FileExists(filePath))
-				{
-					PrintError("Failed to find renderer settings files on disk!\n");
-					return;
-				}
-			}
-
-			if (bLoadDefaults && FileExists(m_SettingsFilePathAbs))
-			{
-				DeleteFile(m_SettingsFilePathAbs);
-			}
-
-			JSONObject rootObject;
-			if (JSONParser::Parse(filePath, rootObject))
-			{
-				m_bPostProcessingEnabled = rootObject.GetBool("enable post-processing");
-				SetVSyncEnabled(rootObject.GetBool("enable v-sync"));
-				m_PostProcessSettings.bEnableFXAA = rootObject.GetBool("enable fxaa");
-				m_PostProcessSettings.brightness = ParseVec3(rootObject.GetString("brightness"));
-				m_PostProcessSettings.offset = ParseVec3(rootObject.GetString("offset"));
-				m_PostProcessSettings.saturation = rootObject.GetFloat("saturation");
-
-				if (rootObject.HasField("aperture"))
-				{
-					// Assume all exposure control fields are present if one is
-					BaseCamera* cam = g_CameraManager->CurrentCamera();
-					cam->aperture = rootObject.GetFloat("aperture");
-					cam->shutterSpeed = rootObject.GetFloat("shutter speed");
-					cam->lightSensitivity = rootObject.GetFloat("light sensitivity");
-					cam->CalculateExposure();
-				}
-			}
-			else
-			{
-				PrintError("Failed to read renderer settings file, but it exists!\n");
-			}
 		}
 
 		real GLRenderer::GetStringWidth(const std::string& str, BitmapFont* font, real letterSpacing, bool bNormalized) const

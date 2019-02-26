@@ -199,16 +199,20 @@ namespace flex
 			CreateSampler(m_VulkanDevice, samplerCreateInfo);
 		}
 
-		VkDeviceSize VulkanTexture::CreateEmpty(VkFormat format, u32 inWidth, u32 inHeight, u32 inMipLevels, VkImageUsageFlags usage)
+		VkDeviceSize VulkanTexture::CreateEmpty(VkFormat inFormat, u32 inWidth, u32 inHeight, u32 inMipLevels, VkImageUsageFlags inUsage)
 		{
+			width = inWidth;
+			height = inHeight;
+			mipLevels = inMipLevels;
+
 			ImageCreateInfo imageCreateInfo = {};
 			imageCreateInfo.image = image.replace();
 			imageCreateInfo.imageMemory = imageMemory.replace();
-			imageCreateInfo.format = format;
+			imageCreateInfo.format = inFormat;
 			imageCreateInfo.width = inWidth;
 			imageCreateInfo.height = inHeight;
 			imageCreateInfo.mipLevels = inMipLevels;
-			imageCreateInfo.usage = usage;
+			imageCreateInfo.usage = inUsage;
 			imageCreateInfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
 			VkDeviceSize imageSize = CreateImage(m_VulkanDevice, m_GraphicsQueue, imageCreateInfo);
@@ -216,7 +220,7 @@ namespace flex
 			ImageViewCreateInfo imageViewCreateInfo = {};
 			imageViewCreateInfo.image = &image;
 			imageViewCreateInfo.imageView = &imageView;
-			imageViewCreateInfo.format = format;
+			imageViewCreateInfo.format = inFormat;
 			imageViewCreateInfo.mipLevels = inMipLevels;
 			CreateImageView(m_VulkanDevice, imageViewCreateInfo);
 
@@ -309,7 +313,7 @@ namespace flex
 			return memRequirements.size;
 		}
 
-		VkDeviceSize VulkanTexture::CreateCubemapEmpty(VkFormat format, u32 inWidth, u32 inHeight, u32 inChannelCount, u32 inMipLevels, bool enableTrilinearFiltering)
+		VkDeviceSize VulkanTexture::CreateCubemapEmpty(VkFormat inFormat, u32 inWidth, u32 inHeight, u32 inChannelCount, u32 inMipLevels, bool enableTrilinearFiltering)
 		{
 			width = inWidth;
 			height = inHeight;
@@ -321,7 +325,7 @@ namespace flex
 			createInfo.imageView = &imageView;
 			createInfo.sampler = &sampler;
 
-			createInfo.format = format;
+			createInfo.format = inFormat;
 			createInfo.width = inWidth;
 			createInfo.height = inHeight;
 			createInfo.channels = inChannelCount;
@@ -337,7 +341,7 @@ namespace flex
 			return imageSize;
 		}
 
-		VkDeviceSize VulkanTexture::CreateCubemapFromTextures(VkFormat format, const std::array<std::string, 6>& filePaths, bool enableTrilinearFiltering)
+		VkDeviceSize VulkanTexture::CreateCubemapFromTextures(VkFormat inFormat, const std::array<std::string, 6>& filePaths, bool enableTrilinearFiltering)
 		{
 			struct Image
 			{
@@ -444,7 +448,7 @@ namespace flex
 			createInfo.sampler = &sampler;
 			createInfo.totalSize = totalSize;
 
-			createInfo.format = format;
+			createInfo.format = inFormat;
 			createInfo.filePaths = filePaths;
 			createInfo.enableTrilinearFiltering = enableTrilinearFiltering;
 
@@ -578,7 +582,7 @@ namespace flex
 			return memRequirements.size;
 		}
 
-		VkDeviceSize VulkanTexture::CreateFromTexture(const std::string& inFilePath, VkFormat format, bool hdr, u32 inMipLevels)
+		VkDeviceSize VulkanTexture::CreateFromTexture(const std::string& inFilePath, VkFormat inFormat, bool hdr, u32 inMipLevels)
 		{
 			VkDeviceSize textureSize = 0;
 
@@ -604,7 +608,7 @@ namespace flex
 					VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer);
 
 				void* data = nullptr;
-				vkMapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory, 0, textureSize, 0, &data);
+				VK_CHECK_RESULT(vkMapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory, 0, textureSize, 0, &data));
 				memcpy(data, hdrImage.pixels, (size_t)textureSize);
 				vkUnmapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory);
 
@@ -637,7 +641,7 @@ namespace flex
 					VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer);
 
 				void* data = nullptr;
-				vkMapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory, 0, textureSize, 0, &data);
+				VK_CHECK_RESULT(vkMapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory, 0, textureSize, 0, &data));
 				memcpy(data, pixels, (size_t)textureSize);
 				vkUnmapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory);
 
@@ -656,7 +660,7 @@ namespace flex
 			ImageCreateInfo imageCreateInfo = {};
 			imageCreateInfo.image = image.replace();
 			imageCreateInfo.imageMemory = imageMemory.replace();
-			imageCreateInfo.format = format;
+			imageCreateInfo.format = inFormat;
 			imageCreateInfo.width  = (u32)width;
 			imageCreateInfo.height  = (u32)height;
 			imageCreateInfo.imageType  = VK_IMAGE_TYPE_2D;
@@ -667,12 +671,12 @@ namespace flex
 
 			u32 imageSize = (u32)CreateImage(m_VulkanDevice, m_GraphicsQueue, imageCreateInfo);
 
-			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, image, format, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, inMipLevels);
+			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, image, inFormat, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, inMipLevels);
 			CopyBufferToImage(m_VulkanDevice, m_GraphicsQueue, stagingBuffer.m_Buffer, image, width, height);
-			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, image, format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, inMipLevels);
+			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, image, inFormat, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, inMipLevels);
 
 			ImageViewCreateInfo viewCreateInfo = {};
-			viewCreateInfo.format = format;
+			viewCreateInfo.format = inFormat;
 			viewCreateInfo.image = &image;
 			viewCreateInfo.imageView = &imageView;
 			viewCreateInfo.mipLevels = inMipLevels;
@@ -723,6 +727,35 @@ namespace flex
 			samplerInfo.maxLod = createInfo.maxLod;
 
 			VK_CHECK_RESULT(vkCreateSampler(device->m_LogicalDevice, &samplerInfo, nullptr, createInfo.sampler));
+		}
+
+		void VulkanTexture::Destroy()
+		{
+			// Required by BitmapTexture to match GLTexture interface
+		}
+
+		bool VulkanTexture::LoadFromFile(const std::string& inFilePath /* = "" */)
+		{
+			std::string fPath = inFilePath;
+			if (inFilePath.empty())
+			{
+				fPath = filePath;
+			}
+
+			// TODO:
+
+			return false;
+		}
+
+		bool VulkanTexture::SaveToFile(const std::string& absoluteFilePath, ImageFormat format, bool bFlipVertically)
+		{
+			// TODO:
+			return false;
+		}
+
+		void VulkanTexture::Build(void* data /* = nullptr */)
+		{
+			// TODO:
 		}
 
 		VkFormat FindSupportedFormat(VulkanDevice* device, const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)
@@ -880,7 +913,7 @@ namespace flex
 			EndSingleTimeCommands(device, graphicsQueue, commandBuffer);
 		}
 
-		void CreateAndAllocateBuffer(VulkanDevice* device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VulkanBuffer* buffer)
+		VkResult CreateAndAllocateBuffer(VulkanDevice* device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VulkanBuffer* buffer)
 		{
 			VkBufferCreateInfo bufferInfo = {};
 			bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -911,7 +944,7 @@ namespace flex
 			buffer->m_DescriptorInfo.range = VK_WHOLE_SIZE;
 			buffer->m_DescriptorInfo.buffer = buffer->m_Buffer;
 
-			vkBindBufferMemory(device->m_LogicalDevice, buffer->m_Buffer, buffer->m_Memory, 0);
+			return vkBindBufferMemory(device->m_LogicalDevice, buffer->m_Buffer, buffer->m_Memory, 0);
 		}
 
 		void CopyBuffer(VulkanDevice* device, VkQueue graphicsQueue, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkDeviceSize srcOffset, VkDeviceSize dstOffset)
@@ -1278,28 +1311,28 @@ namespace flex
 			allocInfo.commandBufferCount = 1;
 
 			VkCommandBuffer commandBuffer;
-			vkAllocateCommandBuffers(device->m_LogicalDevice, &allocInfo, &commandBuffer);
+			VK_CHECK_RESULT(vkAllocateCommandBuffers(device->m_LogicalDevice, &allocInfo, &commandBuffer));
 
 			VkCommandBufferBeginInfo beginInfo = {};
 			beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 			beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-			vkBeginCommandBuffer(commandBuffer, &beginInfo);
+			VK_CHECK_RESULT(vkBeginCommandBuffer(commandBuffer, &beginInfo));
 
 			return commandBuffer;
 		}
 
 		void EndSingleTimeCommands(VulkanDevice* device, VkQueue graphicsQueue, VkCommandBuffer commandBuffer)
 		{
-			vkEndCommandBuffer(commandBuffer);
+			VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
 
 			VkSubmitInfo submitInfo = {};
 			submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 			submitInfo.commandBufferCount = 1;
 			submitInfo.pCommandBuffers = &commandBuffer;
 
-			vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-			vkQueueWaitIdle(graphicsQueue);
+			VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
+			VK_CHECK_RESULT(vkQueueWaitIdle(graphicsQueue));
 
 			vkFreeCommandBuffers(device->m_LogicalDevice, device->m_CommandPool, 1, &commandBuffer);
 		}

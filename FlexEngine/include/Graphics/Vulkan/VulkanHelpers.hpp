@@ -12,6 +12,8 @@ IGNORE_WARNINGS_POP
 
 namespace flex
 {
+	enum class ImageFormat;
+
 	namespace vk
 	{
 		struct VulkanDevice;
@@ -183,29 +185,36 @@ namespace flex
 			// Non-static member functions
 			void Create(ImageCreateInfo& imageCreateInfo, ImageViewCreateInfo& imageViewCreateInfo, SamplerCreateInfo& samplerCreateInfo);
 
+			void Destroy();
+
+			bool LoadFromFile(const std::string& inFilePath = "");
+			bool SaveToFile(const std::string& absoluteFilePath, ImageFormat format, bool bFlipVertically);
+
+			void Build(void* data = nullptr);
+
 			/*
 			 * Creates image, image view, and sampler based on the texture at filePath
 			 * Returns size of image in bytes
 			 */
-			VkDeviceSize CreateFromTexture(const std::string& inFilePath, VkFormat format, bool hdr = false, u32 inMipLevels = 1);
+			VkDeviceSize CreateFromTexture(const std::string& inFilePath, VkFormat inFormat, bool hdr = false, u32 inMipLevels = 1);
 
 			/*
 			 * Creates image, image view, and sampler
 			 * Returns the size of the image
 			*/
-			VkDeviceSize CreateEmpty(VkFormat format, u32 inWidth, u32 inHeight, u32 inMipLevels = 1, VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT);
+			VkDeviceSize CreateEmpty(VkFormat inFormat, u32 inWidth, u32 inHeight, u32 inMipLevels = 1, VkImageUsageFlags inUsage = VK_IMAGE_USAGE_SAMPLED_BIT);
 
 			/*
 			 * Creates an empty cubemap and returns the size of the generated image
 			 * Returns the size of the image
 			*/
-			VkDeviceSize CreateCubemapEmpty(VkFormat format, u32 inWidth, u32 inHeight, u32 inChannelCount, u32 inMipLevels, bool enableTrilinearFiltering);
+			VkDeviceSize CreateCubemapEmpty(VkFormat inFormat, u32 inWidth, u32 inHeight, u32 inChannelCount, u32 inMipLevels, bool enableTrilinearFiltering);
 
 			/*
 			 * Creates a cubemap from the given 6 textures
 			 * Returns the size of the image
 			 */
-			VkDeviceSize CreateCubemapFromTextures(VkFormat format, const std::array<std::string, 6>& filePaths, bool enableTrilinearFiltering);
+			VkDeviceSize CreateCubemapFromTextures(VkFormat inFormat, const std::array<std::string, 6>& filePaths, bool enableTrilinearFiltering);
 
 			void UpdateImageDescriptor();
 
@@ -285,7 +294,7 @@ namespace flex
 
 		void CopyImage(VulkanDevice* device, VkQueue graphicsQueue, VkImage srcImage, VkImage dstImage, u32 width, u32 height);
 		void CopyBufferToImage(VulkanDevice* device, VkQueue graphicsQueue, VkBuffer buffer, VkImage image, u32 width, u32 height);
-		void CreateAndAllocateBuffer(VulkanDevice* device, VkDeviceSize size, VkBufferUsageFlags usage,
+		VkResult CreateAndAllocateBuffer(VulkanDevice* device, VkDeviceSize size, VkBufferUsageFlags usage,
 			VkMemoryPropertyFlags properties, VulkanBuffer* buffer);
 		void CopyBuffer(VulkanDevice* device, VkQueue graphicsQueue, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size,
 			VkDeviceSize srcOffset = 0, VkDeviceSize dstOffset = 0);

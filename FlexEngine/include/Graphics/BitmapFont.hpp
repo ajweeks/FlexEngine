@@ -8,7 +8,12 @@ namespace flex
 	namespace gl
 	{
 		class GLRenderer;
-		class GLTexture;
+		struct GLTexture;
+	}
+#elif COMPILE_VULKAN
+	namespace vk
+	{
+		class VulkanTexture;
 	}
 #endif
 
@@ -45,26 +50,38 @@ namespace flex
 
 		i16 GetSize() const;
 		bool UseKerning() const;
+		void SetUseKerning(bool bUseKerning);
 
 		void SetTextureSize(const glm::vec2i& texSize);
+
+		const std::vector<TextCache>& GetTextCaches() const;
+		void AddTextCache(TextCache& newCache);
+		void ClearCaches();
 
 #if COMPILE_OPEN_GL
 		gl::GLTexture* SetTexture(gl::GLTexture* newTex);
 		gl::GLTexture* GetTexture();
+#elif COMPILE_VULKAN
+		vk::VulkanTexture* SetTexture(vk::VulkanTexture* newTex);
+		vk::VulkanTexture* GetTexture();
 #endif
+		void ClearTexture();
+
+		void SetBufferSize(i32 size);
+		i32 GetBufferSize() const;
+		void SetBufferStart(i32 start);
+		i32 GetBufferStart() const;
 
 		// TODO: Investigate crash when this value is higher (256)
 		static const i32 CHAR_COUNT = 200;
 
+		std::string name;
+
 	private:
-#if COMPILE_OPEN_GL
-		friend class flex::gl::GLRenderer;
-#endif
 		FontMetric m_CharTable[CHAR_COUNT];
 		std::vector<TextCache> m_TextCaches;
 
 		i16 m_FontSize = 0;
-		std::string m_Name;
 		i32 m_CharacterCount = 0;
 		i32 m_CharacterSpacing = 1;
 		bool m_bUseKerning = false;
@@ -74,6 +91,8 @@ namespace flex
 		i32 m_BufferSize = 0;
 #if COMPILE_OPEN_GL
 		gl::GLTexture* m_Texture = nullptr;
+#elif COMPILE_VULKAN
+		vk::VulkanTexture* m_Texture = nullptr;
 #endif
 		bool m_bAddedToRenderer = false;
 

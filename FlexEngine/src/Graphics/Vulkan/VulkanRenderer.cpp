@@ -65,13 +65,6 @@ namespace flex
 			CreateLogicalDevice(physicalDevice);
 
 			m_CommandBufferManager = VulkanCommandBufferManager(m_VulkanDevice);
-			m_SwapChain = { m_VulkanDevice->m_LogicalDevice, vkDestroySwapchainKHR };
-			m_DeferredCombineRenderPass = { m_VulkanDevice->m_LogicalDevice, vkDestroyRenderPass };
-			m_DescriptorPool = { m_VulkanDevice->m_LogicalDevice, vkDestroyDescriptorPool };
-			m_PresentCompleteSemaphore = { m_VulkanDevice->m_LogicalDevice, vkDestroySemaphore };
-			m_RenderCompleteSemaphore = { m_VulkanDevice->m_LogicalDevice, vkDestroySemaphore };
-			m_ColorSampler = { m_VulkanDevice->m_LogicalDevice, vkDestroySampler };
-			m_PipelineCache = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineCache };
 		}
 
 		VulkanRenderer::~VulkanRenderer()
@@ -290,43 +283,47 @@ namespace flex
 				return;
 			}
 
-			ImGui_ImplGlfw_InitForVulkan(castedWindow->GetWindow(), false);
-			ImGui_ImplVulkan_InitInfo initInfo = {};
-			initInfo.Instance = m_Instance;
-			initInfo.PhysicalDevice = m_VulkanDevice->m_PhysicalDevice;
-			initInfo.Device = *m_VulkanDevice;
-			initInfo.QueueFamily = FindQueueFamilies(m_Surface, m_VulkanDevice->m_PhysicalDevice).graphicsFamily;
-			initInfo.Queue = m_GraphicsQueue;
-			initInfo.PipelineCache = m_PipelineCache;
-			initInfo.DescriptorPool = m_DescriptorPool;
-			initInfo.Allocator = VK_NULL_HANDLE;
-			initInfo.CheckVkResultFn = VK_NULL_HANDLE;
-			ImGui_ImplVulkan_Init(&initInfo, m_DeferredCombineRenderPass);
+			//{
+			//	ImGui_CreateWindowDataCommandBuffers();
 
-			// Upload Fonts
-			{
-				// Use any command queue
-				VkCommandPool command_pool = m_VulkanDevice->m_CommandPool;
-				VkCommandBuffer command_buffer = m_CommandBufferManager.m_CommandBuffers[0];
+			//	ImGui_ImplGlfw_InitForVulkan(castedWindow->GetWindow(), false);
+			//	ImGui_ImplVulkan_InitInfo initInfo = {};
+			//	initInfo.Instance = m_Instance;
+			//	initInfo.PhysicalDevice = m_VulkanDevice->m_PhysicalDevice;
+			//	initInfo.Device = *m_VulkanDevice;
+			//	initInfo.QueueFamily = FindQueueFamilies(m_Surface, m_VulkanDevice->m_PhysicalDevice).graphicsFamily;
+			//	initInfo.Queue = m_GraphicsQueue;
+			//	initInfo.PipelineCache = m_PipelineCache;
+			//	initInfo.DescriptorPool = m_DescriptorPool;
+			//	initInfo.Allocator = VK_NULL_HANDLE;
+			//	initInfo.CheckVkResultFn = VK_NULL_HANDLE;
+			//	ImGui_ImplVulkan_Init(&initInfo, m_DeferredCombineRenderPass);
 
-				VK_CHECK_RESULT(vkResetCommandPool(*m_VulkanDevice, command_pool, 0));
-				VkCommandBufferBeginInfo begin_info = {};
-				begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-				begin_info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-				VK_CHECK_RESULT(vkBeginCommandBuffer(command_buffer, &begin_info));
+			//	// Upload Fonts
+			//	{
+			//		// Use any command queue
+			//		VkCommandPool command_pool = m_ImGuiCommandPool;
+			//		VkCommandBuffer command_buffer = m_ImGuiCommandBuffers[0];
 
-				ImGui_ImplVulkan_CreateFontsTexture(command_buffer);
+			//		VK_CHECK_RESULT(vkResetCommandPool(*m_VulkanDevice, command_pool, 0));
+			//		VkCommandBufferBeginInfo begin_info = {};
+			//		begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+			//		begin_info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+			//		VK_CHECK_RESULT(vkBeginCommandBuffer(command_buffer, &begin_info));
 
-				VkSubmitInfo end_info = {};
-				end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-				end_info.commandBufferCount = 1;
-				end_info.pCommandBuffers = &command_buffer;
-				VK_CHECK_RESULT(vkEndCommandBuffer(command_buffer));
-				VK_CHECK_RESULT(vkQueueSubmit(m_GraphicsQueue, 1, &end_info, VK_NULL_HANDLE));
+			//		ImGui_ImplVulkan_CreateFontsTexture(command_buffer);
 
-				VK_CHECK_RESULT(vkDeviceWaitIdle(*m_VulkanDevice));
-				ImGui_ImplVulkan_InvalidateFontUploadObjects();
-			}
+			//		VkSubmitInfo end_info = {};
+			//		end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+			//		end_info.commandBufferCount = 1;
+			//		end_info.pCommandBuffers = &command_buffer;
+			//		VK_CHECK_RESULT(vkEndCommandBuffer(command_buffer));
+			//		VK_CHECK_RESULT(vkQueueSubmit(m_GraphicsQueue, 1, &end_info, VK_NULL_HANDLE));
+
+			//		VK_CHECK_RESULT(vkDeviceWaitIdle(*m_VulkanDevice));
+			//		ImGui_ImplVulkan_InvalidateFontUploadObjects();
+			//	}
+			//}
 
 			CreateStaticVertexBuffers();
 			CreateStaticIndexBuffers();
@@ -3055,16 +3052,6 @@ namespace flex
 
 		}
 
-		void VulkanRenderer::SaveSettingsToDisk(bool bSaveOverDefaults /*= false*/, bool bAddEditorStr /*= true*/)
-		{
-
-		}
-
-		void VulkanRenderer::LoadSettingsFromDisk(bool bLoadDefaults /*= false*/)
-		{
-
-		}
-
 		real VulkanRenderer::GetStringWidth(const std::string& str, BitmapFont* font, real letterSpacing, bool bNormalized) const
 		{
 			return -1;
@@ -3132,8 +3119,163 @@ namespace flex
 			return capacity;
 		}
 
-		bool VulkanRenderer::LoadFont(BitmapFont** font, i16 size, const std::string& fontFilePath, const std::string& renderedFontFilePath, bool bForceRender, bool bScreenSpace)
+		bool VulkanRenderer::LoadFont(BitmapFont** font, i16 size,
+			const std::string& fontFilePath,
+			const std::string& renderedFontFilePath,
+			bool bForceRender, bool bScreenSpace)
 		{
+			std::map<i32, FontMetric*> characters;
+			std::array<glm::vec2i, 4> maxPos;
+			FT_Face face;
+			if (!LoadFontMetrics(fontFilePath, font, size, bScreenSpace, &characters, &maxPos, &face))
+			{
+				return false;
+			}
+
+			std::string fileName = fontFilePath;
+			StripLeadingDirectories(fileName);
+
+			BitmapFont* newFont = *font;
+
+			// TODO: Save in common place
+			u32 sampleDensity = 32;
+			u32 padding = 1;
+			u32 spread = 5;
+			u32 totPadding = padding + spread;
+
+			bool bUsingPreRenderedTexture = false;
+			if (!bForceRender)
+			{
+				if (FileExists(renderedFontFilePath))
+				{
+					VulkanTexture* fontTex = newFont->SetTexture(new VulkanTexture(m_VulkanDevice, m_GraphicsQueue));
+
+					if (fontTex->LoadFromFile(renderedFontFilePath))
+					{
+						bUsingPreRenderedTexture = true;
+
+						for (auto& charPair : characters)
+						{
+							FontMetric* metric = charPair.second;
+
+							u32 glyphIndex = FT_Get_Char_Index(face, metric->character);
+							if (glyphIndex == 0)
+							{
+								continue;
+							}
+
+							metric->texCoord = metric->texCoord / glm::vec2((real)fontTex->width, (real)fontTex->height);
+						}
+					}
+					else
+					{
+						newFont->ClearTexture();
+						SafeDelete(fontTex);
+					}
+				}
+			}
+
+
+			if (!bUsingPreRenderedTexture)
+			{
+				glm::vec2i textureSize(
+					std::max(std::max(maxPos[0].x, maxPos[1].x), std::max(maxPos[2].x, maxPos[3].x)),
+					std::max(std::max(maxPos[0].y, maxPos[1].y), std::max(maxPos[2].y, maxPos[3].y)));
+				newFont->SetTextureSize(textureSize);
+
+				VulkanTexture* fontTex = newFont->SetTexture(new VulkanTexture(m_VulkanDevice, m_GraphicsQueue));
+				// TODO: VK_IMAGE_USAGE_TRANSFER_DST_BIT?
+				fontTex->CreateEmpty(VkFormat::VK_FORMAT_R16G16B16A16_UNORM, textureSize.x, textureSize.y, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+				fontTex->Build();
+
+				ShaderID computeSDFShaderID;
+				GetShaderID("compute_sdf", computeSDFShaderID);
+				//VulkanShader& computeSDFShader = m_Shaders[computeSDFShaderID];
+
+				//"highResTex" =  0
+				//"spread" = (real)spread
+				//"sampleDensity" = (real)sampleDensity
+				VulkanRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
+
+				// Render to Glyphs atlas
+				FT_Set_Pixel_Sizes(face, 0, size * sampleDensity);
+
+				for (auto& charPair : characters)
+				{
+					FontMetric* metric = charPair.second;
+
+					u32 glyphIndex = FT_Get_Char_Index(face, metric->character);
+					if (glyphIndex == 0)
+					{
+						continue;
+					}
+
+					if (FT_Load_Glyph(face, glyphIndex, FT_LOAD_RENDER))
+					{
+						PrintError("Failed to load glyph with index %i\n", glyphIndex);
+						continue;
+					}
+
+					if (face->glyph->format != FT_GLYPH_FORMAT_BITMAP)
+					{
+						if (FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL))
+						{
+							PrintError("Failed to render glyph with index %i\n", glyphIndex);
+							continue;
+						}
+					}
+
+					if (face->glyph->bitmap.width == 0 ||
+						face->glyph->bitmap.rows == 0)
+					{
+						continue;
+					}
+
+					FT_Bitmap alignedBitmap{};
+					if (FT_Bitmap_Convert(ft, &face->glyph->bitmap, &alignedBitmap, 4))
+					{
+						PrintError("Couldn't align free type bitmap size\n");
+						continue;
+					}
+
+					u32 width = alignedBitmap.width;
+					u32 height = alignedBitmap.rows;
+
+					if (width == 0 || height == 0)
+					{
+						continue;
+					}
+
+					// GLuint texHandle;
+					// GenTexture(texHandle);
+
+					//glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, alignedBitmap.buffer);
+
+					glm::vec4 borderColor(0.0f);
+
+					if (metric->width > 0 && metric->height > 0)
+					{
+						glm::vec2i res = glm::vec2i(metric->width - padding * 2, metric->height - padding * 2);
+						glm::vec2i viewportTL = glm::vec2i(metric->texCoord) + glm::vec2i(padding);
+
+						// set viewport (viewportTL.x, viewportTL.y, res.x, res.y);
+
+						// uniform texChannel = metric->channel
+						// uniform charResolution = (real)res.x, (real)res.y
+						// DrawArrays(gBufferRenderObject->topology, 0, gBufferRenderObject->vertexBufferData->VertexCount)
+					}
+
+					// DeleteTexture(texHandle);
+
+					metric->texCoord = metric->texCoord / glm::vec2((real)textureSize.x, (real)textureSize.y);
+
+					FT_Bitmap_Done(ft, &alignedBitmap);
+				}
+
+				std::string savedSDFTextureAbsFilePath = RelativePathToAbsolute(renderedFontFilePath);
+				fontTex->SaveToFile(savedSDFTextureAbsFilePath, ImageFormat::PNG, false);
+
+			}
 			return false;
 		}
 
@@ -3146,6 +3288,40 @@ namespace flex
 				alignedSize += nCAS - (alignedSize % nCAS);
 			}
 			return alignedSize;
+		}
+
+		void VulkanRenderer::ImGui_CreateWindowDataCommandBuffers()
+		{
+			for (i32 i = 0; i < 2; ++i)
+			{
+				{
+					VkCommandPoolCreateInfo info = {};
+					info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+					info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+					info.queueFamilyIndex = FindQueueFamilies(m_Surface, m_VulkanDevice->m_PhysicalDevice).graphicsFamily;
+					VK_CHECK_RESULT(vkCreateCommandPool(*m_VulkanDevice, &info, nullptr, &m_ImGuiCommandPool));
+				}
+				{
+					VkCommandBufferAllocateInfo info = {};
+					info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+					info.commandPool = m_ImGuiCommandPool;
+					info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+					info.commandBufferCount = 1;
+					VK_CHECK_RESULT(vkAllocateCommandBuffers(*m_VulkanDevice, &info, &m_ImGuiCommandBuffers[i]));
+				}
+				{
+					VkFenceCreateInfo info = {};
+					info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+					info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+					VK_CHECK_RESULT(vkCreateFence(*m_VulkanDevice, &info, nullptr, &m_ImGuiFence));
+				}
+				{
+					VkSemaphoreCreateInfo info = {};
+					info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+					VK_CHECK_RESULT(vkCreateSemaphore(*m_VulkanDevice, &info, nullptr, &m_ImGuiImageAcquiredSemaphore));
+					VK_CHECK_RESULT(vkCreateSemaphore(*m_VulkanDevice, &info, nullptr, &m_ImGuiRenderCompleteSemaphore));
+				}
+			}
 		}
 
 		void VulkanRenderer::UpdateRenderObjectVertexData(RenderID renderID)
@@ -3229,7 +3405,12 @@ namespace flex
 
 			VkDebugReportCallbackCreateInfoEXT createInfo = {};
 			createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
-			createInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
+			createInfo.flags =
+				VK_DEBUG_REPORT_ERROR_BIT_EXT |
+				VK_DEBUG_REPORT_WARNING_BIT_EXT |
+				VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT |
+				//VK_DEBUG_REPORT_INFORMATION_BIT_EXT |
+				VK_DEBUG_REPORT_DEBUG_BIT_EXT;
 			createInfo.pfnCallback = DebugCallback;
 
 			VK_CHECK_RESULT(CreateDebugReportCallbackEXT(m_Instance, &createInfo, nullptr, m_Callback.replace()));
@@ -4773,8 +4954,6 @@ namespace flex
 						}
 					}
 
-					//ImGui_ImplVulkan_RenderWindow();
-
 					vkCmdEndRenderPass(commandBuffer);
 
 					VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
@@ -4979,7 +5158,7 @@ namespace flex
 
 			if (initialData)
 			{
-				stagingBuffer.Map(size);
+				VK_CHECK_RESULT(stagingBuffer.Map(size));
 				memcpy(stagingBuffer.m_Mapped, initialData, size);
 				stagingBuffer.Unmap();
 			}
@@ -4996,7 +5175,7 @@ namespace flex
 			CreateAndAllocateBuffer(m_VulkanDevice, vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
 				VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer);
 
-			stagingBuffer.Map(vertexBufferSize);
+			VK_CHECK_RESULT(stagingBuffer.Map(vertexBufferSize));
 			memcpy(stagingBuffer.m_Mapped, vertexBufferData, vertexBufferSize);
 			stagingBuffer.Unmap();
 
@@ -5043,15 +5222,15 @@ namespace flex
 			const size_t bufferSize = sizeof(indices[0]) * indices.size();
 
 			VulkanBuffer stagingBuffer(m_VulkanDevice->m_LogicalDevice);
-			CreateAndAllocateBuffer(m_VulkanDevice, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer);
+			VK_CHECK_RESULT(CreateAndAllocateBuffer(m_VulkanDevice, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer));
 
-			stagingBuffer.Map(bufferSize);
+			VK_CHECK_RESULT(stagingBuffer.Map(bufferSize));
 			memcpy(stagingBuffer.m_Mapped, indices.data(), bufferSize);
 			stagingBuffer.Unmap();
 
-			CreateAndAllocateBuffer(m_VulkanDevice, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer);
+			VK_CHECK_RESULT(CreateAndAllocateBuffer(m_VulkanDevice, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer));
 
 			CopyBuffer(m_VulkanDevice,m_GraphicsQueue, stagingBuffer.m_Buffer, indexBuffer->m_Buffer, bufferSize);
 		}
@@ -5084,7 +5263,7 @@ namespace flex
 		void VulkanRenderer::PrepareUniformBuffer(VulkanBuffer* buffer, u32 bufferSize,
 			VkBufferUsageFlags bufferUseageFlagBits, VkMemoryPropertyFlags memoryPropertyHostFlagBits)
 		{
-			CreateAndAllocateBuffer(m_VulkanDevice, bufferSize, bufferUseageFlagBits, memoryPropertyHostFlagBits, buffer);
+			VK_CHECK_RESULT(CreateAndAllocateBuffer(m_VulkanDevice, bufferSize, bufferUseageFlagBits, memoryPropertyHostFlagBits, buffer));
 
 			VK_CHECK_RESULT(vkMapMemory(m_VulkanDevice->m_LogicalDevice, buffer->m_Memory, 0, VK_WHOLE_SIZE, 0, &buffer->m_Mapped));
 		}
@@ -5982,7 +6161,6 @@ namespace flex
 		void VulkanRenderer::CaptureSceneToCubemap(RenderID cubemapRenderID)
 		{
 			// TODO: Finish implementing this function
-			return;
 
 			DrawCallInfo drawCallInfo = {};
 			drawCallInfo.bRenderToCubemap = true;

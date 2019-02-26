@@ -108,9 +108,6 @@ namespace flex
 				real spacing,
 				bool bRaw = false) override;
 
-			virtual void SaveSettingsToDisk(bool bSaveOverDefaults = false, bool bAddEditorStr = true) override;
-			virtual void LoadSettingsFromDisk(bool bLoadDefaults = false) override;
-
 			virtual real GetStringWidth(const std::string& str, BitmapFont* font, real letterSpacing, bool bNormalized) const override;
 			virtual real GetStringHeight(const std::string& str, BitmapFont* font, bool bNormalized) const override;
 
@@ -277,6 +274,14 @@ namespace flex
 			static const u32 MAT_CAPACITY = 25;
 
 			//ImGui_ImplVulkanH_WindowData m_ImGuiWindowData;
+
+
+			VkCommandBuffer m_ImGuiCommandBuffers[2];
+			VkCommandPool m_ImGuiCommandPool;
+			VkFence m_ImGuiFence;
+			VkSemaphore m_ImGuiRenderCompleteSemaphore;
+			VkSemaphore m_ImGuiImageAcquiredSemaphore;
+			void ImGui_CreateWindowDataCommandBuffers();
 
 			std::vector<VulkanRenderObject*> m_RenderObjects;
 			std::vector<VulkanMaterial> m_Materials;

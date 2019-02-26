@@ -218,7 +218,7 @@ namespace flex
 			GLTexture(const std::string& relativeFilePath, i32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR);
 			~GLTexture();
 
-			bool GenerateEmpty();
+			bool CreateEmpty();
 			bool LoadFromFile();
 
 			void Reload();

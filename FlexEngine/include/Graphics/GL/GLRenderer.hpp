@@ -102,9 +102,6 @@ namespace flex
 				real spacing,
 				bool bRaw = false) override;
 
-			virtual void SaveSettingsToDisk(bool bSaveOverDefaults = false, bool bAddEditorStr = true) override;
-			virtual void LoadSettingsFromDisk(bool bLoadDefaults = false) override;
-
 			virtual real GetStringWidth(const std::string& str, BitmapFont* font, real letterSpacing, bool bNormalized) const override;
 			virtual real GetStringHeight(const std::string& str, BitmapFont* font, bool bNormalized) const override;
 
@@ -372,11 +369,6 @@ namespace flex
 			GLPhysicsDebugDraw* m_PhysicsDebugDrawer = nullptr;
 
 			AsynchronousTextureSave* screenshotAsyncTextureSave = nullptr;
-
-			FT_Library ft;
-
-			std::string m_DefaultSettingsFilePathAbs;
-			std::string m_SettingsFilePathAbs;
 
 			sec m_MonitorResCheckTimeRemaining = 0.0f;
 

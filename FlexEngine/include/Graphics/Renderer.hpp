@@ -107,9 +107,6 @@ namespace flex
 			real spacing,
 			bool bRaw = false) = 0;
 
-		virtual void SaveSettingsToDisk(bool bSaveOverDefaults = false, bool bAddEditorStr = true) = 0;
-		virtual void LoadSettingsFromDisk(bool bLoadDefaults = false) = 0;
-
 		virtual real GetStringWidth(const std::string& str, BitmapFont* font, real letterSpacing, bool bNormalized) const = 0;
 		virtual real GetStringHeight(const std::string& str, BitmapFont* font, bool bNormalized) const = 0;
 
@@ -121,6 +118,9 @@ namespace flex
 
 		// Call whenever a user-controlled field, such as visibility, changes to rebatch render objects
 		virtual void RenderObjectStateChanged() = 0;
+
+		void SaveSettingsToDisk(bool bSaveOverDefaults = false, bool bAddEditorStr = true);
+		void LoadSettingsFromDisk(bool bLoadDefaults = false);
 
 		// Pos should lie in range [-1, 1], with y increasing upward
 		// Output pos lies in range [0, 1], with y increasing downward,
@@ -186,6 +186,12 @@ namespace flex
 
 		// Returns true if the parent-child tree changed during this call
 		bool DrawImGuiGameObjectNameAndChildren(GameObject* gameObject);
+
+		bool LoadFontMetrics(const std::string& fontFilePath, BitmapFont** font,
+			i16 size, bool bScreenSpace, std::map<i32, struct FontMetric*>* outCharacters,
+			std::array<glm::vec2i, 4>* outMaxPositions, FT_Face* outFace);
+
+		FT_Library ft;
 
 		std::vector<PointLightData*> m_PointLights;
 		DirLightData* m_DirectionalLight = nullptr;
@@ -259,6 +265,9 @@ namespace flex
 			BitmapFont** bitmap;
 		};
 		FontMetaData m_FontMetaDatas[FONT_COUNT];
+
+		std::string m_DefaultSettingsFilePathAbs;
+		std::string m_SettingsFilePathAbs;
 
 		// Must be 12 chars or less
 		const char* m_GameObjectPayloadCStr = "gameobject";

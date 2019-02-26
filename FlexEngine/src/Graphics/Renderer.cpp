@@ -7,13 +7,17 @@ IGNORE_WARNINGS_PUSH
 #include "imgui.h"
 #include "imgui_internal.h"
 #endif
+
+#include <freetype/ftbitmap.h>
 IGNORE_WARNINGS_POP
 
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "FlexEngine.hpp"
+#include "Graphics/BitmapFont.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
+#include "JSONParser.hpp"
 #include "Physics/RigidBody.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
@@ -26,6 +30,8 @@ namespace flex
 {
 	Renderer::Renderer()
 	{
+		m_DefaultSettingsFilePathAbs = RelativePathToAbsolute(ROOT_LOCATION  "saved/config/default-renderer-settings.ini");
+		m_SettingsFilePathAbs = RelativePathToAbsolute(SAVED_LOCATION "config/renderer-settings.ini");
 	}
 
 	Renderer::~Renderer()
@@ -96,6 +102,97 @@ namespace flex
 	bool Renderer::IsRenderingGrid() const
 	{
 		return m_bRenderGrid;
+	}
+
+	void Renderer::SaveSettingsToDisk(bool bSaveOverDefaults /* = false */, bool bAddEditorStr /* = true */)
+	{
+		std::string filePath = (bSaveOverDefaults ? m_DefaultSettingsFilePathAbs : m_SettingsFilePathAbs);
+
+		if (bSaveOverDefaults && FileExists(m_SettingsFilePathAbs))
+		{
+			DeleteFile(m_SettingsFilePathAbs);
+		}
+
+		if (filePath.empty())
+		{
+			PrintError("Failed to save renderer settings to disk: file path is not set!\n");
+			return;
+		}
+
+		JSONObject rootObject = {};
+		rootObject.fields.emplace_back("enable post-processing", JSONValue(m_bPostProcessingEnabled));
+		rootObject.fields.emplace_back("enable v-sync", JSONValue(m_bVSyncEnabled));
+		rootObject.fields.emplace_back("enable fxaa", JSONValue(m_PostProcessSettings.bEnableFXAA));
+		rootObject.fields.emplace_back("brightness", JSONValue(Vec3ToString(m_PostProcessSettings.brightness, 3)));
+		rootObject.fields.emplace_back("offset", JSONValue(Vec3ToString(m_PostProcessSettings.offset, 3)));
+		rootObject.fields.emplace_back("saturation", JSONValue(m_PostProcessSettings.saturation));
+
+		BaseCamera* cam = g_CameraManager->CurrentCamera();
+		rootObject.fields.emplace_back("aperture", JSONValue(cam->aperture));
+		rootObject.fields.emplace_back("shutter speed", JSONValue(cam->shutterSpeed));
+		rootObject.fields.emplace_back("light sensitivity", JSONValue(cam->lightSensitivity));
+		std::string fileContents = rootObject.Print(0);
+
+		if (WriteFile(filePath, fileContents, false))
+		{
+			if (bAddEditorStr)
+			{
+				if (bSaveOverDefaults)
+				{
+					AddEditorString("Saved default renderer settings");
+				}
+				else
+				{
+					AddEditorString("Saved renderer settings");
+				}
+			}
+		}
+	}
+
+	void Renderer::LoadSettingsFromDisk(bool bLoadDefaults /* = false */)
+	{
+		std::string filePath = (bLoadDefaults ? m_DefaultSettingsFilePathAbs : m_SettingsFilePathAbs);
+
+		if (!bLoadDefaults && !FileExists(m_SettingsFilePathAbs))
+		{
+			filePath = m_DefaultSettingsFilePathAbs;
+
+			if (!FileExists(filePath))
+			{
+				PrintError("Failed to find renderer settings files on disk!\n");
+				return;
+			}
+		}
+
+		if (bLoadDefaults && FileExists(m_SettingsFilePathAbs))
+		{
+			DeleteFile(m_SettingsFilePathAbs);
+		}
+
+		JSONObject rootObject;
+		if (JSONParser::Parse(filePath, rootObject))
+		{
+			m_bPostProcessingEnabled = rootObject.GetBool("enable post-processing");
+			SetVSyncEnabled(rootObject.GetBool("enable v-sync"));
+			m_PostProcessSettings.bEnableFXAA = rootObject.GetBool("enable fxaa");
+			m_PostProcessSettings.brightness = ParseVec3(rootObject.GetString("brightness"));
+			m_PostProcessSettings.offset = ParseVec3(rootObject.GetString("offset"));
+			m_PostProcessSettings.saturation = rootObject.GetFloat("saturation");
+
+			if (rootObject.HasField("aperture"))
+			{
+				// Assume all exposure control fields are present if one is
+				BaseCamera* cam = g_CameraManager->CurrentCamera();
+				cam->aperture = rootObject.GetFloat("aperture");
+				cam->shutterSpeed = rootObject.GetFloat("shutter speed");
+				cam->lightSensitivity = rootObject.GetFloat("light sensitivity");
+				cam->CalculateExposure();
+			}
+		}
+		else
+		{
+			PrintError("Failed to read renderer settings file, but it exists!\n");
+		}
 	}
 
 	void Renderer::TransformRectToScreenSpace(const glm::vec2& pos,
@@ -865,4 +962,179 @@ namespace flex
 
 		return bParentChildTreeDirty;
 	}
+
+	bool Renderer::LoadFontMetrics(const std::string& fontFilePath, BitmapFont** font,
+		i16 size, bool bScreenSpace, std::map<i32, FontMetric*>* outCharacters,
+	std::array<glm::vec2i, 4>* outMaxPositions, FT_Face* outFace)
+	{
+		FT_Error error;
+		error = FT_Init_FreeType(&ft);
+		if (error != FT_Err_Ok)
+		{
+			PrintError("Could not init FreeType\n");
+			return false;
+		}
+
+		std::vector<char> fileMemory;
+		ReadFile(fontFilePath, fileMemory, true);
+
+		FT_Face face;
+		error = FT_New_Memory_Face(ft, (FT_Byte*)fileMemory.data(), (FT_Long)fileMemory.size(), 0, &face);
+		if (error == FT_Err_Unknown_File_Format)
+		{
+			PrintError("Unhandled font file format: %s\n", fontFilePath.c_str());
+			return false;
+		}
+		else if (error != FT_Err_Ok || !face)
+		{
+			PrintError("Failed to create new font face: %s\n", fontFilePath.c_str());
+			return false;
+		}
+
+		error = FT_Set_Char_Size(face,
+			0, size * 64,
+			(FT_UInt)g_Monitor->DPI.x,
+			(FT_UInt)g_Monitor->DPI.y);
+
+		//FT_Set_Pixel_Sizes(face, 0, fontPixelSize);
+
+		std::string fileName = fontFilePath;
+		StripLeadingDirectories(fileName);
+		Print("Loaded font file %s\n", fileName.c_str());
+
+		std::string fontName = std::string(face->family_name) + " - " + face->style_name;
+		*font = new BitmapFont(size, fontName, face->num_glyphs);
+		BitmapFont* newFont = *font;
+
+		if (bScreenSpace)
+		{
+			m_FontsSS.push_back(newFont);
+		}
+		else
+		{
+			m_FontsWS.push_back(newFont);
+		}
+
+		newFont->SetUseKerning(FT_HAS_KERNING(face) != 0);
+
+		// Atlas helper variables
+		glm::vec2i startPos[4] = { { 0.0f, 0.0f },{ 0.0f, 0.0f },{ 0.0f, 0.0f },{ 0.0f, 0.0f } };
+		glm::vec2i maxPos[4] = { { 0.0f, 0.0f },{ 0.0f, 0.0f },{ 0.0f, 0.0f },{ 0.0f, 0.0f } };
+		bool bHorizontal = false; // Direction this pass expands the map in (internal moves are !bHorizontal)
+		u32 posCount = 1; // Internal move count in this pass
+		u32 curPos = 0;   // Internal move count
+		u32 channel = 0;  // Current channel writing to
+
+		u32 padding = 1;
+		u32 spread = 5;
+		u32 totPadding = padding + spread;
+
+		for (i32 c = 0; c < BitmapFont::CHAR_COUNT - 1; ++c)
+		{
+			FontMetric* metric = newFont->GetMetric((wchar_t)c);
+			if (!metric)
+			{
+				continue;
+			}
+
+			metric->character = (wchar_t)c;
+
+			u32 glyphIndex = FT_Get_Char_Index(face, c);
+			// TODO: Is this correct?
+			if (glyphIndex == 0)
+			{
+				continue;
+			}
+
+			//if (newFont->UseKerning() && glyphIndex)
+			//{
+			//	for (i32 previous = 0; previous < BitmapFont::CHAR_COUNT - 1; ++previous)
+			//	{
+			//		FT_Vector delta;
+			//
+			//		u32 prevIdx = FT_Get_Char_Index(face, previous);
+			//		FT_Get_Kerning(face, prevIdx, glyphIndex, FT_KERNING_DEFAULT, &delta);
+			//
+			//		if (delta.x != 0 || delta.y != 0)
+			//		{
+			//			std::wstring charKey(std::wstring(1, (wchar_t)previous) + std::wstring(1, (wchar_t)c));
+			//			metric->kerning[charKey] =
+			//				glm::vec2((real)delta.x / 64.0f, (real)delta.y / 64.0f);
+			//		}
+			//	}
+			//}
+
+			if (FT_Load_Glyph(face, glyphIndex, FT_LOAD_RENDER))
+			{
+				PrintError("Failed to load glyph with index %i\n", glyphIndex);
+				continue;
+			}
+
+
+			u32 width = face->glyph->bitmap.width + totPadding * 2;
+			u32 height = face->glyph->bitmap.rows + totPadding * 2;
+
+
+			metric->width = (u16)width;
+			metric->height = (u16)height;
+			metric->offsetX = (i16)(face->glyph->bitmap_left + totPadding);
+			metric->offsetY = -(i16)(face->glyph->bitmap_top + totPadding);
+			metric->advanceX = (real)face->glyph->advance.x / 64.0f;
+
+			// Generate atlas coordinates
+			metric->channel = (u8)channel;
+			metric->texCoord = startPos[channel];
+			if (bHorizontal)
+			{
+				maxPos[channel].y = std::max(maxPos[channel].y, startPos[channel].y + (i32)height);
+				startPos[channel].y += height;
+				maxPos[channel].x = std::max(maxPos[channel].x, startPos[channel].x + (i32)width);
+			}
+			else
+			{
+				maxPos[channel].x = std::max(maxPos[channel].x, startPos[channel].x + (i32)width);
+				startPos[channel].x += width;
+				maxPos[channel].y = std::max(maxPos[channel].y, startPos[channel].y + (i32)height);
+			}
+			channel++;
+			if (channel == 4)
+			{
+				channel = 0;
+				curPos++;
+				if (curPos == posCount)
+				{
+					curPos = 0;
+					bHorizontal = !bHorizontal;
+					if (bHorizontal)
+					{
+						for (u8 cha = 0; cha < 4; ++cha)
+						{
+							startPos[cha] = glm::vec2i(maxPos[cha].x, 0);
+						}
+					}
+					else
+					{
+						for (u8 cha = 0; cha < 4; ++cha)
+						{
+							startPos[cha] = glm::vec2i(0, maxPos[cha].y);
+						}
+						posCount++;
+					}
+				}
+			}
+
+			metric->bIsValid = true;
+
+			(*outCharacters)[c] = metric;
+		}
+
+		(*outMaxPositions)[0] = maxPos[0];
+		(*outMaxPositions)[1] = maxPos[1];
+		(*outMaxPositions)[2] = maxPos[2];
+		(*outMaxPositions)[3] = maxPos[3];
+		*outFace = face;
+
+		return true;
+	}
+
 } // namespace flex

@@ -354,7 +354,7 @@ namespace flex
 		{
 		}
 
-		bool GLTexture::GenerateEmpty()
+		bool GLTexture::CreateEmpty()
 		{
 			assert(!bLoaded);
 
