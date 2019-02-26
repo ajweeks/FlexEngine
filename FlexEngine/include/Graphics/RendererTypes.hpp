@@ -93,6 +93,7 @@ namespace flex
 	const u64 U_UNIFORM_BUFFER_CONSTANT			= (1ull << 43); //const u32 US_UNIFORM_BUFFER_CONSTANT	= sizeof(glm::mat4);
 	const u64 U_UNIFORM_BUFFER_DYNAMIC			= (1ull << 44); //const u32 US_UNIFORM_BUFFER_DYNAMIC	= sizeof(glm::mat4);
 	const u64 U_TEXTURE_SCALE					= (1ull << 45); const u32 US_TEXTURE_SCALE				= sizeof(real);
+	const u64 U_TIME							= (1ull << 46); const u32 US_TIME						= sizeof(real);
 
 	enum class ClearFlag
 	{

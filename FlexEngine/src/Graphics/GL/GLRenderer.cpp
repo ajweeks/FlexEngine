@@ -675,6 +675,7 @@ namespace flex
 				{ U_TRANSFORM_MAT,					"transformMat",					&mat.uniformIDs.transformMat },
 				{ U_TEX_SIZE,						"texSize",						&mat.uniformIDs.texSize },
 				{ U_TEX_SIZE,						"textureScale",					&mat.uniformIDs.textureScale },
+				{ U_TIME,							"time",							&mat.uniformIDs.time },
 			};
 
 			for (const UniformInfo& uniform : uniformInfo)
@@ -4558,6 +4559,7 @@ namespace flex
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_VIEW);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_PROJECTION);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_EXPOSURE);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_TIME);
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_MODEL);
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ENABLE_CUBEMAP_SAMPLER);
@@ -4950,6 +4952,11 @@ namespace flex
 							SetUInt(material->material.shaderID, enabledStr, 0);
 						}
 					}
+				}
+
+				if (shader->shader.constantBufferUniforms.HasUniform(U_TIME))
+				{
+					glUniform1f(material->uniformIDs.time, g_SecElapsedSinceProgramStart);
 				}
 
 				static const char* texelStepStr = "texelStep";

@@ -87,6 +87,7 @@ namespace flex
 				i32 castShadows;
 				i32 shadowDarkness;
 				i32 textureScale;
+				i32 time;
 			};
 			UniformIDs uniformIDs;
 
