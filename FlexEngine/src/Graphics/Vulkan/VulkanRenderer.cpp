@@ -26,6 +26,7 @@ IGNORE_WARNINGS_POP
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "FlexEngine.hpp"
+#include "Graphics/BitmapFont.hpp"
 #include "Graphics/VertexAttribute.hpp"
 #include "Graphics/VertexBufferData.hpp"
 #include "Graphics/Vulkan/VulkanBuffer.hpp"
@@ -57,7 +58,7 @@ namespace flex
 
 			CreateInstance();
 			SetupDebugCallback();
-			CreateSurface(g_Window);
+			CreateSurface();
 			glm::vec2i frameSize = g_Window->GetFrameBufferSize();
 			//SetupImGuiWindowData(&m_ImGuiWindowData, m_Surface, frameSize.x, frameSize.y);
 			VkPhysicalDevice physicalDevice = PickPhysicalDevice();
@@ -127,7 +128,7 @@ namespace flex
 			m_CubemapFrameBuffer->width = 512;
 			m_CubemapFrameBuffer->height = 512;
 
-			CreateSwapChain(g_Window);
+			CreateSwapChain();
 			CreateSwapChainImageViews();
 			CreateRenderPass();
 
@@ -135,7 +136,7 @@ namespace flex
 			CreateDepthResources();
 			CreateFramebuffers();
 
-			PrepareOffscreenFrameBuffer(g_Window);
+			PrepareOffscreenFrameBuffer();
 			PrepareCubemapFrameBuffer();
 
 			LoadDefaultShaderCode();
@@ -280,6 +281,8 @@ namespace flex
 				CreateGraphicsPipeline(i, true);
 			}
 
+			m_CommandBufferManager.CreateCommandBuffers(m_SwapChainImages.size());
+
 			GLFWWindowWrapper* castedWindow = dynamic_cast<GLFWWindowWrapper*>(g_Window);
 			if (castedWindow == nullptr)
 			{
@@ -288,12 +291,11 @@ namespace flex
 			}
 
 			ImGui_ImplGlfw_InitForVulkan(castedWindow->GetWindow(), false);
-
 			ImGui_ImplVulkan_InitInfo initInfo = {};
 			initInfo.Instance = m_Instance;
 			initInfo.PhysicalDevice = m_VulkanDevice->m_PhysicalDevice;
 			initInfo.Device = *m_VulkanDevice;
-			initInfo.QueueFamily = FindQueueFamilies(m_Surface, m_VulkanDevice->m_PhysicalDevice).graphicsFamily; // ?
+			initInfo.QueueFamily = FindQueueFamilies(m_Surface, m_VulkanDevice->m_PhysicalDevice).graphicsFamily;
 			initInfo.Queue = m_GraphicsQueue;
 			initInfo.PipelineCache = m_PipelineCache;
 			initInfo.DescriptorPool = m_DescriptorPool;
@@ -301,30 +303,35 @@ namespace flex
 			initInfo.CheckVkResultFn = VK_NULL_HANDLE;
 			ImGui_ImplVulkan_Init(&initInfo, m_DeferredCombineRenderPass);
 
+			// Upload Fonts
+			{
+				// Use any command queue
+				VkCommandPool command_pool = m_VulkanDevice->m_CommandPool;
+				VkCommandBuffer command_buffer = m_CommandBufferManager.m_CommandBuffers[0];
+
+				VK_CHECK_RESULT(vkResetCommandPool(*m_VulkanDevice, command_pool, 0));
+				VkCommandBufferBeginInfo begin_info = {};
+				begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+				begin_info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+				VK_CHECK_RESULT(vkBeginCommandBuffer(command_buffer, &begin_info));
+
+				ImGui_ImplVulkan_CreateFontsTexture(command_buffer);
+
+				VkSubmitInfo end_info = {};
+				end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+				end_info.commandBufferCount = 1;
+				end_info.pCommandBuffers = &command_buffer;
+				VK_CHECK_RESULT(vkEndCommandBuffer(command_buffer));
+				VK_CHECK_RESULT(vkQueueSubmit(m_GraphicsQueue, 1, &end_info, VK_NULL_HANDLE));
+
+				VK_CHECK_RESULT(vkDeviceWaitIdle(*m_VulkanDevice));
+				ImGui_ImplVulkan_InvalidateFontUploadObjects();
+			}
+
 			CreateStaticVertexBuffers();
 			CreateStaticIndexBuffers();
 
-			m_CommandBufferManager.CreateCommandBuffers(m_SwapChainImages.size());
 			CreateSemaphores();
-
-			// Upload ImGui fonts
-			VK_CHECK_RESULT(vkResetCommandPool(m_VulkanDevice->m_LogicalDevice, m_VulkanDevice->m_CommandPool, 0));
-			VkCommandBufferBeginInfo begin_info = {};
-			begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-			begin_info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-			VK_CHECK_RESULT(vkBeginCommandBuffer(m_CommandBufferManager.m_CommandBuffers[0], &begin_info));
-
-			ImGui_ImplVulkan_CreateFontsTexture(m_CommandBufferManager.m_CommandBuffers[0]);
-
-			VkSubmitInfo end_info = {};
-			end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-			end_info.commandBufferCount = 1;
-			end_info.pCommandBuffers = &m_CommandBufferManager.m_CommandBuffers[0];
-			VK_CHECK_RESULT(vkEndCommandBuffer(m_CommandBufferManager.m_CommandBuffers[0]));
-			VK_CHECK_RESULT(vkQueueSubmit(m_GraphicsQueue, 1, &end_info, VK_NULL_HANDLE));
-
-			VK_CHECK_RESULT(vkDeviceWaitIdle(m_VulkanDevice->m_LogicalDevice));
-			//ImGui_ImplVulkan_InvalidateFontUploadObjects();
 
 			LoadFonts(false);
 
@@ -2520,17 +2527,19 @@ namespace flex
 			if (m_SwapChainNeedsRebuilding)
 			{
 				m_SwapChainNeedsRebuilding = false;
-				RecreateSwapChain(g_Window);
+				RecreateSwapChain();
 			}
 			else
 			{
-				DrawFrame(g_Window);
+				DrawFrame();
 			}
 		}
 
 		void VulkanRenderer::DrawImGuiRenderObjects()
 		{
+			// TODO:
 			return;
+
 			ImGui::NewLine();
 
 			ImGui::BeginChild("SelectedObject", ImVec2(0.0f, 500.0f), true);
@@ -3131,7 +3140,7 @@ namespace flex
 		u32 VulkanRenderer::GetAlignedUBOSize(u32 unalignedSize)
 		{
 			u32 alignedSize = unalignedSize;
-			const u64 nCAS = m_VulkanDevice->m_PhysicalDeviceProperties.limits.nonCoherentAtomSize;
+			const u32 nCAS = (u32)m_VulkanDevice->m_PhysicalDeviceProperties.limits.nonCoherentAtomSize;
 			if (unalignedSize % nCAS != 0)
 			{
 				alignedSize += nCAS - (alignedSize % nCAS);
@@ -3177,6 +3186,7 @@ namespace flex
 		{
 			if (m_EnableValidationLayers && !CheckValidationLayerSupport())
 			{
+				// TODO: Remove all exceptions
 				throw std::runtime_error("validation layers requested, but not available!");
 			}
 
@@ -3225,9 +3235,9 @@ namespace flex
 			VK_CHECK_RESULT(CreateDebugReportCallbackEXT(m_Instance, &createInfo, nullptr, m_Callback.replace()));
 		}
 
-		void VulkanRenderer::CreateSurface(Window* window)
+		void VulkanRenderer::CreateSurface()
 		{
-			VK_CHECK_RESULT(glfwCreateWindowSurface(m_Instance, ((GLFWWindowWrapper*)window)->GetWindow(), nullptr, m_Surface.replace()));
+			VK_CHECK_RESULT(glfwCreateWindowSurface(m_Instance, ((GLFWWindowWrapper*)g_Window)->GetWindow(), nullptr, m_Surface.replace()));
 		}
 
 		//void VulkanRenderer::SetupImGuiWindowData(ImGui_ImplVulkanH_WindowData* data, VkSurfaceKHR surface, i32 width, i32 height)
@@ -3351,16 +3361,16 @@ namespace flex
 			vkGetDeviceQueue(m_VulkanDevice->m_LogicalDevice, (u32)indices.presentFamily, 0, &m_PresentQueue);
 		}
 
-		void VulkanRenderer::RecreateSwapChain(Window* window)
+		void VulkanRenderer::RecreateSwapChain()
 		{
 			vkDeviceWaitIdle(m_VulkanDevice->m_LogicalDevice);
 
-			CreateSwapChain(window);
+			CreateSwapChain();
 			CreateSwapChainImageViews();
 
 			CreateDepthResources();
 
-			PrepareOffscreenFrameBuffer(window);
+			PrepareOffscreenFrameBuffer();
 			CreateRenderPass();
 
 			for (u32 i = 0; i < m_RenderObjects.size(); ++i)
@@ -3373,13 +3383,13 @@ namespace flex
 			m_CommandBufferManager.CreateCommandBuffers(m_SwapChainImages.size());
 		}
 
-		void VulkanRenderer::CreateSwapChain(Window* window)
+		void VulkanRenderer::CreateSwapChain()
 		{
 			VulkanSwapChainSupportDetails swapChainSupport = QuerySwapChainSupport(m_VulkanDevice->m_PhysicalDevice);
 
 			VkSurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat(swapChainSupport.formats);
 			VkPresentModeKHR presentMode = ChooseSwapPresentMode(swapChainSupport.presentModes);
-			VkExtent2D extent = ChooseSwapExtent(window, swapChainSupport.capabilities);
+			VkExtent2D extent = ChooseSwapExtent(swapChainSupport.capabilities);
 
 			u32 imageCount = swapChainSupport.capabilities.minImageCount + 1;
 			if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount)
@@ -4225,7 +4235,7 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::PrepareOffscreenFrameBuffer(Window* window)
+		void VulkanRenderer::PrepareOffscreenFrameBuffer()
 		{
 			// TODO: This should be setting up the m_SwapChainFrameBuffers?
 
@@ -5116,14 +5126,16 @@ namespace flex
 			VK_CHECK_RESULT(vkCreateSemaphore(m_VulkanDevice->m_LogicalDevice, &semaphoreInfo, nullptr, m_RenderCompleteSemaphore.replace()));
 		}
 
-		void VulkanRenderer::DrawFrame(Window* window)
+		void VulkanRenderer::DrawFrame()
 		{
 			u32 imageIndex;
-			VkResult result = vkAcquireNextImageKHR(m_VulkanDevice->m_LogicalDevice, m_SwapChain, std::numeric_limits<u64>::max(), m_PresentCompleteSemaphore, VK_NULL_HANDLE, &imageIndex);
+			VkResult result = vkAcquireNextImageKHR(m_VulkanDevice->m_LogicalDevice,
+				m_SwapChain, std::numeric_limits<u64>::max(), m_PresentCompleteSemaphore,
+				VK_NULL_HANDLE, &imageIndex);
 
 			if (result == VK_ERROR_OUT_OF_DATE_KHR)
 			{
-				RecreateSwapChain(window);
+				RecreateSwapChain();
 				return;
 			}
 			else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
@@ -5176,7 +5188,7 @@ namespace flex
 
 			if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
 			{
-				RecreateSwapChain(window);
+				RecreateSwapChain();
 			}
 			else
 			{
@@ -5242,7 +5254,7 @@ namespace flex
 			return secondBestMode;
 		}
 
-		VkExtent2D VulkanRenderer::ChooseSwapExtent(Window* window, const VkSurfaceCapabilitiesKHR& capabilities) const
+		VkExtent2D VulkanRenderer::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) const
 		{
 			if (capabilities.currentExtent.width != std::numeric_limits<u32>::max())
 			{

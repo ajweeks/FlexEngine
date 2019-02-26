@@ -163,11 +163,11 @@ namespace flex
 			void InsertNewRenderObject(VulkanRenderObject* renderObject);
 			void CreateInstance();
 			void SetupDebugCallback();
-			void CreateSurface(Window* window);
+			void CreateSurface();
 			//void SetupImGuiWindowData(ImGui_ImplVulkanH_WindowData* data, VkSurfaceKHR surface, i32 width, i32 height);
 			VkPhysicalDevice PickPhysicalDevice();
 			void CreateLogicalDevice(VkPhysicalDevice physicalDevice);
-			void CreateSwapChain(Window* window);
+			void CreateSwapChain();
 			void CreateSwapChainImageViews();
 			void CreateRenderPass();
 			void CreateDescriptorSetLayout(ShaderID shaderID);
@@ -177,7 +177,7 @@ namespace flex
 			void CreateGraphicsPipeline(GraphicsPipelineCreateInfo* createInfo);
 			void CreateDepthResources();
 			void CreateFramebuffers();
-			void PrepareOffscreenFrameBuffer(Window* window);
+			void PrepareOffscreenFrameBuffer();
 			void PrepareCubemapFrameBuffer();
 			void PhysicsDebugRender();
 
@@ -215,13 +215,13 @@ namespace flex
 
 			void BindDescriptorSet(VulkanShader* shader, RenderID renderID, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet);
 			void CreateSemaphores();
-			void RecreateSwapChain(Window* window);
+			void RecreateSwapChain();
 
-			void DrawFrame(Window* window);
+			void DrawFrame();
 			bool CreateShaderModule(const std::vector<char>& code, VDeleter<VkShaderModule>& shaderModule) const;
 			VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) const;
 			VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) const;
-			VkExtent2D ChooseSwapExtent(Window* window, const VkSurfaceCapabilitiesKHR& capabilities) const;
+			VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) const;
 			VulkanSwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device) const;
 			bool IsDeviceSuitable(VkPhysicalDevice device) const;
 			bool CheckDeviceExtensionSupport(VkPhysicalDevice device) const;
