@@ -963,23 +963,15 @@ namespace flex
 		return bParentChildTreeDirty;
 	}
 
-	bool Renderer::LoadFontMetrics(const std::string& fontFilePath, BitmapFont** font,
+	bool Renderer::LoadFontMetrics(const std::string& fontFilePath, FT_Library& ft, BitmapFont** font,
 		i16 size, bool bScreenSpace, std::map<i32, FontMetric*>* outCharacters,
 	std::array<glm::vec2i, 4>* outMaxPositions, FT_Face* outFace)
 	{
-		FT_Error error;
-		error = FT_Init_FreeType(&ft);
-		if (error != FT_Err_Ok)
-		{
-			PrintError("Could not init FreeType\n");
-			return false;
-		}
-
 		std::vector<char> fileMemory;
 		ReadFile(fontFilePath, fileMemory, true);
 
 		FT_Face face;
-		error = FT_New_Memory_Face(ft, (FT_Byte*)fileMemory.data(), (FT_Long)fileMemory.size(), 0, &face);
+		FT_Error error = FT_New_Memory_Face(ft, (FT_Byte*)fileMemory.data(), (FT_Long)fileMemory.size(), 0, &face);
 		if (error == FT_Err_Unknown_File_Format)
 		{
 			PrintError("Unhandled font file format: %s\n", fontFilePath.c_str());

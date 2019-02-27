@@ -15,6 +15,7 @@ struct DirectionalLight
 {
 	vec4 direction;
 	vec4 color;
+	float brightness;
 	bool enabled;
 };
 
@@ -22,6 +23,7 @@ struct PointLight
 {
 	vec4 position;
 	vec4 color;
+	float brightness;
 	bool enabled;
 };
 #define NUMBER_POINT_LIGHTS 4
@@ -91,6 +93,27 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 	return ggx1 * ggx2;
 }
 
+vec3 DoLighting(vec3 radiance, vec3 N, vec3 V, vec3 L, float NoV, float NoL,
+	float roughness, float metallic, vec3 F0, vec3 albedo)
+{
+	vec3 H = normalize(V + L);
+
+	// Cook-Torrance BRDF
+	float NDF = DistributionGGX(N, H, roughness);
+	float G = GeometrySmith(N, V, L, roughness);
+	vec3 F = FresnelSchlick(max(dot(H, V), 0.0), F0);
+
+	vec3 kS = F;
+	vec3 kD = vec3(1.0) - kS;
+	kD *= 1.0 - metallic; // Pure metals have no diffuse lighting
+
+	vec3 nominator = NDF * G * F;
+	float denominator = 4 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.001; // Add epsilon to prevent divide by zero
+	vec3 specular = nominator / denominator;
+
+	return (kD * albedo / PI + specular) * radiance * NoL;
+}
+
 void main()
 {
 	// Retrieve data from gbuffer
@@ -106,6 +129,8 @@ void main()
 	vec3 V = normalize(uboConstant.camPos.xyz - worldPos);
 	vec3 R = reflect(-V, N);
 
+	float NoV = max(dot(N, V), 0.0);
+
 	// If diaelectric, F0 should be 0.04, if metal it should be the albedo color
 	vec3 F0 = vec3(0.04);
 	F0 = mix(F0, albedo, metallic);
@@ -115,28 +140,31 @@ void main()
 	for (int i = 0; i < NUMBER_POINT_LIGHTS; ++i)
 	{
 		if (!uboConstant.pointLights[i].enabled) continue;
-		vec3 L = normalize(uboConstant.pointLights[i].position.xyz - worldPos);
-		vec3 H = normalize(V + L);
 
 		float distance = length(uboConstant.pointLights[i].position.xyz - worldPos);
-		float attenuation = 1.0 / (distance * distance);
-		vec3 radiance = uboConstant.pointLights[i].color.rgb * attenuation;
+
+		if (distance > 125)
+		{
+			// TODO: Define radius on point lights individually
+			continue;
+		}
 		
-		// Cook-Torrance BRDF
-		float NDF = DistributionGGX(N, H, roughness);
-		float G = GeometrySmith(N, V, L, roughness);
-		vec3 F = FresnelSchlick(max(dot(H, V), 0.0), F0);
+		// Pretend point lights have a radius of 1cm to avoid division by 0
+		float attenuation = 1.0 / max((distance * distance), 0.001);
+		vec3 L = normalize(uboConstant.pointLights[i].position.xyz - worldPos);
+		vec3 radiance = uboConstant.pointLights[i].color.rgb * attenuation;
+		float NoL = max(dot(N, L), 0.0);
+	
+		Lo += DoLighting(radiance, N, V, L, NoV, NoL, roughness, metallic, F0, albedo);
+	}
 
-		vec3 kS = F;
-		vec3 kD = vec3(1.0) - kS;
-		kD *= 1.0 - metallic; // Pure metals have no diffuse lighting
-
-		vec3 nominator = NDF * G * F;
-		float denominator = 4 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.001; // Add epsilon to prevent divide by zero
-		vec3 specular = nominator / denominator;
-
-		float NdotL = max(dot(N, L), 0.0);
-		Lo += (kD * albedo / PI + specular) * radiance * NdotL;
+	if (uboConstant.dirLight.enabled)
+	{
+		vec3 L = normalize(uboConstant.dirLight.direction.xyz);
+		vec3 radiance = uboConstant.dirLight.color.rgb;
+		float NoL = max(dot(N, L), 0.0);
+		
+		Lo += DoLighting(radiance, N, V, L, NoV, NoL, roughness, metallic, F0, albedo);
 	}
 
 	vec3 F = FresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);

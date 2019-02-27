@@ -361,8 +361,6 @@ namespace flex
 			std::vector<std::vector<GLRenderObject*>> m_ForwardRenderObjectBatches;
 			// All render objects which have "editorObject" set to true
 
-			// Any editor objects which also require a game object wrapper
-			std::vector<GameObject*> m_EditorObjects;
 			std::vector<GLRenderObject*> m_DepthAwareEditorRenderObjectBatch;
 			std::vector<GLRenderObject*> m_DepthUnawareEditorRenderObjectBatch;
 

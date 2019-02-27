@@ -504,24 +504,24 @@ namespace flex
 
 			glDeleteFramebuffers(1, &m_ShadowMapFBO);
 
-			SafeDelete(screenshotAsyncTextureSave);
+			delete screenshotAsyncTextureSave;
 
 			for (GameObject* editorObject : m_EditorObjects)
 			{
 				editorObject->Destroy();
-				SafeDelete(editorObject);
+				delete editorObject;
 			}
 			m_EditorObjects.clear();
 
 			for (BitmapFont* font : m_FontsSS)
 			{
-				SafeDelete(font);
+				delete  font;
 			}
 			m_FontsSS.clear();
 
 			for (BitmapFont* font : m_FontsWS)
 			{
-				SafeDelete(font);
+				delete font;
 			}
 			m_FontsWS.clear();
 
@@ -530,7 +530,7 @@ namespace flex
 				if (texture)
 				{
 					texture->Destroy();
-					SafeDelete(texture);
+					delete texture;
 				}
 			}
 			m_LoadedTextures.clear();
@@ -556,7 +556,7 @@ namespace flex
 				{
 					DestroyRenderObject(obj->GetRenderID());
 				}
-				SafeDelete(obj);
+				delete obj;
 			}
 			m_PersistentObjects.clear();
 
@@ -566,7 +566,7 @@ namespace flex
 				{
 					DestroyRenderObject(editorObject->GetRenderID());
 				}
-				SafeDelete(editorObject);
+				delete editorObject;
 			}
 
 			DestroyRenderObject(m_Quad3DRenderID);
@@ -597,7 +597,7 @@ namespace flex
 			if (m_PhysicsDebugDrawer)
 			{
 				m_PhysicsDebugDrawer->Destroy();
-				SafeDelete(m_PhysicsDebugDrawer);
+				delete m_PhysicsDebugDrawer;
 			}
 
 			m_gBufferQuadVertexBufferData.Destroy();
@@ -3118,10 +3118,17 @@ namespace flex
 								  bool bForceRender,
 								  bool bScreenSpace)
 		{
+			FT_Library ft;
+			if (FT_Init_FreeType(&ft) != FT_Err_Ok)
+			{
+				PrintError("Failed to initialize FreeType\n");
+				return false;
+			}
+
 			std::map<i32, FontMetric*> characters;
 			std::array<glm::vec2i, 4> maxPos;
 			FT_Face face;
-			if (!LoadFontMetrics(fontFilePath, font, size, bScreenSpace, &characters, &maxPos, &face))
+			if (!LoadFontMetrics(fontFilePath, ft, font, size, bScreenSpace, &characters, &maxPos, &face))
 			{
 				return false;
 			}

@@ -187,11 +187,9 @@ namespace flex
 		// Returns true if the parent-child tree changed during this call
 		bool DrawImGuiGameObjectNameAndChildren(GameObject* gameObject);
 
-		bool LoadFontMetrics(const std::string& fontFilePath, BitmapFont** font,
+		bool LoadFontMetrics(const std::string& fontFilePath, FT_Library& ft, BitmapFont** font,
 			i16 size, bool bScreenSpace, std::map<i32, struct FontMetric*>* outCharacters,
 			std::array<glm::vec2i, 4>* outMaxPositions, FT_Face* outFace);
-
-		FT_Library ft;
 
 		std::vector<PointLightData*> m_PointLights;
 		DirLightData* m_DirectionalLight = nullptr;
@@ -208,6 +206,9 @@ namespace flex
 		};
 
 		MaterialID m_ReflectionProbeMaterialID = InvalidMaterialID; // Set by the user via SetReflecionProbeMaterial
+
+		// Any editor objects which also require a game object wrapper
+		std::vector<GameObject*> m_EditorObjects;
 
 		bool m_bVSyncEnabled = true;
 		PhysicsDebuggingSettings m_PhysicsDebuggingSettings;

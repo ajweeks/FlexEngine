@@ -46,9 +46,17 @@ namespace flex
 {
 	namespace vk
 	{
-		std::array<glm::mat4, 6> VulkanRenderer::m_CaptureViews;
+		std::array<glm::mat4, 6> VulkanRenderer::s_CaptureViews;
 
 		VulkanRenderer::VulkanRenderer()
+		{
+		}
+
+		VulkanRenderer::~VulkanRenderer()
+		{
+		}
+
+		void VulkanRenderer::Initialize()
 		{
 			m_ClearColor = { 1.0f, 0.0f, 1.0f, 1.0f };
 			m_BRDFSize = { 512, 512 };
@@ -65,14 +73,7 @@ namespace flex
 			CreateLogicalDevice(physicalDevice);
 
 			m_CommandBufferManager = VulkanCommandBufferManager(m_VulkanDevice);
-		}
 
-		VulkanRenderer::~VulkanRenderer()
-		{
-		}
-
-		void VulkanRenderer::Initialize()
-		{
 			Renderer::Initialize();
 
 			m_DepthAttachment = new FrameBufferAttachment(m_VulkanDevice->m_LogicalDevice);
@@ -108,7 +109,7 @@ namespace flex
 			m_CubemapDepthAttachment = new FrameBufferAttachment(m_VulkanDevice->m_LogicalDevice, depthFormat);*/
 
 			// NOTE: This is different from the GLRenderer's capture views
-			m_CaptureViews = {
+			s_CaptureViews = {
 				glm::lookAt(VEC3_ZERO, glm::vec3(1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
 				glm::lookAt(VEC3_ZERO, glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
 				glm::lookAt(VEC3_ZERO, glm::vec3(0.0f,  -1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  -1.0f)),
@@ -402,8 +403,8 @@ namespace flex
 
 			for (size_t i = 0; i < m_VertexIndexBufferPairs.size(); ++i)
 			{
-				SafeDelete(m_VertexIndexBufferPairs[i].vertexBuffer);
-				SafeDelete(m_VertexIndexBufferPairs[i].indexBuffer);
+				delete m_VertexIndexBufferPairs[i].vertexBuffer;
+				delete m_VertexIndexBufferPairs[i].indexBuffer;
 			}
 			m_VertexIndexBufferPairs.clear();
 
@@ -411,7 +412,7 @@ namespace flex
 
 			DestroyRenderObject(m_GBufferQuadRenderID);
 
-			SafeDelete(m_PhysicsDebugDrawer);
+			delete m_PhysicsDebugDrawer;
 
 			for (GameObject* obj : m_PersistentObjects)
 			{
@@ -419,7 +420,7 @@ namespace flex
 				{
 					DestroyRenderObject(obj->GetRenderID());
 				}
-				SafeDelete(obj);
+				delete obj;
 			}
 			m_PersistentObjects.clear();
 
@@ -443,26 +444,45 @@ namespace flex
 
 			m_Shaders.clear();
 
-			SafeDelete(m_OffScreenFrameBuf);
+			delete m_OffScreenFrameBuf;
 			vkDestroySemaphore(m_VulkanDevice->m_LogicalDevice, offscreenSemaphore, nullptr);
 
-			SafeDelete(m_CubemapFrameBuffer);
-			SafeDelete(m_CubemapDepthAttachment);
+			delete m_CubemapFrameBuffer;
+			delete m_CubemapDepthAttachment;
 
-			SafeDelete(m_DepthAttachment);
+			delete m_DepthAttachment;
 
 			m_gBufferQuadVertexBufferData.Destroy();
 			m_PipelineCache.replace();
 			m_DescriptorPool.replace();
 			m_ColorSampler.replace();
 
-			SafeDelete(m_BlankTexture);
+			delete m_BlankTexture;
 
 			for (size_t i = 0; i < m_LoadedTextures.size(); ++i)
 			{
-				SafeDelete(m_LoadedTextures[i]);
+				delete m_LoadedTextures[i];
 			}
 			m_LoadedTextures.clear();
+
+			for (GameObject* editorObject : m_EditorObjects)
+			{
+				editorObject->Destroy();
+				delete editorObject;
+			}
+			m_EditorObjects.clear();
+
+			for (BitmapFont* font : m_FontsSS)
+			{
+				delete font;
+			}
+			m_FontsSS.clear();
+
+			for (BitmapFont* font : m_FontsWS)
+			{
+				delete font;
+			}
+			m_FontsWS.clear();
 
 			m_DeferredCombineRenderPass.replace();
 			m_SwapChain.replace();
@@ -473,7 +493,7 @@ namespace flex
 
 			vkDeviceWaitIdle(m_VulkanDevice->m_LogicalDevice);
 
-			SafeDelete(m_VulkanDevice);
+			delete m_VulkanDevice;
 
 			glfwTerminate();
 		}
@@ -849,7 +869,7 @@ namespace flex
 
 					// Push constants
 					skyboxMat.pushConstantBlock.mvp =
-						glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (real)dim) * m_CaptureViews[face];
+						glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (real)dim) * s_CaptureViews[face];
 					vkCmdPushConstants(cmdBuf, pipelinelayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock), &skyboxMat.pushConstantBlock);
 
 					vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
@@ -1309,7 +1329,7 @@ namespace flex
 
 					// Push constants
 					skyboxMat.pushConstantBlock.mvp =
-						glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (real)dim) * m_CaptureViews[face];
+						glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (real)dim) * s_CaptureViews[face];
 					vkCmdPushConstants(cmdBuf, pipelinelayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock),
 						&skyboxMat.pushConstantBlock);
 
@@ -1739,7 +1759,7 @@ namespace flex
 
 					// Push constants
 					skyboxMat.pushConstantBlock.mvp =
-						glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (real)dim) * m_CaptureViews[face];
+						glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (real)dim) * s_CaptureViews[face];
 					vkCmdPushConstants(cmdBuf, pipelinelayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock), &skyboxMat.pushConstantBlock);
 
 					vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
@@ -3007,7 +3027,7 @@ namespace flex
 			if (renderObject)
 			{
 				vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPool, 1, &(renderObject->descriptorSet));
-				SafeDelete(renderObject);
+				delete renderObject;
 			}
 			m_RenderObjects[renderID] = nullptr;
 		}
@@ -3124,10 +3144,17 @@ namespace flex
 			const std::string& renderedFontFilePath,
 			bool bForceRender, bool bScreenSpace)
 		{
+			FT_Library ft;
+			if (FT_Init_FreeType(&ft) != FT_Err_Ok)
+			{
+				PrintError("Failed to initialize FreeType\n");
+				return false;
+			}
+
 			std::map<i32, FontMetric*> characters;
 			std::array<glm::vec2i, 4> maxPos;
 			FT_Face face;
-			if (!LoadFontMetrics(fontFilePath, font, size, bScreenSpace, &characters, &maxPos, &face))
+			if (!LoadFontMetrics(fontFilePath, ft, font, size, bScreenSpace, &characters, &maxPos, &face))
 			{
 				return false;
 			}
@@ -3274,8 +3301,11 @@ namespace flex
 
 				std::string savedSDFTextureAbsFilePath = RelativePathToAbsolute(renderedFontFilePath);
 				fontTex->SaveToFile(savedSDFTextureAbsFilePath, ImageFormat::PNG, false);
-
 			}
+
+			FT_Done_Face(face);
+			FT_Done_FreeType(ft);
+
 			return false;
 		}
 
@@ -3408,9 +3438,8 @@ namespace flex
 			createInfo.flags =
 				VK_DEBUG_REPORT_ERROR_BIT_EXT |
 				VK_DEBUG_REPORT_WARNING_BIT_EXT |
-				VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT |
-				//VK_DEBUG_REPORT_INFORMATION_BIT_EXT |
-				VK_DEBUG_REPORT_DEBUG_BIT_EXT;
+				VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
+				//VK_DEBUG_REPORT_DEBUG_BIT_EXT;
 			createInfo.pfnCallback = DebugCallback;
 
 			VK_CHECK_RESULT(CreateDebugReportCallbackEXT(m_Instance, &createInfo, nullptr, m_Callback.replace()));

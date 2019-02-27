@@ -16,6 +16,7 @@ struct DirectionalLight
 {
 	vec4 direction;
 	vec4 color;
+	float brightness;
 	bool enabled;
 	float padding[3];
 };
@@ -25,6 +26,7 @@ struct PointLight
 {
 	vec4 position;
 	vec4 color;
+	float brightness;
 	bool enabled;
 	float padding[2];
 };

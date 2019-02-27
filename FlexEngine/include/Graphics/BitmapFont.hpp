@@ -13,7 +13,7 @@ namespace flex
 #elif COMPILE_VULKAN
 	namespace vk
 	{
-		class VulkanTexture;
+		struct VulkanTexture;
 	}
 #endif
 

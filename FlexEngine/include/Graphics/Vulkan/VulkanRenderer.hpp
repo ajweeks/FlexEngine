@@ -376,7 +376,7 @@ namespace flex
 
 			VkClearColorValue m_ClearColor;
 
-			static std::array<glm::mat4, 6> m_CaptureViews;
+			static std::array<glm::mat4, 6> s_CaptureViews;
 
 			VulkanPhysicsDebugDraw* m_PhysicsDebugDrawer = nullptr;
 

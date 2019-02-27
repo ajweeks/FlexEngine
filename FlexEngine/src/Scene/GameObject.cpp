@@ -2546,7 +2546,7 @@ namespace flex
 			if (DoImGuiRotationDragFloat3("Rotation", dirtyRot, cleanedRot))
 			{
 				m_Transform.SetLocalRotation(glm::quat(glm::radians(cleanedRot)));
-				data.dir = cleanedRot;
+				data.dir = glm::vec4(cleanedRot, 0.0f);
 			}
 			ImGui::SliderFloat("Brightness", &data.brightness, 0.0f, 15.0f);
 			ImGui::ColorEdit4("Color ", &data.color.r, colorEditFlags);
@@ -2596,7 +2596,7 @@ namespace flex
 			std::string dirStr = directionalLightObj.GetString("rotation");
 			glm::quat rot(ParseVec3(dirStr));
 			m_Transform.SetLocalRotation(rot);
-			data.dir = glm::eulerAngles(rot);
+			data.dir = glm::vec4(glm::eulerAngles(rot), 0.0f);
 
 			std::string posStr = directionalLightObj.GetString("pos");
 			if (!posStr.empty())
@@ -2671,7 +2671,7 @@ namespace flex
 	void DirectionalLight::SetRot(const glm::quat& rot)
 	{
 		m_Transform.SetLocalRotation(rot);
-		data.dir = glm::eulerAngles(rot);
+		data.dir = glm::vec4(glm::eulerAngles(rot), 0.0f);
 	}
 
 	PointLight::PointLight(BaseScene* scene) :
@@ -2684,7 +2684,7 @@ namespace flex
 	{
 		data.brightness = 1.0f;
 		data.color = VEC4_ONE;
-		data.pos = VEC3_ZERO;
+		data.pos = VEC4_ZERO;
 		data.bEnabled = true;
 	}
 
@@ -2750,7 +2750,7 @@ namespace flex
 	void PointLight::SetPos(const glm::vec3& pos)
 	{
 		m_Transform.SetLocalPosition(pos);
-		data.pos = pos;
+		data.pos = glm::vec4(pos, 0.0f);
 	}
 
 	glm::vec3 PointLight::GetPos() const
@@ -2769,7 +2769,7 @@ namespace flex
 			std::string posStr = pointLightObj.GetString("pos");
 			glm::vec3 pos = glm::vec3(ParseVec3(posStr));
 			m_Transform.SetLocalPosition(pos);
-			data.pos = pos;
+			data.pos = glm::vec4(pos, 0.0f);
 
 			pointLightObj.SetVec4Checked("color", data.color);
 

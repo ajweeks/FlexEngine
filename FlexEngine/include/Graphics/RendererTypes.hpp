@@ -22,7 +22,7 @@ namespace flex
 
 	struct DirLightData
 	{
-		glm::vec3 dir;
+		glm::vec4 dir; // Euler angles, 4 components to match shader
 		glm::vec4 color;
 		real brightness;
 		bool bEnabled;
@@ -40,7 +40,7 @@ namespace flex
 
 	struct PointLightData
 	{
-		glm::vec3 pos;
+		glm::vec4 pos; // 4 components to match shader
 		glm::vec4 color;
 		real brightness;
 		bool bEnabled;
