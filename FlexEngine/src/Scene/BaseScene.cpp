@@ -211,8 +211,8 @@ namespace flex
 		bool bCreatePlayer = true;
 
 		// TODO: FIXME: Save in scene file
-		if (m_Name.compare("Scene_Gerstner") == 0 ||
-			m_Name.compare("Scene_Empty") == 0)
+		if (m_Name.compare("Scene Gerstner") == 0 ||
+			m_Name.compare("Scene Empty") == 0)
 		{
 			bCreatePlayer = false;
 		}

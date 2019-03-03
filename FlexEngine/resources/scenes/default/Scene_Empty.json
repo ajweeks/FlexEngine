@@ -4,12 +4,25 @@
 	"objects" : 
 	[
 		{
-			"name" : "Reflection Probe 01",
-			"type" : "reflection probe",
+			"name" : "Cornell Box",
+			"type" : "object",
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "0.000, 7.080, 0.000"
+				"pos" : "-28.690, 0.000, -0.001",
+				"rot" : "1.570, 1.570, 3.141",
+				"scale" : "19.999, 20.000, 19.999"
+			},
+			"mesh" : "cornell-box",
+			"material" : "cornell"
+		},
+		{
+			"name" : "Reflection Probe 01",
+			"type" : "reflection probe",
+			"visible" : false,
+			"transform" : 
+			{
+				"pos" : "0.000, 18.600, 0.000"
 			},
 			"material" : "pbr chrome"
 		},
