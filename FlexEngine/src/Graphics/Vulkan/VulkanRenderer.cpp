@@ -196,6 +196,7 @@ namespace flex
 
 				MaterialID gBufferMatID = InitializeMaterial(&gBufferMaterialCreateInfo);
 
+				// TODO: Use full screen tri
 				VertexBufferData::CreateInfo gBufferQuadVertexBufferDataCreateInfo = {};
 				gBufferQuadVertexBufferDataCreateInfo.positions_3D = {
 					{ -1.0f,  1.0f, 0.0f },
@@ -870,7 +871,8 @@ namespace flex
 					// Push constants
 					skyboxMat.pushConstantBlock.mvp =
 						glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (real)dim) * s_CaptureViews[face];
-					vkCmdPushConstants(cmdBuf, pipelinelayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock), &skyboxMat.pushConstantBlock);
+					vkCmdPushConstants(cmdBuf, pipelinelayout, VK_SHADER_STAGE_VERTEX_BIT,
+						0, sizeof(Material::PushConstantBlock), &skyboxMat.pushConstantBlock);
 
 					vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
@@ -2440,7 +2442,7 @@ namespace flex
 
 		void VulkanRenderer::CreateUniformBuffers(VulkanShader* shader)
 		{
-			shader->uniformBuffer.constantData.size = shader->shader.constantBufferUniforms.CalculateSizeInBytes(m_PointLights.size());
+			shader->uniformBuffer.constantData.size = shader->shader.constantBufferUniforms.CalculateSizeInBytes(MAX_NUM_POINT_LIGHTS);
 			if (shader->uniformBuffer.constantData.size > 0)
 			{
 				free(shader->uniformBuffer.constantData.data);
@@ -2454,7 +2456,7 @@ namespace flex
 					VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 			}
 
-			shader->uniformBuffer.dynamicData.size = shader->shader.dynamicBufferUniforms.CalculateSizeInBytes(m_PointLights.size());
+			shader->uniformBuffer.dynamicData.size = shader->shader.dynamicBufferUniforms.CalculateSizeInBytes(MAX_NUM_POINT_LIGHTS);
 			if (shader->uniformBuffer.dynamicData.size > 0 && m_RenderObjects.size() > 0)
 			{
 				if (shader->uniformBuffer.dynamicData.data) _aligned_free(shader->uniformBuffer.dynamicData.data);
@@ -2516,7 +2518,6 @@ namespace flex
 				}
 			}
 
-			// Update uniform buffer
 			UpdateConstantUniformBuffers();
 
 			// TODO: Only update when things have changed
@@ -2525,7 +2526,6 @@ namespace flex
 				UpdateDynamicUniformBuffer(i);
 			}
 
-			// Update g-buffer uniforms
 			UpdateDynamicUniformBuffer(m_GBufferQuadRenderID);
 		}
 
@@ -2626,7 +2626,7 @@ namespace flex
 
 			DoCreateGameObjectButton("Add object...", "Add object");
 
-			if (m_PointLights.size() < MAX_POINT_LIGHT_COUNT)
+			if (m_NumEnabledPointLights < MAX_POINT_LIGHT_COUNT)
 			{
 				static const char* newPointLightStr = "Add point light";
 				if (ImGui::Button(newPointLightStr))
@@ -2634,7 +2634,8 @@ namespace flex
 					BaseScene* scene = g_SceneManager->CurrentScene();
 					PointLight* newPointLight = new PointLight(scene);
 					scene->AddRootObject(newPointLight);
-					RegisterPointLight(&newPointLight->data);
+					newPointLight->Initialize();
+					newPointLight->PostInitialize();
 				}
 			}
 		}
@@ -3144,6 +3145,8 @@ namespace flex
 			const std::string& renderedFontFilePath,
 			bool bForceRender, bool bScreenSpace)
 		{
+			return false;
+
 			FT_Library ft;
 			if (FT_Init_FreeType(&ft) != FT_Err_Ok)
 			{
@@ -3409,7 +3412,7 @@ namespace flex
 			createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 			createInfo.pApplicationInfo = &appInfo;
 
-			auto extensions = GetRequiredExtensions();
+			std::vector<const char*> extensions = GetRequiredExtensions();
 			createInfo.enabledExtensionCount = extensions.size();
 			createInfo.ppEnabledExtensionNames = extensions.data();
 
@@ -3502,7 +3505,7 @@ namespace flex
 			std::vector<VkPhysicalDevice> devices(deviceCount);
 			vkEnumeratePhysicalDevices(m_Instance, &deviceCount, devices.data());
 
-			for (const auto& device : devices)
+			for (const VkPhysicalDevice& device : devices)
 			{
 				if (IsDeviceSuitable(device))
 				{
@@ -4827,9 +4830,10 @@ namespace flex
 					}
 
 					VulkanMaterial& renderObjectMat = m_Materials[renderObject->materialID];
+					VulkanShader& shader = m_Shaders[renderObjectMat.material.shaderID];
 
 					// Only render non-deferred (forward) objects in this pass
-					if (m_Shaders[renderObjectMat.material.shaderID].shader.deferred)
+					if (shader.shader.deferred)
 					{
 						continue;
 					}
@@ -4845,7 +4849,7 @@ namespace flex
 					vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderObject->graphicsPipeline);
 
 					// Push constants
-					if (m_Shaders[renderObjectMat.material.shaderID].shader.bNeedPushConstantBlock)
+					if (shader.shader.bNeedPushConstantBlock)
 					{
 						// Truncate translation component to center cubemap around viewer
 						glm::mat4 view = glm::mat4(glm::mat3(g_CameraManager->CurrentCamera()->GetView()));
@@ -4855,7 +4859,7 @@ namespace flex
 						vkCmdPushConstants(commandBuffer, renderObject->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock), &renderObjectMat.material.pushConstantBlock);
 					}
 
-					BindDescriptorSet(&m_Shaders[renderObjectMat.material.shaderID], renderObject->renderID, commandBuffer, renderObject->pipelineLayout, renderObject->descriptorSet);
+					BindDescriptorSet(&shader, renderObject->renderID, commandBuffer, renderObject->pipelineLayout, renderObject->descriptorSet);
 
 					if (renderObject->indexed)
 					{
@@ -5074,8 +5078,10 @@ namespace flex
 					glm::mat4 view = glm::mat4(glm::mat3(g_CameraManager->CurrentCamera()->GetView())); // Truncate translation part off to center around viewer
 					glm::mat4 projection = g_CameraManager->CurrentCamera()->GetProjection();
 					renderObjectMat.material.pushConstantBlock.mvp =
-						projection * view * MAT4_IDENTITY; // renderObject->model; TODO
-					vkCmdPushConstants(offScreenCmdBuffer, renderObject->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock), &renderObjectMat.material.pushConstantBlock);
+						projection * view * renderObject->gameObject->GetTransform()->GetWorldTransform();
+					vkCmdPushConstants(offScreenCmdBuffer, renderObject->pipelineLayout,
+						VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock),
+						&renderObjectMat.material.pushConstantBlock);
 				}
 
 				BindDescriptorSet(&m_Shaders[renderObjectMat.material.shaderID], renderObject->renderID, offScreenCmdBuffer, renderObject->pipelineLayout, renderObject->descriptorSet);
@@ -5299,6 +5305,7 @@ namespace flex
 
 		void VulkanRenderer::CreateDescriptorPool()
 		{
+			// TODO: Don't do this?
 			const size_t descriptorSetCount = 1000;
 
 			std::vector<VkDescriptorPoolSize> poolSizes{
@@ -5426,7 +5433,7 @@ namespace flex
 				return{ VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
 			}
 
-			for (const auto& availableFormat : availableFormats)
+			for (const VkSurfaceFormatKHR& availableFormat : availableFormats)
 			{
 				if (availableFormat.format == VK_FORMAT_B8G8R8A8_UNORM && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
 				{
@@ -5442,7 +5449,7 @@ namespace flex
 			const VkPresentModeKHR bestMode = (m_bVSyncEnabled ? VK_PRESENT_MODE_IMMEDIATE_KHR : VK_PRESENT_MODE_FIFO_KHR);
 			VkPresentModeKHR secondBestMode = bestMode;
 
-			for (const auto& availablePresentMode : availablePresentModes)
+			for (const VkPresentModeKHR& availablePresentMode : availablePresentModes)
 			{
 				if (availablePresentMode == bestMode)
 				{
@@ -5537,7 +5544,7 @@ namespace flex
 
 			std::set<std::string> requiredExtensions(m_DeviceExtensions.begin(), m_DeviceExtensions.end());
 
-			for (const auto& extension : availableExtensions)
+			for (const VkExtensionProperties& extension : availableExtensions)
 			{
 				requiredExtensions.erase(extension.extensionName);
 			}
@@ -5578,7 +5585,7 @@ namespace flex
 			{
 				bool layerFound = false;
 
-				for (const auto& layerProperties : availableLayers)
+				for (const VkLayerProperties& layerProperties : availableLayers)
 				{
 					if (strcmp(layerName, layerProperties.layerName) == 0)
 					{
@@ -5882,6 +5889,7 @@ namespace flex
 			mappedMemoryRange.offset = offset;
 			mappedMemoryRange.memory = uniformBuffer.dynamicBuffer.m_Memory;
 			mappedMemoryRange.size = uniformBuffer.dynamicData.size;
+			// TODO: Is this call needed if the buffer was allocated specifying VK_MEMORY_PROPERTY_HOST_COHERENT_BIT?
 			vkFlushMappedMemoryRanges(m_VulkanDevice->m_LogicalDevice, 1, &mappedMemoryRange);
 		}
 
@@ -5947,11 +5955,12 @@ namespace flex
 			m_Shaders[shaderID].shader.deferred = false;
 			m_Shaders[shaderID].shader.translucent = true;
 			m_Shaders[shaderID].shader.subpass = 1;
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_MODEL);
@@ -5969,6 +5978,7 @@ namespace flex
 			m_Shaders[shaderID].shader.bNeedNormalSampler = true;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
 				(u32)VertexAttribute::UV |
 				(u32)VertexAttribute::TANGENT |
 				(u32)VertexAttribute::BITANGENT |
@@ -6013,7 +6023,6 @@ namespace flex
 
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
-
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_MODEL);
@@ -6138,7 +6147,7 @@ namespace flex
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ENABLE_IRRADIANCE_SAMPLER);
 			++shaderID;
 
-			// Deferred combine cubemap (sample gbuffer)
+			// Deferred combine cubemap (sample GBuffer)
 			m_Shaders[shaderID].shader.deferred = false; // Sounds strange but this isn't deferred
 			m_Shaders[shaderID].shader.subpass = 0;
 			m_Shaders[shaderID].shader.depthWriteEnable = false; // Disable depth writing
@@ -6289,7 +6298,6 @@ namespace flex
 				PrintError("%s\n", msg);
 				break;
 			case VkDebugReportFlagBitsEXT::VK_DEBUG_REPORT_DEBUG_BIT_EXT:
-				// Fall through
 			default:
 				PrintError("%s\n", msg);
 				break;

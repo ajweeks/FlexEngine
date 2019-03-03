@@ -148,13 +148,13 @@ void main()
 			// TODO: Define radius on point lights individually
 			continue;
 		}
-		
+
 		// Pretend point lights have a radius of 1cm to avoid division by 0
 		float attenuation = 1.0 / max((distance * distance), 0.001);
 		vec3 L = normalize(uboConstant.pointLights[i].position.xyz - worldPos);
 		vec3 radiance = uboConstant.pointLights[i].color.rgb * attenuation;
 		float NoL = max(dot(N, L), 0.0);
-	
+
 		Lo += DoLighting(radiance, N, V, L, NoV, NoL, roughness, metallic, F0, albedo);
 	}
 
@@ -164,30 +164,50 @@ void main()
 		vec3 radiance = uboConstant.dirLight.color.rgb;
 		float NoL = max(dot(N, L), 0.0);
 		
-		Lo += DoLighting(radiance, N, V, L, NoV, NoL, roughness, metallic, F0, albedo);
+		Lo += DoLighting(radiance, N, V, L, NoV, NoL, 1, 1, F0, vec3(1.0));
+
+
+		// vec3 H = normalize(V + L);
+
+		// // Cook-Torrance BRDF
+		// float NDF = DistributionGGX(N, H, roughness);
+		// float G = GeometrySmith(N, V, L, roughness);
+		// vec3 F = FresnelSchlick(max(dot(H, V), 0.0), F0);
+
+		// vec3 kS = F;
+		// vec3 kD = vec3(1.0) - kS;
+		// kD *= 1.0 - metallic; // Pure metals have no diffuse lighting
+
+		// vec3 nominator = NDF * G * F;
+		// float denominator = 4 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.001; // Add epsilon to prevent divide by zero
+		// vec3 specular = nominator / denominator;
+
+		// vec3 lighting = (kD * albedo / PI + specular) * radiance * NoL;
+
+		// fragColor = vec4(NoL,NoL,NoL, 1.0); return;
 	}
 
 	vec3 F = FresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
 
 	vec3 ambient;
-	if (uboDynamic.enableIrradianceSampler)
-	{
-		// Diffse ambient term (IBL)
-		vec3 kS = F;
-	    vec3 kD = 1.0 - kS;
-	    kD *= 1.0 - metallic;	  
-	    vec3 irradiance = texture(irradianceSampler, N).rgb;
-	    vec3 diffuse = irradiance * albedo;
+	// if (uboDynamic.enableIrradianceSampler)
+	// {
+	// 	// Diffse ambient term (IBL)
+	// 	vec3 kS = F;
+	//     vec3 kD = 1.0 - kS;
+	//     kD *= 1.0 - metallic;	  
+	//     vec3 irradiance = texture(irradianceSampler, N).rgb;
+	//     vec3 diffuse = irradiance * albedo;
 
-		// Specular ambient term (IBL)
-		const float MAX_REFLECTION_LOAD = 5.0;
-		vec3 prefilteredColor = textureLod(prefilterMap, R, roughness * MAX_REFLECTION_LOAD).rgb;
-		vec2 brdf = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
-		vec3 specular = prefilteredColor * (F * brdf.x + brdf.y);
+	// 	// Specular ambient term (IBL)
+	// 	const float MAX_REFLECTION_LOAD = 5.0;
+	// 	vec3 prefilteredColor = textureLod(prefilterMap, R, roughness * MAX_REFLECTION_LOAD).rgb;
+	// 	vec2 brdf = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
+	// 	vec3 specular = prefilteredColor * (F * brdf.x + brdf.y);
 
-	    ambient = (kD * diffuse + specular) * ao;
-	}
-	else
+	//     ambient = (kD * diffuse + specular) * ao;
+	// }
+	// else
 	{
 		ambient = vec3(0.03) * albedo * ao;
 	}
@@ -200,16 +220,13 @@ void main()
 	fragColor = vec4(color, 1.0);
 
 	// Visualize normal map:
-	//fragColor = vec4(texture(normalSampler, ex_TexCoord).xyz, 1); return;
-
-	// Visualize normals:
-	//fragColor = vec4(N, 1); return;
+	// fragColor = vec4(N, 1); return;
 
 	// Visualize tangents:
 	//fragColor = vec4(vec3(ex_TBN[0]), 1); return;
 
-	// Visualize texCoords:
-	//fragColor = vec4(ex_TexCoord, 0, 1); return;
+	// Visualize screen coords:
+	// fragColor = vec4(ex_TexCoord, 0, 1); return;
 
 	// Visualize metallic:
 	//fragColor = vec4(metallic, metallic, metallic, 1); return;

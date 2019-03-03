@@ -32,7 +32,8 @@ layout (binding = 1) uniform UBODynamic
 
 layout (location = 0) in vec3 ex_WorldPos;
 layout (location = 1) in vec2 ex_TexCoord;
-layout (location = 2) in mat3 ex_TBN;
+layout (location = 2) in vec4 ex_Color;
+layout (location = 3) in mat3 ex_TBN;
 
 layout (binding = 2) uniform sampler2D albedoSampler;
 layout (binding = 3) uniform sampler2D metallicSampler;
@@ -58,6 +59,6 @@ void main()
 	outNormalRoughness.rgb = normalize(Normal);
 	outNormalRoughness.a = roughness;
 	
-	outAlbedoAO.rgb = albedo;
+	outAlbedoAO.rgb = albedo * vec3(ex_Color);
 	outAlbedoAO.a = ao;
 }
