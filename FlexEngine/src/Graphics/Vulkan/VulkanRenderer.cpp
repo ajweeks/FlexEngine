@@ -386,6 +386,7 @@ namespace flex
 
 		void VulkanRenderer::Destroy()
 		{
+			Renderer::Destroy();
 
 			// TODO: Is this needed?
 			vkDeviceWaitIdle(m_VulkanDevice->m_LogicalDevice);
@@ -2442,7 +2443,7 @@ namespace flex
 
 		void VulkanRenderer::CreateUniformBuffers(VulkanShader* shader)
 		{
-			shader->uniformBuffer.constantData.size = shader->shader.constantBufferUniforms.CalculateSizeInBytes(m_PointLights.size());
+			shader->uniformBuffer.constantData.size = shader->shader.constantBufferUniforms.CalculateSizeInBytes(MAX_NUM_POINT_LIGHTS);
 			if (shader->uniformBuffer.constantData.size > 0)
 			{
 				free(shader->uniformBuffer.constantData.data);
@@ -2456,7 +2457,7 @@ namespace flex
 					VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 			}
 
-			shader->uniformBuffer.dynamicData.size = shader->shader.dynamicBufferUniforms.CalculateSizeInBytes(m_PointLights.size());
+			shader->uniformBuffer.dynamicData.size = shader->shader.dynamicBufferUniforms.CalculateSizeInBytes(MAX_NUM_POINT_LIGHTS);
 			if (shader->uniformBuffer.dynamicData.size > 0 && m_RenderObjects.size() > 0)
 			{
 				if (shader->uniformBuffer.dynamicData.data) _aligned_free(shader->uniformBuffer.dynamicData.data);
@@ -2626,19 +2627,18 @@ namespace flex
 
 			DoCreateGameObjectButton("Add object...", "Add object");
 
-			// TODO:
-			//if (m_NumEnabledPointLights < MAX_POINT_LIGHT_COUNT)
-			//{
-			//	static const char* newPointLightStr = "Add point light";
-			//	if (ImGui::Button(newPointLightStr))
-			//	{
-			//		BaseScene* scene = g_SceneManager->CurrentScene();
-			//		PointLight* newPointLight = new PointLight(scene);
-			//		scene->AddRootObject(newPointLight);
-			//		newPointLight->Initialize();
-			//		newPointLight->PostInitialize();
-			//	}
-			//}
+			if (m_NumPointLightsEnabled < MAX_POINT_LIGHT_COUNT)
+			{
+				static const char* newPointLightStr = "Add point light";
+				if (ImGui::Button(newPointLightStr))
+				{
+					BaseScene* scene = g_SceneManager->CurrentScene();
+					PointLight* newPointLight = new PointLight(scene);
+					scene->AddRootObject(newPointLight);
+					newPointLight->Initialize();
+					newPointLight->PostInitialize();
+				}
+			}
 		}
 
 		void VulkanRenderer::UpdateVertexData(RenderID renderID, VertexBufferData* vertexBufferData)
@@ -5655,15 +5655,9 @@ namespace flex
 				}
 			}
 
-			void* PointLightsDataStart = nullptr;
-			size_t PointLightsSize = 0;
-			size_t PointLightsMoveInWords = 0;
-			if (!m_PointLights.empty())
-			{
-				PointLightsDataStart = (void*)m_PointLights[0];
-				PointLightsSize = sizeof(*(m_PointLights[0])) * m_PointLights.size();
-				PointLightsMoveInWords = PointLightsSize / sizeof(real);
-			}
+			void* PointLightsDataStart = (void*)m_PointLights;
+			size_t PointLightsSize = sizeof(PointLightData) * MAX_NUM_POINT_LIGHTS;
+			size_t PointLightsMoveInWords = PointLightsSize / sizeof(real);
 
 			struct UniformInfo
 			{

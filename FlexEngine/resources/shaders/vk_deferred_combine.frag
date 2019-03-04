@@ -139,7 +139,10 @@ void main()
 	vec3 Lo = vec3(0.0);
 	for (int i = 0; i < NUMBER_POINT_LIGHTS; ++i)
 	{
-		if (!uboConstant.pointLights[i].enabled) continue;
+		if (!uboConstant.pointLights[i].enabled)
+		{
+			continue;
+		}
 
 		float distance = length(uboConstant.pointLights[i].position.xyz - worldPos);
 

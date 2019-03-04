@@ -484,6 +484,8 @@ namespace flex
 
 		void GLRenderer::Destroy()
 		{
+			Renderer::Destroy();
+
 			g_InputManager->UnbindKeyEventCallback(&m_KeyEventCallback);
 			g_InputManager->UnbindActionCallback(&m_ActionCallback);
 
@@ -2711,16 +2713,16 @@ namespace flex
 
 				glm::vec3 camPos = cam->GetPosition();
 				glm::vec3 camUp = cam->GetUp();
-				for (PointLightData* pointLightData : m_PointLights)
+				for (i32 i = 0; i < m_NumPointLightsEnabled; ++i)
 				{
-					if (pointLightData->bEnabled)
+					if (m_PointLights[i].bEnabled)
 					{
 						// TODO: Sort back to front? Or clear depth and then enable depth test
-						drawInfo.pos = pointLightData->pos;
-						drawInfo.color = pointLightData->color * 1.5f;
-						drawInfo.color.a = pointLightData->color.a;
+						drawInfo.pos = m_PointLights[i].pos;
+						drawInfo.color = m_PointLights[i].color * 1.5f;
+						drawInfo.color.a = m_PointLights[i].color.a;
 						drawInfo.textureHandleID = m_LoadedTextures[m_PointLightIconID]->handle;
-						glm::mat4 rotMat = glm::lookAt(camPos, pointLightData->pos, camUp);
+						glm::mat4 rotMat = glm::lookAt(camPos, glm::vec3(m_PointLights[i].pos), camUp);
 						drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
 						DrawSpriteQuad(drawInfo);
 					}
@@ -3157,6 +3159,10 @@ namespace flex
 						for (auto& charPair : characters)
 						{
 							FontMetric* metric = charPair.second;
+							if (metric->character == ' ')
+							{
+								continue;
+							}
 
 							u32 glyphIndex = FT_Get_Char_Index(face, metric->character);
 							if (glyphIndex == 0)
@@ -4751,8 +4757,7 @@ namespace flex
 					{
 						SetUInt(material->material.shaderID, dirLightEnabledStr, 1);
 						static const char* dirLightDirectionStr = "dirLight.direction";
-						glm::vec4 dirLightDir(m_DirectionalLight->dir, 0.0f);
-						SetVec4f(material->material.shaderID, dirLightDirectionStr, dirLightDir);
+						SetVec4f(material->material.shaderID, dirLightDirectionStr, m_DirectionalLight->dir);
 						static const char* dirLightColorStr = "dirLight.color";
 						SetVec4f(material->material.shaderID, dirLightColorStr, m_DirectionalLight->color * m_DirectionalLight->brightness);
 					}
@@ -4769,7 +4774,8 @@ namespace flex
 						const std::string numberStr(std::to_string(i));
 						const char* numberCStr = numberStr.c_str();
 						static const i32 strStartLen = 16;
-						char pointLightStrStart[strStartLen]; // Handles up to 99 numbers
+						static_assert(MAX_NUM_POINT_LIGHTS <= 99, "More than 99 point lights are allowed, strStartLen must be larger to compensate for more digits");
+						char pointLightStrStart[strStartLen];
 						strcpy_s(pointLightStrStart, "pointLights[");
 						strcat_s(pointLightStrStart, numberCStr);
 						strcat_s(pointLightStrStart, "]");
@@ -4779,9 +4785,9 @@ namespace flex
 						strcpy_s(enabledStr, pointLightStrStart);
 						static const char* dotEnabledStr = ".enabled";
 						strcat_s(enabledStr, dotEnabledStr);
-						if (i < m_PointLights.size())
+						if (i < m_NumPointLightsEnabled)
 						{
-							if (m_PointLights[i]->bEnabled)
+							if (m_PointLights[i].bEnabled)
 							{
 								SetUInt(material->material.shaderID, enabledStr, 1);
 
@@ -4789,13 +4795,13 @@ namespace flex
 								strcpy_s(positionStr, pointLightStrStart);
 								static const char* dotPositionStr = ".position";
 								strcat_s(positionStr, dotPositionStr);
-								SetVec4f(material->material.shaderID, positionStr, glm::vec4(m_PointLights[i]->pos, 0.0f));
+								SetVec4f(material->material.shaderID, positionStr, m_PointLights[i].pos);
 
 								char colorStr[strStartLen + 6];
 								strcpy_s(colorStr, pointLightStrStart);
 								static const char* dotColorStr = ".color";
 								strcat_s(colorStr, dotColorStr);
-								SetVec4f(material->material.shaderID, colorStr, m_PointLights[i]->color * m_PointLights[i]->brightness);
+								SetVec4f(material->material.shaderID, colorStr, m_PointLights[i].color * m_PointLights[i].brightness);
 							}
 							else
 							{
@@ -6100,7 +6106,7 @@ namespace flex
 
 			DoCreateGameObjectButton("Add object...", "Add object");
 
-			if (m_PointLights.size() < MAX_POINT_LIGHT_COUNT)
+			if (m_NumPointLightsEnabled < MAX_POINT_LIGHT_COUNT)
 			{
 				static const char* newPointLightStr = "Add point light";
 				if (ImGui::Button(newPointLightStr))

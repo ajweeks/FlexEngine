@@ -39,6 +39,22 @@
 			}
 		},
 		{
+			"name" : "PointLight_01",
+			"type" : "point light",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "2, 0, 0"
+			},
+			"point light info" : 
+			{
+				"pos" : "1, 0, 0",
+				"color" : "0.49, 0.78, 0.91",
+				"enabled" : true,
+				"brightness" : 182.266006
+			}
+		},
+		{
 			"name" : "Directional Light",
 			"type" : "directional light",
 			"visible" : true,

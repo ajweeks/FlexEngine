@@ -21,7 +21,7 @@ namespace flex
 
 		virtual void Initialize();
 		virtual void PostInitialize() = 0;
-		virtual void Destroy() = 0;
+		virtual void Destroy();
 
 		virtual MaterialID InitializeMaterial(const MaterialCreateInfo* createInfo, MaterialID matToReplace = InvalidMaterialID) = 0;
 		virtual TextureID InitializeTexture(const std::string& relativeFilePath, i32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR) = 0;
@@ -148,15 +148,15 @@ namespace flex
 
 		PhysicsDebuggingSettings& GetPhysicsDebuggingSettings();
 
-		bool RegisterDirectionalLight(DirLightData* dirLight);
-		PointLightID RegisterPointLight(PointLightData* pointLight);
+		bool RegisterDirectionalLight(DirLightData* dirLightData);
+		PointLightID RegisterPointLight(PointLightData* pointLightData);
 
 		void RemoveDirectionalLight();
 		void RemovePointLight(PointLightID pointLightID);
 		void RemoveAllPointLights();
 
 		DirLightData* GetDirectionalLight();
-		PointLightData* GetPointLight(PointLightID pointLight);
+		PointLightData* GetPointLight(PointLightID pointLightID);
 		i32 GetNumPointLights();
 
 		i32 GetFramesRenderedCount() const;
@@ -191,7 +191,9 @@ namespace flex
 			i16 size, bool bScreenSpace, std::map<i32, struct FontMetric*>* outCharacters,
 			std::array<glm::vec2i, 4>* outMaxPositions, FT_Face* outFace);
 
-		std::vector<PointLightData*> m_PointLights;
+		static const i32 MAX_NUM_POINT_LIGHTS = 4;
+		PointLightData* m_PointLights;
+		i32 m_NumPointLightsEnabled = 0;
 		DirLightData* m_DirectionalLight = nullptr;
 
 		struct DrawCallInfo

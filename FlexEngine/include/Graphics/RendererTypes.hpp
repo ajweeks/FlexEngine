@@ -23,7 +23,7 @@ namespace flex
 	struct DirLightData
 	{
 		glm::vec4 dir; // Euler angles, 4 components to match shader
-		glm::vec4 color;
+		glm::vec4 color; // If equal to VEC4_NEG_ONE, this point light is uninitialized
 		real brightness;
 		bool bEnabled;
 

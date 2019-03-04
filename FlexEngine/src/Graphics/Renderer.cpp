@@ -28,6 +28,7 @@ IGNORE_WARNINGS_POP
 
 namespace flex
 {
+
 	Renderer::Renderer()
 	{
 		m_DefaultSettingsFilePathAbs = RelativePathToAbsolute(ROOT_LOCATION  "saved/config/default-renderer-settings.ini");
@@ -79,6 +80,13 @@ namespace flex
 		{
 			m_FontMetaDatas[i].renderedTextureFilePath += "-" + DPIStr + m_FontImageExtension;
 		}
+
+		m_PointLights = (PointLightData*)malloc(MAX_NUM_POINT_LIGHTS * sizeof(PointLightData));
+	}
+
+	void Renderer::Destroy()
+	{
+		free(m_PointLights);
 	}
 
 	void Renderer::SetReflectionProbeMaterial(MaterialID reflectionProbeMaterialID)
@@ -308,22 +316,22 @@ namespace flex
 		return m_PhysicsDebuggingSettings;
 	}
 
-	bool Renderer::RegisterDirectionalLight(DirLightData* dirLight)
+	bool Renderer::RegisterDirectionalLight(DirLightData* dirLightData)
 	{
-		m_DirectionalLight = dirLight;
+		m_DirectionalLight = dirLightData;
 		return true;
 	}
 
-	PointLightID Renderer::RegisterPointLight(PointLightData* pointLight)
+	PointLightID Renderer::RegisterPointLight(PointLightData* pointLightData)
 	{
-		if (m_PointLights.size() == MAX_POINT_LIGHT_COUNT)
+		if (m_NumPointLightsEnabled < MAX_NUM_POINT_LIGHTS)
 		{
-			PrintWarn("Attempted to add point light when already at max capacity of %i\n", MAX_POINT_LIGHT_COUNT);
-			return InvalidPointLightID;
+			PointLightID newPointLightID = (PointLightID)m_NumPointLightsEnabled;
+			memcpy(&m_PointLights[newPointLightID], pointLightData, sizeof(PointLightData));
+			m_NumPointLightsEnabled++;
+			return newPointLightID;
 		}
-
-		m_PointLights.push_back(pointLight);
-		return m_PointLights.size() - 1;
+		return InvalidPointLightID;
 	}
 
 	void Renderer::RemoveDirectionalLight()
@@ -333,12 +341,22 @@ namespace flex
 
 	void Renderer::RemovePointLight(PointLightID pointLightID)
 	{
-		// TODO:
+		if (m_PointLights[pointLightID].color.x != -1.0f)
+		{
+			m_PointLights[pointLightID].color = VEC4_NEG_ONE;
+			m_PointLights[pointLightID].bEnabled = false;
+			m_NumPointLightsEnabled--;
+		}
 	}
 
 	void Renderer::RemoveAllPointLights()
 	{
-		m_PointLights.clear();
+		for (i32 i = 0; i < m_NumPointLightsEnabled; ++i)
+		{
+			m_PointLights[i].color = VEC4_NEG_ONE;
+			m_PointLights[i].bEnabled = false;
+		}
+		m_NumPointLightsEnabled = 0;
 	}
 
 	DirLightData* Renderer::GetDirectionalLight()
@@ -346,14 +364,14 @@ namespace flex
 		return m_DirectionalLight;
 	}
 
-	PointLightData* Renderer::GetPointLight(PointLightID pointLight)
+	PointLightData* Renderer::GetPointLight(PointLightID pointLightID)
 	{
-		return m_PointLights[pointLight];
+		return &m_PointLights[pointLightID];
 	}
 
 	i32 Renderer::GetNumPointLights()
 	{
-		return m_PointLights.size();
+		return m_NumPointLightsEnabled;
 	}
 
 	i32 Renderer::GetFramesRenderedCount() const
