@@ -6029,6 +6029,8 @@ namespace flex
 
 		void GLRenderer::DrawImGuiRenderObjects()
 		{
+			// TODO: Move to Renderer
+
 			ImGui::NewLine();
 
 			ImGui::BeginChild("SelectedObject", ImVec2(0.0f, 500.0f), true);
@@ -6106,7 +6108,8 @@ namespace flex
 					BaseScene* scene = g_SceneManager->CurrentScene();
 					PointLight* newPointLight = new PointLight(scene);
 					scene->AddRootObject(newPointLight);
-					RegisterPointLight(&newPointLight->data);
+					newPointLight->Initialize();
+					newPointLight->PostInitialize();
 				}
 			}
 		}

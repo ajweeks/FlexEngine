@@ -152,7 +152,7 @@ namespace flex
 		PointLightID RegisterPointLight(PointLightData* pointLight);
 
 		void RemoveDirectionalLight();
-		void RemovePointLight(const PointLightData* pointLight);
+		void RemovePointLight(PointLightID pointLightID);
 		void RemoveAllPointLights();
 
 		DirLightData* GetDirectionalLight();

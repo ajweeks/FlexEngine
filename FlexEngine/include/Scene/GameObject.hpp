@@ -226,9 +226,9 @@ namespace flex
 
 		bool operator==(const DirectionalLight& other);
 
-		void SetPos(const glm::vec3& pos);
+		void SetPos(const glm::vec3& newPos);
 		glm::vec3 GetPos() const;
-		void SetRot(const glm::quat& rot);
+		void SetRot(const glm::quat& newRot);
 		glm::quat GetRot() const;
 
 		DirLightData data;
@@ -254,6 +254,7 @@ namespace flex
 		glm::vec3 GetPos() const;
 
 		PointLightData data;
+		PointLightID ID = InvalidPointLightID;
 
 	protected:
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;

@@ -331,15 +331,9 @@ namespace flex
 		m_DirectionalLight = nullptr;
 	}
 
-	void Renderer::RemovePointLight(const PointLightData* pointLight)
+	void Renderer::RemovePointLight(PointLightID pointLightID)
 	{
-		auto iter = std::find(m_PointLights.begin(), m_PointLights.end(), pointLight);
-		if (iter == m_PointLights.end())
-		{
-			PrintWarn("Attempted to remove point light which doesn't exist!\n");
-			return;
-		}
-		m_PointLights.erase(iter);
+		// TODO:
 	}
 
 	void Renderer::RemoveAllPointLights()

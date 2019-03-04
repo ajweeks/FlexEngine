@@ -2301,11 +2301,6 @@ namespace flex
 		GameObject::Update();
 	}
 
-	ReflectionProbe::ReflectionProbe(const std::string& name) :
-		GameObject(name, GameObjectType::REFLECTION_PROBE)
-	{
-	}
-
 	GlassPane::GlassPane(const std::string& name) :
 		GameObject(name, GameObjectType::GLASS_PANE)
 	{
@@ -2366,6 +2361,11 @@ namespace flex
 		parentObject.fields.emplace_back("window info", JSONValue(windowInfo));
 	}
 
+	ReflectionProbe::ReflectionProbe(const std::string& name) :
+		GameObject(name, GameObjectType::REFLECTION_PROBE)
+	{
+	}
+
 	GameObject* ReflectionProbe::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
 	{
 		ReflectionProbe* newGameObject = new ReflectionProbe(GetIncrementedPostFixedStr(m_Name, s_DefaultNewGameObjectName));
@@ -2408,25 +2408,25 @@ namespace flex
 		MeshComponent* sphereMesh = new MeshComponent(matID, this);
 
 		assert(m_MeshComponent == nullptr);
-		sphereMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/ico-sphere.glb");
+		sphereMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/sphere.glb");
 		SetMeshComponent(sphereMesh);
 
-		std::string captureName = m_Name + "_capture";
-		GameObject* captureObject = new GameObject(captureName, GameObjectType::_NONE);
-		captureObject->SetSerializable(false);
-		captureObject->SetVisible(false);
-		captureObject->SetVisibleInSceneExplorer(false);
+		//std::string captureName = m_Name + "_capture";
+		//GameObject* captureObject = new GameObject(captureName, GameObjectType::_NONE);
+		//captureObject->SetSerializable(false);
+		//captureObject->SetVisible(false);
+		//captureObject->SetVisibleInSceneExplorer(false);
 
-		RenderObjectCreateInfo captureObjectCreateInfo = {};
-		captureObjectCreateInfo.vertexBufferData = nullptr;
-		captureObjectCreateInfo.materialID = captureMatID;
-		captureObjectCreateInfo.gameObject = captureObject;
-		captureObjectCreateInfo.visibleInSceneExplorer = false;
+		//RenderObjectCreateInfo captureObjectCreateInfo = {};
+		//captureObjectCreateInfo.vertexBufferData = nullptr;
+		//captureObjectCreateInfo.materialID = captureMatID;
+		//captureObjectCreateInfo.gameObject = captureObject;
+		//captureObjectCreateInfo.visibleInSceneExplorer = false;
 
-		RenderID captureRenderID = g_Renderer->InitializeRenderObject(&captureObjectCreateInfo);
-		captureObject->SetRenderID(captureRenderID);
+		//RenderID captureRenderID = g_Renderer->InitializeRenderObject(&captureObjectCreateInfo);
+		//captureObject->SetRenderID(captureRenderID);
 
-		AddChild(captureObject);
+		//AddChild(captureObject);
 
 		g_Renderer->SetReflectionProbeMaterial(captureMatID);
 	}
@@ -2546,7 +2546,9 @@ namespace flex
 			if (DoImGuiRotationDragFloat3("Rotation", dirtyRot, cleanedRot))
 			{
 				m_Transform.SetLocalRotation(glm::quat(glm::radians(cleanedRot)));
-				data.dir = glm::vec4(cleanedRot, 0.0f);
+				// TODO: Remove
+				//data.dir = glm::vec4(cleanedRot, 0.0f);
+				data.dir = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f) * m_Transform.GetWorldRotation();
 			}
 			ImGui::SliderFloat("Brightness", &data.brightness, 0.0f, 15.0f);
 			ImGui::ColorEdit4("Color ", &data.color.r, colorEditFlags);
@@ -2570,9 +2572,9 @@ namespace flex
 		}
 	}
 
-	void DirectionalLight::SetPos(const glm::vec3& pos)
+	void DirectionalLight::SetPos(const glm::vec3& newPos)
 	{
-		m_Transform.SetLocalPosition(pos);
+		m_Transform.SetLocalPosition(newPos);
 	}
 
 	glm::vec3 DirectionalLight::GetPos() const
@@ -2596,7 +2598,9 @@ namespace flex
 			std::string dirStr = directionalLightObj.GetString("rotation");
 			glm::quat rot(ParseVec3(dirStr));
 			m_Transform.SetLocalRotation(rot);
-			data.dir = glm::vec4(glm::eulerAngles(rot), 0.0f);
+			// TODO: Remove
+			//data.dir = glm::vec4(glm::eulerAngles(rot), 0.0f);
+			data.dir = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f) * rot;
 
 			std::string posStr = directionalLightObj.GetString("pos");
 			if (!posStr.empty())
@@ -2668,10 +2672,12 @@ namespace flex
 			other.data.brightness == data.brightness;
 	}
 
-	void DirectionalLight::SetRot(const glm::quat& rot)
+	void DirectionalLight::SetRot(const glm::quat& newRot)
 	{
-		m_Transform.SetLocalRotation(rot);
-		data.dir = glm::vec4(glm::eulerAngles(rot), 0.0f);
+		m_Transform.SetLocalRotation(newRot);
+		// TODO: Remove
+		//data.dir = glm::vec4(glm::eulerAngles(rot), 0.0f);
+		data.dir = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f) * newRot;
 	}
 
 	PointLight::PointLight(BaseScene* scene) :
@@ -2690,14 +2696,14 @@ namespace flex
 
 	void PointLight::Initialize()
 	{
-		g_Renderer->RegisterPointLight(&data);
+		ID = g_Renderer->RegisterPointLight(&data);
 
 		GameObject::Initialize();
 	}
 
 	void PointLight::Destroy()
 	{
-		g_Renderer->RemovePointLight(&data);
+		g_Renderer->RemovePointLight(ID);
 
 		GameObject::Destroy();
 	}
@@ -2722,7 +2728,7 @@ namespace flex
 			static const char* removePointLightStr = "Delete";
 			if (ImGui::Button(removePointLightStr))
 			{
-				g_Renderer->RemovePointLight(&data);
+				g_Renderer->RemovePointLight(ID);
 				bRemovedPointLight = true;
 				ImGui::CloseCurrentPopup();
 			}
@@ -2732,10 +2738,10 @@ namespace flex
 
 		if (!bRemovedPointLight && bTreeOpen)
 		{
-			glm::vec3 pos = m_Transform.GetLocalPosition();
-			if (ImGui::DragFloat3("Position", &pos.x, 0.1f))
+			glm::vec3 position = m_Transform.GetLocalPosition();
+			if (ImGui::DragFloat3("Position", &position.x, 0.1f))
 			{
-				SetPos(pos);
+				SetPos(position);
 			}
 			ImGui::ColorEdit4("Color ", &data.color.r, colorEditFlags);
 			ImGui::SliderFloat("Brightness", &data.brightness, 0.0f, 1000.0f);

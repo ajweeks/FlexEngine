@@ -58,6 +58,8 @@ namespace flex
 
 		void VulkanRenderer::Initialize()
 		{
+			Renderer::Initialize();
+
 			m_ClearColor = { 1.0f, 0.0f, 1.0f, 1.0f };
 			m_BRDFSize = { 512, 512 };
 			m_CubemapFramebufferSize = { 512, 512 };
@@ -73,8 +75,6 @@ namespace flex
 			CreateLogicalDevice(physicalDevice);
 
 			m_CommandBufferManager = VulkanCommandBufferManager(m_VulkanDevice);
-
-			Renderer::Initialize();
 
 			m_DepthAttachment = new FrameBufferAttachment(m_VulkanDevice->m_LogicalDevice);
 
@@ -2442,7 +2442,7 @@ namespace flex
 
 		void VulkanRenderer::CreateUniformBuffers(VulkanShader* shader)
 		{
-			shader->uniformBuffer.constantData.size = shader->shader.constantBufferUniforms.CalculateSizeInBytes(MAX_NUM_POINT_LIGHTS);
+			shader->uniformBuffer.constantData.size = shader->shader.constantBufferUniforms.CalculateSizeInBytes(m_PointLights.size());
 			if (shader->uniformBuffer.constantData.size > 0)
 			{
 				free(shader->uniformBuffer.constantData.data);
@@ -2456,7 +2456,7 @@ namespace flex
 					VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 			}
 
-			shader->uniformBuffer.dynamicData.size = shader->shader.dynamicBufferUniforms.CalculateSizeInBytes(MAX_NUM_POINT_LIGHTS);
+			shader->uniformBuffer.dynamicData.size = shader->shader.dynamicBufferUniforms.CalculateSizeInBytes(m_PointLights.size());
 			if (shader->uniformBuffer.dynamicData.size > 0 && m_RenderObjects.size() > 0)
 			{
 				if (shader->uniformBuffer.dynamicData.data) _aligned_free(shader->uniformBuffer.dynamicData.data);
@@ -2626,18 +2626,19 @@ namespace flex
 
 			DoCreateGameObjectButton("Add object...", "Add object");
 
-			if (m_NumEnabledPointLights < MAX_POINT_LIGHT_COUNT)
-			{
-				static const char* newPointLightStr = "Add point light";
-				if (ImGui::Button(newPointLightStr))
-				{
-					BaseScene* scene = g_SceneManager->CurrentScene();
-					PointLight* newPointLight = new PointLight(scene);
-					scene->AddRootObject(newPointLight);
-					newPointLight->Initialize();
-					newPointLight->PostInitialize();
-				}
-			}
+			// TODO:
+			//if (m_NumEnabledPointLights < MAX_POINT_LIGHT_COUNT)
+			//{
+			//	static const char* newPointLightStr = "Add point light";
+			//	if (ImGui::Button(newPointLightStr))
+			//	{
+			//		BaseScene* scene = g_SceneManager->CurrentScene();
+			//		PointLight* newPointLight = new PointLight(scene);
+			//		scene->AddRootObject(newPointLight);
+			//		newPointLight->Initialize();
+			//		newPointLight->PostInitialize();
+			//	}
+			//}
 		}
 
 		void VulkanRenderer::UpdateVertexData(RenderID renderID, VertexBufferData* vertexBufferData)
