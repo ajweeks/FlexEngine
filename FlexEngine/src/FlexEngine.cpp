@@ -100,17 +100,25 @@ namespace flex
 
 		RetrieveCurrentWorkingDirectory();
 
-		std::string configDirAbs = RelativePathToAbsolute(SAVED_LOCATION "config/");
-		m_CommonSettingsFileName = "common.ini";
-		m_CommonSettingsAbsFilePath = configDirAbs + m_CommonSettingsFileName;
+		{
+			std::string configDirAbs = RelativePathToAbsolute(SAVED_LOCATION "config/");
+			m_CommonSettingsFileName = "common.ini";
+			m_CommonSettingsAbsFilePath = configDirAbs + m_CommonSettingsFileName;
+			CreateDirectoryRecursive(configDirAbs);
+		}
 
-		CreateDirectoryRecursive(configDirAbs);
+		{
+			std::string bootupDirAbs = RelativePathToAbsolute(SAVED_LOCATION "");
+			m_BootupTimesFileName = "bootup-times.log";
+			m_BootupTimesAbsFilePath = bootupDirAbs + m_BootupTimesFileName;
+			CreateDirectoryRecursive(bootupDirAbs);
+		}
 
-		std::string bootupDirAbs = RelativePathToAbsolute(SAVED_LOCATION "");
-		m_BootupTimesFileName = "bootup-times.log";
-		m_BootupTimesAbsFilePath = bootupDirAbs + m_BootupTimesFileName;
-
-		CreateDirectoryRecursive(bootupDirAbs);
+		{
+			std::string renderDocSettingsDirAbs = RelativePathToAbsolute(SAVED_LOCATION "config/");
+			m_RenderDocSettingsFileName = "renderdoc.ini";
+			m_RenderDocSettingsAbsFilePath = renderDocSettingsDirAbs + m_RenderDocSettingsFileName;
+		}
 
 		RendererID preferredInitialRenderer = RendererID::GL;
 
@@ -2125,19 +2133,44 @@ namespace flex
 #if COMPILE_RENDERDOC_API
 	void FlexEngine::SetupRenderDocAPI()
 	{
-		std::string dllPath = RelativePathToAbsolute(ROOT_LOCATION "lib/Debug/renderdoc.dll");
+		std::string dllDirPath;
+		if (FileExists(m_RenderDocSettingsAbsFilePath))
+		{
+			JSONObject rootObject;
+			if (JSONParser::Parse(m_RenderDocSettingsAbsFilePath, rootObject))
+			{
+				dllDirPath = rootObject.GetString("lib path");
+			}
+			else
+			{
+				PrintError("Failed to parse %s\n", m_RenderDocSettingsFileName.c_str());
+			}
+		}
+
+		if (dllDirPath.empty())
+		{
+			PrintError("Requested setup of RenderDoc API, but was unable to find renderdoc settings file\n,"
+				"please create one in the format: "
+						"\"{ \"lib path\" : \"C:\\Path\\To\\RenderDocLibs\\\" }\"\n"
+						"And save it at: \"%s\"\n", m_RenderDocSettingsAbsFilePath.c_str());
+			return;
+		}
+
+
+		if (!EndsWith(dllDirPath, "\\"))
+		{
+			dllDirPath += "\\";
+		}
+
+		std::string dllPath = dllDirPath + "renderdoc.dll";
+
 		if (FileExists(dllPath))
 		{
-			HMODULE renderDocModule = GetModuleHandleA(dllPath.c_str());
+			HMODULE renderDocModule = LoadLibraryA(dllPath.c_str());
 
 			if (renderDocModule == NULL)
 			{
-				renderDocModule = LoadLibraryA(dllPath.c_str());
-			}
-
-			if (renderDocModule == NULL)
-			{
-				PrintWarn("Found render doc dll but failed to load it\n");
+				PrintWarn("Found render doc dll but failed to load it. Is the bitness correct? (must be x86)\n");
 				return;
 			}
 
@@ -2158,6 +2191,10 @@ namespace flex
 			m_RenderDocAPI->SetFocusToggleKeys(nullptr, 0);
 
 			m_RenderDocAPI->SetCaptureOptionU32(eRENDERDOC_Option_DebugOutputMute, 1);
+		}
+		else
+		{
+			PrintError("Unable to find renderdoc settings file at %s\n", m_RenderDocSettingsAbsFilePath.c_str());
 		}
 	}
 #endif

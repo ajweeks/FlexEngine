@@ -3,7 +3,7 @@
 #include "Callbacks/InputCallbacks.hpp"
 #include "Spring.hpp"
 
-struct RENDERDOC_API_1_3_0;
+struct RENDERDOC_API_1_4_0;
 
 namespace flex
 {
@@ -237,6 +237,9 @@ namespace flex
 		std::string m_BootupTimesFileName;
 		std::string m_BootupTimesAbsFilePath;
 
+		std::string m_RenderDocSettingsFileName;
+		std::string m_RenderDocSettingsAbsFilePath;
+
 		const real m_SecondsBetweenCommonSettingsFileSave = 10.0f;
 		real m_SecondsSinceLastCommonSettingsFileSave = 0.0f;
 
@@ -253,7 +256,7 @@ namespace flex
 		real m_SpringTimer = 0.0f;
 
 #if COMPILE_RENDERDOC_API
-		RENDERDOC_API_1_3_0* m_RenderDocAPI = nullptr;
+		RENDERDOC_API_1_4_0* m_RenderDocAPI = nullptr;
 		bool m_bRenderDocTriggerCaptureNextFrame = false;
 		bool m_bRenderDocCapturingFrame = false;
 		i32 m_RenderDocUIPID = -1;
