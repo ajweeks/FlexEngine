@@ -26,16 +26,6 @@ namespace flex
 		glm::vec4 color; // If equal to VEC4_NEG_ONE, this point light is uninitialized
 		real brightness;
 		bool bEnabled;
-
-		real shadowDarkness;
-		bool bCastShadow;
-		real shadowMapNearPlane;
-		real shadowMapFarPlane;
-		real shadowMapZoom;
-
-		// DEBUG: (just for preview in ImGui)
-		u32 shadowTextureID = 0;
-		glm::vec3 pos;
 	};
 
 	struct PointLightData

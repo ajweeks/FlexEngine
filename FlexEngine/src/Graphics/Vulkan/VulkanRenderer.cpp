@@ -166,7 +166,6 @@ namespace flex
 			m_PointLightIconID = InitializeTexture(RESOURCE_LOCATION  "textures/icons/point-light-icon-256.png", 4, false, true, false);
 			m_DirectionalLightIconID = InitializeTexture(RESOURCE_LOCATION  "textures/icons/directional-light-icon-256.png", 4, false, true, false);
 
-			ImGui::CreateContext();
 		}
 
 		void VulkanRenderer::PostInitialize()
@@ -291,47 +290,78 @@ namespace flex
 				return;
 			}
 
-			//{
-			//	ImGui_CreateWindowDataCommandBuffers();
 
-			//	ImGui_ImplGlfw_InitForVulkan(castedWindow->GetWindow(), false);
-			//	ImGui_ImplVulkan_InitInfo initInfo = {};
-			//	initInfo.Instance = m_Instance;
-			//	initInfo.PhysicalDevice = m_VulkanDevice->m_PhysicalDevice;
-			//	initInfo.Device = *m_VulkanDevice;
-			//	initInfo.QueueFamily = FindQueueFamilies(m_Surface, m_VulkanDevice->m_PhysicalDevice).graphicsFamily;
-			//	initInfo.Queue = m_GraphicsQueue;
-			//	initInfo.PipelineCache = m_PipelineCache;
-			//	initInfo.DescriptorPool = m_DescriptorPool;
-			//	initInfo.Allocator = VK_NULL_HANDLE;
-			//	initInfo.CheckVkResultFn = VK_NULL_HANDLE;
-			//	ImGui_ImplVulkan_Init(&initInfo, m_DeferredCombineRenderPass);
+			// ImGui
+			ImGui::CreateContext();
+			ImGuiIO& io = ImGui::GetIO();
+			io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;       // Enable Keyboard Controls
+																		//io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+			io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
+			io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
+																		//io.ConfigFlags |= ImGuiConfigFlags_ViewportsNoTaskBarIcons;
+																		//io.ConfigFlags |= ImGuiConfigFlags_ViewportsNoMerge;
 
-			//	// Upload Fonts
-			//	{
-			//		// Use any command queue
-			//		VkCommandPool command_pool = m_ImGuiCommandPool;
-			//		VkCommandBuffer command_buffer = m_ImGuiCommandBuffers[0];
+																		// Setup GLFW binding
+			ImGui_ImplGlfw_InitForVulkan((GLFWwindow*)g_Window, false);
 
-			//		VK_CHECK_RESULT(vkResetCommandPool(*m_VulkanDevice, command_pool, 0));
-			//		VkCommandBufferBeginInfo begin_info = {};
-			//		begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-			//		begin_info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-			//		VK_CHECK_RESULT(vkBeginCommandBuffer(command_buffer, &begin_info));
+			// Setup Vulkan binding
+			ImGui_ImplVulkan_InitInfo init_info = {};
+			init_info.Instance = m_Instance;
+			init_info.PhysicalDevice = m_VulkanDevice->m_PhysicalDevice;
+			init_info.Device = *m_VulkanDevice;
+			init_info.QueueFamily = FindQueueFamilies(m_Surface, m_VulkanDevice->m_PhysicalDevice).graphicsFamily;
+			init_info.Queue = m_GraphicsQueue;
+			init_info.PipelineCache = m_PipelineCache;
+			init_info.DescriptorPool = m_DescriptorPool;
+			init_info.Allocator = NULL;
+			init_info.CheckVkResultFn = NULL;
+			ImGui_ImplVulkan_Init(&init_info, m_DeferredCombineRenderPass);
 
-			//		ImGui_ImplVulkan_CreateFontsTexture(command_buffer);
+			{
+				// Use any command queue
+				m_ImGuiCommandPool = { m_VulkanDevice->m_LogicalDevice, vkDestroyCommandPool };
+				m_ImGuiCommandPool.replace();
 
-			//		VkSubmitInfo end_info = {};
-			//		end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-			//		end_info.commandBufferCount = 1;
-			//		end_info.pCommandBuffers = &command_buffer;
-			//		VK_CHECK_RESULT(vkEndCommandBuffer(command_buffer));
-			//		VK_CHECK_RESULT(vkQueueSubmit(m_GraphicsQueue, 1, &end_info, VK_NULL_HANDLE));
+				for (int i = 0; i < 2; i++)
+				{
+					{
+						VkCommandPoolCreateInfo info = {};
+						info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+						info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+						info.queueFamilyIndex = init_info.QueueFamily;
+						VK_CHECK_RESULT(vkCreateCommandPool(*m_VulkanDevice, &info, nullptr, &m_ImGuiCommandPool));
+					}
+					{
+						VkCommandBufferAllocateInfo info = {};
+						info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+						info.commandPool = m_ImGuiCommandPool;
+						info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+						info.commandBufferCount = 1;
+						VK_CHECK_RESULT(vkAllocateCommandBuffers(*m_VulkanDevice, &info, &m_ImGuiCommandBuffers[i]));
+					}
+				}
 
-			//		VK_CHECK_RESULT(vkDeviceWaitIdle(*m_VulkanDevice));
-			//		ImGui_ImplVulkan_InvalidateFontUploadObjects();
-			//	}
-			//}
+				VkCommandBuffer command_buffer = m_ImGuiCommandBuffers[0];
+
+
+				VK_CHECK_RESULT(vkResetCommandPool(*m_VulkanDevice, m_ImGuiCommandPool, 0));
+				VkCommandBufferBeginInfo begin_info = {};
+				begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+				begin_info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+				VK_CHECK_RESULT(vkBeginCommandBuffer(command_buffer, &begin_info));
+
+				ImGui_ImplVulkan_CreateFontsTexture(command_buffer);
+
+				VkSubmitInfo end_info = {};
+				end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+				end_info.commandBufferCount = 1;
+				end_info.pCommandBuffers = &command_buffer;
+				VK_CHECK_RESULT(vkEndCommandBuffer(command_buffer));
+				VK_CHECK_RESULT(vkQueueSubmit(m_GraphicsQueue, 1, &end_info, VK_NULL_HANDLE));
+
+				VK_CHECK_RESULT(vkDeviceWaitIdle(*m_VulkanDevice));
+				ImGui_ImplVulkan_InvalidateFontUploadObjects();
+			}
 
 			CreateStaticVertexBuffers();
 			CreateStaticIndexBuffers();
@@ -2561,9 +2591,6 @@ namespace flex
 
 		void VulkanRenderer::DrawImGuiRenderObjects()
 		{
-			// TODO:
-			return;
-
 			ImGui::NewLine();
 
 			ImGui::BeginChild("SelectedObject", ImVec2(0.0f, 500.0f), true);
@@ -3047,12 +3074,12 @@ namespace flex
 				m_PhysicsDebugDrawer->ClearLines();
 			}
 
-			//if (g_EngineInstance->IsRenderingImGui())
-			//{
-			//	ImGui_ImplVulkan_NewFrame();
-			//	ImGui_ImplGlfw_NewFrame();
-			//	ImGui::NewFrame();
-			//}
+			if (g_EngineInstance->IsRenderingImGui())
+			{
+				ImGui_ImplVulkan_NewFrame();
+				ImGui_ImplGlfw_NewFrame();
+				ImGui::NewFrame();
+			}
 		}
 
 		btIDebugDraw* VulkanRenderer::GetDebugDrawer()
@@ -3152,8 +3179,6 @@ namespace flex
 			const std::string& renderedFontFilePath,
 			bool bForceRender, bool bScreenSpace)
 		{
-			return false;
-
 			FT_Library ft;
 			if (FT_Init_FreeType(&ft) != FT_Err_Ok)
 			{
@@ -3194,6 +3219,11 @@ namespace flex
 						for (auto& charPair : characters)
 						{
 							FontMetric* metric = charPair.second;
+
+							if (metric->character == ' ')
+							{
+								continue;
+							}
 
 							u32 glyphIndex = FT_Get_Char_Index(face, metric->character);
 							if (glyphIndex == 0)
@@ -3240,6 +3270,11 @@ namespace flex
 				for (auto& charPair : characters)
 				{
 					FontMetric* metric = charPair.second;
+
+					if (metric->character == ' ')
+					{
+						continue;
+					}
 
 					u32 glyphIndex = FT_Get_Char_Index(face, metric->character);
 					if (glyphIndex == 0)
@@ -3330,39 +3365,39 @@ namespace flex
 			return alignedSize;
 		}
 
-		void VulkanRenderer::ImGui_CreateWindowDataCommandBuffers()
-		{
-			for (i32 i = 0; i < 2; ++i)
-			{
-				{
-					VkCommandPoolCreateInfo info = {};
-					info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-					info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-					info.queueFamilyIndex = FindQueueFamilies(m_Surface, m_VulkanDevice->m_PhysicalDevice).graphicsFamily;
-					VK_CHECK_RESULT(vkCreateCommandPool(*m_VulkanDevice, &info, nullptr, &m_ImGuiCommandPool));
-				}
-				{
-					VkCommandBufferAllocateInfo info = {};
-					info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-					info.commandPool = m_ImGuiCommandPool;
-					info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-					info.commandBufferCount = 1;
-					VK_CHECK_RESULT(vkAllocateCommandBuffers(*m_VulkanDevice, &info, &m_ImGuiCommandBuffers[i]));
-				}
-				{
-					VkFenceCreateInfo info = {};
-					info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-					info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-					VK_CHECK_RESULT(vkCreateFence(*m_VulkanDevice, &info, nullptr, &m_ImGuiFence));
-				}
-				{
-					VkSemaphoreCreateInfo info = {};
-					info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-					VK_CHECK_RESULT(vkCreateSemaphore(*m_VulkanDevice, &info, nullptr, &m_ImGuiImageAcquiredSemaphore));
-					VK_CHECK_RESULT(vkCreateSemaphore(*m_VulkanDevice, &info, nullptr, &m_ImGuiRenderCompleteSemaphore));
-				}
-			}
-		}
+		//void VulkanRenderer::ImGui_CreateWindowDataCommandBuffers()
+		//{
+		//	for (i32 i = 0; i < 2; ++i)
+		//	{
+		//		{
+		//			VkCommandPoolCreateInfo info = {};
+		//			info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		//			info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+		//			info.queueFamilyIndex = FindQueueFamilies(m_Surface, m_VulkanDevice->m_PhysicalDevice).graphicsFamily;
+		//			VK_CHECK_RESULT(vkCreateCommandPool(*m_VulkanDevice, &info, nullptr, &m_ImGuiCommandPool));
+		//		}
+		//		{
+		//			VkCommandBufferAllocateInfo info = {};
+		//			info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		//			info.commandPool = m_ImGuiCommandPool;
+		//			info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		//			info.commandBufferCount = 1;
+		//			VK_CHECK_RESULT(vkAllocateCommandBuffers(*m_VulkanDevice, &info, &m_ImGuiCommandBuffers[i]));
+		//		}
+		//		{
+		//			VkFenceCreateInfo info = {};
+		//			info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		//			info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+		//			VK_CHECK_RESULT(vkCreateFence(*m_VulkanDevice, &info, nullptr, &m_ImGuiFence));
+		//		}
+		//		{
+		//			VkSemaphoreCreateInfo info = {};
+		//			info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+		//			VK_CHECK_RESULT(vkCreateSemaphore(*m_VulkanDevice, &info, nullptr, &m_ImGuiImageAcquiredSemaphore));
+		//			VK_CHECK_RESULT(vkCreateSemaphore(*m_VulkanDevice, &info, nullptr, &m_ImGuiRenderCompleteSemaphore));
+		//		}
+		//	}
+		//}
 
 		void VulkanRenderer::UpdateRenderObjectVertexData(RenderID renderID)
 		{
@@ -4900,16 +4935,19 @@ namespace flex
 				VulkanRenderObject* gBufferObject = GetRenderObject(m_GBufferQuadRenderID);
 				VulkanMaterial* gBufferMaterial = &m_Materials[gBufferObject->materialID];
 
-				//ImGui::Render();
+				if (g_EngineInstance->IsRenderingImGui())
+				{
+					ImGui::Render();
+				}
 				//ImGui_ImplVulkanH_FrameData* fd = &m_ImGuiWindowData->Frames[m_ImGuiWindowData->FrameIndex];
 				for (size_t i = 0; i < m_CommandBufferManager.m_CommandBuffers.size(); ++i)
 				{
 					VkCommandBuffer& commandBuffer = m_CommandBufferManager.m_CommandBuffers[i];
 
-					//if (g_EngineInstance->IsRenderingImGui())
-					//{
-					//	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
-					//}
+					if (g_EngineInstance->IsRenderingImGui())
+					{
+						ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
+					}
 
 					renderPassBeginInfo.framebuffer = m_SwapChainFramebuffers[i];
 
@@ -5663,33 +5701,35 @@ namespace flex
 
 			void* PointLightsDataStart = (void*)m_PointLights;
 			size_t PointLightsSize = sizeof(PointLightData) * MAX_NUM_POINT_LIGHTS;
-			size_t PointLightsMoveInWords = PointLightsSize / sizeof(real);
+
+			m_PointLights->pos = glm::vec4(sin(g_SecElapsedSinceProgramStart) * 5.0f,
+				sin(g_SecElapsedSinceProgramStart + 0.5) * 5.0f,
+				cos(g_SecElapsedSinceProgramStart) * 5.0f,
+				0.0f);
+
+			m_DirectionalLight->data.dir = glm::vec4(RandomInt(0, 10000) / 10000.0f);
+			m_DirectionalLight->data.color = glm::vec4(RandomInt(0, 10000) / 10000.0f);
 
 			struct UniformInfo
 			{
-				UniformInfo(u64 uniform,
-					void* dataStart,
-					size_t copySize,
-					size_t moveInWords) :
+				UniformInfo(u64 uniform, void* dataStart, size_t copySize) :
 					uniform(uniform),
 					dataStart(dataStart),
-					copySize(copySize),
-					moveInWords(moveInWords)
+					copySize(copySize)
 				{}
 
 				u64 uniform;
 				void* dataStart = nullptr;
 				size_t copySize;
-				size_t moveInWords;
 			};
 			UniformInfo uniformInfos[] = {
-				{ U_VIEW, (void*)&view, sizeof(glm::mat4), 16 },
-				{ U_VIEW_INV, (void*)&viewInv, sizeof(glm::mat4), 16 },
-				{ U_PROJECTION, (void*)&projection, sizeof(glm::mat4), 16 },
-				{ U_VIEW_PROJECTION, (void*)&viewProjection, sizeof(glm::mat4), 16 },
-				{ U_CAM_POS, (void*)&camPos, sizeof(glm::vec4), 4 },
-				{ U_DIR_LIGHT, (void*)&m_DirectionalLight, sizeof(*m_DirectionalLight), sizeof(*m_DirectionalLight) / sizeof(real) },
-				{ U_POINT_LIGHTS, (void*)PointLightsDataStart, PointLightsSize, PointLightsMoveInWords },
+				{ U_VIEW, (void*)&view, sizeof(glm::mat4) },
+				{ U_VIEW_INV, (void*)&viewInv, sizeof(glm::mat4) },
+				{ U_PROJECTION, (void*)&projection, sizeof(glm::mat4) },
+				{ U_VIEW_PROJECTION, (void*)&viewProjection, sizeof(glm::mat4) },
+				{ U_CAM_POS, (void*)&camPos, sizeof(glm::vec4) },
+				{ U_DIR_LIGHT, (void*)&m_DirectionalLight->data, sizeof(DirLightData) },
+				{ U_POINT_LIGHTS, (void*)PointLightsDataStart, PointLightsSize },
 			};
 
 			size_t index = 0;
@@ -5698,7 +5738,7 @@ namespace flex
 				if (constantUniforms.HasUniform(uniformInfo.uniform))
 				{
 					memcpy(&constantData.data[index], uniformInfo.dataStart, uniformInfo.copySize);
-					index += uniformInfo.moveInWords;
+					index += (uniformInfo.copySize / sizeof(real));
 				}
 			}
 
@@ -5979,8 +6019,8 @@ namespace flex
 			m_Shaders[shaderID].shader.bNeedNormalSampler = true;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION |
-				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
 				(u32)VertexAttribute::UV |
+				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
 				(u32)VertexAttribute::TANGENT |
 				(u32)VertexAttribute::BITANGENT |
 				(u32)VertexAttribute::NORMAL;

@@ -233,6 +233,16 @@ namespace flex
 
 		DirLightData data;
 
+		real shadowDarkness;
+		bool bCastShadow;
+		real shadowMapNearPlane;
+		real shadowMapFarPlane;
+		real shadowMapZoom;
+
+		// DEBUG: (just for preview in ImGui)
+		u32 shadowTextureID = 0;
+		glm::vec3 pos;
+
 	protected:
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
 		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;

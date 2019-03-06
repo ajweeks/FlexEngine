@@ -2509,7 +2509,7 @@ namespace flex
 
 	void DirectionalLight::Initialize()
 	{
-		g_Renderer->RegisterDirectionalLight(&data);
+		g_Renderer->RegisterDirectionalLight(this);
 
 		GameObject::Initialize();
 	}
@@ -2556,16 +2556,16 @@ namespace flex
 			ImGui::Spacing();
 			ImGui::Text("Shadow");
 
-			ImGui::Checkbox("Cast shadow", &data.bCastShadow);
-			ImGui::SliderFloat("Shadow darkness", &data.shadowDarkness, 0.0f, 1.0f);
+			ImGui::Checkbox("Cast shadow", &bCastShadow);
+			ImGui::SliderFloat("Shadow darkness", &shadowDarkness, 0.0f, 1.0f);
 
-			ImGui::DragFloat("Near", &data.shadowMapNearPlane);
-			ImGui::DragFloat("Far", &data.shadowMapFarPlane);
-			ImGui::DragFloat("Zoom", &data.shadowMapZoom);
+			ImGui::DragFloat("Near", &shadowMapNearPlane);
+			ImGui::DragFloat("Far", &shadowMapFarPlane);
+			ImGui::DragFloat("Zoom", &shadowMapZoom);
 
 			if (ImGui::CollapsingHeader("Preview"))
 			{
-				ImGui::Image((void*)data.shadowTextureID, ImVec2(256, 256));
+				ImGui::Image((void*)shadowTextureID, ImVec2(256, 256));
 			}
 
 			ImGui::TreePop();
@@ -2617,22 +2617,22 @@ namespace flex
 				m_bVisible = directionalLightObj.GetBool("enabled") ? 1 : 0;
 			}
 
-			directionalLightObj.SetBoolChecked("cast shadows", data.bCastShadow);
-			directionalLightObj.SetFloatChecked("shadow darkness", data.shadowDarkness);
+			directionalLightObj.SetBoolChecked("cast shadows", bCastShadow);
+			directionalLightObj.SetFloatChecked("shadow darkness", shadowDarkness);
 
 			if (directionalLightObj.HasField("shadow map near"))
 			{
-				directionalLightObj.SetFloatChecked("shadow map near", data.shadowMapNearPlane);
+				directionalLightObj.SetFloatChecked("shadow map near", shadowMapNearPlane);
 			}
 
 			if (directionalLightObj.HasField("shadow map far"))
 			{
-				directionalLightObj.SetFloatChecked("shadow map far", data.shadowMapFarPlane);
+				directionalLightObj.SetFloatChecked("shadow map far", shadowMapFarPlane);
 			}
 
 			if (directionalLightObj.HasField("shadow map zoom"))
 			{
-				directionalLightObj.SetFloatChecked("shadow map zoom", data.shadowMapZoom);
+				directionalLightObj.SetFloatChecked("shadow map zoom", shadowMapZoom);
 			}
 		}
 	}
@@ -2654,11 +2654,11 @@ namespace flex
 		dirLightObj.fields.emplace_back("enabled", JSONValue(m_bVisible != 0));
 		dirLightObj.fields.emplace_back("brightness", JSONValue(data.brightness));
 
-		dirLightObj.fields.emplace_back("cast shadows", JSONValue(data.bCastShadow));
-		dirLightObj.fields.emplace_back("shadow darkness", JSONValue(data.shadowDarkness));
-		dirLightObj.fields.emplace_back("shadow map near", JSONValue(data.shadowMapNearPlane));
-		dirLightObj.fields.emplace_back("shadow map far", JSONValue(data.shadowMapFarPlane));
-		dirLightObj.fields.emplace_back("shadow map zoom", JSONValue(data.shadowMapZoom));
+		dirLightObj.fields.emplace_back("cast shadows", JSONValue(bCastShadow));
+		dirLightObj.fields.emplace_back("shadow darkness", JSONValue(shadowDarkness));
+		dirLightObj.fields.emplace_back("shadow map near", JSONValue(shadowMapNearPlane));
+		dirLightObj.fields.emplace_back("shadow map far", JSONValue(shadowMapFarPlane));
+		dirLightObj.fields.emplace_back("shadow map zoom", JSONValue(shadowMapZoom));
 
 		parentObject.fields.emplace_back("directional light info", JSONValue(dirLightObj));
 	}

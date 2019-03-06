@@ -51,13 +51,12 @@
 			"const ao" : 0.000000,
 			"generate hdr cubemap sampler" : true,
 			"enable cubemap sampler" : true,
-			"enable cubemap trilinear filtering" : true,
+			"enable cubemap trilinear filtering" : false,
 			"generated cubemap size" : "512, 512",
 			"generate irradiance sampler" : true,
 			"generated irradiance cubemap size" : "32, 32",
 			"generate prefiltered map" : true,
-			"generated prefiltered map size" : "128, 128",
-			"environment map path" : "hdri/Protospace_B/Protospace_B_Env.hdr"
+			"generated prefiltered map size" : "128, 128"
 		},
 		{
 			"name" : "skybox 02",
@@ -68,13 +67,12 @@
 			"const ao" : 0.000000,
 			"generate hdr cubemap sampler" : true,
 			"enable cubemap sampler" : true,
-			"enable cubemap trilinear filtering" : true,
+			"enable cubemap trilinear filtering" : false,
 			"generated cubemap size" : "512, 512",
 			"generate irradiance sampler" : true,
 			"generated irradiance cubemap size" : "32, 32",
 			"generate prefiltered map" : true,
-			"generated prefiltered map size" : "128, 128",
-			"environment map path" : "hdri/CharlesRiver_Ref.hdr"
+			"generated prefiltered map size" : "128, 128"
 		},
 		{
 			"name" : "cerberus",
@@ -335,8 +333,7 @@
 			"const ao" : 1.000000,
 			"enable albedo sampler" : true,
 			"generate albedo sampler" : true,
-			"albedo texture filepath" : "alpha-bg.png",
-			"texture scale" : 0.500000
+			"albedo texture filepath" : "alpha-bg.png"
 		},
 		{
 			"name" : "Terminal Copper",

@@ -277,7 +277,7 @@ namespace flex
 
 
 			VkCommandBuffer m_ImGuiCommandBuffers[2];
-			VkCommandPool m_ImGuiCommandPool;
+			VDeleter<VkCommandPool> m_ImGuiCommandPool;
 			VkFence m_ImGuiFence;
 			VkSemaphore m_ImGuiRenderCompleteSemaphore;
 			VkSemaphore m_ImGuiImageAcquiredSemaphore;

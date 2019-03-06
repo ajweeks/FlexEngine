@@ -39,6 +39,18 @@
 			}
 		},
 		{
+			"name" : "Morph",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "8.442, 2.794, 6.157",
+				"scale" : "1.000, 5.360, 5.350"
+			},
+			"mesh" : "morph-tpose-01",
+			"material" : "pbr white"
+		}
+		{
 			"name" : "PointLight_01",
 			"type" : "point light",
 			"visible" : true,
@@ -69,7 +81,7 @@
 				"pos" : "0.000, 15.000, 0.000",
 				"color" : "1.00, 1.00, 1.00",
 				"enabled" : true,
-				"brightness" : 5.000000,
+				"brightness" : 50.000000,
 				"cast shadows" : true,
 				"shadow darkness" : 0.000000,
 				"shadow map near" : 0.000000,

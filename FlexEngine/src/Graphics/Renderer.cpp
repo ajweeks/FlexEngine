@@ -82,6 +82,11 @@ namespace flex
 		}
 
 		m_PointLights = (PointLightData*)malloc(MAX_NUM_POINT_LIGHTS * sizeof(PointLightData));
+		for (i32 i = 0; i < MAX_NUM_POINT_LIGHTS; ++i)
+		{
+			m_PointLights[i].color = VEC4_NEG_ONE;
+			m_PointLights[i].bEnabled = false;
+		}
 	}
 
 	void Renderer::Destroy()
@@ -316,9 +321,9 @@ namespace flex
 		return m_PhysicsDebuggingSettings;
 	}
 
-	bool Renderer::RegisterDirectionalLight(DirLightData* dirLightData)
+	bool Renderer::RegisterDirectionalLight(DirectionalLight* dirLight)
 	{
-		m_DirectionalLight = dirLightData;
+		m_DirectionalLight = dirLight;
 		return true;
 	}
 
@@ -361,7 +366,7 @@ namespace flex
 
 	DirLightData* Renderer::GetDirectionalLight()
 	{
-		return m_DirectionalLight;
+		return &m_DirectionalLight->data;
 	}
 
 	PointLightData* Renderer::GetPointLight(PointLightID pointLightID)

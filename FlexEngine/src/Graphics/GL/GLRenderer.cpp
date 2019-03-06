@@ -2262,7 +2262,7 @@ namespace flex
 
 			GL_PUSH_DEBUG_GROUP("Shadow Map Depths");
 
-			if (m_DirectionalLight->bCastShadow && m_DirectionalLight->bEnabled)
+			if (m_DirectionalLight->bCastShadow && m_DirectionalLight->data.bEnabled)
 			{
 				GLMaterial* material = &m_Materials[m_ShadowMaterialID];
 				GLShader* shader = &m_Shaders[material->material.shaderID];
@@ -2728,17 +2728,17 @@ namespace flex
 					}
 				}
 
-				if (m_DirectionalLight->bEnabled)
+				if (m_DirectionalLight->data.bEnabled)
 				{
-					drawInfo.color = m_DirectionalLight->color * 1.5f;
-					drawInfo.color.a = m_DirectionalLight->color.a;
+					drawInfo.color = m_DirectionalLight->data.color * 1.5f;
+					drawInfo.color.a = m_DirectionalLight->data.color.a;
 					drawInfo.pos = m_DirectionalLight->pos;
 					drawInfo.textureHandleID = m_LoadedTextures[m_DirectionalLightIconID]->handle;
 					glm::mat4 rotMat = glm::lookAt(camPos, (glm::vec3)m_DirectionalLight->pos, camUp);
 					drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
 					DrawSpriteQuad(drawInfo);
 
-					glm::vec3 dirLightForward = m_DirectionalLight->dir;
+					glm::vec3 dirLightForward = m_DirectionalLight->data.dir;
 					m_PhysicsDebugDrawer->drawLine(
 						ToBtVec3(m_DirectionalLight->pos),
 						ToBtVec3(m_DirectionalLight->pos - dirLightForward * 2.5f),
@@ -3494,7 +3494,7 @@ namespace flex
 
 		void GLRenderer::ComputeDirLightViewProj(glm::mat4& outView, glm::mat4& outProj)
 		{
-			glm::vec3 dirLightDir = m_DirectionalLight->dir;
+			glm::vec3 dirLightDir = m_DirectionalLight->data.dir;
 			outView = glm::lookAt(VEC3_ZERO, -dirLightDir, VEC3_UP);
 
 			real zoom = m_DirectionalLight->shadowMapZoom;
@@ -4753,13 +4753,13 @@ namespace flex
 				if (shader->shader.constantBufferUniforms.HasUniform(U_DIR_LIGHT))
 				{
 					static const char* dirLightEnabledStr = "dirLight.enabled";
-					if (m_DirectionalLight->bEnabled)
+					if (m_DirectionalLight->data.bEnabled)
 					{
 						SetUInt(material->material.shaderID, dirLightEnabledStr, 1);
 						static const char* dirLightDirectionStr = "dirLight.direction";
-						SetVec4f(material->material.shaderID, dirLightDirectionStr, m_DirectionalLight->dir);
+						SetVec4f(material->material.shaderID, dirLightDirectionStr, m_DirectionalLight->data.dir);
 						static const char* dirLightColorStr = "dirLight.color";
-						SetVec4f(material->material.shaderID, dirLightColorStr, m_DirectionalLight->color * m_DirectionalLight->brightness);
+						SetVec4f(material->material.shaderID, dirLightColorStr, m_DirectionalLight->data.color * m_DirectionalLight->data.brightness);
 					}
 					else
 					{

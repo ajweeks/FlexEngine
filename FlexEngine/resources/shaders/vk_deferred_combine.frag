@@ -164,53 +164,36 @@ void main()
 	if (uboConstant.dirLight.enabled)
 	{
 		vec3 L = normalize(uboConstant.dirLight.direction.xyz);
+		// V = normalize(vec3(0.1, 0.2, 0.4));
+		// vec3 L = normalize(vec3(-0.5, 0.8, -0.1));
 		vec3 radiance = uboConstant.dirLight.color.rgb;
+		// vec3 radiance = vec3(1.0);
 		float NoL = max(dot(N, L), 0.0);
-		
+
 		Lo += DoLighting(radiance, N, V, L, NoV, NoL, 1, 1, F0, vec3(1.0));
-
-
-		// vec3 H = normalize(V + L);
-
-		// // Cook-Torrance BRDF
-		// float NDF = DistributionGGX(N, H, roughness);
-		// float G = GeometrySmith(N, V, L, roughness);
-		// vec3 F = FresnelSchlick(max(dot(H, V), 0.0), F0);
-
-		// vec3 kS = F;
-		// vec3 kD = vec3(1.0) - kS;
-		// kD *= 1.0 - metallic; // Pure metals have no diffuse lighting
-
-		// vec3 nominator = NDF * G * F;
-		// float denominator = 4 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.001; // Add epsilon to prevent divide by zero
-		// vec3 specular = nominator / denominator;
-
-		// vec3 lighting = (kD * albedo / PI + specular) * radiance * NoL;
-
-		// fragColor = vec4(NoL,NoL,NoL, 1.0); return;
 	}
 
 	vec3 F = FresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
 
 	vec3 ambient;
-	// if (uboDynamic.enableIrradianceSampler)
-	// {
-	// 	// Diffse ambient term (IBL)
-	// 	vec3 kS = F;
-	//     vec3 kD = 1.0 - kS;
-	//     kD *= 1.0 - metallic;	  
-	//     vec3 irradiance = texture(irradianceSampler, N).rgb;
-	//     vec3 diffuse = irradiance * albedo;
+	if (uboDynamic.enableIrradianceSampler)
+	{
+		// Diffse ambient term (IBL)
+		vec3 kS = F;
+	    vec3 kD = 1.0 - kS;
+	    kD *= 1.0 - metallic;	  
+	    vec3 irradiance = texture(irradianceSampler, N).rgb;
+	    vec3 diffuse = irradiance * albedo;
 
-	// 	// Specular ambient term (IBL)
-	// 	const float MAX_REFLECTION_LOAD = 5.0;
-	// 	vec3 prefilteredColor = textureLod(prefilterMap, R, roughness * MAX_REFLECTION_LOAD).rgb;
-	// 	vec2 brdf = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
-	// 	vec3 specular = prefilteredColor * (F * brdf.x + brdf.y);
+		// Specular ambient term (IBL)
+		const float MAX_REFLECTION_LOAD = 5.0;
+		vec3 prefilteredColor = textureLod(prefilterMap, R, roughness * MAX_REFLECTION_LOAD).rgb;
+		vec2 brdf = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
+		vec3 specular = prefilteredColor * (F * brdf.x + brdf.y);
 
-	//     ambient = (kD * diffuse + specular) * ao;
-	// }
-	// else
+	    ambient = (kD * diffuse + specular) * ao;
+	}
+	else
 	{
 		ambient = vec3(0.03) * albedo * ao;
 	}

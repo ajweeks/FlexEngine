@@ -148,7 +148,7 @@ namespace flex
 
 		PhysicsDebuggingSettings& GetPhysicsDebuggingSettings();
 
-		bool RegisterDirectionalLight(DirLightData* dirLightData);
+		bool RegisterDirectionalLight(DirectionalLight* dirLight);
 		PointLightID RegisterPointLight(PointLightData* pointLightData);
 
 		void RemoveDirectionalLight();
@@ -194,7 +194,7 @@ namespace flex
 		static const i32 MAX_NUM_POINT_LIGHTS = 4;
 		PointLightData* m_PointLights;
 		i32 m_NumPointLightsEnabled = 0;
-		DirLightData* m_DirectionalLight = nullptr;
+		DirectionalLight* m_DirectionalLight = nullptr;
 
 		struct DrawCallInfo
 		{
