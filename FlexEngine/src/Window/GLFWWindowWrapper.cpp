@@ -211,14 +211,14 @@ namespace flex
 			}
 
 			Print("OpenGL loaded\n");
-			Print("Vendor:   %s\n", reinterpret_cast<const char*>(glGetString(GL_VENDOR)));
-			Print("Renderer: %s\n", reinterpret_cast<const char*>(glGetString(GL_RENDERER)));
-			Print("Version:  %s\n\n", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
+			Print("Vendor:     %s\n", reinterpret_cast<const char*>(glGetString(GL_VENDOR)));
+			Print("Renderer:   %s\n", reinterpret_cast<const char*>(glGetString(GL_RENDERER)));
+			Print("Version:    %s\n\n", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
+			//Print("Extensions: %s\n\n", reinterpret_cast<const char*>(glGetString(GL_EXTENSIONS)));
 		}
 		else if (g_bVulkanEnabled)
 		{
-
-			Print("Vulkan loaded\n");
+			// Vulkan hasn't been loaded yet
 		}
 
 		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION  "icons/flex-logo-03_128.png", 4));

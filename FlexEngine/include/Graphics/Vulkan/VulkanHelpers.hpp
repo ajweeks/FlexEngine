@@ -446,6 +446,8 @@ namespace flex
 		TopologyMode VkPrimitiveTopologyToTopologyMode(VkPrimitiveTopology primitiveTopology);
 		CullFace VkCullModeToCullFace(VkCullModeFlags cullMode);
 
+		std::string DeviceTypeToString(VkPhysicalDeviceType type);
+
 		VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* createInfo,
 			const VkAllocationCallbacks* allocator, VkDebugReportCallbackEXT* callback);
 

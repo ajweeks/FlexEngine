@@ -74,6 +74,18 @@ namespace flex
 			VkPhysicalDevice physicalDevice = PickPhysicalDevice();
 			CreateLogicalDevice(physicalDevice);
 
+			{
+				VkPhysicalDeviceProperties& props = m_VulkanDevice->m_PhysicalDeviceProperties;
+				u32 vkVersionMaj = VK_VERSION_MAJOR(props.apiVersion);
+				u32 vkVersionMin = VK_VERSION_MINOR(props.apiVersion);
+				u32 vkVersionPatch = VK_VERSION_PATCH(props.apiVersion);
+				Print("Vulkan loaded - v%u.%u.%u\n", vkVersionMaj, vkVersionMin, vkVersionPatch);
+				Print("Vendor ID, Device ID: 0x%u, 0x%u\n", props.vendorID, props.deviceID);
+				Print("Device name: %s\n", (const char*)props.deviceName);
+				Print("Device type: %s\n", DeviceTypeToString(props.deviceType).c_str());
+				Print("Device driver version: %u\n", props.driverVersion);
+			}
+
 			m_CommandBufferManager = VulkanCommandBufferManager(m_VulkanDevice);
 
 			m_DepthAttachment = new FrameBufferAttachment(m_VulkanDevice->m_LogicalDevice);
@@ -153,12 +165,6 @@ namespace flex
 			m_WorkTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/work_d.jpg", 3, false, true, false);
 			m_PointLightIconID = InitializeTexture(RESOURCE_LOCATION  "textures/icons/point-light-icon-256.png", 4, false, true, false);
 			m_DirectionalLightIconID = InitializeTexture(RESOURCE_LOCATION  "textures/icons/directional-light-icon-256.png", 4, false, true, false);
-
-			//CreateInstance();
-			//SetupDebugCallback();
-			//CreateSurface(g_Window);
-			//VkPhysicalDevice physicalDevice = PickPhysicalDevice();
-			//CreateLogicalDevice(physicalDevice);
 
 			ImGui::CreateContext();
 		}
