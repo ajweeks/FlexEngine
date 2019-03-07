@@ -20,7 +20,7 @@ const bool g_bVulkanEnabled = false;
 #ifdef DEBUG
 #define THOROUGH_CHECKS 1
 #define ENABLE_PROFILING 1
-#define COMPILE_RENDERDOC_API 0
+#define COMPILE_RENDERDOC_API 1
 #else
 #define THOROUGH_CHECKS 0
 #define ENABLE_PROFILING 0
@@ -33,9 +33,12 @@ const bool g_bVulkanEnabled = false;
 #define NOMINMAX
 #define GLFW_EXPOSE_NATIVE_WIN32
 #define GLFW_INCLUDE_NONE
+
+#if COMPILE_IMGUI
 #define IMGUI_IMPL_OPENGL_LOADER_GLAD
 #define IMGUI_DISABLE_OBSOLETE_FUNCTIONS 1
 #define IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS 1
+#endif
 
 #define FLEX_VERSION(major, minor, patch) (((major) << 22) | ((minor) << 12) | (patch))
 

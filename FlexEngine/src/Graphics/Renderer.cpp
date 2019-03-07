@@ -67,13 +67,13 @@ namespace flex
 			&m_FntSourceCodeProSS,
 		};
 
-		m_FontMetaDatas[3] = {
-			RESOURCE_LOCATION  "fonts/gant.ttf",
-			RESOURCE_LOCATION  "fonts/gant-regular-10",
-			10,
-			true,
-			&m_FntGantSS,
-		};
+		//m_FontMetaDatas[3] = {
+		//	RESOURCE_LOCATION  "fonts/gant.ttf",
+		//	RESOURCE_LOCATION  "fonts/gant-regular-10",
+		//	10,
+		//	true,
+		//	&m_FntGantSS,
+		//};
 
 		std::string DPIStr = FloatToString(g_Monitor->DPI.x, 0) + "DPI";
 		for (i32 i = 0; i < FONT_COUNT; ++i)

@@ -172,13 +172,8 @@ configuration {}
 		path.join(SOURCE_DIR, "include/**.h"), 
 		path.join(SOURCE_DIR, "include/**.hpp"), 
 		path.join(SOURCE_DIR, "src/**.cpp"), 
-		path.join(DEPENDENCIES_DIR, "imgui/imgui.h"),
-		path.join(DEPENDENCIES_DIR, "imgui/imconfig.h"),
-		path.join(DEPENDENCIES_DIR, "imgui/imgui_internal.h"),
-		path.join(DEPENDENCIES_DIR, "imgui/imgui.cpp"),
-		path.join(DEPENDENCIES_DIR, "imgui/imgui_draw.cpp"),
-		path.join(DEPENDENCIES_DIR, "imgui/imgui_demo.cpp"),
-		path.join(DEPENDENCIES_DIR, "imgui/imgui_widgets.cpp"),
+		path.join(DEPENDENCIES_DIR, "imgui/**.h"),
+		path.join(DEPENDENCIES_DIR, "imgui/**.cpp"),
 		path.join(DEPENDENCIES_DIR, "glad/src/glad.c"),
 	}
 
@@ -189,10 +184,7 @@ configuration {}
 
 	-- Don't use pre-compiled header for the following files
 	nopch {
-		path.join(DEPENDENCIES_DIR, "imgui/imgui.cpp"),
-		path.join(DEPENDENCIES_DIR, "imgui/imgui_draw.cpp"),
-		path.join(DEPENDENCIES_DIR, "imgui/imgui_demo.cpp"),
-		path.join(DEPENDENCIES_DIR, "imgui/imgui_widgets.cpp"),
+		path.join(DEPENDENCIES_DIR, "imgui/**.cpp"),
 		path.join(DEPENDENCIES_DIR, "glad/src/glad.c")
 	}
 

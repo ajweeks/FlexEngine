@@ -14,10 +14,11 @@ IGNORE_WARNINGS_PUSH
 #include <freetype/ftbitmap.h>
 
 #if COMPILE_IMGUI
-#include "imgui_internal.h"
+// TODO: Remove
+#include "imgui/imgui_internal.h"
 
-#include "ImGui/imgui_impl_glfw.h"
-#include "ImGui/imgui_impl_vulkan.h"
+#include "imgui/imgui_impl_glfw.h"
+#include "imgui/imgui_impl_vulkan.h"
 #endif
 
 #include "BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h"
@@ -69,8 +70,6 @@ namespace flex
 			CreateInstance();
 			SetupDebugCallback();
 			CreateSurface();
-			glm::vec2i frameSize = g_Window->GetFrameBufferSize();
-			//SetupImGuiWindowData(&m_ImGuiWindowData, m_Surface, frameSize.x, frameSize.y);
 			VkPhysicalDevice physicalDevice = PickPhysicalDevice();
 			CreateLogicalDevice(physicalDevice);
 
@@ -296,8 +295,8 @@ namespace flex
 			ImGuiIO& io = ImGui::GetIO();
 			io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;       // Enable Keyboard Controls
 																		//io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-			io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
-			io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
+			//io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
+			//io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
 																		//io.ConfigFlags |= ImGuiConfigFlags_ViewportsNoTaskBarIcons;
 																		//io.ConfigFlags |= ImGuiConfigFlags_ViewportsNoMerge;
 
@@ -4944,11 +4943,6 @@ namespace flex
 				{
 					VkCommandBuffer& commandBuffer = m_CommandBufferManager.m_CommandBuffers[i];
 
-					if (g_EngineInstance->IsRenderingImGui())
-					{
-						ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
-					}
-
 					renderPassBeginInfo.framebuffer = m_SwapChainFramebuffers[i];
 
 					VkCommandBufferBeginInfo cmdBufferbeginInfo = {};
@@ -5030,6 +5024,11 @@ namespace flex
 						{
 							vkCmdDraw(commandBuffer, renderObject->vertexBufferData->VertexCount, 1, renderObject->vertexOffset, 0);
 						}
+					}
+
+					if (g_EngineInstance->IsRenderingImGui())
+					{
+						ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
 					}
 
 					vkCmdEndRenderPass(commandBuffer);

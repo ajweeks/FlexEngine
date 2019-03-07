@@ -310,6 +310,15 @@ namespace flex
 		ms blockDuration = Profiler::GetBlockDuration(profileBlockStr);
 		std::string bootupTimesEntry = GetDateString_YMDHMS() + "," + FloatToString(blockDuration, 2);
 		AppendToBootupTimesFile(bootupTimesEntry);
+
+
+		ImGuiIO& io = ImGui::GetIO();
+		m_ImGuiIniFilepathStr = SAVED_LOCATION "config/imgui.ini";
+		io.IniFilename = m_ImGuiIniFilepathStr.c_str();
+		m_ImGuiLogFilepathStr = SAVED_LOCATION "config/imgui.log";
+		io.LogFilename = m_ImGuiLogFilepathStr.c_str();
+		io.DisplaySize = (ImVec2)g_Window->GetFrameBufferSize();
+		io.IniSavingRate = 10.0f;
 	}
 
 	AudioSourceID FlexEngine::GetAudioSourceID(SoundEffect effect)
@@ -1004,10 +1013,10 @@ namespace flex
 		ImGuiIO& io = ImGui::GetIO();
 		io.MouseDrawCursor = false;
 
-		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+		//io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
-		std::string fontFilePath(RESOURCE_LOCATION u8"fonts/lucon.ttf");
-		io.Fonts->AddFontFromFileTTF(fontFilePath.c_str(), 13);
+		//std::string fontFilePath(RESOURCE_LOCATION u8"fonts/lucon.ttf");
+		//io.Fonts->AddFontFromFileTTF(fontFilePath.c_str(), 13);
 
 		io.FontGlobalScale = g_Monitor->contentScaleX;
 
@@ -1050,8 +1059,8 @@ namespace flex
 		colors[ImGuiCol_TabActive] = ImVec4(0.70f, 0.41f, 0.04f, 1.00f);
 		colors[ImGuiCol_TabUnfocused] = ImVec4(0.50f, 0.28f, 0.08f, 1.00f);
 		colors[ImGuiCol_TabUnfocusedActive] = ImVec4(0.62f, 0.33f, 0.08f, 1.00f);
-		colors[ImGuiCol_DockingPreview] = ImVec4(0.83f, 0.44f, 0.11f, 0.70f);
-		colors[ImGuiCol_DockingBg] = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
+		//colors[ImGuiCol_DockingPreview] = ImVec4(0.83f, 0.44f, 0.11f, 0.70f);
+		//colors[ImGuiCol_DockingBg] = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
 		colors[ImGuiCol_PlotLines] = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
 		colors[ImGuiCol_PlotLinesHovered] = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
 		colors[ImGuiCol_PlotHistogram] = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
@@ -1066,7 +1075,6 @@ namespace flex
 
 	void FlexEngine::DrawImGuiObjects()
 	{
-		return;
 		if (m_bDemoWindowShowing)
 		{
 			ImGui::ShowDemoWindow(&m_bDemoWindowShowing);

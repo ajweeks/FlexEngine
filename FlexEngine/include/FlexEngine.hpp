@@ -240,6 +240,10 @@ namespace flex
 		std::string m_RenderDocSettingsFileName;
 		std::string m_RenderDocSettingsAbsFilePath;
 
+		// Must be stored as member because ImGui will not make a copy
+		std::string m_ImGuiIniFilepathStr;
+		std::string m_ImGuiLogFilepathStr;
+
 		const real m_SecondsBetweenCommonSettingsFileSave = 10.0f;
 		real m_SecondsSinceLastCommonSettingsFileSave = 0.0f;
 

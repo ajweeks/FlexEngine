@@ -177,6 +177,9 @@ namespace flex
 		m_bMaximized = bMaximized;
 		m_bIconified = bIconified;
 
+		ImGuiIO& io = ImGui::GetIO();
+		io.DisplaySize = ImVec2(width, height);
+
 		OnSizeChanged(width, height);
 
 		if (m_CurrentWindowMode == WindowMode::WINDOWED)

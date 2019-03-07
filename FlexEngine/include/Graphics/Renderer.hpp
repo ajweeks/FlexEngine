@@ -177,8 +177,8 @@ namespace flex
 		BitmapFont* m_FntUbuntuCondensedSS = nullptr;
 		BitmapFont* m_FntSourceCodeProWS = nullptr;
 		BitmapFont* m_FntSourceCodeProSS = nullptr;
-		BitmapFont* m_FntGantSS = nullptr;
-		static const i32 FONT_COUNT = 4;
+		//BitmapFont* m_FntGantSS = nullptr;
+		static const i32 FONT_COUNT = 3;
 
 	protected:
 		// If the object gets deleted this frame *gameObjectRef gets set to nullptr
@@ -231,10 +231,6 @@ namespace flex
 		bool m_bRenderGrid = true;
 
 		u32 m_FramesRendered = 0;
-
-		// Must be stored as member because ImGui will not make a copy
-		std::string m_ImGuiIniFilepathStr;
-		std::string m_ImGuiLogFilepathStr;
 
 		bool m_bRebatchRenderObjects = true;
 

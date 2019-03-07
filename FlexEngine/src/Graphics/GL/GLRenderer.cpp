@@ -406,12 +406,6 @@ namespace flex
 
 			ImGui::CreateContext();
 
-			ImGuiIO& io = ImGui::GetIO();
-			m_ImGuiIniFilepathStr = SAVED_LOCATION "config/imgui.ini";
-			io.IniFilename = m_ImGuiIniFilepathStr.c_str();
-			m_ImGuiLogFilepathStr = SAVED_LOCATION "config/imgui.log";
-			io.LogFilename = m_ImGuiLogFilepathStr.c_str();
-
 			// G-buffer objects
 			glGenFramebuffers(1, &m_gBufferHandle);
 			glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
@@ -2011,7 +2005,7 @@ namespace flex
 
 
 			// Screen-space objects
-			SetFont(m_FntGantSS);
+			SetFont(m_FntSourceCodeProSS);
 			static const glm::vec4 color(0.95f);
 			DrawStringSS("FLEX ENGINE", color, AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -0.05f), 0.0f);
 			if (g_EngineInstance->IsSimulationPaused())
