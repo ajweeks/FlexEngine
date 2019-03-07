@@ -4,9 +4,6 @@
 [submodule "FlexEngine/dependencies/stb"]
 	path = FlexEngine/dependencies/stb
 	url = https://github.com/nothings/stb
-[submodule "FlexEngine/dependencies/imgui"]
-	path = FlexEngine/dependencies/imgui
-	url = https://github.com/ajweeks/imgui
 [submodule "FlexEngine/dependencies/glfw"]
 	path = FlexEngine/dependencies/glfw
 	url = https://github.com/glfw/glfw
