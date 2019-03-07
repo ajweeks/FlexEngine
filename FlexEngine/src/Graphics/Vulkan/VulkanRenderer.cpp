@@ -14,9 +14,6 @@ IGNORE_WARNINGS_PUSH
 #include <freetype/ftbitmap.h>
 
 #if COMPILE_IMGUI
-// TODO: Remove
-#include "imgui/imgui_internal.h"
-
 #include "imgui/imgui_impl_glfw.h"
 #include "imgui/imgui_impl_vulkan.h"
 #endif
@@ -114,10 +111,6 @@ namespace flex
 				{ "normalRoughnessFrameBufferSampler",{ m_VulkanDevice->m_LogicalDevice, VK_FORMAT_R16G16B16A16_SFLOAT } },
 				{ "albedoAOFrameBufferSampler",{ m_VulkanDevice->m_LogicalDevice, VK_FORMAT_R8G8B8A8_UNORM } },
 			};
-
-			/*VkFormat depthFormat;
-			GetSupportedDepthFormat(m_VulkanDevice->m_PhysicalDevice, &depthFormat);
-			m_CubemapDepthAttachment = new FrameBufferAttachment(m_VulkanDevice->m_LogicalDevice, depthFormat);*/
 
 			// NOTE: This is different from the GLRenderer's capture views
 			s_CaptureViews = {
@@ -3364,45 +3357,12 @@ namespace flex
 			return alignedSize;
 		}
 
-		//void VulkanRenderer::ImGui_CreateWindowDataCommandBuffers()
-		//{
-		//	for (i32 i = 0; i < 2; ++i)
-		//	{
-		//		{
-		//			VkCommandPoolCreateInfo info = {};
-		//			info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-		//			info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-		//			info.queueFamilyIndex = FindQueueFamilies(m_Surface, m_VulkanDevice->m_PhysicalDevice).graphicsFamily;
-		//			VK_CHECK_RESULT(vkCreateCommandPool(*m_VulkanDevice, &info, nullptr, &m_ImGuiCommandPool));
-		//		}
-		//		{
-		//			VkCommandBufferAllocateInfo info = {};
-		//			info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		//			info.commandPool = m_ImGuiCommandPool;
-		//			info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		//			info.commandBufferCount = 1;
-		//			VK_CHECK_RESULT(vkAllocateCommandBuffers(*m_VulkanDevice, &info, &m_ImGuiCommandBuffers[i]));
-		//		}
-		//		{
-		//			VkFenceCreateInfo info = {};
-		//			info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-		//			info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-		//			VK_CHECK_RESULT(vkCreateFence(*m_VulkanDevice, &info, nullptr, &m_ImGuiFence));
-		//		}
-		//		{
-		//			VkSemaphoreCreateInfo info = {};
-		//			info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-		//			VK_CHECK_RESULT(vkCreateSemaphore(*m_VulkanDevice, &info, nullptr, &m_ImGuiImageAcquiredSemaphore));
-		//			VK_CHECK_RESULT(vkCreateSemaphore(*m_VulkanDevice, &info, nullptr, &m_ImGuiRenderCompleteSemaphore));
-		//		}
-		//	}
-		//}
-
 		void VulkanRenderer::UpdateRenderObjectVertexData(RenderID renderID)
 		{
 			//RenderObject renderObject = GetRenderObject(renderID);
 
 			//CreateDescriptorSet(renderID);
+			// TODO: ?
 			CreateGraphicsPipeline(renderID, false);
 		}
 

@@ -1,11 +1,5 @@
 #pragma once
 
-#include <vector>
-
-IGNORE_WARNINGS_PUSH
-//#include <vulkan/vulkan.hpp>
-IGNORE_WARNINGS_POP
-
 namespace flex
 {
 	namespace vk

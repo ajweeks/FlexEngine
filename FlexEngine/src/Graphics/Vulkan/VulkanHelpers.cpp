@@ -3,7 +3,7 @@
 
 #include "Graphics/Vulkan/VulkanHelpers.hpp"
 
-IGNORE_WARNINGS_PUSH // Don't generate warnings for third party code
+IGNORE_WARNINGS_PUSH
 #include "stb_image.h"
 IGNORE_WARNINGS_POP
 
@@ -44,7 +44,7 @@ namespace flex
 			u32 offset = 0;
 			u32 location = 0;
 
-			// TODO: Roll i32o iteration over array
+			// TODO: Roll into iteration over array
 
 			if (vertexAttributes & (u32)VertexAttribute::POSITION)
 			{
