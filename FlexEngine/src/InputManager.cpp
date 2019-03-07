@@ -682,7 +682,10 @@ namespace flex
 		}
 
 		ImGuiIO& io = ImGui::GetIO();
-		io.MouseDown[(i32)mouseButton] = (m_MouseButtonStates & (1 << (i32)mouseButton)) != 0;
+		if ((i32)mouseButton <= 4)
+		{
+			io.MouseDown[(i32)mouseButton] = (m_MouseButtonStates & (1 << (i32)mouseButton)) != 0;
+		}
 
 		if (!io.WantCaptureMouse)
 		{

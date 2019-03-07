@@ -361,7 +361,7 @@ namespace flex
 		openFileName.nFilterIndex = 0;
 		const i32 MAX_FILE_PATH_LEN = 512;
 		char fileBuf[MAX_FILE_PATH_LEN];
-		memset(fileBuf, '\0', MAX_FILE_PATH_LEN);
+		memset(fileBuf, '\0', MAX_FILE_PATH_LEN - 1);
 		openFileName.lpstrFile = fileBuf;
 		openFileName.nMaxFile = MAX_FILE_PATH_LEN;
 		openFileName.lpstrTitle = windowTitle.c_str();
@@ -532,7 +532,7 @@ namespace flex
 		{
 			pos = absoluteDirectoryPath.find_first_of("\\/", pos + 1);
 			CreateDirectory(absoluteDirectoryPath.substr(0, pos).c_str(), NULL);
-			GetLastError();// == ERROR_ALREADY_EXISTS;
+			//GetLastError() == ERROR_ALREADY_EXISTS;
 		} while (pos != std::string::npos);
 	}
 

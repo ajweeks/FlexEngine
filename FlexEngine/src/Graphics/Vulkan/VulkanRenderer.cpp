@@ -3203,7 +3203,7 @@ namespace flex
 			u32 sampleDensity = 32;
 			u32 padding = 1;
 			u32 spread = 5;
-			u32 totPadding = padding + spread;
+			//u32 totPadding = padding + spread;
 
 			bool bUsingPreRenderedTexture = false;
 			if (!bForceRender)
@@ -3262,7 +3262,7 @@ namespace flex
 				//"highResTex" =  0
 				//"spread" = (real)spread
 				//"sampleDensity" = (real)sampleDensity
-				VulkanRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
+				//VulkanRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
 
 				// Render to Glyphs atlas
 				FT_Set_Pixel_Sizes(face, 0, size * sampleDensity);
