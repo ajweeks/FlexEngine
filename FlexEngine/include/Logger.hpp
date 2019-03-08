@@ -18,12 +18,12 @@ typedef unsigned short WORD;
 
 namespace flex
 {
-	void Print(const char* str, ...);
-	void PrintWarn(const char* str, ...);
-	void PrintError(const char* str, ...);
+	void Print(FORMAT_STRING const char* str, ...);
+	void PrintWarn(FORMAT_STRING const char* str, ...);
+	void PrintError(FORMAT_STRING const char* str, ...);
 	// Call when results are expected to be larger than MAX_CHARS
-	void PrintLong(const char* str, ...);
-	void Print(const char* str, va_list argList);
+	void PrintLong(FORMAT_STRING const char* str, ...);
+	void Print(FORMAT_STRING const char* str, va_list argList);
 
 	void InitializeLogger();
 	void ClearLogFile();

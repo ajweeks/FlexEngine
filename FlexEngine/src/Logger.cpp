@@ -54,7 +54,7 @@ namespace flex
 		}
 	}
 
-	void Print(const char* str, ...)
+	void Print(FORMAT_STRING const char* str, ...)
 	{
 		if (!g_bEnableLogToConsole)
 		{
@@ -71,7 +71,7 @@ namespace flex
 		va_end(argList);
 	}
 
-	void PrintWarn(const char* str, ...)
+	void PrintWarn(FORMAT_STRING const char* str, ...)
 	{
 		if (!g_bEnableLogToConsole)
 		{
@@ -88,7 +88,7 @@ namespace flex
 		va_end(argList);
 	}
 
-	void PrintError(const char* str, ...)
+	void PrintError(FORMAT_STRING const char* str, ...)
 	{
 		if (!g_bEnableLogToConsole)
 		{
@@ -105,7 +105,7 @@ namespace flex
 		va_end(argList);
 	}
 
-	void PrintLong(const char* str, ...)
+	void PrintLong(FORMAT_STRING const char* str, ...)
 	{
 		i32 len = strlen(str);
 		for (i32 i = 0; i < len; i += MAX_CHARS)
@@ -115,7 +115,7 @@ namespace flex
 		Print(str + len - len % MAX_CHARS);
 	}
 
-	void Print(const char* str, va_list argList)
+	void Print(FORMAT_STRING const char* str, va_list argList)
 	{
 		static char s_buffer[MAX_CHARS];
 
