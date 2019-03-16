@@ -57,7 +57,7 @@ const bool g_bVulkanEnabled = false;
 
 #undef FORMAT_STRING
 #if defined(__clang__)
-#define FORMAT_STRING __attribute__ (( format( __printf__, fmtargnumber, firstvarargnumber ))) 
+#define FORMAT_STRING __attribute__ (( format( __printf__, fmtargnumber, firstvarargnumber )))
 #elif defined(_MSC_VER)
 #define FORMAT_STRING _Printf_format_string_
 #endif

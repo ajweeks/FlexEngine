@@ -62,8 +62,6 @@ namespace flex
 			m_BRDFSize = { 512, 512 };
 			m_CubemapFramebufferSize = { 512, 512 };
 
-			m_Materials.reserve(MAT_CAPACITY);
-
 			CreateInstance();
 			SetupDebugCallback();
 			CreateSurface();
@@ -164,102 +162,14 @@ namespace flex
 		{
 			CreateDescriptorPool();
 
-			ShaderID deferredCombineShaderID;
-			if (!GetShaderID("deferred_combine", deferredCombineShaderID))
-			{
-				PrintError("Failed to find deferred_combine shader!\n");
-			}
+			GenerateGBuffer();
 
-			assert(m_SkyBoxMesh != nullptr);
-			MaterialID skyboxMaterialID = m_SkyBoxMesh->GetMeshComponent()->GetMaterialID();
+			assert(m_PhysicsDebugDrawer == nullptr);
+			m_PhysicsDebugDrawer = new VulkanPhysicsDebugDraw();
+			m_PhysicsDebugDrawer->Initialize();
 
-			// Initialize GBuffer material & mesh
-			{
-				MaterialCreateInfo gBufferMaterialCreateInfo = {};
-				gBufferMaterialCreateInfo.name = "GBuffer material";
-				gBufferMaterialCreateInfo.shaderName = "deferred_combine";
-				gBufferMaterialCreateInfo.enableIrradianceSampler = true;
-				gBufferMaterialCreateInfo.irradianceSamplerMatID = skyboxMaterialID;
-				gBufferMaterialCreateInfo.enablePrefilteredMap = true;
-				gBufferMaterialCreateInfo.prefilterMapSamplerMatID = skyboxMaterialID;
-				gBufferMaterialCreateInfo.enableBRDFLUT = true;
-				gBufferMaterialCreateInfo.renderToCubemap = false;
-				for (size_t i = 0; i < m_OffScreenFrameBuf->frameBufferAttachments.size(); ++i)
-				{
-					gBufferMaterialCreateInfo.frameBuffers.push_back({
-						m_OffScreenFrameBuf->frameBufferAttachments[i].first, (void*)&m_OffScreenFrameBuf->frameBufferAttachments[i].second.view
-					});
-				}
-
-				MaterialID gBufferMatID = InitializeMaterial(&gBufferMaterialCreateInfo);
-
-				// TODO: Use full screen tri
-				VertexBufferData::CreateInfo gBufferQuadVertexBufferDataCreateInfo = {};
-				gBufferQuadVertexBufferDataCreateInfo.positions_3D = {
-					{ -1.0f,  1.0f, 0.0f },
-					{ -1.0f, -1.0f, 0.0f },
-					{ 1.0f,  1.0f, 0.0f },
-					{ 1.0f, -1.0f, 0.0f },
-				};
-
-				gBufferQuadVertexBufferDataCreateInfo.texCoords_UV = {
-					{ 0.0f, 1.0f },
-					{ 0.0f, 0.0f },
-					{ 1.0f, 1.0f },
-					{ 1.0f, 0.0f },
-				};
-				gBufferQuadVertexBufferDataCreateInfo.attributes = (u32)VertexAttribute::POSITION | (u32)VertexAttribute::UV;
-				m_gBufferQuadVertexBufferData.Initialize(&gBufferQuadVertexBufferDataCreateInfo);
-
-
-				GameObject* gBufferQuadGameObject = new GameObject("GBuffer Quad", GameObjectType::_NONE);
-				m_PersistentObjects.push_back(gBufferQuadGameObject);
-				// NOTE: G-buffer isn't rendered normally, it is handled separately
-				gBufferQuadGameObject->SetVisible(false);
-
-				RenderObjectCreateInfo gBufferQuadCreateInfo = {};
-				gBufferQuadCreateInfo.materialID = gBufferMatID;
-				gBufferQuadCreateInfo.gameObject = gBufferQuadGameObject;
-				gBufferQuadCreateInfo.vertexBufferData = &m_gBufferQuadVertexBufferData;
-				gBufferQuadCreateInfo.enableCulling = false;
-				gBufferQuadCreateInfo.visibleInSceneExplorer = false;
-
-				m_gBufferQuadIndices = { 0, 1, 2,  2, 1, 3 };
-				gBufferQuadCreateInfo.indices = &m_gBufferQuadIndices;
-
-				m_GBufferQuadRenderID = InitializeRenderObject(&gBufferQuadCreateInfo);
-
-				m_gBufferQuadVertexBufferData.DescribeShaderVariables(this, m_GBufferQuadRenderID);
-			}
-
-			// Initialize GBuffer cubemap material & mesh
-			{
-				MaterialCreateInfo gBufferCubemapMaterialCreateInfo = {};
-				gBufferCubemapMaterialCreateInfo.name = "GBuffer cubemap material";
-				gBufferCubemapMaterialCreateInfo.shaderName = "deferred_combine_cubemap";
-				gBufferCubemapMaterialCreateInfo.enableIrradianceSampler = true;
-				gBufferCubemapMaterialCreateInfo.irradianceSamplerMatID = skyboxMaterialID;
-				gBufferCubemapMaterialCreateInfo.enablePrefilteredMap = true;
-				gBufferCubemapMaterialCreateInfo.prefilterMapSamplerMatID = skyboxMaterialID;
-				gBufferCubemapMaterialCreateInfo.enableBRDFLUT = true;
-				gBufferCubemapMaterialCreateInfo.renderToCubemap = false;
-				for (size_t i = 0; i < m_OffScreenFrameBuf->frameBufferAttachments.size(); ++i)
-				{
-					gBufferCubemapMaterialCreateInfo.frameBuffers.push_back({
-						m_OffScreenFrameBuf->frameBufferAttachments[i].first,
-						(void*)&m_OffScreenFrameBuf->frameBufferAttachments[i].second.view
-					});
-				}
-
-				m_CubemapGBufferMaterialID = InitializeMaterial(&gBufferCubemapMaterialCreateInfo);
-
-				assert(m_PhysicsDebugDrawer == nullptr);
-				m_PhysicsDebugDrawer = new VulkanPhysicsDebugDraw();
-				m_PhysicsDebugDrawer->Initialize();
-
-				btDiscreteDynamicsWorld* world = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
-				world->setDebugDrawer(m_PhysicsDebugDrawer);
-			}
+			btDiscreteDynamicsWorld* world = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
+			world->setDebugDrawer(m_PhysicsDebugDrawer);
 
 			for (size_t i = 0; i < m_Shaders.size(); ++i)
 			{
@@ -513,6 +423,7 @@ namespace flex
 			equirectangularToCubeMatCreateInfo.generateHDREquirectangularSampler = true;
 			// TODO: Make cyclable at runtime
 			equirectangularToCubeMatCreateInfo.hdrEquirectangularTexturePath = environmentMapPath;
+			equirectangularToCubeMatCreateInfo.engineMaterial = true;
 			MaterialID equirectangularToCubeMatID = InitializeMaterial(&equirectangularToCubeMatCreateInfo);
 
 			const VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
@@ -2112,7 +2023,7 @@ namespace flex
 			else
 			{
 				matID = GetNextAvailableMaterialID();
-				m_Materials.push_back({});
+				m_Materials.insert(std::pair<MaterialID, VulkanMaterial>(matID, {}));
 			}
 
 			VulkanMaterial& mat = m_Materials.at(matID);
@@ -2211,6 +2122,8 @@ namespace flex
 
 			mat.material.enableBRDFLUT = createInfo->enableBRDFLUT;
 			mat.material.renderToCubemap = createInfo->renderToCubemap;
+
+			mat.material.engineMaterial = createInfo->engineMaterial;
 
 			mat.descriptorSetLayoutIndex = mat.material.shaderID;
 
@@ -2392,8 +2305,10 @@ namespace flex
 
 		u32 VulkanRenderer::InitializeRenderObject(const RenderObjectCreateInfo* createInfo)
 		{
-			RenderID renderID = GetFirstAvailableRenderID();
+			const RenderID renderID = GetNextAvailableRenderID();
 			VulkanRenderObject* renderObject = new VulkanRenderObject(m_VulkanDevice->m_LogicalDevice, renderID);
+
+			m_bRebatchRenderObjects = true;
 
 			InsertNewRenderObject(renderObject);
 			renderObject->materialID = createInfo->materialID;
@@ -2533,8 +2448,9 @@ namespace flex
 				PhysicsDebugRender();
 			}
 
-			BuildDeferredCommandBuffer(drawCallInfo); // TODO: Only call this when objects change
-			BuildCommandBuffers(drawCallInfo); // TODO: Only call this when objects change
+			// TODO: Don't build command buffers when m_bRebatchRenderObjects is false (but dynamic UI elements still need to be rebuilt!)
+			BuildDeferredCommandBuffer(drawCallInfo);
+			BuildCommandBuffers(drawCallInfo);
 
 			if (m_SwapChainNeedsRebuilding)
 			{
@@ -2885,7 +2801,7 @@ namespace flex
 
 		void VulkanRenderer::OnSceneChanged()
 		{
-
+			GenerateGBuffer();
 		}
 
 		bool VulkanRenderer::GetRenderObjectCreateInfo(RenderID renderID, RenderObjectCreateInfo& outInfo)
@@ -2976,6 +2892,8 @@ namespace flex
 					mat->prefilterTexture = m_Materials[skyboxMatierialID].prefilterTexture;
 				}
 			}
+
+			m_bRebatchRenderObjects = true;
 		}
 
 		GameObject* VulkanRenderer::GetSkyboxMesh()
@@ -2993,6 +2911,7 @@ namespace flex
 			else
 			{
 				PrintError("SetRenderObjectMaterialID couldn't find render object with ID %u\n", renderID);
+				m_bRebatchRenderObjects = true;
 			}
 		}
 
@@ -3022,10 +2941,14 @@ namespace flex
 		{
 			if (renderObject)
 			{
-				vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPool, 1, &(renderObject->descriptorSet));
+				if (renderObject->descriptorSet)
+				{
+					vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPool, 1, &(renderObject->descriptorSet));
+				}
 				delete renderObject;
 			}
 			m_RenderObjects[renderID] = nullptr;
+			m_bRebatchRenderObjects = true;
 		}
 
 		void VulkanRenderer::NewFrame()
@@ -3095,7 +3018,8 @@ namespace flex
 
 		void VulkanRenderer::RenderObjectStateChanged()
 		{
-
+			// NOTE: This member is currently ignored by VulkanRenderer
+			m_bRebatchRenderObjects = true;
 		}
 
 		void VulkanRenderer::PostInitializeRenderObject(RenderID renderID)
@@ -3105,7 +3029,18 @@ namespace flex
 
 		void VulkanRenderer::ClearMaterials()
 		{
-			m_Materials.clear();
+			auto iter = m_Materials.begin();
+			while (iter != m_Materials.end())
+			{
+				if (!iter->second.material.engineMaterial)
+				{
+					iter = m_Materials.erase(iter);
+				}
+				else
+				{
+					++iter;
+				}
+			}
 		}
 
 		VulkanRenderObject* VulkanRenderer::GetRenderObject(RenderID renderID)
@@ -3335,7 +3270,18 @@ namespace flex
 			CreateGraphicsPipeline(renderID, false);
 		}
 
-		RenderID VulkanRenderer::GetFirstAvailableRenderID() const
+		MaterialID VulkanRenderer::GetNextAvailableMaterialID()
+		{
+			// Return lowest available ID
+			MaterialID result = 0;
+			while (m_Materials.find(result) != m_Materials.end())
+			{
+				++result;
+			}
+			return result;
+		}
+
+		RenderID VulkanRenderer::GetNextAvailableRenderID() const
 		{
 			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 			{
@@ -4066,6 +4012,21 @@ namespace flex
 				}
 			}
 
+			for (auto& materialObj : BaseScene::s_ParsedMaterials)
+			{
+				if (materialObj.GetString("name").compare(materialName) == 0)
+				{
+					// Material exists in library, but hasn't been initialized yet
+					MaterialCreateInfo matCreateInfo = {};
+					Material::ParseJSONObject(materialObj, matCreateInfo);
+
+					materialID = InitializeMaterial(&matCreateInfo);
+					g_SceneManager->CurrentScene()->AddMaterialID(materialID);
+
+					return true;
+				}
+			}
+
 			return false;
 		}
 
@@ -4291,7 +4252,7 @@ namespace flex
 			vkDestroyPipelineLayout(m_VulkanDevice->m_LogicalDevice, *createInfo->pipelineLayout, nullptr);
 			VK_CHECK_RESULT(vkCreatePipelineLayout(m_VulkanDevice->m_LogicalDevice, &pipelineLayoutInfo, nullptr, createInfo->pipelineLayout));
 
-			VkPipelineDepthStencilStateCreateInfo depthStencil{};
+			VkPipelineDepthStencilStateCreateInfo depthStencil = {};
 			depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 			depthStencil.depthTestEnable = createInfo->depthTestEnable;
 			depthStencil.depthWriteEnable = createInfo->depthWriteEnable ? VK_TRUE : VK_FALSE;
@@ -4715,6 +4676,152 @@ namespace flex
 			//VK_CHECK_RESULT(vkCreateSampler(m_VulkanDevice->m_LogicalDevice, &samplerCreateInfo, nullptr, m_ColorSampler.replace()));
 		}
 
+		void VulkanRenderer::GenerateGBufferVertexBuffer()
+		{
+			if (m_gBufferQuadVertexBufferData.vertexData == nullptr)
+			{
+				// TODO: Use full screen tri (see GLRenderer::GenerateGBufferVertexBuffer)
+				VertexBufferData::CreateInfo gBufferQuadVertexBufferDataCreateInfo = {};
+				gBufferQuadVertexBufferDataCreateInfo.positions_3D = {
+					{ -1.0f,  1.0f, 0.0f },
+					{ -1.0f, -1.0f, 0.0f },
+					{ 1.0f,  1.0f, 0.0f },
+					{ 1.0f, -1.0f, 0.0f },
+				};
+
+				gBufferQuadVertexBufferDataCreateInfo.texCoords_UV = {
+					{ 0.0f, 1.0f },
+					{ 0.0f, 0.0f },
+					{ 1.0f, 1.0f },
+					{ 1.0f, 0.0f },
+				};
+				gBufferQuadVertexBufferDataCreateInfo.attributes = (u32)VertexAttribute::POSITION | (u32)VertexAttribute::UV;
+				m_gBufferQuadVertexBufferData.Initialize(&gBufferQuadVertexBufferDataCreateInfo);
+			}
+		}
+
+		// TODO: Unify with GLRenderer
+		void VulkanRenderer::GenerateGBuffer()
+		{
+			if (m_gBufferQuadVertexBufferData.vertexData == nullptr)
+			{
+				GenerateGBufferVertexBuffer();
+			}
+
+			assert(m_SkyBoxMesh != nullptr);
+			MaterialID skyboxMaterialID = m_SkyBoxMesh->GetMeshComponent()->GetMaterialID();
+
+			// TODO: Allow user to not set this and have a backup plan (disable deferred rendering?)
+			assert(m_ReflectionProbeMaterialID != InvalidMaterialID);
+
+			const std::string gBufferMatName = "GBuffer material";
+			const std::string gBufferCubeMatName = "GBuffer cubemap material";
+			const std::string gBufferQuadName = "GBuffer quad";
+
+			// Remove existing material if present (this will be true when reloading the scene)
+			{
+				MaterialID existingGBufferQuadMatID = InvalidMaterialID;
+				MaterialID existingGBufferCubeMatID = InvalidMaterialID;
+				// TODO: Don't rely on material names!
+				if (GetMaterialID(gBufferMatName, existingGBufferQuadMatID))
+				{
+					RemoveMaterial(existingGBufferQuadMatID);
+				}
+				if (GetMaterialID(gBufferCubeMatName, existingGBufferCubeMatID))
+				{
+					RemoveMaterial(existingGBufferCubeMatID);
+				}
+
+				for (auto iter = m_PersistentObjects.begin(); iter != m_PersistentObjects.end(); ++iter)
+				{
+					GameObject* gameObject = *iter;
+					if (gameObject->GetName().compare(gBufferQuadName) == 0)
+					{
+						SafeDelete(gameObject);
+						m_PersistentObjects.erase(iter);
+						break;
+					}
+				}
+
+				if (m_GBufferQuadRenderID != InvalidRenderID)
+				{
+					DestroyRenderObject(m_GBufferQuadRenderID);
+				}
+			}
+
+			{
+				MaterialCreateInfo gBufferMaterialCreateInfo = {};
+				gBufferMaterialCreateInfo.name = gBufferMatName;
+				gBufferMaterialCreateInfo.shaderName = "deferred_combine";
+				gBufferMaterialCreateInfo.enableIrradianceSampler = true;
+				gBufferMaterialCreateInfo.irradianceSamplerMatID = skyboxMaterialID;
+				gBufferMaterialCreateInfo.enablePrefilteredMap = true;
+				gBufferMaterialCreateInfo.prefilterMapSamplerMatID = skyboxMaterialID;
+				gBufferMaterialCreateInfo.enableBRDFLUT = true;
+				gBufferMaterialCreateInfo.renderToCubemap = false;
+				gBufferMaterialCreateInfo.engineMaterial = true;
+				for (size_t i = 0; i < m_OffScreenFrameBuf->frameBufferAttachments.size(); ++i)
+				{
+					gBufferMaterialCreateInfo.frameBuffers.push_back({
+						m_OffScreenFrameBuf->frameBufferAttachments[i].first,
+						(void*)&m_OffScreenFrameBuf->frameBufferAttachments[i].second.view
+						});
+				}
+
+				MaterialID gBufferMatID = InitializeMaterial(&gBufferMaterialCreateInfo);
+
+
+				GameObject* gBufferQuadGameObject = new GameObject(gBufferQuadName, GameObjectType::_NONE);
+				m_PersistentObjects.push_back(gBufferQuadGameObject);
+				// NOTE: G-buffer isn't rendered normally, it is handled separately
+				gBufferQuadGameObject->SetVisible(false);
+
+				RenderObjectCreateInfo gBufferQuadCreateInfo = {};
+				gBufferQuadCreateInfo.materialID = gBufferMatID;
+				gBufferQuadCreateInfo.gameObject = gBufferQuadGameObject;
+				gBufferQuadCreateInfo.vertexBufferData = &m_gBufferQuadVertexBufferData;
+				gBufferQuadCreateInfo.enableCulling = false;
+				gBufferQuadCreateInfo.visibleInSceneExplorer = false;
+
+				m_gBufferQuadIndices = { 0, 1, 2,  2, 1, 3 };
+				gBufferQuadCreateInfo.indices = &m_gBufferQuadIndices;
+
+				m_GBufferQuadRenderID = InitializeRenderObject(&gBufferQuadCreateInfo);
+
+				m_gBufferQuadVertexBufferData.DescribeShaderVariables(this, m_GBufferQuadRenderID);
+			}
+
+			// Initialize GBuffer cubemap material & mesh
+			{
+				MaterialCreateInfo gBufferCubemapMaterialCreateInfo = {};
+				gBufferCubemapMaterialCreateInfo.name = gBufferCubeMatName;
+				gBufferCubemapMaterialCreateInfo.shaderName = "deferred_combine_cubemap";
+				gBufferCubemapMaterialCreateInfo.enableIrradianceSampler = true;
+				gBufferCubemapMaterialCreateInfo.irradianceSamplerMatID = skyboxMaterialID;
+				gBufferCubemapMaterialCreateInfo.enablePrefilteredMap = true;
+				gBufferCubemapMaterialCreateInfo.prefilterMapSamplerMatID = skyboxMaterialID;
+				gBufferCubemapMaterialCreateInfo.enableBRDFLUT = true;
+				gBufferCubemapMaterialCreateInfo.renderToCubemap = false;
+				gBufferCubemapMaterialCreateInfo.engineMaterial = true;
+				for (size_t i = 0; i < m_OffScreenFrameBuf->frameBufferAttachments.size(); ++i)
+				{
+					gBufferCubemapMaterialCreateInfo.frameBuffers.push_back({
+						m_OffScreenFrameBuf->frameBufferAttachments[i].first,
+						(void*)&m_OffScreenFrameBuf->frameBufferAttachments[i].second.view
+						});
+				}
+
+				m_CubemapGBufferMaterialID = InitializeMaterial(&gBufferCubemapMaterialCreateInfo);
+			}
+		}
+
+		void VulkanRenderer::RemoveMaterial(MaterialID materialID)
+		{
+			assert(materialID != InvalidMaterialID);
+
+			m_Materials.erase(materialID);
+		}
+
 		void VulkanRenderer::PhysicsDebugRender()
 		{
 			btDiscreteDynamicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
@@ -4836,6 +4943,19 @@ namespace flex
 					}
 
 					BindDescriptorSet(&shader, renderObject->renderID, commandBuffer, renderObject->pipelineLayout, renderObject->descriptorSet);
+
+					bool bUsingGameplayCam = g_CameraManager->CurrentCamera()->bIsGameplayCam;
+					if (g_EngineInstance->IsRenderingEditorObjects() && !bUsingGameplayCam)
+					{
+						// Depth aware editor objects
+						// TODO:
+
+						// Selected object wireframe
+						// TODO:
+
+						// Depth unaware editor objects
+						// TODO:
+					}
 
 					if (renderObject->indexed)
 					{
@@ -5584,7 +5704,10 @@ namespace flex
 		{
 			for (size_t i = 0; i < m_Materials.size(); ++i)
 			{
-				UpdateConstantUniformBuffer(overridenUniforms, i);
+				if (m_Materials[i].material.shaderID != InvalidShaderID)
+				{
+					UpdateConstantUniformBuffer(overridenUniforms, i);
+				}
 			}
 		}
 
@@ -5788,7 +5911,8 @@ namespace flex
 			u32 offset = 0;
 			for (VulkanRenderObject* renderObj : m_RenderObjects)
 			{
-				if (renderObj->renderID != renderObject->renderID &&
+				if (renderObj &&
+					renderObj->renderID != renderObject->renderID &&
 					m_Materials[renderObj->materialID].material.shaderID == m_Materials[renderObject->materialID].material.shaderID)
 				{
 					offset += uniformBuffer.dynamicData.size;
@@ -5810,6 +5934,7 @@ namespace flex
 				u64 uniform;
 				void* dataStart = nullptr;
 				size_t copySize;
+				// TODO: Calculate as copySize / 4
 				size_t moveInWords;
 			};
 			UniformInfo uniformInfos[] = {
@@ -5864,19 +5989,6 @@ namespace flex
 			mappedMemoryRange.size = uniformBuffer.dynamicData.size;
 			// TODO: Is this call needed if the buffer was allocated specifying VK_MEMORY_PROPERTY_HOST_COHERENT_BIT?
 			vkFlushMappedMemoryRanges(m_VulkanDevice->m_LogicalDevice, 1, &mappedMemoryRange);
-		}
-
-		MaterialID VulkanRenderer::GetNextAvailableMaterialID()
-		{
-			return m_Materials.size();
-			// TODO: Store mats in map like GLRenderer
-			//// Return lowest available ID
-			//MaterialID result = 0;
-			//while (m_Materials.find(result) != m_Materials.end())
-			//{
-			//	++result;
-			//}
-			//return result;
 		}
 
 		void VulkanRenderer::LoadDefaultShaderCode()
@@ -6278,7 +6390,6 @@ namespace flex
 
 			return VK_FALSE;
 		}
-
 
 		void SetClipboardText(void* userData, const char* text)
 		{

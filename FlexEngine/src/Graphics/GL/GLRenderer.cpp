@@ -49,7 +49,6 @@ namespace flex
 			m_KeyEventCallback(this, &GLRenderer::OnKeyEvent),
 			m_ActionCallback(this, &GLRenderer::OnActionEvent)
 		{
-			g_Renderer = this;
 		}
 
 		GLRenderer::~GLRenderer()
@@ -229,13 +228,13 @@ namespace flex
 			{
 				const std::string gridMatName = "Grid";
 				// TODO: Don't rely on material names!
-				if (!g_Renderer->GetMaterialID(gridMatName, m_GridMaterialID))
+				if (!GetMaterialID(gridMatName, m_GridMaterialID))
 				{
 					MaterialCreateInfo gridMatInfo = {};
 					gridMatInfo.shaderName = "color";
 					gridMatInfo.name = gridMatName;
 					gridMatInfo.engineMaterial = true;
-					m_GridMaterialID = g_Renderer->InitializeMaterial(&gridMatInfo);
+					m_GridMaterialID = InitializeMaterial(&gridMatInfo);
 				}
 
 				m_Grid = new GameObject("Grid", GameObjectType::OBJECT);
@@ -255,13 +254,13 @@ namespace flex
 			{
 				const std::string worldOriginMatName = "World origin";
 				// TODO: Don't rely on material names!
-				if (!g_Renderer->GetMaterialID(worldOriginMatName, m_WorldAxisMaterialID))
+				if (!GetMaterialID(worldOriginMatName, m_WorldAxisMaterialID))
 				{
 					MaterialCreateInfo worldAxisMatInfo = {};
 					worldAxisMatInfo.shaderName = "color";
 					worldAxisMatInfo.name = worldOriginMatName;
 					worldAxisMatInfo.engineMaterial = true;
-					m_WorldAxisMaterialID = g_Renderer->InitializeMaterial(&worldAxisMatInfo);
+					m_WorldAxisMaterialID = InitializeMaterial(&worldAxisMatInfo);
 				}
 
 				m_WorldOrigin = new GameObject("World origin", GameObjectType::OBJECT);
@@ -1116,11 +1115,7 @@ namespace flex
 				// TODO: Use INVALID material here (Bright pink)
 				// Hopefully the first material works out okay! Should be better than crashing
 				renderObject->materialID = 0;
-
-				if (!m_Materials.empty())
-				{
-					renderObject->materialName = m_Materials[renderObject->materialID].material.name;
-				}
+				renderObject->materialName = m_Materials[renderObject->materialID].material.name;
 			}
 			else
 			{
@@ -1526,7 +1521,7 @@ namespace flex
 					else
 					{
 						SetTopologyMode(quadRenderID, TopologyMode::TRIANGLE_STRIP);
-						m_1x1_NDC_QuadVertexBufferData.DescribeShaderVariables(g_Renderer, quadRenderID);
+						m_1x1_NDC_QuadVertexBufferData.DescribeShaderVariables(this, quadRenderID);
 					}
 				}
 
@@ -1778,7 +1773,7 @@ namespace flex
 					MaterialCreateInfo matCreateInfo = {};
 					Material::ParseJSONObject(materialObj, matCreateInfo);
 
-					materialID = g_Renderer->InitializeMaterial(&matCreateInfo);
+					materialID = InitializeMaterial(&matCreateInfo);
 					g_SceneManager->CurrentScene()->AddMaterialID(materialID);
 
 					return true;
@@ -4241,7 +4236,7 @@ namespace flex
 			UnloadShaders();
 			LoadShaders();
 
-			g_Renderer->AddEditorString("Reloaded shaders");
+			AddEditorString("Reloaded shaders");
 		}
 
 		void GLRenderer::UnloadShaders()
@@ -4778,7 +4773,7 @@ namespace flex
 						strcpy_s(enabledStr, pointLightStrStart);
 						static const char* dotEnabledStr = ".enabled";
 						strcat_s(enabledStr, dotEnabledStr);
-						if (i < m_NumPointLightsEnabled)
+						if (i < (u32)m_NumPointLightsEnabled)
 						{
 							if (m_PointLights[i].bEnabled)
 							{
@@ -5125,7 +5120,7 @@ namespace flex
 
 		void GLRenderer::GenerateGBuffer()
 		{
-			if (!m_gBufferQuadVertexBufferData.vertexData)
+			if (m_gBufferQuadVertexBufferData.vertexData == nullptr)
 			{
 				GenerateGBufferVertexBuffer();
 			}
@@ -5135,7 +5130,7 @@ namespace flex
 
 			std::string gBufferMatName = "GBuffer material";
 			std::string gBufferName = "GBuffer quad";
-			// Remove existing material if present (this be true when reloading the scene)
+			// Remove existing material if present (this will be true when reloading the scene)
 			{
 				MaterialID existingGBufferMatID = InvalidMaterialID;
 				// TODO: Don't rely on material names!
@@ -5195,8 +5190,6 @@ namespace flex
 			m_GBufferQuadRenderID = InitializeRenderObject(&gBufferQuadCreateInfo);
 
 			m_gBufferQuadVertexBufferData.DescribeShaderVariables(this, m_GBufferQuadRenderID);
-
-			//GLRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
 		}
 
 		u32 GLRenderer::GetRenderObjectCount() const

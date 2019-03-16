@@ -44,23 +44,22 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "8.442, 2.794, 6.157",
-				"scale" : "1.000, 5.360, 5.350"
+				"pos" : "-99.258, 1.794, 6.157"
 			},
 			"mesh" : "morph-tpose-01",
 			"material" : "pbr white"
-		}
+		},
 		{
 			"name" : "PointLight_01",
 			"type" : "point light",
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "2, 0, 0"
+				"pos" : "1.000, 0.000, 0.000"
 			},
 			"point light info" : 
 			{
-				"pos" : "1, 0, 0",
+				"pos" : "1.000, 0.000, 0.000",
 				"color" : "0.49, 0.78, 0.91",
 				"enabled" : true,
 				"brightness" : 182.266006
@@ -79,7 +78,7 @@
 			{
 				"rotation" : "1.195, -0.973, -2.522",
 				"pos" : "0.000, 15.000, 0.000",
-				"color" : "1.00, 1.00, 1.00",
+				"color" : "0.31, 0.31, 0.31",
 				"enabled" : true,
 				"brightness" : 50.000000,
 				"cast shadows" : true,
@@ -87,6 +86,22 @@
 				"shadow map near" : 0.000000,
 				"shadow map far" : 100.000000,
 				"shadow map zoom" : 1.000000
+			}
+		},
+		{
+			"name" : "PointLight_01",
+			"type" : "point light",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "-6.600, 4.700, 1.400"
+			},
+			"point light info" : 
+			{
+				"pos" : "-6.600, 4.700, 1.400",
+				"color" : "1.00, 0.06, 0.06",
+				"enabled" : true,
+				"brightness" : 822.916992
 			}
 		}
 	]

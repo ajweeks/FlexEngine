@@ -474,7 +474,7 @@ namespace flex
 
 			if (ImGui::BeginPopupModal(addScenePopupID.c_str(), NULL, ImGuiWindowFlags_AlwaysAutoResize))
 			{
-				static std::string newSceneName = "Scene_" + IntToString(GetSceneCount(), 2);
+				static std::string newSceneName = "scene_" + IntToString(GetSceneCount(), 2);
 
 				const size_t maxStrLen = 256;
 				newSceneName.resize(maxStrLen);

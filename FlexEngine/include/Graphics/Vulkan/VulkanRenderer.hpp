@@ -156,7 +156,9 @@ namespace flex
 			void GenerateIrradianceSamplerFromCubemap(MaterialID cubemapMaterialID);
 			//void GenerateBRDFLUT(u32 brdfLUTTextureID, glm::vec2 BRDFLUTSize);
 
-			RenderID GetFirstAvailableRenderID() const;
+			MaterialID GetNextAvailableMaterialID();
+			RenderID GetNextAvailableRenderID() const;
+
 			void InsertNewRenderObject(VulkanRenderObject* renderObject);
 			void CreateInstance();
 			void SetupDebugCallback();
@@ -177,6 +179,11 @@ namespace flex
 			void PrepareOffscreenFrameBuffer();
 			void PrepareCubemapFrameBuffer();
 			void PhysicsDebugRender();
+
+			void GenerateGBufferVertexBuffer();
+			void GenerateGBuffer();
+
+			void RemoveMaterial(MaterialID materialID);
 
 			void CreateUniformBuffers(VulkanShader* shader);
 
@@ -229,8 +236,6 @@ namespace flex
 			void UpdateConstantUniformBuffer(UniformOverrides const* overridenUniforms, size_t bufferIndex);
 			void UpdateDynamicUniformBuffer(RenderID renderID, UniformOverrides const * overridenUniforms = nullptr);
 
-			MaterialID GetNextAvailableMaterialID();
-
 			void LoadDefaultShaderCode();
 
 			void DrawImGuiForRenderObjectAndChildren(GameObject* gameObject);
@@ -264,17 +269,8 @@ namespace flex
 
 			u32 GetAlignedUBOSize(u32 unalignedSize);
 
-			/*
-			 * How many materials we expect to have *at most* at any given time
-			 * This is only used to prevent local material reference variables to
-			 * remain valid, a more robust solution would be to store materials
-			 * in a linked list rather than a dynamic array, as well as store material IDs
-			 * rather than raw pointers
-			*/
-			static const u32 MAT_CAPACITY = 25;
-
 			std::vector<VulkanRenderObject*> m_RenderObjects;
-			std::vector<VulkanMaterial> m_Materials;
+			std::map<MaterialID, VulkanMaterial> m_Materials;
 
 			glm::vec2i m_CubemapFramebufferSize;
 			glm::vec2i m_BRDFSize;
