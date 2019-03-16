@@ -4951,7 +4951,7 @@ namespace flex
 
 						if (renderObject->indexed)
 						{
-							vkCmdDrawIndexed(commandBuffer, m_VertexIndexBufferPairs[renderObjectMat.material.shaderID].indexCount, 1, renderObject->indexOffset, 0, 0);
+							vkCmdDrawIndexed(commandBuffer, renderObject->indices->size(), 1, renderObject->indexOffset, 0, 0);
 						}
 						else
 						{
