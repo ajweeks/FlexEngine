@@ -1783,6 +1783,31 @@ namespace flex
 			return false;
 		}
 
+		MaterialID GLRenderer::GetMaterialID(RenderID renderID)
+		{
+			GLRenderObject* renderObject = GetRenderObject(renderID);
+			if (renderObject != nullptr)
+			{
+				return renderObject->materialID;
+			}
+			return InvalidMaterialID;
+		}
+
+		std::vector<std::string> GLRenderer::GetValidMaterialNames() const
+		{
+			std::vector<std::string> result;
+
+			for (auto& matPair : m_Materials)
+			{
+				if (!matPair.second.material.engineMaterial)
+				{
+					result.push_back(matPair.second.material.name);
+				}
+			}
+
+			return result;
+		}
+
 		void GLRenderer::SetTopologyMode(RenderID renderID, TopologyMode topology)
 		{
 			GLRenderObject* renderObject = GetRenderObject(renderID);
@@ -6115,215 +6140,6 @@ namespace flex
 			glBindVertexArray(renderObject->VAO);
 			glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
 			glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)vertexBufferData->VertexBufferSize, vertexBufferData->vertexData, GL_DYNAMIC_DRAW);
-		}
-
-		void GLRenderer::DrawImGuiForRenderID(RenderID renderID)
-		{
-			GLRenderObject* renderObject = GetRenderObject(renderID);
-			if (renderObject)
-			{
-				GameObject* gameObject = renderObject->gameObject;
-
-				GLMaterial& material = m_Materials[renderObject->materialID];
-
-				MaterialID selectedMaterialID = 0;
-				i32 selectedMaterialShortIndex = 0;
-				std::string currentMaterialName = "NONE";
-				i32 matShortIndex = 0;
-				for (i32 i = 0; i < (i32)m_Materials.size(); ++i)
-				{
-					if (m_Materials[i].material.engineMaterial)
-					{
-						continue;
-					}
-
-					if (i == (i32)renderObject->materialID)
-					{
-						selectedMaterialID = i;
-						selectedMaterialShortIndex = matShortIndex;
-						currentMaterialName = material.material.name;
-						break;
-					}
-
-					++matShortIndex;
-				}
-				if (ImGui::BeginCombo("Material", currentMaterialName.c_str()))
-				{
-					matShortIndex = 0;
-					for (i32 i = 0; i < (i32)m_Materials.size(); ++i)
-					{
-						if (m_Materials[i].material.engineMaterial)
-						{
-							continue;
-						}
-
-						bool bSelected = (matShortIndex == selectedMaterialShortIndex);
-						std::string materialName = m_Materials[i].material.name;
-						if (ImGui::Selectable(materialName.c_str(), &bSelected))
-						{
-							MeshComponent* mesh = gameObject->GetMeshComponent();
-							if (mesh)
-							{
-								mesh->SetMaterialID(i);
-							}
-							selectedMaterialShortIndex = matShortIndex;
-						}
-
-						++matShortIndex;
-					}
-
-					ImGui::EndCombo();
-				}
-
-				if (ImGui::BeginDragDropTarget())
-				{
-					const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(m_MaterialPayloadCStr);
-
-					if (payload && payload->Data)
-					{
-						MaterialID* draggedMaterialID = (MaterialID*)payload->Data;
-						if (draggedMaterialID)
-						{
-							MeshComponent* mesh = gameObject->GetMeshComponent();
-							if (mesh)
-							{
-								mesh->SetMaterialID(*draggedMaterialID);
-							}
-						}
-					}
-
-					ImGui::EndDragDropTarget();
-				}
-
-				MeshComponent* mesh = gameObject->GetMeshComponent();
-				if (mesh)
-				{
-					MeshComponent::Type meshType = mesh->GetType();
-					switch (meshType)
-					{
-					case MeshComponent::Type::FILE:
-					{
-						i32 selectedMeshIndex = 0;
-						std::string currentMeshFileName = "NONE";
-						i32 i = 0;
-						for (auto iter : MeshComponent::m_LoadedMeshes)
-						{
-							std::string meshFileName = iter.first;
-							StripLeadingDirectories(meshFileName);
-							if (mesh->GetFileName().compare(meshFileName) == 0)
-							{
-								selectedMeshIndex = i;
-								currentMeshFileName = meshFileName;
-								break;
-							}
-
-							++i;
-						}
-						if (ImGui::BeginCombo("Mesh", currentMeshFileName.c_str()))
-						{
-							i = 0;
-
-							for (auto meshPair : MeshComponent::m_LoadedMeshes)
-							{
-								bool bSelected = (i == selectedMeshIndex);
-								std::string meshFileName = meshPair.first;
-								StripLeadingDirectories(meshFileName);
-								if (ImGui::Selectable(meshFileName.c_str(), &bSelected))
-								{
-									if (selectedMeshIndex != i)
-									{
-										selectedMeshIndex = i;
-										std::string relativeFilePath = meshPair.first;
-										MaterialID matID = mesh->GetMaterialID();
-										DestroyRenderObject(gameObject->GetRenderID());
-										gameObject->SetRenderID(InvalidRenderID);
-										mesh->Destroy();
-										mesh->SetOwner(gameObject);
-										mesh->SetRequiredAttributesFromMaterialID(matID);
-										mesh->LoadFromFile(relativeFilePath);
-									}
-								}
-
-								++i;
-							}
-
-							ImGui::EndCombo();
-						}
-
-						if (ImGui::BeginPopupContextItem("mesh context menu"))
-						{
-							if (ImGui::Button("Remove mesh component"))
-							{
-								gameObject->SetMeshComponent(nullptr);
-							}
-
-							ImGui::EndPopup();
-						}
-
-						if (ImGui::BeginDragDropTarget())
-						{
-							const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(m_MeshPayloadCStr);
-
-							if (payload && payload->Data)
-							{
-								std::string draggedMeshFileName((const char*)payload->Data, payload->DataSize);
-								auto meshIter = MeshComponent::m_LoadedMeshes.find(draggedMeshFileName);
-								if (meshIter != MeshComponent::m_LoadedMeshes.end())
-								{
-									std::string newMeshFilePath = meshIter->first;
-
-									if (mesh->GetRelativeFilePath().compare(newMeshFilePath) != 0)
-									{
-										MaterialID matID = mesh->GetMaterialID();
-										DestroyRenderObject(gameObject->GetRenderID());
-										gameObject->SetRenderID(InvalidRenderID);
-										mesh->Destroy();
-										mesh->SetOwner(gameObject);
-										mesh->SetRequiredAttributesFromMaterialID(matID);
-										mesh->LoadFromFile(newMeshFilePath);
-									}
-								}
-							}
-							ImGui::EndDragDropTarget();
-						}
-					} break;
-					case MeshComponent::Type::PREFAB:
-					{
-						i32 selectedMeshIndex = (i32)mesh->GetShape();
-						std::string currentMeshName = MeshComponent::PrefabShapeToString(mesh->GetShape());
-
-						if (ImGui::BeginCombo("Prefab", currentMeshName.c_str()))
-						{
-							for (i32 i = 0; i < (i32)MeshComponent::PrefabShape::_NONE; ++i)
-							{
-								std::string shapeStr = MeshComponent::PrefabShapeToString((MeshComponent::PrefabShape)i);
-								bool bSelected = (selectedMeshIndex == i);
-								if (ImGui::Selectable(shapeStr.c_str(), &bSelected))
-								{
-									if (selectedMeshIndex != i)
-									{
-										selectedMeshIndex = i;
-										MaterialID matID = mesh->GetMaterialID();
-										DestroyRenderObject(gameObject->GetRenderID());
-										gameObject->SetRenderID(InvalidRenderID);
-										mesh->Destroy();
-										mesh->SetOwner(gameObject);
-										mesh->SetRequiredAttributesFromMaterialID(matID);
-										mesh->LoadPrefabShape((MeshComponent::PrefabShape)i);
-									}
-								}
-							}
-
-							ImGui::EndCombo();
-						}
-					} break;
-					default:
-					{
-						PrintError("Unhandled MeshComponent::Type in GLRenderer::DrawImGuiForRenderID: %d\n", (i32)meshType);
-					} break;
-					}
-				}
-			}
 		}
 
 		void GLRenderer::DrawUntexturedQuad(const glm::vec2& pos,

@@ -40,7 +40,7 @@ namespace flex
 
 		virtual void UpdateVertexData(RenderID renderID, VertexBufferData* vertexBufferData) = 0;
 
-		virtual void DrawImGuiForRenderID(RenderID renderID) = 0;
+		void DrawImGuiForGameObjectWithValidRenderID(GameObject* gameObject);
 
 		virtual void DrawUntexturedQuad(const glm::vec2& pos, AnchorPoint anchor, const glm::vec2& size, const glm::vec4& color) = 0;
 		virtual void DrawUntexturedQuadRaw(const glm::vec2& pos, const glm::vec2& size, const glm::vec4& color) = 0;
@@ -80,7 +80,10 @@ namespace flex
 		virtual Shader& GetShader(ShaderID shaderID)  = 0;
 
 		virtual bool GetMaterialID(const std::string& materialName, MaterialID& materialID) = 0;
+		virtual MaterialID GetMaterialID(RenderID renderID) = 0;
 		virtual bool GetShaderID(const std::string& shaderName, ShaderID& shaderID) = 0;
+
+		virtual std::vector<std::string> GetValidMaterialNames() const = 0;
 
 		virtual void DestroyRenderObject(RenderID renderID) = 0;
 

@@ -790,7 +790,7 @@ namespace flex
 					if (skyboxRenderObject->indexed)
 					{
 						vkCmdBindIndexBuffer(cmdBuf, vertexIndexBufferPair.indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
-						vkCmdDrawIndexed(cmdBuf, vertexIndexBufferPair.indexCount, 1, 0, 0, 0);
+						vkCmdDrawIndexed(cmdBuf, skyboxRenderObject->indices->size(), 1, 0, 0, 0);
 					}
 					else
 					{
@@ -1252,7 +1252,7 @@ namespace flex
 					if (skyboxRenderObject->indexed)
 					{
 						vkCmdBindIndexBuffer(cmdBuf, m_VertexIndexBufferPairs[shaderID].indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
-						vkCmdDrawIndexed(cmdBuf, m_VertexIndexBufferPairs[shaderID].indexCount, 1, 0, 0, 0);
+						vkCmdDrawIndexed(cmdBuf, skyboxRenderObject->indices->size(), 1, 0, 0, 0);
 					}
 					else
 					{
@@ -1681,11 +1681,11 @@ namespace flex
 					if (skyboxRenderObject->indexed)
 					{
 						vkCmdBindIndexBuffer(cmdBuf, m_VertexIndexBufferPairs[shaderID].indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
-						vkCmdDrawIndexed(cmdBuf, m_VertexIndexBufferPairs[shaderID].indexCount, 1, 0, 0, 0);
+						vkCmdDrawIndexed(cmdBuf, skyboxRenderObject->indices->size(), 1, 0, 0, 0);
 					}
 					else
 					{
-						vkCmdDraw(cmdBuf, m_VertexIndexBufferPairs[shaderID].vertexCount, 1, 0, 0);
+						vkCmdDraw(cmdBuf, skyboxRenderObject->vertexBufferData->VertexCount, 1, 0, 0);
 					}
 
 					vkCmdEndRenderPass(cmdBuf);
@@ -2549,11 +2549,6 @@ namespace flex
 		}
 
 		void VulkanRenderer::UpdateVertexData(RenderID renderID, VertexBufferData* vertexBufferData)
-		{
-
-		}
-
-		void VulkanRenderer::DrawImGuiForRenderID(RenderID renderID)
 		{
 
 		}
@@ -4030,6 +4025,31 @@ namespace flex
 			return false;
 		}
 
+		MaterialID VulkanRenderer::GetMaterialID(RenderID renderID)
+		{
+			VulkanRenderObject* renderObject = GetRenderObject(renderID);
+			if (renderObject != nullptr)
+			{
+				return renderObject->materialID;
+			}
+			return InvalidMaterialID;
+		}
+
+		std::vector<std::string> VulkanRenderer::GetValidMaterialNames() const
+		{
+			std::vector<std::string> result;
+
+			for (auto& matPair : m_Materials)
+			{
+				if (!matPair.second.material.engineMaterial)
+				{
+					result.push_back(matPair.second.material.name);
+				}
+			}
+
+			return result;
+		}
+
 		bool VulkanRenderer::GetShaderID(const std::string& shaderName, ShaderID& shaderID)
 		{
 			// TODO: Store shaders using sorted data structure?
@@ -4071,7 +4091,7 @@ namespace flex
 
 			GraphicsPipelineCreateInfo pipelineCreateInfo = {};
 			pipelineCreateInfo.shaderID = material->material.shaderID;
-			pipelineCreateInfo.vertexAttributes = renderObject->vertexBufferData->Attributes;
+			pipelineCreateInfo.vertexAttributes = shader.shader.vertexAttributes;
 			pipelineCreateInfo.topology = renderObject->topology;
 			pipelineCreateInfo.cullMode = renderObject->cullMode;
 			pipelineCreateInfo.enableCulling = renderObject->enableCulling;
@@ -5022,7 +5042,7 @@ namespace flex
 					vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID].vertexBuffer->m_Buffer, offsets);
 					vkCmdBindIndexBuffer(commandBuffer, m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID].indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
 
-					vkCmdDrawIndexed(commandBuffer, m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID].indexCount, 1, 0, 0, 1);
+					vkCmdDrawIndexed(commandBuffer, gBufferObject->indices->size(), 1, 0, 0, 1);
 
 
 					vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);

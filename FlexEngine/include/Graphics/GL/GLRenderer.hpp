@@ -39,8 +39,6 @@ namespace flex
 
 			virtual void UpdateVertexData(RenderID renderID, VertexBufferData* vertexBufferData) override;
 
-			virtual void DrawImGuiForRenderID(RenderID renderID) override;
-
 			virtual void DrawUntexturedQuad(const glm::vec2& pos, AnchorPoint anchor, const glm::vec2& size, const glm::vec4& color) override;
 			virtual void DrawUntexturedQuadRaw(const glm::vec2& pos, const glm::vec2& size, const glm::vec4& color) override;
 			virtual void DrawSprite(const SpriteQuadDrawInfo& drawInfo) override;
@@ -77,6 +75,9 @@ namespace flex
 
 			virtual bool GetShaderID(const std::string& shaderName, ShaderID& shaderID) override;
 			virtual bool GetMaterialID(const std::string& materialName, MaterialID& materialID) override;
+			virtual MaterialID GetMaterialID(RenderID renderID) override;
+
+			virtual std::vector<std::string> GetValidMaterialNames() const override;
 
 			virtual void DestroyRenderObject(RenderID renderID) override;
 
