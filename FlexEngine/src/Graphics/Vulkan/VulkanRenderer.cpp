@@ -2887,7 +2887,10 @@ namespace flex
 			UNREFERENCED_PARAMETER(width);
 			UNREFERENCED_PARAMETER(height);
 
-			m_SwapChainNeedsRebuilding = true;
+			if (width != 0 && height != 0)
+			{
+				m_SwapChainNeedsRebuilding = true;
+			}
 		}
 
 		void VulkanRenderer::OnSceneChanged()
@@ -3553,6 +3556,12 @@ namespace flex
 
 		void VulkanRenderer::RecreateSwapChain()
 		{
+			const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+			if (frameBufferSize.x == 0 && frameBufferSize.y != 0)
+			{
+				return;
+			}
+
 			vkDeviceWaitIdle(m_VulkanDevice->m_LogicalDevice);
 
 			CreateSwapChain();
