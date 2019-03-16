@@ -273,12 +273,6 @@ namespace flex
 			*/
 			static const u32 MAT_CAPACITY = 25;
 
-			//VkCommandBuffer m_ImGuiCommandBuffers[2];
-
-
-			VkCommandBuffer m_ImGuiCommandBuffers[2];
-			VDeleter<VkCommandPool> m_ImGuiCommandPool;
-
 			std::vector<VulkanRenderObject*> m_RenderObjects;
 			std::vector<VulkanMaterial> m_Materials;
 

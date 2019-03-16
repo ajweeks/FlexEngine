@@ -310,33 +310,9 @@ namespace flex
 			ImGui_ImplVulkan_Init(&init_info, m_DeferredCombineRenderPass);
 
 			{
-				// Use any command queue
-				m_ImGuiCommandPool = { m_VulkanDevice->m_LogicalDevice, vkDestroyCommandPool };
-				m_ImGuiCommandPool.replace();
+				// TODO: Use general purpose command buffer manager
+				VkCommandBuffer command_buffer = m_CommandBufferManager.m_CommandBuffers[0];
 
-				for (int i = 0; i < 2; i++)
-				{
-					{
-						VkCommandPoolCreateInfo info = {};
-						info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-						info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-						info.queueFamilyIndex = init_info.QueueFamily;
-						VK_CHECK_RESULT(vkCreateCommandPool(*m_VulkanDevice, &info, nullptr, &m_ImGuiCommandPool));
-					}
-					{
-						VkCommandBufferAllocateInfo info = {};
-						info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-						info.commandPool = m_ImGuiCommandPool;
-						info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-						info.commandBufferCount = 1;
-						VK_CHECK_RESULT(vkAllocateCommandBuffers(*m_VulkanDevice, &info, &m_ImGuiCommandBuffers[i]));
-					}
-				}
-
-				VkCommandBuffer command_buffer = m_ImGuiCommandBuffers[0];
-
-
-				VK_CHECK_RESULT(vkResetCommandPool(*m_VulkanDevice, m_ImGuiCommandPool, 0));
 				VkCommandBufferBeginInfo begin_info = {};
 				begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 				begin_info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
@@ -4931,8 +4907,6 @@ namespace flex
 
 
 					vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
-
-
 					// Forward rendered objects
 
 					// TODO: Batch objects with same materials together like in GL renderer
