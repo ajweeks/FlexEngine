@@ -85,7 +85,7 @@ namespace flex
 	{
 		if (bPrintErrorOnFailure && sceneIndex >= m_Scenes.size())
 		{
-			PrintError("Attempt to set scene to index %i failed, it does not exist in the SceneManager\n",
+			PrintError("Attempt to set scene to index %u failed, it does not exist in the SceneManager\n",
 					   sceneIndex);
 			return false;
 		}
@@ -238,7 +238,7 @@ namespace flex
 
 		if (!addedSceneFileNames.empty())
 		{
-			Print("Added %i scenes to list:\n", addedSceneFileNames.size());
+			Print("Added %u scenes to list:\n", addedSceneFileNames.size());
 			for (std::string& fileName : addedSceneFileNames)
 			{
 				Print("%s, ", fileName.c_str());

@@ -607,8 +607,8 @@ namespace flex
 		{
 			std::string fileName = filePath;
 			StripLeadingDirectories(fileName);
-			Print("Stats about WAV file: %s:\n\tchannel count: %i, samples/s: %i, average bytes/s: %i"
-				  ", block align: %i, bits/sample: %i, chunk size: %i, sub chunk2 ID: \"%s\", sub chunk 2 size: %i\n",
+			Print("Stats about WAV file: %s:\n\tchannel count: %u, samples/s: %u, average bytes/s: %u"
+				  ", block align: %u, bits/sample: %u, chunk size: %u, sub chunk2 ID: \"%s\", sub chunk 2 size: %u\n",
 				  fileName.c_str(),
 				  channelCount,
 				  samplesPerSec,
@@ -633,7 +633,7 @@ namespace flex
 				*format = AL_FORMAT_MONO16;
 				break;
 			default:
-				PrintError("WAVE file contains invalid bitsPerSample (must be 8 or 16): %i\n", bitsPerSample);
+				PrintError("WAVE file contains invalid bitsPerSample (must be 8 or 16): %u\n", bitsPerSample);
 				break;
 			}
 		} break;
@@ -648,13 +648,13 @@ namespace flex
 				*format = AL_FORMAT_STEREO16;
 				break;
 			default:
-				PrintError("WAVE file contains invalid bitsPerSample (must be 8 or 16): %i\n", bitsPerSample);
+				PrintError("WAVE file contains invalid bitsPerSample (must be 8 or 16): %u\n", bitsPerSample);
 				break;
 			}
 		} break;
 		default:
 		{
-			PrintError("WAVE file contains invalid channel count (must be 1 or 2): %i\n", channelCount);
+			PrintError("WAVE file contains invalid channel count (must be 1 or 2): %u\n", channelCount);
 		} break;
 		}
 

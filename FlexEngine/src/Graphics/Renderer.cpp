@@ -1075,7 +1075,7 @@ namespace flex
 
 			if (FT_Load_Glyph(face, glyphIndex, FT_LOAD_RENDER))
 			{
-				PrintError("Failed to load glyph with index %i\n", glyphIndex);
+				PrintError("Failed to load glyph with index %u\n", glyphIndex);
 				continue;
 			}
 

@@ -512,7 +512,7 @@ namespace flex
 			return;
 		}
 
-		Print("Parsed %i meshes\n", s_ParsedMeshes.size());
+		Print("Parsed %u meshes\n", s_ParsedMeshes.size());
 	}
 
 	void BaseScene::ParseFoundMaterialFiles()
@@ -547,7 +547,7 @@ namespace flex
 			return;
 		}
 
-		Print("Parsed %i materials\n", s_ParsedMaterials.size());
+		Print("Parsed %u materials\n", s_ParsedMaterials.size());
 	}
 
 	void BaseScene::ParseFoundPrefabFiles()
@@ -581,7 +581,7 @@ namespace flex
 			return;
 		}
 
-		Print("Parsed %i prefabs\n", s_ParsedPrefabs.size());
+		Print("Parsed %u prefabs\n", s_ParsedPrefabs.size());
 	}
 
 	bool BaseScene::SerializeMeshFile()

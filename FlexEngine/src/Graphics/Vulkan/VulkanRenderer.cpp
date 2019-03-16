@@ -434,7 +434,7 @@ namespace flex
 			if (activeRenderObjectCount > 0)
 			{
 				PrintError("=====================================================\n");
-				PrintError("%i render objects were not destroyed before GL render:\n", activeRenderObjectCount);
+				PrintError("%u render objects were not destroyed before GL render:\n", activeRenderObjectCount);
 
 				for (VulkanRenderObject* renderObject : m_RenderObjects)
 				{
@@ -3255,7 +3255,7 @@ namespace flex
 
 					if (FT_Load_Glyph(face, glyphIndex, FT_LOAD_RENDER))
 					{
-						PrintError("Failed to load glyph with index %i\n", glyphIndex);
+						PrintError("Failed to load glyph with index %u\n", glyphIndex);
 						continue;
 					}
 
@@ -3263,7 +3263,7 @@ namespace flex
 					{
 						if (FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL))
 						{
-							PrintError("Failed to render glyph with index %i\n", glyphIndex);
+							PrintError("Failed to render glyph with index %u\n", glyphIndex);
 							continue;
 						}
 					}
@@ -5162,7 +5162,7 @@ namespace flex
 
 			if (vertexBufferSize == 0 || vertexCount == 0)
 			{
-				PrintError("Failed to create static vertex buffer (no verts use shader index %d)\n", shaderID);
+				PrintError("Failed to create static vertex buffer (no verts use shader index %u)\n", shaderID);
 				return 0;
 			}
 

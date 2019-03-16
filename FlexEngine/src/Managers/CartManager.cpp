@@ -200,7 +200,7 @@ namespace flex
 								if (newCartChainID != InvalidCartChainID &&
 									newCartChainID >= m_CartChains.size())
 								{
-									PrintError("Cart chain update failed! Cart has invalid cart chain ID: %d, num cart chains: %d\n", newCartChainID, m_CartChains.size());
+									PrintError("Cart chain update failed! Cart has invalid cart chain ID: %u, num cart chains: %u\n", newCartChainID, m_CartChains.size());
 								}
 							}
 							else if (c1 == InvalidCartChainID)
@@ -220,7 +220,7 @@ namespace flex
 								if (m_Carts[i]->chainID != InvalidCartChainID &&
 									m_Carts[i]->chainID >= m_CartChains.size())
 								{
-									PrintError("Cart chain update failed! Cart has invalid cart chain ID: %d, num cart chains: %d\n", m_Carts[i]->chainID, m_CartChains.size());
+									PrintError("Cart chain update failed! Cart has invalid cart chain ID: %u, num cart chains: %u\n", m_Carts[i]->chainID, m_CartChains.size());
 								}
 							}
 							else if (c2 == InvalidCartChainID)
@@ -240,7 +240,7 @@ namespace flex
 								if (m_Carts[j]->chainID != InvalidCartChainID &&
 									m_Carts[j]->chainID >= m_CartChains.size())
 								{
-									PrintError("Cart chain update failed! Cart has invalid cart chain ID: %d, num cart chains: %d\n", m_Carts[j]->chainID, m_CartChains.size());
+									PrintError("Cart chain update failed! Cart has invalid cart chain ID: %u, num cart chains: %u\n", m_Carts[j]->chainID, m_CartChains.size());
 								}
 							}
 							else
@@ -329,7 +329,7 @@ namespace flex
 				if (cart->chainID != InvalidCartChainID &&
 					cart->chainID >= m_CartChains.size())
 				{
-					PrintError("Cart chain update failed! Cart has invalid cart chain ID: %d, num cart chains: %d\n", cart->chainID, m_CartChains.size());
+					PrintError("Cart chain update failed! Cart has invalid cart chain ID: %u, num cart chains: %u\n", cart->chainID, m_CartChains.size());
 				}
 			}
 		}

@@ -23,7 +23,7 @@ namespace flex
 		vertexData = (real*)malloc(VertexBufferSize);
 		if (vertexData == nullptr)
 		{
-			PrintError("Failed to allocate memory required for vertex buffer data (%d bytes)\n", VertexBufferSize);
+			PrintError("Failed to allocate memory required for vertex buffer data (%u bytes)\n", VertexBufferSize);
 			return;
 		}
 

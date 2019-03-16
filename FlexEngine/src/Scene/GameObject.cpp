@@ -2536,10 +2536,10 @@ namespace flex
 		{
 			ImGui::Checkbox("Enabled", &m_bVisible);
 
-			glm::vec3 pos = m_Transform.GetLocalPosition();
-			if (ImGui::DragFloat3("Position", &pos.x, 0.1f))
+			glm::vec3 position = m_Transform.GetLocalPosition();
+			if (ImGui::DragFloat3("Position", &position.x, 0.1f))
 			{
-				m_Transform.SetLocalPosition(pos);
+				m_Transform.SetLocalPosition(position);
 			}
 			glm::vec3 dirtyRot = glm::degrees(glm::eulerAngles(m_Transform.GetLocalRotation()));
 			glm::vec3 cleanedRot;

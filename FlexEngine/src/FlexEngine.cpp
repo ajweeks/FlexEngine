@@ -190,7 +190,7 @@ namespace flex
 		Print("FlexEngine [%s] - Config: [%s x32] - Compiler: [%s %s]\n", nowStr.c_str(), configStr, m_CompilerName.c_str(), m_CompilerVersion.c_str());
 
 		assert(m_RendererCount > 0); // At least one renderer must be enabled! (see stdafx.h)
-		Print("%i renderer%s enabled, Current renderer: %s\n",
+		Print("%u renderer%s enabled, Current renderer: %s\n",
 			m_RendererCount, (m_RendererCount > 1 ? "s" : ""), m_RendererName.c_str());
 
 		DeselectCurrentlySelectedObjects();
@@ -1205,7 +1205,7 @@ namespace flex
 
 		static const std::string titleString = (std::string("Flex Engine v") + EngineVersionString());
 		static const char* titleCharStr = titleString.c_str();
-		ImGuiWindowFlags mainWindowFlags = ImGuiWindowFlags_NoMove;
+		ImGuiWindowFlags mainWindowFlags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoNavInputs;
 		glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 		m_ImGuiMainWindowWidthMax = frameBufferSize.x - 100.0f;
 		ImGui::SetNextWindowSizeConstraints(ImVec2(350, 300),

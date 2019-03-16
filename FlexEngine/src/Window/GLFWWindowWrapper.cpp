@@ -896,7 +896,7 @@ namespace flex
 		}
 
 		PrintError("-----------------------------------------\n");
-		PrintError("GL Debug message (%i): %s\n", id, message);
+		PrintError("GL Debug message (%u): %s\n", id, message);
 
 		switch (source)
 		{

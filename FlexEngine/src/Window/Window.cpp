@@ -178,7 +178,7 @@ namespace flex
 		m_bIconified = bIconified;
 
 		ImGuiIO& io = ImGui::GetIO();
-		io.DisplaySize = ImVec2(width, height);
+		io.DisplaySize = ImVec2((real)width, (real)height);
 
 		OnSizeChanged(width, height);
 
