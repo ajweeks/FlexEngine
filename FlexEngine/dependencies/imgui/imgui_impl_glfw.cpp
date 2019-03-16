@@ -212,36 +212,37 @@ void ImGui_ImplGlfw_Shutdown()
 
 static void ImGui_ImplGlfw_UpdateMousePosAndButtons()
 {
-    // Update buttons
-    ImGuiIO& io = ImGui::GetIO();
-    for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++)
-    {
-        // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
-        io.MouseDown[i] = g_MouseJustPressed[i] || glfwGetMouseButton(g_Window, i) != 0;
-        g_MouseJustPressed[i] = false;
-    }
-
+	// @THIRD PARTY CODE BEGIN: AJ Weeks 2019-03-16 - We handle this in InputManager
+    //// Update buttons
+    //ImGuiIO& io = ImGui::GetIO();
+    //for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++)
+    //{
+    //    // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
+    //    io.MouseDown[i] = g_MouseJustPressed[i] || glfwGetMouseButton(g_Window, i) != 0;
+    //    g_MouseJustPressed[i] = false;
+    //}
     // Update mouse position
-    const ImVec2 mouse_pos_backup = io.MousePos;
-    io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
+    //const ImVec2 mouse_pos_backup = io.MousePos;
+    //io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
 #ifdef __EMSCRIPTEN__
-    const bool focused = true; // Emscripten
+    //const bool focused = true; // Emscripten
 #else
-    const bool focused = glfwGetWindowAttrib(g_Window, GLFW_FOCUSED) != 0;
+    //const bool focused = glfwGetWindowAttrib(g_Window, GLFW_FOCUSED) != 0;
 #endif
-    if (focused)
-    {
-        if (io.WantSetMousePos)
-        {
-            glfwSetCursorPos(g_Window, (double)mouse_pos_backup.x, (double)mouse_pos_backup.y);
-        }
-        else
-        {
-            double mouse_x, mouse_y;
-            glfwGetCursorPos(g_Window, &mouse_x, &mouse_y);
-            io.MousePos = ImVec2((float)mouse_x, (float)mouse_y);
-        }
-    }
+    //if (focused)
+    //{
+    //    if (io.WantSetMousePos)
+    //    {
+    //        glfwSetCursorPos(g_Window, (double)mouse_pos_backup.x, (double)mouse_pos_backup.y);
+    //    }
+    //    else
+    //    {
+    //        double mouse_x, mouse_y;
+    //        glfwGetCursorPos(g_Window, &mouse_x, &mouse_y);
+    //        io.MousePos = ImVec2((float)mouse_x, (float)mouse_y);
+    //    }
+    //}
+	// @THIRD PARTY CODE END
 }
 
 static void ImGui_ImplGlfw_UpdateMouseCursor()

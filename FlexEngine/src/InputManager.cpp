@@ -62,27 +62,30 @@ namespace flex
 		}
 
 #if 0 // Log mouse states
-		Print("states:   ", false);
+		Print("states:   ");
 		for (u32 i = 0; i < MOUSE_BUTTON_COUNT; ++i)
 		{
-			Print(std::string((m_MouseButtonStates & (1 << i)) != 0 ? "1" : "0") + ", ", false);
+			Print("%d, ", (m_MouseButtonStates & (1 << i)) != 0 ? 1 : 0);
 		}
-		Logger::LogNewLine();
+		Print("\n");
 
-		Print("pressed:  ", false);
+		Print("pressed:  ");
 		for (u32 i = 0; i < MOUSE_BUTTON_COUNT; ++i)
 		{
-			Print(std::string((m_MouseButtonsPressed & (1 << i)) != 0 ? "1" : "0") + ", ", false);
+			Print("%d, ",  (m_MouseButtonsPressed & (1 << i)) != 0 ? 1 : 0);
 		}
-		Logger::LogNewLine();
+		Print("\n");
 
-		Print("released: ", false);
+		Print("released: ");
 		for (u32 i = 0; i < MOUSE_BUTTON_COUNT; ++i)
 		{
-			Print(std::string((m_MouseButtonsReleased & (1 << i)) != 0 ? "1" : "0") + ", ", false);
+			Print("%d, ", (m_MouseButtonsReleased & (1 << i)) != 0 ? 1 : 0);
 		}
-		Logger::LogNewLine();
-		Logger::LogNewLine();
+		Print("\n");
+
+		ImGuiIO& io = ImGui::GetIO();
+		Print("ImGui::IO.mousePos: %.1f, %.1f\n", io.MousePos.x, io.MousePos.y);
+		Print("\n");
 #endif
 
 		// Mouse buttons
@@ -1028,8 +1031,7 @@ namespace flex
 
 
 		ImGuiIO& io = ImGui::GetIO();
-		io.MousePos = m_MousePosition;
-		io.MousePosPrev = m_PrevMousePosition;
+		io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
 		io.MouseWheel = m_ScrollYOffset;
 	}
 

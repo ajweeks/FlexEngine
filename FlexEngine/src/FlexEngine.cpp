@@ -1147,13 +1147,13 @@ namespace flex
 
 			if (ImGui::BeginMenu("Edit"))
 			{
-				if (ImGui::BeginMenu("Add to inventory"))
+				BaseScene* scene = g_SceneManager->CurrentScene();
+				Player* player = scene->GetPlayer(0);
+				if (player != nullptr && ImGui::BeginMenu("Add to inventory"))
 				{
 					if (ImGui::MenuItem("Cart"))
 					{
-						BaseScene* scene = g_SceneManager->CurrentScene();
 						CartManager* cartManager = scene->GetCartManager();
-						Player* player = scene->GetPlayer(0);
 						CartID cartID = cartManager->CreateCart(scene->GetUniqueObjectName("Cart_", 2));
 						Cart* cart = cartManager->GetCart(cartID);
 						player->AddToInventory(cart);
@@ -1161,9 +1161,7 @@ namespace flex
 
 					if (ImGui::MenuItem("Engine cart"))
 					{
-						BaseScene* scene = g_SceneManager->CurrentScene();
 						CartManager* cartManager = scene->GetCartManager();
-						Player* player = scene->GetPlayer(0);
 						CartID cartID = cartManager->CreateEngineCart(scene->GetUniqueObjectName("EngineCart_", 2));
 						EngineCart* engineCart = (EngineCart*)cartManager->GetCart(cartID);
 						player->AddToInventory(engineCart);
@@ -1171,8 +1169,6 @@ namespace flex
 
 					if (ImGui::MenuItem("Mobile liquid box"))
 					{
-						BaseScene* scene = g_SceneManager->CurrentScene();
-						Player* player = scene->GetPlayer(0);
 						MobileLiquidBox* box = new MobileLiquidBox();
 						scene->AddObjectAtEndOFFrame(box);
 						player->AddToInventory(box);
