@@ -641,6 +641,7 @@ namespace flex
 
 		if (m_PrevMousePosition.x == -1.0f)
 		{
+			io.MousePosPrev = m_MousePosition;
 			m_PrevMousePosition = m_MousePosition;
 		}
 

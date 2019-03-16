@@ -264,13 +264,14 @@ namespace flex
 
 		LoadCommonSettingsFromDisk();
 
+		ImGui::CreateContext();
+		SetupImGuiStyles();
+
 		g_SceneManager->InitializeCurrentScene();
 		g_Renderer->PostInitialize();
 		g_SceneManager->PostInitializeCurrentScene();
 
 		g_InputManager->Initialize();
-
-		SetupImGuiStyles();
 
 		g_CameraManager->Initialize();
 
@@ -1014,9 +1015,10 @@ namespace flex
 		io.MouseDrawCursor = false;
 
 		//io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+		io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange; // glfwSetCursor overruns buffer somewhere (currently Window::m_FrameBufferSize.y...)
 
-		//std::string fontFilePath(RESOURCE_LOCATION u8"fonts/lucon.ttf");
-		//io.Fonts->AddFontFromFileTTF(fontFilePath.c_str(), 13);
+		std::string fontFilePath(RESOURCE_LOCATION u8"fonts/lucon.ttf");
+		io.Fonts->AddFontFromFileTTF(fontFilePath.c_str(), 13);
 
 		io.FontGlobalScale = g_Monitor->contentScaleX;
 

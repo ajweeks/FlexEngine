@@ -404,8 +404,6 @@ namespace flex
 				}
 			}
 
-			ImGui::CreateContext();
-
 			// G-buffer objects
 			glGenFramebuffers(1, &m_gBufferHandle);
 			glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
@@ -4770,6 +4768,7 @@ namespace flex
 						static const i32 strStartLen = 16;
 						static_assert(MAX_NUM_POINT_LIGHTS <= 99, "More than 99 point lights are allowed, strStartLen must be larger to compensate for more digits");
 						char pointLightStrStart[strStartLen];
+						// TODO: Replace with safer alternative
 						strcpy_s(pointLightStrStart, "pointLights[");
 						strcat_s(pointLightStrStart, numberCStr);
 						strcat_s(pointLightStrStart, "]");
