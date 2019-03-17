@@ -205,14 +205,16 @@ void main()
 
 	fragColor = vec4(color, 1.0);
 
-	// Visualize normal map:
-	// fragColor = vec4(N, 1); return;
+	// fragColor = vec4(F, 1);
 
-	// Visualize tangents:
-	//fragColor = vec4(vec3(ex_TBN[0]), 1); return;
+	// Visualize normals:
+	//fragColor = vec4(worldPos*0.1, 1); return;
+
+	// Visualize normals:
+	//fragColor = vec4(N, 1); return;
 
 	// Visualize screen coords:
-	// fragColor = vec4(ex_TexCoord, 0, 1); return;
+	//fragColor = vec4(ex_TexCoord, 0, 1); return;
 
 	// Visualize metallic:
 	//fragColor = vec4(metallic, metallic, metallic, 1); return;

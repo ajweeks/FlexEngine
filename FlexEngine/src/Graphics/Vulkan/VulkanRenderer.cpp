@@ -3488,7 +3488,7 @@ namespace flex
 		void VulkanRenderer::RecreateSwapChain()
 		{
 			const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
-			if (frameBufferSize.x == 0 && frameBufferSize.y != 0)
+			if (frameBufferSize.x == 0 || frameBufferSize.y == 0)
 			{
 				return;
 			}

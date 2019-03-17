@@ -15,26 +15,26 @@ Flex Engine is my personal game engine which I began work on in February 2017 as
 - Profiling tools
 - In-game scripting language
 
-![](http://i.imgur.com/3XQGcDD.png)
+![](FlexEngine/screenshots/2018-07-08_21-52-09.png)
 
-![](https://i.imgur.com/DYpYMhH.jpg)
+![](FlexEngine/screenshots/2018-07-10_profiling-visualization-06.jpg)
 **Profiler overlay showing a breakdown the CPU-time of a single frame**
 
-![](https://i.imgur.com/LbRIVav.jpg)
+![](FlexEngine/screenshots/2017-10-19_16-17-00-G-Buffer.jpg)
 **GBuffer (top-left to bottom-right):** position, albedo, normal, final image, depth, metallic, AO, roughness
 
-![](http://i.imgur.com/qtP8Mmm.png)
+![](FlexEngine/screenshots/2017-10-08_11-38-06-combined.jpg)
 
-![](http://i.imgur.com/oSIsXt7.png)
+![](FlexEngine/screenshots/2017-10-08_10-46-22-combined.jpg)
 
-![](http://i.imgur.com/KBCXvKs.png)
+![](FlexEngine/screenshots/2017-10-08_10-33-45-combined.jpg)
 
 <div style="display: inline-block; padding-bottom: 20px">
-  <img src="http://i.imgur.com/ACLLZ5B.png" width="49%"/>
-  <img src="http://i.imgur.com/e0mKpDX.png" width="49%" style="float: right"/>
+  <img src="FlexEngine/screenshots/2017-10-08_14-35-01.png" width="49%"/>
+  <img src="FlexEngine/screenshots/2017-10-08_14-41-35.png" width="49%" style="float: right"/>
 </div>
 
-![](http://i.imgur.com/mqszTPr.gif)
+![](FlexEngine/screenshots/2017-10-08_10-41-01_360_edited.gif)
 
 See more screenshots [here](https://github.com/ajweeks/FlexEngine/tree/development/FlexEngine/screenshots)
 
@@ -60,9 +60,9 @@ Flex Engine uses the following open-source libraries:
  - [glfw](https://github.com/glfw/glfw) - Window creation, input handling
  - [glm](https://github.com/g-truc/glm) - Math operations
  - [ImGui](https://github.com/ocornut/imgui) - User interface
- - [OpenAL](https://www.openal.org/) - Audio loading and playback
+ - [OpenAL](https://www.openal.org) - Audio loading and playback
  - [stb](https://github.com/nothings/stb) - Image loading
- - [tinygltf](https://github.com/syoyo/tinygltf) - Mesh loading
+ - [cgltf](https://github.com/jkuhlmann/cgltf) - Mesh loading
 
 ## License
 Flex engine is released as open source under The MIT License. See [license.md](license.md) for details.
@@ -70,12 +70,12 @@ Flex engine is released as open source under The MIT License. See [license.md](l
 ## Acknowledgements
 A huge thank you must be given to the following individuals and organizations for their incredibly useful resources:
  - Baldur Karlsson of [github.com/baldurk/renderdoc](https://github.com/baldurk/renderdoc)
- - Alexander Overvoorde of [vulkan-tutorial.com](https://vulkan-tutorial.com/)
+ - Alexander Overvoorde of [vulkan-tutorial.com](https://vulkan-tutorial.com)
  - Sascha Willems of [github.com/SaschaWillems/Vulkan](https://github.com/SaschaWillems/Vulkan)
- - Joey de Vries of [learnopengl.com](https://learnopengl.com/)
+ - Joey de Vries of [learnopengl.com](https://learnopengl.com)
  - Andrew Maximov for the pistol model and textures [artisaverb.info/PBT.html ](http://artisaverb.info/PBT.html)
- - [FreePBR.com](http://FreePBR.com) for the high-quality PBR textures
+ - [FreePBR.com](https://FreePBR.com) for the high-quality PBR textures
  - All authors and contributors to the open-source libraries mentioned above
 
 ## Blog
- Stay (somewhat) up to date about this project on my blog at [ajweeks.com/blog](http://ajweeks.com/blog/)
+ Stay (somewhat) up to date about this project on my blog at [ajweeks.com/blog](https://ajweeks.com/blog/)

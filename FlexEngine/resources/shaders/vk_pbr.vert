@@ -45,7 +45,7 @@ layout (binding = 1) uniform UBODynamic
 void main()
 {
     vec4 worldPos = uboDynamic.model * vec4(in_Position, 1.0);
-    ex_WorldPos = worldPos.xyz; 
+    ex_WorldPos = worldPos.xyz;
 	
 	ex_TexCoord = in_TexCoord;
 

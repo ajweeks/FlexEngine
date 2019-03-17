@@ -1448,7 +1448,12 @@ namespace flex
 				if (!lastOpenedSceneName.empty())
 				{
 					// Don't print errors if not found, file might have been deleted since last session
-					g_SceneManager->SetCurrentScene(lastOpenedSceneName, false);
+					if (!g_SceneManager->SetCurrentScene(lastOpenedSceneName, false))
+					{
+						g_SceneManager->SetNextSceneActive();
+						g_SceneManager->InitializeCurrentScene();
+						g_SceneManager->PostInitializeCurrentScene();
+					}
 				}
 
 				bool bRenderImGui;
@@ -2095,12 +2100,16 @@ namespace flex
 
 		if (action == Action::DBG_ENTER_NEXT_SCENE)
 		{
-			g_SceneManager->SetNextSceneActiveAndInit();
+			g_SceneManager->SetNextSceneActive();
+			g_SceneManager->InitializeCurrentScene();
+			g_SceneManager->PostInitializeCurrentScene();
 			return EventReply::CONSUMED;
 		}
 		else if (action == Action::DBG_ENTER_PREV_SCENE)
 		{
-			g_SceneManager->SetPreviousSceneActiveAndInit();
+			g_SceneManager->SetPreviousSceneActive();
+			g_SceneManager->InitializeCurrentScene();
+			g_SceneManager->PostInitializeCurrentScene();
 			return EventReply::CONSUMED;
 		}
 

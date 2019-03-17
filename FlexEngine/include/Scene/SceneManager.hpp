@@ -24,8 +24,8 @@ namespace flex
 		bool SetCurrentScene(u32 sceneIndex, bool bPrintErrorOnFailure = true);
 		bool SetCurrentScene(BaseScene* scene, bool bPrintErrorOnFailure = true);
 		bool SetCurrentScene(const std::string& sceneFileName, bool bPrintErrorOnFailure = true);
-		void SetNextSceneActiveAndInit();
-		void SetPreviousSceneActiveAndInit();
+		void SetNextSceneActive();
+		void SetPreviousSceneActive();
 		void ReloadCurrentScene();
 
 		// Adds all scenes found in scenes directory

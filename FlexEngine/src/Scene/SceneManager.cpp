@@ -143,7 +143,7 @@ namespace flex
 		{
 			if (m_Scenes[i]->GetFileName().compare(sceneFileName) == 0)
 			{
-				return SetCurrentScene(i,bPrintErrorOnFailure);
+				return SetCurrentScene(i, bPrintErrorOnFailure);
 			}
 		}
 
@@ -155,22 +155,25 @@ namespace flex
 		return false;
 	}
 
-	void SceneManager::SetNextSceneActiveAndInit()
+	void SceneManager::SetNextSceneActive()
 	{
 		const size_t sceneCount = m_Scenes.size();
 		if (sceneCount == 1)
 		{
+			m_CurrentSceneIndex = 0;
 			return;
+		}
+
+		if (m_CurrentSceneIndex == u32_max)
+		{
+			m_CurrentSceneIndex = 0;
 		}
 
 		u32 newCurrentSceneIndex = (m_CurrentSceneIndex + 1) % m_Scenes.size();
 		SetCurrentScene(newCurrentSceneIndex);
-
-		InitializeCurrentScene();
-		PostInitializeCurrentScene();
 	}
 
-	void SceneManager::SetPreviousSceneActiveAndInit()
+	void SceneManager::SetPreviousSceneActive()
 	{
 		const size_t sceneCount = m_Scenes.size();
 		if (sceneCount == 1)
@@ -181,9 +184,6 @@ namespace flex
 		// Loop around to previous index but stay positive cause things are unsigned
 		u32 newCurrentSceneIndex = (m_CurrentSceneIndex + m_Scenes.size() - 1) % m_Scenes.size();
 		SetCurrentScene(newCurrentSceneIndex);
-
-		InitializeCurrentScene();
-		PostInitializeCurrentScene();
 	}
 
 	void SceneManager::ReloadCurrentScene()
@@ -413,7 +413,9 @@ namespace flex
 
 			if (ImGui::Button(arrowPrevStr))
 			{
-				SetPreviousSceneActiveAndInit();
+				SetPreviousSceneActive();
+				InitializeCurrentScene();
+				PostInitializeCurrentScene();
 			}
 
 			ImGui::SameLine();
@@ -437,7 +439,9 @@ namespace flex
 
 			if (ImGui::Button(arrowNextStr))
 			{
-				SetNextSceneActiveAndInit();
+				SetNextSceneActive();
+				InitializeCurrentScene();
+				PostInitializeCurrentScene();
 			}
 
 			i32 sceneItemWidth = 240;

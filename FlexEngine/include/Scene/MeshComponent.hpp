@@ -95,13 +95,11 @@ namespace flex
 		// First field is relative file path (e.g. RESOURCE_LOCATION  "meshes/cube.glb")
 		static std::map<std::string, LoadedMesh*> m_LoadedMeshes;
 
-		static bool GetLoadedMesh(const std::string& relativeFilePath, LoadedMesh** loadedMesh);
-
 		static LoadedMesh* LoadMesh(const std::string& relativeFilePath, MeshImportSettings* importSettings = nullptr);
+		static bool FindPreLoadedMesh(const std::string& relativeFilePath, LoadedMesh** loadedMesh);
 
 	private:
 		real CalculateBoundingSphereScale() const;
-
 		bool CalculateTangents(VertexBufferData::CreateInfo& createInfo);
 
 		GameObject* m_OwningGameObject = nullptr;

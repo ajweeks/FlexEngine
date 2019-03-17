@@ -6016,7 +6016,7 @@ namespace flex
 							std::string relativeFilePath = relativeDirPath + fileNameAndExtension;
 
 							LoadedMesh* existingMesh = nullptr;
-							if (MeshComponent::GetLoadedMesh(relativeFilePath, &existingMesh))
+							if (MeshComponent::FindPreLoadedMesh(relativeFilePath, &existingMesh))
 							{
 								i32 j = 0;
 								for (auto meshPair : MeshComponent::m_LoadedMeshes)

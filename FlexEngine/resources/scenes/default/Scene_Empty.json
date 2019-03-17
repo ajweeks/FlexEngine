@@ -4,27 +4,13 @@
 	"objects" : 
 	[
 		{
-			"name" : "Cornell Box",
-			"type" : "object",
-			"visible" : true,
-			"transform" : 
-			{
-				"pos" : "-28.690, 0.000, -0.001",
-				"rot" : "1.570, 1.570, 3.141",
-				"scale" : "19.999, 20.000, 19.999"
-			},
-			"mesh" : "cornell-box",
-			"material" : "cornell"
-		},
-		{
 			"name" : "Reflection Probe 01",
 			"type" : "reflection probe",
 			"visible" : false,
 			"transform" : 
 			{
 				"pos" : "0.000, 18.600, 0.000"
-			},
-			"material" : "pbr chrome"
+			}
 		},
 		{
 			"name" : "Skybox",
@@ -39,31 +25,17 @@
 			}
 		},
 		{
-			"name" : "Morph",
+			"name" : "ab",
 			"type" : "object",
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-99.258, 1.794, 6.157"
+				"pos" : "-99.258, 1.794, 6.157",
+				"rot" : "-3.142, 0.206, -3.142",
+				"scale" : "3.770, 2.880, 2.570"
 			},
-			"mesh" : "morph-tpose-01",
+			"mesh" : "sphere",
 			"material" : "pbr white"
-		},
-		{
-			"name" : "PointLight_01",
-			"type" : "point light",
-			"visible" : true,
-			"transform" : 
-			{
-				"pos" : "1.000, 0.000, 0.000"
-			},
-			"point light info" : 
-			{
-				"pos" : "1.000, 0.000, 0.000",
-				"color" : "0.49, 0.78, 0.91",
-				"enabled" : true,
-				"brightness" : 182.266006
-			}
 		},
 		{
 			"name" : "Directional Light",
@@ -78,7 +50,7 @@
 			{
 				"rotation" : "1.195, -0.973, -2.522",
 				"pos" : "0.000, 15.000, 0.000",
-				"color" : "0.31, 0.31, 0.31",
+				"color" : "0.97, 0.97, 0.97",
 				"enabled" : true,
 				"brightness" : 50.000000,
 				"cast shadows" : true,
@@ -86,22 +58,6 @@
 				"shadow map near" : 0.000000,
 				"shadow map far" : 100.000000,
 				"shadow map zoom" : 1.000000
-			}
-		},
-		{
-			"name" : "PointLight_01",
-			"type" : "point light",
-			"visible" : true,
-			"transform" : 
-			{
-				"pos" : "-6.600, 4.700, 1.400"
-			},
-			"point light info" : 
-			{
-				"pos" : "-6.600, 4.700, 1.400",
-				"color" : "1.00, 0.06, 0.06",
-				"enabled" : true,
-				"brightness" : 822.916992
 			}
 		}
 	]

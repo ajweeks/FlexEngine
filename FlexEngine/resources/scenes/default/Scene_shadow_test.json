@@ -1,6 +1,6 @@
 {
 	"version" : 1,
-	"name" : "Scene_shadow_test",
+	"name" : "scene_shadow_test",
 	"objects" : 
 	[
 		{
@@ -22,8 +22,7 @@
 			"transform" : 
 			{
 				"pos" : "0.000, 15.600, 0.000"
-			},
-			"material" : "pbr chrome"
+			}
 		},
 		{
 			"name" : "ground plane",
@@ -57,6 +56,81 @@
 			"transform" : 
 			{
 				"pos" : "17.457, 2.794, 0.000",
+				"scale" : "1.000, 5.360, 5.350"
+			},
+			"mesh" : "cube",
+			"material" : "sphere 02",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500, 0.500, 0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 0.000000,
+				"kinematic" : true,
+				"static" : true,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "Wall 02",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "14.513, 2.794, 1.351",
+				"scale" : "1.000, 5.360, 5.350"
+			},
+			"mesh" : "cube",
+			"material" : "sphere 01",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500, 0.500, 0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 0.000000,
+				"kinematic" : true,
+				"static" : true,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "Wall 03",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "11.452, 2.794, 3.254",
+				"scale" : "1.000, 5.360, 5.350"
+			},
+			"mesh" : "cube",
+			"material" : "pbr red",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500, 0.500, 0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 0.000000,
+				"kinematic" : true,
+				"static" : true,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "Wall 04",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "8.442, 2.794, 6.157",
 				"scale" : "1.000, 5.360, 5.350"
 			},
 			"mesh" : "cube",
@@ -119,11 +193,11 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-0.500, 4.400, -12.000",
+				"pos" : "0.107, 4.400, -12.000",
 				"scale" : "1.500, 1.500, 1.500"
 			},
-			"mesh" : "sphere",
-			"material" : "pbr white"
+			"mesh" : "cone",
+			"material" : "pbr red"
 		},
 		{
 			"name" : "New_Game_Object_01",
@@ -210,7 +284,7 @@
 			{
 				"rotation" : "0.529, -0.400, -0.951",
 				"pos" : "0.000, 15.000, 0.000",
-				"color" : "1.00, 1.00, 1.00",
+				"color" : "0.25, 0.25, 0.25",
 				"enabled" : true,
 				"brightness" : 5.000000,
 				"cast shadows" : true,
@@ -218,81 +292,6 @@
 				"shadow map near" : -80.000000,
 				"shadow map far" : 100.000000,
 				"shadow map zoom" : 30.000000
-			}
-		},
-		{
-			"name" : "Wall 02",
-			"type" : "object",
-			"visible" : true,
-			"transform" : 
-			{
-				"pos" : "14.513, 2.794, 1.351",
-				"scale" : "1.000, 5.360, 5.350"
-			},
-			"mesh" : "cube",
-			"material" : "pbr white",
-			"collider" : 
-			{
-				"shape" : "box",
-				"half extents" : "0.500, 0.500, 0.500"
-			},
-			"rigid body" : 
-			{
-				"mass" : 0.000000,
-				"kinematic" : true,
-				"static" : true,
-				"mask" : -1,
-				"group" : -1
-			}
-		},
-		{
-			"name" : "Wall 03",
-			"type" : "object",
-			"visible" : true,
-			"transform" : 
-			{
-				"pos" : "11.452, 2.794, 3.254",
-				"scale" : "1.000, 5.360, 5.350"
-			},
-			"mesh" : "cube",
-			"material" : "pbr white",
-			"collider" : 
-			{
-				"shape" : "box",
-				"half extents" : "0.500, 0.500, 0.500"
-			},
-			"rigid body" : 
-			{
-				"mass" : 0.000000,
-				"kinematic" : true,
-				"static" : true,
-				"mask" : -1,
-				"group" : -1
-			}
-		},
-		{
-			"name" : "Wall 04",
-			"type" : "object",
-			"visible" : true,
-			"transform" : 
-			{
-				"pos" : "8.442, 2.794, 6.157",
-				"scale" : "1.000, 5.360, 5.350"
-			},
-			"mesh" : "cube",
-			"material" : "pbr white",
-			"collider" : 
-			{
-				"shape" : "box",
-				"half extents" : "0.500, 0.500, 0.500"
-			},
-			"rigid body" : 
-			{
-				"mass" : 0.000000,
-				"kinematic" : true,
-				"static" : true,
-				"mask" : -1,
-				"group" : -1
 			}
 		}
 	]
