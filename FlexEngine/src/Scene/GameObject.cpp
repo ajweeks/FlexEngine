@@ -2408,11 +2408,11 @@ namespace flex
 		};
 		captureMatID = g_Renderer->InitializeMaterial(&probeCaptureMatCreateInfo);
 
-		MeshComponent* sphereMesh = new MeshComponent(matID, this);
+		//MeshComponent* sphereMesh = new MeshComponent(matID, this);
 
-		assert(m_MeshComponent == nullptr);
-		sphereMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/sphere.glb");
-		SetMeshComponent(sphereMesh);
+		//assert(m_MeshComponent == nullptr);
+		//sphereMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/sphere.glb");
+		//SetMeshComponent(sphereMesh);
 
 		//std::string captureName = m_Name + "_capture";
 		//GameObject* captureObject = new GameObject(captureName, GameObjectType::_NONE);
