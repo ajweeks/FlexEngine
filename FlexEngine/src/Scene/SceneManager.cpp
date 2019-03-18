@@ -54,9 +54,10 @@ namespace flex
 
 		CurrentScene()->Initialize();
 
-		g_Renderer->OnSceneChanged();
+		g_Renderer->OnPreSceneChange();
 		g_EngineInstance->OnSceneChanged();
 		g_CameraManager->OnSceneChanged();
+		g_Renderer->OnPostSceneChange();
 	}
 
 	void SceneManager::PostInitializeCurrentScene()

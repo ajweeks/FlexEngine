@@ -31,7 +31,7 @@ namespace flex
 			virtual RenderID InitializeRenderObject(const RenderObjectCreateInfo* createInfo) override;
 			virtual void PostInitializeRenderObject(RenderID renderID) override;
 
-			virtual void ClearMaterials() override;
+			virtual void ClearMaterials(bool bDestroyEngineMats = false) override;
 
 			virtual void Update() override;
 			virtual void Draw() override;
@@ -55,11 +55,12 @@ namespace flex
 
 			virtual void OnWindowSizeChanged(i32 width, i32 height) override;
 
-			virtual void OnSceneChanged() override;
+			virtual void OnPreSceneChange() override;
+			virtual void OnPostSceneChange() override;
 
 			virtual bool GetRenderObjectCreateInfo(RenderID renderID, RenderObjectCreateInfo& outInfo) override;
 
-			virtual void SetVSyncEnabled(bool enableVSync) override;
+			virtual void SetVSyncEnabled(bool bEnableVSync) override;
 
 			virtual u32 GetRenderObjectCount() const override;
 			virtual u32 GetRenderObjectCapacity() const override;

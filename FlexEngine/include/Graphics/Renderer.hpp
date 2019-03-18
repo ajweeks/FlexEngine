@@ -28,7 +28,7 @@ namespace flex
 		virtual RenderID InitializeRenderObject(const RenderObjectCreateInfo* createInfo) = 0;
 		virtual void PostInitializeRenderObject(RenderID renderID) = 0; // Only call when creating objects after calling PostInitialize()
 
-		virtual void ClearMaterials() = 0;
+		virtual void ClearMaterials(bool bDestroyEngineMats = false) = 0;
 
 		virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) = 0;
 		virtual void SetClearColor(real r, real g, real b) = 0;
@@ -55,7 +55,8 @@ namespace flex
 
 		virtual void OnWindowSizeChanged(i32 width, i32 height) = 0;
 
-		virtual void OnSceneChanged() = 0;
+		virtual void OnPreSceneChange() = 0;
+		virtual void OnPostSceneChange() = 0; // Called once scene has been loaded and all objects have been inited (and post inited)
 
 		/*
 		* Fills outInfo with an up-to-date version of the render object's info
@@ -63,7 +64,7 @@ namespace flex
 		*/
 		virtual bool GetRenderObjectCreateInfo(RenderID renderID, RenderObjectCreateInfo& outInfo) = 0;
 
-		virtual void SetVSyncEnabled(bool enableVSync) = 0;
+		virtual void SetVSyncEnabled(bool bEnableVSync) = 0;
 
 		virtual u32 GetRenderObjectCount() const = 0;
 		virtual u32 GetRenderObjectCapacity() const = 0;

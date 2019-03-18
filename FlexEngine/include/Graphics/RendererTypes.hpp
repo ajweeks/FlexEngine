@@ -338,7 +338,7 @@ namespace flex
 		bool generatePrefilteredMap = false;
 
 		bool enableBRDFLUT = false;
-		bool renderToCubemap = true; // NOTE: This flag is currently ignored by GL renderer!
+		bool renderToCubemap = false; // NOTE: This flag is currently ignored by GL renderer!
 
 		bool generateReflectionProbeMaps = false;
 

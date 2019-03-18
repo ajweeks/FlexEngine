@@ -37,7 +37,7 @@ namespace flex
 			virtual RenderID InitializeRenderObject(const RenderObjectCreateInfo* createInfo) override;
 			virtual void PostInitializeRenderObject(RenderID renderID) override;
 
-			virtual void ClearMaterials() override;
+			virtual void ClearMaterials(bool bDestroyEngineMats = false) override;
 
 			virtual void Update() override;
 			virtual void Draw() override;
@@ -61,11 +61,12 @@ namespace flex
 
 			virtual void OnWindowSizeChanged(i32 width, i32 height) override;
 
-			virtual void OnSceneChanged() override;
+			virtual void OnPreSceneChange() override;
+			virtual void OnPostSceneChange() override;
 
 			virtual bool GetRenderObjectCreateInfo(RenderID renderID, RenderObjectCreateInfo& outInfo) override;
 
-			virtual void SetVSyncEnabled(bool enableVSync) override;
+			virtual void SetVSyncEnabled(bool bEnableVSync) override;
 
 			virtual u32 GetRenderObjectCount() const override;
 			virtual u32 GetRenderObjectCapacity() const override;
@@ -173,7 +174,7 @@ namespace flex
 			void CreateDescriptorSetLayout(ShaderID shaderID);
 			void CreateDescriptorSet(RenderID renderID);
 			void CreateDescriptorSet(DescriptorSetCreateInfo* createInfo);
-			void CreateGraphicsPipeline(RenderID renderID, bool setCubemapRenderPass);
+			void CreateGraphicsPipeline(RenderID renderID, bool bSetCubemapRenderPass);
 			void CreateGraphicsPipeline(GraphicsPipelineCreateInfo* createInfo);
 			void CreateDepthResources();
 			void CreateFramebuffers();
@@ -239,6 +240,8 @@ namespace flex
 
 			void LoadDefaultShaderCode();
 
+			void GenerateReflectionProbeAndIrradianceMaps();
+
 			void DrawImGuiForRenderObjectAndChildren(GameObject* gameObject);
 			// Returns true if object was duplicated
 			bool DoTextureSelector(const char* label, const std::vector<VulkanTexture*>& textures, i32* selectedIndex, bool* bGenerateSampler);
@@ -282,8 +285,8 @@ namespace flex
 			VkDescriptorSet m_OffscreenBufferDescriptorSet = VK_NULL_HANDLE;
 			i32 m_DeferredQuadVertexBufferIndex = -1;
 
-			bool m_PostInitialized = false;
-			bool m_SwapChainNeedsRebuilding = false;
+			bool m_bPostInitialized = false;
+			bool m_bSwapChainNeedsRebuilding = false;
 
 			const std::vector<const char*> m_ValidationLayers =
 			{
@@ -297,9 +300,9 @@ namespace flex
 			};
 
 #ifdef NDEBUG
-			const bool m_EnableValidationLayers = false;
+			const bool m_bEnableValidationLayers = false;
 #else
-			const bool m_EnableValidationLayers = true;
+			const bool m_bEnableValidationLayers = true;
 #endif
 
 			VDeleter<VkInstance> m_Instance{ vkDestroyInstance };

@@ -92,6 +92,9 @@ namespace flex
 				indexBuffer(indexBuffer)
 			{}
 
+			void Destroy();
+			void Empty();
+
 			VulkanBuffer* vertexBuffer = nullptr;
 			VulkanBuffer* indexBuffer = nullptr;
 			u32 vertexCount = 0;
@@ -365,7 +368,7 @@ namespace flex
 			VertexBufferData* vertexBufferData = nullptr;
 			u32 vertexOffset = 0;
 
-			bool indexed = false;
+			bool bIndexed = false;
 			std::vector<u32>* indices = nullptr;
 			u32 indexOffset = 0;
 

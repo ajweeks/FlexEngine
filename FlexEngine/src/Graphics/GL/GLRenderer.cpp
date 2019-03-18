@@ -585,6 +585,9 @@ namespace flex
 			}
 			m_RenderObjects.clear();
 
+			UnloadShaders();
+			ClearMaterials(true);
+
 			m_SkyBoxMesh = nullptr;
 
 			if (m_PhysicsDebugDrawer)
@@ -1161,7 +1164,7 @@ namespace flex
 			if (createInfo->indices != nullptr &&
 				!createInfo->indices->empty())
 			{
-				renderObject->indexed = true;
+				renderObject->bIndexed = true;
 
 				glGenBuffers(1, &renderObject->IBO);
 				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderObject->IBO);
@@ -1229,12 +1232,12 @@ namespace flex
 			}
 		}
 
-		void GLRenderer::ClearMaterials()
+		void GLRenderer::ClearMaterials(bool bDestroyEngineMats /* = false */)
 		{
 			auto iter = m_Materials.begin();
 			while (iter != m_Materials.end())
 			{
-				if (!iter->second.material.engineMaterial)
+				if (bDestroyEngineMats || iter->second.material.engineMaterial == false)
 				{
 					iter = m_Materials.erase(iter);
 				}
@@ -3901,7 +3904,7 @@ namespace flex
 						glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
 							GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapDepthSamplerID, 0);
 
-						if (renderObject->indexed)
+						if (renderObject->bIndexed)
 						{
 							glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderObject->IBO);
 							GLsizei count = (GLsizei)renderObject->indices->size();
@@ -3926,7 +3929,7 @@ namespace flex
 						glDisable(GL_BLEND);
 					}
 
-					if (renderObject->indexed)
+					if (renderObject->bIndexed)
 					{
 						glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderObject->IBO);
 						GLsizei count = (GLsizei)renderObject->indices->size();
@@ -5004,11 +5007,16 @@ namespace flex
 			ResizeRenderBuffer(m_gBufferDepthHandle, newFrameBufferSize, m_OffscreenDepthBufferInternalFormat);
 		}
 
-		void GLRenderer::OnSceneChanged()
+		void GLRenderer::OnPreSceneChange()
 		{
 			// G-Buffer needs to be regenerated using new scene's reflection probe mat ID
 			GenerateGBuffer();
 			m_DirectionalLight->shadowTextureID = m_ShadowMapTexture.id;
+		}
+
+		void GLRenderer::OnPostSceneChange()
+		{
+
 		}
 
 		bool GLRenderer::GetRenderObjectCreateInfo(RenderID renderID, RenderObjectCreateInfo& outInfo)
@@ -5036,9 +5044,9 @@ namespace flex
 			return true;
 		}
 
-		void GLRenderer::SetVSyncEnabled(bool enableVSync)
+		void GLRenderer::SetVSyncEnabled(bool bEnableVSync)
 		{
-			glfwSwapInterval(enableVSync ? 1 : 0);
+			glfwSwapInterval(bEnableVSync ? 1 : 0);
 		}
 
 		void GLRenderer::SetFloat(ShaderID shaderID, const char* valName, real val)

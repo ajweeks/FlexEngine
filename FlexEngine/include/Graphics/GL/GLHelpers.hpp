@@ -141,7 +141,7 @@ namespace flex
 			// If true this object will be drawn after post processing
 			// and not drawn in shipping builds
 			bool editorObject = false;
-			bool indexed = false;
+			bool bIndexed = false;
 		};
 
 		struct UniformInfo

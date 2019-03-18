@@ -25,19 +25,6 @@
 			}
 		},
 		{
-			"name" : "ab",
-			"type" : "object",
-			"visible" : true,
-			"transform" : 
-			{
-				"pos" : "-99.258, 1.794, 6.157",
-				"rot" : "-3.142, 0.206, -3.142",
-				"scale" : "3.770, 2.880, 2.570"
-			},
-			"mesh" : "sphere",
-			"material" : "pbr white"
-		},
-		{
 			"name" : "Directional Light",
 			"type" : "directional light",
 			"visible" : true,
@@ -50,7 +37,7 @@
 			{
 				"rotation" : "1.195, -0.973, -2.522",
 				"pos" : "0.000, 15.000, 0.000",
-				"color" : "0.97, 0.97, 0.97",
+				"color" : "0.81, 0.81, 0.81",
 				"enabled" : true,
 				"brightness" : 50.000000,
 				"cast shadows" : true,

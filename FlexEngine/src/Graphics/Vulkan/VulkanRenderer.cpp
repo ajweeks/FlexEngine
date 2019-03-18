@@ -238,53 +238,9 @@ namespace flex
 
 			LoadFonts(false);
 
-			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
-			{
-				VulkanRenderObject* renderObject = GetRenderObject(i);
-				if (!renderObject)
-				{
-					continue;
-				}
+			GenerateReflectionProbeAndIrradianceMaps();
 
-				VulkanMaterial& renderObjectMat = m_Materials[renderObject->materialID];
-
-				if (renderObjectMat.material.generateReflectionProbeMaps)
-				{
-					Print("Capturing reflection probe\n");
-					CaptureSceneToCubemap(i);
-					GenerateIrradianceSamplerFromCubemap(renderObject->materialID);
-					GeneratePrefilteredMapFromCubemap(renderObject->materialID);
-					Print("Done\n");
-
-					// Capture again to use just generated irradiance + prefilter sampler (TODO: Remove soon)
-					Print("Capturing reflection probe\n");
-					CaptureSceneToCubemap(i);
-					GenerateIrradianceSamplerFromCubemap(renderObject->materialID);
-					GeneratePrefilteredMapFromCubemap(renderObject->materialID);
-					Print("Done\n");
-
-					// Display captured cubemap as skybox (GL code)
-					//m_LoadedMaterials[m_RenderObjects[cubemapID]->materialID].cubemapSamplerID =
-					//	m_LoadedMaterials[m_RenderObjects[renderID]->materialID].cubemapSamplerID;
-				}
-				else if (renderObjectMat.material.generateIrradianceSampler)
-				{
-					GenerateCubemapFromHDR(renderObject, renderObjectMat.material.environmentMapPath);
-					GenerateIrradianceSampler(renderObject);
-					GeneratePrefilteredCube(renderObject);
-				}
-			}
-
-
-			// Generate graphics pipelines with correct render pass set
-			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
-			{
-				//CreateDescriptorSet(i);
-				CreateGraphicsPipeline(i, false);
-			}
-
-
-			m_PostInitialized = true;
+			m_bPostInitialized = true;
 			Print("Ready!\n");
 		}
 
@@ -307,10 +263,9 @@ namespace flex
 			m_PresentCompleteSemaphore.replace();
 			m_RenderCompleteSemaphore.replace();
 
-			for (size_t i = 0; i < m_VertexIndexBufferPairs.size(); ++i)
+			for (VertexIndexBufferPair& pair : m_VertexIndexBufferPairs)
 			{
-				delete m_VertexIndexBufferPairs[i].vertexBuffer;
-				delete m_VertexIndexBufferPairs[i].indexBuffer;
+				pair.Destroy();
 			}
 			m_VertexIndexBufferPairs.clear();
 
@@ -349,6 +304,8 @@ namespace flex
 			m_RenderObjects.clear();
 
 			m_Shaders.clear();
+
+			ClearMaterials(true);
 
 			delete m_OffScreenFrameBuf;
 			vkDestroySemaphore(m_VulkanDevice->m_LogicalDevice, offscreenSemaphore, nullptr);
@@ -758,7 +715,7 @@ namespace flex
 			{
 				PrintError("Attempted to generate cubemap from HDR but vertex buffer has not been generated! (for shader %s)\n", skyboxMat.name.c_str());
 			}
-			if (skyboxRenderObject->indexed &&
+			if (skyboxRenderObject->bIndexed &&
 				vertexIndexBufferPair.indexBuffer->m_Buffer == VK_NULL_HANDLE)
 			{
 				PrintError("Attempted to generate cubemap from HDR but index buffer has not been generated! (for shader %s)\n", skyboxMat.name.c_str());
@@ -787,7 +744,7 @@ namespace flex
 					VkDeviceSize offsets[1] = { 0 };
 
 					vkCmdBindVertexBuffers(cmdBuf, 0, 1, &vertexIndexBufferPair.vertexBuffer->m_Buffer, offsets);
-					if (skyboxRenderObject->indexed)
+					if (skyboxRenderObject->bIndexed)
 					{
 						vkCmdBindIndexBuffer(cmdBuf, vertexIndexBufferPair.indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
 						vkCmdDrawIndexed(cmdBuf, skyboxRenderObject->indices->size(), 1, 0, 0, 0);
@@ -1249,7 +1206,7 @@ namespace flex
 
 					const ShaderID shaderID = skyboxMat.shaderID;
 					vkCmdBindVertexBuffers(cmdBuf, 0, 1, &m_VertexIndexBufferPairs[shaderID].vertexBuffer->m_Buffer, offsets);
-					if (skyboxRenderObject->indexed)
+					if (skyboxRenderObject->bIndexed)
 					{
 						vkCmdBindIndexBuffer(cmdBuf, m_VertexIndexBufferPairs[shaderID].indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
 						vkCmdDrawIndexed(cmdBuf, skyboxRenderObject->indices->size(), 1, 0, 0, 0);
@@ -1678,7 +1635,7 @@ namespace flex
 
 					ShaderID shaderID = skyboxMat.shaderID;
 					vkCmdBindVertexBuffers(cmdBuf, 0, 1, &m_VertexIndexBufferPairs[skyboxMat.shaderID].vertexBuffer->m_Buffer, offsets);
-					if (skyboxRenderObject->indexed)
+					if (skyboxRenderObject->bIndexed)
 					{
 						vkCmdBindIndexBuffer(cmdBuf, m_VertexIndexBufferPairs[shaderID].indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
 						vkCmdDrawIndexed(cmdBuf, skyboxRenderObject->indices->size(), 1, 0, 0, 0);
@@ -2337,11 +2294,11 @@ namespace flex
 				!createInfo->indices->empty())
 			{
 				renderObject->indices = createInfo->indices;
-				renderObject->indexed = true;
+				renderObject->bIndexed = true;
 			}
 
 			// We've already been post initialized, so we need to create a descriptor set and pipeline here
-			if (m_PostInitialized)
+			if (m_bPostInitialized)
 			{
 				CreateDescriptorSet(renderID);
 				CreateGraphicsPipeline(renderID, true);
@@ -2452,9 +2409,9 @@ namespace flex
 			BuildDeferredCommandBuffer(drawCallInfo);
 			BuildCommandBuffers(drawCallInfo);
 
-			if (m_SwapChainNeedsRebuilding)
+			if (m_bSwapChainNeedsRebuilding)
 			{
-				m_SwapChainNeedsRebuilding = false;
+				m_bSwapChainNeedsRebuilding = false;
 				RecreateSwapChain();
 			}
 			else
@@ -2790,13 +2747,29 @@ namespace flex
 
 			if (width != 0 && height != 0)
 			{
-				m_SwapChainNeedsRebuilding = true;
+				m_bSwapChainNeedsRebuilding = true;
 			}
 		}
 
-		void VulkanRenderer::OnSceneChanged()
+		void VulkanRenderer::OnPreSceneChange()
 		{
 			GenerateGBuffer();
+
+			for (VertexIndexBufferPair& pair : m_VertexIndexBufferPairs)
+			{
+				pair.Empty();
+			}
+		}
+
+		void VulkanRenderer::OnPostSceneChange()
+		{
+			if (m_bPostInitialized)
+			{
+				CreateStaticVertexBuffers();
+				CreateStaticIndexBuffers();
+
+				GenerateReflectionProbeAndIrradianceMaps();
+			}
 		}
 
 		bool VulkanRenderer::GetRenderObjectCreateInfo(RenderID renderID, RenderObjectCreateInfo& outInfo)
@@ -2823,9 +2796,9 @@ namespace flex
 			return true;
 		}
 
-		void VulkanRenderer::SetVSyncEnabled(bool enableVSync)
+		void VulkanRenderer::SetVSyncEnabled(bool bEnableVSync)
 		{
-			m_bVSyncEnabled = enableVSync;
+			m_bVSyncEnabled = bEnableVSync;
 		}
 
 		u32 VulkanRenderer::GetRenderObjectCount() const
@@ -2940,6 +2913,8 @@ namespace flex
 				{
 					vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPool, 1, &(renderObject->descriptorSet));
 				}
+				renderObject->graphicsPipeline.replace();
+				renderObject->pipelineLayout.replace();
 				delete renderObject;
 			}
 			m_RenderObjects[renderID] = nullptr;
@@ -3022,13 +2997,18 @@ namespace flex
 			UNREFERENCED_PARAMETER(renderID);
 		}
 
-		void VulkanRenderer::ClearMaterials()
+		void VulkanRenderer::ClearMaterials(bool bDestroyEngineMats /* = false */)
 		{
 			auto iter = m_Materials.begin();
 			while (iter != m_Materials.end())
 			{
-				if (!iter->second.material.engineMaterial)
+				if (bDestroyEngineMats || iter->second.material.engineMaterial == false)
 				{
+					if (iter->second.hdrCubemapFramebuffer)
+					{
+						vkDestroyFramebuffer(m_VulkanDevice->m_LogicalDevice, iter->second.hdrCubemapFramebuffer, nullptr);
+					}
+
 					iter = m_Materials.erase(iter);
 				}
 				else
@@ -3304,7 +3284,7 @@ namespace flex
 
 		void VulkanRenderer::CreateInstance()
 		{
-			if (m_EnableValidationLayers && !CheckValidationLayerSupport())
+			if (m_bEnableValidationLayers && !CheckValidationLayerSupport())
 			{
 				// TODO: Remove all exceptions
 				throw std::runtime_error("validation layers requested, but not available!");
@@ -3327,7 +3307,7 @@ namespace flex
 			createInfo.enabledExtensionCount = extensions.size();
 			createInfo.ppEnabledExtensionNames = extensions.data();
 
-			if (m_EnableValidationLayers)
+			if (m_bEnableValidationLayers)
 			{
 				createInfo.enabledLayerCount = m_ValidationLayers.size();
 				createInfo.ppEnabledLayerNames = m_ValidationLayers.data();
@@ -3342,7 +3322,7 @@ namespace flex
 
 		void VulkanRenderer::SetupDebugCallback()
 		{
-			if (!m_EnableValidationLayers)
+			if (!m_bEnableValidationLayers)
 			{
 				return;
 			}
@@ -3465,7 +3445,7 @@ namespace flex
 			createInfo.enabledExtensionCount = m_DeviceExtensions.size();
 			createInfo.ppEnabledExtensionNames = m_DeviceExtensions.data();
 
-			if (m_EnableValidationLayers)
+			if (m_bEnableValidationLayers)
 			{
 				createInfo.enabledLayerCount = m_ValidationLayers.size();
 				createInfo.ppEnabledLayerNames = m_ValidationLayers.data();
@@ -4078,7 +4058,7 @@ namespace flex
 			return nullptr;
 		}
 
-		void VulkanRenderer::CreateGraphicsPipeline(RenderID renderID, bool setCubemapRenderPass)
+		void VulkanRenderer::CreateGraphicsPipeline(RenderID renderID, bool bSetCubemapRenderPass)
 		{
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
 			if (!renderObject || !renderObject->vertexBufferData)
@@ -4106,9 +4086,9 @@ namespace flex
 			{
 				pipelineCreateInfo.renderPass = m_DeferredCombineRenderPass;
 			}
-			else if (setCubemapRenderPass)
+			else if (bSetCubemapRenderPass)
 			{
-				//ShaderID cubemapGBufferShaderID = m_LoadedMaterials[m_CubemapGBufferMaterialID].material.shaderID;
+				//ShaderID cubemapGBufferShaderID = m_Materials[m_CubemapGBufferMaterialID].material.shaderID;
 				pipelineCreateInfo.renderPass = m_CubemapFrameBuffer->renderPass;
 				//i32 cubemapGBufferShaderSubpass = m_Shaders[cubemapGBufferShaderID].shader.subpass;
 				//pipelineCreateInfo.shaderID = cubemapGBufferShaderID;
@@ -4933,26 +4913,36 @@ namespace flex
 					}
 
 					VulkanMaterial& renderObjectMat = m_Materials[renderObject->materialID];
-					VulkanShader& shader = m_Shaders[renderObjectMat.material.shaderID];
+					VulkanShader& renderObjectShader = m_Shaders[renderObjectMat.material.shaderID];
 
 					// Only render non-deferred (forward) objects in this pass
-					if (shader.shader.deferred)
+					if (renderObjectShader.shader.deferred)
 					{
 						continue;
 					}
 
-					VkDeviceSize offsets[1] = { 0 };
-					vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_VertexIndexBufferPairs[renderObjectMat.material.shaderID].vertexBuffer->m_Buffer, offsets);
+					VulkanBuffer* vertBuffer = m_VertexIndexBufferPairs[renderObjectMat.material.shaderID].vertexBuffer;
+					VulkanBuffer* indexBuffer = m_VertexIndexBufferPairs[renderObjectMat.material.shaderID].indexBuffer;
 
-					if (m_VertexIndexBufferPairs[renderObjectMat.material.shaderID].indexBuffer->m_Size != 0)
+					if (vertBuffer->m_Buffer == 0 ||
+						(renderObject->bIndexed && indexBuffer->m_Buffer == 0))
 					{
-						vkCmdBindIndexBuffer(commandBuffer, m_VertexIndexBufferPairs[renderObjectMat.material.shaderID].indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
+						// Invalid object! Might not contain valid material
+						continue;
+					}
+
+					VkDeviceSize offsets[1] = { 0 };
+					vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertBuffer->m_Buffer, offsets);
+
+					if (renderObject->bIndexed)
+					{
+						vkCmdBindIndexBuffer(commandBuffer, indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
 					}
 
 					vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderObject->graphicsPipeline);
 
 					// Push constants
-					if (shader.shader.bNeedPushConstantBlock)
+					if (renderObjectShader.shader.bNeedPushConstantBlock)
 					{
 						// Truncate translation component to center cubemap around viewer
 						glm::mat4 view = glm::mat4(glm::mat3(g_CameraManager->CurrentCamera()->GetView()));
@@ -4962,7 +4952,7 @@ namespace flex
 						vkCmdPushConstants(commandBuffer, renderObject->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock), &renderObjectMat.material.pushConstantBlock);
 					}
 
-					BindDescriptorSet(&shader, renderObject->renderID, commandBuffer, renderObject->pipelineLayout, renderObject->descriptorSet);
+					BindDescriptorSet(&renderObjectShader, renderObject->renderID, commandBuffer, renderObject->pipelineLayout, renderObject->descriptorSet);
 
 					bool bUsingGameplayCam = g_CameraManager->CurrentCamera()->bIsGameplayCam;
 					if (g_EngineInstance->IsRenderingEditorObjects() && !bUsingGameplayCam)
@@ -4977,7 +4967,7 @@ namespace flex
 						// TODO:
 					}
 
-					if (renderObject->indexed)
+					if (renderObject->bIndexed)
 					{
 						vkCmdDrawIndexed(commandBuffer, renderObject->indices->size(), 1, renderObject->indexOffset, 0, 0);
 					}
@@ -5061,24 +5051,35 @@ namespace flex
 						}
 
 						VulkanMaterial& renderObjectMat = m_Materials[renderObject->materialID];
+						VulkanShader& renderObjectShader = m_Shaders[renderObjectMat.material.shaderID];
 
 						// Only render non-deferred (forward) objects in this pass
-						if (m_Shaders[renderObjectMat.material.shaderID].shader.deferred)
+						if (renderObjectShader.shader.deferred)
 						{
 							continue;
 						}
 
-						vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_VertexIndexBufferPairs[renderObjectMat.material.shaderID].vertexBuffer->m_Buffer, offsets);
+						VulkanBuffer* vertBuffer = m_VertexIndexBufferPairs[renderObjectMat.material.shaderID].vertexBuffer;
+						VulkanBuffer* indexBuffer = m_VertexIndexBufferPairs[renderObjectMat.material.shaderID].indexBuffer;
 
-						if (m_VertexIndexBufferPairs[renderObjectMat.material.shaderID].indexBuffer->m_Size != 0)
+						if (vertBuffer->m_Buffer == 0 ||
+							(renderObject->bIndexed && indexBuffer->m_Buffer == 0))
 						{
-							vkCmdBindIndexBuffer(commandBuffer, m_VertexIndexBufferPairs[renderObjectMat.material.shaderID].indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
+							// Invalid object! Might not contain valid material
+							continue;
+						}
+
+						vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertBuffer->m_Buffer, offsets);
+
+						if (renderObject->bIndexed)
+						{
+							vkCmdBindIndexBuffer(commandBuffer, indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
 						}
 
 						vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderObject->graphicsPipeline);
 
 						// Push constants
-						if (m_Shaders[renderObjectMat.material.shaderID].shader.bNeedPushConstantBlock)
+						if (renderObjectShader.shader.bNeedPushConstantBlock)
 						{
 							glm::mat4 view = glm::mat4(glm::mat3(g_CameraManager->CurrentCamera()->GetView())); // Truncate translation part off to center around viewer
 							glm::mat4 projection = g_CameraManager->CurrentCamera()->GetProjection();
@@ -5087,9 +5088,9 @@ namespace flex
 							vkCmdPushConstants(commandBuffer, renderObject->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock), &renderObjectMat.material.pushConstantBlock);
 						}
 
-						BindDescriptorSet(&m_Shaders[renderObjectMat.material.shaderID], renderObject->renderID, commandBuffer, renderObject->pipelineLayout, renderObject->descriptorSet);
+						BindDescriptorSet(&renderObjectShader, renderObject->renderID, commandBuffer, renderObject->pipelineLayout, renderObject->descriptorSet);
 
-						if (renderObject->indexed)
+						if (renderObject->bIndexed)
 						{
 							vkCmdDrawIndexed(commandBuffer, renderObject->indices->size(), 1, renderObject->indexOffset, 0, 0);
 						}
@@ -5176,21 +5177,35 @@ namespace flex
 				}
 
 				VulkanMaterial& renderObjectMat = m_Materials[renderObject->materialID];
+				VulkanShader& renderObjectShader = m_Shaders[renderObjectMat.material.shaderID];
 
 				// Only render deferred objects in this pass
-				if (!m_Shaders[renderObjectMat.material.shaderID].shader.deferred) continue;
-
-				vkCmdBindVertexBuffers(offScreenCmdBuffer, 0, 1, &m_VertexIndexBufferPairs[renderObjectMat.material.shaderID].vertexBuffer->m_Buffer, offsets);
-
-				if (m_VertexIndexBufferPairs[renderObjectMat.material.shaderID].indexBuffer->m_Size != 0)
+				if (!renderObjectShader.shader.deferred)
 				{
-					vkCmdBindIndexBuffer(offScreenCmdBuffer, m_VertexIndexBufferPairs[renderObjectMat.material.shaderID].indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
+					continue;
+				}
+
+				VulkanBuffer* vertBuffer = m_VertexIndexBufferPairs[renderObjectMat.material.shaderID].vertexBuffer;
+				VulkanBuffer* indexBuffer = m_VertexIndexBufferPairs[renderObjectMat.material.shaderID].indexBuffer;
+
+				if (vertBuffer->m_Buffer == 0 ||
+					(renderObject->bIndexed && indexBuffer->m_Buffer == 0))
+				{
+					// Invalid object! Might not contain valid material
+					continue;
+				}
+
+				vkCmdBindVertexBuffers(offScreenCmdBuffer, 0, 1, &vertBuffer->m_Buffer, offsets);
+
+				if (renderObject->bIndexed)
+				{
+					vkCmdBindIndexBuffer(offScreenCmdBuffer, indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
 				}
 
 				vkCmdBindPipeline(offScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderObject->graphicsPipeline);
 
 				// Push constants
-				if (m_Shaders[renderObjectMat.material.shaderID].shader.bNeedPushConstantBlock)
+				if (renderObjectShader.shader.bNeedPushConstantBlock)
 				{
 					glm::mat4 view = glm::mat4(glm::mat3(g_CameraManager->CurrentCamera()->GetView())); // Truncate translation part off to center around viewer
 					glm::mat4 projection = g_CameraManager->CurrentCamera()->GetProjection();
@@ -5201,9 +5216,9 @@ namespace flex
 						&renderObjectMat.material.pushConstantBlock);
 				}
 
-				BindDescriptorSet(&m_Shaders[renderObjectMat.material.shaderID], renderObject->renderID, offScreenCmdBuffer, renderObject->pipelineLayout, renderObject->descriptorSet);
+				BindDescriptorSet(&renderObjectShader, renderObject->renderID, offScreenCmdBuffer, renderObject->pipelineLayout, renderObject->descriptorSet);
 
-				if (renderObject->indexed)
+				if (renderObject->bIndexed)
 				{
 					vkCmdDrawIndexed(offScreenCmdBuffer, renderObject->indices->size(), 1, renderObject->indexOffset, 0, 0);
 				}
@@ -5351,7 +5366,7 @@ namespace flex
 
 			for (VulkanRenderObject* renderObject : m_RenderObjects)
 			{
-				if (renderObject && m_Materials[renderObject->materialID].material.shaderID == shaderID && renderObject->indexed)
+				if (renderObject && m_Materials[renderObject->materialID].material.shaderID == shaderID && renderObject->bIndexed)
 				{
 					renderObject->indexOffset = indices.size();
 					indices.insert(indices.end(), renderObject->indices->begin(), renderObject->indices->end());
@@ -5682,7 +5697,7 @@ namespace flex
 				extensions.push_back(glfwExtensions[i]);
 			}
 
-			if (m_EnableValidationLayers)
+			if (m_bEnableValidationLayers)
 			{
 				extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
 			}
@@ -6298,6 +6313,53 @@ namespace flex
 				{
 					PrintError("Could not find fragment shader %s\n", shader.name.c_str());
 				}
+			}
+		}
+
+		void VulkanRenderer::GenerateReflectionProbeAndIrradianceMaps()
+		{
+			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
+			{
+				VulkanRenderObject* renderObject = GetRenderObject(i);
+				if (!renderObject)
+				{
+					continue;
+				}
+
+				VulkanMaterial& renderObjectMat = m_Materials[renderObject->materialID];
+
+				if (renderObjectMat.material.generateReflectionProbeMaps)
+				{
+					Print("Capturing reflection probe\n");
+					CaptureSceneToCubemap(i);
+					GenerateIrradianceSamplerFromCubemap(renderObject->materialID);
+					GeneratePrefilteredMapFromCubemap(renderObject->materialID);
+					Print("Done\n");
+
+					// Capture again to use just generated irradiance + prefilter sampler (TODO: Remove soon)
+					Print("Capturing reflection probe\n");
+					CaptureSceneToCubemap(i);
+					GenerateIrradianceSamplerFromCubemap(renderObject->materialID);
+					GeneratePrefilteredMapFromCubemap(renderObject->materialID);
+					Print("Done\n");
+
+					// Display captured cubemap as skybox (GL code)
+					//m_LoadedMaterials[m_RenderObjects[cubemapID]->materialID].cubemapSamplerID =
+					//	m_LoadedMaterials[m_RenderObjects[renderID]->materialID].cubemapSamplerID;
+				}
+				else if (renderObjectMat.material.generateIrradianceSampler)
+				{
+					GenerateCubemapFromHDR(renderObject, renderObjectMat.material.environmentMapPath);
+					GenerateIrradianceSampler(renderObject);
+					GeneratePrefilteredCube(renderObject);
+				}
+			}
+
+			// Generate graphics pipelines with correct render pass set
+			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
+			{
+				//CreateDescriptorSet(i);
+				CreateGraphicsPipeline(i, false);
 			}
 		}
 

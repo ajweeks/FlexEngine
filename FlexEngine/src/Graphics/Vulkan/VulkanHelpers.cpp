@@ -174,6 +174,28 @@ namespace flex
 			}
 		}
 
+		void VertexIndexBufferPair::Destroy()
+		{
+			delete vertexBuffer;
+			delete indexBuffer;
+			vertexCount = 0;
+			indexCount = 0;
+		}
+
+		void VertexIndexBufferPair::Empty()
+		{
+			if (vertexBuffer != nullptr)
+			{
+				vertexBuffer->Destroy();
+			}
+			if (indexBuffer != nullptr)
+			{
+				indexBuffer->Destroy();
+			}
+			vertexCount = 0;
+			indexCount = 0;
+		}
+
 		VulkanTexture::VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue) :
 			m_VulkanDevice(device),
 			m_GraphicsQueue(graphicsQueue),
