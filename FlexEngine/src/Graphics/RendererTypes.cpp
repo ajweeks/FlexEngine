@@ -50,6 +50,7 @@ namespace flex
 		if (HasUniform(U_TRANSFORM_MAT)) size += US_TRANSFORM_MAT;
 		if (HasUniform(U_TEX_SIZE)) size += US_TEX_SIZE;
 		if (HasUniform(U_TEXTURE_SCALE)) size += US_TEXTURE_SCALE;
+		if (HasUniform(U_TIME)) size += US_TIME;
 
 		return size;
 	}

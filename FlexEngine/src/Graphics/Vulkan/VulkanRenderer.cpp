@@ -5754,7 +5754,7 @@ namespace flex
 			Uniforms& constantUniforms = shader.shader.constantBufferUniforms;
 			VulkanUniformBufferObjectData& constantData = shader.uniformBuffer.constantData;
 
-			if (!constantData.data)
+			if (constantData.data == nullptr || constantData.size == 0)
 			{
 				return; // There is no constant data
 			}
@@ -5820,6 +5820,7 @@ namespace flex
 				{ U_CAM_POS, (void*)&camPos, sizeof(glm::vec4) },
 				{ U_DIR_LIGHT, (void*)&m_DirectionalLight->data, sizeof(DirLightData) },
 				{ U_POINT_LIGHTS, (void*)PointLightsDataStart, PointLightsSize },
+				{ U_TIME, (void*)&g_SecElapsedSinceProgramStart, sizeof(real) },
 			};
 
 			size_t index = 0;
@@ -5846,7 +5847,7 @@ namespace flex
 		void VulkanRenderer::UpdateDynamicUniformBuffer(RenderID renderID, UniformOverrides const* uniformOverrides)
 		{
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
-			if (!renderObject)
+			if (renderObject == nullptr)
 			{
 				return;
 			}
@@ -6172,7 +6173,8 @@ namespace flex
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION;
 
-			m_Shaders[shaderID].shader.constantBufferUniforms = {};
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_TIME);
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CUBEMAP_SAMPLER);
 			++shaderID;
