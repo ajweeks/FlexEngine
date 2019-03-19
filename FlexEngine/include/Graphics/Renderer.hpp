@@ -84,7 +84,7 @@ namespace flex
 		virtual MaterialID GetMaterialID(RenderID renderID) = 0;
 		virtual bool GetShaderID(const std::string& shaderName, ShaderID& shaderID) = 0;
 
-		virtual std::vector<std::string> GetValidMaterialNames() const = 0;
+		virtual std::vector<Pair<std::string, MaterialID>> GetValidMaterialNames() const = 0;
 
 		virtual void DestroyRenderObject(RenderID renderID) = 0;
 

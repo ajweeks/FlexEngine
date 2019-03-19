@@ -1796,15 +1796,15 @@ namespace flex
 			return InvalidMaterialID;
 		}
 
-		std::vector<std::string> GLRenderer::GetValidMaterialNames() const
+		std::vector<Pair<std::string, MaterialID>> GLRenderer::GetValidMaterialNames() const
 		{
-			std::vector<std::string> result;
+			std::vector<Pair<std::string, MaterialID>> result;
 
 			for (auto& matPair : m_Materials)
 			{
 				if (!matPair.second.material.engineMaterial)
 				{
-					result.push_back(matPair.second.material.name);
+					result.push_back({ matPair.second.material.name, matPair.first });
 				}
 			}
 

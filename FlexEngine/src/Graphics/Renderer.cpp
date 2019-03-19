@@ -615,19 +615,19 @@ namespace flex
 
 		MeshComponent* mesh = gameObject->GetMeshComponent();
 
-		std::vector<std::string> validMaterialNames = g_Renderer->GetValidMaterialNames();
+		std::vector<Pair<std::string, MaterialID>> validMaterialNames = g_Renderer->GetValidMaterialNames();
 
 		MaterialID selectedMaterialID = 0;
 		i32 selectedMaterialShortIndex = 0;
 		std::string currentMaterialName = "NONE";
 		i32 matShortIndex = 0;
-		for (i32 i = 0; i < (i32)validMaterialNames.size(); ++i)
+		for (const Pair<std::string, MaterialID>& matPair : validMaterialNames)
 		{
-			if (i == (i32)matID)
+			if (matPair.second == (i32)matID)
 			{
-				selectedMaterialID = i;
+				selectedMaterialID = matPair.second;
 				selectedMaterialShortIndex = matShortIndex;
-				currentMaterialName = validMaterialNames[i];
+				currentMaterialName = matPair.first;
 				break;
 			}
 
@@ -636,15 +636,15 @@ namespace flex
 		if (ImGui::BeginCombo("Material", currentMaterialName.c_str()))
 		{
 			matShortIndex = 0;
-			for (i32 i = 0; i < (i32)validMaterialNames.size(); ++i)
+			for (const Pair<std::string, MaterialID>& matPair : validMaterialNames)
 			{
 				bool bSelected = (matShortIndex == selectedMaterialShortIndex);
-				std::string materialName = validMaterialNames[i];
+				std::string materialName = matPair.first;
 				if (ImGui::Selectable(materialName.c_str(), &bSelected))
 				{
 					if (mesh)
 					{
-						mesh->SetMaterialID(i);
+						mesh->SetMaterialID(matPair.second);
 					}
 					selectedMaterialShortIndex = matShortIndex;
 				}

@@ -37,7 +37,7 @@
 			{
 				"rotation" : "1.195, -0.973, -2.522",
 				"pos" : "0.000, 15.000, 0.000",
-				"color" : "0.02, 0.02, 0.02",
+				"color" : "0.31, 0.31, 0.31",
 				"enabled" : true,
 				"brightness" : 50.000000,
 				"cast shadows" : true,
@@ -46,6 +46,16 @@
 				"shadow map far" : 100.000000,
 				"shadow map zoom" : 1.000000
 			}
+		},
+		{
+			"name" : "New_Object_00",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"mesh" : "cube",
+			"material" : "pbr cyan 1"
 		}
 	]
 }
