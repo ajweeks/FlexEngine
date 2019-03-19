@@ -58,6 +58,7 @@ namespace flex
 		for (auto& loadedMeshPair : m_LoadedMeshes)
 		{
 			cgltf_free(loadedMeshPair.second->data);
+			delete loadedMeshPair.second;
 		}
 		m_LoadedMeshes.clear();
 	}
