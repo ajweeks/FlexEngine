@@ -4969,7 +4969,7 @@ namespace flex
 
 					if (renderObject->bIndexed)
 					{
-						vkCmdDrawIndexed(commandBuffer, renderObject->indices->size(), 1, renderObject->indexOffset, 0, 0);
+						vkCmdDrawIndexed(commandBuffer, renderObject->indices->size(), 1, renderObject->indexOffset, renderObject->vertexOffset, 0);
 					}
 					else
 					{
@@ -5092,7 +5092,7 @@ namespace flex
 
 						if (renderObject->bIndexed)
 						{
-							vkCmdDrawIndexed(commandBuffer, renderObject->indices->size(), 1, renderObject->indexOffset, 0, 0);
+							vkCmdDrawIndexed(commandBuffer, renderObject->indices->size(), 1, renderObject->indexOffset, renderObject->vertexOffset, 0);
 						}
 						else
 						{
@@ -5220,7 +5220,7 @@ namespace flex
 
 				if (renderObject->bIndexed)
 				{
-					vkCmdDrawIndexed(offScreenCmdBuffer, renderObject->indices->size(), 1, renderObject->indexOffset, 0, 0);
+					vkCmdDrawIndexed(offScreenCmdBuffer, renderObject->indices->size(), 1, renderObject->indexOffset, renderObject->vertexOffset, 0);
 				}
 				else
 				{
