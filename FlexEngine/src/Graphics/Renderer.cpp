@@ -1205,9 +1205,12 @@ namespace flex
 
 		//FT_Set_Pixel_Sizes(face, 0, fontPixelSize);
 
-		std::string fileName = fontFilePath;
-		StripLeadingDirectories(fileName);
-		Print("Loaded font file %s\n", fileName.c_str());
+		if (g_bEnableLogging_Loading)
+		{
+			std::string fileName = fontFilePath;
+			StripLeadingDirectories(fileName);
+			Print("Loaded font file %s\n", fileName.c_str());
+		}
 
 		std::string fontName = std::string(face->family_name) + " - " + face->style_name;
 		*font = new BitmapFont(size, fontName, face->num_glyphs);

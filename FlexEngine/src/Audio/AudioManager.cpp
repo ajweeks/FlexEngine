@@ -66,9 +66,12 @@ namespace flex
 			return InvalidAudioSourceID;
 		}
 
-		std::string friendlyName = filePath;
-		StripLeadingDirectories(friendlyName);
-		Print("Loading audio source %s\n", friendlyName.c_str());
+		if (g_bEnableLogging_Loading)
+		{
+			std::string friendlyName = filePath;
+			StripLeadingDirectories(friendlyName);
+			Print("Loading audio source %s\n", friendlyName.c_str());
+		}
 
 		// WAVE file
 		i32 format;
@@ -126,7 +129,7 @@ namespace flex
 			return InvalidAudioSourceID;
 		}
 
-		Print("Synthesizing audio source\n");
+		//Print("Synthesizing audio source\n");
 
 		// WAVE file
 		i32 format = AL_FORMAT_STEREO8;

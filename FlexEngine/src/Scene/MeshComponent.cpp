@@ -203,13 +203,19 @@ namespace flex
 			auto existingIter = m_LoadedMeshes.find(relativeFilePath);
 			if (existingIter == m_LoadedMeshes.end())
 			{
-				Print("Loading mesh %s\n", fileName.c_str());
+				if (g_bEnableLogging_Loading)
+				{
+					Print("Loading mesh %s\n", fileName.c_str());
+				}
 				newLoadedMesh = new LoadedMesh();
 				m_LoadedMeshes.emplace(relativeFilePath, newLoadedMesh);
 			}
 			else
 			{
-				Print("Reloading mesh %s\n", fileName.c_str());
+				if (g_bEnableLogging_Loading)
+				{
+					Print("Reloading mesh %s\n", fileName.c_str());
+				}
 				newLoadedMesh = existingIter->second;
 			}
 		}

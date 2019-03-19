@@ -17,6 +17,8 @@ const bool g_bVulkanEnabled = true;
 const bool g_bVulkanEnabled = false;
 #endif
 
+const bool g_bEnableLogging_Loading = false;
+
 #ifdef DEBUG
 #define THOROUGH_CHECKS 1
 #define ENABLE_PROFILING 1

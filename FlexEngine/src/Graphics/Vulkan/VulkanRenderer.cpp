@@ -244,7 +244,6 @@ namespace flex
 			GenerateReflectionProbeAndIrradianceMaps();
 
 			m_bPostInitialized = true;
-			Print("Ready!\n");
 		}
 
 		void VulkanRenderer::Destroy()
@@ -6900,7 +6899,10 @@ namespace flex
 				StripLeadingDirectories(vertFileName);
 				std::string fragFileName = m_Shaders[i].shader.fragmentShaderFilePath;
 				StripLeadingDirectories(fragFileName);
-				Print("Loading shaders %s & %s\n", vertFileName.c_str(), fragFileName.c_str());
+				if (g_bEnableLogging_Loading)
+				{
+					Print("Loading shaders %s & %s\n", vertFileName.c_str(), fragFileName.c_str());
+				}
 
 				if (!ReadFile(shader.vertexShaderFilePath, shader.vertexShaderCode, true))
 				{

@@ -37,9 +37,12 @@ namespace flex
 
 		GLFWimage result = {};
 
-		std::string fileName = filePath;
-		StripLeadingDirectories(fileName);
-		Print("Loading texture %s\n", fileName.c_str());
+		if (g_bEnableLogging_Loading)
+		{
+			std::string fileName = filePath;
+			StripLeadingDirectories(fileName);
+			Print("Loading texture %s\n", fileName.c_str());
+		}
 
 		stbi_set_flip_vertically_on_load(flipVertically);
 
@@ -85,9 +88,12 @@ namespace flex
 
 		filePath = hdrFilePath;
 
-		std::string fileName = hdrFilePath;
-		StripLeadingDirectories(fileName);
-		Print("Loading HDR texture %s\n", fileName.c_str());
+		if (g_bEnableLogging_Loading)
+		{
+			std::string fileName = hdrFilePath;
+			StripLeadingDirectories(fileName);
+			Print("Loading HDR texture %s\n", fileName.c_str());
+		}
 
 		stbi_set_flip_vertically_on_load(flipVertically);
 

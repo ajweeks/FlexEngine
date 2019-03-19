@@ -468,9 +468,6 @@ namespace flex
 			}
 
 			m_DirectionalLight->shadowTextureID = m_ShadowMapTexture.id;
-
-
-			Print("Renderer initialized!\n");
 		}
 
 		void GLRenderer::Destroy()
@@ -3404,15 +3401,18 @@ namespace flex
 				}
 			}
 
-			if (bUsingPreRenderedTexture)
+			if (g_bEnableLogging_Loading)
 			{
-				std::string textureFilePath = renderedFontFilePath;
-				StripLeadingDirectories(textureFilePath);
-				Print("Loaded font atlas texture from %s\n", textureFilePath.c_str());
-			}
-			else
-			{
-				Print("Rendered font atlas for %s\n", fileName.c_str());
+				if (bUsingPreRenderedTexture)
+				{
+					std::string textureFilePath = renderedFontFilePath;
+					StripLeadingDirectories(textureFilePath);
+					Print("Loaded font atlas texture from %s\n", textureFilePath.c_str());
+				}
+				else
+				{
+					Print("Rendered font atlas for %s\n", fileName.c_str());
+				}
 			}
 
 			return true;

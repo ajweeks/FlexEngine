@@ -83,7 +83,10 @@ namespace flex
 
 		if (FileExists(filePath))
 		{
-			Print("Loading scene from %s\n", shortFilePath.c_str());
+			if (g_bEnableLogging_Loading)
+			{
+				Print("Loading scene from %s\n", shortFilePath.c_str());
+			}
 
 			JSONObject sceneRootObject;
 			if (!JSONParser::Parse(filePath, sceneRootObject))
@@ -487,9 +490,12 @@ namespace flex
 		std::string meshesFilePath = RESOURCE_LOCATION  "scenes/meshes.json";
 		if (FileExists(meshesFilePath))
 		{
-			std::string cleanedFilePath = meshesFilePath;
-			StripLeadingDirectories(cleanedFilePath);
-			Print("Parsing meshes file at %s\n", cleanedFilePath.c_str());
+			if (g_bEnableLogging_Loading)
+			{
+				std::string cleanedFilePath = meshesFilePath;
+				StripLeadingDirectories(cleanedFilePath);
+				Print("Parsing meshes file at %s\n", cleanedFilePath.c_str());
+			}
 
 			JSONObject obj;
 			if (JSONParser::Parse(meshesFilePath, obj))
@@ -512,7 +518,10 @@ namespace flex
 			return;
 		}
 
-		Print("Parsed %u meshes\n", s_ParsedMeshes.size());
+		if (g_bEnableLogging_Loading)
+		{
+			Print("Parsed %u meshes\n", s_ParsedMeshes.size());
+		}
 	}
 
 	void BaseScene::ParseFoundMaterialFiles()
@@ -522,9 +531,12 @@ namespace flex
 		std::string materialsFilePath = RESOURCE_LOCATION  "scenes/materials.json";
 		if (FileExists(materialsFilePath))
 		{
-			std::string cleanedFilePath = materialsFilePath;
-			StripLeadingDirectories(cleanedFilePath);
-			Print("Parsing materials file at %s\n", cleanedFilePath.c_str());
+			if (g_bEnableLogging_Loading)
+			{
+				std::string cleanedFilePath = materialsFilePath;
+				StripLeadingDirectories(cleanedFilePath);
+				Print("Parsing materials file at %s\n", cleanedFilePath.c_str());
+			}
 
 			JSONObject obj;
 			if (JSONParser::Parse(materialsFilePath, obj))
@@ -547,7 +559,10 @@ namespace flex
 			return;
 		}
 
-		Print("Parsed %u materials\n", s_ParsedMaterials.size());
+		if (g_bEnableLogging_Loading)
+		{
+			Print("Parsed %u materials\n", s_ParsedMaterials.size());
+		}
 	}
 
 	void BaseScene::ParseFoundPrefabFiles()
@@ -559,9 +574,12 @@ namespace flex
 		{
 			for (const std::string& foundFilePath : foundFiles)
 			{
-				std::string fileName = foundFilePath;
-				StripLeadingDirectories(fileName);
-				Print("Parsing prefab: %s\n", fileName.c_str());
+				if (g_bEnableLogging_Loading)
+				{
+					std::string fileName = foundFilePath;
+					StripLeadingDirectories(fileName);
+					Print("Parsing prefab: %s\n", fileName.c_str());
+				}
 
 				JSONObject obj;
 				if (JSONParser::Parse(foundFilePath, obj))
@@ -581,7 +599,10 @@ namespace flex
 			return;
 		}
 
-		Print("Parsed %u prefabs\n", s_ParsedPrefabs.size());
+		if (g_bEnableLogging_Loading)
+		{
+			Print("Parsed %u prefabs\n", s_ParsedPrefabs.size());
+		}
 	}
 
 	bool BaseScene::SerializeMeshFile()

@@ -1441,14 +1441,17 @@ namespace flex
 			rootObject.fields.emplace_back(ActionStrings[i], JSONValue(bindingObj));
 		}
 
+		std::string inputBindingsFileName = s_InputBindingFilePath;
+		StripLeadingDirectories(inputBindingsFileName);
+
 		std::string fileContents = rootObject.Print(0);
 		if (WriteFile(s_InputBindingFilePath, fileContents, false))
 		{
-			Print("Saved input bindings file to %s\n", s_InputBindingFilePath.c_str());
+			Print("Saved input bindings file to %s\n", inputBindingsFileName.c_str());
 		}
 		else
 		{
-			PrintWarn("Failed to save input bindings file to %s\n", s_InputBindingFilePath.c_str());
+			PrintWarn("Failed to save input bindings file to %s\n", inputBindingsFileName.c_str());
 		}
 	}
 

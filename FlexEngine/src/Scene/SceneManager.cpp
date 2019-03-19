@@ -65,6 +65,9 @@ namespace flex
 		assert(!m_Scenes.empty());
 
 		CurrentScene()->PostInitialize();
+
+		std::string currentSceneName = CurrentScene()->GetName();
+		Print("Loaded scene %s\n", currentSceneName.c_str());
 	}
 
 	void SceneManager::RemoveScene(BaseScene* scene)
@@ -189,6 +192,8 @@ namespace flex
 
 	void SceneManager::ReloadCurrentScene()
 	{
+		Print("Reloading current scene\n");
+
 		SetCurrentScene(m_CurrentSceneIndex);
 
 		InitializeCurrentScene();
@@ -239,13 +244,16 @@ namespace flex
 
 		if (!addedSceneFileNames.empty())
 		{
-			Print("Added %u scenes to list:\n", addedSceneFileNames.size());
-			for (std::string& fileName : addedSceneFileNames)
+			if (g_bEnableLogging_Loading)
 			{
-				Print("%s, ", fileName.c_str());
+				Print("Added %u scenes to list:\n", addedSceneFileNames.size());
+				for (std::string& fileName : addedSceneFileNames)
+				{
+					Print("%s, ", fileName.c_str());
 
+				}
+				Print("\n");
 			}
-			Print("\n");
 
 			if (!bFirstTimeThrough)
 			{

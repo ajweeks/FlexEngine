@@ -441,7 +441,10 @@ namespace flex
 			}
 
 			StripLeadingDirectories(fileName);
-			Print("Loading cubemap textures %s, %s, %s, %s, %s, %s\n", filePaths[0].c_str(), filePaths[1].c_str(), filePaths[2].c_str(), filePaths[3].c_str(), filePaths[4].c_str(), filePaths[5].c_str());
+			if (g_bEnableLogging_Loading)
+			{
+				Print("Loading cubemap textures %s, %s, %s, %s, %s, %s\n", filePaths[0].c_str(), filePaths[1].c_str(), filePaths[2].c_str(), filePaths[3].c_str(), filePaths[4].c_str(), filePaths[5].c_str());
+			}
 
 			// TODO: Handle hdr textures!!! FIXME
 			images.reserve(filePaths.size());
@@ -696,7 +699,10 @@ namespace flex
 			{
 				std::string fileName = relativeFilePath;
 				StripLeadingDirectories(fileName);
-				Print("Loading texture %s\n", fileName.c_str());
+				if (g_bEnableLogging_Loading)
+				{
+					Print("Loading texture %s\n", fileName.c_str());
+				}
 
 				int w, h, c;
 				unsigned char* pixels = stbi_load(relativeFilePath.c_str(), &w, &h, &c, STBI_rgb_alpha);
