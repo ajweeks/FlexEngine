@@ -175,9 +175,13 @@ IGNORE_WARNINGS_POP
 #define PROFILE_AUTO(blockName)
 #endif
 
-#define ENSURE_NO_ENTRY() { PrintError("Execution entered no entry path! %s\n", __FUNCTION__); assert(false); }
+#define DEBUG_BREAK __debugbreak()
+// Linux/Max: (untested)
+//#define DEBUG_BREAK __builtin_trap()
+
+#define ENSURE_NO_ENTRY() { PrintError("Execution entered no entry path! %s\n", __FUNCTION__); DEBUG_BREAK; }
 #ifdef DEBUG
-#define ENSURE(condition) if (!(condition)) { PrintError("Ensure failed! File: %s, Line: %d\n", __FILE__, __LINE__); assert(false); }
+#define ENSURE(condition) if (!(condition)) { PrintError("Ensure failed! File: %s, Line: %d\n", __FILE__, __LINE__); DEBUG_BREAK; }
 #else
 #define ENSURE(condition)
 #endif

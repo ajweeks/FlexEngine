@@ -104,7 +104,9 @@ namespace flex
 
 		struct VulkanTexture
 		{
-			VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue);
+			VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue, const std::string& name, u32 width, u32 height, u32 channelCount);
+			VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue, const std::string& relativeFilePath, u32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR);
+			VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue, const std::array<std::string, 6>& relativeCubemapFilePaths, u32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR);
 
 			struct ImageCreateInfo
 			{
@@ -175,7 +177,7 @@ namespace flex
 
 			// Static, globally usable functions
 
-			/* @return the size of the generated image */
+			/* Returns the size of the generated image */
 			static VkDeviceSize CreateImage(VulkanDevice* device, VkQueue graphicsQueue, ImageCreateInfo& createInfo);
 
 			static void CreateImageView(VulkanDevice* device, ImageViewCreateInfo& createInfo);
@@ -190,7 +192,6 @@ namespace flex
 
 			void Destroy();
 
-			bool LoadFromFile(const std::string& inFilePath = "");
 			bool SaveToFile(const std::string& absoluteFilePath, ImageFormat format, bool bFlipVertically);
 
 			void Build(void* data = nullptr);
@@ -199,7 +200,7 @@ namespace flex
 			 * Creates image, image view, and sampler based on the texture at filePath
 			 * Returns size of image in bytes
 			 */
-			VkDeviceSize CreateFromTexture(const std::string& inFilePath, VkFormat inFormat, bool hdr = false, u32 inMipLevels = 1);
+			VkDeviceSize CreateFromFile(VkFormat inFormat);
 
 			/*
 			 * Creates image, image view, and sampler
@@ -211,7 +212,7 @@ namespace flex
 			 * Creates an empty cubemap and returns the size of the generated image
 			 * Returns the size of the image
 			*/
-			VkDeviceSize CreateCubemapEmpty(VkFormat inFormat, u32 inWidth, u32 inHeight, u32 inChannelCount, u32 inMipLevels, bool enableTrilinearFiltering);
+			VkDeviceSize CreateCubemapEmpty(VkFormat inFormat, u32 inMipLevels, bool enableTrilinearFiltering);
 
 			/*
 			 * Creates a cubemap from the given 6 textures
@@ -221,11 +222,22 @@ namespace flex
 
 			void UpdateImageDescriptor();
 
+			std::string GetRelativeFilePath() const;
+			std::string GetName() const;
+			void Reload();
+
+			VkFormat CalculateFormat();
+
 			u32 width = 0;
 			u32 height = 0;
 			u32 channelCount = 0;
-			std::string filePath = "";
+			std::string name;
+			std::string relativeFilePath;
+			std::array<std::string, 6> relativeCubemapFilePaths;
 			u32 mipLevels = 1;
+			bool bFlipVertically = false;
+			bool bGenerateMipMaps = false;
+			bool bHDR = false;
 
 			VDeleter<VkImage> image;
 			VkImageLayout imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;

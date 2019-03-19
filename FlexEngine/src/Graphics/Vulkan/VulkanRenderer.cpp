@@ -14,6 +14,8 @@ IGNORE_WARNINGS_PUSH
 #include <freetype/ftbitmap.h>
 
 #if COMPILE_IMGUI
+#include "imgui_internal.h" // For columns API
+
 #include "imgui/imgui_impl_glfw.h"
 #include "imgui/imgui_impl_vulkan.h"
 #endif
@@ -36,6 +38,7 @@ IGNORE_WARNINGS_POP
 #include "Profiler.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
+#include "Scene/LoadedMesh.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Window/GLFWWindowWrapper.hpp"
@@ -147,12 +150,12 @@ namespace flex
 				});
 			}
 
-			m_BlankTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue);
-			m_BlankTexture->CreateFromTexture(RESOURCE_LOCATION  "textures/blank.jpg", VK_FORMAT_R8G8B8A8_UNORM, false);
+			m_BlankTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, RESOURCE_LOCATION  "textures/blank.jpg", 1, false, false, false);
+			m_BlankTexture->CreateFromFile(VK_FORMAT_R8G8B8A8_UNORM);
 
-			m_AlphaBGTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/alpha-bg.png", 3, false, false, false);
-			m_LoadingTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/loading_1.png", 3, false, false, false);
-			m_WorkTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/work_d.jpg", 3, false, true, false);
+			m_AlphaBGTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/alpha-bg.png", 4, false, false, false);
+			m_LoadingTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/loading_1.png", 4, false, false, false);
+			m_WorkTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/work_d.jpg", 4, false, true, false);
 			m_PointLightIconID = InitializeTexture(RESOURCE_LOCATION  "textures/icons/point-light-icon-256.png", 4, false, true, false);
 			m_DirectionalLightIconID = InitializeTexture(RESOURCE_LOCATION  "textures/icons/directional-light-icon-256.png", 4, false, true, false);
 
@@ -289,7 +292,7 @@ namespace flex
 			if (activeRenderObjectCount > 0)
 			{
 				PrintError("=====================================================\n");
-				PrintError("%u render objects were not destroyed before GL render:\n", activeRenderObjectCount);
+				PrintError("%u render objects were not destroyed before Vulkan render:\n", activeRenderObjectCount);
 
 				for (VulkanRenderObject* renderObject : m_RenderObjects)
 				{
@@ -2060,7 +2063,7 @@ namespace flex
 				if (!m_BRDFTexture)
 				{
 					Print("Generating BRDF LUT\n");
-					m_BRDFTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue);
+					m_BRDFTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "BRDF", m_BRDFSize.x, m_BRDFSize.y, 1);
 					m_BRDFTexture->CreateEmpty(VK_FORMAT_R16G16_SFLOAT, m_BRDFSize.x, m_BRDFSize.y, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 					m_LoadedTextures.push_back(m_BRDFTexture);
 					GenerateBRDFLUT(m_BRDFTexture);
@@ -2092,7 +2095,7 @@ namespace flex
 					VkFormat format = VK_FORMAT_R8G8B8A8_UNORM,
 					u32 mipLevels = 1,
 					bool hdr = false) :
-					filePath(filePath),
+					relativeFilePath(relativeFilePath),
 					texture(texture),
 					generate(generate),
 					format(format),
@@ -2100,7 +2103,7 @@ namespace flex
 					hdr(hdr)
 				{}
 
-				const std::string filePath;
+				const std::string relativeFilePath;
 				VulkanTexture** texture = nullptr;
 				bool* generate = nullptr;
 				VkFormat format;
@@ -2129,15 +2132,20 @@ namespace flex
 
 			for (TextureInfo& textureInfo : textureInfos)
 			{
-				if (!textureInfo.filePath.empty() && textureInfo.generate)
+				if (!textureInfo.relativeFilePath.empty() && textureInfo.generate)
 				{
-					*textureInfo.texture = GetLoadedTexture(textureInfo.filePath);
+					*textureInfo.texture = GetLoadedTexture(textureInfo.relativeFilePath);
 
 					if (*textureInfo.texture == nullptr)
 					{
-						*textureInfo.texture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue);
+						// TODO: Allow per-texture options for these fields
+						u32 channelCount = 4;
+						bool bFlipVertically = false;
+						bool bHDR = false;
+						*textureInfo.texture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue,
+							textureInfo.relativeFilePath, 4, bFlipVertically, textureInfo.mipLevels > 1, bHDR);
 						// Texture hasn't been loaded yet, load it now
-						(*textureInfo.texture)->CreateFromTexture(textureInfo.filePath, textureInfo.format, textureInfo.hdr, textureInfo.mipLevels);
+						(*textureInfo.texture)->CreateFromFile(textureInfo.format);
 						m_LoadedTextures.push_back(*textureInfo.texture);
 
 						(*textureInfo.texture)->imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -2180,9 +2188,10 @@ namespace flex
 					assert(mat.cubemapTexture == nullptr);
 
 					const u32 mipLevels = static_cast<u32>(floor(log2(createInfo->generatedCubemapSize.x))) + 1;
-					mat.cubemapTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue);
-					mat.cubemapTexture->CreateCubemapEmpty(VK_FORMAT_R8G8B8A8_UNORM, (u32)createInfo->generatedCubemapSize.x,
-						(u32)createInfo->generatedCubemapSize.y, 4, mipLevels, createInfo->enableCubemapTrilinearFiltering);
+					u32 channelCount = 4;
+					mat.cubemapTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "Cubemap", (u32)createInfo->generatedCubemapSize.x,
+						(u32)createInfo->generatedCubemapSize.y, channelCount);
+					mat.cubemapTexture->CreateCubemapEmpty(VK_FORMAT_R8G8B8A8_UNORM, mipLevels, createInfo->enableCubemapTrilinearFiltering);
 					m_LoadedTextures.push_back(mat.cubemapTexture);
 				}
 				else
@@ -2191,7 +2200,9 @@ namespace flex
 
 					if (mat.cubemapTexture == nullptr)
 					{
-						mat.cubemapTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue);
+						u32 channelCount = 4;
+						mat.cubemapTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue,
+							createInfo->cubeMapFilePaths, 4, false, false, false);
 						mat.cubemapTexture->CreateCubemapFromTextures(VK_FORMAT_R8G8B8A8_UNORM, createInfo->cubeMapFilePaths, true);
 						m_LoadedTextures.push_back(mat.cubemapTexture);
 					}
@@ -2203,9 +2214,9 @@ namespace flex
 				assert(mat.cubemapTexture == nullptr);
 
 				const u32 mipLevels = static_cast<u32>(floor(log2(createInfo->generatedCubemapSize.x))) + 1;
-				mat.cubemapTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue);
-				mat.cubemapTexture->CreateCubemapEmpty(VK_FORMAT_R32G32B32A32_SFLOAT, (u32)createInfo->generatedCubemapSize.x,
-					(u32)createInfo->generatedCubemapSize.y, 4, mipLevels, false);
+				mat.cubemapTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "HDR Cubemap",
+					(u32)createInfo->generatedCubemapSize.x, (u32)createInfo->generatedCubemapSize.y, 4);
+				mat.cubemapTexture->CreateCubemapEmpty(VK_FORMAT_R32G32B32A32_SFLOAT, mipLevels, false);
 				m_LoadedTextures.push_back(mat.cubemapTexture);
 			}
 
@@ -2225,9 +2236,10 @@ namespace flex
 				assert(mat.irradianceTexture == nullptr);
 
 				const u32 mipLevels = static_cast<u32>(floor(log2(createInfo->generatedIrradianceCubemapSize.x))) + 1;
-				mat.irradianceTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue);
-				mat.irradianceTexture->CreateCubemapEmpty(VK_FORMAT_R32G32B32A32_SFLOAT, (u32)createInfo->generatedIrradianceCubemapSize.x,
-					(u32)createInfo->generatedIrradianceCubemapSize.y, 4, mipLevels, false);
+				mat.irradianceTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "Irradiance sampler",
+					(u32)createInfo->generatedIrradianceCubemapSize.x,
+					(u32)createInfo->generatedIrradianceCubemapSize.y, 4);
+				mat.irradianceTexture->CreateCubemapEmpty(VK_FORMAT_R32G32B32A32_SFLOAT, mipLevels, false);
 				m_LoadedTextures.push_back(mat.irradianceTexture);
 			}
 
@@ -2241,9 +2253,10 @@ namespace flex
 				assert(mat.prefilterTexture == nullptr);
 
 				const u32 mipLevels = static_cast<u32>(floor(log2(createInfo->generatedPrefilteredCubemapSize.x))) + 1;
-				mat.prefilterTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue);
-				mat.prefilterTexture->CreateCubemapEmpty(VK_FORMAT_R16G16B16A16_SFLOAT, (u32)createInfo->generatedPrefilteredCubemapSize.x,
-					(u32)createInfo->generatedPrefilteredCubemapSize.y, 4, mipLevels, true);
+				mat.prefilterTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "Prefiltered map",
+					(u32)createInfo->generatedPrefilteredCubemapSize.x,
+					(u32)createInfo->generatedPrefilteredCubemapSize.y, 4);
+				mat.prefilterTexture->CreateCubemapEmpty(VK_FORMAT_R16G16B16A16_SFLOAT,  mipLevels, true);
 				m_LoadedTextures.push_back(mat.prefilterTexture);
 			}
 
@@ -2257,7 +2270,12 @@ namespace flex
 
 		TextureID VulkanRenderer::InitializeTexture(const std::string& relativeFilePath, i32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR)
 		{
-			return InvalidTextureID;
+			VulkanTexture* newTex = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, relativeFilePath,
+				channelCount, bFlipVertically, false, bHDR);
+			newTex->CreateFromFile(newTex->CalculateFormat());
+			m_LoadedTextures.push_back(newTex);
+
+			return (TextureID)(m_LoadedTextures.size() - 1);
 		}
 
 		u32 VulkanRenderer::InitializeRenderObject(const RenderObjectCreateInfo* createInfo)
@@ -2301,7 +2319,7 @@ namespace flex
 			if (m_bPostInitialized)
 			{
 				CreateDescriptorSet(renderID);
-				CreateGraphicsPipeline(renderID, true);
+				CreateGraphicsPipeline(renderID, false);
 			}
 
 			return renderID;
@@ -2593,7 +2611,7 @@ namespace flex
 		{
 			bool bValueChanged = false;
 
-			std::string currentTexName = (*selectedIndex == 0 ? "NONE" : (textures[*selectedIndex - 1]->filePath.c_str()));
+			std::string currentTexName = (*selectedIndex == 0 ? "NONE" : (textures[*selectedIndex - 1]->relativeFilePath.c_str()));
 			if (ImGui::BeginCombo(label, currentTexName.c_str()))
 			{
 				for (i32 i = 0; i < (i32)textures.size() + 1; i++)
@@ -2612,7 +2630,7 @@ namespace flex
 					}
 					else
 					{
-						std::string textureName = textures[i - 1]->filePath;
+						std::string textureName = textures[i - 1]->relativeFilePath;
 						if (ImGui::Selectable(textureName.c_str(), bTextureSelected))
 						{
 							if (*selectedIndex == 0)
@@ -2973,7 +2991,583 @@ namespace flex
 
 		void VulkanRenderer::DrawAssetBrowserImGui(bool* bShowing)
 		{
+			// TODO: Consolidate with GL renderer
+			ImGui::SetNextWindowSize(ImVec2(400.0f, 350.0f), ImGuiCond_FirstUseEver);
+			if (ImGui::Begin("Asset browser", bShowing))
+			{
+				if (ImGui::CollapsingHeader("Materials"))
+				{
+					static bool bUpdateFields = true;
+					const i32 MAX_NAME_LEN = 128;
+					static i32 selectedMaterialIndexShort = 0; // Index into shortened array
+					static MaterialID selectedMaterialID = 0;
+					while (m_Materials[selectedMaterialID].material.engineMaterial &&
+						selectedMaterialID < m_Materials.size() - 1)
+					{
+						++selectedMaterialID;
+					}
+					static std::string matName = "";
+					static i32 selectedShaderIndex = 0;
+					// Texture index values of 0 represent no texture, 1 = first index into textures array and so on
+					static i32 albedoTextureIndex = 0;
+					static bool bUpdateAlbedoTextureMaterial = false;
+					static i32 metallicTextureIndex = 0;
+					static bool bUpdateMetallicTextureMaterial = false;
+					static i32 roughnessTextureIndex = 0;
+					static bool bUpdateRoughessTextureMaterial = false;
+					static i32 normalTextureIndex = 0;
+					static bool bUpdateNormalTextureMaterial = false;
+					static i32 aoTextureIndex = 0;
+					static bool bUpdateAOTextureMaterial = false;
+					VulkanMaterial& mat = m_Materials[selectedMaterialID];
 
+					if (bUpdateFields)
+					{
+						bUpdateFields = false;
+
+						matName = mat.material.name;
+						matName.resize(MAX_NAME_LEN);
+
+						i32 i = 0;
+						for (VulkanTexture* texture : m_LoadedTextures)
+						{
+							std::string texturePath = texture->GetRelativeFilePath();
+
+							ImGuiUpdateTextureIndexOrMaterial(bUpdateAlbedoTextureMaterial,
+								texturePath,
+								mat.material.albedoTexturePath,
+								texture,
+								i,
+								&albedoTextureIndex,
+								&mat.albedoTexture->sampler);
+
+							ImGuiUpdateTextureIndexOrMaterial(bUpdateMetallicTextureMaterial,
+								texturePath,
+								mat.material.metallicTexturePath,
+								texture,
+								i,
+								&metallicTextureIndex,
+								&mat.metallicTexture->sampler);
+
+							ImGuiUpdateTextureIndexOrMaterial(bUpdateRoughessTextureMaterial,
+								texturePath,
+								mat.material.roughnessTexturePath,
+								texture,
+								i,
+								&roughnessTextureIndex,
+								&mat.roughnessTexture->sampler);
+
+							ImGuiUpdateTextureIndexOrMaterial(bUpdateNormalTextureMaterial,
+								texturePath,
+								mat.material.normalTexturePath,
+								texture,
+								i,
+								&normalTextureIndex,
+								&mat.normalTexture->sampler);
+
+							ImGuiUpdateTextureIndexOrMaterial(bUpdateAOTextureMaterial,
+								texturePath,
+								mat.material.aoTexturePath,
+								texture,
+								i,
+								&aoTextureIndex,
+								&mat.aoTexture->sampler);
+
+							++i;
+						}
+
+						mat.material.enableAlbedoSampler = (albedoTextureIndex > 0);
+						mat.material.enableMetallicSampler = (metallicTextureIndex > 0);
+						mat.material.enableRoughnessSampler = (roughnessTextureIndex > 0);
+						mat.material.enableNormalSampler = (normalTextureIndex > 0);
+						mat.material.enableAOSampler = (aoTextureIndex > 0);
+
+						selectedShaderIndex = mat.material.shaderID;
+					}
+
+					ImGui::PushItemWidth(160.0f);
+					if (ImGui::InputText("Name", (char*)matName.data(), MAX_NAME_LEN, ImGuiInputTextFlags_EnterReturnsTrue))
+					{
+						// Remove trailing \0 characters
+						matName = std::string(matName.c_str());
+						mat.material.name = matName;
+					}
+					ImGui::PopItemWidth();
+
+					ImGui::SameLine();
+
+					struct ShaderFunctor
+					{
+						static bool GetShaderName(void* data, int idx, const char** out_str)
+						{
+							*out_str = ((VulkanShader*)data)[idx].shader.name.c_str();
+							return true;
+						}
+					};
+					ImGui::PushItemWidth(240.0f);
+					if (ImGui::Combo("Shader", &selectedShaderIndex, &ShaderFunctor::GetShaderName,
+						(void*)m_Shaders.data(), m_Shaders.size()))
+					{
+						mat = m_Materials[selectedMaterialID];
+						mat.material.shaderID = selectedShaderIndex;
+
+						bUpdateFields = true;
+					}
+					ImGui::PopItemWidth();
+
+					ImGui::NewLine();
+
+					ImGui::Columns(2);
+					ImGui::SetColumnWidth(0, 240.0f);
+
+					ImGui::ColorEdit3("Albedo", &mat.material.constAlbedo.x, ImGuiColorEditFlags_Float | ImGuiColorEditFlags_PickerHueWheel);
+
+					if (mat.material.enableMetallicSampler)
+					{
+						ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+					}
+					ImGui::SliderFloat("Metallic", &mat.material.constMetallic, 0.0f, 1.0f, "%.2f");
+					if (mat.material.enableMetallicSampler)
+					{
+						ImGui::PopStyleColor();
+					}
+
+					if (mat.material.enableRoughnessSampler)
+					{
+						ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+					}
+					ImGui::SliderFloat("Roughness", &mat.material.constRoughness, 0.0f, 1.0f, "%.2f");
+					if (mat.material.enableRoughnessSampler)
+					{
+						ImGui::PopStyleColor();
+					}
+
+					if (mat.material.enableAOSampler)
+					{
+						ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+					}
+					ImGui::SliderFloat("AO", &mat.material.constAO, 0.0f, 1.0f, "%.2f");
+					if (mat.material.enableAOSampler)
+					{
+						ImGui::PopStyleColor();
+					}
+
+					ImGui::DragFloat("Texture scale", &mat.material.textureScale, 0.1f);
+
+					ImGui::NextColumn();
+
+					struct TextureFunctor
+					{
+						static bool GetTextureFileName(void* data, i32 idx, const char** out_str)
+						{
+							if (idx == 0)
+							{
+								*out_str = "NONE";
+							}
+							else
+							{
+								*out_str = ((VulkanTexture**)data)[idx - 1]->GetName().c_str();
+							}
+							return true;
+						}
+					};
+
+					std::vector<VulkanTexture*> textures;
+					textures.reserve(m_LoadedTextures.size());
+					for (VulkanTexture* texture : m_LoadedTextures)
+					{
+						textures.push_back(texture);
+					}
+
+					bUpdateAlbedoTextureMaterial = DoTextureSelector("Albedo texture", textures,
+						&albedoTextureIndex, &mat.material.generateAlbedoSampler);
+					bUpdateFields |= bUpdateAlbedoTextureMaterial;
+					bUpdateMetallicTextureMaterial = DoTextureSelector("Metallic texture", textures,
+						&metallicTextureIndex, &mat.material.generateMetallicSampler);
+					bUpdateFields |= bUpdateMetallicTextureMaterial;
+					bUpdateRoughessTextureMaterial = DoTextureSelector("Roughness texture", textures,
+						&roughnessTextureIndex, &mat.material.generateRoughnessSampler);
+					bUpdateFields |= bUpdateRoughessTextureMaterial;
+					bUpdateNormalTextureMaterial = DoTextureSelector("Normal texture", textures,
+						&normalTextureIndex, &mat.material.generateNormalSampler);
+					bUpdateFields |= bUpdateNormalTextureMaterial;
+					bUpdateAOTextureMaterial = DoTextureSelector("AO texture", textures, &aoTextureIndex,
+						&mat.material.generateAOSampler);
+					bUpdateFields |= bUpdateAOTextureMaterial;
+
+					ImGui::NewLine();
+
+					ImGui::EndColumns();
+
+					if (ImGui::BeginChild("material list", ImVec2(0.0f, 120.0f), true))
+					{
+						i32 matShortIndex = 0;
+						for (i32 i = 0; i < (i32)m_Materials.size(); ++i)
+						{
+							if (m_Materials[i].material.engineMaterial)
+							{
+								continue;
+							}
+
+							bool bSelected = (matShortIndex == selectedMaterialIndexShort);
+							if (ImGui::Selectable(m_Materials[i].material.name.c_str(), &bSelected))
+							{
+								if (selectedMaterialIndexShort != matShortIndex)
+								{
+									selectedMaterialIndexShort = matShortIndex;
+									selectedMaterialID = i;
+									bUpdateFields = true;
+								}
+							}
+
+							if (ImGui::BeginPopupContextItem())
+							{
+								if (ImGui::Button("Duplicate"))
+								{
+									const Material& dupMat = m_Materials[i].material;
+
+									MaterialCreateInfo createInfo = {};
+									createInfo.name = GetIncrementedPostFixedStr(dupMat.name, "new material 00");
+									createInfo.shaderName = m_Shaders[dupMat.shaderID].shader.name;
+									createInfo.constAlbedo = dupMat.constAlbedo;
+									createInfo.constRoughness = dupMat.constRoughness;
+									createInfo.constMetallic = dupMat.constMetallic;
+									createInfo.constAO = dupMat.constAO;
+									createInfo.colorMultiplier = dupMat.colorMultiplier;
+									// TODO: Copy other fields
+									MaterialID newMaterialID = InitializeMaterial(&createInfo);
+
+									g_SceneManager->CurrentScene()->AddMaterialID(newMaterialID);
+
+									ImGui::CloseCurrentPopup();
+								}
+
+								ImGui::EndPopup();
+							}
+
+							if (ImGui::IsItemActive())
+							{
+								if (ImGui::BeginDragDropSource())
+								{
+									MaterialID draggedMaterialID = i;
+									const void* data = (void*)(&draggedMaterialID);
+									size_t size = sizeof(MaterialID);
+
+									ImGui::SetDragDropPayload(m_MaterialPayloadCStr, data, size);
+
+									ImGui::Text("%s", m_Materials[i].material.name.c_str());
+
+									ImGui::EndDragDropSource();
+								}
+							}
+
+							++matShortIndex;
+						}
+					}
+					ImGui::EndChild(); // Material list
+
+					const i32 MAX_MAT_NAME_LEN = 128;
+					static std::string newMaterialName = "";
+
+					const char* createMaterialPopupStr = "Create material##popup";
+					if (ImGui::Button("Create material"))
+					{
+						ImGui::OpenPopup(createMaterialPopupStr);
+						newMaterialName = "New Material 01";
+						newMaterialName.resize(MAX_MAT_NAME_LEN);
+					}
+
+					if (ImGui::BeginPopupModal(createMaterialPopupStr, NULL, ImGuiWindowFlags_NoResize))
+					{
+						ImGui::Text("Name:");
+						ImGui::InputText("##NameText", (char*)newMaterialName.data(), MAX_MAT_NAME_LEN);
+
+						ImGui::Text("Shader:");
+						static i32 newMatShaderIndex = 0;
+						if (ImGui::BeginChild("Shader", ImVec2(0, 120), true))
+						{
+							i32 i = 0;
+							for (VulkanShader& shader : m_Shaders)
+							{
+								bool bSelectedShader = (i == newMatShaderIndex);
+								if (ImGui::Selectable(shader.shader.name.c_str(), &bSelectedShader))
+								{
+									newMatShaderIndex = i;
+								}
+
+								++i;
+							}
+						}
+						ImGui::EndChild(); // Shader list
+
+						if (ImGui::Button("Create new material"))
+						{
+							// Remove trailing /0 characters
+							newMaterialName = std::string(newMaterialName.c_str());
+
+							MaterialCreateInfo createInfo = {};
+							createInfo.name = newMaterialName;
+							createInfo.shaderName = m_Shaders[newMatShaderIndex].shader.name;
+							MaterialID newMaterialID = InitializeMaterial(&createInfo);
+
+							g_SceneManager->CurrentScene()->AddMaterialID(newMaterialID);
+
+							ImGui::CloseCurrentPopup();
+						}
+
+						ImGui::SameLine();
+
+						if (ImGui::Button("Cancel"))
+						{
+							ImGui::CloseCurrentPopup();
+						}
+
+						ImGui::EndPopup();
+					}
+
+					ImGui::SameLine();
+
+					ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
+					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
+					ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
+					if (ImGui::Button("Delete material"))
+					{
+						g_SceneManager->CurrentScene()->RemoveMaterialID(selectedMaterialID);
+						RemoveMaterial(selectedMaterialID);
+					}
+					ImGui::PopStyleColor();
+					ImGui::PopStyleColor();
+					ImGui::PopStyleColor();
+				}
+
+				if (ImGui::CollapsingHeader("Textures"))
+				{
+					static i32 selectedTextureIndex = 0;
+					if (ImGui::BeginChild("texture list", ImVec2(0.0f, 120.0f), true))
+					{
+						i32 i = 0;
+						for (VulkanTexture* texture : m_LoadedTextures)
+						{
+							bool bSelected = (i == selectedTextureIndex);
+							std::string textureFileName = texture->GetName();
+							if (ImGui::Selectable(textureFileName.c_str(), &bSelected))
+							{
+								selectedTextureIndex = i;
+							}
+
+							if (ImGui::BeginPopupContextItem())
+							{
+								if (ImGui::Button("Reload"))
+								{
+									texture->Reload();
+									ImGui::CloseCurrentPopup();
+								}
+
+								ImGui::EndPopup();
+							}
+
+							if (ImGui::IsItemHovered())
+							{
+								DoTexturePreviewTooltip(texture);
+							}
+							++i;
+						}
+					}
+					ImGui::EndChild();
+
+					// TODO:
+					//if (ImGui::Button("Import Texture"))
+					//{
+					//	// TODO: Not all textures are directly in this directory! CLEANUP to make more robust
+					//	std::string relativeDirPath = RESOURCE_LOCATION  "textures/";
+					//	std::string absoluteDirectoryStr = RelativePathToAbsolute(relativeDirPath);
+					//	std::string selectedAbsFilePath;
+					//	if (OpenFileDialog("Import texture", absoluteDirectoryStr, selectedAbsFilePath))
+					//	{
+					//		std::string fileNameAndExtension = selectedAbsFilePath;
+					//		StripLeadingDirectories(fileNameAndExtension);
+					//		std::string relativeFilePath = relativeDirPath + fileNameAndExtension;
+
+					//		Print("Importing texture: %s\n", relativeFilePath.c_str());
+
+					//		VulkanTexture* newTexture = new VulkanTexture(relativeFilePath, 3, false, false, false);
+					//		if (newTexture->LoadFromFile())
+					//		{
+					//			m_LoadedTextures.push_back(newTexture);
+					//		}
+
+					//		ImGui::CloseCurrentPopup();
+					//	}
+					//}
+				}
+
+				if (ImGui::CollapsingHeader("Meshes"))
+				{
+					static i32 selectedMeshIndex = 0;
+					//const i32 MAX_NAME_LEN = 128;
+					// TODO: Implement mesh naming
+					//static std::string selectedMeshName = "";
+					static bool bUpdateName = true;
+
+					std::string selectedMeshRelativeFilePath;
+					LoadedMesh* selectedMesh = nullptr;
+					i32 meshIdx = 0;
+					for (auto meshPair : MeshComponent::m_LoadedMeshes)
+					{
+						if (meshIdx == selectedMeshIndex)
+						{
+							selectedMesh = meshPair.second;
+							selectedMeshRelativeFilePath = meshPair.first;
+							break;
+						}
+						++meshIdx;
+					}
+
+					ImGui::Text("Import settings");
+
+					ImGui::Columns(2, "import settings columns", false);
+					ImGui::Separator();
+					ImGui::Checkbox("Flip U", &selectedMesh->importSettings.flipU); ImGui::NextColumn();
+					ImGui::Checkbox("Flip V", &selectedMesh->importSettings.flipV); ImGui::NextColumn();
+					ImGui::Checkbox("Swap Normal YZ", &selectedMesh->importSettings.swapNormalYZ); ImGui::NextColumn();
+					ImGui::Checkbox("Flip Normal Z", &selectedMesh->importSettings.flipNormalZ); ImGui::NextColumn();
+					ImGui::Columns(1);
+
+					if (ImGui::Button("Re-import"))
+					{
+						for (VulkanRenderObject* renderObject : m_RenderObjects)
+						{
+							if (renderObject && renderObject->gameObject)
+							{
+								MeshComponent* gameObjectMesh = renderObject->gameObject->GetMeshComponent();
+								if (gameObjectMesh &&  gameObjectMesh->GetRelativeFilePath().compare(selectedMeshRelativeFilePath) == 0)
+								{
+									MeshImportSettings importSettings = selectedMesh->importSettings;
+
+									MaterialID matID = renderObject->materialID;
+									GameObject* gameObject = renderObject->gameObject;
+
+									DestroyRenderObject(gameObject->GetRenderID());
+									gameObject->SetRenderID(InvalidRenderID);
+
+									gameObjectMesh->Destroy();
+									gameObjectMesh->SetOwner(gameObject);
+									gameObjectMesh->SetRequiredAttributesFromMaterialID(matID);
+									gameObjectMesh->LoadFromFile(selectedMeshRelativeFilePath, &importSettings);
+								}
+							}
+						}
+					}
+
+					ImGui::SameLine();
+
+					if (ImGui::Button("Save"))
+					{
+						g_SceneManager->CurrentScene()->SerializeToFile(true);
+					}
+
+					if (ImGui::BeginChild("mesh list", ImVec2(0.0f, 120.0f), true))
+					{
+						i32 i = 0;
+						for (const auto& meshIter : MeshComponent::m_LoadedMeshes)
+						{
+							bool bSelected = (i == selectedMeshIndex);
+							std::string meshFilePath = meshIter.first;
+							std::string meshFileName = meshIter.first;
+							StripLeadingDirectories(meshFileName);
+							if (ImGui::Selectable(meshFileName.c_str(), &bSelected))
+							{
+								selectedMeshIndex = i;
+								bUpdateName = true;
+							}
+
+							if (ImGui::BeginPopupContextItem())
+							{
+								if (ImGui::Button("Reload"))
+								{
+									MeshComponent::LoadMesh(meshIter.second->relativeFilePath);
+
+									for (VulkanRenderObject* renderObject : m_RenderObjects)
+									{
+										if (renderObject)
+										{
+											MeshComponent* mesh = renderObject->gameObject->GetMeshComponent();
+											if (mesh && mesh->GetRelativeFilePath().compare(meshFilePath) == 0)
+											{
+												mesh->Reload();
+											}
+										}
+									}
+
+									ImGui::CloseCurrentPopup();
+								}
+
+								ImGui::EndPopup();
+							}
+							else
+							{
+								if (ImGui::IsItemActive())
+								{
+									if (ImGui::BeginDragDropSource())
+									{
+										const void* data = (void*)(meshIter.first.c_str());
+										size_t size = strlen(meshIter.first.c_str()) * sizeof(char);
+
+										ImGui::SetDragDropPayload(m_MeshPayloadCStr, data, size);
+
+										ImGui::Text("%s", meshFileName.c_str());
+
+										ImGui::EndDragDropSource();
+									}
+								}
+							}
+
+							++i;
+						}
+					}
+					ImGui::EndChild();
+
+					if (ImGui::Button("Import Mesh"))
+					{
+						// TODO: Not all models are directly in this directory! CLEANUP to make more robust
+						std::string relativeDirPath = RESOURCE_LOCATION  "meshes/";
+						std::string absoluteDirectoryStr = RelativePathToAbsolute(relativeDirPath);
+						std::string selectedAbsFilePath;
+						if (OpenFileDialog("Import mesh", absoluteDirectoryStr, selectedAbsFilePath))
+						{
+							Print("Importing mesh: %s\n", selectedAbsFilePath.c_str());
+
+							std::string fileNameAndExtension = selectedAbsFilePath;
+							StripLeadingDirectories(fileNameAndExtension);
+							std::string relativeFilePath = relativeDirPath + fileNameAndExtension;
+
+							LoadedMesh* existingMesh = nullptr;
+							if (MeshComponent::FindPreLoadedMesh(relativeFilePath, &existingMesh))
+							{
+								i32 j = 0;
+								for (auto meshPair : MeshComponent::m_LoadedMeshes)
+								{
+									if (meshPair.first.compare(relativeFilePath) == 0)
+									{
+										selectedMeshIndex = j;
+										break;
+									}
+
+									++j;
+								}
+							}
+							else
+							{
+								MeshComponent::LoadMesh(relativeFilePath);
+							}
+
+							ImGui::CloseCurrentPopup();
+						}
+					}
+				}
+			}
+
+			ImGui::End();
 		}
 
 		void VulkanRenderer::RecaptureReflectionProbe()
@@ -3076,14 +3670,15 @@ namespace flex
 			u32 spread = 5;
 			//u32 totPadding = padding + spread;
 
+			std::string textureName = std::string("Font atlas ") + fileName;
 			bool bUsingPreRenderedTexture = false;
 			if (!bForceRender)
 			{
 				if (FileExists(renderedFontFilePath))
 				{
-					VulkanTexture* fontTex = newFont->SetTexture(new VulkanTexture(m_VulkanDevice, m_GraphicsQueue));
+					VulkanTexture* fontTex = newFont->SetTexture(new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, renderedFontFilePath, 4, false, false, false));
 
-					if (fontTex->LoadFromFile(renderedFontFilePath))
+					if (fontTex->CreateFromFile(fontTex->CalculateFormat()))
 					{
 						bUsingPreRenderedTexture = true;
 
@@ -3121,7 +3716,7 @@ namespace flex
 					std::max(std::max(maxPos[0].y, maxPos[1].y), std::max(maxPos[2].y, maxPos[3].y)));
 				newFont->SetTextureSize(textureSize);
 
-				VulkanTexture* fontTex = newFont->SetTexture(new VulkanTexture(m_VulkanDevice, m_GraphicsQueue));
+				VulkanTexture* fontTex = newFont->SetTexture(new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, textureName, 4, false, false, false));
 				// TODO: VK_IMAGE_USAGE_TRANSFER_DST_BIT?
 				fontTex->CreateEmpty(VkFormat::VK_FORMAT_R16G16B16A16_UNORM, textureSize.x, textureSize.y, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
 				fontTex->Build();
@@ -4049,7 +4644,7 @@ namespace flex
 		{
 			for (VulkanTexture* vulkanTexture : m_LoadedTextures)
 			{
-				if (!filePath.empty() && filePath.compare(vulkanTexture->filePath) == 0)
+				if (!filePath.empty() && filePath.compare(vulkanTexture->relativeFilePath) == 0)
 				{
 					return vulkanTexture;
 				}

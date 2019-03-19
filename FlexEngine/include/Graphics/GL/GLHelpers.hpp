@@ -214,8 +214,8 @@ namespace flex
 		struct GLTexture
 		{
 			GLTexture();
-			GLTexture(const std::string& name, i32 width, i32 height, i32 channelCount, i32 internalFormat, GLenum format, GLenum type);
-			GLTexture(const std::string& relativeFilePath, i32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR);
+			GLTexture(const std::string& name, u32 width, u32 height, u32 channelCount, i32 internalFormat, GLenum format, GLenum type);
+			GLTexture(const std::string& relativeFilePath, u32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR);
 			~GLTexture();
 
 			bool CreateEmpty();

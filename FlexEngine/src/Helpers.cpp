@@ -353,7 +353,7 @@ namespace flex
 		OPENFILENAME openFileName = {};
 		openFileName.lStructSize = sizeof(OPENFILENAME);
 		openFileName.lpstrInitialDir = absoluteDirectory.c_str();
-		openFileName.nMaxFile = strlen(filter);
+		openFileName.nMaxFile = (filter == nullptr ? 0 : strlen(filter));
 		if (openFileName.nMaxFile && filter)
 		{
 			openFileName.lpstrFilter = filter;

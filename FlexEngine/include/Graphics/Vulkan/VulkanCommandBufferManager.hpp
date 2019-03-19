@@ -27,7 +27,7 @@ namespace flex
 			/* Creates count command buffers (should be equal to the number of backbuffers) */
 			void CreateCommandBuffers(u32 count);
 
-			/* @return true if all command buffers are valid */
+			/* Returns true if all command buffers are valid */
 			bool CheckCommandBuffers() const;
 
 			/* Frees all command buffers */

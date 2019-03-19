@@ -196,15 +196,61 @@ namespace flex
 			indexCount = 0;
 		}
 
-		VulkanTexture::VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue) :
+		VulkanTexture::VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue, const std::string& name,
+			u32 width, u32 height, u32 channelCount) :
 			m_VulkanDevice(device),
 			m_GraphicsQueue(graphicsQueue),
 			image(device->m_LogicalDevice, vkDestroyImage),
 			imageMemory(device->m_LogicalDevice, vkFreeMemory),
 			imageView(device->m_LogicalDevice, vkDestroyImageView),
-			sampler(device->m_LogicalDevice, vkDestroySampler)
+			sampler(device->m_LogicalDevice, vkDestroySampler),
+			name(name),
+			width(width),
+			height(height),
+			channelCount(channelCount)
 		{
 			UpdateImageDescriptor();
+		}
+
+		VulkanTexture::VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue,
+			const std::string& relativeFilePath, u32 channelCount, bool bFlipVertically,
+			bool bGenerateMipMaps, bool bHDR) :
+			m_VulkanDevice(device),
+			m_GraphicsQueue(graphicsQueue),
+			image(device->m_LogicalDevice, vkDestroyImage),
+			imageMemory(device->m_LogicalDevice, vkFreeMemory),
+			imageView(device->m_LogicalDevice, vkDestroyImageView),
+			sampler(device->m_LogicalDevice, vkDestroySampler),
+			relativeFilePath(relativeFilePath),
+			channelCount(channelCount),
+			bFlipVertically(bFlipVertically),
+			bGenerateMipMaps(bGenerateMipMaps),
+			bHDR(bHDR)
+		{
+			UpdateImageDescriptor();
+		}
+
+		VulkanTexture::VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue,
+			const std::array<std::string, 6>& relativeCubemapFilePaths, u32 channelCount, bool bFlipVertically,
+			bool bGenerateMipMaps, bool bHDR) :
+			m_VulkanDevice(device),
+			m_GraphicsQueue(graphicsQueue),
+			image(device->m_LogicalDevice, vkDestroyImage),
+			imageMemory(device->m_LogicalDevice, vkFreeMemory),
+			imageView(device->m_LogicalDevice, vkDestroyImageView),
+			sampler(device->m_LogicalDevice, vkDestroySampler),
+			relativeCubemapFilePaths(relativeCubemapFilePaths),
+			channelCount(channelCount),
+			bFlipVertically(bFlipVertically),
+			bGenerateMipMaps(bGenerateMipMaps),
+			bHDR(bHDR)
+		{
+			UpdateImageDescriptor();
+		}
+
+		void VulkanTexture::Reload()
+		{
+			// TODO:
 		}
 
 		void VulkanTexture::UpdateImageDescriptor()
@@ -212,6 +258,16 @@ namespace flex
 			imageInfoDescriptor.imageLayout = imageLayout;
 			imageInfoDescriptor.imageView = imageView;
 			imageInfoDescriptor.sampler = sampler;
+		}
+
+		std::string VulkanTexture::GetRelativeFilePath() const
+		{
+			return relativeFilePath;
+		}
+
+		std::string VulkanTexture::GetName() const
+		{
+			return name;
 		}
 
 		void VulkanTexture::Create(ImageCreateInfo& imageCreateInfo, ImageViewCreateInfo& imageViewCreateInfo, SamplerCreateInfo& samplerCreateInfo)
@@ -335,11 +391,11 @@ namespace flex
 			return memRequirements.size;
 		}
 
-		VkDeviceSize VulkanTexture::CreateCubemapEmpty(VkFormat inFormat, u32 inWidth, u32 inHeight, u32 inChannelCount, u32 inMipLevels, bool enableTrilinearFiltering)
+		VkDeviceSize VulkanTexture::CreateCubemapEmpty(VkFormat inFormat, u32 inMipLevels, bool enableTrilinearFiltering)
 		{
-			width = inWidth;
-			height = inHeight;
-			channelCount = inChannelCount;
+			assert(width > 0);
+			assert(height > 0);
+			assert(channelCount > 0);
 
 			CubemapCreateInfo createInfo = {};
 			createInfo.image = &image;
@@ -348,10 +404,10 @@ namespace flex
 			createInfo.sampler = &sampler;
 
 			createInfo.format = inFormat;
-			createInfo.width = inWidth;
-			createInfo.height = inHeight;
-			createInfo.channels = inChannelCount;
-			createInfo.totalSize = inWidth * inHeight * inChannelCount * 6;
+			createInfo.width = width;
+			createInfo.height = height;
+			createInfo.channels = channelCount;
+			createInfo.totalSize = width * height * channelCount * 6;
 			createInfo.mipLevels = inMipLevels;
 			createInfo.enableTrilinearFiltering = enableTrilinearFiltering;
 
@@ -604,19 +660,19 @@ namespace flex
 			return memRequirements.size;
 		}
 
-		VkDeviceSize VulkanTexture::CreateFromTexture(const std::string& inFilePath, VkFormat inFormat, bool hdr, u32 inMipLevels)
+		VkDeviceSize VulkanTexture::CreateFromFile(VkFormat inFormat)
 		{
 			VkDeviceSize textureSize = 0;
 
 			VulkanBuffer stagingBuffer(m_VulkanDevice->m_LogicalDevice);
 
-			if (hdr)
+			if (bHDR)
 			{
 				HDRImage hdrImage = {};
-				if (!hdrImage.Load(inFilePath, 4, false))
+				if (!hdrImage.Load(relativeFilePath, 4, false))
 				{
 					const char* failureReasonStr = stbi_failure_reason();
-					PrintError("Couldn't load HDR image, failure reason: %s, filepath: %s\n", failureReasonStr, filePath.c_str());
+					PrintError("Couldn't load HDR image, failure reason: %s, filepath: %s\n", failureReasonStr, relativeFilePath.c_str());
 					return 0;
 				}
 
@@ -638,12 +694,12 @@ namespace flex
 			}
 			else
 			{
-				std::string fileName = inFilePath;
+				std::string fileName = relativeFilePath;
 				StripLeadingDirectories(fileName);
 				Print("Loading texture %s\n", fileName.c_str());
 
 				int w, h, c;
-				unsigned char* pixels = stbi_load(inFilePath.c_str(), &w, &h, &c, STBI_rgb_alpha);
+				unsigned char* pixels = stbi_load(relativeFilePath.c_str(), &w, &h, &c, STBI_rgb_alpha);
 				width = (u32)w;
 				height = (u32)h;
 				channelCount = (u32)c;
@@ -651,7 +707,7 @@ namespace flex
 				if (!pixels)
 				{
 					const char* failureReasonStr = stbi_failure_reason();
-					PrintError("Couldn't load image, failure reason: %s, filepath: %s\n", failureReasonStr, inFilePath.c_str());
+					PrintError("Couldn't load image, failure reason: %s, filepath: %s\n", failureReasonStr, relativeFilePath.c_str());
 					return 0;
 				}
 
@@ -675,7 +731,7 @@ namespace flex
 				channelCount == 0 ||
 				textureSize == 0)
 			{
-				PrintError("Failed to load in texture data from %s\n", inFilePath.c_str());
+				PrintError("Failed to load in texture data from %s\n", relativeFilePath.c_str());
 				return 0;
 			}
 
@@ -693,15 +749,15 @@ namespace flex
 
 			u32 imageSize = (u32)CreateImage(m_VulkanDevice, m_GraphicsQueue, imageCreateInfo);
 
-			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, image, inFormat, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, inMipLevels);
+			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, image, inFormat, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
 			CopyBufferToImage(m_VulkanDevice, m_GraphicsQueue, stagingBuffer.m_Buffer, image, width, height);
-			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, image, inFormat, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, inMipLevels);
+			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, image, inFormat, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipLevels);
 
 			ImageViewCreateInfo viewCreateInfo = {};
 			viewCreateInfo.format = inFormat;
 			viewCreateInfo.image = &image;
 			viewCreateInfo.imageView = &imageView;
-			viewCreateInfo.mipLevels = inMipLevels;
+			viewCreateInfo.mipLevels = mipLevels;
 			CreateImageView(m_VulkanDevice, viewCreateInfo);
 
 			SamplerCreateInfo samplerCreateInfo = {};
@@ -756,19 +812,6 @@ namespace flex
 			// Required by BitmapTexture to match GLTexture interface
 		}
 
-		bool VulkanTexture::LoadFromFile(const std::string& inFilePath /* = "" */)
-		{
-			std::string fPath = inFilePath;
-			if (inFilePath.empty())
-			{
-				fPath = filePath;
-			}
-
-			// TODO:
-
-			return false;
-		}
-
 		bool VulkanTexture::SaveToFile(const std::string& absoluteFilePath, ImageFormat format, bool bFlipVertically)
 		{
 			// TODO:
@@ -778,6 +821,56 @@ namespace flex
 		void VulkanTexture::Build(void* data /* = nullptr */)
 		{
 			// TODO:
+		}
+
+		VkFormat VulkanTexture::CalculateFormat()
+		{
+			if (channelCount == 4)
+			{
+				if (bHDR)
+				{
+					return VK_FORMAT_R32G32B32A32_SFLOAT;
+				}
+				else
+				{
+					return VK_FORMAT_R8G8B8A8_UINT;
+				}
+			}
+			else if (channelCount == 3)
+			{
+				if (bHDR)
+				{
+					return VK_FORMAT_R32G32B32_SFLOAT;
+				}
+				else
+				{
+					return VK_FORMAT_R8G8B8_UINT;
+				}
+			}
+			else if (channelCount == 2)
+			{
+				if (bHDR)
+				{
+					return VK_FORMAT_R32G32_SFLOAT;
+				}
+				else
+				{
+					return VK_FORMAT_R8G8_UINT;
+				}
+			}
+			else if (channelCount == 1)
+			{
+				if (bHDR)
+				{
+					return VK_FORMAT_R32_SFLOAT;
+				}
+				else
+				{
+					return VK_FORMAT_R8_UINT;
+				}
+			}
+
+			ENSURE_NO_ENTRY();
 		}
 
 		VkFormat FindSupportedFormat(VulkanDevice* device, const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)

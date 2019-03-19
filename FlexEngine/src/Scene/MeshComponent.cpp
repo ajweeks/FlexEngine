@@ -675,11 +675,11 @@ namespace flex
 		renderObjectCreateInfo.indices = &m_Indices;
 		renderObjectCreateInfo.materialID = m_MaterialID;
 
-		RenderID renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
 		if (m_OwningGameObject->GetRenderID() != InvalidRenderID)
 		{
 			g_Renderer->DestroyRenderObject(m_OwningGameObject->GetRenderID());
 		}
+		RenderID renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
 		m_OwningGameObject->SetRenderID(renderID);
 
 		g_Renderer->SetTopologyMode(renderID, TopologyMode::TRIANGLE_LIST);

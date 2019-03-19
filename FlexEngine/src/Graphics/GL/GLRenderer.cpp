@@ -9,7 +9,7 @@ IGNORE_WARNINGS_PUSH
 #include <glm/gtx/quaternion.hpp>
 
 #if COMPILE_IMGUI
-#include "imgui_internal.h"
+#include "imgui_internal.h" // For columns API
 
 #include "ImGui/imgui_impl_glfw.h"
 #include "ImGui/imgui_impl_opengl3.h"
