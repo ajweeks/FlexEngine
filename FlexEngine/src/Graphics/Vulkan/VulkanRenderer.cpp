@@ -741,7 +741,7 @@ namespace flex
 
 					vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
-					BindDescriptorSet(&m_Shaders[skyboxMat.shaderID], skyboxRenderObject->renderID, cmdBuf, pipelinelayout, descriptorSet);
+					BindDescriptorSet(&m_Shaders[skyboxMat.shaderID], 0, cmdBuf, pipelinelayout, descriptorSet);
 
 					VkDeviceSize offsets[1] = { 0 };
 
@@ -1202,7 +1202,7 @@ namespace flex
 
 					vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
-					BindDescriptorSet(&m_Shaders[skyboxMat.shaderID], skyboxRenderObject->renderID, cmdBuf, pipelinelayout, descriptorSet);
+					BindDescriptorSet(&m_Shaders[skyboxMat.shaderID], 0, cmdBuf, pipelinelayout, descriptorSet);
 
 					VkDeviceSize offsets[1] = { 0 };
 
@@ -1631,7 +1631,7 @@ namespace flex
 
 					vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
-					BindDescriptorSet(&prefilterShader, skyboxRenderObject->renderID, cmdBuf, pipelinelayout, descriptorSet);
+					BindDescriptorSet(&prefilterShader, 0, cmdBuf, pipelinelayout, descriptorSet);
 
 					VkDeviceSize offsets[1] = { 0 };
 
@@ -2061,7 +2061,6 @@ namespace flex
 			{
 				if (!m_BRDFTexture)
 				{
-					Print("Generating BRDF LUT\n");
 					m_BRDFTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "BRDF", m_BRDFSize.x, m_BRDFSize.y, 1);
 					m_BRDFTexture->CreateEmpty(VK_FORMAT_R16G16_SFLOAT, m_BRDFSize.x, m_BRDFSize.y, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 					m_LoadedTextures.push_back(m_BRDFTexture);
@@ -5495,6 +5494,7 @@ namespace flex
 
 				// Forward rendered objects
 
+				i32 numMeshesRendered = 0;
 				for (size_t j = 0; j < m_RenderObjects.size(); ++j)
 				{
 					VulkanRenderObject* renderObject = GetRenderObject(j);
@@ -5546,7 +5546,7 @@ namespace flex
 						vkCmdPushConstants(commandBuffer, renderObject->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock), &renderObjectMat.material.pushConstantBlock);
 					}
 
-					BindDescriptorSet(&renderObjectShader, renderObject->renderID, commandBuffer, renderObject->pipelineLayout, renderObject->descriptorSet);
+					BindDescriptorSet(&renderObjectShader, numMeshesRendered, commandBuffer, renderObject->pipelineLayout, renderObject->descriptorSet);
 
 					bool bUsingGameplayCam = g_CameraManager->CurrentCamera()->bIsGameplayCam;
 					if (g_EngineInstance->IsRenderingEditorObjects() && !bUsingGameplayCam)
@@ -5569,6 +5569,8 @@ namespace flex
 					{
 						vkCmdDraw(commandBuffer, renderObject->vertexBufferData->VertexCount, 1, renderObject->vertexOffset, 0);
 					}
+
+					++numMeshesRendered;
 				}
 
 				vkCmdEndRenderPass(commandBuffer);
@@ -5597,12 +5599,14 @@ namespace flex
 				{
 					ImGui::Render();
 				}
-				//ImGui_ImplVulkanH_FrameData* fd = &m_ImGuiWindowData->Frames[m_ImGuiWindowData->FrameIndex];
+
 				for (size_t i = 0; i < m_CommandBufferManager.m_CommandBuffers.size(); ++i)
 				{
 					VkCommandBuffer& commandBuffer = m_CommandBufferManager.m_CommandBuffers[i];
 
 					renderPassBeginInfo.framebuffer = m_SwapChainFramebuffers[i];
+
+					i32 numMeshesRendered = 0;
 
 					VkCommandBufferBeginInfo cmdBufferbeginInfo = {};
 					cmdBufferbeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -5618,7 +5622,8 @@ namespace flex
 					VkRect2D scissor = VkRect2D{ { 0u, 0u },{ m_SwapChainExtent.width, m_SwapChainExtent.height } };
 					vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-					BindDescriptorSet(&m_Shaders[gBufferMaterial->material.shaderID], gBufferObject->renderID, commandBuffer, gBufferObject->pipelineLayout, gBufferObject->descriptorSet);
+					BindDescriptorSet(&m_Shaders[gBufferMaterial->material.shaderID], numMeshesRendered, commandBuffer, gBufferObject->pipelineLayout, gBufferObject->descriptorSet);
+					++numMeshesRendered;
 
 					// Final composition as full screen quad (deferred combine)
 					vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gBufferObject->graphicsPipeline);
@@ -5682,7 +5687,7 @@ namespace flex
 							vkCmdPushConstants(commandBuffer, renderObject->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock), &renderObjectMat.material.pushConstantBlock);
 						}
 
-						BindDescriptorSet(&renderObjectShader, renderObject->renderID, commandBuffer, renderObject->pipelineLayout, renderObject->descriptorSet);
+						BindDescriptorSet(&renderObjectShader, numMeshesRendered, commandBuffer, renderObject->pipelineLayout, renderObject->descriptorSet);
 
 						if (renderObject->bIndexed)
 						{
@@ -5692,6 +5697,8 @@ namespace flex
 						{
 							vkCmdDraw(commandBuffer, renderObject->vertexBufferData->VertexCount, 1, renderObject->vertexOffset, 0);
 						}
+
+						++numMeshesRendered;
 					}
 
 					if (g_EngineInstance->IsRenderingImGui())
@@ -5759,6 +5766,7 @@ namespace flex
 			VkDeviceSize offsets[1] = { 0 };
 
 			// TODO: Batch objects with same materials together like in GL renderer
+			i32 numMeshesRendered = 0;
 			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 			{
 				VulkanRenderObject* renderObject = GetRenderObject(i);
@@ -5810,7 +5818,7 @@ namespace flex
 						&renderObjectMat.material.pushConstantBlock);
 				}
 
-				BindDescriptorSet(&renderObjectShader, renderObject->renderID, offScreenCmdBuffer, renderObject->pipelineLayout, renderObject->descriptorSet);
+				BindDescriptorSet(&renderObjectShader, numMeshesRendered, offScreenCmdBuffer, renderObject->pipelineLayout, renderObject->descriptorSet);
 
 				if (renderObject->bIndexed)
 				{
@@ -5820,6 +5828,8 @@ namespace flex
 				{
 					vkCmdDraw(offScreenCmdBuffer, renderObject->vertexBufferData->VertexCount, 1, renderObject->vertexOffset, 0);
 				}
+
+				++numMeshesRendered;
 			}
 
 			vkCmdEndRenderPass(offScreenCmdBuffer);
@@ -5827,9 +5837,9 @@ namespace flex
 			VK_CHECK_RESULT(vkEndCommandBuffer(offScreenCmdBuffer));
 		}
 
-		void VulkanRenderer::BindDescriptorSet(VulkanShader* shader, RenderID renderID, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet)
+		void VulkanRenderer::BindDescriptorSet(VulkanShader* shader, i32 meshIndex, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet)
 		{
-			u32 dynamicOffset = renderID * static_cast<u32>(m_DynamicAlignment);
+			u32 dynamicOffset = meshIndex * static_cast<u32>(m_DynamicAlignment);
 			u32* dynamicOffsetPtr = nullptr;
 			u32 dynamicOffsetCount = 0;
 			if (shader->uniformBuffer.dynamicBuffer.m_Size != 0)
@@ -6386,13 +6396,13 @@ namespace flex
 			void* PointLightsDataStart = (void*)m_PointLights;
 			size_t PointLightsSize = sizeof(PointLightData) * MAX_NUM_POINT_LIGHTS;
 
-			m_PointLights->pos = glm::vec4(sin(g_SecElapsedSinceProgramStart) * 5.0f,
-				sin(g_SecElapsedSinceProgramStart + 0.5) * 5.0f,
-				cos(g_SecElapsedSinceProgramStart) * 5.0f,
-				0.0f);
+			static DirLightData defaultDirLightData = { glm::vec4(VEC3_RIGHT, 0.0), VEC4_ONE, 0.0f, false };
 
-			m_DirectionalLight->data.dir = glm::vec4(RandomInt(0, 10000) / 10000.0f);
-			m_DirectionalLight->data.color = glm::vec4(RandomInt(0, 10000) / 10000.0f);
+			DirLightData* dirLightData = &defaultDirLightData;
+			if (m_DirectionalLight)
+			{
+				dirLightData = &m_DirectionalLight->data;
+			}
 
 			struct UniformInfo
 			{
@@ -6412,7 +6422,7 @@ namespace flex
 				{ U_PROJECTION, (void*)&projection, sizeof(glm::mat4) },
 				{ U_VIEW_PROJECTION, (void*)&viewProjection, sizeof(glm::mat4) },
 				{ U_CAM_POS, (void*)&camPos, sizeof(glm::vec4) },
-				{ U_DIR_LIGHT, (void*)&m_DirectionalLight->data, sizeof(DirLightData) },
+				{ U_DIR_LIGHT, (void*)dirLightData, sizeof(DirLightData) },
 				{ U_POINT_LIGHTS, (void*)PointLightsDataStart, PointLightsSize },
 				{ U_TIME, (void*)&g_SecElapsedSinceProgramStart, sizeof(real) },
 			};

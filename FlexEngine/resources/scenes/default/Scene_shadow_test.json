@@ -293,6 +293,22 @@
 				"shadow map far" : 100.000000,
 				"shadow map zoom" : 30.000000
 			}
+		},
+		{
+			"name" : "PointLight_00",
+			"type" : "point light",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 4.900, 12.700"
+			},
+			"point light info" : 
+			{
+				"pos" : "0.000, 4.900, 12.700",
+				"color" : "1.00, 1.00, 1.00",
+				"enabled" : true,
+				"brightness" : 1.000000
+			}
 		}
 	]
 }

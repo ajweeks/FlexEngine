@@ -2549,9 +2549,7 @@ namespace flex
 			if (DoImGuiRotationDragFloat3("Rotation", dirtyRot, cleanedRot))
 			{
 				m_Transform.SetLocalRotation(glm::quat(glm::radians(cleanedRot)));
-				// TODO: Remove
-				//data.dir = glm::vec4(cleanedRot, 0.0f);
-				data.dir = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f) * m_Transform.GetWorldRotation();
+				data.dir = glm::vec4(cleanedRot, 0.0f);
 			}
 			ImGui::SliderFloat("Brightness", &data.brightness, 0.0f, 15.0f);
 			ImGui::ColorEdit4("Color ", &data.color.r, colorEditFlags);
@@ -2601,9 +2599,7 @@ namespace flex
 			std::string dirStr = directionalLightObj.GetString("rotation");
 			glm::quat rot(ParseVec3(dirStr));
 			m_Transform.SetLocalRotation(rot);
-			// TODO: Remove
-			//data.dir = glm::vec4(glm::eulerAngles(rot), 0.0f);
-			data.dir = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f) * rot;
+			data.dir = glm::vec4(glm::eulerAngles(rot), 0.0f);
 
 			std::string posStr = directionalLightObj.GetString("pos");
 			if (!posStr.empty())
@@ -2678,9 +2674,7 @@ namespace flex
 	void DirectionalLight::SetRot(const glm::quat& newRot)
 	{
 		m_Transform.SetLocalRotation(newRot);
-		// TODO: Remove
-		//data.dir = glm::vec4(glm::eulerAngles(rot), 0.0f);
-		data.dir = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f) * newRot;
+		data.dir = glm::vec4(glm::eulerAngles(newRot), 0.0f);
 	}
 
 	PointLight::PointLight(BaseScene* scene) :
@@ -2725,6 +2719,7 @@ namespace flex
 		const std::string objectName("Point Light##" + m_Name);
 		const bool bTreeOpen = ImGui::TreeNode(objectName.c_str());
 		bool bRemovedPointLight = false;
+		bool bEditedPointLightData = false;
 
 		if (ImGui::BeginPopupContextItem())
 		{
@@ -2744,10 +2739,16 @@ namespace flex
 			glm::vec3 position = m_Transform.GetLocalPosition();
 			if (ImGui::DragFloat3("Position", &position.x, 0.1f))
 			{
+				bEditedPointLightData = true;
 				SetPos(position);
 			}
-			ImGui::ColorEdit4("Color ", &data.color.r, colorEditFlags);
-			ImGui::SliderFloat("Brightness", &data.brightness, 0.0f, 1000.0f);
+			bEditedPointLightData |= ImGui::ColorEdit4("Color ", &data.color.r, colorEditFlags);
+			bEditedPointLightData |= ImGui::SliderFloat("Brightness", &data.brightness, 0.0f, 1000.0f);
+		}
+
+		if (bEditedPointLightData)
+		{
+			g_Renderer->UpdatePointLightData(ID, &data);
 		}
 
 		if (bTreeOpen)

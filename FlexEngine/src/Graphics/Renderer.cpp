@@ -339,6 +339,14 @@ namespace flex
 		return InvalidPointLightID;
 	}
 
+	void Renderer::UpdatePointLightData(PointLightID ID, PointLightData* data)
+	{
+		assert(ID < MAX_NUM_POINT_LIGHTS);
+		assert(data != nullptr);
+
+		memcpy(&m_PointLights[ID], data, sizeof(PointLightData));
+	}
+
 	void Renderer::RemoveDirectionalLight()
 	{
 		m_DirectionalLight = nullptr;

@@ -219,7 +219,7 @@ namespace flex
 			void BuildDeferredCommandBuffer(const DrawCallInfo& drawCallInfo);
 			void RebuildCommandBuffers();
 
-			void BindDescriptorSet(VulkanShader* shader, RenderID renderID, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet);
+			void BindDescriptorSet(VulkanShader* shader, i32 meshIndex, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet);
 			void CreateSemaphores();
 			void RecreateSwapChain();
 

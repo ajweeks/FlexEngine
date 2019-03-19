@@ -137,6 +137,7 @@ void main()
 
 	// Reflectance equation
 	vec3 Lo = vec3(0.0);
+	float a = 0;
 	for (int i = 0; i < NUMBER_POINT_LIGHTS; ++i)
 	{
 		if (!uboConstant.pointLights[i].enabled)
@@ -157,17 +158,19 @@ void main()
 		vec3 L = normalize(uboConstant.pointLights[i].position.xyz - worldPos);
 		vec3 radiance = uboConstant.pointLights[i].color.rgb * attenuation;
 		float NoL = max(dot(N, L), 0.0);
+		a += NoL;
 
 		Lo += DoLighting(radiance, N, V, L, NoV, NoL, roughness, metallic, F0, albedo);
 	}
 
+	fragColor = vec4(a, a, a, 1.0); return;
+
 	if (uboConstant.dirLight.enabled)
 	{
 		vec3 L = normalize(uboConstant.dirLight.direction.xyz);
-		// V = normalize(vec3(0.1, 0.2, 0.4));
-		// vec3 L = normalize(vec3(-0.5, 0.8, -0.1));
+		// vec3 L = normalize(vec3(1, 2, 3));
 		vec3 radiance = uboConstant.dirLight.color.rgb;
-		// vec3 radiance = vec3(1.0);
+		// vec3 radiance = vec3(1.0);//uboConstant.dirLight.color.rgb;
 		float NoL = max(dot(N, L), 0.0);
 
 		Lo += DoLighting(radiance, N, V, L, NoV, NoL, 1, 1, F0, vec3(1.0));

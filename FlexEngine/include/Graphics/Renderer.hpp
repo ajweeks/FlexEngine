@@ -154,6 +154,7 @@ namespace flex
 
 		bool RegisterDirectionalLight(DirectionalLight* dirLight);
 		PointLightID RegisterPointLight(PointLightData* pointLightData);
+		void UpdatePointLightData(PointLightID ID, PointLightData* data);
 
 		void RemoveDirectionalLight();
 		void RemovePointLight(PointLightID pointLightID);
