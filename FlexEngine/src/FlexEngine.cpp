@@ -822,7 +822,7 @@ namespace flex
 
 			if (!m_bSimulationPaused)
 			{
-				for (int i = 1; i < m_FrameTimes.size(); ++i)
+				for (i32 i = 1; i < (i32)m_FrameTimes.size(); ++i)
 				{
 					m_FrameTimes[i - 1] = m_FrameTimes[i];
 				}

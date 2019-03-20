@@ -25,7 +25,8 @@ namespace flex
 		glm::vec4 dir; // Euler angles, 4 components to match shader
 		glm::vec4 color; // If equal to VEC4_NEG_ONE, this point light is uninitialized
 		real brightness;
-		bool bEnabled;
+		i32 bEnabled;
+		i32 padding[2];
 	};
 
 	struct PointLightData
@@ -33,7 +34,8 @@ namespace flex
 		glm::vec4 pos; // 4 components to match shader
 		glm::vec4 color;
 		real brightness;
-		bool bEnabled;
+		i32 bEnabled;
+		i32 padding[2];
 	};
 
 	// Uniforms

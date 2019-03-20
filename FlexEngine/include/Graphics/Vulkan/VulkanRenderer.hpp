@@ -235,7 +235,6 @@ namespace flex
 			bool CheckValidationLayerSupport() const;
 
 			void UpdateConstantUniformBuffers(UniformOverrides const* overridenUniforms = nullptr);
-			void UpdateConstantUniformBuffer(UniformOverrides const* overridenUniforms, size_t bufferIndex);
 			void UpdateDynamicUniformBuffer(RenderID renderID, UniformOverrides const * overridenUniforms = nullptr);
 
 			void LoadDefaultShaderCode();

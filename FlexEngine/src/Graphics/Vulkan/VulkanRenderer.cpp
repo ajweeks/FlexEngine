@@ -2434,6 +2434,8 @@ namespace flex
 			{
 				DrawFrame();
 			}
+
+			++m_FramesRendered;
 		}
 
 		void VulkanRenderer::DrawImGuiRenderObjects()
@@ -6341,57 +6343,11 @@ namespace flex
 
 		void VulkanRenderer::UpdateConstantUniformBuffers(UniformOverrides const* overridenUniforms)
 		{
-			for (size_t i = 0; i < m_Materials.size(); ++i)
-			{
-				if (m_Materials[i].material.shaderID != InvalidShaderID)
-				{
-					UpdateConstantUniformBuffer(overridenUniforms, i);
-				}
-			}
-		}
-
-		void VulkanRenderer::UpdateConstantUniformBuffer(UniformOverrides const* overridenUniforms, size_t bufferIndex)
-		{
-			VulkanMaterial& material = m_Materials[bufferIndex];
-			VulkanShader& shader = m_Shaders[material.material.shaderID];
-
-			Uniforms& constantUniforms = shader.shader.constantBufferUniforms;
-			VulkanUniformBufferObjectData& constantData = shader.uniformBuffer.constantData;
-
-			if (constantData.data == nullptr || constantData.size == 0)
-			{
-				return; // There is no constant data
-			}
-
 			glm::mat4 projection = g_CameraManager->CurrentCamera()->GetProjection();
 			glm::mat4 view = g_CameraManager->CurrentCamera()->GetView();
 			glm::mat4 viewInv = glm::inverse(view);
 			glm::mat4 viewProjection = projection * view;
 			glm::vec4 camPos = glm::vec4(g_CameraManager->CurrentCamera()->GetPosition(), 0.0f);
-
-			if (overridenUniforms)
-			{
-				if (overridenUniforms->overridenUniforms.HasUniform(U_PROJECTION))
-				{
-					projection = overridenUniforms->projection;
-				}
-				if (overridenUniforms->overridenUniforms.HasUniform(U_VIEW))
-				{
-					view = overridenUniforms->view;
-				}
-				if (overridenUniforms->overridenUniforms.HasUniform(U_VIEW_INV))
-				{
-					viewInv = overridenUniforms->viewInv;
-				}
-				if (overridenUniforms->overridenUniforms.HasUniform(U_VIEW_PROJECTION))
-				{
-					viewProjection = overridenUniforms->viewProjection;
-				}
-				if (overridenUniforms->overridenUniforms.HasUniform(U_CAM_POS))
-				{
-					camPos = overridenUniforms->camPos;
-				}
-			}
 
 			void* PointLightsDataStart = (void*)m_PointLights;
 			size_t PointLightsSize = sizeof(PointLightData) * MAX_NUM_POINT_LIGHTS;
@@ -6416,36 +6372,87 @@ namespace flex
 				void* dataStart = nullptr;
 				size_t copySize;
 			};
+
 			UniformInfo uniformInfos[] = {
+				{ U_POINT_LIGHTS, (void*)PointLightsDataStart, PointLightsSize },
 				{ U_VIEW, (void*)&view, sizeof(glm::mat4) },
 				{ U_VIEW_INV, (void*)&viewInv, sizeof(glm::mat4) },
 				{ U_PROJECTION, (void*)&projection, sizeof(glm::mat4) },
 				{ U_VIEW_PROJECTION, (void*)&viewProjection, sizeof(glm::mat4) },
 				{ U_CAM_POS, (void*)&camPos, sizeof(glm::vec4) },
 				{ U_DIR_LIGHT, (void*)dirLightData, sizeof(DirLightData) },
-				{ U_POINT_LIGHTS, (void*)PointLightsDataStart, PointLightsSize },
 				{ U_TIME, (void*)&g_SecElapsedSinceProgramStart, sizeof(real) },
 			};
 
-			size_t index = 0;
-			for (UniformInfo& uniformInfo : uniformInfos)
+			for (u32 bufferIndex = 0; bufferIndex < m_Materials.size(); ++bufferIndex)
 			{
-				if (constantUniforms.HasUniform(uniformInfo.uniform))
+				if (m_Materials[bufferIndex].material.shaderID == InvalidShaderID)
 				{
-					memcpy(&constantData.data[index], uniformInfo.dataStart, uniformInfo.copySize);
-					index += (uniformInfo.copySize / sizeof(real));
+					continue;
 				}
-			}
 
-			u32 size = constantData.size;
+				VulkanMaterial& material = m_Materials[bufferIndex];
+				VulkanShader& shader = m_Shaders[material.material.shaderID];
+
+				Uniforms& constantUniforms = shader.shader.constantBufferUniforms;
+				VulkanUniformBufferObjectData& constantData = shader.uniformBuffer.constantData;
+
+				if (constantData.data == nullptr || constantData.size == 0)
+				{
+					continue; // There is no constant data to update
+				}
+
+				// Restore values in case they were overriden by the last material
+				projection = g_CameraManager->CurrentCamera()->GetProjection();
+				view = g_CameraManager->CurrentCamera()->GetView();
+				viewInv = glm::inverse(view);
+				viewProjection = projection * view;
+				camPos = glm::vec4(g_CameraManager->CurrentCamera()->GetPosition(), 0.0f);
+
+				if (overridenUniforms)
+				{
+					if (overridenUniforms->overridenUniforms.HasUniform(U_PROJECTION))
+					{
+						projection = overridenUniforms->projection;
+					}
+					if (overridenUniforms->overridenUniforms.HasUniform(U_VIEW))
+					{
+						view = overridenUniforms->view;
+					}
+					if (overridenUniforms->overridenUniforms.HasUniform(U_VIEW_INV))
+					{
+						viewInv = overridenUniforms->viewInv;
+					}
+					if (overridenUniforms->overridenUniforms.HasUniform(U_VIEW_PROJECTION))
+					{
+						viewProjection = overridenUniforms->viewProjection;
+					}
+					if (overridenUniforms->overridenUniforms.HasUniform(U_CAM_POS))
+					{
+						camPos = overridenUniforms->camPos;
+					}
+				}
+
+				size_t index = 0;
+				for (UniformInfo& uniformInfo : uniformInfos)
+				{
+					if (constantUniforms.HasUniform(uniformInfo.uniform))
+					{
+						memcpy(&constantData.data[index], uniformInfo.dataStart, uniformInfo.copySize);
+						index += (uniformInfo.copySize / sizeof(real));
+					}
+				}
+
+				u32 size = constantData.size;
 
 #if  DEBUG
-			u32 calculatedSize1 = index * 4;
-			calculatedSize1 = GetAlignedUBOSize(calculatedSize1);
-			assert(calculatedSize1 == size);
+				u32 calculatedSize1 = index * 4;
+				calculatedSize1 = GetAlignedUBOSize(calculatedSize1);
+				assert(calculatedSize1 == size);
 #endif // DEBUG
 
-			memcpy(shader.uniformBuffer.constantBuffer.m_Mapped, constantData.data, size);
+				memcpy(shader.uniformBuffer.constantBuffer.m_Mapped, constantData.data, size);
+			}
 		}
 
 		void VulkanRenderer::UpdateDynamicUniformBuffer(RenderID renderID, UniformOverrides const* uniformOverrides)

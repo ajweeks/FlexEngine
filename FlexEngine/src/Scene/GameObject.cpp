@@ -2513,6 +2513,8 @@ namespace flex
 	void DirectionalLight::Initialize()
 	{
 		g_Renderer->RegisterDirectionalLight(this);
+		data.bEnabled = m_bVisible ? 1 : 0;
+		data.dir = glm::vec4(glm::eulerAngles(m_Transform.GetLocalRotation()), 0.0f);
 
 		GameObject::Initialize();
 	}
@@ -2537,7 +2539,10 @@ namespace flex
 
 		if (ImGui::TreeNode("Directional Light"))
 		{
-			ImGui::Checkbox("Enabled", &m_bVisible);
+			if (ImGui::Checkbox("Enabled", &m_bVisible))
+			{
+				data.bEnabled = m_bVisible ? 1 : 0;
+			}
 
 			glm::vec3 position = m_Transform.GetLocalPosition();
 			if (ImGui::DragFloat3("Position", &position.x, 0.1f))
@@ -2736,6 +2741,14 @@ namespace flex
 
 		if (!bRemovedPointLight && bTreeOpen)
 		{
+			bool bEnabled = data.bEnabled == 1;
+			if (ImGui::Checkbox("Enabled", &bEnabled))
+			{
+				bEditedPointLightData = true;
+				data.bEnabled = bEnabled ? 1 : 0;
+				m_bVisible = data.bEnabled;
+			}
+
 			glm::vec3 position = m_Transform.GetLocalPosition();
 			if (ImGui::DragFloat3("Position", &position.x, 0.1f))
 			{
