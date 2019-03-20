@@ -6396,7 +6396,7 @@ namespace flex
 			void* PointLightsDataStart = (void*)m_PointLights;
 			size_t PointLightsSize = sizeof(PointLightData) * MAX_NUM_POINT_LIGHTS;
 
-			static DirLightData defaultDirLightData = { glm::vec4(VEC3_RIGHT, 0.0), VEC4_ONE, 0.0f, false };
+			static DirLightData defaultDirLightData = { glm::vec4(0.0), VEC4_ONE, 0.0f, false };
 
 			DirLightData* dirLightData = &defaultDirLightData;
 			if (m_DirectionalLight)

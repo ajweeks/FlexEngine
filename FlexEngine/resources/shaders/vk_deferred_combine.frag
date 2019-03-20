@@ -17,6 +17,7 @@ struct DirectionalLight
 	vec4 color;
 	float brightness;
 	bool enabled;
+	bool padding[3];
 };
 
 struct PointLight 
@@ -25,6 +26,7 @@ struct PointLight
 	vec4 color;
 	float brightness;
 	bool enabled;
+	bool padding[3];
 };
 #define NUMBER_POINT_LIGHTS 4
 
@@ -163,7 +165,7 @@ void main()
 		Lo += DoLighting(radiance, N, V, L, NoV, NoL, roughness, metallic, F0, albedo);
 	}
 
-	fragColor = vec4(a, a, a, 1.0); return;
+	// fragColor = vec4(a, a, a, 1.0); return;
 
 	if (uboConstant.dirLight.enabled)
 	{
