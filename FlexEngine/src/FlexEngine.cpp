@@ -214,6 +214,8 @@ namespace flex
 
 		g_EngineInstance = this;
 
+		m_FrameTimes.resize(256);
+
 		AudioManager::Initialize();
 
 		CreateWindowAndRenderer();
@@ -818,6 +820,15 @@ namespace flex
 
 			Profiler::StartFrame();
 
+			if (!m_bSimulationPaused)
+			{
+				for (int i = 1; i < m_FrameTimes.size(); ++i)
+				{
+					m_FrameTimes[i - 1] = m_FrameTimes[i];
+				}
+				m_FrameTimes[m_FrameTimes.size() - 1] = dt;
+			}
+
 			PROFILE_BEGIN("Update");
 			g_Window->PollEvents();
 
@@ -1249,6 +1260,16 @@ namespace flex
 					ImGui::Text("Elapsed time (unpaused): %.2fs", g_SecElapsedSinceProgramStart);
 					ImGui::Text("Selected object count: %d", m_CurrentlySelectedObjects.size());
 					ImGui::Text("Audio effects loaded: %d", s_AudioSourceIDs.size());
+
+					ImVec2 p = ImGui::GetCursorScreenPos();
+					i32 width = 300;
+					i32 height = 100;
+					real minMS = 0.0f;
+					real maxMS = 0.1f;
+					ImGui::PlotLines("", m_FrameTimes.data(), m_FrameTimes.size(), 0, 0, minMS, maxMS, ImVec2(width, height));
+					real targetFrameRate = 60.0f;
+					p.y += (1.0f - (1.0f / targetFrameRate) / (maxMS - minMS)) * height;
+					ImGui::GetWindowDrawList()->AddLine(p, ImVec2(p.x + width, p.y), IM_COL32(128, 0, 0, 255), 1.0f);
 
 					ImGui::TreePop();
 				}
