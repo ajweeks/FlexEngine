@@ -230,7 +230,6 @@ namespace flex
 	static const std::string EMPTY_STRING = std::string();
 
 	static const u32 MAX_TEXTURE_DIM = 65536;
-	static const u32 MAX_POINT_LIGHT_COUNT = 4;
 
 	// These fields are defined and initialized in FlexEngine.cpp
 	extern class Window* g_Window;

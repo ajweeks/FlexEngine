@@ -16,7 +16,7 @@ namespace flex
 		uniforms = (uniforms | uniform);
 	}
 
-	u32 Uniforms::CalculateSizeInBytes(u32 numPointLights) const
+	u32 Uniforms::CalculateSizeInBytes() const
 	{
 		u32 size = 0;
 
@@ -31,7 +31,7 @@ namespace flex
 		if (HasUniform(U_COLOR_MULTIPLIER)) size += US_COLOR_MULTIPLIER;
 		if (HasUniform(U_CAM_POS)) size += US_CAM_POS;
 		if (HasUniform(U_DIR_LIGHT)) size += US_DIR_LIGHT;
-		if (HasUniform(U_POINT_LIGHTS)) size += US_POINT_LIGHTS * numPointLights;
+		if (HasUniform(U_POINT_LIGHTS)) size += US_POINT_LIGHTS * Renderer::MAX_NUM_POINT_LIGHTS;
 		if (HasUniform(U_CONST_ALBEDO)) size += US_CONST_ALBEDO;
 		if (HasUniform(U_CONST_METALLIC)) size += US_CONST_METALLIC;
 		if (HasUniform(U_CONST_ROUGHNESS)) size += US_CONST_ROUGHNESS;

@@ -22,20 +22,18 @@ namespace flex
 
 	struct DirLightData
 	{
-		glm::vec4 dir; // Euler angles, 4 components to match shader
-		glm::vec4 color; // If equal to VEC4_NEG_ONE, this point light is uninitialized
+		i32 enabled;
+		glm::vec3 dir;
+		glm::vec3 color;
 		real brightness;
-		i32 bEnabled;
-		i32 padding[2];
 	};
 
 	struct PointLightData
 	{
-		glm::vec4 pos; // 4 components to match shader
-		glm::vec4 color;
+		i32 enabled;
+		glm::vec3 pos;
+		glm::vec3 color;
 		real brightness;
-		i32 bEnabled;
-		i32 padding[2];
 	};
 
 	// Uniforms
@@ -385,7 +383,7 @@ namespace flex
 
 		bool HasUniform(u64 uniform) const;
 		void AddUniform(u64 uniform);
-		u32 CalculateSizeInBytes(u32 numPointLights) const;
+		u32 CalculateSizeInBytes() const;
 	};
 
 	struct Shader

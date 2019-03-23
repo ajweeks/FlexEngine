@@ -2325,7 +2325,7 @@ namespace flex
 
 		void VulkanRenderer::CreateUniformBuffers(VulkanShader* shader)
 		{
-			shader->uniformBuffer.constantData.size = shader->shader.constantBufferUniforms.CalculateSizeInBytes(MAX_NUM_POINT_LIGHTS);
+			shader->uniformBuffer.constantData.size = shader->shader.constantBufferUniforms.CalculateSizeInBytes();
 			if (shader->uniformBuffer.constantData.size > 0)
 			{
 				free(shader->uniformBuffer.constantData.data);
@@ -2339,7 +2339,7 @@ namespace flex
 					VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 			}
 
-			shader->uniformBuffer.dynamicData.size = shader->shader.dynamicBufferUniforms.CalculateSizeInBytes(MAX_NUM_POINT_LIGHTS);
+			shader->uniformBuffer.dynamicData.size = shader->shader.dynamicBufferUniforms.CalculateSizeInBytes();
 			if (shader->uniformBuffer.dynamicData.size > 0 && m_RenderObjects.size() > 0)
 			{
 				if (shader->uniformBuffer.dynamicData.data) _aligned_free(shader->uniformBuffer.dynamicData.data);
@@ -2509,7 +2509,7 @@ namespace flex
 
 			DoCreateGameObjectButton("Add object...", "Add object");
 
-			if (m_NumPointLightsEnabled < MAX_POINT_LIGHT_COUNT)
+			if (m_NumPointLightsEnabled < MAX_NUM_POINT_LIGHTS)
 			{
 				static const char* newPointLightStr = "Add point light";
 				if (ImGui::Button(newPointLightStr))
@@ -6343,10 +6343,7 @@ namespace flex
 			glm::mat4 viewProjection = projection * view;
 			glm::vec4 camPos = glm::vec4(g_CameraManager->CurrentCamera()->GetPosition(), 0.0f);
 
-			void* PointLightsDataStart = (void*)m_PointLights;
-			size_t PointLightsSize = sizeof(PointLightData) * MAX_NUM_POINT_LIGHTS;
-
-			static DirLightData defaultDirLightData = { glm::vec4(0.0), VEC4_ONE, 0.0f, false };
+			static DirLightData defaultDirLightData = { 0, VEC3_RIGHT, VEC3_ONE, 0.0f };
 
 			DirLightData* dirLightData = &defaultDirLightData;
 			if (m_DirectionalLight)
@@ -6368,13 +6365,13 @@ namespace flex
 			};
 
 			UniformInfo uniformInfos[] = {
-				{ U_POINT_LIGHTS, (void*)PointLightsDataStart, PointLightsSize },
 				{ U_VIEW, (void*)&view, sizeof(glm::mat4) },
 				{ U_VIEW_INV, (void*)&viewInv, sizeof(glm::mat4) },
 				{ U_PROJECTION, (void*)&projection, sizeof(glm::mat4) },
 				{ U_VIEW_PROJECTION, (void*)&viewProjection, sizeof(glm::mat4) },
 				{ U_CAM_POS, (void*)&camPos, sizeof(glm::vec4) },
 				{ U_DIR_LIGHT, (void*)dirLightData, sizeof(DirLightData) },
+				{ U_POINT_LIGHTS, (void*)m_PointLights, sizeof(PointLightData) * MAX_NUM_POINT_LIGHTS },
 				{ U_TIME, (void*)&g_SecElapsedSinceProgramStart, sizeof(real) },
 			};
 
@@ -6432,7 +6429,7 @@ namespace flex
 				{
 					if (constantUniforms.HasUniform(uniformInfo.uniform))
 					{
-						memcpy(&constantData.data[index], uniformInfo.dataStart, uniformInfo.copySize);
+						memcpy(constantData.data + index, uniformInfo.dataStart, uniformInfo.copySize);
 						index += (uniformInfo.copySize / sizeof(real));
 					}
 				}

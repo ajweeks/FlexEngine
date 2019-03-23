@@ -2501,20 +2501,23 @@ namespace flex
 	}
 
 	DirectionalLight::DirectionalLight() :
-		GameObject("Directional Light", GameObjectType::DIRECTIONAL_LIGHT)
+		DirectionalLight("Directional Light")
 	{
 	}
 
 	DirectionalLight::DirectionalLight(const std::string& name) :
 		GameObject(name, GameObjectType::DIRECTIONAL_LIGHT)
 	{
+		data.enabled = m_bVisible ? 1 : 0;
+		data.dir = VEC3_RIGHT;
+		data.color = VEC3_ONE;
+		data.brightness = 1.0f;
 	}
 
 	void DirectionalLight::Initialize()
 	{
 		g_Renderer->RegisterDirectionalLight(this);
-		data.bEnabled = m_bVisible ? 1 : 0;
-		data.dir = glm::vec4(glm::eulerAngles(m_Transform.GetLocalRotation()), 0.0f);
+		data.dir = glm::eulerAngles(m_Transform.GetLocalRotation());
 
 		GameObject::Initialize();
 	}
@@ -2541,7 +2544,7 @@ namespace flex
 		{
 			if (ImGui::Checkbox("Enabled", &m_bVisible))
 			{
-				data.bEnabled = m_bVisible ? 1 : 0;
+				data.enabled = m_bVisible ? 1 : 0;
 			}
 
 			glm::vec3 position = m_Transform.GetLocalPosition();
@@ -2554,7 +2557,7 @@ namespace flex
 			if (DoImGuiRotationDragFloat3("Rotation", dirtyRot, cleanedRot))
 			{
 				m_Transform.SetLocalRotation(glm::quat(glm::radians(cleanedRot)));
-				data.dir = glm::vec4(cleanedRot, 0.0f);
+				data.dir = cleanedRot;
 			}
 			ImGui::SliderFloat("Brightness", &data.brightness, 0.0f, 15.0f);
 			ImGui::ColorEdit4("Color ", &data.color.r, colorEditFlags);
@@ -2604,7 +2607,7 @@ namespace flex
 			std::string dirStr = directionalLightObj.GetString("rotation");
 			glm::quat rot(ParseVec3(dirStr));
 			m_Transform.SetLocalRotation(rot);
-			data.dir = glm::vec4(glm::eulerAngles(rot), 0.0f);
+			data.dir = glm::eulerAngles(rot);
 
 			std::string posStr = directionalLightObj.GetString("pos");
 			if (!posStr.empty())
@@ -2612,7 +2615,7 @@ namespace flex
 				m_Transform.SetLocalPosition(ParseVec3(posStr));
 			}
 
-			directionalLightObj.SetVec4Checked("color", data.color);
+			directionalLightObj.SetVec3Checked("color", data.color);
 
 			directionalLightObj.SetFloatChecked("brightness", data.brightness);
 
@@ -2679,7 +2682,7 @@ namespace flex
 	void DirectionalLight::SetRot(const glm::quat& newRot)
 	{
 		m_Transform.SetLocalRotation(newRot);
-		data.dir = glm::vec4(glm::eulerAngles(newRot), 0.0f);
+		data.dir = glm::eulerAngles(newRot);
 	}
 
 	PointLight::PointLight(BaseScene* scene) :
@@ -2690,10 +2693,10 @@ namespace flex
 	PointLight::PointLight(const std::string& name) :
 		GameObject(name, GameObjectType::POINT_LIGHT)
 	{
-		data.brightness = 1.0f;
-		data.color = VEC4_ONE;
+		data.enabled = 1;
 		data.pos = VEC4_ZERO;
-		data.bEnabled = true;
+		data.color = VEC4_ONE;
+		data.brightness = 1.0f;
 	}
 
 	void PointLight::Initialize()
@@ -2741,12 +2744,12 @@ namespace flex
 
 		if (!bRemovedPointLight && bTreeOpen)
 		{
-			bool bEnabled = data.bEnabled == 1;
+			bool bEnabled = (data.enabled == 1);
 			if (ImGui::Checkbox("Enabled", &bEnabled))
 			{
 				bEditedPointLightData = true;
-				data.bEnabled = bEnabled ? 1 : 0;
-				m_bVisible = data.bEnabled;
+				data.enabled = bEnabled ? 1 : 0;
+				m_bVisible = bEnabled;
 			}
 
 			glm::vec3 position = m_Transform.GetLocalPosition();
@@ -2773,7 +2776,7 @@ namespace flex
 	void PointLight::SetPos(const glm::vec3& pos)
 	{
 		m_Transform.SetLocalPosition(pos);
-		data.pos = glm::vec4(pos, 0.0f);
+		data.pos = pos;
 	}
 
 	glm::vec3 PointLight::GetPos() const
@@ -2792,9 +2795,9 @@ namespace flex
 			std::string posStr = pointLightObj.GetString("pos");
 			glm::vec3 pos = glm::vec3(ParseVec3(posStr));
 			m_Transform.SetLocalPosition(pos);
-			data.pos = glm::vec4(pos, 0.0f);
+			data.pos = pos;
 
-			pointLightObj.SetVec4Checked("color", data.color);
+			pointLightObj.SetVec3Checked("color", data.color);
 
 			pointLightObj.SetFloatChecked("brightness", data.brightness);
 

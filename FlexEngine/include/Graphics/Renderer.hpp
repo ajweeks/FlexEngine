@@ -157,11 +157,11 @@ namespace flex
 		void UpdatePointLightData(PointLightID ID, PointLightData* data);
 
 		void RemoveDirectionalLight();
-		void RemovePointLight(PointLightID pointLightID);
+		void RemovePointLight(PointLightID ID);
 		void RemoveAllPointLights();
 
 		DirLightData* GetDirectionalLight();
-		PointLightData* GetPointLight(PointLightID pointLightID);
+		PointLightData* GetPointLight(PointLightID ID);
 		i32 GetNumPointLights();
 
 		i32 GetFramesRenderedCount() const;
@@ -184,6 +184,7 @@ namespace flex
 		BitmapFont* m_FntSourceCodeProSS = nullptr;
 		//BitmapFont* m_FntGantSS = nullptr;
 		static const i32 FONT_COUNT = 3;
+		static const i32 MAX_NUM_POINT_LIGHTS = 8;
 
 	protected:
 		// If the object gets deleted this frame *gameObjectRef gets set to nullptr
@@ -196,7 +197,6 @@ namespace flex
 			i16 size, bool bScreenSpace, std::map<i32, struct FontMetric*>* outCharacters,
 			std::array<glm::vec2i, 4>* outMaxPositions, FT_Face* outFace);
 
-		static const i32 MAX_NUM_POINT_LIGHTS = 4;
 		PointLightData* m_PointLights;
 		i32 m_NumPointLightsEnabled = 0;
 		DirectionalLight* m_DirectionalLight = nullptr;

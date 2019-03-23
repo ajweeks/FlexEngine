@@ -13,28 +13,27 @@ const float PI = 3.14159265359;
 
 struct DirectionalLight 
 {
-	vec4 direction;
-	vec4 color;
-	float brightness;
 	int enabled;
-	int padding[2];
+	vec3 direction;
+	vec3 color;
+	float brightness;
 };
 
 struct PointLight 
 {
-	vec4 position;
-	vec4 color;
-	float brightness;
 	int enabled;
-	int padding[2];
+	vec3 position;
+	vec3 color;
+	float brightness;
 };
-#define NUMBER_POINT_LIGHTS 4
+#define NUMBER_POINT_LIGHTS 8
 
 layout (binding = 0) uniform UBOConstant
 {
-	PointLight pointLights[NUMBER_POINT_LIGHTS];
 	vec4 camPos;
 	DirectionalLight dirLight;
+	PointLight pointLights[NUMBER_POINT_LIGHTS];
+	// int padding[16]; // 64 byte padding
 } uboConstant;
 
 layout (binding = 1) uniform UBODynamic
@@ -139,14 +138,14 @@ void main()
 
 	// Reflectance equation
 	vec3 Lo = vec3(0.0);
-	 for (int i = 0; i < NUMBER_POINT_LIGHTS; ++i)
+	for (int i = 0; i < NUMBER_POINT_LIGHTS; ++i)
 	{
 		if (uboConstant.pointLights[i].enabled == 0)
 		{
 			continue;
 		}
 
-		float distance = length(uboConstant.pointLights[i].position.xyz - worldPos);
+		float distance = length(uboConstant.pointLights[i].position - worldPos);
 
 		if (distance > 125)
 		{
@@ -156,23 +155,23 @@ void main()
 
 		// Pretend point lights have a radius of 1cm to avoid division by 0
 		float attenuation = 1.0 / max((distance * distance), 0.001);
-		vec3 L = normalize(uboConstant.pointLights[i].position.xyz - worldPos);
+		vec3 L = normalize(uboConstant.pointLights[i].position - worldPos);
 		vec3 radiance = uboConstant.pointLights[i].color.rgb * attenuation;
 		float NoL = max(dot(N, L), 0.0);
 
 		Lo += DoLighting(radiance, N, V, L, NoV, NoL, roughness, metallic, F0, albedo);
 	}
 
-	// if (uboConstant.dirLight.enabled == 0)
-	// {
-	// 	vec3 L = normalize(uboConstant.dirLight.direction.xyz);
-	// 	// vec3 L = normalize(vec3(1, 2, 3));
-	// 	vec3 radiance = uboConstant.dirLight.color.rgb;
-	// 	// vec3 radiance = vec3(1.0);//uboConstant.dirLight.color.rgb;
-	// 	float NoL = max(dot(N, L), 0.0);
+	if (uboConstant.dirLight.enabled != 0)
+	{
+		// vec3 L = normalize(uboConstant.dirLight.direction);
+		vec3 L = normalize(vec3(1, 2, 3));
+		// vec3 radiance = uboConstant.dirLight.color.rgb;
+		vec3 radiance = vec3(1.0);//uboConstant.dirLight.color.rgb;
+		float NoL = max(dot(N, L), 0.0);
 
-	// 	Lo += DoLighting(radiance, N, V, L, NoV, NoL, 1, 1, F0, vec3(1.0));
-	// }
+		Lo += DoLighting(radiance, N, V, L, NoV, NoL, 1, 1, F0, vec3(1.0));
+	}
 
 	vec3 F = FresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
 

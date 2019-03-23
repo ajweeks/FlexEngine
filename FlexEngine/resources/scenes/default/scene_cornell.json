@@ -22,8 +22,7 @@
 			"transform" : 
 			{
 				"pos" : "0.000, 18.600, 0.000"
-			},
-			"material" : "pbr chrome"
+			}
 		},
 		{
 			"name" : "Cornell Box",
@@ -134,7 +133,7 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"scale" : "50.000, 1.000, 50.000"
+				"scale" : "50.520, 1.000, 50.320"
 			},
 			"mesh" : "cube",
 			"material" : "pbr chrome",
@@ -150,58 +149,6 @@
 				"static" : true,
 				"mask" : -1,
 				"group" : -1
-			}
-		},
-		{
-			"name" : "cylinder",
-			"type" : "object",
-			"visible" : true,
-			"transform" : 
-			{
-				"pos" : "17.270, 7.260, -31.480",
-				"scale" : "4.000, 4.000, 4.000"
-			},
-			"mesh" : "cylinder",
-			"material" : "pbr chrome",
-			"collider" : 
-			{
-				"shape" : "cylinder",
-				"half extents" : "1.000, 1.000, 1.000"
-			},
-			"rigid body" : 
-			{
-				"mass" : 1.000000,
-				"kinematic" : true,
-				"static" : false,
-				"mask" : 0,
-				"group" : 0
-			}
-		},
-		{
-			"name" : "capsule",
-			"type" : "object",
-			"visible" : true,
-			"transform" : 
-			{
-				"pos" : "9.045, 51.601, -52.278",
-				"rot" : "0.778, 0.132, -0.306"
-			},
-			"mesh" : "capsule",
-			"material" : "pbr green",
-			"collider" : 
-			{
-				"shape" : "capsule",
-				"radius" : 12.500001,
-				"height" : 24.999998,
-				"offset pos" : "0.000, 0.000, 25.000"
-			},
-			"rigid body" : 
-			{
-				"mass" : 9.852000,
-				"kinematic" : true,
-				"static" : false,
-				"mask" : 0,
-				"group" : 0
 			}
 		},
 		{

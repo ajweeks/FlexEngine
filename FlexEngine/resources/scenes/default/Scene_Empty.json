@@ -6,7 +6,7 @@
 		{
 			"name" : "Reflection Probe 01",
 			"type" : "reflection probe",
-			"visible" : false,
+			"visible" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 18.600, 0.000"
@@ -23,6 +23,16 @@
 			"skybox info" : 
 			{
 			}
+		},
+		{
+			"name" : "New_Object_00",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"mesh" : "cube",
+			"material" : "pbr white"
 		}
 	]
 }

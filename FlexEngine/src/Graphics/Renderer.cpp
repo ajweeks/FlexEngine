@@ -84,8 +84,8 @@ namespace flex
 		m_PointLights = (PointLightData*)malloc(MAX_NUM_POINT_LIGHTS * sizeof(PointLightData));
 		for (i32 i = 0; i < MAX_NUM_POINT_LIGHTS; ++i)
 		{
-			m_PointLights[i].color = VEC4_NEG_ONE;
-			m_PointLights[i].bEnabled = false;
+			m_PointLights[i].color = VEC3_NEG_ONE;
+			m_PointLights[i].enabled = 0;
 		}
 	}
 
@@ -332,7 +332,7 @@ namespace flex
 		if (m_NumPointLightsEnabled < MAX_NUM_POINT_LIGHTS)
 		{
 			PointLightID newPointLightID = (PointLightID)m_NumPointLightsEnabled;
-			memcpy(&m_PointLights[newPointLightID], pointLightData, sizeof(PointLightData));
+			memcpy(m_PointLights + newPointLightID, pointLightData, sizeof(PointLightData));
 			m_NumPointLightsEnabled++;
 			return newPointLightID;
 		}
@@ -344,7 +344,7 @@ namespace flex
 		assert(ID < MAX_NUM_POINT_LIGHTS);
 		assert(data != nullptr);
 
-		memcpy(&m_PointLights[ID], data, sizeof(PointLightData));
+		memcpy(m_PointLights + ID, data, sizeof(PointLightData));
 	}
 
 	void Renderer::RemoveDirectionalLight()
@@ -352,13 +352,14 @@ namespace flex
 		m_DirectionalLight = nullptr;
 	}
 
-	void Renderer::RemovePointLight(PointLightID pointLightID)
+	void Renderer::RemovePointLight(PointLightID ID)
 	{
-		if (m_PointLights[pointLightID].color.x != -1.0f)
+		if (m_PointLights[ID].color.x != -1.0f)
 		{
-			m_PointLights[pointLightID].color = VEC4_NEG_ONE;
-			m_PointLights[pointLightID].bEnabled = false;
+			m_PointLights[ID].color = VEC4_NEG_ONE;
+			m_PointLights[ID].enabled = 0;
 			m_NumPointLightsEnabled--;
+			assert(m_NumPointLightsEnabled >= 0);
 		}
 	}
 
@@ -367,7 +368,7 @@ namespace flex
 		for (i32 i = 0; i < m_NumPointLightsEnabled; ++i)
 		{
 			m_PointLights[i].color = VEC4_NEG_ONE;
-			m_PointLights[i].bEnabled = false;
+			m_PointLights[i].enabled = 0;
 		}
 		m_NumPointLightsEnabled = 0;
 	}
@@ -377,9 +378,9 @@ namespace flex
 		return &m_DirectionalLight->data;
 	}
 
-	PointLightData* Renderer::GetPointLight(PointLightID pointLightID)
+	PointLightData* Renderer::GetPointLight(PointLightID ID)
 	{
-		return &m_PointLights[pointLightID];
+		return &m_PointLights[ID];
 	}
 
 	i32 Renderer::GetNumPointLights()

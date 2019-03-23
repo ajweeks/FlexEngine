@@ -300,14 +300,30 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "0.000, 4.900, 12.700"
+				"pos" : "-1.300, 0.800, 0.000"
 			},
 			"point light info" : 
 			{
-				"pos" : "0.000, 4.900, 12.700",
+				"pos" : "-1.300, 0.800, 0.000",
+				"color" : "0.68, 1.00, 0.00",
+				"enabled" : true,
+				"brightness" : 817.708008
+			}
+		},
+		{
+			"name" : "PointLight_01",
+			"type" : "point light",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "2.300, 2.000, 0.000"
+			},
+			"point light info" : 
+			{
+				"pos" : "2.300, 2.000, 0.000",
 				"color" : "1.00, 1.00, 1.00",
 				"enabled" : true,
-				"brightness" : 1.000000
+				"brightness" : 1000.000000
 			}
 		}
 	]

@@ -6125,7 +6125,7 @@ namespace flex
 
 			DoCreateGameObjectButton("Add object...", "Add object");
 
-			if (m_NumPointLightsEnabled < MAX_POINT_LIGHT_COUNT)
+			if (m_NumPointLightsEnabled < MAX_NUM_POINT_LIGHTS)
 			{
 				static const char* newPointLightStr = "Add point light";
 				if (ImGui::Button(newPointLightStr))
