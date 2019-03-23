@@ -5496,7 +5496,6 @@ namespace flex
 
 				// Forward rendered objects
 
-				i32 numMeshesRendered = 0;
 				for (size_t j = 0; j < m_RenderObjects.size(); ++j)
 				{
 					VulkanRenderObject* renderObject = GetRenderObject(j);
@@ -5548,7 +5547,7 @@ namespace flex
 						vkCmdPushConstants(commandBuffer, renderObject->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock), &renderObjectMat.material.pushConstantBlock);
 					}
 
-					BindDescriptorSet(&renderObjectShader, numMeshesRendered, commandBuffer, renderObject->pipelineLayout, renderObject->descriptorSet);
+					BindDescriptorSet(&renderObjectShader, j, commandBuffer, renderObject->pipelineLayout, renderObject->descriptorSet);
 
 					bool bUsingGameplayCam = g_CameraManager->CurrentCamera()->bIsGameplayCam;
 					if (g_EngineInstance->IsRenderingEditorObjects() && !bUsingGameplayCam)
@@ -5571,8 +5570,6 @@ namespace flex
 					{
 						vkCmdDraw(commandBuffer, renderObject->vertexBufferData->VertexCount, 1, renderObject->vertexOffset, 0);
 					}
-
-					++numMeshesRendered;
 				}
 
 				vkCmdEndRenderPass(commandBuffer);
@@ -5608,7 +5605,7 @@ namespace flex
 
 					renderPassBeginInfo.framebuffer = m_SwapChainFramebuffers[i];
 
-					i32 numMeshesRendered = 0;
+					i32 numMeshesProcessed = 0;
 
 					VkCommandBufferBeginInfo cmdBufferbeginInfo = {};
 					cmdBufferbeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -5624,8 +5621,8 @@ namespace flex
 					VkRect2D scissor = VkRect2D{ { 0u, 0u },{ m_SwapChainExtent.width, m_SwapChainExtent.height } };
 					vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-					BindDescriptorSet(&m_Shaders[gBufferMaterial->material.shaderID], numMeshesRendered, commandBuffer, gBufferObject->pipelineLayout, gBufferObject->descriptorSet);
-					++numMeshesRendered;
+					BindDescriptorSet(&m_Shaders[gBufferMaterial->material.shaderID], numMeshesProcessed, commandBuffer, gBufferObject->pipelineLayout, gBufferObject->descriptorSet);
+					++numMeshesProcessed;
 
 					// Final composition as full screen quad (deferred combine)
 					vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gBufferObject->graphicsPipeline);
@@ -5642,6 +5639,8 @@ namespace flex
 					// TODO: Batch objects with same materials together like in GL renderer
 					for (size_t j = 0; j < m_RenderObjects.size(); ++j)
 					{
+						++numMeshesProcessed;
+
 						VulkanRenderObject* renderObject = GetRenderObject(j);
 						if (!renderObject ||
 							!renderObject->gameObject->IsVisible() ||
@@ -5689,7 +5688,7 @@ namespace flex
 							vkCmdPushConstants(commandBuffer, renderObject->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock), &renderObjectMat.material.pushConstantBlock);
 						}
 
-						BindDescriptorSet(&renderObjectShader, numMeshesRendered, commandBuffer, renderObject->pipelineLayout, renderObject->descriptorSet);
+						BindDescriptorSet(&renderObjectShader, numMeshesProcessed, commandBuffer, renderObject->pipelineLayout, renderObject->descriptorSet);
 
 						if (renderObject->bIndexed)
 						{
@@ -5699,8 +5698,6 @@ namespace flex
 						{
 							vkCmdDraw(commandBuffer, renderObject->vertexBufferData->VertexCount, 1, renderObject->vertexOffset, 0);
 						}
-
-						++numMeshesRendered;
 					}
 
 					if (g_EngineInstance->IsRenderingImGui())
@@ -5768,7 +5765,6 @@ namespace flex
 			VkDeviceSize offsets[1] = { 0 };
 
 			// TODO: Batch objects with same materials together like in GL renderer
-			i32 numMeshesRendered = 0;
 			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 			{
 				VulkanRenderObject* renderObject = GetRenderObject(i);
@@ -5820,7 +5816,7 @@ namespace flex
 						&renderObjectMat.material.pushConstantBlock);
 				}
 
-				BindDescriptorSet(&renderObjectShader, numMeshesRendered, offScreenCmdBuffer, renderObject->pipelineLayout, renderObject->descriptorSet);
+				BindDescriptorSet(&renderObjectShader, i, offScreenCmdBuffer, renderObject->pipelineLayout, renderObject->descriptorSet);
 
 				if (renderObject->bIndexed)
 				{
@@ -5830,8 +5826,6 @@ namespace flex
 				{
 					vkCmdDraw(offScreenCmdBuffer, renderObject->vertexBufferData->VertexCount, 1, renderObject->vertexOffset, 0);
 				}
-
-				++numMeshesRendered;
 			}
 
 			vkCmdEndRenderPass(offScreenCmdBuffer);
