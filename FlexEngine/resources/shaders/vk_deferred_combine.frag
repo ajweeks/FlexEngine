@@ -13,16 +13,16 @@ const float PI = 3.14159265359;
 
 struct DirectionalLight 
 {
-	int enabled;
 	vec3 direction;
+	int enabled;
 	vec3 color;
 	float brightness;
 };
 
 struct PointLight 
 {
-	int enabled;
 	vec3 position;
+	int enabled;
 	vec3 color;
 	float brightness;
 };

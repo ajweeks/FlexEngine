@@ -6343,7 +6343,7 @@ namespace flex
 			glm::mat4 viewProjection = projection * view;
 			glm::vec4 camPos = glm::vec4(g_CameraManager->CurrentCamera()->GetPosition(), 0.0f);
 
-			static DirLightData defaultDirLightData = { 0, VEC3_RIGHT, VEC3_ONE, 0.0f };
+			static DirLightData defaultDirLightData = { VEC3_RIGHT, 0, VEC3_ONE, 0.0f };
 
 			DirLightData* dirLightData = &defaultDirLightData;
 			if (m_DirectionalLight)

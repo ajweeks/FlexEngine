@@ -22,16 +22,16 @@ namespace flex
 
 	struct DirLightData
 	{
-		i32 enabled;
 		glm::vec3 dir;
+		i32 enabled;
 		glm::vec3 color;
 		real brightness;
 	};
 
 	struct PointLightData
 	{
-		i32 enabled;
 		glm::vec3 pos;
+		i32 enabled;
 		glm::vec3 color;
 		real brightness;
 	};
