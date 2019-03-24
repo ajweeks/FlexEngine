@@ -103,6 +103,13 @@ namespace flex
 			return false;
 		}
 
+		if (objectClosingBracket == *offset + 1)
+		{
+			// Empty block
+			*offset = objectClosingBracket + 1;
+			return true;
+		}
+
 		bool bParsing = true;
 		while (bParsing && *offset < objectClosingBracket)
 		{
