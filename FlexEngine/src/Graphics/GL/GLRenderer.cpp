@@ -1663,13 +1663,13 @@ namespace flex
 
 				glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
 
-				for (size_t face = 0; face < 6; ++face)
+				for (u32 face = 0; face < 6; ++face)
 				{
 					// Clear all G-Buffers
 					if (!cubemapMaterial->cubemapSamplerGBuffersIDs.empty())
 					{
 						// Skip first buffer, it'll be cleared below
-						for (size_t i = 1; i < cubemapMaterial->cubemapSamplerGBuffersIDs.size(); ++i)
+						for (u32 i = 1; i < cubemapMaterial->cubemapSamplerGBuffersIDs.size(); ++i)
 						{
 							glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i,
 								GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerGBuffersIDs[i].id, 0);
@@ -1741,7 +1741,7 @@ namespace flex
 		bool GLRenderer::GetShaderID(const std::string& shaderName, ShaderID& shaderID)
 		{
 			// TODO: Store shaders using sorted data structure?
-			for (size_t i = 0; i < m_Shaders.size(); ++i)
+			for (u32 i = 0; i < m_Shaders.size(); ++i)
 			{
 				if (m_Shaders[i].shader.name.compare(shaderName) == 0)
 				{
@@ -2274,7 +2274,7 @@ namespace flex
 
 			GL_PUSH_DEBUG_GROUP("Shadow Map Depths");
 
-			if (m_DirectionalLight->bCastShadow && m_DirectionalLight->data.bEnabled)
+			if (m_DirectionalLight->bCastShadow && m_DirectionalLight->data.enabled)
 			{
 				GLMaterial* material = &m_Materials[m_ShadowMaterialID];
 				GLShader* shader = &m_Shaders[material->material.shaderID];
@@ -2727,12 +2727,11 @@ namespace flex
 				glm::vec3 camUp = cam->GetUp();
 				for (i32 i = 0; i < m_NumPointLightsEnabled; ++i)
 				{
-					if (m_PointLights[i].bEnabled)
+					if (m_PointLights[i].enabled)
 					{
 						// TODO: Sort back to front? Or clear depth and then enable depth test
 						drawInfo.pos = m_PointLights[i].pos;
-						drawInfo.color = m_PointLights[i].color * 1.5f;
-						drawInfo.color.a = m_PointLights[i].color.a;
+						drawInfo.color = glm::vec4(m_PointLights[i].color * 1.5f, 1.0f);
 						drawInfo.textureHandleID = m_LoadedTextures[m_PointLightIconID]->handle;
 						glm::mat4 rotMat = glm::lookAt(camPos, glm::vec3(m_PointLights[i].pos), camUp);
 						drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
@@ -2740,10 +2739,9 @@ namespace flex
 					}
 				}
 
-				if (m_DirectionalLight->data.bEnabled)
+				if (m_DirectionalLight->data.enabled)
 				{
-					drawInfo.color = m_DirectionalLight->data.color * 1.5f;
-					drawInfo.color.a = m_DirectionalLight->data.color.a;
+					drawInfo.color = glm::vec4(m_DirectionalLight->data.color * 1.5f, 1.0f);
 					drawInfo.pos = m_DirectionalLight->pos;
 					drawInfo.textureHandleID = m_LoadedTextures[m_DirectionalLightIconID]->handle;
 					glm::mat4 rotMat = glm::lookAt(camPos, (glm::vec3)m_DirectionalLight->pos, camUp);
@@ -3873,7 +3871,7 @@ namespace flex
 
 					// TODO: Test if this is actually correct
 					glm::vec3 cubemapTranslation = -cubemapRenderObject->gameObject->GetTransform()->GetWorldPosition();
-					for (size_t face = 0; face < 6; ++face)
+					for (u32 face = 0; face < 6; ++face)
 					{
 						glm::mat4 view = glm::translate(m_CaptureViews[face], cubemapTranslation);
 
@@ -3889,7 +3887,7 @@ namespace flex
 							//u32 attachments[numBuffers] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
 							//glDrawBuffers(numBuffers, attachments);
 
-							for (size_t j = 0; j < cubemapMaterial->cubemapSamplerGBuffersIDs.size(); ++j)
+							for (u32 j = 0; j < cubemapMaterial->cubemapSamplerGBuffersIDs.size(); ++j)
 							{
 								glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + j,
 									GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerGBuffersIDs[j].id, 0);
@@ -4767,24 +4765,22 @@ namespace flex
 
 				if (shader->shader.constantBufferUniforms.HasUniform(U_DIR_LIGHT))
 				{
-					static const char* dirLightEnabledStr = "dirLight.enabled";
-					if (m_DirectionalLight->data.bEnabled)
+					if (m_DirectionalLight->data.enabled == 0)
 					{
-						SetUInt(material->material.shaderID, dirLightEnabledStr, 1);
-						static const char* dirLightDirectionStr = "dirLight.direction";
-						SetVec4f(material->material.shaderID, dirLightDirectionStr, m_DirectionalLight->data.dir);
-						static const char* dirLightColorStr = "dirLight.color";
-						SetVec4f(material->material.shaderID, dirLightColorStr, m_DirectionalLight->data.color * m_DirectionalLight->data.brightness);
+						SetInt(material->material.shaderID, "dirLight.enabled", 0);
 					}
 					else
 					{
-						SetUInt(material->material.shaderID, dirLightEnabledStr, 0);
+						SetInt(material->material.shaderID, "dirLight.enabled", 1);
+						SetVec3f(material->material.shaderID, "dirLight.direction", m_DirectionalLight->data.dir);
+						SetVec3f(material->material.shaderID, "dirLight.color", m_DirectionalLight->data.color);
+						SetFloat(material->material.shaderID, "dirLight.brightness", m_DirectionalLight->data.brightness);
 					}
 				}
 
 				if (shader->shader.constantBufferUniforms.HasUniform(U_POINT_LIGHTS))
 				{
-					for (size_t i = 0; i < MAX_POINT_LIGHT_COUNT; ++i)
+					for (u32 i = 0; i < MAX_NUM_POINT_LIGHTS; ++i)
 					{
 						const std::string numberStr(std::to_string(i));
 						const char* numberCStr = numberStr.c_str();
@@ -4799,34 +4795,36 @@ namespace flex
 
 						char enabledStr[strStartLen + 8];
 						strcpy_s(enabledStr, pointLightStrStart);
-						static const char* dotEnabledStr = ".enabled";
-						strcat_s(enabledStr, dotEnabledStr);
+						strcat_s(enabledStr, ".enabled");
 						if (i < (u32)m_NumPointLightsEnabled)
 						{
-							if (m_PointLights[i].bEnabled)
+							if (m_PointLights[i].enabled == 0)
 							{
-								SetUInt(material->material.shaderID, enabledStr, 1);
-
-								char positionStr[strStartLen + 9];
-								strcpy_s(positionStr, pointLightStrStart);
-								static const char* dotPositionStr = ".position";
-								strcat_s(positionStr, dotPositionStr);
-								SetVec4f(material->material.shaderID, positionStr, m_PointLights[i].pos);
-
-								char colorStr[strStartLen + 6];
-								strcpy_s(colorStr, pointLightStrStart);
-								static const char* dotColorStr = ".color";
-								strcat_s(colorStr, dotColorStr);
-								SetVec4f(material->material.shaderID, colorStr, m_PointLights[i].color * m_PointLights[i].brightness);
+								SetInt(material->material.shaderID, enabledStr, 0);
 							}
 							else
 							{
-								SetUInt(material->material.shaderID, enabledStr, 0);
+								SetInt(material->material.shaderID, enabledStr, 1);
+
+								char positionStr[strStartLen + 9];
+								strcpy_s(positionStr, pointLightStrStart);
+								strcat_s(positionStr, ".position");
+								SetVec3f(material->material.shaderID, positionStr, m_PointLights[i].pos);
+
+								char colorStr[strStartLen + 6];
+								strcpy_s(colorStr, pointLightStrStart);
+								strcat_s(colorStr, ".color");
+								SetVec3f(material->material.shaderID, colorStr, m_PointLights[i].color);
+
+								char brightnessStr[strStartLen + 11];
+								strcpy_s(brightnessStr, pointLightStrStart);
+								strcat_s(brightnessStr, ".brightness");
+								SetFloat(material->material.shaderID, brightnessStr, m_PointLights[i].brightness);
 							}
 						}
 						else
 						{
-							SetUInt(material->material.shaderID, enabledStr, 0);
+							SetInt(material->material.shaderID, enabledStr, 0);
 						}
 					}
 				}
@@ -5734,7 +5732,7 @@ namespace flex
 								{
 									MaterialID draggedMaterialID = i;
 									const void* data = (void*)(&draggedMaterialID);
-									size_t size = sizeof(MaterialID);
+									u32 size = sizeof(MaterialID);
 
 									ImGui::SetDragDropPayload(m_MaterialPayloadCStr, data, size);
 
@@ -5993,7 +5991,7 @@ namespace flex
 									if (ImGui::BeginDragDropSource())
 									{
 										const void* data = (void*)(meshIter.first.c_str());
-										size_t size = strlen(meshIter.first.c_str()) * sizeof(char);
+										u32 size = strlen(meshIter.first.c_str()) * sizeof(char);
 
 										ImGui::SetDragDropPayload(m_MeshPayloadCStr, data, size);
 

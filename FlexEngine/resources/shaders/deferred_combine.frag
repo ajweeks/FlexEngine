@@ -14,23 +14,21 @@ out vec4 fragmentColor;
 
 struct DirectionalLight 
 {
-	vec4 direction;
-	vec4 color;
+	vec3 direction;
+	int enabled;
+	vec3 color;
 	float brightness;
-	bool enabled;
-	float padding[3];
 };
 uniform DirectionalLight dirLight;
 
 struct PointLight
 {
-	vec4 position;
-	vec4 color;
+	vec3 position;
+	int enabled;
+	vec3 color;
 	float brightness;
-	bool enabled;
-	float padding[2];
 };
-#define NUMBER_POINT_LIGHTS 4
+#define NUMBER_POINT_LIGHTS 8
 uniform PointLight pointLights[NUMBER_POINT_LIGHTS];
 
 uniform vec4 camPos;
@@ -143,7 +141,7 @@ void main()
 	vec3 Lo = vec3(0.0);
 	for (int i = 0; i < NUMBER_POINT_LIGHTS; ++i)
 	{
-		if (!pointLights[i].enabled)
+		if (pointLights[i].enabled == 0)
 		{
 			continue;
 		}
@@ -160,16 +158,16 @@ void main()
 		// Pretend point lights have a radius of 1cm to avoid division by 0
 		float attenuation = 1.0 / max((distance * distance), 0.001);
 		vec3 L = normalize(pointLights[i].position.xyz - worldPos);
-		vec3 radiance = pointLights[i].color.rgb * attenuation;
+		vec3 radiance = pointLights[i].color * pointLights[i].brightness * attenuation;
 		float NoL = max(dot(N, L), 0.0);
 	
 		Lo += DoLighting(radiance, N, V, L, NoV, NoL, roughness, metallic, F0, albedo);
 	}
 
-	if (dirLight.enabled)
+	if (dirLight.enabled != 0)
 	{
 		vec3 L = normalize(dirLight.direction.xyz);
-		vec3 radiance = dirLight.color.rgb;
+		vec3 radiance = dirLight.color * dirLight.brightness;
 		float NoL = max(dot(N, L), 0.0);
 		
 		float dirLightShadowOpacity = 1.0;

@@ -11,21 +11,21 @@ out vec4 fragmentColor;
 
 struct DirectionalLight 
 {
-	vec4 direction;
-	vec4 color;
-	bool enabled;
-	float padding[3];
+	vec3 direction;
+	int enabled;
+	vec3 color;
+	float brightness;
 };
 uniform DirectionalLight dirLight;
 
 struct PointLight
 {
-	vec4 position;
-	vec4 color;
-	bool enabled;
-	float padding[3];
+	vec3 position;
+	int enabled;
+	vec3 color;
+	float brightness;
 };
-#define NUMBER_POINT_LIGHTS 4
+#define NUMBER_POINT_LIGHTS 8
 uniform PointLight pointLights[NUMBER_POINT_LIGHTS];
 
 uniform vec4 camPos;
@@ -134,21 +134,21 @@ void main()
 	vec3 Lo = vec3(0.0);
 	for (int i = 0; i < NUMBER_POINT_LIGHTS; ++i)
 	{
-		if (!pointLights[i].enabled) continue;
+		if (pointLights[i].enabled == 0) continue;
 
 		vec3 L = normalize(pointLights[i].position.xyz - worldPos);
 		
 		float distance = length(pointLights[i].position.xyz - worldPos);
 		float attenuation = 1.0 / (distance * distance);
-		vec3 radiance = pointLights[i].color.rgb * attenuation;
+		vec3 radiance = pointLights[i].color * pointLights[i].brightness * attenuation;
 	
 		Lo += DoLighting(radiance, N, V, L, roughness, metallic, F0, albedo);
 	}
 
-	if (dirLight.enabled)
+	if (dirLight.enabled != 0)
 	{
 		vec3 L = normalize(dirLight.direction.xyz);
-		vec3 radiance = dirLight.color.rgb;
+		vec3 radiance = dirLight.color * dirLight.brightness;
 		
 		// float dirLightShadow = 0.1;
 		// if (bEnableShadows)
