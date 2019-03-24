@@ -3686,7 +3686,8 @@ namespace flex
 						{
 							FontMetric* metric = charPair.second;
 
-							if (metric->character == ' ')
+							if (metric->character == ' ' ||
+								metric->character == '\0')
 							{
 								continue;
 							}

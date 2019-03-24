@@ -1,4 +1,4 @@
-#version 450
+#version 420
 
 // Deferred PBR Combine
 
@@ -33,7 +33,6 @@ layout (binding = 0) uniform UBOConstant
 	vec4 camPos;
 	DirectionalLight dirLight;
 	PointLight pointLights[NUMBER_POINT_LIGHTS];
-	// int padding[16]; // 64 byte padding
 } uboConstant;
 
 layout (binding = 1) uniform UBODynamic
@@ -156,7 +155,7 @@ void main()
 		// Pretend point lights have a radius of 1cm to avoid division by 0
 		float attenuation = 1.0 / max((distance * distance), 0.001);
 		vec3 L = normalize(uboConstant.pointLights[i].position - worldPos);
-		vec3 radiance = uboConstant.pointLights[i].color.rgb * attenuation;
+		vec3 radiance = uboConstant.pointLights[i].color.rgb * attenuation * uboConstant.pointLights[i].brightness;
 		float NoL = max(dot(N, L), 0.0);
 
 		Lo += DoLighting(radiance, N, V, L, NoV, NoL, roughness, metallic, F0, albedo);
@@ -164,10 +163,8 @@ void main()
 
 	if (uboConstant.dirLight.enabled != 0)
 	{
-		// vec3 L = normalize(uboConstant.dirLight.direction);
-		vec3 L = normalize(vec3(1, 2, 3));
-		// vec3 radiance = uboConstant.dirLight.color.rgb;
-		vec3 radiance = vec3(1.0);//uboConstant.dirLight.color.rgb;
+		vec3 L = normalize(uboConstant.dirLight.direction);
+		vec3 radiance = uboConstant.dirLight.color.rgb;
 		float NoL = max(dot(N, L), 0.0);
 
 		Lo += DoLighting(radiance, N, V, L, NoV, NoL, 1, 1, F0, vec3(1.0));
@@ -207,11 +204,11 @@ void main()
 
 	// fragColor = vec4(F, 1);
 
-	// Visualize normals:
-	//fragColor = vec4(worldPos*0.1, 1); return;
+	// Visualize world pos:
+	// fragColor = vec4(worldPos*0.1, 1); return;
 
 	// Visualize normals:
-	//fragColor = vec4(N, 1); return;
+	// fragColor = vec4(N, 1); return;
 
 	// Visualize screen coords:
 	//fragColor = vec4(ex_TexCoord, 0, 1); return;
