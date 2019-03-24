@@ -22,18 +22,18 @@ namespace flex
 
 	struct DirLightData
 	{
-		glm::vec3 dir;
-		i32 enabled;
-		glm::vec3 color;
-		real brightness;
+		alignas(16) glm::vec3 dir;
+					i32 enabled;
+		alignas(16) glm::vec3 color;
+					real brightness;
 	};
 
 	struct PointLightData
 	{
-		glm::vec3 pos;
-		i32 enabled;
-		glm::vec3 color;
-		real brightness;
+		alignas(16) glm::vec3 pos;
+					i32 enabled;
+		alignas(16) glm::vec3 color;
+					real brightness;
 	};
 
 	// Uniforms
@@ -100,8 +100,9 @@ namespace flex
 		BACK,
 		FRONT,
 		FRONT_AND_BACK,
+		NONE,
 
-		_NONE
+		_INVALID
 	};
 
 	enum class DepthTestFunc
@@ -371,9 +372,8 @@ namespace flex
 
 		bool visible = true;
 		bool visibleInSceneExplorer = true;
-		bool enableCulling = true;
 		bool depthWriteEnable = true;
-		bool editorObject = false;
+		bool bEditorObject = false;
 	};
 
 	struct Uniforms

@@ -484,9 +484,8 @@ namespace flex
 		RenderObjectCreateInfo gizmoCreateInfo = {};
 		gizmoCreateInfo.depthTestReadFunc = DepthTestFunc::LEQUAL;
 		gizmoCreateInfo.depthWriteEnable = false;
-		gizmoCreateInfo.editorObject = true;
+		gizmoCreateInfo.bEditorObject = true;
 		gizmoCreateInfo.cullFace = CullFace::BACK;
-		gizmoCreateInfo.enableCulling = true;
 
 		m_TransformGizmo = new GameObject("Transform gizmo", GameObjectType::_NONE);
 

@@ -1164,10 +1164,14 @@ namespace flex
 		{
 			return CullFace::FRONT_AND_BACK;
 		}
+		else if (strLower.compare("none") == 0)
+		{
+			return CullFace::NONE;
+		}
 		else
 		{
 			PrintError("Unhandled cull face str: %s\n", str.c_str());
-			return CullFace::_NONE;
+			return CullFace::_INVALID;
 		}
 	}
 
@@ -1178,6 +1182,7 @@ namespace flex
 		case CullFace::BACK:			return "back";
 		case CullFace::FRONT:			return "front";
 		case CullFace::FRONT_AND_BACK:	return "front and back";
+		case CullFace::NONE:			return "none";
 		default:						return "UNHANDLED CULL FACE";
 		}
 	}

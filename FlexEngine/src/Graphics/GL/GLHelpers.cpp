@@ -1101,10 +1101,14 @@ namespace flex
 			{
 				return CullFace::FRONT_AND_BACK;
 			}
+			else if (cullFace == GL_NONE)
+			{
+				return CullFace::NONE;
+			}
 			else
 			{
 				PrintError("Unhandled GL cull face passed to GLCullFaceToCullFace: %i\n", cullFace);
-				return CullFace::_NONE;
+				return CullFace::_INVALID;
 			}
 		}
 

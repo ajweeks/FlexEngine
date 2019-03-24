@@ -240,7 +240,7 @@ namespace flex
 				m_Grid = new GameObject("Grid", GameObjectType::OBJECT);
 				MeshComponent* gridMesh = m_Grid->SetMeshComponent(new MeshComponent(m_GridMaterialID, m_Grid, false));
 				RenderObjectCreateInfo createInfo = {};
-				createInfo.editorObject = true;
+				createInfo.bEditorObject = true;
 				gridMesh->LoadPrefabShape(MeshComponent::PrefabShape::GRID, &createInfo);
 				m_Grid->GetTransform()->Translate(0.0f, -0.1f, 0.0f);
 				m_Grid->SetSerializable(false);
@@ -266,7 +266,7 @@ namespace flex
 				m_WorldOrigin = new GameObject("World origin", GameObjectType::OBJECT);
 				MeshComponent* orignMesh = m_WorldOrigin->SetMeshComponent(new MeshComponent(m_WorldAxisMaterialID, m_WorldOrigin, false));
 				RenderObjectCreateInfo createInfo = {};
-				createInfo.editorObject = true;
+				createInfo.bEditorObject = true;
 				orignMesh->LoadPrefabShape(MeshComponent::PrefabShape::WORLD_AXIS_GROUND, &createInfo);
 				m_WorldOrigin->GetTransform()->Translate(0.0f, -0.09f, 0.0f);
 				m_WorldOrigin->SetSerializable(false);
@@ -309,7 +309,7 @@ namespace flex
 				quad2DCreateInfo.materialID = m_PostProcessMatID;
 				quad2DCreateInfo.depthWriteEnable = false;
 				quad2DCreateInfo.gameObject = quad2DGameObject;
-				quad2DCreateInfo.enableCulling = false;
+				quad2DCreateInfo.bEnableCulling = false;
 				quad2DCreateInfo.visibleInSceneExplorer = false;
 				quad2DCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
 				quad2DCreateInfo.depthWriteEnable = false;
@@ -358,11 +358,11 @@ namespace flex
 				quad3DCreateInfo.materialID = m_SpriteMatID;
 				quad3DCreateInfo.depthWriteEnable = false;
 				quad3DCreateInfo.gameObject = quad3DGameObject;
-				quad3DCreateInfo.enableCulling = false;
+				quad3DCreateInfo.bEnableCulling = false;
 				quad3DCreateInfo.visibleInSceneExplorer = false;
 				quad3DCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
 				quad3DCreateInfo.depthWriteEnable = false;
-				quad3DCreateInfo.editorObject = true; // TODO: Create other quad which is identical but is not an editor object for gameplay objects?
+				quad3DCreateInfo.bEditorObject = true; // TODO: Create other quad which is identical but is not an editor object for gameplay objects?
 				m_Quad3DRenderID = InitializeRenderObject(&quad3DCreateInfo);
 
 				m_Quad3DVertexBufferData.DescribeShaderVariables(this, m_Quad3DRenderID);
@@ -1103,10 +1103,9 @@ namespace flex
 			renderObject->indices = createInfo->indices;
 			renderObject->gameObject = createInfo->gameObject;
 			renderObject->cullFace = CullFaceToGLCullFace(createInfo->cullFace);
-			renderObject->enableCulling = (createInfo->cullFace == CullFace::_NONE ? GL_FALSE : (createInfo->enableCulling ? GL_TRUE : GL_FALSE));
 			renderObject->depthTestReadFunc = DepthTestFuncToGlenum(createInfo->depthTestReadFunc);
 			renderObject->depthWriteEnable = BoolToGLBoolean(createInfo->depthWriteEnable);
-			renderObject->editorObject = createInfo->editorObject;
+			renderObject->bEditorObject = createInfo->bEditorObject;
 
 			if (renderObject->materialID == InvalidMaterialID)
 			{
@@ -1330,7 +1329,7 @@ namespace flex
 				glBindVertexArray(skyboxRenderObject->VAO);
 				glBindBuffer(GL_ARRAY_BUFFER, skyboxRenderObject->VBO);
 
-				if (skyboxRenderObject->enableCulling)
+				if (skyboxRenderObject->bEnableCulling)
 				{
 					glEnable(GL_CULL_FACE);
 					glCullFace(skyboxRenderObject->cullFace);
@@ -1410,7 +1409,7 @@ namespace flex
 				glBindVertexArray(skybox->VAO);
 				glBindBuffer(GL_ARRAY_BUFFER, skybox->VBO);
 
-				if (skybox->enableCulling)
+				if (skybox->bEnableCulling)
 				{
 					glEnable(GL_CULL_FACE);
 					glCullFace(skybox->cullFace);
@@ -1537,7 +1536,7 @@ namespace flex
 
 				glViewport(0, 0, brdfLUTSize, brdfLUTSize);
 
-				if (m_1x1_NDC_Quad->enableCulling)
+				if (m_1x1_NDC_Quad->bEnableCulling)
 				{
 					glEnable(GL_CULL_FACE);
 					glCullFace(m_1x1_NDC_Quad->cullFace);
@@ -1608,7 +1607,7 @@ namespace flex
 
 				glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
 
-				if (skybox->enableCulling)
+				if (skybox->bEnableCulling)
 				{
 					glEnable(GL_CULL_FACE);
 					glCullFace(skybox->cullFace);
@@ -2175,7 +2174,7 @@ namespace flex
 			m_DepthUnawareEditorRenderObjectBatch.clear();
 
 			// Sort render objects into deferred + forward buckets
-			for (auto& materialPair : m_Materials)
+			for (const auto& materialPair : m_Materials)
 			{
 				MaterialID matID = materialPair.first;
 				ShaderID shaderID = materialPair.second.material.shaderID;
@@ -2195,7 +2194,7 @@ namespace flex
 						if (renderObject &&
 							renderObject->gameObject->IsVisible() &&
 							renderObject->materialID == matID &&
-							!renderObject->editorObject &&
+							!renderObject->bEditorObject &&
 							renderObject->vertexBufferData)
 						{
 							m_DeferredRenderObjectBatches.back().push_back(renderObject);
@@ -2210,7 +2209,7 @@ namespace flex
 						if (renderObject &&
 							renderObject->gameObject->IsVisible() &&
 							renderObject->materialID == matID &&
-							!renderObject->editorObject &&
+							!renderObject->bEditorObject &&
 							renderObject->vertexBufferData)
 						{
 							m_ForwardRenderObjectBatches.back().push_back(renderObject);
@@ -2223,7 +2222,7 @@ namespace flex
 			{
 				if (renderObject &&
 					renderObject->gameObject->IsVisible() &&
-					renderObject->editorObject &&
+					renderObject->bEditorObject &&
 					renderObject->vertexBufferData)
 				{
 					if (renderObject->depthWriteEnable)
@@ -2243,7 +2242,7 @@ namespace flex
 			{
 				if (renderObject &&
 					renderObject->gameObject->IsVisible() &&
-					!renderObject->editorObject &&
+					!renderObject->bEditorObject &&
 					renderObject->vertexBufferData)
 				{
 					++visibleObjectCount;
@@ -2251,12 +2250,12 @@ namespace flex
 			}
 
 			u32 accountedForObjectCount = 0;
-			for (std::vector<GLRenderObject*>& batch : m_DeferredRenderObjectBatches)
+			for (const std::vector<GLRenderObject*>& batch : m_DeferredRenderObjectBatches)
 			{
 				accountedForObjectCount += batch.size();
 			}
 
-			for (std::vector<GLRenderObject*>& batch : m_ForwardRenderObjectBatches)
+			for (const std::vector<GLRenderObject*>& batch : m_ForwardRenderObjectBatches)
 			{
 				accountedForObjectCount += batch.size();
 			}
@@ -2440,7 +2439,7 @@ namespace flex
 				u32 bindingOffset = BindDeferredFrameBufferTextures(cubemapMaterial);
 				BindTextures(&cubemapShader->shader, cubemapMaterial, bindingOffset);
 
-				if (skybox->enableCulling)
+				if (skybox->bEnableCulling)
 				{
 					glEnable(GL_CULL_FACE);
 					glCullFace(skybox->cullFace);
@@ -2496,7 +2495,7 @@ namespace flex
 				u32 bindingOffset = BindFrameBufferTextures(material);
 				BindTextures(shader, material, bindingOffset);
 
-				if (gBufferQuad->enableCulling)
+				if (gBufferQuad->bEnableCulling)
 				{
 					glEnable(GL_CULL_FACE);
 					glCullFace(gBufferQuad->cullFace);
@@ -2775,7 +2774,7 @@ namespace flex
 			}
 			GLRenderObject* spriteRenderObject = GetRenderObject(spriteRenderID);
 			if (!spriteRenderObject ||
-				(spriteRenderObject->editorObject && !g_EngineInstance->IsRenderingEditorObjects()))
+				(spriteRenderObject->bEditorObject && !g_EngineInstance->IsRenderingEditorObjects()))
 			{
 				return;
 			}
@@ -2947,7 +2946,7 @@ namespace flex
 			glEnable(GL_BLEND);
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-			if (spriteRenderObject->enableCulling)
+			if (spriteRenderObject->bEnableCulling)
 			{
 				glEnable(GL_CULL_FACE);
 				glCullFace(spriteRenderObject->cullFace);
@@ -3817,7 +3816,7 @@ namespace flex
 				glBindVertexArray(renderObject->VAO);
 				glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
 
-				if (renderObject->enableCulling)
+				if (renderObject->bEnableCulling)
 				{
 					glEnable(GL_CULL_FACE);
 					glCullFace(renderObject->cullFace);
@@ -5034,10 +5033,10 @@ namespace flex
 			outInfo.visible = renderObject->gameObject->IsVisible();
 			outInfo.visibleInSceneExplorer = renderObject->gameObject->IsVisibleInSceneExplorer();
 			outInfo.cullFace = GLCullFaceToCullFace(renderObject->cullFace);
-			outInfo.enableCulling = (renderObject->enableCulling == GL_TRUE);
+			outInfo.bEnableCulling = (renderObject->bEnableCulling == GL_TRUE);
 			outInfo.depthTestReadFunc = GlenumToDepthTestFunc(renderObject->depthTestReadFunc);
 			outInfo.depthWriteEnable = (renderObject->depthWriteEnable == GL_TRUE);
-			outInfo.editorObject = renderObject->editorObject;
+			outInfo.bEditorObject = renderObject->bEditorObject;
 
 			return true;
 		}

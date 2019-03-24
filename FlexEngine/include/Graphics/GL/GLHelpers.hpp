@@ -124,7 +124,6 @@ namespace flex
 
 			GLenum topology = 0x0004; // GL_TRIANGLES;
 			GLenum cullFace = 0x0405; // GL_BACK;
-			GLboolean enableCulling = 1;
 
 			// TODO: Remove these in place of DrawCallInfo members
 			GLenum depthTestReadFunc = 0x0203; // GL_LEQUAL;
@@ -140,7 +139,7 @@ namespace flex
 
 			// If true this object will be drawn after post processing
 			// and not drawn in shipping builds
-			bool editorObject = false;
+			bool bEditorObject = false;
 			bool bIndexed = false;
 		};
 

@@ -2480,7 +2480,7 @@ namespace flex
 		assert(matID != InvalidMaterialID);
 		MeshComponent* skyboxMesh = new MeshComponent(matID, this, false);
 		RenderObjectCreateInfo createInfo = {};
-		createInfo.cullFace = CullFace::_NONE;
+		createInfo.cullFace = CullFace::NONE;
 		skyboxMesh->LoadPrefabShape(MeshComponent::PrefabShape::SKYBOX, &createInfo);
 		SetMeshComponent(skyboxMesh);
 
@@ -2589,6 +2589,12 @@ namespace flex
 
 			ImGui::TreePop();
 		}
+	}
+
+	void DirectionalLight::SetVisible(bool bVisible, bool bEffectChildren /* = true */)
+	{
+		data.enabled = (bVisible ? 1 : 0);
+		GameObject::SetVisible(bVisible, bEffectChildren);
 	}
 
 	void DirectionalLight::SetPos(const glm::vec3& newPos)

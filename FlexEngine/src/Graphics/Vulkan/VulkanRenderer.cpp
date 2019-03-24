@@ -2327,7 +2327,6 @@ namespace flex
 
 			renderObject->vertexBufferData = createInfo->vertexBufferData;
 			renderObject->cullMode = CullFaceToVkCullMode(createInfo->cullFace);
-			renderObject->enableCulling = createInfo->enableCulling;
 			renderObject->materialName = m_Materials[renderObject->materialID].material.name;
 			renderObject->gameObject = createInfo->gameObject;
 
@@ -2832,7 +2831,6 @@ namespace flex
 			outInfo.visible = renderObject->gameObject->IsVisible();
 			outInfo.visibleInSceneExplorer = renderObject->gameObject->IsVisibleInSceneExplorer();
 			outInfo.cullFace = VkCullModeToCullFace(renderObject->cullMode);
-			outInfo.enableCulling = renderObject->enableCulling;
 			//outInfo.depthTestReadFunc =  // TODO: ?
 			//outInfo.depthWriteEnable = // TODO: ?
 
@@ -4695,7 +4693,6 @@ namespace flex
 			pipelineCreateInfo.vertexAttributes = shader.shader.vertexAttributes;
 			pipelineCreateInfo.topology = renderObject->topology;
 			pipelineCreateInfo.cullMode = renderObject->cullMode;
-			pipelineCreateInfo.enableCulling = renderObject->enableCulling;
 			pipelineCreateInfo.descriptorSetLayoutIndex = material->descriptorSetLayoutIndex;
 			pipelineCreateInfo.setDynamicStates = false;
 			pipelineCreateInfo.enabledColorBlending = shader.shader.translucent;
@@ -4809,7 +4806,7 @@ namespace flex
 			rasterizer.rasterizerDiscardEnable = VK_FALSE;
 			rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
 			rasterizer.lineWidth = 1.0f;
-			rasterizer.cullMode = createInfo->enableCulling ? createInfo->cullMode : VK_CULL_MODE_NONE;
+			rasterizer.cullMode = createInfo->cullMode;
 			rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 			rasterizer.depthBiasEnable = VK_FALSE;
 
@@ -5401,7 +5398,7 @@ namespace flex
 				gBufferQuadCreateInfo.materialID = gBufferMatID;
 				gBufferQuadCreateInfo.gameObject = gBufferQuadGameObject;
 				gBufferQuadCreateInfo.vertexBufferData = &m_gBufferQuadVertexBufferData;
-				gBufferQuadCreateInfo.enableCulling = false;
+				gBufferQuadCreateInfo.cullFace = CullFace::NONE;
 				gBufferQuadCreateInfo.visibleInSceneExplorer = false;
 
 				m_gBufferQuadIndices = { 0, 1, 2,  2, 1, 3 };
@@ -5782,6 +5779,7 @@ namespace flex
 			vkCmdBeginRenderPass(offScreenCmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 			// TODO: Make min and max values members
+			// TODO: Move to separate function, SetupDrawState?
 			VkViewport viewport = VkViewport{ 0.0f, 1.0f, (real)m_OffScreenFrameBuf->width, (real)m_OffScreenFrameBuf->height, 0.1f, 1000.0f };
 			vkCmdSetViewport(offScreenCmdBuffer, 0, 1, &viewport);
 

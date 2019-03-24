@@ -250,7 +250,7 @@ namespace flex
 
 		void VulkanTexture::Reload()
 		{
-			// TODO:
+			// TODO: Implement
 		}
 
 		void VulkanTexture::UpdateImageDescriptor()
@@ -820,13 +820,13 @@ namespace flex
 
 		bool VulkanTexture::SaveToFile(const std::string& absoluteFilePath, ImageFormat format, bool bFlipVertically)
 		{
-			// TODO:
+			// TODO: Implement
 			return false;
 		}
 
 		void VulkanTexture::Build(void* data /* = nullptr */)
 		{
-			// TODO:
+			// TODO: Implement
 		}
 
 		VkFormat VulkanTexture::CalculateFormat()
@@ -896,7 +896,8 @@ namespace flex
 				}
 			}
 
-			throw std::runtime_error("failed to find supported formats!");
+			PrintError("Failed to find supported formats!");
+			ENSURE_NO_ENTRY();
 		}
 
 		bool HasStencilComponent(VkFormat format)
@@ -917,7 +918,9 @@ namespace flex
 				}
 			}
 
-			throw std::runtime_error("Failed to find any suitable memory type!");
+			PrintError("Failed to find any suitable memory type!\n");
+			ENSURE_NO_ENTRY();
+			return u32_max;
 		}
 
 		void TransitionImageLayout(VulkanDevice* device, VkQueue graphicsQueue, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, u32 mipLevels)
@@ -973,7 +976,9 @@ namespace flex
 			}
 			else
 			{
-				throw std::invalid_argument("unsupported layout transition!");
+				PrintError("Unsupported layout transition!\n");
+				ENSURE_NO_ENTRY();
+				return;
 			}
 
 			vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
@@ -1489,6 +1494,7 @@ namespace flex
 			case CullFace::BACK:			return VK_CULL_MODE_BACK_BIT;
 			case CullFace::FRONT:			return VK_CULL_MODE_FRONT_BIT;
 			case CullFace::FRONT_AND_BACK:	return VK_CULL_MODE_FRONT_AND_BACK;
+			case CullFace::NONE:			return VK_CULL_MODE_NONE;
 			default:
 			{
 				PrintError("Unhandled CullFace passed to CullFaceToVkCullMode: %d\n", (i32)cullFace);
@@ -1544,10 +1550,14 @@ namespace flex
 			{
 				return CullFace::FRONT_AND_BACK;
 			}
+			else if (cullMode == VK_CULL_MODE_NONE)
+			{
+				return CullFace::NONE;
+			}
 			else
 			{
 				PrintError("Unhandled VkCullModeFlagBits passed to VkCullModeToCullFace: %d\n", (i32)cullMode);
-				return CullFace::_NONE;
+				return CullFace::_INVALID;
 			}
 		}
 

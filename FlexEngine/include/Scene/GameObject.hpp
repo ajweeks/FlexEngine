@@ -223,6 +223,7 @@ namespace flex
 		virtual void Initialize() override;
 		virtual void Destroy() override;
 		virtual void DrawImGuiObjects() override;
+		virtual void SetVisible(bool bVisible, bool bEffectChildren /* = true */) override;
 
 		bool operator==(const DirectionalLight& other);
 

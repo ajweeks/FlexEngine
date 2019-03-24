@@ -355,13 +355,9 @@ namespace flex
 			VertexBufferData m_1x1_NDC_QuadVertexBufferData;
 			GLRenderObject* m_1x1_NDC_Quad = nullptr; // A 1x1 quad in NDC space
 
-			// The transform to be used for all objects who don't specify one in their
-			// create info. Always set to identity.
-			//Transform m_DefaultTransform;
-
+			// TODO: Store RenderIDs rather than raw pointers
 			std::vector<std::vector<GLRenderObject*>> m_DeferredRenderObjectBatches;
 			std::vector<std::vector<GLRenderObject*>> m_ForwardRenderObjectBatches;
-			// All render objects which have "editorObject" set to true
 
 			std::vector<GLRenderObject*> m_DepthAwareEditorRenderObjectBatch;
 			std::vector<GLRenderObject*> m_DepthUnawareEditorRenderObjectBatch;

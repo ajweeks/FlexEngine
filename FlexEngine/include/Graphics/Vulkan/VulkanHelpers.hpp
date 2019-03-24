@@ -387,8 +387,9 @@ namespace flex
 			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 
 			VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;
-			// TODO: Rename to enableBackfaceCulling
-			bool enableCulling = true;
+
+			bool bEditorObject = false;
+			bool bDepthWriteEnable = true;
 
 			VDeleter<VkPipelineLayout> pipelineLayout;
 			VDeleter<VkPipeline> graphicsPipeline;
@@ -401,8 +402,6 @@ namespace flex
 
 			VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 			VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;
-			// TODO: Rename to enableBackfaceCulling
-			bool enableCulling = true;
 
 			VkRenderPass renderPass;
 			u32 subpass = 0;
