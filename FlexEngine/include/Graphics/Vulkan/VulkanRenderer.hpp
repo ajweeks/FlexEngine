@@ -272,6 +272,7 @@ namespace flex
 
 			u32 GetAlignedUBOSize(u32 unalignedSize);
 
+			const u32 MAX_NUM_RENDER_OBJECTS = 4096; // TODO: Not this?
 			std::vector<VulkanRenderObject*> m_RenderObjects;
 			std::map<MaterialID, VulkanMaterial> m_Materials;
 

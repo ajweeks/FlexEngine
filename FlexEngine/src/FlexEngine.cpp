@@ -2281,8 +2281,8 @@ namespace flex
 			allMat.colorMultiplier = white;
 		}
 
-		real gizmoHoverMultiplier = 0.6f;
-		glm::vec4 hoverColor(gizmoHoverMultiplier, gizmoHoverMultiplier, gizmoHoverMultiplier, 1.0f);
+		static const real gizmoHoverMultiplier = 0.6f;
+		static const glm::vec4 hoverColor(gizmoHoverMultiplier, gizmoHoverMultiplier, gizmoHoverMultiplier, 1.0f);
 
 		if (pickedTransformGizmo)
 		{

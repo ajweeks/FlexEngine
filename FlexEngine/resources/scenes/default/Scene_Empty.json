@@ -23,16 +23,6 @@
 			"skybox info" : 
 			{
 			}
-		},
-		{
-			"name" : "New_Object_00",
-			"type" : "object",
-			"visible" : true,
-			"transform" : 
-			{
-			},
-			"mesh" : "cube",
-			"material" : "pbr white"
 		}
 	]
 }

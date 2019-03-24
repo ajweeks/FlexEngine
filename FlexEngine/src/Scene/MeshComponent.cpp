@@ -405,9 +405,12 @@ namespace flex
 		m_MinPoint = glm::vec3(FLT_MAX);
 		m_MaxPoint = glm::vec3(FLT_MIN);
 
+		assert(data->meshes_count == 1);
 		for (i32 i = 0; i < (i32)data->meshes_count; ++i)
 		{
 			cgltf_mesh* mesh = &(data->meshes[i]);
+
+			bool bCalculateTangents = false;
 
 			for (i32 j = 0; j < (i32)mesh->primitives_count; ++j)
 			{
@@ -418,10 +421,8 @@ namespace flex
 					continue;
 				}
 
-				i32 indexStart = (i32)m_Indices.size();
-				//i32 vertexStart = (i32)vertexBufferDataCreateInfo.positions_3D.size();
-
-				bool bCalculateTangents = false;
+				//i32 indexStart = (i32)m_Indices.size();
+				i32 vertexStart = (i32)vertexBufferDataCreateInfo.positions_3D.size();
 
 				i32 posAttribIndex = -1;
 				i32 normAttribIndex = -1;
@@ -615,16 +616,16 @@ namespace flex
 
 					for (i32 i = 0; i < indexCount; ++i)
 					{
-						m_Indices.push_back(cgltf_accessor_read_index(primitive->indices, i));
+						m_Indices.push_back(vertexStart + cgltf_accessor_read_index(primitive->indices, i));
 					}
 				}
+			}
 
-				if (bCalculateTangents)
+			if (bCalculateTangents)
+			{
+				if (!CalculateTangents(vertexBufferDataCreateInfo))
 				{
-					if (!CalculateTangents(vertexBufferDataCreateInfo))
-					{
-						PrintWarn("Failed to calculate tangents/bitangents for mesh!\n");
-					}
+					PrintWarn("Failed to calculate tangents/bitangents for mesh!\n");
 				}
 			}
 		}

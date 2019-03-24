@@ -61,6 +61,8 @@ namespace flex
 		{
 			Renderer::Initialize();
 
+			m_RenderObjects.resize(MAX_NUM_RENDER_OBJECTS);
+
 			m_ClearColor = { 1.0f, 0.0f, 1.0f, 1.0f };
 			m_BRDFSize = { 512, 512 };
 			m_CubemapFramebufferSize = { 512, 512 };
@@ -173,6 +175,29 @@ namespace flex
 
 			btDiscreteDynamicsWorld* world = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
 			world->setDebugDrawer(m_PhysicsDebugDrawer);
+
+			// Figure out largest shader uniform buffer to set m_DynamicAlignment correctly
+			{
+				size_t uboAlignment = (size_t)m_VulkanDevice->m_PhysicalDeviceProperties.limits.minUniformBufferOffsetAlignment;
+				for (size_t i = 0; i < m_Shaders.size(); ++i)
+				{
+					u32 size = GetAlignedUBOSize(m_Shaders[i].shader.dynamicBufferUniforms.CalculateSizeInBytes());
+					u32 dynamicDataSize = size;
+					u32 dynamicAllignment =
+						(dynamicDataSize / uboAlignment) * uboAlignment +
+						((dynamicDataSize % uboAlignment) > 0 ? uboAlignment : 0);
+
+					if (dynamicAllignment > m_DynamicAlignment)
+					{
+						u32 newDynamicAllignment = 1;
+						while (newDynamicAllignment < dynamicAllignment)
+						{
+							newDynamicAllignment <<= 1;
+						}
+						m_DynamicAlignment = newDynamicAllignment;
+					}
+				}
+			}
 
 			for (size_t i = 0; i < m_Shaders.size(); ++i)
 			{
@@ -2347,7 +2372,7 @@ namespace flex
 				shader->uniformBuffer.dynamicData.size = GetAlignedUBOSize(shader->uniformBuffer.dynamicData.size);
 
 				const size_t dynamicBufferSize = AllocateUniformBuffer(
-					shader->uniformBuffer.dynamicData.size * m_RenderObjects.size(), (void**)&shader->uniformBuffer.dynamicData.data);
+					shader->uniformBuffer.dynamicData.size, (void**)&shader->uniformBuffer.dynamicData.data);
 				if (dynamicBufferSize > 0)
 				{
 					PrepareUniformBuffer(&shader->uniformBuffer.dynamicBuffer, dynamicBufferSize,
