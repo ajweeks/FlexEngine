@@ -95,7 +95,7 @@ namespace flex
 		void SetStatic(bool bStatic);
 
 		bool IsVisible() const;
-		void SetVisible(bool bVisible, bool effectChildren = true);
+		virtual void SetVisible(bool bVisible, bool bEffectChildren = true);
 
 		// If bIncludingChildren is true, true will be returned if this or any children are visible in scene explorer
 		bool IsVisibleInSceneExplorer(bool bIncludingChildren = false) const;
@@ -257,6 +257,7 @@ namespace flex
 		virtual void Initialize() override;
 		virtual void Destroy() override;
 		virtual void DrawImGuiObjects() override;
+		virtual void SetVisible(bool bVisible, bool bEffectChildren /* = true */) override;
 
 		bool operator==(const PointLight& other);
 

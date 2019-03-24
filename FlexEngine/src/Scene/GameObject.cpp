@@ -328,11 +328,19 @@ namespace flex
 		}
 
 		const std::string objectVisibleLabel("Visible" + objectID + m_Name);
-		ImGui::Checkbox(objectVisibleLabel.c_str(), &m_bVisible);
+		bool bVisible = m_bVisible;
+		if (ImGui::Checkbox(objectVisibleLabel.c_str(), &bVisible))
+		{
+			SetVisible(bVisible);
+		}
 
 		ImGui::SameLine();
 
-		ImGui::Checkbox("Static", &m_bStatic);
+		bool bStatic = m_bStatic;
+		if (ImGui::Checkbox("Static", &bStatic))
+		{
+			SetStatic(bStatic);
+		}
 
 		// Transform
 		ImGui::Text("");
@@ -389,8 +397,10 @@ namespace flex
 
 			ImGui::SameLine();
 
-			if (ImGui::Checkbox("u", &m_bUniformScale))
+			bool bUseUniformScale = m_bUniformScale;
+			if (ImGui::Checkbox("u", &bUseUniformScale))
 			{
+				SetUseUniformScale(bUseUniformScale, true);
 				valueChanged = true;
 			}
 			if (m_bUniformScale)
@@ -1785,18 +1795,18 @@ namespace flex
 		return m_bVisible;
 	}
 
-	void GameObject::SetVisible(bool bVisible, bool effectChildren)
+	void GameObject::SetVisible(bool bVisible, bool bEffectChildren)
 	{
 		if (m_bVisible != bVisible)
 		{
 			m_bVisible = bVisible;
 			g_Renderer->RenderObjectStateChanged();
 
-			if (effectChildren)
+			if (bEffectChildren)
 			{
 				for (GameObject* child : m_Children)
 				{
-					child->SetVisible(bVisible, effectChildren);
+					child->SetVisible(bVisible, bEffectChildren);
 				}
 			}
 		}
@@ -2773,10 +2783,24 @@ namespace flex
 		}
 	}
 
+	void PointLight::SetVisible(bool bVisible, bool bEffectChildren /* = true */)
+	{
+		data.enabled = (bVisible ? 1 : 0);
+		GameObject::SetVisible(bVisible, bEffectChildren);
+		if (ID != InvalidPointLightID)
+		{
+			g_Renderer->UpdatePointLightData(ID, &data);
+		}
+	}
+
 	void PointLight::SetPos(const glm::vec3& pos)
 	{
 		m_Transform.SetLocalPosition(pos);
 		data.pos = pos;
+		if (ID != InvalidPointLightID)
+		{
+			g_Renderer->UpdatePointLightData(ID, &data);
+		}
 	}
 
 	glm::vec3 PointLight::GetPos() const
@@ -2804,6 +2828,7 @@ namespace flex
 			if (pointLightObj.HasField("enabled"))
 			{
 				m_bVisible = pointLightObj.GetBool("enabled") ? 1 : 0;
+				data.enabled = m_bVisible ? 1 : 0;
 			}
 		}
 	}
@@ -2826,9 +2851,9 @@ namespace flex
 
 	bool PointLight::operator==(const PointLight& other)
 	{
-		return other.GetTransform()->GetLocalPosition() == m_Transform.GetLocalPosition() &&
+		return other.data.pos == data.pos &&
 			other.data.color == data.color &&
-			other.m_bVisible == m_bVisible &&
+			other.data.enabled == data.enabled &&
 			other.data.brightness == data.brightness;
 	}
 
