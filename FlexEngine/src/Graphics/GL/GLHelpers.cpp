@@ -951,6 +951,7 @@ namespace flex
 			case CullFace::BACK:			return GL_BACK;
 			case CullFace::FRONT:			return GL_FRONT;
 			case CullFace::FRONT_AND_BACK:	return GL_FRONT_AND_BACK;
+			case CullFace::NONE:			return GL_NONE;
 			default:
 				PrintError("Unhandled cull face passed to CullFaceToGLCullFace: %i\n", (i32)cullFace);
 				return GL_INVALID_ENUM;

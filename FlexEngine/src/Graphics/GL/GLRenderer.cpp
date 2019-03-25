@@ -309,7 +309,7 @@ namespace flex
 				quad2DCreateInfo.materialID = m_PostProcessMatID;
 				quad2DCreateInfo.depthWriteEnable = false;
 				quad2DCreateInfo.gameObject = quad2DGameObject;
-				quad2DCreateInfo.bEnableCulling = false;
+				quad2DCreateInfo.cullFace = CullFace::NONE;
 				quad2DCreateInfo.visibleInSceneExplorer = false;
 				quad2DCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
 				quad2DCreateInfo.depthWriteEnable = false;
@@ -358,7 +358,7 @@ namespace flex
 				quad3DCreateInfo.materialID = m_SpriteMatID;
 				quad3DCreateInfo.depthWriteEnable = false;
 				quad3DCreateInfo.gameObject = quad3DGameObject;
-				quad3DCreateInfo.bEnableCulling = false;
+				quad3DCreateInfo.cullFace = CullFace::NONE;
 				quad3DCreateInfo.visibleInSceneExplorer = false;
 				quad3DCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
 				quad3DCreateInfo.depthWriteEnable = false;
@@ -1329,14 +1329,14 @@ namespace flex
 				glBindVertexArray(skyboxRenderObject->VAO);
 				glBindBuffer(GL_ARRAY_BUFFER, skyboxRenderObject->VBO);
 
-				if (skyboxRenderObject->bEnableCulling)
+				if (skyboxRenderObject->cullFace == GL_NONE)
 				{
-					glEnable(GL_CULL_FACE);
-					glCullFace(skyboxRenderObject->cullFace);
+					glDisable(GL_CULL_FACE);
 				}
 				else
 				{
-					glDisable(GL_CULL_FACE);
+					glEnable(GL_CULL_FACE);
+					glCullFace(skyboxRenderObject->cullFace);
 				}
 
 				glDepthFunc(skyboxRenderObject->depthTestReadFunc);
@@ -1409,14 +1409,14 @@ namespace flex
 				glBindVertexArray(skybox->VAO);
 				glBindBuffer(GL_ARRAY_BUFFER, skybox->VBO);
 
-				if (skybox->bEnableCulling)
+				if (skybox->cullFace == GL_NONE)
 				{
-					glEnable(GL_CULL_FACE);
-					glCullFace(skybox->cullFace);
+					glDisable(GL_CULL_FACE);
 				}
 				else
 				{
-					glDisable(GL_CULL_FACE);
+					glEnable(GL_CULL_FACE);
+					glCullFace(skybox->cullFace);
 				}
 
 				glDepthFunc(skybox->depthTestReadFunc);
@@ -1536,14 +1536,14 @@ namespace flex
 
 				glViewport(0, 0, brdfLUTSize, brdfLUTSize);
 
-				if (m_1x1_NDC_Quad->bEnableCulling)
+				if (m_1x1_NDC_Quad->cullFace == GL_NONE)
 				{
-					glEnable(GL_CULL_FACE);
-					glCullFace(m_1x1_NDC_Quad->cullFace);
+					glDisable(GL_CULL_FACE);
 				}
 				else
 				{
-					glDisable(GL_CULL_FACE);
+					glEnable(GL_CULL_FACE);
+					glCullFace(m_1x1_NDC_Quad->cullFace);
 				}
 
 				glDepthFunc(GL_ALWAYS);
@@ -1607,14 +1607,14 @@ namespace flex
 
 				glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
 
-				if (skybox->bEnableCulling)
+				if (skybox->cullFace == GL_NONE)
 				{
-					glEnable(GL_CULL_FACE);
-					glCullFace(skybox->cullFace);
+					glDisable(GL_CULL_FACE);
 				}
 				else
 				{
-					glDisable(GL_CULL_FACE);
+					glEnable(GL_CULL_FACE);
+					glCullFace(skybox->cullFace);
 				}
 
 				glDepthFunc(skybox->depthTestReadFunc);
@@ -2297,6 +2297,7 @@ namespace flex
 				glm::mat4 lightViewProj = proj * view;
 				glUniformMatrix4fv(material->uniformIDs.lightViewProjection, 1, GL_FALSE, &lightViewProj[0][0]);
 
+				// TODO: Remove?
 				glCullFace(GL_FRONT);
 
 				for (const std::vector<GLRenderObject*>& batch : m_DeferredRenderObjectBatches)
@@ -2306,6 +2307,7 @@ namespace flex
 
 				//glBindFramebuffer(GL_FRAMEBUFFER, 0);
 				//glDrawBuffer(GL_BACK);
+				// TODO: Remove?
 				glCullFace(GL_BACK);
 			}
 
@@ -2439,14 +2441,14 @@ namespace flex
 				u32 bindingOffset = BindDeferredFrameBufferTextures(cubemapMaterial);
 				BindTextures(&cubemapShader->shader, cubemapMaterial, bindingOffset);
 
-				if (skybox->bEnableCulling)
+				if (skybox->cullFace == GL_NONE)
 				{
-					glEnable(GL_CULL_FACE);
-					glCullFace(skybox->cullFace);
+					glDisable(GL_CULL_FACE);
 				}
 				else
 				{
-					glDisable(GL_CULL_FACE);
+					glEnable(GL_CULL_FACE);
+					glCullFace(skybox->cullFace);
 				}
 
 				glDepthFunc(DepthTestFuncToGlenum(drawCallInfo.depthTestFunc));
@@ -2495,14 +2497,14 @@ namespace flex
 				u32 bindingOffset = BindFrameBufferTextures(material);
 				BindTextures(shader, material, bindingOffset);
 
-				if (gBufferQuad->bEnableCulling)
+				if (gBufferQuad->cullFace == GL_NONE)
 				{
-					glEnable(GL_CULL_FACE);
-					glCullFace(gBufferQuad->cullFace);
+					glDisable(GL_CULL_FACE);
 				}
 				else
 				{
-					glDisable(GL_CULL_FACE);
+					glEnable(GL_CULL_FACE);
+					glCullFace(gBufferQuad->cullFace);
 				}
 
 				glDepthFunc(DepthTestFuncToGlenum(drawCallInfo.depthTestFunc));
@@ -2946,14 +2948,14 @@ namespace flex
 			glEnable(GL_BLEND);
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-			if (spriteRenderObject->bEnableCulling)
+			if (spriteRenderObject->cullFace == GL_NONE)
 			{
-				glEnable(GL_CULL_FACE);
-				glCullFace(spriteRenderObject->cullFace);
+				glDisable(GL_CULL_FACE);
 			}
 			else
 			{
-				glDisable(GL_CULL_FACE);
+				glEnable(GL_CULL_FACE);
+				glCullFace(spriteRenderObject->cullFace);
 			}
 
 			// TODO: Remove (use draw call info member)
@@ -3816,14 +3818,14 @@ namespace flex
 				glBindVertexArray(renderObject->VAO);
 				glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
 
-				if (renderObject->bEnableCulling)
+				if (renderObject->cullFace == GL_NONE)
 				{
-					glEnable(GL_CULL_FACE);
-					glCullFace(renderObject->cullFace);
+					glDisable(GL_CULL_FACE);
 				}
 				else
 				{
-					glDisable(GL_CULL_FACE);
+					glEnable(GL_CULL_FACE);
+					glCullFace(renderObject->cullFace);
 				}
 
 				// TODO: Move to translucent pass?
@@ -5033,7 +5035,6 @@ namespace flex
 			outInfo.visible = renderObject->gameObject->IsVisible();
 			outInfo.visibleInSceneExplorer = renderObject->gameObject->IsVisibleInSceneExplorer();
 			outInfo.cullFace = GLCullFaceToCullFace(renderObject->cullFace);
-			outInfo.bEnableCulling = (renderObject->bEnableCulling == GL_TRUE);
 			outInfo.depthTestReadFunc = GlenumToDepthTestFunc(renderObject->depthTestReadFunc);
 			outInfo.depthWriteEnable = (renderObject->depthWriteEnable == GL_TRUE);
 			outInfo.bEditorObject = renderObject->bEditorObject;
