@@ -1,0 +1,55 @@
+{
+	"version" : 1,
+	"name" : "scene_texture_test",
+	"objects" : 
+	[
+		{
+			"name" : "Skybox",
+			"type" : "skybox",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"material" : "skybox 01",
+			"skybox info" : 
+			{
+			}
+		},
+		{
+			"name" : "Reflection Probe 01",
+			"type" : "reflection probe",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 8.000, 0.000"
+			}
+		},
+		{
+			"name" : "cube",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"scale" : "5.000, 1.000, 5.000"
+			},
+			"mesh" : "cube",
+			"material" : "texture_01"
+		},
+		{
+			"name" : "PointLight_00",
+			"type" : "point light",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 4.300, 0.000"
+			},
+			"point light info" : 
+			{
+				"pos" : "0.000, 4.300, 0.000",
+				"color" : "1.00, 1.00, 1.00",
+				"enabled" : true,
+				"brightness" : 1.000000
+			}
+		}
+	]
+}

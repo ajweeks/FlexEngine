@@ -228,6 +228,9 @@ namespace flex
 
 			VkFormat CalculateFormat();
 
+			void RegisterWithImGui();
+			ImTextureID GetImGuiTextureHandle() const;
+
 			u32 width = 0;
 			u32 height = 0;
 			u32 channelCount = 0;
@@ -245,6 +248,10 @@ namespace flex
 			VDeleter<VkImageView> imageView;
 			VDeleter<VkSampler> sampler;
 			VkDescriptorImageInfo imageInfoDescriptor;
+
+			VkDescriptorSet m_ImGuiDescriptorSet = VK_NULL_HANDLE;
+			VkSampler m_ImGuiSampler = VK_NULL_HANDLE;
+			VkImageView m_ImGuiView = VK_NULL_HANDLE;
 
 		private:
 			VulkanDevice* m_VulkanDevice = nullptr;

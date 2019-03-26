@@ -5,6 +5,8 @@
 
 IGNORE_WARNINGS_PUSH
 #include "stb_image.h"
+
+#include "imgui_impl_vulkan.h"
 IGNORE_WARNINGS_POP
 
 #include "Graphics/VertexAttribute.hpp"
@@ -877,6 +879,58 @@ namespace flex
 			}
 
 			ENSURE_NO_ENTRY();
+		}
+
+		void VulkanTexture::RegisterWithImGui()
+		{
+			if (m_ImGuiDescriptorSet != VK_NULL_HANDLE)
+			{
+				return;
+			}
+
+			//{
+			//	VkSamplerCreateInfo info = {};
+			//	info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+			//	info.magFilter = VK_FILTER_LINEAR;
+			//	info.minFilter = VK_FILTER_LINEAR;
+			//	info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+			//	info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+			//	info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+			//	info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+			//	info.minLod = -1000;
+			//	info.maxLod = 1000;
+			//	info.maxAnisotropy = 1.0f;
+			//	VK_CHECK_RESULT(vkCreateSampler(m_VulkanDevice->m_LogicalDevice, &info, nullptr, &m_ImGuiSampler));
+			//}
+
+			//{
+			//	VkImageViewCreateInfo info = {};
+			//	info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+			//	info.image = image;
+			//	info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+			//	info.format = CalculateFormat();
+			//	info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			//	info.subresourceRange.levelCount = 1;
+			//	info.subresourceRange.layerCount = 1;
+			//	VK_CHECK_RESULT(vkCreateImageView(m_VulkanDevice->m_LogicalDevice, &info, nullptr, &m_ImGuiView));
+			//}
+
+			//TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, image, CalculateFormat(), imageLayout, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipLevels);
+			//imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+			ImGui_ImplVulkan_AddTexture(sampler, imageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, &m_ImGuiDescriptorSet);
+		}
+
+		ImTextureID VulkanTexture::GetImGuiTextureHandle() const
+		{
+			if (m_ImGuiDescriptorSet == VK_NULL_HANDLE)
+			{
+				return nullptr;
+			}
+			else
+			{
+				return (ImTextureID)&m_ImGuiDescriptorSet;
+			}
 		}
 
 		VkFormat FindSupportedFormat(VulkanDevice* device, const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)

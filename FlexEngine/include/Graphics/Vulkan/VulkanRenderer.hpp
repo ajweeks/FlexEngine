@@ -244,13 +244,14 @@ namespace flex
 			void DrawImGuiForRenderObjectAndChildren(GameObject* gameObject);
 			// Returns true if object was duplicated
 			bool DoTextureSelector(const char* label, const std::vector<VulkanTexture*>& textures, i32* selectedIndex, bool* bGenerateSampler);
-			void ImGuiUpdateTextureIndexOrMaterial(bool bUpdateTextureMaterial,
+			// Returns true if texture was selected and texture changed
+			bool ImGuiUpdateTextureIndexOrMaterial(bool bUpdateTextureMaterial,
 				const std::string& texturePath,
 				std::string& matTexturePath,
-				VulkanTexture* texture,
+				VulkanTexture* loadedTexture,
 				i32 i,
 				i32* textureIndex,
-				VkSampler* sampler);
+				VulkanTexture** texture);
 			void DoTexturePreviewTooltip(VulkanTexture* texture);
 
 			static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugReportFlagsEXT flags,

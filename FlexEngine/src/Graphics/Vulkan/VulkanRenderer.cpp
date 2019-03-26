@@ -2682,27 +2682,28 @@ namespace flex
 			return bValueChanged;
 		}
 
-		void VulkanRenderer::ImGuiUpdateTextureIndexOrMaterial(bool bUpdateTextureMaterial,
+		bool VulkanRenderer::ImGuiUpdateTextureIndexOrMaterial(bool bUpdateTextureMaterial,
 			const std::string& texturePath,
 			std::string& matTexturePath,
-			VulkanTexture* texture,
+			VulkanTexture* loadedTexture,
 			i32 i,
 			i32* textureIndex,
-			VkSampler* sampler)
+			VulkanTexture** texture)
 		{
 			if (bUpdateTextureMaterial)
 			{
 				if (*textureIndex == 0)
 				{
 					matTexturePath = "";
-					*sampler = VK_NULL_HANDLE;
+					*texture = nullptr;
 				}
 				else if (i == *textureIndex - 1)
 				{
 					matTexturePath = texturePath;
-					if (texture)
+					if (loadedTexture)
 					{
-						*sampler = texture->sampler;
+						*texture = loadedTexture;
+						return true;
 					}
 				}
 			}
@@ -2717,31 +2718,39 @@ namespace flex
 					*textureIndex = i + 1;
 				}
 			}
+
+			return false;
 		}
 
 		void VulkanRenderer::DoTexturePreviewTooltip(VulkanTexture* texture)
 		{
-			ImGui::BeginTooltip();
+			// TODO: Add support to ImGui renderer for texture rendering
+			//ImGui::BeginTooltip();
 
-			ImVec2 cursorPos = ImGui::GetCursorPos();
+			//ImVec2 cursorPos = ImGui::GetCursorPos();
 
-			real textureAspectRatio = (real)texture->width / (real)texture->height;
-			real texSize = 128.0f;
+			//real textureAspectRatio = (real)texture->width / (real)texture->height;
+			//real texSize = 128.0f;
 
-			if (texture->channelCount == 4)
-			{
-				real tiling = 3.0f;
-				ImVec2 uv0(0.0f, 0.0f);
-				ImVec2 uv1(tiling * textureAspectRatio, tiling);
-				VulkanTexture* alphaBGTexture = m_LoadedTextures[m_AlphaBGTextureID];
-				ImGui::Image((void*)&alphaBGTexture->image, ImVec2(texSize * textureAspectRatio, texSize), uv0, uv1);
-			}
+			//if (texture->channelCount == 4)
+			//{
+			//	real tiling = 3.0f;
+			//	ImVec2 uv0(0.0f, 0.0f);
+			//	ImVec2 uv1(tiling * textureAspectRatio, tiling);
+			//	VulkanTexture* alphaBGTexture = m_LoadedTextures[m_AlphaBGTextureID];
+			//	if (alphaBGTexture->GetImGuiTextureHandle() == nullptr)
+			//	{
+			//		alphaBGTexture->RegisterWithImGui();
+			//		assert(alphaBGTexture->GetImGuiTextureHandle() != nullptr);
+			//	}
+			//	ImGui::Image(alphaBGTexture->GetImGuiTextureHandle(), ImVec2(texSize * textureAspectRatio, texSize), uv0, uv1);
+			//}
 
-			ImGui::SetCursorPos(cursorPos);
+			//ImGui::SetCursorPos(cursorPos);
 
-			ImGui::Image((void*)&texture->image, ImVec2(texSize * textureAspectRatio, texSize));
+			//ImGui::Image((void*)&texture->image, ImVec2(texSize * textureAspectRatio, texSize));
 
-			ImGui::EndTooltip();
+			//ImGui::EndTooltip();
 		}
 
 		void VulkanRenderer::ReloadShaders()
@@ -3056,45 +3065,52 @@ namespace flex
 						{
 							std::string texturePath = texture->GetRelativeFilePath();
 
-							ImGuiUpdateTextureIndexOrMaterial(bUpdateAlbedoTextureMaterial,
+							bool bTexutreChanged = false;
+
+							bTexutreChanged |= ImGuiUpdateTextureIndexOrMaterial(bUpdateAlbedoTextureMaterial,
 								texturePath,
 								mat.material.albedoTexturePath,
 								texture,
 								i,
 								&albedoTextureIndex,
-								&mat.albedoTexture->sampler);
+								&mat.albedoTexture);
 
-							ImGuiUpdateTextureIndexOrMaterial(bUpdateMetallicTextureMaterial,
+							bTexutreChanged |= ImGuiUpdateTextureIndexOrMaterial(bUpdateMetallicTextureMaterial,
 								texturePath,
 								mat.material.metallicTexturePath,
 								texture,
 								i,
 								&metallicTextureIndex,
-								&mat.metallicTexture->sampler);
+								&mat.metallicTexture);
 
-							ImGuiUpdateTextureIndexOrMaterial(bUpdateRoughessTextureMaterial,
+							bTexutreChanged |= ImGuiUpdateTextureIndexOrMaterial(bUpdateRoughessTextureMaterial,
 								texturePath,
 								mat.material.roughnessTexturePath,
 								texture,
 								i,
 								&roughnessTextureIndex,
-								&mat.roughnessTexture->sampler);
+								&mat.roughnessTexture);
 
-							ImGuiUpdateTextureIndexOrMaterial(bUpdateNormalTextureMaterial,
+							bTexutreChanged |= ImGuiUpdateTextureIndexOrMaterial(bUpdateNormalTextureMaterial,
 								texturePath,
 								mat.material.normalTexturePath,
 								texture,
 								i,
 								&normalTextureIndex,
-								&mat.normalTexture->sampler);
+								&mat.normalTexture);
 
-							ImGuiUpdateTextureIndexOrMaterial(bUpdateAOTextureMaterial,
+							bTexutreChanged |= ImGuiUpdateTextureIndexOrMaterial(bUpdateAOTextureMaterial,
 								texturePath,
 								mat.material.aoTexturePath,
 								texture,
 								i,
 								&aoTextureIndex,
-								&mat.aoTexture->sampler);
+								&mat.aoTexture);
+
+							if (bTexutreChanged)
+							{
+								UpdateDescriptorSets(selectedMaterialID);
+							}
 
 							++i;
 						}
