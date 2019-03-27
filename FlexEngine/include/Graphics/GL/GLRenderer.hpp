@@ -247,9 +247,6 @@ namespace flex
 			std::vector<GLShader> m_Shaders;
 			std::vector<GLTexture*> m_LoadedTextures;
 
-			// Contains file paths for each file with a .hdr extension in the `resources/textures/hdri/` directory
-			std::vector<std::string> m_AvailableHDRIs;
-
 			// Filled every frame
 			std::vector<SpriteQuadDrawInfo> m_QueuedWSSprites;
 			std::vector<SpriteQuadDrawInfo> m_QueuedSSSprites;

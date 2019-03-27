@@ -325,15 +325,15 @@ namespace flex
 
 
 		memset(m_CmdLineStrBuf, 0, MAX_CHARS_CMD_LINE_STR);
-		m_ConsoleCommands.push_back(ConsoleCommand("reload.scene", []() { g_SceneManager->ReloadCurrentScene(); }));
-		m_ConsoleCommands.push_back(ConsoleCommand("reload.scene.hard", []()
+		m_ConsoleCommands.emplace_back("reload.scene", []() { g_SceneManager->ReloadCurrentScene(); });
+		m_ConsoleCommands.emplace_back("reload.scene.hard", []()
 		{
 			MeshComponent::DestroyAllLoadedMeshes();
 			g_SceneManager->ReloadCurrentScene();
-		}));
-		m_ConsoleCommands.push_back(ConsoleCommand("reload.shaders", []() { g_Renderer->ReloadShaders(); }));
-		m_ConsoleCommands.push_back(ConsoleCommand("reload.fontsdfs", []() { g_Renderer->LoadFonts(true); }));
-		m_ConsoleCommands.push_back(ConsoleCommand("reload.skybox", []() { g_Renderer->ReloadSkybox(true); }));
+		});
+		m_ConsoleCommands.emplace_back("reload.shaders", []() { g_Renderer->ReloadShaders(); });
+		m_ConsoleCommands.emplace_back("reload.fontsdfs", []() { g_Renderer->LoadFonts(true); });
+		m_ConsoleCommands.emplace_back("reload.skybox", []() { g_Renderer->ReloadSkybox(true); });
 
 	}
 

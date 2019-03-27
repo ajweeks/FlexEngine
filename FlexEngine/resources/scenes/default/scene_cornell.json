@@ -31,7 +31,7 @@
 			"transform" : 
 			{
 				"pos" : "-28.690, 0.000, -0.001",
-				"rot" : "1.570, 1.570, 3.141",
+				"rot" : "0.000, 1.570, 0.000",
 				"scale" : "19.999, 20.000, 19.999"
 			},
 			"mesh" : "cornell-box",
@@ -94,7 +94,7 @@
 			"transform" : 
 			{
 				"pos" : "-27.380, 20.111, 0.025",
-				"rot" : "1.571, 1.570, -3.141",
+				"rot" : "0.000, 1.570, 0.000",
 				"scale" : "3.000, 3.000, 3.000"
 			},
 			"mesh" : "cornell-box",
@@ -166,12 +166,28 @@
 				"pos" : "0.000, 15.000, 0.000",
 				"color" : "1.00, 1.00, 1.00",
 				"enabled" : true,
-				"brightness" : 5.000000,
+				"brightness" : 1.953000,
 				"cast shadows" : true,
 				"shadow darkness" : 0.000000,
 				"shadow map near" : -80.000000,
 				"shadow map far" : 100.000000,
 				"shadow map zoom" : 30.000000
+			}
+		},
+		{
+			"name" : "PointLight_00",
+			"type" : "point light",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "9.000, 26.800, 26.900"
+			},
+			"point light info" : 
+			{
+				"pos" : "9.000, 26.800, 26.900",
+				"color" : "1.00, 1.00, 1.00",
+				"enabled" : true,
+				"brightness" : 1000.000000
 			}
 		}
 	]

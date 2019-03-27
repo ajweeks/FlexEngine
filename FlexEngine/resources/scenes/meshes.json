@@ -84,7 +84,7 @@
 			"swapNormalYZ" : true,
 			"flipNormalZ" : true,
 			"flipU" : false,
-			"flipV" : true
+			"flipV" : false
 		},
 		{
 			"file" : "valve.glb",

@@ -639,7 +639,9 @@ namespace flex
 			VkImageFormatProperties formatProperties = {};
 			formatProperties.maxArrayLayers = createInfo.arrayLayers;
 
-			VkResult result = vkGetPhysicalDeviceImageFormatProperties(device->m_PhysicalDevice, imageInfo.format, imageInfo.imageType, imageInfo.tiling, imageInfo.usage, imageInfo.flags, &formatProperties);
+			VkResult result = vkGetPhysicalDeviceImageFormatProperties(device->m_PhysicalDevice,
+				imageInfo.format, imageInfo.imageType, imageInfo.tiling,
+				imageInfo.usage, imageInfo.flags, &formatProperties);
 			if (result != VK_SUCCESS)
 			{
 				// TODO: Handle error gracefully
@@ -682,7 +684,33 @@ namespace flex
 				width = hdrImage.width;
 				height = hdrImage.height;
 				channelCount = hdrImage.channelCount;
-				textureSize = (VkDeviceSize)(width * height * channelCount * sizeof(float));
+
+				if (width == 0 ||
+					height == 0 ||
+					channelCount == 0)
+				{
+					PrintError("Failed to load in hdr texture data from %s\n", relativeFilePath.c_str());
+					return 0;
+				}
+
+				ImageCreateInfo imageCreateInfo = {};
+				imageCreateInfo.image = image.replace();
+				imageCreateInfo.imageMemory = imageMemory.replace();
+				imageCreateInfo.format = inFormat;
+				imageCreateInfo.width = (u32)width;
+				imageCreateInfo.height = (u32)height;
+				imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+				imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+				imageCreateInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+				imageCreateInfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+				imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
+
+				u32 imageSize = (u32)CreateImage(m_VulkanDevice, m_GraphicsQueue, imageCreateInfo);
+
+
+
+				u32 pixelBufSize = (VkDeviceSize)(width * height * channelCount * sizeof(float));
+				textureSize = imageSize;// (VkDeviceSize)(width * height * channelCount * sizeof(float));
 
 
 				CreateAndAllocateBuffer(m_VulkanDevice, textureSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -694,6 +722,23 @@ namespace flex
 				vkUnmapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory);
 
 				hdrImage.Free();
+
+				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, image, inFormat, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
+				CopyBufferToImage(m_VulkanDevice, m_GraphicsQueue, stagingBuffer.m_Buffer, image, width, height);
+				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, image, inFormat, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipLevels);
+
+				ImageViewCreateInfo viewCreateInfo = {};
+				viewCreateInfo.format = inFormat;
+				viewCreateInfo.image = &image;
+				viewCreateInfo.imageView = &imageView;
+				viewCreateInfo.mipLevels = mipLevels;
+				CreateImageView(m_VulkanDevice, viewCreateInfo);
+
+				SamplerCreateInfo samplerCreateInfo = {};
+				samplerCreateInfo.sampler = &sampler;
+				CreateSampler(m_VulkanDevice, samplerCreateInfo);
+
+				return imageSize;
 			}
 			else
 			{
@@ -717,60 +762,66 @@ namespace flex
 					return 0;
 				}
 
-				channelCount = 4;
+				//channelCount = 4;
 
-				textureSize = (VkDeviceSize)(width * height * channelCount * sizeof(unsigned char));
+				if (width == 0 ||
+					height == 0 ||
+					channelCount == 0)
+				{
+					PrintError("Failed to load in texture data from %s\n", relativeFilePath.c_str());
+					return 0;
+				}
+
+				ImageCreateInfo imageCreateInfo = {};
+				imageCreateInfo.image = image.replace();
+				imageCreateInfo.imageMemory = imageMemory.replace();
+				imageCreateInfo.format = inFormat;
+				imageCreateInfo.width = (u32)width;
+				imageCreateInfo.height = (u32)height;
+				imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+				imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+				imageCreateInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+				imageCreateInfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+				imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
+
+				u32 imageSize = (u32)CreateImage(m_VulkanDevice, m_GraphicsQueue, imageCreateInfo);
+
+
+
+				u32 pixelBufSize = (VkDeviceSize)(width * height * channelCount * sizeof(unsigned char));
+				textureSize = imageSize;// (VkDeviceSize)(width * height * channelCount * sizeof(unsigned char));
 
 				CreateAndAllocateBuffer(m_VulkanDevice, textureSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 					VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer);
 
 				void* data = nullptr;
 				VK_CHECK_RESULT(vkMapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory, 0, textureSize, 0, &data));
-				memcpy(data, pixels, (size_t)textureSize);
+				memcpy(data, pixels, (size_t)pixelBufSize);
 				vkUnmapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory);
 
 				stbi_image_free(pixels);
+
+
+
+				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, image, inFormat, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
+				CopyBufferToImage(m_VulkanDevice, m_GraphicsQueue, stagingBuffer.m_Buffer, image, width, height);
+				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, image, inFormat, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipLevels);
+
+				ImageViewCreateInfo viewCreateInfo = {};
+				viewCreateInfo.format = inFormat;
+				viewCreateInfo.image = &image;
+				viewCreateInfo.imageView = &imageView;
+				viewCreateInfo.mipLevels = mipLevels;
+				CreateImageView(m_VulkanDevice, viewCreateInfo);
+
+				SamplerCreateInfo samplerCreateInfo = {};
+				samplerCreateInfo.sampler = &sampler;
+				CreateSampler(m_VulkanDevice, samplerCreateInfo);
+
+				return imageSize;
 			}
 
-			if (width == 0 ||
-				height == 0 ||
-				channelCount == 0 ||
-				textureSize == 0)
-			{
-				PrintError("Failed to load in texture data from %s\n", relativeFilePath.c_str());
-				return 0;
-			}
-
-			ImageCreateInfo imageCreateInfo = {};
-			imageCreateInfo.image = image.replace();
-			imageCreateInfo.imageMemory = imageMemory.replace();
-			imageCreateInfo.format = inFormat;
-			imageCreateInfo.width  = (u32)width;
-			imageCreateInfo.height  = (u32)height;
-			imageCreateInfo.imageType  = VK_IMAGE_TYPE_2D;
-			imageCreateInfo.tiling  = VK_IMAGE_TILING_OPTIMAL;
-			imageCreateInfo.usage  = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-			imageCreateInfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-			imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
-
-			u32 imageSize = (u32)CreateImage(m_VulkanDevice, m_GraphicsQueue, imageCreateInfo);
-
-			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, image, inFormat, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
-			CopyBufferToImage(m_VulkanDevice, m_GraphicsQueue, stagingBuffer.m_Buffer, image, width, height);
-			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, image, inFormat, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipLevels);
-
-			ImageViewCreateInfo viewCreateInfo = {};
-			viewCreateInfo.format = inFormat;
-			viewCreateInfo.image = &image;
-			viewCreateInfo.imageView = &imageView;
-			viewCreateInfo.mipLevels = mipLevels;
-			CreateImageView(m_VulkanDevice, viewCreateInfo);
-
-			SamplerCreateInfo samplerCreateInfo = {};
-			samplerCreateInfo.sampler = &sampler;
-			CreateSampler(m_VulkanDevice, samplerCreateInfo);
-
-			return imageSize;
+			return 0;
 		}
 
 		void VulkanTexture::CreateImageView(VulkanDevice* device, ImageViewCreateInfo& createInfo)

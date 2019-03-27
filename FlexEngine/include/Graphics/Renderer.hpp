@@ -197,6 +197,8 @@ namespace flex
 			i16 size, bool bScreenSpace, std::map<i32, struct FontMetric*>* outCharacters,
 			std::array<glm::vec2i, 4>* outMaxPositions, FT_Face* outFace);
 
+		std::string PickRandomSkyboxTexture();
+
 		PointLightData* m_PointLights;
 		i32 m_NumPointLightsEnabled = 0;
 		DirectionalLight* m_DirectionalLight = nullptr;
@@ -277,6 +279,9 @@ namespace flex
 		const char* m_GameObjectPayloadCStr = "gameobject";
 		const char* m_MaterialPayloadCStr = "material";
 		const char* m_MeshPayloadCStr = "mesh";
+
+		// Contains file paths for each file with a .hdr extension in the `resources/textures/hdri/` directory
+		std::vector<std::string> m_AvailableHDRIs;
 
 	private:
 		Renderer& operator=(const Renderer&) = delete;

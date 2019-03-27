@@ -81,6 +81,12 @@ namespace flex
 			m_FontMetaDatas[i].renderedTextureFilePath += "-" + DPIStr + m_FontImageExtension;
 		}
 
+		std::string hdriPath = RESOURCE("textures/hdri/");
+		if (!FindFilesInDirectory(hdriPath, m_AvailableHDRIs, "hdr"))
+		{
+			PrintWarn("Unable to find hdri directory at %s\n", hdriPath.c_str());
+		}
+
 		m_PointLights = (PointLightData*)malloc(MAX_NUM_POINT_LIGHTS * sizeof(PointLightData));
 		for (i32 i = 0; i < MAX_NUM_POINT_LIGHTS; ++i)
 		{
@@ -1354,6 +1360,25 @@ namespace flex
 		*outFace = face;
 
 		return true;
+	}
+
+	std::string Renderer::PickRandomSkyboxTexture()
+	{
+		i32 matIdx = -1;
+		i32 attemptCount = 0;
+		do
+		{
+			matIdx = RandomInt(0, (i32)m_AvailableHDRIs.size());
+			++attemptCount;
+		} while (!FileExists(m_AvailableHDRIs[matIdx]) && attemptCount < 15);
+
+		if (matIdx == -1)
+		{
+			PrintWarn("Unable to open any available HDRIs!\n");
+			return EMPTY_STRING;
+		}
+
+		return m_AvailableHDRIs[matIdx];
 	}
 
 } // namespace flex

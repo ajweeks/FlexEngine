@@ -99,12 +99,6 @@ namespace flex
 
 			LoadShaders();
 
-			std::string hdriPath = RESOURCE("textures/hdri/");
-			if (!FindFilesInDirectory(hdriPath, m_AvailableHDRIs, "hdr"))
-			{
-				PrintWarn("Unable to find hdri directory at %s\n", hdriPath.c_str());
-			}
-
 			glEnable(GL_DEPTH_TEST);
 			glFrontFace(GL_CCW);
 			glLineWidth(3.0f);
@@ -1276,21 +1270,7 @@ namespace flex
 
 					if (bRandomizeSkybox && !m_AvailableHDRIs.empty())
 					{
-						i32 matIdx = -1;
-						i32 attemptCount = 0;
-						do
-						{
-							matIdx = RandomInt(0, (i32)m_AvailableHDRIs.size());
-							++attemptCount;
-						} while (!FileExists(m_AvailableHDRIs[matIdx]) && attemptCount < 15);
-
-						if (matIdx == -1)
-						{
-							PrintWarn("Unable to open any randomly chosen HDRI!\n");
-							return;
-						}
-
-						equirectangularToCubeMatCreateInfo.hdrEquirectangularTexturePath = m_AvailableHDRIs[matIdx];
+						equirectangularToCubeMatCreateInfo.hdrEquirectangularTexturePath = PickRandomSkyboxTexture();
 					}
 
 					equirectangularToCubeMatID = InitializeMaterial(&equirectangularToCubeMatCreateInfo, equirectangularToCubeMatID);

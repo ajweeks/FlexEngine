@@ -160,7 +160,6 @@ namespace flex
 			m_WorkTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/work_d.jpg", 4, false, true, false);
 			m_PointLightIconID = InitializeTexture(RESOURCE_LOCATION  "textures/icons/point-light-icon-256.png", 4, false, true, false);
 			m_DirectionalLightIconID = InitializeTexture(RESOURCE_LOCATION  "textures/icons/directional-light-icon-256.png", 4, false, true, false);
-
 		}
 
 		void VulkanRenderer::PostInitialize()
@@ -405,8 +404,14 @@ namespace flex
 			equirectangularToCubeMatCreateInfo.shaderName = "equirectangular_to_cube";
 			equirectangularToCubeMatCreateInfo.enableHDREquirectangularSampler = true;
 			equirectangularToCubeMatCreateInfo.generateHDREquirectangularSampler = true;
-			// TODO: Make cyclable at runtime
 			equirectangularToCubeMatCreateInfo.hdrEquirectangularTexturePath = environmentMapPath;
+
+			bool bRandomizeSkybox = true;
+			if (bRandomizeSkybox && !m_AvailableHDRIs.empty())
+			{
+				equirectangularToCubeMatCreateInfo.hdrEquirectangularTexturePath = PickRandomSkyboxTexture();
+			}
+
 			equirectangularToCubeMatCreateInfo.engineMaterial = true;
 			MaterialID equirectangularToCubeMatID = InitializeMaterial(&equirectangularToCubeMatCreateInfo);
 
@@ -2112,7 +2117,7 @@ namespace flex
 
 			struct TextureInfo
 			{
-				TextureInfo(const std::string& filePath,
+				TextureInfo(const std::string& relativeFilePath,
 					VulkanTexture** texture,
 					bool* generate,
 					VkFormat format = VK_FORMAT_R8G8B8A8_UNORM,
@@ -6585,39 +6590,35 @@ namespace flex
 			{
 				UniformInfo(u64 uniform,
 					void* dataStart,
-					size_t copySize,
-					size_t moveInWords) :
+					size_t copySize) :
 					uniform(uniform),
 					dataStart(dataStart),
-					copySize(copySize),
-					moveInWords(moveInWords)
+					copySize(copySize)
 				{}
 
 				u64 uniform;
 				void* dataStart = nullptr;
 				size_t copySize;
-				// TODO: Calculate as copySize / 4
-				size_t moveInWords;
 			};
 			UniformInfo uniformInfos[] = {
-				{ U_MODEL, (void*)&model, 64, 16 },
-				{ U_MODEL_INV_TRANSPOSE, (void*)&modelInvTranspose, 64, 16 },
-				{ U_MODEL_VIEW_PROJ, (void*)&modelViewProjection, 64, 16 },
+				{ U_MODEL, (void*)&model, 64 },
+				{ U_MODEL_INV_TRANSPOSE, (void*)&modelInvTranspose, 64 },
+				{ U_MODEL_VIEW_PROJ, (void*)&modelViewProjection, 64 },
 				// view, viewInv, viewProjection, projection, camPos, dirLight, pointLights should be updated in constant uniform buffer
-				{ U_COLOR_MULTIPLIER, (void*)&material.material.colorMultiplier, 16, 4 },
-				{ U_CONST_ALBEDO, (void*)&material.material.constAlbedo, 16, 4 },
-				{ U_CONST_METALLIC, (void*)&material.material.constMetallic, 4, 1 },
-				{ U_CONST_ROUGHNESS, (void*)&material.material.constRoughness, 4, 1 },
-				{ U_CONST_AO, (void*)&material.material.constAO, 4, 1 },
-				{ U_ENABLE_ALBEDO_SAMPLER, (void*)&enableAlbedoSampler, 4, 1 },
-				{ U_ENABLE_METALLIC_SAMPLER, (void*)&enableMetallicSampler, 4, 1 },
-				{ U_ENABLE_ROUGHNESS_SAMPLER, (void*)&enableRoughnessSampler, 4, 1 },
-				{ U_ENABLE_AO_SAMPLER, (void*)&enableAOSampler, 4, 1 },
-				{ U_ENABLE_NORMAL_SAMPLER, (void*)&enableNormalSampler, 4, 1 },
-				{ U_ENABLE_CUBEMAP_SAMPLER, (void*)&enableCubemapSampler, 4, 1 },
-				{ U_ENABLE_IRRADIANCE_SAMPLER, (void*)&enableIrradianceSampler, 4, 1 },
-				{ U_BLEND_SHARPNESS, (void*)&blendSharpness, 4, 1 },
-				{ U_TEXTURE_SCALE, (void*)&textureScale, 4, 1 },
+				{ U_COLOR_MULTIPLIER, (void*)&material.material.colorMultiplier, 16 },
+				{ U_CONST_ALBEDO, (void*)&material.material.constAlbedo, 16 },
+				{ U_CONST_METALLIC, (void*)&material.material.constMetallic, 4 },
+				{ U_CONST_ROUGHNESS, (void*)&material.material.constRoughness, 4 },
+				{ U_CONST_AO, (void*)&material.material.constAO, 4 },
+				{ U_ENABLE_ALBEDO_SAMPLER, (void*)&enableAlbedoSampler, 4 },
+				{ U_ENABLE_METALLIC_SAMPLER, (void*)&enableMetallicSampler, 4 },
+				{ U_ENABLE_ROUGHNESS_SAMPLER, (void*)&enableRoughnessSampler, 4 },
+				{ U_ENABLE_AO_SAMPLER, (void*)&enableAOSampler, 4 },
+				{ U_ENABLE_NORMAL_SAMPLER, (void*)&enableNormalSampler, 4 },
+				{ U_ENABLE_CUBEMAP_SAMPLER, (void*)&enableCubemapSampler, 4 },
+				{ U_ENABLE_IRRADIANCE_SAMPLER, (void*)&enableIrradianceSampler, 4 },
+				{ U_BLEND_SHARPNESS, (void*)&blendSharpness, 4 },
+				{ U_TEXTURE_SCALE, (void*)&textureScale, 4 },
 			};
 
 			u32 index = 0;
@@ -6626,7 +6627,7 @@ namespace flex
 				if (dynamicUniforms.HasUniform(uniformInfo.uniform))
 				{
 					memcpy(&uniformBuffer.dynamicData.data[offset + index], uniformInfo.dataStart, uniformInfo.copySize);
-					index += uniformInfo.moveInWords;
+					index += uniformInfo.copySize / 4;
 				}
 			}
 

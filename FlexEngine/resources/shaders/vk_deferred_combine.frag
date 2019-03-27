@@ -164,7 +164,7 @@ void main()
 	if (uboConstant.dirLight.enabled != 0)
 	{
 		vec3 L = normalize(uboConstant.dirLight.direction);
-		vec3 radiance = uboConstant.dirLight.color.rgb;
+		vec3 radiance = uboConstant.dirLight.color.rgb * uboConstant.dirLight.brightness;
 		float NoL = max(dot(N, L), 0.0);
 
 		Lo += DoLighting(radiance, N, V, L, NoV, NoL, 1, 1, F0, vec3(1.0));
@@ -208,7 +208,7 @@ void main()
 	// fragColor = vec4(worldPos*0.1, 1); return;
 
 	// Visualize normals:
-	// fragColor = vec4(N, 1); return;
+	// fragColor = vec4(N*0.5+0.5, 1); return;
 
 	// Visualize screen coords:
 	//fragColor = vec4(ex_TexCoord, 0, 1); return;
