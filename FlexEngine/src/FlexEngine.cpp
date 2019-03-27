@@ -19,7 +19,7 @@ IGNORE_WARNINGS_PUSH
 #endif
 
 #if COMPILE_IMGUI
-#include "imgui_internal.h"
+#include "imgui_internal.h" // For something & InputTextEx
 #endif
 IGNORE_WARNINGS_POP
 
@@ -1224,6 +1224,8 @@ namespace flex
 				glm::max(engine->m_ImGuiMainWindowWidth, engine->m_ImGuiMainWindowWidthMin));
 		};
 
+		bool bIsMainWindowCollapsed = true;
+
 		static const std::string titleString = (std::string("Flex Engine v") + EngineVersionString());
 		static const char* titleCharStr = titleString.c_str();
 		ImGuiWindowFlags mainWindowFlags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoNavInputs;
@@ -1241,6 +1243,8 @@ namespace flex
 		{
 			if (ImGui::Begin(titleCharStr, &m_bMainWindowShowing, mainWindowFlags))
 			{
+				bIsMainWindowCollapsed = ImGui::IsWindowCollapsed();
+
 				if (ImGui::TreeNode("Simulation"))
 				{
 					ImGui::Checkbox("Paused", &m_bSimulationPaused);
@@ -1372,10 +1376,22 @@ namespace flex
 
 		if (m_bShowingConsole)
 		{
-			if (ImGui::Begin("Console", &m_bShowingConsole))
+			const real consoleWindowWidth = 350.0f;
+			const real consoleWindowHeight = 25.0f;
+			const real consoleWindowX = (m_bMainWindowShowing && !bIsMainWindowCollapsed) ? m_ImGuiMainWindowWidth : 0.0f;
+			const real consoleWindowY = frameBufferSize.y - consoleWindowHeight;
+			ImGui::SetNextWindowPos(ImVec2(consoleWindowX, consoleWindowY), ImGuiCond_Always);
+			ImGui::SetNextWindowSize(ImVec2(consoleWindowWidth, consoleWindowHeight));
+			if (ImGui::Begin("Console", &m_bShowingConsole,
+				ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoDecoration|ImGuiWindowFlags_NoMove))
 			{
-				if (ImGui::InputText("", m_CmdLineStrBuf, MAX_CHARS_CMD_LINE_STR,
-					ImGuiInputTextFlags_EnterReturnsTrue|ImGuiInputTextFlags_CallbackHistory,
+				if (m_bShouldFocusKeyboardOnConsole)
+				{
+					m_bShouldFocusKeyboardOnConsole = false;
+					ImGui::SetKeyboardFocusHere();
+				}
+				if (ImGui::InputTextEx("", m_CmdLineStrBuf, MAX_CHARS_CMD_LINE_STR, ImVec2(consoleWindowWidth - 16.0f, consoleWindowHeight - 8.0f),
+					ImGuiInputTextFlags_EnterReturnsTrue|ImGuiInputTextFlags_CallbackCharFilter|ImGuiInputTextFlags_CallbackCompletion|ImGuiInputTextFlags_CallbackHistory,
 					[](ImGuiInputTextCallbackData *data) { return g_EngineInstance->ImGuiConsoleInputCallback(data); }))
 				{
 					ToLower(m_CmdLineStrBuf);
@@ -1441,6 +1457,16 @@ namespace flex
 		else if (data->EventKey == ImGuiKey_Tab)
 		{
 			// TODO:
+		}
+
+		if (data->EventFlag == ImGuiInputTextFlags_CallbackCharFilter)
+		{
+			if (data->EventChar == L'`' ||
+				data->EventChar == L'~')
+			{
+				m_bShowingConsole = false;
+				return 1;
+			}
 		}
 		return 0;
 	}
@@ -2009,6 +2035,10 @@ namespace flex
 			if (keyCode == KeyCode::KEY_GRAVE_ACCENT)
 			{
 				m_bShowingConsole = !m_bShowingConsole;
+				if (m_bShowingConsole)
+				{
+					m_bShouldFocusKeyboardOnConsole = true;
+				}
 			}
 
 #if COMPILE_RENDERDOC_API
