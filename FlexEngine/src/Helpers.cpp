@@ -1187,20 +1187,31 @@ namespace flex
 		}
 	}
 
-	void ToLower(std::string& str)
+	std::string& ToLower(std::string& str)
 	{
 		for (char& c : str)
 		{
 			c = (char)tolower(c);
 		}
+		return str;
 	}
 
-	void ToUpper(std::string& str)
+	char* ToLower(char* str)
+	{
+		for (i32 i = 0; i < strlen(str); ++i)
+		{
+			str[i] = tolower(str[i]);
+		}
+		return str;
+	}
+
+	std::string& ToUpper(std::string& str)
 	{
 		for (char& c : str)
 		{
 			c = (char)toupper(c);
 		}
+		return str;
 	}
 
 	bool StartsWith(const std::string& str, const std::string& start)

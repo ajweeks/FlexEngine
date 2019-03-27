@@ -5,6 +5,8 @@
 
 struct RENDERDOC_API_1_4_0;
 
+struct ImGuiInputTextCallbackData;
+
 namespace flex
 {
 	class GameObject;
@@ -19,6 +21,8 @@ namespace flex
 		void Initialize();
 		void UpdateAndRender();
 		void Stop();
+
+		i32 ImGuiConsoleInputCallback(ImGuiInputTextCallbackData *data);
 
 		std::vector<GameObject*> GetSelectedObjects();
 		void SetSelectedObject(GameObject* gameObject);
@@ -255,6 +259,25 @@ namespace flex
 		bool m_bWriteProfilerResultsToFile = false;
 
 		bool m_bWantRenameActiveElement = false;
+
+		struct ConsoleCommand
+		{
+			typedef void(*cmdFunc)();
+			ConsoleCommand(const std::string& name, cmdFunc fun) :
+				name(name),
+				fun(fun)
+			{}
+
+			std::string name;
+			cmdFunc fun;
+		};
+		std::vector<ConsoleCommand> m_ConsoleCommands;
+		bool m_bShowingConsole = false;
+		static const u32 MAX_CHARS_CMD_LINE_STR = 256;
+		char m_CmdLineStrBuf[MAX_CHARS_CMD_LINE_STR];
+		i32 m_PreviousCmdLineIndex = -1;
+		std::vector<std::string> m_PreviousCmdLineEntries;
+
 
 		std::vector<Spring<glm::vec3>> m_TestSprings;
 		real m_SpringTimer = 0.0f;

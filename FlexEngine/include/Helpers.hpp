@@ -143,8 +143,9 @@ namespace flex
 	CullFace StringToCullFace(const std::string& str);
 	std::string CullFaceToString(CullFace cullFace);
 
-	void ToLower(std::string& str);
-	void ToUpper(std::string& str);
+	char* ToLower(char* str);
+	std::string& ToLower(std::string& str);
+	std::string& ToUpper(std::string& str);
 
 	bool StartsWith(const std::string& str, const std::string& start);
 	bool EndsWith(const std::string& str, const std::string& end);

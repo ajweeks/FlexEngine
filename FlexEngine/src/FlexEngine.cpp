@@ -322,6 +322,19 @@ namespace flex
 		io.LogFilename = m_ImGuiLogFilepathStr.c_str();
 		io.DisplaySize = (ImVec2)g_Window->GetFrameBufferSize();
 		io.IniSavingRate = 10.0f;
+
+
+		memset(m_CmdLineStrBuf, 0, MAX_CHARS_CMD_LINE_STR);
+		m_ConsoleCommands.push_back(ConsoleCommand("reload.scene", []() { g_SceneManager->ReloadCurrentScene(); }));
+		m_ConsoleCommands.push_back(ConsoleCommand("reload.scene.hard", []()
+		{
+			MeshComponent::DestroyAllLoadedMeshes();
+			g_SceneManager->ReloadCurrentScene();
+		}));
+		m_ConsoleCommands.push_back(ConsoleCommand("reload.shaders", []() { g_Renderer->ReloadShaders(); }));
+		m_ConsoleCommands.push_back(ConsoleCommand("reload.fontsdfs", []() { g_Renderer->LoadFonts(true); }));
+		m_ConsoleCommands.push_back(ConsoleCommand("reload.skybox", []() { g_Renderer->ReloadSkybox(true); }));
+
 	}
 
 	AudioSourceID FlexEngine::GetAudioSourceID(SoundEffect effect)
@@ -1356,6 +1369,80 @@ namespace flex
 		{
 			g_InputManager->DrawImGuiKeyMapper(&m_bInputMapperShowing);
 		}
+
+		if (m_bShowingConsole)
+		{
+			if (ImGui::Begin("Console", &m_bShowingConsole))
+			{
+				if (ImGui::InputText("", m_CmdLineStrBuf, MAX_CHARS_CMD_LINE_STR,
+					ImGuiInputTextFlags_EnterReturnsTrue|ImGuiInputTextFlags_CallbackHistory,
+					[](ImGuiInputTextCallbackData *data) { return g_EngineInstance->ImGuiConsoleInputCallback(data); }))
+				{
+					ToLower(m_CmdLineStrBuf);
+					for (const ConsoleCommand& cmd : m_ConsoleCommands)
+					{
+						if (strcmp(m_CmdLineStrBuf, cmd.name.c_str()) == 0)
+						{
+							cmd.fun();
+							if (m_PreviousCmdLineEntries.empty() ||
+								strcmp((m_PreviousCmdLineEntries.end() - 1)->c_str(), m_CmdLineStrBuf) != 0)
+							{
+								m_PreviousCmdLineEntries.push_back(m_CmdLineStrBuf);
+							}
+							m_PreviousCmdLineIndex = -1;
+							memset(m_CmdLineStrBuf, 0, MAX_CHARS_CMD_LINE_STR);
+						}
+					}
+				}
+			}
+			ImGui::End();
+		}
+	}
+
+	i32 FlexEngine::ImGuiConsoleInputCallback(ImGuiInputTextCallbackData *data)
+	{
+		const u32 cmdHistCount = m_PreviousCmdLineEntries.size();
+
+		if (data->EventKey == ImGuiKey_UpArrow)
+		{
+			if (cmdHistCount == 0)
+			{
+				return -1;
+			}
+
+			if (m_PreviousCmdLineIndex == cmdHistCount - 1)
+			{
+				return 0;
+			}
+
+			data->DeleteChars(0, data->BufTextLen);
+			++m_PreviousCmdLineIndex;
+			data->InsertChars(0, m_PreviousCmdLineEntries[cmdHistCount - m_PreviousCmdLineIndex - 1].data());
+		}
+		else if (data->EventKey == ImGuiKey_DownArrow)
+		{
+			if (cmdHistCount == 0)
+			{
+				return -1;
+			}
+
+			if (m_PreviousCmdLineIndex == -1)
+			{
+				return 0;
+			}
+
+			data->DeleteChars(0, data->BufTextLen);
+			--m_PreviousCmdLineIndex;
+			if (m_PreviousCmdLineIndex != -1) // -1 leaves console cleared
+			{
+				data->InsertChars(0, m_PreviousCmdLineEntries[cmdHistCount - m_PreviousCmdLineIndex - 1].data());
+			}
+		}
+		else if (data->EventKey == ImGuiKey_Tab)
+		{
+			// TODO:
+		}
+		return 0;
 	}
 
 	void FlexEngine::Stop()
@@ -1918,6 +2005,11 @@ namespace flex
 				return EventReply::CONSUMED;
 			}
 #endif
+
+			if (keyCode == KeyCode::KEY_GRAVE_ACCENT)
+			{
+				m_bShowingConsole = !m_bShowingConsole;
+			}
 
 #if COMPILE_RENDERDOC_API
 			if (m_RenderDocAPI &&
