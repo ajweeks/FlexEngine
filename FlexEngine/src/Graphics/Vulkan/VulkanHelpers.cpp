@@ -12,6 +12,7 @@ IGNORE_WARNINGS_POP
 #include "Graphics/Vulkan/VulkanCommandBufferManager.hpp"
 #include "Graphics/Vulkan/VulkanDevice.hpp"
 #include "Helpers.hpp"
+#include "Time.hpp"
 
 namespace flex
 {
@@ -1683,6 +1684,126 @@ namespace flex
 			default: return  "Other";
 			}
 		}
+
+#ifdef DEBUG
+		AsyncVulkanShaderCompiler::AsyncVulkanShaderCompiler()
+		{
+		}
+
+		AsyncVulkanShaderCompiler::AsyncVulkanShaderCompiler(bool bForceRecompile)
+		{
+			bool bCodeOutOfDate = true;
+
+			m_ChecksumFilePath = SAVED_LOCATION "vk-shader-checksum.dat";
+
+			const std::string shaderInputDirectory = RESOURCE_LOCATION  "shaders";
+			m_ShaderCodeChecksum = CalculteChecksum(shaderInputDirectory);
+
+			if (FileExists(m_ChecksumFilePath))
+			{
+				std::string fileContents;
+				if (ReadFile(m_ChecksumFilePath, fileContents, false))
+				{
+					i64 pShaderCodeChecksum = atoll(fileContents.c_str());
+					if (m_ShaderCodeChecksum == pShaderCodeChecksum)
+					{
+						bCodeOutOfDate = false;
+					}
+				}
+			}
+
+			if (bForceRecompile || bCodeOutOfDate)
+			{
+				startTime = Time::CurrentSeconds();
+				lastTime = startTime;
+				Print("Kicking off async Vulkan shader compilation\n");
+
+				// TODO: Use C++ class from https://github.com/KhronosGroup/glslang rather than batch file call to glslang?
+				taskThread = std::thread([=]
+					{
+						std::string workingDir(RESOURCE("shaders"));
+						char cmdStrBuf[512];
+						memset(cmdStrBuf, 0, 512);
+						strcat_s(cmdStrBuf, "pushd \"");
+						strcat_s(cmdStrBuf, workingDir.c_str());
+						strcat_s(cmdStrBuf, "\" && call vk_compile.bat >nul && popd");
+						// 'pushd \".\\..\\..\\..\\FlexEngine\\resources\\shaders\\\" && vk_compile.bat && popd";'
+						system(cmdStrBuf);
+						is_done = true;
+					});
+
+				secSinceStatusCheck = 0.0f;
+				totalSecWaiting = 0.0f;
+			}
+			else
+			{
+				is_done = true;
+			}
+		}
+
+		i64 AsyncVulkanShaderCompiler::CalculteChecksum(const std::string& directory)
+		{
+			i64 checksum = 0;
+			std::vector<std::string> filePaths;
+			if (FindFilesInDirectory(directory, filePaths, "*"))
+			{
+				m_ShaderCodeChecksum = 0;
+				for (const std::string& filePath : filePaths)
+				{
+					std::string fileName = filePath;
+					StripLeadingDirectories(fileName);
+					bool bGoodStart = StartsWith(fileName, "vk_");
+					bool bGoodEnd = EndsWith(fileName, ".vert") ||
+						EndsWith(fileName, ".frag") ||
+						EndsWith(fileName, ".geom") ||
+						EndsWith(fileName, ".comp");
+					if (bGoodStart && bGoodEnd)
+					{
+						std::string fileContents;
+						if (ReadFile(filePath, fileContents, false))
+						{
+							i64 fileChecksum = 0;
+							i32 i = 1;
+							for (char c : fileContents)
+							{
+								fileChecksum += (i32)i * c;
+								++i;
+							}
+							checksum += fileChecksum;
+						}
+					}
+				}
+			}
+			return checksum;
+		}
+
+		bool AsyncVulkanShaderCompiler::TickStatus()
+		{
+			sec now = Time::CurrentSeconds();
+			secSinceStatusCheck += (now - lastTime);
+			totalSecWaiting += (now - lastTime);
+			lastTime = now;
+			if (secSinceStatusCheck > secBetweenStatusChecks)
+			{
+				secSinceStatusCheck -= secBetweenStatusChecks;
+
+				if (is_done)
+				{
+					bComplete = true;
+					if (taskThread.joinable())
+					{
+						Print("Vulkan async shader compilation completed after %.2fs\n", totalSecWaiting);
+						taskThread.join();
+					}
+
+					std::string fileContents = std::to_string(m_ShaderCodeChecksum);
+					WriteFile(m_ChecksumFilePath, fileContents, false);
+				}
+			}
+
+			return bComplete;
+		}
+#endif // DEBUG
 
 	} // namespace vk
 } // namespace flex

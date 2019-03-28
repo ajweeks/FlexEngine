@@ -205,11 +205,11 @@ if (FlexEngine::s_bHasGLDebugExtension) { glPopDebugGroupKHR(); }
 
 namespace flex
 {
-#define ROOT_LOCATION "../../../FlexEngine/"
-#define SAVED_LOCATION "../../../FlexEngine/saved/"
-#define RESOURCE_LOCATION "../../../FlexEngine/resources/"
-#define RESOURCE(path) "../../../FlexEngine/resources/" path
-#define RESOURCE_STR(path) "../../../FlexEngine/resources/" + path
+#define ROOT_LOCATION "..\\..\\..\\FlexEngine\\"
+#define SAVED_LOCATION "..\\..\\..\\FlexEngine\\saved\\"
+#define RESOURCE_LOCATION "..\\..\\..\\FlexEngine\\resources\\"
+#define RESOURCE(path) "..\\..\\..\\FlexEngine\\resources\\" path
+#define RESOURCE_STR(path) "..\\..\\..\\FlexEngine\\resources\\" + path
 
 	static const glm::vec3 VEC3_RIGHT = glm::vec3(1.0f, 0.0f, 0.0f);
 	static const glm::vec3 VEC3_UP = glm::vec3(0.0f, 1.0f, 0.0f);

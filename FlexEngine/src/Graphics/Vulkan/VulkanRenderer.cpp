@@ -61,6 +61,10 @@ namespace flex
 		{
 			Renderer::Initialize();
 
+#ifdef DEBUG
+			m_ShaderCompiler = new AsyncVulkanShaderCompiler(false);
+#endif
+
 			m_RenderObjects.resize(MAX_NUM_RENDER_OBJECTS);
 
 			m_ClearColor = { 1.0f, 0.0f, 1.0f, 1.0f };
@@ -140,6 +144,21 @@ namespace flex
 			PrepareOffscreenFrameBuffer();
 			PrepareCubemapFrameBuffer();
 
+			m_BlankTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, RESOURCE_LOCATION  "textures/blank.jpg", 1, false, false, false);
+			m_BlankTexture->CreateFromFile(VK_FORMAT_R8G8B8A8_UNORM);
+
+			m_AlphaBGTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/alpha-bg.png", 4, false, false, false);
+			m_LoadingTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/loading_1.png", 4, false, false, false);
+			m_WorkTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/work_d.jpg", 4, false, true, false);
+			m_PointLightIconID = InitializeTexture(RESOURCE_LOCATION  "textures/icons/point-light-icon-256.png", 4, false, true, false);
+			m_DirectionalLightIconID = InitializeTexture(RESOURCE_LOCATION  "textures/icons/directional-light-icon-256.png", 4, false, true, false);
+
+#ifdef DEBUG
+			while (!m_ShaderCompiler->TickStatus())
+			{
+				// Spin lock
+			}
+#endif
 			LoadDefaultShaderCode();
 
 			const u32 shaderCount = m_Shaders.size();
@@ -149,17 +168,8 @@ namespace flex
 				m_VertexIndexBufferPairs.push_back({
 					new VulkanBuffer(m_VulkanDevice->m_LogicalDevice), // Vertex buffer
 					new VulkanBuffer(m_VulkanDevice->m_LogicalDevice)  // Index buffer
-				});
+					});
 			}
-
-			m_BlankTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, RESOURCE_LOCATION  "textures/blank.jpg", 1, false, false, false);
-			m_BlankTexture->CreateFromFile(VK_FORMAT_R8G8B8A8_UNORM);
-
-			m_AlphaBGTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/alpha-bg.png", 4, false, false, false);
-			m_LoadingTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/loading_1.png", 4, false, false, false);
-			m_WorkTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/work_d.jpg", 4, false, true, false);
-			m_PointLightIconID = InitializeTexture(RESOURCE_LOCATION  "textures/icons/point-light-icon-256.png", 4, false, true, false);
-			m_DirectionalLightIconID = InitializeTexture(RESOURCE_LOCATION  "textures/icons/directional-light-icon-256.png", 4, false, true, false);
 		}
 
 		void VulkanRenderer::PostInitialize()
@@ -273,6 +283,10 @@ namespace flex
 		void VulkanRenderer::Destroy()
 		{
 			Renderer::Destroy();
+
+#ifdef DEBUG
+			delete m_ShaderCompiler;
+#endif
 
 			// TODO: Is this needed?
 			vkDeviceWaitIdle(m_VulkanDevice->m_LogicalDevice);

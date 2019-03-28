@@ -366,6 +366,10 @@ namespace flex
 
 			VkClearColorValue m_ClearColor;
 
+#ifdef DEBUG
+			AsyncVulkanShaderCompiler* m_ShaderCompiler = nullptr;
+#endif
+
 			static std::array<glm::mat4, 6> s_CaptureViews;
 
 			VulkanPhysicsDebugDraw* m_PhysicsDebugDrawer = nullptr;

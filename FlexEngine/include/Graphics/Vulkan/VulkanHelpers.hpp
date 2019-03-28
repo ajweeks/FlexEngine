@@ -337,6 +337,35 @@ namespace flex
 			UniformBuffer uniformBuffer;
 		};
 
+#ifdef DEBUG
+		struct AsyncVulkanShaderCompiler
+		{
+			AsyncVulkanShaderCompiler();
+			AsyncVulkanShaderCompiler(bool bForceRecompile);
+
+			// Returns true once task is complete
+			bool TickStatus();
+
+			std::thread taskThread;
+			std::atomic<bool> is_done = false;
+
+			sec startTime = 0.0f;
+			sec lastTime = 0.0f;
+			sec totalSecWaiting = 0.0f;
+			sec secBetweenStatusChecks = 0.05f;
+			sec secSinceStatusCheck = 0.0f;
+
+			bool bSuccess = false;
+			bool bComplete = false;
+
+		private:
+			i64 CalculteChecksum(const std::string& directory);
+
+			std::string m_ChecksumFilePath;
+			i64 m_ShaderCodeChecksum = 0;
+		};
+#endif // DEBUG
+
 		struct VulkanMaterial
 		{
 			Material material = {}; // More info is stored in the generic material struct

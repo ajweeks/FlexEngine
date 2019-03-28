@@ -34,5 +34,5 @@
 @ glslangValidator --spirv-val -V vk_imgui.frag -o spv/vk_imgui_frag.spv
 @ glslangValidator --spirv-val -V vk_imgui.vert -o spv/vk_imgui_vert.spv
 
-@ pause
+@REM @ pause
 
