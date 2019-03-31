@@ -170,6 +170,42 @@ namespace flex
 					new VulkanBuffer(m_VulkanDevice->m_LogicalDevice)  // Index buffer
 					});
 			}
+
+
+			//{
+			//	// Check if the debug marker extension is present
+			//	bool bDbgExtensionPresent = false;
+			//	uint32_t extensionCount;
+			//	vkEnumerateDeviceExtensionProperties(m_VulkanDevice->m_PhysicalDevice, nullptr, &extensionCount, nullptr);
+			//	std::vector<VkExtensionProperties> extensions(extensionCount);
+			//	vkEnumerateDeviceExtensionProperties(m_VulkanDevice->m_PhysicalDevice, nullptr, &extensionCount, extensions.data());
+			//	for (const VkExtensionProperties& extension : extensions)
+			//	{
+			//		if (strcmp(extension.extensionName, VK_EXT_DEBUG_MARKER_EXTENSION_NAME) == 0)
+			//		{
+			//			bDbgExtensionPresent = true;
+			//			break;
+			//		}
+			//	}
+
+			//	if (bDbgExtensionPresent)
+			//	{
+			//		// The debug marker extension is not part of the core, so function pointers need to be loaded manually
+			//		vkDebugMarkerSetObjectTag = (PFN_vkDebugMarkerSetObjectTagEXT)vkGetDeviceProcAddr(m_VulkanDevice->m_LogicalDevice, "vkDebugMarkerSetObjectTagEXT");
+			//		vkDebugMarkerSetObjectName = (PFN_vkDebugMarkerSetObjectNameEXT)vkGetDeviceProcAddr(m_VulkanDevice->m_LogicalDevice, "vkDebugMarkerSetObjectNameEXT");
+			//		vkCmdDebugMarkerBegin = (PFN_vkCmdDebugMarkerBeginEXT)vkGetDeviceProcAddr(m_VulkanDevice->m_LogicalDevice, "vkCmdDebugMarkerBeginEXT");
+			//		vkCmdDebugMarkerEnd = (PFN_vkCmdDebugMarkerEndEXT)vkGetDeviceProcAddr(m_VulkanDevice->m_LogicalDevice, "vkCmdDebugMarkerEndEXT");
+			//		vkCmdDebugMarkerInsert = (PFN_vkCmdDebugMarkerInsertEXT)vkGetDeviceProcAddr(m_VulkanDevice->m_LogicalDevice, "vkCmdDebugMarkerInsertEXT");
+			//		// Set flag if at least one function pointer is present
+			//		FlexEngine::s_bHasVKDebugExtension = (vkCmdDebugMarkerBegin != VK_NULL_HANDLE);
+			//	}
+			//	else
+			//	{
+			//		PrintWarn("Vulkan debug extension not present, debug markers are disabled\n");
+			//		FlexEngine::s_bHasVKDebugExtension = false;
+			//	}
+			//}
+
 		}
 
 		void VulkanRenderer::PostInitialize()

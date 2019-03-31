@@ -14,6 +14,21 @@ namespace flex
 {
 	enum class ImageFormat;
 
+#ifdef DEBUG
+#define VK_DBG_MARKER_BEGIN(ren, cmdBuf, name) \
+if (FlexEngine::s_bHasVKDebugExtension) { \
+	VkDebugMarkerMarkerInfoEXT info = {}; \
+	info.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT; \
+	info.pMarkerName = name; \
+	ren->vkCmdDebugMarkerBegin(cmdBuf, &info); \
+}
+#define VK_DBG_MARKER_END(ren, cmdBuf) \
+if (FlexEngine::s_bHasVKDebugExtension) { ren->vkCmdDebugMarkerEnd(cmdBuf); }
+#else
+#define VK_DBG_MARKER_BEGIN(ren, cmdBuf, name)
+#define VK_DBG_MARKER_END(ren, cmdBuf)
+#endif // DEBUG
+
 	namespace vk
 	{
 		struct VulkanDevice;

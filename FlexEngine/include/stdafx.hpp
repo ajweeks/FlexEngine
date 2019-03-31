@@ -188,21 +188,6 @@ IGNORE_WARNINGS_POP
 #define ENSURE(condition)
 #endif
 
-#if COMPILE_OPEN_GL
-#ifdef DEBUG
-#define GL_PUSH_DEBUG_GROUP(str) \
-if (FlexEngine::s_bHasGLDebugExtension) { glPushDebugGroupKHR(GL_DEBUG_SOURCE_APPLICATION, 0, -1, str); }
-#define GL_POP_DEBUG_GROUP() \
-if (FlexEngine::s_bHasGLDebugExtension) { glPopDebugGroupKHR(); }
-#else
-#define GL_PUSH_DEBUG_GROUP(str)
-#define GL_POP_DEBUG_GROUP()
-#endif // DEBUG
-#else
-#define GL_PUSH_DEBUG_GROUP(str)
-#define GL_POP_DEBUG_GROUP()
-#endif // COMPILE_OPEN_GL
-
 namespace flex
 {
 #define ROOT_LOCATION "..\\..\\..\\FlexEngine\\"

@@ -66,6 +66,7 @@ extern "C"
 namespace flex
 {
 	bool FlexEngine::s_bHasGLDebugExtension = false;
+	bool FlexEngine::s_bHasVKDebugExtension = false;
 
 	const u32 FlexEngine::EngineVersionMajor = 0;
 	const u32 FlexEngine::EngineVersionMinor = 8;

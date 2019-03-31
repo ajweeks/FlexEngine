@@ -29,6 +29,18 @@ namespace flex
 	class GameObject;
 	class VertexBufferData;
 
+
+#ifdef DEBUG
+#define GL_PUSH_DEBUG_GROUP(str) \
+if (FlexEngine::s_bHasGLDebugExtension) { glPushDebugGroupKHR(GL_DEBUG_SOURCE_APPLICATION, 0, -1, str); }
+#define GL_POP_DEBUG_GROUP() \
+if (FlexEngine::s_bHasGLDebugExtension) { glPopDebugGroupKHR(); }
+#else
+#define GL_PUSH_DEBUG_GROUP(str)
+#define GL_POP_DEBUG_GROUP()
+#endif // DEBUG
+
+
 	namespace gl
 	{
 #define InvalidID u32_max

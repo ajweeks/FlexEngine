@@ -80,6 +80,7 @@ namespace flex
 		void ClearWantRenameActiveElement();
 
 		static bool s_bHasGLDebugExtension;
+		static bool s_bHasVKDebugExtension;
 		u32 mainProcessID = 0;
 
 	private:
