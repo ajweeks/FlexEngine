@@ -230,42 +230,43 @@ namespace flex
 			}
 
 
-			// ImGui
-			ImGui_ImplGlfw_InitForVulkan((GLFWwindow*)g_Window, false);
-
-			// Setup Vulkan binding
-			ImGui_ImplVulkan_InitInfo init_info = {};
-			init_info.Instance = m_Instance;
-			init_info.PhysicalDevice = m_VulkanDevice->m_PhysicalDevice;
-			init_info.Device = *m_VulkanDevice;
-			init_info.QueueFamily = FindQueueFamilies(m_Surface, m_VulkanDevice->m_PhysicalDevice).graphicsFamily;
-			init_info.Queue = m_GraphicsQueue;
-			init_info.PipelineCache = m_PipelineCache;
-			init_info.DescriptorPool = m_DescriptorPool;
-			init_info.Allocator = NULL;
-			init_info.CheckVkResultFn = NULL;
-			ImGui_ImplVulkan_Init(&init_info, m_DeferredCombineRenderPass);
-
 			{
-				// TODO: Use general purpose command buffer manager
-				VkCommandBuffer command_buffer = m_CommandBufferManager.m_CommandBuffers[0];
+				// ImGui
+				ImGui_ImplGlfw_InitForVulkan((GLFWwindow*)g_Window, false);
 
-				VkCommandBufferBeginInfo begin_info = {};
-				begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-				begin_info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-				VK_CHECK_RESULT(vkBeginCommandBuffer(command_buffer, &begin_info));
+				ImGui_ImplVulkan_InitInfo init_info = {};
+				init_info.Instance = m_Instance;
+				init_info.PhysicalDevice = m_VulkanDevice->m_PhysicalDevice;
+				init_info.Device = *m_VulkanDevice;
+				init_info.QueueFamily = FindQueueFamilies(m_Surface, m_VulkanDevice->m_PhysicalDevice).graphicsFamily;
+				init_info.Queue = m_GraphicsQueue;
+				init_info.PipelineCache = m_PipelineCache;
+				init_info.DescriptorPool = m_DescriptorPool;
+				init_info.Allocator = NULL;
+				init_info.CheckVkResultFn = NULL;
+				ImGui_ImplVulkan_Init(&init_info, m_DeferredCombineRenderPass);
 
-				ImGui_ImplVulkan_CreateFontsTexture(command_buffer);
+				{
+					// TODO: Use general purpose command buffer manager
+					VkCommandBuffer command_buffer = m_CommandBufferManager.m_CommandBuffers[0];
 
-				VkSubmitInfo end_info = {};
-				end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-				end_info.commandBufferCount = 1;
-				end_info.pCommandBuffers = &command_buffer;
-				VK_CHECK_RESULT(vkEndCommandBuffer(command_buffer));
-				VK_CHECK_RESULT(vkQueueSubmit(m_GraphicsQueue, 1, &end_info, VK_NULL_HANDLE));
+					VkCommandBufferBeginInfo begin_info = {};
+					begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+					begin_info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+					VK_CHECK_RESULT(vkBeginCommandBuffer(command_buffer, &begin_info));
 
-				VK_CHECK_RESULT(vkDeviceWaitIdle(*m_VulkanDevice));
-				ImGui_ImplVulkan_InvalidateFontUploadObjects();
+					ImGui_ImplVulkan_CreateFontsTexture(command_buffer);
+
+					VkSubmitInfo end_info = {};
+					end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+					end_info.commandBufferCount = 1;
+					end_info.pCommandBuffers = &command_buffer;
+					VK_CHECK_RESULT(vkEndCommandBuffer(command_buffer));
+					VK_CHECK_RESULT(vkQueueSubmit(m_GraphicsQueue, 1, &end_info, VK_NULL_HANDLE));
+
+					VK_CHECK_RESULT(vkDeviceWaitIdle(*m_VulkanDevice));
+					ImGui_ImplVulkan_InvalidateFontUploadObjects();
+				}
 			}
 
 			CreateStaticVertexBuffers();
@@ -3725,7 +3726,7 @@ namespace flex
 						{
 							FontMetric* metric = charPair.second;
 
-							if (metric->character == ' ' ||
+							if (isspace(metric->character) ||
 								metric->character == '\0')
 							{
 								continue;

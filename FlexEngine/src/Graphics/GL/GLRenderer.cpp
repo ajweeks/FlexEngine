@@ -3150,7 +3150,8 @@ namespace flex
 						for (auto& charPair : characters)
 						{
 							FontMetric* metric = charPair.second;
-							if (metric->character == ' ')
+							if (isspace(metric->character) ||
+								metric->character == '\0')
 							{
 								continue;
 							}

@@ -290,7 +290,11 @@ namespace flex
 
 			const std::vector<const char*> m_ValidationLayers =
 			{
-				"VK_LAYER_LUNARG_standard_validation"
+				"VK_LAYER_LUNARG_standard_validation",
+				//"VK_LAYER_LUNARG_monitor", // FPS in title bar
+				//"VK_LAYER_LUNARG_api_dump", // Log content
+				//"VK_LAYER_LUNARG_screenshot",
+				//"VK_LAYER_RENDERDOC_Capture", // RenderDoc captures, in engine integration works better (see COMPILE_RENDERDOC_API)
 			};
 
 			const std::vector<const char*> m_DeviceExtensions =

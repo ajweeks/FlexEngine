@@ -20,7 +20,7 @@ namespace flex
 		SetConsoleTextAttribute(g_ConsoleHandle, CONSOLE_COLOR_DEFAULT);
 #endif
 
-		g_LogBufferFilePath = SAVED_LOCATION "FlexEngine.log";
+		g_LogBufferFilePath = SAVED_LOCATION "flex.log";
 
 		ClearLogFile();
 
