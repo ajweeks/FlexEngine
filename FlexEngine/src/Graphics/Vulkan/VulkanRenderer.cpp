@@ -2136,21 +2136,21 @@ namespace flex
 					bool* generate,
 					VkFormat format = VK_FORMAT_R8G8B8A8_UNORM,
 					u32 mipLevels = 1,
-					bool hdr = false) :
+					bool bHDR = false) :
 					relativeFilePath(relativeFilePath),
 					texture(texture),
 					generate(generate),
 					format(format),
 					mipLevels(mipLevels),
-					hdr(hdr)
+					bHDR(bHDR)
 				{}
 
 				const std::string relativeFilePath;
-				VulkanTexture** texture = nullptr;
-				bool* generate = nullptr;
+				VulkanTexture** texture;
+				bool* generate;
 				VkFormat format;
 				u32 mipLevels;
-				bool hdr = false;
+				bool bHDR;
 			};
 
 			TextureInfo textureInfos[] =
@@ -2180,13 +2180,10 @@ namespace flex
 
 					if (*textureInfo.texture == nullptr)
 					{
-						// TODO: Allow per-texture options for these fields
 						u32 channelCount = 4;
 						bool bFlipVertically = false;
-						bool bHDR = false;
 						*textureInfo.texture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue,
-							textureInfo.relativeFilePath, 4, bFlipVertically, textureInfo.mipLevels > 1, bHDR);
-						// Texture hasn't been loaded yet, load it now
+							textureInfo.relativeFilePath, channelCount, bFlipVertically, textureInfo.mipLevels > 1, textureInfo.bHDR);
 						(*textureInfo.texture)->CreateFromFile(textureInfo.format);
 						m_LoadedTextures.push_back(*textureInfo.texture);
 

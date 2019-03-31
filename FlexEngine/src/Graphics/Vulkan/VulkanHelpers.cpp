@@ -763,7 +763,7 @@ namespace flex
 					return 0;
 				}
 
-				//channelCount = 4;
+				channelCount = 4;
 
 				if (width == 0 ||
 					height == 0 ||

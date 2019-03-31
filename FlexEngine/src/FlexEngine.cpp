@@ -2344,8 +2344,8 @@ namespace flex
 			m_RenderDocAPI->SetCaptureFilePathTemplate(captureFilePath.c_str());
 
 			m_RenderDocAPI->MaskOverlayBits(eRENDERDOC_Overlay_None, 0);
-			m_RenderDocAPI->SetCaptureKeys(nullptr, 0);
-			m_RenderDocAPI->SetFocusToggleKeys(nullptr, 0);
+			//m_RenderDocAPI->SetCaptureKeys(nullptr, 0);
+			//m_RenderDocAPI->SetFocusToggleKeys(nullptr, 0);
 
 			m_RenderDocAPI->SetCaptureOptionU32(eRENDERDOC_Option_DebugOutputMute, 1);
 		}

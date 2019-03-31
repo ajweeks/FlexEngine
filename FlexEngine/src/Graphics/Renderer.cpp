@@ -81,7 +81,7 @@ namespace flex
 			m_FontMetaDatas[i].renderedTextureFilePath += "-" + DPIStr + m_FontImageExtension;
 		}
 
-		std::string hdriPath = RESOURCE("textures/hdri/");
+		std::string hdriPath = RESOURCE("textures\\hdri\\");
 		if (!FindFilesInDirectory(hdriPath, m_AvailableHDRIs, "hdr"))
 		{
 			PrintWarn("Unable to find hdri directory at %s\n", hdriPath.c_str());
