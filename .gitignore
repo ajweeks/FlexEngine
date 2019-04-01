@@ -28,6 +28,7 @@ common.ini
 renderer-settings.ini
 window-settings.ini
 imgui.ini
+renderdoc.ini
 
 *.blend1
 *.bfxrsound
