@@ -1374,6 +1374,16 @@ namespace flex
 		return bValueChanged;
 	}
 
+	// See https://graphics.pixar.com/library/OrthonormalB/paper.pdf
+	void CalculateOrthonormalBasis(const glm::vec3&n, glm::vec3& b1, glm::vec3& b2)
+	{
+		real sign = copysignf(1.0f, n.z);
+		const real a = -1.0f / (sign + n.z);
+		const real b = n.x * n.y * a;
+		b1 = glm::vec3(1.0f + sign * n.x * n.x * a, sign * b, -sign * n.x);
+		b2 = glm::vec3(b, sign + n.y * n.y * a, -n.y);
+	}
+
 	bool SaveImage(const std::string& absoluteFilePath, ImageFormat imageFormat, i32 width, i32 height, i32 channelCount, u8* data, bool bFlipVertically)
 	{
 		if (data == nullptr ||
