@@ -2351,7 +2351,7 @@ namespace flex
 		}
 		else
 		{
-			PrintError("Unable to find renderdoc settings file at %s\n", m_RenderDocSettingsAbsFilePath.c_str());
+			PrintError("Unable to find renderdoc dll at %s\n", dllPath.c_str());
 		}
 	}
 #endif
