@@ -276,7 +276,7 @@ namespace flex
 
 			LoadFonts(false);
 
-			GenerateReflectionProbeAndIrradianceMaps();
+			GenerateIrradianceMaps();
 
 			m_bPostInitialized = true;
 		}
@@ -2093,8 +2093,6 @@ namespace flex
 			mat.material.generateIrradianceSampler = createInfo->generateIrradianceSampler;
 			mat.material.irradianceSamplerSize = createInfo->generatedIrradianceCubemapSize;
 
-			mat.material.generateReflectionProbeMaps = createInfo->generateReflectionProbeMaps;
-
 			if (shader.shader.bNeedIrradianceSampler)
 			{
 				if (createInfo->irradianceSamplerMatID < m_Materials.size())
@@ -2192,32 +2190,6 @@ namespace flex
 						(*textureInfo.texture)->UpdateImageDescriptor();
 					}
 				}
-			}
-
-			if (createInfo->generateReflectionProbeMaps)
-			{
-				mat.cubemapSamplerGBuffersIDs = {
-					{ 0, "positionMetallicFrameBufferSampler", VK_FORMAT_R16G16B16_SFLOAT },
-					{ 0, "normalRoughnessFrameBufferSampler", VK_FORMAT_R16G16B16_SFLOAT },
-					{ 0, "albedoAOFrameBufferSampler", VK_FORMAT_R16G16B16_SFLOAT },
-
-					//{ 0, "positionMetallicFrameBufferSampler", GL_RGBA16F, GL_RGBA },
-					//{ 0, "normalRoughnessFrameBufferSampler", GL_RGBA16F, GL_RGBA },
-					//{ 0, "albedoAOFrameBufferSampler", GL_RGBA, GL_RGBA },
-				};
-
-				//GLCubemapCreateInfo cubemapCreateInfo = {};
-				//cubemapCreateInfo.program = shader.program;
-				//cubemapCreateInfo.textureID = &mat.cubemapSamplerID;
-				//cubemapCreateInfo.textureGBufferIDs = &mat.cubemapSamplerGBuffersIDs;
-				//cubemapCreateInfo.depthTextureID = &mat.cubemapDepthSamplerID;
-				//cubemapCreateInfo.HDR = true;
-				//cubemapCreateInfo.enableTrilinearFiltering = createInfo->enableCubemapTrilinearFiltering;
-				//cubemapCreateInfo.generateMipmaps = false;
-				//cubemapCreateInfo.textureSize = createInfo->generatedCubemapSize;
-				//cubemapCreateInfo.generateDepthBuffers = createInfo->generateCubemapDepthBuffers;
-
-				//GenerateVulkanCubemap(cubemapCreateInfo);
 			}
 
 			// Cubemaps are treated differently than regular textures because they require 6 filepaths
@@ -2425,22 +2397,6 @@ namespace flex
 		void VulkanRenderer::Update()
 		{
 			m_PhysicsDebugDrawer->UpdateDebugMode();
-
-			if (g_InputManager->GetKeyDown(KeyCode::KEY_U))
-			{
-				for (auto iter = m_RenderObjects.begin(); iter != m_RenderObjects.end(); ++iter)
-				{
-					VulkanRenderObject* renderObject = *iter;
-					if (renderObject && m_Materials[renderObject->materialID].material.generateReflectionProbeMaps)
-					{
-						Print("Capturing reflection probe\n");
-						CaptureSceneToCubemap(renderObject->renderID);
-						GenerateIrradianceSamplerFromCubemap(renderObject->materialID);
-						GeneratePrefilteredMapFromCubemap(renderObject->materialID);
-						Print("Done\n");
-					}
-				}
-			}
 
 			UpdateConstantUniformBuffers();
 
@@ -2826,8 +2782,6 @@ namespace flex
 			{
 				CreateStaticVertexBuffers();
 				CreateStaticIndexBuffers();
-
-				GenerateReflectionProbeAndIrradianceMaps();
 			}
 		}
 
@@ -3612,7 +3566,7 @@ namespace flex
 
 		void VulkanRenderer::RecaptureReflectionProbe()
 		{
-
+			// UNIMPLEMENTED
 		}
 
 		u32 VulkanRenderer::GetTextureHandle(TextureID textureID) const
@@ -5346,9 +5300,6 @@ namespace flex
 			assert(m_SkyBoxMesh != nullptr);
 			MaterialID skyboxMaterialID = m_SkyBoxMesh->GetMeshComponent()->GetMaterialID();
 
-			// TODO: Allow user to not set this and have a backup plan (disable deferred rendering?)
-			assert(m_ReflectionProbeMaterialID != InvalidMaterialID);
-
 			const std::string gBufferMatName = "GBuffer material";
 			const std::string gBufferCubeMatName = "GBuffer cubemap material";
 			const std::string gBufferQuadName = "GBuffer quad";
@@ -6960,7 +6911,7 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::GenerateReflectionProbeAndIrradianceMaps()
+		void VulkanRenderer::GenerateIrradianceMaps()
 		{
 			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 			{
@@ -6972,26 +6923,7 @@ namespace flex
 
 				VulkanMaterial& renderObjectMat = m_Materials[renderObject->materialID];
 
-				if (renderObjectMat.material.generateReflectionProbeMaps)
-				{
-					Print("Capturing reflection probe\n");
-					CaptureSceneToCubemap(i);
-					GenerateIrradianceSamplerFromCubemap(renderObject->materialID);
-					GeneratePrefilteredMapFromCubemap(renderObject->materialID);
-					Print("Done\n");
-
-					// Capture again to use just generated irradiance + prefilter sampler (TODO: Remove soon)
-					Print("Capturing reflection probe\n");
-					CaptureSceneToCubemap(i);
-					GenerateIrradianceSamplerFromCubemap(renderObject->materialID);
-					GeneratePrefilteredMapFromCubemap(renderObject->materialID);
-					Print("Done\n");
-
-					// Display captured cubemap as skybox (GL code)
-					//m_LoadedMaterials[m_RenderObjects[cubemapID]->materialID].cubemapSamplerID =
-					//	m_LoadedMaterials[m_RenderObjects[renderID]->materialID].cubemapSamplerID;
-				}
-				else if (renderObjectMat.material.generateIrradianceSampler)
+				if (renderObjectMat.material.generateIrradianceSampler)
 				{
 					GenerateCubemapFromHDR(renderObject, renderObjectMat.material.environmentMapPath);
 					GenerateIrradianceSampler(renderObject);
@@ -7009,64 +6941,8 @@ namespace flex
 
 		void VulkanRenderer::CaptureSceneToCubemap(RenderID cubemapRenderID)
 		{
-			// TODO: Finish implementing this function
-
-			DrawCallInfo drawCallInfo = {};
-			drawCallInfo.bRenderToCubemap = true;
-			drawCallInfo.cubemapObjectRenderID = cubemapRenderID;
-
-			VulkanRenderObject* cubemapRenderObject = GetRenderObject(drawCallInfo.cubemapObjectRenderID);
-			VulkanMaterial* cubemapMaterial = &m_Materials[cubemapRenderObject->materialID];
-
-			glm::vec2 cubemapSize = cubemapMaterial->material.cubemapSamplerSize;
-
-			for (size_t face = 0; face < 6; ++face)
-			{
-				// Clear all gbuffers
-				//if (!cubemapMaterial->cubemapSamplerGBuffersIDs.empty())
-				//{
-				//	for (size_t i = 0; i < cubemapMaterial->cubemapSamplerGBuffersIDs.size(); ++i)
-				//	{
-				//		// Bind color CUBE_MAP_POSITIVE_X + face to cubemapMaterial->cubemapSamplerGBuffersIDs[i].id
-				//		// Clear
-				//	}
-				//}
-
-				// Clear base cubemap framebuffer + depth buffer
-				// Bind color CUBE_MAP_POSITIVE_X + face to cubemapMaterial->cubemapSamplerID
-				// Bind depth CUBE_MAP_POSITIVE_X + face to cubemapMaterial->cubemapDepthSamplerID
-				// Clear
-			}
-
-
-
-
-
-
-
-
-
-
-
-
-			// TODO: Maybe not?
-
-
-
-
-
-			//drawCallInfo.bDeferred = true;
-			//BuildDeferredCommandBuffer(drawCallInfo);
-			drawCallInfo.bDeferred = false;
-			//DrawGBufferQuad(drawCallInfo);
-			BuildCommandBuffers(drawCallInfo);
+			// UNIMPLEMENTED
 		}
-
-		//void VulkanRenderer::GenerateCubemapFromHDREquirectangular(MaterialID cubemapMaterialID, const std::string& environmentMapPath)
-		//{
-		//	UNREFERENCED_PARAMETER(cubemapMaterialID);
-		//	UNREFERENCED_PARAMETER(environmentMapPath);
-		//}
 
 		void VulkanRenderer::GeneratePrefilteredMapFromCubemap(MaterialID cubemapMaterialID)
 		{
@@ -7077,12 +6953,6 @@ namespace flex
 		{
 			UNREFERENCED_PARAMETER(cubemapMaterialID);
 		}
-
-		//void VulkanRenderer::GenerateBRDFLUT(u32 brdfLUTTextureID, glm::vec2 BRDFLUTSize)
-		//{
-		//	UNREFERENCED_PARAMETER(brdfLUTTextureID);
-		//	UNREFERENCED_PARAMETER(BRDFLUTSize);
-		//}
 
 		VKAPI_ATTR VkBool32 VKAPI_CALL VulkanRenderer::DebugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType,
 			u64 obj, size_t location, i32 code, const char* layerPrefix, const char* msg, void* userData)

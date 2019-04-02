@@ -239,7 +239,7 @@ namespace flex
 
 			void LoadDefaultShaderCode();
 
-			void GenerateReflectionProbeAndIrradianceMaps();
+			void GenerateIrradianceMaps();
 
 			void DrawImGuiForRenderObjectAndChildren(GameObject* gameObject);
 			// Returns true if object was duplicated
