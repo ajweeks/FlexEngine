@@ -457,6 +457,8 @@ namespace flex
 			}
 		} while (FindNextFile(hFind, &findData) != 0);
 
+		FindClose(hFind);
+
 		DWORD dwError = GetLastError();
 		if (dwError != ERROR_NO_MORE_FILES)
 		{

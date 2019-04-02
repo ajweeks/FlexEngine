@@ -116,12 +116,6 @@ namespace flex
 		}
 		else if (g_bVulkanEnabled)
 		{
-			if (glfwVulkanSupported() == GLFW_FALSE)
-			{
-				PrintError("Vulkan is not supported!\n");
-				return;
-			}
-
 			glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 		}
 

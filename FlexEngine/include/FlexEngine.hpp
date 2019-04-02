@@ -289,6 +289,7 @@ namespace flex
 		bool m_bRenderDocTriggerCaptureNextFrame = false;
 		bool m_bRenderDocCapturingFrame = false;
 		i32 m_RenderDocUIPID = -1;
+		HMODULE m_RenderDocModule = 0;
 #endif
 
 		sec SecSinceLogSave = 0.0f;

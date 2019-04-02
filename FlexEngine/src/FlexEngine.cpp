@@ -350,6 +350,10 @@ namespace flex
 		// TODO: Time engine destruction using non-glfw timer
 		// TODO: Destroy things in opposite order of their creations
 
+#if COMPILE_RENDERDOC_API
+		FreeLibrary(m_RenderDocModule);
+#endif
+
 		g_InputManager->UnbindMouseButtonCallback(&m_MouseButtonCallback);
 		g_InputManager->UnbindMouseMovedCallback(&m_MouseMovedCallback);
 		g_InputManager->UnbindKeyEventCallback(&m_KeyEventCallback);
@@ -2323,15 +2327,15 @@ namespace flex
 
 		if (FileExists(dllPath))
 		{
-			HMODULE renderDocModule = LoadLibraryA(dllPath.c_str());
+			m_RenderDocModule = LoadLibraryA(dllPath.c_str());
 
-			if (renderDocModule == NULL)
+			if (m_RenderDocModule == NULL)
 			{
 				PrintWarn("Found render doc dll but failed to load it. Is the bitness correct? (must be x86)\n");
 				return;
 			}
 
-			pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)GetProcAddress(renderDocModule, "RENDERDOC_GetAPI");
+			pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)GetProcAddress(m_RenderDocModule, "RENDERDOC_GetAPI");
 			int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_3_0, (void **)&m_RenderDocAPI);
 			assert(ret == 1);
 

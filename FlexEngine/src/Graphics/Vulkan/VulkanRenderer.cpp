@@ -232,7 +232,7 @@ namespace flex
 
 			{
 				// ImGui
-				ImGui_ImplGlfw_InitForVulkan((GLFWwindow*)g_Window, false);
+				ImGui_ImplGlfw_InitForVulkan(((GLFWWindowWrapper*)g_Window)->GetWindow(), false);
 
 				ImGui_ImplVulkan_InitInfo init_info = {};
 				init_info.Instance = m_Instance;
