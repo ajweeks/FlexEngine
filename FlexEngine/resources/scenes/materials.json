@@ -326,7 +326,7 @@
 		},
 		{
 			"name" : "Grid",
-			"shader" : "pbr-ws",
+			"shader" : "pbr_ws",
 			"const albedo" : "0.055, 0.055, 0.055",
 			"const metallic" : 0.000000,
 			"const roughness" : 1.000000,

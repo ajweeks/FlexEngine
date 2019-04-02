@@ -196,13 +196,13 @@ namespace flex
 
 			MaterialCreateInfo fontSSMatCreateInfo = {};
 			fontSSMatCreateInfo.name = "Font material SS";
-			fontSSMatCreateInfo.shaderName = "font-ss";
+			fontSSMatCreateInfo.shaderName = "font_ss";
 			fontSSMatCreateInfo.engineMaterial = true;
 			m_FontMatSSID = InitializeMaterial(&fontSSMatCreateInfo);
 
 			MaterialCreateInfo fontWSMatCreateInfo = {};
 			fontWSMatCreateInfo.name = "Font material WS";
-			fontWSMatCreateInfo.shaderName = "font-ws";
+			fontWSMatCreateInfo.shaderName = "font_ws";
 			fontWSMatCreateInfo.engineMaterial = true;
 			m_FontMatWSID = InitializeMaterial(&fontWSMatCreateInfo);
 
@@ -4263,7 +4263,7 @@ namespace flex
 				{ "deferred_combine_cubemap", RESOURCE_LOCATION  "shaders/deferred_combine_cubemap.vert", RESOURCE_LOCATION  "shaders/deferred_combine_cubemap.frag" },
 				{ "color", RESOURCE_LOCATION  "shaders/color.vert", RESOURCE_LOCATION  "shaders/color.frag" },
 				{ "pbr", RESOURCE_LOCATION  "shaders/pbr.vert", RESOURCE_LOCATION  "shaders/pbr.frag" },
-				{ "pbr-ws", RESOURCE_LOCATION  "shaders/pbr-ws.vert", RESOURCE_LOCATION  "shaders/pbr-ws.frag" },
+				{ "pbr_ws", RESOURCE_LOCATION  "shaders/pbr_ws.vert", RESOURCE_LOCATION  "shaders/pbr_ws.frag" },
 				{ "skybox", RESOURCE_LOCATION  "shaders/skybox.vert", RESOURCE_LOCATION  "shaders/skybox.frag" },
 				{ "equirectangular_to_cube", RESOURCE_LOCATION  "shaders/skybox.vert", RESOURCE_LOCATION  "shaders/equirectangular_to_cube.frag" },
 				{ "irradiance", RESOURCE_LOCATION  "shaders/skybox.vert", RESOURCE_LOCATION  "shaders/irradiance.frag" },
@@ -4272,9 +4272,9 @@ namespace flex
 				{ "sprite", RESOURCE_LOCATION  "shaders/sprite.vert", RESOURCE_LOCATION  "shaders/sprite.frag" },
 				{ "post_process", RESOURCE_LOCATION  "shaders/post_process.vert", RESOURCE_LOCATION  "shaders/post_process.frag" },
 				{ "post_fxaa", RESOURCE_LOCATION  "shaders/post_fxaa.vert", RESOURCE_LOCATION  "shaders/post_fxaa.frag" },
-				{ "compute_sdf", RESOURCE_LOCATION  "shaders/ComputeSDF.vert", RESOURCE_LOCATION  "shaders/ComputeSDF.frag" },
-				{ "font-ss", RESOURCE_LOCATION  "shaders/font-ss.vert", RESOURCE_LOCATION  "shaders/font-ss.frag",  RESOURCE_LOCATION  "shaders/font-ss.geom" },
-				{ "font-ws", RESOURCE_LOCATION  "shaders/font-ws.vert", RESOURCE_LOCATION  "shaders/font-ws.frag",  RESOURCE_LOCATION  "shaders/font-ws.geom" },
+				{ "compute_sdf", RESOURCE_LOCATION  "shaders/compute_sdf.vert", RESOURCE_LOCATION  "shaders/compute_sdf.frag" },
+				{ "font_ss", RESOURCE_LOCATION  "shaders/font_ss.vert", RESOURCE_LOCATION  "shaders/font_ss.frag",  RESOURCE_LOCATION  "shaders/font_ss.geom" },
+				{ "font_ws", RESOURCE_LOCATION  "shaders/font_ws.vert", RESOURCE_LOCATION  "shaders/font_ws.frag",  RESOURCE_LOCATION  "shaders/font_ws.geom" },
 				{ "shadow", RESOURCE_LOCATION  "shaders/shadow.vert", RESOURCE_LOCATION  "shaders/shadow.frag" },
 			};
 
