@@ -10,10 +10,10 @@ Flex Engine is my personal game engine which I began work on in February 2017 as
 - Signed-distance field font generation & rendering
 - Physically based rendering
 - Image based lighting
-- Reflection probes
 - Scene editor with custom file format
 - Profiling tools
 - In-game scripting language
+- Conditional checksum-based shader compilation
 
 ![](FlexEngine/screenshots/2018-07-08_21-52-09.png)
 

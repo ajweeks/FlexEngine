@@ -14,9 +14,6 @@
 @ glslangvalidator --spirv-val -V vk_deferred_combine_cubemap.vert -o spv/vk_deferred_combine_cubemap_vert.spv
 @ glslangvalidator --spirv-val -V vk_deferred_combine_cubemap.frag -o spv/vk_deferred_combine_cubemap_frag.spv
 
-@ glslangvalidator --spirv-val -V vk_deferred_simple.vert -o spv/vk_deferred_simple_vert.spv
-@ glslangvalidator --spirv-val -V vk_deferred_simple.frag -o spv/vk_deferred_simple_frag.spv
-
 @ glslangvalidator --spirv-val -V vk_pbr.vert -o spv/vk_pbr_vert.spv
 @ glslangvalidator --spirv-val -V vk_pbr.frag -o spv/vk_pbr_frag.spv
 
@@ -30,9 +27,21 @@
 @ glslangvalidator --spirv-val -V vk_equirectangular_to_cube.frag -o spv/vk_equirectangular_to_cube_frag.spv
 @ glslangvalidator --spirv-val -V vk_prefilter.frag -o spv/vk_prefilter_frag.spv
 
+@ glslangvalidator --spirv-val -V vk_compute_sdf.vert -o spv/vk_compute_sdf_vert.spv
+@ glslangvalidator --spirv-val -V vk_compute_sdf.frag -o spv/vk_compute_sdf_frag.spv
+
+@ glslangvalidator --spirv-val -V vk_font_ss.vert -o spv/vk_font_ss_vert.spv
+@ glslangvalidator --spirv-val -V vk_font_ss.geom -o spv/vk_font_ss_geom.spv
+
+@ glslangvalidator --spirv-val -V vk_font_ws.vert -o spv/vk_font_ws_vert.spv
+@ glslangvalidator --spirv-val -V vk_font_ws.geom -o spv/vk_font_ws_geom.spv
+
+@ glslangvalidator --spirv-val -V vk_font.frag -o spv/vk_font_frag.spv
+
 @REM ImGui
 @ glslangValidator --spirv-val -V vk_imgui.frag -o spv/vk_imgui_frag.spv
 @ glslangValidator --spirv-val -V vk_imgui.vert -o spv/vk_imgui_vert.spv
 
 @REM @ pause
 
+@ EXIT /B %ERRORLEVEL%

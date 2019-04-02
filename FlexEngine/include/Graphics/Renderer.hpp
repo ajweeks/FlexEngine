@@ -184,7 +184,6 @@ namespace flex
 		BitmapFont* m_FntSourceCodeProSS = nullptr;
 		//BitmapFont* m_FntGantSS = nullptr;
 		static const i32 FONT_COUNT = 3;
-		static const i32 MAX_NUM_POINT_LIGHTS = 8;
 
 	protected:
 		// If the object gets deleted this frame *gameObjectRef gets set to nullptr

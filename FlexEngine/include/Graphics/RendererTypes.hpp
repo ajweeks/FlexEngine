@@ -20,20 +20,22 @@ namespace flex
 	class VertexBufferData;
 	class GameObject;
 
+	static const i32 MAX_NUM_POINT_LIGHTS = 8;
+
 	struct DirLightData
 	{
-		alignas(16) glm::vec3 dir;
-					i32 enabled;
-		alignas(16) glm::vec3 color;
-					real brightness;
+		glm::vec3 dir;
+		i32 enabled;
+		glm::vec3 color;
+		real brightness;
 	};
 
 	struct PointLightData
 	{
-		alignas(16) glm::vec3 pos;
-					i32 enabled;
-		alignas(16) glm::vec3 color;
-					real brightness;
+		glm::vec3 pos;
+		i32 enabled;
+		glm::vec3 color;
+		real brightness;
 	};
 
 	// Uniforms
@@ -49,16 +51,16 @@ namespace flex
 	const u64 U_COLOR_MULTIPLIER				= (1ull << 9); const u32 US_COLOR_MULTIPLIER			= sizeof(glm::vec4);
 	const u64 U_CAM_POS							= (1ull << 10); const u32 US_CAM_POS					= sizeof(glm::vec4);
 	const u64 U_DIR_LIGHT						= (1ull << 11); const u32 US_DIR_LIGHT					= sizeof(DirLightData);
-	const u64 U_POINT_LIGHTS					= (1ull << 12); const u32 US_POINT_LIGHTS				= sizeof(PointLightData);
-	const u64 U_ALBEDO_SAMPLER					= (1ull << 13); //const u32 US_ALBEDO_SAMPLER			= sizeof(glm::mat4);
+	const u64 U_POINT_LIGHTS					= (1ull << 12); const u32 US_POINT_LIGHTS				= sizeof(PointLightData) * MAX_NUM_POINT_LIGHTS;
+	const u64 U_ALBEDO_SAMPLER					= (1ull << 13);
 	const u64 U_CONST_ALBEDO					= (1ull << 14); const u32 US_CONST_ALBEDO				= sizeof(glm::vec4);
-	const u64 U_METALLIC_SAMPLER				= (1ull << 15); //const u32 US_METALLIC_SAMPLER			= sizeof(glm::mat4);
+	const u64 U_METALLIC_SAMPLER				= (1ull << 15);
 	const u64 U_CONST_METALLIC					= (1ull << 16); const u32 US_CONST_METALLIC				= sizeof(real);
-	const u64 U_ROUGHNESS_SAMPLER				= (1ull << 17); //const u32 US_ROUGHNESS_SAMPLER		= sizeof(glm::mat4);
+	const u64 U_ROUGHNESS_SAMPLER				= (1ull << 17);
 	const u64 U_CONST_ROUGHNESS					= (1ull << 18); const u32 US_CONST_ROUGHNESS			= sizeof(real);
-	const u64 U_AO_SAMPLER						= (1ull << 19); //const u32 US_AO_SAMPLER				= sizeof(glm::mat4);
+	const u64 U_AO_SAMPLER						= (1ull << 19);
 	const u64 U_CONST_AO						= (1ull << 20); const u32 US_CONST_AO					= sizeof(real);
-	const u64 U_NORMAL_SAMPLER					= (1ull << 21); //const u32 US_NORMAL_SAMPLER			= sizeof(glm::mat4);
+	const u64 U_NORMAL_SAMPLER					= (1ull << 21);
 	const u64 U_ENABLE_CUBEMAP_SAMPLER			= (1ull << 22); const u32 US_ENABLE_CUBEMAP_SAMPLER		= sizeof(i32);
 	const u64 U_ENABLE_ALBEDO_SAMPLER			= (1ull << 23); const u32 US_ENABLE_ALBEDO_SAMPLER		= sizeof(i32);
 	const u64 U_ENABLE_METALLIC_SAMPLER			= (1ull << 24); const u32 US_ENABLE_METALLIC_SAMPLER	= sizeof(i32);
@@ -66,24 +68,28 @@ namespace flex
 	const u64 U_ENABLE_AO_SAMPLER				= (1ull << 26); const u32 US_ENABLE_AO_SAMPLER			= sizeof(i32);
 	const u64 U_ENABLE_NORMAL_SAMPLER			= (1ull << 27); const u32 US_ENABLE_NORMAL_SAMPLER		= sizeof(i32);
 	const u64 U_ENABLE_IRRADIANCE_SAMPLER		= (1ull << 28); const u32 US_ENABLE_IRRADIANCE_SAMPLER	= sizeof(i32);
-	const u64 U_CUBEMAP_SAMPLER					= (1ull << 29); //const u32 US_CUBEMAP_SAMPLER			= sizeof(glm::mat4);
-	const u64 U_IRRADIANCE_SAMPLER				= (1ull << 30); //const u32 US_IRRADIANCE_SAMPLER		= sizeof(glm::mat4);
-	const u64 U_FB_0_SAMPLER					= (1ull << 31); //const u32 US_FB_0_SAMPLER				= sizeof(glm::mat4);
-	const u64 U_FB_1_SAMPLER					= (1ull << 32); //const u32 US_FB_1_SAMPLER				= sizeof(glm::mat4);
-	const u64 U_FB_2_SAMPLER					= (1ull << 33); //const u32 US_FB_2_SAMPLER				= sizeof(glm::mat4);
+	const u64 U_CUBEMAP_SAMPLER					= (1ull << 29);
+	const u64 U_IRRADIANCE_SAMPLER				= (1ull << 30);
+	const u64 U_FB_0_SAMPLER					= (1ull << 31);
+	const u64 U_FB_1_SAMPLER					= (1ull << 32);
+	const u64 U_FB_2_SAMPLER					= (1ull << 33);
 	const u64 U_TEXEL_STEP						= (1ull << 34); const u32 US_TEXEL_STEP					= sizeof(real);
 	const u64 U_SHOW_EDGES						= (1ull << 35); const u32 US_SHOW_EDGES					= sizeof(i32);
 	const u64 U_LIGHT_VIEW_PROJ					= (1ull << 36); const u32 US_LIGHT_VIEW_PROJ			= sizeof(glm::mat4);
-	const u64 U_HDR_EQUIRECTANGULAR_SAMPLER		= (1ull << 37); //const u32 US_HDR_EQUIRECTANGULAR_SAMPLER= sizeof(glm::mat4);
-	const u64 U_BRDF_LUT_SAMPLER				= (1ull << 38); //const u32 US_BRDF_LUT_SAMPLER			= sizeof(glm::mat4);
-	const u64 U_PREFILTER_MAP					= (1ull << 39); //const u32 US_PREFILTER_MAP			= sizeof(glm::mat4);
+	const u64 U_HDR_EQUIRECTANGULAR_SAMPLER		= (1ull << 37);
+	const u64 U_BRDF_LUT_SAMPLER				= (1ull << 38);
+	const u64 U_PREFILTER_MAP					= (1ull << 39);
 	const u64 U_EXPOSURE						= (1ull << 40); const u32 US_EXPOSURE					= sizeof(real);
 	const u64 U_TRANSFORM_MAT					= (1ull << 41); const u32 US_TRANSFORM_MAT				= sizeof(glm::mat4);
 	const u64 U_TEX_SIZE						= (1ull << 42); const u32 US_TEX_SIZE					= sizeof(real);
-	const u64 U_UNIFORM_BUFFER_CONSTANT			= (1ull << 43); //const u32 US_UNIFORM_BUFFER_CONSTANT	= sizeof(glm::mat4);
-	const u64 U_UNIFORM_BUFFER_DYNAMIC			= (1ull << 44); //const u32 US_UNIFORM_BUFFER_DYNAMIC	= sizeof(glm::mat4);
+	const u64 U_UNIFORM_BUFFER_CONSTANT			= (1ull << 43);
+	const u64 U_UNIFORM_BUFFER_DYNAMIC			= (1ull << 44);
 	const u64 U_TEXTURE_SCALE					= (1ull << 45); const u32 US_TEXTURE_SCALE				= sizeof(real);
 	const u64 U_TIME							= (1ull << 46); const u32 US_TIME						= sizeof(real);
+	const u64 U_SDF_DATA						= (1ull << 47); const u32 US_SDF_DATA					= sizeof(glm::vec4);
+	const u64 U_TEX_CHANNEL						= (1ull << 48); const u32 US_TEX_CHANNEL				= sizeof(i32);
+	const u64 U_HIGH_RES_TEX					= (1ull << 49);
+	const u64 U_FONT_CHAR_DATA					= (1ull << 50); const u32 US_FONT_CHAR_DATA				= sizeof(glm::vec4);
 	// NOTE: New additions need to be added in Uniforms::CalculateSizeInBytes
 
 	enum class ClearFlag
@@ -349,6 +355,9 @@ namespace flex
 
 		real textureScale = 1.0f;
 		real blendSharpness = 1.0f;
+
+		glm::vec4 fontCharData;
+		glm::vec2 texSize;
 
 		// TODO: Make this more dynamic!
 		struct PushConstantBlock

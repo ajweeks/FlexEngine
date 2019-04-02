@@ -158,6 +158,11 @@ namespace flex
 			{
 				// Spin lock
 			}
+
+			if (m_ShaderCompiler->bSuccess == false)
+			{
+				PrintError("Failed to compile shader code!\n");
+			}
 #endif
 			LoadDefaultShaderCode();
 
@@ -3681,7 +3686,11 @@ namespace flex
 							FontMetric* metric = charPair.second;
 
 							if (isspace(metric->character) ||
-								metric->character == '\0')
+								metric->character == '\0' ||
+								metric->character == '\t' ||
+								metric->character == '\r' ||
+								metric->character == '\n' ||
+								metric->character == '\b')
 							{
 								continue;
 							}
@@ -3718,7 +3727,7 @@ namespace flex
 
 				ShaderID computeSDFShaderID;
 				GetShaderID("compute_sdf", computeSDFShaderID);
-				//VulkanShader& computeSDFShader = m_Shaders[computeSDFShaderID];
+				VulkanShader& computeSDFShader = m_Shaders[computeSDFShaderID];
 
 				//"highResTex" =  0
 				//"spread" = (real)spread
@@ -6334,6 +6343,8 @@ namespace flex
 			glm::mat4 viewInv = glm::inverse(view);
 			glm::mat4 viewProjection = projection * view;
 			glm::vec4 camPos = glm::vec4(g_CameraManager->CurrentCamera()->GetPosition(), 0.0f);
+			glm::vec4 sdfData = glm::vec4(0.5f, -0.01f, -0.008f, 0.035f);
+			i32 texChannel = 0;
 
 			static DirLightData defaultDirLightData = { VEC3_RIGHT, 0, VEC3_ONE, 0.0f };
 
@@ -6365,6 +6376,8 @@ namespace flex
 				{ U_DIR_LIGHT, (void*)dirLightData, sizeof(DirLightData) },
 				{ U_POINT_LIGHTS, (void*)m_PointLights, sizeof(PointLightData) * MAX_NUM_POINT_LIGHTS },
 				{ U_TIME, (void*)&g_SecElapsedSinceProgramStart, sizeof(real) },
+				{ U_SDF_DATA, (void*)&sdfData, sizeof(glm::vec4) },
+				{ U_TEX_CHANNEL, (void*)&texChannel, sizeof(i32) },
 			};
 
 			for (u32 bufferIndex = 0; bufferIndex < m_Materials.size(); ++bufferIndex)
@@ -6474,6 +6487,8 @@ namespace flex
 			u32 enableIrradianceSampler = material.material.enableIrradianceSampler;
 			real textureScale = material.material.textureScale;
 			real blendSharpness = material.material.blendSharpness;
+			glm::vec2 texSize = material.material.texSize;
+			glm::vec4 fontCharData = material.material.fontCharData;
 
 			// TODO: Roll into array?
 			if (uniformOverrides)
@@ -6564,24 +6579,26 @@ namespace flex
 				size_t copySize;
 			};
 			UniformInfo uniformInfos[] = {
-				{ U_MODEL, (void*)&model, 64 },
-				{ U_MODEL_INV_TRANSPOSE, (void*)&modelInvTranspose, 64 },
-				{ U_MODEL_VIEW_PROJ, (void*)&modelViewProjection, 64 },
+				{ U_MODEL, (void*)&model, sizeof(glm::mat4) },
+				{ U_MODEL_INV_TRANSPOSE, (void*)&modelInvTranspose, sizeof(glm::mat4) },
+				{ U_MODEL_VIEW_PROJ, (void*)&modelViewProjection, sizeof(glm::mat4) },
 				// view, viewInv, viewProjection, projection, camPos, dirLight, pointLights should be updated in constant uniform buffer
-				{ U_COLOR_MULTIPLIER, (void*)&material.material.colorMultiplier, 16 },
-				{ U_CONST_ALBEDO, (void*)&material.material.constAlbedo, 16 },
-				{ U_CONST_METALLIC, (void*)&material.material.constMetallic, 4 },
-				{ U_CONST_ROUGHNESS, (void*)&material.material.constRoughness, 4 },
-				{ U_CONST_AO, (void*)&material.material.constAO, 4 },
-				{ U_ENABLE_ALBEDO_SAMPLER, (void*)&enableAlbedoSampler, 4 },
-				{ U_ENABLE_METALLIC_SAMPLER, (void*)&enableMetallicSampler, 4 },
-				{ U_ENABLE_ROUGHNESS_SAMPLER, (void*)&enableRoughnessSampler, 4 },
-				{ U_ENABLE_AO_SAMPLER, (void*)&enableAOSampler, 4 },
-				{ U_ENABLE_NORMAL_SAMPLER, (void*)&enableNormalSampler, 4 },
-				{ U_ENABLE_CUBEMAP_SAMPLER, (void*)&enableCubemapSampler, 4 },
-				{ U_ENABLE_IRRADIANCE_SAMPLER, (void*)&enableIrradianceSampler, 4 },
-				{ U_BLEND_SHARPNESS, (void*)&blendSharpness, 4 },
-				{ U_TEXTURE_SCALE, (void*)&textureScale, 4 },
+				{ U_COLOR_MULTIPLIER, (void*)&material.material.colorMultiplier, sizeof(glm::vec4) },
+				{ U_CONST_ALBEDO, (void*)&material.material.constAlbedo, sizeof(glm::vec4) },
+				{ U_CONST_METALLIC, (void*)&material.material.constMetallic, sizeof(real) },
+				{ U_CONST_ROUGHNESS, (void*)&material.material.constRoughness, sizeof(real) },
+				{ U_CONST_AO, (void*)&material.material.constAO, sizeof(real) },
+				{ U_ENABLE_ALBEDO_SAMPLER, (void*)&enableAlbedoSampler, sizeof(real) },
+				{ U_ENABLE_METALLIC_SAMPLER, (void*)&enableMetallicSampler, sizeof(real) },
+				{ U_ENABLE_ROUGHNESS_SAMPLER, (void*)&enableRoughnessSampler, sizeof(real) },
+				{ U_ENABLE_AO_SAMPLER, (void*)&enableAOSampler, sizeof(real) },
+				{ U_ENABLE_NORMAL_SAMPLER, (void*)&enableNormalSampler, sizeof(real) },
+				{ U_ENABLE_CUBEMAP_SAMPLER, (void*)&enableCubemapSampler, sizeof(real) },
+				{ U_ENABLE_IRRADIANCE_SAMPLER, (void*)&enableIrradianceSampler, sizeof(real) },
+				{ U_BLEND_SHARPNESS, (void*)&blendSharpness, sizeof(real) },
+				{ U_TEXTURE_SCALE, (void*)&textureScale, sizeof(real) },
+				{ U_FONT_CHAR_DATA, (void*)&fontCharData, sizeof(glm::vec4) },
+				{ U_TEX_SIZE, (void*)&texSize, sizeof(real) },
 			};
 
 			u32 index = 0;
@@ -6619,51 +6636,57 @@ namespace flex
 
 		void VulkanRenderer::LoadDefaultShaderCode()
 		{
-			const std::string shaderDirectory = RESOURCE_LOCATION  "shaders/spv/";
-			m_Shaders = {
-				{ "deferred_simple", shaderDirectory + "vk_deferred_simple_vert.spv", shaderDirectory + "vk_deferred_simple_frag.spv", m_VulkanDevice->m_LogicalDevice },
-				{ "color",  shaderDirectory + "vk_color_vert.spv", shaderDirectory + "vk_color_frag.spv", m_VulkanDevice->m_LogicalDevice },
-				{ "pbr", shaderDirectory + "vk_pbr_vert.spv", shaderDirectory + "vk_pbr_frag.spv", m_VulkanDevice->m_LogicalDevice },
-				{ "pbr-ws", shaderDirectory + "vk_pbr_ws_vert.spv", shaderDirectory + "vk_pbr_ws_frag.spv", m_VulkanDevice->m_LogicalDevice },
-				{ "skybox", shaderDirectory + "vk_skybox_vert.spv", shaderDirectory + "vk_skybox_frag.spv", m_VulkanDevice->m_LogicalDevice },
-				{ "equirectangular_to_cube", shaderDirectory + "vk_skybox_vert.spv", shaderDirectory + "vk_equirectangular_to_cube_frag.spv", m_VulkanDevice->m_LogicalDevice },
-				{ "irradiance", shaderDirectory + "vk_skybox_vert.spv", shaderDirectory + "vk_irradiance_frag.spv", m_VulkanDevice->m_LogicalDevice },
-				{ "prefilter", shaderDirectory + "vk_skybox_vert.spv", shaderDirectory + "vk_prefilter_frag.spv", m_VulkanDevice->m_LogicalDevice },
-				{ "brdf", shaderDirectory + "vk_brdf_vert.spv", shaderDirectory + "vk_brdf_frag.spv", m_VulkanDevice->m_LogicalDevice },
-				{ "deferred_combine", shaderDirectory + "vk_deferred_combine_vert.spv", shaderDirectory + "vk_deferred_combine_frag.spv", m_VulkanDevice->m_LogicalDevice },
-				{ "deferred_combine_cubemap", shaderDirectory + "vk_deferred_combine_cubemap_vert.spv", shaderDirectory + "vk_deferred_combine_cubemap_frag.spv", m_VulkanDevice->m_LogicalDevice },
-				//{ "post_process", shaderDirectory + "vk_post_process_vert.spv", shaderDirectory + "vk_post_process_frag.spv", m_VulkanDevice->m_LogicalDevice },
+			const std::string shaderDirectory = RESOURCE_LOCATION  "shaders\\spv\\";
+			struct ShaderInitInfo
+			{
+				ShaderInitInfo(const char* name, const char* vertFileName, const char* fragFileName, const char* geomFileName = nullptr) :
+					name(name),
+					vertFileName(vertFileName),
+					fragFileName(fragFileName),
+					geomFileName(geomFileName)
+				{
+				}
+
+				const char* name = nullptr;
+				const char* vertFileName = nullptr;
+				const char* fragFileName = nullptr;
+				const char* geomFileName = nullptr;
+			};
+			ShaderInitInfo initInfos[] = {
+				{ "color", "vk_color_vert.spv","vk_color_frag.spv" },
+				{ "pbr", "vk_pbr_vert.spv", "vk_pbr_frag.spv" },
+				{ "pbr_ws", "vk_pbr_ws_vert.spv", "vk_pbr_ws_frag.spv" },
+				{ "skybox", "vk_skybox_vert.spv", "vk_skybox_frag.spv" },
+				{ "equirectangular_to_cube", "vk_skybox_vert.spv", "vk_equirectangular_to_cube_frag.spv" },
+				{ "irradiance", "vk_skybox_vert.spv", "vk_irradiance_frag.spv" },
+				{ "prefilter", "vk_skybox_vert.spv", "vk_prefilter_frag.spv" },
+				{ "brdf", "vk_brdf_vert.spv", "vk_brdf_frag.spv" },
+				{ "deferred_combine", "vk_deferred_combine_vert.spv", "vk_deferred_combine_frag.spv" },
+				{ "deferred_combine_cubemap", "vk_deferred_combine_cubemap_vert.spv", "vk_deferred_combine_cubemap_frag.spv" },
+				{ "compute_sdf", "vk_compute_sdf_vert.spv", "vk_compute_sdf_frag.spv" },
+				{ "font_ss", "vk_font_ss_vert.spv", "vk_font_frag.spv", "vk_font_ss_geom.spv" },
+				{ "font_ws", "vk_font_ws_vert.spv", "vk_font_frag.spv", "vk_font_ws_geom.spv" },
+				//{ "post_process", "vk_post_process_vert.spv", "vk_post_process_frag.spv" },
 			};
 
-			// Specify shader uniforms
+			m_Shaders.reserve(ARRAY_LENGTH(initInfos));
+			for (const ShaderInitInfo& initInfo : initInfos)
+			{
+				std::string vert = shaderDirectory + initInfo.vertFileName;
+				std::string frag = shaderDirectory + initInfo.fragFileName;
+				std::string geom;
+				if (initInfo.geomFileName)
+				{
+					geom = shaderDirectory + initInfo.geomFileName;
+				}
+				m_Shaders.emplace_back(m_VulkanDevice->m_LogicalDevice, initInfo.name, vert, frag, geom);
+			}
+
 			ShaderID shaderID = 0;
-
-			// TODO: Remove material?
-			// Deferred Simple
-			m_Shaders[shaderID].shader.numAttachments = 3;
-			m_Shaders[shaderID].shader.deferred = true;
-			m_Shaders[shaderID].shader.subpass = 0;
-			m_Shaders[shaderID].shader.bNeedNormalSampler = true;
-			m_Shaders[shaderID].shader.vertexAttributes =
-				(u32)VertexAttribute::POSITION |
-				(u32)VertexAttribute::UV |
-				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
-				(u32)VertexAttribute::TANGENT |
-				(u32)VertexAttribute::BITANGENT |
-				(u32)VertexAttribute::NORMAL;
-
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
-
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_MODEL);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_MODEL_INV_TRANSPOSE);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ENABLE_NORMAL_SAMPLER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_NORMAL_SAMPLER);
-			++shaderID;
 
 			// Color
 			m_Shaders[shaderID].shader.deferred = false;
+
 			m_Shaders[shaderID].shader.translucent = true;
 			m_Shaders[shaderID].shader.subpass = 1;
 			m_Shaders[shaderID].shader.vertexAttributes =
@@ -6756,7 +6779,6 @@ namespace flex
 			++shaderID;
 
 			// Skybox
-			m_Shaders[shaderID].shader.deferred = false;
 			m_Shaders[shaderID].shader.subpass = 1;
 			m_Shaders[shaderID].shader.bNeedCubemapSampler = true;
 			m_Shaders[shaderID].shader.bNeedPushConstantBlock = true;
@@ -6770,7 +6792,6 @@ namespace flex
 			++shaderID;
 
 			// Equirectangular to cube
-			m_Shaders[shaderID].shader.deferred = false;
 			m_Shaders[shaderID].shader.subpass = 1;
 			m_Shaders[shaderID].shader.bNeedHDREquirectangularSampler = true;
 			m_Shaders[shaderID].shader.bNeedPushConstantBlock = true;
@@ -6783,7 +6804,6 @@ namespace flex
 			++shaderID;
 
 			// Irradiance
-			m_Shaders[shaderID].shader.deferred = false;
 			m_Shaders[shaderID].shader.subpass = 1;
 			m_Shaders[shaderID].shader.bNeedCubemapSampler = true;
 			m_Shaders[shaderID].shader.bNeedPushConstantBlock = true;
@@ -6796,7 +6816,6 @@ namespace flex
 			++shaderID;
 
 			// Prefilter
-			m_Shaders[shaderID].shader.deferred = false;
 			m_Shaders[shaderID].shader.subpass = 1;
 			m_Shaders[shaderID].shader.bNeedCubemapSampler = true;
 			m_Shaders[shaderID].shader.bNeedPushConstantBlock = true;
@@ -6810,7 +6829,6 @@ namespace flex
 			++shaderID;
 
 			// BRDF
-			m_Shaders[shaderID].shader.deferred = false;
 			m_Shaders[shaderID].shader.subpass = 1;
 			m_Shaders[shaderID].shader.vertexAttributes = 0;
 
@@ -6819,21 +6837,7 @@ namespace flex
 			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
 			++shaderID;
 
-			// Background
-			//m_Shaders[shaderID].shader.deferred = false;
-			//m_Shaders[shaderID].shader.subpass = 1;
-			//m_Shaders[shaderID].shader.bNeedCubemapSampler = true;
-			//m_Shaders[shaderID].shader.bNeedPushConstantBlock = true;
-			//m_Shaders[shaderID].shader.vertexAttributes =
-			//	(u32)VertexAttribute::POSITION;
-
-			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_CUBEMAP_SAMPLER);
-
-			//m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
-			//++shaderID;
-
 			// Deferred combine (sample gbuffer)
-			m_Shaders[shaderID].shader.deferred = false; // Sounds strange but this isn't deferred
 			m_Shaders[shaderID].shader.subpass = 0;
 			m_Shaders[shaderID].shader.depthWriteEnable = false; // Disable depth writing
 			m_Shaders[shaderID].shader.bNeedBRDFLUT = true;
@@ -6860,7 +6864,6 @@ namespace flex
 			++shaderID;
 
 			// Deferred combine cubemap (sample GBuffer)
-			m_Shaders[shaderID].shader.deferred = false; // Sounds strange but this isn't deferred
 			m_Shaders[shaderID].shader.subpass = 0;
 			m_Shaders[shaderID].shader.depthWriteEnable = false; // Disable depth writing
 			m_Shaders[shaderID].shader.bNeedBRDFLUT = true;
@@ -6885,11 +6888,67 @@ namespace flex
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ENABLE_IRRADIANCE_SAMPLER);
 			++shaderID;
 
+			// Compute SDF
+			m_Shaders[shaderID].shader.vertexAttributes =
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::UV;
+
+			m_Shaders[shaderID].shader.constantBufferUniforms = {};
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_SDF_DATA);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_TEX_CHANNEL);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_HIGH_RES_TEX);
+
+			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
+			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_SDF_RESOLUTION);
+			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_HIGH_RES);
+			++shaderID;
+
+			// Font SS
+			m_Shaders[shaderID].shader.vertexAttributes =
+				(u32)VertexAttribute::POSITION_2D |
+				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
+				(u32)VertexAttribute::UV |
+				(u32)VertexAttribute::EXTRA_VEC4 |
+				(u32)VertexAttribute::EXTRA_INT;
+
+			m_Shaders[shaderID].shader.constantBufferUniforms = {};
+
+			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_MODEL);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_FONT_CHAR_DATA);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_TEX_SIZE);
+			++shaderID;
+
+			// Font WS
+			m_Shaders[shaderID].shader.vertexAttributes =
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
+				(u32)VertexAttribute::UV |
+				(u32)VertexAttribute::EXTRA_VEC4 |
+				(u32)VertexAttribute::EXTRA_INT;
+
+			m_Shaders[shaderID].shader.constantBufferUniforms = {};
+
+			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_MODEL);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_FONT_CHAR_DATA);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_TEX_SIZE);
+			++shaderID;
+
+			assert(shaderID == ARRAY_LENGTH(initInfos));
 
 			const size_t shaderCount = m_Shaders.size();
 			for (size_t i = 0; i < shaderCount; ++i)
 			{
 				Shader& shader = m_Shaders[i].shader;
+
+#if 1 // Sanity check
+				assert(!shader.constantBufferUniforms.HasUniform(U_UNIFORM_BUFFER_DYNAMIC));
+				assert(!shader.dynamicBufferUniforms.HasUniform(U_UNIFORM_BUFFER_CONSTANT));
+#endif
 
 				std::string vertFileName = shader.vertexShaderFilePath;
 				StripLeadingDirectories(vertFileName);

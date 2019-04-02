@@ -20,37 +20,43 @@ namespace flex
 	{
 		u32 size = 0;
 
-		if (HasUniform(U_MODEL)) size += US_MODEL;
-		if (HasUniform(U_MODEL_INV_TRANSPOSE)) size += US_MODEL_INV_TRANSPOSE;
-		if (HasUniform(U_VIEW)) size += US_VIEW;
-		if (HasUniform(U_VIEW_INV)) size += US_VIEW_INV;
-		if (HasUniform(U_VIEW_PROJECTION)) size += US_VIEW_PROJECTION;
-		if (HasUniform(U_MODEL_VIEW_PROJ)) size += US_MODEL_VIEW_PROJ;
-		if (HasUniform(U_PROJECTION)) size += US_PROJECTION;
-		if (HasUniform(U_BLEND_SHARPNESS)) size += US_BLEND_SHARPNESS;
-		if (HasUniform(U_COLOR_MULTIPLIER)) size += US_COLOR_MULTIPLIER;
-		if (HasUniform(U_CAM_POS)) size += US_CAM_POS;
-		if (HasUniform(U_DIR_LIGHT)) size += US_DIR_LIGHT;
-		if (HasUniform(U_POINT_LIGHTS)) size += US_POINT_LIGHTS * Renderer::MAX_NUM_POINT_LIGHTS;
-		if (HasUniform(U_CONST_ALBEDO)) size += US_CONST_ALBEDO;
-		if (HasUniform(U_CONST_METALLIC)) size += US_CONST_METALLIC;
-		if (HasUniform(U_CONST_ROUGHNESS)) size += US_CONST_ROUGHNESS;
-		if (HasUniform(U_CONST_AO)) size += US_CONST_AO;
-		if (HasUniform(U_ENABLE_CUBEMAP_SAMPLER)) size += US_ENABLE_CUBEMAP_SAMPLER;
-		if (HasUniform(U_ENABLE_ALBEDO_SAMPLER)) size += US_ENABLE_ALBEDO_SAMPLER;
-		if (HasUniform(U_ENABLE_METALLIC_SAMPLER)) size += US_ENABLE_METALLIC_SAMPLER;
-		if (HasUniform(U_ENABLE_ROUGHNESS_SAMPLER)) size += US_ENABLE_ROUGHNESS_SAMPLER;
-		if (HasUniform(U_ENABLE_AO_SAMPLER)) size += US_ENABLE_AO_SAMPLER;
-		if (HasUniform(U_ENABLE_NORMAL_SAMPLER)) size += US_ENABLE_NORMAL_SAMPLER;
-		if (HasUniform(U_ENABLE_IRRADIANCE_SAMPLER)) size += US_ENABLE_IRRADIANCE_SAMPLER;
-		if (HasUniform(U_TEXEL_STEP)) size += US_TEXEL_STEP;
-		if (HasUniform(U_SHOW_EDGES)) size += US_SHOW_EDGES;
-		if (HasUniform(U_LIGHT_VIEW_PROJ)) size += US_LIGHT_VIEW_PROJ;
-		if (HasUniform(U_EXPOSURE)) size += US_EXPOSURE;
-		if (HasUniform(U_TRANSFORM_MAT)) size += US_TRANSFORM_MAT;
-		if (HasUniform(U_TEX_SIZE)) size += US_TEX_SIZE;
-		if (HasUniform(U_TEXTURE_SCALE)) size += US_TEXTURE_SCALE;
-		if (HasUniform(U_TIME)) size += US_TIME;
+		{
+#define _u(uniform) if (HasUniform(U_##uniform)) size += US_##uniform;
+			_u(MODEL)
+			_u(MODEL_INV_TRANSPOSE)
+			_u(VIEW)
+			_u(VIEW_INV)
+			_u(VIEW_PROJECTION)
+			_u(MODEL_VIEW_PROJ)
+			_u(PROJECTION)
+			_u(BLEND_SHARPNESS)
+			_u(COLOR_MULTIPLIER)
+			_u(CAM_POS)
+			_u(DIR_LIGHT)
+			_u(POINT_LIGHTS)
+			_u(CONST_ALBEDO)
+			_u(CONST_METALLIC)
+			_u(CONST_ROUGHNESS)
+			_u(CONST_AO)
+			_u(ENABLE_CUBEMAP_SAMPLER)
+			_u(ENABLE_ALBEDO_SAMPLER)
+			_u(ENABLE_METALLIC_SAMPLER)
+			_u(ENABLE_ROUGHNESS_SAMPLER)
+			_u(ENABLE_AO_SAMPLER)
+			_u(ENABLE_NORMAL_SAMPLER)
+			_u(ENABLE_IRRADIANCE_SAMPLER)
+			_u(TEXEL_STEP)
+			_u(SHOW_EDGES)
+			_u(LIGHT_VIEW_PROJ)
+			_u(EXPOSURE)
+			_u(TRANSFORM_MAT)
+			_u(TEX_SIZE)
+			_u(TEXTURE_SCALE)
+			_u(TIME)
+			_u(SDF_DATA)
+			_u(TEX_CHANNEL)
+#undef _u
+		}
 
 		return size;
 	}
@@ -58,7 +64,7 @@ namespace flex
 	Shader::Shader(const std::string& name,
 				   const std::string& vertexShaderFilePath,
 				   const std::string& fragmentShaderFilePath,
-				   const std::string& geometryShaderFilePath) :
+				   const std::string& geometryShaderFilePath /* = "" */) :
 		name(name),
 		vertexShaderFilePath(vertexShaderFilePath),
 		fragmentShaderFilePath(fragmentShaderFilePath),

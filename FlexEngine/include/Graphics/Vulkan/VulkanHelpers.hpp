@@ -330,7 +330,10 @@ namespace flex
 
 		struct VulkanShader
 		{
-			VulkanShader(const std::string& name, const std::string& vertexShaderFilePath, const std::string& fragmentShaderFilePath, const VDeleter<VkDevice>& device);
+			VulkanShader(const VDeleter<VkDevice>& device, const std::string& name,
+				const std::string& vertexShaderFilePath,
+				const std::string& fragmentShaderFilePath,
+				const std::string& geomShaderFilePath = "");
 
 			Shader shader;
 

@@ -1658,9 +1658,12 @@ namespace flex
 		{
 		}
 
-		VulkanShader::VulkanShader(const std::string& name, const std::string& vertexShaderFilePath, const std::string& fragmentShaderFilePath, const VDeleter<VkDevice>& device) :
+		VulkanShader::VulkanShader(const VDeleter<VkDevice>& device, const std::string& name,
+			const std::string& vertexShaderFilePath,
+			const std::string& fragmentShaderFilePath,
+			const std::string& geomShaderFilePath /* = "" */) :
 			uniformBuffer(device),
-			shader(name, vertexShaderFilePath, fragmentShaderFilePath)
+			shader(name, vertexShaderFilePath, fragmentShaderFilePath, geomShaderFilePath)
 		{
 		}
 
@@ -1728,7 +1731,7 @@ namespace flex
 						strcat_s(cmdStrBuf, workingDir.c_str());
 						strcat_s(cmdStrBuf, "\" && call vk_compile.bat >nul && popd");
 						// 'pushd \".\\..\\..\\..\\FlexEngine\\resources\\shaders\\\" && vk_compile.bat && popd";'
-						system(cmdStrBuf);
+						bSuccess = system(cmdStrBuf) == 0;
 						is_done = true;
 					});
 
@@ -1738,6 +1741,8 @@ namespace flex
 			else
 			{
 				is_done = true;
+				bSuccess = true;
+				bComplete = true;
 			}
 		}
 
@@ -1796,8 +1801,11 @@ namespace flex
 						taskThread.join();
 					}
 
-					std::string fileContents = std::to_string(m_ShaderCodeChecksum);
-					WriteFile(m_ChecksumFilePath, fileContents, false);
+					if (bSuccess)
+					{
+						std::string fileContents = std::to_string(m_ShaderCodeChecksum);
+						WriteFile(m_ChecksumFilePath, fileContents, false);
+					}
 				}
 			}
 
