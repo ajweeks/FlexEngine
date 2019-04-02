@@ -92,10 +92,6 @@ namespace flex
 
 			virtual btIDebugDraw* GetDebugDrawer() override;
 
-			virtual void SetFont(BitmapFont* font) override;
-			// Draws the given string in the center of the screen for a short period of time
-			// Passing an empty string will immediately clear the current string
-			virtual void AddEditorString(const std::string& str) override;
 			virtual void DrawStringSS(const std::string& str,
 				const glm::vec4& color,
 				AnchorPoint anchor,
@@ -109,9 +105,6 @@ namespace flex
 				const glm::quat& rot,
 				real spacing,
 				bool bRaw = false) override;
-
-			virtual real GetStringWidth(const std::string& str, BitmapFont* font, real letterSpacing, bool bNormalized) const override;
-			virtual real GetStringHeight(const std::string& str, BitmapFont* font, bool bNormalized) const override;
 
 			virtual void DrawAssetBrowserImGui(bool* bShowing) override;
 			virtual void RecaptureReflectionProbe() override;
@@ -271,6 +264,12 @@ namespace flex
 				bool bScreenSpace);
 
 			u32 GetAlignedUBOSize(u32 unalignedSize);
+
+			void DrawSpriteQuad(const SpriteQuadDrawInfo& drawInfo);
+			void DrawScreenSpaceSprites();
+			void DrawWorldSpaceSprites();
+			void DrawTextSS();
+			void DrawTextWS();
 
 			const u32 MAX_NUM_RENDER_OBJECTS = 4096; // TODO: Not this?
 			std::vector<VulkanRenderObject*> m_RenderObjects;

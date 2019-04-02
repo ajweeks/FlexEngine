@@ -458,4 +458,23 @@ namespace flex
 		bool bRaw = false; // If true no further pos/scale processing is down, values are directly uploaded to GPU
 	};
 
+	struct TextVertex2D
+	{
+		glm::vec2 pos;
+		glm::vec2 uv;
+		glm::vec4 color;
+		glm::vec4 charSizePixelsCharSizeNorm; // RG: char size in pixels, BA: char size in [0, 1] in screenspace
+		i32 channel; // uses extra ints slot
+	};
+
+	struct TextVertex3D
+	{
+		glm::vec3 pos;
+		glm::vec4 color;
+		glm::vec3 tangent;
+		glm::vec2 uv;
+		glm::vec4 charSizePixelsCharSizeNorm; // RG: char size in pixels, BA: char size in [0, 1] in screenspace
+		i32 channel; // uses extra ints slot
+	};
+
 } // namespace flex

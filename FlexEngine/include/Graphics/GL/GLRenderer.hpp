@@ -86,10 +86,6 @@ namespace flex
 
 			virtual btIDebugDraw* GetDebugDrawer() override;
 
-			virtual void SetFont(BitmapFont* font) override;
-			// Draws the given string in the center of the screen for a short period of time
-			// Passing an empty string will immediately clear the current string
-			virtual void AddEditorString(const std::string& str) override;
 			virtual void DrawStringSS(const std::string& str,
 				const glm::vec4& color,
 				AnchorPoint anchor,
@@ -103,9 +99,6 @@ namespace flex
 				const glm::quat& rot,
 				real spacing,
 				bool bRaw = false) override;
-
-			virtual real GetStringWidth(const std::string& str, BitmapFont* font, real letterSpacing, bool bNormalized) const override;
-			virtual real GetStringHeight(const std::string& str, BitmapFont* font, bool bNormalized) const override;
 
 			virtual void DrawAssetBrowserImGui(bool* bShowing) override;
 
@@ -170,9 +163,6 @@ namespace flex
 						  bool bForceRender,
 						  bool bScreenSpace);
 
-			void UpdateTextBufferSS();
-			void UpdateTextBufferWS();
-
 			void DrawRenderObjectBatch(const std::vector<GLRenderObject*>& batchedRenderObjects, const DrawCallInfo& drawCallInfo);
 
 			bool GetLoadedTexture(const std::string& filePath, GLTexture** texture);
@@ -229,9 +219,6 @@ namespace flex
 			void DrawLoadingTextureQuad();
 
 			u32 GetActiveRenderObjectCount() const;
-
-			real GetStringWidth(const TextCache& textCache, BitmapFont* font) const;
-			real GetStringHeight(const TextCache& textCache, BitmapFont* font) const;
 
 			void ComputeDirLightViewProj(glm::mat4& outView, glm::mat4& outProj);
 
@@ -298,25 +285,6 @@ namespace flex
 			VertexBufferData m_Quad2DVertexBufferData;
 			RenderID m_Quad2DRenderID;
 
-			struct TextVertex2D
-			{
-				glm::vec2 pos;
-				glm::vec2 uv;
-				glm::vec4 color;
-				glm::vec4 charSizePixelsCharSizeNorm; // RG: char size in pixels, BA: char size in [0, 1] in screenspace
-				i32 channel; // uses extra ints slot
-			};
-
-			struct TextVertex3D
-			{
-				glm::vec3 pos;
-				glm::vec4 color;
-				glm::vec3 tangent;
-				glm::vec2 uv;
-				glm::vec4 charSizePixelsCharSizeNorm; // RG: char size in pixels, BA: char size in [0, 1] in screenspace
-				i32 channel; // uses extra ints slot
-			};
-
 			u32 m_TextQuadSS_VAO = 0;
 			u32 m_TextQuadSS_VBO = 0;
 			VertexBufferData m_TextQuadsSSVertexBufferData;
@@ -324,19 +292,6 @@ namespace flex
 			u32 m_TextQuadWS_VAO = 0;
 			u32 m_TextQuadWS_VBO = 0;
 			VertexBufferData m_TextQuadsWSVertexBufferData;
-
-			sec m_EditorStrSecRemaining = 0.0f;
-			sec m_EditorStrSecDuration = 1.15f;
-			real m_EditorStrFadeDurationPercent = 0.25f;
-			std::string m_EditorMessage;
-
-			MaterialID m_SpriteMatID = InvalidMaterialID;
-			MaterialID m_FontMatSSID = InvalidMaterialID;
-			MaterialID m_FontMatWSID = InvalidMaterialID;
-			MaterialID m_ShadowMatID = InvalidMaterialID;
-			MaterialID m_PostProcessMatID = InvalidMaterialID;
-			MaterialID m_PostFXAAMatID = InvalidMaterialID;
-			MaterialID m_SelectedObjectMatID = InvalidMaterialID;
 
 			u32 m_CaptureFBO = 0;
 			u32 m_CaptureRBO = 0;

@@ -6,7 +6,7 @@
 IGNORE_WARNINGS_PUSH
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 
-#include <glm/gtx/quaternion.hpp>
+#include <glm/gtx/quaternion.hpp> // for rotate
 
 #if COMPILE_IMGUI
 #include "imgui_internal.h" // For columns API
@@ -1983,7 +1983,19 @@ namespace flex
 			DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.75f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 5) * 0.15f, 1.5f + sin(s + 0.3f * 5) * 0.15f, -0.075f * 5), QUAT_UNIT, 0.0f);
 			DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.70f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 6) * 0.17f, 1.5f + sin(s + 0.3f * 6) * 0.17f, -0.075f * 6), QUAT_UNIT, 0.0f);
 
-			UpdateTextBufferWS();
+			{
+				std::vector<TextVertex3D> textVerticesWS;
+				UpdateTextBufferWS(textVerticesWS);
+
+				u32 bufferByteCount = (u32)(textVerticesWS.size() * sizeof(TextVertex3D));
+
+				glBindVertexArray(m_TextQuadWS_VAO);
+				glBindBuffer(GL_ARRAY_BUFFER, m_TextQuadWS_VBO);
+				glBufferData(GL_ARRAY_BUFFER, bufferByteCount, textVerticesWS.data(), GL_DYNAMIC_DRAW);
+				glBindBuffer(GL_ARRAY_BUFFER, 0);
+				glBindVertexArray(0);
+			}
+
 			DrawTextWS();
 
 			bool bUsingGameplayCam = g_CameraManager->CurrentCamera()->bIsGameplayCam;
@@ -2078,7 +2090,20 @@ namespace flex
 				DrawStringSS(m_EditorMessage, glm::vec4(1.0f, 1.0f, 1.0f, alpha), AnchorPoint::CENTER, VEC2_ZERO, 3);
 			}
 
-			UpdateTextBufferSS();
+			{
+				std::vector<TextVertex2D> textVerticesSS;
+				UpdateTextBufferSS(textVerticesSS);
+
+				u32 bufferByteCount = (u32)(textVerticesSS.size() * sizeof(TextVertex2D));
+
+				glBindVertexArray(m_TextQuadSS_VAO);
+				glBindBuffer(GL_ARRAY_BUFFER, m_TextQuadSS_VBO);
+				glBufferData(GL_ARRAY_BUFFER, bufferByteCount, textVerticesSS.data(), GL_DYNAMIC_DRAW);
+				glBindBuffer(GL_ARRAY_BUFFER, 0);
+				glBindVertexArray(0);
+			}
+
+
 			DrawTextSS();
 
 			if (g_EngineInstance->IsRenderingImGui())
@@ -3401,24 +3426,6 @@ namespace flex
 			return true;
 		}
 
-		void GLRenderer::SetFont(BitmapFont* font)
-		{
-			m_CurrentFont = font;
-		}
-
-		void GLRenderer::AddEditorString(const std::string& str)
-		{
-			m_EditorMessage = str;
-			if (str.empty())
-			{
-				m_EditorStrSecRemaining = 0.0f;
-			}
-			else
-			{
-				m_EditorStrSecRemaining = m_EditorStrSecDuration;
-			}
-		}
-
 		void GLRenderer::DrawStringSS(const std::string& str,
 			const glm::vec4& color,
 			AnchorPoint anchor,
@@ -3445,51 +3452,6 @@ namespace flex
 			m_CurrentFont->AddTextCache(newCache);
 		}
 
-		real GLRenderer::GetStringWidth(const TextCache& textCache, BitmapFont* font) const
-		{
-			real strWidth = 0;
-
-			char prevChar = ' ';
-			for (char c : textCache.str)
-			{
-				if (BitmapFont::IsCharValid(c))
-				{
-					FontMetric* metric = font->GetMetric(c);
-
-					if (font->UseKerning())
-					{
-						std::wstring charKey(std::wstring(1, prevChar) + std::wstring(1, c));
-
-						auto iter = metric->kerning.find(charKey);
-						if (iter != metric->kerning.end())
-						{
-							strWidth += iter->second.x;
-						}
-					}
-
-					strWidth += metric->advanceX + textCache.xSpacing;
-				}
-			}
-
-			return strWidth;
-		}
-
-		real GLRenderer::GetStringHeight(const TextCache& textCache, BitmapFont* font) const
-		{
-			real strHeight = 0;
-
-			for (char c : textCache.str)
-			{
-				if (BitmapFont::IsCharValid(c))
-				{
-					FontMetric* metric = font->GetMetric(c);
-					strHeight = glm::max(strHeight, (real)(metric->height));
-				}
-			}
-
-			return strHeight;
-		}
-
 		void GLRenderer::ComputeDirLightViewProj(glm::mat4& outView, glm::mat4& outProj)
 		{
 			if (m_DirectionalLight == nullptr)
@@ -3506,249 +3468,6 @@ namespace flex
 			real nearPlane = m_DirectionalLight->shadowMapNearPlane;
 			real farPlane = m_DirectionalLight->shadowMapFarPlane;
 			outProj = glm::ortho(-zoom, zoom, -zoom, zoom, nearPlane, farPlane);
-		}
-
-		void GLRenderer::UpdateTextBufferSS()
-		{
-			PROFILE_AUTO("Update Text Buffer SS");
-
-			glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
-			real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
-
-			std::vector<TextVertex2D> textVertices;
-			for (BitmapFont* font : m_FontsSS)
-			{
-				real textScale = glm::max(2.0f / (real)frameBufferSize.x, 2.0f / (real)frameBufferSize.y) *
-					(font->GetSize() / 12.0f);
-
-				font->SetBufferStart((i32)(textVertices.size()));
-
-				const std::vector<TextCache>& textCaches = font->GetTextCaches();
-				for (const TextCache& textCache : textCaches)
-				{
-					std::string currentStr = textCache.str;
-
-					real totalAdvanceX = 0;
-
-					glm::vec2 basePos(0.0f);
-
-					if (!textCache.bRaw)
-					{
-						real strWidth = GetStringWidth(textCache, font) * textScale;
-						real strHeight = GetStringHeight(textCache, font) * textScale;
-
-						switch (textCache.anchor)
-						{
-						case AnchorPoint::TOP_LEFT:
-							basePos = glm::vec3(-aspectRatio, 1.0f - strHeight / 2.0f, 0.0f);
-							break;
-						case AnchorPoint::TOP:
-							basePos = glm::vec3(-strWidth / 2.0f, 1.0f - strHeight / 2.0f, 0.0f);
-							break;
-						case AnchorPoint::TOP_RIGHT:
-							basePos = glm::vec3(aspectRatio - strWidth, 1.0f - strHeight / 2.0f, 0.0f);
-							break;
-						case AnchorPoint::RIGHT:
-							basePos = glm::vec3(aspectRatio - strWidth, 0.0f, 0.0f);
-							break;
-						case AnchorPoint::BOTTOM_RIGHT:
-							basePos = glm::vec3(aspectRatio - strWidth, -1.0f + strHeight / 2.0f, 0.0f);
-							break;
-						case AnchorPoint::BOTTOM:
-							basePos = glm::vec3(-strWidth / 2.0f, -1.0f + strHeight / 2.0f, 0.0f);
-							break;
-						case AnchorPoint::BOTTOM_LEFT:
-							basePos = glm::vec3(-aspectRatio, -1.0f + strHeight / 2.0f, 0.0f);
-							break;
-						case AnchorPoint::LEFT:
-							basePos = glm::vec3(-aspectRatio, 0.0f, 0.0f);
-							break;
-						case AnchorPoint::CENTER: // Fall through
-						case AnchorPoint::WHOLE:
-							basePos = glm::vec3(-strWidth / 2.0f, 0.0f, 0.0f);
-							break;
-						default:
-							break;
-						}
-					}
-
-					char prevChar = ' ';
-					for (u32 j = 0; j < currentStr.length(); ++j)
-					{
-						char c = currentStr[j];
-
-						if (BitmapFont::IsCharValid(c))
-						{
-							FontMetric* metric = font->GetMetric(c);
-							if (metric->bIsValid)
-							{
-								if (c == ' ')
-								{
-									totalAdvanceX += metric->advanceX + textCache.xSpacing;
-									prevChar = c;
-									continue;
-								}
-
-								glm::vec2 pos =
-									glm::vec2((textCache.pos.x) * (textCache.bRaw ? 1.0f : aspectRatio), textCache.pos.y) +
-									glm::vec2(totalAdvanceX + metric->offsetX, -metric->offsetY) * textScale;
-
-								if (font->UseKerning())
-								{
-									std::wstring charKey(std::wstring(1, prevChar) + std::wstring(1, c));
-
-									auto iter = metric->kerning.find(charKey);
-									if (iter != metric->kerning.end())
-									{
-										pos += iter->second * textScale;
-									}
-								}
-
-								glm::vec4 charSizePixelsCharSizeNorm(
-									metric->width, metric->height,
-									metric->width * textScale, metric->height * textScale);
-
-								i32 texChannel = (i32)metric->channel;
-
-								TextVertex2D vert = {};
-								vert.pos = basePos + pos;
-								vert.uv = metric->texCoord;
-								vert.color = textCache.color;
-								vert.charSizePixelsCharSizeNorm = charSizePixelsCharSizeNorm;
-								vert.channel = texChannel;
-
-								textVertices.push_back(vert);
-
-								totalAdvanceX += metric->advanceX + textCache.xSpacing;
-							}
-							else
-							{
-								PrintWarn("Attempted to draw char with invalid metric: %c in font %s\n", c, font->name.c_str());
-							}
-						}
-						else
-						{
-							PrintWarn("Attempted to draw invalid char: %c in font %s\n", c, font->name.c_str());
-						}
-
-						prevChar = c;
-					}
-				}
-
-				font->SetBufferSize((i32)(textVertices.size()) - font->GetBufferStart());
-				font->ClearCaches();
-			}
-
-			u32 bufferByteCount = (u32)(textVertices.size() * sizeof(TextVertex2D));
-
-			glBindVertexArray(m_TextQuadSS_VAO);
-			glBindBuffer(GL_ARRAY_BUFFER, m_TextQuadSS_VBO);
-			glBufferData(GL_ARRAY_BUFFER, bufferByteCount, textVertices.data(), GL_DYNAMIC_DRAW);
-			glBindBuffer(GL_ARRAY_BUFFER, 0);
-			glBindVertexArray(0);
-		}
-
-		void GLRenderer::UpdateTextBufferWS()
-		{
-			// TODO: Consolidate with UpdateTextBufferSS
-
-			PROFILE_AUTO("Update Text Buffer WS");
-
-			glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
-			//real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
-
-			std::vector<TextVertex3D> textVertices;
-			for (BitmapFont* font : m_FontsWS)
-			{
-				real textScale = glm::max(2.0f / (real)frameBufferSize.x, 2.0f / (real)frameBufferSize.y) *
-					(font->GetSize() / 12.0f);
-
-				font->SetBufferStart((i32)(textVertices.size()));
-
-				const std::vector<TextCache>& caches = font->GetTextCaches();
-				for (const TextCache& textCache : caches)
-				{
-					std::string currentStr = textCache.str;
-
-					const glm::vec3 tangent = glm::rotate(textCache.rot, VEC3_RIGHT);
-
-					real totalAdvanceX = 0;
-
-					char prevChar = ' ';
-					for (u32 j = 0; j < currentStr.length(); ++j)
-					{
-						char c = currentStr[j];
-
-						if (BitmapFont::IsCharValid(c))
-						{
-							FontMetric* metric = font->GetMetric(c);
-							if (metric->bIsValid)
-							{
-								if (c == ' ')
-								{
-									totalAdvanceX += metric->advanceX + textCache.xSpacing;
-									prevChar = c;
-									continue;
-								}
-
-								glm::vec3 pos = textCache.pos +
-									tangent * (totalAdvanceX + metric->offsetX) * textScale +
-									VEC3_UP * (real)(-metric->offsetY) * textScale;
-
-								if (font->UseKerning())
-								{
-									std::wstring charKey(std::wstring(1, prevChar) + std::wstring(1, c));
-
-									auto iter = metric->kerning.find(charKey);
-									if (iter != metric->kerning.end())
-									{
-										pos += glm::vec3(iter->second, 0.0f) * textScale;
-									}
-								}
-
-								glm::vec4 charSizePixelsCharSizeNorm(
-									metric->width, metric->height,
-									metric->width * textScale, metric->height * textScale);
-
-								i32 texChannel = (i32)metric->channel;
-
-								TextVertex3D vert = {};
-								vert.pos = pos;
-								vert.color = textCache.color;
-								vert.tangent = tangent;
-								vert.uv = metric->texCoord;
-								vert.charSizePixelsCharSizeNorm = charSizePixelsCharSizeNorm;
-								vert.channel = texChannel;
-
-								textVertices.push_back(vert);
-
-								totalAdvanceX += metric->advanceX + textCache.xSpacing;
-							}
-							else
-							{
-								PrintWarn("Attempted to draw char with invalid metric: %c in font %s\n", c, font->name.c_str());
-							}
-						}
-						else
-						{
-							PrintWarn("Attempted to draw invalid char: %c in font %s\n", c, font->name.c_str());
-						}
-
-						prevChar = c;
-					}
-				}
-
-				font->SetBufferSize((i32)(textVertices.size()) - font->GetBufferStart());
-				font->ClearCaches();
-			}
-
-			u32 bufferByteCount = (u32)(textVertices.size() * sizeof(TextVertex3D));
-
-			glBindVertexArray(m_TextQuadWS_VAO);
-			glBindBuffer(GL_ARRAY_BUFFER, m_TextQuadWS_VBO);
-			glBufferData(GL_ARRAY_BUFFER, bufferByteCount, textVertices.data(), GL_DYNAMIC_DRAW);
-			glBindBuffer(GL_ARRAY_BUFFER, 0);
-			glBindVertexArray(0);
 		}
 
 		void GLRenderer::DrawRenderObjectBatch(const std::vector<GLRenderObject*>& batchedRenderObjects, const DrawCallInfo& drawCallInfo)
@@ -5408,61 +5127,6 @@ namespace flex
 			physicsWorld->debugDrawWorld();
 
 			GL_POP_DEBUG_GROUP();
-		}
-
-		real GLRenderer::GetStringWidth(const std::string& str, BitmapFont* font, real letterSpacing, bool bNormalized) const
-		{
-			real strWidth = 0;
-
-			char prevChar = ' ';
-			for (char c : str)
-			{
-				if (BitmapFont::IsCharValid(c))
-				{
-					FontMetric* metric = font->GetMetric(c);
-
-					if (font->UseKerning())
-					{
-						std::wstring charKey(std::wstring(1, prevChar) + std::wstring(1, c));
-
-						auto iter = metric->kerning.find(charKey);
-						if (iter != metric->kerning.end())
-						{
-							strWidth += iter->second.x;
-						}
-					}
-
-					strWidth += metric->advanceX + letterSpacing;
-				}
-			}
-
-			if (bNormalized)
-			{
-				strWidth /= (real)g_Window->GetFrameBufferSize().x;
-			}
-
-			return strWidth;
-		}
-
-		real GLRenderer::GetStringHeight(const std::string& str, BitmapFont* font, bool bNormalized) const
-		{
-			real strHeight = 0;
-
-			for (char c : str)
-			{
-				if (BitmapFont::IsCharValid(c))
-				{
-					FontMetric* metric = font->GetMetric(c);
-					strHeight = glm::max(strHeight, (real)(metric->height));
-				}
-			}
-
-			if (bNormalized)
-			{
-				strHeight /= (real)g_Window->GetFrameBufferSize().y;
-			}
-
-			return strHeight;
 		}
 
 		void GLRenderer::DrawAssetBrowserImGui(bool* bShowing)

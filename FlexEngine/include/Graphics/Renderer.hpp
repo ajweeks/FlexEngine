@@ -7,11 +7,12 @@ class btIDebugDraw;
 
 namespace flex
 {
-	class MeshComponent;
 	class BitmapFont;
-	class GameObject;
-	class PointLight;
 	class DirectionalLight;
+	class GameObject;
+	class MeshComponent;
+	class PointLight;
+	class TextCache;
 
 	class Renderer
 	{
@@ -94,9 +95,6 @@ namespace flex
 
 		virtual btIDebugDraw* GetDebugDrawer() = 0;
 
-		virtual void SetFont(BitmapFont* font) = 0;
-		virtual void AddEditorString(const std::string& str) = 0;
-
 		virtual void DrawStringSS(const std::string& str,
 			const glm::vec4& color,
 			AnchorPoint anchor,
@@ -111,9 +109,6 @@ namespace flex
 			real spacing,
 			bool bRaw = false) = 0;
 
-		virtual real GetStringWidth(const std::string& str, BitmapFont* font, real letterSpacing, bool bNormalized) const = 0;
-		virtual real GetStringHeight(const std::string& str, BitmapFont* font, bool bNormalized) const = 0;
-
 		virtual void DrawAssetBrowserImGui(bool* bShowing) = 0;
 
 		virtual void RecaptureReflectionProbe() = 0;
@@ -122,6 +117,12 @@ namespace flex
 
 		// Call whenever a user-controlled field, such as visibility, changes to rebatch render objects
 		virtual void RenderObjectStateChanged() = 0;
+
+		real GetStringWidth(const std::string& str, BitmapFont* font, real letterSpacing, bool bNormalized) const;
+		real GetStringHeight(const std::string& str, BitmapFont* font, bool bNormalized) const;
+
+		real GetStringWidth(const TextCache& textCache, BitmapFont* font) const;
+		real GetStringHeight(const TextCache& textCache, BitmapFont* font) const;
 
 		void SaveSettingsToDisk(bool bSaveOverDefaults = false, bool bAddEditorStr = true);
 		void LoadSettingsFromDisk(bool bLoadDefaults = false);
@@ -166,6 +167,11 @@ namespace flex
 
 		i32 GetFramesRenderedCount() const;
 
+		void SetFont(BitmapFont* font);
+		// Draws the given string in the center of the screen for a short period of time
+		// Passing an empty string will immediately clear the current string
+		void AddEditorString(const std::string& str);
+
 		struct PostProcessSettings
 		{
 			bool bEnabled = true;
@@ -197,6 +203,9 @@ namespace flex
 			std::array<glm::vec2i, 4>* outMaxPositions, FT_Face* outFace);
 
 		std::string PickRandomSkyboxTexture();
+
+		void UpdateTextBufferSS(std::vector<TextVertex2D>& outTextVertices);
+		void UpdateTextBufferWS(std::vector<TextVertex3D>& outTextVertices);
 
 		PointLightData* m_PointLights;
 		i32 m_NumPointLightsEnabled = 0;
@@ -247,6 +256,19 @@ namespace flex
 		GameObject* m_WorldOrigin = nullptr;
 		MaterialID m_GridMaterialID = InvalidMaterialID;
 		MaterialID m_WorldAxisMaterialID = InvalidMaterialID;
+
+		sec m_EditorStrSecRemaining = 0.0f;
+		sec m_EditorStrSecDuration = 1.15f;
+		real m_EditorStrFadeDurationPercent = 0.25f;
+		std::string m_EditorMessage;
+
+		MaterialID m_SpriteMatID = InvalidMaterialID;
+		MaterialID m_FontMatSSID = InvalidMaterialID;
+		MaterialID m_FontMatWSID = InvalidMaterialID;
+		MaterialID m_ShadowMatID = InvalidMaterialID;
+		MaterialID m_PostProcessMatID = InvalidMaterialID;
+		MaterialID m_PostFXAAMatID = InvalidMaterialID;
+		MaterialID m_SelectedObjectMatID = InvalidMaterialID;
 
 		std::string m_FontImageExtension = ".png";
 		struct FontMetaData
