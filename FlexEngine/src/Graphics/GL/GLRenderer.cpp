@@ -175,7 +175,7 @@ namespace flex
 					PrintError("Shadow depth buffer is incomplete!\n");
 				}
 
-				if (m_DirectionalLight)
+				if (m_DirectionalLight != nullptr)
 				{
 					m_DirectionalLight->shadowTextureID = m_ShadowMapTexture.id;
 				}
@@ -461,7 +461,10 @@ namespace flex
 				editorObject->PostInitialize();
 			}
 
-			m_DirectionalLight->shadowTextureID = m_ShadowMapTexture.id;
+			if (m_DirectionalLight != nullptr)
+			{
+				m_DirectionalLight->shadowTextureID = m_ShadowMapTexture.id;
+			}
 		}
 
 		void GLRenderer::Destroy()
@@ -2253,7 +2256,7 @@ namespace flex
 
 			GL_PUSH_DEBUG_GROUP("Shadow Map Depths");
 
-			if (m_DirectionalLight->bCastShadow && m_DirectionalLight->data.enabled)
+			if (m_DirectionalLight != nullptr && m_DirectionalLight->bCastShadow && m_DirectionalLight->data.enabled)
 			{
 				GLMaterial* material = &m_Materials[m_ShadowMaterialID];
 				GLShader* shader = &m_Shaders[material->material.shaderID];
@@ -2720,7 +2723,7 @@ namespace flex
 					}
 				}
 
-				if (m_DirectionalLight->data.enabled)
+				if (m_DirectionalLight != nullptr && m_DirectionalLight->data.enabled)
 				{
 					drawInfo.color = glm::vec4(m_DirectionalLight->data.color * 1.5f, 1.0f);
 					drawInfo.pos = m_DirectionalLight->pos;
@@ -3489,6 +3492,13 @@ namespace flex
 
 		void GLRenderer::ComputeDirLightViewProj(glm::mat4& outView, glm::mat4& outProj)
 		{
+			if (m_DirectionalLight == nullptr)
+			{
+				outView = glm::lookAt(VEC3_ZERO, VEC3_FORWARD, VEC3_UP);
+				outProj = glm::ortho(-1234.0f, 1234.0f, -4567.0f, 4567.0f, 0.0f, 1.0f);
+				return;
+			}
+
 			glm::vec3 dirLightDir = m_DirectionalLight->data.dir;
 			outView = glm::lookAt(VEC3_ZERO, -dirLightDir, VEC3_UP);
 
@@ -4705,7 +4715,7 @@ namespace flex
 
 				glUseProgram(shader->program);
 
-				if (shader->shader.bNeedShadowMap)
+				if (m_DirectionalLight != nullptr && shader->shader.bNeedShadowMap)
 				{
 					glUniform1i(material->uniformIDs.castShadows, m_DirectionalLight->bCastShadow);
 					glUniform1f(material->uniformIDs.shadowDarkness, m_DirectionalLight->shadowDarkness);
@@ -4745,7 +4755,7 @@ namespace flex
 					glUniform1f(material->uniformIDs.exposure, exposure);
 				}
 
-				if (shader->shader.constantBufferUniforms.HasUniform(U_DIR_LIGHT))
+				if (m_DirectionalLight != nullptr && shader->shader.constantBufferUniforms.HasUniform(U_DIR_LIGHT))
 				{
 					if (m_DirectionalLight->data.enabled == 0)
 					{
@@ -4991,7 +5001,10 @@ namespace flex
 		{
 			// G-Buffer needs to be regenerated using new scene's reflection probe mat ID
 			GenerateGBuffer();
-			m_DirectionalLight->shadowTextureID = m_ShadowMapTexture.id;
+			if (m_DirectionalLight != nullptr)
+			{
+				m_DirectionalLight->shadowTextureID = m_ShadowMapTexture.id;
+			}
 		}
 
 		void GLRenderer::OnPostSceneChange()
