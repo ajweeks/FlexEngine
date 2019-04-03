@@ -193,9 +193,9 @@ namespace flex
 			// Figure out largest shader uniform buffer to set m_DynamicAlignment correctly
 			{
 				size_t uboAlignment = (size_t)m_VulkanDevice->m_PhysicalDeviceProperties.limits.minUniformBufferOffsetAlignment;
-				for (size_t i = 0; i < m_Shaders.size(); ++i)
+				for (const VulkanShader& shader : m_Shaders)
 				{
-					u32 size = GetAlignedUBOSize(m_Shaders[i].shader.dynamicBufferUniforms.CalculateSizeInBytes());
+					u32 size = GetAlignedUBOSize(shader.shader.dynamicBufferUniforms.CalculateSizeInBytes());
 					u32 dynamicDataSize = size;
 					u32 dynamicAllignment =
 						(dynamicDataSize / uboAlignment) * uboAlignment +
@@ -301,9 +301,9 @@ namespace flex
 			ImGui_ImplGlfw_Shutdown();
 			ImGui::DestroyContext();
 
-			for (auto iter = m_DescriptorSetLayouts.begin(); iter != m_DescriptorSetLayouts.end(); ++iter)
+			for (const VkDescriptorSetLayout& descriptorSetLayout : m_DescriptorSetLayouts)
 			{
-				vkDestroyDescriptorSetLayout(m_VulkanDevice->m_LogicalDevice, *iter, nullptr);
+				vkDestroyDescriptorSetLayout(m_VulkanDevice->m_LogicalDevice, descriptorSetLayout, nullptr);
 			}
 
 			m_PresentCompleteSemaphore.replace();
@@ -368,9 +368,9 @@ namespace flex
 
 			delete m_BlankTexture;
 
-			for (size_t i = 0; i < m_LoadedTextures.size(); ++i)
+			for (VulkanTexture* loadedTexture : m_LoadedTextures)
 			{
-				delete m_LoadedTextures[i];
+				delete loadedTexture;
 			}
 			m_LoadedTextures.clear();
 
@@ -2358,7 +2358,7 @@ namespace flex
 			}
 
 			shader->uniformBuffer.dynamicData.size = shader->shader.dynamicBufferUniforms.CalculateSizeInBytes();
-			if (shader->uniformBuffer.dynamicData.size > 0 && m_RenderObjects.size() > 0)
+			if (shader->uniformBuffer.dynamicData.size > 0 && !m_RenderObjects.empty())
 			{
 				if (shader->uniformBuffer.dynamicData.data) _aligned_free(shader->uniformBuffer.dynamicData.data);
 
@@ -2912,11 +2912,11 @@ namespace flex
 
 		void VulkanRenderer::DestroyRenderObject(RenderID renderID)
 		{
-			for (auto iter = m_RenderObjects.begin(); iter != m_RenderObjects.end(); ++iter)
+			for (VulkanRenderObject* renderObject : m_RenderObjects)
 			{
-				if (*iter && (*iter)->renderID == renderID)
+				if (renderObject && renderObject->renderID == renderID)
 				{
-					DestroyRenderObject(renderID, *iter);
+					DestroyRenderObject(renderID, renderObject);
 					return;
 				}
 			}
@@ -4295,9 +4295,7 @@ namespace flex
 
 			for (size_t i = 0; i < material->material.frameBuffers.size(); ++i)
 			{
-				createInfo.frameBufferViews.push_back({
-					U_FB_0_SAMPLER + i, (VkImageView*)material->material.frameBuffers[i].second
-				});
+				createInfo.frameBufferViews.emplace_back(U_FB_0_SAMPLER + i, (VkImageView*)material->material.frameBuffers[i].second);
 			}
 
 			CreateDescriptorSet(&createInfo);
@@ -4425,12 +4423,12 @@ namespace flex
 
 			for (auto& frameBufferViewPair : createInfo->frameBufferViews)
 			{
-				descriptorSets.push_back({
+				descriptorSets.emplace_back(
 					frameBufferViewPair.first, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 					VK_NULL_HANDLE, 0,
 					frameBufferViewPair.second ? *frameBufferViewPair.second : VK_NULL_HANDLE,
 					m_ColorSampler
-				});
+				);
 			}
 
 			std::vector<VkWriteDescriptorSet> writeDescriptorSets;
@@ -4627,7 +4625,7 @@ namespace flex
 			{
 				if (!matPair.second.material.engineMaterial)
 				{
-					result.push_back({ matPair.second.material.name, matPair.first });
+					result.emplace_back(matPair.second.material.name, matPair.first);
 				}
 			}
 
@@ -5360,12 +5358,12 @@ namespace flex
 				gBufferMaterialCreateInfo.enableBRDFLUT = true;
 				gBufferMaterialCreateInfo.renderToCubemap = false;
 				gBufferMaterialCreateInfo.engineMaterial = true;
-				for (size_t i = 0; i < m_OffScreenFrameBuf->frameBufferAttachments.size(); ++i)
+				for (const auto& frameBufferAttachment : m_OffScreenFrameBuf->frameBufferAttachments)
 				{
-					gBufferMaterialCreateInfo.frameBuffers.push_back({
-						m_OffScreenFrameBuf->frameBufferAttachments[i].first,
-						(void*)&m_OffScreenFrameBuf->frameBufferAttachments[i].second.view
-						});
+					gBufferMaterialCreateInfo.frameBuffers.emplace_back(
+						frameBufferAttachment.first,
+						(void*)&frameBufferAttachment.second.view
+					);
 				}
 
 				MaterialID gBufferMatID = InitializeMaterial(&gBufferMaterialCreateInfo);
@@ -5403,12 +5401,12 @@ namespace flex
 				gBufferCubemapMaterialCreateInfo.enableBRDFLUT = true;
 				gBufferCubemapMaterialCreateInfo.renderToCubemap = false;
 				gBufferCubemapMaterialCreateInfo.engineMaterial = true;
-				for (size_t i = 0; i < m_OffScreenFrameBuf->frameBufferAttachments.size(); ++i)
+				for (const auto& frameBufferAttachment : m_OffScreenFrameBuf->frameBufferAttachments)
 				{
-					gBufferCubemapMaterialCreateInfo.frameBuffers.push_back({
-						m_OffScreenFrameBuf->frameBufferAttachments[i].first,
-						(void*)&m_OffScreenFrameBuf->frameBufferAttachments[i].second.view
-						});
+					gBufferCubemapMaterialCreateInfo.frameBuffers.emplace_back(
+						frameBufferAttachment.first,
+						(void*)&frameBufferAttachment.second.view
+					);
 				}
 
 				m_CubemapGBufferMaterialID = InitializeMaterial(&gBufferCubemapMaterialCreateInfo);
@@ -6145,8 +6143,7 @@ namespace flex
 			VkBufferUsageFlags bufferUseageFlagBits, VkMemoryPropertyFlags memoryPropertyHostFlagBits)
 		{
 			VK_CHECK_RESULT(CreateAndAllocateBuffer(m_VulkanDevice, bufferSize, bufferUseageFlagBits, memoryPropertyHostFlagBits, buffer));
-
-			VK_CHECK_RESULT(vkMapMemory(m_VulkanDevice->m_LogicalDevice, buffer->m_Memory, 0, VK_WHOLE_SIZE, 0, &buffer->m_Mapped));
+			VK_CHECK_RESULT(buffer->Map());
 		}
 
 		void VulkanRenderer::CreateDescriptorPool()
