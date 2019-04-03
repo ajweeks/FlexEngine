@@ -429,7 +429,7 @@ namespace flex
 				i32 tanAttribIndex = -1;
 				i32 colAttribIndex = -1;
 				i32 uvAttribIndex = -1;
-				for (i32 k = 0; k < primitive->attributes_count; ++k)
+				for (i32 k = 0; k < (i32)primitive->attributes_count; ++k)
 				{
 					if (strcmp(primitive->attributes[k].name, "POSITION") == 0)
 					{
@@ -464,7 +464,7 @@ namespace flex
 				assert(posAccessor->component_type == cgltf_component_type_r_32f);
 				assert(posAccessor->type == cgltf_type_vec3);
 				//assert(posAccessor->buffer_view->type == cgltf_buffer_view_type_vertices);
-				i32 vertCount = posAccessor->count;
+				u32 vertCount = posAccessor->count;
 
 				vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
 
@@ -483,11 +483,11 @@ namespace flex
 				}
 
 				// Vertices
-				for (u32 i = 0; i < vertCount; ++i)
+				for (u32 v = 0; v < vertCount; ++v)
 				{
 					// Position
 					glm::vec3 pos;
-					cgltf_accessor_read_float(posAccessor, i, &pos.x, 3);
+					cgltf_accessor_read_float(posAccessor, v, &pos.x, 3);
 					vertexBufferDataCreateInfo.positions_3D.push_back(pos);
 
 					// Normal
@@ -507,7 +507,7 @@ namespace flex
 							assert(normAccessor->type == cgltf_type_vec3);
 
 							glm::vec3 norm;
-							cgltf_accessor_read_float(normAccessor, i, &norm.x, 3);
+							cgltf_accessor_read_float(normAccessor, v, &norm.x, 3);
 							if (importSettings && importSettings->swapNormalYZ)
 							{
 								std::swap(norm.y, norm.z);
@@ -537,7 +537,7 @@ namespace flex
 							//assert(tanAccessor->type == cgltf_type_vec3);
 
 							glm::vec4 tangent;
-							cgltf_accessor_read_float(tanAccessor, i, &tangent.x, 4);
+							cgltf_accessor_read_float(tanAccessor, v, &tangent.x, 4);
 							vertexBufferDataCreateInfo.tangents.push_back(tangent);
 						}
 					}
@@ -566,7 +566,7 @@ namespace flex
 							assert(colAccessor->type == cgltf_type_vec4);
 
 							glm::vec4 col;
-							cgltf_accessor_read_float(colAccessor, i, &col.x, 4);
+							cgltf_accessor_read_float(colAccessor, v, &col.x, 4);
 							vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(col);
 						}
 					}
@@ -588,7 +588,7 @@ namespace flex
 							assert(uvAccessor->type == cgltf_type_vec2);
 
 							glm::vec2 uv0;
-							cgltf_accessor_read_float(uvAccessor, i, &uv0.x, 2);
+							cgltf_accessor_read_float(uvAccessor, v, &uv0.x, 2);
 
 							uv0 *= m_UVScale;
 							if (importSettings && importSettings->flipU)
@@ -614,9 +614,9 @@ namespace flex
 						primitive->indices->component_type == cgltf_component_type_r_16u ||
 						primitive->indices->component_type == cgltf_component_type_r_32u);
 
-					for (i32 i = 0; i < indexCount; ++i)
+					for (i32 l = 0; l < indexCount; ++l)
 					{
-						m_Indices.push_back(vertexStart + cgltf_accessor_read_index(primitive->indices, i));
+						m_Indices.push_back(vertexStart + cgltf_accessor_read_index(primitive->indices, l));
 					}
 				}
 			}

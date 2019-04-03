@@ -748,12 +748,12 @@ namespace flex
 							{
 								selectedMeshIndex = i;
 								std::string relativeFilePath = meshPair.first;
-								MaterialID matID = mesh->GetMaterialID();
+								MaterialID meshMatID = mesh->GetMaterialID();
 								DestroyRenderObject(renderID);
 								gameObject->SetRenderID(InvalidRenderID);
 								mesh->Destroy();
 								mesh->SetOwner(gameObject);
-								mesh->SetRequiredAttributesFromMaterialID(matID);
+								mesh->SetRequiredAttributesFromMaterialID(meshMatID);
 								mesh->LoadFromFile(relativeFilePath);
 							}
 						}
@@ -788,12 +788,12 @@ namespace flex
 
 							if (mesh->GetRelativeFilePath().compare(newMeshFilePath) != 0)
 							{
-								MaterialID matID = mesh->GetMaterialID();
+								MaterialID meshMatID = mesh->GetMaterialID();
 								DestroyRenderObject(gameObject->GetRenderID());
 								gameObject->SetRenderID(InvalidRenderID);
 								mesh->Destroy();
 								mesh->SetOwner(gameObject);
-								mesh->SetRequiredAttributesFromMaterialID(matID);
+								mesh->SetRequiredAttributesFromMaterialID(meshMatID);
 								mesh->LoadFromFile(newMeshFilePath);
 							}
 						}
@@ -817,12 +817,12 @@ namespace flex
 							if (selectedMeshIndex != i)
 							{
 								selectedMeshIndex = i;
-								MaterialID matID = mesh->GetMaterialID();
+								MaterialID meshMatID = mesh->GetMaterialID();
 								DestroyRenderObject(gameObject->GetRenderID());
 								gameObject->SetRenderID(InvalidRenderID);
 								mesh->Destroy();
 								mesh->SetOwner(gameObject);
-								mesh->SetRequiredAttributesFromMaterialID(matID);
+								mesh->SetRequiredAttributesFromMaterialID(meshMatID);
 								mesh->LoadPrefabShape((MeshComponent::PrefabShape)i);
 							}
 						}

@@ -1200,9 +1200,9 @@ namespace flex
 
 	char* ToLower(char* str)
 	{
-		for (i32 i = 0; i < strlen(str); ++i)
+		for (u32 i = 0; i < strlen(str); ++i)
 		{
-			str[i] = tolower(str[i]);
+			str[i] = (char)tolower(str[i]);
 		}
 		return str;
 	}

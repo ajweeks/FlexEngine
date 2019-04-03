@@ -478,10 +478,10 @@ namespace flex
 
 			if (m_RigidBody != nullptr)
 			{
-				bool bStatic = m_RigidBody->IsStatic();
-				if (ImGui::Checkbox("Static##rb", &bStatic))
+				bool bRBStatic = m_RigidBody->IsStatic();
+				if (ImGui::Checkbox("Static##rb", &bRBStatic))
 				{
-					m_RigidBody->SetStatic(bStatic);
+					m_RigidBody->SetStatic(bRBStatic);
 				}
 
 				bool bKinematic = m_RigidBody->IsKinematic();
@@ -2394,6 +2394,7 @@ namespace flex
 	{
 		UNREFERENCED_PARAMETER(scene);
 		UNREFERENCED_PARAMETER(parentObj);
+		UNREFERENCED_PARAMETER(matID);
 
 		// Probe capture material
 		MaterialCreateInfo probeCaptureMatCreateInfo = {};

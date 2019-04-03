@@ -2219,7 +2219,7 @@ namespace flex
 					{
 						u32 channelCount = 4;
 						mat.cubemapTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue,
-							createInfo->cubeMapFilePaths, 4, false, false, false);
+							createInfo->cubeMapFilePaths, channelCount, false, false, false);
 						mat.cubemapTexture->CreateCubemapFromTextures(VK_FORMAT_R8G8B8A8_UNORM, createInfo->cubeMapFilePaths, true);
 						m_LoadedTextures.push_back(mat.cubemapTexture);
 					}
@@ -3795,7 +3795,7 @@ namespace flex
 				}
 
 				std::string savedSDFTextureAbsFilePath = RelativePathToAbsolute(renderedFontFilePath);
-				fontTex->SaveToFile(savedSDFTextureAbsFilePath, ImageFormat::PNG, false);
+				fontTex->SaveToFile(savedSDFTextureAbsFilePath, ImageFormat::PNG);
 			}
 
 			FT_Done_Face(face);

@@ -1282,8 +1282,8 @@ namespace flex
 					ImGui::Text("Audio effects loaded: %d", s_AudioSourceIDs.size());
 
 					ImVec2 p = ImGui::GetCursorScreenPos();
-					i32 width = 300;
-					i32 height = 100;
+					real width = 300.0f;
+					real height = 100.0f;
 					real minMS = 0.0f;
 					real maxMS = 0.1f;
 					ImGui::PlotLines("", m_FrameTimes.data(), m_FrameTimes.size(), 0, 0, minMS, maxMS, ImVec2(width, height));
@@ -1421,7 +1421,7 @@ namespace flex
 
 	i32 FlexEngine::ImGuiConsoleInputCallback(ImGuiInputTextCallbackData *data)
 	{
-		const u32 cmdHistCount = m_PreviousCmdLineEntries.size();
+		const i32 cmdHistCount = (i32)m_PreviousCmdLineEntries.size();
 
 		if (data->EventKey == ImGuiKey_UpArrow)
 		{

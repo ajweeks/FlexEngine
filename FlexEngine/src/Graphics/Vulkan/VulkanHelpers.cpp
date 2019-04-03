@@ -710,7 +710,7 @@ namespace flex
 
 
 
-				u32 pixelBufSize = (VkDeviceSize)(width * height * channelCount * sizeof(float));
+				//u32 pixelBufSize = (VkDeviceSize)(width * height * channelCount * sizeof(float));
 				textureSize = imageSize;// (VkDeviceSize)(width * height * channelCount * sizeof(float));
 
 
@@ -870,7 +870,7 @@ namespace flex
 			// Required by BitmapTexture to match GLTexture interface
 		}
 
-		bool VulkanTexture::SaveToFile(const std::string& absoluteFilePath, ImageFormat format, bool bFlipVertically)
+		bool VulkanTexture::SaveToFile(const std::string& absoluteFilePath, ImageFormat format)
 		{
 			// TODO: Implement
 			return false;
@@ -929,6 +929,7 @@ namespace flex
 			}
 
 			ENSURE_NO_ENTRY();
+			return VK_FORMAT_MAX_ENUM;
 		}
 
 		VkFormat FindSupportedFormat(VulkanDevice* device, const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)
@@ -950,6 +951,7 @@ namespace flex
 
 			PrintError("Failed to find supported formats!");
 			ENSURE_NO_ENTRY();
+			return VK_FORMAT_MAX_ENUM;
 		}
 
 		bool HasStencilComponent(VkFormat format)

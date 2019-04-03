@@ -192,7 +192,7 @@ namespace flex
 
 			void Destroy();
 
-			bool SaveToFile(const std::string& absoluteFilePath, ImageFormat format, bool bFlipVertically);
+			bool SaveToFile(const std::string& absoluteFilePath, ImageFormat format);
 
 			void Build(void* data = nullptr);
 

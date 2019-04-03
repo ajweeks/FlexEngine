@@ -12,7 +12,7 @@ namespace flex
 	class GameObject;
 	class MeshComponent;
 	class PointLight;
-	class TextCache;
+	struct TextCache;
 
 	class Renderer
 	{
