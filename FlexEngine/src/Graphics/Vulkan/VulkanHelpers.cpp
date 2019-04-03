@@ -278,6 +278,141 @@ namespace flex
 			CreateSampler(m_VulkanDevice, samplerCreateInfo);
 		}
 
+		void VulkanTexture::CreateFromMemory(u8* buffer, VkFormat format, i32 mipLevels)
+		{
+			//const u32 calculatedMipLevels = createInfo.generateMipMaps ? static_cast<u32>(floor(log2(std::min(createInfo.width, createInfo.height)))) + 1 : 0;
+
+			if (width == 0 ||
+				height == 0)
+			{
+				PrintError("Attempted to create texture with invalid size\n");
+				return;
+			}
+
+			ImageCreateInfo imageCreateInfo = {};
+			imageCreateInfo.image = image.replace();
+			imageCreateInfo.imageMemory = imageMemory.replace();
+			imageCreateInfo.format = format;
+			imageCreateInfo.width = (u32)width;
+			imageCreateInfo.height = (u32)height;
+			imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+			imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+			imageCreateInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+			imageCreateInfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+			imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
+
+			u32 imageSize = (u32)CreateImage(m_VulkanDevice, m_GraphicsQueue, imageCreateInfo);
+
+			//VkMemoryRequirements memRequirements;
+			//vkGetImageMemoryRequirements(m_VulkanDevice->m_LogicalDevice, image, &memRequirements);
+			//
+			//VkMemoryAllocateInfo memAllocInfo = {};
+			//memAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+			//
+			//memAllocInfo.allocationSize = memRequirements.size;
+			//memAllocInfo.memoryTypeIndex = m_VulkanDevice->GetMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			//
+			//VK_CHECK_RESULT(vkAllocateMemory(m_VulkanDevice->m_LogicalDevice, &memAllocInfo, nullptr, imageMemory.replace()));
+			//VK_CHECK_RESULT(vkBindImageMemory(m_VulkanDevice->m_LogicalDevice, image, imageMemory, 0));
+
+			//VkSamplerCreateInfo samplerCreateInfo = {};
+			//samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+			//samplerCreateInfo.maxAnisotropy = 1.0f;
+			//samplerCreateInfo.magFilter = VK_FILTER_LINEAR;
+			//samplerCreateInfo.minFilter = VK_FILTER_LINEAR;
+			//samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+			//samplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+			//samplerCreateInfo.addressModeV = samplerCreateInfo.addressModeU;
+			//samplerCreateInfo.addressModeW = samplerCreateInfo.addressModeU;
+			//samplerCreateInfo.mipLodBias = 0.0f;
+			//samplerCreateInfo.compareOp = VK_COMPARE_OP_NEVER;
+			//samplerCreateInfo.minLod = 0.0f;
+			//samplerCreateInfo.maxLod = (real)mipLevels;
+			//samplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+			//if (m_VulkanDevice->m_PhysicalDeviceFeatures.samplerAnisotropy)
+			//{
+			//	samplerCreateInfo.maxAnisotropy = m_VulkanDevice->m_PhysicalDeviceProperties.limits.maxSamplerAnisotropy;
+			//	samplerCreateInfo.anisotropyEnable = VK_TRUE;
+			//}
+			//
+			//VK_CHECK_RESULT(vkCreateSampler(m_VulkanDevice->m_LogicalDevice, &samplerCreateInfo, nullptr, sampler));
+			//
+			//VkImageViewCreateInfo imageViewCreateInfo = {};
+			//imageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+			//imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+			//imageViewCreateInfo.format = format;
+			//imageViewCreateInfo.components = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
+			//// TODO: Depth!!
+			//imageViewCreateInfo.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+			//imageViewCreateInfo.subresourceRange.layerCount = 6;
+			//imageViewCreateInfo.subresourceRange.levelCount = mipLevels;
+			//imageViewCreateInfo.image = image;
+			//imageViewCreateInfo.flags = 0;
+			//VK_CHECK_RESULT(vkCreateImageView(m_VulkanDevice->m_LogicalDevice, &imageViewCreateInfo, nullptr, imageView));
+
+
+			unsigned char* pixels = buffer;
+
+
+
+			// Create a host-visible staging buffer that contains the raw image data
+			VulkanBuffer stagingBuffer(m_VulkanDevice->m_LogicalDevice);
+
+			VkBufferCreateInfo bufferCreateInfo = {};
+			bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+			bufferCreateInfo.size = imageSize;
+			bufferCreateInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+			bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+
+			VK_CHECK_RESULT(vkCreateBuffer(m_VulkanDevice->m_LogicalDevice, &bufferCreateInfo, nullptr, &stagingBuffer.m_Buffer));
+
+			VkMemoryRequirements memRequirements;
+			vkGetBufferMemoryRequirements(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Buffer, &memRequirements);
+
+			VkMemoryAllocateInfo memAllocInfo = {};
+			memAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+			memAllocInfo.allocationSize = memRequirements.size;
+			memAllocInfo.memoryTypeIndex = m_VulkanDevice->GetMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+			VK_CHECK_RESULT(vkAllocateMemory(m_VulkanDevice->m_LogicalDevice, &memAllocInfo, nullptr, &stagingBuffer.m_Memory));
+			stagingBuffer.Bind();
+
+			stagingBuffer.Map(memRequirements.size);
+			memcpy(stagingBuffer.m_Mapped, pixels, imageSize);
+			free(pixels);
+			stagingBuffer.Unmap();
+
+
+			u32 pixelBufSize = (VkDeviceSize)(width * height * channelCount * sizeof(unsigned char));
+			u32 textureSize = imageSize;// (VkDeviceSize)(width * height * channelCount * sizeof(unsigned char));
+
+			CreateAndAllocateBuffer(m_VulkanDevice, textureSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer);
+
+			void* data = nullptr;
+			VK_CHECK_RESULT(vkMapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory, 0, textureSize, 0, &data));
+			memcpy(data, pixels, (size_t)pixelBufSize);
+			vkUnmapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory);
+
+
+
+			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, image, format, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
+			CopyBufferToImage(m_VulkanDevice, m_GraphicsQueue, stagingBuffer.m_Buffer, image, width, height);
+			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, image, format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipLevels);
+
+			ImageViewCreateInfo viewCreateInfo = {};
+			viewCreateInfo.format = format;
+			viewCreateInfo.image = &image;
+			viewCreateInfo.imageView = &imageView;
+			viewCreateInfo.mipLevels = mipLevels;
+			CreateImageView(m_VulkanDevice, viewCreateInfo);
+
+			SamplerCreateInfo samplerCreateInfo = {};
+			samplerCreateInfo.sampler = sampler.replace();
+			CreateSampler(m_VulkanDevice, samplerCreateInfo);
+		}
+
 		VkDeviceSize VulkanTexture::CreateEmpty(VkFormat inFormat, u32 inWidth, u32 inHeight, u32 inMipLevels, VkImageUsageFlags inUsage)
 		{
 			width = inWidth;

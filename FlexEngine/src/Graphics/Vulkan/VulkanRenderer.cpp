@@ -3702,7 +3702,8 @@ namespace flex
 
 				VulkanTexture* fontTex = newFont->SetTexture(new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, textureName, 4, false, false, false));
 				// TODO: VK_IMAGE_USAGE_TRANSFER_DST_BIT?
-				fontTex->CreateEmpty(VkFormat::VK_FORMAT_R16G16B16A16_UNORM, textureSize.x, textureSize.y, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+				VkFormat imageFormat = VK_FORMAT_R16G16B16A16_UNORM;
+				fontTex->CreateEmpty(imageFormat, textureSize.x, textureSize.y, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
 				fontTex->Build();
 
 				ShaderID computeSDFShaderID;
@@ -3753,7 +3754,7 @@ namespace flex
 						continue;
 					}
 
-					FT_Bitmap alignedBitmap{};
+					FT_Bitmap alignedBitmap = {};
 					if (FT_Bitmap_Convert(ft, &face->glyph->bitmap, &alignedBitmap, 4))
 					{
 						PrintError("Couldn't align free type bitmap size\n");
@@ -3772,6 +3773,21 @@ namespace flex
 					// GenTexture(texHandle);
 
 					//glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, alignedBitmap.buffer);
+
+					VulkanTexture* highResTex = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "High res tex", width, height, 4);
+
+					highResTex->CreateFromMemory(alignedBitmap.buffer, imageFormat, 1);
+
+					VkDescriptorSet descSet;
+					VkDescriptorSet descSetLayout;
+
+					DescriptorSetCreateInfo descSetCreateInfo = {};
+					descSetCreateInfo.descriptorSet = &descSet;
+					descSetCreateInfo.descriptorSetLayout = &descSetLayout;
+					descSetCreateInfo.shaderID = computeSDFShaderID;
+					descSetCreateInfo.uniformBuffer = &computeSDFShader.uniformBuffer;
+					descSetCreateInfo.albedoTexture = highResTex;
+					CreateDescriptorSet(&descSetCreateInfo);
 
 					glm::vec4 borderColor(0.0f);
 
@@ -4418,6 +4434,12 @@ namespace flex
 				createInfo->prefilterTexture ? *&createInfo->prefilterTexture->imageView : VK_NULL_HANDLE,
 				createInfo->prefilterTexture ? *&createInfo->prefilterTexture->sampler : VK_NULL_HANDLE,
 				createInfo->prefilterTexture ? &createInfo->prefilterTexture->imageInfoDescriptor : nullptr },
+
+				{ U_HIGH_RES_TEX, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_NULL_HANDLE, 0,
+				createInfo->albedoTexture ? *&createInfo->albedoTexture->imageView : VK_NULL_HANDLE,
+				createInfo->albedoTexture ? *&createInfo->albedoTexture->sampler : VK_NULL_HANDLE,
+				createInfo->albedoTexture ? &createInfo->albedoTexture->imageInfoDescriptor : nullptr },
 			};
 
 
@@ -4551,6 +4573,9 @@ namespace flex
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
 				{ U_FB_2_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_HIGH_RES_TEX, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 			};
 
@@ -6897,8 +6922,9 @@ namespace flex
 
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_TIME);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_CUBEMAP_SAMPLER);
 
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CUBEMAP_SAMPLER);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
 			++shaderID;
 
 			// Equirectangular to cube
@@ -7007,7 +7033,7 @@ namespace flex
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_SDF_DATA);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_TEX_CHANNEL);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_HIGH_RES_TEX);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_HIGH_RES_TEX); // highResTex
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
 			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_SDF_RESOLUTION);
@@ -7023,6 +7049,7 @@ namespace flex
 				(u32)VertexAttribute::EXTRA_INT;
 
 			m_Shaders[shaderID].shader.constantBufferUniforms = {};
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_ALBEDO_SAMPLER); // in_Texture
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
@@ -7040,6 +7067,7 @@ namespace flex
 				(u32)VertexAttribute::EXTRA_INT;
 
 			m_Shaders[shaderID].shader.constantBufferUniforms = {};
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_ALBEDO_SAMPLER); // in_Texture
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
@@ -7058,6 +7086,11 @@ namespace flex
 #if 1 // Sanity check
 				assert(!shader.constantBufferUniforms.HasUniform(U_UNIFORM_BUFFER_DYNAMIC));
 				assert(!shader.dynamicBufferUniforms.HasUniform(U_UNIFORM_BUFFER_CONSTANT));
+
+				if (shader.constantBufferUniforms.HasUniform(U_HIGH_RES_TEX))
+				{
+					assert(!shader.constantBufferUniforms.HasUniform(U_ALBEDO_SAMPLER));
+				}
 #endif
 
 				std::string vertFileName = shader.vertexShaderFilePath;

@@ -190,6 +190,8 @@ namespace flex
 			// Non-static member functions
 			void Create(ImageCreateInfo& imageCreateInfo, ImageViewCreateInfo& imageViewCreateInfo, SamplerCreateInfo& samplerCreateInfo);
 
+			void CreateFromMemory(u8* buffer, VkFormat format, i32 mipLevels);
+
 			void Destroy();
 
 			bool SaveToFile(const std::string& absoluteFilePath, ImageFormat format);
