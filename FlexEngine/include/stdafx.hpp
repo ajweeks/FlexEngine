@@ -64,6 +64,8 @@ const bool g_bEnableLogging_Loading = false;
 #define FORMAT_STRING _Printf_format_string_
 #endif
 
+#define FT_EXPORT(Type) Type
+
 //#pragma warning(disable : 4201) // nonstandard extension used: nameless struct/union
 //#pragma warning(disable : 4820) // bytes' bytes padding added after construct 'member_name'
 //#pragma warning(disable : 4868) // compiler may not enforce left-to-right evaluation order in braced initializer list
@@ -92,11 +94,6 @@ const bool g_bEnableLogging_Loading = false;
 
 #include "Logger.hpp"
 #include "Types.hpp"
-
-IGNORE_WARNINGS_PUSH
-#include <ft2build.h>
-#include FT_FREETYPE_H
-IGNORE_WARNINGS_POP
 
 #if COMPILE_VULKAN
 IGNORE_WARNINGS_PUSH

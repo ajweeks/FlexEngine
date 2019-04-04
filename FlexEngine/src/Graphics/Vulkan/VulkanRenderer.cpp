@@ -3630,10 +3630,13 @@ namespace flex
 				return false;
 			}
 
+			std::vector<char> fileMemory;
+			ReadFile(fontFilePath, fileMemory, true);
+
 			std::map<i32, FontMetric*> characters;
 			std::array<glm::vec2i, 4> maxPos;
-			FT_Face face;
-			if (!LoadFontMetrics(fontFilePath, ft, font, size, bScreenSpace, &characters, &maxPos, &face))
+			FT_Face face = {};
+			if (!LoadFontMetrics(fileMemory, fontFilePath, ft, font, size, bScreenSpace, &characters, &maxPos, &face))
 			{
 				return false;
 			}
@@ -3716,16 +3719,195 @@ namespace flex
 				//VulkanRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
 
 				// Render to Glyphs atlas
-				FT_Set_Pixel_Sizes(face, 0, size * sampleDensity);
+				//FT_Set_Pixel_Sizes(face, 0, size * sampleDensity);
 
+				VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
+
+				// Render pass
+				VkAttachmentDescription colorAttachment = {};
+				colorAttachment.format = format;
+				colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+				colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+				colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+				colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+				colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+				colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+				colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+				VkAttachmentReference colorAttachmentRef = {};
+				colorAttachmentRef.attachment = 0;
+				colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+				//VkAttachmentDescription depthAttachment = {};
+				//VkFormat depthFormat;
+				//GetSupportedDepthFormat(m_VulkanDevice->m_PhysicalDevice, &depthFormat);
+				//depthAttachment.format = depthFormat;
+				//depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+				//depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+				//depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+				//depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+				//depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+				//depthAttachment.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+				//depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+				//VkAttachmentReference depthAttachmentRef = {};
+				//depthAttachmentRef.attachment = 1;
+				//depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+				std::array<VkSubpassDescription, 1> subpasses;
+				subpasses[0] = {};
+				subpasses[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+				subpasses[0].colorAttachmentCount = 1;
+				subpasses[0].pColorAttachments = &colorAttachmentRef;
+				//subpasses[0].pDepthStencilAttachment = &depthAttachmentRef;
+
+
+				// Use subpass dependencies for attachment layout transitions
+				std::array<VkSubpassDependency, 2> dependencies;
+				dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+				dependencies[0].dstSubpass = 0;
+				dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+				dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+				dependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+				dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+				dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+				dependencies[1].srcSubpass = 0;
+				dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+				dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+				dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+				dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+				dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+				dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+
+				VkRenderPassCreateInfo renderPassInfo = {};
+				renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+				renderPassInfo.attachmentCount = 1;
+				renderPassInfo.pAttachments = &colorAttachment;
+				renderPassInfo.subpassCount = subpasses.size();
+				renderPassInfo.pSubpasses = subpasses.data();
+				renderPassInfo.dependencyCount = dependencies.size();
+				renderPassInfo.pDependencies = dependencies.data();
+
+				VkRenderPass renderPass = VK_NULL_HANDLE;
+				VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassInfo, nullptr, &renderPass));
+
+				VkCommandBuffer commandBuffer = m_CommandBufferManager.CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
+
+				// Offscreen framebuffer
+				struct {
+					VkImage image;
+					VkImageView view;
+					VkDeviceMemory memory;
+					VkFramebuffer framebuffer;
+				} offscreen;
+
+				// Color attachment
+				VkImageCreateInfo offscreenImageCreateInfo = {};
+				offscreenImageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+				offscreenImageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+				offscreenImageCreateInfo.format = format;
+				offscreenImageCreateInfo.extent.width = textureSize.x;
+				offscreenImageCreateInfo.extent.height = textureSize.y;
+				offscreenImageCreateInfo.extent.depth = 1;
+				offscreenImageCreateInfo.mipLevels = 1;
+				offscreenImageCreateInfo.arrayLayers = 1;
+				offscreenImageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+				offscreenImageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+				offscreenImageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+				offscreenImageCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+				offscreenImageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+				VK_CHECK_RESULT(vkCreateImage(m_VulkanDevice->m_LogicalDevice, &offscreenImageCreateInfo, nullptr, &offscreen.image));
+
+				VkMemoryAllocateInfo offscreenMemAlloc = {};
+				offscreenMemAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+				VkMemoryRequirements offscreenMemRequirements;
+				vkGetImageMemoryRequirements(m_VulkanDevice->m_LogicalDevice, offscreen.image, &offscreenMemRequirements);
+				offscreenMemAlloc.allocationSize = offscreenMemRequirements.size;
+				offscreenMemAlloc.memoryTypeIndex = FindMemoryType(m_VulkanDevice, offscreenMemRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+				VK_CHECK_RESULT(vkAllocateMemory(m_VulkanDevice->m_LogicalDevice, &offscreenMemAlloc, nullptr, &offscreen.memory));
+				VK_CHECK_RESULT(vkBindImageMemory(m_VulkanDevice->m_LogicalDevice, offscreen.image, offscreen.memory, 0));
+
+				VkImageViewCreateInfo colorImageView = {};
+				colorImageView.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+				colorImageView.viewType = VK_IMAGE_VIEW_TYPE_2D;
+				colorImageView.format = format;
+				colorImageView.flags = 0;
+				colorImageView.subresourceRange = {};
+				colorImageView.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				colorImageView.subresourceRange.baseMipLevel = 0;
+				colorImageView.subresourceRange.levelCount = 1;
+				colorImageView.subresourceRange.baseArrayLayer = 0;
+				colorImageView.subresourceRange.layerCount = 1;
+				colorImageView.image = offscreen.image;
+				VK_CHECK_RESULT(vkCreateImageView(m_VulkanDevice->m_LogicalDevice, &colorImageView, nullptr, &offscreen.view));
+
+				VkFramebufferCreateInfo framebufCreateInfo = {};
+				framebufCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+				framebufCreateInfo.renderPass = renderPass;
+				framebufCreateInfo.attachmentCount = 1;
+				framebufCreateInfo.pAttachments = &offscreen.view;
+				framebufCreateInfo.width = textureSize.x;
+				framebufCreateInfo.height = textureSize.y;
+				framebufCreateInfo.layers = 1;
+				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &framebufCreateInfo, nullptr, &offscreen.framebuffer));
+
+				VkCommandBuffer layoutCmd = m_CommandBufferManager.CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
+
+				SetImageLayout(
+					layoutCmd,
+					offscreen.image,
+					VK_IMAGE_ASPECT_COLOR_BIT,
+					VK_IMAGE_LAYOUT_UNDEFINED,
+					VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+				m_CommandBufferManager.FlushCommandBuffer(layoutCmd, m_GraphicsQueue, true);
+
+				std::array<VkClearValue, 4> clearValues = {};
+				clearValues[0].color = m_ClearColor;
+				clearValues[1].color = m_ClearColor;
+				clearValues[2].color = m_ClearColor;
+				clearValues[3].depthStencil = { 1.0f, 0 };
+
+
+				VkRenderPassBeginInfo renderPassBeginInfo = {};
+				renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+				renderPassBeginInfo.framebuffer = offscreen.framebuffer;
+				renderPassBeginInfo.renderPass = renderPass;
+				renderPassBeginInfo.renderArea.offset = { 0, 0 };
+				renderPassBeginInfo.renderArea.extent = {
+					(uint32_t)textureSize.x,
+					(uint32_t)textureSize.y
+				};
+				renderPassBeginInfo.clearValueCount = clearValues.size();
+				renderPassBeginInfo.pClearValues = clearValues.data();
+				vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+				VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
+				VkPipeline graphicsPipeline = VK_NULL_HANDLE;
+
+				GraphicsPipelineCreateInfo pipelineCreateInfo = {};
+				pipelineCreateInfo.shaderID = computeSDFShaderID;
+				pipelineCreateInfo.vertexAttributes = computeSDFShader.shader.vertexAttributes;
+				pipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+				pipelineCreateInfo.cullMode = VK_CULL_MODE_NONE;
+				pipelineCreateInfo.descriptorSetLayoutIndex = computeSDFShaderID;
+				pipelineCreateInfo.setDynamicStates = true;
+				pipelineCreateInfo.enabledColorBlending = false;
+				pipelineCreateInfo.pipelineLayout = &pipelineLayout;
+				pipelineCreateInfo.grahpicsPipeline = &graphicsPipeline;
+				pipelineCreateInfo.subpass = 0;
+				pipelineCreateInfo.depthWriteEnable = VK_FALSE;
+				pipelineCreateInfo.renderPass = renderPass;
+				CreateGraphicsPipeline(&pipelineCreateInfo);
+
+				VulkanRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
+				VulkanMaterial* gBufferMaterial = &m_Materials[gBufferRenderObject->materialID];
+
+				std::vector<VulkanTexture*> charTextures;
 				for (auto& charPair : characters)
 				{
 					FontMetric* metric = charPair.second;
-
-					if (metric->character == ' ')
-					{
-						continue;
-					}
 
 					u32 glyphIndex = FT_Get_Char_Index(face, metric->character);
 					if (glyphIndex == 0)
@@ -3769,25 +3951,10 @@ namespace flex
 						continue;
 					}
 
-					// GLuint texHandle;
-					// GenTexture(texHandle);
-
-					//glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, alignedBitmap.buffer);
-
 					VulkanTexture* highResTex = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "High res tex", width, height, 4);
+					charTextures.push_back(highResTex);
 
-					highResTex->CreateFromMemory(alignedBitmap.buffer, imageFormat, 1);
-
-					VkDescriptorSet descSet;
-					VkDescriptorSet descSetLayout;
-
-					DescriptorSetCreateInfo descSetCreateInfo = {};
-					descSetCreateInfo.descriptorSet = &descSet;
-					descSetCreateInfo.descriptorSetLayout = &descSetLayout;
-					descSetCreateInfo.shaderID = computeSDFShaderID;
-					descSetCreateInfo.uniformBuffer = &computeSDFShader.uniformBuffer;
-					descSetCreateInfo.albedoTexture = highResTex;
-					CreateDescriptorSet(&descSetCreateInfo);
+					highResTex->CreateFromMemory(alignedBitmap.buffer, width * height * 4 * sizeof(real), imageFormat, 1);
 
 					glm::vec4 borderColor(0.0f);
 
@@ -3796,22 +3963,170 @@ namespace flex
 						glm::vec2i res = glm::vec2i(metric->width - padding * 2, metric->height - padding * 2);
 						glm::vec2i viewportTL = glm::vec2i(metric->texCoord) + glm::vec2i(padding);
 
+						VkViewport viewport = VkViewport{
+							0.0f, 1.0f,
+							(real)textureSize.x,
+							(real)textureSize.y,
+							0.1f, 1000.0f
+						};
+						vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 						// set viewport (viewportTL.x, viewportTL.y, res.x, res.y);
+
+						VkRect2D scissor = VkRect2D{
+							{ 0u, 0u },
+						{ (uint32_t)width,
+						  (uint32_t)height }
+						};
+						vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+
+
+						VkDeviceSize offsets[1] = { 0 };
+						vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID].vertexBuffer->m_Buffer, offsets);
+						vkCmdBindIndexBuffer(commandBuffer, m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID].indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
+
+						vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+
+						VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[computeSDFShaderID];
+						VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
+
+						// TODO: Create once and update albedoTexture
+						DescriptorSetCreateInfo descSetCreateInfo = {};
+						descSetCreateInfo.descriptorSet = &descriptorSet;
+						descSetCreateInfo.descriptorSetLayout = &descSetLayout;
+						descSetCreateInfo.shaderID = computeSDFShaderID;
+						descSetCreateInfo.uniformBuffer = &computeSDFShader.uniformBuffer;
+						descSetCreateInfo.albedoTexture = highResTex;
+						CreateDescriptorSet(&descSetCreateInfo);
+
+						UpdateConstantUniformBuffers();
 
 						// uniform texChannel = metric->channel
 						// uniform charResolution = (real)res.x, (real)res.y
-						// DrawArrays(gBufferRenderObject->topology, 0, gBufferRenderObject->vertexBufferData->VertexCount)
-					}
 
-					// DeleteTexture(texHandle);
+						vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout,
+							0, 1, &descriptorSet,
+							0, nullptr);
+						//BindDescriptorSet(&m_Shaders[gBufferMaterial->material.shaderID], gBufferRenderObject->renderID, commandBuffer, gBufferObject->pipelineLayout, gBufferObject->descriptorSet);
+
+						vkCmdDrawIndexed(commandBuffer, m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID].indexCount, 1, 0, 0, 1);
+
+						// TODO:
+						//vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPool, 1, &descriptorSet);
+					}
 
 					metric->texCoord = metric->texCoord / glm::vec2((real)textureSize.x, (real)textureSize.y);
 
-					FT_Bitmap_Done(ft, &alignedBitmap);
+					//FT_Bitmap_Done(ft, &alignedBitmap);
 				}
+
+				vkCmdEndRenderPass(commandBuffer);
+
+				VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
+
+				//SetImageLayout(
+				//	commandBuffer,
+				//	offscreen.image,
+				//	VK_IMAGE_ASPECT_COLOR_BIT,
+				//	VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+				//	VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+
+				//// Copy region for transfer from framebuffer to cube face
+				//VkImageCopy copyRegion = {};
+
+				//copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				//copyRegion.srcSubresource.baseArrayLayer = 0;
+				//copyRegion.srcSubresource.mipLevel = 0;
+				//copyRegion.srcSubresource.layerCount = 1;
+				//copyRegion.srcOffset = { 0, 0, 0 };
+
+				//copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				//copyRegion.dstSubresource.baseArrayLayer = 0;
+				//copyRegion.dstSubresource.mipLevel = 0;
+				//copyRegion.dstSubresource.layerCount = 1;
+				//copyRegion.dstOffset = { 0, 0, 0 };
+
+				//copyRegion.extent.width = static_cast<u32>(viewport.width);
+				//copyRegion.extent.height = static_cast<u32>(viewport.height);
+				//copyRegion.extent.depth = 1;
+
+				//vkCmdCopyImage(
+				//	commandBuffer,
+				//	offscreen.image,
+				//	VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				//	renderObjectMat.cubemapTexture->image,
+				//	VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				//	1,
+				//	&copyRegion);
+
+				//// Transform framebuffer color attachment back
+				//SetImageLayout(
+				//	commandBuffer,
+				//	offscreen.image,
+				//	VK_IMAGE_ASPECT_COLOR_BIT,
+				//	VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				//	VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+				//SetImageLayout(
+				//	commandBuffer,
+				//	renderObjectMat.cubemapTexture,
+				//	VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				//	VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+				//	subresourceRange);
+
+				//m_CommandBufferManager.FlushCommandBuffer(commandBuffer, m_GraphicsQueue, true);
+
+				VkSubmitInfo submitInfo = {};
+				submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+				VkPipelineStageFlags waitStages = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+				submitInfo.pWaitDstStageMask = &waitStages;
+
+				//submitInfo.waitSemaphoreCount = 1;
+				//submitInfo.pWaitSemaphores = &m_PresentCompleteSemaphore;
+
+				//submitInfo.signalSemaphoreCount = 1;
+				//submitInfo.pSignalSemaphores = &offscreenSemaphore;
+
+				submitInfo.commandBufferCount = 1;
+				submitInfo.pCommandBuffers = &commandBuffer;
+
+				VK_CHECK_RESULT(vkQueueSubmit(m_GraphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
+
+				//VkPresentInfoKHR presentInfo = {};
+				//presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+				////presentInfo.waitSemaphoreCount = 1;
+				////presentInfo.pWaitSemaphores = &m_RenderCompleteSemaphore;
+
+				//presentInfo.swapchainCount = 1;
+				//presentInfo.pSwapchains = &m_SwapChain;
+
+				//u32 imageIndex = 0;
+				//presentInfo.pImageIndices = &imageIndex;
+
+				//VK_CHECK_RESULT(vkQueuePresentKHR(m_PresentQueue, &presentInfo));
+
+				VK_CHECK_RESULT(vkQueueWaitIdle(m_GraphicsQueue));
+
+				for (VulkanTexture* highResTex : charTextures)
+				{
+					highResTex->Destroy();
+					delete highResTex;
+				}
+				charTextures.clear();
+
+				vkDestroyPipeline(m_VulkanDevice->m_LogicalDevice, graphicsPipeline, nullptr);
+				vkDestroyRenderPass(m_VulkanDevice->m_LogicalDevice, renderPass, nullptr);
+				vkDestroyFramebuffer(m_VulkanDevice->m_LogicalDevice, offscreen.framebuffer, nullptr);
+				vkFreeMemory(m_VulkanDevice->m_LogicalDevice, offscreen.memory, nullptr);
+				vkDestroyImageView(m_VulkanDevice->m_LogicalDevice, offscreen.view, nullptr);
+				vkDestroyImage(m_VulkanDevice->m_LogicalDevice, offscreen.image, nullptr);
 
 				std::string savedSDFTextureAbsFilePath = RelativePathToAbsolute(renderedFontFilePath);
 				fontTex->SaveToFile(savedSDFTextureAbsFilePath, ImageFormat::PNG);
+
+				fontTex->Destroy();
+				delete fontTex;
 			}
 
 			FT_Done_Face(face);
@@ -6234,11 +6549,11 @@ namespace flex
 			VkPipelineStageFlags waitStages = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 			submitInfo.pWaitDstStageMask = &waitStages;
 
-			submitInfo.waitSemaphoreCount = 1;
-			submitInfo.pWaitSemaphores = &m_PresentCompleteSemaphore;
+			//submitInfo.waitSemaphoreCount = 1;
+			//submitInfo.pWaitSemaphores = &m_PresentCompleteSemaphore;
 
-			submitInfo.signalSemaphoreCount = 1;
-			submitInfo.pSignalSemaphores = &offscreenSemaphore;
+			//submitInfo.signalSemaphoreCount = 1;
+			//submitInfo.pSignalSemaphores = &offscreenSemaphore;
 
 			submitInfo.commandBufferCount = 1;
 			submitInfo.pCommandBuffers = &offScreenCmdBuffer;

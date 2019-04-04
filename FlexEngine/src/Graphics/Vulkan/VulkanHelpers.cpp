@@ -278,7 +278,7 @@ namespace flex
 			CreateSampler(m_VulkanDevice, samplerCreateInfo);
 		}
 
-		void VulkanTexture::CreateFromMemory(u8* buffer, VkFormat format, i32 mipLevels)
+		void VulkanTexture::CreateFromMemory(u8* buffer, u32 size, VkFormat format, i32 mipLevels)
 		{
 			//const u32 calculatedMipLevels = createInfo.generateMipMaps ? static_cast<u32>(floor(log2(std::min(createInfo.width, createInfo.height)))) + 1 : 0;
 
@@ -379,21 +379,21 @@ namespace flex
 			stagingBuffer.Bind();
 
 			stagingBuffer.Map(memRequirements.size);
-			memcpy(stagingBuffer.m_Mapped, pixels, imageSize);
+			memcpy(stagingBuffer.m_Mapped, pixels, size);
 			free(pixels);
 			stagingBuffer.Unmap();
 
 
-			u32 pixelBufSize = (VkDeviceSize)(width * height * channelCount * sizeof(unsigned char));
-			u32 textureSize = imageSize;// (VkDeviceSize)(width * height * channelCount * sizeof(unsigned char));
-
-			CreateAndAllocateBuffer(m_VulkanDevice, textureSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer);
-
-			void* data = nullptr;
-			VK_CHECK_RESULT(vkMapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory, 0, textureSize, 0, &data));
-			memcpy(data, pixels, (size_t)pixelBufSize);
-			vkUnmapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory);
+			//u32 pixelBufSize = (VkDeviceSize)(width * height * channelCount * sizeof(unsigned char));
+			//u32 textureSize = imageSize;// (VkDeviceSize)(width * height * channelCount * sizeof(unsigned char));
+			//
+			//CreateAndAllocateBuffer(m_VulkanDevice, textureSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+			//	VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer);
+			//
+			//void* data = nullptr;
+			//VK_CHECK_RESULT(vkMapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory, 0, textureSize, 0, &data));
+			//memcpy(data, pixels, (size_t)size);
+			//vkUnmapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory);
 
 
 

@@ -10,7 +10,10 @@ IGNORE_WARNINGS_PUSH
 
 #include <glm/gtx/quaternion.hpp> // for rotate
 
-#include <freetype/ftbitmap.h>
+#include <ft2build.h>
+#include FT_FREETYPE_H
+#include <freetype/fttypes.h>
+#include <freetype/fterrors.h>
 IGNORE_WARNINGS_POP
 
 #include "Cameras/BaseCamera.hpp"
@@ -47,32 +50,32 @@ namespace flex
 		// TODO: Handle changing DPI after this point
 		// TODO: Save these strings in a config file?
 		m_FontMetaDatas[0] = {
-			RESOURCE_LOCATION  "fonts/UbuntuCondensed-Regular.ttf",
-			RESOURCE_LOCATION  "fonts/UbuntuCondensed-Regular-24",
+			RESOURCE_LOCATION  "fonts\\UbuntuCondensed-Regular.ttf",
+			RESOURCE_LOCATION  "fonts\\UbuntuCondensed-Regular-24",
 			24,
 			true,
 			&m_FntUbuntuCondensedSS,
 		};
 
 		m_FontMetaDatas[1] = {
-			RESOURCE_LOCATION  "fonts/SourceCodePro-regular.ttf",
-			RESOURCE_LOCATION  "fonts/SourceCodePro-regular-16",
+			RESOURCE_LOCATION  "fonts\\SourceCodePro-regular.ttf",
+			RESOURCE_LOCATION  "fonts\\SourceCodePro-regular-16",
 			16,
 			false,
 			&m_FntSourceCodeProWS,
 		};
 
 		m_FontMetaDatas[2] = {
-			RESOURCE_LOCATION  "fonts/SourceCodePro-regular.ttf",
-			RESOURCE_LOCATION  "fonts/SourceCodePro-regular-14",
+			RESOURCE_LOCATION  "fonts\\SourceCodePro-regular.ttf",
+			RESOURCE_LOCATION  "fonts\\SourceCodePro-regular-14",
 			14,
 			true,
 			&m_FntSourceCodeProSS,
 		};
 
 		//m_FontMetaDatas[3] = {
-		//	RESOURCE_LOCATION  "fonts/gant.ttf",
-		//	RESOURCE_LOCATION  "fonts/gant-regular-10",
+		//	RESOURCE_LOCATION  "fonts\\gant.ttf",
+		//	RESOURCE_LOCATION  "fonts\\gant-regular-10",
 		//	10,
 		//	true,
 		//	&m_FntGantSS,
@@ -1214,15 +1217,15 @@ namespace flex
 		return bParentChildTreeDirty;
 	}
 
-	bool Renderer::LoadFontMetrics(const std::string& fontFilePath, FT_Library& ft, BitmapFont** font,
+	bool Renderer::LoadFontMetrics(const std::vector<char>& fileMemory, const std::string& fontFilePath, FT_Library& ft, BitmapFont** font,
 		i16 size, bool bScreenSpace, std::map<i32, FontMetric*>* outCharacters,
 	std::array<glm::vec2i, 4>* outMaxPositions, FT_Face* outFace)
 	{
-		std::vector<char> fileMemory;
-		ReadFile(fontFilePath, fileMemory, true);
+		// TODO: Save in common place
+		u32 sampleDensity = 32;
 
-		FT_Face face;
-		FT_Error error = FT_New_Memory_Face(ft, (FT_Byte*)fileMemory.data(), (FT_Long)fileMemory.size(), 0, &face);
+		FT_Error error = FT_New_Memory_Face(ft, (FT_Byte*)fileMemory.data(), (FT_Long)fileMemory.size(), 0, outFace);
+		FT_Face& face = *outFace;
 		if (error == FT_Err_Unknown_File_Format)
 		{
 			PrintError("Unhandled font file format: %s\n", fontFilePath.c_str());
@@ -1235,11 +1238,9 @@ namespace flex
 		}
 
 		error = FT_Set_Char_Size(face,
-			0, size * 64,
+			0, size * sampleDensity,
 			(FT_UInt)g_Monitor->DPI.x,
 			(FT_UInt)g_Monitor->DPI.y);
-
-		//FT_Set_Pixel_Sizes(face, 0, fontPixelSize);
 
 		if (g_bEnableLogging_Loading)
 		{
@@ -1261,7 +1262,7 @@ namespace flex
 			m_FontsWS.push_back(newFont);
 		}
 
-		newFont->SetUseKerning(FT_HAS_KERNING(face) != 0);
+		//newFont->SetUseKerning(FT_HAS_KERNING(face) != 0);
 
 		// Atlas helper variables
 		glm::vec2i startPos[4] = { { 0.0f, 0.0f },{ 0.0f, 0.0f },{ 0.0f, 0.0f },{ 0.0f, 0.0f } };
@@ -1292,23 +1293,23 @@ namespace flex
 				continue;
 			}
 
-			//if (newFont->UseKerning() && glyphIndex)
-			//{
-			//	for (i32 previous = 0; previous < BitmapFont::CHAR_COUNT - 1; ++previous)
-			//	{
-			//		FT_Vector delta;
-			//
-			//		u32 prevIdx = FT_Get_Char_Index(face, previous);
-			//		FT_Get_Kerning(face, prevIdx, glyphIndex, FT_KERNING_DEFAULT, &delta);
-			//
-			//		if (delta.x != 0 || delta.y != 0)
-			//		{
-			//			std::wstring charKey(std::wstring(1, (wchar_t)previous) + std::wstring(1, (wchar_t)c));
-			//			metric->kerning[charKey] =
-			//				glm::vec2((real)delta.x / 64.0f, (real)delta.y / 64.0f);
-			//		}
-			//	}
-			//}
+			if (newFont->UseKerning() && glyphIndex)
+			{
+				for (i32 previous = 0; previous < BitmapFont::CHAR_COUNT - 1; ++previous)
+				{
+					FT_Vector delta;
+
+					u32 prevIdx = FT_Get_Char_Index(face, previous);
+					FT_Get_Kerning(face, prevIdx, glyphIndex, FT_KERNING_DEFAULT, &delta);
+
+					if (delta.x != 0 || delta.y != 0)
+					{
+						std::wstring charKey(std::wstring(1, (wchar_t)previous) + std::wstring(1, (wchar_t)c));
+						metric->kerning[charKey] =
+							glm::vec2((real)delta.x / 64.0f, (real)delta.y / 64.0f);
+					}
+				}
+			}
 
 			if (FT_Load_Glyph(face, glyphIndex, FT_LOAD_RENDER))
 			{

@@ -3148,8 +3148,12 @@ namespace flex
 
 			std::map<i32, FontMetric*> characters;
 			std::array<glm::vec2i, 4> maxPos;
-			FT_Face face;
-			if (!LoadFontMetrics(fontFilePath, ft, font, size, bScreenSpace, &characters, &maxPos, &face))
+
+			std::vector<char> fileMemory;
+			ReadFile(fontFilePath, fileMemory, true);
+
+			FT_Face face = {};
+			if (!LoadFontMetrics(fileMemory, fontFilePath, ft, font, size, bScreenSpace, &characters, &maxPos, &face))
 			{
 				return false;
 			}
@@ -3253,7 +3257,7 @@ namespace flex
 				GLRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
 
 				// Render to Glyphs atlas
-				FT_Set_Pixel_Sizes(face, 0, size * sampleDensity);
+				//FT_Set_Pixel_Sizes(face, 0, size * sampleDensity);
 
 				for (auto& charPair : characters)
 				{

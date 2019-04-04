@@ -4,6 +4,10 @@
 #include "RendererTypes.hpp"
 
 class btIDebugDraw;
+typedef struct FT_LibraryRec_;
+typedef struct FT_LibraryRec_  *FT_Library;
+typedef struct FT_FaceRec_;
+typedef struct FT_FaceRec_*  FT_Face;
 
 namespace flex
 {
@@ -198,7 +202,7 @@ namespace flex
 		// Returns true if the parent-child tree changed during this call
 		bool DrawImGuiGameObjectNameAndChildren(GameObject* gameObject);
 
-		bool LoadFontMetrics(const std::string& fontFilePath, FT_Library& ft, BitmapFont** font,
+		bool LoadFontMetrics(const std::vector<char>& fileMemory, const std::string& fontFilePath,FT_Library& ft, BitmapFont** font,
 			i16 size, bool bScreenSpace, std::map<i32, struct FontMetric*>* outCharacters,
 			std::array<glm::vec2i, 4>* outMaxPositions, FT_Face* outFace);
 
