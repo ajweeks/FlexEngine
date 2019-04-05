@@ -499,7 +499,7 @@ namespace flex
 		SaveCommonSettingsToDisk(false);
 
 		RenderObjectCreateInfo gizmoCreateInfo = {};
-		gizmoCreateInfo.depthTestReadFunc = DepthTestFunc::LEQUAL;
+		gizmoCreateInfo.depthTestReadFunc = DepthTestFunc::GEQUAL;
 		gizmoCreateInfo.depthWriteEnable = false;
 		gizmoCreateInfo.bEditorObject = true;
 		gizmoCreateInfo.cullFace = CullFace::BACK;

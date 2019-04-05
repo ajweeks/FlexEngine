@@ -783,9 +783,10 @@ namespace flex
 
 					vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
+					// TODO: Is dim correct as far plane?
 					// Push constants
 					skyboxMat.pushConstantBlock.mvp =
-						glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (real)dim) * s_CaptureViews[face];
+						glm::perspective(PI_DIV_TWO, 1.0f, (real)dim, 0.1f) * s_CaptureViews[face];
 					vkCmdPushConstants(cmdBuf, pipelinelayout, VK_SHADER_STAGE_VERTEX_BIT,
 						0, sizeof(Material::PushConstantBlock), &skyboxMat.pushConstantBlock);
 
@@ -1244,9 +1245,10 @@ namespace flex
 
 					vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
+					// TODO: Is dim correct as far plane?
 					// Push constants
 					skyboxMat.pushConstantBlock.mvp =
-						glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (real)dim) * s_CaptureViews[face];
+						glm::perspective(PI_DIV_TWO, 1.0f, (real)dim, 0.1f) * s_CaptureViews[face];
 					vkCmdPushConstants(cmdBuf, pipelinelayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock),
 						&skyboxMat.pushConstantBlock);
 
@@ -1675,8 +1677,9 @@ namespace flex
 					vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 					// Push constants
+					// TODO: Is dim correct as far plane?
 					skyboxMat.pushConstantBlock.mvp =
-						glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (real)dim) * s_CaptureViews[face];
+						glm::perspective(PI_DIV_TWO, 1.0f, (real)dim, 0.1f) * s_CaptureViews[face];
 					vkCmdPushConstants(cmdBuf, pipelinelayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock), &skyboxMat.pushConstantBlock);
 
 					vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);

@@ -221,7 +221,7 @@ namespace flex
 			bool bDeferred = false;
 			bool bWireframe = false;
 			bool bWriteToDepth = true;
-			DepthTestFunc depthTestFunc = DepthTestFunc::LEQUAL;
+			DepthTestFunc depthTestFunc = DepthTestFunc::GEQUAL;
 			RenderID cubemapObjectRenderID = InvalidRenderID;
 			MaterialID materialOverride = InvalidMaterialID;
 		};

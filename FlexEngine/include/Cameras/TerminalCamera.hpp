@@ -11,7 +11,7 @@ namespace flex
 	class TerminalCamera final : public BaseCamera
 	{
 	public:
-		TerminalCamera(real FOV = glm::radians(50.0f), real zNear = 0.1f, real zFar = 1000.0f);
+		TerminalCamera(real FOV = glm::radians(50.0f));
 
 		virtual void Initialize() override;
 		virtual void Update() override;

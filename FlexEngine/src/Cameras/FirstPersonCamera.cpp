@@ -16,8 +16,8 @@ IGNORE_WARNINGS_POP
 
 namespace flex
 {
-	FirstPersonCamera::FirstPersonCamera(real FOV, real zNear, real zFar) :
-		BaseCamera("first-person", true, FOV, zNear, zFar)
+	FirstPersonCamera::FirstPersonCamera(real FOV) :
+		BaseCamera("first-person", true, FOV)
 	{
 		ResetOrientation();
 		RecalculateViewProjection();

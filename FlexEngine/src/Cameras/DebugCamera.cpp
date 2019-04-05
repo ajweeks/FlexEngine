@@ -17,8 +17,8 @@ IGNORE_WARNINGS_POP
 
 namespace flex
 {
-	DebugCamera::DebugCamera(real FOV, real zNear, real zFar) :
-		BaseCamera("debug", false, FOV, zNear, zFar),
+	DebugCamera::DebugCamera(real FOV) :
+		BaseCamera("debug", false, FOV),
 		mouseButtonCallback(this, &DebugCamera::OnMouseButtonEvent),
 		mouseMovedCallback(this, &DebugCamera::OnMouseMovedEvent),
 		m_MouseDragDist(0.0f),

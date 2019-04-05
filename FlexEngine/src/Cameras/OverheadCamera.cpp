@@ -20,8 +20,8 @@ IGNORE_WARNINGS_POP
 
 namespace flex
 {
-	OverheadCamera::OverheadCamera(real FOV, real zNear, real zFar) :
-		BaseCamera("overhead", true, FOV, zNear, zFar)
+	OverheadCamera::OverheadCamera(real FOV) :
+		BaseCamera("overhead", true, FOV)
 	{
 		ResetValues();
 	}

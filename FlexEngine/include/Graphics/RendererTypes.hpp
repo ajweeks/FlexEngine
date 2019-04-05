@@ -376,7 +376,7 @@ namespace flex
 
 		GameObject* gameObject = nullptr;
 
-		DepthTestFunc depthTestReadFunc = DepthTestFunc::LEQUAL;
+		DepthTestFunc depthTestReadFunc = DepthTestFunc::GEQUAL;
 		CullFace cullFace = CullFace::BACK;
 
 		bool visible = true;

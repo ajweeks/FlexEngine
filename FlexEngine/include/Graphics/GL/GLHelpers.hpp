@@ -126,7 +126,7 @@ namespace flex
 			GLenum cullFace = 0x0405; // GL_BACK;
 
 			// TODO: Remove these in place of DrawCallInfo members
-			GLenum depthTestReadFunc = 0x0203; // GL_LEQUAL;
+			GLenum depthTestReadFunc = 0x0206; // GL_GEQUAL;
 			GLboolean depthWriteEnable = 1;
 
 			u32 vertexBuffer = 0;

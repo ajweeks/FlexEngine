@@ -100,6 +100,8 @@ namespace flex
 			LoadShaders();
 
 			glEnable(GL_DEPTH_TEST);
+			glClearDepth(0.0f);
+
 			glFrontFace(GL_CCW);
 			glLineWidth(3.0f);
 
@@ -130,9 +132,9 @@ namespace flex
 				CreateOffscreenFrameBuffer(&m_Offscreen1FBO, &m_Offscreen1RBO, frameBufferSize, m_OffscreenTexture1Handle);
 			}
 
-			const real captureProjectionNearPlane = g_CameraManager->CurrentCamera()->GetZNear();
-			const real captureProjectionFarPlane = g_CameraManager->CurrentCamera()->GetZFar();
-			m_CaptureProjection = glm::perspective(glm::radians(90.0f), 1.0f, captureProjectionNearPlane, captureProjectionFarPlane);
+			const real captureProjectionNearPlane = g_CameraManager->CurrentCamera()->GetZFar();
+			const real captureProjectionFarPlane = g_CameraManager->CurrentCamera()->GetZNear();
+			m_CaptureProjection = glm::perspective(glm::radians(90.0f), 1.0f, captureProjectionFarPlane, captureProjectionNearPlane);
 			m_CaptureViews =
 			{
 				glm::lookAtRH(VEC3_ZERO, glm::vec3(1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
@@ -1676,7 +1678,7 @@ namespace flex
 				drawCallInfo.depthTestFunc = DepthTestFunc::ALWAYS;
 				ShadeDeferredObjects(drawCallInfo);
 				drawCallInfo.bWriteToDepth = true;
-				drawCallInfo.depthTestFunc = DepthTestFunc::LEQUAL;
+				drawCallInfo.depthTestFunc = DepthTestFunc::GEQUAL;
 				DrawForwardObjects(drawCallInfo);
 			}
 			Profiler::PrintBlockDuration(profilerBlockName);
@@ -1783,7 +1785,7 @@ namespace flex
 			{
 				if (!matPair.second.material.engineMaterial)
 				{
-					result.push_back({ matPair.second.material.name, matPair.first });
+					result.emplace_back(matPair.second.material.name, matPair.first);
 				}
 			}
 
@@ -1963,7 +1965,7 @@ namespace flex
 			drawCallInfo.depthTestFunc = DepthTestFunc::ALWAYS;
 			ShadeDeferredObjects(drawCallInfo);
 			drawCallInfo.bWriteToDepth = true;
-			drawCallInfo.depthTestFunc = DepthTestFunc::LEQUAL;
+			drawCallInfo.depthTestFunc = DepthTestFunc::GEQUAL;
 			DrawForwardObjects(drawCallInfo);
 			DrawWorldSpaceSprites();
 			ApplyPostProcessing();
@@ -2397,6 +2399,8 @@ namespace flex
 					frameBufferSize.y, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
 			}
 			glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+			glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
+			glBindRenderbuffer(GL_RENDERBUFFER, m_gBufferDepthHandle);
 
 			GL_POP_DEBUG_GROUP();
 		}
@@ -2937,7 +2941,7 @@ namespace flex
 
 			if (drawInfo.bReadDepth)
 			{
-				glDepthFunc(GL_LEQUAL);
+				glDepthFunc(GL_GEQUAL);
 			}
 			else
 			{
@@ -3103,7 +3107,7 @@ namespace flex
 
 			glDisable(GL_CULL_FACE);
 
-			glDepthFunc(GL_LEQUAL);
+			glDepthFunc(GL_GEQUAL);
 			glDepthMask(GL_TRUE);
 
 			glEnable(GL_BLEND);
@@ -3461,7 +3465,7 @@ namespace flex
 			if (m_DirectionalLight == nullptr)
 			{
 				outView = glm::lookAt(VEC3_ZERO, VEC3_FORWARD, VEC3_UP);
-				outProj = glm::ortho(-1234.0f, 1234.0f, -4567.0f, 4567.0f, 0.0f, 1.0f);
+				outProj = glm::ortho(-1234.0f, 1234.0f, -4567.0f, 4567.0f, 1.0f, 0.01f);
 				return;
 			}
 
@@ -3469,9 +3473,9 @@ namespace flex
 			outView = glm::lookAt(VEC3_ZERO, -dirLightDir, VEC3_UP);
 
 			real zoom = m_DirectionalLight->shadowMapZoom;
-			real nearPlane = m_DirectionalLight->shadowMapNearPlane;
-			real farPlane = m_DirectionalLight->shadowMapFarPlane;
-			outProj = glm::ortho(-zoom, zoom, -zoom, zoom, nearPlane, farPlane);
+			real nearPlane = m_DirectionalLight->shadowMapFarPlane;
+			real farPlane = m_DirectionalLight->shadowMapNearPlane;
+			outProj = glm::ortho(-zoom, zoom, -zoom, zoom, farPlane, nearPlane);
 		}
 
 		void GLRenderer::DrawRenderObjectBatch(const std::vector<GLRenderObject*>& batchedRenderObjects, const DrawCallInfo& drawCallInfo)
@@ -3508,14 +3512,9 @@ namespace flex
 
 			for (GLRenderObject* renderObject : batchedRenderObjects)
 			{
-				if (!renderObject->gameObject->IsVisible())
+				if (!renderObject->gameObject->IsVisible() || renderObject->vertexBufferData == nullptr)
 				{
-					continue;
-				}
-
-				if (!renderObject->vertexBufferData)
-				{
-					//PrintError("Attempted to draw object which contains no vertex buffer data: %s\n", renderObject->gameObject->GetName().c_str());
+					// TODO: Assert false on batch containing invalid render object
 					continue;
 				}
 
