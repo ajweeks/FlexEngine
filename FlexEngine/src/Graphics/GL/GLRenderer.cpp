@@ -308,12 +308,11 @@ namespace flex
 				RenderObjectCreateInfo quad2DCreateInfo = {};
 				quad2DCreateInfo.vertexBufferData = &m_Quad2DVertexBufferData;
 				quad2DCreateInfo.materialID = m_PostProcessMatID;
-				quad2DCreateInfo.depthWriteEnable = false;
+				quad2DCreateInfo.bDepthWriteEnable = false;
 				quad2DCreateInfo.gameObject = quad2DGameObject;
 				quad2DCreateInfo.cullFace = CullFace::NONE;
 				quad2DCreateInfo.visibleInSceneExplorer = false;
 				quad2DCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
-				quad2DCreateInfo.depthWriteEnable = false;
 				m_Quad2DRenderID = InitializeRenderObject(&quad2DCreateInfo);
 
 				m_Quad2DVertexBufferData.DescribeShaderVariables(this, m_Quad2DRenderID);
@@ -357,12 +356,11 @@ namespace flex
 				RenderObjectCreateInfo quad3DCreateInfo = {};
 				quad3DCreateInfo.vertexBufferData = &m_Quad3DVertexBufferData;
 				quad3DCreateInfo.materialID = m_SpriteMatID;
-				quad3DCreateInfo.depthWriteEnable = false;
+				quad3DCreateInfo.bDepthWriteEnable = false;
 				quad3DCreateInfo.gameObject = quad3DGameObject;
 				quad3DCreateInfo.cullFace = CullFace::NONE;
 				quad3DCreateInfo.visibleInSceneExplorer = false;
 				quad3DCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
-				quad3DCreateInfo.depthWriteEnable = false;
 				quad3DCreateInfo.bEditorObject = true; // TODO: Create other quad which is identical but is not an editor object for gameplay objects?
 				m_Quad3DRenderID = InitializeRenderObject(&quad3DCreateInfo);
 
@@ -1108,7 +1106,7 @@ namespace flex
 			renderObject->gameObject = createInfo->gameObject;
 			renderObject->cullFace = CullFaceToGLCullFace(createInfo->cullFace);
 			renderObject->depthTestReadFunc = DepthTestFuncToGlenum(createInfo->depthTestReadFunc);
-			renderObject->depthWriteEnable = BoolToGLBoolean(createInfo->depthWriteEnable);
+			renderObject->bDepthWriteEnable = BoolToGLBoolean(createInfo->bDepthWriteEnable);
 			renderObject->bEditorObject = createInfo->bEditorObject;
 
 			if (renderObject->materialID == InvalidMaterialID)
@@ -1343,7 +1341,7 @@ namespace flex
 
 					glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-					glDepthMask(skyboxRenderObject->depthWriteEnable);
+					glDepthMask(skyboxRenderObject->bDepthWriteEnable);
 
 					glDrawArrays(skyboxRenderObject->topology, 0,
 						(GLsizei)skyboxRenderObject->vertexBufferData->VertexCount);
@@ -1410,7 +1408,7 @@ namespace flex
 				}
 
 				glDepthFunc(skybox->depthTestReadFunc);
-				glDepthMask(skybox->depthWriteEnable);
+				glDepthMask(skybox->bDepthWriteEnable);
 
 				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
 				i32 roughnessUniformLocation = glGetUniformLocation(prefilterShader.program, "roughness");
@@ -1497,7 +1495,7 @@ namespace flex
 					quadCreateInfo.vertexBufferData = &m_1x1_NDC_QuadVertexBufferData;
 					quadCreateInfo.gameObject = oneByOneQuadGameObject;
 					quadCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
-					quadCreateInfo.depthWriteEnable = false;
+					quadCreateInfo.bDepthWriteEnable = false;
 					quadCreateInfo.visibleInSceneExplorer = false;
 
 					RenderID quadRenderID = InitializeRenderObject(&quadCreateInfo);
@@ -1609,7 +1607,7 @@ namespace flex
 
 				glDepthFunc(skybox->depthTestReadFunc);
 
-				glDepthMask(skybox->depthWriteEnable);
+				glDepthMask(skybox->bDepthWriteEnable);
 
 				glBindVertexArray(skybox->VAO);
 				glBindBuffer(GL_ARRAY_BUFFER, skybox->VBO);
@@ -2201,7 +2199,7 @@ namespace flex
 				}
 				GLShader* shader = &m_Shaders[shaderID];
 
-				if (shader->shader.deferred)
+				if (shader->shader.bDeferred)
 				{
 					m_DeferredRenderObjectBatches.emplace_back();
 					for (GLRenderObject* renderObject : m_RenderObjects)
@@ -2240,7 +2238,7 @@ namespace flex
 					renderObject->bEditorObject &&
 					renderObject->vertexBufferData)
 				{
-					if (renderObject->depthWriteEnable)
+					if (renderObject->bDepthWriteEnable)
 					{
 						m_DepthAwareEditorRenderObjectBatch.push_back(renderObject);
 					}
@@ -2976,7 +2974,7 @@ namespace flex
 			}
 
 			// TODO: Remove (use draw call info member)
-			glDepthMask(spriteRenderObject->depthWriteEnable);
+			glDepthMask(spriteRenderObject->bDepthWriteEnable);
 			glDrawArrays(spriteRenderObject->topology, 0, (GLsizei)spriteRenderObject->vertexBufferData->VertexCount);
 		}
 
@@ -3547,7 +3545,7 @@ namespace flex
 				}
 
 				// TODO: Move to translucent pass?
-				if (shader->translucent)
+				if (shader->bTranslucent)
 				{
 					glEnable(GL_BLEND);
 					glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -3636,7 +3634,7 @@ namespace flex
 				else
 				{
 					// TODO: Move to translucent pass?
-					if (shader->translucent)
+					if (shader->bTranslucent)
 					{
 						glEnable(GL_BLEND);
 						glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -4020,9 +4018,9 @@ namespace flex
 			// TOOD: Determine this info automatically when parsing shader code
 
 			// Deferred combine
-			m_Shaders[shaderID].shader.deferred = false; // Sounds strange but this isn't deferred
+			m_Shaders[shaderID].shader.bDeferred = false; // Sounds strange but this isn't deferred
 			// m_Shaders[shaderID].shader.subpass = 0;
-			m_Shaders[shaderID].shader.depthWriteEnable = false; // Disable depth writing
+			m_Shaders[shaderID].shader.bDepthWriteEnable = false; // Disable depth writing
 			m_Shaders[shaderID].shader.bNeedBRDFLUT = true;
 			m_Shaders[shaderID].shader.bNeedShadowMap = true;
 			m_Shaders[shaderID].shader.bNeedIrradianceSampler = true;
@@ -4047,9 +4045,9 @@ namespace flex
 			++shaderID;
 
 			// Deferred combine cubemap
-			m_Shaders[shaderID].shader.deferred = false; // Sounds strange but this isn't deferred
+			m_Shaders[shaderID].shader.bDeferred = false; // Sounds strange but this isn't deferred
 			// m_Shaders[shaderID].shader.subpass = 0;
-			m_Shaders[shaderID].shader.depthWriteEnable = false; // Disable depth writing
+			m_Shaders[shaderID].shader.bDepthWriteEnable = false; // Disable depth writing
 			m_Shaders[shaderID].shader.bNeedBRDFLUT = true;
 			//m_Shaders[shaderID].shader.bNeedShadowMap = true;
 			m_Shaders[shaderID].shader.bNeedIrradianceSampler = true;
@@ -4076,8 +4074,8 @@ namespace flex
 			++shaderID;
 
 			// Color
-			m_Shaders[shaderID].shader.deferred = false;
-			m_Shaders[shaderID].shader.translucent = true;
+			m_Shaders[shaderID].shader.bDeferred = false;
+			m_Shaders[shaderID].shader.bTranslucent = true;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
@@ -4090,7 +4088,7 @@ namespace flex
 			++shaderID;
 
 			// PBR
-			m_Shaders[shaderID].shader.deferred = true;
+			m_Shaders[shaderID].shader.bDeferred = true;
 			m_Shaders[shaderID].shader.bNeedAlbedoSampler = true;
 			m_Shaders[shaderID].shader.bNeedMetallicSampler = true;
 			m_Shaders[shaderID].shader.bNeedRoughnessSampler = true;
@@ -4120,7 +4118,7 @@ namespace flex
 			++shaderID;
 
 			// PBR - WORLD SPACE
-			m_Shaders[shaderID].shader.deferred = true;
+			m_Shaders[shaderID].shader.bDeferred = true;
 			m_Shaders[shaderID].shader.bNeedAlbedoSampler = true;
 			m_Shaders[shaderID].shader.bNeedNormalSampler = true;
 			m_Shaders[shaderID].shader.vertexAttributes =
@@ -4144,7 +4142,7 @@ namespace flex
 			++shaderID;
 
 			// Skybox
-			m_Shaders[shaderID].shader.deferred = false;
+			m_Shaders[shaderID].shader.bDeferred = false;
 			m_Shaders[shaderID].shader.bNeedCubemapSampler = true;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION;
@@ -4160,7 +4158,7 @@ namespace flex
 			++shaderID;
 
 			// Equirectangular to Cube
-			m_Shaders[shaderID].shader.deferred = false;
+			m_Shaders[shaderID].shader.bDeferred = false;
 			m_Shaders[shaderID].shader.bNeedHDREquirectangularSampler = true;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION;
@@ -4173,7 +4171,7 @@ namespace flex
 			++shaderID;
 
 			// Irradiance
-			m_Shaders[shaderID].shader.deferred = false;
+			m_Shaders[shaderID].shader.bDeferred = false;
 			m_Shaders[shaderID].shader.bNeedCubemapSampler = true;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION;
@@ -4186,7 +4184,7 @@ namespace flex
 			++shaderID;
 
 			// Prefilter
-			m_Shaders[shaderID].shader.deferred = false;
+			m_Shaders[shaderID].shader.bDeferred = false;
 			m_Shaders[shaderID].shader.bNeedCubemapSampler = true;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION;
@@ -4199,7 +4197,7 @@ namespace flex
 			++shaderID;
 
 			// BRDF
-			m_Shaders[shaderID].shader.deferred = false;
+			m_Shaders[shaderID].shader.bDeferred = false;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV;
@@ -4210,7 +4208,7 @@ namespace flex
 			++shaderID;
 
 			// Sprite
-			m_Shaders[shaderID].shader.deferred = false;
+			m_Shaders[shaderID].shader.bDeferred = false;
 
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION |
@@ -4227,7 +4225,7 @@ namespace flex
 			++shaderID;
 
 			// Post processing
-			m_Shaders[shaderID].shader.deferred = false;
+			m_Shaders[shaderID].shader.bDeferred = false;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION_2D |
 				(u32)VertexAttribute::UV;
@@ -4241,7 +4239,7 @@ namespace flex
 			++shaderID;
 
 			// Post FXAA (Fast approximate anti-aliasing)
-			m_Shaders[shaderID].shader.deferred = false;
+			m_Shaders[shaderID].shader.bDeferred = false;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION_2D |
 				(u32)VertexAttribute::UV;
@@ -4259,7 +4257,7 @@ namespace flex
 			++shaderID;
 
 			// Compute SDF
-			m_Shaders[shaderID].shader.deferred = false;
+			m_Shaders[shaderID].shader.bDeferred = false;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV;
@@ -4277,7 +4275,7 @@ namespace flex
 			++shaderID;
 
 			// Font SS
-			m_Shaders[shaderID].shader.deferred = false;
+			m_Shaders[shaderID].shader.bDeferred = false;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION_2D |
 				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
@@ -4296,7 +4294,7 @@ namespace flex
 			++shaderID;
 
 			// Font WS
-			m_Shaders[shaderID].shader.deferred = false;
+			m_Shaders[shaderID].shader.bDeferred = false;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
@@ -4314,7 +4312,7 @@ namespace flex
 			++shaderID;
 
 			// Shadow
-			m_Shaders[shaderID].shader.deferred = false;
+			m_Shaders[shaderID].shader.bDeferred = false;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION;
 
@@ -4757,7 +4755,7 @@ namespace flex
 			outInfo.visibleInSceneExplorer = renderObject->gameObject->IsVisibleInSceneExplorer();
 			outInfo.cullFace = GLCullFaceToCullFace(renderObject->cullFace);
 			outInfo.depthTestReadFunc = GlenumToDepthTestFunc(renderObject->depthTestReadFunc);
-			outInfo.depthWriteEnable = (renderObject->depthWriteEnable == GL_TRUE);
+			outInfo.bDepthWriteEnable = (renderObject->bDepthWriteEnable == GL_TRUE);
 			outInfo.bEditorObject = renderObject->bEditorObject;
 
 			return true;
@@ -4936,7 +4934,7 @@ namespace flex
 			gBufferQuadCreateInfo.gameObject = gBufferQuadGameObject;
 			gBufferQuadCreateInfo.vertexBufferData = &m_gBufferQuadVertexBufferData;
 			gBufferQuadCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS; // Ignore previous depth values
-			gBufferQuadCreateInfo.depthWriteEnable = false; // Don't write GBuffer quad to depth buffer
+			gBufferQuadCreateInfo.bDepthWriteEnable = false; // Don't write GBuffer quad to depth buffer
 			gBufferQuadCreateInfo.visibleInSceneExplorer = false;
 
 			m_GBufferQuadRenderID = InitializeRenderObject(&gBufferQuadCreateInfo);

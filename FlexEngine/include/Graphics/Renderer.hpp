@@ -221,6 +221,7 @@ namespace flex
 			bool bDeferred = false;
 			bool bWireframe = false;
 			bool bWriteToDepth = true;
+			// NOTE: DepthTestFunc only supported in GL, Vulkan requires specification at pipeline creation time
 			DepthTestFunc depthTestFunc = DepthTestFunc::GEQUAL;
 			RenderID cubemapObjectRenderID = InvalidRenderID;
 			MaterialID materialOverride = InvalidMaterialID;

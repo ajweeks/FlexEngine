@@ -1751,6 +1751,22 @@ namespace flex
 		}
 
 
+		VkCompareOp DepthTestFuncToVkCompareOp(DepthTestFunc func)
+		{
+			switch (func)
+			{
+			case DepthTestFunc::ALWAYS:		return VK_COMPARE_OP_ALWAYS;
+			case DepthTestFunc::NEVER:		return VK_COMPARE_OP_NEVER;
+			case DepthTestFunc::LESS:		return VK_COMPARE_OP_LESS;
+			case DepthTestFunc::LEQUAL:		return VK_COMPARE_OP_LESS_OR_EQUAL;
+			case DepthTestFunc::GREATER:	return VK_COMPARE_OP_GREATER;
+			case DepthTestFunc::GEQUAL:		return VK_COMPARE_OP_GREATER_OR_EQUAL;
+			case DepthTestFunc::EQUAL:		return VK_COMPARE_OP_EQUAL;
+			case DepthTestFunc::NOTEQUAL:	return VK_COMPARE_OP_NOT_EQUAL;
+			default:						return VK_COMPARE_OP_MAX_ENUM;
+			}
+		}
+
 		VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* createInfo, const VkAllocationCallbacks* allocator, VkDebugReportCallbackEXT* callback)
 		{
 			auto func = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT");

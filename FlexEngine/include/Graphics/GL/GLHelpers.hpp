@@ -127,7 +127,7 @@ namespace flex
 
 			// TODO: Remove these in place of DrawCallInfo members
 			GLenum depthTestReadFunc = 0x0206; // GL_GEQUAL;
-			GLboolean depthWriteEnable = 1;
+			GLboolean bDepthWriteEnable = 1;
 
 			u32 vertexBuffer = 0;
 			VertexBufferData* vertexBufferData = nullptr;

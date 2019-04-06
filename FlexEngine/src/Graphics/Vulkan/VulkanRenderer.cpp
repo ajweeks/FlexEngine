@@ -631,7 +631,7 @@ namespace flex
 			depthStencilState.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 			depthStencilState.depthTestEnable = VK_FALSE;
 			depthStencilState.depthWriteEnable = VK_FALSE;
-			depthStencilState.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+			depthStencilState.depthCompareOp = VK_COMPARE_OP_GREATER_OR_EQUAL;
 			depthStencilState.front = depthStencilState.back;
 			depthStencilState.back.compareOp = VK_COMPARE_OP_ALWAYS;
 
@@ -783,12 +783,11 @@ namespace flex
 
 					vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-					// TODO: Is dim correct as far plane?
 					// Push constants
 					skyboxMat.pushConstantBlock.mvp =
-						glm::perspective(PI_DIV_TWO, 1.0f, (real)dim, 0.1f) * s_CaptureViews[face];
-					vkCmdPushConstants(cmdBuf, pipelinelayout, VK_SHADER_STAGE_VERTEX_BIT,
-						0, sizeof(Material::PushConstantBlock), &skyboxMat.pushConstantBlock);
+						glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (real)dim) * s_CaptureViews[face];
+					vkCmdPushConstants(cmdBuf, pipelinelayout, VK_SHADER_STAGE_VERTEX_BIT, 0,
+						sizeof(Material::PushConstantBlock), &skyboxMat.pushConstantBlock);
 
 					vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
@@ -1098,7 +1097,7 @@ namespace flex
 			depthStencilState.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 			depthStencilState.depthTestEnable = VK_FALSE;
 			depthStencilState.depthWriteEnable = VK_FALSE;
-			depthStencilState.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+			depthStencilState.depthCompareOp = VK_COMPARE_OP_GREATER_OR_EQUAL;
 			depthStencilState.front = depthStencilState.back;
 			depthStencilState.back.compareOp = VK_COMPARE_OP_ALWAYS;
 
@@ -1245,12 +1244,11 @@ namespace flex
 
 					vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-					// TODO: Is dim correct as far plane?
 					// Push constants
 					skyboxMat.pushConstantBlock.mvp =
-						glm::perspective(PI_DIV_TWO, 1.0f, (real)dim, 0.1f) * s_CaptureViews[face];
-					vkCmdPushConstants(cmdBuf, pipelinelayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock),
-						&skyboxMat.pushConstantBlock);
+						glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (real)dim) * s_CaptureViews[face];
+					vkCmdPushConstants(cmdBuf, pipelinelayout, VK_SHADER_STAGE_VERTEX_BIT, 0,
+						sizeof(Material::PushConstantBlock), &skyboxMat.pushConstantBlock);
 
 					vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
@@ -1526,7 +1524,7 @@ namespace flex
 			rasterizationState.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
 			rasterizationState.polygonMode = VK_POLYGON_MODE_FILL;
 			rasterizationState.cullMode = skyboxRenderObject->cullMode;
-			rasterizationState.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+			rasterizationState.frontFace = VK_FRONT_FACE_CLOCKWISE;
 			rasterizationState.flags = 0;
 			rasterizationState.depthClampEnable = VK_FALSE;
 			rasterizationState.lineWidth = 1.0f;
@@ -1544,7 +1542,7 @@ namespace flex
 			depthStencilState.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 			depthStencilState.depthTestEnable = VK_FALSE;
 			depthStencilState.depthWriteEnable = VK_FALSE;
-			depthStencilState.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+			depthStencilState.depthCompareOp = VK_COMPARE_OP_GREATER_OR_EQUAL;
 			depthStencilState.front = depthStencilState.back;
 			depthStencilState.back.compareOp = VK_COMPARE_OP_ALWAYS;
 
@@ -1677,10 +1675,10 @@ namespace flex
 					vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 					// Push constants
-					// TODO: Is dim correct as far plane?
 					skyboxMat.pushConstantBlock.mvp =
-						glm::perspective(PI_DIV_TWO, 1.0f, (real)dim, 0.1f) * s_CaptureViews[face];
-					vkCmdPushConstants(cmdBuf, pipelinelayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock), &skyboxMat.pushConstantBlock);
+						glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (real)dim) * s_CaptureViews[face];
+					vkCmdPushConstants(cmdBuf, pipelinelayout, VK_SHADER_STAGE_VERTEX_BIT, 0,
+						sizeof(Material::PushConstantBlock), &skyboxMat.pushConstantBlock);
 
 					vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
@@ -1881,7 +1879,7 @@ namespace flex
 			pipelineRasterizationStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
 			pipelineRasterizationStateCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
 			pipelineRasterizationStateCreateInfo.cullMode = VK_CULL_MODE_NONE;
-			pipelineRasterizationStateCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+			pipelineRasterizationStateCreateInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
 			pipelineRasterizationStateCreateInfo.flags = 0;
 			pipelineRasterizationStateCreateInfo.depthClampEnable = VK_FALSE;
 			pipelineRasterizationStateCreateInfo.lineWidth = 1.0f;
@@ -1899,7 +1897,7 @@ namespace flex
 			pipelineDepthStencilStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 			pipelineDepthStencilStateCreateInfo.depthTestEnable = VK_FALSE;
 			pipelineDepthStencilStateCreateInfo.depthWriteEnable = VK_FALSE;
-			pipelineDepthStencilStateCreateInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+			pipelineDepthStencilStateCreateInfo.depthCompareOp = VK_COMPARE_OP_GREATER_OR_EQUAL;
 			pipelineDepthStencilStateCreateInfo.front = pipelineDepthStencilStateCreateInfo.back;
 			pipelineDepthStencilStateCreateInfo.back.compareOp = VK_COMPARE_OP_ALWAYS;
 
@@ -2326,6 +2324,8 @@ namespace flex
 			renderObject->cullMode = CullFaceToVkCullMode(createInfo->cullFace);
 			renderObject->materialName = m_Materials[renderObject->materialID].material.name;
 			renderObject->gameObject = createInfo->gameObject;
+			renderObject->bEditorObject = createInfo->bEditorObject;
+			renderObject->depthCompareOp = DepthTestFuncToVkCompareOp(createInfo->depthTestReadFunc);
 
 			if (createInfo->indices != nullptr &&
 				!createInfo->indices->empty())
@@ -3870,7 +3870,7 @@ namespace flex
 				clearValues[0].color = m_ClearColor;
 				clearValues[1].color = m_ClearColor;
 				clearValues[2].color = m_ClearColor;
-				clearValues[3].depthStencil = { 1.0f, 0 };
+				clearValues[3].depthStencil = { 0.0f, 0 };
 
 
 				VkRenderPassBeginInfo renderPassBeginInfo = {};
@@ -5021,11 +5021,12 @@ namespace flex
 			pipelineCreateInfo.cullMode = renderObject->cullMode;
 			pipelineCreateInfo.descriptorSetLayoutIndex = material->descriptorSetLayoutIndex;
 			pipelineCreateInfo.setDynamicStates = false;
-			pipelineCreateInfo.enabledColorBlending = shader.shader.translucent;
+			pipelineCreateInfo.enabledColorBlending = shader.shader.bTranslucent;
 			pipelineCreateInfo.pipelineLayout = renderObject->pipelineLayout.replace();
 			pipelineCreateInfo.grahpicsPipeline = renderObject->graphicsPipeline.replace();
 			pipelineCreateInfo.subpass = shader.shader.subpass;
-			pipelineCreateInfo.depthWriteEnable = shader.shader.depthWriteEnable ? VK_TRUE : VK_FALSE;
+			pipelineCreateInfo.depthWriteEnable = shader.shader.bDepthWriteEnable ? VK_TRUE : VK_FALSE;
+			pipelineCreateInfo.depthCompareOp = renderObject->depthCompareOp;
 			if (!material->material.renderToCubemap)
 			{
 				pipelineCreateInfo.renderPass = m_DeferredCombineRenderPass;
@@ -5038,7 +5039,7 @@ namespace flex
 				//pipelineCreateInfo.shaderID = cubemapGBufferShaderID;
 				//pipelineCreateInfo.subpass = cubemapGBufferShaderSubpass;
 			}
-			else if (shader.shader.deferred)
+			else if (shader.shader.bDeferred)
 			{
 				pipelineCreateInfo.renderPass = m_OffScreenFrameBuf->renderPass;
 			}
@@ -5133,7 +5134,7 @@ namespace flex
 			rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
 			rasterizer.lineWidth = 1.0f;
 			rasterizer.cullMode = createInfo->cullMode;
-			rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+			rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
 			rasterizer.depthBiasEnable = VK_FALSE;
 
 			VkPipelineMultisampleStateCreateInfo multisampling = {};
@@ -5198,13 +5199,10 @@ namespace flex
 
 			VkPipelineDepthStencilStateCreateInfo depthStencil = {};
 			depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-			depthStencil.depthTestEnable = createInfo->depthTestEnable;
-			depthStencil.depthWriteEnable = createInfo->depthWriteEnable ? VK_TRUE : VK_FALSE;
+			depthStencil.depthTestEnable = VK_TRUE;
 			depthStencil.depthCompareOp = createInfo->depthCompareOp;
-			depthStencil.depthBoundsTestEnable = VK_FALSE;
+			depthStencil.depthWriteEnable = createInfo->depthWriteEnable ? VK_TRUE : VK_FALSE;
 			depthStencil.stencilTestEnable = createInfo->stencilTestEnable;
-			depthStencil.minDepthBounds = 0.0f;
-			depthStencil.maxDepthBounds = 1.0f;
 			depthStencil.front = {};
 			depthStencil.back = {};
 
@@ -5723,6 +5721,8 @@ namespace flex
 				gBufferQuadCreateInfo.vertexBufferData = &m_gBufferQuadVertexBufferData;
 				gBufferQuadCreateInfo.cullFace = CullFace::NONE;
 				gBufferQuadCreateInfo.visibleInSceneExplorer = false;
+				gBufferQuadCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
+				gBufferQuadCreateInfo.bDepthWriteEnable = false;
 
 				m_gBufferQuadIndices = { 0, 1, 2,  2, 1, 3 };
 				gBufferQuadCreateInfo.indices = &m_gBufferQuadIndices;
@@ -5785,7 +5785,7 @@ namespace flex
 				clearValues[0].color = m_ClearColor;
 				clearValues[1].color = m_ClearColor;
 				clearValues[2].color = m_ClearColor;
-				clearValues[3].depthStencil = { 1.0f, 0 };
+				clearValues[3].depthStencil = { 0.0f, 0 };
 
 				VkRenderPassBeginInfo renderPassBeginInfo = {};
 				renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -5856,7 +5856,7 @@ namespace flex
 					VulkanShader& renderObjectShader = m_Shaders[renderObjectMat.material.shaderID];
 
 					// Only render non-deferred (forward) objects in this pass
-					if (renderObjectShader.shader.deferred)
+					if (renderObjectShader.shader.bDeferred)
 					{
 						continue;
 					}
@@ -6035,7 +6035,7 @@ namespace flex
 				// Not drawing to cubemap, just draw normally
 				std::array<VkClearValue, 2> clearValues = {};
 				clearValues[0].color = m_ClearColor;
-				clearValues[1].depthStencil = { 1.0f, 0 };
+				clearValues[1].depthStencil = { 0.0f, 0 };
 
 				VkRenderPassBeginInfo renderPassBeginInfo = {};
 				renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -6108,7 +6108,7 @@ namespace flex
 						VulkanShader& renderObjectShader = m_Shaders[renderObjectMat.material.shaderID];
 
 						// Only render non-deferred (forward) objects in this pass
-						if (renderObjectShader.shader.deferred)
+						if (renderObjectShader.shader.bDeferred)
 						{
 							continue;
 						}
@@ -6189,7 +6189,7 @@ namespace flex
 			clearValues[0].color = m_ClearColor;
 			clearValues[1].color = m_ClearColor;
 			clearValues[2].color = m_ClearColor;
-			clearValues[3].depthStencil = { 1.0f, 0 };
+			clearValues[3].depthStencil = { 0.0f, 0 };
 
 			VkRenderPassBeginInfo renderPassBeginInfo = {};
 			renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -6235,7 +6235,7 @@ namespace flex
 				VulkanShader& renderObjectShader = m_Shaders[renderObjectMat.material.shaderID];
 
 				// Only render deferred objects in this pass
-				if (!renderObjectShader.shader.deferred)
+				if (!renderObjectShader.shader.bDeferred)
 				{
 					continue;
 				}
@@ -7138,9 +7138,9 @@ namespace flex
 			ShaderID shaderID = 0;
 
 			// Color
-			m_Shaders[shaderID].shader.deferred = false;
+			m_Shaders[shaderID].shader.bDeferred = false;
 
-			m_Shaders[shaderID].shader.translucent = true;
+			m_Shaders[shaderID].shader.bTranslucent = true;
 			m_Shaders[shaderID].shader.subpass = 1;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION |
@@ -7156,7 +7156,7 @@ namespace flex
 
 			// PBR
 			m_Shaders[shaderID].shader.numAttachments = 3;
-			m_Shaders[shaderID].shader.deferred = true;
+			m_Shaders[shaderID].shader.bDeferred = true;
 			m_Shaders[shaderID].shader.subpass = 0;
 			m_Shaders[shaderID].shader.bNeedAlbedoSampler = true;
 			m_Shaders[shaderID].shader.bNeedMetallicSampler = true;
@@ -7194,7 +7194,7 @@ namespace flex
 
 			// PBR World Space
 			m_Shaders[shaderID].shader.numAttachments = 3;
-			m_Shaders[shaderID].shader.deferred = true;
+			m_Shaders[shaderID].shader.bDeferred = true;
 			m_Shaders[shaderID].shader.subpass = 0;
 			m_Shaders[shaderID].shader.bNeedAlbedoSampler = true;
 			m_Shaders[shaderID].shader.bNeedMetallicSampler = true;
@@ -7293,7 +7293,7 @@ namespace flex
 
 			// Deferred combine (sample gbuffer)
 			m_Shaders[shaderID].shader.subpass = 0;
-			m_Shaders[shaderID].shader.depthWriteEnable = false; // Disable depth writing
+			m_Shaders[shaderID].shader.bDepthWriteEnable = false; // Disable depth writing
 			m_Shaders[shaderID].shader.bNeedBRDFLUT = true;
 			m_Shaders[shaderID].shader.bNeedIrradianceSampler = true;
 			m_Shaders[shaderID].shader.bNeedPrefilteredMap = true;
@@ -7319,7 +7319,7 @@ namespace flex
 
 			// Deferred combine cubemap (sample GBuffer)
 			m_Shaders[shaderID].shader.subpass = 0;
-			m_Shaders[shaderID].shader.depthWriteEnable = false; // Disable depth writing
+			m_Shaders[shaderID].shader.bDepthWriteEnable = false; // Disable depth writing
 			m_Shaders[shaderID].shader.bNeedBRDFLUT = true;
 			m_Shaders[shaderID].shader.bNeedIrradianceSampler = true;
 			m_Shaders[shaderID].shader.bNeedPrefilteredMap = true;

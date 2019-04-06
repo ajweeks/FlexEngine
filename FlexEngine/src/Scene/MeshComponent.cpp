@@ -663,7 +663,8 @@ namespace flex
 			renderObjectCreateInfo.visibleInSceneExplorer = optionalCreateInfo->visibleInSceneExplorer;
 			renderObjectCreateInfo.cullFace = optionalCreateInfo->cullFace;
 			renderObjectCreateInfo.depthTestReadFunc = optionalCreateInfo->depthTestReadFunc;
-			renderObjectCreateInfo.depthWriteEnable = optionalCreateInfo->depthWriteEnable;
+			renderObjectCreateInfo.bDepthWriteEnable = optionalCreateInfo->bDepthWriteEnable;
+			renderObjectCreateInfo.bDepthTestEnable = optionalCreateInfo->bDepthTestEnable;
 			renderObjectCreateInfo.bEditorObject = optionalCreateInfo->bEditorObject;
 
 			if (optionalCreateInfo->vertexBufferData != nullptr)
@@ -725,7 +726,7 @@ namespace flex
 			renderObjectCreateInfo.visibleInSceneExplorer = optionalCreateInfo->visibleInSceneExplorer;
 			renderObjectCreateInfo.cullFace = optionalCreateInfo->cullFace;
 			renderObjectCreateInfo.depthTestReadFunc = optionalCreateInfo->depthTestReadFunc;
-			renderObjectCreateInfo.depthWriteEnable = optionalCreateInfo->depthWriteEnable;
+			renderObjectCreateInfo.bDepthWriteEnable = optionalCreateInfo->bDepthWriteEnable;
 			renderObjectCreateInfo.bEditorObject = optionalCreateInfo->bEditorObject;
 
 			if (optionalCreateInfo->vertexBufferData != nullptr)

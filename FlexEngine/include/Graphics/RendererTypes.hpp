@@ -381,7 +381,8 @@ namespace flex
 
 		bool visible = true;
 		bool visibleInSceneExplorer = true;
-		bool depthWriteEnable = true;
+		bool bDepthWriteEnable = true;
+		bool bDepthTestEnable = true;
 		bool bEditorObject = false;
 	};
 
@@ -419,9 +420,9 @@ namespace flex
 		i32 numAttachments = 1; // How many output textures the fragment shader has
 
 		i32 subpass = 0;
-		bool deferred = false; // TODO: Replace this bool with just checking if numAttachments is larger than 1
-		bool depthWriteEnable = true;
-		bool translucent = false;
+		bool bDeferred = false; // TODO: Replace this bool with just checking if numAttachments is larger than 1
+		bool bDepthWriteEnable = true;
+		bool bTranslucent = false;
 
 		// These variables should be set to true when the shader has these uniforms
 		bool bNeedNormalSampler = false;

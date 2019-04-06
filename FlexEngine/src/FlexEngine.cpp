@@ -500,7 +500,7 @@ namespace flex
 
 		RenderObjectCreateInfo gizmoCreateInfo = {};
 		gizmoCreateInfo.depthTestReadFunc = DepthTestFunc::GEQUAL;
-		gizmoCreateInfo.depthWriteEnable = false;
+		gizmoCreateInfo.bDepthWriteEnable = false;
 		gizmoCreateInfo.bEditorObject = true;
 		gizmoCreateInfo.cullFace = CullFace::BACK;
 
