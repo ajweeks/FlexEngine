@@ -56,9 +56,4 @@ void main()
 		normalize(mat3(uboDynamic.model) * in_Normal));
 
     gl_Position = uboConstant.viewProjection * worldPos;
-    
-	// Convert from GL coordinates to Vulkan coordinates
-	// TODO: Move out to external function in helper file
-	gl_Position.y = -gl_Position.y;
-	gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;
 }

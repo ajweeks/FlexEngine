@@ -31,9 +31,4 @@ void main()
 	gl_Position = uboConstant.viewProjection * uboDynamic.model * inWorldPos;
 
 	outColor = inColor * uboDynamic.multiplier;
-	
-	// Convert from GL coordinates to Vulkan coordinates
-	// TODO: Move out to external function in helper file
-	gl_Position.y = -gl_Position.y;
-	gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;
 }

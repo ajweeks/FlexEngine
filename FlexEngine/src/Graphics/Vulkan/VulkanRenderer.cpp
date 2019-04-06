@@ -82,6 +82,7 @@ namespace flex
 				u32 vkVersionMaj = VK_VERSION_MAJOR(props.apiVersion);
 				u32 vkVersionMin = VK_VERSION_MINOR(props.apiVersion);
 				u32 vkVersionPatch = VK_VERSION_PATCH(props.apiVersion);
+				assert(props.apiVersion >= VK_MAKE_VERSION(1, 1, 0)); // We need this version to support negative viewport heights
 				Print("Vulkan loaded - v%u.%u.%u\n", vkVersionMaj, vkVersionMin, vkVersionPatch);
 				Print("Vendor ID, Device ID: 0x%u, 0x%u\n", props.vendorID, props.deviceID);
 				Print("Device name: %s\n", (const char*)props.deviceName);
@@ -121,8 +122,8 @@ namespace flex
 
 			// NOTE: This is different from the GLRenderer's capture views
 			s_CaptureViews = {
-				glm::lookAt(VEC3_ZERO, glm::vec3(1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
 				glm::lookAt(VEC3_ZERO, glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+				glm::lookAt(VEC3_ZERO, glm::vec3(1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
 				glm::lookAt(VEC3_ZERO, glm::vec3(0.0f,  -1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  -1.0f)),
 				glm::lookAt(VEC3_ZERO, glm::vec3(0.0f, 1.0f,  0.0f), glm::vec3(0.0f,  0.0f, 1.0f)),
 				glm::lookAt(VEC3_ZERO, glm::vec3(0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
@@ -735,10 +736,10 @@ namespace flex
 			VkCommandBuffer cmdBuf = m_CommandBufferManager.CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
 
 			VkViewport viewport = {};
+			viewport.x = 0.0f;
+			viewport.y = (real)dim;
 			viewport.width = (real)dim;
-			viewport.height = (real)dim;
-			viewport.minDepth = 0.0;
-			viewport.maxDepth = 1.0f;
+			viewport.height = -(real)dim;
 
 			VkRect2D scissor = {};
 			scissor.extent = { dim, dim };
@@ -778,7 +779,7 @@ namespace flex
 				for (u32 face = 0; face < 6; ++face)
 				{
 					viewport.width = static_cast<real>(dim * std::pow(0.5f, mip));
-					viewport.height = viewport.width;
+					viewport.height = -viewport.width;
 					vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
 
 					vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -831,7 +832,7 @@ namespace flex
 					copyRegion.dstOffset = { 0, 0, 0 };
 
 					copyRegion.extent.width = static_cast<u32>(viewport.width);
-					copyRegion.extent.height = static_cast<u32>(viewport.height);
+					copyRegion.extent.height = static_cast<u32>(abs(viewport.height));
 					copyRegion.extent.depth = 1;
 
 					vkCmdCopyImage(
@@ -1207,10 +1208,10 @@ namespace flex
 			VkCommandBuffer cmdBuf = m_CommandBufferManager.CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
 
 			VkViewport viewport = {};
+			viewport.x = 0.0f;
+			viewport.y = (real)dim;
 			viewport.width = (real)dim;
-			viewport.height = (real)dim;
-			viewport.minDepth = 0.0f;
-			viewport.maxDepth = 1.0f;
+			viewport.height = -(real)dim;
 
 			VkRect2D scissor = {};
 			scissor.extent = { dim, dim };
@@ -1636,10 +1637,10 @@ namespace flex
 			VkCommandBuffer cmdBuf = m_CommandBufferManager.CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
 
 			VkViewport viewport = {};
+			viewport.x = 0.0f;
+			viewport.y = (real)dim;
 			viewport.width = (real)dim;
-			viewport.height = (real)dim;
-			viewport.minDepth = 0.0f;
-			viewport.maxDepth = 1.0f;
+			viewport.height = -(real)dim;
 
 			VkRect2D scissor = {};
 			scissor.extent.width = dim;
@@ -1996,10 +1997,10 @@ namespace flex
 			vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 			VkViewport viewport = {};
+			viewport.x = 0.0f;
+			viewport.y = (real)dim;
 			viewport.width = (real)dim;
-			viewport.height = (real)dim;
-			viewport.minDepth = 0.0f;
-			viewport.maxDepth = 1.0f;
+			viewport.height = -(real)dim;
 
 			VkRect2D scissor = {};
 			scissor.extent = { dim, dim };
@@ -3864,14 +3865,9 @@ namespace flex
 					VK_IMAGE_ASPECT_COLOR_BIT,
 					VK_IMAGE_LAYOUT_UNDEFINED,
 					VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-				m_CommandBufferManager.FlushCommandBuffer(layoutCmd, m_GraphicsQueue, true);
 
-				std::array<VkClearValue, 4> clearValues = {};
-				clearValues[0].color = m_ClearColor;
-				clearValues[1].color = m_ClearColor;
-				clearValues[2].color = m_ClearColor;
-				clearValues[3].depthStencil = { 0.0f, 0 };
-
+				// TODO?
+				//m_CommandBufferManager.FlushCommandBuffer(layoutCmd, m_GraphicsQueue, true);
 
 				VkRenderPassBeginInfo renderPassBeginInfo = {};
 				renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -3882,14 +3878,16 @@ namespace flex
 					(uint32_t)textureSize.x,
 					(uint32_t)textureSize.y
 				};
-				renderPassBeginInfo.clearValueCount = clearValues.size();
-				renderPassBeginInfo.pClearValues = clearValues.data();
+				renderPassBeginInfo.clearValueCount = 1;
+				renderPassBeginInfo.pClearValues = (VkClearValue*)&m_ClearColor;
 				vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 				VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
 				VkPipeline graphicsPipeline = VK_NULL_HANDLE;
 
 				GraphicsPipelineCreateInfo pipelineCreateInfo = {};
+				pipelineCreateInfo.grahpicsPipeline = &graphicsPipeline;
+				pipelineCreateInfo.pipelineLayout = &pipelineLayout;
 				pipelineCreateInfo.shaderID = computeSDFShaderID;
 				pipelineCreateInfo.vertexAttributes = computeSDFShader.shader.vertexAttributes;
 				pipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
@@ -3897,9 +3895,8 @@ namespace flex
 				pipelineCreateInfo.descriptorSetLayoutIndex = computeSDFShaderID;
 				pipelineCreateInfo.setDynamicStates = true;
 				pipelineCreateInfo.enabledColorBlending = false;
-				pipelineCreateInfo.pipelineLayout = &pipelineLayout;
-				pipelineCreateInfo.grahpicsPipeline = &graphicsPipeline;
 				pipelineCreateInfo.subpass = 0;
+				pipelineCreateInfo.depthCompareOp = VK_COMPARE_OP_ALWAYS;
 				pipelineCreateInfo.depthWriteEnable = VK_FALSE;
 				pipelineCreateInfo.renderPass = renderPass;
 				CreateGraphicsPipeline(&pipelineCreateInfo);
@@ -3967,9 +3964,9 @@ namespace flex
 						glm::vec2i viewportTL = glm::vec2i(metric->texCoord) + glm::vec2i(padding);
 
 						VkViewport viewport = VkViewport{
-							0.0f, 1.0f,
+							0.0f, (real)textureSize.y,
 							(real)textureSize.x,
-							(real)textureSize.y,
+							-(real)textureSize.y,
 							0.1f, 1000.0f
 						};
 						vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
@@ -5110,9 +5107,9 @@ namespace flex
 
 			VkViewport viewport = {};
 			viewport.x = 0.0f;
-			viewport.y = 0.0f;
+			viewport.y = (real)m_SwapChainExtent.height;
 			viewport.width = (real)m_SwapChainExtent.width;
-			viewport.height = (real)m_SwapChainExtent.height;
+			viewport.height = -(real)m_SwapChainExtent.height;
 			viewport.minDepth = 0.0f;
 			viewport.maxDepth = 1.0f;
 
@@ -5632,10 +5629,10 @@ namespace flex
 				};
 
 				gBufferQuadVertexBufferDataCreateInfo.texCoords_UV = {
-					{ 0.0f, 1.0f },
 					{ 0.0f, 0.0f },
-					{ 1.0f, 1.0f },
+					{ 0.0f, 1.0f },
 					{ 1.0f, 0.0f },
+					{ 1.0f, 1.0f },
 				};
 				gBufferQuadVertexBufferDataCreateInfo.attributes = (u32)VertexAttribute::POSITION | (u32)VertexAttribute::UV;
 				m_gBufferQuadVertexBufferData.Initialize(&gBufferQuadVertexBufferDataCreateInfo);
@@ -5811,9 +5808,9 @@ namespace flex
 				vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 				VkViewport viewport = VkViewport{
-					0.0f, 1.0f,
+					0.0f, (real)cubemapMaterial.material.cubemapSamplerSize.y,
 					(real)cubemapMaterial.material.cubemapSamplerSize.x,
-					(real)cubemapMaterial.material.cubemapSamplerSize.y,
+					-(real)cubemapMaterial.material.cubemapSamplerSize.y,
 					0.1f, 1000.0f
 				};
 				vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
@@ -6069,7 +6066,9 @@ namespace flex
 
 					vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-					VkViewport viewport = VkViewport{ 0.0f, 1.0f, (real)m_SwapChainExtent.width, (real)m_SwapChainExtent.height, 0.1f, 1000.0f };
+					VkViewport viewport = VkViewport{ 0.0f, (real)m_SwapChainExtent.height,
+						(real)m_SwapChainExtent.width, -(real)m_SwapChainExtent.height,
+						0.1f, 1000.0f };
 					vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
 					VkRect2D scissor = VkRect2D{ { 0u, 0u },{ m_SwapChainExtent.width, m_SwapChainExtent.height } };
@@ -6211,7 +6210,9 @@ namespace flex
 
 			// TODO: Make min and max values members
 			// TODO: Move to separate function, SetupDrawState?
-			VkViewport viewport = VkViewport{ 0.0f, 1.0f, (real)m_OffScreenFrameBuf->width, (real)m_OffScreenFrameBuf->height, 0.1f, 1000.0f };
+			VkViewport viewport = VkViewport{ 0.0f, (real)m_OffScreenFrameBuf->height,
+				(real)m_OffScreenFrameBuf->width, -(real)m_OffScreenFrameBuf->height,
+				0.1f, 1000.0f };
 			vkCmdSetViewport(offScreenCmdBuffer, 0, 1, &viewport);
 
 			VkRect2D scissor = VkRect2D{ { 0u, 0u },{ m_OffScreenFrameBuf->width, m_OffScreenFrameBuf->height } };

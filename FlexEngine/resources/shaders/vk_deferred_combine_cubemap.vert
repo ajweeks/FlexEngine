@@ -45,5 +45,7 @@ void main()
     ex_WorldPosition = in_Position;
 
     vec4 clipPos = uboConstant.viewProjection * uboDynamic.model * vec4(in_Position, 1.0);
-	gl_Position = clipPos.xyww;
+	gl_Position = clipPos;
+	// Push to far clip plane
+	gl_Position.z = 1.0e-9f;
 }
