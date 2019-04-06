@@ -102,7 +102,7 @@ namespace flex
 			glEnable(GL_DEPTH_TEST);
 			glClearDepth(0.0f);
 
-			glFrontFace(GL_CCW);
+			glFrontFace(GL_CW);
 			glLineWidth(3.0f);
 
 			// Prevent seams from appearing on lower mip map levels of cubemaps
@@ -4849,14 +4849,14 @@ namespace flex
 
 				gBufferQuadVertexBufferDataCreateInfo.positions_3D = {
 					glm::vec3(-1.0f,  -1.0f, 0.0f),
-					glm::vec3(3.0f,  -1.0f, 0.0f),
 					glm::vec3(-1.0f, 3.0f, 0.0f),
+					glm::vec3(3.0f,  -1.0f, 0.0f),
 				};
 
 				gBufferQuadVertexBufferDataCreateInfo.texCoords_UV = {
 					glm::vec2(0.0f, 0.0f),
-					glm::vec2(2.0f, 0.0f),
 					glm::vec2(0.0f, 2.0f),
+					glm::vec2(2.0f, 0.0f),
 				};
 
 				gBufferQuadVertexBufferDataCreateInfo.attributes = (u32)VertexAttribute::POSITION | (u32)VertexAttribute::UV;

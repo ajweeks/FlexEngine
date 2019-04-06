@@ -110,14 +110,14 @@ namespace flex
 			{
 				orbitingCenter = g_EngineInstance->GetSelectedObjectsCenter();
 				bOrbiting = true;
-				targetDPos += m_Right * -m_MouseDragDist.x * m_OrbitingSpeed * turnSpeedMultiplier +
+				targetDPos += m_Right * m_MouseDragDist.x * m_OrbitingSpeed * turnSpeedMultiplier +
 					m_Up * m_MouseDragDist.y * m_OrbitingSpeed * turnSpeedMultiplier;
 			}
 			else
 			{
 				m_MouseDragDist.y = -m_MouseDragDist.y;
 
-				m_TurnVel += glm::vec2(m_MouseDragDist.x * m_MouseRotationSpeed * turnSpeedMultiplier,
+				m_TurnVel += glm::vec2(-m_MouseDragDist.x * m_MouseRotationSpeed * turnSpeedMultiplier,
 					m_MouseDragDist.y * m_MouseRotationSpeed * turnSpeedMultiplier);
 
 				m_Yaw += m_TurnVel.x;
@@ -140,12 +140,12 @@ namespace flex
 		real moveL = g_InputManager->GetActionAxisValue(Action::DBG_CAM_MOVE_LEFT);
 		if (moveL != 0.0f)
 		{
-			translation += m_Right * moveL;
+			translation += -m_Right * moveL;
 		}
 		real moveR = g_InputManager->GetActionAxisValue(Action::DBG_CAM_MOVE_RIGHT);
 		if (moveR != 0.0f)
 		{
-			translation += m_Right * moveR;
+			translation += -m_Right * moveR;
 		}
 		real moveU = g_InputManager->GetActionAxisValue(Action::DBG_CAM_MOVE_UP);
 		if (moveU != 0.0f)
@@ -166,7 +166,7 @@ namespace flex
 				glm::vec2 dragDist = g_InputManager->GetMouseDragDistance(MouseButton::MIDDLE);
 				glm::vec2 frameBufferSize = (glm::vec2)g_Window->GetFrameBufferSize();
 				glm::vec2 normDragDist = dragDist / frameBufferSize;
-				m_Position = (m_DragStartPosition + (-normDragDist.x * m_Right + normDragDist.y * m_Up) * m_PanSpeed);
+				m_Position = (m_DragStartPosition + (normDragDist.x * m_Right + normDragDist.y * m_Up) * m_PanSpeed);
 			}
 		}
 

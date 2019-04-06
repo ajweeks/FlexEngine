@@ -393,7 +393,7 @@ namespace flex
 		}
 
 		glm::mat3 rotMat(worldRotation);
-		right = -rotMat[0];
+		right = rotMat[0];
 		up = rotMat[1];
 		forward = rotMat[2];
 
@@ -590,7 +590,7 @@ namespace flex
 			if (!bUpdateChain)
 			{
 				glm::mat3 rotMat(worldRotation);
-				right = -rotMat[0];
+				right = rotMat[0];
 				up = rotMat[1];
 				forward = rotMat[2];
 			}

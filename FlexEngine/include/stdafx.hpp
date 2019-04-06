@@ -95,6 +95,17 @@ const bool g_bEnableLogging_Loading = false;
 #include "Logger.hpp"
 #include "Types.hpp"
 
+IGNORE_WARNINGS_PUSH
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#define GLM_FORCE_LEFT_HANDED
+
+// For matrix_decompose
+#define GLM_ENABLE_EXPERIMENTAL
+
+#include <glm/glm.hpp>
+IGNORE_WARNINGS_POP
+
 #if COMPILE_VULKAN
 IGNORE_WARNINGS_PUSH
 #include <vulkan/vulkan.hpp>
@@ -145,17 +156,6 @@ IGNORE_WARNINGS_POP
 #ifndef btAssert
 #define btAssert(e) assert(e)
 #endif
-
-IGNORE_WARNINGS_PUSH
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#define GLM_FORCE_LEFT_HANDED
-
-// For matrix_decompose
-#define GLM_ENABLE_EXPERIMENTAL
-
-#include <glm/glm.hpp>
-IGNORE_WARNINGS_POP
 
 #define PI (glm::pi<real>())
 #define TWO_PI (glm::two_pi<real>())
