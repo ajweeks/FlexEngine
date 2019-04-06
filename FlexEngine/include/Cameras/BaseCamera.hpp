@@ -5,7 +5,8 @@ namespace flex
 	class BaseCamera
 	{
 	public:
-		BaseCamera(const std::string& cameraName, bool bIsGameplayCam, real FOV = glm::radians(45.0f), real zNear = 0.01f, real zFar = 10000.0f);
+		BaseCamera(const std::string& cameraName, bool bIsGameplayCam, real FOV = glm::radians(45.0f),
+			real zNear = 0.001f, real zFar = 1000.0f);
 		virtual ~BaseCamera();
 
 		virtual void Initialize();

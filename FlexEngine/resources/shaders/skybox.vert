@@ -15,5 +15,5 @@ void main()
 	// Truncate translation part of view matrix so skybox is always "around" the camera
 	vec4 pos = projection * mat4(mat3(view)) * model * vec4(in_Position, 1.0);
 	gl_Position = pos;
-	// gl_Position.z = 0.000001f;
+	gl_Position.z = 1.0e-9f;
 }

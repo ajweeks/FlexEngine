@@ -108,6 +108,11 @@ namespace flex
 			// Prevent seams from appearing on lower mip map levels of cubemaps
 			glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
+			assert(GL_VERSION_4_5);
+			// TODO: Check presence of GL_ARB_clip_control (GL 4.5)
+			glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
+
+
 			// Capture framebuffer (TODO: Merge with offscreen frame buffer?)
 			{
 				glGenFramebuffers(1, &m_CaptureFBO);
@@ -132,17 +137,17 @@ namespace flex
 				CreateOffscreenFrameBuffer(&m_Offscreen1FBO, &m_Offscreen1RBO, frameBufferSize, m_OffscreenTexture1Handle);
 			}
 
-			const real captureProjectionNearPlane = g_CameraManager->CurrentCamera()->GetZFar();
-			const real captureProjectionFarPlane = g_CameraManager->CurrentCamera()->GetZNear();
+			const real captureProjectionNearPlane = g_CameraManager->CurrentCamera()->GetZNear();
+			const real captureProjectionFarPlane = g_CameraManager->CurrentCamera()->GetZFar();
 			m_CaptureProjection = glm::perspective(glm::radians(90.0f), 1.0f, captureProjectionFarPlane, captureProjectionNearPlane);
 			m_CaptureViews =
 			{
-				glm::lookAtRH(VEC3_ZERO, glm::vec3(1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-				glm::lookAtRH(VEC3_ZERO, glm::vec3(-1.0f, 0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-				glm::lookAtRH(VEC3_ZERO, glm::vec3(0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)),
-				glm::lookAtRH(VEC3_ZERO, glm::vec3(0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f)),
-				glm::lookAtRH(VEC3_ZERO, glm::vec3(0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-				glm::lookAtRH(VEC3_ZERO, glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
+				glm::lookAt(VEC3_ZERO, glm::vec3(-1.0f, 0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+				glm::lookAt(VEC3_ZERO, glm::vec3(1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+				glm::lookAt(VEC3_ZERO, glm::vec3(0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)),
+				glm::lookAt(VEC3_ZERO, glm::vec3(0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f)),
+				glm::lookAt(VEC3_ZERO, glm::vec3(0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+				glm::lookAt(VEC3_ZERO, glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
 			};
 
 			m_AlphaBGTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/alpha-bg.png", 3, false, false, false);
