@@ -751,7 +751,6 @@ namespace flex
 		{
 		case MeshComponent::PrefabShape::CUBE:
 		{
-			const std::array<glm::vec4, 6> colors = { Color::GREEN, Color::RED, Color::BLUE, Color::ORANGE, Color::YELLOW, Color::YELLOW };
 			vertexBufferDataCreateInfo.positions_3D =
 			{
 				// Front
@@ -809,64 +808,6 @@ namespace flex
 				{ -5.0f,  5.0f,  5.0f, },
 			};
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
-
-			vertexBufferDataCreateInfo.colors_R32G32B32A32 =
-			{
-				// Front
-				colors[0],
-				colors[0],
-				colors[0],
-
-				colors[0],
-				colors[0],
-				colors[0],
-
-				// Top
-				colors[1],
-				colors[1],
-				colors[1],
-
-				colors[1],
-				colors[1],
-				colors[1],
-
-				// Back
-				colors[2],
-				colors[2],
-				colors[2],
-
-				colors[2],
-				colors[2],
-				colors[2],
-
-				// Bottom
-				colors[3],
-				colors[3],
-				colors[3],
-
-				colors[3],
-				colors[3],
-				colors[3],
-
-				// Right
-				colors[4],
-				colors[4],
-				colors[4],
-
-				colors[4],
-				colors[4],
-				colors[4],
-
-				// Left
-				colors[5],
-				colors[5],
-				colors[5],
-
-				colors[5],
-				colors[5],
-				colors[5],
-			};
-			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
 
 			vertexBufferDataCreateInfo.normals =
 			{

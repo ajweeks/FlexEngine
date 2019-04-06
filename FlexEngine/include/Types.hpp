@@ -3,8 +3,6 @@
 #include <cstdint>
 #include <limits>
 
-#define STATIC_ASSERT(e) StaticAssert<(e)>{}
-
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 #define ARRAY_LENGTH(a) ARRAY_SIZE(a)
 
