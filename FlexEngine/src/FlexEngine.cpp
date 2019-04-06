@@ -269,6 +269,16 @@ namespace flex
 		ImGui::CreateContext();
 		SetupImGuiStyles();
 
+#if COMPILE_RENDERDOC_API
+		if (m_RenderDocAPI &&
+			m_RenderDocAutoCaptureFrameCount != -1 &&
+			m_RenderDocAutoCaptureFrameOffset == 0)
+		{
+			m_bRenderDocCapturingFrame = true;
+			m_RenderDocAPI->StartFrameCapture(NULL, NULL);
+		}
+#endif
+
 		g_SceneManager->InitializeCurrentScene();
 		g_Renderer->PostInitialize();
 		g_SceneManager->PostInitializeCurrentScene();
@@ -855,11 +865,26 @@ namespace flex
 			}
 
 #if COMPILE_RENDERDOC_API
-			if (m_RenderDocAPI && m_bRenderDocTriggerCaptureNextFrame)
+			if (m_RenderDocAPI)
 			{
-				m_bRenderDocTriggerCaptureNextFrame = false;
-				m_bRenderDocCapturingFrame = true;
-				m_RenderDocAPI->StartFrameCapture(NULL, NULL);
+				if (!m_bRenderDocCapturingFrame &&
+					m_RenderDocAutoCaptureFrameOffset != -1 &&
+					m_RenderDocAutoCaptureFrameCount != -1)
+				{
+					i32 frameIndex = g_Renderer->GetFramesRenderedCount();
+					if (frameIndex >= m_RenderDocAutoCaptureFrameOffset &&
+						frameIndex < m_RenderDocAutoCaptureFrameOffset + m_RenderDocAutoCaptureFrameCount)
+					{
+						m_bRenderDocTriggerCaptureNextFrame = true;
+					}
+				}
+
+				if (m_bRenderDocTriggerCaptureNextFrame)
+				{
+					m_bRenderDocTriggerCaptureNextFrame = false;
+					m_bRenderDocCapturingFrame = true;
+					m_RenderDocAPI->StartFrameCapture(NULL, NULL);
+				}
 			}
 #endif
 
