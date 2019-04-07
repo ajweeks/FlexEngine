@@ -248,12 +248,12 @@ namespace flex
 		m_Pitch = glm::clamp(m_Pitch, -pitchLimit, pitchLimit);
 	}
 
-	float BaseCamera::CalculateEV100(float aperture, float shutterSpeed, float sensitivity)
+	real BaseCamera::CalculateEV100(real aperture, real shutterSpeed, real sensitivity)
 	{
 		return log2((aperture * aperture) / shutterSpeed * 100.0f / sensitivity);
 	}
 
-	float BaseCamera::ComputeExposureNormFactor(float EV100)
+	real BaseCamera::ComputeExposureNormFactor(real EV100)
 	{
 		return pow(2.0f, EV100) * 1.2f;
 	}

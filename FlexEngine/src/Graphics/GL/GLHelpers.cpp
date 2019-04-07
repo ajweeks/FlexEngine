@@ -521,8 +521,6 @@ namespace flex
 		// TODO: CLEANUP: Combine identical parts of SaveTextureToFile & StartAsyncTextureSaveToFile to reduce code duplication
 		bool SaveTextureToFile(const std::string& absoluteFilePath, ImageFormat format, GLuint handle, i32 width, i32 height, i32 channelCount, bool bFlipVertically)
 		{
-			const char* getTexImageBlockName = "glGetTexImage";
-
 			assert(channelCount == 3 || channelCount == 4);
 
 			bool bResult = false;
@@ -539,6 +537,7 @@ namespace flex
 
 			if (readBackTextureData && u8Data)
 			{
+				const char* getTexImageBlockName = "glGetTexImage";
 				PROFILE_BEGIN(getTexImageBlockName);
 				glBindTexture(GL_TEXTURE_2D, handle);
 				glGetTexImage(GL_TEXTURE_2D, 0, channelCount == 3 ? GL_RGB : GL_RGBA, GL_FLOAT, (void*)readBackTextureData);

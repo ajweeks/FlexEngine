@@ -230,14 +230,14 @@ namespace flex
 			}
 
 			static const char* moveSpeedStr = "Move speed";
-			float moveSpeed = currentCamera->GetMoveSpeed();
+			real moveSpeed = currentCamera->GetMoveSpeed();
 			if (ImGui::SliderFloat(moveSpeedStr, &moveSpeed, 1.0f, 250.0f))
 			{
 				currentCamera->SetMoveSpeed(moveSpeed);
 			}
 
 			static const char* turnSpeedStr = "Turn speed";
-			float turnSpeed = glm::degrees(currentCamera->GetRotationSpeed());
+			real turnSpeed = glm::degrees(currentCamera->GetRotationSpeed());
 			if (ImGui::SliderFloat(turnSpeedStr, &turnSpeed, 0.01f, 0.3f))
 			{
 				currentCamera->SetRotationSpeed(glm::radians(turnSpeed));

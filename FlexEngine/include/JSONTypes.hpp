@@ -35,7 +35,7 @@ namespace flex
 
 		real GetFloat(const std::string& label) const;
 		/* Sets value to the result of GetString(label) if that field is present */
-		bool SetFloatChecked(const std::string& label, float& value) const;
+		bool SetFloatChecked(const std::string& label, real& value) const;
 
 		bool GetBool(const std::string& label) const;
 		/* Sets value to the result of GetString(label) if that field is present */

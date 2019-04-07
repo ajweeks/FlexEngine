@@ -82,10 +82,10 @@ namespace flex
 		// aperture measured in f-stops
 		// shutterSpeed measured in seconds
 		// sensitivity measured in ISO
-		static float CalculateEV100(float aperture, float shutterSpeed, float sensitivity);
+		static real CalculateEV100(real aperture, real shutterSpeed, real sensitivity);
 
 		// Computes the exposure normalization factor from the camera's EV100
-		static float ComputeExposureNormFactor(float EV100);
+		static real ComputeExposureNormFactor(real EV100);
 
 		bool m_bInitialized = false;
 

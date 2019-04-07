@@ -170,7 +170,7 @@ namespace flex
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-				float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+				real borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 				glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor); // Prevents areas not covered by map to be in shadow
 				glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, m_ShadowMapTexture.id, 0);
 
@@ -1909,11 +1909,11 @@ namespace flex
 
 			// Fade grid out when far away
 			{
-				float maxHeightVisible = 350.0f;
+				real maxHeightVisible = 350.0f;
 				BaseCamera* camera = g_CameraManager->CurrentCamera();
-				float distCamToGround = camera->GetPosition().y;
-				float maxDistVisible = 300.0f;
-				float distCamToOrigin = glm::distance(camera->GetPosition(), glm::vec3(0, 0, 0));
+				real distCamToGround = camera->GetPosition().y;
+				real maxDistVisible = 300.0f;
+				real distCamToOrigin = glm::distance(camera->GetPosition(), glm::vec3(0, 0, 0));
 
 				glm::vec4 gridColorMutliplier = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f - glm::clamp(distCamToGround / maxHeightVisible, -1.0f, 1.0f));
 				glm::vec4 axisColorMutliplier = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f - glm::clamp(distCamToOrigin / maxDistVisible, -1.0f, 1.0f));;
@@ -3147,6 +3147,7 @@ namespace flex
 								  bool bScreenSpace)
 		{
 			FT_Library ft;
+			// TODO: Only do once per session?
 			if (FT_Init_FreeType(&ft) != FT_Err_Ok)
 			{
 				PrintError("Failed to initialize FreeType\n");
@@ -3214,6 +3215,8 @@ namespace flex
 
 			if (!bUsingPreRenderedTexture)
 			{
+				// Render to glyph atlas
+
 				glm::vec2i textureSize(
 					std::max(std::max(maxPos[0].x, maxPos[1].x), std::max(maxPos[2].x, maxPos[3].x)),
 					std::max(std::max(maxPos[0].y, maxPos[1].y), std::max(maxPos[2].y, maxPos[3].y)));
@@ -3262,9 +3265,6 @@ namespace flex
 				glBlendFunc(GL_ONE, GL_ONE);
 
 				GLRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
-
-				// Render to Glyphs atlas
-				//FT_Set_Pixel_Sizes(face, 0, size * sampleDensity);
 
 				for (auto& charPair : characters)
 				{
@@ -3355,6 +3355,7 @@ namespace flex
 				}
 
 				std::string savedSDFTextureAbsFilePath = RelativePathToAbsolute(renderedFontFilePath);
+				// TODO: Save asynchronously
 				fontTex->SaveToFile(savedSDFTextureAbsFilePath, ImageFormat::PNG, false);
 
 				// Cleanup
@@ -5571,10 +5572,10 @@ namespace flex
 
 					ImGui::Columns(2, "import settings columns", false);
 					ImGui::Separator();
-					ImGui::Checkbox("Flip U", &selectedMesh->importSettings.flipU); ImGui::NextColumn();
-					ImGui::Checkbox("Flip V", &selectedMesh->importSettings.flipV); ImGui::NextColumn();
-					ImGui::Checkbox("Swap Normal YZ", &selectedMesh->importSettings.swapNormalYZ); ImGui::NextColumn();
-					ImGui::Checkbox("Flip Normal Z", &selectedMesh->importSettings.flipNormalZ); ImGui::NextColumn();
+					ImGui::Checkbox("Flip U", &selectedMesh->importSettings.bFlipU); ImGui::NextColumn();
+					ImGui::Checkbox("Flip V", &selectedMesh->importSettings.bFlipV); ImGui::NextColumn();
+					ImGui::Checkbox("Swap Normal YZ", &selectedMesh->importSettings.bSwapNormalYZ); ImGui::NextColumn();
+					ImGui::Checkbox("Flip Normal Z", &selectedMesh->importSettings.bFlipNormalZ); ImGui::NextColumn();
 					ImGui::Columns(1);
 
 					if (ImGui::Button("Re-import"))

@@ -73,10 +73,10 @@ namespace flex
 			meshFilePath = RESOURCE_LOCATION  "meshes/" + meshFilePath;
 		}
 		std::string meshPrefabName = object.GetString("prefab");
-		bool swapNormalYZ = object.GetBool("swapNormalYZ");
-		bool flipNormalZ = object.GetBool("flipNormalZ");
-		bool flipU = object.GetBool("flipU");
-		bool flipV = object.GetBool("flipV");
+		bool bSwapNormalYZ = object.GetBool("swapNormalYZ");
+		bool bFlipNormalZ = object.GetBool("flipNormalZ");
+		bool bFlipU = object.GetBool("flipU");
+		bool bFlipV = object.GetBool("flipV");
 
 		if (materialID == InvalidMaterialID)
 		{
@@ -89,10 +89,10 @@ namespace flex
 				newMeshComponent = new MeshComponent(materialID, owner);
 
 				MeshImportSettings importSettings = {};
-				importSettings.flipU = flipU;
-				importSettings.flipV = flipV;
-				importSettings.flipNormalZ = flipNormalZ;
-				importSettings.swapNormalYZ = swapNormalYZ;
+				importSettings.bFlipU = bFlipU;
+				importSettings.bFlipV = bFlipV;
+				importSettings.bFlipNormalZ = bFlipNormalZ;
+				importSettings.bSwapNormalYZ = bSwapNormalYZ;
 
 				newMeshComponent->LoadFromFile(meshFilePath, &importSettings);
 
@@ -138,10 +138,10 @@ namespace flex
 		}
 
 		MeshImportSettings importSettings = m_ImportSettings;
-		meshObject.fields.emplace_back("swapNormalYZ", JSONValue(importSettings.swapNormalYZ));
-		meshObject.fields.emplace_back("flipNormalZ", JSONValue(importSettings.flipNormalZ));
-		meshObject.fields.emplace_back("flipU", JSONValue(importSettings.flipU));
-		meshObject.fields.emplace_back("flipV", JSONValue(importSettings.flipV));
+		meshObject.fields.emplace_back("swapNormalYZ", JSONValue(importSettings.bSwapNormalYZ));
+		meshObject.fields.emplace_back("flipNormalZ", JSONValue(importSettings.bFlipNormalZ));
+		meshObject.fields.emplace_back("flipU", JSONValue(importSettings.bFlipU));
+		meshObject.fields.emplace_back("flipV", JSONValue(importSettings.bFlipV));
 
 		return meshObject;
 	}
@@ -508,11 +508,11 @@ namespace flex
 
 							glm::vec3 norm;
 							cgltf_accessor_read_float(normAccessor, v, &norm.x, 3);
-							if (importSettings && importSettings->swapNormalYZ)
+							if (importSettings && importSettings->bSwapNormalYZ)
 							{
 								std::swap(norm.y, norm.z);
 							}
-							if (importSettings && importSettings->flipNormalZ)
+							if (importSettings && importSettings->bFlipNormalZ)
 							{
 								norm.z = -norm.z;
 							}
@@ -591,11 +591,11 @@ namespace flex
 							cgltf_accessor_read_float(uvAccessor, v, &uv0.x, 2);
 
 							uv0 *= m_UVScale;
-							if (importSettings && importSettings->flipU)
+							if (importSettings && importSettings->bFlipU)
 							{
 								uv0.x = 1.0f - uv0.x;
 							}
-							if (importSettings && importSettings->flipV)
+							if (importSettings && importSettings->bFlipV)
 							{
 								uv0.y = 1.0f - uv0.y;
 							}
@@ -930,7 +930,7 @@ namespace flex
 		} break;
 		case MeshComponent::PrefabShape::GRID:
 		{
-			const float lineMaxOpacity = 0.5f;
+			const real lineMaxOpacity = 0.5f;
 			glm::vec4 lineColor = Color::GRAY;
 			lineColor.a = lineMaxOpacity;
 
@@ -952,7 +952,7 @@ namespace flex
 				vertexBufferDataCreateInfo.positions_3D.emplace_back(i * GRID_LINE_SPACING - halfWidth, 0.0f, 0.0f);
 				vertexBufferDataCreateInfo.positions_3D.emplace_back(i * GRID_LINE_SPACING - halfWidth, 0.0f, halfWidth);
 
-				float opacityCenter = glm::pow(1.0f - glm::abs((i / (float)GRID_LINE_COUNT) - 0.5f) * 2.0f, 5.0f);
+				real opacityCenter = glm::pow(1.0f - glm::abs((i / (real)GRID_LINE_COUNT) - 0.5f) * 2.0f, 5.0f);
 				glm::vec4 colorCenter = lineColor;
 				colorCenter.a = opacityCenter;
 				glm::vec4 colorEnds = colorCenter;
@@ -971,7 +971,7 @@ namespace flex
 				vertexBufferDataCreateInfo.positions_3D.emplace_back(0.0f, 0.0f, i * GRID_LINE_SPACING - halfWidth);
 				vertexBufferDataCreateInfo.positions_3D.emplace_back(halfWidth, 0.0f, i * GRID_LINE_SPACING - halfWidth);
 
-				float opacityCenter = glm::pow(1.0f - glm::abs((i / (float)GRID_LINE_COUNT) - 0.5f) * 2.0f, 5.0f);
+				real opacityCenter = glm::pow(1.0f - glm::abs((i / (real)GRID_LINE_COUNT) - 0.5f) * 2.0f, 5.0f);
 				glm::vec4 colorCenter = lineColor;
 				colorCenter.a = opacityCenter;
 				glm::vec4 colorEnds = colorCenter;
@@ -1008,7 +1008,7 @@ namespace flex
 			vertexBufferDataCreateInfo.positions_3D.emplace_back(0.0f, 0.0f, 0.0f);
 			vertexBufferDataCreateInfo.positions_3D.emplace_back(0.0f, 0.0f, halfWidth);
 
-			float opacityCenter = 1.0f;
+			real opacityCenter = 1.0f;
 			glm::vec4 colorCenter = centerLineColorZ;
 			colorCenter.a = opacityCenter;
 			glm::vec4 colorEnds = colorCenter;

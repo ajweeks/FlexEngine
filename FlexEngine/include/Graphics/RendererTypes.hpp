@@ -389,7 +389,6 @@ namespace flex
 	struct Uniforms
 	{
 		u64 uniforms;
-		std::map<const char*, bool, strCmp> types;
 
 		bool HasUniform(u64 uniform) const;
 		void AddUniform(u64 uniform);

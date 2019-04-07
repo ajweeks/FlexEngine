@@ -424,8 +424,8 @@ namespace flex
 		g_Monitor = new Monitor();
 		g_Window->RetrieveMonitorInfo();
 
-		float desiredAspectRatio = 16.0f / 9.0f;
-		float desiredWindowSizeScreenPercetange = 0.85f;
+		real desiredAspectRatio = 16.0f / 9.0f;
+		real desiredWindowSizeScreenPercetange = 0.85f;
 
 		// What kind of monitor has different scales along each axis?
 		assert(g_Monitor->contentScaleX == g_Monitor->contentScaleY);

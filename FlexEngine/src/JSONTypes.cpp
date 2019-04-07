@@ -256,7 +256,7 @@ namespace flex
 		return 0.0f;
 	}
 
-	bool JSONObject::SetFloatChecked(const std::string & label, float & value) const
+	bool JSONObject::SetFloatChecked(const std::string & label, real & value) const
 	{
 		if (HasField(label))
 		{

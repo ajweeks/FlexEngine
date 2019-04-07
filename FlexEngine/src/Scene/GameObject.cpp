@@ -405,7 +405,7 @@ namespace flex
 			}
 			if (m_bUniformScale)
 			{
-				float newScale = scale.x;
+				real newScale = scale.x;
 				if (scale.y != pScale.y)
 				{
 					newScale = scale.y;
@@ -4464,7 +4464,7 @@ namespace flex
 				return nullptr;
 			}
 		case OperatorType::MOD:
-			if (typeid(*lhs) == typeid(float))
+			if (typeid(*lhs) == typeid(real))
 			{
 				return new Value(fmod((real)*lhs, (real)*rhs), true);
 			}

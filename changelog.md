@@ -2,6 +2,14 @@
 ### Flex Engine change log (reverse chronological order)
 
 **2019**
+_April_
+- Switch to using reverse Z depth buffers
+
+_March_
+- Add asynchronous vulkan shader compilation using a shader file contents checksum to only recompile when changes have been made
+- Add console command support and several commands (reload scene, reload shaders, ...) (accessed via ~ key)
+- Get Vulkan renderer mostly back up and running
+
 _February_
 - Add Gerstner waves
 - Add abtract syntax tree generator/evaluator
