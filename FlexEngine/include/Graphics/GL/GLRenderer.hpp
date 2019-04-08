@@ -101,6 +101,7 @@ namespace flex
 				bool bRaw = false) override;
 
 			virtual void DrawAssetBrowserImGui(bool* bShowing) override;
+			virtual void DrawImGuiForRenderObject(RenderID renderID) override;
 
 			virtual void RecaptureReflectionProbe() override;
 

@@ -5715,6 +5715,11 @@ namespace flex
 			ImGui::End();
 		}
 
+		void GLRenderer::DrawImGuiForRenderObject(RenderID renderID)
+		{
+
+		}
+
 		void GLRenderer::DrawImGuiRenderObjects()
 		{
 			// TODO: Move to Renderer

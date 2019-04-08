@@ -107,6 +107,8 @@ namespace flex
 				bool bRaw = false) override;
 
 			virtual void DrawAssetBrowserImGui(bool* bShowing) override;
+			virtual void DrawImGuiForRenderObject(RenderID renderID) override;
+
 			virtual void RecaptureReflectionProbe() override;
 			virtual u32 GetTextureHandle(TextureID textureID) const override;
 			virtual void RenderObjectStateChanged() override;
@@ -204,13 +206,12 @@ namespace flex
 			void VulkanRenderer::CreateStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<u32>& indices);
 
 			void CreateDescriptorPool();
-			u32 AllocateUniformBuffer(u32 dynamicDataSize, void** data);
+			u32 AllocateDynamicUniformBuffer(u32 dynamicDataSize, void** data);
 			void PrepareUniformBuffer(VulkanBuffer* buffer, u32 bufferSize,
 				VkBufferUsageFlags bufferUseageFlagBits, VkMemoryPropertyFlags memoryPropertyHostFlagBits);
 
 			void BuildCommandBuffers(const DrawCallInfo& drawCallInfo);
 			void BuildDeferredCommandBuffer(const DrawCallInfo& drawCallInfo);
-			void RebuildCommandBuffers();
 
 			void BindDescriptorSet(VulkanShader* shader, i32 meshIndex, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet);
 			void CreateSemaphores();
@@ -234,7 +235,6 @@ namespace flex
 
 			void GenerateIrradianceMaps();
 
-			void DrawImGuiForRenderObjectAndChildren(GameObject* gameObject);
 			// Returns true if object was duplicated
 			bool DoTextureSelector(const char* label, const std::vector<VulkanTexture*>& textures, i32* selectedIndex, bool* bGenerateSampler);
 			void ImGuiUpdateTextureIndexOrMaterial(bool bUpdateTextureMaterial,

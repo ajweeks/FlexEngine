@@ -114,6 +114,7 @@ namespace flex
 			bool bRaw = false) = 0;
 
 		virtual void DrawAssetBrowserImGui(bool* bShowing) = 0;
+		virtual void DrawImGuiForRenderObject(RenderID renderID) = 0;
 
 		virtual void RecaptureReflectionProbe() = 0;
 

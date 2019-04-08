@@ -652,6 +652,8 @@ namespace flex
 
 		MaterialID matID = g_Renderer->GetMaterialID(renderID);
 
+		g_Renderer->DrawImGuiForRenderObject(renderID);
+
 		MeshComponent* mesh = gameObject->GetMeshComponent();
 
 		std::vector<Pair<std::string, MaterialID>> validMaterialNames = g_Renderer->GetValidMaterialNames();

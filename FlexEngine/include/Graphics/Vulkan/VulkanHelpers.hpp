@@ -190,11 +190,14 @@ namespace flex
 			// Non-static member functions
 			void Create(ImageCreateInfo& imageCreateInfo, ImageViewCreateInfo& imageViewCreateInfo, SamplerCreateInfo& samplerCreateInfo);
 
-			void CreateFromMemory(u8* buffer, u32 size, VkFormat format, i32 mipLevels);
+			u32 CreateFromMemory(u8* buffer, u32 bufferSize, VkFormat inFormat, i32 inMipLevels);
+
+			void TransitionToLayout(VkImageLayout newLayout);
+			void CopyFromBuffer(VkBuffer buffer, u32 inWidth, u32 inHeight);
 
 			void Destroy();
 
-			bool SaveToFile(const std::string& absoluteFilePath, ImageFormat format);
+			bool SaveToFile(const std::string& absoluteFilePath, ImageFormat saveFormat);
 
 			void Build(void* data = nullptr);
 
@@ -208,7 +211,7 @@ namespace flex
 			 * Creates image, image view, and sampler
 			 * Returns the size of the image
 			*/
-			VkDeviceSize CreateEmpty(VkFormat inFormat, u32 inWidth, u32 inHeight, u32 inMipLevels = 1, VkImageUsageFlags inUsage = VK_IMAGE_USAGE_SAMPLED_BIT);
+			VkDeviceSize CreateEmpty(VkFormat inFormat, u32 inMipLevels = 1, VkImageUsageFlags inUsage = VK_IMAGE_USAGE_SAMPLED_BIT);
 
 			/*
 			 * Creates an empty cubemap and returns the size of the generated image
@@ -243,6 +246,7 @@ namespace flex
 
 			VDeleter<VkImage> image;
 			VkImageLayout imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			VkFormat imageFormat = VK_FORMAT_UNDEFINED;
 			VDeleter<VkDeviceMemory> imageMemory;
 			VDeleter<VkImageView> imageView;
 			VDeleter<VkSampler> sampler;
@@ -251,6 +255,7 @@ namespace flex
 		private:
 			VulkanDevice* m_VulkanDevice = nullptr;
 			VkQueue m_GraphicsQueue = VK_NULL_HANDLE;
+
 		};
 
 		void SetImageLayout(
@@ -288,6 +293,17 @@ namespace flex
 			VkImageLayout newImageLayout,
 			VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 			VkPipelineStageFlags dstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+
+		void InsertImageMemoryBarrier(
+			VkCommandBuffer cmdbuffer,
+			VkImage image,
+			VkAccessFlags srcAccessMask,
+			VkAccessFlags dstAccessMask,
+			VkImageLayout oldImageLayout,
+			VkImageLayout newImageLayout,
+			VkPipelineStageFlags srcStageMask,
+			VkPipelineStageFlags dstStageMask,
+			VkImageSubresourceRange subresourceRange);
 
 		void CreateAttachment(
 			VulkanDevice* device,

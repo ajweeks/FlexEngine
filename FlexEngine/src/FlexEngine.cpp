@@ -1510,13 +1510,20 @@ namespace flex
 		return m_CurrentlySelectedObjects;
 	}
 
-	void FlexEngine::SetSelectedObject(GameObject* gameObject)
+	void FlexEngine::SetSelectedObject(GameObject* gameObject, bool bSelectChildren /* = true */)
 	{
 		DeselectCurrentlySelectedObjects();
 
 		if (gameObject != nullptr)
 		{
-			gameObject->AddSelfAndChildrenToVec(m_CurrentlySelectedObjects);
+			if (bSelectChildren)
+			{
+				gameObject->AddSelfAndChildrenToVec(m_CurrentlySelectedObjects);
+			}
+			else
+			{
+				m_CurrentlySelectedObjects.push_back(gameObject);
+			}
 		}
 
 		CalculateSelectedObjectsCenter();

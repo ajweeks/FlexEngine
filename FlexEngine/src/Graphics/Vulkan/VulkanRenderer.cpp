@@ -205,6 +205,7 @@ namespace flex
 					if (dynamicAllignment > m_DynamicAlignment)
 					{
 						u32 newDynamicAllignment = 1;
+						// TODO: Use better nearest POT calculation!
 						while (newDynamicAllignment < dynamicAllignment)
 						{
 							newDynamicAllignment <<= 1;
@@ -2112,7 +2113,7 @@ namespace flex
 				if (!m_BRDFTexture)
 				{
 					m_BRDFTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "BRDF", m_BRDFSize.x, m_BRDFSize.y, 1);
-					m_BRDFTexture->CreateEmpty(VK_FORMAT_R16G16_SFLOAT, m_BRDFSize.x, m_BRDFSize.y, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+					m_BRDFTexture->CreateEmpty(VK_FORMAT_R16G16_SFLOAT, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 					m_LoadedTextures.push_back(m_BRDFTexture);
 					GenerateBRDFLUT(m_BRDFTexture);
 				}
@@ -2290,7 +2291,7 @@ namespace flex
 		TextureID VulkanRenderer::InitializeTexture(const std::string& relativeFilePath, i32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR)
 		{
 			VulkanTexture* newTex = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, relativeFilePath,
-				channelCount, bFlipVertically, false, bHDR);
+				channelCount, bFlipVertically, bGenerateMipMaps, bHDR);
 			newTex->CreateFromFile(newTex->CalculateFormat());
 			m_LoadedTextures.push_back(newTex);
 
@@ -2549,64 +2550,14 @@ namespace flex
 
 		}
 
-		void VulkanRenderer::DrawImGuiForRenderObjectAndChildren(GameObject* gameObject)
+		void VulkanRenderer::DrawImGuiForRenderObject(RenderID renderID)
 		{
-			RenderID renderID = gameObject->GetRenderID();
-			VulkanRenderObject* renderObject = nullptr;
-			std::string objectName;
-			if (renderID != InvalidRenderID)
+			VulkanRenderObject* renderObject = GetRenderObject(renderID);
+			if (renderObject != nullptr)
 			{
-				renderObject = GetRenderObject(renderID);
-				objectName = std::string(gameObject->GetName() + "##" + std::to_string(renderObject->renderID));
-
-				if (!gameObject->IsVisibleInSceneExplorer())
-				{
-					return;
-				}
-			}
-			else
-			{
-				// TODO: FIXME: This will fail if multiple objects share the same name
-				// and have no valid RenderID. Add "##UID" to end of string to ensure uniqueness
-				objectName = std::string(gameObject->GetName());
-			}
-
-			const std::string objectID("##" + objectName + "-visible");
-			bool visible = gameObject->IsVisible();
-			if (ImGui::Checkbox(objectID.c_str(), &visible))
-			{
-				gameObject->SetVisible(visible);
-			}
-			ImGui::SameLine();
-			if (ImGui::TreeNode(objectName.c_str()))
-			{
-				//DrawImGuiForRenderObjectCommon(gameObject);
-
-				if (renderObject)
-				{
-					VulkanMaterial& material = m_Materials[renderObject->materialID];
-					VulkanShader& shader = m_Shaders[material.material.shaderID];
-
-					std::string matNameStr = "Material: " + material.material.name;
-					std::string shaderNameStr = "Shader: " + shader.shader.name;
-					ImGui::TextUnformatted(matNameStr.c_str());
-					ImGui::TextUnformatted(shaderNameStr.c_str());
-
-					if (shader.shader.bNeedIrradianceSampler)
-					{
-						ImGui::Checkbox("Use Irradiance Sampler", &material.material.enableIrradianceSampler);
-					}
-				}
-
-				ImGui::Indent();
-				const std::vector<GameObject*>& children = gameObject->GetChildren();
-				for (GameObject* child : children)
-				{
-					DrawImGuiForRenderObjectAndChildren(child);
-				}
-				ImGui::Unindent();
-
-				ImGui::TreePop();
+				ImGui::Text("Mat ID: %u", renderObject->materialID);
+				ImGui::Text("Shader ID: %u", GetMaterial(renderObject->materialID).shaderID);
+				ImGui::Text("Dynamic Offset: %u", renderObject->dynamicUBOIndex);
 			}
 		}
 
@@ -3410,10 +3361,10 @@ namespace flex
 
 					ImGui::Columns(2, "import settings columns", false);
 					ImGui::Separator();
-					ImGui::Checkbox("Flip U", &selectedMesh->importSettings.flipU); ImGui::NextColumn();
-					ImGui::Checkbox("Flip V", &selectedMesh->importSettings.flipV); ImGui::NextColumn();
-					ImGui::Checkbox("Swap Normal YZ", &selectedMesh->importSettings.swapNormalYZ); ImGui::NextColumn();
-					ImGui::Checkbox("Flip Normal Z", &selectedMesh->importSettings.flipNormalZ); ImGui::NextColumn();
+					ImGui::Checkbox("Flip U", &selectedMesh->importSettings.bFlipU); ImGui::NextColumn();
+					ImGui::Checkbox("Flip V", &selectedMesh->importSettings.bFlipV); ImGui::NextColumn();
+					ImGui::Checkbox("Swap Normal YZ", &selectedMesh->importSettings.bSwapNormalYZ); ImGui::NextColumn();
+					ImGui::Checkbox("Flip Normal Z", &selectedMesh->importSettings.bFlipNormalZ); ImGui::NextColumn();
 					ImGui::Columns(1);
 
 					if (ImGui::Button("Re-import"))
@@ -3565,7 +3516,7 @@ namespace flex
 
 		void VulkanRenderer::RenderObjectStateChanged()
 		{
-			// NOTE: This member is currently ignored by VulkanRenderer
+			// TODO: Ignore object visibility changes
 			m_bRebatchRenderObjects = true;
 		}
 
@@ -3627,7 +3578,9 @@ namespace flex
 			const std::string& renderedFontFilePath,
 			bool bForceRender, bool bScreenSpace)
 		{
+			// TODO: Consolidate with GLRenderer
 			FT_Library ft;
+			// TODO: Only do once per session?
 			if (FT_Init_FreeType(&ft) != FT_Err_Ok)
 			{
 				PrintError("Failed to initialize FreeType\n");
@@ -3656,13 +3609,15 @@ namespace flex
 			u32 spread = 5;
 			//u32 totPadding = padding + spread;
 
-			std::string textureName = std::string("Font atlas ") + fileName;
 			bool bUsingPreRenderedTexture = false;
+			std::string textureName = std::string("Font atlas ") + fileName;
 			if (!bForceRender)
 			{
 				if (FileExists(renderedFontFilePath))
 				{
-					VulkanTexture* fontTex = newFont->SetTexture(new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, renderedFontFilePath, 4, false, false, false));
+					VulkanTexture* fontTex = newFont->SetTexture(new VulkanTexture(m_VulkanDevice,
+						m_GraphicsQueue, renderedFontFilePath, 4, false, false, false));
+					fontTex->name = textureName;
 
 					if (fontTex->CreateFromFile(fontTex->CalculateFormat()))
 					{
@@ -3699,31 +3654,25 @@ namespace flex
 				}
 			}
 
-
 			if (!bUsingPreRenderedTexture)
 			{
+				// Render to glyph atlas
+
 				glm::vec2i textureSize(
 					std::max(std::max(maxPos[0].x, maxPos[1].x), std::max(maxPos[2].x, maxPos[3].x)),
 					std::max(std::max(maxPos[0].y, maxPos[1].y), std::max(maxPos[2].y, maxPos[3].y)));
 				newFont->SetTextureSize(textureSize);
 
-				VulkanTexture* fontTex = newFont->SetTexture(new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, textureName, 4, false, false, false));
+				VulkanTexture* fontTex = newFont->SetTexture(new VulkanTexture(m_VulkanDevice, m_GraphicsQueue,
+					textureName,textureSize.x, textureSize.y, 4));
 				// TODO: VK_IMAGE_USAGE_TRANSFER_DST_BIT?
-				VkFormat imageFormat = VK_FORMAT_R16G16B16A16_UNORM;
-				fontTex->CreateEmpty(imageFormat, textureSize.x, textureSize.y, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
-				fontTex->Build();
+				fontTex->CreateEmpty(VK_FORMAT_R8G8B8A8_UINT, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+				fontTex->TransitionToLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+				//fontTex->Build();
 
 				ShaderID computeSDFShaderID;
 				GetShaderID("compute_sdf", computeSDFShaderID);
 				VulkanShader& computeSDFShader = m_Shaders[computeSDFShaderID];
-
-				//"highResTex" =  0
-				//"spread" = (real)spread
-				//"sampleDensity" = (real)sampleDensity
-				//VulkanRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
-
-				// Render to Glyphs atlas
-				//FT_Set_Pixel_Sizes(face, 0, size * sampleDensity);
 
 				VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
 
@@ -3875,8 +3824,8 @@ namespace flex
 				renderPassBeginInfo.renderPass = renderPass;
 				renderPassBeginInfo.renderArea.offset = { 0, 0 };
 				renderPassBeginInfo.renderArea.extent = {
-					(uint32_t)textureSize.x,
-					(uint32_t)textureSize.y
+					(u32)textureSize.x,
+					(u32)textureSize.y
 				};
 				renderPassBeginInfo.clearValueCount = 1;
 				renderPassBeginInfo.pClearValues = (VkClearValue*)&m_ClearColor;
@@ -3893,8 +3842,8 @@ namespace flex
 				pipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 				pipelineCreateInfo.cullMode = VK_CULL_MODE_NONE;
 				pipelineCreateInfo.descriptorSetLayoutIndex = computeSDFShaderID;
-				pipelineCreateInfo.setDynamicStates = true;
-				pipelineCreateInfo.enabledColorBlending = false;
+				pipelineCreateInfo.bSetDynamicStates = true;
+				pipelineCreateInfo.bEnableColorBlending = false;
 				pipelineCreateInfo.subpass = 0;
 				pipelineCreateInfo.depthCompareOp = VK_COMPARE_OP_ALWAYS;
 				pipelineCreateInfo.depthWriteEnable = VK_FALSE;
@@ -4685,6 +4634,7 @@ namespace flex
 			// TODO: Clean up nullptr checks somehow?
 			std::vector<DescriptorSetInfo> descriptorSets = {
 				{ U_UNIFORM_BUFFER_CONSTANT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				// TODO: Should sizeof(VulkanUniformBufferObjectData) be instead, vulkanUniformBufferObjectData.size?
 				createInfo->uniformBuffer->constantBuffer.m_Buffer, sizeof(VulkanUniformBufferObjectData) },
 
 				{ U_UNIFORM_BUFFER_DYNAMIC, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
@@ -5017,8 +4967,8 @@ namespace flex
 			pipelineCreateInfo.topology = renderObject->topology;
 			pipelineCreateInfo.cullMode = renderObject->cullMode;
 			pipelineCreateInfo.descriptorSetLayoutIndex = material->descriptorSetLayoutIndex;
-			pipelineCreateInfo.setDynamicStates = false;
-			pipelineCreateInfo.enabledColorBlending = shader.shader.bTranslucent;
+			pipelineCreateInfo.bSetDynamicStates = false;
+			pipelineCreateInfo.bEnableColorBlending = shader.shader.bTranslucent;
 			pipelineCreateInfo.pipelineLayout = renderObject->pipelineLayout.replace();
 			pipelineCreateInfo.grahpicsPipeline = renderObject->graphicsPipeline.replace();
 			pipelineCreateInfo.subpass = shader.shader.subpass;
@@ -5146,7 +5096,7 @@ namespace flex
 			{
 				colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 
-				if (createInfo->enabledColorBlending)
+				if (createInfo->bEnableColorBlending)
 				{
 					colorBlendAttachment.blendEnable = VK_TRUE;
 					colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
@@ -5205,7 +5155,7 @@ namespace flex
 
 			VkPipelineDynamicStateCreateInfo dynamicState = {};
 			VkPipelineDynamicStateCreateInfo* pDynamicState = nullptr;
-			if (createInfo->setDynamicStates)
+			if (createInfo->bSetDynamicStates)
 			{
 				VkDynamicState dynamicStates[2] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
 				dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
@@ -5789,8 +5739,8 @@ namespace flex
 				renderPassBeginInfo.renderPass = m_CubemapFrameBuffer->renderPass;
 				renderPassBeginInfo.renderArea.offset = { 0, 0 };
 				renderPassBeginInfo.renderArea.extent = {
-					(uint32_t)cubemapMaterial.material.cubemapSamplerSize.x,
-					(uint32_t)cubemapMaterial.material.cubemapSamplerSize.y
+					(u32)cubemapMaterial.material.cubemapSamplerSize.x,
+					(u32)cubemapMaterial.material.cubemapSamplerSize.y
 				};
 				renderPassBeginInfo.clearValueCount = clearValues.size();
 				renderPassBeginInfo.pClearValues = clearValues.data();
@@ -5817,8 +5767,8 @@ namespace flex
 
 				VkRect2D scissor = VkRect2D{
 					{ 0u, 0u },
-					{ (uint32_t)cubemapMaterial.material.cubemapSamplerSize.x,
-					  (uint32_t)cubemapMaterial.material.cubemapSamplerSize.y }
+					{ (u32)cubemapMaterial.material.cubemapSamplerSize.x,
+					  (u32)cubemapMaterial.material.cubemapSamplerSize.y }
 				};
 				vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
@@ -6458,7 +6408,7 @@ namespace flex
 			CopyBuffer(m_VulkanDevice,m_GraphicsQueue, stagingBuffer.m_Buffer, indexBuffer->m_Buffer, bufferSize);
 		}
 
-		u32 VulkanRenderer::AllocateUniformBuffer(u32 dynamicDataSize, void** data)
+		u32 VulkanRenderer::AllocateDynamicUniformBuffer(u32 dynamicDataSize, void** data)
 		{
 			size_t uboAlignment = (size_t)m_VulkanDevice->m_PhysicalDeviceProperties.limits.minUniformBufferOffsetAlignment;
 			u32 dynamicAllignment =
@@ -6475,6 +6425,7 @@ namespace flex
 				m_DynamicAlignment = newDynamicAllignment;
 			}
 
+			// TODO: FIXME: Use better metric for initial size
 			size_t dynamicBufferSize = m_RenderObjects.size() * m_DynamicAlignment;
 
 			(*data) = _aligned_malloc(dynamicBufferSize, m_DynamicAlignment);

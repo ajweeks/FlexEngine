@@ -19,6 +19,9 @@ namespace flex
 			void Unmap();
 			void Destroy();
 
+			// TODO: Add Create function to call vkCreateBuffer
+			// TODO: Add AllocateMemory function to call vkGetBufferMemoryRequirements & vkAllocateMemory
+
 			VkResult Bind(VkDeviceSize offset = 0);
 			void SetupDescriptor(VkDeviceSize size = VK_WHOLE_SIZE, VkDeviceSize offset = 0);
 			void CopyTo(void* data, VkDeviceSize size);
