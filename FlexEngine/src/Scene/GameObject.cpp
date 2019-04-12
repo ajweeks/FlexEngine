@@ -1374,12 +1374,14 @@ namespace flex
 			if (prefabType == MeshComponent::Type::PREFAB)
 			{
 				MeshComponent::PrefabShape shape = m_MeshComponent->GetShape();
+				newMeshComponent->SetRequiredAttributesFromMaterialID(matID);
 				newMeshComponent->LoadPrefabShape(shape, &createInfo);
 			}
 			else if (prefabType == MeshComponent::Type::FILE)
 			{
 				std::string filePath = m_MeshComponent->GetRelativeFilePath();
 				MeshImportSettings importSettings = m_MeshComponent->GetImportSettings();
+				newMeshComponent->SetRequiredAttributesFromMaterialID(matID);
 				newMeshComponent->LoadFromFile(filePath, &importSettings, &createInfo);
 			}
 			else
