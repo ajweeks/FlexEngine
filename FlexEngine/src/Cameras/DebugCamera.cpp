@@ -26,6 +26,7 @@ namespace flex
 		m_TurnVel(0.0f)
 	{
 		ResetOrientation();
+		m_DragHisto = Histogram(120);
 	}
 
 	DebugCamera::~DebugCamera()
@@ -55,8 +56,15 @@ namespace flex
 		}
 	}
 
+	void DebugCamera::DrawImGuiObjects()
+	{
+		m_DragHisto.DrawImGui();
+	}
+
 	void DebugCamera::Update()
 	{
+		m_DragHisto.AddElement(m_MouseDragDist.y);
+
 		glm::vec3 targetDPos(0.0f);
 
 		bool bOrbiting = false;

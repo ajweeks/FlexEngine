@@ -3,6 +3,7 @@
 #include "BaseCamera.hpp"
 
 #include "Callbacks/InputCallbacks.hpp"
+#include "Histogram.hpp"
 
 namespace flex
 {
@@ -15,6 +16,7 @@ namespace flex
 		virtual void Initialize() override;
 		virtual void Update() override;
 		virtual void Destroy() override;
+		virtual void DrawImGuiObjects() override;
 
 	private:
 		EventReply OnMouseButtonEvent(MouseButton button, KeyAction action);
@@ -37,5 +39,7 @@ namespace flex
 		real m_TurnLag = 0.1f;
 		glm::vec3 m_MoveVel;
 		glm::vec2 m_TurnVel; // Contains amount pitch and yaw changed last frame
+
+		Histogram m_DragHisto;
 	};
 } // namespace flex
