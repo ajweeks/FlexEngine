@@ -4142,11 +4142,11 @@ namespace flex
 
 		RenderID VulkanRenderer::GetNextAvailableRenderID() const
 		{
-			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
+			for (i32 i = (i32)m_RenderObjects.size() - 1; i >= 0; --i)
 			{
-				if (!m_RenderObjects[i])
+				if (m_RenderObjects[i] == nullptr)
 				{
-					return i;
+					return (RenderID)i;
 				}
 			}
 

@@ -403,7 +403,7 @@ namespace flex
 
 		//size_t totalVertCount = 0;
 		m_MinPoint = glm::vec3(FLT_MAX);
-		m_MaxPoint = glm::vec3(FLT_MIN);
+		m_MaxPoint = glm::vec3(-FLT_MAX);
 
 		assert(data->meshes_count == 1);
 		for (i32 i = 0; i < (i32)data->meshes_count; ++i)
@@ -482,13 +482,65 @@ namespace flex
 					bCalculateTangents = true;
 				}
 
+				{
+					if (m_RequiredAttributes & (u32)VertexAttribute::POSITION)
+					{
+						vertexBufferDataCreateInfo.positions_3D.resize(vertCount);
+					}
+
+					if (m_RequiredAttributes & (u32)VertexAttribute::POSITION_2D)
+					{
+						vertexBufferDataCreateInfo.positions_2D.resize(vertCount);
+					}
+
+					if (m_RequiredAttributes & (u32)VertexAttribute::NORMAL)
+					{
+						vertexBufferDataCreateInfo.normals.resize(vertCount);
+					}
+
+					if (m_RequiredAttributes & (u32)VertexAttribute::TANGENT)
+					{
+						vertexBufferDataCreateInfo.tangents.resize(vertCount);
+					}
+
+					if (m_RequiredAttributes & (u32)VertexAttribute::BITANGENT)
+					{
+						vertexBufferDataCreateInfo.bitangents.resize(vertCount);
+					}
+
+					if (m_RequiredAttributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)
+					{
+						vertexBufferDataCreateInfo.colors_R32G32B32A32.resize(vertCount);
+					}
+
+					if (m_RequiredAttributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)
+					{
+						vertexBufferDataCreateInfo.colors_R8G8B8A8.resize(vertCount);
+					}
+
+					if (m_RequiredAttributes & (u32)VertexAttribute::UV)
+					{
+						vertexBufferDataCreateInfo.texCoords_UV.resize(vertCount);
+					}
+
+					if (m_RequiredAttributes & (u32)VertexAttribute::EXTRA_VEC4)
+					{
+						vertexBufferDataCreateInfo.extraVec4s.resize(vertCount);
+					}
+
+					if (m_RequiredAttributes & (u32)VertexAttribute::EXTRA_INT)
+					{
+						vertexBufferDataCreateInfo.extraInts.resize(vertCount);
+					}
+				}
+
 				// Vertices
 				for (u32 v = 0; v < vertCount; ++v)
 				{
 					// Position
 					glm::vec3 pos;
 					cgltf_accessor_read_float(posAccessor, v, &pos.x, 3);
-					vertexBufferDataCreateInfo.positions_3D.push_back(pos);
+					vertexBufferDataCreateInfo.positions_3D[v] = pos;
 
 					// Normal
 					if (m_RequiredAttributes & (u32)VertexAttribute::NORMAL)
@@ -497,7 +549,7 @@ namespace flex
 
 						if (normAttribIndex == -1)
 						{
-							vertexBufferDataCreateInfo.normals.push_back(m_DefaultNormal);
+							vertexBufferDataCreateInfo.normals[v] = m_DefaultNormal;
 						}
 						else
 						{
@@ -516,7 +568,7 @@ namespace flex
 							{
 								norm.z = -norm.z;
 							}
-							vertexBufferDataCreateInfo.normals.push_back(norm);
+							vertexBufferDataCreateInfo.normals[v] = norm;
 						}
 					}
 
@@ -527,7 +579,7 @@ namespace flex
 
 						if (tanAttribIndex == -1)
 						{
-							vertexBufferDataCreateInfo.tangents.push_back(m_DefaultTangent);
+							vertexBufferDataCreateInfo.tangents[v] = m_DefaultTangent;
 						}
 						else
 						{
@@ -538,7 +590,7 @@ namespace flex
 
 							glm::vec4 tangent;
 							cgltf_accessor_read_float(tanAccessor, v, &tangent.x, 4);
-							vertexBufferDataCreateInfo.tangents.push_back(tangent);
+							vertexBufferDataCreateInfo.tangents[v] = tangent;
 						}
 					}
 
@@ -546,7 +598,7 @@ namespace flex
 					if (m_RequiredAttributes & (u32)VertexAttribute::BITANGENT)
 					{
 						vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::BITANGENT;
-						vertexBufferDataCreateInfo.bitangents.push_back(m_DefaultBitangent);
+						vertexBufferDataCreateInfo.bitangents[v] = m_DefaultBitangent;
 					}
 
 					// Color
@@ -556,7 +608,7 @@ namespace flex
 
 						if (colAttribIndex == -1)
 						{
-							vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(m_DefaultColor_4);
+							vertexBufferDataCreateInfo.colors_R32G32B32A32[v] = m_DefaultColor_4;
 						}
 						else
 						{
@@ -567,7 +619,7 @@ namespace flex
 
 							glm::vec4 col;
 							cgltf_accessor_read_float(colAccessor, v, &col.x, 4);
-							vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(col);
+							vertexBufferDataCreateInfo.colors_R32G32B32A32[v] = col;
 						}
 					}
 
@@ -578,7 +630,7 @@ namespace flex
 
 						if (uvAttribIndex == -1)
 						{
-							vertexBufferDataCreateInfo.texCoords_UV.push_back(m_DefaultTexCoord);
+							vertexBufferDataCreateInfo.texCoords_UV[v] = m_DefaultTexCoord;
 						}
 						else
 						{
@@ -599,7 +651,7 @@ namespace flex
 							{
 								uv0.y = 1.0f - uv0.y;
 							}
-							vertexBufferDataCreateInfo.texCoords_UV.push_back(uv0);
+							vertexBufferDataCreateInfo.texCoords_UV[v] = uv0;
 						}
 					}
 				}
@@ -608,6 +660,7 @@ namespace flex
 				{
 					assert(primitive->indices->type == cgltf_type_scalar);
 					const i32 indexCount = (i32)primitive->indices->count;
+					m_Indices.resize(indexCount);
 
 					//assert(primitive->indices->buffer_view->type == cgltf_buffer_view_type_indices);
 					assert(primitive->indices->component_type == cgltf_component_type_r_8u ||
@@ -616,7 +669,7 @@ namespace flex
 
 					for (i32 l = 0; l < indexCount; ++l)
 					{
-						m_Indices.push_back(vertexStart + cgltf_accessor_read_index(primitive->indices, l));
+						m_Indices[l] = vertexStart + cgltf_accessor_read_index(primitive->indices, l);
 					}
 				}
 			}
@@ -1330,7 +1383,7 @@ namespace flex
 		if (!vertexBufferDataCreateInfo.positions_3D.empty())
 		{
 			m_MinPoint = glm::vec3(FLT_MAX);
-			m_MaxPoint = glm::vec3(FLT_MIN);
+			m_MaxPoint = glm::vec3(-FLT_MAX);
 
 			for (const glm::vec3& pos : vertexBufferDataCreateInfo.positions_3D)
 			{

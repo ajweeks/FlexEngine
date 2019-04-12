@@ -5918,11 +5918,11 @@ namespace flex
 
 		RenderID GLRenderer::GetNextAvailableRenderID() const
 		{
-			for (u32 i = 0; i < m_RenderObjects.size(); ++i)
+			for (i32 i = (i32)m_RenderObjects.size() - 1; i >= 0; --i)
 			{
 				if (m_RenderObjects[i] == nullptr)
 				{
-					return i;
+					return (RenderID)i;
 				}
 			}
 
