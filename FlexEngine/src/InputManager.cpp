@@ -598,6 +598,7 @@ namespace flex
 				for (MouseDrag& drag : m_MouseButtonDrags)
 				{
 					drag.startLocation -= glm::vec2(frameBufferSize.x - 1, 0.0f);
+					drag.endLocation = m_MousePosition;
 				}
 				g_Window->SetCursorPos(m_MousePosition);
 			}
@@ -610,6 +611,7 @@ namespace flex
 				for (MouseDrag& drag : m_MouseButtonDrags)
 				{
 					drag.startLocation += glm::vec2(frameBufferSize.x - 1, 0.0f);
+					drag.endLocation = m_MousePosition;
 				}
 				g_Window->SetCursorPos(m_MousePosition);
 			}
@@ -623,6 +625,7 @@ namespace flex
 				for (MouseDrag& drag : m_MouseButtonDrags)
 				{
 					drag.startLocation -= glm::vec2(0.0f, frameBufferSize.y - 1);
+					drag.endLocation = m_MousePosition;
 				}
 				g_Window->SetCursorPos(m_MousePosition);
 			}
@@ -635,6 +638,7 @@ namespace flex
 				for (MouseDrag& drag : m_MouseButtonDrags)
 				{
 					drag.startLocation += glm::vec2(0.0f, frameBufferSize.y - 1);
+					drag.endLocation = m_MousePosition;
 				}
 				g_Window->SetCursorPos(m_MousePosition);
 			}
