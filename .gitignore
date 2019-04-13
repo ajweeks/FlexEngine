@@ -46,6 +46,7 @@ sh.exe.stackdump
 AdditionalFiles/*.cap
 AdditionalFiles/*.nsight-gfxproj
 AdditionalFiles/*.header_hero
+AdditionalFiles/flex-cppcheck-build-dir/**
 
 
 # --------------------------

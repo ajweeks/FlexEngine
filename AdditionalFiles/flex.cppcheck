@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="1">
+    <builddir>flex-cppcheck-build-dir</builddir>
+    <platform>Unspecified</platform>
+    <importproject>../build/Flex.sln</importproject>
+    <analyze-all-vs-configs>true</analyze-all-vs-configs>
+    <libraries>
+        <library>sfml</library>
+        <library>windows</library>
+    </libraries>
+</project>
