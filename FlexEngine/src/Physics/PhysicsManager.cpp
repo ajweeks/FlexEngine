@@ -31,10 +31,10 @@ namespace flex
 		{
 			m_bInitialized = false;
 
-			SafeDelete(m_Solver);
-			SafeDelete(m_OverlappingPairCache);
-			SafeDelete(m_Dispatcher);
-			SafeDelete(m_CollisionConfiguration);
+			delete m_Solver;
+			delete m_OverlappingPairCache;
+			delete m_Dispatcher;
+			delete m_CollisionConfiguration;
 		}
 	}
 

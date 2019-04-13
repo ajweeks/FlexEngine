@@ -25,7 +25,7 @@ namespace flex
 	class TrackManager
 	{
 	public:
-		TrackManager(BaseScene* owningScene);
+		explicit TrackManager(BaseScene* owningScene);
 
 		void InitializeFromJSON(const JSONObject& obj);
 

@@ -22,7 +22,7 @@ namespace flex
 	class GLFWWindowWrapper : public Window
 	{
 	public:
-		GLFWWindowWrapper(const std::string& title);
+		explicit GLFWWindowWrapper(const std::string& title);
 		virtual ~GLFWWindowWrapper();
 
 		virtual void Initialize() override;

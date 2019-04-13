@@ -49,20 +49,14 @@ namespace flex
 
 		void Reset()
 		{
-			for (T& v : prevValues)
-			{
-				v = T();
-			}
+			std::fill(prevValues.begin(), prevValues.end(), T());
 			currentIndex = 0;
 			currentAverage = T();
 		}
 
 		void Reset(const T& resetValue)
 		{
-			for (T& v : prevValues)
-			{
-				v = resetValue;
-			}
+			std::fill(prevValues.begin(), prevValues.end(), resetValue);
 			currentIndex = 0;
 			currentAverage = resetValue;
 		}

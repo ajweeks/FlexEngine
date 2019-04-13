@@ -24,7 +24,7 @@ namespace flex
 			return;
 		}
 
-		bool printAvailableAudioDeviceNames = false;
+		constexpr bool printAvailableAudioDeviceNames = false;
 		if (printAvailableAudioDeviceNames)
 		{
 			PrintAudioDevices(alcGetString(NULL, ALC_DEVICE_SPECIFIER));

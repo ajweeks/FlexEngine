@@ -21,7 +21,6 @@ namespace flex
 		void OnSceneChanged();
 
 		BaseCamera* CurrentCamera() const;
-		i32 CameraCount() const;
 
 		void AddCamera(BaseCamera* camera, bool bSwitchTo = false);
 

@@ -144,15 +144,6 @@ IGNORE_WARNINGS_POP
 
 #include "Physics/PhysicsTypeConversions.hpp"
 
-#define SafeDelete(pObjectToDelete) \
-{ \
-	if (pObjectToDelete != nullptr) \
-	{ \
-		delete(pObjectToDelete); \
-		pObjectToDelete = nullptr; \
-	} \
-} \
-
 #ifndef btAssert
 #define btAssert(e) assert(e)
 #endif

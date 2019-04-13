@@ -15,7 +15,7 @@ namespace flex
 		{
 		}
 
-		Spring(const T& targetPos) :
+		explicit Spring(const T& targetPos) :
 			targetPos(targetPos),
 			targetVel(T()),
 			pos(T()),

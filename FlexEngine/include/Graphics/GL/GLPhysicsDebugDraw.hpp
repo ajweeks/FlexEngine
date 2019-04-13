@@ -3,10 +3,9 @@
 
 IGNORE_WARNINGS_PUSH
 #include <glad/glad.h>
-
-#include "LinearMath/btIDebugDraw.h"
 IGNORE_WARNINGS_POP
 
+#include "Graphics/Renderer.hpp"
 #include "Graphics/VertexBufferData.hpp"
 
 namespace flex
@@ -15,7 +14,7 @@ namespace flex
 	{
 		class GLRenderer;
 
-		class GLPhysicsDebugDraw : public btIDebugDraw
+		class GLPhysicsDebugDraw : public PhysicsDebugDrawBase
 		{
 		public:
 			GLPhysicsDebugDraw();
@@ -37,7 +36,8 @@ namespace flex
 			virtual void drawSphere(btScalar radius, const btTransform& transform, const btVector3& color) override;
 			virtual void drawSphere(const btVector3& p, btScalar radius, const btVector3& color) override;
 
-			void DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& color);
+			virtual void DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& color) override;
+
 			void DrawContactPointWithAlpha(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector4& color);
 
 			virtual void flushLines() override;

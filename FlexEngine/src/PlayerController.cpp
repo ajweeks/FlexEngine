@@ -486,7 +486,7 @@ namespace flex
 		// Jitter tester:
 		//m_Player->GetTransform()->SetWorldPosition(m_Player->GetTransform()->GetWorldPosition() + glm::vec3(g_DeltaTime * 1.0f, 0.0f, 0.0f));
 
-		bool bDrawVelocity = false;
+		constexpr bool bDrawVelocity = false;
 		if (bDrawVelocity)
 		{
 			real scale = 1.0f;
@@ -697,7 +697,7 @@ namespace flex
 		{
 			BaseScene* scene = g_SceneManager->CurrentScene();
 			CartID cartID = scene->GetCartManager()->CreateEngineCart(scene->GetUniqueObjectName("EngineCart_", 2));
-			EngineCart* engineCart = (EngineCart*)scene->GetCartManager()->GetCart(cartID);
+			EngineCart* engineCart = static_cast<EngineCart*>(scene->GetCartManager()->GetCart(cartID));
 			engineCart->SetVisible(false);
 			m_Player->m_Inventory.push_back(engineCart);
 			return EventReply::CONSUMED;

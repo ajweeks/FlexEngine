@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
 		flex::FlexEngine* engineInstance = new flex::FlexEngine();
 		engineInstance->Initialize();
 		engineInstance->UpdateAndRender();
-		SafeDelete(engineInstance);
+		delete engineInstance;
 	}
 
 	if (gIncludeConsole)

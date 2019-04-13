@@ -513,7 +513,7 @@ namespace flex
 						vertexBufferDataCreateInfo.colors_R32G32B32A32.resize(vertCount);
 					}
 
-					if (m_RequiredAttributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)
+					if (m_RequiredAttributes & (u32)VertexAttribute::COLOR_R8G8B8A8_UNORM)
 					{
 						vertexBufferDataCreateInfo.colors_R8G8B8A8.resize(vertCount);
 					}
@@ -711,7 +711,6 @@ namespace flex
 			if (optionalCreateInfo->materialID != InvalidMaterialID)
 			{
 				m_MaterialID = optionalCreateInfo->materialID;
-				renderObjectCreateInfo.materialID = m_MaterialID;
 			}
 			renderObjectCreateInfo.visibleInSceneExplorer = optionalCreateInfo->visibleInSceneExplorer;
 			renderObjectCreateInfo.cullFace = optionalCreateInfo->cullFace;
@@ -774,7 +773,6 @@ namespace flex
 			if (optionalCreateInfo->materialID != InvalidMaterialID)
 			{
 				m_MaterialID = optionalCreateInfo->materialID;
-				renderObjectCreateInfo.materialID = m_MaterialID;
 			}
 			renderObjectCreateInfo.visibleInSceneExplorer = optionalCreateInfo->visibleInSceneExplorer;
 			renderObjectCreateInfo.cullFace = optionalCreateInfo->cullFace;
@@ -798,8 +796,6 @@ namespace flex
 		TopologyMode topologyMode = TopologyMode::TRIANGLE_LIST;
 
 		VertexBufferData::CreateInfo vertexBufferDataCreateInfo = {};
-
-		std::string defaultName;
 
 		switch (shape)
 		{
@@ -978,8 +974,6 @@ namespace flex
 				{ 1.0f, 0.0f },
 			};
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::UV;
-
-			defaultName = "Cube";
 		} break;
 		case MeshComponent::PrefabShape::GRID:
 		{
@@ -1040,7 +1034,6 @@ namespace flex
 			assert(vertexBufferDataCreateInfo.colors_R32G32B32A32.capacity() == vertexBufferDataCreateInfo.colors_R32G32B32A32.size());
 
 			topologyMode = TopologyMode::LINE_LIST;
-			defaultName = "Grid";
 		} break;
 		case MeshComponent::PrefabShape::WORLD_AXIS_GROUND:
 		{
@@ -1090,7 +1083,6 @@ namespace flex
 			assert(vertexBufferDataCreateInfo.colors_R32G32B32A32.capacity() == vertexBufferDataCreateInfo.colors_R32G32B32A32.size());
 
 			topologyMode = TopologyMode::LINE_LIST;
-			defaultName = "World Axis Ground Plane";
 		} break;
 		case MeshComponent::PrefabShape::PLANE:
 		{
@@ -1165,8 +1157,6 @@ namespace flex
 				{ 1.0f, 0.0f },
 			};
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::UV;
-
-			defaultName = "Plane";
 		} break;
 		case MeshComponent::PrefabShape::GERSTNER_PLANE:
 		{
@@ -1210,8 +1200,6 @@ namespace flex
 					m_Indices[i++] = vertIdx - 1;
 				}
 			}
-
-			defaultName = "Gerstner Plane";
 		} break;
 		case MeshComponent::PrefabShape::UV_SPHERE:
 		{
@@ -1230,7 +1218,6 @@ namespace flex
 			u32 parallelCount = 10;
 			u32 meridianCount = 5;
 
-			assert(parallelCount > 0 && meridianCount > 0);
 			for (u32 j = 0; j < parallelCount - 1; ++j)
 			{
 				real polar = PI * real(j + 1) / (real)parallelCount;
@@ -1303,8 +1290,6 @@ namespace flex
 				m_Indices.push_back(a);
 				m_Indices.push_back(b);
 			}
-
-			defaultName = "UV Sphere";
 		} break;
 		case MeshComponent::PrefabShape::SKYBOX:
 		{
@@ -1370,8 +1355,6 @@ namespace flex
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
 
 			renderObjectCreateInfo.cullFace = CullFace::FRONT;
-			defaultName = "Skybox";
-
 		} break;
 		default:
 		{

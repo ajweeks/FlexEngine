@@ -10,7 +10,7 @@ namespace flex
 	{
 	public:
 		BezierCurveList();
-		BezierCurveList(const std::vector<BezierCurve>& curves);
+		explicit BezierCurveList(const std::vector<BezierCurve>& curves);
 
 		static BezierCurveList InitializeFromJSON(const JSONObject& obj);
 

@@ -25,7 +25,7 @@ namespace flex
 
 		void GLPhysicsDebugDraw::Initialize()
 		{
-			m_Renderer = (GLRenderer*)(g_Renderer);
+			m_Renderer = static_cast<GLRenderer*>(g_Renderer);
 			const std::string debugMatName = "Debug";
 			if (!m_Renderer->GetMaterialID(debugMatName, m_MaterialID))
 			{

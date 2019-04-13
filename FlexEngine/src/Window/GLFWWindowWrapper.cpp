@@ -66,7 +66,7 @@ namespace flex
 	{
 		for (GLFWimage& icon : m_WindowIcons)
 		{
-			SafeDelete(icon.pixels);
+			delete icon.pixels;
 		}
 		m_WindowIcons.clear();
 

@@ -218,7 +218,7 @@ namespace flex
 	{
 	public:
 		DirectionalLight();
-		DirectionalLight(const std::string& name);
+		explicit DirectionalLight(const std::string& name);
 
 		virtual void Initialize() override;
 		virtual void Destroy() override;
@@ -234,8 +234,8 @@ namespace flex
 
 		DirLightData data;
 
-		real shadowDarkness;
-		bool bCastShadow;
+		real shadowDarkness = 1.0f;
+		bool bCastShadow = false;
 		real shadowMapNearPlane;
 		real shadowMapFarPlane;
 		real shadowMapZoom;
@@ -252,8 +252,8 @@ namespace flex
 	class PointLight : public GameObject
 	{
 	public:
-		PointLight(BaseScene* scene);
-		PointLight(const std::string& name);
+		explicit PointLight(BaseScene* scene);
+		explicit PointLight(const std::string& name);
 
 		virtual void Initialize() override;
 		virtual void Destroy() override;
@@ -276,7 +276,7 @@ namespace flex
 	class Valve : public GameObject
 	{
 	public:
-		Valve(const std::string& name);
+		explicit Valve(const std::string& name);
 
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
 
@@ -309,7 +309,7 @@ namespace flex
 	class RisingBlock : public GameObject
 	{
 	public:
-		RisingBlock(const std::string& name);
+		explicit RisingBlock(const std::string& name);
 
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
 
@@ -339,7 +339,7 @@ namespace flex
 	class GlassPane : public GameObject
 	{
 	public:
-		GlassPane(const std::string& name);
+		explicit GlassPane(const std::string& name);
 
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
 
@@ -354,7 +354,7 @@ namespace flex
 	class ReflectionProbe : public GameObject
 	{
 	public:
-		ReflectionProbe(const std::string& name);
+		explicit ReflectionProbe(const std::string& name);
 
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
 
@@ -371,7 +371,7 @@ namespace flex
 	class Skybox : public GameObject
 	{
 	public:
-		Skybox(const std::string& name);
+		explicit Skybox(const std::string& name);
 
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
 
@@ -432,7 +432,7 @@ namespace flex
 	class EngineCart : public Cart
 	{
 	public:
-		EngineCart(CartID cartID);
+		explicit EngineCart(CartID cartID);
 		EngineCart(CartID cartID, const std::string& name);
 
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
@@ -460,7 +460,7 @@ namespace flex
 	{
 	public:
 		MobileLiquidBox();
-		MobileLiquidBox(const std::string& name);
+		explicit MobileLiquidBox(const std::string& name);
 
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
 
@@ -478,7 +478,7 @@ namespace flex
 	class GerstnerWave : public GameObject
 	{
 	public:
-		GerstnerWave(const std::string& name);
+		explicit GerstnerWave(const std::string& name);
 
 		virtual void Update() override;
 		void AddWave();
@@ -732,7 +732,7 @@ namespace flex
 	struct Tokenizer
 	{
 		Tokenizer();
-		Tokenizer(const std::string& codeStr);
+		explicit Tokenizer(const std::string& codeStr);
 		~Tokenizer();
 
 		void SetCodeStr(const std::string& newCodeStr);
@@ -784,7 +784,7 @@ namespace flex
 
 	struct Node
 	{
-		Node(const Token& token);
+		explicit Node(const Token& token);
 
 		Token token;
 	};
@@ -831,8 +831,8 @@ namespace flex
 	struct Value
 	{
 		Value();
-		Value(Operation* opearation);
-		Value(Identifier* identifierValue);
+		explicit Value(Operation* opearation);
+		explicit Value(Identifier* identifierValue);
 		Value(i32 intRaw, bool bTemporary);
 		Value(real floatRaw, bool bTemporary);
 		Value(bool boolRaw, bool bTemporary);
@@ -869,7 +869,6 @@ namespace flex
 		Expression(const Token& token, real floatRaw);
 		Expression(const Token& token, bool boolRaw);
 		Expression(const Token& token, Identifier* identifier);
-		Expression(const Token& token, TypeName type, void* value);
 		~Expression();
 
 		Value value;
@@ -1013,7 +1012,7 @@ namespace flex
 
 	struct AST
 	{
-		AST(Tokenizer* tokenizer);
+		explicit AST(Tokenizer* tokenizer);
 
 		void Generate();
 		void Evaluate();
@@ -1030,7 +1029,7 @@ namespace flex
 	{
 	public:
 		Terminal();
-		Terminal(const std::string& name);
+		explicit Terminal(const std::string& name);
 
 		virtual void Initialize() override;
 		virtual void Destroy() override;

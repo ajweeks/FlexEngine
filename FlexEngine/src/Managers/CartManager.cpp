@@ -357,7 +357,7 @@ namespace flex
 		return cartID;
 	}
 
-	Cart* CartManager::GetCart(CartID cartID)
+	Cart* CartManager::GetCart(CartID cartID) const
 	{
 		assert(cartID < m_Carts.size());
 		return m_Carts[cartID];

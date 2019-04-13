@@ -8,7 +8,7 @@ namespace flex
 		{
 		}
 
-		Histogram(i32 count)
+		explicit Histogram(i32 count)
 		{
 			data.resize(count);
 		}

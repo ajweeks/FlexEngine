@@ -36,7 +36,7 @@ namespace flex
 		for (BaseCamera* camera : m_Cameras)
 		{
 			camera->Destroy();
-			SafeDelete(camera);
+			delete camera;
 		}
 		m_Cameras.clear();
 
@@ -60,11 +60,6 @@ namespace flex
 	BaseCamera* CameraManager::CurrentCamera() const
 	{
 		return m_CameraStack.top();
-	}
-
-	i32 CameraManager::CameraCount() const
-	{
-		return (i32)m_Cameras.size();
 	}
 
 	void CameraManager::AddCamera(BaseCamera* camera, bool bSwitchTo)

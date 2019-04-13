@@ -124,8 +124,8 @@ namespace flex
 			}
 			const glm::vec3 nextJunctionPos = track->GetPointAtJunction(nextJunctionCurveIdx);
 
-			glm::vec3 trackForward = track->GetCurveDirectionAt(distAlongTrack);
-			trackForward = glm::normalize(newPoint - pPoint);
+			// TODO: Compare with GetCurveDirectionAt?
+			glm::vec3 trackForward = glm::normalize(newPoint - pPoint);
 			glm::vec3 trackRight = glm::cross(trackForward, VEC3_UP);
 
 			// Check for junction crossings
@@ -804,7 +804,7 @@ namespace flex
 		i32 cartIndex = cartChain->GetCartIndex(cartID);
 		if (cartIndex == 0)
 		{
-			targetT = cartChain->GetCartAtIndexDistAlongTrack(cartIndex + 1);
+			targetT = cartChain->GetCartAtIndexDistAlongTrack(1);
 			//targetT = cartManager->GetCart(cartID)->distAlongTrack + cartManager->GetChainDrivePower(cartChainID);
 		}
 		else

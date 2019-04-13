@@ -38,7 +38,7 @@ namespace flex
 	class Window
 	{
 	public:
-		Window(const std::string& title);
+		explicit Window(const std::string& title);
 		virtual ~Window();
 
 		virtual void Initialize() = 0;

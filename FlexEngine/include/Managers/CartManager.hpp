@@ -9,7 +9,7 @@ namespace flex
 
 	struct CartChain
 	{
-		CartChain(CartChainID chainID);
+		explicit CartChain(CartChainID chainID);
 
 		void AddUnique(CartID cartID);
 		void Remove(CartID cartID);
@@ -35,7 +35,7 @@ namespace flex
 	class CartManager
 	{
 	public:
-		CartManager(BaseScene* owningScene);
+		explicit CartManager(BaseScene* owningScene);
 
 		void Initialize();
 		void Destroy();
@@ -44,7 +44,7 @@ namespace flex
 		// Creates a new cart with given name and adds to the current scene
 		CartID CreateCart(const std::string& name);
 		CartID CreateEngineCart(const std::string& name);
-		Cart* GetCart(CartID cartID);
+		Cart* GetCart(CartID cartID) const;
 		CartChain* GetCartChain(CartChainID cartChainID);
 		real GetChainDrivePower(CartChainID cartChainID);
 

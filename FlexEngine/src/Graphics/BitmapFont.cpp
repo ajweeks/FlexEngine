@@ -30,7 +30,7 @@ namespace flex
 		if (m_Texture)
 		{
 			m_Texture->Destroy();
-			SafeDelete(m_Texture);
+			delete m_Texture;
 		}
 	}
 

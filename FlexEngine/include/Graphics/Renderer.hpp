@@ -1,5 +1,9 @@
 #pragma once
 
+IGNORE_WARNINGS_PUSH
+#include "LinearMath/btIDebugDraw.h"
+IGNORE_WARNINGS_POP
+
 #include "Physics/PhysicsDebuggingSettings.hpp"
 #include "RendererTypes.hpp"
 
@@ -17,6 +21,12 @@ namespace flex
 	class MeshComponent;
 	class PointLight;
 	struct TextCache;
+
+	class PhysicsDebugDrawBase : public btIDebugDraw
+	{
+	public:
+		virtual void DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& color) = 0;
+	};
 
 	class Renderer
 	{
@@ -97,7 +107,7 @@ namespace flex
 
 		virtual void SetReflectionProbeMaterial(MaterialID reflectionProbeMaterialID);
 
-		virtual btIDebugDraw* GetDebugDrawer() = 0;
+		virtual PhysicsDebugDrawBase* GetDebugDrawer() = 0;
 
 		virtual void DrawStringSS(const std::string& str,
 			const glm::vec4& color,

@@ -128,7 +128,7 @@ namespace flex
 		if (m_Controller)
 		{
 			m_Controller->Destroy();
-			SafeDelete(m_Controller);
+			delete m_Controller;
 		}
 
 		AudioManager::DestroyAudioSource(m_SoundPlaceTrackNodeID);
@@ -280,7 +280,7 @@ namespace flex
 			Terminal* terminalWasInteractingWith = dynamic_cast<Terminal*>(m_ObjectInteractingWith);
 			if (terminalWasInteractingWith != nullptr)
 			{
-				TerminalCamera* terminalCam = (TerminalCamera*)g_CameraManager->CurrentCamera();
+				TerminalCamera* terminalCam = static_cast<TerminalCamera*>(g_CameraManager->CurrentCamera());
 				terminalCam->SetTerminal(nullptr);
 				GameObject::SetInteractingWith(gameObject);
 			}
@@ -298,7 +298,7 @@ namespace flex
 			bool bNewCam = false;
 			if (terminalCam == nullptr)
 			{
-				terminalCam = (TerminalCamera*)g_CameraManager->GetCameraByName("terminal");
+				terminalCam = static_cast<TerminalCamera*>(g_CameraManager->GetCameraByName("terminal"));
 				bNewCam = true;
 			}
 			terminalCam->SetTerminal(terminal);

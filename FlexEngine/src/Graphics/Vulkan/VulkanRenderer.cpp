@@ -2355,7 +2355,7 @@ namespace flex
 
 				shader->uniformBuffer.constantData.size = GetAlignedUBOSize(shader->uniformBuffer.constantData.size);
 
-				shader->uniformBuffer.constantData.data = (real*)malloc(shader->uniformBuffer.constantData.size);
+				shader->uniformBuffer.constantData.data = static_cast<real*>(malloc(shader->uniformBuffer.constantData.size));
 				assert(shader->uniformBuffer.constantData.data);
 
 				PrepareUniformBuffer(&shader->uniformBuffer.constantBuffer, shader->uniformBuffer.constantData.size,
@@ -2369,7 +2369,7 @@ namespace flex
 
 				shader->uniformBuffer.dynamicData.size = GetAlignedUBOSize(shader->uniformBuffer.dynamicData.size);
 
-				const size_t dynamicBufferSize = AllocateUniformBuffer(
+				const size_t dynamicBufferSize = AllocateDynamicUniformBuffer(
 					shader->uniformBuffer.dynamicData.size, (void**)&shader->uniformBuffer.dynamicData.data);
 				if (dynamicBufferSize > 0)
 				{
@@ -2481,7 +2481,7 @@ namespace flex
 					draggedGameObjectsVec.reserve(draggedObjectCount);
 					for (i32 i = 0; i < draggedObjectCount; ++i)
 					{
-						draggedGameObjectsVec.push_back(*((GameObject**)payload->Data + i));
+						draggedGameObjectsVec.push_back(*static_cast<GameObject**>(payload->Data) + i);
 					}
 
 					if (!draggedGameObjectsVec.empty())
@@ -2557,7 +2557,7 @@ namespace flex
 			{
 				ImGui::Text("Mat ID: %u", renderObject->materialID);
 				ImGui::Text("Shader ID: %u", GetMaterial(renderObject->materialID).shaderID);
-				ImGui::Text("Dynamic Offset: %u", renderObject->dynamicUBOIndex);
+				//ImGui::Text("Dynamic Offset: %u", renderObject->dynamicUBOIndex);
 			}
 		}
 
@@ -2908,7 +2908,7 @@ namespace flex
 			}
 		}
 
-		btIDebugDraw* VulkanRenderer::GetDebugDrawer()
+		PhysicsDebugDrawBase* VulkanRenderer::GetDebugDrawer()
 		{
 			return m_PhysicsDebugDrawer;
 		}
@@ -3034,7 +3034,7 @@ namespace flex
 					{
 						static bool GetShaderName(void* data, int idx, const char** out_str)
 						{
-							*out_str = ((VulkanShader*)data)[idx].shader.name.c_str();
+							*out_str = (static_cast<VulkanShader*>(data))[idx].shader.name.c_str();
 							return true;
 						}
 					};
@@ -3100,7 +3100,7 @@ namespace flex
 							}
 							else
 							{
-								*out_str = ((VulkanTexture**)data)[idx - 1]->GetName().c_str();
+								*out_str = static_cast<VulkanTexture**>(data)[idx - 1]->GetName().c_str();
 							}
 							return true;
 						}
@@ -3649,7 +3649,7 @@ namespace flex
 					else
 					{
 						newFont->ClearTexture();
-						SafeDelete(fontTex);
+						delete fontTex;
 					}
 				}
 			}
@@ -3828,7 +3828,9 @@ namespace flex
 					(u32)textureSize.y
 				};
 				renderPassBeginInfo.clearValueCount = 1;
-				renderPassBeginInfo.pClearValues = (VkClearValue*)&m_ClearColor;
+				VkClearValue clearCol = {};
+				clearCol.color = m_ClearColor;
+				renderPassBeginInfo.pClearValues = &clearCol;
 				vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 				VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
@@ -3842,8 +3844,8 @@ namespace flex
 				pipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 				pipelineCreateInfo.cullMode = VK_CULL_MODE_NONE;
 				pipelineCreateInfo.descriptorSetLayoutIndex = computeSDFShaderID;
-				pipelineCreateInfo.bSetDynamicStates = true;
-				pipelineCreateInfo.bEnableColorBlending = false;
+				//pipelineCreateInfo.bSetDynamicStates = true;
+				//pipelineCreateInfo.bEnableColorBlending = false;
 				pipelineCreateInfo.subpass = 0;
 				pipelineCreateInfo.depthCompareOp = VK_COMPARE_OP_ALWAYS;
 				pipelineCreateInfo.depthWriteEnable = VK_FALSE;
@@ -3903,7 +3905,7 @@ namespace flex
 					VulkanTexture* highResTex = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "High res tex", width, height, 4);
 					charTextures.push_back(highResTex);
 
-					highResTex->CreateFromMemory(alignedBitmap.buffer, width * height * 4 * sizeof(real), imageFormat, 1);
+					highResTex->CreateFromMemory(alignedBitmap.buffer, width * height * 4 * sizeof(real), VK_FORMAT_R8G8B8A8_UINT, 1);
 
 					glm::vec4 borderColor(0.0f);
 
@@ -4225,7 +4227,7 @@ namespace flex
 
 		void VulkanRenderer::CreateSurface()
 		{
-			VK_CHECK_RESULT(glfwCreateWindowSurface(m_Instance, ((GLFWWindowWrapper*)g_Window)->GetWindow(), nullptr, m_Surface.replace()));
+			VK_CHECK_RESULT(glfwCreateWindowSurface(m_Instance, static_cast<GLFWWindowWrapper*>(g_Window)->GetWindow(), nullptr, m_Surface.replace()));
 		}
 
 		//void VulkanRenderer::SetupImGuiWindowData(ImGui_ImplVulkanH_WindowData* data, VkSurfaceKHR surface, i32 width, i32 height)
@@ -4575,7 +4577,7 @@ namespace flex
 
 			for (size_t i = 0; i < material->material.frameBuffers.size(); ++i)
 			{
-				createInfo.frameBufferViews.emplace_back(U_FB_0_SAMPLER + i, (VkImageView*)material->material.frameBuffers[i].second);
+				createInfo.frameBufferViews.emplace_back(U_FB_0_SAMPLER + i, static_cast<VkImageView*>(material->material.frameBuffers[i].second));
 			}
 
 			CreateDescriptorSet(&createInfo);
@@ -4967,8 +4969,8 @@ namespace flex
 			pipelineCreateInfo.topology = renderObject->topology;
 			pipelineCreateInfo.cullMode = renderObject->cullMode;
 			pipelineCreateInfo.descriptorSetLayoutIndex = material->descriptorSetLayoutIndex;
-			pipelineCreateInfo.bSetDynamicStates = false;
-			pipelineCreateInfo.bEnableColorBlending = shader.shader.bTranslucent;
+			//pipelineCreateInfo.bSetDynamicStates = false;
+			//pipelineCreateInfo.bEnableColorBlending = shader.shader.bTranslucent;
 			pipelineCreateInfo.pipelineLayout = renderObject->pipelineLayout.replace();
 			pipelineCreateInfo.grahpicsPipeline = renderObject->graphicsPipeline.replace();
 			pipelineCreateInfo.subpass = shader.shader.subpass;
@@ -5623,7 +5625,7 @@ namespace flex
 					GameObject* gameObject = *iter;
 					if (gameObject->GetName().compare(gBufferQuadName) == 0)
 					{
-						SafeDelete(gameObject);
+						delete gameObject;
 						m_PersistentObjects.erase(iter);
 						break;
 					}

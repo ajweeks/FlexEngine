@@ -104,6 +104,11 @@ namespace flex
 			// TODO: FIXME: UNIMPLEMENTED: Implement me (or don't)
 		}
 
+		void VulkanPhysicsDebugDraw::DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& color)
+		{
+
+		}
+
 		void VulkanPhysicsDebugDraw::flushLines()
 		{
 			Draw();

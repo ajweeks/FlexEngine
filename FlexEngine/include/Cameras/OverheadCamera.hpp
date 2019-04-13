@@ -11,7 +11,7 @@ namespace flex
 	class OverheadCamera final : public BaseCamera
 	{
 	public:
-		OverheadCamera(real FOV = glm::radians(45.0f));
+		explicit OverheadCamera(real FOV = glm::radians(45.0f));
 		~OverheadCamera();
 
 		virtual void Initialize() override;

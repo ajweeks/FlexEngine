@@ -220,16 +220,16 @@ namespace flex
 		}
 
 		file.ignore(std::numeric_limits<std::streamsize>::max());
-		std::streampos length = file.gcount();
+		std::streampos fileLen = file.gcount();
 		file.clear(); // Clear eof flag
 		file.seekg(0, std::ios::beg);
 
-		if ((size_t)length > 0)
+		if ((size_t)fileLen > 0)
 		{
-			fileContents.resize((size_t)length);
+			fileContents.resize((size_t)fileLen);
 
 			file.seekg(0, std::ios::beg);
-			file.read(&fileContents[0], length);
+			file.read(&fileContents[0], fileLen);
 			file.close();
 
 			// Remove extra null terminators caused by Windows line endings
@@ -610,7 +610,7 @@ namespace flex
 			++dataIndex;
 		}
 
-		bool bPrintWavStats = false;
+		constexpr bool bPrintWavStats = false;
 		if (bPrintWavStats)
 		{
 			std::string fileName = filePath;

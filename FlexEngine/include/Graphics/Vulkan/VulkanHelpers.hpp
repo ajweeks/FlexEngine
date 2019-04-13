@@ -461,8 +461,8 @@ namespace flex
 
 			u32 descriptorSetLayoutIndex = 0;
 
-			bool setDynamicStates = false;
-			bool enabledColorBlending = false;
+			bool bSetDynamicStates = false;
+			bool bEnableColorBlending = false;
 
 			VkBool32 depthWriteEnable = VK_TRUE;
 			VkCompareOp depthCompareOp = VK_COMPARE_OP_GREATER_OR_EQUAL;

@@ -564,7 +564,6 @@ namespace flex
 
 		void StartAsyncTextureSaveToFile(const std::string& absoluteFilePath, ImageFormat format, GLuint handle, i32 width, i32 height, i32 channelCount, bool bFlipVertically, AsynchronousTextureSave** asyncTextureSave)
 		{
-			const char* getTexImageBlockName = "glGetTexImage";
 
 			assert(channelCount == 3 || channelCount == 4);
 
@@ -580,10 +579,13 @@ namespace flex
 
 			if (readBackTextureData && u8Data)
 			{
+				const char* getTexImageBlockName = "glGetTexImage";
 				PROFILE_BEGIN(getTexImageBlockName);
+
 				glBindTexture(GL_TEXTURE_2D, handle);
 				// TODO: Move readback to async thread as well (takes >~40ms)
 				glGetTexImage(GL_TEXTURE_2D, 0, channelCount == 3 ? GL_RGB : GL_RGBA, GL_FLOAT, (void*)readBackTextureData);
+
 				PROFILE_END(getTexImageBlockName);
 				Profiler::PrintBlockDuration(getTexImageBlockName);
 

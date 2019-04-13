@@ -20,7 +20,7 @@ namespace flex
 	{
 	public:
 		// fileName e.g. "scene_01.json"
-		BaseScene(const std::string& fileName);
+		explicit BaseScene(const std::string& fileName);
 		virtual ~BaseScene();
 
 		virtual void Initialize();

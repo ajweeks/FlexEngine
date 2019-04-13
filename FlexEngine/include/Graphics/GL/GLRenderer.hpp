@@ -84,7 +84,7 @@ namespace flex
 
 			virtual void NewFrame() override;
 
-			virtual btIDebugDraw* GetDebugDrawer() override;
+			virtual PhysicsDebugDrawBase* GetDebugDrawer() override;
 
 			virtual void DrawStringSS(const std::string& str,
 				const glm::vec4& color,

@@ -287,8 +287,6 @@ namespace flex
 
 		g_CameraManager->Initialize();
 
-		// TODO: Specify a certain level of priority when registering us to prevent
-		// the DebugCamera from having higher priority than us after switching cams
 		g_InputManager->BindMouseButtonCallback(&m_MouseButtonCallback, 99);
 		g_InputManager->BindMouseMovedCallback(&m_MouseMovedCallback, 99);
 		g_InputManager->BindKeyEventCallback(&m_KeyEventCallback, 10);
@@ -377,27 +375,27 @@ namespace flex
 		if (m_TransformGizmo)
 		{
 			m_TransformGizmo->Destroy();
-			SafeDelete(m_TransformGizmo);
+			delete m_TransformGizmo;
 		}
 
 		g_SceneManager->DestroyAllScenes();
-		SafeDelete(g_SceneManager);
+		delete g_SceneManager;
 
 		g_PhysicsManager->Destroy();
-		SafeDelete(g_PhysicsManager);
+		delete g_PhysicsManager;
 
 		g_CameraManager->Destroy();
-		SafeDelete(g_CameraManager);
+		delete g_CameraManager;
 
 		DestroyWindowAndRenderer();
 
-		SafeDelete(g_Monitor);
+		delete g_Monitor;
 
 		MeshComponent::DestroyAllLoadedMeshes();
 
 		AudioManager::Destroy();
 
-		SafeDelete(g_InputManager);
+		delete g_InputManager;
 
 		// Reset console color to default
 		Print("\n");
@@ -471,13 +469,13 @@ namespace flex
 		if (g_Renderer)
 		{
 			g_Renderer->Destroy();
-			SafeDelete(g_Renderer);
+			delete g_Renderer;
 		}
 
 		if (g_Window)
 		{
 			g_Window->Destroy();
-			SafeDelete(g_Window);
+			delete g_Window;
 		}
 	}
 
@@ -498,7 +496,7 @@ namespace flex
 		if (m_TransformGizmo)
 		{
 			m_TransformGizmo->Destroy();
-			SafeDelete(m_TransformGizmo);
+			delete m_TransformGizmo;
 		}
 
 		DeselectCurrentlySelectedObjects();
@@ -777,50 +775,6 @@ namespace flex
 		m_bRenderEditorObjects = bRenderingEditorObjects;
 	}
 
-	void FlexEngine::CycleRenderer()
-	{
-		// TODO? ??
-		//g_Renderer->InvalidateFontObjects();
-
-		DeselectCurrentlySelectedObjects();
-		PreSceneChange();
-		g_SceneManager->DestroyAllScenes();
-		DestroyWindowAndRenderer();
-
-		while (true)
-		{
-			m_RendererIndex = RendererID(((i32)m_RendererIndex + 1) % (i32)RendererID::_LAST_ELEMENT);
-
-#if COMPILE_VULKAN
-			if (m_RendererIndex == RendererID::VULKAN)
-			{
-				break;
-			}
-#endif
-#if COMPILE_OPEN_GL
-			if (m_RendererIndex == RendererID::GL)
-			{
-				break;
-			}
-#endif
-		}
-		m_RendererName = RenderIDToString(m_RendererIndex);
-		Print("Current renderer: %s\n", m_RendererName.c_str());
-
-		CreateWindowAndRenderer();
-		InitializeWindowAndRenderer();
-
-		SetupImGuiStyles();
-
-		g_SceneManager->AddFoundScenes();
-
-		LoadCommonSettingsFromDisk();
-
-		g_SceneManager->InitializeCurrentScene();
-		g_Renderer->PostInitialize();
-		g_SceneManager->PostInitializeCurrentScene();
-	}
-
 	void FlexEngine::UpdateAndRender()
 	{
 		m_bRunning = true;
@@ -933,10 +887,7 @@ namespace flex
 			if (bSimulateFrame)
 			{
 				g_CameraManager->CurrentCamera()->Update();
-			}
 
-			if (bSimulateFrame)
-			{
 				g_SceneManager->CurrentScene()->Update();
 				Player* p0 = g_SceneManager->CurrentScene()->GetPlayer(0);
 				if (p0)
@@ -1215,7 +1166,7 @@ namespace flex
 					{
 						CartManager* cartManager = scene->GetCartManager();
 						CartID cartID = cartManager->CreateEngineCart(scene->GetUniqueObjectName("EngineCart_", 2));
-						EngineCart* engineCart = (EngineCart*)cartManager->GetCart(cartID);
+						EngineCart* engineCart = static_cast<EngineCart*>(cartManager->GetCart(cartID));
 						player->AddToInventory(engineCart);
 					}
 
@@ -1247,7 +1198,7 @@ namespace flex
 
 		static auto windowSizeCallbackLambda = [](ImGuiSizeCallbackData* data)
 		{
-			FlexEngine* engine = (FlexEngine*)data->UserData;
+			FlexEngine* engine = static_cast<FlexEngine*>(data->UserData);
 			engine->m_ImGuiMainWindowWidth = data->DesiredSize.x;
 			engine->m_ImGuiMainWindowWidth = glm::min(engine->m_ImGuiMainWindowWidthMax,
 				glm::max(engine->m_ImGuiMainWindowWidth, engine->m_ImGuiMainWindowWidthMin));
@@ -2007,7 +1958,6 @@ namespace flex
 					{
 						CalculateSelectedObjectsCenter();
 						m_SelectedObjectDragStartPos = m_SelectedObjectsCenterPos;
-						m_DraggingGizmoOffset = -1.0f;
 					}
 
 					m_bDraggingGizmo = false;
@@ -2368,7 +2318,7 @@ namespace flex
 			}
 
 			pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)GetProcAddress(m_RenderDocModule, "RENDERDOC_GetAPI");
-			int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_3_0, (void **)&m_RenderDocAPI);
+			int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_3_0, (void**)&m_RenderDocAPI);
 			assert(ret == 1);
 
 			i32 major = 0, minor = 0, patch = 0;
@@ -2569,8 +2519,6 @@ namespace flex
 		{
 		case TransformState::TRANSLATE:
 		{
-			std::vector<GameObject*> translationAxes = m_TranslationGizmo->GetChildren();
-
 			if (m_HoveringAxisIndex == 0) // X Axis
 			{
 				xMat.colorMultiplier = selectedColor;
@@ -2586,8 +2534,6 @@ namespace flex
 		} break;
 		case TransformState::ROTATE:
 		{
-			std::vector<GameObject*> rotationAxes = m_RotationGizmo->GetChildren();
-
 			if (m_HoveringAxisIndex == 0) // X Axis
 			{
 				xMat.colorMultiplier = selectedColor;
@@ -2603,8 +2549,6 @@ namespace flex
 		} break;
 		case TransformState::SCALE:
 		{
-			std::vector<GameObject*> scaleAxes = m_ScaleGizmo->GetChildren();
-
 			if (m_HoveringAxisIndex == 0) // X Axis
 			{
 				xMat.colorMultiplier = selectedColor;
@@ -2908,10 +2852,10 @@ namespace flex
 		btVector3 rayStart, rayEnd;
 		GenerateRayAtMousePos(rayStart, rayEnd);
 
-		btRigidBody* pickedRB = physicsWorld->PickFirstBody(rayStart, rayEnd);
+		const btRigidBody* pickedRB = physicsWorld->PickFirstBody(rayStart, rayEnd);
 		if (pickedRB)
 		{
-			GameObject* pickedObject = (GameObject*)pickedRB->getUserPointer();
+			GameObject* pickedObject = static_cast<GameObject*>(pickedRB->getUserPointer());
 
 			RigidBody* rb = pickedObject->GetRigidBody();
 			if (!(rb->GetPhysicsFlags() & (u32)PhysicsFlag::UNSELECTABLE))

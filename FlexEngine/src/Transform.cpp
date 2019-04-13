@@ -93,14 +93,14 @@ namespace flex
 		worldScale(other.localScale),
 		forward(VEC3_FORWARD),
 		up(VEC3_UP),
-		right(VEC3_RIGHT)
-	{
-		localTransform = (glm::translate(MAT4_IDENTITY, other.localPosition) *
+		right(VEC3_RIGHT),
+		localTransform(glm::translate(MAT4_IDENTITY, other.localPosition) *
 						  glm::mat4((glm::quat)other.localRotation) *
-						  glm::scale(MAT4_IDENTITY, other.localScale));
-		worldTransform = (glm::translate(MAT4_IDENTITY, other.worldPosition) *
+						  glm::scale(MAT4_IDENTITY, other.localScale)),
+		worldTransform(glm::translate(MAT4_IDENTITY, other.worldPosition) *
 					      glm::mat4((glm::quat)other.worldRotation) *
-					      glm::scale(MAT4_IDENTITY, other.worldScale));
+					      glm::scale(MAT4_IDENTITY, other.worldScale))
+	{
 	}
 
 	Transform::Transform(const Transform&& other) :

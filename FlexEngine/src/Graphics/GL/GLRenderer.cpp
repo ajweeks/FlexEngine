@@ -1903,7 +1903,7 @@ namespace flex
 						PrintWarn("Failed to asynchronously save screenshot to %s\n", fileName.c_str());
 					}
 
-					SafeDelete(screenshotAsyncTextureSave);
+					delete screenshotAsyncTextureSave;
 				}
 			}
 
@@ -2318,7 +2318,6 @@ namespace flex
 					DrawRenderObjectBatch(batch, drawCallInfo);
 				}
 
-				//glBindFramebuffer(GL_FRAMEBUFFER, 0);
 				//glDrawBuffer(GL_BACK);
 				// TODO: Remove?
 				glCullFace(GL_BACK);
@@ -3208,7 +3207,7 @@ namespace flex
 					else
 					{
 						newFont->ClearTexture();
-						SafeDelete(fontTex);
+						delete fontTex;
 					}
 				}
 			}
@@ -4895,7 +4894,7 @@ namespace flex
 					GameObject* gameObject = *iter;
 					if (gameObject->GetName().compare(gBufferName) == 0)
 					{
-						SafeDelete(gameObject);
+						delete gameObject;
 						m_PersistentObjects.erase(iter);
 						break;
 					}
@@ -5097,7 +5096,7 @@ namespace flex
 				}
 
 				renderObject->gameObject = nullptr;
-				SafeDelete(renderObject);
+				delete renderObject;
 			}
 
 			m_RenderObjects[renderID] = nullptr;
@@ -5119,7 +5118,7 @@ namespace flex
 			}
 		}
 
-		btIDebugDraw* GLRenderer::GetDebugDrawer()
+		PhysicsDebugDrawBase* GLRenderer::GetDebugDrawer()
 		{
 			return m_PhysicsDebugDrawer;
 		}
@@ -5717,7 +5716,7 @@ namespace flex
 
 		void GLRenderer::DrawImGuiForRenderObject(RenderID renderID)
 		{
-
+			UNREFERENCED_PARAMETER(renderID);
 		}
 
 		void GLRenderer::DrawImGuiRenderObjects()

@@ -1,12 +1,9 @@
 #pragma once
 #if COMPILE_VULKAN
 
-IGNORE_WARNINGS_PUSH
-#include <LinearMath\btIDebugDraw.h>
-IGNORE_WARNINGS_POP
-
 #include <vector>
 
+#include "Graphics/Renderer.hpp"
 #include "Graphics/VertexBufferData.hpp"
 #include "Transform.hpp"
 #include "Types.hpp"
@@ -17,7 +14,7 @@ namespace flex
 	{
 		class VulkanRenderer;
 
-		class VulkanPhysicsDebugDraw : public btIDebugDraw
+		class VulkanPhysicsDebugDraw : public PhysicsDebugDrawBase
 		{
 		public:
 			VulkanPhysicsDebugDraw();
@@ -34,6 +31,8 @@ namespace flex
 
 			virtual void drawLine(const btVector3& from, const btVector3& to, const btVector3& color) override;
 			virtual void drawContactPoint(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector3& color) override;
+
+			virtual void DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& color) override;
 
 			virtual void flushLines() override;
 			void ClearLines();

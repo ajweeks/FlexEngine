@@ -62,9 +62,9 @@ namespace flex
 		m_CartManager.Initialize();
 
 		// Use save file if exists, otherwise use default
-		const std::string savedShortPath = "scenes/saved/" + m_FileName;
+		//const std::string savedShortPath = "scenes/saved/" + m_FileName;
 		const std::string defaultShortPath = "scenes/default/" + m_FileName;
-		const std::string savedPath = RESOURCE_STR(savedShortPath);
+		//const std::string savedPath = RESOURCE_STR(savedShortPath);
 		const std::string defaultPath = RESOURCE_STR(defaultShortPath);
 		//m_bUsingSaveFile = FileExists(savedPath);
 
@@ -95,7 +95,7 @@ namespace flex
 				return;
 			}
 
-			const bool printSceneContentsToConsole = false;
+			constexpr bool printSceneContentsToConsole = false;
 			if (printSceneContentsToConsole)
 			{
 				Print("Parsed scene file:\n");
@@ -262,7 +262,7 @@ namespace flex
 			if (rootObject)
 			{
 				rootObject->Destroy();
-				SafeDelete(rootObject);
+				delete rootObject;
 			}
 		}
 		m_RootObjects.clear();
@@ -280,7 +280,7 @@ namespace flex
 		if (m_PhysicsWorld)
 		{
 			m_PhysicsWorld->Destroy();
-			SafeDelete(m_PhysicsWorld);
+			delete m_PhysicsWorld;
 		}
 	}
 
@@ -310,11 +310,6 @@ namespace flex
 			PROFILE_AUTO("Tick scene objects");
 			for (GameObject* rootObject : m_RootObjects)
 			{
-				if (rootObject == (GameObject*)0xdddddddd)
-				{
- 					PrintWarn("ruh roh\n");
-				}
-				else
 				if (rootObject)
 				{
 					rootObject->Update();
@@ -447,7 +442,7 @@ namespace flex
 
 			targetObject->Destroy();
 
-			SafeDelete(targetObject);
+			delete targetObject;
 
 			if (bIsDirectionalLight)
 			{
@@ -862,11 +857,11 @@ namespace flex
 
 	void BaseScene::SerializeToFile(bool bSaveOverDefault /* = false */) const
 	{
-		bool success = false;
+		bool success = true;
 
-		success |= BaseScene::SerializeMeshFile();
-		success |= BaseScene::SerializeMaterialFile();
-		//success |= BaseScene::SerializePrefabFile();
+		success &= BaseScene::SerializeMeshFile();
+		success &= BaseScene::SerializeMaterialFile();
+		//success &= BaseScene::SerializePrefabFile();
 
 		const std::string profileBlockName = "serialize scene to file: " + m_FileName;
 		PROFILE_BEGIN(profileBlockName);
@@ -881,10 +876,7 @@ namespace flex
 		{
 			if (rootObject->IsSerializable())
 			{
-				if (rootObject->IsSerializable())
-				{
-					objectsArray.push_back(rootObject->Serialize(this));
-				}
+				objectsArray.push_back(rootObject->Serialize(this));
 			}
 		}
 		rootSceneObject.fields.emplace_back("objects", JSONValue(objectsArray));
@@ -924,7 +916,7 @@ namespace flex
 
 		std::string savedFilePathName = RESOURCE_STR(shortSavedFileName);
 		savedFilePathName = RelativePathToAbsolute(savedFilePathName);
-		success = WriteFile(savedFilePathName, fileContents, false);
+		success &= WriteFile(savedFilePathName, fileContents, false);
 
 		if (success)
 		{
@@ -935,15 +927,15 @@ namespace flex
 			{
 				//m_bUsingSaveFile = true;
 			}
-
-			PROFILE_END(profileBlockName);
-			Profiler::PrintBlockDuration(profileBlockName);
 		}
 		else
 		{
 			PrintError("Failed to open file for writing at \"%s\", Can't serialize scene\n", savedFilePathName.c_str());
 			AudioManager::PlaySource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud));
 		}
+
+		PROFILE_END(profileBlockName);
+		Profiler::PrintBlockDuration(profileBlockName);
 	}
 
 	void BaseScene::DeleteSaveFiles()
@@ -1006,7 +998,7 @@ namespace flex
 			{
 				if (bDestroy)
 				{
-					SafeDelete(*iter);
+					delete *iter;
 				}
 
 				iter = m_RootObjects.erase(iter);

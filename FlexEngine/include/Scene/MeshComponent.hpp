@@ -14,7 +14,7 @@ namespace flex
 	class MeshComponent
 	{
 	public:
-		MeshComponent(GameObject* owner);
+		explicit MeshComponent(GameObject* owner);
 		MeshComponent(MaterialID materialID, GameObject* owner, bool bSetRequiredAttributesFromMat = true);
 		~MeshComponent();
 

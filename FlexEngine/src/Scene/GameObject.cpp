@@ -237,14 +237,14 @@ namespace flex
 		for (GameObject* child : m_Children)
 		{
 			child->Destroy();
-			SafeDelete(child);
+			delete child;
 		}
 		m_Children.clear();
 
 		if (m_MeshComponent)
 		{
 			m_MeshComponent->Destroy();
-			SafeDelete(m_MeshComponent);
+			delete m_MeshComponent;
 		}
 
 		if (m_RenderID != InvalidRenderID)
@@ -256,10 +256,9 @@ namespace flex
 		if (m_RigidBody)
 		{
 			m_RigidBody->Destroy();
-			SafeDelete(m_RigidBody);
+			delete m_RigidBody;
 		}
 
-		// NOTE: SafeDelete does not work on this type
 		if (m_CollisionShape)
 		{
 			delete m_CollisionShape;
@@ -608,7 +607,7 @@ namespace flex
 				{
 				case BOX_SHAPE_PROXYTYPE:
 				{
-					btBoxShape* boxShape = (btBoxShape*)shape;
+					btBoxShape* boxShape = static_cast<btBoxShape*>(shape);
 					btVector3 halfExtents = boxShape->getHalfExtentsWithMargin();
 					glm::vec3 halfExtentsG = ToVec3(halfExtents);
 					halfExtentsG /= scale;
@@ -623,7 +622,7 @@ namespace flex
 				} break;
 				case SPHERE_SHAPE_PROXYTYPE:
 				{
-					btSphereShape* sphereShape = (btSphereShape*)shape;
+					btSphereShape* sphereShape = static_cast<btSphereShape*>(shape);
 					real radius = sphereShape->getRadius();
 					radius /= scale.x;
 
@@ -636,7 +635,7 @@ namespace flex
 				} break;
 				case CAPSULE_SHAPE_PROXYTYPE:
 				{
-					btCapsuleShapeZ* capsuleShape = (btCapsuleShapeZ*)shape;
+					btCapsuleShapeZ* capsuleShape = static_cast<btCapsuleShapeZ*>(shape);
 					real radius = capsuleShape->getRadius();
 					real halfHeight = capsuleShape->getHalfHeight();
 					radius /= scale.x;
@@ -654,7 +653,7 @@ namespace flex
 				} break;
 				case CYLINDER_SHAPE_PROXYTYPE:
 				{
-					btCylinderShape* cylinderShape = (btCylinderShape*)shape;
+					btCylinderShape* cylinderShape = static_cast<btCylinderShape*>(shape);
 					btVector3 halfExtents = cylinderShape->getHalfExtentsWithMargin();
 					glm::vec3 halfExtentsG = ToVec3(halfExtents);
 					halfExtentsG /= scale;
@@ -743,11 +742,6 @@ namespace flex
 
 	bool GameObject::DoImGuiContextMenu(bool bActive)
 	{
-		static const char* renameObjectPopupLabel = "##rename-game-object";
-		static const char* renameObjectButtonStr = "Rename";
-		static const char* duplicateObjectButtonStr = "Duplicate...";
-		static const char* deleteButtonStr = "Delete";
-
 		bool bDeletedSelf = false;
 
 		// TODO: Prevent name collisions
@@ -772,14 +766,14 @@ namespace flex
 
 		if (ImGui::BeginPopupContextItem(contextMenuIDStr.c_str()))
 		{
-			bool bRename = ImGui::InputText(renameObjectPopupLabel,
+			bool bRename = ImGui::InputText("##rename-game-object",
 				(char*)newObjectName.data(),
 				maxStrLen,
 				ImGuiInputTextFlags_EnterReturnsTrue);
 
 			ImGui::SameLine();
 
-			bRename |= ImGui::Button(renameObjectButtonStr);
+			bRename |= ImGui::Button("Rename");
 
 			bool bInvalidName = std::string(newObjectName.c_str()).empty();
 
@@ -793,14 +787,14 @@ namespace flex
 				ImGui::CloseCurrentPopup();
 			}
 
-			if (DoDuplicateGameObjectButton(duplicateObjectButtonStr))
+			if (DoDuplicateGameObjectButton("Duplicate..."))
 			{
 				ImGui::CloseCurrentPopup();
 			}
 
 			ImGui::SameLine();
 
-			if (ImGui::Button(deleteButtonStr))
+			if (ImGui::Button("Delete"))
 			{
 				if (g_SceneManager->CurrentScene()->DestroyGameObject(this, true))
 				{
@@ -842,12 +836,8 @@ namespace flex
 
 			if (m_CollisionShape)
 			{
-				// NOTE: SafeDelete does not work on this type
-				if (m_CollisionShape)
-				{
-					delete m_CollisionShape;
-					m_CollisionShape = nullptr;
-				}
+				delete m_CollisionShape;
+				m_CollisionShape = nullptr;
 			}
 		}
 	}
@@ -1018,8 +1008,8 @@ namespace flex
 				real mass = rigidBodyObj.GetFloat("mass");
 				bool bKinematic = rigidBodyObj.GetBool("kinematic");
 				bool bStatic = rigidBodyObj.GetBool("static");
-				int mask = rigidBodyObj.GetInt("mask");
-				int group = rigidBodyObj.GetInt("group");
+				i32 mask = rigidBodyObj.GetInt("mask");
+				i32 group = rigidBodyObj.GetInt("group");
 
 				RigidBody* rigidBody = SetRigidBody(new RigidBody(group, mask));
 				rigidBody->SetMass(mass);
@@ -1033,14 +1023,6 @@ namespace flex
 		if (bColliderContainsOffset)
 		{
 			m_RigidBody->SetLocalSRT(localScale, localRot, localPos);
-		}
-
-		VertexAttributes requiredVertexAttributes = 0;
-		if (matID != InvalidMaterialID)
-		{
-			Material& material = g_Renderer->GetMaterial(matID);
-			Shader& shader = g_Renderer->GetShader(material.shaderID);
-			requiredVertexAttributes = shader.vertexAttributes;
 		}
 
 		ParseUniqueFields(obj, scene, matID);
@@ -1158,7 +1140,7 @@ namespace flex
 		{
 			JSONObject colliderObj;
 
-			int shapeType = collisionShape->getShapeType();
+			i32 shapeType = collisionShape->getShapeType();
 			std::string shapeTypeStr = CollisionShapeTypeToString(shapeType);
 			colliderObj.fields.emplace_back("shape", JSONValue(shapeTypeStr));
 
@@ -1166,7 +1148,7 @@ namespace flex
 			{
 			case BOX_SHAPE_PROXYTYPE:
 			{
-				btVector3 btHalfExtents = ((btBoxShape*)collisionShape)->getHalfExtentsWithMargin();
+				btVector3 btHalfExtents = static_cast<btBoxShape*>(collisionShape)->getHalfExtentsWithMargin();
 				glm::vec3 halfExtents = ToVec3(btHalfExtents);
 				halfExtents /= m_Transform.GetWorldScale();
 				std::string halfExtentsStr = Vec3ToString(halfExtents, 3);
@@ -1174,14 +1156,14 @@ namespace flex
 			} break;
 			case SPHERE_SHAPE_PROXYTYPE:
 			{
-				real radius = ((btSphereShape*)collisionShape)->getRadius();
+				real radius = static_cast<btSphereShape*>(collisionShape)->getRadius();
 				radius /= m_Transform.GetWorldScale().x;
 				colliderObj.fields.emplace_back("radius", JSONValue(radius));
 			} break;
 			case CAPSULE_SHAPE_PROXYTYPE:
 			{
-				real radius = ((btCapsuleShapeZ*)collisionShape)->getRadius();
-				real height = ((btCapsuleShapeZ*)collisionShape)->getHalfHeight() * 2.0f;
+				real radius = static_cast<btCapsuleShapeZ*>(collisionShape)->getRadius();
+				real height = static_cast<btCapsuleShapeZ*>(collisionShape)->getHalfHeight() * 2.0f;
 				radius /= m_Transform.GetWorldScale().x;
 				height /= m_Transform.GetWorldScale().x;
 				colliderObj.fields.emplace_back("radius", JSONValue(radius));
@@ -1189,8 +1171,8 @@ namespace flex
 			} break;
 			case CONE_SHAPE_PROXYTYPE:
 			{
-				real radius = ((btConeShape*)collisionShape)->getRadius();
-				real height = ((btConeShape*)collisionShape)->getHeight();
+				real radius = static_cast<btConeShape*>(collisionShape)->getRadius();
+				real height = static_cast<btConeShape*>(collisionShape)->getHeight();
 				radius /= m_Transform.GetWorldScale().x;
 				height /= m_Transform.GetWorldScale().x;
 				colliderObj.fields.emplace_back("radius", JSONValue(radius));
@@ -1198,7 +1180,7 @@ namespace flex
 			} break;
 			case CYLINDER_SHAPE_PROXYTYPE:
 			{
-				btVector3 btHalfExtents = ((btCylinderShape*)collisionShape)->getHalfExtentsWithMargin();
+				btVector3 btHalfExtents = static_cast<btCylinderShape*>(collisionShape)->getHalfExtentsWithMargin();
 				glm::vec3 halfExtents = ToVec3(btHalfExtents);
 				halfExtents /= m_Transform.GetWorldScale();
 				std::string halfExtentsStr = Vec3ToString(halfExtents, 3);
@@ -1249,8 +1231,8 @@ namespace flex
 				real mass = rigidBody->GetMass();
 				bool bKinematic = rigidBody->IsKinematic();
 				bool bStatic = rigidBody->IsStatic();
-				int mask = m_RigidBody->GetMask();
-				int group = m_RigidBody->GetMask();
+				i32 mask = m_RigidBody->GetMask();
+				i32 group = m_RigidBody->GetGroup();
 
 				rigidBodyObj.fields.emplace_back("mass", JSONValue(mass));
 				rigidBodyObj.fields.emplace_back("kinematic", JSONValue(bKinematic));
@@ -1405,35 +1387,35 @@ namespace flex
 			{
 			case BOX_SHAPE_PROXYTYPE:
 			{
-				btVector3 btHalfExtents = ((btBoxShape*)pCollisionShape)->getHalfExtentsWithMargin();
+				btVector3 btHalfExtents = static_cast<btBoxShape*>(pCollisionShape)->getHalfExtentsWithMargin();
 				btHalfExtents = btHalfExtents / btWorldScale;
 				newCollisionShape = new btBoxShape(btHalfExtents);
 			} break;
 			case SPHERE_SHAPE_PROXYTYPE:
 			{
-				real radius = ((btSphereShape*)pCollisionShape)->getRadius();
+				real radius = static_cast<btSphereShape*>(pCollisionShape)->getRadius();
 				radius /= btWorldScaleX;
 				newCollisionShape = new btSphereShape(radius);
 			} break;
 			case CAPSULE_SHAPE_PROXYTYPE:
 			{
-				real radius = ((btCapsuleShapeZ*)pCollisionShape)->getRadius();
-				real height = ((btCapsuleShapeZ*)pCollisionShape)->getHalfHeight() * 2.0f;
+				real radius = static_cast<btCapsuleShapeZ*>(pCollisionShape)->getRadius();
+				real height = static_cast<btCapsuleShapeZ*>(pCollisionShape)->getHalfHeight() * 2.0f;
 				radius /= btWorldScaleX;
 				height /= btWorldScaleX;
 				newCollisionShape = new btCapsuleShapeZ(radius, height);
 			} break;
 			case CONE_SHAPE_PROXYTYPE:
 			{
-				real radius = ((btConeShape*)pCollisionShape)->getRadius();
-				real height = ((btConeShape*)pCollisionShape)->getHeight();
+				real radius = static_cast<btConeShape*>(pCollisionShape)->getRadius();
+				real height = static_cast<btConeShape*>(pCollisionShape)->getHeight();
 				radius /= btWorldScaleX;
 				height /= btWorldScaleX;
 				newCollisionShape = new btConeShape(radius, height);
 			} break;
 			case CYLINDER_SHAPE_PROXYTYPE:
 			{
-				btVector3 btHalfExtents = ((btCylinderShape*)pCollisionShape)->getHalfExtentsWithMargin();
+				btVector3 btHalfExtents = static_cast<btCylinderShape*>(pCollisionShape)->getHalfExtentsWithMargin();
 				btHalfExtents = btHalfExtents / btWorldScale;
 				newCollisionShape = new btCylinderShape(btHalfExtents);
 			} break;
@@ -1882,7 +1864,7 @@ namespace flex
 
 	RigidBody* GameObject::SetRigidBody(RigidBody* rigidBody)
 	{
-		SafeDelete(m_RigidBody);
+		delete m_RigidBody;
 
 		m_RigidBody = rigidBody;
 
@@ -1911,7 +1893,7 @@ namespace flex
 			g_Renderer->DestroyRenderObject(m_RenderID);
 			m_RenderID = InvalidRenderID;
 			m_MeshComponent->Destroy();
-			SafeDelete(m_MeshComponent);
+			delete m_MeshComponent;
 		}
 
 		m_MeshComponent = meshComponent;
@@ -2055,7 +2037,7 @@ namespace flex
 		real currentAbsAvgRotationSpeed = 0.0f;
 		if (m_ObjectInteractingWith)
 		{
-			i32 playerIndex = ((Player*)m_ObjectInteractingWith)->GetIndex();
+			i32 playerIndex = static_cast<Player*>(m_ObjectInteractingWith)->GetIndex();
 
 			const GamepadState& gamepadState = g_InputManager->GetGamepadState(playerIndex);
 			rotationSpeed = (-gamepadState.averageRotationSpeeds.currentAverage) * rotationSpeedScale;
@@ -2194,7 +2176,7 @@ namespace flex
 			{
 				if (rootObject->GetName().compare(valveName) == 0)
 				{
-					valve = (Valve*)rootObject;
+					valve = static_cast<Valve*>(rootObject);
 					break;
 				}
 			}
@@ -2260,7 +2242,7 @@ namespace flex
 		real playerControlledValveRotationSpeed = 0.0f;
 		if (valve->GetObjectInteractingWith())
 		{
-			i32 playerIndex = ((Player*)valve->GetObjectInteractingWith())->GetIndex();
+			i32 playerIndex = static_cast<Player*>(valve->GetObjectInteractingWith())->GetIndex();
 			const GamepadState& gamepadState = g_InputManager->GetGamepadState(playerIndex);
 			playerControlledValveRotationSpeed = (-gamepadState.averageRotationSpeeds.currentAverage) *
 				valve->rotationSpeedScale;
@@ -2585,7 +2567,7 @@ namespace flex
 
 			if (ImGui::CollapsingHeader("Preview"))
 			{
-				ImGui::Image((void*)shadowTextureID, ImVec2(256, 256));
+				ImGui::Image((void*)shadowTextureID, ImVec2(256, 256), ImVec2(0, 1), ImVec2(1, 0));
 			}
 
 			ImGui::TreePop();
@@ -3929,7 +3911,7 @@ namespace flex
 
 	Tokenizer::~Tokenizer()
 	{
-		SafeDelete(context);
+		delete context;
 		codeStrCopy = "";
 	}
 
@@ -4426,8 +4408,8 @@ namespace flex
 
 	Operation::~Operation()
 	{
-		SafeDelete(lhs);
-		SafeDelete(rhs);
+		delete lhs;
+		delete rhs;
 	}
 
 	template<class T>
@@ -4523,7 +4505,7 @@ namespace flex
 
 			if (rhsVar->bIsTemporary)
 			{
-				SafeDelete(rhsVar);
+				delete rhsVar;
 			}
 
 			if (newVal == nullptr)
@@ -4545,11 +4527,11 @@ namespace flex
 			context.errorToken = lhs->token;
 			if (lhsVar->bIsTemporary)
 			{
-				SafeDelete(lhsVar);
+				delete lhsVar;
 			}
 			if (rhsVar->bIsTemporary)
 			{
-				SafeDelete(rhsVar);
+				delete rhsVar;
 			}
 			return nullptr;
 		}
@@ -4573,11 +4555,11 @@ namespace flex
 
 		if (lhsVar->bIsTemporary)
 		{
-			SafeDelete(lhsVar);
+			delete lhsVar;
 		}
 		if (rhsVar->bIsTemporary)
 		{
-			SafeDelete(rhsVar);
+			delete rhsVar;
 		}
 
 		if (newVal == nullptr)
@@ -4602,13 +4584,13 @@ namespace flex
 		OperatorType op = Operator::Parse(tokenizer);
 		if (op == OperatorType::_NONE)
 		{
-			SafeDelete(lhs);
+			delete lhs;
 			return nullptr;
 		}
 		Expression* rhs = Expression::Parse(tokenizer);
 		if (rhs == nullptr)
 		{
-			SafeDelete(lhs);
+			delete lhs;
 			return nullptr;
 		}
 		return new Operation(token, lhs, op, rhs);
@@ -4666,10 +4648,10 @@ namespace flex
 			// No memory to free
 			break;
 		case ValueType::IDENTIFIER:
-			SafeDelete(val.identifier);
+			delete val.identifier;
 			break;
 		case ValueType::OPERATION:
-			SafeDelete(val.operation);
+			delete val.operation;
 			break;
 		default:
 			PrintError("Unhandled statement type in ~Value(): %d\n", (i32)type);
@@ -4777,7 +4759,7 @@ namespace flex
 		//		bool bResult = newVal->val.boolRaw;
 		//		if (newVal->bIsTemporary)
 		//		{
-		//			SafeDelete(newVal);
+		//			delete newVal);
 		//		}
 		//		return bResult;
 		//	}
@@ -4795,11 +4777,9 @@ namespace flex
 	Expression* Expression::Parse(Tokenizer& tokenizer)
 	{
 		Token token = tokenizer.PeekNextToken();
-		bool bNegative = false;
 		if (token.type == TokenType::SUBTRACT)
 		{
 			tokenizer.GetNextToken();
-			bNegative = true;
 			return new Expression(token, new Operation(token, nullptr, OperatorType::NEGATE, Expression::Parse(tokenizer)));
 		}
 
@@ -4828,7 +4808,7 @@ namespace flex
 				{
 					tokenizer.context->errorReason = "Expected operator";
 					tokenizer.context->errorToken = token;
-					SafeDelete(identifier);
+					delete identifier;
 					return nullptr;
 				}
 				else
@@ -4836,16 +4816,16 @@ namespace flex
 					Expression* rhs = Expression::Parse(tokenizer);
 					if (rhs == nullptr)
 					{
-						SafeDelete(identifier);
+						delete identifier;
 						return nullptr;
 					}
 					Expression* lhs = new Expression(token, identifier);
 					Operation* operation = new Operation(token, lhs, op, rhs);
 					if (operation == nullptr)
 					{
-						SafeDelete(identifier);
-						SafeDelete(lhs);
-						SafeDelete(rhs);
+						delete identifier;
+						delete lhs;
+						delete rhs;
 						return nullptr;
 					}
 					return new Expression(token, operation);
@@ -5011,8 +4991,8 @@ namespace flex
 
 	Assignment::~Assignment()
 	{
-		SafeDelete(identifier);
-		SafeDelete(rhs);
+		delete identifier;
+		delete rhs;
 	}
 
 	void Assignment::Evaluate(TokenContext& context)
@@ -5045,13 +5025,13 @@ namespace flex
 				switch (varTypeName)
 				{
 				case TypeName::INT:
-					varVal = (void*)&var->val.intRaw;
+					varVal = static_cast<void*>(&var->val.intRaw);
 					break;
 				case TypeName::FLOAT:
-					varVal = (void*)&var->val.floatRaw;
+					varVal = static_cast<void*>(&var->val.floatRaw);
 					break;
 				case TypeName::BOOL:
-					varVal = (void*)&var->val.boolRaw;
+					varVal = static_cast<void*>(&var->val.boolRaw);
 					break;
 				default:
 					context.errorReason = "Unexpected variable type name";
@@ -5079,11 +5059,11 @@ namespace flex
 				}
 				if (rhsVal->type == ValueType::INT_RAW)
 				{
-					*((i32*)varVal) = rhsVal->val.intRaw;
+					*static_cast<i32*>(varVal) = rhsVal->val.intRaw;
 				}
 				else if (rhsVal->type == ValueType::FLOAT_RAW)
 				{
-					*((i32*)varVal) = (i32)rhsVal->val.floatRaw;
+					*static_cast<i32*>(varVal) = (i32)rhsVal->val.floatRaw;
 				}
 				else
 				{
@@ -5092,7 +5072,7 @@ namespace flex
 				}
 				if (rhsVal->bIsTemporary)
 				{
-					SafeDelete(rhsVal);
+					delete rhsVal;
 				}
 			} break;
 			case TypeName::FLOAT:
@@ -5104,11 +5084,11 @@ namespace flex
 				}
 				if (rhsVal->type == ValueType::INT_RAW)
 				{
-					*((real*)varVal) = (real)rhsVal->val.intRaw;
+					*static_cast<real*>(varVal) = (real)rhsVal->val.intRaw;
 				}
 				else if (rhsVal->type == ValueType::FLOAT_RAW)
 				{
-					*((real*)varVal) = rhsVal->val.floatRaw;
+					*static_cast<real*>(varVal) = rhsVal->val.floatRaw;
 				}
 				else
 				{
@@ -5117,7 +5097,7 @@ namespace flex
 				}
 				if (rhsVal->bIsTemporary)
 				{
-					SafeDelete(rhsVal);
+					delete rhsVal;
 				}
 			} break;
 			case TypeName::BOOL:
@@ -5129,7 +5109,7 @@ namespace flex
 				}
 				if (rhsVal->type == ValueType::BOOL_RAW)
 				{
-					*((bool*)varVal) = rhsVal->val.boolRaw;
+					*static_cast<bool*>(varVal) = rhsVal->val.boolRaw;
 				}
 				else
 				{
@@ -5138,7 +5118,7 @@ namespace flex
 				}
 				if (rhsVal->bIsTemporary)
 				{
-					SafeDelete(rhsVal);
+					delete rhsVal;
 				}
 			} break;
 			default:
@@ -5169,14 +5149,14 @@ namespace flex
 		Token nextToken = tokenizer.GetNextToken();
 		if (nextToken.type == TokenType::SEMICOLON)
 		{
-			SafeDelete(lhs);
+			delete lhs;
 			tokenizer.context->errorReason = "Uninitialized variables are not supported. Add default value";
 			tokenizer.context->errorToken = token;
 			return nullptr;
 		}
 		if (nextToken.type != TokenType::ASSIGNMENT)
 		{
-			SafeDelete(lhs);
+			delete lhs;
 			tokenizer.context->errorReason = "Expected '=' after identifier";
 			tokenizer.context->errorToken = token;
 			return nullptr;
@@ -5185,7 +5165,7 @@ namespace flex
 		Expression* rhs = Expression::Parse(tokenizer);
 		if (rhs == nullptr)
 		{
-			SafeDelete(lhs);
+			delete lhs;
 			return nullptr;
 		}
 		return new Assignment(token, lhs, rhs, typeName);
@@ -5230,17 +5210,17 @@ namespace flex
 		switch (type)
 		{
 		case StatementType::ASSIGNMENT:
-			SafeDelete(contents.assignment);
+			delete contents.assignment;
 			break;
 		case StatementType::IF:
 		case StatementType::ELIF:
-			SafeDelete(contents.ifStatement);
+			delete contents.ifStatement;
 			break;
 		case StatementType::ELSE:
-			SafeDelete(contents.elseStatement);
+			delete contents.elseStatement;
 			break;
 		case StatementType::WHILE:
-			SafeDelete(contents.whileStatement);
+			delete contents.whileStatement;
 			break;
 		default:
 			PrintError("Unhandled statement type in ~Statement(): %d\n", (i32)type);
@@ -5445,8 +5425,8 @@ namespace flex
 
 	IfStatement::~IfStatement()
 	{
-		SafeDelete(condition);
-		SafeDelete(body);
+		delete condition;
+		delete body;
 	}
 
 	void IfStatement::Evaluate(TokenContext& context)
@@ -5477,7 +5457,7 @@ namespace flex
 
 		if (bConditionResult->bIsTemporary)
 		{
-			SafeDelete(bConditionResult);
+			delete bConditionResult;
 		}
 	}
 
@@ -5523,7 +5503,7 @@ namespace flex
 			{
 				tokenizer.context->errorReason = "Expected '{' after if statement condition";
 				tokenizer.context->errorToken = token;
-				SafeDelete(condition);
+				delete condition;
 				return nullptr;
 			}
 		}
@@ -5540,8 +5520,8 @@ namespace flex
 			{
 				tokenizer.context->errorReason = "Expected '}' after if statement body";
 				tokenizer.context->errorToken = token;
-				SafeDelete(condition);
-				SafeDelete(body);
+				delete condition;
+				delete body;
 				return nullptr;
 			}
 		}
@@ -5590,8 +5570,8 @@ namespace flex
 
 	WhileStatement::~WhileStatement()
 	{
-		SafeDelete(condition);
-		SafeDelete(body);
+		delete condition;
+		delete body;
 	}
 
 	void WhileStatement::Evaluate(TokenContext& context)
@@ -5605,7 +5585,7 @@ namespace flex
 			result = condition->Evaluate(context);
 
 			assert(pResult->bIsTemporary);
-			SafeDelete(pResult);
+			delete pResult;
 
 			if (result == nullptr)
 			{
@@ -5620,7 +5600,7 @@ namespace flex
 			}
 		}
 		assert(result->bIsTemporary);
-		SafeDelete(result);
+		delete result;
 	}
 
 	WhileStatement* WhileStatement::Parse(Tokenizer& tokenizer)
@@ -5646,7 +5626,7 @@ namespace flex
 			{
 				tokenizer.context->errorReason = "Expected '{' after while statement";
 				tokenizer.context->errorToken = token;
-				SafeDelete(condition);
+				delete condition;
 				return nullptr;
 			}
 		}
@@ -5663,8 +5643,8 @@ namespace flex
 			{
 				tokenizer.context->errorReason = "Expected '}' after while statement body";
 				tokenizer.context->errorToken = token;
-				SafeDelete(condition);
-				SafeDelete(body);
+				delete condition;
+				delete body;
 				return nullptr;
 			}
 		}
@@ -5680,8 +5660,8 @@ namespace flex
 
 	RootItem::~RootItem()
 	{
-		SafeDelete(statement);
-		SafeDelete(nextItem);
+		delete statement;
+		delete nextItem;
 	}
 
 	void RootItem::Evaluate(TokenContext& context)
@@ -5716,7 +5696,7 @@ namespace flex
 			if (nextItem == nullptr ||
 				!tokenizer.context->errorReason.empty())
 			{
-				SafeDelete(rootStatement);
+				delete rootStatement;
 				return nullptr;
 			}
 		}
@@ -5731,13 +5711,13 @@ namespace flex
 
 	void AST::Destroy()
 	{
-		SafeDelete(rootItem);
+		delete rootItem;
 		bValid = false;
 	}
 
 	void AST::Generate()
 	{
-		SafeDelete(rootItem);
+		delete rootItem;
 
 		bValid = false;
 
@@ -5840,10 +5820,10 @@ namespace flex
 		if (ast != nullptr)
 		{
 			ast->Destroy();
-			SafeDelete(ast);
+			delete ast;
 		}
 
-		SafeDelete(tokenizer);
+		delete tokenizer;
 
 		GameObject::Destroy();
 	}
@@ -6119,8 +6099,12 @@ namespace flex
 	void Terminal::DeleteCharInFront(bool bDeleteUpToNextBreak /* = false */)
 	{
 		m_CursorBlinkTimer = 0.0f;
+		if (lines.empty())
+		{
+			return;
+		}
 		std::string& curLine = lines[cursor.y];
-		if (lines.empty() || (cursor.x == (i32)curLine.size() && cursor.y == (i32)lines.size() - 1))
+		if (cursor.x == (i32)curLine.size() && cursor.y == (i32)lines.size() - 1)
 		{
 			return;
 		}
@@ -6223,8 +6207,12 @@ namespace flex
 	void Terminal::MoveCursorRight(bool bSkipToNextBreak /* = false */)
 	{
 		m_CursorBlinkTimer = 0.0f;
+		if (lines.empty())
+		{
+			return;
+		}
 		std::string& curLine = lines[cursor.y];
-		if (lines.empty() || (cursor.x == (i32)curLine.size() && cursor.y == (i32)lines.size() - 1))
+		if (cursor.x == (i32)curLine.size() && cursor.y == (i32)lines.size() - 1)
 		{
 			return;
 		}

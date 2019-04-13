@@ -10,11 +10,10 @@
 
 namespace flex
 {
-	SceneManager::SceneManager()
+	SceneManager::SceneManager() :
+		m_SavedDirStr(RelativePathToAbsolute(RESOURCE_LOCATION "scenes/saved")),
+		m_DefaultDirStr(RelativePathToAbsolute(RESOURCE_LOCATION "scenes/default"))
 	{
-		m_SavedDirStr = RelativePathToAbsolute(RESOURCE_LOCATION  "scenes/saved");
-		m_DefaultDirStr = RelativePathToAbsolute(RESOURCE_LOCATION  "scenes/default");
-
 		if (!DirectoryExists(m_SavedDirStr))
 		{
 			CreateDirectoryRecursive(m_SavedDirStr);
@@ -76,7 +75,7 @@ namespace flex
 		if (iter != m_Scenes.end())
 		{
 			scene->Destroy();
-			SafeDelete(scene);
+			delete scene;
 			m_Scenes.erase(iter);
 		}
 		else
@@ -292,7 +291,7 @@ namespace flex
 					Print("Removing scene from list due to JSON file missing: %s\n", fileName.c_str());
 
 					removedSceneNames.push_back((*sceneIter)->GetName());
-					SafeDelete(*sceneIter);
+					delete *sceneIter;
 					sceneIter = m_Scenes.erase(sceneIter);
 
 					if (m_CurrentSceneIndex > sceneIndex)
@@ -373,7 +372,7 @@ namespace flex
 		Print("Deleting scene %s\n", scene->GetFileName().c_str());
 
 		scene->DeleteSaveFiles();
-		SafeDelete(scene);
+		delete scene;
 		m_Scenes.erase(m_Scenes.begin() + oldSceneIndex);
 
 
@@ -885,7 +884,7 @@ namespace flex
 		auto iter = m_Scenes.begin();
 		while (iter != m_Scenes.end())
 		{
-			SafeDelete(*iter);
+			delete *iter;
 			iter = m_Scenes.erase(iter);
 		}
 		m_Scenes.clear();

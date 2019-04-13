@@ -96,14 +96,14 @@ namespace flex
 			for (btTypedConstraint* constraint : m_Constraints)
 			{
 				m_RigidBody->removeConstraintRef(constraint);
-				SafeDelete(constraint);
+				delete constraint;
 			}
 
 			g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld()->removeRigidBody(m_RigidBody);
-			SafeDelete(m_RigidBody);
+			delete m_RigidBody;
 		}
 
-		SafeDelete(m_MotionState);
+		delete m_MotionState;
 	}
 
 	void RigidBody::AddConstraint(btTypedConstraint* constraint)
