@@ -913,6 +913,8 @@ namespace flex
 					newGameObject->Initialize();
 					newGameObject->PostInitialize();
 
+					g_EngineInstance->SetSelectedObject(newGameObject);
+
 					ImGui::CloseCurrentPopup();
 				}
 			}
