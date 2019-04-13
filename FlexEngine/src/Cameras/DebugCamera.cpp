@@ -67,9 +67,6 @@ namespace flex
 
 		glm::vec3 targetDPos(0.0f);
 
-		bool bOrbiting = false;
-		glm::vec3 orbitingCenter(0.0f);
-
 		const bool bModFaster = g_InputManager->GetActionDown(Action::EDITOR_MOD_FASTER) > 0;
 		const bool bModSlower = g_InputManager->GetActionDown(Action::EDITOR_MOD_SLOWER) > 0;
 
@@ -103,10 +100,13 @@ namespace flex
 			m_bDraggingMMB = false;
 		}
 
+		bool bOrbiting = false;
+		glm::vec3 orbitingCenter(0.0f);
+
 		bool bPOribiting = m_bOrbiting;
 		m_bOrbiting = g_InputManager->GetActionDown(Action::EDITOR_ORBIT) > 0;
 
-		if (bOrbiting == false && bPOribiting == true)
+		if (!m_bOrbiting && bPOribiting)
 		{
 			m_MoveVel = VEC3_ZERO;
 			m_TurnVel = VEC2_ZERO;
@@ -232,6 +232,8 @@ namespace flex
 			{
 				m_MouseDragDist = VEC2_ZERO;
 				m_bDraggingLMB = false;
+				m_MoveVel = VEC3_ZERO;
+				m_TurnVel = VEC2_ZERO;
 				return EventReply::UNCONSUMED;
 			}
 		}
