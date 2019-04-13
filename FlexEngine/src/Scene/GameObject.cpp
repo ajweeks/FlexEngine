@@ -4510,8 +4510,11 @@ namespace flex
 				newVal = EvaluateUnaryOperation(&rhsVar->val.floatRaw, op);
 				break;
 			case ValueType::BOOL_RAW:
-				newVal = EvaluateUnaryOperation(&rhsVar->val.boolRaw, op);
-				break;
+				context.errorReason = "Only unary operation currently supported is negation, which is invalid on type bool";
+				context.errorToken = rhs->token;
+				return nullptr;
+				//newVal = EvaluateUnaryOperation(&rhsVar->val.boolRaw, op);
+				//break;
 			default:
 				context.errorReason = "Unexpected type name in operation";
 				context.errorToken = rhs->token;
