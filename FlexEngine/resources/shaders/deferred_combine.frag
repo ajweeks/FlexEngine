@@ -174,36 +174,36 @@ void main()
 		vec2 shadowMapTexelSize = 1.0 / textureSize(shadowMap, 0);
 		if (castShadows)
 		{	
-			vec3 transformedShadowPos = vec3(lightViewProj * vec4(worldPos, 1.0));
+			vec4 transformedShadowPos = lightViewProj * vec4(worldPos, 1.0);
+			transformedShadowPos.xy = transformedShadowPos.xy * 0.5 + 0.5;
 
-			if (transformedShadowPos.z <= 1.0)
-			{
-				float baseBias = 0.005;
-				float bias = max(baseBias * (1.0 - NoL), baseBias * 0.01);
-				float shadowSampleContrib = shadowDarkness / 9.0;
+			float baseBias = 0.0001;
+			float bias = max(baseBias * (1.0 - NoL), baseBias * 0.01);
+			int sampleRadius = 5;
+			float spread = 3.0;
+			float shadowSampleContrib = shadowDarkness / ((sampleRadius*2 + 1) * (sampleRadius*2 + 1));
 
 #if QUALITY_LEVEL_HIGH
-				for (int x = -1; x <= 1; ++x)
+			for (int x = -sampleRadius; x <= sampleRadius; ++x)
+			{
+				for (int y = -sampleRadius; y <= sampleRadius; ++y)
 				{
-					for (int y = -1; y <= 1; ++y)
-					{
-						float shadowDepth = texture(shadowMap, 
-							transformedShadowPos.xy + vec2(x, y) * shadowMapTexelSize).r;
+					float shadowDepth = texture(shadowMap, 
+						transformedShadowPos.xy + vec2(x, y) * shadowMapTexelSize*spread).r;
 
-						if (shadowDepth < transformedShadowPos.z - bias)
-						{
-							dirLightShadowOpacity -= shadowSampleContrib;
-						}
+					if (shadowDepth > transformedShadowPos.z + bias)
+					{
+						dirLightShadowOpacity -= shadowSampleContrib;
 					}
 				}
-#else
-				float shadowDepth = texture(shadowMap, transformedShadowPos.xy).r;
-				if (shadowDepth < transformedShadowPos.z - bias)
-				{
-					dirLightShadowOpacity = 1.0 - shadowDarkness;
-				}
-#endif
 			}
+#else
+			float shadowDepth = texture(shadowMap, transformedShadowPos.xy).r;
+			if (shadowDepth > transformedShadowPos.z + bias)
+			{
+				dirLightShadowOpacity = 1.0 - shadowDarkness;
+			}
+#endif
 		}
 
 		Lo += DoLighting(radiance, N, V, L, NoV, NoL, roughness, metallic, F0, albedo) * dirLightShadowOpacity;

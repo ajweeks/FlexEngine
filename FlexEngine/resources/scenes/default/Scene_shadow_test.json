@@ -156,7 +156,7 @@
 			"transform" : 
 			{
 				"pos" : "3.330, 4.569, 1.150",
-				"rot" : "3.142, 1.271, 3.142",
+				"rot" : "-3.141, 1.271, -3.141",
 				"scale" : "1.000, 1.370, 1.000"
 			},
 			"mesh" : "cylinder",
@@ -253,7 +253,7 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-0.500, 4.400, 18.570",
+				"pos" : "-0.500, 7.863, 13.291",
 				"scale" : "1.500, 1.500, 1.500"
 			},
 			"mesh" : "sphere",
@@ -277,21 +277,21 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "0.529, -0.400, -0.951"
+				"pos" : "-1.947, 10.965, 0.112",
+				"rot" : "-0.859, 0.587, 0.374"
 			},
 			"directional light info" : 
 			{
-				"rotation" : "0.529, -0.400, -0.951",
-				"pos" : "0.000, 15.000, 0.000",
-				"color" : "0.25, 0.25, 0.25",
+				"rotation" : "-0.859, 0.587, 0.374",
+				"pos" : "-1.947, 10.965, 0.112",
+				"color" : "1.00, 1.00, 1.00",
 				"enabled" : true,
-				"brightness" : 5.000000,
+				"brightness" : 6.719000,
 				"cast shadows" : true,
-				"shadow darkness" : 0.760000,
-				"shadow map near" : -80.000000,
-				"shadow map far" : 100.000000,
-				"shadow map zoom" : 30.000000
+				"shadow darkness" : 1.000000,
+				"shadow map near" : -45.000000,
+				"shadow map far" : 45.000000,
+				"shadow map zoom" : 66.000000
 			}
 		},
 		{
@@ -316,14 +316,14 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "14.400, 3.400, 0.000"
+				"pos" : "-7.900, 3.393, 4.800"
 			},
 			"point light info" : 
 			{
-				"pos" : "14.400, 3.400, 0.000",
+				"pos" : "-7.900, 3.393, 4.800",
 				"color" : "1.00, 1.00, 1.00",
 				"enabled" : true,
-				"brightness" : 802.083008
+				"brightness" : 552.083008
 			}
 		},
 		{

@@ -78,7 +78,7 @@ namespace flex
 
 
 			m_ShadowMapTexture = {};
-			m_ShadowMapTexture.internalFormat = GL_DEPTH_COMPONENT16;
+			m_ShadowMapTexture.internalFormat = GL_DEPTH_COMPONENT;
 			m_ShadowMapTexture.format = GL_DEPTH_COMPONENT;
 			m_ShadowMapTexture.type = GL_FLOAT;
 
@@ -3472,13 +3472,10 @@ namespace flex
 				return;
 			}
 
-			glm::vec3 dirLightDir = m_DirectionalLight->data.dir;
-			outView = glm::lookAt(VEC3_ZERO, -dirLightDir, VEC3_UP);
+			outView = glm::lookAt(VEC3_ZERO, m_DirectionalLight->data.dir, VEC3_UP);
 
 			real zoom = m_DirectionalLight->shadowMapZoom;
-			real nearPlane = m_DirectionalLight->shadowMapFarPlane;
-			real farPlane = m_DirectionalLight->shadowMapNearPlane;
-			outProj = glm::ortho(-zoom, zoom, -zoom, zoom, farPlane, nearPlane);
+			outProj = glm::ortho(-zoom, zoom, -zoom, zoom, m_DirectionalLight->shadowMapNearPlane, m_DirectionalLight->shadowMapFarPlane);
 		}
 
 		void GLRenderer::DrawRenderObjectBatch(const std::vector<GLRenderObject*>& batchedRenderObjects, const DrawCallInfo& drawCallInfo)
@@ -4417,14 +4414,7 @@ namespace flex
 			glm::mat4 lightView, lightProj;
 			ComputeDirLightViewProj(lightView, lightProj);
 
-			glm::mat4 biasMat(
-				0.5f, 0.0f, 0.0f, 0.0f,
-				0.0f, 0.5f, 0.0f, 0.0f,
-				0.0f, 0.0f, 0.5f, 0.0f,
-				0.5f, 0.5f, 0.5f, 1.0f
-			);
-
-			glm::mat4 biasedLightViewProj = biasMat * lightProj * lightView;
+			glm::mat4 biasedLightViewProj = lightProj * lightView;
 
 			for (auto& materialPair : m_Materials)
 			{
