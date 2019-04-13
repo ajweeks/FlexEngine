@@ -1904,6 +1904,7 @@ namespace flex
 					}
 
 					delete screenshotAsyncTextureSave;
+					screenshotAsyncTextureSave = nullptr;
 				}
 			}
 
