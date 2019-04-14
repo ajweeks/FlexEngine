@@ -31,6 +31,7 @@ namespace flex
 		{
 			m_Texture->Destroy();
 			delete m_Texture;
+			m_Texture = nullptr;
 		}
 	}
 
