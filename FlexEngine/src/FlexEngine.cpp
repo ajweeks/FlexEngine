@@ -2261,7 +2261,7 @@ namespace flex
 		{
 			if (m_CurrentlySelectedObjects.empty())
 			{
-				m_bSimulationPaused = !m_bSimulationPaused;
+				//m_bSimulationPaused = !m_bSimulationPaused;
 			}
 			else
 			{
