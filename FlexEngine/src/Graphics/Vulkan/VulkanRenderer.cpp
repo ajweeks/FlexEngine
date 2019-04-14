@@ -2454,7 +2454,7 @@ namespace flex
 
 		void VulkanRenderer::DrawImGuiRenderObjects()
 		{
-			if (ImGui::Begin("Batches"))
+			if (ImGui::Begin("Dynamic Uniform Buffers"))
 			{
 				ShaderBatch* shaderBatches[] = { &m_DeferredObjectBatches, &m_ForwardObjectBatches };
 				const char* shaderBatchNames[] = { "Deferred", "Forward" };
@@ -2462,62 +2462,123 @@ namespace flex
 				{
 					ShaderBatch* shaderBatch = shaderBatches[i];
 
-					if (ImGui::TreeNode((void*)(intptr_t)(i), "%s", shaderBatchNames[i]))
+					ImGui::Text("%s", shaderBatchNames[i]);
+
+					real boxWidth = 500.0f;
+					real boxHeight = 40.0f;
+					real spacing = 5.0f;
+					real border = 1.0f;
+
+					ImDrawList* drawList = ImGui::GetWindowDrawList();
+					for (u32 j = 0; j < shaderBatch->batches.size(); ++j)
 					{
-						for (u32 j = 0; j < shaderBatch->batches.size(); ++j)
+						const ShaderBatchPair& shaderBatchPair = shaderBatch->batches[j];
+						const VulkanShader& shader = m_Shaders[shaderBatchPair.shaderID];
+
+						if (shader.uniformBuffer.fullDynamicBufferSize == 0)
 						{
-							const ShaderBatchPair& shaderBatchPair = shaderBatch->batches[j];
+							continue;
+						}
 
-							if (!shaderBatchPair.batch.batches.empty())
+						ImVec2 p = ImGui::GetCursorScreenPos();
+						char nodeID0[256];
+						memset(nodeID0, 0, 256);
+						sprintf_s(nodeID0, 256, "%s##%u",
+							m_Shaders[shaderBatchPair.shaderID].shader.name.c_str(),
+							shaderBatchPair.shaderID);
+						if (ImGui::BeginChild(nodeID0, ImVec2(0, 50), true))
+						{
+							std::vector<real> dynamicObjects;
+
+							for (u32 k = 0; k < shaderBatchPair.batch.batches.size(); ++k)
 							{
-								if (ImGui::TreeNode((void*)(intptr_t)(shaderBatchPair.shaderID), "Shader: %s, ID: %u (children: %u)",
-									m_Shaders[shaderBatchPair.shaderID].shader.name.c_str(), shaderBatchPair.shaderID, shaderBatchPair.batch.batches.size()))
+								bool bSameLined = false;
+								const MaterialBatchPair& matBatchPair = shaderBatchPair.batch.batches[k];
+								for (RenderID renderID : matBatchPair.batch.objects)
 								{
-									for (u32 k = 0; k < shaderBatchPair.batch.batches.size(); ++k)
+									VulkanRenderObject* renderObject = GetRenderObject(renderID);
+									if (renderObject != nullptr)
 									{
-										const MaterialBatchPair& matBatchPair = shaderBatchPair.batch.batches[k];
-
-										if (!matBatchPair.batch.objects.empty())
-										{
-											if (ImGui::TreeNode((void*)(intptr_t)(matBatchPair.materialID), "Mat: %s, ID: %u (children: %u)",
-												m_Materials[matBatchPair.materialID].material.name.c_str(), matBatchPair.materialID, matBatchPair.batch.objects.size()))
-											{
-												for (RenderID renderID : matBatchPair.batch.objects)
-												{
-													VulkanRenderObject* renderObject = GetRenderObject(renderID);
-													if (renderObject != nullptr)
-													{
-														bool bSelected = g_EngineInstance->IsObjectSelected(renderObject->gameObject);
-														char nodeID[256];
-														memset(nodeID, 0, 256);
-														sprintf_s(nodeID, 256, "%s dyn off: %u, renderID: %u",
-															renderObject->gameObject->GetName().c_str(),
-															renderObject->dynamicUBOIndex,
-															renderObject->renderID);
-
-														if (ImGui::Selectable(nodeID, &bSelected))
-														{
-															if (bSelected)
-															{
-																g_EngineInstance->SetSelectedObject(renderObject->gameObject, false);
-															}
-															else
-															{
-																g_EngineInstance->DeselectObject(renderObject->gameObject);
-															}
-														}
-													}
-												}
-												ImGui::TreePop();
-											}
-										}
+										dynamicObjects.push_back(1.0f);
 									}
-									ImGui::TreePop();
 								}
 							}
+
+							u32 bufferSlotsTotal = (shader.uniformBuffer.fullDynamicBufferSize / shader.uniformBuffer.dynamicData.size);
+							u32 bufferSlotsFree = bufferSlotsTotal - dynamicObjects.size();
+							for (u32 s = 0; s < bufferSlotsFree; ++s)
+							{
+								dynamicObjects.push_back(0.0f);
+							}
+
+							char histNodeID[256];
+							memset(histNodeID, 0, 256);
+							sprintf_s(histNodeID, 256, "%s (%u/%u)##histo%u",
+								m_Shaders[shaderBatchPair.shaderID].shader.name.c_str(),
+								bufferSlotsTotal - bufferSlotsFree,
+								bufferSlotsTotal,
+								shaderBatchPair.shaderID);
+							ImGui::PlotHistogram(histNodeID, dynamicObjects.data(), dynamicObjects.size(), 0, NULL, 0.0f, 1.0f, ImVec2(0, 0));
 						}
-						ImGui::TreePop();
+						ImGui::EndChild();
 					}
+
+					//if (ImGui::TreeNode((void*)(intptr_t)(i), "%s", shaderBatchNames[i]))
+					//{
+					//	for (u32 j = 0; j < shaderBatch->batches.size(); ++j)
+					//	{
+					//		const ShaderBatchPair& shaderBatchPair = shaderBatch->batches[j];
+					//
+					//		if (!shaderBatchPair.batch.batches.empty())
+					//		{
+					//			if (ImGui::TreeNode((void*)(intptr_t)(shaderBatchPair.shaderID), "Shader: %s, ID: %u (children: %u)",
+					//				m_Shaders[shaderBatchPair.shaderID].shader.name.c_str(), shaderBatchPair.shaderID, shaderBatchPair.batch.batches.size()))
+					//			{
+					//				for (u32 k = 0; k < shaderBatchPair.batch.batches.size(); ++k)
+					//				{
+					//					const MaterialBatchPair& matBatchPair = shaderBatchPair.batch.batches[k];
+					//
+					//					if (!matBatchPair.batch.objects.empty())
+					//					{
+					//						if (ImGui::TreeNode((void*)(intptr_t)(matBatchPair.materialID), "Mat: %s, ID: %u (children: %u)",
+					//							m_Materials[matBatchPair.materialID].material.name.c_str(), matBatchPair.materialID, matBatchPair.batch.objects.size()))
+					//						{
+					//							for (RenderID renderID : matBatchPair.batch.objects)
+					//							{
+					//								VulkanRenderObject* renderObject = GetRenderObject(renderID);
+					//								if (renderObject != nullptr)
+					//								{
+					//									bool bSelected = g_EngineInstance->IsObjectSelected(renderObject->gameObject);
+					//									char nodeID[256];
+					//									memset(nodeID, 0, 256);
+					//									sprintf_s(nodeID, 256, "%s dyn off: %u, renderID: %u",
+					//										renderObject->gameObject->GetName().c_str(),
+					//										renderObject->dynamicUBOIndex,
+					//										renderObject->renderID);
+					//
+					//									if (ImGui::Selectable(nodeID, &bSelected))
+					//									{
+					//										if (bSelected)
+					//										{
+					//											g_EngineInstance->SetSelectedObject(renderObject->gameObject, false);
+					//										}
+					//										else
+					//										{
+					//											g_EngineInstance->DeselectObject(renderObject->gameObject);
+					//										}
+					//									}
+					//								}
+					//							}
+					//							ImGui::TreePop();
+					//						}
+					//					}
+					//				}
+					//				ImGui::TreePop();
+					//			}
+					//		}
+					//	}
+					//	ImGui::TreePop();
+					//}
 				}
 			}
 			ImGui::End();
