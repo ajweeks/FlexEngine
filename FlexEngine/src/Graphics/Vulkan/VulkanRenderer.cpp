@@ -5183,6 +5183,16 @@ namespace flex
 					colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 					colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
 				}
+				else if (createInfo->bEnableAdditiveColorBlending)
+				{
+					colorBlendAttachment.blendEnable = VK_TRUE;
+					colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+					colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
+					colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+					colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+					colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+					colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+				}
 				else
 				{
 					colorBlendAttachment.blendEnable = VK_FALSE;
