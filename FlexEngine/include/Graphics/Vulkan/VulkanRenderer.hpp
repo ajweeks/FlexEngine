@@ -210,10 +210,12 @@ namespace flex
 			void PrepareUniformBuffer(VulkanBuffer* buffer, u32 bufferSize,
 				VkBufferUsageFlags bufferUseageFlagBits, VkMemoryPropertyFlags memoryPropertyHostFlagBits);
 
+			void BatchRenderObjects();
+
 			void BuildCommandBuffers(const DrawCallInfo& drawCallInfo);
 			void BuildDeferredCommandBuffer(const DrawCallInfo& drawCallInfo);
 
-			void BindDescriptorSet(VulkanShader* shader, i32 meshIndex, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet);
+			void BindDescriptorSet(VulkanShader* shader, i32 dynamicOffsetIndex, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet);
 			void CreateSemaphores();
 			void RecreateSwapChain();
 
@@ -274,6 +276,39 @@ namespace flex
 			const u32 MAX_NUM_RENDER_OBJECTS = 4096; // TODO: Not this?
 			std::vector<VulkanRenderObject*> m_RenderObjects;
 			std::map<MaterialID, VulkanMaterial> m_Materials;
+			struct RenderObjectBatch
+			{
+				std::vector<RenderID> objects;
+			};
+
+			struct MaterialBatchPair
+			{
+				MaterialID materialID;
+				RenderObjectBatch batch;
+			};
+
+			struct MaterialBatch
+			{
+				// One per material
+				std::vector<MaterialBatchPair> batches;
+			};
+
+			struct ShaderBatchPair
+			{
+				ShaderID shaderID;
+				MaterialBatch batch;
+			};
+
+			struct ShaderBatch
+			{
+				// One per shader
+				std::vector<ShaderBatchPair> batches;
+			};
+
+			// One per deferred-rendered shader
+			ShaderBatch m_DeferredObjectBatches;
+			// One per forward-rendered shader
+			ShaderBatch m_ForwardObjectBatches;
 
 			glm::vec2i m_CubemapFramebufferSize;
 			glm::vec2i m_BRDFSize;
@@ -287,7 +322,7 @@ namespace flex
 			bool m_bPostInitialized = false;
 			bool m_bSwapChainNeedsRebuilding = false;
 
-			const std::vector<const char*> m_ValidationLayers =
+			std::vector<const char*> m_ValidationLayers =
 			{
 				"VK_LAYER_LUNARG_standard_validation",
 				//"VK_LAYER_LUNARG_monitor", // FPS in title bar
@@ -305,7 +340,9 @@ namespace flex
 #ifdef NDEBUG
 			const bool m_bEnableValidationLayers = false;
 #else
-			const bool m_bEnableValidationLayers = true;
+			//---------------------------------------------------------------------
+			const bool m_bEnableValidationLayers = false; // TODO: **RE-ENABLE!!**
+			//---------------------------------------------------------------------
 #endif
 
 			VDeleter<VkInstance> m_Instance{ vkDestroyInstance };

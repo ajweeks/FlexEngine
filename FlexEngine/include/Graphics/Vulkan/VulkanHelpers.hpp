@@ -83,6 +83,7 @@ namespace flex
 			VulkanBuffer dynamicBuffer;
 			VulkanUniformBufferObjectData constantData;
 			VulkanUniformBufferObjectData dynamicData;
+			u32 fullDynamicBufferSize = 0;
 		};
 
 		struct VertexIndexBufferPair
@@ -440,6 +441,8 @@ namespace flex
 			VkCompareOp depthCompareOp = VK_COMPARE_OP_GREATER_OR_EQUAL;
 
 			bool bEditorObject = false;
+
+			u32 dynamicUBOIndex = 0;
 
 			VDeleter<VkPipelineLayout> pipelineLayout;
 			VDeleter<VkPipeline> graphicsPipeline;

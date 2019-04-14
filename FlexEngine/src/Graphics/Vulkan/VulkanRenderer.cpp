@@ -2371,6 +2371,7 @@ namespace flex
 
 				const size_t dynamicBufferSize = AllocateDynamicUniformBuffer(
 					shader->uniformBuffer.dynamicData.size, (void**)&shader->uniformBuffer.dynamicData.data);
+				shader->uniformBuffer.fullDynamicBufferSize = dynamicBufferSize;;
 				if (dynamicBufferSize > 0)
 				{
 					PrepareUniformBuffer(&shader->uniformBuffer.dynamicBuffer, dynamicBufferSize,
@@ -2428,6 +2429,12 @@ namespace flex
 				PhysicsDebugRender();
 			}
 
+			if (m_bRebatchRenderObjects)
+			{
+				m_bRebatchRenderObjects = false;
+				BatchRenderObjects();
+			}
+
 			// TODO: Don't build command buffers when m_bRebatchRenderObjects is false (but dynamic UI elements still need to be rebuilt!)
 			BuildDeferredCommandBuffer(drawCallInfo);
 			BuildCommandBuffers(drawCallInfo);
@@ -2447,6 +2454,74 @@ namespace flex
 
 		void VulkanRenderer::DrawImGuiRenderObjects()
 		{
+			if (ImGui::Begin("Batches"))
+			{
+				ShaderBatch* shaderBatches[] = { &m_DeferredObjectBatches, &m_ForwardObjectBatches };
+				const char* shaderBatchNames[] = { "Deferred", "Forward" };
+				for (u32 i = 0; i < ARRAY_LENGTH(shaderBatches); ++i)
+				{
+					ShaderBatch* shaderBatch = shaderBatches[i];
+
+					if (ImGui::TreeNode((void*)(intptr_t)(i), "%s", shaderBatchNames[i]))
+					{
+						for (u32 j = 0; j < shaderBatch->batches.size(); ++j)
+						{
+							const ShaderBatchPair& shaderBatchPair = shaderBatch->batches[j];
+
+							if (!shaderBatchPair.batch.batches.empty())
+							{
+								if (ImGui::TreeNode((void*)(intptr_t)(shaderBatchPair.shaderID), "Shader: %s, ID: %u (children: %u)",
+									m_Shaders[shaderBatchPair.shaderID].shader.name.c_str(), shaderBatchPair.shaderID, shaderBatchPair.batch.batches.size()))
+								{
+									for (u32 k = 0; k < shaderBatchPair.batch.batches.size(); ++k)
+									{
+										const MaterialBatchPair& matBatchPair = shaderBatchPair.batch.batches[k];
+
+										if (!matBatchPair.batch.objects.empty())
+										{
+											if (ImGui::TreeNode((void*)(intptr_t)(matBatchPair.materialID), "Mat: %s, ID: %u (children: %u)",
+												m_Materials[matBatchPair.materialID].material.name.c_str(), matBatchPair.materialID, matBatchPair.batch.objects.size()))
+											{
+												for (RenderID renderID : matBatchPair.batch.objects)
+												{
+													VulkanRenderObject* renderObject = GetRenderObject(renderID);
+													if (renderObject != nullptr)
+													{
+														bool bSelected = g_EngineInstance->IsObjectSelected(renderObject->gameObject);
+														char nodeID[256];
+														memset(nodeID, 0, 256);
+														sprintf_s(nodeID, 256, "%s dyn off: %u, renderID: %u",
+															renderObject->gameObject->GetName().c_str(),
+															renderObject->dynamicUBOIndex,
+															renderObject->renderID);
+
+														if (ImGui::Selectable(nodeID, &bSelected))
+														{
+															if (bSelected)
+															{
+																g_EngineInstance->SetSelectedObject(renderObject->gameObject, false);
+															}
+															else
+															{
+																g_EngineInstance->DeselectObject(renderObject->gameObject);
+															}
+														}
+													}
+												}
+												ImGui::TreePop();
+											}
+										}
+									}
+									ImGui::TreePop();
+								}
+							}
+						}
+						ImGui::TreePop();
+					}
+				}
+			}
+			ImGui::End();
+
 			ImGui::NewLine();
 
 			ImGui::BeginChild("SelectedObject", ImVec2(0.0f, 500.0f), true);
@@ -5720,36 +5795,33 @@ namespace flex
 
 		void VulkanRenderer::BuildCommandBuffers(const DrawCallInfo& drawCallInfo)
 		{
-			if (drawCallInfo.bRenderToCubemap)
+			assert(drawCallInfo.bRenderToCubemap == false); // Unsupported in Vulkan renderer!
+
+			std::array<VkClearValue, 2> clearValues = {};
+			clearValues[0].color = m_ClearColor;
+			clearValues[1].depthStencil = { 0.0f, 0 };
+
+			VkRenderPassBeginInfo renderPassBeginInfo = {};
+			renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+			renderPassBeginInfo.renderPass = m_DeferredCombineRenderPass;
+			renderPassBeginInfo.renderArea.offset = { 0, 0 };
+			renderPassBeginInfo.renderArea.extent = m_SwapChainExtent;
+			renderPassBeginInfo.clearValueCount = clearValues.size();
+			renderPassBeginInfo.pClearValues = clearValues.data();
+
+			VulkanRenderObject* gBufferObject = GetRenderObject(m_GBufferQuadRenderID);
+			VulkanMaterial* gBufferMaterial = &m_Materials[gBufferObject->materialID];
+
+			if (g_EngineInstance->IsRenderingImGui())
 			{
-				if (offScreenCmdBuffer == VK_NULL_HANDLE)
-				{
-					offScreenCmdBuffer = m_CommandBufferManager.CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, false);
-				}
+				ImGui::Render();
+			}
 
-				VulkanRenderObject* cubemapRenderObject = GetRenderObject(drawCallInfo.cubemapObjectRenderID);
-				VulkanMaterial const & cubemapMaterial = m_Materials[cubemapRenderObject->materialID];
+			for (size_t i = 0; i < m_CommandBufferManager.m_CommandBuffers.size(); ++i)
+			{
+				VkCommandBuffer& commandBuffer = m_CommandBufferManager.m_CommandBuffers[i];
 
-				std::array<VkClearValue, 4> clearValues = {};
-				clearValues[0].color = m_ClearColor;
-				clearValues[1].color = m_ClearColor;
-				clearValues[2].color = m_ClearColor;
-				clearValues[3].depthStencil = { 0.0f, 0 };
-
-				VkRenderPassBeginInfo renderPassBeginInfo = {};
-				renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-				renderPassBeginInfo.renderPass = m_CubemapFrameBuffer->renderPass;
-				renderPassBeginInfo.renderArea.offset = { 0, 0 };
-				renderPassBeginInfo.renderArea.extent = {
-					(u32)cubemapMaterial.material.cubemapSamplerSize.x,
-					(u32)cubemapMaterial.material.cubemapSamplerSize.y
-				};
-				renderPassBeginInfo.clearValueCount = clearValues.size();
-				renderPassBeginInfo.pClearValues = clearValues.data();
-
-				VkCommandBuffer& commandBuffer = offScreenCmdBuffer;
-
-				renderPassBeginInfo.framebuffer = m_CubemapFrameBuffer->frameBuffer;
+				renderPassBeginInfo.framebuffer = m_SwapChainFramebuffers[i];
 
 				VkCommandBufferBeginInfo cmdBufferbeginInfo = {};
 				cmdBufferbeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -5759,37 +5831,29 @@ namespace flex
 
 				vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-				VkViewport viewport = VkViewport{
-					0.0f, (real)cubemapMaterial.material.cubemapSamplerSize.y,
-					(real)cubemapMaterial.material.cubemapSamplerSize.x,
-					-(real)cubemapMaterial.material.cubemapSamplerSize.y,
-					0.1f, 1000.0f
-				};
+				VkViewport viewport = VkViewport{ 0.0f, (real)m_SwapChainExtent.height,
+					(real)m_SwapChainExtent.width, -(real)m_SwapChainExtent.height,
+					0.1f, 1000.0f };
 				vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
-				VkRect2D scissor = VkRect2D{
-					{ 0u, 0u },
-					{ (u32)cubemapMaterial.material.cubemapSamplerSize.x,
-					  (u32)cubemapMaterial.material.cubemapSamplerSize.y }
-				};
+				VkRect2D scissor = VkRect2D{ { 0u, 0u },{ m_SwapChainExtent.width, m_SwapChainExtent.height } };
 				vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
+				BindDescriptorSet(&m_Shaders[gBufferMaterial->material.shaderID], 0, commandBuffer, gBufferObject->pipelineLayout, gBufferObject->descriptorSet);
 
-				//BindDescriptorSet(&m_Shaders[gBufferMaterial->material.shaderID], gBufferObject->renderID, commandBuffer, gBufferObject->pipelineLayout, gBufferObject->descriptorSet);
+				// Final composition as full screen quad (deferred combine)
+				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gBufferObject->graphicsPipeline);
+				VkDeviceSize offsets[1] = { 0 };
+				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID].vertexBuffer->m_Buffer, offsets);
+				vkCmdBindIndexBuffer(commandBuffer, m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID].indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
 
-				//// Final composition as full screen quad (deferred combine)
-				//vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gBufferObject->graphicsPipeline);
-				//VkDeviceSize offsets[1] = { 0 };
-				//vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID].vertexBuffer->m_Buffer, offsets);
-				//vkCmdBindIndexBuffer(commandBuffer, m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID].indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
-
-				//vkCmdDrawIndexed(commandBuffer, m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID].indexCount, 1, 0, 0, 1);
+				vkCmdDrawIndexed(commandBuffer, gBufferObject->indices->size(), 1, 0, 0, 1);
 
 
 				vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
-
 				// Forward rendered objects
 
+				// TODO: Batch objects with same materials together like in GL renderer
 				for (size_t j = 0; j < m_RenderObjects.size(); ++j)
 				{
 					VulkanRenderObject* renderObject = GetRenderObject(j);
@@ -5820,7 +5884,6 @@ namespace flex
 						continue;
 					}
 
-					VkDeviceSize offsets[1] = { 0 };
 					vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertBuffer->m_Buffer, offsets);
 
 					if (renderObject->bIndexed)
@@ -5833,15 +5896,14 @@ namespace flex
 					// Push constants
 					if (renderObjectShader.shader.bNeedPushConstantBlock)
 					{
-						// Truncate translation component to center cubemap around viewer
-						glm::mat4 view = glm::mat4(glm::mat3(g_CameraManager->CurrentCamera()->GetView()));
+						glm::mat4 view = glm::mat4(glm::mat3(g_CameraManager->CurrentCamera()->GetView())); // Truncate translation part off to center around viewer
 						glm::mat4 projection = g_CameraManager->CurrentCamera()->GetProjection();
 						renderObjectMat.material.pushConstantBlock.mvp =
 							projection * view * renderObject->gameObject->GetTransform()->GetWorldTransform();
 						vkCmdPushConstants(commandBuffer, renderObject->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock), &renderObjectMat.material.pushConstantBlock);
 					}
 
-					BindDescriptorSet(&renderObjectShader, j, commandBuffer, renderObject->pipelineLayout, renderObject->descriptorSet);
+					BindDescriptorSet(&renderObjectShader, renderObject->dynamicUBOIndex, commandBuffer, renderObject->pipelineLayout, renderObject->descriptorSet);
 
 					if (renderObject->bIndexed)
 					{
@@ -5853,8 +5915,8 @@ namespace flex
 					}
 				}
 
-
-				{ // Text & editor objects
+				{
+					// Text & editor objects
 					SetFont(m_FntSourceCodeProWS);
 					real s = g_SecElapsedSinceProgramStart * 3.5f;
 					DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(1.0f), 1.0f), glm::vec3(2.0f, 1.5f, 0.0f), QUAT_UNIT, 0.0f);
@@ -5975,145 +6037,14 @@ namespace flex
 					DrawTextSS();
 				}
 
+				if (g_EngineInstance->IsRenderingImGui())
+				{
+					ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
+				}
+
 				vkCmdEndRenderPass(commandBuffer);
 
 				VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
-			}
-			else
-			{
-				// Not drawing to cubemap, just draw normally
-				std::array<VkClearValue, 2> clearValues = {};
-				clearValues[0].color = m_ClearColor;
-				clearValues[1].depthStencil = { 0.0f, 0 };
-
-				VkRenderPassBeginInfo renderPassBeginInfo = {};
-				renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-				renderPassBeginInfo.renderPass = m_DeferredCombineRenderPass;
-				renderPassBeginInfo.renderArea.offset = { 0, 0 };
-				renderPassBeginInfo.renderArea.extent = m_SwapChainExtent;
-				renderPassBeginInfo.clearValueCount = clearValues.size();
-				renderPassBeginInfo.pClearValues = clearValues.data();
-
-				VulkanRenderObject* gBufferObject = GetRenderObject(m_GBufferQuadRenderID);
-				VulkanMaterial* gBufferMaterial = &m_Materials[gBufferObject->materialID];
-
-				if (g_EngineInstance->IsRenderingImGui())
-				{
-					ImGui::Render();
-				}
-
-				for (size_t i = 0; i < m_CommandBufferManager.m_CommandBuffers.size(); ++i)
-				{
-					VkCommandBuffer& commandBuffer = m_CommandBufferManager.m_CommandBuffers[i];
-
-					renderPassBeginInfo.framebuffer = m_SwapChainFramebuffers[i];
-
-					i32 numMeshesProcessed = 0;
-
-					VkCommandBufferBeginInfo cmdBufferbeginInfo = {};
-					cmdBufferbeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-					cmdBufferbeginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-
-					VK_CHECK_RESULT(vkBeginCommandBuffer(commandBuffer, &cmdBufferbeginInfo));
-
-					vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-					VkViewport viewport = VkViewport{ 0.0f, (real)m_SwapChainExtent.height,
-						(real)m_SwapChainExtent.width, -(real)m_SwapChainExtent.height,
-						0.1f, 1000.0f };
-					vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
-
-					VkRect2D scissor = VkRect2D{ { 0u, 0u },{ m_SwapChainExtent.width, m_SwapChainExtent.height } };
-					vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
-
-					BindDescriptorSet(&m_Shaders[gBufferMaterial->material.shaderID], numMeshesProcessed, commandBuffer, gBufferObject->pipelineLayout, gBufferObject->descriptorSet);
-					++numMeshesProcessed;
-
-					// Final composition as full screen quad (deferred combine)
-					vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gBufferObject->graphicsPipeline);
-					VkDeviceSize offsets[1] = { 0 };
-					vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID].vertexBuffer->m_Buffer, offsets);
-					vkCmdBindIndexBuffer(commandBuffer, m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID].indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
-
-					vkCmdDrawIndexed(commandBuffer, gBufferObject->indices->size(), 1, 0, 0, 1);
-
-
-					vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
-					// Forward rendered objects
-
-					// TODO: Batch objects with same materials together like in GL renderer
-					for (size_t j = 0; j < m_RenderObjects.size(); ++j)
-					{
-						++numMeshesProcessed;
-
-						VulkanRenderObject* renderObject = GetRenderObject(j);
-						if (!renderObject ||
-							!renderObject->gameObject->IsVisible() ||
-							!renderObject->vertexBufferData ||
-							renderObject->vertexBufferData->VertexCount == 0)
-						{
-							continue;
-						}
-
-						VulkanMaterial& renderObjectMat = m_Materials[renderObject->materialID];
-						VulkanShader& renderObjectShader = m_Shaders[renderObjectMat.material.shaderID];
-
-						// Only render non-deferred (forward) objects in this pass
-						if (renderObjectShader.shader.bDeferred)
-						{
-							continue;
-						}
-
-						VulkanBuffer* vertBuffer = m_VertexIndexBufferPairs[renderObjectMat.material.shaderID].vertexBuffer;
-						VulkanBuffer* indexBuffer = m_VertexIndexBufferPairs[renderObjectMat.material.shaderID].indexBuffer;
-
-						if (vertBuffer->m_Buffer == 0 ||
-							(renderObject->bIndexed && indexBuffer->m_Buffer == 0))
-						{
-							// Invalid object! Might not contain valid material
-							continue;
-						}
-
-						vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertBuffer->m_Buffer, offsets);
-
-						if (renderObject->bIndexed)
-						{
-							vkCmdBindIndexBuffer(commandBuffer, indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
-						}
-
-						vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderObject->graphicsPipeline);
-
-						// Push constants
-						if (renderObjectShader.shader.bNeedPushConstantBlock)
-						{
-							glm::mat4 view = glm::mat4(glm::mat3(g_CameraManager->CurrentCamera()->GetView())); // Truncate translation part off to center around viewer
-							glm::mat4 projection = g_CameraManager->CurrentCamera()->GetProjection();
-							renderObjectMat.material.pushConstantBlock.mvp =
-								projection * view * renderObject->gameObject->GetTransform()->GetWorldTransform();
-							vkCmdPushConstants(commandBuffer, renderObject->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock), &renderObjectMat.material.pushConstantBlock);
-						}
-
-						BindDescriptorSet(&renderObjectShader, numMeshesProcessed, commandBuffer, renderObject->pipelineLayout, renderObject->descriptorSet);
-
-						if (renderObject->bIndexed)
-						{
-							vkCmdDrawIndexed(commandBuffer, renderObject->indices->size(), 1, renderObject->indexOffset, renderObject->vertexOffset, 0);
-						}
-						else
-						{
-							vkCmdDraw(commandBuffer, renderObject->vertexBufferData->VertexCount, 1, renderObject->vertexOffset, 0);
-						}
-					}
-
-					if (g_EngineInstance->IsRenderingImGui())
-					{
-						ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
-					}
-
-					vkCmdEndRenderPass(commandBuffer);
-
-					VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
-				}
 			}
 		}
 
@@ -6121,8 +6052,6 @@ namespace flex
 		{
 			// TODO: Remove unused param
 			UNREFERENCED_PARAMETER(drawCallInfo);
-
-			// TODO: Add support for cubemap rendering using m_CubemapFrameBuffer
 
 			if (offScreenCmdBuffer == VK_NULL_HANDLE)
 			{
@@ -6172,67 +6101,61 @@ namespace flex
 
 			VkDeviceSize offsets[1] = { 0 };
 
-			// TODO: Batch objects with same materials together like in GL renderer
-			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
+			for (const ShaderBatchPair& shaderBatches : m_DeferredObjectBatches.batches)
 			{
-				VulkanRenderObject* renderObject = GetRenderObject(i);
-				if (!renderObject ||
-					!renderObject->gameObject->IsVisible() ||
-					!renderObject->vertexBufferData ||
-					renderObject->vertexBufferData->VertexCount == 0)
-				{
-					continue;
-				}
+				ShaderID shaderID = shaderBatches.shaderID;
 
-				VulkanMaterial& renderObjectMat = m_Materials[renderObject->materialID];
-				VulkanShader& renderObjectShader = m_Shaders[renderObjectMat.material.shaderID];
-
-				// Only render deferred objects in this pass
-				if (!renderObjectShader.shader.bDeferred)
-				{
-					continue;
-				}
-
-				VulkanBuffer* vertBuffer = m_VertexIndexBufferPairs[renderObjectMat.material.shaderID].vertexBuffer;
-				VulkanBuffer* indexBuffer = m_VertexIndexBufferPairs[renderObjectMat.material.shaderID].indexBuffer;
-
-				if (vertBuffer->m_Buffer == 0 ||
-					(renderObject->bIndexed && indexBuffer->m_Buffer == 0))
-				{
-					// Invalid object! Might not contain valid material
-					continue;
-				}
+				VulkanBuffer* vertBuffer = m_VertexIndexBufferPairs[shaderID].vertexBuffer;
+				VulkanBuffer* indexBuffer = m_VertexIndexBufferPairs[shaderID].indexBuffer;
 
 				vkCmdBindVertexBuffers(offScreenCmdBuffer, 0, 1, &vertBuffer->m_Buffer, offsets);
 
-				if (renderObject->bIndexed)
+				for (const MaterialBatchPair& matBatches : shaderBatches.batch.batches)
 				{
-					vkCmdBindIndexBuffer(offScreenCmdBuffer, indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
-				}
+					// TODO: Set material state here
 
-				vkCmdBindPipeline(offScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderObject->graphicsPipeline);
+					for (RenderID renderID : matBatches.batch.objects)
+					{
+						VulkanRenderObject* renderObject = GetRenderObject(renderID);
+						if (renderObject == nullptr ||
+							!renderObject->gameObject->IsVisible())
+						{
+							continue;
+						}
 
-				// Push constants
-				if (renderObjectShader.shader.bNeedPushConstantBlock)
-				{
-					glm::mat4 view = glm::mat4(glm::mat3(g_CameraManager->CurrentCamera()->GetView())); // Truncate translation part off to center around viewer
-					glm::mat4 projection = g_CameraManager->CurrentCamera()->GetProjection();
-					renderObjectMat.material.pushConstantBlock.mvp =
-						projection * view * renderObject->gameObject->GetTransform()->GetWorldTransform();
-					vkCmdPushConstants(offScreenCmdBuffer, renderObject->pipelineLayout,
-						VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock),
-						&renderObjectMat.material.pushConstantBlock);
-				}
+						VulkanMaterial& renderObjectMat = m_Materials[renderObject->materialID];
+						VulkanShader& renderObjectShader = m_Shaders[renderObjectMat.material.shaderID];
 
-				BindDescriptorSet(&renderObjectShader, i, offScreenCmdBuffer, renderObject->pipelineLayout, renderObject->descriptorSet);
+						if (renderObject->bIndexed)
+						{
+							vkCmdBindIndexBuffer(offScreenCmdBuffer, indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
+						}
 
-				if (renderObject->bIndexed)
-				{
-					vkCmdDrawIndexed(offScreenCmdBuffer, renderObject->indices->size(), 1, renderObject->indexOffset, renderObject->vertexOffset, 0);
-				}
-				else
-				{
-					vkCmdDraw(offScreenCmdBuffer, renderObject->vertexBufferData->VertexCount, 1, renderObject->vertexOffset, 0);
+						vkCmdBindPipeline(offScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderObject->graphicsPipeline);
+
+						// Push constants
+						if (renderObjectShader.shader.bNeedPushConstantBlock)
+						{
+							glm::mat4 view = glm::mat4(glm::mat3(g_CameraManager->CurrentCamera()->GetView())); // Truncate translation part off to center around viewer
+							glm::mat4 projection = g_CameraManager->CurrentCamera()->GetProjection();
+							renderObjectMat.material.pushConstantBlock.mvp =
+								projection * view * renderObject->gameObject->GetTransform()->GetWorldTransform();
+							vkCmdPushConstants(offScreenCmdBuffer, renderObject->pipelineLayout,
+								VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Material::PushConstantBlock),
+								&renderObjectMat.material.pushConstantBlock);
+						}
+
+						BindDescriptorSet(&renderObjectShader, renderObject->dynamicUBOIndex, offScreenCmdBuffer, renderObject->pipelineLayout, renderObject->descriptorSet);
+
+						if (renderObject->bIndexed)
+						{
+							vkCmdDrawIndexed(offScreenCmdBuffer, renderObject->indices->size(), 1, renderObject->indexOffset, renderObject->vertexOffset, 0);
+						}
+						else
+						{
+							vkCmdDraw(offScreenCmdBuffer, renderObject->vertexBufferData->VertexCount, 1, renderObject->vertexOffset, 0);
+						}
+					}
 				}
 			}
 
@@ -6241,9 +6164,9 @@ namespace flex
 			VK_CHECK_RESULT(vkEndCommandBuffer(offScreenCmdBuffer));
 		}
 
-		void VulkanRenderer::BindDescriptorSet(VulkanShader* shader, i32 meshIndex, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet)
+		void VulkanRenderer::BindDescriptorSet(VulkanShader* shader, i32 dynamicOffsetIndex, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet)
 		{
-			u32 dynamicOffset = meshIndex * static_cast<u32>(m_DynamicAlignment);
+			u32 dynamicOffset = dynamicOffsetIndex * static_cast<u32>(m_DynamicAlignment);
 			u32* dynamicOffsetPtr = nullptr;
 			u32 dynamicOffsetCount = 0;
 			if (shader->uniformBuffer.dynamicBuffer.m_Size != 0)
@@ -6441,6 +6364,92 @@ namespace flex
 		{
 			VK_CHECK_RESULT(CreateAndAllocateBuffer(m_VulkanDevice, bufferSize, bufferUseageFlagBits, memoryPropertyHostFlagBits, buffer));
 			VK_CHECK_RESULT(buffer->Map());
+		}
+
+		void VulkanRenderer::BatchRenderObjects()
+		{
+			const char* blockName = "BatchRenderObjects";
+			u32 renderObjBatchCount = 0;
+			{
+				PROFILE_AUTO(blockName);
+
+				m_DeferredObjectBatches.batches.clear();
+				m_ForwardObjectBatches.batches.clear();
+
+				// NOTE: Optimization options:
+				//			- Sort materials by shader ID to allow early out on second loop
+				//			- Sort render objects based on batching order
+				//			- Reuse previous batching, only removing or adding entries
+
+				for (u32 shaderID = 0; shaderID < m_Shaders.size(); ++shaderID)
+				{
+					ShaderBatch* shaderBatch = (m_Shaders[shaderID].shader.bDeferred ? &m_DeferredObjectBatches : &m_ForwardObjectBatches);
+
+					ShaderBatchPair shaderBatchPair = {};
+					shaderBatchPair.shaderID = shaderID;
+
+					MaterialBatch& matBatch = shaderBatchPair.batch;
+
+					VulkanBuffer* vertBuffer = m_VertexIndexBufferPairs[shaderID].vertexBuffer;
+					VulkanBuffer* indexBuffer = m_VertexIndexBufferPairs[shaderID].indexBuffer;
+
+					if (vertBuffer->m_Buffer == 0)
+					{
+						continue;
+					}
+
+					for (auto matPair : m_Materials)
+					{
+						if (matPair.second.material.shaderID == shaderID)
+						{
+							MaterialBatchPair matBatchPair = {};
+							matBatchPair.materialID = matPair.first;
+
+							for (u32 renderID = 0; renderID < m_RenderObjects.size(); ++renderID)
+							{
+								VulkanRenderObject* renderObject = GetRenderObject(renderID);
+
+								if (renderObject &&
+									renderObject->materialID == matPair.first &&
+									(!renderObject->bIndexed || indexBuffer->m_Buffer != 0))
+								{
+									matBatchPair.batch.objects.push_back(renderID);
+								}
+							}
+
+							++renderObjBatchCount;
+							matBatch.batches.push_back(matBatchPair);
+						}
+					}
+
+					shaderBatch->batches.push_back(shaderBatchPair);
+				}
+
+				ShaderBatch* shaderBatches[2] = { &m_DeferredObjectBatches, &m_ForwardObjectBatches };
+				for (ShaderBatch* shaderBatch : shaderBatches)
+				{
+					for (const ShaderBatchPair& shaderBatchPair : shaderBatch->batches)
+					{
+						i32 dynamicOffsetIndex = 0;
+
+						for (const MaterialBatchPair& matBatches : shaderBatchPair.batch.batches)
+						{
+							for (RenderID renderID : matBatches.batch.objects)
+							{
+								dynamicOffsetIndex += m_Shaders[shaderBatchPair.shaderID].uniformBuffer.dynamicData.size;
+								VulkanRenderObject* renderObject = GetRenderObject(renderID);
+								if (renderObject)
+								{
+									renderObject->dynamicUBOIndex = dynamicOffsetIndex;
+								}
+							}
+						}
+					}
+				}
+			}
+
+			ms blockMS = Profiler::GetBlockDuration(blockName);
+			Print("Batched %u render objects into %u batches in %.2fms\n", m_RenderObjects.size(), renderObjBatchCount, blockMS);
 		}
 
 		void VulkanRenderer::CreateDescriptorPool()
@@ -6960,16 +6969,7 @@ namespace flex
 				modelInvTranspose = glm::transpose(glm::inverse(model));
 			}
 
-			u32 offset = 0;
-			for (VulkanRenderObject* renderObj : m_RenderObjects)
-			{
-				if (renderObj &&
-					renderObj->renderID != renderObject->renderID &&
-					m_Materials[renderObj->materialID].material.shaderID == m_Materials[renderObject->materialID].material.shaderID)
-				{
-					offset += uniformBuffer.dynamicData.size;
-				}
-			}
+			u32 offset = renderObject->dynamicUBOIndex;
 
 			struct UniformInfo
 			{
@@ -7013,6 +7013,7 @@ namespace flex
 			{
 				if (dynamicUniforms.HasUniform(uniformInfo.uniform))
 				{
+					// TODO: Don't store data twice? (in uniformBuffer.dynamicData.data & uniformBuffer.dynamicBuffer.m_Mapped)
 					memcpy(&uniformBuffer.dynamicData.data[offset + index], uniformInfo.dataStart, uniformInfo.copySize);
 					index += uniformInfo.copySize / 4;
 				}
@@ -7025,20 +7026,11 @@ namespace flex
 			u32 calculatedSize1 = index * 4;
 			calculatedSize1 = GetAlignedUBOSize(calculatedSize1);
 			assert(calculatedSize1 == size);
-#endif // DEBUG
+#endif
 
 			void* firstIndex = uniformBuffer.dynamicBuffer.m_Mapped;
-			u64 dest = (u64)firstIndex + (renderID * m_DynamicAlignment);
+			u64 dest = (u64)firstIndex + (offset * m_DynamicAlignment);
 			memcpy((void*)(dest), &uniformBuffer.dynamicData.data[offset], size);
-
-			// Flush to make changes visible to the host
-			VkMappedMemoryRange mappedMemoryRange = {};
-			mappedMemoryRange.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-			mappedMemoryRange.offset = offset;
-			mappedMemoryRange.memory = uniformBuffer.dynamicBuffer.m_Memory;
-			mappedMemoryRange.size = uniformBuffer.dynamicData.size;
-			// TODO: Is this call needed if the buffer was allocated specifying VK_MEMORY_PROPERTY_HOST_COHERENT_BIT?
-			vkFlushMappedMemoryRanges(m_VulkanDevice->m_LogicalDevice, 1, &mappedMemoryRange);
 		}
 
 		void VulkanRenderer::LoadDefaultShaderCode()
