@@ -101,7 +101,7 @@ namespace flex
 		RetrieveCurrentWorkingDirectory();
 
 		{
-			std::string configDirAbs = RelativePathToAbsolute(SAVED_LOCATION "config/");
+			std::string configDirAbs = RelativePathToAbsolute(ROOT_LOCATION "config/");
 			m_CommonSettingsFileName = "common.ini";
 			m_CommonSettingsAbsFilePath = configDirAbs + m_CommonSettingsFileName;
 			CreateDirectoryRecursive(configDirAbs);
@@ -115,7 +115,7 @@ namespace flex
 		}
 
 		{
-			std::string renderDocSettingsDirAbs = RelativePathToAbsolute(SAVED_LOCATION "config/");
+			std::string renderDocSettingsDirAbs = RelativePathToAbsolute(ROOT_LOCATION "config/");
 			m_RenderDocSettingsFileName = "renderdoc.ini";
 			m_RenderDocSettingsAbsFilePath = renderDocSettingsDirAbs + m_RenderDocSettingsFileName;
 		}
@@ -324,9 +324,9 @@ namespace flex
 
 
 		ImGuiIO& io = ImGui::GetIO();
-		m_ImGuiIniFilepathStr = SAVED_LOCATION "config/imgui.ini";
+		m_ImGuiIniFilepathStr = ROOT_LOCATION "config/imgui.ini";
 		io.IniFilename = m_ImGuiIniFilepathStr.c_str();
-		m_ImGuiLogFilepathStr = SAVED_LOCATION "config/imgui.log";
+		m_ImGuiLogFilepathStr = ROOT_LOCATION "config/imgui.log";
 		io.LogFilename = m_ImGuiLogFilepathStr.c_str();
 		io.DisplaySize = (ImVec2)g_Window->GetFrameBufferSize();
 		io.IniSavingRate = 10.0f;
@@ -342,7 +342,6 @@ namespace flex
 		m_ConsoleCommands.emplace_back("reload.shaders", []() { g_Renderer->ReloadShaders(); });
 		m_ConsoleCommands.emplace_back("reload.fontsdfs", []() { g_Renderer->LoadFonts(true); });
 		m_ConsoleCommands.emplace_back("reload.skybox", []() { g_Renderer->ReloadSkybox(true); });
-
 	}
 
 	AudioSourceID FlexEngine::GetAudioSourceID(SoundEffect effect)

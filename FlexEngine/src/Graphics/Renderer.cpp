@@ -35,10 +35,10 @@ IGNORE_WARNINGS_POP
 namespace flex
 {
 
-	Renderer::Renderer()
+	Renderer::Renderer() :
+		m_DefaultSettingsFilePathAbs(RelativePathToAbsolute(ROOT_LOCATION "config/default-renderer-settings.ini")),
+		m_SettingsFilePathAbs(RelativePathToAbsolute(ROOT_LOCATION "config/renderer-settings.ini")),
 	{
-		m_DefaultSettingsFilePathAbs = RelativePathToAbsolute(ROOT_LOCATION  "saved/config/default-renderer-settings.ini");
-		m_SettingsFilePathAbs = RelativePathToAbsolute(SAVED_LOCATION "config/renderer-settings.ini");
 	}
 
 	Renderer::~Renderer()
