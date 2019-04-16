@@ -2202,7 +2202,7 @@ namespace flex
 
 				if (shader->shader.bDeferred)
 				{
-					m_DeferredRenderObjectBatches.emplace_back();
+					GLRenderObjectBatch batch = {};
 					for (GLRenderObject* renderObject : m_RenderObjects)
 					{
 						if (renderObject &&
@@ -2211,13 +2211,17 @@ namespace flex
 							!renderObject->bEditorObject &&
 							renderObject->vertexBufferData)
 						{
-							m_DeferredRenderObjectBatches.back().push_back(renderObject);
+							batch.push_back(renderObject);
 						}
+					}
+					if (!batch.empty())
+					{
+						m_DeferredRenderObjectBatches.push_back(batch);
 					}
 				}
 				else
 				{
-					m_ForwardRenderObjectBatches.emplace_back();
+					GLRenderObjectBatch batch = {};
 					for (GLRenderObject* renderObject : m_RenderObjects)
 					{
 						if (renderObject &&
@@ -2226,8 +2230,12 @@ namespace flex
 							!renderObject->bEditorObject &&
 							renderObject->vertexBufferData)
 						{
-							m_ForwardRenderObjectBatches.back().push_back(renderObject);
+							batch.push_back(renderObject);
 						}
+					}
+					if (!batch.empty())
+					{
+						m_ForwardRenderObjectBatches.push_back(batch);
 					}
 				}
 			}
@@ -2264,12 +2272,12 @@ namespace flex
 			}
 
 			u32 accountedForObjectCount = 0;
-			for (const std::vector<GLRenderObject*>& batch : m_DeferredRenderObjectBatches)
+			for (const GLRenderObjectBatch& batch : m_DeferredRenderObjectBatches)
 			{
 				accountedForObjectCount += batch.size();
 			}
 
-			for (const std::vector<GLRenderObject*>& batch : m_ForwardRenderObjectBatches)
+			for (const GLRenderObjectBatch& batch : m_ForwardRenderObjectBatches)
 			{
 				accountedForObjectCount += batch.size();
 			}
@@ -2314,7 +2322,7 @@ namespace flex
 				// TODO: Remove?
 				glCullFace(GL_FRONT);
 
-				for (const std::vector<GLRenderObject*>& batch : m_DeferredRenderObjectBatches)
+				for (const GLRenderObjectBatch& batch : m_DeferredRenderObjectBatches)
 				{
 					DrawRenderObjectBatch(batch, drawCallInfo);
 				}
@@ -2373,7 +2381,7 @@ namespace flex
 
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-			for (std::vector<GLRenderObject*>& batch : m_DeferredRenderObjectBatches)
+			for (GLRenderObjectBatch& batch : m_DeferredRenderObjectBatches)
 			{
 				DrawRenderObjectBatch(batch, drawCallInfo);
 			}
@@ -2543,7 +2551,7 @@ namespace flex
 				PrintError("DrawForwardObjects was called with a drawCallInfo which is set to be deferred!\n");
 			}
 
-			for (std::vector<GLRenderObject*>& batch : m_ForwardRenderObjectBatches)
+			for (GLRenderObjectBatch& batch : m_ForwardRenderObjectBatches)
 			{
 				DrawRenderObjectBatch(batch, drawCallInfo);
 			}
@@ -2578,7 +2586,7 @@ namespace flex
 			{
 				GL_PUSH_DEBUG_GROUP("Selected Object Wireframe");
 
-				std::vector<GLRenderObject*> selectedObjectRenderBatch;
+				GLRenderObjectBatch selectedObjectRenderBatch;
 				for (GameObject* selectedObject : selectedObjects)
 				{
 					RenderID renderID = selectedObject->GetRenderID();
@@ -3480,7 +3488,7 @@ namespace flex
 			outProj = glm::ortho(-zoom, zoom, -zoom, zoom, m_DirectionalLight->shadowMapNearPlane, m_DirectionalLight->shadowMapFarPlane);
 		}
 
-		void GLRenderer::DrawRenderObjectBatch(const std::vector<GLRenderObject*>& batchedRenderObjects, const DrawCallInfo& drawCallInfo)
+		void GLRenderer::DrawRenderObjectBatch(const GLRenderObjectBatch& batchedRenderObjects, const DrawCallInfo& drawCallInfo)
 		{
 			if (batchedRenderObjects.empty())
 			{
@@ -3490,7 +3498,7 @@ namespace flex
 			MaterialID materialID = InvalidMaterialID;
 			if (drawCallInfo.materialOverride == InvalidMaterialID)
 			{
-				materialID = batchedRenderObjects[0]->materialID;
+				materialID = (*batchedRenderObjects.begin())->materialID;
 			}
 			else
 			{

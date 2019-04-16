@@ -164,7 +164,7 @@ namespace flex
 						  bool bForceRender,
 						  bool bScreenSpace);
 
-			void DrawRenderObjectBatch(const std::vector<GLRenderObject*>& batchedRenderObjects, const DrawCallInfo& drawCallInfo);
+			void DrawRenderObjectBatch(const GLRenderObjectBatch& batchedRenderObjects, const DrawCallInfo& drawCallInfo);
 
 			bool GetLoadedTexture(const std::string& filePath, GLTexture** texture);
 
@@ -308,12 +308,11 @@ namespace flex
 			VertexBufferData m_1x1_NDC_QuadVertexBufferData;
 			GLRenderObject* m_1x1_NDC_Quad = nullptr; // A 1x1 quad in NDC space
 
-			// TODO: Store RenderIDs rather than raw pointers
-			std::vector<std::vector<GLRenderObject*>> m_DeferredRenderObjectBatches;
-			std::vector<std::vector<GLRenderObject*>> m_ForwardRenderObjectBatches;
+			std::list<GLRenderObjectBatch> m_DeferredRenderObjectBatches;
+			std::list<GLRenderObjectBatch> m_ForwardRenderObjectBatches;
 
-			std::vector<GLRenderObject*> m_DepthAwareEditorRenderObjectBatch;
-			std::vector<GLRenderObject*> m_DepthUnawareEditorRenderObjectBatch;
+			GLRenderObjectBatch m_DepthAwareEditorRenderObjectBatch;
+			GLRenderObjectBatch m_DepthUnawareEditorRenderObjectBatch;
 
 			GLPhysicsDebugDraw* m_PhysicsDebugDrawer = nullptr;
 

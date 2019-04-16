@@ -143,6 +143,8 @@ namespace flex
 			bool bIndexed = false;
 		};
 
+		typedef std::list<GLRenderObject*> GLRenderObjectBatch;
+
 		struct UniformInfo
 		{
 			u64 uniform;
