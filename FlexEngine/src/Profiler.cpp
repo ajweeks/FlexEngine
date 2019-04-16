@@ -324,8 +324,7 @@ namespace flex
 			return;
 		}
 
-		BitmapFont* font = g_Renderer->m_FntSourceCodeProSS;
-		g_Renderer->SetFont(font);
+		BitmapFont* font = g_Renderer->SetFont(SID("editor-01"));
 
 		i32 blockCount = (i32)s_DisplayedFrameTimings.size();
 		ms frameStart = s_DisplayedFrameTimings[0].start;

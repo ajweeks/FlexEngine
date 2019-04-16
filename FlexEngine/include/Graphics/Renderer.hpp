@@ -182,7 +182,7 @@ namespace flex
 
 		i32 GetFramesRenderedCount() const;
 
-		void SetFont(BitmapFont* font);
+		BitmapFont* SetFont(StringID fontID);
 		// Draws the given string in the center of the screen for a short period of time
 		// Passing an empty string will immediately clear the current string
 		void AddEditorString(const std::string& str);
@@ -199,13 +199,7 @@ namespace flex
 		};
 
 		PostProcessSettings& GetPostProcessSettings();
-
-		BitmapFont* m_FntUbuntuCondensedSS = nullptr;
-		BitmapFont* m_FntSourceCodeProWS = nullptr;
-		BitmapFont* m_FntSourceCodeProSS = nullptr;
-		//BitmapFont* m_FntGantSS = nullptr;
-		static const i32 FONT_COUNT = 3;
-
+		
 	protected:
 		// If the object gets deleted this frame *gameObjectRef gets set to nullptr
 		void DoCreateGameObjectButton(const char* buttonName, const char* popupName);
@@ -293,24 +287,26 @@ namespace flex
 			{}
 
 			FontMetaData(const std::string& filePath, const std::string& renderedTextureFilePath, i16 size,
-				bool bScreenSpace, BitmapFont** bitmap) :
+				bool bScreenSpace, BitmapFont* bitmapFont) :
 				filePath(filePath),
 				renderedTextureFilePath(renderedTextureFilePath),
 				size(size),
 				bScreenSpace(bScreenSpace),
-				bitmap(bitmap)
-			{}
+				bitmapFont(bitmapFont)
+			{
+			}
 
 			std::string filePath;
 			std::string renderedTextureFilePath;
 			i16 size;
 			bool bScreenSpace;
-			BitmapFont** bitmap;
+			BitmapFont* bitmapFont = nullptr;
 		};
-		FontMetaData m_FontMetaDatas[FONT_COUNT];
+		std::map<StringID, FontMetaData> m_Fonts;
 
 		std::string m_DefaultSettingsFilePathAbs;
 		std::string m_SettingsFilePathAbs;
+		std::string m_FontsFilePathAbs;
 
 		// Must be 12 chars or less
 		const char* m_GameObjectPayloadCStr = "gameobject";

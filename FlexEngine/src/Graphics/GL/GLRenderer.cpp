@@ -1979,7 +1979,7 @@ namespace flex
 				PhysicsDebugRender();
 			}
 
-			SetFont(m_FntSourceCodeProWS);
+			SetFont(SID("editor-02-ws"));
 			real s = g_SecElapsedSinceProgramStart * 3.5f;
 			DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(1.0f), 1.0f), glm::vec3(2.0f, 1.5f, 0.0f), QUAT_UNIT, 0.0f);
 			DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.95f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 1) * 0.05f, 1.5f + sin(s + 0.3f * 1) * 0.05f, -0.075f * 1), QUAT_UNIT, 0.0f);
@@ -2023,7 +2023,7 @@ namespace flex
 
 
 			// Screen-space objects
-			SetFont(m_FntSourceCodeProSS);
+			SetFont(SID("editor-02"));
 			static const glm::vec4 color(0.95f);
 			DrawStringSS("FLEX ENGINE", color, AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -0.05f), 0.0f);
 			if (g_EngineInstance->IsSimulationPaused())
@@ -2036,7 +2036,7 @@ namespace flex
 
 			// Text stress test:
 #if 0
-			SetFont(m_FntSourceCodeProSS);
+			SetFont(SID("editor-02");
 			real yO = -1.0f;
 			std::string str;
 			for (i32 i = 0; i < 5; ++i)
@@ -2055,7 +2055,7 @@ namespace flex
 				yO += 0.05f;
 			}
 
-			SetFont(m_FntUbuntuCondensedSS);
+			SetFont(SID("editor-01"));
 			yO = 0.0f;
 			for (i32 i = 0; i < 3; ++i)
 			{
@@ -2090,7 +2090,7 @@ namespace flex
 
 			if (m_EditorStrSecRemaining > 0.0f)
 			{
-				SetFont(m_FntUbuntuCondensedSS);
+				SetFont(SID("editor-01"));
 				real alpha = glm::clamp(m_EditorStrSecRemaining / (m_EditorStrSecDuration*m_EditorStrFadeDurationPercent),
 					0.0f, 1.0f);
 				DrawStringSS(m_EditorMessage, glm::vec4(1.0f, 1.0f, 1.0f, alpha), AnchorPoint::CENTER, VEC2_ZERO, 3);
@@ -3208,6 +3208,7 @@ namespace flex
 					else
 					{
 						newFont->ClearTexture();
+						fontTex->Destroy();
 						delete fontTex;
 					}
 				}
@@ -4366,19 +4367,15 @@ namespace flex
 			m_FontsSS.clear();
 			m_FontsWS.clear();
 
-			for (FontMetaData& fontMetaData : m_FontMetaDatas)
+			for (auto& pair : m_Fonts)
 			{
-				if (*(fontMetaData.bitmap) != nullptr)
-				{
-					delete *(fontMetaData.bitmap);
-					(*(fontMetaData.bitmap)) = nullptr;
-				}
+				FontMetaData& fontMetaData = pair.second;
 
 				std::string fontName = fontMetaData.filePath;
 				StripLeadingDirectories(fontName);
 				StripFileType(fontName);
 
-				LoadFont(fontMetaData.bitmap,
+				LoadFont(&fontMetaData.bitmapFont,
 					fontMetaData.size,
 					fontMetaData.filePath,
 					fontMetaData.renderedTextureFilePath,

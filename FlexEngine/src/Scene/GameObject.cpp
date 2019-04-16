@@ -5844,8 +5844,7 @@ namespace flex
 
 		if (bRenderCursor || bRenderText)
 		{
-			BitmapFont* font = g_Renderer->m_FntSourceCodeProWS;
-			g_Renderer->SetFont(font);
+			BitmapFont* font = g_Renderer->SetFont(SID("editor-02-ws"));
 
 			const real letterSpacing = 0.9f;
 			const glm::vec3 right = m_Transform.GetRight();
@@ -5898,7 +5897,7 @@ namespace flex
 					{
 						pos = firstLinePos;
 						pos.y -= lineHeight * lastErrorPos.y;
-						g_Renderer->DrawStringWS("!", errorColor, pos + right * charWidth * 1.0f, rot, letterSpacing);
+						g_Renderer->DrawStringWS("!", errorColor, pos - right * charWidth, rot, letterSpacing);
 					}
 				}
 			}

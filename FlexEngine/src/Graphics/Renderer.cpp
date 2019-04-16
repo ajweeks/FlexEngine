@@ -38,6 +38,7 @@ namespace flex
 	Renderer::Renderer() :
 		m_DefaultSettingsFilePathAbs(RelativePathToAbsolute(ROOT_LOCATION "config/default-renderer-settings.ini")),
 		m_SettingsFilePathAbs(RelativePathToAbsolute(ROOT_LOCATION "config/renderer-settings.ini")),
+		m_FontsFilePathAbs(RelativePathToAbsolute(ROOT_LOCATION "config/fonts.ini"))
 	{
 	}
 
@@ -47,44 +48,46 @@ namespace flex
 
 	void Renderer::Initialize()
 	{
-		// TODO: Handle changing DPI after this point
-		// TODO: Save these strings in a config file?
-		m_FontMetaDatas[0] = {
-			RESOURCE_LOCATION  "fonts\\UbuntuCondensed-Regular.ttf",
-			RESOURCE_LOCATION  "fonts\\UbuntuCondensed-Regular-24",
-			24,
-			true,
-			&m_FntUbuntuCondensedSS,
-		};
-
-		m_FontMetaDatas[1] = {
-			RESOURCE_LOCATION  "fonts\\SourceCodePro-regular.ttf",
-			RESOURCE_LOCATION  "fonts\\SourceCodePro-regular-16",
-			16,
-			false,
-			&m_FntSourceCodeProWS,
-		};
-
-		m_FontMetaDatas[2] = {
-			RESOURCE_LOCATION  "fonts\\SourceCodePro-regular.ttf",
-			RESOURCE_LOCATION  "fonts\\SourceCodePro-regular-14",
-			14,
-			true,
-			&m_FntSourceCodeProSS,
-		};
-
-		//m_FontMetaDatas[3] = {
-		//	RESOURCE_LOCATION  "fonts\\gant.ttf",
-		//	RESOURCE_LOCATION  "fonts\\gant-regular-10",
-		//	10,
-		//	true,
-		//	&m_FntGantSS,
-		//};
-
-		std::string DPIStr = FloatToString(g_Monitor->DPI.x, 0) + "DPI";
-		for (i32 i = 0; i < FONT_COUNT; ++i)
+		if (!FileExists(m_FontsFilePathAbs))
 		{
-			m_FontMetaDatas[i].renderedTextureFilePath += "-" + DPIStr + m_FontImageExtension;
+			PrintError("Fonts file missing!\n");
+		}
+		else
+		{
+			JSONObject fontSettings;
+			if (JSONParser::Parse(m_FontsFilePathAbs, fontSettings))
+			{
+				std::vector<JSONObject> fontObjs;
+				if (fontSettings.SetObjectArrayChecked("fonts", fontObjs))
+				{
+					static const std::string DPIStr = FloatToString(g_Monitor->DPI.x, 0) + "DPI";
+
+					for (const JSONObject& fontObj : fontObjs)
+					{
+						FontMetaData fontMetaData = {};
+						
+						fontObj.SetStringChecked("file path", fontMetaData.filePath);
+						fontMetaData.size = (i16)fontObj.GetInt("size");
+						fontObj.SetBoolChecked("screen space", fontMetaData.bScreenSpace);
+
+						if (fontMetaData.filePath.empty())
+						{
+							PrintError("Font doesn't contain file path!\n");
+							continue;
+						}
+
+						fontMetaData.renderedTextureFilePath = fontMetaData.filePath;
+						StripFileType(fontMetaData.renderedTextureFilePath);
+
+						fontMetaData.renderedTextureFilePath += "-" + IntToString(fontMetaData.size, 2) + "-" + DPIStr + m_FontImageExtension;
+						fontMetaData.renderedTextureFilePath = RESOURCE_LOCATION "fonts/" + fontMetaData.renderedTextureFilePath;
+						fontMetaData.filePath = RESOURCE_LOCATION "fonts/" + fontMetaData.filePath;
+
+						std::string fontName = fontObj.GetString("name");
+						m_Fonts[fontName] = fontMetaData;
+					}
+				}
+			}
 		}
 
 		std::string hdriPath = RESOURCE("textures\\hdri\\");
@@ -405,9 +408,10 @@ namespace flex
 		return m_FramesRendered;
 	}
 
-	void Renderer::SetFont(BitmapFont* font)
+	BitmapFont* Renderer::SetFont(StringID fontID)
 	{
-		m_CurrentFont = font;
+		m_CurrentFont = m_Fonts[fontID].bitmapFont;
+		return m_CurrentFont;
 	}
 
 	Renderer::PostProcessSettings& Renderer::GetPostProcessSettings()
@@ -1659,7 +1663,7 @@ namespace flex
 			{
 				std::string currentStr = textCache.str;
 
-				const glm::vec3 tangent = glm::rotate(textCache.rot, VEC3_RIGHT);
+				const glm::vec3 tangent = -glm::rotate(textCache.rot, VEC3_RIGHT);
 
 				real totalAdvanceX = 0;
 

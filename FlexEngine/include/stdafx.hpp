@@ -199,6 +199,13 @@ namespace flex
 #define RESOURCE(path) "..\\..\\..\\FlexEngine\\resources\\" path
 #define RESOURCE_STR(path) "..\\..\\..\\FlexEngine\\resources\\" + path
 
+	// TODO: Use int to represent string
+	//typedef u32 StringID;
+	typedef std::string StringID;
+
+	// TODO: Calculate string hash here
+#define SID(str) (str)
+
 	static const glm::vec3 VEC3_RIGHT = glm::vec3(1.0f, 0.0f, 0.0f);
 	static const glm::vec3 VEC3_UP = glm::vec3(0.0f, 1.0f, 0.0f);
 	static const glm::vec3 VEC3_FORWARD = glm::vec3(0.0f, 0.0f, 1.0f);
