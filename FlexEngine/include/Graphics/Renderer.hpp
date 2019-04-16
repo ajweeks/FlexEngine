@@ -216,6 +216,9 @@ namespace flex
 		void UpdateTextBufferSS(std::vector<TextVertex2D>& outTextVertices);
 		void UpdateTextBufferWS(std::vector<TextVertex3D>& outTextVertices);
 
+		glm::vec4 GetSelectedObjectColorMultiplier() const;
+		glm::mat4 GetPostProcessingMatrix() const;
+
 		PointLightData* m_PointLights;
 		i32 m_NumPointLightsEnabled = 0;
 		DirectionalLight* m_DirectionalLight = nullptr;

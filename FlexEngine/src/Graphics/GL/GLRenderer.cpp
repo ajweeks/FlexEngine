@@ -2600,10 +2600,7 @@ namespace flex
 					}
 				}
 
-				static const glm::vec4 color0 = { 0.95f, 0.95f, 0.95f, 0.4f };
-				static const glm::vec4 color1 = { 0.85f, 0.15f, 0.85f, 0.4f };
-				real pulseSpeed = 8.0f;
-				GetMaterial(m_SelectedObjectMatID).colorMultiplier = Lerp(color0, color1, sin(g_SecElapsedSinceProgramStart * pulseSpeed) * 0.5f + 0.5f);
+				GetMaterial(m_SelectedObjectMatID).colorMultiplier = GetSelectedObjectColorMultiplier();
 
 				DrawCallInfo selectedObjectsDrawInfo = {};
 				selectedObjectsDrawInfo.materialOverride = m_SelectedObjectMatID;
@@ -2898,37 +2895,7 @@ namespace flex
 			GLint cBSLocation = glGetUniformLocation(spriteShader.program, "contrastBrightnessSaturation");
 			if (cBSLocation != -1)
 			{
-				glm::mat4 contrastBrightnessSaturation;
-				if (m_bPostProcessingEnabled)
-				{
-					real sat = m_PostProcessSettings.saturation;
-					glm::vec3 brightness = m_PostProcessSettings.brightness;
-					glm::vec3 offset = m_PostProcessSettings.offset;
-
-					glm::vec3 wgt(0.3086f, 0.6094f, 0.0820f);
-					real a = (1.0f - sat) * wgt.r + sat;
-					real b = (1.0f - sat) * wgt.r;
-					real c = (1.0f - sat) * wgt.r;
-					real d = (1.0f - sat) * wgt.g;
-					real e = (1.0f - sat) * wgt.g + sat;
-					real f = (1.0f - sat) * wgt.g;
-					real g = (1.0f - sat) * wgt.b;
-					real h = (1.0f - sat) * wgt.b;
-					real i = (1.0f - sat) * wgt.b + sat;
-					glm::mat4 satMat = {
-						a, b, c, 0,
-						d, e, f, 0,
-						g, h, i, 0,
-						0, 0, 0, 1
-					};
-
-					contrastBrightnessSaturation = glm::translate(glm::scale(satMat, brightness), offset);
-				}
-				else
-				{
-					contrastBrightnessSaturation = MAT4_IDENTITY;
-				}
-
+				glm::mat4 contrastBrightnessSaturation = GetPostProcessingMatrix();
 				glUniformMatrix4fv(cBSLocation, 1, GL_FALSE, &contrastBrightnessSaturation[0][0]);
 			}
 
