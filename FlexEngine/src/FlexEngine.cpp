@@ -2107,8 +2107,10 @@ namespace flex
 
 			if (keyCode == KeyCode::KEY_F && !m_CurrentlySelectedObjects.empty())
 			{
+				// Focus on selected objects
+
 				glm::vec3 minPos(FLT_MAX);
-				glm::vec3 maxPos(FLT_MIN);
+				glm::vec3 maxPos(-FLT_MAX);
 				for (GameObject* gameObject : m_CurrentlySelectedObjects)
 				{
 					MeshComponent* mesh = gameObject->GetMeshComponent();
@@ -2122,7 +2124,7 @@ namespace flex
 					}
 				}
 
-				if (minPos.x != FLT_MAX && maxPos.x != FLT_MIN)
+				if (minPos.x != FLT_MAX && maxPos.x != -FLT_MAX)
 				{
 					glm::vec3 sphereCenterWS = minPos + (maxPos - minPos) / 2.0f;
 					real sphereRadius = glm::length(maxPos - minPos) / 2.0f;
@@ -2351,6 +2353,11 @@ namespace flex
 		if (m_DraggingAxisIndex != -1)
 		{
 			PrintError("Called HandleGizmoHover when m_DraggingAxisIndex == %i\n", m_DraggingAxisIndex);
+			return false;
+		}
+
+		if (g_InputManager->GetMousePosition().x == -1.0f)
+		{
 			return false;
 		}
 
