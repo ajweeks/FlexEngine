@@ -55,6 +55,7 @@ namespace flex
 			_u(TIME)
 			_u(SDF_DATA)
 			_u(TEX_CHANNEL)
+			_u(FONT_CHAR_DATA)
 #undef _u
 		}
 

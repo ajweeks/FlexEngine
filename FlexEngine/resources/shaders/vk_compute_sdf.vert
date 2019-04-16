@@ -5,16 +5,19 @@ layout (location = 1) in vec2 in_TexCoord;
 
 layout (location = 0) out vec2 ex_TexCoord;
 
-layout (binding = 0) uniform UBOConstant
+layout (binding = 0) uniform UBODynamic
 {
 	vec4 charResXYspreadZsampleDensityW;
 	int texChannel;
-} uboConstant;
+} uboDynamic;
 
 void main()
 {
+	vec2 charRes = uboDynamic.charResXYspreadZsampleDensityW.xy;
+	float spread = uboDynamic.charResXYspreadZsampleDensityW.z;
+
 	ex_TexCoord = in_TexCoord;
-	vec2 adjustment = vec2(uboConstant.charResXYspreadZsampleDensityW.xy * 2.0) / uboConstant.charResXYspreadZsampleDensityW.z;
+	vec2 adjustment = vec2(charRes * 2.0) / spread;
 	ex_TexCoord -= vec2(0.5);
 	ex_TexCoord *= (vec2(1.0) + adjustment);
 	ex_TexCoord += vec2(0.5);

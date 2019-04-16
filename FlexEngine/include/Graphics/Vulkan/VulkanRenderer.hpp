@@ -139,6 +139,8 @@ namespace flex
 				u32 enableNormalSampler;
 				u32 enableCubemapSampler;
 				u32 enableIrradianceSampler;
+				i32 texChannel;
+				glm::vec4 sdfData;
 			};
 
 			void GenerateCubemapFromHDR(VulkanRenderObject* renderObject, const std::string& environmentMapPath);
@@ -206,7 +208,7 @@ namespace flex
 			void VulkanRenderer::CreateStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<u32>& indices);
 
 			void CreateDescriptorPool();
-			u32 AllocateDynamicUniformBuffer(u32 dynamicDataSize, void** data);
+			u32 AllocateDynamicUniformBuffer(u32 dynamicDataSize, void** data, i32 maxObjectCount = -1);
 			void PrepareUniformBuffer(VulkanBuffer* buffer, u32 bufferSize,
 				VkBufferUsageFlags bufferUseageFlagBits, VkMemoryPropertyFlags memoryPropertyHostFlagBits);
 
@@ -232,6 +234,7 @@ namespace flex
 
 			void UpdateConstantUniformBuffers(UniformOverrides const* overridenUniforms = nullptr);
 			void UpdateDynamicUniformBuffer(RenderID renderID, UniformOverrides const * overridenUniforms = nullptr);
+			void UpdateDynamicUniformBuffer(MaterialID materialID, u32 dynamicOffsetIndex, const glm::mat4& inModel, UniformOverrides const* uniformOverrides = nullptr);
 
 			void LoadDefaultShaderCode();
 

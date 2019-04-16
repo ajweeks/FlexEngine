@@ -4,19 +4,19 @@ layout (location = 0) in vec2 ex_TexCoord;
 
 layout (location = 0) out vec4 outColor;
 
-layout (binding = 0) uniform UBOConstant
+layout (binding = 0) uniform UBODynamic
 {
 	vec4 charResXYspreadZsampleDensityW;
 	int texChannel;
-} uboConstant;
+} uboDynamic;
 
 layout (binding = 1) uniform sampler2D highResTex;
 
 void main()
 {
-	vec2 charRes = uboConstant.charResXYspreadZsampleDensityW.xy;
-	float spread = uboConstant.charResXYspreadZsampleDensityW.z;
-	float sampleDensity = uboConstant.charResXYspreadZsampleDensityW.w;
+	vec2 charRes = uboDynamic.charResXYspreadZsampleDensityW.xy;
+	float spread = uboDynamic.charResXYspreadZsampleDensityW.z;
+	float sampleDensity = uboDynamic.charResXYspreadZsampleDensityW.w;
 
 	bool insideChar = texture(highResTex, ex_TexCoord).r > 0.5;
 
@@ -47,6 +47,6 @@ void main()
 	float val = 0.5 + (insideChar ? diff : -diff);
 
 	vec4 color = vec4(0.0);
-	color[uboConstant.texChannel] = val;
+	color[uboDynamic.texChannel] = val;
 	outColor = color;
 }

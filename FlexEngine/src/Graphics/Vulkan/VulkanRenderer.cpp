@@ -296,7 +296,8 @@ namespace flex
 			delete m_ShaderCompiler;
 #endif
 
-			// TODO: Is this needed?
+			vkQueueWaitIdle(m_GraphicsQueue);
+			vkQueueWaitIdle(m_PresentQueue);
 			vkDeviceWaitIdle(m_VulkanDevice->m_LogicalDevice);
 
 			ImGui_ImplVulkan_Shutdown();
@@ -3808,8 +3809,13 @@ namespace flex
 				fontTex->TransitionToLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 				//fontTex->Build();
 
-				ShaderID computeSDFShaderID;
-				GetShaderID("compute_sdf", computeSDFShaderID);
+
+				MaterialCreateInfo computeSDFMatCreateInfo = {};
+				computeSDFMatCreateInfo.name = "Compute SDF";
+				computeSDFMatCreateInfo.shaderName = "compute_sdf";
+				computeSDFMatCreateInfo.engineMaterial = true;
+				MaterialID computeSDFMatID = InitializeMaterial(&computeSDFMatCreateInfo);
+				ShaderID computeSDFShaderID = m_Materials[computeSDFMatID].material.shaderID;
 				VulkanShader& computeSDFShader = m_Shaders[computeSDFShaderID];
 
 				VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
@@ -3967,7 +3973,7 @@ namespace flex
 				};
 				renderPassBeginInfo.clearValueCount = 1;
 				VkClearValue clearCol = {};
-				clearCol.color = m_ClearColor;
+				clearCol.color = { 0.0f, 0.0f, 0.0f, 0.0f };
 				renderPassBeginInfo.pClearValues = &clearCol;
 				vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -3982,8 +3988,8 @@ namespace flex
 				pipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 				pipelineCreateInfo.cullMode = VK_CULL_MODE_NONE;
 				pipelineCreateInfo.descriptorSetLayoutIndex = computeSDFShaderID;
-				//pipelineCreateInfo.bSetDynamicStates = true;
-				//pipelineCreateInfo.bEnableColorBlending = false;
+				pipelineCreateInfo.bSetDynamicStates = true;
+				pipelineCreateInfo.bEnableAdditiveColorBlending = true;
 				pipelineCreateInfo.subpass = 0;
 				pipelineCreateInfo.depthCompareOp = VK_COMPARE_OP_ALWAYS;
 				pipelineCreateInfo.depthWriteEnable = VK_FALSE;
@@ -3993,6 +3999,9 @@ namespace flex
 				VulkanRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
 				VulkanMaterial* gBufferMaterial = &m_Materials[gBufferRenderObject->materialID];
 
+				UpdateConstantUniformBuffers();
+
+				u32 dynamicOffsetIndex = 0;
 				std::vector<VulkanTexture*> charTextures;
 				for (auto& charPair : characters)
 				{
@@ -4035,73 +4044,66 @@ namespace flex
 					u32 width = alignedBitmap.width;
 					u32 height = alignedBitmap.rows;
 
-					if (width == 0 || height == 0)
+					if (width == 0 || height == 0 ||
+						metric->width == 0 || metric->height == 0)
 					{
 						continue;
 					}
 
+					++dynamicOffsetIndex;
+
 					VulkanTexture* highResTex = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "High res tex", width, height, 4);
 					charTextures.push_back(highResTex);
 
-					highResTex->CreateFromMemory(alignedBitmap.buffer, width * height * 4 * sizeof(real), VK_FORMAT_R8G8B8A8_UINT, 1);
+					highResTex->CreateFromMemory(alignedBitmap.buffer, width * height * sizeof(u8), VK_FORMAT_R8_UNORM, 1);
 
-					glm::vec4 borderColor(0.0f);
+					glm::vec2i res = glm::vec2i(metric->width - padding * 2, metric->height - padding * 2);
+					glm::vec2i viewportTL = glm::vec2i(metric->texCoord) + glm::vec2i(padding);
 
-					if (metric->width > 0 && metric->height > 0)
-					{
-						glm::vec2i res = glm::vec2i(metric->width - padding * 2, metric->height - padding * 2);
-						glm::vec2i viewportTL = glm::vec2i(metric->texCoord) + glm::vec2i(padding);
+					VkViewport viewport = {
+						(real)viewportTL.x, (real)viewportTL.y,
+						(real)res.x, (real)res.y,
+						0.1f, 100.0f
+					};
+					vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
-						VkViewport viewport = VkViewport{
-							0.0f, (real)textureSize.y,
-							(real)textureSize.x,
-							-(real)textureSize.y,
-							0.1f, 1000.0f
-						};
-						vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
-						// set viewport (viewportTL.x, viewportTL.y, res.x, res.y);
+					VkRect2D scissor = {
+						{ (u32)viewportTL.x, (u32)viewportTL.y },
+						{ (u32)res.x, (u32)res.y }
+					};
+					vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-						VkRect2D scissor = VkRect2D{
-							{ 0u, 0u },
-						{ (uint32_t)width,
-						  (uint32_t)height }
-						};
-						vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+					VkDeviceSize offsets[1] = { 0 };
+					vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID].vertexBuffer->m_Buffer, offsets);
+					vkCmdBindIndexBuffer(commandBuffer, m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID].indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
 
+					vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
-						VkDeviceSize offsets[1] = { 0 };
-						vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID].vertexBuffer->m_Buffer, offsets);
-						vkCmdBindIndexBuffer(commandBuffer, m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID].indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
+					VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[computeSDFShaderID];
+					VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 
-						vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+					// TODO: Create once and update albedoTexture
+					DescriptorSetCreateInfo descSetCreateInfo = {};
+					descSetCreateInfo.descriptorSet = &descriptorSet;
+					descSetCreateInfo.descriptorSetLayout = &descSetLayout;
+					descSetCreateInfo.shaderID = computeSDFShaderID;
+					descSetCreateInfo.uniformBuffer = &computeSDFShader.uniformBuffer;
+					descSetCreateInfo.albedoTexture = highResTex;
+					CreateDescriptorSet(&descSetCreateInfo);
 
-						VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[computeSDFShaderID];
-						VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
+					BindDescriptorSet(&m_Shaders[computeSDFShaderID], dynamicOffsetIndex, commandBuffer, pipelineLayout, descriptorSet);
 
-						// TODO: Create once and update albedoTexture
-						DescriptorSetCreateInfo descSetCreateInfo = {};
-						descSetCreateInfo.descriptorSet = &descriptorSet;
-						descSetCreateInfo.descriptorSetLayout = &descSetLayout;
-						descSetCreateInfo.shaderID = computeSDFShaderID;
-						descSetCreateInfo.uniformBuffer = &computeSDFShader.uniformBuffer;
-						descSetCreateInfo.albedoTexture = highResTex;
-						CreateDescriptorSet(&descSetCreateInfo);
+					UniformOverrides overrides = {};
+					overrides.texChannel = metric->channel;
+					overrides.overridenUniforms.AddUniform(U_TEX_CHANNEL);
+					overrides.sdfData = glm::vec4((real)res.x, (real)res.y, (real)spread, (real)sampleDensity);
+					overrides.overridenUniforms.AddUniform(U_SDF_DATA);
+					UpdateDynamicUniformBuffer(computeSDFMatID, dynamicOffsetIndex, MAT4_IDENTITY, &overrides);
 
-						UpdateConstantUniformBuffers();
+					vkCmdDrawIndexed(commandBuffer, m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID].indexCount, 1, 0, 0, 1);
 
-						// uniform texChannel = metric->channel
-						// uniform charResolution = (real)res.x, (real)res.y
-
-						vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout,
-							0, 1, &descriptorSet,
-							0, nullptr);
-						//BindDescriptorSet(&m_Shaders[gBufferMaterial->material.shaderID], gBufferRenderObject->renderID, commandBuffer, gBufferObject->pipelineLayout, gBufferObject->descriptorSet);
-
-						vkCmdDrawIndexed(commandBuffer, m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID].indexCount, 1, 0, 0, 1);
-
-						// TODO:
-						//vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPool, 1, &descriptorSet);
-					}
+					// TODO:
+					//vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPool, 1, &descriptorSet);
 
 					metric->texCoord = metric->texCoord / glm::vec2((real)textureSize.x, (real)textureSize.y);
 
@@ -5107,8 +5109,8 @@ namespace flex
 			pipelineCreateInfo.topology = renderObject->topology;
 			pipelineCreateInfo.cullMode = renderObject->cullMode;
 			pipelineCreateInfo.descriptorSetLayoutIndex = material->descriptorSetLayoutIndex;
-			//pipelineCreateInfo.bSetDynamicStates = false;
-			//pipelineCreateInfo.bEnableColorBlending = shader.shader.bTranslucent;
+			pipelineCreateInfo.bSetDynamicStates = false;
+			pipelineCreateInfo.bEnableColorBlending = shader.shader.bTranslucent;
 			pipelineCreateInfo.pipelineLayout = renderObject->pipelineLayout.replace();
 			pipelineCreateInfo.grahpicsPipeline = renderObject->graphicsPipeline.replace();
 			pipelineCreateInfo.subpass = shader.shader.subpass;
@@ -6239,7 +6241,7 @@ namespace flex
 
 		void VulkanRenderer::BindDescriptorSet(VulkanShader* shader, i32 dynamicOffsetIndex, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet)
 		{
-			u32 dynamicOffset = dynamicOffsetIndex * static_cast<u32>(m_DynamicAlignment);
+			u32 dynamicOffset = dynamicOffsetIndex * m_DynamicAlignment;
 			u32* dynamicOffsetPtr = nullptr;
 			u32 dynamicOffsetCount = 0;
 			if (shader->uniformBuffer.dynamicBuffer.m_Size != 0)
@@ -6406,7 +6408,7 @@ namespace flex
 			CopyBuffer(m_VulkanDevice,m_GraphicsQueue, stagingBuffer.m_Buffer, indexBuffer->m_Buffer, bufferSize);
 		}
 
-		u32 VulkanRenderer::AllocateDynamicUniformBuffer(u32 dynamicDataSize, void** data)
+		u32 VulkanRenderer::AllocateDynamicUniformBuffer(u32 dynamicDataSize, void** data, i32 maxObjectCount /* = -1 */)
 		{
 			size_t uboAlignment = (size_t)m_VulkanDevice->m_PhysicalDeviceProperties.limits.minUniformBufferOffsetAlignment;
 			u32 dynamicAllignment =
@@ -6423,8 +6425,12 @@ namespace flex
 				m_DynamicAlignment = newDynamicAllignment;
 			}
 
-			// TODO: FIXME: Use better metric for initial size
-			size_t dynamicBufferSize = m_RenderObjects.size() * m_DynamicAlignment;
+			if (maxObjectCount == -1)
+			{
+				// TODO: FIXME: Use better metric for initial size
+				maxObjectCount = (i32)m_RenderObjects.size();
+			}
+			size_t dynamicBufferSize = maxObjectCount * m_DynamicAlignment;
 
 			(*data) = _aligned_malloc(dynamicBufferSize, m_DynamicAlignment);
 			assert(*data);
@@ -6832,8 +6838,6 @@ namespace flex
 			glm::mat4 viewInv = glm::inverse(view);
 			glm::mat4 viewProjection = projection * view;
 			glm::vec4 camPos = glm::vec4(g_CameraManager->CurrentCamera()->GetPosition(), 0.0f);
-			glm::vec4 sdfData = glm::vec4(0.5f, -0.01f, -0.008f, 0.035f);
-			i32 texChannel = 0;
 
 			static DirLightData defaultDirLightData = { VEC3_RIGHT, 0, VEC3_ONE, 0.0f };
 
@@ -6865,22 +6869,12 @@ namespace flex
 				{ U_DIR_LIGHT, (void*)dirLightData, sizeof(DirLightData) },
 				{ U_POINT_LIGHTS, (void*)m_PointLights, sizeof(PointLightData) * MAX_NUM_POINT_LIGHTS },
 				{ U_TIME, (void*)&g_SecElapsedSinceProgramStart, sizeof(real) },
-				{ U_SDF_DATA, (void*)&sdfData, sizeof(glm::vec4) },
-				{ U_TEX_CHANNEL, (void*)&texChannel, sizeof(i32) },
 			};
 
-			for (u32 bufferIndex = 0; bufferIndex < m_Materials.size(); ++bufferIndex)
+			for (const VulkanShader& shader : m_Shaders)
 			{
-				if (m_Materials[bufferIndex].material.shaderID == InvalidShaderID)
-				{
-					continue;
-				}
-
-				VulkanMaterial& material = m_Materials[bufferIndex];
-				VulkanShader& shader = m_Shaders[material.material.shaderID];
-
-				Uniforms& constantUniforms = shader.shader.constantBufferUniforms;
-				VulkanUniformBufferObjectData& constantData = shader.uniformBuffer.constantData;
+				const Uniforms& constantUniforms = shader.shader.constantBufferUniforms;
+				const VulkanUniformBufferObjectData& constantData = shader.uniformBuffer.constantData;
 
 				if (constantData.data == nullptr || constantData.size == 0)
 				{
@@ -6940,7 +6934,7 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::UpdateDynamicUniformBuffer(RenderID renderID, UniformOverrides const* uniformOverrides)
+		void VulkanRenderer::UpdateDynamicUniformBuffer(RenderID renderID, UniformOverrides const* uniformOverrides /* = nullptr */)
 		{
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
 			if (renderObject == nullptr)
@@ -6948,11 +6942,17 @@ namespace flex
 				return;
 			}
 
-			VulkanMaterial& material = m_Materials[renderObject->materialID];
-			VulkanShader& shader = m_Shaders[material.material.shaderID];
+			u32 offset = renderObject->dynamicUBOIndex;
+			glm::mat4 model = renderObject->gameObject->GetTransform()->GetWorldTransform();
+			UpdateDynamicUniformBuffer(renderObject->materialID, offset, model, uniformOverrides);
+		}
 
-			UniformBuffer& uniformBuffer = shader.uniformBuffer;
-			Uniforms dynamicUniforms = shader.shader.dynamicBufferUniforms;
+		void VulkanRenderer::UpdateDynamicUniformBuffer(MaterialID materialID, u32 dynamicOffsetIndex, const glm::mat4& inModel, UniformOverrides const* uniformOverrides /* = nullptr */)
+		{
+			const VulkanMaterial& material = m_Materials[materialID];
+			const VulkanShader& shader = m_Shaders[material.material.shaderID];
+
+			const UniformBuffer& uniformBuffer = shader.uniformBuffer;
 
 			if (uniformBuffer.dynamicBuffer.m_Size == 0)
 			{
@@ -6961,7 +6961,7 @@ namespace flex
 
 			bool updateMVP = false; // This is set to true when either the view or projection matrix get overridden
 
-			glm::mat4 model = renderObject->gameObject->GetTransform()->GetWorldTransform();
+			glm::mat4 model = inModel;
 			glm::mat4 modelInvTranspose = glm::transpose(glm::inverse(model));
 			glm::mat4 projection = g_CameraManager->CurrentCamera()->GetProjection();
 			glm::mat4 view = g_CameraManager->CurrentCamera()->GetView();
@@ -6978,6 +6978,8 @@ namespace flex
 			real blendSharpness = material.material.blendSharpness;
 			glm::vec2 texSize = material.material.texSize;
 			glm::vec4 fontCharData = material.material.fontCharData;
+			glm::vec4 sdfData(0.5f, -0.01f, -0.008f, 0.035f);
+			i32 texChannel = 0;
 
 			// TODO: Roll into array?
 			if (uniformOverrides)
@@ -7034,6 +7036,14 @@ namespace flex
 				{
 					enableIrradianceSampler = uniformOverrides->enableIrradianceSampler;
 				}
+				if (uniformOverrides->overridenUniforms.HasUniform(U_SDF_DATA))
+				{
+					sdfData = uniformOverrides->sdfData;
+				}
+				if (uniformOverrides->overridenUniforms.HasUniform(U_TEX_CHANNEL))
+				{
+					texChannel = uniformOverrides->texChannel;
+				}
 			}
 
 			if (updateMVP)
@@ -7041,8 +7051,6 @@ namespace flex
 				modelViewProjection = projection * view * model;
 				modelInvTranspose = glm::transpose(glm::inverse(model));
 			}
-
-			u32 offset = renderObject->dynamicUBOIndex;
 
 			struct UniformInfo
 			{
@@ -7079,15 +7087,18 @@ namespace flex
 				{ U_TEXTURE_SCALE, (void*)&textureScale, sizeof(real) },
 				{ U_FONT_CHAR_DATA, (void*)&fontCharData, sizeof(glm::vec4) },
 				{ U_TEX_SIZE, (void*)&texSize, sizeof(real) },
+				{ U_SDF_DATA, (void*)&sdfData, sizeof(glm::vec4) },
+				{ U_TEX_CHANNEL, (void*)&texChannel, sizeof(i32) },
 			};
 
 			u32 index = 0;
+			const Uniforms& dynamicUniforms = shader.shader.dynamicBufferUniforms;
 			for (UniformInfo& uniformInfo : uniformInfos)
 			{
 				if (dynamicUniforms.HasUniform(uniformInfo.uniform))
 				{
 					// TODO: Don't store data twice? (in uniformBuffer.dynamicData.data & uniformBuffer.dynamicBuffer.m_Mapped)
-					memcpy(&uniformBuffer.dynamicData.data[offset + index], uniformInfo.dataStart, uniformInfo.copySize);
+					memcpy(&uniformBuffer.dynamicData.data[dynamicOffsetIndex + index], uniformInfo.dataStart, uniformInfo.copySize);
 					index += uniformInfo.copySize / 4;
 				}
 			}
@@ -7101,9 +7112,9 @@ namespace flex
 			assert(calculatedSize1 == size);
 #endif
 
-			void* firstIndex = uniformBuffer.dynamicBuffer.m_Mapped;
-			u64 dest = (u64)firstIndex + (offset * m_DynamicAlignment);
-			memcpy((void*)(dest), &uniformBuffer.dynamicData.data[offset], size);
+			u64 firstIndex = (u64)uniformBuffer.dynamicBuffer.m_Mapped;
+			u64 dest = firstIndex + (dynamicOffsetIndex * m_DynamicAlignment);
+			memcpy((void*)(dest), &uniformBuffer.dynamicData.data[dynamicOffsetIndex], size);
 		}
 
 		void VulkanRenderer::LoadDefaultShaderCode()
@@ -7367,12 +7378,12 @@ namespace flex
 				(u32)VertexAttribute::UV;
 
 			m_Shaders[shaderID].shader.constantBufferUniforms = {};
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_SDF_DATA);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_TEX_CHANNEL);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_HIGH_RES_TEX); // highResTex
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_SDF_DATA);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_TEX_CHANNEL);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_HIGH_RES_TEX); // highResTex
 			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_SDF_RESOLUTION);
 			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_HIGH_RES);
 			++shaderID;
