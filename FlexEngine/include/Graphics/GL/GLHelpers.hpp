@@ -211,6 +211,8 @@ namespace flex
 
 			i32 compareMode = 0x884E; // GL_COMPARE_REF_TO_TEXTURE;
 		};
+		
+		struct AsynchronousTextureSave;
 
 		struct GLTexture
 		{
@@ -238,7 +240,8 @@ namespace flex
 			std::string GetRelativeFilePath() const;
 			std::string GetName() const;
 
-			bool SaveToFile(const std::string& absoluteFilePath, ImageFormat format, bool bFlipVertically);
+			bool SaveToFile(const std::string& absoluteFilePath, ImageFormat inFormat, bool bFlipVertically);
+			bool SaveToFileAsync(const std::string& absoluteFilePath, ImageFormat inFormat, bool bFlipVertically);
 			// TODO: Add AsyncSave member func
 
 		private:
@@ -257,6 +260,8 @@ namespace flex
 			GLenum type = 0x1406; // GL_FLOAT;
 
 			TextureParameters m_Parameters;
+
+			AsynchronousTextureSave* asyncSave = nullptr;
 
 			bool bHasMipMaps = false;
 			bool bFlipVerticallyOnLoad = false;

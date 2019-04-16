@@ -352,6 +352,8 @@ namespace flex
 
 		GLTexture::~GLTexture()
 		{
+			delete asyncSave;
+			asyncSave = nullptr;
 		}
 
 		bool GLTexture::CreateEmpty()
@@ -513,9 +515,28 @@ namespace flex
 			return name;
 		}
 
-		bool GLTexture::SaveToFile(const std::string& absoluteFilePath, ImageFormat imageFormat, bool bFlipVertically)
+		bool GLTexture::SaveToFile(const std::string& absoluteFilePath, ImageFormat inFormat, bool bFlipVertically)
 		{
-			return SaveTextureToFile(absoluteFilePath, imageFormat, handle, width, height, channelCount, bFlipVertically);
+			return SaveTextureToFile(absoluteFilePath, inFormat, handle, width, height, channelCount, bFlipVertically);
+		}
+
+		bool GLTexture::SaveToFileAsync(const std::string& absoluteFilePath, ImageFormat inFormat, bool bFlipVertically)
+		{
+			if (asyncSave != nullptr)
+			{
+				if (asyncSave->bComplete)
+				{
+					delete asyncSave;
+					asyncSave = nullptr;
+				}
+				else
+				{
+					PrintError("Attempted to save texture asynchronously before previous save has finished!\n");
+					return false;
+				}
+			}
+			StartAsyncTextureSaveToFile(absoluteFilePath, inFormat, handle, width, height, channelCount, bFlipVertically, &asyncSave);
+			return true;
 		}
 
 		// TODO: CLEANUP: Combine identical parts of SaveTextureToFile & StartAsyncTextureSaveToFile to reduce code duplication
@@ -562,10 +583,12 @@ namespace flex
 			return bResult;
 		}
 
-		void StartAsyncTextureSaveToFile(const std::string& absoluteFilePath, ImageFormat format, GLuint handle, i32 width, i32 height, i32 channelCount, bool bFlipVertically, AsynchronousTextureSave** asyncTextureSave)
+		void StartAsyncTextureSaveToFile(const std::string& absoluteFilePath, ImageFormat format, GLuint handle, i32 width,
+			i32 height, i32 channelCount, bool bFlipVertically, AsynchronousTextureSave** asyncTextureSave)
 		{
-
 			assert(channelCount == 3 || channelCount == 4);
+			assert(asyncTextureSave != nullptr);
+			assert(*asyncTextureSave == nullptr);
 
 			i32 pixelCount = width * height;
 

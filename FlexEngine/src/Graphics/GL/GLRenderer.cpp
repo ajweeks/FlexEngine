@@ -3331,8 +3331,7 @@ namespace flex
 				}
 
 				std::string savedSDFTextureAbsFilePath = RelativePathToAbsolute(renderedFontFilePath);
-				// TODO: Save asynchronously
-				fontTex->SaveToFile(savedSDFTextureAbsFilePath, ImageFormat::PNG, false);
+				fontTex->SaveToFileAsync(savedSDFTextureAbsFilePath, ImageFormat::PNG, false);
 
 				// Cleanup
 				glDisable(GL_BLEND);
