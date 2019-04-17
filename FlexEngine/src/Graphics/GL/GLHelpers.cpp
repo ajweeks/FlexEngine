@@ -550,11 +550,11 @@ namespace flex
 
 			i32 floatBufStride = channelCount * sizeof(real);
 			i32 floatBufSize = floatBufStride * pixelCount;
-			real* readBackTextureData = (real*)malloc((u32)floatBufSize);
+			real* readBackTextureData = (real*)malloc_hooked((u32)floatBufSize);
 
 			i32 u8BufStride = channelCount * sizeof(u8);
 			i32 u8BufSize = u8BufStride * pixelCount;
-			u8* u8Data = (u8*)malloc((u32)u8BufSize);
+			u8* u8Data = (u8*)malloc_hooked((u32)u8BufSize);
 
 			if (readBackTextureData && u8Data)
 			{
@@ -594,11 +594,11 @@ namespace flex
 
 			i32 floatBufStride = channelCount * sizeof(real);
 			i32 floatBufSize = floatBufStride * pixelCount;
-			real* readBackTextureData = (real*)malloc((u32)floatBufSize);
+			real* readBackTextureData = (real*)malloc_hooked((u32)floatBufSize);
 
 			i32 u8BufStride = channelCount * sizeof(u8);
 			i32 u8BufSize = u8BufStride * pixelCount;
-			u8* u8Data = (u8*)malloc((u32)u8BufSize);
+			u8* u8Data = (u8*)malloc_hooked((u32)u8BufSize);
 
 			if (readBackTextureData && u8Data)
 			{
@@ -1181,7 +1181,7 @@ namespace flex
 		AsynchronousTextureSave::AsynchronousTextureSave(const std::string& absoluteFilePath, ImageFormat format, i32 width, i32 height, i32 channelCount, bool bFlipVertically, u8* srcData, i32 numBytes) :
 			absoluteFilePath(absoluteFilePath)
 		{
-			data = (u8*)malloc((u32)numBytes);
+			data = (u8*)malloc_hooked((u32)numBytes);
 			if (!data)
 			{
 				PrintError("Failed to allocate %d bytes for asynchronous texture save\n", numBytes);

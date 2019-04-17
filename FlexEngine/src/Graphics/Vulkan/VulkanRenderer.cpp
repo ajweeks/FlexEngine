@@ -2356,7 +2356,7 @@ namespace flex
 
 				shader->uniformBuffer.constantData.size = GetAlignedUBOSize(shader->uniformBuffer.constantData.size);
 
-				shader->uniformBuffer.constantData.data = static_cast<real*>(malloc(shader->uniformBuffer.constantData.size));
+				shader->uniformBuffer.constantData.data = static_cast<real*>(malloc_hooked(shader->uniformBuffer.constantData.size));
 				assert(shader->uniformBuffer.constantData.data);
 
 				PrepareUniformBuffer(&shader->uniformBuffer.constantBuffer, shader->uniformBuffer.constantData.size,
@@ -2366,7 +2366,7 @@ namespace flex
 			shader->uniformBuffer.dynamicData.size = shader->shader.dynamicBufferUniforms.CalculateSizeInBytes();
 			if (shader->uniformBuffer.dynamicData.size > 0 && !m_RenderObjects.empty())
 			{
-				if (shader->uniformBuffer.dynamicData.data) _aligned_free(shader->uniformBuffer.dynamicData.data);
+				if (shader->uniformBuffer.dynamicData.data) aligned_free_hooked(shader->uniformBuffer.dynamicData.data);
 
 				shader->uniformBuffer.dynamicData.size = GetAlignedUBOSize(shader->uniformBuffer.dynamicData.size);
 
@@ -6285,7 +6285,7 @@ namespace flex
 
 		u32 VulkanRenderer::CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, ShaderID shaderID, i32 size)
 		{
-			void* vertexDataStart = malloc(size);
+			void* vertexDataStart = malloc_hooked(size);
 			if (!vertexDataStart)
 			{
 				PrintError("Failed to allocate memory for vertex buffer %u! Attempted to allocate %d bytes", shaderID, size);
@@ -6432,7 +6432,7 @@ namespace flex
 			}
 			size_t dynamicBufferSize = maxObjectCount * m_DynamicAlignment;
 
-			(*data) = _aligned_malloc(dynamicBufferSize, m_DynamicAlignment);
+			(*data) = aligned_malloc_hooked(dynamicBufferSize, m_DynamicAlignment);
 			assert(*data);
 
 			return dynamicBufferSize;

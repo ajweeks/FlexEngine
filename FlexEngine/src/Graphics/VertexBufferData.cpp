@@ -20,7 +20,7 @@ namespace flex
 		VertexBufferSize = VertexCount * VertexStride;
 
 		assert(vertexData == nullptr);
-		vertexData = (real*)malloc(VertexBufferSize);
+		vertexData = (real*)malloc_hooked(VertexBufferSize);
 		if (vertexData == nullptr)
 		{
 			PrintError("Failed to allocate memory required for vertex buffer data (%u bytes)\n", VertexBufferSize);

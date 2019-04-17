@@ -96,7 +96,7 @@ namespace flex
 			PrintWarn("Unable to find hdri directory at %s\n", hdriPath.c_str());
 		}
 
-		m_PointLights = (PointLightData*)malloc(MAX_NUM_POINT_LIGHTS * sizeof(PointLightData));
+		m_PointLights = (PointLightData*)malloc_hooked(MAX_NUM_POINT_LIGHTS * sizeof(PointLightData));
 		for (i32 i = 0; i < MAX_NUM_POINT_LIGHTS; ++i)
 		{
 			m_PointLights[i].color = VEC3_NEG_ONE;

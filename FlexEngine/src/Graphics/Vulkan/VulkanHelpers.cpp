@@ -549,7 +549,7 @@ namespace flex
 				return 0;
 			}
 
-			unsigned char* pixels = (unsigned char*)malloc(totalSize);
+			unsigned char* pixels = (unsigned char*)malloc_hooked(totalSize);
 			if (pixels == nullptr)
 			{
 				PrintError("CreateCubemapFromTextures Failed to allocate %u bytes\n", totalSize);
@@ -975,7 +975,7 @@ namespace flex
 
 			i32 u8BufStride = channelCount * sizeof(u8);
 			i32 u8BufSize = u8BufStride * pixelCount;
-			u8* u8Data = (u8*)malloc((u32)u8BufSize);
+			u8* u8Data = (u8*)malloc_hooked((u32)u8BufSize);
 
 			if (u8Data)
 			{
