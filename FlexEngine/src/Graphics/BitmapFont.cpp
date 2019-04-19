@@ -27,7 +27,7 @@ namespace flex
 
 	BitmapFont::~BitmapFont()
 	{
-		if (m_Texture)
+		if (m_Texture != nullptr)
 		{
 			m_Texture->Destroy();
 			delete m_Texture;

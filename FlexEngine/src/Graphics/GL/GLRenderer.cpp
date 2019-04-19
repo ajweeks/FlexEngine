@@ -3208,17 +3208,8 @@ namespace flex
 				fontTex->SetParameters(params);
 
 				GLuint captureFBO;
-				GLuint captureRBO;
-
 				glGenFramebuffers(1, &captureFBO);
-				glGenRenderbuffers(1, &captureRBO);
-
 				glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
-				glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
-
-				glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, textureSize.x, textureSize.y);
-				// TODO: Don't use depth buffer
-				glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, captureRBO);
 				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fontTex->handle, 0);
 
 				glViewport(0, 0, textureSize.x, textureSize.y);
@@ -3283,10 +3274,7 @@ namespace flex
 					u32 width = alignedBitmap.width;
 					u32 height = alignedBitmap.rows;
 
-					if (width == 0 || height == 0)
-					{
-						continue;
-					}
+					assert(width != 0 && height != 0);
 
 					GLuint texHandle;
 					glGenTextures(1, &texHandle);
@@ -3320,7 +3308,6 @@ namespace flex
 						glBindBuffer(GL_ARRAY_BUFFER, gBufferRenderObject->VBO);
 						glDrawArrays(gBufferRenderObject->topology, 0,
 							(GLsizei)gBufferRenderObject->vertexBufferData->VertexCount);
-						glBindVertexArray(0);
 					}
 
 					glDeleteTextures(1, &texHandle);
@@ -3330,12 +3317,13 @@ namespace flex
 					FT_Bitmap_Done(ft, &alignedBitmap);
 				}
 
+				glBindVertexArray(0);
+
 				std::string savedSDFTextureAbsFilePath = RelativePathToAbsolute(renderedFontFilePath);
 				fontTex->SaveToFileAsync(savedSDFTextureAbsFilePath, ImageFormat::PNG, false);
 
 				// Cleanup
 				glDisable(GL_BLEND);
-				glDeleteRenderbuffers(1, &captureRBO);
 				glDeleteFramebuffers(1, &captureFBO);
 			}
 

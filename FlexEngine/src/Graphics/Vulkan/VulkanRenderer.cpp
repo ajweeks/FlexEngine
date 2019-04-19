@@ -3802,9 +3802,8 @@ namespace flex
 					std::max(std::max(maxPos[0].y, maxPos[1].y), std::max(maxPos[2].y, maxPos[3].y)));
 				newFont->SetTextureSize(textureSize);
 
-				VulkanTexture* fontTex = newFont->SetTexture(new VulkanTexture(m_VulkanDevice, m_GraphicsQueue,
+				VulkanTexture* fontTexColAttachment = newFont->SetTexture(new VulkanTexture(m_VulkanDevice, m_GraphicsQueue,
 					textureName,textureSize.x, textureSize.y, 4));
-				// TODO: VK_IMAGE_USAGE_TRANSFER_DST_BIT?
 				fontTex->CreateEmpty(VK_FORMAT_R8G8B8A8_UINT, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
 				fontTex->TransitionToLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 				//fontTex->Build();
@@ -3829,35 +3828,17 @@ namespace flex
 				colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 				colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 				colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-				colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+				colorAttachment.finalLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 
 				VkAttachmentReference colorAttachmentRef = {};
 				colorAttachmentRef.attachment = 0;
 				colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-				//VkAttachmentDescription depthAttachment = {};
-				//VkFormat depthFormat;
-				//GetSupportedDepthFormat(m_VulkanDevice->m_PhysicalDevice, &depthFormat);
-				//depthAttachment.format = depthFormat;
-				//depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-				//depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-				//depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-				//depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-				//depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-				//depthAttachment.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-				//depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-				//VkAttachmentReference depthAttachmentRef = {};
-				//depthAttachmentRef.attachment = 1;
-				//depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
 				std::array<VkSubpassDescription, 1> subpasses;
 				subpasses[0] = {};
 				subpasses[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 				subpasses[0].colorAttachmentCount = 1;
 				subpasses[0].pColorAttachments = &colorAttachmentRef;
-				//subpasses[0].pDepthStencilAttachment = &depthAttachmentRef;
-
 
 				// Use subpass dependencies for attachment layout transitions
 				std::array<VkSubpassDependency, 2> dependencies;
@@ -3959,9 +3940,6 @@ namespace flex
 					VK_IMAGE_LAYOUT_UNDEFINED,
 					VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
-				// TODO?
-				//m_CommandBufferManager.FlushCommandBuffer(layoutCmd, m_GraphicsQueue, true);
-
 				VkRenderPassBeginInfo renderPassBeginInfo = {};
 				renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 				renderPassBeginInfo.framebuffer = offscreen.framebuffer;
@@ -4003,6 +3981,7 @@ namespace flex
 
 				u32 dynamicOffsetIndex = 0;
 				std::vector<VulkanTexture*> charTextures;
+				std::vector<VkDescriptorSet> descSets;
 				for (auto& charPair : characters)
 				{
 					FontMetric* metric = charPair.second;
@@ -4087,6 +4066,7 @@ namespace flex
 					descSetCreateInfo.uniformBuffer = &computeSDFShader.uniformBuffer;
 					descSetCreateInfo.albedoTexture = highResTex;
 					CreateDescriptorSet(&descSetCreateInfo);
+					descSets.push_back(descriptorSet);
 
 					BindDescriptorSet(&m_Shaders[computeSDFShaderID], dynamicOffsetIndex, commandBuffer, pipelineLayout, descriptorSet);
 
@@ -4099,101 +4079,24 @@ namespace flex
 
 					vkCmdDrawIndexed(commandBuffer, m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID].indexCount, 1, 0, 0, 1);
 
-					// TODO:
-					//vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPool, 1, &descriptorSet);
-
 					metric->texCoord = metric->texCoord / glm::vec2((real)textureSize.x, (real)textureSize.y);
 
-					//FT_Bitmap_Done(ft, &alignedBitmap);
+					FT_Bitmap_Done(ft, &alignedBitmap);
 				}
 
 				vkCmdEndRenderPass(commandBuffer);
 
 				VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
 
-				//SetImageLayout(
-				//	commandBuffer,
-				//	offscreen.image,
-				//	VK_IMAGE_ASPECT_COLOR_BIT,
-				//	VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-				//	VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-
-				//// Copy region for transfer from framebuffer to cube face
-				//VkImageCopy copyRegion = {};
-
-				//copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-				//copyRegion.srcSubresource.baseArrayLayer = 0;
-				//copyRegion.srcSubresource.mipLevel = 0;
-				//copyRegion.srcSubresource.layerCount = 1;
-				//copyRegion.srcOffset = { 0, 0, 0 };
-
-				//copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-				//copyRegion.dstSubresource.baseArrayLayer = 0;
-				//copyRegion.dstSubresource.mipLevel = 0;
-				//copyRegion.dstSubresource.layerCount = 1;
-				//copyRegion.dstOffset = { 0, 0, 0 };
-
-				//copyRegion.extent.width = static_cast<u32>(viewport.width);
-				//copyRegion.extent.height = static_cast<u32>(viewport.height);
-				//copyRegion.extent.depth = 1;
-
-				//vkCmdCopyImage(
-				//	commandBuffer,
-				//	offscreen.image,
-				//	VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				//	renderObjectMat.cubemapTexture->image,
-				//	VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				//	1,
-				//	&copyRegion);
-
-				//// Transform framebuffer color attachment back
-				//SetImageLayout(
-				//	commandBuffer,
-				//	offscreen.image,
-				//	VK_IMAGE_ASPECT_COLOR_BIT,
-				//	VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				//	VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-
-				//SetImageLayout(
-				//	commandBuffer,
-				//	renderObjectMat.cubemapTexture,
-				//	VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				//	VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-				//	subresourceRange);
-
-				//m_CommandBufferManager.FlushCommandBuffer(commandBuffer, m_GraphicsQueue, true);
-
 				VkSubmitInfo submitInfo = {};
 				submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
 				VkPipelineStageFlags waitStages = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 				submitInfo.pWaitDstStageMask = &waitStages;
-
-				//submitInfo.waitSemaphoreCount = 1;
-				//submitInfo.pWaitSemaphores = &m_PresentCompleteSemaphore;
-
-				//submitInfo.signalSemaphoreCount = 1;
-				//submitInfo.pSignalSemaphores = &offscreenSemaphore;
-
 				submitInfo.commandBufferCount = 1;
 				submitInfo.pCommandBuffers = &commandBuffer;
 
 				VK_CHECK_RESULT(vkQueueSubmit(m_GraphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
-
-				//VkPresentInfoKHR presentInfo = {};
-				//presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-
-				////presentInfo.waitSemaphoreCount = 1;
-				////presentInfo.pWaitSemaphores = &m_RenderCompleteSemaphore;
-
-				//presentInfo.swapchainCount = 1;
-				//presentInfo.pSwapchains = &m_SwapChain;
-
-				//u32 imageIndex = 0;
-				//presentInfo.pImageIndices = &imageIndex;
-
-				//VK_CHECK_RESULT(vkQueuePresentKHR(m_PresentQueue, &presentInfo));
-
 				VK_CHECK_RESULT(vkQueueWaitIdle(m_GraphicsQueue));
 
 				for (VulkanTexture* highResTex : charTextures)
@@ -4202,6 +4105,9 @@ namespace flex
 					delete highResTex;
 				}
 				charTextures.clear();
+
+				vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPool, descSets.size(), descSets.data());
+				descSets.clear();
 
 				vkDestroyPipeline(m_VulkanDevice->m_LogicalDevice, graphicsPipeline, nullptr);
 				vkDestroyRenderPass(m_VulkanDevice->m_LogicalDevice, renderPass, nullptr);
