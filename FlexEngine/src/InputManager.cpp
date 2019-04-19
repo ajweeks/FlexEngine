@@ -41,6 +41,9 @@ namespace flex
 		LoadInputBindingsFromFile();
 		SaveInputBindingsToFile();
 
+		m_GamepadStates[0].averageRotationSpeeds = RollingAverage<real>(m_GamepadStates[0].framesToAverageOver);
+		m_GamepadStates[1].averageRotationSpeeds = RollingAverage<real>(m_GamepadStates[1].framesToAverageOver);
+
 		ClearAllInputs();
 	}
 
@@ -1063,7 +1066,7 @@ namespace flex
 		gamepadState.buttonsPressed = 0;
 		gamepadState.buttonsReleased = 0;
 
-		gamepadState.averageRotationSpeeds = RollingAverage<real>(gamepadState.framesToAverageOver);
+		gamepadState.averageRotationSpeeds.Reset();
 
 		m_pGamepadStates[gamepadIndex] = gamepadState;
 	}
