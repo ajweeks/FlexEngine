@@ -4035,7 +4035,7 @@ namespace flex
 					}
 
 					FT_Bitmap alignedBitmap = {};
-					if (FT_Bitmap_Convert(ft, &face->glyph->bitmap, &alignedBitmap, 4))
+					if (FT_Bitmap_Convert(ft, &face->glyph->bitmap, &alignedBitmap, 1))
 					{
 						PrintError("Couldn't align free type bitmap size\n");
 						continue;
@@ -4044,17 +4044,14 @@ namespace flex
 					u32 width = alignedBitmap.width;
 					u32 height = alignedBitmap.rows;
 
-					if (width == 0 || height == 0 ||
-						metric->width == 0 || metric->height == 0)
-					{
-						continue;
-					}
+					assert(width != 0 && height != 0);
+
+					VulkanTexture* highResTex = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "High res tex", width, height, 1);
+					charTextures.push_back(highResTex);
 
 					++dynamicOffsetIndex;
 
-					VulkanTexture* highResTex = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "High res tex", width, height, 4);
-					charTextures.push_back(highResTex);
-
+					highResTex->bSamplerClampToBorder = true;
 					highResTex->CreateFromMemory(alignedBitmap.buffer, width * height * sizeof(u8), VK_FORMAT_R8_UNORM, 1);
 
 					glm::vec2i res = glm::vec2i(metric->width - padding * 2, metric->height - padding * 2);

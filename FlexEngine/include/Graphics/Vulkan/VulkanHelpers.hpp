@@ -244,6 +244,7 @@ namespace flex
 			bool bFlipVertically = false;
 			bool bGenerateMipMaps = false;
 			bool bHDR = false;
+			bool bSamplerClampToBorder = false;
 
 			VDeleter<VkImage> image;
 			VkImageLayout imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;

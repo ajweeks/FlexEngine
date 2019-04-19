@@ -332,6 +332,14 @@ namespace flex
 
 			SamplerCreateInfo samplerCreateInfo = {};
 			samplerCreateInfo.sampler = &sampler;
+			if (bSamplerClampToBorder)
+			{
+				samplerCreateInfo.samplerAddressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+			}
+			else
+			{
+				samplerCreateInfo.samplerAddressMode = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+			}
 			CreateSampler(m_VulkanDevice, samplerCreateInfo);
 
 			return imageSize;

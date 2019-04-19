@@ -17,7 +17,7 @@ void main()
 	float spread = uboDynamic.charResXYspreadZsampleDensityW.z;
 
 	ex_TexCoord = in_TexCoord;
-	vec2 adjustment = vec2(charRes * 2.0) / spread;
+	vec2 adjustment = vec2(spread * 2.0) / charRes;
 	ex_TexCoord -= vec2(0.5);
 	ex_TexCoord *= (vec2(1.0) + adjustment);
 	ex_TexCoord += vec2(0.5);
