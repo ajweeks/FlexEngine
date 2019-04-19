@@ -26,12 +26,11 @@ static size_t deallocationCount = 0;
 
 void* malloc_hooked(size_t size)
 {
-	size += sizeof(size_t);
 	totalAllocated += size;
 	++allocationCount;
 	if (allocationCount % 1000 == 0)
 	{
-		std::cout << "allocations: " << allocationCount << ", " << (totalAllocated / 1024 / 1024) << " MB\n";
+	//	std::cout << "allocations: " << allocationCount << ", " << (totalAllocated / 1024 / 1024) << " MB\n";
 	}
 	void* ptr = malloc(size);
 	return ptr;
@@ -43,7 +42,7 @@ void* aligned_malloc_hooked(size_t size, size_t alignment)
 	++allocationCount;
 	if (allocationCount % 1000 == 0)
 	{
-		std::cout << "allocations: " << allocationCount << ", " << (totalAllocated / 1024 / 1024) << " MB\n";
+	//	std::cout << "allocations: " << allocationCount << ", " << (totalAllocated / 1024 / 1024) << " MB\n";
 	}
 	void* ptr = _aligned_malloc(size, alignment);
 	return ptr;
@@ -54,7 +53,7 @@ void free_hooked(void* ptr)
 	++deallocationCount;
 	if (deallocationCount % 1000 == 0)
 	{
-		std::cout << "deallocations: " << deallocationCount << ", " << (totalAllocated / 1024 / 1024) << " MB\n";
+	//	std::cout << "deallocations: " << deallocationCount << ", " << (totalAllocated / 1024 / 1024) << " MB\n";
 	}
 	free(ptr);
 }
@@ -64,7 +63,7 @@ void aligned_free_hooked(void* ptr)
 	++deallocationCount;
 	if (deallocationCount % 1000 == 0)
 	{
-		std::cout << "deallocations: " << deallocationCount << ", " << (totalAllocated / 1024 / 1024) << " MB\n";
+	//	std::cout << "deallocations: " << deallocationCount << ", " << (totalAllocated / 1024 / 1024) << " MB\n";
 	}
 	_aligned_free(ptr);
 }
