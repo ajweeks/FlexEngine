@@ -199,7 +199,7 @@ namespace flex
 		};
 
 		PostProcessSettings& GetPostProcessSettings();
-		
+
 	protected:
 		// If the object gets deleted this frame *gameObjectRef gets set to nullptr
 		void DoCreateGameObjectButton(const char* buttonName, const char* popupName);
@@ -210,6 +210,8 @@ namespace flex
 		bool LoadFontMetrics(const std::vector<char>& fileMemory, const std::string& fontFilePath,FT_Library& ft, BitmapFont** font,
 			i16 size, bool bScreenSpace, std::map<i32, struct FontMetric*>* outCharacters,
 			std::array<glm::vec2i, 4>* outMaxPositions, FT_Face* outFace);
+
+		void InitializeMaterials();
 
 		std::string PickRandomSkyboxTexture();
 

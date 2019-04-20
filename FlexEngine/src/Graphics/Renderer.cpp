@@ -65,7 +65,7 @@ namespace flex
 					for (const JSONObject& fontObj : fontObjs)
 					{
 						FontMetaData fontMetaData = {};
-						
+
 						fontObj.SetStringChecked("file path", fontMetaData.filePath);
 						fontMetaData.size = (i16)fontObj.GetInt("size");
 						fontObj.SetBoolChecked("screen space", fontMetaData.bScreenSpace);
@@ -1390,6 +1390,21 @@ namespace flex
 		*outFace = face;
 
 		return true;
+	}
+
+	void Renderer::InitializeMaterials()
+	{
+		MaterialCreateInfo fontSSMatCreateInfo = {};
+		fontSSMatCreateInfo.name = "Font material SS";
+		fontSSMatCreateInfo.shaderName = "font_ss";
+		fontSSMatCreateInfo.engineMaterial = true;
+		m_FontMatSSID = InitializeMaterial(&fontSSMatCreateInfo);
+
+		MaterialCreateInfo fontWSMatCreateInfo = {};
+		fontWSMatCreateInfo.name = "Font material WS";
+		fontWSMatCreateInfo.shaderName = "font_ws";
+		fontWSMatCreateInfo.engineMaterial = true;
+		m_FontMatWSID = InitializeMaterial(&fontWSMatCreateInfo);
 	}
 
 	std::string Renderer::PickRandomSkyboxTexture()

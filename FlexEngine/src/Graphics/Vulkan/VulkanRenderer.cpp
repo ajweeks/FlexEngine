@@ -176,6 +176,8 @@ namespace flex
 					new VulkanBuffer(m_VulkanDevice->m_LogicalDevice)  // Index buffer
 					});
 			}
+
+			Renderer::InitializeMaterials();
 		}
 
 		void VulkanRenderer::PostInitialize()

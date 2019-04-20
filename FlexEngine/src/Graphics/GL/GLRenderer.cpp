@@ -188,6 +188,9 @@ namespace flex
 				}
 			}
 
+			Renderer::InitializeMaterials();
+
+			// TODO: Move to Renderer::InitializeMaterials
 			MaterialCreateInfo shadowMatCreateInfo = {};
 			shadowMatCreateInfo.shaderName = "shadow";
 			shadowMatCreateInfo.name = "Shadow";
@@ -200,18 +203,6 @@ namespace flex
 			spriteMatCreateInfo.shaderName = "sprite";
 			spriteMatCreateInfo.engineMaterial = true;
 			m_SpriteMatID = InitializeMaterial(&spriteMatCreateInfo);
-
-			MaterialCreateInfo fontSSMatCreateInfo = {};
-			fontSSMatCreateInfo.name = "Font material SS";
-			fontSSMatCreateInfo.shaderName = "font_ss";
-			fontSSMatCreateInfo.engineMaterial = true;
-			m_FontMatSSID = InitializeMaterial(&fontSSMatCreateInfo);
-
-			MaterialCreateInfo fontWSMatCreateInfo = {};
-			fontWSMatCreateInfo.name = "Font material WS";
-			fontWSMatCreateInfo.shaderName = "font_ws";
-			fontWSMatCreateInfo.engineMaterial = true;
-			m_FontMatWSID = InitializeMaterial(&fontWSMatCreateInfo);
 
 			MaterialCreateInfo postProcessMatCreateInfo = {};
 			postProcessMatCreateInfo.name = "Post process material";
