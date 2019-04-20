@@ -86,7 +86,7 @@ namespace flex
 				i32 texSize;
 				i32 castShadows;
 				i32 shadowDarkness;
-				i32 textureScale;
+				//i32 textureScale;
 				i32 time;
 			};
 			UniformIDs uniformIDs;
@@ -211,7 +211,7 @@ namespace flex
 
 			i32 compareMode = 0x884E; // GL_COMPARE_REF_TO_TEXTURE;
 		};
-		
+
 		struct AsynchronousTextureSave;
 
 		struct GLTexture
@@ -276,6 +276,7 @@ namespace flex
 
 			// Returns true once task is complete
 			bool TickStatus();
+			void WaitToComplete();
 
 			std::thread taskThread;
 			std::promise<bool> taskPromise;

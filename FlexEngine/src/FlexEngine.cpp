@@ -1310,6 +1310,7 @@ namespace flex
 				}
 
 				g_Renderer->DrawImGuiRenderObjects();
+				g_Renderer->DrawImGuiMisc();
 
 				ImGui::Spacing();
 				ImGui::Spacing();

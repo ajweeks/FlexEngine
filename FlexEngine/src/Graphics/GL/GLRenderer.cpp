@@ -109,7 +109,7 @@ namespace flex
 			glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
 			assert(GL_VERSION_4_5);
-			// TODO: Check presence of GL_ARB_clip_control (GL 4.5)
+			// TODO: Handle lack of GL_ARB_clip_control (in GL < 4.5)
 			glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
 
 
@@ -117,7 +117,6 @@ namespace flex
 			{
 				glGenFramebuffers(1, &m_CaptureFBO);
 				glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
-
 
 				glGenRenderbuffers(1, &m_CaptureRBO);
 				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
@@ -498,7 +497,7 @@ namespace flex
 
 			for (BitmapFont* font : m_FontsSS)
 			{
-				delete  font;
+				delete font;
 			}
 			m_FontsSS.clear();
 
@@ -598,7 +597,6 @@ namespace flex
 			MaterialID matID;
 			if (matToReplace != InvalidMaterialID)
 			{
-				// TODO: Do any material destruction work here
 				matID = matToReplace;
 			}
 			else
@@ -657,7 +655,6 @@ namespace flex
 				{ U_IRRADIANCE_SAMPLER,				"enableIrradianceSampler",		&mat.uniformIDs.enableIrradianceSampler },
 				{ U_TRANSFORM_MAT,					"transformMat",					&mat.uniformIDs.transformMat },
 				{ U_TEX_SIZE,						"texSize",						&mat.uniformIDs.texSize },
-				{ U_TEX_SIZE,						"textureScale",					&mat.uniformIDs.textureScale },
 				{ U_TIME,							"time",							&mat.uniformIDs.time },
 			};
 
@@ -666,14 +663,14 @@ namespace flex
 				// TODO: CLEANUP: Get rid of HasUniform in place of -1 check! :O
 				//if (shader.shader.dynamicBufferUniforms.HasUniform(uniform.uniform) ||
 				//	shader.shader.constantBufferUniforms.HasUniform(uniform.uniform))
-				{
+				//{
 					*uniform.id = glGetUniformLocation(shader.program, uniform.name);
-					if (*uniform.id == -1)
-					{
-						//	PrintWarn("uniform %s was not found for material %s (shader: %s)\n",
-						//			  uniform.name, createInfo->name.c_str(), createInfo->shaderName.c_str());
-					}
-				}
+					//if (*uniform.id == -1)
+					//{
+					//		PrintWarn("uniform %s was not found for material %s (shader: %s)\n",
+					//				  uniform.name, createInfo->name.c_str(), createInfo->shaderName.c_str());
+					//}
+				//}
 			}
 
 			if (shader.shader.bNeedShadowMap)
@@ -1380,7 +1377,7 @@ namespace flex
 
 				glUniformMatrix4fv(prefilterMat.uniformIDs.projection, 1, GL_FALSE, &m_CaptureProjection[0][0]);
 
-				glActiveTexture(GL_TEXTURE0); // TODO: Remove constant
+				glActiveTexture(GL_TEXTURE0);
 				glBindTexture(GL_TEXTURE_CUBE_MAP, m_Materials[cubemapMaterialID].cubemapSamplerID);
 
 				glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
@@ -1429,7 +1426,7 @@ namespace flex
 					}
 				}
 
-				// TODO: Make this a togglable bool param for the shader (or roughness param)
+
 				// Visualize prefiltered map as skybox:
 				//m_Materials[renderObject->materialID].cubemapSamplerID = m_Materials[renderObject->materialID].prefilteredMapSamplerID;
 			}
@@ -1575,7 +1572,7 @@ namespace flex
 
 				glUniformMatrix4fv(irradianceMat.uniformIDs.projection, 1, GL_FALSE, &m_CaptureProjection[0][0]);
 
-				glActiveTexture(GL_TEXTURE0); // TODO: Remove constant
+				glActiveTexture(GL_TEXTURE0);
 				glBindTexture(GL_TEXTURE_CUBE_MAP, m_Materials[cubemapMaterialID].cubemapSamplerID);
 
 				glm::vec2 cubemapSize = m_Materials[cubemapMaterialID].material.irradianceSamplerSize;
@@ -1733,7 +1730,7 @@ namespace flex
 
 		bool GLRenderer::GetMaterialID(const std::string& materialName, MaterialID& materialID)
 		{
-			// TODO: Store shaders using sorted data structure?
+			// TODO: Store materials using sorted data structure?
 			for (auto& materialPair : m_Materials)
 			{
 				if (materialPair.second.material.name.compare(materialName) == 0)
@@ -2161,18 +2158,6 @@ namespace flex
 
 			m_bRebatchRenderObjects = false;
 
-			/*
-			TODO: Don't create two nested vectors every call, just sort things by deferred/forward, then by material ID
-
-
-			Eg. deferred | matID
-			yes		 0
-			yes		 2
-			no		 1
-			no		 3
-			no		 5
-			*/
-
 			m_DeferredRenderObjectBatches.clear();
 			m_ForwardRenderObjectBatches.clear();
 			m_DepthAwareEditorRenderObjectBatch.clear();
@@ -2310,7 +2295,6 @@ namespace flex
 				glm::mat4 lightViewProj = proj * view;
 				glUniformMatrix4fv(material->uniformIDs.lightViewProjection, 1, GL_FALSE, &lightViewProj[0][0]);
 
-				// TODO: Remove?
 				glCullFace(GL_FRONT);
 
 				for (const GLRenderObjectBatch& batch : m_DeferredRenderObjectBatches)
@@ -2318,8 +2302,6 @@ namespace flex
 					DrawRenderObjectBatch(batch, drawCallInfo);
 				}
 
-				//glDrawBuffer(GL_BACK);
-				// TODO: Remove?
 				glCullFace(GL_BACK);
 			}
 
@@ -3467,12 +3449,6 @@ namespace flex
 
 			for (GLRenderObject* renderObject : batchedRenderObjects)
 			{
-				if (!renderObject->gameObject->IsVisible() || renderObject->vertexBufferData == nullptr)
-				{
-					// TODO: Assert false on batch containing invalid render object
-					continue;
-				}
-
 				if (drawCallInfo.materialOverride == InvalidMaterialID)
 				{
 					materialID = renderObject->materialID;
@@ -3496,7 +3472,6 @@ namespace flex
 					glCullFace(renderObject->cullFace);
 				}
 
-				// TODO: Move to translucent pass?
 				if (shader->bTranslucent)
 				{
 					glEnable(GL_BLEND);
@@ -3585,7 +3560,6 @@ namespace flex
 				}
 				else
 				{
-					// TODO: Move to translucent pass?
 					if (shader->bTranslucent)
 					{
 						glEnable(GL_BLEND);
@@ -4217,7 +4191,7 @@ namespace flex
 			m_Shaders[shaderID].shader.constantBufferUniforms = {};
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
-			// TODO: Move some of these to constant buffer
+			// TODO: Use same format as VulkanRenderer
 			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CHAR_RESOLUTION);
 			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_SPREAD);
 			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_HIGH_RES_TEX);
@@ -4292,7 +4266,6 @@ namespace flex
 				LinkProgram(shader.program);
 
 #if 0
-				// TODO: Add option to print specific shader's info at runtime
 				PrintShaderInfo(shader.program, shader.shader.name.c_str());
 #endif
 
@@ -4532,10 +4505,10 @@ namespace flex
 
 			GLShader* shader = &m_Shaders[material->material.shaderID];
 
-			if (material->uniformIDs.textureScale != -1)
-			{
-				glUniform1f(material->uniformIDs.textureScale, material->material.textureScale);
-			}
+			//if (material->uniformIDs.textureScale != -1)
+			//{
+			//	glUniform1f(material->uniformIDs.textureScale, material->material.textureScale);
+			//}
 
 			// TODO: Use set functions here (SetFloat, SetMatrix, ...)
 			if (shader->shader.dynamicBufferUniforms.HasUniform(U_MODEL))
@@ -4885,7 +4858,6 @@ namespace flex
 
 		u32 GLRenderer::GetRenderObjectCount() const
 		{
-			// TODO: Replace function with m_RenderObjects.size()? (only if no nullptr objects exist)
 			u32 count = 0;
 
 			for (GLRenderObject* renderObject : m_RenderObjects)
@@ -5660,93 +5632,6 @@ namespace flex
 			UNREFERENCED_PARAMETER(renderID);
 		}
 
-		void GLRenderer::DrawImGuiRenderObjects()
-		{
-			// TODO: Move to Renderer
-
-			ImGui::NewLine();
-
-			ImGui::BeginChild("SelectedObject", ImVec2(0.0f, 500.0f), true);
-
-			const std::vector<GameObject*>& selectedObjects = g_EngineInstance->GetSelectedObjects();
-			if (!selectedObjects.empty())
-			{
-				// TODO: Draw common fields for all selected objects?
-				GameObject* selectedObject = selectedObjects[0];
-				if (selectedObject)
-				{
-					selectedObject->DrawImGuiObjects();
-				}
-			}
-
-			ImGui::EndChild();
-
-			ImGui::NewLine();
-
-			ImGui::Text("Game Objects");
-
-			// Dropping objects onto this text makes them root objects
-			if (ImGui::BeginDragDropTarget())
-			{
-				const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(m_GameObjectPayloadCStr);
-
-				if (payload && payload->Data)
-				{
-					i32 draggedObjectCount = payload->DataSize / sizeof(GameObject*);
-
-					std::vector<GameObject*> draggedGameObjectsVec;
-					draggedGameObjectsVec.reserve(draggedObjectCount);
-					for (i32 i = 0; i < draggedObjectCount; ++i)
-					{
-						draggedGameObjectsVec.push_back(*((GameObject**)payload->Data + i));
-					}
-
-					if (!draggedGameObjectsVec.empty())
-					{
-						std::vector<GameObject*> siblings = draggedGameObjectsVec[0]->GetLaterSiblings();
-
-						for (GameObject* draggedGameObject : draggedGameObjectsVec)
-						{
-							bool bRootObject = draggedGameObject == draggedGameObjectsVec[0];
-							bool bRootSibling = Find(siblings, draggedGameObject) != siblings.end();
-							// Only re-parent root-most object (leave sub-hierarchy as-is)
-							if ((bRootObject || bRootSibling) &&
-								draggedGameObject->GetParent())
-							{
-								draggedGameObject->GetParent()->RemoveChild(draggedGameObject);
-								g_SceneManager->CurrentScene()->AddRootObject(draggedGameObject);
-							}
-						}
-					}
-				}
-				ImGui::EndDragDropTarget();
-			}
-
-			std::vector<GameObject*>& rootObjects = g_SceneManager->CurrentScene()->GetRootObjects();
-			for (GameObject* rootObject : rootObjects)
-			{
-				if (DrawImGuiGameObjectNameAndChildren(rootObject))
-				{
-					break;
-				}
-			}
-
-			DoCreateGameObjectButton("Add object...", "Add object");
-
-			if (m_NumPointLightsEnabled < MAX_NUM_POINT_LIGHTS)
-			{
-				static const char* newPointLightStr = "Add point light";
-				if (ImGui::Button(newPointLightStr))
-				{
-					BaseScene* scene = g_SceneManager->CurrentScene();
-					PointLight* newPointLight = new PointLight(scene);
-					scene->AddRootObject(newPointLight);
-					newPointLight->Initialize();
-					newPointLight->PostInitialize();
-				}
-			}
-		}
-
 		void GLRenderer::UpdateVertexData(RenderID renderID, VertexBufferData* vertexBufferData)
 		{
 			PROFILE_AUTO("Update Vertex Data");
@@ -5809,12 +5694,6 @@ namespace flex
 			{
 				m_QueuedWSSprites.push_back(drawInfo);
 			}
-		}
-
-		void GLRenderer::UpdateRenderObjectVertexData(RenderID renderID)
-		{
-			UNREFERENCED_PARAMETER(renderID);
-			// TODO: IMPLEMENT: UNIMPLEMENTED:
 		}
 
 		GLRenderObject* GLRenderer::GetRenderObject(RenderID renderID)

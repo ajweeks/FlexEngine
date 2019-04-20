@@ -352,8 +352,15 @@ namespace flex
 
 		GLTexture::~GLTexture()
 		{
-			delete asyncSave;
-			asyncSave = nullptr;
+			if (asyncSave != nullptr)
+			{
+				if (!asyncSave->bComplete)
+				{
+					asyncSave->WaitToComplete();
+				}
+				delete asyncSave;
+				asyncSave = nullptr;
+			}
 		}
 
 		bool GLTexture::CreateEmpty()
@@ -1204,6 +1211,7 @@ namespace flex
 			if (data)
 			{
 				free(data);
+				data = nullptr;
 			}
 		}
 
@@ -1224,6 +1232,16 @@ namespace flex
 			}
 
 			return bComplete;
+		}
+
+		void AsynchronousTextureSave::WaitToComplete()
+		{
+			if (bComplete)
+			{
+				return;
+			}
+			taskFuture.get();
+			bComplete = true;
 		}
 
 	} // namespace gl

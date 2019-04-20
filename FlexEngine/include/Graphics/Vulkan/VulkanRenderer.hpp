@@ -41,15 +41,13 @@ namespace flex
 
 			virtual void Update() override;
 			virtual void Draw() override;
-			virtual void DrawImGuiRenderObjects() override;
+			virtual void DrawImGuiMisc() override;
 
 			virtual void UpdateVertexData(RenderID renderID, VertexBufferData* vertexBufferData) override;
 
 			virtual void DrawUntexturedQuad(const glm::vec2& pos, AnchorPoint anchor, const glm::vec2& size, const glm::vec4& color) override;
 			virtual void DrawUntexturedQuadRaw(const glm::vec2& pos, const glm::vec2& size, const glm::vec4& color) override;
 			virtual void DrawSprite(const SpriteQuadDrawInfo& drawInfo) override;
-
-			virtual void UpdateRenderObjectVertexData(RenderID renderID) override;
 
 			virtual void ReloadShaders() override;
 			virtual void LoadFonts(bool bForceRender) override;
@@ -349,7 +347,7 @@ namespace flex
 			const bool m_bEnableValidationLayers = false;
 #else
 			//---------------------------------------------------------------------
-			const bool m_bEnableValidationLayers = false; // TODO: **RE-ENABLE!!**
+			const bool m_bEnableValidationLayers = true; // TODO: **RE-ENABLE!!**
 			//---------------------------------------------------------------------
 #endif
 

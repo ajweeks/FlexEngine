@@ -2021,7 +2021,7 @@ namespace flex
 
 			VkRect2D scissor = {};
 			scissor.extent = { dim, dim };
-			scissor.offset = { 0 , 0 };
+			scissor.offset = { 0u, 0u };
 
 			vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
 			vkCmdSetScissor(cmdBuf, 0, 1, &scissor);
@@ -2468,7 +2468,7 @@ namespace flex
 			++m_FramesRendered;
 		}
 
-		void VulkanRenderer::DrawImGuiRenderObjects()
+		void VulkanRenderer::DrawImGuiMisc()
 		{
 			if (ImGui::Begin("Dynamic Uniform Buffers"))
 			{
@@ -2598,88 +2598,6 @@ namespace flex
 				}
 			}
 			ImGui::End();
-
-			ImGui::NewLine();
-
-			ImGui::BeginChild("SelectedObject", ImVec2(0.0f, 500.0f), true);
-
-			const std::vector<GameObject*>& selectedObjects = g_EngineInstance->GetSelectedObjects();
-			if (!selectedObjects.empty())
-			{
-				// TODO: Draw common fields for all selected objects?
-				GameObject* selectedObject = selectedObjects[0];
-				if (selectedObject)
-				{
-					selectedObject->DrawImGuiObjects();
-				}
-			}
-
-			ImGui::EndChild();
-
-			ImGui::NewLine();
-
-			ImGui::Text("Game Objects");
-
-			// Dropping objects onto this text makes them root objects
-			if (ImGui::BeginDragDropTarget())
-			{
-				const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(m_GameObjectPayloadCStr);
-
-				if (payload && payload->Data)
-				{
-					i32 draggedObjectCount = payload->DataSize / sizeof(GameObject*);
-
-					std::vector<GameObject*> draggedGameObjectsVec;
-					draggedGameObjectsVec.reserve(draggedObjectCount);
-					for (i32 i = 0; i < draggedObjectCount; ++i)
-					{
-						draggedGameObjectsVec.push_back(*static_cast<GameObject**>(payload->Data) + i);
-					}
-
-					if (!draggedGameObjectsVec.empty())
-					{
-						std::vector<GameObject*> siblings = draggedGameObjectsVec[0]->GetLaterSiblings();
-
-						for (GameObject* draggedGameObject : draggedGameObjectsVec)
-						{
-							bool bRootObject = draggedGameObject == draggedGameObjectsVec[0];
-							bool bRootSibling = Find(siblings, draggedGameObject) != siblings.end();
-							// Only re-parent root-most object (leave sub-hierarchy as-is)
-							if ((bRootObject || bRootSibling) &&
-								draggedGameObject->GetParent())
-							{
-								draggedGameObject->GetParent()->RemoveChild(draggedGameObject);
-								g_SceneManager->CurrentScene()->AddRootObject(draggedGameObject);
-							}
-						}
-					}
-				}
-				ImGui::EndDragDropTarget();
-			}
-
-			std::vector<GameObject*>& rootObjects = g_SceneManager->CurrentScene()->GetRootObjects();
-			for (GameObject* rootObject : rootObjects)
-			{
-				if (DrawImGuiGameObjectNameAndChildren(rootObject))
-				{
-					break;
-				}
-			}
-
-			DoCreateGameObjectButton("Add object...", "Add object");
-
-			if (m_NumPointLightsEnabled < MAX_NUM_POINT_LIGHTS)
-			{
-				static const char* newPointLightStr = "Add point light";
-				if (ImGui::Button(newPointLightStr))
-				{
-					BaseScene* scene = g_SceneManager->CurrentScene();
-					PointLight* newPointLight = new PointLight(scene);
-					scene->AddRootObject(newPointLight);
-					newPointLight->Initialize();
-					newPointLight->PostInitialize();
-				}
-			}
 		}
 
 		void VulkanRenderer::UpdateVertexData(RenderID renderID, VertexBufferData* vertexBufferData)
@@ -4284,15 +4202,6 @@ namespace flex
 				return;
 			}
 
-		}
-
-		void VulkanRenderer::UpdateRenderObjectVertexData(RenderID renderID)
-		{
-			//RenderObject renderObject = GetRenderObject(renderID);
-
-			//CreateDescriptorSet(renderID);
-			// TODO: ?
-			CreateGraphicsPipeline(renderID, false);
 		}
 
 		MaterialID VulkanRenderer::GetNextAvailableMaterialID()
@@ -5958,12 +5867,15 @@ namespace flex
 
 				vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-				VkViewport viewport = VkViewport{ 0.0f, (real)m_SwapChainExtent.height,
+				VkViewport viewport = {
+					0.0f, (real)m_SwapChainExtent.height,
 					(real)m_SwapChainExtent.width, -(real)m_SwapChainExtent.height,
 					0.1f, 1000.0f };
 				vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
-				VkRect2D scissor = VkRect2D{ { 0u, 0u },{ m_SwapChainExtent.width, m_SwapChainExtent.height } };
+				VkRect2D scissor = {
+					{ 0u, 0u },
+					{ m_SwapChainExtent.width, m_SwapChainExtent.height } };
 				vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
 				BindDescriptorSet(&m_Shaders[gBufferMaterial->material.shaderID], 0, commandBuffer, gBufferObject->pipelineLayout, gBufferObject->descriptorSet);
@@ -5976,11 +5888,10 @@ namespace flex
 
 				vkCmdDrawIndexed(commandBuffer, gBufferObject->indices->size(), 1, 0, 0, 1);
 
-
-				vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
 				// Forward rendered objects
+				vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
 
-				// TODO: Batch objects with same materials together like in GL renderer
+				// TODO: Use object batches
 				for (size_t j = 0; j < m_RenderObjects.size(); ++j)
 				{
 					VulkanRenderObject* renderObject = GetRenderObject(j);
@@ -6321,12 +6232,13 @@ namespace flex
 
 		void VulkanRenderer::CreateStaticVertexBuffers()
 		{
-			for (size_t i = 0; i < m_VertexIndexBufferPairs.size(); ++i)
+			for (u32 i = 0; i < m_VertexIndexBufferPairs.size(); ++i)
 			{
 				if (m_VertexIndexBufferPairs[i].useStagingBuffer)
 				{
-					size_t requiredMemory = 0;
+					u32 requiredMemory = 0;
 
+					// TODO: Use render object batches
 					for (VulkanRenderObject* renderObject : m_RenderObjects)
 					{
 						if (renderObject && renderObject->vertexBufferData && m_Materials[renderObject->materialID].material.shaderID == i)
@@ -6380,6 +6292,7 @@ namespace flex
 			u32 vertexBufferSize = 0;
 			for (VulkanRenderObject* renderObject : m_RenderObjects)
 			{
+				// TODO: Use render object batches
 				if (renderObject && renderObject->vertexBufferData && m_Materials[renderObject->materialID].material.shaderID == shaderID)
 				{
 					renderObject->vertexOffset = vertexCount;
@@ -6452,6 +6365,7 @@ namespace flex
 		{
 			std::vector<u32> indices;
 
+			// TODO: Use render object batches
 			for (VulkanRenderObject* renderObject : m_RenderObjects)
 			{
 				if (renderObject && m_Materials[renderObject->materialID].material.shaderID == shaderID && renderObject->bIndexed)
@@ -6570,6 +6484,7 @@ namespace flex
 							{
 								VulkanRenderObject* renderObject = GetRenderObject(renderID);
 
+								// TODO: Sort editor objects into their own buckets
 								if (renderObject &&
 									renderObject->materialID == matPair.first &&
 									(!renderObject->bIndexed || indexBuffer->m_Buffer != 0))
@@ -6636,7 +6551,8 @@ namespace flex
 			poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 			poolInfo.poolSizeCount = poolSizes.size();
 			poolInfo.pPoolSizes = poolSizes.data();
-			poolInfo.maxSets = descriptorSetCount * 11;
+			poolInfo.maxSets = descriptorSetCount * poolSizes.size();
+			// TODO: Have additional pool which doesn't have this flag set for constant descriptor sets
 			poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT; // Allow descriptor sets to be added/removed often
 
 			VK_CHECK_RESULT(vkCreateDescriptorPool(m_VulkanDevice->m_LogicalDevice, &poolInfo, nullptr, m_DescriptorPool.replace()));

@@ -50,8 +50,7 @@ namespace flex
 
 		virtual void Update() = 0;
 		virtual void Draw() = 0;
-		virtual void DrawImGuiRenderObjects() = 0;
-		virtual void DrawImGuiSettings();
+		virtual void DrawImGuiMisc();
 
 		virtual void UpdateVertexData(RenderID renderID, VertexBufferData* vertexBufferData) = 0;
 
@@ -60,8 +59,6 @@ namespace flex
 		virtual void DrawUntexturedQuad(const glm::vec2& pos, AnchorPoint anchor, const glm::vec2& size, const glm::vec4& color) = 0;
 		virtual void DrawUntexturedQuadRaw(const glm::vec2& pos, const glm::vec2& size, const glm::vec4& color) = 0;
 		virtual void DrawSprite(const SpriteQuadDrawInfo& drawInfo) = 0;
-
-		virtual void UpdateRenderObjectVertexData(RenderID renderID) = 0;
 
 		virtual void ReloadShaders() = 0;
 		virtual void LoadFonts(bool bForceRender) = 0;
@@ -132,6 +129,9 @@ namespace flex
 
 		// Call whenever a user-controlled field, such as visibility, changes to rebatch render objects
 		virtual void RenderObjectStateChanged() = 0;
+
+		void DrawImGuiRenderObjects();
+		void DrawImGuiSettings();
 
 		real GetStringWidth(const std::string& str, BitmapFont* font, real letterSpacing, bool bNormalized) const;
 		real GetStringHeight(const std::string& str, BitmapFont* font, bool bNormalized) const;

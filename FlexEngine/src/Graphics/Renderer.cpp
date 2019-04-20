@@ -432,6 +432,95 @@ namespace flex
 		}
 	}
 
+	void Renderer::DrawImGuiMisc()
+	{
+	}
+
+	void Renderer::DrawImGuiRenderObjects()
+	{
+		ImGui::NewLine();
+
+		ImGui::BeginChild("SelectedObject", ImVec2(0.0f, 500.0f), true);
+
+		const std::vector<GameObject*>& selectedObjects = g_EngineInstance->GetSelectedObjects();
+		if (!selectedObjects.empty())
+		{
+			// TODO: Draw common fields for all selected objects?
+			GameObject* selectedObject = selectedObjects[0];
+			if (selectedObject)
+			{
+				selectedObject->DrawImGuiObjects();
+			}
+		}
+
+		ImGui::EndChild();
+
+		ImGui::NewLine();
+
+		ImGui::Text("Game Objects");
+
+		// Dropping objects onto this text makes them root objects
+		if (ImGui::BeginDragDropTarget())
+		{
+			const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(m_GameObjectPayloadCStr);
+
+			if (payload && payload->Data)
+			{
+				i32 draggedObjectCount = payload->DataSize / sizeof(GameObject*);
+
+				std::vector<GameObject*> draggedGameObjectsVec;
+				draggedGameObjectsVec.reserve(draggedObjectCount);
+				for (i32 i = 0; i < draggedObjectCount; ++i)
+				{
+					draggedGameObjectsVec.push_back(*((GameObject**)payload->Data + i));
+				}
+
+				if (!draggedGameObjectsVec.empty())
+				{
+					std::vector<GameObject*> siblings = draggedGameObjectsVec[0]->GetLaterSiblings();
+
+					for (GameObject* draggedGameObject : draggedGameObjectsVec)
+					{
+						bool bRootObject = draggedGameObject == draggedGameObjectsVec[0];
+						bool bRootSibling = Find(siblings, draggedGameObject) != siblings.end();
+						// Only re-parent root-most object (leave sub-hierarchy as-is)
+						if ((bRootObject || bRootSibling) &&
+							draggedGameObject->GetParent())
+						{
+							draggedGameObject->GetParent()->RemoveChild(draggedGameObject);
+							g_SceneManager->CurrentScene()->AddRootObject(draggedGameObject);
+						}
+					}
+				}
+			}
+			ImGui::EndDragDropTarget();
+		}
+
+		std::vector<GameObject*>& rootObjects = g_SceneManager->CurrentScene()->GetRootObjects();
+		for (GameObject* rootObject : rootObjects)
+		{
+			if (DrawImGuiGameObjectNameAndChildren(rootObject))
+			{
+				break;
+			}
+		}
+
+		DoCreateGameObjectButton("Add object...", "Add object");
+
+		if (m_NumPointLightsEnabled < MAX_NUM_POINT_LIGHTS)
+		{
+			static const char* newPointLightStr = "Add point light";
+			if (ImGui::Button(newPointLightStr))
+			{
+				BaseScene* scene = g_SceneManager->CurrentScene();
+				PointLight* newPointLight = new PointLight(scene);
+				scene->AddRootObject(newPointLight);
+				newPointLight->Initialize();
+				newPointLight->PostInitialize();
+			}
+		}
+	}
+
 	void Renderer::DrawImGuiSettings()
 	{
 		static const char* rendererSettingsStr = "Renderer settings";
