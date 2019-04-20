@@ -1101,7 +1101,6 @@ namespace flex
 				// Map image memory so we can start copying from it
 				const u8* data;
 				vkMapMemory(m_VulkanDevice->m_LogicalDevice, dstImageMemory, 0, VK_WHOLE_SIZE, 0, (void**)&data);
-				data += subResourceLayout.offset;
 
 				bool bColorSwizzle = false;
 				// Check if source is BGR
@@ -1111,37 +1110,7 @@ namespace flex
 					bColorSwizzle = (std::find(formatsBGR.begin(), formatsBGR.end(), imageFormat) != formatsBGR.end());
 				}
 
-				u32 i = 0;
-				for (u32 y = 0; y < height; y++)
-				{
-					u32* row = (u32*)data;
-					for (u32 x = 0; x < width; x++)
-					{
-						if (bColorSwizzle)
-						{
-							u8Data[i + 0] = *((u8*)row + 2);
-							u8Data[i + 1] = *((u8*)row + 1);
-							u8Data[i + 2] = *((u8*)row + 0);
-							if (channelCount == 4)
-							{
-								u8Data[i + 3] = *((u8*)row + 3);
-							}
-						}
-						else
-						{
-							u8Data[i + 0] = *((u8*)row + 0);
-							u8Data[i + 1] = *((u8*)row + 1);
-							u8Data[i + 2] = *((u8*)row + 2);
-							if (channelCount == 4)
-							{
-								u8Data[i + 3] = *((u8*)row + 3);
-							}
-						}
-						i += channelCount;
-						row++;
-					}
-					data += subResourceLayout.rowPitch;
-				}
+				CopyPixels(data, u8Data, subResourceLayout.offset, width, height, channelCount, subResourceLayout.rowPitch, false);
 
 				bResult = SaveImage(absoluteFilePath, saveFormat, width, height, channelCount, u8Data, bFlipVertically);
 
@@ -1798,6 +1767,47 @@ namespace flex
 			imageView.image = attachment->image;
 			imageView.flags = 0;
 			VK_CHECK_RESULT(vkCreateImageView(device->m_LogicalDevice, &imageView, nullptr, attachment->view.replace()));
+		}
+
+		template<class T>
+		void CopyPixels(const T* srcData, T* dstData, u32 dstOffset, u32 width, u32 height, u32 channelCount, u32 pitch, bool bColorSwizzle)
+		{
+			dstData += dstOffset;
+
+			i32 swizzle[4];
+			if (bColorSwizzle)
+			{
+				swizzle[0] = 2;
+				swizzle[1] = 1;
+				swizzle[2] = 0;
+				swizzle[3] = 3;
+			}
+			else
+			{
+				swizzle[0] = 0;
+				swizzle[1] = 1;
+				swizzle[2] = 2;
+				swizzle[3] = 3;
+			}
+
+			u32 i = 0;
+			for (u32 y = 0; y < height; y++)
+			{
+				const T* row = srcData;
+				for (u32 x = 0; x < width; x++)
+				{
+					dstData[i + 0] = *(row + swizzle[0]);
+					dstData[i + 1] = *(row + swizzle[1]);
+					dstData[i + 2] = *(row + swizzle[2]);
+					if (channelCount == 4)
+					{
+						dstData[i + 3] = *(row + swizzle[3]);
+					}
+					i += channelCount;
+					row += channelCount;
+				}
+				srcData += pitch;
+			}
 		}
 
 		VkBool32 GetSupportedDepthFormat(VkPhysicalDevice physicalDevice, VkFormat *depthFormat)

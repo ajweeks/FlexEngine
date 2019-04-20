@@ -318,6 +318,9 @@ namespace flex
 			VkImageCreateFlags imageFlags,
 			FrameBufferAttachment *attachment);
 
+		template<class T>
+		void CopyPixels(const T* srcData, T* dstData, u32 dstOffset, u32 width, u32 height, u32 channelCount, u32 pitch, bool bColorSwizzle);
+
 		VkBool32 GetSupportedDepthFormat(VkPhysicalDevice physicalDevice, VkFormat* depthFormat);
 
 		VkFormat FindSupportedFormat(VulkanDevice* device, const std::vector<VkFormat>& candidates, VkImageTiling tiling,
