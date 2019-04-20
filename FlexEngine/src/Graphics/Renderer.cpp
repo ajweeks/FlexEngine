@@ -1628,7 +1628,7 @@ namespace flex
 							i32 texChannel = (i32)metric->channel;
 
 							TextVertex2D vert = {};
-							vert.pos = basePos + pos;
+							vert.pos = glm::vec2(basePos + pos);
 							vert.uv = metric->texCoord;
 							vert.color = textCache.color;
 							vert.charSizePixelsCharSizeNorm = charSizePixelsCharSizeNorm;
@@ -1722,9 +1722,9 @@ namespace flex
 
 							TextVertex3D vert = {};
 							vert.pos = pos;
+							vert.uv = metric->texCoord;
 							vert.color = textCache.color;
 							vert.tangent = tangent;
-							vert.uv = metric->texCoord;
 							vert.charSizePixelsCharSizeNorm = charSizePixelsCharSizeNorm;
 							vert.channel = texChannel;
 

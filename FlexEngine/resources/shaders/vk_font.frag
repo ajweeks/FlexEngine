@@ -4,20 +4,15 @@ layout (location = 0) out vec4 out_Color;
 
 layout (location = 0) in GSO
 {
-	flat int channel;
 	vec4 color;
 	vec2 texCoord;
+	flat int channel;
 } inputs;
 
 layout (binding = 0) uniform UBODynamic
 {
 	mat4 model;
-
 	vec4 thresholdXshadowYZsoftenW;
-	// threshold = 0.5;
-	// shadow = vec2(-0.01, -0.008);
-	// soften = 0.035;
-
 	vec2 texSize;
 } uboDynamic;
 
@@ -25,10 +20,12 @@ layout (binding = 1) uniform sampler2D in_Texture;
 
 void main()
 {
-	
 	float threshold = uboDynamic.thresholdXshadowYZsoftenW.x;
 	vec2 shadow = uboDynamic.thresholdXshadowYZsoftenW.yz;
 	float soften = uboDynamic.thresholdXshadowYZsoftenW.w;
+
+	// out_Color = vec4(inputs.color); return;
+	// out_Color = vec4(inputs.texCoord, 0, 1); return;
 
 	float shadowTexValue = texture(in_Texture, inputs.texCoord + shadow)[inputs.channel];
 	float texValue = texture(in_Texture, inputs.texCoord)[inputs.channel];

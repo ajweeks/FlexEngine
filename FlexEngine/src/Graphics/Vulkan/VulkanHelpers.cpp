@@ -12,6 +12,7 @@ IGNORE_WARNINGS_POP
 #include "Graphics/Vulkan/VulkanCommandBufferManager.hpp"
 #include "Graphics/Vulkan/VulkanDevice.hpp"
 #include "Helpers.hpp"
+#include "Profiler.hpp"
 #include "Time.hpp"
 
 namespace flex
@@ -148,6 +149,32 @@ namespace flex
 				attributeDescriptions.push_back(attributeDescription);
 
 				offset += sizeof(glm::vec3);
+				++location;
+			}
+
+			if (vertexAttributes & (u32)VertexAttribute::EXTRA_VEC4)
+			{
+				VkVertexInputAttributeDescription attributeDescription = {};
+				attributeDescription.binding = 0;
+				attributeDescription.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+				attributeDescription.location = location;
+				attributeDescription.offset = offset;
+				attributeDescriptions.push_back(attributeDescription);
+
+				offset += sizeof(glm::vec4);
+				++location;
+			}
+
+			if (vertexAttributes & (u32)VertexAttribute::EXTRA_INT)
+			{
+				VkVertexInputAttributeDescription attributeDescription = {};
+				attributeDescription.binding = 0;
+				attributeDescription.format = VK_FORMAT_R32_SINT;
+				attributeDescription.location = location;
+				attributeDescription.offset = offset;
+				attributeDescriptions.push_back(attributeDescription);
+
+				offset += sizeof(i32);
 				++location;
 			}
 		}
@@ -1313,6 +1340,12 @@ namespace flex
 				barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT; // TODO: Double check
 				barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 			}
+			else if (oldLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL &&
+				newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+			{
+				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT; // TODO: Double check
+				barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+			}
 			else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED &&
 				newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
 			{
@@ -2070,23 +2103,29 @@ namespace flex
 		{
 			bool bCodeOutOfDate = true;
 
-			m_ChecksumFilePath = SAVED_LOCATION "vk-shader-checksum.dat";
-
-			const std::string shaderInputDirectory = RESOURCE_LOCATION  "shaders";
-			m_ShaderCodeChecksum = CalculteChecksum(shaderInputDirectory);
-
-			if (FileExists(m_ChecksumFilePath))
+			const char* blockName = "Calculate shader contents checksum";
 			{
-				std::string fileContents;
-				if (ReadFile(m_ChecksumFilePath, fileContents, false))
+				PROFILE_AUTO(blockName);
+
+				m_ChecksumFilePath = SAVED_LOCATION "vk-shader-checksum.dat";
+
+				const std::string shaderInputDirectory = RESOURCE_LOCATION  "shaders";
+				m_ShaderCodeChecksum = CalculteChecksum(shaderInputDirectory);
+
+				if (FileExists(m_ChecksumFilePath))
 				{
-					i64 pShaderCodeChecksum = atoll(fileContents.c_str());
-					if (m_ShaderCodeChecksum == pShaderCodeChecksum)
+					std::string fileContents;
+					if (ReadFile(m_ChecksumFilePath, fileContents, false))
 					{
-						bCodeOutOfDate = false;
+						i64 pShaderCodeChecksum = atoll(fileContents.c_str());
+						if (m_ShaderCodeChecksum == pShaderCodeChecksum)
+						{
+							bCodeOutOfDate = false;
+						}
 					}
 				}
 			}
+			Profiler::PrintBlockDuration(blockName);
 
 			if (bForceRecompile || bCodeOutOfDate)
 			{

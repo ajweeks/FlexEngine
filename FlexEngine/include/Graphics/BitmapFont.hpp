@@ -64,6 +64,7 @@ namespace flex
 #elif COMPILE_VULKAN
 		vk::VulkanTexture* SetTexture(vk::VulkanTexture* newTex);
 		vk::VulkanTexture* GetTexture();
+		VkDescriptorSet m_DescriptorSet = VK_NULL_HANDLE;
 #endif
 		void ClearTexture();
 

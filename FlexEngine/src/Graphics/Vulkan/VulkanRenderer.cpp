@@ -106,6 +106,9 @@ namespace flex
 			m_ColorSampler = { m_VulkanDevice->m_LogicalDevice, vkDestroySampler };
 			m_PipelineCache = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineCache };
 
+			m_FontSSGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
+			m_FontSSPipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
+
 			m_OffScreenFrameBuf = new FrameBuffer(m_VulkanDevice->m_LogicalDevice);
 			m_OffScreenFrameBuf->frameBufferAttachments = {
 				{ "positionMetallicFrameBufferSampler",{ m_VulkanDevice->m_LogicalDevice, VK_FORMAT_R16G16B16A16_SFLOAT } },
@@ -171,10 +174,15 @@ namespace flex
 			m_VertexIndexBufferPairs.reserve(shaderCount);
 			for (size_t i = 0; i < shaderCount; ++i)
 			{
-				m_VertexIndexBufferPairs.push_back({
+				m_VertexIndexBufferPairs.emplace_back(
 					new VulkanBuffer(m_VulkanDevice->m_LogicalDevice), // Vertex buffer
 					new VulkanBuffer(m_VulkanDevice->m_LogicalDevice)  // Index buffer
-					});
+					);
+				if (m_Shaders[i].bDynamic)
+				{
+					VertexIndexBufferPair& pair = m_VertexIndexBufferPairs[m_VertexIndexBufferPairs.size() - 1];
+					pair.useStagingBuffer = false;
+				}
 			}
 
 			Renderer::InitializeMaterials();
@@ -280,6 +288,7 @@ namespace flex
 
 			CreateStaticVertexBuffers();
 			CreateStaticIndexBuffers();
+			CreateDynamicVertexBuffers();
 
 			CreateSemaphores();
 
@@ -365,6 +374,9 @@ namespace flex
 			delete m_CubemapDepthAttachment;
 
 			delete m_DepthAttachment;
+
+			m_FontSSPipelineLayout.replace();
+			m_FontSSGraphicsPipeline.replace();
 
 			m_gBufferQuadVertexBufferData.Destroy();
 			m_PipelineCache.replace();
@@ -676,24 +688,6 @@ namespace flex
 
 			std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages;
 
-			VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
-			pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-			pipelineCreateInfo.layout = pipelinelayout;
-			pipelineCreateInfo.renderPass = renderpass;
-			pipelineCreateInfo.flags = 0;
-			pipelineCreateInfo.basePipelineIndex = -1;
-			pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
-			pipelineCreateInfo.pInputAssemblyState = &inputAssemblyState;
-			pipelineCreateInfo.pRasterizationState = &rasterizationState;
-			pipelineCreateInfo.pColorBlendState = &colorBlendState;
-			pipelineCreateInfo.pMultisampleState = &multisampleState;
-			pipelineCreateInfo.pViewportState = &viewportState;
-			pipelineCreateInfo.pDepthStencilState = &depthStencilState;
-			pipelineCreateInfo.pDynamicState = &dynamicState;
-			pipelineCreateInfo.stageCount = 2;
-			pipelineCreateInfo.pStages = shaderStages.data();
-			pipelineCreateInfo.pVertexInputState = &vertexInputState;
-
 			VDeleter<VkShaderModule> vertShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
 			if (!CreateShaderModule(equirectangularToCubeShader.shader.vertexShaderCode, vertShaderModule))
 			{
@@ -718,6 +712,25 @@ namespace flex
 			shaderStages[1].module = fragShaderModule;
 			shaderStages[1].pName = "main";
 
+			VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
+			pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+			pipelineCreateInfo.layout = pipelinelayout;
+			pipelineCreateInfo.renderPass = renderpass;
+			pipelineCreateInfo.flags = 0;
+			pipelineCreateInfo.basePipelineIndex = -1;
+			pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
+			pipelineCreateInfo.pInputAssemblyState = &inputAssemblyState;
+			pipelineCreateInfo.pRasterizationState = &rasterizationState;
+			pipelineCreateInfo.pColorBlendState = &colorBlendState;
+			pipelineCreateInfo.pMultisampleState = &multisampleState;
+			pipelineCreateInfo.pViewportState = &viewportState;
+			pipelineCreateInfo.pDepthStencilState = &depthStencilState;
+			pipelineCreateInfo.pDynamicState = &dynamicState;
+			pipelineCreateInfo.stageCount = shaderStages.size();
+			pipelineCreateInfo.pStages = shaderStages.data();
+			pipelineCreateInfo.pVertexInputState = &vertexInputState;
+
+			// TODO: Use CreateGraphicsPipeline helper
 			VkPipeline pipeline = VK_NULL_HANDLE;
 			VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_VulkanDevice->m_LogicalDevice, m_PipelineCache, 1, &pipelineCreateInfo, nullptr, &pipeline));
 
@@ -2883,6 +2896,7 @@ namespace flex
 			{
 				CreateStaticVertexBuffers();
 				CreateStaticIndexBuffers();
+				CreateDynamicVertexBuffers();
 			}
 		}
 
@@ -3034,6 +3048,30 @@ namespace flex
 			m_bRebatchRenderObjects = true;
 		}
 
+		VkPhysicalDeviceFeatures VulkanRenderer::GetEnabledFeaturesForDevice(VkPhysicalDevice physicalDevice)
+		{
+			VkPhysicalDeviceFeatures enabledFeatures = {};
+
+			VkPhysicalDeviceFeatures supportedFeatures;
+			vkGetPhysicalDeviceFeatures(physicalDevice, &supportedFeatures);
+
+			if (supportedFeatures.samplerAnisotropy)
+			{
+				enabledFeatures.samplerAnisotropy = VK_TRUE; // TODO: Remove if not used
+			}
+
+			if (supportedFeatures.geometryShader)
+			{
+				enabledFeatures.geometryShader = VK_TRUE;
+			}
+			else
+			{
+				PrintError("Selected GPU does not support geometry shaders!\n");
+			}
+
+			return enabledFeatures;
+		}
+
 		void VulkanRenderer::NewFrame()
 		{
 			if (m_PhysicsDebugDrawer)
@@ -3056,12 +3094,18 @@ namespace flex
 
 		void VulkanRenderer::DrawStringSS(const std::string& str, const glm::vec4& color, AnchorPoint anchor, const glm::vec2& pos, /* Positional offset from anchor */ real spacing, bool bRaw /*= false*/)
 		{
+			assert(m_CurrentFont != nullptr);
 
+			TextCache newCache(str, anchor, pos, color, spacing, bRaw);
+			m_CurrentFont->AddTextCache(newCache);
 		}
 
 		void VulkanRenderer::DrawStringWS(const std::string& str, const glm::vec4& color, const glm::vec3& pos, const glm::quat& rot, real spacing, bool bRaw /*= false*/)
 		{
+			assert(m_CurrentFont != nullptr);
 
+			TextCache newCache(str, pos, rot, color, spacing, bRaw);
+			m_CurrentFont->AddTextCache(newCache);
 		}
 
 		void VulkanRenderer::DrawAssetBrowserImGui(bool* bShowing)
@@ -3752,6 +3796,7 @@ namespace flex
 
 			bool bUsingPreRenderedTexture = false;
 			std::string textureName = std::string("Font atlas ") + fileName;
+			VkFormat fontTexFormat = VK_FORMAT_R8G8B8A8_UNORM;
 			if (!bForceRender)
 			{
 				if (FileExists(renderedFontFilePath))
@@ -3760,8 +3805,9 @@ namespace flex
 						m_GraphicsQueue, renderedFontFilePath, 4, false, false, false));
 					fontTex->name = textureName;
 
-					if (fontTex->CreateFromFile(fontTex->CalculateFormat()))
+					if (fontTex->CreateFromFile(fontTexFormat))
 					{
+						glm::vec2 fontTexSize((real)fontTex->width, (real)fontTex->height);
 						bUsingPreRenderedTexture = true;
 
 						for (auto& charPair : characters)
@@ -3784,7 +3830,7 @@ namespace flex
 								continue;
 							}
 
-							metric->texCoord = metric->texCoord / glm::vec2((real)fontTex->width, (real)fontTex->height);
+							metric->texCoord = metric->texCoord / fontTexSize;
 						}
 					}
 					else
@@ -3804,11 +3850,10 @@ namespace flex
 					std::max(std::max(maxPos[0].y, maxPos[1].y), std::max(maxPos[2].y, maxPos[3].y)));
 				newFont->SetTextureSize(textureSize);
 
-				VkFormat colAttachmentFormat = VK_FORMAT_R8G8B8A8_UNORM;
-
 				VulkanTexture* fontTexColAttachment = newFont->SetTexture(new VulkanTexture(m_VulkanDevice, m_GraphicsQueue,
 					textureName,textureSize.x, textureSize.y, 4));
-				fontTexColAttachment->CreateEmpty(colAttachmentFormat, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+				fontTexColAttachment->name = textureName;
+				fontTexColAttachment->CreateEmpty(fontTexFormat, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
 				fontTexColAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
 				if (m_ComputeSDFMatID == InvalidMaterialID)
@@ -3826,7 +3871,7 @@ namespace flex
 
 				// Render pass
 				VkAttachmentDescription colorAttachment = {};
-				colorAttachment.format = colAttachmentFormat;
+				colorAttachment.format = fontTexFormat;
 				colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
 				colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 				colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -3936,7 +3981,10 @@ namespace flex
 				VulkanRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
 				VulkanMaterial* gBufferMaterial = &m_Materials[gBufferRenderObject->materialID];
 
+				// TODO: Remove/call only once prior to any font load
 				UpdateConstantUniformBuffers();
+
+				glm::vec2 fontTexSize((real)fontTexColAttachment->width, (real)fontTexColAttachment->height);
 
 				u32 dynamicOffsetIndex = 0;
 				std::vector<VulkanTexture*> charTextures;
@@ -4037,7 +4085,7 @@ namespace flex
 
 					vkCmdDrawIndexed(commandBuffer, m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID].indexCount, 1, 0, 0, 1);
 
-					metric->texCoord = metric->texCoord / glm::vec2((real)textureSize.x, (real)textureSize.y);
+					metric->texCoord = metric->texCoord / fontTexSize;
 
 					FT_Bitmap_Done(ft, &alignedBitmap);
 				}
@@ -4068,14 +4116,15 @@ namespace flex
 				descSets.clear();
 
 				vkDestroyPipeline(m_VulkanDevice->m_LogicalDevice, graphicsPipeline, nullptr);
+				vkDestroyPipelineLayout(m_VulkanDevice->m_LogicalDevice, pipelineLayout, nullptr);
 				vkDestroyRenderPass(m_VulkanDevice->m_LogicalDevice, renderPass, nullptr);
 				vkDestroyFramebuffer(m_VulkanDevice->m_LogicalDevice, framebuffer, nullptr);
 
 				std::string savedSDFTextureAbsFilePath = RelativePathToAbsolute(renderedFontFilePath);
 				fontTexColAttachment->SaveToFile(savedSDFTextureAbsFilePath, ImageFormat::PNG);
 
-				fontTexColAttachment->Destroy();
-				delete fontTexColAttachment;
+				fontTexColAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
 			}
 
 			FT_Done_Face(face);
@@ -4110,13 +4159,130 @@ namespace flex
 
 		}
 
-		void VulkanRenderer::DrawTextSS()
+		void VulkanRenderer::DrawTextSS(VkCommandBuffer commandBuffer)
 		{
+			if (m_FontMatSSID == InvalidMaterialID)
+			{
+				return;
+			}
 
+			PROFILE_AUTO("DrawTextSS");
+
+			bool bHasText = false;
+			for (BitmapFont* font : m_FontsSS)
+			{
+				if (font->GetBufferSize() > 0)
+				{
+					bHasText = true;
+					break;
+				}
+			}
+
+			if (!bHasText)
+			{
+				return;
+			}
+
+			VulkanMaterial& fontMaterial = m_Materials[m_FontMatSSID];
+			VulkanShader& fontShader = m_Shaders[fontMaterial.material.shaderID];
+
+			glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+
+			VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[fontMaterial.material.shaderID];
+
+			if (m_FontSSGraphicsPipeline == VK_NULL_HANDLE)
+			{
+				GraphicsPipelineCreateInfo pipelineCreateInfo = {};
+				pipelineCreateInfo.grahpicsPipeline = m_FontSSGraphicsPipeline.replace();
+				pipelineCreateInfo.pipelineLayout = m_FontSSPipelineLayout.replace();
+				pipelineCreateInfo.shaderID = fontMaterial.material.shaderID;
+				pipelineCreateInfo.vertexAttributes = fontShader.shader.vertexAttributes;
+				pipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+				pipelineCreateInfo.cullMode = VK_CULL_MODE_NONE;
+				pipelineCreateInfo.descriptorSetLayoutIndex = fontMaterial.material.shaderID;
+				pipelineCreateInfo.bSetDynamicStates = true;
+				pipelineCreateInfo.bEnableColorBlending = true;
+				pipelineCreateInfo.subpass = fontShader.shader.subpass;
+				pipelineCreateInfo.depthCompareOp = VK_COMPARE_OP_ALWAYS;
+				pipelineCreateInfo.depthWriteEnable = VK_FALSE;
+				pipelineCreateInfo.renderPass = m_DeferredCombineRenderPass;
+				CreateGraphicsPipeline(&pipelineCreateInfo);
+			}
+			assert(m_FontSSGraphicsPipeline != VK_NULL_HANDLE);
+			assert(m_FontSSPipelineLayout != VK_NULL_HANDLE);
+
+			vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_FontSSGraphicsPipeline);
+
+			VkViewport viewport = {
+				0.0f, (real)frameBufferSize.y,
+				(real)frameBufferSize.x, -(real)frameBufferSize.y,
+				0.1f, 10.0f };
+			vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+
+			VkRect2D scissor = {
+				{ 0u, 0u },
+				{ (u32)frameBufferSize.x, (u32)frameBufferSize.y }
+			};
+			vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+
+			real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
+			real r = aspectRatio;
+			real t = 1.0f;
+			glm::mat4 ortho = glm::ortho(-r, r, -t, t);
+
+			// TODO: Find out how font sizes actually work
+			//real scale = ((real)font->GetFontSize()) / 12.0f + sin(g_SecElapsedSinceProgramStart) * 2.0f;
+			glm::vec3 scaleVec(1.0f);
+
+			glm::mat4 transformMat = glm::scale(MAT4_IDENTITY, scaleVec) * ortho;
+
+			for (BitmapFont* font : m_FontsSS)
+			{
+				if (font->GetBufferSize() > 0)
+				{
+					if (font->m_DescriptorSet == VK_NULL_HANDLE)
+					{
+						DescriptorSetCreateInfo info;
+						info.descriptorSet = &font->m_DescriptorSet;
+						info.descriptorSetLayout = &descSetLayout;
+						info.albedoTexture = font->GetTexture();
+						info.shaderID = fontMaterial.material.shaderID;
+						info.uniformBuffer = &fontShader.uniformBuffer;
+						CreateDescriptorSet(&info);
+					}
+
+					u32 dynamicOffsetIndex = 0;
+					BindDescriptorSet(&fontShader, dynamicOffsetIndex, commandBuffer, m_FontSSPipelineLayout, font->m_DescriptorSet);
+
+					VulkanTexture* fontTex = font->GetTexture();
+					glm::vec2 texSize(fontTex->width, fontTex->height);
+
+					real threshold = 0.5f;
+					glm::vec2 shadow(-0.01f, -0.008f);
+					real soften = 0.035f;
+					glm::vec4 fontCharData(threshold, shadow.x, shadow.y, soften);
+
+					UniformOverrides overrides = {};
+					overrides.overridenUniforms.AddUniform(U_TEX_SIZE);
+					overrides.texSize = texSize;
+					overrides.overridenUniforms.AddUniform(U_FONT_CHAR_DATA); // TODO: Does this data change per-object?
+					overrides.fontCharData = fontCharData;
+					UpdateDynamicUniformBuffer(m_FontMatSSID, dynamicOffsetIndex, transformMat, &overrides);
+
+					VkDeviceSize offsets[1] = { 0 };
+					vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_VertexIndexBufferPairs[fontMaterial.material.shaderID].vertexBuffer->m_Buffer, offsets);
+
+					vkCmdDraw(commandBuffer, font->GetBufferSize(), 1, font->GetBufferStart(), 0);
+				}
+			}
 		}
 
-		void VulkanRenderer::DrawTextWS()
+		void VulkanRenderer::DrawTextWS(VkCommandBuffer commandBuffer)
 		{
+			if (m_FontMatWSID == InvalidMaterialID)
+			{
+				return;
+			}
 
 		}
 
@@ -4315,8 +4481,7 @@ namespace flex
 				queueCreateInfos.push_back(queueCreateInfo);
 			}
 
-			VkPhysicalDeviceFeatures deviceFeatures = {};
-			deviceFeatures.samplerAnisotropy = VK_TRUE;
+			VkPhysicalDeviceFeatures deviceFeatures = GetEnabledFeaturesForDevice(physicalDevice);
 
 			VkDeviceCreateInfo createInfo = {};
 			createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -4794,12 +4959,13 @@ namespace flex
 				VkShaderStageFlags shaderStageFlags;
 			};
 
+			// TODO: Specify stage flags per shader
 			static DescriptorSetInfo descriptorSets[] = {
 				{ U_UNIFORM_BUFFER_CONSTANT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT },
+				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_GEOMETRY_BIT },
 
 				{ U_UNIFORM_BUFFER_DYNAMIC, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
-				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT },
+				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_GEOMETRY_BIT },
 
 				{ U_ALBEDO_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
@@ -5012,6 +5178,23 @@ namespace flex
 		{
 			VulkanShader& shader = m_Shaders[createInfo->shaderID];
 
+			std::vector<VkPipelineShaderStageCreateInfo> shaderStages(2);
+
+			const bool bUseGeometryStage = !shader.shader.geometryShaderCode.empty();
+			if (bUseGeometryStage)
+			{
+				shaderStages.push_back({});
+			}
+
+			VDeleter<VkShaderModule> geomShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
+			if (bUseGeometryStage)
+			{
+				if (!CreateShaderModule(shader.shader.geometryShaderCode, geomShaderModule))
+				{
+					PrintError("Failed to compile geometry shader located at: %s\n", shader.shader.geometryShaderFilePath.c_str());
+				}
+			}
+
 			VDeleter<VkShaderModule> vertShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
 			if (!CreateShaderModule(shader.shader.vertexShaderCode, vertShaderModule))
 			{
@@ -5029,14 +5212,25 @@ namespace flex
 			vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
 			vertShaderStageInfo.module = vertShaderModule;
 			vertShaderStageInfo.pName = "main";
+			shaderStages[0] = vertShaderStageInfo;
 
 			VkPipelineShaderStageCreateInfo fragShaderStageInfo = {};
 			fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 			fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 			fragShaderStageInfo.module = fragShaderModule;
 			fragShaderStageInfo.pName = "main";
+			shaderStages[1] = fragShaderStageInfo;
 
-			std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages = { vertShaderStageInfo, fragShaderStageInfo };
+			VkPipelineShaderStageCreateInfo geomShaderStageInfo = {};
+			if (bUseGeometryStage)
+			{
+				geomShaderStageInfo = {};
+				geomShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+				geomShaderStageInfo.stage = VK_SHADER_STAGE_GEOMETRY_BIT;
+				geomShaderStageInfo.module = geomShaderModule;
+				geomShaderStageInfo.pName = "main";
+				shaderStages[2] = geomShaderStageInfo;
+			}
 
 			const u32 vertexStride = CalculateVertexStride(createInfo->vertexAttributes);
 			VkVertexInputBindingDescription bindingDescription = GetVertexBindingDescription(vertexStride);
@@ -5850,21 +6044,21 @@ namespace flex
 
 				{
 					// Text & editor objects
-					SetFont(SID("editor-02-ws"));
-					real s = g_SecElapsedSinceProgramStart * 3.5f;
-					DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(1.0f), 1.0f), glm::vec3(2.0f, 1.5f, 0.0f), QUAT_UNIT, 0.0f);
-					DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.95f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 1) * 0.05f, 1.5f + sin(s + 0.3f * 1) * 0.05f, -0.075f * 1), QUAT_UNIT, 0.0f);
-					DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.90f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 2) * 0.07f, 1.5f + sin(s + 0.3f * 2) * 0.07f, -0.075f * 2), QUAT_UNIT, 0.0f);
-					DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.85f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 3) * 0.10f, 1.5f + sin(s + 0.3f * 3) * 0.10f, -0.075f * 3), QUAT_UNIT, 0.0f);
-					DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.80f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 4) * 0.12f, 1.5f + sin(s + 0.3f * 4) * 0.12f, -0.075f * 4), QUAT_UNIT, 0.0f);
-					DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.75f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 5) * 0.15f, 1.5f + sin(s + 0.3f * 5) * 0.15f, -0.075f * 5), QUAT_UNIT, 0.0f);
-					DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.70f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 6) * 0.17f, 1.5f + sin(s + 0.3f * 6) * 0.17f, -0.075f * 6), QUAT_UNIT, 0.0f);
+					//SetFont(SID("editor-02-ws"));
+					//real s = g_SecElapsedSinceProgramStart * 3.5f;
+					//DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(1.0f), 1.0f), glm::vec3(2.0f, 1.5f, 0.0f), QUAT_UNIT, 0.0f);
+					//DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.95f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 1) * 0.05f, 1.5f + sin(s + 0.3f * 1) * 0.05f, -0.075f * 1), QUAT_UNIT, 0.0f);
+					//DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.90f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 2) * 0.07f, 1.5f + sin(s + 0.3f * 2) * 0.07f, -0.075f * 2), QUAT_UNIT, 0.0f);
+					//DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.85f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 3) * 0.10f, 1.5f + sin(s + 0.3f * 3) * 0.10f, -0.075f * 3), QUAT_UNIT, 0.0f);
+					//DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.80f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 4) * 0.12f, 1.5f + sin(s + 0.3f * 4) * 0.12f, -0.075f * 4), QUAT_UNIT, 0.0f);
+					//DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.75f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 5) * 0.15f, 1.5f + sin(s + 0.3f * 5) * 0.15f, -0.075f * 5), QUAT_UNIT, 0.0f);
+					//DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.70f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 6) * 0.17f, 1.5f + sin(s + 0.3f * 6) * 0.17f, -0.075f * 6), QUAT_UNIT, 0.0f);
 
-					std::vector<TextVertex3D> textVerticesWS;
-					UpdateTextBufferWS(textVerticesWS);
-					// TODO: Update buffer with textVerticesWS
+					//std::vector<TextVertex3D> textVerticesWS;
+					//UpdateTextBufferWS(textVerticesWS);
+					//// TODO: Update buffer with textVerticesWS
 
-					DrawTextWS();
+					//DrawTextWS();
 
 					bool bUsingGameplayCam = g_CameraManager->CurrentCamera()->bIsGameplayCam;
 					if (g_EngineInstance->IsRenderingEditorObjects() && !bUsingGameplayCam)
@@ -5902,8 +6096,7 @@ namespace flex
 					//DrawStringSS("[2+6=? M,M W.W ~`~ \\/ <A>]", glm::vec4(0.95f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.2f), 1.5f, false);
 
 					// Text stress test:
-#if 0
-					SetFont(SID("editor-02"));
+#if 1
 					real yO = -1.0f;
 					std::string str;
 					for (i32 i = 0; i < 5; ++i)
@@ -5965,9 +6158,21 @@ namespace flex
 
 					std::vector<TextVertex2D> textVerticesSS;
 					UpdateTextBufferSS(textVerticesSS);
-					// TODO: Update buffer with textVerticesSS
 
-					DrawTextSS();
+					u32 bufferByteCount = (u32)(textVerticesSS.size() * sizeof(TextVertex2D));
+
+					const VulkanMaterial& fontMaterial = m_Materials[m_FontMatSSID];
+					VulkanBuffer* vertexBuffer = m_VertexIndexBufferPairs[fontMaterial.material.shaderID].vertexBuffer;
+					u32 copySize = std::min(bufferByteCount, (u32)vertexBuffer->m_Size);
+					if (copySize < bufferByteCount)
+					{
+						PrintError("SS Font vertex buffer is %u bytes too small\n", bufferByteCount - copySize);
+					}
+					VK_CHECK_RESULT(vertexBuffer->Map(copySize));
+					memcpy(vertexBuffer->m_Mapped, textVerticesSS.data(), copySize);
+					vertexBuffer->Unmap();
+
+					DrawTextSS(commandBuffer);
 				}
 
 				if (g_EngineInstance->IsRenderingImGui())
@@ -6141,7 +6346,26 @@ namespace flex
 			}
 		}
 
-		u32 VulkanRenderer::CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, ShaderID shaderID, i32 size)
+		void VulkanRenderer::CreateDynamicVertexBuffers()
+		{
+			for (u32 i = 0; i < m_VertexIndexBufferPairs.size(); ++i)
+			{
+				if (!m_VertexIndexBufferPairs[i].useStagingBuffer)
+				{
+					u32 requiredMemory = m_Shaders[i].dynamicVertexBufferSize;
+
+					if (requiredMemory > 0)
+					{
+						CreateDynamicVertexBuffer(
+							m_VertexIndexBufferPairs[i].vertexBuffer,
+							requiredMemory,
+							nullptr);
+					}
+				}
+			}
+		}
+
+		u32 VulkanRenderer::CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, ShaderID shaderID, u32 size)
 		{
 			void* vertexDataStart = malloc_hooked(size);
 			if (!vertexDataStart)
@@ -6183,21 +6407,21 @@ namespace flex
 
 		void VulkanRenderer::CreateDynamicVertexBuffer(VulkanBuffer* vertexBuffer, u32 size, void* initialData)
 		{
-			VulkanBuffer stagingBuffer(m_VulkanDevice->m_LogicalDevice);
-			CreateAndAllocateBuffer(m_VulkanDevice, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-				VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer);
+			CreateAndAllocateBuffer(m_VulkanDevice, size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vertexBuffer);
 
-			if (initialData)
+			if (initialData != nullptr)
 			{
+				VulkanBuffer stagingBuffer(m_VulkanDevice->m_LogicalDevice);
+				CreateAndAllocateBuffer(m_VulkanDevice, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+					VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer);
+
 				VK_CHECK_RESULT(stagingBuffer.Map(size));
 				memcpy(stagingBuffer.m_Mapped, initialData, size);
 				stagingBuffer.Unmap();
+
+				CopyBuffer(m_VulkanDevice, m_GraphicsQueue, stagingBuffer.m_Buffer, vertexBuffer->m_Buffer, size);
 			}
-
-			CreateAndAllocateBuffer(m_VulkanDevice, size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer);
-
-			CopyBuffer(m_VulkanDevice, m_GraphicsQueue, stagingBuffer.m_Buffer, vertexBuffer->m_Buffer, size);
 		}
 
 		void VulkanRenderer::CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, void* vertexBufferData, u32 vertexBufferSize)
@@ -6898,6 +7122,14 @@ namespace flex
 				{
 					sdfData = uniformOverrides->sdfData;
 				}
+				if (uniformOverrides->overridenUniforms.HasUniform(U_TEX_SIZE))
+				{
+					texSize = uniformOverrides->texSize;
+				}
+				if (uniformOverrides->overridenUniforms.HasUniform(U_FONT_CHAR_DATA))
+				{
+					fontCharData = uniformOverrides->fontCharData;
+				}
 				if (uniformOverrides->overridenUniforms.HasUniform(U_TEX_CHANNEL))
 				{
 					texChannel = uniformOverrides->texChannel;
@@ -6944,7 +7176,7 @@ namespace flex
 				{ U_BLEND_SHARPNESS, (void*)&blendSharpness, sizeof(real) },
 				{ U_TEXTURE_SCALE, (void*)&textureScale, sizeof(real) },
 				{ U_FONT_CHAR_DATA, (void*)&fontCharData, sizeof(glm::vec4) },
-				{ U_TEX_SIZE, (void*)&texSize, sizeof(real) },
+				{ U_TEX_SIZE, (void*)&texSize, sizeof(glm::vec2) },
 				{ U_SDF_DATA, (void*)&sdfData, sizeof(glm::vec4) },
 				{ U_TEX_CHANNEL, (void*)&texChannel, sizeof(i32) },
 			};
@@ -7231,6 +7463,7 @@ namespace flex
 			++shaderID;
 
 			// Compute SDF
+			m_Shaders[shaderID].shader.subpass = 0;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV;
@@ -7247,12 +7480,15 @@ namespace flex
 			++shaderID;
 
 			// Font SS
+			m_Shaders[shaderID].shader.subpass = 1;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION_2D |
 				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
 				(u32)VertexAttribute::UV |
 				(u32)VertexAttribute::EXTRA_VEC4 |
 				(u32)VertexAttribute::EXTRA_INT;
+			m_Shaders[shaderID].bDynamic = true;
+			m_Shaders[shaderID].dynamicVertexBufferSize = 1024*1024; // TODO
 
 			m_Shaders[shaderID].shader.constantBufferUniforms = {};
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_ALBEDO_SAMPLER); // in_Texture
@@ -7265,12 +7501,15 @@ namespace flex
 			++shaderID;
 
 			// Font WS
+			m_Shaders[shaderID].shader.subpass = 1;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
 				(u32)VertexAttribute::UV |
 				(u32)VertexAttribute::EXTRA_VEC4 |
 				(u32)VertexAttribute::EXTRA_INT;
+			m_Shaders[shaderID].bDynamic = true;
+			m_Shaders[shaderID].dynamicVertexBufferSize = 1024*1024; // TODO
 
 			m_Shaders[shaderID].shader.constantBufferUniforms = {};
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_ALBEDO_SAMPLER); // in_Texture
@@ -7303,9 +7542,18 @@ namespace flex
 				StripLeadingDirectories(vertFileName);
 				std::string fragFileName = m_Shaders[i].shader.fragmentShaderFilePath;
 				StripLeadingDirectories(fragFileName);
+				std::string geomFileName = m_Shaders[i].shader.geometryShaderFilePath;
+				StripLeadingDirectories(geomFileName);
 				if (g_bEnableLogging_Loading)
 				{
-					Print("Loading shaders %s & %s\n", vertFileName.c_str(), fragFileName.c_str());
+					if (geomFileName.empty())
+					{
+						Print("Loading shaders %s & %s\n", vertFileName.c_str(), fragFileName.c_str());
+					}
+					else
+					{
+						Print("Loading shaders %s & %s & %s\n", vertFileName.c_str(), fragFileName.c_str(), geomFileName.c_str());
+					}
 				}
 
 				if (!ReadFile(shader.vertexShaderFilePath, shader.vertexShaderCode, true))
@@ -7315,6 +7563,10 @@ namespace flex
 				if (!ReadFile(shader.fragmentShaderFilePath, shader.fragmentShaderCode, true))
 				{
 					PrintError("Could not find fragment shader %s\n", shader.name.c_str());
+				}
+				if (!shader.geometryShaderFilePath.empty() && !ReadFile(shader.geometryShaderFilePath, shader.geometryShaderCode, true))
+				{
+					PrintError("Could not find geometry shader %s\n", shader.name.c_str());
 				}
 			}
 		}

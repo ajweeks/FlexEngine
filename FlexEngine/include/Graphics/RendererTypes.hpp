@@ -81,15 +81,15 @@ namespace flex
 	const u64 U_PREFILTER_MAP					= (1ull << 39);
 	const u64 U_EXPOSURE						= (1ull << 40); const u32 US_EXPOSURE					= sizeof(real);
 	const u64 U_TRANSFORM_MAT					= (1ull << 41); const u32 US_TRANSFORM_MAT				= sizeof(glm::mat4);
-	const u64 U_TEX_SIZE						= (1ull << 42); const u32 US_TEX_SIZE					= sizeof(real);
-	const u64 U_UNIFORM_BUFFER_CONSTANT			= (1ull << 43);
-	const u64 U_UNIFORM_BUFFER_DYNAMIC			= (1ull << 44);
-	const u64 U_TEXTURE_SCALE					= (1ull << 45); const u32 US_TEXTURE_SCALE				= sizeof(real);
-	const u64 U_TIME							= (1ull << 46); const u32 US_TIME						= sizeof(real);
-	const u64 U_SDF_DATA						= (1ull << 47); const u32 US_SDF_DATA					= sizeof(glm::vec4);
-	const u64 U_TEX_CHANNEL						= (1ull << 48); const u32 US_TEX_CHANNEL				= sizeof(i32);
-	const u64 U_HIGH_RES_TEX					= (1ull << 49);
-	const u64 U_FONT_CHAR_DATA					= (1ull << 50); const u32 US_FONT_CHAR_DATA				= sizeof(glm::vec4);
+	const u64 U_FONT_CHAR_DATA					= (1ull << 42); const u32 US_FONT_CHAR_DATA				= sizeof(glm::vec4);
+	const u64 U_TEX_SIZE						= (1ull << 43); const u32 US_TEX_SIZE					= sizeof(glm::vec2);
+	const u64 U_UNIFORM_BUFFER_CONSTANT			= (1ull << 44);
+	const u64 U_UNIFORM_BUFFER_DYNAMIC			= (1ull << 45);
+	const u64 U_TEXTURE_SCALE					= (1ull << 46); const u32 US_TEXTURE_SCALE				= sizeof(real);
+	const u64 U_TIME							= (1ull << 47); const u32 US_TIME						= sizeof(real);
+	const u64 U_SDF_DATA						= (1ull << 48); const u32 US_SDF_DATA					= sizeof(glm::vec4);
+	const u64 U_TEX_CHANNEL						= (1ull << 49); const u32 US_TEX_CHANNEL				= sizeof(i32);
+	const u64 U_HIGH_RES_TEX					= (1ull << 50);
 	// NOTE: New additions need to be added in Uniforms::CalculateSizeInBytes
 
 	enum class ClearFlag
@@ -463,18 +463,18 @@ namespace flex
 		glm::vec2 pos;
 		glm::vec2 uv;
 		glm::vec4 color;
-		glm::vec4 charSizePixelsCharSizeNorm; // RG: char size in pixels, BA: char size in [0, 1] in screenspace
-		i32 channel; // uses extra ints slot
+		glm::vec4 charSizePixelsCharSizeNorm; // RG: char size in pixels, BA: char size in [0, 1] in screen space
+		i32 channel; // uses extra int slot
 	};
 
 	struct TextVertex3D
 	{
 		glm::vec3 pos;
+		glm::vec2 uv;
 		glm::vec4 color;
 		glm::vec3 tangent;
-		glm::vec2 uv;
-		glm::vec4 charSizePixelsCharSizeNorm; // RG: char size in pixels, BA: char size in [0, 1] in screenspace
-		i32 channel; // uses extra ints slot
+		glm::vec4 charSizePixelsCharSizeNorm; // RG: char size in pixels, BA: char size in [0, 1] in screen space
+		i32 channel; // uses extra int slot
 	};
 
 } // namespace flex

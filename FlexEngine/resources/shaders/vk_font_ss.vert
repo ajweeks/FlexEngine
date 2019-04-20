@@ -1,10 +1,10 @@
 #version 450
 
 layout (location = 0) in vec2 in_Position2D;
-layout (location = 1) in vec4 in_Color;
-layout (location = 2) in vec2 in_TexCoord;
+layout (location = 1) in vec2 in_TexCoord;
+layout (location = 2) in vec4 in_Color;
 layout (location = 3) in vec4 in_ExtraVec4; // RG: char size in pixels, BA: char size normalized in screen-space
-layout (location = 4) in int in_ExtraInt;   // Texture channel
+layout (location = 4) in int in_ExtraInt;   // Texture channel - NOTE: This attrib prevents all attrib interpolation from happening because it is integral (I think)
 
 layout (location = 0) out VSO
 {

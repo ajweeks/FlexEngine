@@ -118,6 +118,8 @@ namespace flex
 
 			void DestroyRenderObject(RenderID renderID, VulkanRenderObject* renderObject);
 
+			VkPhysicalDeviceFeatures GetEnabledFeaturesForDevice(VkPhysicalDevice physicalDevice);
+
 			typedef void (VulkanTexture::*VulkanTextureCreateFunction)(VkQueue graphicsQueue, const std::string&, VkFormat, u32);
 
 			struct UniformOverrides // Passed to UpdateUniformConstant or UpdateUniformDynamic to set values to something other than their defaults
@@ -141,6 +143,8 @@ namespace flex
 				u32 enableIrradianceSampler;
 				i32 texChannel;
 				glm::vec4 sdfData;
+				glm::vec4 fontCharData;
+				glm::vec2 texSize;
 			};
 
 			void GenerateCubemapFromHDR(VulkanRenderObject* renderObject, const std::string& environmentMapPath);
@@ -191,12 +195,13 @@ namespace flex
 
 			void CreateDynamicVertexBuffer(VulkanBuffer* vertexBuffer, u32 size, void* initialData = nullptr);
 
-			// Creates vertex buffers for all render objects
 			void CreateStaticVertexBuffers();
+
+			void CreateDynamicVertexBuffers();
 
 			// Creates vertex buffer for all render objects' verts which use specified shader index
 			// Returns vertex count
-			u32 CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, ShaderID shaderID, i32 size);
+			u32 CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, ShaderID shaderID, u32 size);
 			void CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, void* vertexBufferData, u32 vertexBufferSize);
 
 			// Creates static index buffers for all render objects
@@ -273,8 +278,8 @@ namespace flex
 			void DrawSpriteQuad(const SpriteQuadDrawInfo& drawInfo);
 			void DrawScreenSpaceSprites();
 			void DrawWorldSpaceSprites();
-			void DrawTextSS();
-			void DrawTextWS();
+			void DrawTextSS(VkCommandBuffer commandBuffer);
+			void DrawTextWS(VkCommandBuffer commandBuffer);
 
 			const u32 MAX_NUM_RENDER_OBJECTS = 4096; // TODO: Not this?
 			std::vector<VulkanRenderObject*> m_RenderObjects;
@@ -371,6 +376,9 @@ namespace flex
 			MaterialID m_ComputeSDFMatID = InvalidMaterialID;
 
 			VDeleter<VkRenderPass> m_DeferredCombineRenderPass;
+			// TODO: Only use VDeleter on objects which may need to be reused
+			VDeleter<VkPipeline> m_FontSSGraphicsPipeline;
+			VDeleter<VkPipelineLayout> m_FontSSPipelineLayout;
 
 			VDeleter<VkDescriptorPool> m_DescriptorPool;
 			std::vector<VkDescriptorSetLayout> m_DescriptorSetLayouts;

@@ -361,6 +361,8 @@ namespace flex
 			Shader shader;
 
 			UniformBuffer uniformBuffer;
+			bool bDynamic = false;
+			u32 dynamicVertexBufferSize = 0;
 		};
 
 #ifdef DEBUG
