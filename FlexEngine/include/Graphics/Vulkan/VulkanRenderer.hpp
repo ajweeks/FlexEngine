@@ -368,6 +368,8 @@ namespace flex
 			FrameBufferAttachment* m_CubemapDepthAttachment = nullptr;
 			MaterialID m_CubemapGBufferMaterialID = InvalidMaterialID;
 
+			MaterialID m_ComputeSDFMatID = InvalidMaterialID;
+
 			VDeleter<VkRenderPass> m_DeferredCombineRenderPass;
 
 			VDeleter<VkDescriptorPool> m_DescriptorPool;

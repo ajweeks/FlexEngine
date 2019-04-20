@@ -3802,26 +3802,29 @@ namespace flex
 					std::max(std::max(maxPos[0].y, maxPos[1].y), std::max(maxPos[2].y, maxPos[3].y)));
 				newFont->SetTextureSize(textureSize);
 
+				VkFormat colAttachmentFormat = VK_FORMAT_R8G8B8A8_UNORM;
+
 				VulkanTexture* fontTexColAttachment = newFont->SetTexture(new VulkanTexture(m_VulkanDevice, m_GraphicsQueue,
 					textureName,textureSize.x, textureSize.y, 4));
-				fontTex->CreateEmpty(VK_FORMAT_R8G8B8A8_UINT, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
-				fontTex->TransitionToLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-				//fontTex->Build();
+				fontTexColAttachment->CreateEmpty(colAttachmentFormat, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+				fontTexColAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
+				if (m_ComputeSDFMatID == InvalidMaterialID)
+				{
+					MaterialCreateInfo computeSDFMatCreateInfo = {};
+					computeSDFMatCreateInfo.name = "Compute SDF";
+					computeSDFMatCreateInfo.shaderName = "compute_sdf";
+					computeSDFMatCreateInfo.engineMaterial = true;
+					m_ComputeSDFMatID = InitializeMaterial(&computeSDFMatCreateInfo);
+				}
+				assert(m_ComputeSDFMatID != InvalidMaterialID);
 
-				MaterialCreateInfo computeSDFMatCreateInfo = {};
-				computeSDFMatCreateInfo.name = "Compute SDF";
-				computeSDFMatCreateInfo.shaderName = "compute_sdf";
-				computeSDFMatCreateInfo.engineMaterial = true;
-				MaterialID computeSDFMatID = InitializeMaterial(&computeSDFMatCreateInfo);
-				ShaderID computeSDFShaderID = m_Materials[computeSDFMatID].material.shaderID;
+				ShaderID computeSDFShaderID = m_Materials[m_ComputeSDFMatID].material.shaderID;
 				VulkanShader& computeSDFShader = m_Shaders[computeSDFShaderID];
-
-				VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
 
 				// Render pass
 				VkAttachmentDescription colorAttachment = {};
-				colorAttachment.format = format;
+				colorAttachment.format = colAttachmentFormat;
 				colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
 				colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 				colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -3871,78 +3874,32 @@ namespace flex
 				VkRenderPass renderPass = VK_NULL_HANDLE;
 				VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassInfo, nullptr, &renderPass));
 
-				VkCommandBuffer commandBuffer = m_CommandBufferManager.CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
-
-				// Offscreen framebuffer
-				struct {
-					VkImage image;
-					VkImageView view;
-					VkDeviceMemory memory;
-					VkFramebuffer framebuffer;
-				} offscreen;
-
-				// Color attachment
-				VkImageCreateInfo offscreenImageCreateInfo = {};
-				offscreenImageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-				offscreenImageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
-				offscreenImageCreateInfo.format = format;
-				offscreenImageCreateInfo.extent.width = textureSize.x;
-				offscreenImageCreateInfo.extent.height = textureSize.y;
-				offscreenImageCreateInfo.extent.depth = 1;
-				offscreenImageCreateInfo.mipLevels = 1;
-				offscreenImageCreateInfo.arrayLayers = 1;
-				offscreenImageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-				offscreenImageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-				offscreenImageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-				offscreenImageCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-				offscreenImageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-				VK_CHECK_RESULT(vkCreateImage(m_VulkanDevice->m_LogicalDevice, &offscreenImageCreateInfo, nullptr, &offscreen.image));
-
-				VkMemoryAllocateInfo offscreenMemAlloc = {};
-				offscreenMemAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-				VkMemoryRequirements offscreenMemRequirements;
-				vkGetImageMemoryRequirements(m_VulkanDevice->m_LogicalDevice, offscreen.image, &offscreenMemRequirements);
-				offscreenMemAlloc.allocationSize = offscreenMemRequirements.size;
-				offscreenMemAlloc.memoryTypeIndex = FindMemoryType(m_VulkanDevice, offscreenMemRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-				VK_CHECK_RESULT(vkAllocateMemory(m_VulkanDevice->m_LogicalDevice, &offscreenMemAlloc, nullptr, &offscreen.memory));
-				VK_CHECK_RESULT(vkBindImageMemory(m_VulkanDevice->m_LogicalDevice, offscreen.image, offscreen.memory, 0));
-
-				VkImageViewCreateInfo colorImageView = {};
-				colorImageView.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-				colorImageView.viewType = VK_IMAGE_VIEW_TYPE_2D;
-				colorImageView.format = format;
-				colorImageView.flags = 0;
-				colorImageView.subresourceRange = {};
-				colorImageView.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-				colorImageView.subresourceRange.baseMipLevel = 0;
-				colorImageView.subresourceRange.levelCount = 1;
-				colorImageView.subresourceRange.baseArrayLayer = 0;
-				colorImageView.subresourceRange.layerCount = 1;
-				colorImageView.image = offscreen.image;
-				VK_CHECK_RESULT(vkCreateImageView(m_VulkanDevice->m_LogicalDevice, &colorImageView, nullptr, &offscreen.view));
 
 				VkFramebufferCreateInfo framebufCreateInfo = {};
 				framebufCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 				framebufCreateInfo.renderPass = renderPass;
 				framebufCreateInfo.attachmentCount = 1;
-				framebufCreateInfo.pAttachments = &offscreen.view;
+				framebufCreateInfo.pAttachments = &fontTexColAttachment->imageView;
 				framebufCreateInfo.width = textureSize.x;
 				framebufCreateInfo.height = textureSize.y;
-				framebufCreateInfo.layers = 1;
-				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &framebufCreateInfo, nullptr, &offscreen.framebuffer));
 
-				VkCommandBuffer layoutCmd = m_CommandBufferManager.CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
+				framebufCreateInfo.layers = 1;
+				VkFramebuffer framebuffer = VK_NULL_HANDLE;
+				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &framebufCreateInfo, nullptr, &framebuffer));
+
+				VkCommandBuffer commandBuffer = m_CommandBufferManager.CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
 
 				SetImageLayout(
-					layoutCmd,
-					offscreen.image,
+					commandBuffer,
+					fontTexColAttachment->image,
 					VK_IMAGE_ASPECT_COLOR_BIT,
 					VK_IMAGE_LAYOUT_UNDEFINED,
 					VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
+
 				VkRenderPassBeginInfo renderPassBeginInfo = {};
 				renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-				renderPassBeginInfo.framebuffer = offscreen.framebuffer;
+				renderPassBeginInfo.framebuffer = framebuffer;
 				renderPassBeginInfo.renderPass = renderPass;
 				renderPassBeginInfo.renderArea.offset = { 0, 0 };
 				renderPassBeginInfo.renderArea.extent = {
@@ -4037,8 +3994,8 @@ namespace flex
 					glm::vec2i viewportTL = glm::vec2i(metric->texCoord) + glm::vec2i(padding);
 
 					VkViewport viewport = {
-						(real)viewportTL.x, (real)viewportTL.y,
-						(real)res.x, (real)res.y,
+						(real)viewportTL.x, (real)(viewportTL.y + res.y),
+						(real)res.x, -(real)res.y,
 						0.1f, 100.0f
 					};
 					vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
@@ -4058,7 +4015,6 @@ namespace flex
 					VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[computeSDFShaderID];
 					VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 
-					// TODO: Create once and update albedoTexture
 					DescriptorSetCreateInfo descSetCreateInfo = {};
 					descSetCreateInfo.descriptorSet = &descriptorSet;
 					descSetCreateInfo.descriptorSetLayout = &descSetLayout;
@@ -4075,7 +4031,7 @@ namespace flex
 					overrides.overridenUniforms.AddUniform(U_TEX_CHANNEL);
 					overrides.sdfData = glm::vec4((real)res.x, (real)res.y, (real)spread, (real)sampleDensity);
 					overrides.overridenUniforms.AddUniform(U_SDF_DATA);
-					UpdateDynamicUniformBuffer(computeSDFMatID, dynamicOffsetIndex, MAT4_IDENTITY, &overrides);
+					UpdateDynamicUniformBuffer(m_ComputeSDFMatID, dynamicOffsetIndex, MAT4_IDENTITY, &overrides);
 
 					vkCmdDrawIndexed(commandBuffer, m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID].indexCount, 1, 0, 0, 1);
 
@@ -4111,16 +4067,13 @@ namespace flex
 
 				vkDestroyPipeline(m_VulkanDevice->m_LogicalDevice, graphicsPipeline, nullptr);
 				vkDestroyRenderPass(m_VulkanDevice->m_LogicalDevice, renderPass, nullptr);
-				vkDestroyFramebuffer(m_VulkanDevice->m_LogicalDevice, offscreen.framebuffer, nullptr);
-				vkFreeMemory(m_VulkanDevice->m_LogicalDevice, offscreen.memory, nullptr);
-				vkDestroyImageView(m_VulkanDevice->m_LogicalDevice, offscreen.view, nullptr);
-				vkDestroyImage(m_VulkanDevice->m_LogicalDevice, offscreen.image, nullptr);
+				vkDestroyFramebuffer(m_VulkanDevice->m_LogicalDevice, framebuffer, nullptr);
 
 				std::string savedSDFTextureAbsFilePath = RelativePathToAbsolute(renderedFontFilePath);
-				fontTex->SaveToFile(savedSDFTextureAbsFilePath, ImageFormat::PNG);
+				fontTexColAttachment->SaveToFile(savedSDFTextureAbsFilePath, ImageFormat::PNG);
 
-				fontTex->Destroy();
-				delete fontTex;
+				fontTexColAttachment->Destroy();
+				delete fontTexColAttachment;
 			}
 
 			FT_Done_Face(face);
