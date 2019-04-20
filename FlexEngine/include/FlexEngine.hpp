@@ -289,13 +289,8 @@ namespace flex
 		bool m_bRenderDocCapturingFrame = false;
 		i32 m_RenderDocUIPID = -1;
 		HMODULE m_RenderDocModule = 0;
-#if 0 // Capture first frame
-		i32 m_RenderDocAutoCaptureFrameOffset = 0;
-		i32 m_RenderDocAutoCaptureFrameCount = 1;
-#else
 		i32 m_RenderDocAutoCaptureFrameOffset = -1;
 		i32 m_RenderDocAutoCaptureFrameCount = -1;
-#endif
 #endif
 
 		sec SecSinceLogSave = 0.0f;

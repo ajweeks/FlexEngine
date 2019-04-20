@@ -2326,6 +2326,12 @@ namespace flex
 			m_RenderDocAPI->GetAPIVersion(&major, &minor, &patch);
 			Print("RenderDoc API v%i.%i.%i connected, F9 to capture\n", major, minor, patch);
 
+			if (m_RenderDocAutoCaptureFrameOffset != -1 &&
+				m_RenderDocAutoCaptureFrameCount != -1)
+			{
+				Print("Auto capturing %i frame(s) starting at frame %i\n", m_RenderDocAutoCaptureFrameCount, m_RenderDocAutoCaptureFrameOffset);
+			}
+
 			std::string dateStr = GetDateString_YMDHMS();
 			std::string captureFilePath = RelativePathToAbsolute(SAVED_LOCATION "RenderDocCaptures/FlexEngine_" + dateStr);
 			m_RenderDocAPI->SetCaptureFilePathTemplate(captureFilePath.c_str());
