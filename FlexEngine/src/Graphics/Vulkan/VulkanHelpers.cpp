@@ -178,7 +178,9 @@ namespace flex
 		void VertexIndexBufferPair::Destroy()
 		{
 			delete vertexBuffer;
+			vertexBuffer = nullptr;
 			delete indexBuffer;
+			indexBuffer = nullptr;
 			vertexCount = 0;
 			indexCount = 0;
 		}
@@ -362,7 +364,9 @@ namespace flex
 		{
 			assert(width > 0);
 			assert(height > 0);
+
 			mipLevels = inMipLevels;
+			imageFormat = inFormat;
 
 			ImageCreateInfo imageCreateInfo = {};
 			imageCreateInfo.image = image.replace();
@@ -973,13 +977,9 @@ namespace flex
 				bSupportsBlit = false;
 			}
 
-
 			bool bResult = false;
 
 			i32 pixelCount = width * height;
-
-			//i32 floatBufStride = channelCount * sizeof(real);
-			//i32 floatBufSize = floatBufStride * pixelCount;
 
 			i32 u8BufStride = channelCount * sizeof(u8);
 			i32 u8BufSize = u8BufStride * pixelCount;
@@ -1114,7 +1114,6 @@ namespace flex
 
 				bResult = SaveImage(absoluteFilePath, saveFormat, width, height, channelCount, u8Data, bFlipVertically);
 
-				// Clean up resources
 				vkUnmapMemory(m_VulkanDevice->m_LogicalDevice, dstImageMemory);
 				vkFreeMemory(m_VulkanDevice->m_LogicalDevice, dstImageMemory, nullptr);
 				vkDestroyImage(m_VulkanDevice->m_LogicalDevice, dstImage, nullptr);
@@ -1132,7 +1131,6 @@ namespace flex
 		void VulkanTexture::Build(void* data /* = nullptr */)
 		{
 			UNREFERENCED_PARAMETER(data);
-			// TODO: Implement
 		}
 
 		VkFormat VulkanTexture::CalculateFormat()
