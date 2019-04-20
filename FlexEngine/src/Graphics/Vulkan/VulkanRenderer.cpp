@@ -6452,11 +6452,11 @@ namespace flex
 			VkPipelineStageFlags waitStages = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 			submitInfo.pWaitDstStageMask = &waitStages;
 
-			//submitInfo.waitSemaphoreCount = 1;
-			//submitInfo.pWaitSemaphores = &m_PresentCompleteSemaphore;
+			submitInfo.waitSemaphoreCount = 1;
+			submitInfo.pWaitSemaphores = &m_PresentCompleteSemaphore;
 
-			//submitInfo.signalSemaphoreCount = 1;
-			//submitInfo.pSignalSemaphores = &offscreenSemaphore;
+			submitInfo.signalSemaphoreCount = 1;
+			submitInfo.pSignalSemaphores = &offscreenSemaphore;
 
 			submitInfo.commandBufferCount = 1;
 			submitInfo.pCommandBuffers = &offScreenCmdBuffer;
