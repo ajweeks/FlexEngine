@@ -84,7 +84,7 @@
 			"swapNormalYZ" : true,
 			"flipNormalZ" : true,
 			"flipU" : false,
-			"flipV" : true
+			"flipV" : false
 		},
 		{
 			"file" : "valve.glb",
@@ -151,6 +151,27 @@
 		},
 		{
 			"file" : "cart-engine.glb",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "terminal-copper.glb",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "earth.glb",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "morph-tpose-01.glb",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,

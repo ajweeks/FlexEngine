@@ -3,36 +3,20 @@
 
 #include "Graphics/GL/GLRenderer.hpp"
 
-#include <algorithm>
-#include <array>
-#include <functional>
-#include <string>
-#include <utility>
-
-#pragma warning(push, 0)
-#include <BulletCollision/CollisionShapes/btBoxShape.h>
-#include <BulletCollision/CollisionShapes/btCapsuleShape.h>
-#include <BulletCollision/CollisionShapes/btConeShape.h>
-#include <BulletCollision/CollisionShapes/btCylinderShape.h>
-
-#include <BulletCollision/CollisionShapes/btSphereShape.h>
+IGNORE_WARNINGS_PUSH
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
-#include <BulletDynamics/Dynamics/btRigidBody.h>
-#include <freetype/ftbitmap.h>
-#include <glm/gtc/matrix_transform.hpp>
 
-#include <glm/gtc/type_ptr.hpp>
-#include <glm/gtx/quaternion.hpp>
-// TODO: Remove?
-#include <glm/vec3.hpp>
+#include <glm/gtx/quaternion.hpp> // for rotate
 
 #if COMPILE_IMGUI
-#include "imgui_internal.h"
+#include "imgui_internal.h" // For columns API
 
 #include "ImGui/imgui_impl_glfw.h"
 #include "ImGui/imgui_impl_opengl3.h"
 #endif
-#pragma warning(pop)
+
+#include <freetype/ftbitmap.h>
+IGNORE_WARNINGS_POP
 
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
@@ -51,8 +35,8 @@
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/MeshComponent.hpp"
+#include "Scene/LoadedMesh.hpp"
 #include "Scene/SceneManager.hpp"
-#include "Time.hpp"
 #include "Window/GLFWWindowWrapper.hpp"
 #include "Window/Monitor.hpp"
 #include "Window/Window.hpp"
@@ -61,12 +45,10 @@ namespace flex
 {
 	namespace gl
 	{
-		GLRenderer::GLRenderer()
+		GLRenderer::GLRenderer() :
+			m_KeyEventCallback(this, &GLRenderer::OnKeyEvent),
+			m_ActionCallback(this, &GLRenderer::OnActionEvent)
 		{
-			m_DefaultSettingsFilePathAbs = RelativePathToAbsolute(ROOT_LOCATION  "saved/config/default-renderer-settings.ini");
-			m_SettingsFilePathAbs = RelativePathToAbsolute(ROOT_LOCATION "saved/config/renderer-settings.ini");
-
-			g_Renderer = this;
 		}
 
 		GLRenderer::~GLRenderer()
@@ -75,7 +57,14 @@ namespace flex
 
 		void GLRenderer::Initialize()
 		{
+			Renderer::Initialize();
+
 			LoadSettingsFromDisk();
+
+			SetVSyncEnabled(g_Window->GetVSyncEnabled());
+
+			g_InputManager->BindKeyEventCallback(&m_KeyEventCallback, 13);
+			g_InputManager->BindActionCallback(&m_ActionCallback, 13);
 
 			m_OffscreenTexture0Handle = {};
 			m_OffscreenTexture0Handle.internalFormat = GL_RGBA16F;
@@ -89,7 +78,7 @@ namespace flex
 
 
 			m_ShadowMapTexture = {};
-			m_ShadowMapTexture.internalFormat = GL_DEPTH_COMPONENT16;
+			m_ShadowMapTexture.internalFormat = GL_DEPTH_COMPONENT;
 			m_ShadowMapTexture.format = GL_DEPTH_COMPONENT;
 			m_ShadowMapTexture.type = GL_FLOAT;
 
@@ -103,31 +92,31 @@ namespace flex
 			m_gBuffer_NormalRoughnessHandle.format = GL_RGBA;
 			m_gBuffer_NormalRoughnessHandle.type = GL_FLOAT;
 
-			m_gBuffer_DiffuseAOHandle = {};
-			m_gBuffer_DiffuseAOHandle.internalFormat = GL_RGBA16F;
-			m_gBuffer_DiffuseAOHandle.format = GL_RGBA;
-			m_gBuffer_DiffuseAOHandle.type = GL_FLOAT;
+			m_gBuffer_AlbedoAOHandle = {};
+			m_gBuffer_AlbedoAOHandle.internalFormat = GL_RGBA16F;
+			m_gBuffer_AlbedoAOHandle.format = GL_RGBA;
+			m_gBuffer_AlbedoAOHandle.type = GL_FLOAT;
 
 			LoadShaders();
 
-			std::string hdriPath = RESOURCE("textures/hdri/");
-			if (!FindFilesInDirectory(hdriPath, m_AvailableHDRIs, "hdr"))
-			{
-				PrintWarn("Unable to find hdri directory at %s\n", hdriPath.c_str());
-			}
-
 			glEnable(GL_DEPTH_TEST);
-			glFrontFace(GL_CCW);
-			glLineWidth(5.0f);
+			glClearDepth(0.0f);
+
+			glFrontFace(GL_CW);
+			glLineWidth(3.0f);
 
 			// Prevent seams from appearing on lower mip map levels of cubemaps
 			glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+
+			assert(GL_VERSION_4_5);
+			// TODO: Handle lack of GL_ARB_clip_control (in GL < 4.5)
+			glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
+
 
 			// Capture framebuffer (TODO: Merge with offscreen frame buffer?)
 			{
 				glGenFramebuffers(1, &m_CaptureFBO);
 				glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
-
 
 				glGenRenderbuffers(1, &m_CaptureRBO);
 				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
@@ -149,15 +138,15 @@ namespace flex
 
 			const real captureProjectionNearPlane = g_CameraManager->CurrentCamera()->GetZNear();
 			const real captureProjectionFarPlane = g_CameraManager->CurrentCamera()->GetZFar();
-			m_CaptureProjection = glm::perspective(glm::radians(90.0f), 1.0f, captureProjectionNearPlane, captureProjectionFarPlane);
+			m_CaptureProjection = glm::perspective(glm::radians(90.0f), 1.0f, captureProjectionFarPlane, captureProjectionNearPlane);
 			m_CaptureViews =
 			{
-				glm::lookAtRH(VEC3_ZERO, glm::vec3(1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-				glm::lookAtRH(VEC3_ZERO, glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-				glm::lookAtRH(VEC3_ZERO, glm::vec3(0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)),
-				glm::lookAtRH(VEC3_ZERO, glm::vec3(0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f)),
-				glm::lookAtRH(VEC3_ZERO, glm::vec3(0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
-				glm::lookAtRH(VEC3_ZERO, glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
+				glm::lookAt(VEC3_ZERO, glm::vec3(-1.0f, 0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+				glm::lookAt(VEC3_ZERO, glm::vec3(1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+				glm::lookAt(VEC3_ZERO, glm::vec3(0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)),
+				glm::lookAt(VEC3_ZERO, glm::vec3(0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f)),
+				glm::lookAt(VEC3_ZERO, glm::vec3(0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+				glm::lookAt(VEC3_ZERO, glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
 			};
 
 			m_AlphaBGTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/alpha-bg.png", 3, false, false, false);
@@ -180,7 +169,7 @@ namespace flex
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-				float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+				real borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 				glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor); // Prevents areas not covered by map to be in shadow
 				glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, m_ShadowMapTexture.id, 0);
 
@@ -192,12 +181,15 @@ namespace flex
 					PrintError("Shadow depth buffer is incomplete!\n");
 				}
 
-				if (m_DirectionalLight)
+				if (m_DirectionalLight != nullptr)
 				{
 					m_DirectionalLight->shadowTextureID = m_ShadowMapTexture.id;
 				}
 			}
 
+			Renderer::InitializeMaterials();
+
+			// TODO: Move to Renderer::InitializeMaterials
 			MaterialCreateInfo shadowMatCreateInfo = {};
 			shadowMatCreateInfo.shaderName = "shadow";
 			shadowMatCreateInfo.name = "Shadow";
@@ -210,12 +202,6 @@ namespace flex
 			spriteMatCreateInfo.shaderName = "sprite";
 			spriteMatCreateInfo.engineMaterial = true;
 			m_SpriteMatID = InitializeMaterial(&spriteMatCreateInfo);
-
-			MaterialCreateInfo fontMatCreateInfo = {};
-			fontMatCreateInfo.name = "Font material";
-			fontMatCreateInfo.shaderName = "font";
-			fontMatCreateInfo.engineMaterial = true;
-			m_FontMatID = InitializeMaterial(&fontMatCreateInfo);
 
 			MaterialCreateInfo postProcessMatCreateInfo = {};
 			postProcessMatCreateInfo.name = "Post process material";
@@ -233,19 +219,19 @@ namespace flex
 			{
 				const std::string gridMatName = "Grid";
 				// TODO: Don't rely on material names!
-				if (!g_Renderer->GetMaterialID(gridMatName, m_GridMaterialID))
+				if (!GetMaterialID(gridMatName, m_GridMaterialID))
 				{
 					MaterialCreateInfo gridMatInfo = {};
 					gridMatInfo.shaderName = "color";
 					gridMatInfo.name = gridMatName;
 					gridMatInfo.engineMaterial = true;
-					m_GridMaterialID = g_Renderer->InitializeMaterial(&gridMatInfo);
+					m_GridMaterialID = InitializeMaterial(&gridMatInfo);
 				}
 
 				m_Grid = new GameObject("Grid", GameObjectType::OBJECT);
 				MeshComponent* gridMesh = m_Grid->SetMeshComponent(new MeshComponent(m_GridMaterialID, m_Grid, false));
 				RenderObjectCreateInfo createInfo = {};
-				createInfo.editorObject = true;
+				createInfo.bEditorObject = true;
 				gridMesh->LoadPrefabShape(MeshComponent::PrefabShape::GRID, &createInfo);
 				m_Grid->GetTransform()->Translate(0.0f, -0.1f, 0.0f);
 				m_Grid->SetSerializable(false);
@@ -259,19 +245,19 @@ namespace flex
 			{
 				const std::string worldOriginMatName = "World origin";
 				// TODO: Don't rely on material names!
-				if (!g_Renderer->GetMaterialID(worldOriginMatName, m_WorldAxisMaterialID))
+				if (!GetMaterialID(worldOriginMatName, m_WorldAxisMaterialID))
 				{
 					MaterialCreateInfo worldAxisMatInfo = {};
 					worldAxisMatInfo.shaderName = "color";
 					worldAxisMatInfo.name = worldOriginMatName;
 					worldAxisMatInfo.engineMaterial = true;
-					m_WorldAxisMaterialID = g_Renderer->InitializeMaterial(&worldAxisMatInfo);
+					m_WorldAxisMaterialID = InitializeMaterial(&worldAxisMatInfo);
 				}
 
 				m_WorldOrigin = new GameObject("World origin", GameObjectType::OBJECT);
 				MeshComponent* orignMesh = m_WorldOrigin->SetMeshComponent(new MeshComponent(m_WorldAxisMaterialID, m_WorldOrigin, false));
 				RenderObjectCreateInfo createInfo = {};
-				createInfo.editorObject = true;
+				createInfo.bEditorObject = true;
 				orignMesh->LoadPrefabShape(MeshComponent::PrefabShape::WORLD_AXIS_GROUND, &createInfo);
 				m_WorldOrigin->GetTransform()->Translate(0.0f, -0.09f, 0.0f);
 				m_WorldOrigin->SetSerializable(false);
@@ -305,19 +291,18 @@ namespace flex
 				m_Quad2DVertexBufferData.Initialize(&quad2DVertexBufferDataCreateInfo);
 
 
-				GameObject* quad2DGameObject = new GameObject("Sprite Quad 2D", GameObjectType::NONE);
+				GameObject* quad2DGameObject = new GameObject("Sprite Quad 2D", GameObjectType::_NONE);
 				m_PersistentObjects.push_back(quad2DGameObject);
 				quad2DGameObject->SetVisible(false);
 
 				RenderObjectCreateInfo quad2DCreateInfo = {};
 				quad2DCreateInfo.vertexBufferData = &m_Quad2DVertexBufferData;
 				quad2DCreateInfo.materialID = m_PostProcessMatID;
-				quad2DCreateInfo.depthWriteEnable = false;
+				quad2DCreateInfo.bDepthWriteEnable = false;
 				quad2DCreateInfo.gameObject = quad2DGameObject;
-				quad2DCreateInfo.enableCulling = false;
+				quad2DCreateInfo.cullFace = CullFace::NONE;
 				quad2DCreateInfo.visibleInSceneExplorer = false;
 				quad2DCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
-				quad2DCreateInfo.depthWriteEnable = false;
 				m_Quad2DRenderID = InitializeRenderObject(&quad2DCreateInfo);
 
 				m_Quad2DVertexBufferData.DescribeShaderVariables(this, m_Quad2DRenderID);
@@ -354,20 +339,19 @@ namespace flex
 				m_Quad3DVertexBufferData.Initialize(&quad3DVertexBufferDataCreateInfo);
 
 
-				GameObject* quad3DGameObject = new GameObject("Sprite Quad 3D", GameObjectType::NONE);
+				GameObject* quad3DGameObject = new GameObject("Sprite Quad 3D", GameObjectType::_NONE);
 				m_PersistentObjects.push_back(quad3DGameObject);
 				quad3DGameObject->SetVisible(false);
 
 				RenderObjectCreateInfo quad3DCreateInfo = {};
 				quad3DCreateInfo.vertexBufferData = &m_Quad3DVertexBufferData;
 				quad3DCreateInfo.materialID = m_SpriteMatID;
-				quad3DCreateInfo.depthWriteEnable = false;
+				quad3DCreateInfo.bDepthWriteEnable = false;
 				quad3DCreateInfo.gameObject = quad3DGameObject;
-				quad3DCreateInfo.enableCulling = false;
+				quad3DCreateInfo.cullFace = CullFace::NONE;
 				quad3DCreateInfo.visibleInSceneExplorer = false;
 				quad3DCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
-				quad3DCreateInfo.depthWriteEnable = false;
-				quad3DCreateInfo.editorObject = true; // TODO: Create other quad which is identical but is not an editor object for gameplay objects?
+				quad3DCreateInfo.bEditorObject = true; // TODO: Create other quad which is identical but is not an editor object for gameplay objects?
 				m_Quad3DRenderID = InitializeRenderObject(&quad3DCreateInfo);
 
 				m_Quad3DVertexBufferData.DescribeShaderVariables(this, m_Quad3DRenderID);
@@ -397,7 +381,7 @@ namespace flex
 											  internalFormat,
 											  format,
 											  type);
-				if (m_BRDFTexture->GenerateEmpty())
+				if (m_BRDFTexture->CreateEmpty())
 				{
 					m_LoadedTextures.push_back(m_BRDFTexture);
 					GenerateBRDFLUT(m_BRDFTexture->handle, brdfSize);
@@ -407,14 +391,6 @@ namespace flex
 					PrintError("Failed to generate BRDF texture\n");
 				}
 			}
-
-			ImGui::CreateContext();
-
-			ImGuiIO& io = ImGui::GetIO();
-			m_ImGuiIniFilepathStr = ROOT_LOCATION "saved/config/imgui.ini";
-			io.IniFilename = m_ImGuiIniFilepathStr.c_str();
-			m_ImGuiLogFilepathStr = ROOT_LOCATION "saved/config/imgui.log";
-			io.LogFilename = m_ImGuiLogFilepathStr.c_str();
 
 			// G-buffer objects
 			glGenFramebuffers(1, &m_gBufferHandle);
@@ -436,11 +412,11 @@ namespace flex
 									   m_gBuffer_NormalRoughnessHandle.type,
 									   frameBufferSize);
 
-			GenerateFrameBufferTexture(&m_gBuffer_DiffuseAOHandle.id,
+			GenerateFrameBufferTexture(&m_gBuffer_AlbedoAOHandle.id,
 									   2,
-									   m_gBuffer_DiffuseAOHandle.internalFormat,
-									   m_gBuffer_DiffuseAOHandle.format,
-									   m_gBuffer_DiffuseAOHandle.type,
+									   m_gBuffer_AlbedoAOHandle.internalFormat,
+									   m_gBuffer_AlbedoAOHandle.format,
+									   m_gBuffer_AlbedoAOHandle.type,
 									   frameBufferSize);
 
 			// Create and attach depth buffer
@@ -480,16 +456,24 @@ namespace flex
 				editorObject->PostInitialize();
 			}
 
-			m_DirectionalLight->shadowTextureID = m_ShadowMapTexture.id;
-
-
-			Print("Renderer initialized!\n");
+			if (m_DirectionalLight != nullptr)
+			{
+				m_DirectionalLight->shadowTextureID = m_ShadowMapTexture.id;
+			}
 		}
 
 		void GLRenderer::Destroy()
 		{
-			glDeleteVertexArrays(1, &m_TextQuadVAO);
-			glDeleteBuffers(1, &m_TextQuadVBO);
+			Renderer::Destroy();
+
+			g_InputManager->UnbindKeyEventCallback(&m_KeyEventCallback);
+			g_InputManager->UnbindActionCallback(&m_ActionCallback);
+
+			glDeleteVertexArrays(1, &m_TextQuadSS_VAO);
+			glDeleteBuffers(1, &m_TextQuadSS_VBO);
+
+			glDeleteVertexArrays(1, &m_TextQuadWS_VAO);
+			glDeleteBuffers(1, &m_TextQuadWS_VBO);
 
 			glDeleteBuffers(1, &m_CaptureRBO);
 			glDeleteBuffers(1, &m_CaptureFBO);
@@ -502,27 +486,33 @@ namespace flex
 
 			glDeleteFramebuffers(1, &m_ShadowMapFBO);
 
-			SafeDelete(screenshotAsyncTextureSave);
+			delete screenshotAsyncTextureSave;
 
 			for (GameObject* editorObject : m_EditorObjects)
 			{
 				editorObject->Destroy();
-				SafeDelete(editorObject);
+				delete editorObject;
 			}
 			m_EditorObjects.clear();
 
-			for (BitmapFont* font : m_Fonts)
+			for (BitmapFont* font : m_FontsSS)
 			{
-				SafeDelete(font);
+				delete font;
 			}
-			m_Fonts.clear();
+			m_FontsSS.clear();
+
+			for (BitmapFont* font : m_FontsWS)
+			{
+				delete font;
+			}
+			m_FontsWS.clear();
 
 			for (GLTexture* texture : m_LoadedTextures)
 			{
 				if (texture)
 				{
 					texture->Destroy();
-					SafeDelete(texture);
+					delete texture;
 				}
 			}
 			m_LoadedTextures.clear();
@@ -548,7 +538,7 @@ namespace flex
 				{
 					DestroyRenderObject(obj->GetRenderID());
 				}
-				SafeDelete(obj);
+				delete obj;
 			}
 			m_PersistentObjects.clear();
 
@@ -558,7 +548,7 @@ namespace flex
 				{
 					DestroyRenderObject(editorObject->GetRenderID());
 				}
-				SafeDelete(editorObject);
+				delete editorObject;
 			}
 
 			DestroyRenderObject(m_Quad3DRenderID);
@@ -584,19 +574,21 @@ namespace flex
 			}
 			m_RenderObjects.clear();
 
+			UnloadShaders();
+			ClearMaterials(true);
+
 			m_SkyBoxMesh = nullptr;
 
 			if (m_PhysicsDebugDrawer)
 			{
 				m_PhysicsDebugDrawer->Destroy();
-				SafeDelete(m_PhysicsDebugDrawer);
+				delete m_PhysicsDebugDrawer;
 			}
 
 			m_gBufferQuadVertexBufferData.Destroy();
 			m_Quad2DVertexBufferData.Destroy();
 			m_Quad3DVertexBufferData.Destroy();
 
-			// TODO: Is this wanted here?
 			glfwTerminate();
 		}
 
@@ -605,7 +597,6 @@ namespace flex
 			MaterialID matID;
 			if (matToReplace != InvalidMaterialID)
 			{
-				// TODO: Do any material destruction work here
 				matID = matToReplace;
 			}
 			else
@@ -641,30 +632,30 @@ namespace flex
 
 			// TODO: Is this really needed? (do things dynamically instead?)
 			UniformInfo uniformInfo[] = {
-				{ Uniform::MODEL,							"model", 						&mat.uniformIDs.model },
-				{ Uniform::MODEL_INV_TRANSPOSE, 			"modelInvTranspose", 			&mat.uniformIDs.modelInvTranspose },
-				{ Uniform::COLOR_MULTIPLIER, 				"colorMultiplier", 				&mat.uniformIDs.colorMultiplier },
-				{ Uniform::LIGHT_VIEW_PROJ, 				"lightViewProj",				&mat.uniformIDs.lightViewProjection },
-				{ Uniform::EXPOSURE,						"exposure",						&mat.uniformIDs.exposure },
-				{ Uniform::VIEW, 							"view", 						&mat.uniformIDs.view },
-				{ Uniform::VIEW_PROJECTION, 				"viewProjection", 				&mat.uniformIDs.viewProjection },
-				{ Uniform::PROJECTION, 						"projection", 					&mat.uniformIDs.projection },
-				{ Uniform::CAM_POS, 						"camPos", 						&mat.uniformIDs.camPos },
-				{ Uniform::NORMAL_SAMPLER, 					"enableNormalSampler", 			&mat.uniformIDs.enableNormalTexture },
-				{ Uniform::CUBEMAP_SAMPLER, 				"enableCubemapSampler", 		&mat.uniformIDs.enableCubemapTexture },
-				{ Uniform::ALBEDO_SAMPLER,	 				"enableAlbedoSampler", 			&mat.uniformIDs.enableAlbedoSampler },
-				{ Uniform::CONST_ALBEDO, 					"constAlbedo", 					&mat.uniformIDs.constAlbedo },
-				{ Uniform::METALLIC_SAMPLER,		 		"enableMetallicSampler", 		&mat.uniformIDs.enableMetallicSampler },
-				{ Uniform::CONST_METALLIC, 					"constMetallic", 				&mat.uniformIDs.constMetallic },
-				{ Uniform::ROUGHNESS_SAMPLER,	 			"enableRoughnessSampler", 		&mat.uniformIDs.enableRoughnessSampler },
-				{ Uniform::CONST_ROUGHNESS, 				"constRoughness", 				&mat.uniformIDs.constRoughness },
-				{ Uniform::AO_SAMPLER,						"enableAOSampler",				&mat.uniformIDs.enableAOSampler },
-				{ Uniform::CONST_AO,						"constAO",						&mat.uniformIDs.constAO },
-				{ Uniform::HDR_EQUIRECTANGULAR_SAMPLER,		"hdrEquirectangularSampler",	&mat.uniformIDs.hdrEquirectangularSampler },
-				{ Uniform::IRRADIANCE_SAMPLER,				"enableIrradianceSampler",		&mat.uniformIDs.enableIrradianceSampler },
-				{ Uniform::TRANSFORM_MAT,					"transformMat",					&mat.uniformIDs.transformMat },
-				{ Uniform::TEX_SIZE,						"texSize",						&mat.uniformIDs.texSize },
-				{ Uniform::TEX_SIZE,						"textureScale",					&mat.uniformIDs.textureScale },
+				{ U_MODEL,							"model", 						&mat.uniformIDs.model },
+				{ U_MODEL_INV_TRANSPOSE, 			"modelInvTranspose", 			&mat.uniformIDs.modelInvTranspose },
+				{ U_COLOR_MULTIPLIER, 				"colorMultiplier", 				&mat.uniformIDs.colorMultiplier },
+				{ U_LIGHT_VIEW_PROJ, 				"lightViewProj",				&mat.uniformIDs.lightViewProjection },
+				{ U_EXPOSURE,						"exposure",						&mat.uniformIDs.exposure },
+				{ U_VIEW, 							"view", 						&mat.uniformIDs.view },
+				{ U_VIEW_PROJECTION, 				"viewProjection", 				&mat.uniformIDs.viewProjection },
+				{ U_PROJECTION, 					"projection", 					&mat.uniformIDs.projection },
+				{ U_CAM_POS, 						"camPos", 						&mat.uniformIDs.camPos },
+				{ U_NORMAL_SAMPLER, 				"enableNormalSampler", 			&mat.uniformIDs.enableNormalTexture },
+				{ U_CUBEMAP_SAMPLER, 				"enableCubemapSampler", 		&mat.uniformIDs.enableCubemapTexture },
+				{ U_ALBEDO_SAMPLER,	 				"enableAlbedoSampler", 			&mat.uniformIDs.enableAlbedoSampler },
+				{ U_CONST_ALBEDO, 					"constAlbedo", 					&mat.uniformIDs.constAlbedo },
+				{ U_METALLIC_SAMPLER,		 		"enableMetallicSampler", 		&mat.uniformIDs.enableMetallicSampler },
+				{ U_CONST_METALLIC, 				"constMetallic", 				&mat.uniformIDs.constMetallic },
+				{ U_ROUGHNESS_SAMPLER,	 			"enableRoughnessSampler", 		&mat.uniformIDs.enableRoughnessSampler },
+				{ U_CONST_ROUGHNESS, 				"constRoughness", 				&mat.uniformIDs.constRoughness },
+				{ U_AO_SAMPLER,						"enableAOSampler",				&mat.uniformIDs.enableAOSampler },
+				{ U_CONST_AO,						"constAO",						&mat.uniformIDs.constAO },
+				{ U_HDR_EQUIRECTANGULAR_SAMPLER,	"hdrEquirectangularSampler",	&mat.uniformIDs.hdrEquirectangularSampler },
+				{ U_IRRADIANCE_SAMPLER,				"enableIrradianceSampler",		&mat.uniformIDs.enableIrradianceSampler },
+				{ U_TRANSFORM_MAT,					"transformMat",					&mat.uniformIDs.transformMat },
+				{ U_TEX_SIZE,						"texSize",						&mat.uniformIDs.texSize },
+				{ U_TIME,							"time",							&mat.uniformIDs.time },
 			};
 
 			for (const UniformInfo& uniform : uniformInfo)
@@ -672,20 +663,20 @@ namespace flex
 				// TODO: CLEANUP: Get rid of HasUniform in place of -1 check! :O
 				//if (shader.shader.dynamicBufferUniforms.HasUniform(uniform.uniform) ||
 				//	shader.shader.constantBufferUniforms.HasUniform(uniform.uniform))
-				{
+				//{
 					*uniform.id = glGetUniformLocation(shader.program, uniform.name);
-					if (*uniform.id == -1)
-					{
-						//	PrintWarn("uniform %s was not found for material %s (shader: %s)\n",
-						//			  uniform.name, createInfo->name.c_str(), createInfo->shaderName.c_str());
-					}
-				}
+					//if (*uniform.id == -1)
+					//{
+					//		PrintWarn("uniform %s was not found for material %s (shader: %s)\n",
+					//				  uniform.name, createInfo->name.c_str(), createInfo->shaderName.c_str());
+					//}
+				//}
 			}
 
 			if (shader.shader.bNeedShadowMap)
 			{
 				mat.uniformIDs.castShadows = glGetUniformLocation(shader.program, "castShadows");
-				mat.uniformIDs.shadowOpacity = glGetUniformLocation(shader.program, "shadowOpacity");
+				mat.uniformIDs.shadowDarkness = glGetUniformLocation(shader.program, "shadowDarkness");
 			}
 
 			mat.material.normalTexturePath = createInfo->normalTexturePath;
@@ -1102,10 +1093,9 @@ namespace flex
 			renderObject->indices = createInfo->indices;
 			renderObject->gameObject = createInfo->gameObject;
 			renderObject->cullFace = CullFaceToGLCullFace(createInfo->cullFace);
-			renderObject->enableCulling = (createInfo->cullFace == CullFace::NONE ? GL_FALSE : (createInfo->enableCulling ? GL_TRUE : GL_FALSE));
 			renderObject->depthTestReadFunc = DepthTestFuncToGlenum(createInfo->depthTestReadFunc);
-			renderObject->depthWriteEnable = BoolToGLBoolean(createInfo->depthWriteEnable);
-			renderObject->editorObject = createInfo->editorObject;
+			renderObject->bDepthWriteEnable = BoolToGLBoolean(createInfo->bDepthWriteEnable);
+			renderObject->bEditorObject = createInfo->bEditorObject;
 
 			if (renderObject->materialID == InvalidMaterialID)
 			{
@@ -1114,11 +1104,7 @@ namespace flex
 				// TODO: Use INVALID material here (Bright pink)
 				// Hopefully the first material works out okay! Should be better than crashing
 				renderObject->materialID = 0;
-
-				if (!m_Materials.empty())
-				{
-					renderObject->materialName = m_Materials[renderObject->materialID].material.name;
-				}
+				renderObject->materialName = m_Materials[renderObject->materialID].material.name;
 			}
 			else
 			{
@@ -1164,7 +1150,7 @@ namespace flex
 			if (createInfo->indices != nullptr &&
 				!createInfo->indices->empty())
 			{
-				renderObject->indexed = true;
+				renderObject->bIndexed = true;
 
 				glGenBuffers(1, &renderObject->IBO);
 				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderObject->IBO);
@@ -1232,12 +1218,12 @@ namespace flex
 			}
 		}
 
-		void GLRenderer::ClearMaterials()
+		void GLRenderer::ClearMaterials(bool bDestroyEngineMats /* = false */)
 		{
 			auto iter = m_Materials.begin();
 			while (iter != m_Materials.end())
 			{
-				if (!iter->second.material.engineMaterial)
+				if (bDestroyEngineMats || iter->second.material.engineMaterial == false)
 				{
 					iter = m_Materials.erase(iter);
 				}
@@ -1280,21 +1266,7 @@ namespace flex
 
 					if (bRandomizeSkybox && !m_AvailableHDRIs.empty())
 					{
-						i32 matIdx = -1;
-						i32 attemptCount = 0;
-						do
-						{
-							matIdx = RandomInt(0, (i32)m_AvailableHDRIs.size());
-							++attemptCount;
-						} while (!FileExists(m_AvailableHDRIs[matIdx]) && attemptCount < 15);
-
-						if (matIdx == -1)
-						{
-							PrintWarn("Unable to open any randomly chosen HDRI!\n");
-							return;
-						}
-
-						equirectangularToCubeMatCreateInfo.hdrEquirectangularTexturePath = m_AvailableHDRIs[matIdx];
+						equirectangularToCubeMatCreateInfo.hdrEquirectangularTexturePath = PickRandomSkyboxTexture();
 					}
 
 					equirectangularToCubeMatID = InitializeMaterial(&equirectangularToCubeMatCreateInfo, equirectangularToCubeMatID);
@@ -1333,14 +1305,14 @@ namespace flex
 				glBindVertexArray(skyboxRenderObject->VAO);
 				glBindBuffer(GL_ARRAY_BUFFER, skyboxRenderObject->VBO);
 
-				if (skyboxRenderObject->enableCulling)
+				if (skyboxRenderObject->cullFace == GL_NONE)
 				{
-					glEnable(GL_CULL_FACE);
-					glCullFace(skyboxRenderObject->cullFace);
+					glDisable(GL_CULL_FACE);
 				}
 				else
 				{
-					glDisable(GL_CULL_FACE);
+					glEnable(GL_CULL_FACE);
+					glCullFace(skyboxRenderObject->cullFace);
 				}
 
 				glDepthFunc(skyboxRenderObject->depthTestReadFunc);
@@ -1357,7 +1329,7 @@ namespace flex
 
 					glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-					glDepthMask(skyboxRenderObject->depthWriteEnable);
+					glDepthMask(skyboxRenderObject->bDepthWriteEnable);
 
 					glDrawArrays(skyboxRenderObject->topology, 0,
 						(GLsizei)skyboxRenderObject->vertexBufferData->VertexCount);
@@ -1405,7 +1377,7 @@ namespace flex
 
 				glUniformMatrix4fv(prefilterMat.uniformIDs.projection, 1, GL_FALSE, &m_CaptureProjection[0][0]);
 
-				glActiveTexture(GL_TEXTURE0); // TODO: Remove constant
+				glActiveTexture(GL_TEXTURE0);
 				glBindTexture(GL_TEXTURE_CUBE_MAP, m_Materials[cubemapMaterialID].cubemapSamplerID);
 
 				glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
@@ -1413,18 +1385,18 @@ namespace flex
 				glBindVertexArray(skybox->VAO);
 				glBindBuffer(GL_ARRAY_BUFFER, skybox->VBO);
 
-				if (skybox->enableCulling)
+				if (skybox->cullFace == GL_NONE)
+				{
+					glDisable(GL_CULL_FACE);
+				}
+				else
 				{
 					glEnable(GL_CULL_FACE);
 					glCullFace(skybox->cullFace);
 				}
-				else
-				{
-					glDisable(GL_CULL_FACE);
-				}
 
 				glDepthFunc(skybox->depthTestReadFunc);
-				glDepthMask(skybox->depthWriteEnable);
+				glDepthMask(skybox->bDepthWriteEnable);
 
 				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
 				i32 roughnessUniformLocation = glGetUniformLocation(prefilterShader.program, "roughness");
@@ -1434,8 +1406,8 @@ namespace flex
 				{
 					u32 mipWidth = (u32)(m_Materials[cubemapMaterialID].material.prefilteredMapSize.x * pow(0.5f, mip));
 					u32 mipHeight = (u32)(m_Materials[cubemapMaterialID].material.prefilteredMapSize.y * pow(0.5f, mip));
-					assert(mipWidth <= Renderer::MAX_TEXTURE_DIM);
-					assert(mipHeight <= Renderer::MAX_TEXTURE_DIM);
+					assert(mipWidth <= MAX_TEXTURE_DIM);
+					assert(mipHeight <= MAX_TEXTURE_DIM);
 
 					glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, mipWidth, mipHeight);
 
@@ -1454,7 +1426,7 @@ namespace flex
 					}
 				}
 
-				// TODO: Make this a togglable bool param for the shader (or roughness param)
+
 				// Visualize prefiltered map as skybox:
 				//m_Materials[renderObject->materialID].cubemapSamplerID = m_Materials[renderObject->materialID].prefilteredMapSamplerID;
 			}
@@ -1501,10 +1473,7 @@ namespace flex
 					m_1x1_NDC_QuadVertexBufferData = {};
 					m_1x1_NDC_QuadVertexBufferData.Initialize(&quadVertexBufferDataCreateInfo);
 
-					m_1x1_NDC_QuadTransform = Transform::Identity();
-
-
-					GameObject* oneByOneQuadGameObject = new GameObject("1x1 Quad", GameObjectType::NONE);
+					GameObject* oneByOneQuadGameObject = new GameObject("1x1 Quad", GameObjectType::_NONE);
 					m_PersistentObjects.push_back(oneByOneQuadGameObject);
 					// Don't render this normally, we'll draw it manually
 					oneByOneQuadGameObject->SetVisible(false);
@@ -1514,7 +1483,7 @@ namespace flex
 					quadCreateInfo.vertexBufferData = &m_1x1_NDC_QuadVertexBufferData;
 					quadCreateInfo.gameObject = oneByOneQuadGameObject;
 					quadCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
-					quadCreateInfo.depthWriteEnable = false;
+					quadCreateInfo.bDepthWriteEnable = false;
 					quadCreateInfo.visibleInSceneExplorer = false;
 
 					RenderID quadRenderID = InitializeRenderObject(&quadCreateInfo);
@@ -1527,7 +1496,7 @@ namespace flex
 					else
 					{
 						SetTopologyMode(quadRenderID, TopologyMode::TRIANGLE_STRIP);
-						m_1x1_NDC_QuadVertexBufferData.DescribeShaderVariables(g_Renderer, quadRenderID);
+						m_1x1_NDC_QuadVertexBufferData.DescribeShaderVariables(this, quadRenderID);
 					}
 				}
 
@@ -1543,14 +1512,14 @@ namespace flex
 
 				glViewport(0, 0, brdfLUTSize, brdfLUTSize);
 
-				if (m_1x1_NDC_Quad->enableCulling)
+				if (m_1x1_NDC_Quad->cullFace == GL_NONE)
 				{
-					glEnable(GL_CULL_FACE);
-					glCullFace(m_1x1_NDC_Quad->cullFace);
+					glDisable(GL_CULL_FACE);
 				}
 				else
 				{
-					glDisable(GL_CULL_FACE);
+					glEnable(GL_CULL_FACE);
+					glCullFace(m_1x1_NDC_Quad->cullFace);
 				}
 
 				glDepthFunc(GL_ALWAYS);
@@ -1603,7 +1572,7 @@ namespace flex
 
 				glUniformMatrix4fv(irradianceMat.uniformIDs.projection, 1, GL_FALSE, &m_CaptureProjection[0][0]);
 
-				glActiveTexture(GL_TEXTURE0); // TODO: Remove constant
+				glActiveTexture(GL_TEXTURE0);
 				glBindTexture(GL_TEXTURE_CUBE_MAP, m_Materials[cubemapMaterialID].cubemapSamplerID);
 
 				glm::vec2 cubemapSize = m_Materials[cubemapMaterialID].material.irradianceSamplerSize;
@@ -1614,19 +1583,19 @@ namespace flex
 
 				glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
 
-				if (skybox->enableCulling)
+				if (skybox->cullFace == GL_NONE)
+				{
+					glDisable(GL_CULL_FACE);
+				}
+				else
 				{
 					glEnable(GL_CULL_FACE);
 					glCullFace(skybox->cullFace);
 				}
-				else
-				{
-					glDisable(GL_CULL_FACE);
-				}
 
 				glDepthFunc(skybox->depthTestReadFunc);
 
-				glDepthMask(skybox->depthWriteEnable);
+				glDepthMask(skybox->bDepthWriteEnable);
 
 				glBindVertexArray(skybox->VAO);
 				glBindBuffer(GL_ARRAY_BUFFER, skybox->VBO);
@@ -1669,13 +1638,13 @@ namespace flex
 
 				glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
 
-				for (size_t face = 0; face < 6; ++face)
+				for (u32 face = 0; face < 6; ++face)
 				{
 					// Clear all G-Buffers
 					if (!cubemapMaterial->cubemapSamplerGBuffersIDs.empty())
 					{
 						// Skip first buffer, it'll be cleared below
-						for (size_t i = 1; i < cubemapMaterial->cubemapSamplerGBuffersIDs.size(); ++i)
+						for (u32 i = 1; i < cubemapMaterial->cubemapSamplerGBuffersIDs.size(); ++i)
 						{
 							glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i,
 								GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerGBuffersIDs[i].id, 0);
@@ -1700,7 +1669,7 @@ namespace flex
 				drawCallInfo.depthTestFunc = DepthTestFunc::ALWAYS;
 				ShadeDeferredObjects(drawCallInfo);
 				drawCallInfo.bWriteToDepth = true;
-				drawCallInfo.depthTestFunc = DepthTestFunc::LEQUAL;
+				drawCallInfo.depthTestFunc = DepthTestFunc::GEQUAL;
 				DrawForwardObjects(drawCallInfo);
 			}
 			Profiler::PrintBlockDuration(profilerBlockName);
@@ -1744,18 +1713,10 @@ namespace flex
 			m_bRebatchRenderObjects = true;
 		}
 
-		void GLRenderer::SetRenderGrid(bool bRenderGrid)
-		{
-			Renderer::SetRenderGrid(bRenderGrid);
-
-			m_Grid->SetVisible(bRenderGrid);
-			m_WorldOrigin->SetVisible(bRenderGrid);
-		}
-
 		bool GLRenderer::GetShaderID(const std::string& shaderName, ShaderID& shaderID)
 		{
 			// TODO: Store shaders using sorted data structure?
-			for (size_t i = 0; i < m_Shaders.size(); ++i)
+			for (u32 i = 0; i < m_Shaders.size(); ++i)
 			{
 				if (m_Shaders[i].shader.name.compare(shaderName) == 0)
 				{
@@ -1769,7 +1730,7 @@ namespace flex
 
 		bool GLRenderer::GetMaterialID(const std::string& materialName, MaterialID& materialID)
 		{
-			// TODO: Store shaders using sorted data structure?
+			// TODO: Store materials using sorted data structure?
 			for (auto& materialPair : m_Materials)
 			{
 				if (materialPair.second.material.name.compare(materialName) == 0)
@@ -1787,7 +1748,7 @@ namespace flex
 					MaterialCreateInfo matCreateInfo = {};
 					Material::ParseJSONObject(materialObj, matCreateInfo);
 
-					materialID = g_Renderer->InitializeMaterial(&matCreateInfo);
+					materialID = InitializeMaterial(&matCreateInfo);
 					g_SceneManager->CurrentScene()->AddMaterialID(materialID);
 
 					return true;
@@ -1795,6 +1756,31 @@ namespace flex
 			}
 
 			return false;
+		}
+
+		MaterialID GLRenderer::GetMaterialID(RenderID renderID)
+		{
+			GLRenderObject* renderObject = GetRenderObject(renderID);
+			if (renderObject != nullptr)
+			{
+				return renderObject->materialID;
+			}
+			return InvalidMaterialID;
+		}
+
+		std::vector<Pair<std::string, MaterialID>> GLRenderer::GetValidMaterialNames() const
+		{
+			std::vector<Pair<std::string, MaterialID>> result;
+
+			for (auto& matPair : m_Materials)
+			{
+				if (!matPair.second.material.engineMaterial)
+				{
+					result.emplace_back(matPair.second.material.name, matPair.first);
+				}
+			}
+
+			return result;
 		}
 
 		void GLRenderer::SetTopologyMode(RenderID renderID, TopologyMode topology)
@@ -1905,17 +1891,18 @@ namespace flex
 						PrintWarn("Failed to asynchronously save screenshot to %s\n", fileName.c_str());
 					}
 
-					SafeDelete(screenshotAsyncTextureSave);
+					delete screenshotAsyncTextureSave;
+					screenshotAsyncTextureSave = nullptr;
 				}
 			}
 
 			// Fade grid out when far away
 			{
-				float maxHeightVisible = 350.0f;
+				real maxHeightVisible = 350.0f;
 				BaseCamera* camera = g_CameraManager->CurrentCamera();
-				float distCamToGround = camera->GetPosition().y;
-				float maxDistVisible = 300.0f;
-				float distCamToOrigin = glm::distance(camera->GetPosition(), glm::vec3(0, 0, 0));
+				real distCamToGround = camera->GetPosition().y;
+				real maxDistVisible = 300.0f;
+				real distCamToOrigin = glm::distance(camera->GetPosition(), glm::vec3(0, 0, 0));
 
 				glm::vec4 gridColorMutliplier = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f - glm::clamp(distCamToGround / maxHeightVisible, -1.0f, 1.0f));
 				glm::vec4 axisColorMutliplier = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f - glm::clamp(distCamToOrigin / maxDistVisible, -1.0f, 1.0f));;
@@ -1938,21 +1925,15 @@ namespace flex
 				RecaptureReflectionProbe();
 			}
 
-			if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_U))
+			if (m_bCaptureReflectionProbes)
 			{
+				m_bCaptureReflectionProbes = false;
 				RecaptureReflectionProbe();
-			}
-
-			if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_KP_9))
-			{
-				m_bCaptureScreenshot = true;
 			}
 		}
 
 		void GLRenderer::Draw()
 		{
-			//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 			DrawCallInfo drawCallInfo = {};
 
 			UpdateAllMaterialUniforms();
@@ -1976,7 +1957,7 @@ namespace flex
 			drawCallInfo.depthTestFunc = DepthTestFunc::ALWAYS;
 			ShadeDeferredObjects(drawCallInfo);
 			drawCallInfo.bWriteToDepth = true;
-			drawCallInfo.depthTestFunc = DepthTestFunc::LEQUAL;
+			drawCallInfo.depthTestFunc = DepthTestFunc::GEQUAL;
 			DrawForwardObjects(drawCallInfo);
 			DrawWorldSpaceSprites();
 			ApplyPostProcessing();
@@ -1986,9 +1967,33 @@ namespace flex
 				PhysicsDebugRender();
 			}
 
-			// TODO: Draw world space sprites/text here!
+			SetFont(SID("editor-02-ws"));
+			real s = g_SecElapsedSinceProgramStart * 3.5f;
+			DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(1.0f), 1.0f), glm::vec3(2.0f, 1.5f, 0.0f), QUAT_UNIT, 0.0f);
+			DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.95f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 1) * 0.05f, 1.5f + sin(s + 0.3f * 1) * 0.05f, -0.075f * 1), QUAT_UNIT, 0.0f);
+			DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.90f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 2) * 0.07f, 1.5f + sin(s + 0.3f * 2) * 0.07f, -0.075f * 2), QUAT_UNIT, 0.0f);
+			DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.85f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 3) * 0.10f, 1.5f + sin(s + 0.3f * 3) * 0.10f, -0.075f * 3), QUAT_UNIT, 0.0f);
+			DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.80f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 4) * 0.12f, 1.5f + sin(s + 0.3f * 4) * 0.12f, -0.075f * 4), QUAT_UNIT, 0.0f);
+			DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.75f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 5) * 0.15f, 1.5f + sin(s + 0.3f * 5) * 0.15f, -0.075f * 5), QUAT_UNIT, 0.0f);
+			DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.70f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 6) * 0.17f, 1.5f + sin(s + 0.3f * 6) * 0.17f, -0.075f * 6), QUAT_UNIT, 0.0f);
 
-			if (g_EngineInstance->IsRenderingEditorObjects())
+			{
+				std::vector<TextVertex3D> textVerticesWS;
+				UpdateTextBufferWS(textVerticesWS);
+
+				u32 bufferByteCount = (u32)(textVerticesWS.size() * sizeof(TextVertex3D));
+
+				glBindVertexArray(m_TextQuadWS_VAO);
+				glBindBuffer(GL_ARRAY_BUFFER, m_TextQuadWS_VBO);
+				glBufferData(GL_ARRAY_BUFFER, bufferByteCount, textVerticesWS.data(), GL_DYNAMIC_DRAW);
+				glBindBuffer(GL_ARRAY_BUFFER, 0);
+				glBindVertexArray(0);
+			}
+
+			DrawTextWS();
+
+			bool bUsingGameplayCam = g_CameraManager->CurrentCamera()->bIsGameplayCam;
+			if (g_EngineInstance->IsRenderingEditorObjects() && !bUsingGameplayCam)
 			{
 				DrawDepthAwareEditorObjects(drawCallInfo);
 				DrawSelectedObjectWireframe(drawCallInfo);
@@ -2002,122 +2007,102 @@ namespace flex
 				DrawDepthUnawareEditorObjects(drawCallInfo);
 			}
 
+			DrawScreenSpaceSprites();
+
+
 			// Screen-space objects
-#if 1
-			std::vector<glm::vec2> letterOffsetsEmpty;
-			//std::vector<glm::vec2> letterOffsets1;
-			//letterOffsets1.reserve(26);
-			//for (i32 i = 0; i < 26; ++i)
-			//{
-			//	letterOffsets1.emplace_back(
-			//		sin(i * 0.75f + g_SecElapsedSinceProgramStart * 3.0f) * 0.5f,
-			//		cos(i * 0.75f + g_SecElapsedSinceProgramStart * 4.35f) * 0.2f);
-			//}
-			//std::vector<glm::vec2> letterOffsets2;
-			//letterOffsets2.reserve(26);
-			//for (i32 i = 0; i < 26; ++i)
-			//{
-			//	letterOffsets2.emplace_back(
-			//		cos(i + g_SecElapsedSinceProgramStart * 10.0f) * 0.5f,
-			//		sin(i + g_SecElapsedSinceProgramStart * 4.45f) * 0.1f);
-			//}
-			//std::vector<real> letterYOffsets3;
-			//letterYOffsets3.reserve(44);
-			//for (i32 i = 0; i < 44; ++i)
-			//{
-			//	letterYOffsets3.push_back(sin(i * 0.5f + 0.5f + g_SecElapsedSinceProgramStart * 6.0f) * 4.0f);
-			//}
-
-			std::string str;
-
-			SetFont(m_FntGant);
-			DrawString("FLEX ENGINE", glm::vec4(0.95f), AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -0.05f), 0.0f, false, letterOffsetsEmpty);
-			//DrawString("1+/'TEST' \"TEST\"? ABCDEFGHIJKLMNOPQRSTUVWXYZ", glm::vec4(0.95f), AnchorPoint::CENTER, VEC2_ZERO, 1.5f, false, letterOffsetsEmpty);
-			//DrawString("#WOWIE# @LIQWIDICE FILE_NAME.ZIP * 17 (0)", glm::vec4(0.95f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.1f), 1.5f, false, letterOffsetsEmpty);
-			//DrawString("[2+6=? M,M W.W ~`~ \\/ <A>]", glm::vec4(0.95f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.2f), 1.5f, false, letterOffsetsEmpty);
+			SetFont(SID("editor-02"));
+			static const glm::vec4 color(0.95f);
+			DrawStringSS("FLEX ENGINE", color, AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -0.05f), 0.0f);
+			if (g_EngineInstance->IsSimulationPaused())
+			{
+				DrawStringSS("PAUSED", color, AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -0.09f), 0.0f);
+			}
+			//DrawStringSS("1+/'TEST' \"TEST\"? ABCDEFGHIJKLMNOPQRSTUVWXYZ", glm::vec4(0.95f), AnchorPoint::CENTER, VEC2_ZERO, 1.5f, false);
+			//DrawStringSS("#WOWIE# @LIQWIDICE FILE_NAME.ZIP * 17 (0)", glm::vec4(0.95f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.1f), 1.5f, false);
+			//DrawStringSS("[2+6=? M,M W.W ~`~ \\/ <A>]", glm::vec4(0.95f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.2f), 1.5f, false);
 
 			// Text stress test:
-			/*SetFont(m_FntSourceCodePro);
-			DrawString(str, glm::vec4(0.95f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.65f), 3.5f);
-			str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
-			DrawString(str, glm::vec4(0.95f, 0.6f, 0.95f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.6f), 3.5f);
-			str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
-			DrawString(str, glm::vec4(0.8f, 0.9f, 0.1f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.55f), 3.5f);
-			str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
-			DrawString(str, glm::vec4(0.95f, 0.1f, 0.5f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.5f), 3.5f);
-			str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
-			DrawString(str, glm::vec4(0.1f, 0.9f, 0.1f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.45f), 3.5f);
-			str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
-			DrawString(str, glm::vec4(0.2f, 0.4f, 0.7f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.4f), 3.5f);
-			str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
-			DrawString(str, glm::vec4(0.1f, 0.2f, 0.3f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.35f), 3.5f);
-			str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
-			DrawString(str, glm::vec4(0.55f, 0.6f, 0.95f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.3f), 3.5f);
-			str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
-			DrawString(str, glm::vec4(0.3f, 0.3f, 0.9f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.25f), 3.5f);
-			str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
-			DrawString(str, glm::vec4(0.5f, 0.9f, 0.9f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.2f), 3.5f);
-			str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
-			DrawString(str, glm::vec4(0.0f, 0.8f, 0.3f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.15f), 3.5f);
-			str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
-			DrawString(str, glm::vec4(0.8f, 0.4f, 0.1f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.1f), 3.5f);
+#if 0
+			SetFont(SID("editor-02");
+			real yO = -1.0f;
+			std::string str;
+			for (i32 i = 0; i < 5; ++i)
+			{
+				str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
+				DrawStringSS(str, glm::vec4(0.95f), AnchorPoint::CENTER, glm::vec2(0.0f, yO), 3.5f);
+				yO += 0.05f;
+				str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
+				DrawStringSS(str, glm::vec4(0.95f, 0.6f, 0.95f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, yO), 3.5f);
+				yO += 0.05f;
+				str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
+				DrawStringSS(str, glm::vec4(0.8f, 0.9f, 0.1f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, yO), 3.5f);
+				yO += 0.05f;
+				str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
+				DrawStringSS(str, glm::vec4(0.95f, 0.1f, 0.5f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, yO), 3.5f);
+				yO += 0.05f;
+			}
 
-			SetFont(m_FntUbuntuCondensed);
-			str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
-			DrawString(str, glm::vec4(0.95f, 0.5f, 0.1f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.0f), 6);
-			str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
-			DrawString(str, glm::vec4(0.55f, 0.6f, 0.95f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.1f), 6);
-			str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
-			DrawString(str, glm::vec4(0.0f, 0.9f, 0.7f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.2f), 6);
-			str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
-			DrawString(str, glm::vec4(0.55f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.3f), 6);
-			str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
-			DrawString(str, glm::vec4(0.25f, 0.0f, 0.95f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.4f), 6);
-			str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
-			DrawString(str, glm::vec4(0.8f, 0.2f, 0.7f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.5f), 6);
-			str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
-			DrawString(str, glm::vec4(0.95f, 0.8f, 0.6f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.6f), 6);
-			str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
-			DrawString(str, glm::vec4(0.6f, 0.4f, 0.0f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.7f), 6);
-			str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
-			DrawString(str, glm::vec4(0.9f, 0.9f, 0.0f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, 0.8f), 6);*/
+			SetFont(SID("editor-01"));
+			yO = 0.0f;
+			for (i32 i = 0; i < 3; ++i)
+			{
+				str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
+				DrawStringSS(str, glm::vec4(0.95f, 0.5f, 0.1f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, yO), 6);
+				yO += 0.1f;
+				str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
+				DrawStringSS(str, glm::vec4(0.55f, 0.6f, 0.95f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, yO), 6);
+				yO += 0.1f;
+				str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
+				DrawStringSS(str, glm::vec4(0.0f, 0.9f, 0.7f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, yO), 6);
+				yO += 0.1f;
+			}
 
 			//std::string str = std::string("XYZ");
-			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_LEFT, VEC2_ZERO, 3, &letterYOffsetsEmpty);
-			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP, VEC2_ZERO, 3, &letterYOffsetsEmpty);
-			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, VEC2_ZERO, 3, &letterYOffsetsEmpty);
-			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::RIGHT, VEC2_ZERO, 3, &letterYOffsetsEmpty);
-			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM_RIGHT, VEC2_ZERO, 3, &letterYOffsetsEmpty);
-			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM, VEC2_ZERO, 3, &letterYOffsetsEmpty);
-			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM_LEFT, VEC2_ZERO, 3, &letterYOffsetsEmpty);
-			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::LEFT, VEC2_ZERO, 3, &letterYOffsetsEmpty);
-			//DrawString(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::CENTER, VEC2_ZERO, 3, &letterYOffsetsEmpty);
+			//DrawStringSS(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_LEFT, VEC2_ZERO, 3, &letterYOffsetsEmpty);
+			//DrawStringSS(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP, VEC2_ZERO, 3, &letterYOffsetsEmpty);
+			//DrawStringSS(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, VEC2_ZERO, 3, &letterYOffsetsEmpty);
+			//DrawStringSS(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::RIGHT, VEC2_ZERO, 3, &letterYOffsetsEmpty);
+			//DrawStringSS(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM_RIGHT, VEC2_ZERO, 3, &letterYOffsetsEmpty);
+			//DrawStringSS(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM, VEC2_ZERO, 3, &letterYOffsetsEmpty);
+			//DrawStringSS(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM_LEFT, VEC2_ZERO, 3, &letterYOffsetsEmpty);
+			//DrawStringSS(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::LEFT, VEC2_ZERO, 3, &letterYOffsetsEmpty);
+			//DrawStringSS(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::CENTER, VEC2_ZERO, 3, &letterYOffsetsEmpty);
 
 			//std::string fxaaEnabledStr = std::string("FXAA: ") + (m_PostProcessSettings.bEnableFXAA ? "1" : "0");
-			//DrawString(fxaaEnabledStr, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, glm::vec2(-0.01f, 0.0f), 5, &letterYOffsetsEmpty);
+			//DrawStringSS(fxaaEnabledStr, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, glm::vec2(-0.01f, 0.0f), 5, &letterYOffsetsEmpty);
 			//glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 			//std::string resolutionStr = "Frame buffer size: " +  IntToString(frameBufferSize.x) + "x" + IntToString(frameBufferSize.y);
-			//DrawString(resolutionStr, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, glm::vec2(-0.01f, 0.04f), 5, &letterYOffsetsEmpty);
+			//DrawStringSS(resolutionStr, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, glm::vec2(-0.01f, 0.04f), 5, &letterYOffsetsEmpty);
 #endif
 
 			if (m_EditorStrSecRemaining > 0.0f)
 			{
-				SetFont(m_FntUbuntuCondensed);
+				SetFont(SID("editor-01"));
 				real alpha = glm::clamp(m_EditorStrSecRemaining / (m_EditorStrSecDuration*m_EditorStrFadeDurationPercent),
-										0.0f, 1.0f);
-				DrawString(m_EditorMessage, glm::vec4(1.0f, 1.0f, 1.0f, alpha), AnchorPoint::CENTER, VEC2_ZERO, 3, false, {});
+					0.0f, 1.0f);
+				DrawStringSS(m_EditorMessage, glm::vec4(1.0f, 1.0f, 1.0f, alpha), AnchorPoint::CENTER, VEC2_ZERO, 3);
 			}
 
-			DrawScreenSpaceSprites();
+			{
+				std::vector<TextVertex2D> textVerticesSS;
+				UpdateTextBufferSS(textVerticesSS);
 
-			PROFILE_BEGIN("Render > UpdateTextBuffer & DrawText");
-			UpdateTextBuffer();
-			DrawText();
-			PROFILE_END("Render > UpdateTextBuffer & DrawText");
+				u32 bufferByteCount = (u32)(textVerticesSS.size() * sizeof(TextVertex2D));
+
+				glBindVertexArray(m_TextQuadSS_VAO);
+				glBindBuffer(GL_ARRAY_BUFFER, m_TextQuadSS_VBO);
+				glBufferData(GL_ARRAY_BUFFER, bufferByteCount, textVerticesSS.data(), GL_DYNAMIC_DRAW);
+				glBindBuffer(GL_ARRAY_BUFFER, 0);
+				glBindVertexArray(0);
+			}
+
+
+			DrawTextSS();
 
 			if (g_EngineInstance->IsRenderingImGui())
 			{
-				PROFILE_AUTO("Render > ImGuiRender");
+				PROFILE_AUTO("ImGuiRender");
 
 				GL_PUSH_DEBUG_GROUP("ImGui");
 
@@ -2132,16 +2117,16 @@ namespace flex
 
 			if (m_bCaptureScreenshot && screenshotAsyncTextureSave == nullptr)
 			{
-				glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+				m_bCaptureScreenshot = false;
+
+				const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+
 				TextureHandle handle;
 				handle.internalFormat = GL_RGBA16F;
 				handle.format = GL_RGBA;
 				handle.type = GL_FLOAT;
+
 				GLuint newFrameBufferFBO;
-
-				m_bCaptureScreenshot = false;
-
-
 				glGenFramebuffers(1, &newFrameBufferFBO);
 				glBindFramebuffer(GL_FRAMEBUFFER, newFrameBufferFBO);
 
@@ -2173,25 +2158,13 @@ namespace flex
 
 			m_bRebatchRenderObjects = false;
 
-			/*
-			TODO: Don't create two nested vectors every call, just sort things by deferred/forward, then by material ID
-
-
-			Eg. deferred | matID
-			yes		 0
-			yes		 2
-			no		 1
-			no		 3
-			no		 5
-			*/
-
 			m_DeferredRenderObjectBatches.clear();
 			m_ForwardRenderObjectBatches.clear();
 			m_DepthAwareEditorRenderObjectBatch.clear();
 			m_DepthUnawareEditorRenderObjectBatch.clear();
 
 			// Sort render objects into deferred + forward buckets
-			for (auto& materialPair : m_Materials)
+			for (const auto& materialPair : m_Materials)
 			{
 				MaterialID matID = materialPair.first;
 				ShaderID shaderID = materialPair.second.material.shaderID;
@@ -2203,34 +2176,42 @@ namespace flex
 				}
 				GLShader* shader = &m_Shaders[shaderID];
 
-				if (shader->shader.deferred)
+				if (shader->shader.bDeferred)
 				{
-					m_DeferredRenderObjectBatches.emplace_back();
+					GLRenderObjectBatch batch = {};
 					for (GLRenderObject* renderObject : m_RenderObjects)
 					{
 						if (renderObject &&
 							renderObject->gameObject->IsVisible() &&
 							renderObject->materialID == matID &&
-							!renderObject->editorObject &&
+							!renderObject->bEditorObject &&
 							renderObject->vertexBufferData)
 						{
-							m_DeferredRenderObjectBatches.back().push_back(renderObject);
+							batch.push_back(renderObject);
 						}
+					}
+					if (!batch.empty())
+					{
+						m_DeferredRenderObjectBatches.push_back(batch);
 					}
 				}
 				else
 				{
-					m_ForwardRenderObjectBatches.emplace_back();
+					GLRenderObjectBatch batch = {};
 					for (GLRenderObject* renderObject : m_RenderObjects)
 					{
 						if (renderObject &&
 							renderObject->gameObject->IsVisible() &&
 							renderObject->materialID == matID &&
-							!renderObject->editorObject &&
+							!renderObject->bEditorObject &&
 							renderObject->vertexBufferData)
 						{
-							m_ForwardRenderObjectBatches.back().push_back(renderObject);
+							batch.push_back(renderObject);
 						}
+					}
+					if (!batch.empty())
+					{
+						m_ForwardRenderObjectBatches.push_back(batch);
 					}
 				}
 			}
@@ -2239,10 +2220,10 @@ namespace flex
 			{
 				if (renderObject &&
 					renderObject->gameObject->IsVisible() &&
-					renderObject->editorObject &&
+					renderObject->bEditorObject &&
 					renderObject->vertexBufferData)
 				{
-					if (renderObject->depthWriteEnable)
+					if (renderObject->bDepthWriteEnable)
 					{
 						m_DepthAwareEditorRenderObjectBatch.push_back(renderObject);
 					}
@@ -2253,13 +2234,13 @@ namespace flex
 				}
 			}
 
-#if _DEBUG
+#if DEBUG
 			u32 visibleObjectCount = 0;
 			for (GLRenderObject* renderObject : m_RenderObjects)
 			{
 				if (renderObject &&
 					renderObject->gameObject->IsVisible() &&
-					!renderObject->editorObject &&
+					!renderObject->bEditorObject &&
 					renderObject->vertexBufferData)
 				{
 					++visibleObjectCount;
@@ -2267,12 +2248,12 @@ namespace flex
 			}
 
 			u32 accountedForObjectCount = 0;
-			for (std::vector<GLRenderObject*>& batch : m_DeferredRenderObjectBatches)
+			for (const GLRenderObjectBatch& batch : m_DeferredRenderObjectBatches)
 			{
 				accountedForObjectCount += batch.size();
 			}
 
-			for (std::vector<GLRenderObject*>& batch : m_ForwardRenderObjectBatches)
+			for (const GLRenderObjectBatch& batch : m_ForwardRenderObjectBatches)
 			{
 				accountedForObjectCount += batch.size();
 			}
@@ -2290,7 +2271,7 @@ namespace flex
 
 			GL_PUSH_DEBUG_GROUP("Shadow Map Depths");
 
-			if (m_DirectionalLight->bCastShadow && m_DirectionalLight->enabled)
+			if (m_DirectionalLight != nullptr && m_DirectionalLight->bCastShadow && m_DirectionalLight->data.enabled)
 			{
 				GLMaterial* material = &m_Materials[m_ShadowMaterialID];
 				GLShader* shader = &m_Shaders[material->material.shaderID];
@@ -2316,13 +2297,11 @@ namespace flex
 
 				glCullFace(GL_FRONT);
 
-				for (const std::vector<GLRenderObject*>& batch : m_DeferredRenderObjectBatches)
+				for (const GLRenderObjectBatch& batch : m_DeferredRenderObjectBatches)
 				{
 					DrawRenderObjectBatch(batch, drawCallInfo);
 				}
 
-				//glBindFramebuffer(GL_FRAMEBUFFER, 0);
-				//glDrawBuffer(GL_BACK);
 				glCullFace(GL_BACK);
 			}
 
@@ -2375,7 +2354,7 @@ namespace flex
 
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-			for (std::vector<GLRenderObject*>& batch : m_DeferredRenderObjectBatches)
+			for (GLRenderObjectBatch& batch : m_DeferredRenderObjectBatches)
 			{
 				DrawRenderObjectBatch(batch, drawCallInfo);
 			}
@@ -2404,6 +2383,8 @@ namespace flex
 					frameBufferSize.y, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
 			}
 			glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+			glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
+			glBindRenderbuffer(GL_RENDERBUFFER, m_gBufferDepthHandle);
 
 			GL_POP_DEBUG_GROUP();
 		}
@@ -2456,14 +2437,14 @@ namespace flex
 				u32 bindingOffset = BindDeferredFrameBufferTextures(cubemapMaterial);
 				BindTextures(&cubemapShader->shader, cubemapMaterial, bindingOffset);
 
-				if (skybox->enableCulling)
+				if (skybox->cullFace == GL_NONE)
 				{
-					glEnable(GL_CULL_FACE);
-					glCullFace(skybox->cullFace);
+					glDisable(GL_CULL_FACE);
 				}
 				else
 				{
-					glDisable(GL_CULL_FACE);
+					glEnable(GL_CULL_FACE);
+					glCullFace(skybox->cullFace);
 				}
 
 				glDepthFunc(DepthTestFuncToGlenum(drawCallInfo.depthTestFunc));
@@ -2512,14 +2493,14 @@ namespace flex
 				u32 bindingOffset = BindFrameBufferTextures(material);
 				BindTextures(shader, material, bindingOffset);
 
-				if (gBufferQuad->enableCulling)
+				if (gBufferQuad->cullFace == GL_NONE)
 				{
-					glEnable(GL_CULL_FACE);
-					glCullFace(gBufferQuad->cullFace);
+					glDisable(GL_CULL_FACE);
 				}
 				else
 				{
-					glDisable(GL_CULL_FACE);
+					glEnable(GL_CULL_FACE);
+					glCullFace(gBufferQuad->cullFace);
 				}
 
 				glDepthFunc(DepthTestFuncToGlenum(drawCallInfo.depthTestFunc));
@@ -2543,7 +2524,7 @@ namespace flex
 				PrintError("DrawForwardObjects was called with a drawCallInfo which is set to be deferred!\n");
 			}
 
-			for (std::vector<GLRenderObject*>& batch : m_ForwardRenderObjectBatches)
+			for (GLRenderObjectBatch& batch : m_ForwardRenderObjectBatches)
 			{
 				DrawRenderObjectBatch(batch, drawCallInfo);
 			}
@@ -2578,7 +2559,7 @@ namespace flex
 			{
 				GL_PUSH_DEBUG_GROUP("Selected Object Wireframe");
 
-				std::vector<GLRenderObject*> selectedObjectRenderBatch;
+				GLRenderObjectBatch selectedObjectRenderBatch;
 				for (GameObject* selectedObject : selectedObjects)
 				{
 					RenderID renderID = selectedObject->GetRenderID();
@@ -2592,10 +2573,7 @@ namespace flex
 					}
 				}
 
-				static const glm::vec4 color0 = { 0.95f, 0.95f, 0.95f, 0.4f };
-				static const glm::vec4 color1 = { 0.85f, 0.15f, 0.85f, 0.4f };
-				real pulseSpeed = 8.0f;
-				GetMaterial(m_SelectedObjectMatID).colorMultiplier = Lerp(color0, color1, sin(g_SecElapsedSinceProgramStart * pulseSpeed) * 0.5f + 0.5f);
+				GetMaterial(m_SelectedObjectMatID).colorMultiplier = GetSelectedObjectColorMultiplier();
 
 				DrawCallInfo selectedObjectsDrawInfo = {};
 				selectedObjectsDrawInfo.materialOverride = m_SelectedObjectMatID;
@@ -2707,68 +2685,6 @@ namespace flex
 			}
 			m_QueuedSSSprites.clear();
 
-			static glm::vec3 pos(0.01f, -0.01f, 0.0f);
-
-			if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_RIGHT))
-			{
-				pos.x += g_DeltaTime * 1.0f;
-			}
-			if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_LEFT))
-			{
-				pos.x -= g_DeltaTime * 1.0f;
-			}
-			if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_UP))
-			{
-				pos.y += g_DeltaTime * 1.0f;
-			}
-			if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_DOWN))
-			{
-				pos.y -= g_DeltaTime * 1.0f;
-			}
-
-			//glm::vec4 color(1.0f);
-			//
-			//SpriteQuadDrawInfo drawInfo = {};
-			//drawInfo.bScreenSpace = true;
-			//drawInfo.bReadDepth = false;
-			//drawInfo.bWriteDepth = false;
-			//drawInfo.pos = pos;
-			//drawInfo.scale = glm::vec3(1.0, -1.0, 1.0f);
-			//drawInfo.materialID = m_SpriteMatID;
-			//drawInfo.anchor = AnchorPoint::WHOLE;
-			//drawInfo.inputTextureHandle = m_WorkTexture->handle;
-			//drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
-			//DrawSpriteQuad(drawInfo);
-
-			//drawInfo.scale = glm::vec3(0.25f, -0.25f, 1.0f);
-			//drawInfo.anchor = AnchorPoint::BOTTOM_LEFT;
-			//DrawSpriteQuad(drawInfo);
-
-			//drawInfo.anchor = AnchorPoint::LEFT;
-			//DrawSpriteQuad(drawInfo);
-
-			//drawInfo.anchor = AnchorPoint::TOP_LEFT;
-			//DrawSpriteQuad(drawInfo);
-
-			//drawInfo.anchor = AnchorPoint::TOP;
-			//DrawSpriteQuad(drawInfo);
-
-			//drawInfo.color = glm::vec4(1.0f, sin(g_SecElapsedSinceProgramStart) * 0.3f + 0.7f, 0.5f, 1.0f);
-			//drawInfo.anchor = AnchorPoint::TOP_RIGHT;
-			//DrawSpriteQuad(drawInfo);
-
-			//drawInfo.anchor = AnchorPoint::RIGHT;
-			//DrawSpriteQuad(drawInfo);
-
-			//drawInfo.anchor = AnchorPoint::BOTTOM_RIGHT;
-			//DrawSpriteQuad(drawInfo);
-
-			//drawInfo.anchor = AnchorPoint::BOTTOM;
-			//DrawSpriteQuad(drawInfo);
-
-			//drawInfo.anchor = AnchorPoint::CENTER;
-			//DrawSpriteQuad(drawInfo);
-
 			GL_POP_DEBUG_GROUP();
 		}
 
@@ -2786,51 +2702,52 @@ namespace flex
 			}
 			m_QueuedWSSprites.clear();
 
-			glm::vec3 scale(1.0f, -1.0f, 1.0f);
-
-			SpriteQuadDrawInfo drawInfo = {};
-			drawInfo.FBO = m_Offscreen0FBO;
-			drawInfo.RBO = m_Offscreen0RBO;
-			drawInfo.bScreenSpace = false;
-			drawInfo.bReadDepth = true;
-			drawInfo.bWriteDepth = true;
-			drawInfo.scale = scale;
-			drawInfo.materialID = m_SpriteMatID;
-			drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
-
 			BaseCamera* cam = g_CameraManager->CurrentCamera();
-			glm::vec3 camPos = cam->GetPosition();
-			glm::vec3 camUp = cam->GetUp();
-			for (PointLight* pointLight : m_PointLights)
+			if (!cam->bIsGameplayCam)
 			{
-				if (pointLight->enabled)
+				glm::vec3 scale(1.0f, -1.0f, 1.0f);
+
+				SpriteQuadDrawInfo drawInfo = {};
+				drawInfo.FBO = m_Offscreen0FBO;
+				drawInfo.RBO = m_Offscreen0RBO;
+				drawInfo.bScreenSpace = false;
+				drawInfo.bReadDepth = true;
+				drawInfo.bWriteDepth = true;
+				drawInfo.scale = scale;
+				drawInfo.materialID = m_SpriteMatID;
+				drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
+
+				glm::vec3 camPos = cam->GetPosition();
+				glm::vec3 camUp = cam->GetUp();
+				for (i32 i = 0; i < m_NumPointLightsEnabled; ++i)
 				{
-					// TODO: Sort back to front? Or clear depth and then enable depth test
-					drawInfo.pos = pointLight->GetPos();
-					drawInfo.color = pointLight->color * 1.5f;
-					drawInfo.color.a = pointLight->color.a;
-					drawInfo.textureHandleID = m_LoadedTextures[m_PointLightIconID]->handle;
-					glm::mat4 rotMat = glm::lookAt(camPos, (glm::vec3)pointLight->GetPos(), camUp);
+					if (m_PointLights[i].enabled)
+					{
+						// TODO: Sort back to front? Or clear depth and then enable depth test
+						drawInfo.pos = m_PointLights[i].pos;
+						drawInfo.color = glm::vec4(m_PointLights[i].color * 1.5f, 1.0f);
+						drawInfo.textureHandleID = m_LoadedTextures[m_PointLightIconID]->handle;
+						glm::mat4 rotMat = glm::lookAt(camPos, glm::vec3(m_PointLights[i].pos), camUp);
+						drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
+						DrawSpriteQuad(drawInfo);
+					}
+				}
+
+				if (m_DirectionalLight != nullptr && m_DirectionalLight->data.enabled)
+				{
+					drawInfo.color = glm::vec4(m_DirectionalLight->data.color * 1.5f, 1.0f);
+					drawInfo.pos = m_DirectionalLight->pos;
+					drawInfo.textureHandleID = m_LoadedTextures[m_DirectionalLightIconID]->handle;
+					glm::mat4 rotMat = glm::lookAt(camPos, (glm::vec3)m_DirectionalLight->pos, camUp);
 					drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
 					DrawSpriteQuad(drawInfo);
+
+					glm::vec3 dirLightForward = m_DirectionalLight->data.dir;
+					m_PhysicsDebugDrawer->drawLine(
+						ToBtVec3(m_DirectionalLight->pos),
+						ToBtVec3(m_DirectionalLight->pos - dirLightForward * 2.5f),
+						btVector3(0.0f, 0.0f, 1.0f));
 				}
-			}
-
-			if (m_DirectionalLight->enabled)
-			{
-				drawInfo.color = m_DirectionalLight->color * 1.5f;
-				drawInfo.color.a = m_DirectionalLight->color.a;
-				drawInfo.pos = m_DirectionalLight->GetPos();
-				drawInfo.textureHandleID = m_LoadedTextures[m_DirectionalLightIconID]->handle;
-				glm::mat4 rotMat = glm::lookAt(camPos, (glm::vec3)m_DirectionalLight->GetPos(), camUp);
-				drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
-				DrawSpriteQuad(drawInfo);
-
-				glm::vec3 dirLightForward = VEC3_RIGHT * m_DirectionalLight->GetRot();
-				m_PhysicsDebugDrawer->drawLine(
-					ToBtVec3(m_DirectionalLight->GetPos()),
-					ToBtVec3(m_DirectionalLight->GetPos() - dirLightForward * 2.5f),
-					btVector3(0.0f, 0.0f, 1.0f));
 			}
 
 			GL_POP_DEBUG_GROUP();
@@ -2852,7 +2769,7 @@ namespace flex
 			}
 			GLRenderObject* spriteRenderObject = GetRenderObject(spriteRenderID);
 			if (!spriteRenderObject ||
-				(spriteRenderObject->editorObject && !g_EngineInstance->IsRenderingEditorObjects()))
+				(spriteRenderObject->bEditorObject && !g_EngineInstance->IsRenderingEditorObjects()))
 			{
 				return;
 			}
@@ -2871,7 +2788,7 @@ namespace flex
 			const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 			const real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
 
-			if (spriteShader.shader.dynamicBufferUniforms.HasUniform(Uniform::MODEL))
+			if (spriteShader.shader.dynamicBufferUniforms.HasUniform(U_MODEL))
 			{
 				glm::vec3 translation = drawInfo.pos;
 				glm::quat rotation = drawInfo.rotation;
@@ -2901,7 +2818,7 @@ namespace flex
 				glUniformMatrix4fv(spriteMaterial.uniformIDs.model, 1, GL_TRUE, &model[0][0]);
 			}
 
-			if (spriteShader.shader.constantBufferUniforms.HasUniform(Uniform::VIEW))
+			if (spriteShader.shader.constantBufferUniforms.HasUniform(U_VIEW))
 			{
 				if (drawInfo.bScreenSpace)
 				{
@@ -2917,7 +2834,7 @@ namespace flex
 				}
 			}
 
-			if (spriteShader.shader.constantBufferUniforms.HasUniform(Uniform::PROJECTION))
+			if (spriteShader.shader.constantBufferUniforms.HasUniform(U_PROJECTION))
 			{
 				if (drawInfo.bScreenSpace)
 				{
@@ -2935,13 +2852,13 @@ namespace flex
 				}
 			}
 
-			if (spriteShader.shader.dynamicBufferUniforms.HasUniform(Uniform::COLOR_MULTIPLIER))
+			if (spriteShader.shader.dynamicBufferUniforms.HasUniform(U_COLOR_MULTIPLIER))
 			{
 				glUniform4fv(spriteMaterial.uniformIDs.colorMultiplier, 1, &drawInfo.color.r);
 			}
 
 			bool bEnableAlbedoSampler = (drawInfo.textureHandleID != 0 && drawInfo.bEnableAlbedoSampler);
-			if (spriteShader.shader.dynamicBufferUniforms.HasUniform(Uniform::ALBEDO_SAMPLER))
+			if (spriteShader.shader.dynamicBufferUniforms.HasUniform(U_ALBEDO_SAMPLER))
 			{
 				// TODO: glUniform1ui vs glUniform1i ?
 				glUniform1ui(spriteMaterial.uniformIDs.enableAlbedoSampler, bEnableAlbedoSampler ? 1 : 0);
@@ -2951,37 +2868,7 @@ namespace flex
 			GLint cBSLocation = glGetUniformLocation(spriteShader.program, "contrastBrightnessSaturation");
 			if (cBSLocation != -1)
 			{
-				glm::mat4 contrastBrightnessSaturation;
-				if (m_bPostProcessingEnabled)
-				{
-					real sat = m_PostProcessSettings.saturation;
-					glm::vec3 brightness = m_PostProcessSettings.brightness;
-					glm::vec3 offset = m_PostProcessSettings.offset;
-
-					glm::vec3 wgt(0.3086f, 0.6094f, 0.0820f);
-					real a = (1.0f - sat) * wgt.r + sat;
-					real b = (1.0f - sat) * wgt.r;
-					real c = (1.0f - sat) * wgt.r;
-					real d = (1.0f - sat) * wgt.g;
-					real e = (1.0f - sat) * wgt.g + sat;
-					real f = (1.0f - sat) * wgt.g;
-					real g = (1.0f - sat) * wgt.b;
-					real h = (1.0f - sat) * wgt.b;
-					real i = (1.0f - sat) * wgt.b + sat;
-					glm::mat4 satMat = {
-						a, b, c, 0,
-						d, e, f, 0,
-						g, h, i, 0,
-						0, 0, 0, 1
-					};
-
-					contrastBrightnessSaturation = glm::translate(glm::scale(satMat, brightness), offset);
-				}
-				else
-				{
-					contrastBrightnessSaturation = MAT4_IDENTITY;
-				}
-
+				glm::mat4 contrastBrightnessSaturation = GetPostProcessingMatrix();
 				glUniformMatrix4fv(cBSLocation, 1, GL_FALSE, &contrastBrightnessSaturation[0][0]);
 			}
 
@@ -3005,7 +2892,7 @@ namespace flex
 
 			if (drawInfo.bReadDepth)
 			{
-				glDepthFunc(GL_LEQUAL);
+				glDepthFunc(GL_GEQUAL);
 			}
 			else
 			{
@@ -3024,29 +2911,31 @@ namespace flex
 			glEnable(GL_BLEND);
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-			if (spriteRenderObject->enableCulling)
+			if (spriteRenderObject->cullFace == GL_NONE)
+			{
+				glDisable(GL_CULL_FACE);
+			}
+			else
 			{
 				glEnable(GL_CULL_FACE);
 				glCullFace(spriteRenderObject->cullFace);
 			}
-			else
-			{
-				glDisable(GL_CULL_FACE);
-			}
 
 			// TODO: Remove (use draw call info member)
-			glDepthMask(spriteRenderObject->depthWriteEnable);
+			glDepthMask(spriteRenderObject->bDepthWriteEnable);
 			glDrawArrays(spriteRenderObject->topology, 0, (GLsizei)spriteRenderObject->vertexBufferData->VertexCount);
 		}
 
-		void GLRenderer::DrawText()
+		void GLRenderer::DrawTextSS()
 		{
-			GL_PUSH_DEBUG_GROUP("Text");
+			PROFILE_AUTO("DrawTextSS");
+
+			GL_PUSH_DEBUG_GROUP("Text SS");
 
 			bool bHasText = false;
-			for (BitmapFont* font : m_Fonts)
+			for (BitmapFont* font : m_FontsSS)
 			{
-				if (font->m_BufferSize > 0)
+				if (font->GetBufferSize() > 0)
 				{
 					bHasText = true;
 					break;
@@ -3058,7 +2947,7 @@ namespace flex
 				return;
 			}
 
-			GLMaterial& fontMaterial = m_Materials[m_FontMatID];
+			GLMaterial& fontMaterial = m_Materials[m_FontMatSSID];
 			GLShader& fontShader = m_Shaders[fontMaterial.material.shaderID];
 
 			glUseProgram(fontShader.program);
@@ -3083,12 +2972,23 @@ namespace flex
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 			glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
-			glBindVertexArray(m_TextQuadVAO);
-			glBindBuffer(GL_ARRAY_BUFFER, m_TextQuadVBO);
+			glBindVertexArray(m_TextQuadSS_VAO);
+			glBindBuffer(GL_ARRAY_BUFFER, m_TextQuadSS_VBO);
 
-			for (BitmapFont* font : m_Fonts)
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+			glDisable(GL_CULL_FACE);
+
+			glDepthFunc(GL_ALWAYS);
+			glDepthMask(GL_FALSE);
+
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+			for (BitmapFont* font : m_FontsSS)
 			{
-				if (font->m_BufferSize > 0)
+				if (font->GetBufferSize() > 0)
 				{
 					glActiveTexture(GL_TEXTURE0);
 					glBindTexture(GL_TEXTURE_2D, font->GetTexture()->handle);
@@ -3108,18 +3008,78 @@ namespace flex
 					glm::vec2 texSize = (glm::vec2)font->GetTexture()->GetResolution();
 					glUniform2fv(fontMaterial.uniformIDs.texSize, 1, &texSize.r);
 
-					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+					glDrawArrays(GL_POINTS, font->GetBufferStart(), font->GetBufferSize());
+				}
+			}
 
-					glDisable(GL_CULL_FACE);
+			GL_POP_DEBUG_GROUP();
+		}
 
-					glDepthFunc(GL_ALWAYS);
-					glDepthMask(GL_FALSE);
+		void GLRenderer::DrawTextWS()
+		{
+			// TODO: Consolidate with DrawTextSS
 
-					glEnable(GL_BLEND);
-					glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			PROFILE_AUTO("DrawTextWS");
 
-					glDrawArrays(GL_POINTS, font->m_BufferStart, font->m_BufferSize);
+			GL_PUSH_DEBUG_GROUP("Text WS");
+
+			bool bHasText = false;
+			for (BitmapFont* font : m_FontsWS)
+			{
+				if (font->GetBufferSize() > 0)
+				{
+					bHasText = true;
+					break;
+				}
+			}
+
+			if (!bHasText)
+			{
+				return;
+			}
+
+			GLMaterial& fontMaterial = m_Materials[m_FontMatWSID];
+			GLShader& fontShader = m_Shaders[fontMaterial.material.shaderID];
+
+			glUseProgram(fontShader.program);
+
+			glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+
+			glViewport(0, 0, (GLsizei)(frameBufferSize.x), (GLsizei)(frameBufferSize.y));
+
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+			glBindVertexArray(m_TextQuadWS_VAO);
+			glBindBuffer(GL_ARRAY_BUFFER, m_TextQuadWS_VBO);
+
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+			glDisable(GL_CULL_FACE);
+
+			glDepthFunc(GL_GEQUAL);
+			glDepthMask(GL_TRUE);
+
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+			glActiveTexture(GL_TEXTURE0);
+
+			glm::mat4 transformMat = g_CameraManager->CurrentCamera()->GetViewProjection();
+
+			for (BitmapFont* font : m_FontsWS)
+			{
+				if (font->GetBufferSize() > 0)
+				{
+					glBindTexture(GL_TEXTURE_2D, font->GetTexture()->handle);
+
+					glUniformMatrix4fv(fontMaterial.uniformIDs.transformMat, 1, GL_FALSE, &transformMat[0][0]);
+
+					glm::vec2 texSize = (glm::vec2)font->GetTexture()->GetResolution();
+					glUniform2fv(fontMaterial.uniformIDs.texSize, 1, &texSize.r);
+
+					glDrawArrays(GL_POINTS, font->GetBufferStart(), font->GetBufferSize());
 				}
 			}
 
@@ -3130,174 +3090,44 @@ namespace flex
 								  i16 size,
 								  const std::string& fontFilePath,
 								  const std::string& renderedFontFilePath,
-								  bool bForceRender)
+								  bool bForceRender,
+								  bool bScreenSpace)
 		{
-			FT_Error error;
-			error = FT_Init_FreeType(&ft);
-			if (error != FT_Err_Ok)
+			FT_Library ft;
+			// TODO: Only do once per session?
+			if (FT_Init_FreeType(&ft) != FT_Err_Ok)
 			{
-				PrintError("Could not init FreeType\n");
+				PrintError("Failed to initialize FreeType\n");
 				return false;
 			}
+
+			std::map<i32, FontMetric*> characters;
+			std::array<glm::vec2i, 4> maxPos;
 
 			std::vector<char> fileMemory;
 			ReadFile(fontFilePath, fileMemory, true);
 
-			FT_Face face;
-			error = FT_New_Memory_Face(ft, (FT_Byte*)fileMemory.data(), (FT_Long)fileMemory.size(), 0, &face);
-			if (error == FT_Err_Unknown_File_Format)
+			FT_Face face = {};
+			if (!LoadFontMetrics(fileMemory, fontFilePath, ft, font, size, bScreenSpace, &characters, &maxPos, &face))
 			{
-				PrintError("Unhandled font file format: %s\n", fontFilePath.c_str());
 				return false;
 			}
-			else if (error != FT_Err_Ok || !face)
-			{
-				PrintError("Failed to create new font face: %s\n", fontFilePath.c_str());
-				return false;
-			}
-
-			error = FT_Set_Char_Size(face,
-									 0, size * 64,
-									 (FT_UInt)g_Monitor->DPI.x,
-									 (FT_UInt)g_Monitor->DPI.y);
-
-			//FT_Set_Pixel_Sizes(face, 0, fontPixelSize);
 
 			std::string fileName = fontFilePath;
 			StripLeadingDirectories(fileName);
-			Print("Loaded font file %s\n", fileName.c_str());
 
-			std::string fontName = std::string(face->family_name) + " - " + face->style_name;
-			*font = new BitmapFont(size, fontName, face->num_glyphs);
-			BitmapFont* newFont = *font; // Shortcut
+			BitmapFont* newFont = *font;
 
-			m_Fonts.push_back(newFont);
-
-			newFont->m_bUseKerning = FT_HAS_KERNING(face) != 0;
-
-			// Atlas helper variables
-			glm::vec2i startPos[4] = { { 0.0f, 0.0f },{ 0.0f, 0.0f },{ 0.0f, 0.0f },{ 0.0f, 0.0f } };
-			glm::vec2i maxPos[4] = { { 0.0f, 0.0f },{ 0.0f, 0.0f },{ 0.0f, 0.0f },{ 0.0f, 0.0f } };
-			bool bHorizontal = false; // Direction this pass expands the map in (internal moves are !bHorizontal)
-			u32 posCount = 1; // Internal move count in this pass
-			u32 curPos = 0;   // Internal move count
-			u32 channel = 0;  // Current channel writing to
-
+			// TODO: Save in common place
+			u32 sampleDensity = 32;
 			u32 padding = 1;
 			u32 spread = 5;
-			u32 totPadding = padding + spread;
-
-			u32 sampleDensity = 32;
-
-			std::map<i32, FontMetric*> characters;
-			for (i32 c = 0; c < BitmapFont::CHAR_COUNT - 1; ++c)
-			{
-				FontMetric* metric = newFont->GetMetric((wchar_t)c);
-				if (!metric)
-				{
-					continue;
-				}
-
-				metric->character = (wchar_t)c;
-
-				u32 glyphIndex = FT_Get_Char_Index(face, c);
-				// TODO: Is this correct?
-				if (glyphIndex == 0)
-				{
-					continue;
-				}
-
-				//if (newFont->UseKerning() && glyphIndex)
-				//{
-				//	for (i32 previous = 0; previous < BitmapFont::CHAR_COUNT - 1; ++previous)
-				//	{
-				//		FT_Vector delta;
-				//
-				//		u32 prevIdx = FT_Get_Char_Index(face, previous);
-				//		FT_Get_Kerning(face, prevIdx, glyphIndex, FT_KERNING_DEFAULT, &delta);
-				//
-				//		if (delta.x != 0 || delta.y != 0)
-				//		{
-				//			std::wstring charKey(std::wstring(1, (wchar_t)previous) + std::wstring(1, (wchar_t)c));
-				//			metric->kerning[charKey] =
-				//				glm::vec2((real)delta.x / 64.0f, (real)delta.y / 64.0f);
-				//		}
-				//	}
-				//}
-
-				if (FT_Load_Glyph(face, glyphIndex, FT_LOAD_RENDER))
-				{
-					PrintError("Failed to load glyph with index %i\n", glyphIndex);
-					continue;
-				}
-
-
-				u32 width = face->glyph->bitmap.width + totPadding * 2;
-				u32 height = face->glyph->bitmap.rows + totPadding * 2;
-
-
-				metric->width = (u16)width;
-				metric->height = (u16)height;
-				metric->offsetX = (i16)(face->glyph->bitmap_left + totPadding);
-				metric->offsetY = -(i16)(face->glyph->bitmap_top + totPadding);
-				metric->advanceX = (real)face->glyph->advance.x / 64.0f;
-
-				// Generate atlas coordinates
-				metric->channel = (u8)channel;
-				metric->texCoord = startPos[channel];
-				if (bHorizontal)
-				{
-					maxPos[channel].y = std::max(maxPos[channel].y, startPos[channel].y + (i32)height);
-					startPos[channel].y += height;
-					maxPos[channel].x = std::max(maxPos[channel].x, startPos[channel].x + (i32)width);
-				}
-				else
-				{
-					maxPos[channel].x = std::max(maxPos[channel].x, startPos[channel].x + (i32)width);
-					startPos[channel].x += width;
-					maxPos[channel].y = std::max(maxPos[channel].y, startPos[channel].y + (i32)height);
-				}
-				channel++;
-				if (channel == 4)
-				{
-					channel = 0;
-					curPos++;
-					if (curPos == posCount)
-					{
-						curPos = 0;
-						bHorizontal = !bHorizontal;
-						if (bHorizontal)
-						{
-							for (u8 cha = 0; cha < 4; ++cha)
-							{
-								startPos[cha] = glm::vec2i(maxPos[cha].x, 0);
-							}
-						}
-						else
-						{
-							for (u8 cha = 0; cha < 4; ++cha)
-							{
-								startPos[cha] = glm::vec2i(0, maxPos[cha].y);
-							}
-							posCount++;
-						}
-					}
-				}
-
-				metric->bIsValid = true;
-
-				characters[c] = metric;
-			}
 
 			bool bUsingPreRenderedTexture = false;
 			if (!bForceRender)
 			{
 				if (FileExists(renderedFontFilePath))
 				{
-					TextureParameters params(false);
-					params.wrapS = GL_CLAMP_TO_EDGE;
-					params.wrapT = GL_CLAMP_TO_EDGE;
-
 					GLTexture* fontTex = newFont->SetTexture(new GLTexture(renderedFontFilePath, 4, false, false, false));
 
 					if (fontTex->LoadFromFile())
@@ -3307,6 +3137,11 @@ namespace flex
 						for (auto& charPair : characters)
 						{
 							FontMetric* metric = charPair.second;
+							if (isspace(metric->character) ||
+								metric->character == '\0')
+							{
+								continue;
+							}
 
 							u32 glyphIndex = FT_Get_Char_Index(face, metric->character);
 							if (glyphIndex == 0)
@@ -3319,41 +3154,33 @@ namespace flex
 					}
 					else
 					{
-						newFont->m_Texture = nullptr;
-						SafeDelete(fontTex);
+						newFont->ClearTexture();
+						fontTex->Destroy();
+						delete fontTex;
 					}
 				}
 			}
 
 			if (!bUsingPreRenderedTexture)
 			{
+				// Render to glyph atlas
+
 				glm::vec2i textureSize(
 					std::max(std::max(maxPos[0].x, maxPos[1].x), std::max(maxPos[2].x, maxPos[3].x)),
 					std::max(std::max(maxPos[0].y, maxPos[1].y), std::max(maxPos[2].y, maxPos[3].y)));
-				newFont->SetTextureSize(textureSize);
 
-				//Setup rendering
 				TextureParameters params(false);
 				params.wrapS = GL_CLAMP_TO_EDGE;
 				params.wrapT = GL_CLAMP_TO_EDGE;
 
 				GLTexture* fontTex = newFont->SetTexture(new GLTexture(fileName, textureSize.x, textureSize.y, 4, GL_RGBA16F, GL_RGBA, GL_FLOAT));
-				fontTex->GenerateEmpty();
+				fontTex->CreateEmpty();
 				fontTex->Build();
 				fontTex->SetParameters(params);
 
 				GLuint captureFBO;
-				GLuint captureRBO;
-
 				glGenFramebuffers(1, &captureFBO);
-				glGenRenderbuffers(1, &captureRBO);
-
 				glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
-				glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
-
-				glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, textureSize.x, textureSize.y);
-				// TODO: Don't use depth buffer
-				glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, captureRBO);
 				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fontTex->handle, 0);
 
 				glViewport(0, 0, textureSize.x, textureSize.y);
@@ -3376,9 +3203,6 @@ namespace flex
 				glBlendFunc(GL_ONE, GL_ONE);
 
 				GLRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
-
-				//Render to Glyphs atlas
-				FT_Set_Pixel_Sizes(face, 0, size * sampleDensity);
 
 				for (auto& charPair : characters)
 				{
@@ -3411,7 +3235,7 @@ namespace flex
 						continue;
 					}
 
-					FT_Bitmap alignedBitmap{};
+					FT_Bitmap alignedBitmap = {};
 					if (FT_Bitmap_Convert(ft, &face->glyph->bitmap, &alignedBitmap, 4))
 					{
 						PrintError("Couldn't align free type bitmap size\n");
@@ -3421,10 +3245,7 @@ namespace flex
 					u32 width = alignedBitmap.width;
 					u32 height = alignedBitmap.rows;
 
-					if (width == 0 || height == 0)
-					{
-						continue;
-					}
+					assert(width != 0 && height != 0);
 
 					GLuint texHandle;
 					glGenTextures(1, &texHandle);
@@ -3458,7 +3279,6 @@ namespace flex
 						glBindBuffer(GL_ARRAY_BUFFER, gBufferRenderObject->VBO);
 						glDrawArrays(gBufferRenderObject->topology, 0,
 							(GLsizei)gBufferRenderObject->vertexBufferData->VertexCount);
-						glBindVertexArray(0);
 					}
 
 					glDeleteTextures(1, &texHandle);
@@ -3468,12 +3288,13 @@ namespace flex
 					FT_Bitmap_Done(ft, &alignedBitmap);
 				}
 
+				glBindVertexArray(0);
+
 				std::string savedSDFTextureAbsFilePath = RelativePathToAbsolute(renderedFontFilePath);
-				fontTex->SaveToFile(savedSDFTextureAbsFilePath, ImageFormat::PNG, false);
+				fontTex->SaveToFileAsync(savedSDFTextureAbsFilePath, ImageFormat::PNG, false);
 
 				// Cleanup
 				glDisable(GL_BLEND);
-				glDeleteRenderbuffers(1, &captureRBO);
 				glDeleteFramebuffers(1, &captureFBO);
 			}
 
@@ -3481,285 +3302,118 @@ namespace flex
 			FT_Done_FreeType(ft);
 
 
-			// Initialize font shader things
+			// Initialize font shaders
 			{
-				GLMaterial& mat = m_Materials[m_FontMatID];
+				MaterialID matID = bScreenSpace ? m_FontMatSSID : m_FontMatWSID;
+				GLMaterial& mat = m_Materials[matID];
 				GLShader& shader = m_Shaders[mat.material.shaderID];
 				glUseProgram(shader.program);
 
-				glGenVertexArrays(1, &m_TextQuadVAO);
-				glGenBuffers(1, &m_TextQuadVBO);
+				GLuint* VAO = bScreenSpace ? &m_TextQuadSS_VAO : &m_TextQuadWS_VAO;
+				GLuint* VBO = bScreenSpace ? &m_TextQuadSS_VBO : &m_TextQuadWS_VBO;
 
+				glGenVertexArrays(1, VAO);
+				glGenBuffers(1, VBO);
 
-				glBindVertexArray(m_TextQuadVAO);
-				glBindBuffer(GL_ARRAY_BUFFER, m_TextQuadVBO);
+				glBindVertexArray(*VAO);
+				glBindBuffer(GL_ARRAY_BUFFER, *VBO);
 
 				// TODO: Set this value to previous high water mark?
 				i32 bufferSize = 500;
 				glBufferData(GL_ARRAY_BUFFER, bufferSize, NULL, GL_DYNAMIC_DRAW);
 
-				glEnableVertexAttribArray(0);
-				glEnableVertexAttribArray(1);
-				glEnableVertexAttribArray(2);
-				glEnableVertexAttribArray(3);
-				glEnableVertexAttribArray(4);
 
-				glVertexAttribPointer(0, (GLint)2, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, pos));
-				glVertexAttribPointer(1, (GLint)4, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, color));
-				glVertexAttribPointer(2, (GLint)2, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, uv));
-				glVertexAttribPointer(3, (GLint)4, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, charSizePixelsCharSizeNorm));
-				glVertexAttribIPointer(4, (GLint)1, GL_INT, (GLsizei)sizeof(TextVertex), (GLvoid*)offsetof(TextVertex, channel));
+				if (bScreenSpace)
+				{
+					glEnableVertexAttribArray(0);
+					glEnableVertexAttribArray(1);
+					glEnableVertexAttribArray(2);
+					glEnableVertexAttribArray(3);
+					glEnableVertexAttribArray(4);
+
+					glVertexAttribPointer(0, (GLint)2, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex2D), (GLvoid*)offsetof(TextVertex2D, pos));
+					glVertexAttribPointer(1, (GLint)4, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex2D), (GLvoid*)offsetof(TextVertex2D, color));
+					glVertexAttribPointer(2, (GLint)2, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex2D), (GLvoid*)offsetof(TextVertex2D, uv));
+					glVertexAttribPointer(3, (GLint)4, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex2D), (GLvoid*)offsetof(TextVertex2D, charSizePixelsCharSizeNorm));
+					glVertexAttribIPointer(4, (GLint)1, GL_INT, (GLsizei)sizeof(TextVertex2D), (GLvoid*)offsetof(TextVertex2D, channel));
+				}
+				else
+				{
+					glEnableVertexAttribArray(0);
+					glEnableVertexAttribArray(1);
+					glEnableVertexAttribArray(2);
+					glEnableVertexAttribArray(3);
+					glEnableVertexAttribArray(4);
+					glEnableVertexAttribArray(5);
+
+					glVertexAttribPointer(0, (GLint)3, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex3D), (GLvoid*)offsetof(TextVertex3D, pos));
+					glVertexAttribPointer(1, (GLint)4, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex3D), (GLvoid*)offsetof(TextVertex3D, color));
+					glVertexAttribPointer(2, (GLint)3, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex3D), (GLvoid*)offsetof(TextVertex3D, tangent));
+					glVertexAttribPointer(3, (GLint)2, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex3D), (GLvoid*)offsetof(TextVertex3D, uv));
+					glVertexAttribPointer(4, (GLint)4, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(TextVertex3D), (GLvoid*)offsetof(TextVertex3D, charSizePixelsCharSizeNorm));
+					glVertexAttribIPointer(5, (GLint)1, GL_INT, (GLsizei)sizeof(TextVertex3D), (GLvoid*)offsetof(TextVertex3D, channel));
+				}
 			}
 
-			if (bUsingPreRenderedTexture)
+			if (g_bEnableLogging_Loading)
 			{
-				std::string textureFilePath = renderedFontFilePath;
-				StripLeadingDirectories(textureFilePath);
-				Print("Loaded font atlas texture from %s\n", textureFilePath.c_str());
-			}
-			else
-			{
-				Print("Rendered font atlas for %s\n", fileName.c_str());
+				if (bUsingPreRenderedTexture)
+				{
+					std::string textureFilePath = renderedFontFilePath;
+					StripLeadingDirectories(textureFilePath);
+					Print("Loaded font atlas texture from %s\n", textureFilePath.c_str());
+				}
+				else
+				{
+					Print("Rendered font atlas for %s\n", fileName.c_str());
+				}
 			}
 
 			return true;
 		}
 
-		void GLRenderer::SetFont(BitmapFont* font)
-		{
-			m_CurrentFont = font;
-		}
-
-		void GLRenderer::AddEditorString(const std::string& str)
-		{
-			m_EditorMessage = str;
-			if (str.empty())
-			{
-				m_EditorStrSecRemaining = 0.0f;
-			}
-			else
-			{
-				m_EditorStrSecRemaining = m_EditorStrSecDuration;
-			}
-		}
-
-		void GLRenderer::DrawString(const std::string& str,
-									const glm::vec4& color,
-									AnchorPoint anchor,
-									const glm::vec2& pos,
-									real spacing,
-									bool bRaw,
-									const std::vector<glm::vec2>& letterYOffsets)
+		void GLRenderer::DrawStringSS(const std::string& str,
+			const glm::vec4& color,
+			AnchorPoint anchor,
+			const glm::vec2& pos, // Positional offset from anchor
+			real spacing,
+			bool bRaw)
 		{
 			assert(m_CurrentFont != nullptr);
 
-			m_CurrentFont->m_TextCaches.emplace_back(str, anchor, pos, color, spacing, bRaw, letterYOffsets);
+			TextCache newCache(str, anchor, pos, color, spacing, bRaw);
+			m_CurrentFont->AddTextCache(newCache);
 		}
 
-		real GLRenderer::GetStringWidth(const TextCache& textCache, BitmapFont* font) const
+		void GLRenderer::DrawStringWS(const std::string& str,
+			const glm::vec4& color,
+			const glm::vec3& pos,
+			const glm::quat& rot,
+			real spacing,
+			bool bRaw)
 		{
-			real strWidth = 0;
+			assert(m_CurrentFont != nullptr);
 
-			char prevChar = ' ';
-			for (char c : textCache.str)
-			{
-				if (BitmapFont::IsCharValid(c))
-				{
-					FontMetric* metric = font->GetMetric(c);
-
-					if (font->UseKerning())
-					{
-						std::wstring charKey(std::wstring(1, prevChar) + std::wstring(1, c));
-
-						auto iter = metric->kerning.find(charKey);
-						if (iter != metric->kerning.end())
-						{
-							strWidth += iter->second.x;
-						}
-					}
-
-					strWidth += metric->advanceX + textCache.xSpacing;
-				}
-			}
-
-			return strWidth;
-		}
-
-		real GLRenderer::GetStringHeight(const TextCache& textCache, BitmapFont* font) const
-		{
-			real strHeight = 0;
-
-			for (char c : textCache.str)
-			{
-				if (BitmapFont::IsCharValid(c))
-				{
-					FontMetric* metric = font->GetMetric(c);
-					strHeight = glm::max(strHeight, (real)(metric->height));
-				}
-			}
-
-			return strHeight;
+			TextCache newCache(str, pos, rot, color, spacing, bRaw);
+			m_CurrentFont->AddTextCache(newCache);
 		}
 
 		void GLRenderer::ComputeDirLightViewProj(glm::mat4& outView, glm::mat4& outProj)
 		{
-			glm::vec3 dirLightDir = VEC3_RIGHT * m_DirectionalLight->GetRot();
-			outView = glm::lookAt(VEC3_ZERO, -dirLightDir, VEC3_UP);
-
-			real zoom = m_DirectionalLight->shadowMapZoom;
-			real nearPlane = m_DirectionalLight->shadowMapNearPlane;
-			real farPlane = m_DirectionalLight->shadowMapFarPlane;
-			outProj = glm::ortho(-zoom, zoom, -zoom, zoom, nearPlane, farPlane);
-		}
-
-		void GLRenderer::UpdateTextBuffer()
-		{
-			glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
-			real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
-
-			std::vector<TextVertex> textVertices;
-			for (BitmapFont* font : m_Fonts)
+			if (m_DirectionalLight == nullptr)
 			{
-				real textScale = glm::max(2.0f / (real)frameBufferSize.x, 2.0f / (real)frameBufferSize.y) *
-					(font->GetFontSize() / 12.0f);
-
-				font->m_BufferStart = (i32)(textVertices.size());
-				font->m_BufferSize = 0;
-
-				for (TextCache& textCache : font->m_TextCaches)
-				{
-					std::string currentStr = textCache.str;
-
-					bool bUseLetterOffsets = !textCache.letterOffsets.empty();
-					if (bUseLetterOffsets)
-					{
-						assert(textCache.letterOffsets.size() >= currentStr.size());
-					}
-
-					real totalAdvanceX = 0;
-
-					glm::vec2 basePos(0.0f);
-
-					if (!textCache.bRaw)
-					{
-						real strWidth = GetStringWidth(textCache, font) * textScale;
-						real strHeight = GetStringHeight(textCache, font) * textScale;
-
-						switch (textCache.anchor)
-						{
-						case AnchorPoint::TOP_LEFT:
-							basePos = glm::vec3(-aspectRatio, 1.0f - strHeight / 2.0f, 0.0f);
-							break;
-						case AnchorPoint::TOP:
-							basePos = glm::vec3(-strWidth / 2.0f, 1.0f - strHeight / 2.0f, 0.0f);
-							break;
-						case AnchorPoint::TOP_RIGHT:
-							basePos = glm::vec3(aspectRatio - strWidth, 1.0f - strHeight / 2.0f, 0.0f);
-							break;
-						case AnchorPoint::RIGHT:
-							basePos = glm::vec3(aspectRatio - strWidth, 0.0f, 0.0f);
-							break;
-						case AnchorPoint::BOTTOM_RIGHT:
-							basePos = glm::vec3(aspectRatio - strWidth, -1.0f + strHeight / 2.0f, 0.0f);
-							break;
-						case AnchorPoint::BOTTOM:
-							basePos = glm::vec3(-strWidth / 2.0f, -1.0f + strHeight / 2.0f, 0.0f);
-							break;
-						case AnchorPoint::BOTTOM_LEFT:
-							basePos = glm::vec3(-aspectRatio, -1.0f + strHeight / 2.0f, 0.0f);
-							break;
-						case AnchorPoint::LEFT:
-							basePos = glm::vec3(-aspectRatio, 0.0f, 0.0f);
-							break;
-						case AnchorPoint::CENTER: // Fall through
-						case AnchorPoint::WHOLE:
-							basePos = glm::vec3(-strWidth / 2.0f, 0.0f, 0.0f);
-							break;
-						default:
-							break;
-						}
-					}
-
-					char prevChar = ' ';
-					for (u32 j = 0; j < currentStr.length(); ++j)
-					{
-						char c = currentStr[j];
-
-						if (BitmapFont::IsCharValid(c))
-						{
-							FontMetric* metric = font->GetMetric(c);
-							if (metric->bIsValid)
-							{
-								if (c == ' ')
-								{
-									totalAdvanceX += metric->advanceX + textCache.xSpacing;
-									prevChar = c;
-									continue;
-								}
-
-								real xOff = (bUseLetterOffsets ? textCache.letterOffsets[j].x : 0.0f);
-								real yOff = (bUseLetterOffsets ? textCache.letterOffsets[j].y : 0.0f);
-
-								glm::vec2 pos =
-									glm::vec2((textCache.pos.x) * (textCache.bRaw ? 1.0f : aspectRatio), textCache.pos.y) +
-									glm::vec2(totalAdvanceX + metric->offsetX + xOff, -metric->offsetY + yOff) * textScale;
-
-								if (font->UseKerning())
-								{
-									std::wstring charKey(std::wstring(1, prevChar) + std::wstring(1, c));
-
-									auto iter = metric->kerning.find(charKey);
-									if (iter != metric->kerning.end())
-									{
-										pos += iter->second * textScale;
-									}
-								}
-
-								glm::vec4 charSizePixelsCharSizeNorm(
-									metric->width, metric->height,
-									metric->width * textScale, metric->height * textScale);
-
-								i32 texChannel = (i32)metric->channel;
-
-								TextVertex vert{};
-								vert.pos = basePos + pos;
-								vert.uv = metric->texCoord;
-								vert.color = textCache.color;
-								vert.charSizePixelsCharSizeNorm = charSizePixelsCharSizeNorm;
-								vert.channel = texChannel;
-
-								textVertices.push_back(vert);
-
-								totalAdvanceX += metric->advanceX + textCache.xSpacing;
-							}
-							else
-							{
-								PrintWarn("Attempted to draw char with invalid metric: %c in font %s\n", c, font->m_Name.c_str());
-							}
-						}
-						else
-						{
-							PrintWarn("Attempted to draw invalid char: %c in font %s\n", c, font->m_Name.c_str());
-						}
-
-						prevChar = c;
-					}
-				}
-
-				font->m_BufferSize = (i32)(textVertices.size()) - font->m_BufferStart;
-				font->m_TextCaches.clear();
+				outView = glm::lookAt(VEC3_ZERO, VEC3_FORWARD, VEC3_UP);
+				outProj = glm::ortho(-1234.0f, 1234.0f, -4567.0f, 4567.0f, 1.0f, 0.01f);
+				return;
 			}
 
-			u32 bufferByteCount = (u32)(textVertices.size() * sizeof(TextVertex));
+			outView = glm::lookAt(VEC3_ZERO, m_DirectionalLight->data.dir, VEC3_UP);
 
-			glBindVertexArray(m_TextQuadVAO);
-			glBindBuffer(GL_ARRAY_BUFFER, m_TextQuadVBO);
-			glBufferData(GL_ARRAY_BUFFER, bufferByteCount, textVertices.data(), GL_DYNAMIC_DRAW);
-			glBindBuffer(GL_ARRAY_BUFFER, 0);
-			glBindVertexArray(0);
+			real zoom = m_DirectionalLight->shadowMapZoom;
+			outProj = glm::ortho(-zoom, zoom, -zoom, zoom, m_DirectionalLight->shadowMapNearPlane, m_DirectionalLight->shadowMapFarPlane);
 		}
 
-		void GLRenderer::DrawRenderObjectBatch(const std::vector<GLRenderObject*>& batchedRenderObjects, const DrawCallInfo& drawCallInfo)
+		void GLRenderer::DrawRenderObjectBatch(const GLRenderObjectBatch& batchedRenderObjects, const DrawCallInfo& drawCallInfo)
 		{
 			if (batchedRenderObjects.empty())
 			{
@@ -3769,7 +3423,7 @@ namespace flex
 			MaterialID materialID = InvalidMaterialID;
 			if (drawCallInfo.materialOverride == InvalidMaterialID)
 			{
-				materialID = batchedRenderObjects[0]->materialID;
+				materialID = (*batchedRenderObjects.begin())->materialID;
 			}
 			else
 			{
@@ -3793,17 +3447,6 @@ namespace flex
 
 			for (GLRenderObject* renderObject : batchedRenderObjects)
 			{
-				if (!renderObject->gameObject->IsVisible())
-				{
-					continue;
-				}
-
-				if (!renderObject->vertexBufferData)
-				{
-					//PrintError("Attempted to draw object which contains no vertex buffer data: %s\n", renderObject->gameObject->GetName().c_str());
-					continue;
-				}
-
 				if (drawCallInfo.materialOverride == InvalidMaterialID)
 				{
 					materialID = renderObject->materialID;
@@ -3817,18 +3460,17 @@ namespace flex
 				glBindVertexArray(renderObject->VAO);
 				glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
 
-				if (renderObject->enableCulling)
+				if (renderObject->cullFace == GL_NONE)
+				{
+					glDisable(GL_CULL_FACE);
+				}
+				else
 				{
 					glEnable(GL_CULL_FACE);
 					glCullFace(renderObject->cullFace);
 				}
-				else
-				{
-					glDisable(GL_CULL_FACE);
-				}
 
-				// TODO: Move to translucent pass?
-				if (shader->translucent)
+				if (shader->bTranslucent)
 				{
 					glEnable(GL_BLEND);
 					glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -3871,7 +3513,7 @@ namespace flex
 
 					// TODO: Test if this is actually correct
 					glm::vec3 cubemapTranslation = -cubemapRenderObject->gameObject->GetTransform()->GetWorldPosition();
-					for (size_t face = 0; face < 6; ++face)
+					for (u32 face = 0; face < 6; ++face)
 					{
 						glm::mat4 view = glm::translate(m_CaptureViews[face], cubemapTranslation);
 
@@ -3887,7 +3529,7 @@ namespace flex
 							//u32 attachments[numBuffers] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
 							//glDrawBuffers(numBuffers, attachments);
 
-							for (size_t j = 0; j < cubemapMaterial->cubemapSamplerGBuffersIDs.size(); ++j)
+							for (u32 j = 0; j < cubemapMaterial->cubemapSamplerGBuffersIDs.size(); ++j)
 							{
 								glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + j,
 									GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerGBuffersIDs[j].id, 0);
@@ -3902,7 +3544,7 @@ namespace flex
 						glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
 							GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapDepthSamplerID, 0);
 
-						if (renderObject->indexed)
+						if (renderObject->bIndexed)
 						{
 							glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderObject->IBO);
 							GLsizei count = (GLsizei)renderObject->indices->size();
@@ -3916,8 +3558,7 @@ namespace flex
 				}
 				else
 				{
-					// TODO: Move to translucent pass?
-					if (shader->translucent)
+					if (shader->bTranslucent)
 					{
 						glEnable(GL_BLEND);
 						glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -3927,7 +3568,7 @@ namespace flex
 						glDisable(GL_BLEND);
 					}
 
-					if (renderObject->indexed)
+					if (renderObject->bIndexed)
 					{
 						glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderObject->IBO);
 						GLsizei count = (GLsizei)renderObject->indices->size();
@@ -4110,89 +3751,6 @@ namespace flex
 			m_Materials.erase(materialID);
 		}
 
-		void GLRenderer::DoCreateGameObjectButton(const char* buttonName, const char* popupName)
-		{
-			static const char* defaultNewNameBase = "New_Object_";
-			static const char* newObjectNameInputLabel = "##new-object-name";
-			static const char* createButtonStr = "Create";
-			static const char* cancelStr = "Cancel";
-
-			static std::string newObjectName;
-
-			if (ImGui::Button(buttonName))
-			{
-				ImGui::OpenPopup(popupName);
-				i32 highestNoNameObj = -1;
-				i16 maxNumChars = 2;
-				const std::vector<GameObject*> allObjects = g_SceneManager->CurrentScene()->GetAllObjects();
-				for (GameObject* gameObject : allObjects)
-				{
-					if (StartsWith(gameObject->GetName(), defaultNewNameBase))
-					{
-						i16 numChars;
-						i32 num = GetNumberEndingWith(gameObject->GetName(), numChars);
-						if (num != -1)
-						{
-							highestNoNameObj = glm::max(highestNoNameObj, num);
-							maxNumChars = glm::max(maxNumChars, maxNumChars);
-						}
-					}
-				}
-				newObjectName = defaultNewNameBase + IntToString(highestNoNameObj + 1, maxNumChars);
-			}
-
-			if (ImGui::BeginPopupModal(popupName, NULL,
-				ImGuiWindowFlags_AlwaysAutoResize |
-				ImGuiWindowFlags_NoSavedSettings |
-				ImGuiWindowFlags_NoNavInputs))
-			{
-				const size_t maxStrLen = 256;
-				newObjectName.resize(maxStrLen);
-
-
-				bool bCreate = ImGui::InputText(newObjectNameInputLabel,
-												(char*)newObjectName.data(),
-												maxStrLen,
-												ImGuiInputTextFlags_EnterReturnsTrue);
-
-				bCreate |= ImGui::Button(createButtonStr);
-
-				bool bInvalidName = std::string(newObjectName.c_str()).empty();
-
-				if (bCreate && !bInvalidName)
-				{
-					// Remove excess trailing \0 chars
-					newObjectName = std::string(newObjectName.c_str());
-
-					if (!newObjectName.empty())
-					{
-						GameObject* newGameObject = new GameObject(newObjectName, GameObjectType::OBJECT);
-
-						MaterialID matID = 0;
-
-						newGameObject->SetMeshComponent(new MeshComponent(matID, newGameObject));
-						newGameObject->GetMeshComponent()->LoadFromFile(RESOURCE_LOCATION  "meshes/cube.glb");
-
-						g_SceneManager->CurrentScene()->AddRootObject(newGameObject);
-
-						newGameObject->Initialize();
-						newGameObject->PostInitialize();
-
-						ImGui::CloseCurrentPopup();
-					}
-				}
-
-				ImGui::SameLine();
-
-				if (ImGui::Button(cancelStr))
-				{
-					ImGui::CloseCurrentPopup();
-				}
-
-				ImGui::EndPopup();
-			}
-		}
-
 		bool GLRenderer::DoTextureSelector(const char* label,
 										   const std::vector<GLTexture*>& textures,
 										   i32* selectedIndex,
@@ -4345,7 +3903,7 @@ namespace flex
 			UnloadShaders();
 			LoadShaders();
 
-			g_Renderer->AddEditorString("Reloaded shaders");
+			AddEditorString("Reloaded shaders");
 		}
 
 		void GLRenderer::UnloadShaders()
@@ -4364,7 +3922,7 @@ namespace flex
 				{ "deferred_combine_cubemap", RESOURCE_LOCATION  "shaders/deferred_combine_cubemap.vert", RESOURCE_LOCATION  "shaders/deferred_combine_cubemap.frag" },
 				{ "color", RESOURCE_LOCATION  "shaders/color.vert", RESOURCE_LOCATION  "shaders/color.frag" },
 				{ "pbr", RESOURCE_LOCATION  "shaders/pbr.vert", RESOURCE_LOCATION  "shaders/pbr.frag" },
-				{ "pbr-ws", RESOURCE_LOCATION  "shaders/pbr-ws.vert", RESOURCE_LOCATION  "shaders/pbr-ws.frag" },
+				{ "pbr_ws", RESOURCE_LOCATION  "shaders/pbr_ws.vert", RESOURCE_LOCATION  "shaders/pbr_ws.frag" },
 				{ "skybox", RESOURCE_LOCATION  "shaders/skybox.vert", RESOURCE_LOCATION  "shaders/skybox.frag" },
 				{ "equirectangular_to_cube", RESOURCE_LOCATION  "shaders/skybox.vert", RESOURCE_LOCATION  "shaders/equirectangular_to_cube.frag" },
 				{ "irradiance", RESOURCE_LOCATION  "shaders/skybox.vert", RESOURCE_LOCATION  "shaders/irradiance.frag" },
@@ -4373,8 +3931,9 @@ namespace flex
 				{ "sprite", RESOURCE_LOCATION  "shaders/sprite.vert", RESOURCE_LOCATION  "shaders/sprite.frag" },
 				{ "post_process", RESOURCE_LOCATION  "shaders/post_process.vert", RESOURCE_LOCATION  "shaders/post_process.frag" },
 				{ "post_fxaa", RESOURCE_LOCATION  "shaders/post_fxaa.vert", RESOURCE_LOCATION  "shaders/post_fxaa.frag" },
-				{ "compute_sdf", RESOURCE_LOCATION  "shaders/ComputeSDF.vert", RESOURCE_LOCATION  "shaders/ComputeSDF.frag" },
-				{ "font", RESOURCE_LOCATION  "shaders/font.vert", RESOURCE_LOCATION  "shaders/font.frag",  RESOURCE_LOCATION  "shaders/font.geom" },
+				{ "compute_sdf", RESOURCE_LOCATION  "shaders/compute_sdf.vert", RESOURCE_LOCATION  "shaders/compute_sdf.frag" },
+				{ "font_ss", RESOURCE_LOCATION  "shaders/font_ss.vert", RESOURCE_LOCATION  "shaders/font_ss.frag",  RESOURCE_LOCATION  "shaders/font_ss.geom" },
+				{ "font_ws", RESOURCE_LOCATION  "shaders/font_ws.vert", RESOURCE_LOCATION  "shaders/font_ws.frag",  RESOURCE_LOCATION  "shaders/font_ws.geom" },
 				{ "shadow", RESOURCE_LOCATION  "shaders/shadow.vert", RESOURCE_LOCATION  "shaders/shadow.frag" },
 			};
 
@@ -4383,9 +3942,9 @@ namespace flex
 			// TOOD: Determine this info automatically when parsing shader code
 
 			// Deferred combine
-			m_Shaders[shaderID].shader.deferred = false; // Sounds strange but this isn't deferred
+			m_Shaders[shaderID].shader.bDeferred = false; // Sounds strange but this isn't deferred
 			// m_Shaders[shaderID].shader.subpass = 0;
-			m_Shaders[shaderID].shader.depthWriteEnable = false; // Disable depth writing
+			m_Shaders[shaderID].shader.bDepthWriteEnable = false; // Disable depth writing
 			m_Shaders[shaderID].shader.bNeedBRDFLUT = true;
 			m_Shaders[shaderID].shader.bNeedShadowMap = true;
 			m_Shaders[shaderID].shader.bNeedIrradianceSampler = true;
@@ -4394,25 +3953,25 @@ namespace flex
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV;
 
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::LIGHT_VIEW_PROJ);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::CAM_POS);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::EXPOSURE);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::POINT_LIGHTS);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::DIR_LIGHT);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::IRRADIANCE_SAMPLER);
-			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::PREFILTER_MAP);
-			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::BRDF_LUT);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::FB_0_SAMPLER);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::FB_1_SAMPLER);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::FB_2_SAMPLER);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_LIGHT_VIEW_PROJ);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_CAM_POS);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_EXPOSURE);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_POINT_LIGHTS);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_DIR_LIGHT);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_IRRADIANCE_SAMPLER);
+			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_PREFILTER_MAP);
+			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_BRDF_LUT);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_FB_0_SAMPLER);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_FB_1_SAMPLER);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_FB_2_SAMPLER);
 
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::IRRADIANCE_SAMPLER);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_IRRADIANCE_SAMPLER);
 			++shaderID;
 
 			// Deferred combine cubemap
-			m_Shaders[shaderID].shader.deferred = false; // Sounds strange but this isn't deferred
+			m_Shaders[shaderID].shader.bDeferred = false; // Sounds strange but this isn't deferred
 			// m_Shaders[shaderID].shader.subpass = 0;
-			m_Shaders[shaderID].shader.depthWriteEnable = false; // Disable depth writing
+			m_Shaders[shaderID].shader.bDepthWriteEnable = false; // Disable depth writing
 			m_Shaders[shaderID].shader.bNeedBRDFLUT = true;
 			//m_Shaders[shaderID].shader.bNeedShadowMap = true;
 			m_Shaders[shaderID].shader.bNeedIrradianceSampler = true;
@@ -4420,40 +3979,40 @@ namespace flex
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION; // Used as 3D texture coord into cubemap
 
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::VIEW);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::PROJECTION);
-			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::LIGHT_VIEW_PROJ);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::CAM_POS);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::EXPOSURE);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::POINT_LIGHTS);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::DIR_LIGHT);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::IRRADIANCE_SAMPLER);
-			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::PREFILTER_MAP);
-			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::BRDF_LUT);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::FB_0_SAMPLER);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::FB_1_SAMPLER);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::FB_2_SAMPLER);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_VIEW);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_PROJECTION);
+			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_LIGHT_VIEW_PROJ);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_CAM_POS);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_EXPOSURE);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_POINT_LIGHTS);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_DIR_LIGHT);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_IRRADIANCE_SAMPLER);
+			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_PREFILTER_MAP);
+			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_BRDF_LUT);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_FB_0_SAMPLER);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_FB_1_SAMPLER);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_FB_2_SAMPLER);
 
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::MODEL);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::IRRADIANCE_SAMPLER);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_MODEL);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_IRRADIANCE_SAMPLER);
 			++shaderID;
 
 			// Color
-			m_Shaders[shaderID].shader.deferred = false;
-			m_Shaders[shaderID].shader.translucent = true;
+			m_Shaders[shaderID].shader.bDeferred = false;
+			m_Shaders[shaderID].shader.bTranslucent = true;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
 
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::VIEW);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::PROJECTION);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_VIEW);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_PROJECTION);
 
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::MODEL);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::COLOR_MULTIPLIER);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_MODEL);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_COLOR_MULTIPLIER);
 			++shaderID;
 
 			// PBR
-			m_Shaders[shaderID].shader.deferred = true;
+			m_Shaders[shaderID].shader.bDeferred = true;
 			m_Shaders[shaderID].shader.bNeedAlbedoSampler = true;
 			m_Shaders[shaderID].shader.bNeedMetallicSampler = true;
 			m_Shaders[shaderID].shader.bNeedRoughnessSampler = true;
@@ -4467,23 +4026,23 @@ namespace flex
 				(u32)VertexAttribute::BITANGENT |
 				(u32)VertexAttribute::NORMAL;
 
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::VIEW);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::PROJECTION);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_VIEW);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_PROJECTION);
 
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::CONST_ALBEDO);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::ALBEDO_SAMPLER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::CONST_METALLIC);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::METALLIC_SAMPLER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::CONST_ROUGHNESS);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::ROUGHNESS_SAMPLER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::CONST_AO);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::AO_SAMPLER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::NORMAL_SAMPLER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::MODEL);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CONST_ALBEDO);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ALBEDO_SAMPLER);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CONST_METALLIC);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_METALLIC_SAMPLER);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CONST_ROUGHNESS);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ROUGHNESS_SAMPLER);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CONST_AO);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_AO_SAMPLER);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_NORMAL_SAMPLER);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_MODEL);
 			++shaderID;
 
 			// PBR - WORLD SPACE
-			m_Shaders[shaderID].shader.deferred = true;
+			m_Shaders[shaderID].shader.bDeferred = true;
 			m_Shaders[shaderID].shader.bNeedAlbedoSampler = true;
 			m_Shaders[shaderID].shader.bNeedNormalSampler = true;
 			m_Shaders[shaderID].shader.vertexAttributes =
@@ -4493,75 +4052,76 @@ namespace flex
 				(u32)VertexAttribute::BITANGENT |
 				(u32)VertexAttribute::NORMAL;
 
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::VIEW);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::PROJECTION);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_VIEW);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_PROJECTION);
 
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::CONST_ALBEDO);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::ALBEDO_SAMPLER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::CONST_METALLIC);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::CONST_ROUGHNESS);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::CONST_AO);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::NORMAL_SAMPLER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::MODEL);
-			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::TEXTURE_SCALE);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CONST_ALBEDO);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ALBEDO_SAMPLER);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CONST_METALLIC);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CONST_ROUGHNESS);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CONST_AO);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_NORMAL_SAMPLER);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_MODEL);
+			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_TEXTURE_SCALE);
 			++shaderID;
 
 			// Skybox
-			m_Shaders[shaderID].shader.deferred = false;
+			m_Shaders[shaderID].shader.bDeferred = false;
 			m_Shaders[shaderID].shader.bNeedCubemapSampler = true;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION;
 
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::VIEW);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::PROJECTION);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::EXPOSURE);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_VIEW);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_PROJECTION);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_EXPOSURE);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_TIME);
 
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::MODEL);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::ENABLE_CUBEMAP_SAMPLER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::CUBEMAP_SAMPLER);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_MODEL);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ENABLE_CUBEMAP_SAMPLER);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CUBEMAP_SAMPLER);
 			++shaderID;
 
 			// Equirectangular to Cube
-			m_Shaders[shaderID].shader.deferred = false;
+			m_Shaders[shaderID].shader.bDeferred = false;
 			m_Shaders[shaderID].shader.bNeedHDREquirectangularSampler = true;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION;
 
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::VIEW);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::PROJECTION);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::HDR_EQUIRECTANGULAR_SAMPLER);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_VIEW);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_PROJECTION);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_HDR_EQUIRECTANGULAR_SAMPLER);
 
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::MODEL);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_MODEL);
 			++shaderID;
 
 			// Irradiance
-			m_Shaders[shaderID].shader.deferred = false;
+			m_Shaders[shaderID].shader.bDeferred = false;
 			m_Shaders[shaderID].shader.bNeedCubemapSampler = true;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION;
 
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::VIEW);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::PROJECTION);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::CUBEMAP_SAMPLER);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_VIEW);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_PROJECTION);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_CUBEMAP_SAMPLER);
 
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::MODEL);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_MODEL);
 			++shaderID;
 
 			// Prefilter
-			m_Shaders[shaderID].shader.deferred = false;
+			m_Shaders[shaderID].shader.bDeferred = false;
 			m_Shaders[shaderID].shader.bNeedCubemapSampler = true;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION;
 
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::VIEW);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::PROJECTION);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::CUBEMAP_SAMPLER);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_VIEW);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_PROJECTION);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_CUBEMAP_SAMPLER);
 
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::MODEL);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_MODEL);
 			++shaderID;
 
 			// BRDF
-			m_Shaders[shaderID].shader.deferred = false;
+			m_Shaders[shaderID].shader.bDeferred = false;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV;
@@ -4572,24 +4132,24 @@ namespace flex
 			++shaderID;
 
 			// Sprite
-			m_Shaders[shaderID].shader.deferred = false;
+			m_Shaders[shaderID].shader.bDeferred = false;
 
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV;
 
 			m_Shaders[shaderID].shader.constantBufferUniforms = {};
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::VIEW);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::PROJECTION);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_VIEW);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_PROJECTION);
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::MODEL);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::COLOR_MULTIPLIER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::ALBEDO_SAMPLER);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_MODEL);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_COLOR_MULTIPLIER);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ALBEDO_SAMPLER);
 			++shaderID;
 
 			// Post processing
-			m_Shaders[shaderID].shader.deferred = false;
+			m_Shaders[shaderID].shader.bDeferred = false;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION_2D |
 				(u32)VertexAttribute::UV;
@@ -4597,31 +4157,31 @@ namespace flex
 			m_Shaders[shaderID].shader.constantBufferUniforms = {};
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::MODEL);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::COLOR_MULTIPLIER);
-			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::CONTRAST_BRIGHTNESS_SATURATION);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_MODEL);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_COLOR_MULTIPLIER);
+			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CONTRAST_BRIGHTNESS_SATURATION);
 			++shaderID;
 
 			// Post FXAA (Fast approximate anti-aliasing)
-			m_Shaders[shaderID].shader.deferred = false;
+			m_Shaders[shaderID].shader.bDeferred = false;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION_2D |
 				(u32)VertexAttribute::UV;
 
 			m_Shaders[shaderID].shader.constantBufferUniforms = {};
-			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::LUMA_THRESHOLD_MIN);
-			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::LUMA_THRESHOLD_MAX);
-			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::MUL_REDUCE);
-			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::MIN_REDUCE);
-			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::MAX_SPAN);
-			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::TEXEL_STEP);
-			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::SHOW_EDGES);
+			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_LUMA_THRESHOLD_MIN);
+			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_LUMA_THRESHOLD_MAX);
+			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_MUL_REDUCE);
+			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_MIN_REDUCE);
+			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_MAX_SPAN);
+			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_TEXEL_STEP);
+			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_SHOW_EDGES);
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
 			++shaderID;
 
 			// Compute SDF
-			m_Shaders[shaderID].shader.deferred = false;
+			m_Shaders[shaderID].shader.bDeferred = false;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV;
@@ -4629,17 +4189,17 @@ namespace flex
 			m_Shaders[shaderID].shader.constantBufferUniforms = {};
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
-			// TODO: Move some of these to constant buffer
-			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::CHAR_RESOLUTION);
-			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::SPREAD);
-			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::HIGH_RES_TEX);
-			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::TEX_CHANNEL);
-			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::SDF_RESOLUTION);
-			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::HIGH_RES);
+			// TODO: Use same format as VulkanRenderer
+			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CHAR_RESOLUTION);
+			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_SPREAD);
+			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_HIGH_RES_TEX);
+			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_TEX_CHANNEL);
+			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_SDF_RESOLUTION);
+			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_HIGH_RES);
 			++shaderID;
 
-			// Font
-			m_Shaders[shaderID].shader.deferred = false;
+			// Font SS
+			m_Shaders[shaderID].shader.bDeferred = false;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION_2D |
 				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
@@ -4650,23 +4210,41 @@ namespace flex
 			m_Shaders[shaderID].shader.constantBufferUniforms = {};
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::TRANSFORM_MAT);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::TEX_SIZE);
-			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::THRESHOLD);
-			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::SHADOW);
-			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::SOFTEN);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_TRANSFORM_MAT);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_TEX_SIZE);
+			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_THRESHOLD);
+			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_SHADOW);
+			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_SOFTEN);
+			++shaderID;
+
+			// Font WS
+			m_Shaders[shaderID].shader.bDeferred = false;
+			m_Shaders[shaderID].shader.vertexAttributes =
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
+				(u32)VertexAttribute::UV |
+				(u32)VertexAttribute::EXTRA_VEC4 |
+				(u32)VertexAttribute::EXTRA_INT;
+
+			m_Shaders[shaderID].shader.constantBufferUniforms = {};
+
+			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_TRANSFORM_MAT);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_TEX_SIZE);
+			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_THRESHOLD);
+			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_SHADOW);
 			++shaderID;
 
 			// Shadow
-			m_Shaders[shaderID].shader.deferred = false;
+			m_Shaders[shaderID].shader.bDeferred = false;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION;
 
 			m_Shaders[shaderID].shader.constantBufferUniforms = {};
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(Uniform::LIGHT_VIEW_PROJ);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_LIGHT_VIEW_PROJ);
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(Uniform::MODEL);
+			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_MODEL);
 			++shaderID;
 
 			for (GLShader& shader : m_Shaders)
@@ -4686,11 +4264,10 @@ namespace flex
 				LinkProgram(shader.program);
 
 #if 0
-				// TODO: Add option to print specific shader's info at runtime
 				PrintShaderInfo(shader.program, shader.shader.name.c_str());
 #endif
 
-#if _DEBUG
+#if DEBUG
 				if (!IsProgramValid(shader.program))
 				{
 					PrintError("Shader program is invalid!\n");
@@ -4711,60 +4288,23 @@ namespace flex
 		{
 			PROFILE_AUTO("Load fonts");
 
-			// TODO: Save these strings in a config file?
-			std::string fontFilePaths[] = {
-				RESOURCE_LOCATION  "fonts/UbuntuCondensed-Regular.ttf",
-				RESOURCE_LOCATION  "fonts/gant.ttf",
-				RESOURCE_LOCATION  "fonts/SourceCodePro-regular.ttf"
-			};
+			m_FontsSS.clear();
+			m_FontsWS.clear();
 
-			std::string extension = ".png";
-			std::string renderedTextureFilePaths[] = {
-				RESOURCE_LOCATION  "fonts/UbuntuCondensed-Regular-24",
-				RESOURCE_LOCATION  "fonts/gant-regular-10",
-				RESOURCE_LOCATION  "fonts/SourceCodePro-regular-14"
-			};
-
-			i16 fontSizes[] = {
-				24,
-				10,
-				14
-			};
-
-			BitmapFont** fonts[] = {
-				&m_FntUbuntuCondensed,
-				&m_FntGant,
-				&m_FntSourceCodePro,
-			};
-
-			std::string DPIStr = FloatToString(g_Monitor->DPI.x, 0) + "DPI";
-
-			for (std::string& path : renderedTextureFilePaths)
+			for (auto& pair : m_Fonts)
 			{
-				path += "-" + DPIStr + extension;
-			}
+				FontMetaData& fontMetaData = pair.second;
 
-			i32 fontCount = ARRAY_LENGTH(fontFilePaths);
-			assert(
-				ARRAY_LENGTH(renderedTextureFilePaths) == fontCount &&
-				ARRAY_LENGTH(fonts) == fontCount &&
-				ARRAY_LENGTH(fontSizes) == fontCount);
-
-			m_Fonts.clear();
-
-			for (i32 i = 0; i < fontCount; ++i)
-			{
-				if (*(fonts[i]) != nullptr)
-				{
-					delete *(fonts[i]);
-					(*(fonts[i])) = nullptr;
-				}
-
-				std::string fontName = fontFilePaths[i];
+				std::string fontName = fontMetaData.filePath;
 				StripLeadingDirectories(fontName);
 				StripFileType(fontName);
 
-				LoadFont(fonts[i], fontSizes[i], fontFilePaths[i], renderedTextureFilePaths[i], bForceRender);
+				LoadFont(&fontMetaData.bitmapFont,
+					fontMetaData.size,
+					fontMetaData.filePath,
+					fontMetaData.renderedTextureFilePath,
+					bForceRender,
+					fontMetaData.bScreenSpace);
 			}
 		}
 
@@ -4796,14 +4336,7 @@ namespace flex
 			glm::mat4 lightView, lightProj;
 			ComputeDirLightViewProj(lightView, lightProj);
 
-			glm::mat4 biasMat(
-				0.5f, 0.0f, 0.0f, 0.0f,
-				0.0f, 0.5f, 0.0f, 0.0f,
-				0.0f, 0.0f, 0.5f, 0.0f,
-				0.5f, 0.5f, 0.5f, 1.0f
-			);
-
-			glm::mat4 biasedLightViewProj = biasMat * lightProj * lightView;
+			glm::mat4 biasedLightViewProj = lightProj * lightView;
 
 			for (auto& materialPair : m_Materials)
 			{
@@ -4819,33 +4352,33 @@ namespace flex
 
 				glUseProgram(shader->program);
 
-				if (shader->shader.bNeedShadowMap)
+				if (m_DirectionalLight != nullptr && shader->shader.bNeedShadowMap)
 				{
 					glUniform1i(material->uniformIDs.castShadows, m_DirectionalLight->bCastShadow);
-					glUniform1f(material->uniformIDs.shadowOpacity, m_DirectionalLight->shadowOpacity);
+					glUniform1f(material->uniformIDs.shadowDarkness, m_DirectionalLight->shadowDarkness);
 				}
 
-				if (shader->shader.constantBufferUniforms.HasUniform(Uniform::VIEW))
+				if (shader->shader.constantBufferUniforms.HasUniform(U_VIEW))
 				{
 					glUniformMatrix4fv(material->uniformIDs.view, 1, GL_FALSE, &view[0][0]);
 				}
 
-				if (shader->shader.constantBufferUniforms.HasUniform(Uniform::PROJECTION))
+				if (shader->shader.constantBufferUniforms.HasUniform(U_PROJECTION))
 				{
 					glUniformMatrix4fv(material->uniformIDs.projection, 1, GL_FALSE, &proj[0][0]);
 				}
 
-				if (shader->shader.constantBufferUniforms.HasUniform(Uniform::VIEW_PROJECTION))
+				if (shader->shader.constantBufferUniforms.HasUniform(U_VIEW_PROJECTION))
 				{
 					glUniformMatrix4fv(material->uniformIDs.viewProjection, 1, GL_FALSE, &viewProj[0][0]);
 				}
 
-				if (shader->shader.constantBufferUniforms.HasUniform(Uniform::LIGHT_VIEW_PROJ))
+				if (shader->shader.constantBufferUniforms.HasUniform(U_LIGHT_VIEW_PROJ))
 				{
 					glUniformMatrix4fv(material->uniformIDs.lightViewProjection, 1, GL_FALSE, &biasedLightViewProj[0][0]);
 				}
 
-				if (shader->shader.constantBufferUniforms.HasUniform(Uniform::CAM_POS))
+				if (shader->shader.constantBufferUniforms.HasUniform(U_CAM_POS))
 				{
 					glUniform4f(material->uniformIDs.camPos,
 						camPos.x,
@@ -4854,37 +4387,36 @@ namespace flex
 						camPos.w);
 				}
 
-				if (shader->shader.constantBufferUniforms.HasUniform(Uniform::EXPOSURE))
+				if (shader->shader.constantBufferUniforms.HasUniform(U_EXPOSURE))
 				{
 					glUniform1f(material->uniformIDs.exposure, exposure);
 				}
 
-				if (shader->shader.constantBufferUniforms.HasUniform(Uniform::DIR_LIGHT))
+				if (m_DirectionalLight != nullptr && shader->shader.constantBufferUniforms.HasUniform(U_DIR_LIGHT))
 				{
-					static const char* dirLightEnabledStr = "dirLight.enabled";
-					if (m_DirectionalLight->enabled)
+					if (m_DirectionalLight->data.enabled == 0)
 					{
-						SetUInt(material->material.shaderID, dirLightEnabledStr, 1);
-						static const char* dirLightDirectionStr = "dirLight.direction";
-						glm::vec4 dirLightDir = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f) * m_DirectionalLight->GetRot();
-						SetVec4f(material->material.shaderID, dirLightDirectionStr, dirLightDir);
-						static const char* dirLightColorStr = "dirLight.color";
-						SetVec4f(material->material.shaderID, dirLightColorStr, m_DirectionalLight->color * m_DirectionalLight->brightness);
+						SetInt(material->material.shaderID, "dirLight.enabled", 0);
 					}
 					else
 					{
-						SetUInt(material->material.shaderID, dirLightEnabledStr, 0);
+						SetInt(material->material.shaderID, "dirLight.enabled", 1);
+						SetVec3f(material->material.shaderID, "dirLight.direction", m_DirectionalLight->data.dir);
+						SetVec3f(material->material.shaderID, "dirLight.color", m_DirectionalLight->data.color);
+						SetFloat(material->material.shaderID, "dirLight.brightness", m_DirectionalLight->data.brightness);
 					}
 				}
 
-				if (shader->shader.constantBufferUniforms.HasUniform(Uniform::POINT_LIGHTS))
+				if (shader->shader.constantBufferUniforms.HasUniform(U_POINT_LIGHTS))
 				{
-					for (size_t i = 0; i < MAX_POINT_LIGHT_COUNT; ++i)
+					for (u32 i = 0; i < MAX_NUM_POINT_LIGHTS; ++i)
 					{
 						const std::string numberStr(std::to_string(i));
 						const char* numberCStr = numberStr.c_str();
 						static const i32 strStartLen = 16;
-						char pointLightStrStart[strStartLen]; // Handles up to 99 numbers
+						static_assert(MAX_NUM_POINT_LIGHTS <= 99, "More than 99 point lights are allowed, strStartLen must be larger to compensate for more digits");
+						char pointLightStrStart[strStartLen];
+						// TODO: Replace with safer alternative
 						strcpy_s(pointLightStrStart, "pointLights[");
 						strcat_s(pointLightStrStart, numberCStr);
 						strcat_s(pointLightStrStart, "]");
@@ -4892,40 +4424,47 @@ namespace flex
 
 						char enabledStr[strStartLen + 8];
 						strcpy_s(enabledStr, pointLightStrStart);
-						static const char* dotEnabledStr = ".enabled";
-						strcat_s(enabledStr, dotEnabledStr);
-						if (i < m_PointLights.size())
+						strcat_s(enabledStr, ".enabled");
+						if (i < (u32)m_NumPointLightsEnabled)
 						{
-							if (m_PointLights[i]->enabled)
+							if (m_PointLights[i].enabled == 0)
 							{
-								SetUInt(material->material.shaderID, enabledStr, 1);
-
-								char positionStr[strStartLen + 9];
-								strcpy_s(positionStr, pointLightStrStart);
-								static const char* dotPositionStr = ".position";
-								strcat_s(positionStr, dotPositionStr);
-								SetVec4f(material->material.shaderID, positionStr, glm::vec4(m_PointLights[i]->GetPos(), 0.0f));
-
-								char colorStr[strStartLen + 6];
-								strcpy_s(colorStr, pointLightStrStart);
-								static const char* dotColorStr = ".color";
-								strcat_s(colorStr, dotColorStr);
-								SetVec4f(material->material.shaderID, colorStr, m_PointLights[i]->color * m_PointLights[i]->brightness);
+								SetInt(material->material.shaderID, enabledStr, 0);
 							}
 							else
 							{
-								SetUInt(material->material.shaderID, enabledStr, 0);
+								SetInt(material->material.shaderID, enabledStr, 1);
+
+								char positionStr[strStartLen + 9];
+								strcpy_s(positionStr, pointLightStrStart);
+								strcat_s(positionStr, ".position");
+								SetVec3f(material->material.shaderID, positionStr, m_PointLights[i].pos);
+
+								char colorStr[strStartLen + 6];
+								strcpy_s(colorStr, pointLightStrStart);
+								strcat_s(colorStr, ".color");
+								SetVec3f(material->material.shaderID, colorStr, m_PointLights[i].color);
+
+								char brightnessStr[strStartLen + 11];
+								strcpy_s(brightnessStr, pointLightStrStart);
+								strcat_s(brightnessStr, ".brightness");
+								SetFloat(material->material.shaderID, brightnessStr, m_PointLights[i].brightness);
 							}
 						}
 						else
 						{
-							SetUInt(material->material.shaderID, enabledStr, 0);
+							SetInt(material->material.shaderID, enabledStr, 0);
 						}
 					}
 				}
 
+				if (shader->shader.constantBufferUniforms.HasUniform(U_TIME))
+				{
+					glUniform1f(material->uniformIDs.time, g_SecElapsedSinceProgramStart);
+				}
+
 				static const char* texelStepStr = "texelStep";
-				if (shader->shader.constantBufferUniforms.HasUniform(Uniform::TEXEL_STEP))
+				if (shader->shader.constantBufferUniforms.HasUniform(U_TEXEL_STEP))
 				{
 					glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 					glm::vec2 texelStep(1.0f / frameBufferSize.x, 1.0f / frameBufferSize.y);
@@ -4964,81 +4503,81 @@ namespace flex
 
 			GLShader* shader = &m_Shaders[material->material.shaderID];
 
-			if (material->uniformIDs.textureScale != -1)
-			{
-				glUniform1f(material->uniformIDs.textureScale, material->material.textureScale);
-			}
+			//if (material->uniformIDs.textureScale != -1)
+			//{
+			//	glUniform1f(material->uniformIDs.textureScale, material->material.textureScale);
+			//}
 
 			// TODO: Use set functions here (SetFloat, SetMatrix, ...)
-			if (shader->shader.dynamicBufferUniforms.HasUniform(Uniform::MODEL))
+			if (shader->shader.dynamicBufferUniforms.HasUniform(U_MODEL))
 			{
 				glUniformMatrix4fv(material->uniformIDs.model, 1, GL_FALSE, &model[0][0]);
 			}
 
-			if (shader->shader.dynamicBufferUniforms.HasUniform(Uniform::MODEL_INV_TRANSPOSE))
+			if (shader->shader.dynamicBufferUniforms.HasUniform(U_MODEL_INV_TRANSPOSE))
 			{
 				glm::mat4 modelInv = glm::inverse(model);
 				// OpenGL will transpose for us if we set the third param to true
 				glUniformMatrix4fv(material->uniformIDs.modelInvTranspose, 1, GL_TRUE, &modelInv[0][0]);
 			}
 
-			if (shader->shader.dynamicBufferUniforms.HasUniform(Uniform::COLOR_MULTIPLIER))
+			if (shader->shader.dynamicBufferUniforms.HasUniform(U_COLOR_MULTIPLIER))
 			{
 				glm::vec4 colorMultiplier = material->material.colorMultiplier;
 				glUniform4fv(material->uniformIDs.colorMultiplier, 1, &colorMultiplier[0]);
 			}
 
-			if (shader->shader.dynamicBufferUniforms.HasUniform(Uniform::NORMAL_SAMPLER))
+			if (shader->shader.dynamicBufferUniforms.HasUniform(U_NORMAL_SAMPLER))
 			{
 				glUniform1i(material->uniformIDs.enableNormalTexture, material->material.enableNormalSampler);
 			}
 
-			if (shader->shader.dynamicBufferUniforms.HasUniform(Uniform::ENABLE_CUBEMAP_SAMPLER))
+			if (shader->shader.dynamicBufferUniforms.HasUniform(U_ENABLE_CUBEMAP_SAMPLER))
 			{
 				glUniform1i(material->uniformIDs.enableCubemapTexture, material->material.enableCubemapSampler);
 			}
 
-			if (shader->shader.dynamicBufferUniforms.HasUniform(Uniform::ALBEDO_SAMPLER))
+			if (shader->shader.dynamicBufferUniforms.HasUniform(U_ALBEDO_SAMPLER))
 			{
 				glUniform1ui(material->uniformIDs.enableAlbedoSampler, material->material.enableAlbedoSampler);
 			}
 
-			if (shader->shader.dynamicBufferUniforms.HasUniform(Uniform::CONST_ALBEDO))
+			if (shader->shader.dynamicBufferUniforms.HasUniform(U_CONST_ALBEDO))
 			{
 				glUniform4f(material->uniformIDs.constAlbedo, material->material.constAlbedo.x, material->material.constAlbedo.y, material->material.constAlbedo.z, 0);
 			}
 
-			if (shader->shader.dynamicBufferUniforms.HasUniform(Uniform::METALLIC_SAMPLER))
+			if (shader->shader.dynamicBufferUniforms.HasUniform(U_METALLIC_SAMPLER))
 			{
 				glUniform1ui(material->uniformIDs.enableMetallicSampler, material->material.enableMetallicSampler);
 			}
 
-			if (shader->shader.dynamicBufferUniforms.HasUniform(Uniform::CONST_METALLIC))
+			if (shader->shader.dynamicBufferUniforms.HasUniform(U_CONST_METALLIC))
 			{
 				glUniform1f(material->uniformIDs.constMetallic, material->material.constMetallic);
 			}
 
-			if (shader->shader.dynamicBufferUniforms.HasUniform(Uniform::ROUGHNESS_SAMPLER))
+			if (shader->shader.dynamicBufferUniforms.HasUniform(U_ROUGHNESS_SAMPLER))
 			{
 				glUniform1ui(material->uniformIDs.enableRoughnessSampler, material->material.enableRoughnessSampler);
 			}
 
-			if (shader->shader.dynamicBufferUniforms.HasUniform(Uniform::CONST_ROUGHNESS))
+			if (shader->shader.dynamicBufferUniforms.HasUniform(U_CONST_ROUGHNESS))
 			{
 				glUniform1f(material->uniformIDs.constRoughness, material->material.constRoughness);
 			}
 
-			if (shader->shader.dynamicBufferUniforms.HasUniform(Uniform::AO_SAMPLER))
+			if (shader->shader.dynamicBufferUniforms.HasUniform(U_AO_SAMPLER))
 			{
 				glUniform1ui(material->uniformIDs.enableAOSampler, material->material.enableAOSampler);
 			}
 
-			if (shader->shader.dynamicBufferUniforms.HasUniform(Uniform::CONST_AO))
+			if (shader->shader.dynamicBufferUniforms.HasUniform(U_CONST_AO))
 			{
 				glUniform1f(material->uniformIDs.constAO, material->material.constAO);
 			}
 
-			if (shader->shader.dynamicBufferUniforms.HasUniform(Uniform::IRRADIANCE_SAMPLER))
+			if (shader->shader.dynamicBufferUniforms.HasUniform(U_IRRADIANCE_SAMPLER))
 			{
 				glUniform1i(material->uniformIDs.enableIrradianceSampler, material->material.enableIrradianceSampler);
 			}
@@ -5086,20 +4625,28 @@ namespace flex
 				m_gBuffer_NormalRoughnessHandle.type,
 				newFrameBufferSize);
 
-			ResizeFrameBufferTexture(m_gBuffer_DiffuseAOHandle.id,
-				m_gBuffer_DiffuseAOHandle.internalFormat,
-				m_gBuffer_DiffuseAOHandle.format,
-				m_gBuffer_DiffuseAOHandle.type,
+			ResizeFrameBufferTexture(m_gBuffer_AlbedoAOHandle.id,
+				m_gBuffer_AlbedoAOHandle.internalFormat,
+				m_gBuffer_AlbedoAOHandle.format,
+				m_gBuffer_AlbedoAOHandle.type,
 				newFrameBufferSize);
 
 			ResizeRenderBuffer(m_gBufferDepthHandle, newFrameBufferSize, m_OffscreenDepthBufferInternalFormat);
 		}
 
-		void GLRenderer::OnSceneChanged()
+		void GLRenderer::OnPreSceneChange()
 		{
 			// G-Buffer needs to be regenerated using new scene's reflection probe mat ID
 			GenerateGBuffer();
-			m_DirectionalLight->shadowTextureID = m_ShadowMapTexture.id;
+			if (m_DirectionalLight != nullptr)
+			{
+				m_DirectionalLight->shadowTextureID = m_ShadowMapTexture.id;
+			}
+		}
+
+		void GLRenderer::OnPostSceneChange()
+		{
+
 		}
 
 		bool GLRenderer::GetRenderObjectCreateInfo(RenderID renderID, RenderObjectCreateInfo& outInfo)
@@ -5119,23 +4666,16 @@ namespace flex
 			outInfo.visible = renderObject->gameObject->IsVisible();
 			outInfo.visibleInSceneExplorer = renderObject->gameObject->IsVisibleInSceneExplorer();
 			outInfo.cullFace = GLCullFaceToCullFace(renderObject->cullFace);
-			outInfo.enableCulling = (renderObject->enableCulling == GL_TRUE);
 			outInfo.depthTestReadFunc = GlenumToDepthTestFunc(renderObject->depthTestReadFunc);
-			outInfo.depthWriteEnable = (renderObject->depthWriteEnable == GL_TRUE);
-			outInfo.editorObject = renderObject->editorObject;
+			outInfo.bDepthWriteEnable = (renderObject->bDepthWriteEnable == GL_TRUE);
+			outInfo.bEditorObject = renderObject->bEditorObject;
 
 			return true;
 		}
 
-		void GLRenderer::SetVSyncEnabled(bool enableVSync)
+		void GLRenderer::SetVSyncEnabled(bool bEnableVSync)
 		{
-			m_bVSyncEnabled = enableVSync;
-			glfwSwapInterval(enableVSync ? 1 : 0);
-		}
-
-		bool GLRenderer::GetVSyncEnabled()
-		{
-			return m_bVSyncEnabled;
+			glfwSwapInterval(bEnableVSync ? 1 : 0);
 		}
 
 		void GLRenderer::SetFloat(ShaderID shaderID, const char* valName, real val)
@@ -5224,14 +4764,14 @@ namespace flex
 
 				gBufferQuadVertexBufferDataCreateInfo.positions_3D = {
 					glm::vec3(-1.0f,  -1.0f, 0.0f),
-					glm::vec3(3.0f,  -1.0f, 0.0f),
 					glm::vec3(-1.0f, 3.0f, 0.0f),
+					glm::vec3(3.0f,  -1.0f, 0.0f),
 				};
 
 				gBufferQuadVertexBufferDataCreateInfo.texCoords_UV = {
 					glm::vec2(0.0f, 0.0f),
-					glm::vec2(2.0f, 0.0f),
 					glm::vec2(0.0f, 2.0f),
+					glm::vec2(2.0f, 0.0f),
 				};
 
 				gBufferQuadVertexBufferDataCreateInfo.attributes = (u32)VertexAttribute::POSITION | (u32)VertexAttribute::UV;
@@ -5242,7 +4782,7 @@ namespace flex
 
 		void GLRenderer::GenerateGBuffer()
 		{
-			if (!m_gBufferQuadVertexBufferData.vertexData)
+			if (m_gBufferQuadVertexBufferData.vertexData == nullptr)
 			{
 				GenerateGBufferVertexBuffer();
 			}
@@ -5252,7 +4792,7 @@ namespace flex
 
 			std::string gBufferMatName = "GBuffer material";
 			std::string gBufferName = "GBuffer quad";
-			// Remove existing material if present (this be true when reloading the scene)
+			// Remove existing material if present (this will be true when reloading the scene)
 			{
 				MaterialID existingGBufferMatID = InvalidMaterialID;
 				// TODO: Don't rely on material names!
@@ -5266,7 +4806,7 @@ namespace flex
 					GameObject* gameObject = *iter;
 					if (gameObject->GetName().compare(gBufferName) == 0)
 					{
-						SafeDelete(gameObject);
+						delete gameObject;
 						m_PersistentObjects.erase(iter);
 						break;
 					}
@@ -5290,13 +4830,13 @@ namespace flex
 			gBufferMaterialCreateInfo.frameBuffers = {
 				{ "positionMetallicFrameBufferSampler",  &m_gBuffer_PositionMetallicHandle.id },
 				{ "normalRoughnessFrameBufferSampler",  &m_gBuffer_NormalRoughnessHandle.id },
-				{ "albedoAOFrameBufferSampler",  &m_gBuffer_DiffuseAOHandle.id },
+				{ "albedoAOFrameBufferSampler",  &m_gBuffer_AlbedoAOHandle.id },
 			};
 
 			MaterialID gBufferMatID = InitializeMaterial(&gBufferMaterialCreateInfo);
 
 
-			GameObject* gBufferQuadGameObject = new GameObject(gBufferName, GameObjectType::NONE);
+			GameObject* gBufferQuadGameObject = new GameObject(gBufferName, GameObjectType::_NONE);
 			m_PersistentObjects.push_back(gBufferQuadGameObject);
 			// Don't render the g buffer normally, we'll handle it separately
 			gBufferQuadGameObject->SetVisible(false);
@@ -5306,19 +4846,16 @@ namespace flex
 			gBufferQuadCreateInfo.gameObject = gBufferQuadGameObject;
 			gBufferQuadCreateInfo.vertexBufferData = &m_gBufferQuadVertexBufferData;
 			gBufferQuadCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS; // Ignore previous depth values
-			gBufferQuadCreateInfo.depthWriteEnable = false; // Don't write GBuffer quad to depth buffer
+			gBufferQuadCreateInfo.bDepthWriteEnable = false; // Don't write GBuffer quad to depth buffer
 			gBufferQuadCreateInfo.visibleInSceneExplorer = false;
 
 			m_GBufferQuadRenderID = InitializeRenderObject(&gBufferQuadCreateInfo);
 
 			m_gBufferQuadVertexBufferData.DescribeShaderVariables(this, m_GBufferQuadRenderID);
-
-			//GLRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
 		}
 
 		u32 GLRenderer::GetRenderObjectCount() const
 		{
-			// TODO: Replace function with m_RenderObjects.size()? (only if no nullptr objects exist)
 			u32 count = 0;
 
 			for (GLRenderObject* renderObject : m_RenderObjects)
@@ -5400,20 +4937,12 @@ namespace flex
 			{
 				if (renderObject)
 				{
-					if (m_Materials.find(renderObject->materialID) == m_Materials.end())
+					GLMaterial& material = m_Materials[renderObject->materialID];
+					GLShader& shader = m_Shaders[material.material.shaderID];
+					if (shader.shader.bNeedPrefilteredMap)
 					{
-						PrintError("Render object contains invalid material ID: %i, material name: %s\n",
-								   renderObject->materialID, renderObject->materialName.c_str());
-					}
-					else
-					{
-						GLMaterial& material = m_Materials[renderObject->materialID];
-						GLShader& shader = m_Shaders[material.material.shaderID];
-						if (shader.shader.bNeedPrefilteredMap)
-						{
-							material.irradianceSamplerID = m_Materials[skyboxMaterialID].irradianceSamplerID;
-							material.prefilteredMapSamplerID = m_Materials[skyboxMaterialID].prefilteredMapSamplerID;
-						}
+						material.irradianceSamplerID = m_Materials[skyboxMaterialID].irradianceSamplerID;
+						material.prefilteredMapSamplerID = m_Materials[skyboxMaterialID].prefilteredMapSamplerID;
 					}
 				}
 			}
@@ -5478,7 +5007,7 @@ namespace flex
 				}
 
 				renderObject->gameObject = nullptr;
-				SafeDelete(renderObject);
+				delete renderObject;
 			}
 
 			m_RenderObjects[renderID] = nullptr;
@@ -5500,7 +5029,7 @@ namespace flex
 			}
 		}
 
-		btIDebugDraw* GLRenderer::GetDebugDrawer()
+		PhysicsDebugDrawBase* GLRenderer::GetDebugDrawer()
 		{
 			return m_PhysicsDebugDrawer;
 		}
@@ -5517,156 +5046,8 @@ namespace flex
 			GL_POP_DEBUG_GROUP();
 		}
 
-		void GLRenderer::SaveSettingsToDisk(bool bSaveOverDefaults /* = false */, bool bAddEditorStr /* = true */)
-		{
-			std::string filePath = (bSaveOverDefaults ? m_DefaultSettingsFilePathAbs : m_SettingsFilePathAbs);
-
-			if (bSaveOverDefaults && FileExists(m_SettingsFilePathAbs))
-			{
-				DeleteFile(m_SettingsFilePathAbs);
-			}
-
-			if (filePath.empty())
-			{
-				PrintError("Failed to save renderer settings to disk: file path is not set!\n");
-				return;
-			}
-
-			JSONObject rootObject = {};
-			rootObject.fields.emplace_back("enable post-processing", JSONValue(m_bPostProcessingEnabled));
-			rootObject.fields.emplace_back("enable v-sync", JSONValue(m_bVSyncEnabled));
-			rootObject.fields.emplace_back("enable fxaa", JSONValue(m_PostProcessSettings.bEnableFXAA));
-			rootObject.fields.emplace_back("brightness", JSONValue(Vec3ToString(m_PostProcessSettings.brightness, 3)));
-			rootObject.fields.emplace_back("offset", JSONValue(Vec3ToString(m_PostProcessSettings.offset, 3)));
-			rootObject.fields.emplace_back("saturation", JSONValue(m_PostProcessSettings.saturation));
-
-			BaseCamera* cam = g_CameraManager->CurrentCamera();
-			rootObject.fields.emplace_back("aperture", JSONValue(cam->aperture));
-			rootObject.fields.emplace_back("shutter speed", JSONValue(cam->shutterSpeed));
-			rootObject.fields.emplace_back("light sensitivity", JSONValue(cam->lightSensitivity));
-			std::string fileContents = rootObject.Print(0);
-
-			if (WriteFile(filePath, fileContents, false))
-			{
-				if (bAddEditorStr)
-				{
-					if (bSaveOverDefaults)
-					{
-						AddEditorString("Saved default renderer settings");
-					}
-					else
-					{
-						AddEditorString("Saved renderer settings");
-					}
-				}
-			}
-		}
-
-		void GLRenderer::LoadSettingsFromDisk(bool bLoadDefaults /* = false */)
-		{
-			std::string filePath = (bLoadDefaults ? m_DefaultSettingsFilePathAbs : m_SettingsFilePathAbs);
-
-			if (!bLoadDefaults && !FileExists(m_SettingsFilePathAbs))
-			{
-				filePath = m_DefaultSettingsFilePathAbs;
-
-				if (!FileExists(filePath))
-				{
-					PrintError("Failed to find renderer settings files on disk!\n");
-					return;
-				}
-			}
-
-			if (bLoadDefaults && FileExists(m_SettingsFilePathAbs))
-			{
-				DeleteFile(m_SettingsFilePathAbs);
-			}
-
-			JSONObject rootObject;
-			if (JSONParser::Parse(filePath, rootObject))
-			{
-				m_bPostProcessingEnabled = rootObject.GetBool("enable post-processing");
-				SetVSyncEnabled(rootObject.GetBool("enable v-sync"));
-				m_PostProcessSettings.bEnableFXAA = rootObject.GetBool("enable fxaa");
-				m_PostProcessSettings.brightness = ParseVec3(rootObject.GetString("brightness"));
-				m_PostProcessSettings.offset = ParseVec3(rootObject.GetString("offset"));
-				m_PostProcessSettings.saturation = rootObject.GetFloat("saturation");
-
-				if (rootObject.HasField("aperture"))
-				{
-					// Assume all exposure control fields are present if one is
-					BaseCamera* cam = g_CameraManager->CurrentCamera();
-					cam->aperture = rootObject.GetFloat("aperture");
-					cam->shutterSpeed = rootObject.GetFloat("shutter speed");
-					cam->lightSensitivity = rootObject.GetFloat("light sensitivity");
-					cam->CalculateExposure();
-				}
-			}
-			else
-			{
-				PrintError("Failed to read renderer settings file, but it exists!\n");
-			}
-		}
-
-		real GLRenderer::GetStringWidth(const std::string& str, BitmapFont* font, real letterSpacing, bool bNormalized) const
-		{
-			real strWidth = 0;
-
-			char prevChar = ' ';
-			for (char c : str)
-			{
-				if (BitmapFont::IsCharValid(c))
-				{
-					FontMetric* metric = font->GetMetric(c);
-
-					if (font->UseKerning())
-					{
-						std::wstring charKey(std::wstring(1, prevChar) + std::wstring(1, c));
-
-						auto iter = metric->kerning.find(charKey);
-						if (iter != metric->kerning.end())
-						{
-							strWidth += iter->second.x;
-						}
-					}
-
-					strWidth += metric->advanceX + letterSpacing;
-				}
-			}
-
-			if (bNormalized)
-			{
-				strWidth /= (real)g_Window->GetFrameBufferSize().x;
-			}
-
-			return strWidth;
-		}
-
-		real GLRenderer::GetStringHeight(const std::string& str, BitmapFont* font, bool bNormalized) const
-		{
-			real strHeight = 0;
-
-			for (char c : str)
-			{
-				if (BitmapFont::IsCharValid(c))
-				{
-					FontMetric* metric = font->GetMetric(c);
-					strHeight = glm::max(strHeight, (real)(metric->height));
-				}
-			}
-
-			if (bNormalized)
-			{
-				strHeight /= (real)g_Window->GetFrameBufferSize().y;
-			}
-
-			return strHeight;
-		}
-
 		void GLRenderer::DrawAssetBrowserImGui(bool* bShowing)
 		{
-			static i32 MAX_CHAR_COUNT = 128;
-
 			ImGui::SetNextWindowSize(ImVec2(400.0f, 350.0f), ImGuiCond_FirstUseEver);
 			if (ImGui::Begin("Asset browser", bShowing))
 			{
@@ -5926,11 +5307,11 @@ namespace flex
 								{
 									MaterialID draggedMaterialID = i;
 									const void* data = (void*)(&draggedMaterialID);
-									size_t size = sizeof(MaterialID);
+									u32 size = sizeof(MaterialID);
 
 									ImGui::SetDragDropPayload(m_MaterialPayloadCStr, data, size);
 
-									ImGui::Text(m_Materials[i].material.name.c_str());
+									ImGui::Text("%s", m_Materials[i].material.name.c_str());
 
 									ImGui::EndDragDropSource();
 								}
@@ -6078,12 +5459,13 @@ namespace flex
 				if (ImGui::CollapsingHeader("Meshes"))
 				{
 					static i32 selectedMeshIndex = 0;
-					const i32 MAX_NAME_LEN = 128;
-					static std::string selectedMeshName = "";
+					//const i32 MAX_NAME_LEN = 128;
+					// TODO: Implement mesh naming
+					//static std::string selectedMeshName = "";
 					static bool bUpdateName = true;
 
 					std::string selectedMeshRelativeFilePath;
-					MeshComponent::LoadedMesh* selectedMesh = nullptr;
+					LoadedMesh* selectedMesh = nullptr;
 					i32 meshIdx = 0;
 					for (auto meshPair : MeshComponent::m_LoadedMeshes)
 					{
@@ -6100,10 +5482,10 @@ namespace flex
 
 					ImGui::Columns(2, "import settings columns", false);
 					ImGui::Separator();
-					ImGui::Checkbox("Flip U", &selectedMesh->importSettings.flipU); ImGui::NextColumn();
-					ImGui::Checkbox("Flip V", &selectedMesh->importSettings.flipV); ImGui::NextColumn();
-					ImGui::Checkbox("Swap Normal YZ", &selectedMesh->importSettings.swapNormalYZ); ImGui::NextColumn();
-					ImGui::Checkbox("Flip Normal Z", &selectedMesh->importSettings.flipNormalZ); ImGui::NextColumn();
+					ImGui::Checkbox("Flip U", &selectedMesh->importSettings.bFlipU); ImGui::NextColumn();
+					ImGui::Checkbox("Flip V", &selectedMesh->importSettings.bFlipV); ImGui::NextColumn();
+					ImGui::Checkbox("Swap Normal YZ", &selectedMesh->importSettings.bSwapNormalYZ); ImGui::NextColumn();
+					ImGui::Checkbox("Flip Normal Z", &selectedMesh->importSettings.bFlipNormalZ); ImGui::NextColumn();
 					ImGui::Columns(1);
 
 					if (ImGui::Button("Re-import"))
@@ -6115,7 +5497,7 @@ namespace flex
 								MeshComponent* gameObjectMesh = renderObject->gameObject->GetMeshComponent();
 								if (gameObjectMesh &&  gameObjectMesh->GetRelativeFilePath().compare(selectedMeshRelativeFilePath) == 0)
 								{
-									MeshComponent::ImportSettings importSettings = selectedMesh->importSettings;
+									MeshImportSettings importSettings = selectedMesh->importSettings;
 
 									MaterialID matID = renderObject->materialID;
 									GameObject* gameObject = renderObject->gameObject;
@@ -6184,11 +5566,11 @@ namespace flex
 									if (ImGui::BeginDragDropSource())
 									{
 										const void* data = (void*)(meshIter.first.c_str());
-										size_t size = strlen(meshIter.first.c_str()) * sizeof(char);
+										u32 size = strlen(meshIter.first.c_str()) * sizeof(char);
 
 										ImGui::SetDragDropPayload(m_MeshPayloadCStr, data, size);
 
-										ImGui::Text(meshFileName.c_str());
+										ImGui::Text("%s", meshFileName.c_str());
 
 										ImGui::EndDragDropSource();
 									}
@@ -6214,8 +5596,8 @@ namespace flex
 							StripLeadingDirectories(fileNameAndExtension);
 							std::string relativeFilePath = relativeDirPath + fileNameAndExtension;
 
-							MeshComponent::LoadedMesh* existingMesh = nullptr;
-							if (MeshComponent::GetLoadedMesh(relativeFilePath, &existingMesh))
+							LoadedMesh* existingMesh = nullptr;
+							if (MeshComponent::FindPreLoadedMesh(relativeFilePath, &existingMesh))
 							{
 								i32 j = 0;
 								for (auto meshPair : MeshComponent::m_LoadedMeshes)
@@ -6243,294 +5625,20 @@ namespace flex
 			ImGui::End();
 		}
 
-		void GLRenderer::DrawImGuiRenderObjects()
+		void GLRenderer::DrawImGuiForRenderObject(RenderID renderID)
 		{
-			ImGui::NewLine();
-
-			ImGui::BeginChild("SelectedObject",
-							  ImVec2(0.0f, 220.0f),
-							  true);
-
-			const std::vector<GameObject*>& selectedObjects = g_EngineInstance->GetSelectedObjects();
-			if (!selectedObjects.empty())
-			{
-				// TODO: Draw common fields for all selected objects?
-				GameObject* selectedObject = selectedObjects[0];
-				if (selectedObject)
-				{
-					selectedObject->DrawImGuiObjects();
-				}
-			}
-
-			ImGui::EndChild();
-
-			ImGui::NewLine();
-
-			ImGui::Text("Game Objects");
-
-			// Dropping objects onto this text makes them root objects
-			if (ImGui::BeginDragDropTarget())
-			{
-				const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(m_GameObjectPayloadCStr);
-
-				if (payload && payload->Data)
-				{
-					i32 draggedObjectCount = payload->DataSize / sizeof(GameObject*);
-
-					std::vector<GameObject*> draggedGameObjectsVec;
-					draggedGameObjectsVec.reserve(draggedObjectCount);
-					for (i32 i = 0; i < draggedObjectCount; ++i)
-					{
-						draggedGameObjectsVec.push_back(*((GameObject**)payload->Data + i));
-					}
-
-					if (!draggedGameObjectsVec.empty())
-					{
-						std::vector<GameObject*> siblings = draggedGameObjectsVec[0]->GetLaterSiblings();
-
-						for (GameObject* draggedGameObject : draggedGameObjectsVec)
-						{
-							bool bRootObject = draggedGameObject == draggedGameObjectsVec[0];
-							bool bRootSibling = Find(siblings, draggedGameObject) != siblings.end();
-							// Only re-parent root-most object (leave sub-hierarchy as-is)
-							if ((bRootObject || bRootSibling) &&
-								draggedGameObject->GetParent())
-							{
-								draggedGameObject->GetParent()->RemoveChild(draggedGameObject);
-								g_SceneManager->CurrentScene()->AddRootObject(draggedGameObject);
-							}
-						}
-					}
-
-				}
-				ImGui::EndDragDropTarget();
-			}
-
-			std::vector<GameObject*>& rootObjects = g_SceneManager->CurrentScene()->GetRootObjects();
-			for (GameObject* rootObject : rootObjects)
-			{
-				if (DrawGameObjectNameAndChildren(rootObject))
-				{
-					break;
-				}
-			}
-
-			DoCreateGameObjectButton("Add object...", "Add object");
-
-			if (m_PointLights.size() < MAX_POINT_LIGHT_COUNT)
-			{
-				static const char* newPointLightStr = "Add point light";
-				if (ImGui::Button(newPointLightStr))
-				{
-					PointLight* newPointLight = new PointLight();
-					g_SceneManager->CurrentScene()->AddRootObject(newPointLight);
-					RegisterPointLight(newPointLight);
-				}
-			}
+			UNREFERENCED_PARAMETER(renderID);
 		}
 
-		void GLRenderer::DrawImGuiForRenderID(RenderID renderID)
+		void GLRenderer::UpdateVertexData(RenderID renderID, VertexBufferData* vertexBufferData)
 		{
+			PROFILE_AUTO("Update Vertex Data");
+
 			GLRenderObject* renderObject = GetRenderObject(renderID);
-			if (renderObject)
-			{
-				GameObject* gameObject = renderObject->gameObject;
 
-				GLMaterial& material = m_Materials[renderObject->materialID];
-
-				MaterialID selectedMaterialID = 0;
-				i32 selectedMaterialShortIndex = 0;
-				std::string currentMaterialName = "NONE";
-				i32 matShortIndex = 0;
-				for (i32 i = 0; i < (i32)m_Materials.size(); ++i)
-				{
-					if (m_Materials[i].material.engineMaterial)
-					{
-						continue;
-					}
-
-					if (i == (i32)renderObject->materialID)
-					{
-						selectedMaterialID = i;
-						selectedMaterialShortIndex = matShortIndex;
-						currentMaterialName = material.material.name;
-						break;
-					}
-
-					++matShortIndex;
-				}
-				if (ImGui::BeginCombo("Material", currentMaterialName.c_str()))
-				{
-					matShortIndex = 0;
-					for (i32 i = 0; i < (i32)m_Materials.size(); ++i)
-					{
-						if (m_Materials[i].material.engineMaterial)
-						{
-							continue;
-						}
-
-						bool bSelected = (matShortIndex == selectedMaterialShortIndex);
-						std::string materialName = m_Materials[i].material.name;
-						if (ImGui::Selectable(materialName.c_str(), &bSelected))
-						{
-							MeshComponent* mesh = gameObject->GetMeshComponent();
-							if (mesh)
-							{
-								mesh->SetMaterialID(i);
-							}
-							selectedMaterialShortIndex = matShortIndex;
-						}
-
-						++matShortIndex;
-					}
-
-					ImGui::EndCombo();
-				}
-
-				if (ImGui::BeginDragDropTarget())
-				{
-					const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(m_MaterialPayloadCStr);
-
-					if (payload && payload->Data)
-					{
-						MaterialID* draggedMaterialID = (MaterialID*)payload->Data;
-						if (draggedMaterialID)
-						{
-							MeshComponent* mesh = gameObject->GetMeshComponent();
-							if (mesh)
-							{
-								mesh->SetMaterialID(*draggedMaterialID);
-							}
-						}
-					}
-
-					ImGui::EndDragDropTarget();
-				}
-
-				MeshComponent* mesh = gameObject->GetMeshComponent();
-				if (mesh)
-				{
-					switch (mesh->GetType())
-					{
-					case MeshComponent::Type::FILE:
-					{
-						i32 selectedMeshIndex = 0;
-						std::string currentMeshFileName = "NONE";
-						i32 i = 0;
-						for (auto iter : MeshComponent::m_LoadedMeshes)
-						{
-							std::string meshFileName = iter.first;
-							StripLeadingDirectories(meshFileName);
-							if (mesh->GetFileName().compare(meshFileName) == 0)
-							{
-								selectedMeshIndex = i;
-								currentMeshFileName = meshFileName;
-								break;
-							}
-
-							++i;
-						}
-						if (ImGui::BeginCombo("Mesh", currentMeshFileName.c_str()))
-						{
-							i = 0;
-
-							for (auto meshPair : MeshComponent::m_LoadedMeshes)
-							{
-								bool bSelected = (i == selectedMeshIndex);
-								std::string meshFileName = meshPair.first;
-								StripLeadingDirectories(meshFileName);
-								if (ImGui::Selectable(meshFileName.c_str(), &bSelected))
-								{
-									if (selectedMeshIndex != i)
-									{
-										selectedMeshIndex = i;
-										std::string relativeFilePath = meshPair.first;
-										MaterialID matID = mesh->GetMaterialID();
-										DestroyRenderObject(gameObject->GetRenderID());
-										gameObject->SetRenderID(InvalidRenderID);
-										mesh->Destroy();
-										mesh->SetOwner(gameObject);
-										mesh->SetRequiredAttributesFromMaterialID(matID);
-										mesh->LoadFromFile(relativeFilePath);
-									}
-								}
-
-								++i;
-							}
-
-							ImGui::EndCombo();
-						}
-
-						if (ImGui::BeginPopupContextItem("mesh context menu"))
-						{
-							if (ImGui::Button("Remove mesh component"))
-							{
-								gameObject->SetMeshComponent(nullptr);
-							}
-
-							ImGui::EndPopup();
-						}
-
-						if (ImGui::BeginDragDropTarget())
-						{
-							const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(m_MeshPayloadCStr);
-
-							if (payload && payload->Data)
-							{
-								std::string draggedMeshFileName((const char*)payload->Data, payload->DataSize);
-								auto meshIter = MeshComponent::m_LoadedMeshes.find(draggedMeshFileName);
-								if (meshIter != MeshComponent::m_LoadedMeshes.end())
-								{
-									std::string newMeshFilePath = meshIter->first;
-
-									if (mesh->GetRelativeFilePath().compare(newMeshFilePath) != 0)
-									{
-										MaterialID matID = mesh->GetMaterialID();
-										DestroyRenderObject(gameObject->GetRenderID());
-										gameObject->SetRenderID(InvalidRenderID);
-										mesh->Destroy();
-										mesh->SetOwner(gameObject);
-										mesh->SetRequiredAttributesFromMaterialID(matID);
-										mesh->LoadFromFile(newMeshFilePath);
-									}
-								}
-							}
-							ImGui::EndDragDropTarget();
-						}
-					} break;
-					case MeshComponent::Type::PREFAB:
-					{
-						i32 selectedMeshIndex = (i32)mesh->GetShape();
-						std::string currentMeshName = MeshComponent::PrefabShapeToString(mesh->GetShape());
-
-						if (ImGui::BeginCombo("Prefab", currentMeshName.c_str()))
-						{
-							for (i32 i = 0; i < (i32)MeshComponent::PrefabShape::NONE; ++i)
-							{
-								std::string shapeStr = MeshComponent::PrefabShapeToString((MeshComponent::PrefabShape)i);
-								bool bSelected = (selectedMeshIndex == i);
-								if (ImGui::Selectable(shapeStr.c_str(), &bSelected))
-								{
-									if (selectedMeshIndex != i)
-									{
-										selectedMeshIndex = i;
-										MaterialID matID = mesh->GetMaterialID();
-										DestroyRenderObject(gameObject->GetRenderID());
-										gameObject->SetRenderID(InvalidRenderID);
-										mesh->Destroy();
-										mesh->SetOwner(gameObject);
-										mesh->SetRequiredAttributesFromMaterialID(matID);
-										mesh->LoadPrefabShape((MeshComponent::PrefabShape)i);
-									}
-								}
-							}
-
-							ImGui::EndCombo();
-						}
-					} break;
-					}
-				}
-			}
+			glBindVertexArray(renderObject->VAO);
+			glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
+			glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)vertexBufferData->VertexBufferSize, vertexBufferData->vertexData, GL_DYNAMIC_DRAW);
 		}
 
 		void GLRenderer::DrawUntexturedQuad(const glm::vec2& pos,
@@ -6551,7 +5659,7 @@ namespace flex
 			drawInfo.pos = glm::vec3(pos.x, pos.y, 1.0f);
 			drawInfo.bEnableAlbedoSampler = false;
 
-			DrawSpriteQuad(drawInfo);
+			DrawSprite(drawInfo);
 		}
 
 		void GLRenderer::DrawUntexturedQuadRaw(const glm::vec2& pos,
@@ -6571,7 +5679,7 @@ namespace flex
 			drawInfo.pos = glm::vec3(pos.x, pos.y, 1.0f);
 			drawInfo.bEnableAlbedoSampler = false;
 
-			DrawSpriteQuad(drawInfo);
+			DrawSprite(drawInfo);
 		}
 
 		void GLRenderer::DrawSprite(const SpriteQuadDrawInfo& drawInfo)
@@ -6586,303 +5694,9 @@ namespace flex
 			}
 		}
 
-		bool GLRenderer::DrawGameObjectNameAndChildren(GameObject* gameObject)
-		{
-			RenderID renderID = gameObject->GetRenderID();
-			GLRenderObject* renderObject = nullptr;
-			std::string objectName = gameObject->GetName();
-			std::string objectID;
-			if (renderID == InvalidRenderID)
-			{
-				objectID = "##" + objectName;
-			}
-			else
-			{
-				renderObject = GetRenderObject(renderID);
-				objectID = "##" + std::to_string(renderObject->renderID);
-
-				if (!gameObject->IsVisibleInSceneExplorer())
-				{
-					return false;
-				}
-			}
-
-			const std::vector<GameObject*>& gameObjectChildren = gameObject->GetChildren();
-			bool bHasChildren = !gameObjectChildren.empty();
-			if (bHasChildren)
-			{
-				bool bChildVisibleInSceneExplorer = false;
-				// Make sure at least one child is visible in scene explorer
-				for (GameObject* child : gameObjectChildren)
-				{
-					if (child->IsVisibleInSceneExplorer(true))
-					{
-						bChildVisibleInSceneExplorer = true;
-						break;
-					}
-				}
-
-				if (!bChildVisibleInSceneExplorer)
-				{
-					bHasChildren = false;
-				}
-			}
-			bool bSelected = g_EngineInstance->IsObjectSelected(gameObject);
-
-			bool visible = gameObject->IsVisible();
-			const std::string objectVisibleLabel(objectID + "-visible");
-			if (ImGui::Checkbox(objectVisibleLabel.c_str(), &visible))
-			{
-				gameObject->SetVisible(visible);
-			}
-			ImGui::SameLine();
-
-			ImGuiTreeNodeFlags node_flags =
-				ImGuiTreeNodeFlags_OpenOnArrow |
-				ImGuiTreeNodeFlags_OpenOnDoubleClick |
-				(bSelected ? ImGuiTreeNodeFlags_Selected : 0);
-
-			if (!bHasChildren)
-			{
-				node_flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
-			}
-
-			bool node_open = ImGui::TreeNodeEx((void*)gameObject, node_flags, "%s", objectName.c_str());
-
-			if (ImGui::BeginDragDropTarget())
-			{
-				const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(m_MaterialPayloadCStr);
-
-				if (payload && payload->Data)
-				{
-					MaterialID* draggedMaterialID = (MaterialID*)payload->Data;
-					if (draggedMaterialID)
-					{
-						if (gameObject->GetMeshComponent())
-						{
-							gameObject->GetMeshComponent()->SetMaterialID(*draggedMaterialID);
-						}
-					}
-				}
-
-				ImGui::EndDragDropTarget();
-			}
-
-			gameObject->DoImGuiContextMenu(false);
-
-			bool bParentChildTreeChanged = (gameObject == nullptr);
-			if (gameObject)
-			{
-				// TODO: Remove from renderer class
-				if (ImGui::IsMouseReleased(0) && ImGui::IsItemHovered(ImGuiHoveredFlags_None))
-				{
-					if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_LEFT_CONTROL))
-					{
-						g_EngineInstance->ToggleSelectedObject(gameObject);
-					}
-					else if (g_InputManager->GetKeyDown(Input::KeyCode::KEY_LEFT_SHIFT))
-					{
-						const std::vector<GameObject*>& selectedObjects = g_EngineInstance->GetSelectedObjects();
-						if (selectedObjects.empty() ||
-							(selectedObjects.size() == 1 && selectedObjects[0] == gameObject))
-						{
-							g_EngineInstance->ToggleSelectedObject(gameObject);
-						}
-						else
-						{
-							std::vector<GameObject*> objectsToSelect;
-
-							GameObject* objectA = selectedObjects[selectedObjects.size() - 1];
-							GameObject* objectB = gameObject;
-
-							objectA->AddSelfAndChildrenToVec(objectsToSelect);
-							objectB->AddSelfAndChildrenToVec(objectsToSelect);
-
-							if (objectA->GetParent() == objectB->GetParent() &&
-								objectA != objectB)
-							{
-								// Ensure A comes before B
-								if (objectA->GetSiblingIndex() > objectB->GetSiblingIndex())
-								{
-									std::swap(objectA, objectB);
-								}
-
-								const std::vector<GameObject*>& objectALaterSiblings = objectA->GetLaterSiblings();
-								auto objectBIter = Find(objectALaterSiblings, objectB);
-								assert(objectBIter != objectALaterSiblings.end());
-								for (auto iter = objectALaterSiblings.begin(); iter != objectBIter; ++iter)
-								{
-									(*iter)->AddSelfAndChildrenToVec(objectsToSelect);
-								}
-							}
-
-							for (GameObject* objectToSelect : objectsToSelect)
-							{
-								g_EngineInstance->AddSelectedObject(objectToSelect);
-							}
-						}
-					}
-					else
-					{
-						g_EngineInstance->SetSelectedObject(gameObject);
-					}
-				}
-
-				if (ImGui::IsItemActive())
-				{
-					if (ImGui::BeginDragDropSource())
-					{
-						const void* data = nullptr;
-						size_t size = 0;
-
-						const std::vector<GameObject*>& selectedObjects = g_EngineInstance->GetSelectedObjects();
-						auto iter = Find(selectedObjects, gameObject);
-						bool bItemInSelection = iter != selectedObjects.end();
-						std::string dragDropText;
-
-						std::vector<GameObject*> draggedGameObjects;
-						if (bItemInSelection)
-						{
-							for (GameObject* selectedObject : selectedObjects)
-							{
-								// Don't allow children to not be part of dragged selection
-								selectedObject->AddSelfAndChildrenToVec(draggedGameObjects);
-							}
-
-							// Ensure any children which weren't selected are now in selection
-							for (GameObject* draggedGameObject : draggedGameObjects)
-							{
-								g_EngineInstance->AddSelectedObject(draggedGameObject);
-							}
-
-							data = draggedGameObjects.data();
-							size = draggedGameObjects.size() * sizeof(GameObject*);
-
-							if (draggedGameObjects.size() == 1)
-							{
-								dragDropText = draggedGameObjects[0]->GetName();
-							}
-							else
-							{
-								dragDropText = IntToString(draggedGameObjects.size()) + " objects";
-							}
-						}
-						else
-						{
-							g_EngineInstance->SetSelectedObject(gameObject);
-
-							data = (void*)(&gameObject);
-							size = sizeof(GameObject*);
-							dragDropText = gameObject->GetName();
-						}
-
-						ImGui::SetDragDropPayload(m_GameObjectPayloadCStr, data, size);
-
-						ImGui::Text(dragDropText.c_str());
-
-						ImGui::EndDragDropSource();
-					}
-				}
-
-				if (ImGui::BeginDragDropTarget())
-				{
-					const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(m_GameObjectPayloadCStr);
-
-					if (payload && payload->Data)
-					{
-						i32 draggedObjectCount = payload->DataSize / sizeof(GameObject*);
-
-						std::vector<GameObject*> draggedGameObjectsVec;
-						draggedGameObjectsVec.reserve(draggedObjectCount);
-						for (i32 i = 0; i < draggedObjectCount; ++i)
-						{
-							draggedGameObjectsVec.push_back(*((GameObject**)payload->Data + i));
-						}
-
-						if (!draggedGameObjectsVec.empty())
-						{
-							bool bContainsChild = false;
-
-							for (GameObject* draggedGameObject : draggedGameObjectsVec)
-							{
-								if (draggedGameObject == gameObject)
-								{
-									bContainsChild = true;
-									break;
-								}
-
-								if (draggedGameObject->HasChild(gameObject, true))
-								{
-									bContainsChild = true;
-									break;
-								}
-							}
-
-							// If we're a child of the dragged object then don't allow (causes infinite recursion)
-							if (!bContainsChild)
-							{
-								for (GameObject* draggedGameObject : draggedGameObjectsVec)
-								{
-									if (draggedGameObject->GetParent())
-									{
-										if (Find(draggedGameObjectsVec, draggedGameObject->GetParent()) == draggedGameObjectsVec.end())
-										{
-											draggedGameObject->DetachFromParent();
-											gameObject->AddChild(draggedGameObject);
-											bParentChildTreeChanged = true;
-										}
-									}
-									else
-									{
-										g_SceneManager->CurrentScene()->RemoveObjectAtEndOfFrame(draggedGameObject);
-										gameObject->AddChild(draggedGameObject);
-										bParentChildTreeChanged = true;
-									}
-								}
-							}
-						}
-					}
-
-					ImGui::EndDragDropTarget();
-				}
-			}
-
-			if (node_open && bHasChildren)
-			{
-				if (!bParentChildTreeChanged && gameObject)
-				{
-					ImGui::Indent();
-					// Don't cache results since children can change during this recursive call
-					for (GameObject* child : gameObject->GetChildren())
-					{
-						if (DrawGameObjectNameAndChildren(child))
-						{
-							// If parent-child tree changed then early out
-
-							ImGui::Unindent();
-							ImGui::TreePop();
-
-							return true;
-						}
-					}
-					ImGui::Unindent();
-				}
-
-				ImGui::TreePop();
-			}
-
-			return bParentChildTreeChanged;
-		}
-
-		void GLRenderer::UpdateRenderObjectVertexData(RenderID renderID)
-		{
-			UNREFERENCED_PARAMETER(renderID);
-			// TODO: IMPLEMENT: UNIMPLEMENTED:
-		}
-
 		GLRenderObject* GLRenderer::GetRenderObject(RenderID renderID)
 		{
-#if _DEBUG
+#if DEBUG
 			if (renderID > m_RenderObjects.size() ||
 				renderID == InvalidRenderID)
 			{
@@ -6921,17 +5735,41 @@ namespace flex
 
 		RenderID GLRenderer::GetNextAvailableRenderID() const
 		{
-			for (u32 i = 0; i < m_RenderObjects.size(); ++i)
+			for (i32 i = (i32)m_RenderObjects.size() - 1; i >= 0; --i)
 			{
 				if (m_RenderObjects[i] == nullptr)
 				{
-					return i;
+					return (RenderID)i;
 				}
 			}
 
 			return m_RenderObjects.size();
 		}
 
+		EventReply GLRenderer::OnKeyEvent(KeyCode keyCode, KeyAction action, i32 modifiers)
+		{
+			if (action == KeyAction::PRESS)
+			{
+				if (keyCode == KeyCode::KEY_U && modifiers == 0)
+				{
+					m_bCaptureReflectionProbes = true;
+					return EventReply::CONSUMED;
+				}
+
+			}
+
+			return EventReply::UNCONSUMED;
+		}
+
+		EventReply GLRenderer::OnActionEvent(Action action)
+		{
+			if (action == Action::TAKE_SCREENSHOT)
+			{
+				m_bCaptureScreenshot = true;
+				return EventReply::CONSUMED;
+			}
+			return EventReply::UNCONSUMED;
+		}
 
 		void SetClipboardText(void* userData, const char* text)
 		{

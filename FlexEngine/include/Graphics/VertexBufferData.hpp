@@ -14,7 +14,6 @@ namespace flex
 			std::vector<glm::vec3> positions_3D;
 			std::vector<glm::vec2> positions_2D;
 			std::vector<glm::vec2> texCoords_UV;
-			std::vector<glm::vec3> texCoords_UVW;
 			std::vector<i32> colors_R8G8B8A8;
 			std::vector<glm::vec4> colors_R32G32B32A32;
 			std::vector<glm::vec3> tangents;
@@ -26,6 +25,7 @@ namespace flex
 		};
 
 		void Initialize(CreateInfo* createInfo);
+		void UpdateData(CreateInfo* createInfo);
 		void Destroy();
 
 		void DescribeShaderVariables(Renderer* renderer, RenderID renderID);

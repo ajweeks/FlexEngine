@@ -8,31 +8,45 @@
 
 namespace flex
 {
-	CameraManager::CameraManager()
-	{
-	}
-
-	CameraManager::~CameraManager()
+	CameraManager::CameraManager() :
+		m_ActionCallback(this, &CameraManager::OnActionEvent)
 	{
 	}
 
 	void CameraManager::Initialize()
 	{
-		m_Cameras[m_ActiveCameraIndex]->Initialize();
+		BaseCamera* camera = CurrentCamera();
+		assert(camera != nullptr);
+
+		camera->Initialize();
+		camera->OnPossess();
+
+		g_InputManager->BindActionCallback(&m_ActionCallback, 12);
+
+		m_bInitialized = true;
+	}
+
+	void CameraManager::Destroy()
+	{
+		while (!m_CameraStack.empty())
+		{
+			m_CameraStack.pop();
+		}
+
+		for (BaseCamera* camera : m_Cameras)
+		{
+			camera->Destroy();
+			delete camera;
+		}
+		m_Cameras.clear();
+
+		g_InputManager->UnbindActionCallback(&m_ActionCallback);
+
+		m_bInitialized = false;
 	}
 
 	void CameraManager::Update()
 	{
-		if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_EQUAL) ||
-			g_InputManager->IsGamepadButtonPressed(0, Input::GamepadButton::RIGHT_BUMPER))
-		{
-			g_CameraManager->SetActiveIndexRelative(1, false);
-		}
-		else if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_MINUS) ||
-			g_InputManager->IsGamepadButtonPressed(0, Input::GamepadButton::LEFT_BUMPER))
-		{
-			g_CameraManager->SetActiveIndexRelative(-1, false);
-		}
 	}
 
 	void CameraManager::OnSceneChanged()
@@ -43,107 +57,139 @@ namespace flex
 		}
 	}
 
-	void CameraManager::DestroyCameras()
-	{
-		for (BaseCamera* camera : m_Cameras)
-		{
-			SafeDelete(camera);
-		}
-		m_Cameras.clear();
-		m_ActiveCameraIndex = -1;
-	}
-
 	BaseCamera* CameraManager::CurrentCamera() const
 	{
-		return m_Cameras[m_ActiveCameraIndex];
-	}
-
-	i32 CameraManager::CameraCount() const
-	{
-		return (i32)m_Cameras.size();
+		return m_CameraStack.top();
 	}
 
 	void CameraManager::AddCamera(BaseCamera* camera, bool bSwitchTo)
 	{
-		assert(camera);
+		assert(camera != nullptr);
 
 		i32 cameraIndex = GetCameraIndex(camera);
 		if (cameraIndex == -1) // Only add camera if it hasn't been added before
 		{
 			m_Cameras.push_back(camera);
 
-			if (bSwitchTo || m_ActiveCameraIndex == -1)
+			if (bSwitchTo)
 			{
-				m_ActiveCameraIndex = (m_Cameras.size() - 1);
+				SetCamera(camera, false);
 			}
 		}
 	}
 
-	void CameraManager::SwtichTo(BaseCamera* camera, bool bAlign)
+	BaseCamera* CameraManager::SetCamera(BaseCamera* camera, bool bAlignWithPrevious)
 	{
-		assert(camera);
-
-		i32 newCameraIndex = GetCameraIndex(camera);
-
-		if (newCameraIndex == -1)
+		if (!m_CameraStack.empty())
 		{
-			PrintError("Attempted to switch to camera which doesn't exist! %s\n", camera->GetName().c_str());
+			BaseCamera* activeCamera = CurrentCamera();
+			activeCamera->OnDepossess();
+			activeCamera->Destroy();
 		}
-		else
+
+		while (!m_CameraStack.empty())
 		{
-			SwtichToIndex(newCameraIndex, bAlign);
+			m_CameraStack.pop();
 		}
+
+		return PushCamera(camera, bAlignWithPrevious);
 	}
 
-	void CameraManager::SwtichToIndex(i32 index, bool bAlign)
+	BaseCamera* CameraManager::CycleCamera(i32 deltaIndex, bool bAlignWithPrevious)
 	{
-		if (index >= 0 && index < (i32)m_Cameras.size() && index != m_ActiveCameraIndex)
+		assert(glm::abs(deltaIndex) == 1);
+
+		const i32 numCameras = (i32)m_Cameras.size();
+
+		const i32 desiredIndex = GetCameraIndex(m_CameraStack.top()) + deltaIndex;
+		i32 newIndex = desiredIndex;
+		i32 offset = 0;
+		do
 		{
-			if (m_ActiveCameraIndex != -1)
+			newIndex = desiredIndex + offset;
+			offset += deltaIndex;
+			if (newIndex < 0)
 			{
-				m_Cameras[m_ActiveCameraIndex]->OnDepossess();
+				newIndex += numCameras;
 			}
-
-			if (bAlign)
+			else if (newIndex >= numCameras)
 			{
-				AlignCameras(m_Cameras[m_ActiveCameraIndex], m_Cameras[index]);
+				newIndex -= numCameras;
 			}
+		} while (!m_Cameras[newIndex]->bDEBUGCyclable);
 
-			m_ActiveCameraIndex = index;
-
-			m_Cameras[m_ActiveCameraIndex]->Initialize();
-			m_Cameras[m_ActiveCameraIndex]->OnPossess();
-		}
+		return SetCamera(m_Cameras[newIndex], bAlignWithPrevious);
 	}
 
-	void CameraManager::SetActiveIndexRelative(i32 delta, bool bAlign)
+	BaseCamera* CameraManager::SetCameraByName(const std::string& name, bool bAlignWithPrevious)
 	{
-		i32 newIndex = m_ActiveCameraIndex + delta;
-		i32 numCameras = (i32)m_Cameras.size();
-		if (newIndex < 0)
-		{
-			newIndex += numCameras;
-		}
-		else if (newIndex >= numCameras)
-		{
-			newIndex -= numCameras;
-		}
-
-		SwtichToIndex(newIndex, bAlign);
+		return SetCamera(GetCameraByName(name), bAlignWithPrevious);
 	}
 
-	void CameraManager::SetActiveCameraByType(const std::string& typeStr)
+	BaseCamera* CameraManager::PushCamera(BaseCamera* camera, bool bAlignWithPrevious)
+	{
+		assert(camera != nullptr);
+
+		BaseCamera* pActiveCam = nullptr;
+		if (!m_CameraStack.empty())
+		{
+			pActiveCam = m_CameraStack.top();
+
+			pActiveCam->OnDepossess();
+			pActiveCam->Destroy();
+		}
+
+		m_CameraStack.push(camera);
+
+		if (bAlignWithPrevious && pActiveCam != nullptr)
+		{
+			AlignCameras(pActiveCam, camera);
+		}
+
+		if (m_bInitialized)
+		{
+			camera->Initialize();
+			camera->OnPossess();
+		}
+
+		return camera;
+	}
+
+	BaseCamera* CameraManager::PushCameraByName(const std::string& name, bool bAlignWithPrevious)
+	{
+		return PushCamera(GetCameraByName(name), bAlignWithPrevious);
+	}
+
+	void CameraManager::PopCamera()
+	{
+		if (m_CameraStack.size() <= 1)
+		{
+			PrintError("CameraManager::PopCamera - Attempted to pop final camera from stack\n");
+			return;
+		}
+
+		BaseCamera* currentCamera = CurrentCamera();
+		currentCamera->OnDepossess();
+		currentCamera->Destroy();
+
+		m_CameraStack.pop();
+
+		currentCamera = CurrentCamera();
+		currentCamera->OnPossess();
+		currentCamera->Initialize();
+	}
+
+	BaseCamera* CameraManager::GetCameraByName(const std::string& name)
 	{
 		for (i32 i = 0; i < (i32)m_Cameras.size(); ++i)
 		{
-			if (m_Cameras[i]->GetName().compare(typeStr) == 0)
+			if (m_Cameras[i]->GetName().compare(name) == 0)
 			{
-				SwtichToIndex(i, false);
-				return;
+				return m_Cameras[i];
 			}
 		}
 
-		PrintWarn("Attempted to set camera to unknown name: %s\n", typeStr.c_str());
+		return nullptr;
 	}
 
 	void CameraManager::DrawImGuiObjects()
@@ -162,7 +208,7 @@ namespace flex
 
 				if (ImGui::Button(arrowPrevStr))
 				{
-					SetActiveIndexRelative(-1, false);
+					CycleCamera(-1, false);
 				}
 
 				ImGui::SameLine();
@@ -174,19 +220,19 @@ namespace flex
 
 				if (ImGui::Button(arrowNextStr))
 				{
-					SetActiveIndexRelative(1, false);
+					CycleCamera(1, false);
 				}
 			}
 
 			static const char* moveSpeedStr = "Move speed";
-			float moveSpeed = currentCamera->GetMoveSpeed();
+			real moveSpeed = currentCamera->GetMoveSpeed();
 			if (ImGui::SliderFloat(moveSpeedStr, &moveSpeed, 1.0f, 250.0f))
 			{
 				currentCamera->SetMoveSpeed(moveSpeed);
 			}
 
 			static const char* turnSpeedStr = "Turn speed";
-			float turnSpeed = glm::degrees(currentCamera->GetRotationSpeed());
+			real turnSpeed = glm::degrees(currentCamera->GetRotationSpeed());
 			if (ImGui::SliderFloat(turnSpeedStr, &turnSpeed, 0.01f, 0.3f))
 			{
 				currentCamera->SetRotationSpeed(glm::radians(turnSpeed));
@@ -213,6 +259,18 @@ namespace flex
 				currentCamera->SetFOV(glm::radians(camFOV));
 			}
 
+			real zNear = currentCamera->GetZNear();
+			if (ImGui::DragFloat("near", &zNear, 0.05f, -1000.0f, 1000.0f))
+			{
+				currentCamera->SetZNear(zNear);
+			}
+
+			real zFar = currentCamera->GetZFar();
+			if (ImGui::DragFloat("far", &zFar, 0.05f, -1000.0f, 1000.0f))
+			{
+				currentCamera->SetZFar(zFar);
+			}
+
 			if (ImGui::Button("Reset orientation"))
 			{
 				currentCamera->ResetOrientation();
@@ -230,16 +288,15 @@ namespace flex
 
 	i32 CameraManager::GetCameraIndex(BaseCamera* camera)
 	{
-		i32 cameraIndex = -1;
 		for (u32 i = 0; i < m_Cameras.size(); ++i)
 		{
 			if (m_Cameras[i] == camera)
 			{
-				cameraIndex = i;
-				break;
+				return i;
 			}
 		}
-		return cameraIndex;
+
+		return -1;
 	}
 
 	void CameraManager::AlignCameras(BaseCamera* from, BaseCamera* to)
@@ -249,4 +306,21 @@ namespace flex
 		to->SetYaw(from->GetYaw());
 		to->SetFOV(from->GetFOV());
 	}
+
+	EventReply CameraManager::OnActionEvent(Action action)
+	{
+		if (action == Action::DBG_SWITCH_TO_PREV_CAM)
+		{
+			CycleCamera(-1, false);
+			return EventReply::CONSUMED;
+		}
+		else if (action == Action::DBG_SWITCH_TO_NEXT_CAM)
+		{
+			CycleCamera(1, false);
+			return EventReply::CONSUMED;
+		}
+
+		return EventReply::UNCONSUMED;
+	}
+
 } // namespace flex

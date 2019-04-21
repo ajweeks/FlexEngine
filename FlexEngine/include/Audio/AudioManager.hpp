@@ -1,9 +1,9 @@
 #pragma once
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include "AL/al.h"
 #include "AL/alc.h"
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 namespace flex
 {

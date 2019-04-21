@@ -2,22 +2,26 @@
 
 #include "Profiler.hpp"
 
+#include "FlexEngine.hpp"
 #include "Graphics/Renderer.hpp"
+#include "Helpers.hpp"
 #include "InputManager.hpp"
 #include "Time.hpp"
 #include "Window/Window.hpp"
 
 namespace flex
 {
-	i32 Profiler::s_UnendedTimings = 0;
+	bool Profiler::s_bDisplayingFrame = false;
+	bool Profiler::s_bRecordingTrace = false;
+	std::unordered_map<u64, Profiler::Timing> Profiler::s_Timings;
 	ms Profiler::s_FrameStartTime = 0;
 	ms Profiler::s_FrameEndTime = 0;
-	std::unordered_map<u64, Profiler::Timing> Profiler::s_Timings;
+	i32 Profiler::s_UnendedTimings = 0;
 	std::string Profiler::s_PendingCSV;
-	Profiler::DisplayedFrameOptions Profiler::s_DisplayedFrameOptions;
+	std::vector<JSONObject> Profiler::s_PendingTraceEvents;
 	std::vector<Profiler::Timing> Profiler::s_DisplayedFrameTimings;
 	const real Profiler::s_ScrollSpeed = 0.4f;
-	bool Profiler::s_bDisplayingFrame = false;
+	Profiler::DisplayedFrameOptions Profiler::s_DisplayedFrameOptions;
 
 	glm::vec4 Profiler::blockColors[] = {
 		glm::vec4(0.43f, 0.48f, 0.58f, 0.8f), // Pale dark blue
@@ -83,13 +87,13 @@ namespace flex
 					g_InputManager->ClearVerticalScrollDistance();
 				}
 
-				real hDragDist = g_InputManager->GetMouseDragDistance(Input::MouseButton::LEFT).x;
-				if (g_InputManager->IsMouseButtonReleased(Input::MouseButton::LEFT))
+				real hDragDist = g_InputManager->GetMouseDragDistance(MouseButton::LEFT).x;
+				if (g_InputManager->IsMouseButtonReleased(MouseButton::LEFT))
 				{
 					s_DisplayedFrameOptions.hO += s_DisplayedFrameOptions.hScroll;
 					s_DisplayedFrameOptions.hScroll = 0;
 				}
-				if (g_InputManager->IsMouseButtonDown(Input::MouseButton::LEFT) &&
+				if (g_InputManager->IsMouseButtonDown(MouseButton::LEFT) &&
 					hDragDist != 0.0f)
 				{
 					s_DisplayedFrameOptions.hScroll = hDragDist * 0.001f;
@@ -188,7 +192,7 @@ namespace flex
 		auto iter = s_Timings.find(hash);
 		if (iter == s_Timings.end())
 		{
-			PrintError("Profiler::End called before Begin was called! Block name: %s (hash: %i)\n", blockName, hash);
+			PrintError("Profiler::End called before Begin was called! Block name: %s (hash: %ul)\n", blockName, hash);
 			return;
 		}
 
@@ -204,6 +208,22 @@ namespace flex
 			iter->second.end = now;
 
 			--s_UnendedTimings;
+
+			if (s_bRecordingTrace)
+			{
+				i32 PID = (i32)g_EngineInstance->mainProcessID;
+
+				// TODO: Only output this info at file write time to prevent out of memory exceptions
+				JSONObject obj = {};
+				obj.fields.emplace_back("name", JSONValue(blockName));
+				obj.fields.emplace_back("ph", JSONValue("X"));
+				obj.fields.emplace_back("pid", JSONValue(PID));
+				us tStart = Time::ConvertFormats(iter->second.start, Time::Format::MILLISECOND, Time::Format::MICROSECOND);
+				us dur = Time::ConvertFormats(iter->second.end - iter->second.start, Time::Format::MILLISECOND, Time::Format::MICROSECOND);
+				obj.fields.emplace_back("ts", JSONValue(tStart));
+				obj.fields.emplace_back("dur", JSONValue(dur));
+				s_PendingTraceEvents.emplace_back(obj);
+			}
 		}
 	}
 
@@ -217,24 +237,46 @@ namespace flex
 		if (s_PendingCSV.empty())
 		{
 			PrintWarn("Attempted to print profiler results to file before any results were generated!"
-					  "Did you set bPrintTimings when calling EndFrame?\n");
-			return;
+				"Did you set bPrintTimings when calling EndFrame?\n");
 		}
 
-		std::string directory = ROOT_LOCATION "saved/profiles/";
+		std::string directory = SAVED_LOCATION "profiles/";
 		std::string absoluteDirectory = RelativePathToAbsolute(directory);
 		CreateDirectoryRecursive(absoluteDirectory);
-
 		std::string dateString = GetDateString_YMDHMS();
-		std::string filePath = absoluteDirectory + "frame_times_" + dateString + ".csv";
 
-		if (WriteFile(filePath, s_PendingCSV, false))
+		if (!s_PendingCSV.empty())
 		{
-			Print("Wrote profiling results to %s\n", filePath.c_str());
+			std::string filePath = absoluteDirectory + "flex_frame_times_" + dateString + ".csv";
+
+			if (WriteFile(filePath, s_PendingCSV, false))
+			{
+				Print("Wrote profiling results to %s\n", filePath.c_str());
+			}
+			else
+			{
+				Print("Failed to write profiling results to %s\n", filePath.c_str());
+			}
 		}
-		else
+
+		if (!s_PendingTraceEvents.empty())
 		{
-			Print("Failed to write profiling results to %s\n", filePath.c_str());
+			std::string filePath = absoluteDirectory + "flex_trace_" + dateString + ".json";
+
+			// TODO: Don't generate unnecessary whitespace characters in result
+			// TODO: Add systemTraceEvents field containing ETW trace data (see https://docs.google.com/document/d/1CvAClvFfyA5R-PhYUmn5OOQtYMH4h6I0nSsKchNAySU/preview#heading=h.q8di1j2nawlp)
+			// TODO: Add counter events (ph: c, args: {num: 99})
+			JSONObject traceEvents = {};
+			traceEvents.fields.emplace_back("traceEvents", JSONValue(s_PendingTraceEvents));
+			std::string tracingObjectContents = traceEvents.Print(0);
+			if (WriteFile(filePath, tracingObjectContents, false))
+			{
+				Print("Wrote tracing results to %s\n", filePath.c_str());
+			}
+			else
+			{
+				Print("Failed to write tracing results to %s\n", filePath.c_str());
+			}
 		}
 	}
 
@@ -282,8 +324,7 @@ namespace flex
 			return;
 		}
 
-		BitmapFont* font = g_Renderer->m_FntSourceCodePro;
-		g_Renderer->SetFont(font);
+		BitmapFont* font = g_Renderer->SetFont(SID("editor-01"));
 
 		i32 blockCount = (i32)s_DisplayedFrameTimings.size();
 		ms frameStart = s_DisplayedFrameTimings[0].start;
@@ -312,12 +353,12 @@ namespace flex
 		std::string frameDurationStr = FloatToString(frameDuration, 2) + "ms";
 		real letterSpacing = 5;
 		real durationStrWidth = g_Renderer->GetStringWidth(frameDurationStr, font, letterSpacing, true);
-		g_Renderer->DrawString(frameDurationStr,
-							   glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
-							   AnchorPoint::CENTER,
-							   glm::vec2(frameCenter.x - durationStrWidth, frameCenter.y + frameSizeHalf.y * 1.1f),
-							   letterSpacing,
-			true, {});
+		g_Renderer->DrawStringSS(frameDurationStr,
+							     glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
+								 AnchorPoint::CENTER,
+								 glm::vec2(frameCenter.x - durationStrWidth, frameCenter.y + frameSizeHalf.y * 1.1f),
+								 letterSpacing,
+								 true);
 
 		real blockHeight = (frameSizeHalf.y / ((real)blockCount + 2));
 
@@ -348,22 +389,22 @@ namespace flex
 				std::string str = timing.blockName;
 				real strWidth = g_Renderer->GetStringWidth(str, font, letterSpacing, true);
 				glm::vec2 pos(blockCenterNorm.x - strWidth * aspectRatio, frameCenter.y - frameSizeHalf.y * 1.2f);
-				g_Renderer->DrawString(timing.blockName,
-									   glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
-									   AnchorPoint::CENTER,
-									   pos,
-									   letterSpacing,
-					true, {});
+				g_Renderer->DrawStringSS(timing.blockName,
+										 glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
+										 AnchorPoint::CENTER,
+										 pos,
+										 letterSpacing,
+										 true);
 				str = FloatToString(blockDuration, 2) + "ms";
 				strWidth = g_Renderer->GetStringWidth(str, font, letterSpacing, true);
 				pos.x = blockCenterNorm.x - strWidth * aspectRatio;
 				pos.y -= 0.05f;
-				g_Renderer->DrawString(str,
-									   glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
-									   AnchorPoint::CENTER,
-									   pos ,
-									   letterSpacing,
-					true, {});
+				g_Renderer->DrawStringSS(str,
+										 glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
+										 AnchorPoint::CENTER,
+										 pos ,
+										 letterSpacing,
+										 true);
 			}
 
 			++colorIndex;

@@ -28,6 +28,7 @@ common.ini
 renderer-settings.ini
 window-settings.ini
 imgui.ini
+renderdoc.ini
 
 *.blend1
 *.bfxrsound
@@ -44,6 +45,8 @@ sh.exe.stackdump
 
 AdditionalFiles/*.cap
 AdditionalFiles/*.nsight-gfxproj
+AdditionalFiles/*.header_hero
+AdditionalFiles/flex-cppcheck-build-dir/**
 
 
 # --------------------------

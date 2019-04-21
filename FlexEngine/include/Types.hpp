@@ -3,12 +3,13 @@
 #include <cstdint>
 #include <limits>
 
-#pragma warning(push, 0)
-#include <glm/vec2.hpp>
-#pragma warning(pop)
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
+#define ARRAY_LENGTH(a) ARRAY_SIZE(a)
 
 namespace flex
 {
+	class GameObject;
+
 	using i8 = int8_t;
 	using i16 = int16_t;
 	using i32 = int32_t;
@@ -55,6 +56,9 @@ namespace flex
 	using PointLightID = u32;
 	using AudioSourceID = u32;
 	using TrackID = u32;
+	using CartID = u32;
+	using CartChainID = u32;
+	using VariableID = u32;
 
 #define InvalidRenderID ((RenderID)u32_max)
 #define InvalidShaderID ((ShaderID)u32_max)
@@ -63,9 +67,12 @@ namespace flex
 #define InvalidPointLightID ((PointLightID)u32_max)
 #define InvalidAudioSourceID ((AudioSourceID)u32_max)
 #define InvalidTrackID ((TrackID)u32_max)
+#define InvalidCartID ((CartChainID)u32_max)
+#define InvalidCartChainID ((CartChainID)u32_max)
+#define InvalidVariableID ((VariableID)u32_max)
 
-	template<bool> struct StaticAssert;
-	template<> struct StaticAssert<true> {};
+	//template<bool> struct StaticAssert;
+	//template<> struct StaticAssert<true> {};
 
 	enum class GameObjectType
 	{
@@ -79,11 +86,12 @@ namespace flex
 		RISING_BLOCK,
 		GLASS_PANE,
 		CART,
+		ENGINE_CART,
+		MOBILE_LIQUID_BOX,
+		TERMINAL,
+		GERSTNER_WAVE,
 
-
-		// NOTE: Add new types above this line
-		// NOTE: All additions *must* be also added to GameObjectTypeStrings in the same order!
-		NONE
+		_NONE
 	};
 
 	static const char* GameObjectTypeStrings[] =
@@ -98,9 +106,15 @@ namespace flex
 		"rising block",
 		"glass pane",
 		"cart",
+		"engine cart",
+		"mobile liquid box",
+		"terminal",
+		"gerstner wave",
 
 		"NONE"
 	};
+
+	static_assert(ARRAY_LENGTH(GameObjectTypeStrings) == (u32)GameObjectType::_NONE + 1, "Length of GameObjectTypeStrings must match length of GameObjectType enum");
 
 	// Screen-space anchors
 	enum class AnchorPoint
@@ -114,17 +128,77 @@ namespace flex
 		BOTTOM,
 		BOTTOM_LEFT,
 		LEFT,
-		WHOLE // cover the whole screen
+		WHOLE, // Covers the whole screen
+
+		_NONE
 	};
 
-#define STATIC_ASSERT(e) StaticAssert<(e)>{}
+	enum class EventReply
+	{
+		CONSUMED,
+		UNCONSUMED
+	};
 
-#define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
-#define ARRAY_LENGTH(a) ARRAY_SIZE(a)
+	// TODO: Move enums to their own header
+	enum class SamplingType
+	{
+		CONSTANT, // All samples are equally-weighted
+		LINEAR    // Latest sample is weighted N times higher than Nth sample
+	};
+
+	enum class TurningDir
+	{
+		LEFT,
+		NONE,
+		RIGHT
+	};
+
+	enum class TransformState
+	{
+		TRANSLATE,
+		ROTATE,
+		SCALE,
+
+		_NONE
+	};
+
+	enum class TrackState
+	{
+		FACING_FORWARD,
+		FACING_BACKWARD,
+
+		_NONE
+	};
+
+	static const char* TrackStateStrs[] =
+	{
+		"Facing forward",
+		"Facing backward",
+
+		"NONE",
+	};
+
+	static_assert(ARRAY_LENGTH(TrackStateStrs) == (u32)TrackState::_NONE + 1, "Length of TrackStateStrs must match length of TrackState enum");
+
+	enum class LookDirection
+	{
+		LEFT,
+		CENTER,
+		RIGHT,
+
+		_NONE
+	};
+
+	struct MeshImportSettings
+	{
+		/* Whether or not to invert the horizontal texture coordinate */
+		bool bFlipU = false;
+		/* Whether or not to invert the vertical texture coordinate */
+		bool bFlipV = false;
+		/* Whether or not to invert the Z component (up) of all normals */
+		bool bFlipNormalZ = false;
+		/* Whether or not to swap Y and Z components of all normals (converts from Y-up to Z-up) */
+		bool bSwapNormalYZ = false;
+	};
 
 } // namespace flex
-
-namespace glm
-{
-	using vec2i = tvec2<flex::i32>;
-}

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Managers/CartManager.hpp"
 #include "Track/TrackManager.hpp"
 
 namespace flex
@@ -13,18 +14,23 @@ namespace flex
 	struct JSONObject;
 	struct JSONField;
 	struct Material;
+	class ICallbackGameObject;
 
 	class BaseScene
 	{
 	public:
 		// fileName e.g. "scene_01.json"
-		BaseScene(const std::string& fileName);
+		explicit BaseScene(const std::string& fileName);
 		virtual ~BaseScene();
 
 		virtual void Initialize();
 		virtual void PostInitialize();
 		virtual void Destroy();
 		virtual void Update();
+		virtual void LateUpdate();
+
+		void BindOnGameObjectDestroyedCallback(ICallbackGameObject* callback);
+		void UnbindOnGameObjectDestroyedCallback(ICallbackGameObject* callback);
 
 		void SetName(const std::string& name);
 		std::string GetName() const;
@@ -50,11 +56,11 @@ namespace flex
 		void DeleteSaveFiles();
 
 		std::vector<GameObject*>& GetRootObjects();
-		void GetInteractibleObjects(std::vector<GameObject*>& interactibleObjects);
+		void GetInteractableObjects(std::vector<GameObject*>& interactableObjects);
 
 		GameObject* AddRootObject(GameObject* gameObject);
-		void RemoveRootObject(GameObject* gameObject, bool deleteRootObject);
-		void RemoveAllRootObjects(bool deleteRootObjects);
+		void RemoveRootObject(GameObject* gameObject, bool bDestroy);
+		void RemoveAllRootObjects(bool bDestroy);
 
 		std::vector<MaterialID> GetMaterialIDs();
 		void AddMaterialID(MaterialID newMaterialID);
@@ -67,7 +73,7 @@ namespace flex
 
 		// Deletes and removes targetObject if exists in scene
 		// Returns true if targetObject was found
-		bool DestroyGameObject(GameObject* targetObject, bool bDeleteChildren);
+		bool DestroyGameObject(GameObject* targetObject, bool bDestroyChildren);
 
 		bool IsLoaded() const;
 
@@ -85,23 +91,42 @@ namespace flex
 
 		std::vector<GameObject*> GetAllObjects();
 
+		template<class T>
+		std::vector<T*> GetObjectsOfType()
+		{
+			std::vector<GameObject*> objs = GetAllObjects();
+			std::vector<T*> result;
+
+			for (GameObject* obj : objs)
+			{
+				if (dynamic_cast<T*>(obj) != nullptr)
+				{
+					result.push_back((T*)obj);
+				}
+			}
+
+			return result;
+		}
+
 		TrackManager* GetTrackManager();
+		CartManager* GetCartManager();
 
 		// Returns 'prefix' with a number appended representing
 		// how many other objects with that prefix are in the scene
 		std::string GetUniqueObjectName(const std::string& prefix, i16 digits);
 
-		void RemoveObjectAtEndOfFrame(GameObject* obj);
-		void RemoveObjectsAtEndOfFrame(const std::vector<GameObject*>& objs);
+		void DestroyObjectAtEndOfFrame(GameObject* obj);
+		void DestroyObjectsAtEndOfFrame(const std::vector<GameObject*>& objs);
 		void AddObjectAtEndOFFrame(GameObject* obj);
 		void AddObjectsAtEndOFFrame(const std::vector<GameObject*>& objs);
 
 	protected:
-		friend class GameObject;
+		friend GameObject;
+		friend CartManager;
 
 		// Recursively finds targetObject in currentObject's children
 		// Returns true if targetObject was found and deleted
-		bool DestroyGameObjectRecursive(GameObject* currentObject, GameObject* targetObject, bool bDeleteChildren);
+		bool DestroyGameObjectRecursive(GameObject* currentObject, GameObject* targetObject, bool bDestroyChildren);
 
 		i32 GetMaterialArrayIndex(const Material& material);
 
@@ -117,7 +142,6 @@ namespace flex
 
 		std::string m_Name;
 		std::string m_FileName;
-
 
 		std::vector<GameObject*> m_RootObjects;
 
@@ -137,9 +161,12 @@ namespace flex
 		Player* m_Player1 = nullptr;
 
 		TrackManager m_TrackManager;
+		CartManager m_CartManager;
 
 		std::vector<GameObject*> m_ObjectsToAddAtEndOfFrame;
-		std::vector<GameObject*> m_ObjectsToRemoveAtEndOfFrame;
+		std::vector<GameObject*> m_ObjectsToDestroyAtEndOfFrame;
+
+		std::vector<ICallbackGameObject*> m_OnGameObjectDestroyedCallbacks;
 
 	private:
 		/*

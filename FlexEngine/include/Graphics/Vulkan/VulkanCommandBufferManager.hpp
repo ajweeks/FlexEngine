@@ -1,11 +1,5 @@
 #pragma once
 
-#include <vector>
-
-#pragma warning(push, 0)
-#include <vulkan/vulkan.hpp>
-#pragma warning(pop)
-
 namespace flex
 {
 	namespace vk
@@ -26,14 +20,14 @@ namespace flex
 			/* Ends commandBuffer and optionally frees its memory */
 			static void FlushCommandBuffer(VulkanDevice* device, VkCommandBuffer commandBuffer, VkQueue queue, bool free);
 
-			
+
 			/* Creates a command pool used to generate command buffers */
 			void CreatePool(VkSurfaceKHR surface);
 
 			/* Creates count command buffers (should be equal to the number of backbuffers) */
 			void CreateCommandBuffers(u32 count);
 
-			/* @return true if all command buffers are valid */
+			/* Returns true if all command buffers are valid */
 			bool CheckCommandBuffers() const;
 
 			/* Frees all command buffers */

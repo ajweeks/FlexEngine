@@ -1,4 +1,4 @@
-#version 450
+#version 420
 
 // Deferred PBR Combine
 
@@ -13,18 +13,20 @@ const float PI = 3.14159265359;
 
 struct DirectionalLight 
 {
-	vec4 direction;
-	vec4 color;
-	bool enabled;
+	vec3 direction;
+	int enabled;
+	vec3 color;
+	float brightness;
 };
 
 struct PointLight 
 {
-	vec4 position;
-	vec4 color;
-	bool enabled;
+	vec3 position;
+	int enabled;
+	vec3 color;
+	float brightness;
 };
-#define NUMBER_POINT_LIGHTS 4
+#define NUMBER_POINT_LIGHTS 8
 
 layout (binding = 0) uniform UBOConstant
 {
@@ -91,6 +93,27 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 	return ggx1 * ggx2;
 }
 
+vec3 DoLighting(vec3 radiance, vec3 N, vec3 V, vec3 L, float NoV, float NoL,
+	float roughness, float metallic, vec3 F0, vec3 albedo)
+{
+	vec3 H = normalize(V + L);
+
+	// Cook-Torrance BRDF
+	float NDF = DistributionGGX(N, H, roughness);
+	float G = GeometrySmith(N, V, L, roughness);
+	vec3 F = FresnelSchlick(max(dot(H, V), 0.0), F0);
+
+	vec3 kS = F;
+	vec3 kD = vec3(1.0) - kS;
+	kD *= 1.0 - metallic; // Pure metals have no diffuse lighting
+
+	vec3 nominator = NDF * G * F;
+	float denominator = 4 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.001; // Add epsilon to prevent divide by zero
+	vec3 specular = nominator / denominator;
+
+	return (kD * albedo / PI + specular) * radiance * NoL;
+}
+
 void main()
 {
 	// Retrieve data from gbuffer
@@ -106,6 +129,8 @@ void main()
 	vec3 V = normalize(uboConstant.camPos.xyz - worldPos);
 	vec3 R = reflect(-V, N);
 
+	float NoV = max(dot(N, V), 0.0);
+
 	// If diaelectric, F0 should be 0.04, if metal it should be the albedo color
 	vec3 F0 = vec3(0.04);
 	F0 = mix(F0, albedo, metallic);
@@ -114,29 +139,35 @@ void main()
 	vec3 Lo = vec3(0.0);
 	for (int i = 0; i < NUMBER_POINT_LIGHTS; ++i)
 	{
-		if (!uboConstant.pointLights[i].enabled) continue;
-		vec3 L = normalize(uboConstant.pointLights[i].position.xyz - worldPos);
-		vec3 H = normalize(V + L);
+		if (uboConstant.pointLights[i].enabled == 0)
+		{
+			continue;
+		}
 
-		float distance = length(uboConstant.pointLights[i].position.xyz - worldPos);
-		float attenuation = 1.0 / (distance * distance);
-		vec3 radiance = uboConstant.pointLights[i].color.rgb * attenuation;
-		
-		// Cook-Torrance BRDF
-		float NDF = DistributionGGX(N, H, roughness);
-		float G = GeometrySmith(N, V, L, roughness);
-		vec3 F = FresnelSchlick(max(dot(H, V), 0.0), F0);
+		float distance = length(uboConstant.pointLights[i].position - worldPos);
 
-		vec3 kS = F;
-		vec3 kD = vec3(1.0) - kS;
-		kD *= 1.0 - metallic; // Pure metals have no diffuse lighting
+		if (distance > 125)
+		{
+			// TODO: Define radius on point lights individually
+			continue;
+		}
 
-		vec3 nominator = NDF * G * F;
-		float denominator = 4 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.001; // Add epsilon to prevent divide by zero
-		vec3 specular = nominator / denominator;
+		// Pretend point lights have a radius of 1cm to avoid division by 0
+		float attenuation = 1.0 / max((distance * distance), 0.001);
+		vec3 L = normalize(uboConstant.pointLights[i].position - worldPos);
+		vec3 radiance = uboConstant.pointLights[i].color.rgb * attenuation * uboConstant.pointLights[i].brightness;
+		float NoL = max(dot(N, L), 0.0);
 
-		float NdotL = max(dot(N, L), 0.0);
-		Lo += (kD * albedo / PI + specular) * radiance * NdotL;
+		Lo += DoLighting(radiance, N, V, L, NoV, NoL, roughness, metallic, F0, albedo);
+	}
+
+	if (uboConstant.dirLight.enabled != 0)
+	{
+		vec3 L = normalize(uboConstant.dirLight.direction);
+		vec3 radiance = uboConstant.dirLight.color.rgb * uboConstant.dirLight.brightness;
+		float NoL = max(dot(N, L), 0.0);
+
+		Lo += DoLighting(radiance, N, V, L, NoV, NoL, 1, 1, F0, vec3(1.0));
 	}
 
 	vec3 F = FresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
@@ -171,16 +202,15 @@ void main()
 
 	fragColor = vec4(color, 1.0);
 
-	// Visualize normal map:
-	//fragColor = vec4(texture(normalSampler, ex_TexCoord).xyz, 1); return;
+	// fragColor = vec4(F, 1);
+
+	// Visualize world pos:
+	// fragColor = vec4(worldPos*0.1, 1); return;
 
 	// Visualize normals:
-	//fragColor = vec4(N, 1); return;
+	// fragColor = vec4(N*0.5+0.5, 1); return;
 
-	// Visualize tangents:
-	//fragColor = vec4(vec3(ex_TBN[0]), 1); return;
-
-	// Visualize texCoords:
+	// Visualize screen coords:
 	//fragColor = vec4(ex_TexCoord, 0, 1); return;
 
 	// Visualize metallic:

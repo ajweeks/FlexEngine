@@ -60,8 +60,7 @@
 			"transform" : 
 			{
 				"pos" : "-7.300, 8.600, 8.500"
-			},
-			"material" : "pbr chrome"
+			}
 		},
 		{
 			"name" : "Directional Light",
@@ -70,11 +69,11 @@
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "1.195, -0.751, -2.522"
+				"rot" : "2.384, 1.561, 1.426"
 			},
 			"directional light info" : 
 			{
-				"rotation" : "1.195, -0.751, -2.522",
+				"rotation" : "2.384, 1.561, 1.426",
 				"pos" : "0.000, 15.000, 0.000",
 				"color" : "1.00, 1.00, 1.00",
 				"enabled" : true,

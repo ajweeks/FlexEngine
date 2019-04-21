@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "InputEnums.hpp"
+#include "InputTypes.hpp"
 
 struct GLFWwindow;
 
@@ -11,7 +11,8 @@ namespace flex
 		NORMAL,
 		HIDDEN,
 		DISABLED,
-		NONE
+
+		_NONE
 	};
 
 	enum class WindowMode
@@ -19,21 +20,25 @@ namespace flex
 		WINDOWED,
 		WINDOWED_FULLSCREEN, // (aka "Borderless windowed")
 		FULLSCREEN,
-		NONE
+
+		_NONE
 	};
 
-	static const char* WindowModeStrs[] =
+	static const char* WindowModeStrings[] =
 	{
 		"Windowed",
 		"Windowed Fullscreen",
 		"Fullscreen",
-		"None"
+
+		"NONE"
 	};
+
+	static_assert(ARRAY_LENGTH(WindowModeStrings) == (u32)WindowMode::_NONE + 1, "WindowModeStrings length must match WindowMode enum");
 
 	class Window
 	{
 	public:
-		Window(const std::string& title);
+		explicit Window(const std::string& title);
 		virtual ~Window();
 
 		virtual void Initialize() = 0;
@@ -85,9 +90,9 @@ namespace flex
 		WindowMode StrToWindowMode(const char* modeStr);
 
 		// Callbacks
-		virtual void KeyCallback(Input::KeyCode keycode, Input::KeyAction action, i32 mods);
+		virtual void KeyCallback(KeyCode keycode, KeyAction action, i32 mods);
 		virtual void CharCallback(u32 character);
-		virtual void MouseButtonCallback(Input::MouseButton mouseButton, Input::KeyAction action, i32 mods);
+		virtual void MouseButtonCallback(MouseButton mouseButton, KeyAction action, i32 mods);
 		virtual void WindowFocusCallback(i32 focused);
 		virtual void CursorPosCallback(double x, double y);
 		virtual void ScrollCallback(double xoffset, double yoffset);
@@ -104,6 +109,9 @@ namespace flex
 		void SaveToConfig();
 
 		void DrawImGuiObjects();
+
+		bool GetVSyncEnabled() const;
+		void SetVSyncEnabled(bool bEnabled);
 
 	protected:
 
@@ -142,7 +150,7 @@ namespace flex
 		// Whether to restore the size and position from the previous session on bootup
 		bool m_bAutoRestoreStateOnBootup = true;
 
-		WindowMode m_CurrentWindowMode = WindowMode::NONE;
+		WindowMode m_CurrentWindowMode = WindowMode::_NONE;
 
 		// Used to store previous window size and position to restore after exiting fullscreen
 		glm::vec2i m_LastWindowedSize;
@@ -153,6 +161,7 @@ namespace flex
 		bool m_bShowMSInWindowTitle = true;
 		bool m_bMaximized = false;
 		bool m_bIconified = false;
+		bool m_bVSyncEnabled = true;
 
 		real m_UpdateWindowTitleFrequency = 0.0f;
 		real m_SecondsSinceTitleUpdate = 0.0f;

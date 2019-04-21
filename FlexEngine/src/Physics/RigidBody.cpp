@@ -2,17 +2,22 @@
 
 #include "Physics/RigidBody.hpp"
 
-#pragma warning(push, 0)
-#include <btBulletCollisionCommon.h>
-#include <btBulletDynamicsCommon.h>
+IGNORE_WARNINGS_PUSH
+#include <BulletDynamics/Dynamics/btRigidBody.h>
+#include <BulletCollision/CollisionShapes/btCollisionShape.h>
+#include <BulletDynamics/ConstraintSolver/btFixedConstraint.h>
+#include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
+
+#include <LinearMath/btDefaultMotionState.h>
 
 #include <glm/gtc/matrix_transform.hpp>
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #include "Physics/PhysicsManager.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/SceneManager.hpp"
+#include "Transform.hpp"
 
 namespace flex
 {
@@ -91,14 +96,14 @@ namespace flex
 			for (btTypedConstraint* constraint : m_Constraints)
 			{
 				m_RigidBody->removeConstraintRef(constraint);
-				SafeDelete(constraint);
+				delete constraint;
 			}
 
 			g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld()->removeRigidBody(m_RigidBody);
-			SafeDelete(m_RigidBody);
+			delete m_RigidBody;
 		}
 
-		SafeDelete(m_MotionState);
+		delete m_MotionState;
 	}
 
 	void RigidBody::AddConstraint(btTypedConstraint* constraint)

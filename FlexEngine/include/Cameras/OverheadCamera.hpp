@@ -2,7 +2,7 @@
 
 #include "BaseCamera.hpp"
 
-#include "Helpers.hpp" // For RollingAverage
+#include "RollingAverage.hpp"
 
 namespace flex
 {
@@ -11,13 +11,12 @@ namespace flex
 	class OverheadCamera final : public BaseCamera
 	{
 	public:
-		OverheadCamera(real FOV = glm::radians(45.0f), real zNear = 0.1f, real zFar = 10000.0f);
+		explicit OverheadCamera(real FOV = glm::radians(45.0f));
 		~OverheadCamera();
 
 		virtual void Initialize() override;
 		virtual void OnSceneChanged() override;
 		virtual void Update() override;
-		virtual bool IsDebugCam() const override;
 
 		virtual void DrawImGuiObjects() override;
 
@@ -42,7 +41,6 @@ namespace flex
 
 		// Where we point at on the ground
 		glm::vec3 m_TargetLookAtPos;
-		glm::vec3 m_TargetLookAtDir;
 		glm::vec3 m_Vel;
 
 	};

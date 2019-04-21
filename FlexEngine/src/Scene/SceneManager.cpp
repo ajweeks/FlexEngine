@@ -2,8 +2,6 @@
 
 #include "Scene/SceneManager.hpp"
 
-#include <algorithm>
-
 #include "Cameras/CameraManager.hpp"
 #include "FlexEngine.hpp"
 #include "Graphics/Renderer.hpp"
@@ -13,11 +11,9 @@
 namespace flex
 {
 	SceneManager::SceneManager() :
-		m_CurrentSceneIndex(0)
+		m_SavedDirStr(RelativePathToAbsolute(RESOURCE_LOCATION "scenes/saved")),
+		m_DefaultDirStr(RelativePathToAbsolute(RESOURCE_LOCATION "scenes/default"))
 	{
-		m_SavedDirStr = RelativePathToAbsolute(RESOURCE_LOCATION  "scenes/saved");
-		m_DefaultDirStr = RelativePathToAbsolute(RESOURCE_LOCATION  "scenes/default");
-
 		if (!DirectoryExists(m_SavedDirStr))
 		{
 			CreateDirectoryRecursive(m_SavedDirStr);
@@ -57,9 +53,10 @@ namespace flex
 
 		CurrentScene()->Initialize();
 
-		g_Renderer->OnSceneChanged();
+		g_Renderer->OnPreSceneChange();
 		g_EngineInstance->OnSceneChanged();
 		g_CameraManager->OnSceneChanged();
+		g_Renderer->OnPostSceneChange();
 	}
 
 	void SceneManager::PostInitializeCurrentScene()
@@ -67,6 +64,9 @@ namespace flex
 		assert(!m_Scenes.empty());
 
 		CurrentScene()->PostInitialize();
+
+		std::string currentSceneName = CurrentScene()->GetName();
+		Print("Loaded scene %s\n", currentSceneName.c_str());
 	}
 
 	void SceneManager::RemoveScene(BaseScene* scene)
@@ -75,7 +75,7 @@ namespace flex
 		if (iter != m_Scenes.end())
 		{
 			scene->Destroy();
-			SafeDelete(scene);
+			delete scene;
 			m_Scenes.erase(iter);
 		}
 		else
@@ -88,7 +88,7 @@ namespace flex
 	{
 		if (bPrintErrorOnFailure && sceneIndex >= m_Scenes.size())
 		{
-			PrintError("Attempt to set scene to index %i failed, it does not exist in the SceneManager\n",
+			PrintError("Attempt to set scene to index %u failed, it does not exist in the SceneManager\n",
 					   sceneIndex);
 			return false;
 		}
@@ -146,7 +146,7 @@ namespace flex
 		{
 			if (m_Scenes[i]->GetFileName().compare(sceneFileName) == 0)
 			{
-				return SetCurrentScene(i,bPrintErrorOnFailure);
+				return SetCurrentScene(i, bPrintErrorOnFailure);
 			}
 		}
 
@@ -158,22 +158,25 @@ namespace flex
 		return false;
 	}
 
-	void SceneManager::SetNextSceneActiveAndInit()
+	void SceneManager::SetNextSceneActive()
 	{
 		const size_t sceneCount = m_Scenes.size();
 		if (sceneCount == 1)
 		{
+			m_CurrentSceneIndex = 0;
 			return;
+		}
+
+		if (m_CurrentSceneIndex == u32_max)
+		{
+			m_CurrentSceneIndex = 0;
 		}
 
 		u32 newCurrentSceneIndex = (m_CurrentSceneIndex + 1) % m_Scenes.size();
 		SetCurrentScene(newCurrentSceneIndex);
-
-		InitializeCurrentScene();
-		PostInitializeCurrentScene();
 	}
 
-	void SceneManager::SetPreviousSceneActiveAndInit()
+	void SceneManager::SetPreviousSceneActive()
 	{
 		const size_t sceneCount = m_Scenes.size();
 		if (sceneCount == 1)
@@ -184,13 +187,12 @@ namespace flex
 		// Loop around to previous index but stay positive cause things are unsigned
 		u32 newCurrentSceneIndex = (m_CurrentSceneIndex + m_Scenes.size() - 1) % m_Scenes.size();
 		SetCurrentScene(newCurrentSceneIndex);
-
-		InitializeCurrentScene();
-		PostInitializeCurrentScene();
 	}
 
 	void SceneManager::ReloadCurrentScene()
 	{
+		Print("Reloading current scene\n");
+
 		SetCurrentScene(m_CurrentSceneIndex);
 
 		InitializeCurrentScene();
@@ -241,13 +243,16 @@ namespace flex
 
 		if (!addedSceneFileNames.empty())
 		{
-			Print("Added %i scenes to list:\n", addedSceneFileNames.size());
-			for (std::string& fileName : addedSceneFileNames)
+			if (g_bEnableLogging_Loading)
 			{
-				Print("%s, ", fileName.c_str());
+				Print("Added %u scenes to list:\n", addedSceneFileNames.size());
+				for (std::string& fileName : addedSceneFileNames)
+				{
+					Print("%s, ", fileName.c_str());
 
+				}
+				Print("\n");
 			}
-			Print("\n");
 
 			if (!bFirstTimeThrough)
 			{
@@ -286,7 +291,7 @@ namespace flex
 					Print("Removing scene from list due to JSON file missing: %s\n", fileName.c_str());
 
 					removedSceneNames.push_back((*sceneIter)->GetName());
-					SafeDelete(*sceneIter);
+					delete *sceneIter;
 					sceneIter = m_Scenes.erase(sceneIter);
 
 					if (m_CurrentSceneIndex > sceneIndex)
@@ -367,7 +372,7 @@ namespace flex
 		Print("Deleting scene %s\n", scene->GetFileName().c_str());
 
 		scene->DeleteSaveFiles();
-		SafeDelete(scene);
+		delete scene;
 		m_Scenes.erase(m_Scenes.begin() + oldSceneIndex);
 
 
@@ -416,7 +421,9 @@ namespace flex
 
 			if (ImGui::Button(arrowPrevStr))
 			{
-				SetPreviousSceneActiveAndInit();
+				SetPreviousSceneActive();
+				InitializeCurrentScene();
+				PostInitializeCurrentScene();
 			}
 
 			ImGui::SameLine();
@@ -424,7 +431,7 @@ namespace flex
 			BaseScene* currentScene = CurrentScene();
 
 			const std::string currentSceneNameStr(currentScene->GetName() + (currentScene->IsUsingSaveFile() ? " (saved)" : " (default)"));
-			ImGui::Text(currentSceneNameStr.c_str());
+			ImGui::Text("%s", currentSceneNameStr.c_str());
 
 			DoSceneContextMenu(currentScene);
 
@@ -440,7 +447,9 @@ namespace flex
 
 			if (ImGui::Button(arrowNextStr))
 			{
-				SetNextSceneActiveAndInit();
+				SetNextSceneActive();
+				InitializeCurrentScene();
+				PostInitializeCurrentScene();
 			}
 
 			i32 sceneItemWidth = 240;
@@ -477,7 +486,7 @@ namespace flex
 
 			if (ImGui::BeginPopupModal(addScenePopupID.c_str(), NULL, ImGuiWindowFlags_AlwaysAutoResize))
 			{
-				static std::string newSceneName = "Scene_" + IntToString(GetSceneCount(), 2);
+				static std::string newSceneName = "scene_" + IntToString(GetSceneCount(), 2);
 
 				const size_t maxStrLen = 256;
 				newSceneName.resize(maxStrLen);
@@ -803,7 +812,7 @@ namespace flex
 
 				ImGui::PushStyleColor(ImGuiCol_Text, g_WarningTextColor);
 				std::string textStr = "Are you sure you want to permanently delete " + sceneName + "? (both the default & saved files)";
-				ImGui::Text(textStr.c_str());
+				ImGui::Text("%s", textStr.c_str());
 				ImGui::PopStyleColor();
 
 				ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
@@ -875,7 +884,7 @@ namespace flex
 		auto iter = m_Scenes.begin();
 		while (iter != m_Scenes.end())
 		{
-			SafeDelete(*iter);
+			delete *iter;
 			iter = m_Scenes.erase(iter);
 		}
 		m_Scenes.clear();

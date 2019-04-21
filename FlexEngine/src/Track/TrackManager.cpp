@@ -3,11 +3,11 @@
 
 #include "Track/TrackManager.hpp"
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include "LinearMath/btIDebugDraw.h"
 
 #include <glm/gtx/norm.hpp> // For distance2
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
@@ -21,7 +21,28 @@ namespace flex
 {
 	const real TrackManager::JUNCTION_THRESHOLD_DIST = 0.01f;
 
-	TrackManager::TrackManager()
+	JSONObject Junction::Serialize() const
+	{
+		JSONObject result = {};
+
+		const char* delim = ", ";
+		std::string trackIndicesStr(IntToString(trackIndices[0]) + delim +
+			IntToString(trackIndices[1]) + delim +
+			IntToString(trackIndices[2]) + delim +
+			IntToString(trackIndices[3]));
+		std::string curveIndicesStr(IntToString(curveIndices[0]) + delim +
+			IntToString(curveIndices[1]) + delim +
+			IntToString(curveIndices[2]) + delim +
+			IntToString(curveIndices[3]));
+
+		result.fields.emplace_back("track indices", JSONValue(trackIndicesStr));
+		result.fields.emplace_back("curve indices", JSONValue(curveIndicesStr));
+
+		return result;
+	}
+
+	TrackManager::TrackManager(BaseScene* owningScene) :
+		m_OwningScene(owningScene)
 	{
 		m_PreviewJunctionDir.junctionIndex = -1;
 		m_PreviewJunctionDir.dir = VEC3_ZERO;
@@ -31,6 +52,7 @@ namespace flex
 	{
 		const JSONObject& tracksObj = obj.GetObject("tracks");
 
+		m_Tracks.reserve(tracksObj.fields.size());
 		for (const JSONField& field : tracksObj.fields)
 		{
 			m_Tracks.push_back(BezierCurveList::InitializeFromJSON(field.value.objectValue));
@@ -39,9 +61,10 @@ namespace flex
 		FindJunctions();
 	}
 
-	void TrackManager::AddTrack(const BezierCurveList& track)
+	TrackID TrackManager::AddTrack(const BezierCurveList& track)
 	{
 		m_Tracks.push_back(track);
+		return (TrackID)m_Tracks.size();
 	}
 
 	flex::BezierCurveList* TrackManager::GetTrack(TrackID trackID)
@@ -50,7 +73,11 @@ namespace flex
 		return &m_Tracks[(i32)trackID];
 	}
 
-	glm::vec3 TrackManager::GetPointOnTrack(BezierCurveList* track,
+	void TrackManager::Update()
+	{
+	}
+
+	glm::vec3 TrackManager::GetPointOnTrack(TrackID trackID,
 		real distAlongTrack,
 		real pDistAlongTrack,
 		LookDirection desiredDir,
@@ -62,13 +89,13 @@ namespace flex
 		TrackState* outTrackState,
 		bool bPrint)
 	{
-		BezierCurveList* newTrack = nullptr;
+		BezierCurveList* track = &m_Tracks[(i32)trackID];
 		TrackID newTrackID = InvalidTrackID;
 		real newDistAlongTrack = -1.0f;
 		i32 pCurveIdx = -1;
 		i32 newCurveIdx = -1;
 		i32 junctionIndex = -1;
-		TrackState newTrackState = TrackState::NONE;
+		TrackState newTrackState = TrackState::_NONE;
 
 		glm::vec3 pPoint = track->GetPointOnCurve(pDistAlongTrack, &pCurveIdx);
 		glm::vec3 newPoint = track->GetPointOnCurve(distAlongTrack, &newCurveIdx);
@@ -97,18 +124,18 @@ namespace flex
 			}
 			const glm::vec3 nextJunctionPos = track->GetPointAtJunction(nextJunctionCurveIdx);
 
-			glm::vec3 trackForward = track->GetCurveDirectionAt(distAlongTrack);
-			trackForward = glm::normalize(newPoint - pPoint);
+			// TODO: Compare with GetCurveDirectionAt?
+			glm::vec3 trackForward = glm::normalize(newPoint - pPoint);
 			glm::vec3 trackRight = glm::cross(trackForward, VEC3_UP);
 
 			// Check for junction crossings
-			for (i32 i = 0; i < (i32)m_Junctions.size() && newTrack == nullptr; ++i)
+			for (i32 i = 0; i < (i32)m_Junctions.size() && newTrackID == InvalidTrackID; ++i)
 			{
 				Junction& junction = m_Junctions[i];
 
-				for (i32 j = 0; j < junction.trackCount && newTrack == nullptr; ++j)
+				for (i32 j = 0; j < junction.trackCount && newTrackID == InvalidTrackID; ++j)
 				{
-					if (&m_Tracks[junction.trackIndices[j]] == track &&
+					if ((TrackID)junction.trackIndices[j] == trackID &&
 						NearlyEquals(junction.pos, nextJunctionPos, JUNCTION_THRESHOLD_DIST))
 					{
 						junctionIndex = i;
@@ -119,7 +146,7 @@ namespace flex
 						{
 							if (bReachedEndOfTheLine)
 							{
-								newTrackIdx = (&m_Tracks[junction.trackIndices[0]] == track ? 1 : 0);
+								newTrackIdx = ((TrackID)junction.trackIndices[0] == trackID ? 1 : 0);
 								if (bPrint) Print("Changed to only other track at junction (it's the end of the line baby)\n");
 							}
 							else
@@ -130,7 +157,7 @@ namespace flex
 								}
 								else
 								{
-									newTrackIdx = (&m_Tracks[junction.trackIndices[0]] == track ? 1 : 0);
+									newTrackIdx = ((TrackID)junction.trackIndices[0] == trackID ? 1 : 0);
 									if (bPrint) Print("Changed to only other track at junction\n");
 								}
 							}
@@ -142,7 +169,7 @@ namespace flex
 								if (bReachedEndOfTheLine)
 								{
 									glm::vec3 dir = glm::normalize(newPoint - pPoint);
-									newTrackIdx = GetTrackIndexInDir(dir, junction, track, bReachedEndOfTheLine);
+									newTrackIdx = GetTrackIndexInDir(dir, junction, trackID, bReachedEndOfTheLine);
 									if (bPrint) Print("Went straight through an n-way junction (jumped tracks)\n");
 								}
 								else
@@ -160,7 +187,7 @@ namespace flex
 									{
 										desiredDirVec = -desiredDirVec;
 									}
-									newTrackIdx = GetTrackIndexInDir(desiredDirVec, junction, track, bReachedEndOfTheLine);
+									newTrackIdx = GetTrackIndexInDir(desiredDirVec, junction, trackID, bReachedEndOfTheLine);
 									if (newTrackIdx != -1)
 									{
 										if (bPrint) Print("Went left at an n-way junction\n");
@@ -174,7 +201,7 @@ namespace flex
 									{
 										desiredDirVec = -desiredDirVec;
 									}
-									newTrackIdx = GetTrackIndexInDir(desiredDirVec, junction, track, bReachedEndOfTheLine);
+									newTrackIdx = GetTrackIndexInDir(desiredDirVec, junction, trackID, bReachedEndOfTheLine);
 									if (newTrackIdx != -1)
 									{
 										if (bPrint) Print("Went right at an n-way junction\n");
@@ -189,10 +216,9 @@ namespace flex
 
 						if (newTrackIdx != -1)
 						{
-							newTrack = &m_Tracks[junction.trackIndices[newTrackIdx]];
-							newTrackID = (TrackID)junction.trackIndices[newTrackIdx];
+							newTrackID = junction.trackIndices[newTrackIdx];
 							newCurveIdx = junction.curveIndices[newTrackIdx];
-							newDistAlongTrack = (real)newCurveIdx / (real)(newTrack->curves.size());
+							newDistAlongTrack = (real)newCurveIdx / (real)(m_Tracks[(i32)newTrackID].curves.size());
 							glm::vec3 desiredDirVec =
 								(desiredDir == LookDirection::CENTER ? glm::normalize(newPoint - pPoint) :
 									desiredDir == LookDirection::RIGHT ? trackRight : -trackRight);
@@ -200,7 +226,7 @@ namespace flex
 							{
 								desiredDirVec = -desiredDirVec;
 							}
-							newTrackState = GetTrackStateInDir(desiredDirVec, &m_Tracks[junction.trackIndices[newTrackIdx]], newDistAlongTrack, bReversingDownTrack);
+							newTrackState = GetTrackStateInDir(desiredDirVec, junction.trackIndices[newTrackIdx], newDistAlongTrack, bReversingDownTrack);
 							if (bReversingDownTrack)
 							{
 								if (newTrackState == TrackState::FACING_FORWARD)
@@ -237,7 +263,7 @@ namespace flex
 				}
 			}
 
-			if (newTrack == nullptr && newDistAlongTrack == -1.0f)
+			if (newTrackID == InvalidTrackID && newDistAlongTrack == -1.0f)
 			{
 				newDistAlongTrack = glm::clamp(distAlongTrack, 0.0f, 1.0f);
 			}
@@ -245,6 +271,11 @@ namespace flex
 		else
 		{
 			newDistAlongTrack = distAlongTrack;
+		}
+
+		if (newTrackID == InvalidTrackID)
+		{
+			newTrackID = trackID;
 		}
 
 		*outCurveIndex = newCurveIdx;
@@ -256,30 +287,14 @@ namespace flex
 		return newPoint;
 	}
 
-	glm::vec3 TrackManager::GetPointOnTrack(TrackID trackID,
-		real distAlongTrack,
-		real pDistAlongTrack,
-		LookDirection desiredDir,
-		bool bReversingDownTrack,
-		TrackID* outNewTrackID,
-		real* outNewDistAlongTrack,
-		i32* outJunctionIndex,
-		i32* outCurveIndex,
-		TrackState* outTrackState,
-		bool bPrint)
-	{
-		return GetPointOnTrack(&m_Tracks[(i32)trackID], distAlongTrack, pDistAlongTrack,
-			desiredDir, bReversingDownTrack, outNewTrackID, outNewDistAlongTrack,
-			outJunctionIndex, outCurveIndex, outTrackState, bPrint);
-	}
-
-	void TrackManager::UpdatePreview(BezierCurveList* track,
+	void TrackManager::UpdatePreview(TrackID trackID,
 		real distAlongTrack,
 		LookDirection desiredDir,
 		glm::vec3 currentFor,
 		bool bFacingForwardDownTrack,
 		bool bReversingDownTrack)
 	{
+		BezierCurveList* track = &m_Tracks[(i32)trackID];
 		// TODO: Use real-world distance rather than [0-1] spine dist
 		// TODO: Ensure not stepping over multiple junctions
 		real range = 0.2f;
@@ -299,8 +314,9 @@ namespace flex
 		real newDist = -1.0f;
 		i32 junctionIndex = -1;
 		i32 curveIndex = -1;
-		TrackState newTrackState = TrackState::NONE;
-		glm::vec3 newPoint = GetPointOnTrack(track, queryDist, distAlongTrack, desiredDir, bReversingDownTrack, &newTrackID, &newDist, &junctionIndex, &curveIndex, &newTrackState, false);
+		TrackState newTrackState = TrackState::_NONE;
+		GetPointOnTrack(trackID, queryDist, distAlongTrack, desiredDir,
+			bReversingDownTrack, &newTrackID, &newDist, &junctionIndex, &curveIndex, &newTrackState, false);
 
 		if (junctionIndex == -1)
 		{
@@ -328,16 +344,6 @@ namespace flex
 				m_PreviewJunctionDir.dir = -m_PreviewJunctionDir.dir;
 			}
 		}
-	}
-
-	void TrackManager::UpdatePreview(TrackID trackID,
-		real distAlongTrack,
-		LookDirection desiredDir,
-		glm::vec3 currentFor,
-		bool bFacingForwardDownTrack,
-		bool bReversingDownTrack)
-	{
-		UpdatePreview(&m_Tracks[(i32)trackID], distAlongTrack, desiredDir, currentFor, bFacingForwardDownTrack, bReversingDownTrack);
 	}
 
 	bool TrackManager::GetPointInRange(const glm::vec3& p, bool bIncludeHandles, real range, glm::vec3* outPoint)
@@ -395,7 +401,7 @@ namespace flex
 	// TODO: Remove final param in place of junc.pos?
 	i32 TrackManager::GetTrackIndexInDir(const glm::vec3& desiredDir,
 		Junction& junc,
-		BezierCurveList* track,
+		TrackID trackID,
 		bool bEndOfTheLine)
 	{
 		i32 newTrackIdx = -1;
@@ -404,7 +410,7 @@ namespace flex
 		real bestTrackDot = -1.0f;
 		for (i32 k = 0; k < junc.trackCount; ++k)
 		{
-			if (&m_Tracks[junc.trackIndices[k]] != track)
+			if ((TrackID)junc.trackIndices[k] != trackID)
 			{
 				BezierCurveList* testTrack = &m_Tracks[junc.trackIndices[k]];
 				i32 testTrackCurveCount = (i32)testTrack->curves.size();
@@ -486,11 +492,11 @@ namespace flex
 	}
 
 	TrackState TrackManager::GetTrackStateInDir(const glm::vec3& desiredDir,
-		BezierCurveList* track,
+		TrackID trackID,
 		real distAlongTrack,
 		bool bReversing)
 	{
-		bool bFacingDownTrack = track->IsVectorFacingDownTrack(distAlongTrack, desiredDir);
+		bool bFacingDownTrack = m_Tracks[(i32)trackID].IsVectorFacingDownTrack(distAlongTrack, desiredDir);
 
 		if (bReversing)
 		{
@@ -595,12 +601,14 @@ namespace flex
 		}
 	}
 
-	bool TrackManager::IsTrackInRange(const BezierCurveList* track,
+	bool TrackManager::IsTrackInRange(TrackID trackID,
 		const glm::vec3& pos,
 		real range,
 		real* outDistToTrack,
 		real* outDistAlongTrack)
 	{
+		const BezierCurveList* track = &m_Tracks[(i32)trackID];
+
 		// Let's brute force it baby
 		i32 sampleCount = 250;
 
@@ -631,7 +639,7 @@ namespace flex
 		real smallestDist = range;
 		for (i32 i = 0; i < (i32)m_Tracks.size(); ++i)
 		{
-			if (IsTrackInRange(&m_Tracks[i], pos, range, &smallestDist, outDistAlongTrack))
+			if (IsTrackInRange((TrackID)i, pos, range, &smallestDist, outDistAlongTrack))
 			{
 				range = smallestDist;
 				trackID = (TrackID)i;
@@ -643,13 +651,13 @@ namespace flex
 
 	void TrackManager::DrawDebug()
 	{
-		PROFILE_AUTO("TrackManager::DrawDebug");
+		PROFILE_AUTO("TrackManager DrawDebug");
 
-		Player* m_Player0 = g_SceneManager->CurrentScene()->GetPlayer(0);
-		BezierCurveList* trackRiding = (m_Player0->m_TrackRidingID == InvalidTrackID ? nullptr : &m_Tracks[(i32)m_Player0->m_TrackRidingID]);
+		Player* player0 = g_SceneManager->CurrentScene()->GetPlayer(0);
+		BezierCurveList* trackRiding = (player0 == nullptr ? nullptr : (player0->m_TrackRidingID == InvalidTrackID ? nullptr : &m_Tracks[(i32)player0->m_TrackRidingID]));
 		real distAlongClosestTrack = -1.0f;
-		TrackID closestTrackID = GetTrackInRangeID(m_Player0->GetTransform()->GetWorldPosition(),
-			m_Player0->m_TrackAttachMinDist, &distAlongClosestTrack);
+		TrackID closestTrackID = (player0 == nullptr ? 0 : GetTrackInRangeID(player0->GetTransform()->GetWorldPosition(),
+			player0->m_TrackAttachMinDist, &distAlongClosestTrack));
 		for (i32 i = 0; i < (i32)m_Tracks.size(); ++i)
 		{
 			btVector4 highlightColour(0.8f, 0.84f, 0.22f, 1.0f);
@@ -658,7 +666,7 @@ namespace flex
 			{
 				if (&m_Tracks[i] == trackRiding)
 				{
-					distAlongTrack = m_Player0->GetDistAlongTrack();
+					distAlongTrack = player0->GetDistAlongTrack();
 				}
 			}
 			else
@@ -677,46 +685,46 @@ namespace flex
 		for (i32 i = 0; i < (i32)m_Junctions.size(); ++i)
 		{
 			BezierCurveList* track0 = &m_Tracks[m_Junctions[i].trackIndices[0]];
-			 real distAlongTrack0 = m_Junctions[i].curveIndices[0] / (real)track0->curves.size();
-			 i32 curveIndex;
-			 glm::vec3 pos = track0->GetPointOnCurve(distAlongTrack0, &curveIndex);
-			 btVector3 sphereCol = btVector3(0.9f, 0.2f, 0.2f);
-			 if (i == m_DEBUG_highlightedJunctionIndex)
-			 {
-				 sphereCol = btVector3(0.9f, 0.9f, 0.9f);
-			 }
-			 debugDrawer->drawSphere(ToBtVec3(pos), 0.5f, sphereCol);
+			real distAlongTrack0 = m_Junctions[i].curveIndices[0] / (real)track0->curves.size();
+			i32 curveIndex;
+			glm::vec3 pos = track0->GetPointOnCurve(distAlongTrack0, &curveIndex);
+			btVector3 sphereCol = btVector3(0.9f, 0.2f, 0.2f);
+			if (i == m_DEBUG_highlightedJunctionIndex)
+			{
+				sphereCol = btVector3(0.9f, 0.9f, 0.9f);
+			}
+			debugDrawer->drawSphere(ToBtVec3(pos), 0.5f, sphereCol);
 
-			 for (i32 j = 0; j < m_Junctions[i].trackCount; ++j)
-			 {
-				 btVector3 lineColPos = btVector3(0.2f, 0.6f, 0.25f);
-				 btVector3 lineColNeg = btVector3(0.8f, 0.3f, 0.2f);
-				 btVector3 lineColPreview = btVector3(0.95f, 0.95f, 0.98f);
+			for (i32 j = 0; j < m_Junctions[i].trackCount; ++j)
+			{
+				btVector3 lineColPos = btVector3(0.2f, 0.6f, 0.25f);
+				btVector3 lineColNeg = btVector3(0.8f, 0.3f, 0.2f);
+				btVector3 lineColPreview = btVector3(0.95f, 0.95f, 0.98f);
 
-				 BezierCurveList* track = &m_Tracks[m_Junctions[i].trackIndices[j]];
-				 curveIndex = m_Junctions[i].curveIndices[j];
+				BezierCurveList* track = &m_Tracks[m_Junctions[i].trackIndices[j]];
+				curveIndex = m_Junctions[i].curveIndices[j];
 
-				 real tAtJunc = track->GetTAtJunction(curveIndex);
-				 i32 outCurveIdx;
-				 btVector3 start = ToBtVec3(pos + VEC3_UP * 1.5f);
+				real tAtJunc = track->GetTAtJunction(curveIndex);
+				i32 outCurveIdx;
+				btVector3 start = ToBtVec3(pos + VEC3_UP * 1.5f);
 
-				 if (curveIndex < (i32)track->curves.size())
-				 {
-					 glm::vec3 trackP1 = track->GetPointOnCurve(tAtJunc + 0.01f, &outCurveIdx);
-					 glm::vec3 dir1 = glm::normalize(trackP1 - pos);
-					 bool bDirsEqual = NearlyEquals(m_PreviewJunctionDir.dir, dir1, 0.1f);
-					 btVector3 lineCol = ((m_PreviewJunctionDir.junctionIndex == i && bDirsEqual) ? lineColPreview : lineColPos);
-					 debugDrawer->drawLine(start, ToBtVec3(pos + dir1 * 5.0f + VEC3_UP * 1.5f), lineCol);
-				 }
-				 if (curveIndex > 0)
-				 {
-					 glm::vec3 trackP2 = track->GetPointOnCurve(tAtJunc - 0.01f, &outCurveIdx);
-					 glm::vec3 dir2 = glm::normalize(trackP2 - pos);
-					 bool bDirsEqual = NearlyEquals(m_PreviewJunctionDir.dir, dir2, 0.1f);
-					 btVector3 lineCol = ((m_PreviewJunctionDir.junctionIndex == i && bDirsEqual) ? lineColPreview : lineColNeg);
-					 debugDrawer->drawLine(start, ToBtVec3(pos + dir2 * 5.0f + VEC3_UP * 1.5f), lineCol);
-				 }
-			 }
+				if (curveIndex < (i32)track->curves.size())
+				{
+					glm::vec3 trackP1 = track->GetPointOnCurve(tAtJunc + 0.01f, &outCurveIdx);
+					glm::vec3 dir1 = glm::normalize(trackP1 - pos);
+					bool bDirsEqual = NearlyEquals(m_PreviewJunctionDir.dir, dir1, 0.1f);
+					btVector3 lineCol = ((m_PreviewJunctionDir.junctionIndex == i && bDirsEqual) ? lineColPreview : lineColPos);
+					debugDrawer->drawLine(start, ToBtVec3(pos + dir1 * 5.0f + VEC3_UP * 1.5f), lineCol);
+				}
+				if (curveIndex > 0)
+				{
+					glm::vec3 trackP2 = track->GetPointOnCurve(tAtJunc - 0.01f, &outCurveIdx);
+					glm::vec3 dir2 = glm::normalize(trackP2 - pos);
+					bool bDirsEqual = NearlyEquals(m_PreviewJunctionDir.dir, dir2, 0.1f);
+					btVector3 lineCol = ((m_PreviewJunctionDir.junctionIndex == i && bDirsEqual) ? lineColPreview : lineColNeg);
+					debugDrawer->drawLine(start, ToBtVec3(pos + dir2 * 5.0f + VEC3_UP * 1.5f), lineCol);
+				}
+			}
 		}
 	}
 
@@ -724,14 +732,14 @@ namespace flex
 	{
 		if (ImGui::TreeNode("Track Manager"))
 		{
-			ImGui::Text("%d tracks, %d junctions", (i32)m_Tracks.size(), (i32)m_Junctions.size());
+			ImGui::Text("%d tracks, %d junctions", m_Tracks.size(), m_Junctions.size());
 			if (ImGui::SmallButton("<"))
 			{
 				m_DEBUG_highlightedJunctionIndex--;
 				m_DEBUG_highlightedJunctionIndex = glm::max(m_DEBUG_highlightedJunctionIndex, -1);
 			}
 			ImGui::SameLine();
-			ImGui::Text("highlighted junction: %d", m_DEBUG_highlightedJunctionIndex);
+			ImGui::Text("highlighted junction: %i", m_DEBUG_highlightedJunctionIndex);
 			ImGui::SameLine();
 			if (ImGui::SmallButton(">"))
 			{
@@ -741,18 +749,19 @@ namespace flex
 
 			if (m_DEBUG_highlightedJunctionIndex != -1)
 			{
-				ImGui::Text("Junction connected track count: %d", m_Junctions[m_DEBUG_highlightedJunctionIndex].trackCount);
+				ImGui::Text("Junction connected track count: %i", m_Junctions[m_DEBUG_highlightedJunctionIndex].trackCount);
 			}
 
-			ImGui::Text("Preview junc idx: %d", m_PreviewJunctionDir.junctionIndex);
+			ImGui::Text("Preview junc idx: %i", m_PreviewJunctionDir.junctionIndex);
 			ImGui::Text("Preview curve dir: %s", Vec3ToString(m_PreviewJunctionDir.dir, 2).c_str());
 
 			ImGui::TreePop();
 		}
 	}
 
-	real TrackManager::AdvanceTAlongTrack(BezierCurveList* track, real amount, real t)
+	real TrackManager::AdvanceTAlongTrack(TrackID trackID, real amount, real t)
 	{
+		const BezierCurveList* track = &m_Tracks[(i32)trackID];
 		i32 startCurveIndex;
 		real oldLocalT = 0.0f;
 		track->GetCurveIndexAndLocalTFromGlobalT(t, &startCurveIndex, &oldLocalT);
@@ -768,11 +777,6 @@ namespace flex
 
 		real newGlobalT = track->GetGlobalTFromCurveIndexAndLocalT(startCurveIndex, newLocalT);
 		return newGlobalT;
-	}
-
-	real TrackManager::AdvanceTAlongTrack(TrackID trackID, real amount, real t)
-	{
-		return AdvanceTAlongTrack(&m_Tracks[(i32)trackID], amount, t);
 	}
 
 	JSONObject TrackManager::Serialize() const
@@ -791,55 +795,29 @@ namespace flex
 		return result;
 	}
 
-	bool Junction::Equals(BezierCurveList* trackA, BezierCurveList* trackB, i32 curveIndexA, i32 curveIndexB)
+	real TrackManager::GetCartTargetDistAlongTrackInChain(CartChainID cartChainID, CartID cartID) const
 	{
-		i32 trackAIndex = -1;
-		i32 trackBIndex = -1;
+		real targetT = -1.0f;
 
-		TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
-
-		for (i32 i = 0; i < trackCount; ++i)
+		CartManager* cartManager = m_OwningScene->GetCartManager();
+		CartChain* cartChain = cartManager->GetCartChain(cartChainID);
+		i32 cartIndex = cartChain->GetCartIndex(cartID);
+		if (cartIndex == 0)
 		{
-			if (&trackManager->m_Tracks[trackIndices[i]] == trackA)
-			{
-				trackAIndex = i;
-			}
-			else if (&trackManager->m_Tracks[trackIndices[i]] == trackB)
-			{
-				trackBIndex = i;
-			}
+			targetT = cartChain->GetCartAtIndexDistAlongTrack(1);
+			//targetT = cartManager->GetCart(cartID)->distAlongTrack + cartManager->GetChainDrivePower(cartChainID);
+		}
+		else
+		{
+			targetT = cartChain->GetCartAtIndexDistAlongTrack(cartIndex - 1);
 		}
 
-		if (trackAIndex != -1 &&
-			trackBIndex != -1)
-		{
-			if (curveIndices[trackAIndex] == curveIndexA &&
-				curveIndices[trackBIndex] == curveIndexB)
-			{
-				return true;
-			}
-		}
-
-		return false;
+		return targetT;
 	}
 
-	JSONObject Junction::Serialize() const
+	void TrackManager::Destroy()
 	{
-		JSONObject result = {};
-
-		const char* delim = ", ";
-		std::string trackIndicesStr(IntToString(trackIndices[0]) + delim +
-			IntToString(trackIndices[1]) + delim +
-			IntToString(trackIndices[2]) + delim +
-			IntToString(trackIndices[3]));
-		std::string curveIndicesStr(IntToString(curveIndices[0]) + delim +
-			IntToString(curveIndices[1]) + delim +
-			IntToString(curveIndices[2]) + delim +
-			IntToString(curveIndices[3]));
-
-		result.fields.emplace_back("track indices", JSONValue(trackIndicesStr));
-		result.fields.emplace_back("curve indices", JSONValue(curveIndicesStr));
-
-		return result;
+		m_Tracks.clear();
+		m_Junctions.clear();
 	}
 } // namespace flex

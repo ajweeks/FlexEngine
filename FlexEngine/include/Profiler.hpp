@@ -2,11 +2,13 @@
 
 #include <unordered_map>
 
+#include "JSONTypes.hpp"
+
 namespace flex
 {
 	struct AutoProfilerBlock
 	{
-		AutoProfilerBlock(const char* blockName);
+		explicit AutoProfilerBlock(const char* blockName);
 		~AutoProfilerBlock();
 
 		const char* m_BlockName;
@@ -36,6 +38,7 @@ namespace flex
 		static void DrawDisplayedFrame();
 
 		static bool s_bDisplayingFrame;
+		static bool s_bRecordingTrace;
 
 	private:
 		static u64 Hash(const char* str);
@@ -56,6 +59,8 @@ namespace flex
 		static i32 s_UnendedTimings;
 
 		static std::string s_PendingCSV;
+
+		static std::vector<JSONObject> s_PendingTraceEvents;
 
 		// Stores a single frame's timings to be displayed visually
 		static std::vector<Timing> s_DisplayedFrameTimings;

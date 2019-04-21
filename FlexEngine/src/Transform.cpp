@@ -2,7 +2,7 @@
 
 #include "Transform.hpp"
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/matrix_decompose.hpp>
@@ -10,7 +10,7 @@
 #include <glm/vec3.hpp>
 
 #include "BulletDynamics/Dynamics/btRigidBody.h"
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #include "Helpers.hpp"
 #include "Physics/RigidBody.hpp"
@@ -29,51 +29,58 @@ namespace flex
 		localPosition(position),
 		localRotation(rotation),
 		localScale(scale),
-		worldPosition(VEC3_ZERO),
-		worldRotation(VEC3_ZERO),
-		worldScale(VEC3_ONE),
+		worldPosition(position),
+		worldRotation(rotation),
+		worldScale(scale),
 		localTransform(glm::translate(MAT4_IDENTITY, position) *
 			// Cast away constness
 			glm::mat4((glm::quat)rotation) *
 			glm::scale(MAT4_IDENTITY, scale)),
-		worldTransform(1.0f),
-		forward(0.0f, 0.0f, 1.0f),
-		up(0.0f, 1.0f, 0.0f),
-		right(1.0f, 0.0f, 0.0f)
+		worldTransform(glm::translate(MAT4_IDENTITY, position) *
+			// Cast away constness
+			glm::mat4((glm::quat)rotation) *
+			glm::scale(MAT4_IDENTITY, scale)),
+		forward(VEC3_FORWARD),
+		up(VEC3_UP),
+		right(VEC3_RIGHT)
 	{
 	}
 
 	Transform::Transform(const glm::vec3& position, const glm::quat& rotation) :
 		localPosition(position),
 		localRotation(rotation),
-		localScale(1.0f),
-		worldPosition(0.0f),
-		worldRotation(VEC3_ZERO),
-		worldScale(1.0f),
+		localScale(VEC3_ONE),
+		worldPosition(position),
+		worldRotation(rotation),
+		worldScale(VEC3_ONE),
 		localTransform(glm::translate(MAT4_IDENTITY, position) *
 			glm::mat4((glm::quat)rotation) *
 			glm::scale(MAT4_IDENTITY, VEC3_ONE)),
-		worldTransform(1.0f),
-		forward(0.0f, 0.0f, 1.0f),
-		up(0.0f, 1.0f, 0.0f),
-		right(1.0f, 0.0f, 0.0f)
+		worldTransform(glm::translate(MAT4_IDENTITY, position) *
+			glm::mat4((glm::quat)rotation) *
+			glm::scale(MAT4_IDENTITY, VEC3_ONE)),
+		forward(VEC3_FORWARD),
+		up(VEC3_UP),
+		right(VEC3_RIGHT)
 	{
 	}
 
 	Transform::Transform(const glm::vec3& position) :
 		localPosition(position),
 		localRotation(VEC3_ZERO),
-		localScale(1.0f),
-		worldPosition(0.0f),
+		localScale(VEC3_ONE),
+		worldPosition(position),
 		worldRotation(VEC3_ZERO),
-		worldScale(1.0f),
+		worldScale(VEC3_ONE),
 		localTransform(glm::translate(MAT4_IDENTITY, position) *
 			glm::mat4(glm::quat(VEC3_ZERO)) *
 			glm::scale(MAT4_IDENTITY, VEC3_ONE)),
-		worldTransform(1.0f),
-		forward(0.0f, 0.0f, 1.0f),
-		up(0.0f, 1.0f, 0.0f),
-		right(1.0f, 0.0f, 0.0f)
+		worldTransform(glm::translate(MAT4_IDENTITY, position) *
+			glm::mat4(glm::quat(VEC3_ZERO)) *
+			glm::scale(MAT4_IDENTITY, VEC3_ONE)),
+		forward(VEC3_FORWARD),
+		up(VEC3_UP),
+		right(VEC3_RIGHT)
 	{
 	}
 
@@ -81,19 +88,19 @@ namespace flex
 		localPosition(other.localPosition),
 		localRotation(other.localRotation),
 		localScale(other.localScale),
-		worldPosition(0.0f),
-		worldRotation(VEC3_ZERO),
-		worldScale(1.0f),
-		forward(0.0f, 0.0f, 1.0f),
-		up(0.0f, 1.0f, 0.0f),
-		right(1.0f, 0.0f, 0.0f)
-	{
-		localTransform = (glm::translate(MAT4_IDENTITY, other.localPosition) *
+		worldPosition(other.localPosition),
+		worldRotation(other.localRotation),
+		worldScale(other.localScale),
+		forward(VEC3_FORWARD),
+		up(VEC3_UP),
+		right(VEC3_RIGHT),
+		localTransform(glm::translate(MAT4_IDENTITY, other.localPosition) *
 						  glm::mat4((glm::quat)other.localRotation) *
-						  glm::scale(MAT4_IDENTITY, other.localScale));
-		worldTransform = (glm::translate(MAT4_IDENTITY, other.worldPosition) *
+						  glm::scale(MAT4_IDENTITY, other.localScale)),
+		worldTransform(glm::translate(MAT4_IDENTITY, other.worldPosition) *
 					      glm::mat4((glm::quat)other.worldRotation) *
-					      glm::scale(MAT4_IDENTITY, other.worldScale));
+					      glm::scale(MAT4_IDENTITY, other.worldScale))
+	{
 	}
 
 	Transform::Transform(const Transform&& other) :
@@ -103,9 +110,9 @@ namespace flex
 		worldPosition(std::move(other.worldPosition)),
 		worldRotation(std::move(other.worldRotation)),
 		worldScale(std::move(other.worldScale)),
-		forward(0.0f, 0.0f, 1.0f),
-		up(0.0f, 1.0f, 0.0f),
-		right(1.0f, 0.0f, 0.0f)
+		forward(VEC3_FORWARD),
+		up(VEC3_UP),
+		right(VEC3_RIGHT)
 	{
 		localTransform = (glm::translate(MAT4_IDENTITY, localPosition) *
 						  glm::mat4(localRotation) *
@@ -188,7 +195,7 @@ namespace flex
 		}
 
 		// Check we aren't getting garbage data in
-#if _DEBUG
+#if DEBUG
 		if (IsNanOrInf(pos))
 		{
 			PrintError("Read garbage value from transform pos in serialized scene file! Using default value instead\n");
@@ -376,12 +383,20 @@ namespace flex
 						  glm::mat4(localRotation) *
 						  glm::scale(MAT4_IDENTITY, localScale));
 
+		GameObject* parent = m_GameObject->GetParent();
+
+		if (parent == nullptr)
+		{
+			worldPosition = localPosition;
+			worldRotation = localRotation;
+			worldScale = localScale;
+		}
+
 		glm::mat3 rotMat(worldRotation);
 		right = rotMat[0];
 		up = rotMat[1];
 		forward = rotMat[2];
 
-		GameObject* parent = m_GameObject->GetParent();
 		if (parent)
 		{
 			parent->GetTransform()->UpdateParentTransform();

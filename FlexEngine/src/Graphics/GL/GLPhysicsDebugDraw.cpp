@@ -25,7 +25,7 @@ namespace flex
 
 		void GLPhysicsDebugDraw::Initialize()
 		{
-			m_Renderer = (GLRenderer*)(g_Renderer);
+			m_Renderer = static_cast<GLRenderer*>(g_Renderer);
 			const std::string debugMatName = "Debug";
 			if (!m_Renderer->GetMaterialID(debugMatName, m_MaterialID))
 			{
@@ -255,7 +255,6 @@ namespace flex
 				glm::mat4 model = MAT4_IDENTITY;
 				glm::mat4 proj = g_CameraManager->CurrentCamera()->GetProjection();
 				glm::mat4 view = g_CameraManager->CurrentCamera()->GetView();
-				glm::mat4 MVP = proj * view * model;
 				glm::vec4 colorMultiplier = glMat->material.colorMultiplier;
 
 				glUniformMatrix4fv(glMat->uniformIDs.model, 1, false, &model[0][0]);

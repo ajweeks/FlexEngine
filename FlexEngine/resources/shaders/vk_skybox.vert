@@ -21,10 +21,8 @@ void main()
 {
 	ex_TexCoord = in_Position;
 	vec4 pos = pushConsts.mvp * vec4(in_Position, 1.0);
-	gl_Position = pos.xyww; // Clip coords to NDC to ensure skybox is rendered at far plane
+	gl_Position = pos;
 
-	// Convert from GL coordinates to Vulkan coordinates
-	// TODO: Move out to external function in helper file
-	gl_Position.y = -gl_Position.y;
-	gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;
+	// Push to far clip plane
+	gl_Position.z = 1.0e-9f;
 }

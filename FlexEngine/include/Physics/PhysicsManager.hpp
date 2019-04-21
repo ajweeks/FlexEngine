@@ -4,7 +4,6 @@ class btDefaultCollisionConfiguration;
 class btCollisionDispatcher;
 class btBroadphaseInterface;
 class btSequentialImpulseConstraintSolver;
-
 class btDiscreteDynamicsWorld;
 
 namespace flex
@@ -18,16 +17,12 @@ namespace flex
 		btDiscreteDynamicsWorld* CreateWorld();
 
 	private:
-		bool m_Initialized = false;
+		bool m_bInitialized = false;
 
 		btDefaultCollisionConfiguration * m_CollisionConfiguration = nullptr;
 		btCollisionDispatcher* m_Dispatcher = nullptr;
 		btBroadphaseInterface* m_OverlappingPairCache = nullptr;
 		btSequentialImpulseConstraintSolver* m_Solver = nullptr;
-
-		btDiscreteDynamicsWorld* m_PhysicsWorld = nullptr;
-
-		//std::vector<btCollisionShape*> m_Shapes;
 
 	};
 

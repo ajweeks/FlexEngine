@@ -1,31 +1,20 @@
 #pragma once
 
-#include <vector>
-#include <map>
-
-#pragma warning(push, 0)
-#define TINYGLTF_NO_STB_IMAGE
-#define TINYGLTF_NO_STB_IMAGE_WRITE
-#include <tiny_gltf/tiny_gltf.h>
-
-#include <glm/vec2.hpp>
-#include <glm/vec3.hpp>
-#include <glm/vec4.hpp>
-#pragma warning(pop)
-
 #include "Graphics/RendererTypes.hpp"
-#include "JSONTypes.hpp"
 #include "Graphics/VertexAttribute.hpp"
 #include "Graphics/VertexBufferData.hpp"
+#include "JSONTypes.hpp"
+#include "Types.hpp"
 
 namespace flex
 {
 	class GameObject;
+	struct LoadedMesh;
 
 	class MeshComponent
 	{
 	public:
-		MeshComponent(GameObject* owner);
+		explicit MeshComponent(GameObject* owner);
 		MeshComponent(MaterialID materialID, GameObject* owner, bool bSetRequiredAttributesFromMat = true);
 		~MeshComponent();
 
@@ -43,7 +32,8 @@ namespace flex
 		{
 			PREFAB,
 			FILE,
-			NONE
+
+			_NONE
 		};
 
 		enum class PrefabShape
@@ -54,19 +44,9 @@ namespace flex
 			PLANE,
 			UV_SPHERE,
 			SKYBOX,
-			NONE
-		};
+			GERSTNER_PLANE,
 
-		struct ImportSettings
-		{
-			/* Whether or not to invert the horizontal texture coordinate */
-			bool flipU = false;
-			/* Whether or not to invert the vertical texture coordinate */
-			bool flipV = false;
-			/* Whether or not to invert the Z component (up) of all normals */
-			bool flipNormalZ = false;
-			/* Whether or not to swap Y and Z components of all normals (converts from Y-up to Z-up) */
-			bool swapNormalYZ = false;
+			_NONE
 		};
 
 		/*
@@ -78,7 +58,7 @@ namespace flex
 
 		bool LoadFromFile(
 			const std::string& relativeFilePath,
-			ImportSettings* importSettings = nullptr,
+			MeshImportSettings* importSettings = nullptr,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
 		bool LoadPrefabShape(PrefabShape shape,
@@ -98,10 +78,12 @@ namespace flex
 		std::string GetRelativeFilePath() const;
 		std::string GetFileName() const;
 		PrefabShape GetShape() const;
-		ImportSettings GetImportSettings() const;
+		MeshImportSettings GetImportSettings() const;
 
 		real GetScaledBoundingSphereRadius() const;
 		glm::vec3 GetBoundingSphereCenterPointWS() const;
+
+		VertexBufferData* GetVertexBufferData();
 
 		glm::vec3 m_MinPoint;
 		glm::vec3 m_MaxPoint;
@@ -109,49 +91,41 @@ namespace flex
 		real m_BoundingSphereRadius = 0.0f;
 		glm::vec3 m_BoundingSphereCenterPoint;
 
-		struct LoadedMesh
-		{
-			std::string relativeFilePath;
-			ImportSettings importSettings;
-			tinygltf::Model model;
-			tinygltf::TinyGLTF loader;
-		};
+
 		// First field is relative file path (e.g. RESOURCE_LOCATION  "meshes/cube.glb")
 		static std::map<std::string, LoadedMesh*> m_LoadedMeshes;
 
-		static bool GetLoadedMesh(const std::string& relativeFilePath, LoadedMesh** loadedMesh);
-
-		static LoadedMesh* LoadMesh(const std::string& relativeFilePath, ImportSettings* importSettings = nullptr);
+		static LoadedMesh* LoadMesh(const std::string& relativeFilePath, MeshImportSettings* importSettings = nullptr);
+		static bool FindPreLoadedMesh(const std::string& relativeFilePath, LoadedMesh** loadedMesh);
 
 	private:
 		real CalculateBoundingSphereScale() const;
-
-		bool CalculateTangents(VertexBufferData::CreateInfo& createInfo, const tinygltf::Primitive& primitive);
+		bool CalculateTangents(VertexBufferData::CreateInfo& createInfo);
 
 		GameObject* m_OwningGameObject = nullptr;
 
-		bool m_Initialized = false;
+		bool m_bInitialized = false;
 
 		MaterialID m_MaterialID = InvalidMaterialID;
 
-		PrefabShape m_Shape = PrefabShape::NONE;
+		PrefabShape m_Shape = PrefabShape::_NONE;
 
 		static const real GRID_LINE_SPACING;
 		static const u32 GRID_LINE_COUNT;
 
-		Type m_Type = Type::NONE;
+		Type m_Type = Type::_NONE;
 		std::string m_RelativeFilePath;
 		std::string m_FileName;
 
 		glm::vec2 m_UVScale = { 1,1 };
 
-		VertexAttributes m_RequiredAttributes = (u32)VertexAttribute::NONE;
+		VertexAttributes m_RequiredAttributes = (u32)VertexAttribute::_NONE;
 		VertexBufferData m_VertexBufferData = {};
 
 		std::vector<u32> m_Indices;
 
 		// Saved so we can reload meshes and serialize contents to file
-		ImportSettings m_ImportSettings = {};
+		MeshImportSettings m_ImportSettings = {};
 		RenderObjectCreateInfo m_OptionalCreateInfo = {};
 
 		static glm::vec4 m_DefaultColor_4;

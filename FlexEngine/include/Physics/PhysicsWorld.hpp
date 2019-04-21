@@ -1,13 +1,13 @@
 #pragma once
 
 #include <set>
-#include <utility>
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include <BulletCollision/CollisionDispatch/btCollisionWorld.h>
+
 #include <LinearMath/btScalar.h>
 #include <LinearMath/btVector3.h>
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 class btDiscreteDynamicsWorld;
 class btDynamicsWorld;
@@ -31,7 +31,7 @@ namespace flex
 
 		btVector3 GenerateDirectionRayFromScreenPos(i32 x, i32 y);
 
-		btRigidBody* PickFirstBody(const btVector3& rayStart, const btVector3& rayEnd);
+		const btRigidBody* PickFirstBody(const btVector3& rayStart, const btVector3& rayEnd);
 		GameObject* PickTaggedBody(const btVector3& rayStart, const btVector3& rayEnd, const std::string& tag);
 
 	private:

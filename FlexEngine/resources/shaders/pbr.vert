@@ -27,10 +27,11 @@ void main()
 
 	ex_Color = in_Color;
 
+	mat3 modelRot = mat3(model);
 	ex_TBN = mat3(
-		normalize(mat3(model) * in_Tangent), 
-		normalize(mat3(model) * in_Bitangent), 
-		normalize(mat3(model) * in_Normal));
+		normalize(modelRot * in_Tangent), 
+		normalize(modelRot * in_Bitangent), 
+		normalize(modelRot * in_Normal));
 
     gl_Position = projection * view * worldPos;
 }

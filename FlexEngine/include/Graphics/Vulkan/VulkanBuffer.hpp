@@ -1,9 +1,9 @@
 #pragma once
 #if COMPILE_VULKAN
 
-#pragma warning(push, 0) // Don't generate warnings for 3rd party code    
+IGNORE_WARNINGS_PUSH
 #include <vulkan/vulkan.hpp>
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #include "VDeleter.hpp"
 
@@ -18,6 +18,9 @@ namespace flex
 			VkResult Map(VkDeviceSize size = VK_WHOLE_SIZE, VkDeviceSize offset = 0);
 			void Unmap();
 			void Destroy();
+
+			// TODO: Add Create function to call vkCreateBuffer
+			// TODO: Add AllocateMemory function to call vkGetBufferMemoryRequirements & vkAllocateMemory
 
 			VkResult Bind(VkDeviceSize offset = 0);
 			void SetupDescriptor(VkDeviceSize size = VK_WHOLE_SIZE, VkDeviceSize offset = 0);

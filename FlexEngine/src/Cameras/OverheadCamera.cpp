@@ -2,13 +2,13 @@
 
 #include "Cameras/OverheadCamera.hpp"
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/rotate_vector.hpp> // for rotateY
 #include <glm/vec2.hpp>
 
 #include <LinearMath/btIDebugDraw.h>
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
@@ -20,8 +20,8 @@
 
 namespace flex
 {
-	OverheadCamera::OverheadCamera(real FOV, real zNear, real zFar) :
-		BaseCamera("overhead",FOV, zNear, zFar)
+	OverheadCamera::OverheadCamera(real FOV) :
+		BaseCamera("overhead", true, FOV)
 	{
 		ResetValues();
 	}
@@ -32,21 +32,26 @@ namespace flex
 
 	void OverheadCamera::Initialize()
 	{
-		if (m_Player0 == nullptr)
-		{
-			FindPlayer();
-		}
-
 		if (!m_bInitialized)
 		{
+			if (m_Player0 == nullptr)
+			{
+				FindPlayer();
+			}
+
+			if (!m_bInitialized)
+			{
+				m_bInitialized = true;
+
+				BaseCamera::Initialize();
+
+				m_PlayerPosRollingAvg = RollingAverage<glm::vec3>(15, SamplingType::LINEAR);
+				m_PlayerForwardRollingAvg = RollingAverage<glm::vec3>(30, SamplingType::LINEAR);
+
+				ResetValues();
+			}
+
 			m_bInitialized = true;
-
-			BaseCamera::Initialize();
-
-			m_PlayerPosRollingAvg = RollingAverage<glm::vec3>(15, SamplingType::LINEAR);
-			m_PlayerForwardRollingAvg = RollingAverage<glm::vec3>(30, SamplingType::LINEAR);
-
-			ResetValues();
 		}
 	}
 
@@ -67,15 +72,13 @@ namespace flex
 			return;
 		}
 
-		if (g_InputManager->IsGamepadButtonPressed(0, Input::GamepadButton::LEFT_STICK_DOWN) ||
-			(g_InputManager->bPlayerUsingKeyboard[0] && g_InputManager->GetKeyPressed(Input::KeyCode::KEY_DOWN)))
+		if (g_InputManager->GetActionPressed(Action::ZOOM_OUT))
 		{
 			m_TargetZoomLevel += (m_MaxZoomLevel - m_MinZoomLevel) / (real)(m_ZoomLevels - 1);
 			m_TargetZoomLevel = glm::clamp(m_TargetZoomLevel, m_MinZoomLevel, m_MaxZoomLevel);
 		}
 
-		if (g_InputManager->IsGamepadButtonPressed(0, Input::GamepadButton::RIGHT_STICK_DOWN) ||
-			(g_InputManager->bPlayerUsingKeyboard[0] && g_InputManager->GetKeyPressed(Input::KeyCode::KEY_UP)))
+		if (g_InputManager->GetActionPressed(Action::ZOOM_IN))
 		{
 			m_TargetZoomLevel -= (m_MaxZoomLevel - m_MinZoomLevel) / (real)(m_ZoomLevels - 1);
 			m_TargetZoomLevel = glm::clamp(m_TargetZoomLevel, m_MinZoomLevel, m_MaxZoomLevel);
@@ -176,11 +179,6 @@ namespace flex
 		}
 
 		RecalculateViewProjection();
-	}
-
-	bool OverheadCamera::IsDebugCam() const
-	{
-		return false;
 	}
 
 } // namespace flex

@@ -1,19 +1,28 @@
 #pragma once
 #if COMPILE_OPEN_GL || COMPILE_VULKAN
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include <glad/glad.h>
-#include <GLFW/glfw3.h>
-#pragma warning(pop)
+#include <GLFW/glfw3.h> // For GLFWimage (other types are forward declared
+IGNORE_WARNINGS_POP
 
 #include "Window.hpp"
+
+struct GLFWwindow;
+struct GLFWmonitor;
+
+typedef unsigned int GLenum;
+typedef unsigned int GLuint;
+typedef int GLint;
+typedef int GLsizei;
+typedef char GLchar;
 
 namespace flex
 {
 	class GLFWWindowWrapper : public Window
 	{
 	public:
-		GLFWWindowWrapper(const std::string& title);
+		explicit GLFWWindowWrapper(const std::string& title);
 		virtual ~GLFWWindowWrapper();
 
 		virtual void Initialize() override;
@@ -61,16 +70,14 @@ namespace flex
 
 	private:
 
-		real m_PreviousFrameTime = 0;
-
 		GLFWWindowWrapper(const GLFWWindowWrapper&) = delete;
 		GLFWWindowWrapper& operator=(const GLFWWindowWrapper&) = delete;
 	};
 
-	Input::KeyAction GLFWActionToInputManagerAction(i32 glfwAction);
-	Input::KeyCode GLFWKeyToInputManagerKey(i32 glfwKey);
+	KeyAction GLFWActionToInputManagerAction(i32 glfwAction);
+	KeyCode GLFWKeyToInputManagerKey(i32 glfwKey);
 	i32 GLFWModsToInputManagerMods(i32 glfwMods);
-	Input::MouseButton GLFWButtonToInputManagerMouseButton(i32 glfwButton);
+	MouseButton GLFWButtonToInputManagerMouseButton(i32 glfwButton);
 
 	void GLFWErrorCallback(i32 error, const char* description);
 	void GLFWKeyCallback(GLFWwindow* glfwWindow, i32 key, i32 scancode, i32 action, i32 mods);
@@ -78,6 +85,7 @@ namespace flex
 	void GLFWMouseButtonCallback(GLFWwindow* glfwWindow, i32 button, i32 action, i32 mods);
 	void GLFWWindowFocusCallback(GLFWwindow* glfwWindow, i32 focused);
 	void GLFWCursorPosCallback(GLFWwindow* glfwWindow, double x, double y);
+	void GLFWScrollCallback(GLFWwindow* glfwWindow, double xoffset, double yoffset);
 	void GLFWWindowSizeCallback(GLFWwindow* glfwWindow, i32 width, i32 height);
 	void GLFWWindowPosCallback(GLFWwindow* glfwWindow, i32 newX, i32 newY);
 	void GLFWFramebufferSizeCallback(GLFWwindow* glfwWindow, i32 width, i32 height);

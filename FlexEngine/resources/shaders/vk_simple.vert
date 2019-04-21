@@ -52,9 +52,4 @@ void main()
 		normalize(mat3(uboDynamic.modelInvTranspose) * inBitangent),
 		normalize(mat3(uboDynamic.modelInvTranspose) * inNormal));
 	outTexCoord = inTexCoord;
-	
-	// Convert from GL coordinates to Vulkan coordinates
-	// TODO: Move out to external function in helper file
-	gl_Position.y = -gl_Position.y;
-	gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;
 }

@@ -51,13 +51,12 @@
 			"const ao" : 0.000000,
 			"generate hdr cubemap sampler" : true,
 			"enable cubemap sampler" : true,
-			"enable cubemap trilinear filtering" : true,
+			"enable cubemap trilinear filtering" : false,
 			"generated cubemap size" : "512, 512",
 			"generate irradiance sampler" : true,
 			"generated irradiance cubemap size" : "32, 32",
 			"generate prefiltered map" : true,
-			"generated prefiltered map size" : "128, 128",
-			"environment map path" : "hdri/Protospace_B/Protospace_B_Env.hdr"
+			"generated prefiltered map size" : "128, 128"
 		},
 		{
 			"name" : "skybox 02",
@@ -68,13 +67,12 @@
 			"const ao" : 0.000000,
 			"generate hdr cubemap sampler" : true,
 			"enable cubemap sampler" : true,
-			"enable cubemap trilinear filtering" : true,
+			"enable cubemap trilinear filtering" : false,
 			"generated cubemap size" : "512, 512",
 			"generate irradiance sampler" : true,
 			"generated irradiance cubemap size" : "32, 32",
 			"generate prefiltered map" : true,
-			"generated prefiltered map size" : "128, 128",
-			"environment map path" : "hdri/CharlesRiver_Ref.hdr"
+			"generated prefiltered map size" : "128, 128"
 		},
 		{
 			"name" : "cerberus",
@@ -112,7 +110,7 @@
 			"shader" : "pbr",
 			"const albedo" : "0.390, 0.350, 0.320",
 			"const metallic" : 0.000000,
-			"const roughness" : 0.100000,
+			"const roughness" : 0.090000,
 			"const ao" : 1.000000
 		},
 		{
@@ -200,7 +198,7 @@
 			"shader" : "pbr",
 			"const albedo" : "0.388, 0.349, 0.322",
 			"const metallic" : 1.000000,
-			"const roughness" : 1.000000,
+			"const roughness" : 0.920000,
 			"const ao" : 1.000000
 		},
 		{
@@ -328,15 +326,30 @@
 		},
 		{
 			"name" : "Grid",
-			"shader" : "pbr-ws",
-			"const albedo" : "1.000, 1.000, 1.000",
+			"shader" : "pbr_ws",
+			"const albedo" : "0.055, 0.055, 0.055",
 			"const metallic" : 0.000000,
 			"const roughness" : 1.000000,
 			"const ao" : 1.000000,
 			"enable albedo sampler" : true,
 			"generate albedo sampler" : true,
-			"albedo texture filepath" : "grid-01.png",
-			"texture scale" : 0.500000
+			"albedo texture filepath" : "alpha-bg.png"
+		},
+		{
+			"name" : "Terminal Copper",
+			"shader" : "pbr",
+			"const albedo" : "0.490, 0.127, 0.038",
+			"const metallic" : 1.000000,
+			"const roughness" : 0.170000,
+			"const ao" : 1.000000
+		},
+		{
+			"name" : "terminal display",
+			"shader" : "pbr",
+			"const albedo" : "0.003, 0.003, 0.003",
+			"const metallic" : 0.000000,
+			"const roughness" : 0.000000,
+			"const ao" : 0.000000
 		}
 	]
 }

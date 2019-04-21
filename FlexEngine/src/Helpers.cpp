@@ -2,64 +2,60 @@
 
 #include "Helpers.hpp"
 
-#include <fstream>
-#include <iomanip>
-#include <sstream>
+#include <commdlg.h> // For OPENFILENAME
+#include <shellapi.h> // For ShellExecute
 
-#pragma warning(push, 0)
+#include <direct.h> // For _getcwd
+#include <stdio.h> // For gcvt, fopen
+#include <iomanip> // for setprecision
+
+IGNORE_WARNINGS_PUSH
 #include <glm/gtx/matrix_decompose.hpp>
 
-#include "AL/al.h"
-#include "CommCtrl.h"
-
-#include "ShObjIdl.h"
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image.h"
 #include "stb_image_write.h"
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
-#include "FlexEngine.hpp"
-#include "Graphics/Renderer.hpp"
+#include "FlexEngine.hpp" // For FlexEngine::s_CurrentWorkingDirectory
+#include "Graphics/Renderer.hpp" // For MAX_TEXTURE_DIM
+#include "Transform.hpp"
 
+// Taken from "AL/al.h":
+#define AL_FORMAT_MONO8                           0x1100
+#define AL_FORMAT_MONO16                          0x1101
+#define AL_FORMAT_STEREO8                         0x1102
+#define AL_FORMAT_STEREO16                        0x1103
 
 namespace flex
 {
-	ImVec4 g_WarningTextColor(1.0f, 0.25f, 0.25f, 1.0f);
-	ImVec4 g_WarningButtonColor(0.65f, 0.12f, 0.09f, 1.0f);
-	ImVec4 g_WarningButtonHoveredColor(0.45f, 0.04f, 0.01f, 1.0f);
-	ImVec4 g_WarningButtonActiveColor(0.35f, 0.0f, 0.0f, 1.0f);
-
-	const char* TrackStateStrs[((i32)TrackState::NONE) + 1] =
-	{
-		"Facing forward",
-		"Facing backward",
-		"NONE",
-	};
-
-	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount, bool flipVertically, i32* channelCountOut /* = nullptr */)
+	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount, bool flipVertically, u32* channelCountOut /* = nullptr */)
 	{
 		assert(requestedChannelCount == 3 ||
 			   requestedChannelCount == 4);
 
 		GLFWimage result = {};
 
-		std::string fileName = filePath;
-		StripLeadingDirectories(fileName);
-		Print("Loading texture %s\n", fileName.c_str());
+		if (g_bEnableLogging_Loading)
+		{
+			std::string fileName = filePath;
+			StripLeadingDirectories(fileName);
+			Print("Loading texture %s\n", fileName.c_str());
+		}
 
 		stbi_set_flip_vertically_on_load(flipVertically);
 
-		i32 channels;
+		i32 channelCount;
 		unsigned char* data = stbi_load(filePath.c_str(),
 										&result.width,
 										&result.height,
-										&channels,
+										&channelCount,
 										(requestedChannelCount == 4  ? STBI_rgb_alpha : STBI_rgb));
 
 		if (channelCountOut)
 		{
-			*channelCountOut = channels;
+			*channelCountOut = (u32)channelCount;
 		}
 
 		if (data == 0)
@@ -70,8 +66,8 @@ namespace flex
 		}
 		else
 		{
-			assert(result.width <= Renderer::MAX_TEXTURE_DIM);
-			assert(result.height <= Renderer::MAX_TEXTURE_DIM);
+			assert((u32)result.width <= MAX_TEXTURE_DIM);
+			assert((u32)result.height <= MAX_TEXTURE_DIM);
 
 			result.pixels = static_cast<unsigned char*>(data);
 		}
@@ -92,17 +88,24 @@ namespace flex
 
 		filePath = hdrFilePath;
 
-		std::string fileName = hdrFilePath;
-		StripLeadingDirectories(fileName);
-		Print("Loading HDR texture %s\n", fileName.c_str());
+		if (g_bEnableLogging_Loading)
+		{
+			std::string fileName = hdrFilePath;
+			StripLeadingDirectories(fileName);
+			Print("Loading HDR texture %s\n", fileName.c_str());
+		}
 
 		stbi_set_flip_vertically_on_load(flipVertically);
 
+		i32 tempW, tempH, tempC;
 		pixels = stbi_loadf(filePath.c_str(),
-							&width,
-							&height,
-							&channelCount,
+							&tempW,
+							&tempH,
+							&tempC,
 							(requestedChannelCount == 4 ? STBI_rgb_alpha : STBI_rgb));
+
+		width = (u32)tempW;
+		height = (u32)tempH;
 
 		channelCount = 4;
 
@@ -112,9 +115,8 @@ namespace flex
 			return false;
 		}
 
-		assert(width <= Renderer::MAX_TEXTURE_DIM);
-		assert(height <= Renderer::MAX_TEXTURE_DIM);
-		assert(channelCount > 0);
+		assert(width <= MAX_TEXTURE_DIM);
+		assert(height <= MAX_TEXTURE_DIM);
 
 		return true;
 	}
@@ -127,13 +129,16 @@ namespace flex
 	std::string FloatToString(real f, i32 precision)
 	{
 		std::stringstream stream;
-
 		stream << std::fixed << std::setprecision(precision) << f;
-
 		return stream.str();
 	}
 
-	std::string IntToString(i32 i, u16 minChars)
+	std::string BoolToString(bool b)
+	{
+		return b ? "true" : "false";
+	}
+
+	std::string IntToString(i32 i, u16 minChars/* = 0 */, char pad /* = '0' */)
 	{
 		std::string result = std::to_string(glm::abs(i));
 
@@ -141,47 +146,67 @@ namespace flex
 		{
 			if (result.length() < minChars)
 			{
-				result = '-' + std::string(minChars - result.length(), '0') + result;
+				result = "-" + std::string(minChars - result.length(), pad) + result;
 			}
 			else
 			{
-				result = '-' + result;
+				result = "-" + result;
 			}
 		}
 		else
 		{
 			if (result.length() < minChars)
 			{
-				result = std::string(minChars - result.length(), '0') + result;
+				result = std::string(minChars - result.length(), pad) + result;
 			}
 		}
 
 		return result;
 	}
 
-	TextCache::TextCache(const std::string& str, AnchorPoint anchor, glm::vec2 pos, glm::vec4 color, real xSpacing, bool bRaw, const std::vector<glm::vec2>& letterOffsets) :
+	// Screen-space constructor
+	TextCache::TextCache(const std::string& str, AnchorPoint anchor, const glm::vec2& pos,
+		const glm::vec4& color, real xSpacing, bool bRaw) :
 		str(str),
 		anchor(anchor),
-		pos(pos),
+		pos(pos.x, pos.y, -1.0f),
+		rot(QUAT_UNIT),
 		color(color),
 		xSpacing(xSpacing),
-		bRaw(bRaw),
-		letterOffsets(letterOffsets)
+		bRaw(bRaw)
+	{
+	}
+
+	// World-space constructor
+	TextCache::TextCache(const std::string& str, const glm::vec3& pos, const glm::quat& rot,
+		const glm::vec4& color, real xSpacing, bool bRaw) :
+		str(str),
+		anchor(AnchorPoint::_NONE),
+		pos(pos),
+		rot(rot),
+		color(color),
+		xSpacing(xSpacing),
+		bRaw(bRaw)
 	{
 	}
 
 	bool FileExists(const std::string& filePath)
 	{
-		std::ifstream file(filePath.c_str());
-		bool exists = file.good();
-		file.close();
+		FILE* file = nullptr;
+		fopen_s(&file, filePath.c_str(), "r");
 
-		return exists;
+		if (file)
+		{
+			fclose(file);
+			return true;
+		}
+
+		return false;
 	}
 
 	bool ReadFile(const std::string& filePath, std::string& fileContents, bool bBinaryFile)
 	{
-		int fileMode = std::ios::in | std::ios::ate;
+		int fileMode = std::ios::in;
 		if (bBinaryFile)
 		{
 			fileMode |= std::ios::binary;
@@ -194,14 +219,17 @@ namespace flex
 			return false;
 		}
 
-		std::streampos length = file.tellg();
+		file.ignore(std::numeric_limits<std::streamsize>::max());
+		std::streampos fileLen = file.gcount();
+		file.clear(); // Clear eof flag
+		file.seekg(0, std::ios::beg);
 
-		if ((size_t)length > 0)
+		if ((size_t)fileLen > 0)
 		{
-			fileContents.resize((size_t)length);
+			fileContents.resize((size_t)fileLen);
 
 			file.seekg(0, std::ios::beg);
-			file.read(&fileContents[0], length);
+			file.read(&fileContents[0], fileLen);
 			file.close();
 
 			// Remove extra null terminators caused by Windows line endings
@@ -316,7 +344,7 @@ namespace flex
 	{
 		ShellExecute(NULL, "open", absoluteDirectory.c_str(), NULL, NULL, SW_SHOWDEFAULT);
 
-		// OR
+		// Alternative:
 		// system("explorer C:\\");
 	}
 
@@ -328,32 +356,27 @@ namespace flex
 
 	bool OpenFileDialog(const std::string& windowTitle, const std::string& absoluteDirectory, std::string& outSelectedAbsFilePath, char filter[] /* = nullptr */)
 	{
-		//TaskDialog(NULL, NULL, L"Open somethin", L"D:\\", NULL, TDCBF_OK_BUTTON, TD_INFORMATION_ICON, NULL);
-		//return false;
-
-		OPENFILENAME ofna = {};
-		ofna.lStructSize = sizeof(OPENFILENAME);
-		ofna.lpstrInitialDir = absoluteDirectory.c_str();
-		ofna.nMaxFile = ARRAY_SIZE(filter);
-		if (ofna.nMaxFile && filter)
+		OPENFILENAME openFileName = {};
+		openFileName.lStructSize = sizeof(OPENFILENAME);
+		openFileName.lpstrInitialDir = absoluteDirectory.c_str();
+		openFileName.nMaxFile = (filter == nullptr ? 0 : strlen(filter));
+		if (openFileName.nMaxFile && filter)
 		{
-			ofna.lpstrFilter = filter;
+			openFileName.lpstrFilter = filter;
 		}
-		ofna.nFilterIndex = 0;
+		openFileName.nFilterIndex = 0;
 		const i32 MAX_FILE_PATH_LEN = 512;
 		char fileBuf[MAX_FILE_PATH_LEN];
-		memset(fileBuf, '\0', MAX_FILE_PATH_LEN);
-		ofna.lpstrFile = fileBuf;
-		ofna.nMaxFile = MAX_FILE_PATH_LEN;
-		ofna.lpstrTitle = windowTitle.c_str();
-		ofna.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
-		bool bSuccess = GetOpenFileName(&ofna) == 1;
+		memset(fileBuf, '\0', MAX_FILE_PATH_LEN - 1);
+		openFileName.lpstrFile = fileBuf;
+		openFileName.nMaxFile = MAX_FILE_PATH_LEN;
+		openFileName.lpstrTitle = windowTitle.c_str();
+		openFileName.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+		bool bSuccess = GetOpenFileName(&openFileName) == 1;
 
-		if (ofna.lpstrFile)
+		if (openFileName.lpstrFile)
 		{
-			//ofna.nFileOffset;
-			//ofna.nFileExtension;
-			outSelectedAbsFilePath = ofna.lpstrFile;
+			outSelectedAbsFilePath = openFileName.lpstrFile;
 		}
 
 		return bSuccess;
@@ -433,6 +456,8 @@ namespace flex
 				}
 			}
 		} while (FindNextFile(hFind, &findData) != 0);
+
+		FindClose(hFind);
 
 		DWORD dwError = GetLastError();
 		if (dwError != ERROR_NO_MORE_FILES)
@@ -515,7 +540,7 @@ namespace flex
 		{
 			pos = absoluteDirectoryPath.find_first_of("\\/", pos + 1);
 			CreateDirectory(absoluteDirectoryPath.substr(0, pos).c_str(), NULL);
-			GetLastError();// == ERROR_ALREADY_EXISTS;
+			//GetLastError() == ERROR_ALREADY_EXISTS;
 		} while (pos != std::string::npos);
 	}
 
@@ -585,13 +610,13 @@ namespace flex
 			++dataIndex;
 		}
 
-		bool bPrintWavStats = false;
+		constexpr bool bPrintWavStats = false;
 		if (bPrintWavStats)
 		{
 			std::string fileName = filePath;
 			StripLeadingDirectories(fileName);
-			Print("Stats about WAV file: %s:\n\tchannel count: %i, samples/s: %i, average bytes/s: %i"
-				  ", block align: %i, bits/sample: %i, chunk size: %i, sub chunk2 ID: \"%s\", sub chunk 2 size: %i\n",
+			Print("Stats about WAV file: %s:\n\tchannel count: %u, samples/s: %u, average bytes/s: %u"
+				  ", block align: %u, bits/sample: %u, chunk size: %u, sub chunk2 ID: \"%s\", sub chunk 2 size: %u\n",
 				  fileName.c_str(),
 				  channelCount,
 				  samplesPerSec,
@@ -616,7 +641,7 @@ namespace flex
 				*format = AL_FORMAT_MONO16;
 				break;
 			default:
-				PrintError("WAVE file contains invalid bitsPerSample (must be 8 or 16): %i\n", bitsPerSample);
+				PrintError("WAVE file contains invalid bitsPerSample (must be 8 or 16): %u\n", bitsPerSample);
 				break;
 			}
 		} break;
@@ -631,13 +656,13 @@ namespace flex
 				*format = AL_FORMAT_STEREO16;
 				break;
 			default:
-				PrintError("WAVE file contains invalid bitsPerSample (must be 8 or 16): %i\n", bitsPerSample);
+				PrintError("WAVE file contains invalid bitsPerSample (must be 8 or 16): %u\n", bitsPerSample);
 				break;
 			}
 		} break;
 		default:
 		{
-			PrintError("WAVE file contains invalid channel count (must be 1 or 2): %i\n", channelCount);
+			PrintError("WAVE file contains invalid channel count (must be 1 or 2): %u\n", channelCount);
 		} break;
 		}
 
@@ -645,6 +670,28 @@ namespace flex
 		*freq = samplesPerSec;
 
 		return true;
+	}
+
+	std::string TrimStartAndEnd(const std::string& str)
+	{
+		if (str.empty())
+		{
+			return str;
+		}
+
+		auto iter = str.begin();
+		while (iter != str.end() - 1 && isspace(*iter))
+		{
+			++iter;
+		}
+
+		auto riter = str.end() - 1;
+		while (riter != iter && isspace(*riter))
+		{
+			--riter;
+		}
+
+		return std::string(iter, riter + 1);
 	}
 
 	u32 Parse32u(char* ptr)
@@ -762,6 +809,10 @@ namespace flex
 		delta = glm::clamp(delta, 0.00001f, 1.0f);
 		glm::vec3 diff = (b - a);
 		delta = glm::min(delta, glm::length(diff));
+		if (abs(delta) < 0.00001f)
+		{
+			return a;
+		}
 		return a + glm::normalize(diff) * delta;
 	}
 
@@ -789,6 +840,16 @@ namespace flex
 	glm::vec4 Lerp(const glm::vec4& a, const glm::vec4& b, real t)
 	{
 		return a * (1.0f - t) + b * t;
+	}
+
+	bool ParseBool(const std::string& intStr)
+	{
+		return (intStr.compare("true") == 0);
+	}
+
+	glm::i32 ParseInt(const std::string& intStr)
+	{
+		return (i32)atoi(intStr.c_str());
 	}
 
 	real ParseFloat(const std::string& floatStr)
@@ -947,7 +1008,7 @@ namespace flex
 
 	std::string Vec2ToString(glm::vec2 vec, i32 precision)
 	{
-#if _DEBUG
+#if DEBUG
 		if (IsNanOrInf(vec))
 		{
 			PrintError("Attempted to convert vec2 with NAN or inf components to string! Setting to zero\n");
@@ -962,7 +1023,7 @@ namespace flex
 
 	std::string Vec3ToString(glm::vec3 vec, i32 precision)
 	{
-#if _DEBUG
+#if DEBUG
 		if (IsNanOrInf(vec))
 		{
 			PrintError("Attempted to convert vec3 with NAN or inf components to string! Setting to zero\n");
@@ -978,7 +1039,7 @@ namespace flex
 
 	std::string Vec4ToString(glm::vec4 vec, i32 precision)
 	{
-#if _DEBUG
+#if DEBUG
 		if (IsNanOrInf(vec))
 		{
 			PrintError("Attempted to convert vec4 with NAN or inf components to string! Setting to zero\n");
@@ -1105,10 +1166,14 @@ namespace flex
 		{
 			return CullFace::FRONT_AND_BACK;
 		}
+		else if (strLower.compare("none") == 0)
+		{
+			return CullFace::NONE;
+		}
 		else
 		{
 			PrintError("Unhandled cull face str: %s\n", str.c_str());
-			return CullFace::NONE;
+			return CullFace::_INVALID;
 		}
 	}
 
@@ -1119,25 +1184,36 @@ namespace flex
 		case CullFace::BACK:			return "back";
 		case CullFace::FRONT:			return "front";
 		case CullFace::FRONT_AND_BACK:	return "front and back";
-		case CullFace::NONE:			return "NONE";
+		case CullFace::NONE:			return "none";
 		default:						return "UNHANDLED CULL FACE";
 		}
 	}
 
-	void ToLower(std::string& str)
+	std::string& ToLower(std::string& str)
 	{
 		for (char& c : str)
 		{
 			c = (char)tolower(c);
 		}
+		return str;
 	}
 
-	void ToUpper(std::string& str)
+	char* ToLower(char* str)
+	{
+		for (u32 i = 0; i < strlen(str); ++i)
+		{
+			str[i] = (char)tolower(str[i]);
+		}
+		return str;
+	}
+
+	std::string& ToUpper(std::string& str)
 	{
 		for (char& c : str)
 		{
 			c = (char)toupper(c);
 		}
+		return str;
 	}
 
 	bool StartsWith(const std::string& str, const std::string& start)
@@ -1193,16 +1269,16 @@ namespace flex
 
 	const char* GameObjectTypeToString(GameObjectType type)
 	{
-		assert(ARRAY_LENGTH(GameObjectTypeStrings) == (i32)GameObjectType::NONE + 1);
+		assert(ARRAY_LENGTH(GameObjectTypeStrings) == (i32)GameObjectType::_NONE + 1);
 
 		return GameObjectTypeStrings[(i32)type];
 	}
 
 	GameObjectType StringToGameObjectType(const char* gameObjectTypeStr)
 	{
-		assert(ARRAY_LENGTH(GameObjectTypeStrings) == (i32)GameObjectType::NONE + 1);
+		assert(ARRAY_LENGTH(GameObjectTypeStrings) == (i32)GameObjectType::_NONE + 1);
 
-		for (i32 i = 0; i < (i32)GameObjectType::NONE; ++i)
+		for (i32 i = 0; i < (i32)GameObjectType::_NONE; ++i)
 		{
 			if (strcmp(GameObjectTypeStrings[i], gameObjectTypeStr) == 0)
 			{
@@ -1210,7 +1286,7 @@ namespace flex
 			}
 		}
 
-		return GameObjectType::NONE;
+		return GameObjectType::_NONE;
 	}
 
 	void RetrieveCurrentWorkingDirectory()
@@ -1300,6 +1376,16 @@ namespace flex
 		return bValueChanged;
 	}
 
+	// See https://graphics.pixar.com/library/OrthonormalB/paper.pdf
+	void CalculateOrthonormalBasis(const glm::vec3&n, glm::vec3& b1, glm::vec3& b2)
+	{
+		real sign = copysignf(1.0f, n.z);
+		const real a = -1.0f / (sign + n.z);
+		const real b = n.x * n.y * a;
+		b1 = glm::vec3(1.0f + sign * n.x * n.x * a, sign * b, -sign * n.x);
+		b2 = glm::vec3(b, sign + n.y * n.y * a, -n.y);
+	}
+
 	bool SaveImage(const std::string& absoluteFilePath, ImageFormat imageFormat, i32 width, i32 height, i32 channelCount, u8* data, bool bFlipVertically)
 	{
 		if (data == nullptr ||
@@ -1352,10 +1438,5 @@ namespace flex
 		}
 
 		return bResult;
-	}
-
-	const char* TrackStateToString(TrackState state)
-	{
-		return TrackStateStrs[(i32)state];
 	}
 } // namespace flex

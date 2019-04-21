@@ -2,10 +2,10 @@
 
 #include "Cameras/BaseCamera.hpp"
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/vec2.hpp>
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #include "Helpers.hpp"
 #include "Player.hpp"
@@ -16,7 +16,8 @@
 
 namespace flex
 {
-	BaseCamera::BaseCamera(const std::string& cameraName, real FOV, real zNear, real zFar) :
+	BaseCamera::BaseCamera(const std::string& cameraName, bool bIsGameplayCam, real FOV, real zNear, real zFar) :
+		bIsGameplayCam(bIsGameplayCam),
 		m_Name(cameraName),
 		m_View(MAT4_ZERO),
 		m_Proj(MAT4_ZERO),
@@ -51,6 +52,15 @@ namespace flex
 
 	void BaseCamera::Initialize()
 	{
+		m_bInitialized = true;
+	}
+
+	void BaseCamera::Destroy()
+	{
+		if (m_bInitialized)
+		{
+			m_bInitialized = false;
+		}
 	}
 
 	void BaseCamera::OnSceneChanged()
@@ -198,8 +208,8 @@ namespace flex
 
 		glm::vec3 worldUp(0.0f, 1.0f, 0.0f);
 
-		m_Right = normalize(glm::cross(worldUp, m_Forward));
-		m_Up = cross(m_Forward, m_Right);
+		m_Right = normalize(glm::cross(m_Forward, worldUp));
+		m_Up = cross(m_Right, m_Forward);
 	}
 
 	void BaseCamera::CalculateYawAndPitchFromForward()
@@ -226,7 +236,7 @@ namespace flex
 		m_View = glm::lookAt(m_Position, m_Position + m_Forward, m_Up);
 
 		real aspectRatio = windowSize.x / (real)windowSize.y;
-		m_Proj = glm::perspective(m_FOV, aspectRatio, m_ZNear, m_ZFar);
+		m_Proj = glm::perspective(m_FOV, aspectRatio, m_ZFar, m_ZNear);
 
 		m_ViewProjection = m_Proj * m_View;
 
@@ -238,12 +248,12 @@ namespace flex
 		m_Pitch = glm::clamp(m_Pitch, -pitchLimit, pitchLimit);
 	}
 
-	float BaseCamera::CalculateEV100(float aperture, float shutterSpeed, float sensitivity)
+	real BaseCamera::CalculateEV100(real aperture, real shutterSpeed, real sensitivity)
 	{
 		return log2((aperture * aperture) / shutterSpeed * 100.0f / sensitivity);
 	}
 
-	float BaseCamera::ComputeExposureNormFactor(float EV100)
+	real BaseCamera::ComputeExposureNormFactor(real EV100)
 	{
 		return pow(2.0f, EV100) * 1.2f;
 	}

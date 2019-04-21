@@ -3,9 +3,6 @@
 
 #include "JSONParser.hpp"
 
-#include <cwctype>
-#include <fstream>
-
 #include "Helpers.hpp"
 #include "Scene/GameObject.hpp"
 
@@ -106,6 +103,13 @@ namespace flex
 			return false;
 		}
 
+		if (objectClosingBracket == *offset + 1)
+		{
+			// Empty block
+			*offset = objectClosingBracket + 1;
+			return true;
+		}
+
 		bool bParsing = true;
 		while (bParsing && *offset < objectClosingBracket)
 		{
@@ -146,7 +150,9 @@ namespace flex
 
 		if (fileContents[quoteEnd + 1] != ':')
 		{
-			PrintError("Invalidly formatted JSON file (':' must occur after a field label)\n");
+			PrintError("Invalidly formatted JSON file, ':' must occur after a field label\n...\n");
+			std::string surroundingText(fileContents.substr(quoteStart - 20, 40));
+			PrintError("%s\n...\n", surroundingText.c_str());
 			return false;
 		}
 
@@ -289,7 +295,7 @@ namespace flex
 		}
 		else
 		{
-			PrintError("Unhandled opening bracket type: %c\n" + openingBracket);
+			PrintError("Unhandled opening bracket type: %c\n", openingBracket);
 			return -1;
 		}
 

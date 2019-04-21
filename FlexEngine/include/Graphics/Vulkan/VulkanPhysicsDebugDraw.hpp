@@ -1,13 +1,12 @@
 #pragma once
 #if COMPILE_VULKAN
 
-#include "LinearMath\btIDebugDraw.h"
-
-#include "Types.hpp"
-
 #include <vector>
 
+#include "Graphics/Renderer.hpp"
+#include "Graphics/VertexBufferData.hpp"
 #include "Transform.hpp"
+#include "Types.hpp"
 
 namespace flex
 {
@@ -15,7 +14,7 @@ namespace flex
 	{
 		class VulkanRenderer;
 
-		class VulkanPhysicsDebugDraw : public btIDebugDraw
+		class VulkanPhysicsDebugDraw : public PhysicsDebugDrawBase
 		{
 		public:
 			VulkanPhysicsDebugDraw();
@@ -32,6 +31,8 @@ namespace flex
 
 			virtual void drawLine(const btVector3& from, const btVector3& to, const btVector3& color) override;
 			virtual void drawContactPoint(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector3& color) override;
+
+			virtual void DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& color) override;
 
 			virtual void flushLines() override;
 			void ClearLines();
@@ -57,8 +58,7 @@ namespace flex
 
 			// Per-frame data
 			VertexBufferData m_VertexBufferData;
-
-			GameObject* m_GameObject = nullptr;
+			VertexBufferData::CreateInfo m_VertexBufferCreateInfo;
 		};
 	} // namespace vk
 } // namespace flex

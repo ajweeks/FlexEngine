@@ -2,17 +2,16 @@
 
 #include <array>
 #include <map>
-#include <string>
-#include <vector>
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include <glm/gtc/quaternion.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/vec4.hpp>
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #include "Functors.hpp"
 #include "JSONTypes.hpp"
+#include "Pair.hpp"
 
 extern const char** DataTypeStrs;
 
@@ -21,49 +20,85 @@ namespace flex
 	class VertexBufferData;
 	class GameObject;
 
-#define BIT(x) (1 << x)
+	static const i32 MAX_NUM_POINT_LIGHTS = 8;
 
-	enum class Uniform : i64
+	struct DirLightData
 	{
-		MODEL						= BIT(0),
-		MODEL_INV_TRANSPOSE			= BIT(1),
-		VIEW						= BIT(2),
-		VIEW_PROJECTION				= BIT(3),
-		PROJECTION					= BIT(4),
-		COLOR_MULTIPLIER			= BIT(5),
-		CAM_POS						= BIT(6),
-		DIR_LIGHT					= BIT(7),
-		POINT_LIGHTS				= BIT(8),
-		ALBEDO_SAMPLER				= BIT(9),
-		CONST_ALBEDO				= BIT(10),
-		METALLIC_SAMPLER			= BIT(11),
-		CONST_METALLIC				= BIT(12),
-		ROUGHNESS_SAMPLER			= BIT(13),
-		CONST_ROUGHNESS				= BIT(14),
-		AO_SAMPLER					= BIT(15),
-		CONST_AO					= BIT(16),
-		NORMAL_SAMPLER				= BIT(17),
-		ENABLE_CUBEMAP_SAMPLER		= BIT(18),
-		CUBEMAP_SAMPLER				= BIT(19),
-		IRRADIANCE_SAMPLER			= BIT(20),
-		FB_0_SAMPLER				= BIT(21),
-		FB_1_SAMPLER				= BIT(22),
-		FB_2_SAMPLER				= BIT(23),
-		TEXEL_STEP					= BIT(24),
-		SHOW_EDGES					= BIT(25),
-		LIGHT_VIEW_PROJ				= BIT(26),
-		HDR_EQUIRECTANGULAR_SAMPLER	= BIT(27),
-		EXPOSURE					= BIT(28),
-		TRANSFORM_MAT				= BIT(29),
-		TEX_SIZE					= BIT(30),
+		glm::vec3 dir;
+		i32 enabled;
+		glm::vec3 color;
+		real brightness;
 	};
+
+	struct PointLightData
+	{
+		glm::vec3 pos;
+		i32 enabled;
+		glm::vec3 color;
+		real brightness;
+	};
+
+	// Uniforms
+	const u64 U_MODEL							= (1ull << 0); const u32 US_MODEL						= sizeof(glm::mat4);
+	const u64 U_MODEL_INV_TRANSPOSE				= (1ull << 1); const u32 US_MODEL_INV_TRANSPOSE			= sizeof(glm::mat4);
+	const u64 U_VIEW							= (1ull << 2); const u32 US_VIEW						= sizeof(glm::mat4);
+	const u64 U_VIEW_INV						= (1ull << 3); const u32 US_VIEW_INV					= sizeof(glm::mat4);
+	const u64 U_VIEW_PROJECTION					= (1ull << 4); const u32 US_VIEW_PROJECTION				= sizeof(glm::mat4);
+	const u64 U_MODEL_VIEW_PROJ					= (1ull << 5); const u32 US_MODEL_VIEW_PROJ				= sizeof(glm::mat4);
+	// 6
+	const u64 U_PROJECTION						= (1ull << 7); const u32 US_PROJECTION					= sizeof(glm::mat4);
+	const u64 U_BLEND_SHARPNESS					= (1ull << 8); const u32 US_BLEND_SHARPNESS				= sizeof(real);
+	const u64 U_COLOR_MULTIPLIER				= (1ull << 9); const u32 US_COLOR_MULTIPLIER			= sizeof(glm::vec4);
+	const u64 U_CAM_POS							= (1ull << 10); const u32 US_CAM_POS					= sizeof(glm::vec4);
+	const u64 U_DIR_LIGHT						= (1ull << 11); const u32 US_DIR_LIGHT					= sizeof(DirLightData);
+	const u64 U_POINT_LIGHTS					= (1ull << 12); const u32 US_POINT_LIGHTS				= sizeof(PointLightData) * MAX_NUM_POINT_LIGHTS;
+	const u64 U_ALBEDO_SAMPLER					= (1ull << 13);
+	const u64 U_CONST_ALBEDO					= (1ull << 14); const u32 US_CONST_ALBEDO				= sizeof(glm::vec4);
+	const u64 U_METALLIC_SAMPLER				= (1ull << 15);
+	const u64 U_CONST_METALLIC					= (1ull << 16); const u32 US_CONST_METALLIC				= sizeof(real);
+	const u64 U_ROUGHNESS_SAMPLER				= (1ull << 17);
+	const u64 U_CONST_ROUGHNESS					= (1ull << 18); const u32 US_CONST_ROUGHNESS			= sizeof(real);
+	const u64 U_AO_SAMPLER						= (1ull << 19);
+	const u64 U_CONST_AO						= (1ull << 20); const u32 US_CONST_AO					= sizeof(real);
+	const u64 U_NORMAL_SAMPLER					= (1ull << 21);
+	const u64 U_ENABLE_CUBEMAP_SAMPLER			= (1ull << 22); const u32 US_ENABLE_CUBEMAP_SAMPLER		= sizeof(i32);
+	const u64 U_ENABLE_ALBEDO_SAMPLER			= (1ull << 23); const u32 US_ENABLE_ALBEDO_SAMPLER		= sizeof(i32);
+	const u64 U_ENABLE_METALLIC_SAMPLER			= (1ull << 24); const u32 US_ENABLE_METALLIC_SAMPLER	= sizeof(i32);
+	const u64 U_ENABLE_ROUGHNESS_SAMPLER		= (1ull << 25); const u32 US_ENABLE_ROUGHNESS_SAMPLER	= sizeof(i32);
+	const u64 U_ENABLE_AO_SAMPLER				= (1ull << 26); const u32 US_ENABLE_AO_SAMPLER			= sizeof(i32);
+	const u64 U_ENABLE_NORMAL_SAMPLER			= (1ull << 27); const u32 US_ENABLE_NORMAL_SAMPLER		= sizeof(i32);
+	const u64 U_ENABLE_IRRADIANCE_SAMPLER		= (1ull << 28); const u32 US_ENABLE_IRRADIANCE_SAMPLER	= sizeof(i32);
+	const u64 U_CUBEMAP_SAMPLER					= (1ull << 29);
+	const u64 U_IRRADIANCE_SAMPLER				= (1ull << 30);
+	const u64 U_FB_0_SAMPLER					= (1ull << 31);
+	const u64 U_FB_1_SAMPLER					= (1ull << 32);
+	const u64 U_FB_2_SAMPLER					= (1ull << 33);
+	const u64 U_TEXEL_STEP						= (1ull << 34); const u32 US_TEXEL_STEP					= sizeof(real);
+	const u64 U_SHOW_EDGES						= (1ull << 35); const u32 US_SHOW_EDGES					= sizeof(i32);
+	const u64 U_LIGHT_VIEW_PROJ					= (1ull << 36); const u32 US_LIGHT_VIEW_PROJ			= sizeof(glm::mat4);
+	const u64 U_HDR_EQUIRECTANGULAR_SAMPLER		= (1ull << 37);
+	const u64 U_BRDF_LUT_SAMPLER				= (1ull << 38);
+	const u64 U_PREFILTER_MAP					= (1ull << 39);
+	const u64 U_EXPOSURE						= (1ull << 40); const u32 US_EXPOSURE					= sizeof(real);
+	const u64 U_TRANSFORM_MAT					= (1ull << 41); const u32 US_TRANSFORM_MAT				= sizeof(glm::mat4);
+	const u64 U_FONT_CHAR_DATA					= (1ull << 42); const u32 US_FONT_CHAR_DATA				= sizeof(glm::vec4);
+	const u64 U_TEX_SIZE						= (1ull << 43); const u32 US_TEX_SIZE					= sizeof(glm::vec2);
+	const u64 U_UNIFORM_BUFFER_CONSTANT			= (1ull << 44);
+	const u64 U_UNIFORM_BUFFER_DYNAMIC			= (1ull << 45);
+	const u64 U_TEXTURE_SCALE					= (1ull << 46); const u32 US_TEXTURE_SCALE				= sizeof(real);
+	const u64 U_TIME							= (1ull << 47); const u32 US_TIME						= sizeof(real);
+	const u64 U_SDF_DATA						= (1ull << 48); const u32 US_SDF_DATA					= sizeof(glm::vec4);
+	const u64 U_TEX_CHANNEL						= (1ull << 49); const u32 US_TEX_CHANNEL				= sizeof(i32);
+	const u64 U_HIGH_RES_TEX					= (1ull << 50);
+	// NOTE: New additions need to be added in Uniforms::CalculateSizeInBytes
 
 	enum class ClearFlag
 	{
 		COLOR =   (1 << 0),
 		DEPTH =   (1 << 1),
 		STENCIL = (1 << 2),
-		NONE
+
+		_NONE
 	};
 
 	enum class CullFace
@@ -71,7 +106,9 @@ namespace flex
 		BACK,
 		FRONT,
 		FRONT_AND_BACK,
-		NONE
+		NONE,
+
+		_INVALID
 	};
 
 	enum class DepthTestFunc
@@ -84,21 +121,24 @@ namespace flex
 		GEQUAL,
 		EQUAL,
 		NOTEQUAL,
-		NONE
+
+		_NONE
 	};
 
 	enum class BufferTarget
 	{
 		ARRAY_BUFFER,
 		ELEMENT_ARRAY_BUFFER,
-		NONE
+
+		_NONE
 	};
 
 	enum class UsageFlag
 	{
 		STATIC_DRAW,
 		DYNAMIC_DRAW,
-		NONE
+
+		_NONE
 	};
 
 	enum class DataType
@@ -127,11 +167,41 @@ namespace flex
 		SAMPLER_1D_SHADOW,
 		SAMPLER_2D_SHADOW,
 		SAMPLER_CUBE_SHADOW,
-		// NOTE: If adding any types, entries must also be added to the following array!
-		NONE
+
+		_NONE
 	};
 
-	const char* DataTypeToString(DataType dataType);
+	static const char* DataTypeStrings[] =
+	{
+		"bool",
+		"byte",
+		"unsigned byte",
+		"short",
+		"unsigned short",
+		"int",
+		"unsigned int",
+		"float",
+		"double",
+		"float vector 2",
+		"float vector 3",
+		"float vector 4",
+		"float matrix 3",
+		"float matrix 4",
+		"int vector 2",
+		"int vector 3",
+		"int vector 4",
+		"sampler 1D",
+		"sampler 2D",
+		"sampler 3D",
+		"sampler cube",
+		"sampler 1D shadow",
+		"sampler 2D shadow",
+		"sampler cube shadow",
+
+		"NONE",
+	};
+
+	static_assert(ARRAY_LENGTH(DataTypeStrings) == (u32)DataType::_NONE + 1, "DataTypeStrings length must match DataType enum");
 
 	enum class TopologyMode
 	{
@@ -142,7 +212,8 @@ namespace flex
 		TRIANGLE_LIST,
 		TRIANGLE_STRIP,
 		TRIANGLE_FAN,
-		NONE
+
+		_NONE
 	};
 
 	// TODO: Is setting all the members to false necessary?
@@ -159,6 +230,24 @@ namespace flex
 		std::string aoTexturePath = "";
 		std::string hdrEquirectangularTexturePath = "";
 
+		glm::vec4 colorMultiplier = { 1.0f, 1.0f, 1.0f, 1.0f };
+		std::vector<Pair<std::string, void*>> frameBuffers; // Pairs of frame buffer names (as seen in shader) and IDs
+		glm::vec2 generatedIrradianceCubemapSize = { 0.0f, 0.0f };
+		MaterialID irradianceSamplerMatID = InvalidMaterialID; // The id of the material who has an irradiance sampler object (generateIrradianceSampler must be false)
+		std::string environmentMapPath = "";
+		std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
+		glm::vec2 generatedCubemapSize = { 0.0f, 0.0f };
+		glm::vec2 generatedPrefilteredCubemapSize = { 0.0f, 0.0f };
+		MaterialID prefilterMapSamplerMatID = InvalidMaterialID;
+
+		// PBR Constant values
+		glm::vec3 constAlbedo = { 1.0f, 1.0f, 1.0f };
+		real constMetallic = 0.0f;
+		real constRoughness = 0.0f;
+		real constAO = 0.0f;
+
+		real textureScale = 1.0f;
+
 		bool generateNormalSampler = false;
 		bool enableNormalSampler = false;
 		bool generateAlbedoSampler = false;
@@ -173,42 +262,24 @@ namespace flex
 		bool enableHDREquirectangularSampler = false;
 		bool generateHDRCubemapSampler = false;
 
-		glm::vec4 colorMultiplier = { 1.0f, 1.0f, 1.0f, 1.0f };
-
-		std::vector<std::pair<std::string, void*>> frameBuffers; // Pairs of frame buffer names (as seen in shader) and IDs
-
 		bool enableIrradianceSampler = false;
 		bool generateIrradianceSampler = false;
-		glm::vec2 generatedIrradianceCubemapSize = { 0.0f, 0.0f };
-		MaterialID irradianceSamplerMatID = InvalidMaterialID; // The id of the material who has an irradiance sampler object (generateIrradianceSampler must be false)
-		std::string environmentMapPath = "";
 
 		bool enableBRDFLUT = false;
 		bool renderToCubemap = true;
 
-		std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
 		bool enableCubemapSampler = false;
 		bool enableCubemapTrilinearFiltering = false;
 		bool generateCubemapSampler = false;
-		glm::vec2 generatedCubemapSize = { 0.0f, 0.0f };
 		bool generateCubemapDepthBuffers = false;
 
 		bool generatePrefilteredMap = false;
 		bool enablePrefilteredMap = false;
-		glm::vec2 generatedPrefilteredCubemapSize = { 0.0f, 0.0f };
-		MaterialID prefilterMapSamplerMatID = InvalidMaterialID;
 
 		bool generateReflectionProbeMaps = false;
 
-		// PBR Constant values
-		glm::vec3 constAlbedo = { 1.0f, 1.0f, 1.0f };
-		real constMetallic = 0.0f;
-		real constRoughness = 0.0f;
-		real constAO = 0.0f;
-
-		real textureScale = 1.0f;
-
 		bool engineMaterial = false;
+
 	};
 
 	struct Material
@@ -219,18 +290,12 @@ namespace flex
 		JSONObject Serialize() const;
 
 		std::string name = "";
-
 		ShaderID shaderID = InvalidShaderID;
-
-		bool generateNormalSampler = false;
-		bool enableNormalSampler = false;
 		std::string normalTexturePath = "";
 
 		// GBuffer samplers
-		std::vector<std::pair<std::string, void*>> frameBuffers; // Pairs of frame buffer names (as seen in shader) and IDs
+		std::vector<Pair<std::string, void*>> frameBuffers; // Pairs of frame buffer names (as seen in shader) and IDs
 
-		bool generateCubemapSampler = false;
-		bool enableCubemapSampler = false;
 		glm::vec2 cubemapSamplerSize = { 0, 0 };
 		std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
 
@@ -239,51 +304,60 @@ namespace flex
 		real constMetallic = 0;
 		real constRoughness = 0;
 		real constAO = 1;
+		std::string albedoTexturePath = "";
+		std::string metallicTexturePath = "";
+		std::string roughnessTexturePath = "";
+		std::string aoTexturePath = "";
+		std::string hdrEquirectangularTexturePath = "";
+		glm::vec2 irradianceSamplerSize = { 0, 0 };
+		std::string environmentMapPath = "";
+		glm::vec2 prefilteredMapSize = { 0, 0 };
+		glm::vec4 colorMultiplier = { 1, 1, 1, 1 };
+
+		bool generateNormalSampler = false;
+		bool enableNormalSampler = false;
+
+		bool generateCubemapSampler = false;
+		bool enableCubemapSampler = false;
 
 		// PBR samplers
 		bool generateAlbedoSampler = false;
 		bool enableAlbedoSampler = false;
-		std::string albedoTexturePath = "";
 
 		bool generateMetallicSampler = false;
 		bool enableMetallicSampler = false;
-		std::string metallicTexturePath = "";
 
 		bool generateRoughnessSampler = false;
 		bool enableRoughnessSampler = false;
-		std::string roughnessTexturePath = "";
 
 		bool generateAOSampler = false;
 		bool enableAOSampler = false;
-		std::string aoTexturePath = "";
 
 		bool generateHDREquirectangularSampler = false;
 		bool enableHDREquirectangularSampler = false;
-		std::string hdrEquirectangularTexturePath = "";
 
 		bool enableCubemapTrilinearFiltering = false;
 		bool generateHDRCubemapSampler = false;
 
 		bool enableIrradianceSampler = false;
 		bool generateIrradianceSampler = false;
-		glm::vec2 irradianceSamplerSize = { 0, 0 };
-		std::string environmentMapPath = "";
 
 		bool enablePrefilteredMap = false;
 		bool generatePrefilteredMap = false;
-		glm::vec2 prefilteredMapSize = { 0, 0 };
 
 		bool enableBRDFLUT = false;
-		bool renderToCubemap = true; // NOTE: This flag is currently ignored by GL renderer!
+		bool renderToCubemap = false; // NOTE: This flag is currently ignored by GL renderer!
 
 		bool generateReflectionProbeMaps = false;
-
-		glm::vec4 colorMultiplier = { 1, 1, 1, 1 };
 
 		// If true, this material shouldn't be removed when switching scenes
 		bool engineMaterial = false;
 
 		real textureScale = 1.0f;
+		real blendSharpness = 1.0f;
+
+		glm::vec4 fontCharData;
+		glm::vec2 texSize;
 
 		// TODO: Make this more dynamic!
 		struct PushConstantBlock
@@ -302,26 +376,23 @@ namespace flex
 
 		GameObject* gameObject = nullptr;
 
+		DepthTestFunc depthTestReadFunc = DepthTestFunc::GEQUAL;
+		CullFace cullFace = CullFace::BACK;
+
 		bool visible = true;
 		bool visibleInSceneExplorer = true;
-
-		CullFace cullFace = CullFace::BACK;
-		// TODO: Rename to enableBackfaceCulling
-		bool enableCulling = true;
-
-		DepthTestFunc depthTestReadFunc = DepthTestFunc::LEQUAL;
-		bool depthWriteEnable = true;
-
-		bool editorObject = false;
+		bool bDepthWriteEnable = true;
+		bool bDepthTestEnable = true;
+		bool bEditorObject = false;
 	};
 
 	struct Uniforms
 	{
-		Uniform uniforms;
-		std::map<const char*, bool, strCmp> types;
+		u64 uniforms;
 
-		bool HasUniform(Uniform uniform) const;
-		void AddUniform(Uniform uniform);
+		bool HasUniform(u64 uniform) const;
+		void AddUniform(u64 uniform);
+		u32 CalculateSizeInBytes() const;
 	};
 
 	struct Shader
@@ -344,10 +415,13 @@ namespace flex
 		Uniforms constantBufferUniforms = {};
 		Uniforms dynamicBufferUniforms = {};
 
-		bool deferred = false; // TODO: Replace this bool with just checking if numAttachments is larger than 1
+		VertexAttributes vertexAttributes = 0;
+		i32 numAttachments = 1; // How many output textures the fragment shader has
+
 		i32 subpass = 0;
-		bool depthWriteEnable = true;
-		bool translucent = false;
+		bool bDeferred = false; // TODO: Replace this bool with just checking if numAttachments is larger than 1
+		bool bDepthWriteEnable = true;
+		bool bTranslucent = false;
 
 		// These variables should be set to true when the shader has these uniforms
 		bool bNeedNormalSampler = false;
@@ -362,9 +436,6 @@ namespace flex
 		bool bNeedBRDFLUT = false;
 		bool bNeedShadowMap = false;
 		bool bNeedPushConstantBlock = false;
-
-		VertexAttributes vertexAttributes = 0;
-		i32 numAttachments = 1; // How many output textures the fragment shader has
 	};
 
 	struct SpriteQuadDrawInfo
@@ -379,11 +450,31 @@ namespace flex
 		glm::vec3 scale = VEC3_ONE;
 		AnchorPoint anchor = AnchorPoint::TOP_LEFT;
 		glm::vec4 color = VEC4_ONE;
+
 		bool bScreenSpace = true;
 		bool bReadDepth = true;
 		bool bWriteDepth = true;
 		bool bEnableAlbedoSampler = true;
 		bool bRaw = false; // If true no further pos/scale processing is down, values are directly uploaded to GPU
+	};
+
+	struct TextVertex2D
+	{
+		glm::vec2 pos;
+		glm::vec2 uv;
+		glm::vec4 color;
+		glm::vec4 charSizePixelsCharSizeNorm; // RG: char size in pixels, BA: char size in [0, 1] in screen space
+		i32 channel; // uses extra int slot
+	};
+
+	struct TextVertex3D
+	{
+		glm::vec3 pos;
+		glm::vec2 uv;
+		glm::vec4 color;
+		glm::vec3 tangent;
+		glm::vec4 charSizePixelsCharSizeNorm; // RG: char size in pixels, BA: char size in [0, 1] in screen space
+		i32 channel; // uses extra int slot
 	};
 
 } // namespace flex

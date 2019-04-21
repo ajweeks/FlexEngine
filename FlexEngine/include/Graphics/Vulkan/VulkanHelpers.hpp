@@ -1,29 +1,24 @@
 #pragma once
 #if COMPILE_VULKAN
 
-#include <string>
-#include <vector>
-#include <sstream>
-
-#pragma warning(push, 0) // Don't generate warnings for 3rd party code    
+IGNORE_WARNINGS_PUSH
 #include <vulkan/vulkan.hpp>
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
-#include "Graphics/Renderer.hpp"
-#include "VulkanBuffer.hpp"
-#include "VertexBufferData.hpp"
+#include "Graphics/RendererTypes.hpp"
+#include "Graphics/VertexBufferData.hpp"
 #include "VDeleter.hpp"
-
+#include "VulkanBuffer.hpp"
 
 namespace flex
 {
+	enum class ImageFormat;
+
 	namespace vk
 	{
 		struct VulkanDevice;
 
 		std::string VulkanErrorString(VkResult errorCode);
-
-		static std::stringstream VkErrorSS;
 
 		inline void VK_CHECK_RESULT(VkResult result);
 
@@ -88,6 +83,7 @@ namespace flex
 			VulkanBuffer dynamicBuffer;
 			VulkanUniformBufferObjectData constantData;
 			VulkanUniformBufferObjectData dynamicData;
+			u32 fullDynamicBufferSize = 0;
 		};
 
 		struct VertexIndexBufferPair
@@ -96,6 +92,9 @@ namespace flex
 				vertexBuffer(vertexBuffer),
 				indexBuffer(indexBuffer)
 			{}
+
+			void Destroy();
+			void Empty();
 
 			VulkanBuffer* vertexBuffer = nullptr;
 			VulkanBuffer* indexBuffer = nullptr;
@@ -106,7 +105,9 @@ namespace flex
 
 		struct VulkanTexture
 		{
-			VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue);
+			VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue, const std::string& name, u32 width, u32 height, u32 channelCount);
+			VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue, const std::string& relativeFilePath, u32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR);
+			VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue, const std::array<std::string, 6>& relativeCubemapFilePaths, u32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR);
 
 			struct ImageCreateInfo
 			{
@@ -177,7 +178,7 @@ namespace flex
 
 			// Static, globally usable functions
 
-			/* @return the size of the generated image */
+			/* Returns the size of the generated image */
 			static VkDeviceSize CreateImage(VulkanDevice* device, VkQueue graphicsQueue, ImageCreateInfo& createInfo);
 
 			static void CreateImageView(VulkanDevice* device, ImageViewCreateInfo& createInfo);
@@ -190,40 +191,64 @@ namespace flex
 			// Non-static member functions
 			void Create(ImageCreateInfo& imageCreateInfo, ImageViewCreateInfo& imageViewCreateInfo, SamplerCreateInfo& samplerCreateInfo);
 
-			/* 
-			 * Creates image, image view, and sampler based on the texture at filePath 
+			u32 CreateFromMemory(u8* buffer, u32 bufferSize, VkFormat inFormat, i32 inMipLevels);
+
+			void TransitionToLayout(VkImageLayout newLayout);
+			void CopyFromBuffer(VkBuffer buffer, u32 inWidth, u32 inHeight);
+
+			void Destroy();
+
+			bool SaveToFile(const std::string& absoluteFilePath, ImageFormat saveFormat);
+
+			void Build(void* data = nullptr);
+
+			/*
+			 * Creates image, image view, and sampler based on the texture at filePath
 			 * Returns size of image in bytes
 			 */
-			VkDeviceSize CreateFromTexture(const std::string& filePath, VkFormat format, bool hdr = false, u32 mipLevels = 1);
+			VkDeviceSize CreateFromFile(VkFormat inFormat);
 
 			/*
 			 * Creates image, image view, and sampler
 			 * Returns the size of the image
 			*/
-			VkDeviceSize CreateEmpty(VkFormat format, u32 width, u32 height, u32 mipLevels = 1, VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT);
+			VkDeviceSize CreateEmpty(VkFormat inFormat, u32 inMipLevels = 1, VkImageUsageFlags inUsage = VK_IMAGE_USAGE_SAMPLED_BIT);
 
 			/*
 			 * Creates an empty cubemap and returns the size of the generated image
 			 * Returns the size of the image
 			*/
-			VkDeviceSize CreateCubemapEmpty(VkFormat format, u32 width, u32 height, u32 channels, u32 mipLevels, bool enableTrilinearFiltering);
+			VkDeviceSize CreateCubemapEmpty(VkFormat inFormat, u32 inMipLevels, bool enableTrilinearFiltering);
 
 			/*
 			 * Creates a cubemap from the given 6 textures
 			 * Returns the size of the image
 			 */
-			VkDeviceSize CreateCubemapFromTextures(VkFormat format, const std::array<std::string, 6>& filePaths, bool enableTrilinearFiltering);
+			VkDeviceSize CreateCubemapFromTextures(VkFormat inFormat, const std::array<std::string, 6>& filePaths, bool enableTrilinearFiltering);
 
 			void UpdateImageDescriptor();
+
+			std::string GetRelativeFilePath() const;
+			std::string GetName() const;
+			void Reload();
+
+			VkFormat CalculateFormat();
 
 			u32 width = 0;
 			u32 height = 0;
 			u32 channelCount = 0;
-			std::string filePath = "";
+			std::string name;
+			std::string relativeFilePath;
+			std::array<std::string, 6> relativeCubemapFilePaths;
 			u32 mipLevels = 1;
+			bool bFlipVertically = false;
+			bool bGenerateMipMaps = false;
+			bool bHDR = false;
+			bool bSamplerClampToBorder = false;
 
 			VDeleter<VkImage> image;
 			VkImageLayout imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			VkFormat imageFormat = VK_FORMAT_UNDEFINED;
 			VDeleter<VkDeviceMemory> imageMemory;
 			VDeleter<VkImageView> imageView;
 			VDeleter<VkSampler> sampler;
@@ -232,6 +257,7 @@ namespace flex
 		private:
 			VulkanDevice* m_VulkanDevice = nullptr;
 			VkQueue m_GraphicsQueue = VK_NULL_HANDLE;
+
 		};
 
 		void SetImageLayout(
@@ -270,6 +296,17 @@ namespace flex
 			VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 			VkPipelineStageFlags dstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 
+		void InsertImageMemoryBarrier(
+			VkCommandBuffer cmdbuffer,
+			VkImage image,
+			VkAccessFlags srcAccessMask,
+			VkAccessFlags dstAccessMask,
+			VkImageLayout oldImageLayout,
+			VkImageLayout newImageLayout,
+			VkPipelineStageFlags srcStageMask,
+			VkPipelineStageFlags dstStageMask,
+			VkImageSubresourceRange subresourceRange);
+
 		void CreateAttachment(
 			VulkanDevice* device,
 			VkFormat format,
@@ -280,6 +317,9 @@ namespace flex
 			VkImageViewType imageViewType,
 			VkImageCreateFlags imageFlags,
 			FrameBufferAttachment *attachment);
+
+		template<class T>
+		void CopyPixels(const T* srcData, T* dstData, u32 dstOffset, u32 width, u32 height, u32 channelCount, u32 pitch, bool bColorSwizzle);
 
 		VkBool32 GetSupportedDepthFormat(VkPhysicalDevice physicalDevice, VkFormat* depthFormat);
 
@@ -292,7 +332,7 @@ namespace flex
 
 		void CopyImage(VulkanDevice* device, VkQueue graphicsQueue, VkImage srcImage, VkImage dstImage, u32 width, u32 height);
 		void CopyBufferToImage(VulkanDevice* device, VkQueue graphicsQueue, VkBuffer buffer, VkImage image, u32 width, u32 height);
-		void CreateAndAllocateBuffer(VulkanDevice* device, VkDeviceSize size, VkBufferUsageFlags usage,
+		VkResult CreateAndAllocateBuffer(VulkanDevice* device, VkDeviceSize size, VkBufferUsageFlags usage,
 			VkMemoryPropertyFlags properties, VulkanBuffer* buffer);
 		void CopyBuffer(VulkanDevice* device, VkQueue graphicsQueue, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size,
 			VkDeviceSize srcOffset = 0, VkDeviceSize dstOffset = 0);
@@ -313,20 +353,51 @@ namespace flex
 
 		struct VulkanShader
 		{
-			VulkanShader(const std::string& name, const std::string& vertexShaderFilePath, const std::string& fragmentShaderFilePath, const VDeleter<VkDevice>& device);
+			VulkanShader(const VDeleter<VkDevice>& device, const std::string& name,
+				const std::string& vertexShaderFilePath,
+				const std::string& fragmentShaderFilePath,
+				const std::string& geomShaderFilePath = "");
 
 			Shader shader;
 
 			UniformBuffer uniformBuffer;
+			bool bDynamic = false;
+			u32 dynamicVertexBufferSize = 0;
 		};
+
+#ifdef DEBUG
+		struct AsyncVulkanShaderCompiler
+		{
+			AsyncVulkanShaderCompiler();
+			AsyncVulkanShaderCompiler(bool bForceRecompile);
+
+			// Returns true once task is complete
+			bool TickStatus();
+
+			std::thread taskThread;
+			std::atomic<bool> is_done = false;
+
+			sec startTime = 0.0f;
+			sec lastTime = 0.0f;
+			sec totalSecWaiting = 0.0f;
+			sec secBetweenStatusChecks = 0.05f;
+			sec secSinceStatusCheck = 0.0f;
+
+			bool bSuccess = false;
+			bool bComplete = false;
+
+		private:
+			i64 CalculteChecksum(const std::string& directory);
+
+			std::string m_ChecksumFilePath;
+			i64 m_ShaderCodeChecksum = 0;
+		};
+#endif // DEBUG
 
 		struct VulkanMaterial
 		{
-			VulkanMaterial();
-
 			Material material = {}; // More info is stored in the generic material struct
 
-			VulkanTexture* diffuseTexture = nullptr;
 			VulkanTexture* normalTexture = nullptr;
 			VulkanTexture* cubemapTexture = nullptr;
 			VulkanTexture* albedoTexture = nullptr;
@@ -366,15 +437,18 @@ namespace flex
 			VertexBufferData* vertexBufferData = nullptr;
 			u32 vertexOffset = 0;
 
-			bool indexed = false;
+			bool bIndexed = false;
 			std::vector<u32>* indices = nullptr;
 			u32 indexOffset = 0;
 
 			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 
 			VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;
-			// TODO: Rename to enableBackfaceCulling
-			bool enableCulling = true;
+			VkCompareOp depthCompareOp = VK_COMPARE_OP_GREATER_OR_EQUAL;
+
+			bool bEditorObject = false;
+
+			u32 dynamicUBOIndex = 0;
 
 			VDeleter<VkPipelineLayout> pipelineLayout;
 			VDeleter<VkPipeline> graphicsPipeline;
@@ -387,8 +461,6 @@ namespace flex
 
 			VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 			VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;
-			// TODO: Rename to enableBackfaceCulling
-			bool enableCulling = true;
 
 			VkRenderPass renderPass;
 			u32 subpass = 0;
@@ -398,12 +470,12 @@ namespace flex
 
 			u32 descriptorSetLayoutIndex = 0;
 
-			bool setDynamicStates = false;
-			bool enabledColorBlending = false;
+			bool bSetDynamicStates = false;
+			bool bEnableColorBlending = false;
+			bool bEnableAdditiveColorBlending = false;
 
-			VkBool32 depthTestEnable = VK_TRUE;
 			VkBool32 depthWriteEnable = VK_TRUE;
-			VkCompareOp depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+			VkCompareOp depthCompareOp = VK_COMPARE_OP_GREATER_OR_EQUAL;
 			VkBool32 stencilTestEnable = VK_FALSE;
 
 			// Out variables
@@ -419,7 +491,6 @@ namespace flex
 			ShaderID shaderID = InvalidShaderID;
 			UniformBuffer* uniformBuffer = nullptr;
 
-			VulkanTexture* diffuseTexture = nullptr;
 			VulkanTexture* normalTexture = nullptr;
 			VulkanTexture* cubemapTexture = nullptr;
 			VulkanTexture* albedoTexture = nullptr;
@@ -431,7 +502,7 @@ namespace flex
 			VulkanTexture* brdfLUT = nullptr;
 			VulkanTexture* prefilterTexture = nullptr;
 
-			std::vector<std::pair<std::string, VkImageView*>> frameBufferViews; // Name of frame buffer paired with view i32o frame buffer
+			std::vector<std::pair<u32, VkImageView*>> frameBufferViews; // Name of frame buffer paired with view i32o frame buffer
 		};
 
 		struct ImGui_PushConstBlock
@@ -447,6 +518,10 @@ namespace flex
 
 		TopologyMode VkPrimitiveTopologyToTopologyMode(VkPrimitiveTopology primitiveTopology);
 		CullFace VkCullModeToCullFace(VkCullModeFlags cullMode);
+
+		VkCompareOp DepthTestFuncToVkCompareOp(DepthTestFunc func);
+
+		std::string DeviceTypeToString(VkPhysicalDeviceType type);
 
 		VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* createInfo,
 			const VkAllocationCallbacks* allocator, VkDebugReportCallbackEXT* callback);

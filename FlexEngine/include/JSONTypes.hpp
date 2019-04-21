@@ -35,7 +35,7 @@ namespace flex
 
 		real GetFloat(const std::string& label) const;
 		/* Sets value to the result of GetString(label) if that field is present */
-		bool SetFloatChecked(const std::string& label, float& value) const;
+		bool SetFloatChecked(const std::string& label, real& value) const;
 
 		bool GetBool(const std::string& label) const;
 		/* Sets value to the result of GetString(label) if that field is present */
@@ -79,14 +79,14 @@ namespace flex
 		static Type TypeFromChar(char c, const std::string& stringAfter);
 
 		explicit JSONValue();
-		explicit JSONValue(const std::string& strValue);
-		explicit JSONValue(const char* strValue);
-		explicit JSONValue(i32 intValue);
-		explicit JSONValue(real floatValue);
-		explicit JSONValue(bool boolValue);
-		explicit JSONValue(const JSONObject& objectValue);
-		explicit JSONValue(const std::vector<JSONObject>& objectArrayValue);
-		explicit JSONValue(const std::vector<JSONField>& fieldArrayValue);
+		explicit JSONValue(const std::string& inStrValue);
+		explicit JSONValue(const char* inStrValue);
+		explicit JSONValue(i32 inIntValue);
+		explicit JSONValue(real inFloatValue);
+		explicit JSONValue(bool inBoolValue);
+		explicit JSONValue(const JSONObject& inObjectValue);
+		explicit JSONValue(const std::vector<JSONObject>& inObjectArrayValue);
+		explicit JSONValue(const std::vector<JSONField>& inFieldArrayValue);
 
 		Type type = Type::UNINITIALIZED;
 		union

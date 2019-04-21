@@ -2,13 +2,13 @@
 
 #include "Physics/PhysicsWorld.hpp"
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include <BulletCollision/CollisionDispatch/btCollisionObject.h>
-#include <BulletCollision/NarrowPhaseCollision/btRaycastCallback.h>
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 #include <BulletDynamics/Dynamics/btRigidBody.h>
+
 #include <LinearMath/btVector3.h>
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
@@ -59,7 +59,7 @@ namespace flex
 				delete obj;
 			}
 
-			SafeDelete(m_World);
+			delete m_World;
 		}
 	}
 
@@ -99,7 +99,7 @@ namespace flex
 		glm::vec4 rayOrigin(0, 0, 0, 1);
 		glm::vec3 rayOriginWorld = cameraView * rayOrigin;
 
-		glm::vec3 rayPWorld = cameraView * glm::vec4(pixelCameraX, pixelCameraY, -1.0f, 1.0f);
+		glm::vec3 rayPWorld = cameraView * glm::vec4(pixelCameraX, pixelCameraY, 1.0f, 1.0f);
 		btVector3 rayDirection = ToBtVec3(rayPWorld - rayOriginWorld);
 		rayDirection.normalize();
 
@@ -121,7 +121,7 @@ namespace flex
 				const btRigidBody* body = btRigidBody::upcast(rayCallback.m_collisionObjects[i]);
 				if (body)
 				{
-					GameObject* gameObject = (GameObject*)body->getUserPointer();
+					GameObject* gameObject = static_cast<GameObject*>(body->getUserPointer());
 
 					if (gameObject && gameObject->HasTag(tag))
 					{
@@ -139,19 +139,19 @@ namespace flex
 		return pickedGameObject;
 	}
 
-	btRigidBody* PhysicsWorld::PickFirstBody(const btVector3& rayStart, const btVector3& rayEnd)
+	const btRigidBody* PhysicsWorld::PickFirstBody(const btVector3& rayStart, const btVector3& rayEnd)
 	{
-		btRigidBody* pickedBody = nullptr;
+		const btRigidBody* pickedBody = nullptr;
 
 		btCollisionWorld::ClosestRayResultCallback rayCallback(rayStart, rayEnd);
 		m_World->rayTest(rayStart, rayEnd, rayCallback);
 		if (rayCallback.hasHit())
 		{
-			btVector3 pickPos = rayCallback.m_hitPointWorld;
-			btRigidBody* body = (btRigidBody*)btRigidBody::upcast(rayCallback.m_collisionObject);
+			//btVector3 pickPos = rayCallback.m_hitPointWorld;
+			const btRigidBody* body = static_cast<const btRigidBody*>(btRigidBody::upcast(rayCallback.m_collisionObject));
 			if (body)
 			{
-				GameObject* pickedGameObject = (GameObject*)body->getUserPointer();
+				GameObject* pickedGameObject = static_cast<GameObject*>(body->getUserPointer());
 
 				if (pickedGameObject)
 				{
@@ -197,8 +197,8 @@ namespace flex
 			const btCollisionObject* obA = contactManifold->getBody0();
 			const btCollisionObject* obB = contactManifold->getBody1();
 
-			GameObject* obAGameObject = (GameObject*)obA->getUserPointer();
-			GameObject* obBGameObject = (GameObject*)obB->getUserPointer();
+			GameObject* obAGameObject = static_cast<GameObject*>(obA->getUserPointer());
+			GameObject* obBGameObject = static_cast<GameObject*>(obB->getUserPointer());
 
 			i32 numContacts = contactManifold->getNumContacts();
 
@@ -207,8 +207,8 @@ namespace flex
 				u32 obAFlags = obAGameObject->GetRigidBody()->GetPhysicsFlags();
 				u32 obBFlags = obBGameObject->GetRigidBody()->GetPhysicsFlags();
 
-				i32 bObATrigger = (obAFlags & (u32)PhysicsFlag::TRIGGER);
-				i32 bObBTrigger = (obBFlags & (u32)PhysicsFlag::TRIGGER);
+				u32 bObATrigger = (obAFlags & (u32)PhysicsFlag::TRIGGER);
+				u32 bObBTrigger = (obBFlags & (u32)PhysicsFlag::TRIGGER);
 				// If exactly one of the two objects is a trigger (not both)
 				if (bObATrigger ^ bObBTrigger)
 				{
@@ -253,8 +253,8 @@ namespace flex
 
 		for (const auto& pair : differentPairs)
 		{
-			GameObject* triggerGameObject = (GameObject*)pair.first->getUserPointer();
-			GameObject* otherGameObject = (GameObject*)pair.second->getUserPointer();
+			GameObject* triggerGameObject = static_cast<GameObject*>(pair.first->getUserPointer());
+			GameObject* otherGameObject = static_cast<GameObject*>(pair.second->getUserPointer());
 			//Print("Trigger collision end " + triggerGameObject->GetName() + " : " + otherGameObject->GetName());
 			triggerGameObject->OnOverlapEnd(otherGameObject);
 			otherGameObject->OnOverlapEnd(triggerGameObject);

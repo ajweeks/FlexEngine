@@ -22,8 +22,7 @@
 			"transform" : 
 			{
 				"pos" : "0.000, 18.600, 0.000"
-			},
-			"material" : "pbr chrome"
+			}
 		},
 		{
 			"name" : "Cornell Box",
@@ -32,7 +31,7 @@
 			"transform" : 
 			{
 				"pos" : "-28.690, 0.000, -0.001",
-				"rot" : "1.570, 1.570, 3.141",
+				"rot" : "0.000, 1.570, 0.000",
 				"scale" : "19.999, 20.000, 19.999"
 			},
 			"mesh" : "cornell-box",
@@ -95,7 +94,7 @@
 			"transform" : 
 			{
 				"pos" : "-27.380, 20.111, 0.025",
-				"rot" : "1.571, 1.570, -3.141",
+				"rot" : "0.000, 1.570, 0.000",
 				"scale" : "3.000, 3.000, 3.000"
 			},
 			"mesh" : "cornell-box",
@@ -134,7 +133,7 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"scale" : "50.000, 1.000, 50.000"
+				"scale" : "50.520, 1.000, 50.320"
 			},
 			"mesh" : "cube",
 			"material" : "pbr chrome",
@@ -153,58 +152,6 @@
 			}
 		},
 		{
-			"name" : "cylinder",
-			"type" : "object",
-			"visible" : true,
-			"transform" : 
-			{
-				"pos" : "17.270, 7.260, -31.480",
-				"scale" : "4.000, 4.000, 4.000"
-			},
-			"mesh" : "cylinder",
-			"material" : "pbr chrome",
-			"collider" : 
-			{
-				"shape" : "cylinder",
-				"half extents" : "1.000, 1.000, 1.000"
-			},
-			"rigid body" : 
-			{
-				"mass" : 1.000000,
-				"kinematic" : true,
-				"static" : false,
-				"mask" : 0,
-				"group" : 0
-			}
-		},
-		{
-			"name" : "capsule",
-			"type" : "object",
-			"visible" : true,
-			"transform" : 
-			{
-				"pos" : "9.045, 51.601, -52.278",
-				"rot" : "0.778, 0.132, -0.306"
-			},
-			"mesh" : "capsule",
-			"material" : "pbr green",
-			"collider" : 
-			{
-				"shape" : "capsule",
-				"radius" : 12.500001,
-				"height" : 24.999998,
-				"offset pos" : "0.000, 0.000, 25.000"
-			},
-			"rigid body" : 
-			{
-				"mass" : 9.852000,
-				"kinematic" : true,
-				"static" : false,
-				"mask" : 0,
-				"group" : 0
-			}
-		},
-		{
 			"name" : "Directional Light",
 			"type" : "directional light",
 			"visible" : true,
@@ -219,12 +166,28 @@
 				"pos" : "0.000, 15.000, 0.000",
 				"color" : "1.00, 1.00, 1.00",
 				"enabled" : true,
-				"brightness" : 5.000000,
+				"brightness" : 1.953000,
 				"cast shadows" : true,
 				"shadow darkness" : 0.000000,
 				"shadow map near" : -80.000000,
 				"shadow map far" : 100.000000,
 				"shadow map zoom" : 30.000000
+			}
+		},
+		{
+			"name" : "PointLight_00",
+			"type" : "point light",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "9.000, 26.800, 26.900"
+			},
+			"point light info" : 
+			{
+				"pos" : "9.000, 26.800, 26.900",
+				"color" : "1.00, 1.00, 1.00",
+				"enabled" : true,
+				"brightness" : 1000.000000
 			}
 		}
 	]

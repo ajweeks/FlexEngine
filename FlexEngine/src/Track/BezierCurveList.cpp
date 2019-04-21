@@ -4,9 +4,9 @@
 
 #include "Graphics/Renderer.hpp"
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include "LinearMath/btIDebugDraw.h"
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #include "Track/BezierCurve.hpp"
 

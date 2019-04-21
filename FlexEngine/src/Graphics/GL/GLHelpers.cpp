@@ -3,13 +3,12 @@
 
 #include "Graphics/GL/GLHelpers.hpp"
 
-#include <fstream>
-#include <sstream>
-#include <chrono>
-
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include "stb_image.h"
-#pragma warning(pop)
+
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
+IGNORE_WARNINGS_POP
 
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
@@ -19,15 +18,15 @@ namespace flex
 {
 	namespace gl
 	{
-		bool GenerateGLTexture_Empty(u32& textureID, const glm::vec2i& dimensions, bool generateMipMaps, GLenum internalFormat, GLenum format, GLenum type)
+		bool GenerateGLTexture_Empty(u32& textureID, const glm::vec2u& dimensions, bool generateMipMaps, GLenum internalFormat, GLenum format, GLenum type)
 		{
 			return GenerateGLTexture_EmptyWithParams(textureID, dimensions, generateMipMaps, internalFormat, format, type, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR);
 		}
 
-		bool GenerateGLTexture_EmptyWithParams(u32& textureID, const glm::vec2i& dimensions, bool generateMipMaps, GLenum internalFormat, GLenum format, GLenum type, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter)
+		bool GenerateGLTexture_EmptyWithParams(u32& textureID, const glm::vec2u& dimensions, bool generateMipMaps, GLenum internalFormat, GLenum format, GLenum type, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter)
 		{
-			assert(dimensions.x <= Renderer::MAX_TEXTURE_DIM);
-			assert(dimensions.y <= Renderer::MAX_TEXTURE_DIM);
+			assert(dimensions.x <= MAX_TEXTURE_DIM);
+			assert(dimensions.y <= MAX_TEXTURE_DIM);
 
 
 			glGenTextures(1, &textureID);
@@ -84,7 +83,7 @@ namespace flex
 			assert(requestedChannelCount == 3 ||
 				   requestedChannelCount == 4);
 
-			i32 channelCount = 0;
+			u32 channelCount = 0;
 			GLFWimage image = LoadGLFWimage(filePath, requestedChannelCount, flipVertically, &channelCount);
 
 			if (!image.pixels)
@@ -198,7 +197,7 @@ namespace flex
 			if (createInfo.filePaths[0].empty()) // Don't generate pixel data
 			{
 				if (createInfo.textureSize.x <= 0 || createInfo.textureSize.y <= 0 ||
-					createInfo.textureSize.x >= Renderer::MAX_TEXTURE_DIM || createInfo.textureSize.y >= Renderer::MAX_TEXTURE_DIM)
+					createInfo.textureSize.x >= MAX_TEXTURE_DIM || createInfo.textureSize.y >= MAX_TEXTURE_DIM)
 				{
 					PrintError("Invalid cubemap dimensions: %.2fx%.2f\n",
 						createInfo.textureSize.x, createInfo.textureSize.y);
@@ -235,10 +234,6 @@ namespace flex
 
 			if (createInfo.textureGBufferIDs && !createInfo.textureGBufferIDs->empty())
 			{
-				const GLint gbufInternalFormat = GL_RGBA16F;
-				const GLenum gbufFormat = GL_RGBA;
-				const GLenum gbufType = GL_FLOAT;
-
 				i32 binding = 0;
 
 				// Generate GBuffers
@@ -250,7 +245,7 @@ namespace flex
 					for (i32 i = 0; i < 6; i++)
 					{
 						glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gbuffer.internalFormat,
-									 (GLsizei)createInfo.textureSize.x, (GLsizei)createInfo.textureSize.y, 0, gbuffer.format, gbufType, nullptr);
+									 (GLsizei)createInfo.textureSize.x, (GLsizei)createInfo.textureSize.y, 0, gbuffer.format, GL_FLOAT, nullptr);
 					}
 
 					glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -326,7 +321,7 @@ namespace flex
 		{
 		}
 
-		GLTexture::GLTexture(const std::string& name, i32 width, i32 height, i32 channelCount, i32 internalFormat, GLenum format, GLenum type) :
+		GLTexture::GLTexture(const std::string& name, u32 width, u32 height, u32 channelCount, i32 internalFormat, GLenum format, GLenum type) :
 			name(name),
 			width(width),
 			height(height),
@@ -338,15 +333,15 @@ namespace flex
 		}
 
 		GLTexture::GLTexture(const std::string& relativeFilePath,
-							 i32 channelCount,
+							 u32 channelCount,
 							 bool bFlipVertically,
 							 bool bGenerateMipMaps,
 							 bool bHDR) :
 			relativeFilePath(relativeFilePath),
+			channelCount(channelCount),
 			bHasMipMaps(bGenerateMipMaps),
 			bFlipVerticallyOnLoad(bFlipVertically),
-			bHDR(bHDR),
-			channelCount(channelCount)
+			bHDR(bHDR)
 		{
 			if (name.empty())
 			{
@@ -357,14 +352,23 @@ namespace flex
 
 		GLTexture::~GLTexture()
 		{
+			if (asyncSave != nullptr)
+			{
+				if (!asyncSave->bComplete)
+				{
+					asyncSave->WaitToComplete();
+				}
+				delete asyncSave;
+				asyncSave = nullptr;
+			}
 		}
 
-		bool GLTexture::GenerateEmpty()
+		bool GLTexture::CreateEmpty()
 		{
 			assert(!bLoaded);
 
 			bool bSucceeded = GenerateGLTexture_Empty(handle,
-													  glm::vec2i(width, height),
+													  glm::vec2u(width, height),
 													  bHasMipMaps,
 													  internalFormat,
 													  format,
@@ -399,7 +403,6 @@ namespace flex
 				width = infoOut.width;
 				height = infoOut.height;
 				channelCount = infoOut.channelCount;
-				this->bHDR = bHDR;
 
 				bLoaded = true;
 			}
@@ -437,9 +440,9 @@ namespace flex
 			bLoaded = false;
 		}
 
-		glm::vec2i GLTexture::GetResolution()
+		glm::vec2u GLTexture::GetResolution()
 		{
-			return glm::vec2i(width, height);
+			return glm::vec2u(width, height);
 		}
 
 		void GLTexture::SetParameters(TextureParameters params)
@@ -483,11 +486,12 @@ namespace flex
 			m_Parameters = params;
 		}
 
-		bool GLTexture::Resize(glm::vec2i newSize)
+		bool GLTexture::Resize(const glm::vec2u& newSize)
 		{
 			if (newSize.x > width || newSize.y > height)
 			{
-				width = newSize.x; height = newSize.y;
+				width = newSize.x;
+				height = newSize.y;
 				glDeleteTextures(1, &handle);
 				glGenTextures(1, &handle);
 				Build();
@@ -500,7 +504,8 @@ namespace flex
 			}
 			else
 			{
-				width = newSize.x; height = newSize.y;
+				width = newSize.x;
+				height = newSize.y;
 				Build();
 
 				return false;
@@ -517,16 +522,39 @@ namespace flex
 			return name;
 		}
 
-		bool GLTexture::SaveToFile(const std::string& absoluteFilePath, ImageFormat imageFormat, bool bFlipVertically)
+		bool GLTexture::SaveToFile(const std::string& absoluteFilePath, ImageFormat inFormat, bool bFlipVertically)
 		{
-			return SaveTextureToFile(absoluteFilePath, imageFormat, handle, width, height, channelCount, bFlipVertically);
+			return SaveTextureToFile(absoluteFilePath, inFormat, handle, width, height, channelCount, bFlipVertically);
+		}
+
+		bool GLTexture::SaveToFileAsync(const std::string& absoluteFilePath, ImageFormat inFormat, bool bFlipVertically)
+		{
+			if (asyncSave != nullptr)
+			{
+				if (asyncSave->bComplete)
+				{
+					delete asyncSave;
+					asyncSave = nullptr;
+				}
+				else
+				{
+					PrintError("Attempted to save texture asynchronously before previous save has finished!\n");
+					return false;
+				}
+			}
+			StartAsyncTextureSaveToFile(absoluteFilePath, inFormat, handle, width, height, channelCount, bFlipVertically, &asyncSave, (void*)this,
+				[](void* userData)
+				{
+					GLTexture* tex = reinterpret_cast<GLTexture*>(userData);
+					delete tex->asyncSave;
+					tex->asyncSave = nullptr;
+				});
+			return true;
 		}
 
 		// TODO: CLEANUP: Combine identical parts of SaveTextureToFile & StartAsyncTextureSaveToFile to reduce code duplication
 		bool SaveTextureToFile(const std::string& absoluteFilePath, ImageFormat format, GLuint handle, i32 width, i32 height, i32 channelCount, bool bFlipVertically)
 		{
-			const char* getTexImageBlockName = "glGetTexImage";
-
 			assert(channelCount == 3 || channelCount == 4);
 
 			bool bResult = false;
@@ -535,14 +563,15 @@ namespace flex
 
 			i32 floatBufStride = channelCount * sizeof(real);
 			i32 floatBufSize = floatBufStride * pixelCount;
-			real* readBackTextureData = (real*)malloc((u32)floatBufSize);
+			real* readBackTextureData = (real*)malloc_hooked((u32)floatBufSize);
 
 			i32 u8BufStride = channelCount * sizeof(u8);
 			i32 u8BufSize = u8BufStride * pixelCount;
-			u8* u8Data = (u8*)malloc((u32)u8BufSize);
+			u8* u8Data = (u8*)malloc_hooked((u32)u8BufSize);
 
 			if (readBackTextureData && u8Data)
 			{
+				const char* getTexImageBlockName = "glGetTexImage";
 				PROFILE_BEGIN(getTexImageBlockName);
 				glBindTexture(GL_TEXTURE_2D, handle);
 				glGetTexImage(GL_TEXTURE_2D, 0, channelCount == 3 ? GL_RGB : GL_RGBA, GL_FLOAT, (void*)readBackTextureData);
@@ -561,34 +590,38 @@ namespace flex
 				PrintError("Failed to allocate %d bytes to save out to texture at %s\n", floatBufSize, absoluteFilePath.c_str());
 			}
 
-			free(u8Data);
-			free(readBackTextureData);
+			free_hooked(u8Data);
+			free_hooked(readBackTextureData);
 
 			return bResult;
 		}
 
-		void StartAsyncTextureSaveToFile(const std::string& absoluteFilePath, ImageFormat format, GLuint handle, i32 width, i32 height, i32 channelCount, bool bFlipVertically, AsynchronousTextureSave** asyncTextureSave)
+		void StartAsyncTextureSaveToFile(const std::string& absoluteFilePath, ImageFormat format, GLuint handle, i32 width,
+			i32 height, i32 channelCount, bool bFlipVertically, AsynchronousTextureSave** asyncTextureSave, void* userData, void(*callback)(void*))
 		{
-			const char* getTexImageBlockName = "glGetTexImage";
-
 			assert(channelCount == 3 || channelCount == 4);
+			assert(asyncTextureSave != nullptr);
+			assert(*asyncTextureSave == nullptr);
 
 			i32 pixelCount = width * height;
 
 			i32 floatBufStride = channelCount * sizeof(real);
 			i32 floatBufSize = floatBufStride * pixelCount;
-			real* readBackTextureData = (real*)malloc((u32)floatBufSize);
+			real* readBackTextureData = (real*)malloc_hooked((u32)floatBufSize);
 
 			i32 u8BufStride = channelCount * sizeof(u8);
 			i32 u8BufSize = u8BufStride * pixelCount;
-			u8* u8Data = (u8*)malloc((u32)u8BufSize);
+			u8* u8Data = (u8*)malloc_hooked((u32)u8BufSize);
 
 			if (readBackTextureData && u8Data)
 			{
+				const char* getTexImageBlockName = "glGetTexImage";
 				PROFILE_BEGIN(getTexImageBlockName);
+
 				glBindTexture(GL_TEXTURE_2D, handle);
 				// TODO: Move readback to async thread as well (takes >~40ms)
 				glGetTexImage(GL_TEXTURE_2D, 0, channelCount == 3 ? GL_RGB : GL_RGBA, GL_FLOAT, (void*)readBackTextureData);
+
 				PROFILE_END(getTexImageBlockName);
 				Profiler::PrintBlockDuration(getTexImageBlockName);
 
@@ -597,15 +630,15 @@ namespace flex
 					u8Data[i] = (u8)(readBackTextureData[i] * 255.0f);
 				}
 
-				*asyncTextureSave = new AsynchronousTextureSave(absoluteFilePath, format, width, height, channelCount, bFlipVertically, u8Data, u8BufSize);
+				*asyncTextureSave = new AsynchronousTextureSave(absoluteFilePath, format, width, height, channelCount, bFlipVertically, u8Data, u8BufSize, userData, callback);
 			}
 			else
 			{
 				PrintError("Failed to allocate %d bytes to save out to texture at %s\n", floatBufSize, absoluteFilePath.c_str());
 			}
 
-			free(u8Data);
-			free(readBackTextureData);
+			free_hooked(u8Data);
+			free_hooked(readBackTextureData);
 		}
 
 		bool LoadGLShaders(u32 program, GLShader& shader)
@@ -809,14 +842,14 @@ namespace flex
 						snprintf(long_name, 64, "%s[%i]", name, j);
 						i32 location = glGetAttribLocation(program, long_name);
 						Print("  %i) type: %s, name: \"%s\", location: %i\n",
-							i, DataTypeToString(dataType), long_name, location);
+							i, DataTypeStrings[(u32)dataType], long_name, location);
 					}
 				}
 				else
 				{
 					i32 location = glGetAttribLocation(program, name);
 					Print("  %i) type: %s, name: \"%s\", location: %i\n",
-						i, DataTypeToString(dataType), name, location);
+						i, DataTypeStrings[(u32)dataType], name, location);
 				}
 			}
 
@@ -848,14 +881,14 @@ namespace flex
 						snprintf(long_name, 64, "%s[%i]", name, j);
 						i32 location = glGetUniformLocation(program, long_name);
 						Print("  %i) type: %s, name: \"%s\", location: %i\n",
-							i, DataTypeToString(dataType), long_name, location);
+							i, DataTypeStrings[(u32)dataType], long_name, location);
 					}
 				}
 				else
 				{
 					i32 location = glGetUniformLocation(program, name);
 					Print("  %i) type: %s, name: \"%s\", location: %i\n",
-						i, DataTypeToString(dataType), name, location);
+						i, DataTypeStrings[(u32)dataType], name, location);
 				}
 			}
 		}
@@ -955,6 +988,7 @@ namespace flex
 			case CullFace::BACK:			return GL_BACK;
 			case CullFace::FRONT:			return GL_FRONT;
 			case CullFace::FRONT_AND_BACK:	return GL_FRONT_AND_BACK;
+			case CullFace::NONE:			return GL_NONE;
 			default:
 				PrintError("Unhandled cull face passed to CullFaceToGLCullFace: %i\n", (i32)cullFace);
 				return GL_INVALID_ENUM;
@@ -997,7 +1031,7 @@ namespace flex
 			else
 			{
 				PrintError("Unhandled GLTarget passed to GLTargetToBufferTarget: %i\n", (i32)target);
-				return BufferTarget::NONE;
+				return BufferTarget::_NONE;
 			}
 		}
 
@@ -1032,7 +1066,7 @@ namespace flex
 			default:
 			{
 				PrintError("Unhandled GLType passed to GLTypeToDataType: %i\n", type);
-				return DataType::NONE;
+				return DataType::_NONE;
 			}
 			}
 		}
@@ -1050,7 +1084,7 @@ namespace flex
 			else
 			{
 				PrintError("Unhandled GL usage flag passed to GLUsageFlagToUsageFlag: %i\n", usage);
-				return UsageFlag::NONE;
+				return UsageFlag::_NONE;
 			}
 		}
 
@@ -1087,7 +1121,7 @@ namespace flex
 			else
 			{
 				PrintError("Unhandled GL mode passed to GLModeToTopologyMode: %i\n", mode);
-				return TopologyMode::NONE;
+				return TopologyMode::_NONE;
 			}
 		}
 
@@ -1105,10 +1139,14 @@ namespace flex
 			{
 				return CullFace::FRONT_AND_BACK;
 			}
+			else if (cullFace == GL_NONE)
+			{
+				return CullFace::NONE;
+			}
 			else
 			{
 				PrintError("Unhandled GL cull face passed to GLCullFaceToCullFace: %i\n", cullFace);
-				return CullFace::NONE;
+				return CullFace::_INVALID;
 			}
 		}
 
@@ -1149,14 +1187,17 @@ namespace flex
 			else
 			{
 				PrintError("Unhandled GL enum passed to GlenumToDepthTestFunc: %i\n", depthTestFunc);
-				return DepthTestFunc::NONE;
+				return DepthTestFunc::_NONE;
 			}
 		}
 
-		AsynchronousTextureSave::AsynchronousTextureSave(const std::string& absoluteFilePath, ImageFormat format, i32 width, i32 height, i32 channelCount, bool bFlipVertically, u8* srcData, i32 numBytes) :
-			absoluteFilePath(absoluteFilePath)
+		AsynchronousTextureSave::AsynchronousTextureSave(const std::string& absoluteFilePath, ImageFormat format, i32 width, i32 height,
+			i32 channelCount, bool bFlipVertically, u8* srcData, i32 numBytes, void* userData, void(*callback)(void*)) :
+			absoluteFilePath(absoluteFilePath),
+			userData(userData),
+			callback(callback)
 		{
-			data = (u8*)malloc((u32)numBytes);
+			data = (u8*)malloc_hooked((u32)numBytes);
 			if (!data)
 			{
 				PrintError("Failed to allocate %d bytes for asynchronous texture save\n", numBytes);
@@ -1178,7 +1219,13 @@ namespace flex
 		{
 			if (data)
 			{
-				free(data);
+				if (taskThread.joinable())
+				{
+					taskThread.join();
+				}
+				bComplete = true;
+				free_hooked(data);
+				data = nullptr;
 			}
 		}
 
@@ -1195,10 +1242,25 @@ namespace flex
 				{
 					bComplete = true;
 					taskThread.join();
+
+					if (callback != nullptr)
+					{
+						callback(userData);
+					}
 				}
 			}
 
 			return bComplete;
+		}
+
+		void AsynchronousTextureSave::WaitToComplete()
+		{
+			if (bComplete)
+			{
+				return;
+			}
+			taskFuture.get();
+			bComplete = true;
 		}
 
 	} // namespace gl

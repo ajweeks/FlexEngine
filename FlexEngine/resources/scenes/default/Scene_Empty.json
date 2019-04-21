@@ -9,9 +9,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "0.000, 7.080, 0.000"
-			},
-			"material" : "pbr chrome"
+				"pos" : "0.000, 18.600, 0.000"
+			}
 		},
 		{
 			"name" : "Skybox",
@@ -23,80 +22,6 @@
 			"material" : "skybox 02",
 			"skybox info" : 
 			{
-			}
-		},
-		{
-			"name" : "Ground plane",
-			"type" : "object",
-			"visible" : true,
-			"transform" : 
-			{
-				"pos" : "0.000, -1.600, 0.000",
-				"scale" : "80.000, 1.000, 80.000"
-			},
-			"mesh" : "cube",
-			"material" : "pbr light grey",
-			"collider" : 
-			{
-				"shape" : "box",
-				"half extents" : "1.000, 1.000, 1.000"
-			},
-			"rigid body" : 
-			{
-				"mass" : 0.000000,
-				"kinematic" : true,
-				"static" : true,
-				"mask" : -1,
-				"group" : -1
-			}
-		},
-		{
-			"name" : "box",
-			"type" : "object",
-			"visible" : true,
-			"transform" : 
-			{
-				"pos" : "-2.645, 0.420, -13.210",
-				"rot" : "0.000, 0.314, 0.000",
-				"scale" : "1.320, 1.020, 2.220"
-			},
-			"mesh" : "cube",
-			"material" : "pbr chrome",
-			"collider" : 
-			{
-				"shape" : "box",
-				"half extents" : "1.000, 1.000, 1.000"
-			},
-			"rigid body" : 
-			{
-				"mass" : 1.000000,
-				"kinematic" : false,
-				"static" : false,
-				"mask" : -1,
-				"group" : -1
-			}
-		},
-		{
-			"name" : "Directional Light",
-			"type" : "directional light",
-			"visible" : true,
-			"transform" : 
-			{
-				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "1.195, -0.973, -2.522"
-			},
-			"directional light info" : 
-			{
-				"rotation" : "1.195, -0.973, -2.522",
-				"pos" : "0.000, 15.000, 0.000",
-				"color" : "1.00, 1.00, 1.00",
-				"enabled" : true,
-				"brightness" : 5.000000,
-				"cast shadows" : true,
-				"shadow darkness" : 0.000000,
-				"shadow map near" : -80.000000,
-				"shadow map far" : 100.000000,
-				"shadow map zoom" : 30.000000
 			}
 		}
 	]

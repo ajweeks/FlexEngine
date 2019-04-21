@@ -18,12 +18,6 @@ namespace flex
 		Window(title)
 	{
 		m_LastNonFullscreenWindowMode = WindowMode::WINDOWED;
-
-		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION  "icons/flex-logo-03_128.png", 4));
-		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION  "icons/flex-logo-03_64.png", 4));
-		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION  "icons/flex-logo-03_48.png", 4));
-		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION  "icons/flex-logo-03_32.png", 4));
-		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION  "icons/flex-logo-03_16.png", 4));
 	}
 
 	GLFWWindowWrapper::~GLFWWindowWrapper()
@@ -55,6 +49,8 @@ namespace flex
 			Print("%i joysticks connected on bootup\n", numJoysticksConnected);
 		}
 
+		g_EngineInstance->mainProcessID = (u32)GetCurrentProcessId();
+
 		// TODO: Look into supporting system-DPI awareness
 		//SetProcessDPIAware();
 	}
@@ -70,7 +66,7 @@ namespace flex
 	{
 		for (GLFWimage& icon : m_WindowIcons)
 		{
-			SafeDelete(icon.pixels);
+			delete icon.pixels;
 		}
 		m_WindowIcons.clear();
 
@@ -101,22 +97,33 @@ namespace flex
 		m_StartingPosition = m_Position;
 		m_LastWindowedPos = m_Position;
 
-#if _DEBUG
-		glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
-#endif // _DEBUG
-
 		// Don't hide window when losing focus in Windowed Fullscreen
-		glfwWindowHint(GLFW_AUTO_ICONIFY, GLFW_FALSE);
+		glfwWindowHint(GLFW_AUTO_ICONIFY, GLFW_TRUE);
+		glfwWindowHint(GLFW_FOCUS_ON_SHOW, GLFW_TRUE);
 
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+		if (g_bOpenGLEnabled)
+		{
+#if DEBUG
+			glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
+#endif // DEBUG
+
+			glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+			glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+
+			glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
+			glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+			glfwWindowHint(GLFW_CONTEXT_CREATION_API, GLFW_NATIVE_CONTEXT_API);
+		}
+		else if (g_bVulkanEnabled)
+		{
+			glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+		}
 
 		if (m_bMaximized)
 		{
 			glfwWindowHint(GLFW_MAXIMIZED, GL_TRUE);
 		}
 
-		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 		GLFWmonitor* monitor = NULL;
 		if (m_CurrentWindowMode == WindowMode::FULLSCREEN)
@@ -171,34 +178,48 @@ namespace flex
 		glfwFocusWindow(m_Window);
 		m_bHasFocus = true;
 
-		glfwMakeContextCurrent(m_Window);
-
-		gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
-
-#if _DEBUG
-		if (glDebugMessageCallback)
+		if (g_bOpenGLEnabled)
 		{
-			glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-			glDebugMessageCallback(glDebugOutput, nullptr);
-			GLuint unusedIds = 0;
-			glDebugMessageControl(GL_DONT_CARE,
-								  GL_DONT_CARE,
-								  GL_DONT_CARE,
-								  0,
-								  &unusedIds,
-								  true);
-		}
-#endif // _DEBUG
+			glfwMakeContextCurrent(m_Window);
 
-		if (GLAD_GL_KHR_debug)
+			gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
+
+#if DEBUG
+			if (glDebugMessageCallback)
+			{
+				glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+				glDebugMessageCallback(glDebugOutput, nullptr);
+				GLuint unusedIds = 0;
+				glDebugMessageControl(GL_DONT_CARE,
+					GL_DONT_CARE,
+					GL_DONT_CARE,
+					0,
+					&unusedIds,
+					true);
+			}
+#endif // DEBUG
+
+			if (GLAD_GL_KHR_debug)
+			{
+				FlexEngine::s_bHasGLDebugExtension = true;
+			}
+
+			Print("OpenGL loaded\n");
+			Print("Vendor:     %s\n", reinterpret_cast<const char*>(glGetString(GL_VENDOR)));
+			Print("Renderer:   %s\n", reinterpret_cast<const char*>(glGetString(GL_RENDERER)));
+			Print("Version:    %s\n\n", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
+			//Print("Extensions: %s\n\n", reinterpret_cast<const char*>(glGetString(GL_EXTENSIONS)));
+		}
+		else if (g_bVulkanEnabled)
 		{
-			g_EngineInstance->bHasGLDebugExtension = true;
+			// Vulkan hasn't been loaded yet
 		}
 
-		Print("OpenGL loaded\n");
-		Print("Vendor:   %s\n", reinterpret_cast<const char*>(glGetString(GL_VENDOR)));
-		Print("Renderer: %s\n", reinterpret_cast<const char*>(glGetString(GL_RENDERER)));
-		Print("Version:  %s\n\n", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
+		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION  "icons/flex-logo-03_128.png", 4));
+		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION  "icons/flex-logo-03_64.png", 4));
+		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION  "icons/flex-logo-03_48.png", 4));
+		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION  "icons/flex-logo-03_32.png", 4));
+		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION  "icons/flex-logo-03_16.png", 4));
 
 		if (!m_WindowIcons.empty() && m_WindowIcons[0].pixels)
 		{
@@ -338,6 +359,7 @@ namespace flex
 		case CursorMode::NORMAL: glfwCursorMode = GLFW_CURSOR_NORMAL; break;
 		case CursorMode::HIDDEN: glfwCursorMode = GLFW_CURSOR_HIDDEN; break;
 		case CursorMode::DISABLED: glfwCursorMode = GLFW_CURSOR_DISABLED; break;
+		case CursorMode::_NONE:
 		default: PrintError("Unhandled cursor mode passed to GLFWWindowWrapper::SetCursorMode: %i\n", (i32)mode); break;
 		}
 
@@ -389,6 +411,11 @@ namespace flex
 
 				glfwSetWindowMonitor(m_Window, nullptr, m_LastWindowedPos.x, m_LastWindowedPos.y, m_LastWindowedSize.x, m_LastWindowedSize.y, videoMode->refreshRate);
 				m_LastNonFullscreenWindowMode = WindowMode::WINDOWED;
+			} break;
+			case WindowMode::_NONE:
+			default:
+			{
+				PrintError("Unhandled window mode: %d\n", mode);
 			} break;
 			}
 		}
@@ -550,8 +577,8 @@ namespace flex
 		UNREFERENCED_PARAMETER(scancode);
 
 		Window* window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
-		const Input::KeyAction inputAction = GLFWActionToInputManagerAction(action);
-		const Input::KeyCode inputKey = GLFWKeyToInputManagerKey(key);
+		const KeyAction inputAction = GLFWActionToInputManagerAction(action);
+		const KeyCode inputKey = GLFWKeyToInputManagerKey(key);
 		const i32 inputMods = GLFWModsToInputManagerMods(mods);
 
 		window->KeyCallback(inputKey, inputAction, inputMods);
@@ -566,9 +593,9 @@ namespace flex
 	void GLFWMouseButtonCallback(GLFWwindow* glfwWindow, i32 button, i32 action, i32 mods)
 	{
 		Window* window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
-		const Input::KeyAction inputAction = GLFWActionToInputManagerAction(action);
+		const KeyAction inputAction = GLFWActionToInputManagerAction(action);
 		const i32 inputMods = GLFWModsToInputManagerMods(mods);
-		const Input::MouseButton mouseButton = GLFWButtonToInputManagerMouseButton(button);
+		const MouseButton mouseButton = GLFWButtonToInputManagerMouseButton(button);
 
 		window->MouseButtonCallback(mouseButton, inputAction, inputMods);
 	}
@@ -643,7 +670,7 @@ namespace flex
 			Print("Joystick %i disconnected\n", JID);
 		}
 
-		g_JoysticksConnected[JID] = (event == GLFW_CONNECTED);
+		g_JoysticksConnected[(u32)JID] = (event == GLFW_CONNECTED);
 	}
 
 	void GLFWMointorCallback(GLFWmonitor* monitor, int event)
@@ -660,15 +687,15 @@ namespace flex
 		}
 	}
 
-	Input::KeyAction GLFWActionToInputManagerAction(i32 glfwAction)
+	KeyAction GLFWActionToInputManagerAction(i32 glfwAction)
 	{
-		Input::KeyAction inputAction = Input::KeyAction::_NONE;
+		KeyAction inputAction = KeyAction::_NONE;
 
 		switch (glfwAction)
 		{
-		case GLFW_PRESS: inputAction = Input::KeyAction::PRESS; break;
-		case GLFW_REPEAT: inputAction = Input::KeyAction::REPEAT; break;
-		case GLFW_RELEASE: inputAction = Input::KeyAction::RELEASE; break;
+		case GLFW_PRESS: inputAction = KeyAction::PRESS; break;
+		case GLFW_REPEAT: inputAction = KeyAction::REPEAT; break;
+		case GLFW_RELEASE: inputAction = KeyAction::RELEASE; break;
 		case -1: break; // We don't care about events GLFW can't handle
 		default: PrintError("Unhandled glfw action passed to GLFWActionToInputManagerAction in GLFWWIndowWrapper: %i\n",
 							glfwAction);
@@ -677,132 +704,132 @@ namespace flex
 		return inputAction;
 	}
 
-	Input::KeyCode GLFWKeyToInputManagerKey(i32 glfwKey)
+	KeyCode GLFWKeyToInputManagerKey(i32 glfwKey)
 	{
-		Input::KeyCode inputKey = Input::KeyCode::_NONE;
+		KeyCode inputKey = KeyCode::_NONE;
 
 		switch (glfwKey)
 		{
-		case GLFW_KEY_SPACE: inputKey = Input::KeyCode::KEY_SPACE; break;
-		case GLFW_KEY_APOSTROPHE: inputKey = Input::KeyCode::KEY_APOSTROPHE; break;
-		case GLFW_KEY_COMMA: inputKey = Input::KeyCode::KEY_COMMA; break;
-		case GLFW_KEY_MINUS: inputKey = Input::KeyCode::KEY_MINUS; break;
-		case GLFW_KEY_PERIOD: inputKey = Input::KeyCode::KEY_PERIOD; break;
-		case GLFW_KEY_SLASH: inputKey = Input::KeyCode::KEY_SLASH; break;
-		case GLFW_KEY_0: inputKey = Input::KeyCode::KEY_0; break;
-		case GLFW_KEY_1: inputKey = Input::KeyCode::KEY_1; break;
-		case GLFW_KEY_2: inputKey = Input::KeyCode::KEY_2; break;
-		case GLFW_KEY_3: inputKey = Input::KeyCode::KEY_3; break;
-		case GLFW_KEY_4: inputKey = Input::KeyCode::KEY_4; break;
-		case GLFW_KEY_5: inputKey = Input::KeyCode::KEY_5; break;
-		case GLFW_KEY_6: inputKey = Input::KeyCode::KEY_6; break;
-		case GLFW_KEY_7: inputKey = Input::KeyCode::KEY_7; break;
-		case GLFW_KEY_8: inputKey = Input::KeyCode::KEY_8; break;
-		case GLFW_KEY_9: inputKey = Input::KeyCode::KEY_9; break;
-		case GLFW_KEY_SEMICOLON: inputKey = Input::KeyCode::KEY_SEMICOLON; break;
-		case GLFW_KEY_EQUAL: inputKey = Input::KeyCode::KEY_EQUAL; break;
-		case GLFW_KEY_A: inputKey = Input::KeyCode::KEY_A; break;
-		case GLFW_KEY_B: inputKey = Input::KeyCode::KEY_B; break;
-		case GLFW_KEY_C: inputKey = Input::KeyCode::KEY_C; break;
-		case GLFW_KEY_D: inputKey = Input::KeyCode::KEY_D; break;
-		case GLFW_KEY_E: inputKey = Input::KeyCode::KEY_E; break;
-		case GLFW_KEY_F: inputKey = Input::KeyCode::KEY_F; break;
-		case GLFW_KEY_G: inputKey = Input::KeyCode::KEY_G; break;
-		case GLFW_KEY_H: inputKey = Input::KeyCode::KEY_H; break;
-		case GLFW_KEY_I: inputKey = Input::KeyCode::KEY_I; break;
-		case GLFW_KEY_J: inputKey = Input::KeyCode::KEY_J; break;
-		case GLFW_KEY_K: inputKey = Input::KeyCode::KEY_K; break;
-		case GLFW_KEY_L: inputKey = Input::KeyCode::KEY_L; break;
-		case GLFW_KEY_M: inputKey = Input::KeyCode::KEY_M; break;
-		case GLFW_KEY_N: inputKey = Input::KeyCode::KEY_N; break;
-		case GLFW_KEY_O: inputKey = Input::KeyCode::KEY_O; break;
-		case GLFW_KEY_P: inputKey = Input::KeyCode::KEY_P; break;
-		case GLFW_KEY_Q: inputKey = Input::KeyCode::KEY_Q; break;
-		case GLFW_KEY_R: inputKey = Input::KeyCode::KEY_R; break;
-		case GLFW_KEY_S: inputKey = Input::KeyCode::KEY_S; break;
-		case GLFW_KEY_T: inputKey = Input::KeyCode::KEY_T; break;
-		case GLFW_KEY_U: inputKey = Input::KeyCode::KEY_U; break;
-		case GLFW_KEY_V: inputKey = Input::KeyCode::KEY_V; break;
-		case GLFW_KEY_W: inputKey = Input::KeyCode::KEY_W; break;
-		case GLFW_KEY_X: inputKey = Input::KeyCode::KEY_X; break;
-		case GLFW_KEY_Y: inputKey = Input::KeyCode::KEY_Y; break;
-		case GLFW_KEY_Z: inputKey = Input::KeyCode::KEY_Z; break;
-		case GLFW_KEY_LEFT_BRACKET: inputKey = Input::KeyCode::KEY_LEFT_BRACKET; break;
-		case GLFW_KEY_BACKSLASH: inputKey = Input::KeyCode::KEY_BACKSLASH; break;
-		case GLFW_KEY_RIGHT_BRACKET: inputKey = Input::KeyCode::KEY_RIGHT_BRACKET; break;
-		case GLFW_KEY_GRAVE_ACCENT: inputKey = Input::KeyCode::KEY_GRAVE_ACCENT; break;
-		case GLFW_KEY_WORLD_1: inputKey = Input::KeyCode::KEY_WORLD_1; break;
-		case GLFW_KEY_WORLD_2: inputKey = Input::KeyCode::KEY_WORLD_2; break;
-		case GLFW_KEY_ESCAPE: inputKey = Input::KeyCode::KEY_ESCAPE; break;
-		case GLFW_KEY_ENTER: inputKey = Input::KeyCode::KEY_ENTER; break;
-		case GLFW_KEY_TAB: inputKey = Input::KeyCode::KEY_TAB; break;
-		case GLFW_KEY_BACKSPACE: inputKey = Input::KeyCode::KEY_BACKSPACE; break;
-		case GLFW_KEY_INSERT: inputKey = Input::KeyCode::KEY_INSERT; break;
-		case GLFW_KEY_DELETE: inputKey = Input::KeyCode::KEY_DELETE; break;
-		case GLFW_KEY_RIGHT: inputKey = Input::KeyCode::KEY_RIGHT; break;
-		case GLFW_KEY_LEFT: inputKey = Input::KeyCode::KEY_LEFT; break;
-		case GLFW_KEY_DOWN: inputKey = Input::KeyCode::KEY_DOWN; break;
-		case GLFW_KEY_UP: inputKey = Input::KeyCode::KEY_UP; break;
-		case GLFW_KEY_PAGE_UP: inputKey = Input::KeyCode::KEY_PAGE_UP; break;
-		case GLFW_KEY_PAGE_DOWN: inputKey = Input::KeyCode::KEY_PAGE_DOWN; break;
-		case GLFW_KEY_HOME: inputKey = Input::KeyCode::KEY_HOME; break;
-		case GLFW_KEY_END: inputKey = Input::KeyCode::KEY_END; break;
-		case GLFW_KEY_CAPS_LOCK: inputKey = Input::KeyCode::KEY_CAPS_LOCK; break;
-		case GLFW_KEY_SCROLL_LOCK: inputKey = Input::KeyCode::KEY_SCROLL_LOCK; break;
-		case GLFW_KEY_NUM_LOCK: inputKey = Input::KeyCode::KEY_NUM_LOCK; break;
-		case GLFW_KEY_PRINT_SCREEN: inputKey = Input::KeyCode::KEY_PRINT_SCREEN; break;
-		case GLFW_KEY_PAUSE: inputKey = Input::KeyCode::KEY_PAUSE; break;
-		case GLFW_KEY_F1: inputKey = Input::KeyCode::KEY_F1; break;
-		case GLFW_KEY_F2: inputKey = Input::KeyCode::KEY_F2; break;
-		case GLFW_KEY_F3: inputKey = Input::KeyCode::KEY_F3; break;
-		case GLFW_KEY_F4: inputKey = Input::KeyCode::KEY_F4; break;
-		case GLFW_KEY_F5: inputKey = Input::KeyCode::KEY_F5; break;
-		case GLFW_KEY_F6: inputKey = Input::KeyCode::KEY_F6; break;
-		case GLFW_KEY_F7: inputKey = Input::KeyCode::KEY_F7; break;
-		case GLFW_KEY_F8: inputKey = Input::KeyCode::KEY_F8; break;
-		case GLFW_KEY_F9: inputKey = Input::KeyCode::KEY_F9; break;
-		case GLFW_KEY_F10: inputKey = Input::KeyCode::KEY_F10; break;
-		case GLFW_KEY_F11: inputKey = Input::KeyCode::KEY_F11; break;
-		case GLFW_KEY_F12: inputKey = Input::KeyCode::KEY_F12; break;
-		case GLFW_KEY_F13: inputKey = Input::KeyCode::KEY_F13; break;
-		case GLFW_KEY_F14: inputKey = Input::KeyCode::KEY_F14; break;
-		case GLFW_KEY_F15: inputKey = Input::KeyCode::KEY_F15; break;
-		case GLFW_KEY_F16: inputKey = Input::KeyCode::KEY_F16; break;
-		case GLFW_KEY_F17: inputKey = Input::KeyCode::KEY_F17; break;
-		case GLFW_KEY_F18: inputKey = Input::KeyCode::KEY_F18; break;
-		case GLFW_KEY_F19: inputKey = Input::KeyCode::KEY_F19; break;
-		case GLFW_KEY_F20: inputKey = Input::KeyCode::KEY_F20; break;
-		case GLFW_KEY_F21: inputKey = Input::KeyCode::KEY_F21; break;
-		case GLFW_KEY_F22: inputKey = Input::KeyCode::KEY_F22; break;
-		case GLFW_KEY_F23: inputKey = Input::KeyCode::KEY_F23; break;
-		case GLFW_KEY_F24: inputKey = Input::KeyCode::KEY_F24; break;
-		case GLFW_KEY_F25: inputKey = Input::KeyCode::KEY_F25; break;
-		case GLFW_KEY_KP_0: inputKey = Input::KeyCode::KEY_KP_0; break;
-		case GLFW_KEY_KP_1: inputKey = Input::KeyCode::KEY_KP_1; break;
-		case GLFW_KEY_KP_2: inputKey = Input::KeyCode::KEY_KP_2; break;
-		case GLFW_KEY_KP_3: inputKey = Input::KeyCode::KEY_KP_3; break;
-		case GLFW_KEY_KP_4: inputKey = Input::KeyCode::KEY_KP_4; break;
-		case GLFW_KEY_KP_5: inputKey = Input::KeyCode::KEY_KP_5; break;
-		case GLFW_KEY_KP_6: inputKey = Input::KeyCode::KEY_KP_6; break;
-		case GLFW_KEY_KP_7: inputKey = Input::KeyCode::KEY_KP_7; break;
-		case GLFW_KEY_KP_8: inputKey = Input::KeyCode::KEY_KP_8; break;
-		case GLFW_KEY_KP_9: inputKey = Input::KeyCode::KEY_KP_9; break;
-		case GLFW_KEY_KP_DECIMAL: inputKey = Input::KeyCode::KEY_KP_DECIMAL; break;
-		case GLFW_KEY_KP_DIVIDE: inputKey = Input::KeyCode::KEY_KP_DIVIDE; break;
-		case GLFW_KEY_KP_MULTIPLY: inputKey = Input::KeyCode::KEY_KP_MULTIPLY; break;
-		case GLFW_KEY_KP_SUBTRACT: inputKey = Input::KeyCode::KEY_KP_SUBTRACT; break;
-		case GLFW_KEY_KP_ADD: inputKey = Input::KeyCode::KEY_KP_ADD; break;
-		case GLFW_KEY_KP_ENTER: inputKey = Input::KeyCode::KEY_KP_ENTER; break;
-		case GLFW_KEY_KP_EQUAL: inputKey = Input::KeyCode::KEY_KP_EQUAL; break;
-		case GLFW_KEY_LEFT_SHIFT: inputKey = Input::KeyCode::KEY_LEFT_SHIFT; break;
-		case GLFW_KEY_LEFT_CONTROL: inputKey = Input::KeyCode::KEY_LEFT_CONTROL; break;
-		case GLFW_KEY_LEFT_ALT: inputKey = Input::KeyCode::KEY_LEFT_ALT; break;
-		case GLFW_KEY_LEFT_SUPER: inputKey = Input::KeyCode::KEY_LEFT_SUPER; break;
-		case GLFW_KEY_RIGHT_SHIFT: inputKey = Input::KeyCode::KEY_RIGHT_SHIFT; break;
-		case GLFW_KEY_RIGHT_CONTROL: inputKey = Input::KeyCode::KEY_RIGHT_CONTROL; break;
-		case GLFW_KEY_RIGHT_ALT: inputKey = Input::KeyCode::KEY_RIGHT_ALT; break;
-		case GLFW_KEY_RIGHT_SUPER: inputKey = Input::KeyCode::KEY_RIGHT_SUPER; break;
-		case GLFW_KEY_MENU: inputKey = Input::KeyCode::KEY_MENU; break;
+		case GLFW_KEY_SPACE: inputKey = KeyCode::KEY_SPACE; break;
+		case GLFW_KEY_APOSTROPHE: inputKey = KeyCode::KEY_APOSTROPHE; break;
+		case GLFW_KEY_COMMA: inputKey = KeyCode::KEY_COMMA; break;
+		case GLFW_KEY_MINUS: inputKey = KeyCode::KEY_MINUS; break;
+		case GLFW_KEY_PERIOD: inputKey = KeyCode::KEY_PERIOD; break;
+		case GLFW_KEY_SLASH: inputKey = KeyCode::KEY_SLASH; break;
+		case GLFW_KEY_0: inputKey = KeyCode::KEY_0; break;
+		case GLFW_KEY_1: inputKey = KeyCode::KEY_1; break;
+		case GLFW_KEY_2: inputKey = KeyCode::KEY_2; break;
+		case GLFW_KEY_3: inputKey = KeyCode::KEY_3; break;
+		case GLFW_KEY_4: inputKey = KeyCode::KEY_4; break;
+		case GLFW_KEY_5: inputKey = KeyCode::KEY_5; break;
+		case GLFW_KEY_6: inputKey = KeyCode::KEY_6; break;
+		case GLFW_KEY_7: inputKey = KeyCode::KEY_7; break;
+		case GLFW_KEY_8: inputKey = KeyCode::KEY_8; break;
+		case GLFW_KEY_9: inputKey = KeyCode::KEY_9; break;
+		case GLFW_KEY_SEMICOLON: inputKey = KeyCode::KEY_SEMICOLON; break;
+		case GLFW_KEY_EQUAL: inputKey = KeyCode::KEY_EQUAL; break;
+		case GLFW_KEY_A: inputKey = KeyCode::KEY_A; break;
+		case GLFW_KEY_B: inputKey = KeyCode::KEY_B; break;
+		case GLFW_KEY_C: inputKey = KeyCode::KEY_C; break;
+		case GLFW_KEY_D: inputKey = KeyCode::KEY_D; break;
+		case GLFW_KEY_E: inputKey = KeyCode::KEY_E; break;
+		case GLFW_KEY_F: inputKey = KeyCode::KEY_F; break;
+		case GLFW_KEY_G: inputKey = KeyCode::KEY_G; break;
+		case GLFW_KEY_H: inputKey = KeyCode::KEY_H; break;
+		case GLFW_KEY_I: inputKey = KeyCode::KEY_I; break;
+		case GLFW_KEY_J: inputKey = KeyCode::KEY_J; break;
+		case GLFW_KEY_K: inputKey = KeyCode::KEY_K; break;
+		case GLFW_KEY_L: inputKey = KeyCode::KEY_L; break;
+		case GLFW_KEY_M: inputKey = KeyCode::KEY_M; break;
+		case GLFW_KEY_N: inputKey = KeyCode::KEY_N; break;
+		case GLFW_KEY_O: inputKey = KeyCode::KEY_O; break;
+		case GLFW_KEY_P: inputKey = KeyCode::KEY_P; break;
+		case GLFW_KEY_Q: inputKey = KeyCode::KEY_Q; break;
+		case GLFW_KEY_R: inputKey = KeyCode::KEY_R; break;
+		case GLFW_KEY_S: inputKey = KeyCode::KEY_S; break;
+		case GLFW_KEY_T: inputKey = KeyCode::KEY_T; break;
+		case GLFW_KEY_U: inputKey = KeyCode::KEY_U; break;
+		case GLFW_KEY_V: inputKey = KeyCode::KEY_V; break;
+		case GLFW_KEY_W: inputKey = KeyCode::KEY_W; break;
+		case GLFW_KEY_X: inputKey = KeyCode::KEY_X; break;
+		case GLFW_KEY_Y: inputKey = KeyCode::KEY_Y; break;
+		case GLFW_KEY_Z: inputKey = KeyCode::KEY_Z; break;
+		case GLFW_KEY_LEFT_BRACKET: inputKey = KeyCode::KEY_LEFT_BRACKET; break;
+		case GLFW_KEY_BACKSLASH: inputKey = KeyCode::KEY_BACKSLASH; break;
+		case GLFW_KEY_RIGHT_BRACKET: inputKey = KeyCode::KEY_RIGHT_BRACKET; break;
+		case GLFW_KEY_GRAVE_ACCENT: inputKey = KeyCode::KEY_GRAVE_ACCENT; break;
+		case GLFW_KEY_WORLD_1: inputKey = KeyCode::KEY_WORLD_1; break;
+		case GLFW_KEY_WORLD_2: inputKey = KeyCode::KEY_WORLD_2; break;
+		case GLFW_KEY_ESCAPE: inputKey = KeyCode::KEY_ESCAPE; break;
+		case GLFW_KEY_ENTER: inputKey = KeyCode::KEY_ENTER; break;
+		case GLFW_KEY_TAB: inputKey = KeyCode::KEY_TAB; break;
+		case GLFW_KEY_BACKSPACE: inputKey = KeyCode::KEY_BACKSPACE; break;
+		case GLFW_KEY_INSERT: inputKey = KeyCode::KEY_INSERT; break;
+		case GLFW_KEY_DELETE: inputKey = KeyCode::KEY_DELETE; break;
+		case GLFW_KEY_RIGHT: inputKey = KeyCode::KEY_RIGHT; break;
+		case GLFW_KEY_LEFT: inputKey = KeyCode::KEY_LEFT; break;
+		case GLFW_KEY_DOWN: inputKey = KeyCode::KEY_DOWN; break;
+		case GLFW_KEY_UP: inputKey = KeyCode::KEY_UP; break;
+		case GLFW_KEY_PAGE_UP: inputKey = KeyCode::KEY_PAGE_UP; break;
+		case GLFW_KEY_PAGE_DOWN: inputKey = KeyCode::KEY_PAGE_DOWN; break;
+		case GLFW_KEY_HOME: inputKey = KeyCode::KEY_HOME; break;
+		case GLFW_KEY_END: inputKey = KeyCode::KEY_END; break;
+		case GLFW_KEY_CAPS_LOCK: inputKey = KeyCode::KEY_CAPS_LOCK; break;
+		case GLFW_KEY_SCROLL_LOCK: inputKey = KeyCode::KEY_SCROLL_LOCK; break;
+		case GLFW_KEY_NUM_LOCK: inputKey = KeyCode::KEY_NUM_LOCK; break;
+		case GLFW_KEY_PRINT_SCREEN: inputKey = KeyCode::KEY_PRINT_SCREEN; break;
+		case GLFW_KEY_PAUSE: inputKey = KeyCode::KEY_PAUSE; break;
+		case GLFW_KEY_F1: inputKey = KeyCode::KEY_F1; break;
+		case GLFW_KEY_F2: inputKey = KeyCode::KEY_F2; break;
+		case GLFW_KEY_F3: inputKey = KeyCode::KEY_F3; break;
+		case GLFW_KEY_F4: inputKey = KeyCode::KEY_F4; break;
+		case GLFW_KEY_F5: inputKey = KeyCode::KEY_F5; break;
+		case GLFW_KEY_F6: inputKey = KeyCode::KEY_F6; break;
+		case GLFW_KEY_F7: inputKey = KeyCode::KEY_F7; break;
+		case GLFW_KEY_F8: inputKey = KeyCode::KEY_F8; break;
+		case GLFW_KEY_F9: inputKey = KeyCode::KEY_F9; break;
+		case GLFW_KEY_F10: inputKey = KeyCode::KEY_F10; break;
+		case GLFW_KEY_F11: inputKey = KeyCode::KEY_F11; break;
+		case GLFW_KEY_F12: inputKey = KeyCode::KEY_F12; break;
+		case GLFW_KEY_F13: inputKey = KeyCode::KEY_F13; break;
+		case GLFW_KEY_F14: inputKey = KeyCode::KEY_F14; break;
+		case GLFW_KEY_F15: inputKey = KeyCode::KEY_F15; break;
+		case GLFW_KEY_F16: inputKey = KeyCode::KEY_F16; break;
+		case GLFW_KEY_F17: inputKey = KeyCode::KEY_F17; break;
+		case GLFW_KEY_F18: inputKey = KeyCode::KEY_F18; break;
+		case GLFW_KEY_F19: inputKey = KeyCode::KEY_F19; break;
+		case GLFW_KEY_F20: inputKey = KeyCode::KEY_F20; break;
+		case GLFW_KEY_F21: inputKey = KeyCode::KEY_F21; break;
+		case GLFW_KEY_F22: inputKey = KeyCode::KEY_F22; break;
+		case GLFW_KEY_F23: inputKey = KeyCode::KEY_F23; break;
+		case GLFW_KEY_F24: inputKey = KeyCode::KEY_F24; break;
+		case GLFW_KEY_F25: inputKey = KeyCode::KEY_F25; break;
+		case GLFW_KEY_KP_0: inputKey = KeyCode::KEY_KP_0; break;
+		case GLFW_KEY_KP_1: inputKey = KeyCode::KEY_KP_1; break;
+		case GLFW_KEY_KP_2: inputKey = KeyCode::KEY_KP_2; break;
+		case GLFW_KEY_KP_3: inputKey = KeyCode::KEY_KP_3; break;
+		case GLFW_KEY_KP_4: inputKey = KeyCode::KEY_KP_4; break;
+		case GLFW_KEY_KP_5: inputKey = KeyCode::KEY_KP_5; break;
+		case GLFW_KEY_KP_6: inputKey = KeyCode::KEY_KP_6; break;
+		case GLFW_KEY_KP_7: inputKey = KeyCode::KEY_KP_7; break;
+		case GLFW_KEY_KP_8: inputKey = KeyCode::KEY_KP_8; break;
+		case GLFW_KEY_KP_9: inputKey = KeyCode::KEY_KP_9; break;
+		case GLFW_KEY_KP_DECIMAL: inputKey = KeyCode::KEY_KP_DECIMAL; break;
+		case GLFW_KEY_KP_DIVIDE: inputKey = KeyCode::KEY_KP_DIVIDE; break;
+		case GLFW_KEY_KP_MULTIPLY: inputKey = KeyCode::KEY_KP_MULTIPLY; break;
+		case GLFW_KEY_KP_SUBTRACT: inputKey = KeyCode::KEY_KP_SUBTRACT; break;
+		case GLFW_KEY_KP_ADD: inputKey = KeyCode::KEY_KP_ADD; break;
+		case GLFW_KEY_KP_ENTER: inputKey = KeyCode::KEY_KP_ENTER; break;
+		case GLFW_KEY_KP_EQUAL: inputKey = KeyCode::KEY_KP_EQUAL; break;
+		case GLFW_KEY_LEFT_SHIFT: inputKey = KeyCode::KEY_LEFT_SHIFT; break;
+		case GLFW_KEY_LEFT_CONTROL: inputKey = KeyCode::KEY_LEFT_CONTROL; break;
+		case GLFW_KEY_LEFT_ALT: inputKey = KeyCode::KEY_LEFT_ALT; break;
+		case GLFW_KEY_LEFT_SUPER: inputKey = KeyCode::KEY_LEFT_SUPER; break;
+		case GLFW_KEY_RIGHT_SHIFT: inputKey = KeyCode::KEY_RIGHT_SHIFT; break;
+		case GLFW_KEY_RIGHT_CONTROL: inputKey = KeyCode::KEY_RIGHT_CONTROL; break;
+		case GLFW_KEY_RIGHT_ALT: inputKey = KeyCode::KEY_RIGHT_ALT; break;
+		case GLFW_KEY_RIGHT_SUPER: inputKey = KeyCode::KEY_RIGHT_SUPER; break;
+		case GLFW_KEY_MENU: inputKey = KeyCode::KEY_MENU; break;
 		case -1: break; // We don't care about events GLFW can't handle
 		default:
 			PrintError("Unhandled glfw key passed to GLFWKeyToInputManagerKey in GLFWWIndowWrapper: %i\n",
@@ -817,28 +844,30 @@ namespace flex
 	{
 		i32 inputMods = 0;
 
-		if (glfwMods & GLFW_MOD_SHIFT) inputMods |= (i32)Input::Mod::SHIFT;
-		if (glfwMods & GLFW_MOD_ALT) inputMods |= (i32)Input::Mod::ALT;
-		if (glfwMods & GLFW_MOD_CONTROL) inputMods |= (i32)Input::Mod::CONTROL;
-		if (glfwMods & GLFW_MOD_SUPER) inputMods |= (i32)Input::Mod::SUPER;
+		if (glfwMods & GLFW_MOD_SHIFT) inputMods |= (i32)InputModifier::SHIFT;
+		if (glfwMods & GLFW_MOD_ALT) inputMods |= (i32)InputModifier::ALT;
+		if (glfwMods & GLFW_MOD_CONTROL) inputMods |= (i32)InputModifier::CONTROL;
+		if (glfwMods & GLFW_MOD_SUPER) inputMods |= (i32)InputModifier::SUPER;
+		if (glfwMods & GLFW_MOD_CAPS_LOCK) inputMods |= (i32)InputModifier::CAPS_LOCK;
+		if (glfwMods & GLFW_MOD_NUM_LOCK) inputMods |= (i32)InputModifier::NUM_LOCK;
 
 		return inputMods;
 	}
 
-	Input::MouseButton GLFWButtonToInputManagerMouseButton(i32 glfwButton)
+	MouseButton GLFWButtonToInputManagerMouseButton(i32 glfwButton)
 	{
-		Input::MouseButton inputMouseButton = Input::MouseButton::_NONE;
+		MouseButton inputMouseButton = MouseButton::_NONE;
 
 		switch (glfwButton)
 		{
-		case GLFW_MOUSE_BUTTON_1: inputMouseButton = Input::MouseButton::MOUSE_BUTTON_1; break;
-		case GLFW_MOUSE_BUTTON_2: inputMouseButton = Input::MouseButton::MOUSE_BUTTON_2; break;
-		case GLFW_MOUSE_BUTTON_3: inputMouseButton = Input::MouseButton::MOUSE_BUTTON_3; break;
-		case GLFW_MOUSE_BUTTON_4: inputMouseButton = Input::MouseButton::MOUSE_BUTTON_4; break;
-		case GLFW_MOUSE_BUTTON_5: inputMouseButton = Input::MouseButton::MOUSE_BUTTON_5; break;
-		case GLFW_MOUSE_BUTTON_6: inputMouseButton = Input::MouseButton::MOUSE_BUTTON_6; break;
-		case GLFW_MOUSE_BUTTON_7: inputMouseButton = Input::MouseButton::MOUSE_BUTTON_7; break;
-		case GLFW_MOUSE_BUTTON_8: inputMouseButton = Input::MouseButton::MOUSE_BUTTON_8; break;
+		case GLFW_MOUSE_BUTTON_1: inputMouseButton = MouseButton::MOUSE_BUTTON_1; break;
+		case GLFW_MOUSE_BUTTON_2: inputMouseButton = MouseButton::MOUSE_BUTTON_2; break;
+		case GLFW_MOUSE_BUTTON_3: inputMouseButton = MouseButton::MOUSE_BUTTON_3; break;
+		case GLFW_MOUSE_BUTTON_4: inputMouseButton = MouseButton::MOUSE_BUTTON_4; break;
+		case GLFW_MOUSE_BUTTON_5: inputMouseButton = MouseButton::MOUSE_BUTTON_5; break;
+		case GLFW_MOUSE_BUTTON_6: inputMouseButton = MouseButton::MOUSE_BUTTON_6; break;
+		case GLFW_MOUSE_BUTTON_7: inputMouseButton = MouseButton::MOUSE_BUTTON_7; break;
+		case GLFW_MOUSE_BUTTON_8: inputMouseButton = MouseButton::MOUSE_BUTTON_8; break;
 		case -1: break; // We don't care about events GLFW can't handle
 		default: PrintError("Unhandled glfw button passed to GLFWButtonToInputManagerMouseButton in GLFWWIndowWrapper: %i\n",
 							glfwButton); break;
@@ -853,7 +882,7 @@ namespace flex
 		UNREFERENCED_PARAMETER(userParam);
 		UNREFERENCED_PARAMETER(length);
 
-		// Ignore insignificant error/warning codes & notification messages
+		// Ignore insignificant error/warning codes and notification messages
 		if (id == 131169 || id == 131185 || id == 131218 || id == 131204 ||
 			severity == GL_DEBUG_SEVERITY_NOTIFICATION)
 		{
@@ -861,7 +890,7 @@ namespace flex
 		}
 
 		PrintError("-----------------------------------------\n");
-		PrintError("GL Debug message (%i): %s\n", id, message);
+		PrintError("GL Debug message (%u): %s\n", id, message);
 
 		switch (source)
 		{

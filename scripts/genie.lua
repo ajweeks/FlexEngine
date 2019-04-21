@@ -6,7 +6,7 @@
 -- 
 
 
-solution "FlexEngine"
+solution "Flex"
 	configurations {
 		"Debug",
 		"Development",
@@ -96,7 +96,7 @@ end
 
 
 configuration "Debug"
-	defines { "_DEBUG" }
+	defines { "DEBUG" }
 	flags { "Symbols", "ExtraWarnings" }
 configuration "Development"
 	defines { "DEVELOPMENT" }
@@ -110,7 +110,7 @@ configuration "vs*"
 	linkoptions { "/ignore:4221" }
 	defines { "PLATFORM_Win" }
 	includedirs { 
-		path.join(DEPENDENCIES_DIR, "include"),
+		path.join(SOURCE_DIR, "include"),
 		path.join(DEPENDENCIES_DIR, "glad/include"),
 		path.join(DEPENDENCIES_DIR, "glfw/include"), 
 		path.join(DEPENDENCIES_DIR, "glm"), 
@@ -131,9 +131,9 @@ configuration { "x32" }
 configuration {}
 
 
-startproject "FlexEngine"
+startproject "Flex"
 
-project "FlexEngine"
+project "Flex"
 	kind "ConsoleApp"
 
 	location "../build"
@@ -172,13 +172,8 @@ configuration {}
 		path.join(SOURCE_DIR, "include/**.h"), 
 		path.join(SOURCE_DIR, "include/**.hpp"), 
 		path.join(SOURCE_DIR, "src/**.cpp"), 
-		path.join(DEPENDENCIES_DIR, "imgui/imgui.h"),
-		path.join(DEPENDENCIES_DIR, "imgui/imconfig.h"),
-		path.join(DEPENDENCIES_DIR, "imgui/imgui_internal.h"),
-		path.join(DEPENDENCIES_DIR, "imgui/imgui.cpp"),
-		path.join(DEPENDENCIES_DIR, "imgui/imgui_draw.cpp"),
-		path.join(DEPENDENCIES_DIR, "imgui/imgui_demo.cpp"),
-		path.join(DEPENDENCIES_DIR, "imgui/imgui_widgets.cpp"),
+		path.join(DEPENDENCIES_DIR, "imgui/**.h"),
+		path.join(DEPENDENCIES_DIR, "imgui/**.cpp"),
 		path.join(DEPENDENCIES_DIR, "glad/src/glad.c"),
 	}
 
@@ -189,10 +184,7 @@ configuration {}
 
 	-- Don't use pre-compiled header for the following files
 	nopch {
-		path.join(DEPENDENCIES_DIR, "imgui/imgui.cpp"),
-		path.join(DEPENDENCIES_DIR, "imgui/imgui_draw.cpp"),
-		path.join(DEPENDENCIES_DIR, "imgui/imgui_demo.cpp"),
-		path.join(DEPENDENCIES_DIR, "imgui/imgui_widgets.cpp"),
+		path.join(DEPENDENCIES_DIR, "imgui/**.cpp"),
 		path.join(DEPENDENCIES_DIR, "glad/src/glad.c")
 	}
 

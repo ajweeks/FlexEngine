@@ -2,16 +2,14 @@
 
 #include "Scene/BaseScene.hpp"
 
-#include <fstream>
-
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 
-#include <glm/vec3.hpp>
 #include <glm/gtx/norm.hpp> // for distance2
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #include "Audio/AudioManager.hpp"
+#include "Callbacks/GameObjectCallbacks.hpp"
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "FlexEngine.hpp"
@@ -38,7 +36,9 @@ namespace flex
 	std::vector<JSONObject> BaseScene::s_ParsedPrefabs;
 
 	BaseScene::BaseScene(const std::string& fileName) :
-		m_FileName(fileName)
+		m_FileName(fileName),
+		m_TrackManager(this),
+		m_CartManager(this)
 	{
 	}
 
@@ -59,12 +59,12 @@ namespace flex
 
 		m_PhysicsWorld->GetWorld()->setGravity({ 0.0f, -9.81f, 0.0f });
 
-		m_TrackManager = TrackManager();
+		m_CartManager.Initialize();
 
 		// Use save file if exists, otherwise use default
-		const std::string savedShortPath = "scenes/saved/" + m_FileName;
+		//const std::string savedShortPath = "scenes/saved/" + m_FileName;
 		const std::string defaultShortPath = "scenes/default/" + m_FileName;
-		const std::string savedPath = RESOURCE_STR(savedShortPath);
+		//const std::string savedPath = RESOURCE_STR(savedShortPath);
 		const std::string defaultPath = RESOURCE_STR(defaultShortPath);
 		//m_bUsingSaveFile = FileExists(savedPath);
 
@@ -83,7 +83,10 @@ namespace flex
 
 		if (FileExists(filePath))
 		{
-			Print("Loading scene from %s\n", shortFilePath.c_str());
+			if (g_bEnableLogging_Loading)
+			{
+				Print("Loading scene from %s\n", shortFilePath.c_str());
+			}
 
 			JSONObject sceneRootObject;
 			if (!JSONParser::Parse(filePath, sceneRootObject))
@@ -92,7 +95,7 @@ namespace flex
 				return;
 			}
 
-			const bool printSceneContentsToConsole = false;
+			constexpr bool printSceneContentsToConsole = false;
 			if (printSceneContentsToConsole)
 			{
 				Print("Parsed scene file:\n");
@@ -208,11 +211,23 @@ namespace flex
 			AddRootObject(sphere);
 		}
 
-		m_Player0 = new Player(0, glm::vec3(0.0f, 2.0f, 0.0f));
-		AddRootObject(m_Player0);
+		bool bCreatePlayer = true;
 
-		//m_Player1 = new Player(1);
-		//AddRootObject(m_Player1);
+		// TODO: FIXME: Save in scene file
+		if (m_Name.compare("Scene Gerstner") == 0 ||
+			m_Name.compare("Scene Empty") == 0)
+		{
+			bCreatePlayer = false;
+		}
+
+		if (bCreatePlayer)
+		{
+			m_Player0 = new Player(0, glm::vec3(0.0f, 2.0f, 0.0f));
+			AddRootObject(m_Player0);
+
+			//m_Player1 = new Player(1);
+			//AddRootObject(m_Player1);
+		}
 
 		for (GameObject* rootObject : m_RootObjects)
 		{
@@ -247,10 +262,13 @@ namespace flex
 			if (rootObject)
 			{
 				rootObject->Destroy();
-				SafeDelete(rootObject);
+				delete rootObject;
 			}
 		}
 		m_RootObjects.clear();
+
+		m_TrackManager.Destroy();
+		m_CartManager.Destroy();
 
 		m_LoadedMaterials.clear();
 
@@ -262,22 +280,26 @@ namespace flex
 		if (m_PhysicsWorld)
 		{
 			m_PhysicsWorld->Destroy();
-			SafeDelete(m_PhysicsWorld);
+			delete m_PhysicsWorld;
 		}
 	}
 
 	void BaseScene::Update()
 	{
+		const char* profileBlockName = "Update Scene";
+		PROFILE_BEGIN(profileBlockName);
+
 		if (m_PhysicsWorld)
 		{
 			m_PhysicsWorld->Update(g_DeltaTime);
 		}
 
-		if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_Z))
+		m_CartManager.Update();
+		if (g_InputManager->GetKeyPressed(KeyCode::KEY_Z))
 		{
 			AudioManager::PlaySource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud));
 		}
-		if (g_InputManager->GetKeyPressed(Input::KeyCode::KEY_X))
+		if (g_InputManager->GetKeyPressed(KeyCode::KEY_X))
 		{
 			AudioManager::PauseSource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud));
 		}
@@ -293,9 +315,16 @@ namespace flex
 			}
 		}
 
-		if (!m_ObjectsToRemoveAtEndOfFrame.empty())
+		m_TrackManager.DrawDebug();
+
+		PROFILE_END(profileBlockName);
+	}
+
+	void BaseScene::LateUpdate()
+	{
+		if (!m_ObjectsToDestroyAtEndOfFrame.empty())
 		{
-			for (GameObject* gameObject : m_ObjectsToRemoveAtEndOfFrame)
+			for (GameObject* gameObject : m_ObjectsToDestroyAtEndOfFrame)
 			{
 				auto iter = std::find(m_RootObjects.begin(), m_RootObjects.end(), gameObject);
 				if (iter == m_RootObjects.end())
@@ -307,7 +336,7 @@ namespace flex
 					DestroyGameObject(*iter, true);
 				}
 			}
-			m_ObjectsToRemoveAtEndOfFrame.clear();
+			m_ObjectsToDestroyAtEndOfFrame.clear();
 
 			g_Renderer->RenderObjectStateChanged();
 		}
@@ -316,6 +345,14 @@ namespace flex
 		{
 			for (GameObject* gameObject : m_ObjectsToAddAtEndOfFrame)
 			{
+#if THOROUGH_CHECKS
+				if (std::find(m_RootObjects.begin(), m_RootObjects.end(), gameObject) != m_RootObjects.end())
+				{
+					PrintWarn("Attempted to add root object multiple times!\n");
+					continue;
+				}
+#endif
+
 				m_RootObjects.push_back(gameObject);
 				gameObject->Initialize();
 				gameObject->PostInitialize();
@@ -324,16 +361,13 @@ namespace flex
 
 			g_Renderer->RenderObjectStateChanged();
 		}
-
-		m_TrackManager.DrawDebug();
 	}
 
-	bool BaseScene::DestroyGameObject(GameObject* targetObject,
-									 bool bDeleteChildren)
+	bool BaseScene::DestroyGameObject(GameObject* targetObject, bool bDestroyChildren)
 	{
 		for (GameObject* gameObject : m_RootObjects)
 		{
-			if (DestroyGameObjectRecursive(gameObject, targetObject, bDeleteChildren))
+			if (DestroyGameObjectRecursive(gameObject, targetObject, bDestroyChildren))
 			{
 				UpdateRootObjectSiblingIndices();
 				g_Renderer->RenderObjectStateChanged();
@@ -350,10 +384,15 @@ namespace flex
 
 	bool BaseScene::DestroyGameObjectRecursive(GameObject* currentObject,
 											  GameObject* targetObject,
-											  bool bDeleteChildren)
+											  bool bDestroyChildren)
 	{
 		if (currentObject == targetObject)
 		{
+			for (auto callback : m_OnGameObjectDestroyedCallbacks)
+			{
+				callback->Execute(targetObject);
+			}
+
 			// Target's parent pointer will be cleared upon removing from parent, cache it before that happens
 			GameObject* targetParent = targetObject->m_Parent;
 			if (targetObject->m_Parent)
@@ -370,7 +409,7 @@ namespace flex
 			}
 
 			// Set children's parents
-			if (!bDeleteChildren)
+			if (!bDestroyChildren)
 			{
 				for (GameObject* childObject : targetObject->m_Children)
 				{
@@ -392,7 +431,7 @@ namespace flex
 
 			// If children are still in m_Children array when
 			// targetObject is destroyed they will also be destroyed
-			if (!bDeleteChildren)
+			if (!bDestroyChildren)
 			{
 				targetObject->m_Children.clear();
 			}
@@ -401,7 +440,7 @@ namespace flex
 
 			targetObject->Destroy();
 
-			SafeDelete(targetObject);
+			delete targetObject;
 
 			if (bIsDirectionalLight)
 			{
@@ -413,7 +452,7 @@ namespace flex
 
 		for (GameObject* childObject : currentObject->m_Children)
 		{
-			if (DestroyGameObjectRecursive(childObject, targetObject, bDeleteChildren))
+			if (DestroyGameObjectRecursive(childObject, targetObject, bDestroyChildren))
 			{
 				return true;
 			}
@@ -444,9 +483,12 @@ namespace flex
 		std::string meshesFilePath = RESOURCE_LOCATION  "scenes/meshes.json";
 		if (FileExists(meshesFilePath))
 		{
-			std::string cleanedFilePath = meshesFilePath;
-			StripLeadingDirectories(cleanedFilePath);
-			Print("Parsing meshes file at %s\n", cleanedFilePath.c_str());
+			if (g_bEnableLogging_Loading)
+			{
+				std::string cleanedFilePath = meshesFilePath;
+				StripLeadingDirectories(cleanedFilePath);
+				Print("Parsing meshes file at %s\n", cleanedFilePath.c_str());
+			}
 
 			JSONObject obj;
 			if (JSONParser::Parse(meshesFilePath, obj))
@@ -469,7 +511,10 @@ namespace flex
 			return;
 		}
 
-		Print("Parsed %i meshes\n", s_ParsedMeshes.size());
+		if (g_bEnableLogging_Loading)
+		{
+			Print("Parsed %u meshes\n", s_ParsedMeshes.size());
+		}
 	}
 
 	void BaseScene::ParseFoundMaterialFiles()
@@ -479,9 +524,12 @@ namespace flex
 		std::string materialsFilePath = RESOURCE_LOCATION  "scenes/materials.json";
 		if (FileExists(materialsFilePath))
 		{
-			std::string cleanedFilePath = materialsFilePath;
-			StripLeadingDirectories(cleanedFilePath);
-			Print("Parsing materials file at %s\n", cleanedFilePath.c_str());
+			if (g_bEnableLogging_Loading)
+			{
+				std::string cleanedFilePath = materialsFilePath;
+				StripLeadingDirectories(cleanedFilePath);
+				Print("Parsing materials file at %s\n", cleanedFilePath.c_str());
+			}
 
 			JSONObject obj;
 			if (JSONParser::Parse(materialsFilePath, obj))
@@ -504,7 +552,10 @@ namespace flex
 			return;
 		}
 
-		Print("Parsed %i materials\n", s_ParsedMaterials.size());
+		if (g_bEnableLogging_Loading)
+		{
+			Print("Parsed %u materials\n", s_ParsedMaterials.size());
+		}
 	}
 
 	void BaseScene::ParseFoundPrefabFiles()
@@ -516,9 +567,12 @@ namespace flex
 		{
 			for (const std::string& foundFilePath : foundFiles)
 			{
-				std::string fileName = foundFilePath;
-				StripLeadingDirectories(fileName);
-				Print("Parsing prefab: %s\n", fileName.c_str());
+				if (g_bEnableLogging_Loading)
+				{
+					std::string fileName = foundFilePath;
+					StripLeadingDirectories(fileName);
+					Print("Parsing prefab: %s\n", fileName.c_str());
+				}
 
 				JSONObject obj;
 				if (JSONParser::Parse(foundFilePath, obj))
@@ -538,7 +592,10 @@ namespace flex
 			return;
 		}
 
-		Print("Parsed %i prefabs\n", s_ParsedPrefabs.size());
+		if (g_bEnableLogging_Loading)
+		{
+			Print("Parsed %u prefabs\n", s_ParsedPrefabs.size());
+		}
 	}
 
 	bool BaseScene::SerializeMeshFile()
@@ -670,6 +727,11 @@ namespace flex
 		return &m_TrackManager;
 	}
 
+	CartManager* BaseScene::GetCartManager()
+	{
+		return &m_CartManager;
+	}
+
 	std::string BaseScene::GetUniqueObjectName(const std::string& prefix, i16 digits)
 	{
 		std::string result = prefix;
@@ -690,36 +752,36 @@ namespace flex
 		return result;
 	}
 
-	void BaseScene::RemoveObjectAtEndOfFrame(GameObject* obj)
+	void BaseScene::DestroyObjectAtEndOfFrame(GameObject* obj)
 	{
-#if _DEBUG
-		auto iter = std::find(m_ObjectsToRemoveAtEndOfFrame.begin(), m_ObjectsToRemoveAtEndOfFrame.end(), obj);
-		if (iter != m_ObjectsToRemoveAtEndOfFrame.end())
+#if DEBUG
+		auto iter = std::find(m_ObjectsToDestroyAtEndOfFrame.begin(), m_ObjectsToDestroyAtEndOfFrame.end(), obj);
+		if (iter != m_ObjectsToDestroyAtEndOfFrame.end())
 		{
 			PrintWarn("Attempted to flag object to be removed at end of frame more than once! %s\n", obj->GetName().c_str());
 		}
 #endif
-		m_ObjectsToRemoveAtEndOfFrame.push_back(obj);
+		m_ObjectsToDestroyAtEndOfFrame.push_back(obj);
 	}
 
-	void BaseScene::RemoveObjectsAtEndOfFrame(const std::vector<GameObject*>& objs)
+	void BaseScene::DestroyObjectsAtEndOfFrame(const std::vector<GameObject*>& objs)
 	{
-#if _DEBUG
+#if DEBUG
 		for (auto o : objs)
 		{
-			auto iter = std::find(m_ObjectsToRemoveAtEndOfFrame.begin(), m_ObjectsToRemoveAtEndOfFrame.end(), o);
-			if (iter != m_ObjectsToRemoveAtEndOfFrame.end())
+			auto iter = std::find(m_ObjectsToDestroyAtEndOfFrame.begin(), m_ObjectsToDestroyAtEndOfFrame.end(), o);
+			if (iter != m_ObjectsToDestroyAtEndOfFrame.end())
 			{
 				PrintWarn("Attempted to flag object to be removed at end of frame more than once! %s\n", o->GetName().c_str());
 			}
 		}
 #endif
-		m_ObjectsToRemoveAtEndOfFrame.insert(m_ObjectsToRemoveAtEndOfFrame.end(), objs.begin(), objs.end());
+		m_ObjectsToDestroyAtEndOfFrame.insert(m_ObjectsToDestroyAtEndOfFrame.end(), objs.begin(), objs.end());
 	}
 
 	void BaseScene::AddObjectAtEndOFFrame(GameObject* obj)
 	{
-#if _DEBUG
+#if DEBUG
 		auto iter = std::find(m_ObjectsToAddAtEndOfFrame.begin(), m_ObjectsToAddAtEndOfFrame.end(), obj);
 		if (iter != m_ObjectsToAddAtEndOfFrame.end())
 		{
@@ -731,7 +793,7 @@ namespace flex
 
 	void BaseScene::AddObjectsAtEndOFFrame(const std::vector<GameObject*>& objs)
 	{
-#if _DEBUG
+#if DEBUG
 		for (auto o : objs)
 		{
 			auto iter = std::find(m_ObjectsToAddAtEndOfFrame.begin(), m_ObjectsToAddAtEndOfFrame.end(), o);
@@ -786,17 +848,18 @@ namespace flex
 		g_SceneManager->CurrentScene()->AddRootObject(dirLight);
 		dirLight->SetRot(glm::quat(glm::vec3(130.0f, -65.0f, 120.0f)));
 		dirLight->SetPos(glm::vec3(0.0f, 15.0f, 0.0f));
-		dirLight->brightness = 5.0f;
-		g_Renderer->RegisterDirectionalLight(dirLight);
+		dirLight->data.brightness = 5.0f;
+		dirLight->Initialize();
+		dirLight->PostInitialize();
 	}
 
 	void BaseScene::SerializeToFile(bool bSaveOverDefault /* = false */) const
 	{
-		bool success = false;
+		bool success = true;
 
-		success |= BaseScene::SerializeMeshFile();
-		success |= BaseScene::SerializeMaterialFile();
-		//success |= BaseScene::SerializePrefabFile();
+		success &= BaseScene::SerializeMeshFile();
+		success &= BaseScene::SerializeMaterialFile();
+		//success &= BaseScene::SerializePrefabFile();
 
 		const std::string profileBlockName = "serialize scene to file: " + m_FileName;
 		PROFILE_BEGIN(profileBlockName);
@@ -811,10 +874,7 @@ namespace flex
 		{
 			if (rootObject->IsSerializable())
 			{
-				if (rootObject->IsSerializable())
-				{
-					objectsArray.push_back(rootObject->Serialize(this));
-				}
+				objectsArray.push_back(rootObject->Serialize(this));
 			}
 		}
 		rootSceneObject.fields.emplace_back("objects", JSONValue(objectsArray));
@@ -854,7 +914,7 @@ namespace flex
 
 		std::string savedFilePathName = RESOURCE_STR(shortSavedFileName);
 		savedFilePathName = RelativePathToAbsolute(savedFilePathName);
-		success = WriteFile(savedFilePathName, fileContents, false);
+		success &= WriteFile(savedFilePathName, fileContents, false);
 
 		if (success)
 		{
@@ -865,15 +925,15 @@ namespace flex
 			{
 				//m_bUsingSaveFile = true;
 			}
-
-			PROFILE_END(profileBlockName);
-			Profiler::PrintBlockDuration(profileBlockName);
 		}
 		else
 		{
 			PrintError("Failed to open file for writing at \"%s\", Can't serialize scene\n", savedFilePathName.c_str());
 			AudioManager::PlaySource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud));
 		}
+
+		PROFILE_END(profileBlockName);
+		Profiler::PrintBlockDuration(profileBlockName);
 	}
 
 	void BaseScene::DeleteSaveFiles()
@@ -927,16 +987,16 @@ namespace flex
 		return gameObject;
 	}
 
-	void BaseScene::RemoveRootObject(GameObject* gameObject, bool deleteRootObject)
+	void BaseScene::RemoveRootObject(GameObject* gameObject, bool bDestroy)
 	{
 		auto iter = m_RootObjects.begin();
 		while (iter != m_RootObjects.end())
 		{
 			if (*iter == gameObject)
 			{
-				if (deleteRootObject)
+				if (bDestroy)
 				{
-					SafeDelete(*iter);
+					delete *iter;
 				}
 
 				iter = m_RootObjects.erase(iter);
@@ -953,12 +1013,12 @@ namespace flex
 		PrintWarn("Attempting to remove non-existent child from scene %s\n", m_Name.c_str());
 	}
 
-	void BaseScene::RemoveAllRootObjects(bool deleteRootObjects)
+	void BaseScene::RemoveAllRootObjects(bool bDestroy)
 	{
 		auto iter = m_RootObjects.begin();
 		while (iter != m_RootObjects.end())
 		{
-			if (deleteRootObjects)
+			if (bDestroy)
 			{
 				delete *iter;
 			}
@@ -1060,15 +1120,39 @@ namespace flex
 		return m_RootObjects;
 	}
 
-	void BaseScene::GetInteractibleObjects(std::vector<GameObject*>& interactibleObjects)
+	void BaseScene::GetInteractableObjects(std::vector<GameObject*>& interactableObjects)
 	{
-		for (GameObject* rootObject : m_RootObjects)
+		std::vector<GameObject*> allObjects = GetAllObjects();
+		for (GameObject* object : allObjects)
 		{
-			if (rootObject->m_bInteractable)
+			if (object->m_bInteractable)
 			{
-				interactibleObjects.push_back(rootObject);
+				interactableObjects.push_back(object);
 			}
 		}
+	}
+
+	void BaseScene::BindOnGameObjectDestroyedCallback(ICallbackGameObject* callback)
+	{
+		if (std::find(m_OnGameObjectDestroyedCallbacks.begin(), m_OnGameObjectDestroyedCallbacks.end(), callback) != m_OnGameObjectDestroyedCallbacks.end())
+		{
+			PrintWarn("Attempted to bind on game object destroyed callback multiple times!\n");
+			return;
+		}
+
+		m_OnGameObjectDestroyedCallbacks.push_back(callback);
+	}
+
+	void BaseScene::UnbindOnGameObjectDestroyedCallback(ICallbackGameObject* callback)
+	{
+		auto iter = std::find(m_OnGameObjectDestroyedCallbacks.begin(), m_OnGameObjectDestroyedCallbacks.end(), callback);
+		if (iter == m_OnGameObjectDestroyedCallbacks.end())
+		{
+			PrintWarn("Attempted to unbind game object destroyed callback that isn't present in callback list!\n");
+			return;
+		}
+
+		m_OnGameObjectDestroyedCallbacks.erase(iter);
 	}
 
 	void BaseScene::SetName(const std::string& name)

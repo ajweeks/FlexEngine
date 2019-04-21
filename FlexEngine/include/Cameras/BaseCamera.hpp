@@ -5,13 +5,13 @@ namespace flex
 	class BaseCamera
 	{
 	public:
-		BaseCamera(const std::string& cameraName, real FOV = glm::radians(45.0f), real zNear = 0.1f, real zFar = 10000.0f);
+		BaseCamera(const std::string& cameraName, bool bIsGameplayCam, real FOV = glm::radians(45.0f),
+			real zNear = 0.01f, real zFar = 1000.0f);
 		virtual ~BaseCamera();
 
 		virtual void Initialize();
 		virtual void Update() = 0;
-
-		virtual bool IsDebugCam() const = 0;
+		virtual void Destroy();
 
 		virtual void OnSceneChanged();
 
@@ -62,9 +62,12 @@ namespace flex
 
 		// Exposure control
 		real aperture = 1.0f; // f-stops
-		real shutterSpeed = 1 / 8.0f; // seconds
+		real shutterSpeed = 1.0f / 8.0f; // seconds
 		real lightSensitivity = 800.0f; // ISO
 		real exposure = 0.0f;
+
+		bool bIsGameplayCam;
+		bool bDEBUGCyclable = true;
 
 	protected:
 		// Sets m_Right, m_Up, and m_Forward based on m_Yaw and m_Pitch
@@ -79,10 +82,10 @@ namespace flex
 		// aperture measured in f-stops
 		// shutterSpeed measured in seconds
 		// sensitivity measured in ISO
-		static float CalculateEV100(float aperture, float shutterSpeed, float sensitivity);
+		static real CalculateEV100(real aperture, real shutterSpeed, real sensitivity);
 
 		// Computes the exposure normalization factor from the camera's EV100
-		static float ComputeExposureNormFactor(float EV100);
+		static real ComputeExposureNormFactor(real EV100);
 
 		bool m_bInitialized = false;
 
@@ -92,26 +95,26 @@ namespace flex
 		glm::mat4 m_Proj;
 		glm::mat4 m_ViewProjection;
 
-		real m_FOV = 0;
-		real m_ZNear = 0;
-		real m_ZFar = 0;
+		real m_FOV = 0.0f;
+		real m_ZNear = 0.0f;
+		real m_ZFar = 0.0f;
 
-		real m_MoveSpeed = 0;				// WASD or gamepad left stick
-		real m_PanSpeed = 0;				// MMB
-		real m_DragDollySpeed = 0;			// RMB
-		real m_ScrollDollySpeed = 0;		// Scroll wheel
-		real m_MoveSpeedFastMultiplier = 0;
-		real m_MoveSpeedSlowMultiplier = 0;
-		real m_TurnSpeedFastMultiplier = 0;
-		real m_TurnSpeedSlowMultiplier = 0;
-		real m_OrbitingSpeed = 0;			// Alt-LMB drag
-		real m_MouseRotationSpeed = 0;		// LMB drag
-		real m_GamepadRotationSpeed = 0;	// Gamepad right stick
+		real m_MoveSpeed = 0.0f;				// WASD or gamepad left stick
+		real m_PanSpeed = 0.0f;				// MMB
+		real m_DragDollySpeed = 0.0f;			// RMB
+		real m_ScrollDollySpeed = 0.0f;		// Scroll wheel
+		real m_MoveSpeedFastMultiplier = 0.0f;
+		real m_MoveSpeedSlowMultiplier = 0.0f;
+		real m_TurnSpeedFastMultiplier = 0.0f;
+		real m_TurnSpeedSlowMultiplier = 0.0f;
+		real m_OrbitingSpeed = 0.0f;			// Alt-LMB drag
+		real m_MouseRotationSpeed = 0.0f;		// LMB drag
+		real m_GamepadRotationSpeed = 0.0f;	// Gamepad right stick
 
 		glm::vec3 m_Position;
 
-		real m_Yaw = 0;
-		real m_Pitch = 0;
+		real m_Yaw = 0.0f;
+		real m_Pitch = 0.0f;
 		glm::vec3 m_Forward;
 		glm::vec3 m_Up;
 		glm::vec3 m_Right;

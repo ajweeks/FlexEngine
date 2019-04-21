@@ -1,6 +1,6 @@
 {
 	"version" : 1,
-	"name" : "Scene_shadow_test",
+	"name" : "scene_shadow_test",
 	"objects" : 
 	[
 		{
@@ -22,8 +22,7 @@
 			"transform" : 
 			{
 				"pos" : "0.000, 15.600, 0.000"
-			},
-			"material" : "pbr chrome"
+			}
 		},
 		{
 			"name" : "ground plane",
@@ -60,6 +59,81 @@
 				"scale" : "1.000, 5.360, 5.350"
 			},
 			"mesh" : "cube",
+			"material" : "sphere 02",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500, 0.500, 0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 0.000000,
+				"kinematic" : true,
+				"static" : true,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "Wall 02",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "14.513, 2.794, 1.351",
+				"scale" : "1.000, 5.360, 5.350"
+			},
+			"mesh" : "cube",
+			"material" : "sphere 01",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500, 0.500, 0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 0.000000,
+				"kinematic" : true,
+				"static" : true,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "Wall 03",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "11.452, 2.794, 3.254",
+				"scale" : "1.000, 5.360, 5.350"
+			},
+			"mesh" : "cube",
+			"material" : "pbr red",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500, 0.500, 0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 0.000000,
+				"kinematic" : true,
+				"static" : true,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "Wall 04",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "8.442, 2.794, 6.157",
+				"scale" : "1.000, 5.360, 5.350"
+			},
+			"mesh" : "cube",
 			"material" : "pbr white",
 			"collider" : 
 			{
@@ -82,8 +156,8 @@
 			"transform" : 
 			{
 				"pos" : "3.330, 4.569, 1.150",
-				"rot" : "0.000, 1.570, 0.000",
-				"scale" : "1.000, 5.150, 1.000"
+				"rot" : "-3.141, 1.271, -3.141",
+				"scale" : "1.000, 1.370, 1.000"
 			},
 			"mesh" : "cylinder",
 			"material" : "pbr white",
@@ -114,16 +188,16 @@
 			"material" : "pbr white"
 		},
 		{
-			"name" : "New_Game_Object_00",
+			"name" : "tablet",
 			"type" : "object",
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-0.500, 4.400, -12.000",
+				"pos" : "0.107, 3.500, -12.000",
 				"scale" : "1.500, 1.500, 1.500"
 			},
-			"mesh" : "sphere",
-			"material" : "pbr white"
+			"mesh" : "cone",
+			"material" : "pbr red"
 		},
 		{
 			"name" : "New_Game_Object_01",
@@ -131,7 +205,7 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "2.800, 4.100, -7.300",
+				"pos" : "10.200, 4.100, -7.300",
 				"scale" : "1.500, 1.500, 1.500"
 			},
 			"mesh" : "sphere",
@@ -179,7 +253,7 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-0.500, 4.400, 18.570",
+				"pos" : "-0.500, 7.863, 13.291",
 				"scale" : "1.500, 1.500, 1.500"
 			},
 			"mesh" : "sphere",
@@ -203,96 +277,149 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "0.529, -0.400, -0.951"
+				"pos" : "-1.947, 10.965, 0.112",
+				"rot" : "-0.859, 0.587, 0.374"
 			},
 			"directional light info" : 
 			{
-				"rotation" : "0.529, -0.400, -0.951",
-				"pos" : "0.000, 15.000, 0.000",
+				"rotation" : "-0.859, 0.587, 0.374",
+				"pos" : "-1.947, 10.965, 0.112",
 				"color" : "1.00, 1.00, 1.00",
 				"enabled" : true,
-				"brightness" : 5.000000,
+				"brightness" : 6.719000,
 				"cast shadows" : true,
-				"shadow darkness" : 0.760000,
-				"shadow map near" : -80.000000,
-				"shadow map far" : 100.000000,
-				"shadow map zoom" : 30.000000
+				"shadow darkness" : 1.000000,
+				"shadow map near" : -45.000000,
+				"shadow map far" : 45.000000,
+				"shadow map zoom" : 66.000000
 			}
 		},
 		{
-			"name" : "Wall 02",
-			"type" : "object",
+			"name" : "PointLight_00",
+			"type" : "point light",
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "14.513, 2.794, 1.351",
-				"scale" : "1.000, 5.360, 5.350"
+				"pos" : "-6.100, 8.000, -11.900"
 			},
-			"mesh" : "cube",
-			"material" : "pbr white",
-			"collider" : 
+			"point light info" : 
 			{
-				"shape" : "box",
-				"half extents" : "0.500, 0.500, 0.500"
-			},
-			"rigid body" : 
-			{
-				"mass" : 0.000000,
-				"kinematic" : true,
-				"static" : true,
-				"mask" : -1,
-				"group" : -1
+				"pos" : "-6.100, 8.000, -11.900",
+				"color" : "0.98, 0.27, 0.73",
+				"enabled" : true,
+				"brightness" : 312.500000
 			}
 		},
 		{
-			"name" : "Wall 03",
-			"type" : "object",
+			"name" : "PointLight_01",
+			"type" : "point light",
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "11.452, 2.794, 3.254",
-				"scale" : "1.000, 5.360, 5.350"
+				"pos" : "-7.900, 3.393, 4.800"
 			},
-			"mesh" : "cube",
-			"material" : "pbr white",
-			"collider" : 
+			"point light info" : 
 			{
-				"shape" : "box",
-				"half extents" : "0.500, 0.500, 0.500"
-			},
-			"rigid body" : 
-			{
-				"mass" : 0.000000,
-				"kinematic" : true,
-				"static" : true,
-				"mask" : -1,
-				"group" : -1
+				"pos" : "-7.900, 3.393, 4.800",
+				"color" : "1.00, 1.00, 1.00",
+				"enabled" : true,
+				"brightness" : 552.083008
 			}
 		},
 		{
-			"name" : "Wall 04",
-			"type" : "object",
+			"name" : "PointLight_02",
+			"type" : "point light",
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "8.442, 2.794, 6.157",
-				"scale" : "1.000, 5.360, 5.350"
+				"pos" : "-9.400, 8.100, 26.600"
 			},
-			"mesh" : "cube",
-			"material" : "pbr white",
-			"collider" : 
+			"point light info" : 
 			{
-				"shape" : "box",
-				"half extents" : "0.500, 0.500, 0.500"
+				"pos" : "-9.400, 8.100, 26.600",
+				"color" : "0.93, 0.64, 0.29",
+				"enabled" : true,
+				"brightness" : 1000.000000
+			}
+		},
+		{
+			"name" : "PointLight_03",
+			"type" : "point light",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "23.200, 11.800, 17.500"
 			},
-			"rigid body" : 
+			"point light info" : 
 			{
-				"mass" : 0.000000,
-				"kinematic" : true,
-				"static" : true,
-				"mask" : -1,
-				"group" : -1
+				"pos" : "23.200, 11.800, 17.500",
+				"color" : "0.55, 0.77, 1.00",
+				"enabled" : true,
+				"brightness" : 473.958008
+			}
+		},
+		{
+			"name" : "PointLight_04",
+			"type" : "point light",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "-23.100, 3.700, -13.200"
+			},
+			"point light info" : 
+			{
+				"pos" : "-23.100, 3.700, -13.200",
+				"color" : "0.16, 0.48, 0.49",
+				"enabled" : true,
+				"brightness" : 796.875000
+			}
+		},
+		{
+			"name" : "PointLight_05",
+			"type" : "point light",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "-17.000, 11.800, 3.300"
+			},
+			"point light info" : 
+			{
+				"pos" : "-17.000, 11.800, 3.300",
+				"color" : "0.77, 0.90, 0.61",
+				"enabled" : true,
+				"brightness" : 411.458008
+			}
+		},
+		{
+			"name" : "PointLight_06",
+			"type" : "point light",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "11.100, 1.700, -19.600"
+			},
+			"point light info" : 
+			{
+				"pos" : "11.100, 1.700, -19.600",
+				"color" : "0.46, 0.93, 0.88",
+				"enabled" : true,
+				"brightness" : 145.832993
+			}
+		},
+		{
+			"name" : "PointLight_07",
+			"type" : "point light",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.200, 3.800, 11.300"
+			},
+			"point light info" : 
+			{
+				"pos" : "0.200, 3.800, 11.300",
+				"color" : "0.96, 0.53, 1.00",
+				"enabled" : true,
+				"brightness" : 114.583000
 			}
 		}
 	]

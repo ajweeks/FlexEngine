@@ -2,10 +2,10 @@
 
 #include "Cameras/FirstPersonCamera.hpp"
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/vec2.hpp>
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #include "Helpers.hpp"
 #include "Player.hpp"
@@ -16,8 +16,8 @@
 
 namespace flex
 {
-	FirstPersonCamera::FirstPersonCamera(real FOV, real zNear, real zFar) :
-		BaseCamera("first-person",FOV, zNear, zFar)
+	FirstPersonCamera::FirstPersonCamera(real FOV) :
+		BaseCamera("first-person", true, FOV)
 	{
 		ResetOrientation();
 		RecalculateViewProjection();
@@ -29,18 +29,23 @@ namespace flex
 
 	void FirstPersonCamera::Initialize()
 	{
-		if (m_Player == nullptr)
+		if (m_bInitialized)
 		{
-			FindPlayer();
-		}
+			if (m_Player == nullptr)
+			{
+				FindPlayer();
+			}
 
-		if (!m_bInitialized)
-		{
+			if (!m_bInitialized)
+			{
+				m_bInitialized = true;
+
+				BaseCamera::Initialize();
+
+				Update();
+			}
+
 			m_bInitialized = true;
-
-			BaseCamera::Initialize();
-
-			Update();
 		}
 	}
 
@@ -50,6 +55,11 @@ namespace flex
 
 		FindPlayer();
 		Update();
+
+		if (m_Player)
+		{
+			m_Player->UpdateIsPossessed();
+		}
 	}
 
 	void FirstPersonCamera::Update()
@@ -60,8 +70,6 @@ namespace flex
 		}
 
 		Transform* playerTransform = m_Player->GetTransform();
-
-		glm::vec3 targetSpot = playerTransform->GetWorldPosition();
 
 		m_Forward = m_Player->GetLookDirection();
 		m_Right = playerTransform->GetRight();
@@ -81,12 +89,7 @@ namespace flex
 
 	void FirstPersonCamera::FindPlayer()
 	{
-		m_Player = (Player*)(g_SceneManager->CurrentScene()->FirstObjectWithTag("Player0"));
-	}
-
-	bool FirstPersonCamera::IsDebugCam() const
-	{
-		return false;
+		m_Player = static_cast<Player*>(g_SceneManager->CurrentScene()->FirstObjectWithTag("Player0"));
 	}
 
 } // namespace flex

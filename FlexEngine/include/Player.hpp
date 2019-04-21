@@ -2,7 +2,7 @@
 
 #include "Scene/GameObject.hpp"
 
-#include "Helpers.hpp" // For TrackState
+#include "Types.hpp" // For TrackState
 #include "Track/BezierCurve.hpp"
 #include "Track/BezierCurveList.hpp"
 
@@ -12,16 +12,18 @@ namespace flex
 
 	// The player is instructed by its player controller how to move by means of its
 	// transform component being updated, and it applies those changes to its rigid body itself
-	class Player : public GameObject
+	__declspec(align(16)) class Player : public GameObject
 	{
 	public:
 		Player(i32 index, const glm::vec3& initialPos = VEC3_ZERO);
-		~Player();
 
 		virtual void Initialize() override;
 		virtual void PostInitialize() override;
 		virtual void Update() override;
 		virtual void Destroy() override;
+		virtual void DrawImGuiObjects() override;
+		virtual bool AllowInteractionWith(GameObject* gameObject) override;
+		virtual void SetInteractingWith(GameObject* gameObject) override;
 
 		void SetPitch(real pitch);
 		void AddToPitch(real deltaPitch);
@@ -35,7 +37,6 @@ namespace flex
 
 		real GetDistAlongTrack() const;
 
-		void DrawImGuiObjects();
 		void UpdateIsPossessed();
 
 		void ClampPitch();
@@ -50,6 +51,12 @@ namespace flex
 
 		void AddToInventory(GameObject* obj);
 
+		bool IsRidingTrack();
+
+		// TODO: Figure out why this class requires alignment to appease warning C4316
+		void* operator new(size_t i);
+		void operator delete(void* p);
+
 		PlayerController* m_Controller = nullptr;
 		i32 m_Index = 0;
 
@@ -59,7 +66,7 @@ namespace flex
 		deg m_TabletOrbitAngleUp = 13.3f;
 		deg m_TabletOrbitAngleDown = -45.0f;
 		real m_TabletOrbitAngle = m_TabletOrbitAngleUp;
-		bool m_bTabletUp = true;
+		bool m_bTabletUp = false;
 
 		real m_MoveFriction = 12.0f;
 		real m_Height = 4.0f;
@@ -76,7 +83,6 @@ namespace flex
 		bool m_bEditingTrack = false;
 		glm::vec3 m_TrackPlacementReticlePos; // Local offset
 
-
 		bool m_bGrounded = false;
 		bool m_bPossessed = false;
 
@@ -91,7 +97,7 @@ namespace flex
 
 		std::vector<GameObject*> m_Inventory;
 
-		const real m_TurnToFaceDownTrackInvSpeed = 30.0f;
+		const real m_TurnToFaceDownTrackInvSpeed = 25.0f;
 		const real m_FlipTrackDirInvSpeed = 45.0f;
 
 	private:

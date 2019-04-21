@@ -1,6 +1,9 @@
 #pragma once
 
 #include <vector>
+#include <stack>
+
+#include "Callbacks/InputCallbacks.hpp"
 
 namespace flex
 {
@@ -10,50 +13,47 @@ namespace flex
 	{
 	public:
 		CameraManager();
-		~CameraManager();
 
 		void Initialize();
+		void Destroy();
 		void Update();
 
 		void OnSceneChanged();
 
-		void DestroyCameras();
-
 		BaseCamera* CurrentCamera() const;
-		i32 CameraCount() const;
 
 		void AddCamera(BaseCamera* camera, bool bSwitchTo = false);
 
-		/*
-		 * Sets active camera index to camera's index, if found, otherwise does nothing
-		 * Optionally aligns position, rotation, and FOV to current camera
-		 */
-		void SwtichTo(BaseCamera* camera, bool bAlign = true);
+		// Clears stack and pushes the given camera onto it, then returns a pointer to it
+		BaseCamera* SetCamera(BaseCamera* camera, bool bAlignWithPrevious);
+		BaseCamera* CycleCamera(i32 deltaIndex, bool bAlignWithPrevious = true);
+		BaseCamera* SetCameraByName(const std::string& name, bool bAlignWithPrevious);
 
-		/*
-		* Sets active camera index to index (if index is in valid range)
-		* Optionally aligns position, rotation, and FOV to current camera
-		*/
-		void SwtichToIndex(i32 index, bool bAlign = true);
+		BaseCamera* PushCamera(BaseCamera* camera, bool bAlignWithPrevious);
+		BaseCamera* PushCameraByName(const std::string& name, bool bAlignWithPrevious);
+		void PopCamera();
 
-		/*
-		 * Adds delta to active camera index (can be negative)
-		 * Optionally aligns position, rotation, and FOV to current camera
-		 */
-		void SetActiveIndexRelative(i32 delta, bool bAlign = true);
-
-		void SetActiveCameraByType(const std::string& typeStr);
+		BaseCamera* GetCameraByName(const std::string& name);
 
 		void DrawImGuiObjects();
 
 	private:
+		EventReply OnActionEvent(Action action);
+		ActionCallback<CameraManager> m_ActionCallback;
+
 		i32 GetCameraIndex(BaseCamera* camera);
 
-		/* Copies position, rotation, and FOV of "from" to "to" (unchecked!) */
+		/* Copies position, rotation, and FOV of "from" to "to" */
 		void AlignCameras(BaseCamera* from, BaseCamera* to);
 
+		// TODO: Roll custom stack class
+		// Stack containing temporary cameras, the topmost of which is the current camera
+		// Always contains at least one element
+		std::stack<BaseCamera*> m_CameraStack;
+		// All cameras, unordered
 		std::vector<BaseCamera*> m_Cameras;
-		i32 m_ActiveCameraIndex = -1;
+
+		bool m_bInitialized = false;
 
 	};
 } // namespace flex

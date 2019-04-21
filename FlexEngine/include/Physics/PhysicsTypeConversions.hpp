@@ -1,6 +1,6 @@
 #pragma once
 
-#pragma warning(push, 0)
+IGNORE_WARNINGS_PUSH
 #include <glm/gtc/quaternion.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
@@ -8,9 +8,12 @@
 #include <LinearMath/btQuaternion.h>
 #include <LinearMath/btTransform.h>
 #include <LinearMath/btVector3.h>
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
-#include "Transform.hpp"
+namespace flex
+{
+	class Transform;
+}
 
 btVector3 ToBtVec3(const glm::vec3& rhs);
 btVector4 ToBtVec4(const glm::vec4& rhs);

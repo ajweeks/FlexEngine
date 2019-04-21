@@ -1,7 +1,5 @@
 #pragma once
 
-#include <string>
-
 namespace flex
 {
 	class Time
@@ -21,14 +19,6 @@ namespace flex
 		static ns CurrentNanoseconds();
 
 		static real ConvertFormats(real value, Format from, Format to);
-
-		static std::string SecondsToString(sec seconds, i32 precision = 1);
-		static std::string MicrosecondsToString(us microseconds, i32 precision = 1);
-		static std::string MillisecondsToString(ms milliseconds, i32 precision = 1);
-		static std::string NanosecondsToString(ns nanoseconds, i32 precision = 1);
-
-	private:
-		Time();
 
 	};
 } // namespace flex

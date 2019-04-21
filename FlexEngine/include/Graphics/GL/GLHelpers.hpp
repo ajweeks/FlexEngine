@@ -1,20 +1,34 @@
 #pragma once
 #if COMPILE_OPEN_GL
 
-#include <array>
 #include <thread>
 #include <future>
 
-#pragma warning(push, 0)
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
-#pragma warning(pop)
-
 #include "Graphics/RendererTypes.hpp"
 #include "Helpers.hpp"
+#include "Types.hpp"
+
+typedef unsigned int GLenum;
+typedef unsigned char GLboolean;
+typedef unsigned int GLbitfield;
+typedef signed char GLbyte;
+typedef short GLshort;
+typedef int GLint;
+typedef int GLsizei;
+typedef unsigned char GLubyte;
+typedef unsigned short GLushort;
+typedef unsigned int GLuint;
+typedef float GLfloat;
+typedef float GLclampf;
+typedef double GLdouble;
+typedef double GLclampd;
+typedef void GLvoid;
 
 namespace flex
 {
+	class GameObject;
+	class VertexBufferData;
+
 	namespace gl
 	{
 #define InvalidID u32_max
@@ -71,8 +85,9 @@ namespace flex
 				i32 transformMat;
 				i32 texSize;
 				i32 castShadows;
-				i32 shadowOpacity;
-				i32 textureScale;
+				i32 shadowDarkness;
+				//i32 textureScale;
+				i32 time;
 			};
 			UniformIDs uniformIDs;
 
@@ -107,31 +122,32 @@ namespace flex
 			u32 VBO = InvalidID;
 			u32 IBO = InvalidID;
 
-			GLenum topology = GL_TRIANGLES;
-			GLenum cullFace = GL_BACK;
-			GLboolean enableCulling = GL_TRUE;
+			GLenum topology = 0x0004; // GL_TRIANGLES;
+			GLenum cullFace = 0x0405; // GL_BACK;
 
 			// TODO: Remove these in place of DrawCallInfo members
-			GLenum depthTestReadFunc = GL_LEQUAL;
-			GLboolean depthWriteEnable = GL_TRUE;
+			GLenum depthTestReadFunc = 0x0206; // GL_GEQUAL;
+			GLboolean bDepthWriteEnable = 1;
 
 			u32 vertexBuffer = 0;
 			VertexBufferData* vertexBufferData = nullptr;
 
-			bool indexed = false;
 			u32 indexBuffer = 0;
 			std::vector<u32>* indices = nullptr;
 
+			MaterialID materialID = InvalidMaterialID;
+
 			// If true this object will be drawn after post processing
 			// and not drawn in shipping builds
-			bool editorObject = false;
-
-			MaterialID materialID = InvalidMaterialID;
+			bool bEditorObject = false;
+			bool bIndexed = false;
 		};
+
+		typedef std::list<GLRenderObject*> GLRenderObjectBatch;
 
 		struct UniformInfo
 		{
-			Uniform uniform;
+			u64 uniform;
 			const char* name;
 			i32* id;
 		};
@@ -149,13 +165,13 @@ namespace flex
 
 		struct ImageInfo
 		{
-			i32 width;
-			i32 height;
-			i32 channelCount;
+			u32 width;
+			u32 height;
+			u32 channelCount;
 		};
 
-		bool GenerateGLTexture_Empty(u32& textureID, const glm::vec2i& dimensions, bool generateMipMaps, GLenum internalFormat, GLenum format, GLenum type);
-		bool GenerateGLTexture_EmptyWithParams(u32& textureID, const glm::vec2i& dimensions, bool generateMipMaps, GLenum internalFormat, GLenum format, GLenum type, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter);
+		bool GenerateGLTexture_Empty(u32& textureID, const glm::vec2u& dimensions, bool generateMipMaps, GLenum internalFormat, GLenum format, GLenum type);
+		bool GenerateGLTexture_EmptyWithParams(u32& textureID, const glm::vec2u& dimensions, bool generateMipMaps, GLenum internalFormat, GLenum format, GLenum type, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter);
 		bool GenerateGLTexture(u32& textureID, const std::string& filePath, i32 requestedChannelCount, bool flipVertically, bool generateMipMaps, ImageInfo* infoOut = nullptr);
 		bool GenerateGLTextureWithParams(u32& textureID, const std::string& filePath, i32 requestedChannelCount, bool flipVertically, bool generateMipMaps, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter, ImageInfo* infoOut = nullptr);
 		bool GenerateHDRGLTexture(u32& textureID, const std::string& filePath, i32 requestedChannelCount, bool flipVertically, bool generateMipMaps, ImageInfo* infoOut = nullptr);
@@ -169,6 +185,7 @@ namespace flex
 			std::vector<GLCubemapGBuffer>* textureGBufferIDs = nullptr;
 			glm::vec2 textureSize = { 0, 0 };
 			std::array<std::string, 6> filePaths; // Leave empty to generate an "empty" cubemap (no pixel data)
+
 			bool generateMipmaps = false;
 			bool enableTrilinearFiltering = false;
 			bool HDR = false;
@@ -182,27 +199,29 @@ namespace flex
 			TextureParameters(bool bGenMipMaps = false, bool bDepthTex = false);
 
 			//Parameters
-			i32 minFilter = GL_LINEAR;
-			i32 magFilter = GL_LINEAR;
-			i32 wrapS = GL_REPEAT;
-			i32 wrapT = GL_REPEAT;
-			i32 wrapR = GL_REPEAT;
+			i32 minFilter = 0x2601; //GL_LINEAR;
+			i32 magFilter = 0x2601; //GL_LINEAR;
+			i32 wrapS = 0x2901; //GL_REPEAT;
+			i32 wrapT = 0x2901; //GL_REPEAT;
+			i32 wrapR = 0x2901; //GL_REPEAT;
 			glm::vec4 borderColor;
 
 			bool bGenMipMaps = false;
 			bool bDepthTex = false;
 
-			i32 compareMode = GL_COMPARE_REF_TO_TEXTURE;
+			i32 compareMode = 0x884E; // GL_COMPARE_REF_TO_TEXTURE;
 		};
+
+		struct AsynchronousTextureSave;
 
 		struct GLTexture
 		{
 			GLTexture();
-			GLTexture(const std::string& name, i32 width, i32 height, i32 channelCount, i32 internalFormat, GLenum format, GLenum type);
-			GLTexture(const std::string& relativeFilePath, i32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR);
+			GLTexture(const std::string& name, u32 width, u32 height, u32 channelCount, i32 internalFormat, GLenum format, GLenum type);
+			GLTexture(const std::string& relativeFilePath, u32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR);
 			~GLTexture();
 
-			bool GenerateEmpty();
+			bool CreateEmpty();
 			bool LoadFromFile();
 
 			void Reload();
@@ -211,17 +230,18 @@ namespace flex
 			void Destroy();
 			void SetParameters(TextureParameters params);
 
-			glm::vec2i GetResolution();
+			glm::vec2u GetResolution();
 
 			// Returns true if regenerated
 			// If this is a framebuffer texture, upscaling won't work properly
 			// unless it is reattached to the framebuffer object
-			bool Resize(glm::vec2i newSize);
+			bool Resize(const glm::vec2u& newSize);
 
 			std::string GetRelativeFilePath() const;
 			std::string GetName() const;
 
-			bool SaveToFile(const std::string& absoluteFilePath, ImageFormat format, bool bFlipVertically);
+			bool SaveToFile(const std::string& absoluteFilePath, ImageFormat inFormat, bool bFlipVertically);
+			bool SaveToFileAsync(const std::string& absoluteFilePath, ImageFormat inFormat, bool bFlipVertically);
 			// TODO: Add AsyncSave member func
 
 		private:
@@ -229,33 +249,35 @@ namespace flex
 			std::string name; // absFilePath but without the leading directories, or a custom name if not loaded from file
 
 		public:
-
 			GLuint handle = 0;
 
-			i32 width = 0;
-			i32 height = 0;
+			u32 width = 0;
+			u32 height = 0;
+			u32 channelCount = 0;
+
+			i32 internalFormat = 0x1907; // GL_RGB;
+			GLenum format = 0x1907; // GL_RGB;
+			GLenum type = 0x1406; // GL_FLOAT;
+
+			TextureParameters m_Parameters;
+
+			AsynchronousTextureSave* asyncSave = nullptr;
 
 			bool bHasMipMaps = false;
 			bool bFlipVerticallyOnLoad = false;
 			bool bHDR = false;
-			i32 channelCount = 0;
-
 			bool bLoaded = false;
-
-			i32 internalFormat = GL_RGB;
-			GLenum format = GL_RGB;
-			GLenum type = GL_FLOAT;
-
-			TextureParameters m_Parameters;
 		};
 
 		struct AsynchronousTextureSave
 		{
-			AsynchronousTextureSave(const std::string& absoluteFilePath, ImageFormat format, i32 width, i32 height, i32 channelCount, bool bFlipVertically, u8* srcData, i32 numBytes);
+			AsynchronousTextureSave(const std::string& absoluteFilePath, ImageFormat format, i32 width, i32 height, i32 channelCount,
+				bool bFlipVertically, u8* srcData, i32 numBytes, void* userData, void(*callback)(void*));
 			~AsynchronousTextureSave();
 
 			// Returns true once task is complete
 			bool TickStatus();
+			void WaitToComplete();
 
 			std::thread taskThread;
 			std::promise<bool> taskPromise;
@@ -265,16 +287,21 @@ namespace flex
 			GLuint textureID = 0;
 			u8* data = nullptr;
 
-			bool bSuccess = false;
-			bool bComplete = false;
-
 			sec totalSecWaiting = 0.0f;
 			sec secBetweenStatusChecks = 0.05f;
 			sec secSinceStatusCheck = 0.0f;
+
+			void* userData = nullptr;
+			void(*callback)(void*) = nullptr;
+
+			bool bSuccess = false;
+			bool bComplete = false;
 		};
 
-		void StartAsyncTextureSaveToFile(const std::string& absoluteFilePath, ImageFormat format, GLuint handle, i32 width, i32 height, i32 channelCount, bool bFlipVertically, AsynchronousTextureSave** asyncTextureSave);
-		bool SaveTextureToFile(const std::string& absoluteFilePath, ImageFormat format, GLuint handle, i32 width, i32 height, i32 channelCount, bool bFlipVertically);
+		void StartAsyncTextureSaveToFile(const std::string& absoluteFilePath, ImageFormat format, GLuint handle, i32 width, i32 height,
+			i32 channelCount, bool bFlipVertically, AsynchronousTextureSave** asyncTextureSave, void* userData = nullptr, void(*callback)(void*) = nullptr);
+		bool SaveTextureToFile(const std::string& absoluteFilePath, ImageFormat format, GLuint handle, i32 width, i32 height, i32 channelCount,
+			bool bFlipVertically);
 
 		bool LoadGLShaders(u32 program, GLShader& shader);
 		bool LinkProgram(u32 program);

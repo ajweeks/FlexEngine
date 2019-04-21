@@ -6,57 +6,66 @@
 
 namespace flex
 {
-	static const char* DataTypeStrs[(i32)DataType::NONE + 1] = {
-		"bool",
-		"byte",
-		"unsigned byte",
-		"short",
-		"unsigned short",
-		"int",
-		"unsigned int",
-		"float",
-		"double",
-		"float vector 2",
-		"float vector 3",
-		"float vector 4",
-		"float matrix 3",
-		"float matrix 4",
-		"int vector 2",
-		"int vector 3",
-		"int vector 4",
-		"sampler 1D",
-		"sampler 2D",
-		"sampler 3D",
-		"sampler cube",
-		"sampler 1D shadow",
-		"sampler 2D shadow",
-		"sampler cube shadow",
-		"NONE",
-	};
-
-	const char* DataTypeToString(DataType dataType)
+	bool Uniforms::HasUniform(u64 uniform) const
 	{
-		if ((i32)dataType >= 0 && (i32)dataType <= (i32)DataType::NONE)
+		return (uniforms & uniform) != 0;
+	}
+
+	void Uniforms::AddUniform(u64 uniform)
+	{
+		uniforms = (uniforms | uniform);
+	}
+
+	u32 Uniforms::CalculateSizeInBytes() const
+	{
+		u32 size = 0;
+
 		{
-			return DataTypeStrs[(i32)dataType];
+#define _u(uniform) if (HasUniform(U_##uniform)) size += US_##uniform;
+			_u(MODEL)
+			_u(MODEL_INV_TRANSPOSE)
+			_u(VIEW)
+			_u(VIEW_INV)
+			_u(VIEW_PROJECTION)
+			_u(MODEL_VIEW_PROJ)
+			_u(PROJECTION)
+			_u(BLEND_SHARPNESS)
+			_u(COLOR_MULTIPLIER)
+			_u(CAM_POS)
+			_u(DIR_LIGHT)
+			_u(POINT_LIGHTS)
+			_u(CONST_ALBEDO)
+			_u(CONST_METALLIC)
+			_u(CONST_ROUGHNESS)
+			_u(CONST_AO)
+			_u(ENABLE_CUBEMAP_SAMPLER)
+			_u(ENABLE_ALBEDO_SAMPLER)
+			_u(ENABLE_METALLIC_SAMPLER)
+			_u(ENABLE_ROUGHNESS_SAMPLER)
+			_u(ENABLE_AO_SAMPLER)
+			_u(ENABLE_NORMAL_SAMPLER)
+			_u(ENABLE_IRRADIANCE_SAMPLER)
+			_u(TEXEL_STEP)
+			_u(SHOW_EDGES)
+			_u(LIGHT_VIEW_PROJ)
+			_u(EXPOSURE)
+			_u(TRANSFORM_MAT)
+			_u(TEX_SIZE)
+			_u(TEXTURE_SCALE)
+			_u(TIME)
+			_u(SDF_DATA)
+			_u(TEX_CHANNEL)
+			_u(FONT_CHAR_DATA)
+#undef _u
 		}
-		return nullptr;
-	}
 
-	bool Uniforms::HasUniform(Uniform uniform) const
-	{
-		return ((u64)uniforms & (u64)uniform) != 0;
-	}
-
-	void Uniforms::AddUniform(Uniform uniform)
-	{
-		uniforms = (Uniform)((u64)uniforms | (u64)uniform);
+		return size;
 	}
 
 	Shader::Shader(const std::string& name,
 				   const std::string& vertexShaderFilePath,
 				   const std::string& fragmentShaderFilePath,
-				   const std::string& geometryShaderFilePath) :
+				   const std::string& geometryShaderFilePath /* = "" */) :
 		name(name),
 		vertexShaderFilePath(vertexShaderFilePath),
 		fragmentShaderFilePath(fragmentShaderFilePath),
@@ -113,7 +122,6 @@ namespace flex
 				generateReflectionProbeMaps == other.generateReflectionProbeMaps &&
 				colorMultiplier == other.colorMultiplier &&
 				textureScale == other.textureScale
-				//pushConstantBlock.mvp == other.pushConstantBlock.mvp &&
 				);
 
 		return equal;

@@ -1,12 +1,18 @@
 #include "stdafx.hpp"
 
+#if COMPILE_OPEN_GL
+#include "Graphics/GL/GLHelpers.hpp"
+#elif COMPILE_VULKAN
+#include "Graphics/Vulkan/VulkanHelpers.hpp"
+#endif
+
 #include "Graphics/BitmapFont.hpp"
 
 namespace flex
 {
 	BitmapFont::BitmapFont(i16 size, const std::string& name, i32 charCount) :
 		m_FontSize(size),
-		m_Name(name),
+		name(name),
 		m_CharacterCount(charCount)
 	{
 		assert(size > 0);
@@ -21,10 +27,11 @@ namespace flex
 
 	BitmapFont::~BitmapFont()
 	{
-		if (m_Texture)
+		if (m_Texture != nullptr)
 		{
 			m_Texture->Destroy();
-			SafeDelete(m_Texture);
+			delete m_Texture;
+			m_Texture = nullptr;
 		}
 	}
 
@@ -58,7 +65,7 @@ namespace flex
 		return kerningVec;
 	}
 
-	i16 BitmapFont::GetFontSize() const
+	i16 BitmapFont::GetSize() const
 	{
 		return m_FontSize;
 	}
@@ -68,18 +75,57 @@ namespace flex
 		return m_bUseKerning;
 	}
 
-	void BitmapFont::SetTextureSize(const glm::vec2i& texSize)
+	void BitmapFont::SetUseKerning(bool bUseKerning)
 	{
-		m_TextureWidth = texSize.x;
-		m_TextureHeight = texSize.y;
-
-		if (m_Texture)
-		{
-			m_Texture->width = m_TextureWidth;
-			m_Texture->height = m_TextureHeight;
-		}
+		m_bUseKerning = bUseKerning;
 	}
 
+	const std::vector<flex::TextCache>& BitmapFont::GetTextCaches() const
+	{
+		return m_TextCaches;
+	}
+
+	void BitmapFont::AddTextCache(TextCache& newCache)
+	{
+		m_TextCaches.emplace_back(newCache);
+	}
+
+	void BitmapFont::ClearTexture()
+	{
+		m_Texture = nullptr;
+	}
+
+	void BitmapFont::SetBufferSize(i32 size)
+	{
+		m_BufferSize = size;
+	}
+
+	i32 BitmapFont::GetBufferStart() const
+	{
+		return m_BufferStart;
+	}
+
+	flex::i32 BitmapFont::GetCharCount() const
+	{
+		return m_CharacterCount;
+	}
+
+	glm::vec2u BitmapFont::GetTextureSize() const
+	{
+		return glm::vec2u(m_Texture->width, m_Texture->height);
+	}
+
+	void BitmapFont::SetBufferStart(i32 start)
+	{
+		m_BufferStart = start;
+	}
+
+	i32 BitmapFont::GetBufferSize() const
+	{
+		return m_BufferSize;
+	}
+
+#if COMPILE_OPEN_GL
 	gl::GLTexture* BitmapFont::SetTexture(gl::GLTexture* newTex)
 	{
 		m_Texture = newTex;
@@ -89,6 +135,23 @@ namespace flex
 	gl::GLTexture* BitmapFont::GetTexture()
 	{
 		return m_Texture;
+	}
+#elif COMPILE_VULKAN
+	vk::VulkanTexture* BitmapFont::SetTexture(vk::VulkanTexture* newTex)
+	{
+		m_Texture = newTex;
+		return newTex;
+	}
+
+	vk::VulkanTexture* BitmapFont::GetTexture()
+	{
+		return m_Texture;
+	}
+#endif
+
+	void BitmapFont::ClearCaches()
+	{
+		m_TextCaches.clear();
 	}
 
 } // namespace flex

@@ -13,7 +13,7 @@ namespace flex
 		Transform();
 		Transform(const glm::vec3& position, const glm::quat& rotation, const glm::vec3& scale);
 		Transform(const glm::vec3& position, const glm::quat& rotation);
-		Transform(const glm::vec3& position);
+		explicit Transform(const glm::vec3& position);
 
 		Transform(const Transform& other);
 		Transform(const Transform&& other);

@@ -32,4 +32,13 @@
     <DisplayString Condition="type == flex::JSONValue::Type::UNINITIALIZED">uninitialized</DisplayString>
   </Type>
 
+  <Type Name="flex::Value">
+    <!--<DisplayString>{val.intRaw}</DisplayString>-->
+    <DisplayString Condition="type == flex::ValueType::OPERATION">{val.operation}</DisplayString>
+    <DisplayString Condition="type == flex::ValueType::INT_RAW">{val.intRaw}</DisplayString>
+    <DisplayString Condition="type == flex::ValueType::FLOAT_RAW">{val.floatRaw}</DisplayString>
+    <DisplayString Condition="type == flex::ValueType::BOOL_RAW">{val.boolRaw}</DisplayString>
+    <DisplayString Condition="type == flex::ValueType::IDENTIFIER">{val.identifierValue}</DisplayString>
+  </Type>
+
 </AutoVisualizer>
