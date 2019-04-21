@@ -106,7 +106,16 @@ namespace flex
 
 			virtual void RenderObjectStateChanged() override;
 
+		protected:
+			virtual bool LoadFont(BitmapFont** font,
+								  i16 size,
+								  const std::string& fontFilePath,
+								  const std::string& renderedFontFilePath,
+								  bool bForceRender,
+								  bool bScreenSpace) override;
+
 		private:
+
 			struct TextureHandle
 			{
 				u32 id;
@@ -151,15 +160,6 @@ namespace flex
 			void DrawWorldSpaceSprites();
 			void DrawTextSS();
 			void DrawTextWS();
-
-			// Will attempt to find pre-rendered font at specified path, and
-			// only render a new file if not present or if bForceRender is true
-			bool LoadFont(BitmapFont** font,
-						  i16 size,
-						  const std::string& fontFilePath,
-						  const std::string& renderedFontFilePath,
-						  bool bForceRender,
-						  bool bScreenSpace);
 
 			void DrawRenderObjectBatch(const GLRenderObjectBatch& batchedRenderObjects, const DrawCallInfo& drawCallInfo);
 

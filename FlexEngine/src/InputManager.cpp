@@ -766,8 +766,8 @@ namespace flex
 		m_ScrollYOffset = (real)yOffset;
 
 		ImGuiIO& io = ImGui::GetIO();
-		io.MouseWheelH += m_ScrollXOffset;
-		io.MouseWheel += m_ScrollYOffset;
+		io.MouseWheelH += m_ScrollXOffset * 0.5f;
+		io.MouseWheel += m_ScrollYOffset * 0.5f;
 	}
 
 	void InputManager::KeyCallback(KeyCode keyCode, KeyAction action, i32 mods)

@@ -1188,6 +1188,8 @@ namespace flex
 				ImGui::MenuItem("Asset Browser", NULL, &m_bAssetBrowserShowing);
 				ImGui::MenuItem("Demo Window", NULL, &m_bDemoWindowShowing);
 				ImGui::MenuItem("Key Mapper", NULL, &m_bInputMapperShowing);
+				ImGui::MenuItem("Uniform Buffers", NULL, &g_Renderer->bUniformBufferWindowShowing);
+				ImGui::MenuItem("Font Editor", NULL, &g_Renderer->bFontWindowShowing);
 
 				ImGui::EndMenu();
 			}
@@ -1205,21 +1207,21 @@ namespace flex
 
 		bool bIsMainWindowCollapsed = true;
 
-		static const std::string titleString = (std::string("Flex Engine v") + EngineVersionString());
-		static const char* titleCharStr = titleString.c_str();
-		ImGuiWindowFlags mainWindowFlags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoNavInputs;
 		glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 		m_ImGuiMainWindowWidthMax = frameBufferSize.x - 100.0f;
-		ImGui::SetNextWindowSizeConstraints(ImVec2(350, 300),
-			ImVec2((real)frameBufferSize.x, (real)frameBufferSize.y),
-			windowSizeCallbackLambda, this);
-		real menuHeight = 20.0f;
-		ImGui::SetNextWindowPos(ImVec2(0.0f, menuHeight), ImGuiCond_Once);
-		real frameBufferHeight = (real)frameBufferSize.y;
-		ImGui::SetNextWindowSize(ImVec2(m_ImGuiMainWindowWidth, frameBufferHeight - menuHeight),
-			ImGuiCond_Always);
 		if (m_bMainWindowShowing)
 		{
+			static const std::string titleString = (std::string("Flex Engine v") + EngineVersionString());
+			static const char* titleCharStr = titleString.c_str();
+			ImGuiWindowFlags mainWindowFlags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoNavInputs;
+			ImGui::SetNextWindowSizeConstraints(ImVec2(350, 300),
+				ImVec2((real)frameBufferSize.x, (real)frameBufferSize.y),
+				windowSizeCallbackLambda, this);
+			real menuHeight = 20.0f;
+			ImGui::SetNextWindowPos(ImVec2(0.0f, menuHeight), ImGuiCond_Once);
+			real frameBufferHeight = (real)frameBufferSize.y;
+			ImGui::SetNextWindowSize(ImVec2(m_ImGuiMainWindowWidth, frameBufferHeight - menuHeight),
+				ImGuiCond_Always);
 			if (ImGui::Begin(titleCharStr, &m_bMainWindowShowing, mainWindowFlags))
 			{
 				bIsMainWindowCollapsed = ImGui::IsWindowCollapsed();
@@ -1285,13 +1287,9 @@ namespace flex
 				}
 
 				g_Renderer->DrawImGuiSettings();
-
 				g_Window->DrawImGuiObjects();
-
 				g_CameraManager->DrawImGuiObjects();
-
 				g_SceneManager->DrawImGuiObjects();
-
 				AudioManager::DrawImGuiObjects();
 
 				if (ImGui::RadioButton("Translate", GetTransformState() == TransformState::TRANSLATE))
@@ -1310,7 +1308,6 @@ namespace flex
 				}
 
 				g_Renderer->DrawImGuiRenderObjects();
-				g_Renderer->DrawImGuiMisc();
 
 				ImGui::Spacing();
 				ImGui::Spacing();
@@ -1343,6 +1340,8 @@ namespace flex
 			}
 			ImGui::End();
 		}
+
+		g_Renderer->DrawImGuiMisc();
 
 		if (m_bAssetBrowserShowing)
 		{

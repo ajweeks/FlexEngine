@@ -73,6 +73,10 @@ namespace flex
 		void SetBufferStart(i32 start);
 		i32 GetBufferStart() const;
 
+		i32 GetCharCount() const;
+
+		glm::vec2u GetTextureSize() const;
+
 		// TODO: Investigate crash when this value is higher (256)
 		static const i32 CHAR_COUNT = 200;
 
@@ -84,10 +88,8 @@ namespace flex
 
 		i16 m_FontSize = 0;
 		i32 m_CharacterCount = 0;
-		i32 m_CharacterSpacing = 1;
+		//i32 m_CharacterSpacing = 1;
 		bool m_bUseKerning = false;
-		i32 m_TextureWidth = 0;
-		i32 m_TextureHeight = 0;
 		i32 m_BufferStart = 0;
 		i32 m_BufferSize = 0;
 #if COMPILE_OPEN_GL

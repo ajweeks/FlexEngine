@@ -111,6 +111,14 @@ namespace flex
 			virtual u32 GetTextureHandle(TextureID textureID) const override;
 			virtual void RenderObjectStateChanged() override;
 
+		protected:
+			virtual bool LoadFont(BitmapFont** font,
+								  i16 size,
+								  const std::string& fontFilePath,
+								  const std::string& renderedFontFilePath,
+								  bool bForceRender,
+								  bool bScreenSpace) override;
+
 		private:
 			friend VulkanPhysicsDebugDraw;
 
@@ -261,15 +269,6 @@ namespace flex
 			VulkanRenderObject* GetRenderObject(RenderID renderID);
 
 			u32 GetActiveRenderObjectCount() const;
-
-			// Will attempt to find pre-rendered font at specified path, and
-			// only render a new file if not present or if bForceRender is true
-			bool LoadFont(BitmapFont** font,
-				i16 size,
-				const std::string& fontFilePath,
-				const std::string& renderedFontFilePath,
-				bool bForceRender,
-				bool bScreenSpace);
 
 			u32 GetAlignedUBOSize(u32 unalignedSize);
 

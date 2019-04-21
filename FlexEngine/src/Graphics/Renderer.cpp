@@ -434,6 +434,90 @@ namespace flex
 
 	void Renderer::DrawImGuiMisc()
 	{
+		if (bFontWindowShowing)
+		{
+			if (ImGui::Begin("Fonts", &bFontWindowShowing))
+			{
+				for (auto iter = m_Fonts.begin(); iter != m_Fonts.end(); ++iter)
+				{
+					FontMetaData& fontMeta = iter->second;
+					BitmapFont* font = fontMeta.bitmapFont;
+
+					ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollWithMouse;
+					if (ImGui::BeginChild(fontMeta.renderedTextureFilePath.c_str(), ImVec2(0, 165), true, flags))
+					{
+						ImGui::Text("%s", iter->first.c_str());
+						ImGui::Text("%s", font->name.c_str());
+
+						ImGui::Columns(2);
+
+						ImGui::Text("Size: %i", font->GetSize());
+						ImGui::Text("%s space", fontMeta.bScreenSpace ? "Screen" : "World");
+						glm::vec2u texSize(font->GetTextureSize());
+						ImGui::Text("Resolution: %ux%u", texSize.x, texSize.y);
+						ImGui::Text("Char count: %i", font->GetCharCount());
+						ImGui::Text("Byte count: %i", font->GetBufferSize());
+						ImGui::Text("Use kerning: %s", font->UseKerning() ? "true" : "false");
+						ImGui::Text("Num text caches: %u", font->GetTextCaches().size());
+						// TODO: Add support to ImGui vulkan renderer for images
+						//VulkanTexture* tex = font->GetTexture();
+						//ImVec2 texSize((real)tex->width, (real)tex->height);
+						//ImVec2 uv0(0.0f, 0.0f);
+						//ImVec2 uv1(1.0f, 1.0f);
+						//ImGui::Image((void*)&tex->image, texSize, uv0, uv1);
+						ImGui::NextColumn();
+						if (ImGui::Button("Re-bake"))
+						{
+							if (fontMeta.bScreenSpace)
+							{
+								auto vecIterSS = std::find(m_FontsSS.begin(), m_FontsSS.end(), fontMeta.bitmapFont);
+								assert(vecIterSS != m_FontsSS.end());
+
+								m_FontsSS.erase(vecIterSS);
+							}
+							else
+							{
+								auto vecIterWS = std::find(m_FontsWS.begin(), m_FontsWS.end(), fontMeta.bitmapFont);
+								assert(vecIterWS != m_FontsWS.end());
+
+								m_FontsWS.erase(vecIterWS);
+							}
+
+							delete fontMeta.bitmapFont;
+							fontMeta.bitmapFont = nullptr;
+							font = nullptr;
+
+							LoadFont(&fontMeta.bitmapFont,
+								fontMeta.size,
+								fontMeta.filePath,
+								fontMeta.renderedTextureFilePath,
+								true,
+								fontMeta.bScreenSpace);
+
+						}
+						if (ImGui::Button("View SDF"))
+						{
+							std::string absDir = RelativePathToAbsolute(fontMeta.renderedTextureFilePath);
+							OpenExplorer(absDir);
+						}
+						if (ImGui::Button("Open in explorer"))
+						{
+							std::string absDir = RelativePathToAbsolute(fontMeta.renderedTextureFilePath);
+							ExtractDirectoryString(absDir);
+							OpenExplorer(absDir);
+						}
+						ImGui::EndColumns();
+					}
+					ImGui::EndChild();
+				}
+
+				if (ImGui::Button("Re-bake all"))
+				{
+					LoadFonts(true);
+				}
+			}
+			ImGui::End();
+		}
 	}
 
 	void Renderer::DrawImGuiRenderObjects()
@@ -1318,6 +1402,8 @@ namespace flex
 		i16 size, bool bScreenSpace, std::map<i32, FontMetric*>* outCharacters,
 	std::array<glm::vec2i, 4>* outMaxPositions, FT_Face* outFace)
 	{
+		assert(*font == nullptr);
+
 		// TODO: Save in common place
 		u32 sampleDensity = 32;
 

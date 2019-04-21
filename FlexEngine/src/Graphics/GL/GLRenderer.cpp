@@ -3168,7 +3168,6 @@ namespace flex
 				glm::vec2i textureSize(
 					std::max(std::max(maxPos[0].x, maxPos[1].x), std::max(maxPos[2].x, maxPos[3].x)),
 					std::max(std::max(maxPos[0].y, maxPos[1].y), std::max(maxPos[2].y, maxPos[3].y)));
-				newFont->SetTextureSize(textureSize);
 
 				TextureParameters params(false);
 				params.wrapS = GL_CLAMP_TO_EDGE;

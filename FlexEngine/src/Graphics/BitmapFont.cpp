@@ -80,18 +80,6 @@ namespace flex
 		m_bUseKerning = bUseKerning;
 	}
 
-	void BitmapFont::SetTextureSize(const glm::vec2i& texSize)
-	{
-		m_TextureWidth = texSize.x;
-		m_TextureHeight = texSize.y;
-
-		if (m_Texture)
-		{
-			m_Texture->width = m_TextureWidth;
-			m_Texture->height = m_TextureHeight;
-		}
-	}
-
 	const std::vector<flex::TextCache>& BitmapFont::GetTextCaches() const
 	{
 		return m_TextCaches;
@@ -115,6 +103,16 @@ namespace flex
 	i32 BitmapFont::GetBufferStart() const
 	{
 		return m_BufferStart;
+	}
+
+	flex::i32 BitmapFont::GetCharCount() const
+	{
+		return m_CharacterCount;
+	}
+
+	glm::vec2u BitmapFont::GetTextureSize() const
+	{
+		return glm::vec2u(m_Texture->width, m_Texture->height);
 	}
 
 	void BitmapFont::SetBufferStart(i32 start)

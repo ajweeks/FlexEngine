@@ -200,7 +200,21 @@ namespace flex
 
 		PostProcessSettings& GetPostProcessSettings();
 
+		bool bFontWindowShowing = false;
+		bool bUniformBufferWindowShowing = false;
+
 	protected:
+
+		// Will attempt to find pre-rendered font at specified path, and
+		// only render a new file if not present or if bForceRender is true
+		// Returns true if succeeded
+		virtual bool LoadFont(BitmapFont** font,
+							  i16 size,
+							  const std::string& fontFilePath,
+							  const std::string& renderedFontFilePath,
+							  bool bForceRender,
+							  bool bScreenSpace) = 0;
+
 		// If the object gets deleted this frame *gameObjectRef gets set to nullptr
 		void DoCreateGameObjectButton(const char* buttonName, const char* popupName);
 
