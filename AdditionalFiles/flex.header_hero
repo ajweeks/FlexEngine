@@ -1,0 +1,4634 @@
+
+Files = {
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\glad\\src\\glad.c" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 4444
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+			"stdio.h"
+			"stdlib.h"
+			"string.h"
+			"glad/glad.h"
+			"winapifamily.h"
+			"dlfcn.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\example_allegro5\\main.cpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 135
+		LocalIncludes = [
+			"imgui.h"
+			"imgui_impl_allegro5.h"
+		]
+		SystemIncludes = [
+			"stdint.h"
+			"allegro5/allegro.h"
+			"allegro5/allegro_primitives.h"
+			"imgui.h"
+			"imgui_impl_allegro5.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\example_freeglut_opengl2\\main.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_freeglut.h"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_opengl2.h"
+		]
+		Lines = 135
+		LocalIncludes = [
+			"imgui.h"
+			"../imgui_impl_freeglut.h"
+			"../imgui_impl_opengl2.h"
+		]
+		SystemIncludes = [
+			"GL/freeglut.h"
+			"imgui.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\example_glfw_opengl2\\main.cpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 151
+		LocalIncludes = [
+			"imgui.h"
+			"imgui_impl_glfw.h"
+			"imgui_impl_opengl2.h"
+		]
+		SystemIncludes = [
+			"stdio.h"
+			"GLFW/glfw3.h"
+			"imgui.h"
+			"imgui_impl_glfw.h"
+			"imgui_impl_opengl2.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\example_glfw_opengl3\\main.cpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 195
+		LocalIncludes = [
+			"imgui.h"
+			"imgui_impl_glfw.h"
+			"imgui_impl_opengl3.h"
+		]
+		SystemIncludes = [
+			"stdio.h"
+			"GL/gl3w.h"
+			"GL/glew.h"
+			"glad/glad.h"
+			"GLFW/glfw3.h"
+			"imgui.h"
+			"imgui_impl_glfw.h"
+			"imgui_impl_opengl3.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\example_glfw_vulkan\\main.cpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 510
+		LocalIncludes = [
+			"imgui.h"
+			"imgui_impl_glfw.h"
+			"imgui_impl_vulkan.h"
+		]
+		SystemIncludes = [
+			"stdio.h"
+			"stdlib.h"
+			"GLFW/glfw3.h"
+			"vulkan/vulkan.h"
+			"imgui.h"
+			"imgui_impl_glfw.h"
+			"imgui_impl_vulkan.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\example_marmalade\\main.cpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 122
+		LocalIncludes = [
+			"imgui.h"
+			"imgui_impl_marmalade.h"
+		]
+		SystemIncludes = [
+			"stdio.h"
+			"s3eKeyboard.h"
+			"s3ePointer.h"
+			"IwGx.h"
+			"imgui.h"
+			"imgui_impl_marmalade.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\example_null\\main.cpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 35
+		LocalIncludes = [
+			"imgui.h"
+		]
+		SystemIncludes = [
+			"stdio.h"
+			"imgui.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\example_sdl_opengl2\\main.cpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 152
+		LocalIncludes = [
+			"imgui.h"
+			"imgui_impl_sdl.h"
+			"imgui_impl_opengl2.h"
+		]
+		SystemIncludes = [
+			"stdio.h"
+			"SDL.h"
+			"SDL_opengl.h"
+			"imgui.h"
+			"imgui_impl_sdl.h"
+			"imgui_impl_opengl2.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\example_sdl_opengl3\\main.cpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 201
+		LocalIncludes = [
+			"imgui.h"
+			"imgui_impl_sdl.h"
+			"imgui_impl_opengl3.h"
+		]
+		SystemIncludes = [
+			"stdio.h"
+			"SDL.h"
+			"GL/gl3w.h"
+			"GL/glew.h"
+			"glad/glad.h"
+			"imgui.h"
+			"imgui_impl_sdl.h"
+			"imgui_impl_opengl3.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\example_sdl_vulkan\\main.cpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 501
+		LocalIncludes = [
+			"imgui.h"
+			"imgui_impl_sdl.h"
+			"imgui_impl_vulkan.h"
+		]
+		SystemIncludes = [
+			"stdio.h"
+			"stdlib.h"
+			"SDL.h"
+			"SDL_vulkan.h"
+			"vulkan/vulkan.h"
+			"imgui.h"
+			"imgui_impl_sdl.h"
+			"imgui_impl_vulkan.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\example_win32_directx10\\main.cpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 238
+		LocalIncludes = [
+			"imgui.h"
+			"imgui_impl_win32.h"
+			"imgui_impl_dx10.h"
+		]
+		SystemIncludes = [
+			"d3d10_1.h"
+			"d3d10.h"
+			"dinput.h"
+			"tchar.h"
+			"imgui.h"
+			"imgui_impl_win32.h"
+			"imgui_impl_dx10.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\example_win32_directx11\\main.cpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 260
+		LocalIncludes = [
+			"imgui.h"
+			"imgui_impl_win32.h"
+			"imgui_impl_dx11.h"
+		]
+		SystemIncludes = [
+			"d3d11.h"
+			"dinput.h"
+			"tchar.h"
+			"imgui.h"
+			"imgui_impl_win32.h"
+			"imgui_impl_dx11.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\example_win32_directx12\\main.cpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 440
+		LocalIncludes = [
+			"imgui.h"
+			"imgui_impl_win32.h"
+			"imgui_impl_dx12.h"
+		]
+		SystemIncludes = [
+			"d3d12.h"
+			"dxgi1_4.h"
+			"tchar.h"
+			"imgui.h"
+			"imgui_impl_win32.h"
+			"imgui_impl_dx12.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\example_win32_directx9\\main.cpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 209
+		LocalIncludes = [
+			"imgui.h"
+			"imgui_impl_dx9.h"
+			"imgui_impl_win32.h"
+		]
+		SystemIncludes = [
+			"d3d9.h"
+			"dinput.h"
+			"tchar.h"
+			"imgui.h"
+			"imgui_impl_dx9.h"
+			"imgui_impl_win32.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_allegro5.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_allegro5.h"
+		]
+		Lines = 388
+		LocalIncludes = [
+			"imgui.h"
+			"imgui_impl_allegro5.h"
+		]
+		SystemIncludes = [
+			"stdint.h"
+			"cstring"
+			"allegro5/allegro.h"
+			"allegro5/allegro_primitives.h"
+			"allegro5/allegro_windows.h"
+			"imgui.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_allegro5.h" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 29
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_dx10.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_dx10.h"
+		]
+		Lines = 625
+		LocalIncludes = [
+			"imgui.h"
+			"imgui_impl_dx10.h"
+		]
+		SystemIncludes = [
+			"stdio.h"
+			"d3d10_1.h"
+			"d3d10.h"
+			"d3dcompiler.h"
+			"imgui.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_dx10.h" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 21
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_dx11.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_dx11.h"
+		]
+		Lines = 634
+		LocalIncludes = [
+			"imgui.h"
+			"imgui_impl_dx11.h"
+		]
+		SystemIncludes = [
+			"stdio.h"
+			"d3d11.h"
+			"d3dcompiler.h"
+			"imgui.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_dx11.h" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 22
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_dx12.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_dx12.h"
+		]
+		Lines = 771
+		LocalIncludes = [
+			"imgui.h"
+			"imgui_impl_dx12.h"
+		]
+		SystemIncludes = [
+			"d3d12.h"
+			"dxgi1_4.h"
+			"d3dcompiler.h"
+			"imgui.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_dx12.h" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 31
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_dx9.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_dx9.h"
+		]
+		Lines = 274
+		LocalIncludes = [
+			"imgui.h"
+			"imgui_impl_dx9.h"
+		]
+		SystemIncludes = [
+			"d3d9.h"
+			"dinput.h"
+			"imgui.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_dx9.h" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 20
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_freeglut.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_freeglut.h"
+		]
+		Lines = 188
+		LocalIncludes = [
+			"imgui.h"
+			"imgui_impl_freeglut.h"
+		]
+		SystemIncludes = [
+			"GL/freeglut.h"
+			"imgui.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_freeglut.h" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 27
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_glfw.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_glfw.h"
+		]
+		Lines = 672
+		LocalIncludes = [
+			"imgui.h"
+			"imgui_impl_glfw.h"
+		]
+		SystemIncludes = [
+			"GLFW/glfw3.h"
+			"GLFW/glfw3native.h"
+			"imm.h"
+			"imgui.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_glfw.h" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 33
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_marmalade.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_marmalade.h"
+		]
+		Lines = 308
+		LocalIncludes = [
+			"imgui.h"
+			"imgui_impl_marmalade.h"
+		]
+		SystemIncludes = [
+			"s3eClipboard.h"
+			"s3ePointer.h"
+			"s3eKeyboard.h"
+			"IwTexture.h"
+			"IwGx.h"
+			"imgui.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_marmalade.h" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 24
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_opengl2.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_opengl2.h"
+		]
+		Lines = 252
+		LocalIncludes = [
+			"imgui.h"
+			"imgui_impl_opengl2.h"
+		]
+		SystemIncludes = [
+			"stddef.h"
+			"stdint.h"
+			"OpenGL/gl.h"
+			"GL/gl.h"
+			"imgui.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_opengl2.h" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 29
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_opengl3.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_opengl3.h"
+		]
+		Lines = 580
+		LocalIncludes = [
+			"imgui.h"
+			"imgui_impl_opengl3.h"
+			"TargetConditionals.h"
+		]
+		SystemIncludes = [
+			"stdio.h"
+			"stddef.h"
+			"stdint.h"
+			"GLES3/gl3.h"
+			"GL/gl3w.h"
+			"GL/glew.h"
+			"glad/glad.h"
+			"imgui.h"
+			"TargetConditionals.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_opengl3.h" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 40
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_sdl.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_sdl.h"
+		]
+		Lines = 573
+		LocalIncludes = [
+			"imgui.h"
+			"imgui_impl_sdl.h"
+		]
+		SystemIncludes = [
+			"SDL.h"
+			"SDL_syswm.h"
+			"SDL_vulkan.h"
+			"imgui.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_sdl.h" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 25
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_vulkan.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_vulkan.h"
+		]
+		Lines = 1260
+		LocalIncludes = [
+			"imgui.h"
+			"imgui_impl_vulkan.h"
+		]
+		SystemIncludes = [
+			"stdio.h"
+			"stdlib.h"
+			"imgui.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_vulkan.h" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 104
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+			"vulkan/vulkan.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_win32.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_win32.h"
+		]
+		Lines = 701
+		LocalIncludes = [
+			"imgui.h"
+			"imgui_impl_win32.h"
+		]
+		SystemIncludes = [
+			"windows.h"
+			"tchar.h"
+			"imm.h"
+			"imgui.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\imgui_impl_win32.h" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 27
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\libs\\gl3w\\gl\\gl3w.c" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 1344
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+			"GL/gl3w.h"
+			"windows.h"
+			"Carbon/Carbon.h"
+			"dlfcn.h"
+			"GL/glx.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\libs\\usynergy\\usynergy.c" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\libs\\usynergy\\usynergy.h"
+		]
+		Lines = 636
+		LocalIncludes = [
+			"uSynergy.h"
+		]
+		SystemIncludes = [
+			"stdio.h"
+			"string.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\examples\\libs\\usynergy\\usynergy.h" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 420
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+			"stdint.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\imconfig.h" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 83
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+			"glm/vec2.hpp"
+			"glm/vec3.hpp"
+			"glm/vec4.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\imgui.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\imgui.h"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\imgui_internal.h"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\minwindows.hpp"
+		]
+		Lines = 13224
+		LocalIncludes = [
+			"stdafx.hpp"
+			"imgui.h"
+			"imgui_internal.h"
+			"MinWindows.hpp"
+			"imgui_user.inl"
+		]
+		SystemIncludes = [
+			"stb_image.h"
+			"ctype.h"
+			"stdio.h"
+			"stddef.h"
+			"stdint.h"
+			"stdafx.hpp"
+			"MinWindows.hpp"
+			"imgui_user.inl"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\imgui.h" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\imconfig.h"
+		]
+		Lines = 2193
+		LocalIncludes = [
+			"imconfig.h"
+			"imgui_user.h"
+		]
+		SystemIncludes = [
+			"float.h"
+			"stdarg.h"
+			"stddef.h"
+			"string.h"
+			"assert.h"
+			"stdint.h"
+			"imgui_user.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\imgui_demo.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\imgui.h"
+		]
+		Lines = 4116
+		LocalIncludes = [
+			"imgui.h"
+		]
+		SystemIncludes = [
+			"ctype.h"
+			"limits.h"
+			"math.h"
+			"stdio.h"
+			"stdlib.h"
+			"stddef.h"
+			"stdint.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\imgui_draw.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\imgui.h"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\imgui_internal.h"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\imstb_rectpack.h"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\imstb_truetype.h"
+		]
+		Lines = 3229
+		LocalIncludes = [
+			"imgui.h"
+			"imgui_internal.h"
+			"imstb_rectpack.h"
+			"imstb_truetype.h"
+		]
+		SystemIncludes = [
+			"stdio.h"
+			"alloca.h"
+			"malloc.h"
+			"stdlib.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\imgui_internal.h" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\imstb_textedit.h"
+		]
+		Lines = 1604
+		LocalIncludes = [
+			"imstb_textedit.h"
+		]
+		SystemIncludes = [
+			"stdio.h"
+			"stdlib.h"
+			"math.h"
+			"limits.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\imgui_widgets.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\imgui.h"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\imgui_internal.h"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\imstb_textedit.h"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+		]
+		Lines = 6665
+		LocalIncludes = [
+			"stdafx.hpp"
+			"imgui.h"
+			"imgui_internal.h"
+			"imstb_textedit.h"
+		]
+		SystemIncludes = [
+			"ctype.h"
+			"stddef.h"
+			"stdint.h"
+			"stdafx.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\imstb_rectpack.h" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 623
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+			"stdlib.h"
+			"assert.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\imstb_textedit.h" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 1409
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+			"string.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\imstb_truetype.h" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 4854
+		LocalIncludes = [
+			"stb_truetype.h"
+			"stb_truetype.h"
+		]
+		SystemIncludes = [
+			"stdio.h"
+			"math.h"
+			"math.h"
+			"math.h"
+			"math.h"
+			"math.h"
+			"stdlib.h"
+			"assert.h"
+			"string.h"
+			"string.h"
+			"stb_truetype.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\misc\\fonts\\binary_to_compressed_c.cpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 380
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+			"stdio.h"
+			"string.h"
+			"stdlib.h"
+			"assert.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\misc\\freetype\\imgui_freetype.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\misc\\freetype\\imgui_freetype.h"
+		]
+		Lines = 388
+		LocalIncludes = [
+			"imgui_freetype.h"
+			"imgui_internal.h"
+			"imstb_rectpack.h"
+		]
+		SystemIncludes = [
+			"stdint.h"
+			"ft2build.h"
+			"imgui_internal.h"
+			"imstb_rectpack.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\misc\\freetype\\imgui_freetype.h" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 31
+		LocalIncludes = [
+			"imgui.h"
+		]
+		SystemIncludes = [
+			"imgui.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\misc\\stl\\imgui_stl.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\misc\\stl\\imgui_stl.h"
+		]
+		Lines = 61
+		LocalIncludes = [
+			"imgui.h"
+			"imgui_stl.h"
+		]
+		SystemIncludes = [
+			"imgui.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\imgui\\misc\\stl\\imgui_stl.h" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 22
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+			"string"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\renderdoc\\api\\app\\renderdoc_app.h" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 661
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+			"stdint.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\deprecated\\stb_image.c" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 4678
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+			"stdio.h"
+			"math.h"
+			"string.h"
+			"stdio.h"
+			"stdlib.h"
+			"memory.h"
+			"assert.h"
+			"stdarg.h"
+			"stddef.h"
+			"stdint.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\stb.h" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\stb.h"
+		]
+		Lines = 14405
+		LocalIncludes = [
+			"stb.h"
+		]
+		SystemIncludes = [
+			"stdarg.h"
+			"intrin.h"
+			"stdlib.h"
+			"stdio.h"
+			"string.h"
+			"time.h"
+			"fcntl.h"
+			"assert.h"
+			"stdarg.h"
+			"stddef.h"
+			"ctype.h"
+			"math.h"
+			"unistd.h"
+			"io.h"
+			"direct.h"
+			"sys/types.h"
+			"sys/stat.h"
+			"assert.h"
+			"stdlib.h"
+			"string.h"
+			"malloc.h"
+			"io.h"
+			"unistd.h"
+			"dirent.h"
+			"process.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\stb_c_lexer.h" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 962
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+			"stdlib.h"
+			"stdio.h"
+			"stdlib.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\stb_vorbis.c" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 5462
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+			"stdio.h"
+			"stdio.h"
+			"stdlib.h"
+			"string.h"
+			"assert.h"
+			"math.h"
+			"malloc.h"
+			"alloca.h"
+			"limits.h"
+			"crtdbg.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\c_lexer_test.c" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\stb_c_lexer.h"
+		]
+		Lines = 50
+		LocalIncludes = [
+			"../stb_c_lexer.h"
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\caveview\\cave_main.c" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\caveview\\stb_gl.h"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\caveview\\stb_glprog.h"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\caveview\\caveview.h"
+		]
+		Lines = 598
+		LocalIncludes = [
+			"stb.h"
+			"stb_gl.h"
+			"sdl.h"
+			"SDL_opengl.h"
+			"stb_glprog.h"
+			"stb_image.h"
+			"stb_easy_font.h"
+			"caveview.h"
+		]
+		SystemIncludes = [
+			"assert.h"
+			"windows.h"
+			"stb.h"
+			"sdl.h"
+			"SDL_opengl.h"
+			"stb_image.h"
+			"stb_easy_font.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\caveview\\cave_mesher.c" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\caveview\\stb_gl.h"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\caveview\\stb_glprog.h"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\caveview\\caveview.h"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\caveview\\cave_parse.h"
+		]
+		Lines = 933
+		LocalIncludes = [
+			"stb_gl.h"
+			"stb_image.h"
+			"stb_glprog.h"
+			"caveview.h"
+			"cave_parse.h"
+			"stb.h"
+			"sdl.h"
+			"sdl_thread.h"
+			"stb_voxel_render.h"
+		]
+		SystemIncludes = [
+			"math.h"
+			"stb_image.h"
+			"stb.h"
+			"sdl.h"
+			"sdl_thread.h"
+			"stb_voxel_render.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\caveview\\cave_parse.c" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\caveview\\cave_parse.h"
+		]
+		Lines = 632
+		LocalIncludes = [
+			"cave_parse.h"
+			"stb_image.h"
+			"stb.h"
+		]
+		SystemIncludes = [
+			"assert.h"
+			"stdio.h"
+			"limits.h"
+			"stdlib.h"
+			"stb_image.h"
+			"stb.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\caveview\\cave_parse.h" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 41
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\caveview\\cave_render.c" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\caveview\\stb_gl.h"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\caveview\\stb_glprog.h"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\caveview\\caveview.h"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\caveview\\cave_parse.h"
+		]
+		Lines = 951
+		LocalIncludes = [
+			"stb_voxel_render.h"
+			"stb_gl.h"
+			"stb_image.h"
+			"stb_glprog.h"
+			"caveview.h"
+			"cave_parse.h"
+			"stb.h"
+			"sdl.h"
+			"sdl_thread.h"
+		]
+		SystemIncludes = [
+			"math.h"
+			"assert.h"
+			"stb_voxel_render.h"
+			"stb_image.h"
+			"stb.h"
+			"sdl.h"
+			"sdl_thread.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\caveview\\caveview.h" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\caveview\\cave_parse.h"
+		]
+		Lines = 50
+		LocalIncludes = [
+			"stb.h"
+			"stb_voxel_render.h"
+			"cave_parse.h"
+		]
+		SystemIncludes = [
+			"stb.h"
+			"stb_voxel_render.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\caveview\\glext.h" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 11124
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+			"windows.h"
+			"stddef.h"
+			"inttypes.h"
+			"inttypes.h"
+			"inttypes.h"
+			"stdint.h"
+			"stdint.h"
+			"inttypes.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\caveview\\main.c" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 0
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\caveview\\stb_gl.h" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\caveview\\glext.h"
+		]
+		Lines = 1103
+		LocalIncludes = [
+			"glext.h"
+		]
+		SystemIncludes = [
+			"stddef.h"
+			"gl/gl.h"
+			"gl/glu.h"
+			"math.h"
+			"stdlib.h"
+			"assert.h"
+			"memory.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\caveview\\stb_glprog.h" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\caveview\\glext.h"
+		]
+		Lines = 504
+		LocalIncludes = [
+			"glext.h"
+		]
+		SystemIncludes = [
+			"string.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\caveview\\win32\\sdl_windows_main.c" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 224
+		LocalIncludes = [
+			"SDL_config.h"
+			"SDL.h"
+			"SDL_main.h"
+		]
+		SystemIncludes = [
+			"windows.h"
+			"stdio.h"
+			"stdlib.h"
+			"SDL_config.h"
+			"SDL.h"
+			"SDL_main.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\grid_reachability.c" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 363
+		LocalIncludes = [
+			"stb_connected_components.h"
+			"stb.h"
+			"stb_image.h"
+			"stb_image_write.h"
+		]
+		SystemIncludes = [
+			"windows.h"
+			"stdio.h"
+			"direct.h"
+			"stb_connected_components.h"
+			"stb.h"
+			"stb_image.h"
+			"stb_image_write.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\herringbone_generator.c" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 87
+		LocalIncludes = [
+			"stb_herringbone_wang_tile.h"
+			"stb_image_write.h"
+		]
+		SystemIncludes = [
+			"stb_herringbone_wang_tile.h"
+			"stb_image_write.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\herringbone_map.c" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 83
+		LocalIncludes = [
+			"stb_herringbone_wang_tile.h"
+			"stb_image.h"
+			"stb_image_write.h"
+		]
+		SystemIncludes = [
+			"stdio.h"
+			"stb_herringbone_wang_tile.h"
+			"stb_image.h"
+			"stb_image_write.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\image_test.c" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 166
+		LocalIncludes = [
+			"stb_image_write.h"
+			"stb_image.h"
+			"stb.h"
+		]
+		SystemIncludes = [
+			"stb_image_write.h"
+			"stb_image.h"
+			"stb.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\oversample\\main.c" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\oversample\\stb_wingraph.h"
+		]
+		Lines = 332
+		LocalIncludes = [
+			"stb_wingraph.h"
+			"stb_rect_pack.h"
+			"stb_truetype.h"
+		]
+		SystemIncludes = [
+			"assert.h"
+			"ctype.h"
+			"gl/gl.h"
+			"gl/glu.h"
+			"stb_rect_pack.h"
+			"stb_truetype.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\oversample\\stb_wingraph.h" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 829
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+			"windows.h"
+			"stdio.h"
+			"math.h"
+			"time.h"
+			"string.h"
+			"assert.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\pg_test\\pg_test.c" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 124
+		LocalIncludes = [
+			"stb.h"
+			"stb_pg.h"
+			"stb_image.h"
+			"stb_image_write.h"
+		]
+		SystemIncludes = [
+			"stb.h"
+			"stb_pg.h"
+			"stb_image.h"
+			"stb_image_write.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\prerelease\\stb_lib.h" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 3305
+		LocalIncludes = [
+			"stblib_files.h"
+		]
+		SystemIncludes = [
+			"stdarg.h"
+			"intrin.h"
+			"stdlib.h"
+			"stdio.h"
+			"string.h"
+			"time.h"
+			"assert.h"
+			"assert.h"
+			"stdarg.h"
+			"stddef.h"
+			"ctype.h"
+			"math.h"
+			"unistd.h"
+			"io.h"
+			"direct.h"
+			"sys/types.h"
+			"sys/stat.h"
+			"ctype.h"
+			"io.h"
+			"unistd.h"
+			"dirent.h"
+			"stblib_files.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\resample_test.cpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 1118
+		LocalIncludes = [
+			"stb_image_resize.h"
+			"stb_image_write.h"
+			"stb_image.h"
+		]
+		SystemIncludes = [
+			"stdlib.h"
+			"stdio.h"
+			"assert.h"
+			"sys/timeb.h"
+			"direct.h"
+			"sys/stat.h"
+			"stb_image_resize.h"
+			"stb_image_write.h"
+			"stb_image.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\resample_test_c.c" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 8
+		LocalIncludes = [
+			"stb_image_resize.h"
+		]
+		SystemIncludes = [
+			"stb_image_resize.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\sdf\\sdf_test.c" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 152
+		LocalIncludes = [
+			"stb.h"
+			"stb_truetype.h"
+			"stb_image_write.h"
+		]
+		SystemIncludes = [
+			"stb.h"
+			"stb_truetype.h"
+			"stb_image_write.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\stb.c" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\stb.h"
+		]
+		Lines = 3323
+		LocalIncludes = [
+			"stb.h"
+			"../stb.h"
+		]
+		SystemIncludes = [
+			"stdio.h"
+			"string.h"
+			"time.h"
+			"assert.h"
+			"stdlib.h"
+			"crtdbg.h"
+			"conio.h"
+			"windows.h"
+			"stb.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\stb_cpp.cpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 82
+		LocalIncludes = [
+			"stb.h"
+		]
+		SystemIncludes = [
+			"conio.h"
+			"stb.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\stblib_test.c" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\prerelease\\stb_lib.h"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\prerelease\\stb_lib.h"
+		]
+		Lines = 11
+		LocalIncludes = [
+			"prerelease/stb_lib.h"
+			"prerelease/stb_lib.h"
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\stblib_test_companion.c" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\prerelease\\stb_lib.h"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\prerelease\\stb_lib.h"
+		]
+		Lines = 4
+		LocalIncludes = [
+			"prerelease/stb_lib.h"
+			"prerelease/stb_lib.h"
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\stretch_test.c" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 28
+		LocalIncludes = [
+			"stb_truetype.h"
+			"stretchy_buffer.h"
+		]
+		SystemIncludes = [
+			"assert.h"
+			"stb_truetype.h"
+			"stretchy_buffer.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\stretchy_buffer_test.c" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 1
+		LocalIncludes = [
+			"stretchy_buffer.h"
+		]
+		SystemIncludes = [
+			"stretchy_buffer.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\test_c_compilation.c" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 41
+		LocalIncludes = [
+			"stb_sprintf.h"
+			"stb_herringbone_wang_tile.h"
+			"stb_image.h"
+			"stb_image_write.h"
+			"stb_perlin.h"
+			"stb_c_lexer.h"
+			"stb_divide.h"
+			"stb_image_resize.h"
+			"stb_rect_pack.h"
+			"stb_dxt.h"
+			"stb_voxel_render.h"
+			"stb_tilemap_editor.h"
+		]
+		SystemIncludes = [
+			"stb_sprintf.h"
+			"stb_herringbone_wang_tile.h"
+			"stb_image.h"
+			"stb_image_write.h"
+			"stb_perlin.h"
+			"stb_c_lexer.h"
+			"stb_divide.h"
+			"stb_image_resize.h"
+			"stb_rect_pack.h"
+			"stb_dxt.h"
+			"stb_voxel_render.h"
+			"stb_tilemap_editor.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\test_c_lexer.c" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 1
+		LocalIncludes = [
+			"stb_c_lexer.h"
+		]
+		SystemIncludes = [
+			"stb_c_lexer.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\test_cpp_compilation.cpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 148
+		LocalIncludes = [
+			"stb_sprintf.h"
+			"stb_sprintf.h"
+			"stb_image.h"
+			"stb_rect_pack.h"
+			"stb_truetype.h"
+			"stb_image_write.h"
+			"stb_perlin.h"
+			"stb_dxt.h"
+			"stb_c_lexer.h"
+			"stb_divide.h"
+			"stb_herringbone_wang_tile.h"
+			"stb_connected_components.h"
+			"stb_voxel_render.h"
+			"stb_tilemap_editor.h"
+			"stb_easy_font.h"
+			"stb_leakcheck.h"
+			"stb_image_resize.h"
+			"stretchy_buffer.h"
+			"stb_textedit.h"
+			"stb_textedit.h"
+		]
+		SystemIncludes = [
+			"stdlib.h"
+			"string.h"
+			"ctype.h"
+			"stb_sprintf.h"
+			"stb_image.h"
+			"stb_rect_pack.h"
+			"stb_truetype.h"
+			"stb_image_write.h"
+			"stb_perlin.h"
+			"stb_dxt.h"
+			"stb_c_lexer.h"
+			"stb_divide.h"
+			"stb_herringbone_wang_tile.h"
+			"stb_connected_components.h"
+			"stb_voxel_render.h"
+			"stb_tilemap_editor.h"
+			"stb_easy_font.h"
+			"stb_leakcheck.h"
+			"stb_image_resize.h"
+			"stretchy_buffer.h"
+			"stb_textedit.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\test_dxt.c" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 1
+		LocalIncludes = [
+			"stb_dxt.h"
+		]
+		SystemIncludes = [
+			"stb_dxt.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\test_easyfont.c" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 1
+		LocalIncludes = [
+			"stb_easy_font.h"
+		]
+		SystemIncludes = [
+			"stb_easy_font.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\test_image.c" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 1
+		LocalIncludes = [
+			"stb_image.h"
+		]
+		SystemIncludes = [
+			"stb_image.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\test_image_write.c" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 1
+		LocalIncludes = [
+			"stb_image_write.h"
+		]
+		SystemIncludes = [
+			"stb_image_write.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\test_perlin.c" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 1
+		LocalIncludes = [
+			"stb_perlin.h"
+		]
+		SystemIncludes = [
+			"stb_perlin.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\test_sprintf.c" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 1
+		LocalIncludes = [
+			"stb_sprintf.h"
+		]
+		SystemIncludes = [
+			"stb_sprintf.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\test_truetype.c" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 105
+		LocalIncludes = [
+			"stb_rect_pack.h"
+			"stb_truetype.h"
+			"stb_image_write.h"
+		]
+		SystemIncludes = [
+			"stdlib.h"
+			"stdio.h"
+			"stb_rect_pack.h"
+			"stb_truetype.h"
+			"stb_image_write.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\test_vorbis.c" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 22
+		LocalIncludes = [
+			"stb_image.h"
+			"stb_vorbis.c"
+			"stb.h"
+		]
+		SystemIncludes = [
+			"stb_image.h"
+			"stb_vorbis.c"
+			"stb.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\test_voxel.c" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 1
+		LocalIncludes = [
+			"stb_voxel_render.h"
+		]
+		SystemIncludes = [
+			"stb_voxel_render.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\textedit_sample.c" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 84
+		LocalIncludes = [
+			"stb_textedit.h"
+			"stb_textedit.h"
+		]
+		SystemIncludes = [
+			"stdlib.h"
+			"string.h"
+			"ctype.h"
+			"stb_textedit.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\tilemap_editor_integration_example.c" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 193
+		LocalIncludes = [
+			"game.h"
+			"SDL.h"
+			"stb_tilemap_editor.h"
+			"stb_tilemap_editor.h"
+		]
+		SystemIncludes = [
+			"assert.h"
+			"ctype.h"
+			"game.h"
+			"SDL.h"
+			"stb_tilemap_editor.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tests\\vorbseek\\vorbseek.c" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 125
+		LocalIncludes = [
+			"stb_vorbis.c"
+		]
+		SystemIncludes = [
+			"assert.h"
+			"string.h"
+			"stdlib.h"
+			"stdio.h"
+			"stb_vorbis.c"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tools\\easy_font_maker.c" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 211
+		LocalIncludes = [
+			"stb.h"
+			"stb_image.h"
+		]
+		SystemIncludes = [
+			"stb.h"
+			"stb_image.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tools\\make_readme.c" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\stb.h"
+		]
+		Lines = 64
+		LocalIncludes = [
+			"../stb.h"
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\tools\\unicode.c" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\stb\\stb.h"
+		]
+		Lines = 749
+		LocalIncludes = [
+			"../stb.h"
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\tiny_gltf\\json.hpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 14722
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+			"algorithm"
+			"array"
+			"cassert"
+			"ciso646"
+			"clocale"
+			"cmath"
+			"cstddef"
+			"cstdint"
+			"cstdlib"
+			"cstring"
+			"forward_list"
+			"functional"
+			"initializer_list"
+			"iomanip"
+			"iosfwd"
+			"iterator"
+			"limits"
+			"locale"
+			"map"
+			"memory"
+			"numeric"
+			"sstream"
+			"string"
+			"type_traits"
+			"utility"
+			"valarray"
+			"vector"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\tiny_gltf\\tiny_gltf.h" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\tiny_gltf\\json.hpp"
+		]
+		Lines = 4908
+		LocalIncludes = [
+			"./json.hpp"
+			"./stb_image.h"
+			"./stb_image_write.h"
+			"TargetConditionals.h"
+		]
+		SystemIncludes = [
+			"array"
+			"cassert"
+			"cstdint"
+			"cstdlib"
+			"cstring"
+			"map"
+			"string"
+			"vector"
+			"android/asset_manager.h"
+			"algorithm"
+			"fstream"
+			"sstream"
+			"wordexp.h"
+			"./stb_image.h"
+			"./stb_image_write.h"
+			"TargetConditionals.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\audio\\audiomanager.hpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 84
+		LocalIncludes = [
+			"AL/al.h"
+			"AL/alc.h"
+		]
+		SystemIncludes = [
+			"AL/al.h"
+			"AL/alc.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\audio\\randomizedaudiosource.hpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 34
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\callbacks\\gameobjectcallbacks.hpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 34
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\callbacks\\inputcallbacks.hpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\inputtypes.hpp"
+		]
+		Lines = 63
+		LocalIncludes = [
+			"InputTypes.hpp"
+		]
+		SystemIncludes = [
+			"InputTypes.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\basecamera.hpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 120
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\cameramanager.hpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 60
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+			"vector"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\debugcamera.hpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\basecamera.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\callbacks\\inputcallbacks.hpp"
+		]
+		Lines = 54
+		LocalIncludes = [
+			"BaseCamera.hpp"
+			"Callbacks/InputCallbacks.hpp"
+		]
+		SystemIncludes = [
+			"Callbacks/InputCallbacks.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\firstpersoncamera.hpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\basecamera.hpp"
+		]
+		Lines = 26
+		LocalIncludes = [
+			"BaseCamera.hpp"
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\overheadcamera.hpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\basecamera.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\rollingaverage.hpp"
+		]
+		Lines = 49
+		LocalIncludes = [
+			"BaseCamera.hpp"
+			"RollingAverage.hpp"
+		]
+		SystemIncludes = [
+			"RollingAverage.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\colors.hpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 27
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+			"glm/vec4.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\flexengine.hpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\callbacks\\inputcallbacks.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\spring.hpp"
+		]
+		Lines = 247
+		LocalIncludes = [
+			"Callbacks/InputCallbacks.hpp"
+			"Spring.hpp"
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\functors.hpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 10
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\bitmapfont.hpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\helpers.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\gl\\glrenderer.hpp"
+		]
+		Lines = 78
+		LocalIncludes = [
+			"Helpers.hpp"
+			"Graphics/GL/GLRenderer.hpp"
+		]
+		SystemIncludes = [
+			"Helpers.hpp"
+			"Graphics/GL/GLRenderer.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\gl\\glhelpers.hpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\renderertypes.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\helpers.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\types.hpp"
+		]
+		Lines = 323
+		LocalIncludes = [
+			"Graphics/RendererTypes.hpp"
+			"Helpers.hpp"
+			"Types.hpp"
+		]
+		SystemIncludes = [
+			"thread"
+			"future"
+			"Graphics/RendererTypes.hpp"
+			"Helpers.hpp"
+			"Types.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\gl\\glphysicsdebugdraw.hpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vertexbufferdata.hpp"
+		]
+		Lines = 79
+		LocalIncludes = [
+			"LinearMath/btIDebugDraw.h"
+			"Graphics/VertexBufferData.hpp"
+		]
+		SystemIncludes = [
+			"glad/glad.h"
+			"LinearMath/btIDebugDraw.h"
+			"Graphics/VertexBufferData.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\gl\\glrenderer.hpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\gl\\glhelpers.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\renderer.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vertexbufferdata.hpp"
+		]
+		Lines = 384
+		LocalIncludes = [
+			"Graphics/Renderer.hpp"
+			"GLHelpers.hpp"
+			"Graphics/VertexBufferData.hpp"
+		]
+		SystemIncludes = [
+			"map"
+			"Graphics/Renderer.hpp"
+			"Graphics/VertexBufferData.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\renderer.hpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\renderertypes.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\physics\\physicsdebuggingsettings.hpp"
+		]
+		Lines = 223
+		LocalIncludes = [
+			"Physics/PhysicsDebuggingSettings.hpp"
+			"RendererTypes.hpp"
+		]
+		SystemIncludes = [
+			"string"
+			"vector"
+			"Physics/PhysicsDebuggingSettings.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\renderertypes.hpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\functors.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\jsontypes.hpp"
+		]
+		Lines = 384
+		LocalIncludes = [
+			"Functors.hpp"
+			"JSONTypes.hpp"
+		]
+		SystemIncludes = [
+			"array"
+			"map"
+			"glm/gtc/quaternion.hpp"
+			"glm/mat4x4.hpp"
+			"glm/vec4.hpp"
+			"Functors.hpp"
+			"JSONTypes.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vertexattribute.hpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 42
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vertexbufferdata.hpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 39
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vulkan\\vdeleter.hpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 104
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+			"functional"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vulkan\\vulkanbuffer.hpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vulkan\\vdeleter.hpp"
+		]
+		Lines = 41
+		LocalIncludes = [
+			"VDeleter.hpp"
+		]
+		SystemIncludes = [
+			"vulkan/vulkan.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vulkan\\vulkancommandbuffermanager.hpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 57
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+			"vector"
+			"vulkan/vulkan.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vulkan\\vulkandevice.hpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vulkan\\vdeleter.hpp"
+		]
+		Lines = 37
+		LocalIncludes = [
+			"VDeleter.hpp"
+		]
+		SystemIncludes = [
+			"vulkan/vulkan.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vulkan\\vulkanhelpers.hpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vulkan\\vulkanbuffer.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vulkan\\vdeleter.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\renderer.hpp"
+		]
+		Lines = 458
+		LocalIncludes = [
+			"Graphics/Renderer.hpp"
+			"VulkanBuffer.hpp"
+			"VertexBufferData.hpp"
+			"VDeleter.hpp"
+		]
+		SystemIncludes = [
+			"string"
+			"vector"
+			"sstream"
+			"vulkan/vulkan.hpp"
+			"Graphics/Renderer.hpp"
+			"VertexBufferData.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vulkan\\vulkanphysicsdebugdraw.hpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\types.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\transform.hpp"
+		]
+		Lines = 66
+		LocalIncludes = [
+			"LinearMath\\btIDebugDraw.h"
+			"Types.hpp"
+			"Transform.hpp"
+		]
+		SystemIncludes = [
+			"vector"
+			"LinearMath\\btIDebugDraw.h"
+			"Types.hpp"
+			"Transform.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vulkan\\vulkanrenderer.hpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vulkan\\vdeleter.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vulkan\\vulkanbuffer.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vulkan\\vulkandevice.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\renderer.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vulkan\\vulkanhelpers.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\window\\window.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vulkan\\vulkancommandbuffermanager.hpp"
+		]
+		Lines = 309
+		LocalIncludes = [
+			"Graphics/Renderer.hpp"
+			"Graphics/Vulkan/VulkanHelpers.hpp"
+			"VDeleter.hpp"
+			"VulkanBuffer.hpp"
+			"VulkanDevice.hpp"
+			"Window/Window.hpp"
+			"Graphics/Vulkan/VulkanCommandBufferManager.hpp"
+		]
+		SystemIncludes = [
+			"array"
+			"map"
+			"Graphics/Renderer.hpp"
+			"Graphics/Vulkan/VulkanHelpers.hpp"
+			"Window/Window.hpp"
+			"Graphics/Vulkan/VulkanCommandBufferManager.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\helpers.hpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\renderertypes.hpp"
+		]
+		Lines = 217
+		LocalIncludes = [
+			"Graphics/RendererTypes.hpp"
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\imgui\\imgui_impl_glfw.h" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 33
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\imgui\\imgui_impl_opengl3.h" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 40
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\imgui\\imgui_impl_vulkan.h" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 104
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+			"vulkan/vulkan.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\inputmanager.hpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\inputtypes.hpp"
+		]
+		Lines = 132
+		LocalIncludes = [
+			"InputTypes.hpp"
+		]
+		SystemIncludes = [
+			"map"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\inputtypes.hpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\rollingaverage.hpp"
+		]
+		Lines = 330
+		LocalIncludes = [
+			"RollingAverage.hpp"
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\jsonparser.hpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\jsontypes.hpp"
+		]
+		Lines = 53
+		LocalIncludes = [
+			"JSONTypes.hpp"
+		]
+		SystemIncludes = [
+			"string"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\jsontypes.hpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\types.hpp"
+		]
+		Lines = 114
+		LocalIncludes = [
+			"Types.hpp"
+		]
+		SystemIncludes = [
+			"vector"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\logger.hpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 46
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+			"sstream"
+			"stdio.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\managers\\cartmanager.hpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\callbacks\\gameobjectcallbacks.hpp"
+		]
+		Lines = 66
+		LocalIncludes = [
+			"Callbacks/GameObjectCallbacks.hpp"
+		]
+		SystemIncludes = [
+			"Callbacks/GameObjectCallbacks.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\minwindows.hpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 63
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\physics\\physicsdebuggingsettings.hpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 26
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\physics\\physicshelpers.hpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 73
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+			"BulletCollision/BroadphaseCollision/btBroadphaseProxy.h"
+			"glm/gtc/quaternion.hpp"
+			"glm/vec3.hpp"
+			"glm/vec4.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\physics\\physicsmanager.hpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 34
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\physics\\physicstypeconversions.hpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 27
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+			"glm/gtc/quaternion.hpp"
+			"glm/vec3.hpp"
+			"glm/vec4.hpp"
+			"LinearMath/btQuaternion.h"
+			"LinearMath/btTransform.h"
+			"LinearMath/btVector3.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\physics\\physicsworld.hpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 48
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+			"set"
+			"BulletCollision/CollisionDispatch/btCollisionWorld.h"
+			"LinearMath/btScalar.h"
+			"LinearMath/btVector3.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\physics\\rigidbody.hpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\physics\\physicshelpers.hpp"
+		]
+		Lines = 101
+		LocalIncludes = [
+			"Physics/PhysicsHelpers.hpp"
+		]
+		SystemIncludes = [
+			"Physics/PhysicsHelpers.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\player.hpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\gameobject.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\types.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\track\\beziercurve.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\track\\beziercurvelist.hpp"
+		]
+		Lines = 110
+		LocalIncludes = [
+			"Scene/GameObject.hpp"
+			"Types.hpp"
+			"Track/BezierCurve.hpp"
+			"Track/BezierCurveList.hpp"
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\playercontroller.hpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\helpers.hpp"
+		]
+		Lines = 64
+		LocalIncludes = [
+			"Helpers.hpp"
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\profiler.hpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\jsontypes.hpp"
+		]
+		Lines = 87
+		LocalIncludes = [
+			"JSONTypes.hpp"
+		]
+		SystemIncludes = [
+			"unordered_map"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\rollingaverage.hpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\types.hpp"
+		]
+		Lines = 78
+		LocalIncludes = [
+			"Types.hpp"
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\basescene.hpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\managers\\cartmanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\track\\trackmanager.hpp"
+		]
+		Lines = 182
+		LocalIncludes = [
+			"Managers/CartManager.hpp"
+			"Track/TrackManager.hpp"
+		]
+		SystemIncludes = [
+			"Managers/CartManager.hpp"
+			"Track/TrackManager.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\gameobject.hpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\audio\\randomizedaudiosource.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\spring.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\transform.hpp"
+		]
+		Lines = 474
+		LocalIncludes = [
+			"Audio/RandomizedAudioSource.hpp"
+			"Spring.hpp"
+			"Transform.hpp"
+		]
+		SystemIncludes = [
+			"Audio/RandomizedAudioSource.hpp"
+			"Spring.hpp"
+			"Transform.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\loadedmesh.hpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\tiny_gltf\\tiny_gltf.h"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\types.hpp"
+		]
+		Lines = 20
+		LocalIncludes = [
+			"Types.hpp"
+		]
+		SystemIncludes = [
+			"tiny_gltf/tiny_gltf.h"
+			"Types.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\meshcomponent.hpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\renderertypes.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vertexattribute.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vertexbufferdata.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\jsontypes.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\types.hpp"
+		]
+		Lines = 136
+		LocalIncludes = [
+			"Graphics/RendererTypes.hpp"
+			"Graphics/VertexAttribute.hpp"
+			"Graphics/VertexBufferData.hpp"
+			"JSONTypes.hpp"
+			"Types.hpp"
+		]
+		SystemIncludes = [
+			"Graphics/RendererTypes.hpp"
+			"Graphics/VertexAttribute.hpp"
+			"Graphics/VertexBufferData.hpp"
+			"JSONTypes.hpp"
+			"Types.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\scenemanager.hpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 63
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\spring.hpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 90
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\logger.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\types.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\physics\\physicstypeconversions.hpp"
+		]
+		Lines = 199
+		LocalIncludes = [
+			"Logger.hpp"
+			"Types.hpp"
+			"imgui.h"
+			"Physics/PhysicsTypeConversions.hpp"
+		]
+		SystemIncludes = [
+			"algorithm"
+			"functional"
+			"future"
+			"map"
+			"string"
+			"thread"
+			"utility"
+			"vector"
+			"sstream"
+			"fstream"
+			"array"
+			"set"
+			"limits"
+			"unordered_map"
+			"crtdbg.h"
+			"stdlib.h"
+			"string.h"
+			"ft2build.h"
+			"glad/glad.h"
+			"GLFW/glfw3.h"
+			"GLFW/glfw3native.h"
+			"vulkan/vulkan.hpp"
+			"glad/glad.h"
+			"GLFW/glfw3.h"
+			"GLFW/glfw3native.h"
+			"glm/glm.hpp"
+			"imgui.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\time.hpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 24
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\track\\beziercurve.hpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 30
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\track\\beziercurvelist.hpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\jsontypes.hpp"
+		]
+		Lines = 49
+		LocalIncludes = [
+			"JSONTypes.hpp"
+		]
+		SystemIncludes = [
+			"JSONTypes.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\track\\trackmanager.hpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\jsontypes.hpp"
+		]
+		Lines = 102
+		LocalIncludes = [
+			"JSONTypes.hpp"
+		]
+		SystemIncludes = [
+			"JSONTypes.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\transform.hpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\jsontypes.hpp"
+		]
+		Lines = 99
+		LocalIncludes = [
+			"JSONTypes.hpp"
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\types.hpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 200
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+			"cstdint"
+			"limits"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\window\\glfwwindowwrapper.hpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\window\\window.hpp"
+		]
+		Lines = 96
+		LocalIncludes = [
+			"Window.hpp"
+		]
+		SystemIncludes = [
+			"glad/glad.h"
+			"GLFW/glfw3.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\window\\monitor.hpp" = {
+		AbsoluteIncludes = [
+		]
+		Lines = 17
+		LocalIncludes = [
+		]
+		SystemIncludes = [
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\window\\window.hpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\inputtypes.hpp"
+		]
+		Lines = 173
+		LocalIncludes = [
+			"InputTypes.hpp"
+		]
+		SystemIncludes = [
+			"InputTypes.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\audio\\audiomanager.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\audio\\audiomanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\helpers.hpp"
+		]
+		Lines = 415
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Audio/AudioManager.hpp"
+			"Helpers.hpp"
+		]
+		SystemIncludes = [
+			"stdafx.hpp"
+			"Audio/AudioManager.hpp"
+			"Helpers.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\audio\\randomizedaudiosource.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\audio\\randomizedaudiosource.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\audio\\audiomanager.hpp"
+		]
+		Lines = 110
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Audio/RandomizedAudioSource.hpp"
+			"Audio/AudioManager.hpp"
+		]
+		SystemIncludes = [
+			"stdlib.h"
+			"stdafx.hpp"
+			"Audio/RandomizedAudioSource.hpp"
+			"Audio/AudioManager.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\cameras\\basecamera.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\basecamera.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\helpers.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\player.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\playercontroller.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\basescene.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\scenemanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\window\\window.hpp"
+		]
+		Lines = 311
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Cameras/BaseCamera.hpp"
+			"Helpers.hpp"
+			"Player.hpp"
+			"PlayerController.hpp"
+			"Scene/BaseScene.hpp"
+			"Scene/SceneManager.hpp"
+			"Window/Window.hpp"
+		]
+		SystemIncludes = [
+			"glm/gtc/matrix_transform.hpp"
+			"glm/vec2.hpp"
+			"stdafx.hpp"
+			"Cameras/BaseCamera.hpp"
+			"Helpers.hpp"
+			"Player.hpp"
+			"PlayerController.hpp"
+			"Scene/BaseScene.hpp"
+			"Scene/SceneManager.hpp"
+			"Window/Window.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\cameras\\cameramanager.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\cameramanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\basecamera.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\inputmanager.hpp"
+		]
+		Lines = 260
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Cameras/CameraManager.hpp"
+			"Cameras/BaseCamera.hpp"
+			"InputManager.hpp"
+		]
+		SystemIncludes = [
+			"stdafx.hpp"
+			"Cameras/CameraManager.hpp"
+			"Cameras/BaseCamera.hpp"
+			"InputManager.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\cameras\\debugcamera.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\debugcamera.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\cameramanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\flexengine.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\helpers.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\inputmanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\gameobject.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\meshcomponent.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\window\\window.hpp"
+		]
+		Lines = 284
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Cameras/DebugCamera.hpp"
+			"Cameras/CameraManager.hpp"
+			"FlexEngine.hpp"
+			"Helpers.hpp"
+			"InputManager.hpp"
+			"Scene/GameObject.hpp"
+			"Scene/MeshComponent.hpp"
+			"Window/Window.hpp"
+		]
+		SystemIncludes = [
+			"glm/gtc/matrix_transform.hpp"
+			"glm/vec2.hpp"
+			"stdafx.hpp"
+			"Cameras/DebugCamera.hpp"
+			"Cameras/CameraManager.hpp"
+			"FlexEngine.hpp"
+			"Helpers.hpp"
+			"InputManager.hpp"
+			"Scene/GameObject.hpp"
+			"Scene/MeshComponent.hpp"
+			"Window/Window.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\cameras\\firstpersoncamera.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\firstpersoncamera.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\helpers.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\player.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\basescene.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\gameobject.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\scenemanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\window\\window.hpp"
+		]
+		Lines = 99
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Cameras/FirstPersonCamera.hpp"
+			"Helpers.hpp"
+			"Player.hpp"
+			"Scene/BaseScene.hpp"
+			"Scene/GameObject.hpp"
+			"Scene/SceneManager.hpp"
+			"Window/Window.hpp"
+		]
+		SystemIncludes = [
+			"glm/gtc/matrix_transform.hpp"
+			"glm/vec2.hpp"
+			"stdafx.hpp"
+			"Cameras/FirstPersonCamera.hpp"
+			"Helpers.hpp"
+			"Player.hpp"
+			"Scene/BaseScene.hpp"
+			"Scene/GameObject.hpp"
+			"Scene/SceneManager.hpp"
+			"Window/Window.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\cameras\\overheadcamera.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\overheadcamera.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\renderer.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\helpers.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\inputmanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\basescene.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\gameobject.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\scenemanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\window\\window.hpp"
+		]
+		Lines = 189
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Cameras/OverheadCamera.hpp"
+			"Graphics/Renderer.hpp"
+			"Helpers.hpp"
+			"InputManager.hpp"
+			"Scene/BaseScene.hpp"
+			"Scene/GameObject.hpp"
+			"Scene/SceneManager.hpp"
+			"Window/Window.hpp"
+		]
+		SystemIncludes = [
+			"glm/gtc/matrix_transform.hpp"
+			"glm/gtx/rotate_vector.hpp"
+			"glm/vec2.hpp"
+			"LinearMath/btIDebugDraw.h"
+			"stdafx.hpp"
+			"Cameras/OverheadCamera.hpp"
+			"Graphics/Renderer.hpp"
+			"Helpers.hpp"
+			"InputManager.hpp"
+			"Scene/BaseScene.hpp"
+			"Scene/GameObject.hpp"
+			"Scene/SceneManager.hpp"
+			"Window/Window.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\colors.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\colors.hpp"
+		]
+		Lines = 22
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Colors.hpp"
+		]
+		SystemIncludes = [
+			"stdafx.hpp"
+			"Colors.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\flexengine.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\flexengine.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\renderdoc\\api\\app\\renderdoc_app.h"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\audio\\audiomanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\cameramanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\debugcamera.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\firstpersoncamera.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\overheadcamera.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\renderer.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\helpers.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\inputmanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\jsonparser.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\jsontypes.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\physics\\physicsmanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\physics\\physicsworld.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\physics\\rigidbody.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\player.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\playercontroller.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\profiler.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\basescene.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\gameobject.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\meshcomponent.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\scenemanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\time.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\window\\glfwwindowwrapper.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\window\\monitor.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\gl\\glrenderer.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vulkan\\vulkanrenderer.hpp"
+		]
+		Lines = 2576
+		LocalIncludes = [
+			"stdafx.hpp"
+			"FlexEngine.hpp"
+			"renderdoc/api/app/renderdoc_app.h"
+			"imgui_internal.h"
+			"Audio/AudioManager.hpp"
+			"Cameras/CameraManager.hpp"
+			"Cameras/DebugCamera.hpp"
+			"Cameras/FirstPersonCamera.hpp"
+			"Cameras/OverheadCamera.hpp"
+			"Graphics/Renderer.hpp"
+			"Helpers.hpp"
+			"InputManager.hpp"
+			"JSONParser.hpp"
+			"JSONTypes.hpp"
+			"Physics/PhysicsManager.hpp"
+			"Physics/PhysicsWorld.hpp"
+			"Physics/RigidBody.hpp"
+			"Player.hpp"
+			"PlayerController.hpp"
+			"Profiler.hpp"
+			"Scene/BaseScene.hpp"
+			"Scene/GameObject.hpp"
+			"Scene/MeshComponent.hpp"
+			"Scene/SceneManager.hpp"
+			"Time.hpp"
+			"Window/GLFWWindowWrapper.hpp"
+			"Window/Monitor.hpp"
+			"Graphics/GL/GLRenderer.hpp"
+			"Graphics/Vulkan/VulkanRenderer.hpp"
+		]
+		SystemIncludes = [
+			"stdlib.h"
+			"time.h"
+			"BulletCollision/CollisionShapes/btCylinderShape.h"
+			"BulletDynamics/Dynamics/btDynamicsWorld.h"
+			"BulletDynamics/Dynamics/btRigidBody.h"
+			"glm/gtx/intersect.hpp"
+			"LinearMath/btIDebugDraw.h"
+			"stdafx.hpp"
+			"FlexEngine.hpp"
+			"renderdoc/api/app/renderdoc_app.h"
+			"imgui_internal.h"
+			"Audio/AudioManager.hpp"
+			"Cameras/CameraManager.hpp"
+			"Cameras/DebugCamera.hpp"
+			"Cameras/FirstPersonCamera.hpp"
+			"Cameras/OverheadCamera.hpp"
+			"Graphics/Renderer.hpp"
+			"Helpers.hpp"
+			"InputManager.hpp"
+			"JSONParser.hpp"
+			"JSONTypes.hpp"
+			"Physics/PhysicsManager.hpp"
+			"Physics/PhysicsWorld.hpp"
+			"Physics/RigidBody.hpp"
+			"Player.hpp"
+			"PlayerController.hpp"
+			"Profiler.hpp"
+			"Scene/BaseScene.hpp"
+			"Scene/GameObject.hpp"
+			"Scene/MeshComponent.hpp"
+			"Scene/SceneManager.hpp"
+			"Time.hpp"
+			"Window/GLFWWindowWrapper.hpp"
+			"Window/Monitor.hpp"
+			"Graphics/GL/GLRenderer.hpp"
+			"Graphics/Vulkan/VulkanRenderer.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\functors.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\functors.hpp"
+		]
+		Lines = 12
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Functors.hpp"
+		]
+		SystemIncludes = [
+			"stdafx.hpp"
+			"Functors.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\graphics\\bitmapfont.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\bitmapfont.hpp"
+		]
+		Lines = 94
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Graphics/BitmapFont.hpp"
+		]
+		SystemIncludes = [
+			"stdafx.hpp"
+			"Graphics/BitmapFont.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\graphics\\gl\\glhelpers.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\gl\\glhelpers.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\renderer.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\helpers.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\profiler.hpp"
+		]
+		Lines = 1206
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Graphics/GL/GLHelpers.hpp"
+			"stb_image.h"
+			"Graphics/Renderer.hpp"
+			"Helpers.hpp"
+			"Profiler.hpp"
+		]
+		SystemIncludes = [
+			"glad/glad.h"
+			"GLFW/glfw3.h"
+			"stdafx.hpp"
+			"Graphics/GL/GLHelpers.hpp"
+			"stb_image.h"
+			"Graphics/Renderer.hpp"
+			"Helpers.hpp"
+			"Profiler.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\graphics\\gl\\glphysicsdebugdraw.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\gl\\glphysicsdebugdraw.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\basecamera.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\cameramanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\gl\\glhelpers.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\gl\\glrenderer.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\renderer.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vertexattribute.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\profiler.hpp"
+		]
+		Lines = 277
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Graphics/GL/GLPhysicsDebugDraw.hpp"
+			"Cameras/BaseCamera.hpp"
+			"Cameras/CameraManager.hpp"
+			"Graphics/GL/GLHelpers.hpp"
+			"Graphics/GL/GLRenderer.hpp"
+			"Graphics/Renderer.hpp"
+			"Graphics/VertexAttribute.hpp"
+			"Profiler.hpp"
+		]
+		SystemIncludes = [
+			"stdafx.hpp"
+			"Graphics/GL/GLPhysicsDebugDraw.hpp"
+			"Cameras/BaseCamera.hpp"
+			"Cameras/CameraManager.hpp"
+			"Graphics/GL/GLHelpers.hpp"
+			"Graphics/GL/GLRenderer.hpp"
+			"Graphics/Renderer.hpp"
+			"Graphics/VertexAttribute.hpp"
+			"Profiler.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\graphics\\gl\\glrenderer.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\gl\\glrenderer.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\imgui\\imgui_impl_glfw.h"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\imgui\\imgui_impl_opengl3.h"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\basecamera.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\cameramanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\flexengine.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\bitmapfont.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\gl\\glhelpers.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\gl\\glphysicsdebugdraw.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vertexattribute.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\helpers.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\inputmanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\jsonparser.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\jsontypes.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\physics\\physicsworld.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\physics\\rigidbody.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\profiler.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\basescene.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\gameobject.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\meshcomponent.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\loadedmesh.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\scenemanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\window\\glfwwindowwrapper.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\window\\monitor.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\window\\window.hpp"
+		]
+		Lines = 6937
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Graphics/GL/GLRenderer.hpp"
+			"imgui_internal.h"
+			"ImGui/imgui_impl_glfw.h"
+			"ImGui/imgui_impl_opengl3.h"
+			"Cameras/BaseCamera.hpp"
+			"Cameras/CameraManager.hpp"
+			"FlexEngine.hpp"
+			"Graphics/BitmapFont.hpp"
+			"Graphics/GL/GLHelpers.hpp"
+			"Graphics/GL/GLPhysicsDebugDraw.hpp"
+			"Graphics/VertexAttribute.hpp"
+			"Helpers.hpp"
+			"InputManager.hpp"
+			"JSONParser.hpp"
+			"JSONTypes.hpp"
+			"Physics/PhysicsWorld.hpp"
+			"Physics/RigidBody.hpp"
+			"Profiler.hpp"
+			"Scene/BaseScene.hpp"
+			"Scene/GameObject.hpp"
+			"Scene/MeshComponent.hpp"
+			"Scene/LoadedMesh.hpp"
+			"Scene/SceneManager.hpp"
+			"Window/GLFWWindowWrapper.hpp"
+			"Window/Monitor.hpp"
+			"Window/Window.hpp"
+		]
+		SystemIncludes = [
+			"BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h"
+			"glm/gtx/quaternion.hpp"
+			"freetype/ftbitmap.h"
+			"stdafx.hpp"
+			"Graphics/GL/GLRenderer.hpp"
+			"imgui_internal.h"
+			"ImGui/imgui_impl_glfw.h"
+			"ImGui/imgui_impl_opengl3.h"
+			"Cameras/BaseCamera.hpp"
+			"Cameras/CameraManager.hpp"
+			"FlexEngine.hpp"
+			"Graphics/BitmapFont.hpp"
+			"Graphics/GL/GLHelpers.hpp"
+			"Graphics/GL/GLPhysicsDebugDraw.hpp"
+			"Graphics/VertexAttribute.hpp"
+			"Helpers.hpp"
+			"InputManager.hpp"
+			"JSONParser.hpp"
+			"JSONTypes.hpp"
+			"Physics/PhysicsWorld.hpp"
+			"Physics/RigidBody.hpp"
+			"Profiler.hpp"
+			"Scene/BaseScene.hpp"
+			"Scene/GameObject.hpp"
+			"Scene/MeshComponent.hpp"
+			"Scene/LoadedMesh.hpp"
+			"Scene/SceneManager.hpp"
+			"Window/GLFWWindowWrapper.hpp"
+			"Window/Monitor.hpp"
+			"Window/Window.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\graphics\\renderer.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\renderer.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\basecamera.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\cameramanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\flexengine.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\physics\\rigidbody.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\basescene.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\gameobject.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\scenemanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\window\\window.hpp"
+		]
+		Lines = 446
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Graphics/Renderer.hpp"
+			"imgui.h"
+			"imgui_internal.h"
+			"Cameras/BaseCamera.hpp"
+			"Cameras/CameraManager.hpp"
+			"FlexEngine.hpp"
+			"Physics/RigidBody.hpp"
+			"Scene/BaseScene.hpp"
+			"Scene/GameObject.hpp"
+			"Scene/SceneManager.hpp"
+			"Window/Window.hpp"
+		]
+		SystemIncludes = [
+			"stdafx.hpp"
+			"Graphics/Renderer.hpp"
+			"imgui.h"
+			"imgui_internal.h"
+			"Cameras/BaseCamera.hpp"
+			"Cameras/CameraManager.hpp"
+			"FlexEngine.hpp"
+			"Physics/RigidBody.hpp"
+			"Scene/BaseScene.hpp"
+			"Scene/GameObject.hpp"
+			"Scene/SceneManager.hpp"
+			"Window/Window.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\graphics\\renderertypes.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\renderertypes.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\renderer.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\helpers.hpp"
+		]
+		Lines = 342
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Graphics/RendererTypes.hpp"
+			"Graphics/Renderer.hpp"
+			"Helpers.hpp"
+		]
+		SystemIncludes = [
+			"stdafx.hpp"
+			"Graphics/RendererTypes.hpp"
+			"Graphics/Renderer.hpp"
+			"Helpers.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\graphics\\vertexattribute.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vertexattribute.hpp"
+		]
+		Lines = 59
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Graphics/VertexAttribute.hpp"
+		]
+		SystemIncludes = [
+			"stdafx.hpp"
+			"Graphics/VertexAttribute.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\graphics\\vertexbufferdata.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vertexbufferdata.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\renderer.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vertexattribute.hpp"
+		]
+		Lines = 123
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Graphics/VertexBufferData.hpp"
+			"Graphics/Renderer.hpp"
+			"Graphics/VertexAttribute.hpp"
+		]
+		SystemIncludes = [
+			"stdafx.hpp"
+			"Graphics/VertexBufferData.hpp"
+			"Graphics/Renderer.hpp"
+			"Graphics/VertexAttribute.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\graphics\\vulkan\\vulkanbuffer.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vulkan\\vulkanbuffer.hpp"
+		]
+		Lines = 67
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Graphics/Vulkan/VulkanBuffer.hpp"
+		]
+		SystemIncludes = [
+			"stdafx.hpp"
+			"Graphics/Vulkan/VulkanBuffer.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\graphics\\vulkan\\vulkancommandbuffermanager.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vulkan\\vulkancommandbuffermanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vulkan\\vulkandevice.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vulkan\\vulkanhelpers.hpp"
+		]
+		Lines = 126
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Graphics/Vulkan/VulkanCommandBufferManager.hpp"
+			"Graphics/Vulkan/VulkanDevice.hpp"
+			"Graphics/Vulkan/VulkanHelpers.hpp"
+		]
+		SystemIncludes = [
+			"stdafx.hpp"
+			"Graphics/Vulkan/VulkanCommandBufferManager.hpp"
+			"Graphics/Vulkan/VulkanDevice.hpp"
+			"Graphics/Vulkan/VulkanHelpers.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\graphics\\vulkan\\vulkandevice.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vulkan\\vulkandevice.hpp"
+		]
+		Lines = 78
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Graphics/Vulkan/VulkanDevice.hpp"
+		]
+		SystemIncludes = [
+			"stdafx.hpp"
+			"Graphics/Vulkan/VulkanDevice.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\graphics\\vulkan\\vulkanhelpers.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vulkan\\vulkanhelpers.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vulkan\\vulkancommandbuffermanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vulkan\\vulkandevice.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\helpers.hpp"
+		]
+		Lines = 1473
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Graphics/Vulkan/VulkanHelpers.hpp"
+			"stb_image.h"
+			"Graphics/Vulkan/VulkanCommandBufferManager.hpp"
+			"Graphics/Vulkan/VulkanDevice.hpp"
+			"Helpers.hpp"
+			"VertexAttribute.hpp"
+			"VertexBufferData.hpp"
+		]
+		SystemIncludes = [
+			"stdafx.hpp"
+			"Graphics/Vulkan/VulkanHelpers.hpp"
+			"stb_image.h"
+			"Graphics/Vulkan/VulkanCommandBufferManager.hpp"
+			"Graphics/Vulkan/VulkanDevice.hpp"
+			"Helpers.hpp"
+			"VertexAttribute.hpp"
+			"VertexBufferData.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\graphics\\vulkan\\vulkanphysicsdebugdraw.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vulkan\\vulkanphysicsdebugdraw.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\basecamera.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\renderer.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vulkan\\vulkanhelpers.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vulkan\\vulkanrenderer.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\gameobject.hpp"
+		]
+		Lines = 213
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Graphics/Vulkan/VulkanPhysicsDebugDraw.hpp"
+			"Cameras/BaseCamera.hpp"
+			"Graphics/Renderer.hpp"
+			"Graphics/Vulkan/VulkanHelpers.hpp"
+			"Graphics/Vulkan/VulkanRenderer.hpp"
+			"Scene/GameObject.hpp"
+			"VertexAttribute.hpp"
+		]
+		SystemIncludes = [
+			"stdafx.hpp"
+			"Graphics/Vulkan/VulkanPhysicsDebugDraw.hpp"
+			"Cameras/BaseCamera.hpp"
+			"Graphics/Renderer.hpp"
+			"Graphics/Vulkan/VulkanHelpers.hpp"
+			"Graphics/Vulkan/VulkanRenderer.hpp"
+			"Scene/GameObject.hpp"
+			"VertexAttribute.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\graphics\\vulkan\\vulkanrenderer.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vulkan\\vulkanrenderer.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\cameramanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\basecamera.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\flexengine.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\helpers.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\scenemanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\meshcomponent.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\basescene.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\vulkan\\vulkanphysicsdebugdraw.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\physics\\physicsworld.hpp"
+		]
+		Lines = 5681
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Graphics/Vulkan/VulkanRenderer.hpp"
+			"stb_image.h"
+			"imgui.h"
+			"ImGui/imgui_impl_glfw_vulkan.h"
+			"BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h"
+			"Cameras/CameraManager.hpp"
+			"Cameras/BaseCamera.hpp"
+			"FlexEngine.hpp"
+			"Helpers.hpp"
+			"VertexAttribute.hpp"
+			"VertexBufferData.hpp"
+			"Scene/SceneManager.hpp"
+			"Scene/MeshComponent.hpp"
+			"Scene/BaseScene.hpp"
+			"Graphics/Vulkan/VulkanPhysicsDebugDraw.hpp"
+			"Physics/PhysicsWorld.hpp"
+		]
+		SystemIncludes = [
+			"glm/gtc/matrix_transform.hpp"
+			"stdafx.hpp"
+			"Graphics/Vulkan/VulkanRenderer.hpp"
+			"stb_image.h"
+			"imgui.h"
+			"ImGui/imgui_impl_glfw_vulkan.h"
+			"BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h"
+			"Cameras/CameraManager.hpp"
+			"Cameras/BaseCamera.hpp"
+			"FlexEngine.hpp"
+			"Helpers.hpp"
+			"VertexAttribute.hpp"
+			"VertexBufferData.hpp"
+			"Scene/SceneManager.hpp"
+			"Scene/MeshComponent.hpp"
+			"Scene/BaseScene.hpp"
+			"Graphics/Vulkan/VulkanPhysicsDebugDraw.hpp"
+			"Physics/PhysicsWorld.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\helpers.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\helpers.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\flexengine.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\renderer.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\transform.hpp"
+		]
+		Lines = 1352
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Helpers.hpp"
+			"stb_image.h"
+			"stb_image_write.h"
+			"FlexEngine.hpp"
+			"Graphics/Renderer.hpp"
+			"Transform.hpp"
+		]
+		SystemIncludes = [
+			"direct.h"
+			"stdio.h"
+			"iomanip"
+			"glm/gtx/matrix_decompose.hpp"
+			"stdafx.hpp"
+			"Helpers.hpp"
+			"stb_image.h"
+			"stb_image_write.h"
+			"FlexEngine.hpp"
+			"Graphics/Renderer.hpp"
+			"Transform.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\imgui\\imgui_impl_glfw.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\imgui\\imgui_impl_glfw.h"
+		]
+		Lines = 678
+		LocalIncludes = [
+			"stdafx.hpp"
+			"imgui.h"
+			"ImGui/imgui_impl_glfw.h"
+		]
+		SystemIncludes = [
+			"GLFW/glfw3.h"
+			"GLFW/glfw3native.h"
+			"imm.h"
+			"stdafx.hpp"
+			"imgui.h"
+			"ImGui/imgui_impl_glfw.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\imgui\\imgui_impl_opengl3.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\imgui\\imgui_impl_opengl3.h"
+		]
+		Lines = 586
+		LocalIncludes = [
+			"stdafx.hpp"
+			"imgui.h"
+			"ImGui/imgui_impl_opengl3.h"
+			"TargetConditionals.h"
+		]
+		SystemIncludes = [
+			"stdio.h"
+			"stddef.h"
+			"stdint.h"
+			"GLES3/gl3.h"
+			"GL/gl3w.h"
+			"GL/glew.h"
+			"glad/glad.h"
+			"stdafx.hpp"
+			"imgui.h"
+			"ImGui/imgui_impl_opengl3.h"
+			"TargetConditionals.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\imgui\\imgui_impl_vulkan.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\imgui\\imgui_impl_vulkan.h"
+		]
+		Lines = 1266
+		LocalIncludes = [
+			"stdafx.hpp"
+			"imgui.h"
+			"ImGui/imgui_impl_vulkan.h"
+		]
+		SystemIncludes = [
+			"stdio.h"
+			"stdlib.h"
+			"stdafx.hpp"
+			"imgui.h"
+			"ImGui/imgui_impl_vulkan.h"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\inputmanager.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\inputmanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\callbacks\\inputcallbacks.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\renderer.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\helpers.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\jsonparser.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\window\\window.hpp"
+		]
+		Lines = 1086
+		LocalIncludes = [
+			"stdafx.hpp"
+			"InputManager.hpp"
+			"Callbacks/InputCallbacks.hpp"
+			"Graphics/Renderer.hpp"
+			"Helpers.hpp"
+			"JSONParser.hpp"
+			"Window/Window.hpp"
+		]
+		SystemIncludes = [
+			"stdafx.hpp"
+			"InputManager.hpp"
+			"Callbacks/InputCallbacks.hpp"
+			"Graphics/Renderer.hpp"
+			"Helpers.hpp"
+			"JSONParser.hpp"
+			"Window/Window.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\jsonparser.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\jsonparser.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\helpers.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\gameobject.hpp"
+		]
+		Lines = 350
+		LocalIncludes = [
+			"stdafx.hpp"
+			"JSONParser.hpp"
+			"Helpers.hpp"
+			"Scene/GameObject.hpp"
+		]
+		SystemIncludes = [
+			"stdafx.hpp"
+			"JSONParser.hpp"
+			"Helpers.hpp"
+			"Scene/GameObject.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\jsontypes.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\jsontypes.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\helpers.hpp"
+		]
+		Lines = 470
+		LocalIncludes = [
+			"stdafx.hpp"
+			"JSONTypes.hpp"
+			"Helpers.hpp"
+		]
+		SystemIncludes = [
+			"stdafx.hpp"
+			"JSONTypes.hpp"
+			"Helpers.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\logger.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\helpers.hpp"
+		]
+		Lines = 138
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Helpers.hpp"
+		]
+		SystemIncludes = [
+			"iostream"
+			"cstdio"
+			"stdafx.hpp"
+			"Helpers.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\main.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\flexengine.hpp"
+		]
+		Lines = 54
+		LocalIncludes = [
+			"stdafx.hpp"
+			"FlexEngine.hpp"
+		]
+		SystemIncludes = [
+			"stdafx.hpp"
+			"FlexEngine.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\managers\\cartmanager.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\managers\\cartmanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\flexengine.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\renderer.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\profiler.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\basescene.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\gameobject.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\scenemanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\track\\trackmanager.hpp"
+		]
+		Lines = 451
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Managers/CartManager.hpp"
+			"FlexEngine.hpp"
+			"Graphics/Renderer.hpp"
+			"Profiler.hpp"
+			"Scene/BaseScene.hpp"
+			"Scene/GameObject.hpp"
+			"Scene/SceneManager.hpp"
+			"Track/TrackManager.hpp"
+		]
+		SystemIncludes = [
+			"glm/gtx/norm.hpp"
+			"LinearMath/btIDebugDraw.h"
+			"stdafx.hpp"
+			"Managers/CartManager.hpp"
+			"FlexEngine.hpp"
+			"Graphics/Renderer.hpp"
+			"Profiler.hpp"
+			"Scene/BaseScene.hpp"
+			"Scene/GameObject.hpp"
+			"Scene/SceneManager.hpp"
+			"Track/TrackManager.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\physics\\physicshelpers.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\physics\\physicshelpers.hpp"
+		]
+		Lines = 39
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Physics/PhysicsHelpers.hpp"
+		]
+		SystemIncludes = [
+			"BulletCollision/CollisionShapes/btCollisionShape.h"
+			"stdafx.hpp"
+			"Physics/PhysicsHelpers.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\physics\\physicsmanager.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\physics\\physicsmanager.hpp"
+		]
+		Lines = 50
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Physics/PhysicsManager.hpp"
+		]
+		SystemIncludes = [
+			"BulletCollision/BroadphaseCollision/btDbvtBroadphase.h"
+			"BulletCollision/CollisionDispatch/btCollisionDispatcher.h"
+			"BulletCollision/CollisionDispatch/btDefaultCollisionConfiguration.h"
+			"BulletDynamics/ConstraintSolver/btSequentialImpulseConstraintSolver.h"
+			"BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h"
+			"stdafx.hpp"
+			"Physics/PhysicsManager.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\physics\\physicstypeconversions.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\physics\\physicstypeconversions.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\transform.hpp"
+		]
+		Lines = 47
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Physics/PhysicsTypeConversions.hpp"
+			"Transform.hpp"
+		]
+		SystemIncludes = [
+			"stdafx.hpp"
+			"Physics/PhysicsTypeConversions.hpp"
+			"Transform.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\physics\\physicsworld.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\physics\\physicsworld.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\basecamera.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\cameramanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\helpers.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\physics\\physicshelpers.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\physics\\physicsmanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\physics\\rigidbody.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\profiler.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\gameobject.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\window\\window.hpp"
+		]
+		Lines = 270
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Physics/PhysicsWorld.hpp"
+			"Cameras/BaseCamera.hpp"
+			"Cameras/CameraManager.hpp"
+			"Helpers.hpp"
+			"Physics/PhysicsHelpers.hpp"
+			"Physics/PhysicsManager.hpp"
+			"Physics/RigidBody.hpp"
+			"Profiler.hpp"
+			"Scene/GameObject.hpp"
+			"Window/Window.hpp"
+		]
+		SystemIncludes = [
+			"BulletCollision/CollisionDispatch/btCollisionObject.h"
+			"BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h"
+			"BulletDynamics/Dynamics/btRigidBody.h"
+			"LinearMath/btVector3.h"
+			"stdafx.hpp"
+			"Physics/PhysicsWorld.hpp"
+			"Cameras/BaseCamera.hpp"
+			"Cameras/CameraManager.hpp"
+			"Helpers.hpp"
+			"Physics/PhysicsHelpers.hpp"
+			"Physics/PhysicsManager.hpp"
+			"Physics/RigidBody.hpp"
+			"Profiler.hpp"
+			"Scene/GameObject.hpp"
+			"Window/Window.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\physics\\rigidbody.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\physics\\rigidbody.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\physics\\physicsmanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\physics\\physicsworld.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\basescene.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\scenemanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\transform.hpp"
+		]
+		Lines = 343
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Physics/RigidBody.hpp"
+			"Physics/PhysicsManager.hpp"
+			"Physics/PhysicsWorld.hpp"
+			"Scene/BaseScene.hpp"
+			"Scene/SceneManager.hpp"
+			"Transform.hpp"
+		]
+		SystemIncludes = [
+			"BulletDynamics/Dynamics/btRigidBody.h"
+			"BulletCollision/CollisionShapes/btCollisionShape.h"
+			"BulletDynamics/ConstraintSolver/btFixedConstraint.h"
+			"BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h"
+			"LinearMath/btDefaultMotionState.h"
+			"glm/gtc/matrix_transform.hpp"
+			"stdafx.hpp"
+			"Physics/RigidBody.hpp"
+			"Physics/PhysicsManager.hpp"
+			"Physics/PhysicsWorld.hpp"
+			"Scene/BaseScene.hpp"
+			"Scene/SceneManager.hpp"
+			"Transform.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\player.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\player.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\audio\\audiomanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\basecamera.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\cameramanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\firstpersoncamera.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\overheadcamera.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\renderer.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\inputmanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\physics\\physicsworld.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\physics\\rigidbody.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\playercontroller.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\basescene.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\gameobject.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\meshcomponent.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\scenemanager.hpp"
+		]
+		Lines = 689
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Player.hpp"
+			"Audio/AudioManager.hpp"
+			"Cameras/BaseCamera.hpp"
+			"Cameras/CameraManager.hpp"
+			"Cameras/FirstPersonCamera.hpp"
+			"Cameras/OverheadCamera.hpp"
+			"Graphics/Renderer.hpp"
+			"InputManager.hpp"
+			"Physics/PhysicsWorld.hpp"
+			"Physics/RigidBody.hpp"
+			"PlayerController.hpp"
+			"Scene/BaseScene.hpp"
+			"Scene/GameObject.hpp"
+			"Scene/MeshComponent.hpp"
+			"Scene/SceneManager.hpp"
+		]
+		SystemIncludes = [
+			"BulletCollision/CollisionDispatch/btCollisionWorld.h"
+			"BulletCollision/CollisionShapes/btCapsuleShape.h"
+			"BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h"
+			"BulletDynamics/Dynamics/btRigidBody.h"
+			"LinearMath/btIDebugDraw.h"
+			"glm/gtx/rotate_vector.hpp"
+			"stdafx.hpp"
+			"Player.hpp"
+			"Audio/AudioManager.hpp"
+			"Cameras/BaseCamera.hpp"
+			"Cameras/CameraManager.hpp"
+			"Cameras/FirstPersonCamera.hpp"
+			"Cameras/OverheadCamera.hpp"
+			"Graphics/Renderer.hpp"
+			"InputManager.hpp"
+			"Physics/PhysicsWorld.hpp"
+			"Physics/RigidBody.hpp"
+			"PlayerController.hpp"
+			"Scene/BaseScene.hpp"
+			"Scene/GameObject.hpp"
+			"Scene/MeshComponent.hpp"
+			"Scene/SceneManager.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\playercontroller.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\playercontroller.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\audio\\audiomanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\cameramanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\overheadcamera.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\firstpersoncamera.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\renderer.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\inputmanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\physics\\physicstypeconversions.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\physics\\physicsworld.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\physics\\rigidbody.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\player.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\basescene.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\gameobject.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\scenemanager.hpp"
+		]
+		Lines = 321
+		LocalIncludes = [
+			"stdafx.hpp"
+			"PlayerController.hpp"
+			"Audio/AudioManager.hpp"
+			"Cameras/CameraManager.hpp"
+			"Cameras/OverheadCamera.hpp"
+			"Cameras/FirstPersonCamera.hpp"
+			"Graphics/Renderer.hpp"
+			"InputManager.hpp"
+			"Physics/PhysicsTypeConversions.hpp"
+			"Physics/PhysicsWorld.hpp"
+			"Physics/RigidBody.hpp"
+			"Player.hpp"
+			"Scene/BaseScene.hpp"
+			"Scene/GameObject.hpp"
+			"Scene/SceneManager.hpp"
+		]
+		SystemIncludes = [
+			"BulletCollision/CollisionDispatch/btCollisionWorld.h"
+			"BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h"
+			"BulletDynamics/Dynamics/btRigidBody.h"
+			"glm/gtc/matrix_transform.hpp"
+			"glm/gtx/quaternion.hpp"
+			"glm/gtx/vector_angle.hpp"
+			"LinearMath/btIDebugDraw.h"
+			"stdafx.hpp"
+			"PlayerController.hpp"
+			"Audio/AudioManager.hpp"
+			"Cameras/CameraManager.hpp"
+			"Cameras/OverheadCamera.hpp"
+			"Cameras/FirstPersonCamera.hpp"
+			"Graphics/Renderer.hpp"
+			"InputManager.hpp"
+			"Physics/PhysicsTypeConversions.hpp"
+			"Physics/PhysicsWorld.hpp"
+			"Physics/RigidBody.hpp"
+			"Player.hpp"
+			"Scene/BaseScene.hpp"
+			"Scene/GameObject.hpp"
+			"Scene/SceneManager.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\profiler.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\profiler.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\renderer.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\helpers.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\inputmanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\time.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\window\\window.hpp"
+		]
+		Lines = 431
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Profiler.hpp"
+			"Graphics/Renderer.hpp"
+			"Helpers.hpp"
+			"InputManager.hpp"
+			"Time.hpp"
+			"Window/Window.hpp"
+		]
+		SystemIncludes = [
+			"stdafx.hpp"
+			"Profiler.hpp"
+			"Graphics/Renderer.hpp"
+			"Helpers.hpp"
+			"InputManager.hpp"
+			"Time.hpp"
+			"Window/Window.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\scene\\basescene.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\basescene.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\audio\\audiomanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\callbacks\\gameobjectcallbacks.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\basecamera.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\cameramanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\flexengine.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\renderer.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\helpers.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\inputmanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\jsonparser.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\physics\\physicshelpers.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\physics\\physicsmanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\physics\\physicsworld.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\physics\\rigidbody.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\player.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\playercontroller.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\profiler.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\gameobject.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\meshcomponent.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\scenemanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\track\\beziercurve.hpp"
+		]
+		Lines = 1242
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Scene/BaseScene.hpp"
+			"Audio/AudioManager.hpp"
+			"Callbacks/GameObjectCallbacks.hpp"
+			"Cameras/BaseCamera.hpp"
+			"Cameras/CameraManager.hpp"
+			"FlexEngine.hpp"
+			"Graphics/Renderer.hpp"
+			"Helpers.hpp"
+			"InputManager.hpp"
+			"JSONParser.hpp"
+			"Physics/PhysicsHelpers.hpp"
+			"Physics/PhysicsManager.hpp"
+			"Physics/PhysicsWorld.hpp"
+			"Physics/RigidBody.hpp"
+			"Player.hpp"
+			"PlayerController.hpp"
+			"Profiler.hpp"
+			"Scene/GameObject.hpp"
+			"Scene/MeshComponent.hpp"
+			"Scene/SceneManager.hpp"
+			"Track/BezierCurve.hpp"
+		]
+		SystemIncludes = [
+			"BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h"
+			"glm/gtx/norm.hpp"
+			"stdafx.hpp"
+			"Scene/BaseScene.hpp"
+			"Audio/AudioManager.hpp"
+			"Callbacks/GameObjectCallbacks.hpp"
+			"Cameras/BaseCamera.hpp"
+			"Cameras/CameraManager.hpp"
+			"FlexEngine.hpp"
+			"Graphics/Renderer.hpp"
+			"Helpers.hpp"
+			"InputManager.hpp"
+			"JSONParser.hpp"
+			"Physics/PhysicsHelpers.hpp"
+			"Physics/PhysicsManager.hpp"
+			"Physics/PhysicsWorld.hpp"
+			"Physics/RigidBody.hpp"
+			"Player.hpp"
+			"PlayerController.hpp"
+			"Profiler.hpp"
+			"Scene/GameObject.hpp"
+			"Scene/MeshComponent.hpp"
+			"Scene/SceneManager.hpp"
+			"Track/BezierCurve.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\scene\\gameobject.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\gameobject.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\audio\\audiomanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\flexengine.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\renderer.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\helpers.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\inputmanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\jsonparser.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\physics\\physicsworld.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\physics\\rigidbody.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\player.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\basescene.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\meshcomponent.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\scenemanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\window\\window.hpp"
+		]
+		Lines = 3215
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Scene/GameObject.hpp"
+			"Audio/AudioManager.hpp"
+			"FlexEngine.hpp"
+			"Graphics/Renderer.hpp"
+			"Helpers.hpp"
+			"InputManager.hpp"
+			"JSONParser.hpp"
+			"Physics/PhysicsWorld.hpp"
+			"Physics/RigidBody.hpp"
+			"Player.hpp"
+			"Scene/BaseScene.hpp"
+			"Scene/MeshComponent.hpp"
+			"Scene/SceneManager.hpp"
+			"Window/Window.hpp"
+		]
+		SystemIncludes = [
+			"BulletCollision/CollisionShapes/btBoxShape.h"
+			"BulletCollision/CollisionShapes/btCapsuleShape.h"
+			"BulletCollision/CollisionShapes/btCollisionShape.h"
+			"BulletCollision/CollisionShapes/btConeShape.h"
+			"BulletCollision/CollisionShapes/btCylinderShape.h"
+			"BulletCollision/CollisionShapes/btSphereShape.h"
+			"BulletDynamics/ConstraintSolver/btFixedConstraint.h"
+			"BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h"
+			"BulletDynamics/Dynamics/btRigidBody.h"
+			"LinearMath/btIDebugDraw.h"
+			"LinearMath/btTransform.h"
+			"stdafx.hpp"
+			"Scene/GameObject.hpp"
+			"Audio/AudioManager.hpp"
+			"FlexEngine.hpp"
+			"Graphics/Renderer.hpp"
+			"Helpers.hpp"
+			"InputManager.hpp"
+			"JSONParser.hpp"
+			"Physics/PhysicsWorld.hpp"
+			"Physics/RigidBody.hpp"
+			"Player.hpp"
+			"Scene/BaseScene.hpp"
+			"Scene/MeshComponent.hpp"
+			"Scene/SceneManager.hpp"
+			"Window/Window.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\scene\\meshcomponent.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\dependencies\\tiny_gltf\\tiny_gltf.h"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\meshcomponent.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\loadedmesh.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\basecamera.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\cameramanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\colors.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\renderer.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\helpers.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\gameobject.hpp"
+		]
+		Lines = 1551
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Scene/MeshComponent.hpp"
+			"Scene/LoadedMesh.hpp"
+			"Cameras/BaseCamera.hpp"
+			"Cameras/CameraManager.hpp"
+			"Colors.hpp"
+			"Graphics/Renderer.hpp"
+			"Helpers.hpp"
+			"Scene/GameObject.hpp"
+		]
+		SystemIncludes = [
+			"tiny_gltf/tiny_gltf.h"
+			"glm/gtc/matrix_transform.hpp"
+			"glm/gtc/type_ptr.hpp"
+			"stdafx.hpp"
+			"Scene/MeshComponent.hpp"
+			"Scene/LoadedMesh.hpp"
+			"Cameras/BaseCamera.hpp"
+			"Cameras/CameraManager.hpp"
+			"Colors.hpp"
+			"Graphics/Renderer.hpp"
+			"Helpers.hpp"
+			"Scene/GameObject.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\scene\\scenemanager.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\scenemanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\cameras\\cameramanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\flexengine.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\renderer.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\helpers.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\basescene.hpp"
+		]
+		Lines = 895
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Scene/SceneManager.hpp"
+			"Cameras/CameraManager.hpp"
+			"FlexEngine.hpp"
+			"Graphics/Renderer.hpp"
+			"Helpers.hpp"
+			"Scene/BaseScene.hpp"
+		]
+		SystemIncludes = [
+			"stdafx.hpp"
+			"Scene/SceneManager.hpp"
+			"Cameras/CameraManager.hpp"
+			"FlexEngine.hpp"
+			"Graphics/Renderer.hpp"
+			"Helpers.hpp"
+			"Scene/BaseScene.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\stdafx.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+		]
+		Lines = 9
+		LocalIncludes = [
+			"stdafx.hpp"
+		]
+		SystemIncludes = [
+			"stdafx.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\time.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\time.hpp"
+		]
+		Lines = 31
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Time.hpp"
+		]
+		SystemIncludes = [
+			"stdafx.hpp"
+			"Time.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\track\\beziercurve.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\track\\beziercurve.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\gl\\glphysicsdebugdraw.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\renderer.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\helpers.hpp"
+		]
+		Lines = 134
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Track/BezierCurve.hpp"
+			"Graphics/GL/GLPhysicsDebugDraw.hpp"
+			"Graphics/Renderer.hpp"
+			"Helpers.hpp"
+		]
+		SystemIncludes = [
+			"stdafx.hpp"
+			"Track/BezierCurve.hpp"
+			"Graphics/GL/GLPhysicsDebugDraw.hpp"
+			"Graphics/Renderer.hpp"
+			"Helpers.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\track\\beziercurvelist.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\track\\beziercurvelist.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\renderer.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\track\\beziercurve.hpp"
+		]
+		Lines = 191
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Track/BezierCurveList.hpp"
+			"Graphics/Renderer.hpp"
+			"LinearMath/btIDebugDraw.h"
+			"Track/BezierCurve.hpp"
+		]
+		SystemIncludes = [
+			"stdafx.hpp"
+			"Track/BezierCurveList.hpp"
+			"Graphics/Renderer.hpp"
+			"LinearMath/btIDebugDraw.h"
+			"Track/BezierCurve.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\track\\trackmanager.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\track\\trackmanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\renderer.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\helpers.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\player.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\playercontroller.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\profiler.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\basescene.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\scenemanager.hpp"
+		]
+		Lines = 821
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Track/TrackManager.hpp"
+			"LinearMath/btIDebugDraw.h"
+			"Graphics/Renderer.hpp"
+			"Helpers.hpp"
+			"Player.hpp"
+			"PlayerController.hpp"
+			"Profiler.hpp"
+			"Scene/BaseScene.hpp"
+			"Scene/SceneManager.hpp"
+		]
+		SystemIncludes = [
+			"glm/gtx/norm.hpp"
+			"stdafx.hpp"
+			"Track/TrackManager.hpp"
+			"LinearMath/btIDebugDraw.h"
+			"Graphics/Renderer.hpp"
+			"Helpers.hpp"
+			"Player.hpp"
+			"PlayerController.hpp"
+			"Profiler.hpp"
+			"Scene/BaseScene.hpp"
+			"Scene/SceneManager.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\transform.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\transform.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\helpers.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\physics\\rigidbody.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\gameobject.hpp"
+		]
+		Lines = 584
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Transform.hpp"
+			"BulletDynamics/Dynamics/btRigidBody.h"
+			"Helpers.hpp"
+			"Physics/RigidBody.hpp"
+			"Scene/GameObject.hpp"
+		]
+		SystemIncludes = [
+			"glm/gtc/matrix_transform.hpp"
+			"glm/gtc/quaternion.hpp"
+			"glm/gtx/matrix_decompose.hpp"
+			"glm/mat4x4.hpp"
+			"glm/vec3.hpp"
+			"stdafx.hpp"
+			"Transform.hpp"
+			"BulletDynamics/Dynamics/btRigidBody.h"
+			"Helpers.hpp"
+			"Physics/RigidBody.hpp"
+			"Scene/GameObject.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\window\\glfwwindowwrapper.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\window\\glfwwindowwrapper.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\flexengine.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\gl\\glhelpers.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\renderer.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\helpers.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\inputmanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\window\\monitor.hpp"
+		]
+		Lines = 911
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Window/GLFWWindowWrapper.hpp"
+			"FlexEngine.hpp"
+			"Graphics/GL/GLHelpers.hpp"
+			"Graphics/Renderer.hpp"
+			"Helpers.hpp"
+			"InputManager.hpp"
+			"Window/Monitor.hpp"
+		]
+		SystemIncludes = [
+			"stdafx.hpp"
+			"Window/GLFWWindowWrapper.hpp"
+			"FlexEngine.hpp"
+			"Graphics/GL/GLHelpers.hpp"
+			"Graphics/Renderer.hpp"
+			"Helpers.hpp"
+			"InputManager.hpp"
+			"Window/Monitor.hpp"
+		]
+		Touched = true
+	}
+	"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\src\\window\\window.cpp" = {
+		AbsoluteIncludes = [
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\stdafx.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\window\\window.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\graphics\\renderer.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\helpers.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\inputmanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\jsonparser.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\basescene.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\scene\\scenemanager.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\time.hpp"
+			"d:\\megasync\\code\\c++\\flexengine\\flexengine\\flexengine\\include\\window\\monitor.hpp"
+		]
+		Lines = 378
+		LocalIncludes = [
+			"stdafx.hpp"
+			"Window/Window.hpp"
+			"Graphics/Renderer.hpp"
+			"Helpers.hpp"
+			"InputManager.hpp"
+			"JSONParser.hpp"
+			"Scene/BaseScene.hpp"
+			"Scene/SceneManager.hpp"
+			"Time.hpp"
+			"Window/Monitor.hpp"
+		]
+		SystemIncludes = [
+			"stdafx.hpp"
+			"Window/Window.hpp"
+			"Graphics/Renderer.hpp"
+			"Helpers.hpp"
+			"InputManager.hpp"
+			"JSONParser.hpp"
+			"Scene/BaseScene.hpp"
+			"Scene/SceneManager.hpp"
+			"Time.hpp"
+			"Window/Monitor.hpp"
+		]
+		Touched = true
+	}
+}
+IncludeDirectories = [
+	"D:\\MEGASync\\Code\\C++\\FlexEngine\\FlexEngine\\FlexEngine\\include"
+	"D:\\MEGASync\\Code\\C++\\FlexEngine\\FlexEngine\\FlexEngine\\dependencies"
+]
+LastScan = {
+	Day = 28
+	Hour = 20
+	Minute = 26
+	Month = 1
+	Second = 35
+	Year = 2019
+}
+ScanDirectories = [
+	"D:\\MEGASync\\Code\\C++\\FlexEngine\\FlexEngine\\FlexEngine\\src"
+	"D:\\MEGASync\\Code\\C++\\FlexEngine\\FlexEngine\\FlexEngine\\dependencies\\imgui"
+	"D:\\MEGASync\\Code\\C++\\FlexEngine\\FlexEngine\\FlexEngine\\dependencies\\glad"
+	"D:\\MEGASync\\Code\\C++\\FlexEngine\\FlexEngine\\FlexEngine\\dependencies\\stb"
+	"D:\\MEGASync\\Code\\C++\\FlexEngine\\FlexEngine\\FlexEngine\\dependencies\\tiny_gltf"
+]
