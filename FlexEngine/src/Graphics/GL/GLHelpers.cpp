@@ -542,7 +542,13 @@ namespace flex
 					return false;
 				}
 			}
-			StartAsyncTextureSaveToFile(absoluteFilePath, inFormat, handle, width, height, channelCount, bFlipVertically, &asyncSave);
+			StartAsyncTextureSaveToFile(absoluteFilePath, inFormat, handle, width, height, channelCount, bFlipVertically, &asyncSave, (void*)this,
+				[](void* userData)
+				{
+					GLTexture* tex = reinterpret_cast<GLTexture*>(userData);
+					delete tex->asyncSave;
+					tex->asyncSave = nullptr;
+				});
 			return true;
 		}
 
@@ -584,14 +590,14 @@ namespace flex
 				PrintError("Failed to allocate %d bytes to save out to texture at %s\n", floatBufSize, absoluteFilePath.c_str());
 			}
 
-			free(u8Data);
-			free(readBackTextureData);
+			free_hooked(u8Data);
+			free_hooked(readBackTextureData);
 
 			return bResult;
 		}
 
 		void StartAsyncTextureSaveToFile(const std::string& absoluteFilePath, ImageFormat format, GLuint handle, i32 width,
-			i32 height, i32 channelCount, bool bFlipVertically, AsynchronousTextureSave** asyncTextureSave)
+			i32 height, i32 channelCount, bool bFlipVertically, AsynchronousTextureSave** asyncTextureSave, void* userData, void(*callback)(void*))
 		{
 			assert(channelCount == 3 || channelCount == 4);
 			assert(asyncTextureSave != nullptr);
@@ -624,15 +630,15 @@ namespace flex
 					u8Data[i] = (u8)(readBackTextureData[i] * 255.0f);
 				}
 
-				*asyncTextureSave = new AsynchronousTextureSave(absoluteFilePath, format, width, height, channelCount, bFlipVertically, u8Data, u8BufSize);
+				*asyncTextureSave = new AsynchronousTextureSave(absoluteFilePath, format, width, height, channelCount, bFlipVertically, u8Data, u8BufSize, userData, callback);
 			}
 			else
 			{
 				PrintError("Failed to allocate %d bytes to save out to texture at %s\n", floatBufSize, absoluteFilePath.c_str());
 			}
 
-			free(u8Data);
-			free(readBackTextureData);
+			free_hooked(u8Data);
+			free_hooked(readBackTextureData);
 		}
 
 		bool LoadGLShaders(u32 program, GLShader& shader)
@@ -1185,8 +1191,11 @@ namespace flex
 			}
 		}
 
-		AsynchronousTextureSave::AsynchronousTextureSave(const std::string& absoluteFilePath, ImageFormat format, i32 width, i32 height, i32 channelCount, bool bFlipVertically, u8* srcData, i32 numBytes) :
-			absoluteFilePath(absoluteFilePath)
+		AsynchronousTextureSave::AsynchronousTextureSave(const std::string& absoluteFilePath, ImageFormat format, i32 width, i32 height,
+			i32 channelCount, bool bFlipVertically, u8* srcData, i32 numBytes, void* userData, void(*callback)(void*)) :
+			absoluteFilePath(absoluteFilePath),
+			userData(userData),
+			callback(callback)
 		{
 			data = (u8*)malloc_hooked((u32)numBytes);
 			if (!data)
@@ -1210,7 +1219,12 @@ namespace flex
 		{
 			if (data)
 			{
-				free(data);
+				if (taskThread.joinable())
+				{
+					taskThread.join();
+				}
+				bComplete = true;
+				free_hooked(data);
 				data = nullptr;
 			}
 		}
@@ -1228,6 +1242,11 @@ namespace flex
 				{
 					bComplete = true;
 					taskThread.join();
+
+					if (callback != nullptr)
+					{
+						callback(userData);
+					}
 				}
 			}
 

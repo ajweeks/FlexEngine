@@ -166,7 +166,7 @@ namespace flex
 			alDeleteBuffers(NUM_BUFFERS, s_Buffers);
 			return InvalidAudioSourceID;
 		}
-		free(data);
+		free_hooked(data);
 
 
 		// Source

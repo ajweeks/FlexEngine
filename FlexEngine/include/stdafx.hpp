@@ -1,7 +1,7 @@
 #pragma once
 
-#define COMPILE_OPEN_GL 0
-#define COMPILE_VULKAN 1
+#define COMPILE_OPEN_GL 1
+#define COMPILE_VULKAN 0
 
 #define COMPILE_IMGUI 1
 
@@ -22,7 +22,7 @@ const bool g_bEnableLogging_Loading = false;
 #ifdef DEBUG
 #define THOROUGH_CHECKS 1
 #define ENABLE_PROFILING 1
-#define COMPILE_RENDERDOC_API 1	
+#define COMPILE_RENDERDOC_API 0
 #else
 #define THOROUGH_CHECKS 0
 #define ENABLE_PROFILING 0

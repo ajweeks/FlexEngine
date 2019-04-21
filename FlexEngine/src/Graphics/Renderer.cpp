@@ -106,7 +106,7 @@ namespace flex
 
 	void Renderer::Destroy()
 	{
-		free(m_PointLights);
+		free_hooked(m_PointLights);
 	}
 
 	void Renderer::SetReflectionProbeMaterial(MaterialID reflectionProbeMaterialID)

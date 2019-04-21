@@ -191,13 +191,13 @@ namespace flex
 		{
 			if (constantData.data)
 			{
-				free(constantData.data);
+				free_hooked(constantData.data);
 				constantData.data = nullptr;
 			}
 
 			if (dynamicData.data)
 			{
-				_aligned_free(dynamicData.data);
+				aligned_free_hooked(dynamicData.data);
 				dynamicData.data = nullptr;
 			}
 		}
@@ -628,7 +628,7 @@ namespace flex
 
 			stagingBuffer.Map(memRequirements.size);
 			memcpy(stagingBuffer.m_Mapped, pixels, totalSize);
-			free(pixels);
+			free_hooked(pixels);
 			stagingBuffer.Unmap();
 
 
@@ -1150,7 +1150,7 @@ namespace flex
 				PrintError("Failed to allocate %d bytes to save out to texture at %s\n", u8BufSize, absoluteFilePath.c_str());
 			}
 
-			free(u8Data);
+			free_hooked(u8Data);
 
 			return bResult;
 		}

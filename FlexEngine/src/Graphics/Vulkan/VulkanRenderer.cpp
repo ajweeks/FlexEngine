@@ -2371,7 +2371,7 @@ namespace flex
 			shader->uniformBuffer.constantData.size = shader->shader.constantBufferUniforms.CalculateSizeInBytes();
 			if (shader->uniformBuffer.constantData.size > 0)
 			{
-				free(shader->uniformBuffer.constantData.data);
+				free_hooked(shader->uniformBuffer.constantData.data);
 
 				shader->uniformBuffer.constantData.size = GetAlignedUBOSize(shader->uniformBuffer.constantData.size);
 
@@ -6443,7 +6443,7 @@ namespace flex
 			}
 
 			CreateStaticVertexBuffer(vertexBuffer, vertexDataStart, vertexBufferSize);
-			free(vertexDataStart);
+			free_hooked(vertexDataStart);
 
 			return vertexCount;
 		}

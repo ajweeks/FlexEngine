@@ -271,7 +271,8 @@ namespace flex
 
 		struct AsynchronousTextureSave
 		{
-			AsynchronousTextureSave(const std::string& absoluteFilePath, ImageFormat format, i32 width, i32 height, i32 channelCount, bool bFlipVertically, u8* srcData, i32 numBytes);
+			AsynchronousTextureSave(const std::string& absoluteFilePath, ImageFormat format, i32 width, i32 height, i32 channelCount,
+				bool bFlipVertically, u8* srcData, i32 numBytes, void* userData, void(*callback)(void*));
 			~AsynchronousTextureSave();
 
 			// Returns true once task is complete
@@ -290,12 +291,17 @@ namespace flex
 			sec secBetweenStatusChecks = 0.05f;
 			sec secSinceStatusCheck = 0.0f;
 
+			void* userData = nullptr;
+			void(*callback)(void*) = nullptr;
+
 			bool bSuccess = false;
 			bool bComplete = false;
 		};
 
-		void StartAsyncTextureSaveToFile(const std::string& absoluteFilePath, ImageFormat format, GLuint handle, i32 width, i32 height, i32 channelCount, bool bFlipVertically, AsynchronousTextureSave** asyncTextureSave);
-		bool SaveTextureToFile(const std::string& absoluteFilePath, ImageFormat format, GLuint handle, i32 width, i32 height, i32 channelCount, bool bFlipVertically);
+		void StartAsyncTextureSaveToFile(const std::string& absoluteFilePath, ImageFormat format, GLuint handle, i32 width, i32 height,
+			i32 channelCount, bool bFlipVertically, AsynchronousTextureSave** asyncTextureSave, void* userData = nullptr, void(*callback)(void*) = nullptr);
+		bool SaveTextureToFile(const std::string& absoluteFilePath, ImageFormat format, GLuint handle, i32 width, i32 height, i32 channelCount,
+			bool bFlipVertically);
 
 		bool LoadGLShaders(u32 program, GLShader& shader);
 		bool LinkProgram(u32 program);

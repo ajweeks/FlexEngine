@@ -105,7 +105,7 @@ namespace flex
 	{
 		if (vertexData)
 		{
-			free(vertexData);
+			free_hooked(vertexData);
 			vertexData = nullptr;
 		}
 		VertexCount = 0;
