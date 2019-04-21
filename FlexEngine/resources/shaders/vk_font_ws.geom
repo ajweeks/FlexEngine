@@ -16,9 +16,9 @@ layout (location = 0) in VSO
 
 layout (location = 0) out GSO
 {
-	flat int channel;
 	vec4 color;
 	vec2 texCoord;
+	flat int channel;
 } outputs;
 
 layout (binding = 0) uniform UBODynamic
@@ -38,9 +38,9 @@ void main()
 	vec2 uv = inputs[0].texCoord;
 	vec4 col = inputs[0].color;
 	vec3 tangent = inputs[0].tangent;
-	vec3 bitangent = vec3(0, 1, 0);
+	vec3 bitangent = vec3(0, 1, 0); // TODO
 
-	vec2 normUV = vec2(charSizePixels.x, charSizePixels.y) / uboDynamic.texSize;
+	vec2 normUV = charSizePixels / uboDynamic.texSize;
 	
 	outputs.channel = channel;
 	gl_Position = uboDynamic.model * vec4(pos + (bitangent * -charSizeNorm.y), 1.0);

@@ -3066,7 +3066,7 @@ namespace flex
 
 			glActiveTexture(GL_TEXTURE0);
 
-			glm::mat4 viewProj = g_CameraManager->CurrentCamera()->GetViewProjection();
+			glm::mat4 transformMat = g_CameraManager->CurrentCamera()->GetViewProjection();
 
 			for (BitmapFont* font : m_FontsWS)
 			{
@@ -3074,7 +3074,6 @@ namespace flex
 				{
 					glBindTexture(GL_TEXTURE_2D, font->GetTexture()->handle);
 
-					glm::mat4 transformMat = viewProj;
 					glUniformMatrix4fv(fontMaterial.uniformIDs.transformMat, 1, GL_FALSE, &transformMat[0][0]);
 
 					glm::vec2 texSize = (glm::vec2)font->GetTexture()->GetResolution();

@@ -108,6 +108,8 @@ namespace flex
 
 			m_FontSSGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
 			m_FontSSPipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
+			m_FontWSGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
+			m_FontWSPipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
 
 			m_OffScreenFrameBuf = new FrameBuffer(m_VulkanDevice->m_LogicalDevice);
 			m_OffScreenFrameBuf->frameBufferAttachments = {
@@ -377,6 +379,8 @@ namespace flex
 
 			m_FontSSPipelineLayout.replace();
 			m_FontSSGraphicsPipeline.replace();
+			m_FontWSPipelineLayout.replace();
+			m_FontWSGraphicsPipeline.replace();
 
 			m_gBufferQuadVertexBufferData.Destroy();
 			m_PipelineCache.replace();
@@ -4077,6 +4081,7 @@ namespace flex
 
 		}
 
+		// TODO: Unify with DrawTextWS?
 		void VulkanRenderer::DrawTextSS(VkCommandBuffer commandBuffer)
 		{
 			if (m_FontMatSSID == InvalidMaterialID)
@@ -4134,7 +4139,8 @@ namespace flex
 			VkViewport viewport = {
 				0.0f, (real)frameBufferSize.y,
 				(real)frameBufferSize.x, -(real)frameBufferSize.y,
-				0.1f, 10.0f };
+				0.1f, 10.0f
+			};
 			vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
 			VkRect2D scissor = {
@@ -4202,6 +4208,111 @@ namespace flex
 				return;
 			}
 
+			PROFILE_AUTO("DrawTextWS");
+
+			bool bHasText = false;
+			for (BitmapFont* font : m_FontsWS)
+			{
+				if (font->GetBufferSize() > 0)
+				{
+					bHasText = true;
+					break;
+				}
+			}
+
+			if (!bHasText)
+			{
+				return;
+			}
+
+			VulkanMaterial& fontMaterial = m_Materials[m_FontMatWSID];
+			VulkanShader& fontShader = m_Shaders[fontMaterial.material.shaderID];
+
+			glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+
+			VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[fontMaterial.material.shaderID];
+
+			if (m_FontWSGraphicsPipeline == VK_NULL_HANDLE)
+			{
+				GraphicsPipelineCreateInfo pipelineCreateInfo = {};
+				pipelineCreateInfo.grahpicsPipeline = m_FontWSGraphicsPipeline.replace();
+				pipelineCreateInfo.pipelineLayout = m_FontWSPipelineLayout.replace();
+				pipelineCreateInfo.shaderID = fontMaterial.material.shaderID;
+				pipelineCreateInfo.vertexAttributes = fontShader.shader.vertexAttributes;
+				pipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+				pipelineCreateInfo.cullMode = VK_CULL_MODE_NONE;
+				pipelineCreateInfo.descriptorSetLayoutIndex = fontMaterial.material.shaderID;
+				pipelineCreateInfo.bSetDynamicStates = true;
+				pipelineCreateInfo.bEnableColorBlending = true;
+				pipelineCreateInfo.subpass = fontShader.shader.subpass;
+				pipelineCreateInfo.depthCompareOp = VK_COMPARE_OP_GREATER_OR_EQUAL;
+				pipelineCreateInfo.depthWriteEnable = VK_TRUE;
+				pipelineCreateInfo.renderPass = m_DeferredCombineRenderPass;
+				CreateGraphicsPipeline(&pipelineCreateInfo);
+			}
+			assert(m_FontWSGraphicsPipeline != VK_NULL_HANDLE);
+			assert(m_FontWSPipelineLayout != VK_NULL_HANDLE);
+
+			vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_FontWSGraphicsPipeline);
+
+			VkViewport viewport = {
+				0.0f, (real)frameBufferSize.y,
+				(real)frameBufferSize.x, -(real)frameBufferSize.y,
+				0.1f, 10.0f
+			};
+			vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+
+			VkRect2D scissor = {
+				{ 0u, 0u },
+				{ (u32)frameBufferSize.x, (u32)frameBufferSize.y }
+			};
+			vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+
+			// TODO: Find out how font sizes actually work
+			//real scale = ((real)font->GetFontSize()) / 12.0f + sin(g_SecElapsedSinceProgramStart) * 2.0f;
+			glm::vec3 scaleVec(1.0f);
+
+			glm::mat4 transformMat = g_CameraManager->CurrentCamera()->GetViewProjection();
+
+			for (BitmapFont* font : m_FontsWS)
+			{
+				if (font->GetBufferSize() > 0)
+				{
+					if (font->m_DescriptorSet == VK_NULL_HANDLE)
+					{
+						DescriptorSetCreateInfo info;
+						info.descriptorSet = &font->m_DescriptorSet;
+						info.descriptorSetLayout = &descSetLayout;
+						info.albedoTexture = font->GetTexture();
+						info.shaderID = fontMaterial.material.shaderID;
+						info.uniformBuffer = &fontShader.uniformBuffer;
+						CreateDescriptorSet(&info);
+					}
+
+					u32 dynamicOffsetIndex = 0;
+					BindDescriptorSet(&fontShader, dynamicOffsetIndex, commandBuffer, m_FontWSPipelineLayout, font->m_DescriptorSet);
+
+					VulkanTexture* fontTex = font->GetTexture();
+					glm::vec2 texSize(fontTex->width, fontTex->height);
+
+					real threshold = 0.5f;
+					glm::vec2 shadow(-0.01f, -0.008f);
+					real soften = 0.035f;
+					glm::vec4 fontCharData(threshold, shadow.x, shadow.y, soften);
+
+					UniformOverrides overrides = {};
+					overrides.overridenUniforms.AddUniform(U_TEX_SIZE);
+					overrides.texSize = texSize;
+					overrides.overridenUniforms.AddUniform(U_FONT_CHAR_DATA); // TODO: Does this data change per-object?
+					overrides.fontCharData = fontCharData;
+					UpdateDynamicUniformBuffer(m_FontMatWSID, dynamicOffsetIndex, transformMat, &overrides);
+
+					VkDeviceSize offsets[1] = { 0 };
+					vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_VertexIndexBufferPairs[fontMaterial.material.shaderID].vertexBuffer->m_Buffer, offsets);
+
+					vkCmdDraw(commandBuffer, font->GetBufferSize(), 1, font->GetBufferStart(), 0);
+				}
+			}
 		}
 
 		MaterialID VulkanRenderer::GetNextAvailableMaterialID()
@@ -5955,21 +6066,35 @@ namespace flex
 
 				{
 					// Text & editor objects
-					//SetFont(SID("editor-02-ws"));
-					//real s = g_SecElapsedSinceProgramStart * 3.5f;
-					//DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(1.0f), 1.0f), glm::vec3(2.0f, 1.5f, 0.0f), QUAT_UNIT, 0.0f);
-					//DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.95f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 1) * 0.05f, 1.5f + sin(s + 0.3f * 1) * 0.05f, -0.075f * 1), QUAT_UNIT, 0.0f);
-					//DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.90f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 2) * 0.07f, 1.5f + sin(s + 0.3f * 2) * 0.07f, -0.075f * 2), QUAT_UNIT, 0.0f);
-					//DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.85f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 3) * 0.10f, 1.5f + sin(s + 0.3f * 3) * 0.10f, -0.075f * 3), QUAT_UNIT, 0.0f);
-					//DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.80f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 4) * 0.12f, 1.5f + sin(s + 0.3f * 4) * 0.12f, -0.075f * 4), QUAT_UNIT, 0.0f);
-					//DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.75f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 5) * 0.15f, 1.5f + sin(s + 0.3f * 5) * 0.15f, -0.075f * 5), QUAT_UNIT, 0.0f);
-					//DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.70f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 6) * 0.17f, 1.5f + sin(s + 0.3f * 6) * 0.17f, -0.075f * 6), QUAT_UNIT, 0.0f);
+					SetFont(SID("editor-02-ws"));
+					real s = g_SecElapsedSinceProgramStart * 3.5f;
+					DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(1.0f), 1.0f), glm::vec3(2.0f, 1.5f, 0.0f), QUAT_UNIT, 0.0f);
+					DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.95f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 1) * 0.05f, 1.5f + sin(s + 0.3f * 1) * 0.05f, -0.075f * 1), QUAT_UNIT, 0.0f);
+					DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.90f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 2) * 0.07f, 1.5f + sin(s + 0.3f * 2) * 0.07f, -0.075f * 2), QUAT_UNIT, 0.0f);
+					DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.85f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 3) * 0.10f, 1.5f + sin(s + 0.3f * 3) * 0.10f, -0.075f * 3), QUAT_UNIT, 0.0f);
+					DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.80f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 4) * 0.12f, 1.5f + sin(s + 0.3f * 4) * 0.12f, -0.075f * 4), QUAT_UNIT, 0.0f);
+					DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.75f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 5) * 0.15f, 1.5f + sin(s + 0.3f * 5) * 0.15f, -0.075f * 5), QUAT_UNIT, 0.0f);
+					DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.70f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 6) * 0.17f, 1.5f + sin(s + 0.3f * 6) * 0.17f, -0.075f * 6), QUAT_UNIT, 0.0f);
 
-					//std::vector<TextVertex3D> textVerticesWS;
-					//UpdateTextBufferWS(textVerticesWS);
-					//// TODO: Update buffer with textVerticesWS
+					{
+						std::vector<TextVertex3D> textVerticesWS;
+						UpdateTextBufferWS(textVerticesWS);
 
-					//DrawTextWS();
+						u32 WSTextBufferByteCount = (u32)(textVerticesWS.size() * sizeof(TextVertex2D));
+
+						const VulkanMaterial& fontMaterial = m_Materials[m_FontMatWSID];
+						VulkanBuffer* vertexBuffer = m_VertexIndexBufferPairs[fontMaterial.material.shaderID].vertexBuffer;
+						u32 copySize = std::min(WSTextBufferByteCount, (u32)vertexBuffer->m_Size);
+						if (copySize < WSTextBufferByteCount)
+						{
+							PrintError("SS Font vertex buffer is %u bytes too small\n", WSTextBufferByteCount - copySize);
+						}
+						VK_CHECK_RESULT(vertexBuffer->Map(copySize));
+						memcpy(vertexBuffer->m_Mapped, textVerticesWS.data(), copySize);
+						vertexBuffer->Unmap();
+					}
+
+					DrawTextWS(commandBuffer);
 
 					bool bUsingGameplayCam = g_CameraManager->CurrentCamera()->bIsGameplayCam;
 					if (g_EngineInstance->IsRenderingEditorObjects() && !bUsingGameplayCam)
@@ -6010,53 +6135,53 @@ namespace flex
 #if 1
 					real yO = -1.0f;
 					std::string str;
-					for (i32 i = 0; i < 5; ++i)
-					{
-						str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
-						DrawStringSS(str, glm::vec4(0.95f), AnchorPoint::CENTER, glm::vec2(0.0f, yO), 3.5f);
-						yO += 0.05f;
-						str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
-						DrawStringSS(str, glm::vec4(0.95f, 0.6f, 0.95f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, yO), 3.5f);
-						yO += 0.05f;
-						str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
-						DrawStringSS(str, glm::vec4(0.8f, 0.9f, 0.1f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, yO), 3.5f);
-						yO += 0.05f;
-						str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
-						DrawStringSS(str, glm::vec4(0.95f, 0.1f, 0.5f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, yO), 3.5f);
-						yO += 0.05f;
-					}
+					//for (i32 i = 0; i < 5; ++i)
+					//{
+					//	str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
+					//	DrawStringSS(str, glm::vec4(0.95f), AnchorPoint::CENTER, glm::vec2(0.0f, yO), 3.5f);
+					//	yO += 0.05f;
+					//	str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
+					//	DrawStringSS(str, glm::vec4(0.95f, 0.6f, 0.95f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, yO), 3.5f);
+					//	yO += 0.05f;
+					//	str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
+					//	DrawStringSS(str, glm::vec4(0.8f, 0.9f, 0.1f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, yO), 3.5f);
+					//	yO += 0.05f;
+					//	str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
+					//	DrawStringSS(str, glm::vec4(0.95f, 0.1f, 0.5f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, yO), 3.5f);
+					//	yO += 0.05f;
+					//}
 
 					SetFont(SID("editor-01"));
-					yO = 0.0f;
-					for (i32 i = 0; i < 3; ++i)
-					{
-						str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
-						DrawStringSS(str, glm::vec4(0.95f, 0.5f, 0.1f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, yO), 6);
-						yO += 0.1f;
-						str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
-						DrawStringSS(str, glm::vec4(0.55f, 0.6f, 0.95f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, yO), 6);
-						yO += 0.1f;
-						str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
-						DrawStringSS(str, glm::vec4(0.0f, 0.9f, 0.7f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, yO), 6);
-						yO += 0.1f;
-					}
+					//yO = 0.0f;
+					//for (i32 i = 0; i < 3; ++i)
+					//{
+					//	str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
+					//	DrawStringSS(str, glm::vec4(0.95f, 0.5f, 0.1f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, yO), 6);
+					//	yO += 0.1f;
+					//	str = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
+					//	DrawStringSS(str, glm::vec4(0.55f, 0.6f, 0.95f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, yO), 6);
+					//	yO += 0.1f;
+					//	str = std::string("0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"0123456789 -=!@#$%^&*()_+`~\\|/?<>,.*;:[]{}\'\"");
+					//	DrawStringSS(str, glm::vec4(0.0f, 0.9f, 0.7f, 1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, yO), 6);
+					//	yO += 0.1f;
+					//}
 
-					//std::string str = std::string("XYZ");
-					//DrawStringSS(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_LEFT, VEC2_ZERO, 3, &letterYOffsetsEmpty);
-					//DrawStringSS(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP, VEC2_ZERO, 3, &letterYOffsetsEmpty);
-					//DrawStringSS(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, VEC2_ZERO, 3, &letterYOffsetsEmpty);
-					//DrawStringSS(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::RIGHT, VEC2_ZERO, 3, &letterYOffsetsEmpty);
-					//DrawStringSS(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM_RIGHT, VEC2_ZERO, 3, &letterYOffsetsEmpty);
-					//DrawStringSS(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM, VEC2_ZERO, 3, &letterYOffsetsEmpty);
-					//DrawStringSS(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM_LEFT, VEC2_ZERO, 3, &letterYOffsetsEmpty);
-					//DrawStringSS(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::LEFT, VEC2_ZERO, 3, &letterYOffsetsEmpty);
-					//DrawStringSS(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::CENTER, VEC2_ZERO, 3, &letterYOffsetsEmpty);
+					//str = std::string("XYZ");
+					//DrawStringSS(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_LEFT, VEC2_ZERO, 3, false);
+					//DrawStringSS(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP, VEC2_ZERO, 3, false);
+					//DrawStringSS(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, VEC2_ZERO, 3, false);
+					//DrawStringSS(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::RIGHT, VEC2_ZERO, 3, false);
+					//DrawStringSS(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM_RIGHT, VEC2_ZERO, 3, false);
+					//DrawStringSS(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM, VEC2_ZERO, 3, false);
+					//DrawStringSS(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::BOTTOM_LEFT, VEC2_ZERO, 3, false);
+					//DrawStringSS(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::LEFT, VEC2_ZERO, 3, false);
+					//DrawStringSS(str, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::CENTER, VEC2_ZERO, 3, false);
 
-					//std::string fxaaEnabledStr = std::string("FXAA: ") + (m_PostProcessSettings.bEnableFXAA ? "1" : "0");
-					//DrawStringSS(fxaaEnabledStr, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, glm::vec2(-0.01f, 0.0f), 5, &letterYOffsetsEmpty);
-					//glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
-					//std::string resolutionStr = "Frame buffer size: " +  IntToString(frameBufferSize.x) + "x" + IntToString(frameBufferSize.y);
-					//DrawStringSS(resolutionStr, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, glm::vec2(-0.01f, 0.04f), 5, &letterYOffsetsEmpty);
+					std::string fxaaEnabledStr = std::string("FXAA: ") + (m_PostProcessSettings.bEnableFXAA ? "1" : "0");
+					DrawStringSS(fxaaEnabledStr, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, glm::vec2(-0.01f, 0.0f), 5, false);
+					glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+					std::string resolutionStr = "Frame buffer size: " +  IntToString(frameBufferSize.x) + "x" + IntToString(frameBufferSize.y);
+					DrawStringSS(resolutionStr, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, glm::vec2(-0.01f, 0.04f), 5, false);
 #endif
 
 					if (m_EditorStrSecRemaining > 0.0f)
@@ -6067,21 +6192,23 @@ namespace flex
 						DrawStringSS(m_EditorMessage, glm::vec4(1.0f, 1.0f, 1.0f, alpha), AnchorPoint::CENTER, VEC2_ZERO, 3);
 					}
 
-					std::vector<TextVertex2D> textVerticesSS;
-					UpdateTextBufferSS(textVerticesSS);
-
-					u32 bufferByteCount = (u32)(textVerticesSS.size() * sizeof(TextVertex2D));
-
-					const VulkanMaterial& fontMaterial = m_Materials[m_FontMatSSID];
-					VulkanBuffer* vertexBuffer = m_VertexIndexBufferPairs[fontMaterial.material.shaderID].vertexBuffer;
-					u32 copySize = std::min(bufferByteCount, (u32)vertexBuffer->m_Size);
-					if (copySize < bufferByteCount)
 					{
-						PrintError("SS Font vertex buffer is %u bytes too small\n", bufferByteCount - copySize);
+						std::vector<TextVertex2D> textVerticesSS;
+						UpdateTextBufferSS(textVerticesSS);
+
+						u32 SSTextBufferByteCount = (u32)(textVerticesSS.size() * sizeof(TextVertex2D));
+
+						const VulkanMaterial& fontMaterial = m_Materials[m_FontMatSSID];
+						VulkanBuffer* vertexBuffer = m_VertexIndexBufferPairs[fontMaterial.material.shaderID].vertexBuffer;
+						u32 copySize = std::min(SSTextBufferByteCount, (u32)vertexBuffer->m_Size);
+						if (copySize < SSTextBufferByteCount)
+						{
+							PrintError("SS Font vertex buffer is %u bytes too small\n", SSTextBufferByteCount - copySize);
+						}
+						VK_CHECK_RESULT(vertexBuffer->Map(copySize));
+						memcpy(vertexBuffer->m_Mapped, textVerticesSS.data(), copySize);
+						vertexBuffer->Unmap();
 					}
-					VK_CHECK_RESULT(vertexBuffer->Map(copySize));
-					memcpy(vertexBuffer->m_Mapped, textVerticesSS.data(), copySize);
-					vertexBuffer->Unmap();
 
 					DrawTextSS(commandBuffer);
 				}
@@ -7420,8 +7547,9 @@ namespace flex
 			m_Shaders[shaderID].shader.subpass = 1;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION |
-				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
 				(u32)VertexAttribute::UV |
+				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
+				(u32)VertexAttribute::TANGENT |
 				(u32)VertexAttribute::EXTRA_VEC4 |
 				(u32)VertexAttribute::EXTRA_INT;
 			m_Shaders[shaderID].bDynamic = true;

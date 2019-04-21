@@ -377,6 +377,8 @@ namespace flex
 			// TODO: Only use VDeleter on objects which may need to be reused
 			VDeleter<VkPipeline> m_FontSSGraphicsPipeline;
 			VDeleter<VkPipelineLayout> m_FontSSPipelineLayout;
+			VDeleter<VkPipeline> m_FontWSGraphicsPipeline;
+			VDeleter<VkPipelineLayout> m_FontWSPipelineLayout;
 
 			VDeleter<VkDescriptorPool> m_DescriptorPool;
 			std::vector<VkDescriptorSetLayout> m_DescriptorSetLayouts;
