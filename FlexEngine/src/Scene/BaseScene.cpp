@@ -281,6 +281,7 @@ namespace flex
 		{
 			m_PhysicsWorld->Destroy();
 			delete m_PhysicsWorld;
+			m_PhysicsWorld = nullptr;
 		}
 	}
 

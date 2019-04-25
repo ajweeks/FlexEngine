@@ -60,6 +60,7 @@ namespace flex
 			}
 
 			delete m_World;
+			m_World = nullptr;
 		}
 	}
 

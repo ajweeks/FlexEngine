@@ -245,6 +245,7 @@ namespace flex
 		{
 			m_MeshComponent->Destroy();
 			delete m_MeshComponent;
+			m_MeshComponent = nullptr;
 		}
 
 		if (m_RenderID != InvalidRenderID)
@@ -257,6 +258,7 @@ namespace flex
 		{
 			m_RigidBody->Destroy();
 			delete m_RigidBody;
+			m_RigidBody = nullptr;
 		}
 
 		if (m_CollisionShape)
@@ -3912,6 +3914,7 @@ namespace flex
 	Tokenizer::~Tokenizer()
 	{
 		delete context;
+		context = nullptr;
 		codeStrCopy = "";
 	}
 
@@ -4409,7 +4412,9 @@ namespace flex
 	Operation::~Operation()
 	{
 		delete lhs;
+		lhs = nullptr;
 		delete rhs;
+		rhs = nullptr;
 	}
 
 	template<class T>
@@ -4506,6 +4511,7 @@ namespace flex
 			if (rhsVar->bIsTemporary)
 			{
 				delete rhsVar;
+				rhsVar = nullptr;
 			}
 
 			if (newVal == nullptr)
@@ -4528,6 +4534,7 @@ namespace flex
 			if (lhsVar->bIsTemporary)
 			{
 				delete lhsVar;
+				lhsVar = nullptr;
 			}
 			if (rhsVar->bIsTemporary)
 			{
@@ -4556,10 +4563,12 @@ namespace flex
 		if (lhsVar->bIsTemporary)
 		{
 			delete lhsVar;
+			lhsVar = nullptr;
 		}
 		if (rhsVar->bIsTemporary)
 		{
 			delete rhsVar;
+			rhsVar = nullptr;
 		}
 
 		if (newVal == nullptr)
@@ -4649,9 +4658,11 @@ namespace flex
 			break;
 		case ValueType::IDENTIFIER:
 			delete val.identifier;
+			val.identifier = nullptr;
 			break;
 		case ValueType::OPERATION:
 			delete val.operation;
+			val.operation = nullptr;
 			break;
 		default:
 			PrintError("Unhandled statement type in ~Value(): %d\n", (i32)type);
@@ -4992,7 +5003,9 @@ namespace flex
 	Assignment::~Assignment()
 	{
 		delete identifier;
+		identifier = nullptr;
 		delete rhs;
+		rhs = nullptr;
 	}
 
 	void Assignment::Evaluate(TokenContext& context)
@@ -5073,6 +5086,7 @@ namespace flex
 				if (rhsVal->bIsTemporary)
 				{
 					delete rhsVal;
+					rhsVal = nullptr;
 				}
 			} break;
 			case TypeName::FLOAT:
@@ -5098,6 +5112,7 @@ namespace flex
 				if (rhsVal->bIsTemporary)
 				{
 					delete rhsVal;
+					rhsVal = nullptr;
 				}
 			} break;
 			case TypeName::BOOL:
@@ -5119,6 +5134,7 @@ namespace flex
 				if (rhsVal->bIsTemporary)
 				{
 					delete rhsVal;
+					rhsVal = nullptr;
 				}
 			} break;
 			default:
@@ -5211,16 +5227,20 @@ namespace flex
 		{
 		case StatementType::ASSIGNMENT:
 			delete contents.assignment;
+			contents.assignment = nullptr;
 			break;
 		case StatementType::IF:
 		case StatementType::ELIF:
 			delete contents.ifStatement;
+			contents.ifStatement = nullptr;
 			break;
 		case StatementType::ELSE:
 			delete contents.elseStatement;
+			contents.elseStatement = nullptr;
 			break;
 		case StatementType::WHILE:
 			delete contents.whileStatement;
+			contents.whileStatement = nullptr;
 			break;
 		default:
 			PrintError("Unhandled statement type in ~Statement(): %d\n", (i32)type);
@@ -5426,7 +5446,9 @@ namespace flex
 	IfStatement::~IfStatement()
 	{
 		delete condition;
+		condition = nullptr;
 		delete body;
+		body = nullptr;
 	}
 
 	void IfStatement::Evaluate(TokenContext& context)
@@ -5571,7 +5593,9 @@ namespace flex
 	WhileStatement::~WhileStatement()
 	{
 		delete condition;
+		condition = nullptr;
 		delete body;
+		body = nullptr;
 	}
 
 	void WhileStatement::Evaluate(TokenContext& context)
@@ -5661,7 +5685,9 @@ namespace flex
 	RootItem::~RootItem()
 	{
 		delete statement;
+		statement = nullptr;
 		delete nextItem;
+		nextItem = nullptr;
 	}
 
 	void RootItem::Evaluate(TokenContext& context)
@@ -5712,6 +5738,7 @@ namespace flex
 	void AST::Destroy()
 	{
 		delete rootItem;
+		rootItem = nullptr;
 		bValid = false;
 	}
 
@@ -5821,9 +5848,11 @@ namespace flex
 		{
 			ast->Destroy();
 			delete ast;
+			ast = nullptr;
 		}
 
 		delete tokenizer;
+		tokenizer = nullptr;
 
 		GameObject::Destroy();
 	}

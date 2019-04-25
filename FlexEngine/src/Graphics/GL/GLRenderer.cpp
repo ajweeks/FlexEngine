@@ -487,6 +487,7 @@ namespace flex
 			glDeleteFramebuffers(1, &m_ShadowMapFBO);
 
 			delete screenshotAsyncTextureSave;
+			screenshotAsyncTextureSave = nullptr;
 
 			for (GameObject* editorObject : m_EditorObjects)
 			{
@@ -550,6 +551,7 @@ namespace flex
 				}
 				delete editorObject;
 			}
+			m_EditorObjects.clear();
 
 			DestroyRenderObject(m_Quad3DRenderID);
 			DestroyRenderObject(m_Quad2DRenderID);
@@ -583,6 +585,7 @@ namespace flex
 			{
 				m_PhysicsDebugDrawer->Destroy();
 				delete m_PhysicsDebugDrawer;
+				m_PhysicsDebugDrawer = nullptr;
 			}
 
 			m_gBufferQuadVertexBufferData.Destroy();
@@ -3157,6 +3160,7 @@ namespace flex
 						newFont->ClearTexture();
 						fontTex->Destroy();
 						delete fontTex;
+						fontTex = nullptr;
 					}
 				}
 			}
@@ -5008,6 +5012,7 @@ namespace flex
 
 				renderObject->gameObject = nullptr;
 				delete renderObject;
+				renderObject = nullptr;
 			}
 
 			m_RenderObjects[renderID] = nullptr;

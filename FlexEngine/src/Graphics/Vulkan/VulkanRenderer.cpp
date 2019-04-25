@@ -307,6 +307,7 @@ namespace flex
 
 #ifdef DEBUG
 			delete m_ShaderCompiler;
+			m_ShaderCompiler = nullptr;
 #endif
 
 			vkQueueWaitIdle(m_GraphicsQueue);
@@ -336,6 +337,7 @@ namespace flex
 			DestroyRenderObject(m_GBufferQuadRenderID);
 
 			delete m_PhysicsDebugDrawer;
+			m_PhysicsDebugDrawer = nullptr;
 
 			for (GameObject* obj : m_PersistentObjects)
 			{
@@ -370,12 +372,16 @@ namespace flex
 			ClearMaterials(true);
 
 			delete m_OffScreenFrameBuf;
+			m_OffScreenFrameBuf = nullptr;
 			vkDestroySemaphore(m_VulkanDevice->m_LogicalDevice, offscreenSemaphore, nullptr);
 
 			delete m_CubemapFrameBuffer;
+			m_CubemapFrameBuffer = nullptr;
 			delete m_CubemapDepthAttachment;
+			m_CubemapDepthAttachment = nullptr;
 
 			delete m_DepthAttachment;
+			m_DepthAttachment = nullptr;
 
 			m_FontSSPipelineLayout.replace();
 			m_FontSSGraphicsPipeline.replace();
@@ -388,6 +394,7 @@ namespace flex
 			m_ColorSampler.replace();
 
 			delete m_BlankTexture;
+			m_BlankTexture = nullptr;
 
 			for (VulkanTexture* loadedTexture : m_LoadedTextures)
 			{
@@ -424,6 +431,7 @@ namespace flex
 			vkDeviceWaitIdle(m_VulkanDevice->m_LogicalDevice);
 
 			delete m_VulkanDevice;
+			m_VulkanDevice = nullptr;
 
 			glfwTerminate();
 		}
@@ -2970,6 +2978,7 @@ namespace flex
 				renderObject->graphicsPipeline.replace();
 				renderObject->pipelineLayout.replace();
 				delete renderObject;
+				renderObject = nullptr;
 			}
 			m_RenderObjects[renderID] = nullptr;
 			m_bRebatchRenderObjects = true;
@@ -3764,6 +3773,7 @@ namespace flex
 					{
 						newFont->ClearTexture();
 						delete fontTex;
+						fontTex = nullptr;
 					}
 				}
 			}
