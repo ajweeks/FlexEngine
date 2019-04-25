@@ -1119,7 +1119,7 @@ namespace flex
 					bColorSwizzle = (std::find(formatsBGR.begin(), formatsBGR.end(), imageFormat) != formatsBGR.end());
 				}
 
-				CopyPixels(data, u8Data, subResourceLayout.offset, width, height, channelCount, subResourceLayout.rowPitch, false);
+				CopyPixels(data, u8Data, (u32)subResourceLayout.offset, width, height, channelCount, (u32)subResourceLayout.rowPitch, false);
 
 				bResult = SaveImage(absoluteFilePath, saveFormat, width, height, channelCount, u8Data, bFlipVertically);
 

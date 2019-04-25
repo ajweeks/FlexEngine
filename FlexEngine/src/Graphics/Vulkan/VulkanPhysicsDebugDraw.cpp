@@ -106,7 +106,9 @@ namespace flex
 
 		void VulkanPhysicsDebugDraw::DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& color)
 		{
-
+			UNREFERENCED_PARAMETER(from);
+			UNREFERENCED_PARAMETER(to);
+			UNREFERENCED_PARAMETER(color);
 		}
 
 		void VulkanPhysicsDebugDraw::flushLines()

@@ -2135,12 +2135,6 @@ namespace flex
 
 						ImGui::Text("%s", shaderBatchNames[i]);
 
-						real boxWidth = 500.0f;
-						real boxHeight = 40.0f;
-						real spacing = 5.0f;
-						real border = 1.0f;
-
-						ImDrawList* drawList = ImGui::GetWindowDrawList();
 						for (u32 j = 0; j < shaderBatch->batches.size(); ++j)
 						{
 							const ShaderBatchPair& shaderBatchPair = shaderBatch->batches[j];
@@ -2163,7 +2157,6 @@ namespace flex
 
 								for (u32 k = 0; k < shaderBatchPair.batch.batches.size(); ++k)
 								{
-									bool bSameLined = false;
 									const MaterialBatchPair& matBatchPair = shaderBatchPair.batch.batches[k];
 									for (RenderID renderID : matBatchPair.batch.objects)
 									{
@@ -2258,22 +2251,28 @@ namespace flex
 
 		void VulkanRenderer::UpdateVertexData(RenderID renderID, VertexBufferData* vertexBufferData)
 		{
-
+			UNREFERENCED_PARAMETER(renderID);
+			UNREFERENCED_PARAMETER(vertexBufferData);
 		}
 
 		void VulkanRenderer::DrawUntexturedQuad(const glm::vec2& pos, AnchorPoint anchor, const glm::vec2& size, const glm::vec4& color)
 		{
-
+			UNREFERENCED_PARAMETER(pos);
+			UNREFERENCED_PARAMETER(anchor);
+			UNREFERENCED_PARAMETER(size);
+			UNREFERENCED_PARAMETER(color);
 		}
 
 		void VulkanRenderer::DrawUntexturedQuadRaw(const glm::vec2& pos, const glm::vec2& size, const glm::vec4& color)
 		{
-
+			UNREFERENCED_PARAMETER(pos);
+			UNREFERENCED_PARAMETER(size);
+			UNREFERENCED_PARAMETER(color);
 		}
 
 		void VulkanRenderer::DrawSprite(const SpriteQuadDrawInfo& drawInfo)
 		{
-
+			UNREFERENCED_PARAMETER(drawInfo);
 		}
 
 		void VulkanRenderer::DrawImGuiForRenderObject(RenderID renderID)
@@ -2440,7 +2439,7 @@ namespace flex
 
 		void VulkanRenderer::ReloadSkybox(bool bRandomizeTexture)
 		{
-
+			UNREFERENCED_PARAMETER(bRandomizeTexture);
 		}
 
 		void VulkanRenderer::OnWindowSizeChanged(i32 width, i32 height)
@@ -3271,6 +3270,7 @@ namespace flex
 
 		u32 VulkanRenderer::GetTextureHandle(TextureID textureID) const
 		{
+			UNREFERENCED_PARAMETER(textureID);
 			return 0;
 		}
 
@@ -3708,7 +3708,7 @@ namespace flex
 
 		void VulkanRenderer::DrawSpriteQuad(const SpriteQuadDrawInfo& drawInfo)
 		{
-
+			UNREFERENCED_PARAMETER(drawInfo);
 		}
 
 		void VulkanRenderer::DrawScreenSpaceSprites()
@@ -4385,7 +4385,7 @@ namespace flex
 
 			for (size_t i = 0; i < material->material.frameBuffers.size(); ++i)
 			{
-				createInfo.frameBufferViews.emplace_back(U_FB_0_SAMPLER + i, static_cast<VkImageView*>(material->material.frameBuffers[i].second));
+				createInfo.frameBufferViews.emplace_back(static_cast<u32>(U_FB_0_SAMPLER + i), static_cast<VkImageView*>(material->material.frameBuffers[i].second));
 			}
 
 			CreateDescriptorSet(&createInfo);
@@ -5657,7 +5657,7 @@ namespace flex
 
 					// Text stress test:
 #if 1
-					real yO = -1.0f;
+					//real yO = -1.0f;
 					std::string str;
 					//for (i32 i = 0; i < 5; ++i)
 					//{
@@ -7159,7 +7159,7 @@ namespace flex
 
 		void VulkanRenderer::CaptureSceneToCubemap(RenderID cubemapRenderID)
 		{
-			// UNIMPLEMENTED
+			UNREFERENCED_PARAMETER(cubemapRenderID);
 		}
 
 		void VulkanRenderer::GeneratePrefilteredMapFromCubemap(MaterialID cubemapMaterialID)
