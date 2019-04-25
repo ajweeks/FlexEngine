@@ -31,6 +31,7 @@ IGNORE_WARNINGS_POP
 #include "Graphics/VertexBufferData.hpp"
 #include "Graphics/Vulkan/VulkanBuffer.hpp"
 #include "Graphics/Vulkan/VulkanDevice.hpp"
+#include "Graphics/Vulkan/VulkanInitializers.hpp"
 #include "Graphics/Vulkan/VulkanPhysicsDebugDraw.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
@@ -269,17 +270,13 @@ namespace flex
 					// TODO: Use general purpose command buffer manager
 					VkCommandBuffer command_buffer = m_CommandBufferManager.m_CommandBuffers[0];
 
-					VkCommandBufferBeginInfo begin_info = {};
-					begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+					VkCommandBufferBeginInfo begin_info = vks::commandBufferBeginInfo();
 					begin_info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 					VK_CHECK_RESULT(vkBeginCommandBuffer(command_buffer, &begin_info));
 
 					ImGui_ImplVulkan_CreateFontsTexture(command_buffer);
 
-					VkSubmitInfo end_info = {};
-					end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-					end_info.commandBufferCount = 1;
-					end_info.pCommandBuffers = &command_buffer;
+					VkSubmitInfo end_info = vks::submitInfo(1, &command_buffer);
 					VK_CHECK_RESULT(vkEndCommandBuffer(command_buffer));
 					VK_CHECK_RESULT(vkQueueSubmit(m_GraphicsQueue, 1, &end_info, VK_NULL_HANDLE));
 
@@ -505,16 +502,15 @@ namespace flex
 			dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
 			// Renderpass
-			VkRenderPassCreateInfo renderPassCreateInfo = {};
-			renderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+			VkRenderPassCreateInfo renderPassCreateInfo = vks::renderPassCreateInfo();
 			renderPassCreateInfo.attachmentCount = 1;
 			renderPassCreateInfo.pAttachments = &attDesc;
 			renderPassCreateInfo.subpassCount = 1;
 			renderPassCreateInfo.pSubpasses = &subpassDescription;
 			renderPassCreateInfo.dependencyCount = dependencies.size();
 			renderPassCreateInfo.pDependencies = dependencies.data();
-			VkRenderPass renderpass;
-			VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassCreateInfo, nullptr, &renderpass));
+			VkRenderPass renderPass;
+			VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassCreateInfo, nullptr, &renderPass));
 
 
 
@@ -527,8 +523,7 @@ namespace flex
 			} offscreen;
 
 			// Color attachment
-			VkImageCreateInfo offscreenImageCreateInfo = {};
-			offscreenImageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+			VkImageCreateInfo offscreenImageCreateInfo = vks::imageCreateInfo();
 			offscreenImageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
 			offscreenImageCreateInfo.format = format;
 			offscreenImageCreateInfo.extent.width = dim;
@@ -543,17 +538,14 @@ namespace flex
 			offscreenImageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 			VK_CHECK_RESULT(vkCreateImage(m_VulkanDevice->m_LogicalDevice, &offscreenImageCreateInfo, nullptr, &offscreen.image));
 
-			VkMemoryAllocateInfo offscreenMemAlloc = {};
-			offscreenMemAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 			VkMemoryRequirements offscreenMemRequirements;
 			vkGetImageMemoryRequirements(m_VulkanDevice->m_LogicalDevice, offscreen.image, &offscreenMemRequirements);
-			offscreenMemAlloc.allocationSize = offscreenMemRequirements.size;
+			VkMemoryAllocateInfo offscreenMemAlloc = vks::memoryAllocateInfo(offscreenMemRequirements.size);
 			offscreenMemAlloc.memoryTypeIndex = FindMemoryType(m_VulkanDevice, offscreenMemRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 			VK_CHECK_RESULT(vkAllocateMemory(m_VulkanDevice->m_LogicalDevice, &offscreenMemAlloc, nullptr, &offscreen.memory));
 			VK_CHECK_RESULT(vkBindImageMemory(m_VulkanDevice->m_LogicalDevice, offscreen.image, offscreen.memory, 0));
 
-			VkImageViewCreateInfo colorImageView = {};
-			colorImageView.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+			VkImageViewCreateInfo colorImageView = vks::imageViewCreateInfo();
 			colorImageView.viewType = VK_IMAGE_VIEW_TYPE_2D;
 			colorImageView.format = format;
 			colorImageView.flags = 0;
@@ -566,9 +558,7 @@ namespace flex
 			colorImageView.image = offscreen.image;
 			VK_CHECK_RESULT(vkCreateImageView(m_VulkanDevice->m_LogicalDevice, &colorImageView, nullptr, &offscreen.view));
 
-			VkFramebufferCreateInfo framebufCreateInfo = {};
-			framebufCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-			framebufCreateInfo.renderPass = renderpass;
+			VkFramebufferCreateInfo framebufCreateInfo = vks::framebufferCreateInfo(renderPass);
 			framebufCreateInfo.attachmentCount = 1;
 			framebufCreateInfo.pAttachments = &offscreen.view;
 			framebufCreateInfo.width = dim;
@@ -588,17 +578,10 @@ namespace flex
 
 
 			// Descriptors
-			std::array<VkDescriptorSetLayoutBinding, 1> setLayoutBindings = {};
-			setLayoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			setLayoutBindings[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-			setLayoutBindings[0].binding = 0;
-			setLayoutBindings[0].descriptorCount = 1;
+			VkDescriptorSetLayoutBinding setLayoutBinding = vks::descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0);
 
 			VkDescriptorSetLayout descriptorsetlayout;
-			VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = {};
-			descriptorSetLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-			descriptorSetLayoutCreateInfo.pBindings = setLayoutBindings.data();
-			descriptorSetLayoutCreateInfo.bindingCount = static_cast<u32>(setLayoutBindings.size());
+			VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = vks::descriptorSetLayoutCreateInfo(1, &setLayoutBinding);
 			VK_CHECK_RESULT(vkCreateDescriptorSetLayout(m_VulkanDevice->m_LogicalDevice, &descriptorSetLayoutCreateInfo, nullptr, &descriptorsetlayout));
 
 			ShaderID equirectangularToCubeShaderID;
@@ -624,81 +607,27 @@ namespace flex
 			pushConstantRanges[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 			pushConstantRanges[0].offset = 0;
 
-			VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {};
-			pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-			pipelineLayoutCreateInfo.pSetLayouts = &descriptorsetlayout;
-			pipelineLayoutCreateInfo.setLayoutCount = pushConstantRanges.size();
-			pipelineLayoutCreateInfo.pushConstantRangeCount = pipelineLayoutCreateInfo.setLayoutCount;
+			VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = vks::pipelineLayoutCreateInfo(1, &descriptorsetlayout);
+			pipelineLayoutCreateInfo.pushConstantRangeCount = pushConstantRanges.size();
 			pipelineLayoutCreateInfo.pPushConstantRanges = pushConstantRanges.data();
 			VK_CHECK_RESULT(vkCreatePipelineLayout(m_VulkanDevice->m_LogicalDevice, &pipelineLayoutCreateInfo, nullptr, &pipelinelayout));
 
 			// Pipeline
-			VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = {};
-			inputAssemblyState.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-			inputAssemblyState.topology = skyboxRenderObject->topology;
-			inputAssemblyState.flags = 0;
-			inputAssemblyState.primitiveRestartEnable = VK_FALSE;
-
-			VkPipelineRasterizationStateCreateInfo rasterizationState = {};
-			rasterizationState.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-			rasterizationState.polygonMode = VK_POLYGON_MODE_FILL;
-			rasterizationState.cullMode = VK_CULL_MODE_NONE;
-			rasterizationState.frontFace = VK_FRONT_FACE_CLOCKWISE;
-			rasterizationState.depthClampEnable = VK_FALSE;
-			rasterizationState.lineWidth = 1.0f;
-
-			VkPipelineColorBlendAttachmentState blendAttachmentState = {};
-			blendAttachmentState.colorWriteMask = 0xf;
-			blendAttachmentState.blendEnable = VK_FALSE;
-
-			VkPipelineColorBlendStateCreateInfo colorBlendState = {};
-			colorBlendState.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-			colorBlendState.attachmentCount = 1;
-			colorBlendState.pAttachments = &blendAttachmentState;
-
-			VkPipelineDepthStencilStateCreateInfo depthStencilState = {};
-			depthStencilState.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-			depthStencilState.depthTestEnable = VK_FALSE;
-			depthStencilState.depthWriteEnable = VK_FALSE;
-			depthStencilState.depthCompareOp = VK_COMPARE_OP_GREATER_OR_EQUAL;
-			depthStencilState.front = depthStencilState.back;
-			depthStencilState.back.compareOp = VK_COMPARE_OP_ALWAYS;
-
-			VkPipelineViewportStateCreateInfo viewportState = {};
-			viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-			viewportState.scissorCount = 1;
-			viewportState.viewportCount = 1;
-
-			VkPipelineMultisampleStateCreateInfo multisampleState = {};
-			multisampleState.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-			multisampleState.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
+			VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = vks::pipelineInputAssemblyStateCreateInfo(skyboxRenderObject->topology, 0, VK_FALSE);
+			VkPipelineRasterizationStateCreateInfo rasterizationState = vks::pipelineRasterizationStateCreateInfo(VK_POLYGON_MODE_FILL, VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
+			VkPipelineColorBlendAttachmentState blendAttachmentState = vks::pipelineColorBlendAttachmentState(0xF, VK_FALSE);
+			VkPipelineColorBlendStateCreateInfo colorBlendState = vks::pipelineColorBlendStateCreateInfo(1, &blendAttachmentState);
+			VkPipelineDepthStencilStateCreateInfo depthStencilState = vks::pipelineDepthStencilStateCreateInfo(VK_FALSE, VK_FALSE, VK_COMPARE_OP_GREATER_OR_EQUAL);
+			VkPipelineViewportStateCreateInfo viewportState = vks::pipelineViewportStateCreateInfo(1, 1);
+			VkPipelineMultisampleStateCreateInfo multisampleState = vks::pipelineMultisampleStateCreateInfo(VK_SAMPLE_COUNT_1_BIT);
 			std::vector<VkDynamicState> dynamicStateEnables = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
-			VkPipelineDynamicStateCreateInfo dynamicState = {};
-			dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-			dynamicState.dynamicStateCount = static_cast<u32>(dynamicStateEnables.size());
-			dynamicState.pDynamicStates = dynamicStateEnables.data();
+			VkPipelineDynamicStateCreateInfo dynamicState = vks::pipelineDynamicStateCreateInfo(dynamicStateEnables);
 
 			// Vertex input state
-			VkVertexInputBindingDescription vertexInputBinding = {};
-			vertexInputBinding.binding = 0;
-			vertexInputBinding.stride = skyboxRenderObject->vertexBufferData->VertexStride;
-			vertexInputBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+			VkVertexInputBindingDescription vertexInputBinding = vks::vertexInputBindingDescription(0, skyboxRenderObject->vertexBufferData->VertexStride, VK_VERTEX_INPUT_RATE_VERTEX);
+			VkVertexInputAttributeDescription vertexInputAttribute = vks::vertexInputAttributeDescription(0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0);
 
-			VkVertexInputAttributeDescription vertexInputAttribute = {};
-			vertexInputAttribute.binding = 0;
-			vertexInputAttribute.format = VK_FORMAT_R32G32B32_SFLOAT;
-			vertexInputAttribute.location = 0;
-			vertexInputAttribute.offset = 0;
-
-			VkPipelineVertexInputStateCreateInfo vertexInputState = {};
-			vertexInputState.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-			vertexInputState.vertexBindingDescriptionCount = 1;
-			vertexInputState.pVertexBindingDescriptions = &vertexInputBinding;
-			vertexInputState.vertexAttributeDescriptionCount = 1;
-			vertexInputState.pVertexAttributeDescriptions = &vertexInputAttribute;
-
-			std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages;
+			VkPipelineVertexInputStateCreateInfo vertexInputState = vks::pipelineVertexInputStateCreateInfo(1, &vertexInputBinding, 1, &vertexInputAttribute);
 
 			VDeleter<VkShaderModule> vertShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
 			if (!CreateShaderModule(equirectangularToCubeShader.shader.vertexShaderCode, vertShaderModule))
@@ -712,22 +641,14 @@ namespace flex
 				PrintError("Failed to compile fragment shader located at: %s\n", equirectangularToCubeShader.shader.fragmentShaderFilePath.c_str());
 			}
 
-			shaderStages[0] = {};
-			shaderStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-			shaderStages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-			shaderStages[0].module = vertShaderModule;
-			shaderStages[0].pName = "main";
-
-			shaderStages[1] = {};
-			shaderStages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-			shaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-			shaderStages[1].module = fragShaderModule;
-			shaderStages[1].pName = "main";
+			std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages;
+			shaderStages[0] = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, vertShaderModule);
+			shaderStages[1] = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderModule);
 
 			VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
 			pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 			pipelineCreateInfo.layout = pipelinelayout;
-			pipelineCreateInfo.renderPass = renderpass;
+			pipelineCreateInfo.renderPass = renderPass;
 			pipelineCreateInfo.flags = 0;
 			pipelineCreateInfo.basePipelineIndex = -1;
 			pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
@@ -752,10 +673,8 @@ namespace flex
 			VkClearValue clearValues[1];
 			clearValues[0].color = m_ClearColor;
 
-			VkRenderPassBeginInfo renderPassBeginInfo = {};
-			renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+			VkRenderPassBeginInfo renderPassBeginInfo = vks::renderPassBeginInfo(renderPass);
 			// Reuse render pass from example pass
-			renderPassBeginInfo.renderPass = renderpass;
 			renderPassBeginInfo.framebuffer = offscreen.framebuffer;
 			renderPassBeginInfo.renderArea.extent.width = dim;
 			renderPassBeginInfo.renderArea.extent.height = dim;
@@ -764,17 +683,10 @@ namespace flex
 
 			VkCommandBuffer cmdBuf = m_CommandBufferManager.CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
 
-			VkViewport viewport = {};
-			viewport.x = 0.0f;
-			viewport.y = (real)dim;
-			viewport.width = (real)dim;
-			viewport.height = -(real)dim;
-
-			VkRect2D scissor = {};
-			scissor.extent = { dim, dim };
-			scissor.offset = { 0, 0 };
-
+			VkViewport viewport = vks::viewport((real)dim, (real)dim, 0.0f, 1.0f);
 			vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
+
+			VkRect2D scissor = vks::scissor(0, 0, dim, dim);
 			vkCmdSetScissor(cmdBuf, 0, 1, &scissor);
 
 			VkImageSubresourceRange subresourceRange = {};
@@ -893,7 +805,7 @@ namespace flex
 			m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
 
 
-			vkDestroyRenderPass(m_VulkanDevice->m_LogicalDevice, renderpass, nullptr);
+			vkDestroyRenderPass(m_VulkanDevice->m_LogicalDevice, renderPass, nullptr);
 			vkDestroyFramebuffer(m_VulkanDevice->m_LogicalDevice, offscreen.framebuffer, nullptr);
 			vkFreeMemory(m_VulkanDevice->m_LogicalDevice, offscreen.memory, nullptr);
 			vkDestroyImageView(m_VulkanDevice->m_LogicalDevice, offscreen.view, nullptr);
@@ -955,16 +867,15 @@ namespace flex
 			dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
 			// Renderpass
-			VkRenderPassCreateInfo renderPassCreateInfo = {};
-			renderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+			VkRenderPassCreateInfo renderPassCreateInfo = vks::renderPassCreateInfo();
 			renderPassCreateInfo.attachmentCount = 1;
 			renderPassCreateInfo.pAttachments = &attDesc;
 			renderPassCreateInfo.subpassCount = 1;
 			renderPassCreateInfo.pSubpasses = &subpassDescription;
 			renderPassCreateInfo.dependencyCount = dependencies.size();
 			renderPassCreateInfo.pDependencies = dependencies.data();
-			VkRenderPass renderpass;
-			VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassCreateInfo, nullptr, &renderpass));
+			VkRenderPass renderPass;
+			VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassCreateInfo, nullptr, &renderPass));
 
 
 			// Offscreen framebuffer
@@ -976,8 +887,7 @@ namespace flex
 			} offscreen;
 
 			// Color attachment
-			VkImageCreateInfo offscreenImageCreateInfo = {};
-			offscreenImageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+			VkImageCreateInfo offscreenImageCreateInfo = vks::imageCreateInfo();
 			offscreenImageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
 			offscreenImageCreateInfo.format = format;
 			offscreenImageCreateInfo.extent.width = dim;
@@ -992,17 +902,14 @@ namespace flex
 			offscreenImageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 			VK_CHECK_RESULT(vkCreateImage(m_VulkanDevice->m_LogicalDevice, &offscreenImageCreateInfo, nullptr, &offscreen.image));
 
-			VkMemoryAllocateInfo offscreenMemAlloc = {};
-			offscreenMemAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 			VkMemoryRequirements offscreenMemRequirements;
 			vkGetImageMemoryRequirements(m_VulkanDevice->m_LogicalDevice, offscreen.image, &offscreenMemRequirements);
-			offscreenMemAlloc.allocationSize = offscreenMemRequirements.size;
+			VkMemoryAllocateInfo offscreenMemAlloc = vks::memoryAllocateInfo(offscreenMemRequirements.size);
 			offscreenMemAlloc.memoryTypeIndex = FindMemoryType(m_VulkanDevice, offscreenMemRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 			VK_CHECK_RESULT(vkAllocateMemory(m_VulkanDevice->m_LogicalDevice, &offscreenMemAlloc, nullptr, &offscreen.memory));
 			VK_CHECK_RESULT(vkBindImageMemory(m_VulkanDevice->m_LogicalDevice, offscreen.image, offscreen.memory, 0));
 
-			VkImageViewCreateInfo colorImageView = {};
-			colorImageView.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+			VkImageViewCreateInfo colorImageView = vks::imageViewCreateInfo();
 			colorImageView.viewType = VK_IMAGE_VIEW_TYPE_2D;
 			colorImageView.format = format;
 			colorImageView.flags = 0;
@@ -1015,9 +922,7 @@ namespace flex
 			colorImageView.image = offscreen.image;
 			VK_CHECK_RESULT(vkCreateImageView(m_VulkanDevice->m_LogicalDevice, &colorImageView, nullptr, &offscreen.view));
 
-			VkFramebufferCreateInfo framebufCreateInfo = {};
-			framebufCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-			framebufCreateInfo.renderPass = renderpass;
+			VkFramebufferCreateInfo framebufCreateInfo = vks::framebufferCreateInfo(renderPass);
 			framebufCreateInfo.attachmentCount = 1;
 			framebufCreateInfo.pAttachments = &offscreen.view;
 			framebufCreateInfo.width = dim;
@@ -1037,38 +942,20 @@ namespace flex
 
 			// Descriptors
 			VkDescriptorSetLayout descriptorsetlayout;
-			std::array<VkDescriptorSetLayoutBinding, 1> setLayoutBindings = {};
-			setLayoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			setLayoutBindings[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-			setLayoutBindings[0].binding = 0;
-			setLayoutBindings[0].descriptorCount = 1;
+			VkDescriptorSetLayoutBinding setLayoutBinding = vks::descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0);
 
-			VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = {};
-			descriptorSetLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-			descriptorSetLayoutCreateInfo.pBindings = setLayoutBindings.data();
-			descriptorSetLayoutCreateInfo.bindingCount = static_cast<u32>(setLayoutBindings.size());
+			VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = vks::descriptorSetLayoutCreateInfo(1, &setLayoutBinding);
 			VK_CHECK_RESULT(vkCreateDescriptorSetLayout(m_VulkanDevice->m_LogicalDevice, &descriptorSetLayoutCreateInfo, nullptr, &descriptorsetlayout));
 
 			// Descriptor Pool
-			std::array<VkDescriptorPoolSize, 1> poolSizes = {};
-			poolSizes[0].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			poolSizes[0].descriptorCount = 1;
-
-			VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = {};
-			descriptorPoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-			descriptorPoolCreateInfo.pPoolSizes = poolSizes.data();
-			descriptorPoolCreateInfo.poolSizeCount = static_cast<u32>(poolSizes.size());
-			descriptorPoolCreateInfo.maxSets = 2;
+			VkDescriptorPoolSize poolSize = vks::descriptorPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1);
+			VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = vks::descriptorPoolCreateInfo(1, &poolSize, 2);
 			VkDescriptorPool descriptorPool;
 			VK_CHECK_RESULT(vkCreateDescriptorPool(m_VulkanDevice->m_LogicalDevice, &descriptorPoolCreateInfo, nullptr, &descriptorPool));
 
 			// Descriptor sets
 			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
-			VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = {};
-			descriptorSetAllocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-			descriptorSetAllocateInfo.descriptorPool = descriptorPool;
-			descriptorSetAllocateInfo.pSetLayouts = &descriptorsetlayout;
-			descriptorSetAllocateInfo.descriptorSetCount = 1;
+			VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = vks::descriptorSetAllocateInfo(descriptorPool, &descriptorsetlayout, 1);
 			VK_CHECK_RESULT(vkAllocateDescriptorSets(m_VulkanDevice->m_LogicalDevice, &descriptorSetAllocateInfo, &descriptorSet));
 
 			renderObjectMat.cubemapTexture->UpdateImageDescriptor();
@@ -1076,114 +963,33 @@ namespace flex
 			VkDescriptorImageInfo descriptorImageInfo = {};
 			descriptorImageInfo.imageView = offscreen.view;
 			descriptorImageInfo.imageLayout = renderObjectMat.cubemapTexture->imageLayout;
-			VkWriteDescriptorSet writeDescriptorSet = {};
-			writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			writeDescriptorSet.dstSet = descriptorSet;
-			writeDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			writeDescriptorSet.dstBinding = 0;
-			writeDescriptorSet.pImageInfo = &renderObjectMat.cubemapTexture->imageInfoDescriptor;
-			writeDescriptorSet.descriptorCount = 1;
+			VkWriteDescriptorSet writeDescriptorSet = vks::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				0, &renderObjectMat.cubemapTexture->imageInfoDescriptor);
 			vkUpdateDescriptorSets(m_VulkanDevice->m_LogicalDevice, 1, &writeDescriptorSet, 0, nullptr);
 
 			VkPipelineLayout pipelinelayout;
-			std::array<VkPushConstantRange, 1> pushConstantRanges = {};
-			pushConstantRanges[0].size = sizeof(Material::PushConstantBlock);
-			pushConstantRanges[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-			pushConstantRanges[0].offset = 0;
-
-			VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {};
-			pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-			pipelineLayoutCreateInfo.pSetLayouts = &descriptorsetlayout;
-			pipelineLayoutCreateInfo.setLayoutCount = pushConstantRanges.size();
-			pipelineLayoutCreateInfo.pushConstantRangeCount = pipelineLayoutCreateInfo.setLayoutCount;
-			pipelineLayoutCreateInfo.pPushConstantRanges = pushConstantRanges.data();
+			VkPushConstantRange pushConstantRange = vks::pushConstantRange(VK_SHADER_STAGE_VERTEX_BIT, sizeof(Material::PushConstantBlock), 0);
+			VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = vks::pipelineLayoutCreateInfo(1, &descriptorsetlayout);
+			pipelineLayoutCreateInfo.pushConstantRangeCount = 1;
+			pipelineLayoutCreateInfo.pPushConstantRanges = &pushConstantRange;
 			VK_CHECK_RESULT(vkCreatePipelineLayout(m_VulkanDevice->m_LogicalDevice, &pipelineLayoutCreateInfo, nullptr, &pipelinelayout));
 
 			// Pipeline
-			VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = {};
-			inputAssemblyState.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-			inputAssemblyState.topology = skyboxRenderObject->topology;
-			inputAssemblyState.flags = 0;
-			inputAssemblyState.primitiveRestartEnable = VK_FALSE;
-
-			VkPipelineRasterizationStateCreateInfo rasterizationState = {};
-			rasterizationState.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-			rasterizationState.polygonMode = VK_POLYGON_MODE_FILL;
-			rasterizationState.cullMode = VK_CULL_MODE_NONE;
-			rasterizationState.frontFace = VK_FRONT_FACE_CLOCKWISE;
-			rasterizationState.depthClampEnable = VK_FALSE;
-			rasterizationState.lineWidth = 1.0f;
-
-			VkPipelineColorBlendAttachmentState blendAttachmentState = {};
-			blendAttachmentState.colorWriteMask = 0xf;
-			blendAttachmentState.blendEnable = VK_FALSE;
-
-			VkPipelineColorBlendStateCreateInfo colorBlendState = {};
-			colorBlendState.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-			colorBlendState.attachmentCount = 1;
-			colorBlendState.pAttachments = &blendAttachmentState;
-
-			VkPipelineDepthStencilStateCreateInfo depthStencilState = {};
-			depthStencilState.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-			depthStencilState.depthTestEnable = VK_FALSE;
-			depthStencilState.depthWriteEnable = VK_FALSE;
-			depthStencilState.depthCompareOp = VK_COMPARE_OP_GREATER_OR_EQUAL;
-			depthStencilState.front = depthStencilState.back;
-			depthStencilState.back.compareOp = VK_COMPARE_OP_ALWAYS;
-
-			VkPipelineViewportStateCreateInfo viewportState = {};
-			viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-			viewportState.scissorCount = 1;
-			viewportState.viewportCount = 1;
-
-			VkPipelineMultisampleStateCreateInfo multisampleState = {};
-			multisampleState.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-			multisampleState.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
+			VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = vks::pipelineInputAssemblyStateCreateInfo(skyboxRenderObject->topology, 0, VK_FALSE);
+			VkPipelineRasterizationStateCreateInfo rasterizationState = vks::pipelineRasterizationStateCreateInfo(VK_POLYGON_MODE_FILL, VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
+			VkPipelineColorBlendAttachmentState blendAttachmentState = vks::pipelineColorBlendAttachmentState(0xF, VK_FALSE);
+			VkPipelineColorBlendStateCreateInfo colorBlendState = vks::pipelineColorBlendStateCreateInfo(1, &blendAttachmentState);
+			VkPipelineDepthStencilStateCreateInfo depthStencilState = vks::pipelineDepthStencilStateCreateInfo(VK_FALSE, VK_FALSE, VK_COMPARE_OP_GREATER_OR_EQUAL);
+			VkPipelineViewportStateCreateInfo viewportState = vks::pipelineViewportStateCreateInfo(1, 1);
+			VkPipelineMultisampleStateCreateInfo multisampleState = vks::pipelineMultisampleStateCreateInfo(VK_SAMPLE_COUNT_1_BIT);
 			std::vector<VkDynamicState> dynamicStateEnables = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
-			VkPipelineDynamicStateCreateInfo dynamicState = {};
-			dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-			dynamicState.dynamicStateCount = static_cast<u32>(dynamicStateEnables.size());
-			dynamicState.pDynamicStates = dynamicStateEnables.data();
+			VkPipelineDynamicStateCreateInfo dynamicState = vks::pipelineDynamicStateCreateInfo(dynamicStateEnables);
 
 			// Vertex input state
-			VkVertexInputBindingDescription vertexInputBinding = {};
-			vertexInputBinding.binding = 0;
-			vertexInputBinding.stride = skyboxRenderObject->vertexBufferData->VertexStride;
-			vertexInputBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+			VkVertexInputBindingDescription vertexInputBinding = vks::vertexInputBindingDescription(0, skyboxRenderObject->vertexBufferData->VertexStride, VK_VERTEX_INPUT_RATE_VERTEX);
+			VkVertexInputAttributeDescription vertexInputAttribute = vks::vertexInputAttributeDescription(0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0);
 
-			VkVertexInputAttributeDescription vertexInputAttribute = {};
-			vertexInputAttribute.binding = 0;
-			vertexInputAttribute.format = VK_FORMAT_R32G32B32_SFLOAT;
-			vertexInputAttribute.location = 0;
-			vertexInputAttribute.offset = 0;
-
-			VkPipelineVertexInputStateCreateInfo vertexInputState = {};
-			vertexInputState.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-			vertexInputState.vertexBindingDescriptionCount = 1;
-			vertexInputState.pVertexBindingDescriptions = &vertexInputBinding;
-			vertexInputState.vertexAttributeDescriptionCount = 1;
-			vertexInputState.pVertexAttributeDescriptions = &vertexInputAttribute;
-
-			std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages;
-
-			VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
-			pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-			pipelineCreateInfo.layout = pipelinelayout;
-			pipelineCreateInfo.renderPass = renderpass;
-			pipelineCreateInfo.flags = 0;
-			pipelineCreateInfo.basePipelineIndex = -1;
-			pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
-			pipelineCreateInfo.pInputAssemblyState = &inputAssemblyState;
-			pipelineCreateInfo.pRasterizationState = &rasterizationState;
-			pipelineCreateInfo.pColorBlendState = &colorBlendState;
-			pipelineCreateInfo.pMultisampleState = &multisampleState;
-			pipelineCreateInfo.pViewportState = &viewportState;
-			pipelineCreateInfo.pDepthStencilState = &depthStencilState;
-			pipelineCreateInfo.pDynamicState = &dynamicState;
-			pipelineCreateInfo.stageCount = 2;
-			pipelineCreateInfo.pStages = shaderStages.data();
-			pipelineCreateInfo.pVertexInputState = &vertexInputState;
+			VkPipelineVertexInputStateCreateInfo vertexInputState = vks::pipelineVertexInputStateCreateInfo(1, &vertexInputBinding, 1, &vertexInputAttribute);
 
 			ShaderID irradianceShaderID;
 			if (!GetShaderID("irradiance", irradianceShaderID))
@@ -1205,19 +1011,29 @@ namespace flex
 				PrintError("Failed to compile fragment shader located at: %s\n", irradianceShader.shader.fragmentShaderFilePath.c_str());
 			}
 
-			shaderStages[0] = {};
-			shaderStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-			shaderStages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-			shaderStages[0].module = vertShaderModule;
-			shaderStages[0].pName = "main";
+			std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages;
+			shaderStages[0] = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, vertShaderModule);
+			shaderStages[1] = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderModule);
 
-			shaderStages[1] = {};
-			shaderStages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-			shaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-			shaderStages[1].module = fragShaderModule;
-			shaderStages[1].pName = "main";
+			VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
+			pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+			pipelineCreateInfo.layout = pipelinelayout;
+			pipelineCreateInfo.renderPass = renderPass;
+			pipelineCreateInfo.flags = 0;
+			pipelineCreateInfo.basePipelineIndex = -1;
+			pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
+			pipelineCreateInfo.pInputAssemblyState = &inputAssemblyState;
+			pipelineCreateInfo.pRasterizationState = &rasterizationState;
+			pipelineCreateInfo.pColorBlendState = &colorBlendState;
+			pipelineCreateInfo.pMultisampleState = &multisampleState;
+			pipelineCreateInfo.pViewportState = &viewportState;
+			pipelineCreateInfo.pDepthStencilState = &depthStencilState;
+			pipelineCreateInfo.pDynamicState = &dynamicState;
+			pipelineCreateInfo.stageCount = 2;
+			pipelineCreateInfo.pStages = shaderStages.data();
+			pipelineCreateInfo.pVertexInputState = &vertexInputState;
 
-			VkPipeline pipeline = VK_NULL_HANDLE;
+			VkPipeline pipeline;
 			VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_VulkanDevice->m_LogicalDevice, m_PipelineCache, 1, &pipelineCreateInfo, nullptr, &pipeline));
 
 			// Render
@@ -1225,9 +1041,7 @@ namespace flex
 			VkClearValue clearValues[1];
 			clearValues[0].color = m_ClearColor;
 
-			VkRenderPassBeginInfo renderPassBeginInfo = {};
-			renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderPassBeginInfo.renderPass = renderpass;
+			VkRenderPassBeginInfo renderPassBeginInfo = vks::renderPassBeginInfo(renderPass);
 			renderPassBeginInfo.framebuffer = offscreen.framebuffer;
 			renderPassBeginInfo.renderArea.extent.width = dim;
 			renderPassBeginInfo.renderArea.extent.height = dim;
@@ -1236,17 +1050,10 @@ namespace flex
 
 			VkCommandBuffer cmdBuf = m_CommandBufferManager.CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
 
-			VkViewport viewport = {};
-			viewport.x = 0.0f;
-			viewport.y = (real)dim;
-			viewport.width = (real)dim;
-			viewport.height = -(real)dim;
-
-			VkRect2D scissor = {};
-			scissor.extent = { dim, dim };
-			scissor.offset = { 0, 0 };
-
+			VkViewport viewport = vks::viewport((real)dim, (real)dim, 0.0f, 1.0f);
 			vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
+
+			VkRect2D scissor = vks::scissor(0, 0, dim, dim);
 			vkCmdSetScissor(cmdBuf, 0, 1, &scissor);
 
 			VkImageSubresourceRange subresourceRange = {};
@@ -1355,7 +1162,7 @@ namespace flex
 			m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
 
 
-			vkDestroyRenderPass(m_VulkanDevice->m_LogicalDevice, renderpass, nullptr);
+			vkDestroyRenderPass(m_VulkanDevice->m_LogicalDevice, renderPass, nullptr);
 			vkDestroyFramebuffer(m_VulkanDevice->m_LogicalDevice, offscreen.framebuffer, nullptr);
 			vkFreeMemory(m_VulkanDevice->m_LogicalDevice, offscreen.memory, nullptr);
 			vkDestroyImageView(m_VulkanDevice->m_LogicalDevice, offscreen.view, nullptr);
@@ -1418,16 +1225,15 @@ namespace flex
 			dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
 			// Renderpass
-			VkRenderPassCreateInfo renderPassCreateInfo = {};
-			renderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+			VkRenderPassCreateInfo renderPassCreateInfo = vks::renderPassCreateInfo();
 			renderPassCreateInfo.attachmentCount = 1;
 			renderPassCreateInfo.pAttachments = &attDesc;
 			renderPassCreateInfo.subpassCount = 1;
 			renderPassCreateInfo.pSubpasses = &subpassDescription;
 			renderPassCreateInfo.dependencyCount = 2;
 			renderPassCreateInfo.pDependencies = dependencies.data();
-			VkRenderPass renderpass;
-			VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassCreateInfo, nullptr, &renderpass));
+			VkRenderPass renderPass;
+			VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassCreateInfo, nullptr, &renderPass));
 
 			struct {
 				VkImage image;
@@ -1439,8 +1245,7 @@ namespace flex
 			// Offscreen framebuffer
 			{
 				// Color attachment
-				VkImageCreateInfo imageCreateInfo = {};
-				imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+				VkImageCreateInfo imageCreateInfo = vks::imageCreateInfo();
 				imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
 				imageCreateInfo.format = format;
 				imageCreateInfo.extent.width = dim;
@@ -1455,17 +1260,14 @@ namespace flex
 				imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 				VK_CHECK_RESULT(vkCreateImage(m_VulkanDevice->m_LogicalDevice, &imageCreateInfo, nullptr, &offscreen.image));
 
-				VkMemoryAllocateInfo memAlloc = {};
-				memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 				VkMemoryRequirements memRequirements;
 				vkGetImageMemoryRequirements(m_VulkanDevice->m_LogicalDevice, offscreen.image, &memRequirements);
-				memAlloc.allocationSize = memRequirements.size;
+				VkMemoryAllocateInfo memAlloc = vks::memoryAllocateInfo(memRequirements.size);
 				memAlloc.memoryTypeIndex = FindMemoryType(m_VulkanDevice, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 				VK_CHECK_RESULT(vkAllocateMemory(m_VulkanDevice->m_LogicalDevice, &memAlloc, nullptr, &offscreen.memory));
 				VK_CHECK_RESULT(vkBindImageMemory(m_VulkanDevice->m_LogicalDevice, offscreen.image, offscreen.memory, 0));
 
-				VkImageViewCreateInfo colorImageView = {};
-				colorImageView.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+				VkImageViewCreateInfo colorImageView = vks::imageViewCreateInfo();
 				colorImageView.viewType = VK_IMAGE_VIEW_TYPE_2D;
 				colorImageView.format = format;
 				colorImageView.flags = 0;
@@ -1478,15 +1280,13 @@ namespace flex
 				colorImageView.image = offscreen.image;
 				VK_CHECK_RESULT(vkCreateImageView(m_VulkanDevice->m_LogicalDevice, &colorImageView, nullptr, &offscreen.view));
 
-				VkFramebufferCreateInfo fbufCreateInfo = {};
-				fbufCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-				fbufCreateInfo.renderPass = renderpass;
-				fbufCreateInfo.attachmentCount = 1;
-				fbufCreateInfo.pAttachments = &offscreen.view;
-				fbufCreateInfo.width = dim;
-				fbufCreateInfo.height = dim;
-				fbufCreateInfo.layers = 1;
-				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &fbufCreateInfo, nullptr, &offscreen.framebuffer));
+				VkFramebufferCreateInfo framebufCreateInfo = vks::framebufferCreateInfo(renderPass);
+				framebufCreateInfo.attachmentCount = 1;
+				framebufCreateInfo.pAttachments = &offscreen.view;
+				framebufCreateInfo.width = dim;
+				framebufCreateInfo.height = dim;
+				framebufCreateInfo.layers = 1;
+				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &framebufCreateInfo, nullptr, &offscreen.framebuffer));
 
 				VkCommandBuffer layoutCmd = m_CommandBufferManager.CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
 				SetImageLayout(
@@ -1535,90 +1335,36 @@ namespace flex
 
 			// Pipeline layout
 			VkPipelineLayout pipelinelayout;
-			VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {};
-			pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-			pipelineLayoutCreateInfo.setLayoutCount = 1;
-			pipelineLayoutCreateInfo.pSetLayouts = &m_DescriptorSetLayouts[prefilterShaderID];
+			VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = vks::pipelineLayoutCreateInfo(1, &m_DescriptorSetLayouts[prefilterShaderID]);
 			pipelineLayoutCreateInfo.pushConstantRangeCount = pushConstantRanges.size();
 			pipelineLayoutCreateInfo.pPushConstantRanges = pushConstantRanges.data();
 			VK_CHECK_RESULT(vkCreatePipelineLayout(m_VulkanDevice->m_LogicalDevice, &pipelineLayoutCreateInfo, nullptr, &pipelinelayout));
 
 			// Pipeline
-			VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = {};
-			inputAssemblyState.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-			inputAssemblyState.topology = skyboxRenderObject->topology;
-			inputAssemblyState.primitiveRestartEnable = VK_FALSE;
-			inputAssemblyState.flags = 0;
-
-			VkPipelineRasterizationStateCreateInfo rasterizationState = {};
-			rasterizationState.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-			rasterizationState.polygonMode = VK_POLYGON_MODE_FILL;
-			rasterizationState.cullMode = skyboxRenderObject->cullMode;
-			rasterizationState.frontFace = VK_FRONT_FACE_CLOCKWISE;
-			rasterizationState.flags = 0;
-			rasterizationState.depthClampEnable = VK_FALSE;
-			rasterizationState.lineWidth = 1.0f;
-
-			VkPipelineColorBlendAttachmentState blendAttachmentState = {};
-			blendAttachmentState.colorWriteMask = 0xf;
-			blendAttachmentState.blendEnable = VK_FALSE;
-
-			VkPipelineColorBlendStateCreateInfo colorBlendState = {};
-			colorBlendState.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-			colorBlendState.attachmentCount = 1;
-			colorBlendState.pAttachments = &blendAttachmentState;
-
-			VkPipelineDepthStencilStateCreateInfo depthStencilState = {};
-			depthStencilState.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-			depthStencilState.depthTestEnable = VK_FALSE;
-			depthStencilState.depthWriteEnable = VK_FALSE;
-			depthStencilState.depthCompareOp = VK_COMPARE_OP_GREATER_OR_EQUAL;
-			depthStencilState.front = depthStencilState.back;
-			depthStencilState.back.compareOp = VK_COMPARE_OP_ALWAYS;
-
-			VkPipelineViewportStateCreateInfo viewportState = {};
-			viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-			viewportState.viewportCount = 1;
-			viewportState.scissorCount = 1;
-			viewportState.flags = 0;
-
-			VkPipelineMultisampleStateCreateInfo multisampleState = {};
-			multisampleState.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-			multisampleState.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-			multisampleState.flags = 0;
-
+			VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = vks::pipelineInputAssemblyStateCreateInfo(skyboxRenderObject->topology, 0, VK_FALSE);
+			VkPipelineRasterizationStateCreateInfo rasterizationState = vks::pipelineRasterizationStateCreateInfo(VK_POLYGON_MODE_FILL, skyboxRenderObject->cullMode, VK_FRONT_FACE_CLOCKWISE);
+			VkPipelineColorBlendAttachmentState blendAttachmentState = vks::pipelineColorBlendAttachmentState(0xF, VK_FALSE);
+			VkPipelineColorBlendStateCreateInfo colorBlendState = vks::pipelineColorBlendStateCreateInfo(1, &blendAttachmentState);
+			VkPipelineDepthStencilStateCreateInfo depthStencilState = vks::pipelineDepthStencilStateCreateInfo(VK_FALSE, VK_FALSE, VK_COMPARE_OP_GREATER_OR_EQUAL);
+			VkPipelineViewportStateCreateInfo viewportState = vks::pipelineViewportStateCreateInfo(1, 1);
+			VkPipelineMultisampleStateCreateInfo multisampleState = vks::pipelineMultisampleStateCreateInfo(VK_SAMPLE_COUNT_1_BIT);
 			std::vector<VkDynamicState> dynamicStateEnables = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
-			VkPipelineDynamicStateCreateInfo dynamicState = {}; (dynamicStateEnables);
-			dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-			dynamicState.pDynamicStates = dynamicStateEnables.data();
-			dynamicState.dynamicStateCount = static_cast<u32>(dynamicStateEnables.size());
-			dynamicState.flags = 0;
+			VkPipelineDynamicStateCreateInfo dynamicState = vks::pipelineDynamicStateCreateInfo(dynamicStateEnables);
 
 			// Vertex input state
-			VkVertexInputBindingDescription vertexInputBinding = {};
-			vertexInputBinding.binding = 0;
-			vertexInputBinding.stride = skyboxRenderObject->vertexBufferData->VertexStride;
-			vertexInputBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+			VkVertexInputBindingDescription vertexInputBinding = vks::vertexInputBindingDescription(0, skyboxRenderObject->vertexBufferData->VertexStride, VK_VERTEX_INPUT_RATE_VERTEX);
+			VkVertexInputAttributeDescription vertexInputAttribute = vks::vertexInputAttributeDescription(0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0);
 
-			VkVertexInputAttributeDescription vertexInputAttribute = {};
-			vertexInputAttribute.location = 0;
-			vertexInputAttribute.binding = 0;
-			vertexInputAttribute.format = VK_FORMAT_R32G32B32_SFLOAT;
-			vertexInputAttribute.offset = 0;
-
-			VkPipelineVertexInputStateCreateInfo vertexInputState = {};
-			vertexInputState.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-			vertexInputState.vertexBindingDescriptionCount = 1;
-			vertexInputState.pVertexBindingDescriptions = &vertexInputBinding;
-			vertexInputState.vertexAttributeDescriptionCount = 1;
-			vertexInputState.pVertexAttributeDescriptions = &vertexInputAttribute;
+			VkPipelineVertexInputStateCreateInfo vertexInputState = vks::pipelineVertexInputStateCreateInfo(1, &vertexInputBinding, 1, &vertexInputAttribute);
 
 			std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages;
+			shaderStages[0] = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, vertShaderModule);
+			shaderStages[1] = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderModule);
 
 			VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
 			pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 			pipelineCreateInfo.layout = pipelinelayout;
-			pipelineCreateInfo.renderPass = renderpass;
+			pipelineCreateInfo.renderPass = renderPass;
 			pipelineCreateInfo.flags = 0;
 			pipelineCreateInfo.basePipelineIndex = -1;
 			pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
@@ -1633,19 +1379,7 @@ namespace flex
 			pipelineCreateInfo.pStages = shaderStages.data();
 			pipelineCreateInfo.pVertexInputState = &vertexInputState;
 
-			shaderStages[0] = {};
-			shaderStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-			shaderStages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-			shaderStages[0].module = vertShaderModule;
-			shaderStages[0].pName = "main";
-
-			shaderStages[1] = {};
-			shaderStages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-			shaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-			shaderStages[1].module = fragShaderModule;
-			shaderStages[1].pName = "main";
-
-			VkPipeline pipeline = VK_NULL_HANDLE;
+			VkPipeline pipeline;
 			VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_VulkanDevice->m_LogicalDevice, m_PipelineCache, 1, &pipelineCreateInfo, nullptr, &pipeline));
 
 			// Render
@@ -1653,10 +1387,7 @@ namespace flex
 			VkClearValue clearValues[1];
 			clearValues[0].color = m_ClearColor;
 
-			VkRenderPassBeginInfo renderPassBeginInfo = {};
-			renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			// Reuse render pass from example pass
-			renderPassBeginInfo.renderPass = renderpass;
+			VkRenderPassBeginInfo renderPassBeginInfo = vks::renderPassBeginInfo(renderPass);
 			renderPassBeginInfo.framebuffer = offscreen.framebuffer;
 			renderPassBeginInfo.renderArea.extent.width = dim;
 			renderPassBeginInfo.renderArea.extent.height = dim;
@@ -1665,19 +1396,10 @@ namespace flex
 
 			VkCommandBuffer cmdBuf = m_CommandBufferManager.CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
 
-			VkViewport viewport = {};
-			viewport.x = 0.0f;
-			viewport.y = (real)dim;
-			viewport.width = (real)dim;
-			viewport.height = -(real)dim;
-
-			VkRect2D scissor = {};
-			scissor.extent.width = dim;
-			scissor.extent.height = dim;
-			scissor.offset.x = 0;
-			scissor.offset.y = 0;
-
+			VkViewport viewport = vks::viewport((real)dim, (real)dim, 0.0f, 1.0f);
 			vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
+
+			VkRect2D scissor = vks::scissor(0, 0, dim, dim);
 			vkCmdSetScissor(cmdBuf, 0, 1, &scissor);
 
 			VkImageSubresourceRange subresourceRange = {};
@@ -1784,7 +1506,7 @@ namespace flex
 
 			m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
 
-			vkDestroyRenderPass(m_VulkanDevice->m_LogicalDevice, renderpass, nullptr);
+			vkDestroyRenderPass(m_VulkanDevice->m_LogicalDevice, renderPass, nullptr);
 			vkDestroyFramebuffer(m_VulkanDevice->m_LogicalDevice, offscreen.framebuffer, nullptr);
 			vkFreeMemory(m_VulkanDevice->m_LogicalDevice, offscreen.memory, nullptr);
 			vkDestroyImageView(m_VulkanDevice->m_LogicalDevice, offscreen.view, nullptr);
@@ -1834,8 +1556,7 @@ namespace flex
 			dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
 			// Create the actual renderpass
-			VkRenderPassCreateInfo renderPassCreateInfo = {};
-			renderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+			VkRenderPassCreateInfo renderPassCreateInfo = vks::renderPassCreateInfo();
 			renderPassCreateInfo.attachmentCount = 1;
 			renderPassCreateInfo.pAttachments = &attachmentDesc;
 			renderPassCreateInfo.subpassCount = 1;
@@ -1843,12 +1564,10 @@ namespace flex
 			renderPassCreateInfo.dependencyCount = dependencies.size();
 			renderPassCreateInfo.pDependencies = dependencies.data();
 
-			VkRenderPass renderpass;
-			VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassCreateInfo, nullptr, &renderpass));
+			VkRenderPass renderPass;
+			VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassCreateInfo, nullptr, &renderPass));
 
-			VkFramebufferCreateInfo framebufferCreateInfo = {};
-			framebufferCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-			framebufferCreateInfo.renderPass = renderpass;
+			VkFramebufferCreateInfo framebufferCreateInfo = vks::framebufferCreateInfo(renderPass);
 			framebufferCreateInfo.attachmentCount = 1;
 			framebufferCreateInfo.pAttachments = &brdfTexture->imageView;
 			framebufferCreateInfo.width = dim;
@@ -1860,118 +1579,36 @@ namespace flex
 
 			// Descriptors
 			VkDescriptorSetLayout descriptorsetlayout;
-			std::vector<VkDescriptorSetLayoutBinding> setLayoutBindings = {};
-
-			VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo{};
-			descriptorSetLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-			descriptorSetLayoutCreateInfo.pBindings = setLayoutBindings.data();
-			descriptorSetLayoutCreateInfo.bindingCount = static_cast<u32>(setLayoutBindings.size());
+			VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = vks::descriptorSetLayoutCreateInfo(0, nullptr);
 			VK_CHECK_RESULT(vkCreateDescriptorSetLayout(m_VulkanDevice->m_LogicalDevice, &descriptorSetLayoutCreateInfo, nullptr, &descriptorsetlayout));
 
 			// Descriptor Pool
-			std::array<VkDescriptorPoolSize, 1> poolSizes;
-			poolSizes[0].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			poolSizes[0].descriptorCount = 1;
-
-			VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = {};
-			descriptorPoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-			descriptorPoolCreateInfo.poolSizeCount = static_cast<u32>(poolSizes.size());
-			descriptorPoolCreateInfo.pPoolSizes = poolSizes.data();
-			descriptorPoolCreateInfo.maxSets = 2;
+			VkDescriptorPoolSize poolSize = vks::descriptorPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1);
+			VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = vks::descriptorPoolCreateInfo(1, &poolSize, 2);
 			VkDescriptorPool descriptorPool;
 			VK_CHECK_RESULT(vkCreateDescriptorPool(m_VulkanDevice->m_LogicalDevice, &descriptorPoolCreateInfo, nullptr, &descriptorPool));
 
 			// Descriptor sets
-			VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = {};
-			descriptorSetAllocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-			descriptorSetAllocateInfo.descriptorPool = descriptorPool;
-			descriptorSetAllocateInfo.pSetLayouts = &descriptorsetlayout;
-			descriptorSetAllocateInfo.descriptorSetCount = 1;
+			VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = vks::descriptorSetAllocateInfo(descriptorPool, &descriptorsetlayout, 1);
 			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 			VK_CHECK_RESULT(vkAllocateDescriptorSets(m_VulkanDevice->m_LogicalDevice, &descriptorSetAllocateInfo, &descriptorSet));
 
 			// Pipeline layout
-			VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo{};
-			pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-			pipelineLayoutCreateInfo.setLayoutCount = 1;
-			pipelineLayoutCreateInfo.pSetLayouts = &descriptorsetlayout;
+			VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = vks::pipelineLayoutCreateInfo(1, &descriptorsetlayout);
 			VkPipelineLayout pipelinelayout;
 			VK_CHECK_RESULT(vkCreatePipelineLayout(m_VulkanDevice->m_LogicalDevice, &pipelineLayoutCreateInfo, nullptr, &pipelinelayout));
 
 			// Pipeline
-			VkPipelineInputAssemblyStateCreateInfo pipelineInputAssemblyStateCreateInfo = {};
-			pipelineInputAssemblyStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-			pipelineInputAssemblyStateCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-			pipelineInputAssemblyStateCreateInfo.flags = 0;
-			pipelineInputAssemblyStateCreateInfo.primitiveRestartEnable = VK_FALSE;
-
-			VkPipelineRasterizationStateCreateInfo pipelineRasterizationStateCreateInfo = {};
-			pipelineRasterizationStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-			pipelineRasterizationStateCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
-			pipelineRasterizationStateCreateInfo.cullMode = VK_CULL_MODE_NONE;
-			pipelineRasterizationStateCreateInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
-			pipelineRasterizationStateCreateInfo.flags = 0;
-			pipelineRasterizationStateCreateInfo.depthClampEnable = VK_FALSE;
-			pipelineRasterizationStateCreateInfo.lineWidth = 1.0f;
-
-			VkPipelineColorBlendAttachmentState pipelineColorBlendAttachmentState = {};
-			pipelineColorBlendAttachmentState.colorWriteMask = 0xf;
-			pipelineColorBlendAttachmentState.blendEnable = VK_FALSE;
-
-			VkPipelineColorBlendStateCreateInfo pipelineColorBlendStateCreateInfo = {};
-			pipelineColorBlendStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-			pipelineColorBlendStateCreateInfo.attachmentCount = 1;
-			pipelineColorBlendStateCreateInfo.pAttachments = &pipelineColorBlendAttachmentState;
-
-			VkPipelineDepthStencilStateCreateInfo pipelineDepthStencilStateCreateInfo = {};
-			pipelineDepthStencilStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-			pipelineDepthStencilStateCreateInfo.depthTestEnable = VK_FALSE;
-			pipelineDepthStencilStateCreateInfo.depthWriteEnable = VK_FALSE;
-			pipelineDepthStencilStateCreateInfo.depthCompareOp = VK_COMPARE_OP_GREATER_OR_EQUAL;
-			pipelineDepthStencilStateCreateInfo.front = pipelineDepthStencilStateCreateInfo.back;
-			pipelineDepthStencilStateCreateInfo.back.compareOp = VK_COMPARE_OP_ALWAYS;
-
-			VkPipelineViewportStateCreateInfo pipelineViewportStateCreateInfo = {};
-			pipelineViewportStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-			pipelineViewportStateCreateInfo.viewportCount = 1;
-			pipelineViewportStateCreateInfo.scissorCount = 1;
-			pipelineViewportStateCreateInfo.flags = 0;
-
-			VkPipelineMultisampleStateCreateInfo pipelineMultisampleStateCreateInfo = {};
-			pipelineMultisampleStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-			pipelineMultisampleStateCreateInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-			pipelineMultisampleStateCreateInfo.flags = 0;
-
+			VkPipelineInputAssemblyStateCreateInfo pipelineInputAssemblyStateCreateInfo = vks::pipelineInputAssemblyStateCreateInfo(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, 0, VK_FALSE);
+			VkPipelineRasterizationStateCreateInfo pipelineRasterizationStateCreateInfo = vks::pipelineRasterizationStateCreateInfo(VK_POLYGON_MODE_FILL, VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
+			VkPipelineColorBlendAttachmentState pipelineColorBlendAttachmentState = vks::pipelineColorBlendAttachmentState(0xF, VK_FALSE);
+			VkPipelineColorBlendStateCreateInfo pipelineColorBlendStateCreateInfo = vks::pipelineColorBlendStateCreateInfo(1, &pipelineColorBlendAttachmentState);
+			VkPipelineDepthStencilStateCreateInfo pipelineDepthStencilStateCreateInfo = vks::pipelineDepthStencilStateCreateInfo(VK_FALSE, VK_FALSE, VK_COMPARE_OP_GREATER_OR_EQUAL);
+			VkPipelineViewportStateCreateInfo pipelineViewportStateCreateInfo = vks::pipelineViewportStateCreateInfo(1, 1);
+			VkPipelineMultisampleStateCreateInfo pipelineMultisampleStateCreateInfo = vks::pipelineMultisampleStateCreateInfo(VK_SAMPLE_COUNT_1_BIT);
 			std::vector<VkDynamicState> dynamicStateEnables = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
-
-			VkPipelineDynamicStateCreateInfo pipelineDynamicStateCreateInfo{};
-			pipelineDynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-			pipelineDynamicStateCreateInfo.pDynamicStates = dynamicStateEnables.data();
-			pipelineDynamicStateCreateInfo.dynamicStateCount = static_cast<u32>(dynamicStateEnables.size());
-			pipelineDynamicStateCreateInfo.flags = 0;
-
-			VkPipelineVertexInputStateCreateInfo emptyInputState = {};
-			emptyInputState.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-
-			std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages;
-
-			VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
-			pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-			pipelineCreateInfo.layout = pipelinelayout;
-			pipelineCreateInfo.renderPass = renderpass;
-			pipelineCreateInfo.flags = 0;
-			pipelineCreateInfo.basePipelineIndex = -1;
-			pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
-			pipelineCreateInfo.pInputAssemblyState = &pipelineInputAssemblyStateCreateInfo;
-			pipelineCreateInfo.pRasterizationState = &pipelineRasterizationStateCreateInfo;
-			pipelineCreateInfo.pColorBlendState = &pipelineColorBlendStateCreateInfo;
-			pipelineCreateInfo.pMultisampleState = &pipelineMultisampleStateCreateInfo;
-			pipelineCreateInfo.pViewportState = &pipelineViewportStateCreateInfo;
-			pipelineCreateInfo.pDepthStencilState = &pipelineDepthStencilStateCreateInfo;
-			pipelineCreateInfo.pDynamicState = &pipelineDynamicStateCreateInfo;
-			pipelineCreateInfo.stageCount = shaderStages.size();
-			pipelineCreateInfo.pStages = shaderStages.data();
-			pipelineCreateInfo.pVertexInputState = &emptyInputState;
+			VkPipelineDynamicStateCreateInfo pipelineDynamicStateCreateInfo = vks::pipelineDynamicStateCreateInfo(dynamicStateEnables);
+			VkPipelineVertexInputStateCreateInfo emptyInputState = vks::pipelineVertexInputStateCreateInfo(0, nullptr, 0, nullptr);
 
 			// TODO: Bring shader compilation out to function
 			ShaderID brdfShaderID;
@@ -1993,19 +1630,29 @@ namespace flex
 				PrintError("Failed to compile fragment shader located at: %s\n", brdfShader.shader.fragmentShaderFilePath.c_str());
 			}
 
-			shaderStages[0] = {};
-			shaderStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-			shaderStages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-			shaderStages[0].module = vertShaderModule;
-			shaderStages[0].pName = "main";
+			std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages;
+			shaderStages[0] = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, vertShaderModule);
+			shaderStages[1] = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderModule);
 
-			shaderStages[1] = {};
-			shaderStages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-			shaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-			shaderStages[1].module = fragShaderModule;
-			shaderStages[1].pName = "main";
+			VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
+			pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+			pipelineCreateInfo.layout = pipelinelayout;
+			pipelineCreateInfo.renderPass = renderPass;
+			pipelineCreateInfo.flags = 0;
+			pipelineCreateInfo.basePipelineIndex = -1;
+			pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
+			pipelineCreateInfo.pInputAssemblyState = &pipelineInputAssemblyStateCreateInfo;
+			pipelineCreateInfo.pRasterizationState = &pipelineRasterizationStateCreateInfo;
+			pipelineCreateInfo.pColorBlendState = &pipelineColorBlendStateCreateInfo;
+			pipelineCreateInfo.pMultisampleState = &pipelineMultisampleStateCreateInfo;
+			pipelineCreateInfo.pViewportState = &pipelineViewportStateCreateInfo;
+			pipelineCreateInfo.pDepthStencilState = &pipelineDepthStencilStateCreateInfo;
+			pipelineCreateInfo.pDynamicState = &pipelineDynamicStateCreateInfo;
+			pipelineCreateInfo.stageCount = shaderStages.size();
+			pipelineCreateInfo.pStages = shaderStages.data();
+			pipelineCreateInfo.pVertexInputState = &emptyInputState;
 
-			VkPipeline pipeline = VK_NULL_HANDLE;
+			VkPipeline pipeline;
 			VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_VulkanDevice->m_LogicalDevice, m_PipelineCache, 1, &pipelineCreateInfo, nullptr, &pipeline));
 
 			// Render
@@ -2013,9 +1660,7 @@ namespace flex
 			VkClearValue clearValues[1];
 			clearValues[0].color = m_ClearColor;
 
-			VkRenderPassBeginInfo renderPassBeginInfo = {};
-			renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderPassBeginInfo.renderPass = renderpass;
+			VkRenderPassBeginInfo renderPassBeginInfo = vks::renderPassBeginInfo(renderPass);
 			renderPassBeginInfo.renderArea.extent.width = dim;
 			renderPassBeginInfo.renderArea.extent.height = dim;
 			renderPassBeginInfo.clearValueCount = 1;
@@ -2025,18 +1670,12 @@ namespace flex
 			VkCommandBuffer cmdBuf = m_CommandBufferManager.CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
 			vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-			VkViewport viewport = {};
-			viewport.x = 0.0f;
-			viewport.y = (real)dim;
-			viewport.width = (real)dim;
-			viewport.height = -(real)dim;
-
-			VkRect2D scissor = {};
-			scissor.extent = { dim, dim };
-			scissor.offset = { 0u, 0u };
-
+			VkViewport viewport = vks::viewport((real)dim, (real)dim, 0.0f, 1.0f);
 			vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
+
+			VkRect2D scissor = vks::scissor(0, 0, dim, dim);
 			vkCmdSetScissor(cmdBuf, 0, 1, &scissor);
+
 			vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 			vkCmdDraw(cmdBuf, 3, 1, 0, 0);
 			vkCmdEndRenderPass(cmdBuf);
@@ -2046,7 +1685,7 @@ namespace flex
 
 			vkDestroyPipeline(m_VulkanDevice->m_LogicalDevice, pipeline, nullptr);
 			vkDestroyPipelineLayout(m_VulkanDevice->m_LogicalDevice, pipelinelayout, nullptr);
-			vkDestroyRenderPass(m_VulkanDevice->m_LogicalDevice, renderpass, nullptr);
+			vkDestroyRenderPass(m_VulkanDevice->m_LogicalDevice, renderPass, nullptr);
 			vkDestroyFramebuffer(m_VulkanDevice->m_LogicalDevice, framebuffer, nullptr);
 			vkDestroyDescriptorSetLayout(m_VulkanDevice->m_LogicalDevice, descriptorsetlayout, nullptr);
 			vkDestroyDescriptorPool(m_VulkanDevice->m_LogicalDevice, descriptorPool, nullptr);
@@ -3845,8 +3484,7 @@ namespace flex
 				dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
 
-				VkRenderPassCreateInfo renderPassInfo = {};
-				renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+				VkRenderPassCreateInfo renderPassInfo = vks::renderPassCreateInfo();
 				renderPassInfo.attachmentCount = 1;
 				renderPassInfo.pAttachments = &colorAttachment;
 				renderPassInfo.subpassCount = subpasses.size();
@@ -3858,9 +3496,7 @@ namespace flex
 				VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassInfo, nullptr, &renderPass));
 
 
-				VkFramebufferCreateInfo framebufCreateInfo = {};
-				framebufCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-				framebufCreateInfo.renderPass = renderPass;
+				VkFramebufferCreateInfo framebufCreateInfo = vks::framebufferCreateInfo(renderPass);
 				framebufCreateInfo.attachmentCount = 1;
 				framebufCreateInfo.pAttachments = &fontTexColAttachment->imageView;
 				framebufCreateInfo.width = textureSize.x;
@@ -3880,10 +3516,8 @@ namespace flex
 					VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
 
-				VkRenderPassBeginInfo renderPassBeginInfo = {};
-				renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+				VkRenderPassBeginInfo renderPassBeginInfo = vks::renderPassBeginInfo(renderPass);
 				renderPassBeginInfo.framebuffer = framebuffer;
-				renderPassBeginInfo.renderPass = renderPass;
 				renderPassBeginInfo.renderArea.offset = { 0, 0 };
 				renderPassBeginInfo.renderArea.extent = {
 					(u32)textureSize.x,
@@ -3986,10 +3620,7 @@ namespace flex
 					};
 					vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
-					VkRect2D scissor = {
-						{ (u32)viewportTL.x, (u32)viewportTL.y },
-						{ (u32)res.x, (u32)res.y }
-					};
+					VkRect2D scissor = vks::scissor((u32)viewportTL.x, (u32)viewportTL.y, (u32)res.x, (u32)res.y);
 					vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
 					VkDeviceSize offsets[1] = { 0 };
@@ -4030,13 +3661,9 @@ namespace flex
 
 				VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
 
-				VkSubmitInfo submitInfo = {};
-				submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
+				VkSubmitInfo submitInfo = vks::submitInfo(1, &commandBuffer);
 				VkPipelineStageFlags waitStages = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 				submitInfo.pWaitDstStageMask = &waitStages;
-				submitInfo.commandBufferCount = 1;
-				submitInfo.pCommandBuffers = &commandBuffer;
 
 				VK_CHECK_RESULT(vkQueueSubmit(m_GraphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
 				VK_CHECK_RESULT(vkQueueWaitIdle(m_GraphicsQueue));
@@ -4149,17 +3776,10 @@ namespace flex
 
 			vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_FontSSGraphicsPipeline);
 
-			VkViewport viewport = {
-				0.0f, (real)frameBufferSize.y,
-				(real)frameBufferSize.x, -(real)frameBufferSize.y,
-				0.1f, 10.0f
-			};
+			VkViewport viewport = vks::viewport((real)frameBufferSize.x, (real)frameBufferSize.y, 0.1f, 10.0f);
 			vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
-			VkRect2D scissor = {
-				{ 0u, 0u },
-				{ (u32)frameBufferSize.x, (u32)frameBufferSize.y }
-			};
+			VkRect2D scissor = vks::scissor(0u, 0u, (u32)frameBufferSize.x, (u32)frameBufferSize.y);
 			vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
 			real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
@@ -4268,17 +3888,10 @@ namespace flex
 
 			vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_FontWSGraphicsPipeline);
 
-			VkViewport viewport = {
-				0.0f, (real)frameBufferSize.y,
-				(real)frameBufferSize.x, -(real)frameBufferSize.y,
-				0.1f, 10.0f
-			};
+			VkViewport viewport = vks::viewport((real)frameBufferSize.x, (real)frameBufferSize.y, 0.1f, 10.0f);
 			vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
-			VkRect2D scissor = {
-				{ 0u, 0u },
-				{ (u32)frameBufferSize.x, (u32)frameBufferSize.y }
-			};
+			VkRect2D scissor = vks::scissor(0u, 0u, (u32)frameBufferSize.x, (u32)frameBufferSize.y);
 			vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
 			// TODO: Find out how font sizes actually work
@@ -4733,8 +4346,7 @@ namespace flex
 
 			std::array<VkAttachmentDescription, 2> attachments = { colorAttachment, depthAttachment };
 
-			VkRenderPassCreateInfo renderPassInfo = {};
-			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+			VkRenderPassCreateInfo renderPassInfo = vks::renderPassCreateInfo();
 			renderPassInfo.attachmentCount = attachments.size();
 			renderPassInfo.pAttachments = attachments.data();
 			renderPassInfo.subpassCount = subpasses.size();
@@ -4782,11 +4394,7 @@ namespace flex
 		void VulkanRenderer::CreateDescriptorSet(DescriptorSetCreateInfo* createInfo)
 		{
 			VkDescriptorSetLayout layouts[] = { *createInfo->descriptorSetLayout };
-			VkDescriptorSetAllocateInfo allocInfo = {};
-			allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-			allocInfo.descriptorPool = m_DescriptorPool;
-			allocInfo.descriptorSetCount = 1;
-			allocInfo.pSetLayouts = layouts;
+			VkDescriptorSetAllocateInfo allocInfo = vks::descriptorSetAllocateInfo(m_DescriptorPool, layouts, 1);
 
 			if (*createInfo->descriptorSet)
 			{
@@ -4952,15 +4560,14 @@ namespace flex
 						}
 					}
 
-					writeDescriptorSets.push_back({});
-					writeDescriptorSets[descriptorSetIndex].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-					writeDescriptorSets[descriptorSetIndex].dstSet = *createInfo->descriptorSet;
-					writeDescriptorSets[descriptorSetIndex].dstBinding = binding;
-					writeDescriptorSets[descriptorSetIndex].dstArrayElement = 0;
-					writeDescriptorSets[descriptorSetIndex].descriptorType = descriptorSetInfo.descriptorType;
-					writeDescriptorSets[descriptorSetIndex].descriptorCount = 1;
-					writeDescriptorSets[descriptorSetIndex].pBufferInfo = descriptorSetInfo.bufferInfo.buffer ? &descriptorSetInfo.bufferInfo : nullptr;
-					writeDescriptorSets[descriptorSetIndex].pImageInfo = descriptorSetInfo.imageInfo.imageView ? &descriptorSetInfo.imageInfo : nullptr;
+					if (descriptorSetInfo.bufferInfo.buffer != VK_NULL_HANDLE)
+					{
+						writeDescriptorSets.push_back(vks::writeDescriptorSet(*createInfo->descriptorSet, descriptorSetInfo.descriptorType, binding, &descriptorSetInfo.bufferInfo));
+					}
+					else
+					{
+						writeDescriptorSets.push_back(vks::writeDescriptorSet(*createInfo->descriptorSet, descriptorSetInfo.descriptorType, binding, &descriptorSetInfo.imageInfo));
+					}
 
 					++descriptorSetIndex;
 					++binding;
@@ -5059,10 +4666,7 @@ namespace flex
 				}
 			}
 
-			VkDescriptorSetLayoutCreateInfo layoutInfo = {};
-			layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-			layoutInfo.bindingCount = bindings.size();
-			layoutInfo.pBindings = bindings.data();
+			VkDescriptorSetLayoutCreateInfo layoutInfo = vks::descriptorSetLayoutCreateInfo(bindings);
 
 			VK_CHECK_RESULT(vkCreateDescriptorSetLayout(m_VulkanDevice->m_LogicalDevice, &layoutInfo, nullptr, descriptorSetLayout));
 		}
@@ -5240,28 +4844,16 @@ namespace flex
 				PrintError("Failed to compile fragment shader located at: %s\n", shader.shader.fragmentShaderFilePath.c_str());
 			}
 
-			VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
-			vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-			vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-			vertShaderStageInfo.module = vertShaderModule;
-			vertShaderStageInfo.pName = "main";
+			VkPipelineShaderStageCreateInfo vertShaderStageInfo = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, vertShaderModule);
 			shaderStages[0] = vertShaderStageInfo;
 
-			VkPipelineShaderStageCreateInfo fragShaderStageInfo = {};
-			fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-			fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-			fragShaderStageInfo.module = fragShaderModule;
-			fragShaderStageInfo.pName = "main";
+			VkPipelineShaderStageCreateInfo fragShaderStageInfo = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderModule);
 			shaderStages[1] = fragShaderStageInfo;
 
 			VkPipelineShaderStageCreateInfo geomShaderStageInfo = {};
 			if (bUseGeometryStage)
 			{
-				geomShaderStageInfo = {};
-				geomShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-				geomShaderStageInfo.stage = VK_SHADER_STAGE_GEOMETRY_BIT;
-				geomShaderStageInfo.module = geomShaderModule;
-				geomShaderStageInfo.pName = "main";
+				geomShaderStageInfo = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_GEOMETRY_BIT, geomShaderModule);
 				shaderStages[2] = geomShaderStageInfo;
 			}
 
@@ -5270,52 +4862,20 @@ namespace flex
 			std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
 			GetVertexAttributeDescriptions(createInfo->vertexAttributes, attributeDescriptions);
 
-			VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
-			vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-			vertexInputInfo.vertexBindingDescriptionCount = 1;
-			vertexInputInfo.vertexAttributeDescriptionCount = attributeDescriptions.size();
-			vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
-			vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+			VkPipelineVertexInputStateCreateInfo vertexInputInfo = vks::pipelineVertexInputStateCreateInfo(1, &bindingDescription, attributeDescriptions.size(), attributeDescriptions.data());
 
-			VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
-			inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-			inputAssembly.topology = createInfo->topology;
-			inputAssembly.primitiveRestartEnable = VK_FALSE;
+			VkPipelineInputAssemblyStateCreateInfo inputAssembly = vks::pipelineInputAssemblyStateCreateInfo(createInfo->topology, 0, VK_FALSE);
 
-			VkViewport viewport = {};
-			viewport.x = 0.0f;
-			viewport.y = (real)m_SwapChainExtent.height;
-			viewport.width = (real)m_SwapChainExtent.width;
-			viewport.height = -(real)m_SwapChainExtent.height;
-			viewport.minDepth = 0.0f;
-			viewport.maxDepth = 1.0f;
+			VkViewport viewport = vks::viewport((real)m_SwapChainExtent.width, (real)m_SwapChainExtent.height, 0.0f, 1.0f);
+			VkRect2D scissor = vks::scissor(0, 0, m_SwapChainExtent.width, m_SwapChainExtent.height);
 
-			VkRect2D scissor = {};
-			scissor.offset = { 0, 0 };
-			scissor.extent = m_SwapChainExtent;
-
-			VkPipelineViewportStateCreateInfo viewportState = {};
-			viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-			viewportState.viewportCount = 1;
+			VkPipelineViewportStateCreateInfo viewportState = vks::pipelineViewportStateCreateInfo(1, 1);
 			viewportState.pViewports = &viewport;
-			viewportState.scissorCount = 1;
 			viewportState.pScissors = &scissor;
 
-			VkPipelineRasterizationStateCreateInfo rasterizer = {};
-			rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-			rasterizer.depthClampEnable = VK_FALSE;
-			rasterizer.rasterizerDiscardEnable = VK_FALSE;
-			rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-			rasterizer.lineWidth = 1.0f;
-			rasterizer.cullMode = createInfo->cullMode;
-			rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
-			rasterizer.depthBiasEnable = VK_FALSE;
+			VkPipelineRasterizationStateCreateInfo rasterizer = vks::pipelineRasterizationStateCreateInfo(VK_POLYGON_MODE_FILL, createInfo->cullMode, VK_FRONT_FACE_CLOCKWISE);
 
-			VkPipelineMultisampleStateCreateInfo multisampling = {};
-			multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-			// TODO: Enable if available as an option
-			multisampling.sampleShadingEnable = VK_FALSE;
-			multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+			VkPipelineMultisampleStateCreateInfo multisampling = vks::pipelineMultisampleStateCreateInfo(VK_SAMPLE_COUNT_1_BIT);
 
 			std::vector<VkPipelineColorBlendAttachmentState> colorBlendAttachments = {};
 			colorBlendAttachments.resize(shader.shader.numAttachments, {});
@@ -5349,24 +4909,21 @@ namespace flex
 				}
 			}
 
-			VkPipelineColorBlendStateCreateInfo colorBlending = {};
-			colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+			VkPipelineColorBlendStateCreateInfo colorBlending = vks::pipelineColorBlendStateCreateInfo(colorBlendAttachments);
 			colorBlending.logicOpEnable = VK_FALSE;
 			colorBlending.logicOp = VK_LOGIC_OP_COPY;
-			colorBlending.attachmentCount = colorBlendAttachments.size();
-			colorBlending.pAttachments = colorBlendAttachments.data();
 			colorBlending.blendConstants[0] = 0.0f;
 			colorBlending.blendConstants[1] = 0.0f;
 			colorBlending.blendConstants[2] = 0.0f;
 			colorBlending.blendConstants[3] = 0.0f;
 
-			std::array<VkDescriptorSetLayout, 1> setLayouts = { m_DescriptorSetLayouts[createInfo->descriptorSetLayoutIndex] };
-			VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
-			pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-			pipelineLayoutInfo.setLayoutCount = setLayouts.size();
-			pipelineLayoutInfo.pSetLayouts = setLayouts.data();
+			VkDescriptorSetLayout setLayout = m_DescriptorSetLayouts[createInfo->descriptorSetLayoutIndex];
+			VkPipelineLayoutCreateInfo pipelineLayoutInfo = vks::pipelineLayoutCreateInfo(1, &setLayout);
 			pipelineLayoutInfo.pushConstantRangeCount = createInfo->pushConstantRangeCount;
 			pipelineLayoutInfo.pPushConstantRanges = createInfo->pushConstants;
+
+			assert(createInfo->pushConstantRangeCount == 0 || createInfo->pushConstants != nullptr);
+
 
 			if (createInfo->pipelineCache)
 			{
@@ -5381,23 +4938,14 @@ namespace flex
 			vkDestroyPipelineLayout(m_VulkanDevice->m_LogicalDevice, *createInfo->pipelineLayout, nullptr);
 			VK_CHECK_RESULT(vkCreatePipelineLayout(m_VulkanDevice->m_LogicalDevice, &pipelineLayoutInfo, nullptr, createInfo->pipelineLayout));
 
-			VkPipelineDepthStencilStateCreateInfo depthStencil = {};
-			depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-			depthStencil.depthTestEnable = VK_TRUE;
-			depthStencil.depthCompareOp = createInfo->depthCompareOp;
-			depthStencil.depthWriteEnable = createInfo->depthWriteEnable ? VK_TRUE : VK_FALSE;
-			depthStencil.stencilTestEnable = createInfo->stencilTestEnable;
-			depthStencil.front = {};
-			depthStencil.back = {};
+			VkPipelineDepthStencilStateCreateInfo depthStencil = vks::pipelineDepthStencilStateCreateInfo(VK_TRUE, createInfo->depthWriteEnable, createInfo->depthCompareOp, createInfo->stencilTestEnable);
 
 			VkPipelineDynamicStateCreateInfo dynamicState = {};
 			VkPipelineDynamicStateCreateInfo* pDynamicState = nullptr;
 			if (createInfo->bSetDynamicStates)
 			{
 				VkDynamicState dynamicStates[2] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
-				dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-				dynamicState.dynamicStateCount = 2;
-				dynamicState.pDynamicStates = dynamicStates;
+				dynamicState = vks::pipelineDynamicStateCreateInfo(2, dynamicStates);
 
 				pDynamicState = &dynamicState;
 			}
@@ -5497,10 +5045,7 @@ namespace flex
 					m_DepthAttachment->view
 				};
 
-				VkFramebufferCreateInfo framebufferInfo = {};
-				framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-				// Just defines which render passes this frame buffer is compatible with (can be either deferredCombine or forward)
-				framebufferInfo.renderPass = m_DeferredCombineRenderPass;
+				VkFramebufferCreateInfo framebufferInfo =  vks::framebufferCreateInfo(m_DeferredCombineRenderPass);
 				framebufferInfo.attachmentCount = attachments.size();
 				framebufferInfo.pAttachments = attachments.data();
 				framebufferInfo.width = m_SwapChainExtent.width;
@@ -5604,8 +5149,7 @@ namespace flex
 			dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
 			dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
-			VkRenderPassCreateInfo renderPassInfo = {};
-			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+			VkRenderPassCreateInfo renderPassInfo = vks::renderPassCreateInfo();
 			renderPassInfo.pAttachments = attachmentDescs.data();
 			renderPassInfo.attachmentCount = static_cast<u32>(attachmentDescs.size());
 			renderPassInfo.subpassCount = 1;
@@ -5623,10 +5167,7 @@ namespace flex
 			}
 			attachments.push_back(m_DepthAttachment->view);
 
-			VkFramebufferCreateInfo fbufCreateInfo = {};
-			fbufCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-			fbufCreateInfo.pNext = NULL;
-			fbufCreateInfo.renderPass = m_OffScreenFrameBuf->renderPass;
+			VkFramebufferCreateInfo fbufCreateInfo = vks::framebufferCreateInfo(m_OffScreenFrameBuf->renderPass);
 			fbufCreateInfo.pAttachments = attachments.data();
 			fbufCreateInfo.attachmentCount = static_cast<u32>(attachments.size());
 			fbufCreateInfo.width = m_OffScreenFrameBuf->width;
@@ -5635,9 +5176,7 @@ namespace flex
 			VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &fbufCreateInfo, nullptr, m_OffScreenFrameBuf->frameBuffer.replace()));
 
 			// Create sampler to sample from the color attachments
-			VkSamplerCreateInfo samplerCreateInfo = {};
-			samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-			samplerCreateInfo.maxAnisotropy = 1.0f;
+			VkSamplerCreateInfo samplerCreateInfo = vks::samplerCreateInfo();
 			samplerCreateInfo.magFilter = VK_FILTER_NEAREST;
 			samplerCreateInfo.minFilter = VK_FILTER_NEAREST;
 			samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
@@ -5756,8 +5295,7 @@ namespace flex
 			dependencies[2].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
 			dependencies[2].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
 
-			VkRenderPassCreateInfo renderPassInfo = {};
-			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+			VkRenderPassCreateInfo renderPassInfo = vks::renderPassCreateInfo();
 			renderPassInfo.pAttachments = attachmentDescs.data();
 			renderPassInfo.attachmentCount = static_cast<u32>(attachmentDescs.size());
 			renderPassInfo.subpassCount = subpasses.size();
@@ -5774,32 +5312,13 @@ namespace flex
 			}
 			attachments.push_back(m_CubemapDepthAttachment->view);
 
-			VkFramebufferCreateInfo fbufCreateInfo = {};
-			fbufCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-			fbufCreateInfo.pNext = NULL;
-			fbufCreateInfo.renderPass = m_CubemapFrameBuffer->renderPass;
+			VkFramebufferCreateInfo fbufCreateInfo = vks::framebufferCreateInfo(m_CubemapFrameBuffer->renderPass);
 			fbufCreateInfo.pAttachments = attachments.data();
 			fbufCreateInfo.attachmentCount = static_cast<u32>(attachments.size());
 			fbufCreateInfo.width = m_CubemapFrameBuffer->width;
 			fbufCreateInfo.height = m_CubemapFrameBuffer->height;
 			fbufCreateInfo.layers = 6;
 			VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &fbufCreateInfo, nullptr, m_CubemapFrameBuffer->frameBuffer.replace()));
-
-			//// Create sampler to sample from the color attachments
-			//VkSamplerCreateInfo samplerCreateInfo = {};
-			//samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-			//samplerCreateInfo.maxAnisotropy = 1.0f;
-			//samplerCreateInfo.magFilter = VK_FILTER_NEAREST;
-			//samplerCreateInfo.minFilter = VK_FILTER_NEAREST;
-			//samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-			//samplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-			//samplerCreateInfo.addressModeV = samplerCreateInfo.addressModeU;
-			//samplerCreateInfo.addressModeW = samplerCreateInfo.addressModeU;
-			//samplerCreateInfo.mipLodBias = 0.0f;
-			//samplerCreateInfo.minLod = 0.0f;
-			//samplerCreateInfo.maxLod = 1.0f;
-			//samplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-			//VK_CHECK_RESULT(vkCreateSampler(m_VulkanDevice->m_LogicalDevice, &samplerCreateInfo, nullptr, m_ColorSampler.replace()));
 		}
 
 		void VulkanRenderer::GenerateGBufferVertexBuffer()
@@ -5961,9 +5480,7 @@ namespace flex
 			clearValues[0].color = m_ClearColor;
 			clearValues[1].depthStencil = { 0.0f, 0 };
 
-			VkRenderPassBeginInfo renderPassBeginInfo = {};
-			renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderPassBeginInfo.renderPass = m_DeferredCombineRenderPass;
+			VkRenderPassBeginInfo renderPassBeginInfo = vks::renderPassBeginInfo(m_DeferredCombineRenderPass);
 			renderPassBeginInfo.renderArea.offset = { 0, 0 };
 			renderPassBeginInfo.renderArea.extent = m_SwapChainExtent;
 			renderPassBeginInfo.clearValueCount = clearValues.size();
@@ -5983,23 +5500,17 @@ namespace flex
 
 				renderPassBeginInfo.framebuffer = m_SwapChainFramebuffers[i];
 
-				VkCommandBufferBeginInfo cmdBufferbeginInfo = {};
-				cmdBufferbeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+				VkCommandBufferBeginInfo cmdBufferbeginInfo = vks::commandBufferBeginInfo();
 				cmdBufferbeginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 
 				VK_CHECK_RESULT(vkBeginCommandBuffer(commandBuffer, &cmdBufferbeginInfo));
 
 				vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-				VkViewport viewport = {
-					0.0f, (real)m_SwapChainExtent.height,
-					(real)m_SwapChainExtent.width, -(real)m_SwapChainExtent.height,
-					0.1f, 1000.0f };
+				VkViewport viewport = vks::viewport((real)m_SwapChainExtent.width, (real)m_SwapChainExtent.height, 0.1f, 1000.0f);
 				vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
-				VkRect2D scissor = {
-					{ 0u, 0u },
-					{ m_SwapChainExtent.width, m_SwapChainExtent.height } };
+				VkRect2D scissor = vks::scissor(0u, 0u, m_SwapChainExtent.width, m_SwapChainExtent.height);
 				vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
 				BindDescriptorSet(&m_Shaders[gBufferMaterial->material.shaderID], 0, commandBuffer, gBufferObject->pipelineLayout, gBufferObject->descriptorSet);
@@ -6249,8 +5760,7 @@ namespace flex
 
 			if (offscreenSemaphore == VK_NULL_HANDLE)
 			{
-				VkSemaphoreCreateInfo semaphoreCreateInfo = {};
-				semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+				VkSemaphoreCreateInfo semaphoreCreateInfo = vks::semaphoreCreateInfo();
 				VK_CHECK_RESULT(vkCreateSemaphore(m_VulkanDevice->m_LogicalDevice, &semaphoreCreateInfo, nullptr, &offscreenSemaphore));
 			}
 
@@ -6260,9 +5770,7 @@ namespace flex
 			clearValues[2].color = m_ClearColor;
 			clearValues[3].depthStencil = { 0.0f, 0 };
 
-			VkRenderPassBeginInfo renderPassBeginInfo = {};
-			renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderPassBeginInfo.renderPass = m_OffScreenFrameBuf->renderPass;
+			VkRenderPassBeginInfo renderPassBeginInfo = vks::renderPassBeginInfo(m_OffScreenFrameBuf->renderPass);
 			renderPassBeginInfo.framebuffer = m_OffScreenFrameBuf->frameBuffer;
 			renderPassBeginInfo.renderArea.offset = { 0, 0 };
 			renderPassBeginInfo.renderArea.extent.width = m_OffScreenFrameBuf->width;
@@ -6270,8 +5778,7 @@ namespace flex
 			renderPassBeginInfo.clearValueCount = clearValues.size();
 			renderPassBeginInfo.pClearValues = clearValues.data();
 
-			VkCommandBufferBeginInfo cmdBufferbeginInfo = {};
-			cmdBufferbeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+			VkCommandBufferBeginInfo cmdBufferbeginInfo = vks::commandBufferBeginInfo();
 			cmdBufferbeginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 
 			VK_CHECK_RESULT(vkBeginCommandBuffer(offScreenCmdBuffer, &cmdBufferbeginInfo));
@@ -6280,12 +5787,10 @@ namespace flex
 
 			// TODO: Make min and max values members
 			// TODO: Move to separate function, SetupDrawState?
-			VkViewport viewport = VkViewport{ 0.0f, (real)m_OffScreenFrameBuf->height,
-				(real)m_OffScreenFrameBuf->width, -(real)m_OffScreenFrameBuf->height,
-				0.1f, 1000.0f };
+			VkViewport viewport = vks::viewport((real)m_OffScreenFrameBuf->width, (real)m_OffScreenFrameBuf->height, 0.1f, 1000.0f);
 			vkCmdSetViewport(offScreenCmdBuffer, 0, 1, &viewport);
 
-			VkRect2D scissor = VkRect2D{ { 0u, 0u },{ m_OffScreenFrameBuf->width, m_OffScreenFrameBuf->height } };
+			VkRect2D scissor = vks::scissor(0u, 0u, m_OffScreenFrameBuf->width, m_OffScreenFrameBuf->height);
 			vkCmdSetScissor(offScreenCmdBuffer, 0, 1, &scissor);
 
 			VkDeviceSize offsets[1] = { 0 };
@@ -6687,11 +6192,8 @@ namespace flex
 				{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, descriptorSetCount },
 			};
 
-			VkDescriptorPoolCreateInfo poolInfo = {};
-			poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-			poolInfo.poolSizeCount = poolSizes.size();
-			poolInfo.pPoolSizes = poolSizes.data();
-			poolInfo.maxSets = descriptorSetCount * poolSizes.size();
+			u32 maxSets = descriptorSetCount * poolSizes.size();
+			VkDescriptorPoolCreateInfo poolInfo = vks::descriptorPoolCreateInfo(poolSizes, maxSets);
 			// TODO: Have additional pool which doesn't have this flag set for constant descriptor sets
 			poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT; // Allow descriptor sets to be added/removed often
 
@@ -6700,8 +6202,7 @@ namespace flex
 
 		void VulkanRenderer::CreateSemaphores()
 		{
-			VkSemaphoreCreateInfo semaphoreInfo = {};
-			semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+			VkSemaphoreCreateInfo semaphoreInfo = vks::semaphoreCreateInfo();
 
 			VK_CHECK_RESULT(vkCreateSemaphore(m_VulkanDevice->m_LogicalDevice, &semaphoreInfo, nullptr, m_PresentCompleteSemaphore.replace()));
 			VK_CHECK_RESULT(vkCreateSemaphore(m_VulkanDevice->m_LogicalDevice, &semaphoreInfo, nullptr, m_RenderCompleteSemaphore.replace()));
@@ -6781,8 +6282,7 @@ namespace flex
 
 		bool VulkanRenderer::CreateShaderModule(const std::vector<char>& code, VDeleter<VkShaderModule>& shaderModule) const
 		{
-			VkShaderModuleCreateInfo createInfo = {};
-			createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+			VkShaderModuleCreateInfo createInfo = vks::shaderModuleCreateInfo();
 			createInfo.codeSize = code.size();
 			createInfo.pCode = (u32*)code.data();
 
@@ -6924,6 +6424,7 @@ namespace flex
 
 			u32 glfwExtensionCount = 0;
 			const char** glfwExtensions;
+			// TODO: Don't call glfw functions directly in renderer
 			glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
 			for (u32 i = 0; i < glfwExtensionCount; ++i)

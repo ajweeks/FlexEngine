@@ -2,6 +2,7 @@
 #if COMPILE_VULKAN
 
 #include "Graphics/Vulkan/VulkanBuffer.hpp"
+#include "Graphics/Vulkan/VulkanInitializers.hpp"
 
 namespace flex
 {
@@ -54,11 +55,7 @@ namespace flex
 
 		VkResult VulkanBuffer::Flush(VkDeviceSize size, VkDeviceSize offset)
 		{
-			VkMappedMemoryRange mappedRange = {};
-			mappedRange.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-			mappedRange.memory = m_Memory;
-			mappedRange.offset = offset;
-			mappedRange.size = size;
+			VkMappedMemoryRange mappedRange = vks::mappedMemoryRange(m_Memory, offset, size);
 			return vkFlushMappedMemoryRanges(m_Device, 1, &mappedRange);
 		}
 	} // namespace vk
