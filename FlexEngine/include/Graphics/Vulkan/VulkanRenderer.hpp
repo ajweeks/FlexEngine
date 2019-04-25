@@ -339,15 +339,14 @@ namespace flex
 			const std::vector<const char*> m_DeviceExtensions =
 			{
 				VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-				VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME
+				VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME,
+				VK_KHR_MAINTENANCE1_EXTENSION_NAME // For negative viewport height
 			};
 
 #ifdef NDEBUG
 			const bool m_bEnableValidationLayers = false;
 #else
-			//---------------------------------------------------------------------
-			const bool m_bEnableValidationLayers = true; // TODO: **RE-ENABLE!!**
-			//---------------------------------------------------------------------
+			const bool m_bEnableValidationLayers = true;
 #endif
 
 			VDeleter<VkInstance> m_Instance{ vkDestroyInstance };
