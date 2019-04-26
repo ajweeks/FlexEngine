@@ -2251,8 +2251,16 @@ namespace flex
 
 		void VulkanRenderer::UpdateVertexData(RenderID renderID, VertexBufferData* vertexBufferData)
 		{
-			UNREFERENCED_PARAMETER(renderID);
-			UNREFERENCED_PARAMETER(vertexBufferData);
+			VulkanRenderObject* renderObject = GetRenderObject(renderID);
+			VulkanBuffer* vertexBuffer = m_VertexIndexBufferPairs[m_Materials[renderObject->materialID].material.shaderID].vertexBuffer;
+			u32 copySize = std::min(vertexBufferData->VertexBufferSize, (u32)vertexBuffer->m_Size);
+			if (copySize < vertexBufferData->VertexBufferSize)
+			{
+				PrintError("Dynamic vertex buffer is %u bytes too small for data attempting to be copied in\n", vertexBufferData->VertexBufferSize - copySize);
+			}
+			VK_CHECK_RESULT(vertexBuffer->Map(copySize));
+			memcpy(vertexBuffer->m_Mapped, vertexBufferData->vertexData, copySize);
+			vertexBuffer->Unmap();
 		}
 
 		void VulkanRenderer::DrawUntexturedQuad(const glm::vec2& pos, AnchorPoint anchor, const glm::vec2& size, const glm::vec4& color)
@@ -6840,6 +6848,15 @@ namespace flex
 			m_Shaders[shaderID].shader.bNeedRoughnessSampler = true;
 			m_Shaders[shaderID].shader.bNeedAOSampler = true;
 			m_Shaders[shaderID].shader.bNeedNormalSampler = true;
+			
+			
+			
+			// TODO
+			m_Shaders[shaderID].bDynamic = true;
+			m_Shaders[shaderID].dynamicVertexBufferSize = 1024 * 1024; // TODO
+
+
+
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV |
