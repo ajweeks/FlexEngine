@@ -2077,6 +2077,36 @@ namespace flex
 
 		void VulkanRenderer::Update()
 		{
+			Renderer::Update();
+
+#ifdef DEBUG
+			if (m_ShaderCompiler != nullptr)
+			{
+				if (m_ShaderCompiler->TickStatus())
+				{
+					if (m_ShaderCompiler->bSuccess == false)
+					{
+						PrintError("Failed to compile shader code!\n");
+						AddEditorString("Async shader recompile completed unsuccessfully");
+					}
+					else
+					{
+						AddEditorString("Async shader recompile completed successfully");
+
+						LoadDefaultShaderCode();
+
+						for (u32 i = 0; i < m_RenderObjects.size(); ++i)
+						{
+							CreateGraphicsPipeline(i, false);
+						}
+					}
+
+					delete m_ShaderCompiler;
+					m_ShaderCompiler = nullptr;
+				}
+			}
+#endif
+
 			m_PhysicsDebugDrawer->UpdateDebugMode();
 
 			UpdateConstantUniformBuffers();
@@ -2421,26 +2451,17 @@ namespace flex
 				m_ShaderCompiler = new AsyncVulkanShaderCompiler(false);
 			}
 
-			while (!m_ShaderCompiler->TickStatus())
+			if (m_ShaderCompiler->bComplete)
 			{
-				// Spin lock
+				AddEditorString("Found no shader changes to recompile");
+				delete m_ShaderCompiler;
+				m_ShaderCompiler = nullptr;
 			}
-
-			if (m_ShaderCompiler->bSuccess == false)
+			else
 			{
-				PrintError("Failed to compile shader code!\n");
+				AddEditorString("Kicking off async shader recompile");
 			}
-
-			delete m_ShaderCompiler;
-			m_ShaderCompiler = nullptr;
 #endif
-
-			LoadDefaultShaderCode();
-
-			for (u32 i = 0; i < m_RenderObjects.size(); ++i)
-			{
-				CreateGraphicsPipeline(i, false);
-			}
 		}
 
 		void VulkanRenderer::LoadFonts(bool bForceRender)

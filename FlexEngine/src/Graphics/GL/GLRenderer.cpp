@@ -1839,6 +1839,8 @@ namespace flex
 
 		void GLRenderer::Update()
 		{
+			Renderer::Update();
+
 			PROFILE_AUTO("Renderer update");
 
 			// TODO: Hook into callback
@@ -1865,15 +1867,6 @@ namespace flex
 					PROFILE_END(blockName);
 				}
 				//Profiler::PrintBlockDuration(blockName);
-			}
-
-			if (m_EditorStrSecRemaining > 0.0f)
-			{
-				m_EditorStrSecRemaining -= g_DeltaTime;
-				if (m_EditorStrSecRemaining <= 0.0f)
-				{
-					m_EditorStrSecRemaining = 0.0f;
-				}
 			}
 
 			if (screenshotAsyncTextureSave != nullptr)

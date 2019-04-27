@@ -51,7 +51,7 @@ namespace flex
 		virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) = 0;
 		virtual void SetClearColor(real r, real g, real b) = 0;
 
-		virtual void Update() = 0;
+		virtual void Update();
 		virtual void Draw() = 0;
 		virtual void DrawImGuiMisc();
 
@@ -293,7 +293,7 @@ namespace flex
 		MaterialID m_WorldAxisMaterialID = InvalidMaterialID;
 
 		sec m_EditorStrSecRemaining = 0.0f;
-		sec m_EditorStrSecDuration = 1.15f;
+		sec m_EditorStrSecDuration = 1.5f;
 		real m_EditorStrFadeDurationPercent = 0.25f;
 		std::string m_EditorMessage;
 

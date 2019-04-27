@@ -436,6 +436,18 @@ namespace flex
 		}
 	}
 
+	void Renderer::Update()
+	{
+		if (m_EditorStrSecRemaining > 0.0f)
+		{
+			m_EditorStrSecRemaining -= g_DeltaTime;
+			if (m_EditorStrSecRemaining <= 0.0f)
+			{
+				m_EditorStrSecRemaining = 0.0f;
+			}
+		}
+	}
+
 	void Renderer::DrawImGuiMisc()
 	{
 		if (bFontWindowShowing)
