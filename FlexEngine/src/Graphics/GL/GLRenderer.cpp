@@ -2938,7 +2938,7 @@ namespace flex
 			bool bHasText = false;
 			for (BitmapFont* font : m_FontsSS)
 			{
-				if (font->GetBufferSize() > 0)
+				if (font->bufferSize > 0)
 				{
 					bHasText = true;
 					break;
@@ -2991,7 +2991,7 @@ namespace flex
 
 			for (BitmapFont* font : m_FontsSS)
 			{
-				if (font->GetBufferSize() > 0)
+				if (font->bufferSize > 0)
 				{
 					glActiveTexture(GL_TEXTURE0);
 					glBindTexture(GL_TEXTURE_2D, font->GetTexture()->handle);
@@ -3011,7 +3011,7 @@ namespace flex
 					glm::vec2 texSize = (glm::vec2)font->GetTexture()->GetResolution();
 					glUniform2fv(fontMaterial.uniformIDs.texSize, 1, &texSize.r);
 
-					glDrawArrays(GL_POINTS, font->GetBufferStart(), font->GetBufferSize());
+					glDrawArrays(GL_POINTS, font->bufferStart, font->bufferSize);
 				}
 			}
 
@@ -3029,7 +3029,7 @@ namespace flex
 			bool bHasText = false;
 			for (BitmapFont* font : m_FontsWS)
 			{
-				if (font->GetBufferSize() > 0)
+				if (font->bufferSize > 0)
 				{
 					bHasText = true;
 					break;
@@ -3073,7 +3073,7 @@ namespace flex
 
 			for (BitmapFont* font : m_FontsWS)
 			{
-				if (font->GetBufferSize() > 0)
+				if (font->bufferSize > 0)
 				{
 					glBindTexture(GL_TEXTURE_2D, font->GetTexture()->handle);
 
@@ -3082,19 +3082,14 @@ namespace flex
 					glm::vec2 texSize = (glm::vec2)font->GetTexture()->GetResolution();
 					glUniform2fv(fontMaterial.uniformIDs.texSize, 1, &texSize.r);
 
-					glDrawArrays(GL_POINTS, font->GetBufferStart(), font->GetBufferSize());
+					glDrawArrays(GL_POINTS, font->bufferStart, font->bufferSize);
 				}
 			}
 
 			GL_POP_DEBUG_GROUP();
 		}
 
-		bool GLRenderer::LoadFont(BitmapFont** font,
-								  i16 size,
-								  const std::string& fontFilePath,
-								  const std::string& renderedFontFilePath,
-								  bool bForceRender,
-								  bool bScreenSpace)
+		bool GLRenderer::LoadFont(FontMetaData& fontMetaData, bool bForceRender)
 		{
 			FT_Library ft;
 			// TODO: Only do once per session?
@@ -3108,18 +3103,18 @@ namespace flex
 			std::array<glm::vec2i, 4> maxPos;
 
 			std::vector<char> fileMemory;
-			ReadFile(fontFilePath, fileMemory, true);
+			ReadFile(fontMetaData.filePath, fileMemory, true);
 
 			FT_Face face = {};
-			if (!LoadFontMetrics(fileMemory, fontFilePath, ft, font, size, bScreenSpace, &characters, &maxPos, &face))
+			if (!LoadFontMetrics(fileMemory, ft, fontMetaData, &characters, &maxPos, &face))
 			{
 				return false;
 			}
 
-			std::string fileName = fontFilePath;
+			std::string fileName = fontMetaData.filePath;
 			StripLeadingDirectories(fileName);
 
-			BitmapFont* newFont = *font;
+			BitmapFont* newFont = fontMetaData.bitmapFont;
 
 			// TODO: Save in common place
 			u32 sampleDensity = 32;
@@ -3129,9 +3124,9 @@ namespace flex
 			bool bUsingPreRenderedTexture = false;
 			if (!bForceRender)
 			{
-				if (FileExists(renderedFontFilePath))
+				if (FileExists(fontMetaData.renderedTextureFilePath))
 				{
-					GLTexture* fontTex = newFont->SetTexture(new GLTexture(renderedFontFilePath, 4, false, false, false));
+					GLTexture* fontTex = newFont->SetTexture(new GLTexture(fontMetaData.renderedTextureFilePath, 4, false, false, false));
 
 					if (fontTex->LoadFromFile())
 					{
@@ -3294,7 +3289,7 @@ namespace flex
 
 				glBindVertexArray(0);
 
-				std::string savedSDFTextureAbsFilePath = RelativePathToAbsolute(renderedFontFilePath);
+				std::string savedSDFTextureAbsFilePath = RelativePathToAbsolute(fontMetaData.renderedTextureFilePath);
 				fontTex->SaveToFileAsync(savedSDFTextureAbsFilePath, ImageFormat::PNG, false);
 
 				// Cleanup
@@ -3308,13 +3303,13 @@ namespace flex
 
 			// Initialize font shaders
 			{
-				MaterialID matID = bScreenSpace ? m_FontMatSSID : m_FontMatWSID;
+				MaterialID matID = fontMetaData.bScreenSpace ? m_FontMatSSID : m_FontMatWSID;
 				GLMaterial& mat = m_Materials[matID];
 				GLShader& shader = m_Shaders[mat.material.shaderID];
 				glUseProgram(shader.program);
 
-				GLuint* VAO = bScreenSpace ? &m_TextQuadSS_VAO : &m_TextQuadWS_VAO;
-				GLuint* VBO = bScreenSpace ? &m_TextQuadSS_VBO : &m_TextQuadWS_VBO;
+				GLuint* VAO = fontMetaData.bScreenSpace ? &m_TextQuadSS_VAO : &m_TextQuadWS_VAO;
+				GLuint* VBO = fontMetaData.bScreenSpace ? &m_TextQuadSS_VBO : &m_TextQuadWS_VBO;
 
 				glGenVertexArrays(1, VAO);
 				glGenBuffers(1, VBO);
@@ -3327,7 +3322,7 @@ namespace flex
 				glBufferData(GL_ARRAY_BUFFER, bufferSize, NULL, GL_DYNAMIC_DRAW);
 
 
-				if (bScreenSpace)
+				if (fontMetaData.bScreenSpace)
 				{
 					glEnableVertexAttribArray(0);
 					glEnableVertexAttribArray(1);
@@ -3363,7 +3358,7 @@ namespace flex
 			{
 				if (bUsingPreRenderedTexture)
 				{
-					std::string textureFilePath = renderedFontFilePath;
+					std::string textureFilePath = fontMetaData.renderedTextureFilePath;
 					StripLeadingDirectories(textureFilePath);
 					Print("Loaded font atlas texture from %s\n", textureFilePath.c_str());
 				}
@@ -3381,11 +3376,11 @@ namespace flex
 			AnchorPoint anchor,
 			const glm::vec2& pos, // Positional offset from anchor
 			real spacing,
-			bool bRaw)
+			real scale /* = 1.0f */)
 		{
 			assert(m_CurrentFont != nullptr);
 
-			TextCache newCache(str, anchor, pos, color, spacing, bRaw);
+			TextCache newCache(str, anchor, pos, color, spacing, scale);
 			m_CurrentFont->AddTextCache(newCache);
 		}
 
@@ -3394,11 +3389,11 @@ namespace flex
 			const glm::vec3& pos,
 			const glm::quat& rot,
 			real spacing,
-			bool bRaw)
+			real scale /* = 1.0f */)
 		{
 			assert(m_CurrentFont != nullptr);
 
-			TextCache newCache(str, pos, rot, color, spacing, bRaw);
+			TextCache newCache(str, pos, rot, color, spacing, scale);
 			m_CurrentFont->AddTextCache(newCache);
 		}
 
@@ -4303,12 +4298,7 @@ namespace flex
 				StripLeadingDirectories(fontName);
 				StripFileType(fontName);
 
-				LoadFont(&fontMetaData.bitmapFont,
-					fontMetaData.size,
-					fontMetaData.filePath,
-					fontMetaData.renderedTextureFilePath,
-					bForceRender,
-					fontMetaData.bScreenSpace);
+				LoadFont(fontMetaData, bForceRender);
 			}
 		}
 

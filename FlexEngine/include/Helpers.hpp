@@ -55,11 +55,6 @@ namespace flex
 
 	std::string TrimStartAndEnd(const std::string& str);
 
-	/* Interpret 4 bytes starting at ptr as an unsigned 32-bit int */
-	u32 Parse32u(char* ptr);
-	/* Interpret 2 bytes starting at ptr as an unsigned 16-bit int */
-	u16 Parse16u(char* ptr);
-
 	// Returns the current year, month, & day  (YYYY-MM-DD)
 	std::string GetDateString_YMD();
 	// Returns the current year, month, day, hour, minute, & second (YYYY-MM-DD_HH-MM-SS)
@@ -85,6 +80,14 @@ namespace flex
 	glm::vec2 Lerp(const glm::vec2& a, const glm::vec2& b, real t);
 	glm::vec3 Lerp(const glm::vec3& a, const glm::vec3& b, real t);
 	glm::vec4 Lerp(const glm::vec4& a, const glm::vec4& b, real t);
+
+	u32 Pack2FloatToU32(real f1, real f2);
+	void UnpackU32To2Float(u32 u1, real* outF1, real* outF2);
+
+	/* Interpret 4 bytes starting at ptr as an unsigned 32-bit int */
+	u32 Parse32u(char* ptr);
+	/* Interpret 2 bytes starting at ptr as an unsigned 16-bit int */
+	u16 Parse16u(char* ptr);
 
 	bool ParseBool(const std::string& intStr);
 
@@ -212,10 +215,10 @@ namespace flex
 	public:
 		// Screen-space constructor
 		TextCache(const std::string& text, AnchorPoint anchor, const glm::vec2& position,
-			const glm::vec4& col, real xSpacing, bool bRaw);
+			const glm::vec4& col, real xSpacing, real scale);
 		// World-space constructor
 		TextCache(const std::string& text, const glm::vec3& position, const glm::quat& rot,
-			const glm::vec4& col, real xSpacing, bool bRaw);
+			const glm::vec4& col, real xSpacing, real scale);
 
 		std::string str;
 		AnchorPoint anchor;
@@ -223,7 +226,7 @@ namespace flex
 		glm::quat rot;
 		glm::vec4 color;
 		real xSpacing;
-		bool bRaw;
+		real scale;
 
 	private:
 		//TextCache& operator=(const TextCache &tmp);

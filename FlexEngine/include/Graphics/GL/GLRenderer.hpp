@@ -88,14 +88,14 @@ namespace flex
 				AnchorPoint anchor,
 				const glm::vec2& pos, // Positional offset from anchor
 				real spacing,
-				bool bRaw = false) override;
+				real scale = 1.0f) override;
 
 			virtual void DrawStringWS(const std::string& str,
 				const glm::vec4& color,
 				const glm::vec3& pos,
 				const glm::quat& rot,
 				real spacing,
-				bool bRaw = false) override;
+				real scale = 1.0f) override;
 
 			virtual void DrawAssetBrowserImGui(bool* bShowing) override;
 			virtual void DrawImGuiForRenderObject(RenderID renderID) override;
@@ -107,12 +107,7 @@ namespace flex
 			virtual void RenderObjectStateChanged() override;
 
 		protected:
-			virtual bool LoadFont(BitmapFont** font,
-								  i16 size,
-								  const std::string& fontFilePath,
-								  const std::string& renderedFontFilePath,
-								  bool bForceRender,
-								  bool bScreenSpace) override;
+			virtual bool LoadFont(FontMetaData& fontMetaData, bool bForceRender) override;
 
 		private:
 

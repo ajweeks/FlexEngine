@@ -69,6 +69,10 @@ namespace flex
 						fontObj.SetStringChecked("file path", fontMetaData.filePath);
 						fontMetaData.size = (i16)fontObj.GetInt("size");
 						fontObj.SetBoolChecked("screen space", fontMetaData.bScreenSpace);
+						fontObj.SetFloatChecked("threshold", fontMetaData.threshold);
+						fontObj.SetFloatChecked("shadow opacity", fontMetaData.shadowOpacity);
+						fontObj.SetVec2Checked("shadow offset", fontMetaData.shadowOffset);
+						fontObj.SetFloatChecked("soften", fontMetaData.soften);
 
 						if (fontMetaData.filePath.empty())
 						{
@@ -444,27 +448,34 @@ namespace flex
 					BitmapFont* font = fontMeta.bitmapFont;
 
 					ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollWithMouse;
-					if (ImGui::BeginChild(fontMeta.renderedTextureFilePath.c_str(), ImVec2(0, 165), true, flags))
+					if (ImGui::BeginChild(fontMeta.renderedTextureFilePath.c_str(), ImVec2(0, 240), true, flags))
 					{
 						ImGui::Text("%s", iter->first.c_str());
 						ImGui::Text("%s", font->name.c_str());
 
 						ImGui::Columns(2);
+						ImGui::SetColumnWidth(0, 350.0f);
 
-						ImGui::Text("Size: %i", font->GetSize());
+						ImGui::DragFloat("Threshold", &font->metaData.threshold, 0.001f, 0.0f, 1.0f);
+						ImGui::DragFloat2("Shadow Offset", &font->metaData.shadowOffset.x, 0.0007f);
+						ImGui::DragFloat("Shadow Opacity", &font->metaData.shadowOpacity, 0.005f, 0.0f, 0.999f);
+						ImGui::DragFloat("Soften", &font->metaData.soften, 0.001f, 0.0f, 1.0f);
+
+						ImGui::Text("Size: %i", font->metaData.size);
+						ImGui::SameLine();
 						ImGui::Text("%s space", fontMeta.bScreenSpace ? "Screen" : "World");
 						glm::vec2u texSize(font->GetTextureSize());
 						ImGui::Text("Resolution: %ux%u", texSize.x, texSize.y);
-						ImGui::Text("Char count: %i", font->GetCharCount());
-						ImGui::Text("Byte count: %i", font->GetBufferSize());
-						ImGui::Text("Use kerning: %s", font->UseKerning() ? "true" : "false");
-						ImGui::Text("Num text caches: %u", font->GetTextCaches().size());
+						ImGui::Text("Char count: %i", font->characterCount);
+						ImGui::Text("Byte count: %i", font->bufferSize);
+						ImGui::Text("Use kerning: %s", font->bUseKerning ? "true" : "false");
 						// TODO: Add support to ImGui vulkan renderer for images
 						//VulkanTexture* tex = font->GetTexture();
 						//ImVec2 texSize((real)tex->width, (real)tex->height);
 						//ImVec2 uv0(0.0f, 0.0f);
 						//ImVec2 uv1(1.0f, 1.0f);
 						//ImGui::Image((void*)&tex->image, texSize, uv0, uv1);
+
 						ImGui::NextColumn();
 						if (ImGui::Button("Re-bake"))
 						{
@@ -487,12 +498,7 @@ namespace flex
 							fontMeta.bitmapFont = nullptr;
 							font = nullptr;
 
-							LoadFont(&fontMeta.bitmapFont,
-								fontMeta.size,
-								fontMeta.filePath,
-								fontMeta.renderedTextureFilePath,
-								true,
-								fontMeta.bScreenSpace);
+							LoadFont(fontMeta, true);
 
 						}
 						if (ImGui::Button("View SDF"))
@@ -1398,11 +1404,14 @@ namespace flex
 		return bParentChildTreeDirty;
 	}
 
-	bool Renderer::LoadFontMetrics(const std::vector<char>& fileMemory, const std::string& fontFilePath, FT_Library& ft, BitmapFont** font,
-		i16 size, bool bScreenSpace, std::map<i32, FontMetric*>* outCharacters,
-	std::array<glm::vec2i, 4>* outMaxPositions, FT_Face* outFace)
+	bool Renderer::LoadFontMetrics(const std::vector<char>& fileMemory,
+		FT_Library& ft,
+		FontMetaData& metaData,
+		std::map<i32, FontMetric*>* outCharacters,
+		std::array<glm::vec2i, 4>* outMaxPositions,
+		FT_Face* outFace)
 	{
-		assert(*font == nullptr);
+		assert(metaData.bitmapFont == nullptr);
 
 		// TODO: Save in common place
 		u32 sampleDensity = 32;
@@ -1411,32 +1420,32 @@ namespace flex
 		FT_Face& face = *outFace;
 		if (error == FT_Err_Unknown_File_Format)
 		{
-			PrintError("Unhandled font file format: %s\n", fontFilePath.c_str());
+			PrintError("Unhandled font file format: %s\n", metaData.filePath.c_str());
 			return false;
 		}
 		else if (error != FT_Err_Ok || !face)
 		{
-			PrintError("Failed to create new font face: %s\n", fontFilePath.c_str());
+			PrintError("Failed to create new font face: %s\n", metaData.filePath.c_str());
 			return false;
 		}
 
 		error = FT_Set_Char_Size(face,
-			0, size * sampleDensity,
+			0, metaData.size * sampleDensity,
 			(FT_UInt)g_Monitor->DPI.x,
 			(FT_UInt)g_Monitor->DPI.y);
 
 		if (g_bEnableLogging_Loading)
 		{
-			std::string fileName = fontFilePath;
+			std::string fileName = metaData.filePath;
 			StripLeadingDirectories(fileName);
 			Print("Loaded font file %s\n", fileName.c_str());
 		}
 
 		std::string fontName = std::string(face->family_name) + " - " + face->style_name;
-		*font = new BitmapFont(size, fontName, face->num_glyphs);
-		BitmapFont* newFont = *font;
+		metaData.bitmapFont = new BitmapFont(metaData, fontName, face->num_glyphs);
+		BitmapFont* newFont = metaData.bitmapFont;
 
-		if (bScreenSpace)
+		if (metaData.bScreenSpace)
 		{
 			m_FontsSS.push_back(newFont);
 		}
@@ -1476,7 +1485,7 @@ namespace flex
 				continue;
 			}
 
-			if (newFont->UseKerning() && glyphIndex)
+			if (newFont->bUseKerning && glyphIndex)
 			{
 				for (i32 previous = 0; previous < BitmapFont::CHAR_COUNT - 1; ++previous)
 				{
@@ -1612,7 +1621,7 @@ namespace flex
 			{
 				FontMetric* metric = font->GetMetric(c);
 
-				if (font->UseKerning())
+				if (font->bUseKerning)
 				{
 					std::wstring charKey(std::wstring(1, prevChar) + std::wstring(1, c));
 
@@ -1667,7 +1676,7 @@ namespace flex
 			{
 				FontMetric* metric = font->GetMetric(c);
 
-				if (font->UseKerning())
+				if (font->bUseKerning)
 				{
 					std::wstring charKey(std::wstring(1, prevChar) + std::wstring(1, c));
 
@@ -1710,58 +1719,55 @@ namespace flex
 
 		for (BitmapFont* font : m_FontsSS)
 		{
-			real textScale = glm::max(2.0f / (real)frameBufferSize.x, 2.0f / (real)frameBufferSize.y) *
-				(font->GetSize() / 12.0f);
+			real baseTextScale = glm::max(2.0f / (real)frameBufferSize.x, 2.0f / (real)frameBufferSize.y) * (font->metaData.size / 12.0f);
 
-			font->SetBufferStart((i32)(outTextVertices.size()));
+			font->bufferStart = (i32)(outTextVertices.size());
 
 			const std::vector<TextCache>& textCaches = font->GetTextCaches();
 			for (const TextCache& textCache : textCaches)
 			{
+				real textScale = baseTextScale * textCache.scale;
 				std::string currentStr = textCache.str;
 
 				real totalAdvanceX = 0;
 
 				glm::vec2 basePos(0.0f);
 
-				if (!textCache.bRaw)
-				{
-					real strWidth = GetStringWidth(textCache, font) * textScale;
-					real strHeight = GetStringHeight(textCache, font) * textScale;
+				real strWidth = GetStringWidth(textCache, font) * textScale;
+				real strHeight = GetStringHeight(textCache, font) * textScale;
 
-					switch (textCache.anchor)
-					{
-					case AnchorPoint::TOP_LEFT:
-						basePos = glm::vec3(-aspectRatio, 1.0f - strHeight / 2.0f, 0.0f);
-						break;
-					case AnchorPoint::TOP:
-						basePos = glm::vec3(-strWidth / 2.0f, 1.0f - strHeight / 2.0f, 0.0f);
-						break;
-					case AnchorPoint::TOP_RIGHT:
-						basePos = glm::vec3(aspectRatio - strWidth, 1.0f - strHeight / 2.0f, 0.0f);
-						break;
-					case AnchorPoint::RIGHT:
-						basePos = glm::vec3(aspectRatio - strWidth, 0.0f, 0.0f);
-						break;
-					case AnchorPoint::BOTTOM_RIGHT:
-						basePos = glm::vec3(aspectRatio - strWidth, -1.0f + strHeight / 2.0f, 0.0f);
-						break;
-					case AnchorPoint::BOTTOM:
-						basePos = glm::vec3(-strWidth / 2.0f, -1.0f + strHeight / 2.0f, 0.0f);
-						break;
-					case AnchorPoint::BOTTOM_LEFT:
-						basePos = glm::vec3(-aspectRatio, -1.0f + strHeight / 2.0f, 0.0f);
-						break;
-					case AnchorPoint::LEFT:
-						basePos = glm::vec3(-aspectRatio, 0.0f, 0.0f);
-						break;
-					case AnchorPoint::CENTER: // Fall through
-					case AnchorPoint::WHOLE:
-						basePos = glm::vec3(-strWidth / 2.0f, 0.0f, 0.0f);
-						break;
-					default:
-						break;
-					}
+				switch (textCache.anchor)
+				{
+				case AnchorPoint::TOP_LEFT:
+					basePos = glm::vec3(-aspectRatio, 1.0f - strHeight / 2.0f, 0.0f);
+					break;
+				case AnchorPoint::TOP:
+					basePos = glm::vec3(-strWidth / 2.0f, 1.0f - strHeight / 2.0f, 0.0f);
+					break;
+				case AnchorPoint::TOP_RIGHT:
+					basePos = glm::vec3(aspectRatio - strWidth, 1.0f - strHeight / 2.0f, 0.0f);
+					break;
+				case AnchorPoint::RIGHT:
+					basePos = glm::vec3(aspectRatio - strWidth, 0.0f, 0.0f);
+					break;
+				case AnchorPoint::BOTTOM_RIGHT:
+					basePos = glm::vec3(aspectRatio - strWidth, -1.0f + strHeight / 2.0f, 0.0f);
+					break;
+				case AnchorPoint::BOTTOM:
+					basePos = glm::vec3(-strWidth / 2.0f, -1.0f + strHeight / 2.0f, 0.0f);
+					break;
+				case AnchorPoint::BOTTOM_LEFT:
+					basePos = glm::vec3(-aspectRatio, -1.0f + strHeight / 2.0f, 0.0f);
+					break;
+				case AnchorPoint::LEFT:
+					basePos = glm::vec3(-aspectRatio, 0.0f, 0.0f);
+					break;
+				case AnchorPoint::CENTER: // Fall through
+				case AnchorPoint::WHOLE:
+					basePos = glm::vec3(-strWidth / 2.0f, 0.0f, 0.0f);
+					break;
+				default:
+					break;
 				}
 
 				char prevChar = ' ';
@@ -1782,10 +1788,10 @@ namespace flex
 							}
 
 							glm::vec2 pos =
-								glm::vec2((textCache.pos.x) * (textCache.bRaw ? 1.0f : aspectRatio), textCache.pos.y) +
+								glm::vec2((textCache.pos.x) * aspectRatio, textCache.pos.y) +
 								glm::vec2(totalAdvanceX + metric->offsetX, -metric->offsetY) * textScale;
 
-							if (font->UseKerning())
+							if (font->bUseKerning)
 							{
 								std::wstring charKey(std::wstring(1, prevChar) + std::wstring(1, c));
 
@@ -1827,7 +1833,7 @@ namespace flex
 				}
 			}
 
-			font->SetBufferSize((i32)(outTextVertices.size()) - font->GetBufferStart());
+			font->bufferSize = (i32)(outTextVertices.size()) - font->bufferStart;
 			font->ClearCaches();
 		}
 	}
@@ -1843,10 +1849,9 @@ namespace flex
 
 		for (BitmapFont* font : m_FontsWS)
 		{
-			real textScale = glm::max(2.0f / (real)frameBufferSize.x, 2.0f / (real)frameBufferSize.y) *
-				(font->GetSize() / 12.0f);
+			real textScale = glm::max(2.0f / (real)frameBufferSize.x, 2.0f / (real)frameBufferSize.y) * (font->metaData.size / 12.0f);
 
-			font->SetBufferStart((i32)(outTextVertices.size()));
+			font->bufferStart = (i32)(outTextVertices.size());
 
 			const std::vector<TextCache>& caches = font->GetTextCaches();
 			for (const TextCache& textCache : caches)
@@ -1878,7 +1883,7 @@ namespace flex
 								tangent * (totalAdvanceX + metric->offsetX) * textScale +
 								VEC3_UP * (real)(-metric->offsetY) * textScale;
 
-							if (font->UseKerning())
+							if (font->bUseKerning)
 							{
 								std::wstring charKey(std::wstring(1, prevChar) + std::wstring(1, c));
 
@@ -1921,7 +1926,7 @@ namespace flex
 				}
 			}
 
-			font->SetBufferSize((i32)(outTextVertices.size()) - font->GetBufferStart());
+			font->bufferSize = (i32)(outTextVertices.size()) - font->bufferStart;
 			font->ClearCaches();
 		}
 	}

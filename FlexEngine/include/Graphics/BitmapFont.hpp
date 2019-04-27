@@ -37,22 +37,29 @@ namespace flex
 		glm::vec2 texCoord;
 	};
 
+	struct FontMetaData
+	{
+		std::string filePath;
+		std::string renderedTextureFilePath;
+		i16 size = 0;
+		bool bScreenSpace = true;
+		real threshold = 0.5f;
+		glm::vec2 shadowOffset;
+		real shadowOpacity = 0.5f;
+		real soften = 0.035f;
+		class BitmapFont* bitmapFont = nullptr;
+	};
+
 	class BitmapFont
 	{
 	public:
-		BitmapFont(i16 size, const std::string& name, i32 charCount);
+		BitmapFont(const FontMetaData& inMetaData, const std::string& name, i32 charCount);
 		~BitmapFont();
 
 		static bool IsCharValid(wchar_t character);
 
 		FontMetric* GetMetric(wchar_t character);
 		void SetMetric(const FontMetric& metric, wchar_t character);
-
-		i16 GetSize() const;
-		bool UseKerning() const;
-		void SetUseKerning(bool bUseKerning);
-
-		void SetTextureSize(const glm::vec2i& texSize);
 
 		const std::vector<TextCache>& GetTextCaches() const;
 		void AddTextCache(TextCache& newCache);
@@ -68,38 +75,28 @@ namespace flex
 #endif
 		void ClearTexture();
 
-		void SetBufferSize(i32 size);
-		i32 GetBufferSize() const;
-		void SetBufferStart(i32 start);
-		i32 GetBufferStart() const;
-
-		i32 GetCharCount() const;
-
 		glm::vec2u GetTextureSize() const;
 
 		// TODO: Investigate crash when this value is higher (256)
 		static const i32 CHAR_COUNT = 200;
 
 		std::string name;
+		i32 characterCount = 0;
+		bool bUseKerning = false;
+		i32 bufferStart = 0;
+		i32 bufferSize = 0;
+
+		FontMetaData metaData;
 
 	private:
 		FontMetric m_CharTable[CHAR_COUNT];
 		std::vector<TextCache> m_TextCaches;
 
-		i16 m_FontSize = 0;
-		i32 m_CharacterCount = 0;
-		//i32 m_CharacterSpacing = 1;
-		bool m_bUseKerning = false;
-		i32 m_BufferStart = 0;
-		i32 m_BufferSize = 0;
 #if COMPILE_OPEN_GL
 		gl::GLTexture* m_Texture = nullptr;
 #elif COMPILE_VULKAN
 		vk::VulkanTexture* m_Texture = nullptr;
 #endif
-		bool m_bAddedToRenderer = false;
-
-		bool m_bIsCachedFont = false;
 
 	};
 } // namespace flex

@@ -2436,12 +2436,7 @@ namespace flex
 				StripLeadingDirectories(fontName);
 				StripFileType(fontName);
 
-				LoadFont(&fontMetaData.bitmapFont,
-					fontMetaData.size,
-					fontMetaData.filePath,
-					fontMetaData.renderedTextureFilePath,
-					bForceRender,
-					fontMetaData.bScreenSpace);
+				LoadFont(fontMetaData, bForceRender);
 			}
 		}
 
@@ -2674,19 +2669,29 @@ namespace flex
 			return m_PhysicsDebugDrawer;
 		}
 
-		void VulkanRenderer::DrawStringSS(const std::string& str, const glm::vec4& color, AnchorPoint anchor, const glm::vec2& pos, /* Positional offset from anchor */ real spacing, bool bRaw /*= false*/)
+		void VulkanRenderer::DrawStringSS(const std::string& str,
+			const glm::vec4& color,
+			AnchorPoint anchor,
+			const glm::vec2& pos,
+			real spacing,
+			real scale /* = 1.0f */)
 		{
 			assert(m_CurrentFont != nullptr);
 
-			TextCache newCache(str, anchor, pos, color, spacing, bRaw);
+			TextCache newCache(str, anchor, pos, color, spacing, scale);
 			m_CurrentFont->AddTextCache(newCache);
 		}
 
-		void VulkanRenderer::DrawStringWS(const std::string& str, const glm::vec4& color, const glm::vec3& pos, const glm::quat& rot, real spacing, bool bRaw /*= false*/)
+		void VulkanRenderer::DrawStringWS(const std::string& str,
+			const glm::vec4& color,
+			const glm::vec3& pos,
+			const glm::quat& rot,
+			real spacing,
+			real scale /* = 1.0f */)
 		{
 			assert(m_CurrentFont != nullptr);
 
-			TextCache newCache(str, pos, rot, color, spacing, bRaw);
+			TextCache newCache(str, pos, rot, color, spacing, scale);
 			m_CurrentFont->AddTextCache(newCache);
 		}
 
@@ -3341,10 +3346,7 @@ namespace flex
 			return capacity;
 		}
 
-		bool VulkanRenderer::LoadFont(BitmapFont** font, i16 size,
-			const std::string& fontFilePath,
-			const std::string& renderedFontFilePath,
-			bool bForceRender, bool bScreenSpace)
+		bool VulkanRenderer::LoadFont(FontMetaData& fontMetaData, bool bForceRender)
 		{
 			// TODO: Consolidate with GLRenderer
 			FT_Library ft;
@@ -3356,20 +3358,20 @@ namespace flex
 			}
 
 			std::vector<char> fileMemory;
-			ReadFile(fontFilePath, fileMemory, true);
+			ReadFile(fontMetaData.filePath, fileMemory, true);
 
 			std::map<i32, FontMetric*> characters;
 			std::array<glm::vec2i, 4> maxPos;
 			FT_Face face = {};
-			if (!LoadFontMetrics(fileMemory, fontFilePath, ft, font, size, bScreenSpace, &characters, &maxPos, &face))
+			if (!LoadFontMetrics(fileMemory, ft, fontMetaData, &characters, &maxPos, &face))
 			{
 				return false;
 			}
 
-			std::string fileName = fontFilePath;
+			std::string fileName = fontMetaData.filePath;
 			StripLeadingDirectories(fileName);
 
-			BitmapFont* newFont = *font;
+			BitmapFont* newFont = fontMetaData.bitmapFont;
 
 			// TODO: Save in common place
 			u32 sampleDensity = 32;
@@ -3382,10 +3384,10 @@ namespace flex
 			VkFormat fontTexFormat = VK_FORMAT_R8G8B8A8_UNORM;
 			if (!bForceRender)
 			{
-				if (FileExists(renderedFontFilePath))
+				if (FileExists(fontMetaData.renderedTextureFilePath))
 				{
 					VulkanTexture* fontTex = newFont->SetTexture(new VulkanTexture(m_VulkanDevice,
-						m_GraphicsQueue, renderedFontFilePath, 4, false, false, false));
+						m_GraphicsQueue, fontMetaData.renderedTextureFilePath, 4, false, false, false));
 					fontTex->name = textureName;
 
 					if (fontTex->CreateFromFile(fontTexFormat))
@@ -3691,7 +3693,7 @@ namespace flex
 				vkDestroyRenderPass(m_VulkanDevice->m_LogicalDevice, renderPass, nullptr);
 				vkDestroyFramebuffer(m_VulkanDevice->m_LogicalDevice, framebuffer, nullptr);
 
-				std::string savedSDFTextureAbsFilePath = RelativePathToAbsolute(renderedFontFilePath);
+				std::string savedSDFTextureAbsFilePath = RelativePathToAbsolute(fontMetaData.renderedTextureFilePath);
 				fontTexColAttachment->SaveToFile(savedSDFTextureAbsFilePath, ImageFormat::PNG);
 
 				fontTexColAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -3742,7 +3744,7 @@ namespace flex
 			bool bHasText = false;
 			for (BitmapFont* font : m_FontsSS)
 			{
-				if (font->GetBufferSize() > 0)
+				if (font->bufferSize > 0)
 				{
 					bHasText = true;
 					break;
@@ -3803,7 +3805,7 @@ namespace flex
 
 			for (BitmapFont* font : m_FontsSS)
 			{
-				if (font->GetBufferSize() > 0)
+				if (font->bufferSize > 0)
 				{
 					if (font->m_DescriptorSet == VK_NULL_HANDLE)
 					{
@@ -3822,22 +3824,20 @@ namespace flex
 					VulkanTexture* fontTex = font->GetTexture();
 					glm::vec2 texSize(fontTex->width, fontTex->height);
 
-					real threshold = 0.5f;
-					glm::vec2 shadow(-0.01f, -0.008f);
-					real soften = 0.035f;
-					glm::vec4 fontCharData(threshold, shadow.x, shadow.y, soften);
+					u32 packedSoftnessOpacity = Pack2FloatToU32(font->metaData.soften, font->metaData.shadowOpacity);
+					glm::vec4 fontCharData(font->metaData.threshold, font->metaData.shadowOffset.x, font->metaData.shadowOffset.y, static_cast<real>(packedSoftnessOpacity));
 
 					UniformOverrides overrides = {};
 					overrides.overridenUniforms.AddUniform(U_TEX_SIZE);
 					overrides.texSize = texSize;
-					overrides.overridenUniforms.AddUniform(U_FONT_CHAR_DATA); // TODO: Does this data change per-object?
+					overrides.overridenUniforms.AddUniform(U_FONT_CHAR_DATA);
 					overrides.fontCharData = fontCharData;
 					UpdateDynamicUniformBuffer(m_FontMatSSID, dynamicOffsetIndex, transformMat, &overrides);
 
 					VkDeviceSize offsets[1] = { 0 };
 					vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_VertexIndexBufferPairs[fontMaterial.material.shaderID].vertexBuffer->m_Buffer, offsets);
 
-					vkCmdDraw(commandBuffer, font->GetBufferSize(), 1, font->GetBufferStart(), 0);
+					vkCmdDraw(commandBuffer, font->bufferSize, 1, font->bufferStart, 0);
 				}
 			}
 		}
@@ -3854,7 +3854,7 @@ namespace flex
 			bool bHasText = false;
 			for (BitmapFont* font : m_FontsWS)
 			{
-				if (font->GetBufferSize() > 0)
+				if (font->bufferSize > 0)
 				{
 					bHasText = true;
 					break;
@@ -3910,7 +3910,7 @@ namespace flex
 
 			for (BitmapFont* font : m_FontsWS)
 			{
-				if (font->GetBufferSize() > 0)
+				if (font->bufferSize > 0)
 				{
 					if (font->m_DescriptorSet == VK_NULL_HANDLE)
 					{
@@ -3944,7 +3944,7 @@ namespace flex
 					VkDeviceSize offsets[1] = { 0 };
 					vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_VertexIndexBufferPairs[fontMaterial.material.shaderID].vertexBuffer->m_Buffer, offsets);
 
-					vkCmdDraw(commandBuffer, font->GetBufferSize(), 1, font->GetBufferStart(), 0);
+					vkCmdDraw(commandBuffer, font->bufferSize, 1, font->bufferStart, 0);
 				}
 			}
 		}
@@ -5654,7 +5654,7 @@ namespace flex
 					// Screen-space objects
 					SetFont(SID("editor-02"));
 					static const glm::vec4 color(0.95f);
-					DrawStringSS("FLEX ENGINE", color, AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -0.05f), 0.0f);
+					DrawStringSS("FLEX ENGINE", color, AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -0.05f), 1.0f, 0.6f);
 					if (g_EngineInstance->IsSimulationPaused())
 					{
 						DrawStringSS("PAUSED", color, AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -0.09f), 0.0f);
@@ -6848,12 +6848,12 @@ namespace flex
 			m_Shaders[shaderID].shader.bNeedRoughnessSampler = true;
 			m_Shaders[shaderID].shader.bNeedAOSampler = true;
 			m_Shaders[shaderID].shader.bNeedNormalSampler = true;
-			
-			
-			
+
+
+
 			// TODO
-			m_Shaders[shaderID].bDynamic = true;
-			m_Shaders[shaderID].dynamicVertexBufferSize = 1024 * 1024; // TODO
+			//m_Shaders[shaderID].bDynamic = true;
+			//m_Shaders[shaderID].dynamicVertexBufferSize = 1024 * 1024; // TODO
 
 
 

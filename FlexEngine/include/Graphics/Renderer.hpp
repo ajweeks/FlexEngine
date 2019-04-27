@@ -21,6 +21,8 @@ namespace flex
 	class MeshComponent;
 	class PointLight;
 	struct TextCache;
+	struct FontMetaData;
+	struct FontMetric;
 
 	class PhysicsDebugDrawBase : public btIDebugDraw
 	{
@@ -111,14 +113,14 @@ namespace flex
 			AnchorPoint anchor,
 			const glm::vec2& pos,
 			real spacing,
-			bool bRaw = false) = 0;
+			real scale = 1.0f) = 0;
 
 		virtual void DrawStringWS(const std::string& str,
 			const glm::vec4& color,
 			const glm::vec3& pos,
 			const glm::quat& rot,
 			real spacing,
-			bool bRaw = false) = 0;
+			real scale = 1.0f) = 0;
 
 		virtual void DrawAssetBrowserImGui(bool* bShowing) = 0;
 		virtual void DrawImGuiForRenderObject(RenderID renderID) = 0;
@@ -208,12 +210,7 @@ namespace flex
 		// Will attempt to find pre-rendered font at specified path, and
 		// only render a new file if not present or if bForceRender is true
 		// Returns true if succeeded
-		virtual bool LoadFont(BitmapFont** font,
-							  i16 size,
-							  const std::string& fontFilePath,
-							  const std::string& renderedFontFilePath,
-							  bool bForceRender,
-							  bool bScreenSpace) = 0;
+		virtual bool LoadFont(FontMetaData& fontMetaData, bool bForceRender) = 0;
 
 		// If the object gets deleted this frame *gameObjectRef gets set to nullptr
 		void DoCreateGameObjectButton(const char* buttonName, const char* popupName);
@@ -221,9 +218,12 @@ namespace flex
 		// Returns true if the parent-child tree changed during this call
 		bool DrawImGuiGameObjectNameAndChildren(GameObject* gameObject);
 
-		bool LoadFontMetrics(const std::vector<char>& fileMemory, const std::string& fontFilePath,FT_Library& ft, BitmapFont** font,
-			i16 size, bool bScreenSpace, std::map<i32, struct FontMetric*>* outCharacters,
-			std::array<glm::vec2i, 4>* outMaxPositions, FT_Face* outFace);
+		bool LoadFontMetrics(const std::vector<char>& fileMemory,
+			FT_Library& ft,
+			FontMetaData& metaData,
+			std::map<i32, FontMetric*>* outCharacters,
+			std::array<glm::vec2i, 4>* outMaxPositions,
+			FT_Face* outFace);
 
 		void InitializeMaterials();
 
@@ -300,27 +300,7 @@ namespace flex
 		MaterialID m_SelectedObjectMatID = InvalidMaterialID;
 
 		std::string m_FontImageExtension = ".png";
-		struct FontMetaData
-		{
-			FontMetaData()
-			{}
 
-			FontMetaData(const std::string& filePath, const std::string& renderedTextureFilePath, i16 size,
-				bool bScreenSpace, BitmapFont* bitmapFont) :
-				filePath(filePath),
-				renderedTextureFilePath(renderedTextureFilePath),
-				size(size),
-				bScreenSpace(bScreenSpace),
-				bitmapFont(bitmapFont)
-			{
-			}
-
-			std::string filePath;
-			std::string renderedTextureFilePath;
-			i16 size;
-			bool bScreenSpace;
-			BitmapFont* bitmapFont = nullptr;
-		};
 		std::map<StringID, FontMetaData> m_Fonts;
 
 		std::string m_DefaultSettingsFilePathAbs;

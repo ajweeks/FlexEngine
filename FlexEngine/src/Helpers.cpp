@@ -166,27 +166,27 @@ namespace flex
 
 	// Screen-space constructor
 	TextCache::TextCache(const std::string& str, AnchorPoint anchor, const glm::vec2& pos,
-		const glm::vec4& color, real xSpacing, bool bRaw) :
+		const glm::vec4& color, real xSpacing, real scale) :
 		str(str),
 		anchor(anchor),
 		pos(pos.x, pos.y, -1.0f),
 		rot(QUAT_UNIT),
 		color(color),
 		xSpacing(xSpacing),
-		bRaw(bRaw)
+		scale(scale)
 	{
 	}
 
 	// World-space constructor
 	TextCache::TextCache(const std::string& str, const glm::vec3& pos, const glm::quat& rot,
-		const glm::vec4& color, real xSpacing, bool bRaw) :
+		const glm::vec4& color, real xSpacing, real scale) :
 		str(str),
 		anchor(AnchorPoint::_NONE),
 		pos(pos),
 		rot(rot),
 		color(color),
 		xSpacing(xSpacing),
-		bRaw(bRaw)
+		scale(scale)
 	{
 	}
 
@@ -694,16 +694,6 @@ namespace flex
 		return std::string(iter, riter + 1);
 	}
 
-	u32 Parse32u(char* ptr)
-	{
-		return ((u8)ptr[0]) + ((u8)ptr[1] << 8) + ((u8)ptr[2] << 16) + ((u8)ptr[3] << 24);
-	}
-
-	u16 Parse16u(char* ptr)
-	{
-		return ((u8)ptr[0]) + ((u8)ptr[1] << 8);
-	}
-
 	std::string GetDateString_YMD()
 	{
 		std::stringstream result;
@@ -840,6 +830,35 @@ namespace flex
 	glm::vec4 Lerp(const glm::vec4& a, const glm::vec4& b, real t)
 	{
 		return a * (1.0f - t) + b * t;
+	}
+
+	u32 Pack2FloatToU32(real f1, real f2)
+	{
+#ifdef DEBUG
+		if (f1 < 0.0f) PrintWarn("Attempted to pack negative number (%0.5f). Data will be lost\n", f1);
+		if (f2 < 0.0f) PrintWarn("Attempted to pack negative number (%0.5f). Data will be lost\n", f2);
+		if (f1 > 1.0f) PrintWarn("Attempted to pack number larger than 1.0 (%0.5f). Data will be lost\n", f1);
+		if (f2 > 1.0f) PrintWarn("Attempted to pack number larger than 1.0 (%0.5f). Data will be lost\n", f2);
+#endif
+		u32 u1 = static_cast<u32>(f1 * 65535.0f);
+		u32 u2 = static_cast<u32>(f2 * 65535.0f);
+		return (u1 << 16) | (u2 & 0xFFFF);
+	}
+
+	void UnpackU32To2Float(u32 u1, real* outF1, real* outF2)
+	{
+		*outF1 = (u1 >> 16) / 65535.0f;
+		*outF2 = (u1 & 0xFFFF) / 65535.0f;
+	}
+
+	u32 Parse32u(char* ptr)
+	{
+		return ((u8)ptr[0]) + ((u8)ptr[1] << 8) + ((u8)ptr[2] << 16) + ((u8)ptr[3] << 24);
+	}
+
+	u16 Parse16u(char* ptr)
+	{
+		return ((u8)ptr[0]) + ((u8)ptr[1] << 8);
 	}
 
 	bool ParseBool(const std::string& intStr)
@@ -1439,4 +1458,5 @@ namespace flex
 
 		return bResult;
 	}
+
 } // namespace flex
