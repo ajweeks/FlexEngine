@@ -68,21 +68,15 @@ namespace flex
 				vertexDataP += 4;
 			}
 
-			if (Attributes & (u32)VertexAttribute::TANGENT)
-			{
-				memcpy(vertexDataP, createInfo->tangents.data() + i, sizeof(glm::vec3));
-				vertexDataP += 3;
-			}
-
-			if (Attributes & (u32)VertexAttribute::BITANGENT)
-			{
-				memcpy(vertexDataP, createInfo->bitangents.data() + i, sizeof(glm::vec3));
-				vertexDataP += 3;
-			}
-
 			if (Attributes & (u32)VertexAttribute::NORMAL)
 			{
 				memcpy(vertexDataP, createInfo->normals.data() + i, sizeof(glm::vec3));
+				vertexDataP += 3;
+			}
+
+			if (Attributes & (u32)VertexAttribute::TANGENT)
+			{
+				memcpy(vertexDataP, createInfo->tangents.data() + i, sizeof(glm::vec3));
 				vertexDataP += 3;
 			}
 

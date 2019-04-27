@@ -32,10 +32,6 @@ namespace flex
 		{
 			stride += sizeof(glm::vec3);
 		}
-		if (vertexAttributes & (u32)VertexAttribute::BITANGENT)
-		{
-			stride += sizeof(glm::vec3);
-		}
 		if (vertexAttributes & (u32)VertexAttribute::NORMAL)
 		{
 			stride += sizeof(glm::vec3);

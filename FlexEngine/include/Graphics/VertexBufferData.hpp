@@ -17,7 +17,6 @@ namespace flex
 			std::vector<i32> colors_R8G8B8A8;
 			std::vector<glm::vec4> colors_R32G32B32A32;
 			std::vector<glm::vec3> tangents;
-			std::vector<glm::vec3> bitangents;
 			std::vector<glm::vec3> normals;
 
 			std::vector<glm::vec4> extraVec4s;

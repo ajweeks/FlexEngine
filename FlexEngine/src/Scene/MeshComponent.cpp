@@ -29,7 +29,6 @@ namespace flex
 	glm::vec4 MeshComponent::m_DefaultColor_4(1.0f, 1.0f, 1.0f, 1.0f);
 	glm::vec3 MeshComponent::m_DefaultPosition(0.0f, 0.0f, 0.0f);
 	glm::vec3 MeshComponent::m_DefaultTangent(1.0f, 0.0f, 0.0f);
-	glm::vec3 MeshComponent::m_DefaultBitangent(0.0f, 0.0f, 1.0f);
 	glm::vec3 MeshComponent::m_DefaultNormal(0.0f, 1.0f, 0.0f);
 	glm::vec2 MeshComponent::m_DefaultTexCoord(0.0f, 0.0f);
 
@@ -290,58 +289,11 @@ namespace flex
 	{
 		if (createInfo.normals.empty())
 		{
-			PrintError("Can't calculate tangents and bitangents for mesh which contains no normals!\n");
+			PrintError("Can't calculate tangents for mesh which contains no normals!\n");
 			return false;
 		}
 
-		//const real angleEpsilon = 0.9999f;
-		const i32 vertCount = (i32)createInfo.normals.size();
-
-		if (!createInfo.tangents.empty() ||
-			createInfo.bitangents.empty())
-		{
-			createInfo.bitangents.reserve(vertCount);
-
-			// TODO: Somehow handle tangent generation if missing
-			for (i32 i = 0; i < vertCount; ++i)
-			{
-				createInfo.bitangents[i] = glm::normalize(glm::cross(createInfo.normals[i], createInfo.tangents[i]));
-			}
-
-			return true;
-		}
-
-		ENSURE_NO_ENTRY();
-
-		// TODO: Implement?
-
-		//if (createInfo.texCoords_UV.empty())
-		//{
-		//	PrintError("Can't calculate tangents and bitangents for mesh which contains no texture coordinates!\n");
-		//	return false;
-		//}
-
-		//if (!createInfo.tangents.empty() ||
-		//	!createInfo.bitangents.empty())
-		//{
-		//	PrintWarn("Attempted to calculate tangents and bitangents on mesh which already has tangents or bitangents\n");
-		//}
-
-		//createInfo.tangents.reserve(vertCount);
-		//createInfo.bitangents.reserve(vertCount);
-
-		//const glm::vec3* meshPos = &createInfo.positions_3D[0];
-		//const glm::vec3* meshNorm = &createInfo.normals[0];
-		//const glm::vec2* meshUV = &createInfo.texCoords_UV[0];
-		//glm::vec3* meshTan = &createInfo.tangents[0];
-		//glm::vec3* meshBitan = &createInfo.bitangents[0];
-
-
-		//i32 numFaces = vertCount / 3;
-		//for (i32 i = 0; i < numFaces; ++i)
-		//{
-
-		//}
+		// TODO
 
 		return false;
 	}
@@ -476,8 +428,7 @@ namespace flex
 				m_MaxPoint = glm::max(m_MaxPoint, posMax);
 
 
-				if (m_RequiredAttributes & (u32)VertexAttribute::BITANGENT ||
-					(tanAttribIndex == -1 && (m_RequiredAttributes & (u32)VertexAttribute::TANGENT)))
+				if (tanAttribIndex == -1 && (m_RequiredAttributes & (u32)VertexAttribute::TANGENT))
 				{
 					bCalculateTangents = true;
 				}
@@ -501,11 +452,6 @@ namespace flex
 					if (m_RequiredAttributes & (u32)VertexAttribute::TANGENT)
 					{
 						vertexBufferDataCreateInfo.tangents.resize(vertCount);
-					}
-
-					if (m_RequiredAttributes & (u32)VertexAttribute::BITANGENT)
-					{
-						vertexBufferDataCreateInfo.bitangents.resize(vertCount);
 					}
 
 					if (m_RequiredAttributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)
@@ -594,13 +540,6 @@ namespace flex
 						}
 					}
 
-					// Bitangent
-					if (m_RequiredAttributes & (u32)VertexAttribute::BITANGENT)
-					{
-						vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::BITANGENT;
-						vertexBufferDataCreateInfo.bitangents[v] = m_DefaultBitangent;
-					}
-
 					// Color
 					if (m_RequiredAttributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)
 					{
@@ -678,7 +617,7 @@ namespace flex
 			{
 				if (!CalculateTangents(vertexBufferDataCreateInfo))
 				{
-					PrintWarn("Failed to calculate tangents/bitangents for mesh!\n");
+					PrintWarn("Failed to calculate tangents for mesh!\n");
 				}
 			}
 		}
@@ -1110,18 +1049,6 @@ namespace flex
 			};
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::NORMAL;
 
-			vertexBufferDataCreateInfo.bitangents =
-			{
-				{ 1.0f, 0.0f, 0.0f, },
-				{ 1.0f, 0.0f, 0.0f, },
-				{ 1.0f, 0.0f, 0.0f, },
-
-				{ 1.0f, 0.0f, 0.0f, },
-				{ 1.0f, 0.0f, 0.0f, },
-				{ 1.0f, 0.0f, 0.0f, },
-			};
-			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::BITANGENT;
-
 			vertexBufferDataCreateInfo.tangents =
 			{
 				{ 0.0f, 0.0f, 1.0f, },
@@ -1167,7 +1094,6 @@ namespace flex
 			vertexBufferDataCreateInfo.positions_3D.resize(vertCount);
 			vertexBufferDataCreateInfo.normals.resize(vertCount);
 			vertexBufferDataCreateInfo.tangents.resize(vertCount);
-			vertexBufferDataCreateInfo.bitangents.resize(vertCount);
 			vertexBufferDataCreateInfo.colors_R32G32B32A32.resize(vertCount);
 
 			// NOTE: Wave generation is implemented in GerstnerWave::Update
@@ -1179,7 +1105,6 @@ namespace flex
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::NORMAL;
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::TANGENT;
-			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::BITANGENT;
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
 
 			i32 indexCount = 6 * vertCount;

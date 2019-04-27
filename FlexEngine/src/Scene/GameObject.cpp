@@ -3291,7 +3291,6 @@ namespace flex
 		bufferInfo.positions_3D.resize(vertCount);
 		bufferInfo.normals.resize(vertCount);
 		bufferInfo.tangents.resize(vertCount);
-		bufferInfo.bitangents.resize(vertCount);
 		bufferInfo.colors_R32G32B32A32.resize(vertCount);
 
 		for (i32 z = 0; z < vertSideCount; ++z)
@@ -3302,7 +3301,6 @@ namespace flex
 
 				bufferInfo.normals[vertIdx] = glm::vec3(0.0f, 1.0f, 0.0f);
 				bufferInfo.tangents[vertIdx] = glm::vec3(1.0f, 0.0f, 0.0f);
-				bufferInfo.bitangents[vertIdx] = glm::vec3(0.0f, 0.0f, 1.0f);
 				bufferInfo.colors_R32G32B32A32[vertIdx] = VEC4_ONE;
 			}
 		}
@@ -3459,7 +3457,6 @@ namespace flex
 		std::vector<glm::vec3>& positions = bufferInfo.positions_3D;
 		std::vector<glm::vec3>& normals = bufferInfo.normals;
 		std::vector<glm::vec3>& tangents = bufferInfo.tangents;
-		std::vector<glm::vec3>& bitangents = bufferInfo.bitangents;
 
 		// Clear positions and normals
 		for (i32 z = 0; z < vertSideCount; ++z)
@@ -3533,8 +3530,8 @@ namespace flex
 			{
 				i32 vertIdx = z * vertSideCount + x;
 				bufferInfo.tangents[vertIdx] = glm::normalize((positions[vertIdx + 1] - positions[vertIdx]) + (positions[vertIdx] - positions[vertIdx - 1]));
-				bufferInfo.bitangents[vertIdx] = glm::normalize((positions[vertIdx + vertSideCount] - positions[vertIdx]) + (positions[vertIdx] - positions[vertIdx - vertSideCount]));
-				bufferInfo.normals[vertIdx] = glm::cross(bitangents[vertIdx], tangents[vertIdx]);
+				// TODO
+				//bufferInfo.normals[vertIdx] = glm::cross(bitangents[vertIdx], tangents[vertIdx]);
 			}
 		}
 
@@ -3542,7 +3539,6 @@ namespace flex
 		bufferInfo.positions_3D = positions;
 		bufferInfo.normals = normals;
 		bufferInfo.tangents = tangents;
-		bufferInfo.bitangents = bitangents;
 		vertexBuffer->UpdateData(&bufferInfo);
 		g_Renderer->UpdateVertexData(m_RenderID, vertexBuffer);
 

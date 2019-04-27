@@ -10,10 +10,9 @@ namespace flex
 		COLOR_R8G8B8A8_UNORM		= (1 << 3),
 		COLOR_R32G32B32A32_SFLOAT	= (1 << 4),
 		TANGENT						= (1 << 5),
-		BITANGENT					= (1 << 6),
-		NORMAL						= (1 << 7),
-		EXTRA_VEC4					= (1 << 8),
-		EXTRA_INT					= (1 << 9),
+		NORMAL						= (1 << 6),
+		EXTRA_VEC4					= (1 << 7),
+		EXTRA_INT					= (1 << 8),
 
 		_NONE						= 0,
 	};
@@ -32,7 +31,6 @@ namespace flex
 		{ "in_Color_32", 1 },
 		{ "in_Color", 4 },
 		{ "in_Tangent", 3 },
-		{ "in_Bitangent", 3 },
 		{ "in_Normal", 3 },
 		{ "in_ExtraVec4", 4 },
 		{ "in_ExtraInt", 1 },

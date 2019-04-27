@@ -131,7 +131,6 @@ namespace flex
 		static glm::vec4 m_DefaultColor_4;
 		static glm::vec3 m_DefaultPosition;
 		static glm::vec3 m_DefaultTangent;
-		static glm::vec3 m_DefaultBitangent;
 		static glm::vec3 m_DefaultNormal;
 		static glm::vec2 m_DefaultTexCoord;
 

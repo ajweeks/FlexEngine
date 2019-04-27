@@ -4015,7 +4015,6 @@ namespace flex
 				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
 				(u32)VertexAttribute::UV |
 				(u32)VertexAttribute::TANGENT |
-				(u32)VertexAttribute::BITANGENT |
 				(u32)VertexAttribute::NORMAL;
 
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_VIEW);
@@ -4041,7 +4040,6 @@ namespace flex
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
 				(u32)VertexAttribute::TANGENT |
-				(u32)VertexAttribute::BITANGENT |
 				(u32)VertexAttribute::NORMAL;
 
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_VIEW);
