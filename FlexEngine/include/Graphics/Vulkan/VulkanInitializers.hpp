@@ -178,12 +178,11 @@ namespace flex
 			real minDepth,
 			real maxDepth)
 		{
-			assert(height > 0.0f); // Height is automatically negated
 			VkViewport viewport{};
 			viewport.x = 0.0f;
-			viewport.y = height; // Requires VK_KHR_maintenance1 (core in Vulkan 1.1)
+			viewport.y = height;
 			viewport.width = width;
-			viewport.height = -height;
+			viewport.height = -height; // Negative viewport height support requires VK_KHR_maintenance1 (core in Vulkan 1.1)
 			viewport.minDepth = minDepth;
 			viewport.maxDepth = maxDepth;
 			return viewport;
