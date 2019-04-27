@@ -170,6 +170,9 @@ namespace flex
 			{
 				PrintError("Failed to compile shader code!\n");
 			}
+
+			delete m_ShaderCompiler;
+			m_ShaderCompiler = nullptr;
 #endif
 			LoadDefaultShaderCode();
 
@@ -2412,7 +2415,32 @@ namespace flex
 
 		void VulkanRenderer::ReloadShaders()
 		{
-			// TODO: Implement
+#ifdef DEBUG
+			if (m_ShaderCompiler == nullptr)
+			{
+				m_ShaderCompiler = new AsyncVulkanShaderCompiler(false);
+			}
+
+			while (!m_ShaderCompiler->TickStatus())
+			{
+				// Spin lock
+			}
+
+			if (m_ShaderCompiler->bSuccess == false)
+			{
+				PrintError("Failed to compile shader code!\n");
+			}
+
+			delete m_ShaderCompiler;
+			m_ShaderCompiler = nullptr;
+#endif
+
+			LoadDefaultShaderCode();
+
+			for (u32 i = 0; i < m_RenderObjects.size(); ++i)
+			{
+				CreateGraphicsPipeline(i, false);
+			}
 		}
 
 		void VulkanRenderer::LoadFonts(bool bForceRender)
@@ -6774,329 +6802,325 @@ namespace flex
 
 		void VulkanRenderer::LoadDefaultShaderCode()
 		{
-			const std::string shaderDirectory = RESOURCE_LOCATION  "shaders\\spv\\";
-			struct ShaderInitInfo
+			if (m_Shaders.empty())
 			{
-				ShaderInitInfo(const char* name, const char* vertFileName, const char* fragFileName, const char* geomFileName = nullptr) :
-					name(name),
-					vertFileName(vertFileName),
-					fragFileName(fragFileName),
-					geomFileName(geomFileName)
+				const std::string shaderDirectory = RESOURCE_LOCATION  "shaders\\spv\\";
+				struct ShaderInitInfo
 				{
+					ShaderInitInfo(const char* name, const char* vertFileName, const char* fragFileName, const char* geomFileName = nullptr) :
+						name(name),
+						vertFileName(vertFileName),
+						fragFileName(fragFileName),
+						geomFileName(geomFileName)
+					{
+					}
+
+					const char* name = nullptr;
+					const char* vertFileName = nullptr;
+					const char* fragFileName = nullptr;
+					const char* geomFileName = nullptr;
+				};
+				ShaderInitInfo initInfos[] = {
+					{ "color", "vk_color_vert.spv","vk_color_frag.spv" },
+					{ "pbr", "vk_pbr_vert.spv", "vk_pbr_frag.spv" },
+					{ "pbr_ws", "vk_pbr_ws_vert.spv", "vk_pbr_ws_frag.spv" },
+					{ "skybox", "vk_skybox_vert.spv", "vk_skybox_frag.spv" },
+					{ "equirectangular_to_cube", "vk_skybox_vert.spv", "vk_equirectangular_to_cube_frag.spv" },
+					{ "irradiance", "vk_skybox_vert.spv", "vk_irradiance_frag.spv" },
+					{ "prefilter", "vk_skybox_vert.spv", "vk_prefilter_frag.spv" },
+					{ "brdf", "vk_brdf_vert.spv", "vk_brdf_frag.spv" },
+					{ "deferred_combine", "vk_deferred_combine_vert.spv", "vk_deferred_combine_frag.spv" },
+					{ "deferred_combine_cubemap", "vk_deferred_combine_cubemap_vert.spv", "vk_deferred_combine_cubemap_frag.spv" },
+					{ "compute_sdf", "vk_compute_sdf_vert.spv", "vk_compute_sdf_frag.spv" },
+					{ "font_ss", "vk_font_ss_vert.spv", "vk_font_frag.spv", "vk_font_ss_geom.spv" },
+					{ "font_ws", "vk_font_ws_vert.spv", "vk_font_frag.spv", "vk_font_ws_geom.spv" },
+					//{ "post_process", "vk_post_process_vert.spv", "vk_post_process_frag.spv" },
+				};
+
+				m_Shaders.reserve(ARRAY_LENGTH(initInfos));
+				for (const ShaderInitInfo& initInfo : initInfos)
+				{
+					std::string vert = shaderDirectory + initInfo.vertFileName;
+					std::string frag = shaderDirectory + initInfo.fragFileName;
+					std::string geom;
+					if (initInfo.geomFileName)
+					{
+						geom = shaderDirectory + initInfo.geomFileName;
+					}
+					m_Shaders.emplace_back(m_VulkanDevice->m_LogicalDevice, initInfo.name, vert, frag, geom);
 				}
 
-				const char* name = nullptr;
-				const char* vertFileName = nullptr;
-				const char* fragFileName = nullptr;
-				const char* geomFileName = nullptr;
-			};
-			ShaderInitInfo initInfos[] = {
-				{ "color", "vk_color_vert.spv","vk_color_frag.spv" },
-				{ "pbr", "vk_pbr_vert.spv", "vk_pbr_frag.spv" },
-				{ "pbr_ws", "vk_pbr_ws_vert.spv", "vk_pbr_ws_frag.spv" },
-				{ "skybox", "vk_skybox_vert.spv", "vk_skybox_frag.spv" },
-				{ "equirectangular_to_cube", "vk_skybox_vert.spv", "vk_equirectangular_to_cube_frag.spv" },
-				{ "irradiance", "vk_skybox_vert.spv", "vk_irradiance_frag.spv" },
-				{ "prefilter", "vk_skybox_vert.spv", "vk_prefilter_frag.spv" },
-				{ "brdf", "vk_brdf_vert.spv", "vk_brdf_frag.spv" },
-				{ "deferred_combine", "vk_deferred_combine_vert.spv", "vk_deferred_combine_frag.spv" },
-				{ "deferred_combine_cubemap", "vk_deferred_combine_cubemap_vert.spv", "vk_deferred_combine_cubemap_frag.spv" },
-				{ "compute_sdf", "vk_compute_sdf_vert.spv", "vk_compute_sdf_frag.spv" },
-				{ "font_ss", "vk_font_ss_vert.spv", "vk_font_frag.spv", "vk_font_ss_geom.spv" },
-				{ "font_ws", "vk_font_ws_vert.spv", "vk_font_frag.spv", "vk_font_ws_geom.spv" },
-				//{ "post_process", "vk_post_process_vert.spv", "vk_post_process_frag.spv" },
-			};
+				ShaderID shaderID = 0;
 
-			m_Shaders.reserve(ARRAY_LENGTH(initInfos));
-			for (const ShaderInitInfo& initInfo : initInfos)
-			{
-				std::string vert = shaderDirectory + initInfo.vertFileName;
-				std::string frag = shaderDirectory + initInfo.fragFileName;
-				std::string geom;
-				if (initInfo.geomFileName)
-				{
-					geom = shaderDirectory + initInfo.geomFileName;
-				}
-				m_Shaders.emplace_back(m_VulkanDevice->m_LogicalDevice, initInfo.name, vert, frag, geom);
+				// Color
+				m_Shaders[shaderID].shader.bDeferred = false;
+
+				m_Shaders[shaderID].shader.bTranslucent = true;
+				m_Shaders[shaderID].shader.subpass = 1;
+				m_Shaders[shaderID].shader.vertexAttributes =
+					(u32)VertexAttribute::POSITION |
+					(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
+
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_MODEL);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_COLOR_MULTIPLIER);
+				++shaderID;
+
+				// PBR
+				m_Shaders[shaderID].shader.numAttachments = 3;
+				m_Shaders[shaderID].shader.bDeferred = true;
+				m_Shaders[shaderID].shader.subpass = 0;
+				m_Shaders[shaderID].shader.bNeedAlbedoSampler = true;
+				m_Shaders[shaderID].shader.bNeedMetallicSampler = true;
+				m_Shaders[shaderID].shader.bNeedRoughnessSampler = true;
+				m_Shaders[shaderID].shader.bNeedAOSampler = true;
+				m_Shaders[shaderID].shader.bNeedNormalSampler = true;
+
+				m_Shaders[shaderID].shader.vertexAttributes =
+					(u32)VertexAttribute::POSITION |
+					(u32)VertexAttribute::UV |
+					(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
+					(u32)VertexAttribute::NORMAL |
+					(u32)VertexAttribute::TANGENT;
+
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_VIEW_PROJECTION_INV);
+
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_MODEL);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ENABLE_ALBEDO_SAMPLER);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ALBEDO_SAMPLER);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CONST_ALBEDO);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ENABLE_METALLIC_SAMPLER);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_METALLIC_SAMPLER);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CONST_METALLIC);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ENABLE_ROUGHNESS_SAMPLER);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ROUGHNESS_SAMPLER);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CONST_ROUGHNESS);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ENABLE_AO_SAMPLER);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_AO_SAMPLER);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CONST_AO);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ENABLE_NORMAL_SAMPLER);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_NORMAL_SAMPLER);
+				++shaderID;
+
+				// PBR World Space
+				m_Shaders[shaderID].shader.numAttachments = 3;
+				m_Shaders[shaderID].shader.bDeferred = true;
+				m_Shaders[shaderID].shader.subpass = 0;
+				m_Shaders[shaderID].shader.bNeedAlbedoSampler = true;
+				m_Shaders[shaderID].shader.bNeedMetallicSampler = true;
+				m_Shaders[shaderID].shader.bNeedRoughnessSampler = true;
+				m_Shaders[shaderID].shader.bNeedAOSampler = true;
+				m_Shaders[shaderID].shader.bNeedNormalSampler = true;
+				m_Shaders[shaderID].shader.vertexAttributes =
+					(u32)VertexAttribute::POSITION |
+					(u32)VertexAttribute::UV |
+					(u32)VertexAttribute::NORMAL |
+					(u32)VertexAttribute::TANGENT;
+
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_VIEW_PROJECTION_INV);
+
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_MODEL);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ENABLE_ALBEDO_SAMPLER);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ALBEDO_SAMPLER);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CONST_ALBEDO);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ENABLE_METALLIC_SAMPLER);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_METALLIC_SAMPLER);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CONST_METALLIC);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ENABLE_ROUGHNESS_SAMPLER);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ROUGHNESS_SAMPLER);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CONST_ROUGHNESS);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ENABLE_AO_SAMPLER);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_AO_SAMPLER);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CONST_AO);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ENABLE_NORMAL_SAMPLER);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_NORMAL_SAMPLER);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_BLEND_SHARPNESS);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_TEXTURE_SCALE);
+				++shaderID;
+
+				// Skybox
+				m_Shaders[shaderID].shader.subpass = 1;
+				m_Shaders[shaderID].shader.bNeedCubemapSampler = true;
+				m_Shaders[shaderID].shader.bNeedPushConstantBlock = true;
+				m_Shaders[shaderID].shader.vertexAttributes =
+					(u32)VertexAttribute::POSITION;
+
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_TIME);
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_CUBEMAP_SAMPLER);
+
+				m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
+				++shaderID;
+
+				// Equirectangular to cube
+				m_Shaders[shaderID].shader.subpass = 1;
+				m_Shaders[shaderID].shader.bNeedHDREquirectangularSampler = true;
+				m_Shaders[shaderID].shader.bNeedPushConstantBlock = true;
+				m_Shaders[shaderID].shader.vertexAttributes =
+					(u32)VertexAttribute::POSITION;
+
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_HDR_EQUIRECTANGULAR_SAMPLER);
+
+				m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
+				++shaderID;
+
+				// Irradiance
+				m_Shaders[shaderID].shader.subpass = 1;
+				m_Shaders[shaderID].shader.bNeedCubemapSampler = true;
+				m_Shaders[shaderID].shader.bNeedPushConstantBlock = true;
+				m_Shaders[shaderID].shader.vertexAttributes =
+					(u32)VertexAttribute::POSITION;
+
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_CUBEMAP_SAMPLER);
+
+				m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
+				++shaderID;
+
+				// Prefilter
+				m_Shaders[shaderID].shader.subpass = 1;
+				m_Shaders[shaderID].shader.bNeedCubemapSampler = true;
+				m_Shaders[shaderID].shader.bNeedPushConstantBlock = true;
+				m_Shaders[shaderID].shader.vertexAttributes =
+					(u32)VertexAttribute::POSITION;
+
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_CUBEMAP_SAMPLER);
+
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CONST_ROUGHNESS);
+				++shaderID;
+
+				// BRDF
+				m_Shaders[shaderID].shader.subpass = 1;
+				m_Shaders[shaderID].shader.vertexAttributes = 0;
+
+				m_Shaders[shaderID].shader.constantBufferUniforms = {};
+
+				m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
+				++shaderID;
+
+				// Deferred combine (sample gbuffer)
+				m_Shaders[shaderID].shader.subpass = 0;
+				m_Shaders[shaderID].shader.bDepthWriteEnable = false; // Disable depth writing
+				m_Shaders[shaderID].shader.bNeedBRDFLUT = true;
+				m_Shaders[shaderID].shader.bNeedIrradianceSampler = true;
+				m_Shaders[shaderID].shader.bNeedPrefilteredMap = true;
+				m_Shaders[shaderID].shader.vertexAttributes =
+					(u32)VertexAttribute::POSITION |
+					(u32)VertexAttribute::UV;
+
+				// TODO: Specify that this buffer is only used in the frag shader here
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_CAM_POS);
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_VIEW_PROJECTION_INV);
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_DIR_LIGHT);
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_POINT_LIGHTS);
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_BRDF_LUT_SAMPLER);
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_IRRADIANCE_SAMPLER);
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_PREFILTER_MAP);
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_FB_0_SAMPLER);
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_FB_1_SAMPLER);
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_FB_2_SAMPLER);
+
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ENABLE_IRRADIANCE_SAMPLER);
+				++shaderID;
+
+				// Deferred combine cubemap (sample GBuffer)
+				m_Shaders[shaderID].shader.subpass = 0;
+				m_Shaders[shaderID].shader.bDepthWriteEnable = false; // Disable depth writing
+				m_Shaders[shaderID].shader.bNeedBRDFLUT = true;
+				m_Shaders[shaderID].shader.bNeedIrradianceSampler = true;
+				m_Shaders[shaderID].shader.bNeedPrefilteredMap = true;
+				m_Shaders[shaderID].shader.vertexAttributes =
+					(u32)VertexAttribute::POSITION; // Used as 3D texture coord into cubemap
+
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_CUBEMAP_SAMPLER);
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_CAM_POS);
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_DIR_LIGHT);
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_POINT_LIGHTS);
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_BRDF_LUT_SAMPLER);
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_IRRADIANCE_SAMPLER);
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_PREFILTER_MAP);
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_FB_0_SAMPLER);
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_FB_1_SAMPLER);
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_FB_2_SAMPLER);
+
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ENABLE_IRRADIANCE_SAMPLER);
+				++shaderID;
+
+				// Compute SDF
+				m_Shaders[shaderID].shader.subpass = 0;
+				m_Shaders[shaderID].shader.vertexAttributes =
+					(u32)VertexAttribute::POSITION |
+					(u32)VertexAttribute::UV;
+
+				m_Shaders[shaderID].shader.constantBufferUniforms = {};
+
+				m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_SDF_DATA);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_TEX_CHANNEL);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_HIGH_RES_TEX); // highResTex
+				//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_SDF_RESOLUTION);
+				//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_HIGH_RES);
+				++shaderID;
+
+				// Font SS
+				m_Shaders[shaderID].shader.subpass = 1;
+				m_Shaders[shaderID].shader.vertexAttributes =
+					(u32)VertexAttribute::POSITION_2D |
+					(u32)VertexAttribute::UV |
+					(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
+					(u32)VertexAttribute::EXTRA_VEC4 |
+					(u32)VertexAttribute::EXTRA_INT;
+				m_Shaders[shaderID].bDynamic = true;
+				m_Shaders[shaderID].dynamicVertexBufferSize = 1024 * 1024; // TODO
+
+				m_Shaders[shaderID].shader.constantBufferUniforms = {};
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_ALBEDO_SAMPLER); // in_Texture
+
+				m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_MODEL);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_FONT_CHAR_DATA);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_TEX_SIZE);
+				++shaderID;
+
+				// Font WS
+				m_Shaders[shaderID].shader.subpass = 1;
+				m_Shaders[shaderID].shader.vertexAttributes =
+					(u32)VertexAttribute::POSITION |
+					(u32)VertexAttribute::UV |
+					(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
+					(u32)VertexAttribute::TANGENT |
+					(u32)VertexAttribute::EXTRA_VEC4 |
+					(u32)VertexAttribute::EXTRA_INT;
+				m_Shaders[shaderID].bDynamic = true;
+				m_Shaders[shaderID].dynamicVertexBufferSize = 1024 * 1024; // TODO
+
+				m_Shaders[shaderID].shader.constantBufferUniforms = {};
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_ALBEDO_SAMPLER); // in_Texture
+
+				m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_MODEL);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_FONT_CHAR_DATA);
+				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_TEX_SIZE);
+				++shaderID;
+
+				assert(shaderID == ARRAY_LENGTH(initInfos));
 			}
-
-			ShaderID shaderID = 0;
-
-			// Color
-			m_Shaders[shaderID].shader.bDeferred = false;
-
-			m_Shaders[shaderID].shader.bTranslucent = true;
-			m_Shaders[shaderID].shader.subpass = 1;
-			m_Shaders[shaderID].shader.vertexAttributes =
-				(u32)VertexAttribute::POSITION |
-				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
-
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
-
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_MODEL);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_COLOR_MULTIPLIER);
-			++shaderID;
-
-			// PBR
-			m_Shaders[shaderID].shader.numAttachments = 3;
-			m_Shaders[shaderID].shader.bDeferred = true;
-			m_Shaders[shaderID].shader.subpass = 0;
-			m_Shaders[shaderID].shader.bNeedAlbedoSampler = true;
-			m_Shaders[shaderID].shader.bNeedMetallicSampler = true;
-			m_Shaders[shaderID].shader.bNeedRoughnessSampler = true;
-			m_Shaders[shaderID].shader.bNeedAOSampler = true;
-			m_Shaders[shaderID].shader.bNeedNormalSampler = true;
-
-
-
-			// TODO
-			//m_Shaders[shaderID].bDynamic = true;
-			//m_Shaders[shaderID].dynamicVertexBufferSize = 1024 * 1024; // TODO
-
-
-
-			m_Shaders[shaderID].shader.vertexAttributes =
-				(u32)VertexAttribute::POSITION |
-				(u32)VertexAttribute::UV |
-				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
-				(u32)VertexAttribute::TANGENT |
-				(u32)VertexAttribute::BITANGENT |
-				(u32)VertexAttribute::NORMAL;
-
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
-
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_MODEL);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ENABLE_ALBEDO_SAMPLER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ALBEDO_SAMPLER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CONST_ALBEDO);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ENABLE_METALLIC_SAMPLER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_METALLIC_SAMPLER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CONST_METALLIC);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ENABLE_ROUGHNESS_SAMPLER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ROUGHNESS_SAMPLER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CONST_ROUGHNESS);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ENABLE_AO_SAMPLER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_AO_SAMPLER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CONST_AO);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ENABLE_NORMAL_SAMPLER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_NORMAL_SAMPLER);
-			++shaderID;
-
-			// PBR World Space
-			m_Shaders[shaderID].shader.numAttachments = 3;
-			m_Shaders[shaderID].shader.bDeferred = true;
-			m_Shaders[shaderID].shader.subpass = 0;
-			m_Shaders[shaderID].shader.bNeedAlbedoSampler = true;
-			m_Shaders[shaderID].shader.bNeedMetallicSampler = true;
-			m_Shaders[shaderID].shader.bNeedRoughnessSampler = true;
-			m_Shaders[shaderID].shader.bNeedAOSampler = true;
-			m_Shaders[shaderID].shader.bNeedNormalSampler = true;
-			m_Shaders[shaderID].shader.vertexAttributes =
-				(u32)VertexAttribute::POSITION |
-				(u32)VertexAttribute::UV |
-				(u32)VertexAttribute::TANGENT |
-				(u32)VertexAttribute::BITANGENT |
-				(u32)VertexAttribute::NORMAL;
-
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
-
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_MODEL);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ENABLE_ALBEDO_SAMPLER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ALBEDO_SAMPLER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CONST_ALBEDO);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ENABLE_METALLIC_SAMPLER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_METALLIC_SAMPLER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CONST_METALLIC);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ENABLE_ROUGHNESS_SAMPLER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ROUGHNESS_SAMPLER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CONST_ROUGHNESS);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ENABLE_AO_SAMPLER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_AO_SAMPLER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CONST_AO);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ENABLE_NORMAL_SAMPLER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_NORMAL_SAMPLER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_BLEND_SHARPNESS);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_TEXTURE_SCALE);
-			++shaderID;
-
-			// Skybox
-			m_Shaders[shaderID].shader.subpass = 1;
-			m_Shaders[shaderID].shader.bNeedCubemapSampler = true;
-			m_Shaders[shaderID].shader.bNeedPushConstantBlock = true;
-			m_Shaders[shaderID].shader.vertexAttributes =
-				(u32)VertexAttribute::POSITION;
-
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_TIME);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_CUBEMAP_SAMPLER);
-
-			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
-			++shaderID;
-
-			// Equirectangular to cube
-			m_Shaders[shaderID].shader.subpass = 1;
-			m_Shaders[shaderID].shader.bNeedHDREquirectangularSampler = true;
-			m_Shaders[shaderID].shader.bNeedPushConstantBlock = true;
-			m_Shaders[shaderID].shader.vertexAttributes =
-				(u32)VertexAttribute::POSITION;
-
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_HDR_EQUIRECTANGULAR_SAMPLER);
-
-			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
-			++shaderID;
-
-			// Irradiance
-			m_Shaders[shaderID].shader.subpass = 1;
-			m_Shaders[shaderID].shader.bNeedCubemapSampler = true;
-			m_Shaders[shaderID].shader.bNeedPushConstantBlock = true;
-			m_Shaders[shaderID].shader.vertexAttributes =
-				(u32)VertexAttribute::POSITION;
-
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_CUBEMAP_SAMPLER);
-
-			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
-			++shaderID;
-
-			// Prefilter
-			m_Shaders[shaderID].shader.subpass = 1;
-			m_Shaders[shaderID].shader.bNeedCubemapSampler = true;
-			m_Shaders[shaderID].shader.bNeedPushConstantBlock = true;
-			m_Shaders[shaderID].shader.vertexAttributes =
-				(u32)VertexAttribute::POSITION;
-
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_CUBEMAP_SAMPLER);
-
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CONST_ROUGHNESS);
-			++shaderID;
-
-			// BRDF
-			m_Shaders[shaderID].shader.subpass = 1;
-			m_Shaders[shaderID].shader.vertexAttributes = 0;
-
-			m_Shaders[shaderID].shader.constantBufferUniforms = {};
-
-			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
-			++shaderID;
-
-			// Deferred combine (sample gbuffer)
-			m_Shaders[shaderID].shader.subpass = 0;
-			m_Shaders[shaderID].shader.bDepthWriteEnable = false; // Disable depth writing
-			m_Shaders[shaderID].shader.bNeedBRDFLUT = true;
-			m_Shaders[shaderID].shader.bNeedIrradianceSampler = true;
-			m_Shaders[shaderID].shader.bNeedPrefilteredMap = true;
-			m_Shaders[shaderID].shader.vertexAttributes =
-				(u32)VertexAttribute::POSITION |
-				(u32)VertexAttribute::UV;
-
-			// TODO: Specify that this buffer is only used in the frag shader here
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_CAM_POS);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_DIR_LIGHT);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_POINT_LIGHTS);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_BRDF_LUT_SAMPLER);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_IRRADIANCE_SAMPLER);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_PREFILTER_MAP);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_FB_0_SAMPLER);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_FB_1_SAMPLER);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_FB_2_SAMPLER);
-
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ENABLE_IRRADIANCE_SAMPLER);
-			++shaderID;
-
-			// Deferred combine cubemap (sample GBuffer)
-			m_Shaders[shaderID].shader.subpass = 0;
-			m_Shaders[shaderID].shader.bDepthWriteEnable = false; // Disable depth writing
-			m_Shaders[shaderID].shader.bNeedBRDFLUT = true;
-			m_Shaders[shaderID].shader.bNeedIrradianceSampler = true;
-			m_Shaders[shaderID].shader.bNeedPrefilteredMap = true;
-			m_Shaders[shaderID].shader.vertexAttributes =
-				(u32)VertexAttribute::POSITION; // Used as 3D texture coord into cubemap
-
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_CUBEMAP_SAMPLER);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_CAM_POS);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_DIR_LIGHT);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_POINT_LIGHTS);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_BRDF_LUT_SAMPLER);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_IRRADIANCE_SAMPLER);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_PREFILTER_MAP);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_FB_0_SAMPLER);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_FB_1_SAMPLER);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_FB_2_SAMPLER);
-
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ENABLE_IRRADIANCE_SAMPLER);
-			++shaderID;
-
-			// Compute SDF
-			m_Shaders[shaderID].shader.subpass = 0;
-			m_Shaders[shaderID].shader.vertexAttributes =
-				(u32)VertexAttribute::POSITION |
-				(u32)VertexAttribute::UV;
-
-			m_Shaders[shaderID].shader.constantBufferUniforms = {};
-
-			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_SDF_DATA);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_TEX_CHANNEL);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_HIGH_RES_TEX); // highResTex
-			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_SDF_RESOLUTION);
-			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_HIGH_RES);
-			++shaderID;
-
-			// Font SS
-			m_Shaders[shaderID].shader.subpass = 1;
-			m_Shaders[shaderID].shader.vertexAttributes =
-				(u32)VertexAttribute::POSITION_2D |
-				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
-				(u32)VertexAttribute::UV |
-				(u32)VertexAttribute::EXTRA_VEC4 |
-				(u32)VertexAttribute::EXTRA_INT;
-			m_Shaders[shaderID].bDynamic = true;
-			m_Shaders[shaderID].dynamicVertexBufferSize = 1024*1024; // TODO
-
-			m_Shaders[shaderID].shader.constantBufferUniforms = {};
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_ALBEDO_SAMPLER); // in_Texture
-
-			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_MODEL);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_FONT_CHAR_DATA);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_TEX_SIZE);
-			++shaderID;
-
-			// Font WS
-			m_Shaders[shaderID].shader.subpass = 1;
-			m_Shaders[shaderID].shader.vertexAttributes =
-				(u32)VertexAttribute::POSITION |
-				(u32)VertexAttribute::UV |
-				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
-				(u32)VertexAttribute::TANGENT |
-				(u32)VertexAttribute::EXTRA_VEC4 |
-				(u32)VertexAttribute::EXTRA_INT;
-			m_Shaders[shaderID].bDynamic = true;
-			m_Shaders[shaderID].dynamicVertexBufferSize = 1024*1024; // TODO
-
-			m_Shaders[shaderID].shader.constantBufferUniforms = {};
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_ALBEDO_SAMPLER); // in_Texture
-
-			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_MODEL);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_FONT_CHAR_DATA);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_TEX_SIZE);
-			++shaderID;
-
-			assert(shaderID == ARRAY_LENGTH(initInfos));
 
 			const size_t shaderCount = m_Shaders.size();
 			for (size_t i = 0; i < shaderCount; ++i)
