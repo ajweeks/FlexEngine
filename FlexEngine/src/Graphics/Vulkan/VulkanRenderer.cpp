@@ -6501,11 +6501,11 @@ namespace flex
 
 		void VulkanRenderer::UpdateConstantUniformBuffers(UniformOverrides const* overridenUniforms)
 		{
-			glm::mat4 projection = g_CameraManager->CurrentCamera()->GetProjection();
-			glm::mat4 view = g_CameraManager->CurrentCamera()->GetView();
-			glm::mat4 viewInv = glm::inverse(view);
-			glm::mat4 viewProjection = projection * view;
-			glm::vec4 camPos = glm::vec4(g_CameraManager->CurrentCamera()->GetPosition(), 0.0f);
+			glm::mat4 projection;
+			glm::mat4 view;
+			glm::mat4 viewInv;
+			glm::mat4 viewProjection;
+			glm::vec4 camPos;
 
 			static DirLightData defaultDirLightData = { VEC3_RIGHT, 0, VEC3_ONE, 0.0f };
 
@@ -6529,11 +6529,11 @@ namespace flex
 			};
 
 			UniformInfo uniformInfos[] = {
+				{ U_CAM_POS, (void*)&camPos, sizeof(glm::vec4) },
 				{ U_VIEW, (void*)&view, sizeof(glm::mat4) },
 				{ U_VIEW_INV, (void*)&viewInv, sizeof(glm::mat4) },
-				{ U_PROJECTION, (void*)&projection, sizeof(glm::mat4) },
 				{ U_VIEW_PROJECTION, (void*)&viewProjection, sizeof(glm::mat4) },
-				{ U_CAM_POS, (void*)&camPos, sizeof(glm::vec4) },
+				{ U_PROJECTION, (void*)&projection, sizeof(glm::mat4) },
 				{ U_DIR_LIGHT, (void*)dirLightData, sizeof(DirLightData) },
 				{ U_POINT_LIGHTS, (void*)m_PointLights, sizeof(PointLightData) * MAX_NUM_POINT_LIGHTS },
 				{ U_TIME, (void*)&g_SecElapsedSinceProgramStart, sizeof(real) },
@@ -6549,19 +6549,15 @@ namespace flex
 					continue; // There is no constant data to update
 				}
 
-				// Restore values in case they were overriden by the last material
+				// Restore values in case they were overridden by the last material
 				projection = g_CameraManager->CurrentCamera()->GetProjection();
 				view = g_CameraManager->CurrentCamera()->GetView();
-				viewInv = glm::inverse(view);
 				viewProjection = projection * view;
+				viewInv = glm::inverse(view);
 				camPos = glm::vec4(g_CameraManager->CurrentCamera()->GetPosition(), 0.0f);
 
 				if (overridenUniforms)
 				{
-					if (overridenUniforms->overridenUniforms.HasUniform(U_PROJECTION))
-					{
-						projection = overridenUniforms->projection;
-					}
 					if (overridenUniforms->overridenUniforms.HasUniform(U_VIEW))
 					{
 						view = overridenUniforms->view;
@@ -6573,6 +6569,10 @@ namespace flex
 					if (overridenUniforms->overridenUniforms.HasUniform(U_VIEW_PROJECTION))
 					{
 						viewProjection = overridenUniforms->viewProjection;
+					}
+					if (overridenUniforms->overridenUniforms.HasUniform(U_PROJECTION))
+					{
+						projection = overridenUniforms->projection;
 					}
 					if (overridenUniforms->overridenUniforms.HasUniform(U_CAM_POS))
 					{
@@ -6746,7 +6746,7 @@ namespace flex
 				{ U_MODEL, (void*)&model, sizeof(glm::mat4) },
 				{ U_MODEL_INV_TRANSPOSE, (void*)&modelInvTranspose, sizeof(glm::mat4) },
 				{ U_MODEL_VIEW_PROJ, (void*)&modelViewProjection, sizeof(glm::mat4) },
-				// view, viewInv, viewProjection, projection, camPos, dirLight, pointLights should be updated in constant uniform buffer
+				// view, viewProjInv, viewProjection, projection, camPos, dirLight, pointLights should be updated in constant uniform buffer
 				{ U_COLOR_MULTIPLIER, (void*)&material.material.colorMultiplier, sizeof(glm::vec4) },
 				{ U_CONST_ALBEDO, (void*)&material.material.constAlbedo, sizeof(glm::vec4) },
 				{ U_CONST_METALLIC, (void*)&material.material.constMetallic, sizeof(real) },
@@ -6881,7 +6881,7 @@ namespace flex
 
 				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
 				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
-				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_VIEW_PROJECTION_INV);
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_VIEW);
 
 				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
 				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_MODEL);
@@ -6918,7 +6918,7 @@ namespace flex
 
 				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
 				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
-				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_VIEW_PROJECTION_INV);
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_VIEW);
 
 				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
 				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_MODEL);
@@ -7013,7 +7013,7 @@ namespace flex
 				// TODO: Specify that this buffer is only used in the frag shader here
 				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
 				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_CAM_POS);
-				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_VIEW_PROJECTION_INV);
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_VIEW_INV);
 				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_DIR_LIGHT);
 				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_POINT_LIGHTS);
 				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_BRDF_LUT_SAMPLER);

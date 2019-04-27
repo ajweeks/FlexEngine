@@ -31,6 +31,7 @@ struct PointLight
 layout (binding = 0) uniform UBOConstant
 {
 	vec4 camPos;
+	mat4 invView;
 	DirectionalLight dirLight;
 	PointLight pointLights[NUMBER_POINT_LIGHTS];
 } uboConstant;
@@ -121,6 +122,7 @@ void main()
     float metallic = texture(positionMetallicFrameBufferSampler, ex_TexCoord).a;
 
     vec3 N = texture(normalRoughnessFrameBufferSampler, ex_TexCoord).rgb;
+    N = mat3(uboConstant.invView) * N; // view space -> world space
     float roughness = texture(normalRoughnessFrameBufferSampler, ex_TexCoord).a;
 
     vec3 albedo = texture(albedoAOFrameBufferSampler, ex_TexCoord).rgb;

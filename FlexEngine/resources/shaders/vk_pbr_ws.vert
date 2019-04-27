@@ -17,6 +17,7 @@ layout (location = 2) out mat3 ex_TBN;
 // Updated once per frame
 layout (binding = 0) uniform UBOConstant
 {
+	mat4 view;
 	mat4 viewProjection;
 } uboConstant;
 

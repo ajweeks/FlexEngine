@@ -8,6 +8,7 @@
 // Updated once per frame
 layout (binding = 0) uniform UBOConstant
 {
+	mat4 view;
 	mat4 viewProjection;
 } uboConstant;
 
@@ -51,12 +52,14 @@ void main()
 	float metallic = uboDynamic.enableMetallicSampler ? texture(metallicSampler, ex_TexCoord).r : uboDynamic.constMetallic;
 	float roughness = uboDynamic.enableRoughnessSampler ? texture(roughnessSampler, ex_TexCoord).r : uboDynamic.constRoughness;
 	float ao = uboDynamic.enableAOSampler ? texture(aoSampler, ex_TexCoord).r : uboDynamic.constAO;
-	vec3 Normal = normalize(uboDynamic.enableNormalSampler ? (ex_TBN * (texture(normalSampler, ex_TexCoord).xyz * 2 - 1)) : ex_TBN[2]);
+	vec3 N = uboDynamic.enableNormalSampler ? (ex_TBN * (texture(normalSampler, ex_TexCoord).xyz * 2 - 1)) : ex_TBN[2];
+
+	N = normalize(mat3(uboConstant.view) * N);
 
 	outPositionMetallic.rgb = ex_WorldPos;
 	outPositionMetallic.a = metallic;
 
-	outNormalRoughness.rgb = normalize(Normal);
+	outNormalRoughness.rgb = N;
 	outNormalRoughness.a = roughness;
 	
 	outAlbedoAO.rgb = albedo * vec3(ex_Color);
