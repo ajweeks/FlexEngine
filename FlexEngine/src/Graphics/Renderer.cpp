@@ -1974,4 +1974,27 @@ namespace flex
 		return contrastBrightnessSaturation;
 	}
 
+	void Renderer::GenerateGBufferVertexBuffer(bool bFlipV)
+	{
+		if (m_gBufferQuadVertexBufferData.vertexData == nullptr)
+		{
+			VertexBufferData::CreateInfo gBufferQuadVertexBufferDataCreateInfo = {};
+
+			gBufferQuadVertexBufferDataCreateInfo.positions_3D = {
+				glm::vec3(-1.0f, -1.0f, 0.0f),
+				glm::vec3(-1.0f, 3.0f,  0.0f),
+				glm::vec3(3.0f,  -1.0f, 0.0f),
+			};
+
+			gBufferQuadVertexBufferDataCreateInfo.texCoords_UV = {
+				glm::vec2(0.0f, bFlipV ? 1.0f  : 0.0f),
+				glm::vec2(0.0f, bFlipV ? -1.0f : 2.0f),
+				glm::vec2(2.0f, bFlipV ? 1.0f  : 0.0f),
+			};
+
+			gBufferQuadVertexBufferDataCreateInfo.attributes = (u32)VertexAttribute::POSITION | (u32)VertexAttribute::UV;
+			m_gBufferQuadVertexBufferData.Initialize(&gBufferQuadVertexBufferDataCreateInfo);
+		}
+	}
+
 } // namespace flex

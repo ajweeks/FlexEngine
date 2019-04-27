@@ -5357,36 +5357,12 @@ namespace flex
 			VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &fbufCreateInfo, nullptr, m_CubemapFrameBuffer->frameBuffer.replace()));
 		}
 
-		void VulkanRenderer::GenerateGBufferVertexBuffer()
-		{
-			if (m_gBufferQuadVertexBufferData.vertexData == nullptr)
-			{
-				// TODO: Use full screen tri (see GLRenderer::GenerateGBufferVertexBuffer)
-				VertexBufferData::CreateInfo gBufferQuadVertexBufferDataCreateInfo = {};
-				gBufferQuadVertexBufferDataCreateInfo.positions_3D = {
-					{ -1.0f,  1.0f, 0.0f },
-					{ -1.0f, -1.0f, 0.0f },
-					{ 1.0f,  1.0f, 0.0f },
-					{ 1.0f, -1.0f, 0.0f },
-				};
-
-				gBufferQuadVertexBufferDataCreateInfo.texCoords_UV = {
-					{ 0.0f, 0.0f },
-					{ 0.0f, 1.0f },
-					{ 1.0f, 0.0f },
-					{ 1.0f, 1.0f },
-				};
-				gBufferQuadVertexBufferDataCreateInfo.attributes = (u32)VertexAttribute::POSITION | (u32)VertexAttribute::UV;
-				m_gBufferQuadVertexBufferData.Initialize(&gBufferQuadVertexBufferDataCreateInfo);
-			}
-		}
-
 		// TODO: Unify with GLRenderer
 		void VulkanRenderer::GenerateGBuffer()
 		{
 			if (m_gBufferQuadVertexBufferData.vertexData == nullptr)
 			{
-				GenerateGBufferVertexBuffer();
+				GenerateGBufferVertexBuffer(true);
 			}
 
 			assert(m_SkyBoxMesh != nullptr);
@@ -5462,9 +5438,6 @@ namespace flex
 				gBufferQuadCreateInfo.visibleInSceneExplorer = false;
 				gBufferQuadCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
 				gBufferQuadCreateInfo.bDepthWriteEnable = false;
-
-				m_gBufferQuadIndices = { 0, 1, 2,  2, 1, 3 };
-				gBufferQuadCreateInfo.indices = &m_gBufferQuadIndices;
 
 				m_GBufferQuadRenderID = InitializeRenderObject(&gBufferQuadCreateInfo);
 
@@ -5555,9 +5528,8 @@ namespace flex
 				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gBufferObject->graphicsPipeline);
 				VkDeviceSize offsets[1] = { 0 };
 				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID].vertexBuffer->m_Buffer, offsets);
-				vkCmdBindIndexBuffer(commandBuffer, m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID].indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
 
-				vkCmdDrawIndexed(commandBuffer, gBufferObject->indices->size(), 1, 0, 0, 1);
+				vkCmdDraw(commandBuffer, gBufferObject->vertexBufferData->VertexCount, 1, gBufferObject->vertexOffset, 0);
 
 				// Forward rendered objects
 				vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);

@@ -184,7 +184,6 @@ namespace flex
 			void PrepareCubemapFrameBuffer();
 			void PhysicsDebugRender();
 
-			void GenerateGBufferVertexBuffer();
 			void GenerateGBuffer();
 
 			void RemoveMaterial(MaterialID materialID);
@@ -403,10 +402,6 @@ namespace flex
 
 			VkCommandBuffer offScreenCmdBuffer = VK_NULL_HANDLE;
 			VkSemaphore offscreenSemaphore = VK_NULL_HANDLE;
-
-			RenderID m_GBufferQuadRenderID = InvalidRenderID;
-			VertexBufferData m_gBufferQuadVertexBufferData;
-			std::vector<u32> m_gBufferQuadIndices;
 
 			GameObject* m_SkyBoxMesh = nullptr;
 

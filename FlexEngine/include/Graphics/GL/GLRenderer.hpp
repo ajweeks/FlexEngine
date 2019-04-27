@@ -138,7 +138,6 @@ namespace flex
 			void SetVec4f(ShaderID shaderID, const char* vecName, const glm::vec4& vec);
 			void SetMat4f(ShaderID shaderID, const char* matName, const glm::mat4& mat);
 
-			void GenerateGBufferVertexBuffer();
 			void GenerateGBuffer();
 
 			// Draw all static geometry to the given render object's cubemap texture
@@ -235,8 +234,6 @@ namespace flex
 			u32 viewProjectionUBO = 0;
 			u32 viewProjectionCombinedUBO = 0;
 
-			RenderID m_GBufferQuadRenderID = InvalidRenderID;
-			VertexBufferData m_gBufferQuadVertexBufferData;
 			u32 m_gBufferHandle = 0;
 			u32 m_gBufferDepthHandle = 0;
 

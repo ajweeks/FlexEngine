@@ -6,6 +6,7 @@ IGNORE_WARNINGS_POP
 
 #include "Physics/PhysicsDebuggingSettings.hpp"
 #include "RendererTypes.hpp"
+#include "VertexBufferData.hpp"
 
 class btIDebugDraw;
 struct FT_LibraryRec_;
@@ -234,6 +235,11 @@ namespace flex
 
 		glm::vec4 GetSelectedObjectColorMultiplier() const;
 		glm::mat4 GetPostProcessingMatrix() const;
+
+		void GenerateGBufferVertexBuffer(bool bFlipV);
+
+		RenderID m_GBufferQuadRenderID = InvalidRenderID;
+		VertexBufferData m_gBufferQuadVertexBufferData;
 
 		PointLightData* m_PointLights;
 		i32 m_NumPointLightsEnabled = 0;
