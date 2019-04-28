@@ -24,6 +24,8 @@ namespace flex
 
 		class VulkanRenderer : public Renderer
 		{
+			struct ShaderBatchPair;
+
 		public:
 			VulkanRenderer();
 			virtual ~VulkanRenderer();
@@ -220,6 +222,9 @@ namespace flex
 			void BatchRenderObjects();
 
 			void BuildCommandBuffers(const DrawCallInfo& drawCallInfo);
+
+			void DrawShaderBatch(const ShaderBatchPair &shaderBatches, VkCommandBuffer& commandBuffer);
+
 			void BuildDeferredCommandBuffer(const DrawCallInfo& drawCallInfo);
 
 			void BindDescriptorSet(VulkanShader* shader, i32 dynamicOffsetIndex, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet);
@@ -308,6 +313,9 @@ namespace flex
 			ShaderBatch m_DeferredObjectBatches;
 			// One per forward-rendered shader
 			ShaderBatch m_ForwardObjectBatches;
+
+			ShaderBatch m_DepthAwareEditorObjBatches;
+			ShaderBatch m_DepthUnawareEditorObjBatches;
 
 			glm::vec2i m_CubemapFramebufferSize;
 			glm::vec2i m_BRDFSize;
