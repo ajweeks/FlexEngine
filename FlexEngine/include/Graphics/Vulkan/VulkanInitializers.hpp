@@ -647,6 +647,20 @@ namespace flex
 			return shaderStageCreateInfo;
 		}
 
+		inline VkAttachmentDescription attachmentDescription(VkFormat format, VkImageLayout finalLayout)
+		{
+			VkAttachmentDescription attachmentDesc{};
+			attachmentDesc.format = format;
+			attachmentDesc.samples = VK_SAMPLE_COUNT_1_BIT;
+			attachmentDesc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+			attachmentDesc.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+			attachmentDesc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+			attachmentDesc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+			attachmentDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			attachmentDesc.finalLayout = finalLayout;
+			return attachmentDesc;
+		}
+
 	} // namespace vks
 } // namespace flex
 

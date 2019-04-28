@@ -470,16 +470,8 @@ namespace flex
 
 			const u32 mipLevels = static_cast<u32>(floor(log2(dim))) + 1;
 
-			VkAttachmentDescription attDesc = {};
 			// HDR texture color attachment
-			attDesc.format = format;
-			attDesc.samples = VK_SAMPLE_COUNT_1_BIT;
-			attDesc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-			attDesc.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-			attDesc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-			attDesc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-			attDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-			attDesc.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			VkAttachmentDescription attDesc = vks::attachmentDescription(format, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 			VkAttachmentReference colorReference = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
 
 			VkSubpassDescription subpassDescription = {};
@@ -835,16 +827,8 @@ namespace flex
 			assert(dim <= MAX_TEXTURE_DIM);
 			const u32 mipLevels = static_cast<u32>(floor(log2(dim))) + 1;
 
-			VkAttachmentDescription attDesc = {};
 			// Color attachment
-			attDesc.format = format;
-			attDesc.samples = VK_SAMPLE_COUNT_1_BIT;
-			attDesc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-			attDesc.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-			attDesc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-			attDesc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-			attDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-			attDesc.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			VkAttachmentDescription attDesc = vks::attachmentDescription(format, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 			VkAttachmentReference colorReference = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
 
 			VkSubpassDescription subpassDescription = {};
@@ -1193,16 +1177,8 @@ namespace flex
 			assert(dim <= MAX_TEXTURE_DIM);
 			const u32 mipLevels = static_cast<u32>(floor(log2(dim))) + 1;
 
-			VkAttachmentDescription attDesc = {};
 			// Color attachment
-			attDesc.format = format;
-			attDesc.samples = VK_SAMPLE_COUNT_1_BIT;
-			attDesc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-			attDesc.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-			attDesc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-			attDesc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-			attDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-			attDesc.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			VkAttachmentDescription attDesc = vks::attachmentDescription(format, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 			VkAttachmentReference colorReference = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
 
 			VkSubpassDescription subpassDescription = {};
@@ -1525,15 +1501,7 @@ namespace flex
 			assert(dim <= MAX_TEXTURE_DIM);
 
 			// Color attachment
-			VkAttachmentDescription attachmentDesc = {};
-			attachmentDesc.format = format;
-			attachmentDesc.samples = VK_SAMPLE_COUNT_1_BIT;
-			attachmentDesc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-			attachmentDesc.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-			attachmentDesc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-			attachmentDesc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-			attachmentDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-			attachmentDesc.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			VkAttachmentDescription attachmentDesc = vks::attachmentDescription(format, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 			VkAttachmentReference colorReference = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
 
 			VkSubpassDescription subpassDescription = {};
@@ -3504,15 +3472,7 @@ namespace flex
 				VulkanShader& computeSDFShader = m_Shaders[computeSDFShaderID];
 
 				// Render pass
-				VkAttachmentDescription colorAttachment = {};
-				colorAttachment.format = fontTexFormat;
-				colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-				colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-				colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-				colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-				colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-				colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-				colorAttachment.finalLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+				VkAttachmentDescription colorAttachment = vks::attachmentDescription(fontTexFormat, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
 				VkAttachmentReference colorAttachmentRef = {};
 				colorAttachmentRef.attachment = 0;
@@ -4327,31 +4287,16 @@ namespace flex
 
 		void VulkanRenderer::CreateRenderPass()
 		{
-			VkAttachmentDescription colorAttachment = {};
-			colorAttachment.format = m_SwapChainImageFormat;
-			colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-			colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-			colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-			colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-			colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-			colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-			colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+			VkAttachmentDescription colorAttachment = vks::attachmentDescription(m_SwapChainImageFormat, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
 			VkAttachmentReference colorAttachmentRef = {};
 			colorAttachmentRef.attachment = 0;
 			colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-			VkAttachmentDescription depthAttachment = {};
 			VkFormat depthFormat;
 			GetSupportedDepthFormat(m_VulkanDevice->m_PhysicalDevice, &depthFormat);
-			depthAttachment.format = depthFormat;
-			depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-			depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-			depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-			depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-			depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+			VkAttachmentDescription depthAttachment = vks::attachmentDescription(depthFormat, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 			depthAttachment.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-			depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
 			VkAttachmentReference depthAttachmentRef = {};
 			depthAttachmentRef.attachment = 1;
@@ -5152,24 +5097,9 @@ namespace flex
 			// Init attachment properties
 			for (u32 i = 0; i < frameBufferColorAttachmentCount; ++i)
 			{
-				attachmentDescs[i].samples = VK_SAMPLE_COUNT_1_BIT;
-				attachmentDescs[i].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-				attachmentDescs[i].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-				attachmentDescs[i].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-				attachmentDescs[i].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-				attachmentDescs[i].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-				attachmentDescs[i].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-				attachmentDescs[i].format = m_OffScreenFrameBuf->frameBufferAttachments[i].second.format;
+				attachmentDescs[i] = vks::attachmentDescription(m_OffScreenFrameBuf->frameBufferAttachments[i].second.format, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 			}
-			attachmentDescs[frameBufferColorAttachmentCount].samples = VK_SAMPLE_COUNT_1_BIT;
-			attachmentDescs[frameBufferColorAttachmentCount].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-			attachmentDescs[frameBufferColorAttachmentCount].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-			attachmentDescs[frameBufferColorAttachmentCount].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-			attachmentDescs[frameBufferColorAttachmentCount].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-			attachmentDescs[frameBufferColorAttachmentCount].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-			attachmentDescs[frameBufferColorAttachmentCount].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-			attachmentDescs[frameBufferColorAttachmentCount].format = m_DepthAttachment->format;
-
+			attachmentDescs[frameBufferColorAttachmentCount] = vks::attachmentDescription(m_DepthAttachment->format, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
 			std::vector<VkAttachmentReference> colorReferences;
 			for (u32 i = 0; i < frameBufferColorAttachmentCount; ++i)
@@ -5280,24 +5210,9 @@ namespace flex
 			// Init attachment properties
 			for (u32 i = 0; i < frameBufferColorAttachmentCount; ++i)
 			{
-				attachmentDescs[i].samples = VK_SAMPLE_COUNT_1_BIT;
-				attachmentDescs[i].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-				attachmentDescs[i].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-				attachmentDescs[i].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-				attachmentDescs[i].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-				attachmentDescs[i].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-				attachmentDescs[i].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-				attachmentDescs[i].format = m_CubemapFrameBuffer->frameBufferAttachments[i].second.format;
+				attachmentDescs[i] = vks::attachmentDescription(m_CubemapFrameBuffer->frameBufferAttachments[i].second.format, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 			}
-			attachmentDescs[frameBufferColorAttachmentCount].samples = VK_SAMPLE_COUNT_1_BIT;
-			attachmentDescs[frameBufferColorAttachmentCount].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-			attachmentDescs[frameBufferColorAttachmentCount].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-			attachmentDescs[frameBufferColorAttachmentCount].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-			attachmentDescs[frameBufferColorAttachmentCount].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-			attachmentDescs[frameBufferColorAttachmentCount].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-			attachmentDescs[frameBufferColorAttachmentCount].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-			attachmentDescs[frameBufferColorAttachmentCount].format = m_CubemapDepthAttachment->format;
-
+			attachmentDescs[frameBufferColorAttachmentCount] = vks::attachmentDescription(m_CubemapDepthAttachment->format, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
 			std::vector<VkAttachmentReference> colorReferences;
 			for (u32 i = 0; i < frameBufferColorAttachmentCount; ++i)
