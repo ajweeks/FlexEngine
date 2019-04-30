@@ -89,6 +89,7 @@ namespace flex
 	const u64 U_TIME							= (1ull << 47); const u32 US_TIME						= sizeof(real);
 	const u64 U_SDF_DATA						= (1ull << 48); const u32 US_SDF_DATA					= sizeof(glm::vec4);
 	const u64 U_TEX_CHANNEL						= (1ull << 49); const u32 US_TEX_CHANNEL				= sizeof(i32);
+	const u64 U_DEPTH_SAMPLER					= (1ull << 51);
 	const u64 U_HIGH_RES_TEX					= (1ull << 50);
 	// NOTE: New additions need to be added in Uniforms::CalculateSizeInBytes
 
@@ -419,6 +420,7 @@ namespace flex
 		i32 numAttachments = 1; // How many output textures the fragment shader has
 
 		i32 subpass = 0;
+		VkRenderPass renderPass = VK_NULL_HANDLE;
 		bool bDeferred = false; // TODO: Replace this bool with just checking if numAttachments is larger than 1
 		bool bDepthWriteEnable = true;
 		bool bTranslucent = false;
@@ -435,6 +437,7 @@ namespace flex
 		bool bNeedPrefilteredMap = false;
 		bool bNeedBRDFLUT = false;
 		bool bNeedShadowMap = false;
+		bool bNeedDepthSampler = false;
 		bool bNeedPushConstantBlock = false;
 	};
 

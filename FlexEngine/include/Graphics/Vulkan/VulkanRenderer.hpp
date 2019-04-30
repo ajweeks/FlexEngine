@@ -174,7 +174,7 @@ namespace flex
 			void CreateLogicalDevice(VkPhysicalDevice physicalDevice);
 			void CreateSwapChain();
 			void CreateSwapChainImageViews();
-			void CreateRenderPass();
+			void CreateRenderPasses();
 			void CreateDescriptorSetLayout(ShaderID shaderID);
 			void CreateDescriptorSet(RenderID renderID);
 			void CreateDescriptorSet(DescriptorSetCreateInfo* createInfo);
@@ -182,7 +182,7 @@ namespace flex
 			void CreateGraphicsPipeline(GraphicsPipelineCreateInfo* createInfo);
 			void CreateDepthResources();
 			void CreateFramebuffers();
-			void PrepareOffscreenFrameBuffer();
+			void PrepareFrameBuffers();
 			void PrepareCubemapFrameBuffer();
 			void PhysicsDebugRender();
 
@@ -225,7 +225,7 @@ namespace flex
 
 			void DrawShaderBatch(const ShaderBatchPair &shaderBatches, VkCommandBuffer& commandBuffer);
 
-			void BuildDeferredCommandBuffer(const DrawCallInfo& drawCallInfo);
+			void BuildDeferredCommandBuffer();
 
 			void BindDescriptorSet(VulkanShader* shader, i32 dynamicOffsetIndex, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet);
 			void CreateSemaphores();
@@ -321,9 +321,23 @@ namespace flex
 			glm::vec2i m_BRDFSize;
 			VulkanTexture* m_BRDFTexture = nullptr;
 
-			FrameBuffer* m_OffScreenFrameBuf = nullptr;
+			FrameBuffer* m_OffScreenFrameBuf = nullptr; // GBuffer frame buffer
+			FrameBufferAttachment* m_OffScreenDepthAttachment = nullptr;
+			FrameBufferAttachment* m_DepthAttachment = nullptr;
+			//FrameBuffer* m_PostProcessOffScreenFrameBuf = nullptr;
 			VDeleter<VkSampler> m_ColorSampler;
+			VDeleter<VkSampler> m_DepthSampler;
 			VkDescriptorSet m_OffscreenBufferDescriptorSet = VK_NULL_HANDLE;
+
+			FrameBuffer* m_SSAOFrameBuf = nullptr;
+			FrameBuffer* m_SSAOBlurFrameBuf = nullptr;
+			VkDescriptorSet m_SSAODescriptorSet = VK_NULL_HANDLE;
+			VkFormat m_SSAOBufferFormat = VK_FORMAT_UNDEFINED;
+
+			FrameBuffer* m_CubemapFrameBuffer = nullptr;
+			FrameBufferAttachment* m_CubemapDepthAttachment = nullptr;
+			MaterialID m_CubemapGBufferMaterialID = InvalidMaterialID;
+
 			i32 m_DeferredQuadVertexBufferIndex = -1;
 
 			bool m_bPostInitialized = false;
@@ -367,13 +381,13 @@ namespace flex
 			std::vector<VDeleter<VkImageView>> m_SwapChainImageViews;
 			std::vector<VDeleter<VkFramebuffer>> m_SwapChainFramebuffers;
 
-			FrameBuffer* m_CubemapFrameBuffer = nullptr;
-			FrameBufferAttachment* m_CubemapDepthAttachment = nullptr;
-			MaterialID m_CubemapGBufferMaterialID = InvalidMaterialID;
-
 			MaterialID m_ComputeSDFMatID = InvalidMaterialID;
 
 			VDeleter<VkRenderPass> m_DeferredCombineRenderPass;
+			VDeleter<VkRenderPass> m_SSAORenderPass;
+			VDeleter<VkRenderPass> m_SSAOBlurRenderPass;
+			VDeleter<VkRenderPass> m_ForwardRenderPass;
+
 			// TODO: Only use VDeleter on objects which may need to be reused
 			VDeleter<VkPipeline> m_FontSSGraphicsPipeline;
 			VDeleter<VkPipelineLayout> m_FontSSPipelineLayout;
@@ -390,7 +404,6 @@ namespace flex
 
 			VulkanTexture* m_BlankTexture = nullptr;
 
-			FrameBufferAttachment* m_DepthAttachment = nullptr;
 
 			std::vector<VertexIndexBufferPair> m_VertexIndexBufferPairs;
 
@@ -406,14 +419,14 @@ namespace flex
 			VDeleter<VkSemaphore> m_PresentCompleteSemaphore;
 			VDeleter<VkSemaphore> m_RenderCompleteSemaphore;
 
-			VDeleter<VkPipelineCache> m_PipelineCache;
-
-			VkCommandBuffer offScreenCmdBuffer = VK_NULL_HANDLE;
-			VkSemaphore offscreenSemaphore = VK_NULL_HANDLE;
+			VkCommandBuffer m_OffScreenCmdBuffer = VK_NULL_HANDLE;
+			VkSemaphore m_OffscreenSemaphore = VK_NULL_HANDLE;
 
 			GameObject* m_SkyBoxMesh = nullptr;
 
 			VkClearColorValue m_ClearColor;
+
+			u32 m_CurrentSwapChainBufferIndex = 0;
 
 #ifdef DEBUG
 			AsyncVulkanShaderCompiler* m_ShaderCompiler = nullptr;

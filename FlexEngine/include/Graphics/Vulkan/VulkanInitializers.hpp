@@ -70,8 +70,8 @@ namespace flex
 		inline VkRenderPassBeginInfo renderPassBeginInfo(VkRenderPass renderPass)
 		{
 			VkRenderPassBeginInfo renderPassBeginInfo{};
-			renderPassBeginInfo.renderPass = renderPass;
 			renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+			renderPassBeginInfo.renderPass = renderPass;
 			return renderPassBeginInfo;
 		}
 

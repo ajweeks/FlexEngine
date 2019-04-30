@@ -41,12 +41,10 @@ layout (binding = 1) uniform UBODynamic
 layout (binding = 2) uniform sampler2D albedoSampler;
 layout (binding = 3) uniform sampler2D metallicSampler;
 layout (binding = 4) uniform sampler2D roughnessSampler;
-layout (binding = 5) uniform sampler2D aoSampler;
-layout (binding = 6) uniform sampler2D normalSampler;
+layout (binding = 5) uniform sampler2D normalSampler;
 
-layout (location = 0) out vec4 outPositionMetallic;
-layout (location = 1) out vec4 outNormalRoughness;
-layout (location = 2) out vec4 outAlbedoAO;
+layout (location = 0) out vec4 outNormalRoughness;
+layout (location = 1) out vec4 outAlbedoMetallic;
 
 void main() 
 {
@@ -93,16 +91,12 @@ void main()
 
 	float metallic = uboDynamic.enableMetallicSampler ? texture(metallicSampler, ex_TexCoord).r : uboDynamic.constMetallic;
 	float roughness = uboDynamic.enableRoughnessSampler ? texture(roughnessSampler, ex_TexCoord).r : uboDynamic.constRoughness;
-	float ao = uboDynamic.enableAOSampler ? texture(aoSampler, ex_TexCoord).r : uboDynamic.constAO;
 
 	N = normalize(mat3(uboConstant.view) * N);
-
-	outPositionMetallic.rgb = ex_WorldPos;
-	outPositionMetallic.a = metallic;
 
 	outNormalRoughness.rgb = N;
 	outNormalRoughness.a = roughness;
 	
-	outAlbedoAO.rgb = albedo;
-	outAlbedoAO.a = ao;
+	outAlbedoMetallic.rgb = albedo;
+	outAlbedoMetallic.a = metallic;
 }

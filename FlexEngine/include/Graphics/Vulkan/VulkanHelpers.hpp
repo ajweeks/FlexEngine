@@ -310,7 +310,7 @@ namespace flex
 		void CreateAttachment(
 			VulkanDevice* device,
 			VkFormat format,
-			VkImageUsageFlagBits usage,
+			VkImageUsageFlags usage,
 			u32 width,
 			u32 height,
 			u32 arrayLayers,
@@ -328,9 +328,10 @@ namespace flex
 		bool HasStencilComponent(VkFormat format);
 		u32 FindMemoryType(VulkanDevice* device, u32 typeFilter, VkMemoryPropertyFlags properties);
 		void TransitionImageLayout(VulkanDevice* device, VkQueue graphicsQueue, VkImage image, VkFormat format, VkImageLayout oldLayout,
-			VkImageLayout newLayout, u32 mipLevels);
+			VkImageLayout newLayout, u32 mipLevels, VkCommandBuffer optCmdBuf = VK_NULL_HANDLE, bool bIsDepthTexture = false);
 
-		void CopyImage(VulkanDevice* device, VkQueue graphicsQueue, VkImage srcImage, VkImage dstImage, u32 width, u32 height);
+		void CopyImage(VulkanDevice* device, VkQueue graphicsQueue, VkImage srcImage, VkImage dstImage, u32 width, u32 height,
+			VkCommandBuffer optCmdBuf = VK_NULL_HANDLE, VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_COLOR_BIT);
 		void CopyBufferToImage(VulkanDevice* device, VkQueue graphicsQueue, VkBuffer buffer, VkImage image, u32 width, u32 height);
 		VkResult CreateAndAllocateBuffer(VulkanDevice* device, VkDeviceSize size, VkBufferUsageFlags usage,
 			VkMemoryPropertyFlags properties, VulkanBuffer* buffer);
@@ -501,6 +502,8 @@ namespace flex
 			VulkanTexture* irradianceTexture = nullptr;
 			VulkanTexture* brdfLUT = nullptr;
 			VulkanTexture* prefilterTexture = nullptr;
+
+			bool bDepthSampler = false;
 
 			std::vector<std::pair<u32, VkImageView*>> frameBufferViews; // Name of frame buffer paired with view i32o frame buffer
 		};

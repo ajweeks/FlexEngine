@@ -1224,18 +1224,26 @@ namespace flex
 			return u32_max;
 		}
 
-		void TransitionImageLayout(VulkanDevice* device, VkQueue graphicsQueue, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, u32 mipLevels)
+		void TransitionImageLayout(VulkanDevice* device, VkQueue graphicsQueue, VkImage image, VkFormat format, VkImageLayout oldLayout,
+			VkImageLayout newLayout, u32 mipLevels, VkCommandBuffer optCmdBuf /* = VK_NULL_HANDLE */, bool bIsDepthTexture /* = false */)
 		{
-			VkCommandBuffer commandBuffer = BeginSingleTimeCommands(device);
+			VkCommandBuffer commandBuffer = optCmdBuf;
+			if (commandBuffer == VK_NULL_HANDLE)
+			{
+				commandBuffer = BeginSingleTimeCommands(device);
+			}
 
 			VkImageMemoryBarrier barrier = vks::imageMemoryBarrier();
 			barrier.oldLayout = oldLayout;
 			barrier.newLayout = newLayout;
 			barrier.image = image;
 
-			if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+			if (bIsDepthTexture ||
+				oldLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL ||
+				newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
 			{
 				barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+				barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
 
 				if (HasStencilComponent(format))
 				{
@@ -1244,11 +1252,14 @@ namespace flex
 			}
 			else
 			{
+				assert(oldLayout != VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL &&
+					   newLayout != VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+
 				barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				barrier.subresourceRange.levelCount = mipLevels;
 			}
 
 			barrier.subresourceRange.baseMipLevel = 0;
-			barrier.subresourceRange.levelCount = mipLevels;
 			barrier.subresourceRange.baseArrayLayer = 0;
 			barrier.subresourceRange.layerCount = 1;
 
@@ -1262,7 +1273,7 @@ namespace flex
 				newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 			{
 				barrier.srcAccessMask = 0;
-				barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT; // TODO: Double check
+				barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 			}
 			else if (oldLayout == VK_IMAGE_LAYOUT_PREINITIALIZED &&
 				newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
@@ -1274,7 +1285,7 @@ namespace flex
 				newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
 			{
 				barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
-				barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT; // TODO: Double check
+				barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 			}
 			else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
 				newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
@@ -1297,26 +1308,56 @@ namespace flex
 			else if (oldLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL &&
 				newLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
 			{
-				barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT; // TODO: Double check
+				barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
 				barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 			}
 			else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL &&
 				newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 			{
-				barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT; // TODO: Double check
+				barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 				barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 			}
 			else if (oldLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL &&
 				newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
 			{
-				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT; // TODO: Double check
+				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 				barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+			}
+			else if (oldLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL &&
+				newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+			{
+				barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+				barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+			}
+			else if (oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL&&
+				newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+			{
+				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+				barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 			}
 			else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED &&
 				newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
 			{
 				barrier.srcAccessMask = 0;
 				barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+			}
+			else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED &&
+				newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+			{
+				barrier.srcAccessMask = 0;
+				barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			}
+			else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
+				newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+			{
+				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+				barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+			}
+			else if (oldLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL &&
+				newLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
+			{
+				barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+				barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 			}
 			else
 			{
@@ -1331,15 +1372,23 @@ namespace flex
 				0, nullptr,
 				1, &barrier);
 
-			EndSingleTimeCommands(device, graphicsQueue, commandBuffer);
+			if (optCmdBuf == VK_NULL_HANDLE)
+			{
+				EndSingleTimeCommands(device, graphicsQueue, commandBuffer);
+			}
 		}
 
-		void CopyImage(VulkanDevice* device, VkQueue graphicsQueue, VkImage srcImage, VkImage dstImage, u32 width, u32 height)
+		void CopyImage(VulkanDevice* device, VkQueue graphicsQueue, VkImage srcImage, VkImage dstImage, u32 width, u32 height,
+			VkCommandBuffer optCmdBuf /* = VK_NULL_HANDLE */, VkImageAspectFlags aspectMask /* = VK_IMAGE_ASPECT_COLOR_BIT */)
 		{
-			VkCommandBuffer commandBuffer = BeginSingleTimeCommands(device);
+			VkCommandBuffer commandBuffer = optCmdBuf;
+			if (commandBuffer == VK_NULL_HANDLE)
+			{
+				commandBuffer = BeginSingleTimeCommands(device);
+			}
 
 			VkImageSubresourceLayers subresource = {};
-			subresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			subresource.aspectMask = aspectMask;
 			subresource.baseArrayLayer = 0;
 			subresource.mipLevel = 0;
 			subresource.layerCount = 1;
@@ -1356,7 +1405,10 @@ namespace flex
 			vkCmdCopyImage(commandBuffer, srcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 				dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
-			EndSingleTimeCommands(device, graphicsQueue, commandBuffer);
+			if (optCmdBuf == VK_NULL_HANDLE)
+			{
+				EndSingleTimeCommands(device, graphicsQueue, commandBuffer);
+			}
 		}
 
 		void CopyBufferToImage(VulkanDevice* device, VkQueue graphicsQueue, VkBuffer buffer, VkImage image, u32 width, u32 height)
@@ -1687,7 +1739,7 @@ namespace flex
 		void CreateAttachment(
 			VulkanDevice* device,
 			VkFormat format,
-			VkImageUsageFlagBits usage,
+			VkImageUsageFlags usage,
 			u32 width,
 			u32 height,
 			u32 arrayLayers,

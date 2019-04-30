@@ -35,8 +35,13 @@
 
 @ glslangvalidator --spirv-val -V vk_font_ws.vert -o spv/vk_font_ws_vert.spv
 @ glslangvalidator --spirv-val -V vk_font_ws.geom -o spv/vk_font_ws_geom.spv
-
 @ glslangvalidator --spirv-val -V vk_font.frag -o spv/vk_font_frag.spv
+
+@ glslangvalidator --spirv-val -V vk_ssao.vert -o spv/vk_ssao_vert.spv
+@ glslangvalidator --spirv-val -V vk_ssao.frag -o spv/vk_ssao_frag.spv
+
+@ glslangvalidator --spirv-val -V vk_ssao_blur.vert -o spv/vk_ssao_blur_vert.spv
+@ glslangvalidator --spirv-val -V vk_ssao_blur.frag -o spv/vk_ssao_blur_frag.spv
 
 @REM ImGui
 @ glslangValidator --spirv-val -V vk_imgui.frag -o spv/vk_imgui_frag.spv

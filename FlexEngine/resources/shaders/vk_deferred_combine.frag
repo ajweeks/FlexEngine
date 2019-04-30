@@ -45,9 +45,9 @@ layout (binding = 2) uniform sampler2D brdfLUT;
 layout (binding = 3) uniform samplerCube irradianceSampler;
 layout (binding = 4) uniform samplerCube prefilterMap;
 
-layout (binding = 5) uniform sampler2D positionMetallicFrameBufferSampler;
+layout (binding = 5) uniform sampler2D depthBuffer;
 layout (binding = 6) uniform sampler2D normalRoughnessFrameBufferSampler;
-layout (binding = 7) uniform sampler2D albedoAOFrameBufferSampler;
+layout (binding = 7) uniform sampler2D albedoMetallicFrameBufferSampler;
 
 vec3 FresnelSchlick(float cosTheta, vec3 F0)
 {
@@ -115,18 +115,24 @@ vec3 DoLighting(vec3 radiance, vec3 N, vec3 V, vec3 L, float NoV, float NoL,
 	return (kD * albedo / PI + specular) * radiance * NoL;
 }
 
+vec3 reconstructPosFromDepth()
+{
+	float depth = texture(depthBuffer, ex_TexCoord).r;
+	return vec3(0);
+}
+
 void main()
 {
 	// Retrieve data from gbuffer
-    vec3 worldPos = texture(positionMetallicFrameBufferSampler, ex_TexCoord).rgb;
-    float metallic = texture(positionMetallicFrameBufferSampler, ex_TexCoord).a;
+    vec3 worldPos = reconstructPosFromDepth();
 
     vec3 N = texture(normalRoughnessFrameBufferSampler, ex_TexCoord).rgb;
+    // TODO: Keep in view space?
     N = mat3(uboConstant.invView) * N; // view space -> world space
     float roughness = texture(normalRoughnessFrameBufferSampler, ex_TexCoord).a;
 
-    vec3 albedo = texture(albedoAOFrameBufferSampler, ex_TexCoord).rgb;
-    float ao = texture(albedoAOFrameBufferSampler, ex_TexCoord).a;
+    vec3 albedo = texture(albedoMetallicFrameBufferSampler, ex_TexCoord).rgb;
+    float metallic = texture(albedoMetallicFrameBufferSampler, ex_TexCoord).a;
 
 	vec3 V = normalize(uboConstant.camPos.xyz - worldPos);
 	vec3 R = reflect(-V, N);
@@ -190,11 +196,11 @@ void main()
 		vec2 brdf = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
 		vec3 specular = prefilteredColor * (F * brdf.x + brdf.y);
 
-	    ambient = (kD * diffuse + specular) * ao;
+	    ambient = (kD * diffuse + specular);
 	}
 	else
 	{
-		ambient = vec3(0.03) * albedo * ao;
+		ambient = vec3(0.03) * albedo;
 	}
 
 	vec3 color = ambient + Lo;

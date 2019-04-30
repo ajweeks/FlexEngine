@@ -76,6 +76,12 @@ namespace flex
 
 		void VulkanCommandBufferManager::CreateCommandBuffers(u32 count)
 		{
+			if (!m_CommandBuffers.empty())
+			{
+				vkFreeCommandBuffers(m_VulkanDevice->m_LogicalDevice, m_VulkanDevice->m_CommandPool, m_CommandBuffers.size(), m_CommandBuffers.data());
+				m_CommandBuffers.clear();
+			}
+
 			m_CommandBuffers.resize(count);
 
 			VkCommandBufferAllocateInfo allocInfo = vks::commandBufferAllocateInfo(m_VulkanDevice->m_CommandPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, (u32)m_CommandBuffers.size());

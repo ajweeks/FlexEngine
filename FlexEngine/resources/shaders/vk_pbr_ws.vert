@@ -30,13 +30,11 @@ layout (binding = 1) uniform UBODynamic
 	vec4 constAlbedo;
 	float constMetallic;
 	float constRoughness;
-	float constAO;
 
 	// PBR samplers
 	bool enableAlbedoSampler;
 	bool enableMetallicSampler;
 	bool enableRoughnessSampler;
-	bool enableAOSampler;
 	bool enableNormalSampler;
 	
 	float blendSharpness;
@@ -45,9 +43,6 @@ layout (binding = 1) uniform UBODynamic
 
 void main()
 {
-    vec4 worldPos = uboDynamic.model * vec4(in_Position, 1.0);
-    ex_WorldPos = worldPos.xyz; 
-	
 	ex_TexCoord = in_TexCoord;
 
 	vec3 bitan = cross(in_Normal, in_Tangent);
@@ -56,5 +51,7 @@ void main()
 		normalize(mat3(uboDynamic.model) * bitan), 
 		normalize(mat3(uboDynamic.model) * in_Normal));
 
+    vec4 worldPos = uboDynamic.model * vec4(in_Position, 1.0);
+    ex_WorldPos = worldPos.xyz;
     gl_Position = uboConstant.viewProjection * worldPos;
 }
