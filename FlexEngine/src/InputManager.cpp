@@ -676,8 +676,13 @@ namespace flex
 
 		if (action == KeyAction::PRESS)
 		{
-			m_MouseButtonStates    |=  (1 << (u32)mouseButton);
-			m_MouseButtonsPressed  |=  (1 << (u32)mouseButton);
+			if (m_MousePosition.x == -1.0f)
+			{
+				m_MousePosition = g_Window->GetMousePosition();
+			}
+
+			m_MouseButtonStates |= (1 << (u32)mouseButton);
+			m_MouseButtonsPressed |= (1 << (u32)mouseButton);
 			m_MouseButtonsReleased &= ~(1 << (u32)mouseButton);
 
 			m_MouseButtonDrags[(i32)mouseButton].startLocation = m_MousePosition;
@@ -688,6 +693,12 @@ namespace flex
 			m_MouseButtonStates    &= ~(1 << (u32)mouseButton);
 			m_MouseButtonsPressed  &= ~(1 << (u32)mouseButton);
 			m_MouseButtonsReleased |=  (1 << (u32)mouseButton);
+
+
+			if (m_MousePosition.x == -1.0f)
+			{
+				m_MousePosition = g_Window->GetMousePosition();
+			}
 
 			m_MouseButtonDrags[(i32)mouseButton].endLocation = m_MousePosition;
 		}

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "InputTypes.hpp"
 
@@ -99,6 +99,8 @@ namespace flex
 		virtual void WindowSizeCallback(i32 width, i32 height, bool bMaximized, bool bIconified);
 		virtual void WindowPosCallback(i32 newX, i32 newY);
 		virtual void FrameBufferSizeCallback(i32 width, i32 height);
+
+		virtual glm::vec2 GetMousePosition() = 0;
 
 		bool IsMaximized() const;
 		virtual void Maximize() = 0;

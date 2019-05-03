@@ -517,6 +517,13 @@ namespace flex
 		glfwSetCursorPos(m_Window, (double)mousePosition.x, (double)mousePosition.y);
 	}
 
+	glm::vec2 GLFWWindowWrapper::GetMousePosition()
+	{
+		double posX, posY;
+		glfwGetCursorPos(m_Window, &posX, &posY);
+		return glm::vec2((real)posX, (real)posY);
+	}
+
 	void GLFWWindowWrapper::MoveConsole()
 	{
 		HWND hWnd = GetConsoleWindow();

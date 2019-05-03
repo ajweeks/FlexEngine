@@ -61,6 +61,7 @@ namespace flex
 	protected:
 		virtual void SetWindowTitle(const std::string& title) override;
 		virtual void SetMousePosition(glm::vec2 mousePosition) override;
+		virtual glm::vec2 GetMousePosition() override;
 
 		void MoveConsole();
 
