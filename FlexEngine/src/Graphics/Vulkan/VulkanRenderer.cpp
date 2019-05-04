@@ -717,10 +717,10 @@ namespace flex
 
 			VkCommandBuffer cmdBuf = m_CommandBufferManager.CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
 
-			VkViewport viewport = vks::viewport((real)dim, (real)dim, 0.0f, 1.0f);
+			VkViewport viewport = vks::viewportFlipped((real)dim, (real)dim, 0.0f, 1.0f);
 			vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
 
-			VkRect2D scissor = vks::scissor(0, 0, dim, dim);
+			VkRect2D scissor = vks::scissor(0u, 0u, dim, dim);
 			vkCmdSetScissor(cmdBuf, 0, 1, &scissor);
 
 			VkImageSubresourceRange subresourceRange = {};
@@ -751,12 +751,16 @@ namespace flex
 
 			for (u32 mip = 0; mip < mipLevels; ++mip)
 			{
+				real viewportSize = static_cast<real>(dim * std::pow(0.5f, mip));
+				viewport = vks::viewportFlipped(viewportSize, viewportSize, 0.0f, 1.0f);
+				vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
+
+				scissor.extent.width = (u32)viewport.width;
+				scissor.extent.height = (u32)abs(viewport.height);
+				vkCmdSetScissor(cmdBuf, 0, 1, &scissor);
+
 				for (u32 face = 0; face < 6; ++face)
 				{
-					viewport.width = static_cast<real>(dim * std::pow(0.5f, mip));
-					viewport.height = -viewport.width;
-					vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
-
 					vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 					// Push constants
@@ -884,6 +888,7 @@ namespace flex
 			dependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
 			dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 			dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
 			dependencies[1].srcSubpass = 0;
 			dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
 			dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -1076,10 +1081,10 @@ namespace flex
 
 			VkCommandBuffer cmdBuf = m_CommandBufferManager.CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
 
-			VkViewport viewport = vks::viewport((real)dim, (real)dim, 0.0f, 1.0f);
+			VkViewport viewport = vks::viewportFlipped((real)dim, (real)dim, 0.0f, 1.0f);
 			vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
 
-			VkRect2D scissor = vks::scissor(0, 0, dim, dim);
+			VkRect2D scissor = vks::scissor(0u, 0u, dim, dim);
 			vkCmdSetScissor(cmdBuf, 0, 1, &scissor);
 
 			VkImageSubresourceRange subresourceRange = {};
@@ -1099,12 +1104,16 @@ namespace flex
 
 			for (u32 mip = 0; mip < mipLevels; ++mip)
 			{
+				real viewportSize = static_cast<real>(dim * std::pow(0.5f, mip));
+				viewport = vks::viewportFlipped(viewportSize, viewportSize, 0.0f, 1.0f);
+				vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
+
+				scissor.extent.width = (u32)viewport.width;
+				scissor.extent.height = (u32)abs(viewport.height);
+				vkCmdSetScissor(cmdBuf, 0, 1, &scissor);
+
 				for (u32 face = 0; face < 6; ++face)
 				{
-					viewport.width = static_cast<real>(dim * std::pow(0.5f, mip));
-					viewport.height = viewport.width;
-					vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
-
 					vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 					// Push constants
@@ -1156,7 +1165,7 @@ namespace flex
 					copyRegion.dstOffset = { 0, 0, 0 };
 
 					copyRegion.extent.width = static_cast<u32>(viewport.width);
-					copyRegion.extent.height = static_cast<u32>(viewport.height);
+					copyRegion.extent.height = static_cast<u32>(abs(viewport.height));
 					copyRegion.extent.depth = 1;
 
 					vkCmdCopyImage(
@@ -1361,7 +1370,7 @@ namespace flex
 
 			// Pipeline
 			VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = vks::pipelineInputAssemblyStateCreateInfo(skyboxRenderObject->topology, 0, VK_FALSE);
-			VkPipelineRasterizationStateCreateInfo rasterizationState = vks::pipelineRasterizationStateCreateInfo(VK_POLYGON_MODE_FILL, skyboxRenderObject->cullMode, VK_FRONT_FACE_CLOCKWISE);
+			VkPipelineRasterizationStateCreateInfo rasterizationState = vks::pipelineRasterizationStateCreateInfo(VK_POLYGON_MODE_FILL, VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
 			VkPipelineColorBlendAttachmentState blendAttachmentState = vks::pipelineColorBlendAttachmentState(0xF, VK_FALSE);
 			VkPipelineColorBlendStateCreateInfo colorBlendState = vks::pipelineColorBlendStateCreateInfo(1, &blendAttachmentState);
 			VkPipelineDepthStencilStateCreateInfo depthStencilState = vks::pipelineDepthStencilStateCreateInfo(VK_FALSE, VK_FALSE, VK_COMPARE_OP_GREATER_OR_EQUAL);
@@ -1415,10 +1424,10 @@ namespace flex
 
 			VkCommandBuffer cmdBuf = m_CommandBufferManager.CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
 
-			VkViewport viewport = vks::viewport((real)dim, (real)dim, 0.0f, 1.0f);
+			VkViewport viewport = vks::viewportFlipped((real)dim, (real)dim, 0.0f, 1.0f);
 			vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
 
-			VkRect2D scissor = vks::scissor(0, 0, dim, dim);
+			VkRect2D scissor = vks::scissor(0u, 0u, dim, dim);
 			vkCmdSetScissor(cmdBuf, 0, 1, &scissor);
 
 			VkImageSubresourceRange subresourceRange = {};
@@ -1434,15 +1443,20 @@ namespace flex
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				subresourceRange);
+			renderObjectMat.prefilterTexture->imageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 
 			for (u32 mip = 0; mip < mipLevels; ++mip)
 			{
+				real viewportSize = static_cast<real>(dim * std::pow(0.5f, mip));
+				viewport = vks::viewportFlipped(viewportSize, viewportSize, 0.0f, 1.0f);
+				vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
+
+				scissor.extent.width = (u32)viewport.width;
+				scissor.extent.height = (u32)abs(viewport.height);
+				vkCmdSetScissor(cmdBuf, 0, 1, &scissor);
+
 				for (u32 face = 0; face < 6; ++face)
 				{
-					viewport.width = static_cast<real>(dim * std::pow(0.5f, mip));
-					viewport.height = viewport.width;
-					vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
-
 					vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 					// Push constants
@@ -1494,7 +1508,7 @@ namespace flex
 					copyRegion.dstOffset = { 0, 0, 0 };
 
 					copyRegion.extent.width = static_cast<u32>(viewport.width);
-					copyRegion.extent.height = static_cast<u32>(viewport.height);
+					copyRegion.extent.height = static_cast<u32>(abs(viewport.height));
 					copyRegion.extent.depth = 1;
 
 					vkCmdCopyImage(

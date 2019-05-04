@@ -180,6 +180,22 @@ namespace flex
 		{
 			VkViewport viewport{};
 			viewport.x = 0.0f;
+			viewport.y = 0.0f;
+			viewport.width = width;
+			viewport.height = height;
+			viewport.minDepth = minDepth;
+			viewport.maxDepth = maxDepth;
+			return viewport;
+		}
+
+		inline VkViewport viewportFlipped(
+			real width,
+			real height,
+			real minDepth,
+			real maxDepth)
+		{
+			VkViewport viewport{};
+			viewport.x = 0.0f;
 			viewport.y = height;
 			viewport.width = width;
 			viewport.height = -height; // Negative viewport height support requires VK_KHR_maintenance1 (core in Vulkan 1.1)
