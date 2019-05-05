@@ -91,6 +91,23 @@ namespace flex
 				Print("Device driver version: %u\n", props.driverVersion);
 			}
 
+			VkPhysicalDeviceMemoryProperties physicalDeviceMemProps;
+			vkGetPhysicalDeviceMemoryProperties(physicalDevice, &physicalDeviceMemProps);
+			Print("%u Memory heap(s) present on device:\n\t", physicalDeviceMemProps.memoryHeapCount);
+			for (u32 i = 0; i < physicalDeviceMemProps.memoryHeapCount; ++i)
+			{
+				const VkMemoryHeap& heap = physicalDeviceMemProps.memoryHeaps[i];
+				Print("%.2f GB (%s local)", (real)heap.size / (1024.0f * 1024.0f * 1024.0f), heap.flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT ? "device" : "host");
+				if (i != physicalDeviceMemProps.memoryHeapCount - 1)
+				{
+					Print(", ");
+				}
+				else
+				{
+					Print("\n");
+				}
+			}
+
 			m_CommandBufferManager = VulkanCommandBufferManager(m_VulkanDevice);
 
 			m_DepthAttachment = new FrameBufferAttachment(m_VulkanDevice->m_LogicalDevice);
