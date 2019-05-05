@@ -79,16 +79,22 @@ namespace flex
 			CreateLogicalDevice(physicalDevice);
 
 			{
+				u32 instanceAPIVersion;
+				VK_CHECK_RESULT(vkEnumerateInstanceVersion(&instanceAPIVersion));
+				u32 instanceVersionMaj = VK_VERSION_MAJOR(instanceAPIVersion);
+				u32 instanceVersionMin = VK_VERSION_MINOR(instanceAPIVersion);
+				u32 instanceVersionPatch = VK_VERSION_PATCH(instanceAPIVersion);
+
 				VkPhysicalDeviceProperties& props = m_VulkanDevice->m_PhysicalDeviceProperties;
-				u32 vkVersionMaj = VK_VERSION_MAJOR(props.apiVersion);
-				u32 vkVersionMin = VK_VERSION_MINOR(props.apiVersion);
-				u32 vkVersionPatch = VK_VERSION_PATCH(props.apiVersion);
-				assert(props.apiVersion >= VK_MAKE_VERSION(1, 1, 0)); // We need this version to support negative viewport heights
-				Print("Vulkan loaded - v%u.%u.%u\n", vkVersionMaj, vkVersionMin, vkVersionPatch);
+				u32 deviceVersionMaj = VK_VERSION_MAJOR(props.apiVersion);
+				u32 deviceVersionMin = VK_VERSION_MINOR(props.apiVersion);
+				u32 deviceVersionPatch = VK_VERSION_PATCH(props.apiVersion);
+
+				Print("Vulkan loaded - instance v%u.%u.%u (device v%u.%u.%u)\n", instanceVersionMaj, instanceVersionMin, instanceVersionPatch, deviceVersionMaj, deviceVersionMin, deviceVersionPatch);
 				Print("Vendor ID, Device ID: 0x%u, 0x%u\n", props.vendorID, props.deviceID);
-				Print("Device name: %s\n", (const char*)props.deviceName);
-				Print("Device type: %s\n", DeviceTypeToString(props.deviceType).c_str());
-				Print("Device driver version: %u\n", props.driverVersion);
+				Print("Device info: %s, ", (const char*)props.deviceName);
+				Print("(%s), ", DeviceTypeToString(props.deviceType).c_str());
+				Print("driver version: %u\n", props.driverVersion);
 			}
 
 			VkPhysicalDeviceMemoryProperties physicalDeviceMemProps;
