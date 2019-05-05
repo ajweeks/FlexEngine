@@ -2145,6 +2145,13 @@ namespace flex
 
 		void VulkanRenderer::Draw()
 		{
+			glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+			if (m_SwapChainExtent.width == 0u || m_SwapChainExtent.height == 0u ||
+				frameBufferSize.x == 0 || frameBufferSize.y == 0)
+			{
+				return;
+			}
+
 			DrawCallInfo drawCallInfo = {};
 
 			if (!m_PhysicsDebuggingSettings.DisableAll)
