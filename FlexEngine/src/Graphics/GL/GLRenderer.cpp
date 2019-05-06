@@ -681,7 +681,7 @@ namespace flex
 			mat.material.generateNormalSampler = createInfo->generateNormalSampler;
 			mat.material.enableNormalSampler = createInfo->enableNormalSampler;
 
-			mat.material.frameBuffers = createInfo->frameBuffers;
+			mat.material.sampledFrameBuffers = createInfo->sampledFrameBuffers;
 
 			mat.material.enableCubemapTrilinearFiltering = createInfo->enableCubemapTrilinearFiltering;
 
@@ -864,7 +864,7 @@ namespace flex
 				}
 			}
 
-			for (auto& frameBufferPair : createInfo->frameBuffers)
+			for (auto& frameBufferPair : createInfo->sampledFrameBuffers)
 			{
 				const char* frameBufferName = frameBufferPair.first.c_str();
 				i32 positionLocation = glGetUniformLocation(shader.program, frameBufferName);
@@ -3801,21 +3801,14 @@ namespace flex
 		{
 			Material* material = &glMaterial->material;
 
-			struct Tex
-			{
-				bool needed;
-				bool enabled;
-				u32 textureID;
-			};
-
-			if (material->frameBuffers.empty())
+			if (material->sampledFrameBuffers.empty())
 			{
 				PrintWarn("Attempted to bind frame buffers on material that doesn't contain any framebuffers!\n");
 				return startingBinding;
 			}
 
 			u32 binding = startingBinding;
-			for (auto& frameBufferPair : material->frameBuffers)
+			for (auto& frameBufferPair : material->sampledFrameBuffers)
 			{
 				GLenum activeTexture = (GLenum)(GL_TEXTURE0 + (GLuint)binding);
 				glActiveTexture(activeTexture);
@@ -4080,7 +4073,6 @@ namespace flex
 
 			// Deferred combine
 			m_Shaders[shaderID].shader.bDeferred = false; // Sounds strange but this isn't deferred
-			// m_Shaders[shaderID].shader.subpass = 0;
 			m_Shaders[shaderID].shader.bDepthWriteEnable = false; // Disable depth writing
 			m_Shaders[shaderID].shader.bNeedBRDFLUT = true;
 			m_Shaders[shaderID].shader.bNeedShadowMap = true;
@@ -4112,7 +4104,6 @@ namespace flex
 
 			// Deferred combine cubemap
 			m_Shaders[shaderID].shader.bDeferred = false; // Sounds strange but this isn't deferred
-			// m_Shaders[shaderID].shader.subpass = 0;
 			m_Shaders[shaderID].shader.bDepthWriteEnable = false; // Disable depth writing
 			m_Shaders[shaderID].shader.bNeedBRDFLUT = true;
 			//m_Shaders[shaderID].shader.bNeedShadowMap = true;
@@ -4140,7 +4131,6 @@ namespace flex
 			++shaderID;
 
 			// Color
-			m_Shaders[shaderID].shader.bDeferred = false;
 			m_Shaders[shaderID].shader.bTranslucent = true;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION |
@@ -4202,7 +4192,6 @@ namespace flex
 			++shaderID;
 
 			// Skybox
-			m_Shaders[shaderID].shader.bDeferred = false;
 			m_Shaders[shaderID].shader.bNeedCubemapSampler = true;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION;
@@ -4218,7 +4207,6 @@ namespace flex
 			++shaderID;
 
 			// Equirectangular to Cube
-			m_Shaders[shaderID].shader.bDeferred = false;
 			m_Shaders[shaderID].shader.bNeedHDREquirectangularSampler = true;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION;
@@ -4231,7 +4219,6 @@ namespace flex
 			++shaderID;
 
 			// Irradiance
-			m_Shaders[shaderID].shader.bDeferred = false;
 			m_Shaders[shaderID].shader.bNeedCubemapSampler = true;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION;
@@ -4244,7 +4231,6 @@ namespace flex
 			++shaderID;
 
 			// Prefilter
-			m_Shaders[shaderID].shader.bDeferred = false;
 			m_Shaders[shaderID].shader.bNeedCubemapSampler = true;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION;
@@ -4257,7 +4243,6 @@ namespace flex
 			++shaderID;
 
 			// BRDF
-			m_Shaders[shaderID].shader.bDeferred = false;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV;
@@ -4268,8 +4253,6 @@ namespace flex
 			++shaderID;
 
 			// Sprite
-			m_Shaders[shaderID].shader.bDeferred = false;
-
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV;
@@ -4285,7 +4268,6 @@ namespace flex
 			++shaderID;
 
 			// Post processing
-			m_Shaders[shaderID].shader.bDeferred = false;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION_2D |
 				(u32)VertexAttribute::UV;
@@ -4299,7 +4281,6 @@ namespace flex
 			++shaderID;
 
 			// Post FXAA (Fast approximate anti-aliasing)
-			m_Shaders[shaderID].shader.bDeferred = false;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION_2D |
 				(u32)VertexAttribute::UV;
@@ -4317,7 +4298,6 @@ namespace flex
 			++shaderID;
 
 			// Compute SDF
-			m_Shaders[shaderID].shader.bDeferred = false;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV;
@@ -4335,7 +4315,6 @@ namespace flex
 			++shaderID;
 
 			// Font SS
-			m_Shaders[shaderID].shader.bDeferred = false;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION_2D |
 				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
@@ -4354,7 +4333,6 @@ namespace flex
 			++shaderID;
 
 			// Font WS
-			m_Shaders[shaderID].shader.bDeferred = false;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
@@ -4372,7 +4350,6 @@ namespace flex
 			++shaderID;
 
 			// Shadow
-			m_Shaders[shaderID].shader.bDeferred = false;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION;
 
@@ -4771,7 +4748,7 @@ namespace flex
 			ssaoMaterialCreateInfo.name = "SSAO";
 			ssaoMaterialCreateInfo.shaderName = "ssao";
 			ssaoMaterialCreateInfo.engineMaterial = true;
-			ssaoMaterialCreateInfo.frameBuffers = {
+			ssaoMaterialCreateInfo.sampledFrameBuffers = {
 				{ "normalRoughnessFrameBufferSampler", &m_gBufferFBO0.id },
 			};
 
@@ -4781,7 +4758,7 @@ namespace flex
 			ssaoBlurMaterialCreateInfo.name = "SSAO Blur";
 			ssaoBlurMaterialCreateInfo.shaderName = "ssao_blur";
 			ssaoBlurMaterialCreateInfo.engineMaterial = true;
-			ssaoBlurMaterialCreateInfo.frameBuffers = {
+			ssaoBlurMaterialCreateInfo.sampledFrameBuffers = {
 				{ "ssaoFrameBufferSampler",  &m_SSAOFBO.id },
 			};
 
@@ -4837,8 +4814,6 @@ namespace flex
 				m_gBufferDepthTexHandle.type,
 				newFrameBufferSize);
 
-			// TODO: GenerateSSAOMaterials?
-
 			ResizeFrameBufferTexture(m_SSAOFBO.id,
 				m_SSAOFBO.internalFormat,
 				m_SSAOFBO.format,
@@ -4856,6 +4831,7 @@ namespace flex
 		{
 			// G-Buffer needs to be regenerated using new scene's reflection probe mat ID
 			GenerateGBuffer();
+
 			if (m_DirectionalLight != nullptr)
 			{
 				m_DirectionalLight->shadowTextureID = m_ShadowMapTexture.id;
@@ -4864,7 +4840,6 @@ namespace flex
 
 		void GLRenderer::OnPostSceneChange()
 		{
-
 		}
 
 		bool GLRenderer::GetRenderObjectCreateInfo(RenderID renderID, RenderObjectCreateInfo& outInfo)
@@ -5006,7 +4981,7 @@ namespace flex
 			gBufferMaterialCreateInfo.prefilterMapSamplerMatID = m_ReflectionProbeMaterialID;
 			gBufferMaterialCreateInfo.enableBRDFLUT = true;
 			gBufferMaterialCreateInfo.engineMaterial = true;
-			gBufferMaterialCreateInfo.frameBuffers = {
+			gBufferMaterialCreateInfo.sampledFrameBuffers = {
 				{ "normalRoughnessFrameBufferSampler", &m_gBufferFBO0.id },
 				{ "albedoMetallicFrameBufferSampler", &m_gBufferFBO1.id },
 				{ "ssaoBlurFrameBufferSampler",	m_bSSAOBlurEnabled ? &m_SSAOBlurFBO.id : &m_SSAOFBO.id },

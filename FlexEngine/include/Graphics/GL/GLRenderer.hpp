@@ -241,7 +241,6 @@ namespace flex
 			TextureHandle m_gBufferDepthTexHandle;
 
 			// TODO: Resize all framebuffers automatically by inserting into container
-			// TODO: Remove ??
 			TextureHandle m_gBufferFBO0;
 			TextureHandle m_gBufferFBO1;
 

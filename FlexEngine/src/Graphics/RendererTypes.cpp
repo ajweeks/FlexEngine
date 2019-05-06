@@ -87,7 +87,7 @@ namespace flex
 				generateNormalSampler == other.generateNormalSampler &&
 				enableNormalSampler == other.enableNormalSampler &&
 				normalTexturePath == other.normalTexturePath &&
-				frameBuffers.size() == other.frameBuffers.size() &&
+				sampledFrameBuffers.size() == other.sampledFrameBuffers.size() &&
 				generateCubemapSampler == other.generateCubemapSampler &&
 				enableCubemapSampler == other.enableCubemapSampler &&
 				cubemapSamplerSize == other.cubemapSamplerSize &&

@@ -1810,7 +1810,7 @@ namespace flex
 			mat.material.generateNormalSampler = createInfo->generateNormalSampler;
 			mat.material.enableNormalSampler = createInfo->enableNormalSampler;
 
-			mat.material.frameBuffers = createInfo->frameBuffers;
+			mat.material.sampledFrameBuffers = createInfo->sampledFrameBuffers;
 
 			mat.material.enableCubemapSampler = createInfo->enableCubemapSampler;
 			mat.material.generateCubemapSampler = createInfo->generateCubemapSampler;
@@ -4671,9 +4671,9 @@ namespace flex
 				createInfo.ssaoFinalSampler = m_SSAOSampler;
 			}
 
-			for (size_t i = 0; i < material->material.frameBuffers.size(); ++i)
+			for (size_t i = 0; i < material->material.sampledFrameBuffers.size(); ++i)
 			{
-				createInfo.frameBufferViews.emplace_back(static_cast<u32>(U_FB_0_SAMPLER + i), static_cast<VkImageView*>(material->material.frameBuffers[i].second));
+				createInfo.frameBufferViews.emplace_back(static_cast<u32>(U_FB_0_SAMPLER + i), static_cast<VkImageView*>(material->material.sampledFrameBuffers[i].second));
 			}
 
 			CreateDescriptorSet(&createInfo);
@@ -5790,7 +5790,7 @@ namespace flex
 				gBufferMaterialCreateInfo.engineMaterial = true;
 				for (const auto& frameBufferAttachment : m_OffScreenFrameBuf->frameBufferAttachments)
 				{
-					gBufferMaterialCreateInfo.frameBuffers.emplace_back(
+					gBufferMaterialCreateInfo.sampledFrameBuffers.emplace_back(
 						frameBufferAttachment.first,
 						(void*)&frameBufferAttachment.second.view
 					);
@@ -5832,7 +5832,7 @@ namespace flex
 				gBufferCubemapMaterialCreateInfo.engineMaterial = true;
 				for (const auto& frameBufferAttachment : m_OffScreenFrameBuf->frameBufferAttachments)
 				{
-					gBufferCubemapMaterialCreateInfo.frameBuffers.emplace_back(
+					gBufferCubemapMaterialCreateInfo.sampledFrameBuffers.emplace_back(
 						frameBufferAttachment.first,
 						(void*)&frameBufferAttachment.second.view
 					);

@@ -244,7 +244,7 @@ namespace flex
 		std::string hdrEquirectangularTexturePath = "";
 
 		glm::vec4 colorMultiplier = { 1.0f, 1.0f, 1.0f, 1.0f };
-		std::vector<Pair<std::string, void*>> frameBuffers; // Pairs of frame buffer names (as seen in shader) and IDs
+		std::vector<Pair<std::string, void*>> sampledFrameBuffers; // Pairs of frame buffer names (as seen in shader) and IDs
 		glm::vec2 generatedIrradianceCubemapSize = { 0.0f, 0.0f };
 		MaterialID irradianceSamplerMatID = InvalidMaterialID; // The id of the material who has an irradiance sampler object (generateIrradianceSampler must be false)
 		std::string environmentMapPath = "";
@@ -292,7 +292,6 @@ namespace flex
 		bool generateReflectionProbeMaps = false;
 
 		bool engineMaterial = false;
-
 	};
 
 	struct Material
@@ -307,7 +306,7 @@ namespace flex
 		std::string normalTexturePath = "";
 
 		// GBuffer samplers
-		std::vector<Pair<std::string, void*>> frameBuffers; // Pairs of frame buffer names (as seen in shader) and IDs
+		std::vector<Pair<std::string, void*>> sampledFrameBuffers; // Pairs of frame buffer names (as seen in shader) and IDs
 
 		glm::vec2 cubemapSamplerSize = { 0, 0 };
 		std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
