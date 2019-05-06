@@ -361,6 +361,7 @@ namespace flex
 
 			Shader shader;
 
+			VkRenderPass renderPass = VK_NULL_HANDLE;
 			UniformBuffer uniformBuffer;
 			bool bDynamic = false;
 			u32 dynamicVertexBufferSize = 0;

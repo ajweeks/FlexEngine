@@ -147,6 +147,8 @@ namespace flex
 			void GenerateIrradianceSamplerFromCubemap(MaterialID cubemapMaterialID);
 			void GenerateBRDFLUT(u32 brdfLUTTextureID, i32 BRDFLUTSize);
 
+			void CacheMaterialUniformLocations(MaterialID matID);
+
 			void SwapBuffers();
 
 			void DrawSpriteQuad(const SpriteQuadDrawInfo& drawInfo);
@@ -235,13 +237,12 @@ namespace flex
 			u32 viewProjectionCombinedUBO = 0;
 
 			u32 m_gBufferHandle = 0;
-			u32 m_gBufferDepthHandle = 0;
+			TextureHandle m_gBufferDepthTexHandle;
 
 			// TODO: Resize all framebuffers automatically by inserting into container
 			// TODO: Remove ??
-			TextureHandle m_gBuffer_PositionMetallicHandle;
-			TextureHandle m_gBuffer_NormalRoughnessHandle;
-			TextureHandle m_gBuffer_AlbedoAOHandle;
+			TextureHandle m_gBufferFBO0;
+			TextureHandle m_gBufferFBO1;
 
 			TextureHandle m_ShadowMapTexture;
 			u32 m_ShadowMapFBO = 0;

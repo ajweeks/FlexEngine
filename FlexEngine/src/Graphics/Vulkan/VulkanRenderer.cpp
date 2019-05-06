@@ -3965,7 +3965,7 @@ namespace flex
 				pipelineCreateInfo.subpass = fontShader.shader.subpass;
 				pipelineCreateInfo.depthCompareOp = VK_COMPARE_OP_ALWAYS;
 				pipelineCreateInfo.depthWriteEnable = VK_FALSE;
-				pipelineCreateInfo.renderPass = fontShader.shader.renderPass;
+				pipelineCreateInfo.renderPass = fontShader.renderPass;
 				CreateGraphicsPipeline(&pipelineCreateInfo);
 			}
 			assert(m_FontSSGraphicsPipeline != VK_NULL_HANDLE);
@@ -4075,7 +4075,7 @@ namespace flex
 				pipelineCreateInfo.subpass = fontShader.shader.subpass;
 				pipelineCreateInfo.depthCompareOp = VK_COMPARE_OP_GREATER_OR_EQUAL;
 				pipelineCreateInfo.depthWriteEnable = VK_TRUE;
-				pipelineCreateInfo.renderPass = fontShader.shader.renderPass;
+				pipelineCreateInfo.renderPass = fontShader.renderPass;
 				CreateGraphicsPipeline(&pipelineCreateInfo);
 			}
 			assert(m_FontWSGraphicsPipeline != VK_NULL_HANDLE);
@@ -4698,7 +4698,6 @@ namespace flex
 
 			if (shader->shader.constantBufferUniforms.HasUniform(U_SSAO_FINAL_SAMPLER))
 			{
-				// TODO: Handle m_SSAOEnabled == false
 				FrameBufferAttachment& fba = m_bSSAOBlurEnabled ? m_SSAOBlurFrameBuf->frameBufferAttachments[0].second : m_SSAOFrameBuf->frameBufferAttachments[0].second;
 				createInfo.ssaoFinalImageView = fba.view;
 				createInfo.ssaoFinalSampler = m_SSAOSampler;
@@ -5146,7 +5145,7 @@ namespace flex
 			pipelineCreateInfo.depthWriteEnable = shader.shader.bDepthWriteEnable ? VK_TRUE : VK_FALSE;
 			pipelineCreateInfo.depthCompareOp = renderObject->depthCompareOp;
 			{
-				pipelineCreateInfo.renderPass = shader.shader.renderPass;
+				pipelineCreateInfo.renderPass = shader.renderPass;
 			}
 			//if (!material->material.renderToCubemap)
 			//{
@@ -5828,10 +5827,8 @@ namespace flex
 						(void*)&frameBufferAttachment.second.view
 					);
 				}
-				// TODO: Add depth attachment here?
 
 				MaterialID gBufferMatID = InitializeMaterial(&gBufferMaterialCreateInfo);
-
 
 				GameObject* gBufferQuadGameObject = new GameObject(gBufferQuadName, GameObjectType::_NONE);
 				m_PersistentObjects.push_back(gBufferQuadGameObject);
@@ -5945,6 +5942,7 @@ namespace flex
 			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_OffScreenDepthAttachment->image, m_OffScreenDepthAttachment->format,
 				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 1, commandBuffer, true);
 
+			// TODO: Blit here instead if supported
 			CopyImage(m_VulkanDevice, m_GraphicsQueue, m_OffScreenDepthAttachment->image, m_DepthAttachment->image,
 				m_SwapChainExtent.width, m_SwapChainExtent.height, commandBuffer, VK_IMAGE_ASPECT_DEPTH_BIT);
 
@@ -7312,8 +7310,8 @@ namespace flex
 				ShaderID shaderID = 0;
 
 				// Color
+				m_Shaders[shaderID].renderPass = m_ForwardRenderPass;
 				m_Shaders[shaderID].shader.bTranslucent = true;
-				m_Shaders[shaderID].shader.renderPass = m_ForwardRenderPass;
 				m_Shaders[shaderID].shader.vertexAttributes =
 					(u32)VertexAttribute::POSITION |
 					(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
@@ -7329,7 +7327,7 @@ namespace flex
 				// PBR
 				m_Shaders[shaderID].shader.numAttachments = 2;
 				m_Shaders[shaderID].shader.bDeferred = true;
-				m_Shaders[shaderID].shader.renderPass = m_OffScreenFrameBuf->renderPass;
+				m_Shaders[shaderID].renderPass = m_OffScreenFrameBuf->renderPass;
 				m_Shaders[shaderID].shader.bNeedAlbedoSampler = true;
 				m_Shaders[shaderID].shader.bNeedMetallicSampler = true;
 				m_Shaders[shaderID].shader.bNeedRoughnessSampler = true;
@@ -7364,7 +7362,7 @@ namespace flex
 				// PBR World Space
 				m_Shaders[shaderID].shader.numAttachments = 2;
 				m_Shaders[shaderID].shader.bDeferred = true;
-				m_Shaders[shaderID].shader.renderPass = m_OffScreenFrameBuf->renderPass;
+				m_Shaders[shaderID].renderPass = m_OffScreenFrameBuf->renderPass;
 				m_Shaders[shaderID].shader.bNeedAlbedoSampler = true;
 				m_Shaders[shaderID].shader.bNeedMetallicSampler = true;
 				m_Shaders[shaderID].shader.bNeedRoughnessSampler = true;
@@ -7397,7 +7395,7 @@ namespace flex
 				++shaderID;
 
 				// Skybox
-				m_Shaders[shaderID].shader.renderPass = m_ForwardRenderPass;
+				m_Shaders[shaderID].renderPass = m_ForwardRenderPass;
 				m_Shaders[shaderID].shader.bNeedCubemapSampler = true;
 				m_Shaders[shaderID].shader.bNeedPushConstantBlock = true;
 				m_Shaders[shaderID].shader.vertexAttributes =
@@ -7411,7 +7409,7 @@ namespace flex
 				++shaderID;
 
 				// Equirectangular to cube
-				m_Shaders[shaderID].shader.renderPass = m_ForwardRenderPass;
+				m_Shaders[shaderID].renderPass = m_ForwardRenderPass;
 				m_Shaders[shaderID].shader.bNeedHDREquirectangularSampler = true;
 				m_Shaders[shaderID].shader.bNeedPushConstantBlock = true;
 				m_Shaders[shaderID].shader.vertexAttributes =
@@ -7423,7 +7421,7 @@ namespace flex
 				++shaderID;
 
 				// Irradiance
-				m_Shaders[shaderID].shader.renderPass = m_ForwardRenderPass;
+				m_Shaders[shaderID].renderPass = m_ForwardRenderPass;
 				m_Shaders[shaderID].shader.bNeedCubemapSampler = true;
 				m_Shaders[shaderID].shader.bNeedPushConstantBlock = true;
 				m_Shaders[shaderID].shader.vertexAttributes =
@@ -7435,7 +7433,7 @@ namespace flex
 				++shaderID;
 
 				// Prefilter
-				m_Shaders[shaderID].shader.renderPass = m_ForwardRenderPass;
+				m_Shaders[shaderID].renderPass = m_ForwardRenderPass;
 				m_Shaders[shaderID].shader.bNeedCubemapSampler = true;
 				m_Shaders[shaderID].shader.bNeedPushConstantBlock = true;
 				m_Shaders[shaderID].shader.vertexAttributes =
@@ -7448,7 +7446,7 @@ namespace flex
 				++shaderID;
 
 				// BRDF
-				m_Shaders[shaderID].shader.renderPass = m_ForwardRenderPass;
+				m_Shaders[shaderID].renderPass = m_ForwardRenderPass;
 				m_Shaders[shaderID].shader.vertexAttributes = 0;
 
 				m_Shaders[shaderID].shader.constantBufferUniforms = {};
@@ -7457,7 +7455,7 @@ namespace flex
 				++shaderID;
 
 				// Deferred combine (sample GBuffer)
-				m_Shaders[shaderID].shader.renderPass = m_DeferredCombineRenderPass;
+				m_Shaders[shaderID].renderPass = m_DeferredCombineRenderPass;
 				m_Shaders[shaderID].shader.bDepthWriteEnable = false;
 				m_Shaders[shaderID].shader.bNeedBRDFLUT = true;
 				m_Shaders[shaderID].shader.bNeedIrradianceSampler = true;
@@ -7488,7 +7486,7 @@ namespace flex
 				++shaderID;
 
 				// Deferred combine cubemap (sample GBuffer)
-				m_Shaders[shaderID].shader.renderPass = m_DeferredCombineRenderPass;
+				m_Shaders[shaderID].renderPass = m_DeferredCombineRenderPass;
 				m_Shaders[shaderID].shader.bDepthWriteEnable = false;
 				m_Shaders[shaderID].shader.bNeedBRDFLUT = true;
 				m_Shaders[shaderID].shader.bNeedIrradianceSampler = true;
@@ -7514,7 +7512,7 @@ namespace flex
 				++shaderID;
 
 				// Compute SDF
-				m_Shaders[shaderID].shader.renderPass = m_DeferredCombineRenderPass; // TODO: Will this always be overridden?
+				m_Shaders[shaderID].renderPass = m_DeferredCombineRenderPass; // TODO: Will this always be overridden?
 				m_Shaders[shaderID].shader.vertexAttributes =
 					(u32)VertexAttribute::POSITION |
 					(u32)VertexAttribute::UV;
@@ -7530,7 +7528,7 @@ namespace flex
 				++shaderID;
 
 				// Font SS
-				m_Shaders[shaderID].shader.renderPass = m_ForwardRenderPass;
+				m_Shaders[shaderID].renderPass = m_ForwardRenderPass;
 				m_Shaders[shaderID].shader.vertexAttributes =
 					(u32)VertexAttribute::POSITION_2D |
 					(u32)VertexAttribute::UV |
@@ -7551,7 +7549,7 @@ namespace flex
 				++shaderID;
 
 				// Font WS
-				m_Shaders[shaderID].shader.renderPass = m_ForwardRenderPass;
+				m_Shaders[shaderID].renderPass = m_ForwardRenderPass;
 				m_Shaders[shaderID].shader.vertexAttributes =
 					(u32)VertexAttribute::POSITION |
 					(u32)VertexAttribute::UV |
@@ -7573,7 +7571,7 @@ namespace flex
 				++shaderID;
 
 				// SSAO
-				m_Shaders[shaderID].shader.renderPass = m_SSAORenderPass;
+				m_Shaders[shaderID].renderPass = m_SSAORenderPass;
 				m_Shaders[shaderID].shader.vertexAttributes =
 					(u32)VertexAttribute::POSITION |
 					(u32)VertexAttribute::UV;
@@ -7591,7 +7589,7 @@ namespace flex
 				++shaderID;
 
 				// SSAO Blur
-				m_Shaders[shaderID].shader.renderPass = m_SSAOBlurRenderPass;
+				m_Shaders[shaderID].renderPass = m_SSAOBlurRenderPass;
 				m_Shaders[shaderID].shader.vertexAttributes =
 					(u32)VertexAttribute::POSITION |
 					(u32)VertexAttribute::UV;
@@ -7608,7 +7606,8 @@ namespace flex
 			const size_t shaderCount = m_Shaders.size();
 			for (size_t i = 0; i < shaderCount; ++i)
 			{
-				Shader& shader = m_Shaders[i].shader;
+				VulkanShader& vkShader = m_Shaders[i];
+				Shader& shader = vkShader.shader;
 
 #if 1 // Sanity check
 				assert(!shader.constantBufferUniforms.HasUniform(U_UNIFORM_BUFFER_DYNAMIC));
@@ -7619,7 +7618,7 @@ namespace flex
 					assert(!shader.constantBufferUniforms.HasUniform(U_ALBEDO_SAMPLER));
 				}
 
-				if (shader.renderPass == VK_NULL_HANDLE)
+				if (vkShader.renderPass == VK_NULL_HANDLE)
 				{
 					PrintError("Shader %s's render pass was not set!\n", shader.name.c_str());
 				}
@@ -7722,7 +7721,7 @@ namespace flex
 			pipelineCreateInfo.subpass = ssaoShader->shader.subpass;
 			pipelineCreateInfo.depthWriteEnable = ssaoShader->shader.bDepthWriteEnable ? VK_TRUE : VK_FALSE;
 			pipelineCreateInfo.depthCompareOp = gBufferObject->depthCompareOp;
-			pipelineCreateInfo.renderPass = ssaoShader->shader.renderPass;
+			pipelineCreateInfo.renderPass = ssaoShader->renderPass;
 			CreateGraphicsPipeline(&pipelineCreateInfo);
 
 			VulkanMaterial* ssaoBlurMaterial = &m_Materials[m_SSAOBlurMatID];
@@ -7735,7 +7734,7 @@ namespace flex
 			pipelineCreateInfo.descriptorSetLayoutIndex = ssaoBlurMaterial->descriptorSetLayoutIndex;
 			pipelineCreateInfo.subpass = ssaoBlurShader->shader.subpass;
 			pipelineCreateInfo.depthWriteEnable = ssaoBlurShader->shader.bDepthWriteEnable ? VK_TRUE : VK_FALSE;
-			pipelineCreateInfo.renderPass = ssaoBlurShader->shader.renderPass;
+			pipelineCreateInfo.renderPass = ssaoBlurShader->renderPass;
 			CreateGraphicsPipeline(&pipelineCreateInfo);
 		}
 

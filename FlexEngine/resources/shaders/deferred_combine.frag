@@ -32,6 +32,8 @@ struct PointLight
 uniform PointLight pointLights[NUMBER_POINT_LIGHTS];
 
 uniform vec4 camPos;
+uniform mat4 invView;
+uniform mat4 invProj;
 uniform bool enableIrradianceSampler;
 uniform float exposure = 1.0;
 uniform mat4 lightViewProj;
@@ -39,9 +41,9 @@ uniform bool castShadows = true;
 uniform float shadowDarkness = 1.0;
 const float PI = 3.14159265359;
 
-layout (binding = 0) uniform sampler2D positionMetallicFrameBufferSampler;
-layout (binding = 1) uniform sampler2D normalRoughnessFrameBufferSampler;
-layout (binding = 2) uniform sampler2D albedoAOFrameBufferSampler;
+layout (binding = 0) uniform sampler2D normalRoughnessFrameBufferSampler;
+layout (binding = 1) uniform sampler2D albedoMetallicFrameBufferSampler;
+layout (binding = 2) uniform sampler2D depthBuffer;
 layout (binding = 3) uniform sampler2D brdfLUT;
 layout (binding = 4) uniform sampler2D shadowMap;
 layout (binding = 5) uniform samplerCube irradianceSampler;
@@ -112,21 +114,30 @@ vec3 DoLighting(vec3 radiance, vec3 N, vec3 V, vec3 L, float NoV, float NoL,
 // return r;
 //
 
+vec3 reconstructWSPosFromDepth(vec2 uv, float depth)
+{
+	float x = uv.x * 2.0f - 1.0f;
+	float y = uv.y * 2.0f - 1.0f;
+	vec4 pos = vec4(x, y, depth, 1.0f);
+	vec4 posVS = invProj * pos;
+	vec3 posNDC = posVS.xyz / posVS.w;
+	return (invView * vec4(posNDC, 1)).xyz;
+}
+
 void main()
 {
-    // Retrieve data from gbuffer
-    vec3 worldPos = texture(positionMetallicFrameBufferSampler, ex_TexCoord).rgb;
-    float metallic = texture(positionMetallicFrameBufferSampler, ex_TexCoord).a;
+    float metallic = texture(albedoMetallicFrameBufferSampler, ex_TexCoord).a;
 
     vec3 N = texture(normalRoughnessFrameBufferSampler, ex_TexCoord).rgb;
+    N = mat3(invView) * N; // view space -> world space
+
     float roughness = texture(normalRoughnessFrameBufferSampler, ex_TexCoord).a;
-    // If using half floats: (prevent division by zero)
-    //roughness = max(roughness, 0.089);
-    // If using fp32:
     roughness = max(roughness, 0.045);
 
-    vec3 albedo = texture(albedoAOFrameBufferSampler, ex_TexCoord).rgb;
-    float ao = texture(albedoAOFrameBufferSampler, ex_TexCoord).a;
+    float depth = texture(depthBuffer, ex_TexCoord).r;
+    vec3 worldPos = reconstructWSPosFromDepth(ex_TexCoord, depth);
+
+    vec3 albedo = texture(albedoMetallicFrameBufferSampler, ex_TexCoord).rgb;
 
 	vec3 V = normalize(camPos.xyz - worldPos);
 	vec3 R = reflect(-V, N);
@@ -231,11 +242,11 @@ void main()
 		float horizon = min(1.0 + dot(R, N), 1.0);
 		specular *= horizon * horizon;
 
-	    ambient = (kD * diffuse + specular) * ao;
+	    ambient = (kD * diffuse + specular);
 	}
 	else
 	{
-		ambient = vec3(0.03) * albedo * ao;
+		ambient = vec3(0.03) * albedo;
 	}
 
 	vec3 color = ambient + Lo;

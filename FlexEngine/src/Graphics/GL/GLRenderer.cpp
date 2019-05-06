@@ -82,20 +82,20 @@ namespace flex
 			m_ShadowMapTexture.format = GL_DEPTH_COMPONENT;
 			m_ShadowMapTexture.type = GL_FLOAT;
 
-			m_gBuffer_PositionMetallicHandle = {};
-			m_gBuffer_PositionMetallicHandle.internalFormat = GL_RGBA16F;
-			m_gBuffer_PositionMetallicHandle.format = GL_RGBA;
-			m_gBuffer_PositionMetallicHandle.type = GL_FLOAT;
+			m_gBufferFBO0 = {};
+			m_gBufferFBO0.internalFormat = GL_RGBA16F;
+			m_gBufferFBO0.format = GL_RGBA;
+			m_gBufferFBO0.type = GL_FLOAT;
 
-			m_gBuffer_NormalRoughnessHandle = {};
-			m_gBuffer_NormalRoughnessHandle.internalFormat = GL_RGBA16F;
-			m_gBuffer_NormalRoughnessHandle.format = GL_RGBA;
-			m_gBuffer_NormalRoughnessHandle.type = GL_FLOAT;
+			m_gBufferFBO1 = {};
+			m_gBufferFBO1.internalFormat = GL_RGBA16F;
+			m_gBufferFBO1.format = GL_RGBA;
+			m_gBufferFBO1.type = GL_FLOAT;
 
-			m_gBuffer_AlbedoAOHandle = {};
-			m_gBuffer_AlbedoAOHandle.internalFormat = GL_RGBA16F;
-			m_gBuffer_AlbedoAOHandle.format = GL_RGBA;
-			m_gBuffer_AlbedoAOHandle.type = GL_FLOAT;
+			m_gBufferDepthTexHandle = {};
+			m_gBufferDepthTexHandle.internalFormat = GL_DEPTH_COMPONENT;
+			m_gBufferDepthTexHandle.format = GL_DEPTH_COMPONENT;
+			m_gBufferDepthTexHandle.type = GL_FLOAT;
 
 			LoadShaders();
 
@@ -398,32 +398,26 @@ namespace flex
 
 			const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 
-			GenerateFrameBufferTexture(&m_gBuffer_PositionMetallicHandle.id,
+			GenerateFrameBufferTexture(&m_gBufferFBO0.id,
 									   0,
-									   m_gBuffer_PositionMetallicHandle.internalFormat,
-									   m_gBuffer_PositionMetallicHandle.format,
-									   m_gBuffer_PositionMetallicHandle.type,
+									   m_gBufferFBO0.internalFormat,
+									   m_gBufferFBO0.format,
+									   m_gBufferFBO0.type,
 									   frameBufferSize);
 
-			GenerateFrameBufferTexture(&m_gBuffer_NormalRoughnessHandle.id,
+			GenerateFrameBufferTexture(&m_gBufferFBO1.id,
 									   1,
-									   m_gBuffer_NormalRoughnessHandle.internalFormat,
-									   m_gBuffer_NormalRoughnessHandle.format,
-									   m_gBuffer_NormalRoughnessHandle.type,
+									   m_gBufferFBO1.internalFormat,
+									   m_gBufferFBO1.format,
+									   m_gBufferFBO1.type,
 									   frameBufferSize);
 
-			GenerateFrameBufferTexture(&m_gBuffer_AlbedoAOHandle.id,
-									   2,
-									   m_gBuffer_AlbedoAOHandle.internalFormat,
-									   m_gBuffer_AlbedoAOHandle.format,
-									   m_gBuffer_AlbedoAOHandle.type,
-									   frameBufferSize);
-
-			// Create and attach depth buffer
-			glGenRenderbuffers(1, &m_gBufferDepthHandle);
-			glBindRenderbuffer(GL_RENDERBUFFER, m_gBufferDepthHandle);
-			glRenderbufferStorage(GL_RENDERBUFFER, m_OffscreenDepthBufferInternalFormat, frameBufferSize.x, frameBufferSize.y);
-			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_gBufferDepthHandle);
+			glGenTextures(1, &m_gBufferDepthTexHandle.id);
+			glBindTexture(GL_TEXTURE_2D, m_gBufferDepthTexHandle.id);
+			glTexImage2D(GL_TEXTURE_2D, 0, m_gBufferDepthTexHandle.internalFormat, frameBufferSize.x, frameBufferSize.y, 0, m_gBufferDepthTexHandle.format, m_gBufferDepthTexHandle.type, NULL);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, m_gBufferDepthTexHandle.id, 0);
 
 			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 			{
@@ -632,49 +626,7 @@ namespace flex
 
 			glUseProgram(shader.program);
 
-
-			// TODO: Is this really needed? (do things dynamically instead?)
-			UniformInfo uniformInfo[] = {
-				{ U_MODEL,							"model", 						&mat.uniformIDs.model },
-				{ U_MODEL_INV_TRANSPOSE, 			"modelInvTranspose", 			&mat.uniformIDs.modelInvTranspose },
-				{ U_COLOR_MULTIPLIER, 				"colorMultiplier", 				&mat.uniformIDs.colorMultiplier },
-				{ U_LIGHT_VIEW_PROJ, 				"lightViewProj",				&mat.uniformIDs.lightViewProjection },
-				{ U_EXPOSURE,						"exposure",						&mat.uniformIDs.exposure },
-				{ U_VIEW, 							"view", 						&mat.uniformIDs.view },
-				{ U_VIEW_PROJECTION, 				"viewProjection", 				&mat.uniformIDs.viewProjection },
-				{ U_PROJECTION, 					"projection", 					&mat.uniformIDs.projection },
-				{ U_CAM_POS, 						"camPos", 						&mat.uniformIDs.camPos },
-				{ U_NORMAL_SAMPLER, 				"enableNormalSampler", 			&mat.uniformIDs.enableNormalTexture },
-				{ U_CUBEMAP_SAMPLER, 				"enableCubemapSampler", 		&mat.uniformIDs.enableCubemapTexture },
-				{ U_ALBEDO_SAMPLER,	 				"enableAlbedoSampler", 			&mat.uniformIDs.enableAlbedoSampler },
-				{ U_CONST_ALBEDO, 					"constAlbedo", 					&mat.uniformIDs.constAlbedo },
-				{ U_METALLIC_SAMPLER,		 		"enableMetallicSampler", 		&mat.uniformIDs.enableMetallicSampler },
-				{ U_CONST_METALLIC, 				"constMetallic", 				&mat.uniformIDs.constMetallic },
-				{ U_ROUGHNESS_SAMPLER,	 			"enableRoughnessSampler", 		&mat.uniformIDs.enableRoughnessSampler },
-				{ U_CONST_ROUGHNESS, 				"constRoughness", 				&mat.uniformIDs.constRoughness },
-				{ U_AO_SAMPLER,						"enableAOSampler",				&mat.uniformIDs.enableAOSampler },
-				{ U_CONST_AO,						"constAO",						&mat.uniformIDs.constAO },
-				{ U_HDR_EQUIRECTANGULAR_SAMPLER,	"hdrEquirectangularSampler",	&mat.uniformIDs.hdrEquirectangularSampler },
-				{ U_IRRADIANCE_SAMPLER,				"enableIrradianceSampler",		&mat.uniformIDs.enableIrradianceSampler },
-				{ U_TRANSFORM_MAT,					"transformMat",					&mat.uniformIDs.transformMat },
-				{ U_TEX_SIZE,						"texSize",						&mat.uniformIDs.texSize },
-				{ U_TIME,							"time",							&mat.uniformIDs.time },
-			};
-
-			for (const UniformInfo& uniform : uniformInfo)
-			{
-				// TODO: CLEANUP: Get rid of HasUniform in place of -1 check! :O
-				//if (shader.shader.dynamicBufferUniforms.HasUniform(uniform.uniform) ||
-				//	shader.shader.constantBufferUniforms.HasUniform(uniform.uniform))
-				//{
-					*uniform.id = glGetUniformLocation(shader.program, uniform.name);
-					//if (*uniform.id == -1)
-					//{
-					//		PrintWarn("uniform %s was not found for material %s (shader: %s)\n",
-					//				  uniform.name, createInfo->name.c_str(), createInfo->shaderName.c_str());
-					//}
-				//}
-			}
+			CacheMaterialUniformLocations(matID);
 
 			if (shader.shader.bNeedShadowMap)
 			{
@@ -754,7 +706,7 @@ namespace flex
 			{
 				if (!m_BRDFTexture)
 				{
-					Print("BRDF LUT has not been generated before material which uses it!\n");
+					PrintWarn("BRDF LUT has not been generated before material which uses it!\n");
 				}
 				mat.brdfLUTSamplerID = m_BRDFTexture->handle;
 			}
@@ -923,9 +875,8 @@ namespace flex
 			if (mat.material.generateReflectionProbeMaps)
 			{
 				mat.cubemapSamplerGBuffersIDs = {
-					{ 0, "positionMetallicFrameBufferSampler", GL_RGBA16F, GL_RGBA },
 					{ 0, "normalRoughnessFrameBufferSampler", GL_RGBA16F, GL_RGBA },
-					{ 0, "albedoAOFrameBufferSampler", GL_RGBA, GL_RGBA },
+					{ 0, "albedoMetallicFrameBufferSampler", GL_RGBA16F, GL_RGBA },
 				};
 
 				GLCubemapCreateInfo cubemapCreateInfo = {};
@@ -1062,6 +1013,11 @@ namespace flex
 					glUniform1i(uniformLocation, binding);
 				}
 				++binding;
+			}
+
+			if (shader.shader.bNeedDepthSampler)
+			{
+				mat.depthSamplerID = m_gBufferDepthTexHandle.id;
 			}
 
 			return matID;
@@ -1533,6 +1489,47 @@ namespace flex
 				glDrawArrays(m_1x1_NDC_Quad->topology, 0, (GLsizei)m_1x1_NDC_Quad->vertexBufferData->VertexCount);
 			}
 			Profiler::PrintBlockDuration(profileBlockName);
+		}
+
+		void GLRenderer::CacheMaterialUniformLocations(MaterialID matID)
+		{
+			GLMaterial& mat = m_Materials[matID];
+			GLShader& shader = m_Shaders[mat.material.shaderID];
+			glUseProgram(shader.program);
+
+			UniformInfo uniformInfo[] = {
+				{ U_MODEL,							"model", 						&mat.uniformIDs.model },
+				{ U_MODEL_INV_TRANSPOSE, 			"modelInvTranspose", 			&mat.uniformIDs.modelInvTranspose },
+				{ U_COLOR_MULTIPLIER, 				"colorMultiplier", 				&mat.uniformIDs.colorMultiplier },
+				{ U_LIGHT_VIEW_PROJ, 				"lightViewProj",				&mat.uniformIDs.lightViewProjection },
+				{ U_EXPOSURE,						"exposure",						&mat.uniformIDs.exposure },
+				{ U_VIEW, 							"view", 						&mat.uniformIDs.view },
+				{ U_VIEW_INV,						"invView", 						&mat.uniformIDs.viewInv },
+				{ U_VIEW_PROJECTION, 				"viewProjection", 				&mat.uniformIDs.viewProjection },
+				{ U_PROJECTION, 					"projection", 					&mat.uniformIDs.projection },
+				{ U_PROJECTION_INV, 				"invProj",	 					&mat.uniformIDs.projInv },
+				{ U_CAM_POS, 						"camPos", 						&mat.uniformIDs.camPos },
+				{ U_NORMAL_SAMPLER, 				"enableNormalSampler", 			&mat.uniformIDs.enableNormalTexture },
+				{ U_CUBEMAP_SAMPLER, 				"enableCubemapSampler", 		&mat.uniformIDs.enableCubemapTexture },
+				{ U_ALBEDO_SAMPLER,	 				"enableAlbedoSampler", 			&mat.uniformIDs.enableAlbedoSampler },
+				{ U_CONST_ALBEDO, 					"constAlbedo", 					&mat.uniformIDs.constAlbedo },
+				{ U_METALLIC_SAMPLER,		 		"enableMetallicSampler", 		&mat.uniformIDs.enableMetallicSampler },
+				{ U_CONST_METALLIC, 				"constMetallic", 				&mat.uniformIDs.constMetallic },
+				{ U_ROUGHNESS_SAMPLER,	 			"enableRoughnessSampler", 		&mat.uniformIDs.enableRoughnessSampler },
+				{ U_CONST_ROUGHNESS, 				"constRoughness", 				&mat.uniformIDs.constRoughness },
+				{ U_AO_SAMPLER,						"enableAOSampler",				&mat.uniformIDs.enableAOSampler },
+				{ U_CONST_AO,						"constAO",						&mat.uniformIDs.constAO },
+				{ U_HDR_EQUIRECTANGULAR_SAMPLER,	"hdrEquirectangularSampler",	&mat.uniformIDs.hdrEquirectangularSampler },
+				{ U_IRRADIANCE_SAMPLER,				"enableIrradianceSampler",		&mat.uniformIDs.enableIrradianceSampler },
+				{ U_TRANSFORM_MAT,					"transformMat",					&mat.uniformIDs.transformMat },
+				{ U_TEX_SIZE,						"texSize",						&mat.uniformIDs.texSize },
+				{ U_TIME,							"time",							&mat.uniformIDs.time },
+			};
+
+			for (const UniformInfo& uniform : uniformInfo)
+			{
+				*uniform.id = glGetUniformLocation(shader.program, uniform.name);
+			}
 		}
 
 		void GLRenderer::GenerateIrradianceSamplerFromCubemap(MaterialID cubemapMaterialID)
@@ -2337,7 +2334,6 @@ namespace flex
 				glViewport(0, 0, (GLsizei)frameBufferSize.x, (GLsizei)frameBufferSize.y);
 
 				glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
-				glBindRenderbuffer(GL_RENDERBUFFER, m_gBufferDepthHandle);
 			}
 
 			{
@@ -2380,7 +2376,6 @@ namespace flex
 			}
 			glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 			glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
-			glBindRenderbuffer(GL_RENDERBUFFER, m_gBufferDepthHandle);
 
 			GL_POP_DEBUG_GROUP();
 		}
@@ -3618,6 +3613,7 @@ namespace flex
 			};
 
 			Tex textures[] = {
+				{ shader->bNeedDepthSampler, true, glMaterial->depthSamplerID, GL_TEXTURE_2D },
 				{ shader->bNeedAlbedoSampler, material->enableAlbedoSampler, glMaterial->albedoSamplerID, GL_TEXTURE_2D },
 				{ shader->bNeedMetallicSampler, material->enableMetallicSampler, glMaterial->metallicSamplerID, GL_TEXTURE_2D },
 				{ shader->bNeedRoughnessSampler, material->enableRoughnessSampler, glMaterial->roughnessSamplerID, GL_TEXTURE_2D },
@@ -3895,6 +3891,11 @@ namespace flex
 			UnloadShaders();
 			LoadShaders();
 
+			for (u32 i = 0; i < m_Materials.size(); ++i)
+			{
+				CacheMaterialUniformLocations(i);
+			}
+
 			AddEditorString("Reloaded shaders");
 		}
 
@@ -3941,21 +3942,24 @@ namespace flex
 			m_Shaders[shaderID].shader.bNeedShadowMap = true;
 			m_Shaders[shaderID].shader.bNeedIrradianceSampler = true;
 			m_Shaders[shaderID].shader.bNeedPrefilteredMap = true;
+			m_Shaders[shaderID].shader.bNeedDepthSampler = true;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV;
 
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_LIGHT_VIEW_PROJ);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_CAM_POS);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_VIEW_INV);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_PROJECTION_INV);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_LIGHT_VIEW_PROJ);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_EXPOSURE);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_POINT_LIGHTS);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_DIR_LIGHT);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_IRRADIANCE_SAMPLER);
-			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_PREFILTER_MAP);
-			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_BRDF_LUT);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_FB_0_SAMPLER);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_FB_1_SAMPLER);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_FB_2_SAMPLER);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_DEPTH_SAMPLER);
+			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_BRDF_LUT);
+			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_PREFILTER_MAP);
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_IRRADIANCE_SAMPLER);
 			++shaderID;
@@ -4018,7 +4022,7 @@ namespace flex
 				(u32)VertexAttribute::NORMAL;
 
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_VIEW);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_PROJECTION);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CONST_ALBEDO);
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ALBEDO_SAMPLER);
@@ -4312,11 +4316,14 @@ namespace flex
 		{
 			PROFILE_AUTO("Update material uniforms");
 
-			glm::mat4 proj = g_CameraManager->CurrentCamera()->GetProjection();
-			glm::mat4 view = g_CameraManager->CurrentCamera()->GetView();
+			BaseCamera* currentCam = g_CameraManager->CurrentCamera();
+			glm::mat4 view = currentCam->GetView();
+			glm::mat4 viewInv = glm::inverse(view);
+			glm::mat4 proj = currentCam->GetProjection();
+			glm::mat4 projInv = glm::inverse(proj);
 			glm::mat4 viewProj = proj * view;
-			glm::vec4 camPos = glm::vec4(g_CameraManager->CurrentCamera()->GetPosition(), 0.0f);
-			real exposure = g_CameraManager->CurrentCamera()->exposure;
+			glm::vec4 camPos = glm::vec4(currentCam->GetPosition(), 0.0f);
+			real exposure = currentCam->exposure;
 
 			glm::mat4 lightView, lightProj;
 			ComputeDirLightViewProj(lightView, lightProj);
@@ -4348,9 +4355,19 @@ namespace flex
 					glUniformMatrix4fv(material->uniformIDs.view, 1, GL_FALSE, &view[0][0]);
 				}
 
+				if (shader->shader.constantBufferUniforms.HasUniform(U_VIEW_INV))
+				{
+					glUniformMatrix4fv(material->uniformIDs.viewInv, 1, GL_FALSE, &viewInv[0][0]);
+				}
+
 				if (shader->shader.constantBufferUniforms.HasUniform(U_PROJECTION))
 				{
 					glUniformMatrix4fv(material->uniformIDs.projection, 1, GL_FALSE, &proj[0][0]);
+				}
+
+				if (shader->shader.constantBufferUniforms.HasUniform(U_PROJECTION_INV))
+				{
+					glUniformMatrix4fv(material->uniformIDs.projInv, 1, GL_FALSE, &projInv[0][0]);
 				}
 
 				if (shader->shader.constantBufferUniforms.HasUniform(U_VIEW_PROJECTION))
@@ -4598,25 +4615,23 @@ namespace flex
 
 
 			glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
-			ResizeFrameBufferTexture(m_gBuffer_PositionMetallicHandle.id,
-				m_gBuffer_PositionMetallicHandle.internalFormat,
-				m_gBuffer_PositionMetallicHandle.format,
-				m_gBuffer_PositionMetallicHandle.type,
+			ResizeFrameBufferTexture(m_gBufferFBO0.id,
+				m_gBufferFBO0.internalFormat,
+				m_gBufferFBO0.format,
+				m_gBufferFBO0.type,
 				newFrameBufferSize);
 
-			ResizeFrameBufferTexture(m_gBuffer_NormalRoughnessHandle.id,
-				m_gBuffer_NormalRoughnessHandle.internalFormat,
-				m_gBuffer_NormalRoughnessHandle.format,
-				m_gBuffer_NormalRoughnessHandle.type,
+			ResizeFrameBufferTexture(m_gBufferFBO1.id,
+				m_gBufferFBO1.internalFormat,
+				m_gBufferFBO1.format,
+				m_gBufferFBO1.type,
 				newFrameBufferSize);
 
-			ResizeFrameBufferTexture(m_gBuffer_AlbedoAOHandle.id,
-				m_gBuffer_AlbedoAOHandle.internalFormat,
-				m_gBuffer_AlbedoAOHandle.format,
-				m_gBuffer_AlbedoAOHandle.type,
+			ResizeFrameBufferTexture(m_gBufferDepthTexHandle.id,
+				m_gBufferDepthTexHandle.internalFormat,
+				m_gBufferDepthTexHandle.format,
+				m_gBufferDepthTexHandle.type,
 				newFrameBufferSize);
-
-			ResizeRenderBuffer(m_gBufferDepthHandle, newFrameBufferSize, m_OffscreenDepthBufferInternalFormat);
 		}
 
 		void GLRenderer::OnPreSceneChange()
@@ -4788,9 +4803,8 @@ namespace flex
 			gBufferMaterialCreateInfo.enableBRDFLUT = true;
 			gBufferMaterialCreateInfo.engineMaterial = true;
 			gBufferMaterialCreateInfo.frameBuffers = {
-				{ "positionMetallicFrameBufferSampler",  &m_gBuffer_PositionMetallicHandle.id },
-				{ "normalRoughnessFrameBufferSampler",  &m_gBuffer_NormalRoughnessHandle.id },
-				{ "albedoAOFrameBufferSampler",  &m_gBuffer_AlbedoAOHandle.id },
+				{ "normalRoughnessFrameBufferSampler",  &m_gBufferFBO0.id },
+				{ "albedoMetallicFrameBufferSampler",  &m_gBufferFBO1.id },
 			};
 
 			MaterialID gBufferMatID = InitializeMaterial(&gBufferMaterialCreateInfo);

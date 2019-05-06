@@ -68,6 +68,7 @@ namespace flex
 				i32 view;
 				i32 viewInv;
 				i32 projection;
+				i32 projInv;
 				i32 camPos;
 				i32 enableNormalTexture;
 				i32 enableCubemapTexture;
@@ -108,6 +109,7 @@ namespace flex
 			u32 irradianceSamplerID = InvalidID;
 			u32 prefilteredMapSamplerID = InvalidID;
 			u32 brdfLUTSamplerID = InvalidID;
+			u32 depthSamplerID = InvalidID;
 		};
 
 		struct GLRenderObject

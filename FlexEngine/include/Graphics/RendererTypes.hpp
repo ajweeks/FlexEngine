@@ -433,7 +433,6 @@ namespace flex
 		i32 numAttachments = 1; // How many output textures the fragment shader has
 
 		i32 subpass = 0;
-		VkRenderPass renderPass = VK_NULL_HANDLE;
 		bool bDeferred = false; // TODO: Replace this bool with just checking if numAttachments is larger than 1
 		bool bDepthWriteEnable = true;
 		bool bTranslucent = false;
