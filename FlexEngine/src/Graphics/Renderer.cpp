@@ -127,8 +127,14 @@ namespace flex
 	{
 		m_bRenderGrid = bRenderGrid;
 
-		m_Grid->SetVisible(bRenderGrid);
-		m_WorldOrigin->SetVisible(bRenderGrid);
+		if (m_Grid != nullptr)
+		{
+			m_Grid->SetVisible(bRenderGrid);
+		}
+		if (m_WorldOrigin != nullptr)
+		{
+			m_WorldOrigin->SetVisible(bRenderGrid);
+		}
 	}
 
 	bool Renderer::IsRenderingGrid() const
@@ -449,6 +455,11 @@ namespace flex
 	}
 
 	void Renderer::DrawImGuiMisc()
+	{
+
+	}
+
+	void Renderer::DrawImGuiWindows()
 	{
 		if (bFontWindowShowing)
 		{
@@ -1098,19 +1109,21 @@ namespace flex
 				{
 					GameObject* newGameObject = new GameObject(newObjectName, GameObjectType::OBJECT);
 
-					MaterialID matID = 0;
+					MaterialID matID = InvalidMaterialID;
+					if (GetMaterialID("pbr white", matID))
+					{
+						newGameObject->SetMeshComponent(new MeshComponent(matID, newGameObject));
+						newGameObject->GetMeshComponent()->LoadFromFile(RESOURCE_LOCATION  "meshes/cube.glb");
 
-					newGameObject->SetMeshComponent(new MeshComponent(matID, newGameObject));
-					newGameObject->GetMeshComponent()->LoadFromFile(RESOURCE_LOCATION  "meshes/cube.glb");
+						g_SceneManager->CurrentScene()->AddRootObject(newGameObject);
 
-					g_SceneManager->CurrentScene()->AddRootObject(newGameObject);
+						newGameObject->Initialize();
+						newGameObject->PostInitialize();
 
-					newGameObject->Initialize();
-					newGameObject->PostInitialize();
+						g_EngineInstance->SetSelectedObject(newGameObject);
 
-					g_EngineInstance->SetSelectedObject(newGameObject);
-
-					ImGui::CloseCurrentPopup();
+						ImGui::CloseCurrentPopup();
+					}
 				}
 			}
 

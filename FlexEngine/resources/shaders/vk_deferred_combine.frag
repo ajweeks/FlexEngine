@@ -35,6 +35,7 @@ layout (binding = 0) uniform UBOConstant
 	mat4 invProj;
 	DirectionalLight dirLight;
 	PointLight pointLights[NUMBER_POINT_LIGHTS];
+	int enableSSAO;
 } uboConstant;
 
 layout (binding = 1) uniform UBODynamic
@@ -140,7 +141,7 @@ void main()
     vec3 albedo = texture(albedoMetallicTex, ex_TexCoord).rgb;
     float metallic = texture(albedoMetallicTex, ex_TexCoord).a;
 
-    float ssao = texture(ssaoBuffer, ex_TexCoord).r;
+    float ssao = uboConstant.enableSSAO != 0 ? texture(ssaoBuffer, ex_TexCoord).r : 1.0f;
 
     // fragColor = vec4(ssao, ssao, ssao, 1); return;
 

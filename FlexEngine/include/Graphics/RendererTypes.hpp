@@ -102,6 +102,7 @@ namespace flex
 	const u64 U_SSAO_FINAL_SAMPLER				= (1ull << 54);
 	const u64 U_SSAO_NORMAL_SAMPLER				= (1ull << 55);
 	const u64 U_SSAO_DATA						= (1ull << 56); const u32 US_SSAO_DATA					= sizeof(SSAOData);
+	const u64 U_ENABLE_SSAO						= (1ull << 57); const u32 US_ENABLE_SSAO				= sizeof(i32);
 	// NOTE!: New uniforms must be added to Uniforms::CalculateSizeInBytes
 
 	enum class ClearFlag

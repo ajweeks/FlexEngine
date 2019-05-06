@@ -45,6 +45,7 @@ namespace flex
 			virtual void Update() override;
 			virtual void Draw() override;
 			virtual void DrawImGuiMisc() override;
+			virtual void DrawImGuiWindows() override;
 
 			virtual void UpdateVertexData(RenderID renderID, VertexBufferData* vertexBufferData) override;
 
@@ -442,6 +443,9 @@ namespace flex
 
 			SSAOData m_SSAOData;
 			glm::vec2u m_SSAORes;
+
+			bool m_bSSAOEnabled = true;
+			bool m_bSSAOBlurEnabled = true;
 
 #ifdef DEBUG
 			AsyncVulkanShaderCompiler* m_ShaderCompiler = nullptr;

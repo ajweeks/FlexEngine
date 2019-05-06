@@ -1331,10 +1331,9 @@ namespace flex
 				ImGui::Text("Debugging");
 
 				g_SceneManager->CurrentScene()->GetTrackManager()->DrawImGuiObjects();
-
 				g_SceneManager->CurrentScene()->GetCartManager()->DrawImGuiObjects();
-
 				g_CameraManager->CurrentCamera()->DrawImGuiObjects();
+				g_Renderer->DrawImGuiMisc();
 
 				if (ImGui::TreeNode("Spring"))
 				{
@@ -1356,7 +1355,7 @@ namespace flex
 			ImGui::End();
 		}
 
-		g_Renderer->DrawImGuiMisc();
+		g_Renderer->DrawImGuiWindows();
 
 		if (m_bAssetBrowserShowing)
 		{

@@ -237,7 +237,7 @@ namespace flex
 
 			for (u32 i = 0; i < SSAO_KERNEL_SIZE; ++i)
 			{
-				glm::vec3 sample(RandomFloat(-1.0f, 1.0f), RandomFloat(-1.0f, 1.0f), RandomFloat(0.0f, 1.0f));
+				glm::vec3 sample(RandomFloat(-0.9f, 0.9f), RandomFloat(-0.9f, 0.9f), RandomFloat(0.0f, 1.0f));
 				sample = glm::normalize(sample); // Snap to surface of hemisphere
 				sample *= RandomFloat(0.0f, 1.0f); // Space out linearly
 				real scale = (real)i / (real)SSAO_KERNEL_SIZE;
@@ -2278,6 +2278,31 @@ namespace flex
 		void VulkanRenderer::DrawImGuiMisc()
 		{
 			Renderer::DrawImGuiMisc();
+
+			if (ImGui::Checkbox("SSAO", &m_bSSAOEnabled))
+			{
+				m_bSSAOBlurEnabled = m_bSSAOEnabled;
+			}
+			bool bRebuild = false;
+			if (ImGui::Checkbox("SSAO Blur", &m_bSSAOBlurEnabled))
+			{
+				bRebuild = true;
+				if (m_bSSAOBlurEnabled)
+				{
+					m_bSSAOEnabled = true;
+				}
+			}
+
+			if (bRebuild)
+			{
+				CreateDescriptorSet(m_GBufferQuadRenderID);
+				CreateGraphicsPipeline(m_GBufferQuadRenderID, false);
+			}
+		}
+
+		void VulkanRenderer::DrawImGuiWindows()
+		{
+			Renderer::DrawImGuiWindows();
 
 			if (bUniformBufferWindowShowing)
 			{
@@ -4673,7 +4698,8 @@ namespace flex
 
 			if (shader->shader.constantBufferUniforms.HasUniform(U_SSAO_FINAL_SAMPLER))
 			{
-				FrameBufferAttachment& fba = m_SSAOBlurFrameBuf->frameBufferAttachments[0].second;
+				// TODO: Handle m_SSAOEnabled == false
+				FrameBufferAttachment& fba = m_bSSAOBlurEnabled ? m_SSAOBlurFrameBuf->frameBufferAttachments[0].second : m_SSAOFrameBuf->frameBufferAttachments[0].second;
 				createInfo.ssaoFinalImageView = fba.view;
 				createInfo.ssaoFinalSampler = m_SSAOSampler;
 			}
@@ -6206,61 +6232,68 @@ namespace flex
 
 			VertexIndexBufferPair* gBufferVertexIndexBuffer = &m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID];
 
-			std::array<VkClearValue, 1> ssaoClearValues = {};
-			ssaoClearValues[0].color = m_ClearColor;
-
-			renderPassBeginInfo.renderPass = m_SSAORenderPass;
-			renderPassBeginInfo.framebuffer = m_SSAOFrameBuf->frameBuffer;
-			renderPassBeginInfo.renderArea.offset = { 0, 0 };
-			renderPassBeginInfo.renderArea.extent = { m_SSAOFrameBuf->width, m_SSAOFrameBuf->height };
-			renderPassBeginInfo.clearValueCount = ssaoClearValues.size();
-			renderPassBeginInfo.pClearValues = ssaoClearValues.data();
-
-			vkCmdBeginRenderPass(m_OffScreenCmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-			ShaderID ssaoShaderID = InvalidShaderID;
-			GetShaderID("ssao", ssaoShaderID);
-			assert(ssaoShaderID != InvalidShaderID);
-
-			vkCmdBindPipeline(m_OffScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_SSAOGraphicsPipeline);
-
-			VkViewport ssaoViewport = vks::viewportFlipped((real)m_SSAORes.x, (real)m_SSAORes.y, 0.1f, 1000.0f);
-			vkCmdSetViewport(m_OffScreenCmdBuffer, 0, 1, &ssaoViewport);
-
-			VkRect2D ssaoScissor = vks::scissor(0u, 0u, m_SSAORes.x, m_SSAORes.y);
-			vkCmdSetScissor(m_OffScreenCmdBuffer, 0, 1, &ssaoScissor);
-
-			BindDescriptorSet(&m_Shaders[ssaoShaderID], 0, m_OffScreenCmdBuffer, m_SSAOGraphicsPipelineLayout, m_SSAODescSet);
-
 			VkDeviceSize offsets[1] = { 0 };
-			vkCmdBindVertexBuffers(m_OffScreenCmdBuffer, 0, 1, &gBufferVertexIndexBuffer->vertexBuffer->m_Buffer, offsets);
 
-			vkCmdDraw(m_OffScreenCmdBuffer, gBufferObject->vertexBufferData->VertexCount, 1, gBufferObject->vertexOffset, 0);
+			if (m_bSSAOEnabled)
+			{
+				std::array<VkClearValue, 1> ssaoClearValues = {};
+				ssaoClearValues[0].color = m_ClearColor;
 
-			vkCmdEndRenderPass(m_OffScreenCmdBuffer);
+				renderPassBeginInfo.renderPass = m_SSAORenderPass;
+				renderPassBeginInfo.framebuffer = m_SSAOFrameBuf->frameBuffer;
+				renderPassBeginInfo.renderArea.offset = { 0, 0 };
+				renderPassBeginInfo.renderArea.extent = { m_SSAOFrameBuf->width, m_SSAOFrameBuf->height };
+				renderPassBeginInfo.clearValueCount = ssaoClearValues.size();
+				renderPassBeginInfo.pClearValues = ssaoClearValues.data();
+
+				vkCmdBeginRenderPass(m_OffScreenCmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+				ShaderID ssaoShaderID = InvalidShaderID;
+				GetShaderID("ssao", ssaoShaderID);
+				assert(ssaoShaderID != InvalidShaderID);
+
+				vkCmdBindPipeline(m_OffScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_SSAOGraphicsPipeline);
+
+				VkViewport ssaoViewport = vks::viewportFlipped((real)m_SSAORes.x, (real)m_SSAORes.y, 0.1f, 1000.0f);
+				vkCmdSetViewport(m_OffScreenCmdBuffer, 0, 1, &ssaoViewport);
+
+				VkRect2D ssaoScissor = vks::scissor(0u, 0u, m_SSAORes.x, m_SSAORes.y);
+				vkCmdSetScissor(m_OffScreenCmdBuffer, 0, 1, &ssaoScissor);
+
+				BindDescriptorSet(&m_Shaders[ssaoShaderID], 0, m_OffScreenCmdBuffer, m_SSAOGraphicsPipelineLayout, m_SSAODescSet);
+
+				vkCmdBindVertexBuffers(m_OffScreenCmdBuffer, 0, 1, &gBufferVertexIndexBuffer->vertexBuffer->m_Buffer, offsets);
+
+				vkCmdDraw(m_OffScreenCmdBuffer, gBufferObject->vertexBufferData->VertexCount, 1, gBufferObject->vertexOffset, 0);
+
+				vkCmdEndRenderPass(m_OffScreenCmdBuffer);
+			}
 
 			//
 			// Third pass - SSAO blur
 			//
 
-			renderPassBeginInfo.renderPass = m_SSAOBlurRenderPass;
-			renderPassBeginInfo.framebuffer = m_SSAOBlurFrameBuf->frameBuffer;
+			if (m_bSSAOBlurEnabled)
+			{
+				renderPassBeginInfo.renderPass = m_SSAOBlurRenderPass;
+				renderPassBeginInfo.framebuffer = m_SSAOBlurFrameBuf->frameBuffer;
 
-			vkCmdBeginRenderPass(m_OffScreenCmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+				vkCmdBeginRenderPass(m_OffScreenCmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-			ShaderID ssaoBlurShaderID = InvalidShaderID;
-			GetShaderID("ssao_blur", ssaoBlurShaderID);
-			assert(ssaoBlurShaderID != InvalidShaderID);
+				ShaderID ssaoBlurShaderID = InvalidShaderID;
+				GetShaderID("ssao_blur", ssaoBlurShaderID);
+				assert(ssaoBlurShaderID != InvalidShaderID);
 
-			vkCmdBindPipeline(m_OffScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_SSAOBlurGraphicsPipeline);
+				vkCmdBindPipeline(m_OffScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_SSAOBlurGraphicsPipeline);
 
-			BindDescriptorSet(&m_Shaders[ssaoBlurShaderID], 0, m_OffScreenCmdBuffer, m_SSAOBlurGraphicsPipelineLayout, m_SSAOBlurDescSet);
+				BindDescriptorSet(&m_Shaders[ssaoBlurShaderID], 0, m_OffScreenCmdBuffer, m_SSAOBlurGraphicsPipelineLayout, m_SSAOBlurDescSet);
 
-			vkCmdBindVertexBuffers(m_OffScreenCmdBuffer, 0, 1, &gBufferVertexIndexBuffer->vertexBuffer->m_Buffer, offsets);
+				vkCmdBindVertexBuffers(m_OffScreenCmdBuffer, 0, 1, &gBufferVertexIndexBuffer->vertexBuffer->m_Buffer, offsets);
 
-			vkCmdDraw(m_OffScreenCmdBuffer, gBufferObject->vertexBufferData->VertexCount, 1, gBufferObject->vertexOffset, 0);
+				vkCmdDraw(m_OffScreenCmdBuffer, gBufferObject->vertexBufferData->VertexCount, 1, gBufferObject->vertexOffset, 0);
 
-			vkCmdEndRenderPass(m_OffScreenCmdBuffer);
+				vkCmdEndRenderPass(m_OffScreenCmdBuffer);
+			}
 
 			VK_CHECK_RESULT(vkEndCommandBuffer(m_OffScreenCmdBuffer));
 		}
@@ -6933,6 +6966,7 @@ namespace flex
 			glm::mat4 viewInv;
 			glm::mat4 viewProjection;
 			glm::vec4 camPos;
+			i32 enableSSAO = m_bSSAOEnabled ? 1 : 0;
 
 			static DirLightData defaultDirLightData = { VEC3_RIGHT, 0, VEC3_ONE, 0.0f };
 
@@ -6965,7 +6999,8 @@ namespace flex
 				{ U_DIR_LIGHT, (void*)dirLightData, sizeof(DirLightData) },
 				{ U_POINT_LIGHTS, (void*)m_PointLights, sizeof(PointLightData) * MAX_NUM_POINT_LIGHTS },
 				{ U_TIME, (void*)&g_SecElapsedSinceProgramStart, sizeof(real) },
-				{ U_SSAO_DATA, (void*)&m_SSAOData, sizeof(SSAOData) }
+				{ U_SSAO_DATA, (void*)&m_SSAOData, sizeof(SSAOData) },
+				{ U_ENABLE_SSAO, (void*)&enableSSAO, sizeof(i32) },
 			};
 
 			for (const VulkanShader& shader : m_Shaders)
@@ -7439,6 +7474,7 @@ namespace flex
 				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_PROJECTION_INV);
 				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_DIR_LIGHT);
 				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_POINT_LIGHTS);
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_ENABLE_SSAO);
 				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_BRDF_LUT_SAMPLER);
 				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_IRRADIANCE_SAMPLER);
 				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_PREFILTER_MAP);

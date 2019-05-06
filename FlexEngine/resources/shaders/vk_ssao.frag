@@ -47,7 +47,7 @@ void main()
 	ivec2 noiseTexSize = textureSize(in_Noise, 0);
 	float renderScale = 0.5; // SSAO is rendered at 0.5x scale
 	vec2 noiseUV = vec2(float(depthTexSize.x)/float(noiseTexSize.x), float(depthTexSize.y)/float(noiseTexSize.y)) * ex_UV * renderScale;
-	noiseUV += vec2(0.5);
+	// noiseUV += vec2(0.5);
 	vec3 randomVec = texture(in_Noise, noiseUV).xyz;
 	
 	vec3 tangent = normalize(randomVec - normal * dot(randomVec, normal));

@@ -58,6 +58,7 @@ namespace flex
 			_u(TEX_CHANNEL)
 			_u(FONT_CHAR_DATA)
 			_u(SSAO_DATA)
+			_u(ENABLE_SSAO)
 #undef _u
 		}
 

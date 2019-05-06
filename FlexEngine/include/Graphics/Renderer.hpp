@@ -54,6 +54,7 @@ namespace flex
 		virtual void Update();
 		virtual void Draw() = 0;
 		virtual void DrawImGuiMisc();
+		virtual void DrawImGuiWindows();
 
 		virtual void UpdateVertexData(RenderID renderID, VertexBufferData* vertexBufferData) = 0;
 
