@@ -1362,6 +1362,13 @@ namespace flex
 		return value;
 	}
 
+	real RandomFloat(real min, real max)
+	{
+		// TODO: CLEANUP: FIXME: Don't use rand, please
+		real randN = rand() / (real)RAND_MAX;
+		return randN * (max - min) + min;
+	}
+
 	bool DoImGuiRotationDragFloat3(const char* label, glm::vec3& rotation, glm::vec3& outCleanedRotation)
 	{
 		glm::vec3 pRot = rotation;

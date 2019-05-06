@@ -295,16 +295,10 @@ namespace flex
 			CreateSampler(m_VulkanDevice, samplerCreateInfo);
 		}
 
-		u32 VulkanTexture::CreateFromMemory(u8* buffer, u32 bufferSize, VkFormat inFormat, i32 inMipLevels)
+		u32 VulkanTexture::CreateFromMemory(void* buffer, u32 bufferSize, VkFormat inFormat, i32 inMipLevels, VkFilter filter /* = VK_FILTER_LINEAR */)
 		{
-			if (width == 0 ||
-				height == 0)
-			{
-				PrintError("Attempted to create texture with invalid size\n");
-				return 0;
-			}
-
-			unsigned char* pixels = buffer;
+			assert(width != 0 && height != 0);
+			assert(buffer != nullptr);
 
 			ImageCreateInfo imageCreateInfo = {};
 			imageCreateInfo.image = image.replace();
@@ -333,7 +327,7 @@ namespace flex
 
 			void* data = nullptr;
 			VK_CHECK_RESULT(vkMapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory, 0, textureSize, 0, &data));
-			memcpy(data, pixels, bufferSize);// (size_t)textureSize);
+			memcpy(data, buffer, bufferSize);
 			vkUnmapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory);
 
 			TransitionToLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
@@ -349,6 +343,8 @@ namespace flex
 
 			SamplerCreateInfo samplerCreateInfo = {};
 			samplerCreateInfo.sampler = &sampler;
+			samplerCreateInfo.minFilter = filter;
+			samplerCreateInfo.magFilter = filter;
 			if (bSamplerClampToBorder)
 			{
 				samplerCreateInfo.samplerAddressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;

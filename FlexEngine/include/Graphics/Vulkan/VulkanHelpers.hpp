@@ -191,7 +191,7 @@ namespace flex
 			// Non-static member functions
 			void Create(ImageCreateInfo& imageCreateInfo, ImageViewCreateInfo& imageViewCreateInfo, SamplerCreateInfo& samplerCreateInfo);
 
-			u32 CreateFromMemory(u8* buffer, u32 bufferSize, VkFormat inFormat, i32 inMipLevels);
+			u32 CreateFromMemory(void* buffer, u32 bufferSize, VkFormat inFormat, i32 inMipLevels, VkFilter filter = VK_FILTER_LINEAR);
 
 			void TransitionToLayout(VkImageLayout newLayout);
 			void CopyFromBuffer(VkBuffer buffer, u32 inWidth, u32 inHeight);
@@ -409,6 +409,7 @@ namespace flex
 			VulkanTexture* irradianceTexture = nullptr;
 			VulkanTexture* brdfLUT = nullptr;
 			VulkanTexture* prefilterTexture = nullptr;
+			VulkanTexture* noiseTexture = nullptr;
 			VkFramebuffer hdrCubemapFramebuffer = VK_NULL_HANDLE;
 
 			u32 cubemapSamplerID = 0;
@@ -448,6 +449,7 @@ namespace flex
 			VkCompareOp depthCompareOp = VK_COMPARE_OP_GREATER_OR_EQUAL;
 
 			bool bEditorObject = false;
+			bool bSetDynamicStates = false;
 
 			u32 dynamicUBOIndex = 0;
 
@@ -502,6 +504,16 @@ namespace flex
 			VulkanTexture* irradianceTexture = nullptr;
 			VulkanTexture* brdfLUT = nullptr;
 			VulkanTexture* prefilterTexture = nullptr;
+			VulkanTexture* noiseTexture = nullptr;
+
+			VkImageView ssaoNormalImageView = VK_NULL_HANDLE;
+			VkSampler ssaoNormalSampler = VK_NULL_HANDLE;
+
+			VkImageView ssaoImageView = VK_NULL_HANDLE;
+			VkSampler ssaoSampler = VK_NULL_HANDLE;
+
+			VkImageView ssaoFinalImageView = VK_NULL_HANDLE;
+			VkSampler ssaoFinalSampler = VK_NULL_HANDLE;
 
 			bool bDepthSampler = false;
 

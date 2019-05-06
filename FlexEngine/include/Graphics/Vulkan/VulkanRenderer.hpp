@@ -32,6 +32,7 @@ namespace flex
 
 			virtual void Initialize() override;
 			virtual void PostInitialize() override;
+
 			virtual void Destroy() override;
 
 			virtual MaterialID InitializeMaterial(const MaterialCreateInfo* createInfo, MaterialID matToReplace = InvalidMaterialID) override;
@@ -162,6 +163,9 @@ namespace flex
 			void GenerateIrradianceSamplerFromCubemap(MaterialID cubemapMaterialID);
 			//void GenerateBRDFLUT(u32 brdfLUTTextureID, glm::vec2 BRDFLUTSize);
 
+			void CreateSSAOPipelines();
+			void CreateSSAODescriptorSets();
+
 			MaterialID GetNextAvailableMaterialID();
 			RenderID GetNextAvailableRenderID() const;
 
@@ -220,11 +224,9 @@ namespace flex
 				VkBufferUsageFlags bufferUseageFlagBits, VkMemoryPropertyFlags memoryPropertyHostFlagBits);
 
 			void BatchRenderObjects();
-
-			void BuildCommandBuffers(const DrawCallInfo& drawCallInfo);
-
 			void DrawShaderBatch(const ShaderBatchPair &shaderBatches, VkCommandBuffer& commandBuffer);
 
+			void BuildCommandBuffers(const DrawCallInfo& drawCallInfo);
 			void BuildDeferredCommandBuffer();
 
 			void BindDescriptorSet(VulkanShader* shader, i32 dynamicOffsetIndex, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet);
@@ -324,7 +326,6 @@ namespace flex
 			FrameBuffer* m_OffScreenFrameBuf = nullptr; // GBuffer frame buffer
 			FrameBufferAttachment* m_OffScreenDepthAttachment = nullptr;
 			FrameBufferAttachment* m_DepthAttachment = nullptr;
-			//FrameBuffer* m_PostProcessOffScreenFrameBuf = nullptr;
 			VDeleter<VkSampler> m_ColorSampler;
 			VDeleter<VkSampler> m_DepthSampler;
 			VkDescriptorSet m_OffscreenBufferDescriptorSet = VK_NULL_HANDLE;
@@ -388,7 +389,6 @@ namespace flex
 			VDeleter<VkRenderPass> m_SSAOBlurRenderPass;
 			VDeleter<VkRenderPass> m_ForwardRenderPass;
 
-			// TODO: Only use VDeleter on objects which may need to be reused
 			VDeleter<VkPipeline> m_FontSSGraphicsPipeline;
 			VDeleter<VkPipelineLayout> m_FontSSPipelineLayout;
 			VDeleter<VkPipeline> m_FontWSGraphicsPipeline;
@@ -427,6 +427,21 @@ namespace flex
 			VkClearColorValue m_ClearColor;
 
 			u32 m_CurrentSwapChainBufferIndex = 0;
+
+			static const u32 SSAO_NOISE_DIM = 4;
+			VulkanTexture* m_NoiseTexture = nullptr;
+			MaterialID m_SSAOMatID = InvalidMaterialID;
+			MaterialID m_SSAOBlurMatID = InvalidMaterialID;
+			VDeleter<VkPipeline> m_SSAOGraphicsPipeline;
+			VDeleter<VkPipeline> m_SSAOBlurGraphicsPipeline;
+			VDeleter<VkPipelineLayout> m_SSAOGraphicsPipelineLayout;
+			VDeleter<VkPipelineLayout> m_SSAOBlurGraphicsPipelineLayout;
+			VkDescriptorSet m_SSAODescSet = VK_NULL_HANDLE;
+			VkDescriptorSet m_SSAOBlurDescSet = VK_NULL_HANDLE;
+			VDeleter<VkSampler> m_SSAOSampler;
+
+			SSAOData m_SSAOData;
+			glm::vec2u m_SSAORes;
 
 #ifdef DEBUG
 			AsyncVulkanShaderCompiler* m_ShaderCompiler = nullptr;

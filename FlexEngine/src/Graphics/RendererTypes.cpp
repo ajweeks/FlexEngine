@@ -29,6 +29,7 @@ namespace flex
 			_u(VIEW_PROJECTION)
 			_u(MODEL_VIEW_PROJ)
 			_u(PROJECTION)
+			_u(PROJECTION_INV)
 			_u(BLEND_SHARPNESS)
 			_u(COLOR_MULTIPLIER)
 			_u(CAM_POS)
@@ -56,6 +57,7 @@ namespace flex
 			_u(SDF_DATA)
 			_u(TEX_CHANNEL)
 			_u(FONT_CHAR_DATA)
+			_u(SSAO_DATA)
 #undef _u
 		}
 

@@ -167,6 +167,9 @@ namespace flex
 	// Returns random value in range [min, max)
 	i32 RandomInt(i32 min, i32 max);
 
+	// Returns random value in range [min, max)
+	real RandomFloat(real min, real max);
+
 	// Returns true if value changed
 	bool DoImGuiRotationDragFloat3(const char* label, glm::vec3& rotation, glm::vec3& outCleanedRotation);
 

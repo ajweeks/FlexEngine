@@ -32,6 +32,7 @@ layout (binding = 0) uniform UBOConstant
 {
 	vec4 camPos;
 	mat4 invView;
+	mat4 invProj;
 	DirectionalLight dirLight;
 	PointLight pointLights[NUMBER_POINT_LIGHTS];
 } uboConstant;
@@ -46,8 +47,9 @@ layout (binding = 3) uniform samplerCube irradianceSampler;
 layout (binding = 4) uniform samplerCube prefilterMap;
 
 layout (binding = 5) uniform sampler2D depthBuffer;
-layout (binding = 6) uniform sampler2D normalRoughnessFrameBufferSampler;
-layout (binding = 7) uniform sampler2D albedoMetallicFrameBufferSampler;
+layout (binding = 6) uniform sampler2D ssaoBuffer;
+layout (binding = 7) uniform sampler2D normalRoughnessTex;
+layout (binding = 8) uniform sampler2D albedoMetallicTex;
 
 vec3 FresnelSchlick(float cosTheta, vec3 F0)
 {
@@ -115,24 +117,32 @@ vec3 DoLighting(vec3 radiance, vec3 N, vec3 V, vec3 L, float NoV, float NoL,
 	return (kD * albedo / PI + specular) * radiance * NoL;
 }
 
-vec3 reconstructPosFromDepth()
+vec3 reconstructWSPosFromDepth(vec2 uv, float depth)
 {
-	float depth = texture(depthBuffer, ex_TexCoord).r;
-	return vec3(0);
+	float x = uv.x * 2.0f - 1.0f;
+	float y = (1.0f - uv.y) * 2.0f - 1.0f;
+	vec4 pos = vec4(x, y, depth, 1.0f);
+	vec4 posVS = uboConstant.invProj * pos;
+	vec3 posNDC = posVS.xyz / posVS.w;
+	return (uboConstant.invView * vec4(posNDC, 1)).xyz;
 }
 
 void main()
 {
-	// Retrieve data from gbuffer
-    vec3 worldPos = reconstructPosFromDepth();
-
-    vec3 N = texture(normalRoughnessFrameBufferSampler, ex_TexCoord).rgb;
-    // TODO: Keep in view space?
+    vec3 N = texture(normalRoughnessTex, ex_TexCoord).rgb;
     N = mat3(uboConstant.invView) * N; // view space -> world space
-    float roughness = texture(normalRoughnessFrameBufferSampler, ex_TexCoord).a;
+    float roughness = texture(normalRoughnessTex, ex_TexCoord).a;
 
-    vec3 albedo = texture(albedoMetallicFrameBufferSampler, ex_TexCoord).rgb;
-    float metallic = texture(albedoMetallicFrameBufferSampler, ex_TexCoord).a;
+    float depth = texture(depthBuffer, ex_TexCoord).r;
+
+    vec3 worldPos = reconstructWSPosFromDepth(ex_TexCoord, depth);
+
+    vec3 albedo = texture(albedoMetallicTex, ex_TexCoord).rgb;
+    float metallic = texture(albedoMetallicTex, ex_TexCoord).a;
+
+    float ssao = texture(ssaoBuffer, ex_TexCoord).r;
+
+    // fragColor = vec4(ssao, ssao, ssao, 1); return;
 
 	vec3 V = normalize(uboConstant.camPos.xyz - worldPos);
 	vec3 R = reflect(-V, N);
@@ -203,7 +213,7 @@ void main()
 		ambient = vec3(0.03) * albedo;
 	}
 
-	vec3 color = ambient + Lo;
+	vec3 color = ambient + Lo * pow(ssao,2.0f); // TODO: Apply SSAO to ambient term
 
 	color = color / (color + vec3(1.0f)); // Reinhard tone-mapping
 	color = pow(color, vec3(1.0f / 2.2f)); // Gamma correction

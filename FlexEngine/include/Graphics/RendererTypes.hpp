@@ -38,6 +38,12 @@ namespace flex
 		real brightness;
 	};
 
+	const u32 SSAO_KERNEL_SIZE = 64;
+	struct SSAOData
+	{
+		glm::vec4 samples[SSAO_KERNEL_SIZE];
+	};
+
 	// Uniforms
 	const u64 U_MODEL							= (1ull << 0); const u32 US_MODEL						= sizeof(glm::mat4);
 	const u64 U_MODEL_INV_TRANSPOSE				= (1ull << 1); const u32 US_MODEL_INV_TRANSPOSE			= sizeof(glm::mat4);
@@ -45,8 +51,8 @@ namespace flex
 	const u64 U_VIEW_INV						= (1ull << 3); const u32 US_VIEW_INV					= sizeof(glm::mat4);
 	const u64 U_VIEW_PROJECTION					= (1ull << 4); const u32 US_VIEW_PROJECTION				= sizeof(glm::mat4);
 	const u64 U_MODEL_VIEW_PROJ					= (1ull << 5); const u32 US_MODEL_VIEW_PROJ				= sizeof(glm::mat4);
-	// 6
-	const u64 U_PROJECTION						= (1ull << 7); const u32 US_PROJECTION					= sizeof(glm::mat4);
+	const u64 U_PROJECTION						= (1ull << 6); const u32 US_PROJECTION					= sizeof(glm::mat4);
+	const u64 U_PROJECTION_INV					= (1ull << 7); const u32 US_PROJECTION_INV				= sizeof(glm::mat4);
 	const u64 U_BLEND_SHARPNESS					= (1ull << 8); const u32 US_BLEND_SHARPNESS				= sizeof(real);
 	const u64 U_COLOR_MULTIPLIER				= (1ull << 9); const u32 US_COLOR_MULTIPLIER			= sizeof(glm::vec4);
 	const u64 U_CAM_POS							= (1ull << 10); const u32 US_CAM_POS					= sizeof(glm::vec4);
@@ -91,7 +97,12 @@ namespace flex
 	const u64 U_TEX_CHANNEL						= (1ull << 49); const u32 US_TEX_CHANNEL				= sizeof(i32);
 	const u64 U_DEPTH_SAMPLER					= (1ull << 51);
 	const u64 U_HIGH_RES_TEX					= (1ull << 50);
-	// NOTE: New additions need to be added in Uniforms::CalculateSizeInBytes
+	const u64 U_NOISE_SAMPLER					= (1ull << 52);
+	const u64 U_SSAO_RAW_SAMPLER				= (1ull << 53);
+	const u64 U_SSAO_FINAL_SAMPLER				= (1ull << 54);
+	const u64 U_SSAO_NORMAL_SAMPLER				= (1ull << 55);
+	const u64 U_SSAO_DATA						= (1ull << 56); const u32 US_SSAO_DATA					= sizeof(SSAOData);
+	// NOTE!: New uniforms must be added to Uniforms::CalculateSizeInBytes
 
 	enum class ClearFlag
 	{
@@ -385,6 +396,7 @@ namespace flex
 		bool bDepthWriteEnable = true;
 		bool bDepthTestEnable = true;
 		bool bEditorObject = false;
+		bool bSetDynamicStates = false;
 	};
 
 	struct Uniforms
