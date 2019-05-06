@@ -135,7 +135,6 @@ void main()
     float roughness = texture(normalRoughnessTex, ex_TexCoord).a;
 
     float depth = texture(depthBuffer, ex_TexCoord).r;
-
     vec3 worldPos = reconstructWSPosFromDepth(ex_TexCoord, depth);
 
     vec3 albedo = texture(albedoMetallicTex, ex_TexCoord).rgb;

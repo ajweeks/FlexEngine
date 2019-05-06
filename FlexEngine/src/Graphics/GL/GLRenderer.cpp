@@ -3932,8 +3932,6 @@ namespace flex
 
 			ShaderID shaderID = 0;
 
-			// TOOD: Determine this info automatically when parsing shader code
-
 			// Deferred combine
 			m_Shaders[shaderID].shader.bDeferred = false; // Sounds strange but this isn't deferred
 			// m_Shaders[shaderID].shader.subpass = 0;
@@ -4012,7 +4010,6 @@ namespace flex
 			m_Shaders[shaderID].shader.bNeedAlbedoSampler = true;
 			m_Shaders[shaderID].shader.bNeedMetallicSampler = true;
 			m_Shaders[shaderID].shader.bNeedRoughnessSampler = true;
-			m_Shaders[shaderID].shader.bNeedAOSampler = true;
 			m_Shaders[shaderID].shader.bNeedNormalSampler = true;
 			m_Shaders[shaderID].shader.vertexAttributes =
 				(u32)VertexAttribute::POSITION |
@@ -4030,8 +4027,6 @@ namespace flex
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_METALLIC_SAMPLER);
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CONST_ROUGHNESS);
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ROUGHNESS_SAMPLER);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CONST_AO);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_AO_SAMPLER);
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_NORMAL_SAMPLER);
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_MODEL);
 			++shaderID;
@@ -4053,7 +4048,6 @@ namespace flex
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_ALBEDO_SAMPLER);
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CONST_METALLIC);
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CONST_ROUGHNESS);
-			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_CONST_AO);
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_NORMAL_SAMPLER);
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_MODEL);
 			//m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_TEXTURE_SCALE);
@@ -4569,16 +4563,6 @@ namespace flex
 				glUniform1f(material->uniformIDs.constRoughness, material->material.constRoughness);
 			}
 
-			if (shader->shader.dynamicBufferUniforms.HasUniform(U_AO_SAMPLER))
-			{
-				glUniform1ui(material->uniformIDs.enableAOSampler, material->material.enableAOSampler);
-			}
-
-			if (shader->shader.dynamicBufferUniforms.HasUniform(U_CONST_AO))
-			{
-				glUniform1f(material->uniformIDs.constAO, material->material.constAO);
-			}
-
 			if (shader->shader.dynamicBufferUniforms.HasUniform(U_IRRADIANCE_SAMPLER))
 			{
 				glUniform1i(material->uniformIDs.enableIrradianceSampler, material->material.enableIrradianceSampler);
@@ -4681,78 +4665,64 @@ namespace flex
 		void GLRenderer::SetFloat(ShaderID shaderID, const char* valName, real val)
 		{
 			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, valName);
-			if (location == -1)
+			if (location != -1)
 			{
-				PrintWarn("Float %s couldn't be found!\n", valName);
+				glUniform1f(location, val);
 			}
-
-			glUniform1f(location, val);
 		}
 
 		void GLRenderer::SetInt(ShaderID shaderID, const char* valName, i32 val)
 		{
 			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, valName);
-			if (location == -1)
+			if (location != -1)
 			{
-				PrintWarn("i32 %s couldn't be found!\n", valName);
+				glUniform1i(location, val);
 			}
-
-			glUniform1i(location, val);
 		}
 
 		void GLRenderer::SetUInt(ShaderID shaderID, const char* valName, u32 val)
 		{
 			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, valName);
-			if (location == -1)
+			if (location != -1)
 			{
-				PrintWarn("u32 %s couldn't be found!\n", valName);
+				glUniform1ui(location, val);
 			}
-
-			glUniform1ui(location, val);
 		}
 
 		void GLRenderer::SetVec2f(ShaderID shaderID, const char* vecName, const glm::vec2& vec)
 		{
 			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, vecName);
-			if (location == -1)
+			if (location != -1)
 			{
-				PrintWarn("Vec2f %s couldn't be found!\n", vecName);
+				glUniform2f(location, vec[0], vec[1]);
 			}
-
-			glUniform2f(location, vec[0], vec[1]);
 		}
 
 		void GLRenderer::SetVec3f(ShaderID shaderID, const char* vecName, const glm::vec3& vec)
 		{
 			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, vecName);
-			if (location == -1)
+			if (location != -1)
 			{
-				PrintWarn("Vec3f %s couldn't be found!\n", vecName);
+				glUniform3f(location, vec[0], vec[1], vec[2]);
 			}
-
-			glUniform3f(location, vec[0], vec[1], vec[2]);
 		}
 
 		void GLRenderer::SetVec4f(ShaderID shaderID, const char* vecName, const glm::vec4& vec)
 		{
 			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, vecName);
-			if (location == -1)
+			if (location != -1)
 			{
-				PrintWarn("Vec4f %s couldn't be found!\n", vecName);
+				glUniform4f(location, vec[0], vec[1], vec[2], vec[3]);
 			}
-
-			glUniform4f(location, vec[0], vec[1], vec[2], vec[3]);
 		}
 
 		void GLRenderer::SetMat4f(ShaderID shaderID, const char* matName, const glm::mat4& mat)
 		{
 			GLint location = glGetUniformLocation(m_Shaders[shaderID].program, matName);
-			if (location == -1)
+			if (location != -1)
 			{
-				PrintWarn("Mat4f %s couldn't be found!\n", matName);
+				glUniformMatrix4fv(location, 1, GL_FALSE, &mat[0][0]);
 			}
-
-			glUniformMatrix4fv(location, 1, GL_FALSE, &mat[0][0]);
 		}
 
 		void GLRenderer::GenerateGBuffer()

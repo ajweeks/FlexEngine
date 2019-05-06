@@ -357,8 +357,8 @@ namespace flex
 		m_MinPoint = glm::vec3(FLT_MAX);
 		m_MaxPoint = glm::vec3(-FLT_MAX);
 
-		assert(data->meshes_count == 1);
-		for (i32 i = 0; i < (i32)data->meshes_count; ++i)
+		//assert(data->meshes_count == 1);
+		for (i32 i = 0; i < (i32)1; ++i)
 		{
 			cgltf_mesh* mesh = &(data->meshes[i]);
 

@@ -662,16 +662,19 @@ namespace flex
 			std::string fragFileName = shader.shader.fragmentShaderFilePath;
 			StripLeadingDirectories(fragFileName);
 			std::string geomFileName;
-			if (bLoadGeometryShader)
+			if (g_bEnableLogging_Loading)
 			{
-				geomFileName = shader.shader.geometryShaderFilePath;
-				StripLeadingDirectories(geomFileName);
+				if (bLoadGeometryShader)
+				{
+					geomFileName = shader.shader.geometryShaderFilePath;
+					StripLeadingDirectories(geomFileName);
 
-				Print("Loading shaders %s & %s & %s\n", vertFileName.c_str(), fragFileName.c_str(), geomFileName.c_str());
-			}
-			else
-			{
-				Print("Loading shaders %s & %s\n", vertFileName.c_str(), fragFileName.c_str());
+					Print("Loading shaders %s & %s & %s\n", vertFileName.c_str(), fragFileName.c_str(), geomFileName.c_str());
+				}
+				else
+				{
+					Print("Loading shaders %s & %s\n", vertFileName.c_str(), fragFileName.c_str());
+				}
 			}
 
 			if (!ReadFile(shader.shader.vertexShaderFilePath, shader.shader.vertexShaderCode, false))
