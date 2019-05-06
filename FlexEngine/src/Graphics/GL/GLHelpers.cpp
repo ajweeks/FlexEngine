@@ -414,6 +414,34 @@ namespace flex
 			return bSucceeded;
 		}
 
+		bool GLTexture::CreateFromMemory(void* memory, bool bFloat, const TextureParameters& params)
+		{
+			if (memory == nullptr || width == 0 || height == 0)
+			{
+				return false;
+			}
+
+			glGenTextures(1, &handle);
+			glBindTexture(GL_TEXTURE_2D, handle);
+
+			if (channelCount == 4)
+			{
+				glTexImage2D(GL_TEXTURE_2D, 0, bFloat ? GL_RGBA16F : GL_RGBA, width, height, 0, GL_RGBA, bFloat ? GL_FLOAT : GL_UNSIGNED_BYTE, memory);
+			}
+			else
+			{
+				glTexImage2D(GL_TEXTURE_2D, 0, bFloat ? GL_RGB16F : GL_RGB, width, height, 0, GL_RGB, bFloat ? GL_FLOAT : GL_UNSIGNED_BYTE, memory);
+			}
+
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, params.minFilter);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, params.magFilter);
+
+			glBindTexture(GL_TEXTURE_2D, 0);
+			glBindVertexArray(0);
+
+			return true;
+		}
+
 		void GLTexture::Reload()
 		{
 			Destroy();

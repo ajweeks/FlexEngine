@@ -450,6 +450,7 @@ namespace flex
 		bool bNeedBRDFLUT = false;
 		bool bNeedShadowMap = false;
 		bool bNeedDepthSampler = false;
+		bool bNeedNoiseSampler = false; // TODO: Replace with check for U_NOISE_SAMPLER
 		bool bNeedPushConstantBlock = false;
 	};
 

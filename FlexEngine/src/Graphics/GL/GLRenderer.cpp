@@ -66,6 +66,9 @@ namespace flex
 			g_InputManager->BindKeyEventCallback(&m_KeyEventCallback, 13);
 			g_InputManager->BindActionCallback(&m_ActionCallback, 13);
 
+			glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+			m_SSAORes = glm::vec2u((u32)frameBufferSize.x / 2, (u32)frameBufferSize.y / 2);
+
 			m_OffscreenTexture0Handle = {};
 			m_OffscreenTexture0Handle.internalFormat = GL_RGBA16F;
 			m_OffscreenTexture0Handle.format = GL_RGBA;
@@ -96,6 +99,16 @@ namespace flex
 			m_gBufferDepthTexHandle.internalFormat = GL_DEPTH_COMPONENT;
 			m_gBufferDepthTexHandle.format = GL_DEPTH_COMPONENT;
 			m_gBufferDepthTexHandle.type = GL_FLOAT;
+
+			m_SSAOFBO = {};
+			m_SSAOFBO.internalFormat = GL_R16F;
+			m_SSAOFBO.format = GL_RED;
+			m_SSAOFBO.type = GL_FLOAT;
+
+			m_SSAOBlurFBO = {};
+			m_SSAOBlurFBO.internalFormat = GL_R16F;
+			m_SSAOBlurFBO.format = GL_RED;
+			m_SSAOBlurFBO.type = GL_FLOAT;
 
 			LoadShaders();
 
@@ -131,7 +144,6 @@ namespace flex
 
 			// Offscreen framebuffers
 			{
-				glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 				CreateOffscreenFrameBuffer(&m_Offscreen0FBO, &m_Offscreen0RBO, frameBufferSize, m_OffscreenTexture0Handle);
 				CreateOffscreenFrameBuffer(&m_Offscreen1FBO, &m_Offscreen1RBO, frameBufferSize, m_OffscreenTexture1Handle);
 			}
@@ -396,8 +408,6 @@ namespace flex
 			glGenFramebuffers(1, &m_gBufferHandle);
 			glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
 
-			const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
-
 			GenerateFrameBufferTexture(&m_gBufferFBO0.id,
 									   0,
 									   m_gBufferFBO0.internalFormat,
@@ -421,13 +431,46 @@ namespace flex
 
 			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 			{
-				PrintError("Framebuffer not complete!\n");
+				PrintError("GBuffer framebuffer not complete! Status: %u\n", glCheckFramebufferStatus(GL_FRAMEBUFFER));
+			}
+
+			// SSAO
+			glGenFramebuffers(1, &m_SSAOFrameBuffer);
+			glBindFramebuffer(GL_FRAMEBUFFER, m_SSAOFrameBuffer);
+
+			GenerateFrameBufferTexture(&m_SSAOFBO.id,
+				0,
+				m_SSAOFBO.internalFormat,
+				m_SSAOFBO.format,
+				m_SSAOFBO.type,
+				m_SSAORes);
+
+			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+			{
+				PrintError("SSAO framebuffer not complete! Status: %u\n", glCheckFramebufferStatus(GL_FRAMEBUFFER));
+			}
+
+			// SSAO Blur
+			glGenFramebuffers(1, &m_SSAOBlurFrameBuffer);
+			glBindFramebuffer(GL_FRAMEBUFFER, m_SSAOBlurFrameBuffer);
+
+			GenerateFrameBufferTexture(&m_SSAOBlurFBO.id,
+				0,
+				m_SSAOBlurFBO.internalFormat,
+				m_SSAOBlurFBO.format,
+				m_SSAOBlurFBO.type,
+				m_SSAORes);
+
+			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+			{
+				PrintError("SSAO Blur framebuffer not complete! Status: %u\n", glCheckFramebufferStatus(GL_FRAMEBUFFER));
 			}
 		}
 
 		void GLRenderer::PostInitialize()
 		{
 			GenerateGBuffer();
+			GenerateSSAOMaterials();
 
 			LoadFonts(false);
 
@@ -1015,6 +1058,25 @@ namespace flex
 				++binding;
 			}
 
+			if (shader.shader.constantBufferUniforms.HasUniform(U_NOISE_SAMPLER))
+			{
+				if (m_NoiseTexture == nullptr)
+				{
+					std::vector<glm::vec4> ssaoNoise;
+					GenerateSSAONoise(ssaoNoise);
+
+					m_NoiseTexture = new GLTexture("SSAO Noise", SSAO_NOISE_DIM, SSAO_NOISE_DIM, 4, GL_RGBA16F, GL_RGBA, GL_FLOAT);
+					TextureParameters params = {};
+					params.minFilter = GL_NEAREST;
+					params.magFilter = GL_NEAREST;
+					m_NoiseTexture->CreateFromMemory(ssaoNoise.data(), true, params);
+
+					m_LoadedTextures.push_back(m_NoiseTexture);
+				}
+
+				mat.noiseSamplerID = m_NoiseTexture->handle;
+			}
+
 			if (shader.shader.bNeedDepthSampler)
 			{
 				mat.depthSamplerID = m_gBufferDepthTexHandle.id;
@@ -1524,6 +1586,8 @@ namespace flex
 				{ U_TRANSFORM_MAT,					"transformMat",					&mat.uniformIDs.transformMat },
 				{ U_TEX_SIZE,						"texSize",						&mat.uniformIDs.texSize },
 				{ U_TIME,							"time",							&mat.uniformIDs.time },
+				{ U_SSAO_DATA,						"ssaoSamples",					&mat.uniformIDs.ssaoSamples },
+				{ U_ENABLE_SSAO,					"enableSSAO",					&mat.uniformIDs.enableSSAO },
 			};
 
 			for (const UniformInfo& uniform : uniformInfo)
@@ -1910,6 +1974,13 @@ namespace flex
 #endif
 
 			m_PhysicsDebugDrawer->UpdateDebugMode();
+
+			if (m_bSSAOStateChanged)
+			{
+				GenerateGBuffer();
+				m_bSSAOStateChanged = false;
+				return;
+			}
 
 			// TODO: Only ever use the static skybox image to avoid endlessly being out of date
 			// Capture probe again using freshly rendered skybox
@@ -2303,81 +2374,150 @@ namespace flex
 
 		void GLRenderer::DrawDeferredObjects(const DrawCallInfo& drawCallInfo)
 		{
-			const char* profileBlockName = drawCallInfo.bRenderToCubemap ? "DrawDeferredObjectsCubemap" : "DrawDeferredObjects";
-			PROFILE_AUTO(profileBlockName);
-
-			GL_PUSH_DEBUG_GROUP("Deferred Objects");
-
-			if (!drawCallInfo.bDeferred)
 			{
-				PrintError("DrawDeferredObjects was called with a drawCallInfo which isn't set to be deferred!\n");
+				GL_PUSH_DEBUG_GROUP("Deferred Objects");
+
+				const char* profileBlockName = drawCallInfo.bRenderToCubemap ? "DrawDeferredObjectsCubemap" : "DrawDeferredObjects";
+				PROFILE_AUTO(profileBlockName);
+
+				if (!drawCallInfo.bDeferred)
+				{
+					PrintError("DrawDeferredObjects was called with a drawCallInfo which isn't set to be deferred!\n");
+				}
+
+				if (drawCallInfo.bRenderToCubemap)
+				{
+					// TODO: Bind depth buffer to cubemap's depth buffer (needs to generated?)
+
+					GLRenderObject* cubemapRenderObject = GetRenderObject(drawCallInfo.cubemapObjectRenderID);
+					GLMaterial* cubemapMaterial = &m_Materials[cubemapRenderObject->materialID];
+
+					glm::vec2 cubemapSize = cubemapMaterial->material.cubemapSamplerSize;
+
+					glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
+					glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
+					glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
+
+					glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
+				}
+				else
+				{
+					glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+					glViewport(0, 0, (GLsizei)frameBufferSize.x, (GLsizei)frameBufferSize.y);
+
+					glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
+				}
+
+				{
+					const i32 FRAMEBUFFER_COUNT = 3;
+					GLenum attachments[FRAMEBUFFER_COUNT] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
+					glDrawBuffers(FRAMEBUFFER_COUNT, attachments);
+				}
+
+				glDepthMask(GL_TRUE);
+
+				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+				for (GLRenderObjectBatch& batch : m_DeferredRenderObjectBatches)
+				{
+					DrawRenderObjectBatch(batch, drawCallInfo);
+				}
+
+				glUseProgram(0);
+				glBindVertexArray(0);
+
+				{
+					const i32 FRAMEBUFFER_COUNT = 1;
+					u32 attachments[FRAMEBUFFER_COUNT] = { GL_COLOR_ATTACHMENT0 };
+					glDrawBuffers(FRAMEBUFFER_COUNT, attachments);
+				}
+
+				// Copy depth from G-Buffer to default render target
+				if (drawCallInfo.bRenderToCubemap)
+				{
+					// No blit is needed, since we already drew to the cubemap depth
+				}
+				else
+				{
+					const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+
+					glBindFramebuffer(GL_READ_FRAMEBUFFER, m_gBufferHandle);
+					glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_Offscreen0RBO);
+					glBlitFramebuffer(0, 0, frameBufferSize.x, frameBufferSize.y, 0, 0, frameBufferSize.x,
+						frameBufferSize.y, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+				}
+
+				GL_POP_DEBUG_GROUP(); // Deferred Objects
 			}
 
-			if (drawCallInfo.bRenderToCubemap)
+			if (!m_gBufferQuadVertexBufferData.vertexData)
 			{
-				// TODO: Bind depth buffer to cubemap's depth buffer (needs to generated?)
-
-				GLRenderObject* cubemapRenderObject = GetRenderObject(drawCallInfo.cubemapObjectRenderID);
-				GLMaterial* cubemapMaterial = &m_Materials[cubemapRenderObject->materialID];
-
-				glm::vec2 cubemapSize = cubemapMaterial->material.cubemapSamplerSize;
-
-				glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
-				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
-				glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
-
-				glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
-			}
-			else
-			{
-				glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
-				glViewport(0, 0, (GLsizei)frameBufferSize.x, (GLsizei)frameBufferSize.y);
-
-				glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
+				GenerateGBuffer();
 			}
 
+			glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+			GLRenderObject* gBufferQuad = GetRenderObject(m_GBufferQuadRenderID);
+
+			if (m_bSSAOEnabled)
 			{
-				const i32 FRAMEBUFFER_COUNT = 3;
-				GLenum attachments[FRAMEBUFFER_COUNT] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
-				glDrawBuffers(FRAMEBUFFER_COUNT, attachments);
+				GL_PUSH_DEBUG_GROUP("SSAO");
+
+				PROFILE_AUTO("SSAO");
+
+				GLMaterial& ssaoMat = m_Materials[m_SSAOMatID];
+				GLShader ssaoShader = m_Shaders[ssaoMat.material.shaderID];
+
+				glUseProgram(ssaoShader.program);
+
+				glBindFramebuffer(GL_FRAMEBUFFER, m_SSAOFrameBuffer);
+
+				glBindVertexArray(gBufferQuad->VAO);
+				glBindBuffer(GL_ARRAY_BUFFER, gBufferQuad->VBO);
+
+				u32 bindingOffset = BindFrameBufferTextures(&ssaoMat);
+				BindTextures(&ssaoShader.shader, &ssaoMat, bindingOffset);
+
+				glDisable(GL_CULL_FACE);
+				glDepthFunc(GL_ALWAYS);
+				glDepthMask(GL_FALSE);
+
+				glViewport(0, 0, (GLsizei)m_SSAORes.x, (GLsizei)m_SSAORes.y);
+
+				glDrawArrays(gBufferQuad->topology, 0, (GLsizei)gBufferQuad->vertexBufferData->VertexCount);
+
+				GL_POP_DEBUG_GROUP();
 			}
 
-			glDepthMask(GL_TRUE);
-
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-			for (GLRenderObjectBatch& batch : m_DeferredRenderObjectBatches)
+			if (m_bSSAOBlurEnabled)
 			{
-				DrawRenderObjectBatch(batch, drawCallInfo);
+				GL_PUSH_DEBUG_GROUP("SSAO Blur");
+
+				PROFILE_AUTO("SSAO Blur");
+
+				GLMaterial& ssaoBlurMat = m_Materials[m_SSAOBlurMatID];
+				GLShader ssaoBlurShader = m_Shaders[ssaoBlurMat.material.shaderID];
+
+				glUseProgram(ssaoBlurShader.program);
+
+				glBindFramebuffer(GL_FRAMEBUFFER, m_SSAOBlurFrameBuffer);
+
+				glBindVertexArray(gBufferQuad->VAO);
+				glBindBuffer(GL_ARRAY_BUFFER, gBufferQuad->VBO);
+
+				u32 bindingOffset = BindFrameBufferTextures(&ssaoBlurMat);
+				BindTextures(&ssaoBlurShader.shader, &ssaoBlurMat, bindingOffset);
+
+				glDisable(GL_CULL_FACE);
+				glDepthFunc(GL_ALWAYS);
+				glDepthMask(GL_FALSE);
+
+				glViewport(0, 0, (GLsizei)m_SSAORes.x, (GLsizei)m_SSAORes.y);
+
+				glDrawArrays(gBufferQuad->topology, 0, (GLsizei)gBufferQuad->vertexBufferData->VertexCount);
+
+				GL_POP_DEBUG_GROUP();
 			}
-
-			glUseProgram(0);
-			glBindVertexArray(0);
-
-			{
-				const i32 FRAMEBUFFER_COUNT = 1;
-				u32 attachments[FRAMEBUFFER_COUNT] = { GL_COLOR_ATTACHMENT0 };
-				glDrawBuffers(FRAMEBUFFER_COUNT, attachments);
-			}
-
-			// Copy depth from G-Buffer to default render target
-			if (drawCallInfo.bRenderToCubemap)
-			{
-				// No blit is needed, since we already drew to the cubemap depth
-			}
-			else
-			{
-				const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
-
-				glBindFramebuffer(GL_READ_FRAMEBUFFER, m_gBufferHandle);
-				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_Offscreen0RBO);
-				glBlitFramebuffer(0, 0, frameBufferSize.x, frameBufferSize.y, 0, 0, frameBufferSize.x,
-					frameBufferSize.y, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-			}
-			glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
-			glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
-
-			GL_POP_DEBUG_GROUP();
 		}
 
 		void GLRenderer::ShadeDeferredObjects(const DrawCallInfo& drawCallInfo)
@@ -2403,6 +2543,9 @@ namespace flex
 				// Generate GBuffer if not already generated
 				GenerateGBuffer();
 			}
+
+			glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+			glViewport(0, 0, (GLsizei)frameBufferSize.x, (GLsizei)frameBufferSize.y);
 
 			if (drawCallInfo.bRenderToCubemap)
 			{
@@ -3624,6 +3767,7 @@ namespace flex
 				{ shader->bNeedIrradianceSampler, material->enableIrradianceSampler, glMaterial->irradianceSamplerID, GL_TEXTURE_CUBE_MAP },
 				{ shader->bNeedPrefilteredMap, material->enablePrefilteredMap, glMaterial->prefilteredMapSamplerID, GL_TEXTURE_CUBE_MAP },
 				{ shader->bNeedCubemapSampler, material->enableCubemapSampler, glMaterial->cubemapSamplerID, GL_TEXTURE_CUBE_MAP },
+				{ shader->bNeedNoiseSampler, true, glMaterial->noiseSamplerID, GL_TEXTURE_2D },
 			};
 			// TODO: Update reserve count when adding more textures
 
@@ -3928,6 +4072,8 @@ namespace flex
 				{ "font_ss", RESOURCE_LOCATION  "shaders/font_ss.vert", RESOURCE_LOCATION  "shaders/font_ss.frag",  RESOURCE_LOCATION  "shaders/font_ss.geom" },
 				{ "font_ws", RESOURCE_LOCATION  "shaders/font_ws.vert", RESOURCE_LOCATION  "shaders/font_ws.frag",  RESOURCE_LOCATION  "shaders/font_ws.geom" },
 				{ "shadow", RESOURCE_LOCATION  "shaders/shadow.vert", RESOURCE_LOCATION  "shaders/shadow.frag" },
+				{ "ssao", RESOURCE_LOCATION  "shaders/ssao.vert", RESOURCE_LOCATION  "shaders/ssao.frag" },
+				{ "ssao_blur", RESOURCE_LOCATION  "shaders/ssao_blur.vert", RESOURCE_LOCATION  "shaders/ssao_blur.frag" },
 			};
 
 			ShaderID shaderID = 0;
@@ -3952,10 +4098,12 @@ namespace flex
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_EXPOSURE);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_POINT_LIGHTS);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_DIR_LIGHT);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_ENABLE_SSAO);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_IRRADIANCE_SAMPLER);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_FB_0_SAMPLER);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_FB_1_SAMPLER);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_DEPTH_SAMPLER);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_SSAO_FINAL_SAMPLER);
 			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_BRDF_LUT);
 			//m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_PREFILTER_MAP);
 
@@ -4235,6 +4383,38 @@ namespace flex
 			m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_MODEL);
 			++shaderID;
 
+			// SSAO
+			m_Shaders[shaderID].shader.bNeedDepthSampler = true;
+			m_Shaders[shaderID].shader.bNeedNoiseSampler = true;
+			m_Shaders[shaderID].shader.vertexAttributes =
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::UV;
+
+			m_Shaders[shaderID].shader.constantBufferUniforms = {};
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_PROJECTION);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_PROJECTION_INV);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_SSAO_DATA);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_DEPTH_SAMPLER);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_SSAO_NORMAL_SAMPLER);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_NOISE_SAMPLER);
+
+			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
+			++shaderID;
+
+			// SSAO Blur
+			m_Shaders[shaderID].shader.vertexAttributes =
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::UV;
+
+			m_Shaders[shaderID].shader.constantBufferUniforms = {};
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_SSAO_RAW_SAMPLER);
+
+			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
+			++shaderID;
+
+			assert(shaderID == m_Shaders.size());
+
 			for (GLShader& shader : m_Shaders)
 			{
 				shader.program = glCreateProgram();
@@ -4473,6 +4653,22 @@ namespace flex
 				{
 					SetInt(material->material.shaderID, bDEBUGShowEdgesStr, m_PostProcessSettings.bEnableFXAADEBUGShowEdges ? 1 : 0);
 				}
+
+				if (shader->shader.constantBufferUniforms.HasUniform(U_SSAO_DATA))
+				{
+					// TODO: Upload as single uniform block UBO
+					for (u32 i = 0; i < SSAO_KERNEL_SIZE; ++i)
+					{
+						std::string uniformName = "ssaoSamples[" + std::to_string(i) + "]";
+						u32 index = glGetUniformLocation(shader->program, uniformName.c_str());
+						glUniform4fv(index, 1, &m_SSAOData.samples[i].x);
+					}
+				}
+
+				if (shader->shader.constantBufferUniforms.HasUniform(U_ENABLE_SSAO))
+				{
+					glUniform1i(material->uniformIDs.enableSSAO, m_bSSAOEnabled ? 1 : 0);
+				}
 			}
 		}
 
@@ -4569,6 +4765,29 @@ namespace flex
 			}
 		}
 
+		void GLRenderer::GenerateSSAOMaterials()
+		{
+			MaterialCreateInfo ssaoMaterialCreateInfo = {};
+			ssaoMaterialCreateInfo.name = "SSAO";
+			ssaoMaterialCreateInfo.shaderName = "ssao";
+			ssaoMaterialCreateInfo.engineMaterial = true;
+			ssaoMaterialCreateInfo.frameBuffers = {
+				{ "normalRoughnessFrameBufferSampler", &m_gBufferFBO0.id },
+			};
+
+			m_SSAOMatID = InitializeMaterial(&ssaoMaterialCreateInfo, m_SSAOMatID);
+
+			MaterialCreateInfo ssaoBlurMaterialCreateInfo = {};
+			ssaoBlurMaterialCreateInfo.name = "SSAO Blur";
+			ssaoBlurMaterialCreateInfo.shaderName = "ssao_blur";
+			ssaoBlurMaterialCreateInfo.engineMaterial = true;
+			ssaoBlurMaterialCreateInfo.frameBuffers = {
+				{ "ssaoFrameBufferSampler",  &m_SSAOFBO.id },
+			};
+
+			m_SSAOBlurMatID = InitializeMaterial(&ssaoBlurMaterialCreateInfo, m_SSAOBlurMatID);
+		}
+
 		void GLRenderer::OnWindowSizeChanged(i32 width, i32 height)
 		{
 			if (width == 0 || height == 0 || m_gBufferHandle == 0)
@@ -4577,6 +4796,7 @@ namespace flex
 			}
 
 			const glm::vec2i newFrameBufferSize(width, height);
+			m_SSAORes = glm::vec2u((u32)newFrameBufferSize.x / 2, (u32)newFrameBufferSize.y / 2);
 
 			glBindFramebuffer(GL_FRAMEBUFFER, m_Offscreen0FBO);
 			ResizeFrameBufferTexture(m_OffscreenTexture0Handle.id,
@@ -4616,6 +4836,20 @@ namespace flex
 				m_gBufferDepthTexHandle.format,
 				m_gBufferDepthTexHandle.type,
 				newFrameBufferSize);
+
+			// TODO: GenerateSSAOMaterials?
+
+			ResizeFrameBufferTexture(m_SSAOFBO.id,
+				m_SSAOFBO.internalFormat,
+				m_SSAOFBO.format,
+				m_SSAOFBO.type,
+				m_SSAORes);
+
+			ResizeFrameBufferTexture(m_SSAOBlurFBO.id,
+				m_SSAOBlurFBO.internalFormat,
+				m_SSAOBlurFBO.format,
+				m_SSAOBlurFBO.type,
+				m_SSAORes);
 		}
 
 		void GLRenderer::OnPreSceneChange()
@@ -4773,8 +5007,9 @@ namespace flex
 			gBufferMaterialCreateInfo.enableBRDFLUT = true;
 			gBufferMaterialCreateInfo.engineMaterial = true;
 			gBufferMaterialCreateInfo.frameBuffers = {
-				{ "normalRoughnessFrameBufferSampler",  &m_gBufferFBO0.id },
-				{ "albedoMetallicFrameBufferSampler",  &m_gBufferFBO1.id },
+				{ "normalRoughnessFrameBufferSampler", &m_gBufferFBO0.id },
+				{ "albedoMetallicFrameBufferSampler", &m_gBufferFBO1.id },
+				{ "ssaoBlurFrameBufferSampler",	m_bSSAOBlurEnabled ? &m_SSAOBlurFBO.id : &m_SSAOFBO.id },
 			};
 
 			MaterialID gBufferMatID = InitializeMaterial(&gBufferMaterialCreateInfo);

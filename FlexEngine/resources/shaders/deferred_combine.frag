@@ -39,15 +39,17 @@ uniform float exposure = 1.0;
 uniform mat4 lightViewProj;
 uniform bool castShadows = true;
 uniform float shadowDarkness = 1.0;
+uniform bool enableSSAO = true;
 const float PI = 3.14159265359;
 
 layout (binding = 0) uniform sampler2D normalRoughnessFrameBufferSampler;
 layout (binding = 1) uniform sampler2D albedoMetallicFrameBufferSampler;
-layout (binding = 2) uniform sampler2D depthBuffer;
-layout (binding = 3) uniform sampler2D brdfLUT;
-layout (binding = 4) uniform sampler2D shadowMap;
-layout (binding = 5) uniform samplerCube irradianceSampler;
-layout (binding = 6) uniform samplerCube prefilterMap;
+layout (binding = 2) uniform sampler2D ssaoBlurFrameBufferSampler;
+layout (binding = 3) uniform sampler2D depthBuffer;
+layout (binding = 4) uniform sampler2D brdfLUT;
+layout (binding = 5) uniform sampler2D shadowMap;
+layout (binding = 6) uniform samplerCube irradianceSampler;
+layout (binding = 7) uniform samplerCube prefilterMap;
 
 vec3 FresnelSchlick(float cosTheta, vec3 F0)
 {
@@ -130,6 +132,8 @@ void main()
 
     vec3 N = texture(normalRoughnessFrameBufferSampler, ex_TexCoord).rgb;
     N = mat3(invView) * N; // view space -> world space
+
+    float ssao = enableSSAO ? texture(ssaoBlurFrameBufferSampler, ex_TexCoord).r : 1.0f;
 
     float roughness = texture(normalRoughnessFrameBufferSampler, ex_TexCoord).a;
     roughness = max(roughness, 0.045);
@@ -249,7 +253,7 @@ void main()
 		ambient = vec3(0.03) * albedo;
 	}
 
-	vec3 color = ambient + Lo;
+	vec3 color = ambient + Lo * ssao;
 
 	// color = mix(color, vec3(
 	// 	min(

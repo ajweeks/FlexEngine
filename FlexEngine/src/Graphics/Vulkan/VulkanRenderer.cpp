@@ -235,16 +235,6 @@ namespace flex
 				}
 			}
 
-			for (u32 i = 0; i < SSAO_KERNEL_SIZE; ++i)
-			{
-				glm::vec3 sample(RandomFloat(-0.9f, 0.9f), RandomFloat(-0.9f, 0.9f), RandomFloat(0.0f, 1.0f));
-				sample = glm::normalize(sample); // Snap to surface of hemisphere
-				sample *= RandomFloat(0.0f, 1.0f); // Space out linearly
-				real scale = (real)i / (real)SSAO_KERNEL_SIZE;
-				scale = Lerp(0.1f, 1.0f, scale * scale); // Bring distribution of samples closer to origin
-				m_SSAOData.samples[i] = glm::vec4(sample * scale, 0.0f);
-			}
-
 			Renderer::InitializeMaterials();
 		}
 
@@ -2047,12 +2037,8 @@ namespace flex
 			{
 				if (m_NoiseTexture == nullptr)
 				{
-					std::vector<glm::vec4> ssaoNoise(SSAO_NOISE_DIM * SSAO_NOISE_DIM);
-					for (u32 i = 0; i < static_cast<u32>(ssaoNoise.size()); ++i)
-					{
-						// Random rotations around z-axis
-						ssaoNoise[i] = glm::vec4(RandomFloat(-1.0f, 1.0f), RandomFloat(-1.0f, 1.0f), 0.0f, 0.0f);
-					}
+					std::vector<glm::vec4> ssaoNoise;
+					GenerateSSAONoise(ssaoNoise);
 
 					m_NoiseTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "SSAO Noise", SSAO_NOISE_DIM, SSAO_NOISE_DIM, 4);
 					void* buffer = ssaoNoise.data();
@@ -2223,6 +2209,13 @@ namespace flex
 			}
 #endif
 
+			if (m_bSSAOStateChanged)
+			{
+				m_bSSAOStateChanged = false;
+				CreateDescriptorSet(m_GBufferQuadRenderID);
+				CreateGraphicsPipeline(m_GBufferQuadRenderID, false);
+			}
+
 			m_PhysicsDebugDrawer->UpdateDebugMode();
 
 			UpdateConstantUniformBuffers();
@@ -2273,31 +2266,6 @@ namespace flex
 			}
 
 			++m_FramesRendered;
-		}
-
-		void VulkanRenderer::DrawImGuiMisc()
-		{
-			Renderer::DrawImGuiMisc();
-
-			if (ImGui::Checkbox("SSAO", &m_bSSAOEnabled))
-			{
-				m_bSSAOBlurEnabled = m_bSSAOEnabled;
-			}
-			bool bRebuild = false;
-			if (ImGui::Checkbox("SSAO Blur", &m_bSSAOBlurEnabled))
-			{
-				bRebuild = true;
-				if (m_bSSAOBlurEnabled)
-				{
-					m_bSSAOEnabled = true;
-				}
-			}
-
-			if (bRebuild)
-			{
-				CreateDescriptorSet(m_GBufferQuadRenderID);
-				CreateGraphicsPipeline(m_GBufferQuadRenderID, false);
-			}
 		}
 
 		void VulkanRenderer::DrawImGuiWindows()

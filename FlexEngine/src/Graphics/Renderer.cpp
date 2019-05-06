@@ -106,6 +106,16 @@ namespace flex
 			m_PointLights[i].color = VEC3_NEG_ONE;
 			m_PointLights[i].enabled = 0;
 		}
+
+		for (u32 i = 0; i < SSAO_KERNEL_SIZE; ++i)
+		{
+			glm::vec3 sample(RandomFloat(-0.9f, 0.9f), RandomFloat(-0.9f, 0.9f), RandomFloat(0.0f, 1.0f));
+			sample = glm::normalize(sample); // Snap to surface of hemisphere
+			sample *= RandomFloat(0.0f, 1.0f); // Space out linearly
+			real scale = (real)i / (real)SSAO_KERNEL_SIZE;
+			scale = Lerp(0.1f, 1.0f, scale * scale); // Bring distribution of samples closer to origin
+			m_SSAOData.samples[i] = glm::vec4(sample * scale, 0.0f);
+		}
 	}
 
 	void Renderer::Destroy()
@@ -846,6 +856,24 @@ namespace flex
 				m_PostProcessSettings.saturation / maxSaturation,
 				m_PostProcessSettings.saturation / maxSaturation,
 				m_PostProcessSettings.saturation / maxSaturation, 1));
+
+			if (ImGui::Checkbox("SSAO", &m_bSSAOEnabled))
+			{
+				if (m_bSSAOBlurEnabled != m_bSSAOEnabled)
+				{
+					m_bSSAOBlurEnabled = m_bSSAOEnabled;
+					m_bSSAOStateChanged = true;
+				}
+			}
+
+			if (ImGui::Checkbox("SSAO Blur", &m_bSSAOBlurEnabled))
+			{
+				m_bSSAOStateChanged = true;
+				if (m_bSSAOBlurEnabled)
+				{
+					m_bSSAOEnabled = true;
+				}
+			}
 
 			ImGui::TreePop();
 		}
@@ -2019,6 +2047,16 @@ namespace flex
 
 			gBufferQuadVertexBufferDataCreateInfo.attributes = (u32)VertexAttribute::POSITION | (u32)VertexAttribute::UV;
 			m_gBufferQuadVertexBufferData.Initialize(&gBufferQuadVertexBufferDataCreateInfo);
+		}
+	}
+
+	void Renderer::GenerateSSAONoise(std::vector<glm::vec4>& noise)
+	{
+		noise = std::vector<glm::vec4>(SSAO_NOISE_DIM * SSAO_NOISE_DIM);
+		for (u32 i = 0; i < static_cast<u32>(noise.size()); ++i)
+		{
+			// Random rotations around z-axis
+			noise[i] = glm::vec4(RandomFloat(-1.0f, 1.0f), RandomFloat(-1.0f, 1.0f), 0.0f, 0.0f);
 		}
 	}
 

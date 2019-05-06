@@ -44,7 +44,6 @@ namespace flex
 
 			virtual void Update() override;
 			virtual void Draw() override;
-			virtual void DrawImGuiMisc() override;
 			virtual void DrawImGuiWindows() override;
 
 			virtual void UpdateVertexData(RenderID renderID, VertexBufferData* vertexBufferData) override;
@@ -429,7 +428,6 @@ namespace flex
 
 			u32 m_CurrentSwapChainBufferIndex = 0;
 
-			static const u32 SSAO_NOISE_DIM = 4;
 			VulkanTexture* m_NoiseTexture = nullptr;
 			MaterialID m_SSAOMatID = InvalidMaterialID;
 			MaterialID m_SSAOBlurMatID = InvalidMaterialID;
@@ -440,12 +438,6 @@ namespace flex
 			VkDescriptorSet m_SSAODescSet = VK_NULL_HANDLE;
 			VkDescriptorSet m_SSAOBlurDescSet = VK_NULL_HANDLE;
 			VDeleter<VkSampler> m_SSAOSampler;
-
-			SSAOData m_SSAOData;
-			glm::vec2u m_SSAORes;
-
-			bool m_bSSAOEnabled = true;
-			bool m_bSSAOBlurEnabled = true;
 
 #ifdef DEBUG
 			AsyncVulkanShaderCompiler* m_ShaderCompiler = nullptr;

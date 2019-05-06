@@ -89,6 +89,8 @@ namespace flex
 				i32 shadowDarkness;
 				//i32 textureScale;
 				i32 time;
+				i32 ssaoSamples;
+				i32 enableSSAO;
 			};
 			UniformIDs uniformIDs;
 
@@ -110,6 +112,10 @@ namespace flex
 			u32 prefilteredMapSamplerID = InvalidID;
 			u32 brdfLUTSamplerID = InvalidID;
 			u32 depthSamplerID = InvalidID;
+			u32 noiseSamplerID = InvalidID;
+			u32 ssaoNormalSamplerID = InvalidID;
+			u32 ssaoRawSamplerID = InvalidID;
+			u32 ssaoFinalSamplerID = InvalidID;
 		};
 
 		struct GLRenderObject
@@ -225,6 +231,7 @@ namespace flex
 
 			bool CreateEmpty();
 			bool LoadFromFile();
+			bool CreateFromMemory(void* memory, bool bFloat, const TextureParameters& params);
 
 			void Reload();
 

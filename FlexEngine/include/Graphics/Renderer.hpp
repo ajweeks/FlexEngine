@@ -238,6 +238,7 @@ namespace flex
 		glm::mat4 GetPostProcessingMatrix() const;
 
 		void GenerateGBufferVertexBuffer(bool bFlipV);
+		void GenerateSSAONoise(std::vector<glm::vec4>& noise);
 
 		RenderID m_GBufferQuadRenderID = InvalidRenderID;
 		VertexBufferData m_gBufferQuadVertexBufferData;
@@ -321,6 +322,15 @@ namespace flex
 
 		// Contains file paths for each file with a .hdr extension in the `resources/textures/hdri/` directory
 		std::vector<std::string> m_AvailableHDRIs;
+
+		static const u32 SSAO_NOISE_DIM = 4;
+
+		SSAOData m_SSAOData;
+		glm::vec2u m_SSAORes;
+
+		bool m_bSSAOEnabled = true;
+		bool m_bSSAOBlurEnabled = true;
+		bool m_bSSAOStateChanged = false;
 
 	private:
 		Renderer& operator=(const Renderer&) = delete;

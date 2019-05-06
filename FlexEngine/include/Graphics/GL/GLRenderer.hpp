@@ -139,6 +139,7 @@ namespace flex
 			void SetMat4f(ShaderID shaderID, const char* matName, const glm::mat4& mat);
 
 			void GenerateGBuffer();
+			MaterialID GenerateGBufferMaterial();
 
 			// Draw all static geometry to the given render object's cubemap texture
 			void CaptureSceneToCubemap(RenderID cubemapRenderID);
@@ -249,6 +250,15 @@ namespace flex
 			i32 m_ShadowMapSize = 4096;
 			MaterialID m_ShadowMaterialID = InvalidMaterialID;
 
+			u32 m_SSAOFrameBuffer = 0;
+			u32 m_SSAOBlurFrameBuffer = 0;
+			TextureHandle m_SSAOFBO;
+			TextureHandle m_SSAOBlurFBO;
+			MaterialID m_SSAOMatID = InvalidMaterialID;
+			MaterialID m_SSAOBlurMatID = InvalidMaterialID;
+
+			GLTexture* m_NoiseTexture = nullptr;
+
 			GLTexture* m_BRDFTexture = nullptr;
 
 			// Everything is drawn to this texture before being drawn to the default
@@ -312,6 +322,7 @@ namespace flex
 
 			GLRenderer(const GLRenderer&) = delete;
 			GLRenderer& operator=(const GLRenderer&) = delete;
+			void GenerateSSAOMaterials();
 		};
 
 		void SetClipboardText(void* userData, const char* text);
