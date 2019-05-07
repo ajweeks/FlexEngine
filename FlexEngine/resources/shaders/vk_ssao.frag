@@ -61,7 +61,7 @@ void main()
 	float occlusion = 0.0f;
 	for (uint i = 0; i < uboConstant.ssaoKernelSize; i++)
 	{
-		vec3 samplePos = TBN * uboConstant.samples[i].xyz; 
+		vec3 samplePos = TBN * uboConstant.samples[i].xyz;
 		samplePos = posVS + samplePos * uboConstant.ssaoRadius; 
 
 		vec4 offset = vec4(samplePos, 1.0f);

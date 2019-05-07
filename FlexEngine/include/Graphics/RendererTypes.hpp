@@ -46,9 +46,15 @@ namespace flex
 		real radius;
 	};
 
-	struct SSAOBlurData
+	struct SSAOBlurDataConstant
 	{
 		i32 radius;
+		i32 pad; // This is needed so this struct matches the size of SSAOBlurDataDynamic (TODO: Find better solution!)
+	};
+
+	struct SSAOBlurDataDynamic
+	{
+		glm::vec2 ssaoTexelOffset;
 	};
 
 	struct SSAOSamplingData
@@ -115,7 +121,7 @@ namespace flex
 	const u64 U_SSAO_FINAL_SAMPLER				= (1ull << 54);
 	const u64 U_SSAO_NORMAL_SAMPLER				= (1ull << 55);
 	const u64 U_SSAO_GEN_DATA					= (1ull << 56); const u32 US_SSAO_GEN_DATA				= sizeof(SSAOGenData);
-	const u64 U_SSAO_BLUR_DATA					= (1ull << 57); const u32 US_SSAO_BLUR_DATA				= sizeof(SSAOBlurData);
+	const u64 U_SSAO_BLUR_DATA					= (1ull << 57); const u32 US_SSAO_BLUR_DATA				= sizeof(SSAOBlurDataDynamic); // TODO: use two uniforms?
 	const u64 U_SSAO_SAMPLING_DATA				= (1ull << 58); const u32 US_SSAO_SAMPLING_DATA			= sizeof(SSAOSamplingData);
 	// NOTE!: New uniforms must be added to Uniforms::CalculateSizeInBytes
 

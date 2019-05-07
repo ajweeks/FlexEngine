@@ -326,7 +326,9 @@ namespace flex
 		static const u32 SSAO_NOISE_DIM = 4;
 
 		SSAOGenData m_SSAOGenData;
-		SSAOBlurData m_SSAOBlurData;
+		SSAOBlurDataConstant m_SSAOBlurDataConstant;
+		SSAOBlurDataDynamic m_SSAOBlurDataDynamic;
+		i32 m_SSAOBlurSamplePixelOffset;
 		SSAOSamplingData m_SSAOSamplingData;
 		glm::vec2u m_SSAORes;
 		bool m_bSSAOBlurEnabled = true;

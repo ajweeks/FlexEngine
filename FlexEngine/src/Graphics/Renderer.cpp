@@ -119,7 +119,9 @@ namespace flex
 		m_SSAOGenData.kernelSize = MAX_SSAO_KERNEL_SIZE;
 		m_SSAOGenData.radius = 4.5f;
 
-		m_SSAOBlurData.radius = 3;
+		m_SSAOBlurDataConstant.radius = 3;
+		m_SSAOBlurSamplePixelOffset = 1;
+		glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 
 		m_SSAOSamplingData.powExp = 1.75f;
 		m_SSAOSamplingData.ssaoEnabled = 1;
@@ -892,7 +894,8 @@ namespace flex
 				m_SSAOGenData.kernelSize = (u32)kernelSize;
 			}
 			ImGui::SliderFloat("Radius", &m_SSAOGenData.radius, 0.0001f, 15.0f);
-			ImGui::SliderInt("Blur Radius", &m_SSAOBlurData.radius, 1, 16);
+			ImGui::SliderInt("Blur Radius", &m_SSAOBlurDataConstant.radius, 1, 16);
+			ImGui::SliderInt("Blur Offset Count", &m_SSAOBlurSamplePixelOffset, 1, 10);
 			ImGui::SliderFloat("Pow", &m_SSAOSamplingData.powExp, 0.1f, 10.0f);
 
 			ImGui::TreePop();

@@ -132,7 +132,6 @@ namespace flex
 
 				glm::mat4 projection;
 				glm::mat4 view;
-				glm::mat4 viewInv;
 				glm::mat4 viewProjection;
 				glm::vec4 camPos;
 				glm::mat4 model;
@@ -149,6 +148,7 @@ namespace flex
 				glm::vec4 sdfData;
 				glm::vec4 fontCharData;
 				glm::vec2 texSize;
+				bool bSSAOVerticalPass;
 			};
 
 			void GenerateCubemapFromHDR(VulkanRenderObject* renderObject, const std::string& environmentMapPath);
@@ -331,7 +331,8 @@ namespace flex
 			VkDescriptorSet m_OffscreenBufferDescriptorSet = VK_NULL_HANDLE;
 
 			FrameBuffer* m_SSAOFrameBuf = nullptr;
-			FrameBuffer* m_SSAOBlurFrameBuf = nullptr;
+			FrameBuffer* m_SSAOBlurHFrameBuf = nullptr;
+			FrameBuffer* m_SSAOBlurVFrameBuf = nullptr;
 			VkDescriptorSet m_SSAODescriptorSet = VK_NULL_HANDLE;
 			VkFormat m_SSAOBufferFormat = VK_FORMAT_UNDEFINED;
 
@@ -386,7 +387,8 @@ namespace flex
 
 			VDeleter<VkRenderPass> m_DeferredCombineRenderPass;
 			VDeleter<VkRenderPass> m_SSAORenderPass;
-			VDeleter<VkRenderPass> m_SSAOBlurRenderPass;
+			VDeleter<VkRenderPass> m_SSAOBlurHRenderPass;
+			VDeleter<VkRenderPass> m_SSAOBlurVRenderPass;
 			VDeleter<VkRenderPass> m_ForwardRenderPass;
 
 			VDeleter<VkPipeline> m_FontSSGraphicsPipeline;
@@ -432,11 +434,13 @@ namespace flex
 			MaterialID m_SSAOMatID = InvalidMaterialID;
 			MaterialID m_SSAOBlurMatID = InvalidMaterialID;
 			VDeleter<VkPipeline> m_SSAOGraphicsPipeline;
-			VDeleter<VkPipeline> m_SSAOBlurGraphicsPipeline;
+			VDeleter<VkPipeline> m_SSAOBlurGraphicsPipelineH;
+			VDeleter<VkPipeline> m_SSAOBlurGraphicsPipelineV;
 			VDeleter<VkPipelineLayout> m_SSAOGraphicsPipelineLayout;
 			VDeleter<VkPipelineLayout> m_SSAOBlurGraphicsPipelineLayout;
 			VkDescriptorSet m_SSAODescSet = VK_NULL_HANDLE;
-			VkDescriptorSet m_SSAOBlurDescSet = VK_NULL_HANDLE;
+			VkDescriptorSet m_SSAOBlurHDescSet = VK_NULL_HANDLE;
+			VkDescriptorSet m_SSAOBlurVDescSet = VK_NULL_HANDLE;
 			VDeleter<VkSampler> m_SSAOSampler;
 
 #ifdef DEBUG

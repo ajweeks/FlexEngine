@@ -8,23 +8,25 @@ layout (binding = 0) uniform UBOConstant
 {
 	// SSAO Blur Data
 	int ssaoBlurRadius;
+	int pad;
 } uboConstant;
 
-layout (binding = 1) uniform sampler2D in_SSAO;
+layout (binding = 1) uniform UBODynamic
+{
+	vec2 ssaoTexelOffset;
+} uboDyanmic;
+
+layout (binding = 2) uniform sampler2D in_SSAO;
 
 void main()
 {
-	int range = uboConstant.ssaoBlurRadius;
-	const float sampleCount = (range*2+1) * (range*2+1);
-	vec2 texelSize = 2.0 / vec2(textureSize(in_SSAO, 0));
-	float sum = 0.0;
-	for (int x = -range; x <= range; x++) 
+	int sampleCount = 0;
+	float sum = 0.0f;
+	for (int i = -uboConstant.ssaoBlurRadius; i <= uboConstant.ssaoBlurRadius; i++) 
 	{
-		for (int y = -range; y <= range; y++) 
-		{
-			vec2 offset = vec2(float(x), float(y)) * texelSize;
-			sum += texture(in_SSAO, ex_UV + offset).r;
-		}
+		vec2 offset = uboDyanmic.ssaoTexelOffset * float(i);
+		sum += texture(in_SSAO, ex_UV + offset).r;
+		++sampleCount;
 	}
-	out_Color = clamp(sum / sampleCount, 0.0f, 1.0f);
+	out_Color = clamp(sum / float(sampleCount), 0.0f, 1.0f);
 }
