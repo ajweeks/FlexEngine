@@ -815,7 +815,7 @@ namespace flex
 				{
 					m_FrameTimes[i - 1] = m_FrameTimes[i];
 				}
-				m_FrameTimes[m_FrameTimes.size() - 1] = dt;
+				m_FrameTimes[m_FrameTimes.size() - 1] = dt * 1000.0f;
 			}
 
 			PROFILE_BEGIN("Update");
@@ -1277,10 +1277,10 @@ namespace flex
 					real width = 300.0f;
 					real height = 100.0f;
 					real minMS = 0.0f;
-					real maxMS = 0.1f;
+					real maxMS = 100.0f;
 					ImGui::PlotLines("", m_FrameTimes.data(), m_FrameTimes.size(), 0, 0, minMS, maxMS, ImVec2(width, height));
 					real targetFrameRate = 60.0f;
-					p.y += (1.0f - (1.0f / targetFrameRate) / (maxMS - minMS)) * height;
+					p.y += (1.0f - (1000.0f / targetFrameRate) / (maxMS - minMS)) * height;
 					ImGui::GetWindowDrawList()->AddLine(p, ImVec2(p.x + width, p.y), IM_COL32(128, 0, 0, 255), 1.0f);
 
 					ImGui::TreePop();
