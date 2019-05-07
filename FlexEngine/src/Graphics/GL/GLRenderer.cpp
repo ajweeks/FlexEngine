@@ -408,19 +408,8 @@ namespace flex
 			glGenFramebuffers(1, &m_gBufferHandle);
 			glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
 
-			GenerateFrameBufferTexture(&m_gBufferFBO0.id,
-									   0,
-									   m_gBufferFBO0.internalFormat,
-									   m_gBufferFBO0.format,
-									   m_gBufferFBO0.type,
-									   frameBufferSize);
-
-			GenerateFrameBufferTexture(&m_gBufferFBO1.id,
-									   1,
-									   m_gBufferFBO1.internalFormat,
-									   m_gBufferFBO1.format,
-									   m_gBufferFBO1.type,
-									   frameBufferSize);
+			GenerateFrameBufferTexture(m_gBufferFBO0, 0, frameBufferSize);
+			GenerateFrameBufferTexture(m_gBufferFBO1, 1, frameBufferSize);
 
 			glGenTextures(1, &m_gBufferDepthTexHandle.id);
 			glBindTexture(GL_TEXTURE_2D, m_gBufferDepthTexHandle.id);
@@ -438,12 +427,7 @@ namespace flex
 			glGenFramebuffers(1, &m_SSAOFrameBuffer);
 			glBindFramebuffer(GL_FRAMEBUFFER, m_SSAOFrameBuffer);
 
-			GenerateFrameBufferTexture(&m_SSAOFBO.id,
-				0,
-				m_SSAOFBO.internalFormat,
-				m_SSAOFBO.format,
-				m_SSAOFBO.type,
-				m_SSAORes);
+			GenerateFrameBufferTexture(m_SSAOFBO, 0, m_SSAORes);
 
 			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 			{
@@ -454,12 +438,7 @@ namespace flex
 			glGenFramebuffers(1, &m_SSAOBlurFrameBuffer);
 			glBindFramebuffer(GL_FRAMEBUFFER, m_SSAOBlurFrameBuffer);
 
-			GenerateFrameBufferTexture(&m_SSAOBlurFBO.id,
-				0,
-				m_SSAOBlurFBO.internalFormat,
-				m_SSAOBlurFBO.format,
-				m_SSAOBlurFBO.type,
-				m_SSAORes);
+			GenerateFrameBufferTexture(m_SSAOBlurFBO, 0, m_SSAORes);
 
 			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 			{
@@ -1891,6 +1870,13 @@ namespace flex
 			glBindTexture(GL_TEXTURE_2D, 0);
 		}
 
+		void GLRenderer::GenerateFrameBufferTexture(TextureHandle& handle, i32 index, const glm::vec2i& size)
+		{
+			GenerateFrameBufferTexture(&handle.id, index, handle.internalFormat, handle.format, handle.type, size);
+			handle.width = (u32)size.x;
+			handle.height = (u32)size.y;
+		}
+
 		void GLRenderer::ResizeFrameBufferTexture(u32 handle, GLint internalFormat, GLenum format, GLenum type, const glm::vec2i& size)
 		{
 			glBindTexture(GL_TEXTURE_2D, handle);
@@ -2199,12 +2185,7 @@ namespace flex
 				glGenFramebuffers(1, &newFrameBufferFBO);
 				glBindFramebuffer(GL_FRAMEBUFFER, newFrameBufferFBO);
 
-				GenerateFrameBufferTexture(&handle.id,
-					0,
-					handle.internalFormat,
-					handle.format,
-					handle.type,
-					frameBufferSize);
+				GenerateFrameBufferTexture(handle, 0, frameBufferSize);
 
 				glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, newFrameBufferFBO);
@@ -3861,12 +3842,7 @@ namespace flex
 			glRenderbufferStorage(GL_RENDERBUFFER, m_OffscreenDepthBufferInternalFormat, size.x, size.y);
 			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, *RBO);
 
-			GenerateFrameBufferTexture(&handle.id,
-									   0,
-									   handle.internalFormat,
-									   handle.format,
-									   handle.type,
-									   size);
+			GenerateFrameBufferTexture(handle, 0, size);
 
 			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 			{
