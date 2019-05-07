@@ -113,12 +113,12 @@ namespace flex
 
 			struct TextureHandle
 			{
-				u32 id;
-				GLenum internalFormat;
-				GLenum format;
-				GLenum type;
-				u32 width;
-				u32 height;
+				u32 id = InvalidID;
+				GLenum internalFormat = 0x0500; // GL_INVALID_ENUM
+				GLenum format = 0x0500; // GL_INVALID_ENUM
+				GLenum type = 0x0500; // GL_INVALID_ENUM
+				u32 width = 0;
+				u32 height = 0;
 			};
 
 			friend class GLPhysicsDebugDraw;
@@ -176,6 +176,7 @@ namespace flex
 			void GenerateFrameBufferTexture(TextureHandle& handle, i32 index, const glm::vec2i& size);
 
 			void ResizeFrameBufferTexture(u32 handle, GLint internalFormat, GLenum format, GLenum type, const glm::vec2i& size);
+			void ResizeFrameBufferTexture(TextureHandle& handle, const glm::vec2i& size);
 			void ResizeRenderBuffer(u32 handle, const glm::vec2i& size, GLenum internalFormat);
 
 			void UpdateAllMaterialUniforms();

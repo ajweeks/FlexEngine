@@ -1883,6 +1883,13 @@ namespace flex
 			glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, size.x, size.y, 0, format, type, NULL);
 		}
 
+		void GLRenderer::ResizeFrameBufferTexture(TextureHandle& handle, const glm::vec2i& size)
+		{
+			ResizeFrameBufferTexture(handle.id, handle.internalFormat, handle.format, handle.type, size);
+			handle.width = (u32)size.x;
+			handle.height = (u32)size.y;
+		}
+
 		void GLRenderer::ResizeRenderBuffer(u32 handle, const glm::vec2i& size, GLenum internalFormat)
 		{
 			glBindRenderbuffer(GL_RENDERBUFFER, handle);
@@ -4777,56 +4784,18 @@ namespace flex
 			const glm::vec2i newFrameBufferSize(width, height);
 			m_SSAORes = glm::vec2u((u32)newFrameBufferSize.x / 2, (u32)newFrameBufferSize.y / 2);
 
-			glBindFramebuffer(GL_FRAMEBUFFER, m_Offscreen0FBO);
-			ResizeFrameBufferTexture(m_OffscreenTexture0Handle.id,
-									 m_OffscreenTexture0Handle.internalFormat,
-									 m_OffscreenTexture0Handle.format,
-									 m_OffscreenTexture0Handle.type,
-									 newFrameBufferSize);
-
+			ResizeFrameBufferTexture(m_OffscreenTexture0Handle, newFrameBufferSize);
 			ResizeRenderBuffer(m_Offscreen0RBO, newFrameBufferSize, m_OffscreenDepthBufferInternalFormat);
 
-
-			glBindFramebuffer(GL_FRAMEBUFFER, m_Offscreen1FBO);
-			ResizeFrameBufferTexture(m_OffscreenTexture1Handle.id,
-									 m_OffscreenTexture1Handle.internalFormat,
-									 m_OffscreenTexture1Handle.format,
-									 m_OffscreenTexture1Handle.type,
-									 newFrameBufferSize);
-
+			ResizeFrameBufferTexture(m_OffscreenTexture1Handle, newFrameBufferSize);
 			ResizeRenderBuffer(m_Offscreen1RBO, newFrameBufferSize, m_OffscreenDepthBufferInternalFormat);
 
+			ResizeFrameBufferTexture(m_gBufferFBO0, newFrameBufferSize);
 
-			glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
-			ResizeFrameBufferTexture(m_gBufferFBO0.id,
-				m_gBufferFBO0.internalFormat,
-				m_gBufferFBO0.format,
-				m_gBufferFBO0.type,
-				newFrameBufferSize);
-
-			ResizeFrameBufferTexture(m_gBufferFBO1.id,
-				m_gBufferFBO1.internalFormat,
-				m_gBufferFBO1.format,
-				m_gBufferFBO1.type,
-				newFrameBufferSize);
-
-			ResizeFrameBufferTexture(m_gBufferDepthTexHandle.id,
-				m_gBufferDepthTexHandle.internalFormat,
-				m_gBufferDepthTexHandle.format,
-				m_gBufferDepthTexHandle.type,
-				newFrameBufferSize);
-
-			ResizeFrameBufferTexture(m_SSAOFBO.id,
-				m_SSAOFBO.internalFormat,
-				m_SSAOFBO.format,
-				m_SSAOFBO.type,
-				m_SSAORes);
-
-			ResizeFrameBufferTexture(m_SSAOBlurFBO.id,
-				m_SSAOBlurFBO.internalFormat,
-				m_SSAOBlurFBO.format,
-				m_SSAOBlurFBO.type,
-				m_SSAORes);
+			ResizeFrameBufferTexture(m_gBufferFBO1, newFrameBufferSize);
+			ResizeFrameBufferTexture(m_gBufferDepthTexHandle, newFrameBufferSize);
+			ResizeFrameBufferTexture(m_SSAOFBO, m_SSAORes);
+			ResizeFrameBufferTexture(m_SSAOBlurFBO, m_SSAORes);
 		}
 
 		void GLRenderer::OnPreSceneChange()
