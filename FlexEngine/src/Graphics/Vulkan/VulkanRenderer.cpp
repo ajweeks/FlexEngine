@@ -763,10 +763,8 @@ namespace flex
 			clearValues[0].color = m_ClearColor;
 
 			VkRenderPassBeginInfo renderPassBeginInfo = vks::renderPassBeginInfo(renderPass);
-			// Reuse render pass from example pass
 			renderPassBeginInfo.framebuffer = offscreen.framebuffer;
-			renderPassBeginInfo.renderArea.extent.width = dim;
-			renderPassBeginInfo.renderArea.extent.height = dim;
+			renderPassBeginInfo.renderArea.extent = { dim, dim };
 			renderPassBeginInfo.clearValueCount = 1;
 			renderPassBeginInfo.pClearValues = clearValues;
 
@@ -1129,8 +1127,7 @@ namespace flex
 
 			VkRenderPassBeginInfo renderPassBeginInfo = vks::renderPassBeginInfo(renderPass);
 			renderPassBeginInfo.framebuffer = offscreen.framebuffer;
-			renderPassBeginInfo.renderArea.extent.width = dim;
-			renderPassBeginInfo.renderArea.extent.height = dim;
+			renderPassBeginInfo.renderArea.extent = { dim, dim };
 			renderPassBeginInfo.clearValueCount = 1;
 			renderPassBeginInfo.pClearValues = clearValues;
 
@@ -1472,8 +1469,7 @@ namespace flex
 
 			VkRenderPassBeginInfo renderPassBeginInfo = vks::renderPassBeginInfo(renderPass);
 			renderPassBeginInfo.framebuffer = offscreen.framebuffer;
-			renderPassBeginInfo.renderArea.extent.width = dim;
-			renderPassBeginInfo.renderArea.extent.height = dim;
+			renderPassBeginInfo.renderArea.extent = { dim, dim };
 			renderPassBeginInfo.clearValueCount = 1;
 			renderPassBeginInfo.pClearValues = clearValues;
 
@@ -1742,8 +1738,7 @@ namespace flex
 			clearValues[0].color = m_ClearColor;
 
 			VkRenderPassBeginInfo renderPassBeginInfo = vks::renderPassBeginInfo(renderPass);
-			renderPassBeginInfo.renderArea.extent.width = dim;
-			renderPassBeginInfo.renderArea.extent.height = dim;
+			renderPassBeginInfo.renderArea.extent = { dim, dim };
 			renderPassBeginInfo.clearValueCount = 1;
 			renderPassBeginInfo.pClearValues = clearValues;
 			renderPassBeginInfo.framebuffer = framebuffer;
@@ -3684,10 +3679,7 @@ namespace flex
 				VkRenderPassBeginInfo renderPassBeginInfo = vks::renderPassBeginInfo(renderPass);
 				renderPassBeginInfo.framebuffer = framebuffer;
 				renderPassBeginInfo.renderArea.offset = { 0, 0 };
-				renderPassBeginInfo.renderArea.extent = {
-					(u32)textureSize.x,
-					(u32)textureSize.y
-				};
+				renderPassBeginInfo.renderArea.extent = { (u32)textureSize.x, (u32)textureSize.y };
 				renderPassBeginInfo.clearValueCount = 1;
 				VkClearValue clearCol = {};
 				clearCol.color = { 0.0f, 0.0f, 0.0f, 0.0f };
@@ -5423,11 +5415,13 @@ namespace flex
 			m_OffScreenFrameBuf->width = m_SwapChainExtent.width;
 			m_OffScreenFrameBuf->height = m_SwapChainExtent.height;
 
-			m_SSAOFrameBuf->width = m_SwapChainExtent.width / 2;
-			m_SSAOFrameBuf->height = m_SwapChainExtent.height / 2;
+			m_SSAORes = glm::vec2u((u32)(m_SwapChainExtent.width / 2.0f), (u32)(m_SwapChainExtent.height / 2.0f));
 
-			m_SSAOBlurFrameBuf->width = m_SSAOFrameBuf->width;
-			m_SSAOBlurFrameBuf->height = m_SSAOFrameBuf->height;
+			m_SSAOFrameBuf->width = m_SSAORes.x;
+			m_SSAOFrameBuf->height = m_SSAORes.y;
+
+			m_SSAOBlurFrameBuf->width = m_SwapChainExtent.width;
+			m_SSAOBlurFrameBuf->height = m_SwapChainExtent.height;
 
 			const size_t frameBufferColorAttachmentCount = m_OffScreenFrameBuf->frameBufferAttachments.size();
 
@@ -6159,8 +6153,7 @@ namespace flex
 			VkRenderPassBeginInfo renderPassBeginInfo = vks::renderPassBeginInfo(m_OffScreenFrameBuf->renderPass);
 			renderPassBeginInfo.framebuffer = m_OffScreenFrameBuf->frameBuffer;
 			renderPassBeginInfo.renderArea.offset = { 0, 0 };
-			renderPassBeginInfo.renderArea.extent.width = m_OffScreenFrameBuf->width;
-			renderPassBeginInfo.renderArea.extent.height = m_OffScreenFrameBuf->height;
+			renderPassBeginInfo.renderArea.extent = { m_OffScreenFrameBuf->width, m_OffScreenFrameBuf->height };
 			renderPassBeginInfo.clearValueCount = gBufClearValues.size();
 			renderPassBeginInfo.pClearValues = gBufClearValues.data();
 
@@ -6176,11 +6169,11 @@ namespace flex
 			vkCmdBeginRenderPass(m_OffScreenCmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 			// TODO: Make min and max values members
-			VkViewport viewport = vks::viewportFlipped((real)m_OffScreenFrameBuf->width, (real)m_OffScreenFrameBuf->height, 0.1f, 1000.0f);
-			vkCmdSetViewport(m_OffScreenCmdBuffer, 0, 1, &viewport);
+			VkViewport fullScreenViewport = vks::viewportFlipped((real)m_OffScreenFrameBuf->width, (real)m_OffScreenFrameBuf->height, 0.1f, 1000.0f);
+			vkCmdSetViewport(m_OffScreenCmdBuffer, 0, 1, &fullScreenViewport);
 
-			VkRect2D scissor = vks::scissor(0u, 0u, m_OffScreenFrameBuf->width, m_OffScreenFrameBuf->height);
-			vkCmdSetScissor(m_OffScreenCmdBuffer, 0, 1, &scissor);
+			VkRect2D fullScreenScissor = vks::scissor(0u, 0u, m_OffScreenFrameBuf->width, m_OffScreenFrameBuf->height);
+			vkCmdSetScissor(m_OffScreenCmdBuffer, 0, 1, &fullScreenScissor);
 
 			for (const ShaderBatchPair& shaderBatch : m_DeferredObjectBatches.batches)
 			{
@@ -6220,10 +6213,10 @@ namespace flex
 
 				vkCmdBindPipeline(m_OffScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_SSAOGraphicsPipeline);
 
-				VkViewport ssaoViewport = vks::viewportFlipped((real)m_SSAORes.x, (real)m_SSAORes.y, 0.1f, 1000.0f);
+				VkViewport ssaoViewport = vks::viewportFlipped((real)m_SSAOFrameBuf->width, (real)m_SSAOFrameBuf->height, 0.0f, 1.0f);
 				vkCmdSetViewport(m_OffScreenCmdBuffer, 0, 1, &ssaoViewport);
 
-				VkRect2D ssaoScissor = vks::scissor(0u, 0u, m_SSAORes.x, m_SSAORes.y);
+				VkRect2D ssaoScissor = vks::scissor(0u, 0u, m_SSAOFrameBuf->width, m_SSAOFrameBuf->height);
 				vkCmdSetScissor(m_OffScreenCmdBuffer, 0, 1, &ssaoScissor);
 
 				BindDescriptorSet(&m_Shaders[ssaoShaderID], 0, m_OffScreenCmdBuffer, m_SSAOGraphicsPipelineLayout, m_SSAODescSet);
@@ -6243,6 +6236,7 @@ namespace flex
 			{
 				renderPassBeginInfo.renderPass = m_SSAOBlurRenderPass;
 				renderPassBeginInfo.framebuffer = m_SSAOBlurFrameBuf->frameBuffer;
+				renderPassBeginInfo.renderArea.extent = { m_SSAOBlurFrameBuf->width, m_SSAOBlurFrameBuf->height };
 
 				vkCmdBeginRenderPass(m_OffScreenCmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -6251,6 +6245,12 @@ namespace flex
 				assert(ssaoBlurShaderID != InvalidShaderID);
 
 				vkCmdBindPipeline(m_OffScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_SSAOBlurGraphicsPipeline);
+
+				VkViewport ssaoBlurViewport = vks::viewportFlipped((real)m_SSAOBlurFrameBuf->width, (real)m_SSAOBlurFrameBuf->height, 0.0f, 1.0f);
+				vkCmdSetViewport(m_OffScreenCmdBuffer, 0, 1, &ssaoBlurViewport);
+
+				VkRect2D ssaoBlurScissor = vks::scissor(0u, 0u, m_SSAOBlurFrameBuf->width, m_SSAOBlurFrameBuf->height);
+				vkCmdSetScissor(m_OffScreenCmdBuffer, 0, 1, &ssaoBlurScissor);
 
 				BindDescriptorSet(&m_Shaders[ssaoBlurShaderID], 0, m_OffScreenCmdBuffer, m_SSAOBlurGraphicsPipelineLayout, m_SSAOBlurDescSet);
 

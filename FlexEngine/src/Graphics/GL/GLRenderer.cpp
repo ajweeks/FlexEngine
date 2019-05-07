@@ -432,7 +432,7 @@ namespace flex
 			glGenFramebuffers(1, &m_SSAOBlurFrameBuffer);
 			glBindFramebuffer(GL_FRAMEBUFFER, m_SSAOBlurFrameBuffer);
 
-			GenerateFrameBufferTexture(m_SSAOBlurFBO, 0, m_SSAORes);
+			GenerateFrameBufferTexture(m_SSAOBlurFBO, 0, frameBufferSize);
 
 			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 			{
@@ -2406,8 +2406,7 @@ namespace flex
 				}
 				else
 				{
-					glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
-					glViewport(0, 0, (GLsizei)frameBufferSize.x, (GLsizei)frameBufferSize.y);
+					glViewport(0, 0, (GLsizei)m_gBufferFBO0.width, (GLsizei)m_gBufferFBO0.height);
 
 					glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
 				}
@@ -2443,12 +2442,11 @@ namespace flex
 				}
 				else
 				{
-					const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
-
 					glBindFramebuffer(GL_READ_FRAMEBUFFER, m_gBufferHandle);
 					glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_Offscreen0RBO);
-					glBlitFramebuffer(0, 0, frameBufferSize.x, frameBufferSize.y, 0, 0, frameBufferSize.x,
-						frameBufferSize.y, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+					glBlitFramebuffer(0, 0, m_gBufferFBO0.width, m_gBufferFBO0.height,
+						0, 0, m_OffscreenTexture0Handle.width, m_OffscreenTexture0Handle.height,
+						GL_DEPTH_BUFFER_BIT, GL_NEAREST);
 				}
 
 				GL_POP_DEBUG_GROUP(); // Deferred Objects
@@ -2486,7 +2484,7 @@ namespace flex
 				glDepthFunc(GL_ALWAYS);
 				glDepthMask(GL_FALSE);
 
-				glViewport(0, 0, (GLsizei)m_SSAORes.x, (GLsizei)m_SSAORes.y);
+				glViewport(0, 0, (GLsizei)m_SSAOFBO.width, (GLsizei)m_SSAOFBO.height);
 
 				glDrawArrays(gBufferQuad->topology, 0, (GLsizei)gBufferQuad->vertexBufferData->VertexCount);
 
@@ -2516,7 +2514,7 @@ namespace flex
 				glDepthFunc(GL_ALWAYS);
 				glDepthMask(GL_FALSE);
 
-				glViewport(0, 0, (GLsizei)m_SSAORes.x, (GLsizei)m_SSAORes.y);
+				glViewport(0, 0, (GLsizei)m_SSAOBlurFBO.width, (GLsizei)m_SSAOBlurFBO.height);
 
 				glDrawArrays(gBufferQuad->topology, 0, (GLsizei)gBufferQuad->vertexBufferData->VertexCount);
 
@@ -2548,8 +2546,7 @@ namespace flex
 				GenerateGBuffer();
 			}
 
-			glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
-			glViewport(0, 0, (GLsizei)frameBufferSize.x, (GLsizei)frameBufferSize.y);
+			glViewport(0, 0, (GLsizei)m_gBufferFBO0.width, (GLsizei)m_gBufferFBO0.height);
 
 			if (drawCallInfo.bRenderToCubemap)
 			{
@@ -2798,8 +2795,8 @@ namespace flex
 				const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 				glBindFramebuffer(GL_READ_FRAMEBUFFER, m_Offscreen0RBO);
 				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-				glBlitFramebuffer(0, 0, frameBufferSize.x, frameBufferSize.y,
-								  0, 0, frameBufferSize.x, frameBufferSize.y,
+				glBlitFramebuffer(0, 0, m_gBufferFBO0.width, m_gBufferFBO0.height,
+								  0, 0, m_OffscreenTexture0Handle.width, m_OffscreenTexture0Handle.height,
 								  GL_DEPTH_BUFFER_BIT, GL_NEAREST);
 
 				GL_POP_DEBUG_GROUP();
@@ -3010,6 +3007,7 @@ namespace flex
 				glUniformMatrix4fv(cBSLocation, 1, GL_FALSE, &contrastBrightnessSaturation[0][0]);
 			}
 
+			// TODO: Enforce state to be set outside this function
 			glViewport(0, 0, (GLsizei)frameBufferSize.x, (GLsizei)frameBufferSize.y);
 
 			glBindFramebuffer(GL_FRAMEBUFFER, drawInfo.FBO);
@@ -4806,7 +4804,7 @@ namespace flex
 			ResizeFrameBufferTexture(m_gBufferFBO1, newFrameBufferSize);
 			ResizeFrameBufferTexture(m_gBufferDepthTexHandle, newFrameBufferSize);
 			ResizeFrameBufferTexture(m_SSAOFBO, m_SSAORes);
-			ResizeFrameBufferTexture(m_SSAOBlurFBO, m_SSAORes);
+			ResizeFrameBufferTexture(m_SSAOBlurFBO, newFrameBufferSize);
 		}
 
 		void GLRenderer::OnPreSceneChange()

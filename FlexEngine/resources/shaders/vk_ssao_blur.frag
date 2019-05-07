@@ -16,7 +16,7 @@ void main()
 {
 	int range = uboConstant.ssaoBlurRadius;
 	const float sampleCount = (range*2+1) * (range*2+1);
-	vec2 texelSize = 1.0 / vec2(textureSize(in_SSAO, 0));
+	vec2 texelSize = 2.0 / vec2(textureSize(in_SSAO, 0));
 	float sum = 0.0;
 	for (int x = -range; x <= range; x++) 
 	{
