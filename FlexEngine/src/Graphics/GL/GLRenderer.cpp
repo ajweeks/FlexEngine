@@ -410,13 +410,7 @@ namespace flex
 
 			GenerateFrameBufferTexture(m_gBufferFBO0, 0, frameBufferSize);
 			GenerateFrameBufferTexture(m_gBufferFBO1, 1, frameBufferSize);
-
-			glGenTextures(1, &m_gBufferDepthTexHandle.id);
-			glBindTexture(GL_TEXTURE_2D, m_gBufferDepthTexHandle.id);
-			glTexImage2D(GL_TEXTURE_2D, 0, m_gBufferDepthTexHandle.internalFormat, frameBufferSize.x, frameBufferSize.y, 0, m_gBufferDepthTexHandle.format, m_gBufferDepthTexHandle.type, NULL);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-			glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, m_gBufferDepthTexHandle.id, 0);
+			GenerateDepthBufferTexture(m_gBufferDepthTexHandle, frameBufferSize);
 
 			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 			{
@@ -1875,6 +1869,23 @@ namespace flex
 			GenerateFrameBufferTexture(&handle.id, index, handle.internalFormat, handle.format, handle.type, size);
 			handle.width = (u32)size.x;
 			handle.height = (u32)size.y;
+		}
+
+		void GLRenderer::GenerateDepthBufferTexture(u32* handle, GLint internalFormat, GLenum format, GLenum type, const glm::vec2i& size)
+		{
+			glGenTextures(1, handle);
+			glBindTexture(GL_TEXTURE_2D, *handle);
+			glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, size.x, size.y, 0, format, type, NULL);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, *handle, 0);
+		}
+
+		void GLRenderer::GenerateDepthBufferTexture(TextureHandle& handle, const glm::vec2i& size)
+		{
+			GenerateDepthBufferTexture(&handle.id, handle.internalFormat, handle.format, handle.type, size);
+			m_gBufferDepthTexHandle.width = (u32)size.x;
+			m_gBufferDepthTexHandle.height = (u32)size.y;
 		}
 
 		void GLRenderer::ResizeFrameBufferTexture(u32 handle, GLint internalFormat, GLenum format, GLenum type, const glm::vec2i& size)

@@ -175,6 +175,9 @@ namespace flex
 			void GenerateFrameBufferTexture(u32* handle, i32 index, GLint internalFormat, GLenum format, GLenum type, const glm::vec2i& size);
 			void GenerateFrameBufferTexture(TextureHandle& handle, i32 index, const glm::vec2i& size);
 
+			void GenerateDepthBufferTexture(u32* handle, GLint internalFormat, GLenum format, GLenum type, const glm::vec2i& size);
+			void GenerateDepthBufferTexture(TextureHandle& handle, const glm::vec2i& size);
+
 			void ResizeFrameBufferTexture(u32 handle, GLint internalFormat, GLenum format, GLenum type, const glm::vec2i& size);
 			void ResizeFrameBufferTexture(TextureHandle& handle, const glm::vec2i& size);
 			void ResizeRenderBuffer(u32 handle, const glm::vec2i& size, GLenum internalFormat);
