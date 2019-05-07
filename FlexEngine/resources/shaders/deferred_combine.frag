@@ -39,7 +39,10 @@ uniform float exposure = 1.0;
 uniform mat4 lightViewProj;
 uniform bool castShadows = true;
 uniform float shadowDarkness = 1.0;
-uniform bool enableSSAO = true;
+// SSAO Sampling Data
+uniform int enableSSAO = 1;
+uniform float ssaoPowExp = 1.0f;
+
 const float PI = 3.14159265359;
 
 layout (binding = 0) uniform sampler2D normalRoughnessFrameBufferSampler;
@@ -133,7 +136,7 @@ void main()
     vec3 N = texture(normalRoughnessFrameBufferSampler, ex_TexCoord).rgb;
     N = mat3(invView) * N; // view space -> world space
 
-    float ssao = enableSSAO ? texture(ssaoBlurFrameBufferSampler, ex_TexCoord).r : 1.0f;
+    float ssao = enableSSAO != 0 ? texture(ssaoBlurFrameBufferSampler, ex_TexCoord).r : 1.0f;
 
     float roughness = texture(normalRoughnessFrameBufferSampler, ex_TexCoord).a;
     roughness = max(roughness, 0.045);
@@ -253,7 +256,7 @@ void main()
 		ambient = vec3(0.03) * albedo;
 	}
 
-	vec3 color = ambient + Lo * ssao;
+	vec3 color = ambient + Lo * pow(ssao, ssaoPowExp);
 
 	// color = mix(color, vec3(
 	// 	min(

@@ -6200,7 +6200,7 @@ namespace flex
 
 			VkDeviceSize offsets[1] = { 0 };
 
-			if (m_bSSAOEnabled)
+			if (m_SSAOSamplingData.ssaoEnabled)
 			{
 				std::array<VkClearValue, 1> ssaoClearValues = {};
 				ssaoClearValues[0].color = m_ClearColor;
@@ -6932,7 +6932,6 @@ namespace flex
 			glm::mat4 viewInv;
 			glm::mat4 viewProjection;
 			glm::vec4 camPos;
-			i32 enableSSAO = m_bSSAOEnabled ? 1 : 0;
 
 			static DirLightData defaultDirLightData = { VEC3_RIGHT, 0, VEC3_ONE, 0.0f };
 
@@ -6965,8 +6964,9 @@ namespace flex
 				{ U_DIR_LIGHT, (void*)dirLightData, sizeof(DirLightData) },
 				{ U_POINT_LIGHTS, (void*)m_PointLights, sizeof(PointLightData) * MAX_NUM_POINT_LIGHTS },
 				{ U_TIME, (void*)&g_SecElapsedSinceProgramStart, sizeof(real) },
-				{ U_SSAO_DATA, (void*)&m_SSAOData, sizeof(SSAOData) },
-				{ U_ENABLE_SSAO, (void*)&enableSSAO, sizeof(i32) },
+				{ U_SSAO_GEN_DATA, (void*)&m_SSAOGenData, sizeof(SSAOGenData) },
+				{ U_SSAO_BLUR_DATA, (void*)&m_SSAOBlurData, sizeof(SSAOBlurData) },
+				{ U_SSAO_SAMPLING_DATA, (void*)&m_SSAOSamplingData, sizeof(SSAOSamplingData) },
 			};
 
 			for (const VulkanShader& shader : m_Shaders)
@@ -7440,7 +7440,7 @@ namespace flex
 				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_PROJECTION_INV);
 				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_DIR_LIGHT);
 				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_POINT_LIGHTS);
-				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_ENABLE_SSAO);
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_SSAO_SAMPLING_DATA);
 				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_BRDF_LUT_SAMPLER);
 				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_IRRADIANCE_SAMPLER);
 				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_PREFILTER_MAP);
@@ -7548,7 +7548,7 @@ namespace flex
 				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
 				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_PROJECTION);
 				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_PROJECTION_INV);
-				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_SSAO_DATA);
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_SSAO_GEN_DATA);
 				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_DEPTH_SAMPLER);
 				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_SSAO_NORMAL_SAMPLER);
 				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_NOISE_SAMPLER);
@@ -7563,6 +7563,8 @@ namespace flex
 					(u32)VertexAttribute::UV;
 
 				m_Shaders[shaderID].shader.constantBufferUniforms = {};
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_SSAO_BLUR_DATA);
 				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_SSAO_RAW_SAMPLER);
 
 				m_Shaders[shaderID].shader.dynamicBufferUniforms = {};

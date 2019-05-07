@@ -107,15 +107,22 @@ namespace flex
 			m_PointLights[i].enabled = 0;
 		}
 
-		for (u32 i = 0; i < SSAO_KERNEL_SIZE; ++i)
+		for (u32 i = 0; i < MAX_SSAO_KERNEL_SIZE; ++i)
 		{
 			glm::vec3 sample(RandomFloat(-0.9f, 0.9f), RandomFloat(-0.9f, 0.9f), RandomFloat(0.0f, 1.0f));
 			sample = glm::normalize(sample); // Snap to surface of hemisphere
 			sample *= RandomFloat(0.0f, 1.0f); // Space out linearly
-			real scale = (real)i / (real)SSAO_KERNEL_SIZE;
+			real scale = (real)i / (real)MAX_SSAO_KERNEL_SIZE;
 			scale = Lerp(0.1f, 1.0f, scale * scale); // Bring distribution of samples closer to origin
-			m_SSAOData.samples[i] = glm::vec4(sample * scale, 0.0f);
+			m_SSAOGenData.samples[i] = glm::vec4(sample * scale, 0.0f);
 		}
+		m_SSAOGenData.kernelSize = MAX_SSAO_KERNEL_SIZE;
+		m_SSAOGenData.radius = 4.5f;
+
+		m_SSAOBlurData.radius = 3;
+
+		m_SSAOSamplingData.powExp = 1.75f;
+		m_SSAOSamplingData.ssaoEnabled = 1;
 	}
 
 	void Renderer::Destroy()
@@ -857,23 +864,36 @@ namespace flex
 				m_PostProcessSettings.saturation / maxSaturation,
 				m_PostProcessSettings.saturation / maxSaturation, 1));
 
-			if (ImGui::Checkbox("SSAO", &m_bSSAOEnabled))
+			bool bSSAOEnabled = m_SSAOSamplingData.ssaoEnabled != 0;
+			if (ImGui::Checkbox("SSAO", &bSSAOEnabled))
 			{
-				if (m_bSSAOBlurEnabled != m_bSSAOEnabled)
+				m_SSAOSamplingData.ssaoEnabled = bSSAOEnabled ? 1 : 0;
+				if (m_bSSAOBlurEnabled != bSSAOEnabled)
 				{
-					m_bSSAOBlurEnabled = m_bSSAOEnabled;
+					m_bSSAOBlurEnabled = m_SSAOSamplingData.ssaoEnabled;
 					m_bSSAOStateChanged = true;
 				}
 			}
 
-			if (ImGui::Checkbox("SSAO Blur", &m_bSSAOBlurEnabled))
+			ImGui::SameLine();
+
+			if (ImGui::Checkbox("Blur", &m_bSSAOBlurEnabled))
 			{
 				m_bSSAOStateChanged = true;
 				if (m_bSSAOBlurEnabled)
 				{
-					m_bSSAOEnabled = true;
+					m_SSAOSamplingData.ssaoEnabled = true;
 				}
 			}
+
+			i32 kernelSize = (i32)m_SSAOGenData.kernelSize;
+			if (ImGui::SliderInt("Kernel Size", &kernelSize, 1, 64))
+			{
+				m_SSAOGenData.kernelSize = (u32)kernelSize;
+			}
+			ImGui::SliderFloat("Radius", &m_SSAOGenData.radius, 0.0001f, 15.0f);
+			ImGui::SliderInt("Blur Radius", &m_SSAOBlurData.radius, 1, 16);
+			ImGui::SliderFloat("Pow", &m_SSAOSamplingData.powExp, 0.1f, 10.0f);
 
 			ImGui::TreePop();
 		}

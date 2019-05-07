@@ -1586,8 +1586,11 @@ namespace flex
 				{ U_TRANSFORM_MAT,					"transformMat",					&mat.uniformIDs.transformMat },
 				{ U_TEX_SIZE,						"texSize",						&mat.uniformIDs.texSize },
 				{ U_TIME,							"time",							&mat.uniformIDs.time },
-				{ U_SSAO_DATA,						"ssaoSamples",					&mat.uniformIDs.ssaoSamples },
-				{ U_ENABLE_SSAO,					"enableSSAO",					&mat.uniformIDs.enableSSAO },
+				{ 0,								"ssaoRadius",					&mat.uniformIDs.ssaoRadius },
+				{ 0,								"ssaoKernelSize",				&mat.uniformIDs.ssaoKernelSize },
+				{ 0,								"ssaoBlurRadius",				&mat.uniformIDs.ssaoBlurRadius },
+				{ 0,								"ssaoPowExp",					&mat.uniformIDs.ssaoPowExp },
+				{ 0,								"enableSSAO",					&mat.uniformIDs.enableSSAO },
 			};
 
 			for (const UniformInfo& uniform : uniformInfo)
@@ -1882,6 +1885,8 @@ namespace flex
 			glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, size.x, size.y, 0, format, type, NULL);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + index, GL_TEXTURE_2D, *handle, 0);
 			glBindTexture(GL_TEXTURE_2D, 0);
 		}
@@ -2459,7 +2464,7 @@ namespace flex
 
 			GLRenderObject* gBufferQuad = GetRenderObject(m_GBufferQuadRenderID);
 
-			if (m_bSSAOEnabled)
+			if (m_SSAOSamplingData.ssaoEnabled)
 			{
 				GL_PUSH_DEBUG_GROUP("SSAO");
 
@@ -4090,7 +4095,7 @@ namespace flex
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_EXPOSURE);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_POINT_LIGHTS);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_DIR_LIGHT);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_ENABLE_SSAO);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_SSAO_SAMPLING_DATA);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_IRRADIANCE_SAMPLER);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_FB_0_SAMPLER);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_FB_1_SAMPLER);
@@ -4368,10 +4373,9 @@ namespace flex
 				(u32)VertexAttribute::UV;
 
 			m_Shaders[shaderID].shader.constantBufferUniforms = {};
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_PROJECTION);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_PROJECTION_INV);
-			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_SSAO_DATA);
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_SSAO_GEN_DATA);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_DEPTH_SAMPLER);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_SSAO_NORMAL_SAMPLER);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_NOISE_SAMPLER);
@@ -4385,6 +4389,7 @@ namespace flex
 				(u32)VertexAttribute::UV;
 
 			m_Shaders[shaderID].shader.constantBufferUniforms = {};
+			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_SSAO_BLUR_DATA);
 			m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_SSAO_RAW_SAMPLER);
 
 			m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
@@ -4631,21 +4636,42 @@ namespace flex
 					SetInt(material->material.shaderID, bDEBUGShowEdgesStr, m_PostProcessSettings.bEnableFXAADEBUGShowEdges ? 1 : 0);
 				}
 
-				if (shader->shader.constantBufferUniforms.HasUniform(U_SSAO_DATA))
+				// SSAO Gen Data
+				if (material->uniformIDs.ssaoKernelSize != -1)
 				{
 					// TODO: Upload as single uniform block UBO
-					for (u32 i = 0; i < SSAO_KERNEL_SIZE; ++i)
+					for (u32 i = 0; i < m_SSAOGenData.kernelSize; ++i)
 					{
 						std::string uniformName = "ssaoSamples[" + std::to_string(i) + "]";
 						u32 index = glGetUniformLocation(shader->program, uniformName.c_str());
-						glUniform4fv(index, 1, &m_SSAOData.samples[i].x);
+						glUniform4fv(index, 1, &m_SSAOGenData.samples[i].x);
 					}
 				}
-
-				if (shader->shader.constantBufferUniforms.HasUniform(U_ENABLE_SSAO))
+				if (material->uniformIDs.ssaoRadius != -1)
 				{
-					glUniform1i(material->uniformIDs.enableSSAO, m_bSSAOEnabled ? 1 : 0);
+					glUniform1f(material->uniformIDs.ssaoRadius, m_SSAOGenData.radius);
 				}
+				if (material->uniformIDs.ssaoKernelSize != -1)
+				{
+					glUniform1ui(material->uniformIDs.ssaoKernelSize, m_SSAOGenData.kernelSize);
+				}
+
+				// SSAO Blur Data
+				if (material->uniformIDs.ssaoBlurRadius != -1)
+				{
+					glUniform1i(material->uniformIDs.ssaoBlurRadius, m_SSAOBlurData.radius);
+				}
+
+				// SSAO Sampling Data
+				if (material->uniformIDs.enableSSAO != -1)
+				{
+					glUniform1i(material->uniformIDs.enableSSAO, m_SSAOSamplingData.ssaoEnabled);
+				}
+				if (material->uniformIDs.ssaoPowExp != -1)
+				{
+					glUniform1f(material->uniformIDs.ssaoPowExp, m_SSAOSamplingData.powExp);
+				}
+
 			}
 		}
 

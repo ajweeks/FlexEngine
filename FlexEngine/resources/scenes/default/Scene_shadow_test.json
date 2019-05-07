@@ -184,7 +184,7 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "12.134, 1.025, 6.656",
+				"pos" : "11.039, 1.025, 8.384",
 				"scale" : "1.500, 1.500, 1.500"
 			},
 			"mesh" : "sphere",
@@ -281,15 +281,15 @@
 			"transform" : 
 			{
 				"pos" : "-1.947, 10.965, 0.112",
-				"rot" : "-0.859, 0.587, 0.374"
+				"rot" : "-0.859, 0.796, -0.009"
 			},
 			"directional light info" : 
 			{
-				"rotation" : "-0.859, 0.587, 0.374",
+				"rotation" : "-0.859, 0.796, -0.009",
 				"pos" : "-1.947, 10.965, 0.112",
 				"color" : "1.00, 1.00, 1.00",
 				"enabled" : true,
-				"brightness" : 6.719000,
+				"brightness" : 2.344000,
 				"cast shadows" : true,
 				"shadow darkness" : 1.000000,
 				"shadow map near" : -45.000000,

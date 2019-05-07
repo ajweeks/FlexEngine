@@ -4,11 +4,17 @@ layout (location = 0) out float out_Color;
 
 layout (location = 0) in vec2 ex_UV;
 
-layout (binding = 0) uniform sampler2D in_SSAO;
+layout (binding = 0) uniform UBOConstant
+{
+	// SSAO Blur Data
+	int ssaoBlurRadius;
+} uboConstant;
+
+layout (binding = 1) uniform sampler2D in_SSAO;
 
 void main()
 {
-	const int range = 4;
+	int range = uboConstant.ssaoBlurRadius;
 	const float sampleCount = (range*2+1) * (range*2+1);
 	vec2 texelSize = 1.0 / vec2(textureSize(in_SSAO, 0));
 	float sum = 0.0;

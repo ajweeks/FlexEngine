@@ -38,10 +38,23 @@ namespace flex
 		real brightness;
 	};
 
-	const u32 SSAO_KERNEL_SIZE = 64;
-	struct SSAOData
+	const u32 MAX_SSAO_KERNEL_SIZE = 64;
+	struct SSAOGenData
 	{
-		glm::vec4 samples[SSAO_KERNEL_SIZE];
+		glm::vec4 samples[MAX_SSAO_KERNEL_SIZE];
+		u32 kernelSize;
+		real radius;
+	};
+
+	struct SSAOBlurData
+	{
+		i32 radius;
+	};
+
+	struct SSAOSamplingData
+	{
+		i32 ssaoEnabled;
+		real powExp;
 	};
 
 	// Uniforms
@@ -95,14 +108,15 @@ namespace flex
 	const u64 U_TIME							= (1ull << 47); const u32 US_TIME						= sizeof(real);
 	const u64 U_SDF_DATA						= (1ull << 48); const u32 US_SDF_DATA					= sizeof(glm::vec4);
 	const u64 U_TEX_CHANNEL						= (1ull << 49); const u32 US_TEX_CHANNEL				= sizeof(i32);
-	const u64 U_DEPTH_SAMPLER					= (1ull << 51);
 	const u64 U_HIGH_RES_TEX					= (1ull << 50);
+	const u64 U_DEPTH_SAMPLER					= (1ull << 51);
 	const u64 U_NOISE_SAMPLER					= (1ull << 52);
 	const u64 U_SSAO_RAW_SAMPLER				= (1ull << 53);
 	const u64 U_SSAO_FINAL_SAMPLER				= (1ull << 54);
 	const u64 U_SSAO_NORMAL_SAMPLER				= (1ull << 55);
-	const u64 U_SSAO_DATA						= (1ull << 56); const u32 US_SSAO_DATA					= sizeof(SSAOData);
-	const u64 U_ENABLE_SSAO						= (1ull << 57); const u32 US_ENABLE_SSAO				= sizeof(i32);
+	const u64 U_SSAO_GEN_DATA					= (1ull << 56); const u32 US_SSAO_GEN_DATA				= sizeof(SSAOGenData);
+	const u64 U_SSAO_BLUR_DATA					= (1ull << 57); const u32 US_SSAO_BLUR_DATA				= sizeof(SSAOBlurData);
+	const u64 U_SSAO_SAMPLING_DATA				= (1ull << 58); const u32 US_SSAO_SAMPLING_DATA			= sizeof(SSAOSamplingData);
 	// NOTE!: New uniforms must be added to Uniforms::CalculateSizeInBytes
 
 	enum class ClearFlag

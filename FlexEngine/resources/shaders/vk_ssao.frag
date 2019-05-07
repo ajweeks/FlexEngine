@@ -4,14 +4,16 @@ layout (location = 0) out float fragColor;
 
 layout (location = 0) in vec2 ex_UV;
 
-const int SSAO_KERNEL_SIZE = 64;
-const float SSAO_RADIUS = 3.0;
+const uint MAX_SSAO_KERNEL_SIZE = 64;
 
 layout (binding = 0) uniform UBO 
 {
 	mat4 projection;
 	mat4 invProj;
-	vec4 samples[SSAO_KERNEL_SIZE];
+	// SSAO Gen Data
+	vec4 samples[MAX_SSAO_KERNEL_SIZE];
+	uint ssaoKernelSize;
+	float ssaoRadius;
 } uboConstant;
 
 layout (binding = 1) uniform sampler2D in_Depth;
@@ -57,10 +59,10 @@ void main()
 	float bias = 0.01f;
 
 	float occlusion = 0.0f;
-	for (int i = 0; i < SSAO_KERNEL_SIZE; i++)
+	for (uint i = 0; i < uboConstant.ssaoKernelSize; i++)
 	{
 		vec3 samplePos = TBN * uboConstant.samples[i].xyz; 
-		samplePos = posVS + samplePos * SSAO_RADIUS; 
+		samplePos = posVS + samplePos * uboConstant.ssaoRadius; 
 
 		vec4 offset = vec4(samplePos, 1.0f);
 		offset = uboConstant.projection * offset;
@@ -70,10 +72,10 @@ void main()
 		
 		vec3 sampledNormal = texture(in_Normal, offset.xy).xyz;
 		vec3 reconstructedPos = reconstructVSPosFromDepth(offset.xy);
-		float rangeCheck = smoothstep(0.0f, 1.0f, SSAO_RADIUS / abs(reconstructedPos.z - samplePos.z));
+		float rangeCheck = smoothstep(0.0f, 1.0f, uboConstant.ssaoRadius / abs(reconstructedPos.z - samplePos.z));
 		occlusion += (reconstructedPos.z <= samplePos.z - bias ? 1.0f : 0.0f) * rangeCheck;
 	}
-	occlusion = 1.0 - (occlusion / float(SSAO_KERNEL_SIZE));
+	occlusion = 1.0 - (occlusion / float(uboConstant.ssaoKernelSize));
 	
 	fragColor = occlusion;
 }

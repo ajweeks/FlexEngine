@@ -35,7 +35,9 @@ layout (binding = 0) uniform UBOConstant
 	mat4 invProj;
 	DirectionalLight dirLight;
 	PointLight pointLights[NUMBER_POINT_LIGHTS];
+	// SSAO Sampling Data
 	int enableSSAO;
+	float ssaoPowExp;
 } uboConstant;
 
 layout (binding = 1) uniform UBODynamic
@@ -213,7 +215,8 @@ void main()
 		ambient = vec3(0.03) * albedo;
 	}
 
-	vec3 color = ambient + Lo * pow(ssao,2.0f); // TODO: Apply SSAO to ambient term
+	// TODO: Apply SSAO to ambient term
+	vec3 color = ambient + Lo * pow(ssao, uboConstant.ssaoPowExp);
 
 	color = color / (color + vec3(1.0f)); // Reinhard tone-mapping
 	color = pow(color, vec3(1.0f / 2.2f)); // Gamma correction

@@ -89,8 +89,11 @@ namespace flex
 				i32 shadowDarkness;
 				//i32 textureScale;
 				i32 time;
-				i32 ssaoSamples;
 				i32 enableSSAO;
+				i32 ssaoKernelSize;
+				i32 ssaoRadius;
+				i32 ssaoBlurRadius;
+				i32 ssaoPowExp;
 			};
 			UniformIDs uniformIDs;
 
