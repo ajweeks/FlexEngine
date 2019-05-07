@@ -424,6 +424,17 @@
 				"enabled" : true,
 				"brightness" : 114.583000
 			}
+		},
+		{
+			"name" : "che",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 1.215, -5.892"
+			},
+			"mesh" : "che-car-merged",
+			"material" : "pbr chrome"
 		}
 	]
 }
