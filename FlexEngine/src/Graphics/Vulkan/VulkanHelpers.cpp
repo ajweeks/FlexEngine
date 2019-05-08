@@ -2092,29 +2092,37 @@ namespace flex
 		{
 			bool bCodeOutOfDate = true;
 
-			const char* blockName = "Calculate shader contents checksum";
+			std::string compiledDir = RelativePathToAbsolute(RESOURCE_LOCATION "shaders/spv");
+			if (DirectoryExists(compiledDir))
 			{
-				PROFILE_AUTO(blockName);
-
-				m_ChecksumFilePath = SAVED_LOCATION "vk-shader-checksum.dat";
-
-				const std::string shaderInputDirectory = RESOURCE_LOCATION  "shaders";
-				m_ShaderCodeChecksum = CalculteChecksum(shaderInputDirectory);
-
-				if (FileExists(m_ChecksumFilePath))
+				const char* blockName = "Calculate shader contents checksum";
 				{
-					std::string fileContents;
-					if (ReadFile(m_ChecksumFilePath, fileContents, false))
+					PROFILE_AUTO(blockName);
+
+					m_ChecksumFilePath = SAVED_LOCATION "vk-shader-checksum.dat";
+
+					const std::string shaderInputDirectory = RESOURCE_LOCATION  "shaders";
+					m_ShaderCodeChecksum = CalculteChecksum(shaderInputDirectory);
+
+					if (FileExists(m_ChecksumFilePath))
 					{
-						i64 pShaderCodeChecksum = atoll(fileContents.c_str());
-						if (m_ShaderCodeChecksum == pShaderCodeChecksum)
+						std::string fileContents;
+						if (ReadFile(m_ChecksumFilePath, fileContents, false))
 						{
-							bCodeOutOfDate = false;
+							i64 pShaderCodeChecksum = atoll(fileContents.c_str());
+							if (m_ShaderCodeChecksum == pShaderCodeChecksum)
+							{
+								bCodeOutOfDate = false;
+							}
 						}
 					}
 				}
+				Profiler::PrintBlockDuration(blockName);
 			}
-			Profiler::PrintBlockDuration(blockName);
+			else
+			{
+				CreateDirectoryRecursive(compiledDir);
+			}
 
 			if (bForceRecompile || bCodeOutOfDate)
 			{
