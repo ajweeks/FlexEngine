@@ -171,7 +171,9 @@ namespace flex
 			// TODO: Handle in action callback
 			if (g_InputManager->IsMouseButtonDown(MouseButton::MIDDLE))
 			{
-				glm::vec2 dragDist = g_InputManager->GetMouseDragDistance(MouseButton::MIDDLE);
+				const real multiplier = bModFaster ? m_PanSpeedFastMultiplier : bModSlower ? m_PanSpeedSlowMultiplier : 1.0f;
+
+				glm::vec2 dragDist = g_InputManager->GetMouseDragDistance(MouseButton::MIDDLE) * multiplier;
 				glm::vec2 frameBufferSize = (glm::vec2)g_Window->GetFrameBufferSize();
 				glm::vec2 normDragDist = dragDist / frameBufferSize;
 				m_Position = (m_DragStartPosition + (normDragDist.x * m_Right + normDragDist.y * m_Up) * m_PanSpeed);

@@ -100,16 +100,18 @@ namespace flex
 		real m_ZFar = 0.0f;
 
 		real m_MoveSpeed = 0.0f;				// WASD or gamepad left stick
-		real m_PanSpeed = 0.0f;				// MMB
+		real m_PanSpeed = 0.0f;					// MMB
 		real m_DragDollySpeed = 0.0f;			// RMB
-		real m_ScrollDollySpeed = 0.0f;		// Scroll wheel
+		real m_ScrollDollySpeed = 0.0f;			// Scroll wheel
+		real m_OrbitingSpeed = 0.0f;			// Alt-LMB drag
+		real m_MouseRotationSpeed = 0.0f;		// LMB drag
+		real m_GamepadRotationSpeed = 0.0f;		// Gamepad right stick
 		real m_MoveSpeedFastMultiplier = 0.0f;
 		real m_MoveSpeedSlowMultiplier = 0.0f;
 		real m_TurnSpeedFastMultiplier = 0.0f;
 		real m_TurnSpeedSlowMultiplier = 0.0f;
-		real m_OrbitingSpeed = 0.0f;			// Alt-LMB drag
-		real m_MouseRotationSpeed = 0.0f;		// LMB drag
-		real m_GamepadRotationSpeed = 0.0f;	// Gamepad right stick
+		real m_PanSpeedFastMultiplier = 0.0f;
+		real m_PanSpeedSlowMultiplier = 0.0f;
 
 		glm::vec3 m_Position;
 
