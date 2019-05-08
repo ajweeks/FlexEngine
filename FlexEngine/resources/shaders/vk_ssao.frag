@@ -41,7 +41,7 @@ void main()
 		return;
 	}
 
-	vec3 normal = normalize(texture(in_Normal, ex_UV).rgb * 2.0 - 1.0);
+	vec3 normal = normalize(texture(in_Normal, ex_UV).rgb * 2.0f - 1.0f);
 
 	vec3 posVS = reconstructVSPosFromDepth(ex_UV);
 
@@ -59,6 +59,7 @@ void main()
 	float bias = 0.01f;
 
 	float occlusion = 0.0f;
+	int sampleCount = 0;
 	for (uint i = 0; i < uboConstant.ssaoKernelSize; i++)
 	{
 		vec3 samplePos = TBN * uboConstant.samples[i].xyz;
@@ -70,12 +71,20 @@ void main()
 		offset.xy = offset.xy * 0.5f + 0.5f;
 		offset.y = 1.0f - offset.y;
 		
-		vec3 sampledNormal = texture(in_Normal, offset.xy).xyz;
 		vec3 reconstructedPos = reconstructVSPosFromDepth(offset.xy);
-		float rangeCheck = smoothstep(0.0f, 1.0f, uboConstant.ssaoRadius / abs(reconstructedPos.z - samplePos.z));
-		occlusion += (reconstructedPos.z <= samplePos.z - bias ? 1.0f : 0.0f) * rangeCheck;
+		vec3 sampledNormal = normalize(texture(in_Normal, offset.xy).xyz * 2.0f - 1.0f);
+		if (dot(sampledNormal, normal) > 0.95)
+		{
+			++sampleCount;
+		}
+		else if (abs(reconstructedPos.z - posVS.z) < 3.0f)
+		{
+			float rangeCheck = smoothstep(0.0f, 1.0f, uboConstant.ssaoRadius / abs(reconstructedPos.z - samplePos.z));
+			occlusion += (reconstructedPos.z <= samplePos.z - bias ? 1.0f : 0.0f) * rangeCheck;
+			++sampleCount;
+		}
 	}
-	occlusion = 1.0 - (occlusion / float(uboConstant.ssaoKernelSize));
+	occlusion = 1.0 - (occlusion / float(max(sampleCount,1)));
 	
 	fragColor = occlusion;
 }

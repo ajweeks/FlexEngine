@@ -7677,6 +7677,8 @@ namespace flex
 				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
 				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_SSAO_BLUR_DATA);
 				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_SSAO_RAW_SAMPLER);
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_SSAO_NORMAL_SAMPLER);
+				m_Shaders[shaderID].shader.constantBufferUniforms.AddUniform(U_DEPTH_SAMPLER);
 
 				m_Shaders[shaderID].shader.dynamicBufferUniforms = {};
 				m_Shaders[shaderID].shader.dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
@@ -7843,9 +7845,9 @@ namespace flex
 			descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 			descSetCreateInfo.shaderID = ssaoMaterial->material.shaderID;
 			descSetCreateInfo.uniformBuffer = &ssaoShader->uniformBuffer;
-			FrameBufferAttachment& frameBufferAttachment = m_OffScreenFrameBuf->frameBufferAttachments[0].second;
+			FrameBufferAttachment& normalFrameBufferAttachment = m_OffScreenFrameBuf->frameBufferAttachments[0].second;
 			// Depth texture is handled for us in CreateDescriptorSet
-			descSetCreateInfo.ssaoNormalImageView = frameBufferAttachment.view;
+			descSetCreateInfo.ssaoNormalImageView = normalFrameBufferAttachment.view;
 			descSetCreateInfo.ssaoNormalSampler = m_SSAOSampler;
 			descSetCreateInfo.noiseTexture = ssaoMaterial->noiseTexture;
 			CreateDescriptorSet(&descSetCreateInfo);
@@ -7863,6 +7865,9 @@ namespace flex
 			FrameBufferAttachment& ssaoFrameBufferAttachment = m_SSAOFrameBuf->frameBufferAttachments[0].second;
 			descSetCreateInfo.ssaoImageView = ssaoFrameBufferAttachment.view;
 			descSetCreateInfo.ssaoSampler = m_SSAOSampler;
+			descSetCreateInfo.ssaoNormalImageView = normalFrameBufferAttachment.view;
+			descSetCreateInfo.ssaoNormalSampler = m_SSAOSampler;
+			// Depth texture is handled in CreateDescriptorSet
 			CreateDescriptorSet(&descSetCreateInfo);
 
 			descSetCreateInfo = {};
@@ -7873,6 +7878,8 @@ namespace flex
 			FrameBufferAttachment& ssaoBlurHFrameBufferAttachment = m_SSAOBlurHFrameBuf->frameBufferAttachments[0].second;
 			descSetCreateInfo.ssaoImageView = ssaoBlurHFrameBufferAttachment.view;
 			descSetCreateInfo.ssaoSampler = m_SSAOSampler;
+			descSetCreateInfo.ssaoNormalImageView = normalFrameBufferAttachment.view;
+			descSetCreateInfo.ssaoNormalSampler = m_SSAOSampler;
 			CreateDescriptorSet(&descSetCreateInfo);
 		}
 

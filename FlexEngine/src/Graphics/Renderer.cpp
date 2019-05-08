@@ -117,13 +117,13 @@ namespace flex
 			m_SSAOGenData.samples[i] = glm::vec4(sample * scale, 0.0f);
 		}
 		m_SSAOGenData.kernelSize = MAX_SSAO_KERNEL_SIZE;
-		m_SSAOGenData.radius = 4.5f;
+		m_SSAOGenData.radius = 8.0f;
 
-		m_SSAOBlurDataConstant.radius = 3;
-		m_SSAOBlurSamplePixelOffset = 1;
+		m_SSAOBlurDataConstant.radius = 4;
+		m_SSAOBlurSamplePixelOffset = 2;
 		glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 
-		m_SSAOSamplingData.powExp = 1.75f;
+		m_SSAOSamplingData.powExp = 2.0f;
 		m_SSAOSamplingData.ssaoEnabled = 1;
 	}
 
