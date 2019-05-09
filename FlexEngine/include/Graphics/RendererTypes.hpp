@@ -42,7 +42,6 @@ namespace flex
 	struct SSAOGenData
 	{
 		glm::vec4 samples[MAX_SSAO_KERNEL_SIZE];
-		u32 kernelSize;
 		real radius;
 	};
 

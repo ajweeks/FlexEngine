@@ -116,7 +116,6 @@ namespace flex
 			scale = Lerp(0.1f, 1.0f, scale * scale); // Bring distribution of samples closer to origin
 			m_SSAOGenData.samples[i] = glm::vec4(sample * scale, 0.0f);
 		}
-		m_SSAOGenData.kernelSize = MAX_SSAO_KERNEL_SIZE;
 		m_SSAOGenData.radius = 8.0f;
 
 		m_SSAOBlurDataConstant.radius = 4;
@@ -888,10 +887,11 @@ namespace flex
 				}
 			}
 
-			i32 kernelSize = (i32)m_SSAOGenData.kernelSize;
+			i32 kernelSize = (i32)m_SSAOKernelSize;
 			if (ImGui::SliderInt("Kernel Size", &kernelSize, 1, 64))
 			{
-				m_SSAOGenData.kernelSize = (u32)kernelSize;
+				m_SSAOKernelSize = (u32)kernelSize;
+				m_bSSAOStateChanged = true;
 			}
 			ImGui::SliderFloat("Radius", &m_SSAOGenData.radius, 0.0001f, 15.0f);
 			ImGui::SliderInt("Blur Radius", &m_SSAOBlurDataConstant.radius, 1, 16);

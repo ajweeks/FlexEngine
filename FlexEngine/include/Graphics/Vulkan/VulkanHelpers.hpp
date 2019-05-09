@@ -482,10 +482,12 @@ namespace flex
 			VkCompareOp depthCompareOp = VK_COMPARE_OP_GREATER_OR_EQUAL;
 			VkBool32 stencilTestEnable = VK_FALSE;
 
+			VkSpecializationInfo* fragSpecializationInfo = nullptr;
+
 			// Out variables
 			VkPipelineCache* pipelineCache = nullptr;
 			VkPipelineLayout* pipelineLayout = nullptr;
-			VkPipeline* grahpicsPipeline = nullptr;
+			VkPipeline* graphicsPipeline = nullptr;
 		};
 
 		struct DescriptorSetCreateInfo

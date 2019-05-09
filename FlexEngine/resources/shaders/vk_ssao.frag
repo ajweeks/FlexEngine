@@ -4,15 +4,14 @@ layout (location = 0) out float fragColor;
 
 layout (location = 0) in vec2 ex_UV;
 
-const uint MAX_SSAO_KERNEL_SIZE = 64;
+layout (constant_id = 0) const int SSAO_KERNEL_SIZE = 64;
 
 layout (binding = 0) uniform UBO 
 {
 	mat4 projection;
 	mat4 invProj;
 	// SSAO Gen Data
-	vec4 samples[MAX_SSAO_KERNEL_SIZE];
-	uint ssaoKernelSize;
+	vec4 samples[SSAO_KERNEL_SIZE];
 	float ssaoRadius;
 } uboConstant;
 
@@ -60,7 +59,7 @@ void main()
 
 	float occlusion = 0.0f;
 	int sampleCount = 0;
-	for (uint i = 0; i < uboConstant.ssaoKernelSize; i++)
+	for (uint i = 0; i < SSAO_KERNEL_SIZE; i++)
 	{
 		vec3 samplePos = TBN * uboConstant.samples[i].xyz;
 		samplePos = posVS + samplePos * uboConstant.ssaoRadius; 

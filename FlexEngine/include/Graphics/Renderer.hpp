@@ -328,6 +328,7 @@ namespace flex
 		SSAOGenData m_SSAOGenData;
 		SSAOBlurDataConstant m_SSAOBlurDataConstant;
 		SSAOBlurDataDynamic m_SSAOBlurDataDynamic;
+		u32 m_SSAOKernelSize = MAX_SSAO_KERNEL_SIZE;
 		i32 m_SSAOBlurSamplePixelOffset;
 		SSAOSamplingData m_SSAOSamplingData;
 		glm::vec2u m_SSAORes;

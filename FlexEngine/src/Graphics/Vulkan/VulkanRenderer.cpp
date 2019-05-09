@@ -242,6 +242,12 @@ namespace flex
 				}
 			}
 
+			m_SSAOSpecializationMapEntry = { 0, 0, sizeof(u32) };
+			m_SSAOSpecializationInfo.mapEntryCount = 1;
+			m_SSAOSpecializationInfo.pMapEntries = &m_SSAOSpecializationMapEntry;
+			m_SSAOSpecializationInfo.pData = &m_SSAOKernelSize;
+			m_SSAOSpecializationInfo.dataSize = sizeof(u32);
+
 			Renderer::InitializeMaterials();
 		}
 
@@ -2219,8 +2225,11 @@ namespace flex
 			if (m_bSSAOStateChanged)
 			{
 				m_bSSAOStateChanged = false;
+				// Update GBuffer in case blur or ssao entirely was toggled
 				CreateDescriptorSet(m_GBufferQuadRenderID);
 				CreateGraphicsPipeline(m_GBufferQuadRenderID, false);
+				// Update SSAO pipelines in case kernel size changed
+				CreateSSAOPipelines();
 			}
 
 			m_PhysicsDebugDrawer->UpdateDebugMode();
@@ -3702,7 +3711,7 @@ namespace flex
 				VkPipeline graphicsPipeline = VK_NULL_HANDLE;
 
 				GraphicsPipelineCreateInfo pipelineCreateInfo = {};
-				pipelineCreateInfo.grahpicsPipeline = &graphicsPipeline;
+				pipelineCreateInfo.graphicsPipeline = &graphicsPipeline;
 				pipelineCreateInfo.pipelineLayout = &pipelineLayout;
 				pipelineCreateInfo.shaderID = computeSDFShaderID;
 				pipelineCreateInfo.vertexAttributes = computeSDFShader.shader.vertexAttributes;
@@ -3926,7 +3935,7 @@ namespace flex
 			if (m_FontSSGraphicsPipeline == VK_NULL_HANDLE)
 			{
 				GraphicsPipelineCreateInfo pipelineCreateInfo = {};
-				pipelineCreateInfo.grahpicsPipeline = m_FontSSGraphicsPipeline.replace();
+				pipelineCreateInfo.graphicsPipeline = m_FontSSGraphicsPipeline.replace();
 				pipelineCreateInfo.pipelineLayout = m_FontSSPipelineLayout.replace();
 				pipelineCreateInfo.shaderID = fontMaterial.material.shaderID;
 				pipelineCreateInfo.vertexAttributes = fontShader.shader.vertexAttributes;
@@ -4036,7 +4045,7 @@ namespace flex
 			if (m_FontWSGraphicsPipeline == VK_NULL_HANDLE)
 			{
 				GraphicsPipelineCreateInfo pipelineCreateInfo = {};
-				pipelineCreateInfo.grahpicsPipeline = m_FontWSGraphicsPipeline.replace();
+				pipelineCreateInfo.graphicsPipeline = m_FontWSGraphicsPipeline.replace();
 				pipelineCreateInfo.pipelineLayout = m_FontWSPipelineLayout.replace();
 				pipelineCreateInfo.shaderID = fontMaterial.material.shaderID;
 				pipelineCreateInfo.vertexAttributes = fontShader.shader.vertexAttributes;
@@ -5150,7 +5159,7 @@ namespace flex
 
 			GraphicsPipelineCreateInfo pipelineCreateInfo = {};
 			pipelineCreateInfo.pipelineLayout = renderObject->pipelineLayout.replace();
-			pipelineCreateInfo.grahpicsPipeline = renderObject->graphicsPipeline.replace();
+			pipelineCreateInfo.graphicsPipeline = renderObject->graphicsPipeline.replace();
 			pipelineCreateInfo.shaderID = material->material.shaderID;
 			pipelineCreateInfo.vertexAttributes = shader.shader.vertexAttributes;
 			pipelineCreateInfo.topology = renderObject->topology;
@@ -5235,6 +5244,7 @@ namespace flex
 			shaderStages[0] = vertShaderStageInfo;
 
 			VkPipelineShaderStageCreateInfo fragShaderStageInfo = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderModule);
+			fragShaderStageInfo.pSpecializationInfo = createInfo->fragSpecializationInfo;
 			shaderStages[1] = fragShaderStageInfo;
 
 			VkPipelineShaderStageCreateInfo geomShaderStageInfo = {};
@@ -5357,7 +5367,7 @@ namespace flex
 
 			// TODO: Wrap this pipeline in a VDeleter so we can just call .replace()
 			//vkDestroyPipeline(m_VulkanDevice->m_LogicalDevice, *createInfo->grahpicsPipeline, nullptr);
-			VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_VulkanDevice->m_LogicalDevice, pipelineCache, 1, &pipelineInfo, nullptr, createInfo->grahpicsPipeline));
+			VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_VulkanDevice->m_LogicalDevice, pipelineCache, 1, &pipelineInfo, nullptr, createInfo->graphicsPipeline));
 		}
 
 		void VulkanRenderer::CreateDepthResources()
@@ -7785,7 +7795,7 @@ namespace flex
 			VulkanMaterial* ssaoMaterial = &m_Materials[m_SSAOMatID];
 			VulkanShader* ssaoShader = &m_Shaders[ssaoMaterial->material.shaderID];
 
-			pipelineCreateInfo.grahpicsPipeline = m_SSAOGraphicsPipeline.replace();
+			pipelineCreateInfo.graphicsPipeline = m_SSAOGraphicsPipeline.replace();
 			pipelineCreateInfo.pipelineLayout = m_SSAOGraphicsPipelineLayout.replace();
 			pipelineCreateInfo.shaderID = ssaoMaterial->material.shaderID;
 			pipelineCreateInfo.vertexAttributes = ssaoShader->shader.vertexAttributes;
@@ -7794,12 +7804,13 @@ namespace flex
 			pipelineCreateInfo.depthWriteEnable = ssaoShader->shader.bDepthWriteEnable ? VK_TRUE : VK_FALSE;
 			pipelineCreateInfo.depthCompareOp = gBufferObject->depthCompareOp;
 			pipelineCreateInfo.renderPass = ssaoShader->renderPass;
+			pipelineCreateInfo.fragSpecializationInfo = &m_SSAOSpecializationInfo;
 			CreateGraphicsPipeline(&pipelineCreateInfo);
 
 			VulkanMaterial* ssaoBlurMaterial = &m_Materials[m_SSAOBlurMatID];
 			VulkanShader* ssaoBlurShader = &m_Shaders[ssaoBlurMaterial->material.shaderID];
 
-			pipelineCreateInfo.grahpicsPipeline = m_SSAOBlurGraphicsPipelineH.replace();
+			pipelineCreateInfo.graphicsPipeline = m_SSAOBlurGraphicsPipelineH.replace();
 			pipelineCreateInfo.pipelineLayout = m_SSAOBlurGraphicsPipelineLayout.replace();
 			pipelineCreateInfo.shaderID = ssaoBlurMaterial->material.shaderID;
 			pipelineCreateInfo.vertexAttributes = ssaoBlurShader->shader.vertexAttributes;
@@ -7809,7 +7820,7 @@ namespace flex
 			pipelineCreateInfo.renderPass = ssaoBlurShader->renderPass;
 			CreateGraphicsPipeline(&pipelineCreateInfo);
 
-			pipelineCreateInfo.grahpicsPipeline = m_SSAOBlurGraphicsPipelineV.replace();
+			pipelineCreateInfo.graphicsPipeline = m_SSAOBlurGraphicsPipelineV.replace();
 			pipelineCreateInfo.pipelineLayout = m_SSAOBlurGraphicsPipelineLayout.replace();
 			pipelineCreateInfo.shaderID = ssaoBlurMaterial->material.shaderID;
 			pipelineCreateInfo.vertexAttributes = ssaoBlurShader->shader.vertexAttributes;
