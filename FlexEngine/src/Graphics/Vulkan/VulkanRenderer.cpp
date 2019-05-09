@@ -3723,6 +3723,8 @@ namespace flex
 				// TODO: Remove/call only once prior to any font load
 				UpdateConstantUniformBuffers();
 
+				VulkanRenderObject* gBufferObject = GetRenderObject(m_GBufferQuadRenderID);
+
 				glm::vec2 fontTexSize((real)fontTexColAttachment->width, (real)fontTexColAttachment->height);
 
 				u32 dynamicOffsetIndex = 0;
@@ -3794,7 +3796,6 @@ namespace flex
 
 					VkDeviceSize offsets[1] = { 0 };
 					vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID].vertexBuffer->m_Buffer, offsets);
-					vkCmdBindIndexBuffer(commandBuffer, m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID].indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
 
 					vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
@@ -3819,7 +3820,7 @@ namespace flex
 					overrides.overridenUniforms.AddUniform(U_SDF_DATA);
 					UpdateDynamicUniformBuffer(m_ComputeSDFMatID, dynamicOffsetIndex, MAT4_IDENTITY, &overrides);
 
-					vkCmdDrawIndexed(commandBuffer, m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID].indexCount, 1, 0, 0, 1);
+					vkCmdDraw(commandBuffer, gBufferObject->vertexBufferData->VertexCount, 1, gBufferObject->vertexOffset, 0);
 
 					metric->texCoord = metric->texCoord / fontTexSize;
 
