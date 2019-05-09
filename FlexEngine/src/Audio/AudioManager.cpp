@@ -6,7 +6,7 @@
 
 namespace flex
 {
-	std::vector<AudioManager::Source> AudioManager::s_Sources;
+	std::array<AudioManager::Source, AudioManager::NUM_BUFFERS> AudioManager::s_Sources;
 
 	ALCcontext* AudioManager::s_Context = nullptr;
 	ALCdevice* AudioManager::s_Device = nullptr;
@@ -45,8 +45,6 @@ namespace flex
 			DisplayALError("alGenBuffers: ", error);
 			return;
 		}
-
-		s_Sources.resize(NUM_BUFFERS);
 	}
 
 	void AudioManager::Destroy()
@@ -202,7 +200,7 @@ namespace flex
 		{
 			alDeleteSources(1, &source.source);
 		}
-		s_Sources.clear();
+		s_Sources.fill({});
 	}
 
 	void AudioManager::SetMasterGain(real masterGain)

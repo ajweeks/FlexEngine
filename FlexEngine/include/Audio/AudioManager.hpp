@@ -73,7 +73,7 @@ namespace flex
 			bool bLooping = false;
 		};
 
-		static std::vector<Source> s_Sources;
+		static std::array<Source, NUM_BUFFERS> s_Sources;
 
 		static ALCdevice* s_Device;
 		static ALCcontext* s_Context;
