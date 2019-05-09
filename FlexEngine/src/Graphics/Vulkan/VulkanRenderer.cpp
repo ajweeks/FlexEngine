@@ -3811,14 +3811,14 @@ namespace flex
 					CreateDescriptorSet(&descSetCreateInfo);
 					descSets.push_back(descriptorSet);
 
-					BindDescriptorSet(&m_Shaders[computeSDFShaderID], dynamicOffsetIndex, commandBuffer, pipelineLayout, descriptorSet);
+					BindDescriptorSet(&m_Shaders[computeSDFShaderID], dynamicOffsetIndex * m_DynamicAlignment, commandBuffer, pipelineLayout, descriptorSet);
 
 					UniformOverrides overrides = {};
 					overrides.texChannel = metric->channel;
 					overrides.overridenUniforms.AddUniform(U_TEX_CHANNEL);
 					overrides.sdfData = glm::vec4((real)res.x, (real)res.y, (real)spread, (real)sampleDensity);
 					overrides.overridenUniforms.AddUniform(U_SDF_DATA);
-					UpdateDynamicUniformBuffer(m_ComputeSDFMatID, dynamicOffsetIndex, MAT4_IDENTITY, &overrides);
+					UpdateDynamicUniformBuffer(m_ComputeSDFMatID, dynamicOffsetIndex * m_DynamicAlignment, MAT4_IDENTITY, &overrides);
 
 					vkCmdDraw(commandBuffer, gBufferObject->vertexBufferData->VertexCount, 1, gBufferObject->vertexOffset, 0);
 
@@ -3979,7 +3979,7 @@ namespace flex
 					}
 
 					u32 dynamicOffsetIndex = 0;
-					BindDescriptorSet(&fontShader, dynamicOffsetIndex, commandBuffer, m_FontSSPipelineLayout, font->m_DescriptorSet);
+					BindDescriptorSet(&fontShader, dynamicOffsetIndex * m_DynamicAlignment, commandBuffer, m_FontSSPipelineLayout, font->m_DescriptorSet);
 
 					VulkanTexture* fontTex = font->GetTexture();
 					glm::vec2 texSize(fontTex->width, fontTex->height);
@@ -3992,7 +3992,7 @@ namespace flex
 					overrides.texSize = texSize;
 					overrides.overridenUniforms.AddUniform(U_FONT_CHAR_DATA);
 					overrides.fontCharData = fontCharData;
-					UpdateDynamicUniformBuffer(m_FontMatSSID, dynamicOffsetIndex, transformMat, &overrides);
+					UpdateDynamicUniformBuffer(m_FontMatSSID, dynamicOffsetIndex * m_DynamicAlignment, transformMat, &overrides);
 
 					VkDeviceSize offsets[1] = { 0 };
 					vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_VertexIndexBufferPairs[fontMaterial.material.shaderID].vertexBuffer->m_Buffer, offsets);
@@ -4084,7 +4084,7 @@ namespace flex
 					}
 
 					u32 dynamicOffsetIndex = 0;
-					BindDescriptorSet(&fontShader, dynamicOffsetIndex, commandBuffer, m_FontWSPipelineLayout, font->m_DescriptorSet);
+					BindDescriptorSet(&fontShader, dynamicOffsetIndex * m_DynamicAlignment, commandBuffer, m_FontWSPipelineLayout, font->m_DescriptorSet);
 
 					VulkanTexture* fontTex = font->GetTexture();
 					glm::vec2 texSize(fontTex->width, fontTex->height);
@@ -4099,7 +4099,7 @@ namespace flex
 					overrides.texSize = texSize;
 					overrides.overridenUniforms.AddUniform(U_FONT_CHAR_DATA); // TODO: Does this data change per-object?
 					overrides.fontCharData = fontCharData;
-					UpdateDynamicUniformBuffer(m_FontMatWSID, dynamicOffsetIndex, transformMat, &overrides);
+					UpdateDynamicUniformBuffer(m_FontMatWSID, dynamicOffsetIndex * m_DynamicAlignment, transformMat, &overrides);
 
 					VkDeviceSize offsets[1] = { 0 };
 					vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_VertexIndexBufferPairs[fontMaterial.material.shaderID].vertexBuffer->m_Buffer, offsets);
@@ -6205,7 +6205,7 @@ namespace flex
 							sizeof(Material::PushConstantBlock), &mat.material.pushConstantBlock);
 					}
 
-					BindDescriptorSet(&shader, renderObject->dynamicUBOIndex, commandBuffer, renderObject->pipelineLayout, renderObject->descriptorSet);
+					BindDescriptorSet(&shader, renderObject->dynamicUBOOffset, commandBuffer, renderObject->pipelineLayout, renderObject->descriptorSet);
 
 					if (renderObject->bIndexed)
 					{
@@ -6340,14 +6340,14 @@ namespace flex
 				VkRect2D ssaoBlurScissor = vks::scissor(0u, 0u, m_SSAOBlurHFrameBuf->width, m_SSAOBlurHFrameBuf->height);
 				vkCmdSetScissor(m_OffScreenCmdBuffer, 0, 1, &ssaoBlurScissor);
 
-				BindDescriptorSet(&m_Shaders[ssaoBlurShaderID], 0, m_OffScreenCmdBuffer, m_SSAOBlurGraphicsPipelineLayout, m_SSAOBlurHDescSet);
+				BindDescriptorSet(&m_Shaders[ssaoBlurShaderID], 0 * m_DynamicAlignment, m_OffScreenCmdBuffer, m_SSAOBlurGraphicsPipelineLayout, m_SSAOBlurHDescSet);
 
 				vkCmdBindVertexBuffers(m_OffScreenCmdBuffer, 0, 1, &gBufferVertexIndexBuffer->vertexBuffer->m_Buffer, offsets);
 
 				UniformOverrides overrides = {};
 				overrides.overridenUniforms.AddUniform(U_SSAO_BLUR_DATA);
 				overrides.bSSAOVerticalPass = false;
-				UpdateDynamicUniformBuffer(m_SSAOBlurMatID, 0, MAT4_IDENTITY, &overrides);
+				UpdateDynamicUniformBuffer(m_SSAOBlurMatID, 0 * m_DynamicAlignment, MAT4_IDENTITY, &overrides);
 
 				vkCmdDraw(m_OffScreenCmdBuffer, gBufferObject->vertexBufferData->VertexCount, 1, gBufferObject->vertexOffset, 0);
 
@@ -6361,10 +6361,10 @@ namespace flex
 
 				vkCmdBindPipeline(m_OffScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_SSAOBlurGraphicsPipelineV);
 
-				BindDescriptorSet(&m_Shaders[ssaoBlurShaderID], 1, m_OffScreenCmdBuffer, m_SSAOBlurGraphicsPipelineLayout, m_SSAOBlurVDescSet);
+				BindDescriptorSet(&m_Shaders[ssaoBlurShaderID], 1 * m_DynamicAlignment, m_OffScreenCmdBuffer, m_SSAOBlurGraphicsPipelineLayout, m_SSAOBlurVDescSet);
 
 				overrides.bSSAOVerticalPass = true;
-				UpdateDynamicUniformBuffer(m_SSAOBlurMatID, 1, MAT4_IDENTITY, &overrides);
+				UpdateDynamicUniformBuffer(m_SSAOBlurMatID, 1 * m_DynamicAlignment, MAT4_IDENTITY, &overrides);
 
 				vkCmdDraw(m_OffScreenCmdBuffer, gBufferObject->vertexBufferData->VertexCount, 1, gBufferObject->vertexOffset, 0);
 
@@ -6374,9 +6374,9 @@ namespace flex
 			VK_CHECK_RESULT(vkEndCommandBuffer(m_OffScreenCmdBuffer));
 		}
 
-		void VulkanRenderer::BindDescriptorSet(VulkanShader* shader, i32 dynamicOffsetIndex, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet)
+		void VulkanRenderer::BindDescriptorSet(VulkanShader* shader, u32 dynamicOffset, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet)
 		{
-			u32 dynamicOffset = dynamicOffsetIndex * m_DynamicAlignment;
+			//u32 dynamicOffset = dynamicOffsetIndex * m_DynamicAlignment;
 			u32* dynamicOffsetPtr = nullptr;
 			u32 dynamicOffsetCount = 0;
 			if (shader->uniformBuffer.dynamicBuffer.m_Size != 0)
@@ -6618,6 +6618,14 @@ namespace flex
 
 				for (u32 shaderID = 0; shaderID < m_Shaders.size(); ++shaderID)
 				{
+					VulkanBuffer* vertBuffer = m_VertexIndexBufferPairs[shaderID].vertexBuffer;
+					VulkanBuffer* indexBuffer = m_VertexIndexBufferPairs[shaderID].indexBuffer;
+
+					if (vertBuffer->m_Buffer == 0)
+					{
+						continue;
+					}
+
 					ShaderBatch* shaderBatch = (m_Shaders[shaderID].shader.bDeferred ? &m_DeferredObjectBatches : &m_ForwardObjectBatches);
 
 					ShaderBatchPair shaderBatchPair = {};
@@ -6629,13 +6637,7 @@ namespace flex
 					ShaderBatchPair depthUnawareEditorShaderBatchPair = {};
 					depthUnawareEditorShaderBatchPair.shaderID = shaderID;
 
-					VulkanBuffer* vertBuffer = m_VertexIndexBufferPairs[shaderID].vertexBuffer;
-					VulkanBuffer* indexBuffer = m_VertexIndexBufferPairs[shaderID].indexBuffer;
-
-					if (vertBuffer->m_Buffer == 0)
-					{
-						continue;
-					}
+					i32 dynamicUBOOffset = 0;
 
 					for (auto matPair : m_Materials)
 					{
@@ -6655,24 +6657,29 @@ namespace flex
 								VulkanRenderObject* renderObject = GetRenderObject(renderID);
 
 								if (renderObject &&
-									renderObject->gameObject->IsVisible() &&
 									renderObject->materialID == matPair.first &&
 									(!renderObject->bIndexed || indexBuffer->m_Buffer != 0))
 								{
-									if (renderObject->bEditorObject)
+									dynamicUBOOffset += RoundUp(m_Shaders[shaderID].uniformBuffer.dynamicData.size, m_DynamicAlignment);
+									renderObject->dynamicUBOOffset = dynamicUBOOffset;
+
+									if (renderObject->gameObject->IsVisible())
 									{
-										if (m_Shaders[shaderID].shader.bDepthWriteEnable)
+										if (renderObject->bEditorObject)
 										{
-											depthAwareEditorMatBatchPair.batch.objects.push_back(renderID);
+											if (m_Shaders[shaderID].shader.bDepthWriteEnable)
+											{
+												depthAwareEditorMatBatchPair.batch.objects.push_back(renderID);
+											}
+											else
+											{
+												depthUnawareEditorMatBatchPair.batch.objects.push_back(renderID);
+											}
 										}
 										else
 										{
-											depthUnawareEditorMatBatchPair.batch.objects.push_back(renderID);
+											matBatchPair.batch.objects.push_back(renderID);
 										}
-									}
-									else
-									{
-										matBatchPair.batch.objects.push_back(renderID);
 									}
 								}
 							}
@@ -6706,28 +6713,6 @@ namespace flex
 					if (!depthUnawareEditorShaderBatchPair.batch.batches.empty())
 					{
 						m_DepthUnawareEditorObjBatches.batches.push_back(depthUnawareEditorShaderBatchPair);
-					}
-				}
-
-				ShaderBatch* shaderBatches[] = { &m_DeferredObjectBatches, &m_ForwardObjectBatches, &m_DepthAwareEditorObjBatches, &m_DepthUnawareEditorObjBatches };
-				for (ShaderBatch* shaderBatch : shaderBatches)
-				{
-					for (const ShaderBatchPair& shaderBatchPair : shaderBatch->batches)
-					{
-						i32 dynamicOffsetIndex = 0;
-
-						for (const MaterialBatchPair& matBatches : shaderBatchPair.batch.batches)
-						{
-							for (RenderID renderID : matBatches.batch.objects)
-							{
-								dynamicOffsetIndex += m_Shaders[shaderBatchPair.shaderID].uniformBuffer.dynamicData.size;
-								VulkanRenderObject* renderObject = GetRenderObject(renderID);
-								if (renderObject)
-								{
-									renderObject->dynamicUBOIndex = dynamicOffsetIndex;
-								}
-							}
-						}
 					}
 				}
 			}
@@ -7142,12 +7127,11 @@ namespace flex
 				return;
 			}
 
-			u32 offset = renderObject->dynamicUBOIndex;
 			glm::mat4 model = renderObject->gameObject->GetTransform()->GetWorldTransform();
-			UpdateDynamicUniformBuffer(renderObject->materialID, offset, model, uniformOverrides);
+			UpdateDynamicUniformBuffer(renderObject->materialID, renderObject->dynamicUBOOffset, model, uniformOverrides);
 		}
 
-		void VulkanRenderer::UpdateDynamicUniformBuffer(MaterialID materialID, u32 dynamicOffsetIndex, const glm::mat4& inModel, UniformOverrides const* uniformOverrides /* = nullptr */)
+		void VulkanRenderer::UpdateDynamicUniformBuffer(MaterialID materialID, u32 dynamicOffset, const glm::mat4& inModel, UniformOverrides const* uniformOverrides /* = nullptr */)
 		{
 			const VulkanMaterial& material = m_Materials[materialID];
 			const VulkanShader& shader = m_Shaders[material.material.shaderID];
@@ -7319,7 +7303,7 @@ namespace flex
 				if (dynamicUniforms.HasUniform(uniformInfo.uniform))
 				{
 					// TODO: Don't store data twice? (in uniformBuffer.dynamicData.data & uniformBuffer.dynamicBuffer.m_Mapped)
-					memcpy(&uniformBuffer.dynamicData.data[dynamicOffsetIndex + index], uniformInfo.dataStart, uniformInfo.copySize);
+					memcpy(&uniformBuffer.dynamicData.data[dynamicOffset + index], uniformInfo.dataStart, uniformInfo.copySize);
 					index += uniformInfo.copySize / 4;
 				}
 			}
@@ -7334,8 +7318,8 @@ namespace flex
 #endif
 
 			u64 firstIndex = (u64)uniformBuffer.dynamicBuffer.m_Mapped;
-			u64 dest = firstIndex + (dynamicOffsetIndex * m_DynamicAlignment);
-			memcpy((void*)(dest), &uniformBuffer.dynamicData.data[dynamicOffsetIndex], size);
+			u64 dest = firstIndex + dynamicOffset;
+			memcpy((void*)(dest), &uniformBuffer.dynamicData.data[dynamicOffset], size);
 		}
 
 		void VulkanRenderer::LoadDefaultShaderCode()

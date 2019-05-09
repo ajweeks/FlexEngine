@@ -452,7 +452,7 @@ namespace flex
 			bool bEditorObject = false;
 			bool bSetDynamicStates = false;
 
-			u32 dynamicUBOIndex = 0;
+			u32 dynamicUBOOffset = 0;
 
 			VDeleter<VkPipelineLayout> pipelineLayout;
 			VDeleter<VkPipeline> graphicsPipeline;

@@ -1369,6 +1369,11 @@ namespace flex
 		return randN * (max - min) + min;
 	}
 
+	i32 RoundUp(i32 val, i32 alignment)
+	{
+		return val + alignment - (val % alignment);
+	}
+
 	bool DoImGuiRotationDragFloat3(const char* label, glm::vec3& rotation, glm::vec3& outCleanedRotation)
 	{
 		glm::vec3 pRot = rotation;
