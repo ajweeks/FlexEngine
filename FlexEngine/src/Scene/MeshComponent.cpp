@@ -289,13 +289,47 @@ namespace flex
 	{
 		if (createInfo.normals.empty())
 		{
-			PrintError("Can't calculate tangents for mesh which contains no normals!\n");
+			PrintError("Can't calculate tangents for mesh which contains no normal data!\n");
+			return false;
+		}
+		if (createInfo.positions_3D.empty())
+		{
+			PrintError("Can't calculate tangents for mesh which contains no position data!\n");
+			return false;
+		}
+		if (createInfo.texCoords_UV.empty())
+		{
+			// TODO: Handle this case
+			PrintError("Can't calculate tangents for mesh which contains no tex coord data!\n");
 			return false;
 		}
 
-		// TODO
+		for (u32 i = 0; i < createInfo.positions_3D.size() - 2; i += 3)
+		{
+			glm::vec3 p0 = createInfo.positions_3D[i + 0];
+			glm::vec3 p1 = createInfo.positions_3D[i + 1];
+			glm::vec3 p2 = createInfo.positions_3D[i + 2];
 
-		return false;
+			glm::vec2 uv0 = createInfo.texCoords_UV[i + 0];
+			glm::vec2 uv1 = createInfo.texCoords_UV[i + 1];
+			glm::vec2 uv2 = createInfo.texCoords_UV[i + 2];
+
+			glm::vec3 dPos0 = p1 - p0;
+			glm::vec3 dPos1 = p2 - p0;
+
+			glm::vec2 dUV0 = uv1 - uv0;
+			glm::vec2 dUV1 = uv2 - uv0;
+
+			real r = 1.0f / (dUV1.x * dUV0.y - dUV1.y * dUV0.x);
+			glm::vec3 tangent = glm::normalize((dPos0 * dUV0.y - dPos1 * dUV1.y) * r);
+			//glm::vec3 bitangent = (dPos1 * dUV1.x - dPos0 * dUV0.x) * r;
+
+			createInfo.tangents[i + 0] = tangent;
+			createInfo.tangents[i + 1] = tangent;
+			createInfo.tangents[i + 2] = tangent;
+		}
+
+		return true;
 	}
 
 	bool MeshComponent::LoadFromFile(
@@ -431,6 +465,11 @@ namespace flex
 				if (tanAttribIndex == -1 && (m_RequiredAttributes & (u32)VertexAttribute::TANGENT))
 				{
 					bCalculateTangents = true;
+
+					if (uvAttribIndex == -1)
+					{
+						PrintError("Can't generate tangents for mesh which has no tex coords: %s\n", m_FileName.c_str());
+					}
 				}
 
 				{
