@@ -1412,13 +1412,13 @@ namespace flex
 			CreateUniformBuffers(&prefilterShader);
 
 			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
-			DescriptorSetCreateInfo equirectangularToCubeDescriptorCreateInfo = {};
-			equirectangularToCubeDescriptorCreateInfo.descriptorSet = &descriptorSet;
-			equirectangularToCubeDescriptorCreateInfo.descriptorSetLayout = &m_DescriptorSetLayouts[prefilterShaderID];
-			equirectangularToCubeDescriptorCreateInfo.shaderID = prefilterShaderID;
-			equirectangularToCubeDescriptorCreateInfo.uniformBuffer = &prefilterShader.uniformBuffer;
-			equirectangularToCubeDescriptorCreateInfo.cubemapTexture = renderObjectMat.cubemapTexture;
-			CreateDescriptorSet(&equirectangularToCubeDescriptorCreateInfo);
+			DescriptorSetCreateInfo prefilterDescriptorCreateInfo = {};
+			prefilterDescriptorCreateInfo.descriptorSet = &descriptorSet;
+			prefilterDescriptorCreateInfo.descriptorSetLayout = &m_DescriptorSetLayouts[prefilterShaderID];
+			prefilterDescriptorCreateInfo.shaderID = prefilterShaderID;
+			prefilterDescriptorCreateInfo.uniformBuffer = &prefilterShader.uniformBuffer;
+			prefilterDescriptorCreateInfo.cubemapTexture = renderObjectMat.cubemapTexture;
+			CreateDescriptorSet(&prefilterDescriptorCreateInfo);
 
 			std::array<VkPushConstantRange, 1> pushConstantRanges = {};
 			pushConstantRanges[0].offset = 0;
@@ -4486,6 +4486,7 @@ namespace flex
 				renderPassInfo.dependencyCount = dependencies.size();
 				renderPassInfo.pDependencies = dependencies.data();
 
+				// TODO: Add render pass helper
 				VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassInfo, nullptr, m_SSAORenderPass.replace()));
 			}
 
@@ -4501,6 +4502,7 @@ namespace flex
 				subpasses[0].colorAttachmentCount = 1;
 				subpasses[0].pColorAttachments = &colorAttachmentRef;
 
+				// TODO: Add subpass dependency helpers
 				std::array<VkSubpassDependency, 2> dependencies;
 				dependencies[0] = {};
 				dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
