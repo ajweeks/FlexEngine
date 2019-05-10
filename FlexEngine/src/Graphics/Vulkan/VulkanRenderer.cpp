@@ -141,8 +141,8 @@ namespace flex
 			m_FontWSPipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
 
 			m_SSAOGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
-			m_SSAOBlurGraphicsPipelineH = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
-			m_SSAOBlurGraphicsPipelineV = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
+			m_SSAOBlurHGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
+			m_SSAOBlurVGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
 			m_SSAOGraphicsPipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
 			m_SSAOBlurGraphicsPipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
 			m_SSAOSampler = { m_VulkanDevice->m_LogicalDevice, vkDestroySampler };
@@ -481,8 +481,8 @@ namespace flex
 			vkDestroySemaphore(m_VulkanDevice->m_LogicalDevice, m_OffscreenSemaphore, nullptr);
 
 			m_SSAOGraphicsPipeline.replace();
-			m_SSAOBlurGraphicsPipelineH.replace();
-			m_SSAOBlurGraphicsPipelineV.replace();
+			m_SSAOBlurHGraphicsPipeline.replace();
+			m_SSAOBlurVGraphicsPipeline.replace();
 
 			m_SSAOGraphicsPipelineLayout.replace();
 			m_SSAOBlurGraphicsPipelineLayout.replace();
@@ -6342,7 +6342,7 @@ namespace flex
 				GetShaderID("ssao_blur", ssaoBlurShaderID);
 				assert(ssaoBlurShaderID != InvalidShaderID);
 
-				vkCmdBindPipeline(m_OffScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_SSAOBlurGraphicsPipelineH);
+				vkCmdBindPipeline(m_OffScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_SSAOBlurHGraphicsPipeline);
 
 				VkViewport ssaoBlurViewport = vks::viewportFlipped((real)m_SSAOBlurHFrameBuf->width, (real)m_SSAOBlurHFrameBuf->height, 0.0f, 1.0f);
 				vkCmdSetViewport(m_OffScreenCmdBuffer, 0, 1, &ssaoBlurViewport);
@@ -6369,7 +6369,7 @@ namespace flex
 				// Vertical pass
 				vkCmdBeginRenderPass(m_OffScreenCmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-				vkCmdBindPipeline(m_OffScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_SSAOBlurGraphicsPipelineV);
+				vkCmdBindPipeline(m_OffScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_SSAOBlurVGraphicsPipeline);
 
 				BindDescriptorSet(&m_Shaders[ssaoBlurShaderID], 1 * m_DynamicAlignment, m_OffScreenCmdBuffer, m_SSAOBlurGraphicsPipelineLayout, m_SSAOBlurVDescSet);
 
@@ -7810,7 +7810,7 @@ namespace flex
 			VulkanMaterial* ssaoBlurMaterial = &m_Materials[m_SSAOBlurMatID];
 			VulkanShader* ssaoBlurShader = &m_Shaders[ssaoBlurMaterial->material.shaderID];
 
-			pipelineCreateInfo.graphicsPipeline = m_SSAOBlurGraphicsPipelineH.replace();
+			pipelineCreateInfo.graphicsPipeline = m_SSAOBlurHGraphicsPipeline.replace();
 			pipelineCreateInfo.pipelineLayout = m_SSAOBlurGraphicsPipelineLayout.replace();
 			pipelineCreateInfo.shaderID = ssaoBlurMaterial->material.shaderID;
 			pipelineCreateInfo.vertexAttributes = ssaoBlurShader->shader.vertexAttributes;
@@ -7820,7 +7820,7 @@ namespace flex
 			pipelineCreateInfo.renderPass = ssaoBlurShader->renderPass;
 			CreateGraphicsPipeline(&pipelineCreateInfo);
 
-			pipelineCreateInfo.graphicsPipeline = m_SSAOBlurGraphicsPipelineV.replace();
+			pipelineCreateInfo.graphicsPipeline = m_SSAOBlurVGraphicsPipeline.replace();
 			pipelineCreateInfo.pipelineLayout = m_SSAOBlurGraphicsPipelineLayout.replace();
 			pipelineCreateInfo.shaderID = ssaoBlurMaterial->material.shaderID;
 			pipelineCreateInfo.vertexAttributes = ssaoBlurShader->shader.vertexAttributes;

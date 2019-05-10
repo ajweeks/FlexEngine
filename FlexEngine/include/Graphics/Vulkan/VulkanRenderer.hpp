@@ -434,8 +434,8 @@ namespace flex
 			MaterialID m_SSAOMatID = InvalidMaterialID;
 			MaterialID m_SSAOBlurMatID = InvalidMaterialID;
 			VDeleter<VkPipeline> m_SSAOGraphicsPipeline;
-			VDeleter<VkPipeline> m_SSAOBlurGraphicsPipelineH;
-			VDeleter<VkPipeline> m_SSAOBlurGraphicsPipelineV;
+			VDeleter<VkPipeline> m_SSAOBlurHGraphicsPipeline;
+			VDeleter<VkPipeline> m_SSAOBlurVGraphicsPipeline;
 			VDeleter<VkPipelineLayout> m_SSAOGraphicsPipelineLayout;
 			VDeleter<VkPipelineLayout> m_SSAOBlurGraphicsPipelineLayout;
 			VkDescriptorSet m_SSAODescSet = VK_NULL_HANDLE;
