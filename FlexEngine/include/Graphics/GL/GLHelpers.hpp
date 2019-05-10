@@ -93,6 +93,7 @@ namespace flex
 				i32 ssaoKernelSize;
 				i32 ssaoRadius;
 				i32 ssaoBlurRadius;
+				i32 ssaoTexelOffset;
 				i32 ssaoPowExp;
 			};
 			UniformIDs uniformIDs;

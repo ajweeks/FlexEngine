@@ -258,11 +258,14 @@ namespace flex
 			MaterialID m_ShadowMaterialID = InvalidMaterialID;
 
 			u32 m_SSAOFrameBuffer = 0;
-			u32 m_SSAOBlurFrameBuffer = 0;
+			u32 m_SSAOBlurHFrameBuffer = 0;
+			u32 m_SSAOBlurVFrameBuffer = 0;
 			TextureHandle m_SSAOFBO;
-			TextureHandle m_SSAOBlurFBO;
+			TextureHandle m_SSAOBlurHFBO;
+			TextureHandle m_SSAOBlurVFBO;
 			MaterialID m_SSAOMatID = InvalidMaterialID;
-			MaterialID m_SSAOBlurMatID = InvalidMaterialID;
+			MaterialID m_SSAOBlurHMatID = InvalidMaterialID;
+			MaterialID m_SSAOBlurVMatID = InvalidMaterialID;
 
 			GLTexture* m_NoiseTexture = nullptr;
 

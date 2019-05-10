@@ -6,7 +6,6 @@ layout (location = 0) in vec2 ex_UV;
 
 layout (binding = 0) uniform UBOConstant
 {
-	// SSAO Blur Data
 	int ssaoBlurRadius;
 	int pad;
 } uboConstant;
