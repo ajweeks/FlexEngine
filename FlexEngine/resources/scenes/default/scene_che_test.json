@@ -1,0 +1,50 @@
+{
+	"version" : 1,
+	"name" : "Scene Che Test",
+	"objects" : 
+	[
+		{
+			"name" : "Skybox",
+			"type" : "skybox",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"material" : "skybox 01",
+			"skybox info" : 
+			{
+			}
+		},
+		{
+			"name" : "Reflection Probe 01",
+			"type" : "reflection probe",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 8.000, 0.000"
+			}
+		},
+		{
+			"name" : "che",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "3.184, 1.038, 0.000"
+			},
+			"mesh" : "che",
+			"material" : "pbr white"
+		},
+		{
+			"name" : "ground plane",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"scale" : "50.000, 0.500, 50.000"
+			},
+			"mesh" : "cylinder",
+			"material" : "pbr white"
+		}
+	]
+}

@@ -431,9 +431,10 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "0.000, 1.215, -5.892"
+				"pos" : "-13.833, 1.465, -7.597",
+				"rot" : "-3.141, -0.176, -3.141"
 			},
-			"mesh" : "che-car-merged",
+			"mesh" : "che",
 			"material" : "pbr chrome"
 		}
 	]

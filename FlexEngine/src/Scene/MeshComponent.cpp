@@ -407,8 +407,8 @@ namespace flex
 					continue;
 				}
 
-				//i32 indexStart = (i32)m_Indices.size();
 				i32 vertexStart = (i32)vertexBufferDataCreateInfo.positions_3D.size();
+				i32 indexStart = m_Indices.size();
 
 				i32 posAttribIndex = -1;
 				i32 normAttribIndex = -1;
@@ -449,12 +449,12 @@ namespace flex
 				assert(primitive->attributes[posAttribIndex].type == cgltf_attribute_type_position);
 				assert(posAccessor->component_type == cgltf_component_type_r_32f);
 				assert(posAccessor->type == cgltf_type_vec3);
-				//assert(posAccessor->buffer_view->type == cgltf_buffer_view_type_vertices);
 				u32 vertCount = posAccessor->count;
 
 				vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
 
 				assert(posAccessor->has_min);
+				assert(posAccessor->has_max);
 				glm::vec3 posMin = glm::make_vec3(&posAccessor->min[0]);
 				glm::vec3 posMax = glm::make_vec3(&posAccessor->max[0]);
 
@@ -473,58 +473,25 @@ namespace flex
 				}
 
 				{
-					if (m_RequiredAttributes & (u32)VertexAttribute::POSITION)
-					{
-						vertexBufferDataCreateInfo.positions_3D.resize(vertCount);
-					}
-
-					if (m_RequiredAttributes & (u32)VertexAttribute::POSITION_2D)
-					{
-						vertexBufferDataCreateInfo.positions_2D.resize(vertCount);
-					}
-
-					if (m_RequiredAttributes & (u32)VertexAttribute::NORMAL)
-					{
-						vertexBufferDataCreateInfo.normals.resize(vertCount);
-					}
-
-					if (m_RequiredAttributes & (u32)VertexAttribute::TANGENT)
-					{
-						vertexBufferDataCreateInfo.tangents.resize(vertCount);
-					}
-
-					if (m_RequiredAttributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)
-					{
-						vertexBufferDataCreateInfo.colors_R32G32B32A32.resize(vertCount);
-					}
-
-					if (m_RequiredAttributes & (u32)VertexAttribute::COLOR_R8G8B8A8_UNORM)
-					{
-						vertexBufferDataCreateInfo.colors_R8G8B8A8.resize(vertCount);
-					}
-
-					if (m_RequiredAttributes & (u32)VertexAttribute::UV)
-					{
-						vertexBufferDataCreateInfo.texCoords_UV.resize(vertCount);
-					}
-
-					if (m_RequiredAttributes & (u32)VertexAttribute::EXTRA_VEC4)
-					{
-						vertexBufferDataCreateInfo.extraVec4s.resize(vertCount);
-					}
-
-					if (m_RequiredAttributes & (u32)VertexAttribute::EXTRA_INT)
-					{
-						vertexBufferDataCreateInfo.extraInts.resize(vertCount);
-					}
+					if (m_RequiredAttributes & (u32)VertexAttribute::POSITION) vertexBufferDataCreateInfo.positions_3D.resize(vertexBufferDataCreateInfo.positions_3D.size() + vertCount);
+					if (m_RequiredAttributes & (u32)VertexAttribute::POSITION_2D) vertexBufferDataCreateInfo.positions_2D.resize(vertexBufferDataCreateInfo.positions_2D.size() + vertCount);
+					if (m_RequiredAttributes & (u32)VertexAttribute::NORMAL) vertexBufferDataCreateInfo.normals.resize(vertexBufferDataCreateInfo.normals.size() + vertCount);
+					if (m_RequiredAttributes & (u32)VertexAttribute::TANGENT) vertexBufferDataCreateInfo.tangents.resize(vertexBufferDataCreateInfo.tangents.size() + vertCount);
+					if (m_RequiredAttributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT) vertexBufferDataCreateInfo.colors_R32G32B32A32.resize(vertexBufferDataCreateInfo.colors_R32G32B32A32.size() + vertCount);
+					if (m_RequiredAttributes & (u32)VertexAttribute::COLOR_R8G8B8A8_UNORM) vertexBufferDataCreateInfo.colors_R8G8B8A8.resize(vertexBufferDataCreateInfo.colors_R8G8B8A8.size() + vertCount);
+					if (m_RequiredAttributes & (u32)VertexAttribute::UV) vertexBufferDataCreateInfo.texCoords_UV.resize(vertexBufferDataCreateInfo.texCoords_UV.size() + vertCount);
+					if (m_RequiredAttributes & (u32)VertexAttribute::EXTRA_VEC4) vertexBufferDataCreateInfo.extraVec4s.resize(vertexBufferDataCreateInfo.extraVec4s.size() + vertCount);
+					if (m_RequiredAttributes & (u32)VertexAttribute::EXTRA_INT) vertexBufferDataCreateInfo.extraInts.resize(vertexBufferDataCreateInfo.extraInts.size() + vertCount);
 				}
 
 				// Vertices
-				for (u32 v = 0; v < vertCount; ++v)
+				for (u32 vi = 0; vi < vertCount; ++vi)
 				{
+					u32 v = vertexStart + vi;
+
 					// Position
 					glm::vec3 pos;
-					cgltf_accessor_read_float(posAccessor, v, &pos.x, 3);
+					cgltf_accessor_read_float(posAccessor, vi, &pos.x, 3);
 					vertexBufferDataCreateInfo.positions_3D[v] = pos;
 
 					// Normal
@@ -544,7 +511,7 @@ namespace flex
 							assert(normAccessor->type == cgltf_type_vec3);
 
 							glm::vec3 norm;
-							cgltf_accessor_read_float(normAccessor, v, &norm.x, 3);
+							cgltf_accessor_read_float(normAccessor, vi, &norm.x, 3);
 							if (importSettings && importSettings->bSwapNormalYZ)
 							{
 								std::swap(norm.y, norm.z);
@@ -574,7 +541,7 @@ namespace flex
 							//assert(tanAccessor->type == cgltf_type_vec3);
 
 							glm::vec4 tangent;
-							cgltf_accessor_read_float(tanAccessor, v, &tangent.x, 4);
+							cgltf_accessor_read_float(tanAccessor, vi, &tangent.x, 4);
 							vertexBufferDataCreateInfo.tangents[v] = tangent;
 						}
 					}
@@ -596,7 +563,7 @@ namespace flex
 							assert(colAccessor->type == cgltf_type_vec4);
 
 							glm::vec4 col;
-							cgltf_accessor_read_float(colAccessor, v, &col.x, 4);
+							cgltf_accessor_read_float(colAccessor, vi, &col.x, 4);
 							vertexBufferDataCreateInfo.colors_R32G32B32A32[v] = col;
 						}
 					}
@@ -618,7 +585,7 @@ namespace flex
 							assert(uvAccessor->type == cgltf_type_vec2);
 
 							glm::vec2 uv0;
-							cgltf_accessor_read_float(uvAccessor, v, &uv0.x, 2);
+							cgltf_accessor_read_float(uvAccessor, vi, &uv0.x, 2);
 
 							uv0 *= m_UVScale;
 							if (importSettings && importSettings->bFlipU)
@@ -638,7 +605,7 @@ namespace flex
 				{
 					assert(primitive->indices->type == cgltf_type_scalar);
 					const i32 indexCount = (i32)primitive->indices->count;
-					m_Indices.resize(indexCount);
+					m_Indices.resize(m_Indices.size() + indexCount);
 
 					//assert(primitive->indices->buffer_view->type == cgltf_buffer_view_type_indices);
 					assert(primitive->indices->component_type == cgltf_component_type_r_8u ||
@@ -647,7 +614,7 @@ namespace flex
 
 					for (i32 l = 0; l < indexCount; ++l)
 					{
-						m_Indices[l] = vertexStart + cgltf_accessor_read_index(primitive->indices, l);
+						m_Indices[indexStart + l] = vertexStart + cgltf_accessor_read_index(primitive->indices, l);
 					}
 				}
 			}

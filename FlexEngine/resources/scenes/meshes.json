@@ -176,6 +176,13 @@
 			"flipNormalZ" : false,
 			"flipU" : false,
 			"flipV" : false
+		},
+		{
+			"file" : "che.glb",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
 		}
 	]
 }
