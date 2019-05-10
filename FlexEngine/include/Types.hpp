@@ -90,6 +90,7 @@ namespace flex
 		MOBILE_LIQUID_BOX,
 		TERMINAL,
 		GERSTNER_WAVE,
+		BLOCKS,
 
 		_NONE
 	};
@@ -110,6 +111,7 @@ namespace flex
 		"mobile liquid box",
 		"terminal",
 		"gerstner wave",
+		"blocks",
 
 		"NONE"
 	};

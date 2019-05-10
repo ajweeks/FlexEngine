@@ -1,0 +1,86 @@
+{
+	"version" : 1,
+	"name" : "scene_ssao_test",
+	"objects" : 
+	[
+		{
+			"name" : "Skybox",
+			"type" : "skybox",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"material" : "skybox 01",
+			"skybox info" : 
+			{
+			}
+		},
+		{
+			"name" : "Reflection Probe 01",
+			"type" : "reflection probe",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 8.000, 0.000"
+			}
+		},
+		{
+			"name" : "plane",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"scale" : "100.000, 1.000, 100.000"
+			},
+			"mesh" : "",
+			"material" : "pbr chrome"
+		},
+		{
+			"name" : "PointLight_00",
+			"type" : "point light",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 13.600, 0.000"
+			},
+			"point light info" : 
+			{
+				"pos" : "0.000, 13.600, 0.000",
+				"color" : "1.00, 1.00, 1.00",
+				"enabled" : true,
+				"brightness" : 1.000000
+			}
+		},
+		{
+			"name" : "Directional Light",
+			"type" : "directional light",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "-1.947, 10.965, 0.112",
+				"rot" : "-0.859, 0.796, -0.009"
+			},
+			"directional light info" : 
+			{
+				"rotation" : "-0.859, 0.796, -0.009",
+				"pos" : "-1.947, 10.965, 0.112",
+				"color" : "1.00, 1.00, 1.00",
+				"enabled" : true,
+				"brightness" : 2.344000,
+				"cast shadows" : true,
+				"shadow darkness" : 1.000000,
+				"shadow map near" : -45.000000,
+				"shadow map far" : 45.000000,
+				"shadow map zoom" : 66.000000
+			}
+		},
+		{
+			"name" : "blocks",
+			"type" : "blocks",
+			"visible" : true,
+			"transform" : 
+			{
+			}
+		}
+	]
+}

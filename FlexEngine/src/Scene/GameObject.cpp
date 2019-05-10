@@ -175,6 +175,10 @@ namespace flex
 		{
 			newGameObject = new GerstnerWave(objectName);
 		} break;
+		case GameObjectType::BLOCKS:
+		{
+			newGameObject = new Blocks(objectName);
+		} break;
 		case GameObjectType::OBJECT: // Fall through
 		case GameObjectType::_NONE:
 			newGameObject = new GameObject(objectName, gameObjectType);
@@ -3570,6 +3574,47 @@ namespace flex
 		{
 			waves.erase(waves.begin() + index);
 		}
+	}
+
+	Blocks::Blocks(const std::string& name) :
+		GameObject(name, GameObjectType::BLOCKS)
+	{
+		MaterialCreateInfo matCreateInfo = {};
+		matCreateInfo.name = "Block";
+		matCreateInfo.shaderName = "pbr";
+		matCreateInfo.constAO = 1.0f;
+		matCreateInfo.constMetallic = 0.0f;
+
+		std::vector<MaterialID> matIDs;
+		for (i32 i = 0; i < 10; ++i)
+		{
+			matCreateInfo.constAlbedo = glm::vec3(RandomFloat(0.3f, 0.6f), RandomFloat(0.4f, 0.8f), RandomFloat(0.4f, 0.7f));
+			matCreateInfo.constRoughness = RandomFloat(0.0f, 1.0f);
+			matIDs.push_back(g_Renderer->InitializeMaterial(&matCreateInfo));
+		}
+
+		real blockSize = 1.5f;
+		i32 count = 18;
+		for (i32 x = 0; x < count; ++x)
+		{
+			for (i32 z = 0; z < count; ++z)
+			{
+				GameObject* obj = new GameObject("block", GameObjectType::OBJECT);
+				obj->SetMeshComponent(new MeshComponent(PickRandomFrom(matIDs), obj));
+				obj->GetMeshComponent()->LoadFromFile(RESOURCE_LOCATION "meshes/cube.glb");
+				AddChild(obj);
+				obj->GetTransform()->SetLocalScale(glm::vec3(blockSize));
+				obj->GetTransform()->SetLocalPosition(glm::vec3(
+					((real)x / (real)count - 0.5f) * (blockSize * count),
+					RandomFloat(0.0f, 1.2f),
+					((real)z / (real)count - 0.5f) * (blockSize * count)));
+			}
+		}
+	}
+
+	void Blocks::Update()
+	{
+
 	}
 
 	OperatorType Operator::Parse(Tokenizer& tokenizer)

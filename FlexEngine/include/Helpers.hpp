@@ -170,6 +170,12 @@ namespace flex
 	// Returns random value in range [min, max)
 	real RandomFloat(real min, real max);
 
+	template<class T>
+	const T& PickRandomFrom(const std::vector<T>& vec)
+	{
+		return vec[RandomInt(0, vec.size())];
+	}
+
 	i32 RoundUp(i32 val, i32 alignment);
 
 	// Returns true if value changed

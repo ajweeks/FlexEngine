@@ -520,6 +520,17 @@ namespace flex
 
 	};
 
+	class Blocks : public GameObject
+	{
+	public:
+		explicit Blocks(const std::string& name);
+
+		virtual void Update() override;
+
+	protected:
+
+	};
+
 	struct Tokenizer;
 	struct Value;
 	struct Expression;
