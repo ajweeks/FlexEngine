@@ -60,6 +60,7 @@ namespace flex
 			_u(SSAO_GEN_DATA)
 			_u(SSAO_BLUR_DATA)
 			_u(SSAO_SAMPLING_DATA)
+			_u(FXAA_DATA)
 #undef _u
 		}
 

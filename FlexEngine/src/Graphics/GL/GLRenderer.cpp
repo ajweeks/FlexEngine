@@ -3579,21 +3579,6 @@ namespace flex
 			m_CurrentFont->AddTextCache(newCache);
 		}
 
-		void GLRenderer::ComputeDirLightViewProj(glm::mat4& outView, glm::mat4& outProj)
-		{
-			if (m_DirectionalLight == nullptr)
-			{
-				outView = glm::lookAt(VEC3_ZERO, VEC3_FORWARD, VEC3_UP);
-				outProj = glm::ortho(-1234.0f, 1234.0f, -4567.0f, 4567.0f, 1.0f, 0.01f);
-				return;
-			}
-
-			outView = glm::lookAt(VEC3_ZERO, m_DirectionalLight->data.dir, VEC3_UP);
-
-			real zoom = m_DirectionalLight->shadowMapZoom;
-			outProj = glm::ortho(-zoom, zoom, -zoom, zoom, m_DirectionalLight->shadowMapNearPlane, m_DirectionalLight->shadowMapFarPlane);
-		}
-
 		void GLRenderer::DrawRenderObjectBatch(const GLRenderObjectBatch& batchedRenderObjects, const DrawCallInfo& drawCallInfo)
 		{
 			if (batchedRenderObjects.empty())

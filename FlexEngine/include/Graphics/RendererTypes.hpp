@@ -62,6 +62,17 @@ namespace flex
 		real powExp;
 	};
 
+	struct FXAAData
+	{
+		real lumaThresholdMin;
+		real lumaThresholdMax;
+		real mulReduce;
+		real minReduce;
+		real maxSpan;
+		glm::vec2 texelStep;
+		i32 bDEBUGShowEdges;
+	};
+
 	// Uniforms
 	const u64 U_MODEL							= (1ull << 0); const u32 US_MODEL						= sizeof(glm::mat4);
 	const u64 U_MODEL_INV_TRANSPOSE				= (1ull << 1); const u32 US_MODEL_INV_TRANSPOSE			= sizeof(glm::mat4);
@@ -122,6 +133,7 @@ namespace flex
 	const u64 U_SSAO_GEN_DATA					= (1ull << 56); const u32 US_SSAO_GEN_DATA				= sizeof(SSAOGenData);
 	const u64 U_SSAO_BLUR_DATA					= (1ull << 57); const u32 US_SSAO_BLUR_DATA				= sizeof(SSAOBlurDataDynamic); // TODO: use two uniforms?
 	const u64 U_SSAO_SAMPLING_DATA				= (1ull << 58); const u32 US_SSAO_SAMPLING_DATA			= sizeof(SSAOSamplingData);
+	const u64 U_FXAA_DATA						= (1ull << 59); const u32 US_FXAA_DATA					= sizeof(FXAAData);
 	// NOTE!: New uniforms must be added to Uniforms::CalculateSizeInBytes
 
 	enum class ClearFlag

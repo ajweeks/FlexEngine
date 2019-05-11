@@ -240,6 +240,8 @@ namespace flex
 		void GenerateGBufferVertexBuffer(bool bFlipV);
 		void GenerateSSAONoise(std::vector<glm::vec4>& noise);
 
+		void ComputeDirLightViewProj(glm::mat4& outView, glm::mat4& outProj);
+
 		RenderID m_GBufferQuadRenderID = InvalidRenderID;
 		VertexBufferData m_gBufferQuadVertexBufferData;
 
@@ -334,6 +336,8 @@ namespace flex
 		glm::vec2u m_SSAORes;
 		bool m_bSSAOBlurEnabled = true;
 		bool m_bSSAOStateChanged = false;
+
+		FXAAData m_FXAAData;
 
 	private:
 		Renderer& operator=(const Renderer&) = delete;

@@ -43,6 +43,18 @@
 @ glslangvalidator --spirv-val -V vk_ssao_blur.vert -o spv/vk_ssao_blur_vert.spv
 @ glslangvalidator --spirv-val -V vk_ssao_blur.frag -o spv/vk_ssao_blur_frag.spv
 
+@ glslangvalidator --spirv-val -V vk_post_process.vert -o spv/vk_post_process_vert.spv
+@ glslangvalidator --spirv-val -V vk_post_process.frag -o spv/vk_post_process_frag.spv
+
+@ glslangvalidator --spirv-val -V vk_post_fxaa.vert -o spv/vk_post_fxaa_vert.spv
+@ glslangvalidator --spirv-val -V vk_post_fxaa.frag -o spv/vk_post_fxaa_frag.spv
+
+@ glslangvalidator --spirv-val -V vk_shadow.vert -o spv/vk_shadow_vert.spv
+@ glslangvalidator --spirv-val -V vk_shadow.frag -o spv/vk_shadow_frag.spv
+
+@ glslangvalidator --spirv-val -V vk_sprite.vert -o spv/vk_sprite_vert.spv
+@ glslangvalidator --spirv-val -V vk_sprite.frag -o spv/vk_sprite_frag.spv
+
 @REM ImGui
 @ glslangValidator --spirv-val -V vk_imgui.frag -o spv/vk_imgui_frag.spv
 @ glslangValidator --spirv-val -V vk_imgui.vert -o spv/vk_imgui_vert.spv

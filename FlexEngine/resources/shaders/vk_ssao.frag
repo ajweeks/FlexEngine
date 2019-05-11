@@ -6,7 +6,7 @@ layout (location = 0) in vec2 ex_UV;
 
 layout (constant_id = 0) const int SSAO_KERNEL_SIZE = 64;
 
-layout (binding = 0) uniform UBO 
+layout (binding = 0) uniform UBOConstant
 {
 	mat4 projection;
 	mat4 invProj;

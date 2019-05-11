@@ -223,8 +223,6 @@ namespace flex
 
 			u32 GetActiveRenderObjectCount() const;
 
-			void ComputeDirLightViewProj(glm::mat4& outView, glm::mat4& outProj);
-
 			EventReply OnKeyEvent(KeyCode keyCode, KeyAction action, i32 modifiers);
 			KeyEventCallback<GLRenderer> m_KeyEventCallback;
 
