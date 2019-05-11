@@ -13,7 +13,7 @@
 				"scale" : "3.000, 3.000, 3.000"
 			},
 			"mesh" : "street-03",
-			"material" : "Grid"
+			"material" : "pbr grey"
 		},
 		{
 			"name" : "ground plane",
@@ -26,7 +26,7 @@
 				"scale" : "500.000, 1.000, 500.000"
 			},
 			"mesh" : "cube",
-			"material" : "Grid",
+			"material" : "pbr grey",
 			"collider" : 
 			{
 				"shape" : "box",

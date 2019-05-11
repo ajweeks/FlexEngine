@@ -76,9 +76,9 @@ void main()
 		{
 			++sampleCount;
 		}
-		else if (abs(reconstructedPos.z - posVS.z) < 3.0f)
+		else
 		{
-			float rangeCheck = smoothstep(0.0f, 1.0f, uboConstant.ssaoRadius / abs(reconstructedPos.z - samplePos.z));
+			float rangeCheck = smoothstep(0.0f, 1.0f, uboConstant.ssaoRadius / abs(reconstructedPos.z - samplePos.z - bias));
 			occlusion += (reconstructedPos.z <= samplePos.z - bias ? 1.0f : 0.0f) * rangeCheck;
 			++sampleCount;
 		}

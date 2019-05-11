@@ -14,6 +14,7 @@ Flex Engine is my personal game engine which I began work on in February 2017 as
 - Profiling tools
 - In-game scripting language
 - Conditional checksum-based shader compilation
+- SSAO
 
 ![](FlexEngine/screenshots/2018-07-08_21-52-09.png)
 

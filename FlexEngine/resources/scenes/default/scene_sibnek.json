@@ -35,6 +35,39 @@
 			},
 			"mesh" : "sibnek",
 			"material" : "pbr chrome"
+		},
+		{
+			"name" : "PointLight_00",
+			"type" : "point light",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "31.500, 18.434, 0.000",
+				"rot" : "0.000, 0.065, 0.000"
+			},
+			"point light info" : 
+			{
+				"pos" : "31.500, 18.434, 0.000",
+				"color" : "1.00, 1.00, 1.00",
+				"enabled" : true,
+				"brightness" : 885.416992
+			}
+		},
+		{
+			"name" : "PointLight_01",
+			"type" : "point light",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "-42.000, 15.400, 0.000"
+			},
+			"point light info" : 
+			{
+				"pos" : "-42.000, 15.400, 0.000",
+				"color" : "1.00, 1.00, 1.00",
+				"enabled" : true,
+				"brightness" : 640.625000
+			}
 		}
 	]
 }
