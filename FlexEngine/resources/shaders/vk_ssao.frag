@@ -72,7 +72,7 @@ void main()
 		
 		vec3 reconstructedPos = reconstructVSPosFromDepth(offset.xy);
 		vec3 sampledNormal = normalize(texture(in_Normal, offset.xy).xyz * 2.0f - 1.0f);
-		if (dot(sampledNormal, normal) > 0.95)
+		if (dot(sampledNormal, normal) > 0.99)
 		{
 			++sampleCount;
 		}

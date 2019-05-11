@@ -56,6 +56,7 @@ void main()
 
 	float bias = 0.01f;
 
+	int sampleCount = 0;
 	float occlusion = 0.0f;
 	for (uint i = 0; i < ssaoKernelSize; i++)
 	{
@@ -68,13 +69,21 @@ void main()
 		offset.xy = offset.xy * 0.5f + 0.5f;
 		if (offset.x >= 0.0 && offset.x <= 1.0f && offset.y >= 0.0f && offset.y <= 1.0f)
 		{
-			//vec3 sampledNormal = texture(normalRoughnessFrameBufferSampler, offset.xy).xyz;
+			vec3 sampledNormal = texture(normalRoughnessFrameBufferSampler, offset.xy).xyz;
 			vec3 reconstructedPos = reconstructVSPosFromDepth(offset.xy);
-			float rangeCheck = smoothstep(0.0f, 1.0f, ssaoRadius / abs(reconstructedPos.z - samplePos.z));
-			occlusion += (reconstructedPos.z <= samplePos.z - bias ? 1.0f : 0.0f) * rangeCheck;
+			if (dot(sampledNormal, normal) > 0.7)
+			{
+				++sampleCount;
+			}
+			else if (abs(reconstructedPos.z - posVS.z) < 3.0f)
+			{
+				float rangeCheck = smoothstep(0.0f, 1.0f, ssaoRadius / abs(reconstructedPos.z - samplePos.z));
+				occlusion += (reconstructedPos.z <= samplePos.z - bias ? 1.0f : 0.0f) * rangeCheck;
+				++sampleCount;
+			}
 		}
 	}
-	occlusion = 1.0 - (occlusion / float(ssaoKernelSize));
+	occlusion = 1.0 - (occlusion / float(sampleCount));
 	
 	fragColor = occlusion;
 }

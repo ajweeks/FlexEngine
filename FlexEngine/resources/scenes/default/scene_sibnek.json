@@ -1,0 +1,40 @@
+{
+	"version" : 1,
+	"name" : "scene_sibnek",
+	"objects" : 
+	[
+		{
+			"name" : "Skybox",
+			"type" : "skybox",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"material" : "skybox 01",
+			"skybox info" : 
+			{
+			}
+		},
+		{
+			"name" : "Reflection Probe 01",
+			"type" : "reflection probe",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 8.000, 0.000"
+			}
+		},
+		{
+			"name" : "sibnek",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 45.000, 0.000",
+				"scale" : "3.000, 3.000, 3.000"
+			},
+			"mesh" : "sibnek",
+			"material" : "pbr chrome"
+		}
+	]
+}

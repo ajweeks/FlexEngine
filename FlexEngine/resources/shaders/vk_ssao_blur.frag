@@ -31,7 +31,7 @@ void main()
 		vec2 offset = uboDyanmic.ssaoTexelOffset * float(i);
 		float depth = texture(in_Depth, ex_UV + offset).r;
 		vec3 normal = normalize(texture(in_Normal, ex_UV + offset).rgb * 2.0f - 1.0f);
-		if (abs(ourDepth - depth) < 0.00002f && dot(ourNormal, normal) > 0.5f)
+		if (abs(ourDepth - depth) < 0.00002f && dot(ourNormal, normal) > 0.85f)
 		{
 			sum += texture(in_SSAO, ex_UV + offset).r;
 			++sampleCount;

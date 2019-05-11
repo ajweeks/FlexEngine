@@ -6035,16 +6035,19 @@ namespace flex
 
 						u32 WSTextBufferByteCount = (u32)(textVerticesWS.size() * sizeof(TextVertex2D));
 
-						const VulkanMaterial& fontMaterial = m_Materials[m_FontMatWSID];
-						VulkanBuffer* vertexBuffer = m_VertexIndexBufferPairs[fontMaterial.material.shaderID].vertexBuffer;
-						u32 copySize = std::min(WSTextBufferByteCount, (u32)vertexBuffer->m_Size);
-						if (copySize < WSTextBufferByteCount)
+						if (WSTextBufferByteCount > 0)
 						{
-							PrintError("SS Font vertex buffer is %u bytes too small\n", WSTextBufferByteCount - copySize);
+							const VulkanMaterial& fontMaterial = m_Materials[m_FontMatWSID];
+							VulkanBuffer* vertexBuffer = m_VertexIndexBufferPairs[fontMaterial.material.shaderID].vertexBuffer;
+							u32 copySize = std::min(WSTextBufferByteCount, (u32)vertexBuffer->m_Size);
+							if (copySize < WSTextBufferByteCount)
+							{
+								PrintError("SS Font vertex buffer is %u bytes too small\n", WSTextBufferByteCount - copySize);
+							}
+							VK_CHECK_RESULT(vertexBuffer->Map(copySize));
+							memcpy(vertexBuffer->m_Mapped, textVerticesWS.data(), copySize);
+							vertexBuffer->Unmap();
 						}
-						VK_CHECK_RESULT(vertexBuffer->Map(copySize));
-						memcpy(vertexBuffer->m_Mapped, textVerticesWS.data(), copySize);
-						vertexBuffer->Unmap();
 					}
 
 					DrawTextWS(commandBuffer);
@@ -6154,16 +6157,19 @@ namespace flex
 
 						u32 SSTextBufferByteCount = (u32)(textVerticesSS.size() * sizeof(TextVertex2D));
 
-						const VulkanMaterial& fontMaterial = m_Materials[m_FontMatSSID];
-						VulkanBuffer* vertexBuffer = m_VertexIndexBufferPairs[fontMaterial.material.shaderID].vertexBuffer;
-						u32 copySize = std::min(SSTextBufferByteCount, (u32)vertexBuffer->m_Size);
-						if (copySize < SSTextBufferByteCount)
+						if (SSTextBufferByteCount > 0)
 						{
-							PrintError("SS Font vertex buffer is %u bytes too small\n", SSTextBufferByteCount - copySize);
+							const VulkanMaterial& fontMaterial = m_Materials[m_FontMatSSID];
+							VulkanBuffer* vertexBuffer = m_VertexIndexBufferPairs[fontMaterial.material.shaderID].vertexBuffer;
+							u32 copySize = std::min(SSTextBufferByteCount, (u32)vertexBuffer->m_Size);
+							if (copySize < SSTextBufferByteCount)
+							{
+								PrintError("SS Font vertex buffer is %u bytes too small\n", SSTextBufferByteCount - copySize);
+							}
+							VK_CHECK_RESULT(vertexBuffer->Map(copySize));
+							memcpy(vertexBuffer->m_Mapped, textVerticesSS.data(), copySize);
+							vertexBuffer->Unmap();
 						}
-						VK_CHECK_RESULT(vertexBuffer->Map(copySize));
-						memcpy(vertexBuffer->m_Mapped, textVerticesSS.data(), copySize);
-						vertexBuffer->Unmap();
 					}
 
 					DrawTextSS(commandBuffer);

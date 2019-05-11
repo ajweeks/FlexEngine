@@ -212,7 +212,6 @@ namespace flex
 			shadowMatCreateInfo.name = "Shadow";
 			shadowMatCreateInfo.engineMaterial = true;
 			m_ShadowMaterialID = InitializeMaterial(&shadowMatCreateInfo);
-			//i32 program = m_Shaders[m_Materials[m_ShadowMaterialID].material.shaderID].program;
 
 			MaterialCreateInfo spriteMatCreateInfo = {};
 			spriteMatCreateInfo.name = "Sprite material";
@@ -957,6 +956,12 @@ namespace flex
 				++binding;
 			}
 
+			if (shader.shader.bNeedDepthSampler)
+			{
+				mat.depthSamplerID = m_gBufferDepthTexHandle.id;
+				++binding;
+			}
+
 			if (shader.shader.bNeedBRDFLUT)
 			{
 				const char* uniformName = "brdfLUT";
@@ -1064,11 +1069,6 @@ namespace flex
 				}
 
 				mat.noiseSamplerID = m_NoiseTexture->handle;
-			}
-
-			if (shader.shader.bNeedDepthSampler)
-			{
-				mat.depthSamplerID = m_gBufferDepthTexHandle.id;
 			}
 
 			return matID;
@@ -2004,6 +2004,11 @@ namespace flex
 			if (m_bSSAOStateChanged)
 			{
 				GenerateGBuffer();
+
+				if (m_DirectionalLight != nullptr)
+				{
+					m_DirectionalLight->shadowTextureID = m_ShadowMapTexture.id;
+				}
 				m_bSSAOStateChanged = false;
 				return;
 			}
@@ -4486,6 +4491,8 @@ namespace flex
 			for (auto& pair : m_Fonts)
 			{
 				FontMetaData& fontMetaData = pair.second;
+				delete fontMetaData.bitmapFont;
+				fontMetaData.bitmapFont = nullptr;
 
 				std::string fontName = fontMetaData.filePath;
 				StripLeadingDirectories(fontName);
