@@ -1094,6 +1094,12 @@ namespace flex
 
 	void FlexEngine::DrawImGuiObjects()
 	{
+		glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+		if (frameBufferSize.x == 0 || frameBufferSize.y == 0)
+		{
+			return;
+		}
+
 		if (m_bDemoWindowShowing)
 		{
 			ImGui::ShowDemoWindow(&m_bDemoWindowShowing);
@@ -1222,7 +1228,6 @@ namespace flex
 
 		bool bIsMainWindowCollapsed = true;
 
-		glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 		m_ImGuiMainWindowWidthMax = frameBufferSize.x - 100.0f;
 		if (m_bMainWindowShowing)
 		{

@@ -2832,6 +2832,11 @@ namespace flex
 
 		void VulkanRenderer::NewFrame()
 		{
+			if (g_Window->GetFrameBufferSize().x == 0)
+			{
+				return;
+			}
+
 			if (m_PhysicsDebugDrawer)
 			{
 				m_PhysicsDebugDrawer->ClearLines();
