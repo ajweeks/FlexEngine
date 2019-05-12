@@ -2053,12 +2053,9 @@ namespace flex
 		{
 		}
 
-		VulkanShader::VulkanShader(const VDeleter<VkDevice>& device, const std::string& name,
-			const std::string& vertexShaderFilePath,
-			const std::string& fragmentShaderFilePath,
-			const std::string& geomShaderFilePath /* = "" */) :
+		VulkanShader::VulkanShader(const VDeleter<VkDevice>& device, Shader* shader) :
 			uniformBuffer(device),
-			shader(name, vertexShaderFilePath, fragmentShaderFilePath, geomShaderFilePath)
+			shader(shader)
 		{
 		}
 
@@ -2067,7 +2064,6 @@ namespace flex
 			name(name),
 			internalFormat(internalFormat)
 		{
-
 		}
 
 		std::string DeviceTypeToString(VkPhysicalDeviceType type)

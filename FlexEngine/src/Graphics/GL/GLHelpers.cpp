@@ -673,7 +673,7 @@ namespace flex
 		{
 			bool bSuccess = true;
 
-			bool bLoadGeometryShader = (!shader.shader.geometryShaderFilePath.empty());
+			bool bLoadGeometryShader = (!shader.shader->geometryShaderFilePath.empty());
 
 			GLuint vertexShaderID = glCreateShader(GL_VERTEX_SHADER);
 
@@ -685,16 +685,16 @@ namespace flex
 				geometryShaderID = glCreateShader(GL_GEOMETRY_SHADER);
 			}
 
-			std::string vertFileName = shader.shader.vertexShaderFilePath;
+			std::string vertFileName = shader.shader->vertexShaderFilePath;
 			StripLeadingDirectories(vertFileName);
-			std::string fragFileName = shader.shader.fragmentShaderFilePath;
+			std::string fragFileName = shader.shader->fragmentShaderFilePath;
 			StripLeadingDirectories(fragFileName);
 			std::string geomFileName;
 			if (g_bEnableLogging_Loading)
 			{
 				if (bLoadGeometryShader)
 				{
-					geomFileName = shader.shader.geometryShaderFilePath;
+					geomFileName = shader.shader->geometryShaderFilePath;
 					StripLeadingDirectories(geomFileName);
 
 					Print("Loading shaders %s & %s & %s\n", vertFileName.c_str(), fragFileName.c_str(), geomFileName.c_str());
@@ -705,32 +705,32 @@ namespace flex
 				}
 			}
 
-			if (!ReadFile(shader.shader.vertexShaderFilePath, shader.shader.vertexShaderCode, false))
+			if (!ReadFile(shader.shader->vertexShaderFilePath, shader.shader->vertexShaderCode, false))
 			{
-				PrintError("Could not find vertex shader: %s\n", shader.shader.name.c_str());
+				PrintError("Could not find vertex shader: %s\n", shader.shader->name.c_str());
 			}
-			shader.shader.vertexShaderCode.push_back('\0'); // Signal end of string with terminator character
+			shader.shader->vertexShaderCode.push_back('\0'); // Signal end of string with terminator character
 
-			if (!ReadFile(shader.shader.fragmentShaderFilePath, shader.shader.fragmentShaderCode, false))
+			if (!ReadFile(shader.shader->fragmentShaderFilePath, shader.shader->fragmentShaderCode, false))
 			{
-				PrintError("Could not find fragment shader: %s\n", shader.shader.name.c_str());
+				PrintError("Could not find fragment shader: %s\n", shader.shader->name.c_str());
 			}
-			shader.shader.fragmentShaderCode.push_back('\0'); // Signal end of string with terminator character
+			shader.shader->fragmentShaderCode.push_back('\0'); // Signal end of string with terminator character
 
 			if (bLoadGeometryShader)
 			{
-				if (!ReadFile(shader.shader.geometryShaderFilePath, shader.shader.geometryShaderCode, false))
+				if (!ReadFile(shader.shader->geometryShaderFilePath, shader.shader->geometryShaderCode, false))
 				{
-					PrintError("Could not find geometry shader: %s\n", shader.shader.name.c_str());
+					PrintError("Could not find geometry shader: %s\n", shader.shader->name.c_str());
 				}
-				shader.shader.geometryShaderCode.push_back('\0'); // Signal end of string with terminator character
+				shader.shader->geometryShaderCode.push_back('\0'); // Signal end of string with terminator character
 			}
 
 			GLint result = GL_FALSE;
 			i32 infoLogLength;
 
 			// Compile vertex shader
-			char const* vertexSourcepointer = shader.shader.vertexShaderCode.data(); // TODO: Test
+			char const* vertexSourcepointer = shader.shader->vertexShaderCode.data(); // TODO: Test
 			glShaderSource(vertexShaderID, 1, &vertexSourcepointer, NULL);
 			glCompileShader(vertexShaderID);
 
@@ -746,7 +746,7 @@ namespace flex
 			}
 
 			// Compile fragment shader
-			char const* fragmentSourcePointer = shader.shader.fragmentShaderCode.data();
+			char const* fragmentSourcePointer = shader.shader->fragmentShaderCode.data();
 			glShaderSource(fragmentShaderID, 1, &fragmentSourcePointer, NULL);
 			glCompileShader(fragmentShaderID);
 
@@ -764,7 +764,7 @@ namespace flex
 			if (bLoadGeometryShader)
 			{
 				// Compile geometry shader
-				char const* geometrySourcePointer = shader.shader.geometryShaderCode.data();
+				char const* geometrySourcePointer = shader.shader->geometryShaderCode.data();
 				glShaderSource(geometryShaderID, 1, &geometrySourcePointer, NULL);
 				glCompileShader(geometryShaderID);
 
@@ -924,11 +924,8 @@ namespace flex
 			}
 		}
 
-		GLShader::GLShader(const std::string& name,
-						   const std::string& vertexShaderFilePath,
-						   const std::string& fragmentShaderFilePath,
-						   const std::string& geometryShaderFilePath) :
-			shader(name, vertexShaderFilePath, fragmentShaderFilePath, geometryShaderFilePath)
+		GLShader::GLShader(Shader* shader) :
+			shader(shader)
 		{
 		}
 

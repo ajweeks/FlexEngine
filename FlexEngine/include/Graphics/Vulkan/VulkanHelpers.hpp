@@ -354,17 +354,12 @@ namespace flex
 
 		struct VulkanShader
 		{
-			VulkanShader(const VDeleter<VkDevice>& device, const std::string& name,
-				const std::string& vertexShaderFilePath,
-				const std::string& fragmentShaderFilePath,
-				const std::string& geomShaderFilePath = "");
+			VulkanShader(const VDeleter<VkDevice>& device, Shader* shader);
 
-			Shader shader;
+			Shader* shader = nullptr;
 
 			VkRenderPass renderPass = VK_NULL_HANDLE;
 			UniformBuffer uniformBuffer;
-			bool bDynamic = false;
-			u32 dynamicVertexBufferSize = 0;
 		};
 
 #ifdef DEBUG

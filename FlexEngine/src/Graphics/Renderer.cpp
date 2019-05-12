@@ -1102,6 +1102,471 @@ namespace flex
 		}
 	}
 
+	void Renderer::LoadShaders()
+	{
+#if COMPILE_OPEN_GL
+		m_BaseShaders = {
+			{ "deferred_combine", "deferred_combine.vert", "deferred_combine.frag" },
+			{ "deferred_combine_cubemap", "deferred_combine_cubemap.vert", "deferred_combine_cubemap.frag" },
+			{ "color", "color.vert", "color.frag" },
+			{ "pbr", "pbr.vert", "pbr.frag" },
+			{ "pbr_ws", "pbr_ws.vert", "pbr_ws.frag" },
+			{ "skybox", "skybox.vert", "skybox.frag" },
+			{ "equirectangular_to_cube", "skybox.vert", "equirectangular_to_cube.frag" },
+			{ "irradiance", "skybox.vert", "irradiance.frag" },
+			{ "prefilter", "skybox.vert", "prefilter.frag" },
+			{ "brdf", "brdf.vert", "brdf.frag" },
+			{ "sprite", "sprite.vert", "sprite.frag" },
+			{ "post_process", "post_process.vert", "post_process.frag" },
+			{ "post_fxaa", "post_fxaa.vert", "post_fxaa.frag" },
+			{ "compute_sdf", "compute_sdf.vert", "compute_sdf.frag" },
+			{ "font_ss", "font_ss.vert", "font_ss.frag", "font_ss.geom" },
+			{ "font_ws", "font_ws.vert", "font_ws.frag", "font_ws.geom" },
+			{ "shadow", "shadow.vert", "shadow.frag" },
+			{ "ssao", "ssao.vert", "ssao.frag" },
+			{ "ssao_blur", "ssao_blur.vert", "ssao_blur.frag" },
+		};
+#elif COMPILE_VULKAN
+		m_BaseShaders = {
+			{ "deferred_combine", "vk_deferred_combine_vert.spv", "vk_deferred_combine_frag.spv" },
+			{ "deferred_combine_cubemap", "vk_deferred_combine_cubemap_vert.spv", "vk_deferred_combine_cubemap_frag.spv" },
+			{ "color", "vk_color_vert.spv","vk_color_frag.spv" },
+			{ "pbr", "vk_pbr_vert.spv", "vk_pbr_frag.spv" },
+			{ "pbr_ws", "vk_pbr_ws_vert.spv", "vk_pbr_ws_frag.spv" },
+			{ "skybox", "vk_skybox_vert.spv", "vk_skybox_frag.spv" },
+			{ "equirectangular_to_cube", "vk_skybox_vert.spv", "vk_equirectangular_to_cube_frag.spv" },
+			{ "irradiance", "vk_skybox_vert.spv", "vk_irradiance_frag.spv" },
+			{ "prefilter", "vk_skybox_vert.spv", "vk_prefilter_frag.spv" },
+			{ "brdf", "vk_brdf_vert.spv", "vk_brdf_frag.spv" },
+			{ "sprite", "vk_sprite_vert.spv", "vk_sprite_frag.spv" },
+			{ "post_process", "vk_post_process_vert.spv", "vk_post_process_frag.spv" },
+			{ "post_fxaa", "vk_post_fxaa_vert.spv", "vk_post_fxaa_frag.spv" },
+			{ "compute_sdf", "vk_compute_sdf_vert.spv", "vk_compute_sdf_frag.spv" },
+			{ "font_ss", "vk_font_ss_vert.spv", "vk_font_frag.spv", "vk_font_ss_geom.spv" },
+			{ "font_ws", "vk_font_ws_vert.spv", "vk_font_frag.spv", "vk_font_ws_geom.spv" },
+			{ "shadow", "vk_shadow_vert.spv", "vk_shadow_frag.spv" },
+			{ "ssao", "vk_ssao_vert.spv", "vk_ssao_frag.spv" },
+			{ "ssao_blur", "vk_ssao_blur_vert.spv", "vk_ssao_blur_frag.spv" },
+		};
+#endif
+
+		ShaderID shaderID = 0;
+
+		// Deferred combine
+		m_BaseShaders[shaderID].renderPassType = FlexRenderPass::DEFERRED_COMBINE;
+		m_BaseShaders[shaderID].bDeferred = false;
+		m_BaseShaders[shaderID].bDepthWriteEnable = false;
+		m_BaseShaders[shaderID].bNeedBRDFLUT = true;
+		m_BaseShaders[shaderID].bNeedShadowMap = true;
+		m_BaseShaders[shaderID].bNeedIrradianceSampler = true;
+		m_BaseShaders[shaderID].bNeedPrefilteredMap = true;
+		m_BaseShaders[shaderID].bNeedDepthSampler = true;
+		m_BaseShaders[shaderID].vertexAttributes =
+			(u32)VertexAttribute::POSITION |
+			(u32)VertexAttribute::UV;
+
+		// TODO: Specify that this buffer is only used in the frag shader here
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_CAM_POS);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW_INV);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PROJECTION_INV);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_LIGHT_VIEW_PROJ);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_EXPOSURE);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_POINT_LIGHTS);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_DIR_LIGHT);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SSAO_SAMPLING_DATA);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_IRRADIANCE_SAMPLER);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_FB_0_SAMPLER);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_FB_1_SAMPLER);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_DEPTH_SAMPLER);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SSAO_FINAL_SAMPLER);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_BRDF_LUT_SAMPLER);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PREFILTER_MAP);
+
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_IRRADIANCE_SAMPLER);
+		//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_IRRADIANCE_SAMPLER); // TODO
+		++shaderID;
+
+		// Deferred combine cubemap
+		m_BaseShaders[shaderID].renderPassType = FlexRenderPass::DEFERRED_COMBINE;
+		m_BaseShaders[shaderID].bDeferred = false;
+		m_BaseShaders[shaderID].bDepthWriteEnable = false;
+		m_BaseShaders[shaderID].bNeedBRDFLUT = true;
+		m_BaseShaders[shaderID].bNeedDepthSampler = true;
+		//m_BaseShaders[shaderID].bNeedShadowMap = true;
+		m_BaseShaders[shaderID].bNeedIrradianceSampler = true;
+		m_BaseShaders[shaderID].bNeedPrefilteredMap = true;
+		m_BaseShaders[shaderID].vertexAttributes =
+			(u32)VertexAttribute::POSITION; // Used as 3D texture coord into cubemap
+
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PROJECTION);
+		//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_LIGHT_VIEW_PROJ);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_CAM_POS);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_EXPOSURE);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_POINT_LIGHTS);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_DIR_LIGHT);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_IRRADIANCE_SAMPLER);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_CUBEMAP_SAMPLER);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PREFILTER_MAP);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_BRDF_LUT_SAMPLER);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_FB_0_SAMPLER);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_FB_1_SAMPLER);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_DEPTH_SAMPLER);
+
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_IRRADIANCE_SAMPLER);
+		++shaderID;
+
+		// Color
+		m_BaseShaders[shaderID].renderPassType = FlexRenderPass::FORWARD;
+		m_BaseShaders[shaderID].bTranslucent = true;
+		m_BaseShaders[shaderID].vertexAttributes =
+			(u32)VertexAttribute::POSITION |
+			(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
+
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_COLOR_MULTIPLIER);
+		++shaderID;
+
+		// PBR
+		m_BaseShaders[shaderID].renderPassType = FlexRenderPass::DEFERRED;
+		m_BaseShaders[shaderID].numAttachments = 2; // TODO: Work out automatically from samplers?
+		m_BaseShaders[shaderID].bDeferred = true;
+		m_BaseShaders[shaderID].bNeedAlbedoSampler = true;
+		m_BaseShaders[shaderID].bNeedMetallicSampler = true;
+		m_BaseShaders[shaderID].bNeedRoughnessSampler = true;
+		m_BaseShaders[shaderID].bNeedNormalSampler = true;
+		m_BaseShaders[shaderID].vertexAttributes =
+			(u32)VertexAttribute::POSITION |
+			(u32)VertexAttribute::UV |
+			(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
+			(u32)VertexAttribute::NORMAL |
+			(u32)VertexAttribute::TANGENT;
+
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
+
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_CONST_ALBEDO);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_ALBEDO_SAMPLER);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ALBEDO_SAMPLER);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_CONST_METALLIC);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_METALLIC_SAMPLER);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_METALLIC_SAMPLER);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_CONST_ROUGHNESS);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_ROUGHNESS_SAMPLER);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ROUGHNESS_SAMPLER);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_NORMAL_SAMPLER);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_NORMAL_SAMPLER);
+		++shaderID;
+
+		// PBR - WORLD SPACE
+		m_BaseShaders[shaderID].renderPassType = FlexRenderPass::DEFERRED;
+		m_BaseShaders[shaderID].numAttachments = 2;
+		m_BaseShaders[shaderID].bDeferred = true;
+		m_BaseShaders[shaderID].bNeedMetallicSampler = true;
+		m_BaseShaders[shaderID].bNeedRoughnessSampler = true;
+		m_BaseShaders[shaderID].bNeedAlbedoSampler = true;
+		m_BaseShaders[shaderID].bNeedNormalSampler = true;
+		m_BaseShaders[shaderID].vertexAttributes =
+			(u32)VertexAttribute::POSITION |
+			(u32)VertexAttribute::UV |
+			(u32)VertexAttribute::NORMAL |
+			(u32)VertexAttribute::TANGENT;
+
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
+
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_CONST_ALBEDO);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_ALBEDO_SAMPLER);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ALBEDO_SAMPLER);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_CONST_METALLIC);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_METALLIC_SAMPLER);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_METALLIC_SAMPLER);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_CONST_ROUGHNESS);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_ROUGHNESS_SAMPLER);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ROUGHNESS_SAMPLER);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_NORMAL_SAMPLER);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_NORMAL_SAMPLER);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_TEXTURE_SCALE);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_BLEND_SHARPNESS);
+		++shaderID;
+
+		// Skybox
+		m_BaseShaders[shaderID].renderPassType = FlexRenderPass::FORWARD;
+		m_BaseShaders[shaderID].bNeedCubemapSampler = true;
+		m_BaseShaders[shaderID].bNeedPushConstantBlock = true;
+		m_BaseShaders[shaderID].vertexAttributes =
+			(u32)VertexAttribute::POSITION;
+
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PROJECTION);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_EXPOSURE);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_TIME);
+
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_CUBEMAP_SAMPLER);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_CUBEMAP_SAMPLER);
+		++shaderID;
+
+		// Equirectangular to Cube
+		m_BaseShaders[shaderID].renderPassType = FlexRenderPass::FORWARD;
+		m_BaseShaders[shaderID].bNeedHDREquirectangularSampler = true;
+		m_BaseShaders[shaderID].bNeedPushConstantBlock = true;
+		m_BaseShaders[shaderID].vertexAttributes =
+			(u32)VertexAttribute::POSITION;
+
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PROJECTION);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_HDR_EQUIRECTANGULAR_SAMPLER);
+
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
+		++shaderID;
+
+		// Irradiance
+		m_BaseShaders[shaderID].renderPassType = FlexRenderPass::FORWARD;
+		m_BaseShaders[shaderID].bNeedCubemapSampler = true;
+		m_BaseShaders[shaderID].bNeedPushConstantBlock = true;
+		m_BaseShaders[shaderID].vertexAttributes =
+			(u32)VertexAttribute::POSITION;
+
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PROJECTION);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_CUBEMAP_SAMPLER);
+
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
+		++shaderID;
+
+		// Prefilter
+		m_BaseShaders[shaderID].renderPassType = FlexRenderPass::FORWARD;
+		m_BaseShaders[shaderID].bNeedCubemapSampler = true;
+		m_BaseShaders[shaderID].bNeedPushConstantBlock = true;
+		m_BaseShaders[shaderID].vertexAttributes =
+			(u32)VertexAttribute::POSITION;
+
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PROJECTION);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_CUBEMAP_SAMPLER);
+
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_CONST_ROUGHNESS);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
+		++shaderID;
+
+		// BRDF
+		m_BaseShaders[shaderID].renderPassType = FlexRenderPass::FORWARD;
+		m_BaseShaders[shaderID].vertexAttributes = 0;
+
+		m_BaseShaders[shaderID].constantBufferUniforms = {};
+
+		m_BaseShaders[shaderID].dynamicBufferUniforms = {};
+		++shaderID;
+
+		// Sprite
+		m_BaseShaders[shaderID].renderPassType = FlexRenderPass::FORWARD;
+		m_BaseShaders[shaderID].vertexAttributes =
+			(u32)VertexAttribute::POSITION |
+			(u32)VertexAttribute::UV;
+
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
+
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_COLOR_MULTIPLIER);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_ALBEDO_SAMPLER);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ALBEDO_SAMPLER);
+		++shaderID;
+
+		// Post processing
+		m_BaseShaders[shaderID].renderPassType = FlexRenderPass::FORWARD;
+		m_BaseShaders[shaderID].vertexAttributes =
+			(u32)VertexAttribute::POSITION_2D |
+			(u32)VertexAttribute::UV;
+
+		m_BaseShaders[shaderID].constantBufferUniforms = {};
+
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_COLOR_MULTIPLIER);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_ALBEDO_SAMPLER);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ALBEDO_SAMPLER);
+		//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_CONTRAST_BRIGHTNESS_SATURATION);
+		++shaderID;
+
+		// Post FXAA
+		m_BaseShaders[shaderID].renderPassType = FlexRenderPass::FORWARD;
+		m_BaseShaders[shaderID].vertexAttributes =
+			(u32)VertexAttribute::POSITION_2D |
+			(u32)VertexAttribute::UV;
+
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_FXAA_DATA);
+
+		m_BaseShaders[shaderID].dynamicBufferUniforms = {};
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ALBEDO_SAMPLER);
+		++shaderID;
+
+		// Compute SDF
+		m_BaseShaders[shaderID].renderPassType = FlexRenderPass::DEFERRED;
+		m_BaseShaders[shaderID].vertexAttributes =
+			(u32)VertexAttribute::POSITION |
+			(u32)VertexAttribute::UV;
+
+		m_BaseShaders[shaderID].constantBufferUniforms = {};
+
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_SDF_DATA);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_TEX_CHANNEL);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_HIGH_RES_TEX); // highResTex
+		//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_CHAR_RESOLUTION);
+		//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_SPREAD);
+		//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_HIGH_RES_TEX);
+		//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_TEX_CHANNEL);
+		//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_SDF_RESOLUTION);
+		//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_HIGH_RES);
+		++shaderID;
+
+		// Font SS
+		m_BaseShaders[shaderID].renderPassType = FlexRenderPass::FORWARD;
+		m_BaseShaders[shaderID].bDynamic = true;
+		m_BaseShaders[shaderID].dynamicVertexBufferSize = 1024 * 1024; // TODO
+		m_BaseShaders[shaderID].vertexAttributes =
+			(u32)VertexAttribute::POSITION_2D |
+			(u32)VertexAttribute::UV |
+			(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
+			(u32)VertexAttribute::EXTRA_VEC4 |
+			(u32)VertexAttribute::EXTRA_INT;
+
+		m_BaseShaders[shaderID].constantBufferUniforms = {};
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_ALBEDO_SAMPLER);
+
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_FONT_CHAR_DATA);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_TEX_SIZE);
+		++shaderID;
+
+		// Font WS
+		m_BaseShaders[shaderID].renderPassType = FlexRenderPass::FORWARD;
+		m_BaseShaders[shaderID].bDynamic = true;
+		m_BaseShaders[shaderID].dynamicVertexBufferSize = 1024 * 1024; // TODO
+		m_BaseShaders[shaderID].vertexAttributes =
+			(u32)VertexAttribute::POSITION |
+			(u32)VertexAttribute::UV |
+			(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
+			(u32)VertexAttribute::TANGENT |
+			(u32)VertexAttribute::EXTRA_VEC4 |
+			(u32)VertexAttribute::EXTRA_INT;
+
+		m_BaseShaders[shaderID].constantBufferUniforms = {};
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_ALBEDO_SAMPLER);
+
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_FONT_CHAR_DATA);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_TEX_SIZE);
+		//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_THRESHOLD);
+		//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_SHADOW);
+		++shaderID;
+
+		// Shadow
+		m_BaseShaders[shaderID].renderPassType = FlexRenderPass::FORWARD;
+		m_BaseShaders[shaderID].vertexAttributes =
+			(u32)VertexAttribute::POSITION;
+
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_LIGHT_VIEW_PROJ);
+
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
+		++shaderID;
+
+		// SSAO
+		m_BaseShaders[shaderID].renderPassType = FlexRenderPass::SSAO;
+		m_BaseShaders[shaderID].bNeedDepthSampler = true;
+		m_BaseShaders[shaderID].bNeedNoiseSampler = true;
+		m_BaseShaders[shaderID].vertexAttributes =
+			(u32)VertexAttribute::POSITION |
+			(u32)VertexAttribute::UV;
+
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PROJECTION);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PROJECTION_INV);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SSAO_GEN_DATA);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_DEPTH_SAMPLER);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SSAO_NORMAL_SAMPLER);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_NOISE_SAMPLER);
+
+		m_BaseShaders[shaderID].dynamicBufferUniforms = {};
+		++shaderID;
+
+		// SSAO Blur
+		m_BaseShaders[shaderID].renderPassType = FlexRenderPass::SSAO_BLUR;
+		m_BaseShaders[shaderID].bNeedDepthSampler = true;
+		m_BaseShaders[shaderID].vertexAttributes =
+			(u32)VertexAttribute::POSITION |
+			(u32)VertexAttribute::UV;
+
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SSAO_BLUR_DATA);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SSAO_RAW_SAMPLER);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SSAO_NORMAL_SAMPLER);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_DEPTH_SAMPLER);
+
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_SSAO_BLUR_DATA);
+		++shaderID;
+
+		assert(shaderID == m_BaseShaders.size());
+
+		shaderID = 0;
+		for (Shader& shader : m_BaseShaders)
+		{
+			if (!LoadShaderCode(shaderID))
+			{
+				std::string fileNames = shader.vertexShaderFilePath + " & " + shader.fragmentShaderFilePath;
+				if (!shader.geometryShaderFilePath.empty())
+				{
+					fileNames += " & " + shader.geometryShaderFilePath;
+				}
+				PrintError("Couldn't load/compile shaders: %s\n", fileNames.c_str());
+			}
+
+			// No need to keep the code in memory
+			//shader.vertexShaderCode.clear();
+			//shader.vertexShaderCode.shrink_to_fit();
+			//shader.fragmentShaderCode.clear();
+			//shader.fragmentShaderCode.shrink_to_fit();
+			//shader.geometryShaderCode.clear();
+			//shader.geometryShaderCode.shrink_to_fit();
+
+			++shaderID;
+		}
+	}
+
 	void Renderer::DoCreateGameObjectButton(const char* buttonName, const char* popupName)
 	{
 		static const char* defaultNewNameBase = "New_Object_";

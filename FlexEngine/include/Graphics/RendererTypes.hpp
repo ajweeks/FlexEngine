@@ -439,12 +439,23 @@ namespace flex
 		u32 CalculateSizeInBytes() const;
 	};
 
+	enum class FlexRenderPass
+	{
+		DEFERRED,
+		DEFERRED_COMBINE,
+		FORWARD,
+		SSAO,
+		SSAO_BLUR,
+
+		_NONE
+	};
+
 	struct Shader
 	{
 		Shader(const std::string& name,
-			   const std::string& vertexShaderFilePath,
-			   const std::string& fragmentShaderFilePath,
-			   const std::string& geometryShaderFilePath = "");
+			   const std::string& inVertexShaderFilePath,
+			   const std::string& inFragmentShaderFilePath,
+			   const std::string& inGeometryShaderFilePath = "");
 
 		std::string name = "";
 
@@ -482,6 +493,10 @@ namespace flex
 		bool bNeedDepthSampler = false;
 		bool bNeedNoiseSampler = false; // TODO: Replace with check for U_NOISE_SAMPLER
 		bool bNeedPushConstantBlock = false;
+
+		bool bDynamic = false;
+		u32 dynamicVertexBufferSize = 0;
+		FlexRenderPass renderPassType = FlexRenderPass::_NONE;
 	};
 
 	struct SpriteQuadDrawInfo

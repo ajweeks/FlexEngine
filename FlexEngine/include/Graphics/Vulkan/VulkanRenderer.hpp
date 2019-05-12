@@ -117,6 +117,10 @@ namespace flex
 		protected:
 			virtual bool LoadFont(FontMetaData& fontMetaData, bool bForceRender) override;
 
+			virtual void LoadShaders() override;
+
+			virtual bool LoadShaderCode(ShaderID shaderID) override;
+
 		private:
 			friend VulkanPhysicsDebugDraw;
 
@@ -247,8 +251,6 @@ namespace flex
 			void UpdateConstantUniformBuffers(UniformOverrides const* overridenUniforms = nullptr);
 			void UpdateDynamicUniformBuffer(RenderID renderID, UniformOverrides const * overridenUniforms = nullptr);
 			void UpdateDynamicUniformBuffer(MaterialID materialID, u32 dynamicOffsetIndex, const glm::mat4& inModel, UniformOverrides const* uniformOverrides = nullptr);
-
-			void LoadDefaultShaderCode();
 
 			void GenerateIrradianceMaps();
 

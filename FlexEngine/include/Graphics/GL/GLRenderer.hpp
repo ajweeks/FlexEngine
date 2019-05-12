@@ -123,6 +123,8 @@ namespace flex
 
 			friend class GLPhysicsDebugDraw;
 
+			virtual bool LoadShaderCode(ShaderID shaderID) override;
+
 			void DestroyRenderObject(RenderID renderID, GLRenderObject* renderObject);
 
 			void PhysicsDebugRender();

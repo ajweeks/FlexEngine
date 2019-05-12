@@ -209,6 +209,10 @@ namespace flex
 
 	protected:
 
+		virtual void LoadShaders();
+
+		virtual bool LoadShaderCode(ShaderID shaderID) = 0;
+
 		// Will attempt to find pre-rendered font at specified path, and
 		// only render a new file if not present or if bForceRender is true
 		// Returns true if succeeded
@@ -244,6 +248,8 @@ namespace flex
 
 		RenderID m_GBufferQuadRenderID = InvalidRenderID;
 		VertexBufferData m_gBufferQuadVertexBufferData;
+
+		std::vector<Shader> m_BaseShaders;
 
 		PointLightData* m_PointLights;
 		i32 m_NumPointLightsEnabled = 0;
