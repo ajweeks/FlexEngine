@@ -269,6 +269,8 @@ namespace flex
 
 		MaterialID m_ReflectionProbeMaterialID = InvalidMaterialID; // Set by the user via SetReflecionProbeMaterial
 
+		MaterialID m_ShadowMaterialID = InvalidMaterialID;
+
 		// Any editor objects which also require a game object wrapper
 		std::vector<GameObject*> m_EditorObjects;
 

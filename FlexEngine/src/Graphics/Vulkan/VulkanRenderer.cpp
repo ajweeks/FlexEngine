@@ -737,13 +737,13 @@ namespace flex
 			VkPipelineVertexInputStateCreateInfo vertexInputState = vks::pipelineVertexInputStateCreateInfo(1, &vertexInputBinding, 1, &vertexInputAttribute);
 
 			VDeleter<VkShaderModule> vertShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
-			if (!CreateShaderModule(equirectangularToCubeShader.shader->vertexShaderCode, vertShaderModule))
+			if (!CreateShaderModule(equirectangularToCubeShader.shader->vertexShaderCode, vertShaderModule.replace()))
 			{
 				PrintError("Failed to compile vertex shader located at: %s\n", equirectangularToCubeShader.shader->vertexShaderFilePath.c_str());
 			}
 
 			VDeleter<VkShaderModule> fragShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
-			if (!CreateShaderModule(equirectangularToCubeShader.shader->fragmentShaderCode, fragShaderModule))
+			if (!CreateShaderModule(equirectangularToCubeShader.shader->fragmentShaderCode, fragShaderModule.replace()))
 			{
 				PrintError("Failed to compile fragment shader located at: %s\n", equirectangularToCubeShader.shader->fragmentShaderFilePath.c_str());
 			}
@@ -1102,13 +1102,13 @@ namespace flex
 			VulkanShader& irradianceShader = m_Shaders[irradianceShaderID];
 
 			VDeleter<VkShaderModule> vertShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
-			if (!CreateShaderModule(irradianceShader.shader->vertexShaderCode, vertShaderModule))
+			if (!CreateShaderModule(irradianceShader.shader->vertexShaderCode, vertShaderModule.replace()))
 			{
 				PrintError("Failed to compile vertex shader located at: %s\n", irradianceShader.shader->vertexShaderFilePath.c_str());
 			}
 
 			VDeleter<VkShaderModule> fragShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
-			if (!CreateShaderModule(irradianceShader.shader->fragmentShaderCode, fragShaderModule))
+			if (!CreateShaderModule(irradianceShader.shader->fragmentShaderCode, fragShaderModule.replace()))
 			{
 				PrintError("Failed to compile fragment shader located at: %s\n", irradianceShader.shader->fragmentShaderFilePath.c_str());
 			}
@@ -1404,13 +1404,13 @@ namespace flex
 			VulkanShader& prefilterShader = m_Shaders[prefilterShaderID];
 
 			VDeleter<VkShaderModule> vertShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
-			if (!CreateShaderModule(prefilterShader.shader->vertexShaderCode, vertShaderModule))
+			if (!CreateShaderModule(prefilterShader.shader->vertexShaderCode, vertShaderModule.replace()))
 			{
 				PrintError("Failed to compile vertex shader located at: %s\n", prefilterShader.shader->vertexShaderFilePath.c_str());
 			}
 
 			VDeleter<VkShaderModule> fragShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
-			if (!CreateShaderModule(prefilterShader.shader->fragmentShaderCode, fragShaderModule))
+			if (!CreateShaderModule(prefilterShader.shader->fragmentShaderCode, fragShaderModule.replace()))
 			{
 				PrintError("Failed to compile fragment shader located at: %s\n", prefilterShader.shader->fragmentShaderFilePath.c_str());
 			}
@@ -1623,7 +1623,6 @@ namespace flex
 			const u32 dim = (u32)m_BRDFSize.x;
 			assert(dim <= MAX_TEXTURE_DIM);
 
-			// Color attachment
 			VkAttachmentDescription attachmentDesc = vks::attachmentDescription(format, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 			VkAttachmentReference colorReference = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
 
@@ -1632,7 +1631,6 @@ namespace flex
 			subpassDescription.colorAttachmentCount = 1;
 			subpassDescription.pColorAttachments = &colorReference;
 
-			// Use subpass dependencies for layout transitions
 			std::array<VkSubpassDependency, 2> dependencies;
 			dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
 			dependencies[0].dstSubpass = 0;
@@ -1650,7 +1648,6 @@ namespace flex
 			dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
 			dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
-			// Create the actual renderpass
 			VkRenderPassCreateInfo renderPassCreateInfo = vks::renderPassCreateInfo();
 			renderPassCreateInfo.attachmentCount = 1;
 			renderPassCreateInfo.pAttachments = &attachmentDesc;
@@ -1714,13 +1711,13 @@ namespace flex
 			VulkanShader& brdfShader = m_Shaders[brdfShaderID];
 
 			VDeleter<VkShaderModule> vertShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
-			if (!CreateShaderModule(brdfShader.shader->vertexShaderCode, vertShaderModule))
+			if (!CreateShaderModule(brdfShader.shader->vertexShaderCode, vertShaderModule.replace()))
 			{
 				PrintError("Failed to compile vertex shader located at: %s\n", brdfShader.shader->vertexShaderFilePath.c_str());
 			}
 
 			VDeleter<VkShaderModule> fragShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
-			if (!CreateShaderModule(brdfShader.shader->fragmentShaderCode, fragShaderModule))
+			if (!CreateShaderModule(brdfShader.shader->fragmentShaderCode, fragShaderModule.replace()))
 			{
 				PrintError("Failed to compile fragment shader located at: %s\n", brdfShader.shader->fragmentShaderFilePath.c_str());
 			}
@@ -3881,6 +3878,8 @@ namespace flex
 
 		bool VulkanRenderer::LoadShaderCode(ShaderID shaderID)
 		{
+			m_Shaders.reserve(m_BaseShaders.size());
+
 			assert(shaderID >= m_Shaders.size());
 			m_Shaders.emplace_back(m_VulkanDevice->m_LogicalDevice, &m_BaseShaders[shaderID]);
 
@@ -3960,6 +3959,28 @@ namespace flex
 				PrintError("Could not find geometry shader %s\n", shader.name.c_str());
 				bSuccess = false;
 			}
+
+
+			const bool bUseGeometryStage = !shader.geometryShaderCode.empty();
+
+			if (bUseGeometryStage)
+			{
+				if (!CreateShaderModule(shader.geometryShaderCode, vkShader.geomShaderModule.replace()))
+				{
+					PrintError("Failed to compile geometry shader located at: %s\n", shader.geometryShaderFilePath.c_str());
+				}
+			}
+
+			if (!CreateShaderModule(shader.vertexShaderCode, vkShader.vertShaderModule.replace()))
+			{
+				PrintError("Failed to compile vertex shader located at: %s\n", shader.vertexShaderFilePath.c_str());
+			}
+
+			if (!CreateShaderModule(shader.fragmentShaderCode, vkShader.fragShaderModule.replace()))
+			{
+				PrintError("Failed to compile fragment shader located at: %s\n", shader.fragmentShaderFilePath.c_str());
+			}
+
 
 			return bSuccess;
 		}
@@ -5309,38 +5330,17 @@ namespace flex
 				shaderStages.push_back({});
 			}
 
-			VDeleter<VkShaderModule> geomShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
-			if (bUseGeometryStage)
-			{
-				if (!CreateShaderModule(shader.shader->geometryShaderCode, geomShaderModule))
-				{
-					PrintError("Failed to compile geometry shader located at: %s\n", shader.shader->geometryShaderFilePath.c_str());
-				}
-			}
-
-			VDeleter<VkShaderModule> vertShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
-			if (!CreateShaderModule(shader.shader->vertexShaderCode, vertShaderModule))
-			{
-				PrintError("Failed to compile vertex shader located at: %s\n", shader.shader->vertexShaderFilePath.c_str());
-			}
-
-			VDeleter<VkShaderModule> fragShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
-			if (!CreateShaderModule(shader.shader->fragmentShaderCode, fragShaderModule))
-			{
-				PrintError("Failed to compile fragment shader located at: %s\n", shader.shader->fragmentShaderFilePath.c_str());
-			}
-
-			VkPipelineShaderStageCreateInfo vertShaderStageInfo = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, vertShaderModule);
+			VkPipelineShaderStageCreateInfo vertShaderStageInfo = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, shader.vertShaderModule);
 			shaderStages[0] = vertShaderStageInfo;
 
-			VkPipelineShaderStageCreateInfo fragShaderStageInfo = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderModule);
+			VkPipelineShaderStageCreateInfo fragShaderStageInfo = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, shader.fragShaderModule);
 			fragShaderStageInfo.pSpecializationInfo = createInfo->fragSpecializationInfo;
 			shaderStages[1] = fragShaderStageInfo;
 
 			VkPipelineShaderStageCreateInfo geomShaderStageInfo = {};
 			if (bUseGeometryStage)
 			{
-				geomShaderStageInfo = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_GEOMETRY_BIT, geomShaderModule);
+				geomShaderStageInfo = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_GEOMETRY_BIT, shader.geomShaderModule);
 				shaderStages[2] = geomShaderStageInfo;
 			}
 
@@ -6935,13 +6935,13 @@ namespace flex
 			VK_CHECK_RESULT(vkQueueWaitIdle(m_PresentQueue));
 		}
 
-		bool VulkanRenderer::CreateShaderModule(const std::vector<char>& code, VDeleter<VkShaderModule>& shaderModule) const
+		bool VulkanRenderer::CreateShaderModule(const std::vector<char>& code, VkShaderModule* shaderModule) const
 		{
 			VkShaderModuleCreateInfo createInfo = vks::shaderModuleCreateInfo();
 			createInfo.codeSize = code.size();
 			createInfo.pCode = (u32*)code.data();
 
-			VkResult result = vkCreateShaderModule(m_VulkanDevice->m_LogicalDevice, &createInfo, nullptr, shaderModule.replace());
+			VkResult result = vkCreateShaderModule(m_VulkanDevice->m_LogicalDevice, &createInfo, nullptr, shaderModule);
 			VK_CHECK_RESULT(result);
 
 			return (result == VK_SUCCESS);

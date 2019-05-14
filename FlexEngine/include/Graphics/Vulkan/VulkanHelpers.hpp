@@ -360,6 +360,10 @@ namespace flex
 
 			VkRenderPass renderPass = VK_NULL_HANDLE;
 			UniformBuffer uniformBuffer;
+
+			VDeleter<VkShaderModule> geomShaderModule;
+			VDeleter<VkShaderModule> vertShaderModule;
+			VDeleter<VkShaderModule> fragShaderModule;
 		};
 
 #ifdef DEBUG

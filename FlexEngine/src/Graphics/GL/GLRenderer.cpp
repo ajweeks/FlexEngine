@@ -117,6 +117,8 @@ namespace flex
 
 			LoadShaders();
 
+			GL_PUSH_DEBUG_GROUP("Startup");
+
 			glEnable(GL_DEPTH_TEST);
 			glClearDepth(0.0f);
 
@@ -130,6 +132,120 @@ namespace flex
 			// TODO: Handle lack of GL_ARB_clip_control (in GL < 4.5)
 			glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
 
+			m_LoadingTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/loading_1.png", 3, false, false, false);
+
+			MaterialCreateInfo spriteMatCreateInfo = {};
+			spriteMatCreateInfo.name = "Sprite material";
+			spriteMatCreateInfo.shaderName = "sprite";
+			spriteMatCreateInfo.engineMaterial = true;
+			m_SpriteMatID = InitializeMaterial(&spriteMatCreateInfo);
+
+			MaterialCreateInfo postProcessMatCreateInfo = {};
+			postProcessMatCreateInfo.name = "Post process material";
+			postProcessMatCreateInfo.shaderName = "post_process";
+			postProcessMatCreateInfo.engineMaterial = true;
+			m_PostProcessMatID = InitializeMaterial(&postProcessMatCreateInfo);
+
+			// 2D Quad
+			{
+				VertexBufferData::CreateInfo quad2DVertexBufferDataCreateInfo = {};
+				quad2DVertexBufferDataCreateInfo.positions_2D = {
+					glm::vec2(-1.0f,  -1.0f),
+					glm::vec2(-1.0f, 3.0f),
+					glm::vec2(3.0f,  -1.0f)
+				};
+
+				quad2DVertexBufferDataCreateInfo.texCoords_UV = {
+					glm::vec2(0.0f, 0.0f),
+					glm::vec2(0.0f, 2.0f),
+					glm::vec2(2.0f, 0.0f)
+				};
+
+				quad2DVertexBufferDataCreateInfo.attributes =
+					(u32)VertexAttribute::POSITION_2D |
+					(u32)VertexAttribute::UV;
+
+				m_Quad2DVertexBufferData = {};
+				m_Quad2DVertexBufferData.Initialize(&quad2DVertexBufferDataCreateInfo);
+
+
+				GameObject* quad2DGameObject = new GameObject("Sprite Quad 2D", GameObjectType::_NONE);
+				m_PersistentObjects.push_back(quad2DGameObject);
+				quad2DGameObject->SetVisible(false);
+
+				RenderObjectCreateInfo quad2DCreateInfo = {};
+				quad2DCreateInfo.vertexBufferData = &m_Quad2DVertexBufferData;
+				quad2DCreateInfo.materialID = m_PostProcessMatID;
+				quad2DCreateInfo.bDepthWriteEnable = false;
+				quad2DCreateInfo.gameObject = quad2DGameObject;
+				quad2DCreateInfo.cullFace = CullFace::NONE;
+				quad2DCreateInfo.visibleInSceneExplorer = false;
+				quad2DCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
+				m_Quad2DRenderID = InitializeRenderObject(&quad2DCreateInfo);
+
+				m_Quad2DVertexBufferData.DescribeShaderVariables(this, m_Quad2DRenderID);
+			}
+
+			GL_POP_DEBUG_GROUP();
+
+			GL_PUSH_DEBUG_GROUP("Loading quad");
+			DrawLoadingTextureQuad();
+			GL_POP_DEBUG_GROUP();
+
+			SwapBuffers();
+
+			GL_PUSH_DEBUG_GROUP("Post Loading quad startup");
+
+			// 3D Quad
+			{
+				VertexBufferData::CreateInfo quad3DVertexBufferDataCreateInfo = {};
+				quad3DVertexBufferDataCreateInfo.positions_3D = {
+					glm::vec3(-1.0f, -1.0f, 0.0f),
+					glm::vec3(-1.0f, 1.0f, 0.0f),
+					glm::vec3(1.0f, -1.0f, 0.0f),
+
+					glm::vec3(1.0f, -1.0f, 0.0f),
+					glm::vec3(-1.0f, 1.0f, 0.0f),
+					glm::vec3(1.0f, 1.0f, 0.0f),
+				};
+
+				quad3DVertexBufferDataCreateInfo.texCoords_UV = {
+					glm::vec2(0.0f, 0.0f),
+					glm::vec2(0.0f, 1.0f),
+					glm::vec2(1.0f, 0.0f),
+
+					glm::vec2(1.0f, 0.0f),
+					glm::vec2(0.0f, 1.0f),
+					glm::vec2(1.0f, 1.0f),
+				};
+
+				quad3DVertexBufferDataCreateInfo.attributes =
+					(u32)VertexAttribute::POSITION |
+					(u32)VertexAttribute::UV;
+
+				m_Quad3DVertexBufferData = {};
+				m_Quad3DVertexBufferData.Initialize(&quad3DVertexBufferDataCreateInfo);
+
+
+				GameObject* quad3DGameObject = new GameObject("Sprite Quad 3D", GameObjectType::_NONE);
+				m_PersistentObjects.push_back(quad3DGameObject);
+				quad3DGameObject->SetVisible(false);
+
+				RenderObjectCreateInfo quad3DCreateInfo = {};
+				quad3DCreateInfo.vertexBufferData = &m_Quad3DVertexBufferData;
+				quad3DCreateInfo.materialID = m_SpriteMatID;
+				quad3DCreateInfo.bDepthWriteEnable = false;
+				quad3DCreateInfo.gameObject = quad3DGameObject;
+				quad3DCreateInfo.cullFace = CullFace::NONE;
+				quad3DCreateInfo.visibleInSceneExplorer = false;
+				quad3DCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
+				quad3DCreateInfo.bEditorObject = true; // TODO: Create other quad which is identical but is not an editor object for gameplay objects?
+				m_Quad3DRenderID = InitializeRenderObject(&quad3DCreateInfo);
+
+				m_Quad3DVertexBufferData.DescribeShaderVariables(this, m_Quad3DRenderID);
+			}
+
+			Renderer::InitializeMaterials();
 
 			// Capture framebuffer (TODO: Merge with offscreen frame buffer?)
 			{
@@ -167,7 +283,6 @@ namespace flex
 			};
 
 			m_AlphaBGTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/alpha-bg.png", 3, false, false, false);
-			m_LoadingTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/loading_1.png", 3, false, false, false);
 			m_WorkTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/work_d.jpg", 3, false, true, false);
 			m_PointLightIconID = InitializeTexture(RESOURCE_LOCATION  "textures/icons/point-light-icon-256.png", 4, false, true, false);
 			m_DirectionalLightIconID = InitializeTexture(RESOURCE_LOCATION  "textures/icons/directional-light-icon-256.png", 4, false, true, false);
@@ -203,34 +318,6 @@ namespace flex
 					m_DirectionalLight->shadowTextureID = m_ShadowMapTexture.id;
 				}
 			}
-
-			Renderer::InitializeMaterials();
-
-			// TODO: Move to Renderer::InitializeMaterials
-			MaterialCreateInfo shadowMatCreateInfo = {};
-			shadowMatCreateInfo.shaderName = "shadow";
-			shadowMatCreateInfo.name = "Shadow";
-			shadowMatCreateInfo.engineMaterial = true;
-			m_ShadowMaterialID = InitializeMaterial(&shadowMatCreateInfo);
-
-			MaterialCreateInfo spriteMatCreateInfo = {};
-			spriteMatCreateInfo.name = "Sprite material";
-			spriteMatCreateInfo.shaderName = "sprite";
-			spriteMatCreateInfo.engineMaterial = true;
-			m_SpriteMatID = InitializeMaterial(&spriteMatCreateInfo);
-
-			MaterialCreateInfo postProcessMatCreateInfo = {};
-			postProcessMatCreateInfo.name = "Post process material";
-			postProcessMatCreateInfo.shaderName = "post_process";
-			postProcessMatCreateInfo.engineMaterial = true;
-			m_PostProcessMatID = InitializeMaterial(&postProcessMatCreateInfo);
-
-			MaterialCreateInfo postFXAAMatCreateInfo = {};
-			postFXAAMatCreateInfo.name = "FXAA";
-			postFXAAMatCreateInfo.shaderName = "post_fxaa";
-			postFXAAMatCreateInfo.engineMaterial = true;
-			m_PostFXAAMatID = InitializeMaterial(&postFXAAMatCreateInfo);
-
 
 			{
 				const std::string gridMatName = "Grid";
@@ -284,104 +371,16 @@ namespace flex
 			}
 
 
-			// 2D Quad
-			{
-				VertexBufferData::CreateInfo quad2DVertexBufferDataCreateInfo = {};
-				quad2DVertexBufferDataCreateInfo.positions_2D = {
-					glm::vec2(-1.0f,  -1.0f),
-					glm::vec2(-1.0f, 3.0f),
-					glm::vec2(3.0f,  -1.0f)
-				};
-
-				quad2DVertexBufferDataCreateInfo.texCoords_UV = {
-					glm::vec2(0.0f, 0.0f),
-					glm::vec2(0.0f, 2.0f),
-					glm::vec2(2.0f, 0.0f)
-				};
-
-				quad2DVertexBufferDataCreateInfo.attributes =
-					(u32)VertexAttribute::POSITION_2D |
-					(u32)VertexAttribute::UV;
-
-				m_Quad2DVertexBufferData = {};
-				m_Quad2DVertexBufferData.Initialize(&quad2DVertexBufferDataCreateInfo);
-
-
-				GameObject* quad2DGameObject = new GameObject("Sprite Quad 2D", GameObjectType::_NONE);
-				m_PersistentObjects.push_back(quad2DGameObject);
-				quad2DGameObject->SetVisible(false);
-
-				RenderObjectCreateInfo quad2DCreateInfo = {};
-				quad2DCreateInfo.vertexBufferData = &m_Quad2DVertexBufferData;
-				quad2DCreateInfo.materialID = m_PostProcessMatID;
-				quad2DCreateInfo.bDepthWriteEnable = false;
-				quad2DCreateInfo.gameObject = quad2DGameObject;
-				quad2DCreateInfo.cullFace = CullFace::NONE;
-				quad2DCreateInfo.visibleInSceneExplorer = false;
-				quad2DCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
-				m_Quad2DRenderID = InitializeRenderObject(&quad2DCreateInfo);
-
-				m_Quad2DVertexBufferData.DescribeShaderVariables(this, m_Quad2DRenderID);
-			}
-
-			// 3D Quad
-			{
-				VertexBufferData::CreateInfo quad3DVertexBufferDataCreateInfo = {};
-				quad3DVertexBufferDataCreateInfo.positions_3D = {
-					glm::vec3(-1.0f, -1.0f, 0.0f),
-					glm::vec3(-1.0f, 1.0f, 0.0f),
-					glm::vec3(1.0f, -1.0f, 0.0f),
-
-					glm::vec3(1.0f, -1.0f, 0.0f),
-					glm::vec3(-1.0f, 1.0f, 0.0f),
-					glm::vec3(1.0f, 1.0f, 0.0f),
-				};
-
-				quad3DVertexBufferDataCreateInfo.texCoords_UV = {
-					glm::vec2(0.0f, 0.0f),
-					glm::vec2(0.0f, 1.0f),
-					glm::vec2(1.0f, 0.0f),
-
-					glm::vec2(1.0f, 0.0f),
-					glm::vec2(0.0f, 1.0f),
-					glm::vec2(1.0f, 1.0f),
-				};
-
-				quad3DVertexBufferDataCreateInfo.attributes =
-					(u32)VertexAttribute::POSITION |
-					(u32)VertexAttribute::UV;
-
-				m_Quad3DVertexBufferData = {};
-				m_Quad3DVertexBufferData.Initialize(&quad3DVertexBufferDataCreateInfo);
-
-
-				GameObject* quad3DGameObject = new GameObject("Sprite Quad 3D", GameObjectType::_NONE);
-				m_PersistentObjects.push_back(quad3DGameObject);
-				quad3DGameObject->SetVisible(false);
-
-				RenderObjectCreateInfo quad3DCreateInfo = {};
-				quad3DCreateInfo.vertexBufferData = &m_Quad3DVertexBufferData;
-				quad3DCreateInfo.materialID = m_SpriteMatID;
-				quad3DCreateInfo.bDepthWriteEnable = false;
-				quad3DCreateInfo.gameObject = quad3DGameObject;
-				quad3DCreateInfo.cullFace = CullFace::NONE;
-				quad3DCreateInfo.visibleInSceneExplorer = false;
-				quad3DCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
-				quad3DCreateInfo.bEditorObject = true; // TODO: Create other quad which is identical but is not an editor object for gameplay objects?
-				m_Quad3DRenderID = InitializeRenderObject(&quad3DCreateInfo);
-
-				m_Quad3DVertexBufferData.DescribeShaderVariables(this, m_Quad3DRenderID);
-			}
-
-			DrawLoadingTextureQuad();
-			SwapBuffers();
-
 			MaterialCreateInfo selectedObjectMatCreateInfo = {};
 			selectedObjectMatCreateInfo.name = "Selected Object";
 			selectedObjectMatCreateInfo.shaderName = "color";
 			selectedObjectMatCreateInfo.engineMaterial = true;
 			selectedObjectMatCreateInfo.colorMultiplier = VEC4_ONE;
 			m_SelectedObjectMatID = InitializeMaterial(&selectedObjectMatCreateInfo);
+
+			GL_POP_DEBUG_GROUP();
+
+			GL_PUSH_DEBUG_GROUP("BRDF");
 
 			if (!m_BRDFTexture)
 			{
@@ -390,13 +389,7 @@ namespace flex
 				GLenum format = GL_RG;
 				GLenum type = GL_FLOAT;
 
-				m_BRDFTexture = new GLTexture("BRDF",
-											  brdfSize,
-											  brdfSize,
-											  2,
-											  internalFormat,
-											  format,
-											  type);
+				m_BRDFTexture = new GLTexture("BRDF", brdfSize, brdfSize, 2, internalFormat, format, type);
 				if (m_BRDFTexture->CreateEmpty())
 				{
 					m_LoadedTextures.push_back(m_BRDFTexture);
@@ -407,6 +400,7 @@ namespace flex
 					PrintError("Failed to generate BRDF texture\n");
 				}
 			}
+			GL_POP_DEBUG_GROUP();
 
 			// G-buffer objects
 			glGenFramebuffers(1, &m_gBufferHandle);
@@ -546,17 +540,6 @@ namespace flex
 			ImGui_ImplOpenGL3_Shutdown();
 			ImGui_ImplGlfw_Shutdown();
 			ImGui::DestroyContext();
-
-			if (m_1x1_NDC_QuadVertexBufferData.vertexData)
-			{
-				m_1x1_NDC_QuadVertexBufferData.Destroy();
-			}
-
-			if (m_1x1_NDC_Quad)
-			{
-				DestroyRenderObject(m_1x1_NDC_Quad->renderID);
-				m_1x1_NDC_Quad = nullptr;
-			}
 
 			for (GameObject* obj : m_PersistentObjects)
 			{
@@ -1251,6 +1234,8 @@ namespace flex
 			{
 				PROFILE_AUTO(profileBlockName.c_str());
 
+				GL_PUSH_DEBUG_GROUP("Cubemap from Equirectangular Mat Gen");
+
 				if (!m_SkyBoxMesh)
 				{
 					PrintError("Attempted to generate cubemap before skybox object was created!\n");
@@ -1291,6 +1276,10 @@ namespace flex
 				GLRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetRenderID());
 				GLMaterial& skyboxGLMaterial = m_Materials[skyboxRenderObject->materialID];
 
+				GL_POP_DEBUG_GROUP();
+
+				GL_PUSH_DEBUG_GROUP("Cubemap from Equirectangular");
+
 				glUseProgram(equirectangularToCubemapShader.program);
 
 				// TODO: Store what location this texture is at (might not be 0)
@@ -1307,48 +1296,37 @@ namespace flex
 				glm::vec2 cubemapSize = skyboxGLMaterial.material.cubemapSamplerSize;
 
 				glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
-				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
-				glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
+				glBindRenderbuffer(GL_RENDERBUFFER, 0);
+				glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, 0);
 
 				glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
 
 				glBindVertexArray(skyboxRenderObject->VAO);
 				glBindBuffer(GL_ARRAY_BUFFER, skyboxRenderObject->VBO);
 
-				if (skyboxRenderObject->cullFace == GL_NONE)
-				{
-					glDisable(GL_CULL_FACE);
-				}
-				else
-				{
-					glEnable(GL_CULL_FACE);
-					glCullFace(skyboxRenderObject->cullFace);
-				}
+				glDisable(GL_CULL_FACE);
 
-				glDepthFunc(skyboxRenderObject->depthTestReadFunc);
+				glDepthFunc(GL_ALWAYS);
+				glDepthMask(GL_FALSE);
 
 				for (u32 i = 0; i < 6; ++i)
 				{
-					glUniformMatrix4fv(equirectangularToCubemapMaterial.uniformIDs.view, 1, GL_FALSE,
-						&m_CaptureViews[i][0][0]);
+					glUniformMatrix4fv(equirectangularToCubemapMaterial.uniformIDs.view, 1, GL_FALSE, &m_CaptureViews[i][0][0]);
 
-					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-						GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, m_Materials[cubemapMaterialID].cubemapSamplerID, 0);
+					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, m_Materials[cubemapMaterialID].cubemapSamplerID, 0);
 
-					glDepthMask(GL_TRUE);
+					glClear(GL_COLOR_BUFFER_BIT);
 
-					glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-					glDepthMask(skyboxRenderObject->bDepthWriteEnable);
-
-					glDrawArrays(skyboxRenderObject->topology, 0,
-						(GLsizei)skyboxRenderObject->vertexBufferData->VertexCount);
+					glDrawArrays(skyboxRenderObject->topology, 0, (GLsizei)skyboxRenderObject->vertexBufferData->VertexCount);
 				}
 
 				// Generate mip maps for generated cubemap
 				glBindTexture(GL_TEXTURE_CUBE_MAP, m_Materials[cubemapMaterialID].cubemapSamplerID);
 				glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+
+				GL_POP_DEBUG_GROUP();
 			}
+
 			Profiler::PrintBlockDuration(profileBlockName);
 		}
 
@@ -1357,6 +1335,8 @@ namespace flex
 			const std::string profileBlockName = "generating prefiltered map for material: " + m_Materials[cubemapMaterialID].material.name;
 			{
 				PROFILE_AUTO(profileBlockName.c_str());
+
+				GL_PUSH_DEBUG_GROUP("Prefiltered Map Gen");
 
 				if (!m_SkyBoxMesh)
 				{
@@ -1436,6 +1416,7 @@ namespace flex
 					}
 				}
 
+				GL_POP_DEBUG_GROUP();
 
 				// Visualize prefiltered map as skybox:
 				//m_Materials[renderObject->materialID].cubemapSamplerID = m_Materials[renderObject->materialID].prefilteredMapSamplerID;
@@ -1445,13 +1426,14 @@ namespace flex
 
 		void GLRenderer::GenerateBRDFLUT(u32 brdfLUTTextureID, i32 brdfLUTSize)
 		{
-			const std::string profileBlockName = "generating BRDF LUT (" + std::to_string(brdfLUTSize) + "x" + std::to_string(brdfLUTSize) + ")";
+			const char* profileBlockName = "Generate BRDF LUT";
 			{
-				PROFILE_AUTO(profileBlockName.c_str());
+				PROFILE_AUTO(profileBlockName);
 
-				if (m_1x1_NDC_Quad)
+				GL_PUSH_DEBUG_GROUP("BRDF Gen");
+
+				if (m_BRDFMatID != InvalidMaterialID)
 				{
-					// Don't re-create material or object
 					return;
 				}
 
@@ -1459,72 +1441,37 @@ namespace flex
 				brdfMaterialCreateInfo.name = "BRDF";
 				brdfMaterialCreateInfo.shaderName = "brdf";
 				brdfMaterialCreateInfo.engineMaterial = true;
-				MaterialID brdfMatID = InitializeMaterial(&brdfMaterialCreateInfo);
+				m_BRDFMatID = InitializeMaterial(&brdfMaterialCreateInfo, m_BRDFMatID);
 
-				// Generate 1x1 NDC quad
-				{
-					VertexBufferData::CreateInfo quadVertexBufferDataCreateInfo = {};
-					quadVertexBufferDataCreateInfo.attributes = 0;
-					// TODO: Specify that there are 3 empty verts
+				u32 VAO = 0;
+				glGenVertexArrays(1, &VAO);
 
-					m_1x1_NDC_QuadVertexBufferData = {};
-					m_1x1_NDC_QuadVertexBufferData.Initialize(&quadVertexBufferDataCreateInfo);
-
-					GameObject* oneByOneQuadGameObject = new GameObject("1x1 Quad", GameObjectType::_NONE);
-					m_PersistentObjects.push_back(oneByOneQuadGameObject);
-					// Don't render this normally, we'll draw it manually
-					oneByOneQuadGameObject->SetVisible(false);
-
-					RenderObjectCreateInfo quadCreateInfo = {};
-					quadCreateInfo.materialID = brdfMatID;
-					quadCreateInfo.vertexBufferData = &m_1x1_NDC_QuadVertexBufferData;
-					quadCreateInfo.gameObject = oneByOneQuadGameObject;
-					quadCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
-					quadCreateInfo.bDepthWriteEnable = false;
-					quadCreateInfo.visibleInSceneExplorer = false;
-
-					RenderID quadRenderID = InitializeRenderObject(&quadCreateInfo);
-					m_1x1_NDC_Quad = GetRenderObject(quadRenderID);
-
-					if (!m_1x1_NDC_Quad)
-					{
-						PrintError("Failed to create 1x1 NDC quad!\n");
-					}
-					else
-					{
-						SetTopologyMode(quadRenderID, TopologyMode::TRIANGLE_STRIP);
-						m_1x1_NDC_QuadVertexBufferData.DescribeShaderVariables(this, quadRenderID);
-					}
-				}
-
-				glUseProgram(m_Shaders[m_Materials[brdfMatID].material.shaderID].program);
+				glUseProgram(m_Shaders[m_Materials[m_BRDFMatID].material.shaderID].program);
 
 				glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
-				glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
+				//glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
+				//glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, (GLsizei)brdfLUTSize, (GLsizei)brdfLUTSize);
+				glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, 0);
 
 				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, brdfLUTTextureID, 0);
 
-				glBindVertexArray(m_1x1_NDC_Quad->VAO);
-				glBindBuffer(GL_ARRAY_BUFFER, m_1x1_NDC_Quad->VBO);
+				glBindVertexArray(VAO);
+				glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 				glViewport(0, 0, brdfLUTSize, brdfLUTSize);
 
-				if (m_1x1_NDC_Quad->cullFace == GL_NONE)
-				{
-					glDisable(GL_CULL_FACE);
-				}
-				else
-				{
-					glEnable(GL_CULL_FACE);
-					glCullFace(m_1x1_NDC_Quad->cullFace);
-				}
-
+				glDisable(GL_CULL_FACE);
+				glDepthMask(GL_FALSE);
 				glDepthFunc(GL_ALWAYS);
 
-				glDepthMask(GL_FALSE);
+				glDrawArrays(GL_TRIANGLE_STRIP, 0, 3);
 
-				// Render quad
-				glDrawArrays(m_1x1_NDC_Quad->topology, 0, (GLsizei)m_1x1_NDC_Quad->vertexBufferData->VertexCount);
+				u32 e = glGetError();
+				Print("%u\n", e);
+
+				//glDeleteVertexArrays(1, &VAO);
+
+				GL_POP_DEBUG_GROUP();
 			}
 			Profiler::PrintBlockDuration(profileBlockName);
 		}
@@ -1581,6 +1528,8 @@ namespace flex
 			const std::string profileBlockName = "generating irradiance sampler from cubemap";
 			{
 				PROFILE_AUTO(profileBlockName.c_str());
+
+				GL_PUSH_DEBUG_GROUP("Irradiance Gen");
 
 				if (!m_SkyBoxMesh)
 				{
@@ -1654,6 +1603,8 @@ namespace flex
 					// Should be drawing cube here, not object (reflection probe's sphere is being drawn
 					glDrawArrays(skybox->topology, 0, (GLsizei)skybox->vertexBufferData->VertexCount);
 				}
+
+				GL_POP_DEBUG_GROUP();
 			}
 			Profiler::PrintBlockDuration(profileBlockName);
 		}
@@ -2989,38 +2940,19 @@ namespace flex
 				glUniformMatrix4fv(spriteMaterial.uniformIDs.model, 1, GL_TRUE, &model[0][0]);
 			}
 
-			if (spriteShader.shader->constantBufferUniforms.HasUniform(U_VIEW))
+			if (drawInfo.bScreenSpace)
 			{
-				if (drawInfo.bScreenSpace)
-				{
-					glm::mat4 view = MAT4_IDENTITY;
+				real r = aspectRatio;
+				real t = 1.0f;
+				glm::mat4 viewProjection = glm::ortho(-r, r, -t, t);
 
-					glUniformMatrix4fv(spriteMaterial.uniformIDs.view, 1, GL_FALSE, &view[0][0]);
-				}
-				else
-				{
-					glm::mat4 view = g_CameraManager->CurrentCamera()->GetView();
-
-					glUniformMatrix4fv(spriteMaterial.uniformIDs.view, 1, GL_FALSE, &view[0][0]);
-				}
+				glUniformMatrix4fv(spriteMaterial.uniformIDs.viewProjection, 1, GL_FALSE, &viewProjection[0][0]);
 			}
-
-			if (spriteShader.shader->constantBufferUniforms.HasUniform(U_PROJECTION))
+			else
 			{
-				if (drawInfo.bScreenSpace)
-				{
-					real r = aspectRatio;
-					real t = 1.0f;
-					glm::mat4 projection = glm::ortho(-r, r, -t, t);
+				glm::mat4 viewProjection = g_CameraManager->CurrentCamera()->GetViewProjection();
 
-					glUniformMatrix4fv(spriteMaterial.uniformIDs.projection, 1, GL_FALSE, &projection[0][0]);
-				}
-				else
-				{
-					glm::mat4 projection = g_CameraManager->CurrentCamera()->GetProjection();
-
-					glUniformMatrix4fv(spriteMaterial.uniformIDs.projection, 1, GL_FALSE, &projection[0][0]);
-				}
+				glUniformMatrix4fv(spriteMaterial.uniformIDs.viewProjection, 1, GL_FALSE, &viewProjection[0][0]);
 			}
 
 			if (spriteShader.shader->dynamicBufferUniforms.HasUniform(U_COLOR_MULTIPLIER))
@@ -3102,8 +3034,6 @@ namespace flex
 		{
 			PROFILE_AUTO("DrawTextSS");
 
-			GL_PUSH_DEBUG_GROUP("Text SS");
-
 			bool bHasText = false;
 			for (BitmapFont* font : m_FontsSS)
 			{
@@ -3118,6 +3048,8 @@ namespace flex
 			{
 				return;
 			}
+
+			GL_PUSH_DEBUG_GROUP("Text SS");
 
 			GLMaterial& fontMaterial = m_Materials[m_FontMatSSID];
 			GLShader& fontShader = m_Shaders[fontMaterial.material.shaderID];
@@ -3193,8 +3125,6 @@ namespace flex
 
 			PROFILE_AUTO("DrawTextWS");
 
-			GL_PUSH_DEBUG_GROUP("Text WS");
-
 			bool bHasText = false;
 			for (BitmapFont* font : m_FontsWS)
 			{
@@ -3209,6 +3139,8 @@ namespace flex
 			{
 				return;
 			}
+
+			GL_PUSH_DEBUG_GROUP("Text WS");
 
 			GLMaterial& fontMaterial = m_Materials[m_FontMatWSID];
 			GLShader& fontShader = m_Shaders[fontMaterial.material.shaderID];
@@ -4021,8 +3953,8 @@ namespace flex
 			drawInfo.bWriteDepth = false;
 			drawInfo.materialID = m_SpriteMatID;
 			drawInfo.anchor = AnchorPoint::WHOLE;
-			drawInfo.textureHandleID = m_LoadedTextures[m_LoadingTextureID]->handle;
-			drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
+			drawInfo.textureHandleID = loadingTexture->handle;
+			drawInfo.spriteObjectRenderID = m_Quad2DRenderID;
 
 			DrawSpriteQuad(drawInfo);
 		}

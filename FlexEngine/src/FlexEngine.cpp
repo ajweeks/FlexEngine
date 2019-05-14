@@ -239,6 +239,16 @@ namespace flex
 		TerminalCamera* terminalCamera = new TerminalCamera();
 		g_CameraManager->AddCamera(terminalCamera, false);
 
+#if COMPILE_RENDERDOC_API
+		if (m_RenderDocAPI &&
+			m_RenderDocAutoCaptureFrameCount != -1 &&
+			m_RenderDocAutoCaptureFrameOffset == 0)
+		{
+			m_bRenderDocCapturingFrame = true;
+			m_RenderDocAPI->StartFrameCapture(NULL, NULL);
+		}
+#endif
+
 		InitializeWindowAndRenderer();
 
 		g_PhysicsManager = new PhysicsManager();
@@ -268,16 +278,6 @@ namespace flex
 
 		ImGui::CreateContext();
 		SetupImGuiStyles();
-
-#if COMPILE_RENDERDOC_API
-		if (m_RenderDocAPI &&
-			m_RenderDocAutoCaptureFrameCount != -1 &&
-			m_RenderDocAutoCaptureFrameOffset == 0)
-		{
-			m_bRenderDocCapturingFrame = true;
-			m_RenderDocAPI->StartFrameCapture(NULL, NULL);
-		}
-#endif
 
 		g_SceneManager->InitializeCurrentScene();
 		g_Renderer->PostInitialize();

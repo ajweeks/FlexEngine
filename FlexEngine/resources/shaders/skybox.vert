@@ -1,8 +1,8 @@
-#version 400
+#version 450
 
 layout (location = 0) in vec3 in_Position;
 
-out vec3 ex_SampleDirection;
+layout (location = 0) out vec3 ex_SampleDirection;
 
 uniform mat4 view;
 uniform mat4 projection;

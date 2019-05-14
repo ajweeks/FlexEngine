@@ -2057,6 +2057,9 @@ namespace flex
 			uniformBuffer(device),
 			shader(shader)
 		{
+			vertShaderModule = { device, vkDestroyShaderModule };
+			fragShaderModule = { device, vkDestroyShaderModule };
+			geomShaderModule = { device, vkDestroyShaderModule };
 		}
 
 		VulkanCubemapGBuffer::VulkanCubemapGBuffer(u32 id, const char* name, VkFormat internalFormat) :

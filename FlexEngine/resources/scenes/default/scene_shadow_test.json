@@ -18,11 +18,12 @@
 		{
 			"name" : "Reflection Probe 01",
 			"type" : "reflection probe",
-			"visible" : false,
+			"visible" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 15.600, 0.000"
-			}
+			},
+			"material" : "pbr chrome"
 		},
 		{
 			"name" : "ground plane",
@@ -436,6 +437,56 @@
 			},
 			"mesh" : "che",
 			"material" : "pbr chrome"
+		},
+		{
+			"name" : "Wall 03",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "13.112, 2.794, 1.351",
+				"scale" : "1.000, 5.360, 5.350"
+			},
+			"mesh" : "cube",
+			"material" : "sphere 01",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500, 0.500, 0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 0.000000,
+				"kinematic" : true,
+				"static" : true,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "Wall 04",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "13.112, 2.794, 1.351",
+				"scale" : "1.000, 5.360, 5.350"
+			},
+			"mesh" : "cube",
+			"material" : "sphere 01",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500, 0.500, 0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 0.000000,
+				"kinematic" : true,
+				"static" : true,
+				"mask" : -1,
+				"group" : -1
+			}
 		}
 	]
 }

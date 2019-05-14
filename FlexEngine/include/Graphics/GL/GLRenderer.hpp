@@ -255,7 +255,6 @@ namespace flex
 			TextureHandle m_ShadowMapTexture;
 			u32 m_ShadowMapFBO = 0;
 			i32 m_ShadowMapSize = 4096;
-			MaterialID m_ShadowMaterialID = InvalidMaterialID;
 
 			u32 m_SSAOFrameBuffer = 0;
 			u32 m_SSAOBlurHFrameBuffer = 0;
@@ -315,8 +314,7 @@ namespace flex
 
 			GameObject* m_SkyBoxMesh = nullptr;
 
-			VertexBufferData m_1x1_NDC_QuadVertexBufferData;
-			GLRenderObject* m_1x1_NDC_Quad = nullptr; // A 1x1 quad in NDC space
+			MaterialID m_BRDFMatID = InvalidMaterialID;
 
 			std::list<GLRenderObjectBatch> m_DeferredRenderObjectBatches;
 			std::list<GLRenderObjectBatch> m_ForwardRenderObjectBatches;

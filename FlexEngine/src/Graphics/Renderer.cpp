@@ -2130,6 +2130,18 @@ namespace flex
 		fontWSMatCreateInfo.shaderName = "font_ws";
 		fontWSMatCreateInfo.engineMaterial = true;
 		m_FontMatWSID = InitializeMaterial(&fontWSMatCreateInfo);
+
+		MaterialCreateInfo shadowMatCreateInfo = {};
+		shadowMatCreateInfo.shaderName = "shadow";
+		shadowMatCreateInfo.name = "Shadow";
+		shadowMatCreateInfo.engineMaterial = true;
+		m_ShadowMaterialID = InitializeMaterial(&shadowMatCreateInfo);
+
+		MaterialCreateInfo postFXAAMatCreateInfo = {};
+		postFXAAMatCreateInfo.name = "FXAA";
+		postFXAAMatCreateInfo.shaderName = "post_fxaa";
+		postFXAAMatCreateInfo.engineMaterial = true;
+		m_PostFXAAMatID = InitializeMaterial(&postFXAAMatCreateInfo);
 	}
 
 	std::string Renderer::PickRandomSkyboxTexture()
