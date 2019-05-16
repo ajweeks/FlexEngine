@@ -3995,12 +3995,6 @@ namespace flex
 			m_Shaders.clear();
 		}
 
-		void GLRenderer::LoadShaders()
-		{
-			m_Shaders.clear();
-			Renderer::LoadShaders();
-		}
-
 		void GLRenderer::LoadFonts(bool bForceRender)
 		{
 			PROFILE_AUTO("Load fonts");
@@ -4073,6 +4067,12 @@ namespace flex
 				{
 					glUniform1i(material->uniformIDs.castShadows, m_DirectionalLight->bCastShadow);
 					glUniform1f(material->uniformIDs.shadowDarkness, m_DirectionalLight->shadowDarkness);
+				}
+
+				if (shader->shader->bNeedPushConstantBlock)
+				{
+					glUniformMatrix4fv(material->uniformIDs.view, 1, GL_FALSE, &view[0][0]);
+					glUniformMatrix4fv(material->uniformIDs.projection, 1, GL_FALSE, &proj[0][0]);
 				}
 
 				if (shader->shader->constantBufferUniforms.HasUniform(U_VIEW))
@@ -4704,9 +4704,14 @@ namespace flex
 			return *m_Shaders[shaderID].shader;
 		}
 
+		void GLRenderer::SetShaderCount(u32 shaderCount)
+		{
+			m_Shaders.clear();
+			m_Shaders.reserve(shaderCount);
+		}
+
 		bool GLRenderer::LoadShaderCode(ShaderID shaderID)
 		{
-			assert(shaderID >= m_Shaders.size());
 			m_Shaders.emplace_back(&m_BaseShaders[shaderID]);
 
 			GLShader& shader = m_Shaders[shaderID];

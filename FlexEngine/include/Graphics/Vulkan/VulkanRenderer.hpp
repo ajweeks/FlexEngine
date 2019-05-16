@@ -117,9 +117,9 @@ namespace flex
 		protected:
 			virtual bool LoadFont(FontMetaData& fontMetaData, bool bForceRender) override;
 
-			virtual void LoadShaders() override;
-
 			virtual bool LoadShaderCode(ShaderID shaderID) override;
+
+			virtual void SetShaderCount(u32 shaderCount) override;
 
 		private:
 			friend VulkanPhysicsDebugDraw;

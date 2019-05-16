@@ -565,6 +565,7 @@ namespace flex
 			equirectangularToCubeMatCreateInfo.enableHDREquirectangularSampler = true;
 			equirectangularToCubeMatCreateInfo.generateHDREquirectangularSampler = true;
 			equirectangularToCubeMatCreateInfo.hdrEquirectangularTexturePath = environmentMapPath;
+			equirectangularToCubeMatCreateInfo.engineMaterial = true;
 
 			bool bRandomizeSkybox = true;
 			if (bRandomizeSkybox && !m_AvailableHDRIs.empty())
@@ -572,7 +573,6 @@ namespace flex
 				equirectangularToCubeMatCreateInfo.hdrEquirectangularTexturePath = PickRandomSkyboxTexture();
 			}
 
-			equirectangularToCubeMatCreateInfo.engineMaterial = true;
 			MaterialID equirectangularToCubeMatID = InitializeMaterial(&equirectangularToCubeMatCreateInfo);
 
 			const VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
@@ -736,21 +736,9 @@ namespace flex
 
 			VkPipelineVertexInputStateCreateInfo vertexInputState = vks::pipelineVertexInputStateCreateInfo(1, &vertexInputBinding, 1, &vertexInputAttribute);
 
-			VDeleter<VkShaderModule> vertShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
-			if (!CreateShaderModule(equirectangularToCubeShader.shader->vertexShaderCode, vertShaderModule.replace()))
-			{
-				PrintError("Failed to compile vertex shader located at: %s\n", equirectangularToCubeShader.shader->vertexShaderFilePath.c_str());
-			}
-
-			VDeleter<VkShaderModule> fragShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
-			if (!CreateShaderModule(equirectangularToCubeShader.shader->fragmentShaderCode, fragShaderModule.replace()))
-			{
-				PrintError("Failed to compile fragment shader located at: %s\n", equirectangularToCubeShader.shader->fragmentShaderFilePath.c_str());
-			}
-
 			std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages;
-			shaderStages[0] = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, vertShaderModule);
-			shaderStages[1] = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderModule);
+			shaderStages[0] = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, equirectangularToCubeShader.vertShaderModule);
+			shaderStages[1] = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, equirectangularToCubeShader.fragShaderModule);
 
 			VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
 			pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -788,6 +776,7 @@ namespace flex
 
 			VkCommandBuffer cmdBuf = m_CommandBufferManager.CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
 
+			// TODO: Remove calls?
 			VkViewport viewport = vks::viewportFlipped((real)dim, (real)dim, 0.0f, 1.0f);
 			vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
 
@@ -826,8 +815,7 @@ namespace flex
 				viewport = vks::viewportFlipped(viewportSize, viewportSize, 0.0f, 1.0f);
 				vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
 
-				scissor.extent.width = (u32)viewport.width;
-				scissor.extent.height = (u32)abs(viewport.height);
+				scissor = vks::scissor(0u, 0u, (u32)viewportSize, (u32)viewportSize);
 				vkCmdSetScissor(cmdBuf, 0, 1, &scissor);
 
 				for (u32 face = 0; face < 6; ++face)
@@ -835,14 +823,14 @@ namespace flex
 					vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 					// Push constants
-					skyboxMat.pushConstantBlock.mvp =
-						glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (real)dim) * s_CaptureViews[face];
+					skyboxMat.pushConstantBlock.view = s_CaptureViews[face];
+					skyboxMat.pushConstantBlock.proj = glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (real)dim);
 					vkCmdPushConstants(cmdBuf, pipelinelayout, VK_SHADER_STAGE_VERTEX_BIT, 0,
 						sizeof(Material::PushConstantBlock), &skyboxMat.pushConstantBlock);
 
 					vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
-					BindDescriptorSet(&m_Shaders[skyboxMat.shaderID], 0, cmdBuf, pipelinelayout, descriptorSet);
+					BindDescriptorSet(&equirectangularToCubeShader, 0, cmdBuf, pipelinelayout, descriptorSet);
 
 					VkDeviceSize offsets[1] = { 0 };
 
@@ -1178,8 +1166,7 @@ namespace flex
 				viewport = vks::viewportFlipped(viewportSize, viewportSize, 0.0f, 1.0f);
 				vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
 
-				scissor.extent.width = (u32)viewport.width;
-				scissor.extent.height = (u32)abs(viewport.height);
+				scissor = vks::scissor(0u, 0u, (u32)viewportSize, (u32)viewportSize);
 				vkCmdSetScissor(cmdBuf, 0, 1, &scissor);
 
 				for (u32 face = 0; face < 6; ++face)
@@ -1187,18 +1174,18 @@ namespace flex
 					vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 					// Push constants
-					skyboxMat.pushConstantBlock.mvp =
-						glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (real)dim) * s_CaptureViews[face];
+					skyboxMat.pushConstantBlock.view = s_CaptureViews[face];
+					skyboxMat.pushConstantBlock.proj = glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (real)dim);
 					vkCmdPushConstants(cmdBuf, pipelinelayout, VK_SHADER_STAGE_VERTEX_BIT, 0,
 						sizeof(Material::PushConstantBlock), &skyboxMat.pushConstantBlock);
 
 					vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
-					BindDescriptorSet(&m_Shaders[skyboxMat.shaderID], 0, cmdBuf, pipelinelayout, descriptorSet);
+					BindDescriptorSet(&irradianceShader, 0, cmdBuf, pipelinelayout, descriptorSet);
 
 					VkDeviceSize offsets[1] = { 0 };
 
-					const ShaderID shaderID = skyboxMat.shaderID;
+					ShaderID shaderID = skyboxMat.shaderID;
 					vkCmdBindVertexBuffers(cmdBuf, 0, 1, &m_VertexIndexBufferPairs[shaderID].vertexBuffer->m_Buffer, offsets);
 					if (skyboxRenderObject->bIndexed)
 					{
@@ -1520,8 +1507,7 @@ namespace flex
 				viewport = vks::viewportFlipped(viewportSize, viewportSize, 0.0f, 1.0f);
 				vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
 
-				scissor.extent.width = (u32)viewport.width;
-				scissor.extent.height = (u32)abs(viewport.height);
+				scissor = vks::scissor(0u, 0u, (u32)viewportSize, (u32)viewportSize);
 				vkCmdSetScissor(cmdBuf, 0, 1, &scissor);
 
 				for (u32 face = 0; face < 6; ++face)
@@ -1529,8 +1515,8 @@ namespace flex
 					vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 					// Push constants
-					skyboxMat.pushConstantBlock.mvp =
-						glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (real)dim) * s_CaptureViews[face];
+					skyboxMat.pushConstantBlock.view = s_CaptureViews[face];
+					skyboxMat.pushConstantBlock.proj = glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (real)dim);
 					vkCmdPushConstants(cmdBuf, pipelinelayout, VK_SHADER_STAGE_VERTEX_BIT, 0,
 						sizeof(Material::PushConstantBlock), &skyboxMat.pushConstantBlock);
 
@@ -1710,21 +1696,9 @@ namespace flex
 			}
 			VulkanShader& brdfShader = m_Shaders[brdfShaderID];
 
-			VDeleter<VkShaderModule> vertShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
-			if (!CreateShaderModule(brdfShader.shader->vertexShaderCode, vertShaderModule.replace()))
-			{
-				PrintError("Failed to compile vertex shader located at: %s\n", brdfShader.shader->vertexShaderFilePath.c_str());
-			}
-
-			VDeleter<VkShaderModule> fragShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
-			if (!CreateShaderModule(brdfShader.shader->fragmentShaderCode, fragShaderModule.replace()))
-			{
-				PrintError("Failed to compile fragment shader located at: %s\n", brdfShader.shader->fragmentShaderFilePath.c_str());
-			}
-
 			std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages;
-			shaderStages[0] = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, vertShaderModule);
-			shaderStages[1] = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderModule);
+			shaderStages[0] = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, brdfShader.vertShaderModule);
+			shaderStages[1] = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, brdfShader.fragShaderModule);
 
 			VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
 			pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -1761,7 +1735,7 @@ namespace flex
 			VkCommandBuffer cmdBuf = m_CommandBufferManager.CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
 			vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-			VkViewport viewport = vks::viewport((real)dim, (real)dim, 0.0f, 1.0f);
+			VkViewport viewport = vks::viewportFlipped((real)dim, (real)dim, 0.0f, 1.0f);
 			vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
 
 			VkRect2D scissor = vks::scissor(0, 0, dim, dim);
@@ -2124,34 +2098,40 @@ namespace flex
 
 		void VulkanRenderer::CreateUniformBuffers(VulkanShader* shader)
 		{
-			shader->uniformBuffer.constantData.size = shader->shader->constantBufferUniforms.CalculateSizeInBytes();
-			if (shader->uniformBuffer.constantData.size > 0)
+			if (shader->shader->constantBufferUniforms.HasUniform(U_UNIFORM_BUFFER_CONSTANT))
 			{
-				free_hooked(shader->uniformBuffer.constantData.data);
+				shader->uniformBuffer.constantData.size = shader->shader->constantBufferUniforms.CalculateSizeInBytes();
+				if (shader->uniformBuffer.constantData.size > 0)
+				{
+					free_hooked(shader->uniformBuffer.constantData.data);
 
-				shader->uniformBuffer.constantData.size = GetAlignedUBOSize(shader->uniformBuffer.constantData.size);
+					shader->uniformBuffer.constantData.size = GetAlignedUBOSize(shader->uniformBuffer.constantData.size);
 
-				shader->uniformBuffer.constantData.data = static_cast<real*>(malloc_hooked(shader->uniformBuffer.constantData.size));
-				assert(shader->uniformBuffer.constantData.data);
+					shader->uniformBuffer.constantData.data = static_cast<real*>(malloc_hooked(shader->uniformBuffer.constantData.size));
+					assert(shader->uniformBuffer.constantData.data);
 
-				PrepareUniformBuffer(&shader->uniformBuffer.constantBuffer, shader->uniformBuffer.constantData.size,
-					VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+					PrepareUniformBuffer(&shader->uniformBuffer.constantBuffer, shader->uniformBuffer.constantData.size,
+						VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+				}
 			}
 
-			shader->uniformBuffer.dynamicData.size = shader->shader->dynamicBufferUniforms.CalculateSizeInBytes();
-			if (shader->uniformBuffer.dynamicData.size > 0 && !m_RenderObjects.empty())
+			if (shader->shader->dynamicBufferUniforms.HasUniform(U_UNIFORM_BUFFER_DYNAMIC))
 			{
-				if (shader->uniformBuffer.dynamicData.data) aligned_free_hooked(shader->uniformBuffer.dynamicData.data);
-
-				shader->uniformBuffer.dynamicData.size = GetAlignedUBOSize(shader->uniformBuffer.dynamicData.size);
-
-				const size_t dynamicBufferSize = AllocateDynamicUniformBuffer(
-					shader->uniformBuffer.dynamicData.size, (void**)&shader->uniformBuffer.dynamicData.data);
-				shader->uniformBuffer.fullDynamicBufferSize = dynamicBufferSize;;
-				if (dynamicBufferSize > 0)
+				shader->uniformBuffer.dynamicData.size = shader->shader->dynamicBufferUniforms.CalculateSizeInBytes();
+				if (shader->uniformBuffer.dynamicData.size > 0 && !m_RenderObjects.empty())
 				{
-					PrepareUniformBuffer(&shader->uniformBuffer.dynamicBuffer, dynamicBufferSize,
-						VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+					if (shader->uniformBuffer.dynamicData.data) aligned_free_hooked(shader->uniformBuffer.dynamicData.data);
+
+					shader->uniformBuffer.dynamicData.size = GetAlignedUBOSize(shader->uniformBuffer.dynamicData.size);
+
+					const size_t dynamicBufferSize = AllocateDynamicUniformBuffer(
+						shader->uniformBuffer.dynamicData.size, (void**)&shader->uniformBuffer.dynamicData.data);
+					shader->uniformBuffer.fullDynamicBufferSize = dynamicBufferSize;;
+					if (dynamicBufferSize > 0)
+					{
+						PrepareUniformBuffer(&shader->uniformBuffer.dynamicBuffer, dynamicBufferSize,
+							VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+					}
 				}
 			}
 		}
@@ -3876,11 +3856,14 @@ namespace flex
 			return true;
 		}
 
+		void VulkanRenderer::SetShaderCount(u32 shaderCount)
+		{
+			m_Shaders.clear();
+			m_Shaders.reserve(shaderCount);
+		}
+
 		bool VulkanRenderer::LoadShaderCode(ShaderID shaderID)
 		{
-			m_Shaders.reserve(m_BaseShaders.size());
-
-			assert(shaderID >= m_Shaders.size());
 			m_Shaders.emplace_back(m_VulkanDevice->m_LogicalDevice, &m_BaseShaders[shaderID]);
 
 			bool bSuccess = true;
@@ -6300,18 +6283,16 @@ namespace flex
 
 					vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderObject->graphicsPipeline);
 
-					// Push constants
+					BindDescriptorSet(&shader, renderObject->dynamicUBOOffset, commandBuffer, renderObject->pipelineLayout, renderObject->descriptorSet);
+
 					if (shader.shader->bNeedPushConstantBlock)
 					{
-						glm::mat4 view = glm::mat4(glm::mat3(g_CameraManager->CurrentCamera()->GetView())); // Truncate translation part off to center around viewer
-						glm::mat4 projection = g_CameraManager->CurrentCamera()->GetProjection();
-						mat.material.pushConstantBlock.mvp =
-							projection * view * renderObject->gameObject->GetTransform()->GetWorldTransform();
+						// Push constants
+						mat.material.pushConstantBlock.view = g_CameraManager->CurrentCamera()->GetView();
+						mat.material.pushConstantBlock.proj = g_CameraManager->CurrentCamera()->GetProjection();
 						vkCmdPushConstants(commandBuffer, renderObject->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0,
 							sizeof(Material::PushConstantBlock), &mat.material.pushConstantBlock);
 					}
-
-					BindDescriptorSet(&shader, renderObject->dynamicUBOOffset, commandBuffer, renderObject->pipelineLayout, renderObject->descriptorSet);
 
 					if (renderObject->bIndexed)
 					{
@@ -7127,12 +7108,14 @@ namespace flex
 
 		void VulkanRenderer::UpdateConstantUniformBuffers(UniformOverrides const* overridenUniforms)
 		{
-			glm::mat4 projection = g_CameraManager->CurrentCamera()->GetProjection();
+			BaseCamera* cam = g_CameraManager->CurrentCamera();
+			glm::mat4 projection = cam->GetProjection();
 			glm::mat4 projectionInv = glm::inverse(projection);
-			glm::mat4 view = g_CameraManager->CurrentCamera()->GetView();
+			glm::mat4 view = cam->GetView();
 			glm::mat4 viewInv = glm::inverse(view);
 			glm::mat4 viewProjection = projection * view;
-			glm::vec4 camPos = glm::vec4(g_CameraManager->CurrentCamera()->GetPosition(), 0.0f);
+			glm::vec4 camPos = glm::vec4(cam->GetPosition(), 0.0f);
+			real exposure = cam->exposure;
 
 			glm::mat4 lightView, lightProj;
 			ComputeDirLightViewProj(lightView, lightProj);
@@ -7198,6 +7181,7 @@ namespace flex
 				{ U_SSAO_BLUR_DATA, (void*)&m_SSAOBlurDataConstant, sizeof(SSAOBlurDataConstant) },
 				{ U_SSAO_SAMPLING_DATA, (void*)&m_SSAOSamplingData, sizeof(SSAOSamplingData) },
 				{ U_FXAA_DATA, (void*)&m_FXAAData, sizeof(FXAAData) },
+				{ U_EXPOSURE, (void*)&exposure, sizeof(real) },
 			};
 
 			for (const VulkanShader& shader : m_Shaders)
@@ -7435,123 +7419,6 @@ namespace flex
 			memcpy((void*)(dest), &uniformBuffer.dynamicData.data[dynamicOffset], size);
 		}
 
-		void VulkanRenderer::LoadShaders()
-		{
-			Renderer::LoadShaders();
-			//if (m_Shaders.empty())
-			{
-				//const std::string shaderDirectory = RESOURCE_LOCATION  "shaders\\spv\\";
-				//struct ShaderInitInfo
-				//{
-				//	ShaderInitInfo(const char* name, const char* vertFileName, const char* fragFileName, const char* geomFileName = nullptr) :
-				//		name(name),
-				//		vertFileName(vertFileName),
-				//		fragFileName(fragFileName),
-				//		geomFileName(geomFileName)
-				//	{
-				//	}
-				//
-				//	const char* name = nullptr;
-				//	const char* vertFileName = nullptr;
-				//	const char* fragFileName = nullptr;
-				//	const char* geomFileName = nullptr;
-				//};
-
-
-				//m_Shaders.reserve(ARRAY_LENGTH(initInfos));
-				//for (const ShaderInitInfo& initInfo : initInfos)
-				//{
-				//	std::string vert = shaderDirectory + initInfo.vertFileName;
-				//	std::string frag = shaderDirectory + initInfo.fragFileName;
-				//	std::string geom;
-				//	if (initInfo.geomFileName)
-				//	{
-				//		geom = shaderDirectory + initInfo.geomFileName;
-				//	}
-				//	m_Shaders.emplace_back(m_VulkanDevice->m_LogicalDevice, initInfo.name, vert, frag, geom);
-				//}
-#if 1
-				//ShaderID shaderID = 0;
-
-				//// Deferred combine (sample GBuffer)
-				//m_Shaders[shaderID].renderPass = m_DeferredCombineRenderPass;
-				//++shaderID;
-
-				//// Deferred combine cubemap (sample GBuffer)
-				//m_Shaders[shaderID].renderPass = m_DeferredCombineRenderPass;
-				//++shaderID;
-
-				//// Color
-				//m_Shaders[shaderID].renderPass = m_ForwardRenderPass;
-				//++shaderID;
-
-				//// PBR
-				//m_Shaders[shaderID].renderPass = m_OffScreenFrameBuf->renderPass;
-				//++shaderID;
-
-				//// PBR World Space
-				//m_Shaders[shaderID].renderPass = m_OffScreenFrameBuf->renderPass;
-				//++shaderID;
-
-				//// Skybox
-				//m_Shaders[shaderID].renderPass = m_ForwardRenderPass;
-				//++shaderID;
-
-				//// Equirectangular to cube
-				//m_Shaders[shaderID].renderPass = m_ForwardRenderPass;
-				//++shaderID;
-
-				//// Irradiance
-				//m_Shaders[shaderID].renderPass = m_ForwardRenderPass;
-				//++shaderID;
-
-				//// Prefilter
-				//m_Shaders[shaderID].renderPass = m_ForwardRenderPass;
-				//++shaderID;
-
-				//// BRDF
-				//m_Shaders[shaderID].renderPass = m_ForwardRenderPass;
-				//++shaderID;
-
-				//// Sprite
-				//m_Shaders[shaderID].renderPass = m_ForwardRenderPass;
-				//++shaderID;
-
-				//// Post process
-				//m_Shaders[shaderID].renderPass = m_ForwardRenderPass;
-				//++shaderID;
-
-				//// Post FXAA
-				//m_Shaders[shaderID].renderPass = m_ForwardRenderPass;
-				//++shaderID;
-
-				//// Compute SDF
-				//m_Shaders[shaderID].renderPass = m_DeferredCombineRenderPass; // TODO: Will this always be overridden?
-				//++shaderID;
-
-				//// Font SS
-				//m_Shaders[shaderID].renderPass = m_ForwardRenderPass;
-				//++shaderID;
-
-				//// Font WS
-				//m_Shaders[shaderID].renderPass = m_ForwardRenderPass;
-				//++shaderID;
-
-				//// Shadow
-				//m_Shaders[shaderID].renderPass = m_ForwardRenderPass;
-				//++shaderID;
-
-				//// SSAO
-				//m_Shaders[shaderID].renderPass = m_SSAORenderPass;
-				//++shaderID;
-
-				//// SSAO Blur
-				//m_Shaders[shaderID].renderPass = m_SSAOBlurHRenderPass;
-				//++shaderID;
-#endif
-			}
-		}
-
 		void VulkanRenderer::GenerateIrradianceMaps()
 		{
 			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
@@ -7575,7 +7442,7 @@ namespace flex
 			// Generate graphics pipelines with correct render pass set
 			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 			{
-				//CreateDescriptorSet(i);
+				CreateDescriptorSet(i);
 				CreateGraphicsPipeline(i, false);
 			}
 		}

@@ -239,6 +239,8 @@ namespace flex
 		TerminalCamera* terminalCamera = new TerminalCamera();
 		g_CameraManager->AddCamera(terminalCamera, false);
 
+		InitializeWindowAndRenderer();
+
 #if COMPILE_RENDERDOC_API
 		if (m_RenderDocAPI &&
 			m_RenderDocAutoCaptureFrameCount != -1 &&
@@ -248,8 +250,6 @@ namespace flex
 			m_RenderDocAPI->StartFrameCapture(NULL, NULL);
 		}
 #endif
-
-		InitializeWindowAndRenderer();
 
 		g_PhysicsManager = new PhysicsManager();
 		g_PhysicsManager->Initialize();

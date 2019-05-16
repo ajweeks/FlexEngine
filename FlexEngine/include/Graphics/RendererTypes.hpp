@@ -405,7 +405,8 @@ namespace flex
 		// TODO: Make this more dynamic!
 		struct PushConstantBlock
 		{
-			glm::mat4 mvp;
+			glm::mat4 view;
+			glm::mat4 proj;
 		};
 		PushConstantBlock pushConstantBlock = {};
 	};

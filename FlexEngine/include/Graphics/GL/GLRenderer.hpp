@@ -109,6 +109,9 @@ namespace flex
 		protected:
 			virtual bool LoadFont(FontMetaData& fontMetaData, bool bForceRender) override;
 
+			virtual bool LoadShaderCode(ShaderID shaderID) override;
+			virtual void SetShaderCount(u32 shaderCount) override;
+
 		private:
 
 			struct TextureHandle
@@ -122,8 +125,6 @@ namespace flex
 			};
 
 			friend class GLPhysicsDebugDraw;
-
-			virtual bool LoadShaderCode(ShaderID shaderID) override;
 
 			void DestroyRenderObject(RenderID renderID, GLRenderObject* renderObject);
 
@@ -172,7 +173,6 @@ namespace flex
 			RenderID GetNextAvailableRenderID() const;
 			void InsertNewRenderObject(GLRenderObject* renderObject);
 			void UnloadShaders();
-			void LoadShaders();
 
 			void GenerateFrameBufferTexture(u32* handle, i32 index, GLint internalFormat, GLenum format, GLenum type, const glm::vec2i& size);
 			void GenerateFrameBufferTexture(TextureHandle& handle, i32 index, const glm::vec2i& size);

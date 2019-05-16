@@ -1313,15 +1313,13 @@ namespace flex
 			(u32)VertexAttribute::POSITION;
 
 		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
-		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW);
-		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PROJECTION);
+		//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW);
+		//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PROJECTION);
 		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_EXPOSURE);
-		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_TIME);
+		//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_TIME);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_CUBEMAP_SAMPLER);
 
-		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
-		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
-		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_CUBEMAP_SAMPLER);
-		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_CUBEMAP_SAMPLER);
+		m_BaseShaders[shaderID].dynamicBufferUniforms = {};
 		++shaderID;
 
 		// Equirectangular to Cube
@@ -1331,13 +1329,9 @@ namespace flex
 		m_BaseShaders[shaderID].vertexAttributes =
 			(u32)VertexAttribute::POSITION;
 
-		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
-		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW);
-		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PROJECTION);
 		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_HDR_EQUIRECTANGULAR_SAMPLER);
 
-		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
-		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
+		m_BaseShaders[shaderID].dynamicBufferUniforms = {};
 		++shaderID;
 
 		// Irradiance
@@ -1347,13 +1341,9 @@ namespace flex
 		m_BaseShaders[shaderID].vertexAttributes =
 			(u32)VertexAttribute::POSITION;
 
-		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
-		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW);
-		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PROJECTION);
 		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_CUBEMAP_SAMPLER);
 
-		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
-		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
+		m_BaseShaders[shaderID].dynamicBufferUniforms = {};
 		++shaderID;
 
 		// Prefilter
@@ -1363,14 +1353,10 @@ namespace flex
 		m_BaseShaders[shaderID].vertexAttributes =
 			(u32)VertexAttribute::POSITION;
 
-		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
-		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW);
-		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PROJECTION);
 		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_CUBEMAP_SAMPLER);
 
 		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
 		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_CONST_ROUGHNESS);
-		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
 		++shaderID;
 
 		// BRDF
@@ -1541,6 +1527,8 @@ namespace flex
 		++shaderID;
 
 		assert(shaderID == m_BaseShaders.size());
+
+		SetShaderCount(m_BaseShaders.size());
 
 		shaderID = 0;
 		for (Shader& shader : m_BaseShaders)

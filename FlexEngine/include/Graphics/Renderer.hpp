@@ -213,6 +213,8 @@ namespace flex
 
 		virtual bool LoadShaderCode(ShaderID shaderID) = 0;
 
+		virtual void SetShaderCount(u32 shaderCount) = 0;
+
 		// Will attempt to find pre-rendered font at specified path, and
 		// only render a new file if not present or if bForceRender is true
 		// Returns true if succeeded
