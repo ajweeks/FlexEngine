@@ -5328,7 +5328,8 @@ namespace flex
 			}
 
 			const u32 vertexStride = CalculateVertexStride(createInfo->vertexAttributes);
-			VkVertexInputBindingDescription bindingDescription = GetVertexBindingDescription(vertexStride);
+			VkVertexInputBindingDescription bindingDescription = vks::vertexInputBindingDescription(0, vertexStride, VK_VERTEX_INPUT_RATE_VERTEX);
+
 			std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
 			GetVertexAttributeDescriptions(createInfo->vertexAttributes, attributeDescriptions);
 

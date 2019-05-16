@@ -29,16 +29,6 @@ namespace flex
 			}
 		}
 
-		VkVertexInputBindingDescription GetVertexBindingDescription(u32 vertexStride)
-		{
-			VkVertexInputBindingDescription bindingDesc = {};
-			bindingDesc.binding = 0;
-			bindingDesc.stride = vertexStride;
-			bindingDesc.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-			return bindingDesc;
-		}
-
 		void GetVertexAttributeDescriptions(VertexAttributes vertexAttributes,
 			std::vector<VkVertexInputAttributeDescription>& attributeDescriptions)
 		{

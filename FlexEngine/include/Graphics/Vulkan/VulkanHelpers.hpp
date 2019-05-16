@@ -22,8 +22,6 @@ namespace flex
 
 		inline void VK_CHECK_RESULT(VkResult result);
 
-		VkVertexInputBindingDescription GetVertexBindingDescription(u32 vertexStride);
-
 		void GetVertexAttributeDescriptions(VertexAttributes vertexAttributes,
 			std::vector<VkVertexInputAttributeDescription>& attributeDescriptions);
 
