@@ -475,6 +475,7 @@ namespace flex
 			bool bEnableColorBlending = false;
 			bool bEnableAdditiveColorBlending = false;
 
+			VkBool32 depthTestEnable = VK_TRUE;
 			VkBool32 depthWriteEnable = VK_TRUE;
 			VkCompareOp depthCompareOp = VK_COMPARE_OP_GREATER_OR_EQUAL;
 			VkBool32 stencilTestEnable = VK_FALSE;

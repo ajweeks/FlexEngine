@@ -684,13 +684,6 @@ namespace flex
 			m_CommandBufferManager.FlushCommandBuffer(layoutCmd, m_GraphicsQueue, true);
 
 
-			// Descriptors
-			VkDescriptorSetLayoutBinding setLayoutBinding = vks::descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0);
-
-			VkDescriptorSetLayout descriptorsetlayout;
-			VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = vks::descriptorSetLayoutCreateInfo(1, &setLayoutBinding);
-			VK_CHECK_RESULT(vkCreateDescriptorSetLayout(m_VulkanDevice->m_LogicalDevice, &descriptorSetLayoutCreateInfo, nullptr, &descriptorsetlayout));
-
 			ShaderID equirectangularToCubeShaderID;
 			if (!GetShaderID(equirectangularToCubeMatCreateInfo.shaderName, equirectangularToCubeShaderID))
 			{
@@ -708,60 +701,30 @@ namespace flex
 			equirectangularToCubeDescriptorCreateInfo.hdrEquirectangularTexture = m_Materials[equirectangularToCubeMatID].hdrEquirectangularTexture;
 			CreateDescriptorSet(&equirectangularToCubeDescriptorCreateInfo);
 
-			VkPipelineLayout pipelinelayout;
-			std::array<VkPushConstantRange, 1> pushConstantRanges = {};
-			pushConstantRanges[0].size = sizeof(Material::PushConstantBlock);
-			pushConstantRanges[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-			pushConstantRanges[0].offset = 0;
+			VkPushConstantRange pushConstRange = {};
+			pushConstRange.size = sizeof(Material::PushConstantBlock);
+			pushConstRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+			pushConstRange.offset = 0;
 
-			VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = vks::pipelineLayoutCreateInfo(1, &descriptorsetlayout);
-			pipelineLayoutCreateInfo.pushConstantRangeCount = pushConstantRanges.size();
-			pipelineLayoutCreateInfo.pPushConstantRanges = pushConstantRanges.data();
-			VK_CHECK_RESULT(vkCreatePipelineLayout(m_VulkanDevice->m_LogicalDevice, &pipelineLayoutCreateInfo, nullptr, &pipelinelayout));
-
-			// Pipeline
-			VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = vks::pipelineInputAssemblyStateCreateInfo(skyboxRenderObject->topology, 0, VK_FALSE);
-			VkPipelineRasterizationStateCreateInfo rasterizationState = vks::pipelineRasterizationStateCreateInfo(VK_POLYGON_MODE_FILL, VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
-			VkPipelineColorBlendAttachmentState blendAttachmentState = vks::pipelineColorBlendAttachmentState(0xF, VK_FALSE);
-			VkPipelineColorBlendStateCreateInfo colorBlendState = vks::pipelineColorBlendStateCreateInfo(1, &blendAttachmentState);
-			VkPipelineDepthStencilStateCreateInfo depthStencilState = vks::pipelineDepthStencilStateCreateInfo(VK_FALSE, VK_FALSE, VK_COMPARE_OP_GREATER_OR_EQUAL);
-			VkPipelineViewportStateCreateInfo viewportState = vks::pipelineViewportStateCreateInfo(1, 1);
-			VkPipelineMultisampleStateCreateInfo multisampleState = vks::pipelineMultisampleStateCreateInfo(VK_SAMPLE_COUNT_1_BIT);
-			std::vector<VkDynamicState> dynamicStateEnables = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
-			VkPipelineDynamicStateCreateInfo dynamicState = vks::pipelineDynamicStateCreateInfo(dynamicStateEnables);
-
-			// Vertex input state
-			VkVertexInputBindingDescription vertexInputBinding = vks::vertexInputBindingDescription(0, skyboxRenderObject->vertexBufferData->VertexStride, VK_VERTEX_INPUT_RATE_VERTEX);
-			VkVertexInputAttributeDescription vertexInputAttribute = vks::vertexInputAttributeDescription(0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0);
-
-			VkPipelineVertexInputStateCreateInfo vertexInputState = vks::pipelineVertexInputStateCreateInfo(1, &vertexInputBinding, 1, &vertexInputAttribute);
-
-			std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages;
-			shaderStages[0] = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, equirectangularToCubeShader.vertShaderModule);
-			shaderStages[1] = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, equirectangularToCubeShader.fragShaderModule);
-
-			VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
-			pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-			pipelineCreateInfo.layout = pipelinelayout;
-			pipelineCreateInfo.renderPass = renderPass;
-			pipelineCreateInfo.flags = 0;
-			pipelineCreateInfo.basePipelineIndex = -1;
-			pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
-			pipelineCreateInfo.pInputAssemblyState = &inputAssemblyState;
-			pipelineCreateInfo.pRasterizationState = &rasterizationState;
-			pipelineCreateInfo.pColorBlendState = &colorBlendState;
-			pipelineCreateInfo.pMultisampleState = &multisampleState;
-			pipelineCreateInfo.pViewportState = &viewportState;
-			pipelineCreateInfo.pDepthStencilState = &depthStencilState;
-			pipelineCreateInfo.pDynamicState = &dynamicState;
-			pipelineCreateInfo.stageCount = shaderStages.size();
-			pipelineCreateInfo.pStages = shaderStages.data();
-			pipelineCreateInfo.pVertexInputState = &vertexInputState;
-
-			// TODO: Use CreateGraphicsPipeline helper
 			VkPipeline pipeline = VK_NULL_HANDLE;
-			VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_VulkanDevice->m_LogicalDevice, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &pipeline));
-
+			VkPipelineLayout pipelinelayout = VK_NULL_HANDLE;
+			GraphicsPipelineCreateInfo pipelineCreateInfo = {};
+			pipelineCreateInfo.graphicsPipeline = &pipeline;
+			pipelineCreateInfo.pipelineLayout = &pipelinelayout;
+			pipelineCreateInfo.renderPass = renderPass;
+			pipelineCreateInfo.shaderID = equirectangularToCubeShaderID;
+			pipelineCreateInfo.vertexAttributes = equirectangularToCubeShader.shader->vertexAttributes;
+			pipelineCreateInfo.topology = skyboxRenderObject->topology;
+			pipelineCreateInfo.cullMode = skyboxRenderObject->cullMode;
+			pipelineCreateInfo.descriptorSetLayoutIndex = equirectangularToCubeShaderID;
+			pipelineCreateInfo.bSetDynamicStates = true;
+			pipelineCreateInfo.bEnableAdditiveColorBlending = false;
+			pipelineCreateInfo.subpass = 0;
+			pipelineCreateInfo.depthTestEnable = VK_FALSE;
+			pipelineCreateInfo.depthWriteEnable = VK_FALSE;
+			pipelineCreateInfo.pushConstantRangeCount = 1;
+			pipelineCreateInfo.pushConstants = &pushConstRange;
+			CreateGraphicsPipeline(&pipelineCreateInfo);
 
 			// Render
 
@@ -907,7 +870,6 @@ namespace flex
 			vkFreeMemory(m_VulkanDevice->m_LogicalDevice, offscreen.memory, nullptr);
 			vkDestroyImageView(m_VulkanDevice->m_LogicalDevice, offscreen.view, nullptr);
 			vkDestroyImage(m_VulkanDevice->m_LogicalDevice, offscreen.image, nullptr);
-			vkDestroyDescriptorSetLayout(m_VulkanDevice->m_LogicalDevice, descriptorsetlayout, nullptr);
 			vkDestroyPipeline(m_VulkanDevice->m_LogicalDevice, pipeline, nullptr);
 			vkDestroyPipelineLayout(m_VulkanDevice->m_LogicalDevice, pipelinelayout, nullptr);
 		}
@@ -5341,8 +5303,11 @@ namespace flex
 			VkRect2D scissor = vks::scissor(0, 0, m_SwapChainExtent.width, m_SwapChainExtent.height);
 
 			VkPipelineViewportStateCreateInfo viewportState = vks::pipelineViewportStateCreateInfo(1, 1);
-			viewportState.pViewports = &viewport;
-			viewportState.pScissors = &scissor;
+			if (!createInfo->bSetDynamicStates)
+			{
+				viewportState.pViewports = &viewport;
+				viewportState.pScissors = &scissor;
+			}
 
 			VkPipelineRasterizationStateCreateInfo rasterizer = vks::pipelineRasterizationStateCreateInfo(VK_POLYGON_MODE_FILL, createInfo->cullMode, VK_FRONT_FACE_CLOCKWISE);
 
@@ -5352,7 +5317,7 @@ namespace flex
 			colorBlendAttachments.resize(shader.shader->numAttachments, {});
 			for (VkPipelineColorBlendAttachmentState& colorBlendAttachment : colorBlendAttachments)
 			{
-				colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+				colorBlendAttachment.colorWriteMask = 0xF; // RGBA
 
 				if (createInfo->bEnableColorBlending)
 				{
@@ -5408,7 +5373,7 @@ namespace flex
 			vkDestroyPipelineLayout(m_VulkanDevice->m_LogicalDevice, *createInfo->pipelineLayout, nullptr);
 			VK_CHECK_RESULT(vkCreatePipelineLayout(m_VulkanDevice->m_LogicalDevice, &pipelineLayoutInfo, nullptr, createInfo->pipelineLayout));
 
-			VkPipelineDepthStencilStateCreateInfo depthStencil = vks::pipelineDepthStencilStateCreateInfo(VK_TRUE, createInfo->depthWriteEnable, createInfo->depthCompareOp, createInfo->stencilTestEnable);
+			VkPipelineDepthStencilStateCreateInfo depthStencil = vks::pipelineDepthStencilStateCreateInfo(createInfo->depthTestEnable, createInfo->depthWriteEnable, createInfo->depthCompareOp, createInfo->stencilTestEnable);
 
 			VkPipelineDynamicStateCreateInfo dynamicState = {};
 			VkPipelineDynamicStateCreateInfo* pDynamicState = nullptr;
