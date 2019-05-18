@@ -1788,6 +1788,20 @@ namespace flex
 			VK_CHECK_RESULT(vkCreateImageView(device->m_LogicalDevice, &imageView, nullptr, attachment->view.replace()));
 		}
 
+		void CreateAttachment(VulkanDevice* device, FrameBuffer* frameBuffer, u32 fboIndex /* = 0 */)
+		{
+			CreateAttachment(
+				device,
+				frameBuffer->frameBufferAttachments[fboIndex].second.format,
+				VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT,
+				frameBuffer->width,
+				frameBuffer->height,
+				1,
+				VK_IMAGE_VIEW_TYPE_2D,
+				0,
+				&frameBuffer->frameBufferAttachments[fboIndex].second);
+		}
+
 		template<class T>
 		void CopyPixels(const T* srcData, T* dstData, u32 dstOffset, u32 width, u32 height, u32 channelCount, u32 pitch, bool bColorSwizzle)
 		{

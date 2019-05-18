@@ -45,11 +45,6 @@ namespace flex
 			stride += sizeof(i32);
 		}
 
-		if (stride == 0)
-		{
-			PrintWarn("Vertex stride is 0!\n");
-		}
-
 		return stride;
 	}
 } // namespace flex

@@ -316,6 +316,8 @@ namespace flex
 			VkImageCreateFlags imageFlags,
 			FrameBufferAttachment *attachment);
 
+		void CreateAttachment(VulkanDevice* device, FrameBuffer* frameBuffer, u32 fboIndex = 0);
+
 		template<class T>
 		void CopyPixels(const T* srcData, T* dstData, u32 dstOffset, u32 width, u32 height, u32 channelCount, u32 pitch, bool bColorSwizzle);
 

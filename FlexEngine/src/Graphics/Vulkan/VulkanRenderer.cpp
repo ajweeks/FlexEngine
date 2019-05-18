@@ -5408,17 +5408,7 @@ namespace flex
 			// Color attachments
 			for (u32 i = 0; i < frameBufferColorAttachmentCount; ++i)
 			{
-				FrameBufferAttachment& frameBufferAttachment = m_OffScreenFrameBuf->frameBufferAttachments[i].second;
-				CreateAttachment(
-					m_VulkanDevice,
-					frameBufferAttachment.format,
-					VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT,
-					m_OffScreenFrameBuf->width,
-					m_OffScreenFrameBuf->height,
-					1,
-					VK_IMAGE_VIEW_TYPE_2D,
-					0,
-					&frameBufferAttachment);
+				CreateAttachment(m_VulkanDevice, m_OffScreenFrameBuf, i);
 			}
 
 			// Depth attachment
@@ -5502,16 +5492,7 @@ namespace flex
 			{
 				assert(m_SSAOFrameBuf->frameBufferAttachments.size() == 1);
 
-				CreateAttachment(
-					m_VulkanDevice,
-					m_SSAOFrameBuf->frameBufferAttachments[0].second.format,
-					VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT,
-					m_SSAOFrameBuf->width,
-					m_SSAOFrameBuf->height,
-					1,
-					VK_IMAGE_VIEW_TYPE_2D,
-					0,
-					&m_SSAOFrameBuf->frameBufferAttachments[0].second);
+				CreateAttachment(m_VulkanDevice, m_SSAOFrameBuf);
 
 				std::vector<VkImageView> ssaoAttachments;
 				ssaoAttachments.push_back(m_SSAOFrameBuf->frameBufferAttachments[0].second.view);
@@ -5530,17 +5511,7 @@ namespace flex
 				// Horizontal pass frame buffer
 				assert(m_SSAOBlurHFrameBuf->frameBufferAttachments.size() == 1);
 
-				// TODO: CLEANUP: Add overload which takes m_SSAOBlurHFrameBuf
-				CreateAttachment(
-					m_VulkanDevice,
-					m_SSAOBlurHFrameBuf->frameBufferAttachments[0].second.format,
-					VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT,
-					m_SSAOBlurHFrameBuf->width,
-					m_SSAOBlurHFrameBuf->height,
-					1,
-					VK_IMAGE_VIEW_TYPE_2D,
-					0,
-					&m_SSAOBlurHFrameBuf->frameBufferAttachments[0].second);
+				CreateAttachment(m_VulkanDevice, m_SSAOBlurHFrameBuf);
 
 				std::vector<VkImageView> ssaoBlurHAttachments;
 				ssaoBlurHAttachments.push_back(m_SSAOBlurHFrameBuf->frameBufferAttachments[0].second.view);
@@ -5556,16 +5527,7 @@ namespace flex
 				// Vertical pass frame buffer
 				assert(m_SSAOBlurVFrameBuf->frameBufferAttachments.size() == 1);
 
-				CreateAttachment(
-					m_VulkanDevice,
-					m_SSAOBlurVFrameBuf->frameBufferAttachments[0].second.format,
-					VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT,
-					m_SSAOBlurVFrameBuf->width,
-					m_SSAOBlurVFrameBuf->height,
-					1,
-					VK_IMAGE_VIEW_TYPE_2D,
-					0,
-					&m_SSAOBlurVFrameBuf->frameBufferAttachments[0].second);
+				CreateAttachment(m_VulkanDevice, m_SSAOBlurVFrameBuf);
 
 				std::vector<VkImageView> ssaoBlurVAttachments;
 				ssaoBlurVAttachments.push_back(m_SSAOBlurVFrameBuf->frameBufferAttachments[0].second.view);
