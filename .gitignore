@@ -48,6 +48,7 @@ sh.exe.stackdump
 *.header_hero
 *.amplxeproj
 AdditionalFiles/flex-cppcheck-build-dir/**
+AdditionalFiles/FlexVTune/**
 
 
 # --------------------------
