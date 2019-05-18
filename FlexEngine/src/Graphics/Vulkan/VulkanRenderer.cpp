@@ -300,6 +300,8 @@ namespace flex
 				CreateGraphicsPipeline(i, true);
 			}
 
+			GenerateBRDFLUT();
+
 			// SSAO Materials
 			{
 				if (m_SSAOMatID == InvalidMaterialID)
@@ -864,7 +866,6 @@ namespace flex
 
 			m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
 
-
 			vkDestroyRenderPass(m_VulkanDevice->m_LogicalDevice, renderPass, nullptr);
 			vkDestroyFramebuffer(m_VulkanDevice->m_LogicalDevice, offscreen.framebuffer, nullptr);
 			vkFreeMemory(m_VulkanDevice->m_LogicalDevice, offscreen.memory, nullptr);
@@ -992,57 +993,6 @@ namespace flex
 				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 			m_CommandBufferManager.FlushCommandBuffer(layoutCmd, m_GraphicsQueue, true);
 
-			// Descriptors
-			VkDescriptorSetLayout descriptorsetlayout;
-			VkDescriptorSetLayoutBinding setLayoutBinding = vks::descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0);
-
-			VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = vks::descriptorSetLayoutCreateInfo(1, &setLayoutBinding);
-			VK_CHECK_RESULT(vkCreateDescriptorSetLayout(m_VulkanDevice->m_LogicalDevice, &descriptorSetLayoutCreateInfo, nullptr, &descriptorsetlayout));
-
-			// Descriptor Pool
-			VkDescriptorPoolSize poolSize = vks::descriptorPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1);
-			VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = vks::descriptorPoolCreateInfo(1, &poolSize, 2);
-			VkDescriptorPool descriptorPool;
-			VK_CHECK_RESULT(vkCreateDescriptorPool(m_VulkanDevice->m_LogicalDevice, &descriptorPoolCreateInfo, nullptr, &descriptorPool));
-
-			// Descriptor sets
-			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
-			VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = vks::descriptorSetAllocateInfo(descriptorPool, &descriptorsetlayout, 1);
-			VK_CHECK_RESULT(vkAllocateDescriptorSets(m_VulkanDevice->m_LogicalDevice, &descriptorSetAllocateInfo, &descriptorSet));
-
-			renderObjectMat.cubemapTexture->UpdateImageDescriptor();
-
-			VkDescriptorImageInfo descriptorImageInfo = {};
-			descriptorImageInfo.imageView = offscreen.view;
-			descriptorImageInfo.imageLayout = renderObjectMat.cubemapTexture->imageLayout;
-			VkWriteDescriptorSet writeDescriptorSet = vks::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				0, &renderObjectMat.cubemapTexture->imageInfoDescriptor);
-			vkUpdateDescriptorSets(m_VulkanDevice->m_LogicalDevice, 1, &writeDescriptorSet, 0, nullptr);
-
-			VkPipelineLayout pipelinelayout;
-			VkPushConstantRange pushConstantRange = vks::pushConstantRange(VK_SHADER_STAGE_VERTEX_BIT, sizeof(Material::PushConstantBlock), 0);
-			VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = vks::pipelineLayoutCreateInfo(1, &descriptorsetlayout);
-			pipelineLayoutCreateInfo.pushConstantRangeCount = 1;
-			pipelineLayoutCreateInfo.pPushConstantRanges = &pushConstantRange;
-			VK_CHECK_RESULT(vkCreatePipelineLayout(m_VulkanDevice->m_LogicalDevice, &pipelineLayoutCreateInfo, nullptr, &pipelinelayout));
-
-			// Pipeline
-			VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = vks::pipelineInputAssemblyStateCreateInfo(skyboxRenderObject->topology, 0, VK_FALSE);
-			VkPipelineRasterizationStateCreateInfo rasterizationState = vks::pipelineRasterizationStateCreateInfo(VK_POLYGON_MODE_FILL, VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
-			VkPipelineColorBlendAttachmentState blendAttachmentState = vks::pipelineColorBlendAttachmentState(0xF, VK_FALSE);
-			VkPipelineColorBlendStateCreateInfo colorBlendState = vks::pipelineColorBlendStateCreateInfo(1, &blendAttachmentState);
-			VkPipelineDepthStencilStateCreateInfo depthStencilState = vks::pipelineDepthStencilStateCreateInfo(VK_FALSE, VK_FALSE, VK_COMPARE_OP_GREATER_OR_EQUAL);
-			VkPipelineViewportStateCreateInfo viewportState = vks::pipelineViewportStateCreateInfo(1, 1);
-			VkPipelineMultisampleStateCreateInfo multisampleState = vks::pipelineMultisampleStateCreateInfo(VK_SAMPLE_COUNT_1_BIT);
-			std::vector<VkDynamicState> dynamicStateEnables = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
-			VkPipelineDynamicStateCreateInfo dynamicState = vks::pipelineDynamicStateCreateInfo(dynamicStateEnables);
-
-			// Vertex input state
-			VkVertexInputBindingDescription vertexInputBinding = vks::vertexInputBindingDescription(0, skyboxRenderObject->vertexBufferData->VertexStride, VK_VERTEX_INPUT_RATE_VERTEX);
-			VkVertexInputAttributeDescription vertexInputAttribute = vks::vertexInputAttributeDescription(0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0);
-
-			VkPipelineVertexInputStateCreateInfo vertexInputState = vks::pipelineVertexInputStateCreateInfo(1, &vertexInputBinding, 1, &vertexInputAttribute);
-
 			ShaderID irradianceShaderID;
 			if (!GetShaderID("irradiance", irradianceShaderID))
 			{
@@ -1051,42 +1001,34 @@ namespace flex
 			}
 			VulkanShader& irradianceShader = m_Shaders[irradianceShaderID];
 
-			VDeleter<VkShaderModule> vertShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
-			if (!CreateShaderModule(irradianceShader.shader->vertexShaderCode, vertShaderModule.replace()))
-			{
-				PrintError("Failed to compile vertex shader located at: %s\n", irradianceShader.shader->vertexShaderFilePath.c_str());
-			}
+			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
+			DescriptorSetCreateInfo irradianceDescriptorCreateInfo = {};
+			irradianceDescriptorCreateInfo.descriptorSet = &descriptorSet;
+			irradianceDescriptorCreateInfo.descriptorSetLayout = &m_DescriptorSetLayouts[irradianceShaderID];
+			irradianceDescriptorCreateInfo.shaderID = irradianceShaderID;
+			irradianceDescriptorCreateInfo.uniformBuffer = &irradianceShader.uniformBuffer;
+			irradianceDescriptorCreateInfo.cubemapTexture = renderObjectMat.cubemapTexture;
+			CreateDescriptorSet(&irradianceDescriptorCreateInfo);
 
-			VDeleter<VkShaderModule> fragShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
-			if (!CreateShaderModule(irradianceShader.shader->fragmentShaderCode, fragShaderModule.replace()))
-			{
-				PrintError("Failed to compile fragment shader located at: %s\n", irradianceShader.shader->fragmentShaderFilePath.c_str());
-			}
+			renderObjectMat.cubemapTexture->UpdateImageDescriptor();
 
-			std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages;
-			shaderStages[0] = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, vertShaderModule);
-			shaderStages[1] = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderModule);
-
-			VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
-			pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-			pipelineCreateInfo.layout = pipelinelayout;
+			VkPipelineLayout pipelinelayout = VK_NULL_HANDLE;
+			VkPipeline pipeline = VK_NULL_HANDLE;
+			GraphicsPipelineCreateInfo pipelineCreateInfo = {};
+			pipelineCreateInfo.graphicsPipeline = &pipeline;
+			pipelineCreateInfo.pipelineLayout = &pipelinelayout;
 			pipelineCreateInfo.renderPass = renderPass;
-			pipelineCreateInfo.flags = 0;
-			pipelineCreateInfo.basePipelineIndex = -1;
-			pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
-			pipelineCreateInfo.pInputAssemblyState = &inputAssemblyState;
-			pipelineCreateInfo.pRasterizationState = &rasterizationState;
-			pipelineCreateInfo.pColorBlendState = &colorBlendState;
-			pipelineCreateInfo.pMultisampleState = &multisampleState;
-			pipelineCreateInfo.pViewportState = &viewportState;
-			pipelineCreateInfo.pDepthStencilState = &depthStencilState;
-			pipelineCreateInfo.pDynamicState = &dynamicState;
-			pipelineCreateInfo.stageCount = 2;
-			pipelineCreateInfo.pStages = shaderStages.data();
-			pipelineCreateInfo.pVertexInputState = &vertexInputState;
-
-			VkPipeline pipeline;
-			VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_VulkanDevice->m_LogicalDevice, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &pipeline));
+			pipelineCreateInfo.shaderID = irradianceShaderID;
+			pipelineCreateInfo.vertexAttributes = irradianceShader.shader->vertexAttributes;
+			pipelineCreateInfo.topology = skyboxRenderObject->topology;
+			pipelineCreateInfo.cullMode = skyboxRenderObject->cullMode;
+			pipelineCreateInfo.descriptorSetLayoutIndex = irradianceShaderID;
+			pipelineCreateInfo.bSetDynamicStates = true;
+			pipelineCreateInfo.bEnableAdditiveColorBlending = false;
+			pipelineCreateInfo.subpass = 0;
+			pipelineCreateInfo.depthTestEnable = VK_FALSE;
+			pipelineCreateInfo.depthWriteEnable = VK_FALSE;
+			CreateGraphicsPipeline(&pipelineCreateInfo);
 
 			// Render
 
@@ -1215,14 +1157,11 @@ namespace flex
 
 			m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
 
-
 			vkDestroyRenderPass(m_VulkanDevice->m_LogicalDevice, renderPass, nullptr);
 			vkDestroyFramebuffer(m_VulkanDevice->m_LogicalDevice, offscreen.framebuffer, nullptr);
 			vkFreeMemory(m_VulkanDevice->m_LogicalDevice, offscreen.memory, nullptr);
 			vkDestroyImageView(m_VulkanDevice->m_LogicalDevice, offscreen.view, nullptr);
 			vkDestroyImage(m_VulkanDevice->m_LogicalDevice, offscreen.image, nullptr);
-			vkDestroyDescriptorPool(m_VulkanDevice->m_LogicalDevice, descriptorPool, nullptr);
-			vkDestroyDescriptorSetLayout(m_VulkanDevice->m_LogicalDevice, descriptorsetlayout, nullptr);
 			vkDestroyPipeline(m_VulkanDevice->m_LogicalDevice, pipeline, nullptr);
 			vkDestroyPipelineLayout(m_VulkanDevice->m_LogicalDevice, pipelinelayout, nullptr);
 		}
@@ -1352,20 +1291,6 @@ namespace flex
 			}
 			VulkanShader& prefilterShader = m_Shaders[prefilterShaderID];
 
-			VDeleter<VkShaderModule> vertShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
-			if (!CreateShaderModule(prefilterShader.shader->vertexShaderCode, vertShaderModule.replace()))
-			{
-				PrintError("Failed to compile vertex shader located at: %s\n", prefilterShader.shader->vertexShaderFilePath.c_str());
-			}
-
-			VDeleter<VkShaderModule> fragShaderModule{ m_VulkanDevice->m_LogicalDevice, vkDestroyShaderModule };
-			if (!CreateShaderModule(prefilterShader.shader->fragmentShaderCode, fragShaderModule.replace()))
-			{
-				PrintError("Failed to compile fragment shader located at: %s\n", prefilterShader.shader->fragmentShaderFilePath.c_str());
-			}
-
-			CreateUniformBuffers(&prefilterShader);
-
 			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 			DescriptorSetCreateInfo prefilterDescriptorCreateInfo = {};
 			prefilterDescriptorCreateInfo.descriptorSet = &descriptorSet;
@@ -1380,54 +1305,25 @@ namespace flex
 			pushConstantRanges[0].size = sizeof(Material::PushConstantBlock);
 			pushConstantRanges[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
-			// Pipeline layout
-			VkPipelineLayout pipelinelayout;
-			VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = vks::pipelineLayoutCreateInfo(1, &m_DescriptorSetLayouts[prefilterShaderID]);
-			pipelineLayoutCreateInfo.pushConstantRangeCount = pushConstantRanges.size();
-			pipelineLayoutCreateInfo.pPushConstantRanges = pushConstantRanges.data();
-			VK_CHECK_RESULT(vkCreatePipelineLayout(m_VulkanDevice->m_LogicalDevice, &pipelineLayoutCreateInfo, nullptr, &pipelinelayout));
-
-			// Pipeline
-			VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = vks::pipelineInputAssemblyStateCreateInfo(skyboxRenderObject->topology, 0, VK_FALSE);
-			VkPipelineRasterizationStateCreateInfo rasterizationState = vks::pipelineRasterizationStateCreateInfo(VK_POLYGON_MODE_FILL, VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
-			VkPipelineColorBlendAttachmentState blendAttachmentState = vks::pipelineColorBlendAttachmentState(0xF, VK_FALSE);
-			VkPipelineColorBlendStateCreateInfo colorBlendState = vks::pipelineColorBlendStateCreateInfo(1, &blendAttachmentState);
-			VkPipelineDepthStencilStateCreateInfo depthStencilState = vks::pipelineDepthStencilStateCreateInfo(VK_FALSE, VK_FALSE, VK_COMPARE_OP_GREATER_OR_EQUAL);
-			VkPipelineViewportStateCreateInfo viewportState = vks::pipelineViewportStateCreateInfo(1, 1);
-			VkPipelineMultisampleStateCreateInfo multisampleState = vks::pipelineMultisampleStateCreateInfo(VK_SAMPLE_COUNT_1_BIT);
-			std::vector<VkDynamicState> dynamicStateEnables = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
-			VkPipelineDynamicStateCreateInfo dynamicState = vks::pipelineDynamicStateCreateInfo(dynamicStateEnables);
-
-			// Vertex input state
-			VkVertexInputBindingDescription vertexInputBinding = vks::vertexInputBindingDescription(0, skyboxRenderObject->vertexBufferData->VertexStride, VK_VERTEX_INPUT_RATE_VERTEX);
-			VkVertexInputAttributeDescription vertexInputAttribute = vks::vertexInputAttributeDescription(0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0);
-
-			VkPipelineVertexInputStateCreateInfo vertexInputState = vks::pipelineVertexInputStateCreateInfo(1, &vertexInputBinding, 1, &vertexInputAttribute);
-
-			std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages;
-			shaderStages[0] = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, vertShaderModule);
-			shaderStages[1] = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderModule);
-
-			VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
-			pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-			pipelineCreateInfo.layout = pipelinelayout;
+			VkPipelineLayout pipelinelayout = VK_NULL_HANDLE;
+			VkPipeline pipeline = VK_NULL_HANDLE;
+			GraphicsPipelineCreateInfo pipelineCreateInfo = {};
+			pipelineCreateInfo.graphicsPipeline = &pipeline;
+			pipelineCreateInfo.pipelineLayout = &pipelinelayout;
 			pipelineCreateInfo.renderPass = renderPass;
-			pipelineCreateInfo.flags = 0;
-			pipelineCreateInfo.basePipelineIndex = -1;
-			pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
-			pipelineCreateInfo.pInputAssemblyState = &inputAssemblyState;
-			pipelineCreateInfo.pRasterizationState = &rasterizationState;
-			pipelineCreateInfo.pColorBlendState = &colorBlendState;
-			pipelineCreateInfo.pMultisampleState = &multisampleState;
-			pipelineCreateInfo.pViewportState = &viewportState;
-			pipelineCreateInfo.pDepthStencilState = &depthStencilState;
-			pipelineCreateInfo.pDynamicState = &dynamicState;
-			pipelineCreateInfo.stageCount = 2;
-			pipelineCreateInfo.pStages = shaderStages.data();
-			pipelineCreateInfo.pVertexInputState = &vertexInputState;
-
-			VkPipeline pipeline;
-			VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_VulkanDevice->m_LogicalDevice, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &pipeline));
+			pipelineCreateInfo.shaderID = prefilterShaderID;
+			pipelineCreateInfo.vertexAttributes = prefilterShader.shader->vertexAttributes;
+			pipelineCreateInfo.topology = skyboxRenderObject->topology;
+			pipelineCreateInfo.cullMode = skyboxRenderObject->cullMode;
+			pipelineCreateInfo.descriptorSetLayoutIndex = prefilterShaderID;
+			pipelineCreateInfo.bSetDynamicStates = true;
+			pipelineCreateInfo.bEnableAdditiveColorBlending = false;
+			pipelineCreateInfo.subpass = 0;
+			pipelineCreateInfo.depthTestEnable = VK_FALSE;
+			pipelineCreateInfo.depthWriteEnable = VK_FALSE;
+			pipelineCreateInfo.pushConstantRangeCount = pushConstantRanges.size();
+			pipelineCreateInfo.pushConstants = pushConstantRanges.data();
+			CreateGraphicsPipeline(&pipelineCreateInfo);
 
 			// Render
 
@@ -1565,157 +1461,128 @@ namespace flex
 			vkDestroyPipelineLayout(m_VulkanDevice->m_LogicalDevice, pipelinelayout, nullptr);
 		}
 
-		void VulkanRenderer::GenerateBRDFLUT(VulkanTexture* brdfTexture)
+		void VulkanRenderer::GenerateBRDFLUT()
 		{
-			const VkFormat format = VK_FORMAT_R16G16_SFLOAT;
-			const u32 dim = (u32)m_BRDFSize.x;
-			assert(dim <= MAX_TEXTURE_DIM);
-
-			VkAttachmentDescription attachmentDesc = vks::attachmentDescription(format, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			VkAttachmentReference colorReference = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
-
-			VkSubpassDescription subpassDescription = {};
-			subpassDescription.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-			subpassDescription.colorAttachmentCount = 1;
-			subpassDescription.pColorAttachments = &colorReference;
-
-			std::array<VkSubpassDependency, 2> dependencies;
-			dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
-			dependencies[0].dstSubpass = 0;
-			dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-			dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-			dependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-			dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-			dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-			dependencies[1].srcSubpass = 0;
-			dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
-			dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-			dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-			dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-			dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-			dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-			VkRenderPassCreateInfo renderPassCreateInfo = vks::renderPassCreateInfo();
-			renderPassCreateInfo.attachmentCount = 1;
-			renderPassCreateInfo.pAttachments = &attachmentDesc;
-			renderPassCreateInfo.subpassCount = 1;
-			renderPassCreateInfo.pSubpasses = &subpassDescription;
-			renderPassCreateInfo.dependencyCount = dependencies.size();
-			renderPassCreateInfo.pDependencies = dependencies.data();
-
-			VkRenderPass renderPass;
-			VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassCreateInfo, nullptr, &renderPass));
-
-			VkFramebufferCreateInfo framebufferCreateInfo = vks::framebufferCreateInfo(renderPass);
-			framebufferCreateInfo.attachmentCount = 1;
-			framebufferCreateInfo.pAttachments = &brdfTexture->imageView;
-			framebufferCreateInfo.width = dim;
-			framebufferCreateInfo.height = dim;
-			framebufferCreateInfo.layers = 1;
-
-			VkFramebuffer framebuffer;
-			VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &framebufferCreateInfo, nullptr, &framebuffer));
-
-			// Descriptors
-			VkDescriptorSetLayout descriptorsetlayout;
-			VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = vks::descriptorSetLayoutCreateInfo(0, nullptr);
-			VK_CHECK_RESULT(vkCreateDescriptorSetLayout(m_VulkanDevice->m_LogicalDevice, &descriptorSetLayoutCreateInfo, nullptr, &descriptorsetlayout));
-
-			// Descriptor Pool
-			VkDescriptorPoolSize poolSize = vks::descriptorPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1);
-			VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = vks::descriptorPoolCreateInfo(1, &poolSize, 2);
-			VkDescriptorPool descriptorPool;
-			VK_CHECK_RESULT(vkCreateDescriptorPool(m_VulkanDevice->m_LogicalDevice, &descriptorPoolCreateInfo, nullptr, &descriptorPool));
-
-			// Descriptor sets
-			VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = vks::descriptorSetAllocateInfo(descriptorPool, &descriptorsetlayout, 1);
-			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
-			VK_CHECK_RESULT(vkAllocateDescriptorSets(m_VulkanDevice->m_LogicalDevice, &descriptorSetAllocateInfo, &descriptorSet));
-
-			// Pipeline layout
-			VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = vks::pipelineLayoutCreateInfo(1, &descriptorsetlayout);
-			VkPipelineLayout pipelinelayout;
-			VK_CHECK_RESULT(vkCreatePipelineLayout(m_VulkanDevice->m_LogicalDevice, &pipelineLayoutCreateInfo, nullptr, &pipelinelayout));
-
-			// Pipeline
-			VkPipelineInputAssemblyStateCreateInfo pipelineInputAssemblyStateCreateInfo = vks::pipelineInputAssemblyStateCreateInfo(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, 0, VK_FALSE);
-			VkPipelineRasterizationStateCreateInfo pipelineRasterizationStateCreateInfo = vks::pipelineRasterizationStateCreateInfo(VK_POLYGON_MODE_FILL, VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
-			VkPipelineColorBlendAttachmentState pipelineColorBlendAttachmentState = vks::pipelineColorBlendAttachmentState(0xF, VK_FALSE);
-			VkPipelineColorBlendStateCreateInfo pipelineColorBlendStateCreateInfo = vks::pipelineColorBlendStateCreateInfo(1, &pipelineColorBlendAttachmentState);
-			VkPipelineDepthStencilStateCreateInfo pipelineDepthStencilStateCreateInfo = vks::pipelineDepthStencilStateCreateInfo(VK_FALSE, VK_FALSE, VK_COMPARE_OP_GREATER_OR_EQUAL);
-			VkPipelineViewportStateCreateInfo pipelineViewportStateCreateInfo = vks::pipelineViewportStateCreateInfo(1, 1);
-			VkPipelineMultisampleStateCreateInfo pipelineMultisampleStateCreateInfo = vks::pipelineMultisampleStateCreateInfo(VK_SAMPLE_COUNT_1_BIT);
-			std::vector<VkDynamicState> dynamicStateEnables = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
-			VkPipelineDynamicStateCreateInfo pipelineDynamicStateCreateInfo = vks::pipelineDynamicStateCreateInfo(dynamicStateEnables);
-			VkPipelineVertexInputStateCreateInfo emptyInputState = vks::pipelineVertexInputStateCreateInfo(0, nullptr, 0, nullptr);
-
-			// TODO: Bring shader compilation out to function
-			ShaderID brdfShaderID;
-			if (!GetShaderID("brdf", brdfShaderID))
+			if (!bRenderedBRDFLUT)
 			{
-				PrintError("Failed to find brdf shader!\n");
+				const VkFormat format = VK_FORMAT_R16G16_SFLOAT;
+				const u32 dim = (u32)m_BRDFSize.x;
+				assert(dim <= MAX_TEXTURE_DIM);
+
+				VkAttachmentDescription attachmentDesc = vks::attachmentDescription(format, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+				VkAttachmentReference colorReference = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+
+				VkSubpassDescription subpassDescription = {};
+				subpassDescription.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+				subpassDescription.colorAttachmentCount = 1;
+				subpassDescription.pColorAttachments = &colorReference;
+
+				std::array<VkSubpassDependency, 2> dependencies;
+				dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+				dependencies[0].dstSubpass = 0;
+				dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+				dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+				dependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+				dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+				dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+				dependencies[1].srcSubpass = 0;
+				dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+				dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+				dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+				dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+				dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+				dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+				VkRenderPassCreateInfo renderPassCreateInfo = vks::renderPassCreateInfo();
+				renderPassCreateInfo.attachmentCount = 1;
+				renderPassCreateInfo.pAttachments = &attachmentDesc;
+				renderPassCreateInfo.subpassCount = 1;
+				renderPassCreateInfo.pSubpasses = &subpassDescription;
+				renderPassCreateInfo.dependencyCount = dependencies.size();
+				renderPassCreateInfo.pDependencies = dependencies.data();
+
+				VkRenderPass renderPass;
+				VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassCreateInfo, nullptr, &renderPass));
+
+				VkFramebufferCreateInfo framebufferCreateInfo = vks::framebufferCreateInfo(renderPass);
+				framebufferCreateInfo.attachmentCount = 1;
+				framebufferCreateInfo.pAttachments = &m_BRDFTexture->imageView;
+				framebufferCreateInfo.width = dim;
+				framebufferCreateInfo.height = dim;
+				framebufferCreateInfo.layers = 1;
+
+				VkFramebuffer framebuffer = VK_NULL_HANDLE;
+				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &framebufferCreateInfo, nullptr, &framebuffer));
+
+				ShaderID brdfShaderID;
+				if (!GetShaderID("brdf", brdfShaderID))
+				{
+					PrintError("Failed to find brdf shader!\n");
+				}
+				VulkanShader& brdfShader = m_Shaders[brdfShaderID];
+
+				VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
+				DescriptorSetCreateInfo brdfDescriptorCreateInfo = {};
+				brdfDescriptorCreateInfo.descriptorSet = &descriptorSet;
+				brdfDescriptorCreateInfo.descriptorSetLayout = &m_DescriptorSetLayouts[brdfShaderID];
+				brdfDescriptorCreateInfo.shaderID = brdfShaderID;
+				brdfDescriptorCreateInfo.uniformBuffer = &brdfShader.uniformBuffer;
+				CreateDescriptorSet(&brdfDescriptorCreateInfo);
+
+				VkPipelineLayout pipelinelayout = VK_NULL_HANDLE;
+				VkPipeline pipeline = VK_NULL_HANDLE;
+				GraphicsPipelineCreateInfo pipelineCreateInfo = {};
+				pipelineCreateInfo.graphicsPipeline = &pipeline;
+				pipelineCreateInfo.pipelineLayout = &pipelinelayout;
+				pipelineCreateInfo.renderPass = renderPass;
+				pipelineCreateInfo.shaderID = brdfShaderID;
+				pipelineCreateInfo.vertexAttributes = brdfShader.shader->vertexAttributes;
+				pipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+				pipelineCreateInfo.cullMode = VK_CULL_MODE_NONE;
+				pipelineCreateInfo.descriptorSetLayoutIndex = brdfShaderID;
+				pipelineCreateInfo.bSetDynamicStates = true;
+				pipelineCreateInfo.bEnableAdditiveColorBlending = false;
+				pipelineCreateInfo.subpass = 0;
+				pipelineCreateInfo.depthTestEnable = VK_FALSE;
+				pipelineCreateInfo.depthWriteEnable = VK_FALSE;
+				CreateGraphicsPipeline(&pipelineCreateInfo);
+
+				// Render
+
+				VkClearValue clearValues[1];
+				clearValues[0].color = m_ClearColor;
+
+				VkRenderPassBeginInfo renderPassBeginInfo = vks::renderPassBeginInfo(renderPass);
+				renderPassBeginInfo.renderArea.extent = { dim, dim };
+				renderPassBeginInfo.clearValueCount = 1;
+				renderPassBeginInfo.pClearValues = clearValues;
+				renderPassBeginInfo.framebuffer = framebuffer;
+
+				VkCommandBuffer cmdBuf = m_CommandBufferManager.CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
+				vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+				VkViewport viewport = vks::viewportFlipped((real)dim, (real)dim, 0.0f, 1.0f);
+				vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
+
+				VkRect2D scissor = vks::scissor(0, 0, dim, dim);
+				vkCmdSetScissor(cmdBuf, 0, 1, &scissor);
+
+				vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+				vkCmdDraw(cmdBuf, 3, 1, 0, 0);
+				vkCmdEndRenderPass(cmdBuf);
+
+				m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
+
+				vkQueueWaitIdle(m_GraphicsQueue);
+
+				vkDestroyPipeline(m_VulkanDevice->m_LogicalDevice, pipeline, nullptr);
+				vkDestroyPipelineLayout(m_VulkanDevice->m_LogicalDevice, pipelinelayout, nullptr);
+				vkDestroyRenderPass(m_VulkanDevice->m_LogicalDevice, renderPass, nullptr);
+				vkDestroyFramebuffer(m_VulkanDevice->m_LogicalDevice, framebuffer, nullptr);
+
+				bRenderedBRDFLUT = true;
 			}
-			VulkanShader& brdfShader = m_Shaders[brdfShaderID];
-
-			std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages;
-			shaderStages[0] = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, brdfShader.vertShaderModule);
-			shaderStages[1] = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, brdfShader.fragShaderModule);
-
-			VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
-			pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-			pipelineCreateInfo.layout = pipelinelayout;
-			pipelineCreateInfo.renderPass = renderPass;
-			pipelineCreateInfo.flags = 0;
-			pipelineCreateInfo.basePipelineIndex = -1;
-			pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
-			pipelineCreateInfo.pInputAssemblyState = &pipelineInputAssemblyStateCreateInfo;
-			pipelineCreateInfo.pRasterizationState = &pipelineRasterizationStateCreateInfo;
-			pipelineCreateInfo.pColorBlendState = &pipelineColorBlendStateCreateInfo;
-			pipelineCreateInfo.pMultisampleState = &pipelineMultisampleStateCreateInfo;
-			pipelineCreateInfo.pViewportState = &pipelineViewportStateCreateInfo;
-			pipelineCreateInfo.pDepthStencilState = &pipelineDepthStencilStateCreateInfo;
-			pipelineCreateInfo.pDynamicState = &pipelineDynamicStateCreateInfo;
-			pipelineCreateInfo.stageCount = shaderStages.size();
-			pipelineCreateInfo.pStages = shaderStages.data();
-			pipelineCreateInfo.pVertexInputState = &emptyInputState;
-
-			VkPipeline pipeline;
-			VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_VulkanDevice->m_LogicalDevice, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &pipeline));
-
-			// Render
-
-			VkClearValue clearValues[1];
-			clearValues[0].color = m_ClearColor;
-
-			VkRenderPassBeginInfo renderPassBeginInfo = vks::renderPassBeginInfo(renderPass);
-			renderPassBeginInfo.renderArea.extent = { dim, dim };
-			renderPassBeginInfo.clearValueCount = 1;
-			renderPassBeginInfo.pClearValues = clearValues;
-			renderPassBeginInfo.framebuffer = framebuffer;
-
-			VkCommandBuffer cmdBuf = m_CommandBufferManager.CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
-			vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-			VkViewport viewport = vks::viewportFlipped((real)dim, (real)dim, 0.0f, 1.0f);
-			vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
-
-			VkRect2D scissor = vks::scissor(0, 0, dim, dim);
-			vkCmdSetScissor(cmdBuf, 0, 1, &scissor);
-
-			vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-			vkCmdDraw(cmdBuf, 3, 1, 0, 0); // TODO: Does this only work because there are no vert attributes?
-			vkCmdEndRenderPass(cmdBuf);
-			m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
-
-			vkQueueWaitIdle(m_GraphicsQueue);
-
-			vkDestroyPipeline(m_VulkanDevice->m_LogicalDevice, pipeline, nullptr);
-			vkDestroyPipelineLayout(m_VulkanDevice->m_LogicalDevice, pipelinelayout, nullptr);
-			vkDestroyRenderPass(m_VulkanDevice->m_LogicalDevice, renderPass, nullptr);
-			vkDestroyFramebuffer(m_VulkanDevice->m_LogicalDevice, framebuffer, nullptr);
-			vkDestroyDescriptorSetLayout(m_VulkanDevice->m_LogicalDevice, descriptorsetlayout, nullptr);
-			vkDestroyDescriptorPool(m_VulkanDevice->m_LogicalDevice, descriptorPool, nullptr);
 		}
 
 		MaterialID VulkanRenderer::InitializeMaterial(const MaterialCreateInfo* createInfo, MaterialID matToReplace /*= InvalidMaterialID*/)
@@ -1809,7 +1676,6 @@ namespace flex
 					m_BRDFTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "BRDF", m_BRDFSize.x, m_BRDFSize.y, 1);
 					m_BRDFTexture->CreateEmpty(VK_FORMAT_R16G16_SFLOAT, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 					m_LoadedTextures.push_back(m_BRDFTexture);
-					GenerateBRDFLUT(m_BRDFTexture);
 				}
 				mat.brdfLUT = m_BRDFTexture;
 			}
@@ -5295,7 +5161,15 @@ namespace flex
 			std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
 			GetVertexAttributeDescriptions(createInfo->vertexAttributes, attributeDescriptions);
 
-			VkPipelineVertexInputStateCreateInfo vertexInputInfo = vks::pipelineVertexInputStateCreateInfo(1, &bindingDescription, attributeDescriptions.size(), attributeDescriptions.data());
+			VkPipelineVertexInputStateCreateInfo vertexInputInfo;
+			if (vertexStride > 0)
+			{
+				vertexInputInfo = vks::pipelineVertexInputStateCreateInfo(1, &bindingDescription, attributeDescriptions.size(), attributeDescriptions.data());
+			}
+			else
+			{
+				vertexInputInfo = vks::pipelineVertexInputStateCreateInfo(0, nullptr, 0, nullptr);
+			}
 
 			VkPipelineInputAssemblyStateCreateInfo inputAssembly = vks::pipelineInputAssemblyStateCreateInfo(createInfo->topology, 0, VK_FALSE);
 
@@ -5360,7 +5234,6 @@ namespace flex
 
 			assert(createInfo->pushConstantRangeCount == 0 || createInfo->pushConstants != nullptr);
 
-
 			if (createInfo->pipelineCache)
 			{
 				vkDestroyPipelineCache(m_VulkanDevice->m_LogicalDevice, *createInfo->pipelineCache, nullptr);
@@ -5404,8 +5277,6 @@ namespace flex
 
 			VkPipelineCache pipelineCache = createInfo->pipelineCache ? *createInfo->pipelineCache : VK_NULL_HANDLE;
 
-			// TODO: Wrap this pipeline in a VDeleter so we can just call .replace()
-			//vkDestroyPipeline(m_VulkanDevice->m_LogicalDevice, *createInfo->grahpicsPipeline, nullptr);
 			VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_VulkanDevice->m_LogicalDevice, pipelineCache, 1, &pipelineInfo, nullptr, createInfo->graphicsPipeline));
 		}
 

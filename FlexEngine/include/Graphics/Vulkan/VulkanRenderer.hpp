@@ -158,7 +158,7 @@ namespace flex
 			void GenerateCubemapFromHDR(VulkanRenderObject* renderObject, const std::string& environmentMapPath);
 			void GenerateIrradianceSampler(VulkanRenderObject* renderObject);
 			void GeneratePrefilteredCube(VulkanRenderObject* renderObject);
-			void GenerateBRDFLUT(VulkanTexture* brdfTexture);
+			void GenerateBRDFLUT();
 
 			// Draw all static geometry to the given render object's cubemap texture
 			void CaptureSceneToCubemap(RenderID cubemapRenderID);
@@ -324,6 +324,7 @@ namespace flex
 			glm::vec2i m_CubemapFramebufferSize;
 			glm::vec2i m_BRDFSize;
 			VulkanTexture* m_BRDFTexture = nullptr;
+			bool bRenderedBRDFLUT = false;
 
 			FrameBuffer* m_OffScreenFrameBuf = nullptr; // GBuffer frame buffer
 			FrameBufferAttachment* m_OffScreenDepthAttachment = nullptr;
