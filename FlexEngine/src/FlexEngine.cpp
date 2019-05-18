@@ -120,27 +120,11 @@ namespace flex
 			m_RenderDocSettingsAbsFilePath = renderDocSettingsDirAbs + m_RenderDocSettingsFileName;
 		}
 
-		RendererID preferredInitialRenderer = RendererID::GL;
-
-		m_RendererIndex = RendererID::_LAST_ELEMENT;
-		m_RendererCount = 0;
-
 #if COMPILE_OPEN_GL
-		++m_RendererCount;
-		if (m_RendererIndex == RendererID::_LAST_ELEMENT || preferredInitialRenderer == RendererID::GL)
-		{
-			m_RendererIndex = RendererID::GL;
-		}
+		m_RendererName = "Open GL";
+#elif COMPILE_VULKAN
+		m_RendererName = "Vulkan";
 #endif
-#if COMPILE_VULKAN
-		++m_RendererCount;
-		if (m_RendererIndex == RendererID::_LAST_ELEMENT || preferredInitialRenderer == RendererID::VULKAN)
-		{
-			m_RendererIndex = RendererID::VULKAN;
-		}
-#endif
-
-		m_RendererName = RenderIDToString(m_RendererIndex);
 
 		InitializeLogger();
 
@@ -181,17 +165,17 @@ namespace flex
 #elif DEVELOPMENT
 		const char* configStr = "Development";
 #elif SHIPPING
-		const char* configStr = "Release";
+#if SYMBOLS
+		const char* configStr = "Shipping (with symbols)";
+#else
+		const char* configStr = "Shipping";
+#endif
 #else
 		assert(false);
 #endif
 
 		std::string nowStr = GetDateString_YMDHMS();
 		Print("FlexEngine [%s] - Config: [%s x32] - Compiler: [%s %s]\n", nowStr.c_str(), configStr, m_CompilerName.c_str(), m_CompilerVersion.c_str());
-
-		assert(m_RendererCount > 0); // At least one renderer must be enabled! (see stdafx.h)
-		Print("%u renderer%s enabled, Current renderer: %s\n",
-			m_RendererCount, (m_RendererCount > 1 ? "s" : ""), m_RendererName.c_str());
 
 		DeselectCurrentlySelectedObjects();
 
@@ -435,24 +419,11 @@ namespace flex
 
 		g_Window->Create(glm::vec2i(newWindowSizeX, newWindowSizeY), glm::vec2i(newWindowPosX, newWindowPosY));
 
-
-#if COMPILE_VULKAN
-		if (m_RendererIndex == RendererID::VULKAN)
-		{
-			g_Renderer = new vk::VulkanRenderer();
-		}
-#endif
 #if COMPILE_OPEN_GL
-		if (m_RendererIndex == RendererID::GL)
-		{
-			g_Renderer = new gl::GLRenderer();
-		}
+		g_Renderer = new gl::GLRenderer();
+#elif COMPILE_VULKAN
+		g_Renderer = new vk::VulkanRenderer();
 #endif
-		if (g_Renderer == nullptr)
-		{
-			PrintError("Failed to create a renderer!\n");
-			return;
-		}
 	}
 
 	void FlexEngine::InitializeWindowAndRenderer()
@@ -475,18 +446,6 @@ namespace flex
 		{
 			g_Window->Destroy();
 			delete g_Window;
-		}
-	}
-
-	std::string FlexEngine::RenderIDToString(RendererID rendererID) const
-	{
-		switch (rendererID)
-		{
-		case RendererID::VULKAN: return "Vulkan";
-		case RendererID::GL: return "OpenGL";
-		case RendererID::_LAST_ELEMENT:  return "Invalid renderer ID";
-		default:
-			return "Unknown";
 		}
 	}
 
@@ -1272,7 +1231,6 @@ namespace flex
 					static const std::string rendererNameStringStr = std::string("Current renderer: " + m_RendererName);
 					static const char* renderNameStr = rendererNameStringStr.c_str();
 					ImGui::TextUnformatted(renderNameStr);
-					ImGui::Text("Number of available renderers: %d", m_RendererCount);
 					ImGui::Text("Frames rendered: %d", g_Renderer->GetFramesRenderedCount());
 					ImGui::Text("Elapsed time (unpaused): %.2fs", g_SecElapsedSinceProgramStart);
 					ImGui::Text("Selected object count: %d", m_CurrentlySelectedObjects.size());

@@ -83,14 +83,6 @@ namespace flex
 		u32 mainProcessID = 0;
 
 	private:
-		enum class RendererID
-		{
-			VULKAN,
-			GL,
-
-			_LAST_ELEMENT
-		};
-
 		EventReply OnMouseButtonEvent(MouseButton button, KeyAction action);
 		MouseButtonCallback<FlexEngine> m_MouseButtonCallback;
 
@@ -117,8 +109,6 @@ namespace flex
 		void DestroyWindowAndRenderer();
 		void SetupImGuiStyles();
 		void DrawImGuiObjects();
-
-		std::string RenderIDToString(RendererID rendererID) const;
 
 		void DeselectCurrentlySelectedObjects();
 
@@ -158,7 +148,6 @@ namespace flex
 
 		void GenerateRayAtMousePos(btVector3& outRayStart, btVector3& outRayEnd);
 
-		u32 m_RendererCount = 0;
 		bool m_bRunning = false;
 
 		bool m_bRenderImGui = true;
@@ -183,7 +172,6 @@ namespace flex
 		real m_ImGuiMainWindowWidthMax = 0.0f;
 		real m_ImGuiMainWindowWidth = 350.0f;
 
-		RendererID m_RendererIndex = RendererID::_LAST_ELEMENT;
 		std::string m_RendererName;
 		std::string m_CompilerName;
 		std::string m_CompilerVersion;
