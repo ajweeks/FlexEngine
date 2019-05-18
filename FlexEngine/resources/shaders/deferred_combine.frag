@@ -35,7 +35,6 @@ uniform vec4 camPos;
 uniform mat4 invView;
 uniform mat4 invProj;
 uniform bool enableIrradianceSampler;
-uniform float exposure = 1.0;
 uniform mat4 lightViewProj;
 uniform bool castShadows = true;
 uniform float shadowDarkness = 1.0;
@@ -265,8 +264,6 @@ void main()
 	// 	fract(worldPos.y*0.1)*0.2,
 	// 	100.0f),
 	// 		0.8f);
-
-	color *= exposure;
 
 	fragmentColor = vec4(color, 1.0);
 }

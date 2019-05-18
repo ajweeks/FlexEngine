@@ -1171,7 +1171,6 @@ namespace flex
 		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW_INV);
 		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PROJECTION_INV);
 		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_LIGHT_VIEW_PROJ);
-		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_EXPOSURE);
 		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_POINT_LIGHTS);
 		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_DIR_LIGHT);
 		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SSAO_SAMPLING_DATA);
@@ -1205,7 +1204,6 @@ namespace flex
 		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PROJECTION);
 		//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_LIGHT_VIEW_PROJ);
 		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_CAM_POS);
-		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_EXPOSURE);
 		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_POINT_LIGHTS);
 		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_DIR_LIGHT);
 		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_IRRADIANCE_SAMPLER);
@@ -2346,6 +2344,17 @@ namespace flex
 
 		glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 		real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
+
+		u32 totalCharCount = 0;
+		for (BitmapFont* font : m_FontsWS)
+		{
+			const std::vector<TextCache>& caches = font->GetTextCaches();
+			for (const TextCache& textCache : caches)
+			{
+				totalCharCount += textCache.str.length();
+			}
+		}
+		outTextVertices.reserve(totalCharCount); // Slightly high estimate due to whitespaces
 
 		for (BitmapFont* font : m_FontsSS)
 		{

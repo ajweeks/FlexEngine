@@ -2054,8 +2054,6 @@ namespace flex
 			{
 				UpdateDynamicUniformBuffer(i);
 			}
-
-			UpdateDynamicUniformBuffer(m_GBufferQuadRenderID);
 		}
 
 		void VulkanRenderer::Draw()
@@ -4000,10 +3998,6 @@ namespace flex
 
 			VkRect2D scissor = vks::scissor(0u, 0u, (u32)frameBufferSize.x, (u32)frameBufferSize.y);
 			vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
-
-			// TODO: Find out how font sizes actually work
-			//real scale = ((real)font->GetFontSize()) / 12.0f + sin(g_SecElapsedSinceProgramStart) * 2.0f;
-			glm::vec3 scaleVec(1.0f);
 
 			glm::mat4 transformMat = g_CameraManager->CurrentCamera()->GetViewProjection();
 
