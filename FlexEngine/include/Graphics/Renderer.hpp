@@ -226,6 +226,9 @@ namespace flex
 		// Returns true if the parent-child tree changed during this call
 		bool DrawImGuiGameObjectNameAndChildren(GameObject* gameObject);
 
+		void DrawScreenSpaceText();
+		void DrawWorldSpaceText();
+
 		bool LoadFontMetrics(const std::vector<char>& fileMemory,
 			FT_Library& ft,
 			FontMetaData& metaData,
@@ -253,7 +256,7 @@ namespace flex
 
 		std::vector<Shader> m_BaseShaders;
 
-		PointLightData* m_PointLights;
+		PointLightData* m_PointLights = nullptr;
 		i32 m_NumPointLightsEnabled = 0;
 		DirectionalLight* m_DirectionalLight = nullptr;
 
