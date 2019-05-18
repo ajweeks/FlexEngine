@@ -43,9 +43,10 @@ renderdoc.ini
 
 sh.exe.stackdump
 
-AdditionalFiles/*.cap
-AdditionalFiles/*.nsight-gfxproj
-AdditionalFiles/*.header_hero
+*.cap
+*.nsight-gfxproj
+*.header_hero
+*.amplxeproj
 AdditionalFiles/flex-cppcheck-build-dir/**
 
 
