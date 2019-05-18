@@ -3705,27 +3705,8 @@ namespace flex
 			VulkanShader& vkShader = m_Shaders[shaderID];
 			Shader& shader = *vkShader.shader;
 
-			switch (shader.renderPassType)
-			{
-			case FlexRenderPass::DEFERRED:
-				vkShader.renderPass = m_OffScreenFrameBuf->renderPass;
-				break;
-			case FlexRenderPass::DEFERRED_COMBINE:
-				vkShader.renderPass = m_DeferredCombineRenderPass;
-				break;
-			case FlexRenderPass::FORWARD:
-				vkShader.renderPass = m_ForwardRenderPass;
-				break;
-			case FlexRenderPass::SSAO:
-				vkShader.renderPass = m_SSAORenderPass;
-				break;
-			case FlexRenderPass::SSAO_BLUR:
-				vkShader.renderPass = m_SSAOBlurHRenderPass;
-				break;
-			default:
-				PrintError("Shader's render pass type was not set!\n %s", shader.name.c_str());
-				ENSURE_NO_ENTRY();
-			}
+			vkShader.renderPass = ResolveRenderPassType(shader.renderPassType, shader.name.c_str());
+			assert(vkShader.renderPass != VK_NULL_HANDLE);
 
 #if 1 // Sanity check
 			assert(!shader.constantBufferUniforms.HasUniform(U_UNIFORM_BUFFER_DYNAMIC));
@@ -4042,6 +4023,22 @@ namespace flex
 			}
 		}
 
+		VkRenderPass VulkanRenderer::ResolveRenderPassType(RenderPassType renderPassType, const char* shaderName)
+		{
+			switch (renderPassType)
+			{
+			case RenderPassType::DEFERRED: return m_OffScreenFrameBuf->renderPass;
+			case RenderPassType::DEFERRED_COMBINE: return m_DeferredCombineRenderPass;
+			case RenderPassType::FORWARD: return m_ForwardRenderPass;
+			case RenderPassType::SSAO: return m_SSAORenderPass;
+			case RenderPassType::SSAO_BLUR: return m_SSAOBlurHRenderPass;
+			default:
+				PrintError("Shader's render pass type was not set!\n %s", shaderName);
+				ENSURE_NO_ENTRY();
+			}
+			return VK_NULL_HANDLE;
+		}
+
 		MaterialID VulkanRenderer::GetNextAvailableMaterialID()
 		{
 			// Return lowest available ID
@@ -4280,6 +4277,11 @@ namespace flex
 
 			CreateRenderPasses();
 			PrepareFrameBuffers();
+
+			for (u32 i = 0; i < m_Shaders.size(); ++i)
+			{
+				m_Shaders[i].renderPass = ResolveRenderPassType(m_Shaders[i].shader->renderPassType, m_Shaders[i].shader->name.c_str());
+			}
 
 			for (u32 i = 0; i < m_RenderObjects.size(); ++i)
 			{

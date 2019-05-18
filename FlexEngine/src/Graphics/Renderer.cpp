@@ -1153,7 +1153,7 @@ namespace flex
 		ShaderID shaderID = 0;
 
 		// Deferred combine
-		m_BaseShaders[shaderID].renderPassType = FlexRenderPass::DEFERRED_COMBINE;
+		m_BaseShaders[shaderID].renderPassType = RenderPassType::DEFERRED_COMBINE;
 		m_BaseShaders[shaderID].bDeferred = false;
 		m_BaseShaders[shaderID].bDepthWriteEnable = false;
 		m_BaseShaders[shaderID].bNeedBRDFLUT = true;
@@ -1188,7 +1188,7 @@ namespace flex
 		++shaderID;
 
 		// Deferred combine cubemap
-		m_BaseShaders[shaderID].renderPassType = FlexRenderPass::DEFERRED_COMBINE;
+		m_BaseShaders[shaderID].renderPassType = RenderPassType::DEFERRED_COMBINE;
 		m_BaseShaders[shaderID].bDeferred = false;
 		m_BaseShaders[shaderID].bDepthWriteEnable = false;
 		m_BaseShaders[shaderID].bNeedBRDFLUT = true;
@@ -1220,7 +1220,7 @@ namespace flex
 		++shaderID;
 
 		// Color
-		m_BaseShaders[shaderID].renderPassType = FlexRenderPass::FORWARD;
+		m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
 		m_BaseShaders[shaderID].bTranslucent = true;
 		m_BaseShaders[shaderID].vertexAttributes =
 			(u32)VertexAttribute::POSITION |
@@ -1235,7 +1235,7 @@ namespace flex
 		++shaderID;
 
 		// PBR
-		m_BaseShaders[shaderID].renderPassType = FlexRenderPass::DEFERRED;
+		m_BaseShaders[shaderID].renderPassType = RenderPassType::DEFERRED;
 		m_BaseShaders[shaderID].numAttachments = 2; // TODO: Work out automatically from samplers?
 		m_BaseShaders[shaderID].bDeferred = true;
 		m_BaseShaders[shaderID].bNeedAlbedoSampler = true;
@@ -1269,7 +1269,7 @@ namespace flex
 		++shaderID;
 
 		// PBR - WORLD SPACE
-		m_BaseShaders[shaderID].renderPassType = FlexRenderPass::DEFERRED;
+		m_BaseShaders[shaderID].renderPassType = RenderPassType::DEFERRED;
 		m_BaseShaders[shaderID].numAttachments = 2;
 		m_BaseShaders[shaderID].bDeferred = true;
 		m_BaseShaders[shaderID].bNeedMetallicSampler = true;
@@ -1304,7 +1304,7 @@ namespace flex
 		++shaderID;
 
 		// Skybox
-		m_BaseShaders[shaderID].renderPassType = FlexRenderPass::FORWARD;
+		m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
 		m_BaseShaders[shaderID].bNeedCubemapSampler = true;
 		m_BaseShaders[shaderID].bNeedPushConstantBlock = true;
 		m_BaseShaders[shaderID].vertexAttributes =
@@ -1321,7 +1321,7 @@ namespace flex
 		++shaderID;
 
 		// Equirectangular to Cube
-		m_BaseShaders[shaderID].renderPassType = FlexRenderPass::FORWARD;
+		m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
 		m_BaseShaders[shaderID].bNeedHDREquirectangularSampler = true;
 		m_BaseShaders[shaderID].bNeedPushConstantBlock = true;
 		m_BaseShaders[shaderID].vertexAttributes =
@@ -1333,7 +1333,7 @@ namespace flex
 		++shaderID;
 
 		// Irradiance
-		m_BaseShaders[shaderID].renderPassType = FlexRenderPass::FORWARD;
+		m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
 		m_BaseShaders[shaderID].bNeedCubemapSampler = true;
 		m_BaseShaders[shaderID].bNeedPushConstantBlock = true;
 		m_BaseShaders[shaderID].vertexAttributes =
@@ -1345,7 +1345,7 @@ namespace flex
 		++shaderID;
 
 		// Prefilter
-		m_BaseShaders[shaderID].renderPassType = FlexRenderPass::FORWARD;
+		m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
 		m_BaseShaders[shaderID].bNeedCubemapSampler = true;
 		m_BaseShaders[shaderID].bNeedPushConstantBlock = true;
 		m_BaseShaders[shaderID].vertexAttributes =
@@ -1358,7 +1358,7 @@ namespace flex
 		++shaderID;
 
 		// BRDF
-		m_BaseShaders[shaderID].renderPassType = FlexRenderPass::FORWARD;
+		m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
 		m_BaseShaders[shaderID].vertexAttributes = 0;
 
 		m_BaseShaders[shaderID].constantBufferUniforms = {};
@@ -1367,7 +1367,7 @@ namespace flex
 		++shaderID;
 
 		// Sprite
-		m_BaseShaders[shaderID].renderPassType = FlexRenderPass::FORWARD;
+		m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
 		m_BaseShaders[shaderID].vertexAttributes =
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::UV;
@@ -1383,7 +1383,7 @@ namespace flex
 		++shaderID;
 
 		// Post processing
-		m_BaseShaders[shaderID].renderPassType = FlexRenderPass::FORWARD;
+		m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
 		m_BaseShaders[shaderID].vertexAttributes =
 			(u32)VertexAttribute::POSITION_2D |
 			(u32)VertexAttribute::UV;
@@ -1399,7 +1399,7 @@ namespace flex
 		++shaderID;
 
 		// Post FXAA
-		m_BaseShaders[shaderID].renderPassType = FlexRenderPass::FORWARD;
+		m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
 		m_BaseShaders[shaderID].vertexAttributes =
 			(u32)VertexAttribute::POSITION_2D |
 			(u32)VertexAttribute::UV;
@@ -1412,7 +1412,7 @@ namespace flex
 		++shaderID;
 
 		// Compute SDF
-		m_BaseShaders[shaderID].renderPassType = FlexRenderPass::DEFERRED;
+		m_BaseShaders[shaderID].renderPassType = RenderPassType::DEFERRED;
 		m_BaseShaders[shaderID].vertexAttributes =
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::UV;
@@ -1432,7 +1432,7 @@ namespace flex
 		++shaderID;
 
 		// Font SS
-		m_BaseShaders[shaderID].renderPassType = FlexRenderPass::FORWARD;
+		m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
 		m_BaseShaders[shaderID].bDynamic = true;
 		m_BaseShaders[shaderID].dynamicVertexBufferSize = 1024 * 1024; // TODO
 		m_BaseShaders[shaderID].vertexAttributes =
@@ -1453,7 +1453,7 @@ namespace flex
 		++shaderID;
 
 		// Font WS
-		m_BaseShaders[shaderID].renderPassType = FlexRenderPass::FORWARD;
+		m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
 		m_BaseShaders[shaderID].bDynamic = true;
 		m_BaseShaders[shaderID].dynamicVertexBufferSize = 1024 * 1024; // TODO
 		m_BaseShaders[shaderID].vertexAttributes =
@@ -1477,7 +1477,7 @@ namespace flex
 		++shaderID;
 
 		// Shadow
-		m_BaseShaders[shaderID].renderPassType = FlexRenderPass::FORWARD;
+		m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
 		m_BaseShaders[shaderID].vertexAttributes =
 			(u32)VertexAttribute::POSITION;
 
@@ -1489,7 +1489,7 @@ namespace flex
 		++shaderID;
 
 		// SSAO
-		m_BaseShaders[shaderID].renderPassType = FlexRenderPass::SSAO;
+		m_BaseShaders[shaderID].renderPassType = RenderPassType::SSAO;
 		m_BaseShaders[shaderID].bNeedDepthSampler = true;
 		m_BaseShaders[shaderID].bNeedNoiseSampler = true;
 		m_BaseShaders[shaderID].vertexAttributes =
@@ -1508,7 +1508,7 @@ namespace flex
 		++shaderID;
 
 		// SSAO Blur
-		m_BaseShaders[shaderID].renderPassType = FlexRenderPass::SSAO_BLUR;
+		m_BaseShaders[shaderID].renderPassType = RenderPassType::SSAO_BLUR;
 		m_BaseShaders[shaderID].bNeedDepthSampler = true;
 		m_BaseShaders[shaderID].vertexAttributes =
 			(u32)VertexAttribute::POSITION |

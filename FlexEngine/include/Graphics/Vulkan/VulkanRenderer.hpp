@@ -281,6 +281,8 @@ namespace flex
 			void DrawTextSS(VkCommandBuffer commandBuffer);
 			void DrawTextWS(VkCommandBuffer commandBuffer);
 
+			VkRenderPass ResolveRenderPassType(RenderPassType renderPassType, const char* shaderName);
+
 			const u32 MAX_NUM_RENDER_OBJECTS = 4096; // TODO: Not this?
 			std::vector<VulkanRenderObject*> m_RenderObjects;
 			std::map<MaterialID, VulkanMaterial> m_Materials;

@@ -440,7 +440,7 @@ namespace flex
 		u32 CalculateSizeInBytes() const;
 	};
 
-	enum class FlexRenderPass
+	enum class RenderPassType
 	{
 		DEFERRED,
 		DEFERRED_COMBINE,
@@ -497,7 +497,7 @@ namespace flex
 
 		bool bDynamic = false;
 		u32 dynamicVertexBufferSize = 0;
-		FlexRenderPass renderPassType = FlexRenderPass::_NONE;
+		RenderPassType renderPassType = RenderPassType::_NONE;
 	};
 
 	struct SpriteQuadDrawInfo
