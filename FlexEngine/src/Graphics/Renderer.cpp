@@ -883,7 +883,7 @@ namespace flex
 				m_bSSAOStateChanged = true;
 				if (m_bSSAOBlurEnabled)
 				{
-					m_SSAOSamplingData.ssaoEnabled = true;
+					m_SSAOSamplingData.ssaoEnabled = 1;
 				}
 			}
 

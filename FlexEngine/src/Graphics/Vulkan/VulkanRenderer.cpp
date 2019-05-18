@@ -10,6 +10,7 @@ IGNORE_WARNINGS_PUSH
 
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/transform.hpp> // For glm::scale overload
 
 #include <freetype/ftbitmap.h>
 
@@ -703,10 +704,10 @@ namespace flex
 			equirectangularToCubeDescriptorCreateInfo.hdrEquirectangularTexture = m_Materials[equirectangularToCubeMatID].hdrEquirectangularTexture;
 			CreateDescriptorSet(&equirectangularToCubeDescriptorCreateInfo);
 
-			VkPushConstantRange pushConstRange = {};
-			pushConstRange.size = sizeof(Material::PushConstantBlock);
-			pushConstRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-			pushConstRange.offset = 0;
+			std::array<VkPushConstantRange, 1> pushConstantRanges = {};
+			pushConstantRanges[0].offset = 0;
+			pushConstantRanges[0].size = sizeof(Material::PushConstantBlock);
+			pushConstantRanges[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
 			VkPipeline pipeline = VK_NULL_HANDLE;
 			VkPipelineLayout pipelinelayout = VK_NULL_HANDLE;
@@ -724,8 +725,8 @@ namespace flex
 			pipelineCreateInfo.subpass = 0;
 			pipelineCreateInfo.depthTestEnable = VK_FALSE;
 			pipelineCreateInfo.depthWriteEnable = VK_FALSE;
-			pipelineCreateInfo.pushConstantRangeCount = 1;
-			pipelineCreateInfo.pushConstants = &pushConstRange;
+			pipelineCreateInfo.pushConstantRangeCount = pushConstantRanges.size();
+			pipelineCreateInfo.pushConstants = pushConstantRanges.data();
 			CreateGraphicsPipeline(&pipelineCreateInfo);
 
 			// Render
@@ -1012,6 +1013,11 @@ namespace flex
 
 			renderObjectMat.cubemapTexture->UpdateImageDescriptor();
 
+			std::array<VkPushConstantRange, 1> pushConstantRanges = {};
+			pushConstantRanges[0].offset = 0;
+			pushConstantRanges[0].size = sizeof(Material::PushConstantBlock);
+			pushConstantRanges[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
 			VkPipelineLayout pipelinelayout = VK_NULL_HANDLE;
 			VkPipeline pipeline = VK_NULL_HANDLE;
 			GraphicsPipelineCreateInfo pipelineCreateInfo = {};
@@ -1028,6 +1034,8 @@ namespace flex
 			pipelineCreateInfo.subpass = 0;
 			pipelineCreateInfo.depthTestEnable = VK_FALSE;
 			pipelineCreateInfo.depthWriteEnable = VK_FALSE;
+			pipelineCreateInfo.pushConstantRangeCount = pushConstantRanges.size();
+			pipelineCreateInfo.pushConstants = pushConstantRanges.data();
 			CreateGraphicsPipeline(&pipelineCreateInfo);
 
 			// Render
@@ -5248,13 +5256,11 @@ namespace flex
 
 			VkPipelineDepthStencilStateCreateInfo depthStencil = vks::pipelineDepthStencilStateCreateInfo(createInfo->depthTestEnable, createInfo->depthWriteEnable, createInfo->depthCompareOp, createInfo->stencilTestEnable);
 
-			VkPipelineDynamicStateCreateInfo dynamicState = {};
+			VkDynamicState dynamicStates[2] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+			VkPipelineDynamicStateCreateInfo dynamicState = vks::pipelineDynamicStateCreateInfo(2, dynamicStates);
 			VkPipelineDynamicStateCreateInfo* pDynamicState = nullptr;
 			if (createInfo->bSetDynamicStates)
 			{
-				VkDynamicState dynamicStates[2] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
-				dynamicState = vks::pipelineDynamicStateCreateInfo(2, dynamicStates);
-
 				pDynamicState = &dynamicState;
 			}
 
@@ -5295,7 +5301,7 @@ namespace flex
 			depthImageCreateInfo.height = m_SwapChainExtent.height;
 			depthImageCreateInfo.format = depthFormat;
 			depthImageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-			depthImageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+			depthImageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT|VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 			depthImageCreateInfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 			depthImageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
 			VulkanTexture::CreateImage(m_VulkanDevice, m_GraphicsQueue, depthImageCreateInfo);
@@ -5321,7 +5327,10 @@ namespace flex
 			offscreenDepthImageCreateInfo.height = m_SwapChainExtent.height;
 			offscreenDepthImageCreateInfo.format = depthFormat;
 			offscreenDepthImageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-			offscreenDepthImageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
+			offscreenDepthImageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT |
+				VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT |
+				VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
+				VK_IMAGE_USAGE_SAMPLED_BIT;
 			offscreenDepthImageCreateInfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 			offscreenDepthImageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
 			VulkanTexture::CreateImage(m_VulkanDevice, m_GraphicsQueue, offscreenDepthImageCreateInfo);
