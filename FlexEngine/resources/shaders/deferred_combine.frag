@@ -135,7 +135,7 @@ void main()
     vec3 N = texture(normalRoughnessFrameBufferSampler, ex_TexCoord).rgb;
     N = mat3(invView) * N; // view space -> world space
 
-    float ssao = enableSSAO != 0 ? texture(ssaoBlurFrameBufferSampler, ex_TexCoord).r : 1.0f;
+    float ssao = enableSSAO == 1 ? texture(ssaoBlurFrameBufferSampler, ex_TexCoord).r : 1.0f;
 
     float roughness = texture(normalRoughnessFrameBufferSampler, ex_TexCoord).a;
     roughness = max(roughness, 0.045);

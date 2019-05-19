@@ -4159,7 +4159,7 @@ namespace flex
 				}
 				if (material->uniformIDs.ssaoPowExp != -1)
 				{
-					glUniform1f(material->uniformIDs.ssaoPowExp, m_SSAOSamplingData.powExp);
+					glUniform1f(material->uniformIDs.ssaoPowExp, m_SSAOSamplingData.ssaoPowExp);
 				}
 
 			}
