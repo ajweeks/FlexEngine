@@ -10,7 +10,8 @@ solution "Flex"
 	configurations {
 		"Debug",
 		"Development",
-		"Shipping"
+		"Shipping",
+		"Shipping_WithSymbols"
 	}
 
 	platforms {
@@ -96,14 +97,18 @@ end
 
 
 configuration "Debug"
-	defines { "DEBUG" }
+	defines { "DEBUG", "SYMBOLS" }
 	flags { "Symbols", "ExtraWarnings" }
 configuration "Development"
-	defines { "DEVELOPMENT" }
+	defines { "DEVELOPMENT", "SYMBOLS" }
 	flags {"OptimizeSpeed", "Symbols", "ExtraWarnings" }
 configuration "Shipping"
 	defines { "SHIPPING" }
 	flags {"OptimizeSpeed", "No64BitChecks" }
+configuration "Shipping_WithSymbols"
+	defines { "SHIPPING", "SYMBOLS" }
+	flags {"OptimizeSpeed", "Symbols", "No64BitChecks" }
+configuration {}
 
 configuration "vs*"
 	flags { "NoIncrementalLink", "NoEditAndContinue" }
@@ -159,6 +164,8 @@ configuration { "Debug" }
 configuration { "Development" }
 	links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" }
 configuration { "Shipping" }
+	links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" } 
+configuration { "Shipping_WithSymbols" }
 	links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" } 
 configuration {}
 

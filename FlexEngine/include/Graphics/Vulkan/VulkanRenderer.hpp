@@ -366,7 +366,7 @@ namespace flex
 				VK_KHR_MAINTENANCE1_EXTENSION_NAME // For negative viewport height
 			};
 
-#ifdef NDEBUG
+#ifdef SHIPPING
 			const bool m_bEnableValidationLayers = false;
 #else
 			const bool m_bEnableValidationLayers = true;
