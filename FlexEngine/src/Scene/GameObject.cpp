@@ -2722,59 +2722,62 @@ namespace flex
 	{
 		GameObject::DrawImGuiObjects();
 
-		static const ImGuiColorEditFlags colorEditFlags =
-			ImGuiColorEditFlags_NoInputs |
-			ImGuiColorEditFlags_Float |
-			ImGuiColorEditFlags_RGB |
-			ImGuiColorEditFlags_PickerHueWheel |
-			ImGuiColorEditFlags_HDR;
-
-		const std::string objectName("Point Light##" + m_Name);
-		const bool bTreeOpen = ImGui::TreeNode(objectName.c_str());
-		bool bRemovedPointLight = false;
-		bool bEditedPointLightData = false;
-
-		if (ImGui::BeginPopupContextItem())
+		if (ID != InvalidPointLightID)
 		{
-			static const char* removePointLightStr = "Delete";
-			if (ImGui::Button(removePointLightStr))
+			static const ImGuiColorEditFlags colorEditFlags =
+				ImGuiColorEditFlags_NoInputs |
+				ImGuiColorEditFlags_Float |
+				ImGuiColorEditFlags_RGB |
+				ImGuiColorEditFlags_PickerHueWheel |
+				ImGuiColorEditFlags_HDR;
+
+			const std::string objectName("Point Light##" + m_Name);
+			const bool bTreeOpen = ImGui::TreeNode(objectName.c_str());
+			bool bRemovedPointLight = false;
+			bool bEditedPointLightData = false;
+
+			if (ImGui::BeginPopupContextItem())
 			{
-				g_Renderer->RemovePointLight(ID);
-				bRemovedPointLight = true;
-				ImGui::CloseCurrentPopup();
+				static const char* removePointLightStr = "Delete";
+				if (ImGui::Button(removePointLightStr))
+				{
+					g_Renderer->RemovePointLight(ID);
+					bRemovedPointLight = true;
+					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::EndPopup();
 			}
 
-			ImGui::EndPopup();
-		}
-
-		if (!bRemovedPointLight && bTreeOpen)
-		{
-			bool bEnabled = (data.enabled == 1);
-			if (ImGui::Checkbox("Enabled", &bEnabled))
+			if (!bRemovedPointLight && bTreeOpen)
 			{
-				bEditedPointLightData = true;
-				data.enabled = bEnabled ? 1 : 0;
-				m_bVisible = bEnabled;
+				bool bEnabled = (data.enabled == 1);
+				if (ImGui::Checkbox("Enabled", &bEnabled))
+				{
+					bEditedPointLightData = true;
+					data.enabled = bEnabled ? 1 : 0;
+					m_bVisible = bEnabled;
+				}
+
+				glm::vec3 position = m_Transform.GetLocalPosition();
+				if (ImGui::DragFloat3("Position", &position.x, 0.1f))
+				{
+					bEditedPointLightData = true;
+					SetPos(position);
+				}
+				bEditedPointLightData |= ImGui::ColorEdit4("Color ", &data.color.r, colorEditFlags);
+				bEditedPointLightData |= ImGui::SliderFloat("Brightness", &data.brightness, 0.0f, 1000.0f);
 			}
 
-			glm::vec3 position = m_Transform.GetLocalPosition();
-			if (ImGui::DragFloat3("Position", &position.x, 0.1f))
+			if (bEditedPointLightData)
 			{
-				bEditedPointLightData = true;
-				SetPos(position);
+				g_Renderer->UpdatePointLightData(ID, &data);
 			}
-			bEditedPointLightData |= ImGui::ColorEdit4("Color ", &data.color.r, colorEditFlags);
-			bEditedPointLightData |= ImGui::SliderFloat("Brightness", &data.brightness, 0.0f, 1000.0f);
-		}
 
-		if (bEditedPointLightData)
-		{
-			g_Renderer->UpdatePointLightData(ID, &data);
-		}
-
-		if (bTreeOpen)
-		{
-			ImGui::TreePop();
+			if (bTreeOpen)
+			{
+				ImGui::TreePop();
+			}
 		}
 	}
 
