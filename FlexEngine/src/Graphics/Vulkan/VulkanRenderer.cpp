@@ -4709,13 +4709,12 @@ namespace flex
 				VkDescriptorImageInfo imageInfo;
 			};
 
-			// TODO: Clean up nullptr checks somehow?
 			std::vector<DescriptorSetInfo> descriptorSets = {
 				{ U_UNIFORM_BUFFER_CONSTANT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-				// TODO: Should sizeof(VulkanUniformBufferObjectData) be instead, vulkanUniformBufferObjectData.size?
-				createInfo->uniformBuffer->constantBuffer.m_Buffer, sizeof(VulkanUniformBufferObjectData) },
+				createInfo->uniformBuffer->constantBuffer.m_Buffer, createInfo->uniformBuffer->constantBuffer.m_Size },
 
 				{ U_UNIFORM_BUFFER_DYNAMIC, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+				// TODO: Size should be something else...
 				createInfo->uniformBuffer->dynamicBuffer.m_Buffer, sizeof(VulkanUniformBufferObjectData) * m_RenderObjects.size() },
 
 				{ U_ALBEDO_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,

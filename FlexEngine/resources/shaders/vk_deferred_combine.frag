@@ -33,11 +33,13 @@ layout (binding = 0) uniform UBOConstant
 	vec4 camPos;
 	mat4 invView;
 	mat4 invProj;
+	mat4 lightViewProj;
 	DirectionalLight dirLight;
 	PointLight pointLights[NUMBER_POINT_LIGHTS];
 	// SSAO Sampling Data
-	int enableSSAO;
+	int enabled; // TODO: Make specialization constant
 	float ssaoPowExp;
+	vec2 pad;
 } uboConstant;
 
 layout (binding = 1) uniform UBODynamic
@@ -142,7 +144,7 @@ void main()
     vec3 albedo = texture(albedoMetallicTex, ex_TexCoord).rgb;
     float metallic = texture(albedoMetallicTex, ex_TexCoord).a;
 
-    float ssao = uboConstant.enableSSAO != 0 ? texture(ssaoBuffer, ex_TexCoord).r : 1.0f;
+    float ssao = (uboConstant.enabled == 1 ? texture(ssaoBuffer, ex_TexCoord).r : 1.0f);
 
     // fragColor = vec4(ssao, ssao, ssao, 1); return;
 

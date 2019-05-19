@@ -59,7 +59,8 @@ namespace flex
 	struct SSAOSamplingData
 	{
 		i32 ssaoEnabled;
-		real powExp;
+		real ssaoPowExp;
+		real pad[2];
 	};
 
 	struct FXAAData

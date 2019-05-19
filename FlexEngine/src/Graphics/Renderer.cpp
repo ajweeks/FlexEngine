@@ -122,8 +122,9 @@ namespace flex
 		m_SSAOBlurSamplePixelOffset = 2;
 		glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 
-		m_SSAOSamplingData.powExp = 2.0f;
 		m_SSAOSamplingData.ssaoEnabled = 1;
+		m_SSAOSamplingData.ssaoPowExp = 2.0f;
+		m_SSAOSamplingData.pad[0] = m_SSAOSamplingData.pad[1] = 0.0f;
 	}
 
 	void Renderer::Destroy()
@@ -871,7 +872,7 @@ namespace flex
 				m_SSAOSamplingData.ssaoEnabled = bSSAOEnabled ? 1 : 0;
 				if (m_bSSAOBlurEnabled != bSSAOEnabled)
 				{
-					m_bSSAOBlurEnabled = m_SSAOSamplingData.ssaoEnabled;
+					m_bSSAOBlurEnabled = bSSAOEnabled;
 					m_bSSAOStateChanged = true;
 				}
 			}
@@ -896,7 +897,7 @@ namespace flex
 			ImGui::SliderFloat("Radius", &m_SSAOGenData.radius, 0.0001f, 15.0f);
 			ImGui::SliderInt("Blur Radius", &m_SSAOBlurDataConstant.radius, 1, 16);
 			ImGui::SliderInt("Blur Offset Count", &m_SSAOBlurSamplePixelOffset, 1, 10);
-			ImGui::SliderFloat("Pow", &m_SSAOSamplingData.powExp, 0.1f, 10.0f);
+			ImGui::SliderFloat("Pow", &m_SSAOSamplingData.ssaoPowExp, 0.1f, 10.0f);
 
 			ImGui::TreePop();
 		}
@@ -1202,7 +1203,7 @@ namespace flex
 		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
 		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW);
 		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PROJECTION);
-		//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_LIGHT_VIEW_PROJ);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_LIGHT_VIEW_PROJ);
 		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_CAM_POS);
 		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_POINT_LIGHTS);
 		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_DIR_LIGHT);
