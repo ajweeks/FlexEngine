@@ -51,6 +51,11 @@ namespace flex
 
 		//g_EngineInstance->PreSceneChange();
 
+		if (m_CurrentSceneIndex == InvalidID)
+		{
+			m_CurrentSceneIndex = 0;
+		}
+
 		CurrentScene()->Initialize();
 
 		g_Renderer->OnPreSceneChange();
