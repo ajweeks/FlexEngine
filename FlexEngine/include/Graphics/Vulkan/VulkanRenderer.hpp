@@ -171,7 +171,7 @@ namespace flex
 			void CreateSSAODescriptorSets();
 
 			void CreateRenderPass(VkRenderPass* outPass, VkFormat colorFormat, VkImageLayout finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-				bool bKeepInitialContents = false, bool bDepth = false, VkFormat depthFormat = VK_FORMAT_UNDEFINED);
+				bool bKeepInitialContents = false, bool bDepth = false, VkFormat depthFormat = VK_FORMAT_UNDEFINED, VkImageLayout finalDepthLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
 			MaterialID GetNextAvailableMaterialID();
 			RenderID GetNextAvailableRenderID() const;

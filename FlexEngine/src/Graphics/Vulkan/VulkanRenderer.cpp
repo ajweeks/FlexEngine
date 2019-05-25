@@ -4199,244 +4199,28 @@ namespace flex
 
 		void VulkanRenderer::CreateRenderPasses()
 		{
-			// SSAO
-			{
-				VkAttachmentDescription colorAttachment = vks::attachmentDescription(m_SSAOBufferFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-				VkAttachmentReference colorAttachmentRef = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
-
-				std::array<VkSubpassDescription, 1> subpasses;
-				subpasses[0] = {};
-				subpasses[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-				subpasses[0].colorAttachmentCount = 1;
-				subpasses[0].pColorAttachments = &colorAttachmentRef;
-
-				std::array<VkSubpassDependency, 2> dependencies;
-				dependencies[0] = {};
-				dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
-				dependencies[0].dstSubpass = 0;
-				dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-				dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-				dependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-				dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-				dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-				dependencies[1] = {};
-				dependencies[1].srcSubpass = 0;
-				dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
-				dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-				dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-				dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-				dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-				dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-				std::array<VkAttachmentDescription, 1> attachments = { colorAttachment };
-
-				VkRenderPassCreateInfo renderPassInfo = vks::renderPassCreateInfo();
-				renderPassInfo.attachmentCount = attachments.size();
-				renderPassInfo.pAttachments = attachments.data();
-				renderPassInfo.subpassCount = subpasses.size();
-				renderPassInfo.pSubpasses = subpasses.data();
-				renderPassInfo.dependencyCount = dependencies.size();
-				renderPassInfo.pDependencies = dependencies.data();
-
-				// TODO: Add render pass helper
-				VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassInfo, nullptr, m_SSAORenderPass.replace()));
-			}
-
-			// SSAO Blur horizontal pass
-			{
-				VkAttachmentDescription colorAttachment = vks::attachmentDescription(m_SSAOBufferFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-				VkAttachmentReference colorAttachmentRef = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
-
-				std::array<VkSubpassDescription, 1> subpasses;
-				subpasses[0] = {};
-				subpasses[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-				subpasses[0].colorAttachmentCount = 1;
-				subpasses[0].pColorAttachments = &colorAttachmentRef;
-
-				// TODO: Add subpass dependency helpers
-				std::array<VkSubpassDependency, 2> dependencies;
-				dependencies[0] = {};
-				dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
-				dependencies[0].dstSubpass = 0;
-				dependencies[0].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-				dependencies[0].srcAccessMask = 0;
-				dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-				dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-				dependencies[1] = {};
-				dependencies[1].srcSubpass = 0;
-				dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
-				dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-				dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-				dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-				dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-
-				std::array<VkAttachmentDescription, 1> attachments = { colorAttachment };
-
-				VkRenderPassCreateInfo renderPassInfo = vks::renderPassCreateInfo();
-				renderPassInfo.attachmentCount = attachments.size();
-				renderPassInfo.pAttachments = attachments.data();
-				renderPassInfo.subpassCount = subpasses.size();
-				renderPassInfo.pSubpasses = subpasses.data();
-				renderPassInfo.dependencyCount = dependencies.size();
-				renderPassInfo.pDependencies = dependencies.data();
-
-				VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassInfo, nullptr, m_SSAOBlurHRenderPass.replace()));
-			}
-
-			// SSAO Blur vertical pass
-			{
-				VkAttachmentDescription colorAttachment = vks::attachmentDescription(m_SSAOBufferFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-				VkAttachmentReference colorAttachmentRef = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
-
-				std::array<VkSubpassDescription, 1> subpasses;
-				subpasses[0] = {};
-				subpasses[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-				subpasses[0].colorAttachmentCount = 1;
-				subpasses[0].pColorAttachments = &colorAttachmentRef;
-
-
-				std::array<VkSubpassDependency, 2> dependencies;
-				dependencies[0] = {};
-				dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
-				dependencies[0].dstSubpass = 0;
-				dependencies[0].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-				dependencies[0].srcAccessMask = 0;
-				dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-				dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-				dependencies[1] = {};
-				dependencies[1].srcSubpass = 0;
-				dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
-				dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-				dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-				dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-				dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-
-				std::array<VkAttachmentDescription, 1> attachments = { colorAttachment };
-
-				VkRenderPassCreateInfo renderPassInfo = vks::renderPassCreateInfo();
-				renderPassInfo.attachmentCount = attachments.size();
-				renderPassInfo.pAttachments = attachments.data();
-				renderPassInfo.subpassCount = subpasses.size();
-				renderPassInfo.pSubpasses = subpasses.data();
-				renderPassInfo.dependencyCount = dependencies.size();
-				renderPassInfo.pDependencies = dependencies.data();
-
-				VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassInfo, nullptr, m_SSAOBlurVRenderPass.replace()));
-			}
+			CreateRenderPass(m_SSAORenderPass.replace(), m_SSAOBufferFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			CreateRenderPass(m_SSAOBlurHRenderPass.replace(), m_SSAOBufferFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			CreateRenderPass(m_SSAOBlurVRenderPass.replace(), m_SSAOBufferFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 			// Deferred combine render pass
 			{
-				VkAttachmentDescription colorAttachment = vks::attachmentDescription(m_SwapChainImageFormat, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-
-				VkAttachmentReference colorAttachmentRef = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
-
 				// NOTE: We don't need a depth attachment at this point, but we're rendering to the swap chain
 				// frame buffers (which are created using the m_ForwardRenderPass which contains two attachments)
 				VkFormat depthFormat;
 				GetSupportedDepthFormat(m_VulkanDevice->m_PhysicalDevice, &depthFormat);
-				// Offscreen depth will be blitted to swap chain depth after pass
-				VkAttachmentDescription depthAttachment = vks::attachmentDescription(depthFormat, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-				VkAttachmentReference depthAttachmentRef = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
-
-				std::array<VkSubpassDescription, 1> subpasses;
-				subpasses[0] = {};
-				subpasses[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-				subpasses[0].colorAttachmentCount = 1;
-				subpasses[0].pColorAttachments = &colorAttachmentRef;
-				subpasses[0].pDepthStencilAttachment = &depthAttachmentRef;
-
-
-				std::array<VkSubpassDependency, 2> dependencies;
-				dependencies[0] = {};
-				dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
-				dependencies[0].dstSubpass = 0;
-				dependencies[0].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-				dependencies[0].srcAccessMask = 0;
-				dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-				dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-				dependencies[1] = {};
-				dependencies[1].srcSubpass = 0;
-				dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
-				dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-				dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-				dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-				dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-
-				std::array<VkAttachmentDescription, 2> attachments = { colorAttachment, depthAttachment };
-
-				VkRenderPassCreateInfo renderPassInfo = vks::renderPassCreateInfo();
-				renderPassInfo.attachmentCount = attachments.size();
-				renderPassInfo.pAttachments = attachments.data();
-				renderPassInfo.subpassCount = subpasses.size();
-				renderPassInfo.pSubpasses = subpasses.data();
-				renderPassInfo.dependencyCount = dependencies.size();
-				renderPassInfo.pDependencies = dependencies.data();
-
-				VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassInfo, nullptr, m_DeferredCombineRenderPass.replace()));
+				CreateRenderPass(m_DeferredCombineRenderPass.replace(), m_SwapChainImageFormat, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, false,
+					true, depthFormat, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 			}
 
 			// Forward render pass
 			{
-				VkAttachmentDescription colorAttachment = vks::attachmentDescription(m_SwapChainImageFormat, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-				colorAttachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-				colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-
-				VkAttachmentReference colorAttachmentRef = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
-
 				VkFormat depthFormat;
 				GetSupportedDepthFormat(m_VulkanDevice->m_PhysicalDevice, &depthFormat);
-				VkAttachmentDescription depthAttachment = vks::attachmentDescription(depthFormat, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-				depthAttachment.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-				depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 
-				VkAttachmentReference depthAttachmentRef = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
-
-				std::array<VkSubpassDescription, 1> subpasses;
-				subpasses[0] = {};
-				subpasses[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-				subpasses[0].colorAttachmentCount = 1;
-				subpasses[0].pColorAttachments = &colorAttachmentRef;
-				subpasses[0].pDepthStencilAttachment = &depthAttachmentRef;
-
-
-				std::array<VkSubpassDependency, 2> dependencies;
-				dependencies[0] = {};
-				dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
-				dependencies[0].dstSubpass = 0;
-				dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;// VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-				dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-				dependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-				dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-				dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-				dependencies[1] = {};
-				dependencies[1].srcSubpass = 0;
-				dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
-				dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-				dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-				dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-				dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-				dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-				std::array<VkAttachmentDescription, 2> attachments = { colorAttachment, depthAttachment };
-
-				VkRenderPassCreateInfo renderPassInfo = vks::renderPassCreateInfo();
-				renderPassInfo.attachmentCount = attachments.size();
-				renderPassInfo.pAttachments = attachments.data();
-				renderPassInfo.subpassCount = subpasses.size();
-				renderPassInfo.pSubpasses = subpasses.data();
-				renderPassInfo.dependencyCount = dependencies.size();
-				renderPassInfo.pDependencies = dependencies.data();
-
-				VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassInfo, nullptr, m_ForwardRenderPass.replace()));
+				CreateRenderPass(m_ForwardRenderPass.replace(), m_SwapChainImageFormat, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, true, true,
+					depthFormat, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 			}
 		}
 
@@ -7109,11 +6893,11 @@ namespace flex
 		}
 
 		void VulkanRenderer::CreateRenderPass(VkRenderPass* outPass, VkFormat colorFormat, VkImageLayout finalLayout /* = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL */,
-			bool bKeepInitialContents /* = false */, bool bDepth /* = false */, VkFormat depthFormat /* = VK_FORMAT_UNDEFINED */)
+			bool bKeepInitialContents /* = false */, bool bDepth /* = false */, VkFormat depthFormat /* = VK_FORMAT_UNDEFINED */, VkImageLayout finalDepthLayout /* = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL */)
 		{
 			// Color attachment
 			VkAttachmentDescription colorAttachment = vks::attachmentDescription(colorFormat, finalLayout);
-			VkAttachmentDescription depthAttachment = vks::attachmentDescription(depthFormat, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+			VkAttachmentDescription depthAttachment = vks::attachmentDescription(depthFormat, finalDepthLayout);
 
 			if (bKeepInitialContents)
 			{
