@@ -110,7 +110,12 @@ namespace flex
 			virtual bool LoadFont(FontMetaData& fontMetaData, bool bForceRender) override;
 
 			virtual bool LoadShaderCode(ShaderID shaderID) override;
+
 			virtual void SetShaderCount(u32 shaderCount) override;
+
+			virtual void RemoveMaterial(MaterialID materialID) override;
+
+			virtual void FillOutFrameBufferAttachments(std::vector<Pair<std::string, void*>>& outVec) override;
 
 		private:
 
@@ -142,9 +147,6 @@ namespace flex
 			void SetVec3f(ShaderID shaderID, const char* vecName, const glm::vec3& vec);
 			void SetVec4f(ShaderID shaderID, const char* vecName, const glm::vec4& vec);
 			void SetMat4f(ShaderID shaderID, const char* matName, const glm::mat4& mat);
-
-			void GenerateGBuffer();
-			MaterialID GenerateGBufferMaterial();
 
 			// Draw all static geometry to the given render object's cubemap texture
 			void CaptureSceneToCubemap(RenderID cubemapRenderID);
@@ -207,8 +209,6 @@ namespace flex
 			u32 BindDeferredFrameBufferTextures(GLMaterial* glMaterial, u32 startingBinding = 0);
 
 			void CreateOffscreenFrameBuffer(u32* FBO, u32* RBO, const glm::vec2i& size, TextureHandle& handle);
-
-			void RemoveMaterial(MaterialID materialID);
 
 			// Returns true if object was duplicated
 			bool DoTextureSelector(const char* label, const std::vector<GLTexture*>& textures, i32* selectedIndex, bool* bGenerateSampler);
@@ -311,8 +311,6 @@ namespace flex
 
 			glm::mat4 m_CaptureProjection;
 			std::array<glm::mat4, 6> m_CaptureViews;
-
-			GameObject* m_SkyBoxMesh = nullptr;
 
 			MaterialID m_BRDFMatID = InvalidMaterialID;
 

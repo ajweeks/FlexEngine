@@ -5304,122 +5304,22 @@ namespace flex
 			VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &fbufCreateInfo, nullptr, m_CubemapFrameBuffer->frameBuffer.replace()));
 		}
 
-		// TODO: Unify with GLRenderer
-		void VulkanRenderer::GenerateGBuffer()
-		{
-			if (m_gBufferQuadVertexBufferData.vertexData == nullptr)
-			{
-				GenerateGBufferVertexBuffer(true);
-			}
-
-			assert(m_SkyBoxMesh != nullptr);
-			MaterialID skyboxMaterialID = m_SkyBoxMesh->GetMeshComponent()->GetMaterialID();
-
-			const std::string gBufferMatName = "GBuffer material";
-			const std::string gBufferCubeMatName = "GBuffer cubemap material";
-			const std::string gBufferQuadName = "GBuffer quad";
-
-			// Remove existing material if present (this will be true when reloading the scene)
-			{
-				MaterialID existingGBufferQuadMatID = InvalidMaterialID;
-				MaterialID existingGBufferCubeMatID = InvalidMaterialID;
-				// TODO: Don't rely on material names!
-				if (GetMaterialID(gBufferMatName, existingGBufferQuadMatID))
-				{
-					RemoveMaterial(existingGBufferQuadMatID);
-				}
-				if (GetMaterialID(gBufferCubeMatName, existingGBufferCubeMatID))
-				{
-					RemoveMaterial(existingGBufferCubeMatID);
-				}
-
-				for (auto iter = m_PersistentObjects.begin(); iter != m_PersistentObjects.end(); ++iter)
-				{
-					GameObject* gameObject = *iter;
-					if (gameObject->GetName().compare(gBufferQuadName) == 0)
-					{
-						delete gameObject;
-						m_PersistentObjects.erase(iter);
-						break;
-					}
-				}
-
-				if (m_GBufferQuadRenderID != InvalidRenderID)
-				{
-					DestroyRenderObject(m_GBufferQuadRenderID);
-				}
-			}
-
-			{
-				MaterialCreateInfo gBufferMaterialCreateInfo = {};
-				gBufferMaterialCreateInfo.name = gBufferMatName;
-				gBufferMaterialCreateInfo.shaderName = "deferred_combine";
-				gBufferMaterialCreateInfo.enableIrradianceSampler = true;
-				gBufferMaterialCreateInfo.irradianceSamplerMatID = skyboxMaterialID;
-				gBufferMaterialCreateInfo.enablePrefilteredMap = true;
-				gBufferMaterialCreateInfo.prefilterMapSamplerMatID = skyboxMaterialID;
-				gBufferMaterialCreateInfo.enableBRDFLUT = true;
-				gBufferMaterialCreateInfo.renderToCubemap = false;
-				gBufferMaterialCreateInfo.engineMaterial = true;
-				for (const auto& frameBufferAttachment : m_OffScreenFrameBuf->frameBufferAttachments)
-				{
-					gBufferMaterialCreateInfo.sampledFrameBuffers.emplace_back(
-						frameBufferAttachment.first,
-						(void*)&frameBufferAttachment.second.view
-					);
-				}
-
-				MaterialID gBufferMatID = InitializeMaterial(&gBufferMaterialCreateInfo);
-
-				GameObject* gBufferQuadGameObject = new GameObject(gBufferQuadName, GameObjectType::_NONE);
-				m_PersistentObjects.push_back(gBufferQuadGameObject);
-				// NOTE: G-buffer isn't rendered normally, it is handled separately
-				gBufferQuadGameObject->SetVisible(false);
-
-				RenderObjectCreateInfo gBufferQuadCreateInfo = {};
-				gBufferQuadCreateInfo.materialID = gBufferMatID;
-				gBufferQuadCreateInfo.gameObject = gBufferQuadGameObject;
-				gBufferQuadCreateInfo.vertexBufferData = &m_gBufferQuadVertexBufferData;
-				gBufferQuadCreateInfo.cullFace = CullFace::NONE;
-				gBufferQuadCreateInfo.visibleInSceneExplorer = false;
-				gBufferQuadCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
-				gBufferQuadCreateInfo.bDepthWriteEnable = false;
-				gBufferQuadCreateInfo.bSetDynamicStates = true;
-
-				m_GBufferQuadRenderID = InitializeRenderObject(&gBufferQuadCreateInfo);
-
-				m_gBufferQuadVertexBufferData.DescribeShaderVariables(this, m_GBufferQuadRenderID);
-			}
-
-			// Initialize GBuffer cubemap material & mesh
-			{
-				MaterialCreateInfo gBufferCubemapMaterialCreateInfo = {};
-				gBufferCubemapMaterialCreateInfo.name = gBufferCubeMatName;
-				gBufferCubemapMaterialCreateInfo.shaderName = "deferred_combine_cubemap";
-				gBufferCubemapMaterialCreateInfo.enableIrradianceSampler = true;
-				gBufferCubemapMaterialCreateInfo.irradianceSamplerMatID = skyboxMaterialID;
-				gBufferCubemapMaterialCreateInfo.enablePrefilteredMap = true;
-				gBufferCubemapMaterialCreateInfo.prefilterMapSamplerMatID = skyboxMaterialID;
-				gBufferCubemapMaterialCreateInfo.enableBRDFLUT = true;
-				gBufferCubemapMaterialCreateInfo.renderToCubemap = false;
-				gBufferCubemapMaterialCreateInfo.engineMaterial = true;
-				for (const auto& frameBufferAttachment : m_OffScreenFrameBuf->frameBufferAttachments)
-				{
-					gBufferCubemapMaterialCreateInfo.sampledFrameBuffers.emplace_back(
-						frameBufferAttachment.first,
-						(void*)&frameBufferAttachment.second.view
-					);
-				}
-
-				m_CubemapGBufferMaterialID = InitializeMaterial(&gBufferCubemapMaterialCreateInfo);
-			}
-		}
-
 		void VulkanRenderer::RemoveMaterial(MaterialID materialID)
 		{
 			assert(materialID != InvalidMaterialID);
 
 			m_Materials.erase(materialID);
+		}
+
+		void VulkanRenderer::FillOutFrameBufferAttachments(std::vector<Pair<std::string, void*>>& outVec)
+		{
+			for (const auto& frameBufferAttachment : m_OffScreenFrameBuf->frameBufferAttachments)
+			{
+				outVec.emplace_back(
+					frameBufferAttachment.first,
+					(void*)&frameBufferAttachment.second.view
+				);
+			}
 		}
 
 		void VulkanRenderer::PhysicsDebugRender()

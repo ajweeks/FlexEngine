@@ -121,6 +121,10 @@ namespace flex
 
 			virtual void SetShaderCount(u32 shaderCount) override;
 
+			virtual void RemoveMaterial(MaterialID materialID) override;
+
+			virtual void FillOutFrameBufferAttachments(std::vector<Pair<std::string, void*>>& outVec) override;
+
 		private:
 			friend VulkanPhysicsDebugDraw;
 
@@ -196,10 +200,6 @@ namespace flex
 			void PrepareFrameBuffers();
 			void PrepareCubemapFrameBuffer();
 			void PhysicsDebugRender();
-
-			void GenerateGBuffer();
-
-			void RemoveMaterial(MaterialID materialID);
 
 			void CreateUniformBuffers(VulkanShader* shader);
 
@@ -346,7 +346,6 @@ namespace flex
 
 			FrameBuffer* m_CubemapFrameBuffer = nullptr;
 			FrameBufferAttachment* m_CubemapDepthAttachment = nullptr;
-			MaterialID m_CubemapGBufferMaterialID = InvalidMaterialID;
 
 			i32 m_DeferredQuadVertexBufferIndex = -1;
 
@@ -431,8 +430,6 @@ namespace flex
 
 			VkCommandBuffer m_OffScreenCmdBuffer = VK_NULL_HANDLE;
 			VkSemaphore m_OffscreenSemaphore = VK_NULL_HANDLE;
-
-			GameObject* m_SkyBoxMesh = nullptr;
 
 			VkClearColorValue m_ClearColor;
 

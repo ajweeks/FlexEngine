@@ -3747,6 +3747,15 @@ namespace flex
 			m_Materials.erase(materialID);
 		}
 
+		void GLRenderer::FillOutFrameBufferAttachments(std::vector<Pair<std::string, void*>>& outVec)
+		{
+			outVec = {
+				{ "normalRoughnessFrameBufferSampler", &m_gBufferFBO0.id },
+				{ "albedoMetallicFrameBufferSampler", &m_gBufferFBO1.id },
+				{ "ssaoBlurFrameBufferSampler",	m_bSSAOBlurEnabled ? &m_SSAOBlurVFBO.id : &m_SSAOFBO.id },
+			};
+		}
+
 		bool GLRenderer::DoTextureSelector(const char* label,
 										   const std::vector<GLTexture*>& textures,
 										   i32* selectedIndex,
@@ -4420,80 +4429,6 @@ namespace flex
 			{
 				glUniformMatrix4fv(location, 1, GL_FALSE, &mat[0][0]);
 			}
-		}
-
-		void GLRenderer::GenerateGBuffer()
-		{
-			if (m_gBufferQuadVertexBufferData.vertexData == nullptr)
-			{
-				GenerateGBufferVertexBuffer(false);
-			}
-
-			// TODO: Allow user to not set this and have a backup plan (disable deferred rendering?)
-			assert(m_ReflectionProbeMaterialID != InvalidMaterialID);
-
-			std::string gBufferMatName = "GBuffer material";
-			std::string gBufferName = "GBuffer quad";
-			// Remove existing material if present (this will be true when reloading the scene)
-			{
-				MaterialID existingGBufferMatID = InvalidMaterialID;
-				// TODO: Don't rely on material names!
-				if (GetMaterialID(gBufferMatName, existingGBufferMatID))
-				{
-					RemoveMaterial(existingGBufferMatID);
-				}
-
-				for (auto iter = m_PersistentObjects.begin(); iter != m_PersistentObjects.end(); ++iter)
-				{
-					GameObject* gameObject = *iter;
-					if (gameObject->GetName().compare(gBufferName) == 0)
-					{
-						delete gameObject;
-						m_PersistentObjects.erase(iter);
-						break;
-					}
-				}
-
-				if (m_GBufferQuadRenderID != InvalidID)
-				{
-					DestroyRenderObject(m_GBufferQuadRenderID);
-				}
-			}
-
-			MaterialCreateInfo gBufferMaterialCreateInfo = {};
-			gBufferMaterialCreateInfo.name = gBufferMatName;
-			gBufferMaterialCreateInfo.shaderName = "deferred_combine";
-			gBufferMaterialCreateInfo.enableIrradianceSampler = true;
-			gBufferMaterialCreateInfo.irradianceSamplerMatID = m_ReflectionProbeMaterialID;
-			gBufferMaterialCreateInfo.enablePrefilteredMap = true;
-			gBufferMaterialCreateInfo.prefilterMapSamplerMatID = m_ReflectionProbeMaterialID;
-			gBufferMaterialCreateInfo.enableBRDFLUT = true;
-			gBufferMaterialCreateInfo.engineMaterial = true;
-			gBufferMaterialCreateInfo.sampledFrameBuffers = {
-				{ "normalRoughnessFrameBufferSampler", &m_gBufferFBO0.id },
-				{ "albedoMetallicFrameBufferSampler", &m_gBufferFBO1.id },
-				{ "ssaoBlurFrameBufferSampler",	m_bSSAOBlurEnabled ? &m_SSAOBlurVFBO.id : &m_SSAOFBO.id },
-			};
-
-			MaterialID gBufferMatID = InitializeMaterial(&gBufferMaterialCreateInfo);
-
-
-			GameObject* gBufferQuadGameObject = new GameObject(gBufferName, GameObjectType::_NONE);
-			m_PersistentObjects.push_back(gBufferQuadGameObject);
-			// Don't render the g buffer normally, we'll handle it separately
-			gBufferQuadGameObject->SetVisible(false);
-
-			RenderObjectCreateInfo gBufferQuadCreateInfo = {};
-			gBufferQuadCreateInfo.materialID = gBufferMatID;
-			gBufferQuadCreateInfo.gameObject = gBufferQuadGameObject;
-			gBufferQuadCreateInfo.vertexBufferData = &m_gBufferQuadVertexBufferData;
-			gBufferQuadCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS; // Ignore previous depth values
-			gBufferQuadCreateInfo.bDepthWriteEnable = false; // Don't write GBuffer quad to depth buffer
-			gBufferQuadCreateInfo.visibleInSceneExplorer = false;
-
-			m_GBufferQuadRenderID = InitializeRenderObject(&gBufferQuadCreateInfo);
-
-			m_gBufferQuadVertexBufferData.DescribeShaderVariables(this, m_GBufferQuadRenderID);
 		}
 
 		u32 GLRenderer::GetRenderObjectCount() const

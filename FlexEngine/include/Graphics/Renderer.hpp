@@ -208,12 +208,15 @@ namespace flex
 		bool bUniformBufferWindowShowing = false;
 
 	protected:
-
 		virtual void LoadShaders();
 
 		virtual bool LoadShaderCode(ShaderID shaderID) = 0;
 
 		virtual void SetShaderCount(u32 shaderCount) = 0;
+
+		virtual void RemoveMaterial(MaterialID materialID) = 0;
+
+		virtual void FillOutFrameBufferAttachments(std::vector<Pair<std::string, void*>>& outVec) = 0;
 
 		// Will attempt to find pre-rendered font at specified path, and
 		// only render a new file if not present or if bForceRender is true
@@ -225,6 +228,8 @@ namespace flex
 
 		// Returns true if the parent-child tree changed during this call
 		bool DrawImGuiGameObjectNameAndChildren(GameObject* gameObject);
+
+		void GenerateGBuffer();
 
 		void DrawScreenSpaceText();
 		void DrawWorldSpaceText();
@@ -273,8 +278,8 @@ namespace flex
 		};
 
 		MaterialID m_ReflectionProbeMaterialID = InvalidMaterialID; // Set by the user via SetReflecionProbeMaterial
-
 		MaterialID m_ShadowMaterialID = InvalidMaterialID;
+		MaterialID m_CubemapGBufferMaterialID = InvalidMaterialID;
 
 		// Any editor objects which also require a game object wrapper
 		std::vector<GameObject*> m_EditorObjects;
@@ -334,6 +339,8 @@ namespace flex
 		const char* m_GameObjectPayloadCStr = "gameobject";
 		const char* m_MaterialPayloadCStr = "material";
 		const char* m_MeshPayloadCStr = "mesh";
+
+		GameObject* m_SkyBoxMesh = nullptr;
 
 		// Contains file paths for each file with a .hdr extension in the `resources/textures/hdri/` directory
 		std::vector<std::string> m_AvailableHDRIs;
