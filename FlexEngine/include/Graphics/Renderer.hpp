@@ -204,6 +204,8 @@ namespace flex
 
 		PostProcessSettings& GetPostProcessSettings();
 
+		MaterialID GetPlaceholderMaterialID() const;
+
 		bool bFontWindowShowing = false;
 		bool bUniformBufferWindowShowing = false;
 
@@ -326,6 +328,7 @@ namespace flex
 		MaterialID m_PostProcessMatID = InvalidMaterialID;
 		MaterialID m_PostFXAAMatID = InvalidMaterialID;
 		MaterialID m_SelectedObjectMatID = InvalidMaterialID;
+		MaterialID m_PlaceholderMaterialID = InvalidMaterialID;
 
 		std::string m_FontImageExtension = ".png";
 

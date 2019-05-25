@@ -34,7 +34,6 @@ IGNORE_WARNINGS_POP
 
 namespace flex
 {
-
 	Renderer::Renderer() :
 		m_DefaultSettingsFilePathAbs(RelativePathToAbsolute(ROOT_LOCATION "config/default-renderer-settings.ini")),
 		m_SettingsFilePathAbs(RelativePathToAbsolute(ROOT_LOCATION "config/renderer-settings.ini")),
@@ -446,6 +445,11 @@ namespace flex
 	Renderer::PostProcessSettings& Renderer::GetPostProcessSettings()
 	{
 		return m_PostProcessSettings;
+	}
+
+	MaterialID Renderer::GetPlaceholderMaterialID() const
+	{
+		return m_PlaceholderMaterialID;
 	}
 
 	void Renderer::AddEditorString(const std::string& str)
@@ -1612,21 +1616,17 @@ namespace flex
 				{
 					GameObject* newGameObject = new GameObject(newObjectName, GameObjectType::OBJECT);
 
-					MaterialID matID = InvalidMaterialID;
-					if (GetMaterialID("pbr white", matID))
-					{
-						newGameObject->SetMeshComponent(new MeshComponent(matID, newGameObject));
-						newGameObject->GetMeshComponent()->LoadFromFile(RESOURCE_LOCATION  "meshes/cube.glb");
+					newGameObject->SetMeshComponent(new MeshComponent(newGameObject));
+					newGameObject->GetMeshComponent()->LoadFromFile(RESOURCE_LOCATION  "meshes/cube.glb");
 
-						g_SceneManager->CurrentScene()->AddRootObject(newGameObject);
+					g_SceneManager->CurrentScene()->AddRootObject(newGameObject);
 
-						newGameObject->Initialize();
-						newGameObject->PostInitialize();
+					newGameObject->Initialize();
+					newGameObject->PostInitialize();
 
-						g_EngineInstance->SetSelectedObject(newGameObject);
+					g_EngineInstance->SetSelectedObject(newGameObject);
 
-						ImGui::CloseCurrentPopup();
-					}
+					ImGui::CloseCurrentPopup();
 				}
 			}
 
@@ -2316,6 +2316,13 @@ namespace flex
 		postFXAAMatCreateInfo.shaderName = "post_fxaa";
 		postFXAAMatCreateInfo.engineMaterial = true;
 		m_PostFXAAMatID = InitializeMaterial(&postFXAAMatCreateInfo);
+
+		MaterialCreateInfo placeholderMatCreateInfo = {};
+		placeholderMatCreateInfo.name = "Placeholder";
+		placeholderMatCreateInfo.shaderName = "pbr";
+		placeholderMatCreateInfo.engineMaterial = false;
+		placeholderMatCreateInfo.constAlbedo = glm::vec3(1.0f, 0.0f, 1.0f);
+		m_PlaceholderMaterialID = InitializeMaterial(&placeholderMatCreateInfo);
 	}
 
 	std::string Renderer::PickRandomSkyboxTexture()
@@ -2759,5 +2766,4 @@ namespace flex
 		real zoom = m_DirectionalLight->shadowMapZoom;
 		outProj = glm::ortho(-zoom, zoom, -zoom, zoom, m_DirectionalLight->shadowMapNearPlane, m_DirectionalLight->shadowMapFarPlane);
 	}
-
 } // namespace flex

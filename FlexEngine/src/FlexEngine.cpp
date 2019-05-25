@@ -484,14 +484,14 @@ namespace flex
 			real cylinderHeight = 1.8f;
 
 			// X Axis
-			GameObject* transformXAxis = new GameObject("Translation gizmo x axis", GameObjectType::_NONE);
-			transformXAxis->AddTag(m_TranslationGizmoTag);
-			MeshComponent* xAxisMesh = transformXAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatXID, transformXAxis));
+			GameObject* translateXAxis = new GameObject("Translation gizmo x axis", GameObjectType::_NONE);
+			translateXAxis->AddTag(m_TranslationGizmoTag);
+			MeshComponent* xAxisMesh = translateXAxis->SetMeshComponent(new MeshComponent(translateXAxis, m_TransformGizmoMatXID));
 
 			btCylinderShape* xAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
-			transformXAxis->SetCollisionShape(xAxisShape);
+			translateXAxis->SetCollisionShape(xAxisShape);
 
-			RigidBody* gizmoXAxisRB = transformXAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
+			RigidBody* gizmoXAxisRB = translateXAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
 			gizmoXAxisRB->SetMass(0.0f);
 			gizmoXAxisRB->SetKinematic(true);
 			gizmoXAxisRB->SetPhysicsFlags(gizmoRBFlags);
@@ -500,14 +500,14 @@ namespace flex
 			xAxisMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/translation-gizmo-x.glb", nullptr, &gizmoCreateInfo);
 
 			// Y Axis
-			GameObject* transformYAxis = new GameObject("Translation gizmo y axis", GameObjectType::_NONE);
-			transformYAxis->AddTag(m_TranslationGizmoTag);
-			MeshComponent* yAxisMesh = transformYAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatYID, transformYAxis));
+			GameObject* translateYAxis = new GameObject("Translation gizmo y axis", GameObjectType::_NONE);
+			translateYAxis->AddTag(m_TranslationGizmoTag);
+			MeshComponent* yAxisMesh = translateYAxis->SetMeshComponent(new MeshComponent(translateYAxis, m_TransformGizmoMatYID));
 
 			btCylinderShape* yAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
-			transformYAxis->SetCollisionShape(yAxisShape);
+			translateYAxis->SetCollisionShape(yAxisShape);
 
-			RigidBody* gizmoYAxisRB = transformYAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
+			RigidBody* gizmoYAxisRB = translateYAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
 			gizmoYAxisRB->SetMass(0.0f);
 			gizmoYAxisRB->SetKinematic(true);
 			gizmoYAxisRB->SetPhysicsFlags(gizmoRBFlags);
@@ -516,15 +516,15 @@ namespace flex
 			yAxisMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/translation-gizmo-y.glb", nullptr, &gizmoCreateInfo);
 
 			// Z Axis
-			GameObject* transformZAxis = new GameObject("Translation gizmo z axis", GameObjectType::_NONE);
-			transformZAxis->AddTag(m_TranslationGizmoTag);
+			GameObject* translateZAxis = new GameObject("Translation gizmo z axis", GameObjectType::_NONE);
+			translateZAxis->AddTag(m_TranslationGizmoTag);
 
-			MeshComponent* zAxisMesh = transformZAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatZID, transformZAxis));
+			MeshComponent* zAxisMesh = translateZAxis->SetMeshComponent(new MeshComponent(translateZAxis, m_TransformGizmoMatZID));
 
 			btCylinderShape* zAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
-			transformZAxis->SetCollisionShape(zAxisShape);
+			translateZAxis->SetCollisionShape(zAxisShape);
 
-			RigidBody* gizmoZAxisRB = transformZAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
+			RigidBody* gizmoZAxisRB = translateZAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
 			gizmoZAxisRB->SetMass(0.0f);
 			gizmoZAxisRB->SetKinematic(true);
 			gizmoZAxisRB->SetPhysicsFlags(gizmoRBFlags);
@@ -544,9 +544,9 @@ namespace flex
 
 			m_TranslationGizmo = new GameObject("Translation gizmo", GameObjectType::_NONE);
 
-			m_TranslationGizmo->AddChild(transformXAxis);
-			m_TranslationGizmo->AddChild(transformYAxis);
-			m_TranslationGizmo->AddChild(transformZAxis);
+			m_TranslationGizmo->AddChild(translateXAxis);
+			m_TranslationGizmo->AddChild(translateYAxis);
+			m_TranslationGizmo->AddChild(translateZAxis);
 
 			m_TransformGizmo->AddChild(m_TranslationGizmo);
 		}
@@ -559,7 +559,7 @@ namespace flex
 			// X Axis
 			GameObject* rotationXAxis = new GameObject("Rotation gizmo x axis", GameObjectType::_NONE);
 			rotationXAxis->AddTag(m_RotationGizmoTag);
-			MeshComponent* xAxisMesh = rotationXAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatXID, rotationXAxis));
+			MeshComponent* xAxisMesh = rotationXAxis->SetMeshComponent(new MeshComponent(rotationXAxis, m_TransformGizmoMatXID));
 
 			btCylinderShape* xAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
 			rotationXAxis->SetCollisionShape(xAxisShape);
@@ -577,7 +577,7 @@ namespace flex
 			// Y Axis
 			GameObject* rotationYAxis = new GameObject("Rotation gizmo y axis", GameObjectType::_NONE);
 			rotationYAxis->AddTag(m_RotationGizmoTag);
-			MeshComponent* yAxisMesh = rotationYAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatYID, rotationYAxis));
+			MeshComponent* yAxisMesh = rotationYAxis->SetMeshComponent(new MeshComponent(rotationYAxis, m_TransformGizmoMatYID));
 
 			btCylinderShape* yAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
 			rotationYAxis->SetCollisionShape(yAxisShape);
@@ -594,7 +594,7 @@ namespace flex
 			GameObject* rotationZAxis = new GameObject("Rotation gizmo z axis", GameObjectType::_NONE);
 			rotationZAxis->AddTag(m_RotationGizmoTag);
 
-			MeshComponent* zAxisMesh = rotationZAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatZID, rotationZAxis));
+			MeshComponent* zAxisMesh = rotationZAxis->SetMeshComponent(new MeshComponent(rotationZAxis, m_TransformGizmoMatZID));
 
 			btCylinderShape* zAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
 			rotationZAxis->SetCollisionShape(zAxisShape);
@@ -636,7 +636,7 @@ namespace flex
 			// X Axis
 			GameObject* scaleXAxis = new GameObject("Scale gizmo x axis", GameObjectType::_NONE);
 			scaleXAxis->AddTag(m_ScaleGizmoTag);
-			MeshComponent* xAxisMesh = scaleXAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatXID, scaleXAxis));
+			MeshComponent* xAxisMesh = scaleXAxis->SetMeshComponent(new MeshComponent(scaleXAxis, m_TransformGizmoMatXID));
 
 			btCylinderShape* xAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
 			scaleXAxis->SetCollisionShape(xAxisShape);
@@ -652,7 +652,7 @@ namespace flex
 			// Y Axis
 			GameObject* scaleYAxis = new GameObject("Scale gizmo y axis", GameObjectType::_NONE);
 			scaleYAxis->AddTag(m_ScaleGizmoTag);
-			MeshComponent* yAxisMesh = scaleYAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatYID, scaleYAxis));
+			MeshComponent* yAxisMesh = scaleYAxis->SetMeshComponent(new MeshComponent(scaleYAxis, m_TransformGizmoMatYID));
 
 			btCylinderShape* yAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
 			scaleYAxis->SetCollisionShape(yAxisShape);
@@ -669,7 +669,7 @@ namespace flex
 			GameObject* scaleZAxis = new GameObject("Scale gizmo z axis", GameObjectType::_NONE);
 			scaleZAxis->AddTag(m_ScaleGizmoTag);
 
-			MeshComponent* zAxisMesh = scaleZAxis->SetMeshComponent(new MeshComponent(m_TransformGizmoMatZID, scaleZAxis));
+			MeshComponent* zAxisMesh = scaleZAxis->SetMeshComponent(new MeshComponent(scaleZAxis, m_TransformGizmoMatZID));
 
 			btCylinderShape* zAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
 			scaleZAxis->SetCollisionShape(zAxisShape);
@@ -686,7 +686,7 @@ namespace flex
 			GameObject* scaleAllAxes = new GameObject("Scale gizmo all axes", GameObjectType::_NONE);
 			scaleAllAxes->AddTag(m_ScaleGizmoTag);
 
-			MeshComponent* allAxesMesh = scaleAllAxes->SetMeshComponent(new MeshComponent(m_TransformGizmoMatAllID, scaleAllAxes));
+			MeshComponent* allAxesMesh = scaleAllAxes->SetMeshComponent(new MeshComponent(scaleAllAxes, m_TransformGizmoMatAllID));
 
 			btBoxShape* allAxesShape = new btBoxShape(btVector3(boxScale, boxScale, boxScale));
 			scaleAllAxes->SetCollisionShape(allAxesShape);

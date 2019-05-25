@@ -67,7 +67,7 @@ namespace flex
 
 		btCapsuleShape* collisionShape = new btCapsuleShape(1.0f, 2.0f);
 
-		m_MeshComponent = new MeshComponent(matID, this);
+		m_MeshComponent = new MeshComponent(this, matID);
 		AddTag("Player" + std::to_string(m_Index));
 		SetRigidBody(rigidBody);
 		SetStatic(false);
@@ -103,7 +103,7 @@ namespace flex
 			}
 
 			m_MapTablet = new GameObject("Map tablet mesh", GameObjectType::_NONE);
-			MeshComponent* mapTabletMesh = m_MapTablet->SetMeshComponent(new MeshComponent(mapTabletMatID, m_MapTablet));
+			MeshComponent* mapTabletMesh = m_MapTablet->SetMeshComponent(new MeshComponent(m_MapTablet, mapTabletMatID));
 			mapTabletMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/map_tablet.glb");
 			m_MapTabletHolder->AddChild(m_MapTablet);
 			m_MapTablet->GetTransform()->SetLocalPosition(glm::vec3(-0.75f, -0.3f, 2.3f));

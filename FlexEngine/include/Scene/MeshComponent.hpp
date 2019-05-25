@@ -14,8 +14,7 @@ namespace flex
 	class MeshComponent
 	{
 	public:
-		explicit MeshComponent(GameObject* owner);
-		MeshComponent(MaterialID materialID, GameObject* owner, bool bSetRequiredAttributesFromMat = true);
+		MeshComponent(GameObject* owner, MaterialID materialID = InvalidMaterialID, bool bSetRequiredAttributesFromMat = true);
 		~MeshComponent();
 
 		static void DestroyAllLoadedMeshes();

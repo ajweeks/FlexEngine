@@ -332,7 +332,7 @@ namespace flex
 				}
 
 				m_Grid = new GameObject("Grid", GameObjectType::OBJECT);
-				MeshComponent* gridMesh = m_Grid->SetMeshComponent(new MeshComponent(m_GridMaterialID, m_Grid, false));
+				MeshComponent* gridMesh = m_Grid->SetMeshComponent(new MeshComponent(m_Grid, m_GridMaterialID, false));
 				RenderObjectCreateInfo createInfo = {};
 				createInfo.bEditorObject = true;
 				gridMesh->LoadPrefabShape(MeshComponent::PrefabShape::GRID, &createInfo);
@@ -358,7 +358,7 @@ namespace flex
 				}
 
 				m_WorldOrigin = new GameObject("World origin", GameObjectType::OBJECT);
-				MeshComponent* orignMesh = m_WorldOrigin->SetMeshComponent(new MeshComponent(m_WorldAxisMaterialID, m_WorldOrigin, false));
+				MeshComponent* orignMesh = m_WorldOrigin->SetMeshComponent(new MeshComponent(m_WorldOrigin, m_WorldAxisMaterialID, false));
 				RenderObjectCreateInfo createInfo = {};
 				createInfo.bEditorObject = true;
 				orignMesh->LoadPrefabShape(MeshComponent::PrefabShape::WORLD_AXIS_GROUND, &createInfo);

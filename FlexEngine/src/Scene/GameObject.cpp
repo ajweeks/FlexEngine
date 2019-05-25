@@ -454,11 +454,7 @@ namespace flex
 		{
 			if (ImGui::Button("Add mesh component"))
 			{
-				MaterialID matID = InvalidMaterialID;
-				// TODO: Don't rely on material names!
-				g_Renderer->GetMaterialID("pbr chrome", matID);
-
-				MeshComponent* mesh = SetMeshComponent(new MeshComponent(matID, this));
+				MeshComponent* mesh = SetMeshComponent(new MeshComponent(this));
 				mesh->LoadFromFile(RESOURCE_LOCATION  "meshes/cube.glb");
 			}
 		}
@@ -1357,7 +1353,7 @@ namespace flex
 
 		if (m_MeshComponent)
 		{
-			MeshComponent* newMeshComponent = newGameObject->SetMeshComponent(new MeshComponent(matID, newGameObject, false));
+			MeshComponent* newMeshComponent = newGameObject->SetMeshComponent(new MeshComponent(newGameObject, matID, false));
 			MeshComponent::Type prefabType = m_MeshComponent->GetType();
 			if (prefabType == MeshComponent::Type::PREFAB)
 			{
@@ -1986,7 +1982,7 @@ namespace flex
 
 			if (!m_MeshComponent)
 			{
-				MeshComponent* valveMesh = new MeshComponent(matID, this);
+				MeshComponent* valveMesh = new MeshComponent(this, matID);
 				valveMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/valve.glb");
 				assert(GetMeshComponent() == nullptr);
 				SetMeshComponent(valveMesh);
@@ -2150,7 +2146,7 @@ namespace flex
 	{
 		if (!m_MeshComponent)
 		{
-			MeshComponent* cubeMesh = new MeshComponent(matID, this);
+			MeshComponent* cubeMesh = new MeshComponent(this, matID);
 			cubeMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/cube.glb");
 			SetMeshComponent(cubeMesh);
 		}
@@ -2331,7 +2327,7 @@ namespace flex
 
 			if (!m_MeshComponent)
 			{
-				MeshComponent* windowMesh = new MeshComponent(matID, this);
+				MeshComponent* windowMesh = new MeshComponent(this, matID);
 				const char* filePath;
 				if (bBroken)
 				{
@@ -2409,7 +2405,7 @@ namespace flex
 		};
 		captureMatID = g_Renderer->InitializeMaterial(&probeCaptureMatCreateInfo);
 
-		//MeshComponent* sphereMesh = new MeshComponent(matID, this);
+		//MeshComponent* sphereMesh = new MeshComponent(this, matID);
 
 		//assert(m_MeshComponent == nullptr);
 		//sphereMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/sphere.glb");
@@ -2469,7 +2465,7 @@ namespace flex
 
 		assert(m_MeshComponent == nullptr);
 		assert(matID != InvalidMaterialID);
-		MeshComponent* skyboxMesh = new MeshComponent(matID, this, false);
+		MeshComponent* skyboxMesh = new MeshComponent(this, matID, false);
 		skyboxMesh->LoadPrefabShape(MeshComponent::PrefabShape::SKYBOX);
 		SetMeshComponent(skyboxMesh);
 
@@ -2874,7 +2870,7 @@ namespace flex
 			// TODO: Create own material
 			matID = 0;
 		}
-		MeshComponent* mesh = SetMeshComponent(new MeshComponent(matID, this));
+		MeshComponent* mesh = SetMeshComponent(new MeshComponent(this, matID));
 		std::string meshFilePath = std::string(RESOURCE("meshes/")) + std::string(meshName);
 		if (!mesh->LoadFromFile(meshFilePath))
 		{
@@ -3237,7 +3233,7 @@ namespace flex
 			// TODO: Create own material
 			matID = 0;
 		}
-		MeshComponent* mesh = SetMeshComponent(new MeshComponent(matID, this));
+		MeshComponent* mesh = SetMeshComponent(new MeshComponent(this, matID));
 		if (!mesh->LoadFromFile(RESOURCE("meshes/mobile-liquid-box.glb")))
 		{
 			PrintWarn("Failed to load mobile-liquid-box mesh!\n");
@@ -3291,7 +3287,7 @@ namespace flex
 
 		MaterialID planeMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
 
-		MeshComponent* planeMesh = SetMeshComponent(new MeshComponent(planeMatID, this));
+		MeshComponent* planeMesh = SetMeshComponent(new MeshComponent(this, planeMatID));
 		planeMesh->LoadPrefabShape(MeshComponent::PrefabShape::GERSTNER_PLANE);
 
 		i32 vertCount = vertSideCount * vertSideCount;
@@ -3327,7 +3323,7 @@ namespace flex
 		{
 			PrintError("Failed to find material for bobber!\n");
 		}
-		MeshComponent* mesh = bobber->SetMeshComponent(new MeshComponent(matID, bobber));
+		MeshComponent* mesh = bobber->SetMeshComponent(new MeshComponent(bobber, matID));
 		if (!mesh->LoadFromFile(RESOURCE("meshes/sphere.glb")))
 		{
 			PrintError("Failed to load bobber mesh\n");
@@ -3603,7 +3599,7 @@ namespace flex
 			for (i32 z = 0; z < count; ++z)
 			{
 				GameObject* obj = new GameObject("block", GameObjectType::OBJECT);
-				obj->SetMeshComponent(new MeshComponent(PickRandomFrom(matIDs), obj));
+				obj->SetMeshComponent(new MeshComponent(obj, PickRandomFrom(matIDs)));
 				obj->GetMeshComponent()->LoadFromFile(RESOURCE_LOCATION "meshes/cube.glb");
 				AddChild(obj);
 				obj->GetTransform()->SetLocalScale(glm::vec3(blockSize));
@@ -5864,7 +5860,7 @@ namespace flex
 			// TODO: Create own material
 			matID = 0;
 		}
-		MeshComponent* mesh = SetMeshComponent(new MeshComponent(matID, this));
+		MeshComponent* mesh = SetMeshComponent(new MeshComponent(this, matID));
 		if (!mesh->LoadFromFile(RESOURCE("meshes/terminal-copper.glb")))
 		{
 			PrintWarn("Failed to load terminal mesh!\n");

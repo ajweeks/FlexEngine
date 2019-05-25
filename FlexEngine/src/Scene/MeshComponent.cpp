@@ -32,19 +32,19 @@ namespace flex
 	glm::vec3 MeshComponent::m_DefaultNormal(0.0f, 1.0f, 0.0f);
 	glm::vec2 MeshComponent::m_DefaultTexCoord(0.0f, 0.0f);
 
-	MeshComponent::MeshComponent(GameObject* owner) :
-		m_OwningGameObject(owner)
-	{
-	}
-
-	MeshComponent::MeshComponent(MaterialID materialID, GameObject* owner, bool bSetRequiredAttributesFromMat /* = true */) :
+	MeshComponent::MeshComponent(GameObject* owner, MaterialID materialID /* = InvalidMaterialID */, bool bSetRequiredAttributesFromMat /* = true */) :
 		m_OwningGameObject(owner),
 		m_MaterialID(materialID),
 		m_UVScale(1.0f, 1.0f)
 	{
+		if (m_MaterialID == InvalidMaterialID)
+		{
+			m_MaterialID = g_Renderer->GetPlaceholderMaterialID();
+		}
+
 		if (bSetRequiredAttributesFromMat)
 		{
-			SetRequiredAttributesFromMaterialID(materialID);
+			SetRequiredAttributesFromMaterialID(m_MaterialID);
 		}
 	}
 
@@ -85,7 +85,7 @@ namespace flex
 		{
 			if (!meshFilePath.empty())
 			{
-				newMeshComponent = new MeshComponent(materialID, owner);
+				newMeshComponent = new MeshComponent(owner, materialID);
 
 				MeshImportSettings importSettings = {};
 				importSettings.bFlipU = bFlipU;
@@ -99,7 +99,7 @@ namespace flex
 			}
 			else if (!meshPrefabName.empty())
 			{
-				newMeshComponent = new MeshComponent(materialID, owner);
+				newMeshComponent = new MeshComponent(owner, materialID);
 
 				MeshComponent::PrefabShape prefabShape = MeshComponent::StringToPrefabShape(meshPrefabName);
 				newMeshComponent->LoadPrefabShape(prefabShape);
