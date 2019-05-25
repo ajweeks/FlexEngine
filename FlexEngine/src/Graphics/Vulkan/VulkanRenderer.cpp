@@ -5884,6 +5884,10 @@ namespace flex
 			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_DepthAttachment->image, m_DepthAttachment->format,
 				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1, commandBuffer);
 
+			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_OffScreenDepthAttachment->image, m_OffScreenDepthAttachment->format,
+				VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, commandBuffer, true);
+
+
 			// Forward pass
 			renderPassBeginInfo.renderPass = m_ForwardRenderPass;
 			vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
