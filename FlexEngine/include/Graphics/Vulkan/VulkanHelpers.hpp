@@ -509,6 +509,7 @@ namespace flex
 			VulkanTexture* prefilterTexture = nullptr;
 			VulkanTexture* noiseTexture = nullptr;
 
+			// TODO: Pass along frame buffer reference for these image/sampler pairs?
 			VkImageView ssaoNormalImageView = VK_NULL_HANDLE;
 			VkSampler ssaoNormalSampler = VK_NULL_HANDLE;
 

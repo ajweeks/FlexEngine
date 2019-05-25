@@ -477,7 +477,7 @@ namespace flex
 		if (xzVelMagnitude > m_MaxMoveSpeed)
 		{
 			btVector3 xzVelNorm = xzVel.normalized();
-			btVector3 newVel(xzVelNorm.getX() * m_MaxMoveSpeed, vel.getY(), xzVelNorm.getZ() * m_MaxMoveSpeed);;
+			btVector3 newVel(xzVelNorm.getX() * m_MaxMoveSpeed, vel.getY(), xzVelNorm.getZ() * m_MaxMoveSpeed);
 			rb->setLinearVelocity(newVel);
 			xzVelMagnitude = m_MaxMoveSpeed;
 			bMaxVel = true;

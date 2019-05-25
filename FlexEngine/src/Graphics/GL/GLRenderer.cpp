@@ -1926,7 +1926,7 @@ namespace flex
 				real distCamToOrigin = glm::distance(camera->GetPosition(), glm::vec3(0, 0, 0));
 
 				glm::vec4 gridColorMutliplier = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f - glm::clamp(distCamToGround / maxHeightVisible, -1.0f, 1.0f));
-				glm::vec4 axisColorMutliplier = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f - glm::clamp(distCamToOrigin / maxDistVisible, -1.0f, 1.0f));;
+				glm::vec4 axisColorMutliplier = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f - glm::clamp(distCamToOrigin / maxDistVisible, -1.0f, 1.0f));
 				GetMaterial(m_WorldAxisMaterialID).colorMultiplier = axisColorMutliplier;
 				GetMaterial(m_GridMaterialID).colorMultiplier = gridColorMutliplier;
 			}
