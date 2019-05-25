@@ -704,13 +704,6 @@ namespace flex
 
 			VkCommandBuffer cmdBuf = m_CommandBufferManager.CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
 
-			// TODO: Remove calls?
-			VkViewport viewport = vks::viewportFlipped((real)dim, (real)dim, 0.0f, 1.0f);
-			vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
-
-			VkRect2D scissor = vks::scissor(0u, 0u, dim, dim);
-			vkCmdSetScissor(cmdBuf, 0, 1, &scissor);
-
 			VkImageSubresourceRange subresourceRange = {};
 			subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 			subresourceRange.baseMipLevel = 0;
@@ -740,10 +733,10 @@ namespace flex
 			for (u32 mip = 0; mip < mipLevels; ++mip)
 			{
 				real viewportSize = static_cast<real>(dim * std::pow(0.5f, mip));
-				viewport = vks::viewportFlipped(viewportSize, viewportSize, 0.0f, 1.0f);
+				VkViewport viewport = vks::viewportFlipped(viewportSize, viewportSize, 0.0f, 1.0f);
 				vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
 
-				scissor = vks::scissor(0u, 0u, (u32)viewportSize, (u32)viewportSize);
+				VkRect2D scissor = vks::scissor(0u, 0u, (u32)viewportSize, (u32)viewportSize);
 				vkCmdSetScissor(cmdBuf, 0, 1, &scissor);
 
 				for (u32 face = 0; face < 6; ++face)
@@ -4067,7 +4060,7 @@ namespace flex
 				createInfo.enabledLayerCount = 0;
 			}
 
-			m_VulkanDevice = new VulkanDevice(physicalDevice, &m_Instance);
+			m_VulkanDevice = new VulkanDevice(physicalDevice);
 
 			VK_CHECK_RESULT(vkCreateDevice(physicalDevice, &createInfo, nullptr, m_VulkanDevice->m_LogicalDevice.replace()));
 
@@ -5049,7 +5042,6 @@ namespace flex
 			subpass.colorAttachmentCount = static_cast<u32>(colorReferences.size());
 			subpass.pDepthStencilAttachment = &depthReference;
 
-			// Use subpass dependencies for attachment layout transitions
 			std::array<VkSubpassDependency, 2> dependencies;
 
 			dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
@@ -5265,7 +5257,7 @@ namespace flex
 			dependencies[1].srcSubpass = 0;
 			dependencies[1].dstSubpass = 1;
 			dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-			dependencies[1].srcAccessMask = 0; // TODO??
+			dependencies[1].srcAccessMask = 0;
 			dependencies[1].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 			dependencies[1].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
