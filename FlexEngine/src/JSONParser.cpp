@@ -24,7 +24,7 @@ namespace flex
 			lastBracket == std::string::npos ||
 			firstBracket > lastBracket)
 		{
-			PrintError("Failed to parse JSON file. No valid bracket pairs found!\n");
+			PrintError("Failed to parse JSON file. No valid bracket pairs found in %s\n", filePath.c_str());
 		}
 
 		std::string cleanFileContents;
@@ -79,7 +79,7 @@ namespace flex
 		while (bParsing)
 		{
 			JSONField field;
-			bParsing = ParseField(cleanFileContents, &fileContentOffset, field);
+			bParsing = ParseField(filePath, cleanFileContents, &fileContentOffset, field);
 			rootObject.fields.push_back(field);
 
 			bParseSucceeded |= bParsing;
@@ -94,12 +94,12 @@ namespace flex
 		return bParseSucceeded;
 	}
 
-	bool JSONParser::ParseObject(const std::string& fileContents, i32* offset, JSONObject& outObject)
+	bool JSONParser::ParseObject(const std::string& filePath, const std::string& fileContents, i32* offset, JSONObject& outObject)
 	{
-		i32 objectClosingBracket = MatchingBracket('{', fileContents, *offset);
+		i32 objectClosingBracket = MatchingBracket(filePath, '{', fileContents, *offset);
 		if (objectClosingBracket == -1)
 		{
-			PrintError("Couldn't find matching bracket for '{'\n");
+			PrintError("Couldn't find matching bracket for '{' in %s\n", filePath.c_str());
 			return false;
 		}
 
@@ -114,7 +114,7 @@ namespace flex
 		while (bParsing && *offset < objectClosingBracket)
 		{
 			JSONField field;
-			bParsing = ParseField(fileContents, offset, field);
+			bParsing = ParseField(filePath, fileContents, offset, field);
 			outObject.fields.push_back(field);
 		}
 
@@ -128,20 +128,20 @@ namespace flex
 		return true;
 	}
 
-	bool JSONParser::ParseField(const std::string& fileContents, i32* offset, JSONField& field)
+	bool JSONParser::ParseField(const std::string& filePath, const std::string& fileContents, i32* offset, JSONField& field)
 	{
 		size_t quoteStart = fileContents.find('\"', *offset);
 
 		if (quoteStart == std::string::npos)
 		{
-			PrintError("Couldn't find opening quote after offset %i\n", *offset);
+			PrintError("Couldn't find opening quote after offset %i in %s\n", *offset, filePath.c_str());
 			return false;
 		}
 
 		size_t quoteEnd = fileContents.find('\"', quoteStart + 1);
 		if (quoteEnd == std::string::npos)
 		{
-			PrintError("Couldn't find closing quote after offset %i\n", *offset);
+			PrintError("Couldn't find closing quote after offset %i in %s\n", *offset, filePath.c_str());
 			return false;
 		}
 
@@ -150,7 +150,7 @@ namespace flex
 
 		if (fileContents[quoteEnd + 1] != ':')
 		{
-			PrintError("Invalidly formatted JSON file, ':' must occur after a field label\n...\n");
+			PrintError("Invalidly formatted JSON file, ':' must occur after a field label - %s\n...\n", filePath.c_str());
 			std::string surroundingText(fileContents.substr(quoteStart - 20, 40));
 			PrintError("%s\n...\n", surroundingText.c_str());
 			return false;
@@ -167,14 +167,14 @@ namespace flex
 
 			if (strQuoteStart == std::string::npos)
 			{
-				PrintError("Couldn't find quote after offset %i\n", offset);
+				PrintError("Couldn't find quote after offset %i in %s\n", offset, filePath.c_str());
 				return false;
 			}
 
 			size_t strQuoteEnd = fileContents.find('\"', strQuoteStart + 1);
 			if (strQuoteEnd == std::string::npos)
 			{
-				PrintError("Couldn't find end quote after offset %i\n", *offset);
+				PrintError("Couldn't find end quote after offset %i, %s\n", *offset, filePath.c_str());
 				return false;
 			}
 
@@ -226,7 +226,7 @@ namespace flex
 			*offset = quoteEnd + 2;
 
 			JSONObject object;
-			ParseObject(fileContents, offset, object);
+			ParseObject(filePath, fileContents, offset, object);
 
 			field.value = JSONValue(object);
 		} break;
@@ -236,10 +236,10 @@ namespace flex
 
 			*offset = quoteEnd + 2;
 
-			i32 arrayClosingBracket = MatchingBracket('[', fileContents, *offset);
+			i32 arrayClosingBracket = MatchingBracket(filePath, '[', fileContents, *offset);
 			if (arrayClosingBracket == -1)
 			{
-				PrintError("Couldn't find matching bracket %s (for '['\n", field.label.c_str());
+				PrintError("Couldn't find matching bracket %s (for '[') in %s\n", field.label.c_str(), filePath.c_str());
 				return false;
 			}
 
@@ -248,7 +248,7 @@ namespace flex
 			while (*offset < arrayClosingBracket)
 			{
 				JSONObject object;
-				ParseObject(fileContents, offset, object);
+				ParseObject(filePath, fileContents, offset, object);
 
 				objects.push_back(object);
 			}
@@ -267,7 +267,7 @@ namespace flex
 		default:
 		{
 			size_t nextNonAlphaNumeric = NextNonAlphaNumeric(fileContents, *offset);
-			PrintError("Unhandled JSON value type: %s\n", fileContents.substr(quoteEnd + 2, nextNonAlphaNumeric - (quoteEnd + 2)).c_str());
+			PrintError("Unhandled JSON value type: %s in %s\n", fileContents.substr(quoteEnd + 2, nextNonAlphaNumeric - (quoteEnd + 2)).c_str(), filePath.c_str());
 			*offset = -1;
 			return false;
 		} break;
@@ -276,7 +276,7 @@ namespace flex
 		return true;
 	}
 
-	i32 JSONParser::MatchingBracket(char openingBracket, const std::string& fileContents, i32 offset)
+	i32 JSONParser::MatchingBracket(const std::string& filePath, char openingBracket, const std::string& fileContents, i32 offset)
 	{
 		assert(fileContents[offset] == openingBracket);
 
@@ -295,7 +295,7 @@ namespace flex
 		}
 		else
 		{
-			PrintError("Unhandled opening bracket type: %c\n", openingBracket);
+			PrintError("Unhandled opening bracket type: %c in %s\n", openingBracket, filePath.c_str());
 			return -1;
 		}
 
