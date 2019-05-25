@@ -31,8 +31,6 @@ namespace flex
 
 	namespace gl
 	{
-#define InvalidID u32_max
-
 		struct GLShader
 		{
 			GLShader(Shader* shader);
