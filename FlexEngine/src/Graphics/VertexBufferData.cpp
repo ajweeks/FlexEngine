@@ -108,6 +108,127 @@ namespace flex
 		Attributes = 0;
 	}
 
+	u32 VertexBufferData::CopyInto(real* dst, VertexAttributes usingAttributes)
+	{
+		assert(vertexData != nullptr);
+		assert(VertexCount > 0);
+
+		const real* initialDst = dst;
+		real* src = vertexData;
+		for (u32 i = 0; i < VertexCount; ++i)
+		{
+			if (usingAttributes & (u32)VertexAttribute::POSITION)
+			{
+				assert(Attributes & (u32)VertexAttribute::POSITION);
+				memcpy(dst, src, sizeof(glm::vec3));
+				dst += 3;
+			}
+
+			if (Attributes & (u32)VertexAttribute::POSITION)
+			{
+				src += 3;
+			}
+
+			if (usingAttributes & (u32)VertexAttribute::POSITION_2D)
+			{
+				assert(Attributes & (u32)VertexAttribute::POSITION_2D);
+				memcpy(dst, src, sizeof(glm::vec2));
+				dst += 2;
+			}
+
+			if (Attributes & (u32)VertexAttribute::POSITION_2D)
+			{
+				src += 2;
+			}
+
+			if (usingAttributes & (u32)VertexAttribute::UV)
+			{
+				assert(Attributes & (u32)VertexAttribute::UV);
+				memcpy(dst, src, sizeof(glm::vec2));
+				dst += 2;
+			}
+
+			if (Attributes & (u32)VertexAttribute::UV)
+			{
+				src += 2;
+			}
+
+			if (usingAttributes & (u32)VertexAttribute::COLOR_R8G8B8A8_UNORM)
+			{
+				assert(Attributes & (u32)VertexAttribute::COLOR_R8G8B8A8_UNORM);
+				memcpy(dst, src, sizeof(i32));
+				dst += 1;
+			}
+
+			if (Attributes & (u32)VertexAttribute::COLOR_R8G8B8A8_UNORM)
+			{
+				src += 1;
+			}
+
+			if (usingAttributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)
+			{
+				assert(Attributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT);
+				memcpy(dst, src, sizeof(glm::vec4));
+				dst += 4;
+			}
+
+			if (Attributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)
+			{
+				src += 4;
+			}
+
+			if (usingAttributes & (u32)VertexAttribute::NORMAL)
+			{
+				assert(Attributes & (u32)VertexAttribute::NORMAL);
+				memcpy(dst, src, sizeof(glm::vec3));
+				dst += 3;
+			}
+
+			if (Attributes & (u32)VertexAttribute::NORMAL)
+			{
+				src += 3;
+			}
+
+			if (usingAttributes & (u32)VertexAttribute::TANGENT)
+			{
+				assert(Attributes & (u32)VertexAttribute::TANGENT);
+				memcpy(dst, src, sizeof(glm::vec3));
+				dst += 3;
+			}
+
+			if (Attributes & (u32)VertexAttribute::TANGENT)
+			{
+				src += 3;
+			}
+
+			if (usingAttributes & (u32)VertexAttribute::EXTRA_VEC4)
+			{
+				assert(Attributes & (u32)VertexAttribute::EXTRA_VEC4);
+				memcpy(dst, src, sizeof(glm::vec4));
+				dst += 4;
+			}
+
+			if (Attributes & (u32)VertexAttribute::EXTRA_VEC4)
+			{
+				src += 4;
+			}
+
+			if (usingAttributes & (u32)VertexAttribute::EXTRA_INT)
+			{
+				assert(Attributes & (u32)VertexAttribute::EXTRA_INT);
+				memcpy(dst, src, sizeof(i32));
+				dst += 1;
+			}
+
+			if (Attributes & (u32)VertexAttribute::EXTRA_INT)
+			{
+				src += 1;
+			}
+		}
+		u32 bytesCopied = (dst - initialDst) * sizeof(real);
+		return bytesCopied;
+	}
+
 	void VertexBufferData::DescribeShaderVariables(Renderer* renderer, RenderID renderID)
 	{
 		const size_t vertexTypeCount = ARRAY_SIZE(s_VertexTypes);

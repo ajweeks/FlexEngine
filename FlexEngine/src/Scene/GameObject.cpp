@@ -1903,6 +1903,16 @@ namespace flex
 		return meshComponent;
 	}
 
+	bool GameObject::CastsShadow() const
+	{
+		return m_bCastsShadow;
+	}
+
+	void GameObject::SetCastsShadow(bool bCastsShadow)
+	{
+		m_bCastsShadow = bCastsShadow;
+	}
+
 	void GameObject::OnOverlapBegin(GameObject* other)
 	{
 		overlappingObjects.push_back(other);
@@ -2448,6 +2458,7 @@ namespace flex
 	Skybox::Skybox(const std::string& name) :
 		GameObject(name, GameObjectType::SKYBOX)
 	{
+		SetCastsShadow(false);
 	}
 
 	GameObject* Skybox::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
@@ -2507,6 +2518,8 @@ namespace flex
 		data.dir = VEC3_RIGHT;
 		data.color = VEC3_ONE;
 		data.brightness = 1.0f;
+		data.castShadows = 1;
+		data.shadowDarkness = 1.0f;
 	}
 
 	void DirectionalLight::Initialize()
@@ -2560,8 +2573,12 @@ namespace flex
 			ImGui::Spacing();
 			ImGui::Text("Shadow");
 
-			ImGui::Checkbox("Cast shadow", &bCastShadow);
-			ImGui::SliderFloat("Shadow darkness", &shadowDarkness, 0.0f, 1.0f);
+			bool bCastShadows = data.castShadows != 0;
+			if (ImGui::Checkbox("Cast shadow", &bCastShadows))
+			{
+				data.castShadows = bCastShadows ? 1 : 0;
+			}
+			ImGui::SliderFloat("Shadow darkness", &data.shadowDarkness, 0.0f, 1.0f);
 
 			ImGui::DragFloat("Near", &shadowMapNearPlane);
 			ImGui::DragFloat("Far", &shadowMapFarPlane);
@@ -2625,8 +2642,12 @@ namespace flex
 				m_bVisible = directionalLightObj.GetBool("enabled") ? 1 : 0;
 			}
 
-			directionalLightObj.SetBoolChecked("cast shadows", bCastShadow);
-			directionalLightObj.SetFloatChecked("shadow darkness", shadowDarkness);
+			bool bCastShadow = false;
+			if (directionalLightObj.SetBoolChecked("cast shadows", bCastShadow))
+			{
+				data.castShadows = bCastShadow ? 1 : 0;
+			}
+			directionalLightObj.SetFloatChecked("shadow darkness", data.shadowDarkness);
 
 			if (directionalLightObj.HasField("shadow map near"))
 			{
@@ -2662,8 +2683,8 @@ namespace flex
 		dirLightObj.fields.emplace_back("enabled", JSONValue(m_bVisible != 0));
 		dirLightObj.fields.emplace_back("brightness", JSONValue(data.brightness));
 
-		dirLightObj.fields.emplace_back("cast shadows", JSONValue(bCastShadow));
-		dirLightObj.fields.emplace_back("shadow darkness", JSONValue(shadowDarkness));
+		dirLightObj.fields.emplace_back("cast shadows", JSONValue(static_cast<bool>(data.castShadows)));
+		dirLightObj.fields.emplace_back("shadow darkness", JSONValue(data.shadowDarkness));
 		dirLightObj.fields.emplace_back("shadow map near", JSONValue(shadowMapNearPlane));
 		dirLightObj.fields.emplace_back("shadow map far", JSONValue(shadowMapFarPlane));
 		dirLightObj.fields.emplace_back("shadow map zoom", JSONValue(shadowMapZoom));

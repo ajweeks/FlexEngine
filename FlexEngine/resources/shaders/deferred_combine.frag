@@ -18,6 +18,8 @@ struct DirectionalLight
 	int enabled;
 	vec3 color;
 	float brightness;
+	int castShadows;
+ 	float shadowDarkness;
 };
 uniform DirectionalLight dirLight;
 
@@ -36,8 +38,6 @@ uniform mat4 invView;
 uniform mat4 invProj;
 uniform bool enableIrradianceSampler;
 uniform mat4 lightViewProj;
-uniform bool castShadows = true;
-uniform float shadowDarkness = 1.0;
 // SSAO Sampling Data
 uniform int enableSSAO = 1;
 uniform float ssaoPowExp = 1.0f;
@@ -189,16 +189,16 @@ void main()
 		
 		float dirLightShadowOpacity = 1.0;
 		vec2 shadowMapTexelSize = 1.0 / textureSize(shadowMap, 0);
-		if (castShadows)
+		if (dirLight.castShadows != 0)
 		{	
 			vec4 transformedShadowPos = lightViewProj * vec4(worldPos, 1.0);
 			transformedShadowPos.xy = transformedShadowPos.xy * 0.5 + 0.5;
 
-			float baseBias = 0.0001;
+			float baseBias = 0.0005;
 			float bias = max(baseBias * (1.0 - NoL), baseBias * 0.01);
 			int sampleRadius = 5;
 			float spread = 3.0;
-			float shadowSampleContrib = shadowDarkness / ((sampleRadius*2 + 1) * (sampleRadius*2 + 1));
+			float shadowSampleContrib = dirLight.shadowDarkness / ((sampleRadius*2 + 1) * (sampleRadius*2 + 1));
 
 #if QUALITY_LEVEL_HIGH
 			for (int x = -sampleRadius; x <= sampleRadius; ++x)
@@ -218,7 +218,7 @@ void main()
 			float shadowDepth = texture(shadowMap, transformedShadowPos.xy).r;
 			if (shadowDepth > transformedShadowPos.z + bias)
 			{
-				dirLightShadowOpacity = 1.0 - shadowDarkness;
+				dirLightShadowOpacity = 1.0 - dirLight.shadowDarkness;
 			}
 #endif
 		}

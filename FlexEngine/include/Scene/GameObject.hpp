@@ -113,6 +113,9 @@ namespace flex
 		MeshComponent* GetMeshComponent();
 		MeshComponent* SetMeshComponent(MeshComponent* meshComponent);
 
+		bool CastsShadow() const;
+		void SetCastsShadow(bool bCastsShadow);
+
 		// Called when another object has begun to overlap
 		void OnOverlapBegin(GameObject* other);
 		// Called when another object is no longer overlapping
@@ -187,6 +190,8 @@ namespace flex
 
 		bool m_bBeingInteractedWith = false;
 
+		bool m_bCastsShadow = true;
+
 		// Editor only
 		bool m_bUniformScale = false;
 
@@ -234,8 +239,6 @@ namespace flex
 
 		DirLightData data;
 
-		real shadowDarkness = 1.0f;
-		bool bCastShadow = false;
 		real shadowMapNearPlane;
 		real shadowMapFarPlane;
 		real shadowMapZoom;

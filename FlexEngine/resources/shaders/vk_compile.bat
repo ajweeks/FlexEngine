@@ -50,7 +50,6 @@
 @ glslangvalidator --spirv-val -V vk_post_fxaa.frag -o spv/vk_post_fxaa_frag.spv
 
 @ glslangvalidator --spirv-val -V vk_shadow.vert -o spv/vk_shadow_vert.spv
-@ glslangvalidator --spirv-val -V vk_shadow.frag -o spv/vk_shadow_frag.spv
 
 @ glslangvalidator --spirv-val -V vk_sprite.vert -o spv/vk_sprite_vert.spv
 @ glslangvalidator --spirv-val -V vk_sprite.frag -o spv/vk_sprite_frag.spv

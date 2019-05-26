@@ -5,13 +5,12 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
-in vec3 ex_WorldPos;
-in mat3 ex_TBN;
-in vec4 ex_Color;
+layout (location = 0) in vec3 ex_WorldPos;
+layout (location = 1) in mat3 ex_TBN;
+layout (location = 4) in vec4 ex_Color;
 
-layout (location = 0) out vec4 outPositionMetallic;
-layout (location = 1) out vec4 outNormalRoughness;
-layout (location = 2) out vec4 outAlbedoAO;
+layout (location = 0) out vec4 outNormalRoughness;
+layout (location = 1) out vec4 outAlbedoMetallic;
 
 // Material variables
 uniform float textureScale = 1.0;
@@ -22,7 +21,6 @@ layout (binding = 0) uniform sampler2D albedoSampler;
 
 uniform float constMetallic;
 uniform float constRoughness;
-uniform float constAO;
 
 uniform bool enableNormalSampler;
 layout (binding = 1) uniform sampler2D normalSampler;
@@ -70,12 +68,9 @@ void main()
 		N = geomNorm;
 	}
 
-	outPositionMetallic.rgb = ex_WorldPos;
-	outPositionMetallic.a = constMetallic;
+	outAlbedoMetallic.rgb = albedo * ex_Color.rgb;
+	outAlbedoMetallic.a = constMetallic;
 
 	outNormalRoughness.rgb = N;
 	outNormalRoughness.a = constRoughness;
-	
-	outAlbedoAO.rgb = albedo * ex_Color.rgb;
-	outAlbedoAO.a = constAO;
 }

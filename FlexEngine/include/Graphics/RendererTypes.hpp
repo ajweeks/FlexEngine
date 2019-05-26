@@ -28,6 +28,9 @@ namespace flex
 		i32 enabled;
 		glm::vec3 color;
 		real brightness;
+		i32 castShadows;
+		real shadowDarkness;
+		real pad[2];
 	};
 
 	struct PointLightData
@@ -135,6 +138,7 @@ namespace flex
 	const u64 U_SSAO_BLUR_DATA					= (1ull << 57); const u32 US_SSAO_BLUR_DATA				= sizeof(SSAOBlurDataDynamic); // TODO: use two uniforms?
 	const u64 U_SSAO_SAMPLING_DATA				= (1ull << 58); const u32 US_SSAO_SAMPLING_DATA			= sizeof(SSAOSamplingData);
 	const u64 U_FXAA_DATA						= (1ull << 59); const u32 US_FXAA_DATA					= sizeof(FXAAData);
+	const u64 U_SHADOW_SAMPLER					= (1ull << 60);
 	// NOTE!: New uniforms must be added to Uniforms::CalculateSizeInBytes
 
 	enum class ClearFlag
@@ -443,6 +447,7 @@ namespace flex
 
 	enum class RenderPassType
 	{
+		SHADOW,
 		DEFERRED,
 		DEFERRED_COMBINE,
 		FORWARD,
@@ -456,7 +461,7 @@ namespace flex
 	{
 		Shader(const std::string& name,
 			   const std::string& inVertexShaderFilePath,
-			   const std::string& inFragmentShaderFilePath,
+			   const std::string& inFragmentShaderFilePath = "",
 			   const std::string& inGeometryShaderFilePath = "");
 
 		std::string name = "";
@@ -495,6 +500,7 @@ namespace flex
 		bool bNeedDepthSampler = false;
 		bool bNeedNoiseSampler = false; // TODO: Replace with check for U_NOISE_SAMPLER
 		bool bNeedPushConstantBlock = false;
+		bool bGenerateVertexBufferForAll = false;
 
 		bool bDynamic = false;
 		u32 dynamicVertexBufferSize = 0;

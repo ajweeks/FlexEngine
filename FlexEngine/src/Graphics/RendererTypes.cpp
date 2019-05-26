@@ -69,20 +69,26 @@ namespace flex
 
 	Shader::Shader(const std::string& name,
 				   const std::string& inVertexShaderFilePath,
-				   const std::string& inFragmentShaderFilePath,
+				   const std::string& inFragmentShaderFilePath /* = "" */,
 				   const std::string& inGeometryShaderFilePath /* = "" */) :
 		name(name)
 	{
 #if COMPILE_OPEN_GL
 		vertexShaderFilePath = RESOURCE_LOCATION "shaders/" + inVertexShaderFilePath;
-		fragmentShaderFilePath = RESOURCE_LOCATION "shaders/" + inFragmentShaderFilePath;
+		if (!inFragmentShaderFilePath.empty())
+		{
+			fragmentShaderFilePath = RESOURCE_LOCATION "shaders/" + inFragmentShaderFilePath;
+		}
 		if (!inGeometryShaderFilePath.empty())
 		{
 			geometryShaderFilePath = RESOURCE_LOCATION "shaders/" + inGeometryShaderFilePath;
 		}
 #elif COMPILE_VULKAN
 		vertexShaderFilePath = RESOURCE_LOCATION "shaders\\spv\\" + inVertexShaderFilePath;
-		fragmentShaderFilePath = RESOURCE_LOCATION "shaders\\spv\\" + inFragmentShaderFilePath;
+		if (!inFragmentShaderFilePath.empty())
+		{
+			fragmentShaderFilePath = RESOURCE_LOCATION "shaders\\spv\\" + inFragmentShaderFilePath;
+		}
 		if (!inGeometryShaderFilePath.empty())
 		{
 			geometryShaderFilePath = RESOURCE_LOCATION "shaders\\spv\\" + inGeometryShaderFilePath;

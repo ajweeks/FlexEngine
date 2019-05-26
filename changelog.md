@@ -3,6 +3,7 @@
 
 **2019**
 _May_
+- Add shadow mapping to Vulkan
 - Add SSAO support in Vulkan & OpenGL
 - Remove world position from GBuffer, reconstruct from depth instead
 

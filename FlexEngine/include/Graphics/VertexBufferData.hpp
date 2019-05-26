@@ -27,6 +27,8 @@ namespace flex
 		void UpdateData(CreateInfo* createInfo);
 		void Destroy();
 
+		u32 CopyInto(real* dst, VertexAttributes usingAttributes);
+
 		void DescribeShaderVariables(Renderer* renderer, RenderID renderID);
 
 		real* vertexData = nullptr;

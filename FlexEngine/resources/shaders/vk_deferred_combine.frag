@@ -2,6 +2,8 @@
 
 // Deferred PBR Combine
 
+#define QUALITY_LEVEL_HIGH 1
+
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
@@ -17,6 +19,9 @@ struct DirectionalLight
 	int enabled;
 	vec3 color;
 	float brightness;
+	int castShadows;
+	float shadowDarkness;
+	float pad[2];
 };
 
 struct PointLight 
@@ -50,11 +55,12 @@ layout (binding = 1) uniform UBODynamic
 layout (binding = 2) uniform sampler2D brdfLUT;
 layout (binding = 3) uniform samplerCube irradianceSampler;
 layout (binding = 4) uniform samplerCube prefilterMap;
-
 layout (binding = 5) uniform sampler2D depthBuffer;
 layout (binding = 6) uniform sampler2D ssaoBuffer;
-layout (binding = 7) uniform sampler2D normalRoughnessTex;
-layout (binding = 8) uniform sampler2D albedoMetallicTex;
+layout (binding = 7) uniform sampler2D shadowMap;
+
+layout (binding = 8) uniform sampler2D normalRoughnessTex;
+layout (binding = 9) uniform sampler2D albedoMetallicTex;
 
 vec3 FresnelSchlick(float cosTheta, vec3 F0)
 {
@@ -122,7 +128,7 @@ vec3 DoLighting(vec3 radiance, vec3 N, vec3 V, vec3 L, float NoV, float NoL,
 	return (kD * albedo / PI + specular) * radiance * NoL;
 }
 
-vec3 reconstructWSPosFromDepth(vec2 uv, float depth)
+vec3 ReconstructWSPosFromDepth(vec2 uv, float depth)
 {
 	float x = uv.x * 2.0f - 1.0f;
 	float y = (1.0f - uv.y) * 2.0f - 1.0f;
@@ -139,7 +145,7 @@ void main()
     float roughness = texture(normalRoughnessTex, ex_TexCoord).a;
 
     float depth = texture(depthBuffer, ex_TexCoord).r;
-    vec3 worldPos = reconstructWSPosFromDepth(ex_TexCoord, depth);
+    vec3 worldPos = ReconstructWSPosFromDepth(ex_TexCoord, depth);
 
     vec3 albedo = texture(albedoMetallicTex, ex_TexCoord).rgb;
     float metallic = texture(albedoMetallicTex, ex_TexCoord).a;
@@ -189,7 +195,45 @@ void main()
 		vec3 radiance = uboConstant.dirLight.color.rgb * uboConstant.dirLight.brightness;
 		float NoL = max(dot(N, L), 0.0);
 
-		Lo += DoLighting(radiance, N, V, L, NoV, NoL, 1, 1, F0, vec3(1.0));
+		float dirLightShadowOpacity = 1.0;
+		if (uboConstant.dirLight.castShadows != 0)
+		{	
+			vec4 transformedShadowPos = uboConstant.lightViewProj * vec4(worldPos, 1.0);
+			transformedShadowPos.xy = transformedShadowPos.xy * 0.5 + 0.5;
+			transformedShadowPos.y = 1.0f - transformedShadowPos.y;
+
+			float baseBias = 0.0005;
+			float bias = max(baseBias * (1.0 - NoL), baseBias * 0.01);
+
+#if QUALITY_LEVEL_HIGH
+			int sampleRadius = 5;
+			float spread = 3.0;
+			float shadowSampleContrib = uboConstant.dirLight.shadowDarkness / ((sampleRadius*2 + 1) * (sampleRadius*2 + 1));
+			vec2 shadowMapTexelSize = 1.0 / textureSize(shadowMap, 0);
+
+			for (int x = -sampleRadius; x <= sampleRadius; ++x)
+			{
+				for (int y = -sampleRadius; y <= sampleRadius; ++y)
+				{
+					float shadowDepth = texture(shadowMap, 
+						transformedShadowPos.xy + vec2(x, y) * shadowMapTexelSize*spread).r;
+
+					if (shadowDepth > transformedShadowPos.z + bias)
+					{
+						dirLightShadowOpacity -= shadowSampleContrib;
+					}
+				}
+			}
+#else
+			float shadowDepth = texture(shadowMap, transformedShadowPos.xy).r;
+			if (shadowDepth > transformedShadowPos.z + bias)
+			{
+				dirLightShadowOpacity = 1.0 - uboConstant.dirLight.shadowDarkness;
+			}
+#endif
+		}
+
+		Lo += DoLighting(radiance, N, V, L, NoV, NoL, roughness, metallic, F0, albedo) * dirLightShadowOpacity;
 	}
 
 	vec3 F = FresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);

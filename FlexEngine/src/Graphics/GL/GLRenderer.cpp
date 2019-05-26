@@ -2109,6 +2109,7 @@ namespace flex
 
 			m_DeferredRenderObjectBatches.clear();
 			m_ForwardRenderObjectBatches.clear();
+			m_ShadowBatch.clear();
 			m_DepthAwareEditorRenderObjectBatch.clear();
 			m_DepthUnawareEditorRenderObjectBatch.clear();
 
@@ -2183,6 +2184,16 @@ namespace flex
 				}
 			}
 
+			for (GLRenderObject* renderObject : m_RenderObjects)
+			{
+				if (renderObject &&
+					renderObject->gameObject->IsVisible() &&
+					renderObject->gameObject->CastsShadow() &&
+					renderObject->vertexBufferData)
+				{
+					m_ShadowBatch.push_back(renderObject);
+				}
+			}
 #if DEBUG
 			u32 visibleObjectCount = 0;
 			for (GLRenderObject* renderObject : m_RenderObjects)
@@ -2220,7 +2231,7 @@ namespace flex
 
 			GL_PUSH_DEBUG_GROUP("Shadow Map Depths");
 
-			if (m_DirectionalLight != nullptr && m_DirectionalLight->bCastShadow && m_DirectionalLight->data.enabled)
+			if (m_DirectionalLight != nullptr && m_DirectionalLight->data.castShadows != 0 && m_DirectionalLight->data.enabled)
 			{
 				GLMaterial* material = &m_Materials[m_ShadowMaterialID];
 				GLShader* shader = &m_Shaders[material->material.shaderID];
@@ -2237,6 +2248,8 @@ namespace flex
 
 				DrawCallInfo drawCallInfo = {};
 				drawCallInfo.materialOverride = m_ShadowMaterialID;
+				drawCallInfo.bRenderingShadows = true;
+				drawCallInfo.cullFace = CullFace::FRONT;
 
 				glm::mat4 view, proj;
 				ComputeDirLightViewProj(view, proj);
@@ -2244,14 +2257,7 @@ namespace flex
 				glm::mat4 lightViewProj = proj * view;
 				glUniformMatrix4fv(material->uniformIDs.lightViewProjection, 1, GL_FALSE, &lightViewProj[0][0]);
 
-				glCullFace(GL_FRONT);
-
-				for (const GLRenderObjectBatch& batch : m_DeferredRenderObjectBatches)
-				{
-					DrawRenderObjectBatch(batch, drawCallInfo);
-				}
-
-				glCullFace(GL_BACK);
+				DrawRenderObjectBatch(m_ShadowBatch, drawCallInfo);
 			}
 
 			GL_POP_DEBUG_GROUP();
@@ -3466,14 +3472,29 @@ namespace flex
 				glBindVertexArray(renderObject->VAO);
 				glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
 
-				if (renderObject->cullFace == GL_NONE)
+				if (drawCallInfo.cullFace == CullFace::_INVALID)
 				{
-					glDisable(GL_CULL_FACE);
+					if (renderObject->cullFace == GL_NONE)
+					{
+						glDisable(GL_CULL_FACE);
+					}
+					else
+					{
+						glEnable(GL_CULL_FACE);
+						glCullFace(renderObject->cullFace);
+					}
 				}
 				else
 				{
-					glEnable(GL_CULL_FACE);
-					glCullFace(renderObject->cullFace);
+					if (drawCallInfo.cullFace == CullFace::NONE)
+					{
+						glDisable(GL_CULL_FACE);
+					}
+					else
+					{
+						glEnable(GL_CULL_FACE);
+						glCullFace(CullFaceToGLCullFace(drawCallInfo.cullFace));
+					}
 				}
 
 				if (shader->bTranslucent)
@@ -3976,8 +3997,7 @@ namespace flex
 
 			glm::mat4 lightView, lightProj;
 			ComputeDirLightViewProj(lightView, lightProj);
-
-			glm::mat4 biasedLightViewProj = lightProj * lightView;
+			glm::mat4 lightViewProj = lightProj * lightView;
 
 			for (auto& materialPair : m_Materials)
 			{
@@ -3992,12 +4012,6 @@ namespace flex
 				GLShader* shader = &m_Shaders[material->material.shaderID];
 
 				glUseProgram(shader->program);
-
-				if (m_DirectionalLight != nullptr && shader->shader->bNeedShadowMap)
-				{
-					glUniform1i(material->uniformIDs.castShadows, m_DirectionalLight->bCastShadow);
-					glUniform1f(material->uniformIDs.shadowDarkness, m_DirectionalLight->shadowDarkness);
-				}
 
 				if (shader->shader->bNeedPushConstantBlock)
 				{
@@ -4032,7 +4046,7 @@ namespace flex
 
 				if (shader->shader->constantBufferUniforms.HasUniform(U_LIGHT_VIEW_PROJ))
 				{
-					glUniformMatrix4fv(material->uniformIDs.lightViewProjection, 1, GL_FALSE, &biasedLightViewProj[0][0]);
+					glUniformMatrix4fv(material->uniformIDs.lightViewProjection, 1, GL_FALSE, &lightViewProj[0][0]);
 				}
 
 				if (shader->shader->constantBufferUniforms.HasUniform(U_CAM_POS))
@@ -4061,6 +4075,8 @@ namespace flex
 						SetVec3f(material->material.shaderID, "dirLight.direction", m_DirectionalLight->data.dir);
 						SetVec3f(material->material.shaderID, "dirLight.color", m_DirectionalLight->data.color);
 						SetFloat(material->material.shaderID, "dirLight.brightness", m_DirectionalLight->data.brightness);
+						SetInt(material->material.shaderID, "dirLight.castShadows", m_DirectionalLight->data.castShadows);
+						SetFloat(material->material.shaderID, "dirLight.shadowDarkness", m_DirectionalLight->data.shadowDarkness);
 					}
 				}
 

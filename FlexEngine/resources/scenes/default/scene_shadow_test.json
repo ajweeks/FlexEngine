@@ -282,20 +282,20 @@
 			"transform" : 
 			{
 				"pos" : "-1.947, 10.965, 0.112",
-				"rot" : "-0.859, 0.796, -0.009"
+				"rot" : "-0.855, 0.820, 0.653"
 			},
 			"directional light info" : 
 			{
-				"rotation" : "-0.859, 0.796, -0.009",
+				"rotation" : "-0.855, 0.820, 0.653",
 				"pos" : "-1.947, 10.965, 0.112",
 				"color" : "1.00, 1.00, 1.00",
 				"enabled" : true,
 				"brightness" : 2.344000,
 				"cast shadows" : true,
 				"shadow darkness" : 1.000000,
-				"shadow map near" : -45.000000,
-				"shadow map far" : 45.000000,
-				"shadow map zoom" : 66.000000
+				"shadow map near" : -53.000000,
+				"shadow map far" : 47.000000,
+				"shadow map zoom" : 65.000000
 			}
 		},
 		{

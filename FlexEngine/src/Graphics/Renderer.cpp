@@ -1127,7 +1127,7 @@ namespace flex
 			{ "compute_sdf", "compute_sdf.vert", "compute_sdf.frag" },
 			{ "font_ss", "font_ss.vert", "font_ss.frag", "font_ss.geom" },
 			{ "font_ws", "font_ws.vert", "font_ws.frag", "font_ws.geom" },
-			{ "shadow", "shadow.vert", "shadow.frag" },
+			{ "shadow", "shadow.vert" },
 			{ "ssao", "ssao.vert", "ssao.frag" },
 			{ "ssao_blur", "ssao_blur.vert", "ssao_blur.frag" },
 		};
@@ -1149,7 +1149,7 @@ namespace flex
 			{ "compute_sdf", "vk_compute_sdf_vert.spv", "vk_compute_sdf_frag.spv" },
 			{ "font_ss", "vk_font_ss_vert.spv", "vk_font_frag.spv", "vk_font_ss_geom.spv" },
 			{ "font_ws", "vk_font_ws_vert.spv", "vk_font_frag.spv", "vk_font_ws_geom.spv" },
-			{ "shadow", "vk_shadow_vert.spv", "vk_shadow_frag.spv" },
+			{ "shadow", "vk_shadow_vert.spv" },
 			{ "ssao", "vk_ssao_vert.spv", "vk_ssao_frag.spv" },
 			{ "ssao_blur", "vk_ssao_blur_vert.spv", "vk_ssao_blur_frag.spv" },
 		};
@@ -1185,6 +1185,7 @@ namespace flex
 		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_DEPTH_SAMPLER);
 		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SSAO_FINAL_SAMPLER);
 		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_BRDF_LUT_SAMPLER);
+		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SHADOW_SAMPLER);
 		m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PREFILTER_MAP);
 
 		m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
@@ -1482,7 +1483,8 @@ namespace flex
 		++shaderID;
 
 		// Shadow
-		m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
+		m_BaseShaders[shaderID].renderPassType = RenderPassType::SHADOW;
+		m_BaseShaders[shaderID].bGenerateVertexBufferForAll = true;
 		m_BaseShaders[shaderID].vertexAttributes =
 			(u32)VertexAttribute::POSITION;
 
@@ -1538,12 +1540,16 @@ namespace flex
 		{
 			if (!LoadShaderCode(shaderID))
 			{
-				std::string fileNames = shader.vertexShaderFilePath + " & " + shader.fragmentShaderFilePath;
+				PrintError("Couldn't load/compile shaders: %s", shader.vertexShaderFilePath.c_str());
+				if (!shader.fragmentShaderFilePath.empty())
+				{
+					PrintError(", %s", shader.fragmentShaderFilePath.c_str());
+				}
 				if (!shader.geometryShaderFilePath.empty())
 				{
-					fileNames += " & " + shader.geometryShaderFilePath;
+					PrintError(", %s", shader.geometryShaderFilePath.c_str());
 				}
-				PrintError("Couldn't load/compile shaders: %s\n", fileNames.c_str());
+				PrintError("\n");
 			}
 
 			// No need to keep the code in memory

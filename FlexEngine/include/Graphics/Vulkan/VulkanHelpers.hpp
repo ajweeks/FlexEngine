@@ -443,6 +443,9 @@ namespace flex
 			std::vector<u32>* indices = nullptr;
 			u32 indexOffset = 0;
 
+			u32 shadowVertexOffset = 0;
+			u32 shadowIndexOffset = 0;
+
 			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 
 			VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;
@@ -452,6 +455,7 @@ namespace flex
 			bool bSetDynamicStates = false;
 
 			u32 dynamicUBOOffset = 0;
+			u32 dynamicShadowUBOOffset = 0;
 
 			VDeleter<VkPipelineLayout> pipelineLayout;
 			VDeleter<VkPipeline> graphicsPipeline;
@@ -518,6 +522,9 @@ namespace flex
 
 			VkImageView ssaoFinalImageView = VK_NULL_HANDLE;
 			VkSampler ssaoFinalSampler = VK_NULL_HANDLE;
+
+			VkImageView shadowImageView = VK_NULL_HANDLE;
+			VkSampler shadowSampler = VK_NULL_HANDLE;
 
 			bool bDepthSampler = false;
 

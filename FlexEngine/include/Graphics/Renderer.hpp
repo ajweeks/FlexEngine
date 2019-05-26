@@ -273,10 +273,19 @@ namespace flex
 			bool bDeferred = false;
 			bool bWireframe = false;
 			bool bWriteToDepth = true;
+			bool bRenderingShadows = false;
+
+			MaterialID materialIDOverride = InvalidMaterialID;
+
+			u64 graphicsPipelineOverride = InvalidID;
+			u64 pipelineLayoutOverride = InvalidID;
+			u64 descriptorSetOverride = InvalidID;
+
 			// NOTE: DepthTestFunc only supported in GL, Vulkan requires specification at pipeline creation time
 			DepthTestFunc depthTestFunc = DepthTestFunc::GEQUAL;
 			RenderID cubemapObjectRenderID = InvalidRenderID;
 			MaterialID materialOverride = InvalidMaterialID;
+			CullFace cullFace = CullFace::_INVALID;
 		};
 
 		MaterialID m_ReflectionProbeMaterialID = InvalidMaterialID; // Set by the user via SetReflecionProbeMaterial

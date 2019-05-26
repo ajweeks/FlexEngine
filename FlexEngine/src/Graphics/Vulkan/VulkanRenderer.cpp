@@ -125,28 +125,37 @@ namespace flex
 			m_CubemapDepthAttachment = new FrameBufferAttachment(m_VulkanDevice->m_LogicalDevice, depthFormat);
 
 			m_SwapChain = { m_VulkanDevice->m_LogicalDevice, vkDestroySwapchainKHR };
+
 			m_DeferredCombineRenderPass = { m_VulkanDevice->m_LogicalDevice, vkDestroyRenderPass };
 			m_SSAORenderPass = { m_VulkanDevice->m_LogicalDevice, vkDestroyRenderPass };
 			m_SSAOBlurHRenderPass = { m_VulkanDevice->m_LogicalDevice, vkDestroyRenderPass };
 			m_SSAOBlurVRenderPass = { m_VulkanDevice->m_LogicalDevice, vkDestroyRenderPass };
 			m_ForwardRenderPass = { m_VulkanDevice->m_LogicalDevice, vkDestroyRenderPass };
+
 			m_DescriptorPool = { m_VulkanDevice->m_LogicalDevice, vkDestroyDescriptorPool };
+
 			m_PresentCompleteSemaphore = { m_VulkanDevice->m_LogicalDevice, vkDestroySemaphore };
 			m_RenderCompleteSemaphore = { m_VulkanDevice->m_LogicalDevice, vkDestroySemaphore };
+
 			m_ColorSampler = { m_VulkanDevice->m_LogicalDevice, vkDestroySampler };
 			m_DepthSampler = { m_VulkanDevice->m_LogicalDevice, vkDestroySampler };
+			m_SSAOSampler = { m_VulkanDevice->m_LogicalDevice, vkDestroySampler };
+
+			m_ShadowPipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
+			m_ShadowGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
+
+			m_FontSSPipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
+			m_FontWSPipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
 
 			m_FontSSGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
-			m_FontSSPipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
 			m_FontWSGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
-			m_FontWSPipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
+
+			m_SSAOGraphicsPipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
+			m_SSAOBlurGraphicsPipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
 
 			m_SSAOGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
 			m_SSAOBlurHGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
 			m_SSAOBlurVGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
-			m_SSAOGraphicsPipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
-			m_SSAOBlurGraphicsPipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
-			m_SSAOSampler = { m_VulkanDevice->m_LogicalDevice, vkDestroySampler };
 
 			CreateSwapChain();
 			CreateSwapChainImageViews();
@@ -178,6 +187,13 @@ namespace flex
 			m_SSAOBlurVFrameBuf = new FrameBuffer(m_VulkanDevice->m_LogicalDevice);
 			m_SSAOBlurVFrameBuf->frameBufferAttachments = {
 				{ "ssao blur final", { m_VulkanDevice->m_LogicalDevice, m_SSAOBufferFormat } },
+			};
+
+			m_ShadowBufferFormat = VK_FORMAT_D16_UNORM;
+
+			m_ShadowFrameBuf = new FrameBuffer(m_VulkanDevice->m_LogicalDevice);
+			m_ShadowFrameBuf->frameBufferAttachments = {
+				{ "shadow depth", { m_VulkanDevice->m_LogicalDevice, m_ShadowBufferFormat } },
 			};
 
 			// NOTE: This is different from the GLRenderer's capture views
@@ -329,6 +345,43 @@ namespace flex
 				CreateSSAODescriptorSets();
 			}
 
+			{
+				// Shadow map pipeline
+				VulkanMaterial* shadowMaterial = &m_Materials[m_ShadowMatID];
+				VulkanShader* shadowShader = &m_Shaders[shadowMaterial->material.shaderID];
+
+				GraphicsPipelineCreateInfo pipelineCreateInfo = {};
+				pipelineCreateInfo.bSetDynamicStates = true;
+				pipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+				pipelineCreateInfo.cullMode = VK_CULL_MODE_FRONT_BIT;
+				pipelineCreateInfo.bEnableColorBlending = false;
+
+				pipelineCreateInfo.graphicsPipeline = m_ShadowGraphicsPipeline.replace();
+				pipelineCreateInfo.pipelineLayout = m_ShadowPipelineLayout.replace();
+				pipelineCreateInfo.shaderID = shadowMaterial->material.shaderID;
+				pipelineCreateInfo.vertexAttributes = shadowShader->shader->vertexAttributes;
+				pipelineCreateInfo.descriptorSetLayoutIndex = shadowMaterial->descriptorSetLayoutIndex;
+				pipelineCreateInfo.subpass = shadowShader->shader->subpass;
+				pipelineCreateInfo.depthWriteEnable = shadowShader->shader->bDepthWriteEnable ? VK_TRUE : VK_FALSE;
+				pipelineCreateInfo.renderPass = shadowShader->renderPass;
+				CreateGraphicsPipeline(&pipelineCreateInfo);
+
+				// Shadow map descriptor set
+				VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[shadowMaterial->material.shaderID];
+
+				DescriptorSetCreateInfo descSetCreateInfo = {};
+				descSetCreateInfo.descriptorSet = &m_ShadowDescriptorSet;
+				descSetCreateInfo.descriptorSetLayout = &descSetLayout;
+				descSetCreateInfo.shaderID = shadowMaterial->material.shaderID;
+				descSetCreateInfo.uniformBuffer = &shadowShader->uniformBuffer;
+				FrameBufferAttachment& normalFrameBufferAttachment = m_OffScreenFrameBuf->frameBufferAttachments[0].second;
+				// Depth texture is handled for us in CreateDescriptorSet
+				descSetCreateInfo.ssaoNormalImageView = normalFrameBufferAttachment.view;
+				descSetCreateInfo.ssaoNormalSampler = m_SSAOSampler;
+				descSetCreateInfo.noiseTexture = shadowMaterial->noiseTexture;
+				CreateDescriptorSet(&descSetCreateInfo);
+			}
+
 			m_CommandBufferManager.CreateCommandBuffers(m_SwapChainImages.size());
 
 			GLFWWindowWrapper* castedWindow = dynamic_cast<GLFWWindowWrapper*>(g_Window);
@@ -377,6 +430,25 @@ namespace flex
 			CreateStaticVertexBuffers();
 			CreateStaticIndexBuffers();
 			CreateDynamicVertexBuffers();
+
+			CreateShadowVertexBuffer();
+			CreateShadowIndexBuffer();
+
+			// Shadow index/vertex offsets
+			{
+				u32 vertexCount = 0;
+				for (VulkanRenderObject* renderObject : m_RenderObjects)
+				{
+					// TODO: Only account for shadow-casting objects?
+					if (renderObject)
+					{
+						renderObject->shadowVertexOffset = vertexCount;
+						vertexCount += renderObject->vertexBufferData->VertexCount;
+					}
+				}
+
+			}
+
 
 			CreateSemaphores();
 
@@ -481,6 +553,9 @@ namespace flex
 			delete m_OffScreenDepthAttachment;
 			m_OffScreenDepthAttachment = nullptr;
 
+			delete m_ShadowFrameBuf;
+			m_ShadowFrameBuf = nullptr;
+
 			vkDestroySemaphore(m_VulkanDevice->m_LogicalDevice, m_OffscreenSemaphore, nullptr);
 
 			m_SSAOGraphicsPipeline.replace();
@@ -491,6 +566,9 @@ namespace flex
 			m_SSAOBlurGraphicsPipelineLayout.replace();
 
 			m_SSAOSampler.replace();
+
+			m_ShadowGraphicsPipeline.replace();
+			m_ShadowPipelineLayout.replace();
 
 			m_FontSSPipelineLayout.replace();
 			m_FontSSGraphicsPipeline.replace();
@@ -1075,12 +1153,14 @@ namespace flex
 				}
 			}
 
+			// TODO: EZ: Use helper
 			SetImageLayout(
 				cmdBuf,
 				renderObjectMat.irradianceTexture,
 				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 				subresourceRange);
+			renderObjectMat.irradianceTexture->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 			m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
 
@@ -1341,6 +1421,7 @@ namespace flex
 				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 				subresourceRange);
+			renderObjectMat.prefilterTexture->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 			m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
 
@@ -1763,6 +1844,10 @@ namespace flex
 			renderObject->materialName = m_Materials[renderObject->materialID].material.name;
 			renderObject->gameObject = createInfo->gameObject;
 			renderObject->bEditorObject = createInfo->bEditorObject;
+			if (createInfo->bEditorObject)
+			{
+				renderObject->gameObject->SetCastsShadow(false);
+			}
 			renderObject->depthCompareOp = DepthTestFuncToVkCompareOp(createInfo->depthTestReadFunc);
 			renderObject->bSetDynamicStates = createInfo->bSetDynamicStates;
 
@@ -1813,7 +1898,7 @@ namespace flex
 
 					const size_t dynamicBufferSize = AllocateDynamicUniformBuffer(
 						shader->uniformBuffer.dynamicData.size, (void**)&shader->uniformBuffer.dynamicData.data);
-					shader->uniformBuffer.fullDynamicBufferSize = dynamicBufferSize;;
+					shader->uniformBuffer.fullDynamicBufferSize = dynamicBufferSize;
 					if (dynamicBufferSize > 0)
 					{
 						PrepareUniformBuffer(&shader->uniformBuffer.dynamicBuffer, dynamicBufferSize,
@@ -2316,6 +2401,9 @@ namespace flex
 				CreateStaticVertexBuffers();
 				CreateStaticIndexBuffers();
 				CreateDynamicVertexBuffers();
+
+				CreateShadowVertexBuffer();
+				CreateShadowIndexBuffer();
 			}
 		}
 
@@ -3536,42 +3624,62 @@ namespace flex
 			}
 #endif
 
-			std::string vertFileName = shader.vertexShaderFilePath;
-			StripLeadingDirectories(vertFileName);
-			std::string fragFileName = shader.fragmentShaderFilePath;
-			StripLeadingDirectories(fragFileName);
-			std::string geomFileName = shader.geometryShaderFilePath;
-			StripLeadingDirectories(geomFileName);
 			if (g_bEnableLogging_Loading)
 			{
-				if (geomFileName.empty())
+				std::string vertFileName = shader.vertexShaderFilePath;
+				// TODO: EZ: Return value from helper
+				StripLeadingDirectories(vertFileName);
+				std::string fragFileName = shader.fragmentShaderFilePath;
+				StripLeadingDirectories(fragFileName);
+				std::string geomFileName = shader.geometryShaderFilePath;
+				StripLeadingDirectories(geomFileName);
+
+				Print("Loading shaders %s", vertFileName.c_str());
+
+				if (!fragFileName.empty())
 				{
-					Print("Loading shaders %s & %s\n", vertFileName.c_str(), fragFileName.c_str());
+					Print(" & %s", fragFileName.c_str());
 				}
-				else
+
+				if (!geomFileName.empty())
 				{
-					Print("Loading shaders %s & %s & %s\n", vertFileName.c_str(), fragFileName.c_str(), geomFileName.c_str());
+					Print(" & %s", geomFileName.c_str());
 				}
+
+				Print("\n");
 			}
+
+			const bool bUseFragmentStage = !shader.fragmentShaderFilePath.empty();
+			const bool bUseGeometryStage = !shader.geometryShaderFilePath.empty();
 
 			if (!ReadFile(shader.vertexShaderFilePath, shader.vertexShaderCode, true))
 			{
 				PrintError("Could not find vertex shader %s\n", shader.name.c_str());
 				bSuccess = false;
 			}
-			if (!ReadFile(shader.fragmentShaderFilePath, shader.fragmentShaderCode, true))
+			if (bUseFragmentStage && !ReadFile(shader.fragmentShaderFilePath, shader.fragmentShaderCode, true))
 			{
 				PrintError("Could not find fragment shader %s\n", shader.name.c_str());
 				bSuccess = false;
 			}
-			if (!shader.geometryShaderFilePath.empty() && !ReadFile(shader.geometryShaderFilePath, shader.geometryShaderCode, true))
+			if (bUseGeometryStage && !ReadFile(shader.geometryShaderFilePath, shader.geometryShaderCode, true))
 			{
 				PrintError("Could not find geometry shader %s\n", shader.name.c_str());
 				bSuccess = false;
 			}
 
+			if (!CreateShaderModule(shader.vertexShaderCode, vkShader.vertShaderModule.replace()))
+			{
+				PrintError("Failed to compile vertex shader located at: %s\n", shader.vertexShaderFilePath.c_str());
+			}
 
-			const bool bUseGeometryStage = !shader.geometryShaderCode.empty();
+			if (bUseFragmentStage)
+			{
+				if (!CreateShaderModule(shader.fragmentShaderCode, vkShader.fragShaderModule.replace()))
+				{
+					PrintError("Failed to compile fragment shader located at: %s\n", shader.fragmentShaderFilePath.c_str());
+				}
+			}
 
 			if (bUseGeometryStage)
 			{
@@ -3580,17 +3688,6 @@ namespace flex
 					PrintError("Failed to compile geometry shader located at: %s\n", shader.geometryShaderFilePath.c_str());
 				}
 			}
-
-			if (!CreateShaderModule(shader.vertexShaderCode, vkShader.vertShaderModule.replace()))
-			{
-				PrintError("Failed to compile vertex shader located at: %s\n", shader.vertexShaderFilePath.c_str());
-			}
-
-			if (!CreateShaderModule(shader.fragmentShaderCode, vkShader.fragShaderModule.replace()))
-			{
-				PrintError("Failed to compile fragment shader located at: %s\n", shader.fragmentShaderFilePath.c_str());
-			}
-
 
 			return bSuccess;
 		}
@@ -3839,6 +3936,7 @@ namespace flex
 		{
 			switch (renderPassType)
 			{
+			case RenderPassType::SHADOW: return m_ShadowFrameBuf->renderPass;
 			case RenderPassType::DEFERRED: return m_OffScreenFrameBuf->renderPass;
 			case RenderPassType::DEFERRED_COMBINE: return m_DeferredCombineRenderPass;
 			case RenderPassType::FORWARD: return m_ForwardRenderPass;
@@ -3864,7 +3962,7 @@ namespace flex
 
 		RenderID VulkanRenderer::GetNextAvailableRenderID() const
 		{
-			for (i32 i = (i32)m_RenderObjects.size() - 1; i >= 0; --i)
+			for (u32 i = 0; i < m_RenderObjects.size(); ++i)
 			{
 				if (m_RenderObjects[i] == nullptr)
 				{
@@ -4204,7 +4302,7 @@ namespace flex
 				GetSupportedDepthFormat(m_VulkanDevice->m_PhysicalDevice, &depthFormat);
 
 				CreateRenderPass(m_DeferredCombineRenderPass.replace(), m_SwapChainImageFormat, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, false,
-					true, depthFormat, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+					true, depthFormat, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 			}
 
 			// Forward render pass
@@ -4212,8 +4310,9 @@ namespace flex
 				VkFormat depthFormat;
 				GetSupportedDepthFormat(m_VulkanDevice->m_PhysicalDevice, &depthFormat);
 
+				// TODO: Does this get transferred out of?
 				CreateRenderPass(m_ForwardRenderPass.replace(), m_SwapChainImageFormat, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, true, true,
-					depthFormat, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+					depthFormat, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 			}
 		}
 
@@ -4248,6 +4347,12 @@ namespace flex
 
 			if (shader->shader->constantBufferUniforms.HasUniform(U_SSAO_FINAL_SAMPLER))
 			{
+				createInfo.shadowSampler = m_ColorSampler;
+				createInfo.shadowImageView = m_ShadowFrameBuf->frameBufferAttachments[0].second.view;
+			}
+
+			if (shader->shader->constantBufferUniforms.HasUniform(U_SSAO_FINAL_SAMPLER))
+			{
 				FrameBufferAttachment& fba = m_bSSAOBlurEnabled ? m_SSAOBlurVFrameBuf->frameBufferAttachments[0].second : m_SSAOFrameBuf->frameBufferAttachments[0].second;
 				createInfo.ssaoFinalImageView = fba.view;
 				createInfo.ssaoFinalSampler = m_SSAOSampler;
@@ -4278,7 +4383,13 @@ namespace flex
 
 			struct DescriptorSetInfo
 			{
-				DescriptorSetInfo(u64 uniform, VkDescriptorType descriptorType, VkBuffer buffer, VkDeviceSize bufferSize, VkImageView imageView = VK_NULL_HANDLE, VkSampler imageSampler = VK_NULL_HANDLE, VkDescriptorImageInfo* imageInfoPtr = nullptr) :
+				DescriptorSetInfo(u64 uniform,
+					VkDescriptorType descriptorType,
+					VkBuffer buffer,
+					VkDeviceSize bufferSize,
+					VkImageView imageView = VK_NULL_HANDLE,
+					VkSampler imageSampler = VK_NULL_HANDLE,
+					VkDescriptorImageInfo* imageInfoPtr = nullptr) :
 					uniform(uniform),
 					descriptorType(descriptorType),
 					buffer(buffer),
@@ -4292,8 +4403,8 @@ namespace flex
 				u64 uniform;
 				VkDescriptorType descriptorType;
 
-				VkBuffer buffer = VK_NULL_HANDLE;
-				VkDeviceSize bufferSize = 0;
+				VkBuffer buffer;
+				VkDeviceSize bufferSize;
 
 				VkImageView imageView = VK_NULL_HANDLE;
 				VkSampler imageSampler = VK_NULL_HANDLE;
@@ -4309,10 +4420,10 @@ namespace flex
 
 			std::vector<DescriptorSetInfo> descriptorSets = {
 				{ U_UNIFORM_BUFFER_CONSTANT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-				createInfo->uniformBuffer->constantBuffer.m_Buffer, createInfo->uniformBuffer->constantBuffer.m_Size },
+				createInfo->uniformBuffer->constantBuffer.m_Buffer, createInfo->uniformBuffer->constantData.size },
 
 				{ U_UNIFORM_BUFFER_DYNAMIC, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
-				// TODO: Size should be something else...
+				// TODO: Size should be something else... (createInfo->uniformBuffer->fullDynamicBufferSize?)
 				createInfo->uniformBuffer->dynamicBuffer.m_Buffer, sizeof(VulkanUniformBufferObjectData) * m_RenderObjects.size() },
 
 				{ U_ALBEDO_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -4410,6 +4521,12 @@ namespace flex
 				createInfo->noiseTexture ? *&createInfo->noiseTexture->imageView : VK_NULL_HANDLE,
 				createInfo->noiseTexture ? *&createInfo->noiseTexture->sampler : VK_NULL_HANDLE,
 				createInfo->noiseTexture ? &createInfo->noiseTexture->imageInfoDescriptor : nullptr },
+
+				{ U_SHADOW_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_NULL_HANDLE, 0,
+				*&createInfo->shadowImageView,
+				*&createInfo->shadowSampler,
+				nullptr },
 			};
 
 
@@ -4561,6 +4678,9 @@ namespace flex
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
 				{ U_SSAO_FINAL_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_SHADOW_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 			};
 
@@ -4734,26 +4854,27 @@ namespace flex
 		{
 			VulkanShader& shader = m_Shaders[createInfo->shaderID];
 
-			std::vector<VkPipelineShaderStageCreateInfo> shaderStages(2);
+			std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
 
-			const bool bUseGeometryStage = !shader.shader->geometryShaderCode.empty();
-			if (bUseGeometryStage)
-			{
-				shaderStages.push_back({});
-			}
+			const bool bUseFragmentStage = !shader.shader->fragmentShaderFilePath.empty();
+			const bool bUseGeometryStage = !shader.shader->geometryShaderFilePath.empty();
 
 			VkPipelineShaderStageCreateInfo vertShaderStageInfo = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, shader.vertShaderModule);
-			shaderStages[0] = vertShaderStageInfo;
+			shaderStages.push_back(vertShaderStageInfo);
 
-			VkPipelineShaderStageCreateInfo fragShaderStageInfo = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, shader.fragShaderModule);
-			fragShaderStageInfo.pSpecializationInfo = createInfo->fragSpecializationInfo;
-			shaderStages[1] = fragShaderStageInfo;
+			VkPipelineShaderStageCreateInfo fragShaderStageInfo = {};
+			if (bUseFragmentStage)
+			{
+				fragShaderStageInfo = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, shader.fragShaderModule);
+				fragShaderStageInfo.pSpecializationInfo = createInfo->fragSpecializationInfo;
+				shaderStages.push_back(fragShaderStageInfo);
+			}
 
 			VkPipelineShaderStageCreateInfo geomShaderStageInfo = {};
 			if (bUseGeometryStage)
 			{
 				geomShaderStageInfo = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_GEOMETRY_BIT, shader.geomShaderModule);
-				shaderStages[2] = geomShaderStageInfo;
+				shaderStages.push_back(geomShaderStageInfo);
 			}
 
 			const u32 vertexStride = CalculateVertexStride(createInfo->vertexAttributes);
@@ -4894,9 +5015,9 @@ namespace flex
 			depthImageCreateInfo.height = m_SwapChainExtent.height;
 			depthImageCreateInfo.format = depthFormat;
 			depthImageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-			depthImageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT|VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+			depthImageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 			depthImageCreateInfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-			depthImageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
+			depthImageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 			VulkanTexture::CreateImage(m_VulkanDevice, m_GraphicsQueue, depthImageCreateInfo);
 
 			VulkanTexture::ImageViewCreateInfo depthImageViewCreateInfo = {};
@@ -4908,7 +5029,7 @@ namespace flex
 
 			// Depth will be copied from offscreen depth buffer after deferred combine pass
 			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_DepthAttachment->image, depthFormat,
-				VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, VK_NULL_HANDLE, true);
+				VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1, VK_NULL_HANDLE, true);
 
 			// Offscreen attachment
 			m_OffScreenDepthAttachment->format = depthFormat;
@@ -4921,11 +5042,10 @@ namespace flex
 			offscreenDepthImageCreateInfo.format = depthFormat;
 			offscreenDepthImageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
 			offscreenDepthImageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT |
-				VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT |
 				VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
 				VK_IMAGE_USAGE_SAMPLED_BIT;
 			offscreenDepthImageCreateInfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-			offscreenDepthImageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
+			offscreenDepthImageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 			VulkanTexture::CreateImage(m_VulkanDevice, m_GraphicsQueue, offscreenDepthImageCreateInfo);
 
 			VulkanTexture::ImageViewCreateInfo offscreenDepthImageViewCreateInfo = {};
@@ -4938,7 +5058,6 @@ namespace flex
 			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_OffScreenDepthAttachment->image, depthFormat,
 				VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1);
 
-
 			// Cubemap depth
 			VulkanTexture::ImageCreateInfo cubemapDepthImageCreateInfo = {};
 			cubemapDepthImageCreateInfo.image = m_CubemapDepthAttachment->image.replace();
@@ -4949,7 +5068,7 @@ namespace flex
 			cubemapDepthImageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
 			cubemapDepthImageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 			cubemapDepthImageCreateInfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-			cubemapDepthImageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
+			cubemapDepthImageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 			cubemapDepthImageCreateInfo.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 			cubemapDepthImageCreateInfo.arrayLayers = 6;
 			VulkanTexture::CreateImage(m_VulkanDevice, m_GraphicsQueue, cubemapDepthImageCreateInfo);
@@ -5005,71 +5124,149 @@ namespace flex
 			m_SSAOBlurVFrameBuf->width = m_SwapChainExtent.width;
 			m_SSAOBlurVFrameBuf->height = m_SwapChainExtent.height;
 
+			// TODO:
+			m_ShadowFrameBuf->width = 2048;
+			m_ShadowFrameBuf->height = 2048;
+
 			const size_t frameBufferColorAttachmentCount = m_OffScreenFrameBuf->frameBufferAttachments.size();
 
-			// Color attachments
-			for (u32 i = 0; i < frameBufferColorAttachmentCount; ++i)
+			//  Offscreen render pass
 			{
-				CreateAttachment(m_VulkanDevice, m_OffScreenFrameBuf, i);
+				// Color attachments
+				for (u32 i = 0; i < frameBufferColorAttachmentCount; ++i)
+				{
+					CreateAttachment(m_VulkanDevice, m_OffScreenFrameBuf, i);
+				}
+
+				// Find a suitable depth format
+				VkFormat attDepthFormat;
+				VkBool32 validDepthFormat = GetSupportedDepthFormat(m_VulkanDevice->m_PhysicalDevice, &attDepthFormat);
+				assert(validDepthFormat);
+
+				std::vector<VkAttachmentDescription> attachmentDescs(frameBufferColorAttachmentCount + 1); // + 1 for depth attachment
+
+				for (u32 i = 0; i < frameBufferColorAttachmentCount; ++i)
+				{
+					attachmentDescs[i] = vks::attachmentDescription(m_OffScreenFrameBuf->frameBufferAttachments[i].second.format, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+				}
+				// NOTE: Don't use auto-transition (to shader_read_only) because we want to use it multiple times (?)
+				// OPTIMIZE: Potentially could figure out how to use auto transition for this
+				attachmentDescs[frameBufferColorAttachmentCount] = vks::attachmentDescription(m_OffScreenDepthAttachment->format, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+
+				std::vector<VkAttachmentReference> colorReferences;
+				for (u32 i = 0; i < frameBufferColorAttachmentCount; ++i)
+				{
+					colorReferences.push_back({ i, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL });
+				}
+
+				VkAttachmentReference depthReference = { frameBufferColorAttachmentCount, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+
+				VkSubpassDescription subpass = {};
+				subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+				subpass.pColorAttachments = colorReferences.data();
+				subpass.colorAttachmentCount = static_cast<u32>(colorReferences.size());
+				subpass.pDepthStencilAttachment = &depthReference;
+
+				std::array<VkSubpassDependency, 2> dependencies;
+
+				dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+				dependencies[0].dstSubpass = 0;
+				dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+				dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+				dependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+				dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+				dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+				dependencies[1].srcSubpass = 0;
+				dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+				dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+				dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+				dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+				dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+				dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+				VkRenderPassCreateInfo renderPassInfo = vks::renderPassCreateInfo();
+				renderPassInfo.pAttachments = attachmentDescs.data();
+				renderPassInfo.attachmentCount = static_cast<u32>(attachmentDescs.size());
+				renderPassInfo.subpassCount = 1;
+				renderPassInfo.pSubpasses = &subpass;
+				renderPassInfo.dependencyCount = dependencies.size();
+				renderPassInfo.pDependencies = dependencies.data();
+
+				vkDestroyRenderPass(m_VulkanDevice->m_LogicalDevice, m_OffScreenFrameBuf->renderPass, nullptr);
+				VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassInfo, nullptr, &m_OffScreenFrameBuf->renderPass));
 			}
 
-			// Depth attachment
-
-			// Find a suitable depth format
-			VkFormat attDepthFormat;
-			VkBool32 validDepthFormat = GetSupportedDepthFormat(m_VulkanDevice->m_PhysicalDevice, &attDepthFormat);
-			assert(validDepthFormat);
-
-			std::vector<VkAttachmentDescription> attachmentDescs(frameBufferColorAttachmentCount + 1); // + 1 for depth attachment
-
-			for (u32 i = 0; i < frameBufferColorAttachmentCount; ++i)
+			// TODO: Make render pass helper support depth-only passes
+			// Shadow render pass
 			{
-				attachmentDescs[i] = vks::attachmentDescription(m_OffScreenFrameBuf->frameBufferAttachments[i].second.format, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			}
-			attachmentDescs[frameBufferColorAttachmentCount] = vks::attachmentDescription(m_OffScreenDepthAttachment->format, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+				// Color attachment
+				VkAttachmentDescription depthAttachment = vks::attachmentDescription(m_ShadowBufferFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-			std::vector<VkAttachmentReference> colorReferences;
-			for (u32 i = 0; i < frameBufferColorAttachmentCount; ++i)
+				VkAttachmentReference depthAttachmentRef = { 0, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+
+				std::array<VkSubpassDescription, 1> subpasses;
+				subpasses[0] = {};
+				subpasses[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+				subpasses[0].pDepthStencilAttachment = &depthAttachmentRef;
+
+				std::array<VkSubpassDependency, 2> dependencies;
+				dependencies[0] = {};
+				dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+				dependencies[0].dstSubpass = 0;
+				dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+				dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+				dependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+				dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+				dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+				dependencies[1] = {};
+				dependencies[1].srcSubpass = 0;
+				dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+				dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+				dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+				dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+				dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+				dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+				std::vector<VkAttachmentDescription> attachments;
+				attachments.push_back(depthAttachment);
+
+				// Renderpass
+				VkRenderPassCreateInfo renderPassCreateInfo = vks::renderPassCreateInfo();
+				renderPassCreateInfo.attachmentCount = attachments.size();
+				renderPassCreateInfo.pAttachments = attachments.data();
+				renderPassCreateInfo.subpassCount = subpasses.size();
+				renderPassCreateInfo.pSubpasses = subpasses.data();
+				renderPassCreateInfo.dependencyCount = dependencies.size();
+				renderPassCreateInfo.pDependencies = dependencies.data();
+				VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassCreateInfo, nullptr, &m_ShadowFrameBuf->renderPass));
+			}
+
+			// Shadow frame buffer
 			{
-				colorReferences.push_back({ i, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL });
+				CreateAttachment(
+					m_VulkanDevice,
+					m_ShadowBufferFormat,
+					VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT,
+					m_ShadowFrameBuf->width,
+					m_ShadowFrameBuf->height,
+					1,
+					VK_IMAGE_VIEW_TYPE_2D,
+					0,
+					&m_ShadowFrameBuf->frameBufferAttachments[0].second);
+
+				std::vector<VkImageView> shadowAttachments;
+				shadowAttachments.push_back(m_ShadowFrameBuf->frameBufferAttachments[0].second.view);
+
+				VkFramebufferCreateInfo shadowFramebufferCreateInfo = vks::framebufferCreateInfo(m_ShadowFrameBuf->renderPass);
+				shadowFramebufferCreateInfo.pAttachments = shadowAttachments.data();
+				shadowFramebufferCreateInfo.attachmentCount = static_cast<u32>(shadowAttachments.size());
+				shadowFramebufferCreateInfo.width = m_ShadowFrameBuf->width;
+				shadowFramebufferCreateInfo.height = m_ShadowFrameBuf->height;
+				shadowFramebufferCreateInfo.layers = 1;
+				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &shadowFramebufferCreateInfo, nullptr, m_ShadowFrameBuf->frameBuffer.replace()));
 			}
-
-			VkAttachmentReference depthReference = { frameBufferColorAttachmentCount, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
-
-			VkSubpassDescription subpass = {};
-			subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-			subpass.pColorAttachments = colorReferences.data();
-			subpass.colorAttachmentCount = static_cast<u32>(colorReferences.size());
-			subpass.pDepthStencilAttachment = &depthReference;
-
-			std::array<VkSubpassDependency, 2> dependencies;
-
-			dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
-			dependencies[0].dstSubpass = 0;
-			dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-			dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-			dependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-			dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-			dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-			dependencies[1].srcSubpass = 0;
-			dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
-			dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-			dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-			dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-			dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-			dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-			VkRenderPassCreateInfo renderPassInfo = vks::renderPassCreateInfo();
-			renderPassInfo.pAttachments = attachmentDescs.data();
-			renderPassInfo.attachmentCount = static_cast<u32>(attachmentDescs.size());
-			renderPassInfo.subpassCount = 1;
-			renderPassInfo.pSubpasses = &subpass;
-			renderPassInfo.dependencyCount = dependencies.size();
-			renderPassInfo.pDependencies = dependencies.data();
-
-			vkDestroyRenderPass(m_VulkanDevice->m_LogicalDevice, m_OffScreenFrameBuf->renderPass, nullptr);
-			VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassInfo, nullptr, &m_OffScreenFrameBuf->renderPass));
 
 			// Offscreen Framebuffer
 			{
@@ -5143,6 +5340,7 @@ namespace flex
 				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &ssaoBlurVFramebufferCreateInfo, nullptr, m_SSAOBlurVFrameBuf->frameBuffer.replace()));
 			}
 
+			// TODO: Remove redundant samplers
 			VkSamplerCreateInfo ssaoNormalSamplerCreateInfo = vks::samplerCreateInfo();
 			ssaoNormalSamplerCreateInfo.magFilter = VK_FILTER_NEAREST;
 			ssaoNormalSamplerCreateInfo.minFilter = VK_FILTER_NEAREST;
@@ -5372,19 +5570,26 @@ namespace flex
 			}
 			vkCmdEndRenderPass(commandBuffer);
 
+
+			// m_OffScreenDepthAttachment was being read by SSAO, now needs to be copied to m_DepthAttachment for forward rendering
 			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_OffScreenDepthAttachment->image, m_OffScreenDepthAttachment->format,
 				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 1, commandBuffer, true);
+
+			// m_DepthAttachment was copied into, now needs to be written to in forward pass
+			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_DepthAttachment->image, m_DepthAttachment->format,
+				VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, commandBuffer);
 
 			// TODO: Blit here instead if supported
 			CopyImage(m_VulkanDevice, m_GraphicsQueue, m_OffScreenDepthAttachment->image, m_DepthAttachment->image,
 				m_SwapChainExtent.width, m_SwapChainExtent.height, commandBuffer, VK_IMAGE_ASPECT_DEPTH_BIT);
 
+			// m_DepthAttachment was copied into, now needs to be written to in forward pass
 			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_DepthAttachment->image, m_DepthAttachment->format,
 				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1, commandBuffer);
 
+			// m_OffScreenDepthAttachment has been copied out of, now must be transitioned back for next frame
 			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_OffScreenDepthAttachment->image, m_OffScreenDepthAttachment->format,
-				VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, commandBuffer, true);
-
+				VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1, commandBuffer, true);
 
 			// Forward pass
 			renderPassBeginInfo.renderPass = m_ForwardRenderPass;
@@ -5399,50 +5604,50 @@ namespace flex
 
 				{
 					std::vector<TextVertex3D> textVerticesWS;
-						UpdateTextBufferWS(textVerticesWS);
+					UpdateTextBufferWS(textVerticesWS);
 
-						u32 WSTextBufferByteCount = (u32)(textVerticesWS.size() * sizeof(TextVertex2D));
+					u32 WSTextBufferByteCount = (u32)(textVerticesWS.size() * sizeof(TextVertex2D));
 
-						if (WSTextBufferByteCount > 0)
-						{
-							const VulkanMaterial& fontMaterial = m_Materials[m_FontMatWSID];
-							VulkanBuffer* vertexBuffer = m_VertexIndexBufferPairs[fontMaterial.material.shaderID].vertexBuffer;
-							u32 copySize = std::min(WSTextBufferByteCount, (u32)vertexBuffer->m_Size);
-							if (copySize < WSTextBufferByteCount)
-							{
-								PrintError("SS Font vertex buffer is %u bytes too small\n", WSTextBufferByteCount - copySize);
-							}
-							VK_CHECK_RESULT(vertexBuffer->Map(copySize));
-							memcpy(vertexBuffer->m_Mapped, textVerticesWS.data(), copySize);
-							vertexBuffer->Unmap();
-						}
-					}
-
-					DrawTextWS(commandBuffer);
-
-					bool bUsingGameplayCam = g_CameraManager->CurrentCamera()->bIsGameplayCam;
-					if (g_EngineInstance->IsRenderingEditorObjects() && !bUsingGameplayCam)
+					if (WSTextBufferByteCount > 0)
 					{
-						for (const ShaderBatchPair& shaderBatch : m_DepthAwareEditorObjBatches.batches)
+						const VulkanMaterial& fontMaterial = m_Materials[m_FontMatWSID];
+						VulkanBuffer* vertexBuffer = m_VertexIndexBufferPairs[fontMaterial.material.shaderID].vertexBuffer;
+						u32 copySize = std::min(WSTextBufferByteCount, (u32)vertexBuffer->m_Size);
+						if (copySize < WSTextBufferByteCount)
 						{
-							DrawShaderBatch(shaderBatch, commandBuffer);
+							PrintError("SS Font vertex buffer is %u bytes too small\n", WSTextBufferByteCount - copySize);
 						}
-
-						// Selected object wireframe
-						// TODO:
-
-						//glDepthMask(GL_TRUE);
-						//glClear(GL_DEPTH_BUFFER_BIT);
-
-						// Depth unaware objects write to a cleared depth buffer so they
-						// draw on top of previous geometry but are still eclipsed by other
-						// depth unaware objects
-
-						for (const ShaderBatchPair& shaderBatch : m_DepthUnawareEditorObjBatches.batches)
-						{
-							DrawShaderBatch(shaderBatch, commandBuffer);
-						}
+						VK_CHECK_RESULT(vertexBuffer->Map(copySize));
+						memcpy(vertexBuffer->m_Mapped, textVerticesWS.data(), copySize);
+						vertexBuffer->Unmap();
 					}
+				}
+
+				DrawTextWS(commandBuffer);
+
+				bool bUsingGameplayCam = g_CameraManager->CurrentCamera()->bIsGameplayCam;
+				if (g_EngineInstance->IsRenderingEditorObjects() && !bUsingGameplayCam)
+				{
+					for (const ShaderBatchPair& shaderBatch : m_DepthAwareEditorObjBatches.batches)
+					{
+						DrawShaderBatch(shaderBatch, commandBuffer);
+					}
+
+					// Selected object wireframe
+					// TODO:
+
+					//glDepthMask(GL_TRUE);
+					//glClear(GL_DEPTH_BUFFER_BIT);
+
+					// Depth unaware objects write to a cleared depth buffer so they
+					// draw on top of previous geometry but are still eclipsed by other
+					// depth unaware objects
+
+					for (const ShaderBatchPair& shaderBatch : m_DepthUnawareEditorObjBatches.batches)
+					{
+						DrawShaderBatch(shaderBatch, commandBuffer);
+					}
+				}
 
 				DrawScreenSpaceSprites();
 
@@ -5481,9 +5686,13 @@ namespace flex
 			VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
 		}
 
-		void VulkanRenderer::DrawShaderBatch(const ShaderBatchPair& shaderBatch, VkCommandBuffer& commandBuffer)
+		void VulkanRenderer::DrawShaderBatch(const ShaderBatchPair& shaderBatch, VkCommandBuffer& commandBuffer, DrawCallInfo* drawCallInfo /* = nullptr */)
 		{
 			ShaderID shaderID = shaderBatch.shaderID;
+			if (drawCallInfo && drawCallInfo->materialIDOverride != InvalidMaterialID)
+			{
+				shaderID = m_Materials[drawCallInfo->materialIDOverride].material.shaderID;
+			}
 
 			VulkanBuffer* vertBuffer = m_VertexIndexBufferPairs[shaderID].vertexBuffer;
 			VulkanBuffer* indexBuffer = m_VertexIndexBufferPairs[shaderID].indexBuffer;
@@ -5491,40 +5700,89 @@ namespace flex
 			VkDeviceSize offsets[1] = { 0 };
 			vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertBuffer->m_Buffer, offsets);
 
+			u32 i = 0;
 			for (const MaterialBatchPair& matBatch : shaderBatch.batch.batches)
 			{
-				VulkanMaterial& mat = m_Materials[matBatch.materialID];
+				MaterialID matID = matBatch.materialID;
+				if (drawCallInfo && drawCallInfo->materialIDOverride != InvalidMaterialID)
+				{
+					matID = drawCallInfo->materialIDOverride;
+				}
+
+				VulkanMaterial& mat = m_Materials[matID];
 				VulkanShader& shader = m_Shaders[mat.material.shaderID];
 
 				for (RenderID renderID : matBatch.batch.objects)
 				{
 					VulkanRenderObject* renderObject = GetRenderObject(renderID);
+
 					if (renderObject->bIndexed)
 					{
 						vkCmdBindIndexBuffer(commandBuffer, indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
 					}
 
-					vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderObject->graphicsPipeline);
+					VkPipeline graphicsPipeline = renderObject->graphicsPipeline;
+					VkPipelineLayout pipelineLayout = renderObject->pipelineLayout;
+					VkDescriptorSet descriptorSet = renderObject->descriptorSet;
+					u32 dynamicUBOOffset = renderObject->dynamicUBOOffset;
 
-					BindDescriptorSet(&shader, renderObject->dynamicUBOOffset, commandBuffer, renderObject->pipelineLayout, renderObject->descriptorSet);
+					if (drawCallInfo)
+					{
+						if (drawCallInfo->graphicsPipelineOverride != InvalidID)
+						{
+							graphicsPipeline = drawCallInfo->graphicsPipelineOverride;
+							assert(drawCallInfo->pipelineLayoutOverride != InvalidID);
+							pipelineLayout = drawCallInfo->pipelineLayoutOverride;
+						}
+						if (drawCallInfo->descriptorSetOverride != InvalidID)
+						{
+							descriptorSet = drawCallInfo->descriptorSetOverride;
+						}
+						if (drawCallInfo->bRenderingShadows)
+						{
+							dynamicUBOOffset = renderObject->dynamicShadowUBOOffset;
+						}
+					}
+
+					vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+
+					BindDescriptorSet(&shader, dynamicUBOOffset, commandBuffer, pipelineLayout, descriptorSet);
 
 					if (shader.shader->bNeedPushConstantBlock)
 					{
 						// Push constants
 						mat.material.pushConstantBlock.view = g_CameraManager->CurrentCamera()->GetView();
 						mat.material.pushConstantBlock.proj = g_CameraManager->CurrentCamera()->GetProjection();
-						vkCmdPushConstants(commandBuffer, renderObject->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0,
+						vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0,
 							sizeof(Material::PushConstantBlock), &mat.material.pushConstantBlock);
 					}
 
 					if (renderObject->bIndexed)
 					{
-						vkCmdDrawIndexed(commandBuffer, renderObject->indices->size(), 1, renderObject->indexOffset, renderObject->vertexOffset, 0);
+						if (drawCallInfo == nullptr ||
+							!drawCallInfo->bRenderingShadows)
+						{
+							vkCmdDrawIndexed(commandBuffer, renderObject->indices->size(), 1, renderObject->indexOffset, renderObject->vertexOffset, 0);
+						}
+						else
+						{
+							vkCmdDrawIndexed(commandBuffer, renderObject->indices->size(), 1, renderObject->shadowIndexOffset, renderObject->shadowVertexOffset, 0);
+						}
 					}
 					else
 					{
-						vkCmdDraw(commandBuffer, renderObject->vertexBufferData->VertexCount, 1, renderObject->vertexOffset, 0);
+						if (drawCallInfo == nullptr ||
+							!drawCallInfo->bRenderingShadows)
+						{
+							vkCmdDraw(commandBuffer, renderObject->vertexBufferData->VertexCount, 1, renderObject->vertexOffset, 0);
+						}
+						else
+						{
+							vkCmdDraw(commandBuffer, renderObject->vertexBufferData->VertexCount, 1, renderObject->shadowVertexOffset, 0);
+						}
 					}
+
+					++i;
 				}
 			}
 		}
@@ -5542,26 +5800,76 @@ namespace flex
 				VK_CHECK_RESULT(vkCreateSemaphore(m_VulkanDevice->m_LogicalDevice, &semaphoreCreateInfo, nullptr, &m_OffscreenSemaphore));
 			}
 
+			std::array<VkClearValue, 1> shadowClearValues = {};
+			shadowClearValues[0].depthStencil = { 0.0f, 0 };
+
+			VkRenderPassBeginInfo renderPassBeginInfo = vks::renderPassBeginInfo(m_ShadowFrameBuf->renderPass);
+			renderPassBeginInfo.framebuffer = m_ShadowFrameBuf->frameBuffer;
+			renderPassBeginInfo.renderArea.offset = { 0, 0 };
+			renderPassBeginInfo.renderArea.extent = { m_ShadowFrameBuf->width, m_ShadowFrameBuf->height };
+			renderPassBeginInfo.clearValueCount = shadowClearValues.size();
+			renderPassBeginInfo.pClearValues = shadowClearValues.data();
+
+			VkCommandBufferBeginInfo cmdBufferbeginInfo = vks::commandBufferBeginInfo();
+			cmdBufferbeginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+			VK_CHECK_RESULT(vkBeginCommandBuffer(m_OffScreenCmdBuffer, &cmdBufferbeginInfo));
+
+			//
+			// Shadow mapping
+			//
+
+			bool bEnableShadows = true;
+			if (bEnableShadows)
+			{
+				vkCmdBeginRenderPass(m_OffScreenCmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+				VkViewport shadowViewport = vks::viewportFlipped((real)m_ShadowFrameBuf->width, (real)m_ShadowFrameBuf->height, 0.0f, 1.0f);
+				vkCmdSetViewport(m_OffScreenCmdBuffer, 0, 1, &shadowViewport);
+
+				VkRect2D shadowScissor = vks::scissor(0u, 0u, m_ShadowFrameBuf->width, m_ShadowFrameBuf->height);
+				vkCmdSetScissor(m_OffScreenCmdBuffer, 0, 1, &shadowScissor);
+
+				VulkanMaterial* shadowMaterial = &m_Materials[m_ShadowMatID];
+				//VulkanShader* shadowShader = &m_Shaders[shadowMaterial->material.shaderID];
+
+				for (size_t i = 0; i < m_RenderObjects.size(); ++i)
+				{
+					VulkanRenderObject* renderObject = GetRenderObject(i);
+					if (renderObject)
+					{
+						UpdateDynamicUniformBuffer(i, nullptr, m_ShadowMatID, renderObject->dynamicShadowUBOOffset);
+					}
+				}
+
+				DrawCallInfo drawCallInfo = {};
+				drawCallInfo.materialIDOverride = m_ShadowMatID;
+				drawCallInfo.graphicsPipelineOverride = m_ShadowGraphicsPipeline;
+				drawCallInfo.pipelineLayoutOverride = m_ShadowPipelineLayout;
+				drawCallInfo.descriptorSetOverride = m_ShadowDescriptorSet;
+				drawCallInfo.bRenderingShadows = true;
+
+				for (const ShaderBatchPair& shaderBatch : m_ShadowBatch.batches)
+				{
+					DrawShaderBatch(shaderBatch, m_OffScreenCmdBuffer, &drawCallInfo);
+				}
+
+				vkCmdEndRenderPass(m_OffScreenCmdBuffer);
+			}
+
+			//
+			// G-Buffer fill
+			//
+
 			std::array<VkClearValue, 3> gBufClearValues = {};
 			gBufClearValues[0].color = m_ClearColor;
 			gBufClearValues[1].color = m_ClearColor;
 			gBufClearValues[2].depthStencil = { 0.0f, 0 };
 
-			VkRenderPassBeginInfo renderPassBeginInfo = vks::renderPassBeginInfo(m_OffScreenFrameBuf->renderPass);
+			renderPassBeginInfo.renderPass = m_OffScreenFrameBuf->renderPass;
 			renderPassBeginInfo.framebuffer = m_OffScreenFrameBuf->frameBuffer;
-			renderPassBeginInfo.renderArea.offset = { 0, 0 };
 			renderPassBeginInfo.renderArea.extent = { m_OffScreenFrameBuf->width, m_OffScreenFrameBuf->height };
 			renderPassBeginInfo.clearValueCount = gBufClearValues.size();
 			renderPassBeginInfo.pClearValues = gBufClearValues.data();
-
-			VkCommandBufferBeginInfo cmdBufferbeginInfo = vks::commandBufferBeginInfo();
-			cmdBufferbeginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-
-			VK_CHECK_RESULT(vkBeginCommandBuffer(m_OffScreenCmdBuffer, &cmdBufferbeginInfo));
-
-			//
-			// First pass - G-Buffer fill
-			//
 
 			vkCmdBeginRenderPass(m_OffScreenCmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -5579,8 +5887,11 @@ namespace flex
 
 			vkCmdEndRenderPass(m_OffScreenCmdBuffer);
 
+			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_OffScreenDepthAttachment->image, m_OffScreenDepthAttachment->format,
+				VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, m_OffScreenCmdBuffer, true);
+
 			//
-			// Second pass - SSAO generation
+			// SSAO generation
 			//
 
 			VulkanRenderObject* gBufferObject = GetRenderObject(m_GBufferQuadRenderID);
@@ -5604,6 +5915,7 @@ namespace flex
 
 				vkCmdBeginRenderPass(m_OffScreenCmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
+				// TODO: EZ:
 				ShaderID ssaoShaderID = InvalidShaderID;
 				GetShaderID("ssao", ssaoShaderID);
 				assert(ssaoShaderID != InvalidShaderID);
@@ -5623,62 +5935,62 @@ namespace flex
 				vkCmdDraw(m_OffScreenCmdBuffer, gBufferObject->vertexBufferData->VertexCount, 1, gBufferObject->vertexOffset, 0);
 
 				vkCmdEndRenderPass(m_OffScreenCmdBuffer);
-			}
 
-			//
-			// Third pass - SSAO blur
-			//
+				//
+				// SSAO blur
+				//
 
-			if (m_bSSAOBlurEnabled)
-			{
-				renderPassBeginInfo.renderPass = m_SSAOBlurHRenderPass;
-				renderPassBeginInfo.framebuffer = m_SSAOBlurHFrameBuf->frameBuffer;
-				renderPassBeginInfo.renderArea.extent = { m_SSAOBlurHFrameBuf->width, m_SSAOBlurHFrameBuf->height };
+				if (m_bSSAOBlurEnabled)
+				{
+					renderPassBeginInfo.renderPass = m_SSAOBlurHRenderPass;
+					renderPassBeginInfo.framebuffer = m_SSAOBlurHFrameBuf->frameBuffer;
+					renderPassBeginInfo.renderArea.extent = { m_SSAOBlurHFrameBuf->width, m_SSAOBlurHFrameBuf->height };
 
-				// Horizontal pass
-				vkCmdBeginRenderPass(m_OffScreenCmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+					// Horizontal pass
+					vkCmdBeginRenderPass(m_OffScreenCmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-				ShaderID ssaoBlurShaderID = InvalidShaderID;
-				GetShaderID("ssao_blur", ssaoBlurShaderID);
-				assert(ssaoBlurShaderID != InvalidShaderID);
+					ShaderID ssaoBlurShaderID = InvalidShaderID;
+					GetShaderID("ssao_blur", ssaoBlurShaderID);
+					assert(ssaoBlurShaderID != InvalidShaderID);
 
-				vkCmdBindPipeline(m_OffScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_SSAOBlurHGraphicsPipeline);
+					vkCmdBindPipeline(m_OffScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_SSAOBlurHGraphicsPipeline);
 
-				VkViewport ssaoBlurViewport = vks::viewportFlipped((real)m_SSAOBlurHFrameBuf->width, (real)m_SSAOBlurHFrameBuf->height, 0.0f, 1.0f);
-				vkCmdSetViewport(m_OffScreenCmdBuffer, 0, 1, &ssaoBlurViewport);
+					VkViewport ssaoBlurViewport = vks::viewportFlipped((real)m_SSAOBlurHFrameBuf->width, (real)m_SSAOBlurHFrameBuf->height, 0.0f, 1.0f);
+					vkCmdSetViewport(m_OffScreenCmdBuffer, 0, 1, &ssaoBlurViewport);
 
-				VkRect2D ssaoBlurScissor = vks::scissor(0u, 0u, m_SSAOBlurHFrameBuf->width, m_SSAOBlurHFrameBuf->height);
-				vkCmdSetScissor(m_OffScreenCmdBuffer, 0, 1, &ssaoBlurScissor);
+					VkRect2D ssaoBlurScissor = vks::scissor(0u, 0u, m_SSAOBlurHFrameBuf->width, m_SSAOBlurHFrameBuf->height);
+					vkCmdSetScissor(m_OffScreenCmdBuffer, 0, 1, &ssaoBlurScissor);
 
-				BindDescriptorSet(&m_Shaders[ssaoBlurShaderID], 0 * m_DynamicAlignment, m_OffScreenCmdBuffer, m_SSAOBlurGraphicsPipelineLayout, m_SSAOBlurHDescSet);
+					BindDescriptorSet(&m_Shaders[ssaoBlurShaderID], 0 * m_DynamicAlignment, m_OffScreenCmdBuffer, m_SSAOBlurGraphicsPipelineLayout, m_SSAOBlurHDescSet);
 
-				vkCmdBindVertexBuffers(m_OffScreenCmdBuffer, 0, 1, &gBufferVertexIndexBuffer->vertexBuffer->m_Buffer, offsets);
+					vkCmdBindVertexBuffers(m_OffScreenCmdBuffer, 0, 1, &gBufferVertexIndexBuffer->vertexBuffer->m_Buffer, offsets);
 
-				UniformOverrides overrides = {};
-				overrides.overridenUniforms.AddUniform(U_SSAO_BLUR_DATA);
-				overrides.bSSAOVerticalPass = false;
-				UpdateDynamicUniformBuffer(m_SSAOBlurMatID, 0 * m_DynamicAlignment, MAT4_IDENTITY, &overrides);
+					UniformOverrides overrides = {};
+					overrides.overridenUniforms.AddUniform(U_SSAO_BLUR_DATA);
+					overrides.bSSAOVerticalPass = false;
+					UpdateDynamicUniformBuffer(m_SSAOBlurMatID, 0 * m_DynamicAlignment, MAT4_IDENTITY, &overrides);
 
-				vkCmdDraw(m_OffScreenCmdBuffer, gBufferObject->vertexBufferData->VertexCount, 1, gBufferObject->vertexOffset, 0);
+					vkCmdDraw(m_OffScreenCmdBuffer, gBufferObject->vertexBufferData->VertexCount, 1, gBufferObject->vertexOffset, 0);
 
-				vkCmdEndRenderPass(m_OffScreenCmdBuffer);
+					vkCmdEndRenderPass(m_OffScreenCmdBuffer);
 
-				renderPassBeginInfo.renderPass = m_SSAOBlurVRenderPass;
-				renderPassBeginInfo.framebuffer = m_SSAOBlurVFrameBuf->frameBuffer;
+					renderPassBeginInfo.renderPass = m_SSAOBlurVRenderPass;
+					renderPassBeginInfo.framebuffer = m_SSAOBlurVFrameBuf->frameBuffer;
 
-				// Vertical pass
-				vkCmdBeginRenderPass(m_OffScreenCmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+					// Vertical pass
+					vkCmdBeginRenderPass(m_OffScreenCmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-				vkCmdBindPipeline(m_OffScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_SSAOBlurVGraphicsPipeline);
+					vkCmdBindPipeline(m_OffScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_SSAOBlurVGraphicsPipeline);
 
-				BindDescriptorSet(&m_Shaders[ssaoBlurShaderID], 1 * m_DynamicAlignment, m_OffScreenCmdBuffer, m_SSAOBlurGraphicsPipelineLayout, m_SSAOBlurVDescSet);
+					BindDescriptorSet(&m_Shaders[ssaoBlurShaderID], 1 * m_DynamicAlignment, m_OffScreenCmdBuffer, m_SSAOBlurGraphicsPipelineLayout, m_SSAOBlurVDescSet);
 
-				overrides.bSSAOVerticalPass = true;
-				UpdateDynamicUniformBuffer(m_SSAOBlurMatID, 1 * m_DynamicAlignment, MAT4_IDENTITY, &overrides);
+					overrides.bSSAOVerticalPass = true;
+					UpdateDynamicUniformBuffer(m_SSAOBlurMatID, 1 * m_DynamicAlignment, MAT4_IDENTITY, &overrides);
 
-				vkCmdDraw(m_OffScreenCmdBuffer, gBufferObject->vertexBufferData->VertexCount, 1, gBufferObject->vertexOffset, 0);
+					vkCmdDraw(m_OffScreenCmdBuffer, gBufferObject->vertexBufferData->VertexCount, 1, gBufferObject->vertexOffset, 0);
 
-				vkCmdEndRenderPass(m_OffScreenCmdBuffer);
+					vkCmdEndRenderPass(m_OffScreenCmdBuffer);
+				}
 			}
 
 			VK_CHECK_RESULT(vkEndCommandBuffer(m_OffScreenCmdBuffer));
@@ -5709,20 +6021,26 @@ namespace flex
 				{
 					u32 requiredMemory = 0;
 
-					for (VulkanRenderObject* renderObject : m_RenderObjects)
+					Shader* shader = m_Shaders[i].shader;
+					if (!shader->bGenerateVertexBufferForAll)
 					{
-						if (renderObject && renderObject->vertexBufferData && m_Materials[renderObject->materialID].material.shaderID == i)
+						for (VulkanRenderObject* renderObject : m_RenderObjects)
 						{
-							requiredMemory += renderObject->vertexBufferData->VertexBufferSize;
+							if (renderObject &&
+								renderObject->vertexBufferData &&
+								m_Materials[renderObject->materialID].material.shaderID == i)
+							{
+								requiredMemory += renderObject->vertexBufferData->VertexBufferSize;
+							}
 						}
-					}
 
-					if (requiredMemory > 0)
-					{
-						m_VertexIndexBufferPairs[i].vertexCount = CreateStaticVertexBuffer(
-							m_VertexIndexBufferPairs[i].vertexBuffer,
-							i,
-							requiredMemory);
+						if (requiredMemory > 0)
+						{
+							m_VertexIndexBufferPairs[i].vertexCount = CreateStaticVertexBuffer(
+								m_VertexIndexBufferPairs[i].vertexBuffer,
+								i,
+								requiredMemory);
+						}
 					}
 				}
 			}
@@ -5762,7 +6080,9 @@ namespace flex
 			u32 vertexBufferSize = 0;
 			for (VulkanRenderObject* renderObject : m_RenderObjects)
 			{
-				if (renderObject && renderObject->vertexBufferData && m_Materials[renderObject->materialID].material.shaderID == shaderID)
+				if (renderObject &&
+					renderObject->vertexBufferData &&
+					m_Materials[renderObject->materialID].material.shaderID == shaderID)
 				{
 					renderObject->vertexOffset = vertexCount;
 
@@ -5785,6 +6105,83 @@ namespace flex
 			free_hooked(vertexDataStart);
 
 			return vertexCount;
+		}
+
+		void VulkanRenderer::CreateShadowVertexBuffer()
+		{
+			VulkanMaterial& shadowMat = m_Materials[m_ShadowMatID];
+			VulkanShader& shadowShader = m_Shaders[shadowMat.material.shaderID];
+
+			u32 vertexStride = CalculateVertexStride(shadowShader.shader->vertexAttributes);
+			u32 size = 0;
+
+			for (VulkanRenderObject* renderObject : m_RenderObjects)
+			{
+				if (renderObject &&
+					renderObject->vertexBufferData)
+				{
+					size += renderObject->vertexBufferData->VertexCount * vertexStride;
+				}
+			}
+
+			void* vertexDataStart = malloc_hooked(size);
+			if (!vertexDataStart)
+			{
+				PrintError("Failed to allocate memory for shadow vertex buffer! Attempted to allocate %d bytes", size);
+				return;
+			}
+
+			void* vertexBufferData = vertexDataStart;
+
+			u32 vertexCount = 0;
+			u32 vertexBufferSize = 0;
+			for (VulkanRenderObject* renderObject : m_RenderObjects)
+			{
+				if (renderObject &&
+					renderObject->vertexBufferData)
+				{
+					renderObject->shadowVertexOffset = vertexCount;
+
+					u32 copySize = renderObject->vertexBufferData->CopyInto(static_cast<real*>(vertexBufferData), shadowShader.shader->vertexAttributes);
+
+					vertexCount += renderObject->vertexBufferData->VertexCount;
+					vertexBufferSize += copySize;
+
+					vertexBufferData = (char*)vertexBufferData + copySize;
+				}
+			}
+
+			if (vertexBufferSize == 0 || vertexCount == 0)
+			{
+				return;
+			}
+
+			VulkanBuffer* vertexBuffer = m_VertexIndexBufferPairs[shadowMat.material.shaderID].vertexBuffer;
+			CreateStaticVertexBuffer(vertexBuffer, vertexDataStart, vertexBufferSize);
+			free_hooked(vertexDataStart);
+		}
+
+		void VulkanRenderer::CreateShadowIndexBuffer()
+		{
+			std::vector<u32> indices;
+
+			for (VulkanRenderObject* renderObject : m_RenderObjects)
+			{
+				if (renderObject &&
+					renderObject->bIndexed)
+				{
+					renderObject->shadowIndexOffset = indices.size();
+					indices.insert(indices.end(), renderObject->indices->begin(), renderObject->indices->end());
+				}
+			}
+
+			if (indices.empty())
+			{
+				return;
+			}
+
+			VulkanBuffer* indexBuffer = m_VertexIndexBufferPairs[m_Materials[m_ShadowMatID].material.shaderID].indexBuffer;
+			CreateStaticIndexBuffer(indexBuffer, indices);
 		}
 
 		void VulkanRenderer::CreateDynamicVertexBuffer(VulkanBuffer* vertexBuffer, u32 size, void* initialData)
@@ -5826,7 +6223,11 @@ namespace flex
 		{
 			for (size_t i = 0; i < m_VertexIndexBufferPairs.size(); ++i)
 			{
-				m_VertexIndexBufferPairs[i].indexCount = CreateStaticIndexBuffer(m_VertexIndexBufferPairs[i].indexBuffer, i);
+				Shader* shader = m_Shaders[i].shader;
+				if (!shader->bGenerateVertexBufferForAll)
+				{
+					m_VertexIndexBufferPairs[i].indexCount = CreateStaticIndexBuffer(m_VertexIndexBufferPairs[i].indexBuffer, i);
+				}
 			}
 		}
 
@@ -5836,7 +6237,9 @@ namespace flex
 
 			for (VulkanRenderObject* renderObject : m_RenderObjects)
 			{
-				if (renderObject && renderObject->bIndexed && m_Materials[renderObject->materialID].material.shaderID == shaderID)
+				if (renderObject &&
+					renderObject->bIndexed &&
+					m_Materials[renderObject->materialID].material.shaderID == shaderID)
 				{
 					renderObject->indexOffset = indices.size();
 					indices.insert(indices.end(), renderObject->indices->begin(), renderObject->indices->end());
@@ -5918,6 +6321,7 @@ namespace flex
 
 				m_DeferredObjectBatches.batches.clear();
 				m_ForwardObjectBatches.batches.clear();
+				m_ShadowBatch.batches.clear();
 				m_DepthAwareEditorObjBatches.batches.clear();
 				m_DepthUnawareEditorObjBatches.batches.clear();
 
@@ -6026,6 +6430,24 @@ namespace flex
 					}
 				}
 			}
+
+			ShaderBatchPair shadowShaderBatch;
+			shadowShaderBatch.batch.batches.resize(1);
+			u32 dynamicShadowUBOOffset = 0;
+			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
+			{
+				VulkanRenderObject* renderObject = GetRenderObject(i);
+				if (renderObject &&
+					renderObject->vertexBufferData &&
+					renderObject->gameObject->CastsShadow() &&
+					renderObject->gameObject->IsVisible())
+				{
+					dynamicShadowUBOOffset += m_DynamicAlignment;
+					renderObject->dynamicShadowUBOOffset = dynamicShadowUBOOffset;
+					shadowShaderBatch.batch.batches[0].batch.objects.push_back(i);
+				}
+			}
+			m_ShadowBatch.batches.push_back(shadowShaderBatch);
 
 			ms blockMS = Profiler::GetBlockDuration(blockName);
 			Print("Batched %u render objects into %u batches in %.2fms\n", m_RenderObjects.size(), renderObjBatchCount, blockMS);
@@ -6342,10 +6764,9 @@ namespace flex
 
 			glm::mat4 lightView, lightProj;
 			ComputeDirLightViewProj(lightView, lightProj);
+			glm::mat4 lightViewProj = lightProj * lightView;
 
-			glm::mat4 biasedLightViewProj = lightProj * lightView;
-
-			static DirLightData defaultDirLightData = { VEC3_RIGHT, 0, VEC3_ONE, 0.0f };
+			static DirLightData defaultDirLightData = { VEC3_RIGHT, 0, VEC3_ONE, 0.0f, 0, 0.0f };
 
 			DirLightData* dirLightData = &defaultDirLightData;
 			if (m_DirectionalLight)
@@ -6396,7 +6817,7 @@ namespace flex
 				{ U_VIEW_PROJECTION, (void*)&viewProjection, US_VIEW_PROJECTION },
 				{ U_PROJECTION, (void*)&projection, US_PROJECTION },
 				{ U_PROJECTION_INV, (void*)&projectionInv, US_PROJECTION_INV },
-				{ U_LIGHT_VIEW_PROJ, (void*)&biasedLightViewProj, US_LIGHT_VIEW_PROJ },
+				{ U_LIGHT_VIEW_PROJ, (void*)&lightViewProj, US_LIGHT_VIEW_PROJ },
 				{ U_DIR_LIGHT, (void*)dirLightData, US_DIR_LIGHT },
 				{ U_POINT_LIGHTS, (void*)m_PointLights, US_POINT_LIGHTS },
 				{ U_TIME, (void*)&g_SecElapsedSinceProgramStart, US_TIME },
@@ -6439,7 +6860,8 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::UpdateDynamicUniformBuffer(RenderID renderID, UniformOverrides const* uniformOverrides /* = nullptr */)
+		void VulkanRenderer::UpdateDynamicUniformBuffer(RenderID renderID, UniformOverrides const* uniformOverrides /* = nullptr */,
+			MaterialID materialIDOverride /* = InvalidMaterialID */, u32 dynamicUBOOffsetOverride /* = InvalidID */)
 		{
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
 			if (renderObject == nullptr)
@@ -6447,11 +6869,14 @@ namespace flex
 				return;
 			}
 
+			MaterialID matID = materialIDOverride == InvalidMaterialID ? renderObject->materialID : materialIDOverride;
+			u32 dynamicUBOOffset = dynamicUBOOffsetOverride == InvalidID ? renderObject->dynamicUBOOffset : dynamicUBOOffsetOverride;
 			glm::mat4 model = renderObject->gameObject->GetTransform()->GetWorldTransform();
-			UpdateDynamicUniformBuffer(renderObject->materialID, renderObject->dynamicUBOOffset, model, uniformOverrides);
+			UpdateDynamicUniformBuffer(matID, dynamicUBOOffset, model, uniformOverrides);
 		}
 
-		void VulkanRenderer::UpdateDynamicUniformBuffer(MaterialID materialID, u32 dynamicOffset, const glm::mat4& inModel, UniformOverrides const* uniformOverrides /* = nullptr */)
+		void VulkanRenderer::UpdateDynamicUniformBuffer(MaterialID materialID, u32 dynamicOffset, const glm::mat4& inModel,
+			UniformOverrides const* uniformOverrides /* = nullptr */)
 		{
 			const VulkanMaterial& material = m_Materials[materialID];
 			const VulkanShader& shader = m_Shaders[material.material.shaderID];
@@ -6578,14 +7003,6 @@ namespace flex
 
 			struct UniformInfo
 			{
-				UniformInfo(u64 uniform,
-					void* dataStart,
-					size_t copySize) :
-					uniform(uniform),
-					dataStart(dataStart),
-					copySize(copySize)
-				{}
-
 				u64 uniform;
 				void* dataStart = nullptr;
 				size_t copySize;

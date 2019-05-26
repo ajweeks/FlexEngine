@@ -212,18 +212,18 @@ namespace flex
 
 			void CreateDynamicVertexBuffers();
 
-			// Creates vertex buffer for all render objects' verts which use specified shader index
-			// Returns vertex count
+			// Creates vertex buffer for all render objects' verts which use specified shader index. Returns vertex count
 			u32 CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, ShaderID shaderID, u32 size);
 			void CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, void* vertexBufferData, u32 vertexBufferSize);
+			void CreateShadowVertexBuffer();
 
 			// Creates static index buffers for all render objects
 			void CreateStaticIndexBuffers();
 
-			// Creates index buffer for all render objects' indices which use specified shader index
-			// Returns index count
+			// Creates index buffer for all render objects' indices which use specified shader index. Returns index count
 			u32 CreateStaticIndexBuffer(VulkanBuffer* indexBuffer, ShaderID shaderID);
-			void VulkanRenderer::CreateStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<u32>& indices);
+			void CreateStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<u32>& indices);
+			void CreateShadowIndexBuffer();
 
 			void CreateDescriptorPool();
 			u32 AllocateDynamicUniformBuffer(u32 dynamicDataSize, void** data, i32 maxObjectCount = -1);
@@ -231,7 +231,7 @@ namespace flex
 				VkBufferUsageFlags bufferUseageFlagBits, VkMemoryPropertyFlags memoryPropertyHostFlagBits);
 
 			void BatchRenderObjects();
-			void DrawShaderBatch(const ShaderBatchPair &shaderBatches, VkCommandBuffer& commandBuffer);
+			void DrawShaderBatch(const ShaderBatchPair &shaderBatches, VkCommandBuffer& commandBuffer, DrawCallInfo* drawCallInfo = nullptr);
 
 			void BuildCommandBuffers(const DrawCallInfo& drawCallInfo);
 			void BuildDeferredCommandBuffer();
@@ -252,7 +252,8 @@ namespace flex
 			bool CheckValidationLayerSupport() const;
 
 			void UpdateConstantUniformBuffers(UniformOverrides const* overridenUniforms = nullptr);
-			void UpdateDynamicUniformBuffer(RenderID renderID, UniformOverrides const * overridenUniforms = nullptr);
+			void UpdateDynamicUniformBuffer(RenderID renderID, UniformOverrides const * overridenUniforms = nullptr,
+				MaterialID materialIDOverride = InvalidMaterialID, u32 dynamicUBOOffsetOverride = InvalidID);
 			void UpdateDynamicUniformBuffer(MaterialID materialID, u32 dynamicOffsetIndex, const glm::mat4& inModel, UniformOverrides const* uniformOverrides = nullptr);
 
 			void GenerateIrradianceMaps();
@@ -322,6 +323,7 @@ namespace flex
 			ShaderBatch m_DeferredObjectBatches;
 			// One per forward-rendered shader
 			ShaderBatch m_ForwardObjectBatches;
+			ShaderBatch m_ShadowBatch;
 
 			ShaderBatch m_DepthAwareEditorObjBatches;
 			ShaderBatch m_DepthUnawareEditorObjBatches;
@@ -346,6 +348,10 @@ namespace flex
 
 			FrameBuffer* m_CubemapFrameBuffer = nullptr;
 			FrameBufferAttachment* m_CubemapDepthAttachment = nullptr;
+
+			FrameBuffer* m_ShadowFrameBuf = nullptr;
+			VkDescriptorSet m_ShadowDescriptorSet = VK_NULL_HANDLE;
+			VkFormat m_ShadowBufferFormat = VK_FORMAT_UNDEFINED;
 
 			i32 m_DeferredQuadVertexBufferIndex = -1;
 
@@ -397,6 +403,9 @@ namespace flex
 			VDeleter<VkRenderPass> m_SSAOBlurHRenderPass;
 			VDeleter<VkRenderPass> m_SSAOBlurVRenderPass;
 			VDeleter<VkRenderPass> m_ForwardRenderPass;
+
+			VDeleter<VkPipeline> m_ShadowGraphicsPipeline;
+			VDeleter<VkPipelineLayout> m_ShadowPipelineLayout;
 
 			VDeleter<VkPipeline> m_FontSSGraphicsPipeline;
 			VDeleter<VkPipelineLayout> m_FontSSPipelineLayout;

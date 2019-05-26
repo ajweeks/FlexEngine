@@ -316,6 +316,7 @@ namespace flex
 
 			std::list<GLRenderObjectBatch> m_DeferredRenderObjectBatches;
 			std::list<GLRenderObjectBatch> m_ForwardRenderObjectBatches;
+			GLRenderObjectBatch m_ShadowBatch;
 
 			GLRenderObjectBatch m_DepthAwareEditorRenderObjectBatch;
 			GLRenderObjectBatch m_DepthUnawareEditorRenderObjectBatch;

@@ -31,6 +31,10 @@ const bool g_bEnableLogging_Loading = false;
 
 #define VC_EXTRALEAN
 
+#if COMPILE_VULKAN
+#define VULKAN_HPP_TYPESAFE_CONVERSION
+#endif
+
 void* operator new(size_t size);
 void operator delete(void* ptr) noexcept;
 
