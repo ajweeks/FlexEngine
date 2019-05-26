@@ -3,14 +3,14 @@
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.md)
 <!-- [![Build status](https://ci.appveyor.com/api/projects/status/vae2k07y8a802odn?svg=true)](https://ci.appveyor.com/project/ajweeks/flexengine) -->
 
-Flex Engine is my personal game engine which I began work on in February 2017 as a playground for learning about real-time technology. During the first year of development I focused on the renderer, but since then I have been focusing on adding support for other systems.
+Flex Engine is a personal game engine I began work on in February 2017. I use it as a playground for learning about real-time technniques. I try to keep [master](https://github.com/ajweeks/FlexEngine/tree/master) reasonably stable, and therefore update it infrequently. See [development](https://github.com/ajweeks/FlexEngine/tree/development) for the latest changes.
 
 #### Notable Features
-- Support for both Vulkan and OpenGL
+- Vulkan and OpenGL backends
 - Signed-distance field font generation & rendering
-- Physically based rendering
+- Physically based rendering (PBR)
 - Image based lighting
-- Scene editor with custom file format
+- Scene editor with serialization
 - Profiling tools
 - In-game scripting language
 - Conditional checksum-based shader compilation
@@ -22,6 +22,10 @@ Flex Engine is my personal game engine which I began work on in February 2017 as
 **Profiler overlay showing a breakdown the CPU-time of a single frame**
 
 ![](FlexEngine/screenshots/2019-04-21_imgui.jpg)
+**Some of the editor windows**
+
+![](FlexEngine/screenshots/2019-05-26_21-05-27.png)
+**Screen-Space Ambient Occlusion (SSAO)**
 
 ![](FlexEngine/screenshots/2017-10-19_16-17-00-G-Buffer.jpg)
 **GBuffer (top-left to bottom-right):** position, albedo, normal, final image, depth, metallic, AO, roughness
