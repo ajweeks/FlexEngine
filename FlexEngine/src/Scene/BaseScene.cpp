@@ -48,199 +48,197 @@ namespace flex
 
 	void BaseScene::Initialize()
 	{
-		if (m_PhysicsWorld)
+		if (!m_bInitialized)
 		{
-			PrintWarn("Scene is being initialized more than once!\n");
-		}
-
-		// Physics world
-		m_PhysicsWorld = new PhysicsWorld();
-		m_PhysicsWorld->Initialize();
-
-		m_PhysicsWorld->GetWorld()->setGravity({ 0.0f, -9.81f, 0.0f });
-
-		m_CartManager.Initialize();
-
-		// Use save file if exists, otherwise use default
-		//const std::string savedShortPath = "scenes/saved/" + m_FileName;
-		const std::string defaultShortPath = "scenes/default/" + m_FileName;
-		//const std::string savedPath = RESOURCE_STR(savedShortPath);
-		const std::string defaultPath = RESOURCE_STR(defaultShortPath);
-		//m_bUsingSaveFile = FileExists(savedPath);
-
-		std::string shortFilePath;
-		std::string filePath;
-		//if (m_bUsingSaveFile)
-		//{
-		//	shortFilePath = savedShortPath;
-		//	filePath = savedPath;
-		//}
-		//else
-		{
-			shortFilePath = defaultShortPath;
-			filePath = defaultPath;
-		}
-
-		if (FileExists(filePath))
-		{
-			if (g_bEnableLogging_Loading)
+			if (m_PhysicsWorld)
 			{
-				Print("Loading scene from %s\n", shortFilePath.c_str());
+				PrintWarn("Scene is being initialized more than once!\n");
 			}
 
-			JSONObject sceneRootObject;
-			if (!JSONParser::Parse(filePath, sceneRootObject))
+			// Physics world
+			m_PhysicsWorld = new PhysicsWorld();
+			m_PhysicsWorld->Initialize();
+
+			m_PhysicsWorld->GetWorld()->setGravity({ 0.0f, -9.81f, 0.0f });
+
+			m_CartManager.Initialize();
+
+			// Use save file if exists, otherwise use default
+			//const std::string savedShortPath = "scenes/saved/" + m_FileName;
+			const std::string defaultShortPath = "scenes/default/" + m_FileName;
+			//const std::string savedPath = RESOURCE_STR(savedShortPath);
+			const std::string defaultPath = RESOURCE_STR(defaultShortPath);
+			//m_bUsingSaveFile = FileExists(savedPath);
+
+			std::string shortFilePath;
+			std::string filePath;
+			//if (m_bUsingSaveFile)
+			//{
+			//	shortFilePath = savedShortPath;
+			//	filePath = savedPath;
+			//}
+			//else
 			{
-				PrintError("Failed to parse scene file: %s\n", shortFilePath.c_str());
-				return;
+				shortFilePath = defaultShortPath;
+				filePath = defaultPath;
 			}
 
-			constexpr bool printSceneContentsToConsole = false;
-			if (printSceneContentsToConsole)
+			if (FileExists(filePath))
 			{
-				Print("Parsed scene file:\n");
-				PrintLong(sceneRootObject.Print(0).c_str());
-			}
-
-			int sceneVersion = sceneRootObject.GetInt("version");
-			if (sceneVersion != 1)
-			{
-				if (sceneRootObject.HasField("version"))
+				if (g_bEnableLogging_Loading)
 				{
-					PrintError("Unhandled scene version: %i! Max handled version: 1\n", sceneVersion);
+					Print("Loading scene from %s\n", shortFilePath.c_str());
 				}
-				else
+
+				JSONObject sceneRootObject;
+				if (!JSONParser::Parse(filePath, sceneRootObject))
 				{
-					PrintError("Scene version missing from scene file. Assuming version 1\n");
+					PrintError("Failed to parse scene file: %s\n", shortFilePath.c_str());
+					return;
+				}
+
+				constexpr bool printSceneContentsToConsole = false;
+				if (printSceneContentsToConsole)
+				{
+					Print("Parsed scene file:\n");
+					PrintLong(sceneRootObject.Print(0).c_str());
+				}
+
+				int sceneVersion = sceneRootObject.GetInt("version");
+				if (sceneVersion != 1)
+				{
+					if (sceneRootObject.HasField("version"))
+					{
+						PrintError("Unhandled scene version: %i! Max handled version: 1\n", sceneVersion);
+					}
+					else
+					{
+						PrintError("Scene version missing from scene file. Assuming version 1\n");
+					}
+				}
+
+				sceneRootObject.SetStringChecked("name", m_Name);
+
+				sceneRootObject.SetBoolChecked("spawn player", m_bSpawnPlayer);
+
+				// TODO: Only initialize materials currently present in this scene
+				for (JSONObject& materialObj : s_ParsedMaterials)
+				{
+					MaterialCreateInfo matCreateInfo = {};
+					Material::ParseJSONObject(materialObj, matCreateInfo);
+
+					MaterialID matID = g_Renderer->InitializeMaterial(&matCreateInfo);
+					m_LoadedMaterials.push_back(matID);
+				}
+
+				// This holds all the objects in the scene which do not have a parent
+				const std::vector<JSONObject>& rootObjects = sceneRootObject.GetObjectArray("objects");
+				for (const JSONObject& rootObjectJSON : rootObjects)
+				{
+					GameObject* rootObj = GameObject::CreateObjectFromJSON(rootObjectJSON, this, InvalidMaterialID);
+					rootObj->GetTransform()->UpdateParentTransform();
+					AddRootObject(rootObj);
+				}
+
+				if (sceneRootObject.HasField("track manager"))
+				{
+					const JSONObject& trackManagerObj = sceneRootObject.GetObject("track manager");
+
+					m_TrackManager.InitializeFromJSON(trackManagerObj);
 				}
 			}
-
-			sceneRootObject.SetStringChecked("name", m_Name);
-
-			// TODO: Only initialize materials currently present in this scene
-			for (JSONObject& materialObj : s_ParsedMaterials)
+			else
 			{
-				MaterialCreateInfo matCreateInfo = {};
-				Material::ParseJSONObject(materialObj, matCreateInfo);
+				// File doesn't exist, create a new blank one
+				Print("Creating new scene at: %s\n", shortFilePath.c_str());
 
-				MaterialID matID = g_Renderer->InitializeMaterial(&matCreateInfo);
-				m_LoadedMaterials.push_back(matID);
+				// Skybox
+				{
+					//MaterialCreateInfo skyboxMatCreateInfo = {};
+					//skyboxMatCreateInfo.name = "Skybox";
+					//skyboxMatCreateInfo.shaderName = "skybox";
+					//skyboxMatCreateInfo.generateHDRCubemapSampler = true;
+					//skyboxMatCreateInfo.enableCubemapSampler = true;
+					//skyboxMatCreateInfo.enableCubemapTrilinearFiltering = true;
+					//skyboxMatCreateInfo.generatedCubemapSize = glm::vec2(512.0f);
+					//skyboxMatCreateInfo.generateIrradianceSampler = true;
+					//skyboxMatCreateInfo.generatedIrradianceCubemapSize = glm::vec2(32.0f);
+					//skyboxMatCreateInfo.generatePrefilteredMap = true;
+					//skyboxMatCreateInfo.generatedPrefilteredCubemapSize = glm::vec2(128.0f);
+					//skyboxMatCreateInfo.environmentMapPath = RESOURCE_LOCATION  "textures/hdri/Milkyway/Milkyway_Light.hdr";
+					//MaterialID skyboxMatID = g_Renderer->InitializeMaterial(&skyboxMatCreateInfo);
+
+					//m_LoadedMaterials.push_back(skyboxMatID);
+
+					MaterialID skyboxMatID = InvalidMaterialID;
+					g_Renderer->GetMaterialID("skybox 01", skyboxMatID);
+
+					assert(skyboxMatID != InvalidMaterialID);
+
+					Skybox* skybox = new Skybox("Skybox");
+
+					JSONObject emptyObj = {};
+					skybox->ParseJSON(emptyObj, this, skyboxMatID);
+
+					AddRootObject(skybox);
+				}
+
+				MaterialID sphereMatID = InvalidMaterialID;
+				g_Renderer->GetMaterialID("pbr chrome", sphereMatID);
+
+				assert(sphereMatID != InvalidMaterialID);
+
+				// Reflection probe
+				{
+					//MaterialCreateInfo reflectionProbeMatCreateInfo = {};
+					//reflectionProbeMatCreateInfo.name = "Reflection Probe";
+					//reflectionProbeMatCreateInfo.shaderName = "pbr";
+					//reflectionProbeMatCreateInfo.constAlbedo = glm::vec4(0.8f, 0.8f, 0.8f, 1.0f);
+					//reflectionProbeMatCreateInfo.constMetallic = 1.0f;
+					//reflectionProbeMatCreateInfo.constRoughness = 0.0f;
+					//reflectionProbeMatCreateInfo.constAO = 1.0f;
+					//MaterialID sphereMatID = g_Renderer->InitializeMaterial(&reflectionProbeMatCreateInfo);
+
+					//m_LoadedMaterials.push_back(sphereMatID);
+
+					ReflectionProbe* reflectionProbe = new ReflectionProbe("Reflection Probe 01");
+
+					JSONObject emptyObj = {};
+					reflectionProbe->ParseJSON(emptyObj, this, sphereMatID);
+					reflectionProbe->GetTransform()->SetLocalPosition(glm::vec3(0.0f, 8.0f, 0.0f));
+
+					AddRootObject(reflectionProbe);
+				}
+
+				GameObject* sphere = new GameObject("sphere", GameObjectType::OBJECT);
+				sphere->SetMeshComponent(new MeshComponent(sphere, sphereMatID))->LoadPrefabShape(MeshComponent::PrefabShape::UV_SPHERE);
+				AddRootObject(sphere);
 			}
 
-			// This holds all the objects in the scene which do not have a parent
-			const std::vector<JSONObject>& rootObjects = sceneRootObject.GetObjectArray("objects");
-			for (const JSONObject& rootObjectJSON : rootObjects)
+			if (m_bSpawnPlayer)
 			{
-				GameObject* rootObj = GameObject::CreateObjectFromJSON(rootObjectJSON, this, InvalidMaterialID);
-				rootObj->GetTransform()->UpdateParentTransform();
-				AddRootObject(rootObj);
+				m_Player0 = new Player(0, glm::vec3(0.0f, 2.0f, 0.0f));
+				AddRootObject(m_Player0);
+
+				//m_Player1 = new Player(1);
+				//AddRootObject(m_Player1);
 			}
 
-			if (sceneRootObject.HasField("track manager"))
+			for (GameObject* rootObject : m_RootObjects)
 			{
-				const JSONObject& trackManagerObj = sceneRootObject.GetObject("track manager");
-
-				m_TrackManager.InitializeFromJSON(trackManagerObj);
+				rootObject->Initialize();
 			}
-		}
-		else
-		{
-			// File doesn't exist, create a new blank one
-			Print("Creating new scene at: %s\n", shortFilePath.c_str());
-
-			// Skybox
+			if (g_Renderer->GetDirectionalLight() == nullptr)
 			{
-				//MaterialCreateInfo skyboxMatCreateInfo = {};
-				//skyboxMatCreateInfo.name = "Skybox";
-				//skyboxMatCreateInfo.shaderName = "skybox";
-				//skyboxMatCreateInfo.generateHDRCubemapSampler = true;
-				//skyboxMatCreateInfo.enableCubemapSampler = true;
-				//skyboxMatCreateInfo.enableCubemapTrilinearFiltering = true;
-				//skyboxMatCreateInfo.generatedCubemapSize = glm::vec2(512.0f);
-				//skyboxMatCreateInfo.generateIrradianceSampler = true;
-				//skyboxMatCreateInfo.generatedIrradianceCubemapSize = glm::vec2(32.0f);
-				//skyboxMatCreateInfo.generatePrefilteredMap = true;
-				//skyboxMatCreateInfo.generatedPrefilteredCubemapSize = glm::vec2(128.0f);
-				//skyboxMatCreateInfo.environmentMapPath = RESOURCE_LOCATION  "textures/hdri/Milkyway/Milkyway_Light.hdr";
-				//MaterialID skyboxMatID = g_Renderer->InitializeMaterial(&skyboxMatCreateInfo);
-
-				//m_LoadedMaterials.push_back(skyboxMatID);
-
-				MaterialID skyboxMatID = InvalidMaterialID;
-				g_Renderer->GetMaterialID("skybox 01", skyboxMatID);
-
-				assert(skyboxMatID != InvalidMaterialID);
-
-				Skybox* skybox = new Skybox("Skybox");
-
-				JSONObject emptyObj = {};
-				skybox->ParseJSON(emptyObj, this, skyboxMatID);
-
-				AddRootObject(skybox);
+				CreateDefaultDirectionalLight();
 			}
 
-			MaterialID sphereMatID = InvalidMaterialID;
-			g_Renderer->GetMaterialID("pbr chrome", sphereMatID);
+			UpdateRootObjectSiblingIndices();
 
-			assert(sphereMatID != InvalidMaterialID);
+			m_bInitialized = true;
 
-			// Reflection probe
-			{
-				//MaterialCreateInfo reflectionProbeMatCreateInfo = {};
-				//reflectionProbeMatCreateInfo.name = "Reflection Probe";
-				//reflectionProbeMatCreateInfo.shaderName = "pbr";
-				//reflectionProbeMatCreateInfo.constAlbedo = glm::vec4(0.8f, 0.8f, 0.8f, 1.0f);
-				//reflectionProbeMatCreateInfo.constMetallic = 1.0f;
-				//reflectionProbeMatCreateInfo.constRoughness = 0.0f;
-				//reflectionProbeMatCreateInfo.constAO = 1.0f;
-				//MaterialID sphereMatID = g_Renderer->InitializeMaterial(&reflectionProbeMatCreateInfo);
-
-				//m_LoadedMaterials.push_back(sphereMatID);
-
-				ReflectionProbe* reflectionProbe = new ReflectionProbe("Reflection Probe 01");
-
-				JSONObject emptyObj = {};
-				reflectionProbe->ParseJSON(emptyObj, this, sphereMatID);
-				reflectionProbe->GetTransform()->SetLocalPosition(glm::vec3(0.0f, 8.0f, 0.0f));
-
-				AddRootObject(reflectionProbe);
-			}
-
-			GameObject* sphere = new GameObject("sphere", GameObjectType::OBJECT);
-			sphere->SetMeshComponent(new MeshComponent(sphere, sphereMatID))->LoadPrefabShape(MeshComponent::PrefabShape::UV_SPHERE);
-			AddRootObject(sphere);
+			m_bLoaded = true;
 		}
-
-		bool bCreatePlayer = true;
-
-		// TODO: FIXME: Save in scene file
-		if (m_Name.compare("Scene Gerstner") == 0 ||
-			m_Name.compare("Scene Empty") == 0)
-		{
-			bCreatePlayer = false;
-		}
-
-		if (bCreatePlayer)
-		{
-			m_Player0 = new Player(0, glm::vec3(0.0f, 2.0f, 0.0f));
-			AddRootObject(m_Player0);
-
-			//m_Player1 = new Player(1);
-			//AddRootObject(m_Player1);
-		}
-
-		for (GameObject* rootObject : m_RootObjects)
-		{
-			rootObject->Initialize();
-		}
-		if (g_Renderer->GetDirectionalLight() == nullptr)
-		{
-			CreateDefaultDirectionalLight();
-		}
-
-		UpdateRootObjectSiblingIndices();
-
-		m_bLoaded = true;
 	}
 
 	void BaseScene::PostInitialize()
@@ -869,6 +867,7 @@ namespace flex
 
 		rootSceneObject.fields.emplace_back("version", JSONValue(m_FileVersion));
 		rootSceneObject.fields.emplace_back("name", JSONValue(m_Name));
+		rootSceneObject.fields.emplace_back("spawn player", JSONValue(m_bSpawnPlayer));
 
 		std::vector<JSONObject> objectsArray;
 		for (GameObject* rootObject : m_RootObjects)

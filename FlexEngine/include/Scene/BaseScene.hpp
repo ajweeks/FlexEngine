@@ -123,6 +123,7 @@ namespace flex
 	protected:
 		friend GameObject;
 		friend CartManager;
+		friend SceneManager;
 
 		// Recursively finds targetObject in currentObject's children
 		// Returns true if targetObject was found and deleted
@@ -145,9 +146,9 @@ namespace flex
 
 		std::vector<GameObject*> m_RootObjects;
 
-		//bool m_bUsingSaveFile = false;
-
+		bool m_bInitialized = false;
 		bool m_bLoaded = false;
+		bool m_bSpawnPlayer = true;
 
 		/*
 		* Stores all unique initialized materials we've created

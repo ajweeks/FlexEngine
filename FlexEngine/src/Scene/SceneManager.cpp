@@ -457,6 +457,8 @@ namespace flex
 				PostInitializeCurrentScene();
 			}
 
+			ImGui::Checkbox("Spawn player", &currentScene->m_bSpawnPlayer);
+
 			i32 sceneItemWidth = 240;
 			if (ImGui::BeginChild("Scenes", ImVec2((real)sceneItemWidth, 120), true, ImGuiWindowFlags_NoResize))
 			{
