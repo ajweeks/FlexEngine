@@ -21,7 +21,7 @@ struct DirectionalLight
 	float brightness;
 	int castShadows;
 	float shadowDarkness;
-	float pad[2];
+	vec2 _dirLightPad;
 };
 
 struct PointLight 
@@ -42,9 +42,9 @@ layout (binding = 0) uniform UBOConstant
 	DirectionalLight dirLight;
 	PointLight pointLights[NUMBER_POINT_LIGHTS];
 	// SSAO Sampling Data
-	int enabled; // TODO: Make specialization constant
+	int ssaoEnabled; // TODO: Make specialization constant
 	float ssaoPowExp;
-	vec2 pad;
+	vec2 _ssaoPad;
 } uboConstant;
 
 layout (binding = 1) uniform UBODynamic
