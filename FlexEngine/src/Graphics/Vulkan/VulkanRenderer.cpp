@@ -3633,21 +3633,12 @@ namespace flex
 			vkShader.renderPass = ResolveRenderPassType(shader.renderPassType, shader.name.c_str());
 			assert(vkShader.renderPass != VK_NULL_HANDLE);
 
-#if 1 // Sanity check
-			assert(!shader.constantBufferUniforms.HasUniform(U_UNIFORM_BUFFER_DYNAMIC));
-			assert(!shader.dynamicBufferUniforms.HasUniform(U_UNIFORM_BUFFER_CONSTANT));
-
-			if (shader.constantBufferUniforms.HasUniform(U_HIGH_RES_TEX))
-			{
-				assert(!shader.constantBufferUniforms.HasUniform(U_ALBEDO_SAMPLER));
-			}
-
+			// Sanity check
 			if (vkShader.renderPass == VK_NULL_HANDLE)
 			{
 				PrintError("Shader %s's render pass was not set!\n", shader.name.c_str());
 				bSuccess = false;
 			}
-#endif
 
 			if (g_bEnableLogging_Loading)
 			{
@@ -6488,7 +6479,7 @@ namespace flex
 
 		void VulkanRenderer::CreateDescriptorPool()
 		{
-			// TODO: Don't do this?
+			// TODO: OPTIMIZE: Don't do this? Start with high water levels from previous sessions and resize when needed
 			const size_t descriptorSetCount = 1000;
 
 			std::vector<VkDescriptorPoolSize> poolSizes{

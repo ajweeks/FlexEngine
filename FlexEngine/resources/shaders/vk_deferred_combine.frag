@@ -150,9 +150,9 @@ void main()
     vec3 albedo = texture(albedoMetallicTex, ex_TexCoord).rgb;
     float metallic = texture(albedoMetallicTex, ex_TexCoord).a;
 
-    float ssao = (uboConstant.enabled == 1 ? texture(ssaoBuffer, ex_TexCoord).r : 1.0f);
+    float ssao = (uboConstant.ssaoEnabled == 1 ? texture(ssaoBuffer, ex_TexCoord).r : 1.0f);
 
-    // fragColor = vec4(ssao, ssao, ssao, 1); return;
+	// fragColor = vec4(vec3(pow(ssao, uboConstant.ssaoPowExp)), 1); return;
 
 	vec3 V = normalize(uboConstant.camPos.xyz - worldPos);
 	vec3 R = reflect(-V, N);
