@@ -2393,6 +2393,8 @@ namespace flex
 
 				CreateShadowVertexBuffer();
 				CreateShadowIndexBuffer();
+
+				GenerateIrradianceMaps();
 			}
 		}
 
