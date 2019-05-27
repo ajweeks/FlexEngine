@@ -4377,8 +4377,19 @@ namespace flex
 
 			if (shader->shader->constantBufferUniforms.HasUniform(U_SSAO_FINAL_SAMPLER))
 			{
-				FrameBufferAttachment& fba = m_bSSAOBlurEnabled ? m_SSAOBlurVFrameBuf->frameBufferAttachments[0].second : m_SSAOFrameBuf->frameBufferAttachments[0].second;
-				createInfo.ssaoFinalImageView = fba.view;
+				VkImageView ssaoView = m_BlankTexture->imageView;
+				if (m_SSAOSamplingData.ssaoEnabled)
+				{
+					if (m_bSSAOBlurEnabled)
+					{
+						ssaoView = m_SSAOBlurVFrameBuf->frameBufferAttachments[0].second.view;
+					}
+					else
+					{
+						ssaoView = m_SSAOFrameBuf->frameBufferAttachments[0].second.view;
+					}
+				}
+				createInfo.ssaoFinalImageView = ssaoView;
 				createInfo.ssaoFinalSampler = m_SSAOSampler;
 			}
 
