@@ -347,7 +347,7 @@ namespace flex
 
 			{
 				// Shadow map pipeline
-				VulkanMaterial* shadowMaterial = &m_Materials[m_ShadowMatID];
+				VulkanMaterial* shadowMaterial = &m_Materials[m_ShadowMaterialID];
 				VulkanShader* shadowShader = &m_Shaders[shadowMaterial->material.shaderID];
 
 				GraphicsPipelineCreateInfo pipelineCreateInfo = {};
@@ -5829,20 +5829,17 @@ namespace flex
 				VkRect2D shadowScissor = vks::scissor(0u, 0u, m_ShadowFrameBuf->width, m_ShadowFrameBuf->height);
 				vkCmdSetScissor(m_OffScreenCmdBuffer, 0, 1, &shadowScissor);
 
-				VulkanMaterial* shadowMaterial = &m_Materials[m_ShadowMatID];
-				//VulkanShader* shadowShader = &m_Shaders[shadowMaterial->material.shaderID];
-
 				for (size_t i = 0; i < m_RenderObjects.size(); ++i)
 				{
 					VulkanRenderObject* renderObject = GetRenderObject(i);
 					if (renderObject)
 					{
-						UpdateDynamicUniformBuffer(i, nullptr, m_ShadowMatID, renderObject->dynamicShadowUBOOffset);
+						UpdateDynamicUniformBuffer(i, nullptr, m_ShadowMaterialID, renderObject->dynamicShadowUBOOffset);
 					}
 				}
 
 				DrawCallInfo drawCallInfo = {};
-				drawCallInfo.materialIDOverride = m_ShadowMatID;
+				drawCallInfo.materialIDOverride = m_ShadowMaterialID;
 				drawCallInfo.graphicsPipelineOverride = m_ShadowGraphicsPipeline;
 				drawCallInfo.pipelineLayoutOverride = m_ShadowPipelineLayout;
 				drawCallInfo.descriptorSetOverride = m_ShadowDescriptorSet;
@@ -6109,7 +6106,7 @@ namespace flex
 
 		void VulkanRenderer::CreateShadowVertexBuffer()
 		{
-			VulkanMaterial& shadowMat = m_Materials[m_ShadowMatID];
+			VulkanMaterial& shadowMat = m_Materials[m_ShadowMaterialID];
 			VulkanShader& shadowShader = m_Shaders[shadowMat.material.shaderID];
 
 			u32 vertexStride = CalculateVertexStride(shadowShader.shader->vertexAttributes);
@@ -6180,7 +6177,7 @@ namespace flex
 				return;
 			}
 
-			VulkanBuffer* indexBuffer = m_VertexIndexBufferPairs[m_Materials[m_ShadowMatID].material.shaderID].indexBuffer;
+			VulkanBuffer* indexBuffer = m_VertexIndexBufferPairs[m_Materials[m_ShadowMaterialID].material.shaderID].indexBuffer;
 			CreateStaticIndexBuffer(indexBuffer, indices);
 		}
 

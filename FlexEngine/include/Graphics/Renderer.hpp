@@ -333,7 +333,6 @@ namespace flex
 		MaterialID m_SpriteMatID = InvalidMaterialID;
 		MaterialID m_FontMatSSID = InvalidMaterialID;
 		MaterialID m_FontMatWSID = InvalidMaterialID;
-		MaterialID m_ShadowMatID = InvalidMaterialID;
 		MaterialID m_PostProcessMatID = InvalidMaterialID;
 		MaterialID m_PostFXAAMatID = InvalidMaterialID;
 		MaterialID m_SelectedObjectMatID = InvalidMaterialID;
