@@ -1953,14 +1953,38 @@ namespace flex
 
 						LoadShaders();
 
+						CreateRenderPasses();
+						PrepareFrameBuffers();
+
+						// Force font descriptor sets to be regenerated
+						for (BitmapFont* font : m_FontsSS)
+						{
+							font->m_DescriptorSet = VK_NULL_HANDLE;
+						}
+
+						for (BitmapFont* font : m_FontsWS)
+						{
+							font->m_DescriptorSet = VK_NULL_HANDLE;
+						}
+
+						for (u32 i = 0; i < m_Shaders.size(); ++i)
+						{
+							m_Shaders[i].renderPass = ResolveRenderPassType(m_Shaders[i].shader->renderPassType, m_Shaders[i].shader->name.c_str());
+							CreateUniformBuffers(&m_Shaders[i]);
+						}
+
 						for (u32 i = 0; i < m_RenderObjects.size(); ++i)
 						{
 							VulkanRenderObject* renderObject = GetRenderObject(i);
 							if (renderObject != nullptr)
 							{
+								CreateDescriptorSet(i);
 								CreateGraphicsPipeline(i, false);
 							}
 						}
+
+						CreateSSAODescriptorSets();
+						CreateSSAOPipelines();
 					}
 
 					m_bSwapChainNeedsRebuilding = true; // This is needed to recreate some resources for SSAO, etc.
