@@ -346,42 +346,7 @@ namespace flex
 				CreateSSAODescriptorSets();
 			}
 
-			{
-				// Shadow map pipeline
-				VulkanMaterial* shadowMaterial = &m_Materials[m_ShadowMaterialID];
-				VulkanShader* shadowShader = &m_Shaders[shadowMaterial->material.shaderID];
-
-				GraphicsPipelineCreateInfo pipelineCreateInfo = {};
-				pipelineCreateInfo.bSetDynamicStates = true;
-				pipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-				pipelineCreateInfo.cullMode = VK_CULL_MODE_FRONT_BIT;
-				pipelineCreateInfo.bEnableColorBlending = false;
-
-				pipelineCreateInfo.graphicsPipeline = m_ShadowGraphicsPipeline.replace();
-				pipelineCreateInfo.pipelineLayout = m_ShadowPipelineLayout.replace();
-				pipelineCreateInfo.shaderID = shadowMaterial->material.shaderID;
-				pipelineCreateInfo.vertexAttributes = shadowShader->shader->vertexAttributes;
-				pipelineCreateInfo.descriptorSetLayoutIndex = shadowMaterial->descriptorSetLayoutIndex;
-				pipelineCreateInfo.subpass = shadowShader->shader->subpass;
-				pipelineCreateInfo.depthWriteEnable = shadowShader->shader->bDepthWriteEnable ? VK_TRUE : VK_FALSE;
-				pipelineCreateInfo.renderPass = shadowShader->renderPass;
-				CreateGraphicsPipeline(&pipelineCreateInfo);
-
-				// Shadow map descriptor set
-				VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[shadowMaterial->material.shaderID];
-
-				DescriptorSetCreateInfo descSetCreateInfo = {};
-				descSetCreateInfo.descriptorSet = &m_ShadowDescriptorSet;
-				descSetCreateInfo.descriptorSetLayout = &descSetLayout;
-				descSetCreateInfo.shaderID = shadowMaterial->material.shaderID;
-				descSetCreateInfo.uniformBuffer = &shadowShader->uniformBuffer;
-				FrameBufferAttachment& normalFrameBufferAttachment = m_OffScreenFrameBuf->frameBufferAttachments[0].second;
-				// Depth texture is handled for us in CreateDescriptorSet
-				descSetCreateInfo.ssaoNormalImageView = normalFrameBufferAttachment.view;
-				descSetCreateInfo.ssaoNormalSampler = m_SSAOSampler;
-				descSetCreateInfo.noiseTexture = shadowMaterial->noiseTexture;
-				CreateDescriptorSet(&descSetCreateInfo);
-			}
+			CreateShadowResources();
 
 			m_CommandBufferManager.CreateCommandBuffers(m_SwapChainImages.size());
 
@@ -1945,11 +1910,12 @@ namespace flex
 				{
 					if (m_ShaderCompiler->bSuccess == false)
 					{
-						PrintError("Failed to compile shader code!\n");
-						AddEditorString("Async shader recompile completed unsuccessfully");
+						PrintError("Async shader recompile failed\n");
+						AddEditorString("Async shader recompile failed");
 					}
 					else
 					{
+						Print("Async shader recompile completed successfully!\n");
 						AddEditorString("Async shader recompile completed successfully");
 
 						LoadShaders();
@@ -1968,20 +1934,18 @@ namespace flex
 							font->m_DescriptorSet = VK_NULL_HANDLE;
 						}
 
-						for (u32 i = 0; i < m_Shaders.size(); ++i)
+						for (VulkanShader& shader : m_Shaders)
 						{
-							m_Shaders[i].renderPass = ResolveRenderPassType(m_Shaders[i].shader->renderPassType, m_Shaders[i].shader->name.c_str());
-							CreateUniformBuffers(&m_Shaders[i]);
+							shader.renderPass = ResolveRenderPassType(shader.shader->renderPassType, shader.shader->name.c_str());
+							CreateUniformBuffers(&shader);
 						}
+
+						CreateShadowResources();
 
 						for (u32 i = 0; i < m_RenderObjects.size(); ++i)
 						{
-							VulkanRenderObject* renderObject = GetRenderObject(i);
-							if (renderObject != nullptr)
-							{
-								CreateDescriptorSet(i);
-								CreateGraphicsPipeline(i, false);
-							}
+							CreateDescriptorSet(i);
+							CreateGraphicsPipeline(i, false);
 						}
 
 						CreateSSAODescriptorSets();
@@ -3965,6 +3929,44 @@ namespace flex
 			return VK_NULL_HANDLE;
 		}
 
+		void VulkanRenderer::CreateShadowResources()
+		{
+			// Shadow map pipeline
+			VulkanMaterial* shadowMaterial = &m_Materials[m_ShadowMaterialID];
+			VulkanShader* shadowShader = &m_Shaders[shadowMaterial->material.shaderID];
+
+			GraphicsPipelineCreateInfo pipelineCreateInfo = {};
+			pipelineCreateInfo.bSetDynamicStates = true;
+			pipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+			pipelineCreateInfo.cullMode = VK_CULL_MODE_FRONT_BIT;
+			pipelineCreateInfo.bEnableColorBlending = false;
+
+			pipelineCreateInfo.graphicsPipeline = m_ShadowGraphicsPipeline.replace();
+			pipelineCreateInfo.pipelineLayout = m_ShadowPipelineLayout.replace();
+			pipelineCreateInfo.shaderID = shadowMaterial->material.shaderID;
+			pipelineCreateInfo.vertexAttributes = shadowShader->shader->vertexAttributes;
+			pipelineCreateInfo.descriptorSetLayoutIndex = shadowMaterial->descriptorSetLayoutIndex;
+			pipelineCreateInfo.subpass = shadowShader->shader->subpass;
+			pipelineCreateInfo.depthWriteEnable = shadowShader->shader->bDepthWriteEnable ? VK_TRUE : VK_FALSE;
+			pipelineCreateInfo.renderPass = shadowShader->renderPass;
+			CreateGraphicsPipeline(&pipelineCreateInfo);
+
+			// Shadow map descriptor set
+			VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[shadowMaterial->material.shaderID];
+
+			DescriptorSetCreateInfo descSetCreateInfo = {};
+			descSetCreateInfo.descriptorSet = &m_ShadowDescriptorSet;
+			descSetCreateInfo.descriptorSetLayout = &descSetLayout;
+			descSetCreateInfo.shaderID = shadowMaterial->material.shaderID;
+			descSetCreateInfo.uniformBuffer = &shadowShader->uniformBuffer;
+			FrameBufferAttachment& normalFrameBufferAttachment = m_OffScreenFrameBuf->frameBufferAttachments[0].second;
+			// Depth texture is handled for us in CreateDescriptorSet
+			descSetCreateInfo.ssaoNormalImageView = normalFrameBufferAttachment.view;
+			descSetCreateInfo.ssaoNormalSampler = m_SSAOSampler;
+			descSetCreateInfo.noiseTexture = shadowMaterial->noiseTexture;
+			CreateDescriptorSet(&descSetCreateInfo);
+		}
+
 		MaterialID VulkanRenderer::GetNextAvailableMaterialID()
 		{
 			// Return lowest available ID
@@ -5023,6 +5025,11 @@ namespace flex
 			pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
 			VkPipelineCache pipelineCache = createInfo->pipelineCache ? *createInfo->pipelineCache : VK_NULL_HANDLE;
+
+			if (*createInfo->graphicsPipeline != VK_NULL_HANDLE)
+			{
+				vkDestroyPipeline(m_VulkanDevice->m_LogicalDevice, *createInfo->graphicsPipeline, nullptr);
+			}
 
 			VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_VulkanDevice->m_LogicalDevice, pipelineCache, 1, &pipelineInfo, nullptr, createInfo->graphicsPipeline));
 		}
