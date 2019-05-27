@@ -319,6 +319,7 @@ namespace flex
 
 			GenerateBRDFLUT();
 
+			// TODO: (not so EZ): Move to base renderer
 			// SSAO Materials
 			{
 				if (m_SSAOMatID == InvalidMaterialID)
@@ -4369,7 +4370,7 @@ namespace flex
 			createInfo.noiseTexture = material->noiseTexture;
 			createInfo.bDepthSampler = shader->shader->bNeedDepthSampler;
 
-			if (shader->shader->constantBufferUniforms.HasUniform(U_SSAO_FINAL_SAMPLER))
+			if (shader->shader->constantBufferUniforms.HasUniform(U_SHADOW_SAMPLER))
 			{
 				createInfo.shadowSampler = m_ColorSampler;
 				createInfo.shadowImageView = m_ShadowFrameBuf->frameBufferAttachments[0].second.view;
@@ -6590,6 +6591,7 @@ namespace flex
 
 			m_CurrentSwapChainBufferIndex = (imageIndex + 1) % m_SwapChainImages.size();
 
+			// TODO: FIXME: BAD!! PLS REMOVE
 			VK_CHECK_RESULT(vkQueueWaitIdle(m_PresentQueue));
 		}
 
@@ -7313,19 +7315,19 @@ namespace flex
 
 			switch (flags)
 			{
-			case VkDebugReportFlagBitsEXT::VK_DEBUG_REPORT_INFORMATION_BIT_EXT:
+			case VK_DEBUG_REPORT_INFORMATION_BIT_EXT:
 				Print("%s\n", msg);
 				break;
-			case VkDebugReportFlagBitsEXT::VK_DEBUG_REPORT_WARNING_BIT_EXT:
+			case VK_DEBUG_REPORT_WARNING_BIT_EXT:
 				PrintWarn("%s\n", msg);
 				break;
-			case VkDebugReportFlagBitsEXT::VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT:
+			case VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT:
 				PrintWarn("%s\n", msg);
 				break;
-			case VkDebugReportFlagBitsEXT::VK_DEBUG_REPORT_ERROR_BIT_EXT:
+			case VK_DEBUG_REPORT_ERROR_BIT_EXT:
 				PrintError("%s\n", msg);
 				break;
-			case VkDebugReportFlagBitsEXT::VK_DEBUG_REPORT_DEBUG_BIT_EXT:
+			case VK_DEBUG_REPORT_DEBUG_BIT_EXT:
 			default:
 				PrintError("%s\n", msg);
 				break;

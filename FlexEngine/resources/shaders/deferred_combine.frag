@@ -137,6 +137,8 @@ void main()
 
     float ssao = enableSSAO == 1 ? texture(ssaoBlurFrameBufferSampler, ex_TexCoord).r : 1.0f;
 
+    // fragmentColor = vec4(vec3(pow(ssao, ssaoPowExp)), 1); return;
+
     float roughness = texture(normalRoughnessFrameBufferSampler, ex_TexCoord).a;
     roughness = max(roughness, 0.045);
 
