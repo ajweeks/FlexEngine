@@ -28,18 +28,46 @@ namespace flex
 		// Framebuffer for offscreen rendering
 		struct FrameBufferAttachment
 		{
-			FrameBufferAttachment(const VDeleter<VkDevice>& device);
-			FrameBufferAttachment(const VDeleter<VkDevice>& device, VkFormat format);
+			struct CreateInfo
+			{
+				bool bIsDepth = false;
+				bool bIsSampled = false;
+				bool bIsCubemap = false;
+				bool bIsTransferedSrc = false;
+				bool bIsTransferedDst = false;
+				u32 width = 0;
+				u32 height = 0;
+				VkFormat format = VK_FORMAT_UNDEFINED;
+				VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			};
 
+			FrameBufferAttachment(VulkanDevice* device, const CreateInfo& createInfo);
+
+			void CreateImage(u32 inWidth = 0, u32 inHeight = 0);
+			void CreateImageView();
+
+			void TransitionToLayout(VkImageLayout newLayout, VkQueue graphicsQueue, VkCommandBuffer optCmdBuf = VK_NULL_HANDLE);
+
+			VulkanDevice* device = nullptr;
+
+			// TODO: Store data in VulkanTexture
 			VDeleter<VkImage> image;
 			VDeleter<VkDeviceMemory> mem;
 			VDeleter<VkImageView> view;
+			u32 width = 0;
+			u32 height = 0;
+			bool bIsDepth = false;
+			bool bIsSampled = false;
+			bool bIsCubemap = false;
+			bool bIsTransferedSrc = false;
+			bool bIsTransferedDst = false;
 			VkFormat format = VK_FORMAT_UNDEFINED;
+			VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
 		};
 
 		struct FrameBuffer
 		{
-			FrameBuffer(const VDeleter<VkDevice>& device);
+			FrameBuffer(VulkanDevice* device);
 
 			u32 width = 0;
 			u32 height = 0;
@@ -177,7 +205,7 @@ namespace flex
 			// Static, globally usable functions
 
 			/* Returns the size of the generated image */
-			static VkDeviceSize CreateImage(VulkanDevice* device, VkQueue graphicsQueue, ImageCreateInfo& createInfo);
+			static VkDeviceSize CreateImage(VulkanDevice* device, ImageCreateInfo& createInfo);
 
 			static void CreateImageView(VulkanDevice* device, ImageViewCreateInfo& createInfo);
 
@@ -185,9 +213,6 @@ namespace flex
 
 			// Expects *texture == nullptr
 			static VkDeviceSize CreateCubemap(VulkanDevice* device, VkQueue graphicsQueue, CubemapCreateInfo& createInfo);
-
-			// Non-static member functions
-			void Create(ImageCreateInfo& imageCreateInfo, ImageViewCreateInfo& imageViewCreateInfo, SamplerCreateInfo& samplerCreateInfo);
 
 			u32 CreateFromMemory(void* buffer, u32 bufferSize, VkFormat inFormat, i32 inMipLevels, VkFilter filter = VK_FILTER_LINEAR);
 

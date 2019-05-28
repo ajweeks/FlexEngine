@@ -115,14 +115,32 @@ namespace flex
 				}
 			}
 
+			VkFormat depthFormat;
+			if (!GetSupportedDepthFormat(m_VulkanDevice->m_PhysicalDevice, &depthFormat))
+			{
+				PrintWarn("Failed to find suitable depth format\n");
+			}
+
 			m_CommandBufferManager = VulkanCommandBufferManager(m_VulkanDevice);
 
-			m_DepthAttachment = new FrameBufferAttachment(m_VulkanDevice->m_LogicalDevice);
-			m_OffScreenDepthAttachment = new FrameBufferAttachment(m_VulkanDevice->m_LogicalDevice);
+			FrameBufferAttachment::CreateInfo depthCreateInfo = {};
+			depthCreateInfo.bIsDepth = true;
+			depthCreateInfo.bIsTransferedDst = true;
+			depthCreateInfo.format = depthFormat;
+			m_DepthAttachment = new FrameBufferAttachment(m_VulkanDevice, depthCreateInfo);
 
-			VkFormat depthFormat;
-			GetSupportedDepthFormat(m_VulkanDevice->m_PhysicalDevice, &depthFormat);
-			m_CubemapDepthAttachment = new FrameBufferAttachment(m_VulkanDevice->m_LogicalDevice, depthFormat);
+			FrameBufferAttachment::CreateInfo offscreenDepthCreateInfo = {};
+			offscreenDepthCreateInfo.bIsDepth = true;
+			offscreenDepthCreateInfo.bIsTransferedSrc = true;
+			offscreenDepthCreateInfo.bIsSampled = true;
+			offscreenDepthCreateInfo.format = depthFormat;
+			m_OffScreenDepthAttachment = new FrameBufferAttachment(m_VulkanDevice, offscreenDepthCreateInfo);
+
+			FrameBufferAttachment::CreateInfo cubemapDepthCreateInfo = {};
+			cubemapDepthCreateInfo.bIsDepth = true;
+			cubemapDepthCreateInfo.bIsCubemap = true;
+			cubemapDepthCreateInfo.format = depthFormat;
+			m_CubemapDepthAttachment = new FrameBufferAttachment(m_VulkanDevice, cubemapDepthCreateInfo);
 
 			m_SwapChain = { m_VulkanDevice->m_LogicalDevice, vkDestroySwapchainKHR };
 
@@ -160,40 +178,47 @@ namespace flex
 			CreateSwapChain();
 			CreateSwapChainImageViews();
 
-			m_OffScreenFrameBuf = new FrameBuffer(m_VulkanDevice->m_LogicalDevice);
+			FrameBufferAttachment::CreateInfo frameBufCreateInfo = {};
+			frameBufCreateInfo.format = VK_FORMAT_R16G16B16A16_SFLOAT;
+			frameBufCreateInfo.bIsSampled = true;
+
+			m_OffScreenFrameBuf = new FrameBuffer(m_VulkanDevice);
 			m_OffScreenFrameBuf->frameBufferAttachments = {
-				{ "normalRoughnessFrameBufferSampler", { m_VulkanDevice->m_LogicalDevice, VK_FORMAT_R16G16B16A16_SFLOAT } },
-				{ "albedoMetallicFrameBufferSampler",  { m_VulkanDevice->m_LogicalDevice, VK_FORMAT_R16G16B16A16_SFLOAT } },
+				{ "normalRoughnessFrameBufferSampler", { m_VulkanDevice, frameBufCreateInfo } },
+				{ "albedoMetallicFrameBufferSampler",  { m_VulkanDevice, frameBufCreateInfo } },
 			};
 
-			m_CubemapFrameBuffer = new FrameBuffer(m_VulkanDevice->m_LogicalDevice);
+			frameBufCreateInfo.bIsCubemap = true;
+			m_CubemapFrameBuffer = new FrameBuffer(m_VulkanDevice);
 			m_CubemapFrameBuffer->frameBufferAttachments = {
-				{ "normalRoughnessFrameBufferSampler", { m_VulkanDevice->m_LogicalDevice, VK_FORMAT_R16G16B16A16_SFLOAT } },
-				{ "albedoMetallicFrameBufferSampler",  { m_VulkanDevice->m_LogicalDevice, VK_FORMAT_R16G16B16A16_SFLOAT } },
+				{ "normalRoughnessFrameBufferSampler", { m_VulkanDevice, frameBufCreateInfo } },
+				{ "albedoMetallicFrameBufferSampler",  { m_VulkanDevice, frameBufCreateInfo } },
 			};
+			frameBufCreateInfo.bIsCubemap = false;
 
-			m_SSAOBufferFormat = VK_FORMAT_R16_SFLOAT;
+			frameBufCreateInfo.format = VK_FORMAT_R16_SFLOAT;
 
-			m_SSAOFrameBuf = new FrameBuffer(m_VulkanDevice->m_LogicalDevice);
+			m_SSAOFrameBuf = new FrameBuffer(m_VulkanDevice);
 			m_SSAOFrameBuf->frameBufferAttachments = {
-				{ "ssao", { m_VulkanDevice->m_LogicalDevice, m_SSAOBufferFormat } },
+				{ "ssao", { m_VulkanDevice, frameBufCreateInfo } },
 			};
 
-			m_SSAOBlurHFrameBuf = new FrameBuffer(m_VulkanDevice->m_LogicalDevice);
+			m_SSAOBlurHFrameBuf = new FrameBuffer(m_VulkanDevice);
 			m_SSAOBlurHFrameBuf->frameBufferAttachments = {
-				{ "ssao blur h", { m_VulkanDevice->m_LogicalDevice, m_SSAOBufferFormat } },
+				{ "ssao blur h", { m_VulkanDevice, frameBufCreateInfo } },
 			};
 
-			m_SSAOBlurVFrameBuf = new FrameBuffer(m_VulkanDevice->m_LogicalDevice);
+			m_SSAOBlurVFrameBuf = new FrameBuffer(m_VulkanDevice);
 			m_SSAOBlurVFrameBuf->frameBufferAttachments = {
-				{ "ssao blur final", { m_VulkanDevice->m_LogicalDevice, m_SSAOBufferFormat } },
+				{ "ssao blur final", { m_VulkanDevice, frameBufCreateInfo } },
 			};
 
-			m_ShadowBufferFormat = VK_FORMAT_D16_UNORM;
+			frameBufCreateInfo.format = VK_FORMAT_D16_UNORM;
+			frameBufCreateInfo.bIsDepth = true;
 
-			m_ShadowFrameBuf = new FrameBuffer(m_VulkanDevice->m_LogicalDevice);
+			m_ShadowFrameBuf = new FrameBuffer(m_VulkanDevice);
 			m_ShadowFrameBuf->frameBufferAttachments = {
-				{ "shadow depth", { m_VulkanDevice->m_LogicalDevice, m_ShadowBufferFormat } },
+				{ "shadow depth", { m_VulkanDevice, frameBufCreateInfo } },
 			};
 
 			// NOTE: This is different from the GLRenderer's capture views
@@ -2373,6 +2398,7 @@ namespace flex
 			}
 		}
 
+		// TODO: FIXME: This shouldn't be called on startup!!!
 		void VulkanRenderer::OnPreSceneChange()
 		{
 			GenerateGBuffer();
@@ -4310,9 +4336,10 @@ namespace flex
 
 		void VulkanRenderer::CreateRenderPasses()
 		{
-			CreateRenderPass(m_SSAORenderPass.replace(), m_SSAOBufferFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			CreateRenderPass(m_SSAOBlurHRenderPass.replace(), m_SSAOBufferFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			CreateRenderPass(m_SSAOBlurVRenderPass.replace(), m_SSAOBufferFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			VkFormat ssaoFrameBufFormat = m_SSAOFrameBuf->frameBufferAttachments[0].second.format;
+			CreateRenderPass(m_SSAORenderPass.replace(), ssaoFrameBufFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			CreateRenderPass(m_SSAOBlurHRenderPass.replace(), ssaoFrameBufFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			CreateRenderPass(m_SSAOBlurVRenderPass.replace(), ssaoFrameBufFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 			// Deferred combine render pass
 			{
@@ -5038,88 +5065,19 @@ namespace flex
 
 		void VulkanRenderer::CreateDepthResources()
 		{
-			VkFormat depthFormat;
-			GetSupportedDepthFormat(m_VulkanDevice->m_PhysicalDevice, &depthFormat);
-
-			// Swap chain depth attachment
-			m_DepthAttachment->format = depthFormat;
-
-			VulkanTexture::ImageCreateInfo depthImageCreateInfo = {};
-			depthImageCreateInfo.image = m_DepthAttachment->image.replace();
-			depthImageCreateInfo.imageMemory = m_DepthAttachment->mem.replace();
-			depthImageCreateInfo.width = m_SwapChainExtent.width;
-			depthImageCreateInfo.height = m_SwapChainExtent.height;
-			depthImageCreateInfo.format = depthFormat;
-			depthImageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-			depthImageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-			depthImageCreateInfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-			depthImageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-			VulkanTexture::CreateImage(m_VulkanDevice, m_GraphicsQueue, depthImageCreateInfo);
-
-			VulkanTexture::ImageViewCreateInfo depthImageViewCreateInfo = {};
-			depthImageViewCreateInfo.image = &m_DepthAttachment->image;
-			depthImageViewCreateInfo.imageView = m_DepthAttachment->view.replace();
-			depthImageViewCreateInfo.aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
-			depthImageViewCreateInfo.format = depthFormat;
-			VulkanTexture::CreateImageView(m_VulkanDevice, depthImageViewCreateInfo);
+			m_DepthAttachment->CreateImage(m_SwapChainExtent.width, m_SwapChainExtent.height);
+			m_DepthAttachment->CreateImageView();
 
 			// Depth will be copied from offscreen depth buffer after deferred combine pass
-			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_DepthAttachment->image, depthFormat,
-				VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1, VK_NULL_HANDLE, true);
+			m_DepthAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, m_GraphicsQueue);
 
-			// Offscreen attachment
-			m_OffScreenDepthAttachment->format = depthFormat;
+			m_OffScreenDepthAttachment->CreateImage(m_SwapChainExtent.width, m_SwapChainExtent.height);
+			m_OffScreenDepthAttachment->CreateImageView();
+			m_OffScreenDepthAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, m_GraphicsQueue);
 
-			VulkanTexture::ImageCreateInfo offscreenDepthImageCreateInfo = {};
-			offscreenDepthImageCreateInfo.image = m_OffScreenDepthAttachment->image.replace();
-			offscreenDepthImageCreateInfo.imageMemory = m_OffScreenDepthAttachment->mem.replace();
-			offscreenDepthImageCreateInfo.width = m_SwapChainExtent.width;
-			offscreenDepthImageCreateInfo.height = m_SwapChainExtent.height;
-			offscreenDepthImageCreateInfo.format = depthFormat;
-			offscreenDepthImageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-			offscreenDepthImageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT |
-				VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
-				VK_IMAGE_USAGE_SAMPLED_BIT;
-			offscreenDepthImageCreateInfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-			offscreenDepthImageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-			VulkanTexture::CreateImage(m_VulkanDevice, m_GraphicsQueue, offscreenDepthImageCreateInfo);
-
-			VulkanTexture::ImageViewCreateInfo offscreenDepthImageViewCreateInfo = {};
-			offscreenDepthImageViewCreateInfo.image = &m_OffScreenDepthAttachment->image;
-			offscreenDepthImageViewCreateInfo.imageView = m_OffScreenDepthAttachment->view.replace();
-			offscreenDepthImageViewCreateInfo.aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
-			offscreenDepthImageViewCreateInfo.format = depthFormat;
-			VulkanTexture::CreateImageView(m_VulkanDevice, offscreenDepthImageViewCreateInfo);
-
-			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_OffScreenDepthAttachment->image, depthFormat,
-				VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1);
-
-			// Cubemap depth
-			VulkanTexture::ImageCreateInfo cubemapDepthImageCreateInfo = {};
-			cubemapDepthImageCreateInfo.image = m_CubemapDepthAttachment->image.replace();
-			cubemapDepthImageCreateInfo.imageMemory = m_CubemapDepthAttachment->mem.replace();
-			cubemapDepthImageCreateInfo.width = m_CubemapFrameBuffer->width;
-			cubemapDepthImageCreateInfo.height = m_CubemapFrameBuffer->height;
-			cubemapDepthImageCreateInfo.format = depthFormat;
-			cubemapDepthImageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-			cubemapDepthImageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-			cubemapDepthImageCreateInfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-			cubemapDepthImageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-			cubemapDepthImageCreateInfo.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
-			cubemapDepthImageCreateInfo.arrayLayers = 6;
-			VulkanTexture::CreateImage(m_VulkanDevice, m_GraphicsQueue, cubemapDepthImageCreateInfo);
-
-			VulkanTexture::ImageViewCreateInfo cubemapDepthImageViewCreateInfo = {};
-			cubemapDepthImageViewCreateInfo.image = &m_CubemapDepthAttachment->image;
-			cubemapDepthImageViewCreateInfo.imageView = m_CubemapDepthAttachment->view.replace();
-			cubemapDepthImageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
-			cubemapDepthImageViewCreateInfo.aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
-			cubemapDepthImageViewCreateInfo.layerCount = 6;
-			cubemapDepthImageViewCreateInfo.format = depthFormat;
-			VulkanTexture::CreateImageView(m_VulkanDevice, cubemapDepthImageViewCreateInfo);
-
-			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_CubemapDepthAttachment->image, depthFormat,
-				VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1);
+			m_CubemapDepthAttachment->CreateImage(m_CubemapFrameBuffer->width, m_CubemapFrameBuffer->height);
+			m_CubemapDepthAttachment->CreateImageView();
+			m_CubemapDepthAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, m_GraphicsQueue);
 		}
 
 		void VulkanRenderer::CreateFramebuffers()
@@ -5237,7 +5195,8 @@ namespace flex
 			// Shadow render pass
 			{
 				// Color attachment
-				VkAttachmentDescription depthAttachment = vks::attachmentDescription(m_ShadowBufferFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+				VkFormat shadowBufFormat = m_ShadowFrameBuf->frameBufferAttachments[0].second.format;
+				VkAttachmentDescription depthAttachment = vks::attachmentDescription(shadowBufFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 				VkAttachmentReference depthAttachmentRef = { 0, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 
@@ -5281,9 +5240,10 @@ namespace flex
 
 			// Shadow frame buffer
 			{
+				VkFormat shadowBufFormat = m_ShadowFrameBuf->frameBufferAttachments[0].second.format;
 				CreateAttachment(
 					m_VulkanDevice,
-					m_ShadowBufferFormat,
+					shadowBufFormat,
 					VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT,
 					m_ShadowFrameBuf->width,
 					m_ShadowFrameBuf->height,

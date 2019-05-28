@@ -346,14 +346,12 @@ namespace flex
 			FrameBuffer* m_SSAOBlurHFrameBuf = nullptr;
 			FrameBuffer* m_SSAOBlurVFrameBuf = nullptr;
 			VkDescriptorSet m_SSAODescriptorSet = VK_NULL_HANDLE;
-			VkFormat m_SSAOBufferFormat = VK_FORMAT_UNDEFINED;
 
 			FrameBuffer* m_CubemapFrameBuffer = nullptr;
 			FrameBufferAttachment* m_CubemapDepthAttachment = nullptr;
 
 			FrameBuffer* m_ShadowFrameBuf = nullptr;
 			VkDescriptorSet m_ShadowDescriptorSet = VK_NULL_HANDLE;
-			VkFormat m_ShadowBufferFormat = VK_FORMAT_UNDEFINED;
 
 			i32 m_DeferredQuadVertexBufferIndex = -1;
 
