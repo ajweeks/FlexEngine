@@ -254,6 +254,7 @@ namespace flex
 	void BaseScene::Destroy()
 	{
 		m_bLoaded = false;
+		m_bInitialized = false;
 
 		for (GameObject* rootObject : m_RootObjects)
 		{
