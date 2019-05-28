@@ -22,17 +22,14 @@ layout (binding = 0) uniform UBOConstant
 	mat4 viewProjection;
 } uboConstant;
 
-// Updated once per object
 layout (binding = 1) uniform UBODynamic
 {
 	mat4 model;
 
-	// Constant values to use when not using samplers
 	vec4 constAlbedo;
 	float constMetallic;
 	float constRoughness;
 
-	// PBR samplers
 	bool enableAlbedoSampler;
 	bool enableMetallicSampler;
 	bool enableRoughnessSampler;

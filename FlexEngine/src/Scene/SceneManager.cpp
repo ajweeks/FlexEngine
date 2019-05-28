@@ -202,6 +202,7 @@ namespace flex
 
 		InitializeCurrentScene();
 		PostInitializeCurrentScene();
+		g_Renderer->AddEditorString("Scene reloaded");
 	}
 
 	void SceneManager::AddFoundScenes()

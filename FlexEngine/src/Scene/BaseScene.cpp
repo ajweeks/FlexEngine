@@ -211,7 +211,8 @@ namespace flex
 				}
 
 				GameObject* sphere = new GameObject("sphere", GameObjectType::OBJECT);
-				sphere->SetMeshComponent(new MeshComponent(sphere, sphereMatID))->LoadPrefabShape(MeshComponent::PrefabShape::UV_SPHERE);
+				MeshComponent* meshComponent = sphere->SetMeshComponent(new MeshComponent(sphere, sphereMatID));
+				meshComponent->LoadFromFile(RESOURCE_LOCATION "meshes/ico-sphere.glb");
 				AddRootObject(sphere);
 			}
 

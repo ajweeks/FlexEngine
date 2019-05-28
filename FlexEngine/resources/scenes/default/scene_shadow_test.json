@@ -1,6 +1,7 @@
 {
 	"version" : 1,
 	"name" : "scene_shadow_test",
+	"spawn player" : true,
 	"objects" : 
 	[
 		{
@@ -35,7 +36,7 @@
 				"scale" : "60.000, 1.000, 60.000"
 			},
 			"mesh" : "cube",
-			"material" : "pbr grey",
+			"material" : "Grid",
 			"collider" : 
 			{
 				"shape" : "box",

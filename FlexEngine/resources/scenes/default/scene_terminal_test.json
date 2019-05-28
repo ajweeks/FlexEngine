@@ -1,6 +1,7 @@
 {
 	"version" : 1,
 	"name" : "Scene_terminal_test",
+	"spawn player" : true,
 	"objects" : 
 	[
 		{
@@ -57,8 +58,7 @@
 					"transform" : 
 					{
 						"pos" : "-2.045, 14.562, 0.000"
-					},
-					"material" : "pbr chrome"
+					}
 				},
 				{
 					"name" : "Directional Light",

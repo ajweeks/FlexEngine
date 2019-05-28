@@ -148,7 +148,7 @@ namespace flex
 
 		bool m_bInitialized = false;
 		bool m_bLoaded = false;
-		bool m_bSpawnPlayer = true;
+		bool m_bSpawnPlayer = false;
 
 		/*
 		* Stores all unique initialized materials we've created

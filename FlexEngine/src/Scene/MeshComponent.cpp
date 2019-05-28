@@ -1380,6 +1380,8 @@ namespace flex
 		{
 			PrintError("Failed to reload mesh at %s\n", m_RelativeFilePath.c_str());
 		}
+
+		g_Renderer->RenderObjectStateChanged();
 	}
 
 	MaterialID MeshComponent::GetMaterialID() const
@@ -1389,10 +1391,14 @@ namespace flex
 
 	void MeshComponent::SetMaterialID(MaterialID materialID)
 	{
-		m_MaterialID = materialID;
-		if (m_bInitialized && m_OwningGameObject)
+		if (m_MaterialID != materialID)
 		{
-			g_Renderer->SetRenderObjectMaterialID(m_OwningGameObject->GetRenderID(), materialID);
+			m_MaterialID = materialID;
+			if (m_bInitialized && m_OwningGameObject)
+			{
+				g_Renderer->SetRenderObjectMaterialID(m_OwningGameObject->GetRenderID(), materialID);
+			}
+			g_Renderer->RenderObjectStateChanged();
 		}
 	}
 

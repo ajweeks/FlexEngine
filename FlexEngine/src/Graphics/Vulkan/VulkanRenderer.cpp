@@ -2525,13 +2525,26 @@ namespace flex
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
 			if (renderObject)
 			{
-				renderObject->materialID = materialID;
+				MaterialID pMatID = renderObject->materialID;
+				if (materialID != pMatID)
+				{
+					u32 pStride = CalculateVertexStride(m_Shaders[m_Materials[pMatID].material.shaderID].shader->vertexAttributes);
+					u32 newStride = CalculateVertexStride(m_Shaders[m_Materials[materialID].material.shaderID].shader->vertexAttributes);
+					renderObject->materialID = materialID;
+					if (newStride != pStride)
+					{
+						// Regenerate vertex data with new stride
+						renderObject->gameObject->GetMeshComponent()->SetRequiredAttributesFromMaterialID(materialID);
+						renderObject->gameObject->GetMeshComponent()->Reload();
+					}
+				}
 			}
 			else
 			{
 				PrintError("SetRenderObjectMaterialID couldn't find render object with ID %u\n", renderID);
-				m_bRebatchRenderObjects = true;
 			}
+
+			m_bRebatchRenderObjects = true;
 		}
 
 		Material& VulkanRenderer::GetMaterial(MaterialID materialID)
@@ -4496,7 +4509,7 @@ namespace flex
 				createInfo->metallicTexture ? *&createInfo->metallicTexture->sampler : VK_NULL_HANDLE,
 				createInfo->metallicTexture ? &createInfo->metallicTexture->imageInfoDescriptor : nullptr },
 
-				{ U_METALLIC_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ U_ROUGHNESS_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
 				createInfo->roughnessTexture ? *&createInfo->roughnessTexture->imageView : VK_NULL_HANDLE,
 				createInfo->roughnessTexture ? *&createInfo->roughnessTexture->sampler : VK_NULL_HANDLE,
@@ -5825,12 +5838,12 @@ namespace flex
 				VkRect2D shadowScissor = vks::scissor(0u, 0u, m_ShadowFrameBuf->width, m_ShadowFrameBuf->height);
 				vkCmdSetScissor(m_OffScreenCmdBuffer, 0, 1, &shadowScissor);
 
-				for (size_t i = 0; i < m_RenderObjects.size(); ++i)
+				for (const ShaderBatchPair& shaderBatch : m_ShadowBatch.batches)
 				{
-					VulkanRenderObject* renderObject = GetRenderObject(i);
-					if (renderObject)
+					for (RenderID renderID : shaderBatch.batch.batches[0].batch.objects)
 					{
-						UpdateDynamicUniformBuffer(i, nullptr, m_ShadowMaterialID, renderObject->dynamicShadowUBOOffset);
+						VulkanRenderObject* renderObject = GetRenderObject(renderID);
+						UpdateDynamicUniformBuffer(renderID, nullptr, m_ShadowMaterialID, renderObject->dynamicShadowUBOOffset);
 					}
 				}
 
@@ -6307,6 +6320,14 @@ namespace flex
 
 		void VulkanRenderer::BatchRenderObjects()
 		{
+			// TODO: OPTIMIZE: This isn't always necessary, but it is always expensive!
+			CreateStaticVertexBuffers();
+			CreateStaticIndexBuffers();
+			CreateDynamicVertexBuffers();
+
+			CreateShadowVertexBuffer();
+			CreateShadowIndexBuffer();
+
 			const char* blockName = "BatchRenderObjects";
 			u32 renderObjBatchCount = 0;
 			{
@@ -6882,8 +6903,6 @@ namespace flex
 				return; // There are no dynamic uniforms to update
 			}
 
-			bool updateMVP = false; // This is set to true when either the view or projection matrix get overridden
-
 			glm::mat4 model = inModel;
 			glm::mat4 modelInvTranspose = glm::transpose(glm::inverse(model));
 			glm::mat4 projection = g_CameraManager->CurrentCamera()->GetProjection();
@@ -6907,30 +6926,6 @@ namespace flex
 			// TODO: Roll into array?
 			if (uniformOverrides)
 			{
-				if (uniformOverrides->overridenUniforms.HasUniform(U_MODEL))
-				{
-					model = uniformOverrides->model;
-				}
-				if (uniformOverrides->overridenUniforms.HasUniform(U_MODEL_INV_TRANSPOSE))
-				{
-					modelInvTranspose = uniformOverrides->modelInvTranspose;
-				}
-				if (uniformOverrides->overridenUniforms.HasUniform(U_PROJECTION))
-				{
-					projection = uniformOverrides->projection;
-					updateMVP = true;
-				}
-				if (uniformOverrides->overridenUniforms.HasUniform(U_VIEW))
-				{
-					view = uniformOverrides->view;
-					updateMVP = true;
-				}
-				if (uniformOverrides->overridenUniforms.HasUniform(U_MODEL_VIEW_PROJ))
-				{
-					modelViewProjection = uniformOverrides->modelViewProjection;
-					updateMVP = false;	// Don't override modelViewProjection value with overriden view/projection matrices
-										// if it's being specifically overriden itself
-				}
 				if (uniformOverrides->overridenUniforms.HasUniform(U_ENABLE_ALBEDO_SAMPLER))
 				{
 					enableAlbedoSampler = uniformOverrides->enableAlbedoSampler;
@@ -6987,12 +6982,6 @@ namespace flex
 						m_SSAOBlurDataDynamic.ssaoTexelOffset = glm::vec2((real)m_SSAOBlurSamplePixelOffset / m_OffScreenFrameBuf->width, 0.0f);
 					}
 				}
-			}
-
-			if (updateMVP)
-			{
-				modelViewProjection = projection * view * model;
-				modelInvTranspose = glm::transpose(glm::inverse(model));
 			}
 
 			struct UniformInfo
