@@ -350,7 +350,7 @@ namespace flex
 				if (m_SSAOMatID == InvalidMaterialID)
 				{
 					MaterialCreateInfo ssaoMatCreateInfo = {};
-					ssaoMatCreateInfo.name = "SSAO";
+					ssaoMatCreateInfo.name = "ssao";
 					ssaoMatCreateInfo.shaderName = "ssao";
 					ssaoMatCreateInfo.persistent = true;
 					ssaoMatCreateInfo.visibleInEditor = false;
@@ -361,7 +361,7 @@ namespace flex
 				if (m_SSAOBlurMatID == InvalidMaterialID)
 				{
 					MaterialCreateInfo ssaoBlurMatCreateInfo = {};
-					ssaoBlurMatCreateInfo.name = "SSAO Blur";
+					ssaoBlurMatCreateInfo.name = "ssao blur";
 					ssaoBlurMatCreateInfo.shaderName = "ssao_blur";
 					ssaoBlurMatCreateInfo.persistent = true;
 					ssaoBlurMatCreateInfo.visibleInEditor = false;
@@ -634,7 +634,7 @@ namespace flex
 			VulkanMaterial& renderObjectMat = m_Materials[renderObject->materialID];
 
 			MaterialCreateInfo equirectangularToCubeMatCreateInfo = {};
-			equirectangularToCubeMatCreateInfo.name = "Equirectangular to Cube";
+			equirectangularToCubeMatCreateInfo.name = "equirectangular to Cube";
 			equirectangularToCubeMatCreateInfo.shaderName = "equirectangular_to_cube";
 			equirectangularToCubeMatCreateInfo.enableHDREquirectangularSampler = true;
 			equirectangularToCubeMatCreateInfo.generateHDREquirectangularSampler = true;
@@ -3414,7 +3414,7 @@ namespace flex
 				if (m_ComputeSDFMatID == InvalidMaterialID)
 				{
 					MaterialCreateInfo computeSDFMatCreateInfo = {};
-					computeSDFMatCreateInfo.name = "Compute SDF";
+					computeSDFMatCreateInfo.name = "compute SDF";
 					computeSDFMatCreateInfo.shaderName = "compute_sdf";
 					computeSDFMatCreateInfo.persistent = true;
 					computeSDFMatCreateInfo.visibleInEditor = false;

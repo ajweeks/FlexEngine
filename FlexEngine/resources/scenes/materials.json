@@ -322,7 +322,7 @@
 			"const ao" : 1.000000
 		},
 		{
-			"name" : "Grid",
+			"name" : "grid",
 			"shader" : "pbr_ws",
 			"const albedo" : "0.055, 0.055, 0.055",
 			"const metallic" : 0.000000,
@@ -333,7 +333,7 @@
 			"albedo texture filepath" : "alpha-bg.png"
 		},
 		{
-			"name" : "Terminal Copper",
+			"name" : "terminal copper",
 			"shader" : "pbr",
 			"const albedo" : "0.490, 0.127, 0.038",
 			"const metallic" : 1.000000,

@@ -14,7 +14,7 @@
 				"scale" : "100.000, 1.000, 100.000"
 			},
 			"mesh" : "unit-plane",
-			"material" : "Grid",
+			"material" : "grid",
 			"collider" : 
 			{
 				"shape" : "box",
@@ -158,7 +158,7 @@
 				"pos" : "0.473, 0.633, 5.888",
 				"rot" : "3.141, -0.354, 3.141"
 			},
-			"material" : "Terminal Copper",
+			"material" : "terminal copper",
 			"collider" : 
 			{
 				"shape" : "box",

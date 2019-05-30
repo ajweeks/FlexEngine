@@ -2403,7 +2403,7 @@ namespace flex
 
 		// Probe capture material
 		MaterialCreateInfo probeCaptureMatCreateInfo = {};
-		probeCaptureMatCreateInfo.name = "Reflection probe capture";
+		probeCaptureMatCreateInfo.name = "reflection probe capture";
 		probeCaptureMatCreateInfo.shaderName = "deferred_combine_cubemap";
 		probeCaptureMatCreateInfo.generateReflectionProbeMaps = true;
 		probeCaptureMatCreateInfo.generateHDRCubemapSampler = true;
@@ -3312,7 +3312,7 @@ namespace flex
 		GameObject(name, GameObjectType::GERSTNER_WAVE)
 	{
 		MaterialCreateInfo matCreateInfo = {};
-		matCreateInfo.name = "Gerstner";
+		matCreateInfo.name = "gerstner";
 		matCreateInfo.shaderName = "pbr";
 		matCreateInfo.constAlbedo = glm::vec3(0.4f, 0.5f, 0.8f);
 		matCreateInfo.constMetallic = 0.8f;
@@ -3613,7 +3613,7 @@ namespace flex
 		GameObject(name, GameObjectType::BLOCKS)
 	{
 		MaterialCreateInfo matCreateInfo = {};
-		matCreateInfo.name = "Block";
+		matCreateInfo.name = "block";
 		matCreateInfo.shaderName = "pbr";
 		matCreateInfo.constAO = 1.0f;
 		matCreateInfo.constMetallic = 0.0f;
@@ -5889,7 +5889,8 @@ namespace flex
 		m_bInteractable = true;
 
 		MaterialID matID;
-		if (!g_Renderer->GetMaterialID("Terminal Copper", matID))
+		// TODO: Don't rely on material names!
+		if (!g_Renderer->GetMaterialID("terminal copper", matID))
 		{
 			// TODO: Create own material
 			matID = 0;

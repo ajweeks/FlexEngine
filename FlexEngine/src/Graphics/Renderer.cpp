@@ -2273,34 +2273,35 @@ namespace flex
 	void Renderer::InitializeMaterials()
 	{
 		MaterialCreateInfo fontSSMatCreateInfo = {};
-		fontSSMatCreateInfo.name = "Font material SS";
+		fontSSMatCreateInfo.name = "font ss";
 		fontSSMatCreateInfo.shaderName = "font_ss";
 		fontSSMatCreateInfo.persistent = true;
 		fontSSMatCreateInfo.visibleInEditor = false;
 		m_FontMatSSID = InitializeMaterial(&fontSSMatCreateInfo);
 
 		MaterialCreateInfo fontWSMatCreateInfo = {};
-		fontWSMatCreateInfo.name = "Font material WS";
+		fontWSMatCreateInfo.name = "font ws";
 		fontWSMatCreateInfo.shaderName = "font_ws";
 		fontWSMatCreateInfo.persistent = true;
 		fontWSMatCreateInfo.visibleInEditor = false;
 		m_FontMatWSID = InitializeMaterial(&fontWSMatCreateInfo);
 
 		MaterialCreateInfo shadowMatCreateInfo = {};
+		shadowMatCreateInfo.name = "shadow";
 		shadowMatCreateInfo.shaderName = "shadow";
-		shadowMatCreateInfo.name = "Shadow";
+		shadowMatCreateInfo.persistent = true;
 		shadowMatCreateInfo.visibleInEditor = false;
 		m_ShadowMaterialID = InitializeMaterial(&shadowMatCreateInfo);
 
 		MaterialCreateInfo postFXAAMatCreateInfo = {};
-		postFXAAMatCreateInfo.name = "FXAA";
+		postFXAAMatCreateInfo.name = "fxaa";
 		postFXAAMatCreateInfo.shaderName = "post_fxaa";
 		postFXAAMatCreateInfo.persistent = true;
 		postFXAAMatCreateInfo.visibleInEditor = false;
 		m_PostFXAAMatID = InitializeMaterial(&postFXAAMatCreateInfo);
 
 		MaterialCreateInfo placeholderMatCreateInfo = {};
-		placeholderMatCreateInfo.name = "Placeholder";
+		placeholderMatCreateInfo.name = "placeholder";
 		placeholderMatCreateInfo.shaderName = "pbr";
 		placeholderMatCreateInfo.persistent = true;
 		placeholderMatCreateInfo.visibleInEditor = true;

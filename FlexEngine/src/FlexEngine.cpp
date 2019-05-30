@@ -241,7 +241,7 @@ namespace flex
 		// Transform gizmo materials
 		{
 			MaterialCreateInfo matCreateInfo = {};
-			matCreateInfo.name = "Transform";
+			matCreateInfo.name = "transform";
 			matCreateInfo.shaderName = "color";
 			matCreateInfo.constAlbedo = VEC3_ONE;
 			matCreateInfo.persistent = true;

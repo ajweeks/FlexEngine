@@ -23,7 +23,7 @@
 						"rot" : "0.000, -0.000, 0.000"
 					},
 					"mesh" : "earth",
-					"material" : "Grid",
+					"material" : "grid",
 					"collider" : 
 					{
 						"shape" : "box",
@@ -49,7 +49,7 @@
 						"scale" : "5.413, 4.346, 7.675"
 					},
 					"mesh" : "cube",
-					"material" : "Grid",
+					"material" : "grid",
 					"collider" : 
 					{
 						"shape" : "box",
@@ -75,7 +75,7 @@
 						"scale" : "6.565, 6.070, 10.043"
 					},
 					"mesh" : "cube",
-					"material" : "Grid",
+					"material" : "grid",
 					"collider" : 
 					{
 						"shape" : "box",
@@ -101,7 +101,7 @@
 						"scale" : "4.010, 7.861, 10.030"
 					},
 					"mesh" : "cube",
-					"material" : "Grid",
+					"material" : "grid",
 					"collider" : 
 					{
 						"shape" : "box",
@@ -127,7 +127,7 @@
 						"scale" : "4.021, 10.791, 5.011"
 					},
 					"mesh" : "cube",
-					"material" : "Grid",
+					"material" : "grid",
 					"collider" : 
 					{
 						"shape" : "box",
@@ -153,7 +153,7 @@
 						"scale" : "4.010, 5.325, 10.017"
 					},
 					"mesh" : "cube",
-					"material" : "Grid",
+					"material" : "grid",
 					"collider" : 
 					{
 						"shape" : "box",
@@ -179,7 +179,7 @@
 						"scale" : "4.012, 4.688, 8.645"
 					},
 					"mesh" : "cube",
-					"material" : "Grid",
+					"material" : "grid",
 					"collider" : 
 					{
 						"shape" : "box",
@@ -205,7 +205,7 @@
 						"scale" : "4.020, 6.085, 5.405"
 					},
 					"mesh" : "cube",
-					"material" : "Grid",
+					"material" : "grid",
 					"collider" : 
 					{
 						"shape" : "box",
@@ -231,7 +231,7 @@
 						"scale" : "5.051, 6.080, 6.178"
 					},
 					"mesh" : "cube",
-					"material" : "Grid",
+					"material" : "grid",
 					"collider" : 
 					{
 						"shape" : "box",
@@ -257,7 +257,7 @@
 						"scale" : "4.010, 9.869, 10.042"
 					},
 					"mesh" : "cube",
-					"material" : "Grid",
+					"material" : "grid",
 					"collider" : 
 					{
 						"shape" : "box",
@@ -283,7 +283,7 @@
 						"scale" : "8.866, 6.070, 10.059"
 					},
 					"mesh" : "cube",
-					"material" : "Grid",
+					"material" : "grid",
 					"collider" : 
 					{
 						"shape" : "box",
@@ -309,7 +309,7 @@
 						"scale" : "4.010, 12.723, 10.054"
 					},
 					"mesh" : "cube",
-					"material" : "Grid",
+					"material" : "grid",
 					"collider" : 
 					{
 						"shape" : "box",
@@ -335,7 +335,7 @@
 						"scale" : "6.000, 4.940, 7.000"
 					},
 					"mesh" : "cube",
-					"material" : "Grid",
+					"material" : "grid",
 					"collider" : 
 					{
 						"shape" : "box",
@@ -361,7 +361,7 @@
 						"scale" : "3.998, 6.050, 3.029"
 					},
 					"mesh" : "cube",
-					"material" : "Grid",
+					"material" : "grid",
 					"collider" : 
 					{
 						"shape" : "box",
@@ -385,7 +385,7 @@
 						"scale" : "150.000, 1.000, 150.000"
 					},
 					"mesh" : "unit-plane",
-					"material" : "Grid",
+					"material" : "grid",
 					"collider" : 
 					{
 						"shape" : "box",
