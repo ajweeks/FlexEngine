@@ -817,6 +817,13 @@ namespace flex
 						break;
 					}
 				}
+				if (matID == InvalidMaterialID)
+				{
+					if (materialName.compare("placeholder") == 0)
+					{
+						matID = g_Renderer->GetPlaceholderMaterialID();
+					}
+				}
 			}
 			else
 			{
