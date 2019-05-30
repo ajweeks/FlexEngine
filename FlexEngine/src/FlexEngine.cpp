@@ -244,7 +244,8 @@ namespace flex
 			matCreateInfo.name = "Transform";
 			matCreateInfo.shaderName = "color";
 			matCreateInfo.constAlbedo = VEC3_ONE;
-			matCreateInfo.engineMaterial = true;
+			matCreateInfo.persistent = true;
+			matCreateInfo.visibleInEditor = false;
 			m_TransformGizmoMatXID = g_Renderer->InitializeMaterial(&matCreateInfo);
 			m_TransformGizmoMatYID = g_Renderer->InitializeMaterial(&matCreateInfo);
 			m_TransformGizmoMatZID = g_Renderer->InitializeMaterial(&matCreateInfo);

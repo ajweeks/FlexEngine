@@ -1964,7 +1964,8 @@ namespace flex
 			gBufferMaterialCreateInfo.prefilterMapSamplerMatID = skyboxMaterialID;
 			gBufferMaterialCreateInfo.enableBRDFLUT = true;
 			gBufferMaterialCreateInfo.renderToCubemap = false;
-			gBufferMaterialCreateInfo.engineMaterial = true;
+			gBufferMaterialCreateInfo.persistent = true;
+			gBufferMaterialCreateInfo.visibleInEditor = false;
 			FillOutFrameBufferAttachments(gBufferMaterialCreateInfo.sampledFrameBuffers);
 
 			MaterialID gBufferMatID = InitializeMaterial(&gBufferMaterialCreateInfo);
@@ -2000,7 +2001,8 @@ namespace flex
 			gBufferCubemapMaterialCreateInfo.prefilterMapSamplerMatID = skyboxMaterialID;
 			gBufferCubemapMaterialCreateInfo.enableBRDFLUT = true;
 			gBufferCubemapMaterialCreateInfo.renderToCubemap = false;
-			gBufferCubemapMaterialCreateInfo.engineMaterial = true;
+			gBufferCubemapMaterialCreateInfo.persistent = true;
+			gBufferCubemapMaterialCreateInfo.visibleInEditor = false;
 			FillOutFrameBufferAttachments(gBufferCubemapMaterialCreateInfo.sampledFrameBuffers);
 
 			m_CubemapGBufferMaterialID = InitializeMaterial(&gBufferCubemapMaterialCreateInfo);
@@ -2273,31 +2275,35 @@ namespace flex
 		MaterialCreateInfo fontSSMatCreateInfo = {};
 		fontSSMatCreateInfo.name = "Font material SS";
 		fontSSMatCreateInfo.shaderName = "font_ss";
-		fontSSMatCreateInfo.engineMaterial = true;
+		fontSSMatCreateInfo.persistent = true;
+		fontSSMatCreateInfo.visibleInEditor = false;
 		m_FontMatSSID = InitializeMaterial(&fontSSMatCreateInfo);
 
 		MaterialCreateInfo fontWSMatCreateInfo = {};
 		fontWSMatCreateInfo.name = "Font material WS";
 		fontWSMatCreateInfo.shaderName = "font_ws";
-		fontWSMatCreateInfo.engineMaterial = true;
+		fontWSMatCreateInfo.persistent = true;
+		fontWSMatCreateInfo.visibleInEditor = false;
 		m_FontMatWSID = InitializeMaterial(&fontWSMatCreateInfo);
 
 		MaterialCreateInfo shadowMatCreateInfo = {};
 		shadowMatCreateInfo.shaderName = "shadow";
 		shadowMatCreateInfo.name = "Shadow";
-		shadowMatCreateInfo.engineMaterial = true;
+		shadowMatCreateInfo.visibleInEditor = false;
 		m_ShadowMaterialID = InitializeMaterial(&shadowMatCreateInfo);
 
 		MaterialCreateInfo postFXAAMatCreateInfo = {};
 		postFXAAMatCreateInfo.name = "FXAA";
 		postFXAAMatCreateInfo.shaderName = "post_fxaa";
-		postFXAAMatCreateInfo.engineMaterial = true;
+		postFXAAMatCreateInfo.persistent = true;
+		postFXAAMatCreateInfo.visibleInEditor = false;
 		m_PostFXAAMatID = InitializeMaterial(&postFXAAMatCreateInfo);
 
 		MaterialCreateInfo placeholderMatCreateInfo = {};
 		placeholderMatCreateInfo.name = "Placeholder";
 		placeholderMatCreateInfo.shaderName = "pbr";
-		placeholderMatCreateInfo.engineMaterial = false;
+		placeholderMatCreateInfo.persistent = true;
+		placeholderMatCreateInfo.visibleInEditor = true;
 		placeholderMatCreateInfo.constAlbedo = glm::vec3(1.0f, 0.0f, 1.0f);
 		m_PlaceholderMaterialID = InitializeMaterial(&placeholderMatCreateInfo);
 	}

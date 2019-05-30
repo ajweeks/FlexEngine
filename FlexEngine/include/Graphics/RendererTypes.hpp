@@ -327,7 +327,8 @@ namespace flex
 
 		bool generateReflectionProbeMaps = false;
 
-		bool engineMaterial = false;
+		bool persistent = false;
+		bool visibleInEditor = true;
 	};
 
 	struct Material
@@ -398,8 +399,8 @@ namespace flex
 
 		bool generateReflectionProbeMaps = false;
 
-		// If true, this material shouldn't be removed when switching scenes
-		bool engineMaterial = false;
+		bool persistent = false;
+		bool visibleInEditor = false;
 
 		real textureScale = 1.0f;
 		real blendSharpness = 1.0f;

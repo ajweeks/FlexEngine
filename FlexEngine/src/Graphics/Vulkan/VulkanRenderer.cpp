@@ -352,7 +352,8 @@ namespace flex
 					MaterialCreateInfo ssaoMatCreateInfo = {};
 					ssaoMatCreateInfo.name = "SSAO";
 					ssaoMatCreateInfo.shaderName = "ssao";
-					ssaoMatCreateInfo.engineMaterial = true;
+					ssaoMatCreateInfo.persistent = true;
+					ssaoMatCreateInfo.visibleInEditor = false;
 					m_SSAOMatID = InitializeMaterial(&ssaoMatCreateInfo);
 				}
 				assert(m_SSAOMatID != InvalidMaterialID);
@@ -362,7 +363,8 @@ namespace flex
 					MaterialCreateInfo ssaoBlurMatCreateInfo = {};
 					ssaoBlurMatCreateInfo.name = "SSAO Blur";
 					ssaoBlurMatCreateInfo.shaderName = "ssao_blur";
-					ssaoBlurMatCreateInfo.engineMaterial = true;
+					ssaoBlurMatCreateInfo.persistent = true;
+					ssaoBlurMatCreateInfo.visibleInEditor = false;
 					m_SSAOBlurMatID = InitializeMaterial(&ssaoBlurMatCreateInfo);
 				}
 				assert(m_SSAOBlurMatID != InvalidMaterialID);
@@ -637,7 +639,8 @@ namespace flex
 			equirectangularToCubeMatCreateInfo.enableHDREquirectangularSampler = true;
 			equirectangularToCubeMatCreateInfo.generateHDREquirectangularSampler = true;
 			equirectangularToCubeMatCreateInfo.hdrEquirectangularTexturePath = environmentMapPath;
-			equirectangularToCubeMatCreateInfo.engineMaterial = true;
+			equirectangularToCubeMatCreateInfo.persistent = true;
+			equirectangularToCubeMatCreateInfo.visibleInEditor = false;
 
 			bool bRandomizeSkybox = true;
 			if (bRandomizeSkybox && !m_AvailableHDRIs.empty())
@@ -1623,7 +1626,8 @@ namespace flex
 			mat.material.enableBRDFLUT = createInfo->enableBRDFLUT;
 			mat.material.renderToCubemap = createInfo->renderToCubemap;
 
-			mat.material.engineMaterial = createInfo->engineMaterial;
+			mat.material.persistent = createInfo->persistent;
+			mat.material.visibleInEditor = createInfo->visibleInEditor;
 
 			mat.descriptorSetLayoutIndex = mat.material.shaderID;
 
@@ -2673,7 +2677,7 @@ namespace flex
 					const i32 MAX_NAME_LEN = 128;
 					static i32 selectedMaterialIndexShort = 0; // Index into shortened array
 					static MaterialID selectedMaterialID = 0;
-					while (m_Materials[selectedMaterialID].material.engineMaterial &&
+					while (!m_Materials[selectedMaterialID].material.visibleInEditor &&
 						selectedMaterialID < m_Materials.size() - 1)
 					{
 						++selectedMaterialID;
@@ -2876,7 +2880,7 @@ namespace flex
 						i32 matShortIndex = 0;
 						for (i32 i = 0; i < (i32)m_Materials.size(); ++i)
 						{
-							if (m_Materials[i].material.engineMaterial)
+							if (!m_Materials[i].material.visibleInEditor)
 							{
 								continue;
 							}
@@ -3269,7 +3273,7 @@ namespace flex
 			auto iter = m_Materials.begin();
 			while (iter != m_Materials.end())
 			{
-				if (bDestroyEngineMats || iter->second.material.engineMaterial == false)
+				if (bDestroyEngineMats || iter->second.material.persistent == false)
 				{
 					if (iter->second.hdrCubemapFramebuffer)
 					{
@@ -3412,7 +3416,8 @@ namespace flex
 					MaterialCreateInfo computeSDFMatCreateInfo = {};
 					computeSDFMatCreateInfo.name = "Compute SDF";
 					computeSDFMatCreateInfo.shaderName = "compute_sdf";
-					computeSDFMatCreateInfo.engineMaterial = true;
+					computeSDFMatCreateInfo.persistent = true;
+					computeSDFMatCreateInfo.visibleInEditor = false;
 					m_ComputeSDFMatID = InitializeMaterial(&computeSDFMatCreateInfo);
 				}
 				assert(m_ComputeSDFMatID != InvalidMaterialID);
@@ -4821,7 +4826,7 @@ namespace flex
 
 			for (auto& matPair : m_Materials)
 			{
-				if (!matPair.second.material.engineMaterial)
+				if (matPair.second.material.visibleInEditor)
 				{
 					result.emplace_back(matPair.second.material.name, matPair.first);
 				}

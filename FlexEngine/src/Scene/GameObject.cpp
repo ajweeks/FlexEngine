@@ -2416,7 +2416,8 @@ namespace flex
 		probeCaptureMatCreateInfo.generatePrefilteredMap = true;
 		probeCaptureMatCreateInfo.generatedPrefilteredCubemapSize = { 128, 128 };
 		probeCaptureMatCreateInfo.enableBRDFLUT = true;
-		probeCaptureMatCreateInfo.engineMaterial = true;
+		probeCaptureMatCreateInfo.persistent = true;
+		probeCaptureMatCreateInfo.visibleInEditor = false;
 		probeCaptureMatCreateInfo.sampledFrameBuffers = {
 			{ "positionMetallicFrameBufferSampler", nullptr },
 			{ "normalRoughnessFrameBufferSampler", nullptr },
