@@ -286,8 +286,7 @@ namespace flex
 
 	void Window::DrawImGuiObjects()
 	{
-		static const char* windowSettingsStr = "Window settings";
-		if (ImGui::TreeNode(windowSettingsStr))
+		if (ImGui::TreeNode("Window settings"))
 		{
 			if (ImGui::Checkbox("Auto restore state", &m_bAutoRestoreStateOnBootup))
 			{

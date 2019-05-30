@@ -4136,19 +4136,17 @@ namespace flex
 					glUniform1f(material->uniformIDs.time, g_SecElapsedSinceProgramStart);
 				}
 
-				static const char* texelStepStr = "texelStep";
 				if (shader->shader->constantBufferUniforms.HasUniform(U_TEXEL_STEP))
 				{
 					glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 					glm::vec2 texelStep(1.0f / frameBufferSize.x, 1.0f / frameBufferSize.y);
-					SetVec2f(material->material.shaderID, texelStepStr, texelStep);
+					SetVec2f(material->material.shaderID, "texelStep", texelStep);
 				}
 
-				static const char* bDEBUGShowEdgesStr = "bDEBUGShowEdges";
-				GLint location = glGetUniformLocation(shader->program, bDEBUGShowEdgesStr);
+				GLint location = glGetUniformLocation(shader->program, "bDEBUGShowEdges");
 				if (location != -1)
 				{
-					SetInt(material->material.shaderID, bDEBUGShowEdgesStr, m_PostProcessSettings.bEnableFXAADEBUGShowEdges ? 1 : 0);
+					SetInt(material->material.shaderID, "bDEBUGShowEdges", m_PostProcessSettings.bEnableFXAADEBUGShowEdges ? 1 : 0);
 				}
 
 				// SSAO Gen Data

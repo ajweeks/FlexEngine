@@ -194,8 +194,7 @@ namespace flex
 
 	void CameraManager::DrawImGuiObjects()
 	{
-		const char* cameraStr = "Camera";
-		if (ImGui::TreeNode(cameraStr))
+		if (ImGui::TreeNode("Camera"))
 		{
 			BaseCamera* currentCamera = CurrentCamera();
 
@@ -203,10 +202,7 @@ namespace flex
 
 			if (cameraCount > 1) // Only show arrows if other cameras exist
 			{
-				static const char* arrowPrevStr = "<";
-				static const char* arrowNextStr = ">";
-
-				if (ImGui::Button(arrowPrevStr))
+				if (ImGui::Button("<"))
 				{
 					CycleCamera(-1, false);
 				}
@@ -218,22 +214,20 @@ namespace flex
 
 				ImGui::SameLine();
 
-				if (ImGui::Button(arrowNextStr))
+				if (ImGui::Button(">"))
 				{
 					CycleCamera(1, false);
 				}
 			}
 
-			static const char* moveSpeedStr = "Move speed";
 			real moveSpeed = currentCamera->GetMoveSpeed();
-			if (ImGui::SliderFloat(moveSpeedStr, &moveSpeed, 1.0f, 250.0f))
+			if (ImGui::SliderFloat("Move speed", &moveSpeed, 1.0f, 250.0f))
 			{
 				currentCamera->SetMoveSpeed(moveSpeed);
 			}
 
-			static const char* turnSpeedStr = "Turn speed";
 			real turnSpeed = glm::degrees(currentCamera->GetRotationSpeed());
-			if (ImGui::SliderFloat(turnSpeedStr, &turnSpeed, 0.01f, 0.3f))
+			if (ImGui::SliderFloat("Turn speed", &turnSpeed, 0.01f, 0.3f))
 			{
 				currentCamera->SetRotationSpeed(glm::radians(turnSpeed));
 			}

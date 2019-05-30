@@ -419,13 +419,9 @@ namespace flex
 
 	void SceneManager::DrawImGuiObjects()
 	{
-		static const char* scenesStr = "Scenes";
-		if (ImGui::TreeNode(scenesStr))
+		if (ImGui::TreeNode("Scenes"))
 		{
-			static const char* arrowPrevStr = "<";
-			static const char* arrowNextStr = ">";
-
-			if (ImGui::Button(arrowPrevStr))
+			if (ImGui::Button("<"))
 			{
 				SetPreviousSceneActive();
 				InitializeCurrentScene();
@@ -451,7 +447,7 @@ namespace flex
 
 			ImGui::SameLine();
 
-			if (ImGui::Button(arrowNextStr))
+			if (ImGui::Button(">"))
 			{
 				SetNextSceneActive();
 				InitializeCurrentScene();
@@ -485,14 +481,12 @@ namespace flex
 			}
 			ImGui::EndChild();
 
-			static const char* addSceneStr = "Add scene...";
-			std::string addScenePopupID = "Add scene";
-			if (ImGui::Button(addSceneStr))
+			if (ImGui::Button("Add scene..."))
 			{
-				ImGui::OpenPopup(addScenePopupID.c_str());
+				ImGui::OpenPopup("Add scene");
 			}
 
-			if (ImGui::BeginPopupModal(addScenePopupID.c_str(), NULL, ImGuiWindowFlags_AlwaysAutoResize))
+			if (ImGui::BeginPopupModal("Add scene", NULL, ImGuiWindowFlags_AlwaysAutoResize))
 			{
 				static std::string newSceneName = "scene_" + IntToString(GetSceneCount(), 2);
 
@@ -798,23 +792,22 @@ namespace flex
 
 			ImGui::SameLine();
 
-			static const char* deleteSceneStr = "Delete scene...";
-			const std::string deleteScenePopupID = "Delete scene";
+			const char* deleteScenePopupID = "Delete scene";
 
 			ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
 			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
 			ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
 
-			if (ImGui::Button(deleteSceneStr))
+			if (ImGui::Button("Delete scene..."))
 			{
-				ImGui::OpenPopup(deleteScenePopupID.c_str());
+				ImGui::OpenPopup(deleteScenePopupID);
 			}
 
 			ImGui::PopStyleColor();
 			ImGui::PopStyleColor();
 			ImGui::PopStyleColor();
 
-			if (ImGui::BeginPopupModal(deleteScenePopupID.c_str(), NULL, ImGuiWindowFlags_AlwaysAutoResize))
+			if (ImGui::BeginPopupModal(deleteScenePopupID, NULL, ImGuiWindowFlags_AlwaysAutoResize))
 			{
 				static std::string sceneName = CurrentScene()->GetName();
 
