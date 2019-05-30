@@ -79,37 +79,36 @@ namespace flex
 
 		if (materialID == InvalidMaterialID)
 		{
-			PrintError("Mesh component requires material index to be parsed: %s\n", owner->GetName().c_str());
+			PrintWarn("Mesh component requires material index to be parsed: %s\n", owner->GetName().c_str());
+			materialID = g_Renderer->GetPlaceholderMaterialID();
+		}
+
+		if (!meshFilePath.empty())
+		{
+			newMeshComponent = new MeshComponent(owner, materialID);
+
+			MeshImportSettings importSettings = {};
+			importSettings.bFlipU = bFlipU;
+			importSettings.bFlipV = bFlipV;
+			importSettings.bFlipNormalZ = bFlipNormalZ;
+			importSettings.bSwapNormalYZ = bSwapNormalYZ;
+
+			newMeshComponent->LoadFromFile(meshFilePath, &importSettings);
+
+			owner->SetMeshComponent(newMeshComponent);
+		}
+		else if (!meshPrefabName.empty())
+		{
+			newMeshComponent = new MeshComponent(owner, materialID);
+
+			MeshComponent::PrefabShape prefabShape = MeshComponent::StringToPrefabShape(meshPrefabName);
+			newMeshComponent->LoadPrefabShape(prefabShape);
+
+			owner->SetMeshComponent(newMeshComponent);
 		}
 		else
 		{
-			if (!meshFilePath.empty())
-			{
-				newMeshComponent = new MeshComponent(owner, materialID);
-
-				MeshImportSettings importSettings = {};
-				importSettings.bFlipU = bFlipU;
-				importSettings.bFlipV = bFlipV;
-				importSettings.bFlipNormalZ = bFlipNormalZ;
-				importSettings.bSwapNormalYZ = bSwapNormalYZ;
-
-				newMeshComponent->LoadFromFile(meshFilePath, &importSettings);
-
-				owner->SetMeshComponent(newMeshComponent);
-			}
-			else if (!meshPrefabName.empty())
-			{
-				newMeshComponent = new MeshComponent(owner, materialID);
-
-				MeshComponent::PrefabShape prefabShape = MeshComponent::StringToPrefabShape(meshPrefabName);
-				newMeshComponent->LoadPrefabShape(prefabShape);
-
-				owner->SetMeshComponent(newMeshComponent);
-			}
-			else
-			{
-				PrintError("Unhandled mesh field on object: %s\n", owner->GetName().c_str());
-			}
+			PrintError("Unhandled mesh field on object: %s\n", owner->GetName().c_str());
 		}
 
 		return newMeshComponent;
