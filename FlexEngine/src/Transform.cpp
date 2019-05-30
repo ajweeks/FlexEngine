@@ -405,6 +405,11 @@ namespace flex
 		{
 			UpdateChildTransforms();
 		}
+
+		if (updateParentOnStateChange && m_GameObject)
+		{
+			m_GameObject->OnTransformChanged();
+		}
 	}
 
 	void Transform::UpdateChildTransforms()

@@ -41,6 +41,8 @@ namespace flex
 		virtual Transform* GetTransform();
 		virtual const Transform* GetTransform() const;
 
+		virtual void OnTransformChanged();
+
 		virtual bool AllowInteractionWith(GameObject* gameObject);
 		virtual void SetInteractingWith(GameObject* gameObject);
 		bool IsBeingInteractedWith() const;
@@ -229,6 +231,7 @@ namespace flex
 		virtual void Destroy() override;
 		virtual void DrawImGuiObjects() override;
 		virtual void SetVisible(bool bVisible, bool bEffectChildren /* = true */) override;
+		virtual void OnTransformChanged() override;
 
 		bool operator==(const DirectionalLight& other);
 
@@ -262,6 +265,7 @@ namespace flex
 		virtual void Destroy() override;
 		virtual void DrawImGuiObjects() override;
 		virtual void SetVisible(bool bVisible, bool bEffectChildren /* = true */) override;
+		virtual void OnTransformChanged() override;
 
 		bool operator==(const PointLight& other);
 

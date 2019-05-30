@@ -643,7 +643,8 @@ namespace flex
 
 		DoCreateGameObjectButton("Add object...", "Add object");
 
-		if (m_NumPointLightsEnabled < MAX_NUM_POINT_LIGHTS)
+		const bool bShowAddPointLightBtn = m_NumPointLightsEnabled < MAX_NUM_POINT_LIGHTS;
+		if (bShowAddPointLightBtn)
 		{
 			if (ImGui::Button("Add point light"))
 			{
@@ -652,6 +653,28 @@ namespace flex
 				scene->AddRootObject(newPointLight);
 				newPointLight->Initialize();
 				newPointLight->PostInitialize();
+
+				g_EngineInstance->SetSelectedObject(newPointLight);
+			}
+		}
+
+		const bool bShowAddDirLightBtn = m_DirectionalLight == nullptr;
+		if (bShowAddDirLightBtn)
+		{
+			if (bShowAddPointLightBtn)
+			{
+				ImGui::SameLine();
+			}
+
+			if (ImGui::Button("Add directional light"))
+			{
+				BaseScene* scene = g_SceneManager->CurrentScene();
+				DirectionalLight* newDiright = new DirectionalLight();
+				scene->AddRootObject(newDiright);
+				newDiright->Initialize();
+				newDiright->PostInitialize();
+
+				g_EngineInstance->SetSelectedObject(newDiright);
 			}
 		}
 	}

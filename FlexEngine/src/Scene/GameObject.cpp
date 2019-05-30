@@ -270,6 +270,11 @@ namespace flex
 			delete m_CollisionShape;
 			m_CollisionShape = nullptr;
 		}
+
+		if (g_EngineInstance->IsObjectSelected(this))
+		{
+			g_EngineInstance->DeselectObject(this);
+		}
 	}
 
 	void GameObject::Update()
@@ -1717,6 +1722,10 @@ namespace flex
 		return &m_Transform;
 	}
 
+	void GameObject::OnTransformChanged()
+	{
+	}
+
 	void GameObject::AddTag(const std::string& tag)
 	{
 		if (std::find(m_Tags.begin(), m_Tags.end(), tag) == m_Tags.end())
@@ -2527,6 +2536,8 @@ namespace flex
 		g_Renderer->RegisterDirectionalLight(this);
 		data.dir = glm::eulerAngles(m_Transform.GetLocalRotation());
 
+		m_Transform.updateParentOnStateChange = true;
+
 		GameObject::Initialize();
 	}
 
@@ -2548,48 +2559,45 @@ namespace flex
 			ImGuiColorEditFlags_PickerHueWheel |
 			ImGuiColorEditFlags_HDR;
 
-		if (ImGui::TreeNode("Directional Light"))
+		ImGui::Text("Directional Light");
+
+		if (ImGui::BeginPopupContextItem("##dir light context menu"))
 		{
-			if (ImGui::Checkbox("Enabled", &m_bVisible))
+			if (ImGui::Button("Delete"))
 			{
-				data.enabled = m_bVisible ? 1 : 0;
+				g_SceneManager->CurrentScene()->RemoveObject(this, true);
+				ImGui::CloseCurrentPopup();
 			}
 
-			glm::vec3 position = m_Transform.GetLocalPosition();
-			if (ImGui::DragFloat3("Position", &position.x, 0.1f))
-			{
-				m_Transform.SetLocalPosition(position);
-			}
-			glm::vec3 dirtyRot = glm::degrees(glm::eulerAngles(m_Transform.GetLocalRotation()));
-			glm::vec3 cleanedRot;
-			if (DoImGuiRotationDragFloat3("Rotation", dirtyRot, cleanedRot))
-			{
-				m_Transform.SetLocalRotation(glm::quat(glm::radians(cleanedRot)));
-				data.dir = cleanedRot;
-			}
-			ImGui::SliderFloat("Brightness", &data.brightness, 0.0f, 15.0f);
-			ImGui::ColorEdit4("Color ", &data.color.r, colorEditFlags);
+			ImGui::EndPopup();
+		}
 
-			ImGui::Spacing();
-			ImGui::Text("Shadow");
+		if (ImGui::Checkbox("Enabled", &m_bVisible))
+		{
+			data.enabled = m_bVisible ? 1 : 0;
+		}
 
-			bool bCastShadows = data.castShadows != 0;
-			if (ImGui::Checkbox("Cast shadow", &bCastShadows))
-			{
-				data.castShadows = bCastShadows ? 1 : 0;
-			}
-			ImGui::SliderFloat("Shadow darkness", &data.shadowDarkness, 0.0f, 1.0f);
+		ImGui::SameLine();
+		ImGui::ColorEdit4("Color ", &data.color.r, colorEditFlags);
+		ImGui::SliderFloat("Brightness", &data.brightness, 0.0f, 15.0f);
 
-			ImGui::DragFloat("Near", &shadowMapNearPlane);
-			ImGui::DragFloat("Far", &shadowMapFarPlane);
-			ImGui::DragFloat("Zoom", &shadowMapZoom);
+		ImGui::Spacing();
+		ImGui::Text("Shadow");
 
-			if (ImGui::CollapsingHeader("Preview"))
-			{
-				ImGui::Image((void*)shadowTextureID, ImVec2(256, 256), ImVec2(0, 1), ImVec2(1, 0));
-			}
+		bool bCastShadows = data.castShadows != 0;
+		if (ImGui::Checkbox("Cast shadow", &bCastShadows))
+		{
+			data.castShadows = bCastShadows ? 1 : 0;
+		}
+		ImGui::SliderFloat("Shadow darkness", &data.shadowDarkness, 0.0f, 1.0f);
 
-			ImGui::TreePop();
+		ImGui::DragFloat("Near", &shadowMapNearPlane);
+		ImGui::DragFloat("Far", &shadowMapFarPlane);
+		ImGui::DragFloat("Zoom", &shadowMapZoom);
+
+		if (ImGui::CollapsingHeader("Preview"))
+		{
+			ImGui::Image((void*)shadowTextureID, ImVec2(256, 256), ImVec2(0, 1), ImVec2(1, 0));
 		}
 	}
 
@@ -2597,6 +2605,11 @@ namespace flex
 	{
 		data.enabled = (bVisible ? 1 : 0);
 		GameObject::SetVisible(bVisible, bEffectChildren);
+	}
+
+	void DirectionalLight::OnTransformChanged()
+	{
+		data.dir = glm::degrees(glm::eulerAngles(m_Transform.GetLocalRotation()));
 	}
 
 	void DirectionalLight::SetPos(const glm::vec3& newPos)
@@ -2718,12 +2731,14 @@ namespace flex
 		data.enabled = 1;
 		data.pos = VEC4_ZERO;
 		data.color = VEC4_ONE;
-		data.brightness = 1.0f;
+		data.brightness = 500.0f;
 	}
 
 	void PointLight::Initialize()
 	{
 		ID = g_Renderer->RegisterPointLight(&data);
+
+		m_Transform.updateParentOnStateChange = true;
 
 		GameObject::Initialize();
 	}
@@ -2748,17 +2763,15 @@ namespace flex
 				ImGuiColorEditFlags_PickerHueWheel |
 				ImGuiColorEditFlags_HDR;
 
-			const std::string objectName("Point Light##" + m_Name);
-			const bool bTreeOpen = ImGui::TreeNode(objectName.c_str());
+			ImGui::Text("Point Light");
 			bool bRemovedPointLight = false;
 			bool bEditedPointLightData = false;
 
-			if (ImGui::BeginPopupContextItem())
+			if (ImGui::BeginPopupContextItem("##point light context menu"))
 			{
-				static const char* removePointLightStr = "Delete";
-				if (ImGui::Button(removePointLightStr))
+				if (ImGui::Button("Delete"))
 				{
-					g_Renderer->RemovePointLight(ID);
+					g_SceneManager->CurrentScene()->RemoveObject(this, true);
 					bRemovedPointLight = true;
 					ImGui::CloseCurrentPopup();
 				}
@@ -2766,7 +2779,7 @@ namespace flex
 				ImGui::EndPopup();
 			}
 
-			if (!bRemovedPointLight && bTreeOpen)
+			if (!bRemovedPointLight)
 			{
 				bool bEnabled = (data.enabled == 1);
 				if (ImGui::Checkbox("Enabled", &bEnabled))
@@ -2776,24 +2789,14 @@ namespace flex
 					m_bVisible = bEnabled;
 				}
 
-				glm::vec3 position = m_Transform.GetLocalPosition();
-				if (ImGui::DragFloat3("Position", &position.x, 0.1f))
-				{
-					bEditedPointLightData = true;
-					SetPos(position);
-				}
+				ImGui::SameLine();
 				bEditedPointLightData |= ImGui::ColorEdit4("Color ", &data.color.r, colorEditFlags);
 				bEditedPointLightData |= ImGui::SliderFloat("Brightness", &data.brightness, 0.0f, 1000.0f);
-			}
 
-			if (bEditedPointLightData)
-			{
-				g_Renderer->UpdatePointLightData(ID, &data);
-			}
-
-			if (bTreeOpen)
-			{
-				ImGui::TreePop();
+				if (bEditedPointLightData)
+				{
+					g_Renderer->UpdatePointLightData(ID, &data);
+				}
 			}
 		}
 	}
@@ -2802,6 +2805,15 @@ namespace flex
 	{
 		data.enabled = (bVisible ? 1 : 0);
 		GameObject::SetVisible(bVisible, bEffectChildren);
+		if (ID != InvalidPointLightID)
+		{
+			g_Renderer->UpdatePointLightData(ID, &data);
+		}
+	}
+
+	void PointLight::OnTransformChanged()
+	{
+		data.pos = m_Transform.GetLocalPosition();
 		if (ID != InvalidPointLightID)
 		{
 			g_Renderer->UpdatePointLightData(ID, &data);

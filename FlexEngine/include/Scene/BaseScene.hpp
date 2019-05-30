@@ -61,6 +61,7 @@ namespace flex
 		GameObject* AddRootObject(GameObject* gameObject);
 		void RemoveRootObject(GameObject* gameObject, bool bDestroy);
 		void RemoveAllRootObjects(bool bDestroy);
+		bool RemoveObject(GameObject* gameObject, bool bDestroy);
 
 		std::vector<MaterialID> GetMaterialIDs();
 		void AddMaterialID(MaterialID newMaterialID);
@@ -134,8 +135,6 @@ namespace flex
 		MaterialID FindMaterialIDByName(const JSONObject& object);
 
 		void UpdateRootObjectSiblingIndices();
-
-		void CreateDefaultDirectionalLight();
 
 		static const i32 m_FileVersion = 1;
 

@@ -214,6 +214,15 @@ namespace flex
 				MeshComponent* meshComponent = sphere->SetMeshComponent(new MeshComponent(sphere, sphereMatID));
 				meshComponent->LoadFromFile(RESOURCE_LOCATION "meshes/ico-sphere.glb");
 				AddRootObject(sphere);
+
+				// Default directional light
+				DirectionalLight* dirLight = new DirectionalLight();
+				g_SceneManager->CurrentScene()->AddRootObject(dirLight);
+				dirLight->SetRot(glm::quat(glm::vec3(130.0f, -65.0f, 120.0f)));
+				dirLight->SetPos(glm::vec3(0.0f, 15.0f, 0.0f));
+				dirLight->data.brightness = 5.0f;
+				dirLight->Initialize();
+				dirLight->PostInitialize();
 			}
 
 			if (m_bSpawnPlayer)
@@ -228,10 +237,6 @@ namespace flex
 			for (GameObject* rootObject : m_RootObjects)
 			{
 				rootObject->Initialize();
-			}
-			if (g_Renderer->GetDirectionalLight() == nullptr)
-			{
-				CreateDefaultDirectionalLight();
 			}
 
 			UpdateRootObjectSiblingIndices();
@@ -425,11 +430,6 @@ namespace flex
 				}
 			}
 
-			if (g_EngineInstance->IsObjectSelected(targetObject))
-			{
-				g_EngineInstance->DeselectObject(targetObject);
-			}
-
 			// If children are still in m_Children array when
 			// targetObject is destroyed they will also be destroyed
 			if (!bDestroyChildren)
@@ -437,16 +437,9 @@ namespace flex
 				targetObject->m_Children.clear();
 			}
 
-			bool bIsDirectionalLight = (dynamic_cast<DirectionalLight*>(targetObject)) != nullptr;
-
 			targetObject->Destroy();
 
 			delete targetObject;
-
-			if (bIsDirectionalLight)
-			{
-				CreateDefaultDirectionalLight();
-			}
 
 			return true;
 		}
@@ -843,17 +836,6 @@ namespace flex
 		}
 	}
 
-	void BaseScene::CreateDefaultDirectionalLight()
-	{
-		DirectionalLight* dirLight = new DirectionalLight();
-		g_SceneManager->CurrentScene()->AddRootObject(dirLight);
-		dirLight->SetRot(glm::quat(glm::vec3(130.0f, -65.0f, 120.0f)));
-		dirLight->SetPos(glm::vec3(0.0f, 15.0f, 0.0f));
-		dirLight->data.brightness = 5.0f;
-		dirLight->Initialize();
-		dirLight->PostInitialize();
-	}
-
 	void BaseScene::SerializeToFile(bool bSaveOverDefault /* = false */) const
 	{
 		bool success = true;
@@ -1029,6 +1011,34 @@ namespace flex
 		}
 		m_RootObjects.clear();
 		g_Renderer->RenderObjectStateChanged();
+	}
+
+	bool BaseScene::RemoveObject(GameObject* gameObject, bool bDestroy)
+	{
+		for (auto iter = m_RootObjects.begin(); iter != m_RootObjects.end(); ++iter)
+		{
+			if (*iter == gameObject)
+			{
+				if (bDestroy)
+				{
+					(*iter)->Destroy();
+					delete *iter;
+				}
+
+				m_RootObjects.erase(iter);
+				return true;
+			}
+
+			for (auto childIter = (*iter)->m_Children.begin(); childIter != (*iter)->m_Children.end(); ++childIter)
+			{
+				if (RemoveObject(*childIter, bDestroy))
+				{
+					return true;
+				}
+			}
+		}
+
+		return false;
 	}
 
 	std::vector<MaterialID> BaseScene::GetMaterialIDs()

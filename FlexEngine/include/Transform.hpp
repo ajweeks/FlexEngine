@@ -73,6 +73,8 @@ namespace flex
 
 		void UpdateParentTransform(); // Climbs up the parent-child tree up to the root
 
+		bool updateParentOnStateChange = false;
+
 	private:
 		void UpdateChildTransforms(); // Climbs down the parent-child trees to all leaves
 
