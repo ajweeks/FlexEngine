@@ -288,6 +288,9 @@ namespace flex
 			delete m_PhysicsWorld;
 			m_PhysicsWorld = nullptr;
 		}
+
+		m_Player0 = nullptr;
+		m_Player1 = nullptr;
 	}
 
 	void BaseScene::Update()

@@ -1,7 +1,7 @@
 {
 	"version" : 1,
 	"name" : "scene_sibnek",
-	"spawn player" : true,
+	"spawn player" : false,
 	"objects" : 
 	[
 		{

@@ -1,6 +1,7 @@
 {
 	"version" : 1,
 	"name" : "Scene_track_test",
+	"spawn player" : true,
 	"objects" : 
 	[
 		{
