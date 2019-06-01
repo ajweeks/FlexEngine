@@ -123,7 +123,7 @@ namespace flex
 
 		m_SSAOSamplingData.ssaoEnabled = 1;
 		m_SSAOSamplingData.ssaoPowExp = 2.0f;
-		m_SSAOSamplingData.pad[0] = m_SSAOSamplingData.pad[1] = 0.0f;
+
 	}
 
 	void Renderer::Destroy()
@@ -1485,13 +1485,13 @@ namespace flex
 				(u32)VertexAttribute::UV;
 
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SSAO_BLUR_DATA);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SSAO_BLUR_DATA_CONSTANT);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SSAO_RAW_SAMPLER);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SSAO_NORMAL_SAMPLER);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_DEPTH_SAMPLER);
 
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
-			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_SSAO_BLUR_DATA);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_SSAO_BLUR_DATA_DYNAMIC);
 			++shaderID;
 
 			assert(shaderID == m_BaseShaders.size());

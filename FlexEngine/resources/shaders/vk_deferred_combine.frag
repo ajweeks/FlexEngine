@@ -44,7 +44,6 @@ layout (binding = 0) uniform UBOConstant
 	// SSAO Sampling Data
 	int ssaoEnabled; // TODO: Make specialization constant
 	float ssaoPowExp;
-	vec2 _ssaoPad;
 } uboConstant;
 
 layout (binding = 1) uniform UBODynamic

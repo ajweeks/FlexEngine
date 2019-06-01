@@ -22,59 +22,64 @@ namespace flex
 
 	static const i32 MAX_NUM_POINT_LIGHTS = 8;
 
+	// 48 bytes
 	struct DirLightData
 	{
-		glm::vec3 dir;
-		i32 enabled;
-		glm::vec3 color;
-		real brightness;
-		i32 castShadows;
-		real shadowDarkness;
-		real pad[2];
+		glm::vec3 dir;       // 0
+		i32 enabled;         // 12
+		glm::vec3 color;     // 16
+		real brightness;     // 28
+		i32 castShadows;     // 32
+		real shadowDarkness; // 36
+		real pad[2];         // 40
 	};
 
+	// 32 bytes
 	struct PointLightData
 	{
-		glm::vec3 pos;
-		i32 enabled;
-		glm::vec3 color;
-		real brightness;
+		glm::vec3 pos;   // 0
+		i32 enabled;     // 12
+		glm::vec3 color; // 16
+		real brightness; // 28
 	};
 
 	const u32 MAX_SSAO_KERNEL_SIZE = 64;
+	// 1028 bytes
 	struct SSAOGenData
 	{
-		glm::vec4 samples[MAX_SSAO_KERNEL_SIZE];
-		real radius;
+		glm::vec4 samples[MAX_SSAO_KERNEL_SIZE]; // 0
+		real radius;                             // 1024
 	};
 
+	// 4 bytes
 	struct SSAOBlurDataConstant
 	{
-		i32 radius;
-		i32 pad; // This is needed so this struct matches the size of SSAOBlurDataDynamic (TODO: Find better solution!)
+		i32 radius; // 0
 	};
 
+	// 8 bytes
 	struct SSAOBlurDataDynamic
 	{
-		glm::vec2 ssaoTexelOffset;
+		glm::vec2 ssaoTexelOffset; // 0
 	};
 
+	// 8 bytes
 	struct SSAOSamplingData
 	{
-		i32 ssaoEnabled;
-		real ssaoPowExp;
-		real pad[2];
+		i32 ssaoEnabled; // 0
+		real ssaoPowExp; // 4
 	};
 
+	// 32 bytes
 	struct FXAAData
 	{
-		real lumaThresholdMin;
-		real lumaThresholdMax;
-		real mulReduce;
-		real minReduce;
-		real maxSpan;
-		glm::vec2 texelStep;
-		i32 bDEBUGShowEdges;
+		real lumaThresholdMin; // 0
+		real lumaThresholdMax; // 4
+		real mulReduce;        // 8
+		real minReduce;        // 12
+		real maxSpan;          // 16
+		glm::vec2 texelStep;   // 20
+		i32 bDEBUGShowEdges;   // 28
 	};
 
 	// Uniforms
@@ -135,7 +140,8 @@ namespace flex
 	const u64 U_SSAO_FINAL_SAMPLER				= (1ull << 54);
 	const u64 U_SSAO_NORMAL_SAMPLER				= (1ull << 55);
 	const u64 U_SSAO_GEN_DATA					= (1ull << 56); const u32 US_SSAO_GEN_DATA				= sizeof(SSAOGenData);
-	const u64 U_SSAO_BLUR_DATA					= (1ull << 57); const u32 US_SSAO_BLUR_DATA				= sizeof(SSAOBlurDataDynamic); // TODO: use two uniforms?
+	const u64 U_SSAO_BLUR_DATA_DYNAMIC			= (1ull << 57); const u32 US_SSAO_BLUR_DATA_DYNAMIC		= sizeof(SSAOBlurDataDynamic);
+	const u64 U_SSAO_BLUR_DATA_CONSTANT			= (1ull << 57); const u32 US_SSAO_BLUR_DATA_CONSTANT	= sizeof(SSAOBlurDataConstant);
 	const u64 U_SSAO_SAMPLING_DATA				= (1ull << 58); const u32 US_SSAO_SAMPLING_DATA			= sizeof(SSAOSamplingData);
 	const u64 U_FXAA_DATA						= (1ull << 59); const u32 US_FXAA_DATA					= sizeof(FXAAData);
 	const u64 U_SHADOW_SAMPLER					= (1ull << 60);
@@ -528,23 +534,28 @@ namespace flex
 		bool bRaw = false; // If true no further pos/scale processing is down, values are directly uploaded to GPU
 	};
 
+	// TODO: OPTIMIZE: Shrink these bad boys
+	// 52 bytes
 	struct TextVertex2D
 	{
-		glm::vec2 pos;
-		glm::vec2 uv;
-		glm::vec4 color;
-		glm::vec4 charSizePixelsCharSizeNorm; // RG: char size in pixels, BA: char size in [0, 1] in screen space
-		i32 channel; // uses extra int slot
+		glm::vec2 pos;                        // 0
+		glm::vec2 uv;                         // 8
+		glm::vec4 color;                      // 16
+		glm::vec4 charSizePixelsCharSizeNorm; // 32 - RG: char size in pixels, BA: char size in [0, 1] in screen space
+		i32 channel;                          // 48 - Uses extra int slot
 	};
 
+	// 68 bytes
 	struct TextVertex3D
 	{
-		glm::vec3 pos;
-		glm::vec2 uv;
-		glm::vec4 color;
-		glm::vec3 tangent;
-		glm::vec4 charSizePixelsCharSizeNorm; // RG: char size in pixels, BA: char size in [0, 1] in screen space
-		i32 channel; // uses extra int slot
+		glm::vec3 pos;                        // 0
+		                                      // + 4
+		glm::vec2 uv;                         // 16
+		glm::vec4 color;                      // 24
+		glm::vec3 tangent;                    // 32
+		                                      // + 4
+		glm::vec4 charSizePixelsCharSizeNorm; // 48 - RG: char size in pixels, BA: char size in [0, 1] in screen space
+		i32 channel;                          // 64 - uses extra int slot
 	};
 
 } // namespace flex

@@ -5977,7 +5977,7 @@ namespace flex
 					vkCmdBindVertexBuffers(m_OffScreenCmdBuffer, 0, 1, &gBufferVertexIndexBuffer->vertexBuffer->m_Buffer, offsets);
 
 					UniformOverrides overrides = {};
-					overrides.overridenUniforms.AddUniform(U_SSAO_BLUR_DATA);
+					overrides.overridenUniforms.AddUniform(U_SSAO_BLUR_DATA_DYNAMIC);
 					overrides.bSSAOVerticalPass = false;
 					UpdateDynamicUniformBuffer(m_SSAOBlurMatID, 0 * m_DynamicAlignment, MAT4_IDENTITY, &overrides);
 
@@ -6842,7 +6842,7 @@ namespace flex
 				{ U_POINT_LIGHTS, (void*)m_PointLights, US_POINT_LIGHTS },
 				{ U_TIME, (void*)&g_SecElapsedSinceProgramStart, US_TIME },
 				{ U_SSAO_GEN_DATA, (void*)&m_SSAOGenData, US_SSAO_GEN_DATA },
-				{ U_SSAO_BLUR_DATA, (void*)&m_SSAOBlurDataConstant, US_SSAO_BLUR_DATA },
+				{ U_SSAO_BLUR_DATA_CONSTANT, (void*)&m_SSAOBlurDataConstant, US_SSAO_BLUR_DATA_CONSTANT },
 				{ U_SSAO_SAMPLING_DATA, (void*)&m_SSAOSamplingData, US_SSAO_SAMPLING_DATA },
 				{ U_FXAA_DATA, (void*)&m_FXAAData, US_FXAA_DATA },
 				{ U_EXPOSURE, (void*)&exposure, US_EXPOSURE },
@@ -6976,7 +6976,7 @@ namespace flex
 					texChannel = uniformOverrides->texChannel;
 				}
 
-				if (uniformOverrides->overridenUniforms.HasUniform(U_SSAO_BLUR_DATA))
+				if (uniformOverrides->overridenUniforms.HasUniform(U_SSAO_BLUR_DATA_DYNAMIC))
 				{
 					if (uniformOverrides->bSSAOVerticalPass)
 					{
@@ -7018,7 +7018,7 @@ namespace flex
 				{ U_TEX_SIZE, (void*)&texSize, US_TEX_SIZE },
 				{ U_SDF_DATA, (void*)&sdfData, US_SDF_DATA },
 				{ U_TEX_CHANNEL, (void*)&texChannel, US_TEX_CHANNEL },
-				{ U_SSAO_BLUR_DATA, (void*)&m_SSAOBlurDataDynamic, US_SSAO_BLUR_DATA },
+				{ U_SSAO_BLUR_DATA_DYNAMIC, (void*)&m_SSAOBlurDataDynamic, US_SSAO_BLUR_DATA_DYNAMIC },
 			};
 
 			u32 index = 0;

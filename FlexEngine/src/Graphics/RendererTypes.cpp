@@ -58,7 +58,8 @@ namespace flex
 			_u(TEX_CHANNEL)
 			_u(FONT_CHAR_DATA)
 			_u(SSAO_GEN_DATA)
-			_u(SSAO_BLUR_DATA)
+			_u(SSAO_BLUR_DATA_DYNAMIC)
+			_u(SSAO_BLUR_DATA_CONSTANT)
 			_u(SSAO_SAMPLING_DATA)
 			_u(FXAA_DATA)
 #undef _u
