@@ -137,13 +137,15 @@ namespace flex
 			MaterialCreateInfo spriteMatCreateInfo = {};
 			spriteMatCreateInfo.name = "Sprite material";
 			spriteMatCreateInfo.shaderName = "sprite";
-			spriteMatCreateInfo.engineMaterial = true;
+			spriteMatCreateInfo.persistent = true;
+			spriteMatCreateInfo.visibleInEditor = true;
 			m_SpriteMatID = InitializeMaterial(&spriteMatCreateInfo);
 
 			MaterialCreateInfo postProcessMatCreateInfo = {};
 			postProcessMatCreateInfo.name = "Post process material";
 			postProcessMatCreateInfo.shaderName = "post_process";
-			postProcessMatCreateInfo.engineMaterial = true;
+			postProcessMatCreateInfo.persistent = true;
+			postProcessMatCreateInfo.visibleInEditor = false;
 			m_PostProcessMatID = InitializeMaterial(&postProcessMatCreateInfo);
 
 			// 2D Quad
@@ -327,7 +329,8 @@ namespace flex
 					MaterialCreateInfo gridMatInfo = {};
 					gridMatInfo.shaderName = "color";
 					gridMatInfo.name = gridMatName;
-					gridMatInfo.engineMaterial = true;
+					gridMatInfo.persistent = true;
+					gridMatInfo.visibleInEditor = true;
 					m_GridMaterialID = InitializeMaterial(&gridMatInfo);
 				}
 
@@ -353,7 +356,8 @@ namespace flex
 					MaterialCreateInfo worldAxisMatInfo = {};
 					worldAxisMatInfo.shaderName = "color";
 					worldAxisMatInfo.name = worldOriginMatName;
-					worldAxisMatInfo.engineMaterial = true;
+					worldAxisMatInfo.persistent = true;
+					worldAxisMatInfo.visibleInEditor = false;
 					m_WorldAxisMaterialID = InitializeMaterial(&worldAxisMatInfo);
 				}
 
@@ -374,7 +378,8 @@ namespace flex
 			MaterialCreateInfo selectedObjectMatCreateInfo = {};
 			selectedObjectMatCreateInfo.name = "Selected Object";
 			selectedObjectMatCreateInfo.shaderName = "color";
-			selectedObjectMatCreateInfo.engineMaterial = true;
+			selectedObjectMatCreateInfo.persistent = true;
+			selectedObjectMatCreateInfo.visibleInEditor = false;
 			selectedObjectMatCreateInfo.colorMultiplier = VEC4_ONE;
 			m_SelectedObjectMatID = InitializeMaterial(&selectedObjectMatCreateInfo);
 
@@ -700,7 +705,8 @@ namespace flex
 
 			mat.material.colorMultiplier = createInfo->colorMultiplier;
 
-			mat.material.engineMaterial = createInfo->engineMaterial;
+			mat.material.persistent = createInfo->persistent;
+			mat.material.visibleInEditor = createInfo->visibleInEditor;
 
 			mat.material.textureScale = createInfo->textureScale;
 
@@ -1211,12 +1217,12 @@ namespace flex
 			}
 		}
 
-		void GLRenderer::ClearMaterials(bool bDestroyEngineMats /* = false */)
+		void GLRenderer::ClearMaterials(bool bDestroyPersistentMats /* = false */)
 		{
 			auto iter = m_Materials.begin();
 			while (iter != m_Materials.end())
 			{
-				if (bDestroyEngineMats || iter->second.material.engineMaterial == false)
+				if (bDestroyPersistentMats || iter->second.material.persistent == false)
 				{
 					iter = m_Materials.erase(iter);
 				}
@@ -1255,7 +1261,8 @@ namespace flex
 					equirectangularToCubeMatCreateInfo.shaderName = "equirectangular_to_cube";
 					equirectangularToCubeMatCreateInfo.enableHDREquirectangularSampler = true;
 					equirectangularToCubeMatCreateInfo.generateHDREquirectangularSampler = true;
-					equirectangularToCubeMatCreateInfo.engineMaterial = true;
+					equirectangularToCubeMatCreateInfo.persistent = true;
+					equirectangularToCubeMatCreateInfo.visibleInEditor = false;
 					// TODO: Make cyclable at runtime
 					equirectangularToCubeMatCreateInfo.hdrEquirectangularTexturePath = environmentMapPath;
 
@@ -1351,7 +1358,8 @@ namespace flex
 					MaterialCreateInfo prefilterMaterialCreateInfo = {};
 					prefilterMaterialCreateInfo.name = "Prefilter";
 					prefilterMaterialCreateInfo.shaderName = "prefilter";
-					prefilterMaterialCreateInfo.engineMaterial = true;
+					prefilterMaterialCreateInfo.persistent = true;
+					prefilterMaterialCreateInfo.visibleInEditor = false;
 					prefilterMatID = InitializeMaterial(&prefilterMaterialCreateInfo);
 				}
 
@@ -1440,7 +1448,8 @@ namespace flex
 				MaterialCreateInfo brdfMaterialCreateInfo = {};
 				brdfMaterialCreateInfo.name = "BRDF";
 				brdfMaterialCreateInfo.shaderName = "brdf";
-				brdfMaterialCreateInfo.engineMaterial = true;
+				brdfMaterialCreateInfo.persistent = true;
+				brdfMaterialCreateInfo.visibleInEditor = false;
 				m_BRDFMatID = InitializeMaterial(&brdfMaterialCreateInfo, m_BRDFMatID);
 
 				u32 VAO = 0;
@@ -1547,7 +1556,8 @@ namespace flex
 					irrandianceMatCreateInfo.name = "Irradiance";
 					irrandianceMatCreateInfo.shaderName = "irradiance";
 					irrandianceMatCreateInfo.enableCubemapSampler = true;
-					irrandianceMatCreateInfo.engineMaterial = true;
+					irrandianceMatCreateInfo.persistent = true;
+					irrandianceMatCreateInfo.visibleInEditor = false;
 					irrandianceMatID = InitializeMaterial(&irrandianceMatCreateInfo);
 					PROFILE_END(irradianceProfileBlockName);
 					Profiler::PrintBlockDuration(irradianceProfileBlockName);
@@ -1769,7 +1779,7 @@ namespace flex
 
 			for (auto& matPair : m_Materials)
 			{
-				if (!matPair.second.material.engineMaterial)
+				if (!matPair.second.material.visibleInEditor)
 				{
 					result.emplace_back(matPair.second.material.name, matPair.first);
 				}
@@ -4286,7 +4296,8 @@ namespace flex
 			MaterialCreateInfo ssaoMaterialCreateInfo = {};
 			ssaoMaterialCreateInfo.name = "SSAO";
 			ssaoMaterialCreateInfo.shaderName = "ssao";
-			ssaoMaterialCreateInfo.engineMaterial = true;
+			ssaoMaterialCreateInfo.persistent = true;
+			ssaoMaterialCreateInfo.visibleInEditor = false;
 			ssaoMaterialCreateInfo.sampledFrameBuffers = {
 				{ "normalRoughnessFrameBufferSampler", &m_gBufferFBO0.id },
 			};
@@ -4295,7 +4306,8 @@ namespace flex
 			MaterialCreateInfo ssaoBlurHMaterialCreateInfo = {};
 			ssaoBlurHMaterialCreateInfo.name = "SSAO Blur Horizontal";
 			ssaoBlurHMaterialCreateInfo.shaderName = "ssao_blur";
-			ssaoBlurHMaterialCreateInfo.engineMaterial = true;
+			ssaoBlurHMaterialCreateInfo.persistent = true;
+			ssaoBlurHMaterialCreateInfo.visibleInEditor = false;
 			ssaoBlurHMaterialCreateInfo.sampledFrameBuffers = {
 				{ "ssaoFrameBufferSampler",  &m_SSAOFBO.id },
 				{ "normalRoughnessFrameBufferSampler",  &m_gBufferFBO0.id },
@@ -4305,7 +4317,8 @@ namespace flex
 			MaterialCreateInfo ssaoBlurVMaterialCreateInfo = {};
 			ssaoBlurVMaterialCreateInfo.name = "SSAO Blur Vertical";
 			ssaoBlurVMaterialCreateInfo.shaderName = "ssao_blur";
-			ssaoBlurVMaterialCreateInfo.engineMaterial = true;
+			ssaoBlurVMaterialCreateInfo.persistent = true;
+			ssaoBlurVMaterialCreateInfo.visibleInEditor = false;
 			ssaoBlurVMaterialCreateInfo.sampledFrameBuffers = {
 				{ "ssaoFrameBufferSampler",  &m_SSAOBlurHFBO.id },
 				{ "normalRoughnessFrameBufferSampler",  &m_gBufferFBO0.id },
@@ -4684,7 +4697,7 @@ namespace flex
 					const i32 MAX_NAME_LEN = 128;
 					static i32 selectedMaterialIndexShort = 0; // Index into shortened array
 					static MaterialID selectedMaterialID = 0;
-					while (m_Materials[selectedMaterialID].material.engineMaterial &&
+					while (!m_Materials[selectedMaterialID].material.visibleInEditor &&
 						   selectedMaterialID < m_Materials.size() - 1)
 					{
 						++selectedMaterialID;
@@ -4887,7 +4900,7 @@ namespace flex
 						i32 matShortIndex = 0;
 						for (i32 i = 0; i < (i32)m_Materials.size(); ++i)
 						{
-							if (m_Materials[i].material.engineMaterial)
+							if (m_Materials[i].material.visibleInEditor)
 							{
 								continue;
 							}

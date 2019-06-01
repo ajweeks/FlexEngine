@@ -134,6 +134,7 @@ void main()
 
     vec3 N = texture(normalRoughnessFrameBufferSampler, ex_TexCoord).rgb;
     N = mat3(invView) * N; // view space -> world space
+	// fragmentColor = vec4(N-.5+.5, 1.0);return;
 
     float ssao = enableSSAO == 1 ? texture(ssaoBlurFrameBufferSampler, ex_TexCoord).r : 1.0f;
 

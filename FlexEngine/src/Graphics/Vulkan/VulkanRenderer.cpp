@@ -3268,12 +3268,12 @@ namespace flex
 			UNREFERENCED_PARAMETER(renderID);
 		}
 
-		void VulkanRenderer::ClearMaterials(bool bDestroyEngineMats /* = false */)
+		void VulkanRenderer::ClearMaterials(bool bDestroyPersistentMats /* = false */)
 		{
 			auto iter = m_Materials.begin();
 			while (iter != m_Materials.end())
 			{
-				if (bDestroyEngineMats || iter->second.material.persistent == false)
+				if (bDestroyPersistentMats || iter->second.material.persistent == false)
 				{
 					if (iter->second.hdrCubemapFramebuffer)
 					{

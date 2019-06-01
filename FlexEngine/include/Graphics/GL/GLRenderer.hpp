@@ -31,7 +31,7 @@ namespace flex
 			virtual RenderID InitializeRenderObject(const RenderObjectCreateInfo* createInfo) override;
 			virtual void PostInitializeRenderObject(RenderID renderID) override;
 
-			virtual void ClearMaterials(bool bDestroyEngineMats = false) override;
+			virtual void ClearMaterials(bool bDestroyPersistentMats = false) override;
 
 			virtual void Update() override;
 			virtual void Draw() override;

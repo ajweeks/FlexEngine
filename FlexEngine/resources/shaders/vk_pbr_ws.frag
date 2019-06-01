@@ -72,7 +72,7 @@ void main()
 		vec3 normalX = ex_TBN * (texture(normalSampler, uvX).xyz * 2 - 1);
 		vec3 normalY = ex_TBN * (texture(normalSampler, uvY).xyz * 2 - 1);
 		vec3 normalZ = ex_TBN * (texture(normalSampler, uvZ).xyz * 2 - 1);
-		vec3 blendWeights = pow(abs(N), vec3(uboDynamic.blendSharpness));
+		vec3 blendWeights = pow(abs(geomNorm), vec3(uboDynamic.blendSharpness));
 		blendWeights = blendWeights / (blendWeights.x + blendWeights.y + blendWeights.z);
 		N = normalX * blendWeights.x +
 			normalY * blendWeights.y +
