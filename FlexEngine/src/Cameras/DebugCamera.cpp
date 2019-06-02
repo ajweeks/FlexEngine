@@ -26,7 +26,7 @@ namespace flex
 		m_TurnVel(0.0f)
 	{
 		ResetOrientation();
-		m_DragHisto = Histogram(120);
+		m_DragHistory = Histogram(120);
 	}
 
 	DebugCamera::~DebugCamera()
@@ -58,12 +58,12 @@ namespace flex
 
 	void DebugCamera::DrawImGuiObjects()
 	{
-		m_DragHisto.DrawImGui();
+		m_DragHistory.DrawImGui();
 	}
 
 	void DebugCamera::Update()
 	{
-		m_DragHisto.AddElement(m_MouseDragDist.y);
+		m_DragHistory.AddElement(m_MouseDragDist.y);
 
 		glm::vec3 targetDPos(0.0f);
 
