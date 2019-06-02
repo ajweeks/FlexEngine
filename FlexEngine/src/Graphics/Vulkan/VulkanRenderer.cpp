@@ -739,9 +739,9 @@ namespace flex
 			CreateDescriptorSet(&equirectangularToCubeDescriptorCreateInfo);
 
 			std::array<VkPushConstantRange, 1> pushConstantRanges = {};
+			pushConstantRanges[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 			pushConstantRanges[0].offset = 0;
 			pushConstantRanges[0].size = sizeof(Material::PushConstantBlock);
-			pushConstantRanges[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
 			VkPipeline pipeline = VK_NULL_HANDLE;
 			VkPipelineLayout pipelinelayout = VK_NULL_HANDLE;
@@ -1005,9 +1005,9 @@ namespace flex
 			renderObjectMat.cubemapTexture->UpdateImageDescriptor();
 
 			std::array<VkPushConstantRange, 1> pushConstantRanges = {};
+			pushConstantRanges[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 			pushConstantRanges[0].offset = 0;
 			pushConstantRanges[0].size = sizeof(Material::PushConstantBlock);
-			pushConstantRanges[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
 			VkPipelineLayout pipelinelayout = VK_NULL_HANDLE;
 			VkPipeline pipeline = VK_NULL_HANDLE;
@@ -1267,9 +1267,9 @@ namespace flex
 			CreateDescriptorSet(&prefilterDescriptorCreateInfo);
 
 			std::array<VkPushConstantRange, 1> pushConstantRanges = {};
+			pushConstantRanges[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 			pushConstantRanges[0].offset = 0;
 			pushConstantRanges[0].size = sizeof(Material::PushConstantBlock);
-			pushConstantRanges[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
 			VkPipelineLayout pipelinelayout = VK_NULL_HANDLE;
 			VkPipeline pipeline = VK_NULL_HANDLE;

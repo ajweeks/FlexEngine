@@ -1376,7 +1376,6 @@ namespace flex
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_FXAA_DATA);
 
-			m_BaseShaders[shaderID].dynamicBufferUniforms = {};
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ALBEDO_SAMPLER);
 			++shaderID;
 
@@ -1411,7 +1410,6 @@ namespace flex
 				(u32)VertexAttribute::EXTRA_VEC4 |
 				(u32)VertexAttribute::EXTRA_INT;
 
-			m_BaseShaders[shaderID].constantBufferUniforms = {};
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_ALBEDO_SAMPLER);
 
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
@@ -1433,7 +1431,6 @@ namespace flex
 				(u32)VertexAttribute::EXTRA_VEC4 |
 				(u32)VertexAttribute::EXTRA_INT;
 
-			m_BaseShaders[shaderID].constantBufferUniforms = {};
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_ALBEDO_SAMPLER);
 
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
@@ -2750,4 +2747,5 @@ namespace flex
 		real zoom = m_DirectionalLight->shadowMapZoom;
 		outProj = glm::ortho(-zoom, zoom, -zoom, zoom, m_DirectionalLight->shadowMapNearPlane, m_DirectionalLight->shadowMapFarPlane);
 	}
+
 } // namespace flex

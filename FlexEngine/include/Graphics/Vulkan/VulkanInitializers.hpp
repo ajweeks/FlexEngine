@@ -645,8 +645,8 @@ namespace flex
 			VkRect2D rect{};
 			rect.offset.x = x;
 			rect.offset.y = y;
-			rect.extent.height = h;
 			rect.extent.width = w;
+			rect.extent.height = h;
 			return rect;
 		}
 
