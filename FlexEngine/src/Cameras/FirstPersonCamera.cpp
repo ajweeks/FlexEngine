@@ -29,23 +29,16 @@ namespace flex
 
 	void FirstPersonCamera::Initialize()
 	{
-		if (m_bInitialized)
+		if (!m_bInitialized)
 		{
 			if (m_Player == nullptr)
 			{
 				FindPlayer();
 			}
 
-			if (!m_bInitialized)
-			{
-				m_bInitialized = true;
+			Update();
 
-				BaseCamera::Initialize();
-
-				Update();
-			}
-
-			m_bInitialized = true;
+			BaseCamera::Initialize();
 		}
 	}
 

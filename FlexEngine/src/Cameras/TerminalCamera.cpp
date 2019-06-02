@@ -53,7 +53,7 @@ namespace flex
 				}
 			}
 
-			m_bInitialized = true;
+			BaseCamera::Initialize();
 		}
 	}
 

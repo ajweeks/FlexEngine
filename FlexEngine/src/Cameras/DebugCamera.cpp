@@ -42,7 +42,7 @@ namespace flex
 			g_InputManager->BindMouseButtonCallback(&mouseButtonCallback, 10);
 			g_InputManager->BindMouseMovedCallback(&mouseMovedCallback, 10);
 
-			m_bInitialized = true;
+			BaseCamera::Initialize();
 		}
 	}
 
@@ -52,7 +52,8 @@ namespace flex
 		{
 			g_InputManager->UnbindMouseButtonCallback(&mouseButtonCallback);
 			g_InputManager->UnbindMouseMovedCallback(&mouseMovedCallback);
-			m_bInitialized = false;
+
+			BaseCamera::Destroy();
 		}
 	}
 

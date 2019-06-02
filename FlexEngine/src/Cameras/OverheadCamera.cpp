@@ -39,19 +39,12 @@ namespace flex
 				FindPlayer();
 			}
 
-			if (!m_bInitialized)
-			{
-				m_bInitialized = true;
+			m_PlayerPosRollingAvg = RollingAverage<glm::vec3>(15, SamplingType::LINEAR);
+			m_PlayerForwardRollingAvg = RollingAverage<glm::vec3>(30, SamplingType::LINEAR);
 
-				BaseCamera::Initialize();
+			ResetValues();
 
-				m_PlayerPosRollingAvg = RollingAverage<glm::vec3>(15, SamplingType::LINEAR);
-				m_PlayerForwardRollingAvg = RollingAverage<glm::vec3>(30, SamplingType::LINEAR);
-
-				ResetValues();
-			}
-
-			m_bInitialized = true;
+			BaseCamera::Initialize();
 		}
 	}
 
