@@ -2610,7 +2610,7 @@ namespace flex
 
 	void DirectionalLight::OnTransformChanged()
 	{
-		data.dir = glm::degrees(glm::eulerAngles(m_Transform.GetLocalRotation()));
+		data.dir = glm::eulerAngles(m_Transform.GetLocalRotation());
 	}
 
 	void DirectionalLight::SetPos(const glm::vec3& newPos)
