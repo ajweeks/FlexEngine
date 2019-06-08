@@ -29,6 +29,7 @@ namespace flex
 	{
 	public:
 		virtual void Initialize() = 0;
+		virtual void Destroy() = 0;
 		virtual void DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& color) = 0;
 
 		void UpdateDebugMode();
@@ -62,7 +63,7 @@ namespace flex
 		virtual ~Renderer();
 
 		virtual void Initialize();
-		virtual void PostInitialize() = 0;
+		virtual void PostInitialize();
 		virtual void Destroy();
 
 		virtual MaterialID InitializeMaterial(const MaterialCreateInfo* createInfo, MaterialID matToReplace = InvalidMaterialID) = 0;
@@ -83,10 +84,6 @@ namespace flex
 		virtual void UpdateVertexData(RenderID renderID, VertexBufferData* vertexBufferData) = 0;
 
 		void DrawImGuiForGameObjectWithValidRenderID(GameObject* gameObject);
-
-		virtual void DrawUntexturedQuad(const glm::vec2& pos, AnchorPoint anchor, const glm::vec2& size, const glm::vec4& color) = 0;
-		virtual void DrawUntexturedQuadRaw(const glm::vec2& pos, const glm::vec2& size, const glm::vec4& color) = 0;
-		virtual void DrawSprite(const SpriteQuadDrawInfo& drawInfo) = 0;
 
 		virtual void ReloadShaders() = 0;
 		virtual void LoadFonts(bool bForceRender) = 0;
@@ -184,6 +181,10 @@ namespace flex
 										  glm::vec2& posOut,
 										  glm::vec2& scaleOut);
 
+		void EnqueueUntexturedQuad(const glm::vec2& pos, AnchorPoint anchor, const glm::vec2& size, const glm::vec4& color);
+		void EnqueueUntexturedQuadRaw(const glm::vec2& pos, const glm::vec2& size, const glm::vec4& color);
+		void EnqueueSprite(const SpriteQuadDrawInfo& drawInfo);
+
 		void SetPostProcessingEnabled(bool bEnabled);
 		bool IsPostProcessingEnabled() const;
 
@@ -257,8 +258,8 @@ namespace flex
 
 		void GenerateGBuffer();
 
-		void DrawScreenSpaceText();
-		void DrawWorldSpaceText();
+		void EnqueueScreenSpaceText();
+		void EnqueueWorldSpaceText();
 
 		bool LoadFontMetrics(const std::vector<char>& fileMemory,
 			FT_Library& ft,
@@ -315,6 +316,16 @@ namespace flex
 		MaterialID m_ReflectionProbeMaterialID = InvalidMaterialID; // Set by the user via SetReflecionProbeMaterial
 		MaterialID m_ShadowMaterialID = InvalidMaterialID;
 		MaterialID m_CubemapGBufferMaterialID = InvalidMaterialID;
+
+		// Filled every frame
+		std::vector<SpriteQuadDrawInfo> m_QueuedWSSprites;
+		std::vector<SpriteQuadDrawInfo> m_QueuedSSSprites;
+
+		// TODO: Use a mesh prefab here
+		VertexBufferData m_Quad3DVertexBufferData;
+		RenderID m_Quad3DRenderID;
+		VertexBufferData m_FullScreenTriVertexBufferData;
+		RenderID m_FullScreenTriRenderID;
 
 		// Any editor objects which also require a game object wrapper
 		std::vector<GameObject*> m_EditorObjects;

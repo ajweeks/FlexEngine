@@ -2195,26 +2195,6 @@ namespace flex
 			vertexBuffer->Unmap();
 		}
 
-		void VulkanRenderer::DrawUntexturedQuad(const glm::vec2& pos, AnchorPoint anchor, const glm::vec2& size, const glm::vec4& color)
-		{
-			UNREFERENCED_PARAMETER(pos);
-			UNREFERENCED_PARAMETER(anchor);
-			UNREFERENCED_PARAMETER(size);
-			UNREFERENCED_PARAMETER(color);
-		}
-
-		void VulkanRenderer::DrawUntexturedQuadRaw(const glm::vec2& pos, const glm::vec2& size, const glm::vec4& color)
-		{
-			UNREFERENCED_PARAMETER(pos);
-			UNREFERENCED_PARAMETER(size);
-			UNREFERENCED_PARAMETER(color);
-		}
-
-		void VulkanRenderer::DrawSprite(const SpriteQuadDrawInfo& drawInfo)
-		{
-			UNREFERENCED_PARAMETER(drawInfo);
-		}
-
 		void VulkanRenderer::DrawImGuiForRenderObject(RenderID renderID)
 		{
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
@@ -3731,24 +3711,31 @@ namespace flex
 			return alignedSize;
 		}
 
-		void VulkanRenderer::DrawSpriteQuad(const SpriteQuadDrawInfo& drawInfo)
-		{
-			UNREFERENCED_PARAMETER(drawInfo);
-		}
-
-		void VulkanRenderer::DrawScreenSpaceSprites()
-		{
-
-		}
-
-		void VulkanRenderer::DrawWorldSpaceSprites()
-		{
-
-		}
-
 		// TODO: Unify with DrawTextWS?
 		void VulkanRenderer::DrawTextSS(VkCommandBuffer commandBuffer)
 		{
+			// Update dynamic text buffer
+			{
+				std::vector<TextVertex2D> textVerticesSS;
+				UpdateTextBufferSS(textVerticesSS);
+
+				u32 SSTextBufferByteCount = (u32)(textVerticesSS.size() * sizeof(TextVertex2D));
+
+				if (SSTextBufferByteCount > 0)
+				{
+					const VulkanMaterial& fontMaterial = m_Materials[m_FontMatSSID];
+					VulkanBuffer* vertexBuffer = m_VertexIndexBufferPairs[fontMaterial.material.shaderID].vertexBuffer;
+					u32 copySize = std::min(SSTextBufferByteCount, (u32)vertexBuffer->m_Size);
+					if (copySize < SSTextBufferByteCount)
+					{
+						PrintError("SS Font vertex buffer is %u bytes too small\n", SSTextBufferByteCount - copySize);
+					}
+					VK_CHECK_RESULT(vertexBuffer->Map(copySize));
+					memcpy(vertexBuffer->m_Mapped, textVerticesSS.data(), copySize);
+					vertexBuffer->Unmap();
+				}
+			}
+
 			if (m_FontMatSSID == InvalidMaterialID)
 			{
 				return;
@@ -3859,6 +3846,28 @@ namespace flex
 
 		void VulkanRenderer::DrawTextWS(VkCommandBuffer commandBuffer)
 		{
+			// Update dynamic text buffer
+			{
+				std::vector<TextVertex3D> textVerticesWS;
+				UpdateTextBufferWS(textVerticesWS);
+
+				u32 WSTextBufferByteCount = (u32)(textVerticesWS.size() * sizeof(TextVertex2D));
+
+				if (WSTextBufferByteCount > 0)
+				{
+					const VulkanMaterial& fontMaterial = m_Materials[m_FontMatWSID];
+					VulkanBuffer* vertexBuffer = m_VertexIndexBufferPairs[fontMaterial.material.shaderID].vertexBuffer;
+					u32 copySize = std::min(WSTextBufferByteCount, (u32)vertexBuffer->m_Size);
+					if (copySize < WSTextBufferByteCount)
+					{
+						PrintError("SS Font vertex buffer is %u bytes too small\n", WSTextBufferByteCount - copySize);
+					}
+					VK_CHECK_RESULT(vertexBuffer->Map(copySize));
+					memcpy(vertexBuffer->m_Mapped, textVerticesWS.data(), copySize);
+					vertexBuffer->Unmap();
+				}
+			}
+
 			if (m_FontMatWSID == InvalidMaterialID)
 			{
 				return;
@@ -3960,11 +3969,216 @@ namespace flex
 			}
 		}
 
+		void VulkanRenderer::EnqueueScreenSpaceSprites()
+		{
+			// TODO: Shadow quads
+		}
+
+		// TODO: Move to base renderer
+		void VulkanRenderer::EnqueueWorldSpaceSprites()
+		{
+			BaseCamera* cam = g_CameraManager->CurrentCamera();
+			if (!cam->bIsGameplayCam)
+			{
+				glm::vec3 scale(1.0f, -1.0f, 1.0f);
+
+				SpriteQuadDrawInfo drawInfo = {};
+				//drawInfo.FBO = m_Offscreen0FBO;
+				//drawInfo.RBO = m_Offscreen0RBO;
+				drawInfo.bScreenSpace = false;
+				drawInfo.bReadDepth = true;
+				drawInfo.bWriteDepth = true;
+				drawInfo.scale = scale;
+				drawInfo.materialID = m_SpriteMatID;
+
+				glm::vec3 camPos = cam->GetPosition();
+				glm::vec3 camUp = cam->GetUp();
+				for (i32 i = 0; i < m_NumPointLightsEnabled; ++i)
+				{
+					if (m_PointLights[i].enabled)
+					{
+						// TODO: Sort back to front? Or clear depth and then enable depth test
+						drawInfo.pos = m_PointLights[i].pos;
+						drawInfo.color = glm::vec4(m_PointLights[i].color * 1.5f, 1.0f);
+						drawInfo.textureID = m_PointLightIconID;
+						glm::mat4 rotMat = glm::lookAt(camPos, glm::vec3(m_PointLights[i].pos), camUp);
+						drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
+						EnqueueSprite(drawInfo);
+					}
+				}
+
+				if (m_DirectionalLight != nullptr && m_DirectionalLight->data.enabled)
+				{
+					drawInfo.color = glm::vec4(m_DirectionalLight->data.color * 1.5f, 1.0f);
+					drawInfo.pos = m_DirectionalLight->pos;
+					drawInfo.textureID = m_DirectionalLightIconID;
+					glm::mat4 rotMat = glm::lookAt(camPos, (glm::vec3)m_DirectionalLight->pos, camUp);
+					drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
+					EnqueueSprite(drawInfo);
+
+					glm::vec3 dirLightForward = m_DirectionalLight->data.dir;
+					m_PhysicsDebugDrawer->drawLine(
+						ToBtVec3(m_DirectionalLight->pos),
+						ToBtVec3(m_DirectionalLight->pos - dirLightForward * 2.5f),
+						btVector3(0.0f, 0.0f, 1.0f));
+				}
+			}
+		}
+
+		void VulkanRenderer::DrawSpriteBatch(const std::vector<SpriteQuadDrawInfo>& batch, VkCommandBuffer commandBuffer)
+		{
+			if (batch.empty())
+			{
+				return;
+			}
+
+			const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+			const real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
+
+			//VkViewport viewport = vks::viewportFlipped((real)frameBufferSize.x, (real)frameBufferSize.y, 0.0f, 1.0f);
+			//vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+			//
+			//VkRect2D scissor = vks::scissor(0, 0, (u32)frameBufferSize.x, (u32)frameBufferSize.y);
+			//vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+
+			RenderID spriteRenderID = m_Quad3DRenderID;
+			VulkanRenderObject* spriteRenderObject = GetRenderObject(spriteRenderID);
+
+			VkDeviceSize offsets[1] = { 0 };
+
+			if (batch[0].bScreenSpace)
+			{
+				// TODO: Move to on window size changed
+				real r = aspectRatio;
+				real t = 1.0f;
+				m_SpriteOrthoPushConstBlock->SetData(MAT4_IDENTITY, glm::ortho(-r, r, -t, t));
+			}
+			else
+			{
+				// TODO: Move to tick
+				m_SpritePerspPushConstBlock->SetData(MAT4_IDENTITY, g_CameraManager->CurrentCamera()->GetProjection());
+			}
+
+
+			u32 i = 0;
+			for (const SpriteQuadDrawInfo& drawInfo : batch)
+			{
+				MaterialID matID = drawInfo.materialID == InvalidMaterialID ? m_SpriteMatID : drawInfo.materialID;
+				VulkanMaterial& spriteMat = m_Materials[matID];
+				VulkanShader& spriteShader = m_Shaders[spriteMat.material.shaderID];
+
+				VulkanBuffer* vertBuffer = m_VertexIndexBufferPairs[spriteMat.material.shaderID].vertexBuffer;
+
+				glm::vec3 translation = drawInfo.pos;
+				glm::quat rotation = drawInfo.rotation;
+				glm::vec3 scale = drawInfo.scale;
+
+				if (!drawInfo.bRaw)
+				{
+					if (drawInfo.bScreenSpace)
+					{
+						glm::vec2 normalizedTranslation;
+						glm::vec2 normalizedScale;
+						NormalizeSpritePos(translation, drawInfo.anchor, scale, normalizedTranslation, normalizedScale);
+
+						translation = glm::vec3(normalizedTranslation, 0.0f);
+						scale = glm::vec3(normalizedScale, 1.0f);
+					}
+					else
+					{
+						translation.x /= aspectRatio;
+					}
+				}
+
+				glm::mat4 model =
+					glm::translate(MAT4_IDENTITY, translation) *
+					glm::mat4(rotation) *
+					glm::scale(MAT4_IDENTITY, scale);
+
+				u32 dynamicUBOOffset = i * m_DynamicAlignment;
+
+				vkCmdPushConstants(commandBuffer, spriteRenderObject->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT|VK_SHADER_STAGE_FRAGMENT_BIT, 0,
+					drawInfo.bScreenSpace ? m_SpriteOrthoPushConstBlock->size : m_SpritePerspPushConstBlock->size,
+					drawInfo.bScreenSpace ? m_SpriteOrthoPushConstBlock->data :	m_SpritePerspPushConstBlock->data);
+
+				UpdateDynamicUniformBuffer(matID, dynamicUBOOffset, model, nullptr);
+
+				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertBuffer->m_Buffer, offsets);
+
+				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, spriteRenderObject->graphicsPipeline);
+
+				VkDescriptorSet descSet = VK_NULL_HANDLE;
+				if (m_SpriteDescSets.find(drawInfo.textureID) != m_SpriteDescSets.end())
+				{
+					descSet = m_SpriteDescSets[drawInfo.textureID];
+				}
+				else
+				{
+					descSet = CreateSpriteDescSet(drawInfo.textureID);
+					m_SpriteDescSets.insert({ drawInfo.textureID, descSet });
+				}
+
+				BindDescriptorSet(&spriteShader, dynamicUBOOffset, commandBuffer, spriteRenderObject->pipelineLayout, descSet);
+
+				vkCmdDraw(commandBuffer, spriteRenderObject->vertexBufferData->VertexCount, 1, spriteRenderObject->vertexOffset, 0);
+
+
+				//if (drawInfo.bScreenSpace)
+				//{
+				//	real r = aspectRatio;
+				//	real t = 1.0f;
+				//	glm::mat4 viewProjection = glm::ortho(-r, r, -t, t);
+
+				//	glUniformMatrix4fv(spriteMaterial.uniformIDs.viewProjection, 1, GL_FALSE, &viewProjection[0][0]);
+				//}
+				//else
+				//{
+				//	glm::mat4 viewProjection = g_CameraManager->CurrentCamera()->GetViewProjection();
+
+				//	glUniformMatrix4fv(spriteMaterial.uniformIDs.viewProjection, 1, GL_FALSE, &viewProjection[0][0]);
+				//}
+
+				//if (spriteShader.shader->dynamicBufferUniforms.HasUniform(U_COLOR_MULTIPLIER))
+				//{
+				//	glUniform4fv(spriteMaterial.uniformIDs.colorMultiplier, 1, &drawInfo.color.r);
+				//}
+
+				//bool bEnableAlbedoSampler = (drawInfo.textureHandleID != 0 && drawInfo.bEnableAlbedoSampler);
+				//if (spriteShader.shader->dynamicBufferUniforms.HasUniform(U_ALBEDO_SAMPLER))
+				//{
+				//	// TODO: glUniform1ui vs glUniform1i ?
+				//	glUniform1ui(spriteMaterial.uniformIDs.enableAlbedoSampler, bEnableAlbedoSampler ? 1 : 0);
+				//}
+
+				//// http://www.graficaobscura.com/matrix/
+				//GLint cBSLocation = glGetUniformLocation(spriteShader.program, "contrastBrightnessSaturation");
+				//if (cBSLocation != -1)
+				//{
+				//	glm::mat4 contrastBrightnessSaturation = GetPostProcessingMatrix();
+				//	glUniformMatrix4fv(cBSLocation, 1, GL_FALSE, &contrastBrightnessSaturation[0][0]);
+				//}
+
+				//glBindFramebuffer(GL_FRAMEBUFFER, drawInfo.FBO);
+				//glBindRenderbuffer(GL_RENDERBUFFER, drawInfo.RBO);
+
+				//glBindVertexArray(spriteRenderObject->VAO);
+				//glBindBuffer(GL_ARRAY_BUFFER, spriteRenderObject->VBO);
+
+				//if (bEnableAlbedoSampler)
+				//{
+				//	glActiveTexture(GL_TEXTURE0);
+				//	glBindTexture(GL_TEXTURE_2D, drawInfo.textureHandleID);
+				//}
+
+				++i;
+			}
+		}
+
 		VkRenderPass VulkanRenderer::ResolveRenderPassType(RenderPassType renderPassType, const char* shaderName)
 		{
 			switch (renderPassType)
 			{
-			case RenderPassType::SHADOW: return m_ShadowFrameBuf->renderPass;
+			case RenderPassType::SHADOW: return m_ShadowRenderPass;
 			case RenderPassType::DEFERRED: return m_OffScreenFrameBuf->renderPass;
 			case RenderPassType::DEFERRED_COMBINE: return m_DeferredCombineRenderPass;
 			case RenderPassType::FORWARD: return m_ForwardRenderPass;
@@ -4735,9 +4949,6 @@ namespace flex
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
 				{ U_FB_1_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_SHADER_STAGE_FRAGMENT_BIT },
-
-				{ U_FB_2_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
 				{ U_HIGH_RES_TEX, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -5616,29 +5827,11 @@ namespace flex
 					DrawShaderBatch(shaderBatch, commandBuffer);
 				}
 
-				DrawWorldSpaceText();
+				EnqueueWorldSpaceSprites();
+				DrawSpriteBatch(m_QueuedWSSprites, commandBuffer);
+				m_QueuedWSSprites.clear();
 
-				{
-					std::vector<TextVertex3D> textVerticesWS;
-					UpdateTextBufferWS(textVerticesWS);
-
-					u32 WSTextBufferByteCount = (u32)(textVerticesWS.size() * sizeof(TextVertex2D));
-
-					if (WSTextBufferByteCount > 0)
-					{
-						const VulkanMaterial& fontMaterial = m_Materials[m_FontMatWSID];
-						VulkanBuffer* vertexBuffer = m_VertexIndexBufferPairs[fontMaterial.material.shaderID].vertexBuffer;
-						u32 copySize = std::min(WSTextBufferByteCount, (u32)vertexBuffer->m_Size);
-						if (copySize < WSTextBufferByteCount)
-						{
-							PrintError("SS Font vertex buffer is %u bytes too small\n", WSTextBufferByteCount - copySize);
-						}
-						VK_CHECK_RESULT(vertexBuffer->Map(copySize));
-						memcpy(vertexBuffer->m_Mapped, textVerticesWS.data(), copySize);
-						vertexBuffer->Unmap();
-					}
-				}
-
+				EnqueueWorldSpaceText();
 				DrawTextWS(commandBuffer);
 
 				bool bUsingGameplayCam = g_CameraManager->CurrentCamera()->bIsGameplayCam;
@@ -5665,31 +5858,11 @@ namespace flex
 					}
 				}
 
-				DrawScreenSpaceSprites();
+				EnqueueScreenSpaceSprites();
+				DrawSpriteBatch(m_QueuedSSSprites, commandBuffer);
+				m_QueuedSSSprites.clear();
 
-				DrawScreenSpaceText();
-
-				{
-					std::vector<TextVertex2D> textVerticesSS;
-					UpdateTextBufferSS(textVerticesSS);
-
-						u32 SSTextBufferByteCount = (u32)(textVerticesSS.size() * sizeof(TextVertex2D));
-
-						if (SSTextBufferByteCount > 0)
-						{
-							const VulkanMaterial& fontMaterial = m_Materials[m_FontMatSSID];
-							VulkanBuffer* vertexBuffer = m_VertexIndexBufferPairs[fontMaterial.material.shaderID].vertexBuffer;
-							u32 copySize = std::min(SSTextBufferByteCount, (u32)vertexBuffer->m_Size);
-							if (copySize < SSTextBufferByteCount)
-							{
-								PrintError("SS Font vertex buffer is %u bytes too small\n", SSTextBufferByteCount - copySize);
-							}
-							VK_CHECK_RESULT(vertexBuffer->Map(copySize));
-							memcpy(vertexBuffer->m_Mapped, textVerticesSS.data(), copySize);
-							vertexBuffer->Unmap();
-						}
-				}
-
+				EnqueueScreenSpaceText();
 				DrawTextSS(commandBuffer);
 
 				if (g_EngineInstance->IsRenderingImGui())
@@ -6929,6 +7102,7 @@ namespace flex
 			glm::vec4 fontCharData = material.material.fontCharData;
 			glm::vec4 sdfData(0.5f, -0.01f, -0.008f, 0.035f);
 			i32 texChannel = 0;
+			glm::mat4 postProcessMat = GetPostProcessingMatrix();
 
 			// TODO: Roll into array?
 			if (uniformOverrides)
@@ -7021,6 +7195,7 @@ namespace flex
 				{ U_SDF_DATA, (void*)&sdfData, US_SDF_DATA },
 				{ U_TEX_CHANNEL, (void*)&texChannel, US_TEX_CHANNEL },
 				{ U_SSAO_BLUR_DATA_DYNAMIC, (void*)&m_SSAOBlurDataDynamic, US_SSAO_BLUR_DATA_DYNAMIC },
+				{ U_POST_PROCESS_MAT, (void*)&postProcessMat, US_POST_PROCESS_MAT },
 			};
 
 			u32 index = 0;

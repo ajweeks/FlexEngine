@@ -1,15 +1,13 @@
 #version 450
 
-// binding 0 = UBOConstant
-
-layout (binding = 1) uniform UBODynamic
+layout (binding = 0) uniform UBODynamic
 {
 	mat4 model;
 	vec4 colorMultiplier;
 	bool enableAlbedoSampler;
 } uboDynamic;
 
-layout (binding = 2) uniform sampler2D in_Texture;
+layout (binding = 1) uniform sampler2D in_Texture;
 
 layout (location = 0) in vec2 ex_TexCoord;
 

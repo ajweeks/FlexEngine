@@ -1,11 +1,12 @@
 #version 450
 
-layout (binding = 0) uniform UBOConstant
+layout (push_constant) uniform PushConstants
 {
-	mat4 viewProjection;
-} uboConsant;
+	layout (offset = 0) mat4 view;
+	layout (offset = 64) mat4 proj;
+} pushConstants;
 
-layout (binding = 1) uniform UBODynamic
+layout (binding = 0) uniform UBODynamic
 {
 	mat4 model;
 	vec4 colorMultiplier;
@@ -22,5 +23,5 @@ void main()
 	ex_TexCoord = in_TexCoord;
 	vec4 worldPos = vec4(in_Position, 1) * uboDynamic.model;
 	
-	gl_Position = uboConsant.viewProjection * worldPos;
+	gl_Position = (pushConstants.proj * pushConstants.view) * worldPos;
 }

@@ -6,7 +6,6 @@ in vec2 in_Position2D;
 in vec2 in_TexCoord;
 
 out vec2 ex_TexCoord;
-out vec4 ex_Color;
 
 void main()
 {

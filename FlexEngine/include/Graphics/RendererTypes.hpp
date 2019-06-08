@@ -145,6 +145,7 @@ namespace flex
 	const u64 U_SSAO_SAMPLING_DATA				= (1ull << 58); const u32 US_SSAO_SAMPLING_DATA			= sizeof(SSAOSamplingData);
 	const u64 U_FXAA_DATA						= (1ull << 59); const u32 US_FXAA_DATA					= sizeof(FXAAData);
 	const u64 U_SHADOW_SAMPLER					= (1ull << 60);
+	const u64 U_POST_PROCESS_MAT				= (1ull << 63); const u32 US_POST_PROCESS_MAT			= sizeof(glm::mat4);
 	// NOTE!: New uniforms must be added to Uniforms::CalculateSizeInBytes
 
 	enum class ClearFlag

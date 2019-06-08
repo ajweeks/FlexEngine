@@ -134,60 +134,6 @@ namespace flex
 
 			m_LoadingTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/loading_1.png", 3, false, false, false);
 
-			MaterialCreateInfo spriteMatCreateInfo = {};
-			spriteMatCreateInfo.name = "Sprite material";
-			spriteMatCreateInfo.shaderName = "sprite";
-			spriteMatCreateInfo.persistent = true;
-			spriteMatCreateInfo.visibleInEditor = true;
-			m_SpriteMatID = InitializeMaterial(&spriteMatCreateInfo);
-
-			MaterialCreateInfo postProcessMatCreateInfo = {};
-			postProcessMatCreateInfo.name = "Post process material";
-			postProcessMatCreateInfo.shaderName = "post_process";
-			postProcessMatCreateInfo.persistent = true;
-			postProcessMatCreateInfo.visibleInEditor = false;
-			m_PostProcessMatID = InitializeMaterial(&postProcessMatCreateInfo);
-
-			// 2D Quad
-			{
-				VertexBufferData::CreateInfo quad2DVertexBufferDataCreateInfo = {};
-				quad2DVertexBufferDataCreateInfo.positions_2D = {
-					glm::vec2(-1.0f,  -1.0f),
-					glm::vec2(-1.0f, 3.0f),
-					glm::vec2(3.0f,  -1.0f)
-				};
-
-				quad2DVertexBufferDataCreateInfo.texCoords_UV = {
-					glm::vec2(0.0f, 0.0f),
-					glm::vec2(0.0f, 2.0f),
-					glm::vec2(2.0f, 0.0f)
-				};
-
-				quad2DVertexBufferDataCreateInfo.attributes =
-					(u32)VertexAttribute::POSITION_2D |
-					(u32)VertexAttribute::UV;
-
-				m_Quad2DVertexBufferData = {};
-				m_Quad2DVertexBufferData.Initialize(&quad2DVertexBufferDataCreateInfo);
-
-
-				GameObject* quad2DGameObject = new GameObject("Sprite Quad 2D", GameObjectType::_NONE);
-				m_PersistentObjects.push_back(quad2DGameObject);
-				quad2DGameObject->SetVisible(false);
-
-				RenderObjectCreateInfo quad2DCreateInfo = {};
-				quad2DCreateInfo.vertexBufferData = &m_Quad2DVertexBufferData;
-				quad2DCreateInfo.materialID = m_PostProcessMatID;
-				quad2DCreateInfo.bDepthWriteEnable = false;
-				quad2DCreateInfo.gameObject = quad2DGameObject;
-				quad2DCreateInfo.cullFace = CullFace::NONE;
-				quad2DCreateInfo.visibleInSceneExplorer = false;
-				quad2DCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
-				m_Quad2DRenderID = InitializeRenderObject(&quad2DCreateInfo);
-
-				m_Quad2DVertexBufferData.DescribeShaderVariables(this, m_Quad2DRenderID);
-			}
-
 			GL_POP_DEBUG_GROUP();
 
 			GL_PUSH_DEBUG_GROUP("Loading quad");
@@ -197,55 +143,6 @@ namespace flex
 			SwapBuffers();
 
 			GL_PUSH_DEBUG_GROUP("Post Loading quad startup");
-
-			// 3D Quad
-			{
-				VertexBufferData::CreateInfo quad3DVertexBufferDataCreateInfo = {};
-				quad3DVertexBufferDataCreateInfo.positions_3D = {
-					glm::vec3(-1.0f, -1.0f, 0.0f),
-					glm::vec3(-1.0f, 1.0f, 0.0f),
-					glm::vec3(1.0f, -1.0f, 0.0f),
-
-					glm::vec3(1.0f, -1.0f, 0.0f),
-					glm::vec3(-1.0f, 1.0f, 0.0f),
-					glm::vec3(1.0f, 1.0f, 0.0f),
-				};
-
-				quad3DVertexBufferDataCreateInfo.texCoords_UV = {
-					glm::vec2(0.0f, 0.0f),
-					glm::vec2(0.0f, 1.0f),
-					glm::vec2(1.0f, 0.0f),
-
-					glm::vec2(1.0f, 0.0f),
-					glm::vec2(0.0f, 1.0f),
-					glm::vec2(1.0f, 1.0f),
-				};
-
-				quad3DVertexBufferDataCreateInfo.attributes =
-					(u32)VertexAttribute::POSITION |
-					(u32)VertexAttribute::UV;
-
-				m_Quad3DVertexBufferData = {};
-				m_Quad3DVertexBufferData.Initialize(&quad3DVertexBufferDataCreateInfo);
-
-
-				GameObject* quad3DGameObject = new GameObject("Sprite Quad 3D", GameObjectType::_NONE);
-				m_PersistentObjects.push_back(quad3DGameObject);
-				quad3DGameObject->SetVisible(false);
-
-				RenderObjectCreateInfo quad3DCreateInfo = {};
-				quad3DCreateInfo.vertexBufferData = &m_Quad3DVertexBufferData;
-				quad3DCreateInfo.materialID = m_SpriteMatID;
-				quad3DCreateInfo.bDepthWriteEnable = false;
-				quad3DCreateInfo.gameObject = quad3DGameObject;
-				quad3DCreateInfo.cullFace = CullFace::NONE;
-				quad3DCreateInfo.visibleInSceneExplorer = false;
-				quad3DCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
-				quad3DCreateInfo.bEditorObject = true; // TODO: Create other quad which is identical but is not an editor object for gameplay objects?
-				m_Quad3DRenderID = InitializeRenderObject(&quad3DCreateInfo);
-
-				m_Quad3DVertexBufferData.DescribeShaderVariables(this, m_Quad3DRenderID);
-			}
 
 			Renderer::InitializeMaterials();
 
@@ -456,6 +353,8 @@ namespace flex
 
 		void GLRenderer::PostInitialize()
 		{
+			Renderer::PostInitialize();
+
 			GenerateGBuffer();
 			GenerateSSAOMaterials();
 
@@ -566,11 +465,6 @@ namespace flex
 			}
 			m_EditorObjects.clear();
 
-			DestroyRenderObject(m_Quad3DRenderID);
-			DestroyRenderObject(m_Quad2DRenderID);
-
-			DestroyRenderObject(m_GBufferQuadRenderID);
-
 			u32 activeRenderObjectCount = GetActiveRenderObjectCount();
 			if (activeRenderObjectCount > 0)
 			{
@@ -602,7 +496,6 @@ namespace flex
 			}
 
 			m_gBufferQuadVertexBufferData.Destroy();
-			m_Quad2DVertexBufferData.Destroy();
 			m_Quad3DVertexBufferData.Destroy();
 
 			glfwTerminate();
@@ -2003,8 +1896,25 @@ namespace flex
 			drawCallInfo.depthTestFunc = DepthTestFunc::GEQUAL;
 			DrawForwardObjects(drawCallInfo);
 
-			DrawWorldSpaceSprites();
-			DrawWorldSpaceText();
+			{
+				PROFILE_AUTO("DrawWorldSpaceSprites");
+
+				GL_PUSH_DEBUG_GROUP("World-space Sprites");
+
+				EnqueueWorldSpaceSprites();
+
+				for (SpriteQuadDrawInfo& drawInfo : m_QueuedWSSprites)
+				{
+					drawInfo.FBO = m_Offscreen0FBO;
+					drawInfo.RBO = m_Offscreen0RBO;
+					DrawSpriteQuad(drawInfo);
+				}
+				m_QueuedWSSprites.clear();
+
+				GL_POP_DEBUG_GROUP();
+			}
+
+			EnqueueWorldSpaceText();
 
 			ApplyPostProcessing();
 
@@ -2051,9 +1961,28 @@ namespace flex
 				DrawDepthUnawareEditorObjects(drawCallInfo);
 			}
 
-			DrawScreenSpaceSprites();
+			{
+				PROFILE_AUTO("DrawScreenSpaceSprites");
 
-			DrawScreenSpaceText();
+				GL_PUSH_DEBUG_GROUP("Screen-space Sprites");
+
+				EnqueueScreenSpaceSprites();
+
+				{
+					PROFILE_AUTO("DrawScreenSpaceSprites > Display profiler frame");
+					Profiler::DrawDisplayedFrame();
+				}
+
+				for (const SpriteQuadDrawInfo& drawInfo : m_QueuedSSSprites)
+				{
+					DrawSpriteQuad(drawInfo);
+				}
+				m_QueuedSSSprites.clear();
+
+				GL_POP_DEBUG_GROUP();
+			}
+
+			EnqueueScreenSpaceText();
 
 			{
 				std::vector<TextVertex2D> textVerticesSS;
@@ -2703,10 +2632,10 @@ namespace flex
 			drawInfo.materialID = m_PostProcessMatID;
 			drawInfo.color = color;
 			drawInfo.anchor = AnchorPoint::CENTER;
-			drawInfo.textureHandleID = m_OffscreenTexture0Handle.id;
-			drawInfo.spriteObjectRenderID = m_Quad2DRenderID;
+			drawInfo.textureID = m_OffscreenTexture0Handle.id;
+			drawInfo.spriteObjectRenderID = m_FullScreenTriRenderID;
 
-			DrawSpriteQuad(drawInfo);
+			EnqueueSprite(drawInfo);
 
 			if (bFXAAEnabled)
 			{
@@ -2714,60 +2643,35 @@ namespace flex
 				drawInfo.RBO = 0;
 				scale.y = -1.0f;
 
-				drawInfo.textureHandleID = m_OffscreenTexture1Handle.id;
+				drawInfo.textureID = m_OffscreenTexture1Handle.id;
 				drawInfo.materialID = m_PostFXAAMatID;
-				DrawSpriteQuad(drawInfo);
+				EnqueueSprite(drawInfo);
 			}
 			GL_POP_DEBUG_GROUP();
 
 			{
 				GL_PUSH_DEBUG_GROUP("Blit Depth");
 
+				GLTexture* tex = m_LoadedTextures[m_OffscreenTexture0ID];
+
 				const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 				glBindFramebuffer(GL_READ_FRAMEBUFFER, m_Offscreen0RBO);
 				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 				glBlitFramebuffer(0, 0, m_gBufferFBO0.width, m_gBufferFBO0.height,
-								  0, 0, m_OffscreenTexture0Handle.width, m_OffscreenTexture0Handle.height,
+								  0, 0, tex->width, tex->height,
 								  GL_DEPTH_BUFFER_BIT, GL_NEAREST);
 
 				GL_POP_DEBUG_GROUP();
 			}
 		}
 
-		void GLRenderer::DrawScreenSpaceSprites()
+		void GLRenderer::EnqueueScreenSpaceSprites()
 		{
-			GL_PUSH_DEBUG_GROUP("Screen-space Sprites");
-
-			{
-				PROFILE_AUTO("DrawScreenSpaceSprites > Display profiler frame");
-				Profiler::DrawDisplayedFrame();
-			}
-
-			PROFILE_AUTO("DrawScreenSpaceSprites");
-
-			for (const SpriteQuadDrawInfo& drawInfo : m_QueuedSSSprites)
-			{
-				DrawSpriteQuad(drawInfo);
-			}
-			m_QueuedSSSprites.clear();
-
-			GL_POP_DEBUG_GROUP();
 		}
 
-		void GLRenderer::DrawWorldSpaceSprites()
+		// TODO: Move to renderer somehow (work out generic FBO representation)
+		void GLRenderer::EnqueueWorldSpaceSprites()
 		{
-			PROFILE_AUTO("DrawWorldSpaceSprites");
-
-			GL_PUSH_DEBUG_GROUP("World-space Sprites");
-
-			for (SpriteQuadDrawInfo& drawInfo : m_QueuedWSSprites)
-			{
-				drawInfo.FBO = m_Offscreen0FBO;
-				drawInfo.RBO = m_Offscreen0RBO;
-				DrawSpriteQuad(drawInfo);
-			}
-			m_QueuedWSSprites.clear();
-
 			BaseCamera* cam = g_CameraManager->CurrentCamera();
 			if (!cam->bIsGameplayCam)
 			{
@@ -2792,10 +2696,10 @@ namespace flex
 						// TODO: Sort back to front? Or clear depth and then enable depth test
 						drawInfo.pos = m_PointLights[i].pos;
 						drawInfo.color = glm::vec4(m_PointLights[i].color * 1.5f, 1.0f);
-						drawInfo.textureHandleID = m_LoadedTextures[m_PointLightIconID]->handle;
+						drawInfo.textureID = m_PointLightIconID;
 						glm::mat4 rotMat = glm::lookAt(camPos, glm::vec3(m_PointLights[i].pos), camUp);
 						drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
-						DrawSpriteQuad(drawInfo);
+						EnqueueSprite(drawInfo);
 					}
 				}
 
@@ -2803,10 +2707,10 @@ namespace flex
 				{
 					drawInfo.color = glm::vec4(m_DirectionalLight->data.color * 1.5f, 1.0f);
 					drawInfo.pos = m_DirectionalLight->pos;
-					drawInfo.textureHandleID = m_LoadedTextures[m_DirectionalLightIconID]->handle;
+					drawInfo.textureID = m_DirectionalLightIconID;
 					glm::mat4 rotMat = glm::lookAt(camPos, (glm::vec3)m_DirectionalLight->pos, camUp);
 					drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
-					DrawSpriteQuad(drawInfo);
+					EnqueueSprite(drawInfo);
 
 					glm::vec3 dirLightForward = m_DirectionalLight->data.dir;
 					m_PhysicsDebugDrawer->drawLine(
@@ -2815,8 +2719,6 @@ namespace flex
 						btVector3(0.0f, 0.0f, 1.0f));
 				}
 			}
-
-			GL_POP_DEBUG_GROUP();
 		}
 
 		void GLRenderer::DrawSpriteQuad(const SpriteQuadDrawInfo& drawInfo)
@@ -2824,14 +2726,7 @@ namespace flex
 			RenderID spriteRenderID = drawInfo.spriteObjectRenderID;
 			if (spriteRenderID == InvalidRenderID)
 			{
-				if (drawInfo.bScreenSpace)
-				{
-					spriteRenderID = m_Quad2DRenderID;
-				}
-				else
-				{
-					spriteRenderID = m_Quad3DRenderID;
-				}
+				spriteRenderID = m_Quad3DRenderID;
 			}
 			GLRenderObject* spriteRenderObject = GetRenderObject(spriteRenderID);
 			if (!spriteRenderObject ||
@@ -3924,7 +3819,7 @@ namespace flex
 			drawInfo.textureHandleID = loadingTexture->handle;
 			drawInfo.spriteObjectRenderID = m_Quad2DRenderID;
 
-			DrawSpriteQuad(drawInfo);
+			EnqueueSprite(drawInfo);
 		}
 
 		bool GLRenderer::GetLoadedTexture(const std::string& filePath, GLTexture** texture)
@@ -5274,59 +5169,6 @@ namespace flex
 			glBindVertexArray(renderObject->VAO);
 			glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
 			glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)vertexBufferData->VertexBufferSize, vertexBufferData->vertexData, GL_DYNAMIC_DRAW);
-		}
-
-		void GLRenderer::DrawUntexturedQuad(const glm::vec2& pos,
-			AnchorPoint anchor,
-			const glm::vec2& size,
-			const glm::vec4& color)
-		{
-			SpriteQuadDrawInfo drawInfo = {};
-
-			drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
-			drawInfo.materialID = m_SpriteMatID;
-			drawInfo.scale = glm::vec3(size.x, size.y, 1.0f);
-			drawInfo.bScreenSpace = true;
-			drawInfo.bReadDepth = false;
-			drawInfo.bWriteDepth = false;
-			drawInfo.anchor = anchor;
-			drawInfo.color = color;
-			drawInfo.pos = glm::vec3(pos.x, pos.y, 1.0f);
-			drawInfo.bEnableAlbedoSampler = false;
-
-			DrawSprite(drawInfo);
-		}
-
-		void GLRenderer::DrawUntexturedQuadRaw(const glm::vec2& pos,
-			const glm::vec2& size,
-			const glm::vec4& color)
-		{
-			SpriteQuadDrawInfo drawInfo = {};
-
-			drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
-			drawInfo.materialID = m_SpriteMatID;
-			drawInfo.scale = glm::vec3(size.x, size.y, 1.0f);
-			drawInfo.bScreenSpace = true;
-			drawInfo.bReadDepth = false;
-			drawInfo.bWriteDepth = false;
-			drawInfo.bRaw = true;
-			drawInfo.color = color;
-			drawInfo.pos = glm::vec3(pos.x, pos.y, 1.0f);
-			drawInfo.bEnableAlbedoSampler = false;
-
-			DrawSprite(drawInfo);
-		}
-
-		void GLRenderer::DrawSprite(const SpriteQuadDrawInfo& drawInfo)
-		{
-			if (drawInfo.bScreenSpace)
-			{
-				m_QueuedSSSprites.push_back(drawInfo);
-			}
-			else
-			{
-				m_QueuedWSSprites.push_back(drawInfo);
-			}
 		}
 
 		GLRenderObject* GLRenderer::GetRenderObject(RenderID renderID)

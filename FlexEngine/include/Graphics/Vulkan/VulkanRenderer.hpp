@@ -48,10 +48,6 @@ namespace flex
 
 			virtual void UpdateVertexData(RenderID renderID, VertexBufferData* vertexBufferData) override;
 
-			virtual void DrawUntexturedQuad(const glm::vec2& pos, AnchorPoint anchor, const glm::vec2& size, const glm::vec4& color) override;
-			virtual void DrawUntexturedQuadRaw(const glm::vec2& pos, const glm::vec2& size, const glm::vec4& color) override;
-			virtual void DrawSprite(const SpriteQuadDrawInfo& drawInfo) override;
-
 			virtual void ReloadShaders() override;
 			virtual void LoadFonts(bool bForceRender) override;
 
@@ -279,11 +275,11 @@ namespace flex
 
 			u32 GetAlignedUBOSize(u32 unalignedSize);
 
-			void DrawSpriteQuad(const SpriteQuadDrawInfo& drawInfo);
-			void DrawScreenSpaceSprites();
-			void DrawWorldSpaceSprites();
 			void DrawTextSS(VkCommandBuffer commandBuffer);
 			void DrawTextWS(VkCommandBuffer commandBuffer);
+			void EnqueueScreenSpaceSprites();
+			void EnqueueWorldSpaceSprites();
+			void DrawSpriteBatch(const std::vector<SpriteQuadDrawInfo>& batch, VkCommandBuffer commandBuffer);
 
 			VkRenderPass ResolveRenderPassType(RenderPassType renderPassType, const char* shaderName);
 

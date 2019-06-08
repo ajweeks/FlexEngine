@@ -166,8 +166,8 @@ namespace flex
 			drawInfo.bWriteDepth = false;
 			drawInfo.bReadDepth = false;
 			drawInfo.scale = glm::vec3(0.02f);
-			drawInfo.textureHandleID = g_Renderer->GetTextureHandle(m_CrosshairTextureID);
-			g_Renderer->DrawSprite(drawInfo);
+			drawInfo.textureID = m_CrosshairTextureID;
+			g_Renderer->EnqueueSprite(drawInfo);
 		}
 
 		if (m_bTabletUp)

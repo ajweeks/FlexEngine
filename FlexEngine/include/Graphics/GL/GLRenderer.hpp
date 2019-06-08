@@ -38,10 +38,6 @@ namespace flex
 
 			virtual void UpdateVertexData(RenderID renderID, VertexBufferData* vertexBufferData) override;
 
-			virtual void DrawUntexturedQuad(const glm::vec2& pos, AnchorPoint anchor, const glm::vec2& size, const glm::vec4& color) override;
-			virtual void DrawUntexturedQuadRaw(const glm::vec2& pos, const glm::vec2& size, const glm::vec4& color) override;
-			virtual void DrawSprite(const SpriteQuadDrawInfo& drawInfo) override;
-
 			virtual void ReloadShaders() override;
 			virtual void LoadFonts(bool bForceRender) override;
 
@@ -158,8 +154,8 @@ namespace flex
 			void SwapBuffers();
 
 			void DrawSpriteQuad(const SpriteQuadDrawInfo& drawInfo);
-			void DrawScreenSpaceSprites();
-			void DrawWorldSpaceSprites();
+			void EnqueueScreenSpaceSprites();
+			void EnqueueWorldSpaceSprites();
 			void DrawTextSS();
 			void DrawTextWS();
 
@@ -235,10 +231,6 @@ namespace flex
 			std::vector<GLShader> m_Shaders;
 			std::vector<GLTexture*> m_LoadedTextures;
 
-			// Filled every frame
-			std::vector<SpriteQuadDrawInfo> m_QueuedWSSprites;
-			std::vector<SpriteQuadDrawInfo> m_QueuedSSSprites;
-
 			// TODO: Clean up (make more dynamic)
 			u32 viewProjectionUBO = 0;
 			u32 viewProjectionCombinedUBO = 0;
@@ -286,12 +278,6 @@ namespace flex
 
 			TextureID m_PointLightIconID = InvalidTextureID;
 			TextureID m_DirectionalLightIconID = InvalidTextureID;
-
-			// TODO: Use a mesh prefab here
-			VertexBufferData m_Quad3DVertexBufferData;
-			RenderID m_Quad3DRenderID;
-			VertexBufferData m_Quad2DVertexBufferData;
-			RenderID m_Quad2DRenderID;
 
 			u32 m_TextQuadSS_VAO = 0;
 			u32 m_TextQuadSS_VBO = 0;

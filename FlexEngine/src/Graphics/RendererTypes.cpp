@@ -62,6 +62,7 @@ namespace flex
 			_u(SSAO_BLUR_DATA_CONSTANT)
 			_u(SSAO_SAMPLING_DATA)
 			_u(FXAA_DATA)
+			_u(POST_PROCESS_MAT)
 #undef _u
 		}
 

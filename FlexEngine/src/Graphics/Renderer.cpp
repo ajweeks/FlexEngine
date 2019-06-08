@@ -339,6 +339,57 @@ namespace flex
 		posOut.x *= aspectRatio;
 	}
 
+	void Renderer::EnqueueUntexturedQuad(const glm::vec2& pos,
+		AnchorPoint anchor,
+		const glm::vec2& size,
+		const glm::vec4& color)
+	{
+		SpriteQuadDrawInfo drawInfo = {};
+
+		drawInfo.materialID = m_SpriteMatID;
+		drawInfo.scale = glm::vec3(size.x, size.y, 1.0f);
+		drawInfo.bScreenSpace = true;
+		drawInfo.bReadDepth = false;
+		drawInfo.bWriteDepth = false;
+		drawInfo.anchor = anchor;
+		drawInfo.color = color;
+		drawInfo.pos = glm::vec3(pos.x, pos.y, 1.0f);
+		drawInfo.bEnableAlbedoSampler = false;
+
+		EnqueueSprite(drawInfo);
+	}
+
+	void Renderer::EnqueueUntexturedQuadRaw(const glm::vec2& pos,
+		const glm::vec2& size,
+		const glm::vec4& color)
+	{
+		SpriteQuadDrawInfo drawInfo = {};
+
+		drawInfo.materialID = m_SpriteMatID;
+		drawInfo.scale = glm::vec3(size.x, size.y, 1.0f);
+		drawInfo.bScreenSpace = true;
+		drawInfo.bReadDepth = false;
+		drawInfo.bWriteDepth = false;
+		drawInfo.bRaw = true;
+		drawInfo.color = color;
+		drawInfo.pos = glm::vec3(pos.x, pos.y, 1.0f);
+		drawInfo.bEnableAlbedoSampler = false;
+
+		EnqueueSprite(drawInfo);
+	}
+
+	void Renderer::EnqueueSprite(const SpriteQuadDrawInfo& drawInfo)
+	{
+		if (drawInfo.bScreenSpace)
+		{
+			m_QueuedSSSprites.push_back(drawInfo);
+		}
+		else
+		{
+			m_QueuedWSSprites.push_back(drawInfo);
+		}
+	}
+
 	void Renderer::SetPostProcessingEnabled(bool bEnabled)
 	{
 		m_bPostProcessingEnabled = bEnabled;
@@ -2006,7 +2057,7 @@ namespace flex
 		}
 	}
 
-	void Renderer::DrawScreenSpaceText()
+	void Renderer::EnqueueScreenSpaceText()
 	{
 		SetFont(SID("editor-02"));
 		static const glm::vec4 color(0.95f);
@@ -2082,7 +2133,7 @@ namespace flex
 		}
 	}
 
-	void Renderer::DrawWorldSpaceText()
+	void Renderer::EnqueueWorldSpaceText()
 	{
 		SetFont(SID("editor-02-ws"));
 		real s = g_SecElapsedSinceProgramStart * 3.5f;
