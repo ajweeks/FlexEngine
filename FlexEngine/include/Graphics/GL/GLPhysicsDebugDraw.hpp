@@ -21,8 +21,7 @@ namespace flex
 			virtual ~GLPhysicsDebugDraw();
 
 			virtual void Initialize() override;
-
-			void Destroy();
+			virtual void Destroy() override;
 
 			virtual void reportErrorWarning(const char* warningString)  override;
 			virtual void draw3dText(const btVector3& location, const char* textString)  override;

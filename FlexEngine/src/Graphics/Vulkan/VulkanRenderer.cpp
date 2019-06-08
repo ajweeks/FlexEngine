@@ -485,10 +485,12 @@ namespace flex
 
 			m_SkyBoxMesh = nullptr;
 
-			DestroyRenderObject(m_GBufferQuadRenderID);
-
-			delete m_PhysicsDebugDrawer;
-			m_PhysicsDebugDrawer = nullptr;
+			if (m_PhysicsDebugDrawer)
+			{
+				m_PhysicsDebugDrawer->Destroy();
+				delete m_PhysicsDebugDrawer;
+				m_PhysicsDebugDrawer = nullptr;
+			}
 
 			for (GameObject* obj : m_PersistentObjects)
 			{

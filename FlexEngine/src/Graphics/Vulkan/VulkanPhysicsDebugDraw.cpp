@@ -43,6 +43,10 @@ namespace flex
 			m_VertexBufferCreateInfo.attributes = (u32)VertexAttribute::POSITION | (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
 		}
 
+		void VulkanPhysicsDebugDraw::Destroy()
+		{
+		}
+
 		void VulkanPhysicsDebugDraw::reportErrorWarning(const char* warningString)
 		{
 			PrintError("VulkanPhysicsDebugDraw: %s\n", warningString);
