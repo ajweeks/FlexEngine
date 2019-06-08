@@ -2610,6 +2610,7 @@ namespace flex
 
 	void DirectionalLight::OnTransformChanged()
 	{
+		pos = m_Transform.GetLocalPosition();
 		data.dir = glm::eulerAngles(m_Transform.GetLocalRotation());
 	}
 
@@ -2645,6 +2646,7 @@ namespace flex
 			if (!posStr.empty())
 			{
 				m_Transform.SetLocalPosition(ParseVec3(posStr));
+				pos = m_Transform.GetWorldPosition();
 			}
 
 			directionalLightObj.SetVec3Checked("color", data.color);
