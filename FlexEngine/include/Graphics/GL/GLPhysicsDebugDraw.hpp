@@ -20,10 +20,9 @@ namespace flex
 			GLPhysicsDebugDraw();
 			virtual ~GLPhysicsDebugDraw();
 
-			void Initialize();
-			void Destroy();
+			virtual void Initialize() override;
 
-			void UpdateDebugMode();
+			void Destroy();
 
 			virtual void reportErrorWarning(const char* warningString)  override;
 			virtual void draw3dText(const btVector3& location, const char* textString)  override;
@@ -40,24 +39,8 @@ namespace flex
 
 			void DrawContactPointWithAlpha(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector4& color);
 
-			virtual void flushLines() override;
-			void ClearLines();
-
 		private:
-			void Draw();
-
-			struct LineSegment
-			{
-				btVector3 start;
-				btVector3 end;
-				btVector4 color;
-			};
-
-			// Gets filled each frame by calls to drawLine, then emptied after debugDrawWorld()
-			std::vector<LineSegment> m_LineSegments;
-			std::vector<LineSegment> m_pLineSegments;
-
-			int m_DebugMode = 0;
+			virtual void Draw() override;
 
 			GLRenderer* m_Renderer = nullptr;
 

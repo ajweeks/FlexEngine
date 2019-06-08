@@ -43,30 +43,6 @@ namespace flex
 			m_VertexBufferCreateInfo.attributes = (u32)VertexAttribute::POSITION | (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
 		}
 
-		void VulkanPhysicsDebugDraw::UpdateDebugMode()
-		{
-			const PhysicsDebuggingSettings& settings = g_Renderer->GetPhysicsDebuggingSettings();
-
-			m_DebugMode =
-				(settings.DisableAll ? DBG_NoDebug : 0) |
-				(settings.DrawWireframe ? DBG_DrawWireframe : 0) |
-				(settings.DrawAabb ? DBG_DrawAabb : 0) |
-				(settings.DrawFeaturesText ? DBG_DrawFeaturesText : 0) |
-				(settings.DrawContactPoints ? DBG_DrawContactPoints : 0) |
-				(settings.NoDeactivation ? DBG_NoDeactivation : 0) |
-				(settings.NoHelpText ? DBG_NoHelpText : 0) |
-				(settings.DrawText ? DBG_DrawText : 0) |
-				(settings.ProfileTimings ? DBG_ProfileTimings : 0) |
-				(settings.EnableSatComparison ? DBG_EnableSatComparison : 0) |
-				(settings.DisableBulletLCP ? DBG_DisableBulletLCP : 0) |
-				(settings.EnableCCD ? DBG_EnableCCD : 0) |
-				(settings.DrawConstraints ? DBG_DrawConstraints : 0) |
-				(settings.DrawConstraintLimits ? DBG_DrawConstraintLimits : 0) |
-				(settings.FastWireframe ? DBG_FastWireframe : 0) |
-				(settings.DrawNormals ? DBG_DrawNormals : 0) |
-				(settings.DrawFrames ? DBG_DrawFrames : 0);
-		}
-
 		void VulkanPhysicsDebugDraw::reportErrorWarning(const char* warningString)
 		{
 			PrintError("VulkanPhysicsDebugDraw: %s\n", warningString);
@@ -110,16 +86,6 @@ namespace flex
 			UNREFERENCED_PARAMETER(from);
 			UNREFERENCED_PARAMETER(to);
 			UNREFERENCED_PARAMETER(color);
-		}
-
-		void VulkanPhysicsDebugDraw::flushLines()
-		{
-			Draw();
-		}
-
-		void VulkanPhysicsDebugDraw::ClearLines()
-		{
-			m_LineSegments.clear();
 		}
 
 		void VulkanPhysicsDebugDraw::Draw()

@@ -2748,4 +2748,39 @@ namespace flex
 		outProj = glm::ortho(-zoom, zoom, -zoom, zoom, m_DirectionalLight->shadowMapNearPlane, m_DirectionalLight->shadowMapFarPlane);
 	}
 
+	void PhysicsDebugDrawBase::UpdateDebugMode()
+	{
+		const PhysicsDebuggingSettings& settings = g_Renderer->GetPhysicsDebuggingSettings();
+
+		m_DebugMode =
+			(settings.DisableAll ? DBG_NoDebug : 0) |
+			(settings.DrawWireframe ? DBG_DrawWireframe : 0) |
+			(settings.DrawAabb ? DBG_DrawAabb : 0) |
+			(settings.DrawFeaturesText ? DBG_DrawFeaturesText : 0) |
+			(settings.DrawContactPoints ? DBG_DrawContactPoints : 0) |
+			(settings.NoDeactivation ? DBG_NoDeactivation : 0) |
+			(settings.NoHelpText ? DBG_NoHelpText : 0) |
+			(settings.DrawText ? DBG_DrawText : 0) |
+			(settings.ProfileTimings ? DBG_ProfileTimings : 0) |
+			(settings.EnableSatComparison ? DBG_EnableSatComparison : 0) |
+			(settings.DisableBulletLCP ? DBG_DisableBulletLCP : 0) |
+			(settings.EnableCCD ? DBG_EnableCCD : 0) |
+			(settings.DrawConstraints ? DBG_DrawConstraints : 0) |
+			(settings.DrawConstraintLimits ? DBG_DrawConstraintLimits : 0) |
+			(settings.FastWireframe ? DBG_FastWireframe : 0) |
+			(settings.DrawNormals ? DBG_DrawNormals : 0) |
+			(settings.DrawFrames ? DBG_DrawFrames : 0);
+	}
+
+	void PhysicsDebugDrawBase::ClearLines()
+	{
+		m_pLineSegments = m_LineSegments;
+		m_LineSegments.clear();
+	}
+
+	void PhysicsDebugDrawBase::flushLines()
+	{
+		Draw();
+	}
+
 } // namespace flex

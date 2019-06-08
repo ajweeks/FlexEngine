@@ -2010,7 +2010,14 @@ namespace flex
 
 			if (!m_PhysicsDebuggingSettings.DisableAll)
 			{
-				PhysicsDebugRender();
+				PROFILE_AUTO("PhysicsDebugRender");
+
+				GL_PUSH_DEBUG_GROUP("Physics Debug");
+
+				btDiscreteDynamicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
+				physicsWorld->debugDrawWorld();
+
+				GL_POP_DEBUG_GROUP();
 			}
 
 
@@ -4672,18 +4679,6 @@ namespace flex
 		PhysicsDebugDrawBase* GLRenderer::GetDebugDrawer()
 		{
 			return m_PhysicsDebugDrawer;
-		}
-
-		void GLRenderer::PhysicsDebugRender()
-		{
-			PROFILE_AUTO("PhysicsDebugRender");
-
-			GL_PUSH_DEBUG_GROUP("Physics Debug");
-
-			btDiscreteDynamicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
-			physicsWorld->debugDrawWorld();
-
-			GL_POP_DEBUG_GROUP();
 		}
 
 		void GLRenderer::DrawAssetBrowserImGui(bool* bShowing)

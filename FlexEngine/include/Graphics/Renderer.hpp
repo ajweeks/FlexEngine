@@ -28,7 +28,31 @@ namespace flex
 	class PhysicsDebugDrawBase : public btIDebugDraw
 	{
 	public:
+		virtual void Initialize() = 0;
 		virtual void DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& color) = 0;
+
+		void UpdateDebugMode();
+		void ClearLines();
+
+		virtual void flushLines() override;
+
+	protected:
+		virtual void Draw() = 0;
+
+		struct LineSegment
+		{
+			btVector3 start;
+			btVector3 end;
+			// TODO: Support opacity
+			btVector3 color;
+		};
+
+		// Gets filled each frame by calls to drawLine, then emptied after debugDrawWorld()
+		std::vector<LineSegment> m_LineSegments;
+		std::vector<LineSegment> m_pLineSegments;
+
+		i32 m_DebugMode = 0;
+
 	};
 
 	class Renderer
@@ -369,6 +393,10 @@ namespace flex
 		bool m_bSSAOStateChanged = false;
 
 		FXAAData m_FXAAData;
+
+		i32 m_DebugMode = 0;
+
+		PhysicsDebugDrawBase* m_PhysicsDebugDrawer = nullptr;
 
 	private:
 		Renderer& operator=(const Renderer&) = delete;

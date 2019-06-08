@@ -20,9 +20,7 @@ namespace flex
 			VulkanPhysicsDebugDraw();
 			virtual ~VulkanPhysicsDebugDraw();
 
-			void Initialize();
-
-			void UpdateDebugMode();
+			virtual void Initialize() override;
 
 			virtual void reportErrorWarning(const char* warningString)  override;
 			virtual void draw3dText(const btVector3& location, const char* textString)  override;
@@ -34,23 +32,8 @@ namespace flex
 
 			virtual void DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& color) override;
 
-			virtual void flushLines() override;
-			void ClearLines();
-
 		private:
-			void Draw();
-
-			struct LineSegment
-			{
-				btVector3 start;
-				btVector3 end;
-				btVector3 color;
-			};
-
-			// Gets filled each frame by calls to drawLine, then emptied after debugDrawWorld()
-			std::vector<LineSegment> m_LineSegments;
-
-			int m_DebugMode = 0;
+			virtual void Draw() override;
 
 			VulkanRenderer* m_Renderer = nullptr;
 

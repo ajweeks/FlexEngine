@@ -133,8 +133,6 @@ namespace flex
 
 			void DestroyRenderObject(RenderID renderID, GLRenderObject* renderObject);
 
-			void PhysicsDebugRender();
-
 			void GenerateReflectionProbeMaps(RenderID cubemapRenderID, MaterialID materialID);
 			void GenerateIrradianceSamplerMaps(MaterialID materialID);
 
@@ -320,8 +318,6 @@ namespace flex
 
 			GLRenderObjectBatch m_DepthAwareEditorRenderObjectBatch;
 			GLRenderObjectBatch m_DepthUnawareEditorRenderObjectBatch;
-
-			GLPhysicsDebugDraw* m_PhysicsDebugDrawer = nullptr;
 
 			AsynchronousTextureSave* screenshotAsyncTextureSave = nullptr;
 
