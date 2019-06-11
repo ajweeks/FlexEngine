@@ -69,31 +69,16 @@ namespace flex
 			glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 			m_SSAORes = glm::vec2u((u32)frameBufferSize.x / 2, (u32)frameBufferSize.y / 2);
 
-			m_OffscreenTexture0Handle = {};
-			m_OffscreenTexture0Handle.internalFormat = GL_RGBA16F;
-			m_OffscreenTexture0Handle.format = GL_RGBA;
-			m_OffscreenTexture0Handle.type = GL_FLOAT;
-
-			m_OffscreenTexture1Handle = {};
-			m_OffscreenTexture1Handle.internalFormat = GL_RGBA16F;
-			m_OffscreenTexture1Handle.format = GL_RGBA;
-			m_OffscreenTexture1Handle.type = GL_FLOAT;
-
+			m_OffscreenTexture0ID = InitializeBlankTexture(GL_RGBA16F, GL_RGBA, GL_FLOAT, "Offscreen Texture 0", frameBufferSize);
+			m_OffscreenTexture1ID = InitializeBlankTexture(GL_RGBA16F, GL_RGBA, GL_FLOAT, "Offscreen Texture 1", frameBufferSize);
 
 			m_ShadowMapTexture = {};
 			m_ShadowMapTexture.internalFormat = GL_DEPTH_COMPONENT;
 			m_ShadowMapTexture.format = GL_DEPTH_COMPONENT;
 			m_ShadowMapTexture.type = GL_FLOAT;
 
-			m_gBufferFBO0 = {};
-			m_gBufferFBO0.internalFormat = GL_RGBA16F;
-			m_gBufferFBO0.format = GL_RGBA;
-			m_gBufferFBO0.type = GL_FLOAT;
-
-			m_gBufferFBO1 = {};
-			m_gBufferFBO1.internalFormat = GL_RGBA16F;
-			m_gBufferFBO1.format = GL_RGBA;
-			m_gBufferFBO1.type = GL_FLOAT;
+			m_gBufferFBO0ID = InitializeBlankTexture(GL_RGBA16F, GL_RGBA, GL_FLOAT, "GBuffer FBO 0", frameBufferSize);
+			m_gBufferFBO1ID = InitializeBlankTexture(GL_RGBA16F, GL_RGBA, GL_FLOAT, "GBuffer FBO 1", frameBufferSize);
 
 			m_gBufferDepthTexHandle = {};
 			m_gBufferDepthTexHandle.internalFormat = GL_DEPTH_COMPONENT;
@@ -158,8 +143,8 @@ namespace flex
 
 			// Offscreen framebuffers
 			{
-				CreateOffscreenFrameBuffer(&m_Offscreen0FBO, &m_Offscreen0RBO, frameBufferSize, m_OffscreenTexture0Handle);
-				CreateOffscreenFrameBuffer(&m_Offscreen1FBO, &m_Offscreen1RBO, frameBufferSize, m_OffscreenTexture1Handle);
+				CreateOffscreenFrameBuffer(&m_Offscreen0FBO, &m_Offscreen0RBO, m_OffscreenTexture0ID);
+				CreateOffscreenFrameBuffer(&m_Offscreen1FBO, &m_Offscreen1RBO, m_OffscreenTexture1ID);
 			}
 
 			const real captureProjectionNearPlane = g_CameraManager->CurrentCamera()->GetZNear();
@@ -294,8 +279,8 @@ namespace flex
 			glGenFramebuffers(1, &m_gBufferHandle);
 			glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
 
-			GenerateFrameBufferTexture(m_gBufferFBO0, 0, frameBufferSize);
-			GenerateFrameBufferTexture(m_gBufferFBO1, 1, frameBufferSize);
+			GenerateFrameBufferTextureFromID(m_gBufferFBO0ID, 0);
+			GenerateFrameBufferTextureFromID(m_gBufferFBO1ID, 1);
 			GenerateDepthBufferTexture(m_gBufferDepthTexHandle, frameBufferSize);
 
 			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
@@ -1383,8 +1368,16 @@ namespace flex
 
 			if (g_bEnableLogging_Loading)
 			{
-			Profiler::PrintBlockDuration(profileBlockName);
+				Profiler::PrintBlockDuration(profileBlockName);
+			}
 		}
+
+		TextureID GLRenderer::InitializeBlankTexture(GLenum internalFormat, GLenum format, GLenum type, const std::string& name, const glm::vec2& size)
+		{
+			GLTexture* newTexture = new GLTexture(name, (u32)size.x, (u32)size.y, 4, internalFormat, format, type);
+			m_LoadedTextures.push_back(newTexture);
+			TextureID result = m_LoadedTextures.size() - 1;
+			return result;
 		}
 
 		void GLRenderer::CacheMaterialUniformLocations(MaterialID matID)
@@ -1397,7 +1390,7 @@ namespace flex
 				{ U_MODEL,							"model", 						&mat.uniformIDs.model },
 				{ U_MODEL_INV_TRANSPOSE, 			"modelInvTranspose", 			&mat.uniformIDs.modelInvTranspose },
 				{ U_COLOR_MULTIPLIER, 				"colorMultiplier", 				&mat.uniformIDs.colorMultiplier },
-				{ U_LIGHT_VIEW_PROJ, 				"lightViewProj",				&mat.uniformIDs.lightViewProjection },
+				{ U_LIGHT_VIEW_PROJS, 				"lightViewProj",				&mat.uniformIDs.lightViewProjection },
 				{ U_EXPOSURE,						"exposure",						&mat.uniformIDs.exposure },
 				{ U_VIEW, 							"view", 						&mat.uniformIDs.view },
 				{ U_VIEW_INV,						"invView", 						&mat.uniformIDs.viewInv },
@@ -1750,6 +1743,12 @@ namespace flex
 			handle.height = (u32)size.y;
 		}
 
+		void GLRenderer::GenerateFrameBufferTextureFromID(TextureID textureID, i32 index)
+		{
+			GLTexture* tex = m_LoadedTextures[textureID];
+			GenerateFrameBufferTexture(&tex->handle, index, tex->internalFormat, tex->format, tex->type, glm::vec2(tex->width, tex->height));
+		}
+
 		void GLRenderer::GenerateDepthBufferTexture(u32* handle, GLint internalFormat, GLenum format, GLenum type, const glm::vec2i& size)
 		{
 			glGenTextures(1, handle);
@@ -1778,6 +1777,14 @@ namespace flex
 			ResizeFrameBufferTexture(handle.id, handle.internalFormat, handle.format, handle.type, size);
 			handle.width = (u32)size.x;
 			handle.height = (u32)size.y;
+		}
+
+		void GLRenderer::ResizeFrameBufferTextureFromID(TextureID textureID, const glm::vec2i& size)
+		{
+			GLTexture* tex = m_LoadedTextures[textureID];
+			ResizeFrameBufferTexture(tex->handle, tex->internalFormat, tex->format, tex->type, size);
+			tex->width = (u32)size.x;
+			tex->height = (u32)size.y;
 		}
 
 		void GLRenderer::ResizeRenderBuffer(u32 handle, const glm::vec2i& size, GLenum internalFormat)
@@ -2259,7 +2266,8 @@ namespace flex
 				}
 				else
 				{
-					glViewport(0, 0, (GLsizei)m_gBufferFBO0.width, (GLsizei)m_gBufferFBO0.height);
+					GLTexture* gBufTex = m_LoadedTextures[m_gBufferFBO0ID];
+					glViewport(0, 0, (GLsizei)gBufTex->width, (GLsizei)gBufTex->height);
 
 					glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
 				}
@@ -2295,11 +2303,13 @@ namespace flex
 				}
 				else
 				{
+					GLTexture* gBufTex = m_LoadedTextures[m_gBufferFBO0ID];
+					GLTexture* offscreenTex = m_LoadedTextures[m_OffscreenTexture0ID];
 					glBindFramebuffer(GL_READ_FRAMEBUFFER, m_gBufferHandle);
 					glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_Offscreen0RBO);
-					glBlitFramebuffer(0, 0, m_gBufferFBO0.width, m_gBufferFBO0.height,
-						0, 0, m_OffscreenTexture0Handle.width, m_OffscreenTexture0Handle.height,
-						GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+					glBlitFramebuffer(0, 0, gBufTex->width, gBufTex->height,
+									  0, 0, offscreenTex->width, offscreenTex->height,
+									  GL_DEPTH_BUFFER_BIT, GL_NEAREST);
 				}
 
 				GL_POP_DEBUG_GROUP(); // Deferred Objects
@@ -2426,7 +2436,8 @@ namespace flex
 				GenerateGBuffer();
 			}
 
-			glViewport(0, 0, (GLsizei)m_gBufferFBO0.width, (GLsizei)m_gBufferFBO0.height);
+			GLTexture* gBufTex = m_LoadedTextures[m_gBufferFBO0ID];
+			glViewport(0, 0, (GLsizei)gBufTex->width, (GLsizei)gBufTex->height);
 
 			if (drawCallInfo.bRenderToCubemap)
 			{
@@ -2652,10 +2663,12 @@ namespace flex
 			drawInfo.materialID = m_PostProcessMatID;
 			drawInfo.color = color;
 			drawInfo.anchor = AnchorPoint::CENTER;
-			drawInfo.textureID = m_OffscreenTexture0Handle.id;
+			drawInfo.textureID = m_OffscreenTexture0ID;
 			drawInfo.spriteObjectRenderID = m_FullScreenTriRenderID;
 
-			EnqueueSprite(drawInfo);
+			// TODO: Enqueue here if possible
+			DrawSpriteQuad(drawInfo);
+			//EnqueueSprite(drawInfo);
 
 			if (bFXAAEnabled)
 			{
@@ -2663,22 +2676,26 @@ namespace flex
 				drawInfo.RBO = 0;
 				scale.y = -1.0f;
 
-				drawInfo.textureID = m_OffscreenTexture1Handle.id;
+				drawInfo.textureID = m_OffscreenTexture1ID;
 				drawInfo.materialID = m_PostFXAAMatID;
-				EnqueueSprite(drawInfo);
+
+				// TODO: Enqueue here if possible
+				DrawSpriteQuad(drawInfo);
+				//EnqueueSprite(drawInfo);
 			}
 			GL_POP_DEBUG_GROUP();
 
 			{
 				GL_PUSH_DEBUG_GROUP("Blit Depth");
 
-				GLTexture* tex = m_LoadedTextures[m_OffscreenTexture0ID];
+				GLTexture* offscreenTex = m_LoadedTextures[m_OffscreenTexture0ID];
+				GLTexture* gBufTex = m_LoadedTextures[m_OffscreenTexture0ID];
 
 				const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 				glBindFramebuffer(GL_READ_FRAMEBUFFER, m_Offscreen0RBO);
 				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-				glBlitFramebuffer(0, 0, m_gBufferFBO0.width, m_gBufferFBO0.height,
-								  0, 0, tex->width, tex->height,
+				glBlitFramebuffer(0, 0, gBufTex->width, gBufTex->height,
+								  0, 0, offscreenTex->width, offscreenTex->height,
 								  GL_DEPTH_BUFFER_BIT, GL_NEAREST);
 
 				GL_POP_DEBUG_GROUP();
@@ -2819,17 +2836,17 @@ namespace flex
 				glUniform4fv(spriteMaterial.uniformIDs.colorMultiplier, 1, &drawInfo.color.r);
 			}
 
-			bool bEnableAlbedoSampler = (drawInfo.textureHandleID != 0 && drawInfo.bEnableAlbedoSampler);
+			bool bEnableAlbedoSampler = (drawInfo.textureID != InvalidTextureID && drawInfo.bEnableAlbedoSampler);
 			if (spriteShader.shader->dynamicBufferUniforms.HasUniform(U_ALBEDO_SAMPLER))
 			{
 				// TODO: glUniform1ui vs glUniform1i ?
 				glUniform1ui(spriteMaterial.uniformIDs.enableAlbedoSampler, bEnableAlbedoSampler ? 1 : 0);
 			}
 
-			// http://www.graficaobscura.com/matrix/
-			GLint cBSLocation = glGetUniformLocation(spriteShader.program, "contrastBrightnessSaturation");
-			if (cBSLocation != -1)
+			if (spriteShader.shader->dynamicBufferUniforms.HasUniform(U_POST_PROCESS_MAT))
 			{
+				// http://www.graficaobscura.com/matrix/
+				GLint cBSLocation = glGetUniformLocation(spriteShader.program, "contrastBrightnessSaturation");
 				glm::mat4 contrastBrightnessSaturation = GetPostProcessingMatrix();
 				glUniformMatrix4fv(cBSLocation, 1, GL_FALSE, &contrastBrightnessSaturation[0][0]);
 			}
@@ -2846,7 +2863,7 @@ namespace flex
 			if (bEnableAlbedoSampler)
 			{
 				glActiveTexture(GL_TEXTURE0);
-				glBindTexture(GL_TEXTURE_2D, drawInfo.textureHandleID);
+				glBindTexture(GL_TEXTURE_2D, m_LoadedTextures[drawInfo.textureID]->handle);
 			}
 
 			// TODO: Use member
@@ -3675,17 +3692,19 @@ namespace flex
 			return binding;
 		}
 
-		void GLRenderer::CreateOffscreenFrameBuffer(u32* FBO, u32* RBO, const glm::vec2i& size, TextureHandle& handle)
+		void GLRenderer::CreateOffscreenFrameBuffer(u32* FBO, u32* RBO, TextureID textureID)
 		{
+			GLTexture* tex = m_LoadedTextures[textureID];
+
 			glGenFramebuffers(1, FBO);
 			glBindFramebuffer(GL_FRAMEBUFFER, *FBO);
 
 			glGenRenderbuffers(1, RBO);
 			glBindRenderbuffer(GL_RENDERBUFFER, *RBO);
-			glRenderbufferStorage(GL_RENDERBUFFER, m_OffscreenDepthBufferInternalFormat, size.x, size.y);
+			glRenderbufferStorage(GL_RENDERBUFFER, m_OffscreenDepthBufferInternalFormat, tex->width, tex->height);
 			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, *RBO);
 
-			GenerateFrameBufferTexture(handle, 0, size);
+			GenerateFrameBufferTextureFromID(textureID, 0);
 
 			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 			{
@@ -3703,8 +3722,8 @@ namespace flex
 		void GLRenderer::FillOutFrameBufferAttachments(std::vector<Pair<std::string, void*>>& outVec)
 		{
 			outVec = {
-				{ "normalRoughnessFrameBufferSampler", &m_gBufferFBO0.id },
-				{ "albedoMetallicFrameBufferSampler", &m_gBufferFBO1.id },
+				{ "normalRoughnessFrameBufferSampler", &m_LoadedTextures[m_gBufferFBO0ID]->handle },
+				{ "albedoMetallicFrameBufferSampler", &m_LoadedTextures[m_gBufferFBO1ID]->handle },
 				{ "ssaoBlurFrameBufferSampler",	m_bSSAOBlurEnabled ? &m_SSAOBlurVFBO.id : &m_SSAOFBO.id },
 			};
 		}
@@ -3836,10 +3855,12 @@ namespace flex
 			drawInfo.bWriteDepth = false;
 			drawInfo.materialID = m_SpriteMatID;
 			drawInfo.anchor = AnchorPoint::WHOLE;
-			drawInfo.textureHandleID = loadingTexture->handle;
-			drawInfo.spriteObjectRenderID = m_Quad2DRenderID;
+			drawInfo.textureID = m_LoadingTextureID;
+			drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
 
-			EnqueueSprite(drawInfo);
+			// TODO: Enqueue here
+			DrawSpriteQuad(drawInfo);
+			//EnqueueSprite(drawInfo);
 		}
 
 		bool GLRenderer::GetLoadedTexture(const std::string& filePath, GLTexture** texture)
@@ -3927,9 +3948,9 @@ namespace flex
 			glm::vec4 camPos = glm::vec4(currentCam->GetPosition(), 0.0f);
 			real exposure = currentCam->exposure;
 
-			glm::mat4 lightView, lightProj;
-			ComputeDirLightViewProj(lightView, lightProj);
-			glm::mat4 lightViewProj = lightProj * lightView;
+			glm::mat4 lView, lProj;
+			ComputeDirLightViewProj(lView, lProj);
+			glm::mat4 lightViewProj = lProj * lView;
 
 			for (auto& materialPair : m_Materials)
 			{
@@ -3947,6 +3968,7 @@ namespace flex
 
 				if (shader->shader->bNeedPushConstantBlock)
 				{
+					// TODO: Handle other uses of push constants
 					glUniformMatrix4fv(material->uniformIDs.view, 1, GL_FALSE, &view[0][0]);
 					glUniformMatrix4fv(material->uniformIDs.projection, 1, GL_FALSE, &proj[0][0]);
 				}
@@ -3976,7 +3998,7 @@ namespace flex
 					glUniformMatrix4fv(material->uniformIDs.viewProjection, 1, GL_FALSE, &viewProj[0][0]);
 				}
 
-				if (shader->shader->constantBufferUniforms.HasUniform(U_LIGHT_VIEW_PROJ))
+				if (shader->shader->constantBufferUniforms.HasUniform(U_LIGHT_VIEW_PROJS))
 				{
 					glUniformMatrix4fv(material->uniformIDs.lightViewProjection, 1, GL_FALSE, &lightViewProj[0][0]);
 				}
@@ -4221,7 +4243,7 @@ namespace flex
 			ssaoMaterialCreateInfo.persistent = true;
 			ssaoMaterialCreateInfo.visibleInEditor = false;
 			ssaoMaterialCreateInfo.sampledFrameBuffers = {
-				{ "normalRoughnessFrameBufferSampler", &m_gBufferFBO0.id },
+				{ "normalRoughnessFrameBufferSampler", &m_LoadedTextures[m_gBufferFBO0ID]->handle },
 			};
 			m_SSAOMatID = InitializeMaterial(&ssaoMaterialCreateInfo, m_SSAOMatID);
 
@@ -4231,8 +4253,8 @@ namespace flex
 			ssaoBlurHMaterialCreateInfo.persistent = true;
 			ssaoBlurHMaterialCreateInfo.visibleInEditor = false;
 			ssaoBlurHMaterialCreateInfo.sampledFrameBuffers = {
-				{ "ssaoFrameBufferSampler",  &m_SSAOFBO.id },
-				{ "normalRoughnessFrameBufferSampler",  &m_gBufferFBO0.id },
+				{ "ssaoFrameBufferSampler", &m_SSAOFBO.id },
+				{ "normalRoughnessFrameBufferSampler", &m_LoadedTextures[m_gBufferFBO0ID]->handle },
 			};
 			m_SSAOBlurHMatID = InitializeMaterial(&ssaoBlurHMaterialCreateInfo, m_SSAOBlurHMatID);
 
@@ -4242,8 +4264,8 @@ namespace flex
 			ssaoBlurVMaterialCreateInfo.persistent = true;
 			ssaoBlurVMaterialCreateInfo.visibleInEditor = false;
 			ssaoBlurVMaterialCreateInfo.sampledFrameBuffers = {
-				{ "ssaoFrameBufferSampler",  &m_SSAOBlurHFBO.id },
-				{ "normalRoughnessFrameBufferSampler",  &m_gBufferFBO0.id },
+				{ "ssaoFrameBufferSampler", &m_SSAOBlurHFBO.id },
+				{ "normalRoughnessFrameBufferSampler", &m_LoadedTextures[m_gBufferFBO0ID]->handle },
 			};
 			m_SSAOBlurVMatID = InitializeMaterial(&ssaoBlurVMaterialCreateInfo, m_SSAOBlurVMatID);
 		}
@@ -4258,15 +4280,14 @@ namespace flex
 			const glm::vec2i newFrameBufferSize(width, height);
 			m_SSAORes = glm::vec2u((u32)newFrameBufferSize.x / 2, (u32)newFrameBufferSize.y / 2);
 
-			ResizeFrameBufferTexture(m_OffscreenTexture0Handle, newFrameBufferSize);
+			ResizeFrameBufferTextureFromID(m_OffscreenTexture0ID, newFrameBufferSize);
 			ResizeRenderBuffer(m_Offscreen0RBO, newFrameBufferSize, m_OffscreenDepthBufferInternalFormat);
 
-			ResizeFrameBufferTexture(m_OffscreenTexture1Handle, newFrameBufferSize);
+			ResizeFrameBufferTextureFromID(m_OffscreenTexture1ID, newFrameBufferSize);
 			ResizeRenderBuffer(m_Offscreen1RBO, newFrameBufferSize, m_OffscreenDepthBufferInternalFormat);
 
-			ResizeFrameBufferTexture(m_gBufferFBO0, newFrameBufferSize);
-
-			ResizeFrameBufferTexture(m_gBufferFBO1, newFrameBufferSize);
+			ResizeFrameBufferTextureFromID(m_gBufferFBO0ID, newFrameBufferSize);
+			ResizeFrameBufferTextureFromID(m_gBufferFBO1ID, newFrameBufferSize);
 			ResizeFrameBufferTexture(m_gBufferDepthTexHandle, newFrameBufferSize);
 			ResizeFrameBufferTexture(m_SSAOFBO, m_SSAORes);
 			ResizeFrameBufferTexture(m_SSAOBlurHFBO, newFrameBufferSize);

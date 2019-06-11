@@ -149,6 +149,8 @@ namespace flex
 			void GenerateIrradianceSamplerFromCubemap(MaterialID cubemapMaterialID);
 			void GenerateBRDFLUT(u32 brdfLUTTextureID, i32 BRDFLUTSize);
 
+			TextureID InitializeBlankTexture(GLenum internalFormat, GLenum format, GLenum type, const std::string& name, const glm::vec2& size);
+
 			void CacheMaterialUniformLocations(MaterialID matID);
 
 			void SwapBuffers();
@@ -172,12 +174,14 @@ namespace flex
 
 			void GenerateFrameBufferTexture(u32* handle, i32 index, GLint internalFormat, GLenum format, GLenum type, const glm::vec2i& size);
 			void GenerateFrameBufferTexture(TextureHandle& handle, i32 index, const glm::vec2i& size);
+			void GenerateFrameBufferTextureFromID(TextureID textureID, i32 index);
 
 			void GenerateDepthBufferTexture(u32* handle, GLint internalFormat, GLenum format, GLenum type, const glm::vec2i& size);
 			void GenerateDepthBufferTexture(TextureHandle& handle, const glm::vec2i& size);
 
 			void ResizeFrameBufferTexture(u32 handle, GLint internalFormat, GLenum format, GLenum type, const glm::vec2i& size);
 			void ResizeFrameBufferTexture(TextureHandle& handle, const glm::vec2i& size);
+			void ResizeFrameBufferTextureFromID(TextureID textureID, const glm::vec2i& size);
 			void ResizeRenderBuffer(u32 handle, const glm::vec2i& size, GLenum internalFormat);
 
 			void UpdateAllMaterialUniforms();
@@ -202,7 +206,7 @@ namespace flex
 			// Returns the next binding that would be used
 			u32 BindDeferredFrameBufferTextures(GLMaterial* glMaterial, u32 startingBinding = 0);
 
-			void CreateOffscreenFrameBuffer(u32* FBO, u32* RBO, const glm::vec2i& size, TextureHandle& handle);
+			void CreateOffscreenFrameBuffer(u32* FBO, u32* RBO, TextureID textureID);
 
 			// Returns true if object was duplicated
 			bool DoTextureSelector(const char* label, const std::vector<GLTexture*>& textures, i32* selectedIndex, bool* bGenerateSampler);
@@ -239,8 +243,8 @@ namespace flex
 			TextureHandle m_gBufferDepthTexHandle;
 
 			// TODO: Resize all framebuffers automatically by inserting into container
-			TextureHandle m_gBufferFBO0;
-			TextureHandle m_gBufferFBO1;
+			TextureID m_gBufferFBO0ID = InvalidTextureID;
+			TextureID m_gBufferFBO1ID = InvalidTextureID;
 
 			TextureHandle m_ShadowMapTexture;
 			u32 m_ShadowMapFBO = 0;
@@ -260,13 +264,14 @@ namespace flex
 
 			GLTexture* m_BRDFTexture = nullptr;
 
+			// TODO: Add frame buffer abstraction which internally has a texture ID & an FBO & RBO
 			// Everything is drawn to this texture before being drawn to the default
 			// frame buffer through some post-processing effects
-			TextureHandle m_OffscreenTexture0Handle;
+			TextureID m_OffscreenTexture0ID = InvalidTextureID;
 			u32 m_Offscreen0FBO = 0;
 			u32 m_Offscreen0RBO = 0;
 
-			TextureHandle m_OffscreenTexture1Handle;
+			TextureID m_OffscreenTexture1ID = InvalidTextureID;
 			u32 m_Offscreen1FBO = 0;
 			u32 m_Offscreen1RBO = 0;
 

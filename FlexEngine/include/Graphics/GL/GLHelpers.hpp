@@ -257,6 +257,8 @@ namespace flex
 			std::string name; // absFilePath but without the leading directories, or a custom name if not loaded from file
 
 		public:
+			TextureID textureID = InvalidTextureID;
+
 			GLuint handle = 0;
 
 			u32 width = 0;
