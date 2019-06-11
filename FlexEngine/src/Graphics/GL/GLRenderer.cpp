@@ -708,7 +708,10 @@ namespace flex
 								newTexture->LoadFromFile();
 
 								PROFILE_END(textureProfileBlockName);
-								Profiler::PrintBlockDuration(textureProfileBlockName);
+								if (g_bEnableLogging_Loading)
+								{
+									Profiler::PrintBlockDuration(textureProfileBlockName);
+								}
 
 								if (newTexture->bLoaded)
 								{
@@ -1166,7 +1169,10 @@ namespace flex
 
 					equirectangularToCubeMatID = InitializeMaterial(&equirectangularToCubeMatCreateInfo, equirectangularToCubeMatID);
 					PROFILE_END(equirectangularProfileBlockName);
-					Profiler::PrintBlockDuration(equirectangularProfileBlockName);
+					if (g_bEnableLogging_Loading)
+					{
+						Profiler::PrintBlockDuration(equirectangularProfileBlockName);
+					}
 				}
 
 				GLMaterial& equirectangularToCubemapMaterial = m_Materials[equirectangularToCubeMatID];
@@ -1227,7 +1233,10 @@ namespace flex
 				GL_POP_DEBUG_GROUP();
 			}
 
-			Profiler::PrintBlockDuration(profileBlockName);
+			if (g_bEnableLogging_Loading)
+			{
+				Profiler::PrintBlockDuration(profileBlockName);
+			}
 		}
 
 		void GLRenderer::GeneratePrefilteredMapFromCubemap(MaterialID cubemapMaterialID)
@@ -1322,7 +1331,11 @@ namespace flex
 				// Visualize prefiltered map as skybox:
 				//m_Materials[renderObject->materialID].cubemapSamplerID = m_Materials[renderObject->materialID].prefilteredMapSamplerID;
 			}
-			Profiler::PrintBlockDuration(profileBlockName);
+
+			if (g_bEnableLogging_Loading)
+			{
+				Profiler::PrintBlockDuration(profileBlockName);
+			}
 		}
 
 		void GLRenderer::GenerateBRDFLUT(u32 brdfLUTTextureID, i32 brdfLUTSize)
@@ -1375,7 +1388,11 @@ namespace flex
 
 				GL_POP_DEBUG_GROUP();
 			}
+
+			if (g_bEnableLogging_Loading)
+			{
 			Profiler::PrintBlockDuration(profileBlockName);
+		}
 		}
 
 		void GLRenderer::CacheMaterialUniformLocations(MaterialID matID)
@@ -1453,7 +1470,10 @@ namespace flex
 					irrandianceMatCreateInfo.visibleInEditor = false;
 					irrandianceMatID = InitializeMaterial(&irrandianceMatCreateInfo);
 					PROFILE_END(irradianceProfileBlockName);
-					Profiler::PrintBlockDuration(irradianceProfileBlockName);
+					if (g_bEnableLogging_Loading)
+					{
+						Profiler::PrintBlockDuration(irradianceProfileBlockName);
+					}
 				}
 
 				GLMaterial& irradianceMat = m_Materials[irrandianceMatID];
@@ -1509,7 +1529,10 @@ namespace flex
 
 				GL_POP_DEBUG_GROUP();
 			}
-			Profiler::PrintBlockDuration(profileBlockName);
+			if (g_bEnableLogging_Loading)
+			{
+				Profiler::PrintBlockDuration(profileBlockName);
+			}
 		}
 
 		void GLRenderer::CaptureSceneToCubemap(RenderID cubemapRenderID)
@@ -1570,7 +1593,10 @@ namespace flex
 				drawCallInfo.depthTestFunc = DepthTestFunc::GEQUAL;
 				DrawForwardObjects(drawCallInfo);
 			}
-			Profiler::PrintBlockDuration(profilerBlockName);
+			if (g_bEnableLogging_Loading)
+			{
+				Profiler::PrintBlockDuration(profilerBlockName);
+			}
 		}
 
 		void GLRenderer::SwapBuffers()
@@ -1595,7 +1621,10 @@ namespace flex
 				}
 			}
 			PROFILE_END(profilerBlockName);
-			Profiler::PrintBlockDuration(profilerBlockName);
+			if (g_bEnableLogging_Loading)
+			{
+				Profiler::PrintBlockDuration(profilerBlockName);
+			}
 
 			AddEditorString("Captured reflection probe");
 		}
@@ -1780,9 +1809,8 @@ namespace flex
 			if (m_MonitorResCheckTimeRemaining <= 0.0f)
 			{
 				m_MonitorResCheckTimeRemaining = 2.0f;
-				static const char* blockName = "Renderer update > retrieve monitor info";
 				{
-					PROFILE_BEGIN(blockName);
+					PROFILE_AUTO("Renderer update > retrieve monitor info");
 					real pDPIx = g_Monitor->DPI.x;
 					real pDPIy = g_Monitor->DPI.y;
 					g_Window->RetrieveMonitorInfo();
@@ -1792,9 +1820,7 @@ namespace flex
 					{
 						LoadFonts(true);
 					}
-					PROFILE_END(blockName);
 				}
-				//Profiler::PrintBlockDuration(blockName);
 			}
 
 			if (screenshotAsyncTextureSave != nullptr)
@@ -1969,8 +1995,9 @@ namespace flex
 				EnqueueScreenSpaceSprites();
 
 				{
-					PROFILE_AUTO("DrawScreenSpaceSprites > Display profiler frame");
+					PROFILE_BEGIN("DrawScreenSpaceSprites > Display profiler frame");
 					Profiler::DrawDisplayedFrame();
+					PROFILE_END("DrawScreenSpaceSprites > Display profiler frame");
 				}
 
 				for (const SpriteQuadDrawInfo& drawInfo : m_QueuedSSSprites)
@@ -2199,8 +2226,8 @@ namespace flex
 
 				glm::mat4 view, proj;
 				ComputeDirLightViewProj(view, proj);
-
 				glm::mat4 lightViewProj = proj * view;
+
 				glUniformMatrix4fv(material->uniformIDs.lightViewProjection, 1, GL_FALSE, &lightViewProj[0][0]);
 
 				DrawRenderObjectBatch(m_ShadowBatch, drawCallInfo);
