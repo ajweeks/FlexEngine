@@ -248,7 +248,7 @@ namespace flex
 
 		// DEBUG: (just for preview in ImGui)
 		u32 shadowTextureID = 0;
-		glm::vec3 pos;
+		glm::vec3 pos = VEC3_ZERO;
 
 	protected:
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;

@@ -1,0 +1,98 @@
+{
+	"version" : 1,
+	"name" : "scene_depth_test",
+	"spawn player" : false,
+	"objects" : 
+	[
+		{
+			"name" : "Skybox",
+			"type" : "skybox",
+			"visible" : true,
+			"transform" : 
+			{
+				"rot" : "0.000, 0.030, 0.160"
+			},
+			"material" : "skybox 01",
+			"skybox info" : 
+			{
+				"rot" : "0.00, 0.03, 0.16"
+			}
+		},
+		{
+			"name" : "Reflection Probe 01",
+			"type" : "reflection probe",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 8.000, 0.000"
+			}
+		},
+		{
+			"name" : "Directional Light",
+			"type" : "directional light",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 15.000, 0.000",
+				"rot" : "1.195, -0.973, -2.522"
+			},
+			"directional light info" : 
+			{
+				"rotation" : "1.195, -0.973, -2.522",
+				"pos" : "0.000, 15.000, 0.000",
+				"color" : "1.00, 1.00, 1.00",
+				"enabled" : true,
+				"brightness" : 5.000000,
+				"cast shadows" : true,
+				"shadow darkness" : 1.000000,
+				"shadow map near" : -431602080.000000,
+				"shadow map far" : -431602080.000000,
+				"shadow map zoom" : -431602080.000000
+			}
+		},
+		{
+			"name" : "block_1",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "5.500, 0.000, -1.000"
+			},
+			"mesh" : "cube",
+			"material" : "placeholder"
+		},
+		{
+			"name" : "block_2",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "10.500, 0.000, -2.000"
+			},
+			"mesh" : "cube",
+			"material" : "placeholder"
+		},
+		{
+			"name" : "block_3",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "15.500, 0.000, -3.000"
+			},
+			"mesh" : "cube",
+			"material" : "placeholder"
+		},
+		{
+			"name" : "block_4",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "20.500, 0.000, -4.000"
+			},
+			"mesh" : "cube",
+			"material" : "placeholder"
+		}
+	]
+}

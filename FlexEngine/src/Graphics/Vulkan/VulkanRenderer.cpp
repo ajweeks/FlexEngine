@@ -175,6 +175,12 @@ namespace flex
 			m_SSAOBlurHGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
 			m_SSAOBlurVGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
 
+			m_ShadowImage = { m_VulkanDevice->m_LogicalDevice, vkDestroyImage };
+			m_ShadowImageView = { m_VulkanDevice->m_LogicalDevice, vkDestroyImageView };
+			m_ShadowImageMemory = { m_VulkanDevice->m_LogicalDevice, vkFreeMemory };
+			m_ShadowRenderPass = { m_VulkanDevice->m_LogicalDevice, vkDestroyRenderPass };
+
+
 			CreateSwapChain();
 			CreateSwapChainImageViews();
 
@@ -213,13 +219,12 @@ namespace flex
 				{ "ssao blur final", { m_VulkanDevice, frameBufCreateInfo } },
 			};
 
-			frameBufCreateInfo.format = VK_FORMAT_D16_UNORM;
-			frameBufCreateInfo.bIsDepth = true;
+			m_ShadowBufFormat = VK_FORMAT_D16_UNORM;
 
-			m_ShadowFrameBuf = new FrameBuffer(m_VulkanDevice);
-			m_ShadowFrameBuf->frameBufferAttachments = {
-				{ "shadow depth", { m_VulkanDevice, frameBufCreateInfo } },
-			};
+			for (u32 i = 0; i < NUM_SHADOW_CASCADES; ++i)
+			{
+				m_ShadowCascades[i] = new Cascade(m_VulkanDevice->m_LogicalDevice);
+			}
 
 			// NOTE: This is different from the GLRenderer's capture views
 			s_CaptureViews = {
@@ -252,6 +257,9 @@ namespace flex
 			m_WorkTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/work_d.jpg", 4, false, true, false);
 			m_PointLightIconID = InitializeTexture(RESOURCE_LOCATION  "textures/icons/point-light-icon-256.png", 4, false, true, false);
 			m_DirectionalLightIconID = InitializeTexture(RESOURCE_LOCATION  "textures/icons/directional-light-icon-256.png", 4, false, true, false);
+
+			m_SpritePerspPushConstBlock = new Material::PushConstantBlock(128);
+			m_SpriteOrthoPushConstBlock = new Material::PushConstantBlock(128);
 
 #ifdef DEBUG
 			while (!m_ShaderCompiler->TickStatus())
@@ -295,6 +303,8 @@ namespace flex
 
 		void VulkanRenderer::PostInitialize()
 		{
+			Renderer::PostInitialize();
+
 			CreateDescriptorPool();
 
 			GenerateGBuffer();
@@ -498,6 +508,7 @@ namespace flex
 				{
 					DestroyRenderObject(obj->GetRenderID());
 				}
+				obj->Destroy();
 				delete obj;
 			}
 			m_PersistentObjects.clear();
@@ -524,6 +535,12 @@ namespace flex
 
 			ClearMaterials(true);
 
+			delete m_SpritePerspPushConstBlock;
+			m_SpritePerspPushConstBlock = nullptr;
+
+			delete m_SpriteOrthoPushConstBlock;
+			m_SpriteOrthoPushConstBlock = nullptr;
+
 			delete m_OffScreenFrameBuf;
 			m_OffScreenFrameBuf = nullptr;
 
@@ -548,10 +565,17 @@ namespace flex
 			delete m_OffScreenDepthAttachment;
 			m_OffScreenDepthAttachment = nullptr;
 
-			delete m_ShadowFrameBuf;
-			m_ShadowFrameBuf = nullptr;
+			for (u32 i = 0; i < NUM_SHADOW_CASCADES; ++i)
+			{
+				delete m_ShadowCascades[i];
+			}
 
 			vkDestroySemaphore(m_VulkanDevice->m_LogicalDevice, m_OffscreenSemaphore, nullptr);
+
+			m_ShadowImage.replace();
+			m_ShadowImageView.replace();
+			m_ShadowImageMemory.replace();
+			m_ShadowRenderPass.replace();
 
 			m_SSAOGraphicsPipeline.replace();
 			m_SSAOBlurHGraphicsPipeline.replace();
@@ -651,6 +675,7 @@ namespace flex
 			}
 
 			MaterialID equirectangularToCubeMatID = InitializeMaterial(&equirectangularToCubeMatCreateInfo);
+			VulkanMaterial& equirectangularToCubeMat = m_Materials[equirectangularToCubeMatID];
 
 			const VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
 			const u32 dim = (u32)renderObjectMat.material.cubemapSamplerSize.x;
@@ -737,13 +762,13 @@ namespace flex
 			equirectangularToCubeDescriptorCreateInfo.descriptorSetLayout = &m_DescriptorSetLayouts[equirectangularToCubeShaderID];
 			equirectangularToCubeDescriptorCreateInfo.shaderID = equirectangularToCubeShaderID;
 			equirectangularToCubeDescriptorCreateInfo.uniformBuffer = &equirectangularToCubeShader.uniformBuffer;
-			equirectangularToCubeDescriptorCreateInfo.hdrEquirectangularTexture = m_Materials[equirectangularToCubeMatID].hdrEquirectangularTexture;
+			equirectangularToCubeDescriptorCreateInfo.hdrEquirectangularTexture = equirectangularToCubeMat.hdrEquirectangularTexture;
 			CreateDescriptorSet(&equirectangularToCubeDescriptorCreateInfo);
 
 			std::array<VkPushConstantRange, 1> pushConstantRanges = {};
 			pushConstantRanges[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 			pushConstantRanges[0].offset = 0;
-			pushConstantRanges[0].size = sizeof(Material::PushConstantBlock);
+			pushConstantRanges[0].size = equirectangularToCubeShader.shader->pushConstantBlockSize;
 
 			VkPipeline pipeline = VK_NULL_HANDLE;
 			VkPipelineLayout pipelinelayout = VK_NULL_HANDLE;
@@ -818,10 +843,9 @@ namespace flex
 					vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 					// Push constants
-					skyboxMat.pushConstantBlock.view = s_CaptureViews[face];
-					skyboxMat.pushConstantBlock.proj = glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (real)dim);
+					skyboxMat.pushConstantBlock->SetData(s_CaptureViews[face], glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (real)dim));
 					vkCmdPushConstants(cmdBuf, pipelinelayout, VK_SHADER_STAGE_VERTEX_BIT, 0,
-						sizeof(Material::PushConstantBlock), &skyboxMat.pushConstantBlock);
+						skyboxMat.pushConstantBlock->size, skyboxMat.pushConstantBlock->data);
 
 					vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
@@ -1009,7 +1033,7 @@ namespace flex
 			std::array<VkPushConstantRange, 1> pushConstantRanges = {};
 			pushConstantRanges[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 			pushConstantRanges[0].offset = 0;
-			pushConstantRanges[0].size = sizeof(Material::PushConstantBlock);
+			pushConstantRanges[0].size = irradianceShader.shader->pushConstantBlockSize;
 
 			VkPipelineLayout pipelinelayout = VK_NULL_HANDLE;
 			VkPipeline pipeline = VK_NULL_HANDLE;
@@ -1079,10 +1103,9 @@ namespace flex
 					vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 					// Push constants
-					skyboxMat.pushConstantBlock.view = s_CaptureViews[face];
-					skyboxMat.pushConstantBlock.proj = glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (real)dim);
+					skyboxMat.pushConstantBlock->SetData(s_CaptureViews[face], glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (real)dim));
 					vkCmdPushConstants(cmdBuf, pipelinelayout, VK_SHADER_STAGE_VERTEX_BIT, 0,
-						sizeof(Material::PushConstantBlock), &skyboxMat.pushConstantBlock);
+						skyboxMat.pushConstantBlock->size, skyboxMat.pushConstantBlock->data);
 
 					vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
@@ -1271,7 +1294,7 @@ namespace flex
 			std::array<VkPushConstantRange, 1> pushConstantRanges = {};
 			pushConstantRanges[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 			pushConstantRanges[0].offset = 0;
-			pushConstantRanges[0].size = sizeof(Material::PushConstantBlock);
+			pushConstantRanges[0].size = prefilterShader.shader->pushConstantBlockSize;
 
 			VkPipelineLayout pipelinelayout = VK_NULL_HANDLE;
 			VkPipeline pipeline = VK_NULL_HANDLE;
@@ -1341,10 +1364,9 @@ namespace flex
 					vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 					// Push constants
-					skyboxMat.pushConstantBlock.view = s_CaptureViews[face];
-					skyboxMat.pushConstantBlock.proj = glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (real)dim);
+					skyboxMat.pushConstantBlock->SetData(s_CaptureViews[face], glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (real)dim));
 					vkCmdPushConstants(cmdBuf, pipelinelayout, VK_SHADER_STAGE_VERTEX_BIT, 0,
-						sizeof(Material::PushConstantBlock), &skyboxMat.pushConstantBlock);
+						skyboxMat.pushConstantBlock->size, skyboxMat.pushConstantBlock->data);
 
 					vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
@@ -1536,7 +1558,6 @@ namespace flex
 			}
 
 			VulkanMaterial& mat = m_Materials.at(matID);
-			mat.material = {};
 			mat.material.name = createInfo->name;
 
 			if (!GetShaderID(createInfo->shaderName, mat.material.shaderID))
@@ -1597,6 +1618,11 @@ namespace flex
 			mat.material.enableIrradianceSampler = createInfo->enableIrradianceSampler;
 			mat.material.generateIrradianceSampler = createInfo->generateIrradianceSampler;
 			mat.material.irradianceSamplerSize = createInfo->generatedIrradianceCubemapSize;
+
+			if (shader.shader->bNeedPushConstantBlock)
+			{
+				mat.material.pushConstantBlock = new Material::PushConstantBlock(shader.shader->pushConstantBlockSize);
+			}
 
 			if (shader.shader->bNeedIrradianceSampler)
 			{
@@ -1977,6 +2003,12 @@ namespace flex
 						{
 							CreateDescriptorSet(i);
 							CreateGraphicsPipeline(i, false);
+						}
+
+						for (auto& iter : m_SpriteDescSets)
+						{
+							vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPool, 1, &(iter.second));
+							iter.second = CreateSpriteDescSet(iter.first);
 						}
 
 						CreateSSAODescriptorSets();
@@ -3235,8 +3267,8 @@ namespace flex
 
 		u32 VulkanRenderer::GetTextureHandle(TextureID textureID) const
 		{
-			UNREFERENCED_PARAMETER(textureID);
-			return 0;
+			assert(textureID < m_LoadedTextures.size());
+			return m_LoadedTextures[textureID]->textureID;
 		}
 
 		void VulkanRenderer::RenderObjectStateChanged()
@@ -3788,7 +3820,7 @@ namespace flex
 
 			vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_FontSSGraphicsPipeline);
 
-			VkViewport viewport = vks::viewportFlipped((real)frameBufferSize.x, (real)frameBufferSize.y, 0.1f, 10.0f);
+			VkViewport viewport = vks::viewportFlipped((real)frameBufferSize.x, (real)frameBufferSize.y, 0.0f, 1.0f);
 			vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
 			VkRect2D scissor = vks::scissor(0u, 0u, (u32)frameBufferSize.x, (u32)frameBufferSize.y);
@@ -3920,7 +3952,7 @@ namespace flex
 
 			vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_FontWSGraphicsPipeline);
 
-			VkViewport viewport = vks::viewportFlipped((real)frameBufferSize.x, (real)frameBufferSize.y, 0.1f, 10.0f);
+			VkViewport viewport = vks::viewportFlipped((real)frameBufferSize.x, (real)frameBufferSize.y, 0.0f, 1.0f);
 			vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
 			VkRect2D scissor = vks::scissor(0u, 0u, (u32)frameBufferSize.x, (u32)frameBufferSize.y);
@@ -3971,7 +4003,22 @@ namespace flex
 
 		void VulkanRenderer::EnqueueScreenSpaceSprites()
 		{
-			// TODO: Shadow quads
+			if (m_bDisplayShadowCascadePreview)
+			{
+				SpriteQuadDrawInfo drawInfo = {};
+				drawInfo.bScreenSpace = true;
+				drawInfo.bReadDepth = true;
+				drawInfo.bWriteDepth = true;
+				drawInfo.materialID = m_SpriteMatID;
+				drawInfo.anchor = AnchorPoint::BOTTOM_RIGHT;
+				drawInfo.scale = glm::vec3(0.2f);
+				for (u32 i = 0; i < NUM_SHADOW_CASCADES; ++i)
+				{
+					drawInfo.textureID = 999 + i;
+					drawInfo.pos = glm::vec3(0.0f, i * drawInfo.scale.x * 2.1f, 0.0f);
+					EnqueueSprite(drawInfo);
+				}
+			}
 		}
 
 		// TODO: Move to base renderer
@@ -4197,6 +4244,11 @@ namespace flex
 			VulkanMaterial* shadowMaterial = &m_Materials[m_ShadowMaterialID];
 			VulkanShader* shadowShader = &m_Shaders[shadowMaterial->material.shaderID];
 
+			VkPushConstantRange pushConstantRange = {};
+			pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+			pushConstantRange.offset = 0;
+			pushConstantRange.size = shadowShader->shader->pushConstantBlockSize;
+
 			GraphicsPipelineCreateInfo pipelineCreateInfo = {};
 			pipelineCreateInfo.bSetDynamicStates = true;
 			pipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
@@ -4211,6 +4263,8 @@ namespace flex
 			pipelineCreateInfo.subpass = shadowShader->shader->subpass;
 			pipelineCreateInfo.depthWriteEnable = shadowShader->shader->bDepthWriteEnable ? VK_TRUE : VK_FALSE;
 			pipelineCreateInfo.renderPass = shadowShader->renderPass;
+			pipelineCreateInfo.pushConstantRangeCount = 1;
+			pipelineCreateInfo.pushConstants = &pushConstantRange;
 			CreateGraphicsPipeline(&pipelineCreateInfo);
 
 			// Shadow map descriptor set
@@ -4227,6 +4281,33 @@ namespace flex
 			descSetCreateInfo.ssaoNormalSampler = m_SSAOSampler;
 			descSetCreateInfo.noiseTexture = shadowMaterial->noiseTexture;
 			CreateDescriptorSet(&descSetCreateInfo);
+		}
+
+		VkDescriptorSet VulkanRenderer::CreateSpriteDescSet(TextureID textureID)
+		{
+			assert(textureID != InvalidTextureID);
+
+			VulkanMaterial& spriteMat = m_Materials[m_SpriteMatID];
+			VulkanShader& spriteShader = m_Shaders[spriteMat.material.shaderID];
+
+			VkDescriptorSet descSet = VK_NULL_HANDLE;
+			DescriptorSetCreateInfo descSetCreateInfo = {};
+			descSetCreateInfo.descriptorSet = &descSet;
+			descSetCreateInfo.descriptorSetLayout = &m_DescriptorSetLayouts[spriteMat.descriptorSetLayoutIndex];
+			descSetCreateInfo.shaderID = spriteMat.material.shaderID;
+			descSetCreateInfo.uniformBuffer = &spriteShader.uniformBuffer;
+			if (textureID >= 999)
+			{
+				descSetCreateInfo.shadowPreviewView = m_ShadowCascades[textureID - 999]->imageView;
+				descSetCreateInfo.shadowSampler = m_ColorSampler;
+			}
+			else
+			{
+				descSetCreateInfo.albedoTexture = m_LoadedTextures[textureID];
+			}
+			CreateDescriptorSet(&descSetCreateInfo);
+
+			return descSet;
 		}
 
 		MaterialID VulkanRenderer::GetNextAvailableMaterialID()
@@ -4479,6 +4560,12 @@ namespace flex
 				CreateGraphicsPipeline(i, false);
 			}
 
+			for (auto& iter : m_SpriteDescSets)
+			{
+				vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPool, 1, &(iter.second));
+				iter.second = CreateSpriteDescSet(iter.first);
+			}
+
 			CreateSSAODescriptorSets();
 			CreateSSAOPipelines();
 
@@ -4629,7 +4716,8 @@ namespace flex
 			if (shader->shader->constantBufferUniforms.HasUniform(U_SHADOW_SAMPLER))
 			{
 				createInfo.shadowSampler = m_ColorSampler;
-				createInfo.shadowImageView = m_ShadowFrameBuf->frameBufferAttachments[0].second.view;
+				// TODO: Use blank texture array here to appease validation warnings
+				createInfo.shadowImageView = m_DirectionalLight ? m_ShadowCascades[0]->imageView : m_BlankTexture->imageView;
 			}
 
 			if (shader->shader->constantBufferUniforms.HasUniform(U_SSAO_FINAL_SAMPLER))
@@ -4710,6 +4798,10 @@ namespace flex
 				VkDescriptorImageInfo imageInfo;
 			};
 
+			// TODO: Refactor this.
+			//		- Rather than require textures, views should be allowed on their own
+			//		- Samplers should optional
+			//		- Remove info descriptors
 			std::vector<DescriptorSetInfo> descriptorSets = {
 				{ U_UNIFORM_BUFFER_CONSTANT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 				createInfo->uniformBuffer->constantBuffer.m_Buffer, createInfo->uniformBuffer->constantData.size },
@@ -4720,9 +4812,9 @@ namespace flex
 
 				{ U_ALBEDO_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
-				createInfo->albedoTexture ? *&createInfo->albedoTexture->imageView : VK_NULL_HANDLE,
-				createInfo->albedoTexture ? *&createInfo->albedoTexture->sampler : VK_NULL_HANDLE,
-				createInfo->albedoTexture ? &createInfo->albedoTexture->imageInfoDescriptor : nullptr },
+				createInfo->shadowPreviewView != VK_NULL_HANDLE ? createInfo->shadowPreviewView : (createInfo->albedoTexture ? *&createInfo->albedoTexture->imageView : VK_NULL_HANDLE),
+				createInfo->shadowPreviewView != VK_NULL_HANDLE ? createInfo->shadowSampler : (createInfo->albedoTexture ? *&createInfo->albedoTexture->sampler : VK_NULL_HANDLE),
+				createInfo->shadowPreviewView != VK_NULL_HANDLE ? nullptr : (createInfo->albedoTexture ? &createInfo->albedoTexture->imageInfoDescriptor : nullptr) },
 
 				{ U_METALLIC_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
@@ -4819,6 +4911,12 @@ namespace flex
 				*&createInfo->shadowImageView,
 				*&createInfo->shadowSampler,
 				nullptr },
+
+				//{ U_TEX_ARRAY, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				//VK_NULL_HANDLE, 0,
+				//*&createInfo->texArrayView,
+				//*&createInfo->texArraySampler,
+				//nullptr },
 			};
 
 
@@ -5129,10 +5227,10 @@ namespace flex
 			VkPushConstantRange pushConstantRange = {};
 			if (m_Shaders[material->material.shaderID].shader->bNeedPushConstantBlock)
 			{
-				pipelineCreateInfo.pushConstantRangeCount = 1;
+				pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 				pushConstantRange.offset = 0;
-				pushConstantRange.size = sizeof(material->material.pushConstantBlock);
-				pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+				pushConstantRange.size = material->material.pushConstantBlock->size;
+				pipelineCreateInfo.pushConstantRangeCount = 1;
 				pipelineCreateInfo.pushConstants = &pushConstantRange;
 			}
 
@@ -5349,10 +5447,6 @@ namespace flex
 			m_SSAOBlurVFrameBuf->width = m_SwapChainExtent.width;
 			m_SSAOBlurVFrameBuf->height = m_SwapChainExtent.height;
 
-			// TODO:
-			m_ShadowFrameBuf->width = 2048;
-			m_ShadowFrameBuf->height = 2048;
-
 			const size_t frameBufferColorAttachmentCount = m_OffScreenFrameBuf->frameBufferAttachments.size();
 
 			//  Offscreen render pass
@@ -5426,8 +5520,7 @@ namespace flex
 			// Shadow render pass
 			{
 				// Color attachment
-				VkFormat shadowBufFormat = m_ShadowFrameBuf->frameBufferAttachments[0].second.format;
-				VkAttachmentDescription depthAttachment = vks::attachmentDescription(shadowBufFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+				VkAttachmentDescription depthAttachment = vks::attachmentDescription(m_ShadowBufFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 				VkAttachmentReference depthAttachmentRef = { 0, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 
@@ -5466,33 +5559,72 @@ namespace flex
 				renderPassCreateInfo.pSubpasses = subpasses.data();
 				renderPassCreateInfo.dependencyCount = dependencies.size();
 				renderPassCreateInfo.pDependencies = dependencies.data();
-				VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassCreateInfo, nullptr, &m_ShadowFrameBuf->renderPass));
+				VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassCreateInfo, nullptr, &m_ShadowRenderPass));
 			}
 
-			// Shadow frame buffer
+			// Shadow frame buffers
 			{
-				VkFormat shadowBufFormat = m_ShadowFrameBuf->frameBufferAttachments[0].second.format;
-				CreateAttachment(
-					m_VulkanDevice,
-					shadowBufFormat,
-					VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT,
-					m_ShadowFrameBuf->width,
-					m_ShadowFrameBuf->height,
-					1,
-					VK_IMAGE_VIEW_TYPE_2D,
-					0,
-					&m_ShadowFrameBuf->frameBufferAttachments[0].second);
+				VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 
-				std::vector<VkImageView> shadowAttachments;
-				shadowAttachments.push_back(m_ShadowFrameBuf->frameBufferAttachments[0].second.view);
+				VkImageCreateInfo imageCreateInfo = vks::imageCreateInfo();
+				imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+				imageCreateInfo.format = m_ShadowBufFormat;
+				imageCreateInfo.extent.width = SHADOW_CASCADE_RES;
+				imageCreateInfo.extent.height = SHADOW_CASCADE_RES;
+				imageCreateInfo.extent.depth = 1;
+				imageCreateInfo.mipLevels = 1;
+				imageCreateInfo.arrayLayers = NUM_SHADOW_CASCADES;
+				imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+				imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+				imageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT; // VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT?
+				imageCreateInfo.flags = 0;
 
-				VkFramebufferCreateInfo shadowFramebufferCreateInfo = vks::framebufferCreateInfo(m_ShadowFrameBuf->renderPass);
-				shadowFramebufferCreateInfo.pAttachments = shadowAttachments.data();
-				shadowFramebufferCreateInfo.attachmentCount = static_cast<u32>(shadowAttachments.size());
-				shadowFramebufferCreateInfo.width = m_ShadowFrameBuf->width;
-				shadowFramebufferCreateInfo.height = m_ShadowFrameBuf->height;
-				shadowFramebufferCreateInfo.layers = 1;
-				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &shadowFramebufferCreateInfo, nullptr, m_ShadowFrameBuf->frameBuffer.replace()));
+				VK_CHECK_RESULT(vkCreateImage(m_VulkanDevice->m_LogicalDevice, &imageCreateInfo, nullptr, m_ShadowImage.replace()));
+				VkMemoryRequirements memRequirements;
+				vkGetImageMemoryRequirements(m_VulkanDevice->m_LogicalDevice, m_ShadowImage, &memRequirements);
+				VkMemoryAllocateInfo memAlloc = vks::memoryAllocateInfo(memRequirements.size);
+				memAlloc.memoryTypeIndex = m_VulkanDevice->GetMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+				VK_CHECK_RESULT(vkAllocateMemory(m_VulkanDevice->m_LogicalDevice, &memAlloc, nullptr, m_ShadowImageMemory.replace()));
+				VK_CHECK_RESULT(vkBindImageMemory(m_VulkanDevice->m_LogicalDevice, m_ShadowImage, m_ShadowImageMemory, 0));
+
+				// Full image view (for all layers)
+				VkImageViewCreateInfo fullImageView = vks::imageViewCreateInfo();
+				fullImageView.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+				fullImageView.format = m_ShadowBufFormat;
+				fullImageView.subresourceRange = {};
+				fullImageView.subresourceRange.aspectMask = aspectMask;
+				fullImageView.subresourceRange.baseMipLevel = 0;
+				fullImageView.subresourceRange.levelCount = 1; // Number of mipmap levels
+				fullImageView.subresourceRange.baseArrayLayer = 0;
+				fullImageView.subresourceRange.layerCount = NUM_SHADOW_CASCADES;
+				fullImageView.image = m_ShadowImage;
+				fullImageView.flags = 0;
+				VK_CHECK_RESULT(vkCreateImageView(m_VulkanDevice->m_LogicalDevice, &fullImageView, nullptr, m_ShadowImageView.replace()));
+
+				// One frame buffer & view per cascade
+				for (u32 i = 0; i < NUM_SHADOW_CASCADES; ++i)
+				{
+					VkImageViewCreateInfo imageView = vks::imageViewCreateInfo();
+					imageView.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+					imageView.format = m_ShadowBufFormat;
+					imageView.subresourceRange = {};
+					imageView.subresourceRange.aspectMask = aspectMask;
+					imageView.subresourceRange.baseMipLevel = 0;
+					imageView.subresourceRange.levelCount = 1; // Number of mipmap levels
+					imageView.subresourceRange.baseArrayLayer = i;
+					imageView.subresourceRange.layerCount = 1;
+					imageView.image = m_ShadowImage;
+					imageView.flags = 0;
+					VK_CHECK_RESULT(vkCreateImageView(m_VulkanDevice->m_LogicalDevice, &imageView, nullptr, m_ShadowCascades[i]->imageView.replace()));
+
+					VkFramebufferCreateInfo shadowFramebufferCreateInfo = vks::framebufferCreateInfo(m_ShadowRenderPass);
+					shadowFramebufferCreateInfo.pAttachments = &m_ShadowCascades[i]->imageView;
+					shadowFramebufferCreateInfo.attachmentCount = 1;
+					shadowFramebufferCreateInfo.width = SHADOW_CASCADE_RES;
+					shadowFramebufferCreateInfo.height = SHADOW_CASCADE_RES;
+					shadowFramebufferCreateInfo.layers = 1;
+					VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &shadowFramebufferCreateInfo, nullptr, m_ShadowCascades[i]->frameBuffer.replace()));
+				}
 			}
 
 			// Offscreen Framebuffer
@@ -5774,7 +5906,7 @@ namespace flex
 
 			VK_CHECK_RESULT(vkBeginCommandBuffer(commandBuffer, &cmdBufferbeginInfo));
 
-			VkViewport fullscreenViewport = vks::viewportFlipped((real)m_SwapChainExtent.width, (real)m_SwapChainExtent.height, 0.1f, 1000.0f);
+			VkViewport fullscreenViewport = vks::viewportFlipped((real)m_SwapChainExtent.width, (real)m_SwapChainExtent.height, 0.0f, 1.0f);
 			VkRect2D fullscreenScissor = vks::scissor(0u, 0u, m_SwapChainExtent.width, m_SwapChainExtent.height);
 
 			VkDeviceSize offsets[1] = { 0 };
@@ -5937,13 +6069,21 @@ namespace flex
 
 					BindDescriptorSet(&shader, dynamicUBOOffset, commandBuffer, pipelineLayout, descriptorSet);
 
+					Material::PushConstantBlock* pushConstantBlock = mat.material.pushConstantBlock;
 					if (shader.shader->bNeedPushConstantBlock)
 					{
 						// Push constants
-						mat.material.pushConstantBlock.view = g_CameraManager->CurrentCamera()->GetView();
-						mat.material.pushConstantBlock.proj = g_CameraManager->CurrentCamera()->GetProjection();
-						vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0,
-							sizeof(Material::PushConstantBlock), &mat.material.pushConstantBlock);
+						if (drawCallInfo && drawCallInfo->pushConstantOverride)
+						{
+							pushConstantBlock = drawCallInfo->pushConstantOverride;
+						}
+						else
+						{
+							BaseCamera* cam = g_CameraManager->CurrentCamera();
+							mat.material.pushConstantBlock->SetData(cam->GetView(), cam->GetProjection());
+						}
+						VkShaderStageFlags stages = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+						vkCmdPushConstants(commandBuffer, pipelineLayout, stages, 0, pushConstantBlock->size, pushConstantBlock->data);
 					}
 
 					if (renderObject->bIndexed)
@@ -5989,34 +6129,19 @@ namespace flex
 				VK_CHECK_RESULT(vkCreateSemaphore(m_VulkanDevice->m_LogicalDevice, &semaphoreCreateInfo, nullptr, &m_OffscreenSemaphore));
 			}
 
-			std::array<VkClearValue, 1> shadowClearValues = {};
-			shadowClearValues[0].depthStencil = { 0.0f, 0 };
-
-			VkRenderPassBeginInfo renderPassBeginInfo = vks::renderPassBeginInfo(m_ShadowFrameBuf->renderPass);
-			renderPassBeginInfo.framebuffer = m_ShadowFrameBuf->frameBuffer;
-			renderPassBeginInfo.renderArea.offset = { 0, 0 };
-			renderPassBeginInfo.renderArea.extent = { m_ShadowFrameBuf->width, m_ShadowFrameBuf->height };
-			renderPassBeginInfo.clearValueCount = shadowClearValues.size();
-			renderPassBeginInfo.pClearValues = shadowClearValues.data();
-
 			VkCommandBufferBeginInfo cmdBufferbeginInfo = vks::commandBufferBeginInfo();
 			cmdBufferbeginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 			VK_CHECK_RESULT(vkBeginCommandBuffer(m_OffScreenCmdBuffer, &cmdBufferbeginInfo));
 
 			//
-			// Shadow mapping
+			// Cascaded shadow mapping
 			//
 
 			bool bEnableShadows = true;
-			if (bEnableShadows)
+			if (bEnableShadows && m_DirectionalLight)
 			{
-				vkCmdBeginRenderPass(m_OffScreenCmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-				VkViewport shadowViewport = vks::viewportFlipped((real)m_ShadowFrameBuf->width, (real)m_ShadowFrameBuf->height, 0.0f, 1.0f);
-				vkCmdSetViewport(m_OffScreenCmdBuffer, 0, 1, &shadowViewport);
-
-				VkRect2D shadowScissor = vks::scissor(0u, 0u, m_ShadowFrameBuf->width, m_ShadowFrameBuf->height);
-				vkCmdSetScissor(m_OffScreenCmdBuffer, 0, 1, &shadowScissor);
+				std::array<VkClearValue, 1> shadowClearValues = {};
+				shadowClearValues[0].depthStencil = { 0.0f, 0 };
 
 				for (const ShaderBatchPair& shaderBatch : m_ShadowBatch.batches)
 				{
@@ -6027,19 +6152,42 @@ namespace flex
 					}
 				}
 
-				DrawCallInfo drawCallInfo = {};
-				drawCallInfo.materialIDOverride = m_ShadowMaterialID;
-				drawCallInfo.graphicsPipelineOverride = m_ShadowGraphicsPipeline;
-				drawCallInfo.pipelineLayoutOverride = m_ShadowPipelineLayout;
-				drawCallInfo.descriptorSetOverride = m_ShadowDescriptorSet;
-				drawCallInfo.bRenderingShadows = true;
+				VkViewport viewport = vks::viewportFlipped((real)SHADOW_CASCADE_RES, (real)SHADOW_CASCADE_RES, 0.0f, 1.0f);
+				vkCmdSetViewport(m_OffScreenCmdBuffer, 0, 1, &viewport);
 
-				for (const ShaderBatchPair& shaderBatch : m_ShadowBatch.batches)
+				VkRect2D shadowScissor = vks::scissor(0u, 0u, SHADOW_CASCADE_RES, SHADOW_CASCADE_RES);
+				vkCmdSetScissor(m_OffScreenCmdBuffer, 0, 1, &shadowScissor);
+
+				Material::PushConstantBlock pushConstantBlock = {};
+
+				for (u32 c = 0; c < NUM_SHADOW_CASCADES; ++c)
 				{
-					DrawShaderBatch(shaderBatch, m_OffScreenCmdBuffer, &drawCallInfo);
-				}
+					VkRenderPassBeginInfo renderPassBeginInfo = vks::renderPassBeginInfo(m_ShadowRenderPass);
+					renderPassBeginInfo.framebuffer = m_ShadowCascades[c]->frameBuffer;
+					renderPassBeginInfo.renderArea.offset = { 0, 0 };
+					renderPassBeginInfo.renderArea.extent = { SHADOW_CASCADE_RES, SHADOW_CASCADE_RES };
+					renderPassBeginInfo.clearValueCount = shadowClearValues.size();
+					renderPassBeginInfo.pClearValues = shadowClearValues.data();
 
-				vkCmdEndRenderPass(m_OffScreenCmdBuffer);
+					vkCmdBeginRenderPass(m_OffScreenCmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+					DrawCallInfo drawCallInfo = {};
+					drawCallInfo.materialIDOverride = m_ShadowMaterialID;
+					drawCallInfo.graphicsPipelineOverride = m_ShadowGraphicsPipeline;
+					drawCallInfo.pipelineLayoutOverride = m_ShadowPipelineLayout;
+					drawCallInfo.descriptorSetOverride = m_ShadowDescriptorSet;
+					drawCallInfo.bRenderingShadows = true;
+
+					pushConstantBlock.SetData(m_ShadowLightViewMats[c], m_ShadowLightProjMats[c]);
+					drawCallInfo.pushConstantOverride = &pushConstantBlock;
+
+					for (const ShaderBatchPair& shaderBatch : m_ShadowBatch.batches)
+					{
+						DrawShaderBatch(shaderBatch, m_OffScreenCmdBuffer, &drawCallInfo);
+					}
+
+					vkCmdEndRenderPass(m_OffScreenCmdBuffer);
+				}
 			}
 
 			//
@@ -6051,8 +6199,9 @@ namespace flex
 			gBufClearValues[1].color = m_ClearColor;
 			gBufClearValues[2].depthStencil = { 0.0f, 0 };
 
-			renderPassBeginInfo.renderPass = m_OffScreenFrameBuf->renderPass;
+			VkRenderPassBeginInfo renderPassBeginInfo = vks::renderPassBeginInfo(m_OffScreenFrameBuf->renderPass);
 			renderPassBeginInfo.framebuffer = m_OffScreenFrameBuf->frameBuffer;
+			renderPassBeginInfo.renderArea.offset = { 0, 0 };
 			renderPassBeginInfo.renderArea.extent = { m_OffScreenFrameBuf->width, m_OffScreenFrameBuf->height };
 			renderPassBeginInfo.clearValueCount = gBufClearValues.size();
 			renderPassBeginInfo.pClearValues = gBufClearValues.data();
@@ -6060,7 +6209,7 @@ namespace flex
 			vkCmdBeginRenderPass(m_OffScreenCmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 			// TODO: Make min and max values members
-			VkViewport fullScreenViewport = vks::viewportFlipped((real)m_OffScreenFrameBuf->width, (real)m_OffScreenFrameBuf->height, 0.1f, 1000.0f);
+			VkViewport fullScreenViewport = vks::viewportFlipped((real)m_OffScreenFrameBuf->width, (real)m_OffScreenFrameBuf->height, 0.0f, 1.0f);
 			vkCmdSetViewport(m_OffScreenCmdBuffer, 0, 1, &fullScreenViewport);
 
 			VkRect2D fullScreenScissor = vks::scissor(0u, 0u, m_OffScreenFrameBuf->width, m_OffScreenFrameBuf->height);
@@ -6324,7 +6473,8 @@ namespace flex
 			for (VulkanRenderObject* renderObject : m_RenderObjects)
 			{
 				if (renderObject &&
-					renderObject->vertexBufferData)
+					renderObject->vertexBufferData &&
+					renderObject->gameObject->CastsShadow())
 				{
 					renderObject->shadowVertexOffset = vertexCount;
 
@@ -6547,7 +6697,7 @@ namespace flex
 
 					i32 dynamicUBOOffset = 0;
 
-					for (auto matPair : m_Materials)
+					for (auto& matPair : m_Materials)
 					{
 						if (matPair.second.material.shaderID == shaderID)
 						{
@@ -6956,10 +7106,12 @@ namespace flex
 			glm::mat4 viewProjection = projection * view;
 			glm::vec4 camPos = glm::vec4(cam->GetPosition(), 0.0f);
 			real exposure = cam->exposure;
+			glm::vec2 m_NearFarPlanes(cam->GetZNear(), cam->GetZFar());
 
-			glm::mat4 lightView, lightProj;
-			ComputeDirLightViewProj(lightView, lightProj);
-			glm::mat4 lightViewProj = lightProj * lightView;
+			// TODO: Delete func
+			//glm::mat4 lightView, lightProj;
+			//ComputeDirLightViewProj(lightView, lightProj);
+			//glm::mat4 lightViewProj = lightProj * lightView;
 
 			static DirLightData defaultDirLightData = { VEC3_RIGHT, 0, VEC3_ONE, 0.0f, 0, 0.0f };
 
@@ -7012,15 +7164,17 @@ namespace flex
 				{ U_VIEW_PROJECTION, (void*)&viewProjection, US_VIEW_PROJECTION },
 				{ U_PROJECTION, (void*)&projection, US_PROJECTION },
 				{ U_PROJECTION_INV, (void*)&projectionInv, US_PROJECTION_INV },
-				{ U_LIGHT_VIEW_PROJ, (void*)&lightViewProj, US_LIGHT_VIEW_PROJ },
 				{ U_DIR_LIGHT, (void*)dirLightData, US_DIR_LIGHT },
 				{ U_POINT_LIGHTS, (void*)m_PointLights, US_POINT_LIGHTS },
+				{ U_LIGHT_VIEW_PROJS, (void*)&m_ShadowLightViewMats, US_LIGHT_VIEW_PROJS },
 				{ U_TIME, (void*)&g_SecElapsedSinceProgramStart, US_TIME },
+				{ U_SHADOW_SAMPLING_DATA, (void*)&m_ShadowSamplingData, US_SHADOW_SAMPLING_DATA },
 				{ U_SSAO_GEN_DATA, (void*)&m_SSAOGenData, US_SSAO_GEN_DATA },
 				{ U_SSAO_BLUR_DATA_CONSTANT, (void*)&m_SSAOBlurDataConstant, US_SSAO_BLUR_DATA_CONSTANT },
 				{ U_SSAO_SAMPLING_DATA, (void*)&m_SSAOSamplingData, US_SSAO_SAMPLING_DATA },
 				{ U_FXAA_DATA, (void*)&m_FXAAData, US_FXAA_DATA },
 				{ U_EXPOSURE, (void*)&exposure, US_EXPOSURE },
+				{ U_NEAR_FAR_PLANES, (void*)&m_NearFarPlanes, US_NEAR_FAR_PLANES },
 			};
 
 			for (const VulkanShader& shader : m_Shaders)
@@ -7087,6 +7241,7 @@ namespace flex
 			glm::mat4 modelInvTranspose = glm::transpose(glm::inverse(model));
 			glm::mat4 projection = g_CameraManager->CurrentCamera()->GetProjection();
 			glm::mat4 view = g_CameraManager->CurrentCamera()->GetView();
+			glm::mat4 viewProj = projection * view;
 			glm::mat4 modelViewProjection = projection * view * model;
 			glm::vec4 colorMultiplier = material.material.colorMultiplier;
 			u32 enableAlbedoSampler = material.material.enableAlbedoSampler;
@@ -7107,6 +7262,10 @@ namespace flex
 			// TODO: Roll into array?
 			if (uniformOverrides)
 			{
+				if (uniformOverrides->overridenUniforms.HasUniform(U_VIEW_PROJECTION))
+				{
+					viewProj = uniformOverrides->viewProjection;
+				}
 				if (uniformOverrides->overridenUniforms.HasUniform(U_ENABLE_ALBEDO_SAMPLER))
 				{
 					enableAlbedoSampler = uniformOverrides->enableAlbedoSampler;

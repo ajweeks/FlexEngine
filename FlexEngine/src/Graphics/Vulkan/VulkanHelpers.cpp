@@ -2306,6 +2306,12 @@ namespace flex
 		}
 #endif // DEBUG
 
+		Cascade::Cascade(const VDeleter<VkDevice>& device) :
+			frameBuffer(device, vkDestroyFramebuffer),
+			imageView(device, vkDestroyImageView)
+		{
+		}
+
 	} // namespace vk
 } // namespace flex
 

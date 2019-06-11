@@ -284,6 +284,7 @@ namespace flex
 			VkRenderPass ResolveRenderPassType(RenderPassType renderPassType, const char* shaderName);
 
 			void CreateShadowResources();
+			VkDescriptorSet CreateSpriteDescSet(TextureID textureID);
 
 			const u32 MAX_NUM_RENDER_OBJECTS = 4096; // TODO: Not this?
 			std::vector<VulkanRenderObject*> m_RenderObjects;
@@ -346,8 +347,19 @@ namespace flex
 			FrameBuffer* m_CubemapFrameBuffer = nullptr;
 			FrameBufferAttachment* m_CubemapDepthAttachment = nullptr;
 
-			FrameBuffer* m_ShadowFrameBuf = nullptr;
+			//FrameBuffer* m_ShadowFrameBuf = nullptr;
+			VDeleter<VkImage> m_ShadowImage;
+			VDeleter<VkDeviceMemory> m_ShadowImageMemory;
+			VDeleter<VkImageView> m_ShadowImageView;
+			VDeleter<VkRenderPass> m_ShadowRenderPass;
+			VkFormat m_ShadowBufFormat = VK_FORMAT_UNDEFINED;
 			VkDescriptorSet m_ShadowDescriptorSet = VK_NULL_HANDLE;
+			Cascade* m_ShadowCascades[NUM_SHADOW_CASCADES];
+
+			Material::PushConstantBlock* m_SpritePerspPushConstBlock = nullptr;
+			Material::PushConstantBlock* m_SpriteOrthoPushConstBlock = nullptr;
+
+			std::map<TextureID, VkDescriptorSet> m_SpriteDescSets;
 
 			i32 m_DeferredQuadVertexBufferIndex = -1;
 

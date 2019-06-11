@@ -48,7 +48,7 @@ namespace flex
 			_u(ENABLE_IRRADIANCE_SAMPLER)
 			_u(TEXEL_STEP)
 			_u(SHOW_EDGES)
-			_u(LIGHT_VIEW_PROJ)
+			_u(LIGHT_VIEW_PROJS)
 			_u(EXPOSURE)
 			_u(TRANSFORM_MAT)
 			_u(TEX_SIZE)
@@ -62,6 +62,8 @@ namespace flex
 			_u(SSAO_BLUR_DATA_CONSTANT)
 			_u(SSAO_SAMPLING_DATA)
 			_u(FXAA_DATA)
+			_u(SHADOW_SAMPLING_DATA)
+			_u(NEAR_FAR_PLANES)
 			_u(POST_PROCESS_MAT)
 #undef _u
 		}

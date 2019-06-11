@@ -2402,28 +2402,28 @@ namespace flex
 		UNREFERENCED_PARAMETER(matID);
 
 		// Probe capture material
-		MaterialCreateInfo probeCaptureMatCreateInfo = {};
-		probeCaptureMatCreateInfo.name = "reflection probe capture";
-		probeCaptureMatCreateInfo.shaderName = "deferred_combine_cubemap";
-		probeCaptureMatCreateInfo.generateReflectionProbeMaps = true;
-		probeCaptureMatCreateInfo.generateHDRCubemapSampler = true;
-		probeCaptureMatCreateInfo.generatedCubemapSize = glm::vec2(512.0f, 512.0f); // TODO: Add support for non-512.0f size
-		probeCaptureMatCreateInfo.generateCubemapDepthBuffers = true;
-		probeCaptureMatCreateInfo.enableIrradianceSampler = true;
-		probeCaptureMatCreateInfo.generateIrradianceSampler = true;
-		probeCaptureMatCreateInfo.generatedIrradianceCubemapSize = { 32, 32 };
-		probeCaptureMatCreateInfo.enablePrefilteredMap = true;
-		probeCaptureMatCreateInfo.generatePrefilteredMap = true;
-		probeCaptureMatCreateInfo.generatedPrefilteredCubemapSize = { 128, 128 };
-		probeCaptureMatCreateInfo.enableBRDFLUT = true;
-		probeCaptureMatCreateInfo.persistent = true;
-		probeCaptureMatCreateInfo.visibleInEditor = false;
-		probeCaptureMatCreateInfo.sampledFrameBuffers = {
-			{ "positionMetallicFrameBufferSampler", nullptr },
-			{ "normalRoughnessFrameBufferSampler", nullptr },
-			{ "albedoAOFrameBufferSampler", nullptr },
-		};
-		captureMatID = g_Renderer->InitializeMaterial(&probeCaptureMatCreateInfo);
+		//MaterialCreateInfo probeCaptureMatCreateInfo = {};
+		//probeCaptureMatCreateInfo.name = "reflection probe capture";
+		//probeCaptureMatCreateInfo.shaderName = "deferred_combine_cubemap";
+		//probeCaptureMatCreateInfo.generateReflectionProbeMaps = true;
+		//probeCaptureMatCreateInfo.generateHDRCubemapSampler = true;
+		//probeCaptureMatCreateInfo.generatedCubemapSize = glm::vec2(512.0f, 512.0f); // TODO: Add support for non-512.0f size
+		//probeCaptureMatCreateInfo.generateCubemapDepthBuffers = true;
+		//probeCaptureMatCreateInfo.enableIrradianceSampler = true;
+		//probeCaptureMatCreateInfo.generateIrradianceSampler = true;
+		//probeCaptureMatCreateInfo.generatedIrradianceCubemapSize = { 32, 32 };
+		//probeCaptureMatCreateInfo.enablePrefilteredMap = true;
+		//probeCaptureMatCreateInfo.generatePrefilteredMap = true;
+		//probeCaptureMatCreateInfo.generatedPrefilteredCubemapSize = { 128, 128 };
+		//probeCaptureMatCreateInfo.enableBRDFLUT = true;
+		//probeCaptureMatCreateInfo.persistent = true;
+		//probeCaptureMatCreateInfo.visibleInEditor = false;
+		//probeCaptureMatCreateInfo.sampledFrameBuffers = {
+		//	{ "positionMetallicFrameBufferSampler", nullptr },
+		//	{ "normalRoughnessFrameBufferSampler", nullptr },
+		//	{ "albedoAOFrameBufferSampler", nullptr },
+		//};
+		//captureMatID = g_Renderer->InitializeMaterial(&probeCaptureMatCreateInfo);
 
 		//MeshComponent* sphereMesh = new MeshComponent(this, matID);
 
@@ -2448,7 +2448,7 @@ namespace flex
 
 		//AddChild(captureObject);
 
-		g_Renderer->SetReflectionProbeMaterial(captureMatID);
+		//g_Renderer->SetReflectionProbeMaterial(captureMatID);
 	}
 
 	void ReflectionProbe::SerializeUniqueFields(JSONObject& parentObject) const

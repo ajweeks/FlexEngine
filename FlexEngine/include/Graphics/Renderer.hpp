@@ -206,6 +206,8 @@ namespace flex
 		void RemoveAllPointLights();
 
 		DirLightData* GetDirectionalLight();
+		real GetDirectionalLightNear() const;
+		real GetDirectionalLightFar() const;
 		PointLightData* GetPointLight(PointLightID ID);
 		i32 GetNumPointLights();
 
@@ -283,9 +285,6 @@ namespace flex
 
 		void ComputeDirLightViewProj(glm::mat4& outView, glm::mat4& outProj);
 
-		RenderID m_GBufferQuadRenderID = InvalidRenderID;
-		VertexBufferData m_gBufferQuadVertexBufferData;
-
 		std::vector<Shader> m_BaseShaders;
 
 		PointLightData* m_PointLights = nullptr;
@@ -305,6 +304,7 @@ namespace flex
 			u64 graphicsPipelineOverride = InvalidID;
 			u64 pipelineLayoutOverride = InvalidID;
 			u64 descriptorSetOverride = InvalidID;
+			Material::PushConstantBlock* pushConstantOverride = nullptr;
 
 			// NOTE: DepthTestFunc only supported in GL, Vulkan requires specification at pipeline creation time
 			DepthTestFunc depthTestFunc = DepthTestFunc::GEQUAL;
@@ -315,7 +315,12 @@ namespace flex
 
 		MaterialID m_ReflectionProbeMaterialID = InvalidMaterialID; // Set by the user via SetReflecionProbeMaterial
 		MaterialID m_ShadowMaterialID = InvalidMaterialID;
-		MaterialID m_CubemapGBufferMaterialID = InvalidMaterialID;
+		//MaterialID m_CubemapGBufferMaterialID = InvalidMaterialID;
+
+		//const u32 SHADOW_ATLAS_RES = 4096;
+		const u32 SHADOW_CASCADE_RES = 2048;
+		glm::mat4 m_ShadowLightViewMats[NUM_SHADOW_CASCADES];
+		glm::mat4 m_ShadowLightProjMats[NUM_SHADOW_CASCADES];
 
 		// Filled every frame
 		std::vector<SpriteQuadDrawInfo> m_QueuedWSSprites;
@@ -323,9 +328,13 @@ namespace flex
 
 		// TODO: Use a mesh prefab here
 		VertexBufferData m_Quad3DVertexBufferData;
-		RenderID m_Quad3DRenderID;
+		RenderID m_Quad3DRenderID = InvalidRenderID;
 		VertexBufferData m_FullScreenTriVertexBufferData;
-		RenderID m_FullScreenTriRenderID;
+		RenderID m_FullScreenTriRenderID = InvalidRenderID;
+
+		// TODO: Use full screen tri for gbuffer?
+		RenderID m_GBufferQuadRenderID = InvalidRenderID;
+		VertexBufferData m_gBufferQuadVertexBufferData;
 
 		// Any editor objects which also require a game object wrapper
 		std::vector<GameObject*> m_EditorObjects;
@@ -345,6 +354,7 @@ namespace flex
 
 		bool m_bPostProcessingEnabled = true;
 		bool m_bDisplayBoundingVolumes = false;
+		bool m_bDisplayShadowCascadePreview = true;
 
 		bool m_bRenderGrid = true;
 
@@ -392,6 +402,8 @@ namespace flex
 		std::vector<std::string> m_AvailableHDRIs;
 
 		static const u32 SSAO_NOISE_DIM = 4;
+
+		ShadowSamplingData m_ShadowSamplingData;
 
 		SSAOGenData m_SSAOGenData;
 		SSAOBlurDataConstant m_SSAOBlurDataConstant;

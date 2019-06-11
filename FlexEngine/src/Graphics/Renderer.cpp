@@ -8,6 +8,7 @@ IGNORE_WARNINGS_PUSH
 #include "imgui_internal.h"
 #endif
 
+#include <glm/gtx/transform.hpp> // for scale
 #include <glm/gtx/quaternion.hpp> // for rotate
 
 #include <ft2build.h>
@@ -124,11 +125,110 @@ namespace flex
 		m_SSAOSamplingData.ssaoEnabled = 1;
 		m_SSAOSamplingData.ssaoPowExp = 2.0f;
 
+		m_ShadowSamplingData.cascadeDepthSplits = glm::vec4(0.1f, 0.25f, 0.5f, 0.8f);
+	}
+
+	void Renderer::PostInitialize()
+	{
+		// Full screen Triangle
+		{
+			VertexBufferData::CreateInfo triVertexBufferDataCreateInfo = {};
+			triVertexBufferDataCreateInfo.positions_2D = {
+				glm::vec2(-1.0f, -1.0f),
+				glm::vec2(-1.0f,  3.0f),
+				glm::vec2(3.0f, -1.0f)
+			};
+
+			triVertexBufferDataCreateInfo.texCoords_UV = {
+				glm::vec2(0.0f, 0.0f),
+				glm::vec2(0.0f, 2.0f),
+				glm::vec2(2.0f, 0.0f)
+			};
+
+			triVertexBufferDataCreateInfo.attributes =
+				(u32)VertexAttribute::POSITION_2D |
+				(u32)VertexAttribute::UV;
+
+			m_FullScreenTriVertexBufferData = {};
+			m_FullScreenTriVertexBufferData.Initialize(&triVertexBufferDataCreateInfo);
+
+
+			GameObject* fullScreenTriGameObject = new GameObject("Full screen triangle", GameObjectType::_NONE);
+			m_PersistentObjects.push_back(fullScreenTriGameObject);
+			fullScreenTriGameObject->SetVisible(false);
+			fullScreenTriGameObject->SetCastsShadow(false);
+
+			RenderObjectCreateInfo fullScreenTriCreateInfo = {};
+			fullScreenTriCreateInfo.vertexBufferData = &m_FullScreenTriVertexBufferData;
+			fullScreenTriCreateInfo.materialID = m_PostProcessMatID;
+			fullScreenTriCreateInfo.bDepthWriteEnable = false;
+			fullScreenTriCreateInfo.gameObject = fullScreenTriGameObject;
+			fullScreenTriCreateInfo.cullFace = CullFace::NONE;
+			fullScreenTriCreateInfo.visibleInSceneExplorer = false;
+			fullScreenTriCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
+			m_FullScreenTriRenderID = InitializeRenderObject(&fullScreenTriCreateInfo);
+
+			m_FullScreenTriVertexBufferData.DescribeShaderVariables(this, m_FullScreenTriRenderID);
+		}
+
+		// 3D Quad
+		{
+			VertexBufferData::CreateInfo quad3DVertexBufferDataCreateInfo = {};
+			quad3DVertexBufferDataCreateInfo.positions_3D = {
+				glm::vec3(-1.0f, -1.0f, 0.0f),
+				glm::vec3(-1.0f,  1.0f, 0.0f),
+				glm::vec3(1.0f, -1.0f, 0.0f),
+
+				glm::vec3(1.0f, -1.0f, 0.0f),
+				glm::vec3(-1.0f,  1.0f, 0.0f),
+				glm::vec3(1.0f,  1.0f, 0.0f),
+			};
+
+			quad3DVertexBufferDataCreateInfo.texCoords_UV = {
+				glm::vec2(0.0f, 0.0f),
+				glm::vec2(0.0f, 1.0f),
+				glm::vec2(1.0f, 0.0f),
+
+				glm::vec2(1.0f, 0.0f),
+				glm::vec2(0.0f, 1.0f),
+				glm::vec2(1.0f, 1.0f),
+			};
+
+			quad3DVertexBufferDataCreateInfo.attributes =
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::UV;
+
+			m_Quad3DVertexBufferData = {};
+			m_Quad3DVertexBufferData.Initialize(&quad3DVertexBufferDataCreateInfo);
+
+
+			GameObject* quad3DGameObject = new GameObject("Sprite Quad 3D", GameObjectType::_NONE);
+			m_PersistentObjects.push_back(quad3DGameObject);
+			quad3DGameObject->SetVisible(false);
+			quad3DGameObject->SetCastsShadow(false);
+
+			RenderObjectCreateInfo quad3DCreateInfo = {};
+			quad3DCreateInfo.vertexBufferData = &m_Quad3DVertexBufferData;
+			quad3DCreateInfo.materialID = m_SpriteMatID;
+			quad3DCreateInfo.bDepthWriteEnable = false;
+			quad3DCreateInfo.gameObject = quad3DGameObject;
+			quad3DCreateInfo.cullFace = CullFace::NONE;
+			quad3DCreateInfo.visibleInSceneExplorer = false;
+			quad3DCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
+			quad3DCreateInfo.bEditorObject = true; // TODO: Create other quad which is identical but is not an editor object for gameplay objects?
+			m_Quad3DRenderID = InitializeRenderObject(&quad3DCreateInfo);
+
+			m_Quad3DVertexBufferData.DescribeShaderVariables(this, m_Quad3DRenderID);
+		}
 	}
 
 	void Renderer::Destroy()
 	{
 		free_hooked(m_PointLights);
+
+		DestroyRenderObject(m_FullScreenTriRenderID);
+		DestroyRenderObject(m_Quad3DRenderID);
+		DestroyRenderObject(m_GBufferQuadRenderID);
 	}
 
 	void Renderer::SetReflectionProbeMaterial(MaterialID reflectionProbeMaterialID)
@@ -469,7 +569,21 @@ namespace flex
 
 	DirLightData* Renderer::GetDirectionalLight()
 	{
-		return &m_DirectionalLight->data;
+		if (m_DirectionalLight)
+		{
+			return &m_DirectionalLight->data;
+		}
+		return nullptr;
+	}
+
+	real Renderer::GetDirectionalLightNear() const
+	{
+		return m_DirectionalLight->shadowMapNearPlane;
+	}
+
+	real Renderer::GetDirectionalLightFar() const
+	{
+		return m_DirectionalLight->shadowMapFarPlane;
 	}
 
 	PointLightData* Renderer::GetPointLight(PointLightID ID)
@@ -524,6 +638,143 @@ namespace flex
 			if (m_EditorStrSecRemaining <= 0.0f)
 			{
 				m_EditorStrSecRemaining = 0.0f;
+			}
+		}
+
+		m_ShadowSamplingData.cascadeDepthSplits = glm::vec4(0.1f, 0.25f, 0.5f, 0.8f);
+
+		BaseCamera* cam = g_CameraManager->CurrentCamera();
+		DirLightData* dirLight = g_Renderer->GetDirectionalLight();
+		if (dirLight)
+		{
+			glm::vec3 lightDirection = dirLight->dir;
+
+			const real minCascadeDist = glm::max(m_DirectionalLight->shadowMapNearPlane, 0.0f);
+			real clipRange = cam->GetZFar() - cam->GetZNear();
+
+			real lastSplitDist = 0.0;
+			for (u32 c = 0; c < NUM_SHADOW_CASCADES; ++c)
+			{
+				real splitDist = m_ShadowSamplingData.cascadeDepthSplits[c];
+				//glm::vec3 frustumCorners[8] = {
+				//	{ -1.0f,  1.0f, 0.0f },
+				//	{  1.0f,  1.0f, 0.0f },
+				//	{  1.0f, -1.0f, 0.0f },
+				//	{ -1.0f, -1.0f, 0.0f },
+				//	{ -1.0f,  1.0f, 1.0f },
+				//	{  1.0f,  1.0f, 1.0f },
+				//	{  1.0f, -1.0f, 1.0f },
+				//	{ -1.0f, -1.0f, 1.0f },
+				//};
+
+				////const real depthRange = (m_DirectionalLight->shadowMapFarPlane - m_DirectionalLight->shadowMapNearPlane);
+				//real prevSplitDist = (c == 0 ? minCascadeDist : m_ShadowSamplingData.cascadeDepthSplits[c - 1]);
+				//real splitDist = m_ShadowSamplingData.cascadeDepthSplits[c];
+
+				//glm::mat4 invViewProj = glm::inverse(cam->GetViewProjection());
+
+				//for (i32 i = 0; i < 8; ++i)
+				//{
+				//	glm::vec4 cornerWS = invViewProj * glm::vec4(frustumCorners[i], 1.0f);
+				//	frustumCorners[i] = cornerWS / cornerWS.w;
+				//}
+
+				//for (u32 i = 0; i < 4; ++i)
+				//{
+				//	glm::vec3 cornerRay = frustumCorners[i + 4] - frustumCorners[i];
+				//	glm::vec3 nearCornerRay = cornerRay * prevSplitDist;
+				//	glm::vec3 farCornerRay = cornerRay * splitDist;
+				//	frustumCorners[i + 4] = frustumCorners[i] + farCornerRay;
+				//	frustumCorners[i] = frustumCorners[i] + nearCornerRay;
+				//}
+
+				//glm::vec3 frustumCenter = VEC3_ZERO;
+				//for (i32 i = 0; i < 8; ++i)
+				//{
+				//	frustumCenter += frustumCorners[i];
+				//}
+				//frustumCenter /= 8.0f;
+
+				//real radius = glm::distance(frustumCorners[0], frustumCorners[6]) / 2.0f;
+				//real texelsPerUnit = (real)SHADOW_CASCADE_RES / (radius * 2.0f);
+
+				//glm::mat4 scalar = glm::scale(glm::vec3(texelsPerUnit));
+				//glm::mat4 view = glm::lookAt(VEC3_ZERO, -lightDirection, VEC3_UP) * scalar;
+				//glm::mat4 viewInv = glm::inverse(view);
+
+				//frustumCenter = glm::vec3(view * glm::vec4(frustumCenter, 1.0f));
+				//frustumCenter = glm::floor(frustumCenter); // Clamp to integer texel increment
+				//frustumCenter = glm::vec3(viewInv * glm::vec4(frustumCenter, 1.0f));
+
+				//glm::mat4 lightView = glm::lookAt(frustumCenter, frustumCenter - lightDirection, VEC3_UP);
+
+				//// Calculate an AABB around the frustum corners
+				//glm::vec3 mins(FLT_MAX);
+				//glm::vec3 maxes(-FLT_MAX);
+				//for (u32 i = 0; i < 8; ++i)
+				//{
+				//	glm::vec3 corner = glm::vec3(lightView * glm::vec4(frustumCorners[i], 1.0f));
+				//	mins = glm::min(mins, corner);
+				//	maxes = glm::max(maxes, corner);
+				//}
+
+				//glm::vec3 eye = frustumCenter - (lightDirection * -mins.z);
+				//m_ShadowLightViewMats[c] = glm::lookAt(eye, frustumCenter, VEC3_UP);
+				//m_ShadowLightProjMats[c] = glm::ortho(mins.x, maxes.x, mins.y, maxes.y, maxes.z - mins.z, 0.0f);
+				//m_ShadowSamplingData.cascadeViewProjMats[c] = m_ShadowLightProjMats[c] * m_ShadowLightViewMats[c];
+
+
+				glm::vec3 frustumCorners[8] = {
+					glm::vec3(-1.0f,  1.0f, -1.0f),
+					glm::vec3(1.0f,  1.0f, -1.0f),
+					glm::vec3(1.0f, -1.0f, -1.0f),
+					glm::vec3(-1.0f, -1.0f, -1.0f),
+					glm::vec3(-1.0f,  1.0f,  1.0f),
+					glm::vec3(1.0f,  1.0f,  1.0f),
+					glm::vec3(1.0f, -1.0f,  1.0f),
+					glm::vec3(-1.0f, -1.0f,  1.0f),
+				};
+
+				// Project frustum corners into world space
+				glm::mat4 invCam = glm::inverse(cam->GetViewProjection());
+				for (uint32_t i = 0; i < 8; i++) {
+					glm::vec4 invCorner = invCam * glm::vec4(frustumCorners[i], 1.0f);
+					frustumCorners[i] = invCorner / invCorner.w;
+				}
+
+				for (uint32_t i = 0; i < 4; i++) {
+					glm::vec3 dist = frustumCorners[i + 4] - frustumCorners[i];
+					frustumCorners[i + 4] = frustumCorners[i] + (dist * splitDist);
+					frustumCorners[i] = frustumCorners[i] + (dist * lastSplitDist);
+				}
+
+				// Get frustum center
+				glm::vec3 frustumCenter = glm::vec3(0.0f);
+				for (uint32_t i = 0; i < 8; i++) {
+					frustumCenter += frustumCorners[i];
+				}
+				frustumCenter /= 8.0f;
+
+				float radius = 0.0f;
+				for (uint32_t i = 0; i < 8; i++) {
+					float distance = glm::length(frustumCorners[i] - frustumCenter);
+					radius = glm::max(radius, distance);
+				}
+				radius = std::ceil(radius * 16.0f) / 16.0f;
+
+				glm::vec3 maxExtents = glm::vec3(radius);
+				glm::vec3 minExtents = -maxExtents;
+
+				glm::vec3 lightDir = glm::normalize(-m_DirectionalLight->data.dir);
+				m_ShadowLightViewMats[c] = glm::lookAt(frustumCenter - lightDir * -minExtents.z, frustumCenter, glm::vec3(0.0f, 1.0f, 0.0f));
+				m_ShadowLightProjMats[c] = glm::ortho(minExtents.x, maxExtents.x, minExtents.y, maxExtents.y, maxExtents.z - minExtents.z, 0.0f);
+
+				// Store split distance and matrix in cascade
+				m_ShadowSamplingData.cascadeDepthSplits[c] = (cam->GetZNear() + splitDist * clipRange);
+
+				lastSplitDist = m_ShadowSamplingData.cascadeDepthSplits[c];
+
+				m_ShadowSamplingData.cascadeViewProjMats[c] = m_ShadowLightProjMats[c] * m_ShadowLightViewMats[c];
 			}
 		}
 	}
@@ -769,6 +1020,8 @@ namespace flex
 			{
 				g_Window->SetVSyncEnabled(bVSyncEnabled);
 			}
+
+			ImGui::Checkbox("Shadow Preview", &m_bDisplayShadowCascadePreview);
 
 			if (ImGui::TreeNode("Camera exposure"))
 			{
@@ -1126,7 +1379,7 @@ namespace flex
 #if COMPILE_OPEN_GL
 			m_BaseShaders = {
 				{ "deferred_combine", "deferred_combine.vert", "deferred_combine.frag" },
-				{ "deferred_combine_cubemap", "deferred_combine_cubemap.vert", "deferred_combine_cubemap.frag" },
+				//{ "deferred_combine_cubemap", "deferred_combine_cubemap.vert", "deferred_combine_cubemap.frag" },
 				{ "color", "color.vert", "color.frag" },
 				{ "pbr", "pbr.vert", "pbr.frag" },
 				{ "pbr_ws", "pbr_ws.vert", "pbr_ws.frag" },
@@ -1148,7 +1401,7 @@ namespace flex
 #elif COMPILE_VULKAN
 			m_BaseShaders = {
 				{ "deferred_combine", "vk_deferred_combine_vert.spv", "vk_deferred_combine_frag.spv" },
-				{ "deferred_combine_cubemap", "vk_deferred_combine_cubemap_vert.spv", "vk_deferred_combine_cubemap_frag.spv" },
+				//{ "deferred_combine_cubemap", "vk_deferred_combine_cubemap_vert.spv", "vk_deferred_combine_cubemap_frag.spv" },
 				{ "color", "vk_color_vert.spv","vk_color_frag.spv" },
 				{ "pbr", "vk_pbr_vert.spv", "vk_pbr_frag.spv" },
 				{ "pbr_ws", "vk_pbr_ws_vert.spv", "vk_pbr_ws_frag.spv" },
@@ -1189,10 +1442,18 @@ namespace flex
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_CAM_POS);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW_INV);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PROJECTION_INV);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_LIGHT_VIEW_PROJ);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_POINT_LIGHTS);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_DIR_LIGHT);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_POINT_LIGHTS);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SHADOW_SAMPLING_DATA);
+
+			// TODO: Use better solution than this...
+#if COMPILE_OPEN_GL
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_LIGHT_VIEW_PROJS);
+#endif
+
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SSAO_SAMPLING_DATA);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_NEAR_FAR_PLANES);
+
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_IRRADIANCE_SAMPLER);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_FB_0_SAMPLER);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_FB_1_SAMPLER);
@@ -1207,37 +1468,37 @@ namespace flex
 			//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_IRRADIANCE_SAMPLER); // TODO
 			++shaderID;
 
-			// Deferred combine cubemap
-			m_BaseShaders[shaderID].renderPassType = RenderPassType::DEFERRED_COMBINE;
-			m_BaseShaders[shaderID].bDeferred = false;
-			m_BaseShaders[shaderID].bDepthWriteEnable = false;
-			m_BaseShaders[shaderID].bNeedBRDFLUT = true;
-			m_BaseShaders[shaderID].bNeedDepthSampler = true;
-			//m_BaseShaders[shaderID].bNeedShadowMap = true;
-			m_BaseShaders[shaderID].bNeedIrradianceSampler = true;
-			m_BaseShaders[shaderID].bNeedPrefilteredMap = true;
-			m_BaseShaders[shaderID].vertexAttributes =
-				(u32)VertexAttribute::POSITION; // Used as 3D texture coord into cubemap
+			//// Deferred combine cubemap
+			//m_BaseShaders[shaderID].renderPassType = RenderPassType::DEFERRED_COMBINE;
+			//m_BaseShaders[shaderID].bDeferred = false;
+			//m_BaseShaders[shaderID].bDepthWriteEnable = false;
+			//m_BaseShaders[shaderID].bNeedBRDFLUT = true;
+			//m_BaseShaders[shaderID].bNeedDepthSampler = true;
+			////m_BaseShaders[shaderID].bNeedShadowMap = true;
+			//m_BaseShaders[shaderID].bNeedIrradianceSampler = true;
+			//m_BaseShaders[shaderID].bNeedPrefilteredMap = true;
+			//m_BaseShaders[shaderID].vertexAttributes =
+			//	(u32)VertexAttribute::POSITION; // Used as 3D texture coord into cubemap
 
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PROJECTION);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_LIGHT_VIEW_PROJ);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_CAM_POS);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_POINT_LIGHTS);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_DIR_LIGHT);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_IRRADIANCE_SAMPLER);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_CUBEMAP_SAMPLER);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PREFILTER_MAP);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_BRDF_LUT_SAMPLER);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_FB_0_SAMPLER);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_FB_1_SAMPLER);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_DEPTH_SAMPLER);
+			//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+			//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW);
+			//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PROJECTION);
+			////m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_LIGHT_VIEW_PROJS);
+			//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_CAM_POS);
+			//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_POINT_LIGHTS);
+			//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_DIR_LIGHT);
+			//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_IRRADIANCE_SAMPLER);
+			//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_CUBEMAP_SAMPLER);
+			//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PREFILTER_MAP);
+			//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_BRDF_LUT_SAMPLER);
+			//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_FB_0_SAMPLER);
+			//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_FB_1_SAMPLER);
+			//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_DEPTH_SAMPLER);
 
-			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
-			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
-			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_IRRADIANCE_SAMPLER);
-			++shaderID;
+			//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+			//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
+			//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_IRRADIANCE_SAMPLER);
+			//++shaderID;
 
 			// Color
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
@@ -1327,6 +1588,7 @@ namespace flex
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
 			m_BaseShaders[shaderID].bNeedCubemapSampler = true;
 			m_BaseShaders[shaderID].bNeedPushConstantBlock = true;
+			m_BaseShaders[shaderID].pushConstantBlockSize = 128;
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION;
 
@@ -1344,6 +1606,7 @@ namespace flex
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
 			m_BaseShaders[shaderID].bNeedHDREquirectangularSampler = true;
 			m_BaseShaders[shaderID].bNeedPushConstantBlock = true;
+			m_BaseShaders[shaderID].pushConstantBlockSize = 128;
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION;
 
@@ -1356,6 +1619,7 @@ namespace flex
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
 			m_BaseShaders[shaderID].bNeedCubemapSampler = true;
 			m_BaseShaders[shaderID].bNeedPushConstantBlock = true;
+			m_BaseShaders[shaderID].pushConstantBlockSize = 128;
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION;
 
@@ -1368,6 +1632,7 @@ namespace flex
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
 			m_BaseShaders[shaderID].bNeedCubemapSampler = true;
 			m_BaseShaders[shaderID].bNeedPushConstantBlock = true;
+			m_BaseShaders[shaderID].pushConstantBlockSize = 128;
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION;
 
@@ -1387,13 +1652,15 @@ namespace flex
 			++shaderID;
 
 			// Sprite
+			m_BaseShaders[shaderID].bNeedPushConstantBlock = true;
+			m_BaseShaders[shaderID].pushConstantBlockSize = 128;
+			m_BaseShaders[shaderID].bTranslucent = true;
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV;
 
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
+			m_BaseShaders[shaderID].constantBufferUniforms = {};
 
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
@@ -1415,7 +1682,7 @@ namespace flex
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_COLOR_MULTIPLIER);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_ALBEDO_SAMPLER);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ALBEDO_SAMPLER);
-			//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_CONTRAST_BRIGHTNESS_SATURATION);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_POST_PROCESS_MAT);
 			++shaderID;
 
 			// Post FXAA
@@ -1496,11 +1763,15 @@ namespace flex
 			// Shadow
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::SHADOW;
 			m_BaseShaders[shaderID].bGenerateVertexBufferForAll = true;
+			// TODO: Upload index as push constant rather than full matrix
+			// TODO: Make push constant system more robust
+			m_BaseShaders[shaderID].bNeedPushConstantBlock = true;
+			m_BaseShaders[shaderID].pushConstantBlockSize = 128;
+			m_BaseShaders[shaderID].pushConstantsNeededInFragStage = true;
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION;
 
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_LIGHT_VIEW_PROJ);
+			m_BaseShaders[shaderID].constantBufferUniforms = {};
 
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
@@ -1555,6 +1826,10 @@ namespace flex
 			{
 				assert(!shader.constantBufferUniforms.HasUniform(U_UNIFORM_BUFFER_DYNAMIC));
 				assert(!shader.dynamicBufferUniforms.HasUniform(U_UNIFORM_BUFFER_CONSTANT));
+
+				assert((shader.bNeedPushConstantBlock && shader.pushConstantBlockSize != 0) ||
+					  (!shader.bNeedPushConstantBlock && shader.pushConstantBlockSize == 0));
+
 
 				if (shader.constantBufferUniforms.HasUniform(U_HIGH_RES_TEX))
 				{
@@ -2039,22 +2314,22 @@ namespace flex
 		}
 
 		// Initialize GBuffer cubemap material & mesh
-		{
-			MaterialCreateInfo gBufferCubemapMaterialCreateInfo = {};
-			gBufferCubemapMaterialCreateInfo.name = gBufferCubeMatName;
-			gBufferCubemapMaterialCreateInfo.shaderName = "deferred_combine_cubemap";
-			gBufferCubemapMaterialCreateInfo.enableIrradianceSampler = true;
-			gBufferCubemapMaterialCreateInfo.irradianceSamplerMatID = skyboxMaterialID;
-			gBufferCubemapMaterialCreateInfo.enablePrefilteredMap = true;
-			gBufferCubemapMaterialCreateInfo.prefilterMapSamplerMatID = skyboxMaterialID;
-			gBufferCubemapMaterialCreateInfo.enableBRDFLUT = true;
-			gBufferCubemapMaterialCreateInfo.renderToCubemap = false;
-			gBufferCubemapMaterialCreateInfo.persistent = true;
-			gBufferCubemapMaterialCreateInfo.visibleInEditor = false;
-			FillOutFrameBufferAttachments(gBufferCubemapMaterialCreateInfo.sampledFrameBuffers);
-
-			m_CubemapGBufferMaterialID = InitializeMaterial(&gBufferCubemapMaterialCreateInfo);
-		}
+		//{
+		//	MaterialCreateInfo gBufferCubemapMaterialCreateInfo = {};
+		//	gBufferCubemapMaterialCreateInfo.name = gBufferCubeMatName;
+		//	gBufferCubemapMaterialCreateInfo.shaderName = "deferred_combine_cubemap";
+		//	gBufferCubemapMaterialCreateInfo.enableIrradianceSampler = true;
+		//	gBufferCubemapMaterialCreateInfo.irradianceSamplerMatID = skyboxMaterialID;
+		//	gBufferCubemapMaterialCreateInfo.enablePrefilteredMap = true;
+		//	gBufferCubemapMaterialCreateInfo.prefilterMapSamplerMatID = skyboxMaterialID;
+		//	gBufferCubemapMaterialCreateInfo.enableBRDFLUT = true;
+		//	gBufferCubemapMaterialCreateInfo.renderToCubemap = false;
+		//	gBufferCubemapMaterialCreateInfo.persistent = true;
+		//	gBufferCubemapMaterialCreateInfo.visibleInEditor = false;
+		//	FillOutFrameBufferAttachments(gBufferCubemapMaterialCreateInfo.sampledFrameBuffers);
+		//
+		//	m_CubemapGBufferMaterialID = InitializeMaterial(&gBufferCubemapMaterialCreateInfo);
+		//}
 	}
 
 	void Renderer::EnqueueScreenSpaceText()
@@ -2320,6 +2595,21 @@ namespace flex
 
 	void Renderer::InitializeMaterials()
 	{
+		MaterialCreateInfo spriteMatCreateInfo = {};
+		spriteMatCreateInfo.name = "Sprite material";
+		spriteMatCreateInfo.shaderName = "sprite";
+		spriteMatCreateInfo.persistent = true;
+		spriteMatCreateInfo.visibleInEditor = true;
+		spriteMatCreateInfo.enableAlbedoSampler = true;
+		m_SpriteMatID = InitializeMaterial(&spriteMatCreateInfo);
+
+		MaterialCreateInfo postProcessMatCreateInfo = {};
+		postProcessMatCreateInfo.name = "Post process material";
+		postProcessMatCreateInfo.shaderName = "post_process";
+		postProcessMatCreateInfo.persistent = true;
+		postProcessMatCreateInfo.visibleInEditor = false;
+		m_PostProcessMatID = InitializeMaterial(&postProcessMatCreateInfo);
+
 		MaterialCreateInfo fontSSMatCreateInfo = {};
 		fontSSMatCreateInfo.name = "font ss";
 		fontSSMatCreateInfo.shaderName = "font_ss";
@@ -2355,6 +2645,15 @@ namespace flex
 		placeholderMatCreateInfo.visibleInEditor = true;
 		placeholderMatCreateInfo.constAlbedo = glm::vec3(1.0f, 0.0f, 1.0f);
 		m_PlaceholderMaterialID = InitializeMaterial(&placeholderMatCreateInfo);
+
+		MaterialCreateInfo selectedObjectMatCreateInfo = {};
+		selectedObjectMatCreateInfo.name = "Selected Object";
+		selectedObjectMatCreateInfo.shaderName = "color";
+		selectedObjectMatCreateInfo.persistent = true;
+		selectedObjectMatCreateInfo.visibleInEditor = false;
+		selectedObjectMatCreateInfo.colorMultiplier = VEC4_ONE;
+		m_SelectedObjectMatID = InitializeMaterial(&selectedObjectMatCreateInfo);
+
 	}
 
 	std::string Renderer::PickRandomSkyboxTexture()

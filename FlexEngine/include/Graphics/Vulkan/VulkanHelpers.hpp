@@ -25,6 +25,18 @@ namespace flex
 		void GetVertexAttributeDescriptions(VertexAttributes vertexAttributes,
 			std::vector<VkVertexInputAttributeDescription>& attributeDescriptions);
 
+		struct Cascade
+		{
+			Cascade(const VDeleter<VkDevice>& device);
+
+			VDeleter<VkFramebuffer> frameBuffer;
+			VDeleter<VkImageView> imageView;
+			VkDescriptorSet descSet;
+
+			float splitDepth;
+			glm::mat4 viewProj;
+		};
+
 		// Framebuffer for offscreen rendering
 		struct FrameBufferAttachment
 		{
@@ -257,6 +269,7 @@ namespace flex
 
 			VkFormat CalculateFormat();
 
+			TextureID textureID = InvalidTextureID;
 			u32 width = 0;
 			u32 height = 0;
 			u32 channelCount = 0;
@@ -422,7 +435,7 @@ namespace flex
 
 		struct VulkanMaterial
 		{
-			Material material = {}; // More info is stored in the generic material struct
+			Material material; // More info is stored in the generic material struct
 
 			VulkanTexture* normalTexture = nullptr;
 			VulkanTexture* cubemapTexture = nullptr;
@@ -550,6 +563,8 @@ namespace flex
 
 			VkImageView shadowImageView = VK_NULL_HANDLE;
 			VkSampler shadowSampler = VK_NULL_HANDLE;
+
+			VkImageView shadowPreviewView = VK_NULL_HANDLE;
 
 			bool bDepthSampler = false;
 

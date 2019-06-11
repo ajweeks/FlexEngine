@@ -187,9 +187,9 @@ namespace flex
 					*(m_VertexBufferCreateInfo.positions_3D.data() + i) = (ToVec3(line.start));
 					*(m_VertexBufferCreateInfo.positions_3D.data() + i + 1) = (ToVec3(line.end));
 
-					glm::vec4 color = ToVec4(line.color);
-					*(m_VertexBufferCreateInfo.colors_R32G32B32A32.data() + i) = (color);
-					*(m_VertexBufferCreateInfo.colors_R32G32B32A32.data() + i + 1) = (color);
+					glm::vec3 color = ToVec3(line.color);
+					*(m_VertexBufferCreateInfo.colors_R32G32B32A32.data() + i) = glm::vec4(color, 1.0f);
+					*(m_VertexBufferCreateInfo.colors_R32G32B32A32.data() + i + 1) = glm::vec4(color, 1.0f);
 
 					i += 2;
 				}
