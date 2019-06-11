@@ -21,7 +21,7 @@ layout (location = 0) out vec2 ex_TexCoord;
 void main()
 {
 	ex_TexCoord = in_TexCoord;
-	vec4 worldPos = vec4(in_Position, 1) * uboDynamic.model;
+	vec4 worldPos = uboDynamic.model * vec4(in_Position, 1);
 	
 	gl_Position = (pushConstants.proj * pushConstants.view) * worldPos;
 }
