@@ -136,12 +136,6 @@ namespace flex
 
 			GL_POP_DEBUG_GROUP();
 
-			GL_PUSH_DEBUG_GROUP("Loading quad");
-			DrawLoadingTextureQuad();
-			GL_POP_DEBUG_GROUP();
-
-			SwapBuffers();
-
 			GL_PUSH_DEBUG_GROUP("Post Loading quad startup");
 
 			Renderer::InitializeMaterials();
@@ -181,6 +175,7 @@ namespace flex
 				glm::lookAt(VEC3_ZERO, glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
 			};
 
+			// TODO: Move to Renderer::Init
 			m_AlphaBGTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/alpha-bg.png", 3, false, false, false);
 			m_WorkTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/work_d.jpg", 3, false, true, false);
 			m_PointLightIconID = InitializeTexture(RESOURCE_LOCATION  "textures/icons/point-light-icon-256.png", 4, false, true, false);
@@ -271,15 +266,6 @@ namespace flex
 				m_EditorObjects.push_back(m_WorldOrigin);
 			}
 
-
-			MaterialCreateInfo selectedObjectMatCreateInfo = {};
-			selectedObjectMatCreateInfo.name = "Selected Object";
-			selectedObjectMatCreateInfo.shaderName = "color";
-			selectedObjectMatCreateInfo.persistent = true;
-			selectedObjectMatCreateInfo.visibleInEditor = false;
-			selectedObjectMatCreateInfo.colorMultiplier = VEC4_ONE;
-			m_SelectedObjectMatID = InitializeMaterial(&selectedObjectMatCreateInfo);
-
 			GL_POP_DEBUG_GROUP();
 
 			GL_PUSH_DEBUG_GROUP("BRDF");
@@ -354,6 +340,12 @@ namespace flex
 		void GLRenderer::PostInitialize()
 		{
 			Renderer::PostInitialize();
+
+			GL_PUSH_DEBUG_GROUP("Loading quad");
+			DrawLoadingTextureQuad();
+			GL_POP_DEBUG_GROUP();
+
+			SwapBuffers();
 
 			GenerateGBuffer();
 			GenerateSSAOMaterials();
@@ -1810,7 +1802,7 @@ namespace flex
 			{
 				m_MonitorResCheckTimeRemaining = 2.0f;
 				{
-					PROFILE_AUTO("Renderer update > retrieve monitor info");
+					PROFILE_BEGIN("Renderer update > retrieve monitor info");
 					real pDPIx = g_Monitor->DPI.x;
 					real pDPIy = g_Monitor->DPI.y;
 					g_Window->RetrieveMonitorInfo();
@@ -1820,6 +1812,7 @@ namespace flex
 					{
 						LoadFonts(true);
 					}
+					PROFILE_END("Renderer update > retrieve monitor info");
 				}
 			}
 
