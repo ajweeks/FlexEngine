@@ -641,7 +641,7 @@ namespace flex
 			}
 		}
 
-		m_ShadowSamplingData.cascadeDepthSplits = glm::vec4(0.1f, 0.25f, 0.5f, 0.8f);
+		glm::vec4 depthSplits(0.0225458313f, 0.0768544599f, 0.263353288f, 1.0f);
 
 		BaseCamera* cam = g_CameraManager->CurrentCamera();
 		DirLightData* dirLight = g_Renderer->GetDirectionalLight();
@@ -655,7 +655,7 @@ namespace flex
 			real lastSplitDist = 0.0;
 			for (u32 c = 0; c < NUM_SHADOW_CASCADES; ++c)
 			{
-				real splitDist = m_ShadowSamplingData.cascadeDepthSplits[c];
+				real splitDist = depthSplits[c];
 				//glm::vec3 frustumCorners[8] = {
 				//	{ -1.0f,  1.0f, 0.0f },
 				//	{  1.0f,  1.0f, 0.0f },
@@ -772,7 +772,7 @@ namespace flex
 				// Store split distance and matrix in cascade
 				m_ShadowSamplingData.cascadeDepthSplits[c] = (cam->GetZNear() + splitDist * clipRange);
 
-				lastSplitDist = m_ShadowSamplingData.cascadeDepthSplits[c];
+				lastSplitDist = depthSplits[c];
 
 				m_ShadowSamplingData.cascadeViewProjMats[c] = m_ShadowLightProjMats[c] * m_ShadowLightViewMats[c];
 			}
