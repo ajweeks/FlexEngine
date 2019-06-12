@@ -170,7 +170,9 @@ void main()
     vec3 worldPos = ReconstructWSPosFromDepth(ex_TexCoord, depth);
     float depthN = viewPos.z*(1/48.0);
 	
-	float linDepth = (viewPos.z-uboConstant.zNear)/(uboConstant.zFar-uboConstant.zNear);
+    float invDist = 1.0f/(uboConstant.zFar-uboConstant.zNear);
+
+	float linDepth = (viewPos.z-uboConstant.zNear)*invDist;
 	// fragColor = vec4(vec3(linDepth), 1); return;
 
     vec3 albedo = texture(albedoMetallicTex, ex_TexCoord).rgb;	
@@ -183,7 +185,7 @@ void main()
 	uint cascadeIndex = 0;
 	for (uint i = 0; i < NUM_CASCADES; ++i)
 	{
-		if (linDepth > uboConstant.cascadeDepthSplits[i])
+		if (linDepth > ((uboConstant.cascadeDepthSplits[i]-uboConstant.zNear)*invDist))
 		{
 			cascadeIndex = i;
 		}
