@@ -735,9 +735,14 @@ namespace flex
 					glm::vec3(-1.0f, -1.0f,  1.0f),
 				};
 
+				// Flip near & far planes
+				glm::mat4 modifiedProj = cam->GetProjection();
+				modifiedProj[2][2] = 1.0f - modifiedProj[2][2];
+				modifiedProj[3][2] = -modifiedProj[3][2];
+				glm::mat4 invCam = glm::inverse(modifiedProj * cam->GetView());
 				// Project frustum corners into world space
-				glm::mat4 invCam = glm::inverse(cam->GetViewProjection());
-				for (uint32_t i = 0; i < 8; i++) {
+				for (u32 i = 0; i < 8; i++)
+				{
 					glm::vec4 invCorner = invCam * glm::vec4(frustumCorners[i], 1.0f);
 					frustumCorners[i] = invCorner / invCorner.w;
 				}
