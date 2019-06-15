@@ -617,6 +617,16 @@ namespace flex
 		return m_PlaceholderMaterialID;
 	}
 
+	void Renderer::SetDisplayShadowCascadePreview(bool bPreview)
+	{
+		m_bDisplayShadowCascadePreview = bPreview;
+	}
+
+	bool Renderer::GetDisplayShadowCascadePreview() const
+	{
+		return m_bDisplayShadowCascadePreview;
+	}
+
 	void Renderer::AddEditorString(const std::string& str)
 	{
 		m_EditorMessage = str;
@@ -1025,8 +1035,6 @@ namespace flex
 			{
 				g_Window->SetVSyncEnabled(bVSyncEnabled);
 			}
-
-			ImGui::Checkbox("Shadow Preview", &m_bDisplayShadowCascadePreview);
 
 			if (ImGui::TreeNode("Camera exposure"))
 			{

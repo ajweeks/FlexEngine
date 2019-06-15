@@ -1175,6 +1175,17 @@ namespace flex
 				ImGui::EndMenu();
 			}
 
+			if (ImGui::BeginMenu("View"))
+			{
+				bool bPreviewShadows = g_Renderer->GetDisplayShadowCascadePreview();
+				if (ImGui::MenuItem("Shadow cascades", NULL, &bPreviewShadows))
+				{
+					g_Renderer->SetDisplayShadowCascadePreview(bPreviewShadows);
+				}
+
+				ImGui::EndMenu();
+			}
+
 			ImGui::EndMainMenuBar();
 		}
 

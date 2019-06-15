@@ -233,6 +233,9 @@ namespace flex
 
 		MaterialID GetPlaceholderMaterialID() const;
 
+		void SetDisplayShadowCascadePreview(bool bPreview);
+		bool GetDisplayShadowCascadePreview() const;
+
 		bool bFontWindowShowing = false;
 		bool bUniformBufferWindowShowing = false;
 
