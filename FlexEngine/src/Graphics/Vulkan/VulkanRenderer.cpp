@@ -4715,7 +4715,7 @@ namespace flex
 
 			if (shader->shader->constantBufferUniforms.HasUniform(U_SHADOW_SAMPLER))
 			{
-				createInfo.shadowSampler = m_ColorSampler;
+				createInfo.shadowSampler = m_DepthSampler;
 				// TODO: Use blank texture array here to appease validation warnings
 				createInfo.shadowImageView = m_DirectionalLight ? m_ShadowImageView : m_BlankTexture->imageView;
 			}
@@ -5712,8 +5712,8 @@ namespace flex
 			VK_CHECK_RESULT(vkCreateSampler(m_VulkanDevice->m_LogicalDevice, &ssaoNormalSamplerCreateInfo, nullptr, m_SSAOSampler.replace()));
 
 			VkSamplerCreateInfo colSamplerCreateInfo = vks::samplerCreateInfo();
-			colSamplerCreateInfo.magFilter = VK_FILTER_NEAREST;
-			colSamplerCreateInfo.minFilter = VK_FILTER_NEAREST;
+			colSamplerCreateInfo.magFilter = VK_FILTER_LINEAR;
+			colSamplerCreateInfo.minFilter = VK_FILTER_LINEAR;
 			colSamplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 			colSamplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 			colSamplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
@@ -5725,16 +5725,16 @@ namespace flex
 			VK_CHECK_RESULT(vkCreateSampler(m_VulkanDevice->m_LogicalDevice, &colSamplerCreateInfo, nullptr, m_ColorSampler.replace()));
 
 			VkSamplerCreateInfo depthSamplerCreateInfo = vks::samplerCreateInfo();
-			depthSamplerCreateInfo.magFilter = VK_FILTER_NEAREST;
-			depthSamplerCreateInfo.minFilter = VK_FILTER_NEAREST;
+			depthSamplerCreateInfo.magFilter = VK_FILTER_LINEAR;
+			depthSamplerCreateInfo.minFilter = VK_FILTER_LINEAR;
 			depthSamplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-			depthSamplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-			depthSamplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-			depthSamplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+			depthSamplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+			depthSamplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+			depthSamplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
 			depthSamplerCreateInfo.mipLodBias = 0.0f;
 			depthSamplerCreateInfo.minLod = 0.0f;
 			depthSamplerCreateInfo.maxLod = 1.0f;
-			depthSamplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+			depthSamplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE; // TODO: VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK
 			VK_CHECK_RESULT(vkCreateSampler(m_VulkanDevice->m_LogicalDevice, &depthSamplerCreateInfo, nullptr, m_DepthSampler.replace()));
 		}
 
@@ -6020,6 +6020,10 @@ namespace flex
 
 			VkDeviceSize offsets[1] = { 0 };
 			vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertBuffer->m_Buffer, offsets);
+			if (indexBuffer->m_Buffer != VK_NULL_HANDLE)
+			{
+				vkCmdBindIndexBuffer(commandBuffer, indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
+			}
 
 			u32 i = 0;
 			for (const MaterialBatchPair& matBatch : shaderBatch.batch.batches)
@@ -6036,11 +6040,6 @@ namespace flex
 				for (RenderID renderID : matBatch.batch.objects)
 				{
 					VulkanRenderObject* renderObject = GetRenderObject(renderID);
-
-					if (renderObject->bIndexed)
-					{
-						vkCmdBindIndexBuffer(commandBuffer, indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
-					}
 
 					VkPipeline graphicsPipeline = renderObject->graphicsPipeline;
 					VkPipelineLayout pipelineLayout = renderObject->pipelineLayout;
@@ -7167,7 +7166,7 @@ namespace flex
 				{ U_PROJECTION_INV, (void*)&projectionInv, US_PROJECTION_INV },
 				{ U_DIR_LIGHT, (void*)dirLightData, US_DIR_LIGHT },
 				{ U_POINT_LIGHTS, (void*)m_PointLights, US_POINT_LIGHTS },
-				{ U_LIGHT_VIEW_PROJS, (void*)&m_ShadowLightViewMats, US_LIGHT_VIEW_PROJS },
+				//{ U_LIGHT_VIEW_PROJS, (void*)&m_ShadowLightViewMats, US_LIGHT_VIEW_PROJS },
 				{ U_TIME, (void*)&g_SecElapsedSinceProgramStart, US_TIME },
 				{ U_SHADOW_SAMPLING_DATA, (void*)&m_ShadowSamplingData, US_SHADOW_SAMPLING_DATA },
 				{ U_SSAO_GEN_DATA, (void*)&m_SSAOGenData, US_SSAO_GEN_DATA },

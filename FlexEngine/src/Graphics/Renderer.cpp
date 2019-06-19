@@ -651,7 +651,7 @@ namespace flex
 			}
 		}
 
-		glm::vec4 depthSplits(0.0225458313f, 0.0768544599f, 0.263353288f, 1.0f);
+		glm::vec4 depthSplits(0.04f, 0.15f, 0.4f, 1.0f);
 
 		BaseCamera* cam = g_CameraManager->CurrentCamera();
 		DirLightData* dirLight = g_Renderer->GetDirectionalLight();
@@ -661,6 +661,12 @@ namespace flex
 
 			const real minCascadeDist = glm::max(m_DirectionalLight->shadowMapNearPlane, 0.0f);
 			real clipRange = cam->GetZFar() - cam->GetZNear();
+
+			// Flip near & far planes
+			glm::mat4 modifiedProj = cam->GetProjection();
+			modifiedProj[2][2] = 1.0f - modifiedProj[2][2];
+			modifiedProj[3][2] = -modifiedProj[3][2];
+			glm::mat4 invCam = glm::inverse(modifiedProj * cam->GetView());
 
 			real lastSplitDist = 0.0;
 			for (u32 c = 0; c < NUM_SHADOW_CASCADES; ++c)
@@ -733,7 +739,6 @@ namespace flex
 				//m_ShadowLightProjMats[c] = glm::ortho(mins.x, maxes.x, mins.y, maxes.y, maxes.z - mins.z, 0.0f);
 				//m_ShadowSamplingData.cascadeViewProjMats[c] = m_ShadowLightProjMats[c] * m_ShadowLightViewMats[c];
 
-
 				glm::vec3 frustumCorners[8] = {
 					glm::vec3(-1.0f,  1.0f, -1.0f),
 					glm::vec3(1.0f,  1.0f, -1.0f),
@@ -745,11 +750,6 @@ namespace flex
 					glm::vec3(-1.0f, -1.0f,  1.0f),
 				};
 
-				// Flip near & far planes
-				glm::mat4 modifiedProj = cam->GetProjection();
-				modifiedProj[2][2] = 1.0f - modifiedProj[2][2];
-				modifiedProj[3][2] = -modifiedProj[3][2];
-				glm::mat4 invCam = glm::inverse(modifiedProj * cam->GetView());
 				// Project frustum corners into world space
 				for (u32 i = 0; i < 8; i++)
 				{
@@ -757,22 +757,25 @@ namespace flex
 					frustumCorners[i] = invCorner / invCorner.w;
 				}
 
-				for (uint32_t i = 0; i < 4; i++) {
+				for (u32 i = 0; i < 4; i++)
+				{
 					glm::vec3 dist = frustumCorners[i + 4] - frustumCorners[i];
 					frustumCorners[i + 4] = frustumCorners[i] + (dist * splitDist);
 					frustumCorners[i] = frustumCorners[i] + (dist * lastSplitDist);
 				}
 
 				// Get frustum center
-				glm::vec3 frustumCenter = glm::vec3(0.0f);
-				for (uint32_t i = 0; i < 8; i++) {
+				glm::vec3 frustumCenter(0.0f);
+				for (u32 i = 0; i < 8; i++)
+				{
 					frustumCenter += frustumCorners[i];
 				}
 				frustumCenter /= 8.0f;
 
-				float radius = 0.0f;
-				for (uint32_t i = 0; i < 8; i++) {
-					float distance = glm::length(frustumCorners[i] - frustumCenter);
+				real radius = 0.0f;
+				for (u32 i = 0; i < 8; i++)
+				{
+					real distance = glm::length(frustumCorners[i] - frustumCenter);
 					radius = glm::max(radius, distance);
 				}
 				radius = std::ceil(radius * 16.0f) / 16.0f;
@@ -781,7 +784,7 @@ namespace flex
 				glm::vec3 minExtents = -maxExtents;
 
 				glm::vec3 lightDir = glm::normalize(-m_DirectionalLight->data.dir);
-				m_ShadowLightViewMats[c] = glm::lookAt(frustumCenter - lightDir * -minExtents.z, frustumCenter, glm::vec3(0.0f, 1.0f, 0.0f));
+				m_ShadowLightViewMats[c] = glm::lookAt(frustumCenter - lightDir * -minExtents.z, frustumCenter, VEC3_UP);
 				m_ShadowLightProjMats[c] = glm::ortho(minExtents.x, maxExtents.x, minExtents.y, maxExtents.y, maxExtents.z - minExtents.z, 0.0f);
 
 				m_ShadowSamplingData.cascadeDepthSplits[c] = depthSplits[c];// (cam->GetZNear() + splitDist * clipRange);

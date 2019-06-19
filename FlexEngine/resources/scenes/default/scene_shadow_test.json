@@ -487,6 +487,106 @@
 				"mask" : -1,
 				"group" : -1
 			}
+		},
+		{
+			"name" : "New_Game_Object_00",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "-60.427, -2.179, 1.200",
+				"scale" : "60.000, 1.000, 60.000"
+			},
+			"mesh" : "cube",
+			"material" : "grid",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500, 0.500, 0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 0.000000,
+				"kinematic" : true,
+				"static" : true,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "New_Game_Object_01",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "60.000, -2.179, 1.200",
+				"scale" : "60.000, 1.000, 60.000"
+			},
+			"mesh" : "cube",
+			"material" : "grid",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500, 0.500, 0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 0.000000,
+				"kinematic" : true,
+				"static" : true,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "New_Game_Object_02",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, -2.179, 60.000",
+				"scale" : "60.000, 1.000, 60.000"
+			},
+			"mesh" : "cube",
+			"material" : "grid",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500, 0.500, 0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 0.000000,
+				"kinematic" : true,
+				"static" : true,
+				"mask" : -1,
+				"group" : -1
+			}
+		},
+		{
+			"name" : "New_Game_Object_03",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, -2.179, -60.000",
+				"scale" : "60.000, 1.000, 60.000"
+			},
+			"mesh" : "cube",
+			"material" : "grid",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500, 0.500, 0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 0.000000,
+				"kinematic" : true,
+				"static" : true,
+				"mask" : -1,
+				"group" : -1
+			}
 		}
 	]
 }

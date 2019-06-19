@@ -2,7 +2,7 @@
 
 // Deferred PBR Combine
 
-#define QUALITY_LEVEL_HIGH 0
+#define QUALITY_LEVEL_HIGH 1
 #define NUMBER_POINT_LIGHTS 8
 #define NUM_CASCADES 4
 
@@ -245,13 +245,9 @@ void main()
 		float dirLightShadowOpacity = 1.0;
 		if (uboConstant.dirLight.castShadows != 0)
 		{
-			// TODO: Bias matrix?
 			vec4 transformedShadowPos = (biasMat * uboConstant.cascadeViewProjMats[cascadeIndex]) * vec4(worldPos, 1.0);
-			// transformedShadowPos.xy = transformedShadowPos.xy * 0.5 + 0.5;
 			transformedShadowPos.y = 1.0f - transformedShadowPos.y;
 			transformedShadowPos /= transformedShadowPos.w;
-			
-			// fragColor = vec4(vec3(texture(shadowMap, vec3(transformedShadowPos.xy, float(cascadeIndex))).r), 1.0f); return;
 			
 			if (transformedShadowPos.z > -1.0 && transformedShadowPos.z < 1.0)
 			{
@@ -259,8 +255,8 @@ void main()
 				float bias = max(baseBias * (1.0 - NoL), baseBias * 0.01);
 
 #if QUALITY_LEVEL_HIGH
-				int sampleRadius = 5;
-				float spread = 3.0;
+				int sampleRadius = 3;
+				float spread = 1.75;
 				float shadowSampleContrib = uboConstant.dirLight.shadowDarkness / ((sampleRadius*2 + 1) * (sampleRadius*2 + 1));
 				vec2 shadowMapTexelSize = 1.0 / textureSize(shadowMap, 0).xy;
 
@@ -268,7 +264,7 @@ void main()
 				{
 					for (int y = -sampleRadius; y <= sampleRadius; ++y)
 					{
-						float shadowDepth = texture(shadowMap, vec3(transformedShadowPos.xy + vec2(x, y) * shadowMapTexelSize*spread, float(cascadeIndex))).r;
+						float shadowDepth = texture(shadowMap, vec3(transformedShadowPos.xy + vec2(x, y) * shadowMapTexelSize*spread, cascadeIndex)).r;
 
 						if (shadowDepth > transformedShadowPos.z + bias)
 						{
@@ -277,7 +273,7 @@ void main()
 					}
 				}
 #else
-				float shadowDepth = texture(shadowMap, vec3(transformedShadowPos.xy, float(cascadeIndex))).r;
+				float shadowDepth = texture(shadowMap, vec3(transformedShadowPos.xy, cascadeIndex)).r;
 				if (shadowDepth > transformedShadowPos.z + bias)
 				{
 					dirLightShadowOpacity = 1.0 - uboConstant.dirLight.shadowDarkness;

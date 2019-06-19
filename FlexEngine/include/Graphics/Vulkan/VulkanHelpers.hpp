@@ -32,9 +32,6 @@ namespace flex
 			VDeleter<VkFramebuffer> frameBuffer;
 			VDeleter<VkImageView> imageView;
 			VkDescriptorSet descSet;
-
-			float splitDepth;
-			glm::mat4 viewProj;
 		};
 
 		// Framebuffer for offscreen rendering
