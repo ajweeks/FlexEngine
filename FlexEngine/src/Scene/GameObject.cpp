@@ -13,6 +13,8 @@ IGNORE_WARNINGS_PUSH
 
 #include <LinearMath/btIDebugDraw.h>
 #include <LinearMath/btTransform.h>
+
+#include <glm/gtx/quaternion.hpp> // for rotate
 IGNORE_WARNINGS_POP
 
 #include "Scene/GameObject.hpp"
@@ -2535,7 +2537,7 @@ namespace flex
 	void DirectionalLight::Initialize()
 	{
 		g_Renderer->RegisterDirectionalLight(this);
-		data.dir = glm::eulerAngles(m_Transform.GetLocalRotation());
+		data.dir = glm::rotate(m_Transform.GetWorldRotation(), VEC3_RIGHT);
 
 		m_Transform.updateParentOnStateChange = true;
 
@@ -2611,7 +2613,7 @@ namespace flex
 	void DirectionalLight::OnTransformChanged()
 	{
 		pos = m_Transform.GetLocalPosition();
-		data.dir = glm::eulerAngles(m_Transform.GetLocalRotation());
+		data.dir = glm::rotate(m_Transform.GetWorldRotation(), VEC3_RIGHT);
 	}
 
 	void DirectionalLight::SetPos(const glm::vec3& newPos)
@@ -2640,7 +2642,7 @@ namespace flex
 			std::string dirStr = directionalLightObj.GetString("rotation");
 			glm::quat rot(ParseVec3(dirStr));
 			m_Transform.SetLocalRotation(rot);
-			data.dir = glm::eulerAngles(rot);
+			data.dir = glm::rotate(m_Transform.GetWorldRotation(), VEC3_RIGHT);
 
 			std::string posStr = directionalLightObj.GetString("pos");
 			if (!posStr.empty())
@@ -2686,7 +2688,7 @@ namespace flex
 	{
 		JSONObject dirLightObj = {};
 
-		glm::vec3 dirLightDir = glm::eulerAngles(m_Transform.GetLocalRotation());
+		glm::vec3 dirLightDir = glm::rotate(m_Transform.GetWorldRotation(), VEC3_RIGHT);
 		std::string dirStr = Vec3ToString(dirLightDir, 3);
 		dirLightObj.fields.emplace_back("rotation", JSONValue(dirStr));
 
@@ -2719,8 +2721,8 @@ namespace flex
 
 	void DirectionalLight::SetRot(const glm::quat& newRot)
 	{
-		m_Transform.SetLocalRotation(newRot);
-		data.dir = glm::eulerAngles(newRot);
+		m_Transform.SetWorldRotation(newRot);
+		data.dir = glm::rotate(newRot, VEC3_RIGHT);
 	}
 
 	PointLight::PointLight(BaseScene* scene) :
