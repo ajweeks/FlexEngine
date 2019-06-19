@@ -185,9 +185,9 @@ void main()
 	uint cascadeIndex = 0;
 	for (uint i = 0; i < NUM_CASCADES; ++i)
 	{
-		if (linDepth > ((uboConstant.cascadeDepthSplits[i]-uboConstant.zNear)*invDist))
+		if (linDepth > uboConstant.cascadeDepthSplits[i])
 		{
-			cascadeIndex = i;
+			cascadeIndex = i + 1;
 		}
 	}
 
@@ -251,7 +251,6 @@ void main()
 			transformedShadowPos.y = 1.0f - transformedShadowPos.y;
 			transformedShadowPos /= transformedShadowPos.w;
 			
-			fragColor = vec4(transformedShadowPos.xy, cascadeIndex, 1.0f); return;
 			// fragColor = vec4(vec3(texture(shadowMap, vec3(transformedShadowPos.xy, float(cascadeIndex))).r), 1.0f); return;
 			
 			if (transformedShadowPos.z > -1.0 && transformedShadowPos.z < 1.0)

@@ -448,6 +448,24 @@ namespace flex
 				}
 			}
 
+			void SetData(const glm::mat4& viewProj)
+			{
+				const i32 dataSize = sizeof(glm::mat4) * 1;
+				if (data == nullptr)
+				{
+					assert(size == dataSize || size == 0);
+
+					size = dataSize;
+					data = malloc_hooked(dataSize);
+				}
+				else
+				{
+					assert(size == dataSize && "Attempted to set push constant data with differing size. Block must be reallocated.");
+				}
+				real* dst = (real*)data;
+				memcpy(dst, &viewProj, sizeof(glm::mat4)); dst += sizeof(glm::mat4) / sizeof(real);
+			}
+
 			void SetData(const glm::mat4& view, const glm::mat4& proj)
 			{
 				const i32 dataSize = sizeof(glm::mat4) * 2;

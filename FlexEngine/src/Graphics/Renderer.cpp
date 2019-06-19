@@ -784,8 +784,7 @@ namespace flex
 				m_ShadowLightViewMats[c] = glm::lookAt(frustumCenter - lightDir * -minExtents.z, frustumCenter, glm::vec3(0.0f, 1.0f, 0.0f));
 				m_ShadowLightProjMats[c] = glm::ortho(minExtents.x, maxExtents.x, minExtents.y, maxExtents.y, maxExtents.z - minExtents.z, 0.0f);
 
-				// Store split distance and matrix in cascade
-				m_ShadowSamplingData.cascadeDepthSplits[c] = (cam->GetZNear() + splitDist * clipRange);
+				m_ShadowSamplingData.cascadeDepthSplits[c] = depthSplits[c];// (cam->GetZNear() + splitDist * clipRange);
 
 				lastSplitDist = depthSplits[c];
 
@@ -1779,7 +1778,7 @@ namespace flex
 			// TODO: Upload index as push constant rather than full matrix
 			// TODO: Make push constant system more robust
 			m_BaseShaders[shaderID].bNeedPushConstantBlock = true;
-			m_BaseShaders[shaderID].pushConstantBlockSize = 128;
+			m_BaseShaders[shaderID].pushConstantBlockSize = 64;
 			m_BaseShaders[shaderID].pushConstantsNeededInFragStage = true;
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION;

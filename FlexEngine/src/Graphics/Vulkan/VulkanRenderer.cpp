@@ -4717,7 +4717,7 @@ namespace flex
 			{
 				createInfo.shadowSampler = m_ColorSampler;
 				// TODO: Use blank texture array here to appease validation warnings
-				createInfo.shadowImageView = m_DirectionalLight ? m_ShadowCascades[0]->imageView : m_BlankTexture->imageView;
+				createInfo.shadowImageView = m_DirectionalLight ? m_ShadowImageView : m_BlankTexture->imageView;
 			}
 
 			if (shader->shader->constantBufferUniforms.HasUniform(U_SSAO_FINAL_SAMPLER))
@@ -6178,7 +6178,8 @@ namespace flex
 					drawCallInfo.descriptorSetOverride = m_ShadowDescriptorSet;
 					drawCallInfo.bRenderingShadows = true;
 
-					pushConstantBlock.SetData(m_ShadowLightViewMats[c], m_ShadowLightProjMats[c]);
+					// TODO: Upload as one draw
+					pushConstantBlock.SetData(m_ShadowSamplingData.cascadeViewProjMats[c]);
 					drawCallInfo.pushConstantOverride = &pushConstantBlock;
 
 					for (const ShaderBatchPair& shaderBatch : m_ShadowBatch.batches)
