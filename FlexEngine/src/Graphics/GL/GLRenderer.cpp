@@ -1386,6 +1386,7 @@ namespace flex
 			GLShader& shader = m_Shaders[mat.material.shaderID];
 			glUseProgram(shader.program);
 
+			// TODO: CLEANUP: Get rid of first param
 			UniformInfo uniformInfo[] = {
 				{ U_MODEL,							"model", 						&mat.uniformIDs.model },
 				{ U_MODEL_INV_TRANSPOSE, 			"modelInvTranspose", 			&mat.uniformIDs.modelInvTranspose },

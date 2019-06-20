@@ -4014,6 +4014,7 @@ namespace flex
 				drawInfo.scale = glm::vec3(0.2f);
 				for (u32 i = 0; i < NUM_SHADOW_CASCADES; ++i)
 				{
+					// TODO: Cleaner solution pls (also fix validation warnings)
 					drawInfo.textureID = 999 + i;
 					drawInfo.pos = glm::vec3(0.0f, i * drawInfo.scale.x * 2.1f, 0.0f);
 					EnqueueSprite(drawInfo);
@@ -4030,8 +4031,6 @@ namespace flex
 				glm::vec3 scale(1.0f, -1.0f, 1.0f);
 
 				SpriteQuadDrawInfo drawInfo = {};
-				//drawInfo.FBO = m_Offscreen0FBO;
-				//drawInfo.RBO = m_Offscreen0RBO;
 				drawInfo.bScreenSpace = false;
 				drawInfo.bReadDepth = true;
 				drawInfo.bWriteDepth = true;
@@ -4081,12 +4080,6 @@ namespace flex
 
 			const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 			const real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
-
-			//VkViewport viewport = vks::viewportFlipped((real)frameBufferSize.x, (real)frameBufferSize.y, 0.0f, 1.0f);
-			//vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
-			//
-			//VkRect2D scissor = vks::scissor(0, 0, (u32)frameBufferSize.x, (u32)frameBufferSize.y);
-			//vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
 			RenderID spriteRenderID = m_Quad3DRenderID;
 			VulkanRenderObject* spriteRenderObject = GetRenderObject(spriteRenderID);
@@ -7108,11 +7101,6 @@ namespace flex
 			real exposure = cam->exposure;
 			glm::vec2 m_NearFarPlanes(cam->GetZNear(), cam->GetZFar());
 
-			// TODO: Delete func
-			//glm::mat4 lightView, lightProj;
-			//ComputeDirLightViewProj(lightView, lightProj);
-			//glm::mat4 lightViewProj = lightProj * lightView;
-
 			static DirLightData defaultDirLightData = { VEC3_RIGHT, 0, VEC3_ONE, 0.0f, 0, 0.0f };
 
 			DirLightData* dirLightData = &defaultDirLightData;
@@ -7166,7 +7154,6 @@ namespace flex
 				{ U_PROJECTION_INV, (void*)&projectionInv, US_PROJECTION_INV },
 				{ U_DIR_LIGHT, (void*)dirLightData, US_DIR_LIGHT },
 				{ U_POINT_LIGHTS, (void*)m_PointLights, US_POINT_LIGHTS },
-				//{ U_LIGHT_VIEW_PROJS, (void*)&m_ShadowLightViewMats, US_LIGHT_VIEW_PROJS },
 				{ U_TIME, (void*)&g_SecElapsedSinceProgramStart, US_TIME },
 				{ U_SHADOW_SAMPLING_DATA, (void*)&m_ShadowSamplingData, US_SHADOW_SAMPLING_DATA },
 				{ U_SSAO_GEN_DATA, (void*)&m_SSAOGenData, US_SSAO_GEN_DATA },
