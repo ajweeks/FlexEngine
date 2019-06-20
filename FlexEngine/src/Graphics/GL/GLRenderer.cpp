@@ -2664,7 +2664,6 @@ namespace flex
 			drawInfo.color = color;
 			drawInfo.anchor = AnchorPoint::CENTER;
 			drawInfo.textureID = m_OffscreenTexture0ID;
-			drawInfo.spriteObjectRenderID = m_FullScreenTriRenderID;
 
 			// TODO: Enqueue here if possible
 			DrawSpriteQuad(drawInfo);
@@ -2722,7 +2721,6 @@ namespace flex
 				drawInfo.bWriteDepth = true;
 				drawInfo.scale = scale;
 				drawInfo.materialID = m_SpriteMatID;
-				drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
 
 				glm::vec3 camPos = cam->GetPosition();
 				glm::vec3 camUp = cam->GetUp();
@@ -2760,28 +2758,14 @@ namespace flex
 
 		void GLRenderer::DrawSpriteQuad(const SpriteQuadDrawInfo& drawInfo)
 		{
-			RenderID spriteRenderID = drawInfo.spriteObjectRenderID;
-			if (spriteRenderID == InvalidRenderID)
-			{
-				spriteRenderID = m_Quad3DRenderID;
-			}
-			GLRenderObject* spriteRenderObject = GetRenderObject(spriteRenderID);
-			if (!spriteRenderObject ||
-				(spriteRenderObject->bEditorObject && !g_EngineInstance->IsRenderingEditorObjects()))
-			{
-				return;
-			}
-
-			spriteRenderObject->materialID = drawInfo.materialID;
-			if (spriteRenderObject->materialID == InvalidMaterialID)
-			{
-				spriteRenderObject->materialID = m_SpriteMatID;
-			}
-
-			GLMaterial& spriteMaterial = m_Materials[spriteRenderObject->materialID];
+			MaterialID matID = drawInfo.materialID == InvalidMaterialID ? m_SpriteMatID : drawInfo.materialID;
+			GLMaterial& spriteMaterial = m_Materials[matID];
 			GLShader& spriteShader = m_Shaders[spriteMaterial.material.shaderID];
 
 			glUseProgram(spriteShader.program);
+
+			RenderID spriteRenderID = drawInfo.bScreenSpace ? m_FullScreenTriRenderID : m_Quad3DRenderID;
+			GLRenderObject* spriteRenderObject = GetRenderObject(spriteRenderID);
 
 			const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 			const real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
@@ -3413,114 +3397,138 @@ namespace flex
 					if (drawCallInfo.materialOverride == InvalidMaterialID)
 					{
 						materialID = renderObject->materialID;
-					material = &m_Materials[materialID];
-					glShader = &m_Shaders[material->material.shaderID];
-					shader = glShader->shader;
-				}
-
-				assert(glShader->program == boundProgram);
-
-				glBindVertexArray(renderObject->VAO);
-				glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
-
-				if (drawCallInfo.cullFace == CullFace::_INVALID)
-				{
-					if (renderObject->cullFace == GL_NONE)
-					{
-						glDisable(GL_CULL_FACE);
-					}
-					else
-					{
-						glEnable(GL_CULL_FACE);
-						glCullFace(renderObject->cullFace);
-					}
-				}
-				else
-				{
-					if (drawCallInfo.cullFace == CullFace::NONE)
-					{
-						glDisable(GL_CULL_FACE);
-					}
-					else
-					{
-						glEnable(GL_CULL_FACE);
-						glCullFace(CullFaceToGLCullFace(drawCallInfo.cullFace));
-					}
-				}
-
-				if (shader->bTranslucent)
-				{
-					glEnable(GL_BLEND);
-					glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-				}
-				else
-				{
-					glDisable(GL_BLEND);
-				}
-
-				glDepthFunc(DepthTestFuncToGlenum(drawCallInfo.depthTestFunc));
-				glDepthMask(BoolToGLBoolean(drawCallInfo.bWriteToDepth));
-
-				UpdatePerObjectUniforms(renderObject->renderID, material);
-
-				BindTextures(shader, material);
-
-				if (drawCallInfo.bRenderToCubemap)
-				{
-					// renderObject->gameObject->IsStatic()
-
-					GLRenderObject* cubemapRenderObject = GetRenderObject(drawCallInfo.cubemapObjectRenderID);
-					GLMaterial* cubemapMaterial = &m_Materials[cubemapRenderObject->materialID];
-
-					glm::vec2 cubemapSize = cubemapMaterial->material.cubemapSamplerSize;
-
-					glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
-					glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
-					glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
-					glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
-
-					if (material->uniformIDs.projection == 0)
-					{
-						PrintWarn("Attempted to draw object to cubemap but uniformIDs.projection is not set on object: %s\n",
-								  renderObject->gameObject->GetName().c_str());
-						continue;
+						material = &m_Materials[materialID];
+						glShader = &m_Shaders[material->material.shaderID];
+						shader = glShader->shader;
 					}
 
-					// Use capture projection matrix
-					glUniformMatrix4fv(material->uniformIDs.projection, 1, GL_FALSE, &m_CaptureProjection[0][0]);
+					assert(glShader->program == boundProgram);
 
-					// TODO: Test if this is actually correct
-					glm::vec3 cubemapTranslation = -cubemapRenderObject->gameObject->GetTransform()->GetWorldPosition();
-					for (u32 face = 0; face < 6; ++face)
+					glBindVertexArray(renderObject->VAO);
+					glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
+
+					if (drawCallInfo.cullFace == CullFace::_INVALID)
 					{
-						glm::mat4 view = glm::translate(m_CaptureViews[face], cubemapTranslation);
-
-						// This doesn't work because it flips the winding order of things (I think), maybe just account for that?
-						// Flip vertically to match cubemap, cubemap shouldn't even be captured here eventually?
-						//glm::mat4 view = glm::translate(glm::scale(m_CaptureViews[face], glm::vec3(1.0f, -1.0f, 1.0f)), cubemapTranslation);
-
-						glUniformMatrix4fv(material->uniformIDs.view, 1, GL_FALSE, &view[0][0]);
-
-						if (drawCallInfo.bDeferred)
+						if (renderObject->cullFace == GL_NONE)
 						{
-							//constexpr i32 numBuffers = 3;
-							//u32 attachments[numBuffers] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
-							//glDrawBuffers(numBuffers, attachments);
-
-							for (u32 j = 0; j < cubemapMaterial->cubemapSamplerGBuffersIDs.size(); ++j)
-							{
-								glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + j,
-									GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerGBuffersIDs[j].id, 0);
-							}
+							glDisable(GL_CULL_FACE);
 						}
 						else
 						{
-							glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-								GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerID, 0);
+							glEnable(GL_CULL_FACE);
+							glCullFace(renderObject->cullFace);
+						}
+					}
+					else
+					{
+						if (drawCallInfo.cullFace == CullFace::NONE)
+						{
+							glDisable(GL_CULL_FACE);
+						}
+						else
+						{
+							glEnable(GL_CULL_FACE);
+							glCullFace(CullFaceToGLCullFace(drawCallInfo.cullFace));
+						}
+					}
+
+					if (shader->bTranslucent)
+					{
+						glEnable(GL_BLEND);
+						glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+					}
+					else
+					{
+						glDisable(GL_BLEND);
+					}
+
+					glDepthFunc(DepthTestFuncToGlenum(drawCallInfo.depthTestFunc));
+					glDepthMask(BoolToGLBoolean(drawCallInfo.bWriteToDepth));
+
+					UpdatePerObjectUniforms(renderObject->renderID, material);
+
+					BindTextures(shader, material);
+
+					if (drawCallInfo.bRenderToCubemap)
+					{
+						// renderObject->gameObject->IsStatic()
+
+						GLRenderObject* cubemapRenderObject = GetRenderObject(drawCallInfo.cubemapObjectRenderID);
+						GLMaterial* cubemapMaterial = &m_Materials[cubemapRenderObject->materialID];
+
+						glm::vec2 cubemapSize = cubemapMaterial->material.cubemapSamplerSize;
+
+						glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
+						glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
+						glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
+						glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
+
+						if (material->uniformIDs.projection == 0)
+						{
+							PrintWarn("Attempted to draw object to cubemap but uniformIDs.projection is not set on object: %s\n",
+								renderObject->gameObject->GetName().c_str());
+							continue;
 						}
 
-						glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-							GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapDepthSamplerID, 0);
+						// Use capture projection matrix
+						glUniformMatrix4fv(material->uniformIDs.projection, 1, GL_FALSE, &m_CaptureProjection[0][0]);
+
+						// TODO: Test if this is actually correct
+						glm::vec3 cubemapTranslation = -cubemapRenderObject->gameObject->GetTransform()->GetWorldPosition();
+						for (u32 face = 0; face < 6; ++face)
+						{
+							glm::mat4 view = glm::translate(m_CaptureViews[face], cubemapTranslation);
+
+							// This doesn't work because it flips the winding order of things (I think), maybe just account for that?
+							// Flip vertically to match cubemap, cubemap shouldn't even be captured here eventually?
+							//glm::mat4 view = glm::translate(glm::scale(m_CaptureViews[face], glm::vec3(1.0f, -1.0f, 1.0f)), cubemapTranslation);
+
+							glUniformMatrix4fv(material->uniformIDs.view, 1, GL_FALSE, &view[0][0]);
+
+							if (drawCallInfo.bDeferred)
+							{
+								//constexpr i32 numBuffers = 3;
+								//u32 attachments[numBuffers] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
+								//glDrawBuffers(numBuffers, attachments);
+
+								for (u32 j = 0; j < cubemapMaterial->cubemapSamplerGBuffersIDs.size(); ++j)
+								{
+									glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + j,
+										GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerGBuffersIDs[j].id, 0);
+								}
+							}
+							else
+							{
+								glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+									GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerID, 0);
+							}
+
+							glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+								GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapDepthSamplerID, 0);
+
+							if (renderObject->bIndexed)
+							{
+								glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderObject->IBO);
+								GLsizei count = (GLsizei)renderObject->indices->size();
+								glDrawElements(renderObject->topology, count, GL_UNSIGNED_INT, (void*)0);
+							}
+							else
+							{
+								glDrawArrays(renderObject->topology, 0, (GLsizei)renderObject->vertexBufferData->VertexCount);
+							}
+						}
+					}
+					else
+					{
+						if (shader->bTranslucent)
+						{
+							glEnable(GL_BLEND);
+							glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+						}
+						else
+						{
+							glDisable(GL_BLEND);
+						}
 
 						if (renderObject->bIndexed)
 						{
@@ -3533,54 +3541,30 @@ namespace flex
 							glDrawArrays(renderObject->topology, 0, (GLsizei)renderObject->vertexBufferData->VertexCount);
 						}
 					}
-				}
-				else
-				{
-					if (shader->bTranslucent)
+
+					if (m_bDisplayBoundingVolumes && renderObject->gameObject)
 					{
-						glEnable(GL_BLEND);
-						glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-					}
-					else
-					{
-						glDisable(GL_BLEND);
-					}
+						MeshComponent* mesh = renderObject->gameObject->GetMeshComponent();
+						if (mesh)
+						{
+							btVector3 centerWS = ToBtVec3(mesh->GetBoundingSphereCenterPointWS());
+							m_PhysicsDebugDrawer->drawSphere(centerWS, 0.1f, btVector3(0.8f, 0.2f, 0.1f));
+							m_PhysicsDebugDrawer->drawSphere(centerWS, mesh->GetScaledBoundingSphereRadius(), btVector3(0.2f, 0.8f, 0.1f));
 
-					if (renderObject->bIndexed)
-					{
-						glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderObject->IBO);
-						GLsizei count = (GLsizei)renderObject->indices->size();
-						glDrawElements(renderObject->topology, count, GL_UNSIGNED_INT, (void*)0);
-					}
-					else
-					{
-						glDrawArrays(renderObject->topology, 0, (GLsizei)renderObject->vertexBufferData->VertexCount);
-					}
-				}
+							Transform* transform = renderObject->gameObject->GetTransform();
 
-				if (m_bDisplayBoundingVolumes && renderObject->gameObject)
-				{
-					MeshComponent* mesh = renderObject->gameObject->GetMeshComponent();
-					if (mesh)
-					{
-						btVector3 centerWS = ToBtVec3(mesh->GetBoundingSphereCenterPointWS());
-						m_PhysicsDebugDrawer->drawSphere(centerWS, 0.1f, btVector3(0.8f, 0.2f, 0.1f));
-						m_PhysicsDebugDrawer->drawSphere(centerWS, mesh->GetScaledBoundingSphereRadius(), btVector3(0.2f, 0.8f, 0.1f));
+							//glm::vec3 transformedMin = glm::vec3(transform->GetWorldTransform() * glm::vec4(mesh->m_MinPoint, 1.0f));
+							//glm::vec3 transformedMax = glm::vec3(transform->GetWorldTransform() * glm::vec4(mesh->m_MaxPoint, 1.0f));
+							//btVector3 minPos = ToBtVec3(transformedMin);
+							//btVector3 maxPos = ToBtVec3(transformedMax);
+							//m_PhysicsDebugDrawer->drawSphere(minPos, 0.1f, btVector3(0.2f, 0.8f, 0.1f));
+							//m_PhysicsDebugDrawer->drawSphere(maxPos, 0.1f, btVector3(0.2f, 0.8f, 0.1f));
 
-						Transform* transform = renderObject->gameObject->GetTransform();
+							btVector3 scaledMin = ToBtVec3(transform->GetWorldScale() * mesh->m_MinPoint);
+							btVector3 scaledMax = ToBtVec3(transform->GetWorldScale() * mesh->m_MaxPoint);
 
-						//glm::vec3 transformedMin = glm::vec3(transform->GetWorldTransform() * glm::vec4(mesh->m_MinPoint, 1.0f));
-						//glm::vec3 transformedMax = glm::vec3(transform->GetWorldTransform() * glm::vec4(mesh->m_MaxPoint, 1.0f));
-						//btVector3 minPos = ToBtVec3(transformedMin);
-						//btVector3 maxPos = ToBtVec3(transformedMax);
-						//m_PhysicsDebugDrawer->drawSphere(minPos, 0.1f, btVector3(0.2f, 0.8f, 0.1f));
-						//m_PhysicsDebugDrawer->drawSphere(maxPos, 0.1f, btVector3(0.2f, 0.8f, 0.1f));
-
-						btVector3 scaledMin = ToBtVec3(transform->GetWorldScale() * mesh->m_MinPoint);
-						btVector3 scaledMax = ToBtVec3(transform->GetWorldScale() * mesh->m_MaxPoint);
-
-						btTransform transformBT = ToBtTransform(*transform);
-						m_PhysicsDebugDrawer->drawBox(scaledMin, scaledMax, transformBT, btVector3(0.85f, 0.8f, 0.85f));
+							btTransform transformBT = ToBtTransform(*transform);
+							m_PhysicsDebugDrawer->drawBox(scaledMin, scaledMax, transformBT, btVector3(0.85f, 0.8f, 0.85f));
 						}
 					}
 				}
@@ -3859,7 +3843,6 @@ namespace flex
 			drawInfo.materialID = m_SpriteMatID;
 			drawInfo.anchor = AnchorPoint::WHOLE;
 			drawInfo.textureID = m_LoadingTextureID;
-			drawInfo.spriteObjectRenderID = m_Quad3DRenderID;
 
 			// TODO: Enqueue here
 			DrawSpriteQuad(drawInfo);
