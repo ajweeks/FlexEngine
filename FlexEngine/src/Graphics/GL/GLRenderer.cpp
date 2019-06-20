@@ -1686,7 +1686,7 @@ namespace flex
 
 			for (auto& matPair : m_Materials)
 			{
-				if (!matPair.second.material.visibleInEditor)
+				if (matPair.second.material.visibleInEditor)
 				{
 					result.emplace_back(matPair.second.material.name, matPair.first);
 				}
@@ -3408,9 +3408,11 @@ namespace flex
 
 			for (GLRenderObject* renderObject : batchedRenderObjects)
 			{
-				if (drawCallInfo.materialOverride == InvalidMaterialID)
+				if (!drawCallInfo.bRenderingShadows || renderObject->gameObject->CastsShadow())
 				{
-					materialID = renderObject->materialID;
+					if (drawCallInfo.materialOverride == InvalidMaterialID)
+					{
+						materialID = renderObject->materialID;
 					material = &m_Materials[materialID];
 					glShader = &m_Shaders[material->material.shaderID];
 					shader = glShader->shader;
@@ -3579,6 +3581,7 @@ namespace flex
 
 						btTransform transformBT = ToBtTransform(*transform);
 						m_PhysicsDebugDrawer->drawBox(scaledMin, scaledMax, transformBT, btVector3(0.85f, 0.8f, 0.85f));
+						}
 					}
 				}
 			}
@@ -4831,7 +4834,7 @@ namespace flex
 						i32 matShortIndex = 0;
 						for (i32 i = 0; i < (i32)m_Materials.size(); ++i)
 						{
-							if (m_Materials[i].material.visibleInEditor)
+							if (!m_Materials[i].material.visibleInEditor)
 							{
 								continue;
 							}

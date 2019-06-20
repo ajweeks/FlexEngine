@@ -486,6 +486,7 @@ namespace flex
 
 			// X Axis
 			GameObject* translateXAxis = new GameObject("Translation gizmo x axis", GameObjectType::_NONE);
+			translateXAxis->SetCastsShadow(false);
 			translateXAxis->AddTag(m_TranslationGizmoTag);
 			MeshComponent* xAxisMesh = translateXAxis->SetMeshComponent(new MeshComponent(translateXAxis, m_TransformGizmoMatXID));
 
@@ -502,6 +503,7 @@ namespace flex
 
 			// Y Axis
 			GameObject* translateYAxis = new GameObject("Translation gizmo y axis", GameObjectType::_NONE);
+			translateYAxis->SetCastsShadow(false);
 			translateYAxis->AddTag(m_TranslationGizmoTag);
 			MeshComponent* yAxisMesh = translateYAxis->SetMeshComponent(new MeshComponent(translateYAxis, m_TransformGizmoMatYID));
 
@@ -518,6 +520,7 @@ namespace flex
 
 			// Z Axis
 			GameObject* translateZAxis = new GameObject("Translation gizmo z axis", GameObjectType::_NONE);
+			translateZAxis->SetCastsShadow(false);
 			translateZAxis->AddTag(m_TranslationGizmoTag);
 
 			MeshComponent* zAxisMesh = translateZAxis->SetMeshComponent(new MeshComponent(translateZAxis, m_TransformGizmoMatZID));
@@ -559,6 +562,7 @@ namespace flex
 
 			// X Axis
 			GameObject* rotationXAxis = new GameObject("Rotation gizmo x axis", GameObjectType::_NONE);
+			rotationXAxis->SetCastsShadow(false);
 			rotationXAxis->AddTag(m_RotationGizmoTag);
 			MeshComponent* xAxisMesh = rotationXAxis->SetMeshComponent(new MeshComponent(rotationXAxis, m_TransformGizmoMatXID));
 
@@ -577,6 +581,7 @@ namespace flex
 
 			// Y Axis
 			GameObject* rotationYAxis = new GameObject("Rotation gizmo y axis", GameObjectType::_NONE);
+			rotationYAxis->SetCastsShadow(false);
 			rotationYAxis->AddTag(m_RotationGizmoTag);
 			MeshComponent* yAxisMesh = rotationYAxis->SetMeshComponent(new MeshComponent(rotationYAxis, m_TransformGizmoMatYID));
 
@@ -593,6 +598,7 @@ namespace flex
 
 			// Z Axis
 			GameObject* rotationZAxis = new GameObject("Rotation gizmo z axis", GameObjectType::_NONE);
+			rotationZAxis->SetCastsShadow(false);
 			rotationZAxis->AddTag(m_RotationGizmoTag);
 
 			MeshComponent* zAxisMesh = rotationZAxis->SetMeshComponent(new MeshComponent(rotationZAxis, m_TransformGizmoMatZID));
@@ -636,6 +642,7 @@ namespace flex
 
 			// X Axis
 			GameObject* scaleXAxis = new GameObject("Scale gizmo x axis", GameObjectType::_NONE);
+			scaleXAxis->SetCastsShadow(false);
 			scaleXAxis->AddTag(m_ScaleGizmoTag);
 			MeshComponent* xAxisMesh = scaleXAxis->SetMeshComponent(new MeshComponent(scaleXAxis, m_TransformGizmoMatXID));
 
@@ -652,6 +659,7 @@ namespace flex
 
 			// Y Axis
 			GameObject* scaleYAxis = new GameObject("Scale gizmo y axis", GameObjectType::_NONE);
+			scaleYAxis->SetCastsShadow(false);
 			scaleYAxis->AddTag(m_ScaleGizmoTag);
 			MeshComponent* yAxisMesh = scaleYAxis->SetMeshComponent(new MeshComponent(scaleYAxis, m_TransformGizmoMatYID));
 
@@ -668,6 +676,7 @@ namespace flex
 
 			// Z Axis
 			GameObject* scaleZAxis = new GameObject("Scale gizmo z axis", GameObjectType::_NONE);
+			scaleZAxis->SetCastsShadow(false);
 			scaleZAxis->AddTag(m_ScaleGizmoTag);
 
 			MeshComponent* zAxisMesh = scaleZAxis->SetMeshComponent(new MeshComponent(scaleZAxis, m_TransformGizmoMatZID));
