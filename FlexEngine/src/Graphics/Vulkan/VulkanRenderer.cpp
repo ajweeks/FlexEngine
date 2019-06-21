@@ -504,10 +504,6 @@ namespace flex
 
 			for (GameObject* obj : m_PersistentObjects)
 			{
-				if (obj->GetRenderID() != InvalidRenderID)
-				{
-					DestroyRenderObject(obj->GetRenderID());
-				}
 				obj->Destroy();
 				delete obj;
 			}
@@ -5096,7 +5092,7 @@ namespace flex
 				}
 			}
 
-			for (auto& materialObj : BaseScene::s_ParsedMaterials)
+			for (const auto& materialObj : BaseScene::s_ParsedMaterials)
 			{
 				if (materialObj.GetString("name").compare(materialName) == 0)
 				{

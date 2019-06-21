@@ -130,6 +130,8 @@ namespace flex
 
 	void Renderer::PostInitialize()
 	{
+		// TODO: Use MeshComponent for these objects?
+
 		// Full screen Triangle
 		{
 			VertexBufferData::CreateInfo triVertexBufferDataCreateInfo = {};
@@ -225,6 +227,9 @@ namespace flex
 	void Renderer::Destroy()
 	{
 		free_hooked(m_PointLights);
+
+		m_Quad3DVertexBufferData.Destroy();
+		m_FullScreenTriVertexBufferData.Destroy();
 
 		DestroyRenderObject(m_FullScreenTriRenderID);
 		DestroyRenderObject(m_Quad3DRenderID);
@@ -2210,6 +2215,7 @@ namespace flex
 				GameObject* gameObject = *iter;
 				if (gameObject->GetName().compare(gBufferQuadName) == 0)
 				{
+					gameObject->Destroy();
 					delete gameObject;
 					m_PersistentObjects.erase(iter);
 					break;
