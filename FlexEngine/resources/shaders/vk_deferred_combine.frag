@@ -3,7 +3,7 @@
 // Deferred PBR Combine
 
 #define QUALITY_LEVEL_HIGH 1
-#define NUMBER_POINT_LIGHTS 8
+#define NUM_POINT_LIGHTS 8
 #define NUM_CASCADES 4
 
 #extension GL_ARB_separate_shader_objects : enable
@@ -40,7 +40,7 @@ layout (binding = 0) uniform UBOConstant
 	mat4 invView;
 	mat4 invProj;
 	DirectionalLight dirLight;
-	PointLight pointLights[NUMBER_POINT_LIGHTS];
+	PointLight pointLights[NUM_POINT_LIGHTS];
 	// Cascading Shadow Map Data
 	mat4 cascadeViewProjMats[NUM_CASCADES];
 	vec4 cascadeDepthSplits;
@@ -61,7 +61,7 @@ layout (binding = 3) uniform samplerCube irradianceSampler;
 layout (binding = 4) uniform samplerCube prefilterMap;
 layout (binding = 5) uniform sampler2D depthBuffer;
 layout (binding = 6) uniform sampler2D ssaoBuffer;
-layout (binding = 7) uniform sampler2DArray shadowMap;
+layout (binding = 7) uniform sampler2DArray shadowMaps;
 
 layout (binding = 8) uniform sampler2D normalRoughnessTex;
 layout (binding = 9) uniform sampler2D albedoMetallicTex;
@@ -212,7 +212,7 @@ void main()
 
 	// Reflectance equation
 	vec3 Lo = vec3(0.0);
-	for (int i = 0; i < NUMBER_POINT_LIGHTS; ++i)
+	for (int i = 0; i < NUM_POINT_LIGHTS; ++i)
 	{
 		if (uboConstant.pointLights[i].enabled == 0)
 		{
@@ -258,13 +258,13 @@ void main()
 				int sampleRadius = 3;
 				float spread = 1.75;
 				float shadowSampleContrib = uboConstant.dirLight.shadowDarkness / ((sampleRadius*2 + 1) * (sampleRadius*2 + 1));
-				vec2 shadowMapTexelSize = 1.0 / textureSize(shadowMap, 0).xy;
+				vec3 shadowMapTexelSize = 1.0 / textureSize(shadowMaps, 0);
 
 				for (int x = -sampleRadius; x <= sampleRadius; ++x)
 				{
 					for (int y = -sampleRadius; y <= sampleRadius; ++y)
 					{
-						float shadowDepth = texture(shadowMap, vec3(transformedShadowPos.xy + vec2(x, y) * shadowMapTexelSize*spread, cascadeIndex)).r;
+						float shadowDepth = texture(shadowMaps, vec3(transformedShadowPos.xy + vec2(x, y) * shadowMapTexelSize.xy*spread, cascadeIndex)).r;
 
 						if (shadowDepth > transformedShadowPos.z + bias)
 						{
@@ -273,7 +273,7 @@ void main()
 					}
 				}
 #else
-				float shadowDepth = texture(shadowMap, vec3(transformedShadowPos.xy, cascadeIndex)).r;
+				float shadowDepth = texture(shadowMaps, vec3(transformedShadowPos.xy, cascadeIndex)).r;
 				if (shadowDepth > transformedShadowPos.z + bias)
 				{
 					dirLightShadowOpacity = 1.0 - uboConstant.dirLight.shadowDarkness;
