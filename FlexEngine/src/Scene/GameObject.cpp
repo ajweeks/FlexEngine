@@ -2597,11 +2597,6 @@ namespace flex
 		ImGui::DragFloat("Near", &shadowMapNearPlane);
 		ImGui::DragFloat("Far", &shadowMapFarPlane);
 		ImGui::DragFloat("Zoom", &shadowMapZoom);
-
-		if (ImGui::CollapsingHeader("Preview"))
-		{
-			ImGui::Image((void*)shadowTextureID, ImVec2(256, 256), ImVec2(0, 1), ImVec2(1, 0));
-		}
 	}
 
 	void DirectionalLight::SetVisible(bool bVisible, bool bEffectChildren /* = true */)

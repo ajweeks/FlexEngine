@@ -246,8 +246,7 @@ namespace flex
 		real shadowMapFarPlane;
 		real shadowMapZoom;
 
-		// DEBUG: (just for preview in ImGui)
-		u32 shadowTextureID = 0;
+		// DEBUG:
 		glm::vec3 pos = VEC3_ZERO;
 
 	protected:

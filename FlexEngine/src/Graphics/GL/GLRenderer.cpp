@@ -188,13 +188,9 @@ namespace flex
 				glDrawBuffer(GL_NONE);
 
 				if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-				{
-					PrintError("Shadow depth buffer is incomplete!\n");
-				}
-
-				if (m_DirectionalLight != nullptr)
-				{
-					m_DirectionalLight->shadowTextureID = m_ShadowMapTexture.id;
+					{
+						PrintError("Shadow depth buffer is incomplete!\n");
+					}
 				}
 			}
 
@@ -354,11 +350,6 @@ namespace flex
 			for (GameObject* editorObject : m_EditorObjects)
 			{
 				editorObject->PostInitialize();
-			}
-
-			if (m_DirectionalLight != nullptr)
-			{
-				m_DirectionalLight->shadowTextureID = m_ShadowMapTexture.id;
 			}
 		}
 
@@ -1873,10 +1864,6 @@ namespace flex
 			{
 				GenerateGBuffer();
 
-				if (m_DirectionalLight != nullptr)
-				{
-					m_DirectionalLight->shadowTextureID = m_ShadowMapTexture.id;
-				}
 				m_bSSAOStateChanged = false;
 				return;
 			}
@@ -3393,11 +3380,9 @@ namespace flex
 
 			for (GLRenderObject* renderObject : batchedRenderObjects)
 			{
-				if (!drawCallInfo.bRenderingShadows || renderObject->gameObject->CastsShadow())
+				if (drawCallInfo.materialOverride == InvalidMaterialID)
 				{
-					if (drawCallInfo.materialOverride == InvalidMaterialID)
-					{
-						materialID = renderObject->materialID;
+					materialID = renderObject->materialID;
 						material = &m_Materials[materialID];
 						glShader = &m_Shaders[material->material.shaderID];
 						shader = glShader->shader;
@@ -3566,7 +3551,6 @@ namespace flex
 
 							btTransform transformBT = ToBtTransform(*transform);
 							m_PhysicsDebugDrawer->drawBox(scaledMin, scaledMax, transformBT, btVector3(0.85f, 0.8f, 0.85f));
-						}
 					}
 				}
 			}
@@ -4285,11 +4269,6 @@ namespace flex
 		{
 			// G-Buffer needs to be regenerated using new scene's reflection probe mat ID
 			GenerateGBuffer();
-
-			if (m_DirectionalLight != nullptr)
-			{
-				m_DirectionalLight->shadowTextureID = m_ShadowMapTexture.id;
-			}
 		}
 
 		void GLRenderer::OnPostSceneChange()

@@ -320,7 +320,7 @@ namespace flex
 		MaterialID m_ShadowMaterialID = InvalidMaterialID;
 		//MaterialID m_CubemapGBufferMaterialID = InvalidMaterialID;
 
-		//const u32 SHADOW_ATLAS_RES = 4096;
+		// TODO: Make tweakable at runtime
 		const u32 SHADOW_CASCADE_RES = 2048;
 		glm::mat4 m_ShadowLightViewMats[NUM_SHADOW_CASCADES];
 		glm::mat4 m_ShadowLightProjMats[NUM_SHADOW_CASCADES];
