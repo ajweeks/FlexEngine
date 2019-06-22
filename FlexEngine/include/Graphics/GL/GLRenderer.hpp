@@ -247,8 +247,7 @@ namespace flex
 			TextureID m_gBufferFBO1ID = InvalidTextureID;
 
 			TextureHandle m_ShadowMapTexture;
-			u32 m_ShadowMapFBO = 0;
-			i32 m_ShadowMapSize = 4096;
+			std::array<u32, NUM_SHADOW_CASCADES> m_ShadowMapFBOs;
 
 			u32 m_SSAOFrameBuffer = 0;
 			u32 m_SSAOBlurHFrameBuffer = 0;

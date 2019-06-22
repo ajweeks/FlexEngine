@@ -170,24 +170,27 @@ namespace flex
 			{
 				// TODO: Add option to initialize empty texture using public virtual
 
-				glGenFramebuffers(1, &m_ShadowMapFBO);
-				glBindFramebuffer(GL_FRAMEBUFFER, m_ShadowMapFBO);
-
 				glGenTextures(1, &m_ShadowMapTexture.id);
-				glBindTexture(GL_TEXTURE_2D, m_ShadowMapTexture.id);
-				glTexImage2D(GL_TEXTURE_2D, 0, m_ShadowMapTexture.internalFormat, m_ShadowMapSize, m_ShadowMapSize, 0, m_ShadowMapTexture.format, m_ShadowMapTexture.type, NULL);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+				glBindTexture(GL_TEXTURE_2D_ARRAY, m_ShadowMapTexture.id);
+				glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, m_ShadowMapTexture.internalFormat, SHADOW_CASCADE_RES, SHADOW_CASCADE_RES, NUM_SHADOW_CASCADES, 0, m_ShadowMapTexture.format, m_ShadowMapTexture.type, NULL);
+				glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+				glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+				glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+				glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 				real borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-				glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor); // Prevents areas not covered by map to be in shadow
-				glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, m_ShadowMapTexture.id, 0);
+				glTexParameterfv(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BORDER_COLOR, borderColor); // Prevents areas not covered by map to be in shadow
 
-				// No color buffer is written to
-				glDrawBuffer(GL_NONE);
+				for (i32 i = 0; i < NUM_SHADOW_CASCADES; ++i)
+				{
+					glGenFramebuffers(1, &m_ShadowMapFBOs[i]);
+					glBindFramebuffer(GL_FRAMEBUFFER, m_ShadowMapFBOs[i]);
 
-				if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+					glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, m_ShadowMapTexture.id, 0, i);
+
+					// No color buffer is written to
+					glDrawBuffer(GL_NONE);
+
+					if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 					{
 						PrintError("Shadow depth buffer is incomplete!\n");
 					}
@@ -375,7 +378,10 @@ namespace flex
 			glDeleteFramebuffers(1, &m_Offscreen1FBO);
 			glDeleteRenderbuffers(1, &m_Offscreen1RBO);
 
-			glDeleteFramebuffers(1, &m_ShadowMapFBO);
+			for (i32 i = 0; i < NUM_SHADOW_CASCADES; ++i)
+			{
+				glDeleteFramebuffers(1, &m_ShadowMapFBOs[i]);
+			}
 
 			delete screenshotAsyncTextureSave;
 			screenshotAsyncTextureSave = nullptr;
@@ -833,7 +839,7 @@ namespace flex
 
 			if (shader.shader->bNeedShadowMap)
 			{
-				const char* uniformName = "shadowMap";
+				const char* uniformName = "shadowMaps";
 				i32 uniformLocation = glGetUniformLocation(shader.program, uniformName);
 				if (uniformLocation == -1)
 				{
@@ -1382,7 +1388,6 @@ namespace flex
 				{ U_MODEL,							"model", 						&mat.uniformIDs.model },
 				{ U_MODEL_INV_TRANSPOSE, 			"modelInvTranspose", 			&mat.uniformIDs.modelInvTranspose },
 				{ U_COLOR_MULTIPLIER, 				"colorMultiplier", 				&mat.uniformIDs.colorMultiplier },
-				{ U_LIGHT_VIEW_PROJS, 				"lightViewProj",				&mat.uniformIDs.lightViewProjection },
 				{ U_EXPOSURE,						"exposure",						&mat.uniformIDs.exposure },
 				{ U_VIEW, 							"view", 						&mat.uniformIDs.view },
 				{ U_VIEW_INV,						"invView", 						&mat.uniformIDs.viewInv },
@@ -2192,33 +2197,34 @@ namespace flex
 
 			GL_PUSH_DEBUG_GROUP("Shadow Map Depths");
 
-			if (m_DirectionalLight != nullptr && m_DirectionalLight->data.castShadows != 0 && m_DirectionalLight->data.enabled)
+			if (m_DirectionalLight &&
+				m_DirectionalLight->data.castShadows &&
+				m_DirectionalLight->data.enabled)
 			{
 				GLMaterial* material = &m_Materials[m_ShadowMaterialID];
 				GLShader* shader = &m_Shaders[material->material.shaderID];
 				glUseProgram(shader->program);
-
-				glBindFramebuffer(GL_FRAMEBUFFER, m_ShadowMapFBO);
-
-				glViewport(0, 0, m_ShadowMapSize, m_ShadowMapSize);
-
-				glDepthMask(GL_TRUE);
-				glDrawBuffer(GL_NONE);
-
-				glClear(GL_DEPTH_BUFFER_BIT);
 
 				DrawCallInfo drawCallInfo = {};
 				drawCallInfo.materialOverride = m_ShadowMaterialID;
 				drawCallInfo.bRenderingShadows = true;
 				drawCallInfo.cullFace = CullFace::FRONT;
 
-				glm::mat4 view, proj;
-				ComputeDirLightViewProj(view, proj);
-				glm::mat4 lightViewProj = proj * view;
+				for (i32 i = 0; i < NUM_SHADOW_CASCADES; ++i)
+				{
+					glBindFramebuffer(GL_FRAMEBUFFER, m_ShadowMapFBOs[i]);
 
-				glUniformMatrix4fv(material->uniformIDs.lightViewProjection, 1, GL_FALSE, &lightViewProj[0][0]);
+					glViewport(0, 0, SHADOW_CASCADE_RES, SHADOW_CASCADE_RES);
 
-				DrawRenderObjectBatch(m_ShadowBatch, drawCallInfo);
+					glDepthMask(GL_TRUE);
+					glDrawBuffer(GL_NONE);
+
+					glClear(GL_DEPTH_BUFFER_BIT);
+
+					SetMat4f(material->material.shaderID, "lightViewProj", m_ShadowSamplingData.cascadeViewProjMats[i]);
+
+					DrawRenderObjectBatch(m_ShadowBatch, drawCallInfo);
+				}
 			}
 
 			GL_POP_DEBUG_GROUP();
@@ -3383,138 +3389,114 @@ namespace flex
 				if (drawCallInfo.materialOverride == InvalidMaterialID)
 				{
 					materialID = renderObject->materialID;
-						material = &m_Materials[materialID];
-						glShader = &m_Shaders[material->material.shaderID];
-						shader = glShader->shader;
-					}
+					material = &m_Materials[materialID];
+					glShader = &m_Shaders[material->material.shaderID];
+					shader = glShader->shader;
+				}
 
-					assert(glShader->program == boundProgram);
+				assert(glShader->program == boundProgram);
 
-					glBindVertexArray(renderObject->VAO);
-					glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
+				glBindVertexArray(renderObject->VAO);
+				glBindBuffer(GL_ARRAY_BUFFER, renderObject->VBO);
 
-					if (drawCallInfo.cullFace == CullFace::_INVALID)
+				if (drawCallInfo.cullFace == CullFace::_INVALID)
+				{
+					if (renderObject->cullFace == GL_NONE)
 					{
-						if (renderObject->cullFace == GL_NONE)
-						{
-							glDisable(GL_CULL_FACE);
-						}
-						else
-						{
-							glEnable(GL_CULL_FACE);
-							glCullFace(renderObject->cullFace);
-						}
+						glDisable(GL_CULL_FACE);
 					}
 					else
 					{
-						if (drawCallInfo.cullFace == CullFace::NONE)
-						{
-							glDisable(GL_CULL_FACE);
-						}
-						else
-						{
-							glEnable(GL_CULL_FACE);
-							glCullFace(CullFaceToGLCullFace(drawCallInfo.cullFace));
-						}
+						glEnable(GL_CULL_FACE);
+						glCullFace(renderObject->cullFace);
 					}
-
-					if (shader->bTranslucent)
+				}
+				else
+				{
+					if (drawCallInfo.cullFace == CullFace::NONE)
 					{
-						glEnable(GL_BLEND);
-						glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+						glDisable(GL_CULL_FACE);
 					}
 					else
 					{
-						glDisable(GL_BLEND);
+						glEnable(GL_CULL_FACE);
+						glCullFace(CullFaceToGLCullFace(drawCallInfo.cullFace));
+					}
+				}
+
+				if (shader->bTranslucent)
+				{
+					glEnable(GL_BLEND);
+					glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+				}
+				else
+				{
+					glDisable(GL_BLEND);
+				}
+
+				glDepthFunc(DepthTestFuncToGlenum(drawCallInfo.depthTestFunc));
+				glDepthMask(BoolToGLBoolean(drawCallInfo.bWriteToDepth));
+
+				UpdatePerObjectUniforms(renderObject->renderID, material);
+
+				BindTextures(shader, material);
+
+				if (drawCallInfo.bRenderToCubemap)
+				{
+					// renderObject->gameObject->IsStatic()
+
+					GLRenderObject* cubemapRenderObject = GetRenderObject(drawCallInfo.cubemapObjectRenderID);
+					GLMaterial* cubemapMaterial = &m_Materials[cubemapRenderObject->materialID];
+
+					glm::vec2 cubemapSize = cubemapMaterial->material.cubemapSamplerSize;
+
+					glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
+					glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
+					glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
+					glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
+
+					if (material->uniformIDs.projection == 0)
+					{
+						PrintWarn("Attempted to draw object to cubemap but uniformIDs.projection is not set on object: %s\n",
+							renderObject->gameObject->GetName().c_str());
+						continue;
 					}
 
-					glDepthFunc(DepthTestFuncToGlenum(drawCallInfo.depthTestFunc));
-					glDepthMask(BoolToGLBoolean(drawCallInfo.bWriteToDepth));
+					// Use capture projection matrix
+					glUniformMatrix4fv(material->uniformIDs.projection, 1, GL_FALSE, &m_CaptureProjection[0][0]);
 
-					UpdatePerObjectUniforms(renderObject->renderID, material);
-
-					BindTextures(shader, material);
-
-					if (drawCallInfo.bRenderToCubemap)
+					// TODO: Test if this is actually correct
+					glm::vec3 cubemapTranslation = -cubemapRenderObject->gameObject->GetTransform()->GetWorldPosition();
+					for (u32 face = 0; face < 6; ++face)
 					{
-						// renderObject->gameObject->IsStatic()
+						glm::mat4 view = glm::translate(m_CaptureViews[face], cubemapTranslation);
 
-						GLRenderObject* cubemapRenderObject = GetRenderObject(drawCallInfo.cubemapObjectRenderID);
-						GLMaterial* cubemapMaterial = &m_Materials[cubemapRenderObject->materialID];
+						// This doesn't work because it flips the winding order of things (I think), maybe just account for that?
+						// Flip vertically to match cubemap, cubemap shouldn't even be captured here eventually?
+						//glm::mat4 view = glm::translate(glm::scale(m_CaptureViews[face], glm::vec3(1.0f, -1.0f, 1.0f)), cubemapTranslation);
 
-						glm::vec2 cubemapSize = cubemapMaterial->material.cubemapSamplerSize;
+						glUniformMatrix4fv(material->uniformIDs.view, 1, GL_FALSE, &view[0][0]);
 
-						glBindFramebuffer(GL_FRAMEBUFFER, m_CaptureFBO);
-						glBindRenderbuffer(GL_RENDERBUFFER, m_CaptureRBO);
-						glRenderbufferStorage(GL_RENDERBUFFER, m_CaptureDepthInternalFormat, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
-						glViewport(0, 0, (GLsizei)cubemapSize.x, (GLsizei)cubemapSize.y);
-
-						if (material->uniformIDs.projection == 0)
+						if (drawCallInfo.bDeferred)
 						{
-							PrintWarn("Attempted to draw object to cubemap but uniformIDs.projection is not set on object: %s\n",
-								renderObject->gameObject->GetName().c_str());
-							continue;
-						}
+							//constexpr i32 numBuffers = 3;
+							//u32 attachments[numBuffers] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
+							//glDrawBuffers(numBuffers, attachments);
 
-						// Use capture projection matrix
-						glUniformMatrix4fv(material->uniformIDs.projection, 1, GL_FALSE, &m_CaptureProjection[0][0]);
-
-						// TODO: Test if this is actually correct
-						glm::vec3 cubemapTranslation = -cubemapRenderObject->gameObject->GetTransform()->GetWorldPosition();
-						for (u32 face = 0; face < 6; ++face)
-						{
-							glm::mat4 view = glm::translate(m_CaptureViews[face], cubemapTranslation);
-
-							// This doesn't work because it flips the winding order of things (I think), maybe just account for that?
-							// Flip vertically to match cubemap, cubemap shouldn't even be captured here eventually?
-							//glm::mat4 view = glm::translate(glm::scale(m_CaptureViews[face], glm::vec3(1.0f, -1.0f, 1.0f)), cubemapTranslation);
-
-							glUniformMatrix4fv(material->uniformIDs.view, 1, GL_FALSE, &view[0][0]);
-
-							if (drawCallInfo.bDeferred)
+							for (u32 j = 0; j < cubemapMaterial->cubemapSamplerGBuffersIDs.size(); ++j)
 							{
-								//constexpr i32 numBuffers = 3;
-								//u32 attachments[numBuffers] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
-								//glDrawBuffers(numBuffers, attachments);
-
-								for (u32 j = 0; j < cubemapMaterial->cubemapSamplerGBuffersIDs.size(); ++j)
-								{
-									glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + j,
-										GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerGBuffersIDs[j].id, 0);
-								}
+								glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + j,
+									GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerGBuffersIDs[j].id, 0);
 							}
-							else
-							{
-								glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-									GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerID, 0);
-							}
-
-							glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-								GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapDepthSamplerID, 0);
-
-							if (renderObject->bIndexed)
-							{
-								glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderObject->IBO);
-								GLsizei count = (GLsizei)renderObject->indices->size();
-								glDrawElements(renderObject->topology, count, GL_UNSIGNED_INT, (void*)0);
-							}
-							else
-							{
-								glDrawArrays(renderObject->topology, 0, (GLsizei)renderObject->vertexBufferData->VertexCount);
-							}
-						}
-					}
-					else
-					{
-						if (shader->bTranslucent)
-						{
-							glEnable(GL_BLEND);
-							glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 						}
 						else
 						{
-							glDisable(GL_BLEND);
+							glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+								GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapSamplerID, 0);
 						}
+
+						glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+							GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubemapMaterial->cubemapDepthSamplerID, 0);
 
 						if (renderObject->bIndexed)
 						{
@@ -3527,30 +3509,54 @@ namespace flex
 							glDrawArrays(renderObject->topology, 0, (GLsizei)renderObject->vertexBufferData->VertexCount);
 						}
 					}
-
-					if (m_bDisplayBoundingVolumes && renderObject->gameObject)
+				}
+				else
+				{
+					if (shader->bTranslucent)
 					{
-						MeshComponent* mesh = renderObject->gameObject->GetMeshComponent();
-						if (mesh)
-						{
-							btVector3 centerWS = ToBtVec3(mesh->GetBoundingSphereCenterPointWS());
-							m_PhysicsDebugDrawer->drawSphere(centerWS, 0.1f, btVector3(0.8f, 0.2f, 0.1f));
-							m_PhysicsDebugDrawer->drawSphere(centerWS, mesh->GetScaledBoundingSphereRadius(), btVector3(0.2f, 0.8f, 0.1f));
+						glEnable(GL_BLEND);
+						glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+					}
+					else
+					{
+						glDisable(GL_BLEND);
+					}
 
-							Transform* transform = renderObject->gameObject->GetTransform();
+					if (renderObject->bIndexed)
+					{
+						glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderObject->IBO);
+						GLsizei count = (GLsizei)renderObject->indices->size();
+						glDrawElements(renderObject->topology, count, GL_UNSIGNED_INT, (void*)0);
+					}
+					else
+					{
+						glDrawArrays(renderObject->topology, 0, (GLsizei)renderObject->vertexBufferData->VertexCount);
+					}
+				}
 
-							//glm::vec3 transformedMin = glm::vec3(transform->GetWorldTransform() * glm::vec4(mesh->m_MinPoint, 1.0f));
-							//glm::vec3 transformedMax = glm::vec3(transform->GetWorldTransform() * glm::vec4(mesh->m_MaxPoint, 1.0f));
-							//btVector3 minPos = ToBtVec3(transformedMin);
-							//btVector3 maxPos = ToBtVec3(transformedMax);
-							//m_PhysicsDebugDrawer->drawSphere(minPos, 0.1f, btVector3(0.2f, 0.8f, 0.1f));
-							//m_PhysicsDebugDrawer->drawSphere(maxPos, 0.1f, btVector3(0.2f, 0.8f, 0.1f));
+				if (m_bDisplayBoundingVolumes && renderObject->gameObject)
+				{
+					MeshComponent* mesh = renderObject->gameObject->GetMeshComponent();
+					if (mesh)
+					{
+						btVector3 centerWS = ToBtVec3(mesh->GetBoundingSphereCenterPointWS());
+						m_PhysicsDebugDrawer->drawSphere(centerWS, 0.1f, btVector3(0.8f, 0.2f, 0.1f));
+						m_PhysicsDebugDrawer->drawSphere(centerWS, mesh->GetScaledBoundingSphereRadius(), btVector3(0.2f, 0.8f, 0.1f));
 
-							btVector3 scaledMin = ToBtVec3(transform->GetWorldScale() * mesh->m_MinPoint);
-							btVector3 scaledMax = ToBtVec3(transform->GetWorldScale() * mesh->m_MaxPoint);
+						Transform* transform = renderObject->gameObject->GetTransform();
 
-							btTransform transformBT = ToBtTransform(*transform);
-							m_PhysicsDebugDrawer->drawBox(scaledMin, scaledMax, transformBT, btVector3(0.85f, 0.8f, 0.85f));
+						//glm::vec3 transformedMin = glm::vec3(transform->GetWorldTransform() * glm::vec4(mesh->m_MinPoint, 1.0f));
+						//glm::vec3 transformedMax = glm::vec3(transform->GetWorldTransform() * glm::vec4(mesh->m_MaxPoint, 1.0f));
+						//btVector3 minPos = ToBtVec3(transformedMin);
+						//btVector3 maxPos = ToBtVec3(transformedMax);
+						//m_PhysicsDebugDrawer->drawSphere(minPos, 0.1f, btVector3(0.2f, 0.8f, 0.1f));
+						//m_PhysicsDebugDrawer->drawSphere(maxPos, 0.1f, btVector3(0.2f, 0.8f, 0.1f));
+
+						btVector3 scaledMin = ToBtVec3(transform->GetWorldScale() * mesh->m_MinPoint);
+						btVector3 scaledMax = ToBtVec3(transform->GetWorldScale() * mesh->m_MaxPoint);
+
+						btTransform transformBT = ToBtTransform(*transform);
+						m_PhysicsDebugDrawer->drawBox(scaledMin, scaledMax, transformBT, btVector3(0.85f, 0.8f, 0.85f));
 					}
 				}
 			}
@@ -3581,7 +3587,7 @@ namespace flex
 				{ shader->bNeedAOSampler, material->enableAOSampler, glMaterial->aoSamplerID, GL_TEXTURE_2D },
 				{ shader->bNeedNormalSampler, material->enableNormalSampler, glMaterial->normalSamplerID, GL_TEXTURE_2D },
 				{ shader->bNeedBRDFLUT, material->enableBRDFLUT, glMaterial->brdfLUTSamplerID, GL_TEXTURE_2D },
-				{ shader->bNeedShadowMap, true, m_ShadowMapTexture.id, GL_TEXTURE_2D },
+				{ shader->bNeedShadowMap, true, m_ShadowMapTexture.id, GL_TEXTURE_2D_ARRAY },
 				{ shader->bNeedIrradianceSampler, material->enableIrradianceSampler, glMaterial->irradianceSamplerID, GL_TEXTURE_CUBE_MAP },
 				{ shader->bNeedPrefilteredMap, material->enablePrefilteredMap, glMaterial->prefilteredMapSamplerID, GL_TEXTURE_CUBE_MAP },
 				{ shader->bNeedCubemapSampler, material->enableCubemapSampler, glMaterial->cubemapSamplerID, GL_TEXTURE_CUBE_MAP },
@@ -3919,10 +3925,6 @@ namespace flex
 			glm::vec4 camPos = glm::vec4(currentCam->GetPosition(), 0.0f);
 			real exposure = currentCam->exposure;
 
-			glm::mat4 lView, lProj;
-			ComputeDirLightViewProj(lView, lProj);
-			glm::mat4 lightViewProj = lProj * lView;
-
 			for (auto& materialPair : m_Materials)
 			{
 				GLMaterial* material = &materialPair.second;
@@ -3967,11 +3969,6 @@ namespace flex
 				if (shader->shader->constantBufferUniforms.HasUniform(U_VIEW_PROJECTION))
 				{
 					glUniformMatrix4fv(material->uniformIDs.viewProjection, 1, GL_FALSE, &viewProj[0][0]);
-				}
-
-				if (shader->shader->constantBufferUniforms.HasUniform(U_LIGHT_VIEW_PROJS))
-				{
-					glUniformMatrix4fv(material->uniformIDs.lightViewProjection, 1, GL_FALSE, &lightViewProj[0][0]);
 				}
 
 				if (shader->shader->constantBufferUniforms.HasUniform(U_CAM_POS))
@@ -4110,6 +4107,20 @@ namespace flex
 					glUniform1f(material->uniformIDs.ssaoPowExp, m_SSAOSamplingData.ssaoPowExp);
 				}
 
+				// Shadow sampling data
+				if (shader->shader->constantBufferUniforms.HasUniform(U_SHADOW_SAMPLING_DATA))
+				{
+					for (i32 i = 0; i < NUM_SHADOW_CASCADES; ++i)
+					{
+						std::string u = "cascadeViewProjMats[" + std::to_string(i) + "]";
+						SetMat4f(material->material.shaderID, u.c_str(), m_ShadowSamplingData.cascadeViewProjMats[i]);
+					}
+
+					BaseCamera* cam = g_CameraManager->CurrentCamera();
+					SetVec4f(material->material.shaderID, "cascadeDepthSplits", m_ShadowSamplingData.cascadeDepthSplits);
+					SetFloat(material->material.shaderID, "zNear", cam->GetZNear());
+					SetFloat(material->material.shaderID, "zFar", cam->GetZFar());
+				}
 			}
 		}
 
