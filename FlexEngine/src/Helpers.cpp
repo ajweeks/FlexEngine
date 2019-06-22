@@ -955,6 +955,17 @@ namespace flex
 		}
 	}
 
+	glm::quat ParseQuat(const std::string& quatStr)
+	{
+		std::vector<std::string> parts = Split(quatStr, ',');
+		glm::quat result;
+		result.x = (real)std::atof(parts[0].c_str());
+		result.y = (real)std::atof(parts[1].c_str());
+		result.z = (real)std::atof(parts[2].c_str());
+		result.w = (real)std::atof(parts[3].c_str());
+		return result;
+	}
+
 	bool IsNanOrInf(real val)
 	{
 		return isnan(val) || isinf(val);
@@ -1025,13 +1036,13 @@ namespace flex
 		str = std::string(minLen - str.length(), pad) + str;
 	}
 
-	std::string Vec2ToString(glm::vec2 vec, i32 precision)
+	std::string Vec2ToString(const glm::vec2& vec, i32 precision)
 	{
 #if DEBUG
 		if (IsNanOrInf(vec))
 		{
 			PrintError("Attempted to convert vec2 with NAN or inf components to string! Setting to zero\n");
-			vec = VEC2_ZERO;
+			return "INVALID VEC";
 		}
 #endif
 
@@ -1040,13 +1051,13 @@ namespace flex
 		return result;
 	}
 
-	std::string Vec3ToString(glm::vec3 vec, i32 precision)
+	std::string Vec3ToString(const glm::vec3& vec, i32 precision)
 	{
 #if DEBUG
 		if (IsNanOrInf(vec))
 		{
 			PrintError("Attempted to convert vec3 with NAN or inf components to string! Setting to zero\n");
-			vec = VEC3_ZERO;
+			return "INVALID VEC";
 		}
 #endif
 
@@ -1056,13 +1067,13 @@ namespace flex
 		return result;
 	}
 
-	std::string Vec4ToString(glm::vec4 vec, i32 precision)
+	std::string Vec4ToString(const glm::vec4& vec, i32 precision)
 	{
 #if DEBUG
 		if (IsNanOrInf(vec))
 		{
 			PrintError("Attempted to convert vec4 with NAN or inf components to string! Setting to zero\n");
-			vec = VEC4_ZERO;
+			return "INVALID VEC";
 		}
 #endif
 
@@ -1070,6 +1081,23 @@ namespace flex
 			FloatToString(vec.y, precision) + SEPARATOR_STR +
 			FloatToString(vec.z, precision) + SEPARATOR_STR +
 			FloatToString(vec.w, precision));
+		return result;
+	}
+
+	std::string QuatToString(const glm::quat& quat, i32 precision)
+	{
+#if DEBUG
+		if (IsNanOrInf(quat))
+		{
+			PrintError("Attempted to convert vec4 with NAN or inf components to string! Setting to zero\n");
+			return "INVALID QUAT";
+		}
+#endif
+
+		std::string result(FloatToString(quat.x, precision) + SEPARATOR_STR +
+				FloatToString(quat.y, precision) + SEPARATOR_STR +
+				FloatToString(quat.z, precision) + SEPARATOR_STR +
+				FloatToString(quat.w, precision));
 		return result;
 	}
 

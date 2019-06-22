@@ -110,6 +110,8 @@ namespace flex
 	*/
 	glm::vec4 ParseVec4(const std::string& vecStr, real defaultW = 1.0f);
 
+	glm::quat ParseQuat(const std::string& quatStr);
+
 	bool IsNanOrInf(real val);
 	bool IsNanOrInf(const glm::vec2& vec);
 	bool IsNanOrInf(const glm::vec3& vec);
@@ -127,9 +129,11 @@ namespace flex
 
 	std::string BoolToString(bool b);
 
-	std::string Vec2ToString(glm::vec2 vec, i32 precision);
-	std::string Vec3ToString(glm::vec3 vec, i32 precision);
-	std::string Vec4ToString(glm::vec4 vec, i32 precision);
+	std::string Vec2ToString(const glm::vec2& vec, i32 precision);
+	std::string Vec3ToString(const glm::vec3& vec, i32 precision);
+	std::string Vec4ToString(const glm::vec4& vec, i32 precision);
+
+	std::string QuatToString(const glm::quat& quat, i32 precision);
 
 	void CopyVec3ToClipboard(const glm::vec3& vec);
 	void CopyVec4ToClipboard(const glm::vec4& vec);

@@ -2634,9 +2634,8 @@ namespace flex
 		JSONObject directionalLightObj;
 		if (parentObject.SetObjectChecked("directional light info", directionalLightObj))
 		{
-			std::string dirStr = directionalLightObj.GetString("rotation");
-			glm::quat rot(ParseVec3(dirStr));
-			m_Transform.SetLocalRotation(rot);
+			std::string quatStr = directionalLightObj.GetString("rotation");
+			m_Transform.SetWorldRotation(ParseQuat(quatStr));
 			data.dir = glm::rotate(m_Transform.GetWorldRotation(), VEC3_RIGHT);
 
 			std::string posStr = directionalLightObj.GetString("pos");
@@ -2683,8 +2682,7 @@ namespace flex
 	{
 		JSONObject dirLightObj = {};
 
-		glm::vec3 dirLightDir = glm::rotate(m_Transform.GetWorldRotation(), VEC3_RIGHT);
-		std::string dirStr = Vec3ToString(dirLightDir, 3);
+		std::string dirStr = QuatToString(m_Transform.GetWorldRotation(), 3);
 		dirLightObj.fields.emplace_back("rotation", JSONValue(dirStr));
 
 		std::string posStr = Vec3ToString(m_Transform.GetLocalPosition(), 3);
