@@ -1355,11 +1355,6 @@ namespace flex
 
 				glDrawArrays(GL_TRIANGLE_STRIP, 0, 3);
 
-				u32 e = glGetError();
-				Print("%u\n", e);
-
-				//glDeleteVertexArrays(1, &VAO);
-
 				GL_POP_DEBUG_GROUP();
 			}
 
