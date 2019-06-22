@@ -91,16 +91,16 @@ namespace flex
 	};
 
 	// Uniforms
-	const u64 U_MODEL							= (1ull << 0); const u32 US_MODEL						= sizeof(glm::mat4);
-	const u64 U_MODEL_INV_TRANSPOSE				= (1ull << 1); const u32 US_MODEL_INV_TRANSPOSE			= sizeof(glm::mat4);
-	const u64 U_VIEW							= (1ull << 2); const u32 US_VIEW						= sizeof(glm::mat4);
-	const u64 U_VIEW_INV						= (1ull << 3); const u32 US_VIEW_INV					= sizeof(glm::mat4);
-	const u64 U_VIEW_PROJECTION					= (1ull << 4); const u32 US_VIEW_PROJECTION				= sizeof(glm::mat4);
-	const u64 U_MODEL_VIEW_PROJ					= (1ull << 5); const u32 US_MODEL_VIEW_PROJ				= sizeof(glm::mat4);
-	const u64 U_PROJECTION						= (1ull << 6); const u32 US_PROJECTION					= sizeof(glm::mat4);
-	const u64 U_PROJECTION_INV					= (1ull << 7); const u32 US_PROJECTION_INV				= sizeof(glm::mat4);
-	const u64 U_BLEND_SHARPNESS					= (1ull << 8); const u32 US_BLEND_SHARPNESS				= sizeof(real);
-	const u64 U_COLOR_MULTIPLIER				= (1ull << 9); const u32 US_COLOR_MULTIPLIER			= sizeof(glm::vec4);
+	const u64 U_MODEL							= (1ull << 0);	const u32 US_MODEL						= sizeof(glm::mat4);
+	const u64 U_MODEL_INV_TRANSPOSE				= (1ull << 1);	const u32 US_MODEL_INV_TRANSPOSE		= sizeof(glm::mat4);
+	const u64 U_VIEW							= (1ull << 2);	const u32 US_VIEW						= sizeof(glm::mat4);
+	const u64 U_VIEW_INV						= (1ull << 3);	const u32 US_VIEW_INV					= sizeof(glm::mat4);
+	const u64 U_VIEW_PROJECTION					= (1ull << 4);	const u32 US_VIEW_PROJECTION			= sizeof(glm::mat4);
+	const u64 U_MODEL_VIEW_PROJ					= (1ull << 5);	const u32 US_MODEL_VIEW_PROJ			= sizeof(glm::mat4);
+	const u64 U_PROJECTION						= (1ull << 6);	const u32 US_PROJECTION					= sizeof(glm::mat4);
+	const u64 U_PROJECTION_INV					= (1ull << 7);	const u32 US_PROJECTION_INV				= sizeof(glm::mat4);
+	const u64 U_BLEND_SHARPNESS					= (1ull << 8);	const u32 US_BLEND_SHARPNESS			= sizeof(real);
+	const u64 U_COLOR_MULTIPLIER				= (1ull << 9);	const u32 US_COLOR_MULTIPLIER			= sizeof(glm::vec4);
 	const u64 U_CAM_POS							= (1ull << 10); const u32 US_CAM_POS					= sizeof(glm::vec4);
 	const u64 U_DIR_LIGHT						= (1ull << 11); const u32 US_DIR_LIGHT					= sizeof(DirLightData);
 	const u64 U_POINT_LIGHTS					= (1ull << 12); const u32 US_POINT_LIGHTS				= sizeof(PointLightData) * MAX_NUM_POINT_LIGHTS;
@@ -603,6 +603,7 @@ namespace flex
 		bool bNeedNoiseSampler = false; // TODO: Replace with check for U_NOISE_SAMPLER
 		bool bNeedPushConstantBlock = false;
 		bool bGenerateVertexBufferForAll = false;
+		bool bTextureArr = false;
 		u32 pushConstantBlockSize = 0;
 
 		bool bDynamic = false;
@@ -616,6 +617,7 @@ namespace flex
 	{
 		//RenderID spriteObjectRenderID = InvalidRenderID;
 		TextureID textureID = InvalidTextureID;
+		u32 textureLayer = 0;
 		u32 FBO = 0; // 0 for rendering to final RT
 		u32 RBO = 0; // 0 for rendering to final RT
 		MaterialID materialID = InvalidMaterialID;
@@ -630,6 +632,7 @@ namespace flex
 		bool bWriteDepth = true;
 		bool bEnableAlbedoSampler = true;
 		bool bRaw = false; // If true no further pos/scale processing is down, values are directly uploaded to GPU
+		bool bFullscreen = false;
 	};
 
 	// TODO: OPTIMIZE: Shrink these bad boys

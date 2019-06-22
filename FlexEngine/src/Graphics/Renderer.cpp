@@ -1339,6 +1339,7 @@ namespace flex
 				{ "prefilter", "skybox.vert", "prefilter.frag" },
 				{ "brdf", "brdf.vert", "brdf.frag" },
 				{ "sprite", "sprite.vert", "sprite.frag" },
+				{ "sprite_arr", "sprite.vert", "sprite_arr.frag" },
 				{ "post_process", "post_process.vert", "post_process.frag" },
 				{ "post_fxaa", "post_fxaa.vert", "post_fxaa.frag" },
 				{ "compute_sdf", "compute_sdf.vert", "compute_sdf.frag" },
@@ -1361,6 +1362,7 @@ namespace flex
 				{ "prefilter", "vk_skybox_vert.spv", "vk_prefilter_frag.spv" },
 				{ "brdf", "vk_brdf_vert.spv", "vk_brdf_frag.spv" },
 				{ "sprite", "vk_sprite_vert.spv", "vk_sprite_frag.spv" },
+				{ "sprite_arr", "vk_sprite_vert.spv", "vk_sprite_frag_arr.spv" },
 				{ "post_process", "vk_post_process_vert.spv", "vk_post_process_frag.spv" },
 				{ "post_fxaa", "vk_post_fxaa_vert.spv", "vk_post_fxaa_frag.spv" },
 				{ "compute_sdf", "vk_compute_sdf_vert.spv", "vk_compute_sdf_frag.spv" },
@@ -1605,6 +1607,25 @@ namespace flex
 			m_BaseShaders[shaderID].bNeedPushConstantBlock = true;
 			m_BaseShaders[shaderID].pushConstantBlockSize = 128;
 			m_BaseShaders[shaderID].bTranslucent = true;
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
+			m_BaseShaders[shaderID].vertexAttributes =
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::UV;
+
+			m_BaseShaders[shaderID].constantBufferUniforms = {};
+
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_COLOR_MULTIPLIER);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_ALBEDO_SAMPLER);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ALBEDO_SAMPLER);
+			++shaderID;
+
+			// Sprite - Texture Array
+			m_BaseShaders[shaderID].bNeedPushConstantBlock = true;
+			m_BaseShaders[shaderID].pushConstantBlockSize = 128;
+			m_BaseShaders[shaderID].bTranslucent = true;
+			m_BaseShaders[shaderID].bTextureArr = true;
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION |
@@ -2553,6 +2574,14 @@ namespace flex
 		spriteMatCreateInfo.visibleInEditor = true;
 		spriteMatCreateInfo.enableAlbedoSampler = true;
 		m_SpriteMatID = InitializeMaterial(&spriteMatCreateInfo);
+
+		MaterialCreateInfo spriteArrMatCreateInfo = {};
+		spriteArrMatCreateInfo.name = "Sprite Texture Array material";
+		spriteArrMatCreateInfo.shaderName = "sprite_arr";
+		spriteArrMatCreateInfo.persistent = true;
+		spriteArrMatCreateInfo.visibleInEditor = true;
+		spriteArrMatCreateInfo.enableAlbedoSampler = true;
+		m_SpriteArrMatID = InitializeMaterial(&spriteArrMatCreateInfo);
 
 		MaterialCreateInfo postProcessMatCreateInfo = {};
 		postProcessMatCreateInfo.name = "Post process material";

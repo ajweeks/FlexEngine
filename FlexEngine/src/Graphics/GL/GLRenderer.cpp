@@ -2644,6 +2644,7 @@ namespace flex
 			glm::vec4 color(1.0f);
 
 			drawInfo.bScreenSpace = true;
+			drawInfo.bFullscreen = true;
 			drawInfo.bReadDepth = false;
 			drawInfo.bWriteDepth = false;
 			drawInfo.pos = pos;
@@ -2692,6 +2693,24 @@ namespace flex
 
 		void GLRenderer::EnqueueScreenSpaceSprites()
 		{
+			if (m_bDisplayShadowCascadePreview)
+			{
+				SpriteQuadDrawInfo drawInfo = {};
+				drawInfo.bScreenSpace = true;
+				drawInfo.bReadDepth = true;
+				drawInfo.bWriteDepth = true;
+				drawInfo.materialID = m_SpriteArrMatID;
+				drawInfo.anchor = AnchorPoint::BOTTOM_RIGHT;
+				drawInfo.scale = glm::vec3(0.2f);
+				for (u32 i = 0; i < NUM_SHADOW_CASCADES; ++i)
+				{
+					// TODO:
+					drawInfo.textureID = 0;
+					drawInfo.textureLayer = i;
+					drawInfo.pos = glm::vec3(0.0f, i * drawInfo.scale.x * 2.1f, 0.0f);
+					EnqueueSprite(drawInfo);
+				}
+			}
 		}
 
 		// TODO: Move to renderer somehow (work out generic FBO representation)
@@ -2753,7 +2772,7 @@ namespace flex
 
 			glUseProgram(spriteShader.program);
 
-			RenderID spriteRenderID = drawInfo.bScreenSpace ? m_FullScreenTriRenderID : m_Quad3DRenderID;
+			RenderID spriteRenderID = drawInfo.bFullscreen ? m_FullScreenTriRenderID : m_Quad3DRenderID;
 			GLRenderObject* spriteRenderObject = GetRenderObject(spriteRenderID);
 
 			const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
@@ -2836,7 +2855,21 @@ namespace flex
 			if (bEnableAlbedoSampler)
 			{
 				glActiveTexture(GL_TEXTURE0);
-				glBindTexture(GL_TEXTURE_2D, m_LoadedTextures[drawInfo.textureID]->handle);
+				GLenum target = GL_TEXTURE_2D;
+				u32 textureHandle;
+				if (spriteShader.shader->bTextureArr)
+				{
+					target = GL_TEXTURE_2D_ARRAY;
+					// TODO: Store shadow texture as GL texture and pass ID
+					textureHandle = m_ShadowMapTexture.id;
+
+					SetUInt(spriteMaterial.material.shaderID, "layer", drawInfo.textureLayer);
+				}
+				else
+				{
+					textureHandle = m_LoadedTextures[drawInfo.textureID]->handle;
+				}
+				glBindTexture(target, textureHandle);
 			}
 
 			// TODO: Use member
@@ -3824,6 +3857,7 @@ namespace flex
 			real textureAspectRatio = loadingTexture->width / (real)loadingTexture->height;
 			drawInfo.scale = glm::vec3(textureAspectRatio, -1.0f, 1.0f);
 			drawInfo.bScreenSpace = true;
+			drawInfo.bFullscreen = true;
 			drawInfo.bReadDepth = false;
 			drawInfo.bWriteDepth = false;
 			drawInfo.materialID = m_SpriteMatID;

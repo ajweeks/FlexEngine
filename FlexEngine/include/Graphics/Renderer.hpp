@@ -379,6 +379,7 @@ namespace flex
 		std::string m_EditorMessage;
 
 		MaterialID m_SpriteMatID = InvalidMaterialID;
+		MaterialID m_SpriteArrMatID = InvalidMaterialID;
 		MaterialID m_FontMatSSID = InvalidMaterialID;
 		MaterialID m_FontMatWSID = InvalidMaterialID;
 		MaterialID m_PostProcessMatID = InvalidMaterialID;
