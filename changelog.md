@@ -2,13 +2,18 @@
 ### Flex Engine change log (reverse chronological order)
 
 **2019**
+_June_
+- Add debug preview of cascades
+- Add cascaded shadow mapping to GL & Vulkan
+- Lots of cleanup, refactoring, and bug fixing
+
 _May_
 - Add shadow mapping to Vulkan
-- Add SSAO support in Vulkan & OpenGL
+- Add screen-space ambient occlusion to Vulkan & OpenGL
 - Remove world position from GBuffer, reconstruct from depth instead
 
 _April_
-- Add async Vulkan shader compilation on bootup (based on checksum)
+- Add async Vulkan shader compilation on bootup (based on shader file checksums)
 - Add shader hot-reloading support to Vulkan
 - Add font metadata viewer
 - Batch render objects (editor/gameplay > deferred/forward > shader > material)

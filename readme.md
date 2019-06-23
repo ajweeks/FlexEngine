@@ -8,15 +8,19 @@ Flex Engine is a personal game engine I began work on in February 2017. I use it
 #### Notable Features
 - Vulkan and OpenGL backends
 - Signed-distance field font generation & rendering
-- Physically based rendering (PBR)
+- Physically based shading model
 - Image based lighting
+- Screen-space ambient occlusion
+- Stable cascaded shadow mapping
+- Conditional checksum-based shader compilation
 - Scene editor with serialization
 - Profiling tools
 - In-game scripting language
-- Conditional checksum-based shader compilation
-- SSAO
 
 ![](FlexEngine/screenshots/2018-07-08_21-52-09.png)
+
+![](FlexEngine/screenshots/2019-06-23_11-21-10.jpg)
+**Basic implementation of Cascaded Shadow Mapping**
 
 ![](FlexEngine/screenshots/2018-07-10_profiling-visualization-06.jpg)
 **Profiler overlay showing a breakdown the CPU-time of a single frame**
