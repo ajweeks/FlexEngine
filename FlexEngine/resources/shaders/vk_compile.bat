@@ -53,6 +53,7 @@
 
 @ glslangvalidator --spirv-val -V vk_sprite.vert -o spv/vk_sprite_vert.spv
 @ glslangvalidator --spirv-val -V vk_sprite.frag -o spv/vk_sprite_frag.spv
+@ glslangvalidator --spirv-val -V vk_sprite_arr.frag -o spv/vk_sprite_arr_frag.spv
 
 @REM ImGui
 @ glslangValidator --spirv-val -V vk_imgui.frag -o spv/vk_imgui_frag.spv

@@ -255,6 +255,9 @@ namespace flex
 		// Returns true if succeeded
 		virtual bool LoadFont(FontMetaData& fontMetaData, bool bForceRender) = 0;
 
+		virtual void EnqueueScreenSpaceSprites();
+		virtual void EnqueueWorldSpaceSprites();
+
 		// If the object gets deleted this frame *gameObjectRef gets set to nullptr
 		void DoCreateGameObjectButton(const char* buttonName, const char* popupName);
 
@@ -328,6 +331,7 @@ namespace flex
 		// Filled every frame
 		std::vector<SpriteQuadDrawInfo> m_QueuedWSSprites;
 		std::vector<SpriteQuadDrawInfo> m_QueuedSSSprites;
+		std::vector<SpriteQuadDrawInfo> m_QueuedSSArrSprites;
 
 		// TODO: Use a mesh prefab here
 		VertexBufferData m_Quad3DVertexBufferData;

@@ -175,6 +175,9 @@ namespace flex
 			m_SSAOBlurHGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
 			m_SSAOBlurVGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
 
+			m_SpriteArrGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
+			m_SpriteArrGraphicsPipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
+
 			m_ShadowImage = { m_VulkanDevice->m_LogicalDevice, vkDestroyImage };
 			m_ShadowImageView = { m_VulkanDevice->m_LogicalDevice, vkDestroyImageView };
 			m_ShadowImageMemory = { m_VulkanDevice->m_LogicalDevice, vkFreeMemory };
@@ -260,6 +263,7 @@ namespace flex
 
 			m_SpritePerspPushConstBlock = new Material::PushConstantBlock(128);
 			m_SpriteOrthoPushConstBlock = new Material::PushConstantBlock(128);
+			m_SpriteOrthoArrPushConstBlock = new Material::PushConstantBlock(132);
 
 #ifdef DEBUG
 			while (!m_ShaderCompiler->TickStatus())
@@ -459,6 +463,30 @@ namespace flex
 
 			GenerateIrradianceMaps();
 
+			{
+				VulkanMaterial& spriteArrMat = m_Materials[m_SpriteArrMatID];
+				VulkanShader& spriteArrShader = m_Shaders[spriteArrMat.material.shaderID];
+
+				std::array<VkPushConstantRange, 1> pushConstantRanges = {};
+				pushConstantRanges[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+				pushConstantRanges[0].offset = 0;
+				pushConstantRanges[0].size = spriteArrShader.shader->pushConstantBlockSize;
+
+				GraphicsPipelineCreateInfo createInfo = {};
+				createInfo.graphicsPipeline = &m_SpriteArrGraphicsPipeline;
+				createInfo.pipelineLayout = &m_SpriteArrGraphicsPipelineLayout;
+				createInfo.renderPass = m_ForwardRenderPass;
+				createInfo.shaderID = spriteArrMat.material.shaderID;
+				createInfo.vertexAttributes = m_Quad3DVertexBufferData.Attributes;
+				createInfo.descriptorSetLayoutIndex = spriteArrMat.material.shaderID;
+				createInfo.bEnableColorBlending = true;
+				createInfo.depthTestEnable = false;
+				createInfo.depthWriteEnable = false;
+				createInfo.pushConstantRangeCount = pushConstantRanges.size();
+				createInfo.pushConstants = pushConstantRanges.data();
+				CreateGraphicsPipeline(&createInfo);
+			}
+
 			m_bPostInitialized = true;
 		}
 
@@ -537,6 +565,9 @@ namespace flex
 			delete m_SpriteOrthoPushConstBlock;
 			m_SpriteOrthoPushConstBlock = nullptr;
 
+			delete m_SpriteOrthoArrPushConstBlock;
+			m_SpriteOrthoArrPushConstBlock = nullptr;
+
 			delete m_OffScreenFrameBuf;
 			m_OffScreenFrameBuf = nullptr;
 
@@ -579,6 +610,9 @@ namespace flex
 
 			m_SSAOGraphicsPipelineLayout.replace();
 			m_SSAOBlurGraphicsPipelineLayout.replace();
+
+			m_SpriteArrGraphicsPipeline.replace();
+			m_SpriteArrGraphicsPipelineLayout.replace();
 
 			m_SSAOSampler.replace();
 
@@ -2003,8 +2037,8 @@ namespace flex
 
 						for (auto& iter : m_SpriteDescSets)
 						{
-							vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPool, 1, &(iter.second));
-							iter.second = CreateSpriteDescSet(iter.first);
+							vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPool, 1, &(iter.second.descSet));
+							iter.second.descSet = CreateSpriteDescSet(iter.second.shaderID, iter.first, iter.second.textureLayer);
 						}
 
 						CreateSSAODescriptorSets();
@@ -3999,28 +4033,14 @@ namespace flex
 
 		void VulkanRenderer::EnqueueScreenSpaceSprites()
 		{
-			if (m_bDisplayShadowCascadePreview)
-			{
-				SpriteQuadDrawInfo drawInfo = {};
-				drawInfo.bScreenSpace = true;
-				drawInfo.bReadDepth = true;
-				drawInfo.bWriteDepth = true;
-				drawInfo.materialID = m_SpriteMatID;
-				drawInfo.anchor = AnchorPoint::BOTTOM_RIGHT;
-				drawInfo.scale = glm::vec3(0.2f);
-				for (u32 i = 0; i < NUM_SHADOW_CASCADES; ++i)
-				{
-					// TODO: Cleaner solution pls (also fix validation warnings)
-					drawInfo.textureID = 999 + i;
-					drawInfo.pos = glm::vec3(0.0f, i * drawInfo.scale.x * 2.1f, 0.0f);
-					EnqueueSprite(drawInfo);
-				}
-			}
+			Renderer::EnqueueScreenSpaceSprites();
 		}
 
 		// TODO: Move to base renderer
 		void VulkanRenderer::EnqueueWorldSpaceSprites()
 		{
+			Renderer::EnqueueWorldSpaceSprites();
+
 			BaseCamera* cam = g_CameraManager->CurrentCamera();
 			if (!cam->bIsGameplayCam)
 			{
@@ -4095,16 +4115,30 @@ namespace flex
 				m_SpritePerspPushConstBlock->SetData(MAT4_IDENTITY, g_CameraManager->CurrentCamera()->GetProjection());
 			}
 
+			MaterialID matID = batch[0].materialID == InvalidMaterialID ? m_SpriteMatID : batch[0].materialID;
+			VulkanMaterial& spriteMat = m_Materials[matID];
+			VulkanShader& spriteShader = m_Shaders[spriteMat.material.shaderID];
+
+			VulkanBuffer* vertBuffer = m_VertexIndexBufferPairs[spriteMat.material.shaderID].vertexBuffer;
+
+			// TODO: Use instancing!
+			if (!m_VertexIndexBufferPairs[spriteMat.material.shaderID].useStagingBuffer)
+			{
+				// Copy vertex data into device memory for dynamic shaders
+				u32 copySize = (u32)vertBuffer->m_Size;
+				VK_CHECK_RESULT(vertBuffer->Map(copySize));
+				real* dst = (real*)vertBuffer->m_Mapped;
+				for (u32 i = 0; i < batch.size(); ++i)
+				{
+					memcpy(dst, m_Quad3DVertexBufferData.vertexData, m_Quad3DVertexBufferData.VertexBufferSize);
+					dst += m_Quad3DVertexBufferData.VertexBufferSize / sizeof(real);
+				}
+				vertBuffer->Unmap();
+			}
 
 			u32 i = 0;
 			for (const SpriteQuadDrawInfo& drawInfo : batch)
 			{
-				MaterialID matID = drawInfo.materialID == InvalidMaterialID ? m_SpriteMatID : drawInfo.materialID;
-				VulkanMaterial& spriteMat = m_Materials[matID];
-				VulkanShader& spriteShader = m_Shaders[spriteMat.material.shaderID];
-
-				VulkanBuffer* vertBuffer = m_VertexIndexBufferPairs[spriteMat.material.shaderID].vertexBuffer;
-
 				glm::vec3 translation = drawInfo.pos;
 				glm::quat rotation = drawInfo.rotation;
 				glm::vec3 scale = drawInfo.scale;
@@ -4133,28 +4167,54 @@ namespace flex
 
 				u32 dynamicUBOOffset = i * m_DynamicAlignment;
 
-				vkCmdPushConstants(commandBuffer, spriteRenderObject->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT|VK_SHADER_STAGE_FRAGMENT_BIT, 0,
-					drawInfo.bScreenSpace ? m_SpriteOrthoPushConstBlock->size : m_SpritePerspPushConstBlock->size,
-					drawInfo.bScreenSpace ? m_SpriteOrthoPushConstBlock->data :	m_SpritePerspPushConstBlock->data);
+				VkPipeline pipeline = spriteRenderObject->graphicsPipeline;
+				VkPipelineLayout pipelineLayout = spriteRenderObject->pipelineLayout;
+
+				Material::PushConstantBlock* pushBlock = nullptr;
+				if (drawInfo.bScreenSpace)
+				{
+					if (spriteShader.shader->bTextureArr)
+					{
+						real r = aspectRatio;
+						real t = 1.0f;
+						m_SpriteOrthoArrPushConstBlock->SetData(MAT4_IDENTITY, glm::ortho(-r, r, -t, t), drawInfo.textureLayer);
+
+						pushBlock = m_SpriteOrthoArrPushConstBlock;
+
+						pipeline = m_SpriteArrGraphicsPipeline;
+						pipelineLayout = m_SpriteArrGraphicsPipelineLayout;
+					}
+					else
+					{
+						pushBlock = m_SpriteOrthoPushConstBlock;
+					}
+				}
+				else
+				{
+					pushBlock = m_SpritePerspPushConstBlock;
+				}
+
+
+				vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, pushBlock->size, pushBlock->data);
 
 				UpdateDynamicUniformBuffer(matID, dynamicUBOOffset, model, nullptr);
 
 				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertBuffer->m_Buffer, offsets);
 
-				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, spriteRenderObject->graphicsPipeline);
+				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
 				VkDescriptorSet descSet = VK_NULL_HANDLE;
 				if (m_SpriteDescSets.find(drawInfo.textureID) != m_SpriteDescSets.end())
 				{
-					descSet = m_SpriteDescSets[drawInfo.textureID];
+					descSet = m_SpriteDescSets[drawInfo.textureID].descSet;
 				}
 				else
 				{
-					descSet = CreateSpriteDescSet(drawInfo.textureID);
-					m_SpriteDescSets.insert({ drawInfo.textureID, descSet });
+					descSet = CreateSpriteDescSet(spriteMat.material.shaderID, drawInfo.textureID, drawInfo.textureLayer);
+					m_SpriteDescSets.insert({ drawInfo.textureID, { spriteMat.material.shaderID, descSet, drawInfo.textureLayer } });
 				}
 
-				BindDescriptorSet(&spriteShader, dynamicUBOOffset, commandBuffer, spriteRenderObject->pipelineLayout, descSet);
+				BindDescriptorSet(&spriteShader, dynamicUBOOffset, commandBuffer, pipelineLayout, descSet);
 
 				vkCmdDraw(commandBuffer, spriteRenderObject->vertexBufferData->VertexCount, 1, spriteRenderObject->vertexOffset, 0);
 
@@ -4272,22 +4332,21 @@ namespace flex
 			CreateDescriptorSet(&descSetCreateInfo);
 		}
 
-		VkDescriptorSet VulkanRenderer::CreateSpriteDescSet(TextureID textureID)
+		VkDescriptorSet VulkanRenderer::CreateSpriteDescSet(ShaderID spriteShaderID, TextureID textureID, u32 layer /* = 0 */)
 		{
 			assert(textureID != InvalidTextureID);
 
-			VulkanMaterial& spriteMat = m_Materials[m_SpriteMatID];
-			VulkanShader& spriteShader = m_Shaders[spriteMat.material.shaderID];
+			VulkanShader& spriteShader = m_Shaders[spriteShaderID];
 
 			VkDescriptorSet descSet = VK_NULL_HANDLE;
 			DescriptorSetCreateInfo descSetCreateInfo = {};
 			descSetCreateInfo.descriptorSet = &descSet;
-			descSetCreateInfo.descriptorSetLayout = &m_DescriptorSetLayouts[spriteMat.descriptorSetLayoutIndex];
-			descSetCreateInfo.shaderID = spriteMat.material.shaderID;
+			descSetCreateInfo.descriptorSetLayout = &m_DescriptorSetLayouts[spriteShaderID];
+			descSetCreateInfo.shaderID = spriteShaderID;
 			descSetCreateInfo.uniformBuffer = &spriteShader.uniformBuffer;
-			if (textureID >= 999)
+			if (spriteShader.shader->bTextureArr)
 			{
-				descSetCreateInfo.shadowPreviewView = m_ShadowCascades[textureID - 999]->imageView;
+				descSetCreateInfo.shadowPreviewView = m_ShadowCascades[layer]->imageView;
 				descSetCreateInfo.shadowSampler = m_ColorSampler;
 			}
 			else
@@ -4551,8 +4610,8 @@ namespace flex
 
 			for (auto& iter : m_SpriteDescSets)
 			{
-				vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPool, 1, &(iter.second));
-				iter.second = CreateSpriteDescSet(iter.first);
+				vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPool, 1, &(iter.second.descSet));
+				iter.second.descSet = CreateSpriteDescSet(iter.second.shaderID, iter.first, iter.second.textureLayer);
 			}
 
 			CreateSSAODescriptorSets();
@@ -5982,6 +6041,8 @@ namespace flex
 				EnqueueScreenSpaceSprites();
 				DrawSpriteBatch(m_QueuedSSSprites, commandBuffer);
 				m_QueuedSSSprites.clear();
+				DrawSpriteBatch(m_QueuedSSArrSprites, commandBuffer);
+				m_QueuedSSArrSprites.clear();
 
 				EnqueueScreenSpaceText();
 				DrawTextSS(commandBuffer);
@@ -7315,7 +7376,6 @@ namespace flex
 			};
 			UniformInfo uniformInfos[] = {
 				{ U_MODEL, (void*)&model, US_MODEL },
-				{ U_MODEL_INV_TRANSPOSE, (void*)&modelInvTranspose, US_MODEL_INV_TRANSPOSE },
 				{ U_MODEL_VIEW_PROJ, (void*)&modelViewProjection, US_MODEL_VIEW_PROJ },
 				// view, viewProjInv, viewProjection, projection, camPos, dirLight, pointLights should be updated in constant uniform buffer
 				{ U_COLOR_MULTIPLIER, (void*)&material.material.colorMultiplier, US_COLOR_MULTIPLIER },

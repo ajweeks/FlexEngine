@@ -284,7 +284,7 @@ namespace flex
 			VkRenderPass ResolveRenderPassType(RenderPassType renderPassType, const char* shaderName);
 
 			void CreateShadowResources();
-			VkDescriptorSet CreateSpriteDescSet(TextureID textureID);
+			VkDescriptorSet CreateSpriteDescSet(ShaderID spriteShaderID, TextureID textureID, u32 layer = 0);
 
 			const u32 MAX_NUM_RENDER_OBJECTS = 4096; // TODO: Not this?
 			std::vector<VulkanRenderObject*> m_RenderObjects;
@@ -358,8 +358,16 @@ namespace flex
 
 			Material::PushConstantBlock* m_SpritePerspPushConstBlock = nullptr;
 			Material::PushConstantBlock* m_SpriteOrthoPushConstBlock = nullptr;
+			Material::PushConstantBlock* m_SpriteOrthoArrPushConstBlock = nullptr;
 
-			std::map<TextureID, VkDescriptorSet> m_SpriteDescSets;
+			struct SpriteDescSet
+			{
+				ShaderID shaderID;
+				VkDescriptorSet descSet;
+				u32 textureLayer;
+			};
+
+			std::map<TextureID, SpriteDescSet> m_SpriteDescSets;
 
 			i32 m_DeferredQuadVertexBufferIndex = -1;
 
@@ -466,6 +474,9 @@ namespace flex
 			VDeleter<VkSampler> m_SSAOSampler;
 			VkSpecializationInfo m_SSAOSpecializationInfo;
 			VkSpecializationMapEntry m_SSAOSpecializationMapEntry;
+
+			VDeleter<VkPipeline> m_SpriteArrGraphicsPipeline;
+			VDeleter<VkPipelineLayout> m_SpriteArrGraphicsPipelineLayout;
 
 #ifdef DEBUG
 			AsyncVulkanShaderCompiler* m_ShaderCompiler = nullptr;

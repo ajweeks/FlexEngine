@@ -113,6 +113,9 @@ namespace flex
 
 			virtual void FillOutFrameBufferAttachments(std::vector<Pair<std::string, void*>>& outVec) override;
 
+			virtual void EnqueueScreenSpaceSprites() override;
+			virtual void EnqueueWorldSpaceSprites() override;
+
 		private:
 
 			struct TextureHandle
@@ -156,8 +159,6 @@ namespace flex
 			void SwapBuffers();
 
 			void DrawSpriteQuad(const SpriteQuadDrawInfo& drawInfo);
-			void EnqueueScreenSpaceSprites();
-			void EnqueueWorldSpaceSprites();
 			void DrawTextSS();
 			void DrawTextWS();
 

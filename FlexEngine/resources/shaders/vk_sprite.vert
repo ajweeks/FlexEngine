@@ -4,6 +4,7 @@ layout (push_constant) uniform PushConstants
 {
 	layout (offset = 0) mat4 view;
 	layout (offset = 64) mat4 proj;
+	layout (offset = 128) uint textureLayer;
 } pushConstants;
 
 layout (binding = 0) uniform UBODynamic

@@ -1381,7 +1381,6 @@ namespace flex
 			// TODO: CLEANUP: Get rid of first param
 			UniformInfo uniformInfo[] = {
 				{ U_MODEL,							"model", 						&mat.uniformIDs.model },
-				{ U_MODEL_INV_TRANSPOSE, 			"modelInvTranspose", 			&mat.uniformIDs.modelInvTranspose },
 				{ U_COLOR_MULTIPLIER, 				"colorMultiplier", 				&mat.uniformIDs.colorMultiplier },
 				{ U_EXPOSURE,						"exposure",						&mat.uniformIDs.exposure },
 				{ U_VIEW, 							"view", 						&mat.uniformIDs.view },
@@ -1993,6 +1992,12 @@ namespace flex
 					DrawSpriteQuad(drawInfo);
 				}
 				m_QueuedSSSprites.clear();
+
+				for (const SpriteQuadDrawInfo& drawInfo : m_QueuedSSArrSprites)
+				{
+					DrawSpriteQuad(drawInfo);
+				}
+				m_QueuedSSArrSprites.clear();
 
 				GL_POP_DEBUG_GROUP();
 			}
@@ -2693,29 +2698,14 @@ namespace flex
 
 		void GLRenderer::EnqueueScreenSpaceSprites()
 		{
-			if (m_bDisplayShadowCascadePreview)
-			{
-				SpriteQuadDrawInfo drawInfo = {};
-				drawInfo.bScreenSpace = true;
-				drawInfo.bReadDepth = true;
-				drawInfo.bWriteDepth = true;
-				drawInfo.materialID = m_SpriteArrMatID;
-				drawInfo.anchor = AnchorPoint::BOTTOM_RIGHT;
-				drawInfo.scale = glm::vec3(0.2f);
-				for (u32 i = 0; i < NUM_SHADOW_CASCADES; ++i)
-				{
-					// TODO:
-					drawInfo.textureID = 0;
-					drawInfo.textureLayer = i;
-					drawInfo.pos = glm::vec3(0.0f, i * drawInfo.scale.x * 2.1f, 0.0f);
-					EnqueueSprite(drawInfo);
-				}
-			}
+			Renderer::EnqueueScreenSpaceSprites();
 		}
 
 		// TODO: Move to renderer somehow (work out generic FBO representation)
 		void GLRenderer::EnqueueWorldSpaceSprites()
 		{
+			Renderer::EnqueueWorldSpaceSprites();
+
 			BaseCamera* cam = g_CameraManager->CurrentCamera();
 			if (!cam->bIsGameplayCam)
 			{
@@ -4185,13 +4175,6 @@ namespace flex
 			if (shader->shader->dynamicBufferUniforms.HasUniform(U_MODEL))
 			{
 				glUniformMatrix4fv(material->uniformIDs.model, 1, GL_FALSE, &model[0][0]);
-			}
-
-			if (shader->shader->dynamicBufferUniforms.HasUniform(U_MODEL_INV_TRANSPOSE))
-			{
-				glm::mat4 modelInv = glm::inverse(model);
-				// OpenGL will transpose for us if we set the third param to true
-				glUniformMatrix4fv(material->uniformIDs.modelInvTranspose, 1, GL_TRUE, &modelInv[0][0]);
 			}
 
 			if (shader->shader->dynamicBufferUniforms.HasUniform(U_COLOR_MULTIPLIER))

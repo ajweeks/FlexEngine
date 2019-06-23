@@ -55,7 +55,6 @@ namespace flex
 			struct UniformIDs
 			{
 				i32 model;
-				i32 modelInvTranspose;
 				i32 colorMultiplier;
 				i32 exposure;
 				i32 viewProjection;

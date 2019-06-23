@@ -23,7 +23,6 @@ namespace flex
 		{
 #define _u(uniform) if (HasUniform(U_##uniform)) size += US_##uniform;
 			_u(MODEL)
-			_u(MODEL_INV_TRANSPOSE)
 			_u(VIEW)
 			_u(VIEW_INV)
 			_u(VIEW_PROJECTION)

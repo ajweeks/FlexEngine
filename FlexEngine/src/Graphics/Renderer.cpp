@@ -1,4 +1,4 @@
-#include "stdafx.hpp"
+	#include "stdafx.hpp"
 
 #include "Graphics/Renderer.hpp"
 
@@ -487,7 +487,14 @@ namespace flex
 	{
 		if (drawInfo.bScreenSpace)
 		{
-			m_QueuedSSSprites.push_back(drawInfo);
+			if (drawInfo.materialID != InvalidMaterialID && GetShader(GetMaterial(drawInfo.materialID).shaderID).bTextureArr)
+			{
+				m_QueuedSSArrSprites.push_back(drawInfo);
+			}
+			else
+			{
+				m_QueuedSSSprites.push_back(drawInfo);
+			}
 		}
 		else
 		{
@@ -630,6 +637,32 @@ namespace flex
 	bool Renderer::GetDisplayShadowCascadePreview() const
 	{
 		return m_bDisplayShadowCascadePreview;
+	}
+
+	void Renderer::EnqueueScreenSpaceSprites()
+	{
+		if (m_bDisplayShadowCascadePreview)
+		{
+			SpriteQuadDrawInfo drawInfo = {};
+			drawInfo.bScreenSpace = true;
+			drawInfo.bReadDepth = true;
+			drawInfo.bWriteDepth = true;
+			drawInfo.materialID = m_SpriteArrMatID;
+			drawInfo.anchor = AnchorPoint::BOTTOM_RIGHT;
+			drawInfo.scale = glm::vec3(0.2f);
+			for (u32 i = 0; i < NUM_SHADOW_CASCADES; ++i)
+			{
+				// TODO:
+				drawInfo.textureID = 999 + i;
+				drawInfo.textureLayer = i;
+				drawInfo.pos = glm::vec3(0.0f, i * drawInfo.scale.x * 2.1f, 0.0f);
+				EnqueueSprite(drawInfo);
+			}
+		}
+	}
+
+	void Renderer::EnqueueWorldSpaceSprites()
+	{
 	}
 
 	void Renderer::AddEditorString(const std::string& str)
@@ -1362,7 +1395,7 @@ namespace flex
 				{ "prefilter", "vk_skybox_vert.spv", "vk_prefilter_frag.spv" },
 				{ "brdf", "vk_brdf_vert.spv", "vk_brdf_frag.spv" },
 				{ "sprite", "vk_sprite_vert.spv", "vk_sprite_frag.spv" },
-				{ "sprite_arr", "vk_sprite_vert.spv", "vk_sprite_frag_arr.spv" },
+				{ "sprite_arr", "vk_sprite_vert.spv", "vk_sprite_arr_frag.spv" },
 				{ "post_process", "vk_post_process_vert.spv", "vk_post_process_frag.spv" },
 				{ "post_fxaa", "vk_post_fxaa_vert.spv", "vk_post_fxaa_frag.spv" },
 				{ "compute_sdf", "vk_compute_sdf_vert.spv", "vk_compute_sdf_frag.spv" },
@@ -1397,15 +1430,8 @@ namespace flex
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_DIR_LIGHT);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_POINT_LIGHTS);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SHADOW_SAMPLING_DATA);
-
-			// TODO: Use better solution than this...
-#if COMPILE_OPEN_GL
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_LIGHT_VIEW_PROJS);
-#endif
-
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SSAO_SAMPLING_DATA);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_NEAR_FAR_PLANES);
-
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_IRRADIANCE_SAMPLER);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_FB_0_SAMPLER);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_FB_1_SAMPLER);
@@ -1605,7 +1631,7 @@ namespace flex
 
 			// Sprite
 			m_BaseShaders[shaderID].bNeedPushConstantBlock = true;
-			m_BaseShaders[shaderID].pushConstantBlockSize = 128;
+			m_BaseShaders[shaderID].pushConstantBlockSize = 132;
 			m_BaseShaders[shaderID].bTranslucent = true;
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
 			m_BaseShaders[shaderID].vertexAttributes =
@@ -1623,9 +1649,11 @@ namespace flex
 
 			// Sprite - Texture Array
 			m_BaseShaders[shaderID].bNeedPushConstantBlock = true;
-			m_BaseShaders[shaderID].pushConstantBlockSize = 128;
+			m_BaseShaders[shaderID].pushConstantBlockSize = 132;
 			m_BaseShaders[shaderID].bTranslucent = true;
 			m_BaseShaders[shaderID].bTextureArr = true;
+			m_BaseShaders[shaderID].bDynamic = true;
+			m_BaseShaders[shaderID].dynamicVertexBufferSize = 1024 * 1024; // TODO
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION |
