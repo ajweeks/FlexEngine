@@ -6988,7 +6988,7 @@ namespace flex
 
 		VkPresentModeKHR VulkanRenderer::ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) const
 		{
-			const VkPresentModeKHR bestMode = (m_bVSyncEnabled ? VK_PRESENT_MODE_IMMEDIATE_KHR : VK_PRESENT_MODE_FIFO_KHR);
+			const VkPresentModeKHR bestMode = (m_bVSyncEnabled ? VK_PRESENT_MODE_MAILBOX_KHR : VK_PRESENT_MODE_IMMEDIATE_KHR);
 			VkPresentModeKHR secondBestMode = bestMode;
 
 			for (const VkPresentModeKHR& availablePresentMode : availablePresentModes)
