@@ -588,16 +588,6 @@ namespace flex
 		return nullptr;
 	}
 
-	real Renderer::GetDirectionalLightNear() const
-	{
-		return m_DirectionalLight->shadowMapNearPlane;
-	}
-
-	real Renderer::GetDirectionalLightFar() const
-	{
-		return m_DirectionalLight->shadowMapFarPlane;
-	}
-
 	PointLightData* Renderer::GetPointLight(PointLightID ID)
 	{
 		return &m_PointLights[ID];
@@ -696,8 +686,6 @@ namespace flex
 		if (dirLight)
 		{
 			glm::vec3 lightDirection = dirLight->dir;
-
-			const real minCascadeDist = glm::max(m_DirectionalLight->shadowMapNearPlane, 0.0f);
 
 			// Flip near & far planes
 			glm::mat4 modifiedProj = cam->GetProjection();
@@ -3089,21 +3077,6 @@ namespace flex
 			// Random rotations around z-axis
 			noise[i] = glm::vec4(RandomFloat(-1.0f, 1.0f), RandomFloat(-1.0f, 1.0f), 0.0f, 0.0f);
 		}
-	}
-
-	void Renderer::ComputeDirLightViewProj(glm::mat4& outView, glm::mat4& outProj)
-	{
-		if (m_DirectionalLight == nullptr)
-		{
-			outView = glm::lookAt(VEC3_ZERO, VEC3_FORWARD, VEC3_UP);
-			outProj = glm::ortho(-1234.0f, 1234.0f, -4567.0f, 4567.0f, 1.0f, 0.01f);
-			return;
-		}
-
-		outView = glm::lookAt(VEC3_ZERO, m_DirectionalLight->data.dir, VEC3_UP);
-
-		real zoom = m_DirectionalLight->shadowMapZoom;
-		outProj = glm::ortho(-zoom, zoom, -zoom, zoom, m_DirectionalLight->shadowMapNearPlane, m_DirectionalLight->shadowMapFarPlane);
 	}
 
 	void PhysicsDebugDrawBase::UpdateDebugMode()

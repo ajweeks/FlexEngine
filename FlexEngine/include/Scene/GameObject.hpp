@@ -242,10 +242,6 @@ namespace flex
 
 		DirLightData data;
 
-		real shadowMapNearPlane;
-		real shadowMapFarPlane;
-		real shadowMapZoom;
-
 		// DEBUG:
 		glm::vec3 pos = VEC3_ZERO;
 

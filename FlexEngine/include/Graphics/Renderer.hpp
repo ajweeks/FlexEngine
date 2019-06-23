@@ -206,8 +206,6 @@ namespace flex
 		void RemoveAllPointLights();
 
 		DirLightData* GetDirectionalLight();
-		real GetDirectionalLightNear() const;
-		real GetDirectionalLightFar() const;
 		PointLightData* GetPointLight(PointLightID ID);
 		i32 GetNumPointLights();
 
@@ -288,8 +286,6 @@ namespace flex
 
 		void GenerateGBufferVertexBuffer(bool bFlipV);
 		void GenerateSSAONoise(std::vector<glm::vec4>& noise);
-
-		void ComputeDirLightViewProj(glm::mat4& outView, glm::mat4& outProj);
 
 		std::vector<Shader> m_BaseShaders;
 

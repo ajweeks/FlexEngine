@@ -2593,10 +2593,6 @@ namespace flex
 			data.castShadows = bCastShadows ? 1 : 0;
 		}
 		ImGui::SliderFloat("Shadow darkness", &data.shadowDarkness, 0.0f, 1.0f);
-
-		ImGui::DragFloat("Near", &shadowMapNearPlane);
-		ImGui::DragFloat("Far", &shadowMapFarPlane);
-		ImGui::DragFloat("Zoom", &shadowMapZoom);
 	}
 
 	void DirectionalLight::SetVisible(bool bVisible, bool bEffectChildren /* = true */)
@@ -2660,21 +2656,6 @@ namespace flex
 				data.castShadows = bCastShadow ? 1 : 0;
 			}
 			directionalLightObj.SetFloatChecked("shadow darkness", data.shadowDarkness);
-
-			if (directionalLightObj.HasField("shadow map near"))
-			{
-				directionalLightObj.SetFloatChecked("shadow map near", shadowMapNearPlane);
-			}
-
-			if (directionalLightObj.HasField("shadow map far"))
-			{
-				directionalLightObj.SetFloatChecked("shadow map far", shadowMapFarPlane);
-			}
-
-			if (directionalLightObj.HasField("shadow map zoom"))
-			{
-				directionalLightObj.SetFloatChecked("shadow map zoom", shadowMapZoom);
-			}
 		}
 	}
 
@@ -2696,9 +2677,6 @@ namespace flex
 
 		dirLightObj.fields.emplace_back("cast shadows", JSONValue(static_cast<bool>(data.castShadows)));
 		dirLightObj.fields.emplace_back("shadow darkness", JSONValue(data.shadowDarkness));
-		dirLightObj.fields.emplace_back("shadow map near", JSONValue(shadowMapNearPlane));
-		dirLightObj.fields.emplace_back("shadow map far", JSONValue(shadowMapFarPlane));
-		dirLightObj.fields.emplace_back("shadow map zoom", JSONValue(shadowMapZoom));
 
 		parentObject.fields.emplace_back("directional light info", JSONValue(dirLightObj));
 	}
