@@ -5560,8 +5560,7 @@ namespace flex
 				renderPassInfo.dependencyCount = dependencies.size();
 				renderPassInfo.pDependencies = dependencies.data();
 
-				vkDestroyRenderPass(m_VulkanDevice->m_LogicalDevice, m_OffScreenFrameBuf->renderPass, nullptr);
-				VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassInfo, nullptr, &m_OffScreenFrameBuf->renderPass));
+				VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassInfo, nullptr, m_OffScreenFrameBuf->renderPass.replace()));
 			}
 
 			// TODO: Make render pass helper support depth-only passes
@@ -5607,7 +5606,7 @@ namespace flex
 				renderPassCreateInfo.pSubpasses = subpasses.data();
 				renderPassCreateInfo.dependencyCount = dependencies.size();
 				renderPassCreateInfo.pDependencies = dependencies.data();
-				VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassCreateInfo, nullptr, &m_ShadowRenderPass));
+				VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassCreateInfo, nullptr, m_ShadowRenderPass.replace()));
 			}
 
 			// Shadow frame buffers
