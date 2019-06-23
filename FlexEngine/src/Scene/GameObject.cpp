@@ -3561,7 +3561,8 @@ namespace flex
 		bufferInfo.normals = normals;
 		bufferInfo.tangents = tangents;
 		vertexBuffer->UpdateData(&bufferInfo);
-		g_Renderer->UpdateVertexData(m_RenderID, vertexBuffer);
+		// TODO: Get working in Vulkan
+		//g_Renderer->UpdateVertexData(m_RenderID, vertexBuffer);
 
 
 		const glm::vec3 wavePos = m_Transform.GetWorldPosition();
