@@ -2624,15 +2624,24 @@ namespace flex
 
 	void DirectionalLight::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID)
 	{
-		UNREFERENCED_PARAMETER(scene);
 		UNREFERENCED_PARAMETER(matID);
+
+		i32 sceneFileVersion = scene->GetFileVersion();
 
 		JSONObject directionalLightObj;
 		if (parentObject.SetObjectChecked("directional light info", directionalLightObj))
 		{
-			std::string quatStr = directionalLightObj.GetString("rotation");
-			m_Transform.SetWorldRotation(ParseQuat(quatStr));
-			data.dir = glm::rotate(m_Transform.GetWorldRotation(), VEC3_RIGHT);
+			std::string rotStr = directionalLightObj.GetString("rotation");
+			if (sceneFileVersion >= 2)
+			{
+				m_Transform.SetWorldRotation(ParseQuat(rotStr));
+				data.dir = glm::rotate(m_Transform.GetWorldRotation(), VEC3_RIGHT);
+			}
+			else
+			{
+				glm::quat rot(ParseVec3(rotStr));
+				m_Transform.SetWorldRotation(rot);
+			}
 
 			std::string posStr = directionalLightObj.GetString("pos");
 			if (!posStr.empty())

@@ -104,17 +104,10 @@ namespace flex
 					PrintLong(sceneRootObject.Print(0).c_str());
 				}
 
-				int sceneVersion = sceneRootObject.GetInt("version");
-				if (sceneVersion != 1)
+				if (!sceneRootObject.SetIntChecked("version", m_FileVersion))
 				{
-					if (sceneRootObject.HasField("version"))
-					{
-						PrintError("Unhandled scene version: %i! Max handled version: 1\n", sceneVersion);
-					}
-					else
-					{
-						PrintError("Scene version missing from scene file. Assuming version 1\n");
-					}
+					m_FileVersion = 1;
+					PrintError("Scene version missing from scene file. Assuming version 1\n");
 				}
 
 				sceneRootObject.SetStringChecked("name", m_Name);
@@ -245,6 +238,9 @@ namespace flex
 
 			m_bLoaded = true;
 		}
+
+		// All updating to new file version should be complete by this point
+		m_FileVersion = LATEST_FILE_VER;
 	}
 
 	void BaseScene::PostInitialize()
@@ -595,7 +591,7 @@ namespace flex
 		}
 	}
 
-	bool BaseScene::SerializeMeshFile()
+	bool BaseScene::SerializeMeshFile() const
 	{
 		std::string meshesFilePath = RESOURCE_LOCATION  "scenes/meshes.json";
 
@@ -653,7 +649,7 @@ namespace flex
 		return true;
 	}
 
-	bool BaseScene::SerializeMaterialFile()
+	bool BaseScene::SerializeMaterialFile() const
 	{
 		std::string materialsFilePath = RESOURCE_LOCATION  "scenes/materials.json";
 
@@ -700,7 +696,7 @@ namespace flex
 		return true;
 	}
 
-	bool BaseScene::SerializePrefabFile()
+	bool BaseScene::SerializePrefabFile() const
 	{
 		// TODO: Implement
 		ENSURE_NO_ENTRY();
@@ -803,6 +799,11 @@ namespace flex
 		m_ObjectsToAddAtEndOfFrame.insert(m_ObjectsToAddAtEndOfFrame.end(), objs.begin(), objs.end());
 	}
 
+	i32 BaseScene::GetFileVersion() const
+	{
+		return m_FileVersion;
+	}
+
 	MaterialID BaseScene::FindMaterialIDByName(const JSONObject& object)
 	{
 		MaterialID matID = InvalidMaterialID;
@@ -850,8 +851,8 @@ namespace flex
 	{
 		bool success = true;
 
-		success &= BaseScene::SerializeMeshFile();
-		success &= BaseScene::SerializeMaterialFile();
+		success &= SerializeMeshFile();
+		success &= SerializeMaterialFile();
 		//success &= BaseScene::SerializePrefabFile();
 
 		const std::string profileBlockName = "serialize scene to file: " + m_FileName;

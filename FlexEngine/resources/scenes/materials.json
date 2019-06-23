@@ -1,5 +1,5 @@
 {
-	"version" : 1,
+	"version" : 2,
 	"materials" : 
 	[
 		{
@@ -23,7 +23,7 @@
 			"shader" : "pbr",
 			"const albedo" : "0.230, 0.250, 0.290",
 			"const metallic" : 0.000000,
-			"const roughness" : 0.340000,
+			"const roughness" : 0.820000,
 			"const ao" : 1.000000
 		},
 		{

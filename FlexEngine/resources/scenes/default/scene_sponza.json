@@ -1,6 +1,7 @@
 {
-	"version" : 1,
+	"version" : 2,
 	"name" : "Sponza",
+	"spawn player" : false,
 	"objects" : 
 	[
 		{
@@ -67,8 +68,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "18.945, 0.880, 3.148",
-				"rot" : "-2.642, -0.396, 2.498",
+				"pos" : "19.371, 0.880, 3.061",
+				"rot" : "-2.609, -0.357, 2.060",
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "sphere",
@@ -93,8 +94,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "16.978, 0.880, 1.984",
-				"rot" : "2.160, 1.322, -0.677",
+				"pos" : "17.204, 0.880, 1.965",
+				"rot" : "2.160, 1.322, -0.901",
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "sphere",
@@ -119,8 +120,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "5.248, 0.880, 4.273",
-				"rot" : "1.847, 0.038, 2.250",
+				"pos" : "5.550, 0.880, 4.970",
+				"rot" : "1.515, -0.501, 2.018",
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "sphere",
@@ -145,8 +146,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "21.887, 0.880, 3.865",
-				"rot" : "-0.388, 0.337, -1.823",
+				"pos" : "22.376, 0.880, 3.644",
+				"rot" : "-0.306, 0.200, -2.293",
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "sphere",
@@ -171,8 +172,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "19.522, 0.880, 7.289",
-				"rot" : "-0.602, -0.841, 1.697",
+				"pos" : "19.973, 0.880, 7.250",
+				"rot" : "-0.603, -0.837, 1.248",
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "sphere",
@@ -197,8 +198,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "11.634, 0.880, 6.047",
-				"rot" : "0.507, 0.444, 0.307",
+				"pos" : "12.110, 0.880, 6.697",
+				"rot" : "1.123, 0.340, 0.059",
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "sphere",
@@ -223,8 +224,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "8.399, 0.880, 6.054",
-				"rot" : "0.625, 0.397, 1.196",
+				"pos" : "8.651, 0.880, 6.760",
+				"rot" : "0.925, -0.167, 0.971",
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "sphere",
@@ -249,8 +250,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "3.894, 0.880, 6.184",
-				"rot" : "0.231, 0.355, 2.112",
+				"pos" : "4.079, 0.880, 6.864",
+				"rot" : "-0.025, -0.204, 1.902",
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "sphere",
@@ -275,8 +276,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "1.723, 0.880, 6.079",
-				"rot" : "0.467, 0.356, 1.753",
+				"pos" : "1.907, 0.880, 6.837",
+				"rot" : "0.400, -0.328, 1.562",
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "sphere",
@@ -301,8 +302,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-4.483, 0.880, 6.095",
-				"rot" : "0.165, 0.527, 2.602",
+				"pos" : "-4.476, 0.880, 6.762",
+				"rot" : "-0.348, 0.162, 2.416",
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "sphere",
@@ -327,8 +328,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-8.720, 0.880, 6.099",
-				"rot" : "0.180, 0.511, 2.570",
+				"pos" : "-8.656, 0.880, 6.809",
+				"rot" : "-0.339, 0.094, 2.342",
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "sphere",
@@ -353,8 +354,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-10.751, 0.880, 6.162",
-				"rot" : "0.110, 0.505, 2.599",
+				"pos" : "-10.750, 0.880, 6.819",
+				"rot" : "-0.388, 0.155, 2.431",
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "sphere",
@@ -376,104 +377,21 @@
 		{
 			"name" : "Directional Light",
 			"type" : "directional light",
-			"visible" : false,
+			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "26.928, -70.728, -18.970",
-				"rot" : "-2.038, -1.396, 0.344"
+				"pos" : "26.928, -70.728, -18.870",
+				"rot" : "-0.000, 0.112, 1.929"
 			},
 			"directional light info" : 
 			{
-				"rotation" : "-2.038, -1.396, 0.344",
-				"pos" : "26.928, -70.728, -18.970",
+				"rotation" : "-0.046, 0.032, 0.820, 0.569",
+				"pos" : "26.928, -70.728, -18.870",
 				"color" : "1.00, 1.00, 1.00",
-				"enabled" : false,
+				"enabled" : true,
 				"brightness" : 12.188000,
 				"cast shadows" : true,
-				"shadow darkness" : 0.880000,
-				"shadow map near" : -182.000000,
-				"shadow map far" : 186.000000,
-				"shadow map zoom" : 146.000000
-			}
-		},
-		{
-			"name" : "Point Light",
-			"type" : "point light",
-			"visible" : true,
-			"transform" : 
-			{
-				"pos" : "0.000, 36.693, 0.372"
-			},
-			"point light info" : 
-			{
-				"pos" : "0.000, 36.693, 0.372",
-				"color" : "1.00, 1.00, 0.87",
-				"enabled" : true,
-				"brightness" : 1000.000000
-			}
-		},
-		{
-			"name" : "Point Light",
-			"type" : "point light",
-			"visible" : true,
-			"transform" : 
-			{
-				"pos" : "114.520, 67.945, 0.000"
-			},
-			"point light info" : 
-			{
-				"pos" : "114.520, 67.945, 0.000",
-				"color" : "1.00, 0.92, 0.73",
-				"enabled" : true,
-				"brightness" : 500.000000
-			}
-		},
-		{
-			"name" : "Point Light",
-			"type" : "point light",
-			"visible" : true,
-			"transform" : 
-			{
-				"pos" : "-115.776, 65.709, 0.000"
-			},
-			"point light info" : 
-			{
-				"pos" : "-115.776, 65.709, 0.000",
-				"color" : "0.94, 0.86, 0.66",
-				"enabled" : true,
-				"brightness" : 666.666992
-			}
-		},
-		{
-			"name" : "PointLight_00",
-			"type" : "point light",
-			"visible" : true,
-			"transform" : 
-			{
-				"pos" : "-104.000, 18.900, 1.400"
-			},
-			"point light info" : 
-			{
-				"pos" : "-104.000, 18.900, 1.400",
-				"color" : "1.00, 1.00, 1.00",
-				"enabled" : true,
-				"brightness" : 395.833008
-			}
-		},
-		{
-			"name" : "PointLight_01",
-			"type" : "point light",
-			"visible" : true,
-			"transform" : 
-			{
-				"pos" : "116.100, 13.800, 2.300"
-			},
-			"point light info" : 
-			{
-				"pos" : "116.100, 13.800, 2.300",
-				"color" : "1.00, 1.00, 1.00",
-				"enabled" : true,
-				"brightness" : 125.000000
+				"shadow darkness" : 0.880000
 			}
 		}
 	]

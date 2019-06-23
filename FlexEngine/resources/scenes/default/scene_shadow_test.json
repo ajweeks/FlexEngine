@@ -1,5 +1,5 @@
 {
-	"version" : 1,
+	"version" : 2,
 	"name" : "scene_shadow_test",
 	"spawn player" : true,
 	"objects" : 
@@ -282,11 +282,11 @@
 			"transform" : 
 			{
 				"pos" : "-1.947, 10.965, 0.112",
-				"rot" : "-0.287, 1.246, 1.209"
+				"rot" : "-0.424, 0.409, 0.265"
 			},
 			"directional light info" : 
 			{
-				"rotation" : "-0.424, 0.409, 0.525, 0.614",
+				"rotation" : "-0.230, 0.170, 0.169, 0.943",
 				"pos" : "-1.947, 10.965, 0.112",
 				"color" : "1.00, 1.00, 1.00",
 				"enabled" : true,

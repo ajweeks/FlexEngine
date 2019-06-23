@@ -1,6 +1,7 @@
 {
-	"version" : 1,
+	"version" : 2,
 	"name" : "Scene_sphere_comparison",
+	"spawn player" : false,
 	"objects" : 
 	[
 		{
@@ -9,7 +10,7 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"rot" : "-3.142, 1.408, -3.142"
+				"rot" : "-3.140, 1.410, -3.140"
 			},
 			"material" : "skybox 01",
 			"skybox info" : 
@@ -24,8 +25,7 @@
 			"transform" : 
 			{
 				"pos" : "14.860, 13.780, 0.000"
-			},
-			"material" : "pbr chrome"
+			}
 		},
 		{
 			"name" : "Top spheres",
@@ -322,11 +322,11 @@
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "1.195, -1.308, -2.522"
+				"rot" : "-0.343, -0.579, -0.521"
 			},
 			"directional light info" : 
 			{
-				"rotation" : "1.195, -1.308, -2.522",
+				"rotation" : "-0.230, -0.230, -0.290, 0.900",
 				"pos" : "0.000, 15.000, 0.000",
 				"color" : "1.00, 1.00, 1.00",
 				"enabled" : false,
