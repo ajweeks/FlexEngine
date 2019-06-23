@@ -269,6 +269,12 @@ namespace flex
 				VkDebugReportObjectTypeEXT objType, u64 obj, size_t location, i32 code, const char* layerPrefix,
 				const char* msg, void* userData);
 
+			// TODO: Monitor number of used desc sets to set this value intelligently
+			static const u32 MAX_NUM_DESC_SETS = 1024;
+			static const u32 MAX_NUM_DESC_COMBINED_IMAGE_SAMPLERS = 1024;
+			static const u32 MAX_NUM_DESC_UNIFORM_BUFFERS = 1024;
+			static const u32 MAX_NUM_DESC_DYNAMIC_UNIFORM_BUFFERS = 1024;
+
 			VulkanRenderObject* GetRenderObject(RenderID renderID);
 
 			u32 GetActiveRenderObjectCount() const;

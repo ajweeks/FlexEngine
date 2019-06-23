@@ -6848,25 +6848,14 @@ namespace flex
 
 		void VulkanRenderer::CreateDescriptorPool()
 		{
-			// TODO: OPTIMIZE: Don't do this? Start with high water levels from previous sessions and resize when needed
-			const size_t descriptorSetCount = 1000;
-
-			std::vector<VkDescriptorPoolSize> poolSizes{
-				{ VK_DESCRIPTOR_TYPE_SAMPLER, descriptorSetCount },
-				{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, descriptorSetCount },
-				{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, descriptorSetCount },
-				{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, descriptorSetCount },
-				{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, descriptorSetCount },
-				{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, descriptorSetCount },
-				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, descriptorSetCount },
-				{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, descriptorSetCount },
-				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, descriptorSetCount },
-				{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, descriptorSetCount },
-				{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, descriptorSetCount },
+			std::vector<VkDescriptorPoolSize> poolSizes
+			{
+				{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_NUM_DESC_COMBINED_IMAGE_SAMPLERS },
+				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MAX_NUM_DESC_UNIFORM_BUFFERS },
+				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, MAX_NUM_DESC_DYNAMIC_UNIFORM_BUFFERS },
 			};
 
-			u32 maxSets = descriptorSetCount * poolSizes.size();
-			VkDescriptorPoolCreateInfo poolInfo = vks::descriptorPoolCreateInfo(poolSizes, maxSets);
+			VkDescriptorPoolCreateInfo poolInfo = vks::descriptorPoolCreateInfo(poolSizes, MAX_NUM_DESC_SETS);
 			// TODO: Have additional pool which doesn't have this flag set for constant descriptor sets
 			poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT; // Allow descriptor sets to be added/removed often
 
