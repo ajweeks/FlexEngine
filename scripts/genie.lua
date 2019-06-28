@@ -79,11 +79,6 @@ end
 -- copy files that are specific for the platform being built for
 function windowsPlatformPostBuild()
 	local cfgs = configurations()
-	local cfg_lib_dirs = {
-		"Debug",
-		"Release",
-		"Release"
-	};
 
 	for i = 1, #cfgs do
 		--copy dlls and resources after build
