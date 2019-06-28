@@ -23,6 +23,7 @@ solution "Flex"
 
 	location "../build/"
 	objdir "../build/"
+	windowstargetplatformversion "10.0.17763.0"
 
 
 PROJECT_DIR = path.getabsolute("..")
@@ -75,25 +76,25 @@ function staticPlatformLibraries()
 end
 
 
---copy files that are specific for the platform being built for
--- function windowsPlatformPostBuild()
--- 	local cfgs = configurations()
--- 	local cfg_lib_dirs = {
--- 		"Debug",
--- 		"Release",
--- 		"Release"
--- 	};
+-- copy files that are specific for the platform being built for
+function windowsPlatformPostBuild()
+	local cfgs = configurations()
+	local cfg_lib_dirs = {
+		"Debug",
+		"Release",
+		"Release"
+	};
 
--- 	for i = 1, #cfgs do
--- 		--copy dlls and resources after build
--- 		configuration { "vs*", cfgs[i] }
--- 			postbuildcommands { 
--- 				"copy \"$(SolutionDir)..\\FlexEngine\\lib\\" .. cfg_lib_dirs[i] .. "\\assimp-vc140-mt.dll\" " ..
--- 				"\"$(OutDir)assimp-vc140-mt.dll\""
--- 			}
--- 	end
--- 	configuration {}
--- end
+	for i = 1, #cfgs do
+		--copy dlls and resources after build
+		configuration { "vs*", cfgs[i] }
+			postbuildcommands { 
+				"copy \"$(SolutionDir)..\\FlexEngine\\lib\\openal32.dll\" " ..
+				"\"$(OutDir)openal32.dll\""
+			}
+	end
+	configuration {}
+end
 
 
 configuration "Debug"
@@ -109,6 +110,7 @@ configuration "Shipping_WithSymbols"
 	defines { "SHIPPING", "SYMBOLS" }
 	flags {"OptimizeSpeed", "Symbols", "No64BitChecks" }
 configuration {}
+
 
 configuration "vs*"
 	flags { "NoIncrementalLink", "NoEditAndContinue" }
@@ -154,6 +156,7 @@ project "Flex"
 
 	platformLibraries()
 	staticPlatformLibraries()
+	windowsPlatformPostBuild()
 
 	--Linked libraries
     links { "opengl32", "glfw3", "vulkan-1", "OpenAL32" }
