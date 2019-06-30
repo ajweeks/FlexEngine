@@ -110,6 +110,13 @@ namespace flex
 			virtual u32 GetTextureHandle(TextureID textureID) const override;
 			virtual void RenderObjectStateChanged() override;
 
+			bool bDebugUtilsExtensionPresent = false;
+
+			PFN_vkDebugMarkerSetObjectNameEXT m_vkDebugMarkerSetObjectName = nullptr;
+			PFN_vkCmdDebugMarkerBeginEXT m_vkCmdDebugMarkerBegin = nullptr;
+			PFN_vkCmdDebugMarkerEndEXT m_vkCmdDebugMarkerEnd = nullptr;
+			bool m_bEnableDebugMarkers = false;
+
 		protected:
 			virtual bool LoadFont(FontMetaData& fontMetaData, bool bForceRender) override;
 
@@ -170,8 +177,12 @@ namespace flex
 			void CreateSSAOPipelines();
 			void CreateSSAODescriptorSets();
 
-			void CreateRenderPass(VkRenderPass* outPass, VkFormat colorFormat, VkImageLayout finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-				bool bKeepInitialContents = false, bool bDepth = false, VkFormat depthFormat = VK_FORMAT_UNDEFINED, VkImageLayout finalDepthLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+			void CreateRenderPass(VkRenderPass* outPass, VkFormat colorFormat, const char* passName,
+				VkImageLayout finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+				bool bKeepInitialContents = false,
+				bool bDepth = false,
+				VkFormat depthFormat = VK_FORMAT_UNDEFINED,
+				VkImageLayout finalDepthLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
 			MaterialID GetNextAvailableMaterialID();
 			RenderID GetNextAvailableRenderID() const;
@@ -183,6 +194,7 @@ namespace flex
 			//void SetupImGuiWindowData(ImGui_ImplVulkanH_WindowData* data, VkSurfaceKHR surface, i32 width, i32 height);
 			VkPhysicalDevice PickPhysicalDevice();
 			void CreateLogicalDevice(VkPhysicalDevice physicalDevice);
+			void FindPresentInstanceExtensions();
 			void CreateSwapChain();
 			void CreateSwapChainImageViews();
 			void CreateRenderPasses();
@@ -236,16 +248,28 @@ namespace flex
 			void CreateSemaphores();
 			void RecreateSwapChain();
 
+			void SetObjectName(uint64_t object, VkDebugReportObjectTypeEXT type, const char* name);
+			void SetSwapchainName(VkSwapchainKHR swapchain, const char* name);
+			void SetDescriptorSetName(VkDescriptorSet descSet, const char* name);
+			void SetPipelineName(VkPipeline pipeline, const char* name);
+			void SetFramebufferName(VkFramebuffer framebuffer, const char* name);
+			void SetRenderPassName(VkRenderPass renderPass, const char* name);
+
+			void BeginRegion(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color = VEC4_ONE);
+			void EndRegion(VkCommandBuffer cmdBuf);
+
 			void DrawFrame();
 			bool CreateShaderModule(const std::vector<char>& code, VkShaderModule* shaderModule) const;
 			VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) const;
 			VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) const;
 			VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) const;
 			VulkanSwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device) const;
-			bool IsDeviceSuitable(VkPhysicalDevice device) const;
-			bool CheckDeviceExtensionSupport(VkPhysicalDevice device) const;
+			bool IsDeviceSuitable(VkPhysicalDevice device);
+			bool CheckDeviceExtensionSupport(VkPhysicalDevice device);
 			std::vector<const char*> GetRequiredExtensions() const;
 			bool CheckValidationLayerSupport() const;
+
+			bool ExtensionSupported(const std::string& extStr) const;
 
 			void UpdateConstantUniformBuffers(UniformOverrides const* overridenUniforms = nullptr);
 			void UpdateDynamicUniformBuffer(RenderID renderID, UniformOverrides const * overridenUniforms = nullptr,
@@ -291,6 +315,8 @@ namespace flex
 
 			void CreateShadowResources();
 			VkDescriptorSet CreateSpriteDescSet(ShaderID spriteShaderID, TextureID textureID, u32 layer = 0);
+
+			std::vector<std::string> m_SupportedDeviceExtenions;
 
 			const u32 MAX_NUM_RENDER_OBJECTS = 4096; // TODO: Not this?
 			std::vector<VulkanRenderObject*> m_RenderObjects;
@@ -389,11 +415,11 @@ namespace flex
 				//"VK_LAYER_RENDERDOC_Capture", // RenderDoc captures, in engine integration works better (see COMPILE_RENDERDOC_API)
 			};
 
-			const std::vector<const char*> m_DeviceExtensions =
+			const std::vector<const char*> m_RequiredDeviceExtensions =
 			{
 				VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 				VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME,
-				VK_KHR_MAINTENANCE1_EXTENSION_NAME // For negative viewport height
+				VK_KHR_MAINTENANCE1_EXTENSION_NAME, // For negative viewport height
 			};
 
 #ifdef SHIPPING

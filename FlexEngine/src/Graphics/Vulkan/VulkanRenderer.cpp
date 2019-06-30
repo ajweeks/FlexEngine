@@ -79,6 +79,15 @@ namespace flex
 			VkPhysicalDevice physicalDevice = PickPhysicalDevice();
 			CreateLogicalDevice(physicalDevice);
 
+			FindPresentInstanceExtensions();
+
+			if (m_bEnableDebugMarkers)
+			{
+				m_vkDebugMarkerSetObjectName = reinterpret_cast<PFN_vkDebugMarkerSetObjectNameEXT>(vkGetInstanceProcAddr(m_Instance, "vkDebugMarkerSetObjectNameEXT"));
+				m_vkCmdDebugMarkerBegin = reinterpret_cast<PFN_vkCmdDebugMarkerBeginEXT>(vkGetDeviceProcAddr(m_VulkanDevice->m_LogicalDevice, "vkCmdDebugMarkerBeginEXT"));
+				m_vkCmdDebugMarkerEnd = reinterpret_cast<PFN_vkCmdDebugMarkerEndEXT>(vkGetDeviceProcAddr(m_VulkanDevice->m_LogicalDevice, "vkCmdDebugMarkerEndEXT"));
+			}
+
 			{
 				u32 instanceAPIVersion;
 				VK_CHECK_RESULT(vkEnumerateInstanceVersion(&instanceAPIVersion));
@@ -713,7 +722,7 @@ namespace flex
 			const u32 mipLevels = static_cast<u32>(floor(log2(dim))) + 1;
 
 			VkRenderPass renderPass;
-			CreateRenderPass(&renderPass, format);
+			CreateRenderPass(&renderPass, format, "Equirectangular to Cubemap");
 
 			// Offscreen framebuffer
 			struct {
@@ -788,6 +797,7 @@ namespace flex
 
 			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 			DescriptorSetCreateInfo equirectangularToCubeDescriptorCreateInfo = {};
+			equirectangularToCubeDescriptorCreateInfo.DBG_Name = "Equirectangular to cube";
 			equirectangularToCubeDescriptorCreateInfo.descriptorSet = &descriptorSet;
 			equirectangularToCubeDescriptorCreateInfo.descriptorSetLayout = &m_DescriptorSetLayouts[equirectangularToCubeShaderID];
 			equirectangularToCubeDescriptorCreateInfo.shaderID = equirectangularToCubeShaderID;
@@ -832,6 +842,8 @@ namespace flex
 			renderPassBeginInfo.pClearValues = clearValues;
 
 			VkCommandBuffer cmdBuf = m_CommandBufferManager.CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
+
+			BeginRegion(cmdBuf, "Generate Cubemap from HDR");
 
 			VkImageSubresourceRange subresourceRange = {};
 			subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -948,6 +960,8 @@ namespace flex
 				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 				subresourceRange);
 
+			EndRegion(cmdBuf);
+
 			m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
 
 			vkDestroyRenderPass(m_VulkanDevice->m_LogicalDevice, renderPass, nullptr);
@@ -977,7 +991,7 @@ namespace flex
 			const u32 mipLevels = static_cast<u32>(floor(log2(dim))) + 1;
 
 			VkRenderPass renderPass;
-			CreateRenderPass(&renderPass, format);
+			CreateRenderPass(&renderPass, format, "Generate Irradiance");
 
 			// Offscreen framebuffer
 			struct {
@@ -1051,6 +1065,7 @@ namespace flex
 
 			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 			DescriptorSetCreateInfo irradianceDescriptorCreateInfo = {};
+			irradianceDescriptorCreateInfo.DBG_Name = "Irradiance";
 			irradianceDescriptorCreateInfo.descriptorSet = &descriptorSet;
 			irradianceDescriptorCreateInfo.descriptorSetLayout = &m_DescriptorSetLayouts[irradianceShaderID];
 			irradianceDescriptorCreateInfo.shaderID = irradianceShaderID;
@@ -1097,6 +1112,8 @@ namespace flex
 			renderPassBeginInfo.pClearValues = clearValues;
 
 			VkCommandBuffer cmdBuf = m_CommandBufferManager.CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
+
+			BeginRegion(cmdBuf, "Generate Irradiance");
 
 			VkViewport viewport = vks::viewportFlipped((real)dim, (real)dim, 0.0f, 1.0f);
 			vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
@@ -1211,6 +1228,8 @@ namespace flex
 				subresourceRange);
 			renderObjectMat.irradianceTexture->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
+			EndRegion(cmdBuf);
+
 			m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
 
 			vkDestroyRenderPass(m_VulkanDevice->m_LogicalDevice, renderPass, nullptr);
@@ -1240,7 +1259,7 @@ namespace flex
 			const u32 mipLevels = static_cast<u32>(floor(log2(dim))) + 1;
 
 			VkRenderPass renderPass;
-			CreateRenderPass(&renderPass, format);
+			CreateRenderPass(&renderPass, format, "Generate Prefiltered Cube");
 
 			struct {
 				VkImage image;
@@ -1314,6 +1333,7 @@ namespace flex
 
 			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 			DescriptorSetCreateInfo prefilterDescriptorCreateInfo = {};
+			prefilterDescriptorCreateInfo.DBG_Name = "Prefilter";
 			prefilterDescriptorCreateInfo.descriptorSet = &descriptorSet;
 			prefilterDescriptorCreateInfo.descriptorSetLayout = &m_DescriptorSetLayouts[prefilterShaderID];
 			prefilterDescriptorCreateInfo.shaderID = prefilterShaderID;
@@ -1358,6 +1378,8 @@ namespace flex
 			renderPassBeginInfo.pClearValues = clearValues;
 
 			VkCommandBuffer cmdBuf = m_CommandBufferManager.CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
+
+			BeginRegion(cmdBuf, "Generate Prefiltered Cube");
 
 			VkViewport viewport = vks::viewportFlipped((real)dim, (real)dim, 0.0f, 1.0f);
 			vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
@@ -1471,6 +1493,8 @@ namespace flex
 				subresourceRange);
 			renderObjectMat.prefilterTexture->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
+			EndRegion(cmdBuf);
+
 			m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
 
 			vkDestroyRenderPass(m_VulkanDevice->m_LogicalDevice, renderPass, nullptr);
@@ -1491,7 +1515,7 @@ namespace flex
 				assert(dim <= MAX_TEXTURE_DIM);
 
 				VkRenderPass renderPass;
-				CreateRenderPass(&renderPass, format, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+				CreateRenderPass(&renderPass, format, "Generate BRDF LUT", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 				VkFramebufferCreateInfo framebufferCreateInfo = vks::framebufferCreateInfo(renderPass);
 				framebufferCreateInfo.attachmentCount = 1;
@@ -1512,6 +1536,7 @@ namespace flex
 
 				VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 				DescriptorSetCreateInfo brdfDescriptorCreateInfo = {};
+				brdfDescriptorCreateInfo.DBG_Name = "BRDF";
 				brdfDescriptorCreateInfo.descriptorSet = &descriptorSet;
 				brdfDescriptorCreateInfo.descriptorSetLayout = &m_DescriptorSetLayouts[brdfShaderID];
 				brdfDescriptorCreateInfo.shaderID = brdfShaderID;
@@ -1548,6 +1573,9 @@ namespace flex
 				renderPassBeginInfo.framebuffer = framebuffer;
 
 				VkCommandBuffer cmdBuf = m_CommandBufferManager.CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
+				
+				BeginRegion(cmdBuf, "Generate BRDF LUT");
+
 				vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 				VkViewport viewport = vks::viewportFlipped((real)dim, (real)dim, 0.0f, 1.0f);
@@ -1559,6 +1587,8 @@ namespace flex
 				vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 				vkCmdDraw(cmdBuf, 3, 1, 0, 0);
 				vkCmdEndRenderPass(cmdBuf);
+
+				EndRegion(cmdBuf);
 
 				m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
 
@@ -3470,7 +3500,7 @@ namespace flex
 				VulkanShader& computeSDFShader = m_Shaders[computeSDFShaderID];
 
 				VkRenderPass renderPass;
-				CreateRenderPass(&renderPass, fontTexFormat);
+				CreateRenderPass(&renderPass, fontTexFormat, "Font SDF");
 
 				VkFramebufferCreateInfo framebufCreateInfo = vks::framebufferCreateInfo(renderPass);
 				framebufCreateInfo.attachmentCount = 1;
@@ -3501,6 +3531,8 @@ namespace flex
 				clearCol.color = { 0.0f, 0.0f, 0.0f, 0.0f };
 				renderPassBeginInfo.pClearValues = &clearCol;
 				vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+				BeginRegion(commandBuffer, "Generate Font SDF");
 
 				VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
 				VkPipeline graphicsPipeline = VK_NULL_HANDLE;
@@ -3607,6 +3639,7 @@ namespace flex
 					VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 
 					DescriptorSetCreateInfo descSetCreateInfo = {};
+					descSetCreateInfo.DBG_Name = "Font SDF";
 					descSetCreateInfo.descriptorSet = &descriptorSet;
 					descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 					descSetCreateInfo.shaderID = computeSDFShaderID;
@@ -3632,6 +3665,8 @@ namespace flex
 				}
 
 				vkCmdEndRenderPass(commandBuffer);
+
+				EndRegion(commandBuffer);
 
 				VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
 
@@ -3874,6 +3909,7 @@ namespace flex
 					if (font->m_DescriptorSet == VK_NULL_HANDLE)
 					{
 						DescriptorSetCreateInfo info;
+						info.DBG_Name = "Font SS";
 						info.descriptorSet = &font->m_DescriptorSet;
 						info.descriptorSetLayout = &descSetLayout;
 						info.albedoTexture = font->GetTexture();
@@ -3997,6 +4033,7 @@ namespace flex
 					if (font->m_DescriptorSet == VK_NULL_HANDLE)
 					{
 						DescriptorSetCreateInfo info;
+						info.DBG_Name = "Font WS";
 						info.descriptorSet = &font->m_DescriptorSet;
 						info.descriptorSetLayout = &descSetLayout;
 						info.albedoTexture = font->GetTexture();
@@ -4320,6 +4357,7 @@ namespace flex
 			VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[shadowMaterial->material.shaderID];
 
 			DescriptorSetCreateInfo descSetCreateInfo = {};
+			descSetCreateInfo.DBG_Name = "Shadow";
 			descSetCreateInfo.descriptorSet = &m_ShadowDescriptorSet;
 			descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 			descSetCreateInfo.shaderID = shadowMaterial->material.shaderID;
@@ -4340,6 +4378,7 @@ namespace flex
 
 			VkDescriptorSet descSet = VK_NULL_HANDLE;
 			DescriptorSetCreateInfo descSetCreateInfo = {};
+			descSetCreateInfo.DBG_Name = "Sprite Descriptor Set";
 			descSetCreateInfo.descriptorSet = &descSet;
 			descSetCreateInfo.descriptorSetLayout = &m_DescriptorSetLayouts[spriteShaderID];
 			descSetCreateInfo.shaderID = spriteShaderID;
@@ -4546,6 +4585,19 @@ namespace flex
 
 			VkPhysicalDeviceFeatures deviceFeatures = GetEnabledFeaturesForDevice(physicalDevice);
 
+			std::vector<const char*> deviceExtensions;
+
+			for (const char* extStr : m_RequiredDeviceExtensions)
+			{
+				deviceExtensions.push_back(extStr);
+			}
+
+			if (ExtensionSupported(VK_EXT_DEBUG_MARKER_EXTENSION_NAME))
+			{
+				deviceExtensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+				m_bEnableDebugMarkers = true;
+			}
+
 			VkDeviceCreateInfo createInfo = {};
 			createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 
@@ -4554,8 +4606,8 @@ namespace flex
 
 			createInfo.pEnabledFeatures = &deviceFeatures;
 
-			createInfo.enabledExtensionCount = m_DeviceExtensions.size();
-			createInfo.ppEnabledExtensionNames = m_DeviceExtensions.data();
+			createInfo.enabledExtensionCount = deviceExtensions.size();
+			createInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
 			if (m_bEnableValidationLayers)
 			{
@@ -4575,6 +4627,25 @@ namespace flex
 
 			vkGetDeviceQueue(m_VulkanDevice->m_LogicalDevice, (u32)indices.graphicsFamily, 0, &m_GraphicsQueue);
 			vkGetDeviceQueue(m_VulkanDevice->m_LogicalDevice, (u32)indices.presentFamily, 0, &m_PresentQueue);
+		}
+
+		void VulkanRenderer::FindPresentInstanceExtensions()
+		{
+			u32 extensionCount = 0;
+			vkEnumerateInstanceExtensionProperties("VK_LAYER_LUNARG_standard_validation", &extensionCount, nullptr);
+
+			std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+			vkEnumerateInstanceExtensionProperties("VK_LAYER_LUNARG_standard_validation", &extensionCount, availableExtensions.data());
+
+			for (VkExtensionProperties& prop : availableExtensions)
+			{
+				if (strcmp(prop.extensionName, "VK_EXT_debug_report") == 0)
+				{
+					bDebugUtilsExtensionPresent = true;
+				}
+
+				//Print("%s v%d\n", prop.extensionName, prop.specVersion);
+			}
 		}
 
 		void VulkanRenderer::RecreateSwapChain()
@@ -4619,6 +4690,70 @@ namespace flex
 
 			CreateFramebuffers();
 			m_CommandBufferManager.CreateCommandBuffers(m_SwapChainImages.size());
+		}
+
+		void VulkanRenderer::SetObjectName(uint64_t object, VkDebugReportObjectTypeEXT type, const char* name)
+		{
+			if (m_vkDebugMarkerSetObjectName)
+			{
+				VkDebugMarkerObjectNameInfoEXT info = {};
+				info.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT;
+				info.object = object;
+				info.objectType = type;
+				info.pObjectName = name;
+				VK_CHECK_RESULT(m_vkDebugMarkerSetObjectName(m_VulkanDevice->m_LogicalDevice, &info));
+			}
+		}
+
+		void VulkanRenderer::SetSwapchainName(VkSwapchainKHR swapchain, const char* name)
+		{
+			SetObjectName(swapchain, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, name);
+		}
+
+		void VulkanRenderer::SetDescriptorSetName(VkDescriptorSet descSet, const char* name)
+		{
+			SetObjectName(descSet, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, name);
+		}
+
+		void VulkanRenderer::SetPipelineName(VkPipeline pipeline, const char* name)
+		{
+			SetObjectName(pipeline, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, name);
+		}
+
+		void VulkanRenderer::SetFramebufferName(VkFramebuffer framebuffer, const char* name)
+		{
+			SetObjectName(framebuffer, VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT, name);
+		}
+
+		void VulkanRenderer::SetRenderPassName(VkRenderPass renderPass, const char* name)
+		{
+			SetObjectName(renderPass, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, name);
+		}
+
+		void VulkanRenderer::BeginRegion(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color)
+		{
+			if (m_vkCmdDebugMarkerBegin)
+			{
+				VkDebugMarkerMarkerInfoEXT markerInfo = {};
+				markerInfo.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
+				memcpy(markerInfo.color, &color[0], sizeof(float) * 4);
+				markerInfo.pMarkerName = markerName;
+				m_vkCmdDebugMarkerBegin(cmdBuf, &markerInfo);
+			}
+		}
+
+		void VulkanRenderer::EndRegion(VkCommandBuffer cmdBuf)
+		{
+			if (m_vkCmdDebugMarkerEnd)
+			{
+				m_vkCmdDebugMarkerEnd(cmdBuf);
+			}
+		}
+
+		void SetClipboardText(void* userData, const char* text)
+		{
+			GLFWWindowWrapper* glfwWindow = static_cast<GLFWWindowWrapper*>(userData);
+			glfwWindow->SetClipboardText(text);
 		}
 
 		void VulkanRenderer::CreateSwapChain()
@@ -4681,6 +4816,18 @@ namespace flex
 			m_SwapChainExtent = extent;
 
 			m_SSAORes = glm::vec2u((u32)(m_SwapChainExtent.width / 2.0f), (u32)(m_SwapChainExtent.height / 2.0f));
+
+			SetSwapchainName(m_SwapChain, "Default Swapchain");
+			//if (bDebugUtilsExtensionPresent && VulkanRenderer::m_vkCmdInsertDebugUtilsLabel)
+			//{
+			//	VkDebugMarkerObjectNameInfoEXT info = {};
+			//	info.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT;
+			//	info.object = m_SwapChain;
+			//	info.objectType = VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT;
+			//	info.pObjectName = "Default Swapchain";
+			//	VkResult r = VulkanRenderer::m_vkDebugMarkerSetObjectName(m_VulkanDevice->m_LogicalDevice, &info);
+			//	Print("%d\n", r);
+			//}
 		}
 
 		void VulkanRenderer::CreateSwapChainImageViews()
@@ -4706,9 +4853,9 @@ namespace flex
 		void VulkanRenderer::CreateRenderPasses()
 		{
 			VkFormat ssaoFrameBufFormat = m_SSAOFrameBuf->frameBufferAttachments[0].second.format;
-			CreateRenderPass(m_SSAORenderPass.replace(), ssaoFrameBufFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			CreateRenderPass(m_SSAOBlurHRenderPass.replace(), ssaoFrameBufFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			CreateRenderPass(m_SSAOBlurVRenderPass.replace(), ssaoFrameBufFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			CreateRenderPass(m_SSAORenderPass.replace(), ssaoFrameBufFormat, "SSAO", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			CreateRenderPass(m_SSAOBlurHRenderPass.replace(), ssaoFrameBufFormat, "SSAO Blur Horizontal", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			CreateRenderPass(m_SSAOBlurVRenderPass.replace(), ssaoFrameBufFormat, "SSAO Blur Vertical", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 			// Deferred combine render pass
 			{
@@ -4717,7 +4864,7 @@ namespace flex
 				VkFormat depthFormat;
 				GetSupportedDepthFormat(m_VulkanDevice->m_PhysicalDevice, &depthFormat);
 
-				CreateRenderPass(m_DeferredCombineRenderPass.replace(), m_SwapChainImageFormat, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, false,
+				CreateRenderPass(m_DeferredCombineRenderPass.replace(), m_SwapChainImageFormat, "Deferred combine", VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, false,
 					true, depthFormat, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 			}
 
@@ -4727,7 +4874,7 @@ namespace flex
 				GetSupportedDepthFormat(m_VulkanDevice->m_PhysicalDevice, &depthFormat);
 
 				// TODO: Does this get transferred out of?
-				CreateRenderPass(m_ForwardRenderPass.replace(), m_SwapChainImageFormat, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, true, true,
+				CreateRenderPass(m_ForwardRenderPass.replace(), m_SwapChainImageFormat, "Forward", VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, true, true,
 					depthFormat, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 			}
 		}
@@ -4744,6 +4891,8 @@ namespace flex
 			VulkanShader* shader = &m_Shaders[material->material.shaderID];
 
 			DescriptorSetCreateInfo createInfo = {};
+			std::string debugName = (renderObject->gameObject ? renderObject->gameObject->GetName() : "") + " - renderID " + std::to_string(renderID);
+			createInfo.DBG_Name = debugName.c_str();
 			createInfo.descriptorSet = &renderObject->descriptorSet;
 			createInfo.descriptorSetLayout = &m_DescriptorSetLayouts[material->descriptorSetLayoutIndex];
 			createInfo.shaderID = material->material.shaderID;
@@ -5036,6 +5185,11 @@ namespace flex
 			if (!writeDescriptorSets.empty())
 			{
 				vkUpdateDescriptorSets(m_VulkanDevice->m_LogicalDevice, writeDescriptorSets.size(), writeDescriptorSets.data(), 0, nullptr);
+			}
+
+			if (createInfo->DBG_Name)
+			{
+				SetDescriptorSetName(*createInfo->descriptorSet, createInfo->DBG_Name);
 			}
 		}
 
@@ -5476,6 +5630,9 @@ namespace flex
 				framebufferInfo.layers = 1;
 
 				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &framebufferInfo, nullptr, m_SwapChainFramebuffers[i].replace()));
+
+				std::string name = "Swapchain " + std::to_string(i);
+				SetFramebufferName(m_SwapChainFramebuffers[i], name.c_str());
 			}
 		}
 
@@ -5671,6 +5828,9 @@ namespace flex
 					shadowFramebufferCreateInfo.height = SHADOW_CASCADE_RES;
 					shadowFramebufferCreateInfo.layers = 1;
 					VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &shadowFramebufferCreateInfo, nullptr, m_ShadowCascades[i]->frameBuffer.replace()));
+
+					std::string name = "Shadow cascade " + std::to_string(i);
+					SetFramebufferName(m_ShadowCascades[i]->frameBuffer, name.c_str());
 				}
 			}
 
@@ -5690,6 +5850,8 @@ namespace flex
 				offscreenFramebufferCreateInfo.height = m_OffScreenFrameBuf->height;
 				offscreenFramebufferCreateInfo.layers = 1;
 				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &offscreenFramebufferCreateInfo, nullptr, m_OffScreenFrameBuf->frameBuffer.replace()));
+
+				SetFramebufferName(m_OffScreenFrameBuf->frameBuffer, "Offscreen");
 			}
 
 			// SSAO Framebuffer
@@ -5708,6 +5870,8 @@ namespace flex
 				ssaoFramebufferCreateInfo.height = m_SSAOFrameBuf->height;
 				ssaoFramebufferCreateInfo.layers = 1;
 				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &ssaoFramebufferCreateInfo, nullptr, m_SSAOFrameBuf->frameBuffer.replace()));
+
+				SetFramebufferName(m_SSAOFrameBuf->frameBuffer, "SSAO");
 			}
 
 			// SSAO Blur Horizontal pass frame buffer
@@ -5726,6 +5890,8 @@ namespace flex
 				ssaoBlurHFramebufferCreateInfo.height = m_SSAOBlurHFrameBuf->height;
 				ssaoBlurHFramebufferCreateInfo.layers = 1;
 				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &ssaoBlurHFramebufferCreateInfo, nullptr, m_SSAOBlurHFrameBuf->frameBuffer.replace()));
+
+				SetFramebufferName(m_SSAOBlurHFrameBuf->frameBuffer, "SSAO Blur Horizontal");
 			}
 
 			// SSAO Blur Vertical pass frame buffer
@@ -5744,6 +5910,8 @@ namespace flex
 				ssaoBlurVFramebufferCreateInfo.height = m_SSAOBlurVFrameBuf->height;
 				ssaoBlurVFramebufferCreateInfo.layers = 1;
 				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &ssaoBlurVFramebufferCreateInfo, nullptr, m_SSAOBlurVFrameBuf->frameBuffer.replace()));
+
+				SetFramebufferName(m_SSAOBlurVFrameBuf->frameBuffer, "SSAO Blur Vertical");
 			}
 
 			// TODO: Remove redundant samplers
@@ -5898,6 +6066,8 @@ namespace flex
 			fbufCreateInfo.height = m_CubemapFrameBuffer->height;
 			fbufCreateInfo.layers = 6;
 			VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &fbufCreateInfo, nullptr, m_CubemapFrameBuffer->frameBuffer.replace()));
+
+			SetFramebufferName(m_CubemapFrameBuffer->frameBuffer, "Cubemap");
 		}
 
 		void VulkanRenderer::RemoveMaterial(MaterialID materialID)
@@ -5953,6 +6123,8 @@ namespace flex
 
 			VK_CHECK_RESULT(vkBeginCommandBuffer(commandBuffer, &cmdBufferbeginInfo));
 
+			BeginRegion(commandBuffer, "Shade deferred");
+
 			VkViewport fullscreenViewport = vks::viewportFlipped((real)m_SwapChainExtent.width, (real)m_SwapChainExtent.height, 0.0f, 1.0f);
 			VkRect2D fullscreenScissor = vks::scissor(0u, 0u, m_SwapChainExtent.width, m_SwapChainExtent.height);
 
@@ -5997,6 +6169,9 @@ namespace flex
 			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_OffScreenDepthAttachment->image, m_OffScreenDepthAttachment->format,
 				VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1, commandBuffer, true);
 
+			EndRegion(commandBuffer);
+			BeginRegion(commandBuffer, "Forward");
+
 			// Forward pass
 			renderPassBeginInfo.renderPass = m_ForwardRenderPass;
 			vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -6006,16 +6181,26 @@ namespace flex
 					DrawShaderBatch(shaderBatch, commandBuffer);
 				}
 
+				EndRegion(commandBuffer);
+				BeginRegion(commandBuffer, "World Space Sprites");
+
 				EnqueueWorldSpaceSprites();
 				DrawSpriteBatch(m_QueuedWSSprites, commandBuffer);
 				m_QueuedWSSprites.clear();
 
+				EndRegion(commandBuffer);
+				BeginRegion(commandBuffer, "World Space Text");
+
 				EnqueueWorldSpaceText();
 				DrawTextWS(commandBuffer);
+
+				EndRegion(commandBuffer);
 
 				bool bUsingGameplayCam = g_CameraManager->CurrentCamera()->bIsGameplayCam;
 				if (g_EngineInstance->IsRenderingEditorObjects() && !bUsingGameplayCam)
 				{
+					BeginRegion(commandBuffer, "Editor objects");
+
 					for (const ShaderBatchPair& shaderBatch : m_DepthAwareEditorObjBatches.batches)
 					{
 						DrawShaderBatch(shaderBatch, commandBuffer);
@@ -6035,7 +6220,11 @@ namespace flex
 					{
 						DrawShaderBatch(shaderBatch, commandBuffer);
 					}
+
+					EndRegion(commandBuffer);
 				}
+
+				BeginRegion(commandBuffer, "Screen Space Sprites");
 
 				EnqueueScreenSpaceSprites();
 				DrawSpriteBatch(m_QueuedSSSprites, commandBuffer);
@@ -6043,12 +6232,21 @@ namespace flex
 				DrawSpriteBatch(m_QueuedSSArrSprites, commandBuffer);
 				m_QueuedSSArrSprites.clear();
 
+				EndRegion(commandBuffer);
+				BeginRegion(commandBuffer, "Screen Space Text");
+
 				EnqueueScreenSpaceText();
 				DrawTextSS(commandBuffer);
 
+				EndRegion(commandBuffer);
+
 				if (g_EngineInstance->IsRenderingImGui())
 				{
+					BeginRegion(commandBuffer, "ImGui");
+
 					ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
+					
+					EndRegion(commandBuffer);
 				}
 			}
 			vkCmdEndRenderPass(commandBuffer);
@@ -6181,6 +6379,8 @@ namespace flex
 			cmdBufferbeginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 			VK_CHECK_RESULT(vkBeginCommandBuffer(m_OffScreenCmdBuffer, &cmdBufferbeginInfo));
 
+			BeginRegion(m_OffScreenCmdBuffer, "Shadow cascades");
+
 			//
 			// Cascaded shadow mapping
 			//
@@ -6239,6 +6439,9 @@ namespace flex
 				}
 			}
 
+			EndRegion(m_OffScreenCmdBuffer);
+			BeginRegion(m_OffScreenCmdBuffer, "Deferred");
+
 			//
 			// G-Buffer fill
 			//
@@ -6274,6 +6477,8 @@ namespace flex
 			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_OffScreenDepthAttachment->image, m_OffScreenDepthAttachment->format,
 				VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, m_OffScreenCmdBuffer, true);
 
+			EndRegion(m_OffScreenCmdBuffer);
+
 			//
 			// SSAO generation
 			//
@@ -6287,6 +6492,8 @@ namespace flex
 
 			if (m_SSAOSamplingData.ssaoEnabled)
 			{
+				BeginRegion(m_OffScreenCmdBuffer, "SSAO");
+
 				std::array<VkClearValue, 1> ssaoClearValues = {};
 				ssaoClearValues[0].color = m_ClearColor;
 
@@ -6320,12 +6527,16 @@ namespace flex
 
 				vkCmdEndRenderPass(m_OffScreenCmdBuffer);
 
+				EndRegion(m_OffScreenCmdBuffer);
+
 				//
 				// SSAO blur
 				//
 
 				if (m_bSSAOBlurEnabled)
 				{
+					BeginRegion(m_OffScreenCmdBuffer, "SSAO Blur");
+
 					renderPassBeginInfo.renderPass = m_SSAOBlurHRenderPass;
 					renderPassBeginInfo.framebuffer = m_SSAOBlurHFrameBuf->frameBuffer;
 					renderPassBeginInfo.renderArea.extent = { m_SSAOBlurHFrameBuf->width, m_SSAOBlurHFrameBuf->height };
@@ -6374,6 +6585,8 @@ namespace flex
 					vkCmdDraw(m_OffScreenCmdBuffer, gBufferObject->vertexBufferData->VertexCount, 1, gBufferObject->vertexOffset, 0);
 
 					vkCmdEndRenderPass(m_OffScreenCmdBuffer);
+
+					EndRegion(m_OffScreenCmdBuffer);
 				}
 			}
 
@@ -7044,7 +7257,7 @@ namespace flex
 			return details;
 		}
 
-		bool VulkanRenderer::IsDeviceSuitable(VkPhysicalDevice device) const
+		bool VulkanRenderer::IsDeviceSuitable(VkPhysicalDevice device)
 		{
 			VulkanQueueFamilyIndices indices = FindQueueFamilies(m_Surface, device);
 
@@ -7064,17 +7277,24 @@ namespace flex
 			return isSuitable;
 		}
 
-		bool VulkanRenderer::CheckDeviceExtensionSupport(VkPhysicalDevice device) const
+		bool VulkanRenderer::CheckDeviceExtensionSupport(VkPhysicalDevice device)
 		{
 			u32 extensionCount;
 			vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
 
-			std::vector<VkExtensionProperties> availableExtensions(extensionCount);
-			vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
+			std::vector<VkExtensionProperties> extensions(extensionCount);
+			vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, extensions.data());
 
-			std::set<std::string> requiredExtensions(m_DeviceExtensions.begin(), m_DeviceExtensions.end());
+			m_SupportedDeviceExtenions.clear();
+			m_SupportedDeviceExtenions.reserve(extensionCount);
+			for (VkExtensionProperties& prop : extensions)
+			{
+				m_SupportedDeviceExtenions.push_back(prop.extensionName);
+			}
 
-			for (const VkExtensionProperties& extension : availableExtensions)
+			std::set<std::string> requiredExtensions(m_RequiredDeviceExtensions.begin(), m_RequiredDeviceExtensions.end());
+
+			for (const VkExtensionProperties& extension : extensions)
 			{
 				requiredExtensions.erase(extension.extensionName);
 			}
@@ -7132,6 +7352,11 @@ namespace flex
 			}
 
 			return true;
+		}
+
+		bool VulkanRenderer::ExtensionSupported(const std::string& extStr) const
+		{
+			return (std::find(m_SupportedDeviceExtenions.begin(), m_SupportedDeviceExtenions.end(), extStr) != m_SupportedDeviceExtenions.end());
 		}
 
 		void VulkanRenderer::UpdateConstantUniformBuffers(UniformOverrides const* overridenUniforms)
@@ -7514,6 +7739,7 @@ namespace flex
 			VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[ssaoMaterial->material.shaderID];
 
 			DescriptorSetCreateInfo descSetCreateInfo = {};
+			descSetCreateInfo.DBG_Name = "SSAO";
 			descSetCreateInfo.descriptorSet = &m_SSAODescSet;
 			descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 			descSetCreateInfo.shaderID = ssaoMaterial->material.shaderID;
@@ -7532,6 +7758,7 @@ namespace flex
 
 			descSetCreateInfo = {};
 			descSetCreateInfo.descriptorSet = &m_SSAOBlurHDescSet;
+			descSetCreateInfo.DBG_Name = "SSAO Blur Horizontal";
 			descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 			descSetCreateInfo.shaderID = ssaoBlurMaterial->material.shaderID;
 			descSetCreateInfo.uniformBuffer = &ssaoBlurShader->uniformBuffer;
@@ -7545,6 +7772,7 @@ namespace flex
 
 			descSetCreateInfo = {};
 			descSetCreateInfo.descriptorSet = &m_SSAOBlurVDescSet;
+			descSetCreateInfo.DBG_Name = "SSAO Blur Vertical";
 			descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 			descSetCreateInfo.shaderID = ssaoBlurMaterial->material.shaderID;
 			descSetCreateInfo.uniformBuffer = &ssaoBlurShader->uniformBuffer;
@@ -7556,8 +7784,12 @@ namespace flex
 			CreateDescriptorSet(&descSetCreateInfo);
 		}
 
-		void VulkanRenderer::CreateRenderPass(VkRenderPass* outPass, VkFormat colorFormat, VkImageLayout finalLayout /* = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL */,
-			bool bKeepInitialContents /* = false */, bool bDepth /* = false */, VkFormat depthFormat /* = VK_FORMAT_UNDEFINED */, VkImageLayout finalDepthLayout /* = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL */)
+		void VulkanRenderer::CreateRenderPass(VkRenderPass* outPass, VkFormat colorFormat, const char* passName,
+			VkImageLayout finalLayout /* = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL */,
+			bool bKeepInitialContents /* = false */,
+			bool bDepth /* = false */,
+			VkFormat depthFormat /* = VK_FORMAT_UNDEFINED */,
+			VkImageLayout finalDepthLayout /* = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL */)
 		{
 			// Color attachment
 			VkAttachmentDescription colorAttachment = vks::attachmentDescription(colorFormat, finalLayout);
@@ -7622,6 +7854,8 @@ namespace flex
 			renderPassCreateInfo.dependencyCount = dependencies.size();
 			renderPassCreateInfo.pDependencies = dependencies.data();
 			VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassCreateInfo, nullptr, outPass));
+
+			SetRenderPassName(*outPass, passName);
 		}
 
 		VKAPI_ATTR VkBool32 VKAPI_CALL VulkanRenderer::DebugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType,
@@ -7655,12 +7889,6 @@ namespace flex
 			}
 
 			return VK_FALSE;
-		}
-
-		void SetClipboardText(void* userData, const char* text)
-		{
-			GLFWWindowWrapper* glfwWindow = static_cast<GLFWWindowWrapper*>(userData);
-			glfwWindow->SetClipboardText(text);
 		}
 
 		const char* GetClipboardText(void* userData)

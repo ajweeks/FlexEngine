@@ -22,6 +22,11 @@ namespace flex
 
 		inline void VK_CHECK_RESULT(VkResult result);
 
+		//void LabelObject(VulkanRenderer* renderer, VkCommandBuffer cmdBuf, const char* name);
+		void SetObjectName(class VulkanRenderer* renderer, VkDevice device, uint64_t object, VkDebugReportObjectTypeEXT type, const char* name);
+		void SetSwapchainName(class VulkanRenderer* renderer, VkDevice device, VkSwapchainKHR swapchain, const char* name);
+		void SetDescriptorSetName(VulkanRenderer* renderer, VkDevice device, VkDescriptorSet descSet, const char* name);
+
 		void GetVertexAttributeDescriptions(VertexAttributes vertexAttributes,
 			std::vector<VkVertexInputAttributeDescription>& attributeDescriptions);
 
@@ -566,6 +571,8 @@ namespace flex
 			bool bDepthSampler = false;
 
 			std::vector<std::pair<u32, VkImageView*>> frameBufferViews; // Name of frame buffer paired with view i32o frame buffer
+
+			const char* DBG_Name = nullptr;
 		};
 
 		struct ImGui_PushConstBlock

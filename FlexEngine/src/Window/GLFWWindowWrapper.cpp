@@ -210,10 +210,6 @@ namespace flex
 			Print("Version:    %s\n\n", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
 			//Print("Extensions: %s\n\n", reinterpret_cast<const char*>(glGetString(GL_EXTENSIONS)));
 		}
-		else if (g_bVulkanEnabled)
-		{
-			// Vulkan hasn't been loaded yet
-		}
 
 		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION  "icons/flex-logo-03_128.png", 4));
 		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION  "icons/flex-logo-03_64.png", 4));
