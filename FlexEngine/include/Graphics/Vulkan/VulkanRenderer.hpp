@@ -208,6 +208,7 @@ namespace flex
 			void PrepareFrameBuffers();
 			void PrepareCubemapFrameBuffer();
 			void PhysicsDebugRender();
+			void RenderFullscreenQuad(VkCommandBuffer commandBuffer, VkRenderPass renderPass, VkFramebuffer framebuffer);
 
 			void CreateUniformBuffers(VulkanShader* shader);
 

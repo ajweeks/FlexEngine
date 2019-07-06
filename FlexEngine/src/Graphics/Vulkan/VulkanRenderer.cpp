@@ -6094,36 +6094,14 @@ namespace flex
 			physicsWorld->debugDrawWorld();
 		}
 
-		void VulkanRenderer::BuildCommandBuffers(const DrawCallInfo& drawCallInfo)
+		void VulkanRenderer::RenderFullscreenQuad(VkCommandBuffer commandBuffer, VkRenderPass renderPass, VkFramebuffer framebuffer)
 		{
-			assert(drawCallInfo.bRenderToCubemap == false); // Unsupported in Vulkan renderer!
-
 			std::array<VkClearValue, 2> clearValues = {};
 			clearValues[0].color = m_ClearColor;
 			clearValues[1].depthStencil = { 0.0f, 0 };
 
-			VkRenderPassBeginInfo renderPassBeginInfo = vks::renderPassBeginInfo(m_DeferredCombineRenderPass);
-			renderPassBeginInfo.renderArea.offset = { 0, 0 };
-			renderPassBeginInfo.renderArea.extent = m_SwapChainExtent;
-			renderPassBeginInfo.clearValueCount = clearValues.size();
-			renderPassBeginInfo.pClearValues = clearValues.data();
-
 			VulkanRenderObject* gBufferObject = GetRenderObject(m_GBufferQuadRenderID);
 			VulkanMaterial* gBufferMaterial = &m_Materials[gBufferObject->materialID];
-
-			if (g_EngineInstance->IsRenderingImGui())
-			{
-				ImGui::Render();
-			}
-
-			VkCommandBuffer& commandBuffer = m_CommandBufferManager.m_CommandBuffers[0];
-
-			VkCommandBufferBeginInfo cmdBufferbeginInfo = vks::commandBufferBeginInfo();
-			cmdBufferbeginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-
-			VK_CHECK_RESULT(vkBeginCommandBuffer(commandBuffer, &cmdBufferbeginInfo));
-
-			BeginRegion(commandBuffer, "Shade deferred");
 
 			VkViewport fullscreenViewport = vks::viewportFlipped((real)m_SwapChainExtent.width, (real)m_SwapChainExtent.height, 0.0f, 1.0f);
 			VkRect2D fullscreenScissor = vks::scissor(0u, 0u, m_SwapChainExtent.width, m_SwapChainExtent.height);
@@ -6133,8 +6111,12 @@ namespace flex
 			vkCmdSetViewport(commandBuffer, 0, 1, &fullscreenViewport);
 			vkCmdSetScissor(commandBuffer, 0, 1, &fullscreenScissor);
 
-			// Deferred combine pass
-			renderPassBeginInfo.framebuffer = m_SwapChainFramebuffers[m_CurrentSwapChainBufferIndex];
+			VkRenderPassBeginInfo renderPassBeginInfo = vks::renderPassBeginInfo(renderPass);
+			renderPassBeginInfo.renderArea.offset = { 0, 0 };
+			renderPassBeginInfo.renderArea.extent = m_SwapChainExtent;
+			renderPassBeginInfo.clearValueCount = clearValues.size();
+			renderPassBeginInfo.pClearValues = clearValues.data();
+			renderPassBeginInfo.framebuffer = framebuffer;
 			vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 			{
 				BindDescriptorSet(&m_Shaders[gBufferMaterial->material.shaderID], 0, commandBuffer, gBufferObject->pipelineLayout, gBufferObject->descriptorSet);
@@ -6143,45 +6125,93 @@ namespace flex
 
 				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID].vertexBuffer->m_Buffer, offsets);
 
-				// Final composition as full screen quad (deferred combine)
 				vkCmdDraw(commandBuffer, gBufferObject->vertexBufferData->VertexCount, 1, gBufferObject->vertexOffset, 0);
 			}
 			vkCmdEndRenderPass(commandBuffer);
+		}
 
+		void VulkanRenderer::BuildCommandBuffers(const DrawCallInfo& drawCallInfo)
+		{
+			assert(drawCallInfo.bRenderToCubemap == false); // Unsupported in Vulkan renderer!
 
-			// m_OffScreenDepthAttachment was being read by SSAO, now needs to be copied to m_DepthAttachment for forward rendering
-			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_OffScreenDepthAttachment->image, m_OffScreenDepthAttachment->format,
-				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 1, commandBuffer, true);
+			//std::array<VkClearValue, 2> clearValues = {};
+			//clearValues[0].color = m_ClearColor;
+			//clearValues[1].depthStencil = { 0.0f, 0 };
 
-			// m_DepthAttachment was copied into, now needs to be written to in forward pass
-			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_DepthAttachment->image, m_DepthAttachment->format,
-				VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, commandBuffer);
+			//VkRenderPassBeginInfo renderPassBeginInfo = vks::renderPassBeginInfo(m_DeferredCombineRenderPass);
+			//renderPassBeginInfo.renderArea.offset = { 0, 0 };
+			//renderPassBeginInfo.renderArea.extent = m_SwapChainExtent;
+			//renderPassBeginInfo.clearValueCount = clearValues.size();
+			//renderPassBeginInfo.pClearValues = clearValues.data();
 
-			// TODO: Blit here instead if supported
-			CopyImage(m_VulkanDevice, m_GraphicsQueue, m_OffScreenDepthAttachment->image, m_DepthAttachment->image,
-				m_SwapChainExtent.width, m_SwapChainExtent.height, commandBuffer, VK_IMAGE_ASPECT_DEPTH_BIT);
+			//VulkanRenderObject* gBufferObject = GetRenderObject(m_GBufferQuadRenderID);
+			//VulkanMaterial* gBufferMaterial = &m_Materials[gBufferObject->materialID];
 
-			// m_DepthAttachment was copied into, now needs to be written to in forward pass
-			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_DepthAttachment->image, m_DepthAttachment->format,
-				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1, commandBuffer);
-
-			// m_OffScreenDepthAttachment has been copied out of, now must be transitioned back for next frame
-			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_OffScreenDepthAttachment->image, m_OffScreenDepthAttachment->format,
-				VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1, commandBuffer, true);
-
-			EndRegion(commandBuffer);
-			BeginRegion(commandBuffer, "Forward");
-
-			// Forward pass
-			renderPassBeginInfo.renderPass = m_ForwardRenderPass;
-			vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+			if (g_EngineInstance->IsRenderingImGui())
 			{
+				ImGui::Render();
+			}
+
+			// TODO: Remove unused cmd buffers
+			VkCommandBuffer& commandBuffer = m_CommandBufferManager.m_CommandBuffers[0];
+
+			VkCommandBufferBeginInfo cmdBufferbeginInfo = vks::commandBufferBeginInfo();
+			cmdBufferbeginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+
+			VK_CHECK_RESULT(vkBeginCommandBuffer(commandBuffer, &cmdBufferbeginInfo));
+
+			{
+				BeginRegion(commandBuffer, "Shade deferred");
+
+				RenderFullscreenQuad(commandBuffer, m_DeferredCombineRenderPass, m_SwapChainFramebuffers[m_CurrentSwapChainBufferIndex]);
+
+				// m_OffScreenDepthAttachment was being read by SSAO, now needs to be copied to m_DepthAttachment for forward rendering
+				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_OffScreenDepthAttachment->image, m_OffScreenDepthAttachment->format,
+					VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 1, commandBuffer, true);
+
+				// m_DepthAttachment was copied into, now needs to be written to in forward pass
+				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_DepthAttachment->image, m_DepthAttachment->format,
+					VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, commandBuffer);
+
+				// TODO: Blit here instead if supported
+				CopyImage(m_VulkanDevice, m_GraphicsQueue, m_OffScreenDepthAttachment->image, m_DepthAttachment->image,
+					m_SwapChainExtent.width, m_SwapChainExtent.height, commandBuffer, VK_IMAGE_ASPECT_DEPTH_BIT);
+
+				// m_DepthAttachment was copied into, now needs to be written to in forward pass
+				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_DepthAttachment->image, m_DepthAttachment->format,
+					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1, commandBuffer);
+
+				// m_OffScreenDepthAttachment has been copied out of, now must be transitioned back for next frame
+				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_OffScreenDepthAttachment->image, m_OffScreenDepthAttachment->format,
+					VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1, commandBuffer, true);
+
+				EndRegion(commandBuffer);
+			}
+
+			{
+				BeginRegion(commandBuffer, "Forward");
+
+				std::array<VkClearValue, 2> clearValues = {};
+				clearValues[0].color = m_ClearColor;
+				clearValues[1].depthStencil = { 0.0f, 0 };
+
+				VkRenderPassBeginInfo renderPassBeginInfo = vks::renderPassBeginInfo(m_ForwardRenderPass);
+				renderPassBeginInfo.renderArea.offset = { 0, 0 };
+				renderPassBeginInfo.renderArea.extent = m_SwapChainExtent;
+				renderPassBeginInfo.clearValueCount = clearValues.size();
+				renderPassBeginInfo.pClearValues = clearValues.data();
+				renderPassBeginInfo.framebuffer = m_SwapChainFramebuffers[m_CurrentSwapChainBufferIndex];
+
+				vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 				for (const ShaderBatchPair& shaderBatch : m_ForwardObjectBatches.batches)
 				{
 					DrawShaderBatch(shaderBatch, commandBuffer);
 				}
 
 				EndRegion(commandBuffer);
+			}
+
+			{
 				BeginRegion(commandBuffer, "World Space Sprites");
 
 				EnqueueWorldSpaceSprites();
@@ -6195,35 +6225,46 @@ namespace flex
 				DrawTextWS(commandBuffer);
 
 				EndRegion(commandBuffer);
+			}
 
-				bool bUsingGameplayCam = g_CameraManager->CurrentCamera()->bIsGameplayCam;
-				if (g_EngineInstance->IsRenderingEditorObjects() && !bUsingGameplayCam)
+
+			/*{
+				BeginRegion(commandBuffer, "Post processing");
+
+				ApplyPostProcessing(commandBuffer);
+
+				EndRegion(commandBuffer);
+			}*/
+
+			bool bUsingGameplayCam = g_CameraManager->CurrentCamera()->bIsGameplayCam;
+			if (g_EngineInstance->IsRenderingEditorObjects() && !bUsingGameplayCam)
+			{
+				BeginRegion(commandBuffer, "Editor objects");
+
+				for (const ShaderBatchPair& shaderBatch : m_DepthAwareEditorObjBatches.batches)
 				{
-					BeginRegion(commandBuffer, "Editor objects");
-
-					for (const ShaderBatchPair& shaderBatch : m_DepthAwareEditorObjBatches.batches)
-					{
-						DrawShaderBatch(shaderBatch, commandBuffer);
-					}
-
-					// Selected object wireframe
-					// TODO:
-
-					//glDepthMask(GL_TRUE);
-					//glClear(GL_DEPTH_BUFFER_BIT);
-
-					// Depth unaware objects write to a cleared depth buffer so they
-					// draw on top of previous geometry but are still eclipsed by other
-					// depth unaware objects
-
-					for (const ShaderBatchPair& shaderBatch : m_DepthUnawareEditorObjBatches.batches)
-					{
-						DrawShaderBatch(shaderBatch, commandBuffer);
-					}
-
-					EndRegion(commandBuffer);
+					DrawShaderBatch(shaderBatch, commandBuffer);
 				}
 
+				// Selected object wireframe
+				// TODO:
+
+				//glDepthMask(GL_TRUE);
+				//glClear(GL_DEPTH_BUFFER_BIT);
+
+				// Depth unaware objects write to a cleared depth buffer so they
+				// draw on top of previous geometry but are still eclipsed by other
+				// depth unaware objects
+
+				for (const ShaderBatchPair& shaderBatch : m_DepthUnawareEditorObjBatches.batches)
+				{
+					DrawShaderBatch(shaderBatch, commandBuffer);
+				}
+
+				EndRegion(commandBuffer);
+			}
+
+			{
 				BeginRegion(commandBuffer, "Screen Space Sprites");
 
 				EnqueueScreenSpaceSprites();
@@ -6233,21 +6274,24 @@ namespace flex
 				m_QueuedSSArrSprites.clear();
 
 				EndRegion(commandBuffer);
+			}
+
+			{
 				BeginRegion(commandBuffer, "Screen Space Text");
 
 				EnqueueScreenSpaceText();
 				DrawTextSS(commandBuffer);
 
 				EndRegion(commandBuffer);
+			}
 
-				if (g_EngineInstance->IsRenderingImGui())
-				{
-					BeginRegion(commandBuffer, "ImGui");
+			if (g_EngineInstance->IsRenderingImGui())
+			{
+				BeginRegion(commandBuffer, "ImGui");
 
-					ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
+				ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
 					
-					EndRegion(commandBuffer);
-				}
+				EndRegion(commandBuffer);
 			}
 			vkCmdEndRenderPass(commandBuffer);
 
