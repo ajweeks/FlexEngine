@@ -357,7 +357,7 @@ namespace flex
 
 		bool m_bPostProcessingEnabled = true;
 		bool m_bDisplayBoundingVolumes = false;
-		bool m_bDisplayShadowCascadePreview = true;
+		bool m_bDisplayShadowCascadePreview = false;
 
 		bool m_bRenderGrid = true;
 
