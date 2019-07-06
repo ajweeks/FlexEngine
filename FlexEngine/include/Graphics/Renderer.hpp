@@ -239,13 +239,9 @@ namespace flex
 
 	protected:
 		virtual void LoadShaders();
-
 		virtual bool LoadShaderCode(ShaderID shaderID) = 0;
-
 		virtual void SetShaderCount(u32 shaderCount) = 0;
-
 		virtual void RemoveMaterial(MaterialID materialID) = 0;
-
 		virtual void FillOutFrameBufferAttachments(std::vector<Pair<std::string, void*>>& outVec) = 0;
 
 		// Will attempt to find pre-rendered font at specified path, and

@@ -686,6 +686,1650 @@ namespace flex
 			glfwTerminate();
 		}
 
+		MaterialID VulkanRenderer::InitializeMaterial(const MaterialCreateInfo* createInfo, MaterialID matToReplace /*= InvalidMaterialID*/)
+		{
+			MaterialID matID = InvalidMaterialID;
+			if (matToReplace != InvalidMaterialID)
+			{
+				// TODO: Do any material destruction work here
+				matID = matToReplace;
+			}
+			else
+			{
+				matID = GetNextAvailableMaterialID();
+				m_Materials.insert(std::pair<MaterialID, VulkanMaterial>(matID, {}));
+			}
+
+			VulkanMaterial& mat = m_Materials.at(matID);
+			mat.material.name = createInfo->name;
+
+			if (!GetShaderID(createInfo->shaderName, mat.material.shaderID))
+			{
+				if (createInfo->shaderName.empty())
+				{
+					PrintError("Material's shader not set! MaterialCreateInfo::shaderName must be filled in\n");
+				}
+				else
+				{
+					PrintError("Material's shader not set! Shader name %s not found\n", createInfo->shaderName.c_str());
+				}
+
+				// TODO: Handle more gracefully (use placeholder shader)
+				return InvalidMaterialID;
+			}
+			VulkanShader& shader = m_Shaders[mat.material.shaderID];
+
+			mat.material.normalTexturePath = createInfo->normalTexturePath;
+			mat.material.generateNormalSampler = createInfo->generateNormalSampler;
+			mat.material.enableNormalSampler = createInfo->enableNormalSampler;
+
+			mat.material.sampledFrameBuffers = createInfo->sampledFrameBuffers;
+
+			mat.material.enableCubemapSampler = createInfo->enableCubemapSampler;
+			mat.material.generateCubemapSampler = createInfo->generateCubemapSampler;
+			mat.material.cubemapSamplerSize = createInfo->generatedCubemapSize;
+			mat.material.cubeMapFilePaths = createInfo->cubeMapFilePaths;
+
+			mat.material.constAlbedo = glm::vec4(createInfo->constAlbedo, 0);
+			mat.material.generateAlbedoSampler = createInfo->generateAlbedoSampler;
+			mat.material.albedoTexturePath = createInfo->albedoTexturePath;
+			mat.material.enableAlbedoSampler = createInfo->enableAlbedoSampler;
+
+			mat.material.constMetallic = createInfo->constMetallic;
+			mat.material.generateMetallicSampler = createInfo->generateMetallicSampler;
+			mat.material.metallicTexturePath = createInfo->metallicTexturePath;
+			mat.material.enableMetallicSampler = createInfo->enableMetallicSampler;
+
+			mat.material.constRoughness = createInfo->constRoughness;
+			mat.material.generateRoughnessSampler = createInfo->generateRoughnessSampler;
+			mat.material.roughnessTexturePath = createInfo->roughnessTexturePath;
+			mat.material.enableRoughnessSampler = createInfo->enableRoughnessSampler;
+
+			mat.material.constAO = createInfo->constAO;
+			mat.material.generateAOSampler = createInfo->generateAOSampler;
+			mat.material.aoTexturePath = createInfo->aoTexturePath;
+			mat.material.enableAOSampler = createInfo->enableAOSampler;
+
+			mat.material.colorMultiplier = createInfo->colorMultiplier;
+
+			mat.material.enableHDREquirectangularSampler = createInfo->enableHDREquirectangularSampler;
+			mat.material.generateHDREquirectangularSampler = createInfo->generateHDREquirectangularSampler;
+			mat.material.hdrEquirectangularTexturePath = createInfo->hdrEquirectangularTexturePath;
+
+			mat.material.generateHDRCubemapSampler = createInfo->generateHDRCubemapSampler;
+
+			mat.material.enableIrradianceSampler = createInfo->enableIrradianceSampler;
+			mat.material.generateIrradianceSampler = createInfo->generateIrradianceSampler;
+			mat.material.irradianceSamplerSize = createInfo->generatedIrradianceCubemapSize;
+
+			if (shader.shader->bNeedPushConstantBlock)
+			{
+				mat.material.pushConstantBlock = new Material::PushConstantBlock(shader.shader->pushConstantBlockSize);
+			}
+
+			if (shader.shader->bNeedIrradianceSampler)
+			{
+				if (createInfo->irradianceSamplerMatID < m_Materials.size())
+				{
+					mat.irradianceTexture = m_Materials[createInfo->irradianceSamplerMatID].irradianceTexture;
+				}
+			}
+			if (shader.shader->bNeedBRDFLUT)
+			{
+				if (!m_BRDFTexture)
+				{
+					m_BRDFTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "BRDF", m_BRDFSize.x, m_BRDFSize.y, 1);
+					m_BRDFTexture->CreateEmpty(VK_FORMAT_R16G16_SFLOAT, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+					m_LoadedTextures.push_back(m_BRDFTexture);
+				}
+				mat.brdfLUT = m_BRDFTexture;
+			}
+			if (shader.shader->bNeedPrefilteredMap)
+			{
+				mat.prefilterTexture = (createInfo->prefilterMapSamplerMatID < m_Materials.size() ?
+					m_Materials[createInfo->prefilterMapSamplerMatID].prefilterTexture : nullptr);
+			}
+
+			mat.material.enablePrefilteredMap = createInfo->enablePrefilteredMap;
+			mat.material.generatePrefilteredMap = createInfo->generatePrefilteredMap;
+			mat.material.prefilteredMapSize = createInfo->generatedPrefilteredCubemapSize;
+
+			mat.material.enableBRDFLUT = createInfo->enableBRDFLUT;
+			mat.material.renderToCubemap = createInfo->renderToCubemap;
+
+			mat.material.persistent = createInfo->persistent;
+			mat.material.visibleInEditor = createInfo->visibleInEditor;
+
+			mat.descriptorSetLayoutIndex = mat.material.shaderID;
+
+			struct TextureInfo
+			{
+				TextureInfo(const std::string& relativeFilePath,
+					VulkanTexture** texture,
+					bool* generate,
+					VkFormat format = VK_FORMAT_R8G8B8A8_UNORM,
+					u32 mipLevels = 1,
+					bool bHDR = false) :
+					relativeFilePath(relativeFilePath),
+					texture(texture),
+					generate(generate),
+					format(format),
+					mipLevels(mipLevels),
+					bHDR(bHDR)
+				{}
+
+				const std::string relativeFilePath;
+				VulkanTexture** texture;
+				bool* generate;
+				VkFormat format;
+				u32 mipLevels;
+				bool bHDR;
+			};
+
+			TextureInfo textureInfos[] =
+			{
+				{ createInfo->normalTexturePath, &mat.normalTexture, &mat.material.generateNormalSampler },
+				{ createInfo->albedoTexturePath, &mat.albedoTexture, &mat.material.generateAlbedoSampler },
+				{ createInfo->metallicTexturePath, &mat.metallicTexture, &mat.material.generateMetallicSampler },
+				{ createInfo->roughnessTexturePath, &mat.roughnessTexture, &mat.material.generateRoughnessSampler },
+				{ createInfo->aoTexturePath, &mat.aoTexture, &mat.material.generateAOSampler },
+				{ createInfo->hdrEquirectangularTexturePath, &mat.hdrEquirectangularTexture, &mat.material.generateHDREquirectangularSampler, VK_FORMAT_R32G32B32A32_SFLOAT, 1, true },
+			};
+			const size_t textureCount = sizeof(textureInfos) / sizeof(textureInfos[0]);
+
+			// Calculate how many textures need to be allocated to prevent texture vector from resizing
+			const size_t usedTextureCount = createInfo->generateAlbedoSampler +
+				createInfo->generateAOSampler + createInfo->generateCubemapSampler +
+				createInfo->generateIrradianceSampler + createInfo->generateMetallicSampler +
+				createInfo->generateNormalSampler + createInfo->generatePrefilteredMap +
+				createInfo->generateRoughnessSampler + createInfo->generateHDREquirectangularSampler;
+			m_LoadedTextures.reserve(usedTextureCount);
+
+			for (TextureInfo& textureInfo : textureInfos)
+			{
+				if (!textureInfo.relativeFilePath.empty() && textureInfo.generate)
+				{
+					*textureInfo.texture = GetLoadedTexture(textureInfo.relativeFilePath);
+
+					if (*textureInfo.texture == nullptr)
+					{
+						u32 channelCount = 4;
+						bool bFlipVertically = false;
+						*textureInfo.texture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue,
+							textureInfo.relativeFilePath, channelCount, bFlipVertically, textureInfo.mipLevels > 1, textureInfo.bHDR);
+						(*textureInfo.texture)->CreateFromFile(textureInfo.format);
+						m_LoadedTextures.push_back(*textureInfo.texture);
+
+						(*textureInfo.texture)->imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+						(*textureInfo.texture)->UpdateImageDescriptor();
+					}
+				}
+			}
+
+			// Cubemaps are treated differently than regular textures because they require 6 filepaths
+			if (mat.material.generateCubemapSampler)
+			{
+				if (createInfo->cubeMapFilePaths[0].empty())
+				{
+					assert(mat.cubemapTexture == nullptr);
+
+					const u32 mipLevels = static_cast<u32>(floor(log2(createInfo->generatedCubemapSize.x))) + 1;
+					u32 channelCount = 4;
+					mat.cubemapTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "Cubemap", (u32)createInfo->generatedCubemapSize.x,
+						(u32)createInfo->generatedCubemapSize.y, channelCount);
+					mat.cubemapTexture->CreateCubemapEmpty(VK_FORMAT_R8G8B8A8_UNORM, mipLevels, createInfo->enableCubemapTrilinearFiltering);
+					m_LoadedTextures.push_back(mat.cubemapTexture);
+				}
+				else
+				{
+					mat.cubemapTexture = GetLoadedTexture(createInfo->cubeMapFilePaths[0]);
+
+					if (mat.cubemapTexture == nullptr)
+					{
+						u32 channelCount = 4;
+						mat.cubemapTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue,
+							createInfo->cubeMapFilePaths, channelCount, false, false, false);
+						mat.cubemapTexture->CreateCubemapFromTextures(VK_FORMAT_R8G8B8A8_UNORM, createInfo->cubeMapFilePaths, true);
+						m_LoadedTextures.push_back(mat.cubemapTexture);
+					}
+				}
+			}
+
+			if (mat.material.generateHDRCubemapSampler)
+			{
+				assert(mat.cubemapTexture == nullptr);
+
+				const u32 mipLevels = static_cast<u32>(floor(log2(createInfo->generatedCubemapSize.x))) + 1;
+				mat.cubemapTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "HDR Cubemap",
+					(u32)createInfo->generatedCubemapSize.x, (u32)createInfo->generatedCubemapSize.y, 4);
+				mat.cubemapTexture->CreateCubemapEmpty(VK_FORMAT_R32G32B32A32_SFLOAT, mipLevels, false);
+				m_LoadedTextures.push_back(mat.cubemapTexture);
+			}
+
+			if (shader.shader->bNeedCubemapSampler)
+			{
+
+			}
+
+
+			if (shader.shader->bNeedBRDFLUT)
+			{
+
+			}
+
+			if (mat.material.generateIrradianceSampler)
+			{
+				assert(mat.irradianceTexture == nullptr);
+
+				const u32 mipLevels = static_cast<u32>(floor(log2(createInfo->generatedIrradianceCubemapSize.x))) + 1;
+				mat.irradianceTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "Irradiance sampler",
+					(u32)createInfo->generatedIrradianceCubemapSize.x,
+					(u32)createInfo->generatedIrradianceCubemapSize.y, 4);
+				mat.irradianceTexture->CreateCubemapEmpty(VK_FORMAT_R32G32B32A32_SFLOAT, mipLevels, false);
+				m_LoadedTextures.push_back(mat.irradianceTexture);
+			}
+
+			if (shader.shader->bNeedIrradianceSampler)
+			{
+
+			}
+
+			if (mat.material.generatePrefilteredMap)
+			{
+				assert(mat.prefilterTexture == nullptr);
+
+				const u32 mipLevels = static_cast<u32>(floor(log2(createInfo->generatedPrefilteredCubemapSize.x))) + 1;
+				mat.prefilterTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "Prefiltered map",
+					(u32)createInfo->generatedPrefilteredCubemapSize.x,
+					(u32)createInfo->generatedPrefilteredCubemapSize.y, 4);
+				mat.prefilterTexture->CreateCubemapEmpty(VK_FORMAT_R16G16B16A16_SFLOAT,  mipLevels, true);
+				m_LoadedTextures.push_back(mat.prefilterTexture);
+			}
+
+			if (shader.shader->bNeedPrefilteredMap)
+			{
+
+			}
+
+			if (shader.shader->constantBufferUniforms.HasUniform(U_NOISE_SAMPLER))
+			{
+				if (m_NoiseTexture == nullptr)
+				{
+					std::vector<glm::vec4> ssaoNoise;
+					GenerateSSAONoise(ssaoNoise);
+
+					m_NoiseTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "SSAO Noise", SSAO_NOISE_DIM, SSAO_NOISE_DIM, 4);
+					void* buffer = ssaoNoise.data();
+					u32 bufferSize = ssaoNoise.size() * sizeof(glm::vec4);
+					m_NoiseTexture->CreateFromMemory(buffer, bufferSize, VK_FORMAT_R32G32B32A32_SFLOAT, 1, VK_FILTER_NEAREST);
+					m_LoadedTextures.push_back(m_NoiseTexture);
+				}
+
+				mat.noiseTexture = m_NoiseTexture;
+			}
+
+			return matID;
+		}
+
+		TextureID VulkanRenderer::InitializeTexture(const std::string& relativeFilePath, i32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR)
+		{
+			VulkanTexture* newTex = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, relativeFilePath,
+				channelCount, bFlipVertically, bGenerateMipMaps, bHDR);
+			newTex->CreateFromFile(newTex->CalculateFormat());
+			m_LoadedTextures.push_back(newTex);
+
+			return (TextureID)(m_LoadedTextures.size() - 1);
+		}
+
+		u32 VulkanRenderer::InitializeRenderObject(const RenderObjectCreateInfo* createInfo)
+		{
+			const RenderID renderID = GetNextAvailableRenderID();
+			VulkanRenderObject* renderObject = new VulkanRenderObject(m_VulkanDevice->m_LogicalDevice, renderID);
+
+			m_bRebatchRenderObjects = true;
+
+			InsertNewRenderObject(renderObject);
+			renderObject->materialID = createInfo->materialID;
+
+			if (renderObject->materialID == InvalidMaterialID)
+			{
+				if (m_Materials.empty())
+				{
+					PrintError("Render object created before any materials have been created! Returning...\n");
+					return InvalidRenderID;
+				}
+				else
+				{
+					PrintError("Render object doesn't have its material ID set! Using first available material\n");
+					renderObject->materialID = 0;
+				}
+			}
+
+			renderObject->vertexBufferData = createInfo->vertexBufferData;
+			renderObject->cullMode = CullFaceToVkCullMode(createInfo->cullFace);
+			renderObject->materialName = m_Materials[renderObject->materialID].material.name;
+			renderObject->gameObject = createInfo->gameObject;
+			renderObject->bEditorObject = createInfo->bEditorObject;
+			if (createInfo->bEditorObject)
+			{
+				renderObject->gameObject->SetCastsShadow(false);
+			}
+			renderObject->depthCompareOp = DepthTestFuncToVkCompareOp(createInfo->depthTestReadFunc);
+			renderObject->bSetDynamicStates = createInfo->bSetDynamicStates;
+
+			if (createInfo->indices != nullptr &&
+				!createInfo->indices->empty())
+			{
+				renderObject->indices = createInfo->indices;
+				renderObject->bIndexed = true;
+			}
+
+			// We've already been post initialized, so we need to create a descriptor set and pipeline here
+			if (m_bPostInitialized)
+			{
+				CreateDescriptorSet(renderID);
+				CreateGraphicsPipeline(renderID, false);
+			}
+
+			return renderID;
+		}
+
+		void VulkanRenderer::PostInitializeRenderObject(RenderID renderID)
+		{
+			UNREFERENCED_PARAMETER(renderID);
+		}
+
+		void VulkanRenderer::ClearMaterials(bool bDestroyPersistentMats /* = false */)
+		{
+			auto iter = m_Materials.begin();
+			while (iter != m_Materials.end())
+			{
+				if (bDestroyPersistentMats || iter->second.material.persistent == false)
+				{
+					if (iter->second.hdrCubemapFramebuffer)
+					{
+						vkDestroyFramebuffer(m_VulkanDevice->m_LogicalDevice, iter->second.hdrCubemapFramebuffer, nullptr);
+					}
+
+					iter = m_Materials.erase(iter);
+				}
+				else
+				{
+					++iter;
+				}
+			}
+		}
+
+		void VulkanRenderer::CreateUniformBuffers(VulkanShader* shader)
+		{
+			if (shader->shader->constantBufferUniforms.HasUniform(U_UNIFORM_BUFFER_CONSTANT))
+			{
+				shader->uniformBuffer.constantData.size = shader->shader->constantBufferUniforms.CalculateSizeInBytes();
+				if (shader->uniformBuffer.constantData.size > 0)
+				{
+					free_hooked(shader->uniformBuffer.constantData.data);
+
+					shader->uniformBuffer.constantData.size = GetAlignedUBOSize(shader->uniformBuffer.constantData.size);
+
+					shader->uniformBuffer.constantData.data = static_cast<real*>(malloc_hooked(shader->uniformBuffer.constantData.size));
+					assert(shader->uniformBuffer.constantData.data);
+
+					PrepareUniformBuffer(&shader->uniformBuffer.constantBuffer, shader->uniformBuffer.constantData.size,
+						VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+				}
+			}
+
+			if (shader->shader->dynamicBufferUniforms.HasUniform(U_UNIFORM_BUFFER_DYNAMIC))
+			{
+				shader->uniformBuffer.dynamicData.size = shader->shader->dynamicBufferUniforms.CalculateSizeInBytes();
+				if (shader->uniformBuffer.dynamicData.size > 0 && !m_RenderObjects.empty())
+				{
+					if (shader->uniformBuffer.dynamicData.data) aligned_free_hooked(shader->uniformBuffer.dynamicData.data);
+
+					shader->uniformBuffer.dynamicData.size = GetAlignedUBOSize(shader->uniformBuffer.dynamicData.size);
+
+					const size_t dynamicBufferSize = AllocateDynamicUniformBuffer(
+						shader->uniformBuffer.dynamicData.size, (void**)&shader->uniformBuffer.dynamicData.data);
+					shader->uniformBuffer.fullDynamicBufferSize = dynamicBufferSize;
+					if (dynamicBufferSize > 0)
+					{
+						PrepareUniformBuffer(&shader->uniformBuffer.dynamicBuffer, dynamicBufferSize,
+							VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+					}
+				}
+			}
+		}
+
+		void VulkanRenderer::Update()
+		{
+			Renderer::Update();
+
+#ifdef DEBUG
+			if (m_ShaderCompiler != nullptr)
+			{
+				if (m_ShaderCompiler->TickStatus())
+				{
+					if (m_ShaderCompiler->bSuccess == false)
+					{
+						PrintError("Async shader recompile failed\n");
+						AddEditorString("Async shader recompile failed");
+					}
+					else
+					{
+						Print("Async shader recompile completed successfully!\n");
+						AddEditorString("Async shader recompile completed successfully");
+
+						LoadShaders();
+
+						CreateRenderPasses();
+						PrepareFrameBuffers();
+
+						// Force font descriptor sets to be regenerated
+						for (BitmapFont* font : m_FontsSS)
+						{
+							font->m_DescriptorSet = VK_NULL_HANDLE;
+						}
+
+						for (BitmapFont* font : m_FontsWS)
+						{
+							font->m_DescriptorSet = VK_NULL_HANDLE;
+						}
+
+						for (VulkanShader& shader : m_Shaders)
+						{
+							shader.renderPass = ResolveRenderPassType(shader.shader->renderPassType, shader.shader->name.c_str());
+							CreateUniformBuffers(&shader);
+						}
+
+						CreateShadowResources();
+
+						for (u32 i = 0; i < m_RenderObjects.size(); ++i)
+						{
+							CreateDescriptorSet(i);
+							CreateGraphicsPipeline(i, false);
+						}
+
+						for (auto& iter : m_SpriteDescSets)
+						{
+							vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPool, 1, &(iter.second.descSet));
+							iter.second.descSet = CreateSpriteDescSet(iter.second.shaderID, iter.first, iter.second.textureLayer);
+						}
+
+						CreateSSAODescriptorSets();
+						CreateSSAOPipelines();
+					}
+
+					m_bSwapChainNeedsRebuilding = true; // This is needed to recreate some resources for SSAO, etc.
+
+					delete m_ShaderCompiler;
+					m_ShaderCompiler = nullptr;
+				}
+			}
+#endif
+
+			if (m_bSSAOStateChanged)
+			{
+				m_bSSAOStateChanged = false;
+				// Update GBuffer in case blur or ssao entirely was toggled
+				CreateDescriptorSet(m_GBufferQuadRenderID);
+				CreateGraphicsPipeline(m_GBufferQuadRenderID, false);
+				// Update SSAO pipelines in case kernel size changed
+				CreateSSAOPipelines();
+			}
+
+			m_PhysicsDebugDrawer->UpdateDebugMode();
+
+			UpdateConstantUniformBuffers();
+
+			// TODO: Only update when things have changed
+			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
+			{
+				UpdateDynamicUniformBuffer(i);
+			}
+		}
+
+		void VulkanRenderer::Draw()
+		{
+			glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+			if (m_SwapChainExtent.width == 0u || m_SwapChainExtent.height == 0u ||
+				frameBufferSize.x == 0 || frameBufferSize.y == 0)
+			{
+				return;
+			}
+
+			DrawCallInfo drawCallInfo = {};
+
+			if (!m_PhysicsDebuggingSettings.DisableAll)
+			{
+				PhysicsDebugRender();
+			}
+
+			if (m_bRebatchRenderObjects)
+			{
+				m_bRebatchRenderObjects = false;
+				BatchRenderObjects();
+			}
+
+			// TODO: Don't build command buffers when m_bRebatchRenderObjects is false (but dynamic UI elements still need to be rebuilt!)
+			BuildDeferredCommandBuffer();
+			BuildCommandBuffers(drawCallInfo);
+
+			if (m_bSwapChainNeedsRebuilding)
+			{
+				m_bSwapChainNeedsRebuilding = false;
+				RecreateSwapChain();
+			}
+			else
+			{
+				DrawFrame();
+			}
+
+			++m_FramesRendered;
+		}
+
+		void VulkanRenderer::DrawImGuiWindows()
+		{
+			Renderer::DrawImGuiWindows();
+
+			if (bUniformBufferWindowShowing)
+			{
+				if (ImGui::Begin("Dynamic Uniform Buffers", &bUniformBufferWindowShowing))
+				{
+					ShaderBatch* shaderBatches[] = { &m_DeferredObjectBatches, &m_ForwardObjectBatches };
+					const char* shaderBatchNames[] = { "Deferred", "Forward" };
+					for (u32 i = 0; i < ARRAY_LENGTH(shaderBatches); ++i)
+					{
+						ShaderBatch* shaderBatch = shaderBatches[i];
+
+						ImGui::Text("%s", shaderBatchNames[i]);
+
+						for (u32 j = 0; j < shaderBatch->batches.size(); ++j)
+						{
+							const ShaderBatchPair& shaderBatchPair = shaderBatch->batches[j];
+							const VulkanShader& shader = m_Shaders[shaderBatchPair.shaderID];
+
+							if (shader.uniformBuffer.fullDynamicBufferSize == 0)
+							{
+								continue;
+							}
+
+							ImVec2 p = ImGui::GetCursorScreenPos();
+							char nodeID0[256];
+							memset(nodeID0, 0, 256);
+							sprintf_s(nodeID0, 256, "%s##%u",
+								m_Shaders[shaderBatchPair.shaderID].shader->name.c_str(),
+								shaderBatchPair.shaderID);
+							if (ImGui::BeginChild(nodeID0, ImVec2(0, 50), true))
+							{
+								std::vector<real> dynamicObjects;
+
+								for (u32 k = 0; k < shaderBatchPair.batch.batches.size(); ++k)
+								{
+									const MaterialBatchPair& matBatchPair = shaderBatchPair.batch.batches[k];
+									for (RenderID renderID : matBatchPair.batch.objects)
+									{
+										VulkanRenderObject* renderObject = GetRenderObject(renderID);
+										if (renderObject != nullptr)
+										{
+											dynamicObjects.push_back(1.0f);
+										}
+									}
+								}
+
+								u32 bufferSlotsTotal = (shader.uniformBuffer.fullDynamicBufferSize / shader.uniformBuffer.dynamicData.size);
+								u32 bufferSlotsFree = bufferSlotsTotal - dynamicObjects.size();
+								for (u32 s = 0; s < bufferSlotsFree; ++s)
+								{
+									dynamicObjects.push_back(0.0f);
+								}
+
+								char histNodeID[256];
+								memset(histNodeID, 0, 256);
+								sprintf_s(histNodeID, 256, "%s (%u/%u)##histo%u",
+									m_Shaders[shaderBatchPair.shaderID].shader->name.c_str(),
+									bufferSlotsTotal - bufferSlotsFree,
+									bufferSlotsTotal,
+									shaderBatchPair.shaderID);
+								ImGui::PlotHistogram(histNodeID, dynamicObjects.data(), dynamicObjects.size(), 0, NULL, 0.0f, 1.0f, ImVec2(0, 0));
+							}
+							ImGui::EndChild();
+						}
+
+						//if (ImGui::TreeNode((void*)(intptr_t)(i), "%s", shaderBatchNames[i]))
+						//{
+						//	for (u32 j = 0; j < shaderBatch->batches.size(); ++j)
+						//	{
+						//		const ShaderBatchPair& shaderBatchPair = shaderBatch->batches[j];
+						//
+						//		if (!shaderBatchPair.batch.batches.empty())
+						//		{
+						//			if (ImGui::TreeNode((void*)(intptr_t)(shaderBatchPair.shaderID), "Shader: %s, ID: %u (children: %u)",
+						//				m_Shaders[shaderBatchPair.shaderID].shader.name.c_str(), shaderBatchPair.shaderID, shaderBatchPair.batch.batches.size()))
+						//			{
+						//				for (u32 k = 0; k < shaderBatchPair.batch.batches.size(); ++k)
+						//				{
+						//					const MaterialBatchPair& matBatchPair = shaderBatchPair.batch.batches[k];
+						//
+						//					if (!matBatchPair.batch.objects.empty())
+						//					{
+						//						if (ImGui::TreeNode((void*)(intptr_t)(matBatchPair.materialID), "Mat: %s, ID: %u (children: %u)",
+						//							m_Materials[matBatchPair.materialID].material.name.c_str(), matBatchPair.materialID, matBatchPair.batch.objects.size()))
+						//						{
+						//							for (RenderID renderID : matBatchPair.batch.objects)
+						//							{
+						//								VulkanRenderObject* renderObject = GetRenderObject(renderID);
+						//								if (renderObject != nullptr)
+						//								{
+						//									bool bSelected = g_EngineInstance->IsObjectSelected(renderObject->gameObject);
+						//									char nodeID[256];
+						//									memset(nodeID, 0, 256);
+						//									sprintf_s(nodeID, 256, "%s dyn off: %u, renderID: %u",
+						//										renderObject->gameObject->GetName().c_str(),
+						//										renderObject->dynamicUBOIndex,
+						//										renderObject->renderID);
+						//
+						//									if (ImGui::Selectable(nodeID, &bSelected))
+						//									{
+						//										if (bSelected)
+						//										{
+						//											g_EngineInstance->SetSelectedObject(renderObject->gameObject, false);
+						//										}
+						//										else
+						//										{
+						//											g_EngineInstance->DeselectObject(renderObject->gameObject);
+						//										}
+						//									}
+						//								}
+						//							}
+						//							ImGui::TreePop();
+						//						}
+						//					}
+						//				}
+						//				ImGui::TreePop();
+						//			}
+						//		}
+						//	}
+						//	ImGui::TreePop();
+						//}
+					}
+				}
+				ImGui::End();
+			}
+		}
+
+		void VulkanRenderer::UpdateVertexData(RenderID renderID, VertexBufferData* vertexBufferData)
+		{
+			VulkanRenderObject* renderObject = GetRenderObject(renderID);
+			VulkanBuffer* vertexBuffer = m_VertexIndexBufferPairs[m_Materials[renderObject->materialID].material.shaderID].vertexBuffer;
+			u32 copySize = std::min(vertexBufferData->VertexBufferSize, (u32)vertexBuffer->m_Size);
+			if (copySize < vertexBufferData->VertexBufferSize)
+			{
+				PrintError("Dynamic vertex buffer is %u bytes too small for data attempting to be copied in\n", vertexBufferData->VertexBufferSize - copySize);
+			}
+			VK_CHECK_RESULT(vertexBuffer->Map(copySize));
+			memcpy(vertexBuffer->m_Mapped, vertexBufferData->vertexData, copySize);
+			vertexBuffer->Unmap();
+		}
+
+		void VulkanRenderer::DrawImGuiForRenderObject(RenderID renderID)
+		{
+			VulkanRenderObject* renderObject = GetRenderObject(renderID);
+			if (renderObject != nullptr)
+			{
+				ImGui::Text("Mat ID: %u", renderObject->materialID);
+				ImGui::Text("Shader ID: %u", GetMaterial(renderObject->materialID).shaderID);
+				//ImGui::Text("Dynamic Offset: %u", renderObject->dynamicUBOIndex);
+			}
+		}
+
+		void VulkanRenderer::ReloadShaders()
+		{
+#ifdef DEBUG
+			if (m_ShaderCompiler == nullptr)
+			{
+				m_ShaderCompiler = new AsyncVulkanShaderCompiler(false);
+			}
+
+			if (m_ShaderCompiler->bComplete)
+			{
+				AddEditorString("Found no shader changes to recompile");
+				delete m_ShaderCompiler;
+				m_ShaderCompiler = nullptr;
+			}
+			else
+			{
+				AddEditorString("Kicking off async shader recompile");
+			}
+#endif
+		}
+
+		void VulkanRenderer::LoadFonts(bool bForceRender)
+		{
+			PROFILE_AUTO("Load fonts");
+
+			m_FontsSS.clear();
+			m_FontsWS.clear();
+
+			for (auto& pair : m_Fonts)
+			{
+				FontMetaData& fontMetaData = pair.second;
+
+				if (fontMetaData.bitmapFont != nullptr)
+				{
+					delete fontMetaData.bitmapFont;
+					fontMetaData.bitmapFont = nullptr;
+				}
+
+				std::string fontName = fontMetaData.filePath;
+				StripLeadingDirectories(fontName);
+				StripFileType(fontName);
+
+				LoadFont(fontMetaData, bForceRender);
+			}
+		}
+
+		void VulkanRenderer::ReloadSkybox(bool bRandomizeTexture)
+		{
+			UNREFERENCED_PARAMETER(bRandomizeTexture);
+		}
+
+		void VulkanRenderer::SetTopologyMode(RenderID renderID, TopologyMode topology)
+		{
+			VulkanRenderObject* renderObject = GetRenderObject(renderID);
+			if (!renderObject)
+			{
+				return;
+			}
+
+			VkPrimitiveTopology vkTopology = TopologyModeToVkPrimitiveTopology(topology);
+
+			if (vkTopology == VK_PRIMITIVE_TOPOLOGY_MAX_ENUM)
+			{
+				PrintError("Unsupported TopologyMode passed to VulkanRenderer::SetTopologyMode: %d\n", (i32)topology);
+			}
+			else
+			{
+				renderObject->topology = vkTopology;
+			}
+		}
+
+		void VulkanRenderer::SetClearColor(real r, real g, real b)
+		{
+			m_ClearColor = { r, g, b, 1.0f };
+		}
+
+		void VulkanRenderer::OnWindowSizeChanged(i32 width, i32 height)
+		{
+			UNREFERENCED_PARAMETER(width);
+			UNREFERENCED_PARAMETER(height);
+
+			if (width != 0 && height != 0)
+			{
+				m_bSwapChainNeedsRebuilding = true;
+			}
+		}
+
+		// TODO: FIXME: This shouldn't be called on startup!!!
+		void VulkanRenderer::OnPreSceneChange()
+		{
+			GenerateGBuffer();
+
+			for (VertexIndexBufferPair& pair : m_VertexIndexBufferPairs)
+			{
+				pair.Empty();
+			}
+		}
+
+		void VulkanRenderer::OnPostSceneChange()
+		{
+			if (m_bPostInitialized)
+			{
+				CreateStaticVertexBuffers();
+				CreateStaticIndexBuffers();
+				CreateDynamicVertexBuffers();
+
+				CreateShadowVertexBuffer();
+				CreateShadowIndexBuffer();
+
+				GenerateIrradianceMaps();
+			}
+		}
+
+		bool VulkanRenderer::GetRenderObjectCreateInfo(RenderID renderID, RenderObjectCreateInfo& outInfo)
+		{
+			outInfo = {};
+
+			VulkanRenderObject* renderObject = GetRenderObject(renderID);
+			if (!renderObject)
+			{
+				return false;
+			}
+
+			outInfo.materialID = renderObject->materialID;
+			outInfo.vertexBufferData = renderObject->vertexBufferData;
+			outInfo.indices = renderObject->indices;
+			outInfo.gameObject = renderObject->gameObject;
+			outInfo.visible = renderObject->gameObject->IsVisible();
+			outInfo.visibleInSceneExplorer = renderObject->gameObject->IsVisibleInSceneExplorer();
+			outInfo.cullFace = VkCullModeToCullFace(renderObject->cullMode);
+			//outInfo.depthTestReadFunc =  // TODO: ?
+			//outInfo.depthWriteEnable = // TODO: ?
+
+			return true;
+		}
+
+		void VulkanRenderer::SetVSyncEnabled(bool bEnableVSync)
+		{
+			m_bVSyncEnabled = bEnableVSync;
+		}
+
+		u32 VulkanRenderer::GetRenderObjectCount() const
+		{
+			u32 count = 0;
+
+			for (VulkanRenderObject* renderObject : m_RenderObjects)
+			{
+				if (renderObject != nullptr)
+				{
+					++count;
+				}
+			}
+
+			return count;
+		}
+
+		u32 VulkanRenderer::GetRenderObjectCapacity() const
+		{
+			return m_RenderObjects.size();
+		}
+
+		void VulkanRenderer::DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size, DataType dataType, bool normalized, i32 stride, void* pointer)
+		{
+			// TODO: Implement
+			UNREFERENCED_PARAMETER(renderID);
+			UNREFERENCED_PARAMETER(variableName);
+			UNREFERENCED_PARAMETER(size);
+			UNREFERENCED_PARAMETER(dataType);
+			UNREFERENCED_PARAMETER(normalized);
+			UNREFERENCED_PARAMETER(stride);
+			UNREFERENCED_PARAMETER(pointer);
+		}
+
+		void VulkanRenderer::SetSkyboxMesh(GameObject* skyboxMesh)
+		{
+			m_SkyBoxMesh = skyboxMesh;
+
+			if (skyboxMesh == nullptr)
+			{
+				return;
+			}
+
+			MaterialID skyboxMatierialID = m_SkyBoxMesh->GetMeshComponent()->GetMaterialID();
+			if (skyboxMatierialID == InvalidMaterialID)
+			{
+				PrintError("Skybox doesn't have a valid material! Irradiance textures can't be generated\n");
+				return;
+			}
+
+			for (u32 i = 0; i < m_RenderObjects.size(); ++i)
+			{
+				VulkanRenderObject* renderObject = GetRenderObject(i);
+				if (renderObject &&
+					m_Shaders[m_Materials[renderObject->materialID].material.shaderID].shader->bNeedPrefilteredMap)
+				{
+					VulkanMaterial* mat = &m_Materials[renderObject->materialID];
+					mat->irradianceTexture = m_Materials[skyboxMatierialID].irradianceTexture;
+					mat->prefilterTexture = m_Materials[skyboxMatierialID].prefilterTexture;
+				}
+			}
+
+			m_bRebatchRenderObjects = true;
+		}
+
+		GameObject* VulkanRenderer::GetSkyboxMesh()
+		{
+			return m_SkyBoxMesh;
+		}
+
+		void VulkanRenderer::SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID)
+		{
+			VulkanRenderObject* renderObject = GetRenderObject(renderID);
+			if (renderObject)
+			{
+				MaterialID pMatID = renderObject->materialID;
+				if (materialID != pMatID)
+				{
+					u32 pStride = CalculateVertexStride(m_Shaders[m_Materials[pMatID].material.shaderID].shader->vertexAttributes);
+					u32 newStride = CalculateVertexStride(m_Shaders[m_Materials[materialID].material.shaderID].shader->vertexAttributes);
+					renderObject->materialID = materialID;
+					if (newStride != pStride)
+					{
+						// Regenerate vertex data with new stride
+						renderObject->gameObject->GetMeshComponent()->SetRequiredAttributesFromMaterialID(materialID);
+						renderObject->gameObject->GetMeshComponent()->Reload();
+					}
+				}
+			}
+			else
+			{
+				PrintError("SetRenderObjectMaterialID couldn't find render object with ID %u\n", renderID);
+			}
+
+			m_bRebatchRenderObjects = true;
+		}
+
+		Material& VulkanRenderer::GetMaterial(MaterialID materialID)
+		{
+			return m_Materials[materialID].material;
+		}
+
+		Shader& VulkanRenderer::GetShader(ShaderID shaderID)
+		{
+			return *m_Shaders[shaderID].shader;
+		}
+
+		void VulkanRenderer::DestroyRenderObject(RenderID renderID)
+		{
+			for (VulkanRenderObject* renderObject : m_RenderObjects)
+			{
+				if (renderObject && renderObject->renderID == renderID)
+				{
+					DestroyRenderObject(renderID, renderObject);
+					return;
+				}
+			}
+		}
+
+		void VulkanRenderer::DestroyRenderObject(RenderID renderID, VulkanRenderObject* renderObject)
+		{
+			if (renderObject)
+			{
+				if (renderObject->descriptorSet)
+				{
+					vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPool, 1, &(renderObject->descriptorSet));
+				}
+				renderObject->graphicsPipeline.replace();
+				renderObject->pipelineLayout.replace();
+				delete renderObject;
+				renderObject = nullptr;
+			}
+			m_RenderObjects[renderID] = nullptr;
+			m_bRebatchRenderObjects = true;
+		}
+
+		VkPhysicalDeviceFeatures VulkanRenderer::GetEnabledFeaturesForDevice(VkPhysicalDevice physicalDevice)
+		{
+			VkPhysicalDeviceFeatures enabledFeatures = {};
+
+			VkPhysicalDeviceFeatures supportedFeatures;
+			vkGetPhysicalDeviceFeatures(physicalDevice, &supportedFeatures);
+
+			if (supportedFeatures.samplerAnisotropy)
+			{
+				enabledFeatures.samplerAnisotropy = VK_TRUE; // TODO: Remove if not used
+			}
+
+			if (supportedFeatures.geometryShader)
+			{
+				enabledFeatures.geometryShader = VK_TRUE;
+			}
+			else
+			{
+				PrintError("Selected GPU does not support geometry shaders!\n");
+			}
+
+			return enabledFeatures;
+		}
+
+		void VulkanRenderer::NewFrame()
+		{
+			if (g_Window->GetFrameBufferSize().x == 0)
+			{
+				return;
+			}
+
+			if (m_PhysicsDebugDrawer)
+			{
+				m_PhysicsDebugDrawer->ClearLines();
+			}
+
+			if (g_EngineInstance->IsRenderingImGui())
+			{
+				ImGui_ImplVulkan_NewFrame();
+				ImGui_ImplGlfw_NewFrame();
+				ImGui::NewFrame();
+			}
+		}
+
+		PhysicsDebugDrawBase* VulkanRenderer::GetDebugDrawer()
+		{
+			return m_PhysicsDebugDrawer;
+		}
+
+		void VulkanRenderer::DrawStringSS(const std::string& str,
+			const glm::vec4& color,
+			AnchorPoint anchor,
+			const glm::vec2& pos,
+			real spacing,
+			real scale /* = 1.0f */)
+		{
+			assert(m_CurrentFont != nullptr);
+
+			TextCache newCache(str, anchor, pos, color, spacing, scale);
+			m_CurrentFont->AddTextCache(newCache);
+		}
+
+		void VulkanRenderer::DrawStringWS(const std::string& str,
+			const glm::vec4& color,
+			const glm::vec3& pos,
+			const glm::quat& rot,
+			real spacing,
+			real scale /* = 1.0f */)
+		{
+			assert(m_CurrentFont != nullptr);
+
+			TextCache newCache(str, pos, rot, color, spacing, scale);
+			m_CurrentFont->AddTextCache(newCache);
+		}
+
+		void VulkanRenderer::DrawAssetBrowserImGui(bool* bShowing)
+		{
+			// TODO: Consolidate with GL renderer
+			ImGui::SetNextWindowSize(ImVec2(400.0f, 350.0f), ImGuiCond_FirstUseEver);
+			if (ImGui::Begin("Asset browser", bShowing))
+			{
+				if (ImGui::CollapsingHeader("Materials"))
+				{
+					static bool bUpdateFields = true;
+					const i32 MAX_NAME_LEN = 128;
+					static i32 selectedMaterialIndexShort = 0; // Index into shortened array
+					static MaterialID selectedMaterialID = 0;
+					while (!m_Materials[selectedMaterialID].material.visibleInEditor &&
+						selectedMaterialID < m_Materials.size() - 1)
+					{
+						++selectedMaterialID;
+					}
+					static std::string matName = "";
+					static i32 selectedShaderIndex = 0;
+					// Texture index values of 0 represent no texture, 1 = first index into textures array and so on
+					static i32 albedoTextureIndex = 0;
+					static bool bUpdateAlbedoTextureMaterial = false;
+					static i32 metallicTextureIndex = 0;
+					static bool bUpdateMetallicTextureMaterial = false;
+					static i32 roughnessTextureIndex = 0;
+					static bool bUpdateRoughessTextureMaterial = false;
+					static i32 normalTextureIndex = 0;
+					static bool bUpdateNormalTextureMaterial = false;
+					static i32 aoTextureIndex = 0;
+					static bool bUpdateAOTextureMaterial = false;
+					VulkanMaterial& mat = m_Materials[selectedMaterialID];
+
+					if (bUpdateFields)
+					{
+						bUpdateFields = false;
+
+						matName = mat.material.name;
+						matName.resize(MAX_NAME_LEN);
+
+						i32 i = 0;
+						for (VulkanTexture* texture : m_LoadedTextures)
+						{
+							std::string texturePath = texture->GetRelativeFilePath();
+
+							ImGuiUpdateTextureIndexOrMaterial(bUpdateAlbedoTextureMaterial,
+								texturePath,
+								mat.material.albedoTexturePath,
+								texture,
+								i,
+								&albedoTextureIndex,
+								&mat.albedoTexture->sampler);
+
+							ImGuiUpdateTextureIndexOrMaterial(bUpdateMetallicTextureMaterial,
+								texturePath,
+								mat.material.metallicTexturePath,
+								texture,
+								i,
+								&metallicTextureIndex,
+								&mat.metallicTexture->sampler);
+
+							ImGuiUpdateTextureIndexOrMaterial(bUpdateRoughessTextureMaterial,
+								texturePath,
+								mat.material.roughnessTexturePath,
+								texture,
+								i,
+								&roughnessTextureIndex,
+								&mat.roughnessTexture->sampler);
+
+							ImGuiUpdateTextureIndexOrMaterial(bUpdateNormalTextureMaterial,
+								texturePath,
+								mat.material.normalTexturePath,
+								texture,
+								i,
+								&normalTextureIndex,
+								&mat.normalTexture->sampler);
+
+							ImGuiUpdateTextureIndexOrMaterial(bUpdateAOTextureMaterial,
+								texturePath,
+								mat.material.aoTexturePath,
+								texture,
+								i,
+								&aoTextureIndex,
+								&mat.aoTexture->sampler);
+
+							++i;
+						}
+
+						mat.material.enableAlbedoSampler = (albedoTextureIndex > 0);
+						mat.material.enableMetallicSampler = (metallicTextureIndex > 0);
+						mat.material.enableRoughnessSampler = (roughnessTextureIndex > 0);
+						mat.material.enableNormalSampler = (normalTextureIndex > 0);
+						mat.material.enableAOSampler = (aoTextureIndex > 0);
+
+						selectedShaderIndex = mat.material.shaderID;
+					}
+
+					ImGui::PushItemWidth(160.0f);
+					if (ImGui::InputText("Name", (char*)matName.data(), MAX_NAME_LEN, ImGuiInputTextFlags_EnterReturnsTrue))
+					{
+						// Remove trailing \0 characters
+						matName = std::string(matName.c_str());
+						mat.material.name = matName;
+					}
+					ImGui::PopItemWidth();
+
+					ImGui::SameLine();
+
+					struct ShaderFunctor
+					{
+						static bool GetShaderName(void* data, int idx, const char** out_str)
+						{
+							*out_str = (static_cast<VulkanShader*>(data))[idx].shader->name.c_str();
+							return true;
+						}
+					};
+					ImGui::PushItemWidth(240.0f);
+					if (ImGui::Combo("Shader", &selectedShaderIndex, &ShaderFunctor::GetShaderName,
+						(void*)m_Shaders.data(), m_Shaders.size()))
+					{
+						mat = m_Materials[selectedMaterialID];
+						mat.material.shaderID = selectedShaderIndex;
+
+						bUpdateFields = true;
+					}
+					ImGui::PopItemWidth();
+
+					ImGui::NewLine();
+
+					ImGui::Columns(2);
+					ImGui::SetColumnWidth(0, 240.0f);
+
+					ImGui::ColorEdit3("Albedo", &mat.material.constAlbedo.x, ImGuiColorEditFlags_Float | ImGuiColorEditFlags_PickerHueWheel);
+
+					if (mat.material.enableMetallicSampler)
+					{
+						ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+					}
+					ImGui::SliderFloat("Metallic", &mat.material.constMetallic, 0.0f, 1.0f, "%.2f");
+					if (mat.material.enableMetallicSampler)
+					{
+						ImGui::PopStyleColor();
+					}
+
+					if (mat.material.enableRoughnessSampler)
+					{
+						ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+					}
+					ImGui::SliderFloat("Roughness", &mat.material.constRoughness, 0.0f, 1.0f, "%.2f");
+					if (mat.material.enableRoughnessSampler)
+					{
+						ImGui::PopStyleColor();
+					}
+
+					if (mat.material.enableAOSampler)
+					{
+						ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+					}
+					ImGui::SliderFloat("AO", &mat.material.constAO, 0.0f, 1.0f, "%.2f");
+					if (mat.material.enableAOSampler)
+					{
+						ImGui::PopStyleColor();
+					}
+
+					ImGui::DragFloat("Texture scale", &mat.material.textureScale, 0.1f);
+
+					ImGui::NextColumn();
+
+					struct TextureFunctor
+					{
+						static bool GetTextureFileName(void* data, i32 idx, const char** out_str)
+						{
+							if (idx == 0)
+							{
+								*out_str = "NONE";
+							}
+							else
+							{
+								*out_str = static_cast<VulkanTexture**>(data)[idx - 1]->GetName().c_str();
+							}
+							return true;
+						}
+					};
+
+					std::vector<VulkanTexture*> textures;
+					textures.reserve(m_LoadedTextures.size());
+					for (VulkanTexture* texture : m_LoadedTextures)
+					{
+						textures.push_back(texture);
+					}
+
+					bUpdateAlbedoTextureMaterial = DoTextureSelector("Albedo texture", textures,
+						&albedoTextureIndex, &mat.material.generateAlbedoSampler);
+					bUpdateFields |= bUpdateAlbedoTextureMaterial;
+					bUpdateMetallicTextureMaterial = DoTextureSelector("Metallic texture", textures,
+						&metallicTextureIndex, &mat.material.generateMetallicSampler);
+					bUpdateFields |= bUpdateMetallicTextureMaterial;
+					bUpdateRoughessTextureMaterial = DoTextureSelector("Roughness texture", textures,
+						&roughnessTextureIndex, &mat.material.generateRoughnessSampler);
+					bUpdateFields |= bUpdateRoughessTextureMaterial;
+					bUpdateNormalTextureMaterial = DoTextureSelector("Normal texture", textures,
+						&normalTextureIndex, &mat.material.generateNormalSampler);
+					bUpdateFields |= bUpdateNormalTextureMaterial;
+					bUpdateAOTextureMaterial = DoTextureSelector("AO texture", textures, &aoTextureIndex,
+						&mat.material.generateAOSampler);
+					bUpdateFields |= bUpdateAOTextureMaterial;
+
+					ImGui::NewLine();
+
+					ImGui::EndColumns();
+
+					if (ImGui::BeginChild("material list", ImVec2(0.0f, 120.0f), true))
+					{
+						i32 matShortIndex = 0;
+						for (i32 i = 0; i < (i32)m_Materials.size(); ++i)
+						{
+							if (!m_Materials[i].material.visibleInEditor)
+							{
+								continue;
+							}
+
+							bool bSelected = (matShortIndex == selectedMaterialIndexShort);
+							if (ImGui::Selectable(m_Materials[i].material.name.c_str(), &bSelected))
+							{
+								if (selectedMaterialIndexShort != matShortIndex)
+								{
+									selectedMaterialIndexShort = matShortIndex;
+									selectedMaterialID = i;
+									bUpdateFields = true;
+								}
+							}
+
+							if (ImGui::BeginPopupContextItem())
+							{
+								if (ImGui::Button("Duplicate"))
+								{
+									const Material& dupMat = m_Materials[i].material;
+
+									MaterialCreateInfo createInfo = {};
+									createInfo.name = GetIncrementedPostFixedStr(dupMat.name, "new material 00");
+									createInfo.shaderName = m_Shaders[dupMat.shaderID].shader->name;
+									createInfo.constAlbedo = dupMat.constAlbedo;
+									createInfo.constRoughness = dupMat.constRoughness;
+									createInfo.constMetallic = dupMat.constMetallic;
+									createInfo.constAO = dupMat.constAO;
+									createInfo.colorMultiplier = dupMat.colorMultiplier;
+									// TODO: Copy other fields
+									MaterialID newMaterialID = InitializeMaterial(&createInfo);
+
+									g_SceneManager->CurrentScene()->AddMaterialID(newMaterialID);
+
+									ImGui::CloseCurrentPopup();
+								}
+
+								ImGui::EndPopup();
+							}
+
+							if (ImGui::IsItemActive())
+							{
+								if (ImGui::BeginDragDropSource())
+								{
+									MaterialID draggedMaterialID = i;
+									const void* data = (void*)(&draggedMaterialID);
+									size_t size = sizeof(MaterialID);
+
+									ImGui::SetDragDropPayload(m_MaterialPayloadCStr, data, size);
+
+									ImGui::Text("%s", m_Materials[i].material.name.c_str());
+
+									ImGui::EndDragDropSource();
+								}
+							}
+
+							++matShortIndex;
+						}
+					}
+					ImGui::EndChild(); // Material list
+
+					const i32 MAX_MAT_NAME_LEN = 128;
+					static std::string newMaterialName = "";
+
+					const char* createMaterialPopupStr = "Create material##popup";
+					if (ImGui::Button("Create material"))
+					{
+						ImGui::OpenPopup(createMaterialPopupStr);
+						newMaterialName = "New Material 01";
+						newMaterialName.resize(MAX_MAT_NAME_LEN);
+					}
+
+					if (ImGui::BeginPopupModal(createMaterialPopupStr, NULL, ImGuiWindowFlags_NoResize))
+					{
+						ImGui::Text("Name:");
+						ImGui::InputText("##NameText", (char*)newMaterialName.data(), MAX_MAT_NAME_LEN);
+
+						ImGui::Text("Shader:");
+						static i32 newMatShaderIndex = 0;
+						if (ImGui::BeginChild("Shader", ImVec2(0, 120), true))
+						{
+							i32 i = 0;
+							for (VulkanShader& shader : m_Shaders)
+							{
+								bool bSelectedShader = (i == newMatShaderIndex);
+								if (ImGui::Selectable(shader.shader->name.c_str(), &bSelectedShader))
+								{
+									newMatShaderIndex = i;
+								}
+
+								++i;
+							}
+						}
+						ImGui::EndChild(); // Shader list
+
+						if (ImGui::Button("Create new material"))
+						{
+							// Remove trailing /0 characters
+							newMaterialName = std::string(newMaterialName.c_str());
+
+							MaterialCreateInfo createInfo = {};
+							createInfo.name = newMaterialName;
+							createInfo.shaderName = m_Shaders[newMatShaderIndex].shader->name;
+							MaterialID newMaterialID = InitializeMaterial(&createInfo);
+
+							g_SceneManager->CurrentScene()->AddMaterialID(newMaterialID);
+
+							ImGui::CloseCurrentPopup();
+						}
+
+						ImGui::SameLine();
+
+						if (ImGui::Button("Cancel"))
+						{
+							ImGui::CloseCurrentPopup();
+						}
+
+						ImGui::EndPopup();
+					}
+
+					ImGui::SameLine();
+
+					ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
+					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
+					ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
+					if (ImGui::Button("Delete material"))
+					{
+						g_SceneManager->CurrentScene()->RemoveMaterialID(selectedMaterialID);
+						RemoveMaterial(selectedMaterialID);
+					}
+					ImGui::PopStyleColor();
+					ImGui::PopStyleColor();
+					ImGui::PopStyleColor();
+				}
+
+				if (ImGui::CollapsingHeader("Textures"))
+				{
+					static i32 selectedTextureIndex = 0;
+					if (ImGui::BeginChild("texture list", ImVec2(0.0f, 120.0f), true))
+					{
+						i32 i = 0;
+						for (VulkanTexture* texture : m_LoadedTextures)
+						{
+							bool bSelected = (i == selectedTextureIndex);
+							std::string textureFileName = texture->GetName();
+							if (ImGui::Selectable(textureFileName.c_str(), &bSelected))
+							{
+								selectedTextureIndex = i;
+							}
+
+							if (ImGui::BeginPopupContextItem())
+							{
+								if (ImGui::Button("Reload"))
+								{
+									texture->Reload();
+									ImGui::CloseCurrentPopup();
+								}
+
+								ImGui::EndPopup();
+							}
+
+							if (ImGui::IsItemHovered())
+							{
+								DoTexturePreviewTooltip(texture);
+							}
+							++i;
+						}
+					}
+					ImGui::EndChild();
+
+					// TODO:
+					//if (ImGui::Button("Import Texture"))
+					//{
+					//	// TODO: Not all textures are directly in this directory! CLEANUP to make more robust
+					//	std::string relativeDirPath = RESOURCE_LOCATION  "textures/";
+					//	std::string absoluteDirectoryStr = RelativePathToAbsolute(relativeDirPath);
+					//	std::string selectedAbsFilePath;
+					//	if (OpenFileDialog("Import texture", absoluteDirectoryStr, selectedAbsFilePath))
+					//	{
+					//		std::string fileNameAndExtension = selectedAbsFilePath;
+					//		StripLeadingDirectories(fileNameAndExtension);
+					//		std::string relativeFilePath = relativeDirPath + fileNameAndExtension;
+
+					//		Print("Importing texture: %s\n", relativeFilePath.c_str());
+
+					//		VulkanTexture* newTexture = new VulkanTexture(relativeFilePath, 3, false, false, false);
+					//		if (newTexture->LoadFromFile())
+					//		{
+					//			m_LoadedTextures.push_back(newTexture);
+					//		}
+
+					//		ImGui::CloseCurrentPopup();
+					//	}
+					//}
+				}
+
+				if (ImGui::CollapsingHeader("Meshes"))
+				{
+					static i32 selectedMeshIndex = 0;
+					//const i32 MAX_NAME_LEN = 128;
+					// TODO: Implement mesh naming
+					//static std::string selectedMeshName = "";
+					static bool bUpdateName = true;
+
+					std::string selectedMeshRelativeFilePath;
+					LoadedMesh* selectedMesh = nullptr;
+					i32 meshIdx = 0;
+					for (auto meshPair : MeshComponent::m_LoadedMeshes)
+					{
+						if (meshIdx == selectedMeshIndex)
+						{
+							selectedMesh = meshPair.second;
+							selectedMeshRelativeFilePath = meshPair.first;
+							break;
+						}
+						++meshIdx;
+					}
+
+					ImGui::Text("Import settings");
+
+					ImGui::Columns(2, "import settings columns", false);
+					ImGui::Separator();
+					ImGui::Checkbox("Flip U", &selectedMesh->importSettings.bFlipU); ImGui::NextColumn();
+					ImGui::Checkbox("Flip V", &selectedMesh->importSettings.bFlipV); ImGui::NextColumn();
+					ImGui::Checkbox("Swap Normal YZ", &selectedMesh->importSettings.bSwapNormalYZ); ImGui::NextColumn();
+					ImGui::Checkbox("Flip Normal Z", &selectedMesh->importSettings.bFlipNormalZ); ImGui::NextColumn();
+					ImGui::Columns(1);
+
+					if (ImGui::Button("Re-import"))
+					{
+						for (VulkanRenderObject* renderObject : m_RenderObjects)
+						{
+							if (renderObject && renderObject->gameObject)
+							{
+								MeshComponent* gameObjectMesh = renderObject->gameObject->GetMeshComponent();
+								if (gameObjectMesh &&  gameObjectMesh->GetRelativeFilePath().compare(selectedMeshRelativeFilePath) == 0)
+								{
+									MeshImportSettings importSettings = selectedMesh->importSettings;
+
+									MaterialID matID = renderObject->materialID;
+									GameObject* gameObject = renderObject->gameObject;
+
+									DestroyRenderObject(gameObject->GetRenderID());
+									gameObject->SetRenderID(InvalidRenderID);
+
+									gameObjectMesh->Destroy();
+									gameObjectMesh->SetOwner(gameObject);
+									gameObjectMesh->SetRequiredAttributesFromMaterialID(matID);
+									gameObjectMesh->LoadFromFile(selectedMeshRelativeFilePath, &importSettings);
+								}
+							}
+						}
+					}
+
+					ImGui::SameLine();
+
+					if (ImGui::Button("Save"))
+					{
+						g_SceneManager->CurrentScene()->SerializeToFile(true);
+					}
+
+					if (ImGui::BeginChild("mesh list", ImVec2(0.0f, 120.0f), true))
+					{
+						i32 i = 0;
+						for (const auto& meshIter : MeshComponent::m_LoadedMeshes)
+						{
+							bool bSelected = (i == selectedMeshIndex);
+							std::string meshFilePath = meshIter.first;
+							std::string meshFileName = meshIter.first;
+							StripLeadingDirectories(meshFileName);
+							if (ImGui::Selectable(meshFileName.c_str(), &bSelected))
+							{
+								selectedMeshIndex = i;
+								bUpdateName = true;
+							}
+
+							if (ImGui::BeginPopupContextItem())
+							{
+								if (ImGui::Button("Reload"))
+								{
+									MeshComponent::LoadMesh(meshIter.second->relativeFilePath);
+
+									for (VulkanRenderObject* renderObject : m_RenderObjects)
+									{
+										if (renderObject)
+										{
+											MeshComponent* mesh = renderObject->gameObject->GetMeshComponent();
+											if (mesh && mesh->GetRelativeFilePath().compare(meshFilePath) == 0)
+											{
+												mesh->Reload();
+											}
+										}
+									}
+
+									ImGui::CloseCurrentPopup();
+								}
+
+								ImGui::EndPopup();
+							}
+							else
+							{
+								if (ImGui::IsItemActive())
+								{
+									if (ImGui::BeginDragDropSource())
+									{
+										const void* data = (void*)(meshIter.first.c_str());
+										size_t size = strlen(meshIter.first.c_str()) * sizeof(char);
+
+										ImGui::SetDragDropPayload(m_MeshPayloadCStr, data, size);
+
+										ImGui::Text("%s", meshFileName.c_str());
+
+										ImGui::EndDragDropSource();
+									}
+								}
+							}
+
+							++i;
+						}
+					}
+					ImGui::EndChild();
+
+					if (ImGui::Button("Import Mesh"))
+					{
+						// TODO: Not all models are directly in this directory! CLEANUP to make more robust
+						std::string relativeDirPath = RESOURCE_LOCATION  "meshes/";
+						std::string absoluteDirectoryStr = RelativePathToAbsolute(relativeDirPath);
+						std::string selectedAbsFilePath;
+						if (OpenFileDialog("Import mesh", absoluteDirectoryStr, selectedAbsFilePath))
+						{
+							Print("Importing mesh: %s\n", selectedAbsFilePath.c_str());
+
+							std::string fileNameAndExtension = selectedAbsFilePath;
+							StripLeadingDirectories(fileNameAndExtension);
+							std::string relativeFilePath = relativeDirPath + fileNameAndExtension;
+
+							LoadedMesh* existingMesh = nullptr;
+							if (MeshComponent::FindPreLoadedMesh(relativeFilePath, &existingMesh))
+							{
+								i32 j = 0;
+								for (auto meshPair : MeshComponent::m_LoadedMeshes)
+								{
+									if (meshPair.first.compare(relativeFilePath) == 0)
+									{
+										selectedMeshIndex = j;
+										break;
+									}
+
+									++j;
+								}
+							}
+							else
+							{
+								MeshComponent::LoadMesh(relativeFilePath);
+							}
+
+							ImGui::CloseCurrentPopup();
+						}
+					}
+				}
+			}
+
+			ImGui::End();
+		}
+
+		void VulkanRenderer::RecaptureReflectionProbe()
+		{
+			// UNIMPLEMENTED
+		}
+
+		u32 VulkanRenderer::GetTextureHandle(TextureID textureID) const
+		{
+			assert(textureID < m_LoadedTextures.size());
+			return m_LoadedTextures[textureID]->textureID;
+		}
+
+		void VulkanRenderer::RenderObjectStateChanged()
+		{
+			// TODO: Ignore object visibility changes
+			m_bRebatchRenderObjects = true;
+		}
+
 		void VulkanRenderer::GenerateCubemapFromHDR(VulkanRenderObject* renderObject, const std::string& environmentMapPath)
 		{
 			if (!m_SkyBoxMesh)
@@ -1573,7 +3217,7 @@ namespace flex
 				renderPassBeginInfo.framebuffer = framebuffer;
 
 				VkCommandBuffer cmdBuf = m_CommandBufferManager.CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
-				
+
 				BeginRegion(cmdBuf, "Generate BRDF LUT");
 
 				vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -1603,1764 +3247,195 @@ namespace flex
 			}
 		}
 
-		MaterialID VulkanRenderer::InitializeMaterial(const MaterialCreateInfo* createInfo, MaterialID matToReplace /*= InvalidMaterialID*/)
+		void VulkanRenderer::CaptureSceneToCubemap(RenderID cubemapRenderID)
 		{
-			MaterialID matID = InvalidMaterialID;
-			if (matToReplace != InvalidMaterialID)
-			{
-				// TODO: Do any material destruction work here
-				matID = matToReplace;
-			}
-			else
-			{
-				matID = GetNextAvailableMaterialID();
-				m_Materials.insert(std::pair<MaterialID, VulkanMaterial>(matID, {}));
-			}
+			UNREFERENCED_PARAMETER(cubemapRenderID);
+		}
 
-			VulkanMaterial& mat = m_Materials.at(matID);
-			mat.material.name = createInfo->name;
+		void VulkanRenderer::GeneratePrefilteredMapFromCubemap(MaterialID cubemapMaterialID)
+		{
+			UNREFERENCED_PARAMETER(cubemapMaterialID);
+		}
 
-			if (!GetShaderID(createInfo->shaderName, mat.material.shaderID))
+		void VulkanRenderer::GenerateIrradianceSamplerFromCubemap(MaterialID cubemapMaterialID)
+		{
+			UNREFERENCED_PARAMETER(cubemapMaterialID);
+		}
+
+		void VulkanRenderer::CreateSSAOPipelines()
+		{
+			VulkanRenderObject* gBufferObject = GetRenderObject(m_GBufferQuadRenderID);
+
+			GraphicsPipelineCreateInfo pipelineCreateInfo = {};
+			pipelineCreateInfo.bSetDynamicStates = true;
+			pipelineCreateInfo.topology = gBufferObject->topology;
+			pipelineCreateInfo.cullMode = gBufferObject->cullMode;
+			pipelineCreateInfo.bEnableColorBlending = false;
+
+			VulkanMaterial* ssaoMaterial = &m_Materials[m_SSAOMatID];
+			VulkanShader* ssaoShader = &m_Shaders[ssaoMaterial->material.shaderID];
+
+			pipelineCreateInfo.graphicsPipeline = m_SSAOGraphicsPipeline.replace();
+			pipelineCreateInfo.pipelineLayout = m_SSAOGraphicsPipelineLayout.replace();
+			pipelineCreateInfo.shaderID = ssaoMaterial->material.shaderID;
+			pipelineCreateInfo.vertexAttributes = ssaoShader->shader->vertexAttributes;
+			pipelineCreateInfo.descriptorSetLayoutIndex = ssaoMaterial->descriptorSetLayoutIndex;
+			pipelineCreateInfo.subpass = ssaoShader->shader->subpass;
+			pipelineCreateInfo.depthWriteEnable = ssaoShader->shader->bDepthWriteEnable ? VK_TRUE : VK_FALSE;
+			pipelineCreateInfo.depthCompareOp = gBufferObject->depthCompareOp;
+			pipelineCreateInfo.renderPass = ssaoShader->renderPass;
+			pipelineCreateInfo.fragSpecializationInfo = &m_SSAOSpecializationInfo;
+			CreateGraphicsPipeline(&pipelineCreateInfo);
+
+			VulkanMaterial* ssaoBlurMaterial = &m_Materials[m_SSAOBlurMatID];
+			VulkanShader* ssaoBlurShader = &m_Shaders[ssaoBlurMaterial->material.shaderID];
+
+			pipelineCreateInfo.graphicsPipeline = m_SSAOBlurHGraphicsPipeline.replace();
+			pipelineCreateInfo.pipelineLayout = m_SSAOBlurGraphicsPipelineLayout.replace();
+			pipelineCreateInfo.shaderID = ssaoBlurMaterial->material.shaderID;
+			pipelineCreateInfo.vertexAttributes = ssaoBlurShader->shader->vertexAttributes;
+			pipelineCreateInfo.descriptorSetLayoutIndex = ssaoBlurMaterial->descriptorSetLayoutIndex;
+			pipelineCreateInfo.subpass = 0;
+			pipelineCreateInfo.depthWriteEnable = ssaoBlurShader->shader->bDepthWriteEnable ? VK_TRUE : VK_FALSE;
+			pipelineCreateInfo.renderPass = ssaoBlurShader->renderPass;
+			CreateGraphicsPipeline(&pipelineCreateInfo);
+
+			pipelineCreateInfo.graphicsPipeline = m_SSAOBlurVGraphicsPipeline.replace();
+			pipelineCreateInfo.pipelineLayout = m_SSAOBlurGraphicsPipelineLayout.replace();
+			pipelineCreateInfo.shaderID = ssaoBlurMaterial->material.shaderID;
+			pipelineCreateInfo.vertexAttributes = ssaoBlurShader->shader->vertexAttributes;
+			pipelineCreateInfo.descriptorSetLayoutIndex = ssaoBlurMaterial->descriptorSetLayoutIndex;
+			pipelineCreateInfo.subpass = 0;
+			pipelineCreateInfo.depthWriteEnable = ssaoBlurShader->shader->bDepthWriteEnable ? VK_TRUE : VK_FALSE;
+			pipelineCreateInfo.renderPass = ssaoBlurShader->renderPass;
+			CreateGraphicsPipeline(&pipelineCreateInfo);
+		}
+
+		void VulkanRenderer::CreateSSAODescriptorSets()
+		{
+			VulkanMaterial* ssaoMaterial = &m_Materials[m_SSAOMatID];
+			VulkanShader* ssaoShader = &m_Shaders[ssaoMaterial->material.shaderID];
+
+			VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[ssaoMaterial->material.shaderID];
+
+			DescriptorSetCreateInfo descSetCreateInfo = {};
+			descSetCreateInfo.DBG_Name = "SSAO";
+			descSetCreateInfo.descriptorSet = &m_SSAODescSet;
+			descSetCreateInfo.descriptorSetLayout = &descSetLayout;
+			descSetCreateInfo.shaderID = ssaoMaterial->material.shaderID;
+			descSetCreateInfo.uniformBuffer = &ssaoShader->uniformBuffer;
+			FrameBufferAttachment& normalFrameBufferAttachment = m_OffScreenFrameBuf->frameBufferAttachments[0].second;
+			// Depth texture is handled for us in CreateDescriptorSet
+			descSetCreateInfo.ssaoNormalImageView = normalFrameBufferAttachment.view;
+			descSetCreateInfo.ssaoNormalSampler = m_SSAOSampler;
+			descSetCreateInfo.noiseTexture = ssaoMaterial->noiseTexture;
+			CreateDescriptorSet(&descSetCreateInfo);
+
+			VulkanMaterial* ssaoBlurMaterial = &m_Materials[m_SSAOBlurMatID];
+			VulkanShader* ssaoBlurShader = &m_Shaders[ssaoBlurMaterial->material.shaderID];
+
+			descSetLayout = m_DescriptorSetLayouts[ssaoBlurMaterial->material.shaderID];
+
+			descSetCreateInfo = {};
+			descSetCreateInfo.descriptorSet = &m_SSAOBlurHDescSet;
+			descSetCreateInfo.DBG_Name = "SSAO Blur Horizontal";
+			descSetCreateInfo.descriptorSetLayout = &descSetLayout;
+			descSetCreateInfo.shaderID = ssaoBlurMaterial->material.shaderID;
+			descSetCreateInfo.uniformBuffer = &ssaoBlurShader->uniformBuffer;
+			FrameBufferAttachment& ssaoFrameBufferAttachment = m_SSAOFrameBuf->frameBufferAttachments[0].second;
+			descSetCreateInfo.ssaoImageView = ssaoFrameBufferAttachment.view;
+			descSetCreateInfo.ssaoSampler = m_SSAOSampler;
+			descSetCreateInfo.ssaoNormalImageView = normalFrameBufferAttachment.view;
+			descSetCreateInfo.ssaoNormalSampler = m_SSAOSampler;
+			// Depth texture is handled in CreateDescriptorSet
+			CreateDescriptorSet(&descSetCreateInfo);
+
+			descSetCreateInfo = {};
+			descSetCreateInfo.descriptorSet = &m_SSAOBlurVDescSet;
+			descSetCreateInfo.DBG_Name = "SSAO Blur Vertical";
+			descSetCreateInfo.descriptorSetLayout = &descSetLayout;
+			descSetCreateInfo.shaderID = ssaoBlurMaterial->material.shaderID;
+			descSetCreateInfo.uniformBuffer = &ssaoBlurShader->uniformBuffer;
+			FrameBufferAttachment& ssaoBlurHFrameBufferAttachment = m_SSAOBlurHFrameBuf->frameBufferAttachments[0].second;
+			descSetCreateInfo.ssaoImageView = ssaoBlurHFrameBufferAttachment.view;
+			descSetCreateInfo.ssaoSampler = m_SSAOSampler;
+			descSetCreateInfo.ssaoNormalImageView = normalFrameBufferAttachment.view;
+			descSetCreateInfo.ssaoNormalSampler = m_SSAOSampler;
+			CreateDescriptorSet(&descSetCreateInfo);
+		}
+
+		void VulkanRenderer::CreateRenderPass(VkRenderPass* outPass, VkFormat colorFormat, const char* passName,
+			VkImageLayout finalLayout /* = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL */,
+			bool bKeepInitialContents /* = false */,
+			bool bDepth /* = false */,
+			VkFormat depthFormat /* = VK_FORMAT_UNDEFINED */,
+			VkImageLayout finalDepthLayout /* = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL */)
+		{
+			// Color attachment
+			VkAttachmentDescription colorAttachment = vks::attachmentDescription(colorFormat, finalLayout);
+			VkAttachmentDescription depthAttachment = vks::attachmentDescription(depthFormat, finalDepthLayout);
+
+			if (bKeepInitialContents)
 			{
-				if (createInfo->shaderName.empty())
+				colorAttachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+				colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+
+				if (bDepth)
 				{
-					PrintError("Material's shader not set! MaterialCreateInfo::shaderName must be filled in\n");
-				}
-				else
-				{
-					PrintError("Material's shader not set! Shader name %s not found\n", createInfo->shaderName.c_str());
-				}
-
-				// TODO: Handle more gracefully (use placeholder shader)
-				return InvalidMaterialID;
-			}
-			VulkanShader& shader = m_Shaders[mat.material.shaderID];
-
-			mat.material.normalTexturePath = createInfo->normalTexturePath;
-			mat.material.generateNormalSampler = createInfo->generateNormalSampler;
-			mat.material.enableNormalSampler = createInfo->enableNormalSampler;
-
-			mat.material.sampledFrameBuffers = createInfo->sampledFrameBuffers;
-
-			mat.material.enableCubemapSampler = createInfo->enableCubemapSampler;
-			mat.material.generateCubemapSampler = createInfo->generateCubemapSampler;
-			mat.material.cubemapSamplerSize = createInfo->generatedCubemapSize;
-			mat.material.cubeMapFilePaths = createInfo->cubeMapFilePaths;
-
-			mat.material.constAlbedo = glm::vec4(createInfo->constAlbedo, 0);
-			mat.material.generateAlbedoSampler = createInfo->generateAlbedoSampler;
-			mat.material.albedoTexturePath = createInfo->albedoTexturePath;
-			mat.material.enableAlbedoSampler = createInfo->enableAlbedoSampler;
-
-			mat.material.constMetallic = createInfo->constMetallic;
-			mat.material.generateMetallicSampler = createInfo->generateMetallicSampler;
-			mat.material.metallicTexturePath = createInfo->metallicTexturePath;
-			mat.material.enableMetallicSampler = createInfo->enableMetallicSampler;
-
-			mat.material.constRoughness = createInfo->constRoughness;
-			mat.material.generateRoughnessSampler = createInfo->generateRoughnessSampler;
-			mat.material.roughnessTexturePath = createInfo->roughnessTexturePath;
-			mat.material.enableRoughnessSampler = createInfo->enableRoughnessSampler;
-
-			mat.material.constAO = createInfo->constAO;
-			mat.material.generateAOSampler = createInfo->generateAOSampler;
-			mat.material.aoTexturePath = createInfo->aoTexturePath;
-			mat.material.enableAOSampler = createInfo->enableAOSampler;
-
-			mat.material.colorMultiplier = createInfo->colorMultiplier;
-
-			mat.material.enableHDREquirectangularSampler = createInfo->enableHDREquirectangularSampler;
-			mat.material.generateHDREquirectangularSampler = createInfo->generateHDREquirectangularSampler;
-			mat.material.hdrEquirectangularTexturePath = createInfo->hdrEquirectangularTexturePath;
-
-			mat.material.generateHDRCubemapSampler = createInfo->generateHDRCubemapSampler;
-
-			mat.material.enableIrradianceSampler = createInfo->enableIrradianceSampler;
-			mat.material.generateIrradianceSampler = createInfo->generateIrradianceSampler;
-			mat.material.irradianceSamplerSize = createInfo->generatedIrradianceCubemapSize;
-
-			if (shader.shader->bNeedPushConstantBlock)
-			{
-				mat.material.pushConstantBlock = new Material::PushConstantBlock(shader.shader->pushConstantBlockSize);
-			}
-
-			if (shader.shader->bNeedIrradianceSampler)
-			{
-				if (createInfo->irradianceSamplerMatID < m_Materials.size())
-				{
-					mat.irradianceTexture = m_Materials[createInfo->irradianceSamplerMatID].irradianceTexture;
-				}
-			}
-			if (shader.shader->bNeedBRDFLUT)
-			{
-				if (!m_BRDFTexture)
-				{
-					m_BRDFTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "BRDF", m_BRDFSize.x, m_BRDFSize.y, 1);
-					m_BRDFTexture->CreateEmpty(VK_FORMAT_R16G16_SFLOAT, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-					m_LoadedTextures.push_back(m_BRDFTexture);
-				}
-				mat.brdfLUT = m_BRDFTexture;
-			}
-			if (shader.shader->bNeedPrefilteredMap)
-			{
-				mat.prefilterTexture = (createInfo->prefilterMapSamplerMatID < m_Materials.size() ?
-					m_Materials[createInfo->prefilterMapSamplerMatID].prefilterTexture : nullptr);
-			}
-
-			mat.material.enablePrefilteredMap = createInfo->enablePrefilteredMap;
-			mat.material.generatePrefilteredMap = createInfo->generatePrefilteredMap;
-			mat.material.prefilteredMapSize = createInfo->generatedPrefilteredCubemapSize;
-
-			mat.material.enableBRDFLUT = createInfo->enableBRDFLUT;
-			mat.material.renderToCubemap = createInfo->renderToCubemap;
-
-			mat.material.persistent = createInfo->persistent;
-			mat.material.visibleInEditor = createInfo->visibleInEditor;
-
-			mat.descriptorSetLayoutIndex = mat.material.shaderID;
-
-			struct TextureInfo
-			{
-				TextureInfo(const std::string& relativeFilePath,
-					VulkanTexture** texture,
-					bool* generate,
-					VkFormat format = VK_FORMAT_R8G8B8A8_UNORM,
-					u32 mipLevels = 1,
-					bool bHDR = false) :
-					relativeFilePath(relativeFilePath),
-					texture(texture),
-					generate(generate),
-					format(format),
-					mipLevels(mipLevels),
-					bHDR(bHDR)
-				{}
-
-				const std::string relativeFilePath;
-				VulkanTexture** texture;
-				bool* generate;
-				VkFormat format;
-				u32 mipLevels;
-				bool bHDR;
-			};
-
-			TextureInfo textureInfos[] =
-			{
-				{ createInfo->normalTexturePath, &mat.normalTexture, &mat.material.generateNormalSampler },
-				{ createInfo->albedoTexturePath, &mat.albedoTexture, &mat.material.generateAlbedoSampler },
-				{ createInfo->metallicTexturePath, &mat.metallicTexture, &mat.material.generateMetallicSampler },
-				{ createInfo->roughnessTexturePath, &mat.roughnessTexture, &mat.material.generateRoughnessSampler },
-				{ createInfo->aoTexturePath, &mat.aoTexture, &mat.material.generateAOSampler },
-				{ createInfo->hdrEquirectangularTexturePath, &mat.hdrEquirectangularTexture, &mat.material.generateHDREquirectangularSampler, VK_FORMAT_R32G32B32A32_SFLOAT, 1, true },
-			};
-			const size_t textureCount = sizeof(textureInfos) / sizeof(textureInfos[0]);
-
-			// Calculate how many textures need to be allocated to prevent texture vector from resizing
-			const size_t usedTextureCount = createInfo->generateAlbedoSampler +
-				createInfo->generateAOSampler + createInfo->generateCubemapSampler +
-				createInfo->generateIrradianceSampler + createInfo->generateMetallicSampler +
-				createInfo->generateNormalSampler + createInfo->generatePrefilteredMap +
-				createInfo->generateRoughnessSampler + createInfo->generateHDREquirectangularSampler;
-			m_LoadedTextures.reserve(usedTextureCount);
-
-			for (TextureInfo& textureInfo : textureInfos)
-			{
-				if (!textureInfo.relativeFilePath.empty() && textureInfo.generate)
-				{
-					*textureInfo.texture = GetLoadedTexture(textureInfo.relativeFilePath);
-
-					if (*textureInfo.texture == nullptr)
-					{
-						u32 channelCount = 4;
-						bool bFlipVertically = false;
-						*textureInfo.texture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue,
-							textureInfo.relativeFilePath, channelCount, bFlipVertically, textureInfo.mipLevels > 1, textureInfo.bHDR);
-						(*textureInfo.texture)->CreateFromFile(textureInfo.format);
-						m_LoadedTextures.push_back(*textureInfo.texture);
-
-						(*textureInfo.texture)->imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-						(*textureInfo.texture)->UpdateImageDescriptor();
-					}
+					depthAttachment.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+					depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 				}
 			}
 
-			// Cubemaps are treated differently than regular textures because they require 6 filepaths
-			if (mat.material.generateCubemapSampler)
+			VkAttachmentReference colorReference = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+			VkAttachmentReference depthAttachmentRef = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+
+			std::array<VkSubpassDescription, 1> subpasses;
+			subpasses[0] = {};
+			subpasses[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+			subpasses[0].colorAttachmentCount = 1;
+			subpasses[0].pColorAttachments = &colorReference;
+			subpasses[0].pDepthStencilAttachment = bDepth ? &depthAttachmentRef : nullptr;
+
+			// Use subpass dependencies for layout transitions
+			std::array<VkSubpassDependency, 2> dependencies;
+			dependencies[0] = {};
+			dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+			dependencies[0].dstSubpass = 0;
+			dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+			dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+			dependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+			dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+			dependencies[1] = {};
+			dependencies[1].srcSubpass = 0;
+			dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+			dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+			dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+			dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+			dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+			std::vector<VkAttachmentDescription> attachments;
+			attachments.push_back(colorAttachment);
+
+			if (bDepth)
 			{
-				if (createInfo->cubeMapFilePaths[0].empty())
-				{
-					assert(mat.cubemapTexture == nullptr);
-
-					const u32 mipLevels = static_cast<u32>(floor(log2(createInfo->generatedCubemapSize.x))) + 1;
-					u32 channelCount = 4;
-					mat.cubemapTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "Cubemap", (u32)createInfo->generatedCubemapSize.x,
-						(u32)createInfo->generatedCubemapSize.y, channelCount);
-					mat.cubemapTexture->CreateCubemapEmpty(VK_FORMAT_R8G8B8A8_UNORM, mipLevels, createInfo->enableCubemapTrilinearFiltering);
-					m_LoadedTextures.push_back(mat.cubemapTexture);
-				}
-				else
-				{
-					mat.cubemapTexture = GetLoadedTexture(createInfo->cubeMapFilePaths[0]);
-
-					if (mat.cubemapTexture == nullptr)
-					{
-						u32 channelCount = 4;
-						mat.cubemapTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue,
-							createInfo->cubeMapFilePaths, channelCount, false, false, false);
-						mat.cubemapTexture->CreateCubemapFromTextures(VK_FORMAT_R8G8B8A8_UNORM, createInfo->cubeMapFilePaths, true);
-						m_LoadedTextures.push_back(mat.cubemapTexture);
-					}
-				}
+				attachments.push_back(depthAttachment);
 			}
 
-			if (mat.material.generateHDRCubemapSampler)
-			{
-				assert(mat.cubemapTexture == nullptr);
-
-				const u32 mipLevels = static_cast<u32>(floor(log2(createInfo->generatedCubemapSize.x))) + 1;
-				mat.cubemapTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "HDR Cubemap",
-					(u32)createInfo->generatedCubemapSize.x, (u32)createInfo->generatedCubemapSize.y, 4);
-				mat.cubemapTexture->CreateCubemapEmpty(VK_FORMAT_R32G32B32A32_SFLOAT, mipLevels, false);
-				m_LoadedTextures.push_back(mat.cubemapTexture);
-			}
-
-			if (shader.shader->bNeedCubemapSampler)
-			{
-
-			}
-
-
-			if (shader.shader->bNeedBRDFLUT)
-			{
-
-			}
-
-			if (mat.material.generateIrradianceSampler)
-			{
-				assert(mat.irradianceTexture == nullptr);
-
-				const u32 mipLevels = static_cast<u32>(floor(log2(createInfo->generatedIrradianceCubemapSize.x))) + 1;
-				mat.irradianceTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "Irradiance sampler",
-					(u32)createInfo->generatedIrradianceCubemapSize.x,
-					(u32)createInfo->generatedIrradianceCubemapSize.y, 4);
-				mat.irradianceTexture->CreateCubemapEmpty(VK_FORMAT_R32G32B32A32_SFLOAT, mipLevels, false);
-				m_LoadedTextures.push_back(mat.irradianceTexture);
-			}
-
-			if (shader.shader->bNeedIrradianceSampler)
-			{
-
-			}
-
-			if (mat.material.generatePrefilteredMap)
-			{
-				assert(mat.prefilterTexture == nullptr);
-
-				const u32 mipLevels = static_cast<u32>(floor(log2(createInfo->generatedPrefilteredCubemapSize.x))) + 1;
-				mat.prefilterTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "Prefiltered map",
-					(u32)createInfo->generatedPrefilteredCubemapSize.x,
-					(u32)createInfo->generatedPrefilteredCubemapSize.y, 4);
-				mat.prefilterTexture->CreateCubemapEmpty(VK_FORMAT_R16G16B16A16_SFLOAT,  mipLevels, true);
-				m_LoadedTextures.push_back(mat.prefilterTexture);
-			}
-
-			if (shader.shader->bNeedPrefilteredMap)
-			{
-
-			}
-
-			if (shader.shader->constantBufferUniforms.HasUniform(U_NOISE_SAMPLER))
-			{
-				if (m_NoiseTexture == nullptr)
-				{
-					std::vector<glm::vec4> ssaoNoise;
-					GenerateSSAONoise(ssaoNoise);
-
-					m_NoiseTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "SSAO Noise", SSAO_NOISE_DIM, SSAO_NOISE_DIM, 4);
-					void* buffer = ssaoNoise.data();
-					u32 bufferSize = ssaoNoise.size() * sizeof(glm::vec4);
-					m_NoiseTexture->CreateFromMemory(buffer, bufferSize, VK_FORMAT_R32G32B32A32_SFLOAT, 1, VK_FILTER_NEAREST);
-					m_LoadedTextures.push_back(m_NoiseTexture);
-				}
-
-				mat.noiseTexture = m_NoiseTexture;
-			}
-
-			return matID;
-		}
-
-		TextureID VulkanRenderer::InitializeTexture(const std::string& relativeFilePath, i32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR)
-		{
-			VulkanTexture* newTex = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, relativeFilePath,
-				channelCount, bFlipVertically, bGenerateMipMaps, bHDR);
-			newTex->CreateFromFile(newTex->CalculateFormat());
-			m_LoadedTextures.push_back(newTex);
-
-			return (TextureID)(m_LoadedTextures.size() - 1);
-		}
-
-		u32 VulkanRenderer::InitializeRenderObject(const RenderObjectCreateInfo* createInfo)
-		{
-			const RenderID renderID = GetNextAvailableRenderID();
-			VulkanRenderObject* renderObject = new VulkanRenderObject(m_VulkanDevice->m_LogicalDevice, renderID);
-
-			m_bRebatchRenderObjects = true;
-
-			InsertNewRenderObject(renderObject);
-			renderObject->materialID = createInfo->materialID;
-
-			if (renderObject->materialID == InvalidMaterialID)
-			{
-				if (m_Materials.empty())
-				{
-					PrintError("Render object created before any materials have been created! Returning...\n");
-					return InvalidRenderID;
-				}
-				else
-				{
-					PrintError("Render object doesn't have its material ID set! Using first available material\n");
-					renderObject->materialID = 0;
-				}
-			}
-
-			renderObject->vertexBufferData = createInfo->vertexBufferData;
-			renderObject->cullMode = CullFaceToVkCullMode(createInfo->cullFace);
-			renderObject->materialName = m_Materials[renderObject->materialID].material.name;
-			renderObject->gameObject = createInfo->gameObject;
-			renderObject->bEditorObject = createInfo->bEditorObject;
-			if (createInfo->bEditorObject)
-			{
-				renderObject->gameObject->SetCastsShadow(false);
-			}
-			renderObject->depthCompareOp = DepthTestFuncToVkCompareOp(createInfo->depthTestReadFunc);
-			renderObject->bSetDynamicStates = createInfo->bSetDynamicStates;
-
-			if (createInfo->indices != nullptr &&
-				!createInfo->indices->empty())
-			{
-				renderObject->indices = createInfo->indices;
-				renderObject->bIndexed = true;
-			}
-
-			// We've already been post initialized, so we need to create a descriptor set and pipeline here
-			if (m_bPostInitialized)
-			{
-				CreateDescriptorSet(renderID);
-				CreateGraphicsPipeline(renderID, false);
-			}
-
-			return renderID;
-		}
-
-		void VulkanRenderer::CreateUniformBuffers(VulkanShader* shader)
-		{
-			if (shader->shader->constantBufferUniforms.HasUniform(U_UNIFORM_BUFFER_CONSTANT))
-			{
-				shader->uniformBuffer.constantData.size = shader->shader->constantBufferUniforms.CalculateSizeInBytes();
-				if (shader->uniformBuffer.constantData.size > 0)
-				{
-					free_hooked(shader->uniformBuffer.constantData.data);
-
-					shader->uniformBuffer.constantData.size = GetAlignedUBOSize(shader->uniformBuffer.constantData.size);
-
-					shader->uniformBuffer.constantData.data = static_cast<real*>(malloc_hooked(shader->uniformBuffer.constantData.size));
-					assert(shader->uniformBuffer.constantData.data);
-
-					PrepareUniformBuffer(&shader->uniformBuffer.constantBuffer, shader->uniformBuffer.constantData.size,
-						VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-				}
-			}
-
-			if (shader->shader->dynamicBufferUniforms.HasUniform(U_UNIFORM_BUFFER_DYNAMIC))
-			{
-				shader->uniformBuffer.dynamicData.size = shader->shader->dynamicBufferUniforms.CalculateSizeInBytes();
-				if (shader->uniformBuffer.dynamicData.size > 0 && !m_RenderObjects.empty())
-				{
-					if (shader->uniformBuffer.dynamicData.data) aligned_free_hooked(shader->uniformBuffer.dynamicData.data);
-
-					shader->uniformBuffer.dynamicData.size = GetAlignedUBOSize(shader->uniformBuffer.dynamicData.size);
-
-					const size_t dynamicBufferSize = AllocateDynamicUniformBuffer(
-						shader->uniformBuffer.dynamicData.size, (void**)&shader->uniformBuffer.dynamicData.data);
-					shader->uniformBuffer.fullDynamicBufferSize = dynamicBufferSize;
-					if (dynamicBufferSize > 0)
-					{
-						PrepareUniformBuffer(&shader->uniformBuffer.dynamicBuffer, dynamicBufferSize,
-							VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-					}
-				}
-			}
-		}
-
-		void VulkanRenderer::SetTopologyMode(RenderID renderID, TopologyMode topology)
-		{
-			VulkanRenderObject* renderObject = GetRenderObject(renderID);
-			if (!renderObject)
-			{
-				return;
-			}
-
-			VkPrimitiveTopology vkTopology = TopologyModeToVkPrimitiveTopology(topology);
-
-			if (vkTopology == VK_PRIMITIVE_TOPOLOGY_MAX_ENUM)
-			{
-				PrintError("Unsupported TopologyMode passed to VulkanRenderer::SetTopologyMode: %d\n", (i32)topology);
-			}
-			else
-			{
-				renderObject->topology = vkTopology;
-			}
-		}
-
-		void VulkanRenderer::SetClearColor(real r, real g, real b)
-		{
-			m_ClearColor = { r, g, b, 1.0f };
-		}
-
-		void VulkanRenderer::Update()
-		{
-			Renderer::Update();
-
-#ifdef DEBUG
-			if (m_ShaderCompiler != nullptr)
-			{
-				if (m_ShaderCompiler->TickStatus())
-				{
-					if (m_ShaderCompiler->bSuccess == false)
-					{
-						PrintError("Async shader recompile failed\n");
-						AddEditorString("Async shader recompile failed");
-					}
-					else
-					{
-						Print("Async shader recompile completed successfully!\n");
-						AddEditorString("Async shader recompile completed successfully");
-
-						LoadShaders();
-
-						CreateRenderPasses();
-						PrepareFrameBuffers();
-
-						// Force font descriptor sets to be regenerated
-						for (BitmapFont* font : m_FontsSS)
-						{
-							font->m_DescriptorSet = VK_NULL_HANDLE;
-						}
-
-						for (BitmapFont* font : m_FontsWS)
-						{
-							font->m_DescriptorSet = VK_NULL_HANDLE;
-						}
-
-						for (VulkanShader& shader : m_Shaders)
-						{
-							shader.renderPass = ResolveRenderPassType(shader.shader->renderPassType, shader.shader->name.c_str());
-							CreateUniformBuffers(&shader);
-						}
-
-						CreateShadowResources();
-
-						for (u32 i = 0; i < m_RenderObjects.size(); ++i)
-						{
-							CreateDescriptorSet(i);
-							CreateGraphicsPipeline(i, false);
-						}
-
-						for (auto& iter : m_SpriteDescSets)
-						{
-							vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPool, 1, &(iter.second.descSet));
-							iter.second.descSet = CreateSpriteDescSet(iter.second.shaderID, iter.first, iter.second.textureLayer);
-						}
-
-						CreateSSAODescriptorSets();
-						CreateSSAOPipelines();
-					}
-
-					m_bSwapChainNeedsRebuilding = true; // This is needed to recreate some resources for SSAO, etc.
-
-					delete m_ShaderCompiler;
-					m_ShaderCompiler = nullptr;
-				}
-			}
-#endif
-
-			if (m_bSSAOStateChanged)
-			{
-				m_bSSAOStateChanged = false;
-				// Update GBuffer in case blur or ssao entirely was toggled
-				CreateDescriptorSet(m_GBufferQuadRenderID);
-				CreateGraphicsPipeline(m_GBufferQuadRenderID, false);
-				// Update SSAO pipelines in case kernel size changed
-				CreateSSAOPipelines();
-			}
-
-			m_PhysicsDebugDrawer->UpdateDebugMode();
-
-			UpdateConstantUniformBuffers();
-
-			// TODO: Only update when things have changed
-			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
-			{
-				UpdateDynamicUniformBuffer(i);
-			}
-		}
-
-		void VulkanRenderer::Draw()
-		{
-			glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
-			if (m_SwapChainExtent.width == 0u || m_SwapChainExtent.height == 0u ||
-				frameBufferSize.x == 0 || frameBufferSize.y == 0)
-			{
-				return;
-			}
-
-			DrawCallInfo drawCallInfo = {};
-
-			if (!m_PhysicsDebuggingSettings.DisableAll)
-			{
-				PhysicsDebugRender();
-			}
-
-			if (m_bRebatchRenderObjects)
-			{
-				m_bRebatchRenderObjects = false;
-				BatchRenderObjects();
-			}
-
-			// TODO: Don't build command buffers when m_bRebatchRenderObjects is false (but dynamic UI elements still need to be rebuilt!)
-			BuildDeferredCommandBuffer();
-			BuildCommandBuffers(drawCallInfo);
-
-			if (m_bSwapChainNeedsRebuilding)
-			{
-				m_bSwapChainNeedsRebuilding = false;
-				RecreateSwapChain();
-			}
-			else
-			{
-				DrawFrame();
-			}
-
-			++m_FramesRendered;
-		}
-
-		void VulkanRenderer::DrawImGuiWindows()
-		{
-			Renderer::DrawImGuiWindows();
-
-			if (bUniformBufferWindowShowing)
-			{
-				if (ImGui::Begin("Dynamic Uniform Buffers", &bUniformBufferWindowShowing))
-				{
-					ShaderBatch* shaderBatches[] = { &m_DeferredObjectBatches, &m_ForwardObjectBatches };
-					const char* shaderBatchNames[] = { "Deferred", "Forward" };
-					for (u32 i = 0; i < ARRAY_LENGTH(shaderBatches); ++i)
-					{
-						ShaderBatch* shaderBatch = shaderBatches[i];
-
-						ImGui::Text("%s", shaderBatchNames[i]);
-
-						for (u32 j = 0; j < shaderBatch->batches.size(); ++j)
-						{
-							const ShaderBatchPair& shaderBatchPair = shaderBatch->batches[j];
-							const VulkanShader& shader = m_Shaders[shaderBatchPair.shaderID];
-
-							if (shader.uniformBuffer.fullDynamicBufferSize == 0)
-							{
-								continue;
-							}
-
-							ImVec2 p = ImGui::GetCursorScreenPos();
-							char nodeID0[256];
-							memset(nodeID0, 0, 256);
-							sprintf_s(nodeID0, 256, "%s##%u",
-								m_Shaders[shaderBatchPair.shaderID].shader->name.c_str(),
-								shaderBatchPair.shaderID);
-							if (ImGui::BeginChild(nodeID0, ImVec2(0, 50), true))
-							{
-								std::vector<real> dynamicObjects;
-
-								for (u32 k = 0; k < shaderBatchPair.batch.batches.size(); ++k)
-								{
-									const MaterialBatchPair& matBatchPair = shaderBatchPair.batch.batches[k];
-									for (RenderID renderID : matBatchPair.batch.objects)
-									{
-										VulkanRenderObject* renderObject = GetRenderObject(renderID);
-										if (renderObject != nullptr)
-										{
-											dynamicObjects.push_back(1.0f);
-										}
-									}
-								}
-
-								u32 bufferSlotsTotal = (shader.uniformBuffer.fullDynamicBufferSize / shader.uniformBuffer.dynamicData.size);
-								u32 bufferSlotsFree = bufferSlotsTotal - dynamicObjects.size();
-								for (u32 s = 0; s < bufferSlotsFree; ++s)
-								{
-									dynamicObjects.push_back(0.0f);
-								}
-
-								char histNodeID[256];
-								memset(histNodeID, 0, 256);
-								sprintf_s(histNodeID, 256, "%s (%u/%u)##histo%u",
-									m_Shaders[shaderBatchPair.shaderID].shader->name.c_str(),
-									bufferSlotsTotal - bufferSlotsFree,
-									bufferSlotsTotal,
-									shaderBatchPair.shaderID);
-								ImGui::PlotHistogram(histNodeID, dynamicObjects.data(), dynamicObjects.size(), 0, NULL, 0.0f, 1.0f, ImVec2(0, 0));
-							}
-							ImGui::EndChild();
-						}
-
-						//if (ImGui::TreeNode((void*)(intptr_t)(i), "%s", shaderBatchNames[i]))
-						//{
-						//	for (u32 j = 0; j < shaderBatch->batches.size(); ++j)
-						//	{
-						//		const ShaderBatchPair& shaderBatchPair = shaderBatch->batches[j];
-						//
-						//		if (!shaderBatchPair.batch.batches.empty())
-						//		{
-						//			if (ImGui::TreeNode((void*)(intptr_t)(shaderBatchPair.shaderID), "Shader: %s, ID: %u (children: %u)",
-						//				m_Shaders[shaderBatchPair.shaderID].shader.name.c_str(), shaderBatchPair.shaderID, shaderBatchPair.batch.batches.size()))
-						//			{
-						//				for (u32 k = 0; k < shaderBatchPair.batch.batches.size(); ++k)
-						//				{
-						//					const MaterialBatchPair& matBatchPair = shaderBatchPair.batch.batches[k];
-						//
-						//					if (!matBatchPair.batch.objects.empty())
-						//					{
-						//						if (ImGui::TreeNode((void*)(intptr_t)(matBatchPair.materialID), "Mat: %s, ID: %u (children: %u)",
-						//							m_Materials[matBatchPair.materialID].material.name.c_str(), matBatchPair.materialID, matBatchPair.batch.objects.size()))
-						//						{
-						//							for (RenderID renderID : matBatchPair.batch.objects)
-						//							{
-						//								VulkanRenderObject* renderObject = GetRenderObject(renderID);
-						//								if (renderObject != nullptr)
-						//								{
-						//									bool bSelected = g_EngineInstance->IsObjectSelected(renderObject->gameObject);
-						//									char nodeID[256];
-						//									memset(nodeID, 0, 256);
-						//									sprintf_s(nodeID, 256, "%s dyn off: %u, renderID: %u",
-						//										renderObject->gameObject->GetName().c_str(),
-						//										renderObject->dynamicUBOIndex,
-						//										renderObject->renderID);
-						//
-						//									if (ImGui::Selectable(nodeID, &bSelected))
-						//									{
-						//										if (bSelected)
-						//										{
-						//											g_EngineInstance->SetSelectedObject(renderObject->gameObject, false);
-						//										}
-						//										else
-						//										{
-						//											g_EngineInstance->DeselectObject(renderObject->gameObject);
-						//										}
-						//									}
-						//								}
-						//							}
-						//							ImGui::TreePop();
-						//						}
-						//					}
-						//				}
-						//				ImGui::TreePop();
-						//			}
-						//		}
-						//	}
-						//	ImGui::TreePop();
-						//}
-					}
-				}
-				ImGui::End();
-			}
-		}
-
-		void VulkanRenderer::UpdateVertexData(RenderID renderID, VertexBufferData* vertexBufferData)
-		{
-			VulkanRenderObject* renderObject = GetRenderObject(renderID);
-			VulkanBuffer* vertexBuffer = m_VertexIndexBufferPairs[m_Materials[renderObject->materialID].material.shaderID].vertexBuffer;
-			u32 copySize = std::min(vertexBufferData->VertexBufferSize, (u32)vertexBuffer->m_Size);
-			if (copySize < vertexBufferData->VertexBufferSize)
-			{
-				PrintError("Dynamic vertex buffer is %u bytes too small for data attempting to be copied in\n", vertexBufferData->VertexBufferSize - copySize);
-			}
-			VK_CHECK_RESULT(vertexBuffer->Map(copySize));
-			memcpy(vertexBuffer->m_Mapped, vertexBufferData->vertexData, copySize);
-			vertexBuffer->Unmap();
-		}
-
-		void VulkanRenderer::DrawImGuiForRenderObject(RenderID renderID)
-		{
-			VulkanRenderObject* renderObject = GetRenderObject(renderID);
-			if (renderObject != nullptr)
-			{
-				ImGui::Text("Mat ID: %u", renderObject->materialID);
-				ImGui::Text("Shader ID: %u", GetMaterial(renderObject->materialID).shaderID);
-				//ImGui::Text("Dynamic Offset: %u", renderObject->dynamicUBOIndex);
-			}
-		}
-
-		bool VulkanRenderer::DoTextureSelector(const char* label,
-			const std::vector<VulkanTexture*>& textures,
-			i32* selectedIndex,
-			bool* bGenerateSampler)
-		{
-			bool bValueChanged = false;
-
-			std::string currentTexName = (*selectedIndex == 0 ? "NONE" : (textures[*selectedIndex - 1]->relativeFilePath.c_str()));
-			if (ImGui::BeginCombo(label, currentTexName.c_str()))
-			{
-				for (i32 i = 0; i < (i32)textures.size() + 1; i++)
-				{
-					bool bTextureSelected = (*selectedIndex == i);
-
-					if (i == 0)
-					{
-						if (ImGui::Selectable("NONE", bTextureSelected))
-						{
-							*bGenerateSampler = false;
-
-							*selectedIndex = i;
-							bValueChanged = true;
-						}
-					}
-					else
-					{
-						std::string textureName = textures[i - 1]->relativeFilePath;
-						if (ImGui::Selectable(textureName.c_str(), bTextureSelected))
-						{
-							if (*selectedIndex == 0)
-							{
-								*bGenerateSampler = true;
-							}
-
-							*selectedIndex = i;
-							bValueChanged = true;
-						}
-
-						if (ImGui::IsItemHovered())
-						{
-							DoTexturePreviewTooltip(textures[i - 1]);
-						}
-					}
-					if (bTextureSelected)
-					{
-						ImGui::SetItemDefaultFocus();
-					}
-				}
-				ImGui::EndCombo();
-			}
-
-			return bValueChanged;
-		}
-
-		void VulkanRenderer::ImGuiUpdateTextureIndexOrMaterial(bool bUpdateTextureMaterial,
-			const std::string& texturePath,
-			std::string& matTexturePath,
-			VulkanTexture* texture,
-			i32 i,
-			i32* textureIndex,
-			VkSampler* sampler)
-		{
-			if (bUpdateTextureMaterial)
-			{
-				if (*textureIndex == 0)
-				{
-					matTexturePath = "";
-					*sampler = VK_NULL_HANDLE;
-				}
-				else if (i == *textureIndex - 1)
-				{
-					matTexturePath = texturePath;
-					if (texture)
-					{
-						*sampler = texture->sampler;
-					}
-				}
-			}
-			else
-			{
-				if (matTexturePath.empty())
-				{
-					*textureIndex = 0;
-				}
-				else if (texturePath.compare(matTexturePath) == 0)
-				{
-					*textureIndex = i + 1;
-				}
-			}
-		}
-
-		void VulkanRenderer::DoTexturePreviewTooltip(VulkanTexture* texture)
-		{
-			ImGui::BeginTooltip();
-
-			ImVec2 cursorPos = ImGui::GetCursorPos();
-
-			real textureAspectRatio = (real)texture->width / (real)texture->height;
-			real texSize = 128.0f;
-
-			if (texture->channelCount == 4)
-			{
-				real tiling = 3.0f;
-				ImVec2 uv0(0.0f, 0.0f);
-				ImVec2 uv1(tiling * textureAspectRatio, tiling);
-				VulkanTexture* alphaBGTexture = m_LoadedTextures[m_AlphaBGTextureID];
-				ImGui::Image((void*)&alphaBGTexture->image, ImVec2(texSize * textureAspectRatio, texSize), uv0, uv1);
-			}
-
-			ImGui::SetCursorPos(cursorPos);
-
-			ImGui::Image((void*)&texture->image, ImVec2(texSize * textureAspectRatio, texSize));
-
-			ImGui::EndTooltip();
-		}
-
-		void VulkanRenderer::ReloadShaders()
-		{
-#ifdef DEBUG
-			if (m_ShaderCompiler == nullptr)
-			{
-				m_ShaderCompiler = new AsyncVulkanShaderCompiler(false);
-			}
-
-			if (m_ShaderCompiler->bComplete)
-			{
-				AddEditorString("Found no shader changes to recompile");
-				delete m_ShaderCompiler;
-				m_ShaderCompiler = nullptr;
-			}
-			else
-			{
-				AddEditorString("Kicking off async shader recompile");
-			}
-#endif
-		}
-
-		void VulkanRenderer::LoadFonts(bool bForceRender)
-		{
-			PROFILE_AUTO("Load fonts");
-
-			m_FontsSS.clear();
-			m_FontsWS.clear();
-
-			for (auto& pair : m_Fonts)
-			{
-				FontMetaData& fontMetaData = pair.second;
-
-				if (fontMetaData.bitmapFont != nullptr)
-				{
-					delete fontMetaData.bitmapFont;
-					fontMetaData.bitmapFont = nullptr;
-				}
-
-				std::string fontName = fontMetaData.filePath;
-				StripLeadingDirectories(fontName);
-				StripFileType(fontName);
-
-				LoadFont(fontMetaData, bForceRender);
-			}
-		}
-
-		void VulkanRenderer::ReloadSkybox(bool bRandomizeTexture)
-		{
-			UNREFERENCED_PARAMETER(bRandomizeTexture);
-		}
-
-		void VulkanRenderer::OnWindowSizeChanged(i32 width, i32 height)
-		{
-			UNREFERENCED_PARAMETER(width);
-			UNREFERENCED_PARAMETER(height);
-
-			if (width != 0 && height != 0)
-			{
-				m_bSwapChainNeedsRebuilding = true;
-			}
-		}
-
-		// TODO: FIXME: This shouldn't be called on startup!!!
-		void VulkanRenderer::OnPreSceneChange()
-		{
-			GenerateGBuffer();
-
-			for (VertexIndexBufferPair& pair : m_VertexIndexBufferPairs)
-			{
-				pair.Empty();
-			}
-		}
-
-		void VulkanRenderer::OnPostSceneChange()
-		{
-			if (m_bPostInitialized)
-			{
-				CreateStaticVertexBuffers();
-				CreateStaticIndexBuffers();
-				CreateDynamicVertexBuffers();
-
-				CreateShadowVertexBuffer();
-				CreateShadowIndexBuffer();
-
-				GenerateIrradianceMaps();
-			}
-		}
-
-		bool VulkanRenderer::GetRenderObjectCreateInfo(RenderID renderID, RenderObjectCreateInfo& outInfo)
-		{
-			outInfo = {};
-
-			VulkanRenderObject* renderObject = GetRenderObject(renderID);
-			if (!renderObject)
-			{
-				return false;
-			}
-
-			outInfo.materialID = renderObject->materialID;
-			outInfo.vertexBufferData = renderObject->vertexBufferData;
-			outInfo.indices = renderObject->indices;
-			outInfo.gameObject = renderObject->gameObject;
-			outInfo.visible = renderObject->gameObject->IsVisible();
-			outInfo.visibleInSceneExplorer = renderObject->gameObject->IsVisibleInSceneExplorer();
-			outInfo.cullFace = VkCullModeToCullFace(renderObject->cullMode);
-			//outInfo.depthTestReadFunc =  // TODO: ?
-			//outInfo.depthWriteEnable = // TODO: ?
-
-			return true;
-		}
-
-		void VulkanRenderer::SetVSyncEnabled(bool bEnableVSync)
-		{
-			m_bVSyncEnabled = bEnableVSync;
-		}
-
-		u32 VulkanRenderer::GetRenderObjectCount() const
-		{
-			u32 count = 0;
-
-			for (VulkanRenderObject* renderObject : m_RenderObjects)
-			{
-				if (renderObject != nullptr)
-				{
-					++count;
-				}
-			}
-
-			return count;
-		}
-
-		u32 VulkanRenderer::GetRenderObjectCapacity() const
-		{
-			return m_RenderObjects.size();
-		}
-
-		void VulkanRenderer::DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size, DataType dataType, bool normalized, i32 stride, void* pointer)
-		{
-			// TODO: Implement
-			UNREFERENCED_PARAMETER(renderID);
-			UNREFERENCED_PARAMETER(variableName);
-			UNREFERENCED_PARAMETER(size);
-			UNREFERENCED_PARAMETER(dataType);
-			UNREFERENCED_PARAMETER(normalized);
-			UNREFERENCED_PARAMETER(stride);
-			UNREFERENCED_PARAMETER(pointer);
-		}
-
-		void VulkanRenderer::SetSkyboxMesh(GameObject* skyboxMesh)
-		{
-			m_SkyBoxMesh = skyboxMesh;
-
-			if (skyboxMesh == nullptr)
-			{
-				return;
-			}
-
-			MaterialID skyboxMatierialID = m_SkyBoxMesh->GetMeshComponent()->GetMaterialID();
-			if (skyboxMatierialID == InvalidMaterialID)
-			{
-				PrintError("Skybox doesn't have a valid material! Irradiance textures can't be generated\n");
-				return;
-			}
-
-			for (u32 i = 0; i < m_RenderObjects.size(); ++i)
-			{
-				VulkanRenderObject* renderObject = GetRenderObject(i);
-				if (renderObject &&
-					m_Shaders[m_Materials[renderObject->materialID].material.shaderID].shader->bNeedPrefilteredMap)
-				{
-					VulkanMaterial* mat = &m_Materials[renderObject->materialID];
-					mat->irradianceTexture = m_Materials[skyboxMatierialID].irradianceTexture;
-					mat->prefilterTexture = m_Materials[skyboxMatierialID].prefilterTexture;
-				}
-			}
-
-			m_bRebatchRenderObjects = true;
-		}
-
-		GameObject* VulkanRenderer::GetSkyboxMesh()
-		{
-			return m_SkyBoxMesh;
-		}
-
-		void VulkanRenderer::SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID)
-		{
-			VulkanRenderObject* renderObject = GetRenderObject(renderID);
-			if (renderObject)
-			{
-				MaterialID pMatID = renderObject->materialID;
-				if (materialID != pMatID)
-				{
-					u32 pStride = CalculateVertexStride(m_Shaders[m_Materials[pMatID].material.shaderID].shader->vertexAttributes);
-					u32 newStride = CalculateVertexStride(m_Shaders[m_Materials[materialID].material.shaderID].shader->vertexAttributes);
-					renderObject->materialID = materialID;
-					if (newStride != pStride)
-					{
-						// Regenerate vertex data with new stride
-						renderObject->gameObject->GetMeshComponent()->SetRequiredAttributesFromMaterialID(materialID);
-						renderObject->gameObject->GetMeshComponent()->Reload();
-					}
-				}
-			}
-			else
-			{
-				PrintError("SetRenderObjectMaterialID couldn't find render object with ID %u\n", renderID);
-			}
-
-			m_bRebatchRenderObjects = true;
-		}
-
-		Material& VulkanRenderer::GetMaterial(MaterialID materialID)
-		{
-			return m_Materials[materialID].material;
-		}
-
-		Shader& VulkanRenderer::GetShader(ShaderID shaderID)
-		{
-			return *m_Shaders[shaderID].shader;
-		}
-
-		void VulkanRenderer::DestroyRenderObject(RenderID renderID)
-		{
-			for (VulkanRenderObject* renderObject : m_RenderObjects)
-			{
-				if (renderObject && renderObject->renderID == renderID)
-				{
-					DestroyRenderObject(renderID, renderObject);
-					return;
-				}
-			}
-		}
-
-		void VulkanRenderer::DestroyRenderObject(RenderID renderID, VulkanRenderObject* renderObject)
-		{
-			if (renderObject)
-			{
-				if (renderObject->descriptorSet)
-				{
-					vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPool, 1, &(renderObject->descriptorSet));
-				}
-				renderObject->graphicsPipeline.replace();
-				renderObject->pipelineLayout.replace();
-				delete renderObject;
-				renderObject = nullptr;
-			}
-			m_RenderObjects[renderID] = nullptr;
-			m_bRebatchRenderObjects = true;
-		}
-
-		VkPhysicalDeviceFeatures VulkanRenderer::GetEnabledFeaturesForDevice(VkPhysicalDevice physicalDevice)
-		{
-			VkPhysicalDeviceFeatures enabledFeatures = {};
-
-			VkPhysicalDeviceFeatures supportedFeatures;
-			vkGetPhysicalDeviceFeatures(physicalDevice, &supportedFeatures);
-
-			if (supportedFeatures.samplerAnisotropy)
-			{
-				enabledFeatures.samplerAnisotropy = VK_TRUE; // TODO: Remove if not used
-			}
-
-			if (supportedFeatures.geometryShader)
-			{
-				enabledFeatures.geometryShader = VK_TRUE;
-			}
-			else
-			{
-				PrintError("Selected GPU does not support geometry shaders!\n");
-			}
-
-			return enabledFeatures;
-		}
-
-		void VulkanRenderer::NewFrame()
-		{
-			if (g_Window->GetFrameBufferSize().x == 0)
-			{
-				return;
-			}
-
-			if (m_PhysicsDebugDrawer)
-			{
-				m_PhysicsDebugDrawer->ClearLines();
-			}
-
-			if (g_EngineInstance->IsRenderingImGui())
-			{
-				ImGui_ImplVulkan_NewFrame();
-				ImGui_ImplGlfw_NewFrame();
-				ImGui::NewFrame();
-			}
-		}
-
-		PhysicsDebugDrawBase* VulkanRenderer::GetDebugDrawer()
-		{
-			return m_PhysicsDebugDrawer;
-		}
-
-		void VulkanRenderer::DrawStringSS(const std::string& str,
-			const glm::vec4& color,
-			AnchorPoint anchor,
-			const glm::vec2& pos,
-			real spacing,
-			real scale /* = 1.0f */)
-		{
-			assert(m_CurrentFont != nullptr);
-
-			TextCache newCache(str, anchor, pos, color, spacing, scale);
-			m_CurrentFont->AddTextCache(newCache);
-		}
-
-		void VulkanRenderer::DrawStringWS(const std::string& str,
-			const glm::vec4& color,
-			const glm::vec3& pos,
-			const glm::quat& rot,
-			real spacing,
-			real scale /* = 1.0f */)
-		{
-			assert(m_CurrentFont != nullptr);
-
-			TextCache newCache(str, pos, rot, color, spacing, scale);
-			m_CurrentFont->AddTextCache(newCache);
-		}
-
-		void VulkanRenderer::DrawAssetBrowserImGui(bool* bShowing)
-		{
-			// TODO: Consolidate with GL renderer
-			ImGui::SetNextWindowSize(ImVec2(400.0f, 350.0f), ImGuiCond_FirstUseEver);
-			if (ImGui::Begin("Asset browser", bShowing))
-			{
-				if (ImGui::CollapsingHeader("Materials"))
-				{
-					static bool bUpdateFields = true;
-					const i32 MAX_NAME_LEN = 128;
-					static i32 selectedMaterialIndexShort = 0; // Index into shortened array
-					static MaterialID selectedMaterialID = 0;
-					while (!m_Materials[selectedMaterialID].material.visibleInEditor &&
-						selectedMaterialID < m_Materials.size() - 1)
-					{
-						++selectedMaterialID;
-					}
-					static std::string matName = "";
-					static i32 selectedShaderIndex = 0;
-					// Texture index values of 0 represent no texture, 1 = first index into textures array and so on
-					static i32 albedoTextureIndex = 0;
-					static bool bUpdateAlbedoTextureMaterial = false;
-					static i32 metallicTextureIndex = 0;
-					static bool bUpdateMetallicTextureMaterial = false;
-					static i32 roughnessTextureIndex = 0;
-					static bool bUpdateRoughessTextureMaterial = false;
-					static i32 normalTextureIndex = 0;
-					static bool bUpdateNormalTextureMaterial = false;
-					static i32 aoTextureIndex = 0;
-					static bool bUpdateAOTextureMaterial = false;
-					VulkanMaterial& mat = m_Materials[selectedMaterialID];
-
-					if (bUpdateFields)
-					{
-						bUpdateFields = false;
-
-						matName = mat.material.name;
-						matName.resize(MAX_NAME_LEN);
-
-						i32 i = 0;
-						for (VulkanTexture* texture : m_LoadedTextures)
-						{
-							std::string texturePath = texture->GetRelativeFilePath();
-
-							ImGuiUpdateTextureIndexOrMaterial(bUpdateAlbedoTextureMaterial,
-								texturePath,
-								mat.material.albedoTexturePath,
-								texture,
-								i,
-								&albedoTextureIndex,
-								&mat.albedoTexture->sampler);
-
-							ImGuiUpdateTextureIndexOrMaterial(bUpdateMetallicTextureMaterial,
-								texturePath,
-								mat.material.metallicTexturePath,
-								texture,
-								i,
-								&metallicTextureIndex,
-								&mat.metallicTexture->sampler);
-
-							ImGuiUpdateTextureIndexOrMaterial(bUpdateRoughessTextureMaterial,
-								texturePath,
-								mat.material.roughnessTexturePath,
-								texture,
-								i,
-								&roughnessTextureIndex,
-								&mat.roughnessTexture->sampler);
-
-							ImGuiUpdateTextureIndexOrMaterial(bUpdateNormalTextureMaterial,
-								texturePath,
-								mat.material.normalTexturePath,
-								texture,
-								i,
-								&normalTextureIndex,
-								&mat.normalTexture->sampler);
-
-							ImGuiUpdateTextureIndexOrMaterial(bUpdateAOTextureMaterial,
-								texturePath,
-								mat.material.aoTexturePath,
-								texture,
-								i,
-								&aoTextureIndex,
-								&mat.aoTexture->sampler);
-
-							++i;
-						}
-
-						mat.material.enableAlbedoSampler = (albedoTextureIndex > 0);
-						mat.material.enableMetallicSampler = (metallicTextureIndex > 0);
-						mat.material.enableRoughnessSampler = (roughnessTextureIndex > 0);
-						mat.material.enableNormalSampler = (normalTextureIndex > 0);
-						mat.material.enableAOSampler = (aoTextureIndex > 0);
-
-						selectedShaderIndex = mat.material.shaderID;
-					}
-
-					ImGui::PushItemWidth(160.0f);
-					if (ImGui::InputText("Name", (char*)matName.data(), MAX_NAME_LEN, ImGuiInputTextFlags_EnterReturnsTrue))
-					{
-						// Remove trailing \0 characters
-						matName = std::string(matName.c_str());
-						mat.material.name = matName;
-					}
-					ImGui::PopItemWidth();
-
-					ImGui::SameLine();
-
-					struct ShaderFunctor
-					{
-						static bool GetShaderName(void* data, int idx, const char** out_str)
-						{
-							*out_str = (static_cast<VulkanShader*>(data))[idx].shader->name.c_str();
-							return true;
-						}
-					};
-					ImGui::PushItemWidth(240.0f);
-					if (ImGui::Combo("Shader", &selectedShaderIndex, &ShaderFunctor::GetShaderName,
-						(void*)m_Shaders.data(), m_Shaders.size()))
-					{
-						mat = m_Materials[selectedMaterialID];
-						mat.material.shaderID = selectedShaderIndex;
-
-						bUpdateFields = true;
-					}
-					ImGui::PopItemWidth();
-
-					ImGui::NewLine();
-
-					ImGui::Columns(2);
-					ImGui::SetColumnWidth(0, 240.0f);
-
-					ImGui::ColorEdit3("Albedo", &mat.material.constAlbedo.x, ImGuiColorEditFlags_Float | ImGuiColorEditFlags_PickerHueWheel);
-
-					if (mat.material.enableMetallicSampler)
-					{
-						ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
-					}
-					ImGui::SliderFloat("Metallic", &mat.material.constMetallic, 0.0f, 1.0f, "%.2f");
-					if (mat.material.enableMetallicSampler)
-					{
-						ImGui::PopStyleColor();
-					}
-
-					if (mat.material.enableRoughnessSampler)
-					{
-						ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
-					}
-					ImGui::SliderFloat("Roughness", &mat.material.constRoughness, 0.0f, 1.0f, "%.2f");
-					if (mat.material.enableRoughnessSampler)
-					{
-						ImGui::PopStyleColor();
-					}
-
-					if (mat.material.enableAOSampler)
-					{
-						ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
-					}
-					ImGui::SliderFloat("AO", &mat.material.constAO, 0.0f, 1.0f, "%.2f");
-					if (mat.material.enableAOSampler)
-					{
-						ImGui::PopStyleColor();
-					}
-
-					ImGui::DragFloat("Texture scale", &mat.material.textureScale, 0.1f);
-
-					ImGui::NextColumn();
-
-					struct TextureFunctor
-					{
-						static bool GetTextureFileName(void* data, i32 idx, const char** out_str)
-						{
-							if (idx == 0)
-							{
-								*out_str = "NONE";
-							}
-							else
-							{
-								*out_str = static_cast<VulkanTexture**>(data)[idx - 1]->GetName().c_str();
-							}
-							return true;
-						}
-					};
-
-					std::vector<VulkanTexture*> textures;
-					textures.reserve(m_LoadedTextures.size());
-					for (VulkanTexture* texture : m_LoadedTextures)
-					{
-						textures.push_back(texture);
-					}
-
-					bUpdateAlbedoTextureMaterial = DoTextureSelector("Albedo texture", textures,
-						&albedoTextureIndex, &mat.material.generateAlbedoSampler);
-					bUpdateFields |= bUpdateAlbedoTextureMaterial;
-					bUpdateMetallicTextureMaterial = DoTextureSelector("Metallic texture", textures,
-						&metallicTextureIndex, &mat.material.generateMetallicSampler);
-					bUpdateFields |= bUpdateMetallicTextureMaterial;
-					bUpdateRoughessTextureMaterial = DoTextureSelector("Roughness texture", textures,
-						&roughnessTextureIndex, &mat.material.generateRoughnessSampler);
-					bUpdateFields |= bUpdateRoughessTextureMaterial;
-					bUpdateNormalTextureMaterial = DoTextureSelector("Normal texture", textures,
-						&normalTextureIndex, &mat.material.generateNormalSampler);
-					bUpdateFields |= bUpdateNormalTextureMaterial;
-					bUpdateAOTextureMaterial = DoTextureSelector("AO texture", textures, &aoTextureIndex,
-						&mat.material.generateAOSampler);
-					bUpdateFields |= bUpdateAOTextureMaterial;
-
-					ImGui::NewLine();
-
-					ImGui::EndColumns();
-
-					if (ImGui::BeginChild("material list", ImVec2(0.0f, 120.0f), true))
-					{
-						i32 matShortIndex = 0;
-						for (i32 i = 0; i < (i32)m_Materials.size(); ++i)
-						{
-							if (!m_Materials[i].material.visibleInEditor)
-							{
-								continue;
-							}
-
-							bool bSelected = (matShortIndex == selectedMaterialIndexShort);
-							if (ImGui::Selectable(m_Materials[i].material.name.c_str(), &bSelected))
-							{
-								if (selectedMaterialIndexShort != matShortIndex)
-								{
-									selectedMaterialIndexShort = matShortIndex;
-									selectedMaterialID = i;
-									bUpdateFields = true;
-								}
-							}
-
-							if (ImGui::BeginPopupContextItem())
-							{
-								if (ImGui::Button("Duplicate"))
-								{
-									const Material& dupMat = m_Materials[i].material;
-
-									MaterialCreateInfo createInfo = {};
-									createInfo.name = GetIncrementedPostFixedStr(dupMat.name, "new material 00");
-									createInfo.shaderName = m_Shaders[dupMat.shaderID].shader->name;
-									createInfo.constAlbedo = dupMat.constAlbedo;
-									createInfo.constRoughness = dupMat.constRoughness;
-									createInfo.constMetallic = dupMat.constMetallic;
-									createInfo.constAO = dupMat.constAO;
-									createInfo.colorMultiplier = dupMat.colorMultiplier;
-									// TODO: Copy other fields
-									MaterialID newMaterialID = InitializeMaterial(&createInfo);
-
-									g_SceneManager->CurrentScene()->AddMaterialID(newMaterialID);
-
-									ImGui::CloseCurrentPopup();
-								}
-
-								ImGui::EndPopup();
-							}
-
-							if (ImGui::IsItemActive())
-							{
-								if (ImGui::BeginDragDropSource())
-								{
-									MaterialID draggedMaterialID = i;
-									const void* data = (void*)(&draggedMaterialID);
-									size_t size = sizeof(MaterialID);
-
-									ImGui::SetDragDropPayload(m_MaterialPayloadCStr, data, size);
-
-									ImGui::Text("%s", m_Materials[i].material.name.c_str());
-
-									ImGui::EndDragDropSource();
-								}
-							}
-
-							++matShortIndex;
-						}
-					}
-					ImGui::EndChild(); // Material list
-
-					const i32 MAX_MAT_NAME_LEN = 128;
-					static std::string newMaterialName = "";
-
-					const char* createMaterialPopupStr = "Create material##popup";
-					if (ImGui::Button("Create material"))
-					{
-						ImGui::OpenPopup(createMaterialPopupStr);
-						newMaterialName = "New Material 01";
-						newMaterialName.resize(MAX_MAT_NAME_LEN);
-					}
-
-					if (ImGui::BeginPopupModal(createMaterialPopupStr, NULL, ImGuiWindowFlags_NoResize))
-					{
-						ImGui::Text("Name:");
-						ImGui::InputText("##NameText", (char*)newMaterialName.data(), MAX_MAT_NAME_LEN);
-
-						ImGui::Text("Shader:");
-						static i32 newMatShaderIndex = 0;
-						if (ImGui::BeginChild("Shader", ImVec2(0, 120), true))
-						{
-							i32 i = 0;
-							for (VulkanShader& shader : m_Shaders)
-							{
-								bool bSelectedShader = (i == newMatShaderIndex);
-								if (ImGui::Selectable(shader.shader->name.c_str(), &bSelectedShader))
-								{
-									newMatShaderIndex = i;
-								}
-
-								++i;
-							}
-						}
-						ImGui::EndChild(); // Shader list
-
-						if (ImGui::Button("Create new material"))
-						{
-							// Remove trailing /0 characters
-							newMaterialName = std::string(newMaterialName.c_str());
-
-							MaterialCreateInfo createInfo = {};
-							createInfo.name = newMaterialName;
-							createInfo.shaderName = m_Shaders[newMatShaderIndex].shader->name;
-							MaterialID newMaterialID = InitializeMaterial(&createInfo);
-
-							g_SceneManager->CurrentScene()->AddMaterialID(newMaterialID);
-
-							ImGui::CloseCurrentPopup();
-						}
-
-						ImGui::SameLine();
-
-						if (ImGui::Button("Cancel"))
-						{
-							ImGui::CloseCurrentPopup();
-						}
-
-						ImGui::EndPopup();
-					}
-
-					ImGui::SameLine();
-
-					ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
-					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
-					ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
-					if (ImGui::Button("Delete material"))
-					{
-						g_SceneManager->CurrentScene()->RemoveMaterialID(selectedMaterialID);
-						RemoveMaterial(selectedMaterialID);
-					}
-					ImGui::PopStyleColor();
-					ImGui::PopStyleColor();
-					ImGui::PopStyleColor();
-				}
-
-				if (ImGui::CollapsingHeader("Textures"))
-				{
-					static i32 selectedTextureIndex = 0;
-					if (ImGui::BeginChild("texture list", ImVec2(0.0f, 120.0f), true))
-					{
-						i32 i = 0;
-						for (VulkanTexture* texture : m_LoadedTextures)
-						{
-							bool bSelected = (i == selectedTextureIndex);
-							std::string textureFileName = texture->GetName();
-							if (ImGui::Selectable(textureFileName.c_str(), &bSelected))
-							{
-								selectedTextureIndex = i;
-							}
-
-							if (ImGui::BeginPopupContextItem())
-							{
-								if (ImGui::Button("Reload"))
-								{
-									texture->Reload();
-									ImGui::CloseCurrentPopup();
-								}
-
-								ImGui::EndPopup();
-							}
-
-							if (ImGui::IsItemHovered())
-							{
-								DoTexturePreviewTooltip(texture);
-							}
-							++i;
-						}
-					}
-					ImGui::EndChild();
-
-					// TODO:
-					//if (ImGui::Button("Import Texture"))
-					//{
-					//	// TODO: Not all textures are directly in this directory! CLEANUP to make more robust
-					//	std::string relativeDirPath = RESOURCE_LOCATION  "textures/";
-					//	std::string absoluteDirectoryStr = RelativePathToAbsolute(relativeDirPath);
-					//	std::string selectedAbsFilePath;
-					//	if (OpenFileDialog("Import texture", absoluteDirectoryStr, selectedAbsFilePath))
-					//	{
-					//		std::string fileNameAndExtension = selectedAbsFilePath;
-					//		StripLeadingDirectories(fileNameAndExtension);
-					//		std::string relativeFilePath = relativeDirPath + fileNameAndExtension;
-
-					//		Print("Importing texture: %s\n", relativeFilePath.c_str());
-
-					//		VulkanTexture* newTexture = new VulkanTexture(relativeFilePath, 3, false, false, false);
-					//		if (newTexture->LoadFromFile())
-					//		{
-					//			m_LoadedTextures.push_back(newTexture);
-					//		}
-
-					//		ImGui::CloseCurrentPopup();
-					//	}
-					//}
-				}
-
-				if (ImGui::CollapsingHeader("Meshes"))
-				{
-					static i32 selectedMeshIndex = 0;
-					//const i32 MAX_NAME_LEN = 128;
-					// TODO: Implement mesh naming
-					//static std::string selectedMeshName = "";
-					static bool bUpdateName = true;
-
-					std::string selectedMeshRelativeFilePath;
-					LoadedMesh* selectedMesh = nullptr;
-					i32 meshIdx = 0;
-					for (auto meshPair : MeshComponent::m_LoadedMeshes)
-					{
-						if (meshIdx == selectedMeshIndex)
-						{
-							selectedMesh = meshPair.second;
-							selectedMeshRelativeFilePath = meshPair.first;
-							break;
-						}
-						++meshIdx;
-					}
-
-					ImGui::Text("Import settings");
-
-					ImGui::Columns(2, "import settings columns", false);
-					ImGui::Separator();
-					ImGui::Checkbox("Flip U", &selectedMesh->importSettings.bFlipU); ImGui::NextColumn();
-					ImGui::Checkbox("Flip V", &selectedMesh->importSettings.bFlipV); ImGui::NextColumn();
-					ImGui::Checkbox("Swap Normal YZ", &selectedMesh->importSettings.bSwapNormalYZ); ImGui::NextColumn();
-					ImGui::Checkbox("Flip Normal Z", &selectedMesh->importSettings.bFlipNormalZ); ImGui::NextColumn();
-					ImGui::Columns(1);
-
-					if (ImGui::Button("Re-import"))
-					{
-						for (VulkanRenderObject* renderObject : m_RenderObjects)
-						{
-							if (renderObject && renderObject->gameObject)
-							{
-								MeshComponent* gameObjectMesh = renderObject->gameObject->GetMeshComponent();
-								if (gameObjectMesh &&  gameObjectMesh->GetRelativeFilePath().compare(selectedMeshRelativeFilePath) == 0)
-								{
-									MeshImportSettings importSettings = selectedMesh->importSettings;
-
-									MaterialID matID = renderObject->materialID;
-									GameObject* gameObject = renderObject->gameObject;
-
-									DestroyRenderObject(gameObject->GetRenderID());
-									gameObject->SetRenderID(InvalidRenderID);
-
-									gameObjectMesh->Destroy();
-									gameObjectMesh->SetOwner(gameObject);
-									gameObjectMesh->SetRequiredAttributesFromMaterialID(matID);
-									gameObjectMesh->LoadFromFile(selectedMeshRelativeFilePath, &importSettings);
-								}
-							}
-						}
-					}
-
-					ImGui::SameLine();
-
-					if (ImGui::Button("Save"))
-					{
-						g_SceneManager->CurrentScene()->SerializeToFile(true);
-					}
-
-					if (ImGui::BeginChild("mesh list", ImVec2(0.0f, 120.0f), true))
-					{
-						i32 i = 0;
-						for (const auto& meshIter : MeshComponent::m_LoadedMeshes)
-						{
-							bool bSelected = (i == selectedMeshIndex);
-							std::string meshFilePath = meshIter.first;
-							std::string meshFileName = meshIter.first;
-							StripLeadingDirectories(meshFileName);
-							if (ImGui::Selectable(meshFileName.c_str(), &bSelected))
-							{
-								selectedMeshIndex = i;
-								bUpdateName = true;
-							}
-
-							if (ImGui::BeginPopupContextItem())
-							{
-								if (ImGui::Button("Reload"))
-								{
-									MeshComponent::LoadMesh(meshIter.second->relativeFilePath);
-
-									for (VulkanRenderObject* renderObject : m_RenderObjects)
-									{
-										if (renderObject)
-										{
-											MeshComponent* mesh = renderObject->gameObject->GetMeshComponent();
-											if (mesh && mesh->GetRelativeFilePath().compare(meshFilePath) == 0)
-											{
-												mesh->Reload();
-											}
-										}
-									}
-
-									ImGui::CloseCurrentPopup();
-								}
-
-								ImGui::EndPopup();
-							}
-							else
-							{
-								if (ImGui::IsItemActive())
-								{
-									if (ImGui::BeginDragDropSource())
-									{
-										const void* data = (void*)(meshIter.first.c_str());
-										size_t size = strlen(meshIter.first.c_str()) * sizeof(char);
-
-										ImGui::SetDragDropPayload(m_MeshPayloadCStr, data, size);
-
-										ImGui::Text("%s", meshFileName.c_str());
-
-										ImGui::EndDragDropSource();
-									}
-								}
-							}
-
-							++i;
-						}
-					}
-					ImGui::EndChild();
-
-					if (ImGui::Button("Import Mesh"))
-					{
-						// TODO: Not all models are directly in this directory! CLEANUP to make more robust
-						std::string relativeDirPath = RESOURCE_LOCATION  "meshes/";
-						std::string absoluteDirectoryStr = RelativePathToAbsolute(relativeDirPath);
-						std::string selectedAbsFilePath;
-						if (OpenFileDialog("Import mesh", absoluteDirectoryStr, selectedAbsFilePath))
-						{
-							Print("Importing mesh: %s\n", selectedAbsFilePath.c_str());
-
-							std::string fileNameAndExtension = selectedAbsFilePath;
-							StripLeadingDirectories(fileNameAndExtension);
-							std::string relativeFilePath = relativeDirPath + fileNameAndExtension;
-
-							LoadedMesh* existingMesh = nullptr;
-							if (MeshComponent::FindPreLoadedMesh(relativeFilePath, &existingMesh))
-							{
-								i32 j = 0;
-								for (auto meshPair : MeshComponent::m_LoadedMeshes)
-								{
-									if (meshPair.first.compare(relativeFilePath) == 0)
-									{
-										selectedMeshIndex = j;
-										break;
-									}
-
-									++j;
-								}
-							}
-							else
-							{
-								MeshComponent::LoadMesh(relativeFilePath);
-							}
-
-							ImGui::CloseCurrentPopup();
-						}
-					}
-				}
-			}
-
-			ImGui::End();
-		}
-
-		void VulkanRenderer::RecaptureReflectionProbe()
-		{
-			// UNIMPLEMENTED
-		}
-
-		u32 VulkanRenderer::GetTextureHandle(TextureID textureID) const
-		{
-			assert(textureID < m_LoadedTextures.size());
-			return m_LoadedTextures[textureID]->textureID;
-		}
-
-		void VulkanRenderer::RenderObjectStateChanged()
-		{
-			// TODO: Ignore object visibility changes
-			m_bRebatchRenderObjects = true;
-		}
-
-		void VulkanRenderer::PostInitializeRenderObject(RenderID renderID)
-		{
-			UNREFERENCED_PARAMETER(renderID);
-		}
-
-		void VulkanRenderer::ClearMaterials(bool bDestroyPersistentMats /* = false */)
-		{
-			auto iter = m_Materials.begin();
-			while (iter != m_Materials.end())
-			{
-				if (bDestroyPersistentMats || iter->second.material.persistent == false)
-				{
-					if (iter->second.hdrCubemapFramebuffer)
-					{
-						vkDestroyFramebuffer(m_VulkanDevice->m_LogicalDevice, iter->second.hdrCubemapFramebuffer, nullptr);
-					}
-
-					iter = m_Materials.erase(iter);
-				}
-				else
-				{
-					++iter;
-				}
-			}
+			// Renderpass
+			VkRenderPassCreateInfo renderPassCreateInfo = vks::renderPassCreateInfo();
+			renderPassCreateInfo.attachmentCount = attachments.size();
+			renderPassCreateInfo.pAttachments = attachments.data();
+			renderPassCreateInfo.subpassCount = subpasses.size();
+			renderPassCreateInfo.pSubpasses = subpasses.data();
+			renderPassCreateInfo.dependencyCount = dependencies.size();
+			renderPassCreateInfo.pDependencies = dependencies.data();
+			VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassCreateInfo, nullptr, outPass));
+
+			SetRenderPassName(*outPass, passName);
 		}
 
 		VulkanRenderObject* VulkanRenderer::GetRenderObject(RenderID renderID)
@@ -4645,108 +4720,6 @@ namespace flex
 				}
 
 				//Print("%s v%d\n", prop.extensionName, prop.specVersion);
-			}
-		}
-
-		void VulkanRenderer::RecreateSwapChain()
-		{
-			m_CurrentSwapChainBufferIndex = 0;
-
-			const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
-			if (frameBufferSize.x == 0 || frameBufferSize.y == 0)
-			{
-				return;
-			}
-
-			vkDeviceWaitIdle(m_VulkanDevice->m_LogicalDevice);
-
-			CreateSwapChain();
-			CreateSwapChainImageViews();
-
-			CreateDepthResources();
-
-			CreateRenderPasses();
-			PrepareFrameBuffers();
-
-			for (u32 i = 0; i < m_Shaders.size(); ++i)
-			{
-				m_Shaders[i].renderPass = ResolveRenderPassType(m_Shaders[i].shader->renderPassType, m_Shaders[i].shader->name.c_str());
-			}
-
-			for (u32 i = 0; i < m_RenderObjects.size(); ++i)
-			{
-				CreateDescriptorSet(i);
-				CreateGraphicsPipeline(i, false);
-			}
-
-			for (auto& iter : m_SpriteDescSets)
-			{
-				vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPool, 1, &(iter.second.descSet));
-				iter.second.descSet = CreateSpriteDescSet(iter.second.shaderID, iter.first, iter.second.textureLayer);
-			}
-
-			CreateSSAODescriptorSets();
-			CreateSSAOPipelines();
-
-			CreateFramebuffers();
-			m_CommandBufferManager.CreateCommandBuffers(m_SwapChainImages.size());
-		}
-
-		void VulkanRenderer::SetObjectName(uint64_t object, VkDebugReportObjectTypeEXT type, const char* name)
-		{
-			if (m_vkDebugMarkerSetObjectName)
-			{
-				VkDebugMarkerObjectNameInfoEXT info = {};
-				info.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT;
-				info.object = object;
-				info.objectType = type;
-				info.pObjectName = name;
-				VK_CHECK_RESULT(m_vkDebugMarkerSetObjectName(m_VulkanDevice->m_LogicalDevice, &info));
-			}
-		}
-
-		void VulkanRenderer::SetSwapchainName(VkSwapchainKHR swapchain, const char* name)
-		{
-			SetObjectName(swapchain, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, name);
-		}
-
-		void VulkanRenderer::SetDescriptorSetName(VkDescriptorSet descSet, const char* name)
-		{
-			SetObjectName(descSet, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, name);
-		}
-
-		void VulkanRenderer::SetPipelineName(VkPipeline pipeline, const char* name)
-		{
-			SetObjectName(pipeline, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, name);
-		}
-
-		void VulkanRenderer::SetFramebufferName(VkFramebuffer framebuffer, const char* name)
-		{
-			SetObjectName(framebuffer, VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT, name);
-		}
-
-		void VulkanRenderer::SetRenderPassName(VkRenderPass renderPass, const char* name)
-		{
-			SetObjectName(renderPass, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, name);
-		}
-
-		void VulkanRenderer::BeginRegion(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color)
-		{
-			if (m_vkCmdDebugMarkerBegin)
-			{
-				VkDebugMarkerMarkerInfoEXT markerInfo = {};
-				markerInfo.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
-				memcpy(markerInfo.color, &color[0], sizeof(float) * 4);
-				markerInfo.pMarkerName = markerName;
-				m_vkCmdDebugMarkerBegin(cmdBuf, &markerInfo);
-			}
-		}
-
-		void VulkanRenderer::EndRegion(VkCommandBuffer cmdBuf)
-		{
-			if (m_vkCmdDebugMarkerEnd)
-			{
-				m_vkCmdDebugMarkerEnd(cmdBuf);
 			}
 		}
 
@@ -6094,208 +6067,477 @@ namespace flex
 			physicsWorld->debugDrawWorld();
 		}
 
-		void VulkanRenderer::RenderFullscreenQuad(VkCommandBuffer commandBuffer, VkRenderPass renderPass, VkFramebuffer framebuffer)
+		void VulkanRenderer::CreateStaticVertexBuffers()
 		{
-			std::array<VkClearValue, 2> clearValues = {};
-			clearValues[0].color = m_ClearColor;
-			clearValues[1].depthStencil = { 0.0f, 0 };
-
-			VulkanRenderObject* gBufferObject = GetRenderObject(m_GBufferQuadRenderID);
-			VulkanMaterial* gBufferMaterial = &m_Materials[gBufferObject->materialID];
-
-			VkViewport fullscreenViewport = vks::viewportFlipped((real)m_SwapChainExtent.width, (real)m_SwapChainExtent.height, 0.0f, 1.0f);
-			VkRect2D fullscreenScissor = vks::scissor(0u, 0u, m_SwapChainExtent.width, m_SwapChainExtent.height);
-
-			VkDeviceSize offsets[1] = { 0 };
-
-			vkCmdSetViewport(commandBuffer, 0, 1, &fullscreenViewport);
-			vkCmdSetScissor(commandBuffer, 0, 1, &fullscreenScissor);
-
-			VkRenderPassBeginInfo renderPassBeginInfo = vks::renderPassBeginInfo(renderPass);
-			renderPassBeginInfo.renderArea.offset = { 0, 0 };
-			renderPassBeginInfo.renderArea.extent = m_SwapChainExtent;
-			renderPassBeginInfo.clearValueCount = clearValues.size();
-			renderPassBeginInfo.pClearValues = clearValues.data();
-			renderPassBeginInfo.framebuffer = framebuffer;
-			vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+			for (u32 i = 0; i < m_VertexIndexBufferPairs.size(); ++i)
 			{
-				BindDescriptorSet(&m_Shaders[gBufferMaterial->material.shaderID], 0, commandBuffer, gBufferObject->pipelineLayout, gBufferObject->descriptorSet);
+				if (m_VertexIndexBufferPairs[i].useStagingBuffer)
+				{
+					u32 requiredMemory = 0;
 
-				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gBufferObject->graphicsPipeline);
+					Shader* shader = m_Shaders[i].shader;
+					if (!shader->bGenerateVertexBufferForAll)
+					{
+						for (VulkanRenderObject* renderObject : m_RenderObjects)
+						{
+							if (renderObject &&
+								renderObject->vertexBufferData &&
+								m_Materials[renderObject->materialID].material.shaderID == i)
+							{
+								requiredMemory += renderObject->vertexBufferData->VertexBufferSize;
+							}
+						}
 
-				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID].vertexBuffer->m_Buffer, offsets);
-
-				vkCmdDraw(commandBuffer, gBufferObject->vertexBufferData->VertexCount, 1, gBufferObject->vertexOffset, 0);
+						if (requiredMemory > 0)
+						{
+							m_VertexIndexBufferPairs[i].vertexCount = CreateStaticVertexBuffer(
+								m_VertexIndexBufferPairs[i].vertexBuffer,
+								i,
+								requiredMemory);
+						}
+					}
+				}
 			}
-			vkCmdEndRenderPass(commandBuffer);
 		}
 
-		void VulkanRenderer::BuildCommandBuffers(const DrawCallInfo& drawCallInfo)
+		void VulkanRenderer::CreateDynamicVertexBuffers()
 		{
-			assert(drawCallInfo.bRenderToCubemap == false); // Unsupported in Vulkan renderer!
-
-			//std::array<VkClearValue, 2> clearValues = {};
-			//clearValues[0].color = m_ClearColor;
-			//clearValues[1].depthStencil = { 0.0f, 0 };
-
-			//VkRenderPassBeginInfo renderPassBeginInfo = vks::renderPassBeginInfo(m_DeferredCombineRenderPass);
-			//renderPassBeginInfo.renderArea.offset = { 0, 0 };
-			//renderPassBeginInfo.renderArea.extent = m_SwapChainExtent;
-			//renderPassBeginInfo.clearValueCount = clearValues.size();
-			//renderPassBeginInfo.pClearValues = clearValues.data();
-
-			//VulkanRenderObject* gBufferObject = GetRenderObject(m_GBufferQuadRenderID);
-			//VulkanMaterial* gBufferMaterial = &m_Materials[gBufferObject->materialID];
-
-			if (g_EngineInstance->IsRenderingImGui())
+			for (u32 i = 0; i < m_VertexIndexBufferPairs.size(); ++i)
 			{
-				ImGui::Render();
-			}
-
-			// TODO: Remove unused cmd buffers
-			VkCommandBuffer& commandBuffer = m_CommandBufferManager.m_CommandBuffers[0];
-
-			VkCommandBufferBeginInfo cmdBufferbeginInfo = vks::commandBufferBeginInfo();
-			cmdBufferbeginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-
-			VK_CHECK_RESULT(vkBeginCommandBuffer(commandBuffer, &cmdBufferbeginInfo));
-
-			{
-				BeginRegion(commandBuffer, "Shade deferred");
-
-				RenderFullscreenQuad(commandBuffer, m_DeferredCombineRenderPass, m_SwapChainFramebuffers[m_CurrentSwapChainBufferIndex]);
-
-				// m_OffScreenDepthAttachment was being read by SSAO, now needs to be copied to m_DepthAttachment for forward rendering
-				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_OffScreenDepthAttachment->image, m_OffScreenDepthAttachment->format,
-					VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 1, commandBuffer, true);
-
-				// m_DepthAttachment was copied into, now needs to be written to in forward pass
-				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_DepthAttachment->image, m_DepthAttachment->format,
-					VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, commandBuffer);
-
-				// TODO: Blit here instead if supported
-				CopyImage(m_VulkanDevice, m_GraphicsQueue, m_OffScreenDepthAttachment->image, m_DepthAttachment->image,
-					m_SwapChainExtent.width, m_SwapChainExtent.height, commandBuffer, VK_IMAGE_ASPECT_DEPTH_BIT);
-
-				// m_DepthAttachment was copied into, now needs to be written to in forward pass
-				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_DepthAttachment->image, m_DepthAttachment->format,
-					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1, commandBuffer);
-
-				// m_OffScreenDepthAttachment has been copied out of, now must be transitioned back for next frame
-				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_OffScreenDepthAttachment->image, m_OffScreenDepthAttachment->format,
-					VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1, commandBuffer, true);
-
-				EndRegion(commandBuffer);
-			}
-
-			{
-				BeginRegion(commandBuffer, "Forward");
-
-				std::array<VkClearValue, 2> clearValues = {};
-				clearValues[0].color = m_ClearColor;
-				clearValues[1].depthStencil = { 0.0f, 0 };
-
-				VkRenderPassBeginInfo renderPassBeginInfo = vks::renderPassBeginInfo(m_ForwardRenderPass);
-				renderPassBeginInfo.renderArea.offset = { 0, 0 };
-				renderPassBeginInfo.renderArea.extent = m_SwapChainExtent;
-				renderPassBeginInfo.clearValueCount = clearValues.size();
-				renderPassBeginInfo.pClearValues = clearValues.data();
-				renderPassBeginInfo.framebuffer = m_SwapChainFramebuffers[m_CurrentSwapChainBufferIndex];
-
-				vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-				for (const ShaderBatchPair& shaderBatch : m_ForwardObjectBatches.batches)
+				if (!m_VertexIndexBufferPairs[i].useStagingBuffer)
 				{
-					DrawShaderBatch(shaderBatch, commandBuffer);
+					u32 requiredMemory = m_Shaders[i].shader->dynamicVertexBufferSize;
+
+					if (requiredMemory > 0)
+					{
+						CreateDynamicVertexBuffer(
+							m_VertexIndexBufferPairs[i].vertexBuffer,
+							requiredMemory,
+							nullptr);
+					}
 				}
+			}
+		}
 
-				EndRegion(commandBuffer);
+		u32 VulkanRenderer::CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, ShaderID shaderID, u32 size)
+		{
+			void* vertexDataStart = malloc_hooked(size);
+			if (!vertexDataStart)
+			{
+				PrintError("Failed to allocate memory for vertex buffer %u! Attempted to allocate %d bytes", shaderID, size);
+				return 0;
 			}
 
+			void* vertexBufferData = vertexDataStart;
+
+			u32 vertexCount = 0;
+			u32 vertexBufferSize = 0;
+			for (VulkanRenderObject* renderObject : m_RenderObjects)
 			{
-				BeginRegion(commandBuffer, "World Space Sprites");
-
-				EnqueueWorldSpaceSprites();
-				DrawSpriteBatch(m_QueuedWSSprites, commandBuffer);
-				m_QueuedWSSprites.clear();
-
-				EndRegion(commandBuffer);
-				BeginRegion(commandBuffer, "World Space Text");
-
-				EnqueueWorldSpaceText();
-				DrawTextWS(commandBuffer);
-
-				EndRegion(commandBuffer);
-			}
-
-
-			/*{
-				BeginRegion(commandBuffer, "Post processing");
-
-				ApplyPostProcessing(commandBuffer);
-
-				EndRegion(commandBuffer);
-			}*/
-
-			bool bUsingGameplayCam = g_CameraManager->CurrentCamera()->bIsGameplayCam;
-			if (g_EngineInstance->IsRenderingEditorObjects() && !bUsingGameplayCam)
-			{
-				BeginRegion(commandBuffer, "Editor objects");
-
-				for (const ShaderBatchPair& shaderBatch : m_DepthAwareEditorObjBatches.batches)
+				if (renderObject &&
+					renderObject->vertexBufferData &&
+					m_Materials[renderObject->materialID].material.shaderID == shaderID)
 				{
-					DrawShaderBatch(shaderBatch, commandBuffer);
+					renderObject->vertexOffset = vertexCount;
+
+					memcpy(vertexBufferData, renderObject->vertexBufferData->vertexData, renderObject->vertexBufferData->VertexBufferSize);
+
+					vertexCount += renderObject->vertexBufferData->VertexCount;
+					vertexBufferSize += renderObject->vertexBufferData->VertexBufferSize;
+
+					vertexBufferData = (char*)vertexBufferData + renderObject->vertexBufferData->VertexBufferSize;
 				}
+			}
 
-				// Selected object wireframe
-				// TODO:
+			if (vertexBufferSize == 0 || vertexCount == 0)
+			{
+				PrintError("Failed to create static vertex buffer (no verts use shader index %u)\n", shaderID);
+				return 0;
+			}
 
-				//glDepthMask(GL_TRUE);
-				//glClear(GL_DEPTH_BUFFER_BIT);
+			CreateStaticVertexBuffer(vertexBuffer, vertexDataStart, vertexBufferSize);
+			free_hooked(vertexDataStart);
 
-				// Depth unaware objects write to a cleared depth buffer so they
-				// draw on top of previous geometry but are still eclipsed by other
-				// depth unaware objects
+			return vertexCount;
+		}
 
-				for (const ShaderBatchPair& shaderBatch : m_DepthUnawareEditorObjBatches.batches)
+		void VulkanRenderer::CreateShadowVertexBuffer()
+		{
+			VulkanMaterial& shadowMat = m_Materials[m_ShadowMaterialID];
+			VulkanShader& shadowShader = m_Shaders[shadowMat.material.shaderID];
+
+			u32 vertexStride = CalculateVertexStride(shadowShader.shader->vertexAttributes);
+			u32 size = 0;
+
+			for (VulkanRenderObject* renderObject : m_RenderObjects)
+			{
+				if (renderObject &&
+					renderObject->vertexBufferData)
 				{
-					DrawShaderBatch(shaderBatch, commandBuffer);
+					size += renderObject->vertexBufferData->VertexCount * vertexStride;
 				}
-
-				EndRegion(commandBuffer);
 			}
 
+			void* vertexDataStart = malloc_hooked(size);
+			if (!vertexDataStart)
 			{
-				BeginRegion(commandBuffer, "Screen Space Sprites");
-
-				EnqueueScreenSpaceSprites();
-				DrawSpriteBatch(m_QueuedSSSprites, commandBuffer);
-				m_QueuedSSSprites.clear();
-				DrawSpriteBatch(m_QueuedSSArrSprites, commandBuffer);
-				m_QueuedSSArrSprites.clear();
-
-				EndRegion(commandBuffer);
+				PrintError("Failed to allocate memory for shadow vertex buffer! Attempted to allocate %d bytes", size);
+				return;
 			}
 
+			void* vertexBufferData = vertexDataStart;
+
+			u32 vertexCount = 0;
+			u32 vertexBufferSize = 0;
+			for (VulkanRenderObject* renderObject : m_RenderObjects)
 			{
-				BeginRegion(commandBuffer, "Screen Space Text");
+				if (renderObject &&
+					renderObject->vertexBufferData &&
+					renderObject->gameObject->CastsShadow())
+				{
+					renderObject->shadowVertexOffset = vertexCount;
 
-				EnqueueScreenSpaceText();
-				DrawTextSS(commandBuffer);
+					u32 copySize = renderObject->vertexBufferData->CopyInto(static_cast<real*>(vertexBufferData), shadowShader.shader->vertexAttributes);
 
-				EndRegion(commandBuffer);
+					vertexCount += renderObject->vertexBufferData->VertexCount;
+					vertexBufferSize += copySize;
+
+					vertexBufferData = (char*)vertexBufferData + copySize;
+				}
 			}
 
-			if (g_EngineInstance->IsRenderingImGui())
+			if (vertexBufferSize == 0 || vertexCount == 0)
 			{
-				BeginRegion(commandBuffer, "ImGui");
-
-				ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
-					
-				EndRegion(commandBuffer);
+				return;
 			}
-			vkCmdEndRenderPass(commandBuffer);
 
-			VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
+			VulkanBuffer* vertexBuffer = m_VertexIndexBufferPairs[shadowMat.material.shaderID].vertexBuffer;
+			CreateStaticVertexBuffer(vertexBuffer, vertexDataStart, vertexBufferSize);
+			free_hooked(vertexDataStart);
+		}
+
+		void VulkanRenderer::CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, void* vertexBufferData, u32 vertexBufferSize)
+		{
+			VulkanBuffer stagingBuffer(m_VulkanDevice->m_LogicalDevice);
+			CreateAndAllocateBuffer(m_VulkanDevice, vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+				VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer);
+
+			VK_CHECK_RESULT(stagingBuffer.Map(vertexBufferSize));
+			memcpy(stagingBuffer.m_Mapped, vertexBufferData, vertexBufferSize);
+			stagingBuffer.Unmap();
+
+			CreateAndAllocateBuffer(m_VulkanDevice, vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer);
+
+			CopyBuffer(m_VulkanDevice, m_GraphicsQueue, stagingBuffer.m_Buffer, vertexBuffer->m_Buffer, vertexBufferSize);
+		}
+
+		void VulkanRenderer::CreateDynamicVertexBuffer(VulkanBuffer* vertexBuffer, u32 size, void* initialData)
+		{
+			CreateAndAllocateBuffer(m_VulkanDevice, size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vertexBuffer);
+
+			if (initialData != nullptr)
+			{
+				VulkanBuffer stagingBuffer(m_VulkanDevice->m_LogicalDevice);
+				CreateAndAllocateBuffer(m_VulkanDevice, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+					VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer);
+
+				VK_CHECK_RESULT(stagingBuffer.Map(size));
+				memcpy(stagingBuffer.m_Mapped, initialData, size);
+				stagingBuffer.Unmap();
+
+				CopyBuffer(m_VulkanDevice, m_GraphicsQueue, stagingBuffer.m_Buffer, vertexBuffer->m_Buffer, size);
+			}
+		}
+
+		void VulkanRenderer::CreateStaticIndexBuffers()
+		{
+			for (size_t i = 0; i < m_VertexIndexBufferPairs.size(); ++i)
+			{
+				Shader* shader = m_Shaders[i].shader;
+				if (!shader->bGenerateVertexBufferForAll)
+				{
+					m_VertexIndexBufferPairs[i].indexCount = CreateStaticIndexBuffer(m_VertexIndexBufferPairs[i].indexBuffer, i);
+				}
+			}
+		}
+
+		u32 VulkanRenderer::CreateStaticIndexBuffer(VulkanBuffer* indexBuffer, ShaderID shaderID)
+		{
+			std::vector<u32> indices;
+
+			for (VulkanRenderObject* renderObject : m_RenderObjects)
+			{
+				if (renderObject &&
+					renderObject->bIndexed &&
+					m_Materials[renderObject->materialID].material.shaderID == shaderID)
+				{
+					renderObject->indexOffset = indices.size();
+					indices.insert(indices.end(), renderObject->indices->begin(), renderObject->indices->end());
+				}
+			}
+
+			if (indices.empty())
+			{
+				// No indexed render objects use specified shader
+				return 0;
+			}
+
+			CreateStaticIndexBuffer(indexBuffer, indices);
+
+			return indices.size();
+		}
+
+		void VulkanRenderer::CreateShadowIndexBuffer()
+		{
+			std::vector<u32> indices;
+
+			for (VulkanRenderObject* renderObject : m_RenderObjects)
+			{
+				if (renderObject &&
+					renderObject->bIndexed)
+				{
+					renderObject->shadowIndexOffset = indices.size();
+					indices.insert(indices.end(), renderObject->indices->begin(), renderObject->indices->end());
+				}
+			}
+
+			if (indices.empty())
+			{
+				return;
+			}
+
+			VulkanBuffer* indexBuffer = m_VertexIndexBufferPairs[m_Materials[m_ShadowMaterialID].material.shaderID].indexBuffer;
+			CreateStaticIndexBuffer(indexBuffer, indices);
+		}
+
+		void VulkanRenderer::CreateStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<u32>& indices)
+		{
+			const size_t bufferSize = sizeof(indices[0]) * indices.size();
+
+			VulkanBuffer stagingBuffer(m_VulkanDevice->m_LogicalDevice);
+			VK_CHECK_RESULT(CreateAndAllocateBuffer(m_VulkanDevice, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer));
+
+			VK_CHECK_RESULT(stagingBuffer.Map(bufferSize));
+			memcpy(stagingBuffer.m_Mapped, indices.data(), bufferSize);
+			stagingBuffer.Unmap();
+
+			VK_CHECK_RESULT(CreateAndAllocateBuffer(m_VulkanDevice, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer));
+
+			CopyBuffer(m_VulkanDevice,m_GraphicsQueue, stagingBuffer.m_Buffer, indexBuffer->m_Buffer, bufferSize);
+		}
+
+		void VulkanRenderer::CreateDescriptorPool()
+		{
+			std::vector<VkDescriptorPoolSize> poolSizes
+			{
+				{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_NUM_DESC_COMBINED_IMAGE_SAMPLERS },
+				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MAX_NUM_DESC_UNIFORM_BUFFERS },
+				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, MAX_NUM_DESC_DYNAMIC_UNIFORM_BUFFERS },
+			};
+
+			VkDescriptorPoolCreateInfo poolInfo = vks::descriptorPoolCreateInfo(poolSizes, MAX_NUM_DESC_SETS);
+			// TODO: Have additional pool which doesn't have this flag set for constant descriptor sets
+			poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT; // Allow descriptor sets to be added/removed often
+
+			VK_CHECK_RESULT(vkCreateDescriptorPool(m_VulkanDevice->m_LogicalDevice, &poolInfo, nullptr, m_DescriptorPool.replace()));
+		}
+
+		u32 VulkanRenderer::AllocateDynamicUniformBuffer(u32 dynamicDataSize, void** data, i32 maxObjectCount /* = -1 */)
+		{
+			size_t uboAlignment = (size_t)m_VulkanDevice->m_PhysicalDeviceProperties.limits.minUniformBufferOffsetAlignment;
+			u32 dynamicAllignment =
+				(dynamicDataSize / uboAlignment) * uboAlignment +
+				((dynamicDataSize % uboAlignment) > 0 ? uboAlignment : 0);
+
+			if (dynamicAllignment > m_DynamicAlignment)
+			{
+				u32 newDynamicAllignment = 1;
+				while (newDynamicAllignment < dynamicAllignment)
+				{
+					newDynamicAllignment <<= 1;
+				}
+				m_DynamicAlignment = newDynamicAllignment;
+			}
+
+			if (maxObjectCount == -1)
+			{
+				// TODO: FIXME: Use better metric for initial size
+				maxObjectCount = (i32)m_RenderObjects.size();
+			}
+			size_t dynamicBufferSize = maxObjectCount * m_DynamicAlignment;
+
+			(*data) = aligned_malloc_hooked(dynamicBufferSize, m_DynamicAlignment);
+			assert(*data);
+
+			return dynamicBufferSize;
+		}
+
+		void VulkanRenderer::PrepareUniformBuffer(VulkanBuffer* buffer, u32 bufferSize,
+			VkBufferUsageFlags bufferUseageFlagBits, VkMemoryPropertyFlags memoryPropertyHostFlagBits)
+		{
+			VK_CHECK_RESULT(CreateAndAllocateBuffer(m_VulkanDevice, bufferSize, bufferUseageFlagBits, memoryPropertyHostFlagBits, buffer));
+			VK_CHECK_RESULT(buffer->Map());
+		}
+
+		void VulkanRenderer::CreateSemaphores()
+		{
+			VkSemaphoreCreateInfo semaphoreInfo = vks::semaphoreCreateInfo();
+
+			VK_CHECK_RESULT(vkCreateSemaphore(m_VulkanDevice->m_LogicalDevice, &semaphoreInfo, nullptr, m_PresentCompleteSemaphore.replace()));
+			VK_CHECK_RESULT(vkCreateSemaphore(m_VulkanDevice->m_LogicalDevice, &semaphoreInfo, nullptr, m_RenderCompleteSemaphore.replace()));
+		}
+
+		void VulkanRenderer::BatchRenderObjects()
+		{
+			// TODO: OPTIMIZE: This isn't always necessary, but it is always expensive!
+			CreateStaticVertexBuffers();
+			CreateStaticIndexBuffers();
+			CreateDynamicVertexBuffers();
+
+			CreateShadowVertexBuffer();
+			CreateShadowIndexBuffer();
+
+			const char* blockName = "BatchRenderObjects";
+			u32 renderObjBatchCount = 0;
+			{
+				PROFILE_AUTO(blockName);
+
+				m_DeferredObjectBatches.batches.clear();
+				m_ForwardObjectBatches.batches.clear();
+				m_ShadowBatch.batches.clear();
+				m_DepthAwareEditorObjBatches.batches.clear();
+				m_DepthUnawareEditorObjBatches.batches.clear();
+
+				// NOTE: Optimization options:
+				//			- Sort materials by shader ID to allow early out on second loop
+				//			- Sort render objects based on batching order
+				//			- Reuse previous batching, only removing or adding entries
+
+				for (u32 shaderID = 0; shaderID < m_Shaders.size(); ++shaderID)
+				{
+					VulkanBuffer* vertBuffer = m_VertexIndexBufferPairs[shaderID].vertexBuffer;
+					VulkanBuffer* indexBuffer = m_VertexIndexBufferPairs[shaderID].indexBuffer;
+
+					if (vertBuffer->m_Buffer == 0)
+					{
+						continue;
+					}
+
+					ShaderBatch* shaderBatch = (m_Shaders[shaderID].shader->bDeferred ? &m_DeferredObjectBatches : &m_ForwardObjectBatches);
+
+					ShaderBatchPair shaderBatchPair = {};
+					shaderBatchPair.shaderID = shaderID;
+
+					ShaderBatchPair depthAwareEditorShaderBatchPair = {};
+					depthAwareEditorShaderBatchPair.shaderID = shaderID;
+
+					ShaderBatchPair depthUnawareEditorShaderBatchPair = {};
+					depthUnawareEditorShaderBatchPair.shaderID = shaderID;
+
+					i32 dynamicUBOOffset = 0;
+
+					for (auto& matPair : m_Materials)
+					{
+						if (matPair.second.material.shaderID == shaderID)
+						{
+							MaterialBatchPair matBatchPair = {};
+							matBatchPair.materialID = matPair.first;
+
+							MaterialBatchPair depthAwareEditorMatBatchPair = {};
+							depthAwareEditorMatBatchPair.materialID = matPair.first;
+
+							MaterialBatchPair depthUnawareEditorMatBatchPair = {};
+							depthUnawareEditorMatBatchPair.materialID = matPair.first;
+
+							for (u32 renderID = 0; renderID < m_RenderObjects.size(); ++renderID)
+							{
+								VulkanRenderObject* renderObject = GetRenderObject(renderID);
+
+								if (renderObject &&
+									renderObject->materialID == matPair.first &&
+									(!renderObject->bIndexed || indexBuffer->m_Buffer != 0))
+								{
+									dynamicUBOOffset += RoundUp(m_Shaders[shaderID].uniformBuffer.dynamicData.size, m_DynamicAlignment);
+									renderObject->dynamicUBOOffset = dynamicUBOOffset;
+
+									if (renderObject->gameObject->IsVisible())
+									{
+										if (renderObject->bEditorObject)
+										{
+											if (m_Shaders[shaderID].shader->bDepthWriteEnable)
+											{
+												depthAwareEditorMatBatchPair.batch.objects.push_back(renderID);
+											}
+											else
+											{
+												depthUnawareEditorMatBatchPair.batch.objects.push_back(renderID);
+											}
+										}
+										else
+										{
+											matBatchPair.batch.objects.push_back(renderID);
+										}
+									}
+								}
+							}
+
+							if (!matBatchPair.batch.objects.empty())
+							{
+								++renderObjBatchCount;
+								shaderBatchPair.batch.batches.push_back(matBatchPair);
+							}
+							if (!depthAwareEditorMatBatchPair.batch.objects.empty())
+							{
+								++renderObjBatchCount;
+								depthAwareEditorShaderBatchPair.batch.batches.push_back(depthAwareEditorMatBatchPair);
+							}
+							if (!depthUnawareEditorMatBatchPair.batch.objects.empty())
+							{
+								++renderObjBatchCount;
+								depthUnawareEditorShaderBatchPair.batch.batches.push_back(depthUnawareEditorMatBatchPair);
+							}
+						}
+					}
+
+					if (!shaderBatchPair.batch.batches.empty())
+					{
+						shaderBatch->batches.push_back(shaderBatchPair);
+					}
+					if (!depthAwareEditorShaderBatchPair.batch.batches.empty())
+					{
+						m_DepthAwareEditorObjBatches.batches.push_back(depthAwareEditorShaderBatchPair);
+					}
+					if (!depthUnawareEditorShaderBatchPair.batch.batches.empty())
+					{
+						m_DepthUnawareEditorObjBatches.batches.push_back(depthUnawareEditorShaderBatchPair);
+					}
+				}
+			}
+
+			ShaderBatchPair shadowShaderBatch;
+			shadowShaderBatch.batch.batches.resize(1);
+			u32 dynamicShadowUBOOffset = 0;
+			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
+			{
+				VulkanRenderObject* renderObject = GetRenderObject(i);
+				if (renderObject &&
+					renderObject->vertexBufferData &&
+					renderObject->gameObject->CastsShadow() &&
+					renderObject->gameObject->IsVisible())
+				{
+					dynamicShadowUBOOffset += m_DynamicAlignment;
+					renderObject->dynamicShadowUBOOffset = dynamicShadowUBOOffset;
+					shadowShaderBatch.batch.batches[0].batch.objects.push_back(i);
+				}
+			}
+			m_ShadowBatch.batches.push_back(shadowShaderBatch);
+
+			ms blockMS = Profiler::GetBlockDuration(blockName);
+			Print("Batched %u render objects into %u batches in %.2fms\n", m_RenderObjects.size(), renderObjBatchCount, blockMS);
 		}
 
 		void VulkanRenderer::DrawShaderBatch(const ShaderBatchPair& shaderBatch, VkCommandBuffer& commandBuffer, DrawCallInfo* drawCallInfo /* = nullptr */)
@@ -6404,6 +6646,42 @@ namespace flex
 					++i;
 				}
 			}
+		}
+
+		void VulkanRenderer::RenderFullscreenQuad(VkCommandBuffer commandBuffer, VkRenderPass renderPass, VkFramebuffer framebuffer)
+		{
+			std::array<VkClearValue, 2> clearValues = {};
+			clearValues[0].color = m_ClearColor;
+			clearValues[1].depthStencil = { 0.0f, 0 };
+
+			VulkanRenderObject* gBufferObject = GetRenderObject(m_GBufferQuadRenderID);
+			VulkanMaterial* gBufferMaterial = &m_Materials[gBufferObject->materialID];
+
+			VkViewport fullscreenViewport = vks::viewportFlipped((real)m_SwapChainExtent.width, (real)m_SwapChainExtent.height, 0.0f, 1.0f);
+			VkRect2D fullscreenScissor = vks::scissor(0u, 0u, m_SwapChainExtent.width, m_SwapChainExtent.height);
+
+			VkDeviceSize offsets[1] = { 0 };
+
+			vkCmdSetViewport(commandBuffer, 0, 1, &fullscreenViewport);
+			vkCmdSetScissor(commandBuffer, 0, 1, &fullscreenScissor);
+
+			VkRenderPassBeginInfo renderPassBeginInfo = vks::renderPassBeginInfo(renderPass);
+			renderPassBeginInfo.renderArea.offset = { 0, 0 };
+			renderPassBeginInfo.renderArea.extent = m_SwapChainExtent;
+			renderPassBeginInfo.clearValueCount = clearValues.size();
+			renderPassBeginInfo.pClearValues = clearValues.data();
+			renderPassBeginInfo.framebuffer = framebuffer;
+			vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+			{
+				BindDescriptorSet(&m_Shaders[gBufferMaterial->material.shaderID], 0, commandBuffer, gBufferObject->pipelineLayout, gBufferObject->descriptorSet);
+
+				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gBufferObject->graphicsPipeline);
+
+				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID].vertexBuffer->m_Buffer, offsets);
+
+				vkCmdDraw(commandBuffer, gBufferObject->vertexBufferData->VertexCount, 1, gBufferObject->vertexOffset, 0);
+			}
+			vkCmdEndRenderPass(commandBuffer);
 		}
 
 		void VulkanRenderer::BuildDeferredCommandBuffer()
@@ -6637,494 +6915,172 @@ namespace flex
 			VK_CHECK_RESULT(vkEndCommandBuffer(m_OffScreenCmdBuffer));
 		}
 
-		void VulkanRenderer::BindDescriptorSet(VulkanShader* shader, u32 dynamicOffset, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet)
+		void VulkanRenderer::BuildCommandBuffers(const DrawCallInfo& drawCallInfo)
 		{
-			//u32 dynamicOffset = dynamicOffsetIndex * m_DynamicAlignment;
-			u32* dynamicOffsetPtr = nullptr;
-			u32 dynamicOffsetCount = 0;
-			if (shader->uniformBuffer.dynamicBuffer.m_Size != 0)
+			assert(drawCallInfo.bRenderToCubemap == false); // Unsupported in Vulkan renderer!
+
+			//std::array<VkClearValue, 2> clearValues = {};
+			//clearValues[0].color = m_ClearColor;
+			//clearValues[1].depthStencil = { 0.0f, 0 };
+
+			//VkRenderPassBeginInfo renderPassBeginInfo = vks::renderPassBeginInfo(m_DeferredCombineRenderPass);
+			//renderPassBeginInfo.renderArea.offset = { 0, 0 };
+			//renderPassBeginInfo.renderArea.extent = m_SwapChainExtent;
+			//renderPassBeginInfo.clearValueCount = clearValues.size();
+			//renderPassBeginInfo.pClearValues = clearValues.data();
+
+			//VulkanRenderObject* gBufferObject = GetRenderObject(m_GBufferQuadRenderID);
+			//VulkanMaterial* gBufferMaterial = &m_Materials[gBufferObject->materialID];
+
+			if (g_EngineInstance->IsRenderingImGui())
 			{
-				// This shader uses a dynamic buffer, so it needs a dynamic offset
-				dynamicOffsetPtr = &dynamicOffset;
-				dynamicOffsetCount = 1;
+				ImGui::Render();
 			}
 
-			vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout,
-				0, 1, &descriptorSet,
-				dynamicOffsetCount, dynamicOffsetPtr);
-		}
+			// TODO: Remove unused cmd buffers
+			VkCommandBuffer& commandBuffer = m_CommandBufferManager.m_CommandBuffers[0];
 
-		void VulkanRenderer::CreateStaticVertexBuffers()
-		{
-			for (u32 i = 0; i < m_VertexIndexBufferPairs.size(); ++i)
+			VkCommandBufferBeginInfo cmdBufferbeginInfo = vks::commandBufferBeginInfo();
+			cmdBufferbeginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+
+			VK_CHECK_RESULT(vkBeginCommandBuffer(commandBuffer, &cmdBufferbeginInfo));
+
 			{
-				if (m_VertexIndexBufferPairs[i].useStagingBuffer)
+				BeginRegion(commandBuffer, "Shade deferred");
+
+				RenderFullscreenQuad(commandBuffer, m_DeferredCombineRenderPass, m_SwapChainFramebuffers[m_CurrentSwapChainBufferIndex]);
+
+				// m_OffScreenDepthAttachment was being read by SSAO, now needs to be copied to m_DepthAttachment for forward rendering
+				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_OffScreenDepthAttachment->image, m_OffScreenDepthAttachment->format,
+					VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 1, commandBuffer, true);
+
+				// m_DepthAttachment was copied into, now needs to be written to in forward pass
+				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_DepthAttachment->image, m_DepthAttachment->format,
+					VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, commandBuffer);
+
+				// TODO: Blit here instead if supported
+				CopyImage(m_VulkanDevice, m_GraphicsQueue, m_OffScreenDepthAttachment->image, m_DepthAttachment->image,
+					m_SwapChainExtent.width, m_SwapChainExtent.height, commandBuffer, VK_IMAGE_ASPECT_DEPTH_BIT);
+
+				// m_DepthAttachment was copied into, now needs to be written to in forward pass
+				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_DepthAttachment->image, m_DepthAttachment->format,
+					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1, commandBuffer);
+
+				// m_OffScreenDepthAttachment has been copied out of, now must be transitioned back for next frame
+				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_OffScreenDepthAttachment->image, m_OffScreenDepthAttachment->format,
+					VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1, commandBuffer, true);
+
+				EndRegion(commandBuffer);
+			}
+
+			{
+				BeginRegion(commandBuffer, "Forward");
+
+				std::array<VkClearValue, 2> clearValues = {};
+				clearValues[0].color = m_ClearColor;
+				clearValues[1].depthStencil = { 0.0f, 0 };
+
+				VkRenderPassBeginInfo renderPassBeginInfo = vks::renderPassBeginInfo(m_ForwardRenderPass);
+				renderPassBeginInfo.renderArea.offset = { 0, 0 };
+				renderPassBeginInfo.renderArea.extent = m_SwapChainExtent;
+				renderPassBeginInfo.clearValueCount = clearValues.size();
+				renderPassBeginInfo.pClearValues = clearValues.data();
+				renderPassBeginInfo.framebuffer = m_SwapChainFramebuffers[m_CurrentSwapChainBufferIndex];
+
+				vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+				for (const ShaderBatchPair& shaderBatch : m_ForwardObjectBatches.batches)
 				{
-					u32 requiredMemory = 0;
-
-					Shader* shader = m_Shaders[i].shader;
-					if (!shader->bGenerateVertexBufferForAll)
-					{
-						for (VulkanRenderObject* renderObject : m_RenderObjects)
-						{
-							if (renderObject &&
-								renderObject->vertexBufferData &&
-								m_Materials[renderObject->materialID].material.shaderID == i)
-							{
-								requiredMemory += renderObject->vertexBufferData->VertexBufferSize;
-							}
-						}
-
-						if (requiredMemory > 0)
-						{
-							m_VertexIndexBufferPairs[i].vertexCount = CreateStaticVertexBuffer(
-								m_VertexIndexBufferPairs[i].vertexBuffer,
-								i,
-								requiredMemory);
-						}
-					}
+					DrawShaderBatch(shaderBatch, commandBuffer);
 				}
-			}
-		}
 
-		void VulkanRenderer::CreateDynamicVertexBuffers()
-		{
-			for (u32 i = 0; i < m_VertexIndexBufferPairs.size(); ++i)
+				EndRegion(commandBuffer);
+			}
+
 			{
-				if (!m_VertexIndexBufferPairs[i].useStagingBuffer)
+				BeginRegion(commandBuffer, "World Space Sprites");
+
+				EnqueueWorldSpaceSprites();
+				DrawSpriteBatch(m_QueuedWSSprites, commandBuffer);
+				m_QueuedWSSprites.clear();
+
+				EndRegion(commandBuffer);
+				BeginRegion(commandBuffer, "World Space Text");
+
+				EnqueueWorldSpaceText();
+				DrawTextWS(commandBuffer);
+
+				EndRegion(commandBuffer);
+			}
+
+
+			/*{
+				BeginRegion(commandBuffer, "Post processing");
+
+				ApplyPostProcessing(commandBuffer);
+
+				EndRegion(commandBuffer);
+			}*/
+
+			bool bUsingGameplayCam = g_CameraManager->CurrentCamera()->bIsGameplayCam;
+			if (g_EngineInstance->IsRenderingEditorObjects() && !bUsingGameplayCam)
+			{
+				BeginRegion(commandBuffer, "Editor objects");
+
+				for (const ShaderBatchPair& shaderBatch : m_DepthAwareEditorObjBatches.batches)
 				{
-					u32 requiredMemory = m_Shaders[i].shader->dynamicVertexBufferSize;
-
-					if (requiredMemory > 0)
-					{
-						CreateDynamicVertexBuffer(
-							m_VertexIndexBufferPairs[i].vertexBuffer,
-							requiredMemory,
-							nullptr);
-					}
+					DrawShaderBatch(shaderBatch, commandBuffer);
 				}
-			}
-		}
 
-		u32 VulkanRenderer::CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, ShaderID shaderID, u32 size)
-		{
-			void* vertexDataStart = malloc_hooked(size);
-			if (!vertexDataStart)
-			{
-				PrintError("Failed to allocate memory for vertex buffer %u! Attempted to allocate %d bytes", shaderID, size);
-				return 0;
-			}
+				// Selected object wireframe
+				// TODO:
 
-			void* vertexBufferData = vertexDataStart;
+				//glDepthMask(GL_TRUE);
+				//glClear(GL_DEPTH_BUFFER_BIT);
 
-			u32 vertexCount = 0;
-			u32 vertexBufferSize = 0;
-			for (VulkanRenderObject* renderObject : m_RenderObjects)
-			{
-				if (renderObject &&
-					renderObject->vertexBufferData &&
-					m_Materials[renderObject->materialID].material.shaderID == shaderID)
+				// Depth unaware objects write to a cleared depth buffer so they
+				// draw on top of previous geometry but are still eclipsed by other
+				// depth unaware objects
+
+				for (const ShaderBatchPair& shaderBatch : m_DepthUnawareEditorObjBatches.batches)
 				{
-					renderObject->vertexOffset = vertexCount;
-
-					memcpy(vertexBufferData, renderObject->vertexBufferData->vertexData, renderObject->vertexBufferData->VertexBufferSize);
-
-					vertexCount += renderObject->vertexBufferData->VertexCount;
-					vertexBufferSize += renderObject->vertexBufferData->VertexBufferSize;
-
-					vertexBufferData = (char*)vertexBufferData + renderObject->vertexBufferData->VertexBufferSize;
+					DrawShaderBatch(shaderBatch, commandBuffer);
 				}
+
+				EndRegion(commandBuffer);
 			}
 
-			if (vertexBufferSize == 0 || vertexCount == 0)
 			{
-				PrintError("Failed to create static vertex buffer (no verts use shader index %u)\n", shaderID);
-				return 0;
+				BeginRegion(commandBuffer, "Screen Space Sprites");
+
+				EnqueueScreenSpaceSprites();
+				DrawSpriteBatch(m_QueuedSSSprites, commandBuffer);
+				m_QueuedSSSprites.clear();
+				DrawSpriteBatch(m_QueuedSSArrSprites, commandBuffer);
+				m_QueuedSSArrSprites.clear();
+
+				EndRegion(commandBuffer);
 			}
 
-			CreateStaticVertexBuffer(vertexBuffer, vertexDataStart, vertexBufferSize);
-			free_hooked(vertexDataStart);
-
-			return vertexCount;
-		}
-
-		void VulkanRenderer::CreateShadowVertexBuffer()
-		{
-			VulkanMaterial& shadowMat = m_Materials[m_ShadowMaterialID];
-			VulkanShader& shadowShader = m_Shaders[shadowMat.material.shaderID];
-
-			u32 vertexStride = CalculateVertexStride(shadowShader.shader->vertexAttributes);
-			u32 size = 0;
-
-			for (VulkanRenderObject* renderObject : m_RenderObjects)
 			{
-				if (renderObject &&
-					renderObject->vertexBufferData)
-				{
-					size += renderObject->vertexBufferData->VertexCount * vertexStride;
-				}
+				BeginRegion(commandBuffer, "Screen Space Text");
+
+				EnqueueScreenSpaceText();
+				DrawTextSS(commandBuffer);
+
+				EndRegion(commandBuffer);
 			}
 
-			void* vertexDataStart = malloc_hooked(size);
-			if (!vertexDataStart)
+			if (g_EngineInstance->IsRenderingImGui())
 			{
-				PrintError("Failed to allocate memory for shadow vertex buffer! Attempted to allocate %d bytes", size);
-				return;
+				BeginRegion(commandBuffer, "ImGui");
+
+				ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
+
+				EndRegion(commandBuffer);
 			}
+			vkCmdEndRenderPass(commandBuffer);
 
-			void* vertexBufferData = vertexDataStart;
-
-			u32 vertexCount = 0;
-			u32 vertexBufferSize = 0;
-			for (VulkanRenderObject* renderObject : m_RenderObjects)
-			{
-				if (renderObject &&
-					renderObject->vertexBufferData &&
-					renderObject->gameObject->CastsShadow())
-				{
-					renderObject->shadowVertexOffset = vertexCount;
-
-					u32 copySize = renderObject->vertexBufferData->CopyInto(static_cast<real*>(vertexBufferData), shadowShader.shader->vertexAttributes);
-
-					vertexCount += renderObject->vertexBufferData->VertexCount;
-					vertexBufferSize += copySize;
-
-					vertexBufferData = (char*)vertexBufferData + copySize;
-				}
-			}
-
-			if (vertexBufferSize == 0 || vertexCount == 0)
-			{
-				return;
-			}
-
-			VulkanBuffer* vertexBuffer = m_VertexIndexBufferPairs[shadowMat.material.shaderID].vertexBuffer;
-			CreateStaticVertexBuffer(vertexBuffer, vertexDataStart, vertexBufferSize);
-			free_hooked(vertexDataStart);
-		}
-
-		void VulkanRenderer::CreateShadowIndexBuffer()
-		{
-			std::vector<u32> indices;
-
-			for (VulkanRenderObject* renderObject : m_RenderObjects)
-			{
-				if (renderObject &&
-					renderObject->bIndexed)
-				{
-					renderObject->shadowIndexOffset = indices.size();
-					indices.insert(indices.end(), renderObject->indices->begin(), renderObject->indices->end());
-				}
-			}
-
-			if (indices.empty())
-			{
-				return;
-			}
-
-			VulkanBuffer* indexBuffer = m_VertexIndexBufferPairs[m_Materials[m_ShadowMaterialID].material.shaderID].indexBuffer;
-			CreateStaticIndexBuffer(indexBuffer, indices);
-		}
-
-		void VulkanRenderer::CreateDynamicVertexBuffer(VulkanBuffer* vertexBuffer, u32 size, void* initialData)
-		{
-			CreateAndAllocateBuffer(m_VulkanDevice, size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vertexBuffer);
-
-			if (initialData != nullptr)
-			{
-				VulkanBuffer stagingBuffer(m_VulkanDevice->m_LogicalDevice);
-				CreateAndAllocateBuffer(m_VulkanDevice, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-					VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer);
-
-				VK_CHECK_RESULT(stagingBuffer.Map(size));
-				memcpy(stagingBuffer.m_Mapped, initialData, size);
-				stagingBuffer.Unmap();
-
-				CopyBuffer(m_VulkanDevice, m_GraphicsQueue, stagingBuffer.m_Buffer, vertexBuffer->m_Buffer, size);
-			}
-		}
-
-		void VulkanRenderer::CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, void* vertexBufferData, u32 vertexBufferSize)
-		{
-			VulkanBuffer stagingBuffer(m_VulkanDevice->m_LogicalDevice);
-			CreateAndAllocateBuffer(m_VulkanDevice, vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-				VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer);
-
-			VK_CHECK_RESULT(stagingBuffer.Map(vertexBufferSize));
-			memcpy(stagingBuffer.m_Mapped, vertexBufferData, vertexBufferSize);
-			stagingBuffer.Unmap();
-
-			CreateAndAllocateBuffer(m_VulkanDevice, vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer);
-
-			CopyBuffer(m_VulkanDevice,m_GraphicsQueue, stagingBuffer.m_Buffer, vertexBuffer->m_Buffer, vertexBufferSize);
-		}
-
-		void VulkanRenderer::CreateStaticIndexBuffers()
-		{
-			for (size_t i = 0; i < m_VertexIndexBufferPairs.size(); ++i)
-			{
-				Shader* shader = m_Shaders[i].shader;
-				if (!shader->bGenerateVertexBufferForAll)
-				{
-					m_VertexIndexBufferPairs[i].indexCount = CreateStaticIndexBuffer(m_VertexIndexBufferPairs[i].indexBuffer, i);
-				}
-			}
-		}
-
-		u32 VulkanRenderer::CreateStaticIndexBuffer(VulkanBuffer* indexBuffer, ShaderID shaderID)
-		{
-			std::vector<u32> indices;
-
-			for (VulkanRenderObject* renderObject : m_RenderObjects)
-			{
-				if (renderObject &&
-					renderObject->bIndexed &&
-					m_Materials[renderObject->materialID].material.shaderID == shaderID)
-				{
-					renderObject->indexOffset = indices.size();
-					indices.insert(indices.end(), renderObject->indices->begin(), renderObject->indices->end());
-				}
-			}
-
-			if (indices.empty())
-			{
-				// No indexed render objects use specified shader
-				return 0;
-			}
-
-			CreateStaticIndexBuffer(indexBuffer, indices);
-
-			return indices.size();
-		}
-
-		void VulkanRenderer::CreateStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<u32>& indices)
-		{
-			const size_t bufferSize = sizeof(indices[0]) * indices.size();
-
-			VulkanBuffer stagingBuffer(m_VulkanDevice->m_LogicalDevice);
-			VK_CHECK_RESULT(CreateAndAllocateBuffer(m_VulkanDevice, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer));
-
-			VK_CHECK_RESULT(stagingBuffer.Map(bufferSize));
-			memcpy(stagingBuffer.m_Mapped, indices.data(), bufferSize);
-			stagingBuffer.Unmap();
-
-			VK_CHECK_RESULT(CreateAndAllocateBuffer(m_VulkanDevice, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer));
-
-			CopyBuffer(m_VulkanDevice,m_GraphicsQueue, stagingBuffer.m_Buffer, indexBuffer->m_Buffer, bufferSize);
-		}
-
-		u32 VulkanRenderer::AllocateDynamicUniformBuffer(u32 dynamicDataSize, void** data, i32 maxObjectCount /* = -1 */)
-		{
-			size_t uboAlignment = (size_t)m_VulkanDevice->m_PhysicalDeviceProperties.limits.minUniformBufferOffsetAlignment;
-			u32 dynamicAllignment =
-				(dynamicDataSize / uboAlignment) * uboAlignment +
-				((dynamicDataSize % uboAlignment) > 0 ? uboAlignment : 0);
-
-			if (dynamicAllignment > m_DynamicAlignment)
-			{
-				u32 newDynamicAllignment = 1;
-				while (newDynamicAllignment < dynamicAllignment)
-				{
-					newDynamicAllignment <<= 1;
-				}
-				m_DynamicAlignment = newDynamicAllignment;
-			}
-
-			if (maxObjectCount == -1)
-			{
-				// TODO: FIXME: Use better metric for initial size
-				maxObjectCount = (i32)m_RenderObjects.size();
-			}
-			size_t dynamicBufferSize = maxObjectCount * m_DynamicAlignment;
-
-			(*data) = aligned_malloc_hooked(dynamicBufferSize, m_DynamicAlignment);
-			assert(*data);
-
-			return dynamicBufferSize;
-		}
-
-		void VulkanRenderer::PrepareUniformBuffer(VulkanBuffer* buffer, u32 bufferSize,
-			VkBufferUsageFlags bufferUseageFlagBits, VkMemoryPropertyFlags memoryPropertyHostFlagBits)
-		{
-			VK_CHECK_RESULT(CreateAndAllocateBuffer(m_VulkanDevice, bufferSize, bufferUseageFlagBits, memoryPropertyHostFlagBits, buffer));
-			VK_CHECK_RESULT(buffer->Map());
-		}
-
-		void VulkanRenderer::BatchRenderObjects()
-		{
-			// TODO: OPTIMIZE: This isn't always necessary, but it is always expensive!
-			CreateStaticVertexBuffers();
-			CreateStaticIndexBuffers();
-			CreateDynamicVertexBuffers();
-
-			CreateShadowVertexBuffer();
-			CreateShadowIndexBuffer();
-
-			const char* blockName = "BatchRenderObjects";
-			u32 renderObjBatchCount = 0;
-			{
-				PROFILE_AUTO(blockName);
-
-				m_DeferredObjectBatches.batches.clear();
-				m_ForwardObjectBatches.batches.clear();
-				m_ShadowBatch.batches.clear();
-				m_DepthAwareEditorObjBatches.batches.clear();
-				m_DepthUnawareEditorObjBatches.batches.clear();
-
-				// NOTE: Optimization options:
-				//			- Sort materials by shader ID to allow early out on second loop
-				//			- Sort render objects based on batching order
-				//			- Reuse previous batching, only removing or adding entries
-
-				for (u32 shaderID = 0; shaderID < m_Shaders.size(); ++shaderID)
-				{
-					VulkanBuffer* vertBuffer = m_VertexIndexBufferPairs[shaderID].vertexBuffer;
-					VulkanBuffer* indexBuffer = m_VertexIndexBufferPairs[shaderID].indexBuffer;
-
-					if (vertBuffer->m_Buffer == 0)
-					{
-						continue;
-					}
-
-					ShaderBatch* shaderBatch = (m_Shaders[shaderID].shader->bDeferred ? &m_DeferredObjectBatches : &m_ForwardObjectBatches);
-
-					ShaderBatchPair shaderBatchPair = {};
-					shaderBatchPair.shaderID = shaderID;
-
-					ShaderBatchPair depthAwareEditorShaderBatchPair = {};
-					depthAwareEditorShaderBatchPair.shaderID = shaderID;
-
-					ShaderBatchPair depthUnawareEditorShaderBatchPair = {};
-					depthUnawareEditorShaderBatchPair.shaderID = shaderID;
-
-					i32 dynamicUBOOffset = 0;
-
-					for (auto& matPair : m_Materials)
-					{
-						if (matPair.second.material.shaderID == shaderID)
-						{
-							MaterialBatchPair matBatchPair = {};
-							matBatchPair.materialID = matPair.first;
-
-							MaterialBatchPair depthAwareEditorMatBatchPair = {};
-							depthAwareEditorMatBatchPair.materialID = matPair.first;
-
-							MaterialBatchPair depthUnawareEditorMatBatchPair = {};
-							depthUnawareEditorMatBatchPair.materialID = matPair.first;
-
-							for (u32 renderID = 0; renderID < m_RenderObjects.size(); ++renderID)
-							{
-								VulkanRenderObject* renderObject = GetRenderObject(renderID);
-
-								if (renderObject &&
-									renderObject->materialID == matPair.first &&
-									(!renderObject->bIndexed || indexBuffer->m_Buffer != 0))
-								{
-									dynamicUBOOffset += RoundUp(m_Shaders[shaderID].uniformBuffer.dynamicData.size, m_DynamicAlignment);
-									renderObject->dynamicUBOOffset = dynamicUBOOffset;
-
-									if (renderObject->gameObject->IsVisible())
-									{
-										if (renderObject->bEditorObject)
-										{
-											if (m_Shaders[shaderID].shader->bDepthWriteEnable)
-											{
-												depthAwareEditorMatBatchPair.batch.objects.push_back(renderID);
-											}
-											else
-											{
-												depthUnawareEditorMatBatchPair.batch.objects.push_back(renderID);
-											}
-										}
-										else
-										{
-											matBatchPair.batch.objects.push_back(renderID);
-										}
-									}
-								}
-							}
-
-							if (!matBatchPair.batch.objects.empty())
-							{
-								++renderObjBatchCount;
-								shaderBatchPair.batch.batches.push_back(matBatchPair);
-							}
-							if (!depthAwareEditorMatBatchPair.batch.objects.empty())
-							{
-								++renderObjBatchCount;
-								depthAwareEditorShaderBatchPair.batch.batches.push_back(depthAwareEditorMatBatchPair);
-							}
-							if (!depthUnawareEditorMatBatchPair.batch.objects.empty())
-							{
-								++renderObjBatchCount;
-								depthUnawareEditorShaderBatchPair.batch.batches.push_back(depthUnawareEditorMatBatchPair);
-							}
-						}
-					}
-
-					if (!shaderBatchPair.batch.batches.empty())
-					{
-						shaderBatch->batches.push_back(shaderBatchPair);
-					}
-					if (!depthAwareEditorShaderBatchPair.batch.batches.empty())
-					{
-						m_DepthAwareEditorObjBatches.batches.push_back(depthAwareEditorShaderBatchPair);
-					}
-					if (!depthUnawareEditorShaderBatchPair.batch.batches.empty())
-					{
-						m_DepthUnawareEditorObjBatches.batches.push_back(depthUnawareEditorShaderBatchPair);
-					}
-				}
-			}
-
-			ShaderBatchPair shadowShaderBatch;
-			shadowShaderBatch.batch.batches.resize(1);
-			u32 dynamicShadowUBOOffset = 0;
-			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
-			{
-				VulkanRenderObject* renderObject = GetRenderObject(i);
-				if (renderObject &&
-					renderObject->vertexBufferData &&
-					renderObject->gameObject->CastsShadow() &&
-					renderObject->gameObject->IsVisible())
-				{
-					dynamicShadowUBOOffset += m_DynamicAlignment;
-					renderObject->dynamicShadowUBOOffset = dynamicShadowUBOOffset;
-					shadowShaderBatch.batch.batches[0].batch.objects.push_back(i);
-				}
-			}
-			m_ShadowBatch.batches.push_back(shadowShaderBatch);
-
-			ms blockMS = Profiler::GetBlockDuration(blockName);
-			Print("Batched %u render objects into %u batches in %.2fms\n", m_RenderObjects.size(), renderObjBatchCount, blockMS);
-		}
-
-		void VulkanRenderer::CreateDescriptorPool()
-		{
-			std::vector<VkDescriptorPoolSize> poolSizes
-			{
-				{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_NUM_DESC_COMBINED_IMAGE_SAMPLERS },
-				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MAX_NUM_DESC_UNIFORM_BUFFERS },
-				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, MAX_NUM_DESC_DYNAMIC_UNIFORM_BUFFERS },
-			};
-
-			VkDescriptorPoolCreateInfo poolInfo = vks::descriptorPoolCreateInfo(poolSizes, MAX_NUM_DESC_SETS);
-			// TODO: Have additional pool which doesn't have this flag set for constant descriptor sets
-			poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT; // Allow descriptor sets to be added/removed often
-
-			VK_CHECK_RESULT(vkCreateDescriptorPool(m_VulkanDevice->m_LogicalDevice, &poolInfo, nullptr, m_DescriptorPool.replace()));
-		}
-
-		void VulkanRenderer::CreateSemaphores()
-		{
-			VkSemaphoreCreateInfo semaphoreInfo = vks::semaphoreCreateInfo();
-
-			VK_CHECK_RESULT(vkCreateSemaphore(m_VulkanDevice->m_LogicalDevice, &semaphoreInfo, nullptr, m_PresentCompleteSemaphore.replace()));
-			VK_CHECK_RESULT(vkCreateSemaphore(m_VulkanDevice->m_LogicalDevice, &semaphoreInfo, nullptr, m_RenderCompleteSemaphore.replace()));
+			VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
 		}
 
 		void VulkanRenderer::DrawFrame()
@@ -7199,6 +7155,125 @@ namespace flex
 
 			// TODO: FIXME: BAD!! PLS REMOVE
 			VK_CHECK_RESULT(vkQueueWaitIdle(m_PresentQueue));
+		}
+
+		void VulkanRenderer::BindDescriptorSet(VulkanShader* shader, u32 dynamicOffset, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet)
+		{
+			//u32 dynamicOffset = dynamicOffsetIndex * m_DynamicAlignment;
+			u32* dynamicOffsetPtr = nullptr;
+			u32 dynamicOffsetCount = 0;
+			if (shader->uniformBuffer.dynamicBuffer.m_Size != 0)
+			{
+				// This shader uses a dynamic buffer, so it needs a dynamic offset
+				dynamicOffsetPtr = &dynamicOffset;
+				dynamicOffsetCount = 1;
+			}
+
+			vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout,
+				0, 1, &descriptorSet,
+				dynamicOffsetCount, dynamicOffsetPtr);
+		}
+
+		void VulkanRenderer::RecreateSwapChain()
+		{
+			m_CurrentSwapChainBufferIndex = 0;
+
+			const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+			if (frameBufferSize.x == 0 || frameBufferSize.y == 0)
+			{
+				return;
+			}
+
+			vkDeviceWaitIdle(m_VulkanDevice->m_LogicalDevice);
+
+			CreateSwapChain();
+			CreateSwapChainImageViews();
+
+			CreateDepthResources();
+
+			CreateRenderPasses();
+			PrepareFrameBuffers();
+
+			for (u32 i = 0; i < m_Shaders.size(); ++i)
+			{
+				m_Shaders[i].renderPass = ResolveRenderPassType(m_Shaders[i].shader->renderPassType, m_Shaders[i].shader->name.c_str());
+			}
+
+			for (u32 i = 0; i < m_RenderObjects.size(); ++i)
+			{
+				CreateDescriptorSet(i);
+				CreateGraphicsPipeline(i, false);
+			}
+
+			for (auto& iter : m_SpriteDescSets)
+			{
+				vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPool, 1, &(iter.second.descSet));
+				iter.second.descSet = CreateSpriteDescSet(iter.second.shaderID, iter.first, iter.second.textureLayer);
+			}
+
+			CreateSSAODescriptorSets();
+			CreateSSAOPipelines();
+
+			CreateFramebuffers();
+			m_CommandBufferManager.CreateCommandBuffers(m_SwapChainImages.size());
+		}
+
+		void VulkanRenderer::SetObjectName(uint64_t object, VkDebugReportObjectTypeEXT type, const char* name)
+		{
+			if (m_vkDebugMarkerSetObjectName)
+			{
+				VkDebugMarkerObjectNameInfoEXT info = {};
+				info.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT;
+				info.object = object;
+				info.objectType = type;
+				info.pObjectName = name;
+				VK_CHECK_RESULT(m_vkDebugMarkerSetObjectName(m_VulkanDevice->m_LogicalDevice, &info));
+			}
+		}
+
+		void VulkanRenderer::SetSwapchainName(VkSwapchainKHR swapchain, const char* name)
+		{
+			SetObjectName(swapchain, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, name);
+		}
+
+		void VulkanRenderer::SetDescriptorSetName(VkDescriptorSet descSet, const char* name)
+		{
+			SetObjectName(descSet, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, name);
+		}
+
+		void VulkanRenderer::SetPipelineName(VkPipeline pipeline, const char* name)
+		{
+			SetObjectName(pipeline, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, name);
+		}
+
+		void VulkanRenderer::SetFramebufferName(VkFramebuffer framebuffer, const char* name)
+		{
+			SetObjectName(framebuffer, VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT, name);
+		}
+
+		void VulkanRenderer::SetRenderPassName(VkRenderPass renderPass, const char* name)
+		{
+			SetObjectName(renderPass, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, name);
+		}
+
+		void VulkanRenderer::BeginRegion(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color)
+		{
+			if (m_vkCmdDebugMarkerBegin)
+			{
+				VkDebugMarkerMarkerInfoEXT markerInfo = {};
+				markerInfo.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
+				memcpy(markerInfo.color, &color[0], sizeof(float) * 4);
+				markerInfo.pMarkerName = markerName;
+				m_vkCmdDebugMarkerBegin(cmdBuf, &markerInfo);
+			}
+		}
+
+		void VulkanRenderer::EndRegion(VkCommandBuffer cmdBuf)
+		{
+			if (m_vkCmdDebugMarkerEnd)
+			{
+				m_vkCmdDebugMarkerEnd(cmdBuf);
+			}
 		}
 
 		bool VulkanRenderer::CreateShaderModule(const std::vector<char>& code, VkShaderModule* shaderModule) const
@@ -7711,195 +7786,120 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::CaptureSceneToCubemap(RenderID cubemapRenderID)
+		bool VulkanRenderer::DoTextureSelector(const char* label,
+			const std::vector<VulkanTexture*>& textures,
+			i32* selectedIndex,
+			bool* bGenerateSampler)
 		{
-			UNREFERENCED_PARAMETER(cubemapRenderID);
-		}
+			bool bValueChanged = false;
 
-		void VulkanRenderer::GeneratePrefilteredMapFromCubemap(MaterialID cubemapMaterialID)
-		{
-			UNREFERENCED_PARAMETER(cubemapMaterialID);
-		}
-
-		void VulkanRenderer::GenerateIrradianceSamplerFromCubemap(MaterialID cubemapMaterialID)
-		{
-			UNREFERENCED_PARAMETER(cubemapMaterialID);
-		}
-
-		void VulkanRenderer::CreateSSAOPipelines()
-		{
-			VulkanRenderObject* gBufferObject = GetRenderObject(m_GBufferQuadRenderID);
-
-			GraphicsPipelineCreateInfo pipelineCreateInfo = {};
-			pipelineCreateInfo.bSetDynamicStates = true;
-			pipelineCreateInfo.topology = gBufferObject->topology;
-			pipelineCreateInfo.cullMode = gBufferObject->cullMode;
-			pipelineCreateInfo.bEnableColorBlending = false;
-
-			VulkanMaterial* ssaoMaterial = &m_Materials[m_SSAOMatID];
-			VulkanShader* ssaoShader = &m_Shaders[ssaoMaterial->material.shaderID];
-
-			pipelineCreateInfo.graphicsPipeline = m_SSAOGraphicsPipeline.replace();
-			pipelineCreateInfo.pipelineLayout = m_SSAOGraphicsPipelineLayout.replace();
-			pipelineCreateInfo.shaderID = ssaoMaterial->material.shaderID;
-			pipelineCreateInfo.vertexAttributes = ssaoShader->shader->vertexAttributes;
-			pipelineCreateInfo.descriptorSetLayoutIndex = ssaoMaterial->descriptorSetLayoutIndex;
-			pipelineCreateInfo.subpass = ssaoShader->shader->subpass;
-			pipelineCreateInfo.depthWriteEnable = ssaoShader->shader->bDepthWriteEnable ? VK_TRUE : VK_FALSE;
-			pipelineCreateInfo.depthCompareOp = gBufferObject->depthCompareOp;
-			pipelineCreateInfo.renderPass = ssaoShader->renderPass;
-			pipelineCreateInfo.fragSpecializationInfo = &m_SSAOSpecializationInfo;
-			CreateGraphicsPipeline(&pipelineCreateInfo);
-
-			VulkanMaterial* ssaoBlurMaterial = &m_Materials[m_SSAOBlurMatID];
-			VulkanShader* ssaoBlurShader = &m_Shaders[ssaoBlurMaterial->material.shaderID];
-
-			pipelineCreateInfo.graphicsPipeline = m_SSAOBlurHGraphicsPipeline.replace();
-			pipelineCreateInfo.pipelineLayout = m_SSAOBlurGraphicsPipelineLayout.replace();
-			pipelineCreateInfo.shaderID = ssaoBlurMaterial->material.shaderID;
-			pipelineCreateInfo.vertexAttributes = ssaoBlurShader->shader->vertexAttributes;
-			pipelineCreateInfo.descriptorSetLayoutIndex = ssaoBlurMaterial->descriptorSetLayoutIndex;
-			pipelineCreateInfo.subpass = 0;
-			pipelineCreateInfo.depthWriteEnable = ssaoBlurShader->shader->bDepthWriteEnable ? VK_TRUE : VK_FALSE;
-			pipelineCreateInfo.renderPass = ssaoBlurShader->renderPass;
-			CreateGraphicsPipeline(&pipelineCreateInfo);
-
-			pipelineCreateInfo.graphicsPipeline = m_SSAOBlurVGraphicsPipeline.replace();
-			pipelineCreateInfo.pipelineLayout = m_SSAOBlurGraphicsPipelineLayout.replace();
-			pipelineCreateInfo.shaderID = ssaoBlurMaterial->material.shaderID;
-			pipelineCreateInfo.vertexAttributes = ssaoBlurShader->shader->vertexAttributes;
-			pipelineCreateInfo.descriptorSetLayoutIndex = ssaoBlurMaterial->descriptorSetLayoutIndex;
-			pipelineCreateInfo.subpass = 0;
-			pipelineCreateInfo.depthWriteEnable = ssaoBlurShader->shader->bDepthWriteEnable ? VK_TRUE : VK_FALSE;
-			pipelineCreateInfo.renderPass = ssaoBlurShader->renderPass;
-			CreateGraphicsPipeline(&pipelineCreateInfo);
-		}
-
-		void VulkanRenderer::CreateSSAODescriptorSets()
-		{
-			VulkanMaterial* ssaoMaterial = &m_Materials[m_SSAOMatID];
-			VulkanShader* ssaoShader = &m_Shaders[ssaoMaterial->material.shaderID];
-
-			VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[ssaoMaterial->material.shaderID];
-
-			DescriptorSetCreateInfo descSetCreateInfo = {};
-			descSetCreateInfo.DBG_Name = "SSAO";
-			descSetCreateInfo.descriptorSet = &m_SSAODescSet;
-			descSetCreateInfo.descriptorSetLayout = &descSetLayout;
-			descSetCreateInfo.shaderID = ssaoMaterial->material.shaderID;
-			descSetCreateInfo.uniformBuffer = &ssaoShader->uniformBuffer;
-			FrameBufferAttachment& normalFrameBufferAttachment = m_OffScreenFrameBuf->frameBufferAttachments[0].second;
-			// Depth texture is handled for us in CreateDescriptorSet
-			descSetCreateInfo.ssaoNormalImageView = normalFrameBufferAttachment.view;
-			descSetCreateInfo.ssaoNormalSampler = m_SSAOSampler;
-			descSetCreateInfo.noiseTexture = ssaoMaterial->noiseTexture;
-			CreateDescriptorSet(&descSetCreateInfo);
-
-			VulkanMaterial* ssaoBlurMaterial = &m_Materials[m_SSAOBlurMatID];
-			VulkanShader* ssaoBlurShader = &m_Shaders[ssaoBlurMaterial->material.shaderID];
-
-			descSetLayout = m_DescriptorSetLayouts[ssaoBlurMaterial->material.shaderID];
-
-			descSetCreateInfo = {};
-			descSetCreateInfo.descriptorSet = &m_SSAOBlurHDescSet;
-			descSetCreateInfo.DBG_Name = "SSAO Blur Horizontal";
-			descSetCreateInfo.descriptorSetLayout = &descSetLayout;
-			descSetCreateInfo.shaderID = ssaoBlurMaterial->material.shaderID;
-			descSetCreateInfo.uniformBuffer = &ssaoBlurShader->uniformBuffer;
-			FrameBufferAttachment& ssaoFrameBufferAttachment = m_SSAOFrameBuf->frameBufferAttachments[0].second;
-			descSetCreateInfo.ssaoImageView = ssaoFrameBufferAttachment.view;
-			descSetCreateInfo.ssaoSampler = m_SSAOSampler;
-			descSetCreateInfo.ssaoNormalImageView = normalFrameBufferAttachment.view;
-			descSetCreateInfo.ssaoNormalSampler = m_SSAOSampler;
-			// Depth texture is handled in CreateDescriptorSet
-			CreateDescriptorSet(&descSetCreateInfo);
-
-			descSetCreateInfo = {};
-			descSetCreateInfo.descriptorSet = &m_SSAOBlurVDescSet;
-			descSetCreateInfo.DBG_Name = "SSAO Blur Vertical";
-			descSetCreateInfo.descriptorSetLayout = &descSetLayout;
-			descSetCreateInfo.shaderID = ssaoBlurMaterial->material.shaderID;
-			descSetCreateInfo.uniformBuffer = &ssaoBlurShader->uniformBuffer;
-			FrameBufferAttachment& ssaoBlurHFrameBufferAttachment = m_SSAOBlurHFrameBuf->frameBufferAttachments[0].second;
-			descSetCreateInfo.ssaoImageView = ssaoBlurHFrameBufferAttachment.view;
-			descSetCreateInfo.ssaoSampler = m_SSAOSampler;
-			descSetCreateInfo.ssaoNormalImageView = normalFrameBufferAttachment.view;
-			descSetCreateInfo.ssaoNormalSampler = m_SSAOSampler;
-			CreateDescriptorSet(&descSetCreateInfo);
-		}
-
-		void VulkanRenderer::CreateRenderPass(VkRenderPass* outPass, VkFormat colorFormat, const char* passName,
-			VkImageLayout finalLayout /* = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL */,
-			bool bKeepInitialContents /* = false */,
-			bool bDepth /* = false */,
-			VkFormat depthFormat /* = VK_FORMAT_UNDEFINED */,
-			VkImageLayout finalDepthLayout /* = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL */)
-		{
-			// Color attachment
-			VkAttachmentDescription colorAttachment = vks::attachmentDescription(colorFormat, finalLayout);
-			VkAttachmentDescription depthAttachment = vks::attachmentDescription(depthFormat, finalDepthLayout);
-
-			if (bKeepInitialContents)
+			std::string currentTexName = (*selectedIndex == 0 ? "NONE" : (textures[*selectedIndex - 1]->relativeFilePath.c_str()));
+			if (ImGui::BeginCombo(label, currentTexName.c_str()))
 			{
-				colorAttachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-				colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-
-				if (bDepth)
+				for (i32 i = 0; i < (i32)textures.size() + 1; i++)
 				{
-					depthAttachment.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-					depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+					bool bTextureSelected = (*selectedIndex == i);
+
+					if (i == 0)
+					{
+						if (ImGui::Selectable("NONE", bTextureSelected))
+						{
+							*bGenerateSampler = false;
+
+							*selectedIndex = i;
+							bValueChanged = true;
+						}
+					}
+					else
+					{
+						std::string textureName = textures[i - 1]->relativeFilePath;
+						if (ImGui::Selectable(textureName.c_str(), bTextureSelected))
+						{
+							if (*selectedIndex == 0)
+							{
+								*bGenerateSampler = true;
+							}
+
+							*selectedIndex = i;
+							bValueChanged = true;
+						}
+
+						if (ImGui::IsItemHovered())
+						{
+							DoTexturePreviewTooltip(textures[i - 1]);
+						}
+					}
+					if (bTextureSelected)
+					{
+						ImGui::SetItemDefaultFocus();
+					}
+				}
+				ImGui::EndCombo();
+			}
+
+			return bValueChanged;
+		}
+
+		void VulkanRenderer::ImGuiUpdateTextureIndexOrMaterial(bool bUpdateTextureMaterial,
+			const std::string& texturePath,
+			std::string& matTexturePath,
+			VulkanTexture* texture,
+			i32 i,
+			i32* textureIndex,
+			VkSampler* sampler)
+		{
+			if (bUpdateTextureMaterial)
+			{
+				if (*textureIndex == 0)
+				{
+					matTexturePath = "";
+					*sampler = VK_NULL_HANDLE;
+				}
+				else if (i == *textureIndex - 1)
+				{
+					matTexturePath = texturePath;
+					if (texture)
+					{
+						*sampler = texture->sampler;
+					}
 				}
 			}
-
-			VkAttachmentReference colorReference = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
-			VkAttachmentReference depthAttachmentRef = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
-
-			std::array<VkSubpassDescription, 1> subpasses;
-			subpasses[0] = {};
-			subpasses[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-			subpasses[0].colorAttachmentCount = 1;
-			subpasses[0].pColorAttachments = &colorReference;
-			subpasses[0].pDepthStencilAttachment = bDepth ? &depthAttachmentRef : nullptr;
-
-			// Use subpass dependencies for layout transitions
-			std::array<VkSubpassDependency, 2> dependencies;
-			dependencies[0] = {};
-			dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
-			dependencies[0].dstSubpass = 0;
-			dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-			dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-			dependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-			dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-			dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-			dependencies[1] = {};
-			dependencies[1].srcSubpass = 0;
-			dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
-			dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-			dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-			dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-			dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-			dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-			std::vector<VkAttachmentDescription> attachments;
-			attachments.push_back(colorAttachment);
-
-			if (bDepth)
+			else
 			{
-				attachments.push_back(depthAttachment);
+				if (matTexturePath.empty())
+				{
+					*textureIndex = 0;
+				}
+				else if (texturePath.compare(matTexturePath) == 0)
+				{
+					*textureIndex = i + 1;
+				}
+			}
+		}
+
+		void VulkanRenderer::DoTexturePreviewTooltip(VulkanTexture* texture)
+		{
+			ImGui::BeginTooltip();
+
+			ImVec2 cursorPos = ImGui::GetCursorPos();
+
+			real textureAspectRatio = (real)texture->width / (real)texture->height;
+			real texSize = 128.0f;
+
+			if (texture->channelCount == 4)
+			{
+				real tiling = 3.0f;
+				ImVec2 uv0(0.0f, 0.0f);
+				ImVec2 uv1(tiling * textureAspectRatio, tiling);
+				VulkanTexture* alphaBGTexture = m_LoadedTextures[m_AlphaBGTextureID];
+				ImGui::Image((void*)&alphaBGTexture->image, ImVec2(texSize * textureAspectRatio, texSize), uv0, uv1);
 			}
 
-			// Renderpass
-			VkRenderPassCreateInfo renderPassCreateInfo = vks::renderPassCreateInfo();
-			renderPassCreateInfo.attachmentCount = attachments.size();
-			renderPassCreateInfo.pAttachments = attachments.data();
-			renderPassCreateInfo.subpassCount = subpasses.size();
-			renderPassCreateInfo.pSubpasses = subpasses.data();
-			renderPassCreateInfo.dependencyCount = dependencies.size();
-			renderPassCreateInfo.pDependencies = dependencies.data();
-			VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassCreateInfo, nullptr, outPass));
+			ImGui::SetCursorPos(cursorPos);
 
-			SetRenderPassName(*outPass, passName);
+			ImGui::Image((void*)&texture->image, ImVec2(texSize * textureAspectRatio, texSize));
+
+			ImGui::EndTooltip();
 		}
 
 		VKAPI_ATTR VkBool32 VKAPI_CALL VulkanRenderer::DebugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType,

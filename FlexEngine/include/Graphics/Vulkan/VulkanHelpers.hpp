@@ -570,7 +570,7 @@ namespace flex
 
 			bool bDepthSampler = false;
 
-			std::vector<std::pair<u32, VkImageView*>> frameBufferViews; // Name of frame buffer paired with view i32o frame buffer
+			std::vector<std::pair<u32, VkImageView*>> frameBufferViews; // Name of frame buffer paired with view into frame buffer
 
 			const char* DBG_Name = nullptr;
 		};

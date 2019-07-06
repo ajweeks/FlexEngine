@@ -118,15 +118,14 @@ namespace flex
 			bool m_bEnableDebugMarkers = false;
 
 		protected:
+			virtual bool LoadShaderCode(ShaderID shaderID) override;
+			virtual void SetShaderCount(u32 shaderCount) override;
+			virtual void RemoveMaterial(MaterialID materialID) override;
+			virtual void FillOutFrameBufferAttachments(std::vector<Pair<std::string, void*>>& outVec) override;
 			virtual bool LoadFont(FontMetaData& fontMetaData, bool bForceRender) override;
 
-			virtual bool LoadShaderCode(ShaderID shaderID) override;
-
-			virtual void SetShaderCount(u32 shaderCount) override;
-
-			virtual void RemoveMaterial(MaterialID materialID) override;
-
-			virtual void FillOutFrameBufferAttachments(std::vector<Pair<std::string, void*>>& outVec) override;
+			virtual void EnqueueScreenSpaceSprites() override;
+			virtual void EnqueueWorldSpaceSprites() override;
 
 		private:
 			friend VulkanPhysicsDebugDraw;
@@ -137,9 +136,9 @@ namespace flex
 
 			typedef void (VulkanTexture::*VulkanTextureCreateFunction)(VkQueue graphicsQueue, const std::string&, VkFormat, u32);
 
-			struct UniformOverrides // Passed to UpdateUniformConstant or UpdateUniformDynamic to set values to something other than their defaults
+			struct UniformOverrides
 			{
-				Uniforms overridenUniforms; // To override a uniform, add it to this object, then set the overridden value to the respective member
+				Uniforms overridenUniforms;
 
 				glm::mat4 projection;
 				glm::mat4 view;
@@ -167,12 +166,9 @@ namespace flex
 			void GeneratePrefilteredCube(VulkanRenderObject* renderObject);
 			void GenerateBRDFLUT();
 
-			// Draw all static geometry to the given render object's cubemap texture
 			void CaptureSceneToCubemap(RenderID cubemapRenderID);
-			//void GenerateCubemapFromHDREquirectangular(MaterialID cubemapMaterialID, const std::string& environmentMapPath);
 			void GeneratePrefilteredMapFromCubemap(MaterialID cubemapMaterialID);
 			void GenerateIrradianceSamplerFromCubemap(MaterialID cubemapMaterialID);
-			//void GenerateBRDFLUT(u32 brdfLUTTextureID, glm::vec2 BRDFLUTSize);
 
 			void CreateSSAOPipelines();
 			void CreateSSAODescriptorSets();
@@ -208,45 +204,45 @@ namespace flex
 			void PrepareFrameBuffers();
 			void PrepareCubemapFrameBuffer();
 			void PhysicsDebugRender();
-			void RenderFullscreenQuad(VkCommandBuffer commandBuffer, VkRenderPass renderPass, VkFramebuffer framebuffer);
 
 			void CreateUniformBuffers(VulkanShader* shader);
 
-			// Returns a pointer i32o m_LoadedTextures if a texture has been loaded from that file path, otherwise returns nullptr
+			// Returns a pointer into m_LoadedTextures if a texture has been loaded from that file path, otherwise returns nullptr
 			VulkanTexture* GetLoadedTexture(const std::string& filePath);
-
-			void CreateDynamicVertexBuffer(VulkanBuffer* vertexBuffer, u32 size, void* initialData = nullptr);
-
+			
 			void CreateStaticVertexBuffers();
-
 			void CreateDynamicVertexBuffers();
 
-			// Creates vertex buffer for all render objects' verts which use specified shader index. Returns vertex count
 			u32 CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, ShaderID shaderID, u32 size);
-			void CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, void* vertexBufferData, u32 vertexBufferSize);
 			void CreateShadowVertexBuffer();
+			void CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, void* vertexBufferData, u32 vertexBufferSize);
+			void CreateDynamicVertexBuffer(VulkanBuffer* vertexBuffer, u32 size, void* initialData = nullptr);
 
-			// Creates static index buffers for all render objects
 			void CreateStaticIndexBuffers();
 
 			// Creates index buffer for all render objects' indices which use specified shader index. Returns index count
 			u32 CreateStaticIndexBuffer(VulkanBuffer* indexBuffer, ShaderID shaderID);
-			void CreateStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<u32>& indices);
 			void CreateShadowIndexBuffer();
+			void CreateStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<u32>& indices);
 
 			void CreateDescriptorPool();
 			u32 AllocateDynamicUniformBuffer(u32 dynamicDataSize, void** data, i32 maxObjectCount = -1);
 			void PrepareUniformBuffer(VulkanBuffer* buffer, u32 bufferSize,
 				VkBufferUsageFlags bufferUseageFlagBits, VkMemoryPropertyFlags memoryPropertyHostFlagBits);
 
+			void CreateSemaphores();
+
 			void BatchRenderObjects();
 			void DrawShaderBatch(const ShaderBatchPair &shaderBatches, VkCommandBuffer& commandBuffer, DrawCallInfo* drawCallInfo = nullptr);
 
-			void BuildCommandBuffers(const DrawCallInfo& drawCallInfo);
+			void RenderFullscreenQuad(VkCommandBuffer commandBuffer, VkRenderPass renderPass, VkFramebuffer framebuffer);
+
 			void BuildDeferredCommandBuffer();
+			void BuildCommandBuffers(const DrawCallInfo& drawCallInfo);
+
+			void DrawFrame();
 
 			void BindDescriptorSet(VulkanShader* shader, u32 dynamicOffsetOffset, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet);
-			void CreateSemaphores();
 			void RecreateSwapChain();
 
 			void SetObjectName(uint64_t object, VkDebugReportObjectTypeEXT type, const char* name);
@@ -259,7 +255,6 @@ namespace flex
 			void BeginRegion(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color = VEC4_ONE);
 			void EndRegion(VkCommandBuffer cmdBuf);
 
-			void DrawFrame();
 			bool CreateShaderModule(const std::vector<char>& code, VkShaderModule* shaderModule) const;
 			VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) const;
 			VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) const;
@@ -308,8 +303,6 @@ namespace flex
 
 			void DrawTextSS(VkCommandBuffer commandBuffer);
 			void DrawTextWS(VkCommandBuffer commandBuffer);
-			void EnqueueScreenSpaceSprites();
-			void EnqueueWorldSpaceSprites();
 			void DrawSpriteBatch(const std::vector<SpriteQuadDrawInfo>& batch, VkCommandBuffer commandBuffer);
 
 			VkRenderPass ResolveRenderPassType(RenderPassType renderPassType, const char* shaderName);
