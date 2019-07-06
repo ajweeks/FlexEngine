@@ -1929,21 +1929,6 @@ namespace flex
 
 			EnqueueWorldSpaceText();
 
-			ApplyPostProcessing();
-
-			if (!m_PhysicsDebuggingSettings.DisableAll)
-			{
-				PROFILE_AUTO("PhysicsDebugRender");
-
-				GL_PUSH_DEBUG_GROUP("Physics Debug");
-
-				btDiscreteDynamicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
-				physicsWorld->debugDrawWorld();
-
-				GL_POP_DEBUG_GROUP();
-			}
-
-
 			{
 				std::vector<TextVertex3D> textVerticesWS;
 				UpdateTextBufferWS(textVerticesWS);
@@ -1958,6 +1943,20 @@ namespace flex
 			}
 
 			DrawTextWS();
+
+			ApplyPostProcessing();
+
+			if (!m_PhysicsDebuggingSettings.DisableAll)
+			{
+				PROFILE_AUTO("PhysicsDebugRender");
+
+				GL_PUSH_DEBUG_GROUP("Physics Debug");
+
+				btDiscreteDynamicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
+				physicsWorld->debugDrawWorld();
+
+				GL_POP_DEBUG_GROUP();
+			}
 
 			bool bUsingGameplayCam = g_CameraManager->CurrentCamera()->bIsGameplayCam;
 			if (g_EngineInstance->IsRenderingEditorObjects() && !bUsingGameplayCam)
@@ -2754,6 +2753,7 @@ namespace flex
 			}
 		}
 
+		// TODO: Enqueue sprites like in Vulkan then draw in batches
 		void GLRenderer::DrawSpriteQuad(const SpriteQuadDrawInfo& drawInfo)
 		{
 			MaterialID matID = drawInfo.materialID == InvalidMaterialID ? m_SpriteMatID : drawInfo.materialID;
