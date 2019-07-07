@@ -5691,6 +5691,7 @@ namespace flex
 				renderPassInfo.pDependencies = dependencies.data();
 
 				VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassInfo, nullptr, m_GBufferFrameBuf->renderPass.replace()));
+				SetRenderPassName(m_GBufferFrameBuf->renderPass, "GBuffer");
 			}
 
 			// TODO: Make render pass helper support depth-only passes
@@ -5737,6 +5738,26 @@ namespace flex
 				renderPassCreateInfo.dependencyCount = dependencies.size();
 				renderPassCreateInfo.pDependencies = dependencies.data();
 				VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassCreateInfo, nullptr, m_ShadowRenderPass.replace()));
+				SetRenderPassName(m_ShadowRenderPass, "Shadow");
+			}
+
+			// GBuffer frame buffer
+			{
+				std::vector<VkImageView> attachments;
+				for (u32 i = 0; i < frameBufferColorAttachmentCount; ++i)
+				{
+					attachments.push_back(m_GBufferFrameBuf->frameBufferAttachments[i].second.view);
+				}
+				attachments.push_back(m_GBufferDepthAttachment->view);
+
+				VkFramebufferCreateInfo gbufferFramebufferCreateInfo = vks::framebufferCreateInfo(m_GBufferFrameBuf->renderPass);
+				gbufferFramebufferCreateInfo.pAttachments = attachments.data();
+				gbufferFramebufferCreateInfo.attachmentCount = static_cast<u32>(attachments.size());
+				gbufferFramebufferCreateInfo.width = m_GBufferFrameBuf->width;
+				gbufferFramebufferCreateInfo.height = m_GBufferFrameBuf->height;
+				gbufferFramebufferCreateInfo.layers = 1;
+				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &gbufferFramebufferCreateInfo, nullptr, m_GBufferFrameBuf->frameBuffer.replace()));
+				SetFramebufferName(m_GBufferFrameBuf->frameBuffer, "GBuffer");
 			}
 
 			// Shadow frame buffers
@@ -5807,27 +5828,7 @@ namespace flex
 				}
 			}
 
-			// GBuffer framebuffer
-			{
-				std::vector<VkImageView> attachments;
-				for (u32 i = 0; i < frameBufferColorAttachmentCount; ++i)
-				{
-					attachments.push_back(m_GBufferFrameBuf->frameBufferAttachments[i].second.view);
-				}
-				attachments.push_back(m_GBufferDepthAttachment->view);
-
-				VkFramebufferCreateInfo gbufferFramebufferCreateInfo = vks::framebufferCreateInfo(m_GBufferFrameBuf->renderPass);
-				gbufferFramebufferCreateInfo.pAttachments = attachments.data();
-				gbufferFramebufferCreateInfo.attachmentCount = static_cast<u32>(attachments.size());
-				gbufferFramebufferCreateInfo.width = m_GBufferFrameBuf->width;
-				gbufferFramebufferCreateInfo.height = m_GBufferFrameBuf->height;
-				gbufferFramebufferCreateInfo.layers = 1;
-				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &gbufferFramebufferCreateInfo, nullptr, m_GBufferFrameBuf->frameBuffer.replace()));
-
-				SetFramebufferName(m_GBufferFrameBuf->frameBuffer, "GBuffer");
-			}
-
-			// SSAO Framebuffer
+			// SSAO frame buffer
 			{
 				assert(m_SSAOFrameBuf->frameBufferAttachments.size() == 1);
 
@@ -5843,47 +5844,34 @@ namespace flex
 				ssaoFramebufferCreateInfo.height = m_SSAOFrameBuf->height;
 				ssaoFramebufferCreateInfo.layers = 1;
 				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &ssaoFramebufferCreateInfo, nullptr, m_SSAOFrameBuf->frameBuffer.replace()));
-
 				SetFramebufferName(m_SSAOFrameBuf->frameBuffer, "SSAO");
 			}
 
-			// SSAO Blur Horizontal pass frame buffer
+			// SSAO Blur frame buffers
 			{
 				assert(m_SSAOBlurHFrameBuf->frameBufferAttachments.size() == 1);
+				assert(m_SSAOBlurVFrameBuf->frameBufferAttachments.size() == 1);
+				assert(m_SSAOBlurHFrameBuf->width == m_SSAOBlurVFrameBuf->width);
+				assert(m_SSAOBlurHFrameBuf->height == m_SSAOBlurVFrameBuf->height);
 
 				CreateAttachment(m_VulkanDevice, m_SSAOBlurHFrameBuf);
-
-				std::vector<VkImageView> ssaoBlurHAttachments;
-				ssaoBlurHAttachments.push_back(m_SSAOBlurHFrameBuf->frameBufferAttachments[0].second.view);
-
-				VkFramebufferCreateInfo ssaoBlurHFramebufferCreateInfo = vks::framebufferCreateInfo(m_SSAOBlurHRenderPass);
-				ssaoBlurHFramebufferCreateInfo.pAttachments = ssaoBlurHAttachments.data();
-				ssaoBlurHFramebufferCreateInfo.attachmentCount = static_cast<u32>(ssaoBlurHAttachments.size());
-				ssaoBlurHFramebufferCreateInfo.width = m_SSAOBlurHFrameBuf->width;
-				ssaoBlurHFramebufferCreateInfo.height = m_SSAOBlurHFrameBuf->height;
-				ssaoBlurHFramebufferCreateInfo.layers = 1;
-				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &ssaoBlurHFramebufferCreateInfo, nullptr, m_SSAOBlurHFrameBuf->frameBuffer.replace()));
-
-				SetFramebufferName(m_SSAOBlurHFrameBuf->frameBuffer, "SSAO Blur Horizontal");
-			}
-
-			// SSAO Blur Vertical pass frame buffer
-			{
-				assert(m_SSAOBlurVFrameBuf->frameBufferAttachments.size() == 1);
-
 				CreateAttachment(m_VulkanDevice, m_SSAOBlurVFrameBuf);
 
-				std::vector<VkImageView> ssaoBlurVAttachments;
-				ssaoBlurVAttachments.push_back(m_SSAOBlurVFrameBuf->frameBufferAttachments[0].second.view);
+				std::vector<VkImageView> attachments;
+				attachments.push_back(m_SSAOBlurHFrameBuf->frameBufferAttachments[0].second.view);
 
-				VkFramebufferCreateInfo ssaoBlurVFramebufferCreateInfo = vks::framebufferCreateInfo(m_SSAOBlurVRenderPass);
-				ssaoBlurVFramebufferCreateInfo.pAttachments = ssaoBlurVAttachments.data();
-				ssaoBlurVFramebufferCreateInfo.attachmentCount = static_cast<u32>(ssaoBlurVAttachments.size());
-				ssaoBlurVFramebufferCreateInfo.width = m_SSAOBlurVFrameBuf->width;
-				ssaoBlurVFramebufferCreateInfo.height = m_SSAOBlurVFrameBuf->height;
-				ssaoBlurVFramebufferCreateInfo.layers = 1;
-				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &ssaoBlurVFramebufferCreateInfo, nullptr, m_SSAOBlurVFrameBuf->frameBuffer.replace()));
+				VkFramebufferCreateInfo frameBufferCreateInfo = vks::framebufferCreateInfo(m_SSAOBlurHRenderPass);
+				frameBufferCreateInfo.pAttachments = attachments.data();
+				frameBufferCreateInfo.attachmentCount = static_cast<u32>(attachments.size());
+				frameBufferCreateInfo.width = m_SSAOBlurHFrameBuf->width;
+				frameBufferCreateInfo.height = m_SSAOBlurHFrameBuf->height;
+				frameBufferCreateInfo.layers = 1;
+				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &frameBufferCreateInfo, nullptr, m_SSAOBlurHFrameBuf->frameBuffer.replace()));
+				SetFramebufferName(m_SSAOBlurHFrameBuf->frameBuffer, "SSAO Blur Horizontal");
 
+				attachments[0] = m_SSAOBlurVFrameBuf->frameBufferAttachments[0].second.view;
+				frameBufferCreateInfo.renderPass = m_SSAOBlurVRenderPass;
+				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &frameBufferCreateInfo, nullptr, m_SSAOBlurVFrameBuf->frameBuffer.replace()));
 				SetFramebufferName(m_SSAOBlurVFrameBuf->frameBuffer, "SSAO Blur Vertical");
 			}
 
