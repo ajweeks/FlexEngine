@@ -2277,7 +2277,7 @@ namespace flex
 			gBufferMaterialCreateInfo.renderToCubemap = false;
 			gBufferMaterialCreateInfo.persistent = true;
 			gBufferMaterialCreateInfo.visibleInEditor = false;
-			FillOutFrameBufferAttachments(gBufferMaterialCreateInfo.sampledFrameBuffers);
+			FillOutGBufferFrameBufferAttachments(gBufferMaterialCreateInfo.sampledFrameBuffers);
 
 			MaterialID gBufferMatID = InitializeMaterial(&gBufferMaterialCreateInfo);
 
@@ -2314,7 +2314,7 @@ namespace flex
 		//	gBufferCubemapMaterialCreateInfo.renderToCubemap = false;
 		//	gBufferCubemapMaterialCreateInfo.persistent = true;
 		//	gBufferCubemapMaterialCreateInfo.visibleInEditor = false;
-		//	FillOutFrameBufferAttachments(gBufferCubemapMaterialCreateInfo.sampledFrameBuffers);
+		//	FillOutGBufferFrameBufferAttachments(gBufferCubemapMaterialCreateInfo.sampledFrameBuffers);
 		//
 		//	m_CubemapGBufferMaterialID = InitializeMaterial(&gBufferCubemapMaterialCreateInfo);
 		//}

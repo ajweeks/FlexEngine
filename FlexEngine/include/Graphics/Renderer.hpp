@@ -242,7 +242,7 @@ namespace flex
 		virtual bool LoadShaderCode(ShaderID shaderID) = 0;
 		virtual void SetShaderCount(u32 shaderCount) = 0;
 		virtual void RemoveMaterial(MaterialID materialID) = 0;
-		virtual void FillOutFrameBufferAttachments(std::vector<Pair<std::string, void*>>& outVec) = 0;
+		virtual void FillOutGBufferFrameBufferAttachments(std::vector<Pair<std::string, void*>>& outVec) = 0;
 
 		// Will attempt to find pre-rendered font at specified path, and
 		// only render a new file if not present or if bForceRender is true

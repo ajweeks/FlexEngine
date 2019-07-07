@@ -111,7 +111,7 @@ namespace flex
 
 			virtual void RemoveMaterial(MaterialID materialID) override;
 
-			virtual void FillOutFrameBufferAttachments(std::vector<Pair<std::string, void*>>& outVec) override;
+			virtual void FillOutGBufferFrameBufferAttachments(std::vector<Pair<std::string, void*>>& outVec) override;
 
 			virtual void EnqueueScreenSpaceSprites() override;
 			virtual void EnqueueWorldSpaceSprites() override;

@@ -3715,7 +3715,7 @@ namespace flex
 			m_Materials.erase(materialID);
 		}
 
-		void GLRenderer::FillOutFrameBufferAttachments(std::vector<Pair<std::string, void*>>& outVec)
+		void GLRenderer::FillOutGBufferFrameBufferAttachments(std::vector<Pair<std::string, void*>>& outVec)
 		{
 			outVec = {
 				{ "normalRoughnessFrameBufferSampler", &m_LoadedTextures[m_gBufferFBO0ID]->handle },

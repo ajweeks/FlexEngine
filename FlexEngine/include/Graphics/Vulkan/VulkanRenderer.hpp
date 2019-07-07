@@ -121,7 +121,7 @@ namespace flex
 			virtual bool LoadShaderCode(ShaderID shaderID) override;
 			virtual void SetShaderCount(u32 shaderCount) override;
 			virtual void RemoveMaterial(MaterialID materialID) override;
-			virtual void FillOutFrameBufferAttachments(std::vector<Pair<std::string, void*>>& outVec) override;
+			virtual void FillOutGBufferFrameBufferAttachments(std::vector<Pair<std::string, void*>>& outVec) override;
 			virtual bool LoadFont(FontMetaData& fontMetaData, bool bForceRender) override;
 
 			virtual void EnqueueScreenSpaceSprites() override;
@@ -237,7 +237,6 @@ namespace flex
 
 			void RenderFullscreenQuad(VkCommandBuffer commandBuffer, VkRenderPass renderPass, VkFramebuffer framebuffer);
 
-			void BuildDeferredCommandBuffer();
 			void BuildCommandBuffers(const DrawCallInfo& drawCallInfo);
 
 			void DrawFrame();
@@ -358,7 +357,7 @@ namespace flex
 			VulkanTexture* m_BRDFTexture = nullptr;
 			bool bRenderedBRDFLUT = false;
 
-			FrameBuffer* m_OffScreenFrameBuf = nullptr; // GBuffer frame buffer
+			FrameBuffer* m_GBufferFrameBuf = nullptr;
 			FrameBufferAttachment* m_OffScreenDepthAttachment = nullptr;
 			FrameBufferAttachment* m_DepthAttachment = nullptr;
 			VDeleter<VkSampler> m_ColorSampler;
@@ -370,7 +369,7 @@ namespace flex
 			FrameBuffer* m_SSAOBlurVFrameBuf = nullptr;
 			VkDescriptorSet m_SSAODescriptorSet = VK_NULL_HANDLE;
 
-			FrameBuffer* m_CubemapFrameBuffer = nullptr;
+			FrameBuffer* m_GBufferCubemapFrameBuffer = nullptr;
 			FrameBufferAttachment* m_CubemapDepthAttachment = nullptr;
 
 			//FrameBuffer* m_ShadowFrameBuf = nullptr;
