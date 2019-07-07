@@ -6902,7 +6902,7 @@ namespace flex
 
 					vkCmdBeginRenderPass(m_OffScreenCmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-					// TODO: EZ:
+					// TODO: EZ: (erradicate all calls to GetShaderID)
 					ShaderID ssaoShaderID = InvalidShaderID;
 					GetShaderID("ssao", ssaoShaderID);
 					assert(ssaoShaderID != InvalidShaderID);
@@ -6989,21 +6989,9 @@ namespace flex
 				VK_CHECK_RESULT(vkEndCommandBuffer(m_OffScreenCmdBuffer));
 			}
 
-			//std::array<VkClearValue, 2> clearValues = {};
-			//clearValues[0].color = m_ClearColor;
-			//clearValues[1].depthStencil = { 0.0f, 0 };
-
-			//VkRenderPassBeginInfo renderPassBeginInfo = vks::renderPassBeginInfo(m_DeferredCombineRenderPass);
-			//renderPassBeginInfo.renderArea.offset = { 0, 0 };
-			//renderPassBeginInfo.renderArea.extent = m_SwapChainExtent;
-			//renderPassBeginInfo.clearValueCount = clearValues.size();
-			//renderPassBeginInfo.pClearValues = clearValues.data();
-
-			//VulkanRenderObject* gBufferObject = GetRenderObject(m_GBufferQuadRenderID);
-			//VulkanMaterial* gBufferMaterial = &m_Materials[gBufferObject->materialID];
-
 			if (g_EngineInstance->IsRenderingImGui())
 			{
+				// Generate ImGui geometry (retrieved later through ImGui::GetDrawData)
 				ImGui::Render();
 			}
 
@@ -7020,19 +7008,21 @@ namespace flex
 
 				RenderFullscreenQuad(commandBuffer, m_DeferredCombineRenderPass, m_SwapChainFramebuffers[m_CurrentSwapChainBufferIndex]);
 
+				// TODO: Remove unnecessary transitions (use render passes where possible)
+
 				// m_GBufferDepthAttachment was being read by SSAO, now needs to be copied to m_SwapChainDepthAttachment for forward rendering
 				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_GBufferDepthAttachment->image, m_GBufferDepthAttachment->format,
 					VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 1, commandBuffer, true);
 
-				// m_SwapChainDepthAttachment was copied into, now needs to be written to in forward pass
+				// m_SwapChainDepthAttachment is empty, needs to be copied into from data generated in gbuffer fill pass
 				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_SwapChainDepthAttachment->image, m_SwapChainDepthAttachment->format,
 					VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, commandBuffer);
 
-				// TODO: Blit here instead if supported
+				// TODO: Blit here instead when supported
 				CopyImage(m_VulkanDevice, m_GraphicsQueue, m_GBufferDepthAttachment->image, m_SwapChainDepthAttachment->image,
 					m_SwapChainExtent.width, m_SwapChainExtent.height, commandBuffer, VK_IMAGE_ASPECT_DEPTH_BIT);
 
-				// m_SwapChainDepthAttachment was copied into, now needs to be written to in forward pass
+				// m_SwapChainDepthAttachment was copied into, now will be written to in forward pass
 				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_SwapChainDepthAttachment->image, m_SwapChainDepthAttachment->format,
 					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1, commandBuffer);
 
