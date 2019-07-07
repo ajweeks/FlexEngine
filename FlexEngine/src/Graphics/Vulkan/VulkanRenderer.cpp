@@ -132,18 +132,18 @@ namespace flex
 
 			m_CommandBufferManager = VulkanCommandBufferManager(m_VulkanDevice);
 
-			FrameBufferAttachment::CreateInfo depthCreateInfo = {};
-			depthCreateInfo.bIsDepth = true;
-			depthCreateInfo.bIsTransferedDst = true;
-			depthCreateInfo.format = depthFormat;
-			m_SwapChainDepthAttachment = new FrameBufferAttachment(m_VulkanDevice, depthCreateInfo);
+			FrameBufferAttachment::CreateInfo swapChainDepthCreateInfo = {};
+			swapChainDepthCreateInfo.bIsDepth = true;
+			swapChainDepthCreateInfo.bIsTransferedDst = true;
+			swapChainDepthCreateInfo.format = depthFormat;
+			m_SwapChainDepthAttachment = new FrameBufferAttachment(m_VulkanDevice, swapChainDepthCreateInfo);
 
-			FrameBufferAttachment::CreateInfo offscreenDepthCreateInfo = {};
-			offscreenDepthCreateInfo.bIsDepth = true;
-			offscreenDepthCreateInfo.bIsTransferedSrc = true;
-			offscreenDepthCreateInfo.bIsSampled = true;
-			offscreenDepthCreateInfo.format = depthFormat;
-			m_GBufferDepthAttachment = new FrameBufferAttachment(m_VulkanDevice, offscreenDepthCreateInfo);
+			FrameBufferAttachment::CreateInfo gBufferDepthCreateInfo = {};
+			gBufferDepthCreateInfo.bIsDepth = true;
+			gBufferDepthCreateInfo.bIsTransferedSrc = true;
+			gBufferDepthCreateInfo.bIsSampled = true;
+			gBufferDepthCreateInfo.format = depthFormat;
+			m_GBufferDepthAttachment = new FrameBufferAttachment(m_VulkanDevice, gBufferDepthCreateInfo);
 
 			FrameBufferAttachment::CreateInfo cubemapDepthCreateInfo = {};
 			cubemapDepthCreateInfo.bIsDepth = true;
@@ -202,15 +202,15 @@ namespace flex
 
 			m_GBufferFrameBuf = new FrameBuffer(m_VulkanDevice);
 			m_GBufferFrameBuf->frameBufferAttachments = {
-				{ "normalRoughnessFrameBufferSampler", { m_VulkanDevice, frameBufCreateInfo } },
-				{ "albedoMetallicFrameBufferSampler",  { m_VulkanDevice, frameBufCreateInfo } },
+				{ "normalRoughness", { m_VulkanDevice, frameBufCreateInfo } },
+				{ "albedoMetallic",  { m_VulkanDevice, frameBufCreateInfo } },
 			};
 
 			frameBufCreateInfo.bIsCubemap = true;
 			m_GBufferCubemapFrameBuffer = new FrameBuffer(m_VulkanDevice);
 			m_GBufferCubemapFrameBuffer->frameBufferAttachments = {
-				{ "normalRoughnessFrameBufferSampler", { m_VulkanDevice, frameBufCreateInfo } },
-				{ "albedoMetallicFrameBufferSampler",  { m_VulkanDevice, frameBufCreateInfo } },
+				{ "normalRoughness", { m_VulkanDevice, frameBufCreateInfo } },
+				{ "albedoMetallic",  { m_VulkanDevice, frameBufCreateInfo } },
 			};
 			frameBufCreateInfo.bIsCubemap = false;
 
