@@ -145,6 +145,15 @@ namespace flex
 			gBufferDepthCreateInfo.format = depthFormat;
 			m_GBufferDepthAttachment = new FrameBufferAttachment(m_VulkanDevice, gBufferDepthCreateInfo);
 
+			FrameBufferAttachment::CreateInfo offscreenDepthCreateInfo = {};
+			offscreenDepthCreateInfo.bIsDepth = true;
+			// TODO: Double check
+			offscreenDepthCreateInfo.bIsTransferedSrc = true;
+			offscreenDepthCreateInfo.bIsSampled = true;
+			offscreenDepthCreateInfo.format = depthFormat;
+			m_OffscreenDepthAttachment0 = new FrameBufferAttachment(m_VulkanDevice, offscreenDepthCreateInfo);
+			m_OffscreenDepthAttachment1 = new FrameBufferAttachment(m_VulkanDevice, offscreenDepthCreateInfo);
+
 			FrameBufferAttachment::CreateInfo cubemapDepthCreateInfo = {};
 			cubemapDepthCreateInfo.bIsDepth = true;
 			cubemapDepthCreateInfo.bIsCubemap = true;
@@ -196,14 +205,26 @@ namespace flex
 			CreateSwapChain();
 			CreateSwapChainImageViews();
 
+			m_OffscreenFrameBufferFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
+
 			FrameBufferAttachment::CreateInfo frameBufCreateInfo = {};
-			frameBufCreateInfo.format = VK_FORMAT_R16G16B16A16_SFLOAT;
+			frameBufCreateInfo.format = m_OffscreenFrameBufferFormat;
 			frameBufCreateInfo.bIsSampled = true;
 
 			m_GBufferFrameBuf = new FrameBuffer(m_VulkanDevice);
 			m_GBufferFrameBuf->frameBufferAttachments = {
 				{ "normalRoughness", { m_VulkanDevice, frameBufCreateInfo } },
 				{ "albedoMetallic",  { m_VulkanDevice, frameBufCreateInfo } },
+			};
+
+			m_OffscreenFrameBuffer0 = new FrameBuffer(m_VulkanDevice);
+			m_OffscreenFrameBuffer0->frameBufferAttachments = {
+				{ "color", { m_VulkanDevice, frameBufCreateInfo } },
+			};
+
+			m_OffscreenFrameBuffer1 = new FrameBuffer(m_VulkanDevice);
+			m_OffscreenFrameBuffer1->frameBufferAttachments = {
+				{ "color", { m_VulkanDevice, frameBufCreateInfo } },
 			};
 
 			frameBufCreateInfo.bIsCubemap = true;
@@ -580,6 +601,12 @@ namespace flex
 			delete m_GBufferFrameBuf;
 			m_GBufferFrameBuf = nullptr;
 
+			delete m_OffscreenFrameBuffer0;
+			m_OffscreenFrameBuffer0 = nullptr;
+
+			delete m_OffscreenFrameBuffer1;
+			m_OffscreenFrameBuffer1 = nullptr;
+
 			delete m_SSAOFrameBuf;
 			m_SSAOFrameBuf = nullptr;
 
@@ -600,6 +627,12 @@ namespace flex
 
 			delete m_GBufferDepthAttachment;
 			m_GBufferDepthAttachment = nullptr;
+
+			delete m_OffscreenDepthAttachment0;
+			m_OffscreenDepthAttachment0 = nullptr;
+
+			delete m_OffscreenDepthAttachment1;
+			m_OffscreenDepthAttachment1 = nullptr;
 
 			for (u32 i = 0; i < NUM_SHADOW_CASCADES; ++i)
 			{
@@ -4825,6 +4858,8 @@ namespace flex
 
 		void VulkanRenderer::CreateRenderPasses()
 		{
+			// TODO: Create GBuffer & offscreen render passes here too? (Currently in PrepareFrameBuffers)
+
 			VkFormat ssaoFrameBufFormat = m_SSAOFrameBuf->frameBufferAttachments[0].second.format;
 			CreateRenderPass(m_SSAORenderPass.replace(), ssaoFrameBufFormat, "SSAO", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 			CreateRenderPass(m_SSAOBlurHRenderPass.replace(), ssaoFrameBufFormat, "SSAO Blur Horizontal", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -5579,6 +5614,14 @@ namespace flex
 			m_GBufferDepthAttachment->CreateImageView();
 			m_GBufferDepthAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, m_GraphicsQueue);
 
+			m_OffscreenDepthAttachment0->CreateImage(m_SwapChainExtent.width, m_SwapChainExtent.height);
+			m_OffscreenDepthAttachment0->CreateImageView();
+			m_OffscreenDepthAttachment0->TransitionToLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, m_GraphicsQueue);
+
+			m_OffscreenDepthAttachment1->CreateImage(m_SwapChainExtent.width, m_SwapChainExtent.height);
+			m_OffscreenDepthAttachment1->CreateImageView();
+			m_OffscreenDepthAttachment1->TransitionToLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, m_GraphicsQueue);
+
 			m_CubemapDepthAttachment->CreateImage(m_GBufferCubemapFrameBuffer->width, m_GBufferCubemapFrameBuffer->height);
 			m_CubemapDepthAttachment->CreateImageView();
 			m_CubemapDepthAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, m_GraphicsQueue);
@@ -5613,6 +5656,12 @@ namespace flex
 		{
 			m_GBufferFrameBuf->width = m_SwapChainExtent.width;
 			m_GBufferFrameBuf->height = m_SwapChainExtent.height;
+
+			m_OffscreenFrameBuffer0->width = m_SwapChainExtent.width;
+			m_OffscreenFrameBuffer0->height = m_SwapChainExtent.height;
+
+			m_OffscreenFrameBuffer1->width = m_SwapChainExtent.width;
+			m_OffscreenFrameBuffer1->height = m_SwapChainExtent.height;
 
 			m_SSAORes = glm::vec2u((u32)(m_SwapChainExtent.width / 2.0f), (u32)(m_SwapChainExtent.height / 2.0f));
 
@@ -5694,6 +5743,14 @@ namespace flex
 				SetRenderPassName(m_GBufferFrameBuf->renderPass, "GBuffer");
 			}
 
+			//  Offscreen render passes
+			{
+				CreateRenderPass(m_OffscreenFrameBuffer0->renderPass.replace(), m_OffscreenFrameBufferFormat, "Offscreen 0", VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+					false, true, m_OffscreenDepthAttachment0->format, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+				CreateRenderPass(m_OffscreenFrameBuffer1->renderPass.replace(), m_OffscreenFrameBufferFormat, "Offscreen 1", VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+					false, true, m_OffscreenDepthAttachment1->format, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+			}
+
 			// TODO: Make render pass helper support depth-only passes
 			// Shadow render pass
 			{
@@ -5758,6 +5815,31 @@ namespace flex
 				gbufferFramebufferCreateInfo.layers = 1;
 				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &gbufferFramebufferCreateInfo, nullptr, m_GBufferFrameBuf->frameBuffer.replace()));
 				SetFramebufferName(m_GBufferFrameBuf->frameBuffer, "GBuffer");
+			}
+
+			// Offscreen frame buffers
+			{
+				CreateAttachment(m_VulkanDevice, m_OffscreenFrameBuffer0);
+				CreateAttachment(m_VulkanDevice, m_OffscreenFrameBuffer1);
+
+				std::vector<VkImageView> attachments;
+				attachments.push_back(m_OffscreenFrameBuffer0->frameBufferAttachments[0].second.view);
+				attachments.push_back(m_OffscreenDepthAttachment0->view);
+
+				VkFramebufferCreateInfo offscreenFramebufferCreateInfo = vks::framebufferCreateInfo(m_OffscreenFrameBuffer0->renderPass);
+				offscreenFramebufferCreateInfo.pAttachments = attachments.data();
+				offscreenFramebufferCreateInfo.attachmentCount = static_cast<u32>(attachments.size());
+				offscreenFramebufferCreateInfo.width = m_OffscreenFrameBuffer0->width;
+				offscreenFramebufferCreateInfo.height = m_OffscreenFrameBuffer0->height;
+				offscreenFramebufferCreateInfo.layers = 1;
+				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &offscreenFramebufferCreateInfo, nullptr, m_OffscreenFrameBuffer0->frameBuffer.replace()));
+				SetFramebufferName(m_OffscreenFrameBuffer0->frameBuffer, "Offscreen 0");
+
+				attachments[0] = m_OffscreenFrameBuffer1->frameBufferAttachments[0].second.view;
+				attachments[1] = m_OffscreenDepthAttachment1->view;
+				offscreenFramebufferCreateInfo.renderPass = m_OffscreenFrameBuffer1->renderPass;
+				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &offscreenFramebufferCreateInfo, nullptr, m_OffscreenFrameBuffer1->frameBuffer.replace()));
+				SetFramebufferName(m_OffscreenFrameBuffer1->frameBuffer, "Offscreen 1");
 			}
 
 			// Shadow frame buffers

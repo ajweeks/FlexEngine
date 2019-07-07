@@ -363,6 +363,13 @@ namespace flex
 			VDeleter<VkSampler> m_DepthSampler;
 			VkDescriptorSet m_OffscreenBufferDescriptorSet = VK_NULL_HANDLE;
 
+			VkFormat m_OffscreenFrameBufferFormat = VK_FORMAT_UNDEFINED;
+			FrameBuffer* m_OffscreenFrameBuffer0 = nullptr;
+			FrameBuffer* m_OffscreenFrameBuffer1 = nullptr;
+
+			FrameBufferAttachment* m_OffscreenDepthAttachment0 = nullptr;
+			FrameBufferAttachment* m_OffscreenDepthAttachment1 = nullptr;
+
 			FrameBuffer* m_SSAOFrameBuf = nullptr;
 			FrameBuffer* m_SSAOBlurHFrameBuf = nullptr;
 			FrameBuffer* m_SSAOBlurVFrameBuf = nullptr;
