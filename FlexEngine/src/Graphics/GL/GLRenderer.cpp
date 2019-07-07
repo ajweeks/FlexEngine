@@ -77,13 +77,13 @@ namespace flex
 			m_ShadowMapTexture.format = GL_DEPTH_COMPONENT;
 			m_ShadowMapTexture.type = GL_FLOAT;
 
-			m_gBufferFBO0ID = InitializeBlankTexture(GL_RGBA16F, GL_RGBA, GL_FLOAT, "GBuffer FBO 0", frameBufferSize);
-			m_gBufferFBO1ID = InitializeBlankTexture(GL_RGBA16F, GL_RGBA, GL_FLOAT, "GBuffer FBO 1", frameBufferSize);
+			m_GBufferTexture0ID = InitializeBlankTexture(GL_RGBA16F, GL_RGBA, GL_FLOAT, "GBuffer FBO 0", frameBufferSize);
+			m_GBufferTexture1ID = InitializeBlankTexture(GL_RGBA16F, GL_RGBA, GL_FLOAT, "GBuffer FBO 1", frameBufferSize);
 
-			m_gBufferDepthTexHandle = {};
-			m_gBufferDepthTexHandle.internalFormat = GL_DEPTH_COMPONENT;
-			m_gBufferDepthTexHandle.format = GL_DEPTH_COMPONENT;
-			m_gBufferDepthTexHandle.type = GL_FLOAT;
+			m_GBufferDepthTextureHandle = {};
+			m_GBufferDepthTextureHandle.internalFormat = GL_DEPTH_COMPONENT;
+			m_GBufferDepthTextureHandle.format = GL_DEPTH_COMPONENT;
+			m_GBufferDepthTextureHandle.type = GL_FLOAT;
 
 			m_SSAOFBO = {};
 			m_SSAOFBO.internalFormat = GL_R16F;
@@ -275,12 +275,12 @@ namespace flex
 			GL_POP_DEBUG_GROUP();
 
 			// G-buffer objects
-			glGenFramebuffers(1, &m_gBufferHandle);
-			glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
+			glGenFramebuffers(1, &m_GBufferFrameBufferHandle);
+			glBindFramebuffer(GL_FRAMEBUFFER, m_GBufferFrameBufferHandle);
 
-			GenerateFrameBufferTextureFromID(m_gBufferFBO0ID, 0);
-			GenerateFrameBufferTextureFromID(m_gBufferFBO1ID, 1);
-			GenerateDepthBufferTexture(m_gBufferDepthTexHandle, frameBufferSize);
+			GenerateFrameBufferTextureFromID(m_GBufferTexture0ID, 0);
+			GenerateFrameBufferTextureFromID(m_GBufferTexture1ID, 1);
+			GenerateDepthBufferTexture(m_GBufferDepthTextureHandle, frameBufferSize);
 
 			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 			{
@@ -817,7 +817,7 @@ namespace flex
 
 			if (shader.shader->bNeedDepthSampler)
 			{
-				mat.depthSamplerID = m_gBufferDepthTexHandle.id;
+				mat.depthSamplerID = m_GBufferDepthTextureHandle.id;
 				++binding;
 			}
 
@@ -1753,8 +1753,8 @@ namespace flex
 		void GLRenderer::GenerateDepthBufferTexture(TextureHandle& handle, const glm::vec2i& size)
 		{
 			GenerateDepthBufferTexture(&handle.id, handle.internalFormat, handle.format, handle.type, size);
-			m_gBufferDepthTexHandle.width = (u32)size.x;
-			m_gBufferDepthTexHandle.height = (u32)size.y;
+			m_GBufferDepthTextureHandle.width = (u32)size.x;
+			m_GBufferDepthTextureHandle.height = (u32)size.y;
 		}
 
 		void GLRenderer::ResizeFrameBufferTexture(u32 handle, GLint internalFormat, GLenum format, GLenum type, const glm::vec2i& size)
@@ -1901,10 +1901,12 @@ namespace flex
 			// World-space objects
 			drawCallInfo.bDeferred = true;
 			DrawDeferredObjects(drawCallInfo);
+
 			drawCallInfo.bDeferred = false;
 			drawCallInfo.bWriteToDepth = false;
 			drawCallInfo.depthTestFunc = DepthTestFunc::ALWAYS;
 			ShadeDeferredObjects(drawCallInfo);
+
 			drawCallInfo.bWriteToDepth = true;
 			drawCallInfo.depthTestFunc = DepthTestFunc::GEQUAL;
 			DrawForwardObjects(drawCallInfo);
@@ -2259,10 +2261,10 @@ namespace flex
 				}
 				else
 				{
-					GLTexture* gBufTex = m_LoadedTextures[m_gBufferFBO0ID];
+					GLTexture* gBufTex = m_LoadedTextures[m_GBufferTexture0ID];
 					glViewport(0, 0, (GLsizei)gBufTex->width, (GLsizei)gBufTex->height);
 
-					glBindFramebuffer(GL_FRAMEBUFFER, m_gBufferHandle);
+					glBindFramebuffer(GL_FRAMEBUFFER, m_GBufferFrameBufferHandle);
 				}
 
 				{
@@ -2296,9 +2298,9 @@ namespace flex
 				}
 				else
 				{
-					GLTexture* gBufTex = m_LoadedTextures[m_gBufferFBO0ID];
+					GLTexture* gBufTex = m_LoadedTextures[m_GBufferTexture0ID];
 					GLTexture* offscreenTex = m_LoadedTextures[m_OffscreenTexture0ID];
-					glBindFramebuffer(GL_READ_FRAMEBUFFER, m_gBufferHandle);
+					glBindFramebuffer(GL_READ_FRAMEBUFFER, m_GBufferFrameBufferHandle);
 					glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_Offscreen0RBO);
 					glBlitFramebuffer(0, 0, gBufTex->width, gBufTex->height,
 									  0, 0, offscreenTex->width, offscreenTex->height,
@@ -2429,7 +2431,7 @@ namespace flex
 				GenerateGBuffer();
 			}
 
-			GLTexture* gBufTex = m_LoadedTextures[m_gBufferFBO0ID];
+			GLTexture* gBufTex = m_LoadedTextures[m_GBufferTexture0ID];
 			glViewport(0, 0, (GLsizei)gBufTex->width, (GLsizei)gBufTex->height);
 
 			if (drawCallInfo.bRenderToCubemap)
@@ -3718,8 +3720,8 @@ namespace flex
 		void GLRenderer::FillOutGBufferFrameBufferAttachments(std::vector<Pair<std::string, void*>>& outVec)
 		{
 			outVec = {
-				{ "normalRoughnessFrameBufferSampler", &m_LoadedTextures[m_gBufferFBO0ID]->handle },
-				{ "albedoMetallicFrameBufferSampler", &m_LoadedTextures[m_gBufferFBO1ID]->handle },
+				{ "normalRoughnessFrameBufferSampler", &m_LoadedTextures[m_GBufferTexture0ID]->handle },
+				{ "albedoMetallicFrameBufferSampler", &m_LoadedTextures[m_GBufferTexture1ID]->handle },
 				{ "ssaoBlurFrameBufferSampler",	m_bSSAOBlurEnabled ? &m_SSAOBlurVFBO.id : &m_SSAOFBO.id },
 			};
 		}
@@ -4237,7 +4239,7 @@ namespace flex
 			ssaoMaterialCreateInfo.persistent = true;
 			ssaoMaterialCreateInfo.visibleInEditor = false;
 			ssaoMaterialCreateInfo.sampledFrameBuffers = {
-				{ "normalRoughnessFrameBufferSampler", &m_LoadedTextures[m_gBufferFBO0ID]->handle },
+				{ "normalRoughnessFrameBufferSampler", &m_LoadedTextures[m_GBufferTexture0ID]->handle },
 			};
 			m_SSAOMatID = InitializeMaterial(&ssaoMaterialCreateInfo, m_SSAOMatID);
 
@@ -4248,7 +4250,7 @@ namespace flex
 			ssaoBlurHMaterialCreateInfo.visibleInEditor = false;
 			ssaoBlurHMaterialCreateInfo.sampledFrameBuffers = {
 				{ "ssaoFrameBufferSampler", &m_SSAOFBO.id },
-				{ "normalRoughnessFrameBufferSampler", &m_LoadedTextures[m_gBufferFBO0ID]->handle },
+				{ "normalRoughnessFrameBufferSampler", &m_LoadedTextures[m_GBufferTexture0ID]->handle },
 			};
 			m_SSAOBlurHMatID = InitializeMaterial(&ssaoBlurHMaterialCreateInfo, m_SSAOBlurHMatID);
 
@@ -4259,14 +4261,14 @@ namespace flex
 			ssaoBlurVMaterialCreateInfo.visibleInEditor = false;
 			ssaoBlurVMaterialCreateInfo.sampledFrameBuffers = {
 				{ "ssaoFrameBufferSampler", &m_SSAOBlurHFBO.id },
-				{ "normalRoughnessFrameBufferSampler", &m_LoadedTextures[m_gBufferFBO0ID]->handle },
+				{ "normalRoughnessFrameBufferSampler", &m_LoadedTextures[m_GBufferTexture0ID]->handle },
 			};
 			m_SSAOBlurVMatID = InitializeMaterial(&ssaoBlurVMaterialCreateInfo, m_SSAOBlurVMatID);
 		}
 
 		void GLRenderer::OnWindowSizeChanged(i32 width, i32 height)
 		{
-			if (width == 0 || height == 0 || m_gBufferHandle == 0)
+			if (width == 0 || height == 0 || m_GBufferFrameBufferHandle == 0)
 			{
 				return;
 			}
@@ -4280,9 +4282,9 @@ namespace flex
 			ResizeFrameBufferTextureFromID(m_OffscreenTexture1ID, newFrameBufferSize);
 			ResizeRenderBuffer(m_Offscreen1RBO, newFrameBufferSize, m_OffscreenDepthBufferInternalFormat);
 
-			ResizeFrameBufferTextureFromID(m_gBufferFBO0ID, newFrameBufferSize);
-			ResizeFrameBufferTextureFromID(m_gBufferFBO1ID, newFrameBufferSize);
-			ResizeFrameBufferTexture(m_gBufferDepthTexHandle, newFrameBufferSize);
+			ResizeFrameBufferTextureFromID(m_GBufferTexture0ID, newFrameBufferSize);
+			ResizeFrameBufferTextureFromID(m_GBufferTexture1ID, newFrameBufferSize);
+			ResizeFrameBufferTexture(m_GBufferDepthTextureHandle, newFrameBufferSize);
 			ResizeFrameBufferTexture(m_SSAOFBO, m_SSAORes);
 			ResizeFrameBufferTexture(m_SSAOBlurHFBO, newFrameBufferSize);
 			ResizeFrameBufferTexture(m_SSAOBlurVFBO, newFrameBufferSize);

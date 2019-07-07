@@ -240,12 +240,11 @@ namespace flex
 			u32 viewProjectionUBO = 0;
 			u32 viewProjectionCombinedUBO = 0;
 
-			u32 m_gBufferHandle = 0;
-			TextureHandle m_gBufferDepthTexHandle;
-
+			u32 m_GBufferFrameBufferHandle = 0;
+			TextureHandle m_GBufferDepthTextureHandle;
 			// TODO: Resize all framebuffers automatically by inserting into container
-			TextureID m_gBufferFBO0ID = InvalidTextureID;
-			TextureID m_gBufferFBO1ID = InvalidTextureID;
+			TextureID m_GBufferTexture0ID = InvalidTextureID; // normal + roughness
+			TextureID m_GBufferTexture1ID = InvalidTextureID; // albedo + metallic
 
 			TextureHandle m_ShadowMapTexture;
 			std::array<u32, NUM_SHADOW_CASCADES> m_ShadowMapFBOs;
@@ -265,8 +264,6 @@ namespace flex
 			GLTexture* m_BRDFTexture = nullptr;
 
 			// TODO: Add frame buffer abstraction which internally has a texture ID & an FBO & RBO
-			// Everything is drawn to this texture before being drawn to the default
-			// frame buffer through some post-processing effects
 			TextureID m_OffscreenTexture0ID = InvalidTextureID;
 			u32 m_Offscreen0FBO = 0;
 			u32 m_Offscreen0RBO = 0;
