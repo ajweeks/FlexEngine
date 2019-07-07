@@ -136,14 +136,14 @@ namespace flex
 			depthCreateInfo.bIsDepth = true;
 			depthCreateInfo.bIsTransferedDst = true;
 			depthCreateInfo.format = depthFormat;
-			m_DepthAttachment = new FrameBufferAttachment(m_VulkanDevice, depthCreateInfo);
+			m_SwapChainDepthAttachment = new FrameBufferAttachment(m_VulkanDevice, depthCreateInfo);
 
 			FrameBufferAttachment::CreateInfo offscreenDepthCreateInfo = {};
 			offscreenDepthCreateInfo.bIsDepth = true;
 			offscreenDepthCreateInfo.bIsTransferedSrc = true;
 			offscreenDepthCreateInfo.bIsSampled = true;
 			offscreenDepthCreateInfo.format = depthFormat;
-			m_OffScreenDepthAttachment = new FrameBufferAttachment(m_VulkanDevice, offscreenDepthCreateInfo);
+			m_GBufferDepthAttachment = new FrameBufferAttachment(m_VulkanDevice, offscreenDepthCreateInfo);
 
 			FrameBufferAttachment::CreateInfo cubemapDepthCreateInfo = {};
 			cubemapDepthCreateInfo.bIsDepth = true;
@@ -595,11 +595,11 @@ namespace flex
 			delete m_CubemapDepthAttachment;
 			m_CubemapDepthAttachment = nullptr;
 
-			delete m_DepthAttachment;
-			m_DepthAttachment = nullptr;
+			delete m_SwapChainDepthAttachment;
+			m_SwapChainDepthAttachment = nullptr;
 
-			delete m_OffScreenDepthAttachment;
-			m_OffScreenDepthAttachment = nullptr;
+			delete m_GBufferDepthAttachment;
+			m_GBufferDepthAttachment = nullptr;
 
 			for (u32 i = 0; i < NUM_SHADOW_CASCADES; ++i)
 			{
@@ -5048,7 +5048,7 @@ namespace flex
 
 				{ U_DEPTH_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
-				*&m_OffScreenDepthAttachment->view,
+				*&m_GBufferDepthAttachment->view,
 				*&m_DepthSampler,
 				nullptr },
 
@@ -5569,15 +5569,15 @@ namespace flex
 
 		void VulkanRenderer::CreateDepthResources()
 		{
-			m_DepthAttachment->CreateImage(m_SwapChainExtent.width, m_SwapChainExtent.height);
-			m_DepthAttachment->CreateImageView();
+			m_SwapChainDepthAttachment->CreateImage(m_SwapChainExtent.width, m_SwapChainExtent.height);
+			m_SwapChainDepthAttachment->CreateImageView();
 
 			// Depth will be copied from offscreen depth buffer after deferred combine pass
-			m_DepthAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, m_GraphicsQueue);
+			m_SwapChainDepthAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, m_GraphicsQueue);
 
-			m_OffScreenDepthAttachment->CreateImage(m_SwapChainExtent.width, m_SwapChainExtent.height);
-			m_OffScreenDepthAttachment->CreateImageView();
-			m_OffScreenDepthAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, m_GraphicsQueue);
+			m_GBufferDepthAttachment->CreateImage(m_SwapChainExtent.width, m_SwapChainExtent.height);
+			m_GBufferDepthAttachment->CreateImageView();
+			m_GBufferDepthAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, m_GraphicsQueue);
 
 			m_CubemapDepthAttachment->CreateImage(m_GBufferCubemapFrameBuffer->width, m_GBufferCubemapFrameBuffer->height);
 			m_CubemapDepthAttachment->CreateImageView();
@@ -5592,7 +5592,7 @@ namespace flex
 			{
 				std::array<VkImageView, 2> attachments = {
 					m_SwapChainImageViews[i],
-					m_DepthAttachment->view
+					m_SwapChainDepthAttachment->view
 				};
 
 				VkFramebufferCreateInfo framebufferInfo =  vks::framebufferCreateInfo(m_ForwardRenderPass);
@@ -5648,7 +5648,7 @@ namespace flex
 				}
 				// NOTE: Don't use auto-transition (to shader_read_only) because we want to use it multiple times (?)
 				// OPTIMIZE: Potentially could figure out how to use auto transition for this
-				attachmentDescs[frameBufferColorAttachmentCount] = vks::attachmentDescription(m_OffScreenDepthAttachment->format, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+				attachmentDescs[frameBufferColorAttachmentCount] = vks::attachmentDescription(m_GBufferDepthAttachment->format, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
 				std::vector<VkAttachmentReference> colorReferences;
 				for (u32 i = 0; i < frameBufferColorAttachmentCount; ++i)
@@ -5814,7 +5814,7 @@ namespace flex
 				{
 					attachments.push_back(m_GBufferFrameBuf->frameBufferAttachments[i].second.view);
 				}
-				attachments.push_back(m_OffScreenDepthAttachment->view);
+				attachments.push_back(m_GBufferDepthAttachment->view);
 
 				VkFramebufferCreateInfo gbufferFramebufferCreateInfo = vks::framebufferCreateInfo(m_GBufferFrameBuf->renderPass);
 				gbufferFramebufferCreateInfo.pAttachments = attachments.data();
@@ -6800,7 +6800,7 @@ namespace flex
 
 				vkCmdEndRenderPass(m_OffScreenCmdBuffer);
 
-				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_OffScreenDepthAttachment->image, m_OffScreenDepthAttachment->format,
+				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_GBufferDepthAttachment->image, m_GBufferDepthAttachment->format,
 					VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, m_OffScreenCmdBuffer, true);
 
 				EndRegion(m_OffScreenCmdBuffer);
@@ -6950,24 +6950,24 @@ namespace flex
 
 				RenderFullscreenQuad(commandBuffer, m_DeferredCombineRenderPass, m_SwapChainFramebuffers[m_CurrentSwapChainBufferIndex]);
 
-				// m_OffScreenDepthAttachment was being read by SSAO, now needs to be copied to m_DepthAttachment for forward rendering
-				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_OffScreenDepthAttachment->image, m_OffScreenDepthAttachment->format,
+				// m_GBufferDepthAttachment was being read by SSAO, now needs to be copied to m_SwapChainDepthAttachment for forward rendering
+				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_GBufferDepthAttachment->image, m_GBufferDepthAttachment->format,
 					VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 1, commandBuffer, true);
 
-				// m_DepthAttachment was copied into, now needs to be written to in forward pass
-				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_DepthAttachment->image, m_DepthAttachment->format,
+				// m_SwapChainDepthAttachment was copied into, now needs to be written to in forward pass
+				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_SwapChainDepthAttachment->image, m_SwapChainDepthAttachment->format,
 					VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, commandBuffer);
 
 				// TODO: Blit here instead if supported
-				CopyImage(m_VulkanDevice, m_GraphicsQueue, m_OffScreenDepthAttachment->image, m_DepthAttachment->image,
+				CopyImage(m_VulkanDevice, m_GraphicsQueue, m_GBufferDepthAttachment->image, m_SwapChainDepthAttachment->image,
 					m_SwapChainExtent.width, m_SwapChainExtent.height, commandBuffer, VK_IMAGE_ASPECT_DEPTH_BIT);
 
-				// m_DepthAttachment was copied into, now needs to be written to in forward pass
-				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_DepthAttachment->image, m_DepthAttachment->format,
+				// m_SwapChainDepthAttachment was copied into, now needs to be written to in forward pass
+				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_SwapChainDepthAttachment->image, m_SwapChainDepthAttachment->format,
 					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1, commandBuffer);
 
-				// m_OffScreenDepthAttachment has been copied out of, now must be transitioned back for next frame
-				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_OffScreenDepthAttachment->image, m_OffScreenDepthAttachment->format,
+				// m_GBufferDepthAttachment has been copied out of, now must be transitioned back for next frame
+				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_GBufferDepthAttachment->image, m_GBufferDepthAttachment->format,
 					VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1, commandBuffer, true);
 
 				EndRegion(commandBuffer);

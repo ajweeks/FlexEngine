@@ -358,8 +358,7 @@ namespace flex
 			bool bRenderedBRDFLUT = false;
 
 			FrameBuffer* m_GBufferFrameBuf = nullptr;
-			FrameBufferAttachment* m_OffScreenDepthAttachment = nullptr;
-			FrameBufferAttachment* m_DepthAttachment = nullptr;
+			FrameBufferAttachment* m_GBufferDepthAttachment = nullptr;
 			VDeleter<VkSampler> m_ColorSampler;
 			VDeleter<VkSampler> m_DepthSampler;
 			VkDescriptorSet m_OffscreenBufferDescriptorSet = VK_NULL_HANDLE;
@@ -372,7 +371,6 @@ namespace flex
 			FrameBuffer* m_GBufferCubemapFrameBuffer = nullptr;
 			FrameBufferAttachment* m_CubemapDepthAttachment = nullptr;
 
-			//FrameBuffer* m_ShadowFrameBuf = nullptr;
 			VDeleter<VkImage> m_ShadowImage;
 			VDeleter<VkDeviceMemory> m_ShadowImageMemory;
 			VDeleter<VkImageView> m_ShadowImageView;
@@ -436,6 +434,7 @@ namespace flex
 			VkExtent2D m_SwapChainExtent;
 			std::vector<VDeleter<VkImageView>> m_SwapChainImageViews;
 			std::vector<VDeleter<VkFramebuffer>> m_SwapChainFramebuffers;
+			FrameBufferAttachment* m_SwapChainDepthAttachment = nullptr;
 
 			MaterialID m_ComputeSDFMatID = InvalidMaterialID;
 
