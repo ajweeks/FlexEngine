@@ -12,6 +12,7 @@ IGNORE_WARNINGS_POP
 #include "Graphics/Vulkan/VulkanCommandBufferManager.hpp"
 #include "Graphics/Vulkan/VulkanDevice.hpp"
 #include "Graphics/Vulkan/VulkanInitializers.hpp"
+#include "Graphics/Vulkan/VulkanRenderer.hpp"
 #include "Helpers.hpp"
 #include "Profiler.hpp"
 #include "Time.hpp"
@@ -417,6 +418,7 @@ namespace flex
 			imageCreateInfo.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 
 			VK_CHECK_RESULT(vkCreateImage(device->m_LogicalDevice, &imageCreateInfo, nullptr, createInfo.image));
+			VulkanRenderer::SetImageName(device, *createInfo.image, createInfo.DBG_Name);
 
 			VkMemoryRequirements memRequirements;
 			vkGetImageMemoryRequirements(device->m_LogicalDevice, *createInfo.image, &memRequirements);
@@ -447,6 +449,7 @@ namespace flex
 			}
 
 			VK_CHECK_RESULT(vkCreateSampler(device->m_LogicalDevice, &samplerCreateInfo, nullptr, createInfo.sampler));
+			VulkanRenderer::SetSamplerName(device, *createInfo.sampler, createInfo.DBG_Name);
 
 			VkImageViewCreateInfo imageViewCreateInfo = vks::imageViewCreateInfo();
 			imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
@@ -458,6 +461,7 @@ namespace flex
 			imageViewCreateInfo.image = *createInfo.image;
 			imageViewCreateInfo.flags = 0;
 			VK_CHECK_RESULT(vkCreateImageView(device->m_LogicalDevice, &imageViewCreateInfo, nullptr, createInfo.imageView));
+			VulkanRenderer::SetImageViewName(device, *createInfo.imageView, createInfo.DBG_Name);
 
 			return memRequirements.size;
 		}
@@ -704,6 +708,7 @@ namespace flex
 			}
 
 			VK_CHECK_RESULT(vkCreateImage(device->m_LogicalDevice, &imageInfo, nullptr, createInfo.image));
+			VulkanRenderer::SetImageName(device, *createInfo.image, createInfo.DBG_Name);
 
 			VkMemoryRequirements memRequirements;
 			vkGetImageMemoryRequirements(device->m_LogicalDevice, *createInfo.image, &memRequirements);
@@ -892,6 +897,7 @@ namespace flex
 			viewInfo.flags = 0;
 
 			VK_CHECK_RESULT(vkCreateImageView(device->m_LogicalDevice, &viewInfo, nullptr, createInfo.imageView));
+			VulkanRenderer::SetImageViewName(device, *createInfo.image, createInfo.DBG_Name);
 		}
 
 		void VulkanTexture::CreateSampler(VulkanDevice* device, SamplerCreateInfo& createInfo)
@@ -914,6 +920,7 @@ namespace flex
 			samplerInfo.maxLod = createInfo.maxLod;
 
 			VK_CHECK_RESULT(vkCreateSampler(device->m_LogicalDevice, &samplerInfo, nullptr, createInfo.sampler));
+			VulkanRenderer::SetSamplerName(device, *createInfo.sampler, createInfo.DBG_Name);
 		}
 
 		void VulkanTexture::Destroy()
@@ -1734,7 +1741,8 @@ namespace flex
 			u32 arrayLayers,
 			VkImageViewType imageViewType,
 			VkImageCreateFlags imageFlags,
-			FrameBufferAttachment *attachment)
+			FrameBufferAttachment *attachment,
+			const char* DBG_Name /* = nullptr */)
 		{
 			VkImageAspectFlags aspectMask = 0;
 
@@ -1773,6 +1781,8 @@ namespace flex
 			imageCreateInfo.flags = imageFlags;
 
 			VK_CHECK_RESULT(vkCreateImage(device->m_LogicalDevice, &imageCreateInfo, nullptr, attachment->image.replace()));
+			VulkanRenderer::SetImageName(device, attachment->image, DBG_Name);
+
 			VkMemoryRequirements memRequirements;
 			vkGetImageMemoryRequirements(device->m_LogicalDevice, attachment->image, &memRequirements);
 			VkMemoryAllocateInfo memAlloc = vks::memoryAllocateInfo(memRequirements.size);
@@ -1792,9 +1802,10 @@ namespace flex
 			imageView.image = attachment->image;
 			imageView.flags = 0;
 			VK_CHECK_RESULT(vkCreateImageView(device->m_LogicalDevice, &imageView, nullptr, attachment->view.replace()));
+			VulkanRenderer::SetImageViewName(device, attachment->view, DBG_Name);
 		}
 
-		void CreateAttachment(VulkanDevice* device, FrameBuffer* frameBuffer, u32 fboIndex /* = 0 */)
+		void CreateAttachment(VulkanDevice* device, FrameBuffer* frameBuffer, u32 fboIndex /* = 0 */, const char* DBG_Name /* = nullptr */)
 		{
 			CreateAttachment(
 				device,
@@ -1805,7 +1816,8 @@ namespace flex
 				1,
 				VK_IMAGE_VIEW_TYPE_2D,
 				0,
-				&frameBuffer->frameBufferAttachments[fboIndex].second);
+				&frameBuffer->frameBufferAttachments[fboIndex].second,
+				DBG_Name);
 		}
 
 		template<class T>

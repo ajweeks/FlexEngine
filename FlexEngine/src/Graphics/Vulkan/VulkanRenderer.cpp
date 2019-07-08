@@ -457,7 +457,7 @@ namespace flex
 
 					VkSubmitInfo end_info = vks::submitInfo(1, &command_buffer);
 					VK_CHECK_RESULT(vkEndCommandBuffer(command_buffer));
-					SetCommandBufferName(command_buffer, "ImGui create fonts texture command buffer");
+					SetCommandBufferName(m_VulkanDevice, command_buffer, "ImGui create fonts texture command buffer");
 					VK_CHECK_RESULT(vkQueueSubmit(m_GraphicsQueue, 1, &end_info, VK_NULL_HANDLE));
 
 					VK_CHECK_RESULT(vkDeviceWaitIdle(*m_VulkanDevice));
@@ -2400,7 +2400,7 @@ namespace flex
 			const u32 mipLevels = static_cast<u32>(floor(log2(dim))) + 1;
 
 			VkRenderPass renderPass;
-			CreateRenderPass(&renderPass, format, "Equirectangular to Cubemap");
+			CreateRenderPass(&renderPass, format, "Equirectangular to Cubemap render pass");
 
 			// Offscreen framebuffer
 			struct {
@@ -2669,7 +2669,7 @@ namespace flex
 			const u32 mipLevels = static_cast<u32>(floor(log2(dim))) + 1;
 
 			VkRenderPass renderPass;
-			CreateRenderPass(&renderPass, format, "Generate Irradiance");
+			CreateRenderPass(&renderPass, format, "Generate Irradiance render pass");
 
 			// Offscreen framebuffer
 			struct {
@@ -2937,7 +2937,7 @@ namespace flex
 			const u32 mipLevels = static_cast<u32>(floor(log2(dim))) + 1;
 
 			VkRenderPass renderPass;
-			CreateRenderPass(&renderPass, format, "Generate Prefiltered Cube");
+			CreateRenderPass(&renderPass, format, "Generate Prefiltered Cube render pass");
 
 			struct {
 				VkImage image;
@@ -3193,7 +3193,7 @@ namespace flex
 				assert(dim <= MAX_TEXTURE_DIM);
 
 				VkRenderPass renderPass;
-				CreateRenderPass(&renderPass, format, "Generate BRDF LUT", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+				CreateRenderPass(&renderPass, format, "Generate BRDF LUT render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 				VkFramebufferCreateInfo framebufferCreateInfo = vks::framebufferCreateInfo(renderPass);
 				framebufferCreateInfo.attachmentCount = 1;
@@ -3473,7 +3473,7 @@ namespace flex
 			renderPassCreateInfo.pDependencies = dependencies.data();
 			VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassCreateInfo, nullptr, outPass));
 
-			SetRenderPassName(*outPass, passName);
+			SetRenderPassName(m_VulkanDevice, *outPass, passName);
 		}
 
 		VulkanRenderObject* VulkanRenderer::GetRenderObject(RenderID renderID)
@@ -3613,7 +3613,7 @@ namespace flex
 				VulkanShader& computeSDFShader = m_Shaders[computeSDFShaderID];
 
 				VkRenderPass renderPass;
-				CreateRenderPass(&renderPass, fontTexFormat, "Font SDF");
+				CreateRenderPass(&renderPass, fontTexFormat, "Font SDF render pass");
 
 				VkFramebufferCreateInfo framebufCreateInfo = vks::framebufferCreateInfo(renderPass);
 				framebufCreateInfo.attachmentCount = 1;
@@ -3781,7 +3781,7 @@ namespace flex
 				EndRegion(commandBuffer);
 
 				VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
-				SetCommandBufferName(commandBuffer, "Load font command buffer");
+				SetCommandBufferName(m_VulkanDevice, commandBuffer, "Load font command buffer");
 
 				VkSubmitInfo submitInfo = vks::submitInfo(1, &commandBuffer);
 				VkPipelineStageFlags waitStages = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -4494,7 +4494,7 @@ namespace flex
 
 			VkDescriptorSet descSet = VK_NULL_HANDLE;
 			DescriptorSetCreateInfo descSetCreateInfo = {};
-			descSetCreateInfo.DBG_Name = "Sprite Descriptor Set";
+			descSetCreateInfo.DBG_Name = "Sprite descriptor set";
 			descSetCreateInfo.descriptorSet = &descSet;
 			descSetCreateInfo.descriptorSetLayout = &m_DescriptorSetLayouts[spriteShaderID];
 			descSetCreateInfo.shaderID = spriteShaderID;
@@ -4831,17 +4831,7 @@ namespace flex
 
 			m_SSAORes = glm::vec2u((u32)(m_SwapChainExtent.width / 2.0f), (u32)(m_SwapChainExtent.height / 2.0f));
 
-			SetSwapchainName(m_SwapChain, "Default Swapchain");
-			//if (bDebugUtilsExtensionPresent && VulkanRenderer::m_vkCmdInsertDebugUtilsLabel)
-			//{
-			//	VkDebugMarkerObjectNameInfoEXT info = {};
-			//	info.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT;
-			//	info.object = m_SwapChain;
-			//	info.objectType = VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT;
-			//	info.pObjectName = "Default Swapchain";
-			//	VkResult r = VulkanRenderer::m_vkDebugMarkerSetObjectName(m_VulkanDevice->m_LogicalDevice, &info);
-			//	Print("%d\n", r);
-			//}
+			SetSwapchainName(m_VulkanDevice, m_SwapChain, "Default Swapchain");
 		}
 
 		void VulkanRenderer::CreateSwapChainImageViews()
@@ -4869,9 +4859,9 @@ namespace flex
 			// TODO: Create GBuffer & offscreen render passes here too? (Currently in PrepareFrameBuffers)
 
 			VkFormat ssaoFrameBufFormat = m_SSAOFrameBuf->frameBufferAttachments[0].second.format;
-			CreateRenderPass(m_SSAORenderPass.replace(), ssaoFrameBufFormat, "SSAO", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			CreateRenderPass(m_SSAOBlurHRenderPass.replace(), ssaoFrameBufFormat, "SSAO Blur Horizontal", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			CreateRenderPass(m_SSAOBlurVRenderPass.replace(), ssaoFrameBufFormat, "SSAO Blur Vertical", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			CreateRenderPass(m_SSAORenderPass.replace(), ssaoFrameBufFormat, "SSAO render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			CreateRenderPass(m_SSAOBlurHRenderPass.replace(), ssaoFrameBufFormat, "SSAO Blur Horizontal render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			CreateRenderPass(m_SSAOBlurVRenderPass.replace(), ssaoFrameBufFormat, "SSAO Blur Vertical render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 			// Deferred combine render pass
 			{
@@ -5205,7 +5195,7 @@ namespace flex
 
 			if (createInfo->DBG_Name)
 			{
-				SetDescriptorSetName(*createInfo->descriptorSet, createInfo->DBG_Name);
+				SetDescriptorSetName(m_VulkanDevice, *createInfo->descriptorSet, createInfo->DBG_Name);
 			}
 		}
 
@@ -5610,7 +5600,7 @@ namespace flex
 			}
 
 			VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_VulkanDevice->m_LogicalDevice, pipelineCache, 1, &pipelineInfo, nullptr, createInfo->graphicsPipeline));
-			SetPipelineName(*createInfo->graphicsPipeline, createInfo->DBG_Name);
+			SetPipelineName(m_VulkanDevice, *createInfo->graphicsPipeline, createInfo->DBG_Name);
 		}
 
 		void VulkanRenderer::CreateDepthResources()
@@ -5651,7 +5641,7 @@ namespace flex
 					m_SwapChainDepthAttachment->view
 				};
 
-				VkFramebufferCreateInfo framebufferInfo =  vks::framebufferCreateInfo(m_ForwardRenderPass);
+				VkFramebufferCreateInfo framebufferInfo =  vks::framebufferCreateInfo(m_GammaCorrectRenderPass);
 				framebufferInfo.attachmentCount = attachments.size();
 				framebufferInfo.pAttachments = attachments.data();
 				framebufferInfo.width = m_SwapChainExtent.width;
@@ -5659,7 +5649,7 @@ namespace flex
 				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &framebufferInfo, nullptr, m_SwapChainFramebuffers[i].replace()));
 
 				std::string name = "Swapchain " + std::to_string(i);
-				SetFramebufferName(m_SwapChainFramebuffers[i], name.c_str());
+				SetFramebufferName(m_VulkanDevice, m_SwapChainFramebuffers[i], name.c_str());
 			}
 		}
 
@@ -5751,15 +5741,16 @@ namespace flex
 				renderPassInfo.pDependencies = dependencies.data();
 
 				VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassInfo, nullptr, m_GBufferFrameBuf->renderPass.replace()));
-				SetRenderPassName(m_GBufferFrameBuf->renderPass, "GBuffer");
+				SetRenderPassName(m_VulkanDevice, m_GBufferFrameBuf->renderPass, "GBuffer render pass");
 			}
 
 			//  Offscreen render passes
 			{
-				CreateRenderPass(m_OffscreenFrameBuffer0->renderPass.replace(), m_OffscreenFrameBufferFormat, "Offscreen 0", VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-					false, true, m_OffscreenDepthAttachment0->format, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-				CreateRenderPass(m_OffscreenFrameBuffer1->renderPass.replace(), m_OffscreenFrameBufferFormat, "Offscreen 1", VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-					false, true, m_OffscreenDepthAttachment1->format, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+				// TODO: Don't create these?
+				CreateRenderPass(m_OffscreenFrameBuffer0->renderPass.replace(), m_OffscreenFrameBufferFormat, "Offscreen 0 render pass", VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+					VK_IMAGE_LAYOUT_UNDEFINED, true, m_OffscreenDepthAttachment0->format, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+				CreateRenderPass(m_OffscreenFrameBuffer1->renderPass.replace(), m_OffscreenFrameBufferFormat, "Offscreen 1 render pass", VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+					VK_IMAGE_LAYOUT_UNDEFINED, true, m_OffscreenDepthAttachment1->format, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 			}
 
 			// TODO: Make render pass helper support depth-only passes
@@ -5806,7 +5797,7 @@ namespace flex
 				renderPassCreateInfo.dependencyCount = dependencies.size();
 				renderPassCreateInfo.pDependencies = dependencies.data();
 				VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassCreateInfo, nullptr, m_ShadowRenderPass.replace()));
-				SetRenderPassName(m_ShadowRenderPass, "Shadow");
+				SetRenderPassName(m_VulkanDevice, m_ShadowRenderPass, "Shadow render pass");
 			}
 
 			// GBuffer frame buffer
@@ -5824,11 +5815,14 @@ namespace flex
 				gbufferFramebufferCreateInfo.width = m_GBufferFrameBuf->width;
 				gbufferFramebufferCreateInfo.height = m_GBufferFrameBuf->height;
 				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &gbufferFramebufferCreateInfo, nullptr, m_GBufferFrameBuf->frameBuffer.replace()));
-				SetFramebufferName(m_GBufferFrameBuf->frameBuffer, "GBuffer");
+				SetFramebufferName(m_VulkanDevice, m_GBufferFrameBuf->frameBuffer, "GBuffer frame buffer");
 			}
 
 			// Offscreen frame buffers
 			{
+				assert(m_OffscreenFrameBuffer0->width == m_OffscreenFrameBuffer1->width);
+				assert(m_OffscreenFrameBuffer0->height == m_OffscreenFrameBuffer1->height);
+
 				CreateAttachment(m_VulkanDevice, m_OffscreenFrameBuffer0);
 				CreateAttachment(m_VulkanDevice, m_OffscreenFrameBuffer1);
 
@@ -5842,13 +5836,13 @@ namespace flex
 				offscreenFramebufferCreateInfo.width = m_OffscreenFrameBuffer0->width;
 				offscreenFramebufferCreateInfo.height = m_OffscreenFrameBuffer0->height;
 				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &offscreenFramebufferCreateInfo, nullptr, m_OffscreenFrameBuffer0->frameBuffer.replace()));
-				SetFramebufferName(m_OffscreenFrameBuffer0->frameBuffer, "Offscreen 0");
+				SetFramebufferName(m_VulkanDevice, m_OffscreenFrameBuffer0->frameBuffer, "Offscreen 0");
 
 				attachments[0] = m_OffscreenFrameBuffer1->frameBufferAttachments[0].second.view;
 				attachments[1] = m_OffscreenDepthAttachment1->view;
 				offscreenFramebufferCreateInfo.renderPass = m_OffscreenFrameBuffer1->renderPass;
 				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &offscreenFramebufferCreateInfo, nullptr, m_OffscreenFrameBuffer1->frameBuffer.replace()));
-				SetFramebufferName(m_OffscreenFrameBuffer1->frameBuffer, "Offscreen 1");
+				SetFramebufferName(m_VulkanDevice, m_OffscreenFrameBuffer1->frameBuffer, "Offscreen 1");
 			}
 
 			// Shadow frame buffers
@@ -5914,7 +5908,7 @@ namespace flex
 					VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &shadowFramebufferCreateInfo, nullptr, m_ShadowCascades[i]->frameBuffer.replace()));
 
 					std::string name = "Shadow cascade " + std::to_string(i);
-					SetFramebufferName(m_ShadowCascades[i]->frameBuffer, name.c_str());
+					SetFramebufferName(m_VulkanDevice, m_ShadowCascades[i]->frameBuffer, name.c_str());
 				}
 			}
 
@@ -5933,7 +5927,7 @@ namespace flex
 				ssaoFramebufferCreateInfo.width = m_SSAOFrameBuf->width;
 				ssaoFramebufferCreateInfo.height = m_SSAOFrameBuf->height;
 				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &ssaoFramebufferCreateInfo, nullptr, m_SSAOFrameBuf->frameBuffer.replace()));
-				SetFramebufferName(m_SSAOFrameBuf->frameBuffer, "SSAO");
+				SetFramebufferName(m_VulkanDevice, m_SSAOFrameBuf->frameBuffer, "SSAO");
 			}
 
 			// SSAO Blur frame buffers
@@ -5955,12 +5949,12 @@ namespace flex
 				frameBufferCreateInfo.width = m_SSAOBlurHFrameBuf->width;
 				frameBufferCreateInfo.height = m_SSAOBlurHFrameBuf->height;
 				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &frameBufferCreateInfo, nullptr, m_SSAOBlurHFrameBuf->frameBuffer.replace()));
-				SetFramebufferName(m_SSAOBlurHFrameBuf->frameBuffer, "SSAO Blur Horizontal");
+				SetFramebufferName(m_VulkanDevice, m_SSAOBlurHFrameBuf->frameBuffer, "SSAO Blur Horizontal");
 
 				attachments[0] = m_SSAOBlurVFrameBuf->frameBufferAttachments[0].second.view;
 				frameBufferCreateInfo.renderPass = m_SSAOBlurVRenderPass;
 				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &frameBufferCreateInfo, nullptr, m_SSAOBlurVFrameBuf->frameBuffer.replace()));
-				SetFramebufferName(m_SSAOBlurVFrameBuf->frameBuffer, "SSAO Blur Vertical");
+				SetFramebufferName(m_VulkanDevice, m_SSAOBlurVFrameBuf->frameBuffer, "SSAO Blur Vertical");
 			}
 
 			// TODO: Remove redundant samplers
@@ -5974,6 +5968,7 @@ namespace flex
 			ssaoNormalSamplerCreateInfo.minLod = 0.0f;
 			ssaoNormalSamplerCreateInfo.maxLod = 1.0f;
 			VK_CHECK_RESULT(vkCreateSampler(m_VulkanDevice->m_LogicalDevice, &ssaoNormalSamplerCreateInfo, nullptr, m_SSAOSampler.replace()));
+			SetSamplerName(m_VulkanDevice, m_SSAOSampler, "SSAO sampler");
 
 			VkSamplerCreateInfo colSamplerCreateInfo = vks::samplerCreateInfo();
 			colSamplerCreateInfo.magFilter = VK_FILTER_LINEAR;
@@ -5987,6 +5982,7 @@ namespace flex
 			colSamplerCreateInfo.maxLod = 1.0f;
 			colSamplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
 			VK_CHECK_RESULT(vkCreateSampler(m_VulkanDevice->m_LogicalDevice, &colSamplerCreateInfo, nullptr, m_ColorSampler.replace()));
+			SetSamplerName(m_VulkanDevice, m_ColorSampler, "Color sampler");
 
 			VkSamplerCreateInfo depthSamplerCreateInfo = vks::samplerCreateInfo();
 			depthSamplerCreateInfo.magFilter = VK_FILTER_LINEAR;
@@ -6000,6 +5996,7 @@ namespace flex
 			depthSamplerCreateInfo.maxLod = 1.0f;
 			depthSamplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE; // TODO: VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK
 			VK_CHECK_RESULT(vkCreateSampler(m_VulkanDevice->m_LogicalDevice, &depthSamplerCreateInfo, nullptr, m_DepthSampler.replace()));
+			SetSamplerName(m_VulkanDevice, m_DepthSampler, "Depth sampler");
 		}
 
 		void VulkanRenderer::PrepareCubemapFrameBuffer()
@@ -6100,6 +6097,7 @@ namespace flex
 			renderPassInfo.pDependencies = dependencies.data();
 
 			VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassInfo, nullptr, m_GBufferCubemapFrameBuffer->renderPass.replace()));
+			SetRenderPassName(m_VulkanDevice, m_GBufferCubemapFrameBuffer->renderPass, "GBuffer Cubemap render pass");
 
 			std::vector<VkImageView> attachments;
 			for (u32 i = 0; i < frameBufferColorAttachmentCount; ++i)
@@ -6115,8 +6113,7 @@ namespace flex
 			fbufCreateInfo.height = m_GBufferCubemapFrameBuffer->height;
 			fbufCreateInfo.layers = 6;
 			VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &fbufCreateInfo, nullptr, m_GBufferCubemapFrameBuffer->frameBuffer.replace()));
-
-			SetFramebufferName(m_GBufferCubemapFrameBuffer->frameBuffer, "Cubemap");
+			SetFramebufferName(m_VulkanDevice, m_GBufferCubemapFrameBuffer->frameBuffer, "GBuffer Cubemap frame buffer");
 		}
 
 		void VulkanRenderer::RemoveMaterial(MaterialID materialID)
@@ -6993,7 +6990,7 @@ namespace flex
 				}
 
 				VK_CHECK_RESULT(vkEndCommandBuffer(m_OffScreenCmdBuffer));
-				SetCommandBufferName(m_OffScreenCmdBuffer, "Offscreen command buffer");
+				SetCommandBufferName(m_VulkanDevice, m_OffScreenCmdBuffer, "Offscreen command buffer");
 			}
 
 			if (g_EngineInstance->IsRenderingImGui())
@@ -7148,7 +7145,7 @@ namespace flex
 			vkCmdEndRenderPass(commandBuffer);
 
 			VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
-			SetCommandBufferName(commandBuffer, "Forward command buffer");
+			SetCommandBufferName(m_VulkanDevice, commandBuffer, "Forward command buffer");
 		}
 
 		void VulkanRenderer::DrawFrame()
@@ -7286,47 +7283,67 @@ namespace flex
 			m_CommandBufferManager.CreateCommandBuffers(m_SwapChainImages.size());
 		}
 
-		void VulkanRenderer::SetObjectName(u64 object, VkDebugReportObjectTypeEXT type, const char* name)
+		void VulkanRenderer::SetObjectName(VulkanDevice* device, u64 object, VkDebugReportObjectTypeEXT type, const char* name)
 		{
-			if (m_vkDebugMarkerSetObjectName)
+			if (name != nullptr && m_vkDebugMarkerSetObjectName != nullptr)
 			{
 				VkDebugMarkerObjectNameInfoEXT info = {};
 				info.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT;
 				info.object = object;
 				info.objectType = type;
 				info.pObjectName = name;
-				VK_CHECK_RESULT(m_vkDebugMarkerSetObjectName(m_VulkanDevice->m_LogicalDevice, &info));
+				VK_CHECK_RESULT(m_vkDebugMarkerSetObjectName(device->m_LogicalDevice, &info));
 			}
 		}
 
-		void VulkanRenderer::SetCommandBufferName(VkCommandBuffer commandBuffer, const char* name)
+		void VulkanRenderer::SetCommandBufferName(VulkanDevice* device, VkCommandBuffer commandBuffer, const char* name)
 		{
-			SetObjectName((u64)commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, name);
+			SetObjectName(device, (u64)commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, name);
 		}
 
-		void VulkanRenderer::SetSwapchainName(VkSwapchainKHR swapchain, const char* name)
+		void VulkanRenderer::SetSwapchainName(VulkanDevice* device, VkSwapchainKHR swapchain, const char* name)
 		{
-			SetObjectName(swapchain, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, name);
+			SetObjectName(device, swapchain, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, name);
 		}
 
-		void VulkanRenderer::SetDescriptorSetName(VkDescriptorSet descSet, const char* name)
+		void VulkanRenderer::SetDescriptorSetName(VulkanDevice* device, VkDescriptorSet descSet, const char* name)
 		{
-			SetObjectName(descSet, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, name);
+			SetObjectName(device, descSet, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, name);
 		}
 
-		void VulkanRenderer::SetPipelineName(VkPipeline pipeline, const char* name)
+		void VulkanRenderer::SetPipelineName(VulkanDevice* device, VkPipeline pipeline, const char* name)
 		{
-			SetObjectName(pipeline, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, name);
+			SetObjectName(device, pipeline, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, name);
 		}
 
-		void VulkanRenderer::SetFramebufferName(VkFramebuffer framebuffer, const char* name)
+		void VulkanRenderer::SetFramebufferName(VulkanDevice* device, VkFramebuffer framebuffer, const char* name)
 		{
-			SetObjectName(framebuffer, VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT, name);
+			SetObjectName(device, framebuffer, VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT, name);
 		}
 
-		void VulkanRenderer::SetRenderPassName(VkRenderPass renderPass, const char* name)
+		void VulkanRenderer::SetRenderPassName(VulkanDevice* device, VkRenderPass renderPass, const char* name)
 		{
-			SetObjectName(renderPass, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, name);
+			SetObjectName(device, renderPass, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, name);
+		}
+
+		void VulkanRenderer::SetImageName(VulkanDevice* device, VkImage image, const char* name)
+		{
+			SetObjectName(device, image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, name);
+		}
+
+		void VulkanRenderer::SetImageViewName(VulkanDevice* device, VkImageView imageView, const char* name)
+		{
+			SetObjectName(device, imageView, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT, name);
+		}
+
+		void VulkanRenderer::SetSamplerName(VulkanDevice* device, VkSampler sampler, const char* name)
+		{
+			SetObjectName(device, sampler, VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT, name);
+		}
+
+		void VulkanRenderer::SetBufferName(VulkanDevice* device, VkBuffer buffer, const char* name)
+		{
+			SetObjectName(device, buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, name);
 		}
 
 		void VulkanRenderer::BeginRegion(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color)

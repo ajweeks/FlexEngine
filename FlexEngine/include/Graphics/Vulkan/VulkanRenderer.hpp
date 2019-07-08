@@ -110,11 +110,23 @@ namespace flex
 			virtual u32 GetTextureHandle(TextureID textureID) const override;
 			virtual void RenderObjectStateChanged() override;
 
+			static void SetObjectName(VulkanDevice* device, u64 object, VkDebugReportObjectTypeEXT type, const char* name);
+			static void SetCommandBufferName(VulkanDevice* device, VkCommandBuffer commandBuffer, const char* name);
+			static void SetSwapchainName(VulkanDevice* device, VkSwapchainKHR swapchain, const char* name);
+			static void SetDescriptorSetName(VulkanDevice* device, VkDescriptorSet descSet, const char* name);
+			static void SetPipelineName(VulkanDevice* device, VkPipeline pipeline, const char* name);
+			static void SetFramebufferName(VulkanDevice* device, VkFramebuffer framebuffer, const char* name);
+			static void SetRenderPassName(VulkanDevice* device, VkRenderPass renderPass, const char* name);
+			static void SetImageName(VulkanDevice* device, VkImage image, const char* name);
+			static void SetImageViewName(VulkanDevice* device, VkImageView imageView, const char* name);
+			static void SetSamplerName(VulkanDevice* device, VkSampler sampler, const char* name);
+			static void SetBufferName(VulkanDevice* device, VkBuffer buffer, const char* name);
+
 			bool bDebugUtilsExtensionPresent = false;
 
-			PFN_vkDebugMarkerSetObjectNameEXT m_vkDebugMarkerSetObjectName = nullptr;
-			PFN_vkCmdDebugMarkerBeginEXT m_vkCmdDebugMarkerBegin = nullptr;
-			PFN_vkCmdDebugMarkerEndEXT m_vkCmdDebugMarkerEnd = nullptr;
+			static PFN_vkDebugMarkerSetObjectNameEXT m_vkDebugMarkerSetObjectName;
+			static PFN_vkCmdDebugMarkerBeginEXT m_vkCmdDebugMarkerBegin;
+			static PFN_vkCmdDebugMarkerEndEXT m_vkCmdDebugMarkerEnd;
 			bool m_bEnableDebugMarkers = false;
 
 		protected:
@@ -243,14 +255,6 @@ namespace flex
 
 			void BindDescriptorSet(VulkanShader* shader, u32 dynamicOffsetOffset, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet);
 			void RecreateSwapChain();
-
-			void SetObjectName(u64 object, VkDebugReportObjectTypeEXT type, const char* name);
-			void SetCommandBufferName(VkCommandBuffer commandBuffer, const char* name);
-			void SetSwapchainName(VkSwapchainKHR swapchain, const char* name);
-			void SetDescriptorSetName(VkDescriptorSet descSet, const char* name);
-			void SetPipelineName(VkPipeline pipeline, const char* name);
-			void SetFramebufferName(VkFramebuffer framebuffer, const char* name);
-			void SetRenderPassName(VkRenderPass renderPass, const char* name);
 
 			void BeginRegion(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color = VEC4_ONE);
 			void EndRegion(VkCommandBuffer cmdBuf);

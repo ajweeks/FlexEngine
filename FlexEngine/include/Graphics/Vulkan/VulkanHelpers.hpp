@@ -162,6 +162,8 @@ namespace flex
 				VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
 				u32 arrayLayers = 1;
 				VkImageCreateFlags flags = 0;
+				
+				const char* DBG_Name = nullptr;
 			};
 
 			struct ImageViewCreateInfo
@@ -174,6 +176,8 @@ namespace flex
 				u32 layerCount = 1;
 				VkImageViewType viewType = VK_IMAGE_VIEW_TYPE_2D;
 				VkImageAspectFlags aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
+
+				const char* DBG_Name = nullptr;
 			};
 
 			struct SamplerCreateInfo
@@ -187,6 +191,8 @@ namespace flex
 				VkFilter minFilter = VK_FILTER_LINEAR;
 				VkSamplerAddressMode samplerAddressMode = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 				VkBorderColor borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+
+				const char* DBG_Name = nullptr;
 			};
 
 			struct CubemapCreateInfo
@@ -209,6 +215,8 @@ namespace flex
 
 				// Leave following field empty to generate uninitialized cubemap
 				std::array<std::string, 6> filePaths;
+
+				const char* DBG_Name = nullptr;
 			};
 
 			// Static, globally usable functions
@@ -349,9 +357,10 @@ namespace flex
 			u32 arrayLayers,
 			VkImageViewType imageViewType,
 			VkImageCreateFlags imageFlags,
-			FrameBufferAttachment *attachment);
+			FrameBufferAttachment *attachment,
+			const char* DBG_Name = nullptr);
 
-		void CreateAttachment(VulkanDevice* device, FrameBuffer* frameBuffer, u32 fboIndex = 0);
+		void CreateAttachment(VulkanDevice* device, FrameBuffer* frameBuffer, u32 fboIndex = 0, const char* DBG_Name = nullptr);
 
 		template<class T>
 		void CopyPixels(const T* srcData, T* dstData, u32 dstOffset, u32 width, u32 height, u32 channelCount, u32 pitch, bool bColorSwizzle);
