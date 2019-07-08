@@ -2451,7 +2451,6 @@ namespace flex
 			framebufCreateInfo.pAttachments = &offscreen.view;
 			framebufCreateInfo.width = dim;
 			framebufCreateInfo.height = dim;
-			framebufCreateInfo.layers = 1;
 			VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &framebufCreateInfo, nullptr, &offscreen.framebuffer));
 
 			VkCommandBuffer layoutCmd = m_CommandBufferManager.CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
@@ -2721,7 +2720,6 @@ namespace flex
 			framebufCreateInfo.pAttachments = &offscreen.view;
 			framebufCreateInfo.width = dim;
 			framebufCreateInfo.height = dim;
-			framebufCreateInfo.layers = 1;
 			VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &framebufCreateInfo, nullptr, &offscreen.framebuffer));
 
 			VkCommandBuffer layoutCmd = m_CommandBufferManager.CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
@@ -2991,7 +2989,6 @@ namespace flex
 				framebufCreateInfo.pAttachments = &offscreen.view;
 				framebufCreateInfo.width = dim;
 				framebufCreateInfo.height = dim;
-				framebufCreateInfo.layers = 1;
 				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &framebufCreateInfo, nullptr, &offscreen.framebuffer));
 
 				VkCommandBuffer layoutCmd = m_CommandBufferManager.CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
@@ -3203,7 +3200,6 @@ namespace flex
 				framebufferCreateInfo.pAttachments = &m_BRDFTexture->imageView;
 				framebufferCreateInfo.width = dim;
 				framebufferCreateInfo.height = dim;
-				framebufferCreateInfo.layers = 1;
 
 				VkFramebuffer framebuffer = VK_NULL_HANDLE;
 				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &framebufferCreateInfo, nullptr, &framebuffer));
@@ -3624,8 +3620,6 @@ namespace flex
 				framebufCreateInfo.pAttachments = &fontTexColAttachment->imageView;
 				framebufCreateInfo.width = textureSize.x;
 				framebufCreateInfo.height = textureSize.y;
-
-				framebufCreateInfo.layers = 1;
 				VkFramebuffer framebuffer = VK_NULL_HANDLE;
 				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &framebufCreateInfo, nullptr, &framebuffer));
 
@@ -5662,8 +5656,6 @@ namespace flex
 				framebufferInfo.pAttachments = attachments.data();
 				framebufferInfo.width = m_SwapChainExtent.width;
 				framebufferInfo.height = m_SwapChainExtent.height;
-				framebufferInfo.layers = 1;
-
 				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &framebufferInfo, nullptr, m_SwapChainFramebuffers[i].replace()));
 
 				std::string name = "Swapchain " + std::to_string(i);
@@ -5831,7 +5823,6 @@ namespace flex
 				gbufferFramebufferCreateInfo.attachmentCount = static_cast<u32>(attachments.size());
 				gbufferFramebufferCreateInfo.width = m_GBufferFrameBuf->width;
 				gbufferFramebufferCreateInfo.height = m_GBufferFrameBuf->height;
-				gbufferFramebufferCreateInfo.layers = 1;
 				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &gbufferFramebufferCreateInfo, nullptr, m_GBufferFrameBuf->frameBuffer.replace()));
 				SetFramebufferName(m_GBufferFrameBuf->frameBuffer, "GBuffer");
 			}
@@ -5850,7 +5841,6 @@ namespace flex
 				offscreenFramebufferCreateInfo.attachmentCount = static_cast<u32>(attachments.size());
 				offscreenFramebufferCreateInfo.width = m_OffscreenFrameBuffer0->width;
 				offscreenFramebufferCreateInfo.height = m_OffscreenFrameBuffer0->height;
-				offscreenFramebufferCreateInfo.layers = 1;
 				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &offscreenFramebufferCreateInfo, nullptr, m_OffscreenFrameBuffer0->frameBuffer.replace()));
 				SetFramebufferName(m_OffscreenFrameBuffer0->frameBuffer, "Offscreen 0");
 
@@ -5921,7 +5911,6 @@ namespace flex
 					shadowFramebufferCreateInfo.attachmentCount = 1;
 					shadowFramebufferCreateInfo.width = SHADOW_CASCADE_RES;
 					shadowFramebufferCreateInfo.height = SHADOW_CASCADE_RES;
-					shadowFramebufferCreateInfo.layers = 1;
 					VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &shadowFramebufferCreateInfo, nullptr, m_ShadowCascades[i]->frameBuffer.replace()));
 
 					std::string name = "Shadow cascade " + std::to_string(i);
@@ -5943,7 +5932,6 @@ namespace flex
 				ssaoFramebufferCreateInfo.attachmentCount = static_cast<u32>(ssaoAttachments.size());
 				ssaoFramebufferCreateInfo.width = m_SSAOFrameBuf->width;
 				ssaoFramebufferCreateInfo.height = m_SSAOFrameBuf->height;
-				ssaoFramebufferCreateInfo.layers = 1;
 				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &ssaoFramebufferCreateInfo, nullptr, m_SSAOFrameBuf->frameBuffer.replace()));
 				SetFramebufferName(m_SSAOFrameBuf->frameBuffer, "SSAO");
 			}
@@ -5966,7 +5954,6 @@ namespace flex
 				frameBufferCreateInfo.attachmentCount = static_cast<u32>(attachments.size());
 				frameBufferCreateInfo.width = m_SSAOBlurHFrameBuf->width;
 				frameBufferCreateInfo.height = m_SSAOBlurHFrameBuf->height;
-				frameBufferCreateInfo.layers = 1;
 				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &frameBufferCreateInfo, nullptr, m_SSAOBlurHFrameBuf->frameBuffer.replace()));
 				SetFramebufferName(m_SSAOBlurHFrameBuf->frameBuffer, "SSAO Blur Horizontal");
 

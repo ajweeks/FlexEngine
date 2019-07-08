@@ -134,8 +134,9 @@ namespace flex
 		inline VkFramebufferCreateInfo framebufferCreateInfo(VkRenderPass renderPass)
 		{
 			VkFramebufferCreateInfo framebufferCreateInfo{};
-			framebufferCreateInfo.renderPass = renderPass;
 			framebufferCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+			framebufferCreateInfo.renderPass = renderPass;
+			framebufferCreateInfo.layers = 1;
 			return framebufferCreateInfo;
 		}
 
