@@ -187,7 +187,7 @@ namespace flex
 
 			void CreateRenderPass(VkRenderPass* outPass, VkFormat colorFormat, const char* passName,
 				VkImageLayout finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-				bool bKeepInitialContents = false,
+				VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
 				bool bDepth = false,
 				VkFormat depthFormat = VK_FORMAT_UNDEFINED,
 				VkImageLayout finalDepthLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
@@ -247,7 +247,8 @@ namespace flex
 			void BatchRenderObjects();
 			void DrawShaderBatch(const ShaderBatchPair &shaderBatches, VkCommandBuffer& commandBuffer, DrawCallInfo* drawCallInfo = nullptr);
 
-			void RenderFullscreenQuad(VkCommandBuffer commandBuffer, VkRenderPass renderPass, VkFramebuffer framebuffer);
+			void RenderFullscreenQuad(VkCommandBuffer commandBuffer, VkRenderPass renderPass, VkFramebuffer framebuffer, ShaderID shaderID,
+				VkPipelineLayout pipelineLayout, VkPipeline graphicsPipeline, VkDescriptorSet descriptorSet, bool bFlipViewport);
 
 			void BuildCommandBuffers(const DrawCallInfo& drawCallInfo);
 
@@ -309,7 +310,7 @@ namespace flex
 			void DrawTextWS(VkCommandBuffer commandBuffer);
 			void DrawSpriteBatch(const std::vector<SpriteQuadDrawInfo>& batch, VkCommandBuffer commandBuffer);
 
-			VkRenderPass ResolveRenderPassType(RenderPassType renderPassType, const char* shaderName);
+			VkRenderPass ResolveRenderPassType(RenderPassType renderPassType, const char* shaderName = nullptr);
 
 			void CreateShadowResources();
 			VkDescriptorSet CreateSpriteDescSet(ShaderID spriteShaderID, TextureID textureID, u32 layer = 0);
@@ -366,7 +367,6 @@ namespace flex
 			FrameBufferAttachment* m_GBufferDepthAttachment = nullptr;
 			VDeleter<VkSampler> m_ColorSampler;
 			VDeleter<VkSampler> m_DepthSampler;
-			VkDescriptorSet m_OffscreenBufferDescriptorSet = VK_NULL_HANDLE;
 
 			VkFormat m_OffscreenFrameBufferFormat = VK_FORMAT_UNDEFINED;
 			FrameBuffer* m_OffscreenFrameBuffer0 = nullptr;
@@ -375,10 +375,13 @@ namespace flex
 			FrameBufferAttachment* m_OffscreenDepthAttachment0 = nullptr;
 			FrameBufferAttachment* m_OffscreenDepthAttachment1 = nullptr;
 
+			VkDescriptorSet m_PostProcessDescriptorSet = VK_NULL_HANDLE;
+			VkDescriptorSet m_TAAResolveDescriptorSet = VK_NULL_HANDLE;
+			VkDescriptorSet m_GammaCorrectDescriptorSet = VK_NULL_HANDLE;
+
 			FrameBuffer* m_SSAOFrameBuf = nullptr;
 			FrameBuffer* m_SSAOBlurHFrameBuf = nullptr;
 			FrameBuffer* m_SSAOBlurVFrameBuf = nullptr;
-			VkDescriptorSet m_SSAODescriptorSet = VK_NULL_HANDLE;
 
 			FrameBuffer* m_GBufferCubemapFrameBuffer = nullptr;
 			FrameBufferAttachment* m_CubemapDepthAttachment = nullptr;
@@ -386,7 +389,6 @@ namespace flex
 			VDeleter<VkImage> m_ShadowImage;
 			VDeleter<VkDeviceMemory> m_ShadowImageMemory;
 			VDeleter<VkImageView> m_ShadowImageView;
-			VDeleter<VkRenderPass> m_ShadowRenderPass;
 			VkFormat m_ShadowBufFormat = VK_FORMAT_UNDEFINED;
 			VkDescriptorSet m_ShadowDescriptorSet = VK_NULL_HANDLE;
 			Cascade* m_ShadowCascades[NUM_SHADOW_CASCADES];
@@ -394,6 +396,8 @@ namespace flex
 			Material::PushConstantBlock* m_SpritePerspPushConstBlock = nullptr;
 			Material::PushConstantBlock* m_SpriteOrthoPushConstBlock = nullptr;
 			Material::PushConstantBlock* m_SpriteOrthoArrPushConstBlock = nullptr;
+
+			VulkanBuffer* m_FullScreenTriVertexBuffer = nullptr;
 
 			struct SpriteDescSet
 			{
@@ -450,11 +454,16 @@ namespace flex
 
 			MaterialID m_ComputeSDFMatID = InvalidMaterialID;
 
+			VDeleter<VkRenderPass> m_ShadowRenderPass;
 			VDeleter<VkRenderPass> m_DeferredCombineRenderPass;
 			VDeleter<VkRenderPass> m_SSAORenderPass;
 			VDeleter<VkRenderPass> m_SSAOBlurHRenderPass;
 			VDeleter<VkRenderPass> m_SSAOBlurVRenderPass;
 			VDeleter<VkRenderPass> m_ForwardRenderPass;
+			VDeleter<VkRenderPass> m_PostProcessRenderPass;
+			VDeleter<VkRenderPass> m_TAAResolveRenderPass;
+			VDeleter<VkRenderPass> m_UIRenderPass;
+			VDeleter<VkRenderPass> m_GammaCorrectRenderPass;
 
 			VDeleter<VkPipeline> m_ShadowGraphicsPipeline;
 			VDeleter<VkPipelineLayout> m_ShadowPipelineLayout;
@@ -463,6 +472,13 @@ namespace flex
 			VDeleter<VkPipelineLayout> m_FontSSPipelineLayout;
 			VDeleter<VkPipeline> m_FontWSGraphicsPipeline;
 			VDeleter<VkPipelineLayout> m_FontWSPipelineLayout;
+
+			VDeleter<VkPipeline> m_PostProcessGraphicsPipeline;
+			VDeleter<VkPipelineLayout> m_PostProcessGraphicsPipelineLayout;
+			VDeleter<VkPipeline> m_TAAResolveGraphicsPipeline;
+			VDeleter<VkPipelineLayout> m_TAAResolveGraphicsPipelineLayout;
+			VDeleter<VkPipeline> m_GammaCorrectGraphicsPipeline;
+			VDeleter<VkPipelineLayout> m_GammaCorrectGraphicsPipelineLayout;
 
 			VDeleter<VkDescriptorPool> m_DescriptorPool;
 			std::vector<VkDescriptorSetLayout> m_DescriptorSetLayouts;

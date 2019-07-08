@@ -1,7 +1,4 @@
 
-@ glslangvalidator --spirv-val -V vk_simple.vert -o spv/vk_simple_vert.spv 
-@ glslangvalidator --spirv-val -V vk_simple.frag -o spv/vk_simple_frag.spv
-
 @ glslangvalidator --spirv-val -V vk_color.vert -o spv/vk_color_vert.spv 
 @ glslangvalidator --spirv-val -V vk_color.frag -o spv/vk_color_frag.spv
 
@@ -54,6 +51,10 @@
 @ glslangvalidator --spirv-val -V vk_sprite.vert -o spv/vk_sprite_vert.spv
 @ glslangvalidator --spirv-val -V vk_sprite.frag -o spv/vk_sprite_frag.spv
 @ glslangvalidator --spirv-val -V vk_sprite_arr.frag -o spv/vk_sprite_arr_frag.spv
+
+@ glslangvalidator --spirv-val -V vk_taa_resolve.frag -o spv/vk_taa_resolve_frag.spv
+
+@ glslangvalidator --spirv-val -V vk_gamma_correct.frag -o spv/vk_gamma_correct_frag.spv
 
 @REM ImGui
 @ glslangValidator --spirv-val -V vk_imgui.frag -o spv/vk_imgui_frag.spv

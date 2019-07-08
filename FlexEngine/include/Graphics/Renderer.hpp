@@ -311,8 +311,6 @@ namespace flex
 			CullFace cullFace = CullFace::_INVALID;
 		};
 
-		MaterialID m_ReflectionProbeMaterialID = InvalidMaterialID; // Set by the user via SetReflecionProbeMaterial
-		MaterialID m_ShadowMaterialID = InvalidMaterialID;
 		//MaterialID m_CubemapGBufferMaterialID = InvalidMaterialID;
 
 		// TODO: Make tweakable at runtime
@@ -328,6 +326,7 @@ namespace flex
 		// TODO: Use a mesh prefab here
 		VertexBufferData m_Quad3DVertexBufferData;
 		RenderID m_Quad3DRenderID = InvalidRenderID;
+		RenderID m_Quad3DSSRenderID = InvalidRenderID;
 		VertexBufferData m_FullScreenTriVertexBufferData;
 		RenderID m_FullScreenTriRenderID = InvalidRenderID;
 
@@ -374,13 +373,20 @@ namespace flex
 		real m_EditorStrFadeDurationPercent = 0.25f;
 		std::string m_EditorMessage;
 
-		MaterialID m_SpriteMatID = InvalidMaterialID;
+		MaterialID m_ReflectionProbeMaterialID = InvalidMaterialID; // Set by the user via SetReflecionProbeMaterial
+
+		MaterialID m_SpriteMatSSID = InvalidMaterialID;
+		MaterialID m_SpriteMatWSID = InvalidMaterialID;
 		MaterialID m_SpriteArrMatID = InvalidMaterialID;
 		MaterialID m_FontMatSSID = InvalidMaterialID;
 		MaterialID m_FontMatWSID = InvalidMaterialID;
+		MaterialID m_ShadowMaterialID = InvalidMaterialID;
 		MaterialID m_PostProcessMatID = InvalidMaterialID;
 		MaterialID m_PostFXAAMatID = InvalidMaterialID;
 		MaterialID m_SelectedObjectMatID = InvalidMaterialID;
+		MaterialID m_TAAResolveMaterialID = InvalidMaterialID;
+		//MaterialID m_UIMaterialID = InvalidMaterialID;
+		MaterialID m_GammaCorrectMaterialID = InvalidMaterialID;
 		MaterialID m_PlaceholderMaterialID = InvalidMaterialID;
 
 		std::string m_FontImageExtension = ".png";

@@ -107,6 +107,8 @@ namespace flex
 			m_PointLights[i].enabled = 0;
 		}
 
+		// TODO: Move these defaults to config file
+
 		for (u32 i = 0; i < MAX_SSAO_KERNEL_SIZE; ++i)
 		{
 			glm::vec3 sample(RandomFloat(-0.9f, 0.9f), RandomFloat(-0.9f, 0.9f), RandomFloat(0.0f, 1.0f));
@@ -142,9 +144,9 @@ namespace flex
 			};
 
 			triVertexBufferDataCreateInfo.texCoords_UV = {
-				glm::vec2(0.0f, 0.0f),
-				glm::vec2(0.0f, 2.0f),
-				glm::vec2(2.0f, 0.0f)
+				glm::vec2(0.0f,  1.0f),
+				glm::vec2(0.0f, -1.0f),
+				glm::vec2(2.0f,  1.0f)
 			};
 
 			triVertexBufferDataCreateInfo.attributes =
@@ -211,16 +213,21 @@ namespace flex
 
 			RenderObjectCreateInfo quad3DCreateInfo = {};
 			quad3DCreateInfo.vertexBufferData = &m_Quad3DVertexBufferData;
-			quad3DCreateInfo.materialID = m_SpriteMatID;
+			quad3DCreateInfo.materialID = m_SpriteMatWSID;
 			quad3DCreateInfo.bDepthWriteEnable = false;
 			quad3DCreateInfo.gameObject = quad3DGameObject;
 			quad3DCreateInfo.cullFace = CullFace::NONE;
 			quad3DCreateInfo.visibleInSceneExplorer = false;
 			quad3DCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
 			quad3DCreateInfo.bEditorObject = true; // TODO: Create other quad which is identical but is not an editor object for gameplay objects?
+			quad3DCreateInfo.renderPassOverride = RenderPassType::FORWARD;
 			m_Quad3DRenderID = InitializeRenderObject(&quad3DCreateInfo);
 
 			m_Quad3DVertexBufferData.DescribeShaderVariables(this, m_Quad3DRenderID);
+
+			quad3DCreateInfo.materialID = m_SpriteMatSSID;
+			quad3DCreateInfo.renderPassOverride = RenderPassType::UI;
+			m_Quad3DSSRenderID = InitializeRenderObject(&quad3DCreateInfo);
 		}
 	}
 
@@ -233,6 +240,7 @@ namespace flex
 
 		DestroyRenderObject(m_FullScreenTriRenderID);
 		DestroyRenderObject(m_Quad3DRenderID);
+		DestroyRenderObject(m_Quad3DSSRenderID);
 		DestroyRenderObject(m_GBufferQuadRenderID);
 	}
 
@@ -451,7 +459,7 @@ namespace flex
 	{
 		SpriteQuadDrawInfo drawInfo = {};
 
-		drawInfo.materialID = m_SpriteMatID;
+		drawInfo.materialID = m_SpriteMatSSID;
 		drawInfo.scale = glm::vec3(size.x, size.y, 1.0f);
 		drawInfo.bScreenSpace = true;
 		drawInfo.bReadDepth = false;
@@ -470,7 +478,7 @@ namespace flex
 	{
 		SpriteQuadDrawInfo drawInfo = {};
 
-		drawInfo.materialID = m_SpriteMatID;
+		drawInfo.materialID = m_SpriteMatSSID;
 		drawInfo.scale = glm::vec3(size.x, size.y, 1.0f);
 		drawInfo.bScreenSpace = true;
 		drawInfo.bReadDepth = false;
@@ -1369,6 +1377,8 @@ namespace flex
 				{ "shadow", "shadow.vert" },
 				{ "ssao", "ssao.vert", "ssao.frag" },
 				{ "ssao_blur", "ssao_blur.vert", "ssao_blur.frag" },
+				{ "taa_resolve", "post_process.vert", "taa_resolve.frag" },
+				{ "gamma_correct", "post_process.vert", "gamma_correct.frag" },
 			};
 #elif COMPILE_VULKAN
 			m_BaseShaders = {
@@ -1391,7 +1401,9 @@ namespace flex
 				{ "font_ws", "vk_font_ws_vert.spv", "vk_font_frag.spv", "vk_font_ws_geom.spv" },
 				{ "shadow", "vk_shadow_vert.spv" },
 				{ "ssao", "vk_ssao_vert.spv", "vk_ssao_frag.spv" },
-				{ "ssao_blur", "vk_ssao_blur_vert.spv", "vk_ssao_blur_frag.spv" },
+				{ "ssao_blur", "vk_post_fxaa_vert.spv", "vk_ssao_blur_frag.spv" },
+				{ "taa_resolve", "vk_post_fxaa_vert.spv", "vk_taa_resolve_frag.spv" },
+				{ "gamma_correct", "vk_post_fxaa_vert.spv", "vk_gamma_correct_frag.spv" },
 			};
 #endif
 
@@ -1407,7 +1419,7 @@ namespace flex
 			m_BaseShaders[shaderID].bNeedPrefilteredMap = true;
 			m_BaseShaders[shaderID].bNeedDepthSampler = true;
 			m_BaseShaders[shaderID].vertexAttributes =
-				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::POSITION_2D |
 				(u32)VertexAttribute::UV;
 
 			// TODO: Specify that this buffer is only used in the frag shader here
@@ -1621,7 +1633,7 @@ namespace flex
 			m_BaseShaders[shaderID].bNeedPushConstantBlock = true;
 			m_BaseShaders[shaderID].pushConstantBlockSize = 132;
 			m_BaseShaders[shaderID].bTranslucent = true;
-			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::UI;
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV;
@@ -1642,7 +1654,7 @@ namespace flex
 			m_BaseShaders[shaderID].bTextureArr = true;
 			m_BaseShaders[shaderID].bDynamic = true;
 			m_BaseShaders[shaderID].dynamicVertexBufferSize = 1024 * 1024; // TODO
-			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::UI;
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV;
@@ -1657,31 +1669,32 @@ namespace flex
 			++shaderID;
 
 			// Post processing
-			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::POST_PROCESS;
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION_2D |
 				(u32)VertexAttribute::UV;
 
-			m_BaseShaders[shaderID].constantBufferUniforms = {};
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SCENE_SAMPLER);
 
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+			// TODO: Remove???
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_COLOR_MULTIPLIER);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_ALBEDO_SAMPLER);
-			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ALBEDO_SAMPLER);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_POST_PROCESS_MAT);
 			++shaderID;
 
 			// Post FXAA
-			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD; // TODO:
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION_2D |
 				(u32)VertexAttribute::UV;
 
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_FXAA_DATA);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SCENE_SAMPLER);
 
-			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ALBEDO_SAMPLER);
+			m_BaseShaders[shaderID].dynamicBufferUniforms = {};
 			++shaderID;
 
 			// Compute SDF
@@ -1705,7 +1718,7 @@ namespace flex
 			++shaderID;
 
 			// Font SS
-			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::UI;
 			m_BaseShaders[shaderID].bDynamic = true;
 			m_BaseShaders[shaderID].dynamicVertexBufferSize = 1024 * 1024; // TODO
 			m_BaseShaders[shaderID].vertexAttributes =
@@ -1768,6 +1781,7 @@ namespace flex
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::SSAO;
 			m_BaseShaders[shaderID].bNeedDepthSampler = true;
 			m_BaseShaders[shaderID].bNeedNoiseSampler = true;
+			m_BaseShaders[shaderID].bDepthWriteEnable = false;
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV;
@@ -1786,6 +1800,7 @@ namespace flex
 			// SSAO Blur
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::SSAO_BLUR;
 			m_BaseShaders[shaderID].bNeedDepthSampler = true;
+			m_BaseShaders[shaderID].bDepthWriteEnable = false;
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV;
@@ -1798,6 +1813,30 @@ namespace flex
 
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_SSAO_BLUR_DATA_DYNAMIC);
+			++shaderID;
+
+			// TAA Resolve
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::TAA_RESOLVE;
+			m_BaseShaders[shaderID].bDepthWriteEnable = false;
+			m_BaseShaders[shaderID].vertexAttributes =
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::UV;
+
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SCENE_SAMPLER);
+
+			m_BaseShaders[shaderID].dynamicBufferUniforms = {};
+			++shaderID;
+
+			// Gamma Correct
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::GAMMA_CORRECT;
+			m_BaseShaders[shaderID].bDepthWriteEnable = false;
+			m_BaseShaders[shaderID].vertexAttributes =
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::UV;
+
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SCENE_SAMPLER);
+
+			m_BaseShaders[shaderID].dynamicBufferUniforms = {};
 			++shaderID;
 
 			assert(shaderID == m_BaseShaders.size());
@@ -2535,13 +2574,21 @@ namespace flex
 
 	void Renderer::InitializeMaterials()
 	{
-		MaterialCreateInfo spriteMatCreateInfo = {};
-		spriteMatCreateInfo.name = "Sprite material";
-		spriteMatCreateInfo.shaderName = "sprite";
-		spriteMatCreateInfo.persistent = true;
-		spriteMatCreateInfo.visibleInEditor = true;
-		spriteMatCreateInfo.enableAlbedoSampler = true;
-		m_SpriteMatID = InitializeMaterial(&spriteMatCreateInfo);
+		MaterialCreateInfo spriteMatSSCreateInfo = {};
+		spriteMatSSCreateInfo.name = "Sprite material";
+		spriteMatSSCreateInfo.shaderName = "sprite";
+		spriteMatSSCreateInfo.persistent = true;
+		spriteMatSSCreateInfo.visibleInEditor = true;
+		spriteMatSSCreateInfo.enableAlbedoSampler = true;
+		m_SpriteMatSSID = InitializeMaterial(&spriteMatSSCreateInfo);
+
+		MaterialCreateInfo spriteMatWSCreateInfo = {};
+		spriteMatWSCreateInfo.name = "Sprite material";
+		spriteMatWSCreateInfo.shaderName = "sprite";
+		spriteMatWSCreateInfo.persistent = true;
+		spriteMatWSCreateInfo.visibleInEditor = true;
+		spriteMatWSCreateInfo.enableAlbedoSampler = true;
+		m_SpriteMatWSID = InitializeMaterial(&spriteMatWSCreateInfo);
 
 		MaterialCreateInfo spriteArrMatCreateInfo = {};
 		spriteArrMatCreateInfo.name = "Sprite Texture Array material";
@@ -2550,13 +2597,6 @@ namespace flex
 		spriteArrMatCreateInfo.visibleInEditor = true;
 		spriteArrMatCreateInfo.enableAlbedoSampler = true;
 		m_SpriteArrMatID = InitializeMaterial(&spriteArrMatCreateInfo);
-
-		MaterialCreateInfo postProcessMatCreateInfo = {};
-		postProcessMatCreateInfo.name = "Post process material";
-		postProcessMatCreateInfo.shaderName = "post_process";
-		postProcessMatCreateInfo.persistent = true;
-		postProcessMatCreateInfo.visibleInEditor = false;
-		m_PostProcessMatID = InitializeMaterial(&postProcessMatCreateInfo);
 
 		MaterialCreateInfo fontSSMatCreateInfo = {};
 		fontSSMatCreateInfo.name = "font ss";
@@ -2579,20 +2619,19 @@ namespace flex
 		shadowMatCreateInfo.visibleInEditor = false;
 		m_ShadowMaterialID = InitializeMaterial(&shadowMatCreateInfo);
 
+		MaterialCreateInfo postProcessMatCreateInfo = {};
+		postProcessMatCreateInfo.name = "Post process material";
+		postProcessMatCreateInfo.shaderName = "post_process";
+		postProcessMatCreateInfo.persistent = true;
+		postProcessMatCreateInfo.visibleInEditor = false;
+		m_PostProcessMatID = InitializeMaterial(&postProcessMatCreateInfo);
+
 		MaterialCreateInfo postFXAAMatCreateInfo = {};
 		postFXAAMatCreateInfo.name = "fxaa";
 		postFXAAMatCreateInfo.shaderName = "post_fxaa";
 		postFXAAMatCreateInfo.persistent = true;
 		postFXAAMatCreateInfo.visibleInEditor = false;
 		m_PostFXAAMatID = InitializeMaterial(&postFXAAMatCreateInfo);
-
-		MaterialCreateInfo placeholderMatCreateInfo = {};
-		placeholderMatCreateInfo.name = "placeholder";
-		placeholderMatCreateInfo.shaderName = "pbr";
-		placeholderMatCreateInfo.persistent = true;
-		placeholderMatCreateInfo.visibleInEditor = true;
-		placeholderMatCreateInfo.constAlbedo = glm::vec3(1.0f, 0.0f, 1.0f);
-		m_PlaceholderMaterialID = InitializeMaterial(&placeholderMatCreateInfo);
 
 		MaterialCreateInfo selectedObjectMatCreateInfo = {};
 		selectedObjectMatCreateInfo.name = "Selected Object";
@@ -2602,6 +2641,29 @@ namespace flex
 		selectedObjectMatCreateInfo.colorMultiplier = VEC4_ONE;
 		m_SelectedObjectMatID = InitializeMaterial(&selectedObjectMatCreateInfo);
 
+		MaterialCreateInfo taaMatCreateInfo = {};
+		taaMatCreateInfo.name = "TAA Resolve";
+		taaMatCreateInfo.shaderName = "color";
+		taaMatCreateInfo.persistent = true;
+		taaMatCreateInfo.visibleInEditor = false;
+		taaMatCreateInfo.colorMultiplier = VEC4_ONE;
+		m_TAAResolveMaterialID = InitializeMaterial(&taaMatCreateInfo);
+		
+		MaterialCreateInfo gammaCorrectMatCreateInfo = {};
+		gammaCorrectMatCreateInfo.name = "Gamma Correct";
+		gammaCorrectMatCreateInfo.shaderName = "gamma_correct";
+		gammaCorrectMatCreateInfo.persistent = true;
+		gammaCorrectMatCreateInfo.visibleInEditor = false;
+		gammaCorrectMatCreateInfo.colorMultiplier = VEC4_ONE;
+		m_GammaCorrectMaterialID = InitializeMaterial(&gammaCorrectMatCreateInfo);
+
+		MaterialCreateInfo placeholderMatCreateInfo = {};
+		placeholderMatCreateInfo.name = "placeholder";
+		placeholderMatCreateInfo.shaderName = "pbr";
+		placeholderMatCreateInfo.persistent = true;
+		placeholderMatCreateInfo.visibleInEditor = true;
+		placeholderMatCreateInfo.constAlbedo = glm::vec3(1.0f, 0.0f, 1.0f);
+		m_PlaceholderMaterialID = InitializeMaterial(&placeholderMatCreateInfo);
 	}
 
 	std::string Renderer::PickRandomSkyboxTexture()

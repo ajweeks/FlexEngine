@@ -503,6 +503,8 @@ namespace flex
 
 			VDeleter<VkPipelineLayout> pipelineLayout;
 			VDeleter<VkPipeline> graphicsPipeline;
+
+			RenderPassType renderPassOverride = RenderPassType::_NONE;
 		};
 
 		struct GraphicsPipelineCreateInfo
@@ -573,6 +575,9 @@ namespace flex
 			VkSampler shadowSampler = VK_NULL_HANDLE;
 
 			VkImageView shadowPreviewView = VK_NULL_HANDLE;
+
+			VkImageView sceneImageView = VK_NULL_HANDLE;
+			VkSampler sceneSampler = VK_NULL_HANDLE;
 
 			bool bDepthSampler = false;
 

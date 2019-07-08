@@ -154,6 +154,7 @@ namespace flex
 	const u64 U_SHADOW_SAMPLING_DATA			= (1ull << 60); const u32 US_SHADOW_SAMPLING_DATA		= sizeof(ShadowSamplingData);
 	const u64 U_NEAR_FAR_PLANES					= (1ull << 61); const u32 US_NEAR_FAR_PLANES			= sizeof(glm::vec2);
 	const u64 U_POST_PROCESS_MAT				= (1ull << 62); const u32 US_POST_PROCESS_MAT			= sizeof(glm::mat4);
+	const u64 U_SCENE_SAMPLER					= (1ull << 63);
 	// NOTE!: New uniforms must be added to Uniforms::CalculateSizeInBytes
 
 	enum class ClearFlag
@@ -517,6 +518,22 @@ namespace flex
 		PushConstantBlock* pushConstantBlock = nullptr;
 	};
 
+	enum class RenderPassType
+	{
+		SHADOW,
+		DEFERRED,
+		DEFERRED_COMBINE,
+		FORWARD,
+		SSAO,
+		SSAO_BLUR,
+		POST_PROCESS,
+		TAA_RESOLVE,
+		UI,
+		GAMMA_CORRECT,
+
+		_NONE
+	};
+
 	struct RenderObjectCreateInfo
 	{
 		MaterialID materialID = InvalidMaterialID;
@@ -528,6 +545,7 @@ namespace flex
 
 		DepthTestFunc depthTestReadFunc = DepthTestFunc::GEQUAL;
 		CullFace cullFace = CullFace::BACK;
+		RenderPassType renderPassOverride = RenderPassType::_NONE;
 
 		bool visible = true;
 		bool visibleInSceneExplorer = true;
@@ -544,18 +562,6 @@ namespace flex
 		bool HasUniform(u64 uniform) const;
 		void AddUniform(u64 uniform);
 		u32 CalculateSizeInBytes() const;
-	};
-
-	enum class RenderPassType
-	{
-		SHADOW,
-		DEFERRED,
-		DEFERRED_COMBINE,
-		FORWARD,
-		SSAO,
-		SSAO_BLUR,
-
-		_NONE
 	};
 
 	struct Shader
