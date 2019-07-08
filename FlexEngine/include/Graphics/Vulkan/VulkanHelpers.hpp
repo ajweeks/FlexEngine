@@ -523,6 +523,8 @@ namespace flex
 
 			VkSpecializationInfo* fragSpecializationInfo = nullptr;
 
+			const char* DBG_Name = nullptr;
+
 			// Out variables
 			VkPipelineCache* pipelineCache = nullptr;
 			VkPipelineLayout* pipelineLayout = nullptr;

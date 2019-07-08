@@ -457,6 +457,7 @@ namespace flex
 
 					VkSubmitInfo end_info = vks::submitInfo(1, &command_buffer);
 					VK_CHECK_RESULT(vkEndCommandBuffer(command_buffer));
+					SetCommandBufferName(command_buffer, "ImGui create fonts texture command buffer");
 					VK_CHECK_RESULT(vkQueueSubmit(m_GraphicsQueue, 1, &end_info, VK_NULL_HANDLE));
 
 					VK_CHECK_RESULT(vkDeviceWaitIdle(*m_VulkanDevice));
@@ -503,6 +504,7 @@ namespace flex
 				pushConstantRanges[0].size = spriteArrShader.shader->pushConstantBlockSize;
 
 				GraphicsPipelineCreateInfo createInfo = {};
+				createInfo.DBG_Name = "Sprite array pipeline";
 				createInfo.graphicsPipeline = &m_SpriteArrGraphicsPipeline;
 				createInfo.pipelineLayout = &m_SpriteArrGraphicsPipelineLayout;
 				createInfo.renderPass = m_ForwardRenderPass;
@@ -510,8 +512,8 @@ namespace flex
 				createInfo.vertexAttributes = m_Quad3DVertexBufferData.Attributes;
 				createInfo.descriptorSetLayoutIndex = spriteArrMat.material.shaderID;
 				createInfo.bEnableColorBlending = true;
-				createInfo.depthTestEnable = false;
-				createInfo.depthWriteEnable = false;
+				createInfo.depthTestEnable = VK_FALSE;
+				createInfo.depthWriteEnable = VK_FALSE;
 				createInfo.pushConstantRangeCount = pushConstantRanges.size();
 				createInfo.pushConstants = pushConstantRanges.data();
 				CreateGraphicsPipeline(&createInfo);
@@ -2473,7 +2475,7 @@ namespace flex
 
 			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 			DescriptorSetCreateInfo equirectangularToCubeDescriptorCreateInfo = {};
-			equirectangularToCubeDescriptorCreateInfo.DBG_Name = "Equirectangular to cube";
+			equirectangularToCubeDescriptorCreateInfo.DBG_Name = "Equirectangular to cube descriptor set";
 			equirectangularToCubeDescriptorCreateInfo.descriptorSet = &descriptorSet;
 			equirectangularToCubeDescriptorCreateInfo.descriptorSetLayout = &m_DescriptorSetLayouts[equirectangularToCubeShaderID];
 			equirectangularToCubeDescriptorCreateInfo.shaderID = equirectangularToCubeShaderID;
@@ -2489,6 +2491,7 @@ namespace flex
 			VkPipeline pipeline = VK_NULL_HANDLE;
 			VkPipelineLayout pipelinelayout = VK_NULL_HANDLE;
 			GraphicsPipelineCreateInfo pipelineCreateInfo = {};
+			pipelineCreateInfo.DBG_Name = "Equirectangular to cube pipeline";
 			pipelineCreateInfo.graphicsPipeline = &pipeline;
 			pipelineCreateInfo.pipelineLayout = &pipelinelayout;
 			pipelineCreateInfo.renderPass = renderPass;
@@ -2741,7 +2744,7 @@ namespace flex
 
 			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 			DescriptorSetCreateInfo irradianceDescriptorCreateInfo = {};
-			irradianceDescriptorCreateInfo.DBG_Name = "Irradiance";
+			irradianceDescriptorCreateInfo.DBG_Name = "Irradiance descriptor set";
 			irradianceDescriptorCreateInfo.descriptorSet = &descriptorSet;
 			irradianceDescriptorCreateInfo.descriptorSetLayout = &m_DescriptorSetLayouts[irradianceShaderID];
 			irradianceDescriptorCreateInfo.shaderID = irradianceShaderID;
@@ -2759,6 +2762,7 @@ namespace flex
 			VkPipelineLayout pipelinelayout = VK_NULL_HANDLE;
 			VkPipeline pipeline = VK_NULL_HANDLE;
 			GraphicsPipelineCreateInfo pipelineCreateInfo = {};
+			pipelineCreateInfo.DBG_Name = "Irradiance pipeline";
 			pipelineCreateInfo.graphicsPipeline = &pipeline;
 			pipelineCreateInfo.pipelineLayout = &pipelinelayout;
 			pipelineCreateInfo.renderPass = renderPass;
@@ -3009,7 +3013,7 @@ namespace flex
 
 			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 			DescriptorSetCreateInfo prefilterDescriptorCreateInfo = {};
-			prefilterDescriptorCreateInfo.DBG_Name = "Prefilter";
+			prefilterDescriptorCreateInfo.DBG_Name = "Prefilter descriptor set";
 			prefilterDescriptorCreateInfo.descriptorSet = &descriptorSet;
 			prefilterDescriptorCreateInfo.descriptorSetLayout = &m_DescriptorSetLayouts[prefilterShaderID];
 			prefilterDescriptorCreateInfo.shaderID = prefilterShaderID;
@@ -3025,6 +3029,7 @@ namespace flex
 			VkPipelineLayout pipelinelayout = VK_NULL_HANDLE;
 			VkPipeline pipeline = VK_NULL_HANDLE;
 			GraphicsPipelineCreateInfo pipelineCreateInfo = {};
+			pipelineCreateInfo.DBG_Name = "Prefiltered cube pipeline";
 			pipelineCreateInfo.graphicsPipeline = &pipeline;
 			pipelineCreateInfo.pipelineLayout = &pipelinelayout;
 			pipelineCreateInfo.renderPass = renderPass;
@@ -3212,7 +3217,7 @@ namespace flex
 
 				VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 				DescriptorSetCreateInfo brdfDescriptorCreateInfo = {};
-				brdfDescriptorCreateInfo.DBG_Name = "BRDF";
+				brdfDescriptorCreateInfo.DBG_Name = "BRDF descriptor set";
 				brdfDescriptorCreateInfo.descriptorSet = &descriptorSet;
 				brdfDescriptorCreateInfo.descriptorSetLayout = &m_DescriptorSetLayouts[brdfShaderID];
 				brdfDescriptorCreateInfo.shaderID = brdfShaderID;
@@ -3222,6 +3227,7 @@ namespace flex
 				VkPipelineLayout pipelinelayout = VK_NULL_HANDLE;
 				VkPipeline pipeline = VK_NULL_HANDLE;
 				GraphicsPipelineCreateInfo pipelineCreateInfo = {};
+				pipelineCreateInfo.DBG_Name = "BRDF LUT pipeline";
 				pipelineCreateInfo.graphicsPipeline = &pipeline;
 				pipelineCreateInfo.pipelineLayout = &pipelinelayout;
 				pipelineCreateInfo.renderPass = renderPass;
@@ -3307,6 +3313,7 @@ namespace flex
 			VulkanMaterial* ssaoMaterial = &m_Materials[m_SSAOMatID];
 			VulkanShader* ssaoShader = &m_Shaders[ssaoMaterial->material.shaderID];
 
+			pipelineCreateInfo.DBG_Name = "SSAO pipeline";
 			pipelineCreateInfo.graphicsPipeline = m_SSAOGraphicsPipeline.replace();
 			pipelineCreateInfo.pipelineLayout = m_SSAOGraphicsPipelineLayout.replace();
 			pipelineCreateInfo.shaderID = ssaoMaterial->material.shaderID;
@@ -3322,6 +3329,7 @@ namespace flex
 			VulkanMaterial* ssaoBlurMaterial = &m_Materials[m_SSAOBlurMatID];
 			VulkanShader* ssaoBlurShader = &m_Shaders[ssaoBlurMaterial->material.shaderID];
 
+			pipelineCreateInfo.DBG_Name = "SSAO Blur Horizontal pipeline";
 			pipelineCreateInfo.graphicsPipeline = m_SSAOBlurHGraphicsPipeline.replace();
 			pipelineCreateInfo.pipelineLayout = m_SSAOBlurGraphicsPipelineLayout.replace();
 			pipelineCreateInfo.shaderID = ssaoBlurMaterial->material.shaderID;
@@ -3332,6 +3340,7 @@ namespace flex
 			pipelineCreateInfo.renderPass = ssaoBlurShader->renderPass;
 			CreateGraphicsPipeline(&pipelineCreateInfo);
 
+			pipelineCreateInfo.DBG_Name = "SSAO Blur Vertcical pipeline";
 			pipelineCreateInfo.graphicsPipeline = m_SSAOBlurVGraphicsPipeline.replace();
 			pipelineCreateInfo.pipelineLayout = m_SSAOBlurGraphicsPipelineLayout.replace();
 			pipelineCreateInfo.shaderID = ssaoBlurMaterial->material.shaderID;
@@ -3351,7 +3360,7 @@ namespace flex
 			VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[ssaoMaterial->material.shaderID];
 
 			DescriptorSetCreateInfo descSetCreateInfo = {};
-			descSetCreateInfo.DBG_Name = "SSAO";
+			descSetCreateInfo.DBG_Name = "SSAO descriptor set";
 			descSetCreateInfo.descriptorSet = &m_SSAODescSet;
 			descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 			descSetCreateInfo.shaderID = ssaoMaterial->material.shaderID;
@@ -3371,7 +3380,7 @@ namespace flex
 
 			descSetCreateInfo = {};
 			descSetCreateInfo.descriptorSet = &m_SSAOBlurHDescSet;
-			descSetCreateInfo.DBG_Name = "SSAO Blur Horizontal";
+			descSetCreateInfo.DBG_Name = "SSAO Blur Horizontal descriptor set";
 			descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 			descSetCreateInfo.shaderID = ssaoBlurMaterial->material.shaderID;
 			descSetCreateInfo.uniformBuffer = &ssaoBlurShader->uniformBuffer;
@@ -3385,7 +3394,7 @@ namespace flex
 
 			descSetCreateInfo = {};
 			descSetCreateInfo.descriptorSet = &m_SSAOBlurVDescSet;
-			descSetCreateInfo.DBG_Name = "SSAO Blur Vertical";
+			descSetCreateInfo.DBG_Name = "SSAO Blur Vertical descriptor set";
 			descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 			descSetCreateInfo.shaderID = ssaoBlurMaterial->material.shaderID;
 			descSetCreateInfo.uniformBuffer = &ssaoBlurShader->uniformBuffer;
@@ -3646,6 +3655,7 @@ namespace flex
 				VkPipeline graphicsPipeline = VK_NULL_HANDLE;
 
 				GraphicsPipelineCreateInfo pipelineCreateInfo = {};
+				pipelineCreateInfo.DBG_Name = "Load font pipeline";
 				pipelineCreateInfo.graphicsPipeline = &graphicsPipeline;
 				pipelineCreateInfo.pipelineLayout = &pipelineLayout;
 				pipelineCreateInfo.shaderID = computeSDFShaderID;
@@ -3747,7 +3757,7 @@ namespace flex
 					VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 
 					DescriptorSetCreateInfo descSetCreateInfo = {};
-					descSetCreateInfo.DBG_Name = "Font SDF";
+					descSetCreateInfo.DBG_Name = "Font SDF descriptor set";
 					descSetCreateInfo.descriptorSet = &descriptorSet;
 					descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 					descSetCreateInfo.shaderID = computeSDFShaderID;
@@ -3777,6 +3787,7 @@ namespace flex
 				EndRegion(commandBuffer);
 
 				VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
+				SetCommandBufferName(commandBuffer, "Load font command buffer");
 
 				VkSubmitInfo submitInfo = vks::submitInfo(1, &commandBuffer);
 				VkPipelineStageFlags waitStages = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -3973,6 +3984,7 @@ namespace flex
 			if (m_FontSSGraphicsPipeline == VK_NULL_HANDLE)
 			{
 				GraphicsPipelineCreateInfo pipelineCreateInfo = {};
+				pipelineCreateInfo.DBG_Name = "Font SS pipeline";
 				pipelineCreateInfo.graphicsPipeline = m_FontSSGraphicsPipeline.replace();
 				pipelineCreateInfo.pipelineLayout = m_FontSSPipelineLayout.replace();
 				pipelineCreateInfo.shaderID = fontMaterial.material.shaderID;
@@ -4017,7 +4029,7 @@ namespace flex
 					if (font->m_DescriptorSet == VK_NULL_HANDLE)
 					{
 						DescriptorSetCreateInfo info;
-						info.DBG_Name = "Font SS";
+						info.DBG_Name = "Font SS descriptor set";
 						info.descriptorSet = &font->m_DescriptorSet;
 						info.descriptorSetLayout = &descSetLayout;
 						info.albedoTexture = font->GetTexture();
@@ -4106,6 +4118,7 @@ namespace flex
 			if (m_FontWSGraphicsPipeline == VK_NULL_HANDLE)
 			{
 				GraphicsPipelineCreateInfo pipelineCreateInfo = {};
+				pipelineCreateInfo.DBG_Name = "Font WS pipeline";
 				pipelineCreateInfo.graphicsPipeline = m_FontWSGraphicsPipeline.replace();
 				pipelineCreateInfo.pipelineLayout = m_FontWSPipelineLayout.replace();
 				pipelineCreateInfo.shaderID = fontMaterial.material.shaderID;
@@ -4141,7 +4154,7 @@ namespace flex
 					if (font->m_DescriptorSet == VK_NULL_HANDLE)
 					{
 						DescriptorSetCreateInfo info;
-						info.DBG_Name = "Font WS";
+						info.DBG_Name = "Font WS descriptor set";
 						info.descriptorSet = &font->m_DescriptorSet;
 						info.descriptorSetLayout = &descSetLayout;
 						info.albedoTexture = font->GetTexture();
@@ -4444,6 +4457,7 @@ namespace flex
 			pushConstantRange.size = shadowShader->shader->pushConstantBlockSize;
 
 			GraphicsPipelineCreateInfo pipelineCreateInfo = {};
+			pipelineCreateInfo.DBG_Name = "Shadow pipeline";
 			pipelineCreateInfo.bSetDynamicStates = true;
 			pipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 			pipelineCreateInfo.cullMode = VK_CULL_MODE_FRONT_BIT;
@@ -4465,7 +4479,7 @@ namespace flex
 			VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[shadowMaterial->material.shaderID];
 
 			DescriptorSetCreateInfo descSetCreateInfo = {};
-			descSetCreateInfo.DBG_Name = "Shadow";
+			descSetCreateInfo.DBG_Name = "Shadow descriptor set";
 			descSetCreateInfo.descriptorSet = &m_ShadowDescriptorSet;
 			descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 			descSetCreateInfo.shaderID = shadowMaterial->material.shaderID;
@@ -4899,7 +4913,7 @@ namespace flex
 			VulkanShader* shader = &m_Shaders[material->material.shaderID];
 
 			DescriptorSetCreateInfo createInfo = {};
-			std::string debugName = (renderObject->gameObject ? renderObject->gameObject->GetName() : "") + " - renderID " + std::to_string(renderID);
+			std::string debugName = "Render Object '" + (renderObject->gameObject ? renderObject->gameObject->GetName() : "") + "' (renderID " + std::to_string(renderID) + ") descriptor set";
 			createInfo.DBG_Name = debugName.c_str();
 			createInfo.descriptorSet = &renderObject->descriptorSet;
 			createInfo.descriptorSetLayout = &m_DescriptorSetLayouts[material->descriptorSetLayoutIndex];
@@ -5398,6 +5412,8 @@ namespace flex
 			VulkanShader& shader = m_Shaders[material->material.shaderID];
 
 			GraphicsPipelineCreateInfo pipelineCreateInfo = {};
+			std::string dbgName = "Render object '" + (renderObject->gameObject ? renderObject->gameObject->GetName() : "") + "' (renderID " + std::to_string(renderID) + ") pipeline";
+			pipelineCreateInfo.DBG_Name = dbgName.c_str();
 			pipelineCreateInfo.pipelineLayout = renderObject->pipelineLayout.replace();
 			pipelineCreateInfo.graphicsPipeline = renderObject->graphicsPipeline.replace();
 			pipelineCreateInfo.shaderID = material->material.shaderID;
@@ -5600,6 +5616,7 @@ namespace flex
 			}
 
 			VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_VulkanDevice->m_LogicalDevice, pipelineCache, 1, &pipelineInfo, nullptr, createInfo->graphicsPipeline));
+			SetPipelineName(*createInfo->graphicsPipeline, createInfo->DBG_Name);
 		}
 
 		void VulkanRenderer::CreateDepthResources()
@@ -5614,10 +5631,12 @@ namespace flex
 			m_GBufferDepthAttachment->CreateImageView();
 			m_GBufferDepthAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, m_GraphicsQueue);
 
+			m_OffscreenDepthAttachment0->bIsTransferedDst = true;
 			m_OffscreenDepthAttachment0->CreateImage(m_SwapChainExtent.width, m_SwapChainExtent.height);
 			m_OffscreenDepthAttachment0->CreateImageView();
 			m_OffscreenDepthAttachment0->TransitionToLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, m_GraphicsQueue);
 
+			//m_OffscreenDepthAttachment1->bIsTransferedDst = true;
 			m_OffscreenDepthAttachment1->CreateImage(m_SwapChainExtent.width, m_SwapChainExtent.height);
 			m_OffscreenDepthAttachment1->CreateImageView();
 			m_OffscreenDepthAttachment1->TransitionToLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, m_GraphicsQueue);
@@ -6987,6 +7006,7 @@ namespace flex
 				}
 
 				VK_CHECK_RESULT(vkEndCommandBuffer(m_OffScreenCmdBuffer));
+				SetCommandBufferName(m_OffScreenCmdBuffer, "Offscreen command buffer");
 			}
 
 			if (g_EngineInstance->IsRenderingImGui())
@@ -7141,6 +7161,7 @@ namespace flex
 			vkCmdEndRenderPass(commandBuffer);
 
 			VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
+			SetCommandBufferName(commandBuffer, "Forward command buffer");
 		}
 
 		void VulkanRenderer::DrawFrame()
@@ -7278,7 +7299,7 @@ namespace flex
 			m_CommandBufferManager.CreateCommandBuffers(m_SwapChainImages.size());
 		}
 
-		void VulkanRenderer::SetObjectName(uint64_t object, VkDebugReportObjectTypeEXT type, const char* name)
+		void VulkanRenderer::SetObjectName(u64 object, VkDebugReportObjectTypeEXT type, const char* name)
 		{
 			if (m_vkDebugMarkerSetObjectName)
 			{
@@ -7289,6 +7310,11 @@ namespace flex
 				info.pObjectName = name;
 				VK_CHECK_RESULT(m_vkDebugMarkerSetObjectName(m_VulkanDevice->m_LogicalDevice, &info));
 			}
+		}
+
+		void VulkanRenderer::SetCommandBufferName(VkCommandBuffer commandBuffer, const char* name)
+		{
+			SetObjectName((u64)commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, name);
 		}
 
 		void VulkanRenderer::SetSwapchainName(VkSwapchainKHR swapchain, const char* name)

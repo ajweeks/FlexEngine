@@ -244,7 +244,8 @@ namespace flex
 			void BindDescriptorSet(VulkanShader* shader, u32 dynamicOffsetOffset, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet);
 			void RecreateSwapChain();
 
-			void SetObjectName(uint64_t object, VkDebugReportObjectTypeEXT type, const char* name);
+			void SetObjectName(u64 object, VkDebugReportObjectTypeEXT type, const char* name);
+			void SetCommandBufferName(VkCommandBuffer commandBuffer, const char* name);
 			void SetSwapchainName(VkSwapchainKHR swapchain, const char* name);
 			void SetDescriptorSetName(VkDescriptorSet descSet, const char* name);
 			void SetPipelineName(VkPipeline pipeline, const char* name);
