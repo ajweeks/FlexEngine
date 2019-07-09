@@ -1079,7 +1079,7 @@ namespace flex
 			if (ImGui::BeginMenu("File"))
 			{
 #if COMPILE_RENDERDOC_API
-				if (m_RenderDocAPI && ImGui::MenuItem("Capture RenderDoc frame"))
+				if (m_RenderDocAPI && ImGui::MenuItem("Capture RenderDoc frame", "F9"))
 				{
 					m_bRenderDocTriggerCaptureNextFrame = true;
 				}
@@ -2291,10 +2291,10 @@ namespace flex
 
 		if (dllDirPath.empty())
 		{
-			PrintError("Requested setup of RenderDoc API, but was unable to find renderdoc settings file\n,"
-				"please create one in the format: "
-						"\"{ \"lib path\" : \"C:\\Path\\To\\RenderDocLibs\\\" }\"\n"
-						"And save it at: \"%s\"\n", m_RenderDocSettingsAbsFilePath.c_str());
+			PrintError("Unable to setup RenderDoc API - renderdoc settings file missing. "
+						"Please create one in the format: "
+						"\"{ \"lib path\" : \"C:\\Path\\To\\RenderDocLibs\\\" }\" "
+						"and save it at: \"%s\"\n", m_RenderDocSettingsAbsFilePath.c_str());
 			return;
 		}
 
