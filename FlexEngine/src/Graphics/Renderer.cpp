@@ -2643,7 +2643,7 @@ namespace flex
 
 		MaterialCreateInfo taaMatCreateInfo = {};
 		taaMatCreateInfo.name = "TAA Resolve";
-		taaMatCreateInfo.shaderName = "color";
+		taaMatCreateInfo.shaderName = "taa_resolve";
 		taaMatCreateInfo.persistent = true;
 		taaMatCreateInfo.visibleInEditor = false;
 		taaMatCreateInfo.colorMultiplier = VEC4_ONE;
