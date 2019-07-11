@@ -5,8 +5,10 @@
 IGNORE_WARNINGS_PUSH
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/vec2.hpp>
+
 IGNORE_WARNINGS_POP
 
+#include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "Player.hpp"
 #include "PlayerController.hpp"
@@ -242,6 +244,60 @@ namespace flex
 
 		m_ViewProjection = m_Proj * m_View;
 
+		if (g_Renderer->IsTAAEnabled())
+		{
+			JitterMatrix(m_ViewProjection);
+		}
+
+	}
+	void BaseCamera::JitterMatrix(glm::mat4& matrix)
+	{
+		// Sub-sample positions for 16x TAA
+		static const glm::vec2 SAMPLE_LOCS_16[16] = {
+			glm::vec2(-8.0f, 0.0f) / 8.0f,
+			glm::vec2(-6.0f, -4.0f) / 8.0f,
+			glm::vec2(-3.0f, -2.0f) / 8.0f,
+			glm::vec2(-2.0f, -6.0f) / 8.0f,
+			glm::vec2(1.0f, -1.0f) / 8.0f,
+			glm::vec2(2.0f, -5.0f) / 8.0f,
+			glm::vec2(6.0f, -7.0f) / 8.0f,
+			glm::vec2(5.0f, -3.0f) / 8.0f,
+			glm::vec2(4.0f, 1.0f) / 8.0f,
+			glm::vec2(7.0f, 4.0f) / 8.0f,
+			glm::vec2(3.0f, 5.0f) / 8.0f,
+			glm::vec2(0.0f, 7.0f) / 8.0f,
+			glm::vec2(-1.0f, 3.0f) / 8.0f,
+			glm::vec2(-4.0f, 6.0f) / 8.0f,
+			glm::vec2(-7.0f, 8.0f) / 8.0f,
+			glm::vec2(-5.0f, 2.0f) / 8.0f };
+
+		// Sub-sample positions for 8x TAA
+		static const glm::vec2 SAMPLE_LOCS_8[8] = {
+			glm::vec2(-7.0f, 1.0f) / 8.0f,
+			glm::vec2(-5.0f, -5.0f) / 8.0f,
+			glm::vec2(-1.0f, -3.0f) / 8.0f,
+			glm::vec2(3.0f, -7.0f) / 8.0f,
+			glm::vec2(5.0f, -1.0f) / 8.0f,
+			glm::vec2(7.0f, 7.0f) / 8.0f,
+			glm::vec2(1.0f, 3.0f) / 8.0f,
+			glm::vec2(-3.0f, 5.0f) / 8.0f };
+
+		bool bHigherSampleCount = false;
+
+		const u32 sampleCount = bHigherSampleCount ? 16 : 8;
+		const glm::vec2* samples = bHigherSampleCount ? SAMPLE_LOCS_16 : SAMPLE_LOCS_8;
+
+		const glm::vec2i swapChainSize = g_Window->GetFrameBufferSize();
+		const unsigned subsampleIdx = g_Renderer->GetFramesRenderedCount() % sampleCount;
+
+		const glm::vec2 texSize(1.0f / (glm::vec2)swapChainSize);
+		const glm::vec2 subsampleSizeNDC = texSize * 2.0f;
+
+		glm::vec2 subsample = samples[subsampleIdx] * subsampleSizeNDC;
+		subsample *= 4.0f; // [-subsampleSizeNDC / 2, subsampleSizeNDC / 2]
+
+		glm::mat4 jitterMat = glm::translate(MAT4_IDENTITY, glm::vec3(subsample.x, subsample.y, 0.0f));
+		matrix = matrix * jitterMat;
 	}
 
 	void BaseCamera::ClampPitch()

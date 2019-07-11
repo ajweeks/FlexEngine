@@ -637,6 +637,11 @@ namespace flex
 		return m_bDisplayShadowCascadePreview;
 	}
 
+	bool Renderer::IsTAAEnabled() const
+	{
+		return m_bEnableTAA;
+	}
+
 	void Renderer::EnqueueScreenSpaceSprites()
 	{
 		if (m_bDisplayShadowCascadePreview)

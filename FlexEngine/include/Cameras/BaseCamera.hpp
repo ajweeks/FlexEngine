@@ -78,6 +78,7 @@ namespace flex
 		void CalculateYawAndPitchFromForward();
 		void RecalculateViewProjection();
 
+		void JitterMatrix(glm::mat4& matrix);
 		void ClampPitch();
 
 		// Exposure calculations taken from Google's Filament rendering engine

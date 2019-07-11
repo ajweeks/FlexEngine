@@ -234,6 +234,8 @@ namespace flex
 		void SetDisplayShadowCascadePreview(bool bPreview);
 		bool GetDisplayShadowCascadePreview() const;
 
+		bool IsTAAEnabled() const;
+
 		bool bFontWindowShowing = false;
 		bool bUniformBufferWindowShowing = false;
 
@@ -420,6 +422,8 @@ namespace flex
 		glm::vec2u m_SSAORes;
 		bool m_bSSAOBlurEnabled = true;
 		bool m_bSSAOStateChanged = false;
+
+		bool m_bEnableTAA = true;
 
 		FXAAData m_FXAAData;
 

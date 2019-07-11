@@ -15,5 +15,5 @@ void main()
 	vec4 sceneCol = texture(in_SceneTexture, ex_TexCoord);
 	vec4 historyCol = texture(in_HistoryTexture, ex_TexCoord);
 
-	out_Color = mix(sceneCol, historyCol, 1/16.0);
+	out_Color = mix(historyCol, sceneCol, 1/8.0);
 }

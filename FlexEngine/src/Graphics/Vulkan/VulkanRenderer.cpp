@@ -236,12 +236,12 @@ namespace flex
 			m_OffscreenFrameBuffer0->frameBufferAttachments = {
 				{ "color", { m_VulkanDevice, frameBufCreateInfo } },
 			};
+			m_OffscreenFrameBuffer0->frameBufferAttachments[0].second.bIsTransferedSrc = true;
 
 			m_OffscreenFrameBuffer1 = new FrameBuffer(m_VulkanDevice);
 			m_OffscreenFrameBuffer1->frameBufferAttachments = {
 				{ "color", { m_VulkanDevice, frameBufCreateInfo } },
 			};
-			m_OffscreenFrameBuffer1->frameBufferAttachments[0].second.bIsTransferedSrc = true;
 
 			m_HistoryBuffer = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "History buffer", m_SwapChainExtent.width, m_SwapChainExtent.height, 4);
 			m_HistoryBuffer->imageFormat = m_OffscreenFrameBufferFormat;
@@ -5018,7 +5018,7 @@ namespace flex
 
 			// TAA resolve render pass
 			// FB0 is sampled in gamma correct pass
-			CreateRenderPass(m_TAAResolveRenderPass.replace(), m_OffscreenFrameBufferFormat, "TAA Resolve render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			CreateRenderPass(m_TAAResolveRenderPass.replace(), m_OffscreenFrameBufferFormat, "TAA Resolve render pass", VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, true, depthFormat, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
 			// Gamma correct render pass
@@ -7321,14 +7321,14 @@ namespace flex
 
 			m_HistoryBuffer->TransitionToLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, commandBuffer);
 
-			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, sceneBuffer1.image, sceneBuffer0.format,
-				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 1, commandBuffer, false);
-
-			CopyImage(m_VulkanDevice, m_GraphicsQueue, sceneBuffer1.image, m_HistoryBuffer->image,
+			CopyImage(m_VulkanDevice, m_GraphicsQueue, sceneBuffer0.image, m_HistoryBuffer->image,
 				m_SwapChainExtent.width, m_SwapChainExtent.height, commandBuffer, VK_IMAGE_ASPECT_COLOR_BIT);
 
-			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, sceneBuffer1.image, sceneBuffer0.format,
+			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, sceneBuffer0.image, sceneBuffer0.format,
 				VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, commandBuffer, false);
+
+			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, sceneBuffer1.image, sceneBuffer1.format,
+				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1, commandBuffer, false);
 
 			m_HistoryBuffer->TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, commandBuffer);
 
@@ -7818,7 +7818,7 @@ namespace flex
 			glm::mat4 projectionInv = glm::inverse(projection);
 			glm::mat4 view = cam->GetView();
 			glm::mat4 viewInv = glm::inverse(view);
-			glm::mat4 viewProjection = projection * view;
+			glm::mat4 viewProjection = cam->GetViewProjection();
 			glm::vec4 camPos = glm::vec4(cam->GetPosition(), 0.0f);
 			real exposure = cam->exposure;
 			glm::vec2 m_NearFarPlanes(cam->GetZNear(), cam->GetZFar());
