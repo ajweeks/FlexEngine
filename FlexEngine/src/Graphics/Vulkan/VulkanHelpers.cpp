@@ -1201,6 +1201,7 @@ namespace flex
 			return u32_max;
 		}
 
+		// NOTE: This function needs to burn and die in hell.
 		void TransitionImageLayout(VulkanDevice* device, VkQueue graphicsQueue, VkImage image, VkFormat format, VkImageLayout oldLayout,
 			VkImageLayout newLayout, u32 mipLevels, VkCommandBuffer optCmdBuf /* = VK_NULL_HANDLE */, bool bIsDepthTexture /* = false */)
 		{
@@ -1365,6 +1366,12 @@ namespace flex
 			{
 				barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 				barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			}
+			else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED &&
+				newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+			{
+				barrier.srcAccessMask = 0;
+				barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 			}
 			else
 			{
