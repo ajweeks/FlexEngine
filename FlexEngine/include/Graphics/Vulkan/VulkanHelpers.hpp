@@ -360,9 +360,10 @@ namespace flex
 			VkImage* image,
 			VkDeviceMemory* memory,
 			VkImageView* imageView,
-			const char* DBG_Name = nullptr);
+			const char* DBG_ImageName = nullptr,
+			const char* DBG_ImageViewName = nullptr);
 
-		void CreateAttachment(VulkanDevice* device, FrameBuffer* frameBuffer, u32 fboIndex = 0, const char* DBG_Name = nullptr);
+		void CreateAttachment(VulkanDevice* device, FrameBuffer* frameBuffer, u32 fboIndex = 0, const char* DBG_ImageName = nullptr, const char* DBG_ImageViewName = nullptr);
 
 		template<class T>
 		void CopyPixels(const T* srcData, T* dstData, u32 dstOffset, u32 width, u32 height, u32 channelCount, u32 pitch, bool bColorSwizzle);

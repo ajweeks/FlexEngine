@@ -1745,7 +1745,7 @@ namespace flex
 		}
 
 		void CreateAttachment(VulkanDevice* device, VkFormat format, VkImageUsageFlags usage, u32 width, u32 height, u32 arrayLayers, VkImageViewType imageViewType,
-			VkImageCreateFlags imageFlags, VkImage* image, VkDeviceMemory* memory, VkImageView* imageView, const char* DBG_Name /* = nullptr */)
+			VkImageCreateFlags imageFlags, VkImage* image, VkDeviceMemory* memory, VkImageView* imageView, const char* DBG_ImageName /* = nullptr */, const char* DBG_ImageViewName /* = nullptr */)
 		{
 			assert(format != VK_FORMAT_UNDEFINED);
 			assert(width != 0 && height != 0);
@@ -1789,7 +1789,7 @@ namespace flex
 			imageCreateInfo.flags = imageFlags;
 
 			VK_CHECK_RESULT(vkCreateImage(device->m_LogicalDevice, &imageCreateInfo, nullptr, image));
-			VulkanRenderer::SetImageName(device, *image, DBG_Name);
+			VulkanRenderer::SetImageName(device, *image, DBG_ImageName);
 
 			VkMemoryRequirements memRequirements;
 			vkGetImageMemoryRequirements(device->m_LogicalDevice, *image, &memRequirements);
@@ -1810,10 +1810,10 @@ namespace flex
 			imageViewCreateInfo.image = *image;
 			imageViewCreateInfo.flags = 0;
 			VK_CHECK_RESULT(vkCreateImageView(device->m_LogicalDevice, &imageViewCreateInfo, nullptr, imageView));
-			VulkanRenderer::SetImageViewName(device, *imageView, DBG_Name);
+			VulkanRenderer::SetImageViewName(device, *imageView, DBG_ImageViewName);
 		}
 
-		void CreateAttachment(VulkanDevice* device, FrameBuffer* frameBuffer, u32 fboIndex /* = 0 */, const char* DBG_Name /* = nullptr */)
+		void CreateAttachment(VulkanDevice* device, FrameBuffer* frameBuffer, u32 fboIndex /* = 0 */, const char* DBG_ImageName /* = nullptr */, const char* DBG_ImageViewName /* = nullptr */)
 		{
 			FrameBufferAttachment* fbAttachment = &frameBuffer->frameBufferAttachments[fboIndex].second;
 			CreateAttachment(
@@ -1830,7 +1830,8 @@ namespace flex
 				fbAttachment->image.replace(),
 				fbAttachment->mem.replace(),
 				fbAttachment->view.replace(),
-				DBG_Name);
+				DBG_ImageName,
+				DBG_ImageViewName);
 			fbAttachment->layout = VK_IMAGE_LAYOUT_UNDEFINED;
 		}
 

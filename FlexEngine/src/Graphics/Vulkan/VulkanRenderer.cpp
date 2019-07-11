@@ -5043,8 +5043,10 @@ namespace flex
 			VulkanShader* shader = &m_Shaders[material->material.shaderID];
 
 			DescriptorSetCreateInfo createInfo = {};
-			std::string debugName = "Render Object '" + (renderObject->gameObject ? renderObject->gameObject->GetName() : "") + "' (renderID " + std::to_string(renderID) + ") descriptor set";
-			createInfo.DBG_Name = debugName.c_str();
+
+			char debugName[256];
+			sprintf_s(debugName, "Render Object %s (render ID %u) descriptor set", renderObject->gameObject ? renderObject->gameObject->GetName().c_str() : "", renderID);
+			createInfo.DBG_Name = debugName;
 			createInfo.descriptorSet = &renderObject->descriptorSet;
 			createInfo.descriptorSetLayout = &m_DescriptorSetLayouts[material->descriptorSetLayoutIndex];
 			createInfo.shaderID = material->material.shaderID;
@@ -5550,8 +5552,9 @@ namespace flex
 			VulkanShader& shader = m_Shaders[material->material.shaderID];
 
 			GraphicsPipelineCreateInfo pipelineCreateInfo = {};
-			std::string dbgName = "Render object '" + (renderObject->gameObject ? renderObject->gameObject->GetName() : "") + "' (renderID " + std::to_string(renderID) + ") pipeline";
-			pipelineCreateInfo.DBG_Name = dbgName.c_str();
+			char debugName[256];
+			sprintf_s(debugName, "Render Object %s (render ID %u) pipeline", renderObject->gameObject ? renderObject->gameObject->GetName().c_str() : "", renderID);
+			pipelineCreateInfo.DBG_Name = debugName;
 			pipelineCreateInfo.pipelineLayout = renderObject->pipelineLayout.replace();
 			pipelineCreateInfo.graphicsPipeline = renderObject->graphicsPipeline.replace();
 			pipelineCreateInfo.shaderID = material->material.shaderID;
@@ -5766,7 +5769,7 @@ namespace flex
 		{
 			m_SwapChainFramebuffers.resize(m_SwapChainImageViews.size(), VDeleter<VkFramebuffer>{ m_VulkanDevice->m_LogicalDevice, vkDestroyFramebuffer });
 
-			for (size_t i = 0; i < m_SwapChainImageViews.size(); ++i)
+			for (u32 i = 0; i < m_SwapChainImageViews.size(); ++i)
 			{
 				std::array<VkImageView, 2> attachments = {
 					m_SwapChainImageViews[i],
@@ -5780,8 +5783,9 @@ namespace flex
 				framebufferInfo.height = m_SwapChainExtent.height;
 				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &framebufferInfo, nullptr, m_SwapChainFramebuffers[i].replace()));
 
-				std::string name = "Swapchain " + std::to_string(i);
-				SetFramebufferName(m_VulkanDevice, m_SwapChainFramebuffers[i], name.c_str());
+				char name[256];
+				sprintf_s(name, "Swapchain %u", i);
+				SetFramebufferName(m_VulkanDevice, m_SwapChainFramebuffers[i], name);
 			}
 		}
 
@@ -5817,7 +5821,11 @@ namespace flex
 				// Color attachments
 				for (u32 i = 0; i < frameBufferColorAttachmentCount; ++i)
 				{
-					CreateAttachment(m_VulkanDevice, m_GBufferFrameBuf, i);
+					char dbgImageName[256];
+					char dbgImageViewName[256];
+					sprintf_s(dbgImageName, "GBuffer %u image", i);
+					sprintf_s(dbgImageViewName, "GBuffer %u image view", i);
+					CreateAttachment(m_VulkanDevice, m_GBufferFrameBuf, i, dbgImageName, dbgImageViewName);
 				}
 
 				// Find a suitable depth format
@@ -5958,8 +5966,8 @@ namespace flex
 				assert(m_OffscreenFrameBuffer0->width == m_OffscreenFrameBuffer1->width);
 				assert(m_OffscreenFrameBuffer0->height == m_OffscreenFrameBuffer1->height);
 
-				CreateAttachment(m_VulkanDevice, m_OffscreenFrameBuffer0);
-				CreateAttachment(m_VulkanDevice, m_OffscreenFrameBuffer1);
+				CreateAttachment(m_VulkanDevice, m_OffscreenFrameBuffer0, 0, "Offscreen 0 image", "Offscreen 0 image view");
+				CreateAttachment(m_VulkanDevice, m_OffscreenFrameBuffer1, 0, "Offscreen 1 image", "Offscreen 1 image view");
 
 				std::vector<VkImageView> attachments;
 				attachments.push_back(m_OffscreenFrameBuffer0->frameBufferAttachments[0].second.view);
@@ -5992,7 +6000,8 @@ namespace flex
 				m_HistoryBuffer->image.replace(),
 				m_HistoryBuffer->imageMemory.replace(),
 				m_HistoryBuffer->imageView.replace(),
-				"History Buffer texture");
+				"History Buffer image",
+				"History Buffer image view");
 			m_HistoryBuffer->imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 			m_HistoryBuffer->TransitionToLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
@@ -6014,6 +6023,7 @@ namespace flex
 				imageCreateInfo.flags = 0;
 
 				VK_CHECK_RESULT(vkCreateImage(m_VulkanDevice->m_LogicalDevice, &imageCreateInfo, nullptr, m_ShadowImage.replace()));
+				SetImageName(m_VulkanDevice, m_ShadowImage, "Shadow cascade image");
 				VkMemoryRequirements memRequirements;
 				vkGetImageMemoryRequirements(m_VulkanDevice->m_LogicalDevice, m_ShadowImage, &memRequirements);
 				VkMemoryAllocateInfo memAlloc = vks::memoryAllocateInfo(memRequirements.size);
@@ -6034,6 +6044,7 @@ namespace flex
 				fullImageView.image = m_ShadowImage;
 				fullImageView.flags = 0;
 				VK_CHECK_RESULT(vkCreateImageView(m_VulkanDevice->m_LogicalDevice, &fullImageView, nullptr, m_ShadowImageView.replace()));
+				SetImageViewName(m_VulkanDevice, m_ShadowImageView, "Shadow cascade image view (main)");
 
 				// One frame buffer & view per cascade
 				for (u32 i = 0; i < NUM_SHADOW_CASCADES; ++i)
@@ -6050,6 +6061,9 @@ namespace flex
 					imageView.image = m_ShadowImage;
 					imageView.flags = 0;
 					VK_CHECK_RESULT(vkCreateImageView(m_VulkanDevice->m_LogicalDevice, &imageView, nullptr, m_ShadowCascades[i]->imageView.replace()));
+					char imageViewName[256];
+					sprintf_s(imageViewName, "Shadow cascade %u image view", i);
+					SetImageViewName(m_VulkanDevice, m_ShadowCascades[i]->imageView, imageViewName);
 
 					VkFramebufferCreateInfo shadowFramebufferCreateInfo = vks::framebufferCreateInfo(m_ShadowRenderPass);
 					shadowFramebufferCreateInfo.pAttachments = &m_ShadowCascades[i]->imageView;
@@ -6058,8 +6072,9 @@ namespace flex
 					shadowFramebufferCreateInfo.height = SHADOW_CASCADE_RES;
 					VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &shadowFramebufferCreateInfo, nullptr, m_ShadowCascades[i]->frameBuffer.replace()));
 
-					std::string name = "Shadow cascade " + std::to_string(i);
-					SetFramebufferName(m_VulkanDevice, m_ShadowCascades[i]->frameBuffer, name.c_str());
+					char frameBufferName[256];
+					sprintf_s(frameBufferName, "Shadow cascade %u frame buffer", i);
+					SetFramebufferName(m_VulkanDevice, m_ShadowCascades[i]->frameBuffer, frameBufferName);
 				}
 			}
 
@@ -6067,7 +6082,7 @@ namespace flex
 			{
 				assert(m_SSAOFrameBuf->frameBufferAttachments.size() == 1);
 
-				CreateAttachment(m_VulkanDevice, m_SSAOFrameBuf);
+				CreateAttachment(m_VulkanDevice, m_SSAOFrameBuf, 0, "SSAO image", "SSAO image view");
 
 				std::vector<VkImageView> ssaoAttachments;
 				ssaoAttachments.push_back(m_SSAOFrameBuf->frameBufferAttachments[0].second.view);
@@ -6078,7 +6093,7 @@ namespace flex
 				ssaoFramebufferCreateInfo.width = m_SSAOFrameBuf->width;
 				ssaoFramebufferCreateInfo.height = m_SSAOFrameBuf->height;
 				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &ssaoFramebufferCreateInfo, nullptr, m_SSAOFrameBuf->frameBuffer.replace()));
-				SetFramebufferName(m_VulkanDevice, m_SSAOFrameBuf->frameBuffer, "SSAO");
+				SetFramebufferName(m_VulkanDevice, m_SSAOFrameBuf->frameBuffer, "SSAO frame buffer");
 			}
 
 			// SSAO Blur frame buffers
@@ -6088,8 +6103,8 @@ namespace flex
 				assert(m_SSAOBlurHFrameBuf->width == m_SSAOBlurVFrameBuf->width);
 				assert(m_SSAOBlurHFrameBuf->height == m_SSAOBlurVFrameBuf->height);
 
-				CreateAttachment(m_VulkanDevice, m_SSAOBlurHFrameBuf);
-				CreateAttachment(m_VulkanDevice, m_SSAOBlurVFrameBuf);
+				CreateAttachment(m_VulkanDevice, m_SSAOBlurHFrameBuf, 0, "SSAO Blur H image", "SSAO Blur H image view");
+				CreateAttachment(m_VulkanDevice, m_SSAOBlurVFrameBuf, 0, "SSAO Blur V image", "SSAO Blur V image view");
 
 				std::vector<VkImageView> attachments;
 				attachments.push_back(m_SSAOBlurHFrameBuf->frameBufferAttachments[0].second.view);
@@ -6157,7 +6172,11 @@ namespace flex
 			// Color attachments
 			for (u32 i = 0; i < frameBufferColorAttachmentCount; ++i)
 			{
-				CreateAttachment(m_VulkanDevice, m_GBufferCubemapFrameBuffer, i);
+				char dbgImageName[256];
+				char dbgImageViewName[256];
+				sprintf_s(dbgImageName, "Cubemap %u image", i);
+				sprintf_s(dbgImageViewName, "Cubemap %u image view", i);
+				CreateAttachment(m_VulkanDevice, m_GBufferCubemapFrameBuffer, i, dbgImageName, dbgImageViewName);
 			}
 
 			// Depth attachment
