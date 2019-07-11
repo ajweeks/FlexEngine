@@ -241,6 +241,10 @@ namespace flex
 			m_OffscreenFrameBuffer1->frameBufferAttachments = {
 				{ "color", { m_VulkanDevice, frameBufCreateInfo } },
 			};
+			m_OffscreenFrameBuffer1->frameBufferAttachments[0].second.bIsTransferedSrc = true;
+
+			m_HistoryBuffer = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "History buffer", m_SwapChainExtent.width, m_SwapChainExtent.height, 4);
+			m_HistoryBuffer->imageFormat = m_OffscreenFrameBufferFormat;
 
 			frameBufCreateInfo.bIsCubemap = true;
 			m_GBufferCubemapFrameBuffer = new FrameBuffer(m_VulkanDevice);
@@ -549,6 +553,8 @@ namespace flex
 				FrameBufferAttachment& sceneFrameBufferAttachment = m_OffscreenFrameBuffer1->frameBufferAttachments[0].second;
 				descSetCreateInfo.sceneImageView = sceneFrameBufferAttachment.view;
 				descSetCreateInfo.sceneSampler = m_ColorSampler;
+				descSetCreateInfo.historyBufferImageView = m_HistoryBuffer->imageView;
+				descSetCreateInfo.historyBufferSampler = m_ColorSampler;
 				CreateDescriptorSet(&descSetCreateInfo);
 			}
 
@@ -743,6 +749,9 @@ namespace flex
 
 			delete m_OffscreenFrameBuffer1;
 			m_OffscreenFrameBuffer1 = nullptr;
+
+			delete m_HistoryBuffer;
+			m_HistoryBuffer = nullptr;
 
 			delete m_SSAOFrameBuf;
 			m_SSAOFrameBuf = nullptr;
@@ -5003,8 +5012,8 @@ namespace flex
 				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, true, depthFormat, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
 			// Post process render pass
-			// After completion FB1 is read from by TAA resolve pass
-			CreateRenderPass(m_PostProcessRenderPass.replace(), m_OffscreenFrameBufferFormat, "Post Process render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			// After completion FB1 is copied into history buffer (and then transitioned manually into read only for TAA pass)
+			CreateRenderPass(m_PostProcessRenderPass.replace(), m_OffscreenFrameBufferFormat, "Post Process render pass", VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 				VK_IMAGE_LAYOUT_UNDEFINED, true, depthFormat, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
 			// TAA resolve render pass
@@ -5251,11 +5260,16 @@ namespace flex
 				//*&createInfo->texArraySampler,
 				//nullptr },
 
-
 				{ U_SCENE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
 				*&createInfo->sceneImageView,
 				*&createInfo->sceneSampler,
+				nullptr },
+
+				{ U_HISTORY_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_NULL_HANDLE, 0,
+				*&createInfo->historyBufferImageView,
+				*&createInfo->historyBufferSampler,
 				nullptr },
 			};
 
@@ -5413,6 +5427,9 @@ namespace flex
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
 				{ U_SCENE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_HISTORY_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 			};
 
@@ -5779,6 +5796,9 @@ namespace flex
 			m_OffscreenFrameBuffer1->width = m_SwapChainExtent.width;
 			m_OffscreenFrameBuffer1->height = m_SwapChainExtent.height;
 
+			m_HistoryBuffer->width = m_SwapChainExtent.width;
+			m_HistoryBuffer->height = m_SwapChainExtent.height;
+
 			m_SSAORes = glm::vec2u((u32)(m_SwapChainExtent.width / 2.0f), (u32)(m_SwapChainExtent.height / 2.0f));
 
 			m_SSAOFrameBuf->width = m_SSAORes.x;
@@ -5960,6 +5980,22 @@ namespace flex
 				SetFramebufferName(m_VulkanDevice, m_OffscreenFrameBuffer1->frameBuffer, "Offscreen 1");
 			}
 
+			CreateAttachment(
+				m_VulkanDevice,
+				m_HistoryBuffer->imageFormat,
+				VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+				m_HistoryBuffer->width,
+				m_HistoryBuffer->height,
+				1,
+				VK_IMAGE_VIEW_TYPE_2D,
+				0,
+				m_HistoryBuffer->image.replace(),
+				m_HistoryBuffer->imageMemory.replace(),
+				m_HistoryBuffer->imageView.replace(),
+				"History Buffer texture");
+			m_HistoryBuffer->imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			m_HistoryBuffer->TransitionToLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
 			// Shadow frame buffers
 			{
 				VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
@@ -6121,17 +6157,7 @@ namespace flex
 			// Color attachments
 			for (u32 i = 0; i < frameBufferColorAttachmentCount; ++i)
 			{
-				FrameBufferAttachment& frameBufferAttachment = m_GBufferCubemapFrameBuffer->frameBufferAttachments[i].second;
-				CreateAttachment(
-					m_VulkanDevice,
-					frameBufferAttachment.format,
-					VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-					m_GBufferCubemapFrameBuffer->width,
-					m_GBufferCubemapFrameBuffer->height,
-					6,
-					VK_IMAGE_VIEW_TYPE_CUBE,
-					VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
-					&frameBufferAttachment);
+				CreateAttachment(m_VulkanDevice, m_GBufferCubemapFrameBuffer, i);
 			}
 
 			// Depth attachment
@@ -7258,8 +7284,18 @@ namespace flex
 				EndRegion(commandBuffer);
 			}
 
-			// m_OffscreenFrameBuffer0 was being read from by post process, now needs to be written to again
 			const FrameBufferAttachment& sceneBuffer0 = m_OffscreenFrameBuffer0->frameBufferAttachments[0].second;
+			const FrameBufferAttachment& sceneBuffer1 = m_OffscreenFrameBuffer1->frameBufferAttachments[0].second;
+
+			CopyImage(m_VulkanDevice, m_GraphicsQueue, sceneBuffer1.image, m_HistoryBuffer->image,
+				m_SwapChainExtent.width, m_SwapChainExtent.height, commandBuffer, VK_IMAGE_ASPECT_COLOR_BIT);
+
+			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, sceneBuffer1.image, sceneBuffer0.format,
+				VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, commandBuffer, false);
+
+			m_HistoryBuffer->TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, commandBuffer);
+
+			// m_OffscreenFrameBuffer0 was being read from by post process, now needs to be written to again
 			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, sceneBuffer0.image, sceneBuffer0.format,
 				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1, commandBuffer, false);
 
@@ -7271,6 +7307,9 @@ namespace flex
 
 				EndRegion(commandBuffer);
 			}
+
+			// NOTE: This copy can be moved around if needed (as long as it occurs before next copy)
+			m_HistoryBuffer->TransitionToLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, commandBuffer);
 
 			{
 				BeginRegion(commandBuffer, "Gamma Correct");

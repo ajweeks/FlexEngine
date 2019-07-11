@@ -338,13 +338,13 @@ namespace flex
 			return imageSize;
 		}
 
-		void VulkanTexture::TransitionToLayout(VkImageLayout newLayout)
+		void VulkanTexture::TransitionToLayout(VkImageLayout newLayout, VkCommandBuffer optCommandBuffer /* = VK_NULL_HANDLE */)
 		{
 			if (imageLayout == newLayout)
 			{
 				PrintWarn("Redundant image layout transition on %s, already in %u\n", name.c_str(), (u32)imageLayout);
 			}
-			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, image, imageFormat, imageLayout, newLayout, mipLevels);
+			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, image, imageFormat, imageLayout, newLayout, mipLevels, optCommandBuffer);
 			imageLayout = newLayout;
 		}
 
@@ -1309,7 +1309,7 @@ namespace flex
 			else if (oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL&&
 				newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
 			{
-				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT; // hmm...
 				barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 			}
 			else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED &&
@@ -1359,6 +1359,12 @@ namespace flex
 			{
 				barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
 				barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			}
+			else if (oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL &&
+				newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+			{
+				barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+				barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 			}
 			else
 			{
@@ -1738,21 +1744,15 @@ namespace flex
 				1, &imageMemoryBarrier);
 		}
 
-		void CreateAttachment(
-			VulkanDevice* device,
-			VkFormat format,
-			VkImageUsageFlags usage,
-			u32 width,
-			u32 height,
-			u32 arrayLayers,
-			VkImageViewType imageViewType,
-			VkImageCreateFlags imageFlags,
-			FrameBufferAttachment *attachment,
-			const char* DBG_Name /* = nullptr */)
+		void CreateAttachment(VulkanDevice* device, VkFormat format, VkImageUsageFlags usage, u32 width, u32 height, u32 arrayLayers, VkImageViewType imageViewType,
+			VkImageCreateFlags imageFlags, VkImage* image, VkDeviceMemory* memory, VkImageView* imageView, const char* DBG_Name /* = nullptr */)
 		{
-			VkImageAspectFlags aspectMask = 0;
+			assert(format != VK_FORMAT_UNDEFINED);
+			assert(width != 0 && height != 0);
+			assert(width <= MAX_TEXTURE_DIM);
+			assert(height <= MAX_TEXTURE_DIM);
 
-			attachment->format = format;
+			VkImageAspectFlags aspectMask = 0;
 
 			if (usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
 			{
@@ -1769,9 +1769,11 @@ namespace flex
 				}
 			}
 
-			assert(aspectMask > 0);
-			assert(width <= MAX_TEXTURE_DIM);
-			assert(height <= MAX_TEXTURE_DIM);
+			if (aspectMask == 0)
+			{
+				// NOTE: Assuming color here, if depth texture is needed without DEPTH_STENCIL_ATTACHMENT_BIT more robust solution is required
+				aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			}
 
 			VkImageCreateInfo imageCreateInfo = vks::imageCreateInfo();
 			imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -1783,47 +1785,53 @@ namespace flex
 			imageCreateInfo.arrayLayers = arrayLayers;
 			imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 			imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-			imageCreateInfo.usage = usage | VK_IMAGE_USAGE_SAMPLED_BIT;
+			imageCreateInfo.usage = usage | VK_IMAGE_USAGE_SAMPLED_BIT; // TODO: Get rid!
 			imageCreateInfo.flags = imageFlags;
 
-			VK_CHECK_RESULT(vkCreateImage(device->m_LogicalDevice, &imageCreateInfo, nullptr, attachment->image.replace()));
-			VulkanRenderer::SetImageName(device, attachment->image, DBG_Name);
+			VK_CHECK_RESULT(vkCreateImage(device->m_LogicalDevice, &imageCreateInfo, nullptr, image));
+			VulkanRenderer::SetImageName(device, *image, DBG_Name);
 
 			VkMemoryRequirements memRequirements;
-			vkGetImageMemoryRequirements(device->m_LogicalDevice, attachment->image, &memRequirements);
+			vkGetImageMemoryRequirements(device->m_LogicalDevice, *image, &memRequirements);
 			VkMemoryAllocateInfo memAlloc = vks::memoryAllocateInfo(memRequirements.size);
 			memAlloc.memoryTypeIndex = device->GetMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-			VK_CHECK_RESULT(vkAllocateMemory(device->m_LogicalDevice, &memAlloc, nullptr, attachment->mem.replace()));
-			VK_CHECK_RESULT(vkBindImageMemory(device->m_LogicalDevice, attachment->image, attachment->mem, 0));
+			VK_CHECK_RESULT(vkAllocateMemory(device->m_LogicalDevice, &memAlloc, nullptr, memory));
+			VK_CHECK_RESULT(vkBindImageMemory(device->m_LogicalDevice, *image, *memory, 0));
 
-			VkImageViewCreateInfo imageView = vks::imageViewCreateInfo();
-			imageView.viewType = imageViewType;
-			imageView.format = format;
-			imageView.subresourceRange = {};
-			imageView.subresourceRange.aspectMask = aspectMask;
-			imageView.subresourceRange.baseMipLevel = 0;
-			imageView.subresourceRange.levelCount = 1; // Number of mipmap levels
-			imageView.subresourceRange.baseArrayLayer = 0;
-			imageView.subresourceRange.layerCount = arrayLayers;
-			imageView.image = attachment->image;
-			imageView.flags = 0;
-			VK_CHECK_RESULT(vkCreateImageView(device->m_LogicalDevice, &imageView, nullptr, attachment->view.replace()));
-			VulkanRenderer::SetImageViewName(device, attachment->view, DBG_Name);
+			VkImageViewCreateInfo imageViewCreateInfo = vks::imageViewCreateInfo();
+			imageViewCreateInfo.viewType = imageViewType;
+			imageViewCreateInfo.format = format;
+			imageViewCreateInfo.subresourceRange = {};
+			imageViewCreateInfo.subresourceRange.aspectMask = aspectMask;
+			imageViewCreateInfo.subresourceRange.baseMipLevel = 0;
+			imageViewCreateInfo.subresourceRange.levelCount = 1; // Number of mipmap levels
+			imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
+			imageViewCreateInfo.subresourceRange.layerCount = arrayLayers;
+			imageViewCreateInfo.image = *image;
+			imageViewCreateInfo.flags = 0;
+			VK_CHECK_RESULT(vkCreateImageView(device->m_LogicalDevice, &imageViewCreateInfo, nullptr, imageView));
+			VulkanRenderer::SetImageViewName(device, *imageView, DBG_Name);
 		}
 
 		void CreateAttachment(VulkanDevice* device, FrameBuffer* frameBuffer, u32 fboIndex /* = 0 */, const char* DBG_Name /* = nullptr */)
 		{
+			FrameBufferAttachment* fbAttachment = &frameBuffer->frameBufferAttachments[fboIndex].second;
 			CreateAttachment(
 				device,
-				frameBuffer->frameBufferAttachments[fboIndex].second.format,
-				VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT,
+				fbAttachment->format,
+				VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT | 
+				(fbAttachment->bIsTransferedDst ? VK_IMAGE_USAGE_TRANSFER_DST_BIT : 0) |
+				(fbAttachment->bIsTransferedSrc ? VK_IMAGE_USAGE_TRANSFER_SRC_BIT : 0),
 				frameBuffer->width,
 				frameBuffer->height,
-				1,
-				VK_IMAGE_VIEW_TYPE_2D,
-				0,
-				&frameBuffer->frameBufferAttachments[fboIndex].second,
+				fbAttachment->bIsCubemap ? 6 : 1,
+				fbAttachment->bIsCubemap ? VK_IMAGE_VIEW_TYPE_CUBE : VK_IMAGE_VIEW_TYPE_2D,
+				fbAttachment->bIsCubemap ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0,
+				fbAttachment->image.replace(),
+				fbAttachment->mem.replace(),
+				fbAttachment->view.replace(),
 				DBG_Name);
+			fbAttachment->layout = VK_IMAGE_LAYOUT_UNDEFINED;
 		}
 
 		template<class T>

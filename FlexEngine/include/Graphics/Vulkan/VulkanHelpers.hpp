@@ -233,7 +233,7 @@ namespace flex
 
 			u32 CreateFromMemory(void* buffer, u32 bufferSize, VkFormat inFormat, i32 inMipLevels, VkFilter filter = VK_FILTER_LINEAR);
 
-			void TransitionToLayout(VkImageLayout newLayout);
+			void TransitionToLayout(VkImageLayout newLayout, VkCommandBuffer optCommandBuffer = VK_NULL_HANDLE);
 			void CopyFromBuffer(VkBuffer buffer, u32 inWidth, u32 inHeight);
 
 			void Destroy();
@@ -357,7 +357,9 @@ namespace flex
 			u32 arrayLayers,
 			VkImageViewType imageViewType,
 			VkImageCreateFlags imageFlags,
-			FrameBufferAttachment *attachment,
+			VkImage* image,
+			VkDeviceMemory* memory,
+			VkImageView* imageView,
 			const char* DBG_Name = nullptr);
 
 		void CreateAttachment(VulkanDevice* device, FrameBuffer* frameBuffer, u32 fboIndex = 0, const char* DBG_Name = nullptr);
@@ -576,6 +578,9 @@ namespace flex
 
 			VkImageView sceneImageView = VK_NULL_HANDLE;
 			VkSampler sceneSampler = VK_NULL_HANDLE;
+
+			VkImageView historyBufferImageView = VK_NULL_HANDLE;
+			VkSampler historyBufferSampler = VK_NULL_HANDLE;
 
 			bool bDepthSampler = false;
 

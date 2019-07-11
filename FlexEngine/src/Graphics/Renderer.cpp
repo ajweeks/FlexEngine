@@ -1823,6 +1823,7 @@ namespace flex
 				(u32)VertexAttribute::UV;
 
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SCENE_SAMPLER);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_HISTORY_SAMPLER);
 
 			m_BaseShaders[shaderID].dynamicBufferUniforms = {};
 			++shaderID;

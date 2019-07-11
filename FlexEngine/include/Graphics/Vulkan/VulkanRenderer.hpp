@@ -372,6 +372,8 @@ namespace flex
 			FrameBufferAttachment* m_OffscreenDepthAttachment0 = nullptr;
 			FrameBufferAttachment* m_OffscreenDepthAttachment1 = nullptr;
 
+			VulkanTexture* m_HistoryBuffer = nullptr;
+
 			VkDescriptorSet m_PostProcessDescriptorSet = VK_NULL_HANDLE;
 			VkDescriptorSet m_TAAResolveDescriptorSet = VK_NULL_HANDLE;
 			VkDescriptorSet m_GammaCorrectDescriptorSet = VK_NULL_HANDLE;
