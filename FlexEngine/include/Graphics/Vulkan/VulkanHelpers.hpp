@@ -448,7 +448,6 @@ namespace flex
 			VulkanTexture* albedoTexture = nullptr;
 			VulkanTexture* metallicTexture = nullptr;
 			VulkanTexture* roughnessTexture = nullptr;
-			VulkanTexture* aoTexture = nullptr;
 			VulkanTexture* hdrEquirectangularTexture = nullptr;
 			VulkanTexture* irradianceTexture = nullptr;
 			VulkanTexture* brdfLUT = nullptr;
@@ -555,7 +554,6 @@ namespace flex
 			VulkanTexture* metallicTexture = nullptr;
 			VulkanTexture* roughnessTexture = nullptr;
 			VulkanTexture* hdrEquirectangularTexture = nullptr;
-			VulkanTexture* aoTexture = nullptr;
 			VulkanTexture* irradianceTexture = nullptr;
 			VulkanTexture* brdfLUT = nullptr;
 			VulkanTexture* prefilterTexture = nullptr;

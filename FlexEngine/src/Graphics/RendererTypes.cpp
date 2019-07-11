@@ -26,7 +26,6 @@ namespace flex
 			_u(VIEW)
 			_u(VIEW_INV)
 			_u(VIEW_PROJECTION)
-			_u(MODEL_VIEW_PROJ)
 			_u(PROJECTION)
 			_u(PROJECTION_INV)
 			_u(BLEND_SHARPNESS)
@@ -37,19 +36,14 @@ namespace flex
 			_u(CONST_ALBEDO)
 			_u(CONST_METALLIC)
 			_u(CONST_ROUGHNESS)
-			_u(CONST_AO)
-			_u(ENABLE_CUBEMAP_SAMPLER)
 			_u(ENABLE_ALBEDO_SAMPLER)
 			_u(ENABLE_METALLIC_SAMPLER)
 			_u(ENABLE_ROUGHNESS_SAMPLER)
-			_u(ENABLE_AO_SAMPLER)
 			_u(ENABLE_NORMAL_SAMPLER)
 			_u(ENABLE_IRRADIANCE_SAMPLER)
-			_u(TEXEL_STEP)
 			_u(SHOW_EDGES)
 			_u(LIGHT_VIEW_PROJS)
 			_u(EXPOSURE)
-			_u(TRANSFORM_MAT)
 			_u(TEX_SIZE)
 			_u(TEXTURE_SCALE)
 			_u(TIME)
@@ -118,7 +112,6 @@ namespace flex
 				constAlbedo == other.constAlbedo &&
 				constMetallic == other.constMetallic &&
 				constRoughness == other.constRoughness &&
-				constAO == other.constAO &&
 				generateAlbedoSampler == other.generateAlbedoSampler &&
 				enableAlbedoSampler == other.enableAlbedoSampler &&
 				albedoTexturePath == other.albedoTexturePath &&
@@ -128,9 +121,6 @@ namespace flex
 				generateRoughnessSampler == other.generateRoughnessSampler &&
 				enableRoughnessSampler == other.enableRoughnessSampler &&
 				roughnessTexturePath == other.roughnessTexturePath &&
-				generateAOSampler == other.generateAOSampler &&
-				enableAOSampler == other.enableAOSampler &&
-				aoTexturePath == other.aoTexturePath &&
 				generateHDREquirectangularSampler == other.generateHDREquirectangularSampler &&
 				enableHDREquirectangularSampler == other.enableHDREquirectangularSampler &&
 				hdrEquirectangularTexturePath == other.hdrEquirectangularTexturePath &&
@@ -169,7 +159,6 @@ namespace flex
 			{ &createInfoOut.albedoTexturePath, "albedo texture filepath" },
 			{ &createInfoOut.metallicTexturePath, "metallic texture filepath" },
 			{ &createInfoOut.roughnessTexturePath, "roughness texture filepath" },
-			{ &createInfoOut.aoTexturePath, "ao texture filepath" },
 			{ &createInfoOut.normalTexturePath, "normal texture filepath" },
 			{ &createInfoOut.hdrEquirectangularTexturePath, "hdr equirectangular texture filepath" },
 			{ &createInfoOut.environmentMapPath, "environment map path" },
@@ -189,8 +178,6 @@ namespace flex
 		material.SetBoolChecked("enable metallic sampler", createInfoOut.enableMetallicSampler);
 		material.SetBoolChecked("generate roughness sampler", createInfoOut.generateRoughnessSampler);
 		material.SetBoolChecked("enable roughness sampler", createInfoOut.enableRoughnessSampler);
-		material.SetBoolChecked("generate ao sampler", createInfoOut.generateAOSampler);
-		material.SetBoolChecked("enable ao sampler", createInfoOut.enableAOSampler);
 		material.SetBoolChecked("generate normal sampler", createInfoOut.generateNormalSampler);
 		material.SetBoolChecked("enable normal sampler", createInfoOut.enableNormalSampler);
 		material.SetBoolChecked("generate hdr equirectangular sampler", createInfoOut.generateHDREquirectangularSampler);
@@ -215,7 +202,6 @@ namespace flex
 		material.SetVec3Checked("const albedo", createInfoOut.constAlbedo);
 		material.SetFloatChecked("const metallic", createInfoOut.constMetallic);
 		material.SetFloatChecked("const roughness", createInfoOut.constRoughness);
-		material.SetFloatChecked("const ao", createInfoOut.constAO);
 
 		material.SetFloatChecked("texture scale", createInfoOut.textureScale);
 	}
@@ -235,7 +221,6 @@ namespace flex
 		materialObject.fields.emplace_back("const albedo", JSONValue(constAlbedoStr));
 		materialObject.fields.emplace_back("const metallic", JSONValue(constMetallic));
 		materialObject.fields.emplace_back("const roughness", JSONValue(constRoughness));
-		materialObject.fields.emplace_back("const ao", JSONValue(constAO));
 
 		static const bool defaultEnableAlbedo = false;
 		if (shader.bNeedAlbedoSampler && enableAlbedoSampler != defaultEnableAlbedo)
@@ -253,12 +238,6 @@ namespace flex
 		if (shader.bNeedRoughnessSampler && enableRoughnessSampler != defaultEnableRoughness)
 		{
 			materialObject.fields.emplace_back("enable roughness sampler", JSONValue(enableRoughnessSampler));
-		}
-
-		static const bool defaultEnableAO = false;
-		if (shader.bNeedAOSampler && enableAOSampler != defaultEnableAO)
-		{
-			materialObject.fields.emplace_back("enable ao sampler", JSONValue(enableAOSampler));
 		}
 
 		static const bool defaultEnableNormal = false;
@@ -285,12 +264,6 @@ namespace flex
 			materialObject.fields.emplace_back("generate roughness sampler", JSONValue(generateRoughnessSampler));
 		}
 
-		static const bool defaultGenerateAO = false;
-		if (shader.bNeedAOSampler && generateAOSampler != defaultGenerateAO)
-		{
-			materialObject.fields.emplace_back("generate ao sampler", JSONValue(generateAOSampler));
-		}
-
 		static const bool defaultGenerateNormal = false;
 		if (shader.bNeedNormalSampler && generateNormalSampler != defaultGenerateNormal)
 		{
@@ -315,12 +288,6 @@ namespace flex
 		{
 			std::string shortRoughnessTexturePath = roughnessTexturePath.substr(texturePrefixStr.length());
 			materialObject.fields.emplace_back("roughness texture filepath", JSONValue(shortRoughnessTexturePath));
-		}
-
-		if (shader.bNeedAOSampler && !aoTexturePath.empty())
-		{
-			std::string shortAOTexturePath = aoTexturePath.substr(texturePrefixStr.length());
-			materialObject.fields.emplace_back("ao texture filepath", JSONValue(shortAOTexturePath));
 		}
 
 		if (shader.bNeedNormalSampler && !normalTexturePath.empty())

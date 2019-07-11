@@ -926,11 +926,6 @@ namespace flex
 			mat.material.roughnessTexturePath = createInfo->roughnessTexturePath;
 			mat.material.enableRoughnessSampler = createInfo->enableRoughnessSampler;
 
-			mat.material.constAO = createInfo->constAO;
-			mat.material.generateAOSampler = createInfo->generateAOSampler;
-			mat.material.aoTexturePath = createInfo->aoTexturePath;
-			mat.material.enableAOSampler = createInfo->enableAOSampler;
-
 			mat.material.colorMultiplier = createInfo->colorMultiplier;
 
 			mat.material.enableHDREquirectangularSampler = createInfo->enableHDREquirectangularSampler;
@@ -1013,14 +1008,13 @@ namespace flex
 				{ createInfo->albedoTexturePath, &mat.albedoTexture, &mat.material.generateAlbedoSampler },
 				{ createInfo->metallicTexturePath, &mat.metallicTexture, &mat.material.generateMetallicSampler },
 				{ createInfo->roughnessTexturePath, &mat.roughnessTexture, &mat.material.generateRoughnessSampler },
-				{ createInfo->aoTexturePath, &mat.aoTexture, &mat.material.generateAOSampler },
 				{ createInfo->hdrEquirectangularTexturePath, &mat.hdrEquirectangularTexture, &mat.material.generateHDREquirectangularSampler, VK_FORMAT_R32G32B32A32_SFLOAT, 1, true },
 			};
 			const size_t textureCount = sizeof(textureInfos) / sizeof(textureInfos[0]);
 
 			// Calculate how many textures need to be allocated to prevent texture vector from resizing
 			const size_t usedTextureCount = createInfo->generateAlbedoSampler +
-				createInfo->generateAOSampler + createInfo->generateCubemapSampler +
+				createInfo->generateCubemapSampler +
 				createInfo->generateIrradianceSampler + createInfo->generateMetallicSampler +
 				createInfo->generateNormalSampler + createInfo->generatePrefilteredMap +
 				createInfo->generateRoughnessSampler + createInfo->generateHDREquirectangularSampler;
@@ -1941,8 +1935,6 @@ namespace flex
 					static bool bUpdateRoughessTextureMaterial = false;
 					static i32 normalTextureIndex = 0;
 					static bool bUpdateNormalTextureMaterial = false;
-					static i32 aoTextureIndex = 0;
-					static bool bUpdateAOTextureMaterial = false;
 					VulkanMaterial& mat = m_Materials[selectedMaterialID];
 
 					if (bUpdateFields)
@@ -1989,14 +1981,6 @@ namespace flex
 								&normalTextureIndex,
 								&mat.normalTexture->sampler);
 
-							ImGuiUpdateTextureIndexOrMaterial(bUpdateAOTextureMaterial,
-								texturePath,
-								mat.material.aoTexturePath,
-								texture,
-								i,
-								&aoTextureIndex,
-								&mat.aoTexture->sampler);
-
 							++i;
 						}
 
@@ -2004,7 +1988,6 @@ namespace flex
 						mat.material.enableMetallicSampler = (metallicTextureIndex > 0);
 						mat.material.enableRoughnessSampler = (roughnessTextureIndex > 0);
 						mat.material.enableNormalSampler = (normalTextureIndex > 0);
-						mat.material.enableAOSampler = (aoTextureIndex > 0);
 
 						selectedShaderIndex = mat.material.shaderID;
 					}
@@ -2066,16 +2049,6 @@ namespace flex
 						ImGui::PopStyleColor();
 					}
 
-					if (mat.material.enableAOSampler)
-					{
-						ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
-					}
-					ImGui::SliderFloat("AO", &mat.material.constAO, 0.0f, 1.0f, "%.2f");
-					if (mat.material.enableAOSampler)
-					{
-						ImGui::PopStyleColor();
-					}
-
 					ImGui::DragFloat("Texture scale", &mat.material.textureScale, 0.1f);
 
 					ImGui::NextColumn();
@@ -2115,9 +2088,6 @@ namespace flex
 					bUpdateNormalTextureMaterial = DoTextureSelector("Normal texture", textures,
 						&normalTextureIndex, &mat.material.generateNormalSampler);
 					bUpdateFields |= bUpdateNormalTextureMaterial;
-					bUpdateAOTextureMaterial = DoTextureSelector("AO texture", textures, &aoTextureIndex,
-						&mat.material.generateAOSampler);
-					bUpdateFields |= bUpdateAOTextureMaterial;
 
 					ImGui::NewLine();
 
@@ -2156,7 +2126,6 @@ namespace flex
 									createInfo.constAlbedo = dupMat.constAlbedo;
 									createInfo.constRoughness = dupMat.constRoughness;
 									createInfo.constMetallic = dupMat.constMetallic;
-									createInfo.constAO = dupMat.constAO;
 									createInfo.colorMultiplier = dupMat.colorMultiplier;
 									// TODO: Copy other fields
 									MaterialID newMaterialID = InitializeMaterial(&createInfo);
@@ -5077,7 +5046,6 @@ namespace flex
 			createInfo.albedoTexture = material->albedoTexture;
 			createInfo.metallicTexture = material->metallicTexture;
 			createInfo.roughnessTexture = material->roughnessTexture;
-			createInfo.aoTexture = material->aoTexture;
 			createInfo.irradianceTexture = material->irradianceTexture;
 			createInfo.brdfLUT = material->brdfLUT;
 			createInfo.prefilterTexture = material->prefilterTexture;
@@ -5198,12 +5166,6 @@ namespace flex
 				createInfo->roughnessTexture ? *&createInfo->roughnessTexture->imageView : VK_NULL_HANDLE,
 				createInfo->roughnessTexture ? *&createInfo->roughnessTexture->sampler : VK_NULL_HANDLE,
 				createInfo->roughnessTexture ? &createInfo->roughnessTexture->imageInfoDescriptor : nullptr },
-
-				{ U_AO_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_NULL_HANDLE, 0,
-				createInfo->aoTexture ? *&createInfo->aoTexture->imageView : VK_NULL_HANDLE,
-				createInfo->aoTexture ? *&createInfo->aoTexture->sampler : VK_NULL_HANDLE,
-				createInfo->aoTexture ? &createInfo->aoTexture->imageInfoDescriptor : nullptr },
 
 				{ U_NORMAL_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
@@ -5403,9 +5365,6 @@ namespace flex
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
 				{ U_ROUGHNESS_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_SHADER_STAGE_FRAGMENT_BIT },
-
-				{ U_AO_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
 				{ U_NORMAL_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -7932,14 +7891,11 @@ namespace flex
 			glm::mat4 projection = g_CameraManager->CurrentCamera()->GetProjection();
 			glm::mat4 view = g_CameraManager->CurrentCamera()->GetView();
 			glm::mat4 viewProj = projection * view;
-			glm::mat4 modelViewProjection = projection * view * model;
 			glm::vec4 colorMultiplier = material.material.colorMultiplier;
 			u32 enableAlbedoSampler = material.material.enableAlbedoSampler;
 			u32 enableMetallicSampler = material.material.enableMetallicSampler;
 			u32 enableRoughnessSampler = material.material.enableRoughnessSampler;
-			u32 enableAOSampler = material.material.enableAOSampler;
 			u32 enableNormalSampler = material.material.enableNormalSampler;
-			u32 enableCubemapSampler = material.material.enableCubemapSampler;
 			u32 enableIrradianceSampler = material.material.enableIrradianceSampler;
 			real textureScale = material.material.textureScale;
 			real blendSharpness = material.material.blendSharpness;
@@ -7968,17 +7924,9 @@ namespace flex
 				{
 					enableRoughnessSampler = uniformOverrides->enableRoughnessSampler;
 				}
-				if (uniformOverrides->overridenUniforms.HasUniform(U_ENABLE_AO_SAMPLER))
-				{
-					enableAOSampler = uniformOverrides->enableAOSampler;
-				}
 				if (uniformOverrides->overridenUniforms.HasUniform(U_ENABLE_NORMAL_SAMPLER))
 				{
 					enableNormalSampler = uniformOverrides->enableNormalSampler;
-				}
-				if (uniformOverrides->overridenUniforms.HasUniform(U_ENABLE_CUBEMAP_SAMPLER))
-				{
-					enableCubemapSampler = uniformOverrides->enableCubemapSampler;
 				}
 				if (uniformOverrides->overridenUniforms.HasUniform(U_ENABLE_IRRADIANCE_SAMPLER))
 				{
@@ -8022,19 +7970,15 @@ namespace flex
 			};
 			UniformInfo uniformInfos[] = {
 				{ U_MODEL, (void*)&model, US_MODEL },
-				{ U_MODEL_VIEW_PROJ, (void*)&modelViewProjection, US_MODEL_VIEW_PROJ },
 				// view, viewProjInv, viewProjection, projection, camPos, dirLight, pointLights should be updated in constant uniform buffer
 				{ U_COLOR_MULTIPLIER, (void*)&material.material.colorMultiplier, US_COLOR_MULTIPLIER },
 				{ U_CONST_ALBEDO, (void*)&material.material.constAlbedo, US_CONST_ALBEDO },
 				{ U_CONST_METALLIC, (void*)&material.material.constMetallic, US_CONST_METALLIC },
 				{ U_CONST_ROUGHNESS, (void*)&material.material.constRoughness, US_CONST_ROUGHNESS },
-				{ U_CONST_AO, (void*)&material.material.constAO, US_CONST_AO },
 				{ U_ENABLE_ALBEDO_SAMPLER, (void*)&enableAlbedoSampler, US_ENABLE_ALBEDO_SAMPLER },
 				{ U_ENABLE_METALLIC_SAMPLER, (void*)&enableMetallicSampler, US_ENABLE_METALLIC_SAMPLER },
 				{ U_ENABLE_ROUGHNESS_SAMPLER, (void*)&enableRoughnessSampler, US_ENABLE_ROUGHNESS_SAMPLER },
-				{ U_ENABLE_AO_SAMPLER, (void*)&enableAOSampler, US_ENABLE_AO_SAMPLER },
 				{ U_ENABLE_NORMAL_SAMPLER, (void*)&enableNormalSampler, US_ENABLE_NORMAL_SAMPLER },
-				{ U_ENABLE_CUBEMAP_SAMPLER, (void*)&enableCubemapSampler, US_ENABLE_CUBEMAP_SAMPLER },
 				{ U_ENABLE_IRRADIANCE_SAMPLER, (void*)&enableIrradianceSampler, US_ENABLE_IRRADIANCE_SAMPLER },
 				{ U_BLEND_SHARPNESS, (void*)&blendSharpness, US_BLEND_SHARPNESS },
 				{ U_TEXTURE_SCALE, (void*)&textureScale, US_TEXTURE_SCALE },

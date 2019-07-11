@@ -189,7 +189,6 @@ namespace flex
 					//reflectionProbeMatCreateInfo.constAlbedo = glm::vec4(0.8f, 0.8f, 0.8f, 1.0f);
 					//reflectionProbeMatCreateInfo.constMetallic = 1.0f;
 					//reflectionProbeMatCreateInfo.constRoughness = 0.0f;
-					//reflectionProbeMatCreateInfo.constAO = 1.0f;
 					//MaterialID sphereMatID = g_Renderer->InitializeMaterial(&reflectionProbeMatCreateInfo);
 
 					//m_LoadedMaterials.push_back(sphereMatID);

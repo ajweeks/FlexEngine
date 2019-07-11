@@ -64,15 +64,12 @@ namespace flex
 				i32 projInv;
 				i32 camPos;
 				i32 enableNormalTexture;
-				i32 enableCubemapTexture;
 				i32 constAlbedo;
 				i32 enableAlbedoSampler;
 				i32 constMetallic;
 				i32 enableMetallicSampler;
 				i32 constRoughness;
 				i32 enableRoughnessSampler;
-				i32 constAO;
-				i32 enableAOSampler;
 				i32 hdrEquirectangularSampler;
 				i32 enableIrradianceSampler;
 				i32 verticalScale;
@@ -101,7 +98,6 @@ namespace flex
 			u32 albedoSamplerID = InvalidID;
 			u32 metallicSamplerID = InvalidID;
 			u32 roughnessSamplerID = InvalidID;
-			u32 aoSamplerID = InvalidID;
 
 			u32 hdrTextureID = InvalidID;
 

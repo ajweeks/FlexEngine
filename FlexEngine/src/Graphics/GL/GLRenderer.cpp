@@ -551,11 +551,6 @@ namespace flex
 			mat.material.roughnessTexturePath = createInfo->roughnessTexturePath;
 			mat.material.enableRoughnessSampler = createInfo->enableRoughnessSampler;
 
-			mat.material.constAO = createInfo->constAO;
-			mat.material.generateAOSampler = createInfo->generateAOSampler;
-			mat.material.aoTexturePath = createInfo->aoTexturePath;
-			mat.material.enableAOSampler = createInfo->enableAOSampler;
-
 			mat.material.enableHDREquirectangularSampler = createInfo->enableHDREquirectangularSampler;
 			mat.material.generateHDREquirectangularSampler = createInfo->generateHDREquirectangularSampler;
 			mat.material.hdrEquirectangularTexturePath = createInfo->hdrEquirectangularTexturePath;
@@ -638,8 +633,6 @@ namespace flex
 				createInfo->metallicTexturePath, "metallicSampler", 3, false, true, false },
 				{ shader.shader->bNeedRoughnessSampler, mat.material.generateRoughnessSampler, &mat.roughnessSamplerID,
 				createInfo->roughnessTexturePath, "roughnessSampler", 3, false, true, false },
-				{ shader.shader->bNeedAOSampler, mat.material.generateAOSampler, &mat.aoSamplerID,
-				createInfo->aoTexturePath, "aoSampler", 3, false, true, false },
 				{ shader.shader->bNeedNormalSampler, mat.material.generateNormalSampler, &mat.normalSamplerID,
 				createInfo->normalTexturePath, "normalSampler", 3, false, true, false },
 				{ shader.shader->bNeedHDREquirectangularSampler, mat.material.generateHDREquirectangularSampler, &mat.hdrTextureID,
@@ -1390,18 +1383,14 @@ namespace flex
 				{ U_PROJECTION_INV, 				"invProj",	 					&mat.uniformIDs.projInv },
 				{ U_CAM_POS, 						"camPos", 						&mat.uniformIDs.camPos },
 				{ U_NORMAL_SAMPLER, 				"enableNormalSampler", 			&mat.uniformIDs.enableNormalTexture },
-				{ U_CUBEMAP_SAMPLER, 				"enableCubemapSampler", 		&mat.uniformIDs.enableCubemapTexture },
 				{ U_ALBEDO_SAMPLER,	 				"enableAlbedoSampler", 			&mat.uniformIDs.enableAlbedoSampler },
 				{ U_CONST_ALBEDO, 					"constAlbedo", 					&mat.uniformIDs.constAlbedo },
 				{ U_METALLIC_SAMPLER,		 		"enableMetallicSampler", 		&mat.uniformIDs.enableMetallicSampler },
 				{ U_CONST_METALLIC, 				"constMetallic", 				&mat.uniformIDs.constMetallic },
 				{ U_ROUGHNESS_SAMPLER,	 			"enableRoughnessSampler", 		&mat.uniformIDs.enableRoughnessSampler },
 				{ U_CONST_ROUGHNESS, 				"constRoughness", 				&mat.uniformIDs.constRoughness },
-				{ U_AO_SAMPLER,						"enableAOSampler",				&mat.uniformIDs.enableAOSampler },
-				{ U_CONST_AO,						"constAO",						&mat.uniformIDs.constAO },
 				{ U_HDR_EQUIRECTANGULAR_SAMPLER,	"hdrEquirectangularSampler",	&mat.uniformIDs.hdrEquirectangularSampler },
 				{ U_IRRADIANCE_SAMPLER,				"enableIrradianceSampler",		&mat.uniformIDs.enableIrradianceSampler },
-				{ U_TRANSFORM_MAT,					"transformMat",					&mat.uniformIDs.transformMat },
 				{ U_TEX_SIZE,						"texSize",						&mat.uniformIDs.texSize },
 				{ U_TIME,							"time",							&mat.uniformIDs.time },
 				{ 0,								"ssaoRadius",					&mat.uniformIDs.ssaoRadius },
@@ -2719,7 +2708,7 @@ namespace flex
 				drawInfo.bReadDepth = true;
 				drawInfo.bWriteDepth = true;
 				drawInfo.scale = scale;
-				drawInfo.materialID = m_SpriteMatID;
+				drawInfo.materialID = m_SpriteMatSSID;
 
 				glm::vec3 camPos = cam->GetPosition();
 				glm::vec3 camUp = cam->GetUp();
@@ -2758,7 +2747,7 @@ namespace flex
 		// TODO: Enqueue sprites like in Vulkan then draw in batches
 		void GLRenderer::DrawSpriteQuad(const SpriteQuadDrawInfo& drawInfo)
 		{
-			MaterialID matID = drawInfo.materialID == InvalidMaterialID ? m_SpriteMatID : drawInfo.materialID;
+			MaterialID matID = drawInfo.materialID == InvalidMaterialID ? (drawInfo.bScreenSpace ? m_SpriteMatSSID : m_SpriteMatWSID) : drawInfo.materialID;
 			GLMaterial& spriteMaterial = m_Materials[matID];
 			GLShader& spriteShader = m_Shaders[spriteMaterial.material.shaderID];
 
@@ -2981,7 +2970,7 @@ namespace flex
 					glm::vec3 scaleVec(1.0f);
 
 					glm::mat4 transformMat = glm::scale(MAT4_IDENTITY, scaleVec) * ortho;
-					glUniformMatrix4fv(fontMaterial.uniformIDs.transformMat, 1, GL_TRUE, &transformMat[0][0]);
+					glUniformMatrix4fv(fontMaterial.uniformIDs.model, 1, GL_TRUE, &transformMat[0][0]);
 
 					glm::vec2 texSize = (glm::vec2)font->GetTexture()->GetResolution();
 					glUniform2fv(fontMaterial.uniformIDs.texSize, 1, &texSize.r);
@@ -3052,7 +3041,7 @@ namespace flex
 				{
 					glBindTexture(GL_TEXTURE_2D, font->GetTexture()->handle);
 
-					glUniformMatrix4fv(fontMaterial.uniformIDs.transformMat, 1, GL_FALSE, &transformMat[0][0]);
+					glUniformMatrix4fv(fontMaterial.uniformIDs.model, 1, GL_FALSE, &transformMat[0][0]);
 
 					glm::vec2 texSize = (glm::vec2)font->GetTexture()->GetResolution();
 					glUniform2fv(fontMaterial.uniformIDs.texSize, 1, &texSize.r);
@@ -3604,7 +3593,6 @@ namespace flex
 				{ shader->bNeedAlbedoSampler, material->enableAlbedoSampler, glMaterial->albedoSamplerID, GL_TEXTURE_2D },
 				{ shader->bNeedMetallicSampler, material->enableMetallicSampler, glMaterial->metallicSamplerID, GL_TEXTURE_2D },
 				{ shader->bNeedRoughnessSampler, material->enableRoughnessSampler, glMaterial->roughnessSamplerID, GL_TEXTURE_2D },
-				{ shader->bNeedAOSampler, material->enableAOSampler, glMaterial->aoSamplerID, GL_TEXTURE_2D },
 				{ shader->bNeedNormalSampler, material->enableNormalSampler, glMaterial->normalSamplerID, GL_TEXTURE_2D },
 				{ shader->bNeedBRDFLUT, material->enableBRDFLUT, glMaterial->brdfLUTSamplerID, GL_TEXTURE_2D },
 				{ shader->bNeedShadowMap, true, m_ShadowMapTexture.id, GL_TEXTURE_2D_ARRAY },
@@ -3852,7 +3840,7 @@ namespace flex
 			drawInfo.bFullscreen = true;
 			drawInfo.bReadDepth = false;
 			drawInfo.bWriteDepth = false;
-			drawInfo.materialID = m_SpriteMatID;
+			drawInfo.materialID = m_SpriteMatSSID;
 			drawInfo.anchor = AnchorPoint::WHOLE;
 			drawInfo.textureID = m_LoadingTextureID;
 
@@ -4079,13 +4067,6 @@ namespace flex
 					glUniform1f(material->uniformIDs.time, g_SecElapsedSinceProgramStart);
 				}
 
-				if (shader->shader->constantBufferUniforms.HasUniform(U_TEXEL_STEP))
-				{
-					glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
-					glm::vec2 texelStep(1.0f / frameBufferSize.x, 1.0f / frameBufferSize.y);
-					SetVec2f(material->material.shaderID, "texelStep", texelStep);
-				}
-
 				GLint location = glGetUniformLocation(shader->program, "bDEBUGShowEdges");
 				if (location != -1)
 				{
@@ -4188,11 +4169,6 @@ namespace flex
 			if (shader->shader->dynamicBufferUniforms.HasUniform(U_NORMAL_SAMPLER))
 			{
 				glUniform1i(material->uniformIDs.enableNormalTexture, material->material.enableNormalSampler);
-			}
-
-			if (shader->shader->dynamicBufferUniforms.HasUniform(U_ENABLE_CUBEMAP_SAMPLER))
-			{
-				glUniform1i(material->uniformIDs.enableCubemapTexture, material->material.enableCubemapSampler);
 			}
 
 			if (shader->shader->dynamicBufferUniforms.HasUniform(U_ALBEDO_SAMPLER))
@@ -4635,8 +4611,6 @@ namespace flex
 					static bool bUpdateRoughessTextureMaterial = false;
 					static i32 normalTextureIndex = 0;
 					static bool bUpdateNormalTextureMaterial = false;
-					static i32 aoTextureIndex = 0;
-					static bool bUpdateAOTextureMaterial = false;
 					GLMaterial& mat = m_Materials[selectedMaterialID];
 
 					if (bUpdateFields)
@@ -4683,14 +4657,6 @@ namespace flex
 														 &normalTextureIndex,
 														 &mat.normalSamplerID);
 
-							ImGuiUpdateTextureIndexOrMaterial(bUpdateAOTextureMaterial,
-														 texturePath,
-														 mat.material.aoTexturePath,
-														 texture,
-														 i,
-														 &aoTextureIndex,
-														 &mat.aoSamplerID);
-
 							++i;
 						}
 
@@ -4698,7 +4664,6 @@ namespace flex
 						mat.material.enableMetallicSampler = (metallicTextureIndex > 0);
 						mat.material.enableRoughnessSampler = (roughnessTextureIndex > 0);
 						mat.material.enableNormalSampler = (normalTextureIndex > 0);
-						mat.material.enableAOSampler = (aoTextureIndex > 0);
 
 						selectedShaderIndex = mat.material.shaderID;
 					}
@@ -4760,16 +4725,6 @@ namespace flex
 						ImGui::PopStyleColor();
 					}
 
-					if (mat.material.enableAOSampler)
-					{
-						ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
-					}
-					ImGui::SliderFloat("AO", &mat.material.constAO, 0.0f, 1.0f, "%.2f");
-					if (mat.material.enableAOSampler)
-					{
-						ImGui::PopStyleColor();
-					}
-
 					ImGui::DragFloat("Texture scale", &mat.material.textureScale, 0.1f);
 
 					ImGui::NextColumn();
@@ -4809,9 +4764,6 @@ namespace flex
 					bUpdateNormalTextureMaterial = DoTextureSelector("Normal texture", textures,
 						&normalTextureIndex, &mat.material.generateNormalSampler);
 					bUpdateFields |= bUpdateNormalTextureMaterial;
-					bUpdateAOTextureMaterial = DoTextureSelector("AO texture", textures, &aoTextureIndex,
-						&mat.material.generateAOSampler);
-					bUpdateFields |= bUpdateAOTextureMaterial;
 
 					ImGui::NewLine();
 
@@ -4850,7 +4802,6 @@ namespace flex
 									createInfo.constAlbedo = dupMat.constAlbedo;
 									createInfo.constRoughness = dupMat.constRoughness;
 									createInfo.constMetallic = dupMat.constMetallic;
-									createInfo.constAO = dupMat.constAO;
 									createInfo.colorMultiplier = dupMat.colorMultiplier;
 									// TODO: Copy other fields
 									MaterialID newMaterialID = InitializeMaterial(&createInfo);

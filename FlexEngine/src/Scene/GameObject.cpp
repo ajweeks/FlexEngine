@@ -3301,7 +3301,6 @@ namespace flex
 		matCreateInfo.constAlbedo = glm::vec3(0.4f, 0.5f, 0.8f);
 		matCreateInfo.constMetallic = 0.8f;
 		matCreateInfo.constRoughness = 0.01f;
-		matCreateInfo.constAO = 1.0f;
 
 		MaterialID planeMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
 
@@ -3600,7 +3599,6 @@ namespace flex
 		MaterialCreateInfo matCreateInfo = {};
 		matCreateInfo.name = "block";
 		matCreateInfo.shaderName = "pbr";
-		matCreateInfo.constAO = 1.0f;
 		matCreateInfo.constMetallic = 0.0f;
 
 		std::vector<MaterialID> matIDs;

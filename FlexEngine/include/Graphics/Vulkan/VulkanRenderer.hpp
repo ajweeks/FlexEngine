@@ -158,13 +158,10 @@ namespace flex
 				glm::vec4 camPos;
 				glm::mat4 model;
 				glm::mat4 modelInvTranspose;
-				glm::mat4 modelViewProjection;
 				u32 enableAlbedoSampler;
 				u32 enableMetallicSampler;
 				u32 enableRoughnessSampler;
-				u32 enableAOSampler;
 				u32 enableNormalSampler;
-				u32 enableCubemapSampler;
 				u32 enableIrradianceSampler;
 				i32 texChannel;
 				glm::vec4 sdfData;
