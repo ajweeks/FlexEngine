@@ -570,7 +570,7 @@ namespace flex
 				descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 				descSetCreateInfo.shaderID = gammaCorrectShaderID;
 				descSetCreateInfo.uniformBuffer = &gammaCorrectShader->uniformBuffer;
-				FrameBufferAttachment& sceneFrameBufferAttachment = m_OffscreenFrameBuffer0->frameBufferAttachments[0].second;
+				FrameBufferAttachment& sceneFrameBufferAttachment = m_bEnableTAA ? m_OffscreenFrameBuffer0->frameBufferAttachments[0].second : m_OffscreenFrameBuffer1->frameBufferAttachments[0].second;
 				descSetCreateInfo.sceneImageView = sceneFrameBufferAttachment.view;
 				descSetCreateInfo.sceneSampler = m_ColorSampler;
 				CreateDescriptorSet(&descSetCreateInfo);
@@ -7303,34 +7303,35 @@ namespace flex
 				EndRegion(commandBuffer);
 			}
 
-			const FrameBufferAttachment& sceneBuffer0 = m_OffscreenFrameBuffer0->frameBufferAttachments[0].second;
-			const FrameBufferAttachment& sceneBuffer1 = m_OffscreenFrameBuffer1->frameBufferAttachments[0].second;
+			const FrameBufferAttachment& offscreenBuffer0 = m_OffscreenFrameBuffer0->frameBufferAttachments[0].second;
+			const FrameBufferAttachment& offscreenBuffer1 = m_OffscreenFrameBuffer1->frameBufferAttachments[0].second;
 
-			// m_OffscreenFrameBuffer0 was being read from by post process, now needs to be written to again
-			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, sceneBuffer0.image, sceneBuffer0.format,
-				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1, commandBuffer, false);
-
+			if (m_bEnableTAA)
 			{
+				// m_OffscreenFrameBuffer0 was being read from by post process, now needs to be written to again
+				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, offscreenBuffer0.image, offscreenBuffer0.format,
+					VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1, commandBuffer, false);
+
 				BeginRegion(commandBuffer, "TAA Resolve");
 
 				RenderFullscreenQuad(commandBuffer, m_TAAResolveRenderPass, m_OffscreenFrameBuffer0->frameBuffer, m_Materials[m_TAAResolveMaterialID].material.shaderID,
 					m_TAAResolveGraphicsPipelineLayout, m_TAAResolveGraphicsPipeline, m_TAAResolveDescriptorSet, true);
 
 				EndRegion(commandBuffer);
+
+				m_HistoryBuffer->TransitionToLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, commandBuffer);
+
+				CopyImage(m_VulkanDevice, m_GraphicsQueue, offscreenBuffer0.image, m_HistoryBuffer->image,
+					m_SwapChainExtent.width, m_SwapChainExtent.height, commandBuffer, VK_IMAGE_ASPECT_COLOR_BIT);
+
+				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, offscreenBuffer0.image, offscreenBuffer0.format,
+					VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, commandBuffer, false);
+
+				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, offscreenBuffer1.image, offscreenBuffer1.format,
+					VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1, commandBuffer, false);
+
+				m_HistoryBuffer->TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, commandBuffer);
 			}
-
-			m_HistoryBuffer->TransitionToLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, commandBuffer);
-
-			CopyImage(m_VulkanDevice, m_GraphicsQueue, sceneBuffer0.image, m_HistoryBuffer->image,
-				m_SwapChainExtent.width, m_SwapChainExtent.height, commandBuffer, VK_IMAGE_ASPECT_COLOR_BIT);
-
-			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, sceneBuffer0.image, sceneBuffer0.format,
-				VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, commandBuffer, false);
-
-			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, sceneBuffer1.image, sceneBuffer1.format,
-				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1, commandBuffer, false);
-
-			m_HistoryBuffer->TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, commandBuffer);
 
 			{
 				BeginRegion(commandBuffer, "Gamma Correct");
