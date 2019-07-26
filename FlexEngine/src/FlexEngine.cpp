@@ -1380,7 +1380,7 @@ namespace flex
 							if (m_PreviousCmdLineEntries.empty() ||
 								strcmp((m_PreviousCmdLineEntries.end() - 1)->c_str(), m_CmdLineStrBuf) != 0)
 							{
-								m_PreviousCmdLineEntries.push_back(m_CmdLineStrBuf);
+								m_PreviousCmdLineEntries.emplace_back(m_CmdLineStrBuf);
 							}
 							m_PreviousCmdLineIndex = -1;
 							memset(m_CmdLineStrBuf, 0, MAX_CHARS_CMD_LINE_STR);
