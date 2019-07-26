@@ -216,6 +216,8 @@ namespace flex
 
 			void CreateUniformBuffers(VulkanShader* shader);
 
+			void CreatePostProcessingObjects();
+
 			// Returns a pointer into m_LoadedTextures if a texture has been loaded from that file path, otherwise returns nullptr
 			VulkanTexture* GetLoadedTexture(const std::string& filePath);
 			

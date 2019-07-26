@@ -1007,8 +1007,6 @@ namespace flex
 				g_Window->SetVSyncEnabled(bVSyncEnabled);
 			}
 
-			ImGui::Checkbox("TAA", &m_bEnableTAA);
-
 			if (ImGui::TreeNode("Camera exposure"))
 			{
 				BaseCamera* currentCamera = g_CameraManager->CurrentCamera();
@@ -1086,6 +1084,8 @@ namespace flex
 		if (ImGui::TreeNode("Post processing"))
 		{
 			ImGui::Checkbox("Enabled", &m_bPostProcessingEnabled);
+
+			ImGui::Checkbox("TAA", &m_bEnableTAA);
 
 			ImGui::Checkbox("FXAA", &m_PostProcessSettings.bEnableFXAA);
 
