@@ -4698,14 +4698,16 @@ namespace flex
 				throw std::runtime_error("validation layers requested, but not available!");
 			}
 
+			const u32 requiredVkVersion = VK_MAKE_VERSION(1, 1, 0);
+
 			VkApplicationInfo appInfo = {};
 			appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 			std::string applicationName = g_Window->GetTitle();
 			appInfo.pApplicationName = applicationName.c_str();
-			appInfo.applicationVersion = VK_API_VERSION_1_0;
+			appInfo.applicationVersion = requiredVkVersion;
 			appInfo.pEngineName = "Flex Engine";
 			appInfo.engineVersion = FLEX_VERSION(FlexEngine::EngineVersionMajor, FlexEngine::EngineVersionMinor, FlexEngine::EngineVersionPatch);
-			appInfo.apiVersion = VK_API_VERSION_1_0;
+			appInfo.apiVersion = requiredVkVersion;
 
 			VkInstanceCreateInfo createInfo = {};
 			createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
