@@ -723,10 +723,10 @@ namespace flex
 				};
 
 				// Transform frustum corners from clip space to world space
-				for (u32 i = 0; i < 8; ++i)
+				for (glm::vec3& frustumCorner : frustumCorners)
 				{
-					glm::vec4 invCorner = invCam * glm::vec4(frustumCorners[i], 1.0f);
-					frustumCorners[i] = invCorner / invCorner.w;
+					glm::vec4 invCorner = invCam * glm::vec4(frustumCorner, 1.0f);
+					frustumCorner = invCorner / invCorner.w;
 				}
 
 				for (u32 i = 0; i < 4; ++i)
@@ -737,16 +737,16 @@ namespace flex
 				}
 
 				glm::vec3 frustumCenter(0.0f);
-				for (u32 i = 0; i < 8; ++i)
+				for (const glm::vec3& frustumCorner : frustumCorners)
 				{
-					frustumCenter += frustumCorners[i];
+					frustumCenter += frustumCorner;
 				}
 				frustumCenter /= 8.0f;
 
 				real radius = 0.0f;
-				for (u32 i = 0; i < 8; ++i)
+				for (const glm::vec3& frustumCorner : frustumCorners)
 				{
-					real distance = glm::length(frustumCorners[i] - frustumCenter);
+					real distance = glm::length(frustumCorner - frustumCenter);
 					radius = glm::max(radius, distance);
 				}
 				radius = std::ceil(radius * 16.0f) / 16.0f;
@@ -776,15 +776,15 @@ namespace flex
 		{
 			if (ImGui::Begin("Fonts", &bFontWindowShowing))
 			{
-				for (auto iter = m_Fonts.begin(); iter != m_Fonts.end(); ++iter)
+				for (auto& fontPair : m_Fonts)
 				{
-					FontMetaData& fontMeta = iter->second;
+					FontMetaData& fontMeta = fontPair.second;
 					BitmapFont* font = fontMeta.bitmapFont;
 
 					ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollWithMouse;
 					if (ImGui::BeginChild(fontMeta.renderedTextureFilePath.c_str(), ImVec2(0, 240), true, flags))
 					{
-						ImGui::Text("%s", iter->first.c_str());
+						ImGui::Text("%s", fontPair.first.c_str());
 						ImGui::Text("%s", font->name.c_str());
 
 						ImGui::Columns(2);
@@ -1084,6 +1084,8 @@ namespace flex
 		if (ImGui::TreeNode("Post processing"))
 		{
 			ImGui::Checkbox("Enabled", &m_bPostProcessingEnabled);
+
+			ImGui::Checkbox("TAA", &m_bEnableTAA);
 
 			ImGui::Checkbox("FXAA", &m_PostProcessSettings.bEnableFXAA);
 
@@ -2863,10 +2865,8 @@ namespace flex
 				}
 
 				char prevChar = ' ';
-				for (u32 j = 0; j < currentStr.length(); ++j)
+				for (char c : currentStr)
 				{
-					char c = currentStr[j];
-
 					if (BitmapFont::IsCharValid(c))
 					{
 						FontMetric* metric = font->GetMetric(c);
@@ -2955,10 +2955,8 @@ namespace flex
 				real totalAdvanceX = 0;
 
 				char prevChar = ' ';
-				for (u32 j = 0; j < currentStr.length(); ++j)
+				for (char c : currentStr)
 				{
-					char c = currentStr[j];
-
 					if (BitmapFont::IsCharValid(c))
 					{
 						FontMetric* metric = font->GetMetric(c);
@@ -3092,10 +3090,10 @@ namespace flex
 	void Renderer::GenerateSSAONoise(std::vector<glm::vec4>& noise)
 	{
 		noise = std::vector<glm::vec4>(SSAO_NOISE_DIM * SSAO_NOISE_DIM);
-		for (u32 i = 0; i < static_cast<u32>(noise.size()); ++i)
+		for (glm::vec4& noiseSample : noise)
 		{
 			// Random rotations around z-axis
-			noise[i] = glm::vec4(RandomFloat(-1.0f, 1.0f), RandomFloat(-1.0f, 1.0f), 0.0f, 0.0f);
+			noiseSample = glm::vec4(RandomFloat(-1.0f, 1.0f), RandomFloat(-1.0f, 1.0f), 0.0f, 0.0f);
 		}
 	}
 

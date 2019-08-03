@@ -291,7 +291,7 @@ namespace flex
 		const unsigned subsampleIdx = g_Renderer->GetFramesRenderedCount() % sampleCount;
 
 		const glm::vec2 texSize(1.0f / (glm::vec2)swapChainSize);
-		const glm::vec2 subsampleSizeNDC = texSize * 2.0f;
+		const glm::vec2 subsampleSizeNDC = texSize / 2.0f;
 
 		glm::vec2 subsample = samples[subsampleIdx] * subsampleSizeNDC;
 		subsample *= 4.0f; // [-subsampleSizeNDC / 2, subsampleSizeNDC / 2]
