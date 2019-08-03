@@ -289,6 +289,10 @@ namespace flex
 				VkSampler* sampler);
 			void DoTexturePreviewTooltip(VulkanTexture* texture);
 
+			void BeginGPUTimeStamp(VkCommandBuffer commandBuffer, const std::string& name);
+			void EndGPUTimeStamp(VkCommandBuffer commandBuffer, const std::string& name);
+			ms GetDurationBetweenTimeStamps(const std::string& name);
+
 			static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugReportFlagsEXT flags,
 				VkDebugReportObjectTypeEXT objType, u64 obj, size_t location, i32 code, const char* layerPrefix,
 				const char* msg, void* userData);
@@ -413,6 +417,18 @@ namespace flex
 
 			bool m_bPostInitialized = false;
 			bool m_bSwapChainNeedsRebuilding = false;
+
+			// TODO: Create other query pools
+			VkQueryPool m_TimestampQueryPool = VK_NULL_HANDLE;
+			static const u64 MAX_TIMESTAMP_QUERIES = 1024;
+
+			// Points from timestamp names to query indices. Index is negated on timestamp end to signify being ended.
+			std::map<std::string, i32> m_TimestampQueryNames;
+			std::vector<ms> m_TimestampQueryDurations;
+
+			static const u32 NUM_GPU_TIMINGS = 64;
+			std::vector<std::array<real, NUM_GPU_TIMINGS>> m_TimestampHistograms;
+			u32 m_TimestampHistogramIndex = 0;
 
 			std::vector<const char*> m_ValidationLayers =
 			{

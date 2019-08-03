@@ -238,6 +238,7 @@ namespace flex
 
 		bool bFontWindowShowing = false;
 		bool bUniformBufferWindowShowing = false;
+		bool bGPUTimingsWindowShowing = false;
 
 	protected:
 		virtual void LoadShaders();

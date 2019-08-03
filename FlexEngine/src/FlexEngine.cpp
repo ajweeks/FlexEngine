@@ -1175,6 +1175,7 @@ namespace flex
 			if (ImGui::BeginMenu("Window"))
 			{
 				ImGui::MenuItem("Main Window", NULL, &m_bMainWindowShowing);
+				ImGui::MenuItem("GPU Timings", NULL, &g_Renderer->bGPUTimingsWindowShowing);
 				ImGui::MenuItem("Asset Browser", NULL, &m_bAssetBrowserShowing);
 				ImGui::MenuItem("Demo Window", NULL, &m_bDemoWindowShowing);
 				ImGui::MenuItem("Key Mapper", NULL, &m_bInputMapperShowing);

@@ -354,6 +354,12 @@ namespace flex
 			m_SSAOSpecializationInfo.dataSize = sizeof(u32);
 
 			Renderer::InitializeMaterials();
+
+			VkQueryPoolCreateInfo queryPoolCreateInfo = {};
+			queryPoolCreateInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+			queryPoolCreateInfo.queryType = VK_QUERY_TYPE_TIMESTAMP;
+			queryPoolCreateInfo.queryCount = MAX_TIMESTAMP_QUERIES;
+			vkCreateQueryPool(m_VulkanDevice->m_LogicalDevice, &queryPoolCreateInfo, nullptr, &m_TimestampQueryPool);
 		}
 
 		void VulkanRenderer::PostInitialize()
@@ -730,6 +736,8 @@ namespace flex
 			m_SwapChain.replace();
 			m_SwapChainImageViews.clear();
 			m_SwapChainFramebuffers.clear();
+
+			vkDestroyQueryPool(m_VulkanDevice->m_LogicalDevice, m_TimestampQueryPool, nullptr);
 
 			m_CommandBufferManager.DestroyCommandBuffers();
 
@@ -1378,6 +1386,21 @@ namespace flex
 			{
 				UpdateDynamicUniformBuffer(i);
 			}
+
+			if (!m_TimestampQueryNames.empty())
+			{
+				m_TimestampHistograms.resize(m_TimestampQueryNames.size());
+				u32 i = 0;
+				for (auto iter = m_TimestampQueryNames.begin(); iter != m_TimestampQueryNames.end(); ++iter)
+				{
+					m_TimestampHistograms[i][m_TimestampHistogramIndex] = GetDurationBetweenTimeStamps(iter->first);
+					++i;
+				}
+
+				m_TimestampHistogramIndex = (m_TimestampHistogramIndex + 1) % NUM_GPU_TIMINGS;
+
+				m_TimestampQueryNames.clear();
+			}
 		}
 
 		void VulkanRenderer::Draw()
@@ -1421,6 +1444,31 @@ namespace flex
 		void VulkanRenderer::DrawImGuiWindows()
 		{
 			Renderer::DrawImGuiWindows();
+
+			if (bGPUTimingsWindowShowing)
+			{
+				if (ImGui::Begin("GPU Timings", &bGPUTimingsWindowShowing))
+				{
+					ImGui::Columns(2);
+
+					for (auto iter = m_TimestampQueryNames.begin(); iter != m_TimestampQueryNames.end(); ++iter)
+					{
+						u32 arrayIndex = abs(iter->second / 2);
+						if (arrayIndex < m_TimestampHistograms.size())
+						{
+							ImGui::Text("%s: %.2fms", iter->first.c_str(), m_TimestampHistograms[arrayIndex][0]);
+						}
+					}
+
+					ImGui::NextColumn();
+
+					for (u32 i = 0; i < m_TimestampHistograms.size(); ++i)
+					{
+						ImGui::PlotLines("", m_TimestampHistograms[i].data(), NUM_GPU_TIMINGS, m_TimestampHistogramIndex, nullptr, 0.0f, 8.0f);
+					}
+				}
+				ImGui::End();
+			}
 
 			if (bUniformBufferWindowShowing)
 			{
@@ -6954,6 +7002,8 @@ namespace flex
 				cmdBufferbeginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 				VK_CHECK_RESULT(vkBeginCommandBuffer(m_OffScreenCmdBuffer, &cmdBufferbeginInfo));
 
+				BeginGPUTimeStamp(m_OffScreenCmdBuffer, "Deferred");
+
 				BeginRegion(m_OffScreenCmdBuffer, "Shadow cascades");
 
 				//
@@ -7165,6 +7215,8 @@ namespace flex
 					}
 				}
 
+				EndGPUTimeStamp(m_OffScreenCmdBuffer, "Deferred");
+
 				VK_CHECK_RESULT(vkEndCommandBuffer(m_OffScreenCmdBuffer));
 				SetCommandBufferName(m_VulkanDevice, m_OffScreenCmdBuffer, "Offscreen command buffer");
 			}
@@ -7177,11 +7229,12 @@ namespace flex
 
 			// TODO: Remove unused cmd buffers
 			VkCommandBuffer& commandBuffer = m_CommandBufferManager.m_CommandBuffers[0];
-
 			VkCommandBufferBeginInfo cmdBufferbeginInfo = vks::commandBufferBeginInfo();
 			cmdBufferbeginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 
 			VK_CHECK_RESULT(vkBeginCommandBuffer(commandBuffer, &cmdBufferbeginInfo));
+
+			BeginGPUTimeStamp(commandBuffer, "Forward");
 
 			{
 				BeginRegion(commandBuffer, "Shade deferred");
@@ -7397,8 +7450,11 @@ namespace flex
 			}
 			EndRegion(commandBuffer);
 
+			EndGPUTimeStamp(commandBuffer, "Forward");
+
 			VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
 			SetCommandBufferName(m_VulkanDevice, commandBuffer, "Forward command buffer");
+
 		}
 
 		void VulkanRenderer::DrawFrame()
@@ -8230,6 +8286,61 @@ namespace flex
 			ImGui::Image((void*)&texture->image, ImVec2(texSize * textureAspectRatio, texSize));
 
 			ImGui::EndTooltip();
+		}
+
+		void VulkanRenderer::BeginGPUTimeStamp(VkCommandBuffer commandBuffer, const std::string& name)
+		{
+			const i32 queryIndex = (i32)(m_TimestampQueryNames.size() * 2);
+			m_TimestampQueryNames[name] = queryIndex;
+
+			vkCmdResetQueryPool(commandBuffer, m_TimestampQueryPool, (u32)queryIndex, 2);
+			vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, m_TimestampQueryPool, (u32)queryIndex);
+		}
+
+		void VulkanRenderer::EndGPUTimeStamp(VkCommandBuffer commandBuffer, const std::string& name)
+		{
+			auto iter = m_TimestampQueryNames.find(name);
+			if (iter == m_TimestampQueryNames.end())
+			{
+				PrintError("Attempted to end GPU timestamp that wasn't begun.\n");
+				return;
+			}
+
+			const i32 queryIndex = iter->second;
+
+			if (queryIndex < 0)
+			{
+				PrintError("Attempted to end GPU timestamp more than once.\n");
+				return;
+			}
+
+			vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, m_TimestampQueryPool, queryIndex + 1);
+
+			iter->second = -queryIndex;
+		}
+
+		ms VulkanRenderer::GetDurationBetweenTimeStamps(const std::string& name)
+		{
+			auto iter = m_TimestampQueryNames.find(name);
+			if (iter == m_TimestampQueryNames.end())
+			{
+				PrintError("Attempted to get duration of GPU timestamp that don't exist.\n");
+				return 0.0f;
+			}
+
+			i32 queryIndex = iter->second;
+
+			if (queryIndex > 0)
+			{
+				PrintError("Attempted to get duration of GPU timestamp that hasn't been ended.\n");
+				return 0.0f;
+			}
+
+			queryIndex = -queryIndex;
+
+			u64 timestamps[2];
+			vkGetQueryPoolResults(m_VulkanDevice->m_LogicalDevice, m_TimestampQueryPool, queryIndex, 2, sizeof(u64) * 2, timestamps, sizeof(u64), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
+			return (timestamps[1] - timestamps[0]) / 1000000.0f;
 		}
 
 		VKAPI_ATTR VkBool32 VKAPI_CALL VulkanRenderer::DebugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType,
