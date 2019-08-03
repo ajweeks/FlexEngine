@@ -318,6 +318,17 @@ void main()
 
 	fragColor = vec4(color, 1.0);
 
+#if 0
+	switch (cascadeIndex)
+	{
+		case 0: fragColor *= vec4(0.85f, 0.4f, 0.3f, 0.0f); return;
+		case 1: fragColor *= vec4(0.2f, 1.0f, 1.0f, 0.0f); return;
+		case 2: fragColor *= vec4(1.0f, 1.0f, 0.2f, 0.0f); return;
+		case 3: fragColor *= vec4(0.4f, 0.8f, 0.2f, 0.0f); return;
+		default: fragColor = vec4(1.0f, 0.0f, 1.0f, 0.0f); return;
+	}
+#endif
+
 	// fragColor = vec4(F, 1);
 
 	// Visualize world pos:
