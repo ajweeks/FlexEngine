@@ -2701,7 +2701,7 @@ namespace flex
 
 			VkCommandBuffer cmdBuf = m_CommandBufferManager.CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
 
-			BeginRegion(cmdBuf, "Generate Cubemap from HDR");
+			BeginDebugMarkerRegion(cmdBuf, "Generate Cubemap from HDR");
 
 			VkImageSubresourceRange subresourceRange = {};
 			subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -2818,7 +2818,7 @@ namespace flex
 				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 				subresourceRange);
 
-			EndRegion(cmdBuf);
+			EndDebugMarkerRegion(cmdBuf);
 
 			m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
 
@@ -2971,7 +2971,7 @@ namespace flex
 
 			VkCommandBuffer cmdBuf = m_CommandBufferManager.CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
 
-			BeginRegion(cmdBuf, "Generate Irradiance");
+			BeginDebugMarkerRegion(cmdBuf, "Generate Irradiance");
 
 			VkViewport viewport = vks::viewportFlipped((real)dim, (real)dim, 0.0f, 1.0f);
 			vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
@@ -3086,7 +3086,7 @@ namespace flex
 				subresourceRange);
 			renderObjectMat.irradianceTexture->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-			EndRegion(cmdBuf);
+			EndDebugMarkerRegion(cmdBuf);
 
 			m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
 
@@ -3237,7 +3237,7 @@ namespace flex
 
 			VkCommandBuffer cmdBuf = m_CommandBufferManager.CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
 
-			BeginRegion(cmdBuf, "Generate Prefiltered Cube");
+			BeginDebugMarkerRegion(cmdBuf, "Generate Prefiltered Cube");
 
 			VkViewport viewport = vks::viewportFlipped((real)dim, (real)dim, 0.0f, 1.0f);
 			vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
@@ -3351,7 +3351,7 @@ namespace flex
 				subresourceRange);
 			renderObjectMat.prefilterTexture->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-			EndRegion(cmdBuf);
+			EndDebugMarkerRegion(cmdBuf);
 
 			m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
 
@@ -3432,7 +3432,7 @@ namespace flex
 
 				VkCommandBuffer cmdBuf = m_CommandBufferManager.CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
 
-				BeginRegion(cmdBuf, "Generate BRDF LUT");
+				BeginDebugMarkerRegion(cmdBuf, "Generate BRDF LUT");
 
 				vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -3446,7 +3446,7 @@ namespace flex
 				vkCmdDraw(cmdBuf, 3, 1, 0, 0);
 				vkCmdEndRenderPass(cmdBuf);
 
-				EndRegion(cmdBuf);
+				EndDebugMarkerRegion(cmdBuf);
 
 				m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
 
@@ -3823,7 +3823,7 @@ namespace flex
 				renderPassBeginInfo.pClearValues = &clearCol;
 				vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-				BeginRegion(commandBuffer, "Generate Font SDF");
+				BeginDebugMarkerRegion(commandBuffer, "Generate Font SDF");
 
 				VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
 				VkPipeline graphicsPipeline = VK_NULL_HANDLE;
@@ -3958,7 +3958,7 @@ namespace flex
 
 				vkCmdEndRenderPass(commandBuffer);
 
-				EndRegion(commandBuffer);
+				EndDebugMarkerRegion(commandBuffer);
 
 				VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
 				SetCommandBufferName(m_VulkanDevice, commandBuffer, "Load font command buffer");
@@ -7004,7 +7004,7 @@ namespace flex
 
 				BeginGPUTimeStamp(m_OffScreenCmdBuffer, "Deferred");
 
-				BeginRegion(m_OffScreenCmdBuffer, "Shadow cascades");
+				BeginDebugMarkerRegion(m_OffScreenCmdBuffer, "Shadow cascades");
 
 				//
 				// Cascaded shadow mapping
@@ -7064,8 +7064,8 @@ namespace flex
 					}
 				}
 
-				EndRegion(m_OffScreenCmdBuffer);
-				BeginRegion(m_OffScreenCmdBuffer, "Deferred");
+				EndDebugMarkerRegion(m_OffScreenCmdBuffer);
+				BeginDebugMarkerRegion(m_OffScreenCmdBuffer, "Deferred");
 
 				//
 				// G-Buffer fill
@@ -7102,7 +7102,7 @@ namespace flex
 				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_GBufferDepthAttachment->image, m_GBufferDepthAttachment->format,
 					VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, m_OffScreenCmdBuffer, true);
 
-				EndRegion(m_OffScreenCmdBuffer);
+				EndDebugMarkerRegion(m_OffScreenCmdBuffer);
 
 				//
 				// SSAO generation
@@ -7117,7 +7117,7 @@ namespace flex
 
 				if (m_SSAOSamplingData.ssaoEnabled)
 				{
-					BeginRegion(m_OffScreenCmdBuffer, "SSAO");
+					BeginDebugMarkerRegion(m_OffScreenCmdBuffer, "SSAO");
 
 					std::array<VkClearValue, 1> ssaoClearValues = {};
 					ssaoClearValues[0].color = m_ClearColor;
@@ -7152,7 +7152,7 @@ namespace flex
 
 					vkCmdEndRenderPass(m_OffScreenCmdBuffer);
 
-					EndRegion(m_OffScreenCmdBuffer);
+					EndDebugMarkerRegion(m_OffScreenCmdBuffer);
 
 					//
 					// SSAO blur
@@ -7160,7 +7160,7 @@ namespace flex
 
 					if (m_bSSAOBlurEnabled)
 					{
-						BeginRegion(m_OffScreenCmdBuffer, "SSAO Blur");
+						BeginDebugMarkerRegion(m_OffScreenCmdBuffer, "SSAO Blur");
 
 						renderPassBeginInfo.renderPass = m_SSAOBlurHRenderPass;
 						renderPassBeginInfo.framebuffer = m_SSAOBlurHFrameBuf->frameBuffer;
@@ -7211,7 +7211,7 @@ namespace flex
 
 						vkCmdEndRenderPass(m_OffScreenCmdBuffer);
 
-						EndRegion(m_OffScreenCmdBuffer);
+						EndDebugMarkerRegion(m_OffScreenCmdBuffer);
 					}
 				}
 
@@ -7237,18 +7237,18 @@ namespace flex
 			BeginGPUTimeStamp(commandBuffer, "Forward");
 
 			{
-				BeginRegion(commandBuffer, "Shade deferred");
+				BeginDebugMarkerRegion(commandBuffer, "Shade deferred");
 
 				VulkanRenderObject* gBufferObject = GetRenderObject(m_GBufferQuadRenderID);
 				ShaderID shaderID = m_Materials[gBufferObject->materialID].material.shaderID;
 				RenderFullscreenQuad(commandBuffer, m_DeferredCombineRenderPass, m_OffscreenFrameBuffer0->frameBuffer, shaderID,
 					gBufferObject->pipelineLayout, gBufferObject->graphicsPipeline, gBufferObject->descriptorSet, true);
 
-				EndRegion(commandBuffer);
+				EndDebugMarkerRegion(commandBuffer);
 			}
 
 			{
-				BeginRegion(commandBuffer, "Copy depth");
+				BeginDebugMarkerRegion(commandBuffer, "Copy depth");
 
 				// TODO: Remove unnecessary transitions (use render passes where possible)
 
@@ -7275,7 +7275,7 @@ namespace flex
 				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_GBufferDepthAttachment->image, m_GBufferDepthAttachment->format,
 					VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1, commandBuffer, true);
 
-				EndRegion(commandBuffer);
+				EndDebugMarkerRegion(commandBuffer);
 			}
 
 			std::array<VkClearValue, 2> clearValues = {};
@@ -7296,36 +7296,36 @@ namespace flex
 			vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 			{
 				{
-					BeginRegion(commandBuffer, "Forward");
+					BeginDebugMarkerRegion(commandBuffer, "Forward");
 
 					for (const ShaderBatchPair& shaderBatch : m_ForwardObjectBatches.batches)
 					{
 						DrawShaderBatch(shaderBatch, commandBuffer);
 					}
 
-					EndRegion(commandBuffer);
+					EndDebugMarkerRegion(commandBuffer);
 				}
 
 				{
-					BeginRegion(commandBuffer, "World Space Sprites");
+					BeginDebugMarkerRegion(commandBuffer, "World Space Sprites");
 
 					EnqueueWorldSpaceSprites();
 					DrawSpriteBatch(m_QueuedWSSprites, commandBuffer);
 					m_QueuedWSSprites.clear();
 
-					EndRegion(commandBuffer);
-					BeginRegion(commandBuffer, "World Space Text");
+					EndDebugMarkerRegion(commandBuffer);
+					BeginDebugMarkerRegion(commandBuffer, "World Space Text");
 
 					EnqueueWorldSpaceText();
 					DrawTextWS(commandBuffer);
 
-					EndRegion(commandBuffer);
+					EndDebugMarkerRegion(commandBuffer);
 				}
 
 				bool bUsingGameplayCam = g_CameraManager->CurrentCamera()->bIsGameplayCam;
 				if (g_EngineInstance->IsRenderingEditorObjects() && !bUsingGameplayCam)
 				{
-					BeginRegion(commandBuffer, "Editor objects");
+					BeginDebugMarkerRegion(commandBuffer, "Editor objects");
 
 					for (const ShaderBatchPair& shaderBatch : m_DepthAwareEditorObjBatches.batches)
 					{
@@ -7347,7 +7347,7 @@ namespace flex
 						DrawShaderBatch(shaderBatch, commandBuffer);
 					}
 
-					EndRegion(commandBuffer);
+					EndDebugMarkerRegion(commandBuffer);
 				}
 			}
 			vkCmdEndRenderPass(commandBuffer);
@@ -7355,15 +7355,19 @@ namespace flex
 			//
 			// Post process pass
 			//
+			
+			BeginGPUTimeStamp(commandBuffer, "Post Process");
 
 			{
-				BeginRegion(commandBuffer, "Post process");
+				BeginDebugMarkerRegion(commandBuffer, "Post process");
 
 				RenderFullscreenQuad(commandBuffer, m_PostProcessRenderPass, m_OffscreenFrameBuffer1->frameBuffer, m_Materials[m_PostProcessMatID].material.shaderID,
 					m_PostProcessGraphicsPipelineLayout, m_PostProcessGraphicsPipeline, m_PostProcessDescriptorSet, true);
 
-				EndRegion(commandBuffer);
+				EndDebugMarkerRegion(commandBuffer);
 			}
+
+			EndGPUTimeStamp(commandBuffer, "Post Process");
 
 			const FrameBufferAttachment& offscreenBuffer0 = m_OffscreenFrameBuffer0->frameBufferAttachments[0].second;
 			const FrameBufferAttachment& offscreenBuffer1 = m_OffscreenFrameBuffer1->frameBufferAttachments[0].second;
@@ -7374,12 +7378,12 @@ namespace flex
 				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, offscreenBuffer0.image, offscreenBuffer0.format,
 					VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1, commandBuffer, false);
 
-				BeginRegion(commandBuffer, "TAA Resolve");
+				BeginDebugMarkerRegion(commandBuffer, "TAA Resolve");
 
 				RenderFullscreenQuad(commandBuffer, m_TAAResolveRenderPass, m_OffscreenFrameBuffer0->frameBuffer, m_Materials[m_TAAResolveMaterialID].material.shaderID,
 					m_TAAResolveGraphicsPipelineLayout, m_TAAResolveGraphicsPipeline, m_TAAResolveDescriptorSet, true);
 
-				EndRegion(commandBuffer);
+				EndDebugMarkerRegion(commandBuffer);
 
 				m_HistoryBuffer->TransitionToLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, commandBuffer);
 
@@ -7396,15 +7400,15 @@ namespace flex
 			}
 
 			{
-				BeginRegion(commandBuffer, "Gamma Correct");
+				BeginDebugMarkerRegion(commandBuffer, "Gamma Correct");
 
 				RenderFullscreenQuad(commandBuffer, m_GammaCorrectRenderPass, m_SwapChainFramebuffers[m_CurrentSwapChainBufferIndex], m_Materials[m_GammaCorrectMaterialID].material.shaderID,
 					m_GammaCorrectGraphicsPipelineLayout, m_GammaCorrectGraphicsPipeline, m_GammaCorrectDescriptorSet, true);
 
-				EndRegion(commandBuffer);
+				EndDebugMarkerRegion(commandBuffer);
 			}
 
-			BeginRegion(commandBuffer, "UI");
+			BeginDebugMarkerRegion(commandBuffer, "UI");
 			{
 
 				VkRenderPassBeginInfo uiRenderPassBeginInfo = vks::renderPassBeginInfo(m_UIRenderPass);
@@ -7417,7 +7421,7 @@ namespace flex
 				vkCmdBeginRenderPass(commandBuffer, &uiRenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 				{
-					BeginRegion(commandBuffer, "Screen Space Sprites");
+					BeginDebugMarkerRegion(commandBuffer, "Screen Space Sprites");
 
 					EnqueueScreenSpaceSprites();
 					DrawSpriteBatch(m_QueuedSSSprites, commandBuffer);
@@ -7425,30 +7429,30 @@ namespace flex
 					DrawSpriteBatch(m_QueuedSSArrSprites, commandBuffer);
 					m_QueuedSSArrSprites.clear();
 
-					EndRegion(commandBuffer);
+					EndDebugMarkerRegion(commandBuffer);
 				}
 
 				{
-					BeginRegion(commandBuffer, "Screen Space Text");
+					BeginDebugMarkerRegion(commandBuffer, "Screen Space Text");
 
 					EnqueueScreenSpaceText();
 					DrawTextSS(commandBuffer);
 
-					EndRegion(commandBuffer);
+					EndDebugMarkerRegion(commandBuffer);
 				}
 
 				if (g_EngineInstance->IsRenderingImGui())
 				{
-					BeginRegion(commandBuffer, "ImGui");
+					BeginDebugMarkerRegion(commandBuffer, "ImGui");
 
 					ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
 
-					EndRegion(commandBuffer);
+					EndDebugMarkerRegion(commandBuffer);
 				}
 
 				vkCmdEndRenderPass(commandBuffer);
 			}
-			EndRegion(commandBuffer);
+			EndDebugMarkerRegion(commandBuffer);
 
 			EndGPUTimeStamp(commandBuffer, "Forward");
 
@@ -7657,7 +7661,7 @@ namespace flex
 			SetObjectName(device, buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, name);
 		}
 
-		void VulkanRenderer::BeginRegion(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color)
+		void VulkanRenderer::BeginDebugMarkerRegion(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color)
 		{
 			if (m_vkCmdDebugMarkerBegin)
 			{
@@ -7669,7 +7673,7 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::EndRegion(VkCommandBuffer cmdBuf)
+		void VulkanRenderer::EndDebugMarkerRegion(VkCommandBuffer cmdBuf)
 		{
 			if (m_vkCmdDebugMarkerEnd)
 			{

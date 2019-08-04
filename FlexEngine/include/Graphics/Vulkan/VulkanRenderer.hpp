@@ -256,8 +256,8 @@ namespace flex
 			void BindDescriptorSet(VulkanShader* shader, u32 dynamicOffsetOffset, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet);
 			void RecreateSwapChain();
 
-			void BeginRegion(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color = VEC4_ONE);
-			void EndRegion(VkCommandBuffer cmdBuf);
+			void BeginDebugMarkerRegion(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color = VEC4_ONE);
+			void EndDebugMarkerRegion(VkCommandBuffer cmdBuf);
 
 			bool CreateShaderModule(const std::vector<char>& code, VkShaderModule* shaderModule) const;
 			VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) const;
