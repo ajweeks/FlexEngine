@@ -107,7 +107,8 @@ namespace flex
 
 	private:
 		void HandleRadialDeadZone(real* x, real* y);
-		void LoadInputBindingsFromFile();
+		// Returns true if file was found and is complete
+		bool LoadInputBindingsFromFile();
 		void SaveInputBindingsToFile();
 
 		Action GetActionFromKeyCode(KeyCode keyCode);

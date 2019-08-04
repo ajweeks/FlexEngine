@@ -38,8 +38,11 @@ namespace flex
 		io.KeyMap[ImGuiKey_Y] = (i32)KeyCode::KEY_Y; // for text edit CTRL+Y: redo
 		io.KeyMap[ImGuiKey_Z] = (i32)KeyCode::KEY_Z; // for text edit CTRL+Z: undo
 
-		LoadInputBindingsFromFile();
-		SaveInputBindingsToFile();
+		if (!LoadInputBindingsFromFile())
+		{
+			// Immediately save input bindings file when file doesn't exist or is incomplete
+			SaveInputBindingsToFile();
+		}
 
 		m_GamepadStates[0].averageRotationSpeeds = RollingAverage<real>(m_GamepadStates[0].framesToAverageOver);
 		m_GamepadStates[1].averageRotationSpeeds = RollingAverage<real>(m_GamepadStates[1].framesToAverageOver);
@@ -1379,19 +1382,22 @@ namespace flex
 		}
 	}
 
-	void InputManager::LoadInputBindingsFromFile()
+	bool InputManager::LoadInputBindingsFromFile()
 	{
 		JSONObject rootObject;
 		if (!JSONParser::Parse(s_InputBindingFilePath, rootObject))
 		{
 			PrintError("Failed to load input bindings from file! Won't have any inputs mapped!!\n");
-			return;
+			return false;
 		}
+
+		bool bFileComplete = true;
 
 		const u32 actionCount = (u32)Action::_NONE;
 		if (rootObject.fields.size() != actionCount)
 		{
 			PrintWarn("Unexpected number of inputs found in input-bindings.ini! (%u expected, %u found)\n", actionCount, rootObject.fields.size());
+			bFileComplete = false;
 		}
 
 		for (u32 i = 0; i < actionCount; ++i)
@@ -1432,6 +1438,8 @@ namespace flex
 				m_InputBindings[i].bNegative = child.GetBool("negative");
 			}
 		}
+
+		return bFileComplete;
 	}
 
 	void InputManager::SaveInputBindingsToFile()
