@@ -185,9 +185,6 @@ namespace flex
 		void EnqueueUntexturedQuadRaw(const glm::vec2& pos, const glm::vec2& size, const glm::vec4& color);
 		void EnqueueSprite(const SpriteQuadDrawInfo& drawInfo);
 
-		void SetPostProcessingEnabled(bool bEnabled);
-		bool IsPostProcessingEnabled() const;
-
 		void ToggleRenderGrid();
 		bool IsRenderingGrid() const;
 		void SetRenderGrid(bool bRenderGrid);
@@ -218,8 +215,6 @@ namespace flex
 
 		struct PostProcessSettings
 		{
-			bool bEnabled = true;
-
 			real saturation = 1.0f;
 			glm::vec3 brightness;
 			glm::vec3 offset;
@@ -353,7 +348,6 @@ namespace flex
 
 		PostProcessSettings m_PostProcessSettings;
 
-		bool m_bPostProcessingEnabled = true;
 		bool m_bDisplayBoundingVolumes = false;
 		bool m_bDisplayShadowCascadePreview = false;
 

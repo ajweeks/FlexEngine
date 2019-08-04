@@ -289,7 +289,6 @@ namespace flex
 		}
 
 		JSONObject rootObject = {};
-		rootObject.fields.emplace_back("enable post-processing", JSONValue(m_bPostProcessingEnabled));
 		rootObject.fields.emplace_back("enable v-sync", JSONValue(m_bVSyncEnabled));
 		rootObject.fields.emplace_back("enable fxaa", JSONValue(m_PostProcessSettings.bEnableFXAA));
 		rootObject.fields.emplace_back("brightness", JSONValue(Vec3ToString(m_PostProcessSettings.brightness, 3)));
@@ -341,7 +340,6 @@ namespace flex
 		JSONObject rootObject;
 		if (JSONParser::Parse(filePath, rootObject))
 		{
-			m_bPostProcessingEnabled = rootObject.GetBool("enable post-processing");
 			SetVSyncEnabled(rootObject.GetBool("enable v-sync"));
 			m_PostProcessSettings.bEnableFXAA = rootObject.GetBool("enable fxaa");
 			m_PostProcessSettings.brightness = ParseVec3(rootObject.GetString("brightness"));
@@ -508,16 +506,6 @@ namespace flex
 		{
 			m_QueuedWSSprites.push_back(drawInfo);
 		}
-	}
-
-	void Renderer::SetPostProcessingEnabled(bool bEnabled)
-	{
-		m_bPostProcessingEnabled = bEnabled;
-	}
-
-	bool Renderer::IsPostProcessingEnabled() const
-	{
-		return m_bPostProcessingEnabled;
 	}
 
 	void Renderer::SetDisplayBoundingVolumesEnabled(bool bEnabled)
@@ -1083,8 +1071,6 @@ namespace flex
 
 		if (ImGui::TreeNode("Post processing"))
 		{
-			ImGui::Checkbox("Enabled", &m_bPostProcessingEnabled);
-
 			ImGui::Checkbox("TAA", &m_bEnableTAA);
 
 			ImGui::Checkbox("FXAA", &m_PostProcessSettings.bEnableFXAA);
@@ -3032,35 +3018,28 @@ namespace flex
 	glm::mat4 Renderer::GetPostProcessingMatrix() const
 	{
 		glm::mat4 contrastBrightnessSaturation;
-		if (m_bPostProcessingEnabled)
-		{
-			real sat = m_PostProcessSettings.saturation;
-			glm::vec3 brightness = m_PostProcessSettings.brightness;
-			glm::vec3 offset = m_PostProcessSettings.offset;
+		real sat = m_PostProcessSettings.saturation;
+		glm::vec3 brightness = m_PostProcessSettings.brightness;
+		glm::vec3 offset = m_PostProcessSettings.offset;
 
-			static const glm::vec3 wgt(0.3086f, 0.6094f, 0.0820f);
-			real a = (1.0f - sat) * wgt.r + sat;
-			real b = (1.0f - sat) * wgt.r;
-			real c = (1.0f - sat) * wgt.r;
-			real d = (1.0f - sat) * wgt.g;
-			real e = (1.0f - sat) * wgt.g + sat;
-			real f = (1.0f - sat) * wgt.g;
-			real g = (1.0f - sat) * wgt.b;
-			real h = (1.0f - sat) * wgt.b;
-			real i = (1.0f - sat) * wgt.b + sat;
-			glm::mat4 satMat = {
-				a, b, c, 0,
-				d, e, f, 0,
-				g, h, i, 0,
-				0, 0, 0, 1
-			};
+		static const glm::vec3 wgt(0.3086f, 0.6094f, 0.0820f);
+		real a = (1.0f - sat) * wgt.r + sat;
+		real b = (1.0f - sat) * wgt.r;
+		real c = (1.0f - sat) * wgt.r;
+		real d = (1.0f - sat) * wgt.g;
+		real e = (1.0f - sat) * wgt.g + sat;
+		real f = (1.0f - sat) * wgt.g;
+		real g = (1.0f - sat) * wgt.b;
+		real h = (1.0f - sat) * wgt.b;
+		real i = (1.0f - sat) * wgt.b + sat;
+		glm::mat4 satMat = {
+			a, b, c, 0,
+			d, e, f, 0,
+			g, h, i, 0,
+			0, 0, 0, 1
+		};
 
-			contrastBrightnessSaturation = glm::translate(glm::scale(satMat, brightness), offset);
-		}
-		else
-		{
-			contrastBrightnessSaturation = MAT4_IDENTITY;
-		}
+		contrastBrightnessSaturation = glm::translate(glm::scale(satMat, brightness), offset);
 		return contrastBrightnessSaturation;
 	}
 

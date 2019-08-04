@@ -7356,18 +7356,17 @@ namespace flex
 			// Post process pass
 			//
 			
-			BeginGPUTimeStamp(commandBuffer, "Post Process");
-
 			{
+				BeginGPUTimeStamp(commandBuffer, "Post Process");
+
 				BeginDebugMarkerRegion(commandBuffer, "Post process");
 
 				RenderFullscreenQuad(commandBuffer, m_PostProcessRenderPass, m_OffscreenFrameBuffer1->frameBuffer, m_Materials[m_PostProcessMatID].material.shaderID,
 					m_PostProcessGraphicsPipelineLayout, m_PostProcessGraphicsPipeline, m_PostProcessDescriptorSet, true);
 
 				EndDebugMarkerRegion(commandBuffer);
-			}
 
-			EndGPUTimeStamp(commandBuffer, "Post Process");
+				EndGPUTimeStamp(commandBuffer, "Post Process");
 
 			const FrameBufferAttachment& offscreenBuffer0 = m_OffscreenFrameBuffer0->frameBufferAttachments[0].second;
 			const FrameBufferAttachment& offscreenBuffer1 = m_OffscreenFrameBuffer1->frameBufferAttachments[0].second;
