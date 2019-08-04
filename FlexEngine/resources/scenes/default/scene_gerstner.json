@@ -1,6 +1,7 @@
 {
-	"version" : 1,
+	"version" : 2,
 	"name" : "Scene Gerstner",
+	"spawn player" : false,
 	"objects" : 
 	[
 		{
@@ -22,8 +23,7 @@
 			"transform" : 
 			{
 				"pos" : "0.000, 8.000, 0.000"
-			},
-			"material" : "pbr chrome"
+			}
 		},
 		{
 			"name" : "Directional Light",
@@ -36,16 +36,13 @@
 			},
 			"directional light info" : 
 			{
-				"rotation" : "1.601, -1.514, 3.133",
+				"rotation" : "0.480, 0.520, 0.508, -0.491",
 				"pos" : "0.000, 15.000, 0.000",
 				"color" : "1.00, 1.00, 1.00",
 				"enabled" : true,
 				"brightness" : 2.578000,
 				"cast shadows" : false,
-				"shadow darkness" : 1.000000,
-				"shadow map near" : -80.000000,
-				"shadow map far" : 100.000000,
-				"shadow map zoom" : 30.000000
+				"shadow darkness" : 1.000000
 			}
 		},
 		{
@@ -56,7 +53,7 @@
 			{
 				"pos" : "0.000, 3.400, 0.000"
 			},
-			"material" : "Gerstner",
+			"material" : "gerstner",
 			"gerstner wave" : 
 			{
 				"waves" : 

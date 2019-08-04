@@ -1,6 +1,7 @@
 {
-	"version" : 1,
+	"version" : 2,
 	"name" : "Scene Empty",
+	"spawn player" : false,
 	"objects" : 
 	[
 		{

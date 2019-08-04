@@ -1,5 +1,5 @@
 {
-	"version" : 1,
+	"version" : 2,
 	"name" : "Scene_track_test",
 	"spawn player" : true,
 	"objects" : 
@@ -424,16 +424,13 @@
 					},
 					"directional light info" : 
 					{
-						"rotation" : "1.195, -0.973, -2.522",
+						"rotation" : "0.217, 0.591, 0.616, -0.473",
 						"pos" : "0.000, 15.000, 0.000",
 						"color" : "1.00, 1.00, 1.00",
 						"enabled" : true,
 						"brightness" : 5.000000,
 						"cast shadows" : true,
-						"shadow darkness" : 0.911000,
-						"shadow map near" : -80.000000,
-						"shadow map far" : 41.000000,
-						"shadow map zoom" : 81.000000
+						"shadow darkness" : 0.911000
 					}
 				},
 				{
@@ -456,7 +453,6 @@
 					{
 						"pos" : "-8.434, 7.266, 0.000"
 					},
-					"material" : "pbr chrome",
 					"children" : 
 					[
 						{
@@ -544,16 +540,13 @@
 					},
 					"directional light info" : 
 					{
-						"rotation" : "1.195, -0.973, -2.522",
+						"rotation" : "0.217, 0.591, 0.616, -0.473",
 						"pos" : "0.000, 15.000, 0.000",
 						"color" : "1.00, 1.00, 1.00",
 						"enabled" : true,
 						"brightness" : 1.000000,
 						"cast shadows" : true,
-						"shadow darkness" : 0.000000,
-						"shadow map near" : -80.000000,
-						"shadow map far" : 100.000000,
-						"shadow map zoom" : 30.000000
+						"shadow darkness" : 0.000000
 					}
 				},
 				{
@@ -576,7 +569,6 @@
 					{
 						"pos" : "-8.434, 7.266, 0.000"
 					},
-					"material" : "pbr chrome",
 					"children" : 
 					[
 						{
@@ -611,16 +603,13 @@
 					},
 					"directional light info" : 
 					{
-						"rotation" : "1.195, -0.973, -2.522",
+						"rotation" : "0.217, 0.591, 0.616, -0.473",
 						"pos" : "0.000, 15.000, 0.000",
 						"color" : "1.00, 1.00, 1.00",
 						"enabled" : true,
 						"brightness" : 1.000000,
 						"cast shadows" : true,
-						"shadow darkness" : 0.000000,
-						"shadow map near" : -80.000000,
-						"shadow map far" : 100.000000,
-						"shadow map zoom" : 30.000000
+						"shadow darkness" : 0.000000
 					}
 				},
 				{
@@ -643,7 +632,6 @@
 					{
 						"pos" : "-8.434, 7.266, 0.000"
 					},
-					"material" : "pbr chrome",
 					"children" : 
 					[
 						{

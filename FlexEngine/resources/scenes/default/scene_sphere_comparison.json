@@ -322,7 +322,7 @@
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "-0.343, -0.579, -0.521"
+				"rot" : "-0.342, -0.579, -0.521"
 			},
 			"directional light info" : 
 			{
@@ -332,10 +332,7 @@
 				"enabled" : false,
 				"brightness" : 1.552000,
 				"cast shadows" : true,
-				"shadow darkness" : 1.000000,
-				"shadow map near" : -80.000000,
-				"shadow map far" : 100.000000,
-				"shadow map zoom" : 30.000000
+				"shadow darkness" : 1.000000
 			}
 		},
 		{
