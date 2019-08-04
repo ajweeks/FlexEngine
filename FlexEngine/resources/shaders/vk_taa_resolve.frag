@@ -25,6 +25,12 @@ vec3 ReconstructWSPosFromDepth(vec2 uv, float depth)
 	return (uboConstant.invView * vec4(posNDC, 1)).xyz;
 }
 
+float luminence(vec3 rgb)
+{
+	// TODO: Use proper values here
+	return dot(rgb, vec3(0.3, 0.6, 0.2));
+}
+
 void main()
 {
 	float nonLinearDepth = texture(in_DepthBuffer, ex_TexCoord).r;
@@ -36,8 +42,13 @@ void main()
 
 	vec2 historyUV = lastFrameHCPos.xy * 0.5 + 0.5;
 
-	vec4 sceneCol = texture(in_SceneTexture, ex_TexCoord);
-	vec4 historyCol = texture(in_HistoryTexture, historyUV);
+	vec3 sceneCol = texture(in_SceneTexture, ex_TexCoord).rgb;
+	vec3 historyCol = texture(in_HistoryTexture, historyUV).rgb;
 
-	out_Color = mix(historyCol, sceneCol, 1/8.0);
+	float alpha = 1/8.0;
+
+	// Ignore samples which differ in color too much
+	if (abs(luminence(sceneCol) - luminence(historyCol)) > 0.05) alpha = 1.0;
+
+	out_Color = vec4(mix(historyCol, sceneCol, alpha), 1.0);
 }
