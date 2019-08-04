@@ -1449,22 +1449,15 @@ namespace flex
 			{
 				if (ImGui::Begin("GPU Timings", &bGPUTimingsWindowShowing))
 				{
-					ImGui::Columns(2);
-
 					for (auto iter = m_TimestampQueryNames.begin(); iter != m_TimestampQueryNames.end(); ++iter)
 					{
 						u32 arrayIndex = abs(iter->second / 2);
 						if (arrayIndex < m_TimestampHistograms.size())
 						{
-							ImGui::Text("%s: %.2fms", iter->first.c_str(), m_TimestampHistograms[arrayIndex][0]);
+							char buf[256];
+							sprintf_s(buf, 256, "%s: %.2fms", iter->first.c_str(), m_TimestampHistograms[arrayIndex][0]);
+							ImGui::PlotLines(buf, m_TimestampHistograms[arrayIndex].data(), NUM_GPU_TIMINGS, m_TimestampHistogramIndex, nullptr, 0.0f, 8.0f);
 						}
-					}
-
-					ImGui::NextColumn();
-
-					for (u32 i = 0; i < m_TimestampHistograms.size(); ++i)
-					{
-						ImGui::PlotLines("", m_TimestampHistograms[i].data(), NUM_GPU_TIMINGS, m_TimestampHistogramIndex, nullptr, 0.0f, 8.0f);
 					}
 				}
 				ImGui::End();
@@ -7117,6 +7110,8 @@ namespace flex
 
 				if (m_SSAOSamplingData.ssaoEnabled)
 				{
+					BeginGPUTimeStamp(m_OffScreenCmdBuffer, "SSAO");
+
 					BeginDebugMarkerRegion(m_OffScreenCmdBuffer, "SSAO");
 
 					std::array<VkClearValue, 1> ssaoClearValues = {};
@@ -7213,6 +7208,8 @@ namespace flex
 
 						EndDebugMarkerRegion(m_OffScreenCmdBuffer);
 					}
+
+					EndGPUTimeStamp(m_OffScreenCmdBuffer, "SSAO");
 				}
 
 				EndGPUTimeStamp(m_OffScreenCmdBuffer, "Deferred");
@@ -7367,12 +7364,15 @@ namespace flex
 				EndDebugMarkerRegion(commandBuffer);
 
 				EndGPUTimeStamp(commandBuffer, "Post Process");
+			}
 
 			const FrameBufferAttachment& offscreenBuffer0 = m_OffscreenFrameBuffer0->frameBufferAttachments[0].second;
 			const FrameBufferAttachment& offscreenBuffer1 = m_OffscreenFrameBuffer1->frameBufferAttachments[0].second;
 
 			if (m_bEnableTAA)
 			{
+				BeginGPUTimeStamp(commandBuffer, "TAA");
+
 				// m_OffscreenFrameBuffer0 was being read from by post process, now needs to be written to again
 				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, offscreenBuffer0.image, offscreenBuffer0.format,
 					VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1, commandBuffer, false);
@@ -7383,6 +7383,8 @@ namespace flex
 					m_TAAResolveGraphicsPipelineLayout, m_TAAResolveGraphicsPipeline, m_TAAResolveDescriptorSet, true);
 
 				EndDebugMarkerRegion(commandBuffer);
+
+				EndGPUTimeStamp(commandBuffer, "TAA");
 
 				m_HistoryBuffer->TransitionToLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, commandBuffer);
 
