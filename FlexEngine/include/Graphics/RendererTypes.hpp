@@ -149,6 +149,7 @@ namespace flex
 	const u64 U_POST_PROCESS_MAT				= (1ull << 55); const u32 US_POST_PROCESS_MAT			= sizeof(glm::mat4);
 	const u64 U_SCENE_SAMPLER					= (1ull << 56);
 	const u64 U_HISTORY_SAMPLER					= (1ull << 57);
+	const u64 U_LAST_FRAME_VIEWPROJ				= (1ull << 58); const u32 US_LAST_FRAME_VIEWPROJ		= sizeof(glm::mat4);
 	// NOTE!: New uniforms must be added to Uniforms::CalculateSizeInBytes
 
 	enum class ClearFlag

@@ -415,6 +415,8 @@ namespace flex
 
 			i32 m_DeferredQuadVertexBufferIndex = -1;
 
+			glm::mat4 m_LastFrameViewProj;
+
 			bool m_bPostInitialized = false;
 			bool m_bSwapChainNeedsRebuilding = false;
 

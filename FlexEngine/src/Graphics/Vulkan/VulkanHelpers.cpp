@@ -1205,6 +1205,11 @@ namespace flex
 		void TransitionImageLayout(VulkanDevice* device, VkQueue graphicsQueue, VkImage image, VkFormat format, VkImageLayout oldLayout,
 			VkImageLayout newLayout, u32 mipLevels, VkCommandBuffer optCmdBuf /* = VK_NULL_HANDLE */, bool bIsDepthTexture /* = false */)
 		{
+			if (oldLayout == newLayout)
+			{
+				return;
+			}
+
 			VkCommandBuffer commandBuffer = optCmdBuf;
 			if (commandBuffer == VK_NULL_HANDLE)
 			{
@@ -2095,6 +2100,7 @@ namespace flex
 		void FrameBufferAttachment::TransitionToLayout(VkImageLayout newLayout, VkQueue graphicsQueue, VkCommandBuffer optCmdBuf /* = VK_NULL_HANDLE */)
 		{
 			TransitionImageLayout(device, graphicsQueue, image, format, layout, newLayout, 1, optCmdBuf, bIsDepth);
+			layout = newLayout;
 		}
 
 		void FrameBufferAttachment::CreateImage(u32 inWidth /* = 0 */, u32 inHeight /* = 0 */)

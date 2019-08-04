@@ -1815,8 +1815,13 @@ namespace flex
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV;
 
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW_INV);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PROJECTION_INV);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_LAST_FRAME_VIEWPROJ);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SCENE_SAMPLER);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_HISTORY_SAMPLER);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_DEPTH_SAMPLER);
 
 			m_BaseShaders[shaderID].dynamicBufferUniforms = {};
 			++shaderID;

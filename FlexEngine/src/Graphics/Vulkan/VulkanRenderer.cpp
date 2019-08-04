@@ -1401,6 +1401,8 @@ namespace flex
 
 				m_TimestampQueryNames.clear();
 			}
+
+			m_LastFrameViewProj = g_CameraManager->CurrentCamera()->GetViewProjection();
 		}
 
 		void VulkanRenderer::Draw()
@@ -5306,12 +5308,6 @@ namespace flex
 				*&createInfo->shadowSampler,
 				nullptr },
 
-				//{ U_TEX_ARRAY, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				//VK_NULL_HANDLE, 0,
-				//*&createInfo->texArrayView,
-				//*&createInfo->texArraySampler,
-				//nullptr },
-
 				{ U_SCENE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
 				*&createInfo->sceneImageView,
@@ -5889,9 +5885,8 @@ namespace flex
 				{
 					attachmentDescs[i] = vks::attachmentDescription(m_GBufferFrameBuf->frameBufferAttachments[i].second.format, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 				}
-				// NOTE: Don't use auto-transition (to shader_read_only) because we want to use it multiple times (?)
-				// OPTIMIZE: Potentially could figure out how to use auto transition for this
-				attachmentDescs[frameBufferColorAttachmentCount] = vks::attachmentDescription(m_GBufferDepthAttachment->format, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+				// Depth is read by SSAO after gbuffer fill
+				attachmentDescs[frameBufferColorAttachmentCount] = vks::attachmentDescription(m_GBufferDepthAttachment->format, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 				std::vector<VkAttachmentReference> colorReferences;
 				for (u32 i = 0; i < frameBufferColorAttachmentCount; ++i)
@@ -7092,8 +7087,9 @@ namespace flex
 
 				vkCmdEndRenderPass(m_OffScreenCmdBuffer);
 
-				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_GBufferDepthAttachment->image, m_GBufferDepthAttachment->format,
-					VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, m_OffScreenCmdBuffer, true);
+				// NOTE: Layout is auto transitioned from render pass
+				// TODO: Somehow handle this automatically?
+				m_GBufferDepthAttachment->layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 				EndDebugMarkerRegion(m_OffScreenCmdBuffer);
 
@@ -7251,26 +7247,21 @@ namespace flex
 
 				// m_GBufferDepthAttachment was being read by SSAO, now needs to be copied to m_SwapChainDepthAttachment for forward rendering
 
-				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_GBufferDepthAttachment->image, m_GBufferDepthAttachment->format,
-					VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 1, commandBuffer, true);
+				m_GBufferDepthAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, m_GraphicsQueue, commandBuffer);
 
 				// m_OffscreenDepthAttachment0 is empty, needs to be copied into from data generated in gbuffer fill pass
 				// NOTE: Handled by m_DeferredCombineRenderPass
-				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_OffscreenDepthAttachment0->image, m_OffscreenDepthAttachment0->format,
-					VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, commandBuffer);
+				m_OffscreenDepthAttachment0->TransitionToLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, m_GraphicsQueue, commandBuffer);
 
 				// TODO: Blit here instead when supported
 				CopyImage(m_VulkanDevice, m_GraphicsQueue, m_GBufferDepthAttachment->image, m_OffscreenDepthAttachment0->image,
 					m_SwapChainExtent.width, m_SwapChainExtent.height, commandBuffer, VK_IMAGE_ASPECT_DEPTH_BIT);
 
-				// m_OffscreenDepthAttachment0 was copied into, now will be written to in forward pass
-				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_OffscreenDepthAttachment0->image, m_OffscreenDepthAttachment0->format,
-					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1, commandBuffer);
+				// m_GBufferDepthAttachment has been copied out of, now must be transitioned back to read only for TAA resolve
+				m_GBufferDepthAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_GraphicsQueue, commandBuffer);
 
-				// m_GBufferDepthAttachment has been copied out of, now must be transitioned back for next frame
-				// TODO: Set initial layout in render pass?
-				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, m_GBufferDepthAttachment->image, m_GBufferDepthAttachment->format,
-					VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1, commandBuffer, true);
+				// m_OffscreenDepthAttachment0 was copied into, now will be written to in forward pass
+				m_OffscreenDepthAttachment0->TransitionToLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, m_GraphicsQueue, commandBuffer);
 
 				EndDebugMarkerRegion(commandBuffer);
 			}
@@ -7453,6 +7444,11 @@ namespace flex
 
 				vkCmdEndRenderPass(commandBuffer);
 			}
+			
+			// GBuffer depth is auto transitioned back to DS optimal for next frame
+			// TODO: Track automatically somehow
+			m_GBufferDepthAttachment->layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
 			EndDebugMarkerRegion(commandBuffer);
 
 			EndGPUTimeStamp(commandBuffer, "Forward");
@@ -7947,6 +7943,7 @@ namespace flex
 				{ U_VIEW_PROJECTION, (void*)&viewProjection, US_VIEW_PROJECTION },
 				{ U_PROJECTION, (void*)&projection, US_PROJECTION },
 				{ U_PROJECTION_INV, (void*)&projectionInv, US_PROJECTION_INV },
+				{ U_LAST_FRAME_VIEWPROJ, (void*)&m_LastFrameViewProj, US_LAST_FRAME_VIEWPROJ },
 				{ U_DIR_LIGHT, (void*)dirLightData, US_DIR_LIGHT },
 				{ U_POINT_LIGHTS, (void*)m_PointLights, US_POINT_LIGHTS },
 				{ U_TIME, (void*)&g_SecElapsedSinceProgramStart, US_TIME },

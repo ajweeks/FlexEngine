@@ -58,6 +58,7 @@ namespace flex
 			_u(SHADOW_SAMPLING_DATA)
 			_u(NEAR_FAR_PLANES)
 			_u(POST_PROCESS_MAT)
+			_u(LAST_FRAME_VIEWPROJ)
 #undef _u
 		}
 
