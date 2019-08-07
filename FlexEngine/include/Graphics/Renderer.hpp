@@ -231,6 +231,8 @@ namespace flex
 
 		bool IsTAAEnabled() const;
 
+		i32 GetTAASampleCount() const;
+
 		bool bFontWindowShowing = false;
 		bool bUniformBufferWindowShowing = false;
 		bool bGPUTimingsWindowShowing = false;
@@ -411,7 +413,7 @@ namespace flex
 		SSAOGenData m_SSAOGenData;
 		SSAOBlurDataConstant m_SSAOBlurDataConstant;
 		SSAOBlurDataDynamic m_SSAOBlurDataDynamic;
-		u32 m_SSAOKernelSize = MAX_SSAO_KERNEL_SIZE;
+		i32 m_SSAOKernelSize = MAX_SSAO_KERNEL_SIZE;
 		i32 m_SSAOBlurSamplePixelOffset;
 		SSAOSamplingData m_SSAOSamplingData;
 		glm::vec2u m_SSAORes;
@@ -419,6 +421,9 @@ namespace flex
 		bool m_bSSAOStateChanged = false;
 
 		bool m_bEnableTAA = true;
+
+		i32 m_TAASampleCount = 8;
+		bool m_bTAAStateChanged = false;
 
 		FXAAData m_FXAAData;
 

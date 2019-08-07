@@ -995,6 +995,11 @@ namespace flex
 				isinf(quat.x) || isinf(quat.y) || isinf(quat.z) || isinf(quat.w));
 	}
 
+	real RoundToNearestPowerOfTwo(real num)
+	{
+		return pow(2.0f, ceil(log(num) / log(2.0f) - 0.5f));
+	}
+
 	std::string GetIncrementedPostFixedStr(const std::string& namePrefix, const std::string& defaultName)
 	{
 		if (namePrefix.empty())

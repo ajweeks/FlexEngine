@@ -44,7 +44,7 @@ namespace flex
 		real brightness; // 28
 	};
 
-	const u32 MAX_SSAO_KERNEL_SIZE = 64;
+	const i32 MAX_SSAO_KERNEL_SIZE = 64;
 	// 1028 bytes
 	struct SSAOGenData
 	{

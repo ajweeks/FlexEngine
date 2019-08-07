@@ -118,6 +118,8 @@ namespace flex
 	bool IsNanOrInf(const glm::vec4& vec);
 	bool IsNanOrInf(const glm::quat& quat);
 
+	real RoundToNearestPowerOfTwo(real num);
+
 	std::string GetIncrementedPostFixedStr(const std::string& namePrefix, const std::string& defaultName);
 
 	void PadEnd(std::string& str, i32 minLen, char pad);

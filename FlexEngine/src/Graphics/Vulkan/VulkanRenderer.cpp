@@ -347,11 +347,17 @@ namespace flex
 
 			m_FullScreenTriVertexBuffer = new VulkanBuffer(m_VulkanDevice->m_LogicalDevice);
 
-			m_SSAOSpecializationMapEntry = { 0, 0, sizeof(u32) };
+			m_SSAOSpecializationMapEntry = { 0, 0, sizeof(i32) };
 			m_SSAOSpecializationInfo.mapEntryCount = 1;
 			m_SSAOSpecializationInfo.pMapEntries = &m_SSAOSpecializationMapEntry;
 			m_SSAOSpecializationInfo.pData = &m_SSAOKernelSize;
-			m_SSAOSpecializationInfo.dataSize = sizeof(u32);
+			m_SSAOSpecializationInfo.dataSize = sizeof(i32);
+
+			m_TAASpecializationMapEntry = { 0, 0, sizeof(i32) };
+			m_TAAOSpecializationInfo.mapEntryCount = 1;
+			m_TAAOSpecializationInfo.pMapEntries = &m_TAASpecializationMapEntry;
+			m_TAAOSpecializationInfo.pData = &m_TAASampleCount;
+			m_TAAOSpecializationInfo.dataSize = sizeof(i32);
 
 			Renderer::InitializeMaterials();
 
@@ -1250,7 +1256,7 @@ namespace flex
 				GraphicsPipelineCreateInfo createInfo = {};
 				createInfo.DBG_Name = "Post process pipeline";
 				createInfo.graphicsPipeline = m_PostProcessGraphicsPipeline.replace();
-				createInfo.pipelineLayout = &m_PostProcessGraphicsPipelineLayout;
+				createInfo.pipelineLayout = m_PostProcessGraphicsPipelineLayout.replace();
 				createInfo.renderPass = m_PostProcessRenderPass;
 				createInfo.shaderID = postProcessMat.material.shaderID;
 				createInfo.vertexAttributes = m_FullScreenTriVertexBufferData.Attributes;
@@ -1267,8 +1273,8 @@ namespace flex
 
 				GraphicsPipelineCreateInfo createInfo = {};
 				createInfo.DBG_Name = "TAA Resolve pipeline";
-				createInfo.graphicsPipeline = &m_TAAResolveGraphicsPipeline;
-				createInfo.pipelineLayout = &m_TAAResolveGraphicsPipelineLayout;
+				createInfo.graphicsPipeline = m_TAAResolveGraphicsPipeline.replace();
+				createInfo.pipelineLayout = m_TAAResolveGraphicsPipelineLayout.replace();
 				createInfo.renderPass = m_TAAResolveRenderPass;
 				createInfo.shaderID = taaResolveMat.material.shaderID;
 				createInfo.vertexAttributes = m_FullScreenTriVertexBufferData.Attributes;
@@ -1276,6 +1282,7 @@ namespace flex
 				createInfo.bSetDynamicStates = true;
 				createInfo.depthTestEnable = VK_FALSE;
 				createInfo.depthWriteEnable = VK_FALSE;
+				createInfo.fragSpecializationInfo = &m_TAAOSpecializationInfo;
 				CreateGraphicsPipeline(&createInfo);
 			}
 
@@ -1285,8 +1292,8 @@ namespace flex
 
 				GraphicsPipelineCreateInfo createInfo = {};
 				createInfo.DBG_Name = "Gamma Correct pipeline";
-				createInfo.graphicsPipeline = &m_GammaCorrectGraphicsPipeline;
-				createInfo.pipelineLayout = &m_GammaCorrectGraphicsPipelineLayout;
+				createInfo.graphicsPipeline = m_GammaCorrectGraphicsPipeline.replace();
+				createInfo.pipelineLayout = m_GammaCorrectGraphicsPipelineLayout.replace();
 				createInfo.renderPass = m_GammaCorrectRenderPass;
 				createInfo.shaderID = gammaCorrectMat.material.shaderID;
 				createInfo.vertexAttributes = m_FullScreenTriVertexBufferData.Attributes;
@@ -1375,6 +1382,13 @@ namespace flex
 				CreateGraphicsPipeline(m_GBufferQuadRenderID, false);
 				// Update SSAO pipelines in case kernel size changed
 				CreateSSAOPipelines();
+			}
+
+			if (m_bTAAStateChanged)
+			{
+				m_bTAAStateChanged = false;
+
+				CreatePostProcessingObjects();
 			}
 
 			m_PhysicsDebugDrawer->UpdateDebugMode();

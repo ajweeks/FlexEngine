@@ -251,8 +251,8 @@ namespace flex
 
 	void BaseCamera::JitterMatrix(glm::mat4& matrix)
 	{
-		// Sub-sample positions for 16x TAA
-		static const glm::vec2 SAMPLE_LOCS_16[16] = {
+		static const glm::vec2 SAMPLE_LOCS_16[16] =
+		{
 			glm::vec2(-8.0f, 0.0f) / 8.0f,
 			glm::vec2(-6.0f, -4.0f) / 8.0f,
 			glm::vec2(-3.0f, -2.0f) / 8.0f,
@@ -268,10 +268,11 @@ namespace flex
 			glm::vec2(-1.0f, 3.0f) / 8.0f,
 			glm::vec2(-4.0f, 6.0f) / 8.0f,
 			glm::vec2(-7.0f, 8.0f) / 8.0f,
-			glm::vec2(-5.0f, 2.0f) / 8.0f };
+			glm::vec2(-5.0f, 2.0f) / 8.0f
+		};
 
-		// Sub-sample positions for 8x TAA
-		static const glm::vec2 SAMPLE_LOCS_8[8] = {
+		static const glm::vec2 SAMPLE_LOCS_8[8] =
+		{
 			glm::vec2(-7.0f, 1.0f) / 8.0f,
 			glm::vec2(-5.0f, -5.0f) / 8.0f,
 			glm::vec2(-1.0f, -3.0f) / 8.0f,
@@ -279,21 +280,29 @@ namespace flex
 			glm::vec2(5.0f, -1.0f) / 8.0f,
 			glm::vec2(7.0f, 7.0f) / 8.0f,
 			glm::vec2(1.0f, 3.0f) / 8.0f,
-			glm::vec2(-3.0f, 5.0f) / 8.0f };
+			glm::vec2(-3.0f, 5.0f) / 8.0f
+		};
 
-		bool bHigherSampleCount = false;
+		static const glm::vec2 SAMPLE_LOCS_4[4] =
+		{
+			glm::vec2(-7.0f, 1.0f) / 8.0f,
+			glm::vec2(-1.0f, -3.0f) / 8.0f,
+			glm::vec2(5.0f, -1.0f) / 8.0f,
+			glm::vec2(1.0f, 3.0f) / 8.0f,
+		};
 
-		const u32 sampleCount = bHigherSampleCount ? 16 : 8;
-		const glm::vec2* samples = bHigherSampleCount ? SAMPLE_LOCS_16 : SAMPLE_LOCS_8;
+		const i32 sampleCount = g_Renderer->GetTAASampleCount();
+		if (sampleCount <= 0)
+		{
+			return;
+		}
+
+		const glm::vec2* samples = (sampleCount == 16 ? SAMPLE_LOCS_16 : (sampleCount == 8 ? SAMPLE_LOCS_8 : SAMPLE_LOCS_4));
 
 		const glm::vec2i swapChainSize = g_Window->GetFrameBufferSize();
 		const unsigned subsampleIdx = g_Renderer->GetFramesRenderedCount() % sampleCount;
 
-		const glm::vec2 texSize(1.0f / (glm::vec2)swapChainSize);
-		const glm::vec2 subsampleSizeNDC = texSize / 2.0f;
-
-		glm::vec2 subsample = samples[subsampleIdx] * subsampleSizeNDC;
-		subsample *= 4.0f; // [-subsampleSizeNDC / 2, subsampleSizeNDC / 2]
+		glm::vec2 subsample = samples[subsampleIdx] / (2.0f * (glm::vec2)swapChainSize);
 
 		glm::mat4 jitterMat = glm::translate(MAT4_IDENTITY, glm::vec3(subsample.x, subsample.y, 0.0f));
 		matrix = jitterMat * matrix;

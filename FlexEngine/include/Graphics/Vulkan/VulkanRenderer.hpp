@@ -543,9 +543,13 @@ namespace flex
 			VkDescriptorSet m_SSAOBlurHDescSet = VK_NULL_HANDLE;
 			VkDescriptorSet m_SSAOBlurVDescSet = VK_NULL_HANDLE;
 			VDeleter<VkSampler> m_SSAOSampler;
-			VkSpecializationInfo m_SSAOSpecializationInfo;
-			VkSpecializationMapEntry m_SSAOSpecializationMapEntry;
 
+			// TODO: Create abstraction for specialization constants
+			VkSpecializationMapEntry m_SSAOSpecializationMapEntry;
+			VkSpecializationInfo m_SSAOSpecializationInfo;
+			VkSpecializationMapEntry m_TAASpecializationMapEntry;
+			VkSpecializationInfo m_TAAOSpecializationInfo;
+			
 			VDeleter<VkPipeline> m_SpriteArrGraphicsPipeline;
 			VDeleter<VkPipelineLayout> m_SpriteArrGraphicsPipelineLayout;
 

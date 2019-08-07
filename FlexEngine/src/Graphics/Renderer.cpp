@@ -630,6 +630,11 @@ namespace flex
 		return m_bEnableTAA;
 	}
 
+	i32 Renderer::GetTAASampleCount() const
+	{
+		return m_TAASampleCount;
+	}
+
 	void Renderer::EnqueueScreenSpaceSprites()
 	{
 		if (m_bDisplayShadowCascadePreview)
@@ -1018,7 +1023,7 @@ namespace flex
 					if (ImGui::SliderFloat("ISO", &currentCamera->lightSensitivity, 100.0f, 6400.0f))
 					{
 						// Round to nearest power of 2 * 100
-						currentCamera->lightSensitivity = pow(2.0f, ceil(log(currentCamera->lightSensitivity / 100.0f) / log(2.0f) - 0.5f)) * 100.0f;
+						currentCamera->lightSensitivity = RoundToNearestPowerOfTwo(currentCamera->lightSensitivity / 100.0f) * 100.0f;
 						currentCamera->CalculateExposure();
 					}
 				}
@@ -1074,6 +1079,12 @@ namespace flex
 			ImGui::Checkbox("TAA", &m_bEnableTAA);
 
 			ImGui::PushItemWidth(150.0f);
+			if (ImGui::SliderInt("Sample Count", &m_TAASampleCount, 1, 16))
+			{
+				m_bTAAStateChanged = true;
+				m_TAASampleCount = (i32)RoundToNearestPowerOfTwo((real)m_TAASampleCount);
+			}
+
 			ImGui::Checkbox("FXAA", &m_PostProcessSettings.bEnableFXAA);
 
 			if (m_PostProcessSettings.bEnableFXAA)
@@ -1130,17 +1141,15 @@ namespace flex
 				}
 			}
 
-			i32 kernelSize = (i32)m_SSAOKernelSize;
-			if (ImGui::SliderInt("Kernel Size", &kernelSize, 1, 64))
+			if (ImGui::SliderInt("Kernel Size", &m_SSAOKernelSize, 1, 64))
 			{
-				m_SSAOKernelSize = (u32)kernelSize;
 				m_bSSAOStateChanged = true;
 			}
 			ImGui::SliderFloat("Radius", &m_SSAOGenData.radius, 0.0001f, 15.0f);
 			ImGui::SliderInt("Blur Radius", &m_SSAOBlurDataConstant.radius, 1, 16);
 			ImGui::SliderInt("Blur Offset Count", &m_SSAOBlurSamplePixelOffset, 1, 10);
 			ImGui::SliderFloat("Pow", &m_SSAOSamplingData.ssaoPowExp, 0.1f, 10.0f);
-
+			
 			ImGui::PopItemWidth();
 
 			ImGui::TreePop();

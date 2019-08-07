@@ -15,6 +15,8 @@ layout (binding = 1) uniform sampler2D in_DepthBuffer;
 layout (binding = 2) uniform sampler2D in_SceneTexture;
 layout (binding = 3) uniform sampler2D in_HistoryTexture;
 
+layout (constant_id = 0) const int TAA_SAMPLE_COUNT = 8;
+
 vec3 ReconstructWSPosFromDepth(vec2 uv, float depth)
 {
 	float x = uv.x * 2.0 - 1.0;
@@ -42,13 +44,28 @@ void main()
 
 	vec2 historyUV = lastFrameHCPos.xy * 0.5 + 0.5;
 
+	// float maxUVDist = 2.0;
+	// float alpha = mix(1/4.0, 1.0, clamp(length(historyUV - ex_TexCoord) / maxUVDist, 0.0, 1.0));
+
+	float alpha = 1.0 / TAA_SAMPLE_COUNT;
+
+	// if (historyUV.x - ex_TexCoord.x > 2.0) historyUV.x = ex_TexCoord.x + 2.0;
+	// else if (historyUV.x - ex_TexCoord.x < -2.0) historyUV.x = ex_TexCoord.x - 2.0;
+
+	// if (historyUV.y - ex_TexCoord.y > 2.0) historyUV.y = ex_TexCoord.y + 2.0;
+	// else if (historyUV.y - ex_TexCoord.y < -2.0) historyUV.y = ex_TexCoord.y - 2.0;
+
 	vec3 sceneCol = texture(in_SceneTexture, ex_TexCoord).rgb;
 	vec3 historyCol = texture(in_HistoryTexture, historyUV).rgb;
 
-	float alpha = 1/8.0;
+	if (historyUV.x > 1.0 || historyUV.x < 0.0 || historyUV.y > 1.0 || historyUV.y < 0.0)
+	{
+		alpha = 1.0;
+	}
 
 	// Ignore samples which differ in color too much
-	if (abs(luminence(sceneCol) - luminence(historyCol)) > 0.05) alpha = 1.0;
+	// if (abs(luminence(sceneCol) - luminence(historyCol)) > 0.1) alpha = 1.0;
 
 	out_Color = vec4(mix(historyCol, sceneCol, alpha), 1.0);
+	// out_Color = vec4(abs(historyCol - sceneCol), 1.0);
 }
