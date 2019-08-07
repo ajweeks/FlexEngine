@@ -296,7 +296,7 @@ namespace flex
 		subsample *= 4.0f; // [-subsampleSizeNDC / 2, subsampleSizeNDC / 2]
 
 		glm::mat4 jitterMat = glm::translate(MAT4_IDENTITY, glm::vec3(subsample.x, subsample.y, 0.0f));
-		matrix = matrix * jitterMat;
+		matrix = jitterMat * matrix;
 	}
 
 	void BaseCamera::ClampPitch()
