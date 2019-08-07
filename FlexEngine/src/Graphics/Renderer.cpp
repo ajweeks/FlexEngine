@@ -1073,6 +1073,7 @@ namespace flex
 		{
 			ImGui::Checkbox("TAA", &m_bEnableTAA);
 
+			ImGui::PushItemWidth(150.0f);
 			ImGui::Checkbox("FXAA", &m_PostProcessSettings.bEnableFXAA);
 
 			if (m_PostProcessSettings.bEnableFXAA)
@@ -1083,7 +1084,7 @@ namespace flex
 			}
 
 			real maxBrightness = 2.5f;
-			ImGui::SliderFloat3("Brightness (RGB)", &m_PostProcessSettings.brightness.r, 0.0f, maxBrightness);
+			ImGui::SliderFloat3("Brightness", &m_PostProcessSettings.brightness.r, 0.0f, maxBrightness);
 			ImGui::SameLine();
 			ImGui::ColorButton("##1", ImVec4(
 				m_PostProcessSettings.brightness.r / maxBrightness,
@@ -1092,7 +1093,7 @@ namespace flex
 
 			real minOffset = -0.065f;
 			real maxOffset = 0.065f;
-			ImGui::SliderFloat3("Offset (RGB)", &m_PostProcessSettings.offset.r, minOffset, maxOffset);
+			ImGui::SliderFloat3("Offset", &m_PostProcessSettings.offset.r, minOffset, maxOffset);
 			ImGui::SameLine();
 			ImGui::ColorButton("##2", ImVec4(
 				(m_PostProcessSettings.offset.r - minOffset) / (maxOffset - minOffset),
@@ -1139,6 +1140,8 @@ namespace flex
 			ImGui::SliderInt("Blur Radius", &m_SSAOBlurDataConstant.radius, 1, 16);
 			ImGui::SliderInt("Blur Offset Count", &m_SSAOBlurSamplePixelOffset, 1, 10);
 			ImGui::SliderFloat("Pow", &m_SSAOSamplingData.ssaoPowExp, 0.1f, 10.0f);
+
+			ImGui::PopItemWidth();
 
 			ImGui::TreePop();
 		}

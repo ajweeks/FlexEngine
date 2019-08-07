@@ -228,7 +228,6 @@ namespace flex
 #endif
 	}
 
-	// TODO: Measure impact of calling this every frame (optimize? Only call when values change? Only update changed values)
 	void BaseCamera::RecalculateViewProjection()
 	{
 		const glm::vec2 windowSize = g_Window->GetSize();
@@ -239,7 +238,7 @@ namespace flex
 
 		m_View = glm::lookAt(m_Position, m_Position + m_Forward, m_Up);
 
-		real aspectRatio = windowSize.x / (real)windowSize.y;
+		real aspectRatio = (real)windowSize.x / (real)windowSize.y;
 		m_Proj = glm::perspective(m_FOV, aspectRatio, m_ZFar, m_ZNear);
 
 		m_ViewProjection = m_Proj * m_View;
@@ -248,8 +247,8 @@ namespace flex
 		{
 			JitterMatrix(m_ViewProjection);
 		}
-
 	}
+
 	void BaseCamera::JitterMatrix(glm::mat4& matrix)
 	{
 		// Sub-sample positions for 16x TAA
