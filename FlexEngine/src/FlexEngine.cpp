@@ -910,6 +910,7 @@ namespace flex
 			{
 				m_TransformGizmo->SetVisible(true);
 				UpdateGizmoVisibility();
+				CalculateSelectedObjectsCenter();
 				m_TransformGizmo->GetTransform()->SetWorldPosition(m_SelectedObjectsCenterPos);
 				m_TransformGizmo->GetTransform()->SetWorldRotation(m_SelectedObjectRotation);
 			}
