@@ -662,6 +662,7 @@ namespace flex
 			renderObjectCreateInfo.bDepthWriteEnable = optionalCreateInfo->bDepthWriteEnable;
 			renderObjectCreateInfo.bDepthTestEnable = optionalCreateInfo->bDepthTestEnable;
 			renderObjectCreateInfo.bEditorObject = optionalCreateInfo->bEditorObject;
+			renderObjectCreateInfo.bSetDynamicStates = optionalCreateInfo->bSetDynamicStates;
 
 			if (optionalCreateInfo->vertexBufferData != nullptr)
 			{
