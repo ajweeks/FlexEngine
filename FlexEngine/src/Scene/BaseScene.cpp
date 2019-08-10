@@ -331,14 +331,9 @@ namespace flex
 		{
 			for (GameObject* gameObject : m_ObjectsToDestroyAtEndOfFrame)
 			{
-				auto iter = std::find(m_RootObjects.begin(), m_RootObjects.end(), gameObject);
-				if (iter == m_RootObjects.end())
+				if (!DestroyGameObject(gameObject, true))
 				{
 					PrintWarn("Attempted to remove game object from scene which doesn't exist! %s\n", gameObject->GetName().c_str());
-				}
-				else
-				{
-					DestroyGameObject(*iter, true);
 				}
 			}
 			m_ObjectsToDestroyAtEndOfFrame.clear();
