@@ -550,18 +550,6 @@
 					}
 				},
 				{
-					"name" : "Skybox 2",
-					"type" : "skybox",
-					"visible" : true,
-					"transform" : 
-					{
-					},
-					"material" : "skybox 02",
-					"skybox info" : 
-					{
-					}
-				},
-				{
 					"name" : "Reflection Probe 02",
 					"type" : "reflection probe",
 					"visible" : true,
@@ -610,18 +598,6 @@
 						"brightness" : 1.000000,
 						"cast shadows" : true,
 						"shadow darkness" : 0.000000
-					}
-				},
-				{
-					"name" : "Skybox 2",
-					"type" : "skybox",
-					"visible" : true,
-					"transform" : 
-					{
-					},
-					"material" : "skybox 02",
-					"skybox info" : 
-					{
 					}
 				},
 				{
