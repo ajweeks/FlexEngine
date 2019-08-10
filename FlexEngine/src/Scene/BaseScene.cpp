@@ -290,8 +290,7 @@ namespace flex
 
 	void BaseScene::Update()
 	{
-		const char* profileBlockName = "Update Scene";
-		PROFILE_BEGIN(profileBlockName);
+		PROFILE_BEGIN("Update Scene");
 
 		if (m_PhysicsWorld)
 		{
@@ -321,7 +320,7 @@ namespace flex
 
 		m_TrackManager.DrawDebug();
 
-		PROFILE_END(profileBlockName);
+		PROFILE_END("Update Scene");
 	}
 
 	void BaseScene::LateUpdate()
