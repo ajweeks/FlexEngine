@@ -7907,9 +7907,9 @@ namespace flex
 		{
 			BaseCamera* cam = g_CameraManager->CurrentCamera();
 			glm::mat4 projection = cam->GetProjection();
-			glm::mat4 projectionInv = glm::inverse(projection);
+			glm::mat4 projectionInv; // Calculated below
 			glm::mat4 view = cam->GetView();
-			glm::mat4 viewInv = glm::inverse(view);
+			glm::mat4 viewInv; // Calculated below
 			glm::mat4 viewProjection = cam->GetViewProjection();
 			glm::vec4 camPos = glm::vec4(cam->GetPosition(), 0.0f);
 			real exposure = cam->exposure;
@@ -7954,10 +7954,10 @@ namespace flex
 				{
 					camPos = overridenUniforms->camPos;
 				}
-
-				viewInv = glm::inverse(view);
-				projectionInv = glm::inverse(projection);
 			}
+
+			viewInv = glm::inverse(view);
+			projectionInv = glm::inverse(projection);
 
 			UniformInfo uniformInfos[] = {
 				{ U_CAM_POS, (void*)&camPos, US_CAM_POS },
@@ -8040,7 +8040,6 @@ namespace flex
 			}
 
 			glm::mat4 model = inModel;
-			glm::mat4 modelInvTranspose = glm::transpose(glm::inverse(model));
 			glm::mat4 projection = g_CameraManager->CurrentCamera()->GetProjection();
 			glm::mat4 view = g_CameraManager->CurrentCamera()->GetView();
 			glm::mat4 viewProj = projection * view;
