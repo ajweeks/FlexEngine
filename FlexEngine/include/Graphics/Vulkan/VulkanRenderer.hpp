@@ -220,6 +220,7 @@ namespace flex
 
 			// Returns a pointer into m_LoadedTextures if a texture has been loaded from that file path, otherwise returns nullptr
 			VulkanTexture* GetLoadedTexture(const std::string& filePath);
+			bool RemoveLoadedTexture(VulkanTexture* texture, bool bDestroy);
 			
 			void CreateStaticVertexBuffers();
 			void CreateDynamicVertexBuffers();

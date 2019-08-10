@@ -71,6 +71,9 @@ namespace flex
 			m_ShaderCompiler = new AsyncVulkanShaderCompiler(false);
 #endif
 
+			// TODO: Kick off texture load here (most importantly, environment maps)
+
+
 			m_RenderObjects.resize(MAX_NUM_RENDER_OBJECTS);
 
 			m_ClearColor = { 1.0f, 0.0f, 1.0f, 1.0f };
@@ -2652,13 +2655,8 @@ namespace flex
 				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 			m_CommandBufferManager.FlushCommandBuffer(layoutCmd, m_GraphicsQueue, true);
 
-
-			ShaderID equirectangularToCubeShaderID;
-			if (!GetShaderID(equirectangularToCubeMatCreateInfo.shaderName, equirectangularToCubeShaderID))
-			{
-				PrintError("Failed to find equirectangular_to_cube shader ID!\n");
-				return;
-			}
+			
+			ShaderID equirectangularToCubeShaderID = equirectangularToCubeMat.material.shaderID;
 			VulkanShader& equirectangularToCubeShader = m_Shaders[equirectangularToCubeShaderID];
 
 			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
@@ -5595,6 +5593,24 @@ namespace flex
 			}
 
 			return nullptr;
+		}
+
+		bool VulkanRenderer::RemoveLoadedTexture(VulkanTexture* texture, bool bDestroy)
+		{
+			for (auto iter = m_LoadedTextures.begin(); iter != m_LoadedTextures.end(); ++iter)
+			{
+				if (*iter == texture)
+				{
+					if (bDestroy)
+					{
+						delete *iter;
+					}
+					m_LoadedTextures.erase(iter);
+					return true;
+				}
+			}
+
+			return false;
 		}
 
 		void VulkanRenderer::CreateGraphicsPipeline(RenderID renderID, bool bSetCubemapRenderPass)
