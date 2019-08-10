@@ -6355,8 +6355,11 @@ namespace flex
 
 		void VulkanRenderer::PhysicsDebugRender()
 		{
+			// TODO: Re-enable once Vulkan physics debug renderer is implemented
+#if 0
 			btDiscreteDynamicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
 			physicsWorld->debugDrawWorld();
+#endif
 		}
 
 		void VulkanRenderer::CreateStaticVertexBuffers()
@@ -6905,15 +6908,15 @@ namespace flex
 						{
 							if (mat.material.pushConstantBlock->data != nullptr)
 							{
-							BaseCamera* cam = g_CameraManager->CurrentCamera();
-							mat.material.pushConstantBlock->SetData(cam->GetView(), cam->GetProjection());
-						}
+								BaseCamera* cam = g_CameraManager->CurrentCamera();
+								mat.material.pushConstantBlock->SetData(cam->GetView(), cam->GetProjection());
+							}
 						}
 						if (mat.material.pushConstantBlock->data != nullptr)
 						{
-						VkShaderStageFlags stages = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-						vkCmdPushConstants(commandBuffer, pipelineLayout, stages, 0, pushConstantBlock->size, pushConstantBlock->data);
-					}
+							VkShaderStageFlags stages = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+							vkCmdPushConstants(commandBuffer, pipelineLayout, stages, 0, pushConstantBlock->size, pushConstantBlock->data);
+						}
 					}
 
 					if (renderObject->bIndexed)

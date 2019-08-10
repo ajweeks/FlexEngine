@@ -318,7 +318,9 @@ namespace flex
 			}
 		}
 
+#if 0 // TODO: Re-enable and optimize once Vulkan physics debug drawer is implemented
 		m_TrackManager.DrawDebug();
+#endif
 
 		PROFILE_END("Update Scene");
 	}
