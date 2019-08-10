@@ -18,22 +18,12 @@ namespace flex
 		metaData.bitmapFont = this;
 		assert(metaData.size > 0);
 		assert(charCount > 0);
-
-		// TODO: Is this needed? (double check in release config)
-		//for (i32 i = 0; i < CHAR_COUNT; ++i)
-		//{
-		//	m_CharTable[i].kerning = std::map<std::wstring, glm::vec2>();
-		//}
 	}
 
 	BitmapFont::~BitmapFont()
 	{
-		if (m_Texture != nullptr)
-		{
-			m_Texture->Destroy();
-			delete m_Texture;
-			m_Texture = nullptr;
-		}
+		delete m_Texture;
+		m_Texture = nullptr;
 	}
 
 	bool BitmapFont::IsCharValid(wchar_t character)

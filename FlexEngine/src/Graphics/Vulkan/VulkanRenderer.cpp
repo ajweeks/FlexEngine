@@ -3981,7 +3981,6 @@ namespace flex
 
 				for (VulkanTexture* highResTex : charTextures)
 				{
-					highResTex->Destroy();
 					delete highResTex;
 				}
 				charTextures.clear();

@@ -923,11 +923,6 @@ namespace flex
 			VulkanRenderer::SetSamplerName(device, *createInfo.sampler, createInfo.DBG_Name);
 		}
 
-		void VulkanTexture::Destroy()
-		{
-			// VDeleter wrappers handle destruction for us
-		}
-
 		bool VulkanTexture::SaveToFile(const std::string& absoluteFilePath, ImageFormat saveFormat)
 		{
 			assert(channelCount == 3 || channelCount == 4);

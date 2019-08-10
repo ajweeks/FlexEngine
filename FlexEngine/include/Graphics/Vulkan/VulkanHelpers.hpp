@@ -236,8 +236,6 @@ namespace flex
 			void TransitionToLayout(VkImageLayout newLayout, VkCommandBuffer optCommandBuffer = VK_NULL_HANDLE);
 			void CopyFromBuffer(VkBuffer buffer, u32 inWidth, u32 inHeight);
 
-			void Destroy();
-
 			bool SaveToFile(const std::string& absoluteFilePath, ImageFormat saveFormat);
 
 			void Build(void* data = nullptr);
