@@ -6903,11 +6903,17 @@ namespace flex
 						}
 						else
 						{
+							if (mat.material.pushConstantBlock->data != nullptr)
+							{
 							BaseCamera* cam = g_CameraManager->CurrentCamera();
 							mat.material.pushConstantBlock->SetData(cam->GetView(), cam->GetProjection());
 						}
+						}
+						if (mat.material.pushConstantBlock->data != nullptr)
+						{
 						VkShaderStageFlags stages = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 						vkCmdPushConstants(commandBuffer, pipelineLayout, stages, 0, pushConstantBlock->size, pushConstantBlock->data);
+					}
 					}
 
 					if (renderObject->bIndexed)
