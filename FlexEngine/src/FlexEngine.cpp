@@ -469,6 +469,7 @@ namespace flex
 		gizmoCreateInfo.depthTestReadFunc = DepthTestFunc::GEQUAL;
 		gizmoCreateInfo.bDepthWriteEnable = false;
 		gizmoCreateInfo.bEditorObject = true;
+		gizmoCreateInfo.bSetDynamicStates = true;
 		gizmoCreateInfo.cullFace = CullFace::BACK;
 
 		m_TransformGizmo = new GameObject("Transform gizmo", GameObjectType::_NONE);
