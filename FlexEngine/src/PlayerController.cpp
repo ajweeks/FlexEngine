@@ -630,86 +630,89 @@ namespace flex
 
 	EventReply PlayerController::OnActionEvent(Action action)
 	{
-		if (action == Action::ENTER_TRACK_BUILD_MODE)
+		if (m_Player->m_bPossessed)
 		{
-			if (m_Player->m_bPossessed && m_Player->m_TrackRidingID == InvalidTrackID)
+			if (action == Action::ENTER_TRACK_BUILD_MODE)
 			{
-				m_Player->m_bPlacingTrack = !m_Player->m_bPlacingTrack;
-				m_Player->m_bEditingTrack = false;
+				if (m_Player->m_TrackRidingID == InvalidTrackID)
+				{
+					m_Player->m_bPlacingTrack = !m_Player->m_bPlacingTrack;
+					m_Player->m_bEditingTrack = false;
+					return EventReply::CONSUMED;
+				}
+			}
+
+			if (action == Action::ENTER_TRACK_EDIT_MODE)
+			{
+				if (m_Player->m_TrackRidingID == InvalidTrackID)
+				{
+					m_Player->m_bEditingTrack = !m_Player->m_bEditingTrack;
+					m_Player->m_bPlacingTrack = false;
+					return EventReply::CONSUMED;
+				}
+			}
+
+			if (action == Action::COMPLETE_TRACK)
+			{
+				if (m_Player->m_TrackRidingID == InvalidTrackID)
+				{
+					m_bAttemptCompleteTrack = true;
+					return EventReply::CONSUMED;
+				}
+			}
+
+			if (action == Action::TOGGLE_TABLET)
+			{
+				m_Player->m_bTabletUp = !m_Player->m_bTabletUp;
 				return EventReply::CONSUMED;
 			}
-		}
 
-		if (action == Action::ENTER_TRACK_EDIT_MODE)
-		{
-			if (m_Player->m_bPossessed && m_Player->m_TrackRidingID == InvalidTrackID)
+			if (action == Action::PLACE_ITEM)
 			{
-				m_Player->m_bEditingTrack = !m_Player->m_bEditingTrack;
-				m_Player->m_bPlacingTrack = false;
+				if (!m_Player->m_Inventory.empty())
+				{
+					m_bAttemptPlaceItemFromInventory = true;
+					return EventReply::CONSUMED;
+				}
+			}
+
+			if (action == Action::INTERACT)
+			{
+				m_bAttemptInteract = true;
+				// TODO: Determine if we can interact with anything here to allow
+				// others to consume this event in the case we don't want it
 				return EventReply::CONSUMED;
 			}
-		}
 
-		if (action == Action::COMPLETE_TRACK)
-		{
-			if (m_Player->m_bPossessed && m_Player->m_TrackRidingID == InvalidTrackID)
+			// TODO: Set flags here and move "real" code to Update?
+			if (action == Action::DBG_ADD_CART_TO_INV)
 			{
-				m_bAttemptCompleteTrack = true;
+				BaseScene* scene = g_SceneManager->CurrentScene();
+				CartID cartID = scene->GetCartManager()->CreateCart(scene->GetUniqueObjectName("Cart_", 2));
+				Cart* cart = scene->GetCartManager()->GetCart(cartID);
+				cart->SetVisible(false);
+				m_Player->m_Inventory.push_back(cart);
 				return EventReply::CONSUMED;
 			}
-		}
 
-		if (g_InputManager->GetActionPressed(Action::TOGGLE_TABLET))
-		{
-			m_Player->m_bTabletUp = !m_Player->m_bTabletUp;
-			return EventReply::CONSUMED;
-		}
-
-		if (action == Action::PLACE_ITEM)
-		{
-			if (m_Player->m_bPossessed && !m_Player->m_Inventory.empty())
+			if (action == Action::DBG_ADD_ENGINE_CART_TO_INV)
 			{
-				m_bAttemptPlaceItemFromInventory = true;
+				BaseScene* scene = g_SceneManager->CurrentScene();
+				CartID cartID = scene->GetCartManager()->CreateEngineCart(scene->GetUniqueObjectName("EngineCart_", 2));
+				EngineCart* engineCart = static_cast<EngineCart*>(scene->GetCartManager()->GetCart(cartID));
+				engineCart->SetVisible(false);
+				m_Player->m_Inventory.push_back(engineCart);
 				return EventReply::CONSUMED;
 			}
-		}
 
-		if (action == Action::INTERACT)
-		{
-			m_bAttemptInteract = true;
-			// TODO: Determine if we can interact with anything here to allow
-			// others to consume this event in the case we don't want it
-			return EventReply::CONSUMED;
-		}
-
-		// TODO: Set flags here and move "real" code to Update?
-		if (action == Action::DBG_ADD_CART_TO_INV)
-		{
-			BaseScene* scene = g_SceneManager->CurrentScene();
-			CartID cartID = scene->GetCartManager()->CreateCart(scene->GetUniqueObjectName("Cart_", 2));
-			Cart* cart = scene->GetCartManager()->GetCart(cartID);
-			cart->SetVisible(false);
-			m_Player->m_Inventory.push_back(cart);
-			return EventReply::CONSUMED;
-		}
-
-		if (action == Action::DBG_ADD_ENGINE_CART_TO_INV)
-		{
-			BaseScene* scene = g_SceneManager->CurrentScene();
-			CartID cartID = scene->GetCartManager()->CreateEngineCart(scene->GetUniqueObjectName("EngineCart_", 2));
-			EngineCart* engineCart = static_cast<EngineCart*>(scene->GetCartManager()->GetCart(cartID));
-			engineCart->SetVisible(false);
-			m_Player->m_Inventory.push_back(engineCart);
-			return EventReply::CONSUMED;
-		}
-
-		if (action == Action::DBG_ADD_LIQUID_BOX_TO_INV)
-		{
-			MobileLiquidBox* box = new MobileLiquidBox();
-			g_SceneManager->CurrentScene()->AddObjectAtEndOFFrame(box);
-			box->SetVisible(false);
-			m_Player->m_Inventory.push_back(box);
-			return EventReply::CONSUMED;
+			if (action == Action::DBG_ADD_LIQUID_BOX_TO_INV)
+			{
+				MobileLiquidBox* box = new MobileLiquidBox();
+				g_SceneManager->CurrentScene()->AddObjectAtEndOFFrame(box);
+				box->SetVisible(false);
+				m_Player->m_Inventory.push_back(box);
+				return EventReply::CONSUMED;
+			}
 		}
 
 		return EventReply::UNCONSUMED;
