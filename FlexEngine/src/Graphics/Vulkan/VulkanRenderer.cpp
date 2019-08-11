@@ -437,6 +437,7 @@ namespace flex
 					m_SSAOMatID = InitializeMaterial(&ssaoMatCreateInfo);
 				}
 				assert(m_SSAOMatID != InvalidMaterialID);
+				m_SSAOShaderID = m_Materials[m_SSAOMatID].material.shaderID;
 
 				if (m_SSAOBlurMatID == InvalidMaterialID)
 				{
@@ -448,6 +449,7 @@ namespace flex
 					m_SSAOBlurMatID = InitializeMaterial(&ssaoBlurMatCreateInfo);
 				}
 				assert(m_SSAOBlurMatID != InvalidMaterialID);
+				m_SSAOBlurShaderID = m_Materials[m_SSAOBlurMatID].material.shaderID;
 
 				CreateSSAOPipelines();
 				CreateSSAODescriptorSets();
@@ -763,7 +765,6 @@ namespace flex
 			MaterialID matID = InvalidMaterialID;
 			if (matToReplace != InvalidMaterialID)
 			{
-				// TODO: Do any material destruction work here
 				matID = matToReplace;
 			}
 			else
@@ -786,8 +787,7 @@ namespace flex
 					PrintError("Material's shader not set! Shader name %s not found\n", createInfo->shaderName.c_str());
 				}
 
-				// TODO: Handle more gracefully (use placeholder shader)
-				return InvalidMaterialID;
+				return m_PlaceholderMaterialID;
 			}
 			VulkanShader& shader = m_Shaders[mat.material.shaderID];
 
@@ -3078,7 +3078,6 @@ namespace flex
 				}
 			}
 
-			// TODO: EZ: Use helper
 			SetImageLayout(
 				cmdBuf,
 				renderObjectMat.irradianceTexture,
@@ -7149,10 +7148,7 @@ namespace flex
 
 					vkCmdBeginRenderPass(m_OffScreenCmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-					// TODO: EZ: (erradicate all calls to GetShaderID)
-					ShaderID ssaoShaderID = InvalidShaderID;
-					GetShaderID("ssao", ssaoShaderID);
-					assert(ssaoShaderID != InvalidShaderID);
+					assert(m_SSAOShaderID != InvalidShaderID);
 
 					vkCmdBindPipeline(m_OffScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_SSAOGraphicsPipeline);
 
@@ -7162,7 +7158,7 @@ namespace flex
 					VkRect2D ssaoScissor = vks::scissor(0u, 0u, m_SSAOFrameBuf->width, m_SSAOFrameBuf->height);
 					vkCmdSetScissor(m_OffScreenCmdBuffer, 0, 1, &ssaoScissor);
 
-					BindDescriptorSet(&m_Shaders[ssaoShaderID], 0, m_OffScreenCmdBuffer, m_SSAOGraphicsPipelineLayout, m_SSAODescSet);
+					BindDescriptorSet(&m_Shaders[m_SSAOShaderID], 0, m_OffScreenCmdBuffer, m_SSAOGraphicsPipelineLayout, m_SSAODescSet);
 
 					vkCmdBindVertexBuffers(m_OffScreenCmdBuffer, 0, 1, &gBufferVertexIndexBuffer->vertexBuffer->m_Buffer, offsets);
 
@@ -7187,9 +7183,7 @@ namespace flex
 						// Horizontal pass
 						vkCmdBeginRenderPass(m_OffScreenCmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-						ShaderID ssaoBlurShaderID = InvalidShaderID;
-						GetShaderID("ssao_blur", ssaoBlurShaderID);
-						assert(ssaoBlurShaderID != InvalidShaderID);
+						assert(m_SSAOBlurShaderID != InvalidShaderID);
 
 						vkCmdBindPipeline(m_OffScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_SSAOBlurHGraphicsPipeline);
 
@@ -7199,7 +7193,7 @@ namespace flex
 						VkRect2D ssaoBlurScissor = vks::scissor(0u, 0u, m_SSAOBlurHFrameBuf->width, m_SSAOBlurHFrameBuf->height);
 						vkCmdSetScissor(m_OffScreenCmdBuffer, 0, 1, &ssaoBlurScissor);
 
-						BindDescriptorSet(&m_Shaders[ssaoBlurShaderID], 0 * m_DynamicAlignment, m_OffScreenCmdBuffer, m_SSAOBlurGraphicsPipelineLayout, m_SSAOBlurHDescSet);
+						BindDescriptorSet(&m_Shaders[m_SSAOBlurShaderID], 0 * m_DynamicAlignment, m_OffScreenCmdBuffer, m_SSAOBlurGraphicsPipelineLayout, m_SSAOBlurHDescSet);
 
 						vkCmdBindVertexBuffers(m_OffScreenCmdBuffer, 0, 1, &gBufferVertexIndexBuffer->vertexBuffer->m_Buffer, offsets);
 
@@ -7220,7 +7214,7 @@ namespace flex
 
 						vkCmdBindPipeline(m_OffScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_SSAOBlurVGraphicsPipeline);
 
-						BindDescriptorSet(&m_Shaders[ssaoBlurShaderID], 1 * m_DynamicAlignment, m_OffScreenCmdBuffer, m_SSAOBlurGraphicsPipelineLayout, m_SSAOBlurVDescSet);
+						BindDescriptorSet(&m_Shaders[m_SSAOBlurShaderID], 1 * m_DynamicAlignment, m_OffScreenCmdBuffer, m_SSAOBlurGraphicsPipelineLayout, m_SSAOBlurVDescSet);
 
 						overrides.bSSAOVerticalPass = true;
 						UpdateDynamicUniformBuffer(m_SSAOBlurMatID, 1 * m_DynamicAlignment, MAT4_IDENTITY, &overrides);

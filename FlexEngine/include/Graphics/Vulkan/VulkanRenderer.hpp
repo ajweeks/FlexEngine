@@ -533,7 +533,9 @@ namespace flex
 			u32 m_CurrentSwapChainBufferIndex = 0;
 
 			VulkanTexture* m_NoiseTexture = nullptr;
+			ShaderID m_SSAOShaderID = InvalidShaderID;
 			MaterialID m_SSAOMatID = InvalidMaterialID;
+			ShaderID m_SSAOBlurShaderID = InvalidShaderID;
 			MaterialID m_SSAOBlurMatID = InvalidMaterialID;
 			VDeleter<VkPipeline> m_SSAOGraphicsPipeline;
 			VDeleter<VkPipeline> m_SSAOBlurHGraphicsPipeline;
