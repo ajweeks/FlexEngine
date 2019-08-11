@@ -2796,6 +2796,7 @@ namespace flex
 		return strHeight;
 	}
 
+	// TODO: Consolidate with UpdateTextBufferWS
 	void Renderer::UpdateTextBufferSS(std::vector<TextVertex2D>& outTextVertices)
 	{
 		PROFILE_AUTO("Update Text Buffer SS");
@@ -2803,20 +2804,22 @@ namespace flex
 		glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 		real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
 
-		u32 totalCharCount = 0;
+		u32 charCountUpperBound = 0;
 		for (BitmapFont* font : m_FontsWS)
 		{
 			const std::vector<TextCache>& caches = font->GetTextCaches();
 			for (const TextCache& textCache : caches)
 			{
-				totalCharCount += textCache.str.length();
+				charCountUpperBound += textCache.str.length();
 			}
 		}
-		outTextVertices.reserve(totalCharCount); // Slightly high estimate due to whitespaces
+		outTextVertices.reserve(charCountUpperBound);
+
+		const real frameBufferScale = glm::max(2.0f / (real)frameBufferSize.x, 2.0f / (real)frameBufferSize.y);
 
 		for (BitmapFont* font : m_FontsSS)
 		{
-			real baseTextScale = glm::max(2.0f / (real)frameBufferSize.x, 2.0f / (real)frameBufferSize.y) * (font->metaData.size / 12.0f);
+			real baseTextScale = frameBufferScale * (font->metaData.size / 12.0f);
 
 			font->bufferStart = (i32)(outTextVertices.size());
 
@@ -2928,7 +2931,7 @@ namespace flex
 				}
 			}
 
-			font->bufferSize = (i32)(outTextVertices.size()) - font->bufferStart;
+			font->bufferSize = (i32)outTextVertices.size() - font->bufferStart;
 			font->ClearCaches();
 		}
 	}
@@ -2939,26 +2942,35 @@ namespace flex
 
 		PROFILE_AUTO("Update Text Buffer WS");
 
-		glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
-		//real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
+		const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+		const real frameBufferScale = glm::max(2.0f / (real)frameBufferSize.x, 2.0f / (real)frameBufferSize.y);
+
+		u32 charCountUpperBound = 0;
+		for (BitmapFont* font : m_FontsWS)
+		{
+			const std::vector<TextCache>& caches = font->GetTextCaches();
+			for (const TextCache& textCache : caches)
+			{
+				charCountUpperBound += textCache.str.length();
+			}
+		}
+		outTextVertices.reserve(charCountUpperBound);
 
 		for (BitmapFont* font : m_FontsWS)
 		{
-			real textScale = glm::max(2.0f / (real)frameBufferSize.x, 2.0f / (real)frameBufferSize.y) * (font->metaData.size / 12.0f);
+			real textScale = frameBufferScale * (font->metaData.size / 12.0f);
 
 			font->bufferStart = (i32)(outTextVertices.size());
 
 			const std::vector<TextCache>& caches = font->GetTextCaches();
 			for (const TextCache& textCache : caches)
 			{
-				std::string currentStr = textCache.str;
-
 				const glm::vec3 tangent = -glm::rotate(textCache.rot, VEC3_RIGHT);
 
 				real totalAdvanceX = 0;
 
 				char prevChar = ' ';
-				for (char c : currentStr)
+				for (char c : textCache.str)
 				{
 					if (BitmapFont::IsCharValid(c))
 					{
@@ -3019,7 +3031,7 @@ namespace flex
 				}
 			}
 
-			font->bufferSize = (i32)(outTextVertices.size()) - font->bufferStart;
+			font->bufferSize = (i32)outTextVertices.size() - font->bufferStart;
 			font->ClearCaches();
 		}
 	}
