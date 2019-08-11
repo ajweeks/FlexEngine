@@ -9,6 +9,7 @@ layout (binding = 0) uniform UBOConstant
 	mat4 invView;
 	mat4 invProj;
 	mat4 lastFrameViewProj;
+	float maxUVDist;
 } uboConstant;
 
 layout (binding = 1) uniform sampler2D in_DepthBuffer;
@@ -37,6 +38,7 @@ void main()
 {
 	float nonLinearDepth = texture(in_DepthBuffer, ex_TexCoord).r;
 	vec3 wsPos = ReconstructWSPosFromDepth(ex_TexCoord, nonLinearDepth);
+	ivec2 texSize = textureSize(in_SceneTexture, 0); 
 
 	vec4 lastFrameHCPos = uboConstant.lastFrameViewProj * vec4(wsPos, 1.0);
 	lastFrameHCPos.xyz /= lastFrameHCPos.w;
@@ -44,10 +46,11 @@ void main()
 
 	vec2 historyUV = lastFrameHCPos.xy * 0.5 + 0.5;
 
-	// float maxUVDist = 2.0;
-	// float alpha = mix(1/4.0, 1.0, clamp(length(historyUV - ex_TexCoord) / maxUVDist, 0.0, 1.0));
-
 	float alpha = 1.0 / TAA_SAMPLE_COUNT;
+
+	// Blend based on distance moved
+	float dUV = clamp((length((historyUV) - (ex_TexCoord)) - 1.0/texSize.x) / uboConstant.maxUVDist, 0.0, 1.0);
+	// alpha = mix(alpha, 1.0, dUV);
 
 	// if (historyUV.x - ex_TexCoord.x > 2.0) historyUV.x = ex_TexCoord.x + 2.0;
 	// else if (historyUV.x - ex_TexCoord.x < -2.0) historyUV.x = ex_TexCoord.x - 2.0;
@@ -58,6 +61,7 @@ void main()
 	vec3 sceneCol = texture(in_SceneTexture, ex_TexCoord).rgb;
 	vec3 historyCol = texture(in_HistoryTexture, historyUV).rgb;
 
+	// Ignore samples outside the frame buffer
 	if (historyUV.x > 1.0 || historyUV.x < 0.0 || historyUV.y > 1.0 || historyUV.y < 0.0)
 	{
 		alpha = 1.0;
@@ -68,4 +72,7 @@ void main()
 
 	out_Color = vec4(mix(historyCol, sceneCol, alpha), 1.0);
 	// out_Color = vec4(abs(historyCol - sceneCol), 1.0);
+
+	float r = dUV;
+	out_Color.r = mix(out_Color.r, r, r);
 }

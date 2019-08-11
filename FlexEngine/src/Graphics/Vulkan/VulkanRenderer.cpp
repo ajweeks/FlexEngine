@@ -7929,6 +7929,7 @@ namespace flex
 			glm::vec4 camPos = glm::vec4(cam->GetPosition(), 0.0f);
 			real exposure = cam->exposure;
 			glm::vec2 m_NearFarPlanes(cam->GetZNear(), cam->GetZFar());
+			real TAAMaxUVResampleDistScaled = m_TAAMaxUVResampleDist / 1000.0f;
 
 			static DirLightData defaultDirLightData = { VEC3_RIGHT, 0, VEC3_ONE, 0.0f, 0, 0.0f };
 
@@ -7982,6 +7983,7 @@ namespace flex
 				{ U_PROJECTION, (void*)&projection, US_PROJECTION },
 				{ U_PROJECTION_INV, (void*)&projectionInv, US_PROJECTION_INV },
 				{ U_LAST_FRAME_VIEWPROJ, (void*)&m_LastFrameViewProj, US_LAST_FRAME_VIEWPROJ },
+				{ U_MAX_UV_DIST, (void*)&TAAMaxUVResampleDistScaled, US_MAX_UV_DIST },
 				{ U_DIR_LIGHT, (void*)dirLightData, US_DIR_LIGHT },
 				{ U_POINT_LIGHTS, (void*)m_PointLights, US_POINT_LIGHTS },
 				{ U_TIME, (void*)&g_SecElapsedSinceProgramStart, US_TIME },

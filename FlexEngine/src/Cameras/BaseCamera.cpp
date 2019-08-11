@@ -251,6 +251,7 @@ namespace flex
 
 	void BaseCamera::JitterMatrix(glm::mat4& matrix)
 	{
+		// [-1.0f, 1.0f]
 		static const glm::vec2 SAMPLE_LOCS_16[16] =
 		{
 			glm::vec2(-8.0f, 0.0f) / 8.0f,
@@ -302,7 +303,8 @@ namespace flex
 		const glm::vec2i swapChainSize = g_Window->GetFrameBufferSize();
 		const unsigned subsampleIdx = g_Renderer->GetFramesRenderedCount() % sampleCount;
 
-		glm::vec2 subsample = samples[subsampleIdx] / (2.0f * (glm::vec2)swapChainSize);
+		// [-halfPix, halfPix] (in NDC)
+		glm::vec2 subsample = (samples[subsampleIdx] / 4.0f) / (glm::vec2)swapChainSize;
 
 		glm::mat4 jitterMat = glm::translate(MAT4_IDENTITY, glm::vec3(subsample.x, subsample.y, 0.0f));
 		matrix = jitterMat * matrix;

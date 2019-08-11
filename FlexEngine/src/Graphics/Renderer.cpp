@@ -1085,6 +1085,8 @@ namespace flex
 				m_TAASampleCount = (i32)RoundToNearestPowerOfTwo((real)m_TAASampleCount);
 			}
 
+			ImGui::SliderFloat("Max UV Dist", &m_TAAMaxUVResampleDist, 0.0f, 10.0f);
+
 			ImGui::Checkbox("FXAA", &m_PostProcessSettings.bEnableFXAA);
 
 			if (m_PostProcessSettings.bEnableFXAA)
@@ -1831,6 +1833,7 @@ namespace flex
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW_INV);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PROJECTION_INV);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_LAST_FRAME_VIEWPROJ);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_MAX_UV_DIST);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SCENE_SAMPLER);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_HISTORY_SAMPLER);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_DEPTH_SAMPLER);
