@@ -80,8 +80,7 @@ namespace flex
 							continue;
 						}
 
-						fontMetaData.renderedTextureFilePath = fontMetaData.filePath;
-						StripFileType(fontMetaData.renderedTextureFilePath);
+						fontMetaData.renderedTextureFilePath = StripFileType(fontMetaData.filePath);
 
 						fontMetaData.renderedTextureFilePath += "-" + IntToString(fontMetaData.size, 2) + "-" + DPIStr + m_FontImageExtension;
 						fontMetaData.renderedTextureFilePath = RESOURCE_LOCATION "fonts/" + fontMetaData.renderedTextureFilePath;
@@ -835,8 +834,7 @@ namespace flex
 						}
 						if (ImGui::Button("Open in explorer"))
 						{
-							std::string absDir = RelativePathToAbsolute(fontMeta.renderedTextureFilePath);
-							ExtractDirectoryString(absDir);
+							const std::string absDir = ExtractDirectoryString(RelativePathToAbsolute(fontMeta.renderedTextureFilePath));
 							OpenExplorer(absDir);
 						}
 						ImGui::EndColumns();
@@ -1240,8 +1238,7 @@ namespace flex
 				i32 i = 0;
 				for (auto iter : MeshComponent::m_LoadedMeshes)
 				{
-					std::string meshFileName = iter.first;
-					StripLeadingDirectories(meshFileName);
+					const std::string meshFileName = StripLeadingDirectories(iter.first);
 					if (mesh->GetFileName().compare(meshFileName) == 0)
 					{
 						selectedMeshIndex = i;
@@ -1258,8 +1255,7 @@ namespace flex
 					for (auto meshPair : MeshComponent::m_LoadedMeshes)
 					{
 						bool bSelected = (i == selectedMeshIndex);
-						std::string meshFileName = meshPair.first;
-						StripLeadingDirectories(meshFileName);
+						const std::string meshFileName = StripLeadingDirectories(meshPair.first);
 						if (ImGui::Selectable(meshFileName.c_str(), &bSelected))
 						{
 							if (selectedMeshIndex != i)
@@ -2446,8 +2442,7 @@ namespace flex
 
 		if (g_bEnableLogging_Loading)
 		{
-			std::string fileName = metaData.filePath;
-			StripLeadingDirectories(fileName);
+			const std::string fileName = StripLeadingDirectories(metaData.filePath);
 			Print("Loaded font file %s\n", fileName.c_str());
 		}
 

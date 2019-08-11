@@ -954,8 +954,7 @@ namespace flex
 				else
 				{
 					g_Renderer->AddEditorString("Captured RenderDoc frame");
-					std::string captureFileName = captureFilePath;
-					StripLeadingDirectories(captureFileName);
+					const std::string captureFileName = StripLeadingDirectories(captureFilePath);
 					Print("Captured RenderDoc frame to %s\n", captureFileName.c_str());
 					if (m_RenderDocUIPID == -1)
 					{
@@ -2333,8 +2332,8 @@ namespace flex
 				Print("Auto capturing %i frame(s) starting at frame %i\n", m_RenderDocAutoCaptureFrameCount, m_RenderDocAutoCaptureFrameOffset);
 			}
 
-			std::string dateStr = GetDateString_YMDHMS();
-			std::string captureFilePath = RelativePathToAbsolute(SAVED_LOCATION "RenderDocCaptures/FlexEngine_" + dateStr);
+			const std::string dateStr = GetDateString_YMDHMS();
+			const std::string captureFilePath = RelativePathToAbsolute(SAVED_LOCATION "RenderDocCaptures/FlexEngine_" + dateStr);
 			m_RenderDocAPI->SetCaptureFilePathTemplate(captureFilePath.c_str());
 
 			m_RenderDocAPI->MaskOverlayBits(eRENDERDOC_Overlay_None, 0);

@@ -4,6 +4,8 @@
 
 namespace flex
 {
+	// TODO: Many of the functions in this file would benefit from unit tests
+
 	static const char* SEPARATOR_STR = ", ";
 
 	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount = 3, bool flipVertically = false, u32* channelCountOut = nullptr);
@@ -32,17 +34,18 @@ namespace flex
 	bool FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileType);
 
 	// Removes all content before final '/' or '\'
-	void StripLeadingDirectories(std::string& filePath);
+	std::string StripLeadingDirectories(std::string filePath);
 
 	// Removes all content after final '/' or '\'
 	// NOTE: If path describes a directory and doesn't end in a slash, final directory will be removed
-	void ExtractDirectoryString(std::string& filePath);
+	std::string ExtractDirectoryString(std::string filePath);
 
 	// Removes all chars after first '.' occurrence
-	void StripFileType(std::string& filePath);
+	std::string StripFileType(std::string filePath);
 
 	// Removes all chars before first '.' occurrence
-	void ExtractFileType(std::string& filePathInTypeOut);
+	// NOTE: Unused!
+	std::string ExtractFileType(std::string filePathInTypeOut);
 
 	// Creates directories for each listed in string
 	void CreateDirectoryRecursive(const std::string& absoluteDirectoryPath);

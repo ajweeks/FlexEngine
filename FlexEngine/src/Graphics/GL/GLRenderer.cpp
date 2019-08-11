@@ -661,8 +661,7 @@ namespace flex
 							}
 							else
 							{
-								std::string fileNameClean = samplerCreateInfo.filepath;
-								StripLeadingDirectories(fileNameClean);
+								const std::string fileNameClean = StripLeadingDirectories(samplerCreateInfo.filepath);
 								std::string textureProfileBlockName = "load texture " + fileNameClean;
 								PROFILE_BEGIN(textureProfileBlockName);
 
@@ -1807,8 +1806,7 @@ namespace flex
 			{
 				if (screenshotAsyncTextureSave->TickStatus())
 				{
-					std::string fileName = screenshotAsyncTextureSave->absoluteFilePath;
-					StripLeadingDirectories(fileName);
+					const std::string fileName = StripLeadingDirectories(screenshotAsyncTextureSave->absoluteFilePath);
 
 					AddEditorString("Saved screenshot");
 
@@ -3075,8 +3073,7 @@ namespace flex
 				return false;
 			}
 
-			std::string fileName = fontMetaData.filePath;
-			StripLeadingDirectories(fileName);
+			const std::string fileName = StripLeadingDirectories(fontMetaData.filePath);
 
 			BitmapFont* newFont = fontMetaData.bitmapFont;
 
@@ -3322,8 +3319,7 @@ namespace flex
 			{
 				if (bUsingPreRenderedTexture)
 				{
-					std::string textureFilePath = fontMetaData.renderedTextureFilePath;
-					StripLeadingDirectories(textureFilePath);
+					const std::string textureFilePath = StripLeadingDirectories(fontMetaData.renderedTextureFilePath);
 					Print("Loaded font atlas texture from %s\n", textureFilePath.c_str());
 				}
 				else
@@ -3898,10 +3894,7 @@ namespace flex
 				delete fontMetaData.bitmapFont;
 				fontMetaData.bitmapFont = nullptr;
 
-				std::string fontName = fontMetaData.filePath;
-				StripLeadingDirectories(fontName);
-				StripFileType(fontName);
-
+				const std::string fontName = StripFileType(StripLeadingDirectories(fontMetaData.filePath));
 				LoadFont(fontMetaData, bForceRender);
 			}
 		}
@@ -4952,8 +4945,7 @@ namespace flex
 						std::string selectedAbsFilePath;
 						if (OpenFileDialog("Import texture", absoluteDirectoryStr, selectedAbsFilePath))
 						{
-							std::string fileNameAndExtension = selectedAbsFilePath;
-							StripLeadingDirectories(fileNameAndExtension);
+							const std::string fileNameAndExtension = StripLeadingDirectories(selectedAbsFilePath);
 							std::string relativeFilePath = relativeDirPath + fileNameAndExtension;
 
 							Print("Importing texture: %s\n", relativeFilePath.c_str());
@@ -5040,9 +5032,8 @@ namespace flex
 						for (const auto& meshIter : MeshComponent::m_LoadedMeshes)
 						{
 							bool bSelected = (i == selectedMeshIndex);
-							std::string meshFilePath = meshIter.first;
-							std::string meshFileName = meshIter.first;
-							StripLeadingDirectories(meshFileName);
+							const std::string meshFilePath = meshIter.first;
+							const std::string meshFileName = StripLeadingDirectories(meshIter.first);
 							if (ImGui::Selectable(meshFileName.c_str(), &bSelected))
 							{
 								selectedMeshIndex = i;
@@ -5105,8 +5096,7 @@ namespace flex
 						{
 							Print("Importing mesh: %s\n", selectedAbsFilePath.c_str());
 
-							std::string fileNameAndExtension = selectedAbsFilePath;
-							StripLeadingDirectories(fileNameAndExtension);
+							const std::string fileNameAndExtension = StripLeadingDirectories(selectedAbsFilePath);
 							std::string relativeFilePath = relativeDirPath + fileNameAndExtension;
 
 							LoadedMesh* existingMesh = nullptr;

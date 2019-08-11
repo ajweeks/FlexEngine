@@ -217,7 +217,7 @@ namespace flex
 		{
 			for (std::string& fileName : foundFileNames)
 			{
-				StripLeadingDirectories(fileName);
+				fileName = StripLeadingDirectories(fileName);
 
 				if (!SceneExists(fileName))
 				{
@@ -235,7 +235,7 @@ namespace flex
 		{
 			for (std::string& fileName : foundFileNames)
 			{
-				StripLeadingDirectories(fileName);
+				fileName = StripLeadingDirectories(fileName);
 
 				if (!SceneExists(fileName))
 				{
@@ -587,8 +587,7 @@ namespace flex
 				if (bRenameSceneFileName)
 				{
 					std::string newSceneFileNameStr(newSceneFileName);
-					std::string fileDir = RelativePathToAbsolute(scene->GetDefaultRelativeFilePath());
-					ExtractDirectoryString(fileDir);
+					std::string fileDir = ExtractDirectoryString(RelativePathToAbsolute(scene->GetDefaultRelativeFilePath()));
 					std::string newSceneFilePath = fileDir + newSceneFileNameStr;
 					bool bNameEmpty = newSceneFileNameStr.empty();
 					bool bCorrectFileType = EndsWith(newSceneFileNameStr, ".json");
@@ -676,8 +675,7 @@ namespace flex
 				newSceneNameStr += " Copy";
 				strcpy_s(newSceneName, newSceneNameStr.c_str());
 
-				std::string newSceneFileNameStr = scene->GetFileName();
-				StripFileType(newSceneFileNameStr);
+				std::string newSceneFileNameStr = StripFileType(scene->GetFileName());
 
 				bool bValidName = false;
 				do
@@ -696,8 +694,7 @@ namespace flex
 					}
 
 					std::string filePathFrom = RelativePathToAbsolute(scene->GetDefaultRelativeFilePath());
-					std::string fullNewFilePath = filePathFrom;
-					ExtractDirectoryString(fullNewFilePath);
+					std::string fullNewFilePath = ExtractDirectoryString(filePathFrom);
 					fullNewFilePath += newSceneFileNameStr + ".json";
 					bValidName = !FileExists(fullNewFilePath);
 				} while (!bValidName);
@@ -737,9 +734,7 @@ namespace flex
 				if (bDuplicateScene && bValidInput)
 				{
 					std::string filePathFrom = RelativePathToAbsolute(scene->GetDefaultRelativeFilePath());
-					std::string sceneFileDir = filePathFrom;
-					ExtractDirectoryString(sceneFileDir);
-					std::string filePathTo = sceneFileDir + newSceneFileName;
+					std::string filePathTo = ExtractDirectoryString(filePathFrom) + newSceneFileName;
 
 					if (FileExists(filePathTo))
 					{
@@ -784,9 +779,7 @@ namespace flex
 
 			if (ImGui::Button("Open in explorer"))
 			{
-				std::string directory = currentScene->GetRelativeFilePath();
-				ExtractDirectoryString(directory);
-				directory = RelativePathToAbsolute(directory);
+				const std::string directory = RelativePathToAbsolute(ExtractDirectoryString(currentScene->GetRelativeFilePath()));
 				OpenExplorer(directory);
 			}
 

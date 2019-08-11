@@ -1467,8 +1467,7 @@ namespace flex
 			rootObject.fields.emplace_back(ActionStrings[i], JSONValue(bindingObj));
 		}
 
-		std::string inputBindingsFileName = s_InputBindingFilePath;
-		StripLeadingDirectories(inputBindingsFileName);
+		std::string inputBindingsFileName = StripLeadingDirectories(s_InputBindingFilePath);
 
 		std::string fileContents = rootObject.Print(0);
 		if (WriteFile(s_InputBindingFilePath, fileContents, false))

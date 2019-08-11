@@ -904,9 +904,7 @@ namespace flex
 			bool bFound = false;
 			for (const JSONObject& parsedMeshObj : BaseScene::s_ParsedMeshes)
 			{
-				std::string fileName = parsedMeshObj.GetString("file");
-				StripLeadingDirectories(fileName);
-				StripFileType(fileName);
+				std::string fileName = StripFileType(StripLeadingDirectories(parsedMeshObj.GetString("file")));
 
 				if (fileName.compare(meshName) == 0)
 				{
@@ -1108,10 +1106,7 @@ namespace flex
 			bIsBasicObject &&
 			!m_bLoadedFromPrefab)
 		{
-			std::string meshName = m_MeshComponent->GetRelativeFilePath();
-			StripLeadingDirectories(meshName);
-			StripFileType(meshName);
-
+			const std::string meshName = StripFileType(StripLeadingDirectories(m_MeshComponent->GetRelativeFilePath()));
 			object.fields.emplace_back("mesh", JSONValue(meshName));
 		}
 

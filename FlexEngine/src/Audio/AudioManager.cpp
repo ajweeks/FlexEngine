@@ -66,8 +66,7 @@ namespace flex
 
 		if (g_bEnableLogging_Loading)
 		{
-			std::string friendlyName = filePath;
-			StripLeadingDirectories(friendlyName);
+			const std::string friendlyName = StripLeadingDirectories(filePath);
 			Print("Loading audio source %s\n", friendlyName.c_str());
 		}
 

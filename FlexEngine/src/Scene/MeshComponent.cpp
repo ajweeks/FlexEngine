@@ -193,8 +193,7 @@ namespace flex
 			return nullptr;
 		}
 
-		std::string fileName = relativeFilePath;
-		StripLeadingDirectories(fileName);
+		const std::string fileName = StripLeadingDirectories(relativeFilePath);
 
 		LoadedMesh* newLoadedMesh = nullptr;
 		{
@@ -347,8 +346,7 @@ namespace flex
 		m_Type = Type::FILE;
 		m_Shape = PrefabShape::_NONE;
 		m_RelativeFilePath = relativeFilePath;
-		m_FileName = m_RelativeFilePath;
-		StripLeadingDirectories(m_FileName);
+		m_FileName = StripLeadingDirectories(m_RelativeFilePath);
 
 		m_BoundingSphereRadius = 0;
 		m_BoundingSphereCenterPoint = VEC3_ZERO;

@@ -39,8 +39,7 @@ namespace flex
 
 		if (g_bEnableLogging_Loading)
 		{
-			std::string fileName = filePath;
-			StripLeadingDirectories(fileName);
+			const std::string fileName = StripLeadingDirectories(filePath);
 			Print("Loading texture %s\n", fileName.c_str());
 		}
 
@@ -90,8 +89,7 @@ namespace flex
 
 		if (g_bEnableLogging_Loading)
 		{
-			std::string fileName = hdrFilePath;
-			StripLeadingDirectories(fileName);
+			const std::string fileName = StripLeadingDirectories(hdrFilePath);
 			Print("Loading HDR texture %s\n", fileName.c_str());
 		}
 
@@ -469,7 +467,7 @@ namespace flex
 		return !filePaths.empty();
 	}
 
-	void StripLeadingDirectories(std::string& filePath)
+	std::string StripLeadingDirectories(std::string filePath)
 	{
 		size_t finalSlash = filePath.rfind('/');
 		if (finalSlash == std::string::npos)
@@ -477,17 +475,14 @@ namespace flex
 			finalSlash = filePath.rfind('\\');
 		}
 
-		if (finalSlash == std::string::npos)
-		{
-			return; // There are no directories to remove
-		}
-		else
+		if (finalSlash != std::string::npos)
 		{
 			filePath = filePath.substr(finalSlash + 1);
 		}
+		return filePath;
 	}
 
-	void ExtractDirectoryString(std::string& filePath)
+	std::string ExtractDirectoryString(std::string filePath)
 	{
 		size_t finalSlash = filePath.rfind('/');
 		if (finalSlash == std::string::npos)
@@ -495,30 +490,29 @@ namespace flex
 			finalSlash = filePath.rfind('\\');
 		}
 
-		if (finalSlash == std::string::npos)
-		{
-			return; // There are no directories to remove
-		}
-		else
+		if (finalSlash != std::string::npos)
 		{
 			filePath = filePath.substr(0, finalSlash + 1);
 		}
+		return filePath;
 	}
 
-	void StripFileType(std::string& filePath)
+	std::string StripFileType(std::string filePath)
 	{
 		if (filePath.find('.') != std::string::npos)
 		{
 			filePath = Split(filePath, '.')[0];
 		}
+		return filePath;
 	}
 
-	void ExtractFileType(std::string& filePathInTypeOut)
+	std::string ExtractFileType(std::string filePathInTypeOut)
 	{
 		if (filePathInTypeOut.find('.') != std::string::npos)
 		{
 			filePathInTypeOut = Split(filePathInTypeOut, '.')[1];
 		}
+		return filePathInTypeOut;
 	}
 
 	void CreateDirectoryRecursive(const std::string& absoluteDirectoryPath)
@@ -613,8 +607,7 @@ namespace flex
 		constexpr bool bPrintWavStats = false;
 		if (bPrintWavStats)
 		{
-			std::string fileName = filePath;
-			StripLeadingDirectories(fileName);
+			const std::string fileName = StripLeadingDirectories(filePath);
 			Print("Stats about WAV file: %s:\n\tchannel count: %u, samples/s: %u, average bytes/s: %u"
 				  ", block align: %u, bits/sample: %u, chunk size: %u, sub chunk2 ID: \"%s\", sub chunk 2 size: %u\n",
 				  fileName.c_str(),

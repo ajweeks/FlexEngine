@@ -345,8 +345,7 @@ namespace flex
 		{
 			if (name.empty())
 			{
-				name = relativeFilePath;
-				StripLeadingDirectories(name);
+				name = StripLeadingDirectories(relativeFilePath);
 			}
 		}
 
@@ -692,12 +691,9 @@ namespace flex
 
 			if (g_bEnableLogging_Loading)
 			{
-				std::string vertFileName = shader.shader->vertexShaderFilePath;
-				StripLeadingDirectories(vertFileName);
-				std::string fragFileName = shader.shader->fragmentShaderFilePath;
-				StripLeadingDirectories(fragFileName);
-				std::string geomFileName = shader.shader->geometryShaderFilePath;
-				StripLeadingDirectories(geomFileName);
+				const std::string vertFileName = StripLeadingDirectories(shader.shader->vertexShaderFilePath);
+				const std::string fragFileName = StripLeadingDirectories(shader.shader->fragmentShaderFilePath);
+				const std::string geomFileName = StripLeadingDirectories(shader.shader->geometryShaderFilePath);
 
 				Print("Loading shaders %s", vertFileName.c_str());
 

@@ -508,14 +508,13 @@ namespace flex
 			std::vector<Image> images;
 			u32 totalSize = 0;
 
-			std::string fileName = filePaths[0];
+			const std::string fileName = StripLeadingDirectories(filePaths[0]);
 			if (fileName.empty())
 			{
 				PrintError("CreateCubemapFromTextures was given an empty filepath!\n");
 				return 0;
 			}
 
-			StripLeadingDirectories(fileName);
 			if (g_bEnableLogging_Loading)
 			{
 				Print("Loading cubemap textures %s, %s, %s, %s, %s, %s\n", filePaths[0].c_str(), filePaths[1].c_str(), filePaths[2].c_str(), filePaths[3].c_str(), filePaths[4].c_str(), filePaths[5].c_str());
@@ -800,8 +799,7 @@ namespace flex
 			}
 			else
 			{
-				std::string fileName = relativeFilePath;
-				StripLeadingDirectories(fileName);
+				const std::string fileName = StripLeadingDirectories(relativeFilePath);
 				if (g_bEnableLogging_Loading)
 				{
 					Print("Loading texture %s\n", fileName.c_str());
@@ -2279,8 +2277,7 @@ namespace flex
 				m_ShaderCodeChecksum = 0;
 				for (const std::string& filePath : filePaths)
 				{
-					std::string fileName = filePath;
-					StripLeadingDirectories(fileName);
+					const std::string fileName = StripLeadingDirectories(filePath);
 					bool bGoodStart = StartsWith(fileName, "vk_");
 					bool bGoodEnd = EndsWith(fileName, ".vert") ||
 						EndsWith(fileName, ".frag") ||

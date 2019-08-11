@@ -1671,10 +1671,7 @@ namespace flex
 					fontMetaData.bitmapFont = nullptr;
 				}
 
-				std::string fontName = fontMetaData.filePath;
-				StripLeadingDirectories(fontName);
-				StripFileType(fontName);
-
+				const std::string fontName = StripFileType(StripLeadingDirectories(fontMetaData.filePath));
 				LoadFont(fontMetaData, bForceRender);
 			}
 		}
@@ -2353,8 +2350,7 @@ namespace flex
 					//	std::string selectedAbsFilePath;
 					//	if (OpenFileDialog("Import texture", absoluteDirectoryStr, selectedAbsFilePath))
 					//	{
-					//		std::string fileNameAndExtension = selectedAbsFilePath;
-					//		StripLeadingDirectories(fileNameAndExtension);
+					//		const std::string fileNameAndExtension = StripLeadingDirectories(selectedAbsFilePath);
 					//		std::string relativeFilePath = relativeDirPath + fileNameAndExtension;
 
 					//		Print("Importing texture: %s\n", relativeFilePath.c_str());
@@ -2441,9 +2437,8 @@ namespace flex
 						for (const auto& meshIter : MeshComponent::m_LoadedMeshes)
 						{
 							bool bSelected = (i == selectedMeshIndex);
-							std::string meshFilePath = meshIter.first;
-							std::string meshFileName = meshIter.first;
-							StripLeadingDirectories(meshFileName);
+							const std::string meshFilePath = meshIter.first;
+							const std::string meshFileName = StripLeadingDirectories(meshIter.first);
 							if (ImGui::Selectable(meshFileName.c_str(), &bSelected))
 							{
 								selectedMeshIndex = i;
@@ -2506,8 +2501,7 @@ namespace flex
 						{
 							Print("Importing mesh: %s\n", selectedAbsFilePath.c_str());
 
-							std::string fileNameAndExtension = selectedAbsFilePath;
-							StripLeadingDirectories(fileNameAndExtension);
+							const std::string fileNameAndExtension = StripLeadingDirectories(selectedAbsFilePath);
 							std::string relativeFilePath = relativeDirPath + fileNameAndExtension;
 
 							LoadedMesh* existingMesh = nullptr;
@@ -3712,8 +3706,7 @@ namespace flex
 				return false;
 			}
 
-			std::string fileName = fontMetaData.filePath;
-			StripLeadingDirectories(fileName);
+			const std::string fileName = StripLeadingDirectories(fontMetaData.filePath);
 
 			BitmapFont* newFont = fontMetaData.bitmapFont;
 
@@ -4030,13 +4023,9 @@ namespace flex
 
 			if (g_bEnableLogging_Loading)
 			{
-				std::string vertFileName = shader.vertexShaderFilePath;
-				// TODO: EZ: Return value from helper
-				StripLeadingDirectories(vertFileName);
-				std::string fragFileName = shader.fragmentShaderFilePath;
-				StripLeadingDirectories(fragFileName);
-				std::string geomFileName = shader.geometryShaderFilePath;
-				StripLeadingDirectories(geomFileName);
+				const std::string vertFileName = StripLeadingDirectories(shader.vertexShaderFilePath);
+				const std::string fragFileName = StripLeadingDirectories(shader.fragmentShaderFilePath);
+				const std::string geomFileName = StripLeadingDirectories(shader.geometryShaderFilePath);
 
 				Print("Loading shaders %s", vertFileName.c_str());
 

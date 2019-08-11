@@ -473,8 +473,7 @@ namespace flex
 		{
 			if (g_bEnableLogging_Loading)
 			{
-				std::string cleanedFilePath = meshesFilePath;
-				StripLeadingDirectories(cleanedFilePath);
+				const std::string cleanedFilePath = StripLeadingDirectories(meshesFilePath);
 				Print("Parsing meshes file at %s\n", cleanedFilePath.c_str());
 			}
 
@@ -514,8 +513,7 @@ namespace flex
 		{
 			if (g_bEnableLogging_Loading)
 			{
-				std::string cleanedFilePath = materialsFilePath;
-				StripLeadingDirectories(cleanedFilePath);
+				const std::string cleanedFilePath = StripLeadingDirectories(materialsFilePath);
 				Print("Parsing materials file at %s\n", cleanedFilePath.c_str());
 			}
 
@@ -557,8 +555,7 @@ namespace flex
 			{
 				if (g_bEnableLogging_Loading)
 				{
-					std::string fileName = foundFilePath;
-					StripLeadingDirectories(fileName);
+					const std::string fileName = StripLeadingDirectories(foundFilePath);
 					Print("Parsing prefab: %s\n", fileName.c_str());
 				}
 
@@ -1223,17 +1220,13 @@ namespace flex
 		}
 
 		std::string absDefaultFilePathFrom = RelativePathToAbsolute(GetDefaultRelativeFilePath());
-		std::string defaultAbsFileDir = absDefaultFilePathFrom;
-		ExtractDirectoryString(defaultAbsFileDir);
-		std::string absDefaultFilePathTo = defaultAbsFileDir + fileName;
+		std::string absDefaultFilePathTo = ExtractDirectoryString(absDefaultFilePathFrom) + fileName;
 		if (CopyFile(absDefaultFilePathFrom, absDefaultFilePathTo))
 		{
 			//if (m_bUsingSaveFile)
 			{
 				std::string absSavedFilePathFrom = RelativePathToAbsolute(GetRelativeFilePath());
-				std::string savedAbsFileDir = absSavedFilePathFrom;
-				ExtractDirectoryString(savedAbsFileDir);
-				std::string absSavedFilePathTo = savedAbsFileDir + fileName;
+				std::string absSavedFilePathTo = ExtractDirectoryString(absSavedFilePathFrom) + fileName;
 				if (CopyFile(absSavedFilePathFrom, absSavedFilePathTo))
 				{
 					success = true;
