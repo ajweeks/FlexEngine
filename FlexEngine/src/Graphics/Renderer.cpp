@@ -1345,6 +1345,11 @@ namespace flex
 					ImGui::EndCombo();
 				}
 			} break;
+			case MeshComponent::Type::PROCEDURAL:
+			{
+				ImGui::Text("Procedural mesh");
+				ImGui::Text("Vertex count: %u", mesh->GetVertexBufferData()->VertexCount);
+			} break;
 			default:
 			{
 				PrintError("Unhandled MeshComponent::Type in Renderer::DrawImGuiForGameObject: %d\n", (i32)meshType);
@@ -1484,6 +1489,8 @@ namespace flex
 			// Color
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
 			m_BaseShaders[shaderID].bTranslucent = true;
+			m_BaseShaders[shaderID].bDynamic = true;
+			m_BaseShaders[shaderID].dynamicVertexBufferSize = 1024 * 1024; // TODO: FIXME:
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
@@ -1656,7 +1663,7 @@ namespace flex
 			m_BaseShaders[shaderID].bTranslucent = true;
 			m_BaseShaders[shaderID].bTextureArr = true;
 			m_BaseShaders[shaderID].bDynamic = true;
-			m_BaseShaders[shaderID].dynamicVertexBufferSize = 1024 * 1024; // TODO
+			m_BaseShaders[shaderID].dynamicVertexBufferSize = 1024 * 1024; // TODO: FIXME:
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::UI;
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION |
@@ -1688,7 +1695,7 @@ namespace flex
 			++shaderID;
 
 			// Post FXAA
-			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD; // TODO:
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD; // TODO: FIXME:
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION_2D |
 				(u32)VertexAttribute::UV;
@@ -1723,7 +1730,7 @@ namespace flex
 			// Font SS
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::UI;
 			m_BaseShaders[shaderID].bDynamic = true;
-			m_BaseShaders[shaderID].dynamicVertexBufferSize = 1024 * 1024; // TODO
+			m_BaseShaders[shaderID].dynamicVertexBufferSize = 1024 * 1024; // TODO: FIXME:
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION_2D |
 				(u32)VertexAttribute::UV |
@@ -1743,7 +1750,7 @@ namespace flex
 			// Font WS
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
 			m_BaseShaders[shaderID].bDynamic = true;
-			m_BaseShaders[shaderID].dynamicVertexBufferSize = 1024 * 1024; // TODO
+			m_BaseShaders[shaderID].dynamicVertexBufferSize = 1024 * 1024; // TODO: FIXME:
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV |

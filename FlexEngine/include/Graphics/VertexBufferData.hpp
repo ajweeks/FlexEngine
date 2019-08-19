@@ -7,6 +7,7 @@ namespace flex
 	class VertexBufferData
 	{
 	public:
+		// TODO: Bring out of class for consistency with other CreateInfo structs
 		struct CreateInfo
 		{
 			VertexAttributes attributes;
@@ -24,7 +25,8 @@ namespace flex
 		};
 
 		void Initialize(CreateInfo* createInfo);
-		void UpdateData(CreateInfo* createInfo);
+		void InitializeDynamic(VertexAttributes attributes, u32 maxNumVerts); // Allocates enough memory for maxNumVerts with given attributes
+		void UpdateData(CreateInfo const* createInfo);
 		void Destroy();
 
 		u32 CopyInto(real* dst, VertexAttributes usingAttributes);

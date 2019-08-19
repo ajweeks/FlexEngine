@@ -41,8 +41,10 @@ namespace flex
 			MaterialID m_MaterialID = InvalidMaterialID;
 
 			// Per-frame data
-			VertexBufferData m_VertexBufferData;
 			VertexBufferData::CreateInfo m_VertexBufferCreateInfo;
+
+			GameObject* m_Object = nullptr;
+			MeshComponent* m_ObjectMesh = nullptr;
 		};
 	} // namespace vk
 } // namespace flex

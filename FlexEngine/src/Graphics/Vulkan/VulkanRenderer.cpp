@@ -1608,7 +1608,7 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::UpdateVertexData(RenderID renderID, VertexBufferData* vertexBufferData)
+		void VulkanRenderer::UpdateVertexData(RenderID renderID, VertexBufferData const* vertexBufferData)
 		{
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
 			VulkanBuffer* vertexBuffer = m_VertexIndexBufferPairs[m_Materials[renderObject->materialID].material.shaderID].vertexBuffer;
@@ -1617,6 +1617,7 @@ namespace flex
 			{
 				PrintError("Dynamic vertex buffer is %u bytes too small for data attempting to be copied in\n", vertexBufferData->VertexBufferSize - copySize);
 			}
+			// TODO: Keep mapped persistently?
 			VK_CHECK_RESULT(vertexBuffer->Map(copySize));
 			memcpy(vertexBuffer->m_Mapped, vertexBufferData->vertexData, copySize);
 			vertexBuffer->Unmap();
@@ -5701,6 +5702,7 @@ namespace flex
 			}
 
 			VkPipelineRasterizationStateCreateInfo rasterizer = vks::pipelineRasterizationStateCreateInfo(VK_POLYGON_MODE_FILL, createInfo->cullMode, VK_FRONT_FACE_CLOCKWISE);
+			rasterizer.lineWidth = 3.0f;
 
 			VkPipelineMultisampleStateCreateInfo multisampling = vks::pipelineMultisampleStateCreateInfo(VK_SAMPLE_COUNT_1_BIT);
 
@@ -6358,11 +6360,8 @@ namespace flex
 
 		void VulkanRenderer::PhysicsDebugRender()
 		{
-			// TODO: Re-enable once Vulkan physics debug renderer is implemented
-#if 0
 			btDiscreteDynamicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
 			physicsWorld->debugDrawWorld();
-#endif
 		}
 
 		void VulkanRenderer::CreateStaticVertexBuffers()

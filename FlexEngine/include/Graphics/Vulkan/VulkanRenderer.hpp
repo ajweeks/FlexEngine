@@ -46,7 +46,7 @@ namespace flex
 			virtual void Draw() override;
 			virtual void DrawImGuiWindows() override;
 
-			virtual void UpdateVertexData(RenderID renderID, VertexBufferData* vertexBufferData) override;
+			virtual void UpdateVertexData(RenderID renderID, VertexBufferData const* vertexBufferData) override;
 
 			virtual void ReloadShaders() override;
 			virtual void LoadFonts(bool bForceRender) override;

@@ -225,23 +225,6 @@ namespace flex
 
 		newLoadedMesh->relativeFilePath = relativeFilePath;
 
-		static constexpr auto cgltf_resultToString = [](cgltf_result result)
-		{
-			switch (result)
-			{
-			case cgltf_result_data_too_short:	return "Data too short";
-			case cgltf_result_unknown_format:	return "Unknown format";
-			case cgltf_result_invalid_json:		return "Invalid json";
-			case cgltf_result_invalid_gltf:		return "Invalid gltf";
-			case cgltf_result_invalid_options:	return "Invalid options";
-			case cgltf_result_file_not_found:	return "File not found";
-			case cgltf_result_io_error:			return "IO error";
-			case cgltf_result_out_of_memory:	return "Out of memory";
-			default:							return "";
-			}
-		};
-
-
 		cgltf_options ops = {};
 		ops.type = cgltf_file_type_invalid; // auto detect gltf or glb
 		cgltf_data* data = nullptr;
@@ -258,7 +241,19 @@ namespace flex
 
 		if (result != cgltf_result_success)
 		{
-			std::string err = cgltf_resultToString(result);
+			std::string err;
+			switch (result)
+			{
+			case cgltf_result_data_too_short:	err = "Data too short"; break;
+			case cgltf_result_unknown_format:	err = "Unknown format"; break;
+			case cgltf_result_invalid_json:		err = "Invalid json"; break;
+			case cgltf_result_invalid_gltf:		err = "Invalid gltf"; break;
+			case cgltf_result_invalid_options:	err = "Invalid options"; break;
+			case cgltf_result_file_not_found:	err = "File not found"; break;
+			case cgltf_result_io_error:			err = "IO error"; break;
+			case cgltf_result_out_of_memory:	err = "Out of memory"; break;
+			default:							err = ""; break;
+			}
 			PrintError("Failed to load gltf/glb file at: %s\nError: %s\n", relativeFilePath.c_str(), err.c_str());
 			cgltf_free(data);
 		}
@@ -1339,8 +1334,38 @@ namespace flex
 		return true;
 	}
 
+	bool MeshComponent::CreateProcedural(u32 initialMaxVertCount, VertexAttributes attributes, TopologyMode topologyMode /* = TopologyMode::TRIANGLE_LIST */)
+	{
+		assert(m_VertexBufferData.vertexData == nullptr);
+
+		m_VertexBufferData.InitializeDynamic(attributes, initialMaxVertCount);
+
+		RenderObjectCreateInfo renderObjectCreateInfo = {};
+
+		renderObjectCreateInfo.gameObject = m_OwningGameObject;
+		renderObjectCreateInfo.vertexBufferData = &m_VertexBufferData;
+		renderObjectCreateInfo.indices = &m_Indices;
+		renderObjectCreateInfo.materialID = m_MaterialID;
+
+		if (m_OwningGameObject->GetRenderID() != InvalidRenderID)
+		{
+			g_Renderer->DestroyRenderObject(m_OwningGameObject->GetRenderID());
+		}
+		RenderID renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
+		m_OwningGameObject->SetRenderID(renderID);
+
+		g_Renderer->SetTopologyMode(renderID, topologyMode);
+
+		m_VertexBufferData.DescribeShaderVariables(g_Renderer, renderID);
+
+		m_bInitialized = true;
+
+		return true;
+	}
+
 	void MeshComponent::Update()
 	{
+		// TODO: Move elsewhere
 		if (m_Shape == PrefabShape::GRID)
 		{
 			Transform* transform = m_OwningGameObject->GetTransform();
@@ -1351,6 +1376,12 @@ namespace flex
 				camPos.z - fmod(camPos.z + GRID_LINE_SPACING / 2.0f, GRID_LINE_SPACING));
 			transform->SetWorldPosition(newGridPos);
 		}
+	}
+
+	void MeshComponent::UpdateProceduralData(VertexBufferData::CreateInfo const* newData)
+	{
+		m_VertexBufferData.UpdateData(newData);
+		g_Renderer->UpdateVertexData(m_OwningGameObject->GetRenderID(), &m_VertexBufferData);
 	}
 
 	void MeshComponent::Reload()

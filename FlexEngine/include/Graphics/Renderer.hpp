@@ -81,7 +81,7 @@ namespace flex
 		virtual void DrawImGuiMisc();
 		virtual void DrawImGuiWindows();
 
-		virtual void UpdateVertexData(RenderID renderID, VertexBufferData* vertexBufferData) = 0;
+		virtual void UpdateVertexData(RenderID renderID, VertexBufferData const* vertexBufferData) = 0;
 
 		void DrawImGuiForGameObjectWithValidRenderID(GameObject* gameObject);
 

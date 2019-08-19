@@ -36,7 +36,7 @@ namespace flex
 			virtual void Update() override;
 			virtual void Draw() override;
 
-			virtual void UpdateVertexData(RenderID renderID, VertexBufferData* vertexBufferData) override;
+			virtual void UpdateVertexData(RenderID renderID, VertexBufferData const* vertexBufferData) override;
 
 			virtual void ReloadShaders() override;
 			virtual void LoadFonts(bool bForceRender) override;

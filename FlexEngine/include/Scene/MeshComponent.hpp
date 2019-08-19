@@ -23,6 +23,9 @@ namespace flex
 		JSONObject Serialize() const;
 
 		void Update();
+
+		void UpdateProceduralData(VertexBufferData::CreateInfo const* newData);
+
 		void Destroy();
 
 		void SetOwner(GameObject* owner);
@@ -31,6 +34,7 @@ namespace flex
 		{
 			PREFAB,
 			FILE,
+			PROCEDURAL,
 
 			_NONE
 		};
@@ -62,6 +66,8 @@ namespace flex
 
 		bool LoadPrefabShape(PrefabShape shape,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
+
+		bool CreateProcedural(u32 initialMaxVertCount, VertexAttributes attributes, TopologyMode topologyMode = TopologyMode::TRIANGLE_LIST);
 
 		void Reload();
 

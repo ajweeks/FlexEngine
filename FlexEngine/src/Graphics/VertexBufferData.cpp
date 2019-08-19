@@ -16,21 +16,37 @@ namespace flex
 			VertexCount = createInfo->positions_2D.size();
 		}
 		Attributes = createInfo->attributes;
-		VertexStride = CalculateVertexStride(Attributes);
+		VertexStride = CalculateVertexStride(createInfo->attributes);
 		VertexBufferSize = VertexCount * VertexStride;
 
 		assert(vertexData == nullptr);
 		vertexData = (real*)malloc_hooked(VertexBufferSize);
 		if (vertexData == nullptr)
 		{
-			PrintError("Failed to allocate memory required for vertex buffer data (%u bytes)\n", VertexBufferSize);
+			PrintError("Failed to allocate vertex buffer memory (%u bytes)\n", VertexBufferSize);
 			return;
 		}
 
 		UpdateData(createInfo);
 	}
 
-	void VertexBufferData::UpdateData(CreateInfo* createInfo)
+	void VertexBufferData::InitializeDynamic(VertexAttributes attributes, u32 maxNumVerts)
+	{
+		VertexCount = maxNumVerts;
+		Attributes = attributes;
+		VertexStride = CalculateVertexStride(attributes);
+		VertexBufferSize = VertexCount * VertexStride;
+
+		assert(vertexData == nullptr);
+		vertexData = (real*)malloc_hooked(VertexBufferSize);
+		if (vertexData == nullptr)
+		{
+			PrintError("Failed to allocate vertex buffer memory (%u bytes)\n", VertexBufferSize);
+			return;
+		}
+	}
+
+	void VertexBufferData::UpdateData(CreateInfo const* createInfo)
 	{
 		assert(vertexData != nullptr);
 		assert(VertexCount > 0);

@@ -9,7 +9,10 @@
 #include "Graphics/Vulkan/VulkanHelpers.hpp"
 #include "Graphics/Vulkan/VulkanRenderer.hpp"
 #include "Profiler.hpp"
+#include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
+#include "Scene/MeshComponent.hpp"
+#include "Scene/SceneManager.hpp"
 
 namespace flex
 {
@@ -21,7 +24,6 @@ namespace flex
 
 		VulkanPhysicsDebugDraw::~VulkanPhysicsDebugDraw()
 		{
-			m_VertexBufferData.Destroy();
 		}
 
 		void VulkanPhysicsDebugDraw::Initialize()
@@ -38,9 +40,18 @@ namespace flex
 				m_MaterialID = g_Renderer->InitializeMaterial(&debugMatCreateInfo);
 			}
 
-			m_VertexBufferData = {};
-			m_VertexBufferCreateInfo = {};
-			m_VertexBufferCreateInfo.attributes = (u32)VertexAttribute::POSITION | (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+			RenderObjectCreateInfo createInfo = {};
+			createInfo.materialID = m_MaterialID;
+			createInfo.bEditorObject = true;
+			createInfo.bDepthWriteEnable = false;
+			m_Object = new GameObject("Vk Physics Debug Draw", GameObjectType::_NONE);
+			m_ObjectMesh = m_Object->SetMeshComponent(new MeshComponent(m_Object, m_MaterialID));
+			const VertexAttributes vertexAttributes = (u32)VertexAttribute::POSITION | (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+			if (!m_ObjectMesh->CreateProcedural(8192, vertexAttributes, TopologyMode::LINE_LIST))
+			{
+				PrintWarn("Vulkan physics debug renderer failed to initialize vertex buffer");
+			}
+			g_SceneManager->CurrentScene()->AddRootObject(m_Object);
 		}
 
 		void VulkanPhysicsDebugDraw::Destroy()
@@ -56,7 +67,6 @@ namespace flex
 		{
 			UNREFERENCED_PARAMETER(location);
 			UNREFERENCED_PARAMETER(textString);
-			// TODO: FIXME: UNIMPLEMENTED: Implement me (or don't)
 		}
 
 		void VulkanPhysicsDebugDraw::setDebugMode(int debugMode)
@@ -87,9 +97,7 @@ namespace flex
 
 		void VulkanPhysicsDebugDraw::DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& color)
 		{
-			UNREFERENCED_PARAMETER(from);
-			UNREFERENCED_PARAMETER(to);
-			UNREFERENCED_PARAMETER(color);
+			m_LineSegments.push_back(LineSegment{ from, to, color });
 		}
 
 		void VulkanPhysicsDebugDraw::Draw()
@@ -100,12 +108,7 @@ namespace flex
 			}
 
 			{
-				PROFILE_AUTO("PhysicsDebugRender > Destroy previous vertex buffer");
-				m_VertexBufferData.Destroy();
-			}
-
-			{
-				PROFILE_AUTO("PhysicsDebugRender > Initialze vertex buffer");
+				PROFILE_AUTO("PhysicsDebugRender > Update vertex buffer");
 
 				m_VertexBufferCreateInfo.positions_3D.clear();
 				m_VertexBufferCreateInfo.colors_R32G32B32A32.clear();
@@ -126,48 +129,8 @@ namespace flex
 					i += 2;
 				}
 
-				m_VertexBufferData.Initialize(&m_VertexBufferCreateInfo);
+				m_ObjectMesh->UpdateProceduralData(&m_VertexBufferCreateInfo);
 			}
-
-			// TODO: Draw
-			//{
-			//	PROFILE_AUTO("PhysicsDebugRender > render");
-
-			//	glUseProgram(glShader->program);
-
-			//	glBindVertexArray(m_VAO);
-
-			//	glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
-			//	glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)m_VertexBufferData.VertexBufferSize, m_VertexBufferData.vertexData, GL_STREAM_DRAW);
-
-			//	// Describe shader variables (TODO: Why can't this be done just once in initialize? glBufferData)
-			//	{
-			//		real* currentLocation = (real*)0;
-
-			//		glVertexAttribPointer((GLuint)m_VertAttribPosLoc, 3, GL_FLOAT, GL_FALSE, m_VertexBufferData.VertexStride, currentLocation);
-			//		currentLocation += 3;
-
-			//		glVertexAttribPointer((GLuint)m_VertAttribColLoc, 4, GL_FLOAT, GL_FALSE, m_VertexBufferData.VertexStride, currentLocation);
-			//		currentLocation += 4;
-			//	}
-
-			//	glm::mat4 model = MAT4_IDENTITY;
-			//	glm::mat4 proj = g_CameraManager->CurrentCamera()->GetProjection();
-			//	glm::mat4 view = g_CameraManager->CurrentCamera()->GetView();
-			//	glm::vec4 colorMultiplier = glMat->material.colorMultiplier;
-
-			//	glUniformMatrix4fv(glMat->uniformIDs.model, 1, false, &model[0][0]);
-			//	glUniformMatrix4fv(glMat->uniformIDs.view, 1, false, &view[0][0]);
-			//	glUniformMatrix4fv(glMat->uniformIDs.projection, 1, false, &proj[0][0]);
-			//	glUniform4fv(glMat->uniformIDs.colorMultiplier, 1, &colorMultiplier[0]);
-
-			//	glDepthMask(GL_FALSE);
-
-			//	glEnable(GL_BLEND);
-			//	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-			//	glDrawArrays(GL_LINES, 0, (GLsizei)m_VertexBufferData.VertexCount);
-			//}
 		}
 	} // namespace vk
 } // namespace flex
