@@ -26,6 +26,8 @@ namespace flex
 			if (result != VK_SUCCESS)
 			{
 				PrintError("Vulkan fatal error: %s\n", VulkanErrorString(result).c_str());
+				// TODO: Replace with platform-agnostic method
+				DebugBreak();
 				assert(result == VK_SUCCESS);
 			}
 		}

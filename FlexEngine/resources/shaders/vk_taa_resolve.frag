@@ -49,7 +49,6 @@ void main()
 	float alpha = 1.0 / TAA_SAMPLE_COUNT;
 
 	// Blend based on distance moved
-	float dUV = clamp((length((historyUV) - (ex_TexCoord)) - 1.0/texSize.x) / uboConstant.maxUVDist, 0.0, 1.0);
 	// alpha = mix(alpha, 1.0, dUV);
 
 	// if (historyUV.x - ex_TexCoord.x > 2.0) historyUV.x = ex_TexCoord.x + 2.0;
@@ -72,7 +71,4 @@ void main()
 
 	out_Color = vec4(mix(historyCol, sceneCol, alpha), 1.0);
 	// out_Color = vec4(abs(historyCol - sceneCol), 1.0);
-
-	float r = dUV;
-	out_Color.r = mix(out_Color.r, r, r);
 }

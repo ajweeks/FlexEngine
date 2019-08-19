@@ -568,7 +568,6 @@ namespace flex
 			return false;
 		}
 
-		// TODO: Unsigned?
 		u32 subChunk1Size = Parse32u(&dataArray[dataIndex]); dataIndex += 4;
 		if (subChunk1Size != 16)
 		{

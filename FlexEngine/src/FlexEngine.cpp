@@ -2324,7 +2324,7 @@ namespace flex
 
 			i32 major = 0, minor = 0, patch = 0;
 			m_RenderDocAPI->GetAPIVersion(&major, &minor, &patch);
-			Print("RenderDoc API v%i.%i.%i connected, F9 to capture\n", major, minor, patch);
+			Print("### RenderDoc API v%i.%i.%i connected, F9 to capture ###\n", major, minor, patch);
 
 			if (m_RenderDocAutoCaptureFrameOffset != -1 &&
 				m_RenderDocAutoCaptureFrameCount != -1)
