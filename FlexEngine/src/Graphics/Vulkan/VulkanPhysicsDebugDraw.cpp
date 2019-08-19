@@ -82,7 +82,7 @@ namespace flex
 
 		void VulkanPhysicsDebugDraw::drawLine(const btVector3& from, const btVector3& to, const btVector3& color)
 		{
-			m_LineSegments.push_back(LineSegment{ from, to, color });
+			m_LineSegments.emplace_back(from, to, color);
 		}
 
 		void VulkanPhysicsDebugDraw::drawContactPoint(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector3& color)
@@ -97,7 +97,7 @@ namespace flex
 
 		void VulkanPhysicsDebugDraw::DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& color)
 		{
-			m_LineSegments.push_back(LineSegment{ from, to, color });
+			m_LineSegments.emplace_back(from, to, color);
 		}
 
 		void VulkanPhysicsDebugDraw::Draw()
@@ -113,18 +113,24 @@ namespace flex
 				m_VertexBufferCreateInfo.positions_3D.clear();
 				m_VertexBufferCreateInfo.colors_R32G32B32A32.clear();
 
-				m_VertexBufferCreateInfo.positions_3D.resize(m_LineSegments.size() * 2);
-				m_VertexBufferCreateInfo.colors_R32G32B32A32.resize(m_LineSegments.size() * 2);
+				u32 numLines = m_LineSegments.size();
+
+				if (m_VertexBufferCreateInfo.positions_3D.capacity() < numLines)
+				{
+					m_VertexBufferCreateInfo.positions_3D.resize(numLines * 2);
+					m_VertexBufferCreateInfo.colors_R32G32B32A32.resize(numLines * 2);
+				}
 
 				i32 i = 0;
+				glm::vec3* posData = m_VertexBufferCreateInfo.positions_3D.data();
+				glm::vec4* colData = m_VertexBufferCreateInfo.colors_R32G32B32A32.data();
 				for (LineSegment& line : m_LineSegments)
 				{
-					*(m_VertexBufferCreateInfo.positions_3D.data() + i) = (ToVec3(line.start));
-					*(m_VertexBufferCreateInfo.positions_3D.data() + i + 1) = (ToVec3(line.end));
+					memcpy(posData + i, line.start, sizeof(real) * 3);
+					memcpy(posData + i + 1, line.end, sizeof(real) * 3);
 
-					glm::vec4 color(ToVec3(line.color), 1.0f);
-					*(m_VertexBufferCreateInfo.colors_R32G32B32A32.data() + i) = (color);
-					*(m_VertexBufferCreateInfo.colors_R32G32B32A32.data() + i + 1) = (color);
+					memcpy(colData + i, line.color, sizeof(real) * 4);
+					memcpy(colData + i + 1, line.color, sizeof(real) * 4);
 
 					i += 2;
 				}

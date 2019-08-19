@@ -42,10 +42,23 @@ namespace flex
 
 		struct LineSegment
 		{
-			btVector3 start;
-			btVector3 end;
+			LineSegment(const btVector3& vStart, const btVector3& vEnd, const btVector3& vCol)
+			{
+				memcpy(start, vStart.m_floats, sizeof(real) * 3);
+				memcpy(end, vEnd.m_floats, sizeof(real) * 3);
+				memcpy(color, vCol.m_floats, sizeof(real) * 3);
+				color[3] = 1.0f;
+			}
+			LineSegment(const btVector3& vStart, const btVector3& vEnd, const btVector4& vCol)
+			{
+				memcpy(start, vStart.m_floats, sizeof(real) * 3);
+				memcpy(end, vEnd.m_floats, sizeof(real) * 3);
+				memcpy(color, vCol.m_floats, sizeof(real) * 4);
+			}
+			real start[3];
+			real end[3];
 			// TODO: Support opacity
-			btVector3 color;
+			real color[4];
 		};
 
 		// Gets filled each frame by calls to drawLine, then emptied after debugDrawWorld()
