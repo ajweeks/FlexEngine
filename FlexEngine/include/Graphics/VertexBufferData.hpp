@@ -7,7 +7,7 @@ namespace flex
 	class VertexBufferData
 	{
 	public:
-		// TODO: Bring out of class for consistency with other CreateInfo structs
+		// TODO: EZ: Bring out of class for consistency with other CreateInfo structs
 		struct CreateInfo
 		{
 			VertexAttributes attributes;

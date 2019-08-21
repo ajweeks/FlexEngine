@@ -57,13 +57,11 @@ namespace flex
 			}
 			real start[3];
 			real end[3];
-			// TODO: Support opacity
 			real color[4];
 		};
 
 		// Gets filled each frame by calls to drawLine, then emptied after debugDrawWorld()
 		std::vector<LineSegment> m_LineSegments;
-		std::vector<LineSegment> m_pLineSegments;
 
 		i32 m_DebugMode = 0;
 
