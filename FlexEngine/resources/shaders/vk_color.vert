@@ -14,7 +14,7 @@ layout (binding = 0) uniform UBOConstant
 layout (binding = 1) uniform UBODynamic
 {
 	mat4 model;
-	vec4 multiplier;
+	vec4 colorMultiplier;
 } uboDynamic;
 
 layout (location = 0) out vec4 outColor;
@@ -28,5 +28,5 @@ void main()
 {
 	gl_Position = uboConstant.viewProjection * uboDynamic.model * vec4(in_Position, 1.0);
 
-	outColor = in_Color * uboDynamic.multiplier;
+	outColor = in_Color * uboDynamic.colorMultiplier;
 }
