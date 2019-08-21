@@ -6407,10 +6407,7 @@ namespace flex
 
 					if (requiredMemory > 0)
 					{
-						CreateDynamicVertexBuffer(
-							m_VertexIndexBufferPairs[i].vertexBuffer,
-							requiredMemory,
-							nullptr);
+						CreateDynamicVertexBuffer(m_VertexIndexBufferPairs[i].vertexBuffer, requiredMemory);
 					}
 				}
 			}
@@ -6529,23 +6526,10 @@ namespace flex
 			CopyBuffer(m_VulkanDevice, m_GraphicsQueue, stagingBuffer.m_Buffer, vertexBuffer->m_Buffer, vertexBufferSize);
 		}
 
-		void VulkanRenderer::CreateDynamicVertexBuffer(VulkanBuffer* vertexBuffer, u32 size, void* initialData)
+		void VulkanRenderer::CreateDynamicVertexBuffer(VulkanBuffer* vertexBuffer, u32 size)
 		{
 			CreateAndAllocateBuffer(m_VulkanDevice, size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vertexBuffer);
-
-			if (initialData != nullptr)
-			{
-				VulkanBuffer stagingBuffer(m_VulkanDevice->m_LogicalDevice);
-				CreateAndAllocateBuffer(m_VulkanDevice, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-					VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer);
-
-				VK_CHECK_RESULT(stagingBuffer.Map(size));
-				memcpy(stagingBuffer.m_Mapped, initialData, size);
-				stagingBuffer.Unmap();
-
-				CopyBuffer(m_VulkanDevice, m_GraphicsQueue, stagingBuffer.m_Buffer, vertexBuffer->m_Buffer, size);
-			}
 		}
 
 		void VulkanRenderer::CreateStaticIndexBuffers()

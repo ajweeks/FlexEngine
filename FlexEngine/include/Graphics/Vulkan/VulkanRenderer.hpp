@@ -228,7 +228,7 @@ namespace flex
 			u32 CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, ShaderID shaderID, u32 size);
 			void CreateShadowVertexBuffer();
 			void CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, void* vertexBufferData, u32 vertexBufferSize);
-			void CreateDynamicVertexBuffer(VulkanBuffer* vertexBuffer, u32 size, void* initialData = nullptr);
+			void CreateDynamicVertexBuffer(VulkanBuffer* vertexBuffer, u32 size);
 
 			void CreateStaticIndexBuffers();
 
