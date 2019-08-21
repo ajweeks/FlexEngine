@@ -113,12 +113,12 @@ namespace flex
 				m_VertexBufferCreateInfo.positions_3D.clear();
 				m_VertexBufferCreateInfo.colors_R32G32B32A32.clear();
 
-				u32 numLines = m_LineSegments.size();
+				u32 numVerts = m_LineSegments.size() * 2;
 
-				if (m_VertexBufferCreateInfo.positions_3D.capacity() < numLines)
+				if (m_VertexBufferCreateInfo.positions_3D.capacity() < numVerts)
 				{
-					m_VertexBufferCreateInfo.positions_3D.resize(numLines * 2);
-					m_VertexBufferCreateInfo.colors_R32G32B32A32.resize(numLines * 2);
+					m_VertexBufferCreateInfo.positions_3D.resize(numVerts * 2);
+					m_VertexBufferCreateInfo.colors_R32G32B32A32.resize(numVerts * 2);
 				}
 
 				i32 i = 0;
