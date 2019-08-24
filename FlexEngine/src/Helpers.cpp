@@ -1035,67 +1035,107 @@ namespace flex
 
 	std::string Vec2ToString(const glm::vec2& vec, i32 precision)
 	{
+		return Vec2ToString(vec.x, vec.y, precision);
+	}
+
+	std::string Vec3ToString(const glm::vec3& vec, i32 precision)
+	{
+		return Vec3ToString(vec.x, vec.y, vec.z, precision);
+	}
+
+	std::string Vec4ToString(const glm::vec4& vec, i32 precision)
+	{
+		return Vec4ToString(vec.x, vec.y, vec.z, vec.w, precision);
+	}
+
+	std::string Vec2ToString(real* data, i32 precision)
+	{
+		return Vec2ToString(*data, *(data + 1), precision);
+	}
+
+	std::string Vec3ToString(real* data, i32 precision)
+	{
+		return Vec3ToString(*data, *(data + 1), *(data + 2), precision);
+	}
+
+	std::string Vec4ToString(real* data, i32 precision)
+	{
+		return Vec4ToString(*data, *(data + 1), *(data + 2), *(data + 3), precision);
+	}
+
+	std::string Vec2ToString(real x, real y, i32 precision)
+	{
 #if DEBUG
-		if (IsNanOrInf(vec))
+		if (IsNanOrInf(x) || IsNanOrInf(y))
 		{
 			PrintError("Attempted to convert vec2 with NAN or inf components to string! Setting to zero\n");
 			return "INVALID VEC";
 		}
 #endif
 
-		std::string result(FloatToString(vec.x, precision) + SEPARATOR_STR +
-			FloatToString(vec.y, precision));
+		std::string result(FloatToString(x, precision) + SEPARATOR_STR +
+			FloatToString(y, precision));
 		return result;
 	}
 
-	std::string Vec3ToString(const glm::vec3& vec, i32 precision)
+	std::string Vec3ToString(real x, real y, real z, i32 precision)
 	{
 #if DEBUG
-		if (IsNanOrInf(vec))
+		if (IsNanOrInf(x) || IsNanOrInf(y) || IsNanOrInf(z))
 		{
 			PrintError("Attempted to convert vec3 with NAN or inf components to string! Setting to zero\n");
 			return "INVALID VEC";
 		}
 #endif
 
-		std::string result(FloatToString(vec.x, precision) + SEPARATOR_STR +
-			FloatToString(vec.y, precision) + SEPARATOR_STR +
-			FloatToString(vec.z, precision));
+		std::string result(FloatToString(x, precision) + SEPARATOR_STR +
+			FloatToString(y, precision) + SEPARATOR_STR +
+			FloatToString(z, precision));
 		return result;
 	}
 
-	std::string Vec4ToString(const glm::vec4& vec, i32 precision)
+	std::string Vec4ToString(real x, real y, real z, real w, i32 precision)
 	{
 #if DEBUG
-		if (IsNanOrInf(vec))
+		if (IsNanOrInf(x) || IsNanOrInf(y) || IsNanOrInf(z) || IsNanOrInf(w))
 		{
 			PrintError("Attempted to convert vec4 with NAN or inf components to string! Setting to zero\n");
 			return "INVALID VEC";
 		}
 #endif
 
-		std::string result(FloatToString(vec.x, precision) + SEPARATOR_STR +
-			FloatToString(vec.y, precision) + SEPARATOR_STR +
-			FloatToString(vec.z, precision) + SEPARATOR_STR +
-			FloatToString(vec.w, precision));
+		std::string result(FloatToString(x, precision) + SEPARATOR_STR +
+			FloatToString(y, precision) + SEPARATOR_STR +
+			FloatToString(z, precision) + SEPARATOR_STR +
+			FloatToString(w, precision));
 		return result;
 	}
 
 	std::string QuatToString(const glm::quat& quat, i32 precision)
 	{
+		return QuatToString(quat.x, quat.y, quat.z, quat.w, precision);
+	}
+
+	std::string QuatToString(real x, real y, real z, real w, i32 precision)
+	{
 #if DEBUG
-		if (IsNanOrInf(quat))
+		if (IsNanOrInf(x) || IsNanOrInf(y) || IsNanOrInf(z) || IsNanOrInf(w))
 		{
 			PrintError("Attempted to convert vec4 with NAN or inf components to string! Setting to zero\n");
 			return "INVALID QUAT";
 		}
 #endif
 
-		std::string result(FloatToString(quat.x, precision) + SEPARATOR_STR +
-				FloatToString(quat.y, precision) + SEPARATOR_STR +
-				FloatToString(quat.z, precision) + SEPARATOR_STR +
-				FloatToString(quat.w, precision));
+		std::string result(FloatToString(x, precision) + SEPARATOR_STR +
+			FloatToString(y, precision) + SEPARATOR_STR +
+			FloatToString(z, precision) + SEPARATOR_STR +
+			FloatToString(w, precision));
 		return result;
+	}
+
+	std::string QuatToString(real * data, i32 precision)
+	{
+		return std::string();
 	}
 
 	void CopyVec3ToClipboard(const glm::vec3& vec)

@@ -138,7 +138,17 @@ namespace flex
 	std::string Vec3ToString(const glm::vec3& vec, i32 precision);
 	std::string Vec4ToString(const glm::vec4& vec, i32 precision);
 
+	std::string Vec2ToString(real* data, i32 precision);
+	std::string Vec3ToString(real* data, i32 precision);
+	std::string Vec4ToString(real* data, i32 precision);
+
+	std::string Vec2ToString(real x, real y, i32 precision);
+	std::string Vec3ToString(real x, real y, real z, i32 precision);
+	std::string Vec4ToString(real x, real y, real z, real w, i32 precision);
+
 	std::string QuatToString(const glm::quat& quat, i32 precision);
+	std::string QuatToString(real x, real y, real z, real w, i32 precision);
+	std::string QuatToString(real* data, i32 precision);
 
 	void CopyVec3ToClipboard(const glm::vec3& vec);
 	void CopyVec4ToClipboard(const glm::vec4& vec);
