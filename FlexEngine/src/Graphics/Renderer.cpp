@@ -690,8 +690,6 @@ namespace flex
 		DirLightData* dirLight = g_Renderer->GetDirectionalLight();
 		if (dirLight)
 		{
-			glm::vec3 lightDirection = dirLight->dir;
-
 			// Flip near & far planes
 			glm::mat4 modifiedProj = cam->GetProjection();
 			modifiedProj[2][2] = 1.0f - modifiedProj[2][2];
@@ -1773,8 +1771,6 @@ namespace flex
 			// Shadow
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::SHADOW;
 			m_BaseShaders[shaderID].bGenerateVertexBufferForAll = true;
-			// TODO: Upload index as push constant rather than full matrix
-			// TODO: Make push constant system more robust
 			m_BaseShaders[shaderID].bNeedPushConstantBlock = true;
 			m_BaseShaders[shaderID].pushConstantBlockSize = 64;
 			m_BaseShaders[shaderID].pushConstantsNeededInFragStage = true;
