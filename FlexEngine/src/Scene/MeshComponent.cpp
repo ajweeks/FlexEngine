@@ -159,6 +159,12 @@ namespace flex
 		}
 	}
 
+	void MeshComponent::UpdateProceduralData(VertexBufferData::CreateInfo const* newData)
+	{
+		m_VertexBufferData.UpdateData(newData);
+		g_Renderer->UpdateVertexData(m_OwningGameObject->GetRenderID(), &m_VertexBufferData);
+	}
+
 	void MeshComponent::Destroy()
 	{
 		m_VertexBufferData.Destroy();
@@ -500,26 +506,7 @@ namespace flex
 
 		if (optionalCreateInfo)
 		{
-			if (optionalCreateInfo->materialID != InvalidMaterialID)
-			{
-				m_MaterialID = optionalCreateInfo->materialID;
-			}
-			renderObjectCreateInfo.visibleInSceneExplorer = optionalCreateInfo->visibleInSceneExplorer;
-			renderObjectCreateInfo.cullFace = optionalCreateInfo->cullFace;
-			renderObjectCreateInfo.depthTestReadFunc = optionalCreateInfo->depthTestReadFunc;
-			renderObjectCreateInfo.bDepthWriteEnable = optionalCreateInfo->bDepthWriteEnable;
-			renderObjectCreateInfo.bDepthTestEnable = optionalCreateInfo->bDepthTestEnable;
-			renderObjectCreateInfo.bEditorObject = optionalCreateInfo->bEditorObject;
-			renderObjectCreateInfo.bSetDynamicStates = optionalCreateInfo->bSetDynamicStates;
-
-			if (optionalCreateInfo->vertexBufferData != nullptr)
-			{
-				PrintWarn("Attempted to override vertexBufferData in LoadFromFile! Ignoring passed in data\n");
-			}
-			if (optionalCreateInfo->indices != nullptr)
-			{
-				PrintWarn("Attempted to override indices in LoadFromFile! Ignoring passed in data\n");
-			}
+			CopyInOptionalCreateInfo(renderObjectCreateInfo, *optionalCreateInfo);
 		}
 
 		renderObjectCreateInfo.gameObject = m_OwningGameObject;
@@ -563,24 +550,7 @@ namespace flex
 
 		if (optionalCreateInfo)
 		{
-			if (optionalCreateInfo->materialID != InvalidMaterialID)
-			{
-				m_MaterialID = optionalCreateInfo->materialID;
-			}
-			renderObjectCreateInfo.visibleInSceneExplorer = optionalCreateInfo->visibleInSceneExplorer;
-			renderObjectCreateInfo.cullFace = optionalCreateInfo->cullFace;
-			renderObjectCreateInfo.depthTestReadFunc = optionalCreateInfo->depthTestReadFunc;
-			renderObjectCreateInfo.bDepthWriteEnable = optionalCreateInfo->bDepthWriteEnable;
-			renderObjectCreateInfo.bEditorObject = optionalCreateInfo->bEditorObject;
-
-			if (optionalCreateInfo->vertexBufferData != nullptr)
-			{
-				PrintError("Can not override vertexBufferData in LoadPrefabShape! Ignoring passed in data\n");
-			}
-			if (optionalCreateInfo->indices != nullptr)
-			{
-				PrintError("Can not override indices in LoadPrefabShape! Ignoring passed in data\n");
-			}
+			CopyInOptionalCreateInfo(renderObjectCreateInfo, *optionalCreateInfo);
 		}
 
 		renderObjectCreateInfo.gameObject = m_OwningGameObject;
@@ -1189,13 +1159,21 @@ namespace flex
 		return true;
 	}
 
-	bool MeshComponent::CreateProcedural(u32 initialMaxVertCount, VertexAttributes attributes, TopologyMode topologyMode /* = TopologyMode::TRIANGLE_LIST */)
+	bool MeshComponent::CreateProcedural(u32 initialMaxVertCount,
+		VertexAttributes attributes,
+		TopologyMode topologyMode /* = TopologyMode::TRIANGLE_LIST */,
+		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
 	{
 		assert(m_VertexBufferData.vertexData == nullptr);
 
 		m_VertexBufferData.InitializeDynamic(attributes, initialMaxVertCount);
 
 		RenderObjectCreateInfo renderObjectCreateInfo = {};
+
+		if (optionalCreateInfo)
+		{
+			CopyInOptionalCreateInfo(renderObjectCreateInfo, *optionalCreateInfo);
+		}
 
 		renderObjectCreateInfo.gameObject = m_OwningGameObject;
 		renderObjectCreateInfo.vertexBufferData = &m_VertexBufferData;
@@ -1533,5 +1511,28 @@ namespace flex
 		}
 
 		return true;
+	}
+
+	void MeshComponent::CopyInOptionalCreateInfo(RenderObjectCreateInfo& createInfo, const RenderObjectCreateInfo& overrides)
+	{
+		if (overrides.materialID != InvalidMaterialID)
+		{
+			m_MaterialID = overrides.materialID;
+		}
+		createInfo.visibleInSceneExplorer = overrides.visibleInSceneExplorer;
+		createInfo.cullFace = overrides.cullFace;
+		createInfo.depthTestReadFunc = overrides.depthTestReadFunc;
+		createInfo.bDepthWriteEnable = overrides.bDepthWriteEnable;
+		createInfo.bEditorObject = overrides.bEditorObject;
+		createInfo.bSetDynamicStates = overrides.bSetDynamicStates;
+
+		if (overrides.vertexBufferData != nullptr)
+		{
+			PrintWarn("Attempted to override vertexBufferData in LoadFromFile! Ignoring passed in data\n");
+		}
+		if (overrides.indices != nullptr)
+		{
+			PrintWarn("Attempted to override indices in LoadFromFile! Ignoring passed in data\n");
+		}
 	}
 } // namespace flex

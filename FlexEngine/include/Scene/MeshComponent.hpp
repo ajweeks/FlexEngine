@@ -46,6 +46,8 @@ namespace flex
 
 		void Update();
 
+		void UpdateProceduralData(VertexBufferData::CreateInfo const* newData);
+
 		void Destroy();
 
 		void SetOwner(GameObject* owner);
@@ -65,7 +67,10 @@ namespace flex
 		bool LoadPrefabShape(PrefabShape shape,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
-		bool CreateProcedural(u32 initialMaxVertCount, VertexAttributes attributes, TopologyMode topologyMode = TopologyMode::TRIANGLE_LIST);
+		bool CreateProcedural(u32 initialMaxVertCount,
+			VertexAttributes attributes,
+			TopologyMode topologyMode = TopologyMode::TRIANGLE_LIST,
+			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
 		void Reload();
 
@@ -103,6 +108,8 @@ namespace flex
 	private:
 		real CalculateBoundingSphereScale() const;
 		bool CalculateTangents(VertexBufferData::CreateInfo& createInfo);
+
+		void CopyInOptionalCreateInfo(RenderObjectCreateInfo& createInfo, const RenderObjectCreateInfo& overrides);
 
 		static const real GRID_LINE_SPACING;
 		static const u32 GRID_LINE_COUNT;
