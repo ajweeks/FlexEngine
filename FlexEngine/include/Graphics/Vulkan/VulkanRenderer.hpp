@@ -279,6 +279,8 @@ namespace flex
 
 			void GenerateIrradianceMaps();
 
+			void OnShaderReloadSuccess();
+
 			// Returns true if object was duplicated
 			bool DoTextureSelector(const char* label, const std::vector<VulkanTexture*>& textures, i32* selectedIndex, bool* bGenerateSampler);
 			void ImGuiUpdateTextureIndexOrMaterial(bool bUpdateTextureMaterial,

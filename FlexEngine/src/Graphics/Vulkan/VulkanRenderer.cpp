@@ -1313,67 +1313,22 @@ namespace flex
 			Renderer::Update();
 
 #ifdef DEBUG
-			if (m_ShaderCompiler != nullptr)
+			if (m_ShaderCompiler && m_ShaderCompiler->TickStatus())
 			{
-				if (m_ShaderCompiler->TickStatus())
+				if (m_ShaderCompiler->bSuccess)
 				{
-					if (m_ShaderCompiler->bSuccess == false)
-					{
-						PrintError("Async shader recompile failed\n");
-						AddEditorString("Async shader recompile failed");
-					}
-					else
-					{
-						Print("Async shader recompile completed successfully!\n");
-						AddEditorString("Async shader recompile completed successfully");
-
-						LoadShaders();
-
-						CreateRenderPasses();
-						PrepareFrameBuffers();
-
-						// Force font descriptor sets to be regenerated
-						for (BitmapFont* font : m_FontsSS)
-						{
-							font->m_DescriptorSet = VK_NULL_HANDLE;
-						}
-
-						for (BitmapFont* font : m_FontsWS)
-						{
-							font->m_DescriptorSet = VK_NULL_HANDLE;
-						}
-
-						for (VulkanShader& shader : m_Shaders)
-						{
-							shader.renderPass = ResolveRenderPassType(shader.shader->renderPassType, shader.shader->name.c_str());
-							CreateUniformBuffers(&shader);
-						}
-
-						CreateShadowResources();
-
-						for (u32 i = 0; i < m_RenderObjects.size(); ++i)
-						{
-							CreateDescriptorSet(i);
-							CreateGraphicsPipeline(i, false);
-						}
-
-						for (auto& iter : m_SpriteDescSets)
-						{
-							vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPool, 1, &(iter.second.descSet));
-							iter.second.descSet = CreateSpriteDescSet(iter.second.shaderID, iter.first, iter.second.textureLayer);
-						}
-
-						CreateSSAODescriptorSets();
-						CreateSSAOPipelines();
-
-						CreatePostProcessingObjects();
-					}
-
-					m_bSwapChainNeedsRebuilding = true; // This is needed to recreate some resources for SSAO, etc.
-
-					delete m_ShaderCompiler;
-					m_ShaderCompiler = nullptr;
+					OnShaderReloadSuccess();
 				}
+				else
+				{
+					PrintError("Async shader recompile failed\n");
+					AddEditorString("Async shader recompile failed");
+				}
+
+				m_bSwapChainNeedsRebuilding = true; // This is needed to recreate some resources for SSAO, etc.
+
+				delete m_ShaderCompiler;
+				m_ShaderCompiler = nullptr;
 			}
 #endif
 
@@ -8175,6 +8130,53 @@ namespace flex
 				CreateDescriptorSet(i);
 				CreateGraphicsPipeline(i, false);
 			}
+		}
+
+		void VulkanRenderer::OnShaderReloadSuccess()
+		{
+			Print("Async shader recompile completed successfully!\n");
+			AddEditorString("Async shader recompile completed successfully");
+
+			LoadShaders();
+
+			CreateRenderPasses();
+			PrepareFrameBuffers();
+
+			// Force font descriptor sets to be regenerated
+			for (BitmapFont* font : m_FontsSS)
+			{
+				font->m_DescriptorSet = VK_NULL_HANDLE;
+			}
+
+			for (BitmapFont* font : m_FontsWS)
+			{
+				font->m_DescriptorSet = VK_NULL_HANDLE;
+			}
+
+			for (VulkanShader& shader : m_Shaders)
+			{
+				shader.renderPass = ResolveRenderPassType(shader.shader->renderPassType, shader.shader->name.c_str());
+				CreateUniformBuffers(&shader);
+			}
+
+			CreateShadowResources();
+
+			for (u32 i = 0; i < m_RenderObjects.size(); ++i)
+			{
+				CreateDescriptorSet(i);
+				CreateGraphicsPipeline(i, false);
+			}
+
+			for (auto& iter : m_SpriteDescSets)
+			{
+				vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPool, 1, &(iter.second.descSet));
+				iter.second.descSet = CreateSpriteDescSet(iter.second.shaderID, iter.first, iter.second.textureLayer);
+			}
+
+			CreateSSAODescriptorSets();
+			CreateSSAOPipelines();
+
+			CreatePostProcessingObjects();
 		}
 
 		bool VulkanRenderer::DoTextureSelector(const char* label,
