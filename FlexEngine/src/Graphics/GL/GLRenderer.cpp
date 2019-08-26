@@ -2576,7 +2576,7 @@ namespace flex
 						GLRenderObject* renderObject = GetRenderObject(renderID);
 						if (renderObject)
 						{
-							selectedObjectRenderBatch.push_back(renderObject);
+							selectedObjectRenderBatch.emplace_back(renderObject);
 						}
 					}
 				}

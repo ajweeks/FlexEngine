@@ -333,7 +333,7 @@ namespace flex
 
 			struct MaterialBatchPair
 			{
-				MaterialID materialID;
+				MaterialID materialID = InvalidMaterialID;
 				RenderObjectBatch batch;
 			};
 
@@ -345,7 +345,7 @@ namespace flex
 
 			struct ShaderBatchPair
 			{
-				ShaderID shaderID;
+				ShaderID shaderID = InvalidShaderID;
 				MaterialBatch batch;
 			};
 

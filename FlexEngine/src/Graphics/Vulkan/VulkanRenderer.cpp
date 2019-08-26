@@ -219,7 +219,6 @@ namespace flex
 			m_ShadowImageMemory = { m_VulkanDevice->m_LogicalDevice, vkFreeMemory };
 			m_ShadowRenderPass = { m_VulkanDevice->m_LogicalDevice, vkDestroyRenderPass };
 
-
 			CreateSwapChain();
 			CreateSwapChainImageViews();
 
@@ -6179,7 +6178,7 @@ namespace flex
 			depthSamplerCreateInfo.mipLodBias = 0.0f;
 			depthSamplerCreateInfo.minLod = 0.0f;
 			depthSamplerCreateInfo.maxLod = 1.0f;
-			depthSamplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE; // TODO: VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK
+			depthSamplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
 			VK_CHECK_RESULT(vkCreateSampler(m_VulkanDevice->m_LogicalDevice, &depthSamplerCreateInfo, nullptr, m_DepthSampler.replace()));
 			SetSamplerName(m_VulkanDevice, m_DepthSampler, "Depth sampler");
 		}
@@ -6891,7 +6890,6 @@ namespace flex
 		void VulkanRenderer::RenderFullscreenQuad(VkCommandBuffer commandBuffer, VkRenderPass renderPass, VkFramebuffer framebuffer,
 			ShaderID shaderID, VkPipelineLayout pipelineLayout, VkPipeline graphicsPipeline, VkDescriptorSet descriptorSet, bool bFlipViewport)
 		{
-			// TODO: Begin and end regions here?
 			std::array<VkClearValue, 2> clearValues = {};
 			clearValues[0].color = m_ClearColor;
 			clearValues[1].depthStencil = { 0.0f, 0 };
@@ -6920,10 +6918,6 @@ namespace flex
 
 				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
-				//
-				// TODO: Render full screen tri here!
-				//
-				//vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_VertexIndexBufferPairs[shaderID].vertexBuffer->m_Buffer, offsets);
 				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_FullScreenTriVertexBuffer->m_Buffer, offsets);
 				
 				vkCmdDraw(commandBuffer, m_FullScreenTriVertexBufferData.VertexCount, 1, 0, 0);
@@ -7035,7 +7029,6 @@ namespace flex
 
 				vkCmdBeginRenderPass(m_OffScreenCmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-				// TODO: Make min and max values members
 				VkViewport fullScreenViewport = vks::viewportFlipped((real)m_GBufferFrameBuf->width, (real)m_GBufferFrameBuf->height, 0.0f, 1.0f);
 				vkCmdSetViewport(m_OffScreenCmdBuffer, 0, 1, &fullScreenViewport);
 
