@@ -144,6 +144,21 @@ namespace flex
 		return meshObject;
 	}
 
+	void MeshComponent::Update()
+	{
+		// TODO: Move elsewhere
+		if (m_Shape == PrefabShape::GRID)
+		{
+			Transform* transform = m_OwningGameObject->GetTransform();
+			glm::vec3 camPos = g_CameraManager->CurrentCamera()->GetPosition();
+			glm::vec3 newGridPos = glm::vec3(camPos.x - fmod(
+				camPos.x + GRID_LINE_SPACING / 2.0f, GRID_LINE_SPACING),
+				transform->GetWorldPosition().y,
+				camPos.z - fmod(camPos.z + GRID_LINE_SPACING / 2.0f, GRID_LINE_SPACING));
+			transform->SetWorldPosition(newGridPos);
+		}
+	}
+
 	void MeshComponent::Destroy()
 	{
 		m_VertexBufferData.Destroy();
@@ -163,166 +178,6 @@ namespace flex
 		Material& mat = g_Renderer->GetMaterial(matID);
 		Shader& shader = g_Renderer->GetShader(mat.shaderID);
 		m_RequiredAttributes = shader.vertexAttributes;
-	}
-
-	bool MeshComponent::FindPreLoadedMesh(const std::string& relativeFilePath, LoadedMesh** loadedMesh)
-	{
-		auto iter = m_LoadedMeshes.find(relativeFilePath);
-		if (iter == m_LoadedMeshes.end())
-		{
-			return false;
-		}
-		else
-		{
-			*loadedMesh = iter->second;
-			return true;
-		}
-	}
-
-	LoadedMesh* MeshComponent::LoadMesh(const std::string& relativeFilePath, MeshImportSettings* importSettings /* = nullptr */)
-	{
-		if (relativeFilePath.find(':') != std::string::npos)
-		{
-			PrintError("Called MeshComponent::LoadMesh with an absolute file path! Filepath must be relative. %s\n", relativeFilePath.c_str());
-			return nullptr;
-		}
-
-		if (!EndsWith(relativeFilePath, "gltf") && !EndsWith(relativeFilePath, "glb"))
-		{
-			PrintWarn("Attempted to load non gltf/glb model! Only those formats are supported! %s\n", relativeFilePath.c_str());
-			return nullptr;
-		}
-
-		const std::string fileName = StripLeadingDirectories(relativeFilePath);
-
-		LoadedMesh* newLoadedMesh = nullptr;
-		{
-			auto existingIter = m_LoadedMeshes.find(relativeFilePath);
-			if (existingIter == m_LoadedMeshes.end())
-			{
-				if (g_bEnableLogging_Loading)
-				{
-					Print("Loading mesh %s\n", fileName.c_str());
-				}
-				newLoadedMesh = new LoadedMesh();
-				m_LoadedMeshes.emplace(relativeFilePath, newLoadedMesh);
-			}
-			else
-			{
-				if (g_bEnableLogging_Loading)
-				{
-					Print("Reloading mesh %s\n", fileName.c_str());
-				}
-				newLoadedMesh = existingIter->second;
-			}
-		}
-
-		// If import settings were passed in, save them in the cached mesh
-		if (importSettings)
-		{
-			newLoadedMesh->importSettings = *importSettings;
-		}
-
-		newLoadedMesh->relativeFilePath = relativeFilePath;
-
-		cgltf_options ops = {};
-		ops.type = cgltf_file_type_invalid; // auto detect gltf or glb
-		cgltf_data* data = nullptr;
-		cgltf_result result = cgltf_parse_file(&ops, relativeFilePath.c_str(), &data);
-		if (result == cgltf_result_success)
-		{
-			result = cgltf_load_buffers(&ops, data, relativeFilePath.c_str());
-		}
-
-		if (result == cgltf_result_success)
-		{
-			result = cgltf_validate(data);
-		}
-
-		if (result != cgltf_result_success)
-		{
-			std::string err;
-			switch (result)
-			{
-			case cgltf_result_data_too_short:	err = "Data too short"; break;
-			case cgltf_result_unknown_format:	err = "Unknown format"; break;
-			case cgltf_result_invalid_json:		err = "Invalid json"; break;
-			case cgltf_result_invalid_gltf:		err = "Invalid gltf"; break;
-			case cgltf_result_invalid_options:	err = "Invalid options"; break;
-			case cgltf_result_file_not_found:	err = "File not found"; break;
-			case cgltf_result_io_error:			err = "IO error"; break;
-			case cgltf_result_out_of_memory:	err = "Out of memory"; break;
-			default:							err = ""; break;
-			}
-			PrintError("Failed to load gltf/glb file at: %s\nError: %s\n", relativeFilePath.c_str(), err.c_str());
-			cgltf_free(data);
-		}
-		else
-		{
-			newLoadedMesh->data = data;
-		}
-
-		return newLoadedMesh;
-	}
-
-	real MeshComponent::CalculateBoundingSphereScale() const
-	{
-		Transform* transform = m_OwningGameObject->GetTransform();
-		glm::vec3 scale = transform->GetWorldScale();
-		glm::vec3 scaledMin = scale * m_MinPoint;
-		glm::vec3 scaledMax = scale * m_MaxPoint;
-
-		real sphereScale = (glm::max(glm::max(glm::abs(scaledMax.x), glm::abs(scaledMin.x)),
-			glm::max(glm::max(glm::abs(scaledMax.y), glm::abs(scaledMin.y)),
-				glm::max(glm::abs(scaledMax.z), glm::abs(scaledMin.z)))));
-		return sphereScale;
-	}
-
-	bool MeshComponent::CalculateTangents(VertexBufferData::CreateInfo& createInfo)
-	{
-		if (createInfo.normals.empty())
-		{
-			PrintError("Can't calculate tangents for mesh which contains no normal data!\n");
-			return false;
-		}
-		if (createInfo.positions_3D.empty())
-		{
-			PrintError("Can't calculate tangents for mesh which contains no position data!\n");
-			return false;
-		}
-		if (createInfo.texCoords_UV.empty())
-		{
-			// TODO: Handle this case
-			PrintError("Can't calculate tangents for mesh which contains no tex coord data!\n");
-			return false;
-		}
-
-		for (u32 i = 0; i < createInfo.positions_3D.size() - 2; i += 3)
-		{
-			glm::vec3 p0 = createInfo.positions_3D[i + 0];
-			glm::vec3 p1 = createInfo.positions_3D[i + 1];
-			glm::vec3 p2 = createInfo.positions_3D[i + 2];
-
-			glm::vec2 uv0 = createInfo.texCoords_UV[i + 0];
-			glm::vec2 uv1 = createInfo.texCoords_UV[i + 1];
-			glm::vec2 uv2 = createInfo.texCoords_UV[i + 2];
-
-			glm::vec3 dPos0 = p1 - p0;
-			glm::vec3 dPos1 = p2 - p0;
-
-			glm::vec2 dUV0 = uv1 - uv0;
-			glm::vec2 dUV1 = uv2 - uv0;
-
-			real r = 1.0f / (dUV1.x * dUV0.y - dUV1.y * dUV0.x);
-			glm::vec3 tangent = glm::normalize((dPos0 * dUV0.y - dPos1 * dUV1.y) * r);
-			//glm::vec3 bitangent = (dPos1 * dUV1.x - dPos0 * dUV0.x) * r;
-
-			createInfo.tangents[i + 0] = tangent;
-			createInfo.tangents[i + 1] = tangent;
-			createInfo.tangents[i + 2] = tangent;
-		}
-
-		return true;
 	}
 
 	bool MeshComponent::LoadFromFile(
@@ -1363,27 +1218,6 @@ namespace flex
 		return true;
 	}
 
-	void MeshComponent::Update()
-	{
-		// TODO: Move elsewhere
-		if (m_Shape == PrefabShape::GRID)
-		{
-			Transform* transform = m_OwningGameObject->GetTransform();
-			glm::vec3 camPos = g_CameraManager->CurrentCamera()->GetPosition();
-			glm::vec3 newGridPos = glm::vec3(camPos.x - fmod(
-				camPos.x + GRID_LINE_SPACING/2.0f, GRID_LINE_SPACING),
-				transform->GetWorldPosition().y,
-				camPos.z - fmod(camPos.z + GRID_LINE_SPACING / 2.0f, GRID_LINE_SPACING));
-			transform->SetWorldPosition(newGridPos);
-		}
-	}
-
-	void MeshComponent::UpdateProceduralData(VertexBufferData::CreateInfo const* newData)
-	{
-		m_VertexBufferData.UpdateData(newData);
-		g_Renderer->UpdateVertexData(m_OwningGameObject->GetRenderID(), &m_VertexBufferData);
-	}
-
 	void MeshComponent::Reload()
 	{
 		if (m_Type != Type::FILE)
@@ -1487,9 +1321,119 @@ namespace flex
 		}
 	}
 
+	bool MeshComponent::FindPreLoadedMesh(const std::string& relativeFilePath, LoadedMesh** loadedMesh)
+	{
+		auto iter = m_LoadedMeshes.find(relativeFilePath);
+		if (iter == m_LoadedMeshes.end())
+		{
+			return false;
+		}
+		else
+		{
+			*loadedMesh = iter->second;
+			return true;
+		}
+	}
+
+	LoadedMesh* MeshComponent::LoadMesh(const std::string& relativeFilePath, MeshImportSettings* importSettings /* = nullptr */)
+	{
+		if (relativeFilePath.find(':') != std::string::npos)
+		{
+			PrintError("Called MeshComponent::LoadMesh with an absolute file path! Filepath must be relative. %s\n", relativeFilePath.c_str());
+			return nullptr;
+		}
+
+		if (!EndsWith(relativeFilePath, "gltf") && !EndsWith(relativeFilePath, "glb"))
+		{
+			PrintWarn("Attempted to load non gltf/glb model! Only those formats are supported! %s\n", relativeFilePath.c_str());
+			return nullptr;
+		}
+
+		const std::string fileName = StripLeadingDirectories(relativeFilePath);
+
+		LoadedMesh* newLoadedMesh = nullptr;
+		{
+			auto existingIter = m_LoadedMeshes.find(relativeFilePath);
+			if (existingIter == m_LoadedMeshes.end())
+			{
+				if (g_bEnableLogging_Loading)
+				{
+					Print("Loading mesh %s\n", fileName.c_str());
+				}
+				newLoadedMesh = new LoadedMesh();
+				m_LoadedMeshes.emplace(relativeFilePath, newLoadedMesh);
+			}
+			else
+			{
+				if (g_bEnableLogging_Loading)
+				{
+					Print("Reloading mesh %s\n", fileName.c_str());
+				}
+				newLoadedMesh = existingIter->second;
+			}
+		}
+
+		// If import settings were passed in, save them in the cached mesh
+		if (importSettings)
+		{
+			newLoadedMesh->importSettings = *importSettings;
+		}
+
+		newLoadedMesh->relativeFilePath = relativeFilePath;
+
+		cgltf_options ops = {};
+		ops.type = cgltf_file_type_invalid; // auto detect gltf or glb
+		cgltf_data* data = nullptr;
+		cgltf_result result = cgltf_parse_file(&ops, relativeFilePath.c_str(), &data);
+		if (result == cgltf_result_success)
+		{
+			result = cgltf_load_buffers(&ops, data, relativeFilePath.c_str());
+		}
+
+		if (result == cgltf_result_success)
+		{
+			result = cgltf_validate(data);
+		}
+
+		if (result != cgltf_result_success)
+		{
+			std::string err;
+			switch (result)
+			{
+			case cgltf_result_data_too_short:	err = "Data too short"; break;
+			case cgltf_result_unknown_format:	err = "Unknown format"; break;
+			case cgltf_result_invalid_json:		err = "Invalid json"; break;
+			case cgltf_result_invalid_gltf:		err = "Invalid gltf"; break;
+			case cgltf_result_invalid_options:	err = "Invalid options"; break;
+			case cgltf_result_file_not_found:	err = "File not found"; break;
+			case cgltf_result_io_error:			err = "IO error"; break;
+			case cgltf_result_out_of_memory:	err = "Out of memory"; break;
+			default:							err = ""; break;
+			}
+			PrintError("Failed to load gltf/glb file at: %s\nError: %s\n", relativeFilePath.c_str(), err.c_str());
+			cgltf_free(data);
+		}
+		else
+		{
+			newLoadedMesh->data = data;
+		}
+
+		return newLoadedMesh;
+	}
+
 	MeshComponent::Type MeshComponent::GetType() const
 	{
 		return m_Type;
+	}
+
+	std::string MeshComponent::GetRelativeFilePath() const
+	{
+		return m_RelativeFilePath;
+	}
+
+	std::string MeshComponent::GetFileName() const
+	{
+		return m_FileName;
 	}
 
 	MeshComponent::PrefabShape MeshComponent::GetShape() const
@@ -1531,13 +1475,63 @@ namespace flex
 		return &m_VertexBufferData;
 	}
 
-	std::string MeshComponent::GetRelativeFilePath() const
+	real MeshComponent::CalculateBoundingSphereScale() const
 	{
-		return m_RelativeFilePath;
+		Transform* transform = m_OwningGameObject->GetTransform();
+		glm::vec3 scale = transform->GetWorldScale();
+		glm::vec3 scaledMin = scale * m_MinPoint;
+		glm::vec3 scaledMax = scale * m_MaxPoint;
+
+		real sphereScale = (glm::max(glm::max(glm::abs(scaledMax.x), glm::abs(scaledMin.x)),
+			glm::max(glm::max(glm::abs(scaledMax.y), glm::abs(scaledMin.y)),
+				glm::max(glm::abs(scaledMax.z), glm::abs(scaledMin.z)))));
+		return sphereScale;
 	}
 
-	std::string MeshComponent::GetFileName() const
+	bool MeshComponent::CalculateTangents(VertexBufferData::CreateInfo& createInfo)
 	{
-		return m_FileName;
+		if (createInfo.normals.empty())
+		{
+			PrintError("Can't calculate tangents for mesh which contains no normal data!\n");
+			return false;
+		}
+		if (createInfo.positions_3D.empty())
+		{
+			PrintError("Can't calculate tangents for mesh which contains no position data!\n");
+			return false;
+		}
+		if (createInfo.texCoords_UV.empty())
+		{
+			// TODO: Handle this case
+			PrintError("Can't calculate tangents for mesh which contains no tex coord data!\n");
+			return false;
+		}
+
+		for (u32 i = 0; i < createInfo.positions_3D.size() - 2; i += 3)
+		{
+			glm::vec3 p0 = createInfo.positions_3D[i + 0];
+			glm::vec3 p1 = createInfo.positions_3D[i + 1];
+			glm::vec3 p2 = createInfo.positions_3D[i + 2];
+
+			glm::vec2 uv0 = createInfo.texCoords_UV[i + 0];
+			glm::vec2 uv1 = createInfo.texCoords_UV[i + 1];
+			glm::vec2 uv2 = createInfo.texCoords_UV[i + 2];
+
+			glm::vec3 dPos0 = p1 - p0;
+			glm::vec3 dPos1 = p2 - p0;
+
+			glm::vec2 dUV0 = uv1 - uv0;
+			glm::vec2 dUV1 = uv2 - uv0;
+
+			real r = 1.0f / (dUV1.x * dUV0.y - dUV1.y * dUV0.x);
+			glm::vec3 tangent = glm::normalize((dPos0 * dUV0.y - dPos1 * dUV1.y) * r);
+			//glm::vec3 bitangent = (dPos1 * dUV1.x - dPos0 * dUV0.x) * r;
+
+			createInfo.tangents[i + 0] = tangent;
+			createInfo.tangents[i + 1] = tangent;
+			createInfo.tangents[i + 2] = tangent;
+		}
+
+		return true;
 	}
 } // namespace flex
