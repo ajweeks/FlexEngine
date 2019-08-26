@@ -191,16 +191,6 @@ void main()
 		}
 	}
 
-#if 0
-	switch (cascadeIndex)
-	{
-		case 0: fragColor = vec4(1.0f, 0.2f, 0.0f, 0.0f); return;
-		case 1: fragColor = vec4(0.0f, 1.0f, 0.2f, 0.0f); return;
-		case 2: fragColor = vec4(0.0f, 0.2f, 1.0f, 0.0f); return;
-		case 3: fragColor = vec4(0.1f, 0.1f, 0.2f, 0.0f); return;
-	}
-#endif
-
 	vec3 V = normalize(uboConstant.camPos.xyz - worldPos);
 	vec3 R = reflect(-V, N);
 
