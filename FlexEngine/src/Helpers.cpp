@@ -1050,17 +1050,17 @@ namespace flex
 
 	std::string Vec2ToString(real* data, i32 precision)
 	{
-		return Vec2ToString(*data, *(data + 1), precision);
+		return Vec2ToString(*(data + 0), *(data + 1), precision);
 	}
 
 	std::string Vec3ToString(real* data, i32 precision)
 	{
-		return Vec3ToString(*data, *(data + 1), *(data + 2), precision);
+		return Vec3ToString(*(data + 0), *(data + 1), *(data + 2), precision);
 	}
 
 	std::string Vec4ToString(real* data, i32 precision)
 	{
-		return Vec4ToString(*data, *(data + 1), *(data + 2), *(data + 3), precision);
+		return Vec4ToString(*(data + 0), *(data + 1), *(data + 2), *(data + 3), precision);
 	}
 
 	std::string Vec2ToString(real x, real y, i32 precision)
@@ -1116,6 +1116,11 @@ namespace flex
 		return QuatToString(quat.x, quat.y, quat.z, quat.w, precision);
 	}
 
+	std::string QuatToString(real* data, i32 precision)
+	{
+		return QuatToString(*(data + 0), *(data + 1), *(data + 2), *(data + 3), precision);
+	}
+
 	std::string QuatToString(real x, real y, real z, real w, i32 precision)
 	{
 #if DEBUG
@@ -1131,11 +1136,6 @@ namespace flex
 			FloatToString(z, precision) + SEPARATOR_STR +
 			FloatToString(w, precision));
 		return result;
-	}
-
-	std::string QuatToString(real * data, i32 precision)
-	{
-		return std::string();
 	}
 
 	void CopyVec3ToClipboard(const glm::vec3& vec)
