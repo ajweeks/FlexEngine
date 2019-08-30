@@ -240,6 +240,10 @@ namespace flex
 	static const glm::quat QUAT_UNIT = glm::quat(VEC3_ZERO);
 	static const glm::mat4 MAT4_IDENTITY = glm::mat4(1.0f);
 	static const glm::mat4 MAT4_ZERO = glm::mat4(0.0f);
+	static const u32 COLOR32U_WHITE = 0xFFFFFFFF;
+	static const u32 COLOR32U_BLACK = 0x00000000;
+	static const glm::vec4 COLOR128F_WHITE = VEC4_ONE;
+	static const glm::vec4 COLOR128F_BLACK = VEC4_ZERO;
 
 	static const std::string EMPTY_STRING = std::string();
 

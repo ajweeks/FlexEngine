@@ -29,6 +29,8 @@ namespace flex
 		void UpdateData(CreateInfo const* createInfo);
 		void Destroy();
 
+		// Copies data from this buffer into dst for each given attribute
+		// If this buffer doesn't contain a given attribute, default values will be used
 		u32 CopyInto(real* dst, VertexAttributes usingAttributes);
 
 		void DescribeShaderVariables(Renderer* renderer, RenderID renderID);
