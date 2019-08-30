@@ -2098,7 +2098,7 @@ namespace flex
 			layout = newLayout;
 		}
 
-		void FrameBufferAttachment::CreateImage(u32 inWidth /* = 0 */, u32 inHeight /* = 0 */)
+		void FrameBufferAttachment::CreateImage(u32 inWidth /* = 0 */, u32 inHeight /* = 0 */, const char* optDBGName /* = nullptr */)
 		{
 			if (inWidth != 0 && inHeight != 0)
 			{
@@ -2138,10 +2138,11 @@ namespace flex
 				createInfo.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 				createInfo.arrayLayers = 6;
 			}
+			createInfo.DBG_Name = optDBGName;
 			VulkanTexture::CreateImage(device, createInfo);
 		}
 
-		void FrameBufferAttachment::CreateImageView()
+		void FrameBufferAttachment::CreateImageView(const char* optDBGName /* = nullptr */)
 		{
 			VulkanTexture::ImageViewCreateInfo createInfo = {};
 			createInfo.image = &image;
@@ -2160,6 +2161,7 @@ namespace flex
 				createInfo.layerCount = 6;
 				createInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
 			}
+			createInfo.DBG_Name = optDBGName;
 			VulkanTexture::CreateImageView(device, createInfo);
 		}
 
