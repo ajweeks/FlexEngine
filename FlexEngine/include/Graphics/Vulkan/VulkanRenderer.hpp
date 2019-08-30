@@ -554,7 +554,8 @@ namespace flex
 			VkSpecializationInfo m_SSAOSpecializationInfo;
 			VkSpecializationMapEntry m_TAASpecializationMapEntry;
 			VkSpecializationInfo m_TAAOSpecializationInfo;
-			
+			real m_TAA_ks[2];
+
 			VDeleter<VkPipeline> m_SpriteArrGraphicsPipeline;
 			VDeleter<VkPipelineLayout> m_SpriteArrGraphicsPipelineLayout;
 

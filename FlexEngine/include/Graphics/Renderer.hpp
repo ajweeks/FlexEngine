@@ -434,7 +434,6 @@ namespace flex
 		bool m_bEnableTAA = true;
 		i32 m_TAASampleCount = 2;
 		bool m_bTAAStateChanged = false;
-		real m_TAAMaxUVResampleDist = 2.0f;
 
 		FXAAData m_FXAAData;
 

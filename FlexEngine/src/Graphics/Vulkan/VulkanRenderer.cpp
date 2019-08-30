@@ -368,6 +368,9 @@ namespace flex
 			queryPoolCreateInfo.queryType = VK_QUERY_TYPE_TIMESTAMP;
 			queryPoolCreateInfo.queryCount = MAX_TIMESTAMP_QUERIES;
 			vkCreateQueryPool(m_VulkanDevice->m_LogicalDevice, &queryPoolCreateInfo, nullptr, &m_TimestampQueryPool);
+
+			m_TAA_ks[0] = 0.1f; // KL
+			m_TAA_ks[1] = 0.3f; // KH
 		}
 
 		void VulkanRenderer::PostInitialize()
@@ -1273,6 +1276,11 @@ namespace flex
 			{
 				VulkanMaterial& taaResolveMat = m_Materials[m_TAAResolveMaterialID];
 
+				std::array<VkPushConstantRange, 1> pushConstantRanges = {};
+				pushConstantRanges[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+				pushConstantRanges[0].offset = 0;
+				pushConstantRanges[0].size = m_Shaders[taaResolveMat.material.shaderID].shader->pushConstantBlockSize;
+
 				GraphicsPipelineCreateInfo createInfo = {};
 				createInfo.DBG_Name = "TAA Resolve pipeline";
 				createInfo.graphicsPipeline = m_TAAResolveGraphicsPipeline.replace();
@@ -1285,6 +1293,8 @@ namespace flex
 				createInfo.depthTestEnable = VK_FALSE;
 				createInfo.depthWriteEnable = VK_FALSE;
 				createInfo.fragSpecializationInfo = &m_TAAOSpecializationInfo;
+				createInfo.pushConstantRangeCount = pushConstantRanges.size();
+				createInfo.pushConstants = pushConstantRanges.data();
 				CreateGraphicsPipeline(&createInfo);
 			}
 
@@ -1417,6 +1427,9 @@ namespace flex
 		void VulkanRenderer::DrawImGuiWindows()
 		{
 			Renderer::DrawImGuiWindows();
+
+			ImGui::SliderFloat("TAA KL", m_TAA_ks, 0.0f, 100.0f);
+			ImGui::SliderFloat("TAA KH", (m_TAA_ks + 1), 0.0f, 100.0f);
 
 			if (bGPUTimingsWindowShowing)
 			{
@@ -7320,7 +7333,13 @@ namespace flex
 
 				BeginDebugMarkerRegion(commandBuffer, "TAA Resolve");
 
-				RenderFullscreenQuad(commandBuffer, m_TAAResolveRenderPass, m_OffscreenFrameBuffer0->frameBuffer, m_Materials[m_TAAResolveMaterialID].material.shaderID,
+				VulkanMaterial& TAAMat = m_Materials[m_TAAResolveMaterialID];
+				TAAMat.material.pushConstantBlock->SetData(m_TAA_ks, sizeof(real) * 2);
+
+				VkShaderStageFlags stages = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+				vkCmdPushConstants(commandBuffer, m_TAAResolveGraphicsPipelineLayout, stages, 0, TAAMat.material.pushConstantBlock->size, TAAMat.material.pushConstantBlock->data);
+
+				RenderFullscreenQuad(commandBuffer, m_TAAResolveRenderPass, m_OffscreenFrameBuffer0->frameBuffer, TAAMat.material.shaderID,
 					m_TAAResolveGraphicsPipelineLayout, m_TAAResolveGraphicsPipeline, m_TAAResolveDescriptorSet, true);
 
 				EndDebugMarkerRegion(commandBuffer);
@@ -7841,7 +7860,6 @@ namespace flex
 			glm::vec4 camPos = glm::vec4(cam->GetPosition(), 0.0f);
 			real exposure = cam->exposure;
 			glm::vec2 m_NearFarPlanes(cam->GetZNear(), cam->GetZFar());
-			real TAAMaxUVResampleDistScaled = m_TAAMaxUVResampleDist / 1000.0f;
 
 			static DirLightData defaultDirLightData = { VEC3_RIGHT, 0, VEC3_ONE, 0.0f, 0, 0.0f };
 
@@ -7895,7 +7913,6 @@ namespace flex
 				{ U_PROJECTION, (void*)&projection, US_PROJECTION },
 				{ U_PROJECTION_INV, (void*)&projectionInv, US_PROJECTION_INV },
 				{ U_LAST_FRAME_VIEWPROJ, (void*)&m_LastFrameViewProj, US_LAST_FRAME_VIEWPROJ },
-				{ U_MAX_UV_DIST, (void*)&TAAMaxUVResampleDistScaled, US_MAX_UV_DIST },
 				{ U_DIR_LIGHT, (void*)dirLightData, US_DIR_LIGHT },
 				{ U_POINT_LIGHTS, (void*)m_PointLights, US_POINT_LIGHTS },
 				{ U_TIME, (void*)&g_SecElapsedSinceProgramStart, US_TIME },

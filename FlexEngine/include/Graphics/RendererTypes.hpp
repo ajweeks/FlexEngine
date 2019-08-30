@@ -150,7 +150,6 @@ namespace flex
 	const u64 U_SCENE_SAMPLER					= (1ull << 56);
 	const u64 U_HISTORY_SAMPLER					= (1ull << 57);
 	const u64 U_LAST_FRAME_VIEWPROJ				= (1ull << 58); const u32 US_LAST_FRAME_VIEWPROJ		= sizeof(glm::mat4);
-	const u64 U_MAX_UV_DIST						= (1ull << 59); const u32 US_MAX_UV_DIST				= sizeof(real);
 	// NOTE!: New uniforms must be added to Uniforms::CalculateSizeInBytes
 
 	enum class ClearFlag
@@ -435,9 +434,8 @@ namespace flex
 				}
 			}
 
-			void SetData(const glm::mat4& viewProj)
+			void InitWithSize(u32 dataSize)
 			{
-				const i32 dataSize = sizeof(glm::mat4) * 1;
 				if (data == nullptr)
 				{
 					assert(size == dataSize || size == 0);
@@ -447,8 +445,21 @@ namespace flex
 				}
 				else
 				{
-					assert(size == dataSize && "Attempted to set push constant data with differing size. Block must be reallocated.");
+					assert(size == dataSize && "Attempted to initialize push constant data with differing size. Block must be reallocated when size changes.");
 				}
+			}
+
+			void SetData(real* newData, u32 dataSize)
+			{
+				InitWithSize(dataSize);
+				memcpy(data, newData, size);
+			}
+
+			void SetData(const glm::mat4& viewProj)
+			{
+				const i32 dataSize = sizeof(glm::mat4) * 1;
+				InitWithSize(dataSize);
+
 				real* dst = (real*)data;
 				memcpy(dst, &viewProj, sizeof(glm::mat4)); dst += sizeof(glm::mat4) / sizeof(real);
 			}
@@ -456,17 +467,8 @@ namespace flex
 			void SetData(const glm::mat4& view, const glm::mat4& proj)
 			{
 				const i32 dataSize = sizeof(glm::mat4) * 2;
-				if (data == nullptr)
-				{
-					assert(size == dataSize || size == 0);
+				InitWithSize(dataSize);
 
-					size = dataSize;
-					data = malloc_hooked(dataSize);
-				}
-				else
-				{
-					assert(size == dataSize && "Attempted to set push constant data with differing size. Block must be reallocated.");
-				}
 				real* dst = (real*)data;
 				memcpy(dst, &view, sizeof(glm::mat4)); dst += sizeof(glm::mat4) / sizeof(real);
 				memcpy(dst, &proj, sizeof(glm::mat4)); dst += sizeof(glm::mat4) / sizeof(real);
