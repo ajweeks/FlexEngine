@@ -52,8 +52,8 @@ namespace flex
 
 			FrameBufferAttachment(VulkanDevice* device, const CreateInfo& createInfo);
 
-			void CreateImage(u32 inWidth = 0, u32 inHeight = 0);
-			void CreateImageView();
+			void CreateImage(u32 inWidth = 0, u32 inHeight = 0, const char* optDBGName = nullptr);
+			void CreateImageView(const char* optDBGName = nullptr);
 
 			void TransitionToLayout(VkImageLayout newLayout, VkQueue graphicsQueue, VkCommandBuffer optCmdBuf = VK_NULL_HANDLE);
 
