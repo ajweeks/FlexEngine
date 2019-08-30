@@ -6917,9 +6917,6 @@ namespace flex
 
 			VkDeviceSize offsets[1] = { 0 };
 
-			vkCmdSetViewport(commandBuffer, 0, 1, &fullscreenViewport);
-			vkCmdSetScissor(commandBuffer, 0, 1, &fullscreenScissor);
-
 			VkRenderPassBeginInfo renderPassBeginInfo = vks::renderPassBeginInfo(renderPass);
 			renderPassBeginInfo.renderArea.offset = { 0, 0 };
 			renderPassBeginInfo.renderArea.extent = m_SwapChainExtent;
@@ -6931,6 +6928,9 @@ namespace flex
 				BindDescriptorSet(vkShader, 0, commandBuffer, pipelineLayout, descriptorSet);
 
 				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+				
+				vkCmdSetViewport(commandBuffer, 0, 1, &fullscreenViewport);
+				vkCmdSetScissor(commandBuffer, 0, 1, &fullscreenScissor);
 
 				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_FullScreenTriVertexBuffer->m_Buffer, offsets);
 				
