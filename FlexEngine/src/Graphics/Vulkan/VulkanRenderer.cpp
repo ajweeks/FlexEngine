@@ -5669,7 +5669,8 @@ namespace flex
 			}
 
 			VkPipelineRasterizationStateCreateInfo rasterizer = vks::pipelineRasterizationStateCreateInfo(VK_POLYGON_MODE_FILL, createInfo->cullMode, VK_FRONT_FACE_CLOCKWISE);
-			rasterizer.lineWidth = 3.0f;
+			// TODO: Query for wide-line support
+			//rasterizer.lineWidth = 3.0f;
 
 			VkPipelineMultisampleStateCreateInfo multisampling = vks::pipelineMultisampleStateCreateInfo(VK_SAMPLE_COUNT_1_BIT);
 
