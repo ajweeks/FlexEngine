@@ -2787,7 +2787,7 @@ namespace flex
 				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 				subresourceRange);
 
-			EndDebugMarkerRegion(cmdBuf);
+			EndDebugMarkerRegion(cmdBuf); // Generate Cubemap from HDR
 
 			m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
 
@@ -3054,7 +3054,7 @@ namespace flex
 				subresourceRange);
 			renderObjectMat.irradianceTexture->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-			EndDebugMarkerRegion(cmdBuf);
+			EndDebugMarkerRegion(cmdBuf); // Generate Irradiance
 
 			m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
 
@@ -3319,7 +3319,7 @@ namespace flex
 				subresourceRange);
 			renderObjectMat.prefilterTexture->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-			EndDebugMarkerRegion(cmdBuf);
+			EndDebugMarkerRegion(cmdBuf); // Generate Prefiltered Cube
 
 			m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
 
@@ -3414,7 +3414,7 @@ namespace flex
 				vkCmdDraw(cmdBuf, 3, 1, 0, 0);
 				vkCmdEndRenderPass(cmdBuf);
 
-				EndDebugMarkerRegion(cmdBuf);
+				EndDebugMarkerRegion(cmdBuf); // Generate BRDF LUT
 
 				m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
 
@@ -3925,7 +3925,7 @@ namespace flex
 
 				vkCmdEndRenderPass(commandBuffer);
 
-				EndDebugMarkerRegion(commandBuffer);
+				EndDebugMarkerRegion(commandBuffer); // Generate Font SDF
 
 				VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
 				SetCommandBufferName(m_VulkanDevice, commandBuffer, "Load font command buffer");
@@ -5009,6 +5009,11 @@ namespace flex
 		void VulkanRenderer::CreateRenderPasses()
 		{
 			// TODO: Create GBuffer & offscreen render passes here too? (Currently in PrepareFrameBuffers)
+
+			//
+			// See `FlexEngine/screenshots/FlexRenderPasses_2019-07-08.jpg` for 
+			// a detailed breakdown of render passes and their dependencies
+			//
 
 			VkFormat ssaoFrameBufFormat = m_SSAOFrameBuf->frameBufferAttachments[0].second.format;
 			CreateRenderPass(m_SSAORenderPass.replace(), ssaoFrameBufFormat, "SSAO render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -7069,7 +7074,7 @@ namespace flex
 				// TODO: Somehow handle this automatically?
 				m_GBufferDepthAttachment->layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-				EndDebugMarkerRegion(m_OffScreenCmdBuffer);
+				EndDebugMarkerRegion(m_OffScreenCmdBuffer); // Deferred
 
 				//
 				// SSAO generation
@@ -7118,7 +7123,7 @@ namespace flex
 
 					vkCmdEndRenderPass(m_OffScreenCmdBuffer);
 
-					EndDebugMarkerRegion(m_OffScreenCmdBuffer);
+					EndDebugMarkerRegion(m_OffScreenCmdBuffer); // SSAO
 
 					//
 					// SSAO blur
@@ -7175,7 +7180,7 @@ namespace flex
 
 						vkCmdEndRenderPass(m_OffScreenCmdBuffer);
 
-						EndDebugMarkerRegion(m_OffScreenCmdBuffer);
+						EndDebugMarkerRegion(m_OffScreenCmdBuffer); // SSAO Blur
 					}
 
 					EndGPUTimeStamp(m_OffScreenCmdBuffer, "SSAO");
@@ -7210,7 +7215,7 @@ namespace flex
 				RenderFullscreenQuad(commandBuffer, m_DeferredCombineRenderPass, m_OffscreenFrameBuffer0->frameBuffer, shaderID,
 					gBufferObject->pipelineLayout, gBufferObject->graphicsPipeline, gBufferObject->descriptorSet, true);
 
-				EndDebugMarkerRegion(commandBuffer);
+				EndDebugMarkerRegion(commandBuffer); // Shade deferred
 			}
 
 			{
@@ -7236,7 +7241,7 @@ namespace flex
 				// m_OffscreenDepthAttachment0 was copied into, now will be written to in forward pass
 				m_OffscreenDepthAttachment0->TransitionToLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, m_GraphicsQueue, commandBuffer);
 
-				EndDebugMarkerRegion(commandBuffer);
+				EndDebugMarkerRegion(commandBuffer); // Copy depth
 			}
 
 			std::array<VkClearValue, 2> clearValues = {};
@@ -7264,7 +7269,7 @@ namespace flex
 						DrawShaderBatch(shaderBatch, commandBuffer);
 					}
 
-					EndDebugMarkerRegion(commandBuffer);
+					EndDebugMarkerRegion(commandBuffer); // Forward
 				}
 
 				{
@@ -7274,13 +7279,13 @@ namespace flex
 					DrawSpriteBatch(m_QueuedWSSprites, commandBuffer);
 					m_QueuedWSSprites.clear();
 
-					EndDebugMarkerRegion(commandBuffer);
+					EndDebugMarkerRegion(commandBuffer); // World Space Sprites
 					BeginDebugMarkerRegion(commandBuffer, "World Space Text");
 
 					EnqueueWorldSpaceText();
 					DrawTextWS(commandBuffer);
 
-					EndDebugMarkerRegion(commandBuffer);
+					EndDebugMarkerRegion(commandBuffer); // World Space Text
 				}
 
 				bool bUsingGameplayCam = g_CameraManager->CurrentCamera()->bIsGameplayCam;
@@ -7308,7 +7313,7 @@ namespace flex
 						DrawShaderBatch(shaderBatch, commandBuffer);
 					}
 
-					EndDebugMarkerRegion(commandBuffer);
+					EndDebugMarkerRegion(commandBuffer); // Editor objects
 				}
 			}
 			vkCmdEndRenderPass(commandBuffer);
@@ -7325,7 +7330,7 @@ namespace flex
 				RenderFullscreenQuad(commandBuffer, m_PostProcessRenderPass, m_OffscreenFrameBuffer1->frameBuffer, m_Materials[m_PostProcessMatID].material.shaderID,
 					m_PostProcessGraphicsPipelineLayout, m_PostProcessGraphicsPipeline, m_PostProcessDescriptorSet, true);
 
-				EndDebugMarkerRegion(commandBuffer);
+				EndDebugMarkerRegion(commandBuffer); // Post process
 
 				EndGPUTimeStamp(commandBuffer, "Post Process");
 			}
@@ -7352,7 +7357,7 @@ namespace flex
 				RenderFullscreenQuad(commandBuffer, m_TAAResolveRenderPass, m_OffscreenFrameBuffer0->frameBuffer, TAAMat.material.shaderID,
 					m_TAAResolveGraphicsPipelineLayout, m_TAAResolveGraphicsPipeline, m_TAAResolveDescriptorSet, true);
 
-				EndDebugMarkerRegion(commandBuffer);
+				EndDebugMarkerRegion(commandBuffer); // TAA Resolve
 
 				EndGPUTimeStamp(commandBuffer, "TAA");
 
@@ -7376,7 +7381,7 @@ namespace flex
 				RenderFullscreenQuad(commandBuffer, m_GammaCorrectRenderPass, m_SwapChainFramebuffers[m_CurrentSwapChainBufferIndex], m_Materials[m_GammaCorrectMaterialID].material.shaderID,
 					m_GammaCorrectGraphicsPipelineLayout, m_GammaCorrectGraphicsPipeline, m_GammaCorrectDescriptorSet, true);
 
-				EndDebugMarkerRegion(commandBuffer);
+				EndDebugMarkerRegion(commandBuffer); // Gamma Correct
 			}
 
 			BeginDebugMarkerRegion(commandBuffer, "UI");
@@ -7428,7 +7433,7 @@ namespace flex
 			// TODO: Track automatically somehow
 			m_GBufferDepthAttachment->layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-			EndDebugMarkerRegion(commandBuffer);
+			EndDebugMarkerRegion(commandBuffer); // UI
 
 			EndGPUTimeStamp(commandBuffer, "Forward");
 
