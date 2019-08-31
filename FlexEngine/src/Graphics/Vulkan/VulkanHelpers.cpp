@@ -311,10 +311,18 @@ namespace flex
 			VK_CHECK_RESULT(vkMapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory, 0, imageSize, 0, &data));
 			memcpy(data, buffer, bufferSize);
 			vkUnmapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory);
+			{
+				VkCommandBuffer cmdBuffer = BeginSingleTimeCommands(m_VulkanDevice);
+				std::string debugMarkerStr = "Uploading texture data from memory into " + name;
+				VulkanRenderer::BeginDebugMarkerRegion(cmdBuffer, debugMarkerStr.c_str());
 
-			TransitionToLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-			CopyFromBuffer(stagingBuffer.m_Buffer, width, height);
-			TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+				TransitionToLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, cmdBuffer);
+				CopyFromBuffer(stagingBuffer.m_Buffer, width, height, cmdBuffer);
+				TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, cmdBuffer);
+
+				VulkanRenderer::EndDebugMarkerRegion(cmdBuffer);
+				EndSingleTimeCommands(m_VulkanDevice, m_GraphicsQueue, cmdBuffer);
+			}
 
 			ImageViewCreateInfo viewCreateInfo = {};
 			viewCreateInfo.format = inFormat;
@@ -350,9 +358,9 @@ namespace flex
 			imageLayout = newLayout;
 		}
 
-		void VulkanTexture::CopyFromBuffer(VkBuffer buffer, u32 inWidth, u32 inHeight)
+		void VulkanTexture::CopyFromBuffer(VkBuffer buffer, u32 inWidth, u32 inHeight, VkCommandBuffer optCommandBuffer /* = 0 */)
 		{
-			CopyBufferToImage(m_VulkanDevice, m_GraphicsQueue, buffer, image, inWidth, inHeight);
+			CopyBufferToImage(m_VulkanDevice, m_GraphicsQueue, buffer, image, inWidth, inHeight, optCommandBuffer);
 			width = width;
 			height = height;
 		}
@@ -782,9 +790,19 @@ namespace flex
 
 				hdrImage.Free();
 
-				TransitionToLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-				CopyFromBuffer(stagingBuffer.m_Buffer, width, height);
-				TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+				{
+					VkCommandBuffer cmdBuffer = BeginSingleTimeCommands(m_VulkanDevice);
+					std::string fileName = StripLeadingDirectories(relativeFilePath);
+					std::string debugMarkerStr = "Uploading texture data from " + fileName;
+					VulkanRenderer::BeginDebugMarkerRegion(cmdBuffer, debugMarkerStr.c_str());
+
+					TransitionToLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, cmdBuffer);
+					CopyFromBuffer(stagingBuffer.m_Buffer, width, height, cmdBuffer);
+					TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, cmdBuffer);
+
+					VulkanRenderer::EndDebugMarkerRegion(cmdBuffer);
+					EndSingleTimeCommands(m_VulkanDevice, m_GraphicsQueue, cmdBuffer);
+				}
 
 				ImageViewCreateInfo viewCreateInfo = {};
 				viewCreateInfo.format = inFormat;
@@ -860,11 +878,18 @@ namespace flex
 
 				stbi_image_free(pixels);
 
+				{
+					VkCommandBuffer cmdBuffer = BeginSingleTimeCommands(m_VulkanDevice);
+					std::string debugMarkerStr = "Uploading texture data from " + fileName;
+					VulkanRenderer::BeginDebugMarkerRegion(cmdBuffer, debugMarkerStr.c_str());
 
+					TransitionToLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, cmdBuffer);
+					CopyFromBuffer(stagingBuffer.m_Buffer, width, height, cmdBuffer);
+					TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, cmdBuffer);
 
-				TransitionToLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-				CopyFromBuffer(stagingBuffer.m_Buffer, width, height);
-				TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+					VulkanRenderer::EndDebugMarkerRegion(cmdBuffer);
+					EndSingleTimeCommands(m_VulkanDevice, m_GraphicsQueue, cmdBuffer);
+				}
 
 				ImageViewCreateInfo viewCreateInfo = {};
 				viewCreateInfo.format = inFormat;
@@ -1426,9 +1451,13 @@ namespace flex
 			}
 		}
 
-		void CopyBufferToImage(VulkanDevice* device, VkQueue graphicsQueue, VkBuffer buffer, VkImage image, u32 width, u32 height)
+		void CopyBufferToImage(VulkanDevice* device, VkQueue graphicsQueue, VkBuffer buffer, VkImage image, u32 width, u32 height, VkCommandBuffer optCommandBuffer /* = 0 */)
 		{
-			VkCommandBuffer commandBuffer = BeginSingleTimeCommands(device);
+			VkCommandBuffer commandBuffer = optCommandBuffer;
+			if (commandBuffer == 0)
+			{
+				commandBuffer = BeginSingleTimeCommands(device);
+			}
 
 			VkBufferImageCopy region = {};
 			region.bufferOffset = 0;
@@ -1447,7 +1476,10 @@ namespace flex
 
 			vkCmdCopyBufferToImage(commandBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
-			EndSingleTimeCommands(device, graphicsQueue, commandBuffer);
+			if (optCommandBuffer == 0)
+			{
+				EndSingleTimeCommands(device, graphicsQueue, commandBuffer);
+			}
 		}
 
 		VkResult CreateAndAllocateBuffer(VulkanDevice* device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VulkanBuffer* buffer)
@@ -1909,7 +1941,6 @@ namespace flex
 
 			return false;
 		}
-
 
 		VkCommandBuffer BeginSingleTimeCommands(VulkanDevice* device)
 		{

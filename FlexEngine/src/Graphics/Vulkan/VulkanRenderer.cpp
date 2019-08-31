@@ -5773,29 +5773,37 @@ namespace flex
 
 		void VulkanRenderer::CreateDepthResources()
 		{
+			VkCommandBuffer transitionCmdBuffer = BeginSingleTimeCommands(m_VulkanDevice);
+
+			BeginDebugMarkerRegion(transitionCmdBuffer, "Create Depth Resources");
+
 			m_SwapChainDepthAttachment->CreateImage(m_SwapChainExtent.width, m_SwapChainExtent.height, "Swap Chain Depth attachment");
 			m_SwapChainDepthAttachment->CreateImageView("Swap Chain Depth image view");
 
 			// Depth will be copied from offscreen depth buffer after deferred combine pass
-			m_SwapChainDepthAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, m_GraphicsQueue);
+			m_SwapChainDepthAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, m_GraphicsQueue, transitionCmdBuffer);
 
 			m_GBufferDepthAttachment->CreateImage(m_SwapChainExtent.width, m_SwapChainExtent.height, "GBuffer Depth attachment");
 			m_GBufferDepthAttachment->CreateImageView("GBuffer Depth image view");
-			m_GBufferDepthAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, m_GraphicsQueue);
+			m_GBufferDepthAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, m_GraphicsQueue, transitionCmdBuffer);
 
 			m_OffscreenDepthAttachment0->bIsTransferedDst = true;
 			m_OffscreenDepthAttachment0->CreateImage(m_SwapChainExtent.width, m_SwapChainExtent.height, "Offscreen Depth attachment 0");
 			m_OffscreenDepthAttachment0->CreateImageView("Offscreen Depth 0 image view");
-			m_OffscreenDepthAttachment0->TransitionToLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, m_GraphicsQueue);
+			m_OffscreenDepthAttachment0->TransitionToLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, m_GraphicsQueue, transitionCmdBuffer);
 
 			//m_OffscreenDepthAttachment1->bIsTransferedDst = true;
 			m_OffscreenDepthAttachment1->CreateImage(m_SwapChainExtent.width, m_SwapChainExtent.height, "Offscreen Depth attachment 1");
 			m_OffscreenDepthAttachment1->CreateImageView("Offscreen Depth 1 image view");
-			m_OffscreenDepthAttachment1->TransitionToLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, m_GraphicsQueue);
+			m_OffscreenDepthAttachment1->TransitionToLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, m_GraphicsQueue, transitionCmdBuffer);
 
 			m_CubemapDepthAttachment->CreateImage(m_GBufferCubemapFrameBuffer->width, m_GBufferCubemapFrameBuffer->height, "Cube Depth attachment");
 			m_CubemapDepthAttachment->CreateImageView("Cubemap Depth image view");
-			m_CubemapDepthAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, m_GraphicsQueue);
+			m_CubemapDepthAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, m_GraphicsQueue, transitionCmdBuffer);
+
+			EndDebugMarkerRegion(transitionCmdBuffer);
+
+			EndSingleTimeCommands(m_VulkanDevice, m_GraphicsQueue, transitionCmdBuffer);
 		}
 
 		void VulkanRenderer::CreateFramebuffers()
@@ -7628,7 +7636,17 @@ namespace flex
 			SetObjectName(device, buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, name);
 		}
 
-		void VulkanRenderer::BeginDebugMarkerRegion(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color)
+		inline void VulkanRenderer::BeginDebugMarkerRegion(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color)
+		{
+			((VulkanRenderer*)g_Renderer)->BeginDebugMarkerRegionInternal(cmdBuf, markerName, color);
+		}
+
+		inline void VulkanRenderer::EndDebugMarkerRegion(VkCommandBuffer cmdBuf)
+		{
+			((VulkanRenderer*)g_Renderer)->EndDebugMarkerRegionInternal(cmdBuf);
+		}
+
+		void VulkanRenderer::BeginDebugMarkerRegionInternal(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color)
 		{
 			if (m_vkCmdDebugMarkerBegin)
 			{
@@ -7640,7 +7658,7 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::EndDebugMarkerRegion(VkCommandBuffer cmdBuf)
+		void VulkanRenderer::EndDebugMarkerRegionInternal(VkCommandBuffer cmdBuf)
 		{
 			if (m_vkCmdDebugMarkerEnd)
 			{

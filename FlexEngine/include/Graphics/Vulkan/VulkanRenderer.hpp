@@ -121,6 +121,9 @@ namespace flex
 			static void SetImageViewName(VulkanDevice* device, VkImageView imageView, const char* name);
 			static void SetSamplerName(VulkanDevice* device, VkSampler sampler, const char* name);
 			static void SetBufferName(VulkanDevice* device, VkBuffer buffer, const char* name);
+			
+			static void BeginDebugMarkerRegion(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color = VEC4_ONE);
+			static void EndDebugMarkerRegion(VkCommandBuffer cmdBuf);
 
 			bool bDebugUtilsExtensionPresent = false;
 
@@ -257,8 +260,8 @@ namespace flex
 			void BindDescriptorSet(VulkanShader* shader, u32 dynamicOffsetOffset, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet);
 			void RecreateSwapChain();
 
-			void BeginDebugMarkerRegion(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color = VEC4_ONE);
-			void EndDebugMarkerRegion(VkCommandBuffer cmdBuf);
+			void BeginDebugMarkerRegionInternal(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color = VEC4_ONE);
+			void EndDebugMarkerRegionInternal(VkCommandBuffer cmdBuf);
 
 			bool CreateShaderModule(const std::vector<char>& code, VkShaderModule* shaderModule) const;
 			VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) const;
