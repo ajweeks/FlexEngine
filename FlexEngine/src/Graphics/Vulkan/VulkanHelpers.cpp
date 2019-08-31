@@ -1503,11 +1503,6 @@ namespace flex
 			buffer->m_UsageFlags = usage;
 			buffer->m_MemoryPropertyFlags = properties;
 
-			// Initialize a default descriptor that covers the whole buffer size
-			buffer->m_DescriptorInfo.offset = 0;
-			buffer->m_DescriptorInfo.range = VK_WHOLE_SIZE;
-			buffer->m_DescriptorInfo.buffer = buffer->m_Buffer;
-
 			return vkBindBufferMemory(device->m_LogicalDevice, buffer->m_Buffer, buffer->m_Memory, 0);
 		}
 

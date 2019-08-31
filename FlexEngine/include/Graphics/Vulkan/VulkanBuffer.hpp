@@ -15,21 +15,17 @@ namespace flex
 		{
 			VulkanBuffer(const VDeleter<VkDevice>& device);
 
-			VkResult Map(VkDeviceSize size = VK_WHOLE_SIZE, VkDeviceSize offset = 0);
+			VkResult Map(VkDeviceSize size = VK_WHOLE_SIZE);
 			void Unmap();
 			void Destroy();
 
 			// TODO: Add Create function to call vkCreateBuffer
 			// TODO: Add AllocateMemory function to call vkGetBufferMemoryRequirements & vkAllocateMemory
 
-			VkResult Bind(VkDeviceSize offset = 0);
-			void SetupDescriptor(VkDeviceSize size = VK_WHOLE_SIZE, VkDeviceSize offset = 0);
-			void CopyTo(void* data, VkDeviceSize size);
-			VkResult Flush(VkDeviceSize size = VK_WHOLE_SIZE, VkDeviceSize offset = 0);
+			VkResult Bind();
 
 			VDeleter<VkBuffer> m_Buffer;
 			VDeleter<VkDeviceMemory> m_Memory;
-			VkDescriptorBufferInfo m_DescriptorInfo;
 			VkDevice m_Device = VK_NULL_HANDLE;
 			VkDeviceSize m_Size = 0;
 			VkDeviceSize m_Alignment = 0;

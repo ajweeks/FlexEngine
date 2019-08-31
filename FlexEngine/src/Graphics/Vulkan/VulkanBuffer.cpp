@@ -15,9 +15,9 @@ namespace flex
 		{
 		}
 
-		VkResult VulkanBuffer::Map(VkDeviceSize size, VkDeviceSize offset)
+		VkResult VulkanBuffer::Map(VkDeviceSize size)
 		{
-			return vkMapMemory(m_Device, m_Memory, offset, size, 0, &m_Mapped);
+			return vkMapMemory(m_Device, m_Memory, 0, size, 0, &m_Mapped);
 		}
 
 		void VulkanBuffer::Unmap()
@@ -35,28 +35,9 @@ namespace flex
 			m_Memory.replace();
 		}
 
-		VkResult VulkanBuffer::Bind(VkDeviceSize offset)
+		VkResult VulkanBuffer::Bind()
 		{
-			return vkBindBufferMemory(m_Device, m_Buffer, m_Memory, offset);
-		}
-
-		void VulkanBuffer::SetupDescriptor(VkDeviceSize size, VkDeviceSize offset)
-		{
-			m_DescriptorInfo.offset = offset;
-			m_DescriptorInfo.buffer = m_Buffer;
-			m_DescriptorInfo.range = size;
-		}
-
-		void VulkanBuffer::CopyTo(void* data, VkDeviceSize size)
-		{
-			assert(m_Mapped);
-			memcpy(m_Mapped, data, (size_t)size);
-		}
-
-		VkResult VulkanBuffer::Flush(VkDeviceSize size, VkDeviceSize offset)
-		{
-			VkMappedMemoryRange mappedRange = vks::mappedMemoryRange(m_Memory, offset, size);
-			return vkFlushMappedMemoryRanges(m_Device, 1, &mappedRange);
+			return vkBindBufferMemory(m_Device, m_Buffer, m_Memory, 0);
 		}
 	} // namespace vk
 } // namespace flex
