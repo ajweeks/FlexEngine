@@ -922,7 +922,7 @@ namespace flex
 			viewInfo.flags = 0;
 
 			VK_CHECK_RESULT(vkCreateImageView(device->m_LogicalDevice, &viewInfo, nullptr, createInfo.imageView));
-			VulkanRenderer::SetImageViewName(device, *createInfo.image, createInfo.DBG_Name);
+			VulkanRenderer::SetImageViewName(device, *createInfo.imageView, createInfo.DBG_Name);
 		}
 
 		void VulkanTexture::CreateSampler(VulkanDevice* device, SamplerCreateInfo& createInfo)
