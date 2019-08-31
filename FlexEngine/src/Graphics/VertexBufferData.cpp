@@ -254,8 +254,8 @@ namespace flex
 				}
 				else
 				{
-					i32 i = 0;
-					memcpy(dst, &i, sizeof(i32));
+					i32 zero = 0;
+					memcpy(dst, &zero, sizeof(i32));
 				}
 				dst += 1;
 			}
