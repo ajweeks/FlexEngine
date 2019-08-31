@@ -561,26 +561,6 @@
 			"children" : 
 			[
 				{
-					"name" : "New_Game_Object_00",
-					"type" : "directional light",
-					"visible" : true,
-					"transform" : 
-					{
-						"pos" : "0.000, 15.000, 0.000",
-						"rot" : "1.195, -0.973, -2.522"
-					},
-					"directional light info" : 
-					{
-						"rotation" : "0.217, 0.591, 0.616, -0.473",
-						"pos" : "0.000, 15.000, 0.000",
-						"color" : "1.00, 1.00, 1.00",
-						"enabled" : true,
-						"brightness" : 1.000000,
-						"cast shadows" : true,
-						"shadow darkness" : 0.000000
-					}
-				},
-				{
 					"name" : "Reflection Probe 02",
 					"type" : "reflection probe",
 					"visible" : true,
