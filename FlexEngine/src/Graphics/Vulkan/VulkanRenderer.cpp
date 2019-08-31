@@ -5801,7 +5801,7 @@ namespace flex
 			m_CubemapDepthAttachment->CreateImageView("Cubemap Depth image view");
 			m_CubemapDepthAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, m_GraphicsQueue, transitionCmdBuffer);
 
-			EndDebugMarkerRegion(transitionCmdBuffer);
+			EndDebugMarkerRegion(transitionCmdBuffer); // Create Depth Resources
 
 			EndSingleTimeCommands(m_VulkanDevice, m_GraphicsQueue, transitionCmdBuffer);
 		}
@@ -6970,15 +6970,15 @@ namespace flex
 
 				BeginGPUTimeStamp(m_OffScreenCmdBuffer, "Deferred");
 
-				BeginDebugMarkerRegion(m_OffScreenCmdBuffer, "Shadow cascades");
-
 				//
 				// Cascaded shadow mapping
 				//
 
 				bool bEnableShadows = true;
-				if (bEnableShadows && m_DirectionalLight)
+				if (bEnableShadows && m_DirectionalLight && m_DirectionalLight->data.castShadows)
 				{
+					BeginDebugMarkerRegion(m_OffScreenCmdBuffer, "Shadow cascades");
+
 					std::array<VkClearValue, 1> shadowClearValues = {};
 					shadowClearValues[0].depthStencil = { 0.0f, 0 };
 
@@ -7028,9 +7028,10 @@ namespace flex
 
 						vkCmdEndRenderPass(m_OffScreenCmdBuffer);
 					}
+
+					EndDebugMarkerRegion(m_OffScreenCmdBuffer); // Shadow cascades
 				}
 
-				EndDebugMarkerRegion(m_OffScreenCmdBuffer);
 				BeginDebugMarkerRegion(m_OffScreenCmdBuffer, "Deferred");
 
 				//
