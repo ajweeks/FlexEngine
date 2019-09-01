@@ -550,6 +550,13 @@ namespace flex
 			CreatePostProcessingObjects();
 
 			m_bPostInitialized = true;
+
+			UpdateConstantUniformBuffers();
+
+			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
+			{
+				UpdateDynamicUniformBuffer(i);
+			}
 		}
 
 		void VulkanRenderer::Destroy()
@@ -1374,7 +1381,7 @@ namespace flex
 			UpdateConstantUniformBuffers();
 
 			// TODO: Only update when things have changed
-			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
+			for (u32 i = 0; i < m_RenderObjects.size(); ++i)
 			{
 				UpdateDynamicUniformBuffer(i);
 			}
@@ -7223,6 +7230,7 @@ namespace flex
 
 				VulkanRenderObject* gBufferObject = GetRenderObject(m_GBufferQuadRenderID);
 				ShaderID shaderID = m_Materials[gBufferObject->materialID].material.shaderID;
+
 				RenderFullscreenQuad(commandBuffer, m_DeferredCombineRenderPass, m_OffscreenFrameBuffer0->frameBuffer, shaderID,
 					gBufferObject->pipelineLayout, gBufferObject->graphicsPipeline, gBufferObject->descriptorSet, true);
 
@@ -8008,7 +8016,7 @@ namespace flex
 			UpdateDynamicUniformBuffer(matID, dynamicUBOOffset, model, uniformOverrides);
 		}
 
-		void VulkanRenderer::UpdateDynamicUniformBuffer(MaterialID materialID, u32 dynamicOffset, const glm::mat4& inModel,
+		void VulkanRenderer::UpdateDynamicUniformBuffer(MaterialID materialID, u32 dynamicOffset, const glm::mat4& model,
 			UniformOverrides const* uniformOverrides /* = nullptr */)
 		{
 			const VulkanMaterial& material = m_Materials[materialID];
@@ -8021,7 +8029,6 @@ namespace flex
 				return; // There are no dynamic uniforms to update
 			}
 
-			glm::mat4 model = inModel;
 			glm::mat4 projection = g_CameraManager->CurrentCamera()->GetProjection();
 			glm::mat4 view = g_CameraManager->CurrentCamera()->GetView();
 			glm::mat4 viewProj = projection * view;

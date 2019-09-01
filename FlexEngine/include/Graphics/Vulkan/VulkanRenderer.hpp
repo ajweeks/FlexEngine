@@ -278,7 +278,7 @@ namespace flex
 			void UpdateConstantUniformBuffers(UniformOverrides const* overridenUniforms = nullptr);
 			void UpdateDynamicUniformBuffer(RenderID renderID, UniformOverrides const * overridenUniforms = nullptr,
 				MaterialID materialIDOverride = InvalidMaterialID, u32 dynamicUBOOffsetOverride = InvalidID);
-			void UpdateDynamicUniformBuffer(MaterialID materialID, u32 dynamicOffsetIndex, const glm::mat4& inModel, UniformOverrides const* uniformOverrides = nullptr);
+			void UpdateDynamicUniformBuffer(MaterialID materialID, u32 dynamicOffsetIndex, const glm::mat4& model, UniformOverrides const* uniformOverrides = nullptr);
 
 			void GenerateIrradianceMaps();
 
