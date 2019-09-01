@@ -7088,9 +7088,7 @@ namespace flex
 
 				vkCmdEndRenderPass(m_OffScreenCmdBuffer);
 
-				// NOTE: Layout is auto transitioned from render pass
-				// TODO: Somehow handle this automatically?
-				m_GBufferDepthAttachment->layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+				m_GBufferDepthAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_GraphicsQueue);
 
 				EndDebugMarkerRegion(m_OffScreenCmdBuffer); // Deferred
 
@@ -7448,9 +7446,8 @@ namespace flex
 				vkCmdEndRenderPass(commandBuffer);
 			}
 			
-			// GBuffer depth is auto transitioned back to DS optimal for next frame
-			// TODO: Track automatically somehow
-			m_GBufferDepthAttachment->layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+			// GBuffer depth is transitioned back to DS optimal for next frame
+			m_GBufferDepthAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, m_GraphicsQueue, commandBuffer);
 
 			EndDebugMarkerRegion(commandBuffer); // UI
 
