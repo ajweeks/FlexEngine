@@ -514,6 +514,7 @@ namespace flex
 			std::vector<VulkanTexture*> m_LoadedTextures;
 
 			VulkanTexture* m_BlankTexture = nullptr;
+			VulkanTexture* m_BlankTextureArr = nullptr;
 
 
 			std::vector<VertexIndexBufferPair> m_VertexIndexBufferPairs;

@@ -303,8 +303,15 @@ namespace flex
 			PrepareFrameBuffers();
 			PrepareCubemapFrameBuffer();
 
-			m_BlankTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, RESOURCE_LOCATION  "textures/blank.jpg", 1, false, false, false);
-			m_BlankTexture->CreateFromFile(VK_FORMAT_R8G8B8A8_UNORM);
+			{
+				u32 blankData = 0xFFFFFFFF;
+				m_BlankTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "blank", 1, 1, 1);
+				m_BlankTexture->CreateFromMemory(&blankData, sizeof(blankData), VK_FORMAT_R8G8B8A8_UNORM, 1);
+
+				m_BlankTextureArr = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "blank_arr", 1, 1, 1);
+				m_BlankTextureArr->bIsArray = true;
+				m_BlankTextureArr->CreateFromMemory(&blankData, sizeof(blankData), VK_FORMAT_R8G8B8A8_UNORM, 1);
+			}
 
 			m_AlphaBGTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/alpha-bg.png", 4, false, false, false);
 			m_LoadingTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/loading_1.png", 4, false, false, false);
@@ -351,6 +358,7 @@ namespace flex
 
 			m_SSAOSpecializationMapEntry = { 0, 0, sizeof(i32) };
 			m_SSAOSpecializationInfo.mapEntryCount = 1;
+
 			m_SSAOSpecializationInfo.pMapEntries = &m_SSAOSpecializationMapEntry;
 			m_SSAOSpecializationInfo.pData = &m_SSAOKernelSize;
 			m_SSAOSpecializationInfo.dataSize = sizeof(i32);
@@ -708,9 +716,12 @@ namespace flex
 			m_ColorSampler.replace();
 			m_DepthSampler.replace();
 
+			delete m_BlankTextureArr;
+			m_BlankTextureArr = nullptr;
+
 			delete m_BlankTexture;
 			m_BlankTexture = nullptr;
-
+			
 			for (VulkanTexture* loadedTexture : m_LoadedTextures)
 			{
 				delete loadedTexture;
@@ -5091,7 +5102,7 @@ namespace flex
 			{
 				createInfo.shadowSampler = m_DepthSampler;
 				// TODO: Use blank texture array here to appease validation warnings
-				createInfo.shadowImageView = (m_DirectionalLight && m_DirectionalLight->data.castShadows) ? m_ShadowImageView : m_BlankTexture->imageView;
+				createInfo.shadowImageView = (m_DirectionalLight && m_DirectionalLight->data.castShadows) ? m_ShadowImageView : m_BlankTextureArr->imageView;
 			}
 
 			if (shader->shader->constantBufferUniforms.HasUniform(U_SSAO_FINAL_SAMPLER))

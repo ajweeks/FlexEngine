@@ -281,10 +281,11 @@ namespace flex
 			return name;
 		}
 
-		u32 VulkanTexture::CreateFromMemory(void* buffer, u32 bufferSize, VkFormat inFormat, i32 inMipLevels, VkFilter filter /* = VK_FILTER_LINEAR */)
+		u32 VulkanTexture::CreateFromMemory(void* buffer, u32 bufferSize, VkFormat inFormat, i32 inMipLevels, VkFilter filter /* = VK_FILTER_LINEAR */, i32 layerCount /* = 1 */)
 		{
 			assert(width != 0 && height != 0);
 			assert(buffer != nullptr);
+			assert((!bIsArray && layerCount == 1) || (bIsArray && layerCount >= 1));
 
 			ImageCreateInfo imageCreateInfo = {};
 			imageCreateInfo.image = image.replace();
@@ -292,6 +293,7 @@ namespace flex
 			imageCreateInfo.format = inFormat;
 			imageCreateInfo.width = (u32)width;
 			imageCreateInfo.height = (u32)height;
+			imageCreateInfo.arrayLayers = layerCount;
 			imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
 			imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
 			imageCreateInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -325,6 +327,7 @@ namespace flex
 			}
 
 			ImageViewCreateInfo viewCreateInfo = {};
+			viewCreateInfo.viewType = (bIsArray ? VK_IMAGE_VIEW_TYPE_2D_ARRAY : VK_IMAGE_VIEW_TYPE_2D);
 			viewCreateInfo.format = inFormat;
 			viewCreateInfo.image = &image;
 			viewCreateInfo.imageView = &imageView;
@@ -1221,7 +1224,7 @@ namespace flex
 			return u32_max;
 		}
 
-		// NOTE: This function needs to burn and die in hell.
+		// TODO: FIXME: This function needs to take the src & dst access masks as args, clearly we can't keep trying to handle all cases...
 		void TransitionImageLayout(VulkanDevice* device, VkQueue graphicsQueue, VkImage image, VkFormat format, VkImageLayout oldLayout,
 			VkImageLayout newLayout, u32 mipLevels, VkCommandBuffer optCmdBuf /* = VK_NULL_HANDLE */, bool bIsDepthTexture /* = false */)
 		{

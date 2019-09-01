@@ -82,6 +82,7 @@ namespace flex
 			u32 height = 0;
 			VDeleter<VkFramebuffer> frameBuffer;
 			std::vector<std::pair<std::string, FrameBufferAttachment>> frameBufferAttachments;
+			// TODO: Should frame buffers own their render passes?
 			VDeleter<VkRenderPass> renderPass;
 		};
 
@@ -231,7 +232,7 @@ namespace flex
 			// Expects *texture == nullptr
 			static VkDeviceSize CreateCubemap(VulkanDevice* device, VkQueue graphicsQueue, CubemapCreateInfo& createInfo);
 
-			u32 CreateFromMemory(void* buffer, u32 bufferSize, VkFormat inFormat, i32 inMipLevels, VkFilter filter = VK_FILTER_LINEAR);
+			u32 CreateFromMemory(void* buffer, u32 bufferSize, VkFormat inFormat, i32 inMipLevels, VkFilter filter = VK_FILTER_LINEAR, i32 layerCount = 1);
 
 			void TransitionToLayout(VkImageLayout newLayout, VkCommandBuffer optCommandBuffer = VK_NULL_HANDLE);
 			void CopyFromBuffer(VkBuffer buffer, u32 inWidth, u32 inHeight, VkCommandBuffer optCommandBuffer = 0);
@@ -283,6 +284,7 @@ namespace flex
 			bool bFlipVertically = false;
 			bool bGenerateMipMaps = false;
 			bool bHDR = false;
+			bool bIsArray = false;
 			bool bSamplerClampToBorder = false;
 
 			VDeleter<VkImage> image;
