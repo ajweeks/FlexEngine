@@ -5091,7 +5091,7 @@ namespace flex
 			{
 				createInfo.shadowSampler = m_DepthSampler;
 				// TODO: Use blank texture array here to appease validation warnings
-				createInfo.shadowImageView = m_DirectionalLight ? m_ShadowImageView : m_BlankTexture->imageView;
+				createInfo.shadowImageView = (m_DirectionalLight && m_DirectionalLight->data.castShadows) ? m_ShadowImageView : m_BlankTexture->imageView;
 			}
 
 			if (shader->shader->constantBufferUniforms.HasUniform(U_SSAO_FINAL_SAMPLER))
