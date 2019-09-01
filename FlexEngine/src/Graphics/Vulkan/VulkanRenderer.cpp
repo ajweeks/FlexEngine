@@ -6064,7 +6064,7 @@ namespace flex
 				imageCreateInfo.arrayLayers = NUM_SHADOW_CASCADES;
 				imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 				imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-				imageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT; // VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT?
+				imageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 				imageCreateInfo.flags = 0;
 
 				VK_CHECK_RESULT(vkCreateImage(m_VulkanDevice->m_LogicalDevice, &imageCreateInfo, nullptr, m_ShadowImage.replace()));
