@@ -428,10 +428,10 @@ namespace flex
 		i32 m_SSAOBlurSamplePixelOffset;
 		SSAOSamplingData m_SSAOSamplingData;
 		glm::vec2u m_SSAORes;
-		bool m_bSSAOBlurEnabled = false;
+		bool m_bSSAOBlurEnabled = true;
 		bool m_bSSAOStateChanged = false;
 
-		bool m_bEnableTAA = false;
+		bool m_bEnableTAA = true;
 		i32 m_TAASampleCount = 2;
 		bool m_bTAAStateChanged = false;
 

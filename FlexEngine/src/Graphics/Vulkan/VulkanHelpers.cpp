@@ -988,20 +988,20 @@ namespace flex
 			{
 				// Create the linear tiled destination image to copy to and to read the memory from
 				VkImage dstImage;
-				VkImageCreateInfo imageCreateCI = vks::imageCreateInfo();
-				imageCreateCI.imageType = VK_IMAGE_TYPE_2D;
+				VkImageCreateInfo createInfo = vks::imageCreateInfo();
+				createInfo.imageType = VK_IMAGE_TYPE_2D;
 				// Note that vkCmdBlitImage (if supported) will also do format conversions if the swapchain color format would differ
-				imageCreateCI.format = VK_FORMAT_R8G8B8A8_UNORM;
-				imageCreateCI.extent.width = width;
-				imageCreateCI.extent.height = height;
-				imageCreateCI.extent.depth = 1;
-				imageCreateCI.arrayLayers = 1;
-				imageCreateCI.mipLevels = 1;
-				imageCreateCI.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-				imageCreateCI.samples = VK_SAMPLE_COUNT_1_BIT;
-				imageCreateCI.tiling = VK_IMAGE_TILING_LINEAR;
-				imageCreateCI.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-				VK_CHECK_RESULT(vkCreateImage(m_VulkanDevice->m_LogicalDevice, &imageCreateCI, nullptr, &dstImage));
+				createInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
+				createInfo.extent.width = width;
+				createInfo.extent.height = height;
+				createInfo.extent.depth = 1;
+				createInfo.arrayLayers = 1;
+				createInfo.mipLevels = 1;
+				createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+				createInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+				createInfo.tiling = VK_IMAGE_TILING_LINEAR;
+				createInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+				VK_CHECK_RESULT(vkCreateImage(m_VulkanDevice->m_LogicalDevice, &createInfo, nullptr, &dstImage));
 
 				VkMemoryRequirements memRequirements;
 				vkGetImageMemoryRequirements(m_VulkanDevice->m_LogicalDevice, dstImage, &memRequirements);
