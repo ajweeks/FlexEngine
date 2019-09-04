@@ -190,7 +190,8 @@ namespace flex
 				VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
 				bool bDepth = false,
 				VkFormat depthFormat = VK_FORMAT_UNDEFINED,
-				VkImageLayout finalDepthLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+				VkImageLayout finalDepthLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				VkImageLayout initialDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
 			MaterialID GetNextAvailableMaterialID();
 			RenderID GetNextAvailableRenderID() const;

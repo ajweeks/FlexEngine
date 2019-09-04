@@ -3573,7 +3573,8 @@ namespace flex
 			VkImageLayout initialLayout /* = VK_IMAGE_LAYOUT_UNDEFINED */,
 			bool bDepth /* = false */,
 			VkFormat depthFormat /* = VK_FORMAT_UNDEFINED */,
-			VkImageLayout finalDepthLayout /* = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL */)
+			VkImageLayout finalDepthLayout /* = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL */,
+			VkImageLayout initialDepthLayout /* = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL */)
 		{
 			// Color attachment
 			VkAttachmentDescription colorAttachment = vks::attachmentDescription(colorFormat, finalLayout);
@@ -3586,7 +3587,7 @@ namespace flex
 
 				if (bDepth)
 				{
-					depthAttachment.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+					depthAttachment.initialLayout = initialDepthLayout;
 					depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 				}
 			}
@@ -5051,17 +5052,17 @@ namespace flex
 			// Forward render pass
 			// After completion FB0 is sampled in post processing pass
 			CreateRenderPass(m_ForwardRenderPass.replace(), m_OffscreenFrameBufferFormat, "Forward render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, true, depthFormat, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, true, depthFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 			// Post process render pass
 			// After completion FB1 is sampled in TAA resolve pass
 			CreateRenderPass(m_PostProcessRenderPass.replace(), m_OffscreenFrameBufferFormat, "Post Process render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-				VK_IMAGE_LAYOUT_UNDEFINED, true, depthFormat, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+				VK_IMAGE_LAYOUT_UNDEFINED, true, depthFormat, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
 			// TAA resolve render pass
 			// FB0 is sampled in gamma correct pass
 			CreateRenderPass(m_TAAResolveRenderPass.replace(), m_OffscreenFrameBufferFormat, "TAA Resolve render pass", VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, true, depthFormat, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, true, depthFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 			// Gamma correct render pass
 			CreateRenderPass(m_GammaCorrectRenderPass.replace(), m_SwapChainImageFormat, "Gamma correct render pass", VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -6031,6 +6032,11 @@ namespace flex
 
 				CreateAttachment(m_VulkanDevice, m_OffscreenFrameBuffer0, 0, "Offscreen 0 image", "Offscreen 0 image view");
 				CreateAttachment(m_VulkanDevice, m_OffscreenFrameBuffer1, 0, "Offscreen 1 image", "Offscreen 1 image view");
+				
+				// Deferred shading specifies initial layout of color attachment optimal
+				m_OffscreenFrameBuffer0->frameBufferAttachments[0].second.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+				// Post process specifies initial layout of color attachment optimal
+				m_OffscreenFrameBuffer1->frameBufferAttachments[0].second.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 				std::vector<VkImageView> attachments;
 				attachments.push_back(m_OffscreenFrameBuffer0->frameBufferAttachments[0].second.view);
@@ -6050,7 +6056,7 @@ namespace flex
 				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &offscreenFramebufferCreateInfo, nullptr, m_OffscreenFrameBuffer1->frameBuffer.replace()));
 				SetFramebufferName(m_VulkanDevice, m_OffscreenFrameBuffer1->frameBuffer, "Offscreen 1");
 			}
-
+			
 			CreateAttachment(
 				m_VulkanDevice,
 				m_HistoryBuffer->imageFormat,
@@ -6065,7 +6071,7 @@ namespace flex
 				m_HistoryBuffer->imageView.replace(),
 				"History Buffer image",
 				"History Buffer image view");
-			m_HistoryBuffer->imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			// TODO: Remove, initialLayout should handle this (?)
 			m_HistoryBuffer->TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 			// Shadow frame buffers
@@ -7335,6 +7341,12 @@ namespace flex
 			}
 			vkCmdEndRenderPass(commandBuffer);
 
+			FrameBufferAttachment& offscreenBuffer0 = m_OffscreenFrameBuffer0->frameBufferAttachments[0].second;
+			FrameBufferAttachment& offscreenBuffer1 = m_OffscreenFrameBuffer1->frameBufferAttachments[0].second;
+
+			// Forward render pass transitioned this to read only optimal
+			offscreenBuffer0.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
 			//
 			// Post process pass
 			//
@@ -7352,16 +7364,15 @@ namespace flex
 				EndGPUTimeStamp(commandBuffer, "Post Process");
 			}
 
-			const FrameBufferAttachment& offscreenBuffer0 = m_OffscreenFrameBuffer0->frameBufferAttachments[0].second;
-			const FrameBufferAttachment& offscreenBuffer1 = m_OffscreenFrameBuffer1->frameBufferAttachments[0].second;
+			// Post process render pass transitioned this to shader read only optimal
+			offscreenBuffer1.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 			if (m_bEnableTAA)
 			{
 				BeginGPUTimeStamp(commandBuffer, "TAA");
 
-				// m_OffscreenFrameBuffer0 was being read from by post process, now needs to be written to again
-				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, offscreenBuffer0.image, offscreenBuffer0.format,
-					VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1, commandBuffer, false);
+				// Transition for TAA to write to
+				offscreenBuffer0.TransitionToLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, m_GraphicsQueue, commandBuffer);
 
 				BeginDebugMarkerRegion(commandBuffer, "TAA Resolve");
 
@@ -7373,6 +7384,9 @@ namespace flex
 
 				RenderFullscreenQuad(commandBuffer, m_TAAResolveRenderPass, m_OffscreenFrameBuffer0->frameBuffer, TAAMat.material.shaderID,
 					m_TAAResolveGraphicsPipelineLayout, m_TAAResolveGraphicsPipeline, m_TAAResolveDescriptorSet, true);
+				
+				// Transitioned by TAA resolve pass
+				offscreenBuffer0.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 
 				EndDebugMarkerRegion(commandBuffer); // TAA Resolve
 
@@ -7383,11 +7397,8 @@ namespace flex
 				CopyImage(m_VulkanDevice, m_GraphicsQueue, offscreenBuffer0.image, m_HistoryBuffer->image,
 					m_SwapChainExtent.width, m_SwapChainExtent.height, commandBuffer, VK_IMAGE_ASPECT_COLOR_BIT);
 
-				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, offscreenBuffer0.image, offscreenBuffer0.format,
-					VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1, commandBuffer, false);
-
-				TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, offscreenBuffer1.image, offscreenBuffer1.format,
-					VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1, commandBuffer, false);
+				// Transition to ready only for gamma correct pass
+				offscreenBuffer0.TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_GraphicsQueue, commandBuffer);
 
 				m_HistoryBuffer->TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, commandBuffer);
 			}
@@ -7445,9 +7456,6 @@ namespace flex
 
 				vkCmdEndRenderPass(commandBuffer);
 			}
-			
-			// GBuffer depth is transitioned back to DS optimal for next frame
-			m_GBufferDepthAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, m_GraphicsQueue, commandBuffer);
 
 			EndDebugMarkerRegion(commandBuffer); // UI
 
