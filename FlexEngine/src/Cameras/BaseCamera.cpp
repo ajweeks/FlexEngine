@@ -40,9 +40,14 @@ namespace flex
 		m_TurnSpeedSlowMultiplier(0.1f),
 		m_PanSpeedFastMultiplier(2.5f),
 		m_PanSpeedSlowMultiplier(0.2f),
+		m_RollRestorationSpeed(12.0f),
 		m_Position(VEC3_ZERO),
 		m_Yaw(0.0f),
-		m_Pitch(0.0f)
+		m_Pitch(0.0f),
+		m_Roll(0.0f),
+		m_Forward(VEC3_FORWARD),
+		m_Up(VEC3_UP),
+		m_Right(VEC3_RIGHT)
 	{
 		ResetOrientation();
 		CalculateAxisVectorsFromPitchAndYaw();
@@ -57,6 +62,11 @@ namespace flex
 	void BaseCamera::Initialize()
 	{
 		m_bInitialized = true;
+	}
+
+	void BaseCamera::Update()
+	{
+		m_Roll = Lerp(m_Roll, 0.0f, m_RollRestorationSpeed * g_DeltaTime);
 	}
 
 	void BaseCamera::Destroy()
@@ -174,6 +184,7 @@ namespace flex
 	{
 		m_Yaw = yawRad;
 		m_Pitch = pitchRad;
+		m_Roll = 0.0f;
 	}
 
 	glm::vec3 BaseCamera::GetRight() const
@@ -200,6 +211,7 @@ namespace flex
 	{
 		m_Pitch = 0.0f;
 		m_Yaw = PI;
+		m_Roll = 0.0f;
 	}
 
 	void BaseCamera::CalculateAxisVectorsFromPitchAndYaw()
@@ -211,6 +223,7 @@ namespace flex
 		m_Forward = normalize(m_Forward);
 
 		glm::vec3 worldUp(0.0f, 1.0f, 0.0f);
+		worldUp += m_Right * m_Roll;
 
 		m_Right = normalize(glm::cross(m_Forward, worldUp));
 		m_Up = cross(m_Right, m_Forward);
@@ -221,6 +234,7 @@ namespace flex
 		m_Pitch = asin(m_Forward.y);
 		ClampPitch();
 		m_Yaw = atan2(m_Forward.z, m_Forward.x);
+		m_Roll = 0.0f;
 
 #if THOROUGH_CHECKS
 		ENSURE(!IsNanOrInf(m_Pitch));

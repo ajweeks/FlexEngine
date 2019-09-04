@@ -21,6 +21,7 @@ namespace flex
 		BaseCamera("debug", false, FOV),
 		mouseButtonCallback(this, &DebugCamera::OnMouseButtonEvent),
 		mouseMovedCallback(this, &DebugCamera::OnMouseMovedEvent),
+		m_RollOnTurnAmount(1.5f),
 		m_MouseDragDist(0.0f),
 		m_MoveVel(0.0f),
 		m_TurnVel(0.0f)
@@ -64,6 +65,8 @@ namespace flex
 
 	void DebugCamera::Update()
 	{
+		BaseCamera::Update();
+
 		m_DragHistory.AddElement(m_MouseDragDist.y);
 
 		glm::vec3 targetDPos(0.0f);
@@ -129,11 +132,13 @@ namespace flex
 				m_TurnVel += glm::vec2(-m_MouseDragDist.x * m_MouseRotationSpeed * turnSpeedMultiplier,
 					m_MouseDragDist.y * m_MouseRotationSpeed * turnSpeedMultiplier);
 
+				m_Roll += m_TurnVel.x * m_RollOnTurnAmount * g_DeltaTime;
+
 				m_Yaw += m_TurnVel.x;
 				m_Pitch += m_TurnVel.y;
 				ClampPitch();
 			}
-		}
+			}
 
 		glm::vec3 translation(0.0f);
 		real moveF = g_InputManager->GetActionAxisValue(Action::DBG_CAM_MOVE_FORWARD);

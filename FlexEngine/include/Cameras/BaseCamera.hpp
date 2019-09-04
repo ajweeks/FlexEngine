@@ -13,7 +13,7 @@ namespace flex
 		virtual ~BaseCamera();
 
 		virtual void Initialize();
-		virtual void Update() = 0;
+		virtual void Update();
 		virtual void Destroy();
 
 		virtual void OnSceneChanged();
@@ -116,11 +116,13 @@ namespace flex
 		real m_TurnSpeedSlowMultiplier = 0.0f;
 		real m_PanSpeedFastMultiplier = 0.0f;
 		real m_PanSpeedSlowMultiplier = 0.0f;
+		real m_RollRestorationSpeed = 0.0f;
 
 		glm::vec3 m_Position;
 
-		real m_Yaw = 0.0f;
-		real m_Pitch = 0.0f;
+		real m_Yaw;
+		real m_Pitch;
+		real m_Roll;
 		glm::vec3 m_Forward;
 		glm::vec3 m_Up;
 		glm::vec3 m_Right;

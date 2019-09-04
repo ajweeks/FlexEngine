@@ -60,6 +60,8 @@ namespace flex
 
 	void OverheadCamera::Update()
 	{
+		BaseCamera::Update();
+
 		if (!m_Player0)
 		{
 			return;

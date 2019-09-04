@@ -57,6 +57,8 @@ namespace flex
 
 	void FirstPersonCamera::Update()
 	{
+		BaseCamera::Update();
+
 		if (!m_Player)
 		{
 			return;

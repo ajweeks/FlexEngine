@@ -25,6 +25,8 @@ namespace flex
 		EventReply OnMouseMovedEvent(const glm::vec2& dMousePos);
 		MouseMovedCallback<DebugCamera> mouseMovedCallback;
 
+		real m_RollOnTurnAmount;
+
 		glm::vec2 m_MouseDragDist;
 
 		bool m_bDraggingLMB = false;

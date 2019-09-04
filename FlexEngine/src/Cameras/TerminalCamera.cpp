@@ -59,6 +59,8 @@ namespace flex
 
 	void TerminalCamera::Update()
 	{
+		BaseCamera::Update();
+
 		if (m_bTransitioningIn || m_bTransitioningOut)
 		{
 			m_Yaw = MoveTowards(m_Yaw, m_TargetYaw, g_DeltaTime * m_LerpSpeed);
