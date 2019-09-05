@@ -79,7 +79,7 @@ namespace flex
 
 		real lookH = g_InputManager->GetActionAxisValue(Action::DBG_CAM_LOOK_LEFT) + g_InputManager->GetActionAxisValue(Action::DBG_CAM_LOOK_RIGHT);
 		real lookV = g_InputManager->GetActionAxisValue(Action::DBG_CAM_LOOK_DOWN) + g_InputManager->GetActionAxisValue(Action::DBG_CAM_LOOK_UP);
-		real yawO = lookH * m_GamepadRotationSpeed * turnSpeedMultiplier * g_DeltaTime;
+		real yawO = -lookH * m_GamepadRotationSpeed * turnSpeedMultiplier * g_DeltaTime;
 		// Horizontal FOV is roughly twice as wide as vertical
 		real pitchO = lookV * 0.6f * m_GamepadRotationSpeed * turnSpeedMultiplier * g_DeltaTime;
 
