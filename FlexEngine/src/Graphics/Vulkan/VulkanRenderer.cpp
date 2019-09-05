@@ -6071,7 +6071,7 @@ namespace flex
 				m_HistoryBuffer->imageView.replace(),
 				"History Buffer image",
 				"History Buffer image view");
-			// TODO: Remove, initialLayout should handle this (?)
+			m_HistoryBuffer->imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 			m_HistoryBuffer->TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 			// Shadow frame buffers

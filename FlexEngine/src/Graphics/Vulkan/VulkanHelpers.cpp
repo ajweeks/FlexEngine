@@ -2169,6 +2169,9 @@ namespace flex
 			}
 			createInfo.DBG_Name = optDBGName;
 			VulkanTexture::CreateImage(device, createInfo);
+
+			format = format;
+			layout = VK_IMAGE_LAYOUT_UNDEFINED;
 		}
 
 		void FrameBufferAttachment::CreateImageView(const char* optDBGName /* = nullptr */)
