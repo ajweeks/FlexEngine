@@ -19,6 +19,7 @@ IGNORE_WARNINGS_POP
 
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
+#include "Editor.hpp"
 #include "FlexEngine.hpp"
 #include "Graphics/BitmapFont.hpp"
 #include "Helpers.hpp"
@@ -855,7 +856,7 @@ namespace flex
 
 		ImGui::BeginChild("SelectedObject", ImVec2(0.0f, 500.0f), true);
 
-		const std::vector<GameObject*>& selectedObjects = g_EngineInstance->GetSelectedObjects();
+		const std::vector<GameObject*>& selectedObjects = g_Editor->GetSelectedObjects();
 		if (!selectedObjects.empty())
 		{
 			// TODO: Draw common fields for all selected objects?
@@ -931,7 +932,7 @@ namespace flex
 				newPointLight->Initialize();
 				newPointLight->PostInitialize();
 
-				g_EngineInstance->SetSelectedObject(newPointLight);
+				g_Editor->SetSelectedObject(newPointLight);
 			}
 		}
 
@@ -951,7 +952,7 @@ namespace flex
 				newDiright->Initialize();
 				newDiright->PostInitialize();
 
-				g_EngineInstance->SetSelectedObject(newDiright);
+				g_Editor->SetSelectedObject(newDiright);
 			}
 		}
 	}
@@ -1963,7 +1964,7 @@ namespace flex
 					newGameObject->Initialize();
 					newGameObject->PostInitialize();
 
-					g_EngineInstance->SetSelectedObject(newGameObject);
+					g_Editor->SetSelectedObject(newGameObject);
 
 					ImGui::CloseCurrentPopup();
 				}
@@ -2021,7 +2022,7 @@ namespace flex
 				bHasChildren = false;
 			}
 		}
-		bool bSelected = g_EngineInstance->IsObjectSelected(gameObject);
+		bool bSelected = g_Editor->IsObjectSelected(gameObject);
 
 		bool visible = gameObject->IsVisible();
 		const std::string objectVisibleLabel(objectID + "-visible");
@@ -2075,15 +2076,15 @@ namespace flex
 			{
 				if (g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_CONTROL))
 				{
-					g_EngineInstance->ToggleSelectedObject(gameObject);
+					g_Editor->ToggleSelectedObject(gameObject);
 				}
 				else if (g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_SHIFT))
 				{
-					const std::vector<GameObject*>& selectedObjects = g_EngineInstance->GetSelectedObjects();
+					const std::vector<GameObject*>& selectedObjects = g_Editor->GetSelectedObjects();
 					if (selectedObjects.empty() ||
 						(selectedObjects.size() == 1 && selectedObjects[0] == gameObject))
 					{
-						g_EngineInstance->ToggleSelectedObject(gameObject);
+						g_Editor->ToggleSelectedObject(gameObject);
 					}
 					else
 					{
@@ -2115,13 +2116,13 @@ namespace flex
 
 						for (GameObject* objectToSelect : objectsToSelect)
 						{
-							g_EngineInstance->AddSelectedObject(objectToSelect);
+							g_Editor->AddSelectedObject(objectToSelect);
 						}
 					}
 				}
 				else
 				{
-					g_EngineInstance->SetSelectedObject(gameObject);
+					g_Editor->SetSelectedObject(gameObject);
 				}
 			}
 
@@ -2132,7 +2133,7 @@ namespace flex
 					const void* data = nullptr;
 					size_t size = 0;
 
-					const std::vector<GameObject*>& selectedObjects = g_EngineInstance->GetSelectedObjects();
+					const std::vector<GameObject*>& selectedObjects = g_Editor->GetSelectedObjects();
 					auto iter = Find(selectedObjects, gameObject);
 					bool bItemInSelection = iter != selectedObjects.end();
 					std::string dragDropText;
@@ -2149,7 +2150,7 @@ namespace flex
 						// Ensure any children which weren't selected are now in selection
 						for (GameObject* draggedGameObject : draggedGameObjects)
 						{
-							g_EngineInstance->AddSelectedObject(draggedGameObject);
+							g_Editor->AddSelectedObject(draggedGameObject);
 						}
 
 						data = draggedGameObjects.data();
@@ -2166,7 +2167,7 @@ namespace flex
 					}
 					else
 					{
-						g_EngineInstance->SetSelectedObject(gameObject);
+						g_Editor->SetSelectedObject(gameObject);
 
 						data = (void*)(&gameObject);
 						size = sizeof(GameObject*);

@@ -20,6 +20,7 @@ IGNORE_WARNINGS_POP
 #include "Scene/GameObject.hpp"
 #include "Audio/AudioManager.hpp"
 #include "Cameras/TerminalCamera.hpp"
+#include "Editor.hpp"
 #include "FlexEngine.hpp"
 #include "Graphics/BitmapFont.hpp"
 #include "Graphics/Renderer.hpp"
@@ -273,9 +274,9 @@ namespace flex
 			m_CollisionShape = nullptr;
 		}
 
-		if (g_EngineInstance->IsObjectSelected(this))
+		if (g_Editor->IsObjectSelected(this))
 		{
-			g_EngineInstance->DeselectObject(this);
+			g_Editor->DeselectObject(this);
 		}
 	}
 
@@ -446,9 +447,9 @@ namespace flex
 					m_RigidBody->MatchParentTransform();
 				}
 
-				if (g_EngineInstance->IsObjectSelected(this))
+				if (g_Editor->IsObjectSelected(this))
 				{
-					g_EngineInstance->CalculateSelectedObjectsCenter();
+					g_Editor->CalculateSelectedObjectsCenter();
 				}
 			}
 		}
@@ -761,10 +762,10 @@ namespace flex
 		bool bRefreshNameField = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup) &&
 			ImGui::IsMouseClicked(1);
 
-		if (bActive && g_EngineInstance->GetWantRenameActiveElement())
+		if (bActive && g_Editor->GetWantRenameActiveElement())
 		{
 			ImGui::OpenPopup(contextMenuIDStr.c_str());
-			g_EngineInstance->ClearWantRenameActiveElement();
+			g_Editor->ClearWantRenameActiveElement();
 			bRefreshNameField = true;
 		}
 		if (bRefreshNameField)
@@ -827,7 +828,7 @@ namespace flex
 		{
 			GameObject* newGameObject = CopySelfAndAddToScene(nullptr, true);
 
-			g_EngineInstance->SetSelectedObject(newGameObject);
+			g_Editor->SetSelectedObject(newGameObject);
 
 			return true;
 		}

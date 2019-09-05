@@ -8,6 +8,7 @@ IGNORE_WARNINGS_PUSH
 IGNORE_WARNINGS_POP
 
 #include "Cameras/CameraManager.hpp"
+#include "Editor.hpp"
 #include "FlexEngine.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
@@ -120,7 +121,7 @@ namespace flex
 		{
 			if (m_bOrbiting)
 			{
-				orbitingCenter = g_EngineInstance->GetSelectedObjectsCenter();
+				orbitingCenter = g_Editor->GetSelectedObjectsCenter();
 				bOrbiting = true;
 				targetDPos += m_Right * m_MouseDragDist.x * m_OrbitingSpeed * turnSpeedMultiplier +
 					m_Up * m_MouseDragDist.y * m_OrbitingSpeed * turnSpeedMultiplier;

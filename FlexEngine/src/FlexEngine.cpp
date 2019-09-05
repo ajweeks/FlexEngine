@@ -6,13 +6,8 @@
 #include <time.h> // For time
 
 IGNORE_WARNINGS_PUSH
-#include <BulletCollision/CollisionShapes/btCylinderShape.h>
-#include <BulletDynamics/Dynamics/btDynamicsWorld.h>
-
 #include <BulletDynamics/Dynamics/btRigidBody.h>
 #include <glm/gtx/intersect.hpp>
-
-#include <LinearMath/btIDebugDraw.h>
 
 #if COMPILE_RENDERDOC_API
 #include "renderdoc/api/app/renderdoc_app.h"
@@ -29,6 +24,7 @@ IGNORE_WARNINGS_POP
 #include "Cameras/FirstPersonCamera.hpp"
 #include "Cameras/OverheadCamera.hpp"
 #include "Cameras/TerminalCamera.hpp"
+#include "Editor.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
@@ -56,6 +52,7 @@ IGNORE_WARNINGS_POP
 #include "Graphics/Vulkan/VulkanRenderer.hpp"
 #endif
 
+
 // Specify that we prefer to be run on a discrete card on laptops when available
 extern "C"
 {
@@ -81,6 +78,7 @@ namespace flex
 	class InputManager* g_InputManager = nullptr;
 	class Renderer* g_Renderer = nullptr;
 	class FlexEngine* g_EngineInstance = nullptr;
+	class Editor* g_Editor = nullptr;
 	class SceneManager* g_SceneManager = nullptr;
 	struct Monitor* g_Monitor = nullptr;
 	class PhysicsManager* g_PhysicsManager = nullptr;
@@ -91,7 +89,6 @@ namespace flex
 
 	FlexEngine::FlexEngine() :
 		m_MouseButtonCallback(this, &FlexEngine::OnMouseButtonEvent),
-		m_MouseMovedCallback(this, &FlexEngine::OnMouseMovedEvent),
 		m_KeyEventCallback(this, &FlexEngine::OnKeyEvent),
 		m_ActionCallback(this, &FlexEngine::OnActionEvent)
 	{
@@ -176,10 +173,6 @@ namespace flex
 
 		std::string nowStr = GetDateString_YMDHMS();
 		Print("FlexEngine [%s] - Config: [%s x32] - Compiler: [%s %s]\n", nowStr.c_str(), configStr, m_CompilerName.c_str(), m_CompilerVersion.c_str());
-
-		DeselectCurrentlySelectedObjects();
-
-		m_LMBDownPos = glm::vec2i(-1);
 	}
 
 	FlexEngine::~FlexEngine()
@@ -203,6 +196,8 @@ namespace flex
 		AudioManager::Initialize();
 
 		CreateWindowAndRenderer();
+
+		g_Editor = new Editor();
 
 		g_InputManager = new InputManager();
 
@@ -238,19 +233,7 @@ namespace flex
 		g_PhysicsManager = new PhysicsManager();
 		g_PhysicsManager->Initialize();
 
-		// Transform gizmo materials
-		{
-			MaterialCreateInfo matCreateInfo = {};
-			matCreateInfo.name = "transform";
-			matCreateInfo.shaderName = "color";
-			matCreateInfo.constAlbedo = VEC3_ONE;
-			matCreateInfo.persistent = true;
-			matCreateInfo.visibleInEditor = false;
-			m_TransformGizmoMatXID = g_Renderer->InitializeMaterial(&matCreateInfo);
-			m_TransformGizmoMatYID = g_Renderer->InitializeMaterial(&matCreateInfo);
-			m_TransformGizmoMatZID = g_Renderer->InitializeMaterial(&matCreateInfo);
-			m_TransformGizmoMatAllID = g_Renderer->InitializeMaterial(&matCreateInfo);
-		}
+		g_Editor->Initialize();
 
 		BaseScene::ParseFoundMeshFiles();
 		BaseScene::ParseFoundMaterialFiles();
@@ -273,7 +256,6 @@ namespace flex
 		g_CameraManager->Initialize();
 
 		g_InputManager->BindMouseButtonCallback(&m_MouseButtonCallback, 99);
-		g_InputManager->BindMouseMovedCallback(&m_MouseMovedCallback, 99);
 		g_InputManager->BindKeyEventCallback(&m_KeyEventCallback, 10);
 		g_InputManager->BindActionCallback(&m_ActionCallback, 10);
 
@@ -327,6 +309,8 @@ namespace flex
 		m_ConsoleCommands.emplace_back("reload.shaders", []() { g_Renderer->ReloadShaders(); });
 		m_ConsoleCommands.emplace_back("reload.fontsdfs", []() { g_Renderer->LoadFonts(true); });
 		m_ConsoleCommands.emplace_back("reload.skybox", []() { g_Renderer->ReloadSkybox(true); });
+		//m_ConsoleCommands.emplace_back("select.all", []() { g_Editor->SelectAll(); });
+		//m_ConsoleCommands.emplace_back("select.none", []() { g_Editor->SelectNone(); });
 	}
 
 	AudioSourceID FlexEngine::GetAudioSourceID(SoundEffect effect)
@@ -347,20 +331,13 @@ namespace flex
 #endif
 
 		g_InputManager->UnbindMouseButtonCallback(&m_MouseButtonCallback);
-		g_InputManager->UnbindMouseMovedCallback(&m_MouseMovedCallback);
 		g_InputManager->UnbindKeyEventCallback(&m_KeyEventCallback);
 		g_InputManager->UnbindActionCallback(&m_ActionCallback);
 
 		SaveCommonSettingsToDisk(false);
 		g_Window->SaveToConfig();
 
-		DeselectCurrentlySelectedObjects();
-
-		if (m_TransformGizmo)
-		{
-			m_TransformGizmo->Destroy();
-			delete m_TransformGizmo;
-		}
+		g_Editor->Destroy();
 
 		g_SceneManager->DestroyAllScenes();
 		delete g_SceneManager;
@@ -380,6 +357,8 @@ namespace flex
 		AudioManager::Destroy();
 
 		delete g_InputManager;
+
+		delete g_Editor;
 
 		// Reset console color to default
 		Print("\n");
@@ -452,291 +431,14 @@ namespace flex
 
 	void FlexEngine::PreSceneChange()
 	{
-		if (m_TransformGizmo)
-		{
-			m_TransformGizmo->Destroy();
-			delete m_TransformGizmo;
-		}
-
-		DeselectCurrentlySelectedObjects();
+		g_Editor->PreSceneChange();
 	}
 
 	void FlexEngine::OnSceneChanged()
 	{
 		SaveCommonSettingsToDisk(false);
 
-		RenderObjectCreateInfo gizmoCreateInfo = {};
-		gizmoCreateInfo.depthTestReadFunc = DepthTestFunc::GEQUAL;
-		gizmoCreateInfo.bDepthWriteEnable = false;
-		gizmoCreateInfo.bEditorObject = true;
-		gizmoCreateInfo.bSetDynamicStates = true;
-		gizmoCreateInfo.cullFace = CullFace::BACK;
-
-		m_TransformGizmo = new GameObject("Transform gizmo", GameObjectType::_NONE);
-
-		// Scene explorer visibility doesn't need to be set because this object isn't a root object
-
-		u32 gizmoRBFlags = ((u32)PhysicsFlag::TRIGGER) | ((u32)PhysicsFlag::UNSELECTABLE);
-		i32 gizmoRBGroup = (u32)CollisionType::EDITOR_OBJECT;
-		i32 gizmoRBMask = (i32)CollisionType::DEFAULT;
-
-		// Translation gizmo
-		{
-			real cylinderRadius = 0.3f;
-			real cylinderHeight = 1.8f;
-
-			// X Axis
-			GameObject* translateXAxis = new GameObject("Translation gizmo x axis", GameObjectType::_NONE);
-			translateXAxis->SetCastsShadow(false);
-			translateXAxis->AddTag(m_TranslationGizmoTag);
-			MeshComponent* xAxisMesh = translateXAxis->SetMeshComponent(new MeshComponent(translateXAxis, m_TransformGizmoMatXID));
-
-			btCylinderShape* xAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
-			translateXAxis->SetCollisionShape(xAxisShape);
-
-			RigidBody* gizmoXAxisRB = translateXAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
-			gizmoXAxisRB->SetMass(0.0f);
-			gizmoXAxisRB->SetKinematic(true);
-			gizmoXAxisRB->SetPhysicsFlags(gizmoRBFlags);
-
-			xAxisMesh->SetRequiredAttributesFromMaterialID(m_TransformGizmoMatXID);
-			xAxisMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/translation-gizmo-x.glb", nullptr, &gizmoCreateInfo);
-
-			// Y Axis
-			GameObject* translateYAxis = new GameObject("Translation gizmo y axis", GameObjectType::_NONE);
-			translateYAxis->SetCastsShadow(false);
-			translateYAxis->AddTag(m_TranslationGizmoTag);
-			MeshComponent* yAxisMesh = translateYAxis->SetMeshComponent(new MeshComponent(translateYAxis, m_TransformGizmoMatYID));
-
-			btCylinderShape* yAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
-			translateYAxis->SetCollisionShape(yAxisShape);
-
-			RigidBody* gizmoYAxisRB = translateYAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
-			gizmoYAxisRB->SetMass(0.0f);
-			gizmoYAxisRB->SetKinematic(true);
-			gizmoYAxisRB->SetPhysicsFlags(gizmoRBFlags);
-
-			yAxisMesh->SetRequiredAttributesFromMaterialID(m_TransformGizmoMatYID);
-			yAxisMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/translation-gizmo-y.glb", nullptr, &gizmoCreateInfo);
-
-			// Z Axis
-			GameObject* translateZAxis = new GameObject("Translation gizmo z axis", GameObjectType::_NONE);
-			translateZAxis->SetCastsShadow(false);
-			translateZAxis->AddTag(m_TranslationGizmoTag);
-
-			MeshComponent* zAxisMesh = translateZAxis->SetMeshComponent(new MeshComponent(translateZAxis, m_TransformGizmoMatZID));
-
-			btCylinderShape* zAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
-			translateZAxis->SetCollisionShape(zAxisShape);
-
-			RigidBody* gizmoZAxisRB = translateZAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
-			gizmoZAxisRB->SetMass(0.0f);
-			gizmoZAxisRB->SetKinematic(true);
-			gizmoZAxisRB->SetPhysicsFlags(gizmoRBFlags);
-
-			zAxisMesh->SetRequiredAttributesFromMaterialID(m_TransformGizmoMatZID);
-			zAxisMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/translation-gizmo-z.glb", nullptr, &gizmoCreateInfo);
-
-
-			gizmoXAxisRB->SetLocalRotation(glm::quat(glm::vec3(0, 0, PI / 2.0f)));
-			gizmoXAxisRB->SetLocalPosition(glm::vec3(-cylinderHeight, 0, 0));
-
-			gizmoYAxisRB->SetLocalPosition(glm::vec3(0, cylinderHeight, 0));
-
-			gizmoZAxisRB->SetLocalRotation(glm::quat(glm::vec3(PI / 2.0f, 0, 0)));
-			gizmoZAxisRB->SetLocalPosition(glm::vec3(0, 0, cylinderHeight));
-
-
-			m_TranslationGizmo = new GameObject("Translation gizmo", GameObjectType::_NONE);
-
-			m_TranslationGizmo->AddChild(translateXAxis);
-			m_TranslationGizmo->AddChild(translateYAxis);
-			m_TranslationGizmo->AddChild(translateZAxis);
-
-			m_TransformGizmo->AddChild(m_TranslationGizmo);
-		}
-
-		// Rotation gizmo
-		{
-			real cylinderRadius = 3.4f;
-			real cylinderHeight = 0.2f;
-
-			// X Axis
-			GameObject* rotationXAxis = new GameObject("Rotation gizmo x axis", GameObjectType::_NONE);
-			rotationXAxis->SetCastsShadow(false);
-			rotationXAxis->AddTag(m_RotationGizmoTag);
-			MeshComponent* xAxisMesh = rotationXAxis->SetMeshComponent(new MeshComponent(rotationXAxis, m_TransformGizmoMatXID));
-
-			btCylinderShape* xAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
-			rotationXAxis->SetCollisionShape(xAxisShape);
-
-			RigidBody* gizmoXAxisRB = rotationXAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
-			gizmoXAxisRB->SetMass(0.0f);
-			gizmoXAxisRB->SetKinematic(true);
-			gizmoXAxisRB->SetPhysicsFlags(gizmoRBFlags);
-			// TODO: Get this to work (-cylinderHeight / 2.0f?)
-			gizmoXAxisRB->SetLocalPosition(glm::vec3(100.0f, 0.0f, 0.0f));
-
-			xAxisMesh->SetRequiredAttributesFromMaterialID(m_TransformGizmoMatXID);
-			xAxisMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/rotation-gizmo-flat-x.glb", nullptr, &gizmoCreateInfo);
-
-			// Y Axis
-			GameObject* rotationYAxis = new GameObject("Rotation gizmo y axis", GameObjectType::_NONE);
-			rotationYAxis->SetCastsShadow(false);
-			rotationYAxis->AddTag(m_RotationGizmoTag);
-			MeshComponent* yAxisMesh = rotationYAxis->SetMeshComponent(new MeshComponent(rotationYAxis, m_TransformGizmoMatYID));
-
-			btCylinderShape* yAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
-			rotationYAxis->SetCollisionShape(yAxisShape);
-
-			RigidBody* gizmoYAxisRB = rotationYAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
-			gizmoYAxisRB->SetMass(0.0f);
-			gizmoYAxisRB->SetKinematic(true);
-			gizmoYAxisRB->SetPhysicsFlags(gizmoRBFlags);
-
-			yAxisMesh->SetRequiredAttributesFromMaterialID(m_TransformGizmoMatYID);
-			yAxisMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/rotation-gizmo-flat-y.glb", nullptr, &gizmoCreateInfo);
-
-			// Z Axis
-			GameObject* rotationZAxis = new GameObject("Rotation gizmo z axis", GameObjectType::_NONE);
-			rotationZAxis->SetCastsShadow(false);
-			rotationZAxis->AddTag(m_RotationGizmoTag);
-
-			MeshComponent* zAxisMesh = rotationZAxis->SetMeshComponent(new MeshComponent(rotationZAxis, m_TransformGizmoMatZID));
-
-			btCylinderShape* zAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
-			rotationZAxis->SetCollisionShape(zAxisShape);
-
-			RigidBody* gizmoZAxisRB = rotationZAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
-			gizmoZAxisRB->SetMass(0.0f);
-			gizmoZAxisRB->SetKinematic(true);
-			gizmoZAxisRB->SetPhysicsFlags(gizmoRBFlags);
-
-			zAxisMesh->SetRequiredAttributesFromMaterialID(m_TransformGizmoMatZID);
-			zAxisMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/rotation-gizmo-flat-z.glb", nullptr, &gizmoCreateInfo);
-
-			gizmoXAxisRB->SetLocalRotation(glm::quat(glm::vec3(0, 0, PI / 2.0f)));
-			gizmoXAxisRB->SetLocalPosition(glm::vec3(-cylinderHeight, 0, 0));
-
-			gizmoYAxisRB->SetLocalPosition(glm::vec3(0, cylinderHeight, 0));
-
-			gizmoZAxisRB->SetLocalRotation(glm::quat(glm::vec3(PI / 2.0f, 0, 0)));
-			gizmoZAxisRB->SetLocalPosition(glm::vec3(0, 0, cylinderHeight));
-
-
-			m_RotationGizmo = new GameObject("Rotation gizmo", GameObjectType::_NONE);
-
-			m_RotationGizmo->AddChild(rotationXAxis);
-			m_RotationGizmo->AddChild(rotationYAxis);
-			m_RotationGizmo->AddChild(rotationZAxis);
-
-			m_TransformGizmo->AddChild(m_RotationGizmo);
-
-			m_RotationGizmo->SetVisible(false);
-		}
-
-		// Scale gizmo
-		{
-			real boxScale = 0.5f;
-			real cylinderRadius = 0.3f;
-			real cylinderHeight = 1.8f;
-
-			// X Axis
-			GameObject* scaleXAxis = new GameObject("Scale gizmo x axis", GameObjectType::_NONE);
-			scaleXAxis->SetCastsShadow(false);
-			scaleXAxis->AddTag(m_ScaleGizmoTag);
-			MeshComponent* xAxisMesh = scaleXAxis->SetMeshComponent(new MeshComponent(scaleXAxis, m_TransformGizmoMatXID));
-
-			btCylinderShape* xAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
-			scaleXAxis->SetCollisionShape(xAxisShape);
-
-			RigidBody* gizmoXAxisRB = scaleXAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
-			gizmoXAxisRB->SetMass(0.0f);
-			gizmoXAxisRB->SetKinematic(true);
-			gizmoXAxisRB->SetPhysicsFlags(gizmoRBFlags);
-
-			xAxisMesh->SetRequiredAttributesFromMaterialID(m_TransformGizmoMatXID);
-			xAxisMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/scale-gizmo-x.glb", nullptr, &gizmoCreateInfo);
-
-			// Y Axis
-			GameObject* scaleYAxis = new GameObject("Scale gizmo y axis", GameObjectType::_NONE);
-			scaleYAxis->SetCastsShadow(false);
-			scaleYAxis->AddTag(m_ScaleGizmoTag);
-			MeshComponent* yAxisMesh = scaleYAxis->SetMeshComponent(new MeshComponent(scaleYAxis, m_TransformGizmoMatYID));
-
-			btCylinderShape* yAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
-			scaleYAxis->SetCollisionShape(yAxisShape);
-
-			RigidBody* gizmoYAxisRB = scaleYAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
-			gizmoYAxisRB->SetMass(0.0f);
-			gizmoYAxisRB->SetKinematic(true);
-			gizmoYAxisRB->SetPhysicsFlags(gizmoRBFlags);
-
-			yAxisMesh->SetRequiredAttributesFromMaterialID(m_TransformGizmoMatYID);
-			yAxisMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/scale-gizmo-y.glb", nullptr, &gizmoCreateInfo);
-
-			// Z Axis
-			GameObject* scaleZAxis = new GameObject("Scale gizmo z axis", GameObjectType::_NONE);
-			scaleZAxis->SetCastsShadow(false);
-			scaleZAxis->AddTag(m_ScaleGizmoTag);
-
-			MeshComponent* zAxisMesh = scaleZAxis->SetMeshComponent(new MeshComponent(scaleZAxis, m_TransformGizmoMatZID));
-
-			btCylinderShape* zAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
-			scaleZAxis->SetCollisionShape(zAxisShape);
-
-			RigidBody* gizmoZAxisRB = scaleZAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
-			gizmoZAxisRB->SetMass(0.0f);
-			gizmoZAxisRB->SetKinematic(true);
-			gizmoZAxisRB->SetPhysicsFlags(gizmoRBFlags);
-
-			zAxisMesh->SetRequiredAttributesFromMaterialID(m_TransformGizmoMatZID);
-			zAxisMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/scale-gizmo-z.glb", nullptr, &gizmoCreateInfo);
-
-			// Center (all axes)
-			GameObject* scaleAllAxes = new GameObject("Scale gizmo all axes", GameObjectType::_NONE);
-			scaleAllAxes->AddTag(m_ScaleGizmoTag);
-
-			MeshComponent* allAxesMesh = scaleAllAxes->SetMeshComponent(new MeshComponent(scaleAllAxes, m_TransformGizmoMatAllID));
-
-			btBoxShape* allAxesShape = new btBoxShape(btVector3(boxScale, boxScale, boxScale));
-			scaleAllAxes->SetCollisionShape(allAxesShape);
-
-			RigidBody* gizmoAllAxesRB = scaleAllAxes->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
-			gizmoAllAxesRB->SetMass(0.0f);
-			gizmoAllAxesRB->SetKinematic(true);
-			gizmoAllAxesRB->SetPhysicsFlags(gizmoRBFlags);
-
-			allAxesMesh->SetRequiredAttributesFromMaterialID(m_TransformGizmoMatAllID);
-			allAxesMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/scale-gizmo-all.glb", nullptr, &gizmoCreateInfo);
-
-
-			gizmoXAxisRB->SetLocalRotation(glm::quat(glm::vec3(0, 0, PI / 2.0f)));
-			gizmoXAxisRB->SetLocalPosition(glm::vec3(-cylinderHeight, 0, 0));
-
-			gizmoYAxisRB->SetLocalPosition(glm::vec3(0, cylinderHeight, 0));
-
-			gizmoZAxisRB->SetLocalRotation(glm::quat(glm::vec3(PI / 2.0f, 0, 0)));
-			gizmoZAxisRB->SetLocalPosition(glm::vec3(0, 0, cylinderHeight));
-
-
-			m_ScaleGizmo = new GameObject("Scale gizmo", GameObjectType::_NONE);
-
-			m_ScaleGizmo->AddChild(scaleXAxis);
-			m_ScaleGizmo->AddChild(scaleYAxis);
-			m_ScaleGizmo->AddChild(scaleZAxis);
-			m_ScaleGizmo->AddChild(scaleAllAxes);
-
-			m_TransformGizmo->AddChild(m_ScaleGizmo);
-
-			m_ScaleGizmo->SetVisible(false);
-		}
-
-		m_TransformGizmo->Initialize();
-
-		m_TransformGizmo->PostInitialize();
-
-		m_CurrentTransformGizmoState = TransformState::TRANSLATE;
+		g_Editor->OnSceneChanged();
 	}
 
 	bool FlexEngine::IsRenderingImGui() const
@@ -839,28 +541,8 @@ namespace flex
 				PROFILE_END("DrawImGuiObjects");
 			}
 
-			if (g_InputManager->IsMouseButtonDown(MouseButton::LEFT))
-			{
-				if (!m_bDraggingGizmo)
-				{
-					m_HoveringAxisIndex = -1;
-				}
-			}
-			else
-			{
-				m_bDraggingGizmo = false;
-				if (!g_CameraManager->CurrentCamera()->bIsGameplayCam &&
-					!m_CurrentlySelectedObjects.empty())
-				{
-#if COMPILE_RENDERDOC_API
-					if (m_RenderDocAPI &&
-						!m_bRenderDocCapturingFrame)
-#endif
-					{
-						HandleGizmoHover();
-					}
-				}
-			}
+			g_Editor->EarlyUpdate();
+
 			Profiler::Update();
 
 			const bool bSimulateFrame = (!m_bSimulationPaused || m_bSimulateNextFrame);
@@ -904,19 +586,6 @@ namespace flex
 				m_TestSprings[i].Tick(g_DeltaTime);
 				real t = (real)i / (real)m_TestSprings.size();
 				debugDrawer->drawSphere(ToBtVec3(m_TestSprings[i].pos), (1.0f - t + 0.1f) * 0.5f, btVector3(0.5f - 0.3f * t, 0.8f - 0.4f * t, 0.6f - 0.2f * t));
-			}
-
-			if (!m_CurrentlySelectedObjects.empty())
-			{
-				m_TransformGizmo->SetVisible(true);
-				UpdateGizmoVisibility();
-				CalculateSelectedObjectsCenter();
-				m_TransformGizmo->GetTransform()->SetWorldPosition(m_SelectedObjectsCenterPos);
-				m_TransformGizmo->GetTransform()->SetWorldRotation(m_SelectedObjectRotation);
-			}
-			else
-			{
-				m_TransformGizmo->SetVisible(false);
 			}
 
 			g_Window->Update();
@@ -1256,7 +925,6 @@ namespace flex
 					ImGui::TextUnformatted(renderNameStr);
 					ImGui::Text("Frames rendered: %d", g_Renderer->GetFramesRenderedCount());
 					ImGui::Text("Elapsed time (unpaused): %.2fs", g_SecElapsedSinceProgramStart);
-					ImGui::Text("Selected object count: %d", m_CurrentlySelectedObjects.size());
 					ImGui::Text("Audio effects loaded: %d", s_AudioSourceIDs.size());
 
 					ImVec2 p = ImGui::GetCursorScreenPos();
@@ -1293,19 +961,19 @@ namespace flex
 				g_SceneManager->DrawImGuiObjects();
 				AudioManager::DrawImGuiObjects();
 
-				if (ImGui::RadioButton("Translate", GetTransformState() == TransformState::TRANSLATE))
+				if (ImGui::RadioButton("Translate", g_Editor->GetTransformState() == TransformState::TRANSLATE))
 				{
-					SetTransformState(TransformState::TRANSLATE);
+					g_Editor->SetTransformState(TransformState::TRANSLATE);
 				}
 				ImGui::SameLine();
-				if (ImGui::RadioButton("Rotate", GetTransformState() == TransformState::ROTATE))
+				if (ImGui::RadioButton("Rotate", g_Editor->GetTransformState() == TransformState::ROTATE))
 				{
-					SetTransformState(TransformState::ROTATE);
+					g_Editor->SetTransformState(TransformState::ROTATE);
 				}
 				ImGui::SameLine();
-				if (ImGui::RadioButton("Scale", GetTransformState() == TransformState::SCALE))
+				if (ImGui::RadioButton("Scale", g_Editor->GetTransformState() == TransformState::SCALE))
 				{
-					SetTransformState(TransformState::SCALE);
+					g_Editor->SetTransformState(TransformState::SCALE);
 				}
 
 				g_Renderer->DrawImGuiRenderObjects();
@@ -1453,98 +1121,6 @@ namespace flex
 	void FlexEngine::Stop()
 	{
 		m_bRunning = false;
-	}
-
-	std::vector<GameObject*> FlexEngine::GetSelectedObjects()
-	{
-		return m_CurrentlySelectedObjects;
-	}
-
-	void FlexEngine::SetSelectedObject(GameObject* gameObject, bool bSelectChildren /* = true */)
-	{
-		DeselectCurrentlySelectedObjects();
-
-		if (gameObject != nullptr)
-		{
-			if (bSelectChildren)
-			{
-				gameObject->AddSelfAndChildrenToVec(m_CurrentlySelectedObjects);
-			}
-			else
-			{
-				m_CurrentlySelectedObjects.push_back(gameObject);
-			}
-		}
-
-		CalculateSelectedObjectsCenter();
-	}
-
-	void FlexEngine::ToggleSelectedObject(GameObject* gameObject)
-	{
-		auto iter = Find(m_CurrentlySelectedObjects, gameObject);
-		if (iter == m_CurrentlySelectedObjects.end())
-		{
-			gameObject->AddSelfAndChildrenToVec(m_CurrentlySelectedObjects);
-		}
-		else
-		{
-			m_CurrentlySelectedObjects.erase(iter);
-
-			if (m_CurrentlySelectedObjects.empty())
-			{
-				DeselectCurrentlySelectedObjects();
-			}
-		}
-
-		CalculateSelectedObjectsCenter();
-	}
-
-	void FlexEngine::AddSelectedObject(GameObject* gameObject)
-	{
-		auto iter = Find(m_CurrentlySelectedObjects, gameObject);
-		if (iter == m_CurrentlySelectedObjects.end())
-		{
-			gameObject->AddSelfAndChildrenToVec(m_CurrentlySelectedObjects);
-
-			CalculateSelectedObjectsCenter();
-		}
-	}
-
-	void FlexEngine::DeselectObject(GameObject* gameObject)
-	{
-		for (GameObject* selectedObj : m_CurrentlySelectedObjects)
-		{
-			if (selectedObj == gameObject)
-			{
-				gameObject->RemoveSelfAndChildrenToVec(m_CurrentlySelectedObjects);
-				CalculateSelectedObjectsCenter();
-				return;
-			}
-		}
-
-		PrintWarn("Attempted to deselect object which wasn't selected!\n");
-	}
-
-	bool FlexEngine::IsObjectSelected(GameObject* gameObject)
-	{
-		bool bSelected = (Find(m_CurrentlySelectedObjects, gameObject) != m_CurrentlySelectedObjects.end());
-		return bSelected;
-	}
-
-	glm::vec3 FlexEngine::GetSelectedObjectsCenter()
-	{
-		return m_SelectedObjectsCenterPos;
-	}
-
-	void FlexEngine::DeselectCurrentlySelectedObjects()
-	{
-		m_CurrentlySelectedObjects.clear();
-		m_SelectedObjectsCenterPos = VEC3_ZERO;
-		m_SelectedObjectDragStartPos = VEC3_ZERO;
-		m_DraggingGizmoScaleLast = VEC3_ZERO;
-		m_DraggingGizmoOffset = -1.0f;
-		m_DraggingAxisIndex = -1;
-		m_bDraggingGizmo = false;
 	}
 
 	bool FlexEngine::LoadCommonSettingsFromDisk()
@@ -1700,228 +1276,6 @@ namespace flex
 		}
 	}
 
-	glm::vec3 FlexEngine::CalculateRayPlaneIntersectionAlongAxis(const glm::vec3& axis,
-		const glm::vec3& rayOrigin,
-		const glm::vec3& rayEnd,
-		const glm::vec3& planeOrigin,
-		const glm::vec3& planeNorm)
-	{
-		glm::vec3 rayDir = glm::normalize(rayEnd - rayOrigin);
-		glm::vec3 cameraForward = g_CameraManager->CurrentCamera()->GetForward();
-		glm::vec3 planeN = planeNorm;
-		if (glm::dot(planeN, cameraForward) > 0.0f)
-		{
-			planeN = -planeN;
-		}
-		real intersectionDistance;
-		if (glm::intersectRayPlane(rayOrigin, rayDir, planeOrigin, planeN, intersectionDistance))
-		{
-			glm::vec3 intersectionPoint = rayOrigin + rayDir * intersectionDistance;
-			if (m_DraggingGizmoOffset == -1.0f)
-			{
-				m_DraggingGizmoOffset = glm::dot(intersectionPoint - m_SelectedObjectDragStartPos, axis);
-			}
-
-			glm::vec3 constrainedPoint = planeOrigin + (glm::dot(intersectionPoint - planeOrigin, axis) - m_DraggingGizmoOffset) * axis;
-			return constrainedPoint;
-		}
-
-		return VEC3_ZERO;
-	}
-
-	glm::quat FlexEngine::CalculateDeltaRotationFromGizmoDrag(
-		const glm::vec3& axis,
-		const glm::vec3& rayOrigin,
-		const glm::vec3& rayEnd,
-		const glm::quat& pRot)
-	{
-		glm::vec3 intersectionPoint(0.0f);
-
-		Transform* gizmoTransform = m_TransformGizmo->GetTransform();
-		glm::vec3 rayDir = glm::normalize(rayEnd - rayOrigin);
-		glm::vec3 planeOrigin = gizmoTransform->GetWorldPosition();
-		glm::vec3 cameraForward = g_CameraManager->CurrentCamera()->GetForward();
-		glm::vec3 planeN = m_PlaneN;
-		bool bFlip = glm::dot(planeN, cameraForward) > 0.0f;
-		if (bFlip)
-		{
-			planeN = -planeN;
-		}
-		real intersectionDistance;
-		if (glm::intersectRayPlane(rayOrigin, rayDir, planeOrigin, planeN, intersectionDistance))
-		{
-			intersectionPoint = rayOrigin + rayDir * intersectionDistance;
-			if (m_DraggingGizmoOffset == -1.0f)
-			{
-				m_DraggingGizmoOffset = glm::dot(intersectionPoint - m_SelectedObjectDragStartPos, m_AxisProjectedOnto);
-			}
-
-			if (m_bFirstFrameDraggingRotationGizmo)
-			{
-				m_StartPointOnPlane = intersectionPoint;
-			}
-		}
-
-
-		glm::vec3 v1 = glm::normalize(m_StartPointOnPlane - planeOrigin);
-		glm::vec3 v2L = intersectionPoint - planeOrigin;
-		glm::vec3 v2 = glm::normalize(v2L);
-
-		glm::vec3 vecPerp = glm::cross(m_AxisOfRotation, v1);
-
-		real v1ov2 = glm::dot(v1, v2);
-		bool dotPos = (glm::dot(v2, vecPerp) > 0.0f);
-		bool dot2Pos = (v1ov2 > 0.0f);
-
-		if (dotPos && !m_bLastDotPos)
-		{
-			if (dot2Pos)
-			{
-				m_RotationGizmoWrapCount++;
-			}
-			else
-			{
-				m_RotationGizmoWrapCount--;
-			}
-		}
-		else if (!dotPos && m_bLastDotPos)
-		{
-			if (dot2Pos)
-			{
-				m_RotationGizmoWrapCount--;
-			}
-			else
-			{
-				m_RotationGizmoWrapCount++;
-			}
-		}
-
-		m_bLastDotPos = dotPos;
-
-		real angleRaw = acos(v1ov2);
-		real angle = (m_RotationGizmoWrapCount % 2 == 0 ? angleRaw : -angleRaw);
-
-		m_pV1oV2 = v1ov2;
-
-		if (m_bFirstFrameDraggingRotationGizmo)
-		{
-			m_bFirstFrameDraggingRotationGizmo = false;
-			m_LastAngle = angle;
-			m_RotationGizmoWrapCount = 0;
-		}
-
-		btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
-		debugDrawer->drawLine(
-			ToBtVec3(planeOrigin),
-			ToBtVec3(planeOrigin + axis * 5.0f),
-			btVector3(1.0f, 1.0f, 0.0f));
-
-		debugDrawer->drawLine(
-			ToBtVec3(planeOrigin),
-			ToBtVec3(planeOrigin + v1),
-			btVector3(1.0f, 0.0f, 0.0f));
-
-		debugDrawer->drawArc(
-			ToBtVec3(planeOrigin),
-			ToBtVec3(m_PlaneN),
-			ToBtVec3(v1),
-			1.0f,
-			1.0f,
-			(m_RotationGizmoWrapCount * PI) - angle,
-			0.0f,
-			btVector3(0.1f, 0.1f, 0.15f),
-			true);
-
-		debugDrawer->drawLine(
-			ToBtVec3(planeOrigin + v2L),
-			ToBtVec3(planeOrigin),
-			btVector3(1.0f, 1.0f, 1.0f));
-
-		debugDrawer->drawLine(
-			ToBtVec3(planeOrigin),
-			ToBtVec3(planeOrigin + vecPerp * 3.0f),
-			btVector3(0.5f, 1.0f, 1.0f));
-
-		real dAngle = m_LastAngle - angle;
-		glm::quat result(VEC3_ZERO);
-		if (!IsNanOrInf(dAngle))
-		{
-			glm::quat newRot = glm::rotate(pRot, dAngle, m_AxisOfRotation);
-			result = newRot - pRot;
-		}
-
-		m_LastAngle = angle;
-
-		return result;
-	}
-
-	void FlexEngine::UpdateGizmoVisibility()
-	{
-		if (m_TransformGizmo->IsVisible())
-		{
-			m_TranslationGizmo->SetVisible(m_CurrentTransformGizmoState == TransformState::TRANSLATE);
-			m_RotationGizmo->SetVisible(m_CurrentTransformGizmoState == TransformState::ROTATE);
-			m_ScaleGizmo->SetVisible(m_CurrentTransformGizmoState == TransformState::SCALE);
-		}
-	}
-
-	void FlexEngine::SetTransformState(TransformState state)
-	{
-		if (state != m_CurrentTransformGizmoState)
-		{
-			m_CurrentTransformGizmoState = state;
-
-			UpdateGizmoVisibility();
-		}
-	}
-
-	bool FlexEngine::GetWantRenameActiveElement() const
-	{
-		return m_bWantRenameActiveElement;
-	}
-
-	void FlexEngine::ClearWantRenameActiveElement()
-	{
-		m_bWantRenameActiveElement = false;
-	}
-
-	TransformState FlexEngine::GetTransformState() const
-	{
-		return m_CurrentTransformGizmoState;
-	}
-
-	void FlexEngine::CalculateSelectedObjectsCenter()
-	{
-		if (m_CurrentlySelectedObjects.empty())
-		{
-			return;
-		}
-
-		glm::vec3 avgPos(0.0f);
-		for (GameObject* gameObject : m_CurrentlySelectedObjects)
-		{
-			avgPos += gameObject->GetTransform()->GetWorldPosition();
-		}
-		m_SelectedObjectsCenterPos = m_SelectedObjectDragStartPos;
-		m_SelectedObjectRotation = m_CurrentlySelectedObjects[m_CurrentlySelectedObjects.size() - 1]->GetTransform()->GetWorldRotation();
-
-		m_SelectedObjectsCenterPos = (avgPos / (real)m_CurrentlySelectedObjects.size());
-	}
-
-	void FlexEngine::SelectAll()
-	{
-		for (GameObject* gameObject : g_SceneManager->CurrentScene()->GetAllObjects())
-		{
-			m_CurrentlySelectedObjects.push_back(gameObject);
-		}
-		CalculateSelectedObjectsCenter();
-	}
-
-	bool FlexEngine::IsDraggingGizmo() const
-	{
-		return m_bDraggingGizmo;
-	}
-
 	std::string FlexEngine::EngineVersionString()
 	{
 		return IntToString(EngineVersionMajor) + "." +
@@ -1931,70 +1285,8 @@ namespace flex
 
 	EventReply FlexEngine::OnMouseButtonEvent(MouseButton button, KeyAction action)
 	{
-		if (button == MouseButton::LEFT)
-		{
-			if (action == KeyAction::PRESS)
-			{
-				m_LMBDownPos = g_InputManager->GetMousePosition();
-
-				if (m_HoveringAxisIndex != -1)
-				{
-					HandleGizmoClick();
-					return EventReply::CONSUMED;
-				}
-
-				return EventReply::UNCONSUMED;
-			}
-			else if (action == KeyAction::RELEASE)
-			{
-				if (m_bDraggingGizmo)
-				{
-					if (m_CurrentlySelectedObjects.empty())
-					{
-						m_SelectedObjectDragStartPos = VEC3_NEG_ONE;
-					}
-					else
-					{
-						CalculateSelectedObjectsCenter();
-						m_SelectedObjectDragStartPos = m_SelectedObjectsCenterPos;
-					}
-
-					m_bDraggingGizmo = false;
-					m_DraggingAxisIndex = -1;
-					m_DraggingGizmoScaleLast = VEC3_ZERO;
-					m_DraggingGizmoOffset = -1.0f;
-				}
-
-				if (m_LMBDownPos != glm::vec2i(-1))
-				{
-					glm::vec2i releasePos = g_InputManager->GetMousePosition();
-					real dPos = glm::length((glm::vec2)(releasePos - m_LMBDownPos));
-					if (dPos < 1.0f)
-					{
-						if (HandleObjectClick())
-						{
-							m_LMBDownPos = glm::vec2i(-1);
-							return EventReply::CONSUMED;
-						}
-					}
-
-					m_LMBDownPos = glm::vec2i(-1);
-				}
-			}
-		}
-
-		return EventReply::UNCONSUMED;
-	}
-
-	EventReply FlexEngine::OnMouseMovedEvent(const glm::vec2& dMousePos)
-	{
-		UNREFERENCED_PARAMETER(dMousePos);
-
-		if (m_bDraggingGizmo)
-		{
-			HandleGizmoMovement();
-			return EventReply::CONSUMED;
-		}
+		UNREFERENCED_PARAMETER(button);
+		UNREFERENCED_PARAMETER(action);
 		return EventReply::UNCONSUMED;
 	}
 
@@ -2005,18 +1297,6 @@ namespace flex
 
 		if (action == KeyAction::PRESS)
 		{
-			// Disabled for now since we only support Open GL
-#if 0
-			if (keyCode == KeyCode::KEY_T)
-			{
-				g_InputManager->Update();
-				g_InputManager->PostUpdate();
-				g_InputManager->ClearAllInputs();
-				CycleRenderer();
-				return EventReply::CONSUMED;
-			}
-#endif
-
 			if (keyCode == KeyCode::KEY_GRAVE_ACCENT)
 			{
 				m_bShowingConsole = !m_bShowingConsole;
@@ -2064,17 +1344,6 @@ namespace flex
 				return EventReply::CONSUMED;
 			}
 
-			if (keyCode == KeyCode::KEY_DELETE)
-			{
-				if (!m_CurrentlySelectedObjects.empty())
-				{
-					g_SceneManager->CurrentScene()->DestroyObjectsAtEndOfFrame(m_CurrentlySelectedObjects);
-
-					DeselectCurrentlySelectedObjects();
-					return EventReply::CONSUMED;
-				}
-			}
-
 			if (keyCode == KeyCode::KEY_R)
 			{
 				if (bControlDown)
@@ -2102,74 +1371,6 @@ namespace flex
 				(bAltDown && keyCode == KeyCode::KEY_ENTER))
 			{
 				g_Window->ToggleFullscreen();
-				return EventReply::CONSUMED;
-			}
-
-			if (keyCode == KeyCode::KEY_F && !m_CurrentlySelectedObjects.empty())
-			{
-				// Focus on selected objects
-
-				glm::vec3 minPos(FLT_MAX);
-				glm::vec3 maxPos(-FLT_MAX);
-				for (GameObject* gameObject : m_CurrentlySelectedObjects)
-				{
-					MeshComponent* mesh = gameObject->GetMeshComponent();
-					if (mesh)
-					{
-						Transform* transform = gameObject->GetTransform();
-						glm::vec3 min = transform->GetWorldTransform() * glm::vec4(mesh->m_MinPoint, 1.0f);
-						glm::vec3 max = transform->GetWorldTransform() * glm::vec4(mesh->m_MaxPoint, 1.0f);
-						minPos = glm::min(minPos, min);
-						maxPos = glm::max(maxPos, max);
-					}
-				}
-
-				if (minPos.x != FLT_MAX && maxPos.x != -FLT_MAX)
-				{
-					glm::vec3 sphereCenterWS = minPos + (maxPos - minPos) / 2.0f;
-					real sphereRadius = glm::length(maxPos - minPos) / 2.0f;
-
-					BaseCamera* cam = g_CameraManager->CurrentCamera();
-
-					glm::vec3 currentOffset = cam->GetPosition() - sphereCenterWS;
-					glm::vec3 newOffset = glm::normalize(currentOffset) * sphereRadius * 2.0f;
-
-					cam->SetPosition(sphereCenterWS + newOffset);
-					cam->LookAt(sphereCenterWS);
-				}
-				return EventReply::CONSUMED;
-			}
-
-			if (bControlDown && keyCode == KeyCode::KEY_A)
-			{
-				SelectAll();
-				return EventReply::CONSUMED;
-			}
-
-			if (bControlDown && keyCode == KeyCode::KEY_S)
-			{
-				g_SceneManager->CurrentScene()->SerializeToFile(true);
-				return EventReply::CONSUMED;
-			}
-
-			if (bControlDown && keyCode == KeyCode::KEY_D)
-			{
-				if (!m_CurrentlySelectedObjects.empty())
-				{
-					std::vector<GameObject*> newSelectedGameObjects;
-
-					for (GameObject* gameObject : m_CurrentlySelectedObjects)
-					{
-						GameObject* duplicatedObject = gameObject->CopySelfAndAddToScene(nullptr, true);
-
-						duplicatedObject->AddSelfAndChildrenToVec(newSelectedGameObjects);
-					}
-
-					DeselectCurrentlySelectedObjects();
-
-					m_CurrentlySelectedObjects = newSelectedGameObjects;
-					CalculateSelectedObjectsCenter();
-				}
 				return EventReply::CONSUMED;
 			}
 
@@ -2221,12 +1422,6 @@ namespace flex
 
 	EventReply FlexEngine::OnActionEvent(Action action)
 	{
-		if (action == Action::EDITOR_RENAME_SELECTED)
-		{
-			m_bWantRenameActiveElement = !m_bWantRenameActiveElement;
-			return EventReply::CONSUMED;
-		}
-
 		if (action == Action::DBG_ENTER_NEXT_SCENE)
 		{
 			g_SceneManager->SetNextSceneActive();
@@ -2239,35 +1434,6 @@ namespace flex
 			g_SceneManager->SetPreviousSceneActive();
 			g_SceneManager->InitializeCurrentScene();
 			g_SceneManager->PostInitializeCurrentScene();
-			return EventReply::CONSUMED;
-		}
-
-		if (action == Action::EDITOR_SELECT_TRANSLATE_GIZMO)
-		{
-			SetTransformState(TransformState::TRANSLATE);
-			return EventReply::CONSUMED;
-		}
-		if (action == Action::EDITOR_SELECT_ROTATE_GIZMO)
-		{
-			SetTransformState(TransformState::ROTATE);
-			return EventReply::CONSUMED;
-		}
-		if (action == Action::EDITOR_SELECT_SCALE_GIZMO)
-		{
-			SetTransformState(TransformState::SCALE);
-			return EventReply::CONSUMED;
-		}
-
-		if (action == Action::PAUSE)
-		{
-			if (m_CurrentlySelectedObjects.empty())
-			{
-				//m_bSimulationPaused = !m_bSimulationPaused;
-			}
-			else
-			{
-				DeselectCurrentlySelectedObjects();
-			}
 			return EventReply::CONSUMED;
 		}
 
@@ -2349,550 +1515,36 @@ namespace flex
 	}
 #endif
 
-	bool FlexEngine::HandleGizmoHover()
+	glm::vec3 FlexEngine::CalculateRayPlaneIntersectionAlongAxis(
+		const glm::vec3& axis,
+		const glm::vec3& rayOrigin,
+		const glm::vec3& rayEnd,
+		const glm::vec3& planeOrigin,
+		const glm::vec3& planeNorm,
+		const glm::vec3& startPos,
+		real& inOutOffset)
 	{
-		if (m_bDraggingGizmo == true)
+		glm::vec3 rayDir = glm::normalize(rayEnd - rayOrigin);
+		glm::vec3 cameraForward = g_CameraManager->CurrentCamera()->GetForward();
+		glm::vec3 planeN = planeNorm;
+		if (glm::dot(planeN, cameraForward) > 0.0f)
 		{
-			PrintError("Called HandleGizmoHover when m_bDraggingGizmo == true\n");
-			return false;
+			planeN = -planeN;
 		}
-		if (m_DraggingAxisIndex != -1)
+		real intersectionDistance;
+		if (glm::intersectRayPlane(rayOrigin, rayDir, planeOrigin, planeN, intersectionDistance))
 		{
-			PrintError("Called HandleGizmoHover when m_DraggingAxisIndex == %i\n", m_DraggingAxisIndex);
-			return false;
-		}
+			glm::vec3 intersectionPoint = rayOrigin + rayDir * intersectionDistance;
+			if (inOutOffset == -1.0f)
+			{
+				inOutOffset = glm::dot(intersectionPoint - startPos, axis);
+			}
 
-		if (g_InputManager->GetMousePosition().x == -1.0f)
-		{
-			return false;
-		}
-
-		PhysicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld();
-
-		btVector3 rayStart, rayEnd;
-		GenerateRayAtMousePos(rayStart, rayEnd);
-
-		std::string gizmoTag = (
-			m_CurrentTransformGizmoState == TransformState::TRANSLATE ? m_TranslationGizmoTag :
-			(m_CurrentTransformGizmoState == TransformState::ROTATE ? m_RotationGizmoTag :
-				m_ScaleGizmoTag));
-		GameObject* pickedTransformGizmo = physicsWorld->PickTaggedBody(rayStart, rayEnd, gizmoTag);
-
-		Material& xMat = g_Renderer->GetMaterial(m_TransformGizmoMatXID);
-		Material& yMat = g_Renderer->GetMaterial(m_TransformGizmoMatYID);
-		Material& zMat = g_Renderer->GetMaterial(m_TransformGizmoMatZID);
-		Material& allMat = g_Renderer->GetMaterial(m_TransformGizmoMatAllID);
-		glm::vec4 white(1.0f);
-		if (m_DraggingAxisIndex != 0)
-		{
-			xMat.colorMultiplier = white;
-		}
-		if (m_DraggingAxisIndex != 1)
-		{
-			yMat.colorMultiplier = white;
-		}
-		if (m_DraggingAxisIndex != 2)
-		{
-			zMat.colorMultiplier = white;
-		}
-		if (m_DraggingAxisIndex != 3)
-		{
-			allMat.colorMultiplier = white;
+			glm::vec3 constrainedPoint = planeOrigin + (glm::dot(intersectionPoint - planeOrigin, axis) - inOutOffset) * axis;
+			return constrainedPoint;
 		}
 
-		static const real gizmoHoverMultiplier = 0.6f;
-		static const glm::vec4 hoverColor(gizmoHoverMultiplier, gizmoHoverMultiplier, gizmoHoverMultiplier, 1.0f);
-
-		if (pickedTransformGizmo)
-		{
-			switch (m_CurrentTransformGizmoState)
-			{
-			case TransformState::TRANSLATE:
-			{
-				std::vector<GameObject*> translationAxes = m_TranslationGizmo->GetChildren();
-
-				if (pickedTransformGizmo == translationAxes[0]) // X Axis
-				{
-					m_HoveringAxisIndex = 0;
-					xMat.colorMultiplier = hoverColor;
-				}
-				else if (pickedTransformGizmo == translationAxes[1]) // Y Axis
-				{
-					m_HoveringAxisIndex = 1;
-					yMat.colorMultiplier = hoverColor;
-				}
-				else if (pickedTransformGizmo == translationAxes[2]) // Z Axis
-				{
-					m_HoveringAxisIndex = 2;
-					zMat.colorMultiplier = hoverColor;
-				}
-			} break;
-			case TransformState::ROTATE:
-			{
-				std::vector<GameObject*> rotationAxes = m_RotationGizmo->GetChildren();
-
-				if (pickedTransformGizmo == rotationAxes[0]) // X Axis
-				{
-					m_HoveringAxisIndex = 0;
-					xMat.colorMultiplier = hoverColor;
-				}
-				else if (pickedTransformGizmo == rotationAxes[1]) // Y Axis
-				{
-					m_HoveringAxisIndex = 1;
-					yMat.colorMultiplier = hoverColor;
-				}
-				else if (pickedTransformGizmo == rotationAxes[2]) // Z Axis
-				{
-					m_HoveringAxisIndex = 2;
-					zMat.colorMultiplier = hoverColor;
-				}
-			} break;
-			case TransformState::SCALE:
-			{
-				std::vector<GameObject*> scaleAxes = m_ScaleGizmo->GetChildren();
-
-				if (pickedTransformGizmo == scaleAxes[0]) // X Axis
-				{
-					m_HoveringAxisIndex = 0;
-					xMat.colorMultiplier = hoverColor;
-				}
-				else if (pickedTransformGizmo == scaleAxes[1]) // Y Axis
-				{
-					m_HoveringAxisIndex = 1;
-					yMat.colorMultiplier = hoverColor;
-				}
-				else if (pickedTransformGizmo == scaleAxes[2]) // Z Axis
-				{
-					m_HoveringAxisIndex = 2;
-					zMat.colorMultiplier = hoverColor;
-				}
-				else if (pickedTransformGizmo == scaleAxes[3]) // All axes
-				{
-					m_HoveringAxisIndex = 3;
-					allMat.colorMultiplier = hoverColor;
-				}
-			} break;
-			default:
-			{
-				PrintError("Unhandled transform state in FlexEngine::HandleGizmoHover\n");
-			} break;
-			}
-		}
-		else
-		{
-			m_HoveringAxisIndex = -1;
-		}
-
-		// Fade out gizmo parts when facing head-on
-		if (m_CurrentTransformGizmoState != TransformState::ROTATE)
-		{
-			Transform* gizmoTransform = m_TransformGizmo->GetTransform();
-			glm::vec3 camForward = g_CameraManager->CurrentCamera()->GetForward();
-
-			real camForDotR = glm::abs(glm::dot(camForward, gizmoTransform->GetRight()));
-			real camForDotU = glm::abs(glm::dot(camForward, gizmoTransform->GetUp()));
-			real camForDotF = glm::abs(glm::dot(camForward, gizmoTransform->GetForward()));
-			real threshold = 0.98f;
-			if (camForDotR >= threshold)
-			{
-				xMat.colorMultiplier.a = Lerp(1.0f, 0.0f, (camForDotR - threshold) / (1.0f - threshold));
-			}
-			if (camForDotU >= threshold)
-			{
-				yMat.colorMultiplier.a = Lerp(1.0f, 0.0f, (camForDotU - threshold) / (1.0f - threshold));
-			}
-			if (camForDotF >= threshold)
-			{
-				zMat.colorMultiplier.a = Lerp(1.0f, 0.0f, (camForDotF - threshold) / (1.0f - threshold));
-			}
-		}
-
-		return m_HoveringAxisIndex != -1;
-	}
-
-	void FlexEngine::HandleGizmoClick()
-	{
-		assert(m_bDraggingGizmo == false);
-		assert(m_HoveringAxisIndex != -1);
-
-		m_DraggingAxisIndex = m_HoveringAxisIndex;
-		m_bDraggingGizmo = true;
-		m_SelectedObjectDragStartPos = m_TransformGizmo->GetTransform()->GetWorldPosition();
-
-		real gizmoSelectedMultiplier = 0.4f;
-		glm::vec4 selectedColor(gizmoSelectedMultiplier, gizmoSelectedMultiplier, gizmoSelectedMultiplier, 1.0f);
-
-		Material& xMat = g_Renderer->GetMaterial(m_TransformGizmoMatXID);
-		Material& yMat = g_Renderer->GetMaterial(m_TransformGizmoMatYID);
-		Material& zMat = g_Renderer->GetMaterial(m_TransformGizmoMatZID);
-		Material& allMat = g_Renderer->GetMaterial(m_TransformGizmoMatAllID);
-
-		switch (m_CurrentTransformGizmoState)
-		{
-		case TransformState::TRANSLATE:
-		{
-			if (m_HoveringAxisIndex == 0) // X Axis
-			{
-				xMat.colorMultiplier = selectedColor;
-			}
-			else if (m_HoveringAxisIndex == 1) // Y Axis
-			{
-				yMat.colorMultiplier = selectedColor;
-			}
-			else if (m_HoveringAxisIndex == 2) // Z Axis
-			{
-				zMat.colorMultiplier = selectedColor;
-			}
-		} break;
-		case TransformState::ROTATE:
-		{
-			if (m_HoveringAxisIndex == 0) // X Axis
-			{
-				xMat.colorMultiplier = selectedColor;
-			}
-			else if (m_HoveringAxisIndex == 1) // Y Axis
-			{
-				yMat.colorMultiplier = selectedColor;
-			}
-			else if (m_HoveringAxisIndex == 2) // Z Axis
-			{
-				zMat.colorMultiplier = selectedColor;
-			}
-		} break;
-		case TransformState::SCALE:
-		{
-			if (m_HoveringAxisIndex == 0) // X Axis
-			{
-				xMat.colorMultiplier = selectedColor;
-			}
-			else if (m_HoveringAxisIndex == 1) // Y Axis
-			{
-				yMat.colorMultiplier = selectedColor;
-			}
-			else if (m_HoveringAxisIndex == 2) // Z Axis
-			{
-				zMat.colorMultiplier = selectedColor;
-			}
-			else if (m_HoveringAxisIndex == 3) // All axes
-			{
-				allMat.colorMultiplier = selectedColor;
-			}
-		} break;
-		default:
-		{
-			PrintError("Unhandled transform state in FlexEngine::HandleGizmoClick\n");
-		} break;
-		}
-	}
-
-	void FlexEngine::HandleGizmoMovement()
-	{
-		assert(m_HoveringAxisIndex != -1);
-		assert(m_DraggingAxisIndex != -1);
-		assert(m_bDraggingGizmo);
-		if (m_CurrentlySelectedObjects.empty())
-		{
-			DeselectCurrentlySelectedObjects();
-			return;
-		}
-
-		Transform* gizmoTransform = m_TransformGizmo->GetTransform();
-		const glm::vec3 gizmoUp = gizmoTransform->GetUp();
-		const glm::vec3 gizmoRight = gizmoTransform->GetRight();
-		const glm::vec3 gizmoForward = gizmoTransform->GetForward();
-
-		btVector3 rayStart, rayEnd;
-		GenerateRayAtMousePos(rayStart, rayEnd);
-
-		glm::vec3 rayStartG = ToVec3(rayStart);
-		glm::vec3 rayEndG = ToVec3(rayEnd);
-		glm::vec3 camForward = g_CameraManager->CurrentCamera()->GetForward();
-		glm::vec3 planeOrigin = gizmoTransform->GetWorldPosition();
-
-		btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
-		debugDrawer->drawLine(
-			ToBtVec3(gizmoTransform->GetWorldPosition()),
-			ToBtVec3(gizmoTransform->GetWorldPosition() + gizmoRight * 6.0f),
-			btVector3(1.0f, 0.0f, 0.0f));
-
-		debugDrawer->drawLine(
-			ToBtVec3(gizmoTransform->GetWorldPosition()),
-			ToBtVec3(gizmoTransform->GetWorldPosition() + gizmoUp * 6.0f),
-			btVector3(0.0f, 1.0f, 0.0f));
-
-		debugDrawer->drawLine(
-			ToBtVec3(gizmoTransform->GetWorldPosition()),
-			ToBtVec3(gizmoTransform->GetWorldPosition() + gizmoForward * 6.0f),
-			btVector3(0.0f, 0.0f, 1.0f));
-
-
-		switch (m_CurrentTransformGizmoState)
-		{
-		case TransformState::TRANSLATE:
-		{
-			glm::vec3 dPos(0.0f);
-
-			if (g_InputManager->DidMouseWrap())
-			{
-				m_DraggingGizmoOffset = -1.0f;
-				Print("warp\n");
-			}
-
-			if (m_DraggingAxisIndex == 0) // X Axis
-			{
-				glm::vec3 axis = gizmoRight;
-				glm::vec3 planeN = gizmoForward;
-				if (glm::abs(glm::dot(planeN, camForward)) < 0.5f)
-				{
-					planeN = gizmoUp;
-				}
-				glm::vec3 intersectionPont = CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN);
-				dPos = intersectionPont - planeOrigin;
-			}
-			else if (m_DraggingAxisIndex == 1) // Y Axis
-			{
-				glm::vec3 axis = gizmoUp;
-				glm::vec3 planeN = gizmoRight;
-				if (glm::abs(glm::dot(planeN, camForward)) < 0.5f)
-				{
-					planeN = gizmoForward;
-				}
-				glm::vec3 intersectionPont = CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN);
-				dPos = intersectionPont - planeOrigin;
-			}
-			else if (m_DraggingAxisIndex == 2) // Z Axis
-			{
-				glm::vec3 axis = gizmoForward;
-				glm::vec3 planeN = gizmoUp;
-				if (glm::abs(glm::dot(planeN, camForward)) < 0.5f)
-				{
-					planeN = gizmoRight;
-				}
-				glm::vec3 intersectionPont = CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN);
-				dPos = intersectionPont - planeOrigin;
-			}
-
-			Transform* selectedObjectTransform = m_CurrentlySelectedObjects[m_CurrentlySelectedObjects.size() - 1]->GetTransform();
-
-			debugDrawer->drawLine(
-				ToBtVec3(m_SelectedObjectDragStartPos),
-				ToBtVec3(selectedObjectTransform->GetLocalPosition()),
-				(m_DraggingAxisIndex == 0 ? btVector3(1.0f, 0.0f, 0.0f) : m_DraggingAxisIndex == 1 ? btVector3(0.0f, 1.0f, 0.0f) : btVector3(0.1f, 0.1f, 1.0f)));
-
-			for (GameObject* gameObject : m_CurrentlySelectedObjects)
-			{
-				GameObject* parent = gameObject->GetParent();
-				bool bObjectIsntChild = (parent == nullptr) || (Find(m_CurrentlySelectedObjects, parent) == m_CurrentlySelectedObjects.end());
-				if (bObjectIsntChild)
-				{
-					gameObject->GetTransform()->Translate(dPos);
-				}
-			}
-		} break;
-		case TransformState::ROTATE:
-		{
-			glm::quat dRot(VEC3_ZERO);
-
-			static glm::quat pGizmoRot = gizmoTransform->GetLocalRotation();
-			Print("%.2f,%.2f,%.2f,%.2f\n", pGizmoRot.x, pGizmoRot.y, pGizmoRot.z, pGizmoRot.w);
-
-			if (m_DraggingAxisIndex == 0) // X Axis
-			{
-				if (m_bFirstFrameDraggingRotationGizmo)
-				{
-					m_UnmodifiedAxisProjectedOnto = gizmoUp;
-					m_AxisProjectedOnto = m_UnmodifiedAxisProjectedOnto;
-					m_AxisOfRotation = gizmoRight;
-					m_PlaneN = m_AxisOfRotation;
-					if (glm::abs(glm::dot(m_AxisProjectedOnto, camForward)) > 0.5f)
-					{
-						m_AxisProjectedOnto = gizmoForward;
-						m_PlaneN = gizmoUp;
-					}
-				}
-
-				dRot = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, rayStartG, rayEndG, pGizmoRot);
-			}
-			else if (m_DraggingAxisIndex == 1) // Y Axis
-			{
-				if (m_bFirstFrameDraggingRotationGizmo)
-				{
-					m_UnmodifiedAxisProjectedOnto = gizmoRight;
-					m_AxisProjectedOnto = m_UnmodifiedAxisProjectedOnto;
-					m_AxisOfRotation = gizmoUp;
-					m_PlaneN = m_AxisOfRotation;
-					if (glm::abs(glm::dot(m_AxisProjectedOnto, camForward)) > 0.5f)
-					{
-						m_AxisProjectedOnto = gizmoForward;
-						//m_PlaneN = gizmoUp;
-					}
-				}
-
-				dRot = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, rayStartG, rayEndG, pGizmoRot);
-			}
-			else if (m_DraggingAxisIndex == 2) // Z Axis
-			{
-				if (m_bFirstFrameDraggingRotationGizmo)
-				{
-					m_UnmodifiedAxisProjectedOnto = gizmoUp;
-					m_AxisProjectedOnto = m_UnmodifiedAxisProjectedOnto;
-					m_AxisOfRotation = gizmoForward;
-					m_PlaneN = m_AxisOfRotation;
-					if (glm::abs(glm::dot(m_AxisProjectedOnto, camForward)) > 0.5f)
-					{
-						m_AxisProjectedOnto = gizmoForward;
-						m_PlaneN = gizmoRight;
-					}
-				}
-
-				dRot = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, rayStartG, rayEndG, pGizmoRot);
-			}
-
-			pGizmoRot = m_CurrentRot;
-
-			Transform* selectedObjectTransform = m_CurrentlySelectedObjects[m_CurrentlySelectedObjects.size() - 1]->GetTransform();
-
-			debugDrawer->drawLine(
-				ToBtVec3(m_SelectedObjectDragStartPos),
-				ToBtVec3(selectedObjectTransform->GetLocalPosition()),
-				(m_DraggingAxisIndex == 0 ? btVector3(1.0f, 0.0f, 0.0f) : m_DraggingAxisIndex == 1 ? btVector3(0.0f, 1.0f, 0.0f) : btVector3(0.1f, 0.1f, 1.0f)));
-
-			for (GameObject* gameObject : m_CurrentlySelectedObjects)
-			{
-				GameObject* parent = gameObject->GetParent();
-				bool bObjectIsntChild = (parent == nullptr) || (Find(m_CurrentlySelectedObjects, parent) == m_CurrentlySelectedObjects.end());
-				if (bObjectIsntChild)
-				{
-					gameObject->GetTransform()->Rotate(dRot);
-				}
-			}
-		} break;
-		case TransformState::SCALE:
-		{
-			glm::vec3 dScale(1.0f);
-			real scale = 0.1f;
-
-			if (m_DraggingAxisIndex == 0) // X Axis
-			{
-				glm::vec3 axis = gizmoRight;
-				glm::vec3 planeN = gizmoForward;
-				if (glm::abs(glm::dot(planeN, camForward)) < 0.5f)
-				{
-					planeN = gizmoUp;
-				}
-				glm::vec3 intersectionPont = CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN);
-				glm::vec3 scaleNow = (intersectionPont - planeOrigin);
-				dScale += (scaleNow - m_DraggingGizmoScaleLast) * scale;
-
-				m_DraggingGizmoScaleLast = scaleNow;
-			}
-			else if (m_DraggingAxisIndex == 1) // Y Axis
-			{
-				glm::vec3 axis = gizmoUp;
-				glm::vec3 planeN = gizmoRight;
-				if (glm::abs(glm::dot(planeN, camForward)) < 0.5f)
-				{
-					planeN = gizmoForward;
-				}
-				glm::vec3 intersectionPont = CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN);
-				glm::vec3 scaleNow = (intersectionPont - planeOrigin);
-				dScale += (scaleNow - m_DraggingGizmoScaleLast) * scale;
-
-				m_DraggingGizmoScaleLast = scaleNow;
-			}
-			else if (m_DraggingAxisIndex == 2) // Z Axis
-			{
-				glm::vec3 axis = gizmoForward;
-				glm::vec3 planeN = gizmoUp;
-				if (glm::abs(glm::dot(planeN, camForward)) < 0.5f)
-				{
-					planeN = gizmoRight;
-				}
-				glm::vec3 intersectionPont = CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN);
-				glm::vec3 scaleNow = (intersectionPont - planeOrigin);
-				dScale += (scaleNow - m_DraggingGizmoScaleLast) * scale;
-
-				m_DraggingGizmoScaleLast = scaleNow;
-			}
-			else if (m_DraggingAxisIndex == 3) // All axes
-			{
-				glm::vec3 axis = gizmoRight;
-				glm::vec3 planeN = gizmoForward;
-				if (glm::abs(glm::dot(planeN, camForward)) < 0.5f)
-				{
-					planeN = gizmoUp;
-				}
-				glm::vec3 intersectionPont = CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN);
-				glm::vec3 scaleNow = (intersectionPont - planeOrigin);
-				dScale += (scaleNow - m_DraggingGizmoScaleLast) * scale;
-
-				m_DraggingGizmoScaleLast = scaleNow;
-			}
-
-			Transform* selectedObjectTransform = m_CurrentlySelectedObjects[m_CurrentlySelectedObjects.size() - 1]->GetTransform();
-
-			dScale = glm::clamp(dScale, 0.01f, 10.0f);
-
-			debugDrawer->drawLine(
-				ToBtVec3(m_SelectedObjectDragStartPos),
-				ToBtVec3(selectedObjectTransform->GetLocalPosition()),
-				(m_DraggingAxisIndex == 0 ? btVector3(1.0f, 0.0f, 0.0f) : m_DraggingAxisIndex == 1 ? btVector3(0.0f, 1.0f, 0.0f) : btVector3(0.1f, 0.1f, 1.0f)));
-
-			for (GameObject* gameObject : m_CurrentlySelectedObjects)
-			{
-				GameObject* parent = gameObject->GetParent();
-				bool bObjectIsntChild = (parent == nullptr) || (Find(m_CurrentlySelectedObjects, parent) == m_CurrentlySelectedObjects.end());
-				if (bObjectIsntChild)
-				{
-					gameObject->GetTransform()->Scale(dScale);
-				}
-			}
-		} break;
-		default:
-		{
-			PrintError("Unhandled transform state in FlexEngine::HandleGizmoMovement\n");
-		} break;
-		}
-
-		CalculateSelectedObjectsCenter();
-	}
-
-	bool FlexEngine::HandleObjectClick()
-	{
-		PhysicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld();
-
-		btVector3 rayStart, rayEnd;
-		GenerateRayAtMousePos(rayStart, rayEnd);
-
-		const btRigidBody* pickedRB = physicsWorld->PickFirstBody(rayStart, rayEnd);
-		if (pickedRB)
-		{
-			GameObject* pickedObject = static_cast<GameObject*>(pickedRB->getUserPointer());
-
-			RigidBody* rb = pickedObject->GetRigidBody();
-			if (!(rb->GetPhysicsFlags() & (u32)PhysicsFlag::UNSELECTABLE))
-			{
-				if (g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_SHIFT))
-				{
-					ToggleSelectedObject(pickedObject);
-				}
-				else
-				{
-					DeselectCurrentlySelectedObjects();
-					m_CurrentlySelectedObjects.push_back(pickedObject);
-				}
-				g_InputManager->ClearMouseInput();
-				CalculateSelectedObjectsCenter();
-
-				return true;
-			}
-			else
-			{
-				DeselectCurrentlySelectedObjects();
-			}
-		}
-
-		return false;
+		return VEC3_ZERO;
 	}
 
 	void FlexEngine::GenerateRayAtMousePos(btVector3& outRayStart, btVector3& outRayEnd)
