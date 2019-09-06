@@ -4429,7 +4429,8 @@ namespace flex
 			else
 			{
 				// TODO: Move to tick
-				m_SpritePerspPushConstBlock->SetData(MAT4_IDENTITY, g_CameraManager->CurrentCamera()->GetProjection());
+				// NOTE: This doesn't respect TAA jitter!
+				m_SpritePerspPushConstBlock->SetData(g_CameraManager->CurrentCamera()->GetView(), g_CameraManager->CurrentCamera()->GetProjection());
 			}
 
 			MaterialID matID = (batch[0].materialID == InvalidMaterialID ? (batch[0].bScreenSpace ? m_SpriteMatSSID : m_SpriteMatWSID) : batch[0].materialID);
