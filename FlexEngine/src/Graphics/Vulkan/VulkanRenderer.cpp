@@ -4369,6 +4369,9 @@ namespace flex
 				drawInfo.bWriteDepth = true;
 				drawInfo.scale = scale;
 				drawInfo.materialID = m_SpriteMatWSID;
+				
+				const real minSpriteDist = 1.5f;
+				const real maxSpriteDist = 3.0f;
 
 				glm::vec3 camPos = cam->GetPosition();
 				glm::vec3 camUp = cam->GetUp();
@@ -4376,23 +4379,25 @@ namespace flex
 				{
 					if (m_PointLights[i].enabled)
 					{
+						drawInfo.textureID = m_PointLightIconID;
 						// TODO: Sort back to front? Or clear depth and then enable depth test
 						drawInfo.pos = m_PointLights[i].pos;
-						drawInfo.color = glm::vec4(m_PointLights[i].color * 1.5f, 1.0f);
-						drawInfo.textureID = m_PointLightIconID;
-						glm::mat4 rotMat = glm::lookAt(camPos, glm::vec3(m_PointLights[i].pos), camUp);
+						glm::mat4 rotMat = glm::lookAt(m_PointLights[i].pos, camPos, camUp);
 						drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
+						real alpha = glm::clamp(glm::distance(drawInfo.pos, camPos) / maxSpriteDist - minSpriteDist, 0.0f, 1.0f);
+						drawInfo.color = glm::vec4(m_PointLights[i].color * 1.5f, alpha);
 						EnqueueSprite(drawInfo);
 					}
 				}
 
 				if (m_DirectionalLight != nullptr && m_DirectionalLight->data.enabled)
 				{
-					drawInfo.color = glm::vec4(m_DirectionalLight->data.color * 1.5f, 1.0f);
-					drawInfo.pos = m_DirectionalLight->pos;
 					drawInfo.textureID = m_DirectionalLightIconID;
-					glm::mat4 rotMat = glm::lookAt(camPos, (glm::vec3)m_DirectionalLight->pos, camUp);
+					drawInfo.pos = m_DirectionalLight->pos;
+					glm::mat4 rotMat = glm::lookAt(camPos, m_DirectionalLight->pos, camUp);
 					drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
+					real alpha = glm::clamp(glm::distance(drawInfo.pos, camPos) / maxSpriteDist - minSpriteDist, 0.0f, 1.0f);
+					drawInfo.color = glm::vec4(m_DirectionalLight->data.color * 1.5f, alpha);
 					EnqueueSprite(drawInfo);
 
 					glm::vec3 dirLightForward = m_DirectionalLight->data.dir;
@@ -4511,7 +4516,10 @@ namespace flex
 
 				vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, pushBlock->size, pushBlock->data);
 
-				UpdateDynamicUniformBuffer(matID, dynamicUBOOffset, model, nullptr);
+				UniformOverrides overrides = {};
+				overrides.colorMultiplier = drawInfo.color;
+				overrides.overridenUniforms.AddUniform(U_COLOR_MULTIPLIER);
+				UpdateDynamicUniformBuffer(matID, dynamicUBOOffset, model, &overrides);
 
 				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertBuffer->m_Buffer, offsets);
 
@@ -8091,7 +8099,6 @@ namespace flex
 				{
 					texChannel = uniformOverrides->texChannel;
 				}
-
 				if (uniformOverrides->overridenUniforms.HasUniform(U_SSAO_BLUR_DATA_DYNAMIC))
 				{
 					if (uniformOverrides->bSSAOVerticalPass)
@@ -8102,6 +8109,10 @@ namespace flex
 					{
 						m_SSAOBlurDataDynamic.ssaoTexelOffset = glm::vec2((real)m_SSAOBlurSamplePixelOffset / m_GBufferFrameBuf->width, 0.0f);
 					}
+				}
+				if (uniformOverrides->overridenUniforms.HasUniform(U_COLOR_MULTIPLIER))
+				{
+					colorMultiplier = uniformOverrides->colorMultiplier;
 				}
 			}
 
@@ -8114,7 +8125,7 @@ namespace flex
 			UniformInfo uniformInfos[] = {
 				{ U_MODEL, (void*)&model, US_MODEL },
 				// view, viewProjInv, viewProjection, projection, camPos, dirLight, pointLights should be updated in constant uniform buffer
-				{ U_COLOR_MULTIPLIER, (void*)&material.material.colorMultiplier, US_COLOR_MULTIPLIER },
+				{ U_COLOR_MULTIPLIER, (void*)&colorMultiplier, US_COLOR_MULTIPLIER },
 				{ U_CONST_ALBEDO, (void*)&material.material.constAlbedo, US_CONST_ALBEDO },
 				{ U_CONST_METALLIC, (void*)&material.material.constMetallic, US_CONST_METALLIC },
 				{ U_CONST_ROUGHNESS, (void*)&material.material.constRoughness, US_CONST_ROUGHNESS },

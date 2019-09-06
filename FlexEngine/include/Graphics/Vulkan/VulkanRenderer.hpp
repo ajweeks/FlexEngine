@@ -170,6 +170,7 @@ namespace flex
 				glm::vec4 sdfData;
 				glm::vec4 fontCharData;
 				glm::vec2 texSize;
+				glm::vec4 colorMultiplier;
 				bool bSSAOVerticalPass;
 			};
 
