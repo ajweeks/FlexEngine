@@ -4471,10 +4471,6 @@ namespace flex
 						translation = glm::vec3(normalizedTranslation, 0.0f);
 						scale = glm::vec3(normalizedScale, 1.0f);
 					}
-					else
-					{
-						translation.x /= aspectRatio;
-					}
 				}
 
 				glm::mat4 model =
