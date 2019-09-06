@@ -755,6 +755,11 @@ namespace flex
 				}
 #endif
 
+				if (ImGui::MenuItem("Save scene", "Ctrl+S"))
+				{
+					g_SceneManager->CurrentScene()->SerializeToFile(false);
+				}
+
 				if (ImGui::BeginMenu("Reload"))
 				{
 					if (ImGui::MenuItem("Scene", "R"))
