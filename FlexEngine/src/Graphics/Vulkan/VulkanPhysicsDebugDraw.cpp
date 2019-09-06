@@ -46,6 +46,7 @@ namespace flex
 			createInfo.bDepthWriteEnable = false;
 			m_Object = new GameObject("Vk Physics Debug Draw", GameObjectType::_NONE);
 			m_Object->SetSerializable(false);
+			m_Object->SetVisibleInSceneExplorer(false);
 			m_ObjectMesh = m_Object->SetMeshComponent(new MeshComponent(m_Object, m_MaterialID));
 			const VertexAttributes vertexAttributes = (u32)VertexAttribute::POSITION | (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
 			if (!m_ObjectMesh->CreateProcedural(16384*4, vertexAttributes, TopologyMode::LINE_LIST, &createInfo))
