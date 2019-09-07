@@ -52,7 +52,8 @@ namespace flex
 		assert(VertexCount > 0);
 
 		real* vertexDataP = vertexData;
-		for (u32 i = 0; i < VertexCount; ++i)
+		u32 count = glm::min(VertexCount, createInfo->positions_3D.empty() ? createInfo->positions_2D.size() : createInfo->positions_3D.size());
+		for (u32 i = 0; i < count; ++i)
 		{
 			if (Attributes & (u32)VertexAttribute::POSITION)
 			{
@@ -108,7 +109,7 @@ namespace flex
 				vertexDataP += 1;
 			}
 		}
-		assert(vertexDataP == vertexData + (VertexStride / sizeof(real) * VertexCount));
+		assert(vertexDataP == vertexData + (VertexStride / sizeof(real) * count));
 	}
 
 	void VertexBufferData::Destroy()
