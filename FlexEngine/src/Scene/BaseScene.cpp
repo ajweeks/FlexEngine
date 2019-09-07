@@ -981,6 +981,7 @@ namespace flex
 			{
 				if (bDestroy)
 				{
+					(*iter)->Destroy();
 					delete *iter;
 				}
 

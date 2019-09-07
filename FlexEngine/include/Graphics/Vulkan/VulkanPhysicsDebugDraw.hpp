@@ -22,6 +22,7 @@ namespace flex
 
 			virtual void Initialize() override;
 			virtual void Destroy() override;
+			virtual void OnPostSceneChange() override;
 
 			virtual void reportErrorWarning(const char* warningString)  override;
 			virtual void draw3dText(const btVector3& location, const char* textString)  override;
@@ -35,6 +36,8 @@ namespace flex
 
 		private:
 			virtual void Draw() override;
+
+			void CreateDebugObject();
 
 			VulkanRenderer* m_Renderer = nullptr;
 

@@ -1716,6 +1716,8 @@ namespace flex
 
 		void VulkanRenderer::OnPostSceneChange()
 		{
+			Renderer::OnPostSceneChange();
+
 			if (m_bPostInitialized)
 			{
 				CreateStaticVertexBuffers();

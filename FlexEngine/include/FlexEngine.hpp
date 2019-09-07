@@ -24,7 +24,6 @@ namespace flex
 
 		i32 ImGuiConsoleInputCallback(ImGuiInputTextCallbackData *data);
 
-		void PreSceneChange();
 		void OnSceneChanged();
 
 		bool IsRenderingImGui() const;

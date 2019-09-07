@@ -250,6 +250,7 @@ namespace flex
 		g_SceneManager->InitializeCurrentScene();
 		g_Renderer->PostInitialize();
 		g_SceneManager->PostInitializeCurrentScene();
+		g_Editor->PostInitialize();
 
 		g_InputManager->Initialize();
 
@@ -429,16 +430,9 @@ namespace flex
 		}
 	}
 
-	void FlexEngine::PreSceneChange()
-	{
-		g_Editor->PreSceneChange();
-	}
-
 	void FlexEngine::OnSceneChanged()
 	{
 		SaveCommonSettingsToDisk(false);
-
-		g_Editor->OnSceneChanged();
 	}
 
 	bool FlexEngine::IsRenderingImGui() const

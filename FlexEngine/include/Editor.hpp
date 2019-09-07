@@ -13,6 +13,7 @@ namespace flex
 		Editor();
 
 		void Initialize();
+		void PostInitialize();
 		void Destroy();
 		void EarlyUpdate();
 		void PreSceneChange();
@@ -55,6 +56,8 @@ namespace flex
 
 		EventReply OnActionEvent(Action action);
 		ActionCallback<Editor> m_ActionCallback;
+
+		void CreateObjects();
 
 		// Parent of translation, rotation, and scale gizmo objects
 		GameObject* m_TransformGizmo = nullptr;

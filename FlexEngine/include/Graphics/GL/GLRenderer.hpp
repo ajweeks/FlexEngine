@@ -49,7 +49,6 @@ namespace flex
 			virtual void OnWindowSizeChanged(i32 width, i32 height) override;
 
 			virtual void OnPreSceneChange() override;
-			virtual void OnPostSceneChange() override;
 
 			virtual bool GetRenderObjectCreateInfo(RenderID renderID, RenderObjectCreateInfo& outInfo) override;
 

@@ -51,6 +51,7 @@ namespace flex
 		void DoSceneContextMenu(BaseScene* scene);
 
 		u32 m_CurrentSceneIndex = InvalidID;
+		u32 m_PreviousSceneIndex = InvalidID;
 		std::vector<BaseScene*> m_Scenes;
 
 		std::string m_SavedDirStr;

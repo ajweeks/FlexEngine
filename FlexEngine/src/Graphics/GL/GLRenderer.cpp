@@ -4265,9 +4265,6 @@ namespace flex
 			GenerateGBuffer();
 		}
 
-		void GLRenderer::OnPostSceneChange()
-		{
-		}
 
 		bool GLRenderer::GetRenderObjectCreateInfo(RenderID renderID, RenderObjectCreateInfo& outInfo)
 		{

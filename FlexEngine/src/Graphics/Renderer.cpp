@@ -1356,6 +1356,11 @@ namespace flex
 		}
 	}
 
+	void Renderer::OnPostSceneChange()
+	{
+		m_PhysicsDebugDrawer->OnPostSceneChange();
+	}
+
 	void Renderer::LoadShaders()
 	{
 		if (m_BaseShaders.empty())

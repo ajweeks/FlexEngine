@@ -32,6 +32,8 @@ namespace flex
 		virtual void Destroy() = 0;
 		virtual void DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& color) = 0;
 
+		virtual void OnPostSceneChange() = 0;
+
 		void UpdateDebugMode();
 		void ClearLines();
 
@@ -104,7 +106,7 @@ namespace flex
 		virtual void OnWindowSizeChanged(i32 width, i32 height) = 0;
 
 		virtual void OnPreSceneChange() = 0;
-		virtual void OnPostSceneChange() = 0; // Called once scene has been loaded and all objects have been inited (and post inited)
+		virtual void OnPostSceneChange(); // Called once scene has been loaded and all objects have been initialized and post initialized
 
 		/*
 		* Fills outInfo with an up-to-date version of the render object's info

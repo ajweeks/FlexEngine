@@ -3,6 +3,7 @@
 #include "Scene/SceneManager.hpp"
 
 #include "Cameras/CameraManager.hpp"
+#include "Editor.hpp"
 #include "FlexEngine.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
@@ -58,10 +59,14 @@ namespace flex
 
 		CurrentScene()->Initialize();
 
-		g_Renderer->OnPreSceneChange();
-		g_EngineInstance->OnSceneChanged();
-		g_CameraManager->OnSceneChanged();
-		g_Renderer->OnPostSceneChange();
+		if (m_PreviousSceneIndex != InvalidID)
+		{
+			g_Renderer->OnPreSceneChange();
+			g_EngineInstance->OnSceneChanged();
+			g_Editor->OnSceneChanged();
+			g_CameraManager->OnSceneChanged();
+			g_Renderer->OnPostSceneChange();
+		}
 	}
 
 	void SceneManager::PostInitializeCurrentScene()
@@ -98,10 +103,11 @@ namespace flex
 			return false;
 		}
 
-		g_EngineInstance->PreSceneChange();
+		g_Editor->PreSceneChange();
 
+		m_PreviousSceneIndex = m_CurrentSceneIndex;
 
-		if (m_CurrentSceneIndex != u32_max)
+		if (m_CurrentSceneIndex != InvalidID)
 		{
 			//if (m_Scenes[m_CurrentSceneIndex]->GetPhysicsWorld())
 			//{
@@ -172,7 +178,7 @@ namespace flex
 			return;
 		}
 
-		if (m_CurrentSceneIndex == u32_max)
+		if (m_CurrentSceneIndex == InvalidID)
 		{
 			m_CurrentSceneIndex = 0;
 		}
@@ -364,7 +370,7 @@ namespace flex
 				m_CurrentSceneIndex = 0;
 			}
 
-			g_EngineInstance->PreSceneChange();
+			g_Editor->PreSceneChange();
 			scene->Destroy();
 		}
 		else
