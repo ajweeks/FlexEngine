@@ -38,17 +38,15 @@ const bool g_bEnableLogging_Loading = false;
 void* operator new(size_t size);
 void operator delete(void* ptr) noexcept;
 
-//#define malloc(size) malloc_hooked(size)
-//#define free(ptr) free_hooked(ptr)
-
 void* malloc_hooked(size_t size);
 void* aligned_malloc_hooked(size_t size, size_t alignment);
 void free_hooked(void* ptr);
 void aligned_free_hooked(void* ptr);
+void* realloc_hooked(void* ptr, size_t newsz);
 
-//#define STBI_MALLOC(size)		malloc_hooked(size)
-//#define STBI_REALLOC(p, newsz)	realloc(p, newsz)
-//#define STBI_FREE(ptr)			free_hooked(ptr)
+#define STBI_MALLOC(size)		malloc_hooked(size)
+#define STBI_REALLOC(p, newsz)	realloc_hooked(p, newsz)
+#define STBI_FREE(ptr)			free_hooked(ptr)
 
 #define BT_NO_SIMD_OPERATOR_OVERLOADS
 #define NOMINMAX
