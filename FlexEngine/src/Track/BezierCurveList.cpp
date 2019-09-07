@@ -23,6 +23,11 @@ namespace flex
 		DEBUG_GenerateRandomSeed();
 	}
 
+	BezierCurveList::~BezierCurveList()
+	{
+		delete m_BaseColour;
+	}
+
 	BezierCurveList BezierCurveList::InitializeFromJSON(const JSONObject& obj)
 	{
 		BezierCurveList result = {};
@@ -48,7 +53,7 @@ namespace flex
 		for (i32 i = 0; i < (i32)curves.size(); ++i)
 		{
 			bool bHighlighted = (highlightedCurveIndex == i);
-			curves[i].DrawDebug(bHighlighted, m_BaseColour, highlightColour);
+			curves[i].DrawDebug(bHighlighted, *m_BaseColour, highlightColour);
 		}
 	}
 
@@ -181,7 +186,8 @@ namespace flex
 	{
 		m_DebugColourRandomSeed = (real)rand() / (real)RAND_MAX;
 
-		m_BaseColour = btVector4(
+		delete m_BaseColour;
+		m_BaseColour = new btVector4(
 			0.75f + 0.3f * fmod(15.648f * m_DebugColourRandomSeed, 1.0f),
 			0.2f + 0.4f * fmod(0.342f + 6.898f * m_DebugColourRandomSeed, 1.0f),
 			0.2f + 0.4f * fmod(0.158f + 2.221f * m_DebugColourRandomSeed, 1.0f),

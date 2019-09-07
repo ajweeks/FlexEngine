@@ -12,7 +12,7 @@ namespace flex
 
 	// The player is instructed by its player controller how to move by means of its
 	// transform component being updated, and it applies those changes to its rigid body itself
-	__declspec(align(16)) class Player : public GameObject
+	class Player : public GameObject
 	{
 	public:
 		Player(i32 index, const glm::vec3& initialPos = VEC3_ZERO);
@@ -52,10 +52,6 @@ namespace flex
 		void AddToInventory(GameObject* obj);
 
 		bool IsRidingTrack();
-
-		// TODO: Figure out why this class requires alignment to appease warning C4316
-		void* operator new(size_t i);
-		void operator delete(void* p);
 
 		PlayerController* m_Controller = nullptr;
 		i32 m_Index = 0;
