@@ -76,7 +76,7 @@ namespace flex
 
 	void DestroyGLFWimage(GLFWimage& image)
 	{
-		stbi_image_free(image.pixels);
+		STBI_FREE(image.pixels);
 		image.pixels = nullptr;
 	}
 
@@ -121,7 +121,8 @@ namespace flex
 
 	void HDRImage::Free()
 	{
-		stbi_image_free(pixels);
+		STBI_FREE(pixels);
+		pixels = nullptr;
 	}
 
 	std::string FloatToString(real f, i32 precision)
