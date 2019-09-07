@@ -9,8 +9,6 @@ IGNORE_WARNINGS_PUSH
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 #include <BulletDynamics/Dynamics/btRigidBody.h>
 
-#include <LinearMath/btIDebugDraw.h>
-
 #include <glm/gtx/rotate_vector.hpp>
 #include <glm/gtx/norm.hpp> // For distance2
 IGNORE_WARNINGS_POP

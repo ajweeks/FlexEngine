@@ -85,7 +85,6 @@ namespace flex
 		glm::vec3 m_StartPointOnPlane;
 		i32 m_RotationGizmoWrapCount = 0;
 		real m_LastAngle = -1.0f;
-		real m_pV1oV2 = -1.0f;
 		glm::vec3 m_PlaneN;
 		glm::vec3 m_AxisOfRotation;
 		glm::quat m_CurrentRot;

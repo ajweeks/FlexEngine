@@ -562,8 +562,6 @@ namespace flex
 		real angleRaw = acos(v1ov2);
 		real angle = (m_RotationGizmoWrapCount % 2 == 0 ? angleRaw : -angleRaw);
 
-		m_pV1oV2 = v1ov2;
-
 		if (m_bFirstFrameDraggingRotationGizmo)
 		{
 			m_bFirstFrameDraggingRotationGizmo = false;
