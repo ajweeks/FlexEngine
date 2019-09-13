@@ -17,46 +17,6 @@ namespace flex
 		bDEBUGCyclable = false;
 	}
 
-	void TerminalCamera::Initialize()
-	{
-		if (!m_bInitialized)
-		{
-			if (m_Terminal ==  nullptr)
-			{
-				Player* p0 = g_SceneManager->CurrentScene()->GetPlayer(0);
-				if (p0 != nullptr)
-				{
-					// TODO: Also take into account directionality, like done in PlayerController::Update
-					std::vector<Terminal*> terminals = g_SceneManager->CurrentScene()->GetObjectsOfType<Terminal>();
-					if (!terminals.empty())
-					{
-						glm::vec3 playerPos = p0->GetTransform()->GetWorldPosition();
-						real shortestDist = FLT_MAX;
-						Terminal* closestTerminal = nullptr;
-						for (Terminal* t : terminals)
-						{
-							real distToTerm = glm::distance(playerPos, t->GetTransform()->GetWorldPosition());
-							if (distToTerm < shortestDist)
-							{
-								shortestDist = distToTerm;
-								closestTerminal = t;
-							}
-						}
-
-						if (closestTerminal != nullptr)
-						{
-							// Will call SetTerminal on us
-							p0->SetInteractingWith(closestTerminal);
-							closestTerminal->SetInteractingWith(p0);
-						}
-					}
-				}
-			}
-
-			BaseCamera::Initialize();
-		}
-	}
-
 	void TerminalCamera::Update()
 	{
 		BaseCamera::Update();

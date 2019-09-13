@@ -13,7 +13,6 @@ namespace flex
 	public:
 		explicit TerminalCamera(real FOV = glm::radians(50.0f));
 
-		virtual void Initialize() override;
 		virtual void Update() override;
 
 		// Called prior to transitioning in (with a valid Terminal*), or after transitioning out (with nullptr)

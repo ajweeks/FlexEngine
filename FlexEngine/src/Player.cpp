@@ -291,17 +291,12 @@ namespace flex
 			m_bBeingInteractedWith = true;
 
 			TerminalCamera* terminalCam = dynamic_cast<TerminalCamera*>(g_CameraManager->CurrentCamera());
-			bool bNewCam = false;
 			if (terminalCam == nullptr)
 			{
 				terminalCam = static_cast<TerminalCamera*>(g_CameraManager->GetCameraByName("terminal"));
-				bNewCam = true;
-			}
-			terminalCam->SetTerminal(terminal);
-			if (bNewCam)
-			{
 				g_CameraManager->PushCamera(terminalCam, true);
 			}
+			terminalCam->SetTerminal(terminal);
 		}
 	}
 
