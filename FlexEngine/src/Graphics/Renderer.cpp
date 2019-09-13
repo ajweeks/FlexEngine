@@ -2992,8 +2992,8 @@ namespace flex
 							}
 
 							glm::vec3 pos = textCache.pos +
-								tangent * (totalAdvanceX + metric->offsetX) * textScale +
-								VEC3_UP * (real)(-metric->offsetY) * textScale;
+								tangent * (totalAdvanceX + metric->offsetX) * textScale * textCache.scale +
+								VEC3_UP * (real)(-metric->offsetY) * textScale * textCache.scale;
 
 							if (font->bUseKerning)
 							{
@@ -3002,13 +3002,13 @@ namespace flex
 								auto iter = metric->kerning.find(charKey);
 								if (iter != metric->kerning.end())
 								{
-									pos += glm::vec3(iter->second, 0.0f) * textScale;
+									pos += glm::vec3(iter->second, 0.0f) * textScale * textCache.scale;
 								}
 							}
 
 							glm::vec4 charSizePixelsCharSizeNorm(
 								metric->width, metric->height,
-								metric->width * textScale, metric->height * textScale);
+								metric->width * textScale * textCache.scale, metric->height * textScale * textCache.scale);
 
 							i32 texChannel = (i32)metric->channel;
 
