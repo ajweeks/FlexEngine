@@ -33,8 +33,9 @@ namespace flex
 
 		real m_MoveAcceleration = 120.0f;
 		real m_MaxMoveSpeed = 20.0f;
-		real m_RotateHSpeed = 4.0f;
-		real m_RotateVSpeed = 1.3f;
+		real m_RotateHSpeedFirstPerson = 2.0f;
+		real m_RotateHSpeedThirdPerson = 4.0f;
+		real m_RotateVSpeed = 1.0f;
 		// If the player has a velocity magnitude of this value or lower, their
 		// rotation speed will linearly decrease as their velocity approaches 0
 		// TODO: Use again

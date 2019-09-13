@@ -511,7 +511,7 @@ namespace flex
 			}
 
 			glm::quat rot = transform->GetLocalRotation();
-			real angle = lookH * m_RotateHSpeed * g_DeltaTime;
+			real angle = lookH * (m_Mode == Mode::FIRST_PERSON ? m_RotateHSpeedFirstPerson : m_RotateHSpeedThirdPerson) * g_DeltaTime;
 			rot = glm::rotate(rot, angle, up);
 			transform->SetWorldRotation(rot);
 
