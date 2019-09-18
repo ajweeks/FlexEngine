@@ -6403,8 +6403,6 @@ namespace flex
 
 	void Terminal::ParseCode()
 	{
-		bParsePassed = true;
-
 		assert(tokenizer != nullptr);
 		assert(ast != nullptr);
 

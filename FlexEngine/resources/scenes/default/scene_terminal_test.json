@@ -67,7 +67,7 @@
 					"transform" : 
 					{
 						"pos" : "0.000, 15.000, 0.000",
-						"rot" : "1.195, -0.973, -2.522"
+						"rot" : "1.194, -0.973, -2.523"
 					},
 					"directional light info" : 
 					{
@@ -172,24 +172,15 @@
 			},
 			"terminal" : 
 			{
-				"str" : "float _ = 1.19f;  int aaa = 0108;
-int var = 100;
-int iat = 55;
-float ff=_-_+_*99.;
-int i = ff;
-int a = var;
-int aba = a;
-bool t = true;
-//bool fal = !t;
-//if (true)
-//{
-//  aba = 1;
-//}
-//else
-//{
-//  aba = 11;
-//}
-int result = aba * aba;"
+				"str" : "float foo = 1.19f;
+float bar = 9.992f;
+float result = foo + bar;
+int a = abar;
+bool t = a != 11;
+bool f = a == 11;
+bool b = t && f;
+bool e = b || f;
+bool n = 1 * 8;"
 			},
 			"children" : 
 			[

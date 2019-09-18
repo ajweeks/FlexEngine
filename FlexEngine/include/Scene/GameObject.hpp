@@ -1092,7 +1092,6 @@ namespace flex
 		Tokenizer* tokenizer = nullptr;
 
 		std::vector<std::string> lines;
-		bool bParsePassed = false;
 
 		real m_LineHeight = 9.0f;
 		real m_LetterScale = 0.23f;
