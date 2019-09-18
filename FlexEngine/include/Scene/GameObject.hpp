@@ -1036,6 +1036,7 @@ namespace flex
 		bool bValid = false;
 
 		glm::vec2i lastErrorTokenLocation = glm::vec2i(-1);
+		i32 lastErrorTokenLen = 0;
 	};
 
 	class Terminal : public GameObject

@@ -4579,6 +4579,13 @@ namespace flex
 
 		Value* lhsVar = lhs->Evaluate(context);
 
+		if (lhsVar == nullptr)
+		{
+			context.errorReason = "Invalid expression";
+			context.errorToken = lhs->token;
+			return nullptr;
+		}
+
 		// TODO: Handle implicit conversions
 		if (lhsVar->type != rhsVar->type)
 		{
@@ -5799,10 +5806,8 @@ namespace flex
 
 		if (!tokenizer->context->errorReason.empty())
 		{
-			PrintError("Creation of AST failed\n");
-			PrintError("Error reason: %s\n", tokenizer->context->errorReason.c_str());
-			PrintError("Error token: %s\n", tokenizer->context->errorToken.ToString().c_str());
 			lastErrorTokenLocation = glm::vec2i(tokenizer->context->errorToken.linePos, tokenizer->context->errorToken.lineNum);
+			lastErrorTokenLen = tokenizer->context->errorToken.len;
 			tokenizer->context->errors = { Error(tokenizer->context->errorToken.lineNum, tokenizer->context->errorReason) };
 			return;
 		}
@@ -5810,6 +5815,7 @@ namespace flex
 		bValid = true;
 
 		lastErrorTokenLocation = glm::vec2i(-1);
+		lastErrorTokenLen = 0;
 	}
 
 	void AST::Evaluate()
@@ -5833,10 +5839,8 @@ namespace flex
 			}
 			else
 			{
-				PrintError("Evaluation of AST failed\n");
-				PrintError("Error reason: %s\n", tokenizer->context->errorReason.c_str());
-				PrintError("Error token: %s\n", tokenizer->context->errorToken.ToString().c_str());
 				lastErrorTokenLocation = glm::vec2i(tokenizer->context->errorToken.linePos, tokenizer->context->errorToken.lineNum);
+				lastErrorTokenLen = tokenizer->context->errorToken.len;
 				bSuccess = false;
 				tokenizer->context->errors = { Error(tokenizer->context->errorToken.lineNum, tokenizer->context->errorReason) };
 				break;
@@ -5846,6 +5850,7 @@ namespace flex
 		if (bSuccess)
 		{
 			lastErrorTokenLocation = glm::vec2i(-1);
+			lastErrorTokenLen = 0;
 		}
 	}
 
@@ -5973,7 +5978,10 @@ namespace flex
 					{
 						pos = firstLinePos;
 						pos.y -= lineHeight * lastErrorPos.y;
-						g_Renderer->DrawStringWS("!", errorColor, pos + right * charWidth * 1.7f, rot, letterSpacing, m_LetterScale);
+						g_Renderer->DrawStringWS("!", errorColor, pos + right * (charWidth * 1.7f), rot, letterSpacing, m_LetterScale);
+						std::string underlineStr = std::string(lastErrorPos.x, ' ') + std::string(ast->lastErrorTokenLen, '_');
+						pos.y -= lineHeight * 0.2f;
+						g_Renderer->DrawStringWS(underlineStr, errorColor, pos, rot, letterSpacing, m_LetterScale);
 					}
 				}
 			}

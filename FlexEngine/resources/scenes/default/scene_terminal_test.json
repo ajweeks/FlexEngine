@@ -175,12 +175,15 @@
 				"str" : "float foo = 1.19f;
 float bar = 9.992f;
 float result = foo + bar;
-int a = abar;
+int a = bar;
 bool t = a != 11;
 bool f = a == 11;
 bool b = t && f;
 bool e = b || f;
-bool n = 1 * 8;"
+int n = 1 * 8;
+int i =0 ;
+int aa  = 999999;
+int neg = -919191;"
 			},
 			"children" : 
 			[
