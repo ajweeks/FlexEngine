@@ -5772,12 +5772,6 @@ namespace flex
 		if (tokenizer.context->HasNextChar())
 		{
 			nextItem = RootItem::Parse(tokenizer);
-			if (nextItem == nullptr ||
-				!tokenizer.context->errorReason.empty())
-			{
-				delete rootStatement;
-				return nullptr;
-			}
 		}
 
 		return new RootItem(rootStatement, nextItem);
