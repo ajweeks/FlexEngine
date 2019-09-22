@@ -15,8 +15,7 @@ solution "Flex"
 	}
 
 	platforms {
-		"x32",
-		--"x64",
+		"x32"
 	}
 
 	language "C++"
@@ -32,8 +31,7 @@ DEPENDENCIES_DIR = path.join(SOURCE_DIR, "dependencies/")
 
 
 -- Put intermediate files under build/Intermediate/config_platform/project
--- Put binaries under bin/config/project/platform --TODO: Really? confirm
--- TODO: Remove project cause we only have one
+-- Put binaries under bin/config/project
 function outputDirectories(_project)
 	local cfgs = configurations()
 	local p = platforms()
@@ -41,7 +39,7 @@ function outputDirectories(_project)
 		for j = 1, #p do
 			configuration { cfgs[i], p[j] }
 				targetdir("../bin/" .. cfgs[i] .. "_" .. p[j] .. "/" .. _project)
-				objdir("../build/Intermediate/" .. cfgs[i]  .. "/" .. _project)		--seems like the platform will automatically be added
+				objdir("../build/Intermediate/" .. cfgs[i]  .. "/" .. _project)
 		end
 	end
 	configuration {}
@@ -197,6 +195,25 @@ configuration {}
 	pchsource "../FlexEngine/src/stdafx.cpp"
 
 
+project "shaderc"
+	kind "ConsoleApp"
+	
+	location "../build/shaderc"
 
+	configuration { }
+
+	outputDirectories("shaderc")
+
+	includedirs { 
+		path.join(DEPENDENCIES_DIR, "shaderc/libshaderc/include"),
+		path.join(DEPENDENCIES_DIR, "shaderc/libshaderc_util/include"),
+		path.join(DEPENDENCIES_DIR, "glslang"),
+		path.join(DEPENDENCIES_DIR, "spirv-tools/include"),
+	}
+
+    files {
+		path.join(DEPENDENCIES_DIR, "shaderc/libshaderc/src/*"),
+	}
 
 -- TODO: Figure out how to set stdafx.cpp to use /Yc compiler flag to generate precompiled header object
+
