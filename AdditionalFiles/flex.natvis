@@ -52,4 +52,8 @@
   <Type Name="flex::Shader">
     <DisplayString>{name}</DisplayString>
   </Type>
+
+  <Type Name="flex::vk::VulkanRenderObject">
+    <DisplayString>{gameObject->m_Name},{materialName}</DisplayString>
+  </Type>
 </AutoVisualizer>
