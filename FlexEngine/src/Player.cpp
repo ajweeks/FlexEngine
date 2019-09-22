@@ -154,7 +154,7 @@ namespace flex
 			m_Transform.SetWorldRotation(rot, true);
 		}
 
-		// Draw crosshair
+		// Draw cross hair
 		{
 			SpriteQuadDrawInfo drawInfo = {};
 			drawInfo.anchor = AnchorPoint::CENTER;

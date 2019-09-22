@@ -787,6 +787,17 @@ namespace flex
 			(abs(a.w - b.w) < threshold);
 	}
 
+	glm::quat MoveTowards(const glm::quat& a, const glm::quat& b, real delta)
+	{
+		delta = glm::clamp(delta, 0.00001f, 1.0f);
+		glm::quat slerpVal = glm::slerp(a, b, delta);
+		if (glm::length(a - b) < 0.00001f)
+		{
+			return b;
+		}
+		return slerpVal;
+	}
+
 	glm::vec3 MoveTowards(const glm::vec3& a, const glm::vec3& b, real delta)
 	{
 		delta = glm::clamp(delta, 0.00001f, 1.0f);
@@ -794,12 +805,12 @@ namespace flex
 		delta = glm::min(delta, glm::length(diff));
 		if (abs(delta) < 0.00001f)
 		{
-			return a;
+			return b;
 		}
 		return a + glm::normalize(diff) * delta;
 	}
 
-	real MoveTowards(const real& a, real b, real delta)
+	real MoveTowards(const real& a, const real b, real delta)
 	{
 		delta = glm::clamp(delta, 0.00001f, 1.0f);
 		return a + (b - a) * delta;

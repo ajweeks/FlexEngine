@@ -76,8 +76,9 @@ namespace flex
 	bool NearlyEquals(const glm::vec3& a, const glm::vec3& b, real threshhold);
 	bool NearlyEquals(const glm::vec4& a, const glm::vec4& b, real threshhold);
 
+	glm::quat MoveTowards(const glm::quat& a, const glm::quat& b, real delta);
 	glm::vec3 MoveTowards(const glm::vec3& a, const glm::vec3& b, real delta);
-	real MoveTowards(const real& a, real b, real delta);
+	real MoveTowards(const real& a, const real b, real delta);
 
 	real Lerp(real a, real b, real t);
 	glm::vec2 Lerp(const glm::vec2& a, const glm::vec2& b, real t);

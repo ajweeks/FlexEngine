@@ -153,7 +153,7 @@
 			"transform" : 
 			{
 				"pos" : "0.473, 0.633, 5.888",
-				"rot" : "3.141, -0.354, 3.141"
+				"rot" : "0.000, 0.424, 0.000"
 			},
 			"material" : "terminal copper",
 			"collider" : 
@@ -183,7 +183,8 @@ bool e = b || f;
 int n = 1 * 8;
 int i =0 ;
 int aa  = 999999;
-int neg = -919191;"
+int neg = -919191;
+// "
 			},
 			"children" : 
 			[

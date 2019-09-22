@@ -2,6 +2,10 @@
 
 #include "Cameras/TerminalCamera.hpp"
 
+IGNORE_WARNINGS_PUSH
+#include <glm/gtx/norm.hpp> // For distance2
+IGNORE_WARNINGS_POP
+
 #include "Cameras/CameraManager.hpp"
 #include "Helpers.hpp" // For MoveTowards
 #include "Player.hpp"
@@ -12,9 +16,65 @@
 namespace flex
 {
 	TerminalCamera::TerminalCamera(real FOV) :
-		BaseCamera("terminal", true, FOV)
+		BaseCamera("terminal", true, FOV),
+		m_StartingPos(VEC3_ZERO)
 	{
 		bDEBUGCyclable = false;
+	}
+
+	void TerminalCamera::Initialize()
+	{
+		if (!m_bInitialized)
+		{
+			// Handle game startup in terminal cam
+			if (m_Terminal == nullptr)
+			{
+				Player* p0 = g_SceneManager->CurrentScene()->GetPlayer(0);
+				if (p0 != nullptr)
+				{
+					std::vector<Terminal*> terminals = g_SceneManager->CurrentScene()->GetObjectsOfType<Terminal>();
+					if (!terminals.empty())
+					{
+						Transform* playerTransform = p0->GetTransform();
+						glm::vec3 playerPos = playerTransform->GetWorldPosition();
+						real shortestSqDist = FLT_MAX;
+						Terminal* closestTerminal = nullptr;
+						for (Terminal* t : terminals)
+						{
+							real sqDist = glm::distance2(playerPos, t->GetTransform()->GetWorldPosition());
+							if (sqDist < shortestSqDist)
+							{
+								shortestSqDist = sqDist;
+								closestTerminal = t;
+							}
+						}
+
+						if (closestTerminal != nullptr)
+						{
+							Transform* terminalTransform = closestTerminal->GetTransform();
+							glm::vec3 terminalForward = terminalTransform->GetForward();
+							m_Forward = -terminalForward;
+							CalculateYawAndPitchFromForward();
+
+							glm::vec3 targetXZPos = terminalTransform->GetWorldPosition() + terminalForward * 2.5f;
+
+							m_StartingPitch = m_Pitch;
+							m_StartingYaw = m_Yaw;
+							m_StartingPos = glm::vec3(targetXZPos.x, m_Position.y, targetXZPos.z);
+
+							m_TargetPlayerPos = m_StartingPos + terminalForward * 3.0f;
+							m_TargetPlayerRot = glm::quat(glm::vec3(0, atan2(m_Forward.x, m_Forward.z), 0));
+
+							// Will call SetTerminal on us
+							p0->SetInteractingWith(closestTerminal);
+							closestTerminal->SetInteractingWith(p0);
+						}
+					}
+				}
+			}
+
+			BaseCamera::Initialize();
+		}
 	}
 
 	void TerminalCamera::Update()
@@ -26,6 +86,14 @@ namespace flex
 			m_Yaw = MoveTowards(m_Yaw, m_TargetYaw, g_DeltaTime * m_LerpSpeed);
 			m_Pitch = MoveTowards(m_Pitch, m_TargetPitch, g_DeltaTime * m_LerpSpeed);
 			m_Position = MoveTowards(m_Position, m_TargetPos, g_DeltaTime * m_LerpSpeed);
+
+			if (m_bTransitioningIn)
+			{
+				Player* p0 = g_SceneManager->CurrentScene()->GetPlayer(0);
+				Transform* playerTransform = p0->GetTransform();
+				playerTransform->SetWorldPosition(MoveTowards(playerTransform->GetWorldPosition(), m_TargetPlayerPos, g_DeltaTime * m_LerpSpeed));
+				playerTransform->SetWorldRotation(MoveTowards(playerTransform->GetWorldRotation(), m_TargetPlayerRot, g_DeltaTime * m_LerpSpeed));
+			}
 
 			if (NearlyEquals(m_Yaw, m_TargetYaw, 0.01f) &&
 				NearlyEquals(m_Pitch, m_TargetPitch, 0.01f) &&
@@ -72,6 +140,7 @@ namespace flex
 			glm::vec3 targetForward = glm::normalize(terminalTransform->GetWorldPosition() - m_TargetPos);
 			m_TargetPitch = 0.0f;
 			m_TargetYaw = atan2(targetForward.z, targetForward.x);
+			WrapTargetYaw();
 			m_bTransitioningIn = true;
 		}
 	}
@@ -80,8 +149,22 @@ namespace flex
 	{
 		m_TargetPitch = m_StartingPitch;
 		m_TargetYaw = m_StartingYaw;
+		WrapTargetYaw();
 		m_TargetPos = m_StartingPos;
+
 		m_bTransitioningOut = true;
+	}
+
+	void TerminalCamera::WrapTargetYaw()
+	{
+		if (m_TargetYaw - m_Yaw > PI)
+		{
+			m_TargetYaw -= TWO_PI;
+		}
+		if (m_TargetYaw - m_Yaw < -PI)
+		{
+			m_TargetYaw += TWO_PI;
+		}
 	}
 
 } // namespace flex
