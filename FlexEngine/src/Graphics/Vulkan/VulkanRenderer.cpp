@@ -7606,6 +7606,8 @@ namespace flex
 
 			CreatePostProcessingObjects();
 
+			UpdateDynamicUniformBuffer(m_PostProcessMatID, 0, MAT4_IDENTITY, nullptr);
+
 			CreateFramebuffers();
 			m_CommandBufferManager.CreateCommandBuffers(m_SwapChainImages.size());
 		}
