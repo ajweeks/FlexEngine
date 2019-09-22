@@ -45,7 +45,7 @@ namespace flex
 
 	struct Token g_EmptyToken = Token();
 
-	RandomizedAudioSource GameObject::s_SqueakySounds;
+	AudioCue GameObject::s_SqueakySounds;
 	AudioSourceID GameObject::s_BunkSound;
 
 	GameObject::GameObject(const std::string& name, GameObjectType type) :

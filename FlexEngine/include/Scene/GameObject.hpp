@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Audio/RandomizedAudioSource.hpp"
+#include "Audio/AudioCue.hpp"
 #include "Callbacks/InputCallbacks.hpp"
 #include "Graphics/RendererTypes.hpp"
 #include "Graphics/VertexBufferData.hpp" // For VertexBufferData::CreateInfo
@@ -215,7 +215,7 @@ namespace flex
 		MeshComponent* m_MeshComponent = nullptr;
 
 		static AudioSourceID s_BunkSound;
-		static RandomizedAudioSource s_SqueakySounds;
+		static AudioCue s_SqueakySounds;
 
 	};
 

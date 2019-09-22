@@ -1,6 +1,6 @@
 #include "stdafx.hpp"
 
-#include "Audio/RandomizedAudioSource.hpp"
+#include "Audio/AudioCue.hpp"
 
 #include <stdlib.h> // rand
 
@@ -8,7 +8,7 @@
 
 namespace flex
 {
-	void RandomizedAudioSource::Initialize(const std::string& filePath0, i32 fileCount)
+	void AudioCue::Initialize(const std::string& filePath0, i32 fileCount)
 	{
 		// "xxx00.wav"
 		//     ^
@@ -35,11 +35,11 @@ namespace flex
 		m_bInitialized = true;
 	}
 
-	void RandomizedAudioSource::Destroy()
+	void AudioCue::Destroy()
 	{
 	}
 
-	void RandomizedAudioSource::Play(bool forceRestart)
+	void AudioCue::Play(bool forceRestart)
 	{
 		if (!forceRestart && m_LastPlayedID != InvalidAudioSourceID)
 		{
@@ -53,13 +53,13 @@ namespace flex
 		AudioManager::PlaySource(m_LastPlayedID, forceRestart);
 	}
 
-	void RandomizedAudioSource::Pause()
+	void AudioCue::Pause()
 	{
 		m_LastPlayedID = m_SourceIDs[GetRandomIndex()];
 		AudioManager::PauseSource(m_LastPlayedID);
 	}
 
-	void RandomizedAudioSource::Stop()
+	void AudioCue::Stop()
 	{
 		if (m_LastPlayedID != InvalidAudioSourceID)
 		{
@@ -67,7 +67,7 @@ namespace flex
 		}
 	}
 
-	void RandomizedAudioSource::SetGain(real gain)
+	void AudioCue::SetGain(real gain)
 	{
 		m_Gain = gain;
 
@@ -77,7 +77,7 @@ namespace flex
 		}
 	}
 
-	void RandomizedAudioSource::SetPitch(real pitch)
+	void AudioCue::SetPitch(real pitch)
 	{
 		m_Pitch = pitch;
 
@@ -87,12 +87,12 @@ namespace flex
 		}
 	}
 
-	bool RandomizedAudioSource::IsInitialized() const
+	bool AudioCue::IsInitialized() const
 	{
 		return m_bInitialized;
 	}
 
-	bool RandomizedAudioSource::IsPlaying() const
+	bool AudioCue::IsPlaying() const
 	{
 		if (m_LastPlayedID == InvalidAudioSourceID)
 		{
@@ -101,7 +101,7 @@ namespace flex
 		return AudioManager::IsSourcePlaying(m_LastPlayedID);
 	}
 
-	i32 RandomizedAudioSource::GetRandomIndex()
+	i32 AudioCue::GetRandomIndex()
 	{
 		// TODO: Use better random function
 		// TODO: Don't pick previously chosen ID again

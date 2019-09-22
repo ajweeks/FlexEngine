@@ -2,7 +2,7 @@
 
 namespace flex
 {
-	class RandomizedAudioSource
+	class AudioCue
 	{
 	public:
 		// Loads several audio source files post-fix numbered starting from "00" going up to fileCount
