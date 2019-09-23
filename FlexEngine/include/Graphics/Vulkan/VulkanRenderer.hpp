@@ -172,6 +172,7 @@ namespace flex
 				glm::vec2 texSize;
 				glm::vec4 colorMultiplier;
 				bool bSSAOVerticalPass;
+				SHCoeffs shCoeffs;
 			};
 
 			void GenerateCubemapFromHDR(VulkanRenderObject* renderObject, const std::string& environmentMapPath);

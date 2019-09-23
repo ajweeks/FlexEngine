@@ -1414,6 +1414,7 @@ namespace flex
 				{ "ssao_blur", "vk_post_fxaa_vert.spv", "vk_ssao_blur_frag.spv" },
 				{ "taa_resolve", "vk_post_fxaa_vert.spv", "vk_taa_resolve_frag.spv" },
 				{ "gamma_correct", "vk_post_fxaa_vert.spv", "vk_gamma_correct_frag.spv" },
+				{ "spherical_harmonic_visualization", "vk_spherical_harmonic_visualization_vert.spv", "vk_spherical_harmonic_visualization_frag.spv" },
 			};
 #endif
 
@@ -1856,6 +1857,22 @@ namespace flex
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SCENE_SAMPLER);
 
 			m_BaseShaders[shaderID].dynamicBufferUniforms = {};
+			++shaderID;
+
+			// Spherical Harmonic Visualizer
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
+			m_BaseShaders[shaderID].vertexAttributes =
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::NORMAL |
+				(u32)VertexAttribute::TANGENT;
+
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PROJECTION);
+
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_SH_COEFFS);
 			++shaderID;
 
 			assert(shaderID == m_BaseShaders.size());

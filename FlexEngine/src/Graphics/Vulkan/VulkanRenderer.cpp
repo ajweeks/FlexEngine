@@ -8059,6 +8059,7 @@ namespace flex
 			glm::vec4 sdfData(0.5f, -0.01f, -0.008f, 0.035f);
 			i32 texChannel = 0;
 			glm::mat4 postProcessMat = GetPostProcessingMatrix();
+			SHCoeffs shCoeffs = {};
 
 			// TODO: Roll into array?
 			if (uniformOverrides)
@@ -8118,6 +8119,10 @@ namespace flex
 				{
 					colorMultiplier = uniformOverrides->colorMultiplier;
 				}
+				if (uniformOverrides->overridenUniforms.HasUniform(U_SH_COEFFS))
+				{
+					shCoeffs = uniformOverrides->shCoeffs;
+				}
 			}
 
 			struct UniformInfo
@@ -8146,6 +8151,7 @@ namespace flex
 				{ U_TEX_CHANNEL, (void*)&texChannel, US_TEX_CHANNEL },
 				{ U_SSAO_BLUR_DATA_DYNAMIC, (void*)&m_SSAOBlurDataDynamic, US_SSAO_BLUR_DATA_DYNAMIC },
 				{ U_POST_PROCESS_MAT, (void*)&postProcessMat, US_POST_PROCESS_MAT },
+				{ U_SH_COEFFS, (void*)&shCoeffs, US_SH_COEFFS },
 			};
 
 			u32 index = 0;
