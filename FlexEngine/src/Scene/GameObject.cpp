@@ -4434,6 +4434,17 @@ namespace flex
 		}
 	}
 
+	ValueType TypeNameToValueType(TypeName typeName)
+	{
+		switch (typeName)
+		{
+		case TypeName::INT: return ValueType::INT_RAW;
+		case TypeName::FLOAT: return ValueType::FLOAT_RAW;
+		case TypeName::BOOL: return ValueType::BOOL_RAW;
+		default: return ValueType::_NONE;
+		}
+	}
+
 	Identifier::Identifier(const Token& token, const std::string& identifierStr, TypeName type) :
 		Node(token),
 		identifierStr(identifierStr),
@@ -4666,7 +4677,7 @@ namespace flex
 	}
 
 	Value::Value() :
-		type(ValueType::NONE),
+		type(ValueType::_NONE),
 		bIsTemporary(true),
 		val()
 	{
@@ -5081,7 +5092,7 @@ namespace flex
 				{
 					return;
 				}
-				varTypeName = var->val.identifier->type;
+				varTypeName = ValueTypeToTypeName(var->type);
 			}
 			else
 			{

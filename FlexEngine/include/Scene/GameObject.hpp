@@ -810,10 +810,11 @@ namespace flex
 		FLOAT_RAW,
 		BOOL_RAW,
 
-		NONE
+		_NONE
 	};
 
 	TypeName ValueTypeToTypeName(ValueType valueType);
+	ValueType TypeNameToValueType(TypeName typeName);
 
 	struct Identifier : public Node
 	{
