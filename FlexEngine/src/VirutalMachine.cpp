@@ -2,9 +2,6 @@
 
 #include "VirtualMachine.hpp"
 
-IGNORE_WARNINGS_PUSH
-IGNORE_WARNINGS_POP
-
 #include "Helpers.hpp"
 
 namespace flex
@@ -1207,37 +1204,6 @@ namespace flex
 		}
 	}
 
-	//bool Expression::Compare(TokenContext& context, Expression* other, OperatorType op)
-	//{
-		//if (value.type == ValueType::IDENTIFIER)
-		//{
-
-		//	context.GetVarInstanceFromToken(token)->val.identifier->;
-		//}
-
-		//if (value.type == ValueType::OPERATION)
-		//{
-		//	Value* newVal = value.val.operation->Evaluate(context);
-		//	if (newVal->type == ValueType::BOOL_RAW)
-		//	{
-		//		bool bResult = newVal->val.boolRaw;
-		//		if (newVal->bIsTemporary)
-		//		{
-		//			delete newVal);
-		//		}
-		//		return bResult;
-		//	}
-		//	else
-		//	{
-		//		context.errorReason = "Operation expression didn't evaluate to bool value";
-		//		context.errorToken = token;
-		//		return nullptr;
-		//	}
-		//}
-
-	//	return false;
-	//}
-
 	Expression* Expression::Parse(Tokenizer& tokenizer)
 	{
 		Token token = tokenizer.PeekNextToken();
@@ -2223,8 +2189,6 @@ namespace flex
 		RootItem* currentItem = rootItem;
 		while (currentItem != nullptr)
 		{
-			//Print("Type: %d\n", currentItem->statement->type);
-
 			currentItem->statement->Evaluate(*tokenizer->context);
 			if (tokenizer->context->errorReason.empty())
 			{

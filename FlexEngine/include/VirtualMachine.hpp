@@ -1,7 +1,5 @@
 #pragma once
 
-#include "JSONTypes.hpp"
-
 namespace flex
 {
 	struct AST;
