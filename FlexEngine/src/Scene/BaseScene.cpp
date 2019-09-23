@@ -626,13 +626,14 @@ namespace flex
 
 		std::string fileContents = meshesObj.Print(0);
 
+		const std::string fileName = StripLeadingDirectories(meshesFilePath);
 		if (WriteFile(meshesFilePath, fileContents, false))
 		{
-			Print("Serialized mesh file %s\n", meshesFilePath.c_str());
+			Print("Serialized mesh file to: %s\n", fileName.c_str());
 		}
 		else
 		{
-			PrintWarn("Failed to serialize mesh file %s\n", meshesFilePath.c_str());
+			PrintWarn("Failed to serialize mesh file to: %s\n", fileName.c_str());
 			return false;
 		}
 
@@ -673,13 +674,14 @@ namespace flex
 
 		std::string fileContents = materialsObj.Print(0);
 
+		const std::string fileName = StripLeadingDirectories(materialsFilePath);
 		if (WriteFile(materialsFilePath, fileContents, false))
 		{
-			Print("Serialized materials file %s\n", materialsFilePath.c_str());
+			Print("Serialized materials file to: %s\n", fileName.c_str());
 		}
 		else
 		{
-			PrintWarn("Failed to serialize materials file %s\n", materialsFilePath.c_str());
+			PrintWarn("Failed to serialize materials file to: %s\n", fileName.c_str());
 			return false;
 		}
 
@@ -918,7 +920,6 @@ namespace flex
 		}
 
 		PROFILE_END(profileBlockName);
-		Profiler::PrintBlockDuration(profileBlockName);
 	}
 
 	void BaseScene::DeleteSaveFiles()

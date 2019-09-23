@@ -172,19 +172,20 @@
 			},
 			"terminal" : 
 			{
-				"str" : "float foo = 1.19f;
+				"str" : "float roo = 1.19f;
 float bar = 9.992f;
-float result = foo + bar;
+float b = 0.0f;
+float roobarb = roo + bar + b;
 int a = bar;
 bool t = a != 11;
 bool f = a == 11;
-bool b = t && f;
-bool e = b || f;
+bool bo = t && f;
+bool e = bo || f;
 int n = 1 * 8;
 int i =0 ;
 int aa  = 999999;
-int neg = -919191;
-// "
+int foo = 10;
+foo = 1 + 1 + foo * foo;"
 			},
 			"children" : 
 			[

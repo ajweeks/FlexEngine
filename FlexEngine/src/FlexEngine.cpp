@@ -182,8 +182,8 @@ namespace flex
 
 	void FlexEngine::Initialize()
 	{
-		const char* profileBlockStr = "Engine initialize";
-		PROFILE_BEGIN(profileBlockStr);
+		const char* engineInitBlockName = "Engine initialize";
+		PROFILE_BEGIN(engineInitBlockName);
 
 #if COMPILE_RENDERDOC_API
 		SetupRenderDocAPI();
@@ -283,13 +283,11 @@ namespace flex
 			m_TestSprings[i].UAF = 15.0f;
 		}
 
-		PROFILE_END(profileBlockStr);
-		Profiler::PrintBlockDuration(profileBlockStr);
+		PROFILE_END(engineInitBlockName);
 
-		ms blockDuration = Profiler::GetBlockDuration(profileBlockStr);
+		ms blockDuration = Profiler::GetBlockDuration(engineInitBlockName);
 		std::string bootupTimesEntry = GetDateString_YMDHMS() + "," + FloatToString(blockDuration, 2);
 		AppendToBootupTimesFile(bootupTimesEntry);
-
 
 		ImGuiIO& io = ImGui::GetIO();
 		m_ImGuiIniFilepathStr = ROOT_LOCATION "config/imgui.ini";
@@ -310,8 +308,8 @@ namespace flex
 		m_ConsoleCommands.emplace_back("reload.shaders", []() { g_Renderer->ReloadShaders(); });
 		m_ConsoleCommands.emplace_back("reload.fontsdfs", []() { g_Renderer->LoadFonts(true); });
 		m_ConsoleCommands.emplace_back("reload.skybox", []() { g_Renderer->ReloadSkybox(true); });
-		//m_ConsoleCommands.emplace_back("select.all", []() { g_Editor->SelectAll(); });
-		//m_ConsoleCommands.emplace_back("select.none", []() { g_Editor->SelectNone(); });
+		m_ConsoleCommands.emplace_back("select.all", []() { g_Editor->SelectAll(); });
+		m_ConsoleCommands.emplace_back("select.none", []() { g_Editor->SelectNone(); });
 	}
 
 	AudioSourceID FlexEngine::GetAudioSourceID(SoundEffect effect)
