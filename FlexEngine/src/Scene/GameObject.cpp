@@ -3767,8 +3767,8 @@ namespace flex
 
 		ImGui::Begin("Terminal");
 		{
-			ImGui::DragFloat("Line height", &m_LineHeight, 0.01f);
-			ImGui::DragFloat("Scale", &m_LetterScale, 0.01f);
+			//ImGui::DragFloat("Line height", &m_LineHeight, 0.01f);
+			//ImGui::DragFloat("Scale", &m_LetterScale, 0.01f);
 
 			ImGui::Text("Variables");
 			if (ImGui::BeginChild("Variables", ImVec2(0.0f, 220.0f), true))
@@ -3778,28 +3778,29 @@ namespace flex
 					const TokenContext::InstantiatedIdentifier& var = tokenizer->context->instantiatedIdentifiers[i];
 					std::string valStr = var.value->ToString();
 					const char* typeNameCStr = g_TypeNameStrings[(i32)ValueTypeToTypeName(var.value->type)];
-					ImGui::Text("%s %s = %s", typeNameCStr, var.name.c_str(), valStr.c_str());
+					ImGui::Text("%s = %s", var.name.c_str(), valStr.c_str());
+					ImGui::SameLine();
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
+					ImGui::Text("(%s)", typeNameCStr);
+					ImGui::PopStyleColor();
 				}
 			}
 			ImGui::EndChild();
 
-			ImGui::Text("Errors: %d", tokenizer->context->errors.size());
+			if (tokenizer->context->errors.empty())
 			{
-				if (tokenizer->context->errors.empty())
+				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 1.0f, 0.5f, 1.0f));
+				ImGui::Text("Success");
+				ImGui::PopStyleColor();
+			}
+			else
+			{
+				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.5f, 0.5f, 1.0f));
+				for (const Error& e : tokenizer->context->errors)
 				{
-					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 1.0f, 0.5f, 1.0f));
-					ImGui::Text("Success");
-					ImGui::PopStyleColor();
+					ImGui::Text("L%d: %s", e.lineNumber + 1, e.str.c_str());
 				}
-				else
-				{
-					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.5f, 0.5f, 1.0f));
-					for (const Error& e : tokenizer->context->errors)
-					{
-						ImGui::Text("%2d, %s", e.lineNumber, e.str.c_str());
-					}
-					ImGui::PopStyleColor();
-				}
+				ImGui::PopStyleColor();
 			}
 		}
 		ImGui::End();

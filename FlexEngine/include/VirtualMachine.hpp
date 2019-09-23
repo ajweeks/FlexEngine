@@ -58,7 +58,7 @@ namespace flex
 			str(str)
 		{}
 
-		i32 lineNumber;
+		i32 lineNumber; // zero based
 		std::string str;
 	};
 
@@ -154,7 +154,7 @@ namespace flex
 	{
 		std::string ToString() const;
 
-		i32 lineNum;
+		i32 lineNum; // zero based
 		i32 linePos;
 		i32 tokenID;
 		TokenType type;
