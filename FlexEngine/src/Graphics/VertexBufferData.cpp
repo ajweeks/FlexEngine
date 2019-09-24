@@ -139,7 +139,6 @@ namespace flex
 				if (Attributes & (u32)VertexAttribute::POSITION)
 				{
 					memcpy(dst, src, sizeof(glm::vec3));
-					src += 3;
 				}
 				else
 				{
@@ -153,7 +152,6 @@ namespace flex
 				if (Attributes & (u32)VertexAttribute::POSITION_2D)
 				{
 					memcpy(dst, src, sizeof(glm::vec2));
-					src += 2;
 				}
 				else
 				{
@@ -167,7 +165,6 @@ namespace flex
 				if (Attributes & (u32)VertexAttribute::UV)
 				{
 					memcpy(dst, src, sizeof(glm::vec2));
-					src += 2;
 				}
 				else
 				{
@@ -181,7 +178,6 @@ namespace flex
 				if (Attributes & (u32)VertexAttribute::COLOR_R8G8B8A8_UNORM)
 				{
 					memcpy(dst, src, sizeof(i32));
-					src += 1;
 				}
 				else
 				{
@@ -195,7 +191,6 @@ namespace flex
 				if (Attributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)
 				{
 					memcpy(dst, src, sizeof(glm::vec4));
-					src += 4;
 				}
 				else
 				{
@@ -209,7 +204,6 @@ namespace flex
 				if (Attributes & (u32)VertexAttribute::NORMAL)
 				{
 					memcpy(dst, src, sizeof(glm::vec3));
-					src += 3;
 				}
 				else
 				{
@@ -223,7 +217,6 @@ namespace flex
 				if (Attributes & (u32)VertexAttribute::TANGENT)
 				{
 					memcpy(dst, src, sizeof(glm::vec3));
-					src += 3;
 				}
 				else
 				{
@@ -237,7 +230,6 @@ namespace flex
 				if (Attributes & (u32)VertexAttribute::EXTRA_VEC4)
 				{
 					memcpy(dst, src, sizeof(glm::vec4));
-					src += 4;
 				}
 				else
 				{
@@ -251,7 +243,6 @@ namespace flex
 				if (Attributes & (u32)VertexAttribute::EXTRA_INT)
 				{
 					memcpy(dst, src, sizeof(i32));
-					src += 1;
 				}
 				else
 				{
@@ -260,6 +251,8 @@ namespace flex
 				}
 				dst += 1;
 			}
+
+			src += VertexStride / sizeof(real);
 		}
 		u32 bytesCopied = (dst - initialDst) * sizeof(real);
 		return bytesCopied;
