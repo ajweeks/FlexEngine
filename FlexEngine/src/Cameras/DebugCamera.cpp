@@ -123,8 +123,19 @@ namespace flex
 			{
 				orbitingCenter = g_Editor->GetSelectedObjectsCenter();
 				bOrbiting = true;
-				targetDPos += m_Right * m_MouseDragDist.x * m_OrbitingSpeed * turnSpeedMultiplier +
-					m_Up * m_MouseDragDist.y * m_OrbitingSpeed * turnSpeedMultiplier;
+
+				float dr = glm::dot(m_Forward, VEC3_UP);
+				if (abs(dr) > 0.995f && glm::sign(m_MouseDragDist.y) != glm::sign(dr))
+
+				{
+					// Facing nearly entirely up or down, only allow movement around pole (slowed slightly)
+					targetDPos += m_Right * (m_MouseDragDist.x * m_OrbitingSpeed * turnSpeedMultiplier * 0.5f);
+				}
+				else
+				{
+					targetDPos += m_Right * (m_MouseDragDist.x * m_OrbitingSpeed * turnSpeedMultiplier) +
+						m_Up * (m_MouseDragDist.y * m_OrbitingSpeed * turnSpeedMultiplier);
+				}
 			}
 			else
 			{
@@ -139,7 +150,7 @@ namespace flex
 				m_Pitch += m_TurnVel.y;
 				ClampPitch();
 			}
-			}
+		}
 
 		glm::vec3 translation(0.0f);
 		real moveF = g_InputManager->GetActionAxisValue(Action::DBG_CAM_MOVE_FORWARD);
