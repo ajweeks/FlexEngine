@@ -6499,7 +6499,8 @@ namespace flex
 			{
 				if (renderObject &&
 					renderObject->vertexBufferData &&
-					renderObject->gameObject->CastsShadow())
+					renderObject->gameObject->CastsShadow() &&
+					renderObject->gameObject->IsVisible())
 				{
 					renderObject->shadowVertexOffset = vertexCount;
 
