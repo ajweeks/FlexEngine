@@ -1,4 +1,4 @@
-	#include "stdafx.hpp"
+#include "stdafx.hpp"
 
 #include "Graphics/Renderer.hpp"
 
@@ -363,9 +363,9 @@ namespace flex
 	}
 
 	void Renderer::TransformRectToScreenSpace(const glm::vec2& pos,
-											  const glm::vec2& scale,
-											  glm::vec2& posOut,
-											  glm::vec2& scaleOut)
+		const glm::vec2& scale,
+		glm::vec2& posOut,
+		glm::vec2& scaleOut)
 	{
 		const glm::vec2 frameBufferSize = (glm::vec2)g_Window->GetFrameBufferSize();
 		const real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
@@ -391,10 +391,10 @@ namespace flex
 	}
 
 	void Renderer::NormalizeSpritePos(const glm::vec2& pos,
-									  AnchorPoint anchor,
-									  const glm::vec2& scale,
-									  glm::vec2& posOut,
-									  glm::vec2& scaleOut)
+		AnchorPoint anchor,
+		const glm::vec2& scale,
+		glm::vec2& posOut,
+		glm::vec2& scaleOut)
 	{
 		const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 		const real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
@@ -1146,7 +1146,7 @@ namespace flex
 			ImGui::SliderInt("Blur Radius", &m_SSAOBlurDataConstant.radius, 1, 16);
 			ImGui::SliderInt("Blur Offset Count", &m_SSAOBlurSamplePixelOffset, 1, 10);
 			ImGui::SliderFloat("Pow", &m_SSAOSamplingData.ssaoPowExp, 0.1f, 10.0f);
-			
+
 			ImGui::PopItemWidth();
 
 			ImGui::TreePop();
@@ -1493,7 +1493,7 @@ namespace flex
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
 			m_BaseShaders[shaderID].bTranslucent = true;
 			m_BaseShaders[shaderID].bDynamic = true;
-			m_BaseShaders[shaderID].dynamicVertexBufferSize = 16384 *4*28; // TODO: FIXME:
+			m_BaseShaders[shaderID].dynamicVertexBufferSize = 16384 * 4 * 28; // TODO: FIXME:
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
@@ -1888,7 +1888,7 @@ namespace flex
 				assert(!shader.dynamicBufferUniforms.HasUniform(U_UNIFORM_BUFFER_CONSTANT));
 
 				assert((shader.bNeedPushConstantBlock && shader.pushConstantBlockSize != 0) ||
-					  (!shader.bNeedPushConstantBlock && shader.pushConstantBlockSize == 0));
+					(!shader.bNeedPushConstantBlock && shader.pushConstantBlockSize == 0));
 
 
 				if (shader.constantBufferUniforms.HasUniform(U_HIGH_RES_TEX))
@@ -1910,14 +1910,6 @@ namespace flex
 				}
 				PrintError("\n");
 			}
-
-			// TODO: Clear out at some point?
-			//shader.vertexShaderCode.clear();
-			//shader.vertexShaderCode.shrink_to_fit();
-			//shader.fragmentShaderCode.clear();
-			//shader.fragmentShaderCode.shrink_to_fit();
-			//shader.geometryShaderCode.clear();
-			//shader.geometryShaderCode.shrink_to_fit();
 		}
 	}
 
@@ -2681,7 +2673,7 @@ namespace flex
 		taaMatCreateInfo.visibleInEditor = false;
 		taaMatCreateInfo.colorMultiplier = VEC4_ONE;
 		m_TAAResolveMaterialID = InitializeMaterial(&taaMatCreateInfo);
-		
+
 		MaterialCreateInfo gammaCorrectMatCreateInfo = {};
 		gammaCorrectMatCreateInfo.name = "Gamma Correct";
 		gammaCorrectMatCreateInfo.shaderName = "gamma_correct";
@@ -3107,9 +3099,9 @@ namespace flex
 			};
 
 			gBufferQuadVertexBufferDataCreateInfo.texCoords_UV = {
-				glm::vec2(0.0f, bFlipV ? 1.0f  : 0.0f),
+				glm::vec2(0.0f, bFlipV ? 1.0f : 0.0f),
 				glm::vec2(0.0f, bFlipV ? -1.0f : 2.0f),
-				glm::vec2(2.0f, bFlipV ? 1.0f  : 0.0f),
+				glm::vec2(2.0f, bFlipV ? 1.0f : 0.0f),
 			};
 
 			gBufferQuadVertexBufferDataCreateInfo.attributes = (u32)VertexAttribute::POSITION | (u32)VertexAttribute::UV;

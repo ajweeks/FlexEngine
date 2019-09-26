@@ -2072,7 +2072,7 @@ namespace flex
 		if ((rotationSpeed < 0.0f &&
 			rotation <= minRotation) ||
 			(rotationSpeed > 0.0f &&
-			rotation >= maxRotation))
+				rotation >= maxRotation))
 		{
 			rotationSpeed = 0.0f;
 			pRotationSpeed = 0.0f;
@@ -3717,7 +3717,7 @@ namespace flex
 
 			const glm::quat rot = m_Transform.GetWorldRotation();
 			real charHeight = g_Renderer->GetStringHeight("W", font, false) * m_LetterScale;
-			const real lineHeight = charHeight * (m_LineHeight/1000.0f);
+			const real lineHeight = charHeight * (m_LineHeight / 1000.0f);
 			real charWidth = g_Renderer->GetStringWidth("W", font, letterSpacing, false) / 1000.0f;
 			const real lineNoWidth = 24.0f * charWidth * m_LetterScale;
 
@@ -4039,7 +4039,7 @@ namespace flex
 
 		if (bSkipToNextBreak)
 		{
-			if (cursor.x == 0  && cursor.y > 0)
+			if (cursor.x == 0 && cursor.y > 0)
 			{
 				cursor.x = INT_MAX;
 				MoveCursorUp();

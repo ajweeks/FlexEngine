@@ -44,7 +44,7 @@ namespace flex
 		m_PlayerIndex = m_Player->GetIndex();
 
 		assert(m_PlayerIndex == 0 ||
-			   m_PlayerIndex == 1);
+			m_PlayerIndex == 1);
 
 		m_Player->UpdateIsPossessed();
 

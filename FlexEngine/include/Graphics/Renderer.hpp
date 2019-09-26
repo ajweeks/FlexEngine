@@ -128,7 +128,7 @@ namespace flex
 		virtual void SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID) = 0;
 
 		virtual Material& GetMaterial(MaterialID matID) = 0;
-		virtual Shader& GetShader(ShaderID shaderID)  = 0;
+		virtual Shader& GetShader(ShaderID shaderID) = 0;
 
 		virtual bool GetMaterialID(const std::string& materialName, MaterialID& materialID) = 0;
 		virtual MaterialID GetMaterialID(RenderID renderID) = 0;
@@ -184,15 +184,15 @@ namespace flex
 		// Output pos lies in range [0, 1], with y increasing downward,
 		// Output scale lies in range [0, 1] - both outputs corrected for aspect ratio
 		void TransformRectToScreenSpace(const glm::vec2& pos,
-								const glm::vec2& scale,
-								glm::vec2& posOut,
-								glm::vec2& scaleOut);
+			const glm::vec2& scale,
+			glm::vec2& posOut,
+			glm::vec2& scaleOut);
 
 		void NormalizeSpritePos(const glm::vec2& pos,
-										  AnchorPoint anchor,
-										  const glm::vec2& scale,
-										  glm::vec2& posOut,
-										  glm::vec2& scaleOut);
+			AnchorPoint anchor,
+			const glm::vec2& scale,
+			glm::vec2& posOut,
+			glm::vec2& scaleOut);
 
 		void EnqueueUntexturedQuad(const glm::vec2& pos, AnchorPoint anchor, const glm::vec2& size, const glm::vec4& color);
 		void EnqueueUntexturedQuadRaw(const glm::vec2& pos, const glm::vec2& size, const glm::vec4& color);

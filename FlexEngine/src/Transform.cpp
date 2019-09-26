@@ -95,11 +95,11 @@ namespace flex
 		up(VEC3_UP),
 		right(VEC3_RIGHT),
 		localTransform(glm::translate(MAT4_IDENTITY, other.localPosition) *
-						  glm::mat4((glm::quat)other.localRotation) *
-						  glm::scale(MAT4_IDENTITY, other.localScale)),
+			glm::mat4((glm::quat)other.localRotation) *
+			glm::scale(MAT4_IDENTITY, other.localScale)),
 		worldTransform(glm::translate(MAT4_IDENTITY, other.worldPosition) *
-					      glm::mat4((glm::quat)other.worldRotation) *
-					      glm::scale(MAT4_IDENTITY, other.worldScale))
+			glm::mat4((glm::quat)other.worldRotation) *
+			glm::scale(MAT4_IDENTITY, other.worldScale))
 	{
 	}
 
@@ -115,11 +115,11 @@ namespace flex
 		right(VEC3_RIGHT)
 	{
 		localTransform = (glm::translate(MAT4_IDENTITY, localPosition) *
-						  glm::mat4(localRotation) *
-						  glm::scale(MAT4_IDENTITY, localScale));
+			glm::mat4(localRotation) *
+			glm::scale(MAT4_IDENTITY, localScale));
 		worldTransform = (glm::translate(MAT4_IDENTITY, worldPosition) *
-					      glm::mat4(worldRotation) *
-					      glm::scale(MAT4_IDENTITY, worldScale));
+			glm::mat4(worldRotation) *
+			glm::scale(MAT4_IDENTITY, worldScale));
 	}
 
 	Transform& Transform::operator=(const Transform& other)
@@ -131,11 +131,11 @@ namespace flex
 		worldRotation = other.worldRotation;
 		worldScale = other.worldScale;
 		localTransform = glm::mat4(glm::translate(MAT4_IDENTITY, localPosition) *
-								   glm::mat4(localRotation) *
-								   glm::scale(MAT4_IDENTITY, localScale));
+			glm::mat4(localRotation) *
+			glm::scale(MAT4_IDENTITY, localScale));
 		worldTransform = glm::mat4(glm::translate(MAT4_IDENTITY, worldPosition) *
-								   glm::mat4(worldRotation) *
-								   glm::scale(MAT4_IDENTITY, worldScale));
+			glm::mat4(worldRotation) *
+			glm::scale(MAT4_IDENTITY, worldScale));
 		forward = other.forward;
 		up = other.up;
 		right = other.right;
@@ -153,11 +153,11 @@ namespace flex
 			worldRotation = std::move(other.worldRotation);
 			worldScale = std::move(other.worldScale);
 			localTransform = glm::mat4(glm::translate(MAT4_IDENTITY, localPosition) *
-									   glm::mat4(localRotation) *
-									   glm::scale(MAT4_IDENTITY, localScale));
+				glm::mat4(localRotation) *
+				glm::scale(MAT4_IDENTITY, localScale));
 			worldTransform = glm::mat4(glm::translate(MAT4_IDENTITY, worldPosition) *
-									   glm::mat4(worldRotation) *
-									   glm::scale(MAT4_IDENTITY, worldScale));
+				glm::mat4(worldRotation) *
+				glm::scale(MAT4_IDENTITY, worldScale));
 			forward = other.forward;
 			up = other.up;
 			right = other.right;
@@ -342,8 +342,8 @@ namespace flex
 	bool Transform::IsIdentity() const
 	{
 		bool identity = (localPosition == m_Identity.localPosition &&
-						localRotation == m_Identity.localRotation &&
-						localScale == m_Identity.localScale);
+			localRotation == m_Identity.localRotation &&
+			localScale == m_Identity.localScale);
 		return identity;
 	}
 
@@ -380,8 +380,8 @@ namespace flex
 	{
 		// TODO: Move this
 		localTransform = (glm::translate(MAT4_IDENTITY, localPosition) *
-						  glm::mat4(localRotation) *
-						  glm::scale(MAT4_IDENTITY, localScale));
+			glm::mat4(localRotation) *
+			glm::scale(MAT4_IDENTITY, localScale));
 
 		GameObject* parent = m_GameObject->GetParent();
 

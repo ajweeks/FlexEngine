@@ -394,7 +394,7 @@ namespace flex
 
 		Print("Available OpenAL devices:\n");
 		while (device && *device != '\0' &&
-			   next && *next != '\0')
+			next && *next != '\0')
 		{
 			Print("\t\t%s\n", device);
 			size_t len = strlen(device);

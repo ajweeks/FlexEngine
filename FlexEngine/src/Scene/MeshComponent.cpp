@@ -1429,7 +1429,7 @@ namespace flex
 		if (!(m_VertexBufferData.Attributes & (i32)VertexAttribute::POSITION))
 		{
 			PrintError("Attempted to get bounding sphere radius of mesh component which contains no 3D vertices!"
-					   "Radius will always be 0\n");
+				"Radius will always be 0\n");
 		}
 		real sphereScale = CalculateBoundingSphereScale();
 		return m_BoundingSphereRadius * sphereScale;
@@ -1440,7 +1440,7 @@ namespace flex
 		if (!(m_VertexBufferData.Attributes & (i32)VertexAttribute::POSITION))
 		{
 			PrintError("Attempted to get bounding sphere center point of mesh component which contains no 3D vertices!"
-					   "Center point will always be 0\n");
+				"Center point will always be 0\n");
 		}
 
 		Transform* transform = m_OwningGameObject->GetTransform();

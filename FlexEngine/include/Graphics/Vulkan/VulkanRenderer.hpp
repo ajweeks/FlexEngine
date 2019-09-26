@@ -121,7 +121,7 @@ namespace flex
 			static void SetImageViewName(VulkanDevice* device, VkImageView imageView, const char* name);
 			static void SetSamplerName(VulkanDevice* device, VkSampler sampler, const char* name);
 			static void SetBufferName(VulkanDevice* device, VkBuffer buffer, const char* name);
-			
+
 			static void BeginDebugMarkerRegion(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color = VEC4_ONE);
 			static void EndDebugMarkerRegion(VkCommandBuffer cmdBuf);
 
@@ -227,7 +227,7 @@ namespace flex
 			// Returns a pointer into m_LoadedTextures if a texture has been loaded from that file path, otherwise returns nullptr
 			VulkanTexture* GetLoadedTexture(const std::string& filePath);
 			bool RemoveLoadedTexture(VulkanTexture* texture, bool bDestroy);
-			
+
 			void CreateStaticVertexBuffers();
 			void CreateDynamicVertexBuffers();
 

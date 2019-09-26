@@ -78,7 +78,7 @@ namespace flex
 		Print("pressed:  ");
 		for (u32 i = 0; i < MOUSE_BUTTON_COUNT; ++i)
 		{
-			Print("%d, ",  (m_MouseButtonsPressed & (1 << i)) != 0 ? 1 : 0);
+			Print("%d, ", (m_MouseButtonsPressed & (1 << i)) != 0 ? 1 : 0);
 		}
 		Print("\n");
 
@@ -97,7 +97,7 @@ namespace flex
 		// Mouse buttons
 		for (u32 i = 0; i < MOUSE_BUTTON_COUNT; ++i)
 		{
-			m_MouseButtonsPressed  &= ~(1 << i);
+			m_MouseButtonsPressed &= ~(1 << i);
 			m_MouseButtonsReleased &= ~(1 << i);
 			if (m_MouseButtonStates & (1 << i))
 			{
@@ -140,8 +140,8 @@ namespace flex
 
 					real stickRotationSpeed = (currentAngle - previousAngle) / g_DeltaTime;
 					stickRotationSpeed = glm::clamp(stickRotationSpeed,
-													-MAX_JOYSTICK_ROTATION_SPEED,
-													MAX_JOYSTICK_ROTATION_SPEED);
+						-MAX_JOYSTICK_ROTATION_SPEED,
+						MAX_JOYSTICK_ROTATION_SPEED);
 
 					gamepadState.averageRotationSpeeds.AddValue(stickRotationSpeed);
 				}
@@ -687,9 +687,9 @@ namespace flex
 		}
 		else if (action == KeyAction::RELEASE)
 		{
-			m_MouseButtonStates    &= ~(1 << (u32)mouseButton);
-			m_MouseButtonsPressed  &= ~(1 << (u32)mouseButton);
-			m_MouseButtonsReleased |=  (1 << (u32)mouseButton);
+			m_MouseButtonStates &= ~(1 << (u32)mouseButton);
+			m_MouseButtonsPressed &= ~(1 << (u32)mouseButton);
+			m_MouseButtonsReleased |= (1 << (u32)mouseButton);
 
 
 			if (m_MousePosition.x == -1.0f)
@@ -723,7 +723,7 @@ namespace flex
 			}
 
 			bool bEventsInQueue = (actionIter != m_ActionCallbacks.end()) ||
-								  (mouseButtonIter != m_MouseButtonCallbacks.end());
+				(mouseButtonIter != m_MouseButtonCallbacks.end());
 			while (bEventsInQueue)
 			{
 				if (actionIter == m_ActionCallbacks.end())
@@ -763,7 +763,7 @@ namespace flex
 				}
 
 				bEventsInQueue = (actionIter != m_ActionCallbacks.end()) ||
-								 (mouseButtonIter != m_MouseButtonCallbacks.end());
+					(mouseButtonIter != m_MouseButtonCallbacks.end());
 			}
 		}
 	}
@@ -822,7 +822,7 @@ namespace flex
 			}
 
 			bool bEventsInQueue = (actionIter != m_ActionCallbacks.end()) ||
-								  (keyEventIter != m_KeyEventCallbacks.end());
+				(keyEventIter != m_KeyEventCallbacks.end());
 			while (bEventsInQueue)
 			{
 				if (actionIter == m_ActionCallbacks.end())
@@ -862,7 +862,7 @@ namespace flex
 				}
 
 				bEventsInQueue = (actionIter != m_ActionCallbacks.end()) ||
-								 (keyEventIter != m_KeyEventCallbacks.end());
+					(keyEventIter != m_KeyEventCallbacks.end());
 			}
 		}
 	}
@@ -1001,7 +1001,7 @@ namespace flex
 		glm::vec2 halfSizePixels = sizePixels / 2.0f;
 
 		bool bHoveringInArea = (m_MousePosition.x >= posPixels.x - halfSizePixels.x && m_MousePosition.x < posPixels.x + halfSizePixels.x &&
-								m_MousePosition.y >= posPixels.y - halfSizePixels.y && m_MousePosition.y < posPixels.y + halfSizePixels.y);
+			m_MousePosition.y >= posPixels.y - halfSizePixels.y && m_MousePosition.y < posPixels.y + halfSizePixels.y);
 		return bHoveringInArea;
 	}
 

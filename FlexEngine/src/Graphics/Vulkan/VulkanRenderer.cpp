@@ -1028,7 +1028,7 @@ namespace flex
 				mat.prefilterTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "Prefiltered map",
 					(u32)createInfo->generatedPrefilteredCubemapSize.x,
 					(u32)createInfo->generatedPrefilteredCubemapSize.y, 4);
-				mat.prefilterTexture->CreateCubemapEmpty(VK_FORMAT_R16G16B16A16_SFLOAT,  mipLevels, true);
+				mat.prefilterTexture->CreateCubemapEmpty(VK_FORMAT_R16G16B16A16_SFLOAT, mipLevels, true);
 				m_LoadedTextures.push_back(mat.prefilterTexture);
 			}
 
@@ -3761,7 +3761,7 @@ namespace flex
 					std::max(std::max(maxPos[0].y, maxPos[1].y), std::max(maxPos[2].y, maxPos[3].y)));
 
 				VulkanTexture* fontTexColAttachment = newFont->SetTexture(new VulkanTexture(m_VulkanDevice, m_GraphicsQueue,
-					textureName,textureSize.x, textureSize.y, 4));
+					textureName, textureSize.x, textureSize.y, 4));
 				fontTexColAttachment->name = textureName;
 				fontTexColAttachment->CreateEmpty(fontTexFormat, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
 				fontTexColAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
@@ -4612,7 +4612,7 @@ namespace flex
 			case RenderPassType::UI: return m_UIRenderPass;
 			case RenderPassType::GAMMA_CORRECT: return m_GammaCorrectRenderPass;
 			default:
-				PrintError("Shader's render pass type was not set!\n %s", shaderName ? shaderName: "");
+				PrintError("Shader's render pass type was not set!\n %s", shaderName ? shaderName : "");
 				ENSURE_NO_ENTRY();
 			}
 			return VK_NULL_HANDLE;
@@ -5851,7 +5851,7 @@ namespace flex
 					m_SwapChainDepthAttachment->view
 				};
 
-				VkFramebufferCreateInfo framebufferInfo =  vks::framebufferCreateInfo(m_GammaCorrectRenderPass);
+				VkFramebufferCreateInfo framebufferInfo = vks::framebufferCreateInfo(m_GammaCorrectRenderPass);
 				framebufferInfo.attachmentCount = attachments.size();
 				framebufferInfo.pAttachments = attachments.data();
 				framebufferInfo.width = m_SwapChainExtent.width;
@@ -6624,7 +6624,7 @@ namespace flex
 			VK_CHECK_RESULT(CreateAndAllocateBuffer(m_VulkanDevice, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer));
 
-			CopyBuffer(m_VulkanDevice,m_GraphicsQueue, stagingBuffer.m_Buffer, indexBuffer->m_Buffer, bufferSize);
+			CopyBuffer(m_VulkanDevice, m_GraphicsQueue, stagingBuffer.m_Buffer, indexBuffer->m_Buffer, bufferSize);
 		}
 
 		void VulkanRenderer::CreateDescriptorPool()

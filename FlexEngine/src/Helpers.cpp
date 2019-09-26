@@ -33,7 +33,7 @@ namespace flex
 	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount, bool flipVertically, u32* channelCountOut /* = nullptr */)
 	{
 		assert(requestedChannelCount == 3 ||
-			   requestedChannelCount == 4);
+			requestedChannelCount == 4);
 
 		GLFWimage result = {};
 
@@ -47,10 +47,10 @@ namespace flex
 
 		i32 channelCount;
 		unsigned char* data = stbi_load(filePath.c_str(),
-										&result.width,
-										&result.height,
-										&channelCount,
-										(requestedChannelCount == 4  ? STBI_rgb_alpha : STBI_rgb));
+			&result.width,
+			&result.height,
+			&channelCount,
+			(requestedChannelCount == 4 ? STBI_rgb_alpha : STBI_rgb));
 
 		if (channelCountOut)
 		{
@@ -83,7 +83,7 @@ namespace flex
 	bool HDRImage::Load(const std::string& hdrFilePath, i32 requestedChannelCount, bool flipVertically)
 	{
 		assert(requestedChannelCount == 3 ||
-			   requestedChannelCount == 4);
+			requestedChannelCount == 4);
 
 		filePath = hdrFilePath;
 
@@ -97,10 +97,10 @@ namespace flex
 
 		i32 tempW, tempH, tempC;
 		pixels = stbi_loadf(filePath.c_str(),
-							&tempW,
-							&tempH,
-							&tempC,
-							(requestedChannelCount == 4 ? STBI_rgb_alpha : STBI_rgb));
+			&tempW,
+			&tempH,
+			&tempC,
+			(requestedChannelCount == 4 ? STBI_rgb_alpha : STBI_rgb));
 
 		width = (u32)tempW;
 		height = (u32)tempH;
@@ -278,7 +278,7 @@ namespace flex
 
 	bool WriteFile(const std::string& filePath, const std::vector<char>& vec, bool bBinaryFile)
 	{
-		i32 fileMode =std::ios::out | std::ios::trunc;
+		i32 fileMode = std::ios::out | std::ios::trunc;
 		if (bBinaryFile)
 		{
 			fileMode |= std::ios::binary;
@@ -336,7 +336,7 @@ namespace flex
 		DWORD dwAttrib = GetFileAttributes(absoluteDirectoryPath.c_str());
 
 		return (dwAttrib != INVALID_FILE_ATTRIBUTES &&
-			    dwAttrib & FILE_ATTRIBUTE_DIRECTORY);
+			dwAttrib & FILE_ATTRIBUTE_DIRECTORY);
 	}
 
 	void OpenExplorer(const std::string& absoluteDirectory)
@@ -609,16 +609,16 @@ namespace flex
 		{
 			const std::string fileName = StripLeadingDirectories(filePath);
 			Print("Stats about WAV file: %s:\n\tchannel count: %u, samples/s: %u, average bytes/s: %u"
-				  ", block align: %u, bits/sample: %u, chunk size: %u, sub chunk2 ID: \"%s\", sub chunk 2 size: %u\n",
-				  fileName.c_str(),
-				  channelCount,
-				  samplesPerSec,
-				  avgBytesPerSec,
-				  blockAlign,
-				  bitsPerSample,
-				  chunkSize,
-				  subChunk2ID.c_str(),
-				  subChunk2Size);
+				", block align: %u, bits/sample: %u, chunk size: %u, sub chunk2 ID: \"%s\", sub chunk 2 size: %u\n",
+				fileName.c_str(),
+				channelCount,
+				samplesPerSec,
+				avgBytesPerSec,
+				blockAlign,
+				bitsPerSample,
+				chunkSize,
+				subChunk2ID.c_str(),
+				subChunk2Size);
 		}
 
 		switch (channelCount)
@@ -978,25 +978,25 @@ namespace flex
 	bool IsNanOrInf(const glm::vec2& vec)
 	{
 		return (isnan(vec.x) || isnan(vec.y) ||
-				isinf(vec.x) || isinf(vec.y));
+			isinf(vec.x) || isinf(vec.y));
 	}
 
 	bool IsNanOrInf(const glm::vec3& vec)
 	{
 		return (isnan(vec.x) || isnan(vec.y) || isnan(vec.z) ||
-				isinf(vec.x) || isinf(vec.y) || isinf(vec.z));
+			isinf(vec.x) || isinf(vec.y) || isinf(vec.z));
 	}
 
 	bool IsNanOrInf(const glm::vec4& vec)
 	{
 		return (isnan(vec.x) || isnan(vec.y) || isnan(vec.z) || isnan(vec.w) ||
-				isinf(vec.x) || isinf(vec.y) || isinf(vec.z) || isinf(vec.w));
+			isinf(vec.x) || isinf(vec.y) || isinf(vec.z) || isinf(vec.w));
 	}
 
 	bool IsNanOrInf(const glm::quat& quat)
 	{
 		return (isnan(quat.x) || isnan(quat.y) || isnan(quat.z) || isnan(quat.w) ||
-				isinf(quat.x) || isinf(quat.y) || isinf(quat.z) || isinf(quat.w));
+			isinf(quat.x) || isinf(quat.y) || isinf(quat.z) || isinf(quat.w));
 	}
 
 	real RoundToNearestPowerOfTwo(real num)
@@ -1183,7 +1183,7 @@ namespace flex
 		glm::vec3 rot = glm::eulerAngles(transform->GetWorldRotation());
 		glm::vec3 scale = transform->GetWorldScale();
 		ImGui::LogText("%.2ff,%.2ff,%.2ff,%.2ff,%.2ff,%.2ff,%.2ff,%.2ff,%.2ff",
-					   pos.x, pos.y, pos.z, rot.x, rot.y, rot.z, scale.x, scale.y, scale.z);
+			pos.x, pos.y, pos.z, rot.x, rot.y, rot.z, scale.x, scale.y, scale.z);
 
 		ImGui::LogFinish();
 	}
@@ -1239,7 +1239,7 @@ namespace flex
 			stof(clipboardContents.substr(0, comma1)),
 			stof(clipboardContents.substr(comma1 + 1, comma2 - comma1 - 1)),
 			stof(clipboardContents.substr(comma2 + 1, comma3 - comma2 - 1)),
-			stof(clipboardContents.substr(comma3 + 1 ))
+			stof(clipboardContents.substr(comma3 + 1))
 		);
 
 		return result;

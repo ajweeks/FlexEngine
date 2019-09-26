@@ -166,8 +166,8 @@ namespace flex
 
 	enum class ClearFlag
 	{
-		COLOR =   (1 << 0),
-		DEPTH =   (1 << 1),
+		COLOR = (1 << 0),
+		DEPTH = (1 << 1),
 		STENCIL = (1 << 2),
 
 		_NONE
@@ -568,9 +568,9 @@ namespace flex
 	struct Shader
 	{
 		Shader(const std::string& name,
-			   const std::string& inVertexShaderFilePath,
-			   const std::string& inFragmentShaderFilePath = "",
-			   const std::string& inGeometryShaderFilePath = "");
+			const std::string& inVertexShaderFilePath,
+			const std::string& inFragmentShaderFilePath = "",
+			const std::string& inGeometryShaderFilePath = "");
 
 		std::string name = "";
 

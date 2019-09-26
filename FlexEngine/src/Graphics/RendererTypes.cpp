@@ -23,43 +23,43 @@ namespace flex
 		{
 #define _u(uniform) if (HasUniform(U_##uniform)) size += US_##uniform;
 			_u(MODEL)
-			_u(VIEW)
-			_u(VIEW_INV)
-			_u(VIEW_PROJECTION)
-			_u(PROJECTION)
-			_u(PROJECTION_INV)
-			_u(BLEND_SHARPNESS)
-			_u(COLOR_MULTIPLIER)
-			_u(CAM_POS)
-			_u(DIR_LIGHT)
-			_u(POINT_LIGHTS)
-			_u(CONST_ALBEDO)
-			_u(CONST_METALLIC)
-			_u(CONST_ROUGHNESS)
-			_u(ENABLE_ALBEDO_SAMPLER)
-			_u(ENABLE_METALLIC_SAMPLER)
-			_u(ENABLE_ROUGHNESS_SAMPLER)
-			_u(ENABLE_NORMAL_SAMPLER)
-			_u(ENABLE_IRRADIANCE_SAMPLER)
-			_u(SHOW_EDGES)
-			_u(LIGHT_VIEW_PROJS)
-			_u(EXPOSURE)
-			_u(TEX_SIZE)
-			_u(TEXTURE_SCALE)
-			_u(TIME)
-			_u(SDF_DATA)
-			_u(TEX_CHANNEL)
-			_u(FONT_CHAR_DATA)
-			_u(SSAO_GEN_DATA)
-			_u(SSAO_BLUR_DATA_DYNAMIC)
-			_u(SSAO_BLUR_DATA_CONSTANT)
-			_u(SSAO_SAMPLING_DATA)
-			_u(FXAA_DATA)
-			_u(SHADOW_SAMPLING_DATA)
-			_u(NEAR_FAR_PLANES)
-			_u(POST_PROCESS_MAT)
-			_u(LAST_FRAME_VIEWPROJ)
-			_u(SH_COEFFS)
+				_u(VIEW)
+				_u(VIEW_INV)
+				_u(VIEW_PROJECTION)
+				_u(PROJECTION)
+				_u(PROJECTION_INV)
+				_u(BLEND_SHARPNESS)
+				_u(COLOR_MULTIPLIER)
+				_u(CAM_POS)
+				_u(DIR_LIGHT)
+				_u(POINT_LIGHTS)
+				_u(CONST_ALBEDO)
+				_u(CONST_METALLIC)
+				_u(CONST_ROUGHNESS)
+				_u(ENABLE_ALBEDO_SAMPLER)
+				_u(ENABLE_METALLIC_SAMPLER)
+				_u(ENABLE_ROUGHNESS_SAMPLER)
+				_u(ENABLE_NORMAL_SAMPLER)
+				_u(ENABLE_IRRADIANCE_SAMPLER)
+				_u(SHOW_EDGES)
+				_u(LIGHT_VIEW_PROJS)
+				_u(EXPOSURE)
+				_u(TEX_SIZE)
+				_u(TEXTURE_SCALE)
+				_u(TIME)
+				_u(SDF_DATA)
+				_u(TEX_CHANNEL)
+				_u(FONT_CHAR_DATA)
+				_u(SSAO_GEN_DATA)
+				_u(SSAO_BLUR_DATA_DYNAMIC)
+				_u(SSAO_BLUR_DATA_CONSTANT)
+				_u(SSAO_SAMPLING_DATA)
+				_u(FXAA_DATA)
+				_u(SHADOW_SAMPLING_DATA)
+				_u(NEAR_FAR_PLANES)
+				_u(POST_PROCESS_MAT)
+				_u(LAST_FRAME_VIEWPROJ)
+				_u(SH_COEFFS)
 #undef _u
 		}
 
@@ -67,9 +67,9 @@ namespace flex
 	}
 
 	Shader::Shader(const std::string& name,
-				   const std::string& inVertexShaderFilePath,
-				   const std::string& inFragmentShaderFilePath /* = "" */,
-				   const std::string& inGeometryShaderFilePath /* = "" */) :
+		const std::string& inVertexShaderFilePath,
+		const std::string& inFragmentShaderFilePath /* = "" */,
+		const std::string& inGeometryShaderFilePath /* = "" */) :
 		name(name)
 	{
 #if COMPILE_OPEN_GL
