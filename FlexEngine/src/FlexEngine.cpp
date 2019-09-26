@@ -1064,44 +1064,58 @@ namespace flex
 	{
 		const i32 cmdHistCount = (i32)m_PreviousCmdLineEntries.size();
 
-		if (data->EventKey == ImGuiKey_UpArrow)
+		if (data->EventFlag == ImGuiInputTextFlags_CallbackHistory)
 		{
-			if (cmdHistCount == 0)
+			if (data->EventKey == ImGuiKey_UpArrow)
 			{
-				return -1;
-			}
+				if (cmdHistCount == 0)
+				{
+					return -1;
+				}
 
-			if (m_PreviousCmdLineIndex == cmdHistCount - 1)
-			{
-				return 0;
-			}
+				if (m_PreviousCmdLineIndex == cmdHistCount - 1)
+				{
+					return 0;
+				}
 
-			data->DeleteChars(0, data->BufTextLen);
-			++m_PreviousCmdLineIndex;
-			data->InsertChars(0, m_PreviousCmdLineEntries[cmdHistCount - m_PreviousCmdLineIndex - 1].data());
-		}
-		else if (data->EventKey == ImGuiKey_DownArrow)
-		{
-			if (cmdHistCount == 0)
-			{
-				return -1;
-			}
-
-			if (m_PreviousCmdLineIndex == -1)
-			{
-				return 0;
-			}
-
-			data->DeleteChars(0, data->BufTextLen);
-			--m_PreviousCmdLineIndex;
-			if (m_PreviousCmdLineIndex != -1) // -1 leaves console cleared
-			{
+				data->DeleteChars(0, data->BufTextLen);
+				++m_PreviousCmdLineIndex;
 				data->InsertChars(0, m_PreviousCmdLineEntries[cmdHistCount - m_PreviousCmdLineIndex - 1].data());
 			}
+			else if (data->EventKey == ImGuiKey_DownArrow)
+			{
+				if (cmdHistCount == 0)
+				{
+					return -1;
+				}
+
+				if (m_PreviousCmdLineIndex == -1)
+				{
+					return 0;
+				}
+
+				data->DeleteChars(0, data->BufTextLen);
+				--m_PreviousCmdLineIndex;
+				if (m_PreviousCmdLineIndex != -1) // -1 leaves console cleared
+				{
+					data->InsertChars(0, m_PreviousCmdLineEntries[cmdHistCount - m_PreviousCmdLineIndex - 1].data());
+				}
+			}
 		}
-		else if (data->EventKey == ImGuiKey_Tab)
+		else if (data->EventFlag == ImGuiInputTextFlags_CallbackCompletion)
 		{
-			// TODO:
+			if (data->BufTextLen > 0)
+			{
+				for (const ConsoleCommand& cmd : m_ConsoleCommands)
+				{
+					if (StartsWith(cmd.name, data->Buf))
+					{
+						data->DeleteChars(0, data->BufTextLen);
+						data->InsertChars(0, cmd.name.data());
+						break;
+					}
+				}
+			}
 		}
 
 		if (data->EventFlag == ImGuiInputTextFlags_CallbackCharFilter)
