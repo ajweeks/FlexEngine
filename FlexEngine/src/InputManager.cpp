@@ -169,15 +169,9 @@ namespace flex
 
 	void InputManager::PostUpdate()
 	{
-		//glm::vec2i dPos = (m_MousePosition - m_PrevMousePosition);
-		//Print("%i, %i\n", dPos.x, dPos.y);
-		//i32 threshold = 300;
-		//m_bMouseWrapped = abs(dPos.x) > threshold ||
-		//	abs(dPos.y) > threshold;
-
-		for (auto iter : m_Keys)
+		for (auto& keyPair : m_Keys)
 		{
-			iter.second.pDown = iter.second.down;
+			keyPair.second.pDown = keyPair.second.down;
 		}
 
 		m_bMouseWrapped = false;
