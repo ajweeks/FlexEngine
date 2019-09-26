@@ -159,7 +159,7 @@ namespace flex
 		}
 	}
 
-	void MeshComponent::UpdateProceduralData(VertexBufferData::CreateInfo const* newData)
+	void MeshComponent::UpdateProceduralData(VertexBufferDataCreateInfo const* newData)
 	{
 		m_VertexBufferData.UpdateData(newData);
 		g_Renderer->UpdateVertexData(m_OwningGameObject->GetRenderID(), &m_VertexBufferData);
@@ -238,7 +238,7 @@ namespace flex
 			return false;
 		}
 
-		VertexBufferData::CreateInfo vertexBufferDataCreateInfo = {};
+		VertexBufferDataCreateInfo vertexBufferDataCreateInfo = {};
 
 		//size_t totalVertCount = 0;
 		m_MinPoint = glm::vec3(FLT_MAX);
@@ -558,7 +558,7 @@ namespace flex
 
 		TopologyMode topologyMode = TopologyMode::TRIANGLE_LIST;
 
-		VertexBufferData::CreateInfo vertexBufferDataCreateInfo = {};
+		VertexBufferDataCreateInfo vertexBufferDataCreateInfo = {};
 
 		switch (shape)
 		{
@@ -1466,7 +1466,7 @@ namespace flex
 		return sphereScale;
 	}
 
-	bool MeshComponent::CalculateTangents(VertexBufferData::CreateInfo& createInfo)
+	bool MeshComponent::CalculateTangents(VertexBufferDataCreateInfo& createInfo)
 	{
 		if (createInfo.normals.empty())
 		{

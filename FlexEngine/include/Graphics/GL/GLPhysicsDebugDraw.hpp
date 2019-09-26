@@ -53,7 +53,7 @@ namespace flex
 
 			// Per-frame data
 			VertexBufferData m_VertexBufferData;
-			VertexBufferData::CreateInfo m_VertexBufferCreateInfo;
+			VertexBufferDataCreateInfo m_VertexBufferCreateInfo;
 		};
 	} // namespace gl
 } // namespace flex

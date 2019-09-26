@@ -8,7 +8,7 @@
 
 namespace flex
 {
-	void VertexBufferData::Initialize(CreateInfo* createInfo)
+	void VertexBufferData::Initialize(VertexBufferDataCreateInfo* createInfo)
 	{
 		VertexCount = createInfo->positions_3D.size();
 		if (VertexCount == 0)
@@ -46,7 +46,7 @@ namespace flex
 		}
 	}
 
-	void VertexBufferData::UpdateData(CreateInfo const* createInfo)
+	void VertexBufferData::UpdateData(VertexBufferDataCreateInfo const* createInfo)
 	{
 		assert(vertexData != nullptr);
 		assert(VertexCount > 0);

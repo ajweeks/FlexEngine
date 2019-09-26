@@ -46,7 +46,7 @@ namespace flex
 
 		void Update();
 
-		void UpdateProceduralData(VertexBufferData::CreateInfo const* newData);
+		void UpdateProceduralData(VertexBufferDataCreateInfo const* newData);
 
 		void Destroy();
 
@@ -107,7 +107,7 @@ namespace flex
 
 	private:
 		real CalculateBoundingSphereScale() const;
-		bool CalculateTangents(VertexBufferData::CreateInfo& createInfo);
+		bool CalculateTangents(VertexBufferDataCreateInfo& createInfo);
 
 		void CopyInOptionalCreateInfo(RenderObjectCreateInfo& createInfo, const RenderObjectCreateInfo& overrides);
 

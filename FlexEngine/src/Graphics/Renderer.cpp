@@ -136,7 +136,7 @@ namespace flex
 
 		// Full screen Triangle
 		{
-			VertexBufferData::CreateInfo triVertexBufferDataCreateInfo = {};
+			VertexBufferDataCreateInfo triVertexBufferDataCreateInfo = {};
 			triVertexBufferDataCreateInfo.positions_2D = {
 				glm::vec2(-1.0f, -1.0f),
 				glm::vec2(-1.0f,  3.0f),
@@ -177,7 +177,7 @@ namespace flex
 
 		// 3D Quad
 		{
-			VertexBufferData::CreateInfo quad3DVertexBufferDataCreateInfo = {};
+			VertexBufferDataCreateInfo quad3DVertexBufferDataCreateInfo = {};
 			quad3DVertexBufferDataCreateInfo.positions_3D = {
 				glm::vec3(-1.0f, -1.0f, 0.0f),
 				glm::vec3(-1.0f,  1.0f, 0.0f),
@@ -3100,7 +3100,7 @@ namespace flex
 	{
 		if (m_gBufferQuadVertexBufferData.vertexData == nullptr)
 		{
-			VertexBufferData::CreateInfo gBufferQuadVertexBufferDataCreateInfo = {};
+			VertexBufferDataCreateInfo gBufferQuadVertexBufferDataCreateInfo = {};
 
 			gBufferQuadVertexBufferDataCreateInfo.positions_3D = {
 				glm::vec3(-1.0f, -1.0f, 0.0f),

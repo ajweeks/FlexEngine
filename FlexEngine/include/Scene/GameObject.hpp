@@ -3,7 +3,7 @@
 #include "Audio/AudioCue.hpp"
 #include "Callbacks/InputCallbacks.hpp"
 #include "Graphics/RendererTypes.hpp"
-#include "Graphics/VertexBufferData.hpp" // For VertexBufferData::CreateInfo
+#include "Graphics/VertexBufferData.hpp" // For VertexBufferDataCreateInfo
 #include "Spring.hpp"
 #include "Transform.hpp"
 
@@ -500,7 +500,7 @@ namespace flex
 
 		i32 vertSideCount = 100;
 		real size = 30.0f;
-		VertexBufferData::CreateInfo bufferInfo;
+		VertexBufferDataCreateInfo bufferInfo;
 
 		struct WaveInfo
 		{
