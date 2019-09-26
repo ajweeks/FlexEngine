@@ -2,7 +2,6 @@
 
 layout (binding = 0) uniform UBODynamic
 {
-	mat4 model;
 	vec4 colorMultiplier;
 	mat4 contrastBrightnessSaturation;
 } uboDynamic;
@@ -15,6 +14,5 @@ layout (location = 0) out vec2 ex_TexCoord;
 void main()
 {
 	ex_TexCoord = in_TexCoord;
-	vec3 transformedPos = (vec4(in_Position2D, 0, 1) * uboDynamic.model).xyz;
-	gl_Position = vec4(transformedPos, 1);
+	gl_Position = vec4(in_Position2D, 0, 1);
 }
