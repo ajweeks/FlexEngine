@@ -586,10 +586,9 @@ namespace flex
 		Uniforms dynamicBufferUniforms = {};
 
 		VertexAttributes vertexAttributes = 0;
-		i32 numAttachments = 1; // How many output textures the fragment shader has
+		i32 numAttachments = 1;
 
 		i32 subpass = 0;
-		bool bDeferred = false; // TODO: Replace this bool with just checking if numAttachments is larger than 1
 		bool bDepthWriteEnable = true;
 		bool bTranslucent = false;
 
@@ -603,9 +602,6 @@ namespace flex
 		bool bNeedIrradianceSampler = false;
 		bool bNeedPrefilteredMap = false;
 		bool bNeedBRDFLUT = false;
-		bool bNeedShadowMap = false;
-		bool bNeedDepthSampler = false;
-		bool bNeedNoiseSampler = false; // TODO: Replace with check for U_NOISE_SAMPLER
 		bool bNeedPushConstantBlock = false;
 		bool bGenerateVertexBufferForAll = false;
 		bool bTextureArr = false;

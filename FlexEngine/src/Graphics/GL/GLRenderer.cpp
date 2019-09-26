@@ -514,7 +514,7 @@ namespace flex
 
 			CacheMaterialUniformLocations(matID);
 
-			if (shader.shader->bNeedShadowMap)
+			if (shader.shader->constantBufferUniforms.HasUniform(U_SHADOW_SAMPLER))
 			{
 				mat.uniformIDs.castShadows = glGetUniformLocation(shader.program, "castShadows");
 				mat.uniformIDs.shadowDarkness = glGetUniformLocation(shader.program, "shadowDarkness");
@@ -829,7 +829,7 @@ namespace flex
 				++binding;
 			}
 
-			if (shader.shader->bNeedShadowMap)
+			if (shader.shader->constantBufferUniforms.HasUniform(U_SHADOW_SAMPLER))
 			{
 				const char* uniformName = "shadowMaps";
 				i32 uniformLocation = glGetUniformLocation(shader.program, uniformName);
@@ -2080,7 +2080,7 @@ namespace flex
 				}
 				GLShader* shader = &m_Shaders[shaderID];
 
-				if (shader->shader->bDeferred)
+				if (shader->shader->numAttachments > 1) // Deferred
 				{
 					GLRenderObjectBatch batch = {};
 					for (GLRenderObject* renderObject : m_RenderObjects)
@@ -3585,17 +3585,17 @@ namespace flex
 			};
 
 			Tex textures[] = {
-				{ shader->bNeedDepthSampler, true, glMaterial->depthSamplerID, GL_TEXTURE_2D },
+				{ shader->constantBufferUniforms.HasUniform(U_DEPTH_SAMPLER), true, glMaterial->depthSamplerID, GL_TEXTURE_2D },
 				{ shader->bNeedAlbedoSampler, material->enableAlbedoSampler, glMaterial->albedoSamplerID, GL_TEXTURE_2D },
 				{ shader->bNeedMetallicSampler, material->enableMetallicSampler, glMaterial->metallicSamplerID, GL_TEXTURE_2D },
 				{ shader->bNeedRoughnessSampler, material->enableRoughnessSampler, glMaterial->roughnessSamplerID, GL_TEXTURE_2D },
 				{ shader->bNeedNormalSampler, material->enableNormalSampler, glMaterial->normalSamplerID, GL_TEXTURE_2D },
 				{ shader->bNeedBRDFLUT, material->enableBRDFLUT, glMaterial->brdfLUTSamplerID, GL_TEXTURE_2D },
-				{ shader->bNeedShadowMap, true, m_ShadowMapTexture.id, GL_TEXTURE_2D_ARRAY },
+				{ shader->constantBufferUniforms.HasUniform(U_SHADOW_SAMPLER), true, m_ShadowMapTexture.id, GL_TEXTURE_2D_ARRAY },
 				{ shader->bNeedIrradianceSampler, material->enableIrradianceSampler, glMaterial->irradianceSamplerID, GL_TEXTURE_CUBE_MAP },
 				{ shader->bNeedPrefilteredMap, material->enablePrefilteredMap, glMaterial->prefilteredMapSamplerID, GL_TEXTURE_CUBE_MAP },
 				{ shader->bNeedCubemapSampler, material->enableCubemapSampler, glMaterial->cubemapSamplerID, GL_TEXTURE_CUBE_MAP },
-				{ shader->bNeedNoiseSampler, true, glMaterial->noiseSamplerID, GL_TEXTURE_2D },
+				{ shader->constantBufferUniforms.HasUniform(U_NOISE_SAMPLER), true, glMaterial->noiseSamplerID, GL_TEXTURE_2D },
 			};
 			// TODO: Update reserve count when adding more textures
 

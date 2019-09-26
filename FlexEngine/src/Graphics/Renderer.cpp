@@ -1422,13 +1422,10 @@ namespace flex
 
 			// Deferred combine
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::DEFERRED_COMBINE;
-			m_BaseShaders[shaderID].bDeferred = false;
 			m_BaseShaders[shaderID].bDepthWriteEnable = false;
 			m_BaseShaders[shaderID].bNeedBRDFLUT = true;
-			m_BaseShaders[shaderID].bNeedShadowMap = true;
 			m_BaseShaders[shaderID].bNeedIrradianceSampler = true;
 			m_BaseShaders[shaderID].bNeedPrefilteredMap = true;
-			m_BaseShaders[shaderID].bNeedDepthSampler = true;
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION_2D |
 				(u32)VertexAttribute::UV;
@@ -1462,8 +1459,6 @@ namespace flex
 			//m_BaseShaders[shaderID].bDeferred = false;
 			//m_BaseShaders[shaderID].bDepthWriteEnable = false;
 			//m_BaseShaders[shaderID].bNeedBRDFLUT = true;
-			//m_BaseShaders[shaderID].bNeedDepthSampler = true;
-			////m_BaseShaders[shaderID].bNeedShadowMap = true;
 			//m_BaseShaders[shaderID].bNeedIrradianceSampler = true;
 			//m_BaseShaders[shaderID].bNeedPrefilteredMap = true;
 			//m_BaseShaders[shaderID].vertexAttributes =
@@ -1509,7 +1504,6 @@ namespace flex
 			// PBR
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::DEFERRED;
 			m_BaseShaders[shaderID].numAttachments = 2; // TODO: Work out automatically from samplers?
-			m_BaseShaders[shaderID].bDeferred = true;
 			m_BaseShaders[shaderID].bNeedAlbedoSampler = true;
 			m_BaseShaders[shaderID].bNeedMetallicSampler = true;
 			m_BaseShaders[shaderID].bNeedRoughnessSampler = true;
@@ -1543,7 +1537,6 @@ namespace flex
 			// PBR - WORLD SPACE
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::DEFERRED;
 			m_BaseShaders[shaderID].numAttachments = 2;
-			m_BaseShaders[shaderID].bDeferred = true;
 			m_BaseShaders[shaderID].bNeedMetallicSampler = true;
 			m_BaseShaders[shaderID].bNeedRoughnessSampler = true;
 			m_BaseShaders[shaderID].bNeedAlbedoSampler = true;
@@ -1788,8 +1781,6 @@ namespace flex
 
 			// SSAO
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::SSAO;
-			m_BaseShaders[shaderID].bNeedDepthSampler = true;
-			m_BaseShaders[shaderID].bNeedNoiseSampler = true;
 			m_BaseShaders[shaderID].bDepthWriteEnable = false;
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION |
@@ -1808,7 +1799,6 @@ namespace flex
 
 			// SSAO Blur
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::SSAO_BLUR;
-			m_BaseShaders[shaderID].bNeedDepthSampler = true;
 			m_BaseShaders[shaderID].bDepthWriteEnable = false;
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION |

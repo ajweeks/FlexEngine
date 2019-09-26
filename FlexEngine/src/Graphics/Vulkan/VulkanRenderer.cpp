@@ -5114,12 +5114,11 @@ namespace flex
 			createInfo.brdfLUT = material->brdfLUT;
 			createInfo.prefilterTexture = material->prefilterTexture;
 			createInfo.noiseTexture = material->noiseTexture;
-			createInfo.bDepthSampler = shader->shader->bNeedDepthSampler;
+			createInfo.bDepthSampler = shader->shader->constantBufferUniforms.HasUniform(U_DEPTH_SAMPLER);
 
 			if (shader->shader->constantBufferUniforms.HasUniform(U_SHADOW_SAMPLER))
 			{
 				createInfo.shadowSampler = m_DepthSampler;
-				// TODO: Use blank texture array here to appease validation warnings
 				createInfo.shadowImageView = (m_DirectionalLight && m_DirectionalLight->data.castShadows) ? m_ShadowImageView : m_BlankTextureArr->imageView;
 			}
 
@@ -6724,7 +6723,8 @@ namespace flex
 						continue;
 					}
 
-					ShaderBatch* shaderBatch = (m_Shaders[shaderID].shader->bDeferred ? &m_DeferredObjectBatches : &m_ForwardObjectBatches);
+					const bool bDeferred = m_Shaders[shaderID].shader->numAttachments > 1;
+					ShaderBatch* shaderBatch = (bDeferred ? &m_DeferredObjectBatches : &m_ForwardObjectBatches);
 
 					ShaderBatchPair shaderBatchPair = {};
 					shaderBatchPair.shaderID = shaderID;
