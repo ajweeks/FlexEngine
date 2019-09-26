@@ -346,7 +346,7 @@ namespace flex
 				m_VertexIndexBufferPairs.emplace_back(
 					new VulkanBuffer(m_VulkanDevice->m_LogicalDevice), // Vertex buffer
 					new VulkanBuffer(m_VulkanDevice->m_LogicalDevice)  // Index buffer
-					);
+				);
 				if (m_Shaders[i].shader->bDynamic)
 				{
 					VertexIndexBufferPair& pair = m_VertexIndexBufferPairs[m_VertexIndexBufferPairs.size() - 1];
@@ -728,7 +728,7 @@ namespace flex
 
 			delete m_BlankTexture;
 			m_BlankTexture = nullptr;
-			
+
 			for (VulkanTexture* loadedTexture : m_LoadedTextures)
 			{
 				delete loadedTexture;
@@ -2637,7 +2637,7 @@ namespace flex
 				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 			m_CommandBufferManager.FlushCommandBuffer(layoutCmd, m_GraphicsQueue, true);
 
-			
+
 			ShaderID equirectangularToCubeShaderID = equirectangularToCubeMat.material.shaderID;
 			VulkanShader& equirectangularToCubeShader = m_Shaders[equirectangularToCubeShaderID];
 
@@ -4053,6 +4053,7 @@ namespace flex
 			{
 				PrintError("Failed to compile vertex shader located at: %s\n", shader.vertexShaderFilePath.c_str());
 			}
+			shader.vertexShaderCode.clear();
 
 			if (bUseFragmentStage)
 			{
@@ -4060,6 +4061,7 @@ namespace flex
 				{
 					PrintError("Failed to compile fragment shader located at: %s\n", shader.fragmentShaderFilePath.c_str());
 				}
+				shader.fragmentShaderCode.clear();
 			}
 
 			if (bUseGeometryStage)
@@ -4068,6 +4070,7 @@ namespace flex
 				{
 					PrintError("Failed to compile geometry shader located at: %s\n", shader.geometryShaderFilePath.c_str());
 				}
+				shader.geometryShaderCode.clear();
 			}
 
 			return bSuccess;
@@ -4371,7 +4374,7 @@ namespace flex
 				drawInfo.bWriteDepth = true;
 				drawInfo.scale = scale;
 				drawInfo.materialID = m_SpriteMatWSID;
-				
+
 				const real minSpriteDist = 1.5f;
 				const real maxSpriteDist = 3.0f;
 
@@ -4779,7 +4782,7 @@ namespace flex
 				VK_DEBUG_REPORT_ERROR_BIT_EXT |
 				VK_DEBUG_REPORT_WARNING_BIT_EXT |
 				VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
-				//VK_DEBUG_REPORT_DEBUG_BIT_EXT;
+			//VK_DEBUG_REPORT_DEBUG_BIT_EXT;
 			createInfo.pfnCallback = DebugCallback;
 
 			VK_CHECK_RESULT(CreateDebugReportCallbackEXT(m_Instance, &createInfo, nullptr, m_Callback.replace()));
@@ -5045,7 +5048,7 @@ namespace flex
 			CreateRenderPass(m_SSAORenderPass.replace(), ssaoFrameBufFormat, "SSAO render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 			CreateRenderPass(m_SSAOBlurHRenderPass.replace(), ssaoFrameBufFormat, "SSAO Blur Horizontal render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 			CreateRenderPass(m_SSAOBlurVRenderPass.replace(), ssaoFrameBufFormat, "SSAO Blur Vertical render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			
+
 			VkFormat depthFormat;
 			GetSupportedDepthFormat(m_VulkanDevice->m_PhysicalDevice, &depthFormat);
 
@@ -6039,7 +6042,7 @@ namespace flex
 
 				CreateAttachment(m_VulkanDevice, m_OffscreenFrameBuffer0, 0, "Offscreen 0 image", "Offscreen 0 image view");
 				CreateAttachment(m_VulkanDevice, m_OffscreenFrameBuffer1, 0, "Offscreen 1 image", "Offscreen 1 image view");
-				
+
 				// Deferred shading specifies initial layout of color attachment optimal
 				m_OffscreenFrameBuffer0->frameBufferAttachments[0].second.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 				// Post process specifies initial layout of color attachment optimal
@@ -6063,7 +6066,7 @@ namespace flex
 				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &offscreenFramebufferCreateInfo, nullptr, m_OffscreenFrameBuffer1->frameBuffer.replace()));
 				SetFramebufferName(m_VulkanDevice, m_OffscreenFrameBuffer1->frameBuffer, "Offscreen 1");
 			}
-			
+
 			CreateAttachment(
 				m_VulkanDevice,
 				m_HistoryBuffer->imageFormat,
@@ -6955,7 +6958,7 @@ namespace flex
 
 			VulkanShader* vkShader = &m_Shaders[shaderID];
 
-			VkViewport fullscreenViewport = bFlipViewport ? 
+			VkViewport fullscreenViewport = bFlipViewport ?
 				vks::viewportFlipped((real)m_SwapChainExtent.width, (real)m_SwapChainExtent.height, 0.0f, 1.0f) :
 				vks::viewport((real)m_SwapChainExtent.width, (real)m_SwapChainExtent.height, 0.0f, 1.0f);
 			VkRect2D fullscreenScissor = vks::scissor(0u, 0u, m_SwapChainExtent.width, m_SwapChainExtent.height);
@@ -6973,12 +6976,12 @@ namespace flex
 				BindDescriptorSet(vkShader, 0, commandBuffer, pipelineLayout, descriptorSet);
 
 				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
-				
+
 				vkCmdSetViewport(commandBuffer, 0, 1, &fullscreenViewport);
 				vkCmdSetScissor(commandBuffer, 0, 1, &fullscreenScissor);
 
 				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_FullScreenTriVertexBuffer->m_Buffer, offsets);
-				
+
 				vkCmdDraw(commandBuffer, m_FullScreenTriVertexBufferData.VertexCount, 1, 0, 0);
 			}
 			vkCmdEndRenderPass(commandBuffer);
@@ -7358,7 +7361,7 @@ namespace flex
 			//
 			// Post process pass
 			//
-			
+
 			{
 				BeginGPUTimeStamp(commandBuffer, "Post Process");
 
@@ -7392,7 +7395,7 @@ namespace flex
 
 				RenderFullscreenQuad(commandBuffer, m_TAAResolveRenderPass, m_OffscreenFrameBuffer0->frameBuffer, TAAMat.material.shaderID,
 					m_TAAResolveGraphicsPipelineLayout, m_TAAResolveGraphicsPipeline, m_TAAResolveDescriptorSet, true);
-				
+
 				// Transitioned by TAA resolve pass
 				offscreenBuffer0.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 
