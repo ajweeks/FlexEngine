@@ -92,7 +92,6 @@ namespace flex
 		m_KeyEventCallback(this, &FlexEngine::OnKeyEvent),
 		m_ActionCallback(this, &FlexEngine::OnActionEvent)
 	{
-		// TODO: Add custom seeding for different random systems
 		std::srand((u32)time(NULL));
 
 		RetrieveCurrentWorkingDirectory();
@@ -135,23 +134,23 @@ namespace flex
 #elif defined(_MSC_VER)
 		m_CompilerName = "MSVC";
 
-	#if _MSC_VER >= 1920 // TODO: Double check this value once Microsoft publishes VS2019 fully
-			m_CompilerVersion = "2019";
-	#elif _MSC_VER >= 1910
-			m_CompilerVersion = "2017";
-	#elif _MSC_VER >= 1900
-			m_CompilerVersion = "2015";
-	#elif _MSC_VER >= 1800
-			m_CompilerVersion = "2013";
-	#else
-			m_CompilerVersion = "Unknown";
-	#endif
+#if _MSC_VER >= 1920
+		m_CompilerVersion = "2019";
+#elif _MSC_VER >= 1910
+		m_CompilerVersion = "2017";
+#elif _MSC_VER >= 1900
+		m_CompilerVersion = "2015";
+#elif _MSC_VER >= 1800
+		m_CompilerVersion = "2013";
+#else
+		m_CompilerVersion = "Unknown";
+#endif
 #elif defined(__GNUC__)
 		m_CompilerName = "GCC";
 
 		m_CompilerVersion =
 			IntToString(__GNUC__) + '.' +
-			IntToString(__GNUC_MINOR__ ) +
+			IntToString(__GNUC_MINOR__) +
 #else
 		m_CompilerName = "Unknown";
 		m_CompilerVersion = "Unknown";
@@ -323,7 +322,6 @@ namespace flex
 	void FlexEngine::Destroy()
 	{
 		// TODO: Time engine destruction using non-glfw timer
-		// TODO: Destroy things in opposite order of their creations
 
 #if COMPILE_RENDERDOC_API
 		FreeLibrary(m_RenderDocModule);
@@ -482,117 +480,120 @@ namespace flex
 				m_FrameTimes[m_FrameTimes.size() - 1] = dt * 1000.0f;
 			}
 
-			PROFILE_BEGIN("Update");
-			g_Window->PollEvents();
-
-			const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
-			if (frameBufferSize.x == 0 || frameBufferSize.y == 0)
+			// Update
 			{
-				g_InputManager->ClearAllInputs();
-			}
+				PROFILE_BEGIN("Update");
+				g_Window->PollEvents();
+
+				g_InputManager->Update();
+
+				const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+				if (frameBufferSize.x == 0 || frameBufferSize.y == 0)
+				{
+					g_InputManager->ClearAllInputs();
+				}
 
 #if COMPILE_RENDERDOC_API
-			if (m_RenderDocAPI)
-			{
-				if (!m_bRenderDocCapturingFrame &&
-					m_RenderDocAutoCaptureFrameOffset != -1 &&
-					m_RenderDocAutoCaptureFrameCount != -1)
+				if (m_RenderDocAPI)
 				{
-					i32 frameIndex = g_Renderer->GetFramesRenderedCount();
-					if (frameIndex >= m_RenderDocAutoCaptureFrameOffset &&
-						frameIndex < m_RenderDocAutoCaptureFrameOffset + m_RenderDocAutoCaptureFrameCount)
+					if (!m_bRenderDocCapturingFrame &&
+						m_RenderDocAutoCaptureFrameOffset != -1 &&
+						m_RenderDocAutoCaptureFrameCount != -1)
 					{
-						m_bRenderDocTriggerCaptureNextFrame = true;
+						i32 frameIndex = g_Renderer->GetFramesRenderedCount();
+						if (frameIndex >= m_RenderDocAutoCaptureFrameOffset &&
+							frameIndex < m_RenderDocAutoCaptureFrameOffset + m_RenderDocAutoCaptureFrameCount)
+						{
+							m_bRenderDocTriggerCaptureNextFrame = true;
+						}
+					}
+
+					if (m_RenderDocAPI && m_bRenderDocTriggerCaptureNextFrame)
+					{
+						m_bRenderDocTriggerCaptureNextFrame = false;
+						m_bRenderDocCapturingFrame = true;
+						m_RenderDocAPI->StartFrameCapture(NULL, NULL);
 					}
 				}
-
-			if (m_RenderDocAPI && m_bRenderDocTriggerCaptureNextFrame)
-				{
-					m_bRenderDocTriggerCaptureNextFrame = false;
-					m_bRenderDocCapturingFrame = true;
-					m_RenderDocAPI->StartFrameCapture(NULL, NULL);
-				}
-			}
 #endif
 
-			// Call as early as possible in the frame
-			// Starts new ImGui frame and clears debug draw lines
-			g_Renderer->NewFrame();
+				// Call as early as possible in the frame
+				// Starts new ImGui frame and clears debug draw lines
+				g_Renderer->NewFrame();
 
-			SecSinceLogSave += dt;
-			if (SecSinceLogSave >= LogSaveRate)
-			{
-				SecSinceLogSave -= LogSaveRate;
-				SaveLogBufferToFile();
-			}
-
-			if (m_bRenderImGui)
-			{
-				PROFILE_BEGIN("DrawImGuiObjects");
-				DrawImGuiObjects();
-				PROFILE_END("DrawImGuiObjects");
-			}
-
-			g_Editor->EarlyUpdate();
-
-			Profiler::Update();
-
-			const bool bSimulateFrame = (!m_bSimulationPaused || m_bSimulateNextFrame);
-			m_bSimulateNextFrame = false;
-
-			g_CameraManager->Update();
-
-			if (bSimulateFrame)
-			{
-				g_CameraManager->CurrentCamera()->Update();
-
-				g_SceneManager->CurrentScene()->Update();
-				Player* p0 = g_SceneManager->CurrentScene()->GetPlayer(0);
-				if (p0)
+				SecSinceLogSave += dt;
+				if (SecSinceLogSave >= LogSaveRate)
 				{
-					glm::vec3 targetPos = p0->GetTransform()->GetWorldPosition() + p0->GetTransform()->GetForward() * -2.0f;
-					m_SpringTimer += g_DeltaTime;
-					real amplitude = 1.5f;
-					real period = 5.0f;
-					if (m_SpringTimer > period)
-					{
-						m_SpringTimer -= period;
-					}
-					targetPos.y += pow(sin(glm::clamp(m_SpringTimer - period / 2.0f, 0.0f, PI)), 40.0f) * amplitude;
-					glm::vec3 targetVel = ToVec3(p0->GetRigidBody()->GetRigidBodyInternal()->getLinearVelocity());
+					SecSinceLogSave -= LogSaveRate;
+					SaveLogBufferToFile();
+				}
 
-					for (Spring<glm::vec3>& spring : m_TestSprings)
-					{
-						spring.SetTargetPos(targetPos);
-						spring.SetTargetVel(targetVel);
+				if (m_bRenderImGui)
+				{
+					PROFILE_BEGIN("DrawImGuiObjects");
+					DrawImGuiObjects();
+					PROFILE_END("DrawImGuiObjects");
+				}
 
-						targetPos = spring.pos;
-						targetVel = spring.vel;
+				g_Editor->EarlyUpdate();
+
+				Profiler::Update();
+
+				const bool bSimulateFrame = (!m_bSimulationPaused || m_bSimulateNextFrame);
+				m_bSimulateNextFrame = false;
+
+				g_CameraManager->Update();
+
+				if (bSimulateFrame)
+				{
+					g_CameraManager->CurrentCamera()->Update();
+
+					g_SceneManager->CurrentScene()->Update();
+					Player* p0 = g_SceneManager->CurrentScene()->GetPlayer(0);
+					if (p0)
+					{
+						glm::vec3 targetPos = p0->GetTransform()->GetWorldPosition() + p0->GetTransform()->GetForward() * -2.0f;
+						m_SpringTimer += g_DeltaTime;
+						real amplitude = 1.5f;
+						real period = 5.0f;
+						if (m_SpringTimer > period)
+						{
+							m_SpringTimer -= period;
+						}
+						targetPos.y += pow(sin(glm::clamp(m_SpringTimer - period / 2.0f, 0.0f, PI)), 40.0f) * amplitude;
+						glm::vec3 targetVel = ToVec3(p0->GetRigidBody()->GetRigidBodyInternal()->getLinearVelocity());
+
+						for (Spring<glm::vec3>& spring : m_TestSprings)
+						{
+							spring.SetTargetPos(targetPos);
+							spring.SetTargetVel(targetVel);
+
+							targetPos = spring.pos;
+							targetVel = spring.vel;
+						}
 					}
 				}
+
+				btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
+				for (i32 i = 0; i < (i32)m_TestSprings.size(); ++i)
+				{
+					m_TestSprings[i].Tick(g_DeltaTime);
+					real t = (real)i / (real)m_TestSprings.size();
+					debugDrawer->drawSphere(ToBtVec3(m_TestSprings[i].pos), (1.0f - t + 0.1f) * 0.5f, btVector3(0.5f - 0.3f * t, 0.8f - 0.4f * t, 0.6f - 0.2f * t));
+				}
+
+				g_Window->Update();
+
+				if (bSimulateFrame)
+				{
+					g_SceneManager->CurrentScene()->LateUpdate();
+				}
+
+				g_Renderer->Update();
+
+				g_InputManager->PostUpdate();
+				PROFILE_END("Update");
 			}
-
-			btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
-			for (i32 i = 0; i < (i32)m_TestSprings.size(); ++i)
-			{
-				m_TestSprings[i].Tick(g_DeltaTime);
-				real t = (real)i / (real)m_TestSprings.size();
-				debugDrawer->drawSphere(ToBtVec3(m_TestSprings[i].pos), (1.0f - t + 0.1f) * 0.5f, btVector3(0.5f - 0.3f * t, 0.8f - 0.4f * t, 0.6f - 0.2f * t));
-			}
-
-			g_Window->Update();
-
-			if (bSimulateFrame)
-			{
-				g_SceneManager->CurrentScene()->LateUpdate();
-			}
-
-			g_Renderer->Update();
-
-			// TODO: Consolidate functions?
-			g_InputManager->Update();
-			g_InputManager->PostUpdate();
-			PROFILE_END("Update");
 
 			PROFILE_BEGIN("Render");
 			g_Renderer->Draw();
@@ -1027,7 +1028,7 @@ namespace flex
 			ImGui::SetNextWindowPos(ImVec2(consoleWindowX, consoleWindowY), ImGuiCond_Always);
 			ImGui::SetNextWindowSize(ImVec2(consoleWindowWidth, consoleWindowHeight));
 			if (ImGui::Begin("Console", &m_bShowingConsole,
-				ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoDecoration|ImGuiWindowFlags_NoMove))
+				ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove))
 			{
 				if (m_bShouldFocusKeyboardOnConsole)
 				{
@@ -1035,7 +1036,7 @@ namespace flex
 					ImGui::SetKeyboardFocusHere();
 				}
 				if (ImGui::InputTextEx("", m_CmdLineStrBuf, MAX_CHARS_CMD_LINE_STR, ImVec2(consoleWindowWidth - 16.0f, consoleWindowHeight - 8.0f),
-					ImGuiInputTextFlags_EnterReturnsTrue|ImGuiInputTextFlags_CallbackCharFilter|ImGuiInputTextFlags_CallbackCompletion|ImGuiInputTextFlags_CallbackHistory,
+					ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackCharFilter | ImGuiInputTextFlags_CallbackCompletion | ImGuiInputTextFlags_CallbackHistory,
 					[](ImGuiInputTextCallbackData *data) { return g_EngineInstance->ImGuiConsoleInputCallback(data); }))
 				{
 					ToLower(m_CmdLineStrBuf);
@@ -1457,9 +1458,9 @@ namespace flex
 		if (dllDirPath.empty())
 		{
 			PrintError("Unable to setup RenderDoc API - renderdoc settings file missing. "
-						"Please create one in the format: "
-						"\"{ \"lib path\" : \"C:\\Path\\To\\RenderDocLibs\\\" }\" "
-						"and save it at: \"%s\"\n", m_RenderDocSettingsAbsFilePath.c_str());
+				"Please create one in the format: "
+				"\"{ \"lib path\" : \"C:\\Path\\To\\RenderDocLibs\\\" }\" "
+				"and save it at: \"%s\"\n", m_RenderDocSettingsAbsFilePath.c_str());
 			return;
 		}
 

@@ -77,6 +77,10 @@ void main()
 	// out_Color = vec4(mix(historyCol, newSceneCol, alpha), 1.0);
 	vec3 w = clamp(1.0/(mix(vec3(pushConstants.kl), vec3(pushConstants.kh), wk)), 0.0, 1.0);
 	out_Color = vec4(mix(clamp(historyCol, cMin, cMax), sceneCol, w), 1.0);
+	//out_Color = vec4(w, 1.0);
+	
+	//out_Color = vec4(mix(clamp(historyCol, cMin, cMax), sceneCol, alpha), 1.0);
+	// out_Color = vec4(vec3(alpha), 1.0);
 	
 	// float range = (1.0 - initialWeight);
 	// out_Color = mix(out_Color, vec4(1.0, 0.0, 0.0, 1.0), (alpha - initialWeight) / range);

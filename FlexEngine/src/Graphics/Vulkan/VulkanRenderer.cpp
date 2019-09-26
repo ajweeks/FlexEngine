@@ -377,8 +377,8 @@ namespace flex
 			queryPoolCreateInfo.queryCount = MAX_TIMESTAMP_QUERIES;
 			vkCreateQueryPool(m_VulkanDevice->m_LogicalDevice, &queryPoolCreateInfo, nullptr, &m_TimestampQueryPool);
 
-			m_TAA_ks[0] = 0.1f; // KL
-			m_TAA_ks[1] = 0.3f; // KH
+			m_TAA_ks[0] = 2.25f; // KL
+			m_TAA_ks[1] = 100.0f; // KH
 		}
 
 		void VulkanRenderer::PostInitialize()
@@ -1446,8 +1446,8 @@ namespace flex
 		{
 			Renderer::DrawImGuiWindows();
 
-			ImGui::SliderFloat("TAA KL", m_TAA_ks, 0.0f, 100.0f);
-			ImGui::SliderFloat("TAA KH", (m_TAA_ks + 1), 0.0f, 100.0f);
+			ImGui::SliderFloat("TAA KL", &(m_TAA_ks[0]), 0.0f, 100.0f);
+			ImGui::SliderFloat("TAA KH", &(m_TAA_ks[1]), 0.0f, 100.0f);
 
 			if (bGPUTimingsWindowShowing)
 			{
