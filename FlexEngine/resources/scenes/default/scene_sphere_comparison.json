@@ -366,6 +366,17 @@
 				"enabled" : true,
 				"brightness" : 500.000000
 			}
+		},
+		{
+			"name" : "New_Object_00",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"scale" : "5.000, 5.000, 5.000"
+			},
+			"mesh" : "sphere",
+			"material" : "SH Visualization"
 		}
 	]
 }

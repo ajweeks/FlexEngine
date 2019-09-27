@@ -8064,6 +8064,9 @@ namespace flex
 			i32 texChannel = 0;
 			glm::mat4 postProcessMat = GetPostProcessingMatrix();
 			SHCoeffs shCoeffs = {};
+			shCoeffs.r0.x = 1.0f;
+			shCoeffs.g0.x = 1.0f;
+			shCoeffs.b0.x = 0.0f;
 
 			// TODO: Roll into array?
 			if (uniformOverrides)

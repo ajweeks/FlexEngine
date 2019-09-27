@@ -1,7 +1,7 @@
 #version 450
 
 layout (location = 0) in mat3 ex_TBN;
-layout (location = 3) in vec3 ex_WorldPos;
+layout (location = 3) in vec4 ex_WorldPos;
 
 layout (location = 0) out vec4 fragColor;
 
@@ -83,11 +83,15 @@ vec3 ComputeProbeRadianceAtPos(vec3 positionWS, vec3 direction)
     {
         radiance += coefficients[i] * dirFactors[i];
     }
+    int i = 5;
+    return vec3(mix(vec3(1,0,0), mix(vec3(0,0,0), vec3(0,1,0), max(dirFactors[i], 0)), min(dirFactors[i]+1.0, 1)));
     return radiance;
 }
 
 void main()
 {
 	vec3 N = normalize(mat3(uboConstant.view) * ex_TBN[2]);
-	fragColor = vec4(ComputeProbeRadianceAtPos(ex_WorldPos, N), 1);
+	fragColor = vec4(ComputeProbeRadianceAtPos(ex_WorldPos.xyz, N), 1);
+	//fragColor = vec4(ex_WorldPos.xyz*.1,1);
+	// fragColor = vec4(N*0.5+.5,1);
 }
