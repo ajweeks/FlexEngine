@@ -90,7 +90,7 @@ vec3 ComputeProbeRadianceAtPos(vec3 positionWS, vec3 direction)
 
 void main()
 {
-	vec3 N = normalize(mat3(uboConstant.view) * ex_TBN[2]);
+	vec3 N = normalize(ex_TBN[2]);
 	fragColor = vec4(ComputeProbeRadianceAtPos(ex_WorldPos.xyz, N), 1);
 	//fragColor = vec4(ex_WorldPos.xyz*.1,1);
 	// fragColor = vec4(N*0.5+.5,1);
