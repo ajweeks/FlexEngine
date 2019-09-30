@@ -33,6 +33,7 @@ IGNORE_WARNINGS_POP
 #include "Physics/PhysicsManager.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
+#include "Platform/Platform.hpp"
 #include "Player.hpp"
 #include "PlayerController.hpp"
 #include "Profiler.hpp"
@@ -618,6 +619,14 @@ namespace flex
 					g_Renderer->AddEditorString("Captured RenderDoc frame");
 					const std::string captureFileName = StripLeadingDirectories(captureFilePath);
 					Print("Captured RenderDoc frame to %s\n", captureFileName.c_str());
+					if (m_RenderDocUIPID != -1)
+					{
+						// Handle application having been closed
+						if (!Platform::IsProcessRunning(m_RenderDocUIPID))
+						{
+							m_RenderDocUIPID = -1;
+						}
+					}
 					if (m_RenderDocUIPID == -1)
 					{
 						m_RenderDocUIPID = m_RenderDocAPI->LaunchReplayUI(true, captureFilePath.c_str());
