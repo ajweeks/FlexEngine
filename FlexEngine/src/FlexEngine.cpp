@@ -604,7 +604,9 @@ namespace flex
 			if (m_RenderDocAPI && m_bRenderDocCapturingFrame)
 			{
 				m_bRenderDocCapturingFrame = false;
+				Print("Capturing RenderDoc frame...\n");
 				m_RenderDocAPI->EndFrameCapture(NULL, NULL);
+
 				u32 bufferSize;
 				u32 captureIndex = 0;
 				m_RenderDocAPI->GetCapture(captureIndex, nullptr, &bufferSize, nullptr);
@@ -629,7 +631,7 @@ namespace flex
 					}
 					if (m_RenderDocUIPID == -1)
 					{
-						m_RenderDocUIPID = m_RenderDocAPI->LaunchReplayUI(true, captureFilePath.c_str());
+						m_RenderDocUIPID = m_RenderDocAPI->LaunchReplayUI(1, captureFilePath.c_str());
 					}
 				}
 			}
@@ -1506,7 +1508,7 @@ namespace flex
 			}
 
 			pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)GetProcAddress(m_RenderDocModule, "RENDERDOC_GetAPI");
-			int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_3_0, (void**)&m_RenderDocAPI);
+			int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_4_0, (void**)&m_RenderDocAPI);
 			assert(ret == 1);
 
 			i32 major = 0, minor = 0, patch = 0;
@@ -1524,8 +1526,8 @@ namespace flex
 			m_RenderDocAPI->SetCaptureFilePathTemplate(captureFilePath.c_str());
 
 			m_RenderDocAPI->MaskOverlayBits(eRENDERDOC_Overlay_None, 0);
-			//m_RenderDocAPI->SetCaptureKeys(nullptr, 0);
-			//m_RenderDocAPI->SetFocusToggleKeys(nullptr, 0);
+			m_RenderDocAPI->SetCaptureKeys(nullptr, 0);
+			m_RenderDocAPI->SetFocusToggleKeys(nullptr, 0);
 
 			m_RenderDocAPI->SetCaptureOptionU32(eRENDERDOC_Option_DebugOutputMute, 1);
 		}
