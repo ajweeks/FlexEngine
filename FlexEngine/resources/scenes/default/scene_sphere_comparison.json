@@ -47,7 +47,7 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "SH Visualization"
+					"material" : "sphere 10"
 				},
 				{
 					"name" : "Sphere 09",
@@ -59,7 +59,7 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "SH Visualization"
+					"material" : "sphere 09"
 				},
 				{
 					"name" : "Sphere 08",
@@ -71,7 +71,7 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "SH Visualization"
+					"material" : "sphere 08"
 				},
 				{
 					"name" : "Sphere 00",
@@ -83,7 +83,7 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "SH Visualization"
+					"material" : "sphere 00"
 				},
 				{
 					"name" : "Sphere 07",
@@ -95,7 +95,7 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "SH Visualization"
+					"material" : "sphere 07"
 				},
 				{
 					"name" : "Sphere 05",
@@ -107,7 +107,7 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "SH Visualization"
+					"material" : "sphere 05"
 				},
 				{
 					"name" : "Sphere 06",
@@ -119,7 +119,7 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "SH Visualization"
+					"material" : "sphere 06"
 				},
 				{
 					"name" : "Sphere 04",
@@ -131,7 +131,7 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "SH Visualization"
+					"material" : "sphere 04"
 				},
 				{
 					"name" : "Sphere 03",
@@ -143,7 +143,7 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "SH Visualization"
+					"material" : "sphere 03"
 				},
 				{
 					"name" : "Sphere 02",
@@ -155,7 +155,7 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "SH Visualization"
+					"material" : "sphere 02"
 				},
 				{
 					"name" : "Sphere 01",
@@ -167,7 +167,7 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "SH Visualization"
+					"material" : "sphere 01"
 				}
 			]
 		},
@@ -177,7 +177,7 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "43.000, 1.880, 0.000"
+				"pos" : "0.000, 1.880, 0.000"
 			},
 			"children" : 
 			[
@@ -191,7 +191,7 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "SH Visualization"
+					"material" : "sphere 11"
 				},
 				{
 					"name" : "Sphere 12",
@@ -203,7 +203,7 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "SH Visualization"
+					"material" : "sphere 12"
 				},
 				{
 					"name" : "Sphere 13",
@@ -215,7 +215,7 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "SH Visualization"
+					"material" : "sphere 13"
 				},
 				{
 					"name" : "Sphere 14",
@@ -227,7 +227,7 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "SH Visualization"
+					"material" : "sphere 14"
 				},
 				{
 					"name" : "Sphere 15",
@@ -239,7 +239,7 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "SH Visualization"
+					"material" : "sphere 15"
 				},
 				{
 					"name" : "Sphere 16",
@@ -251,7 +251,7 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "SH Visualization"
+					"material" : "sphere 16"
 				},
 				{
 					"name" : "Sphere 17",
@@ -263,7 +263,7 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "SH Visualization"
+					"material" : "sphere 17"
 				},
 				{
 					"name" : "Sphere 18",
@@ -275,7 +275,7 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "SH Visualization"
+					"material" : "sphere 18"
 				},
 				{
 					"name" : "Sphere 19",
@@ -287,7 +287,7 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "SH Visualization"
+					"material" : "sphere 19"
 				},
 				{
 					"name" : "Sphere 20",
@@ -299,7 +299,7 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "SH Visualization"
+					"material" : "sphere 20"
 				},
 				{
 					"name" : "Sphere 21",
@@ -311,7 +311,7 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "SH Visualization"
+					"material" : "sphere 21"
 				}
 			]
 		},
@@ -366,17 +366,6 @@
 				"enabled" : true,
 				"brightness" : 500.000000
 			}
-		},
-		{
-			"name" : "New_Object_00",
-			"type" : "object",
-			"visible" : true,
-			"transform" : 
-			{
-				"scale" : "5.000, 5.000, 5.000"
-			},
-			"mesh" : "sphere",
-			"material" : "SH Visualization"
 		}
 	]
 }

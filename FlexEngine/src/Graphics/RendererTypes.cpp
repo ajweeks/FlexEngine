@@ -59,7 +59,6 @@ namespace flex
 				_u(NEAR_FAR_PLANES)
 				_u(POST_PROCESS_MAT)
 				_u(LAST_FRAME_VIEWPROJ)
-				_u(SH_COEFFS)
 #undef _u
 		}
 

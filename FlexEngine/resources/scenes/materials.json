@@ -308,13 +308,6 @@
 			"const albedo" : "0.001, 0.001, 0.001",
 			"const metallic" : 0.000000,
 			"const roughness" : 0.000000
-		},
-		{
-			"name" : "SH Visualization",
-			"shader" : "spherical_harmonic_visualization",
-			"const albedo" : "1.000, 1.000, 1.000",
-			"const metallic" : 0.000000,
-			"const roughness" : 0.000000
 		}
 	]
 }
