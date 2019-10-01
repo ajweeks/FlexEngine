@@ -607,30 +607,16 @@ namespace flex
 				Print("Capturing RenderDoc frame...\n");
 				m_RenderDocAPI->EndFrameCapture(NULL, NULL);
 
-				u32 bufferSize;
-				u32 captureIndex = 0;
-				m_RenderDocAPI->GetCapture(captureIndex, nullptr, &bufferSize, nullptr);
-				std::string captureFilePath(bufferSize, '\0');
-				u32 result = m_RenderDocAPI->GetCapture(captureIndex, (char*)captureFilePath.data(), &bufferSize, nullptr);
-				if (result == 0 || bufferSize == 0)
-				{
-					PrintWarn("Failed to retrieve capture with index %d\n", captureIndex);
-				}
-				else
+				std::string captureFilePath;
+				if (GetLatestRenderDocCaptureFilePath(captureFilePath))
 				{
 					g_Renderer->AddEditorString("Captured RenderDoc frame");
 
-					captureFilePath.pop_back(); // Remove trailing null terminator
 					const std::string captureFileName = StripLeadingDirectories(captureFilePath);
 					Print("Captured RenderDoc frame to %s\n", captureFileName.c_str());
-					if (m_RenderDocUIPID != -1)
-					{
-						// Handle application having been closed
-						if (!Platform::IsProcessRunning(m_RenderDocUIPID))
-						{
-							m_RenderDocUIPID = -1;
-						}
-					}
+
+					CheckForRenderDocUIRunning();
+
 					if (m_RenderDocUIPID == -1)
 					{
 						std::string cmdLineArgs = captureFilePath;
@@ -863,6 +849,9 @@ namespace flex
 				ImGui::MenuItem("Key Mapper", NULL, &m_bInputMapperShowing);
 				ImGui::MenuItem("Uniform Buffers", NULL, &g_Renderer->bUniformBufferWindowShowing);
 				ImGui::MenuItem("Font Editor", NULL, &g_Renderer->bFontWindowShowing);
+#if COMPILE_RENDERDOC_API
+				ImGui::MenuItem("Render Doc Captures", NULL, &m_bShowingRenderDocWindow);
+#endif
 
 				ImGui::EndMenu();
 			}
@@ -1072,6 +1061,52 @@ namespace flex
 			}
 			ImGui::End();
 		}
+
+#if COMPILE_RENDERDOC_API
+		if (m_bShowingRenderDocWindow)
+		{
+			if (ImGui::Begin("RenderDoc", &m_bShowingRenderDocWindow))
+			{
+				ImGui::Text("RenderDoc connected - API v%i.%i.%i", m_RenderDocAPIVerionMajor, m_RenderDocAPIVerionMinor, m_RenderDocAPIVerionPatch);
+				if (ImGui::Button("Trigger capture (F9)"))
+				{
+					m_bRenderDocTriggerCaptureNextFrame = true;
+				}
+
+				if (m_bRenderDocTriggerCaptureNextFrame|| m_bRenderDocCapturingFrame)
+				{
+					ImGui::Text("Capturing frame...");
+				}
+
+				if (m_RenderDocUIPID == -1)
+				{
+					if (ImGui::Button("Launch QRenderDoc"))
+					{
+						std::string captureFilePath;
+						GetLatestRenderDocCaptureFilePath(captureFilePath);
+						
+						CheckForRenderDocUIRunning();
+
+						if (m_RenderDocUIPID == -1)
+						{
+							std::string cmdLineArgs = captureFilePath;
+							m_RenderDocUIPID = m_RenderDocAPI->LaunchReplayUI(1, cmdLineArgs.c_str());
+						}
+					}
+				}
+				else
+				{
+					// Only update every second
+					m_SecSinceRenderDocPIDCheck += g_DeltaTime;
+					if (m_SecSinceRenderDocPIDCheck > 1.0f)
+					{
+						CheckForRenderDocUIRunning();
+					}
+				}
+			}
+			ImGui::End();
+		}
+#endif
 	}
 
 	i32 FlexEngine::ImGuiConsoleInputCallback(ImGuiInputTextCallbackData *data)
@@ -1514,9 +1549,8 @@ namespace flex
 			int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_4_0, (void**)&m_RenderDocAPI);
 			assert(ret == 1);
 
-			i32 major = 0, minor = 0, patch = 0;
-			m_RenderDocAPI->GetAPIVersion(&major, &minor, &patch);
-			Print("### RenderDoc API v%i.%i.%i connected, F9 to capture ###\n", major, minor, patch);
+			m_RenderDocAPI->GetAPIVersion(&m_RenderDocAPIVerionMajor, &m_RenderDocAPIVerionMinor, &m_RenderDocAPIVerionPatch);
+			Print("### RenderDoc API v%i.%i.%i connected, F9 to capture ###\n", m_RenderDocAPIVerionMajor, m_RenderDocAPIVerionMinor, m_RenderDocAPIVerionPatch);
 
 			if (m_RenderDocAutoCaptureFrameOffset != -1 &&
 				m_RenderDocAutoCaptureFrameCount != -1)
@@ -1538,6 +1572,34 @@ namespace flex
 		{
 			PrintError("Unable to find renderdoc dll at %s\n", dllPath.c_str());
 		}
+	}
+
+	void FlexEngine::CheckForRenderDocUIRunning()
+	{
+		if (m_RenderDocUIPID != -1)
+		{
+			if (!Platform::IsProcessRunning(m_RenderDocUIPID))
+			{
+				m_RenderDocUIPID = -1;
+			}
+		}
+	}
+
+	bool FlexEngine::GetLatestRenderDocCaptureFilePath(std::string& outFilePath)
+	{
+		u32 bufferSize;
+		u32 captureIndex = 0;
+		m_RenderDocAPI->GetCapture(captureIndex, nullptr, &bufferSize, nullptr);
+		std::string captureFilePath(bufferSize, '\0');
+		u32 result = m_RenderDocAPI->GetCapture(captureIndex, (char*)captureFilePath.data(), &bufferSize, nullptr);
+		if (result != 0 && bufferSize != 0)
+		{
+			captureFilePath.pop_back(); // Remove trailing null terminator
+			outFilePath = captureFilePath;
+			return true;
+		}
+
+		return false;
 	}
 #endif
 

@@ -87,6 +87,8 @@ namespace flex
 
 #if COMPILE_RENDERDOC_API
 		void SetupRenderDocAPI();
+		void CheckForRenderDocUIRunning();
+		bool GetLatestRenderDocCaptureFilePath(std::string& outFilePath);
 #endif
 
 		void Destroy();
@@ -190,6 +192,13 @@ namespace flex
 		bool m_bRenderDocCapturingFrame = false;
 		i32 m_RenderDocUIPID = -1;
 		HMODULE m_RenderDocModule = 0;
+		bool m_bShowingRenderDocWindow = false;
+		i32 m_RenderDocAPIVerionMajor = -1;
+		i32 m_RenderDocAPIVerionMinor = -1;
+		i32 m_RenderDocAPIVerionPatch = -1;
+
+		sec m_SecSinceRenderDocPIDCheck = 0.0f;
+
 		i32 m_RenderDocAutoCaptureFrameOffset = -1;
 		i32 m_RenderDocAutoCaptureFrameCount = -1;
 #endif
