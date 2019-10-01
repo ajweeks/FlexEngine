@@ -692,7 +692,7 @@ namespace flex
 		std::stringstream result;
 
 		SYSTEMTIME time;
-		GetSystemTime(&time);
+		GetLocalTime(&time);
 
 		result << IntToString(time.wYear, 4) << '-' <<
 			IntToString(time.wMonth, 2) << '-' <<
@@ -706,7 +706,7 @@ namespace flex
 		std::stringstream result;
 
 		SYSTEMTIME time;
-		GetSystemTime(&time);
+		GetLocalTime(&time);
 
 		result << IntToString(time.wYear, 4) << '-' <<
 			IntToString(time.wMonth, 2) << '-' <<
