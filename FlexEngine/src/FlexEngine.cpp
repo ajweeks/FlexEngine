@@ -612,13 +612,15 @@ namespace flex
 				m_RenderDocAPI->GetCapture(captureIndex, nullptr, &bufferSize, nullptr);
 				std::string captureFilePath(bufferSize, '\0');
 				u32 result = m_RenderDocAPI->GetCapture(captureIndex, (char*)captureFilePath.data(), &bufferSize, nullptr);
-				if (result == 0)
+				if (result == 0 || bufferSize == 0)
 				{
 					PrintWarn("Failed to retrieve capture with index %d\n", captureIndex);
 				}
 				else
 				{
 					g_Renderer->AddEditorString("Captured RenderDoc frame");
+
+					captureFilePath.pop_back(); // Remove trailing null terminator
 					const std::string captureFileName = StripLeadingDirectories(captureFilePath);
 					Print("Captured RenderDoc frame to %s\n", captureFileName.c_str());
 					if (m_RenderDocUIPID != -1)
@@ -631,7 +633,8 @@ namespace flex
 					}
 					if (m_RenderDocUIPID == -1)
 					{
-						m_RenderDocUIPID = m_RenderDocAPI->LaunchReplayUI(1, captureFilePath.c_str());
+						std::string cmdLineArgs = captureFilePath;
+						m_RenderDocUIPID = m_RenderDocAPI->LaunchReplayUI(1, cmdLineArgs.c_str());
 					}
 				}
 			}
