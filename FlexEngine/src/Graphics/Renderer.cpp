@@ -1768,7 +1768,6 @@ namespace flex
 			m_BaseShaders[shaderID].bGenerateVertexBufferForAll = true;
 			m_BaseShaders[shaderID].bNeedPushConstantBlock = true;
 			m_BaseShaders[shaderID].pushConstantBlockSize = 64;
-			m_BaseShaders[shaderID].pushConstantsNeededInFragStage = true;
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION;
 
@@ -1817,7 +1816,6 @@ namespace flex
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::TAA_RESOLVE;
 			m_BaseShaders[shaderID].bDepthWriteEnable = false;
 			m_BaseShaders[shaderID].bNeedPushConstantBlock = true;
-			m_BaseShaders[shaderID].pushConstantsNeededInFragStage = true;
 			m_BaseShaders[shaderID].pushConstantBlockSize = 8;
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION |

@@ -609,8 +609,6 @@ namespace flex
 		bool bDynamic = false;
 		u32 dynamicVertexBufferSize = 0;
 		RenderPassType renderPassType = RenderPassType::_NONE;
-
-		bool pushConstantsNeededInFragStage = false;
 	};
 
 	struct SpriteQuadDrawInfo
