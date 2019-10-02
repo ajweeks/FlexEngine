@@ -241,12 +241,12 @@ namespace flex
 			m_OffscreenFrameBuffer0->frameBufferAttachments = {
 				{ "color", { m_VulkanDevice, frameBufCreateInfo } },
 			};
-			m_OffscreenFrameBuffer0->frameBufferAttachments[0].second.bIsTransferedSrc = true;
 
 			m_OffscreenFrameBuffer1 = new FrameBuffer(m_VulkanDevice);
 			m_OffscreenFrameBuffer1->frameBufferAttachments = {
 				{ "color", { m_VulkanDevice, frameBufCreateInfo } },
 			};
+			m_OffscreenFrameBuffer1->frameBufferAttachments[0].second.bIsTransferedSrc = true;
 
 			m_HistoryBuffer = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "History buffer", m_SwapChainExtent.width, m_SwapChainExtent.height, 4);
 			m_HistoryBuffer->imageFormat = m_OffscreenFrameBufferFormat;
@@ -7499,15 +7499,15 @@ namespace flex
 
 				{
 					// Should be auto-transitioned by TAA resolve pass, but isn't??
-					offscreenBuffer0.TransitionToLayout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, m_GraphicsQueue, commandBuffer);
+					offscreenBuffer1.TransitionToLayout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, m_GraphicsQueue, commandBuffer);
 
 					m_HistoryBuffer->TransitionToLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, commandBuffer);
 
-					CopyImage(m_VulkanDevice, m_GraphicsQueue, offscreenBuffer0.image, m_HistoryBuffer->image,
+					CopyImage(m_VulkanDevice, m_GraphicsQueue, offscreenBuffer1.image, m_HistoryBuffer->image,
 						m_SwapChainExtent.width, m_SwapChainExtent.height, commandBuffer, VK_IMAGE_ASPECT_COLOR_BIT);
 
 					// Transition to ready only for gamma correct pass
-					offscreenBuffer0.TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_GraphicsQueue, commandBuffer);
+					offscreenBuffer1.TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_GraphicsQueue, commandBuffer);
 
 					m_HistoryBuffer->TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, commandBuffer);
 				}
