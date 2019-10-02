@@ -581,6 +581,8 @@ namespace flex
 			VkImageView sceneImageView = VK_NULL_HANDLE;
 			VkSampler sceneSampler = VK_NULL_HANDLE;
 
+			VkImageView albedoView = VK_NULL_HANDLE;
+
 			VkImageView historyBufferImageView = VK_NULL_HANDLE;
 			VkSampler historyBufferSampler = VK_NULL_HANDLE;
 

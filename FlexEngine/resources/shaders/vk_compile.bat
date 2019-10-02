@@ -1,5 +1,8 @@
 @ECHO off
 
+glslangvalidator --spirv-val -V vk_barebones_pos2_uv.vert -o spv/vk_barebones_pos2_uv_vert.spv
+glslangvalidator --spirv-val -V vk_barebones_pos3_uv.vert -o spv/vk_barebones_pos3_uv_vert.spv
+
 glslangvalidator --spirv-val -V vk_color.vert -o spv/vk_color_vert.spv 
 glslangvalidator --spirv-val -V vk_color.frag -o spv/vk_color_frag.spv
 
@@ -35,16 +38,13 @@ glslangvalidator --spirv-val -V vk_font_ws.vert -o spv/vk_font_ws_vert.spv
 glslangvalidator --spirv-val -V vk_font_ws.geom -o spv/vk_font_ws_geom.spv
 glslangvalidator --spirv-val -V vk_font.frag -o spv/vk_font_frag.spv
 
-glslangvalidator --spirv-val -V vk_ssao.vert -o spv/vk_ssao_vert.spv
 glslangvalidator --spirv-val -V vk_ssao.frag -o spv/vk_ssao_frag.spv
 
-glslangvalidator --spirv-val -V vk_ssao_blur.vert -o spv/vk_ssao_blur_vert.spv
 glslangvalidator --spirv-val -V vk_ssao_blur.frag -o spv/vk_ssao_blur_frag.spv
 
 glslangvalidator --spirv-val -V vk_post_process.vert -o spv/vk_post_process_vert.spv
 glslangvalidator --spirv-val -V vk_post_process.frag -o spv/vk_post_process_frag.spv
 
-glslangvalidator --spirv-val -V vk_post_fxaa.vert -o spv/vk_post_fxaa_vert.spv
 glslangvalidator --spirv-val -V vk_post_fxaa.frag -o spv/vk_post_fxaa_frag.spv
 
 glslangvalidator --spirv-val -V vk_shadow.vert -o spv/vk_shadow_vert.spv
@@ -56,6 +56,8 @@ glslangvalidator --spirv-val -V vk_sprite_arr.frag -o spv/vk_sprite_arr_frag.spv
 glslangvalidator --spirv-val -V vk_taa_resolve.frag -o spv/vk_taa_resolve_frag.spv
 
 glslangvalidator --spirv-val -V vk_gamma_correct.frag -o spv/vk_gamma_correct_frag.spv
+
+glslangvalidator --spirv-val -V vk_blit.frag -o spv/vk_blit_frag.spv
 
 @REM ImGui
 glslangValidator --spirv-val -V vk_imgui.frag -o spv/vk_imgui_frag.spv

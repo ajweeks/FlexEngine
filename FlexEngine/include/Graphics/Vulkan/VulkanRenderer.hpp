@@ -221,7 +221,8 @@ namespace flex
 
 			void CreateUniformBuffers(VulkanShader* shader);
 
-			void CreatePostProcessingObjects();
+			void CreatePostProcessingResources();
+			void CreateFullscreenBlitResources();
 
 			// Returns a pointer into m_LoadedTextures if a texture has been loaded from that file path, otherwise returns nullptr
 			VulkanTexture* GetLoadedTexture(const std::string& filePath);
@@ -252,8 +253,24 @@ namespace flex
 			void BatchRenderObjects();
 			void DrawShaderBatch(const ShaderBatchPair &shaderBatches, VkCommandBuffer& commandBuffer, DrawCallInfo* drawCallInfo = nullptr);
 
-			void RenderFullscreenQuad(VkCommandBuffer commandBuffer, VkRenderPass renderPass, VkFramebuffer framebuffer, ShaderID shaderID,
-				VkPipelineLayout pipelineLayout, VkPipeline graphicsPipeline, VkDescriptorSet descriptorSet, bool bFlipViewport);
+			// Expects a render pass to be in flight, renders a fullscreen tri with minimal state setup
+			void RenderFullscreenTri(
+				VkCommandBuffer commandBuffer,
+				ShaderID shaderID,
+				VkPipelineLayout pipelineLayout,
+				VkPipeline graphicsPipeline,
+				VkDescriptorSet descriptorSet);
+
+			// Begins the given render pass, renders a fullscreen tri, then ends the render pass
+			void RenderFullscreenTri(
+				VkCommandBuffer commandBuffer,
+				VkRenderPass renderPass,
+				VkFramebuffer framebuffer,
+				ShaderID shaderID,
+				VkPipelineLayout pipelineLayout,
+				VkPipeline graphicsPipeline,
+				VkDescriptorSet descriptorSet,
+				bool bFlipViewport);
 
 			void BuildCommandBuffers(const DrawCallInfo& drawCallInfo);
 
@@ -389,8 +406,9 @@ namespace flex
 			VulkanTexture* m_HistoryBuffer = nullptr;
 
 			VkDescriptorSet m_PostProcessDescriptorSet = VK_NULL_HANDLE;
-			VkDescriptorSet m_TAAResolveDescriptorSet = VK_NULL_HANDLE;
 			VkDescriptorSet m_GammaCorrectDescriptorSet = VK_NULL_HANDLE;
+			VkDescriptorSet m_TAAResolveDescriptorSet = VK_NULL_HANDLE;
+			VkDescriptorSet m_FinalFullscreenBlitDescriptorSet = VK_NULL_HANDLE;
 
 			FrameBuffer* m_SSAOFrameBuf = nullptr;
 			FrameBuffer* m_SSAOBlurHFrameBuf = nullptr;
@@ -479,8 +497,6 @@ namespace flex
 			std::vector<VDeleter<VkFramebuffer>> m_SwapChainFramebuffers;
 			FrameBufferAttachment* m_SwapChainDepthAttachment = nullptr;
 
-			MaterialID m_ComputeSDFMatID = InvalidMaterialID;
-
 			VDeleter<VkRenderPass> m_ShadowRenderPass;
 			VDeleter<VkRenderPass> m_DeferredCombineRenderPass;
 			VDeleter<VkRenderPass> m_SSAORenderPass;
@@ -506,6 +522,12 @@ namespace flex
 			VDeleter<VkPipelineLayout> m_TAAResolveGraphicsPipelineLayout;
 			VDeleter<VkPipeline> m_GammaCorrectGraphicsPipeline;
 			VDeleter<VkPipelineLayout> m_GammaCorrectGraphicsPipelineLayout;
+
+			VDeleter<VkPipeline> m_SpriteArrGraphicsPipeline;
+			VDeleter<VkPipelineLayout> m_SpriteArrGraphicsPipelineLayout;
+
+			VDeleter<VkPipeline> m_BlitGraphicsPipeline;
+			VDeleter<VkPipelineLayout> m_BlitGraphicsPipelineLayout;
 
 			VDeleter<VkDescriptorPool> m_DescriptorPool;
 			std::vector<VkDescriptorSetLayout> m_DescriptorSetLayouts;
@@ -562,8 +584,8 @@ namespace flex
 			VkSpecializationInfo m_TAAOSpecializationInfo;
 			real m_TAA_ks[2];
 
-			VDeleter<VkPipeline> m_SpriteArrGraphicsPipeline;
-			VDeleter<VkPipelineLayout> m_SpriteArrGraphicsPipelineLayout;
+			MaterialID m_ComputeSDFMatID = InvalidMaterialID;
+			MaterialID m_FullscreenBlitMatID = InvalidMaterialID;
 
 #ifdef DEBUG
 			AsyncVulkanShaderCompiler* m_ShaderCompiler = nullptr;

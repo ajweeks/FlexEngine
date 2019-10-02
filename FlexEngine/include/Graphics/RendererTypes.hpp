@@ -528,8 +528,8 @@ namespace flex
 		SSAO_BLUR,
 		POST_PROCESS,
 		TAA_RESOLVE,
-		UI,
 		GAMMA_CORRECT,
+		UI,
 
 		_NONE
 	};

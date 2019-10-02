@@ -8,5 +8,5 @@ layout (location = 0) out vec2 ex_TexCoord;
 void main()
 {
 	ex_TexCoord = in_TexCoord;
-	gl_Position = vec4(in_Position2D, 0, 1);
+	gl_Position = vec4(in_Position2D, 0.0, 1.0);
 }

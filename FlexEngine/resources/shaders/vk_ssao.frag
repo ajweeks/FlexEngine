@@ -2,7 +2,7 @@
 
 layout (location = 0) out float fragColor;
 
-layout (location = 0) in vec2 ex_UV;
+layout (location = 0) in vec2 ex_TexCoord;
 
 layout (constant_id = 0) const int SSAO_KERNEL_SIZE = 64;
 
@@ -32,7 +32,7 @@ vec3 reconstructVSPosFromDepth(vec2 uv)
 
 void main()
 {
-    float depth = texture(in_Depth, ex_UV).r;
+    float depth = texture(in_Depth, ex_TexCoord).r;
 	
 	if (depth == 0.0f)
 	{
@@ -40,14 +40,14 @@ void main()
 		return;
 	}
 
-	vec3 normal = normalize(texture(in_Normal, ex_UV).rgb * 2.0f - 1.0f);
+	vec3 normal = normalize(texture(in_Normal, ex_TexCoord).rgb * 2.0f - 1.0f);
 
-	vec3 posVS = reconstructVSPosFromDepth(ex_UV);
+	vec3 posVS = reconstructVSPosFromDepth(ex_TexCoord);
 
 	ivec2 depthTexSize = textureSize(in_Depth, 0); 
 	ivec2 noiseTexSize = textureSize(in_Noise, 0);
 	float renderScale = 0.5; // SSAO is rendered at 0.5x scale
-	vec2 noiseUV = vec2(float(depthTexSize.x)/float(noiseTexSize.x), float(depthTexSize.y)/float(noiseTexSize.y)) * ex_UV * renderScale;
+	vec2 noiseUV = vec2(float(depthTexSize.x)/float(noiseTexSize.x), float(depthTexSize.y)/float(noiseTexSize.y)) * ex_TexCoord * renderScale;
 	// noiseUV += vec2(0.5);
 	vec3 randomVec = texture(in_Noise, noiseUV).xyz;
 	

@@ -396,9 +396,8 @@ namespace flex
 		MaterialID m_PostProcessMatID = InvalidMaterialID;
 		MaterialID m_PostFXAAMatID = InvalidMaterialID;
 		MaterialID m_SelectedObjectMatID = InvalidMaterialID;
-		MaterialID m_TAAResolveMaterialID = InvalidMaterialID;
-		//MaterialID m_UIMaterialID = InvalidMaterialID;
 		MaterialID m_GammaCorrectMaterialID = InvalidMaterialID;
+		MaterialID m_TAAResolveMaterialID = InvalidMaterialID;
 		MaterialID m_PlaceholderMaterialID = InvalidMaterialID;
 
 		std::string m_FontImageExtension = ".png";

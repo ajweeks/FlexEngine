@@ -204,15 +204,18 @@ namespace flex
 			m_SSAOBlurHGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
 			m_SSAOBlurVGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
 
-			m_SpriteArrGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
-			m_SpriteArrGraphicsPipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
-
 			m_PostProcessGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
 			m_PostProcessGraphicsPipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
 			m_TAAResolveGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
 			m_TAAResolveGraphicsPipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
 			m_GammaCorrectGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
 			m_GammaCorrectGraphicsPipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
+
+			m_SpriteArrGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
+			m_SpriteArrGraphicsPipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
+
+			m_BlitGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
+			m_BlitGraphicsPipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
 
 			m_ShadowImage = { m_VulkanDevice->m_LogicalDevice, vkDestroyImage };
 			m_ShadowImageView = { m_VulkanDevice->m_LogicalDevice, vkDestroyImageView };
@@ -465,6 +468,19 @@ namespace flex
 				CreateSSAODescriptorSets();
 			}
 
+			if (m_FullscreenBlitMatID == InvalidMaterialID)
+			{
+				MaterialCreateInfo fullscreenBlitMatCreateInfo = {};
+				fullscreenBlitMatCreateInfo.name = "fullscreen blit";
+				fullscreenBlitMatCreateInfo.shaderName = "blit";
+				fullscreenBlitMatCreateInfo.persistent = true;
+				fullscreenBlitMatCreateInfo.visibleInEditor = false;
+				fullscreenBlitMatCreateInfo.generateAlbedoSampler = true;
+				fullscreenBlitMatCreateInfo.enableAlbedoSampler = true;
+				m_FullscreenBlitMatID = InitializeMaterial(&fullscreenBlitMatCreateInfo);
+			}
+			assert(m_FullscreenBlitMatID != InvalidMaterialID);
+
 			CreateShadowResources();
 
 			m_CommandBufferManager.CreateCommandBuffers(m_SwapChainImages.size());
@@ -547,7 +563,8 @@ namespace flex
 
 			GenerateIrradianceMaps();
 
-			CreatePostProcessingObjects();
+			CreatePostProcessingResources();
+			CreateFullscreenBlitResources();
 
 			m_bPostInitialized = true;
 
@@ -698,9 +715,6 @@ namespace flex
 			m_SSAOGraphicsPipelineLayout.replace();
 			m_SSAOBlurGraphicsPipelineLayout.replace();
 
-			m_SpriteArrGraphicsPipeline.replace();
-			m_SpriteArrGraphicsPipelineLayout.replace();
-
 			m_SSAOSampler.replace();
 
 			m_ShadowGraphicsPipeline.replace();
@@ -717,6 +731,12 @@ namespace flex
 			m_TAAResolveGraphicsPipelineLayout.replace();
 			m_GammaCorrectGraphicsPipeline.replace();
 			m_GammaCorrectGraphicsPipelineLayout.replace();
+
+			m_SpriteArrGraphicsPipeline.replace();
+			m_SpriteArrGraphicsPipelineLayout.replace();
+
+			m_BlitGraphicsPipeline.replace();
+			m_BlitGraphicsPipelineLayout.replace();
 
 			m_gBufferQuadVertexBufferData.Destroy();
 			m_DescriptorPool.replace();
@@ -1187,7 +1207,7 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::CreatePostProcessingObjects()
+		void VulkanRenderer::CreatePostProcessingResources()
 		{
 			// Post process descriptor set
 			{
@@ -1207,26 +1227,6 @@ namespace flex
 				CreateDescriptorSet(&descSetCreateInfo);
 			}
 
-			// TAA Resolve descriptor set
-			{
-				ShaderID taaResolveShaderID = m_Materials[m_TAAResolveMaterialID].material.shaderID;
-				VulkanShader* taaResolveShader = &m_Shaders[taaResolveShaderID];
-				VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[taaResolveShaderID];
-
-				DescriptorSetCreateInfo descSetCreateInfo = {};
-				descSetCreateInfo.DBG_Name = "TAA Resolve descriptor set";
-				descSetCreateInfo.descriptorSet = &m_TAAResolveDescriptorSet;
-				descSetCreateInfo.descriptorSetLayout = &descSetLayout;
-				descSetCreateInfo.shaderID = taaResolveShaderID;
-				descSetCreateInfo.uniformBuffer = &taaResolveShader->uniformBuffer;
-				FrameBufferAttachment& sceneFrameBufferAttachment = m_OffscreenFrameBuffer1->frameBufferAttachments[0].second;
-				descSetCreateInfo.sceneImageView = sceneFrameBufferAttachment.view;
-				descSetCreateInfo.sceneSampler = m_ColorSampler;
-				descSetCreateInfo.historyBufferImageView = m_HistoryBuffer->imageView;
-				descSetCreateInfo.historyBufferSampler = m_ColorSampler;
-				CreateDescriptorSet(&descSetCreateInfo);
-			}
-
 			// Gamma Correct descriptor set
 			{
 				ShaderID gammaCorrectShaderID = m_Materials[m_GammaCorrectMaterialID].material.shaderID;
@@ -1239,9 +1239,29 @@ namespace flex
 				descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 				descSetCreateInfo.shaderID = gammaCorrectShaderID;
 				descSetCreateInfo.uniformBuffer = &gammaCorrectShader->uniformBuffer;
-				FrameBufferAttachment& sceneFrameBufferAttachment = m_bEnableTAA ? m_OffscreenFrameBuffer0->frameBufferAttachments[0].second : m_OffscreenFrameBuffer1->frameBufferAttachments[0].second;
+				FrameBufferAttachment& sceneFrameBufferAttachment = m_OffscreenFrameBuffer1->frameBufferAttachments[0].second;
 				descSetCreateInfo.sceneImageView = sceneFrameBufferAttachment.view;
 				descSetCreateInfo.sceneSampler = m_ColorSampler;
+				CreateDescriptorSet(&descSetCreateInfo);
+			}
+
+			// TAA Resolve descriptor set
+			{
+				ShaderID taaResolveShaderID = m_Materials[m_TAAResolveMaterialID].material.shaderID;
+				VulkanShader* taaResolveShader = &m_Shaders[taaResolveShaderID];
+				VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[taaResolveShaderID];
+
+				DescriptorSetCreateInfo descSetCreateInfo = {};
+				descSetCreateInfo.DBG_Name = "TAA Resolve descriptor set";
+				descSetCreateInfo.descriptorSet = &m_TAAResolveDescriptorSet;
+				descSetCreateInfo.descriptorSetLayout = &descSetLayout;
+				descSetCreateInfo.shaderID = taaResolveShaderID;
+				descSetCreateInfo.uniformBuffer = &taaResolveShader->uniformBuffer;
+				FrameBufferAttachment& sceneFrameBufferAttachment = m_OffscreenFrameBuffer0->frameBufferAttachments[0].second;
+				descSetCreateInfo.sceneImageView = sceneFrameBufferAttachment.view;
+				descSetCreateInfo.sceneSampler = m_ColorSampler;
+				descSetCreateInfo.historyBufferImageView = m_HistoryBuffer->imageView;
+				descSetCreateInfo.historyBufferSampler = m_ColorSampler;
 				CreateDescriptorSet(&descSetCreateInfo);
 			}
 
@@ -1290,6 +1310,24 @@ namespace flex
 				CreateGraphicsPipeline(&createInfo);
 			}
 
+			// Gamma Correct pipeline
+			{
+				VulkanMaterial& gammaCorrectMat = m_Materials[m_GammaCorrectMaterialID];
+
+				GraphicsPipelineCreateInfo createInfo = {};
+				createInfo.DBG_Name = "Gamma Correct pipeline";
+				createInfo.graphicsPipeline = m_GammaCorrectGraphicsPipeline.replace();
+				createInfo.pipelineLayout = m_GammaCorrectGraphicsPipelineLayout.replace();
+				createInfo.renderPass = m_GammaCorrectRenderPass;
+				createInfo.shaderID = gammaCorrectMat.material.shaderID;
+				createInfo.vertexAttributes = m_FullScreenTriVertexBufferData.Attributes;
+				createInfo.descriptorSetLayoutIndex = gammaCorrectMat.material.shaderID;
+				createInfo.bSetDynamicStates = true;
+				createInfo.depthTestEnable = VK_FALSE;
+				createInfo.depthWriteEnable = VK_FALSE;
+				CreateGraphicsPipeline(&createInfo);
+			}
+
 			// TAA Resolve pipeline
 			{
 				VulkanMaterial& taaResolveMat = m_Materials[m_TAAResolveMaterialID];
@@ -1315,23 +1353,48 @@ namespace flex
 				createInfo.pushConstants = pushConstantRanges.data();
 				CreateGraphicsPipeline(&createInfo);
 			}
+		}
 
-			// Gamma Correct pipeline
+		void VulkanRenderer::CreateFullscreenBlitResources()
+		{
+			VulkanMaterial* fullscreenBlitMat = &m_Materials[m_FullscreenBlitMatID];
+			ShaderID fullscreenShaderID = fullscreenBlitMat->material.shaderID;
+			VulkanShader* fullscreenShader = &m_Shaders[fullscreenShaderID];
+
 			{
-				VulkanMaterial& gammaCorrectMat = m_Materials[m_GammaCorrectMaterialID];
+				VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[fullscreenShaderID];
 
-				GraphicsPipelineCreateInfo createInfo = {};
-				createInfo.DBG_Name = "Gamma Correct pipeline";
-				createInfo.graphicsPipeline = m_GammaCorrectGraphicsPipeline.replace();
-				createInfo.pipelineLayout = m_GammaCorrectGraphicsPipelineLayout.replace();
-				createInfo.renderPass = m_GammaCorrectRenderPass;
-				createInfo.shaderID = gammaCorrectMat.material.shaderID;
-				createInfo.vertexAttributes = m_FullScreenTriVertexBufferData.Attributes;
-				createInfo.descriptorSetLayoutIndex = gammaCorrectMat.material.shaderID;
-				createInfo.bSetDynamicStates = true;
-				createInfo.depthTestEnable = VK_FALSE;
-				createInfo.depthWriteEnable = VK_FALSE;
-				CreateGraphicsPipeline(&createInfo);
+				DescriptorSetCreateInfo descSetCreateInfo = {};
+				descSetCreateInfo.DBG_Name = "Fullscreen blit descriptor set";
+				descSetCreateInfo.descriptorSet = &m_FinalFullscreenBlitDescriptorSet;
+				descSetCreateInfo.descriptorSetLayout = &descSetLayout;
+				descSetCreateInfo.shaderID = fullscreenShaderID;
+				descSetCreateInfo.uniformBuffer = &fullscreenShader->uniformBuffer;
+				FrameBufferAttachment& sceneFrameBufferAttachment = m_bEnableTAA ?
+					m_OffscreenFrameBuffer1->frameBufferAttachments[0].second :
+					m_OffscreenFrameBuffer0->frameBufferAttachments[0].second;
+				descSetCreateInfo.albedoView = sceneFrameBufferAttachment.view;
+				CreateDescriptorSet(&descSetCreateInfo);
+			}
+
+			{
+				GraphicsPipelineCreateInfo pipelineCreateInfo = {};
+				pipelineCreateInfo.DBG_Name = "Blit pipeline";
+				pipelineCreateInfo.bSetDynamicStates = true;
+				pipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+				pipelineCreateInfo.cullMode = VK_CULL_MODE_NONE;
+				pipelineCreateInfo.bEnableColorBlending = false;
+
+				pipelineCreateInfo.graphicsPipeline = m_BlitGraphicsPipeline.replace();
+				pipelineCreateInfo.pipelineLayout = m_BlitGraphicsPipelineLayout.replace();
+				pipelineCreateInfo.shaderID = fullscreenBlitMat->material.shaderID;
+				pipelineCreateInfo.vertexAttributes = fullscreenShader->shader->vertexAttributes;
+				pipelineCreateInfo.descriptorSetLayoutIndex = fullscreenBlitMat->descriptorSetLayoutIndex;
+				pipelineCreateInfo.subpass = fullscreenShader->shader->subpass;
+				pipelineCreateInfo.depthWriteEnable = VK_FALSE;
+				pipelineCreateInfo.depthCompareOp = VK_COMPARE_OP_ALWAYS;
+				pipelineCreateInfo.renderPass = fullscreenShader->renderPass;
+				CreateGraphicsPipeline(&pipelineCreateInfo);
 			}
 		}
 
@@ -1373,7 +1436,8 @@ namespace flex
 			{
 				m_bTAAStateChanged = false;
 
-				CreatePostProcessingObjects();
+				CreatePostProcessingResources();
+				CreateFullscreenBlitResources();
 			}
 
 			m_PhysicsDebugDrawer->UpdateDebugMode();
@@ -4605,8 +4669,8 @@ namespace flex
 			case RenderPassType::SSAO_BLUR: return m_SSAOBlurHRenderPass;
 			case RenderPassType::POST_PROCESS: return m_PostProcessRenderPass;
 			case RenderPassType::TAA_RESOLVE: return m_TAAResolveRenderPass;
-			case RenderPassType::UI: return m_UIRenderPass;
 			case RenderPassType::GAMMA_CORRECT: return m_GammaCorrectRenderPass;
+			case RenderPassType::UI: return m_UIRenderPass;
 			default:
 				PrintError("Shader's render pass type was not set!\n %s", shaderName ? shaderName : "");
 				ENSURE_NO_ENTRY();
@@ -5036,7 +5100,7 @@ namespace flex
 			// TODO: Create GBuffer & offscreen render passes here too? (Currently in PrepareFrameBuffers)
 
 			//
-			// See `FlexEngine/screenshots/FlexRenderPasses_2019-07-08.jpg` for 
+			// See `FlexEngine/screenshots/FlexRenderPasses_2019-10-02.jpg` for 
 			// a detailed breakdown of render passes and their dependencies
 			//
 
@@ -5056,27 +5120,24 @@ namespace flex
 				VK_IMAGE_LAYOUT_UNDEFINED, true, depthFormat, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
 			// Forward render pass
-			// After completion FB0 is sampled in post processing pass
 			CreateRenderPass(m_ForwardRenderPass.replace(), m_OffscreenFrameBufferFormat, "Forward render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, true, depthFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 			// Post process render pass
-			// After completion FB1 is sampled in TAA resolve pass
 			CreateRenderPass(m_PostProcessRenderPass.replace(), m_OffscreenFrameBufferFormat, "Post Process render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 				VK_IMAGE_LAYOUT_UNDEFINED, true, depthFormat, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
-			// TAA resolve render pass
-			// FB0 is sampled in gamma correct pass
-			CreateRenderPass(m_TAAResolveRenderPass.replace(), m_OffscreenFrameBufferFormat, "TAA Resolve render pass", VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, true, depthFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
 			// Gamma correct render pass
-			CreateRenderPass(m_GammaCorrectRenderPass.replace(), m_SwapChainImageFormat, "Gamma correct render pass", VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-				VK_IMAGE_LAYOUT_UNDEFINED, true, depthFormat, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+			CreateRenderPass(m_GammaCorrectRenderPass.replace(), m_OffscreenFrameBufferFormat, "Gamma correct render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+				VK_IMAGE_LAYOUT_UNDEFINED, true, depthFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+			// TAA resolve render pass
+			CreateRenderPass(m_TAAResolveRenderPass.replace(), m_OffscreenFrameBufferFormat, "TAA Resolve render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, true, depthFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 			// UI render pass
 			CreateRenderPass(m_UIRenderPass.replace(), m_SwapChainImageFormat, "UI render pass", VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, true, depthFormat, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+				VK_IMAGE_LAYOUT_UNDEFINED, true, depthFormat, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
 		}
 
@@ -5210,9 +5271,9 @@ namespace flex
 
 				{ U_ALBEDO_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
-				createInfo->shadowPreviewView != VK_NULL_HANDLE ? createInfo->shadowPreviewView : (createInfo->albedoTexture ? *&createInfo->albedoTexture->imageView : VK_NULL_HANDLE),
-				createInfo->shadowPreviewView != VK_NULL_HANDLE ? createInfo->shadowSampler : (createInfo->albedoTexture ? *&createInfo->albedoTexture->sampler : VK_NULL_HANDLE),
-				createInfo->shadowPreviewView != VK_NULL_HANDLE ? nullptr : (createInfo->albedoTexture ? &createInfo->albedoTexture->imageInfoDescriptor : nullptr) },
+				createInfo->albedoView != VK_NULL_HANDLE ? createInfo->albedoView : createInfo->shadowPreviewView != VK_NULL_HANDLE ? createInfo->shadowPreviewView : (createInfo->albedoTexture ? *&createInfo->albedoTexture->imageView : VK_NULL_HANDLE),
+				createInfo->albedoView != VK_NULL_HANDLE ? m_ColorSampler : createInfo->shadowPreviewView != VK_NULL_HANDLE ? createInfo->shadowSampler : (createInfo->albedoTexture ? *&createInfo->albedoTexture->sampler : VK_NULL_HANDLE),
+				createInfo->albedoView != VK_NULL_HANDLE ? nullptr : createInfo->shadowPreviewView != VK_NULL_HANDLE ? nullptr : (createInfo->albedoTexture ? &createInfo->albedoTexture->imageInfoDescriptor : nullptr) },
 
 				{ U_METALLIC_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
@@ -5846,7 +5907,7 @@ namespace flex
 					m_SwapChainDepthAttachment->view
 				};
 
-				VkFramebufferCreateInfo framebufferInfo = vks::framebufferCreateInfo(m_GammaCorrectRenderPass);
+				VkFramebufferCreateInfo framebufferInfo = vks::framebufferCreateInfo(m_UIRenderPass);
 				framebufferInfo.attachmentCount = attachments.size();
 				framebufferInfo.pAttachments = attachments.data();
 				framebufferInfo.width = m_SwapChainExtent.width;
@@ -6945,8 +7006,34 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::RenderFullscreenQuad(VkCommandBuffer commandBuffer, VkRenderPass renderPass, VkFramebuffer framebuffer,
-			ShaderID shaderID, VkPipelineLayout pipelineLayout, VkPipeline graphicsPipeline, VkDescriptorSet descriptorSet, bool bFlipViewport)
+		void VulkanRenderer::RenderFullscreenTri(
+			VkCommandBuffer commandBuffer,
+			ShaderID shaderID,
+			VkPipelineLayout pipelineLayout,
+			VkPipeline graphicsPipeline,
+			VkDescriptorSet descriptorSet)
+		{
+			VulkanShader* vkShader = &m_Shaders[shaderID];
+
+			VkDeviceSize offsets[1] = { 0 };
+			BindDescriptorSet(vkShader, 0, commandBuffer, pipelineLayout, descriptorSet);
+
+			vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+
+			vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_FullScreenTriVertexBuffer->m_Buffer, offsets);
+
+			vkCmdDraw(commandBuffer, m_FullScreenTriVertexBufferData.VertexCount, 1, 0, 0);
+		}
+
+		void VulkanRenderer::RenderFullscreenTri(
+			VkCommandBuffer commandBuffer,
+			VkRenderPass renderPass,
+			VkFramebuffer framebuffer,
+			ShaderID shaderID,
+			VkPipelineLayout pipelineLayout,
+			VkPipeline graphicsPipeline,
+			VkDescriptorSet descriptorSet,
+			bool bFlipViewport)
 		{
 			std::array<VkClearValue, 2> clearValues = {};
 			clearValues[0].color = m_ClearColor;
@@ -6968,6 +7055,7 @@ namespace flex
 			renderPassBeginInfo.pClearValues = clearValues.data();
 			renderPassBeginInfo.framebuffer = framebuffer;
 			vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
 			{
 				BindDescriptorSet(vkShader, 0, commandBuffer, pipelineLayout, descriptorSet);
 
@@ -6980,6 +7068,7 @@ namespace flex
 
 				vkCmdDraw(commandBuffer, m_FullScreenTriVertexBufferData.VertexCount, 1, 0, 0);
 			}
+
 			vkCmdEndRenderPass(commandBuffer);
 		}
 
@@ -7242,7 +7331,7 @@ namespace flex
 				VulkanRenderObject* gBufferObject = GetRenderObject(m_GBufferQuadRenderID);
 				ShaderID shaderID = m_Materials[gBufferObject->materialID].material.shaderID;
 
-				RenderFullscreenQuad(commandBuffer, m_DeferredCombineRenderPass, m_OffscreenFrameBuffer0->frameBuffer, shaderID,
+				RenderFullscreenTri(commandBuffer, m_DeferredCombineRenderPass, m_OffscreenFrameBuffer0->frameBuffer, shaderID,
 					gBufferObject->pipelineLayout, gBufferObject->graphicsPipeline, gBufferObject->descriptorSet, true);
 
 				EndDebugMarkerRegion(commandBuffer); // Shade deferred
@@ -7363,7 +7452,7 @@ namespace flex
 
 				BeginDebugMarkerRegion(commandBuffer, "Post process");
 
-				RenderFullscreenQuad(commandBuffer, m_PostProcessRenderPass, m_OffscreenFrameBuffer1->frameBuffer, m_Materials[m_PostProcessMatID].material.shaderID,
+				RenderFullscreenTri(commandBuffer, m_PostProcessRenderPass, m_OffscreenFrameBuffer1->frameBuffer, m_Materials[m_PostProcessMatID].material.shaderID,
 					m_PostProcessGraphicsPipelineLayout, m_PostProcessGraphicsPipeline, m_PostProcessDescriptorSet, true);
 
 				EndDebugMarkerRegion(commandBuffer); // Post process
@@ -7374,12 +7463,24 @@ namespace flex
 			// Post process render pass transitioned this to shader read only optimal
 			offscreenBuffer1.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
+			{
+				BeginDebugMarkerRegion(commandBuffer, "Gamma Correct");
+
+				offscreenBuffer0.TransitionToLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, m_GraphicsQueue, commandBuffer);
+
+				RenderFullscreenTri(commandBuffer, m_GammaCorrectRenderPass, m_OffscreenFrameBuffer0->frameBuffer,
+					m_Materials[m_GammaCorrectMaterialID].material.shaderID, m_GammaCorrectGraphicsPipelineLayout,
+					m_GammaCorrectGraphicsPipeline, m_GammaCorrectDescriptorSet, true);
+
+				// Auto transitioned
+				offscreenBuffer0.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+				EndDebugMarkerRegion(commandBuffer); // Gamma Correct
+			}
+
 			if (m_bEnableTAA)
 			{
 				BeginGPUTimeStamp(commandBuffer, "TAA");
-
-				// Transition for TAA to write to
-				offscreenBuffer0.TransitionToLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, m_GraphicsQueue, commandBuffer);
 
 				BeginDebugMarkerRegion(commandBuffer, "TAA Resolve");
 
@@ -7389,34 +7490,30 @@ namespace flex
 				VkShaderStageFlags stages = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 				vkCmdPushConstants(commandBuffer, m_TAAResolveGraphicsPipelineLayout, stages, 0, TAAMat.material.pushConstantBlock->size, TAAMat.material.pushConstantBlock->data);
 
-				RenderFullscreenQuad(commandBuffer, m_TAAResolveRenderPass, m_OffscreenFrameBuffer0->frameBuffer, TAAMat.material.shaderID,
+				RenderFullscreenTri(commandBuffer, m_TAAResolveRenderPass, m_OffscreenFrameBuffer1->frameBuffer, TAAMat.material.shaderID,
 					m_TAAResolveGraphicsPipelineLayout, m_TAAResolveGraphicsPipeline, m_TAAResolveDescriptorSet, true);
-
-				// Transitioned by TAA resolve pass
-				offscreenBuffer0.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 
 				EndDebugMarkerRegion(commandBuffer); // TAA Resolve
 
 				EndGPUTimeStamp(commandBuffer, "TAA");
 
-				m_HistoryBuffer->TransitionToLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, commandBuffer);
+				{
+					// Should be auto-transitioned by TAA resolve pass, but isn't??
+					offscreenBuffer0.TransitionToLayout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, m_GraphicsQueue, commandBuffer);
 
-				CopyImage(m_VulkanDevice, m_GraphicsQueue, offscreenBuffer0.image, m_HistoryBuffer->image,
-					m_SwapChainExtent.width, m_SwapChainExtent.height, commandBuffer, VK_IMAGE_ASPECT_COLOR_BIT);
+					m_HistoryBuffer->TransitionToLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, commandBuffer);
 
-				// Transition to ready only for gamma correct pass
-				offscreenBuffer0.TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_GraphicsQueue, commandBuffer);
+					CopyImage(m_VulkanDevice, m_GraphicsQueue, offscreenBuffer0.image, m_HistoryBuffer->image,
+						m_SwapChainExtent.width, m_SwapChainExtent.height, commandBuffer, VK_IMAGE_ASPECT_COLOR_BIT);
 
-				m_HistoryBuffer->TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, commandBuffer);
-			}
+					// Transition to ready only for gamma correct pass
+					offscreenBuffer0.TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_GraphicsQueue, commandBuffer);
 
-			{
-				BeginDebugMarkerRegion(commandBuffer, "Gamma Correct");
+					m_HistoryBuffer->TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, commandBuffer);
+				}
 
-				RenderFullscreenQuad(commandBuffer, m_GammaCorrectRenderPass, m_SwapChainFramebuffers[m_CurrentSwapChainBufferIndex], m_Materials[m_GammaCorrectMaterialID].material.shaderID,
-					m_GammaCorrectGraphicsPipelineLayout, m_GammaCorrectGraphicsPipeline, m_GammaCorrectDescriptorSet, true);
-
-				EndDebugMarkerRegion(commandBuffer); // Gamma Correct
+				// ?
+				//offscreenBuffer1.TransitionToLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, m_GraphicsQueue, commandBuffer);
 			}
 
 			BeginDebugMarkerRegion(commandBuffer, "UI");
@@ -7430,6 +7527,10 @@ namespace flex
 				uiRenderPassBeginInfo.framebuffer = m_SwapChainFramebuffers[m_CurrentSwapChainBufferIndex];
 
 				vkCmdBeginRenderPass(commandBuffer, &uiRenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+				// Fullscreen blit from offscreen frame buffer onto swap chain
+				RenderFullscreenTri(commandBuffer, m_Materials[m_FullscreenBlitMatID].material.shaderID,
+					m_BlitGraphicsPipelineLayout, m_BlitGraphicsPipeline, m_FinalFullscreenBlitDescriptorSet);
 
 				{
 					BeginDebugMarkerRegion(commandBuffer, "Screen Space Sprites");
@@ -7604,7 +7705,8 @@ namespace flex
 			CreateSSAODescriptorSets();
 			CreateSSAOPipelines();
 
-			CreatePostProcessingObjects();
+			CreatePostProcessingResources();
+			CreateFullscreenBlitResources();
 
 			UpdateDynamicUniformBuffer(m_PostProcessMatID, 0, MAT4_IDENTITY, nullptr);
 
@@ -8246,7 +8348,8 @@ namespace flex
 			CreateSSAODescriptorSets();
 			CreateSSAOPipelines();
 
-			CreatePostProcessingObjects();
+			CreatePostProcessingResources();
+			CreateFullscreenBlitResources();
 		}
 
 		bool VulkanRenderer::DoTextureSelector(const char* label,

@@ -1073,7 +1073,10 @@ namespace flex
 
 		if (ImGui::TreeNode("Post processing"))
 		{
-			ImGui::Checkbox("TAA", &m_bEnableTAA);
+			if (ImGui::Checkbox("TAA", &m_bEnableTAA))
+			{
+				m_bTAAStateChanged = true;
+			}
 
 			ImGui::PushItemWidth(150.0f);
 			if (ImGui::SliderInt("Sample Count", &m_TAASampleCount, 1, 16))
@@ -1389,6 +1392,7 @@ namespace flex
 				{ "ssao_blur", "ssao_blur.vert", "ssao_blur.frag" },
 				{ "taa_resolve", "post_process.vert", "taa_resolve.frag" },
 				{ "gamma_correct", "post_process.vert", "gamma_correct.frag" },
+				{ "blit", "blit.vert", "blit.frag" },
 			};
 #elif COMPILE_VULKAN
 			m_BaseShaders = {
@@ -1405,15 +1409,16 @@ namespace flex
 				{ "sprite", "vk_sprite_vert.spv", "vk_sprite_frag.spv" },
 				{ "sprite_arr", "vk_sprite_vert.spv", "vk_sprite_arr_frag.spv" },
 				{ "post_process", "vk_post_process_vert.spv", "vk_post_process_frag.spv" },
-				{ "post_fxaa", "vk_post_fxaa_vert.spv", "vk_post_fxaa_frag.spv" },
+				{ "post_fxaa", "vk_barebones_pos2_uv_vert.spv", "vk_post_fxaa_frag.spv" },
 				{ "compute_sdf", "vk_compute_sdf_vert.spv", "vk_compute_sdf_frag.spv" },
 				{ "font_ss", "vk_font_ss_vert.spv", "vk_font_frag.spv", "vk_font_ss_geom.spv" },
 				{ "font_ws", "vk_font_ws_vert.spv", "vk_font_frag.spv", "vk_font_ws_geom.spv" },
 				{ "shadow", "vk_shadow_vert.spv" },
-				{ "ssao", "vk_ssao_vert.spv", "vk_ssao_frag.spv" },
-				{ "ssao_blur", "vk_post_fxaa_vert.spv", "vk_ssao_blur_frag.spv" },
-				{ "taa_resolve", "vk_post_fxaa_vert.spv", "vk_taa_resolve_frag.spv" },
-				{ "gamma_correct", "vk_post_fxaa_vert.spv", "vk_gamma_correct_frag.spv" },
+				{ "ssao", "vk_barebones_pos3_uv_vert.spv", "vk_ssao_frag.spv" },
+				{ "ssao_blur", "vk_barebones_pos3_uv_vert.spv", "vk_ssao_blur_frag.spv" },
+				{ "taa_resolve", "vk_barebones_pos2_uv_vert.spv", "vk_taa_resolve_frag.spv" },
+				{ "gamma_correct", "vk_barebones_pos2_uv_vert.spv", "vk_gamma_correct_frag.spv" },
+				{ "blit", "vk_barebones_pos2_uv_vert.spv", "vk_blit_frag.spv" },
 			};
 #endif
 
@@ -1840,6 +1845,18 @@ namespace flex
 				(u32)VertexAttribute::UV;
 
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SCENE_SAMPLER);
+
+			m_BaseShaders[shaderID].dynamicBufferUniforms = {};
+			++shaderID;
+
+			// Blit
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::UI;
+			m_BaseShaders[shaderID].bDepthWriteEnable = false;
+			m_BaseShaders[shaderID].vertexAttributes =
+				(u32)VertexAttribute::POSITION_2D |
+				(u32)VertexAttribute::UV;
+
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_ALBEDO_SAMPLER);
 
 			m_BaseShaders[shaderID].dynamicBufferUniforms = {};
 			++shaderID;
@@ -2386,6 +2403,7 @@ namespace flex
 
 	void Renderer::EnqueueWorldSpaceText()
 	{
+#if 0
 		SetFont(SID("editor-02-ws"));
 		real s = g_SecElapsedSinceProgramStart * 3.5f;
 		DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(1.0f), 1.0f), glm::vec3(2.0f, 5.0f, 0.0f), QUAT_UNIT, 0.0f, 100.0f);
@@ -2395,6 +2413,7 @@ namespace flex
 		DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.80f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 4) * 0.12f, 5.0f + sin(s + 0.3f * 4) * 0.12f, -0.075f * 4), QUAT_UNIT, 0.0f, 100.0f);
 		DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.75f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 5) * 0.15f, 5.0f + sin(s + 0.3f * 5) * 0.15f, -0.075f * 5), QUAT_UNIT, 0.0f, 100.0f);
 		DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.70f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 6) * 0.17f, 5.0f + sin(s + 0.3f * 6) * 0.17f, -0.075f * 6), QUAT_UNIT, 0.0f, 100.0f);
+#endif
 	}
 
 	bool Renderer::LoadFontMetrics(const std::vector<char>& fileMemory,
