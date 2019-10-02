@@ -13,7 +13,7 @@ namespace flex
 		explicit BezierCurveList(const std::vector<BezierCurve>& curves);
 		~BezierCurveList();
 
-		static BezierCurveList InitializeFromJSON(const JSONObject& obj);
+		void InitializeFromJSON(const JSONObject& obj);
 
 		void DrawDebug(const btVector4& highlightColour, real highlightCurveAtPoint = -1.0f) const;
 
