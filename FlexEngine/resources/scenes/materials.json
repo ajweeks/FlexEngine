@@ -308,6 +308,26 @@
 			"const albedo" : "0.001, 0.001, 0.001",
 			"const metallic" : 0.000000,
 			"const roughness" : 0.000000
+		},
+		{
+			"name" : "noise",
+			"shader" : "pbr",
+			"const albedo" : "1.000, 1.000, 1.000",
+			"const metallic" : 0.000000,
+			"const roughness" : 0.920000,
+			"enable albedo sampler" : true,
+			"generate albedo sampler" : true,
+			"albedo texture filepath" : "noise1.png"
+		},
+		{
+			"name" : "clouds",
+			"shader" : "pbr",
+			"const albedo" : "1.000, 1.000, 1.000",
+			"const metallic" : 0.000000,
+			"const roughness" : 0.890000,
+			"enable albedo sampler" : true,
+			"generate albedo sampler" : true,
+			"albedo texture filepath" : "clouds1.png"
 		}
 	]
 }

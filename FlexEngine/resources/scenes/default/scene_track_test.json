@@ -401,6 +401,58 @@
 						"mask" : -1,
 						"group" : -1
 					}
+				},
+				{
+					"name" : "New_Object_02",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "0.441, 11.126, -4.611",
+						"rot" : "0.000, -0.000, 0.000",
+						"scale" : "6.000, 4.940, 6.050"
+					},
+					"mesh" : "cube",
+					"material" : "clouds",
+					"collider" : 
+					{
+						"shape" : "box",
+						"half extents" : "0.500, 0.500, 0.500"
+					},
+					"rigid body" : 
+					{
+						"mass" : 0.000000,
+						"kinematic" : false,
+						"static" : true,
+						"mask" : 1,
+						"group" : 1
+					}
+				},
+				{
+					"name" : "New_Object_03",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "0.441, 11.126, -11.511",
+						"rot" : "0.000, -0.000, 0.000",
+						"scale" : "6.000, 4.940, 5.660"
+					},
+					"mesh" : "cube",
+					"material" : "noise",
+					"collider" : 
+					{
+						"shape" : "box",
+						"half extents" : "0.500, 0.500, 0.500"
+					},
+					"rigid body" : 
+					{
+						"mass" : 0.000000,
+						"kinematic" : false,
+						"static" : true,
+						"mask" : 1,
+						"group" : 1
+					}
 				}
 			]
 		},
@@ -420,7 +472,7 @@
 					"transform" : 
 					{
 						"pos" : "0.000, 15.000, 0.000",
-						"rot" : "1.195, -0.973, -2.522"
+						"rot" : "1.194, -0.973, -2.523"
 					},
 					"directional light info" : 
 					{
