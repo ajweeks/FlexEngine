@@ -57,9 +57,6 @@ glslangvalidator --spirv-val -V vk_taa_resolve.frag -o spv/vk_taa_resolve_frag.s
 
 glslangvalidator --spirv-val -V vk_gamma_correct.frag -o spv/vk_gamma_correct_frag.spv
 
-glslangvalidator --spirv-val -V vk_spherical_harmonic_visualization.vert -o spv/vk_spherical_harmonic_visualization_vert.spv
-glslangvalidator --spirv-val -V vk_spherical_harmonic_visualization.frag -o spv/vk_spherical_harmonic_visualization_frag.spv
-
 @REM ImGui
 glslangValidator --spirv-val -V vk_imgui.frag -o spv/vk_imgui_frag.spv
 glslangValidator --spirv-val -V vk_imgui.vert -o spv/vk_imgui_vert.spv
