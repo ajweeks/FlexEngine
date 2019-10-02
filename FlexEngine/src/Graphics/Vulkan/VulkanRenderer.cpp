@@ -2016,7 +2016,7 @@ namespace flex
 								texture,
 								i,
 								&albedoTextureIndex,
-								&mat.albedoTexture->sampler);
+								mat.albedoTexture ? &mat.albedoTexture->sampler : nullptr);
 
 							ImGuiUpdateTextureIndexOrMaterial(bUpdateMetallicTextureMaterial,
 								texturePath,
@@ -2024,7 +2024,7 @@ namespace flex
 								texture,
 								i,
 								&metallicTextureIndex,
-								&mat.metallicTexture->sampler);
+								mat.metallicTexture ? &mat.metallicTexture->sampler : nullptr);
 
 							ImGuiUpdateTextureIndexOrMaterial(bUpdateRoughessTextureMaterial,
 								texturePath,
@@ -2032,7 +2032,7 @@ namespace flex
 								texture,
 								i,
 								&roughnessTextureIndex,
-								&mat.roughnessTexture->sampler);
+								mat.roughnessTexture ? &mat.roughnessTexture->sampler : nullptr);
 
 							ImGuiUpdateTextureIndexOrMaterial(bUpdateNormalTextureMaterial,
 								texturePath,
@@ -2040,7 +2040,7 @@ namespace flex
 								texture,
 								i,
 								&normalTextureIndex,
-								&mat.normalTexture->sampler);
+								mat.normalTexture ? &mat.normalTexture->sampler : nullptr);
 
 							++i;
 						}
@@ -2303,8 +2303,8 @@ namespace flex
 						for (VulkanTexture* texture : m_LoadedTextures)
 						{
 							bool bSelected = (i == selectedTextureIndex);
-							std::string textureFileName = texture->GetName();
-							if (ImGui::Selectable(textureFileName.c_str(), &bSelected))
+							std::string textureName = texture->GetName();
+							if (ImGui::Selectable(textureName.c_str(), &bSelected))
 							{
 								selectedTextureIndex = i;
 							}
@@ -2329,29 +2329,25 @@ namespace flex
 					}
 					ImGui::EndChild();
 
-					// TODO:
-					//if (ImGui::Button("Import Texture"))
-					//{
-					//	// TODO: Not all textures are directly in this directory! CLEANUP to make more robust
-					//	std::string relativeDirPath = RESOURCE_LOCATION  "textures/";
-					//	std::string absoluteDirectoryStr = RelativePathToAbsolute(relativeDirPath);
-					//	std::string selectedAbsFilePath;
-					//	if (OpenFileDialog("Import texture", absoluteDirectoryStr, selectedAbsFilePath))
-					//	{
-					//		const std::string fileNameAndExtension = StripLeadingDirectories(selectedAbsFilePath);
-					//		std::string relativeFilePath = relativeDirPath + fileNameAndExtension;
+					if (ImGui::Button("Import Texture"))
+					{
+						// TODO: Not all textures are directly in this directory! CLEANUP to make more robust
+						std::string relativeDirPath = RESOURCE_LOCATION  "textures/";
+						std::string absoluteDirectoryStr = RelativePathToAbsolute(relativeDirPath);
+						std::string selectedAbsFilePath;
+						if (OpenFileDialog("Import texture", absoluteDirectoryStr, selectedAbsFilePath))
+						{
+							const std::string fileNameAndExtension = StripLeadingDirectories(selectedAbsFilePath);
+							std::string relativeFilePath = relativeDirPath + fileNameAndExtension;
 
-					//		Print("Importing texture: %s\n", relativeFilePath.c_str());
+							Print("Importing texture: %s\n", relativeFilePath.c_str());
 
-					//		VulkanTexture* newTexture = new VulkanTexture(relativeFilePath, 3, false, false, false);
-					//		if (newTexture->LoadFromFile())
-					//		{
-					//			m_LoadedTextures.push_back(newTexture);
-					//		}
+							VulkanTexture* newTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, relativeFilePath, 3, false, false, false);
+							m_LoadedTextures.push_back(newTexture);
 
-					//		ImGui::CloseCurrentPopup();
-					//	}
-					//}
+							ImGui::CloseCurrentPopup();
+						}
+					}
 				}
 
 				if (ImGui::CollapsingHeader("Meshes"))
@@ -8260,7 +8256,7 @@ namespace flex
 		{
 			bool bValueChanged = false;
 
-			std::string currentTexName = (*selectedIndex == 0 ? "NONE" : (textures[*selectedIndex - 1]->relativeFilePath.c_str()));
+			std::string currentTexName = (*selectedIndex == 0 ? "NONE" : (textures[*selectedIndex - 1]->fileName.c_str()));
 			if (ImGui::BeginCombo(label, currentTexName.c_str()))
 			{
 				for (i32 i = 0; i < (i32)textures.size() + 1; i++)
@@ -8279,8 +8275,7 @@ namespace flex
 					}
 					else
 					{
-						std::string textureName = textures[i - 1]->relativeFilePath;
-						if (ImGui::Selectable(textureName.c_str(), bTextureSelected))
+						if (ImGui::Selectable(textures[i - 1]->fileName.c_str(), bTextureSelected))
 						{
 							if (*selectedIndex == 0)
 							{
@@ -8317,17 +8312,20 @@ namespace flex
 		{
 			if (bUpdateTextureMaterial)
 			{
-				if (*textureIndex == 0)
+				if (sampler != nullptr)
 				{
-					matTexturePath = "";
-					*sampler = VK_NULL_HANDLE;
-				}
-				else if (i == *textureIndex - 1)
-				{
-					matTexturePath = texturePath;
-					if (texture)
+					if (*textureIndex == 0)
 					{
-						*sampler = texture->sampler;
+						matTexturePath = "";
+						*sampler = VK_NULL_HANDLE;
+					}
+					else if (i == *textureIndex - 1)
+					{
+						matTexturePath = texturePath;
+						if (texture)
+						{
+							*sampler = texture->sampler;
+						}
 					}
 				}
 			}

@@ -279,6 +279,7 @@ namespace flex
 			u32 channelCount = 0;
 			std::string name;
 			std::string relativeFilePath;
+			std::string fileName;
 			std::array<std::string, 6> relativeCubemapFilePaths;
 			u32 mipLevels = 1;
 			bool bFlipVertically = false;

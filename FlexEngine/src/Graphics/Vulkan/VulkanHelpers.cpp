@@ -233,6 +233,7 @@ namespace flex
 			imageView(device->m_LogicalDevice, vkDestroyImageView),
 			sampler(device->m_LogicalDevice, vkDestroySampler),
 			relativeFilePath(relativeFilePath),
+			fileName(StripLeadingDirectories(relativeFilePath)),
 			channelCount(channelCount),
 			bFlipVertically(bFlipVertically),
 			bGenerateMipMaps(bGenerateMipMaps),
@@ -521,7 +522,7 @@ namespace flex
 			std::vector<Image> images;
 			u32 totalSize = 0;
 
-			const std::string fileName = StripLeadingDirectories(filePaths[0]);
+			fileName = StripLeadingDirectories(filePaths[0]);
 			if (fileName.empty())
 			{
 				PrintError("CreateCubemapFromTextures was given an empty filepath!\n");
@@ -795,7 +796,6 @@ namespace flex
 
 				{
 					VkCommandBuffer cmdBuffer = BeginSingleTimeCommands(m_VulkanDevice);
-					std::string fileName = StripLeadingDirectories(relativeFilePath);
 					std::string debugMarkerStr = "Uploading texture data from " + fileName;
 					VulkanRenderer::BeginDebugMarkerRegion(cmdBuffer, debugMarkerStr.c_str());
 
@@ -822,7 +822,6 @@ namespace flex
 			}
 			else
 			{
-				const std::string fileName = StripLeadingDirectories(relativeFilePath);
 				if (g_bEnableLogging_Loading)
 				{
 					Print("Loading texture %s\n", fileName.c_str());
