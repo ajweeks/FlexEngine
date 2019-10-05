@@ -1522,15 +1522,15 @@ namespace flex
 		{
 			PrintError("Unable to setup RenderDoc API - renderdoc settings file missing. "
 				"Please create one in the format: "
-				"\"{ \"lib path\" : \"C:\\Path\\To\\RenderDocLibs\\\" }\" "
+				"\"{ \"lib path\" : \"C:/Path/To/RenderDocLibs/\" }\" "
 				"and save it at: \"%s\"\n", m_RenderDocSettingsAbsFilePath.c_str());
 			return;
 		}
 
 
-		if (!EndsWith(dllDirPath, "\\"))
+		if (!EndsWith(dllDirPath, "/"))
 		{
-			dllDirPath += "\\";
+			dllDirPath += "/";
 		}
 
 		std::string dllPath = dllDirPath + "renderdoc.dll";

@@ -182,6 +182,7 @@ namespace flex
 
 	// Must be called at least once to set g_CurrentWorkingDirectory!
 	void RetrieveCurrentWorkingDirectory();
+	std::string ReplaceBackSlashesWithForward(std::string str);
 	std::string RelativePathToAbsolute(const std::string& relativePath);
 
 	// Returns random value in range [min, max)

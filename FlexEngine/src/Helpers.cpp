@@ -342,9 +342,6 @@ namespace flex
 	void OpenExplorer(const std::string& absoluteDirectory)
 	{
 		ShellExecute(NULL, "open", absoluteDirectory.c_str(), NULL, NULL, SW_SHOWDEFAULT);
-
-		// Alternative:
-		// system("explorer C:\\");
 	}
 
 	bool OpenJSONFileDialog(const std::string& windowTitle, const std::string& absoluteDirectory, std::string& outSelectedAbsFilePath)
@@ -392,13 +389,10 @@ namespace flex
 			}
 		}
 
-		bool bPathContainsBackslash = (directoryPath.find('\\') != std::string::npos);
-		char slashChar = (bPathContainsBackslash ? '\\' : '/');
-
 		std::string cleanedDirPath = directoryPath;
-		if (cleanedDirPath[cleanedDirPath.size() - 1] != slashChar)
+		if (cleanedDirPath[cleanedDirPath.size() - 1] != '/')
 		{
-			cleanedDirPath += slashChar;
+			cleanedDirPath += '/';
 		}
 
 		std::string cleanedDirPathWithWildCard = cleanedDirPath + '*';
@@ -471,11 +465,6 @@ namespace flex
 	std::string StripLeadingDirectories(std::string filePath)
 	{
 		size_t finalSlash = filePath.rfind('/');
-		if (finalSlash == std::string::npos)
-		{
-			finalSlash = filePath.rfind('\\');
-		}
-
 		if (finalSlash != std::string::npos)
 		{
 			filePath = filePath.substr(finalSlash + 1);
@@ -486,11 +475,6 @@ namespace flex
 	std::string ExtractDirectoryString(std::string filePath)
 	{
 		size_t finalSlash = filePath.rfind('/');
-		if (finalSlash == std::string::npos)
-		{
-			finalSlash = filePath.rfind('\\');
-		}
-
 		if (finalSlash != std::string::npos)
 		{
 			filePath = filePath.substr(0, finalSlash + 1);
@@ -533,7 +517,7 @@ namespace flex
 		u32 pos = 0;
 		do
 		{
-			pos = absoluteDirectoryPath.find_first_of("\\/", pos + 1);
+			pos = absoluteDirectoryPath.find_first_of('/', pos + 1);
 			CreateDirectory(absoluteDirectoryPath.substr(0, pos).c_str(), NULL);
 			//GetLastError() == ERROR_ALREADY_EXISTS;
 		} while (pos != std::string::npos);
@@ -1016,13 +1000,11 @@ namespace flex
 
 		if (numEndingWith == -1)
 		{
-			return defaultName;
+			numEndingWith = 1;
 		}
-		else
-		{
-			std::string result = namePrefix.substr(0, namePrefix.size() - numChars) + IntToString(numEndingWith + 1, numChars);
-			return result;
-		}
+
+		std::string result = namePrefix.substr(0, namePrefix.size() - numChars) + IntToString(numEndingWith + 1, numChars);
+		return result;
 	}
 
 	void PadEnd(std::string& str, i32 minLen, char pad)
@@ -1388,11 +1370,23 @@ namespace flex
 	void RetrieveCurrentWorkingDirectory()
 	{
 		char cwdBuffer[MAX_PATH];
-		char* ans = _getcwd(cwdBuffer, sizeof(cwdBuffer));
-		if (ans)
+		char* str = _getcwd(cwdBuffer, sizeof(cwdBuffer));
+		if (str)
 		{
-			FlexEngine::s_CurrentWorkingDirectory = ans;
+			FlexEngine::s_CurrentWorkingDirectory = ReplaceBackSlashesWithForward(str);
 		}
+	}
+
+	std::string ReplaceBackSlashesWithForward(std::string str)
+	{
+		std::for_each(str.begin(), str.end(), [](char& c)
+		{
+			if (c == '\\')
+			{
+				c = '/';
+			}
+		});
+		return str;
 	}
 
 	std::string RelativePathToAbsolute(const std::string& relativePath)
@@ -1405,7 +1399,7 @@ namespace flex
 
 		while (nextDoubleDot != std::string::npos)
 		{
-			size_t lastSlash = workingDirectory.find_last_of("\\/");
+			size_t lastSlash = workingDirectory.find_last_of('/');
 			if (lastSlash == std::string::npos)
 			{
 				PrintWarn("Invalidly formed relative path! %s\n", relativePath.c_str());
@@ -1419,15 +1413,9 @@ namespace flex
 			}
 		}
 
-		std::for_each(strippedFilePath.begin(), strippedFilePath.end(), [](char& c)
-		{
-			if (c == '/')
-			{
-				c = '\\';
-			}
-		});
+		strippedFilePath = ReplaceBackSlashesWithForward(strippedFilePath);
 
-		std::string absolutePath = workingDirectory + '\\' + strippedFilePath;
+		std::string absolutePath = workingDirectory + '/' + strippedFilePath;
 
 		return absolutePath;
 	}

@@ -82,14 +82,14 @@ namespace flex
 			geometryShaderFilePath = RESOURCE_LOCATION "shaders/" + inGeometryShaderFilePath;
 		}
 #elif COMPILE_VULKAN
-		vertexShaderFilePath = RESOURCE_LOCATION "shaders\\spv\\" + inVertexShaderFilePath;
+		vertexShaderFilePath = RESOURCE_LOCATION "shaders/spv/" + inVertexShaderFilePath;
 		if (!inFragmentShaderFilePath.empty())
 		{
-			fragmentShaderFilePath = RESOURCE_LOCATION "shaders\\spv\\" + inFragmentShaderFilePath;
+			fragmentShaderFilePath = RESOURCE_LOCATION "shaders/spv/" + inFragmentShaderFilePath;
 		}
 		if (!inGeometryShaderFilePath.empty())
 		{
-			geometryShaderFilePath = RESOURCE_LOCATION "shaders\\spv\\" + inGeometryShaderFilePath;
+			geometryShaderFilePath = RESOURCE_LOCATION "shaders/spv/" + inGeometryShaderFilePath;
 		}
 #endif
 	}

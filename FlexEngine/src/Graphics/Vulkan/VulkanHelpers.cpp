@@ -2287,7 +2287,6 @@ namespace flex
 						strcat_s(cmdStrBuf, "pushd \"");
 						strcat_s(cmdStrBuf, workingDir.c_str());
 						strcat_s(cmdStrBuf, "\" && call vk_compile.bat >nul && popd");
-						// 'pushd \".\\..\\..\\..\\FlexEngine\\resources\\shaders\\\" && vk_compile.bat && popd";'
 						bSuccess = system(cmdStrBuf) == 0;
 						is_done = true;
 					});
