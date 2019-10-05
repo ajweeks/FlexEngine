@@ -311,7 +311,7 @@ namespace flex
 				VulkanTexture* texture,
 				i32 i,
 				i32* textureIndex,
-				VkSampler* sampler);
+				VulkanTexture** textureToUpdate);
 			void DoTexturePreviewTooltip(VulkanTexture* texture);
 
 			void BeginGPUTimeStamp(VkCommandBuffer commandBuffer, const std::string& name);

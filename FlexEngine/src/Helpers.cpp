@@ -372,7 +372,7 @@ namespace flex
 
 		if (openFileName.lpstrFile)
 		{
-			outSelectedAbsFilePath = openFileName.lpstrFile;
+			outSelectedAbsFilePath = ReplaceBackSlashesWithForward(openFileName.lpstrFile);
 		}
 
 		return bSuccess;

@@ -2080,7 +2080,7 @@ namespace flex
 								texture,
 								i,
 								&albedoTextureIndex,
-								mat.albedoTexture ? &mat.albedoTexture->sampler : nullptr);
+								&mat.albedoTexture);
 
 							ImGuiUpdateTextureIndexOrMaterial(bUpdateMetallicTextureMaterial,
 								texturePath,
@@ -2088,7 +2088,7 @@ namespace flex
 								texture,
 								i,
 								&metallicTextureIndex,
-								mat.metallicTexture ? &mat.metallicTexture->sampler : nullptr);
+								&mat.metallicTexture);
 
 							ImGuiUpdateTextureIndexOrMaterial(bUpdateRoughessTextureMaterial,
 								texturePath,
@@ -2096,7 +2096,7 @@ namespace flex
 								texture,
 								i,
 								&roughnessTextureIndex,
-								mat.roughnessTexture ? &mat.roughnessTexture->sampler : nullptr);
+								&mat.roughnessTexture);
 
 							ImGuiUpdateTextureIndexOrMaterial(bUpdateNormalTextureMaterial,
 								texturePath,
@@ -2104,7 +2104,7 @@ namespace flex
 								texture,
 								i,
 								&normalTextureIndex,
-								mat.normalTexture ? &mat.normalTexture->sampler : nullptr);
+								&mat.normalTexture);
 
 							++i;
 						}
@@ -8460,23 +8460,23 @@ namespace flex
 			VulkanTexture* texture,
 			i32 i,
 			i32* textureIndex,
-			VkSampler* sampler)
+			VulkanTexture** textureToUpdate)
 		{
 			if (bUpdateTextureMaterial)
 			{
-				if (sampler != nullptr)
+				if (textureToUpdate != nullptr)
 				{
 					if (*textureIndex == 0)
 					{
 						matTexturePath = "";
-						*sampler = VK_NULL_HANDLE;
+						*textureToUpdate = nullptr;
 					}
 					else if (i == *textureIndex - 1)
 					{
 						matTexturePath = texturePath;
 						if (texture)
 						{
-							*sampler = texture->sampler;
+							*textureToUpdate = texture;
 						}
 					}
 				}
