@@ -2246,7 +2246,7 @@ namespace flex
 									const Material& dupMat = m_Materials[i].material;
 
 									MaterialCreateInfo createInfo = {};
-									createInfo.name = GetIncrementedPostFixedStr(dupMat.name, "new material 00");
+									createInfo.name = GetIncrementedPostFixedStr(dupMat.name, "new material");
 									createInfo.shaderName = m_Shaders[dupMat.shaderID].shader->name;
 									createInfo.constAlbedo = dupMat.constAlbedo;
 									createInfo.constRoughness = dupMat.constRoughness;
@@ -2322,6 +2322,21 @@ namespace flex
 						{
 							// Remove trailing /0 characters
 							newMaterialName = std::string(newMaterialName.c_str());
+
+							bool bMaterialNameExists = false;
+							for (const auto& matPair : m_Materials)
+							{
+								if (matPair.second.material.name.compare(newMaterialName) == 0)
+								{
+									bMaterialNameExists = true;
+									break;
+								}
+							}
+
+							if (bMaterialNameExists)
+							{
+								newMaterialName = GetIncrementedPostFixedStr(newMaterialName, "new material");
+							}
 
 							MaterialCreateInfo createInfo = {};
 							createInfo.name = newMaterialName;
@@ -2404,10 +2419,27 @@ namespace flex
 							const std::string fileNameAndExtension = StripLeadingDirectories(selectedAbsFilePath);
 							std::string relativeFilePath = relativeDirPath + fileNameAndExtension;
 
-							Print("Importing texture: %s\n", relativeFilePath.c_str());
+							bool bTextureAlreadyImported = false;
+							for (VulkanTexture* tex : m_LoadedTextures)
+							{
+								if (tex->relativeFilePath.compare(relativeFilePath) == 0)
+								{
+									bTextureAlreadyImported = true;
+									break;
+								}
+							}
 
-							VulkanTexture* newTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, relativeFilePath, 3, false, false, false);
-							m_LoadedTextures.push_back(newTexture);
+							if (bTextureAlreadyImported)
+							{
+								Print("Texture with path %s already imported\n", relativeFilePath.c_str());
+							}
+							else
+							{
+								Print("Importing texture: %s\n", relativeFilePath.c_str());
+
+								VulkanTexture* newTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, relativeFilePath, 3, false, false, false);
+								m_LoadedTextures.push_back(newTexture);
+							}
 
 							ImGui::CloseCurrentPopup();
 						}
@@ -2425,7 +2457,7 @@ namespace flex
 					std::string selectedMeshRelativeFilePath;
 					LoadedMesh* selectedMesh = nullptr;
 					i32 meshIdx = 0;
-					for (auto meshPair : MeshComponent::m_LoadedMeshes)
+					for (const auto& meshPair : MeshComponent::m_LoadedMeshes)
 					{
 						if (meshIdx == selectedMeshIndex)
 						{
@@ -2547,29 +2579,46 @@ namespace flex
 						std::string selectedAbsFilePath;
 						if (OpenFileDialog("Import mesh", absoluteDirectoryStr, selectedAbsFilePath))
 						{
-							Print("Importing mesh: %s\n", selectedAbsFilePath.c_str());
-
 							const std::string fileNameAndExtension = StripLeadingDirectories(selectedAbsFilePath);
-							std::string relativeFilePath = relativeDirPath + fileNameAndExtension;
+							std::string selectedRelativeFilePath = relativeDirPath + fileNameAndExtension;
 
-							LoadedMesh* existingMesh = nullptr;
-							if (MeshComponent::FindPreLoadedMesh(relativeFilePath, &existingMesh))
+							bool bMeshAlreadyImported = false;
+							for (const auto& meshPair : MeshComponent::m_LoadedMeshes)
 							{
-								i32 j = 0;
-								for (auto meshPair : MeshComponent::m_LoadedMeshes)
+								if (meshPair.first.compare(selectedRelativeFilePath) == 0)
 								{
-									if (meshPair.first.compare(relativeFilePath) == 0)
-									{
-										selectedMeshIndex = j;
-										break;
-									}
-
-									++j;
+									bMeshAlreadyImported = true;
+									break;
 								}
+							}
+
+							if (bMeshAlreadyImported)
+							{
+								Print("Mesh with filepath %s already imported\n", selectedAbsFilePath.c_str());
 							}
 							else
 							{
-								MeshComponent::LoadMesh(relativeFilePath);
+								Print("Importing mesh: %s\n", selectedAbsFilePath.c_str());
+
+								LoadedMesh* existingMesh = nullptr;
+								if (MeshComponent::FindPreLoadedMesh(selectedRelativeFilePath, &existingMesh))
+								{
+									i32 j = 0;
+									for (const auto& meshPair : MeshComponent::m_LoadedMeshes)
+									{
+										if (meshPair.first.compare(selectedRelativeFilePath) == 0)
+										{
+											selectedMeshIndex = j;
+											break;
+										}
+
+										++j;
+									}
+								}
+								else
+								{
+									MeshComponent::LoadMesh(selectedRelativeFilePath);
+								}
 							}
 
 							ImGui::CloseCurrentPopup();
