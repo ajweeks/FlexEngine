@@ -810,7 +810,8 @@ namespace flex
 			else
 			{
 				matID = GetNextAvailableMaterialID();
-				m_Materials.insert(std::pair<MaterialID, VulkanMaterial>(matID, {}));
+				m_Materials.insert(std::pair<MaterialID, VulkanMaterial>(matID, VulkanMaterial()));
+				m_bRebatchRenderObjects = true;
 			}
 
 			VulkanMaterial& mat = m_Materials.at(matID);
@@ -7171,7 +7172,10 @@ namespace flex
 					VkRect2D shadowScissor = vks::scissor(0u, 0u, SHADOW_CASCADE_RES, SHADOW_CASCADE_RES);
 					vkCmdSetScissor(m_OffScreenCmdBuffer, 0, 1, &shadowScissor);
 
-					Material::PushConstantBlock pushConstantBlock = {};
+					if (m_CascadedShadowMapPushConstantBlock == nullptr)
+					{
+						m_CascadedShadowMapPushConstantBlock = new Material::PushConstantBlock();
+					}
 
 					for (u32 c = 0; c < NUM_SHADOW_CASCADES; ++c)
 					{
@@ -7192,8 +7196,8 @@ namespace flex
 						shadowDrawCallInfo.bRenderingShadows = true;
 
 						// TODO: Upload as one draw
-						pushConstantBlock.SetData(m_ShadowSamplingData.cascadeViewProjMats[c]);
-						shadowDrawCallInfo.pushConstantOverride = &pushConstantBlock;
+						m_CascadedShadowMapPushConstantBlock->SetData(m_ShadowSamplingData.cascadeViewProjMats[c]);
+						shadowDrawCallInfo.pushConstantOverride = m_CascadedShadowMapPushConstantBlock;
 
 						for (const ShaderBatchPair& shaderBatch : m_ShadowBatch.batches)
 						{

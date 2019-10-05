@@ -439,6 +439,8 @@ namespace flex
 
 			std::map<TextureID, SpriteDescSet> m_SpriteDescSets;
 
+			Material::PushConstantBlock* m_CascadedShadowMapPushConstantBlock = nullptr;
+
 			i32 m_DeferredQuadVertexBufferIndex = -1;
 
 			glm::mat4 m_LastFrameViewProj;

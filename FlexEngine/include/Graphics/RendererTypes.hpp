@@ -351,6 +351,18 @@ namespace flex
 
 	struct Material
 	{
+		struct PushConstantBlock;
+
+		Material() {};
+
+		Material(const Material& rhs)
+		{
+			if (rhs.pushConstantBlock)
+			{
+				pushConstantBlock = new PushConstantBlock(*rhs.pushConstantBlock);
+			}
+		}
+
 		~Material()
 		{
 			if (pushConstantBlock)
@@ -435,6 +447,29 @@ namespace flex
 			PushConstantBlock(i32 initialSize) : size(initialSize) { assert(initialSize != 0); }
 			PushConstantBlock() {}
 
+			PushConstantBlock(const PushConstantBlock& rhs)
+			{
+				data = rhs.data;
+				size = rhs.size;
+			}
+			PushConstantBlock(const PushConstantBlock&& rhs)
+			{
+				data = rhs.data;
+				size = rhs.size;
+			}
+			PushConstantBlock& operator=(const PushConstantBlock& rhs)
+			{
+				data = rhs.data;
+				size = rhs.size;
+				return *this;
+			}
+			PushConstantBlock& operator=(const PushConstantBlock&& rhs)
+			{
+				data = rhs.data;
+				size = rhs.size;
+				return *this;
+			}
+
 			~PushConstantBlock()
 			{
 				if (data)
@@ -508,12 +543,6 @@ namespace flex
 			void* data = nullptr;
 			u32 size = 0;
 			// TODO: Store stage flags
-
-		private:
-			PushConstantBlock(PushConstantBlock& other) = delete;
-			PushConstantBlock(PushConstantBlock&& other) = delete;
-			PushConstantBlock& operator=(PushConstantBlock& other) = delete;
-			PushConstantBlock& operator=(PushConstantBlock&& other) = delete;
 		};
 		PushConstantBlock* pushConstantBlock = nullptr;
 	};
