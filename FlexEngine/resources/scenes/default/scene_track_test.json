@@ -227,7 +227,7 @@
 					"visible" : true,
 					"transform" : 
 					{
-						"pos" : "-57.290, 2.502, 46.106",
+						"pos" : "-57.290, 3.004, 46.106",
 						"rot" : "0.000, -0.000, 0.000",
 						"scale" : "5.051, 6.080, 6.178"
 					},
@@ -403,7 +403,7 @@
 					}
 				},
 				{
-					"name" : "New_Object_02",
+					"name" : "cloud box",
 					"type" : "object",
 					"visible" : true,
 					"transform" : 
@@ -429,7 +429,7 @@
 					}
 				},
 				{
-					"name" : "New_Object_03",
+					"name" : "noise box",
 					"type" : "object",
 					"visible" : true,
 					"transform" : 
@@ -440,6 +440,188 @@
 					},
 					"mesh" : "cube",
 					"material" : "noise",
+					"collider" : 
+					{
+						"shape" : "box",
+						"half extents" : "0.500, 0.500, 0.500"
+					},
+					"rigid body" : 
+					{
+						"mass" : 0.000000,
+						"kinematic" : false,
+						"static" : true,
+						"mask" : 1,
+						"group" : 1
+					}
+				},
+				{
+					"name" : "cerebus box",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "0.441, 4.626, -4.611",
+						"rot" : "0.000, -0.000, 0.000",
+						"scale" : "6.000, 4.940, 6.050"
+					},
+					"mesh" : "cube",
+					"material" : "cerberus",
+					"collider" : 
+					{
+						"shape" : "box",
+						"half extents" : "0.500, 0.500, 0.500"
+					},
+					"rigid body" : 
+					{
+						"mass" : 0.000000,
+						"kinematic" : false,
+						"static" : true,
+						"mask" : 1,
+						"group" : 1
+					}
+				},
+				{
+					"name" : "grid box",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "0.441, 4.626, -11.611",
+						"rot" : "0.000, -0.000, 0.000",
+						"scale" : "6.000, 4.940, 5.510"
+					},
+					"mesh" : "cube",
+					"material" : "grid",
+					"collider" : 
+					{
+						"shape" : "box",
+						"half extents" : "0.500, 0.500, 0.500"
+					},
+					"rigid body" : 
+					{
+						"mass" : 0.000000,
+						"kinematic" : false,
+						"static" : true,
+						"mask" : 1,
+						"group" : 1
+					}
+				},
+				{
+					"name" : "capsule",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "2.941, 7.826, -8.064",
+						"rot" : "0.000, -0.000, 0.000",
+						"scale" : "1.370, 0.800, 1.090"
+					},
+					"mesh" : "capsule",
+					"material" : "grid",
+					"collider" : 
+					{
+						"shape" : "box",
+						"half extents" : "0.500, 0.500, 0.500"
+					},
+					"rigid body" : 
+					{
+						"mass" : 0.000000,
+						"kinematic" : false,
+						"static" : true,
+						"mask" : 1,
+						"group" : 1
+					}
+				},
+				{
+					"name" : "striped box",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "-15.359, 12.926, -7.211",
+						"rot" : "0.000, -0.000, 0.000",
+						"scale" : "3.460, 1.140, 27.570"
+					},
+					"mesh" : "cube",
+					"material" : "stripes",
+					"collider" : 
+					{
+						"shape" : "box",
+						"half extents" : "0.500, 0.500, 0.500"
+					},
+					"rigid body" : 
+					{
+						"mass" : 0.000000,
+						"kinematic" : false,
+						"static" : true,
+						"mask" : 1,
+						"group" : 1
+					}
+				},
+				{
+					"name" : "striped box2",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "-19.459, 12.926, -9.011",
+						"rot" : "0.000, -0.000, 0.000",
+						"scale" : "3.460, 1.140, 27.570"
+					},
+					"mesh" : "cube",
+					"material" : "stripes",
+					"collider" : 
+					{
+						"shape" : "box",
+						"half extents" : "0.500, 0.500, 0.500"
+					},
+					"rigid body" : 
+					{
+						"mass" : 0.000000,
+						"kinematic" : false,
+						"static" : true,
+						"mask" : 1,
+						"group" : 1
+					}
+				},
+				{
+					"name" : "striped box3",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "-23.859, 12.926, -6.611",
+						"rot" : "0.000, -0.000, 0.000",
+						"scale" : "3.460, 1.140, 27.570"
+					},
+					"mesh" : "cube",
+					"material" : "stripes",
+					"collider" : 
+					{
+						"shape" : "box",
+						"half extents" : "0.500, 0.500, 0.500"
+					},
+					"rigid body" : 
+					{
+						"mass" : 0.000000,
+						"kinematic" : false,
+						"static" : true,
+						"mask" : 1,
+						"group" : 1
+					}
+				},
+				{
+					"name" : "striped box4",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "-28.059, 12.926, -9.911",
+						"rot" : "0.000, -0.000, 0.000",
+						"scale" : "3.460, 1.140, 27.570"
+					},
+					"mesh" : "cube",
+					"material" : "stripes",
 					"collider" : 
 					{
 						"shape" : "box",
@@ -472,15 +654,15 @@
 					"transform" : 
 					{
 						"pos" : "0.000, 15.000, 0.000",
-						"rot" : "1.194, -0.973, -2.523"
+						"rot" : "0.000, 0.715, 0.574"
 					},
 					"directional light info" : 
 					{
-						"rotation" : "0.217, 0.591, 0.616, -0.473",
+						"rotation" : "-0.099, 0.336, 0.265, 0.898",
 						"pos" : "0.000, 15.000, 0.000",
 						"color" : "1.00, 1.00, 1.00",
 						"enabled" : true,
-						"brightness" : 5.000000,
+						"brightness" : 4.063000,
 						"cast shadows" : true,
 						"shadow darkness" : 0.911000
 					}

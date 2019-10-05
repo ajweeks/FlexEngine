@@ -328,6 +328,56 @@
 			"enable albedo sampler" : true,
 			"generate albedo sampler" : true,
 			"albedo texture filepath" : "clouds1.png"
+		},
+		{
+			"name" : "dots",
+			"shader" : "pbr",
+			"const albedo" : "1.000, 1.000, 1.000",
+			"const metallic" : 0.000000,
+			"const roughness" : 0.000000,
+			"enable albedo sampler" : true,
+			"generate albedo sampler" : true,
+			"albedo texture filepath" : "dots.png"
+		},
+		{
+			"name" : "stripes",
+			"shader" : "pbr",
+			"const albedo" : "1.000, 1.000, 1.000",
+			"const metallic" : 0.000000,
+			"const roughness" : 0.000000,
+			"enable albedo sampler" : true,
+			"generate albedo sampler" : true,
+			"albedo texture filepath" : "v-stripes.png"
+		},
+		{
+			"name" : "cross hatch",
+			"shader" : "pbr",
+			"const albedo" : "1.000, 1.000, 1.000",
+			"const metallic" : 0.000000,
+			"const roughness" : 0.000000,
+			"enable albedo sampler" : true,
+			"generate albedo sampler" : true,
+			"albedo texture filepath" : "cross-hatch.png"
+		},
+		{
+			"name" : "checker",
+			"shader" : "pbr",
+			"const albedo" : "1.000, 1.000, 1.000",
+			"const metallic" : 0.000000,
+			"const roughness" : 0.000000,
+			"enable albedo sampler" : true,
+			"generate albedo sampler" : true,
+			"albedo texture filepath" : "checker.png"
+		},
+		{
+			"name" : "test",
+			"shader" : "pbr",
+			"const albedo" : "1.000, 1.000, 1.000",
+			"const metallic" : 0.000000,
+			"const roughness" : 0.000000,
+			"enable albedo sampler" : true,
+			"generate albedo sampler" : true,
+			"albedo texture filepath" : "work_d.jpg"
 		}
 	]
 }
