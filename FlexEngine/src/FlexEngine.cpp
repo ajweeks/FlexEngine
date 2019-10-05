@@ -486,8 +486,6 @@ namespace flex
 				PROFILE_BEGIN("Update");
 				g_Window->PollEvents();
 
-				g_InputManager->Update();
-
 				const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 				if (frameBufferSize.x == 0 || frameBufferSize.y == 0)
 				{
@@ -591,6 +589,8 @@ namespace flex
 				}
 
 				g_Renderer->Update();
+
+				g_InputManager->Update();
 
 				g_InputManager->PostUpdate();
 				PROFILE_END("Update");
