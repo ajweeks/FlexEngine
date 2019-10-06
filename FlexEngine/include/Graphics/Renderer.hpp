@@ -44,6 +44,8 @@ namespace flex
 
 		struct LineSegment
 		{
+			LineSegment() {}
+
 			LineSegment(const btVector3& vStart, const btVector3& vEnd, const btVector3& vCol)
 			{
 				memcpy(start, vStart.m_floats, sizeof(real) * 3);
@@ -62,8 +64,9 @@ namespace flex
 			real color[4];
 		};
 
-		// Gets filled each frame by calls to drawLine, then emptied after debugDrawWorld()
-		std::vector<LineSegment> m_LineSegments;
+		static const u32 MAX_NUM_LINE_SEGMENTS = 65536;
+		u32 m_LineSegmentIndex = 0;
+		LineSegment m_LineSegments[MAX_NUM_LINE_SEGMENTS];
 
 		i32 m_DebugMode = 0;
 

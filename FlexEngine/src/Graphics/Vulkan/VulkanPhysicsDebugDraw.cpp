@@ -76,7 +76,14 @@ namespace flex
 
 		void VulkanPhysicsDebugDraw::drawLine(const btVector3& from, const btVector3& to, const btVector3& color)
 		{
-			m_LineSegments.emplace_back(from, to, color);
+			if (m_LineSegmentIndex < MAX_NUM_LINE_SEGMENTS)
+			{
+				m_LineSegments[m_LineSegmentIndex++] = { from, to, color };
+			}
+			else
+			{
+				PrintWarn("Max number of debug draw lines reached (%d)\n", MAX_NUM_LINE_SEGMENTS);
+			}
 		}
 
 		void VulkanPhysicsDebugDraw::drawContactPoint(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector3& color)
@@ -91,12 +98,19 @@ namespace flex
 
 		void VulkanPhysicsDebugDraw::DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& color)
 		{
-			m_LineSegments.emplace_back(from, to, color);
+			if (m_LineSegmentIndex < MAX_NUM_LINE_SEGMENTS)
+			{
+				m_LineSegments[m_LineSegmentIndex++] = { from, to, color };
+			}
+			else
+			{
+				PrintWarn("Max number of debug draw lines reached (%d)\n", MAX_NUM_LINE_SEGMENTS);
+			}
 		}
 
 		void VulkanPhysicsDebugDraw::Draw()
 		{
-			if (m_LineSegments.empty())
+			if (m_LineSegmentIndex == 0)
 			{
 				return;
 			}
@@ -107,7 +121,7 @@ namespace flex
 				m_VertexBufferCreateInfo.positions_3D.clear();
 				m_VertexBufferCreateInfo.colors_R32G32B32A32.clear();
 
-				u32 numVerts = m_LineSegments.size() * 2;
+				u32 numVerts = m_LineSegmentIndex * 2;
 
 				if (m_VertexBufferCreateInfo.positions_3D.capacity() < numVerts)
 				{
@@ -118,13 +132,13 @@ namespace flex
 				i32 i = 0;
 				glm::vec3* posData = m_VertexBufferCreateInfo.positions_3D.data();
 				glm::vec4* colData = m_VertexBufferCreateInfo.colors_R32G32B32A32.data();
-				for (LineSegment& line : m_LineSegments)
+				for (u32 li = 0; li < m_LineSegmentIndex; ++li)
 				{
-					memcpy(posData + i, line.start, sizeof(real) * 3);
-					memcpy(posData + i + 1, line.end, sizeof(real) * 3);
+					memcpy(posData + i, m_LineSegments[li].start, sizeof(real) * 3);
+					memcpy(posData + i + 1, m_LineSegments[li].end, sizeof(real) * 3);
 
-					memcpy(colData + i, line.color, sizeof(real) * 4);
-					memcpy(colData + i + 1, line.color, sizeof(real) * 4);
+					memcpy(colData + i, m_LineSegments[li].color, sizeof(real) * 4);
+					memcpy(colData + i + 1, m_LineSegments[li].color, sizeof(real) * 4);
 
 					i += 2;
 				}

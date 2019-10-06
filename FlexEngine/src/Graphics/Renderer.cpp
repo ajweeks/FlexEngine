@@ -3135,7 +3135,7 @@ namespace flex
 
 	void PhysicsDebugDrawBase::ClearLines()
 	{
-		m_LineSegments.clear();
+		m_LineSegmentIndex = 0;
 	}
 
 	void PhysicsDebugDrawBase::flushLines()
