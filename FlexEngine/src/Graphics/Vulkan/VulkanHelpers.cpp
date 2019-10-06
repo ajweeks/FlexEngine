@@ -456,11 +456,12 @@ namespace flex
 			samplerCreateInfo.minLod = 0.0f;
 			samplerCreateInfo.maxLod = (real)createInfo.mipLevels;
 			samplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-			if (device->m_PhysicalDeviceFeatures.samplerAnisotropy)
-			{
-				samplerCreateInfo.maxAnisotropy = device->m_PhysicalDeviceProperties.limits.maxSamplerAnisotropy;
-				samplerCreateInfo.anisotropyEnable = VK_TRUE;
-			}
+			// Enable anisotropy if desired with:
+			//if (device->m_PhysicalDeviceFeatures.samplerAnisotropy)
+			//{
+			//	samplerCreateInfo.maxAnisotropy = device->m_PhysicalDeviceProperties.limits.maxSamplerAnisotropy;
+			//	samplerCreateInfo.anisotropyEnable = VK_TRUE;
+			//}
 
 			VK_CHECK_RESULT(vkCreateSampler(device->m_LogicalDevice, &samplerCreateInfo, nullptr, createInfo.sampler));
 			VulkanRenderer::SetSamplerName(device, *createInfo.sampler, createInfo.DBG_Name);
@@ -935,7 +936,7 @@ namespace flex
 			samplerInfo.addressModeU = createInfo.samplerAddressMode;
 			samplerInfo.addressModeV = createInfo.samplerAddressMode;
 			samplerInfo.addressModeW = createInfo.samplerAddressMode;
-			samplerInfo.anisotropyEnable = VK_TRUE;
+			samplerInfo.anisotropyEnable = VK_FALSE;
 			samplerInfo.maxAnisotropy = createInfo.maxAnisotropy;
 			samplerInfo.borderColor = createInfo.borderColor;
 			samplerInfo.unnormalizedCoordinates = VK_FALSE;
