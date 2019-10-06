@@ -306,13 +306,19 @@ namespace flex
 			glm::vec2(1.0f, 3.0f) / 8.0f,
 		};
 
+		static const glm::vec2 SAMPLE_LOCS_2[2] =
+		{
+			glm::vec2(-7.0f, 1.0f) / 8.0f,
+			glm::vec2(5.0f, -7.0f) / 8.0f,
+		};
+
 		const i32 sampleCount = g_Renderer->GetTAASampleCount();
 		if (sampleCount <= 0)
 		{
 			return;
 		}
 
-		const glm::vec2* samples = (sampleCount == 16 ? SAMPLE_LOCS_16 : (sampleCount == 8 ? SAMPLE_LOCS_8 : SAMPLE_LOCS_4));
+		const glm::vec2* samples = (sampleCount == 16 ? SAMPLE_LOCS_16 : (sampleCount == 8 ? SAMPLE_LOCS_8 : (sampleCount == 4 ? SAMPLE_LOCS_4 : SAMPLE_LOCS_2)));
 
 		const glm::vec2i swapChainSize = g_Window->GetFrameBufferSize();
 		const unsigned subsampleIdx = g_Renderer->GetFramesRenderedCount() % sampleCount;

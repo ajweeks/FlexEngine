@@ -344,7 +344,7 @@
 			"shader" : "pbr",
 			"const albedo" : "1.000, 1.000, 1.000",
 			"const metallic" : 0.000000,
-			"const roughness" : 0.000000,
+			"const roughness" : 1.000000,
 			"enable albedo sampler" : true,
 			"generate albedo sampler" : true,
 			"albedo texture filepath" : "v-stripes.png"
