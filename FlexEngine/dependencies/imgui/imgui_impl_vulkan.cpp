@@ -665,9 +665,6 @@ bool ImGui_ImplVulkan_CreateDeviceObjects()
     info.pDynamicState = &dynamic_state;
     info.layout = g_PipelineLayout;
 	info.renderPass = g_RenderPass;
-	// @THIRD PARTY CODE BEGIN: AJ Weeks 2019-03-16
-	info.subpass = 1;
-	// @THIRD PARTY CODE END
 	err = vkCreateGraphicsPipelines(g_Device, g_PipelineCache, 1, &info, g_Allocator, &g_Pipeline);
     check_vk_result(err);
 

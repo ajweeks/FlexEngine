@@ -23,17 +23,21 @@ namespace flex
 		DEBUG_GenerateRandomSeed();
 	}
 
-	BezierCurveList BezierCurveList::InitializeFromJSON(const JSONObject& obj)
+	BezierCurveList::~BezierCurveList()
 	{
-		BezierCurveList result = {};
+		btAlignedFree(m_BaseColour);
+		m_BaseColour = nullptr;
+	}
+
+	void BezierCurveList::InitializeFromJSON(const JSONObject& obj)
+	{
+		curves.clear();
 
 		for (const JSONField& field : obj.fields)
 		{
 			std::string curveString = field.value.strValue;
-			result.curves.push_back(BezierCurve::FromString(curveString));
+			curves.emplace_back(BezierCurve::FromString(curveString));
 		}
-
-		return result;
 	}
 
 	void BezierCurveList::DrawDebug(const btVector4& highlightColour, real highlightCurveAtPoint /* = -1.0f */) const
@@ -48,7 +52,7 @@ namespace flex
 		for (i32 i = 0; i < (i32)curves.size(); ++i)
 		{
 			bool bHighlighted = (highlightedCurveIndex == i);
-			curves[i].DrawDebug(bHighlighted, m_BaseColour, highlightColour);
+			curves[i].DrawDebug(bHighlighted, *m_BaseColour, highlightColour);
 		}
 	}
 
@@ -181,7 +185,9 @@ namespace flex
 	{
 		m_DebugColourRandomSeed = (real)rand() / (real)RAND_MAX;
 
-		m_BaseColour = btVector4(
+		btAlignedFree(m_BaseColour);
+		void* mem = btAlignedAlloc(sizeof(btVector4), 16);
+		m_BaseColour = new (mem) btVector4(
 			0.75f + 0.3f * fmod(15.648f * m_DebugColourRandomSeed, 1.0f),
 			0.2f + 0.4f * fmod(0.342f + 6.898f * m_DebugColourRandomSeed, 1.0f),
 			0.2f + 0.4f * fmod(0.158f + 2.221f * m_DebugColourRandomSeed, 1.0f),

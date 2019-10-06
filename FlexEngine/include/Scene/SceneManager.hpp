@@ -50,7 +50,8 @@ namespace flex
 		bool SceneExists(const std::string& fileName) const;
 		void DoSceneContextMenu(BaseScene* scene);
 
-		u32 m_CurrentSceneIndex = u32_max;
+		u32 m_CurrentSceneIndex = InvalidID;
+		u32 m_PreviousSceneIndex = InvalidID;
 		std::vector<BaseScene*> m_Scenes;
 
 		std::string m_SavedDirStr;

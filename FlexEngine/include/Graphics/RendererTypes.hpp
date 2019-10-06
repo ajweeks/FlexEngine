@@ -21,81 +21,152 @@ namespace flex
 	class GameObject;
 
 	static const i32 MAX_NUM_POINT_LIGHTS = 8;
+	static const i32 NUM_SHADOW_CASCADES = 4;
 
+	// 48 bytes
 	struct DirLightData
 	{
-		glm::vec3 dir;
-		i32 enabled;
-		glm::vec3 color;
-		real brightness;
+		glm::vec3 dir;       // 0
+		i32 enabled;         // 12
+		glm::vec3 color;     // 16
+		real brightness;     // 28
+		i32 castShadows;     // 32
+		real shadowDarkness; // 36
+		real pad[2];         // 40
 	};
 
+	// 32 bytes
 	struct PointLightData
 	{
-		glm::vec3 pos;
-		i32 enabled;
-		glm::vec3 color;
-		real brightness;
+		glm::vec3 pos;   // 0
+		i32 enabled;     // 12
+		glm::vec3 color; // 16
+		real brightness; // 28
+	};
+
+	const i32 MAX_SSAO_KERNEL_SIZE = 64;
+	// 1028 bytes
+	struct SSAOGenData
+	{
+		glm::vec4 samples[MAX_SSAO_KERNEL_SIZE]; // 0
+		real radius;                             // 1024
+	};
+
+	// 4 bytes
+	struct SSAOBlurDataConstant
+	{
+		i32 radius; // 0
+	};
+
+	// 8 bytes
+	struct SSAOBlurDataDynamic
+	{
+		glm::vec2 ssaoTexelOffset; // 0
+	};
+
+	// 8 bytes
+	struct SSAOSamplingData
+	{
+		i32 ssaoEnabled; // 0
+		real ssaoPowExp; // 4
+	};
+
+	// 32 bytes
+	struct FXAAData
+	{
+		real lumaThresholdMin; // 0
+		real lumaThresholdMax; // 4
+		real mulReduce;        // 8
+		real minReduce;        // 12
+		real maxSpan;          // 16
+		glm::vec2 texelStep;   // 20
+		i32 bDEBUGShowEdges;   // 28
+	};
+
+	// 272 bytes
+	struct ShadowSamplingData
+	{
+		glm::mat4 cascadeViewProjMats[NUM_SHADOW_CASCADES]; // 0
+		glm::vec4 cascadeDepthSplits;                       // 256
+	};
+
+	struct SHCoeffs
+	{
+		glm::vec4 r0;
+		glm::vec4 g0;
+		glm::vec4 b0;
+		glm::vec4 r1;
+		glm::vec4 g1;
+		glm::vec4 b1;
+		glm::vec4 rgb2;
 	};
 
 	// Uniforms
-	const u64 U_MODEL							= (1ull << 0); const u32 US_MODEL						= sizeof(glm::mat4);
-	const u64 U_MODEL_INV_TRANSPOSE				= (1ull << 1); const u32 US_MODEL_INV_TRANSPOSE			= sizeof(glm::mat4);
-	const u64 U_VIEW							= (1ull << 2); const u32 US_VIEW						= sizeof(glm::mat4);
-	const u64 U_VIEW_INV						= (1ull << 3); const u32 US_VIEW_INV					= sizeof(glm::mat4);
-	const u64 U_VIEW_PROJECTION					= (1ull << 4); const u32 US_VIEW_PROJECTION				= sizeof(glm::mat4);
-	const u64 U_MODEL_VIEW_PROJ					= (1ull << 5); const u32 US_MODEL_VIEW_PROJ				= sizeof(glm::mat4);
-	// 6
-	const u64 U_PROJECTION						= (1ull << 7); const u32 US_PROJECTION					= sizeof(glm::mat4);
-	const u64 U_BLEND_SHARPNESS					= (1ull << 8); const u32 US_BLEND_SHARPNESS				= sizeof(real);
-	const u64 U_COLOR_MULTIPLIER				= (1ull << 9); const u32 US_COLOR_MULTIPLIER			= sizeof(glm::vec4);
-	const u64 U_CAM_POS							= (1ull << 10); const u32 US_CAM_POS					= sizeof(glm::vec4);
-	const u64 U_DIR_LIGHT						= (1ull << 11); const u32 US_DIR_LIGHT					= sizeof(DirLightData);
-	const u64 U_POINT_LIGHTS					= (1ull << 12); const u32 US_POINT_LIGHTS				= sizeof(PointLightData) * MAX_NUM_POINT_LIGHTS;
-	const u64 U_ALBEDO_SAMPLER					= (1ull << 13);
-	const u64 U_CONST_ALBEDO					= (1ull << 14); const u32 US_CONST_ALBEDO				= sizeof(glm::vec4);
-	const u64 U_METALLIC_SAMPLER				= (1ull << 15);
-	const u64 U_CONST_METALLIC					= (1ull << 16); const u32 US_CONST_METALLIC				= sizeof(real);
-	const u64 U_ROUGHNESS_SAMPLER				= (1ull << 17);
-	const u64 U_CONST_ROUGHNESS					= (1ull << 18); const u32 US_CONST_ROUGHNESS			= sizeof(real);
-	const u64 U_AO_SAMPLER						= (1ull << 19);
-	const u64 U_CONST_AO						= (1ull << 20); const u32 US_CONST_AO					= sizeof(real);
-	const u64 U_NORMAL_SAMPLER					= (1ull << 21);
-	const u64 U_ENABLE_CUBEMAP_SAMPLER			= (1ull << 22); const u32 US_ENABLE_CUBEMAP_SAMPLER		= sizeof(i32);
-	const u64 U_ENABLE_ALBEDO_SAMPLER			= (1ull << 23); const u32 US_ENABLE_ALBEDO_SAMPLER		= sizeof(i32);
-	const u64 U_ENABLE_METALLIC_SAMPLER			= (1ull << 24); const u32 US_ENABLE_METALLIC_SAMPLER	= sizeof(i32);
-	const u64 U_ENABLE_ROUGHNESS_SAMPLER		= (1ull << 25); const u32 US_ENABLE_ROUGHNESS_SAMPLER	= sizeof(i32);
-	const u64 U_ENABLE_AO_SAMPLER				= (1ull << 26); const u32 US_ENABLE_AO_SAMPLER			= sizeof(i32);
-	const u64 U_ENABLE_NORMAL_SAMPLER			= (1ull << 27); const u32 US_ENABLE_NORMAL_SAMPLER		= sizeof(i32);
-	const u64 U_ENABLE_IRRADIANCE_SAMPLER		= (1ull << 28); const u32 US_ENABLE_IRRADIANCE_SAMPLER	= sizeof(i32);
-	const u64 U_CUBEMAP_SAMPLER					= (1ull << 29);
-	const u64 U_IRRADIANCE_SAMPLER				= (1ull << 30);
-	const u64 U_FB_0_SAMPLER					= (1ull << 31);
-	const u64 U_FB_1_SAMPLER					= (1ull << 32);
-	const u64 U_FB_2_SAMPLER					= (1ull << 33);
-	const u64 U_TEXEL_STEP						= (1ull << 34); const u32 US_TEXEL_STEP					= sizeof(real);
-	const u64 U_SHOW_EDGES						= (1ull << 35); const u32 US_SHOW_EDGES					= sizeof(i32);
-	const u64 U_LIGHT_VIEW_PROJ					= (1ull << 36); const u32 US_LIGHT_VIEW_PROJ			= sizeof(glm::mat4);
-	const u64 U_HDR_EQUIRECTANGULAR_SAMPLER		= (1ull << 37);
-	const u64 U_BRDF_LUT_SAMPLER				= (1ull << 38);
-	const u64 U_PREFILTER_MAP					= (1ull << 39);
-	const u64 U_EXPOSURE						= (1ull << 40); const u32 US_EXPOSURE					= sizeof(real);
-	const u64 U_TRANSFORM_MAT					= (1ull << 41); const u32 US_TRANSFORM_MAT				= sizeof(glm::mat4);
-	const u64 U_FONT_CHAR_DATA					= (1ull << 42); const u32 US_FONT_CHAR_DATA				= sizeof(glm::vec4);
-	const u64 U_TEX_SIZE						= (1ull << 43); const u32 US_TEX_SIZE					= sizeof(glm::vec2);
-	const u64 U_UNIFORM_BUFFER_CONSTANT			= (1ull << 44);
-	const u64 U_UNIFORM_BUFFER_DYNAMIC			= (1ull << 45);
-	const u64 U_TEXTURE_SCALE					= (1ull << 46); const u32 US_TEXTURE_SCALE				= sizeof(real);
-	const u64 U_TIME							= (1ull << 47); const u32 US_TIME						= sizeof(real);
-	const u64 U_SDF_DATA						= (1ull << 48); const u32 US_SDF_DATA					= sizeof(glm::vec4);
-	const u64 U_TEX_CHANNEL						= (1ull << 49); const u32 US_TEX_CHANNEL				= sizeof(i32);
-	const u64 U_HIGH_RES_TEX					= (1ull << 50);
-	// NOTE: New additions need to be added in Uniforms::CalculateSizeInBytes
+	const u64 U_MODEL							= (1ull << 0);	const u32 US_MODEL						= sizeof(glm::mat4);
+	const u64 U_VIEW							= (1ull << 1);	const u32 US_VIEW						= sizeof(glm::mat4);
+	const u64 U_VIEW_INV						= (1ull << 2);	const u32 US_VIEW_INV					= sizeof(glm::mat4);
+	const u64 U_VIEW_PROJECTION					= (1ull << 3);	const u32 US_VIEW_PROJECTION			= sizeof(glm::mat4);
+	const u64 U_PROJECTION						= (1ull << 4);	const u32 US_PROJECTION					= sizeof(glm::mat4);
+	const u64 U_PROJECTION_INV					= (1ull << 5);	const u32 US_PROJECTION_INV				= sizeof(glm::mat4);
+	const u64 U_BLEND_SHARPNESS					= (1ull << 6);	const u32 US_BLEND_SHARPNESS			= sizeof(real);
+	const u64 U_COLOR_MULTIPLIER				= (1ull << 7);	const u32 US_COLOR_MULTIPLIER			= sizeof(glm::vec4);
+	const u64 U_CAM_POS							= (1ull << 8);	const u32 US_CAM_POS					= sizeof(glm::vec4);
+	const u64 U_DIR_LIGHT						= (1ull << 9); const u32 US_DIR_LIGHT					= sizeof(DirLightData);
+	const u64 U_POINT_LIGHTS					= (1ull << 10); const u32 US_POINT_LIGHTS				= sizeof(PointLightData) * MAX_NUM_POINT_LIGHTS;
+	const u64 U_ALBEDO_SAMPLER					= (1ull << 11);
+	const u64 U_CONST_ALBEDO					= (1ull << 12); const u32 US_CONST_ALBEDO				= sizeof(glm::vec4);
+	const u64 U_METALLIC_SAMPLER				= (1ull << 13);
+	const u64 U_CONST_METALLIC					= (1ull << 14); const u32 US_CONST_METALLIC				= sizeof(real);
+	const u64 U_ROUGHNESS_SAMPLER				= (1ull << 15);
+	const u64 U_CONST_ROUGHNESS					= (1ull << 16); const u32 US_CONST_ROUGHNESS			= sizeof(real);
+	const u64 U_NORMAL_SAMPLER					= (1ull << 17);
+	const u64 U_ENABLE_ALBEDO_SAMPLER			= (1ull << 18); const u32 US_ENABLE_ALBEDO_SAMPLER		= sizeof(i32);
+	const u64 U_ENABLE_METALLIC_SAMPLER			= (1ull << 19); const u32 US_ENABLE_METALLIC_SAMPLER	= sizeof(i32);
+	const u64 U_ENABLE_ROUGHNESS_SAMPLER		= (1ull << 20); const u32 US_ENABLE_ROUGHNESS_SAMPLER	= sizeof(i32);
+	const u64 U_ENABLE_NORMAL_SAMPLER			= (1ull << 21); const u32 US_ENABLE_NORMAL_SAMPLER		= sizeof(i32);
+	const u64 U_ENABLE_IRRADIANCE_SAMPLER		= (1ull << 22); const u32 US_ENABLE_IRRADIANCE_SAMPLER	= sizeof(i32);
+	const u64 U_CUBEMAP_SAMPLER					= (1ull << 23);
+	const u64 U_IRRADIANCE_SAMPLER				= (1ull << 24);
+	const u64 U_FB_0_SAMPLER					= (1ull << 25);
+	const u64 U_FB_1_SAMPLER					= (1ull << 26);
+	const u64 U_SHOW_EDGES						= (1ull << 27); const u32 US_SHOW_EDGES					= sizeof(i32);
+	const u64 U_LIGHT_VIEW_PROJS				= (1ull << 28); const u32 US_LIGHT_VIEW_PROJS			= sizeof(glm::mat4) * NUM_SHADOW_CASCADES;
+	const u64 U_HDR_EQUIRECTANGULAR_SAMPLER		= (1ull << 29);
+	const u64 U_BRDF_LUT_SAMPLER				= (1ull << 30);
+	const u64 U_PREFILTER_MAP					= (1ull << 31);
+	const u64 U_EXPOSURE						= (1ull << 32); const u32 US_EXPOSURE					= sizeof(real);
+	const u64 U_FONT_CHAR_DATA					= (1ull << 33); const u32 US_FONT_CHAR_DATA				= sizeof(glm::vec4);
+	const u64 U_TEX_SIZE						= (1ull << 34); const u32 US_TEX_SIZE					= sizeof(glm::vec2);
+	const u64 U_UNIFORM_BUFFER_CONSTANT			= (1ull << 35);
+	const u64 U_UNIFORM_BUFFER_DYNAMIC			= (1ull << 36);
+	const u64 U_TEXTURE_SCALE					= (1ull << 37); const u32 US_TEXTURE_SCALE				= sizeof(real);
+	const u64 U_TIME							= (1ull << 38); const u32 US_TIME						= sizeof(real);
+	const u64 U_SDF_DATA						= (1ull << 39); const u32 US_SDF_DATA					= sizeof(glm::vec4);
+	const u64 U_TEX_CHANNEL						= (1ull << 40); const u32 US_TEX_CHANNEL				= sizeof(i32);
+	const u64 U_HIGH_RES_TEX					= (1ull << 41);
+	const u64 U_DEPTH_SAMPLER					= (1ull << 42);
+	const u64 U_NOISE_SAMPLER					= (1ull << 43);
+	const u64 U_SSAO_RAW_SAMPLER				= (1ull << 44);
+	const u64 U_SSAO_FINAL_SAMPLER				= (1ull << 45);
+	const u64 U_SSAO_NORMAL_SAMPLER				= (1ull << 46);
+	const u64 U_SSAO_GEN_DATA					= (1ull << 47); const u32 US_SSAO_GEN_DATA				= sizeof(SSAOGenData);
+	const u64 U_SSAO_BLUR_DATA_DYNAMIC			= (1ull << 48); const u32 US_SSAO_BLUR_DATA_DYNAMIC		= sizeof(SSAOBlurDataDynamic);
+	const u64 U_SSAO_BLUR_DATA_CONSTANT			= (1ull << 49); const u32 US_SSAO_BLUR_DATA_CONSTANT	= sizeof(SSAOBlurDataConstant);
+	const u64 U_SSAO_SAMPLING_DATA				= (1ull << 50); const u32 US_SSAO_SAMPLING_DATA			= sizeof(SSAOSamplingData);
+	const u64 U_FXAA_DATA						= (1ull << 51); const u32 US_FXAA_DATA					= sizeof(FXAAData);
+	const u64 U_SHADOW_SAMPLER					= (1ull << 52);
+	const u64 U_SHADOW_SAMPLING_DATA			= (1ull << 53); const u32 US_SHADOW_SAMPLING_DATA		= sizeof(ShadowSamplingData);
+	const u64 U_NEAR_FAR_PLANES					= (1ull << 54); const u32 US_NEAR_FAR_PLANES			= sizeof(glm::vec2);
+	const u64 U_POST_PROCESS_MAT				= (1ull << 55); const u32 US_POST_PROCESS_MAT			= sizeof(glm::mat4);
+	const u64 U_SCENE_SAMPLER					= (1ull << 56);
+	const u64 U_HISTORY_SAMPLER					= (1ull << 57);
+	const u64 U_LAST_FRAME_VIEWPROJ				= (1ull << 58); const u32 US_LAST_FRAME_VIEWPROJ		= sizeof(glm::mat4);
+	// NOTE: New uniforms must be added to Uniforms::CalculateSizeInBytes
 
 	enum class ClearFlag
 	{
-		COLOR =   (1 << 0),
-		DEPTH =   (1 << 1),
+		COLOR = (1 << 0),
+		DEPTH = (1 << 1),
 		STENCIL = (1 << 2),
 
 		_NONE
@@ -227,11 +298,10 @@ namespace flex
 		std::string albedoTexturePath = "";
 		std::string metallicTexturePath = "";
 		std::string roughnessTexturePath = "";
-		std::string aoTexturePath = "";
 		std::string hdrEquirectangularTexturePath = "";
 
 		glm::vec4 colorMultiplier = { 1.0f, 1.0f, 1.0f, 1.0f };
-		std::vector<Pair<std::string, void*>> frameBuffers; // Pairs of frame buffer names (as seen in shader) and IDs
+		std::vector<Pair<std::string, void*>> sampledFrameBuffers; // Pairs of frame buffer names (as seen in shader) and IDs
 		glm::vec2 generatedIrradianceCubemapSize = { 0.0f, 0.0f };
 		MaterialID irradianceSamplerMatID = InvalidMaterialID; // The id of the material who has an irradiance sampler object (generateIrradianceSampler must be false)
 		std::string environmentMapPath = "";
@@ -244,7 +314,6 @@ namespace flex
 		glm::vec3 constAlbedo = { 1.0f, 1.0f, 1.0f };
 		real constMetallic = 0.0f;
 		real constRoughness = 0.0f;
-		real constAO = 0.0f;
 
 		real textureScale = 1.0f;
 
@@ -256,8 +325,6 @@ namespace flex
 		bool enableMetallicSampler = false;
 		bool generateRoughnessSampler = false;
 		bool enableRoughnessSampler = false;
-		bool generateAOSampler = false;
-		bool enableAOSampler = false;
 		bool generateHDREquirectangularSampler = false;
 		bool enableHDREquirectangularSampler = false;
 		bool generateHDRCubemapSampler = false;
@@ -278,12 +345,33 @@ namespace flex
 
 		bool generateReflectionProbeMaps = false;
 
-		bool engineMaterial = false;
-
+		bool persistent = false;
+		bool visibleInEditor = true;
 	};
 
 	struct Material
 	{
+		struct PushConstantBlock;
+
+		Material() {};
+
+		Material(const Material& rhs)
+		{
+			if (rhs.pushConstantBlock)
+			{
+				pushConstantBlock = new PushConstantBlock(*rhs.pushConstantBlock);
+			}
+		}
+
+		~Material()
+		{
+			if (pushConstantBlock)
+			{
+				delete pushConstantBlock;
+				pushConstantBlock = nullptr;
+			}
+		}
+
 		bool Equals(const Material& other);
 
 		static void ParseJSONObject(const JSONObject& material, MaterialCreateInfo& createInfoOut);
@@ -294,7 +382,7 @@ namespace flex
 		std::string normalTexturePath = "";
 
 		// GBuffer samplers
-		std::vector<Pair<std::string, void*>> frameBuffers; // Pairs of frame buffer names (as seen in shader) and IDs
+		std::vector<Pair<std::string, void*>> sampledFrameBuffers;
 
 		glm::vec2 cubemapSamplerSize = { 0, 0 };
 		std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
@@ -303,11 +391,9 @@ namespace flex
 		glm::vec4 constAlbedo = { 1, 1, 1, 1 };
 		real constMetallic = 0;
 		real constRoughness = 0;
-		real constAO = 1;
 		std::string albedoTexturePath = "";
 		std::string metallicTexturePath = "";
 		std::string roughnessTexturePath = "";
-		std::string aoTexturePath = "";
 		std::string hdrEquirectangularTexturePath = "";
 		glm::vec2 irradianceSamplerSize = { 0, 0 };
 		std::string environmentMapPath = "";
@@ -330,9 +416,6 @@ namespace flex
 		bool generateRoughnessSampler = false;
 		bool enableRoughnessSampler = false;
 
-		bool generateAOSampler = false;
-		bool enableAOSampler = false;
-
 		bool generateHDREquirectangularSampler = false;
 		bool enableHDREquirectangularSampler = false;
 
@@ -350,8 +433,8 @@ namespace flex
 
 		bool generateReflectionProbeMaps = false;
 
-		// If true, this material shouldn't be removed when switching scenes
-		bool engineMaterial = false;
+		bool persistent = false;
+		bool visibleInEditor = false;
 
 		real textureScale = 1.0f;
 		real blendSharpness = 1.0f;
@@ -359,12 +442,125 @@ namespace flex
 		glm::vec4 fontCharData;
 		glm::vec2 texSize;
 
-		// TODO: Make this more dynamic!
 		struct PushConstantBlock
 		{
-			glm::mat4 mvp;
+			PushConstantBlock(i32 initialSize) : size(initialSize) { assert(initialSize != 0); }
+			PushConstantBlock() {}
+
+			PushConstantBlock(const PushConstantBlock& rhs)
+			{
+				data = rhs.data;
+				size = rhs.size;
+			}
+			PushConstantBlock(const PushConstantBlock&& rhs)
+			{
+				data = rhs.data;
+				size = rhs.size;
+			}
+			PushConstantBlock& operator=(const PushConstantBlock& rhs)
+			{
+				data = rhs.data;
+				size = rhs.size;
+				return *this;
+			}
+			PushConstantBlock& operator=(const PushConstantBlock&& rhs)
+			{
+				data = rhs.data;
+				size = rhs.size;
+				return *this;
+			}
+
+			~PushConstantBlock()
+			{
+				if (data)
+				{
+					free_hooked(data);
+					data = nullptr;
+					size = 0;
+				}
+			}
+
+			void InitWithSize(u32 dataSize)
+			{
+				if (data == nullptr)
+				{
+					assert(size == dataSize || size == 0);
+
+					size = dataSize;
+					data = malloc_hooked(dataSize);
+				}
+				else
+				{
+					assert(size == dataSize && "Attempted to initialize push constant data with differing size. Block must be reallocated when size changes.");
+				}
+			}
+
+			void SetData(real* newData, u32 dataSize)
+			{
+				InitWithSize(dataSize);
+				memcpy(data, newData, size);
+			}
+
+			void SetData(const glm::mat4& viewProj)
+			{
+				const i32 dataSize = sizeof(glm::mat4) * 1;
+				InitWithSize(dataSize);
+
+				real* dst = (real*)data;
+				memcpy(dst, &viewProj, sizeof(glm::mat4)); dst += sizeof(glm::mat4) / sizeof(real);
+			}
+
+			void SetData(const glm::mat4& view, const glm::mat4& proj)
+			{
+				const i32 dataSize = sizeof(glm::mat4) * 2;
+				InitWithSize(dataSize);
+
+				real* dst = (real*)data;
+				memcpy(dst, &view, sizeof(glm::mat4)); dst += sizeof(glm::mat4) / sizeof(real);
+				memcpy(dst, &proj, sizeof(glm::mat4)); dst += sizeof(glm::mat4) / sizeof(real);
+			}
+
+			void SetData(const glm::mat4& view, const glm::mat4& proj, i32 textureIndex)
+			{
+				const i32 dataSize = sizeof(glm::mat4) * 2 + sizeof(i32);
+				if (data == nullptr)
+				{
+					assert(size == dataSize || size == 0);
+
+					size = dataSize;
+					data = malloc_hooked(dataSize);
+				}
+				else
+				{
+					assert(size == dataSize && "Attempted to set push constant data with differing size. Block must be reallocated.");
+				}
+				real* dst = (real*)data;
+				memcpy(dst, &view, sizeof(glm::mat4)); dst += sizeof(glm::mat4) / sizeof(real);
+				memcpy(dst, &proj, sizeof(glm::mat4)); dst += sizeof(glm::mat4) / sizeof(real);
+				memcpy(dst, &textureIndex, sizeof(i32)); dst += sizeof(i32) / sizeof(real);
+			}
+
+			void* data = nullptr;
+			u32 size = 0;
+			// TODO: Store stage flags
 		};
-		PushConstantBlock pushConstantBlock = {};
+		PushConstantBlock* pushConstantBlock = nullptr;
+	};
+
+	enum class RenderPassType
+	{
+		SHADOW,
+		DEFERRED,
+		DEFERRED_COMBINE,
+		FORWARD,
+		SSAO,
+		SSAO_BLUR,
+		POST_PROCESS,
+		TAA_RESOLVE,
+		GAMMA_CORRECT,
+		UI,
+
+		_NONE
 	};
 
 	struct RenderObjectCreateInfo
@@ -378,12 +574,14 @@ namespace flex
 
 		DepthTestFunc depthTestReadFunc = DepthTestFunc::GEQUAL;
 		CullFace cullFace = CullFace::BACK;
+		RenderPassType renderPassOverride = RenderPassType::_NONE;
 
 		bool visible = true;
 		bool visibleInSceneExplorer = true;
 		bool bDepthWriteEnable = true;
 		bool bDepthTestEnable = true;
 		bool bEditorObject = false;
+		bool bSetDynamicStates = false;
 	};
 
 	struct Uniforms
@@ -398,9 +596,9 @@ namespace flex
 	struct Shader
 	{
 		Shader(const std::string& name,
-			   const std::string& vertexShaderFilePath,
-			   const std::string& fragmentShaderFilePath,
-			   const std::string& geometryShaderFilePath = "");
+			const std::string& inVertexShaderFilePath,
+			const std::string& inFragmentShaderFilePath = "",
+			const std::string& inGeometryShaderFilePath = "");
 
 		std::string name = "";
 
@@ -416,10 +614,9 @@ namespace flex
 		Uniforms dynamicBufferUniforms = {};
 
 		VertexAttributes vertexAttributes = 0;
-		i32 numAttachments = 1; // How many output textures the fragment shader has
+		i32 numAttachments = 1;
 
 		i32 subpass = 0;
-		bool bDeferred = false; // TODO: Replace this bool with just checking if numAttachments is larger than 1
 		bool bDepthWriteEnable = true;
 		bool bTranslucent = false;
 
@@ -429,19 +626,25 @@ namespace flex
 		bool bNeedAlbedoSampler = false;
 		bool bNeedMetallicSampler = false;
 		bool bNeedRoughnessSampler = false;
-		bool bNeedAOSampler = false;
 		bool bNeedHDREquirectangularSampler = false;
 		bool bNeedIrradianceSampler = false;
 		bool bNeedPrefilteredMap = false;
 		bool bNeedBRDFLUT = false;
-		bool bNeedShadowMap = false;
 		bool bNeedPushConstantBlock = false;
+		bool bGenerateVertexBufferForAll = false;
+		bool bTextureArr = false;
+		u32 pushConstantBlockSize = 0;
+
+		bool bDynamic = false;
+		u32 dynamicVertexBufferSize = 0;
+		RenderPassType renderPassType = RenderPassType::_NONE;
 	};
 
 	struct SpriteQuadDrawInfo
 	{
-		RenderID spriteObjectRenderID = InvalidRenderID;
-		u32 textureHandleID = 0; // Not a TextureID, but the GL id (TODO: Make API-agnostic)
+		//RenderID spriteObjectRenderID = InvalidRenderID;
+		TextureID textureID = InvalidTextureID;
+		u32 textureLayer = 0;
 		u32 FBO = 0; // 0 for rendering to final RT
 		u32 RBO = 0; // 0 for rendering to final RT
 		MaterialID materialID = InvalidMaterialID;
@@ -456,25 +659,31 @@ namespace flex
 		bool bWriteDepth = true;
 		bool bEnableAlbedoSampler = true;
 		bool bRaw = false; // If true no further pos/scale processing is down, values are directly uploaded to GPU
+		bool bFullscreen = false;
 	};
 
+	// TODO: OPTIMIZE: Shrink these bad boys
+	// 52 bytes
 	struct TextVertex2D
 	{
-		glm::vec2 pos;
-		glm::vec2 uv;
-		glm::vec4 color;
-		glm::vec4 charSizePixelsCharSizeNorm; // RG: char size in pixels, BA: char size in [0, 1] in screen space
-		i32 channel; // uses extra int slot
+		glm::vec2 pos;                        // 0
+		glm::vec2 uv;                         // 8
+		glm::vec4 color;                      // 16
+		glm::vec4 charSizePixelsCharSizeNorm; // 32 - RG: char size in pixels, BA: char size in [0, 1] in screen space
+		i32 channel;                          // 48 - Uses extra int slot
 	};
 
+	// 68 bytes
 	struct TextVertex3D
 	{
-		glm::vec3 pos;
-		glm::vec2 uv;
-		glm::vec4 color;
-		glm::vec3 tangent;
-		glm::vec4 charSizePixelsCharSizeNorm; // RG: char size in pixels, BA: char size in [0, 1] in screen space
-		i32 channel; // uses extra int slot
+		glm::vec3 pos;                        // 0
+		                                      // + 4
+		glm::vec2 uv;                         // 16
+		glm::vec4 color;                      // 24
+		glm::vec3 tangent;                    // 32
+		                                      // + 4
+		glm::vec4 charSizePixelsCharSizeNorm; // 48 - RG: char size in pixels, BA: char size in [0, 1] in screen space
+		i32 channel;                          // 64 - uses extra int slot
 	};
 
 } // namespace flex

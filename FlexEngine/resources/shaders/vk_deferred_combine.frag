@@ -1,6 +1,10 @@
-#version 420
+#version 450
 
 // Deferred PBR Combine
+
+#define QUALITY_LEVEL_HIGH 1
+#define NUM_POINT_LIGHTS 8
+#define NUM_CASCADES 4
 
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
@@ -17,6 +21,9 @@ struct DirectionalLight
 	int enabled;
 	vec3 color;
 	float brightness;
+	int castShadows;
+	float shadowDarkness;
+	vec2 _dirLightPad;
 };
 
 struct PointLight 
@@ -26,27 +33,38 @@ struct PointLight
 	vec3 color;
 	float brightness;
 };
-#define NUMBER_POINT_LIGHTS 8
 
 layout (binding = 0) uniform UBOConstant
 {
 	vec4 camPos;
+	mat4 invView;
+	mat4 invProj;
 	DirectionalLight dirLight;
-	PointLight pointLights[NUMBER_POINT_LIGHTS];
+	PointLight pointLights[NUM_POINT_LIGHTS];
+	// Cascading Shadow Map Data
+	mat4 cascadeViewProjMats[NUM_CASCADES];
+	vec4 cascadeDepthSplits;
+	// SSAO Sampling Data
+	int ssaoEnabled; // TODO: Make specialization constant
+	float ssaoPowExp;
+	float zNear;
+	float zFar;
 } uboConstant;
 
 layout (binding = 1) uniform UBODynamic
 {
-	bool enableIrradianceSampler;
+	int enableIrradianceSampler;
 } uboDynamic;
 
 layout (binding = 2) uniform sampler2D brdfLUT;
 layout (binding = 3) uniform samplerCube irradianceSampler;
 layout (binding = 4) uniform samplerCube prefilterMap;
+layout (binding = 5) uniform sampler2D depthBuffer;
+layout (binding = 6) uniform sampler2D ssaoBuffer;
+layout (binding = 7) uniform sampler2DArray shadowMaps;
 
-layout (binding = 5) uniform sampler2D positionMetallicFrameBufferSampler;
-layout (binding = 6) uniform sampler2D normalRoughnessFrameBufferSampler;
-layout (binding = 7) uniform sampler2D albedoAOFrameBufferSampler;
+layout (binding = 8) uniform sampler2D normalRoughnessTex;
+layout (binding = 9) uniform sampler2D albedoMetallicTex;
 
 vec3 FresnelSchlick(float cosTheta, vec3 F0)
 {
@@ -114,17 +132,64 @@ vec3 DoLighting(vec3 radiance, vec3 N, vec3 V, vec3 L, float NoV, float NoL,
 	return (kD * albedo / PI + specular) * radiance * NoL;
 }
 
+vec3 ReconstructVSPosFromDepth(vec2 uv, float depth)
+{
+	float x = uv.x * 2.0f - 1.0f;
+	float y = (1.0f - uv.y) * 2.0f - 1.0f;
+	vec4 pos = vec4(x, y, depth, 1.0f);
+	vec4 posVS = uboConstant.invProj * pos;
+	vec3 posNDC = posVS.xyz / posVS.w;
+	return posNDC;
+}
+
+vec3 ReconstructWSPosFromDepth(vec2 uv, float depth)
+{
+	float x = uv.x * 2.0f - 1.0f;
+	float y = (1.0f - uv.y) * 2.0f - 1.0f;
+	vec4 pos = vec4(x, y, depth, 1.0f);
+	vec4 posVS = uboConstant.invProj * pos;
+	vec3 posNDC = posVS.xyz / posVS.w;
+	return (uboConstant.invView * vec4(posNDC, 1)).xyz;
+}
+
+const mat4 biasMat = mat4( 
+	0.5, 0.0, 0.0, 0.0,
+	0.0, 0.5, 0.0, 0.0,
+	0.0, 0.0, 1.0, 0.0,
+	0.5, 0.5, 0.0, 1.0 
+);
+
 void main()
 {
-	// Retrieve data from gbuffer
-    vec3 worldPos = texture(positionMetallicFrameBufferSampler, ex_TexCoord).rgb;
-    float metallic = texture(positionMetallicFrameBufferSampler, ex_TexCoord).a;
+    vec3 N = texture(normalRoughnessTex, ex_TexCoord).rgb;
+    N = mat3(uboConstant.invView) * N; // view space -> world space
+    float roughness = texture(normalRoughnessTex, ex_TexCoord).a;
 
-    vec3 N = texture(normalRoughnessFrameBufferSampler, ex_TexCoord).rgb;
-    float roughness = texture(normalRoughnessFrameBufferSampler, ex_TexCoord).a;
+    float depth = texture(depthBuffer, ex_TexCoord).r;
+    vec3 viewPos = ReconstructVSPosFromDepth(ex_TexCoord, depth);
+    vec3 worldPos = ReconstructWSPosFromDepth(ex_TexCoord, depth);
+    float depthN = viewPos.z*(1/48.0);
+	
+    float invDist = 1.0f/(uboConstant.zFar-uboConstant.zNear);
 
-    vec3 albedo = texture(albedoAOFrameBufferSampler, ex_TexCoord).rgb;
-    float ao = texture(albedoAOFrameBufferSampler, ex_TexCoord).a;
+	float linDepth = (viewPos.z-uboConstant.zNear)*invDist;
+	// fragColor = vec4(vec3(linDepth), 1); return;
+
+    vec3 albedo = texture(albedoMetallicTex, ex_TexCoord).rgb;	
+    float metallic = texture(albedoMetallicTex, ex_TexCoord).a;
+
+    float ssao = (uboConstant.ssaoEnabled == 1 ? texture(ssaoBuffer, ex_TexCoord).r : 1.0f);
+
+	// fragColor = vec4(vec3(pow(ssao, uboConstant.ssaoPowExp)), 1); return;
+
+	uint cascadeIndex = 0;
+	for (uint i = 0; i < NUM_CASCADES; ++i)
+	{
+		if (linDepth > uboConstant.cascadeDepthSplits[i])
+		{
+			cascadeIndex = i + 1;
+		}
+	}
 
 	vec3 V = normalize(uboConstant.camPos.xyz - worldPos);
 	vec3 R = reflect(-V, N);
@@ -137,7 +202,7 @@ void main()
 
 	// Reflectance equation
 	vec3 Lo = vec3(0.0);
-	for (int i = 0; i < NUMBER_POINT_LIGHTS; ++i)
+	for (int i = 0; i < NUM_POINT_LIGHTS; ++i)
 	{
 		if (uboConstant.pointLights[i].enabled == 0)
 		{
@@ -167,13 +232,53 @@ void main()
 		vec3 radiance = uboConstant.dirLight.color.rgb * uboConstant.dirLight.brightness;
 		float NoL = max(dot(N, L), 0.0);
 
-		Lo += DoLighting(radiance, N, V, L, NoV, NoL, 1, 1, F0, vec3(1.0));
+		float dirLightShadowOpacity = 1.0;
+		if (uboConstant.dirLight.castShadows != 0)
+		{
+			vec4 transformedShadowPos = (biasMat * uboConstant.cascadeViewProjMats[cascadeIndex]) * vec4(worldPos, 1.0);
+			transformedShadowPos.y = 1.0f - transformedShadowPos.y;
+			transformedShadowPos /= transformedShadowPos.w;
+			
+			if (transformedShadowPos.z > -1.0 && transformedShadowPos.z < 1.0)
+			{
+				float baseBias = 0.0005;
+				float bias = max(baseBias * (1.0 - NoL), baseBias * 0.01);
+
+#if QUALITY_LEVEL_HIGH
+				int sampleRadius = 3;
+				float spread = 1.75;
+				float shadowSampleContrib = uboConstant.dirLight.shadowDarkness / ((sampleRadius*2 + 1) * (sampleRadius*2 + 1));
+				vec3 shadowMapTexelSize = 1.0 / textureSize(shadowMaps, 0);
+
+				for (int x = -sampleRadius; x <= sampleRadius; ++x)
+				{
+					for (int y = -sampleRadius; y <= sampleRadius; ++y)
+					{
+						float shadowDepth = texture(shadowMaps, vec3(transformedShadowPos.xy + vec2(x, y) * shadowMapTexelSize.xy*spread, cascadeIndex)).r;
+
+						if (shadowDepth > transformedShadowPos.z + bias)
+						{
+							dirLightShadowOpacity -= shadowSampleContrib;
+						}
+					}
+				}
+#else
+				float shadowDepth = texture(shadowMaps, vec3(transformedShadowPos.xy, cascadeIndex)).r;
+				if (shadowDepth > transformedShadowPos.z + bias)
+				{
+					dirLightShadowOpacity = 1.0 - uboConstant.dirLight.shadowDarkness;
+				}
+#endif
+			}
+		}
+
+		Lo += DoLighting(radiance, N, V, L, NoV, NoL, roughness, metallic, F0, albedo) * dirLightShadowOpacity;
 	}
 
 	vec3 F = FresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
 
 	vec3 ambient;
-	if (uboDynamic.enableIrradianceSampler)
+	if (uboDynamic.enableIrradianceSampler != 0)
 	{
 		// Diffse ambient term (IBL)
 		vec3 kS = F;
@@ -188,19 +293,31 @@ void main()
 		vec2 brdf = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
 		vec3 specular = prefilteredColor * (F * brdf.x + brdf.y);
 
-	    ambient = (kD * diffuse + specular) * ao;
+	    ambient = (kD * diffuse + specular);
 	}
 	else
 	{
-		ambient = vec3(0.03) * albedo * ao;
+		ambient = vec3(0.03) * albedo;
 	}
 
-	vec3 color = ambient + Lo;
+	// TODO: Apply SSAO to ambient term
+	vec3 color = ambient + Lo * pow(ssao, uboConstant.ssaoPowExp);
 
 	color = color / (color + vec3(1.0f)); // Reinhard tone-mapping
 	color = pow(color, vec3(1.0f / 2.2f)); // Gamma correction
 
 	fragColor = vec4(color, 1.0);
+
+#if 0
+	switch (cascadeIndex)
+	{
+		case 0: fragColor *= vec4(0.85f, 0.4f, 0.3f, 0.0f); return;
+		case 1: fragColor *= vec4(0.2f, 1.0f, 1.0f, 0.0f); return;
+		case 2: fragColor *= vec4(1.0f, 1.0f, 0.2f, 0.0f); return;
+		case 3: fragColor *= vec4(0.4f, 0.8f, 0.2f, 0.0f); return;
+		default: fragColor = vec4(1.0f, 0.0f, 1.0f, 0.0f); return;
+	}
+#endif
 
 	// fragColor = vec4(F, 1);
 

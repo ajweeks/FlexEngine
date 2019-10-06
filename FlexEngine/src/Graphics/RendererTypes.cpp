@@ -23,39 +23,42 @@ namespace flex
 		{
 #define _u(uniform) if (HasUniform(U_##uniform)) size += US_##uniform;
 			_u(MODEL)
-			_u(MODEL_INV_TRANSPOSE)
-			_u(VIEW)
-			_u(VIEW_INV)
-			_u(VIEW_PROJECTION)
-			_u(MODEL_VIEW_PROJ)
-			_u(PROJECTION)
-			_u(BLEND_SHARPNESS)
-			_u(COLOR_MULTIPLIER)
-			_u(CAM_POS)
-			_u(DIR_LIGHT)
-			_u(POINT_LIGHTS)
-			_u(CONST_ALBEDO)
-			_u(CONST_METALLIC)
-			_u(CONST_ROUGHNESS)
-			_u(CONST_AO)
-			_u(ENABLE_CUBEMAP_SAMPLER)
-			_u(ENABLE_ALBEDO_SAMPLER)
-			_u(ENABLE_METALLIC_SAMPLER)
-			_u(ENABLE_ROUGHNESS_SAMPLER)
-			_u(ENABLE_AO_SAMPLER)
-			_u(ENABLE_NORMAL_SAMPLER)
-			_u(ENABLE_IRRADIANCE_SAMPLER)
-			_u(TEXEL_STEP)
-			_u(SHOW_EDGES)
-			_u(LIGHT_VIEW_PROJ)
-			_u(EXPOSURE)
-			_u(TRANSFORM_MAT)
-			_u(TEX_SIZE)
-			_u(TEXTURE_SCALE)
-			_u(TIME)
-			_u(SDF_DATA)
-			_u(TEX_CHANNEL)
-			_u(FONT_CHAR_DATA)
+				_u(VIEW)
+				_u(VIEW_INV)
+				_u(VIEW_PROJECTION)
+				_u(PROJECTION)
+				_u(PROJECTION_INV)
+				_u(BLEND_SHARPNESS)
+				_u(COLOR_MULTIPLIER)
+				_u(CAM_POS)
+				_u(DIR_LIGHT)
+				_u(POINT_LIGHTS)
+				_u(CONST_ALBEDO)
+				_u(CONST_METALLIC)
+				_u(CONST_ROUGHNESS)
+				_u(ENABLE_ALBEDO_SAMPLER)
+				_u(ENABLE_METALLIC_SAMPLER)
+				_u(ENABLE_ROUGHNESS_SAMPLER)
+				_u(ENABLE_NORMAL_SAMPLER)
+				_u(ENABLE_IRRADIANCE_SAMPLER)
+				_u(SHOW_EDGES)
+				_u(LIGHT_VIEW_PROJS)
+				_u(EXPOSURE)
+				_u(TEX_SIZE)
+				_u(TEXTURE_SCALE)
+				_u(TIME)
+				_u(SDF_DATA)
+				_u(TEX_CHANNEL)
+				_u(FONT_CHAR_DATA)
+				_u(SSAO_GEN_DATA)
+				_u(SSAO_BLUR_DATA_DYNAMIC)
+				_u(SSAO_BLUR_DATA_CONSTANT)
+				_u(SSAO_SAMPLING_DATA)
+				_u(FXAA_DATA)
+				_u(SHADOW_SAMPLING_DATA)
+				_u(NEAR_FAR_PLANES)
+				_u(POST_PROCESS_MAT)
+				_u(LAST_FRAME_VIEWPROJ)
 #undef _u
 		}
 
@@ -63,14 +66,32 @@ namespace flex
 	}
 
 	Shader::Shader(const std::string& name,
-				   const std::string& vertexShaderFilePath,
-				   const std::string& fragmentShaderFilePath,
-				   const std::string& geometryShaderFilePath /* = "" */) :
-		name(name),
-		vertexShaderFilePath(vertexShaderFilePath),
-		fragmentShaderFilePath(fragmentShaderFilePath),
-		geometryShaderFilePath(geometryShaderFilePath)
+		const std::string& inVertexShaderFilePath,
+		const std::string& inFragmentShaderFilePath /* = "" */,
+		const std::string& inGeometryShaderFilePath /* = "" */) :
+		name(name)
 	{
+#if COMPILE_OPEN_GL
+		vertexShaderFilePath = RESOURCE_LOCATION "shaders/" + inVertexShaderFilePath;
+		if (!inFragmentShaderFilePath.empty())
+		{
+			fragmentShaderFilePath = RESOURCE_LOCATION "shaders/" + inFragmentShaderFilePath;
+		}
+		if (!inGeometryShaderFilePath.empty())
+		{
+			geometryShaderFilePath = RESOURCE_LOCATION "shaders/" + inGeometryShaderFilePath;
+		}
+#elif COMPILE_VULKAN
+		vertexShaderFilePath = RESOURCE_LOCATION "shaders/spv/" + inVertexShaderFilePath;
+		if (!inFragmentShaderFilePath.empty())
+		{
+			fragmentShaderFilePath = RESOURCE_LOCATION "shaders/spv/" + inFragmentShaderFilePath;
+		}
+		if (!inGeometryShaderFilePath.empty())
+		{
+			geometryShaderFilePath = RESOURCE_LOCATION "shaders/spv/" + inGeometryShaderFilePath;
+		}
+#endif
 	}
 
 	bool Material::Equals(const Material& other)
@@ -84,7 +105,7 @@ namespace flex
 				generateNormalSampler == other.generateNormalSampler &&
 				enableNormalSampler == other.enableNormalSampler &&
 				normalTexturePath == other.normalTexturePath &&
-				frameBuffers.size() == other.frameBuffers.size() &&
+				sampledFrameBuffers.size() == other.sampledFrameBuffers.size() &&
 				generateCubemapSampler == other.generateCubemapSampler &&
 				enableCubemapSampler == other.enableCubemapSampler &&
 				cubemapSamplerSize == other.cubemapSamplerSize &&
@@ -92,7 +113,6 @@ namespace flex
 				constAlbedo == other.constAlbedo &&
 				constMetallic == other.constMetallic &&
 				constRoughness == other.constRoughness &&
-				constAO == other.constAO &&
 				generateAlbedoSampler == other.generateAlbedoSampler &&
 				enableAlbedoSampler == other.enableAlbedoSampler &&
 				albedoTexturePath == other.albedoTexturePath &&
@@ -102,9 +122,6 @@ namespace flex
 				generateRoughnessSampler == other.generateRoughnessSampler &&
 				enableRoughnessSampler == other.enableRoughnessSampler &&
 				roughnessTexturePath == other.roughnessTexturePath &&
-				generateAOSampler == other.generateAOSampler &&
-				enableAOSampler == other.enableAOSampler &&
-				aoTexturePath == other.aoTexturePath &&
 				generateHDREquirectangularSampler == other.generateHDREquirectangularSampler &&
 				enableHDREquirectangularSampler == other.enableHDREquirectangularSampler &&
 				hdrEquirectangularTexturePath == other.hdrEquirectangularTexturePath &&
@@ -143,7 +160,6 @@ namespace flex
 			{ &createInfoOut.albedoTexturePath, "albedo texture filepath" },
 			{ &createInfoOut.metallicTexturePath, "metallic texture filepath" },
 			{ &createInfoOut.roughnessTexturePath, "roughness texture filepath" },
-			{ &createInfoOut.aoTexturePath, "ao texture filepath" },
 			{ &createInfoOut.normalTexturePath, "normal texture filepath" },
 			{ &createInfoOut.hdrEquirectangularTexturePath, "hdr equirectangular texture filepath" },
 			{ &createInfoOut.environmentMapPath, "environment map path" },
@@ -163,8 +179,6 @@ namespace flex
 		material.SetBoolChecked("enable metallic sampler", createInfoOut.enableMetallicSampler);
 		material.SetBoolChecked("generate roughness sampler", createInfoOut.generateRoughnessSampler);
 		material.SetBoolChecked("enable roughness sampler", createInfoOut.enableRoughnessSampler);
-		material.SetBoolChecked("generate ao sampler", createInfoOut.generateAOSampler);
-		material.SetBoolChecked("enable ao sampler", createInfoOut.enableAOSampler);
 		material.SetBoolChecked("generate normal sampler", createInfoOut.generateNormalSampler);
 		material.SetBoolChecked("enable normal sampler", createInfoOut.enableNormalSampler);
 		material.SetBoolChecked("generate hdr equirectangular sampler", createInfoOut.generateHDREquirectangularSampler);
@@ -189,7 +203,6 @@ namespace flex
 		material.SetVec3Checked("const albedo", createInfoOut.constAlbedo);
 		material.SetFloatChecked("const metallic", createInfoOut.constMetallic);
 		material.SetFloatChecked("const roughness", createInfoOut.constRoughness);
-		material.SetFloatChecked("const ao", createInfoOut.constAO);
 
 		material.SetFloatChecked("texture scale", createInfoOut.textureScale);
 	}
@@ -209,7 +222,6 @@ namespace flex
 		materialObject.fields.emplace_back("const albedo", JSONValue(constAlbedoStr));
 		materialObject.fields.emplace_back("const metallic", JSONValue(constMetallic));
 		materialObject.fields.emplace_back("const roughness", JSONValue(constRoughness));
-		materialObject.fields.emplace_back("const ao", JSONValue(constAO));
 
 		static const bool defaultEnableAlbedo = false;
 		if (shader.bNeedAlbedoSampler && enableAlbedoSampler != defaultEnableAlbedo)
@@ -227,12 +239,6 @@ namespace flex
 		if (shader.bNeedRoughnessSampler && enableRoughnessSampler != defaultEnableRoughness)
 		{
 			materialObject.fields.emplace_back("enable roughness sampler", JSONValue(enableRoughnessSampler));
-		}
-
-		static const bool defaultEnableAO = false;
-		if (shader.bNeedAOSampler && enableAOSampler != defaultEnableAO)
-		{
-			materialObject.fields.emplace_back("enable ao sampler", JSONValue(enableAOSampler));
 		}
 
 		static const bool defaultEnableNormal = false;
@@ -259,12 +265,6 @@ namespace flex
 			materialObject.fields.emplace_back("generate roughness sampler", JSONValue(generateRoughnessSampler));
 		}
 
-		static const bool defaultGenerateAO = false;
-		if (shader.bNeedAOSampler && generateAOSampler != defaultGenerateAO)
-		{
-			materialObject.fields.emplace_back("generate ao sampler", JSONValue(generateAOSampler));
-		}
-
 		static const bool defaultGenerateNormal = false;
 		if (shader.bNeedNormalSampler && generateNormalSampler != defaultGenerateNormal)
 		{
@@ -289,12 +289,6 @@ namespace flex
 		{
 			std::string shortRoughnessTexturePath = roughnessTexturePath.substr(texturePrefixStr.length());
 			materialObject.fields.emplace_back("roughness texture filepath", JSONValue(shortRoughnessTexturePath));
-		}
-
-		if (shader.bNeedAOSampler && !aoTexturePath.empty())
-		{
-			std::string shortAOTexturePath = aoTexturePath.substr(texturePrefixStr.length());
-			materialObject.fields.emplace_back("ao texture filepath", JSONValue(shortAOTexturePath));
 		}
 
 		if (shader.bNeedNormalSampler && !normalTexturePath.empty())

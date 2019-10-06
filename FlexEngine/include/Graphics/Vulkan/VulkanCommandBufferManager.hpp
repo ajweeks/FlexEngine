@@ -43,6 +43,7 @@ namespace flex
 		private:
 			friend class VulkanRenderer;
 
+			// TODO: CLEANUP: Make single command buffer
 			std::vector<VkCommandBuffer> m_CommandBuffers;
 			VulkanDevice* m_VulkanDevice = nullptr;
 

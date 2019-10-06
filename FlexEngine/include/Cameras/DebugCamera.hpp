@@ -25,6 +25,8 @@ namespace flex
 		EventReply OnMouseMovedEvent(const glm::vec2& dMousePos);
 		MouseMovedCallback<DebugCamera> mouseMovedCallback;
 
+		real m_RollOnTurnAmount;
+
 		glm::vec2 m_MouseDragDist;
 
 		bool m_bDraggingLMB = false;
@@ -40,6 +42,6 @@ namespace flex
 		glm::vec3 m_MoveVel;
 		glm::vec2 m_TurnVel; // Contains amount pitch and yaw changed last frame
 
-		Histogram m_DragHisto;
+		Histogram m_DragHistory;
 	};
 } // namespace flex

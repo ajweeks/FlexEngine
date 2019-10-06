@@ -66,7 +66,7 @@ namespace flex
 	{
 		for (GLFWimage& icon : m_WindowIcons)
 		{
-			delete icon.pixels;
+			DestroyGLFWimage(icon);
 		}
 		m_WindowIcons.clear();
 
@@ -209,10 +209,6 @@ namespace flex
 			Print("Renderer:   %s\n", reinterpret_cast<const char*>(glGetString(GL_RENDERER)));
 			Print("Version:    %s\n\n", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
 			//Print("Extensions: %s\n\n", reinterpret_cast<const char*>(glGetString(GL_EXTENSIONS)));
-		}
-		else if (g_bVulkanEnabled)
-		{
-			// Vulkan hasn't been loaded yet
 		}
 
 		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION  "icons/flex-logo-03_128.png", 4));
@@ -515,6 +511,13 @@ namespace flex
 	void GLFWWindowWrapper::SetMousePosition(glm::vec2 mousePosition)
 	{
 		glfwSetCursorPos(m_Window, (double)mousePosition.x, (double)mousePosition.y);
+	}
+
+	glm::vec2 GLFWWindowWrapper::GetMousePosition()
+	{
+		double posX, posY;
+		glfwGetCursorPos(m_Window, &posX, &posY);
+		return glm::vec2((real)posX, (real)posY);
 	}
 
 	void GLFWWindowWrapper::MoveConsole()

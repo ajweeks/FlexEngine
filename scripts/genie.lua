@@ -10,7 +10,8 @@ solution "Flex"
 	configurations {
 		"Debug",
 		"Development",
-		"Shipping"
+		"Shipping",
+		"Shipping_WithSymbols"
 	}
 
 	platforms {
@@ -22,6 +23,7 @@ solution "Flex"
 
 	location "../build/"
 	objdir "../build/"
+	windowstargetplatformversion "10.0.17763.0"
 
 
 PROJECT_DIR = path.getabsolute("..")
@@ -74,36 +76,36 @@ function staticPlatformLibraries()
 end
 
 
---copy files that are specific for the platform being built for
--- function windowsPlatformPostBuild()
--- 	local cfgs = configurations()
--- 	local cfg_lib_dirs = {
--- 		"Debug",
--- 		"Release",
--- 		"Release"
--- 	};
+-- copy files that are specific for the platform being built for
+function windowsPlatformPostBuild()
+	local cfgs = configurations()
 
--- 	for i = 1, #cfgs do
--- 		--copy dlls and resources after build
--- 		configuration { "vs*", cfgs[i] }
--- 			postbuildcommands { 
--- 				"copy \"$(SolutionDir)..\\FlexEngine\\lib\\" .. cfg_lib_dirs[i] .. "\\assimp-vc140-mt.dll\" " ..
--- 				"\"$(OutDir)assimp-vc140-mt.dll\""
--- 			}
--- 	end
--- 	configuration {}
--- end
+	for i = 1, #cfgs do
+		--copy dlls and resources after build
+		configuration { "vs*", cfgs[i] }
+			postbuildcommands { 
+				"copy \"$(SolutionDir)..\\FlexEngine\\lib\\openal32.dll\" " ..
+				"\"$(OutDir)openal32.dll\""
+			}
+	end
+	configuration {}
+end
 
 
 configuration "Debug"
-	defines { "DEBUG" }
+	defines { "DEBUG", "SYMBOLS" }
 	flags { "Symbols", "ExtraWarnings" }
 configuration "Development"
-	defines { "DEVELOPMENT" }
+	defines { "DEVELOPMENT", "SYMBOLS" }
 	flags {"OptimizeSpeed", "Symbols", "ExtraWarnings" }
 configuration "Shipping"
 	defines { "SHIPPING" }
 	flags {"OptimizeSpeed", "No64BitChecks" }
+configuration "Shipping_WithSymbols"
+	defines { "SHIPPING", "SYMBOLS" }
+	flags {"OptimizeSpeed", "Symbols", "No64BitChecks" }
+configuration {}
+
 
 configuration "vs*"
 	flags { "NoIncrementalLink", "NoEditAndContinue" }
@@ -149,6 +151,7 @@ project "Flex"
 
 	platformLibraries()
 	staticPlatformLibraries()
+	windowsPlatformPostBuild()
 
 	--Linked libraries
     links { "opengl32", "glfw3", "vulkan-1", "OpenAL32" }
@@ -159,6 +162,8 @@ configuration { "Debug" }
 configuration { "Development" }
 	links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" }
 configuration { "Shipping" }
+	links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" } 
+configuration { "Shipping_WithSymbols" }
 	links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" } 
 configuration {}
 

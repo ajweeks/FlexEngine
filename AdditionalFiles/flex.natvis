@@ -41,4 +41,19 @@
     <DisplayString Condition="type == flex::ValueType::IDENTIFIER">{val.identifierValue}</DisplayString>
   </Type>
 
+  <Type Name="flex::vk::VDeleter&lt;*&gt;">
+    <DisplayString>{object} (VDeleter)</DisplayString>
+  </Type>
+
+  <Type Name="flex::Material">
+    <DisplayString>{name}, shaderID: {shaderID}</DisplayString>
+  </Type>
+
+  <Type Name="flex::Shader">
+    <DisplayString>{name}</DisplayString>
+  </Type>
+
+  <Type Name="flex::vk::VulkanRenderObject">
+    <DisplayString>{gameObject->m_Name},{materialName}</DisplayString>
+  </Type>
 </AutoVisualizer>

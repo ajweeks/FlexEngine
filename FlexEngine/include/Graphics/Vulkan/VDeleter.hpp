@@ -31,7 +31,7 @@ namespace flex
 			void cleanup();
 		};
 
-
+		// TODO: Monitor number of VDeleters being created/destroyed
 		template<typename T>
 		VDeleter<T>::VDeleter() :
 			VDeleter([](T, VkAllocationCallbacks*) {})

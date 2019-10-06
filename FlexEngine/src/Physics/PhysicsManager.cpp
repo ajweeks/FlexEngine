@@ -32,9 +32,13 @@ namespace flex
 			m_bInitialized = false;
 
 			delete m_Solver;
+			m_Solver = nullptr;
 			delete m_OverlappingPairCache;
+			m_OverlappingPairCache = nullptr;
 			delete m_Dispatcher;
+			m_Dispatcher = nullptr;
 			delete m_CollisionConfiguration;
+			m_CollisionConfiguration = nullptr;
 		}
 	}
 

@@ -5,8 +5,10 @@
 IGNORE_WARNINGS_PUSH
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/vec2.hpp>
+
 IGNORE_WARNINGS_POP
 
+#include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "Player.hpp"
 #include "PlayerController.hpp"
@@ -25,20 +27,27 @@ namespace flex
 		m_FOV(FOV),
 		m_ZNear(zNear),
 		m_ZFar(zFar),
-		m_MoveSpeed(25.0f),
+		m_MoveSpeed(18.0f),
 		m_PanSpeed(10.0f),
 		m_DragDollySpeed(0.1f),
 		m_ScrollDollySpeed(2.0f),
+		m_OrbitingSpeed(0.1f),
+		m_MouseRotationSpeed(0.0015f),
+		m_GamepadRotationSpeed(2.0f),
 		m_MoveSpeedFastMultiplier(3.5f),
 		m_MoveSpeedSlowMultiplier(0.05f),
 		m_TurnSpeedFastMultiplier(2.0f),
 		m_TurnSpeedSlowMultiplier(0.1f),
-		m_OrbitingSpeed(0.1f),
-		m_MouseRotationSpeed(0.0015f),
-		m_GamepadRotationSpeed(2.0f),
+		m_PanSpeedFastMultiplier(2.5f),
+		m_PanSpeedSlowMultiplier(0.2f),
+		m_RollRestorationSpeed(12.0f),
 		m_Position(VEC3_ZERO),
 		m_Yaw(0.0f),
-		m_Pitch(0.0f)
+		m_Pitch(0.0f),
+		m_Roll(0.0f),
+		m_Forward(VEC3_FORWARD),
+		m_Up(VEC3_UP),
+		m_Right(VEC3_RIGHT)
 	{
 		ResetOrientation();
 		CalculateAxisVectorsFromPitchAndYaw();
@@ -53,6 +62,11 @@ namespace flex
 	void BaseCamera::Initialize()
 	{
 		m_bInitialized = true;
+	}
+
+	void BaseCamera::Update()
+	{
+		m_Roll = Lerp(m_Roll, 0.0f, m_RollRestorationSpeed * g_DeltaTime);
 	}
 
 	void BaseCamera::Destroy()
@@ -170,6 +184,7 @@ namespace flex
 	{
 		m_Yaw = yawRad;
 		m_Pitch = pitchRad;
+		m_Roll = 0.0f;
 	}
 
 	glm::vec3 BaseCamera::GetRight() const
@@ -196,6 +211,7 @@ namespace flex
 	{
 		m_Pitch = 0.0f;
 		m_Yaw = PI;
+		m_Roll = 0.0f;
 	}
 
 	void BaseCamera::CalculateAxisVectorsFromPitchAndYaw()
@@ -207,6 +223,7 @@ namespace flex
 		m_Forward = normalize(m_Forward);
 
 		glm::vec3 worldUp(0.0f, 1.0f, 0.0f);
+		worldUp += m_Right * m_Roll;
 
 		m_Right = normalize(glm::cross(m_Forward, worldUp));
 		m_Up = cross(m_Right, m_Forward);
@@ -217,6 +234,7 @@ namespace flex
 		m_Pitch = asin(m_Forward.y);
 		ClampPitch();
 		m_Yaw = atan2(m_Forward.z, m_Forward.x);
+		m_Roll = 0.0f;
 
 #if THOROUGH_CHECKS
 		ENSURE(!IsNanOrInf(m_Pitch));
@@ -224,7 +242,6 @@ namespace flex
 #endif
 	}
 
-	// TODO: Measure impact of calling this every frame (optimize? Only call when values change? Only update changed values)
 	void BaseCamera::RecalculateViewProjection()
 	{
 		const glm::vec2 windowSize = g_Window->GetSize();
@@ -235,11 +252,82 @@ namespace flex
 
 		m_View = glm::lookAt(m_Position, m_Position + m_Forward, m_Up);
 
-		real aspectRatio = windowSize.x / (real)windowSize.y;
+		real aspectRatio = (real)windowSize.x / (real)windowSize.y;
 		m_Proj = glm::perspective(m_FOV, aspectRatio, m_ZFar, m_ZNear);
 
 		m_ViewProjection = m_Proj * m_View;
 
+		if (g_Renderer->IsTAAEnabled())
+		{
+			JitterMatrix(m_ViewProjection);
+		}
+	}
+
+	void BaseCamera::JitterMatrix(glm::mat4& matrix)
+	{
+		// [-1.0f, 1.0f]
+		static const glm::vec2 SAMPLE_LOCS_16[16] =
+		{
+			glm::vec2(-8.0f, 0.0f) / 8.0f,
+			glm::vec2(-6.0f, -4.0f) / 8.0f,
+			glm::vec2(-3.0f, -2.0f) / 8.0f,
+			glm::vec2(-2.0f, -6.0f) / 8.0f,
+			glm::vec2(1.0f, -1.0f) / 8.0f,
+			glm::vec2(2.0f, -5.0f) / 8.0f,
+			glm::vec2(6.0f, -7.0f) / 8.0f,
+			glm::vec2(5.0f, -3.0f) / 8.0f,
+			glm::vec2(4.0f, 1.0f) / 8.0f,
+			glm::vec2(7.0f, 4.0f) / 8.0f,
+			glm::vec2(3.0f, 5.0f) / 8.0f,
+			glm::vec2(0.0f, 7.0f) / 8.0f,
+			glm::vec2(-1.0f, 3.0f) / 8.0f,
+			glm::vec2(-4.0f, 6.0f) / 8.0f,
+			glm::vec2(-7.0f, 8.0f) / 8.0f,
+			glm::vec2(-5.0f, 2.0f) / 8.0f
+		};
+
+		static const glm::vec2 SAMPLE_LOCS_8[8] =
+		{
+			glm::vec2(-7.0f, 1.0f) / 8.0f,
+			glm::vec2(-5.0f, -5.0f) / 8.0f,
+			glm::vec2(-1.0f, -3.0f) / 8.0f,
+			glm::vec2(3.0f, -7.0f) / 8.0f,
+			glm::vec2(5.0f, -1.0f) / 8.0f,
+			glm::vec2(7.0f, 7.0f) / 8.0f,
+			glm::vec2(1.0f, 3.0f) / 8.0f,
+			glm::vec2(-3.0f, 5.0f) / 8.0f
+		};
+
+		static const glm::vec2 SAMPLE_LOCS_4[4] =
+		{
+			glm::vec2(-7.0f, 1.0f) / 8.0f,
+			glm::vec2(-1.0f, -3.0f) / 8.0f,
+			glm::vec2(5.0f, -1.0f) / 8.0f,
+			glm::vec2(1.0f, 3.0f) / 8.0f,
+		};
+
+		static const glm::vec2 SAMPLE_LOCS_2[2] =
+		{
+			glm::vec2(-7.0f, 1.0f) / 8.0f,
+			glm::vec2(5.0f, -7.0f) / 8.0f,
+		};
+
+		const i32 sampleCount = g_Renderer->GetTAASampleCount();
+		if (sampleCount <= 0)
+		{
+			return;
+		}
+
+		const glm::vec2* samples = (sampleCount == 16 ? SAMPLE_LOCS_16 : (sampleCount == 8 ? SAMPLE_LOCS_8 : (sampleCount == 4 ? SAMPLE_LOCS_4 : SAMPLE_LOCS_2)));
+
+		const glm::vec2i swapChainSize = g_Window->GetFrameBufferSize();
+		const unsigned subsampleIdx = g_Renderer->GetFramesRenderedCount() % sampleCount;
+
+		// [-halfPix, halfPix] (in NDC)
+		glm::vec2 subsample = (samples[subsampleIdx] / 4.0f) / (glm::vec2)swapChainSize;
+
+		glm::mat4 jitterMat = glm::translate(MAT4_IDENTITY, glm::vec3(subsample.x, subsample.y, 0.0f));
+		matrix = jitterMat * matrix;
 	}
 
 	void BaseCamera::ClampPitch()

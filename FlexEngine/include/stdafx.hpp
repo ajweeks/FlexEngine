@@ -1,7 +1,7 @@
 #pragma once
 
-#define COMPILE_OPEN_GL 1
-#define COMPILE_VULKAN 0
+#define COMPILE_OPEN_GL 0
+#define COMPILE_VULKAN 1
 
 #define COMPILE_IMGUI 1
 
@@ -31,20 +31,22 @@ const bool g_bEnableLogging_Loading = false;
 
 #define VC_EXTRALEAN
 
+#if COMPILE_VULKAN
+#define VULKAN_HPP_TYPESAFE_CONVERSION
+#endif
+
 void* operator new(size_t size);
 void operator delete(void* ptr) noexcept;
-
-//#define malloc(size) malloc_hooked(size)
-//#define free(ptr) free_hooked(ptr)
 
 void* malloc_hooked(size_t size);
 void* aligned_malloc_hooked(size_t size, size_t alignment);
 void free_hooked(void* ptr);
 void aligned_free_hooked(void* ptr);
+void* realloc_hooked(void* ptr, size_t newsz);
 
-//#define STBI_MALLOC(size)		malloc_hooked(size)
-//#define STBI_REALLOC(p, newsz)	realloc(p, newsz)
-//#define STBI_FREE(ptr)			free_hooked(ptr)
+#define STBI_MALLOC(size)		malloc_hooked(size)
+#define STBI_REALLOC(p, newsz)	realloc_hooked(p, newsz)
+#define STBI_FREE(ptr)			free_hooked(ptr)
 
 #define BT_NO_SIMD_OPERATOR_OVERLOADS
 #define NOMINMAX
@@ -208,11 +210,11 @@ if (FlexEngine::s_bHasGLDebugExtension) { glPopDebugGroupKHR(); }
 
 namespace flex
 {
-#define ROOT_LOCATION "..\\..\\..\\FlexEngine\\"
-#define SAVED_LOCATION "..\\..\\..\\FlexEngine\\saved\\"
-#define RESOURCE_LOCATION "..\\..\\..\\FlexEngine\\resources\\"
-#define RESOURCE(path) "..\\..\\..\\FlexEngine\\resources\\" path
-#define RESOURCE_STR(path) "..\\..\\..\\FlexEngine\\resources\\" + path
+#define ROOT_LOCATION "../../../FlexEngine/"
+#define SAVED_LOCATION "../../../FlexEngine/saved/"
+#define RESOURCE_LOCATION "../../../FlexEngine/resources/"
+#define RESOURCE(path) "../../../FlexEngine/resources/" path
+#define RESOURCE_STR(path) "../../../FlexEngine/resources/" + path
 
 	// TODO: Use int to represent string
 	//typedef u32 StringID;
@@ -236,6 +238,10 @@ namespace flex
 	static const glm::quat QUAT_UNIT = glm::quat(VEC3_ZERO);
 	static const glm::mat4 MAT4_IDENTITY = glm::mat4(1.0f);
 	static const glm::mat4 MAT4_ZERO = glm::mat4(0.0f);
+	static const u32 COLOR32U_WHITE = 0xFFFFFFFF;
+	static const u32 COLOR32U_BLACK = 0x00000000;
+	static const glm::vec4 COLOR128F_WHITE = VEC4_ONE;
+	static const glm::vec4 COLOR128F_BLACK = VEC4_ZERO;
 
 	static const std::string EMPTY_STRING = std::string();
 
@@ -248,6 +254,7 @@ namespace flex
 	extern class InputManager* g_InputManager;
 	extern class Renderer* g_Renderer;
 	extern class FlexEngine* g_EngineInstance;
+	extern class Editor* g_Editor;
 	extern class SceneManager* g_SceneManager;
 	extern struct Monitor* g_Monitor;
 	extern class PhysicsManager* g_PhysicsManager;

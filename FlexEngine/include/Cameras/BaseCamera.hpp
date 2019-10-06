@@ -1,16 +1,19 @@
 #pragma once
 
+// TODO: Move all constants into generic, hotreloadable constants file
+#include "Graphics/RendererTypes.hpp" // For NUM_SHADOW_CASCADES
+
 namespace flex
 {
 	class BaseCamera
 	{
 	public:
 		BaseCamera(const std::string& cameraName, bool bIsGameplayCam, real FOV = glm::radians(45.0f),
-			real zNear = 0.01f, real zFar = 1000.0f);
+			real zNear = 0.5f, real zFar = 350.0f);
 		virtual ~BaseCamera();
 
 		virtual void Initialize();
-		virtual void Update() = 0;
+		virtual void Update();
 		virtual void Destroy();
 
 		virtual void OnSceneChanged();
@@ -75,6 +78,7 @@ namespace flex
 		void CalculateYawAndPitchFromForward();
 		void RecalculateViewProjection();
 
+		void JitterMatrix(glm::mat4& matrix);
 		void ClampPitch();
 
 		// Exposure calculations taken from Google's Filament rendering engine
@@ -100,23 +104,29 @@ namespace flex
 		real m_ZFar = 0.0f;
 
 		real m_MoveSpeed = 0.0f;				// WASD or gamepad left stick
-		real m_PanSpeed = 0.0f;				// MMB
+		real m_PanSpeed = 0.0f;					// MMB
 		real m_DragDollySpeed = 0.0f;			// RMB
-		real m_ScrollDollySpeed = 0.0f;		// Scroll wheel
+		real m_ScrollDollySpeed = 0.0f;			// Scroll wheel
+		real m_OrbitingSpeed = 0.0f;			// Alt-LMB drag
+		real m_MouseRotationSpeed = 0.0f;		// LMB drag
+		real m_GamepadRotationSpeed = 0.0f;		// Gamepad right stick
 		real m_MoveSpeedFastMultiplier = 0.0f;
 		real m_MoveSpeedSlowMultiplier = 0.0f;
 		real m_TurnSpeedFastMultiplier = 0.0f;
 		real m_TurnSpeedSlowMultiplier = 0.0f;
-		real m_OrbitingSpeed = 0.0f;			// Alt-LMB drag
-		real m_MouseRotationSpeed = 0.0f;		// LMB drag
-		real m_GamepadRotationSpeed = 0.0f;	// Gamepad right stick
+		real m_PanSpeedFastMultiplier = 0.0f;
+		real m_PanSpeedSlowMultiplier = 0.0f;
+		real m_RollRestorationSpeed = 0.0f;
 
 		glm::vec3 m_Position;
 
-		real m_Yaw = 0.0f;
-		real m_Pitch = 0.0f;
+		real m_Yaw;
+		real m_Pitch;
+		real m_Roll;
 		glm::vec3 m_Forward;
 		glm::vec3 m_Up;
 		glm::vec3 m_Right;
+
+		glm::mat4 m_ShadowProjectionMats[NUM_SHADOW_CASCADES];
 	};
 } // namespace flex

@@ -24,12 +24,15 @@ namespace flex
 
 		class VulkanRenderer : public Renderer
 		{
+			struct ShaderBatchPair;
+
 		public:
 			VulkanRenderer();
 			virtual ~VulkanRenderer();
 
 			virtual void Initialize() override;
 			virtual void PostInitialize() override;
+
 			virtual void Destroy() override;
 
 			virtual MaterialID InitializeMaterial(const MaterialCreateInfo* createInfo, MaterialID matToReplace = InvalidMaterialID) override;
@@ -37,17 +40,13 @@ namespace flex
 			virtual RenderID InitializeRenderObject(const RenderObjectCreateInfo* createInfo) override;
 			virtual void PostInitializeRenderObject(RenderID renderID) override;
 
-			virtual void ClearMaterials(bool bDestroyEngineMats = false) override;
+			virtual void ClearMaterials(bool bDestroyPersistentMats = false) override;
 
 			virtual void Update() override;
 			virtual void Draw() override;
-			virtual void DrawImGuiMisc() override;
+			virtual void DrawImGuiWindows() override;
 
-			virtual void UpdateVertexData(RenderID renderID, VertexBufferData* vertexBufferData) override;
-
-			virtual void DrawUntexturedQuad(const glm::vec2& pos, AnchorPoint anchor, const glm::vec2& size, const glm::vec4& color) override;
-			virtual void DrawUntexturedQuadRaw(const glm::vec2& pos, const glm::vec2& size, const glm::vec4& color) override;
-			virtual void DrawSprite(const SpriteQuadDrawInfo& drawInfo) override;
+			virtual void UpdateVertexData(RenderID renderID, VertexBufferData const* vertexBufferData) override;
 
 			virtual void ReloadShaders() override;
 			virtual void LoadFonts(bool bForceRender) override;
@@ -95,14 +94,14 @@ namespace flex
 				AnchorPoint anchor,
 				const glm::vec2& pos, // Positional offset from anchor
 				real spacing,
-				bool bRaw = false) override;
+				real scale = 1.0f) override;
 
 			virtual void DrawStringWS(const std::string& str,
 				const glm::vec4& color,
 				const glm::vec3& pos,
 				const glm::quat& rot,
 				real spacing,
-				bool bRaw = false) override;
+				real scale = 1.0f) override;
 
 			virtual void DrawAssetBrowserImGui(bool* bShowing) override;
 			virtual void DrawImGuiForRenderObject(RenderID renderID) override;
@@ -111,13 +110,37 @@ namespace flex
 			virtual u32 GetTextureHandle(TextureID textureID) const override;
 			virtual void RenderObjectStateChanged() override;
 
+			static void SetObjectName(VulkanDevice* device, u64 object, VkDebugReportObjectTypeEXT type, const char* name);
+			static void SetCommandBufferName(VulkanDevice* device, VkCommandBuffer commandBuffer, const char* name);
+			static void SetSwapchainName(VulkanDevice* device, VkSwapchainKHR swapchain, const char* name);
+			static void SetDescriptorSetName(VulkanDevice* device, VkDescriptorSet descSet, const char* name);
+			static void SetPipelineName(VulkanDevice* device, VkPipeline pipeline, const char* name);
+			static void SetFramebufferName(VulkanDevice* device, VkFramebuffer framebuffer, const char* name);
+			static void SetRenderPassName(VulkanDevice* device, VkRenderPass renderPass, const char* name);
+			static void SetImageName(VulkanDevice* device, VkImage image, const char* name);
+			static void SetImageViewName(VulkanDevice* device, VkImageView imageView, const char* name);
+			static void SetSamplerName(VulkanDevice* device, VkSampler sampler, const char* name);
+			static void SetBufferName(VulkanDevice* device, VkBuffer buffer, const char* name);
+
+			static void BeginDebugMarkerRegion(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color = VEC4_ONE);
+			static void EndDebugMarkerRegion(VkCommandBuffer cmdBuf);
+
+			bool bDebugUtilsExtensionPresent = false;
+
+			static PFN_vkDebugMarkerSetObjectNameEXT m_vkDebugMarkerSetObjectName;
+			static PFN_vkCmdDebugMarkerBeginEXT m_vkCmdDebugMarkerBegin;
+			static PFN_vkCmdDebugMarkerEndEXT m_vkCmdDebugMarkerEnd;
+			bool m_bEnableDebugMarkers = false;
+
 		protected:
-			virtual bool LoadFont(BitmapFont** font,
-								  i16 size,
-								  const std::string& fontFilePath,
-								  const std::string& renderedFontFilePath,
-								  bool bForceRender,
-								  bool bScreenSpace) override;
+			virtual bool LoadShaderCode(ShaderID shaderID) override;
+			virtual void SetShaderCount(u32 shaderCount) override;
+			virtual void RemoveMaterial(MaterialID materialID) override;
+			virtual void FillOutGBufferFrameBufferAttachments(std::vector<Pair<std::string, void*>>& outVec) override;
+			virtual bool LoadFont(FontMetaData& fontMetaData, bool bForceRender) override;
+
+			virtual void EnqueueScreenSpaceSprites() override;
+			virtual void EnqueueWorldSpaceSprites() override;
 
 		private:
 			friend VulkanPhysicsDebugDraw;
@@ -128,42 +151,48 @@ namespace flex
 
 			typedef void (VulkanTexture::*VulkanTextureCreateFunction)(VkQueue graphicsQueue, const std::string&, VkFormat, u32);
 
-			struct UniformOverrides // Passed to UpdateUniformConstant or UpdateUniformDynamic to set values to something other than their defaults
+			struct UniformOverrides
 			{
-				Uniforms overridenUniforms; // To override a uniform, add it to this object, then set the overridden value to the respective member
+				Uniforms overridenUniforms;
 
 				glm::mat4 projection;
 				glm::mat4 view;
-				glm::mat4 viewInv;
 				glm::mat4 viewProjection;
 				glm::vec4 camPos;
 				glm::mat4 model;
 				glm::mat4 modelInvTranspose;
-				glm::mat4 modelViewProjection;
 				u32 enableAlbedoSampler;
 				u32 enableMetallicSampler;
 				u32 enableRoughnessSampler;
-				u32 enableAOSampler;
 				u32 enableNormalSampler;
-				u32 enableCubemapSampler;
 				u32 enableIrradianceSampler;
 				i32 texChannel;
 				glm::vec4 sdfData;
 				glm::vec4 fontCharData;
 				glm::vec2 texSize;
+				glm::vec4 colorMultiplier;
+				bool bSSAOVerticalPass;
 			};
 
 			void GenerateCubemapFromHDR(VulkanRenderObject* renderObject, const std::string& environmentMapPath);
 			void GenerateIrradianceSampler(VulkanRenderObject* renderObject);
 			void GeneratePrefilteredCube(VulkanRenderObject* renderObject);
-			void GenerateBRDFLUT(VulkanTexture* brdfTexture);
+			void GenerateBRDFLUT();
 
-			// Draw all static geometry to the given render object's cubemap texture
 			void CaptureSceneToCubemap(RenderID cubemapRenderID);
-			//void GenerateCubemapFromHDREquirectangular(MaterialID cubemapMaterialID, const std::string& environmentMapPath);
 			void GeneratePrefilteredMapFromCubemap(MaterialID cubemapMaterialID);
 			void GenerateIrradianceSamplerFromCubemap(MaterialID cubemapMaterialID);
-			//void GenerateBRDFLUT(u32 brdfLUTTextureID, glm::vec2 BRDFLUTSize);
+
+			void CreateSSAOPipelines();
+			void CreateSSAODescriptorSets();
+
+			void CreateRenderPass(VkRenderPass* outPass, VkFormat colorFormat, const char* passName,
+				VkImageLayout finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+				VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+				bool bDepth = false,
+				VkFormat depthFormat = VK_FORMAT_UNDEFINED,
+				VkImageLayout finalDepthLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				VkImageLayout initialDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
 			MaterialID GetNextAvailableMaterialID();
 			RenderID GetNextAvailableRenderID() const;
@@ -175,9 +204,10 @@ namespace flex
 			//void SetupImGuiWindowData(ImGui_ImplVulkanH_WindowData* data, VkSurfaceKHR surface, i32 width, i32 height);
 			VkPhysicalDevice PickPhysicalDevice();
 			void CreateLogicalDevice(VkPhysicalDevice physicalDevice);
+			void FindPresentInstanceExtensions();
 			void CreateSwapChain();
 			void CreateSwapChainImageViews();
-			void CreateRenderPass();
+			void CreateRenderPasses();
 			void CreateDescriptorSetLayout(ShaderID shaderID);
 			void CreateDescriptorSet(RenderID renderID);
 			void CreateDescriptorSet(DescriptorSetCreateInfo* createInfo);
@@ -185,71 +215,93 @@ namespace flex
 			void CreateGraphicsPipeline(GraphicsPipelineCreateInfo* createInfo);
 			void CreateDepthResources();
 			void CreateFramebuffers();
-			void PrepareOffscreenFrameBuffer();
+			void PrepareFrameBuffers();
 			void PrepareCubemapFrameBuffer();
 			void PhysicsDebugRender();
 
-			void GenerateGBufferVertexBuffer();
-			void GenerateGBuffer();
-
-			void RemoveMaterial(MaterialID materialID);
-
 			void CreateUniformBuffers(VulkanShader* shader);
 
-			// Returns a pointer i32o m_LoadedTextures if a texture has been loaded from that file path, otherwise returns nullptr
-			VulkanTexture* GetLoadedTexture(const std::string& filePath);
+			void CreatePostProcessingResources();
+			void CreateFullscreenBlitResources();
 
-			void CreateDynamicVertexBuffer(VulkanBuffer* vertexBuffer, u32 size, void* initialData = nullptr);
+			// Returns a pointer into m_LoadedTextures if a texture has been loaded from that file path, otherwise returns nullptr
+			VulkanTexture* GetLoadedTexture(const std::string& filePath);
+			bool RemoveLoadedTexture(VulkanTexture* texture, bool bDestroy);
 
 			void CreateStaticVertexBuffers();
-
 			void CreateDynamicVertexBuffers();
 
-			// Creates vertex buffer for all render objects' verts which use specified shader index
-			// Returns vertex count
 			u32 CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, ShaderID shaderID, u32 size);
+			void CreateShadowVertexBuffer();
 			void CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, void* vertexBufferData, u32 vertexBufferSize);
+			void CreateDynamicVertexBuffer(VulkanBuffer* vertexBuffer, u32 size);
 
-			// Creates static index buffers for all render objects
 			void CreateStaticIndexBuffers();
 
-			// Creates index buffer for all render objects' indices which use specified shader index
-			// Returns index count
+			// Creates index buffer for all render objects' indices which use specified shader index. Returns index count
 			u32 CreateStaticIndexBuffer(VulkanBuffer* indexBuffer, ShaderID shaderID);
-			void VulkanRenderer::CreateStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<u32>& indices);
+			void CreateShadowIndexBuffer();
+			void CreateStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<u32>& indices);
 
 			void CreateDescriptorPool();
 			u32 AllocateDynamicUniformBuffer(u32 dynamicDataSize, void** data, i32 maxObjectCount = -1);
 			void PrepareUniformBuffer(VulkanBuffer* buffer, u32 bufferSize,
 				VkBufferUsageFlags bufferUseageFlagBits, VkMemoryPropertyFlags memoryPropertyHostFlagBits);
 
+			void CreateSemaphores();
+
 			void BatchRenderObjects();
+			void DrawShaderBatch(const ShaderBatchPair &shaderBatches, VkCommandBuffer& commandBuffer, DrawCallInfo* drawCallInfo = nullptr);
+
+			// Expects a render pass to be in flight, renders a fullscreen tri with minimal state setup
+			void RenderFullscreenTri(
+				VkCommandBuffer commandBuffer,
+				ShaderID shaderID,
+				VkPipelineLayout pipelineLayout,
+				VkPipeline graphicsPipeline,
+				VkDescriptorSet descriptorSet);
+
+			// Begins the given render pass, renders a fullscreen tri, then ends the render pass
+			void RenderFullscreenTri(
+				VkCommandBuffer commandBuffer,
+				VkRenderPass renderPass,
+				VkFramebuffer framebuffer,
+				ShaderID shaderID,
+				VkPipelineLayout pipelineLayout,
+				VkPipeline graphicsPipeline,
+				VkDescriptorSet descriptorSet,
+				bool bFlipViewport);
 
 			void BuildCommandBuffers(const DrawCallInfo& drawCallInfo);
-			void BuildDeferredCommandBuffer(const DrawCallInfo& drawCallInfo);
-
-			void BindDescriptorSet(VulkanShader* shader, i32 dynamicOffsetIndex, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet);
-			void CreateSemaphores();
-			void RecreateSwapChain();
 
 			void DrawFrame();
-			bool CreateShaderModule(const std::vector<char>& code, VDeleter<VkShaderModule>& shaderModule) const;
+
+			void BindDescriptorSet(VulkanShader* shader, u32 dynamicOffsetOffset, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet);
+			void RecreateSwapChain();
+
+			void BeginDebugMarkerRegionInternal(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color = VEC4_ONE);
+			void EndDebugMarkerRegionInternal(VkCommandBuffer cmdBuf);
+
+			bool CreateShaderModule(const std::vector<char>& code, VkShaderModule* shaderModule) const;
 			VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) const;
 			VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) const;
 			VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) const;
 			VulkanSwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device) const;
-			bool IsDeviceSuitable(VkPhysicalDevice device) const;
-			bool CheckDeviceExtensionSupport(VkPhysicalDevice device) const;
+			bool IsDeviceSuitable(VkPhysicalDevice device);
+			bool CheckDeviceExtensionSupport(VkPhysicalDevice device);
 			std::vector<const char*> GetRequiredExtensions() const;
 			bool CheckValidationLayerSupport() const;
 
-			void UpdateConstantUniformBuffers(UniformOverrides const* overridenUniforms = nullptr);
-			void UpdateDynamicUniformBuffer(RenderID renderID, UniformOverrides const * overridenUniforms = nullptr);
-			void UpdateDynamicUniformBuffer(MaterialID materialID, u32 dynamicOffsetIndex, const glm::mat4& inModel, UniformOverrides const* uniformOverrides = nullptr);
+			bool ExtensionSupported(const std::string& extStr) const;
 
-			void LoadDefaultShaderCode();
+			void UpdateConstantUniformBuffers(UniformOverrides const* overridenUniforms = nullptr);
+			void UpdateDynamicUniformBuffer(RenderID renderID, UniformOverrides const * overridenUniforms = nullptr,
+				MaterialID materialIDOverride = InvalidMaterialID, u32 dynamicUBOOffsetOverride = InvalidID);
+			void UpdateDynamicUniformBuffer(MaterialID materialID, u32 dynamicOffsetIndex, const glm::mat4& model, UniformOverrides const* uniformOverrides = nullptr);
 
 			void GenerateIrradianceMaps();
+
+			void OnShaderReloadSuccess();
 
 			// Returns true if object was duplicated
 			bool DoTextureSelector(const char* label, const std::vector<VulkanTexture*>& textures, i32* selectedIndex, bool* bGenerateSampler);
@@ -259,12 +311,22 @@ namespace flex
 				VulkanTexture* texture,
 				i32 i,
 				i32* textureIndex,
-				VkSampler* sampler);
+				VulkanTexture** textureToUpdate);
 			void DoTexturePreviewTooltip(VulkanTexture* texture);
+
+			void BeginGPUTimeStamp(VkCommandBuffer commandBuffer, const std::string& name);
+			void EndGPUTimeStamp(VkCommandBuffer commandBuffer, const std::string& name);
+			ms GetDurationBetweenTimeStamps(const std::string& name);
 
 			static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugReportFlagsEXT flags,
 				VkDebugReportObjectTypeEXT objType, u64 obj, size_t location, i32 code, const char* layerPrefix,
 				const char* msg, void* userData);
+
+			// TODO: Monitor number of used desc sets to set this value intelligently
+			static const u32 MAX_NUM_DESC_SETS = 1024;
+			static const u32 MAX_NUM_DESC_COMBINED_IMAGE_SAMPLERS = 1024;
+			static const u32 MAX_NUM_DESC_UNIFORM_BUFFERS = 1024;
+			static const u32 MAX_NUM_DESC_DYNAMIC_UNIFORM_BUFFERS = 1024;
 
 			VulkanRenderObject* GetRenderObject(RenderID renderID);
 
@@ -272,11 +334,16 @@ namespace flex
 
 			u32 GetAlignedUBOSize(u32 unalignedSize);
 
-			void DrawSpriteQuad(const SpriteQuadDrawInfo& drawInfo);
-			void DrawScreenSpaceSprites();
-			void DrawWorldSpaceSprites();
 			void DrawTextSS(VkCommandBuffer commandBuffer);
 			void DrawTextWS(VkCommandBuffer commandBuffer);
+			void DrawSpriteBatch(const std::vector<SpriteQuadDrawInfo>& batch, VkCommandBuffer commandBuffer);
+
+			VkRenderPass ResolveRenderPassType(RenderPassType renderPassType, const char* shaderName = nullptr);
+
+			void CreateShadowResources();
+			VkDescriptorSet CreateSpriteDescSet(ShaderID spriteShaderID, TextureID textureID, u32 layer = 0);
+
+			std::vector<std::string> m_SupportedDeviceExtenions;
 
 			const u32 MAX_NUM_RENDER_OBJECTS = 4096; // TODO: Not this?
 			std::vector<VulkanRenderObject*> m_RenderObjects;
@@ -288,7 +355,7 @@ namespace flex
 
 			struct MaterialBatchPair
 			{
-				MaterialID materialID;
+				MaterialID materialID = InvalidMaterialID;
 				RenderObjectBatch batch;
 			};
 
@@ -300,7 +367,7 @@ namespace flex
 
 			struct ShaderBatchPair
 			{
-				ShaderID shaderID;
+				ShaderID shaderID = InvalidShaderID;
 				MaterialBatch batch;
 			};
 
@@ -314,18 +381,85 @@ namespace flex
 			ShaderBatch m_DeferredObjectBatches;
 			// One per forward-rendered shader
 			ShaderBatch m_ForwardObjectBatches;
+			ShaderBatch m_ShadowBatch;
+
+			ShaderBatch m_DepthAwareEditorObjBatches;
+			ShaderBatch m_DepthUnawareEditorObjBatches;
 
 			glm::vec2i m_CubemapFramebufferSize;
 			glm::vec2i m_BRDFSize;
 			VulkanTexture* m_BRDFTexture = nullptr;
+			bool bRenderedBRDFLUT = false;
 
-			FrameBuffer* m_OffScreenFrameBuf = nullptr;
-			VDeleter<VkSampler> m_ColorSampler;
-			VkDescriptorSet m_OffscreenBufferDescriptorSet = VK_NULL_HANDLE;
+			FrameBuffer* m_GBufferFrameBuf = nullptr;
+			FrameBufferAttachment* m_GBufferDepthAttachment = nullptr;
+
+			VDeleter<VkSampler> m_LinMipLinSampler;
+			VDeleter<VkSampler> m_DepthSampler;
+			VDeleter<VkSampler> m_NearestClampEdgeSampler;
+
+			VkFormat m_OffscreenFrameBufferFormat = VK_FORMAT_UNDEFINED;
+			FrameBuffer* m_OffscreenFrameBuffer0 = nullptr;
+			FrameBuffer* m_OffscreenFrameBuffer1 = nullptr;
+
+			FrameBufferAttachment* m_OffscreenDepthAttachment0 = nullptr;
+			FrameBufferAttachment* m_OffscreenDepthAttachment1 = nullptr;
+
+			VulkanTexture* m_HistoryBuffer = nullptr;
+
+			VkDescriptorSet m_PostProcessDescriptorSet = VK_NULL_HANDLE;
+			VkDescriptorSet m_GammaCorrectDescriptorSet = VK_NULL_HANDLE;
+			VkDescriptorSet m_TAAResolveDescriptorSet = VK_NULL_HANDLE;
+			VkDescriptorSet m_FinalFullscreenBlitDescriptorSet = VK_NULL_HANDLE;
+
+			FrameBuffer* m_SSAOFrameBuf = nullptr;
+			FrameBuffer* m_SSAOBlurHFrameBuf = nullptr;
+			FrameBuffer* m_SSAOBlurVFrameBuf = nullptr;
+
+			FrameBuffer* m_GBufferCubemapFrameBuffer = nullptr;
+			FrameBufferAttachment* m_CubemapDepthAttachment = nullptr;
+
+			VDeleter<VkImage> m_ShadowImage;
+			VDeleter<VkDeviceMemory> m_ShadowImageMemory;
+			VDeleter<VkImageView> m_ShadowImageView;
+			VkFormat m_ShadowBufFormat = VK_FORMAT_UNDEFINED;
+			VkDescriptorSet m_ShadowDescriptorSet = VK_NULL_HANDLE;
+			Cascade* m_ShadowCascades[NUM_SHADOW_CASCADES];
+
+			Material::PushConstantBlock* m_SpritePerspPushConstBlock = nullptr;
+			Material::PushConstantBlock* m_SpriteOrthoPushConstBlock = nullptr;
+			Material::PushConstantBlock* m_SpriteOrthoArrPushConstBlock = nullptr;
+
+			VulkanBuffer* m_FullScreenTriVertexBuffer = nullptr;
+
+			struct SpriteDescSet
+			{
+				ShaderID shaderID;
+				VkDescriptorSet descSet;
+				u32 textureLayer;
+			};
+
+			std::map<TextureID, SpriteDescSet> m_SpriteDescSets;
+
+			Material::PushConstantBlock* m_CascadedShadowMapPushConstantBlock = nullptr;
+
 			i32 m_DeferredQuadVertexBufferIndex = -1;
+
+			glm::mat4 m_LastFrameViewProj;
 
 			bool m_bPostInitialized = false;
 			bool m_bSwapChainNeedsRebuilding = false;
+
+			// TODO: Create other query pools
+			VkQueryPool m_TimestampQueryPool = VK_NULL_HANDLE;
+			static const u64 MAX_TIMESTAMP_QUERIES = 1024;
+
+			// Points from timestamp names to query indices. Index is negated on timestamp end to signify being ended.
+			std::map<std::string, i32> m_TimestampQueryNames;
+
+			static const u32 NUM_GPU_TIMINGS = 64;
+			std::vector<std::array<real, NUM_GPU_TIMINGS>> m_TimestampHistograms;
+			u32 m_TimestampHistogramIndex = 0;
 
 			std::vector<const char*> m_ValidationLayers =
 			{
@@ -336,18 +470,17 @@ namespace flex
 				//"VK_LAYER_RENDERDOC_Capture", // RenderDoc captures, in engine integration works better (see COMPILE_RENDERDOC_API)
 			};
 
-			const std::vector<const char*> m_DeviceExtensions =
+			const std::vector<const char*> m_RequiredDeviceExtensions =
 			{
 				VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-				VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME
+				VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME,
+				VK_KHR_MAINTENANCE1_EXTENSION_NAME, // For negative viewport height
 			};
 
-#ifdef NDEBUG
+#ifdef SHIPPING
 			const bool m_bEnableValidationLayers = false;
 #else
-			//---------------------------------------------------------------------
-			const bool m_bEnableValidationLayers = true; // TODO: **RE-ENABLE!!**
-			//---------------------------------------------------------------------
+			const bool m_bEnableValidationLayers = true;
 #endif
 
 			VDeleter<VkInstance> m_Instance{ vkDestroyInstance };
@@ -365,19 +498,39 @@ namespace flex
 			VkExtent2D m_SwapChainExtent;
 			std::vector<VDeleter<VkImageView>> m_SwapChainImageViews;
 			std::vector<VDeleter<VkFramebuffer>> m_SwapChainFramebuffers;
+			FrameBufferAttachment* m_SwapChainDepthAttachment = nullptr;
 
-			FrameBuffer* m_CubemapFrameBuffer = nullptr;
-			FrameBufferAttachment* m_CubemapDepthAttachment = nullptr;
-			MaterialID m_CubemapGBufferMaterialID = InvalidMaterialID;
-
-			MaterialID m_ComputeSDFMatID = InvalidMaterialID;
-
+			VDeleter<VkRenderPass> m_ShadowRenderPass;
 			VDeleter<VkRenderPass> m_DeferredCombineRenderPass;
-			// TODO: Only use VDeleter on objects which may need to be reused
+			VDeleter<VkRenderPass> m_SSAORenderPass;
+			VDeleter<VkRenderPass> m_SSAOBlurHRenderPass;
+			VDeleter<VkRenderPass> m_SSAOBlurVRenderPass;
+			VDeleter<VkRenderPass> m_ForwardRenderPass;
+			VDeleter<VkRenderPass> m_PostProcessRenderPass;
+			VDeleter<VkRenderPass> m_TAAResolveRenderPass;
+			VDeleter<VkRenderPass> m_UIRenderPass;
+			VDeleter<VkRenderPass> m_GammaCorrectRenderPass;
+
+			VDeleter<VkPipeline> m_ShadowGraphicsPipeline;
+			VDeleter<VkPipelineLayout> m_ShadowPipelineLayout;
+
 			VDeleter<VkPipeline> m_FontSSGraphicsPipeline;
 			VDeleter<VkPipelineLayout> m_FontSSPipelineLayout;
 			VDeleter<VkPipeline> m_FontWSGraphicsPipeline;
 			VDeleter<VkPipelineLayout> m_FontWSPipelineLayout;
+
+			VDeleter<VkPipeline> m_PostProcessGraphicsPipeline;
+			VDeleter<VkPipelineLayout> m_PostProcessGraphicsPipelineLayout;
+			VDeleter<VkPipeline> m_TAAResolveGraphicsPipeline;
+			VDeleter<VkPipelineLayout> m_TAAResolveGraphicsPipelineLayout;
+			VDeleter<VkPipeline> m_GammaCorrectGraphicsPipeline;
+			VDeleter<VkPipelineLayout> m_GammaCorrectGraphicsPipelineLayout;
+
+			VDeleter<VkPipeline> m_SpriteArrGraphicsPipeline;
+			VDeleter<VkPipelineLayout> m_SpriteArrGraphicsPipelineLayout;
+
+			VDeleter<VkPipeline> m_BlitGraphicsPipeline;
+			VDeleter<VkPipelineLayout> m_BlitGraphicsPipelineLayout;
 
 			VDeleter<VkDescriptorPool> m_DescriptorPool;
 			std::vector<VkDescriptorSetLayout> m_DescriptorSetLayouts;
@@ -388,8 +541,8 @@ namespace flex
 			std::vector<VulkanTexture*> m_LoadedTextures;
 
 			VulkanTexture* m_BlankTexture = nullptr;
+			VulkanTexture* m_BlankTextureArr = nullptr;
 
-			FrameBufferAttachment* m_DepthAttachment = nullptr;
 
 			std::vector<VertexIndexBufferPair> m_VertexIndexBufferPairs;
 
@@ -405,26 +558,42 @@ namespace flex
 			VDeleter<VkSemaphore> m_PresentCompleteSemaphore;
 			VDeleter<VkSemaphore> m_RenderCompleteSemaphore;
 
-			VDeleter<VkPipelineCache> m_PipelineCache;
-
-			VkCommandBuffer offScreenCmdBuffer = VK_NULL_HANDLE;
-			VkSemaphore offscreenSemaphore = VK_NULL_HANDLE;
-
-			RenderID m_GBufferQuadRenderID = InvalidRenderID;
-			VertexBufferData m_gBufferQuadVertexBufferData;
-			std::vector<u32> m_gBufferQuadIndices;
-
-			GameObject* m_SkyBoxMesh = nullptr;
+			VkCommandBuffer m_OffScreenCmdBuffer = VK_NULL_HANDLE;
+			VkSemaphore m_OffscreenSemaphore = VK_NULL_HANDLE;
 
 			VkClearColorValue m_ClearColor;
+
+			u32 m_CurrentSwapChainBufferIndex = 0;
+
+			VulkanTexture* m_NoiseTexture = nullptr;
+			ShaderID m_SSAOShaderID = InvalidShaderID;
+			MaterialID m_SSAOMatID = InvalidMaterialID;
+			ShaderID m_SSAOBlurShaderID = InvalidShaderID;
+			MaterialID m_SSAOBlurMatID = InvalidMaterialID;
+			VDeleter<VkPipeline> m_SSAOGraphicsPipeline;
+			VDeleter<VkPipeline> m_SSAOBlurHGraphicsPipeline;
+			VDeleter<VkPipeline> m_SSAOBlurVGraphicsPipeline;
+			VDeleter<VkPipelineLayout> m_SSAOGraphicsPipelineLayout;
+			VDeleter<VkPipelineLayout> m_SSAOBlurGraphicsPipelineLayout;
+			VkDescriptorSet m_SSAODescSet = VK_NULL_HANDLE;
+			VkDescriptorSet m_SSAOBlurHDescSet = VK_NULL_HANDLE;
+			VkDescriptorSet m_SSAOBlurVDescSet = VK_NULL_HANDLE;
+
+			// TODO: Create abstraction for specialization constants
+			VkSpecializationMapEntry m_SSAOSpecializationMapEntry;
+			VkSpecializationInfo m_SSAOSpecializationInfo;
+			VkSpecializationMapEntry m_TAASpecializationMapEntry;
+			VkSpecializationInfo m_TAAOSpecializationInfo;
+			real m_TAA_ks[2];
+
+			MaterialID m_ComputeSDFMatID = InvalidMaterialID;
+			MaterialID m_FullscreenBlitMatID = InvalidMaterialID;
 
 #ifdef DEBUG
 			AsyncVulkanShaderCompiler* m_ShaderCompiler = nullptr;
 #endif
 
 			static std::array<glm::mat4, 6> s_CaptureViews;
-
-			VulkanPhysicsDebugDraw* m_PhysicsDebugDrawer = nullptr;
 
 			VulkanRenderer(const VulkanRenderer&) = delete;
 			VulkanRenderer& operator=(const VulkanRenderer&) = delete;

@@ -1,0 +1,207 @@
+{
+	"version" : 2,
+	"name" : "Scene_terminal_test",
+	"spawn player" : true,
+	"objects" : 
+	[
+		{
+			"name" : "ground plane",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 0.030, 0.000",
+				"scale" : "100.000, 1.000, 100.000"
+			},
+			"mesh" : "unit-plane",
+			"material" : "grid",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500, 0.500, 0.500",
+				"offset pos" : "0.000, -0.500, 0.000"
+			},
+			"rigid body" : 
+			{
+				"mass" : 0.000000,
+				"kinematic" : true,
+				"static" : true,
+				"mask" : 1,
+				"group" : 1
+			}
+		},
+		{
+			"name" : "Lighting",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"children" : 
+			[
+				{
+					"name" : "Skybox",
+					"type" : "skybox",
+					"visible" : true,
+					"transform" : 
+					{
+					},
+					"material" : "skybox 01",
+					"skybox info" : 
+					{
+					}
+				},
+				{
+					"name" : "Reflection Probe 01",
+					"type" : "reflection probe",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "-2.045, 14.562, 0.000"
+					}
+				},
+				{
+					"name" : "Directional Light",
+					"type" : "directional light",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "0.000, 15.000, 0.000",
+						"rot" : "1.194, -0.973, -2.523"
+					},
+					"directional light info" : 
+					{
+						"rotation" : "0.217, 0.591, 0.616, -0.473",
+						"pos" : "0.000, 15.000, 0.000",
+						"color" : "1.00, 1.00, 1.00",
+						"enabled" : true,
+						"brightness" : 5.000000,
+						"cast shadows" : true,
+						"shadow darkness" : 1.000000
+					}
+				},
+				{
+					"name" : "PointLight_03",
+					"type" : "point light",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "-20.073, 4.952, 20.109"
+					},
+					"point light info" : 
+					{
+						"pos" : "-20.073, 4.952, 20.109",
+						"color" : "0.49, 0.78, 0.91",
+						"enabled" : true,
+						"brightness" : 182.266006
+					}
+				},
+				{
+					"name" : "PointLight_02",
+					"type" : "point light",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "-5.788, 8.328, 24.110"
+					},
+					"point light info" : 
+					{
+						"pos" : "-5.788, 8.328, 24.110",
+						"color" : "0.94, 0.80, 0.57",
+						"enabled" : true,
+						"brightness" : 500.000000
+					}
+				},
+				{
+					"name" : "PointLight_01",
+					"type" : "point light",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "10.562, 12.777, -4.604"
+					},
+					"point light info" : 
+					{
+						"pos" : "10.562, 12.777, -4.604",
+						"color" : "1.00, 1.00, 1.00",
+						"enabled" : true,
+						"brightness" : 500.000000
+					}
+				},
+				{
+					"name" : "PointLight_00",
+					"type" : "point light",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "-11.401, 11.826, 4.532"
+					},
+					"point light info" : 
+					{
+						"pos" : "-11.401, 11.826, 4.532",
+						"color" : "1.00, 1.00, 1.00",
+						"enabled" : true,
+						"brightness" : 827.585999
+					}
+				}
+			]
+		},
+		{
+			"name" : "Copper Terminal 01",
+			"type" : "terminal",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "-3.227, 0.600, 9.288",
+				"rot" : "-3.142, 0.213, -3.142"
+			},
+			"material" : "terminal copper",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "1.000, 1.300, 1.000",
+				"offset pos" : "0.000, 0.700, 0.000"
+			},
+			"rigid body" : 
+			{
+				"mass" : 0.000000,
+				"kinematic" : true,
+				"static" : true,
+				"mask" : 1,
+				"group" : 1
+			},
+			"terminal" : 
+			{
+				"str" : "float roo = 1.19f;
+float bar = 9.992f;
+float b = 0.0f;
+float roobarb = roo + bar + b;
+int a = bar;
+bool t = a != 11;
+bool f = a == 11;
+bool bo = t && f;
+bool e = bo || f;
+int n = 1 * 8;
+int i =0 ;
+int aa  = 999999;
+int foo = 10;
+foo = 1 + 1 + foo * foo;"
+			},
+			"children" : 
+			[
+				{
+					"name" : "screen",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "0.000, 0.933, 0.484",
+						"scale" : "1.760, 1.790, 1.000"
+					},
+					"mesh" : "cube",
+					"material" : "terminal display"
+				}
+			]
+		}
+	]
+}

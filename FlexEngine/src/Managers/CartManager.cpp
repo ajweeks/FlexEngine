@@ -130,8 +130,7 @@ namespace flex
 
 	void CartManager::Update()
 	{
-		const char* profileBlockName = "Cart manager update";
-		PROFILE_BEGIN(profileBlockName);
+		PROFILE_BEGIN("Cart manager update");
 
 		// Update cart chains
 		{
@@ -334,7 +333,7 @@ namespace flex
 			}
 		}
 
-		PROFILE_END(profileBlockName);
+		PROFILE_END("Cart manager update");
 	}
 
 	CartID CartManager::CreateCart(const std::string& name)

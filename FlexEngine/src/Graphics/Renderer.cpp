@@ -8,6 +8,7 @@ IGNORE_WARNINGS_PUSH
 #include "imgui_internal.h"
 #endif
 
+#include <glm/gtx/transform.hpp> // for scale
 #include <glm/gtx/quaternion.hpp> // for rotate
 
 #include <ft2build.h>
@@ -18,6 +19,7 @@ IGNORE_WARNINGS_POP
 
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
+#include "Editor.hpp"
 #include "FlexEngine.hpp"
 #include "Graphics/BitmapFont.hpp"
 #include "Helpers.hpp"
@@ -34,7 +36,6 @@ IGNORE_WARNINGS_POP
 
 namespace flex
 {
-
 	Renderer::Renderer() :
 		m_DefaultSettingsFilePathAbs(RelativePathToAbsolute(ROOT_LOCATION "config/default-renderer-settings.ini")),
 		m_SettingsFilePathAbs(RelativePathToAbsolute(ROOT_LOCATION "config/renderer-settings.ini")),
@@ -69,6 +70,10 @@ namespace flex
 						fontObj.SetStringChecked("file path", fontMetaData.filePath);
 						fontMetaData.size = (i16)fontObj.GetInt("size");
 						fontObj.SetBoolChecked("screen space", fontMetaData.bScreenSpace);
+						fontObj.SetFloatChecked("threshold", fontMetaData.threshold);
+						fontObj.SetFloatChecked("shadow opacity", fontMetaData.shadowOpacity);
+						fontObj.SetVec2Checked("shadow offset", fontMetaData.shadowOffset);
+						fontObj.SetFloatChecked("soften", fontMetaData.soften);
 
 						if (fontMetaData.filePath.empty())
 						{
@@ -76,8 +81,7 @@ namespace flex
 							continue;
 						}
 
-						fontMetaData.renderedTextureFilePath = fontMetaData.filePath;
-						StripFileType(fontMetaData.renderedTextureFilePath);
+						fontMetaData.renderedTextureFilePath = StripFileType(fontMetaData.filePath);
 
 						fontMetaData.renderedTextureFilePath += "-" + IntToString(fontMetaData.size, 2) + "-" + DPIStr + m_FontImageExtension;
 						fontMetaData.renderedTextureFilePath = RESOURCE_LOCATION "fonts/" + fontMetaData.renderedTextureFilePath;
@@ -90,7 +94,7 @@ namespace flex
 			}
 		}
 
-		std::string hdriPath = RESOURCE("textures\\hdri\\");
+		std::string hdriPath = RESOURCE("textures/hdri/");
 		if (!FindFilesInDirectory(hdriPath, m_AvailableHDRIs, "hdr"))
 		{
 			PrintWarn("Unable to find hdri directory at %s\n", hdriPath.c_str());
@@ -102,11 +106,142 @@ namespace flex
 			m_PointLights[i].color = VEC3_NEG_ONE;
 			m_PointLights[i].enabled = 0;
 		}
+
+		// TODO: Move these defaults to config file
+
+		for (u32 i = 0; i < MAX_SSAO_KERNEL_SIZE; ++i)
+		{
+			glm::vec3 sample(RandomFloat(-0.9f, 0.9f), RandomFloat(-0.9f, 0.9f), RandomFloat(0.0f, 1.0f));
+			sample = glm::normalize(sample); // Snap to surface of hemisphere
+			sample *= RandomFloat(0.0f, 1.0f); // Space out linearly
+			real scale = (real)i / (real)MAX_SSAO_KERNEL_SIZE;
+			scale = Lerp(0.1f, 1.0f, scale * scale); // Bring distribution of samples closer to origin
+			m_SSAOGenData.samples[i] = glm::vec4(sample * scale, 0.0f);
+		}
+		m_SSAOGenData.radius = 8.0f;
+
+		m_SSAOBlurDataConstant.radius = 4;
+		m_SSAOBlurSamplePixelOffset = 2;
+		glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+
+		m_SSAOSamplingData.ssaoEnabled = 1;
+		m_SSAOSamplingData.ssaoPowExp = 2.0f;
+
+		m_ShadowSamplingData.cascadeDepthSplits = glm::vec4(0.1f, 0.25f, 0.5f, 0.8f);
+	}
+
+	void Renderer::PostInitialize()
+	{
+		// TODO: Use MeshComponent for these objects?
+
+		// Full screen Triangle
+		{
+			VertexBufferDataCreateInfo triVertexBufferDataCreateInfo = {};
+			triVertexBufferDataCreateInfo.positions_2D = {
+				glm::vec2(-1.0f, -1.0f),
+				glm::vec2(-1.0f,  3.0f),
+				glm::vec2(3.0f, -1.0f)
+			};
+
+			triVertexBufferDataCreateInfo.texCoords_UV = {
+				glm::vec2(0.0f,  1.0f),
+				glm::vec2(0.0f, -1.0f),
+				glm::vec2(2.0f,  1.0f)
+			};
+
+			triVertexBufferDataCreateInfo.attributes =
+				(u32)VertexAttribute::POSITION_2D |
+				(u32)VertexAttribute::UV;
+
+			m_FullScreenTriVertexBufferData = {};
+			m_FullScreenTriVertexBufferData.Initialize(&triVertexBufferDataCreateInfo);
+
+
+			GameObject* fullScreenTriGameObject = new GameObject("Full screen triangle", GameObjectType::_NONE);
+			m_PersistentObjects.push_back(fullScreenTriGameObject);
+			fullScreenTriGameObject->SetVisible(false);
+			fullScreenTriGameObject->SetCastsShadow(false);
+
+			RenderObjectCreateInfo fullScreenTriCreateInfo = {};
+			fullScreenTriCreateInfo.vertexBufferData = &m_FullScreenTriVertexBufferData;
+			fullScreenTriCreateInfo.materialID = m_PostProcessMatID;
+			fullScreenTriCreateInfo.bDepthWriteEnable = false;
+			fullScreenTriCreateInfo.gameObject = fullScreenTriGameObject;
+			fullScreenTriCreateInfo.cullFace = CullFace::NONE;
+			fullScreenTriCreateInfo.visibleInSceneExplorer = false;
+			fullScreenTriCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
+			m_FullScreenTriRenderID = InitializeRenderObject(&fullScreenTriCreateInfo);
+
+			m_FullScreenTriVertexBufferData.DescribeShaderVariables(this, m_FullScreenTriRenderID);
+		}
+
+		// 3D Quad
+		{
+			VertexBufferDataCreateInfo quad3DVertexBufferDataCreateInfo = {};
+			quad3DVertexBufferDataCreateInfo.positions_3D = {
+				glm::vec3(-1.0f, -1.0f, 0.0f),
+				glm::vec3(-1.0f,  1.0f, 0.0f),
+				glm::vec3(1.0f, -1.0f, 0.0f),
+
+				glm::vec3(1.0f, -1.0f, 0.0f),
+				glm::vec3(-1.0f,  1.0f, 0.0f),
+				glm::vec3(1.0f,  1.0f, 0.0f),
+			};
+
+			quad3DVertexBufferDataCreateInfo.texCoords_UV = {
+				glm::vec2(0.0f, 0.0f),
+				glm::vec2(0.0f, 1.0f),
+				glm::vec2(1.0f, 0.0f),
+
+				glm::vec2(1.0f, 0.0f),
+				glm::vec2(0.0f, 1.0f),
+				glm::vec2(1.0f, 1.0f),
+			};
+
+			quad3DVertexBufferDataCreateInfo.attributes =
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::UV;
+
+			m_Quad3DVertexBufferData = {};
+			m_Quad3DVertexBufferData.Initialize(&quad3DVertexBufferDataCreateInfo);
+
+
+			GameObject* quad3DGameObject = new GameObject("Sprite Quad 3D", GameObjectType::_NONE);
+			m_PersistentObjects.push_back(quad3DGameObject);
+			quad3DGameObject->SetVisible(false);
+			quad3DGameObject->SetCastsShadow(false);
+
+			RenderObjectCreateInfo quad3DCreateInfo = {};
+			quad3DCreateInfo.vertexBufferData = &m_Quad3DVertexBufferData;
+			quad3DCreateInfo.materialID = m_SpriteMatWSID;
+			quad3DCreateInfo.bDepthWriteEnable = false;
+			quad3DCreateInfo.gameObject = quad3DGameObject;
+			quad3DCreateInfo.cullFace = CullFace::NONE;
+			quad3DCreateInfo.visibleInSceneExplorer = false;
+			quad3DCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
+			quad3DCreateInfo.bEditorObject = true; // TODO: Create other quad which is identical but is not an editor object for gameplay objects?
+			quad3DCreateInfo.renderPassOverride = RenderPassType::FORWARD;
+			m_Quad3DRenderID = InitializeRenderObject(&quad3DCreateInfo);
+
+			m_Quad3DVertexBufferData.DescribeShaderVariables(this, m_Quad3DRenderID);
+
+			quad3DCreateInfo.materialID = m_SpriteMatSSID;
+			quad3DCreateInfo.renderPassOverride = RenderPassType::UI;
+			m_Quad3DSSRenderID = InitializeRenderObject(&quad3DCreateInfo);
+		}
 	}
 
 	void Renderer::Destroy()
 	{
 		free_hooked(m_PointLights);
+
+		m_Quad3DVertexBufferData.Destroy();
+		m_FullScreenTriVertexBufferData.Destroy();
+
+		DestroyRenderObject(m_FullScreenTriRenderID);
+		DestroyRenderObject(m_Quad3DRenderID);
+		DestroyRenderObject(m_Quad3DSSRenderID);
+		DestroyRenderObject(m_GBufferQuadRenderID);
 	}
 
 	void Renderer::SetReflectionProbeMaterial(MaterialID reflectionProbeMaterialID)
@@ -123,8 +258,14 @@ namespace flex
 	{
 		m_bRenderGrid = bRenderGrid;
 
-		m_Grid->SetVisible(bRenderGrid);
-		m_WorldOrigin->SetVisible(bRenderGrid);
+		if (m_Grid != nullptr)
+		{
+			m_Grid->SetVisible(bRenderGrid);
+		}
+		if (m_WorldOrigin != nullptr)
+		{
+			m_WorldOrigin->SetVisible(bRenderGrid);
+		}
 	}
 
 	bool Renderer::IsRenderingGrid() const
@@ -148,7 +289,6 @@ namespace flex
 		}
 
 		JSONObject rootObject = {};
-		rootObject.fields.emplace_back("enable post-processing", JSONValue(m_bPostProcessingEnabled));
 		rootObject.fields.emplace_back("enable v-sync", JSONValue(m_bVSyncEnabled));
 		rootObject.fields.emplace_back("enable fxaa", JSONValue(m_PostProcessSettings.bEnableFXAA));
 		rootObject.fields.emplace_back("brightness", JSONValue(Vec3ToString(m_PostProcessSettings.brightness, 3)));
@@ -200,7 +340,6 @@ namespace flex
 		JSONObject rootObject;
 		if (JSONParser::Parse(filePath, rootObject))
 		{
-			m_bPostProcessingEnabled = rootObject.GetBool("enable post-processing");
 			SetVSyncEnabled(rootObject.GetBool("enable v-sync"));
 			m_PostProcessSettings.bEnableFXAA = rootObject.GetBool("enable fxaa");
 			m_PostProcessSettings.brightness = ParseVec3(rootObject.GetString("brightness"));
@@ -224,9 +363,9 @@ namespace flex
 	}
 
 	void Renderer::TransformRectToScreenSpace(const glm::vec2& pos,
-											  const glm::vec2& scale,
-											  glm::vec2& posOut,
-											  glm::vec2& scaleOut)
+		const glm::vec2& scale,
+		glm::vec2& posOut,
+		glm::vec2& scaleOut)
 	{
 		const glm::vec2 frameBufferSize = (glm::vec2)g_Window->GetFrameBufferSize();
 		const real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
@@ -252,10 +391,10 @@ namespace flex
 	}
 
 	void Renderer::NormalizeSpritePos(const glm::vec2& pos,
-									  AnchorPoint anchor,
-									  const glm::vec2& scale,
-									  glm::vec2& posOut,
-									  glm::vec2& scaleOut)
+		AnchorPoint anchor,
+		const glm::vec2& scale,
+		glm::vec2& posOut,
+		glm::vec2& scaleOut)
 	{
 		const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 		const real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
@@ -311,14 +450,62 @@ namespace flex
 		posOut.x *= aspectRatio;
 	}
 
-	void Renderer::SetPostProcessingEnabled(bool bEnabled)
+	void Renderer::EnqueueUntexturedQuad(const glm::vec2& pos,
+		AnchorPoint anchor,
+		const glm::vec2& size,
+		const glm::vec4& color)
 	{
-		m_bPostProcessingEnabled = bEnabled;
+		SpriteQuadDrawInfo drawInfo = {};
+
+		drawInfo.materialID = m_SpriteMatSSID;
+		drawInfo.scale = glm::vec3(size.x, size.y, 1.0f);
+		drawInfo.bScreenSpace = true;
+		drawInfo.bReadDepth = false;
+		drawInfo.bWriteDepth = false;
+		drawInfo.anchor = anchor;
+		drawInfo.color = color;
+		drawInfo.pos = glm::vec3(pos.x, pos.y, 1.0f);
+		drawInfo.bEnableAlbedoSampler = false;
+
+		EnqueueSprite(drawInfo);
 	}
 
-	bool Renderer::IsPostProcessingEnabled() const
+	void Renderer::EnqueueUntexturedQuadRaw(const glm::vec2& pos,
+		const glm::vec2& size,
+		const glm::vec4& color)
 	{
-		return m_bPostProcessingEnabled;
+		SpriteQuadDrawInfo drawInfo = {};
+
+		drawInfo.materialID = m_SpriteMatSSID;
+		drawInfo.scale = glm::vec3(size.x, size.y, 1.0f);
+		drawInfo.bScreenSpace = true;
+		drawInfo.bReadDepth = false;
+		drawInfo.bWriteDepth = false;
+		drawInfo.bRaw = true;
+		drawInfo.color = color;
+		drawInfo.pos = glm::vec3(pos.x, pos.y, 1.0f);
+		drawInfo.bEnableAlbedoSampler = false;
+
+		EnqueueSprite(drawInfo);
+	}
+
+	void Renderer::EnqueueSprite(const SpriteQuadDrawInfo& drawInfo)
+	{
+		if (drawInfo.bScreenSpace)
+		{
+			if (drawInfo.materialID != InvalidMaterialID && GetShader(GetMaterial(drawInfo.materialID).shaderID).bTextureArr)
+			{
+				m_QueuedSSArrSprites.push_back(drawInfo);
+			}
+			else
+			{
+				m_QueuedSSSprites.push_back(drawInfo);
+			}
+		}
+		else
+		{
+			m_QueuedWSSprites.push_back(drawInfo);
+		}
 	}
 
 	void Renderer::SetDisplayBoundingVolumesEnabled(bool bEnabled)
@@ -390,7 +577,11 @@ namespace flex
 
 	DirLightData* Renderer::GetDirectionalLight()
 	{
-		return &m_DirectionalLight->data;
+		if (m_DirectionalLight)
+		{
+			return &m_DirectionalLight->data;
+		}
+		return nullptr;
 	}
 
 	PointLightData* Renderer::GetPointLight(PointLightID ID)
@@ -419,6 +610,57 @@ namespace flex
 		return m_PostProcessSettings;
 	}
 
+	MaterialID Renderer::GetPlaceholderMaterialID() const
+	{
+		return m_PlaceholderMaterialID;
+	}
+
+	void Renderer::SetDisplayShadowCascadePreview(bool bPreview)
+	{
+		m_bDisplayShadowCascadePreview = bPreview;
+	}
+
+	bool Renderer::GetDisplayShadowCascadePreview() const
+	{
+		return m_bDisplayShadowCascadePreview;
+	}
+
+	bool Renderer::IsTAAEnabled() const
+	{
+		return m_bEnableTAA;
+	}
+
+	i32 Renderer::GetTAASampleCount() const
+	{
+		return m_TAASampleCount;
+	}
+
+	void Renderer::EnqueueScreenSpaceSprites()
+	{
+		if (m_bDisplayShadowCascadePreview)
+		{
+			SpriteQuadDrawInfo drawInfo = {};
+			drawInfo.bScreenSpace = true;
+			drawInfo.bReadDepth = true;
+			drawInfo.bWriteDepth = true;
+			drawInfo.materialID = m_SpriteArrMatID;
+			drawInfo.anchor = AnchorPoint::BOTTOM_RIGHT;
+			drawInfo.scale = glm::vec3(0.2f);
+			for (u32 i = 0; i < NUM_SHADOW_CASCADES; ++i)
+			{
+				// TODO:
+				drawInfo.textureID = 999 + i;
+				drawInfo.textureLayer = i;
+				drawInfo.pos = glm::vec3(0.0f, i * drawInfo.scale.x * 2.1f, 0.0f);
+				EnqueueSprite(drawInfo);
+			}
+		}
+	}
+
+	void Renderer::EnqueueWorldSpaceSprites()
+	{
+	}
+
 	void Renderer::AddEditorString(const std::string& str)
 	{
 		m_EditorMessage = str;
@@ -432,39 +674,133 @@ namespace flex
 		}
 	}
 
+	void Renderer::Update()
+	{
+		if (m_EditorStrSecRemaining > 0.0f)
+		{
+			m_EditorStrSecRemaining -= g_DeltaTime;
+			if (m_EditorStrSecRemaining <= 0.0f)
+			{
+				m_EditorStrSecRemaining = 0.0f;
+			}
+		}
+
+		glm::vec4 depthSplits(0.04f, 0.15f, 0.4f, 1.0f);
+
+		BaseCamera* cam = g_CameraManager->CurrentCamera();
+		DirLightData* dirLight = g_Renderer->GetDirectionalLight();
+		if (dirLight)
+		{
+			// Flip near & far planes
+			glm::mat4 modifiedProj = cam->GetProjection();
+			modifiedProj[2][2] = 1.0f - modifiedProj[2][2];
+			modifiedProj[3][2] = -modifiedProj[3][2];
+			glm::mat4 invCam = glm::inverse(modifiedProj * cam->GetView());
+
+			real lastSplitDist = 0.0;
+			for (u32 c = 0; c < NUM_SHADOW_CASCADES; ++c)
+			{
+				real splitDist = depthSplits[c];
+
+				glm::vec3 frustumCorners[8] = {
+					{ -1.0f,  1.0f, -1.0f },
+					{  1.0f,  1.0f, -1.0f },
+					{  1.0f, -1.0f, -1.0f },
+					{ -1.0f, -1.0f, -1.0f },
+					{ -1.0f,  1.0f,  1.0f },
+					{  1.0f,  1.0f,  1.0f },
+					{  1.0f, -1.0f,  1.0f },
+					{ -1.0f, -1.0f,  1.0f },
+				};
+
+				// Transform frustum corners from clip space to world space
+				for (glm::vec3& frustumCorner : frustumCorners)
+				{
+					glm::vec4 invCorner = invCam * glm::vec4(frustumCorner, 1.0f);
+					frustumCorner = invCorner / invCorner.w;
+				}
+
+				for (u32 i = 0; i < 4; ++i)
+				{
+					glm::vec3 dist = frustumCorners[i + 4] - frustumCorners[i];
+					frustumCorners[i + 4] = frustumCorners[i] + (dist * splitDist);
+					frustumCorners[i] = frustumCorners[i] + (dist * lastSplitDist);
+				}
+
+				glm::vec3 frustumCenter(0.0f);
+				for (const glm::vec3& frustumCorner : frustumCorners)
+				{
+					frustumCenter += frustumCorner;
+				}
+				frustumCenter /= 8.0f;
+
+				real radius = 0.0f;
+				for (const glm::vec3& frustumCorner : frustumCorners)
+				{
+					real distance = glm::length(frustumCorner - frustumCenter);
+					radius = glm::max(radius, distance);
+				}
+				radius = std::ceil(radius * 16.0f) / 16.0f;
+
+				glm::vec3 maxExtents = glm::vec3(radius);
+				glm::vec3 minExtents = -maxExtents;
+
+				m_ShadowLightViewMats[c] = glm::lookAt(frustumCenter - (-m_DirectionalLight->data.dir) * -minExtents.z, frustumCenter, VEC3_UP);
+				m_ShadowLightProjMats[c] = glm::ortho(minExtents.x, maxExtents.x, minExtents.y, maxExtents.y, maxExtents.z - minExtents.z, 0.0f);
+
+				m_ShadowSamplingData.cascadeViewProjMats[c] = m_ShadowLightProjMats[c] * m_ShadowLightViewMats[c];
+				m_ShadowSamplingData.cascadeDepthSplits[c] = depthSplits[c];
+
+				lastSplitDist = depthSplits[c];
+			}
+		}
+	}
+
 	void Renderer::DrawImGuiMisc()
+	{
+
+	}
+
+	void Renderer::DrawImGuiWindows()
 	{
 		if (bFontWindowShowing)
 		{
 			if (ImGui::Begin("Fonts", &bFontWindowShowing))
 			{
-				for (auto iter = m_Fonts.begin(); iter != m_Fonts.end(); ++iter)
+				for (auto& fontPair : m_Fonts)
 				{
-					FontMetaData& fontMeta = iter->second;
+					FontMetaData& fontMeta = fontPair.second;
 					BitmapFont* font = fontMeta.bitmapFont;
 
 					ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollWithMouse;
-					if (ImGui::BeginChild(fontMeta.renderedTextureFilePath.c_str(), ImVec2(0, 165), true, flags))
+					if (ImGui::BeginChild(fontMeta.renderedTextureFilePath.c_str(), ImVec2(0, 240), true, flags))
 					{
-						ImGui::Text("%s", iter->first.c_str());
+						ImGui::Text("%s", fontPair.first.c_str());
 						ImGui::Text("%s", font->name.c_str());
 
 						ImGui::Columns(2);
+						ImGui::SetColumnWidth(0, 350.0f);
 
-						ImGui::Text("Size: %i", font->GetSize());
+						ImGui::DragFloat("Threshold", &font->metaData.threshold, 0.001f, 0.0f, 1.0f);
+						ImGui::DragFloat2("Shadow Offset", &font->metaData.shadowOffset.x, 0.0007f);
+						ImGui::DragFloat("Shadow Opacity", &font->metaData.shadowOpacity, 0.005f, 0.0f, 0.999f);
+						ImGui::DragFloat("Soften", &font->metaData.soften, 0.001f, 0.0f, 1.0f);
+
+						ImGui::Text("Size: %i", font->metaData.size);
+						ImGui::SameLine();
 						ImGui::Text("%s space", fontMeta.bScreenSpace ? "Screen" : "World");
 						glm::vec2u texSize(font->GetTextureSize());
 						ImGui::Text("Resolution: %ux%u", texSize.x, texSize.y);
-						ImGui::Text("Char count: %i", font->GetCharCount());
-						ImGui::Text("Byte count: %i", font->GetBufferSize());
-						ImGui::Text("Use kerning: %s", font->UseKerning() ? "true" : "false");
-						ImGui::Text("Num text caches: %u", font->GetTextCaches().size());
+						ImGui::Text("Char count: %i", font->characterCount);
+						ImGui::Text("Byte count: %i", font->bufferSize);
+						ImGui::Text("Use kerning: %s", font->bUseKerning ? "true" : "false");
 						// TODO: Add support to ImGui vulkan renderer for images
 						//VulkanTexture* tex = font->GetTexture();
 						//ImVec2 texSize((real)tex->width, (real)tex->height);
 						//ImVec2 uv0(0.0f, 0.0f);
 						//ImVec2 uv1(1.0f, 1.0f);
 						//ImGui::Image((void*)&tex->image, texSize, uv0, uv1);
+
 						ImGui::NextColumn();
 						if (ImGui::Button("Re-bake"))
 						{
@@ -487,12 +823,7 @@ namespace flex
 							fontMeta.bitmapFont = nullptr;
 							font = nullptr;
 
-							LoadFont(&fontMeta.bitmapFont,
-								fontMeta.size,
-								fontMeta.filePath,
-								fontMeta.renderedTextureFilePath,
-								true,
-								fontMeta.bScreenSpace);
+							LoadFont(fontMeta, true);
 
 						}
 						if (ImGui::Button("View SDF"))
@@ -502,8 +833,7 @@ namespace flex
 						}
 						if (ImGui::Button("Open in explorer"))
 						{
-							std::string absDir = RelativePathToAbsolute(fontMeta.renderedTextureFilePath);
-							ExtractDirectoryString(absDir);
+							const std::string absDir = ExtractDirectoryString(RelativePathToAbsolute(fontMeta.renderedTextureFilePath));
 							OpenExplorer(absDir);
 						}
 						ImGui::EndColumns();
@@ -526,7 +856,7 @@ namespace flex
 
 		ImGui::BeginChild("SelectedObject", ImVec2(0.0f, 500.0f), true);
 
-		const std::vector<GameObject*>& selectedObjects = g_EngineInstance->GetSelectedObjects();
+		const std::vector<GameObject*>& selectedObjects = g_Editor->GetSelectedObjects();
 		if (!selectedObjects.empty())
 		{
 			// TODO: Draw common fields for all selected objects?
@@ -591,24 +921,45 @@ namespace flex
 
 		DoCreateGameObjectButton("Add object...", "Add object");
 
-		if (m_NumPointLightsEnabled < MAX_NUM_POINT_LIGHTS)
+		const bool bShowAddPointLightBtn = m_NumPointLightsEnabled < MAX_NUM_POINT_LIGHTS;
+		if (bShowAddPointLightBtn)
 		{
-			static const char* newPointLightStr = "Add point light";
-			if (ImGui::Button(newPointLightStr))
+			if (ImGui::Button("Add point light"))
 			{
 				BaseScene* scene = g_SceneManager->CurrentScene();
 				PointLight* newPointLight = new PointLight(scene);
 				scene->AddRootObject(newPointLight);
 				newPointLight->Initialize();
 				newPointLight->PostInitialize();
+
+				g_Editor->SetSelectedObject(newPointLight);
+			}
+		}
+
+		const bool bShowAddDirLightBtn = m_DirectionalLight == nullptr;
+		if (bShowAddDirLightBtn)
+		{
+			if (bShowAddPointLightBtn)
+			{
+				ImGui::SameLine();
+			}
+
+			if (ImGui::Button("Add directional light"))
+			{
+				BaseScene* scene = g_SceneManager->CurrentScene();
+				DirectionalLight* newDiright = new DirectionalLight();
+				scene->AddRootObject(newDiright);
+				newDiright->Initialize();
+				newDiright->PostInitialize();
+
+				g_Editor->SetSelectedObject(newDiright);
 			}
 		}
 	}
 
 	void Renderer::DrawImGuiSettings()
 	{
-		static const char* rendererSettingsStr = "Renderer settings";
-		if (ImGui::TreeNode(rendererSettingsStr))
+		if (ImGui::TreeNode("Renderer settings"))
 		{
 			if (ImGui::Button(" Save "))
 			{
@@ -635,21 +986,18 @@ namespace flex
 			ImGui::PopStyleColor();
 			ImGui::PopStyleColor();
 
-			static const char* recaptureReflectionProbeStr = "Recapture reflection probe";
-			if (ImGui::Button(recaptureReflectionProbeStr))
+			if (ImGui::Button("Recapture reflection probe"))
 			{
 				g_Renderer->RecaptureReflectionProbe();
 			}
 
 			bool bVSyncEnabled = g_Window->GetVSyncEnabled();
-			static const char* vSyncEnabledStr = "VSync";
-			if (ImGui::Checkbox(vSyncEnabledStr, &bVSyncEnabled))
+			if (ImGui::Checkbox("VSync", &bVSyncEnabled))
 			{
 				g_Window->SetVSyncEnabled(bVSyncEnabled);
 			}
 
-			static const char* exposureControlStr = "Camera exposure";
-			if (ImGui::TreeNode(exposureControlStr))
+			if (ImGui::TreeNode("Camera exposure"))
 			{
 				BaseCamera* currentCamera = g_CameraManager->CurrentCamera();
 
@@ -657,25 +1005,22 @@ namespace flex
 
 				ImGui::PushItemWidth(140.0f);
 				{
-					static const char* apertureStr = "Aperture (f-stops)";
-					if (ImGui::SliderFloat(apertureStr, &currentCamera->aperture, 1.0f, 64.0f))
+					if (ImGui::SliderFloat("Aperture (f-stops)", &currentCamera->aperture, 1.0f, 64.0f))
 					{
 						currentCamera->CalculateExposure();
 					}
 
-					static const char* shutterSpeedStr = "Shutter speed (1/s)";
 					real shutterSpeedInv = 1.0f / currentCamera->shutterSpeed;
-					if (ImGui::SliderFloat(shutterSpeedStr, &shutterSpeedInv, 1.0f, 500.0f))
+					if (ImGui::SliderFloat("Shutter speed (1/s)", &shutterSpeedInv, 1.0f, 500.0f))
 					{
 						currentCamera->shutterSpeed = 1.0f / shutterSpeedInv;
 						currentCamera->CalculateExposure();
 					}
 
-					static const char* isoStr = "ISO";
-					if (ImGui::SliderFloat(isoStr, &currentCamera->lightSensitivity, 100.0f, 6400.0f))
+					if (ImGui::SliderFloat("ISO", &currentCamera->lightSensitivity, 100.0f, 6400.0f))
 					{
 						// Round to nearest power of 2 * 100
-						currentCamera->lightSensitivity = pow(2.0f, ceil(log(currentCamera->lightSensitivity / 100.0f) / log(2.0f) - 0.5f)) * 100.0f;
+						currentCamera->lightSensitivity = RoundToNearestPowerOfTwo(currentCamera->lightSensitivity / 100.0f) * 100.0f;
 						currentCamera->CalculateExposure();
 					}
 				}
@@ -684,13 +1029,11 @@ namespace flex
 				ImGui::TreePop();
 			}
 
-			static const char* physicsDebuggingStr = "Debug objects";
-			if (ImGui::TreeNode(physicsDebuggingStr))
+			if (ImGui::TreeNode("Debug objects"))
 			{
 				PhysicsDebuggingSettings& physicsDebuggingSettings = g_Renderer->GetPhysicsDebuggingSettings();
 
-				static const char* disableAllStr = "Disable All";
-				ImGui::Checkbox(disableAllStr, &physicsDebuggingSettings.DisableAll);
+				ImGui::Checkbox("Disable All", &physicsDebuggingSettings.DisableAll);
 
 				ImGui::Spacing();
 				ImGui::Spacing();
@@ -707,61 +1050,15 @@ namespace flex
 					ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
 				}
 
-				static const char* displayBoundingVolumesStr = "Bounding volumes";
 				bool bDisplayBoundingVolumes = g_Renderer->IsDisplayBoundingVolumesEnabled();
-				if (ImGui::Checkbox(displayBoundingVolumesStr, &bDisplayBoundingVolumes))
+				if (ImGui::Checkbox("Bounding volumes", &bDisplayBoundingVolumes))
 				{
 					g_Renderer->SetDisplayBoundingVolumesEnabled(bDisplayBoundingVolumes);
 				}
 
-				static const char* wireframeStr = "Wireframe (P)";
-				ImGui::Checkbox(wireframeStr, &physicsDebuggingSettings.DrawWireframe);
+				ImGui::Checkbox("Wireframe (P)", &physicsDebuggingSettings.DrawWireframe);
 
-				static const char* aabbStr = "AABB";
-				ImGui::Checkbox(aabbStr, &physicsDebuggingSettings.DrawAabb);
-
-				// Unused (for now):
-				//static const char* drawFeaturesTextStr = "Draw Features Text";
-				//ImGui::Checkbox(drawFeaturesTextStr, &physicsDebuggingSettings.DrawFeaturesText);
-
-				//static const char* drawContactPointsStr = "Draw Contact Points";
-				//ImGui::Checkbox(drawContactPointsStr, &physicsDebuggingSettings.DrawContactPoints);
-
-				//static const char* noDeactivationStr = "No Deactivation";
-				//ImGui::Checkbox(noDeactivationStr, &physicsDebuggingSettings.NoDeactivation);
-
-				//static const char* noHelpTextStr = "No Help Text";
-				//ImGui::Checkbox(noHelpTextStr, &physicsDebuggingSettings.NoHelpText);
-
-				//static const char* drawTextStr = "Draw Text";
-				//ImGui::Checkbox(drawTextStr, &physicsDebuggingSettings.DrawText);
-
-				//static const char* profileTimingsStr = "Profile Timings";
-				//ImGui::Checkbox(profileTimingsStr, &physicsDebuggingSettings.ProfileTimings);
-
-				//static const char* satComparisonStr = "Sat Comparison";
-				//ImGui::Checkbox(satComparisonStr, &physicsDebuggingSettings.EnableSatComparison);
-
-				//static const char* disableBulletLCPStr = "Disable Bullet LCP";
-				//ImGui::Checkbox(disableBulletLCPStr, &physicsDebuggingSettings.DisableBulletLCP);
-
-				//static const char* ccdStr = "CCD";
-				//ImGui::Checkbox(ccdStr, &physicsDebuggingSettings.EnableCCD);
-
-				//static const char* drawConstraintsStr = "Draw Constraints";
-				//ImGui::Checkbox(drawConstraintsStr, &physicsDebuggingSettings.DrawConstraints);
-
-				//static const char* drawConstraintLimitsStr = "Draw Constraint Limits";
-				//ImGui::Checkbox(drawConstraintLimitsStr, &physicsDebuggingSettings.DrawConstraintLimits);
-
-				//static const char* fastWireframeStr = "Fast Wireframe";
-				//ImGui::Checkbox(fastWireframeStr, &physicsDebuggingSettings.FastWireframe);
-
-				//static const char* drawNormalsStr = "Draw Normals";
-				//ImGui::Checkbox(drawNormalsStr, &physicsDebuggingSettings.DrawNormals);
-
-				//static const char* drawFramesStr = "Draw Frames";
-				//ImGui::Checkbox(drawFramesStr, &physicsDebuggingSettings.DrawFrames);
+				ImGui::Checkbox("AABB", &physicsDebuggingSettings.DrawAabb);
 
 				if (physicsDebuggingSettings.DisableAll)
 				{
@@ -774,49 +1071,86 @@ namespace flex
 			ImGui::TreePop();
 		}
 
-		static const char* postProcessStr = "Post processing";
-		if (ImGui::TreeNode(postProcessStr))
+		if (ImGui::TreeNode("Post processing"))
 		{
-			ImGui::Checkbox("Enabled", &m_bPostProcessingEnabled);
+			if (ImGui::Checkbox("TAA", &m_bEnableTAA))
+			{
+				m_bTAAStateChanged = true;
+			}
 
-			static const char* fxaaEnabledStr = "FXAA";
-			ImGui::Checkbox(fxaaEnabledStr, &m_PostProcessSettings.bEnableFXAA);
+			ImGui::PushItemWidth(150.0f);
+			if (ImGui::SliderInt("Sample Count", &m_TAASampleCount, 1, 16))
+			{
+				m_bTAAStateChanged = true;
+				m_TAASampleCount = (i32)RoundToNearestPowerOfTwo((real)m_TAASampleCount);
+			}
+
+			ImGui::Checkbox("FXAA", &m_PostProcessSettings.bEnableFXAA);
 
 			if (m_PostProcessSettings.bEnableFXAA)
 			{
 				ImGui::Indent();
-				static const char* fxaaShowEdgesEnabledStr = "Show edges";
-				ImGui::Checkbox(fxaaShowEdgesEnabledStr, &m_PostProcessSettings.bEnableFXAADEBUGShowEdges);
+				ImGui::Checkbox("Show edges", &m_PostProcessSettings.bEnableFXAADEBUGShowEdges);
 				ImGui::Unindent();
 			}
 
-			static const char* brightnessStr = "Brightness (RGB)";
 			real maxBrightness = 2.5f;
-			ImGui::SliderFloat3(brightnessStr, &m_PostProcessSettings.brightness.r, 0.0f, maxBrightness);
+			ImGui::SliderFloat3("Brightness", &m_PostProcessSettings.brightness.r, 0.0f, maxBrightness);
 			ImGui::SameLine();
 			ImGui::ColorButton("##1", ImVec4(
 				m_PostProcessSettings.brightness.r / maxBrightness,
 				m_PostProcessSettings.brightness.g / maxBrightness,
 				m_PostProcessSettings.brightness.b / maxBrightness, 1));
 
-			static const char* offsetStr = "Offset (RGB)";
 			real minOffset = -0.065f;
 			real maxOffset = 0.065f;
-			ImGui::SliderFloat3(offsetStr, &m_PostProcessSettings.offset.r, minOffset, maxOffset);
+			ImGui::SliderFloat3("Offset", &m_PostProcessSettings.offset.r, minOffset, maxOffset);
 			ImGui::SameLine();
 			ImGui::ColorButton("##2", ImVec4(
 				(m_PostProcessSettings.offset.r - minOffset) / (maxOffset - minOffset),
 				(m_PostProcessSettings.offset.g - minOffset) / (maxOffset - minOffset),
 				(m_PostProcessSettings.offset.b - minOffset) / (maxOffset - minOffset), 1));
 
-			static const char* saturationStr = "Saturation";
 			const real maxSaturation = 1.5f;
-			ImGui::SliderFloat(saturationStr, &m_PostProcessSettings.saturation, 0.0f, maxSaturation);
+			ImGui::SliderFloat("Saturation", &m_PostProcessSettings.saturation, 0.0f, maxSaturation);
 			ImGui::SameLine();
 			ImGui::ColorButton("##3", ImVec4(
 				m_PostProcessSettings.saturation / maxSaturation,
 				m_PostProcessSettings.saturation / maxSaturation,
 				m_PostProcessSettings.saturation / maxSaturation, 1));
+
+			bool bSSAOEnabled = m_SSAOSamplingData.ssaoEnabled != 0;
+			if (ImGui::Checkbox("SSAO", &bSSAOEnabled))
+			{
+				m_SSAOSamplingData.ssaoEnabled = bSSAOEnabled ? 1 : 0;
+				if (m_bSSAOBlurEnabled != bSSAOEnabled)
+				{
+					m_bSSAOBlurEnabled = bSSAOEnabled;
+					m_bSSAOStateChanged = true;
+				}
+			}
+
+			ImGui::SameLine();
+
+			if (ImGui::Checkbox("Blur", &m_bSSAOBlurEnabled))
+			{
+				m_bSSAOStateChanged = true;
+				if (m_bSSAOBlurEnabled)
+				{
+					m_SSAOSamplingData.ssaoEnabled = 1;
+				}
+			}
+
+			if (ImGui::SliderInt("Kernel Size", &m_SSAOKernelSize, 1, 64))
+			{
+				m_bSSAOStateChanged = true;
+			}
+			ImGui::SliderFloat("Radius", &m_SSAOGenData.radius, 0.0001f, 15.0f);
+			ImGui::SliderInt("Blur Radius", &m_SSAOBlurDataConstant.radius, 1, 16);
+			ImGui::SliderInt("Blur Offset Count", &m_SSAOBlurSamplePixelOffset, 1, 10);
+			ImGui::SliderFloat("Pow", &m_SSAOSamplingData.ssaoPowExp, 0.1f, 10.0f);
+
+			ImGui::PopItemWidth();
 
 			ImGui::TreePop();
 		}
@@ -904,8 +1238,7 @@ namespace flex
 				i32 i = 0;
 				for (auto iter : MeshComponent::m_LoadedMeshes)
 				{
-					std::string meshFileName = iter.first;
-					StripLeadingDirectories(meshFileName);
+					const std::string meshFileName = StripLeadingDirectories(iter.first);
 					if (mesh->GetFileName().compare(meshFileName) == 0)
 					{
 						selectedMeshIndex = i;
@@ -922,8 +1255,7 @@ namespace flex
 					for (auto meshPair : MeshComponent::m_LoadedMeshes)
 					{
 						bool bSelected = (i == selectedMeshIndex);
-						std::string meshFileName = meshPair.first;
-						StripLeadingDirectories(meshFileName);
+						const std::string meshFileName = StripLeadingDirectories(meshPair.first);
 						if (ImGui::Selectable(meshFileName.c_str(), &bSelected))
 						{
 							if (selectedMeshIndex != i)
@@ -1013,6 +1345,11 @@ namespace flex
 					ImGui::EndCombo();
 				}
 			} break;
+			case MeshComponent::Type::PROCEDURAL:
+			{
+				ImGui::Text("Procedural mesh");
+				ImGui::Text("Vertex count: %u", mesh->GetVertexBufferData()->VertexCount);
+			} break;
 			default:
 			{
 				PrintError("Unhandled MeshComponent::Type in Renderer::DrawImGuiForGameObject: %d\n", (i32)meshType);
@@ -1022,12 +1359,551 @@ namespace flex
 		}
 	}
 
+	void Renderer::OnPostSceneChange()
+	{
+		m_PhysicsDebugDrawer->OnPostSceneChange();
+	}
+
+	void Renderer::LoadShaders()
+	{
+		if (m_BaseShaders.empty())
+		{
+#if COMPILE_OPEN_GL
+			m_BaseShaders = {
+				{ "deferred_combine", "deferred_combine.vert", "deferred_combine.frag" },
+				//{ "deferred_combine_cubemap", "deferred_combine_cubemap.vert", "deferred_combine_cubemap.frag" },
+				{ "color", "color.vert", "color.frag" },
+				{ "pbr", "pbr.vert", "pbr.frag" },
+				{ "pbr_ws", "pbr_ws.vert", "pbr_ws.frag" },
+				{ "skybox", "skybox.vert", "skybox.frag" },
+				{ "equirectangular_to_cube", "skybox.vert", "equirectangular_to_cube.frag" },
+				{ "irradiance", "skybox.vert", "irradiance.frag" },
+				{ "prefilter", "skybox.vert", "prefilter.frag" },
+				{ "brdf", "brdf.vert", "brdf.frag" },
+				{ "sprite", "sprite.vert", "sprite.frag" },
+				{ "sprite_arr", "sprite.vert", "sprite_arr.frag" },
+				{ "post_process", "post_process.vert", "post_process.frag" },
+				{ "post_fxaa", "post_fxaa.vert", "post_fxaa.frag" },
+				{ "compute_sdf", "compute_sdf.vert", "compute_sdf.frag" },
+				{ "font_ss", "font_ss.vert", "font_ss.frag", "font_ss.geom" },
+				{ "font_ws", "font_ws.vert", "font_ws.frag", "font_ws.geom" },
+				{ "shadow", "shadow.vert" },
+				{ "ssao", "ssao.vert", "ssao.frag" },
+				{ "ssao_blur", "ssao_blur.vert", "ssao_blur.frag" },
+				{ "taa_resolve", "post_process.vert", "taa_resolve.frag" },
+				{ "gamma_correct", "post_process.vert", "gamma_correct.frag" },
+				{ "blit", "blit.vert", "blit.frag" },
+			};
+#elif COMPILE_VULKAN
+			m_BaseShaders = {
+				{ "deferred_combine", "vk_deferred_combine_vert.spv", "vk_deferred_combine_frag.spv" },
+				//{ "deferred_combine_cubemap", "vk_deferred_combine_cubemap_vert.spv", "vk_deferred_combine_cubemap_frag.spv" },
+				{ "color", "vk_color_vert.spv","vk_color_frag.spv" },
+				{ "pbr", "vk_pbr_vert.spv", "vk_pbr_frag.spv" },
+				{ "pbr_ws", "vk_pbr_ws_vert.spv", "vk_pbr_ws_frag.spv" },
+				{ "skybox", "vk_skybox_vert.spv", "vk_skybox_frag.spv" },
+				{ "equirectangular_to_cube", "vk_skybox_vert.spv", "vk_equirectangular_to_cube_frag.spv" },
+				{ "irradiance", "vk_skybox_vert.spv", "vk_irradiance_frag.spv" },
+				{ "prefilter", "vk_skybox_vert.spv", "vk_prefilter_frag.spv" },
+				{ "brdf", "vk_brdf_vert.spv", "vk_brdf_frag.spv" },
+				{ "sprite", "vk_sprite_vert.spv", "vk_sprite_frag.spv" },
+				{ "sprite_arr", "vk_sprite_vert.spv", "vk_sprite_arr_frag.spv" },
+				{ "post_process", "vk_post_process_vert.spv", "vk_post_process_frag.spv" },
+				{ "post_fxaa", "vk_barebones_pos2_uv_vert.spv", "vk_post_fxaa_frag.spv" },
+				{ "compute_sdf", "vk_compute_sdf_vert.spv", "vk_compute_sdf_frag.spv" },
+				{ "font_ss", "vk_font_ss_vert.spv", "vk_font_frag.spv", "vk_font_ss_geom.spv" },
+				{ "font_ws", "vk_font_ws_vert.spv", "vk_font_frag.spv", "vk_font_ws_geom.spv" },
+				{ "shadow", "vk_shadow_vert.spv" },
+				{ "ssao", "vk_barebones_pos3_uv_vert.spv", "vk_ssao_frag.spv" },
+				{ "ssao_blur", "vk_barebones_pos3_uv_vert.spv", "vk_ssao_blur_frag.spv" },
+				{ "taa_resolve", "vk_barebones_pos2_uv_vert.spv", "vk_taa_resolve_frag.spv" },
+				{ "gamma_correct", "vk_barebones_pos2_uv_vert.spv", "vk_gamma_correct_frag.spv" },
+				{ "blit", "vk_barebones_pos2_uv_vert.spv", "vk_blit_frag.spv" },
+			};
+#endif
+
+			ShaderID shaderID = 0;
+
+			// Deferred combine
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::DEFERRED_COMBINE;
+			m_BaseShaders[shaderID].bDepthWriteEnable = false;
+			m_BaseShaders[shaderID].bNeedBRDFLUT = true;
+			m_BaseShaders[shaderID].bNeedIrradianceSampler = true;
+			m_BaseShaders[shaderID].bNeedPrefilteredMap = true;
+			m_BaseShaders[shaderID].vertexAttributes =
+				(u32)VertexAttribute::POSITION_2D |
+				(u32)VertexAttribute::UV;
+
+			// TODO: Specify that this buffer is only used in the frag shader here
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_CAM_POS);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW_INV);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PROJECTION_INV);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_DIR_LIGHT);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_POINT_LIGHTS);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SHADOW_SAMPLING_DATA);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SSAO_SAMPLING_DATA);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_NEAR_FAR_PLANES);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_IRRADIANCE_SAMPLER);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_FB_0_SAMPLER);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_FB_1_SAMPLER);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_DEPTH_SAMPLER);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SSAO_FINAL_SAMPLER);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_BRDF_LUT_SAMPLER);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SHADOW_SAMPLER);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PREFILTER_MAP);
+
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_IRRADIANCE_SAMPLER);
+			//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_IRRADIANCE_SAMPLER); // TODO
+			++shaderID;
+
+			//// Deferred combine cubemap
+			//m_BaseShaders[shaderID].renderPassType = RenderPassType::DEFERRED_COMBINE;
+			//m_BaseShaders[shaderID].bDeferred = false;
+			//m_BaseShaders[shaderID].bDepthWriteEnable = false;
+			//m_BaseShaders[shaderID].bNeedBRDFLUT = true;
+			//m_BaseShaders[shaderID].bNeedIrradianceSampler = true;
+			//m_BaseShaders[shaderID].bNeedPrefilteredMap = true;
+			//m_BaseShaders[shaderID].vertexAttributes =
+			//	(u32)VertexAttribute::POSITION; // Used as 3D texture coord into cubemap
+
+			//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+			//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW);
+			//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PROJECTION);
+			////m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_LIGHT_VIEW_PROJS);
+			//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_CAM_POS);
+			//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_POINT_LIGHTS);
+			//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_DIR_LIGHT);
+			//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_IRRADIANCE_SAMPLER);
+			//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_CUBEMAP_SAMPLER);
+			//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PREFILTER_MAP);
+			//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_BRDF_LUT_SAMPLER);
+			//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_FB_0_SAMPLER);
+			//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_FB_1_SAMPLER);
+			//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_DEPTH_SAMPLER);
+
+			//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+			//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
+			//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_IRRADIANCE_SAMPLER);
+			//++shaderID;
+
+			// Color
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
+			m_BaseShaders[shaderID].bTranslucent = true;
+			m_BaseShaders[shaderID].bDynamic = true;
+			m_BaseShaders[shaderID].dynamicVertexBufferSize = 16384 * 4 * 28; // TODO: FIXME:
+			m_BaseShaders[shaderID].vertexAttributes =
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
+
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_COLOR_MULTIPLIER);
+			++shaderID;
+
+			// PBR
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::DEFERRED;
+			m_BaseShaders[shaderID].numAttachments = 2; // TODO: Work out automatically from samplers?
+			m_BaseShaders[shaderID].bNeedAlbedoSampler = true;
+			m_BaseShaders[shaderID].bNeedMetallicSampler = true;
+			m_BaseShaders[shaderID].bNeedRoughnessSampler = true;
+			m_BaseShaders[shaderID].bNeedNormalSampler = true;
+			m_BaseShaders[shaderID].vertexAttributes =
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::UV |
+				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
+				(u32)VertexAttribute::NORMAL |
+				(u32)VertexAttribute::TANGENT;
+
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
+
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_CONST_ALBEDO);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_ALBEDO_SAMPLER);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ALBEDO_SAMPLER);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_CONST_METALLIC);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_METALLIC_SAMPLER);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_METALLIC_SAMPLER);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_CONST_ROUGHNESS);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_ROUGHNESS_SAMPLER);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ROUGHNESS_SAMPLER);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_NORMAL_SAMPLER);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_NORMAL_SAMPLER);
+			++shaderID;
+
+			// PBR - WORLD SPACE
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::DEFERRED;
+			m_BaseShaders[shaderID].numAttachments = 2;
+			m_BaseShaders[shaderID].bNeedMetallicSampler = true;
+			m_BaseShaders[shaderID].bNeedRoughnessSampler = true;
+			m_BaseShaders[shaderID].bNeedAlbedoSampler = true;
+			m_BaseShaders[shaderID].bNeedNormalSampler = true;
+			m_BaseShaders[shaderID].vertexAttributes =
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::UV |
+				(u32)VertexAttribute::NORMAL |
+				(u32)VertexAttribute::TANGENT;
+
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
+
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_CONST_ALBEDO);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_ALBEDO_SAMPLER);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ALBEDO_SAMPLER);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_CONST_METALLIC);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_METALLIC_SAMPLER);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_METALLIC_SAMPLER);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_CONST_ROUGHNESS);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_ROUGHNESS_SAMPLER);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ROUGHNESS_SAMPLER);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_NORMAL_SAMPLER);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_NORMAL_SAMPLER);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_TEXTURE_SCALE);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_BLEND_SHARPNESS);
+			++shaderID;
+
+			// Skybox
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
+			m_BaseShaders[shaderID].bNeedCubemapSampler = true;
+			m_BaseShaders[shaderID].bNeedPushConstantBlock = true;
+			m_BaseShaders[shaderID].pushConstantBlockSize = 128;
+			m_BaseShaders[shaderID].vertexAttributes =
+				(u32)VertexAttribute::POSITION;
+
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+			//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW);
+			//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PROJECTION);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_EXPOSURE);
+			//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_TIME);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_CUBEMAP_SAMPLER);
+
+			m_BaseShaders[shaderID].dynamicBufferUniforms = {};
+			++shaderID;
+
+			// Equirectangular to Cube
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
+			m_BaseShaders[shaderID].bNeedHDREquirectangularSampler = true;
+			m_BaseShaders[shaderID].bNeedPushConstantBlock = true;
+			m_BaseShaders[shaderID].pushConstantBlockSize = 128;
+			m_BaseShaders[shaderID].vertexAttributes =
+				(u32)VertexAttribute::POSITION;
+
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_HDR_EQUIRECTANGULAR_SAMPLER);
+
+			m_BaseShaders[shaderID].dynamicBufferUniforms = {};
+			++shaderID;
+
+			// Irradiance
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
+			m_BaseShaders[shaderID].bNeedCubemapSampler = true;
+			m_BaseShaders[shaderID].bNeedPushConstantBlock = true;
+			m_BaseShaders[shaderID].pushConstantBlockSize = 128;
+			m_BaseShaders[shaderID].vertexAttributes =
+				(u32)VertexAttribute::POSITION;
+
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_CUBEMAP_SAMPLER);
+
+			m_BaseShaders[shaderID].dynamicBufferUniforms = {};
+			++shaderID;
+
+			// Prefilter
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
+			m_BaseShaders[shaderID].bNeedCubemapSampler = true;
+			m_BaseShaders[shaderID].bNeedPushConstantBlock = true;
+			m_BaseShaders[shaderID].pushConstantBlockSize = 128;
+			m_BaseShaders[shaderID].vertexAttributes =
+				(u32)VertexAttribute::POSITION;
+
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_CUBEMAP_SAMPLER);
+
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_CONST_ROUGHNESS);
+			++shaderID;
+
+			// BRDF
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
+			m_BaseShaders[shaderID].vertexAttributes = 0;
+
+			m_BaseShaders[shaderID].constantBufferUniforms = {};
+
+			m_BaseShaders[shaderID].dynamicBufferUniforms = {};
+			++shaderID;
+
+			// Sprite
+			m_BaseShaders[shaderID].bNeedPushConstantBlock = true;
+			m_BaseShaders[shaderID].pushConstantBlockSize = 132;
+			m_BaseShaders[shaderID].bTranslucent = true;
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::UI;
+			m_BaseShaders[shaderID].vertexAttributes =
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::UV;
+
+			m_BaseShaders[shaderID].constantBufferUniforms = {};
+
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_COLOR_MULTIPLIER);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_ALBEDO_SAMPLER);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ALBEDO_SAMPLER);
+			++shaderID;
+
+			// Sprite - Texture Array
+			m_BaseShaders[shaderID].bNeedPushConstantBlock = true;
+			m_BaseShaders[shaderID].pushConstantBlockSize = 132;
+			m_BaseShaders[shaderID].bTranslucent = true;
+			m_BaseShaders[shaderID].bTextureArr = true;
+			m_BaseShaders[shaderID].bDynamic = true;
+			m_BaseShaders[shaderID].dynamicVertexBufferSize = 1024 * 1024; // TODO: FIXME:
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::UI;
+			m_BaseShaders[shaderID].vertexAttributes =
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::UV;
+
+			m_BaseShaders[shaderID].constantBufferUniforms = {};
+
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_COLOR_MULTIPLIER);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_ALBEDO_SAMPLER);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ALBEDO_SAMPLER);
+			++shaderID;
+
+			// Post processing
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::POST_PROCESS;
+			m_BaseShaders[shaderID].vertexAttributes =
+				(u32)VertexAttribute::POSITION_2D |
+				(u32)VertexAttribute::UV;
+
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SCENE_SAMPLER);
+
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_COLOR_MULTIPLIER);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_ALBEDO_SAMPLER);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_POST_PROCESS_MAT);
+			++shaderID;
+
+			// Post FXAA
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD; // TODO: FIXME:
+			m_BaseShaders[shaderID].vertexAttributes =
+				(u32)VertexAttribute::POSITION_2D |
+				(u32)VertexAttribute::UV;
+
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_FXAA_DATA);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SCENE_SAMPLER);
+
+			m_BaseShaders[shaderID].dynamicBufferUniforms = {};
+			++shaderID;
+
+			// Compute SDF
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::DEFERRED;
+			m_BaseShaders[shaderID].vertexAttributes =
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::UV;
+
+			m_BaseShaders[shaderID].constantBufferUniforms = {};
+
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_SDF_DATA);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_TEX_CHANNEL);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_HIGH_RES_TEX); // highResTex
+			//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_CHAR_RESOLUTION);
+			//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_SPREAD);
+			//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_HIGH_RES_TEX);
+			//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_TEX_CHANNEL);
+			//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_SDF_RESOLUTION);
+			//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_HIGH_RES);
+			++shaderID;
+
+			// Font SS
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::UI;
+			m_BaseShaders[shaderID].bDynamic = true;
+			m_BaseShaders[shaderID].dynamicVertexBufferSize = 1024 * 1024; // TODO: FIXME:
+			m_BaseShaders[shaderID].vertexAttributes =
+				(u32)VertexAttribute::POSITION_2D |
+				(u32)VertexAttribute::UV |
+				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
+				(u32)VertexAttribute::EXTRA_VEC4 |
+				(u32)VertexAttribute::EXTRA_INT;
+
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_ALBEDO_SAMPLER);
+
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_FONT_CHAR_DATA);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_TEX_SIZE);
+			++shaderID;
+
+			// Font WS
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
+			m_BaseShaders[shaderID].bDynamic = true;
+			m_BaseShaders[shaderID].dynamicVertexBufferSize = 1024 * 1024; // TODO: FIXME:
+			m_BaseShaders[shaderID].vertexAttributes =
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::UV |
+				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
+				(u32)VertexAttribute::TANGENT |
+				(u32)VertexAttribute::EXTRA_VEC4 |
+				(u32)VertexAttribute::EXTRA_INT;
+
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_ALBEDO_SAMPLER);
+
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_FONT_CHAR_DATA);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_TEX_SIZE);
+			//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_THRESHOLD);
+			//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_SHADOW);
+			++shaderID;
+
+			// Shadow
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::SHADOW;
+			m_BaseShaders[shaderID].bGenerateVertexBufferForAll = true;
+			m_BaseShaders[shaderID].bNeedPushConstantBlock = true;
+			m_BaseShaders[shaderID].pushConstantBlockSize = 64;
+			m_BaseShaders[shaderID].vertexAttributes =
+				(u32)VertexAttribute::POSITION;
+
+			m_BaseShaders[shaderID].constantBufferUniforms = {};
+
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
+			++shaderID;
+
+			// SSAO
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::SSAO;
+			m_BaseShaders[shaderID].bDepthWriteEnable = false;
+			m_BaseShaders[shaderID].vertexAttributes =
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::UV;
+
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PROJECTION);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PROJECTION_INV);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SSAO_GEN_DATA);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_DEPTH_SAMPLER);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SSAO_NORMAL_SAMPLER);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_NOISE_SAMPLER);
+
+			m_BaseShaders[shaderID].dynamicBufferUniforms = {};
+			++shaderID;
+
+			// SSAO Blur
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::SSAO_BLUR;
+			m_BaseShaders[shaderID].bDepthWriteEnable = false;
+			m_BaseShaders[shaderID].vertexAttributes =
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::UV;
+
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SSAO_BLUR_DATA_CONSTANT);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SSAO_RAW_SAMPLER);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SSAO_NORMAL_SAMPLER);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_DEPTH_SAMPLER);
+
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_SSAO_BLUR_DATA_DYNAMIC);
+			++shaderID;
+
+			// TAA Resolve
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::TAA_RESOLVE;
+			m_BaseShaders[shaderID].bDepthWriteEnable = false;
+			m_BaseShaders[shaderID].bNeedPushConstantBlock = true;
+			m_BaseShaders[shaderID].pushConstantBlockSize = 8;
+			m_BaseShaders[shaderID].vertexAttributes =
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::UV;
+
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW_INV);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PROJECTION_INV);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_LAST_FRAME_VIEWPROJ);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SCENE_SAMPLER);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_HISTORY_SAMPLER);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_DEPTH_SAMPLER);
+
+			m_BaseShaders[shaderID].dynamicBufferUniforms = {};
+			++shaderID;
+
+			// Gamma Correct
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::GAMMA_CORRECT;
+			m_BaseShaders[shaderID].bDepthWriteEnable = false;
+			m_BaseShaders[shaderID].vertexAttributes =
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::UV;
+
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SCENE_SAMPLER);
+
+			m_BaseShaders[shaderID].dynamicBufferUniforms = {};
+			++shaderID;
+
+			// Blit
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::UI;
+			m_BaseShaders[shaderID].bDepthWriteEnable = false;
+			m_BaseShaders[shaderID].vertexAttributes =
+				(u32)VertexAttribute::POSITION_2D |
+				(u32)VertexAttribute::UV;
+
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_ALBEDO_SAMPLER);
+
+			m_BaseShaders[shaderID].dynamicBufferUniforms = {};
+			++shaderID;
+
+			assert(shaderID == m_BaseShaders.size());
+		}
+
+		SetShaderCount(m_BaseShaders.size());
+
+		for (u32 shaderID = 0; shaderID < m_BaseShaders.size(); ++shaderID)
+		{
+			Shader& shader = m_BaseShaders[shaderID];
+
+			// Sanity checks
+			{
+				assert(!shader.constantBufferUniforms.HasUniform(U_UNIFORM_BUFFER_DYNAMIC));
+				assert(!shader.dynamicBufferUniforms.HasUniform(U_UNIFORM_BUFFER_CONSTANT));
+
+				assert((shader.bNeedPushConstantBlock && shader.pushConstantBlockSize != 0) ||
+					(!shader.bNeedPushConstantBlock && shader.pushConstantBlockSize == 0));
+
+
+				if (shader.constantBufferUniforms.HasUniform(U_HIGH_RES_TEX))
+				{
+					assert(!shader.constantBufferUniforms.HasUniform(U_ALBEDO_SAMPLER));
+				}
+			}
+
+			if (!LoadShaderCode(shaderID))
+			{
+				PrintError("Couldn't load/compile shaders: %s", shader.vertexShaderFilePath.c_str());
+				if (!shader.fragmentShaderFilePath.empty())
+				{
+					PrintError(", %s", shader.fragmentShaderFilePath.c_str());
+				}
+				if (!shader.geometryShaderFilePath.empty())
+				{
+					PrintError(", %s", shader.geometryShaderFilePath.c_str());
+				}
+				PrintError("\n");
+			}
+		}
+	}
+
 	void Renderer::DoCreateGameObjectButton(const char* buttonName, const char* popupName)
 	{
 		static const char* defaultNewNameBase = "New_Object_";
-		static const char* newObjectNameInputLabel = "##new-object-name";
-		static const char* createButtonStr = "Create";
-		static const char* cancelStr = "Cancel";
 
 		static std::string newObjectName;
 
@@ -1062,12 +1938,12 @@ namespace flex
 			newObjectName.resize(maxStrLen);
 
 
-			bool bCreate = ImGui::InputText(newObjectNameInputLabel,
+			bool bCreate = ImGui::InputText("##new-object-name",
 				(char*)newObjectName.data(),
 				maxStrLen,
 				ImGuiInputTextFlags_EnterReturnsTrue);
 
-			bCreate |= ImGui::Button(createButtonStr);
+			bCreate |= ImGui::Button("Create");
 
 			bool bInvalidName = std::string(newObjectName.c_str()).empty();
 
@@ -1080,9 +1956,7 @@ namespace flex
 				{
 					GameObject* newGameObject = new GameObject(newObjectName, GameObjectType::OBJECT);
 
-					MaterialID matID = 0;
-
-					newGameObject->SetMeshComponent(new MeshComponent(matID, newGameObject));
+					newGameObject->SetMeshComponent(new MeshComponent(newGameObject));
 					newGameObject->GetMeshComponent()->LoadFromFile(RESOURCE_LOCATION  "meshes/cube.glb");
 
 					g_SceneManager->CurrentScene()->AddRootObject(newGameObject);
@@ -1090,7 +1964,7 @@ namespace flex
 					newGameObject->Initialize();
 					newGameObject->PostInitialize();
 
-					g_EngineInstance->SetSelectedObject(newGameObject);
+					g_Editor->SetSelectedObject(newGameObject);
 
 					ImGui::CloseCurrentPopup();
 				}
@@ -1098,7 +1972,7 @@ namespace flex
 
 			ImGui::SameLine();
 
-			if (ImGui::Button(cancelStr))
+			if (ImGui::Button("Cancel"))
 			{
 				ImGui::CloseCurrentPopup();
 			}
@@ -1148,7 +2022,7 @@ namespace flex
 				bHasChildren = false;
 			}
 		}
-		bool bSelected = g_EngineInstance->IsObjectSelected(gameObject);
+		bool bSelected = g_Editor->IsObjectSelected(gameObject);
 
 		bool visible = gameObject->IsVisible();
 		const std::string objectVisibleLabel(objectID + "-visible");
@@ -1202,15 +2076,15 @@ namespace flex
 			{
 				if (g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_CONTROL))
 				{
-					g_EngineInstance->ToggleSelectedObject(gameObject);
+					g_Editor->ToggleSelectedObject(gameObject);
 				}
 				else if (g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_SHIFT))
 				{
-					const std::vector<GameObject*>& selectedObjects = g_EngineInstance->GetSelectedObjects();
+					const std::vector<GameObject*>& selectedObjects = g_Editor->GetSelectedObjects();
 					if (selectedObjects.empty() ||
 						(selectedObjects.size() == 1 && selectedObjects[0] == gameObject))
 					{
-						g_EngineInstance->ToggleSelectedObject(gameObject);
+						g_Editor->ToggleSelectedObject(gameObject);
 					}
 					else
 					{
@@ -1242,13 +2116,13 @@ namespace flex
 
 						for (GameObject* objectToSelect : objectsToSelect)
 						{
-							g_EngineInstance->AddSelectedObject(objectToSelect);
+							g_Editor->AddSelectedObject(objectToSelect);
 						}
 					}
 				}
 				else
 				{
-					g_EngineInstance->SetSelectedObject(gameObject);
+					g_Editor->SetSelectedObject(gameObject);
 				}
 			}
 
@@ -1259,7 +2133,7 @@ namespace flex
 					const void* data = nullptr;
 					size_t size = 0;
 
-					const std::vector<GameObject*>& selectedObjects = g_EngineInstance->GetSelectedObjects();
+					const std::vector<GameObject*>& selectedObjects = g_Editor->GetSelectedObjects();
 					auto iter = Find(selectedObjects, gameObject);
 					bool bItemInSelection = iter != selectedObjects.end();
 					std::string dragDropText;
@@ -1276,7 +2150,7 @@ namespace flex
 						// Ensure any children which weren't selected are now in selection
 						for (GameObject* draggedGameObject : draggedGameObjects)
 						{
-							g_EngineInstance->AddSelectedObject(draggedGameObject);
+							g_Editor->AddSelectedObject(draggedGameObject);
 						}
 
 						data = draggedGameObjects.data();
@@ -1293,7 +2167,7 @@ namespace flex
 					}
 					else
 					{
-						g_EngineInstance->SetSelectedObject(gameObject);
+						g_Editor->SetSelectedObject(gameObject);
 
 						data = (void*)(&gameObject);
 						size = sizeof(GameObject*);
@@ -1398,11 +2272,158 @@ namespace flex
 		return bParentChildTreeDirty;
 	}
 
-	bool Renderer::LoadFontMetrics(const std::vector<char>& fileMemory, const std::string& fontFilePath, FT_Library& ft, BitmapFont** font,
-		i16 size, bool bScreenSpace, std::map<i32, FontMetric*>* outCharacters,
-	std::array<glm::vec2i, 4>* outMaxPositions, FT_Face* outFace)
+	void Renderer::GenerateGBuffer()
 	{
-		assert(*font == nullptr);
+		if (m_gBufferQuadVertexBufferData.vertexData == nullptr)
+		{
+			GenerateGBufferVertexBuffer(g_bVulkanEnabled);
+		}
+
+		assert(m_SkyBoxMesh != nullptr);
+		MaterialID skyboxMaterialID = m_SkyBoxMesh->GetMeshComponent()->GetMaterialID();
+
+		const std::string gBufferMatName = "GBuffer material";
+		const std::string gBufferCubeMatName = "GBuffer cubemap material";
+		const std::string gBufferQuadName = "GBuffer quad";
+
+		// Remove existing material if present (this will be true when reloading the scene)
+		{
+			MaterialID existingGBufferQuadMatID = InvalidMaterialID;
+			MaterialID existingGBufferCubeMatID = InvalidMaterialID;
+			// TODO: Don't rely on material names!
+			if (GetMaterialID(gBufferMatName, existingGBufferQuadMatID))
+			{
+				RemoveMaterial(existingGBufferQuadMatID);
+			}
+			if (GetMaterialID(gBufferCubeMatName, existingGBufferCubeMatID))
+			{
+				RemoveMaterial(existingGBufferCubeMatID);
+			}
+
+			for (auto iter = m_PersistentObjects.begin(); iter != m_PersistentObjects.end(); ++iter)
+			{
+				GameObject* gameObject = *iter;
+				if (gameObject->GetName().compare(gBufferQuadName) == 0)
+				{
+					gameObject->Destroy();
+					delete gameObject;
+					m_PersistentObjects.erase(iter);
+					break;
+				}
+			}
+
+			if (m_GBufferQuadRenderID != InvalidRenderID)
+			{
+				DestroyRenderObject(m_GBufferQuadRenderID);
+			}
+		}
+
+		{
+			MaterialCreateInfo gBufferMaterialCreateInfo = {};
+			gBufferMaterialCreateInfo.name = gBufferMatName;
+			gBufferMaterialCreateInfo.shaderName = "deferred_combine";
+			gBufferMaterialCreateInfo.enableIrradianceSampler = true;
+			gBufferMaterialCreateInfo.irradianceSamplerMatID = skyboxMaterialID;
+			gBufferMaterialCreateInfo.enablePrefilteredMap = true;
+			gBufferMaterialCreateInfo.prefilterMapSamplerMatID = skyboxMaterialID;
+			gBufferMaterialCreateInfo.enableBRDFLUT = true;
+			gBufferMaterialCreateInfo.renderToCubemap = false;
+			gBufferMaterialCreateInfo.persistent = true;
+			gBufferMaterialCreateInfo.visibleInEditor = false;
+			FillOutGBufferFrameBufferAttachments(gBufferMaterialCreateInfo.sampledFrameBuffers);
+
+			MaterialID gBufferMatID = InitializeMaterial(&gBufferMaterialCreateInfo);
+
+			GameObject* gBufferQuadGameObject = new GameObject(gBufferQuadName, GameObjectType::_NONE);
+			m_PersistentObjects.push_back(gBufferQuadGameObject);
+			// NOTE: G-buffer isn't rendered normally, it is handled separately
+			gBufferQuadGameObject->SetVisible(false);
+
+			RenderObjectCreateInfo gBufferQuadCreateInfo = {};
+			gBufferQuadCreateInfo.materialID = gBufferMatID;
+			gBufferQuadCreateInfo.gameObject = gBufferQuadGameObject;
+			gBufferQuadCreateInfo.vertexBufferData = &m_gBufferQuadVertexBufferData;
+			gBufferQuadCreateInfo.cullFace = CullFace::NONE;
+			gBufferQuadCreateInfo.visibleInSceneExplorer = false;
+			gBufferQuadCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
+			gBufferQuadCreateInfo.bDepthWriteEnable = false;
+			gBufferQuadCreateInfo.bSetDynamicStates = true;
+
+			m_GBufferQuadRenderID = InitializeRenderObject(&gBufferQuadCreateInfo);
+
+			m_gBufferQuadVertexBufferData.DescribeShaderVariables(this, m_GBufferQuadRenderID);
+		}
+
+		// Initialize GBuffer cubemap material & mesh
+		//{
+		//	MaterialCreateInfo gBufferCubemapMaterialCreateInfo = {};
+		//	gBufferCubemapMaterialCreateInfo.name = gBufferCubeMatName;
+		//	gBufferCubemapMaterialCreateInfo.shaderName = "deferred_combine_cubemap";
+		//	gBufferCubemapMaterialCreateInfo.enableIrradianceSampler = true;
+		//	gBufferCubemapMaterialCreateInfo.irradianceSamplerMatID = skyboxMaterialID;
+		//	gBufferCubemapMaterialCreateInfo.enablePrefilteredMap = true;
+		//	gBufferCubemapMaterialCreateInfo.prefilterMapSamplerMatID = skyboxMaterialID;
+		//	gBufferCubemapMaterialCreateInfo.enableBRDFLUT = true;
+		//	gBufferCubemapMaterialCreateInfo.renderToCubemap = false;
+		//	gBufferCubemapMaterialCreateInfo.persistent = true;
+		//	gBufferCubemapMaterialCreateInfo.visibleInEditor = false;
+		//	FillOutGBufferFrameBufferAttachments(gBufferCubemapMaterialCreateInfo.sampledFrameBuffers);
+		//
+		//	m_CubemapGBufferMaterialID = InitializeMaterial(&gBufferCubemapMaterialCreateInfo);
+		//}
+	}
+
+	void Renderer::EnqueueScreenSpaceText()
+	{
+		SetFont(SID("editor-02"));
+		static const glm::vec4 color(0.95f);
+		DrawStringSS("FLEX ENGINE", color, AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -0.055f), 1.0f, 0.6f);
+		if (g_EngineInstance->IsSimulationPaused())
+		{
+			DrawStringSS("PAUSED", color, AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -0.09f), 0.0f);
+		}
+
+#if 0
+		std::string str;
+		std::string fxaaEnabledStr = std::string("FXAA: ") + (m_PostProcessSettings.bEnableFXAA ? "1" : "0");
+		DrawStringSS(fxaaEnabledStr, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -0.15f), 1.0f, 0.35f);
+		glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+		std::string resolutionStr = "Frame buffer size: " + IntToString(frameBufferSize.x) + " x " + IntToString(frameBufferSize.y);
+		DrawStringSS(resolutionStr, glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -0.175f), 1.0f, 0.35f);
+#endif
+
+		if (m_EditorStrSecRemaining > 0.0f)
+		{
+			SetFont(SID("editor-01"));
+			real alpha = glm::clamp(m_EditorStrSecRemaining / (m_EditorStrSecDuration*m_EditorStrFadeDurationPercent),
+				0.0f, 1.0f);
+			DrawStringSS(m_EditorMessage, glm::vec4(1.0f, 1.0f, 1.0f, alpha), AnchorPoint::CENTER, VEC2_ZERO, 3);
+		}
+	}
+
+	void Renderer::EnqueueWorldSpaceText()
+	{
+#if 0
+		SetFont(SID("editor-02-ws"));
+		real s = g_SecElapsedSinceProgramStart * 3.5f;
+		DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(1.0f), 1.0f), glm::vec3(2.0f, 5.0f, 0.0f), QUAT_UNIT, 0.0f, 100.0f);
+		DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.95f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 1) * 0.05f, 5.0f + sin(s + 0.3f * 1) * 0.05f, -0.075f * 1), QUAT_UNIT, 0.0f, 100.0f);
+		DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.90f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 2) * 0.07f, 5.0f + sin(s + 0.3f * 2) * 0.07f, -0.075f * 2), QUAT_UNIT, 0.0f, 100.0f);
+		DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.85f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 3) * 0.10f, 5.0f + sin(s + 0.3f * 3) * 0.10f, -0.075f * 3), QUAT_UNIT, 0.0f, 100.0f);
+		DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.80f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 4) * 0.12f, 5.0f + sin(s + 0.3f * 4) * 0.12f, -0.075f * 4), QUAT_UNIT, 0.0f, 100.0f);
+		DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.75f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 5) * 0.15f, 5.0f + sin(s + 0.3f * 5) * 0.15f, -0.075f * 5), QUAT_UNIT, 0.0f, 100.0f);
+		DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.70f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 6) * 0.17f, 5.0f + sin(s + 0.3f * 6) * 0.17f, -0.075f * 6), QUAT_UNIT, 0.0f, 100.0f);
+#endif
+	}
+
+	bool Renderer::LoadFontMetrics(const std::vector<char>& fileMemory,
+		FT_Library& ft,
+		FontMetaData& metaData,
+		std::map<i32, FontMetric*>* outCharacters,
+		std::array<glm::vec2i, 4>* outMaxPositions,
+		FT_Face* outFace)
+	{
+		assert(metaData.bitmapFont == nullptr);
 
 		// TODO: Save in common place
 		u32 sampleDensity = 32;
@@ -1411,32 +2432,31 @@ namespace flex
 		FT_Face& face = *outFace;
 		if (error == FT_Err_Unknown_File_Format)
 		{
-			PrintError("Unhandled font file format: %s\n", fontFilePath.c_str());
+			PrintError("Unhandled font file format: %s\n", metaData.filePath.c_str());
 			return false;
 		}
 		else if (error != FT_Err_Ok || !face)
 		{
-			PrintError("Failed to create new font face: %s\n", fontFilePath.c_str());
+			PrintError("Failed to create new font face: %s\n", metaData.filePath.c_str());
 			return false;
 		}
 
 		error = FT_Set_Char_Size(face,
-			0, size * sampleDensity,
+			0, metaData.size * sampleDensity,
 			(FT_UInt)g_Monitor->DPI.x,
 			(FT_UInt)g_Monitor->DPI.y);
 
 		if (g_bEnableLogging_Loading)
 		{
-			std::string fileName = fontFilePath;
-			StripLeadingDirectories(fileName);
+			const std::string fileName = StripLeadingDirectories(metaData.filePath);
 			Print("Loaded font file %s\n", fileName.c_str());
 		}
 
 		std::string fontName = std::string(face->family_name) + " - " + face->style_name;
-		*font = new BitmapFont(size, fontName, face->num_glyphs);
-		BitmapFont* newFont = *font;
+		metaData.bitmapFont = new BitmapFont(metaData, fontName, face->num_glyphs);
+		BitmapFont* newFont = metaData.bitmapFont;
 
-		if (bScreenSpace)
+		if (metaData.bScreenSpace)
 		{
 			m_FontsSS.push_back(newFont);
 		}
@@ -1476,7 +2496,7 @@ namespace flex
 				continue;
 			}
 
-			if (newFont->UseKerning() && glyphIndex)
+			if (newFont->bUseKerning && glyphIndex)
 			{
 				for (i32 previous = 0; previous < BitmapFont::CHAR_COUNT - 1; ++previous)
 				{
@@ -1569,17 +2589,96 @@ namespace flex
 
 	void Renderer::InitializeMaterials()
 	{
+		MaterialCreateInfo spriteMatSSCreateInfo = {};
+		spriteMatSSCreateInfo.name = "Sprite material";
+		spriteMatSSCreateInfo.shaderName = "sprite";
+		spriteMatSSCreateInfo.persistent = true;
+		spriteMatSSCreateInfo.visibleInEditor = true;
+		spriteMatSSCreateInfo.enableAlbedoSampler = true;
+		m_SpriteMatSSID = InitializeMaterial(&spriteMatSSCreateInfo);
+
+		MaterialCreateInfo spriteMatWSCreateInfo = {};
+		spriteMatWSCreateInfo.name = "Sprite material";
+		spriteMatWSCreateInfo.shaderName = "sprite";
+		spriteMatWSCreateInfo.persistent = true;
+		spriteMatWSCreateInfo.visibleInEditor = true;
+		spriteMatWSCreateInfo.enableAlbedoSampler = true;
+		m_SpriteMatWSID = InitializeMaterial(&spriteMatWSCreateInfo);
+
+		MaterialCreateInfo spriteArrMatCreateInfo = {};
+		spriteArrMatCreateInfo.name = "Sprite Texture Array material";
+		spriteArrMatCreateInfo.shaderName = "sprite_arr";
+		spriteArrMatCreateInfo.persistent = true;
+		spriteArrMatCreateInfo.visibleInEditor = true;
+		spriteArrMatCreateInfo.enableAlbedoSampler = true;
+		m_SpriteArrMatID = InitializeMaterial(&spriteArrMatCreateInfo);
+
 		MaterialCreateInfo fontSSMatCreateInfo = {};
-		fontSSMatCreateInfo.name = "Font material SS";
+		fontSSMatCreateInfo.name = "font ss";
 		fontSSMatCreateInfo.shaderName = "font_ss";
-		fontSSMatCreateInfo.engineMaterial = true;
+		fontSSMatCreateInfo.persistent = true;
+		fontSSMatCreateInfo.visibleInEditor = false;
 		m_FontMatSSID = InitializeMaterial(&fontSSMatCreateInfo);
 
 		MaterialCreateInfo fontWSMatCreateInfo = {};
-		fontWSMatCreateInfo.name = "Font material WS";
+		fontWSMatCreateInfo.name = "font ws";
 		fontWSMatCreateInfo.shaderName = "font_ws";
-		fontWSMatCreateInfo.engineMaterial = true;
+		fontWSMatCreateInfo.persistent = true;
+		fontWSMatCreateInfo.visibleInEditor = false;
 		m_FontMatWSID = InitializeMaterial(&fontWSMatCreateInfo);
+
+		MaterialCreateInfo shadowMatCreateInfo = {};
+		shadowMatCreateInfo.name = "shadow";
+		shadowMatCreateInfo.shaderName = "shadow";
+		shadowMatCreateInfo.persistent = true;
+		shadowMatCreateInfo.visibleInEditor = false;
+		m_ShadowMaterialID = InitializeMaterial(&shadowMatCreateInfo);
+
+		MaterialCreateInfo postProcessMatCreateInfo = {};
+		postProcessMatCreateInfo.name = "Post process material";
+		postProcessMatCreateInfo.shaderName = "post_process";
+		postProcessMatCreateInfo.persistent = true;
+		postProcessMatCreateInfo.visibleInEditor = false;
+		m_PostProcessMatID = InitializeMaterial(&postProcessMatCreateInfo);
+
+		MaterialCreateInfo postFXAAMatCreateInfo = {};
+		postFXAAMatCreateInfo.name = "fxaa";
+		postFXAAMatCreateInfo.shaderName = "post_fxaa";
+		postFXAAMatCreateInfo.persistent = true;
+		postFXAAMatCreateInfo.visibleInEditor = false;
+		m_PostFXAAMatID = InitializeMaterial(&postFXAAMatCreateInfo);
+
+		MaterialCreateInfo selectedObjectMatCreateInfo = {};
+		selectedObjectMatCreateInfo.name = "Selected Object";
+		selectedObjectMatCreateInfo.shaderName = "color";
+		selectedObjectMatCreateInfo.persistent = true;
+		selectedObjectMatCreateInfo.visibleInEditor = false;
+		selectedObjectMatCreateInfo.colorMultiplier = VEC4_ONE;
+		m_SelectedObjectMatID = InitializeMaterial(&selectedObjectMatCreateInfo);
+
+		MaterialCreateInfo taaMatCreateInfo = {};
+		taaMatCreateInfo.name = "TAA Resolve";
+		taaMatCreateInfo.shaderName = "taa_resolve";
+		taaMatCreateInfo.persistent = true;
+		taaMatCreateInfo.visibleInEditor = false;
+		taaMatCreateInfo.colorMultiplier = VEC4_ONE;
+		m_TAAResolveMaterialID = InitializeMaterial(&taaMatCreateInfo);
+
+		MaterialCreateInfo gammaCorrectMatCreateInfo = {};
+		gammaCorrectMatCreateInfo.name = "Gamma Correct";
+		gammaCorrectMatCreateInfo.shaderName = "gamma_correct";
+		gammaCorrectMatCreateInfo.persistent = true;
+		gammaCorrectMatCreateInfo.visibleInEditor = false;
+		gammaCorrectMatCreateInfo.colorMultiplier = VEC4_ONE;
+		m_GammaCorrectMaterialID = InitializeMaterial(&gammaCorrectMatCreateInfo);
+
+		MaterialCreateInfo placeholderMatCreateInfo = {};
+		placeholderMatCreateInfo.name = "placeholder";
+		placeholderMatCreateInfo.shaderName = "pbr";
+		placeholderMatCreateInfo.persistent = true;
+		placeholderMatCreateInfo.visibleInEditor = true;
+		placeholderMatCreateInfo.constAlbedo = glm::vec3(1.0f, 0.0f, 1.0f);
+		m_PlaceholderMaterialID = InitializeMaterial(&placeholderMatCreateInfo);
 	}
 
 	std::string Renderer::PickRandomSkyboxTexture()
@@ -1612,7 +2711,7 @@ namespace flex
 			{
 				FontMetric* metric = font->GetMetric(c);
 
-				if (font->UseKerning())
+				if (font->bUseKerning)
 				{
 					std::wstring charKey(std::wstring(1, prevChar) + std::wstring(1, c));
 
@@ -1667,7 +2766,7 @@ namespace flex
 			{
 				FontMetric* metric = font->GetMetric(c);
 
-				if (font->UseKerning())
+				if (font->bUseKerning)
 				{
 					std::wstring charKey(std::wstring(1, prevChar) + std::wstring(1, c));
 
@@ -1701,6 +2800,7 @@ namespace flex
 		return strHeight;
 	}
 
+	// TODO: Consolidate with UpdateTextBufferWS
 	void Renderer::UpdateTextBufferSS(std::vector<TextVertex2D>& outTextVertices)
 	{
 		PROFILE_AUTO("Update Text Buffer SS");
@@ -1708,67 +2808,75 @@ namespace flex
 		glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 		real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
 
+		u32 charCountUpperBound = 0;
+		for (BitmapFont* font : m_FontsWS)
+		{
+			const std::vector<TextCache>& caches = font->GetTextCaches();
+			for (const TextCache& textCache : caches)
+			{
+				charCountUpperBound += textCache.str.length();
+			}
+		}
+		outTextVertices.reserve(charCountUpperBound);
+
+		const real frameBufferScale = glm::max(2.0f / (real)frameBufferSize.x, 2.0f / (real)frameBufferSize.y);
+
 		for (BitmapFont* font : m_FontsSS)
 		{
-			real textScale = glm::max(2.0f / (real)frameBufferSize.x, 2.0f / (real)frameBufferSize.y) *
-				(font->GetSize() / 12.0f);
+			real baseTextScale = frameBufferScale * (font->metaData.size / 12.0f);
 
-			font->SetBufferStart((i32)(outTextVertices.size()));
+			font->bufferStart = (i32)(outTextVertices.size());
 
 			const std::vector<TextCache>& textCaches = font->GetTextCaches();
 			for (const TextCache& textCache : textCaches)
 			{
+				real textScale = baseTextScale * textCache.scale;
 				std::string currentStr = textCache.str;
 
 				real totalAdvanceX = 0;
 
 				glm::vec2 basePos(0.0f);
 
-				if (!textCache.bRaw)
-				{
-					real strWidth = GetStringWidth(textCache, font) * textScale;
-					real strHeight = GetStringHeight(textCache, font) * textScale;
+				real strWidth = GetStringWidth(textCache, font) * textScale;
+				real strHeight = GetStringHeight(textCache, font) * textScale;
 
-					switch (textCache.anchor)
-					{
-					case AnchorPoint::TOP_LEFT:
-						basePos = glm::vec3(-aspectRatio, 1.0f - strHeight / 2.0f, 0.0f);
-						break;
-					case AnchorPoint::TOP:
-						basePos = glm::vec3(-strWidth / 2.0f, 1.0f - strHeight / 2.0f, 0.0f);
-						break;
-					case AnchorPoint::TOP_RIGHT:
-						basePos = glm::vec3(aspectRatio - strWidth, 1.0f - strHeight / 2.0f, 0.0f);
-						break;
-					case AnchorPoint::RIGHT:
-						basePos = glm::vec3(aspectRatio - strWidth, 0.0f, 0.0f);
-						break;
-					case AnchorPoint::BOTTOM_RIGHT:
-						basePos = glm::vec3(aspectRatio - strWidth, -1.0f + strHeight / 2.0f, 0.0f);
-						break;
-					case AnchorPoint::BOTTOM:
-						basePos = glm::vec3(-strWidth / 2.0f, -1.0f + strHeight / 2.0f, 0.0f);
-						break;
-					case AnchorPoint::BOTTOM_LEFT:
-						basePos = glm::vec3(-aspectRatio, -1.0f + strHeight / 2.0f, 0.0f);
-						break;
-					case AnchorPoint::LEFT:
-						basePos = glm::vec3(-aspectRatio, 0.0f, 0.0f);
-						break;
-					case AnchorPoint::CENTER: // Fall through
-					case AnchorPoint::WHOLE:
-						basePos = glm::vec3(-strWidth / 2.0f, 0.0f, 0.0f);
-						break;
-					default:
-						break;
-					}
+				switch (textCache.anchor)
+				{
+				case AnchorPoint::TOP_LEFT:
+					basePos = glm::vec3(-aspectRatio, 1.0f - strHeight / 2.0f, 0.0f);
+					break;
+				case AnchorPoint::TOP:
+					basePos = glm::vec3(-strWidth / 2.0f, 1.0f - strHeight / 2.0f, 0.0f);
+					break;
+				case AnchorPoint::TOP_RIGHT:
+					basePos = glm::vec3(aspectRatio - strWidth, 1.0f - strHeight / 2.0f, 0.0f);
+					break;
+				case AnchorPoint::RIGHT:
+					basePos = glm::vec3(aspectRatio - strWidth, 0.0f, 0.0f);
+					break;
+				case AnchorPoint::BOTTOM_RIGHT:
+					basePos = glm::vec3(aspectRatio - strWidth, -1.0f + strHeight / 2.0f, 0.0f);
+					break;
+				case AnchorPoint::BOTTOM:
+					basePos = glm::vec3(-strWidth / 2.0f, -1.0f + strHeight / 2.0f, 0.0f);
+					break;
+				case AnchorPoint::BOTTOM_LEFT:
+					basePos = glm::vec3(-aspectRatio, -1.0f + strHeight / 2.0f, 0.0f);
+					break;
+				case AnchorPoint::LEFT:
+					basePos = glm::vec3(-aspectRatio, 0.0f, 0.0f);
+					break;
+				case AnchorPoint::CENTER: // Fall through
+				case AnchorPoint::WHOLE:
+					basePos = glm::vec3(-strWidth / 2.0f, 0.0f, 0.0f);
+					break;
+				default:
+					break;
 				}
 
 				char prevChar = ' ';
-				for (u32 j = 0; j < currentStr.length(); ++j)
+				for (char c : currentStr)
 				{
-					char c = currentStr[j];
-
 					if (BitmapFont::IsCharValid(c))
 					{
 						FontMetric* metric = font->GetMetric(c);
@@ -1782,10 +2890,10 @@ namespace flex
 							}
 
 							glm::vec2 pos =
-								glm::vec2((textCache.pos.x) * (textCache.bRaw ? 1.0f : aspectRatio), textCache.pos.y) +
+								glm::vec2((textCache.pos.x) * aspectRatio, textCache.pos.y) +
 								glm::vec2(totalAdvanceX + metric->offsetX, -metric->offsetY) * textScale;
 
-							if (font->UseKerning())
+							if (font->bUseKerning)
 							{
 								std::wstring charKey(std::wstring(1, prevChar) + std::wstring(1, c));
 
@@ -1827,7 +2935,7 @@ namespace flex
 				}
 			}
 
-			font->SetBufferSize((i32)(outTextVertices.size()) - font->GetBufferStart());
+			font->bufferSize = (i32)outTextVertices.size() - font->bufferStart;
 			font->ClearCaches();
 		}
 	}
@@ -1838,30 +2946,36 @@ namespace flex
 
 		PROFILE_AUTO("Update Text Buffer WS");
 
-		glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
-		//real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
+		const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+		const real frameBufferScale = glm::max(2.0f / (real)frameBufferSize.x, 2.0f / (real)frameBufferSize.y);
+
+		u32 charCountUpperBound = 0;
+		for (BitmapFont* font : m_FontsWS)
+		{
+			const std::vector<TextCache>& caches = font->GetTextCaches();
+			for (const TextCache& textCache : caches)
+			{
+				charCountUpperBound += textCache.str.length();
+			}
+		}
+		outTextVertices.reserve(charCountUpperBound);
 
 		for (BitmapFont* font : m_FontsWS)
 		{
-			real textScale = glm::max(2.0f / (real)frameBufferSize.x, 2.0f / (real)frameBufferSize.y) *
-				(font->GetSize() / 12.0f);
+			real textScale = frameBufferScale * (font->metaData.size / 12.0f);
 
-			font->SetBufferStart((i32)(outTextVertices.size()));
+			font->bufferStart = (i32)(outTextVertices.size());
 
 			const std::vector<TextCache>& caches = font->GetTextCaches();
 			for (const TextCache& textCache : caches)
 			{
-				std::string currentStr = textCache.str;
-
 				const glm::vec3 tangent = -glm::rotate(textCache.rot, VEC3_RIGHT);
 
 				real totalAdvanceX = 0;
 
 				char prevChar = ' ';
-				for (u32 j = 0; j < currentStr.length(); ++j)
+				for (char c : textCache.str)
 				{
-					char c = currentStr[j];
-
 					if (BitmapFont::IsCharValid(c))
 					{
 						FontMetric* metric = font->GetMetric(c);
@@ -1875,23 +2989,23 @@ namespace flex
 							}
 
 							glm::vec3 pos = textCache.pos +
-								tangent * (totalAdvanceX + metric->offsetX) * textScale +
-								VEC3_UP * (real)(-metric->offsetY) * textScale;
+								tangent * (totalAdvanceX + metric->offsetX) * textScale * textCache.scale +
+								VEC3_UP * (real)(-metric->offsetY) * textScale * textCache.scale;
 
-							if (font->UseKerning())
+							if (font->bUseKerning)
 							{
 								std::wstring charKey(std::wstring(1, prevChar) + std::wstring(1, c));
 
 								auto iter = metric->kerning.find(charKey);
 								if (iter != metric->kerning.end())
 								{
-									pos += glm::vec3(iter->second, 0.0f) * textScale;
+									pos += glm::vec3(iter->second, 0.0f) * textScale * textCache.scale;
 								}
 							}
 
 							glm::vec4 charSizePixelsCharSizeNorm(
 								metric->width, metric->height,
-								metric->width * textScale, metric->height * textScale);
+								metric->width * textScale * textCache.scale, metric->height * textScale * textCache.scale);
 
 							i32 texChannel = (i32)metric->channel;
 
@@ -1921,7 +3035,7 @@ namespace flex
 				}
 			}
 
-			font->SetBufferSize((i32)(outTextVertices.size()) - font->GetBufferStart());
+			font->bufferSize = (i32)outTextVertices.size() - font->bufferStart;
 			font->ClearCaches();
 		}
 	}
@@ -1937,36 +3051,96 @@ namespace flex
 	glm::mat4 Renderer::GetPostProcessingMatrix() const
 	{
 		glm::mat4 contrastBrightnessSaturation;
-		if (m_bPostProcessingEnabled)
-		{
-			real sat = m_PostProcessSettings.saturation;
-			glm::vec3 brightness = m_PostProcessSettings.brightness;
-			glm::vec3 offset = m_PostProcessSettings.offset;
+		real sat = m_PostProcessSettings.saturation;
+		glm::vec3 brightness = m_PostProcessSettings.brightness;
+		glm::vec3 offset = m_PostProcessSettings.offset;
 
-			static const glm::vec3 wgt(0.3086f, 0.6094f, 0.0820f);
-			real a = (1.0f - sat) * wgt.r + sat;
-			real b = (1.0f - sat) * wgt.r;
-			real c = (1.0f - sat) * wgt.r;
-			real d = (1.0f - sat) * wgt.g;
-			real e = (1.0f - sat) * wgt.g + sat;
-			real f = (1.0f - sat) * wgt.g;
-			real g = (1.0f - sat) * wgt.b;
-			real h = (1.0f - sat) * wgt.b;
-			real i = (1.0f - sat) * wgt.b + sat;
-			glm::mat4 satMat = {
-				a, b, c, 0,
-				d, e, f, 0,
-				g, h, i, 0,
-				0, 0, 0, 1
+		static const glm::vec3 wgt(0.3086f, 0.6094f, 0.0820f);
+		real a = (1.0f - sat) * wgt.r + sat;
+		real b = (1.0f - sat) * wgt.r;
+		real c = (1.0f - sat) * wgt.r;
+		real d = (1.0f - sat) * wgt.g;
+		real e = (1.0f - sat) * wgt.g + sat;
+		real f = (1.0f - sat) * wgt.g;
+		real g = (1.0f - sat) * wgt.b;
+		real h = (1.0f - sat) * wgt.b;
+		real i = (1.0f - sat) * wgt.b + sat;
+		glm::mat4 satMat = {
+			a, b, c, 0,
+			d, e, f, 0,
+			g, h, i, 0,
+			0, 0, 0, 1
+		};
+
+		contrastBrightnessSaturation = glm::translate(glm::scale(satMat, brightness), offset);
+		return contrastBrightnessSaturation;
+	}
+
+	void Renderer::GenerateGBufferVertexBuffer(bool bFlipV)
+	{
+		if (m_gBufferQuadVertexBufferData.vertexData == nullptr)
+		{
+			VertexBufferDataCreateInfo gBufferQuadVertexBufferDataCreateInfo = {};
+
+			gBufferQuadVertexBufferDataCreateInfo.positions_3D = {
+				glm::vec3(-1.0f, -1.0f, 0.0f),
+				glm::vec3(-1.0f, 3.0f,  0.0f),
+				glm::vec3(3.0f,  -1.0f, 0.0f),
 			};
 
-			contrastBrightnessSaturation = glm::translate(glm::scale(satMat, brightness), offset);
+			gBufferQuadVertexBufferDataCreateInfo.texCoords_UV = {
+				glm::vec2(0.0f, bFlipV ? 1.0f : 0.0f),
+				glm::vec2(0.0f, bFlipV ? -1.0f : 2.0f),
+				glm::vec2(2.0f, bFlipV ? 1.0f : 0.0f),
+			};
+
+			gBufferQuadVertexBufferDataCreateInfo.attributes = (u32)VertexAttribute::POSITION | (u32)VertexAttribute::UV;
+			m_gBufferQuadVertexBufferData.Initialize(&gBufferQuadVertexBufferDataCreateInfo);
 		}
-		else
+	}
+
+	void Renderer::GenerateSSAONoise(std::vector<glm::vec4>& noise)
+	{
+		noise = std::vector<glm::vec4>(SSAO_NOISE_DIM * SSAO_NOISE_DIM);
+		for (glm::vec4& noiseSample : noise)
 		{
-			contrastBrightnessSaturation = MAT4_IDENTITY;
+			// Random rotations around z-axis
+			noiseSample = glm::vec4(RandomFloat(-1.0f, 1.0f), RandomFloat(-1.0f, 1.0f), 0.0f, 0.0f);
 		}
-		return contrastBrightnessSaturation;
+	}
+
+	void PhysicsDebugDrawBase::UpdateDebugMode()
+	{
+		const PhysicsDebuggingSettings& settings = g_Renderer->GetPhysicsDebuggingSettings();
+
+		m_DebugMode =
+			(settings.DisableAll ? DBG_NoDebug : 0) |
+			(settings.DrawWireframe ? DBG_DrawWireframe : 0) |
+			(settings.DrawAabb ? DBG_DrawAabb : 0) |
+			(settings.DrawFeaturesText ? DBG_DrawFeaturesText : 0) |
+			(settings.DrawContactPoints ? DBG_DrawContactPoints : 0) |
+			(settings.NoDeactivation ? DBG_NoDeactivation : 0) |
+			(settings.NoHelpText ? DBG_NoHelpText : 0) |
+			(settings.DrawText ? DBG_DrawText : 0) |
+			(settings.ProfileTimings ? DBG_ProfileTimings : 0) |
+			(settings.EnableSatComparison ? DBG_EnableSatComparison : 0) |
+			(settings.DisableBulletLCP ? DBG_DisableBulletLCP : 0) |
+			(settings.EnableCCD ? DBG_EnableCCD : 0) |
+			(settings.DrawConstraints ? DBG_DrawConstraints : 0) |
+			(settings.DrawConstraintLimits ? DBG_DrawConstraintLimits : 0) |
+			(settings.FastWireframe ? DBG_FastWireframe : 0) |
+			(settings.DrawNormals ? DBG_DrawNormals : 0) |
+			(settings.DrawFrames ? DBG_DrawFrames : 0);
+	}
+
+	void PhysicsDebugDrawBase::ClearLines()
+	{
+		m_LineSegmentIndex = 0;
+	}
+
+	void PhysicsDebugDrawBase::flushLines()
+	{
+		Draw();
 	}
 
 } // namespace flex

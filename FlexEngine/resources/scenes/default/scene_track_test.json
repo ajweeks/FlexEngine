@@ -1,0 +1,897 @@
+{
+	"version" : 2,
+	"name" : "Scene_track_test",
+	"spawn player" : true,
+	"objects" : 
+	[
+		{
+			"name" : "Environment",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, -0.110, 0.000"
+			},
+			"children" : 
+			[
+				{
+					"name" : "Earth",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "-24.200, 2.945, -2.024",
+						"rot" : "0.000, -0.000, 0.000"
+					},
+					"mesh" : "earth",
+					"material" : "grid",
+					"collider" : 
+					{
+						"shape" : "box",
+						"half extents" : "0.500, 0.500, 0.500"
+					},
+					"rigid body" : 
+					{
+						"mass" : 0.000000,
+						"kinematic" : false,
+						"static" : true,
+						"mask" : 1,
+						"group" : 1
+					}
+				},
+				{
+					"name" : "New_Object_03",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "-41.846, 1.915, -2.111",
+						"rot" : "0.000, -0.000, 0.000",
+						"scale" : "5.413, 4.346, 7.675"
+					},
+					"mesh" : "cube",
+					"material" : "grid",
+					"collider" : 
+					{
+						"shape" : "box",
+						"half extents" : "0.500, 0.500, 0.500"
+					},
+					"rigid body" : 
+					{
+						"mass" : 0.000000,
+						"kinematic" : false,
+						"static" : true,
+						"mask" : 1,
+						"group" : 1
+					}
+				},
+				{
+					"name" : "New_Object_10",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "-57.097, 2.696, -2.283",
+						"rot" : "0.000, -0.000, 0.000",
+						"scale" : "6.565, 6.070, 10.043"
+					},
+					"mesh" : "cube",
+					"material" : "grid",
+					"collider" : 
+					{
+						"shape" : "box",
+						"half extents" : "0.500, 0.500, 0.500"
+					},
+					"rigid body" : 
+					{
+						"mass" : 0.000000,
+						"kinematic" : false,
+						"static" : true,
+						"mask" : 1,
+						"group" : 1
+					}
+				},
+				{
+					"name" : "New_Object_14",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "-26.550, 2.795, -26.856",
+						"rot" : "0.000, -0.000, 0.000",
+						"scale" : "4.010, 7.861, 10.030"
+					},
+					"mesh" : "cube",
+					"material" : "grid",
+					"collider" : 
+					{
+						"shape" : "box",
+						"half extents" : "0.500, 0.500, 0.500"
+					},
+					"rigid body" : 
+					{
+						"mass" : 0.000000,
+						"kinematic" : false,
+						"static" : true,
+						"mask" : 1,
+						"group" : 1
+					}
+				},
+				{
+					"name" : "New_Object_04",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "-41.947, 2.595, 22.977",
+						"rot" : "0.000, -0.000, 0.000",
+						"scale" : "4.021, 10.791, 5.011"
+					},
+					"mesh" : "cube",
+					"material" : "grid",
+					"collider" : 
+					{
+						"shape" : "box",
+						"half extents" : "0.500, 0.500, 0.500"
+					},
+					"rigid body" : 
+					{
+						"mass" : 0.000000,
+						"kinematic" : false,
+						"static" : true,
+						"mask" : 1,
+						"group" : 1
+					}
+				},
+				{
+					"name" : "New_Object_05",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "-31.359, 2.595, 23.019",
+						"rot" : "0.000, -0.000, 0.000",
+						"scale" : "4.010, 5.325, 10.017"
+					},
+					"mesh" : "cube",
+					"material" : "grid",
+					"collider" : 
+					{
+						"shape" : "box",
+						"half extents" : "0.500, 0.500, 0.500"
+					},
+					"rigid body" : 
+					{
+						"mass" : 0.000000,
+						"kinematic" : false,
+						"static" : true,
+						"mask" : 1,
+						"group" : 1
+					}
+				},
+				{
+					"name" : "New_Object_06",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "-31.452, 2.502, 46.210",
+						"rot" : "0.000, -0.000, 0.000",
+						"scale" : "4.012, 4.688, 8.645"
+					},
+					"mesh" : "cube",
+					"material" : "grid",
+					"collider" : 
+					{
+						"shape" : "box",
+						"half extents" : "0.500, 0.500, 0.500"
+					},
+					"rigid body" : 
+					{
+						"mass" : 0.000000,
+						"kinematic" : false,
+						"static" : true,
+						"mask" : 1,
+						"group" : 1
+					}
+				},
+				{
+					"name" : "New_Object_07",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "-44.331, 2.502, 46.158",
+						"rot" : "0.000, -0.000, 0.000",
+						"scale" : "4.020, 6.085, 5.405"
+					},
+					"mesh" : "cube",
+					"material" : "grid",
+					"collider" : 
+					{
+						"shape" : "box",
+						"half extents" : "0.500, 0.500, 0.500"
+					},
+					"rigid body" : 
+					{
+						"mass" : 0.000000,
+						"kinematic" : false,
+						"static" : true,
+						"mask" : 1,
+						"group" : 1
+					}
+				},
+				{
+					"name" : "New_Object_08",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "-57.290, 3.004, 46.106",
+						"rot" : "0.000, -0.000, 0.000",
+						"scale" : "5.051, 6.080, 6.178"
+					},
+					"mesh" : "cube",
+					"material" : "grid",
+					"collider" : 
+					{
+						"shape" : "box",
+						"half extents" : "0.500, 0.500, 0.500"
+					},
+					"rigid body" : 
+					{
+						"mass" : 0.000000,
+						"kinematic" : false,
+						"static" : true,
+						"mask" : 1,
+						"group" : 1
+					}
+				},
+				{
+					"name" : "New_Object_09",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "-57.198, 2.595, 22.893",
+						"rot" : "0.000, -0.000, 0.000",
+						"scale" : "4.010, 9.869, 10.042"
+					},
+					"mesh" : "cube",
+					"material" : "grid",
+					"collider" : 
+					{
+						"shape" : "box",
+						"half extents" : "0.500, 0.500, 0.500"
+					},
+					"rigid body" : 
+					{
+						"mass" : 0.000000,
+						"kinematic" : false,
+						"static" : true,
+						"mask" : 1,
+						"group" : 1
+					}
+				},
+				{
+					"name" : "New_Object_11",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "-56.998, 2.795, -26.978",
+						"rot" : "0.000, -0.000, 0.000",
+						"scale" : "8.866, 6.070, 10.059"
+					},
+					"mesh" : "cube",
+					"material" : "grid",
+					"collider" : 
+					{
+						"shape" : "box",
+						"half extents" : "0.500, 0.500, 0.500"
+					},
+					"rigid body" : 
+					{
+						"mass" : 0.000000,
+						"kinematic" : false,
+						"static" : true,
+						"mask" : 1,
+						"group" : 1
+					}
+				},
+				{
+					"name" : "New_Object_12",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "-41.523, 2.795, -26.916",
+						"rot" : "0.000, -0.000, 0.000",
+						"scale" : "4.010, 12.723, 10.054"
+					},
+					"mesh" : "cube",
+					"material" : "grid",
+					"collider" : 
+					{
+						"shape" : "box",
+						"half extents" : "0.500, 0.500, 0.500"
+					},
+					"rigid body" : 
+					{
+						"mass" : 0.000000,
+						"kinematic" : false,
+						"static" : true,
+						"mask" : 1,
+						"group" : 1
+					}
+				},
+				{
+					"name" : "New_Object_01",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "-10.859, 2.026, -25.011",
+						"rot" : "0.000, -0.000, 0.000",
+						"scale" : "6.000, 4.940, 7.000"
+					},
+					"mesh" : "cube",
+					"material" : "grid",
+					"collider" : 
+					{
+						"shape" : "box",
+						"half extents" : "0.500, 0.500, 0.500"
+					},
+					"rigid body" : 
+					{
+						"mass" : 0.000000,
+						"kinematic" : false,
+						"static" : true,
+						"mask" : 1,
+						"group" : 1
+					}
+				},
+				{
+					"name" : "New_Object_00",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "-9.881, 2.947, 11.166",
+						"rot" : "0.000, -0.000, 0.000",
+						"scale" : "3.998, 6.050, 3.029"
+					},
+					"mesh" : "cube",
+					"material" : "grid",
+					"collider" : 
+					{
+						"shape" : "box",
+						"half extents" : "0.500, 0.500, 0.500"
+					},
+					"rigid body" : 
+					{
+						"mass" : 0.000000,
+						"kinematic" : false,
+						"static" : true,
+						"mask" : 1,
+						"group" : 1
+					}
+				},
+				{
+					"name" : "ground plane",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"scale" : "150.000, 1.000, 150.000"
+					},
+					"mesh" : "unit-plane",
+					"material" : "grid",
+					"collider" : 
+					{
+						"shape" : "box",
+						"half extents" : "0.500, 0.500, 0.500",
+						"offset pos" : "0.000, -0.500, 0.000"
+					},
+					"rigid body" : 
+					{
+						"mass" : 0.000000,
+						"kinematic" : true,
+						"static" : true,
+						"mask" : -1,
+						"group" : -1
+					}
+				},
+				{
+					"name" : "cloud box",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "0.441, 11.126, -4.611",
+						"rot" : "0.000, -0.000, 0.000",
+						"scale" : "6.000, 4.940, 6.050"
+					},
+					"mesh" : "cube",
+					"material" : "clouds",
+					"collider" : 
+					{
+						"shape" : "box",
+						"half extents" : "0.500, 0.500, 0.500"
+					},
+					"rigid body" : 
+					{
+						"mass" : 0.000000,
+						"kinematic" : false,
+						"static" : true,
+						"mask" : 1,
+						"group" : 1
+					}
+				},
+				{
+					"name" : "noise box",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "0.441, 11.126, -11.511",
+						"rot" : "0.000, -0.000, 0.000",
+						"scale" : "6.000, 4.940, 5.660"
+					},
+					"mesh" : "cube",
+					"material" : "noise",
+					"collider" : 
+					{
+						"shape" : "box",
+						"half extents" : "0.500, 0.500, 0.500"
+					},
+					"rigid body" : 
+					{
+						"mass" : 0.000000,
+						"kinematic" : false,
+						"static" : true,
+						"mask" : 1,
+						"group" : 1
+					}
+				},
+				{
+					"name" : "cerebus box",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "0.441, 4.626, -4.611",
+						"rot" : "0.000, -0.000, 0.000",
+						"scale" : "6.000, 4.940, 6.050"
+					},
+					"mesh" : "cube",
+					"material" : "cerberus",
+					"collider" : 
+					{
+						"shape" : "box",
+						"half extents" : "0.500, 0.500, 0.500"
+					},
+					"rigid body" : 
+					{
+						"mass" : 0.000000,
+						"kinematic" : false,
+						"static" : true,
+						"mask" : 1,
+						"group" : 1
+					}
+				},
+				{
+					"name" : "grid box",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "0.441, 4.626, -11.611",
+						"rot" : "0.000, -0.000, 0.000",
+						"scale" : "6.000, 4.940, 5.510"
+					},
+					"mesh" : "cube",
+					"material" : "grid",
+					"collider" : 
+					{
+						"shape" : "box",
+						"half extents" : "0.500, 0.500, 0.500"
+					},
+					"rigid body" : 
+					{
+						"mass" : 0.000000,
+						"kinematic" : false,
+						"static" : true,
+						"mask" : 1,
+						"group" : 1
+					}
+				},
+				{
+					"name" : "capsule",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "2.941, 7.826, -8.064",
+						"rot" : "0.000, -0.000, 0.000",
+						"scale" : "1.370, 0.800, 1.090"
+					},
+					"mesh" : "capsule",
+					"material" : "grid",
+					"collider" : 
+					{
+						"shape" : "box",
+						"half extents" : "0.500, 0.500, 0.500"
+					},
+					"rigid body" : 
+					{
+						"mass" : 0.000000,
+						"kinematic" : false,
+						"static" : true,
+						"mask" : 1,
+						"group" : 1
+					}
+				},
+				{
+					"name" : "striped box",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "-15.359, 12.926, -7.211",
+						"rot" : "0.000, -0.000, 0.000",
+						"scale" : "3.460, 1.140, 27.570"
+					},
+					"mesh" : "cube",
+					"material" : "stripes",
+					"collider" : 
+					{
+						"shape" : "box",
+						"half extents" : "0.500, 0.500, 0.500"
+					},
+					"rigid body" : 
+					{
+						"mass" : 0.000000,
+						"kinematic" : false,
+						"static" : true,
+						"mask" : 1,
+						"group" : 1
+					}
+				},
+				{
+					"name" : "striped box2",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "-19.459, 12.926, -9.011",
+						"rot" : "0.000, -0.000, 0.000",
+						"scale" : "3.460, 1.140, 27.570"
+					},
+					"mesh" : "cube",
+					"material" : "stripes",
+					"collider" : 
+					{
+						"shape" : "box",
+						"half extents" : "0.500, 0.500, 0.500"
+					},
+					"rigid body" : 
+					{
+						"mass" : 0.000000,
+						"kinematic" : false,
+						"static" : true,
+						"mask" : 1,
+						"group" : 1
+					}
+				},
+				{
+					"name" : "striped box3",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "-23.859, 12.926, -6.611",
+						"rot" : "0.000, -0.000, 0.000",
+						"scale" : "3.460, 1.140, 27.570"
+					},
+					"mesh" : "cube",
+					"material" : "stripes",
+					"collider" : 
+					{
+						"shape" : "box",
+						"half extents" : "0.500, 0.500, 0.500"
+					},
+					"rigid body" : 
+					{
+						"mass" : 0.000000,
+						"kinematic" : false,
+						"static" : true,
+						"mask" : 1,
+						"group" : 1
+					}
+				},
+				{
+					"name" : "striped box4",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "-28.059, 12.926, -9.911",
+						"rot" : "0.000, -0.000, 0.000",
+						"scale" : "3.460, 1.140, 27.570"
+					},
+					"mesh" : "cube",
+					"material" : "stripes",
+					"collider" : 
+					{
+						"shape" : "box",
+						"half extents" : "0.500, 0.500, 0.500"
+					},
+					"rigid body" : 
+					{
+						"mass" : 0.000000,
+						"kinematic" : false,
+						"static" : true,
+						"mask" : 1,
+						"group" : 1
+					}
+				}
+			]
+		},
+		{
+			"name" : "Lighting",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"children" : 
+			[
+				{
+					"name" : "Directional Light",
+					"type" : "directional light",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "0.000, 15.000, 0.000",
+						"rot" : "0.000, 0.715, 0.574"
+					},
+					"directional light info" : 
+					{
+						"rotation" : "-0.099, 0.336, 0.265, 0.898",
+						"pos" : "0.000, 15.000, 0.000",
+						"color" : "1.00, 1.00, 1.00",
+						"enabled" : true,
+						"brightness" : 4.063000,
+						"cast shadows" : true,
+						"shadow darkness" : 0.911000
+					}
+				},
+				{
+					"name" : "Skybox 1",
+					"type" : "skybox",
+					"visible" : true,
+					"transform" : 
+					{
+					},
+					"material" : "skybox 02",
+					"skybox info" : 
+					{
+					}
+				},
+				{
+					"name" : "Reflection Probe 01",
+					"type" : "reflection probe",
+					"visible" : false,
+					"transform" : 
+					{
+						"pos" : "-8.434, 7.266, 0.000"
+					},
+					"children" : 
+					[
+						{
+							"name" : "New_Game_Object_00",
+							"type" : "NONE",
+							"visible" : true,
+							"transform" : 
+							{
+							}
+						}
+					]
+				},
+				{
+					"name" : "PointLight_03",
+					"type" : "point light",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "-22.547, 9.283, -11.692"
+					},
+					"point light info" : 
+					{
+						"pos" : "-22.547, 9.283, -11.692",
+						"color" : "1.00, 1.00, 1.00",
+						"enabled" : true,
+						"brightness" : 812.500000
+					}
+				},
+				{
+					"name" : "PointLight_00",
+					"type" : "point light",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "-14.163, 6.757, 14.795"
+					},
+					"point light info" : 
+					{
+						"pos" : "-14.163, 6.757, 14.795",
+						"color" : "0.97, 0.97, 0.70",
+						"enabled" : true,
+						"brightness" : 145.832993
+					}
+				},
+				{
+					"name" : "PointLight_01",
+					"type" : "point light",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "3.100, 4.737, -25.251"
+					},
+					"point light info" : 
+					{
+						"pos" : "3.100, 4.737, -25.251",
+						"color" : "1.00, 1.00, 1.00",
+						"enabled" : true,
+						"brightness" : 270.936005
+					}
+				},
+				{
+					"name" : "PointLight_02",
+					"type" : "point light",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "10.065, 7.522, 14.100"
+					},
+					"point light info" : 
+					{
+						"pos" : "10.065, 7.522, 14.100",
+						"color" : "0.60, 0.67, 1.00",
+						"enabled" : true,
+						"brightness" : 723.958008
+					}
+				},
+				{
+					"name" : "Reflection Probe 02",
+					"type" : "reflection probe",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "-8.434, 7.266, 0.000"
+					},
+					"children" : 
+					[
+						{
+							"name" : "New_Game_Object_00",
+							"type" : "NONE",
+							"visible" : true,
+							"transform" : 
+							{
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name" : "New_Game_Object_00",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"children" : 
+			[
+				{
+					"name" : "Reflection Probe 02",
+					"type" : "reflection probe",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "-8.434, 7.266, 0.000"
+					},
+					"children" : 
+					[
+						{
+							"name" : "New_Game_Object_00",
+							"type" : "NONE",
+							"visible" : true,
+							"transform" : 
+							{
+							}
+						}
+					]
+				}
+			]
+		}
+	],
+	"track manager" : 
+	{
+		"tracks" : 
+		{
+			"track" : 
+			{
+				"curve" : "5.00000, 0.00000, 5.00000, 15.00000, 0.00000, 12.00000, 25.00000, 0.00000, 5.00000, 35.00000, 0.00000, 10.00000",
+				"curve" : "35.00000, 0.00000, 10.00000, 45.00000, 0.00000, 10.00000, 55.00000, 0.00000, 10.00000, 60.00000, 0.00000, 10.00000",
+				"curve" : "60.00000, 0.00000, 10.00000, 70.00000, 0.00000, 10.00000, 73.00000, 0.00000, 8.00000, 73.00000, 0.00000, 2.00000",
+				"curve" : "73.00000, 0.00000, 2.00000, 73.00000, 0.00000, -6.00000, 60.00000, 0.00000, -8.00000, 50.00000, 0.00000, -8.00000"
+			},
+			"track" : 
+			{
+				"curve" : "35.00000, 0.00000, 10.00000, 37.00000, 0.00000, 17.00000, 25.00000, 0.00000, 16.00000, 22.00000, 0.00000, 19.00000",
+				"curve" : "22.00000, 0.00000, 19.00000, 19.00000, 0.00000, 22.00000, 13.00000, 0.00000, 22.00000, 11.00000, 0.00000, 25.00000"
+			},
+			"track" : 
+			{
+				"curve" : "35.00000, 0.00000, 10.00000, 40.00000, 0.00000, -2.00000, 45.00000, 0.00000, 4.00000, 50.00000, 0.00000, -8.00000"
+			},
+			"track" : 
+			{
+				"curve" : "36.00000, 0.00000, -16.00000, 36.00000, 0.00000, -19.00000, 35.00000, 0.00000, -24.00000, 37.00000, 0.00000, -31.00000",
+				"curve" : "37.00000, 0.00000, -31.00000, 39.00000, 0.00000, -37.00000, 43.00000, 0.00000, -34.00000, 46.00000, 0.00000, -39.00000",
+				"curve" : "46.00000, 0.00000, -39.00000, 50.00000, 0.00000, -43.00000, 46.00000, 0.00000, -45.00000, 44.00000, 0.00000, -51.00000",
+				"curve" : "44.00000, 0.00000, -51.00000, 42.00000, 0.00000, -57.00000, 26.00000, 0.00000, -51.00000, 23.00000, 0.00000, -49.00000",
+				"curve" : "23.00000, 0.00000, -49.00000, 20.00000, 0.00000, -46.00000, 22.00000, 0.00000, -36.00000, 27.00000, 0.00000, -30.00000",
+				"curve" : "27.00000, 0.00000, -30.00000, 32.00000, 0.00000, -25.00000, 30.00000, 0.00000, -20.00000, 27.00000, 0.00000, -13.00000",
+				"curve" : "27.00000, 0.00000, -13.00000, 24.00000, 0.00000, -7.00000, 32.00000, 0.00000, -11.00000, 37.00000, 0.00000, -13.00000",
+				"curve" : "37.00000, 0.00000, -13.00000, 43.00000, 0.00000, -16.00000, 37.00000, 0.00000, -17.00000, 36.00000, 0.00000, -16.00000",
+				"curve" : "36.00000, 0.00000, -16.00000, 34.00000, 0.00000, -14.00000, 36.00000, 0.00000, -16.00000, 40.00000, 0.00000, -19.00000"
+			},
+			"track" : 
+			{
+				"curve" : "14.00000, 0.00000, -12.00000, 11.00000, 0.00000, -16.00000, 6.00000, 0.00000, -26.00000, 13.00000, 0.00000, -34.00000",
+				"curve" : "13.00000, 0.00000, -34.00000, 19.00000, 0.00000, -42.00000, 11.00000, 0.00000, -44.00000, 8.00000, 0.00000, -48.00000"
+			},
+			"track" : 
+			{
+				"curve" : "17.00000, 0.00000, 0.00000, 17.00000, 0.00000, -4.00000, 15.00000, 0.00000, -11.00000, 8.00000, 0.00000, -13.00000",
+				"curve" : "8.00000, 0.00000, -13.00000, 1.00000, 0.00000, -14.00000, -5.00000, 0.00000, -2.00000, 4.00000, 0.00000, 2.00000"
+			},
+			"track" : 
+			{
+				"curve" : "4.00000, 0.00000, 2.00000, 10.00000, 0.00000, 1.00000, 17.00000, 0.00000, 4.00000, 17.00000, 0.00000, 0.00000"
+			},
+			"track" : 
+			{
+				"curve" : "11.00000, 0.00000, 31.00000, 10.00000, 0.00000, 36.00000, 4.00000, 0.00000, 38.00000, 0.00000, 0.00000, 40.00000"
+			},
+			"track" : 
+			{
+				"curve" : "-15.00000, 0.00000, 47.00000, -4.00000, 0.00000, 52.00000, 0.00000, 0.00000, 43.00000, 0.00000, 0.00000, 40.00000"
+			},
+			"track" : 
+			{
+				"curve" : "0.00000, 0.00000, 40.00000, 3.00000, 0.00000, 42.00000, 5.00000, 0.00000, 43.00000, 6.00000, 0.00000, 51.00000"
+			},
+			"track" : 
+			{
+				"curve" : "6.00000, 0.00000, 51.00000, 5.00000, 0.00000, 58.00000, 12.00000, 0.00000, 62.00000, 18.00000, 0.00000, 55.00000",
+				"curve" : "18.00000, 0.00000, 55.00000, 24.00000, 0.00000, 48.00000, 16.00000, 0.00000, 50.00000, 11.00000, 0.00000, 45.00000",
+				"curve" : "11.00000, 0.00000, 45.00000, 7.00000, 0.00000, 39.00000, 4.00000, 0.00000, 37.00000, -4.00000, 0.00000, 35.00000",
+				"curve" : "-4.00000, 0.00000, 35.00000, -13.00000, 0.00000, 33.00000, -6.00000, 0.00000, 38.00000, 0.00000, 0.00000, 40.00000"
+			},
+			"track" : 
+			{
+				"curve" : "43.00000, 0.00000, 18.00000, 56.00000, 0.00000, 14.00000, 57.00000, 0.00000, 25.00000, 58.00000, 0.00000, 38.00000",
+				"curve" : "58.00000, 0.00000, 38.00000, 60.00000, 0.00000, 51.00000, 48.00000, 0.00000, 57.00000, 37.00000, 0.00000, 50.00000",
+				"curve" : "37.00000, 0.00000, 50.00000, 26.00000, 0.00000, 44.00000, 25.00000, 0.00000, 35.00000, 34.00000, 0.00000, 22.00000"
+			},
+			"track" : 
+			{
+				"curve" : "43.00000, 0.00000, 18.00000, 40.00000, 0.00000, 18.00000, 38.00000, 0.00000, 19.00000, 34.00000, 0.00000, 22.00000"
+			}
+		}
+	}
+}

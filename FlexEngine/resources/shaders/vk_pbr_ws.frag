@@ -1,6 +1,6 @@
 #version 450
 
-// Deferred PBR
+// Deferred PBR - World Space
 
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
@@ -12,25 +12,21 @@ layout (location = 2) in mat3 ex_TBN;
 // Updated once per frame
 layout (binding = 0) uniform UBOConstant
 {
+	mat4 view;
 	mat4 viewProjection;
 } uboConstant;
 
-// Updated once per object
 layout (binding = 1) uniform UBODynamic
 {
 	mat4 model;
 
-	// Constant values to use when not using samplers
 	vec4 constAlbedo;
 	float constMetallic;
 	float constRoughness;
-	float constAO;
 
-	// PBR samplers
 	bool enableAlbedoSampler;
 	bool enableMetallicSampler;
 	bool enableRoughnessSampler;
-	bool enableAOSampler;
 	bool enableNormalSampler;
 	
 	float blendSharpness;
@@ -40,12 +36,10 @@ layout (binding = 1) uniform UBODynamic
 layout (binding = 2) uniform sampler2D albedoSampler;
 layout (binding = 3) uniform sampler2D metallicSampler;
 layout (binding = 4) uniform sampler2D roughnessSampler;
-layout (binding = 5) uniform sampler2D aoSampler;
-layout (binding = 6) uniform sampler2D normalSampler;
+layout (binding = 5) uniform sampler2D normalSampler;
 
-layout (location = 0) out vec4 outPositionMetallic;
-layout (location = 1) out vec4 outNormalRoughness;
-layout (location = 2) out vec4 outAlbedoAO;
+layout (location = 0) out vec4 outNormalRoughness;
+layout (location = 1) out vec4 outAlbedoMetallic;
 
 void main() 
 {
@@ -78,7 +72,7 @@ void main()
 		vec3 normalX = ex_TBN * (texture(normalSampler, uvX).xyz * 2 - 1);
 		vec3 normalY = ex_TBN * (texture(normalSampler, uvY).xyz * 2 - 1);
 		vec3 normalZ = ex_TBN * (texture(normalSampler, uvZ).xyz * 2 - 1);
-		vec3 blendWeights = pow(abs(N), vec3(uboDynamic.blendSharpness));
+		vec3 blendWeights = pow(abs(geomNorm), vec3(uboDynamic.blendSharpness));
 		blendWeights = blendWeights / (blendWeights.x + blendWeights.y + blendWeights.z);
 		N = normalX * blendWeights.x +
 			normalY * blendWeights.y +
@@ -92,14 +86,12 @@ void main()
 
 	float metallic = uboDynamic.enableMetallicSampler ? texture(metallicSampler, ex_TexCoord).r : uboDynamic.constMetallic;
 	float roughness = uboDynamic.enableRoughnessSampler ? texture(roughnessSampler, ex_TexCoord).r : uboDynamic.constRoughness;
-	float ao = uboDynamic.enableAOSampler ? texture(aoSampler, ex_TexCoord).r : uboDynamic.constAO;
 
-	outPositionMetallic.rgb = ex_WorldPos;
-	outPositionMetallic.a = metallic;
+	N = normalize(mat3(uboConstant.view) * N);
 
-	outNormalRoughness.rgb = normalize(N);
+	outNormalRoughness.rgb = N;
 	outNormalRoughness.a = roughness;
 	
-	outAlbedoAO.rgb = albedo;
-	outAlbedoAO.a = ao;
+	outAlbedoMetallic.rgb = albedo;
+	outAlbedoMetallic.a = metallic;
 }

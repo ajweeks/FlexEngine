@@ -1,6 +1,7 @@
 {
-	"version" : 1,
+	"version" : 2,
 	"name" : "Cerberus Scene",
+	"spawn player" : false,
 	"objects" : 
 	[
 		{
@@ -35,43 +36,7 @@
 			{
 				"pos" : "3.100, 18.920, 1.978",
 				"rot" : "0.037, -0.000, 0.000"
-			},
-			"material" : "pbr chrome"
+			}
 		}
-	],
-	"point lights" : 
-	[
-		{
-			"pos" : "-1.000, -1.000, -1.000",
-			"color" : "0.52, 0.55, 1.00",
-			"enabled" : true,
-			"brightness" : 206.572998
-		},
-		{
-			"pos" : "-1.000, -1.000, -1.000",
-			"color" : "0.89, 0.85, 0.47",
-			"enabled" : true,
-			"brightness" : 370.891998
-		},
-		{
-			"pos" : "-1.000, -1.000, -1.000",
-			"color" : "0.52, 0.55, 1.00",
-			"enabled" : true,
-			"brightness" : 356.807007
-		},
-		{
-			"pos" : "-1.000, -1.000, -1.000",
-			"color" : "0.93, 0.66, 0.33",
-			"enabled" : true,
-			"brightness" : 323.944000
-		}
-	],
-	"directional light" : 
-	{
-		"rotation" : "0.722, 0.398, 0.566",
-		"pos" : "0.000, 0.000, 0.000",
-		"color" : "0.87, 0.83, 0.59",
-		"enabled" : true,
-		"brightness" : 2.394000
-	}
+	]
 }

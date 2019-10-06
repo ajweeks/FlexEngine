@@ -1,5 +1,5 @@
 {
-	"version" : 1,
+	"version" : 2,
 	"meshes" : 
 	[
 		{
@@ -172,6 +172,20 @@
 		},
 		{
 			"file" : "morph-tpose-01.glb",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "che.glb",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "sibnek.glb",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,

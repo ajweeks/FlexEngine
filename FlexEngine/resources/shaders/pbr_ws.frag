@@ -5,27 +5,30 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
-in vec3 ex_WorldPos;
-in mat3 ex_TBN;
-in vec4 ex_Color;
+layout (location = 0) in vec3 ex_WorldPos;
+layout (location = 1) in vec2 ex_TexCoord;
+layout (location = 2) in mat3 ex_TBN;
 
-layout (location = 0) out vec4 outPositionMetallic;
-layout (location = 1) out vec4 outNormalRoughness;
-layout (location = 2) out vec4 outAlbedoAO;
+layout (location = 0) out vec4 outNormalRoughness;
+layout (location = 1) out vec4 outAlbedoMetallic;
 
 // Material variables
 uniform float textureScale = 1.0;
 uniform float blendSharpness = 1.0;
+
 uniform vec4 constAlbedo;
 uniform bool enableAlbedoSampler;
-layout (binding = 0) uniform sampler2D albedoSampler;
-
-uniform float constMetallic;
+uniform sampler2D albedoSampler;
 uniform float constRoughness;
-uniform float constAO;
-
+uniform bool enableRoughnessSampler;
+uniform sampler2D roughnessSampler;
+uniform float constMetallic;
+uniform bool enableMetallicSampler;
+uniform sampler2D metallicSampler;
 uniform bool enableNormalSampler;
-layout (binding = 1) uniform sampler2D normalSampler;
+uniform sampler2D normalSampler;
+
+uniform mat4 view;
 
 void main() 
 {
@@ -58,7 +61,7 @@ void main()
 		vec3 normalX = ex_TBN * (texture(normalSampler, uvX).xyz * 2 - 1);
 		vec3 normalY = ex_TBN * (texture(normalSampler, uvY).xyz * 2 - 1);
 		vec3 normalZ = ex_TBN * (texture(normalSampler, uvZ).xyz * 2 - 1);
-		vec3 blendWeights = pow(abs(N), vec3(blendSharpness));
+		vec3 blendWeights = pow(abs(geomNorm), vec3(blendSharpness));
 		blendWeights = blendWeights / (blendWeights.x + blendWeights.y + blendWeights.z);
 		N = normalX * blendWeights.x +
 			normalY * blendWeights.y +
@@ -70,12 +73,14 @@ void main()
 		N = geomNorm;
 	}
 
-	outPositionMetallic.rgb = ex_WorldPos;
-	outPositionMetallic.a = constMetallic;
+	float metallic = enableMetallicSampler ? texture(metallicSampler, ex_TexCoord).r : constMetallic;
+	float roughness = enableRoughnessSampler ? texture(roughnessSampler, ex_TexCoord).r : constRoughness;
+
+	N = normalize(mat3(view) * N);
+
+	outAlbedoMetallic.rgb = albedo;
+	outAlbedoMetallic.a = constMetallic;
 
 	outNormalRoughness.rgb = N;
 	outNormalRoughness.a = constRoughness;
-	
-	outAlbedoAO.rgb = albedo * ex_Color.rgb;
-	outAlbedoAO.a = constAO;
 }

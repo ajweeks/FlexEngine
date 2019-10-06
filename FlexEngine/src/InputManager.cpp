@@ -38,8 +38,11 @@ namespace flex
 		io.KeyMap[ImGuiKey_Y] = (i32)KeyCode::KEY_Y; // for text edit CTRL+Y: redo
 		io.KeyMap[ImGuiKey_Z] = (i32)KeyCode::KEY_Z; // for text edit CTRL+Z: undo
 
-		LoadInputBindingsFromFile();
-		SaveInputBindingsToFile();
+		if (!LoadInputBindingsFromFile())
+		{
+			// Immediately save input bindings file when file doesn't exist or is incomplete
+			SaveInputBindingsToFile();
+		}
 
 		m_GamepadStates[0].averageRotationSpeeds = RollingAverage<real>(m_GamepadStates[0].framesToAverageOver);
 		m_GamepadStates[1].averageRotationSpeeds = RollingAverage<real>(m_GamepadStates[1].framesToAverageOver);
@@ -75,7 +78,7 @@ namespace flex
 		Print("pressed:  ");
 		for (u32 i = 0; i < MOUSE_BUTTON_COUNT; ++i)
 		{
-			Print("%d, ",  (m_MouseButtonsPressed & (1 << i)) != 0 ? 1 : 0);
+			Print("%d, ", (m_MouseButtonsPressed & (1 << i)) != 0 ? 1 : 0);
 		}
 		Print("\n");
 
@@ -94,7 +97,7 @@ namespace flex
 		// Mouse buttons
 		for (u32 i = 0; i < MOUSE_BUTTON_COUNT; ++i)
 		{
-			m_MouseButtonsPressed  &= ~(1 << i);
+			m_MouseButtonsPressed &= ~(1 << i);
 			m_MouseButtonsReleased &= ~(1 << i);
 			if (m_MouseButtonStates & (1 << i))
 			{
@@ -137,8 +140,8 @@ namespace flex
 
 					real stickRotationSpeed = (currentAngle - previousAngle) / g_DeltaTime;
 					stickRotationSpeed = glm::clamp(stickRotationSpeed,
-													-MAX_JOYSTICK_ROTATION_SPEED,
-													MAX_JOYSTICK_ROTATION_SPEED);
+						-MAX_JOYSTICK_ROTATION_SPEED,
+						MAX_JOYSTICK_ROTATION_SPEED);
 
 					gamepadState.averageRotationSpeeds.AddValue(stickRotationSpeed);
 				}
@@ -166,15 +169,9 @@ namespace flex
 
 	void InputManager::PostUpdate()
 	{
-		//glm::vec2i dPos = (m_MousePosition - m_PrevMousePosition);
-		//Print("%i, %i\n", dPos.x, dPos.y);
-		//i32 threshold = 300;
-		//m_bMouseWrapped = abs(dPos.x) > threshold ||
-		//	abs(dPos.y) > threshold;
-
-		for (auto iter : m_Keys)
+		for (auto& keyPair : m_Keys)
 		{
-			iter.second.pDown = iter.second.down;
+			keyPair.second.pDown = keyPair.second.down;
 		}
 
 		m_bMouseWrapped = false;
@@ -676,8 +673,13 @@ namespace flex
 
 		if (action == KeyAction::PRESS)
 		{
-			m_MouseButtonStates    |=  (1 << (u32)mouseButton);
-			m_MouseButtonsPressed  |=  (1 << (u32)mouseButton);
+			if (m_MousePosition.x == -1.0f)
+			{
+				m_MousePosition = g_Window->GetMousePosition();
+			}
+
+			m_MouseButtonStates |= (1 << (u32)mouseButton);
+			m_MouseButtonsPressed |= (1 << (u32)mouseButton);
 			m_MouseButtonsReleased &= ~(1 << (u32)mouseButton);
 
 			m_MouseButtonDrags[(i32)mouseButton].startLocation = m_MousePosition;
@@ -685,9 +687,15 @@ namespace flex
 		}
 		else if (action == KeyAction::RELEASE)
 		{
-			m_MouseButtonStates    &= ~(1 << (u32)mouseButton);
-			m_MouseButtonsPressed  &= ~(1 << (u32)mouseButton);
-			m_MouseButtonsReleased |=  (1 << (u32)mouseButton);
+			m_MouseButtonStates &= ~(1 << (u32)mouseButton);
+			m_MouseButtonsPressed &= ~(1 << (u32)mouseButton);
+			m_MouseButtonsReleased |= (1 << (u32)mouseButton);
+
+
+			if (m_MousePosition.x == -1.0f)
+			{
+				m_MousePosition = g_Window->GetMousePosition();
+			}
 
 			m_MouseButtonDrags[(i32)mouseButton].endLocation = m_MousePosition;
 		}
@@ -715,7 +723,7 @@ namespace flex
 			}
 
 			bool bEventsInQueue = (actionIter != m_ActionCallbacks.end()) ||
-								  (mouseButtonIter != m_MouseButtonCallbacks.end());
+				(mouseButtonIter != m_MouseButtonCallbacks.end());
 			while (bEventsInQueue)
 			{
 				if (actionIter == m_ActionCallbacks.end())
@@ -755,7 +763,7 @@ namespace flex
 				}
 
 				bEventsInQueue = (actionIter != m_ActionCallbacks.end()) ||
-								 (mouseButtonIter != m_MouseButtonCallbacks.end());
+					(mouseButtonIter != m_MouseButtonCallbacks.end());
 			}
 		}
 	}
@@ -814,7 +822,7 @@ namespace flex
 			}
 
 			bool bEventsInQueue = (actionIter != m_ActionCallbacks.end()) ||
-								  (keyEventIter != m_KeyEventCallbacks.end());
+				(keyEventIter != m_KeyEventCallbacks.end());
 			while (bEventsInQueue)
 			{
 				if (actionIter == m_ActionCallbacks.end())
@@ -854,7 +862,7 @@ namespace flex
 				}
 
 				bEventsInQueue = (actionIter != m_ActionCallbacks.end()) ||
-								 (keyEventIter != m_KeyEventCallbacks.end());
+					(keyEventIter != m_KeyEventCallbacks.end());
 			}
 		}
 	}
@@ -993,7 +1001,7 @@ namespace flex
 		glm::vec2 halfSizePixels = sizePixels / 2.0f;
 
 		bool bHoveringInArea = (m_MousePosition.x >= posPixels.x - halfSizePixels.x && m_MousePosition.x < posPixels.x + halfSizePixels.x &&
-								m_MousePosition.y >= posPixels.y - halfSizePixels.y && m_MousePosition.y < posPixels.y + halfSizePixels.y);
+			m_MousePosition.y >= posPixels.y - halfSizePixels.y && m_MousePosition.y < posPixels.y + halfSizePixels.y);
 		return bHoveringInArea;
 	}
 
@@ -1368,19 +1376,22 @@ namespace flex
 		}
 	}
 
-	void InputManager::LoadInputBindingsFromFile()
+	bool InputManager::LoadInputBindingsFromFile()
 	{
 		JSONObject rootObject;
 		if (!JSONParser::Parse(s_InputBindingFilePath, rootObject))
 		{
 			PrintError("Failed to load input bindings from file! Won't have any inputs mapped!!\n");
-			return;
+			return false;
 		}
+
+		bool bFileComplete = true;
 
 		const u32 actionCount = (u32)Action::_NONE;
 		if (rootObject.fields.size() != actionCount)
 		{
 			PrintWarn("Unexpected number of inputs found in input-bindings.ini! (%u expected, %u found)\n", actionCount, rootObject.fields.size());
+			bFileComplete = false;
 		}
 
 		for (u32 i = 0; i < actionCount; ++i)
@@ -1421,6 +1432,8 @@ namespace flex
 				m_InputBindings[i].bNegative = child.GetBool("negative");
 			}
 		}
+
+		return bFileComplete;
 	}
 
 	void InputManager::SaveInputBindingsToFile()
@@ -1448,8 +1461,7 @@ namespace flex
 			rootObject.fields.emplace_back(ActionStrings[i], JSONValue(bindingObj));
 		}
 
-		std::string inputBindingsFileName = s_InputBindingFilePath;
-		StripLeadingDirectories(inputBindingsFileName);
+		std::string inputBindingsFileName = StripLeadingDirectories(s_InputBindingFilePath);
 
 		std::string fileContents = rootObject.Print(0);
 		if (WriteFile(s_InputBindingFilePath, fileContents, false))

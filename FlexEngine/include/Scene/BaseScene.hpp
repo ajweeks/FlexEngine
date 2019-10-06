@@ -61,6 +61,7 @@ namespace flex
 		GameObject* AddRootObject(GameObject* gameObject);
 		void RemoveRootObject(GameObject* gameObject, bool bDestroy);
 		void RemoveAllRootObjects(bool bDestroy);
+		bool RemoveObject(GameObject* gameObject, bool bDestroy);
 
 		std::vector<MaterialID> GetMaterialIDs();
 		void AddMaterialID(MaterialID newMaterialID);
@@ -81,13 +82,13 @@ namespace flex
 		static void ParseFoundMaterialFiles();
 		static void ParseFoundPrefabFiles();
 
-		static bool SerializeMeshFile();
-		static bool SerializeMaterialFile();
-		static bool SerializePrefabFile();
-
 		static std::vector<JSONObject> s_ParsedMaterials;
 		static std::vector<JSONObject> s_ParsedMeshes;
 		static std::vector<JSONObject> s_ParsedPrefabs;
+
+		bool SerializeMeshFile() const;
+		bool SerializeMaterialFile() const;
+		bool SerializePrefabFile() const;
 
 		std::vector<GameObject*> GetAllObjects();
 
@@ -120,9 +121,12 @@ namespace flex
 		void AddObjectAtEndOFFrame(GameObject* obj);
 		void AddObjectsAtEndOFFrame(const std::vector<GameObject*>& objs);
 
+		i32 GetFileVersion() const;
+
 	protected:
 		friend GameObject;
 		friend CartManager;
+		friend SceneManager;
 
 		// Recursively finds targetObject in currentObject's children
 		// Returns true if targetObject was found and deleted
@@ -134,9 +138,8 @@ namespace flex
 
 		void UpdateRootObjectSiblingIndices();
 
-		void CreateDefaultDirectionalLight();
-
-		static const i32 m_FileVersion = 1;
+		static const i32 LATEST_FILE_VER = 2;
+		i32 m_FileVersion = LATEST_FILE_VER;
 
 		PhysicsWorld* m_PhysicsWorld = nullptr;
 
@@ -145,9 +148,9 @@ namespace flex
 
 		std::vector<GameObject*> m_RootObjects;
 
-		//bool m_bUsingSaveFile = false;
-
+		bool m_bInitialized = false;
 		bool m_bLoaded = false;
+		bool m_bSpawnPlayer = false;
 
 		/*
 		* Stores all unique initialized materials we've created

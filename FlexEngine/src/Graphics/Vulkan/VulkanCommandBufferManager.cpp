@@ -5,6 +5,7 @@
 
 #include "Graphics/Vulkan/VulkanDevice.hpp"
 #include "Graphics/Vulkan/VulkanHelpers.hpp"
+#include "Graphics/Vulkan/VulkanInitializers.hpp"
 
 namespace flex
 {
@@ -27,18 +28,12 @@ namespace flex
 		{
 			VkCommandBuffer commandBuffer;
 
-			VkCommandBufferAllocateInfo commandBuffferAllocateInfo = {};
-			commandBuffferAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-			commandBuffferAllocateInfo.commandPool = device->m_CommandPool;
-			commandBuffferAllocateInfo.level = level;
-			commandBuffferAllocateInfo.commandBufferCount = 1;
-
+			VkCommandBufferAllocateInfo commandBuffferAllocateInfo = vks::commandBufferAllocateInfo(device->m_CommandPool, level, 1);
 			VK_CHECK_RESULT(vkAllocateCommandBuffers(device->m_LogicalDevice, &commandBuffferAllocateInfo, &commandBuffer));
 
 			if (begin)
 			{
-				VkCommandBufferBeginInfo commandBufferBeginInfo = {};
-				commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+				VkCommandBufferBeginInfo commandBufferBeginInfo = vks::commandBufferBeginInfo();
 				VK_CHECK_RESULT(vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo));
 			}
 
@@ -72,8 +67,7 @@ namespace flex
 		{
 			VulkanQueueFamilyIndices queueFamilyIndices = FindQueueFamilies(surface, m_VulkanDevice->m_PhysicalDevice);
 
-			VkCommandPoolCreateInfo poolInfo = {};
-			poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+			VkCommandPoolCreateInfo poolInfo = vks::commandPoolCreateInfo();
 			poolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 			poolInfo.queueFamilyIndex = (u32)queueFamilyIndices.graphicsFamily;
 
@@ -82,14 +76,15 @@ namespace flex
 
 		void VulkanCommandBufferManager::CreateCommandBuffers(u32 count)
 		{
+			if (!m_CommandBuffers.empty())
+			{
+				vkFreeCommandBuffers(m_VulkanDevice->m_LogicalDevice, m_VulkanDevice->m_CommandPool, m_CommandBuffers.size(), m_CommandBuffers.data());
+				m_CommandBuffers.clear();
+			}
+
 			m_CommandBuffers.resize(count);
 
-			VkCommandBufferAllocateInfo allocInfo = {};
-			allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-			allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-			allocInfo.commandPool = m_VulkanDevice->m_CommandPool;
-			allocInfo.commandBufferCount = (u32)m_CommandBuffers.size();
-
+			VkCommandBufferAllocateInfo allocInfo = vks::commandBufferAllocateInfo(m_VulkanDevice->m_CommandPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, (u32)m_CommandBuffers.size());
 			VK_CHECK_RESULT(vkAllocateCommandBuffers(m_VulkanDevice->m_LogicalDevice, &allocInfo, m_CommandBuffers.data()));
 		}
 

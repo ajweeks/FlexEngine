@@ -338,7 +338,7 @@ namespace flex
 
 		const glm::vec2 frameTL = frameCenter + glm::vec2(-frameSizeHalf.x, frameSizeHalf.y);
 
-		g_Renderer->DrawUntexturedQuadRaw(frameCenter,
+		g_Renderer->EnqueueUntexturedQuadRaw(frameCenter,
 										  frameSizeHalf,
 										  glm::vec4(0.175f, 0.175f, 0.175f, s_DisplayedFrameOptions.opacity));
 
@@ -346,7 +346,7 @@ namespace flex
 		if (bMouseHoveredOverMainFrame)
 		{
 			// Highlight frame with translucent white quad when hovered
-			g_Renderer->DrawUntexturedQuadRaw(frameCenter,
+			g_Renderer->EnqueueUntexturedQuadRaw(frameCenter,
 											  frameSizeHalf,
 											  glm::vec4(1.0f, 1.0f, 1.0f, 0.03f));
 		}
@@ -374,13 +374,13 @@ namespace flex
 			glm::vec2 blockCenterNorm(blockLeftX + halfBlockWidth, blockCenterY);
 			glm::vec2 blockScaleNorm(halfBlockWidth, blockHeight);
 
-			g_Renderer->DrawUntexturedQuadRaw(blockCenterNorm, blockScaleNorm, blockColors[colorIndex]);
+			g_Renderer->EnqueueUntexturedQuadRaw(blockCenterNorm, blockScaleNorm, blockColors[colorIndex]);
 
 			bool bMouseHoveredOverBlock = g_InputManager->IsMouseHoveringRect(blockCenterNorm, blockScaleNorm);
 			if (bMouseHoveredOverBlock)
 			{
 				// Highlight hovered block with translucent white quad
-				g_Renderer->DrawUntexturedQuadRaw(blockCenterNorm, blockScaleNorm, glm::vec4(1.0f, 1.0f, 1.0f, 0.3f));
+				g_Renderer->EnqueueUntexturedQuadRaw(blockCenterNorm, blockScaleNorm, glm::vec4(1.0f, 1.0f, 1.0f, 0.3f));
 
 
 				glm::vec2 frameBufferSize = (glm::vec2)g_Window->GetFrameBufferSize();

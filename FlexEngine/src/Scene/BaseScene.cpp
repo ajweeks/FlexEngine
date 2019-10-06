@@ -48,199 +48,198 @@ namespace flex
 
 	void BaseScene::Initialize()
 	{
-		if (m_PhysicsWorld)
+		if (!m_bInitialized)
 		{
-			PrintWarn("Scene is being initialized more than once!\n");
-		}
-
-		// Physics world
-		m_PhysicsWorld = new PhysicsWorld();
-		m_PhysicsWorld->Initialize();
-
-		m_PhysicsWorld->GetWorld()->setGravity({ 0.0f, -9.81f, 0.0f });
-
-		m_CartManager.Initialize();
-
-		// Use save file if exists, otherwise use default
-		//const std::string savedShortPath = "scenes/saved/" + m_FileName;
-		const std::string defaultShortPath = "scenes/default/" + m_FileName;
-		//const std::string savedPath = RESOURCE_STR(savedShortPath);
-		const std::string defaultPath = RESOURCE_STR(defaultShortPath);
-		//m_bUsingSaveFile = FileExists(savedPath);
-
-		std::string shortFilePath;
-		std::string filePath;
-		//if (m_bUsingSaveFile)
-		//{
-		//	shortFilePath = savedShortPath;
-		//	filePath = savedPath;
-		//}
-		//else
-		{
-			shortFilePath = defaultShortPath;
-			filePath = defaultPath;
-		}
-
-		if (FileExists(filePath))
-		{
-			if (g_bEnableLogging_Loading)
+			if (m_PhysicsWorld)
 			{
-				Print("Loading scene from %s\n", shortFilePath.c_str());
+				PrintWarn("Scene is being initialized more than once!\n");
 			}
 
-			JSONObject sceneRootObject;
-			if (!JSONParser::Parse(filePath, sceneRootObject))
+			// Physics world
+			m_PhysicsWorld = new PhysicsWorld();
+			m_PhysicsWorld->Initialize();
+
+			m_PhysicsWorld->GetWorld()->setGravity({ 0.0f, -9.81f, 0.0f });
+
+			m_CartManager.Initialize();
+
+			// Use save file if exists, otherwise use default
+			//const std::string savedShortPath = "scenes/saved/" + m_FileName;
+			const std::string defaultShortPath = "scenes/default/" + m_FileName;
+			//const std::string savedPath = RESOURCE_STR(savedShortPath);
+			const std::string defaultPath = RESOURCE_STR(defaultShortPath);
+			//m_bUsingSaveFile = FileExists(savedPath);
+
+			std::string shortFilePath;
+			std::string filePath;
+			//if (m_bUsingSaveFile)
+			//{
+			//	shortFilePath = savedShortPath;
+			//	filePath = savedPath;
+			//}
+			//else
 			{
-				PrintError("Failed to parse scene file: %s\n", shortFilePath.c_str());
-				return;
+				shortFilePath = defaultShortPath;
+				filePath = defaultPath;
 			}
 
-			constexpr bool printSceneContentsToConsole = false;
-			if (printSceneContentsToConsole)
+			if (FileExists(filePath))
 			{
-				Print("Parsed scene file:\n");
-				PrintLong(sceneRootObject.Print(0).c_str());
-			}
-
-			int sceneVersion = sceneRootObject.GetInt("version");
-			if (sceneVersion != 1)
-			{
-				if (sceneRootObject.HasField("version"))
+				if (g_bEnableLogging_Loading)
 				{
-					PrintError("Unhandled scene version: %i! Max handled version: 1\n", sceneVersion);
+					Print("Loading scene from %s\n", shortFilePath.c_str());
 				}
-				else
+
+				JSONObject sceneRootObject;
+				if (!JSONParser::Parse(filePath, sceneRootObject))
 				{
+					PrintError("Failed to parse scene file: %s\n", shortFilePath.c_str());
+					return;
+				}
+
+				constexpr bool printSceneContentsToConsole = false;
+				if (printSceneContentsToConsole)
+				{
+					Print("Parsed scene file:\n");
+					PrintLong(sceneRootObject.Print(0).c_str());
+				}
+
+				if (!sceneRootObject.SetIntChecked("version", m_FileVersion))
+				{
+					m_FileVersion = 1;
 					PrintError("Scene version missing from scene file. Assuming version 1\n");
 				}
+
+				sceneRootObject.SetStringChecked("name", m_Name);
+
+				sceneRootObject.SetBoolChecked("spawn player", m_bSpawnPlayer);
+
+				// TODO: Only initialize materials currently present in this scene
+				for (JSONObject& materialObj : s_ParsedMaterials)
+				{
+					MaterialCreateInfo matCreateInfo = {};
+					Material::ParseJSONObject(materialObj, matCreateInfo);
+
+					MaterialID matID = g_Renderer->InitializeMaterial(&matCreateInfo);
+					m_LoadedMaterials.push_back(matID);
+				}
+
+				// This holds all the objects in the scene which do not have a parent
+				const std::vector<JSONObject>& rootObjects = sceneRootObject.GetObjectArray("objects");
+				for (const JSONObject& rootObjectJSON : rootObjects)
+				{
+					GameObject* rootObj = GameObject::CreateObjectFromJSON(rootObjectJSON, this, InvalidMaterialID);
+					rootObj->GetTransform()->UpdateParentTransform();
+					AddRootObject(rootObj);
+				}
+
+				if (sceneRootObject.HasField("track manager"))
+				{
+					const JSONObject& trackManagerObj = sceneRootObject.GetObject("track manager");
+
+					m_TrackManager.InitializeFromJSON(trackManagerObj);
+				}
 			}
-
-			sceneRootObject.SetStringChecked("name", m_Name);
-
-			// TODO: Only initialize materials currently present in this scene
-			for (JSONObject& materialObj : s_ParsedMaterials)
+			else
 			{
-				MaterialCreateInfo matCreateInfo = {};
-				Material::ParseJSONObject(materialObj, matCreateInfo);
+				// File doesn't exist, create a new blank one
+				Print("Creating new scene at: %s\n", shortFilePath.c_str());
 
-				MaterialID matID = g_Renderer->InitializeMaterial(&matCreateInfo);
-				m_LoadedMaterials.push_back(matID);
+				// Skybox
+				{
+					//MaterialCreateInfo skyboxMatCreateInfo = {};
+					//skyboxMatCreateInfo.name = "Skybox";
+					//skyboxMatCreateInfo.shaderName = "skybox";
+					//skyboxMatCreateInfo.generateHDRCubemapSampler = true;
+					//skyboxMatCreateInfo.enableCubemapSampler = true;
+					//skyboxMatCreateInfo.enableCubemapTrilinearFiltering = true;
+					//skyboxMatCreateInfo.generatedCubemapSize = glm::vec2(512.0f);
+					//skyboxMatCreateInfo.generateIrradianceSampler = true;
+					//skyboxMatCreateInfo.generatedIrradianceCubemapSize = glm::vec2(32.0f);
+					//skyboxMatCreateInfo.generatePrefilteredMap = true;
+					//skyboxMatCreateInfo.generatedPrefilteredCubemapSize = glm::vec2(128.0f);
+					//skyboxMatCreateInfo.environmentMapPath = RESOURCE_LOCATION  "textures/hdri/Milkyway/Milkyway_Light.hdr";
+					//MaterialID skyboxMatID = g_Renderer->InitializeMaterial(&skyboxMatCreateInfo);
+
+					//m_LoadedMaterials.push_back(skyboxMatID);
+
+					MaterialID skyboxMatID = InvalidMaterialID;
+					g_Renderer->GetMaterialID("skybox 01", skyboxMatID);
+
+					assert(skyboxMatID != InvalidMaterialID);
+
+					Skybox* skybox = new Skybox("Skybox");
+
+					JSONObject emptyObj = {};
+					skybox->ParseJSON(emptyObj, this, skyboxMatID);
+
+					AddRootObject(skybox);
+				}
+
+				MaterialID sphereMatID = InvalidMaterialID;
+				g_Renderer->GetMaterialID("pbr chrome", sphereMatID);
+
+				assert(sphereMatID != InvalidMaterialID);
+
+				// Reflection probe
+				{
+					//MaterialCreateInfo reflectionProbeMatCreateInfo = {};
+					//reflectionProbeMatCreateInfo.name = "Reflection Probe";
+					//reflectionProbeMatCreateInfo.shaderName = "pbr";
+					//reflectionProbeMatCreateInfo.constAlbedo = glm::vec4(0.8f, 0.8f, 0.8f, 1.0f);
+					//reflectionProbeMatCreateInfo.constMetallic = 1.0f;
+					//reflectionProbeMatCreateInfo.constRoughness = 0.0f;
+					//MaterialID sphereMatID = g_Renderer->InitializeMaterial(&reflectionProbeMatCreateInfo);
+
+					//m_LoadedMaterials.push_back(sphereMatID);
+
+					ReflectionProbe* reflectionProbe = new ReflectionProbe("Reflection Probe 01");
+
+					JSONObject emptyObj = {};
+					reflectionProbe->ParseJSON(emptyObj, this, sphereMatID);
+					reflectionProbe->GetTransform()->SetLocalPosition(glm::vec3(0.0f, 8.0f, 0.0f));
+
+					AddRootObject(reflectionProbe);
+				}
+
+				GameObject* sphere = new GameObject("sphere", GameObjectType::OBJECT);
+				MeshComponent* meshComponent = sphere->SetMeshComponent(new MeshComponent(sphere, sphereMatID));
+				meshComponent->LoadFromFile(RESOURCE_LOCATION "meshes/ico-sphere.glb");
+				AddRootObject(sphere);
+
+				// Default directional light
+				DirectionalLight* dirLight = new DirectionalLight();
+				g_SceneManager->CurrentScene()->AddRootObject(dirLight);
+				dirLight->SetRot(glm::quat(glm::vec3(130.0f, -65.0f, 120.0f)));
+				dirLight->SetPos(glm::vec3(0.0f, 15.0f, 0.0f));
+				dirLight->data.brightness = 5.0f;
+				dirLight->Initialize();
+				dirLight->PostInitialize();
 			}
 
-			// This holds all the objects in the scene which do not have a parent
-			const std::vector<JSONObject>& rootObjects = sceneRootObject.GetObjectArray("objects");
-			for (const JSONObject& rootObjectJSON : rootObjects)
+			if (m_bSpawnPlayer)
 			{
-				GameObject* rootObj = GameObject::CreateObjectFromJSON(rootObjectJSON, this, InvalidMaterialID);
-				rootObj->GetTransform()->UpdateParentTransform();
-				AddRootObject(rootObj);
+				m_Player0 = new Player(0, glm::vec3(0.0f, 2.0f, 0.0f));
+				AddRootObject(m_Player0);
+
+				//m_Player1 = new Player(1);
+				//AddRootObject(m_Player1);
 			}
 
-			if (sceneRootObject.HasField("track manager"))
+			for (GameObject* rootObject : m_RootObjects)
 			{
-				const JSONObject& trackManagerObj = sceneRootObject.GetObject("track manager");
-
-				m_TrackManager.InitializeFromJSON(trackManagerObj);
-			}
-		}
-		else
-		{
-			// File doesn't exist, create a new blank one
-			Print("Creating new scene at: %s\n", shortFilePath.c_str());
-
-			// Skybox
-			{
-				//MaterialCreateInfo skyboxMatCreateInfo = {};
-				//skyboxMatCreateInfo.name = "Skybox";
-				//skyboxMatCreateInfo.shaderName = "skybox";
-				//skyboxMatCreateInfo.generateHDRCubemapSampler = true;
-				//skyboxMatCreateInfo.enableCubemapSampler = true;
-				//skyboxMatCreateInfo.enableCubemapTrilinearFiltering = true;
-				//skyboxMatCreateInfo.generatedCubemapSize = glm::vec2(512.0f);
-				//skyboxMatCreateInfo.generateIrradianceSampler = true;
-				//skyboxMatCreateInfo.generatedIrradianceCubemapSize = glm::vec2(32.0f);
-				//skyboxMatCreateInfo.generatePrefilteredMap = true;
-				//skyboxMatCreateInfo.generatedPrefilteredCubemapSize = glm::vec2(128.0f);
-				//skyboxMatCreateInfo.environmentMapPath = RESOURCE_LOCATION  "textures/hdri/Milkyway/Milkyway_Light.hdr";
-				//MaterialID skyboxMatID = g_Renderer->InitializeMaterial(&skyboxMatCreateInfo);
-
-				//m_LoadedMaterials.push_back(skyboxMatID);
-
-				MaterialID skyboxMatID = InvalidMaterialID;
-				g_Renderer->GetMaterialID("skybox 01", skyboxMatID);
-
-				assert(skyboxMatID != InvalidMaterialID);
-
-				Skybox* skybox = new Skybox("Skybox");
-
-				JSONObject emptyObj = {};
-				skybox->ParseJSON(emptyObj, this, skyboxMatID);
-
-				AddRootObject(skybox);
+				rootObject->Initialize();
 			}
 
-			MaterialID sphereMatID = InvalidMaterialID;
-			g_Renderer->GetMaterialID("pbr chrome", sphereMatID);
+			UpdateRootObjectSiblingIndices();
 
-			assert(sphereMatID != InvalidMaterialID);
+			m_bInitialized = true;
 
-			// Reflection probe
-			{
-				//MaterialCreateInfo reflectionProbeMatCreateInfo = {};
-				//reflectionProbeMatCreateInfo.name = "Reflection Probe";
-				//reflectionProbeMatCreateInfo.shaderName = "pbr";
-				//reflectionProbeMatCreateInfo.constAlbedo = glm::vec4(0.8f, 0.8f, 0.8f, 1.0f);
-				//reflectionProbeMatCreateInfo.constMetallic = 1.0f;
-				//reflectionProbeMatCreateInfo.constRoughness = 0.0f;
-				//reflectionProbeMatCreateInfo.constAO = 1.0f;
-				//MaterialID sphereMatID = g_Renderer->InitializeMaterial(&reflectionProbeMatCreateInfo);
-
-				//m_LoadedMaterials.push_back(sphereMatID);
-
-				ReflectionProbe* reflectionProbe = new ReflectionProbe("Reflection Probe 01");
-
-				JSONObject emptyObj = {};
-				reflectionProbe->ParseJSON(emptyObj, this, sphereMatID);
-				reflectionProbe->GetTransform()->SetLocalPosition(glm::vec3(0.0f, 8.0f, 0.0f));
-
-				AddRootObject(reflectionProbe);
-			}
-
-			GameObject* sphere = new GameObject("sphere", GameObjectType::OBJECT);
-			sphere->SetMeshComponent(new MeshComponent(sphereMatID, sphere))->LoadPrefabShape(MeshComponent::PrefabShape::UV_SPHERE);
-			AddRootObject(sphere);
+			m_bLoaded = true;
 		}
 
-		bool bCreatePlayer = true;
-
-		// TODO: FIXME: Save in scene file
-		if (m_Name.compare("Scene Gerstner") == 0 ||
-			m_Name.compare("Scene Empty") == 0)
-		{
-			bCreatePlayer = false;
-		}
-
-		if (bCreatePlayer)
-		{
-			m_Player0 = new Player(0, glm::vec3(0.0f, 2.0f, 0.0f));
-			AddRootObject(m_Player0);
-
-			//m_Player1 = new Player(1);
-			//AddRootObject(m_Player1);
-		}
-
-		for (GameObject* rootObject : m_RootObjects)
-		{
-			rootObject->Initialize();
-		}
-		if (g_Renderer->GetDirectionalLight() == nullptr)
-		{
-			CreateDefaultDirectionalLight();
-		}
-
-		UpdateRootObjectSiblingIndices();
-
-		m_bLoaded = true;
+		// All updating to new file version should be complete by this point
+		m_FileVersion = LATEST_FILE_VER;
 	}
 
 	void BaseScene::PostInitialize()
@@ -256,6 +255,7 @@ namespace flex
 	void BaseScene::Destroy()
 	{
 		m_bLoaded = false;
+		m_bInitialized = false;
 
 		for (GameObject* rootObject : m_RootObjects)
 		{
@@ -281,13 +281,16 @@ namespace flex
 		{
 			m_PhysicsWorld->Destroy();
 			delete m_PhysicsWorld;
+			m_PhysicsWorld = nullptr;
 		}
+
+		m_Player0 = nullptr;
+		m_Player1 = nullptr;
 	}
 
 	void BaseScene::Update()
 	{
-		const char* profileBlockName = "Update Scene";
-		PROFILE_BEGIN(profileBlockName);
+		PROFILE_BEGIN("Update Scene");
 
 		if (m_PhysicsWorld)
 		{
@@ -317,7 +320,7 @@ namespace flex
 
 		m_TrackManager.DrawDebug();
 
-		PROFILE_END(profileBlockName);
+		PROFILE_END("Update Scene");
 	}
 
 	void BaseScene::LateUpdate()
@@ -326,14 +329,9 @@ namespace flex
 		{
 			for (GameObject* gameObject : m_ObjectsToDestroyAtEndOfFrame)
 			{
-				auto iter = std::find(m_RootObjects.begin(), m_RootObjects.end(), gameObject);
-				if (iter == m_RootObjects.end())
+				if (!DestroyGameObject(gameObject, true))
 				{
 					PrintWarn("Attempted to remove game object from scene which doesn't exist! %s\n", gameObject->GetName().c_str());
-				}
-				else
-				{
-					DestroyGameObject(*iter, true);
 				}
 			}
 			m_ObjectsToDestroyAtEndOfFrame.clear();
@@ -424,11 +422,6 @@ namespace flex
 				}
 			}
 
-			if (g_EngineInstance->IsObjectSelected(targetObject))
-			{
-				g_EngineInstance->DeselectObject(targetObject);
-			}
-
 			// If children are still in m_Children array when
 			// targetObject is destroyed they will also be destroyed
 			if (!bDestroyChildren)
@@ -436,16 +429,9 @@ namespace flex
 				targetObject->m_Children.clear();
 			}
 
-			bool bIsDirectionalLight = (dynamic_cast<DirectionalLight*>(targetObject)) != nullptr;
-
 			targetObject->Destroy();
 
 			delete targetObject;
-
-			if (bIsDirectionalLight)
-			{
-				CreateDefaultDirectionalLight();
-			}
 
 			return true;
 		}
@@ -485,8 +471,7 @@ namespace flex
 		{
 			if (g_bEnableLogging_Loading)
 			{
-				std::string cleanedFilePath = meshesFilePath;
-				StripLeadingDirectories(cleanedFilePath);
+				const std::string cleanedFilePath = StripLeadingDirectories(meshesFilePath);
 				Print("Parsing meshes file at %s\n", cleanedFilePath.c_str());
 			}
 
@@ -526,8 +511,7 @@ namespace flex
 		{
 			if (g_bEnableLogging_Loading)
 			{
-				std::string cleanedFilePath = materialsFilePath;
-				StripLeadingDirectories(cleanedFilePath);
+				const std::string cleanedFilePath = StripLeadingDirectories(materialsFilePath);
 				Print("Parsing materials file at %s\n", cleanedFilePath.c_str());
 			}
 
@@ -569,8 +553,7 @@ namespace flex
 			{
 				if (g_bEnableLogging_Loading)
 				{
-					std::string fileName = foundFilePath;
-					StripLeadingDirectories(fileName);
+					const std::string fileName = StripLeadingDirectories(foundFilePath);
 					Print("Parsing prefab: %s\n", fileName.c_str());
 				}
 
@@ -598,7 +581,7 @@ namespace flex
 		}
 	}
 
-	bool BaseScene::SerializeMeshFile()
+	bool BaseScene::SerializeMeshFile() const
 	{
 		std::string meshesFilePath = RESOURCE_LOCATION  "scenes/meshes.json";
 
@@ -643,20 +626,21 @@ namespace flex
 
 		std::string fileContents = meshesObj.Print(0);
 
+		const std::string fileName = StripLeadingDirectories(meshesFilePath);
 		if (WriteFile(meshesFilePath, fileContents, false))
 		{
-			Print("Serialized mesh file %s\n", meshesFilePath.c_str());
+			Print("Serialized mesh file to: %s\n", fileName.c_str());
 		}
 		else
 		{
-			PrintWarn("Failed to serialize mesh file %s\n", meshesFilePath.c_str());
+			PrintWarn("Failed to serialize mesh file to: %s\n", fileName.c_str());
 			return false;
 		}
 
 		return true;
 	}
 
-	bool BaseScene::SerializeMaterialFile()
+	bool BaseScene::SerializeMaterialFile() const
 	{
 		std::string materialsFilePath = RESOURCE_LOCATION  "scenes/materials.json";
 
@@ -690,20 +674,21 @@ namespace flex
 
 		std::string fileContents = materialsObj.Print(0);
 
+		const std::string fileName = StripLeadingDirectories(materialsFilePath);
 		if (WriteFile(materialsFilePath, fileContents, false))
 		{
-			Print("Serialized materials file %s\n", materialsFilePath.c_str());
+			Print("Serialized materials file to: %s\n", fileName.c_str());
 		}
 		else
 		{
-			PrintWarn("Failed to serialize materials file %s\n", materialsFilePath.c_str());
+			PrintWarn("Failed to serialize materials file to: %s\n", fileName.c_str());
 			return false;
 		}
 
 		return true;
 	}
 
-	bool BaseScene::SerializePrefabFile()
+	bool BaseScene::SerializePrefabFile() const
 	{
 		// TODO: Implement
 		ENSURE_NO_ENTRY();
@@ -806,6 +791,11 @@ namespace flex
 		m_ObjectsToAddAtEndOfFrame.insert(m_ObjectsToAddAtEndOfFrame.end(), objs.begin(), objs.end());
 	}
 
+	i32 BaseScene::GetFileVersion() const
+	{
+		return m_FileVersion;
+	}
+
 	MaterialID BaseScene::FindMaterialIDByName(const JSONObject& object)
 	{
 		MaterialID matID = InvalidMaterialID;
@@ -821,6 +811,13 @@ namespace flex
 					{
 						matID = loadedMatID;
 						break;
+					}
+				}
+				if (matID == InvalidMaterialID)
+				{
+					if (materialName.compare("placeholder") == 0)
+					{
+						matID = g_Renderer->GetPlaceholderMaterialID();
 					}
 				}
 			}
@@ -842,23 +839,12 @@ namespace flex
 		}
 	}
 
-	void BaseScene::CreateDefaultDirectionalLight()
-	{
-		DirectionalLight* dirLight = new DirectionalLight();
-		g_SceneManager->CurrentScene()->AddRootObject(dirLight);
-		dirLight->SetRot(glm::quat(glm::vec3(130.0f, -65.0f, 120.0f)));
-		dirLight->SetPos(glm::vec3(0.0f, 15.0f, 0.0f));
-		dirLight->data.brightness = 5.0f;
-		dirLight->Initialize();
-		dirLight->PostInitialize();
-	}
-
 	void BaseScene::SerializeToFile(bool bSaveOverDefault /* = false */) const
 	{
 		bool success = true;
 
-		success &= BaseScene::SerializeMeshFile();
-		success &= BaseScene::SerializeMaterialFile();
+		success &= SerializeMeshFile();
+		success &= SerializeMaterialFile();
 		//success &= BaseScene::SerializePrefabFile();
 
 		const std::string profileBlockName = "serialize scene to file: " + m_FileName;
@@ -868,6 +854,7 @@ namespace flex
 
 		rootSceneObject.fields.emplace_back("version", JSONValue(m_FileVersion));
 		rootSceneObject.fields.emplace_back("name", JSONValue(m_Name));
+		rootSceneObject.fields.emplace_back("spawn player", JSONValue(m_bSpawnPlayer));
 
 		std::vector<JSONObject> objectsArray;
 		for (GameObject* rootObject : m_RootObjects)
@@ -933,7 +920,6 @@ namespace flex
 		}
 
 		PROFILE_END(profileBlockName);
-		Profiler::PrintBlockDuration(profileBlockName);
 	}
 
 	void BaseScene::DeleteSaveFiles()
@@ -996,6 +982,7 @@ namespace flex
 			{
 				if (bDestroy)
 				{
+					(*iter)->Destroy();
 					delete *iter;
 				}
 
@@ -1027,6 +1014,34 @@ namespace flex
 		}
 		m_RootObjects.clear();
 		g_Renderer->RenderObjectStateChanged();
+	}
+
+	bool BaseScene::RemoveObject(GameObject* gameObject, bool bDestroy)
+	{
+		for (auto iter = m_RootObjects.begin(); iter != m_RootObjects.end(); ++iter)
+		{
+			if (*iter == gameObject)
+			{
+				if (bDestroy)
+				{
+					(*iter)->Destroy();
+					delete *iter;
+				}
+
+				m_RootObjects.erase(iter);
+				return true;
+			}
+
+			for (auto childIter = (*iter)->m_Children.begin(); childIter != (*iter)->m_Children.end(); ++childIter)
+			{
+				if (RemoveObject(*childIter, bDestroy))
+				{
+					return true;
+				}
+			}
+		}
+
+		return false;
 	}
 
 	std::vector<MaterialID> BaseScene::GetMaterialIDs()
@@ -1205,17 +1220,13 @@ namespace flex
 		}
 
 		std::string absDefaultFilePathFrom = RelativePathToAbsolute(GetDefaultRelativeFilePath());
-		std::string defaultAbsFileDir = absDefaultFilePathFrom;
-		ExtractDirectoryString(defaultAbsFileDir);
-		std::string absDefaultFilePathTo = defaultAbsFileDir + fileName;
+		std::string absDefaultFilePathTo = ExtractDirectoryString(absDefaultFilePathFrom) + fileName;
 		if (CopyFile(absDefaultFilePathFrom, absDefaultFilePathTo))
 		{
 			//if (m_bUsingSaveFile)
 			{
 				std::string absSavedFilePathFrom = RelativePathToAbsolute(GetRelativeFilePath());
-				std::string savedAbsFileDir = absSavedFilePathFrom;
-				ExtractDirectoryString(savedAbsFileDir);
-				std::string absSavedFilePathTo = savedAbsFileDir + fileName;
+				std::string absSavedFilePathTo = ExtractDirectoryString(absSavedFilePathFrom) + fileName;
 				if (CopyFile(absSavedFilePathFrom, absSavedFilePathTo))
 				{
 					success = true;

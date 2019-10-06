@@ -70,6 +70,7 @@ namespace flex
 #define InvalidCartID ((CartChainID)u32_max)
 #define InvalidCartChainID ((CartChainID)u32_max)
 #define InvalidVariableID ((VariableID)u32_max)
+#define InvalidID u32_max
 
 	//template<bool> struct StaticAssert;
 	//template<> struct StaticAssert<true> {};
@@ -90,6 +91,7 @@ namespace flex
 		MOBILE_LIQUID_BOX,
 		TERMINAL,
 		GERSTNER_WAVE,
+		BLOCKS,
 
 		_NONE
 	};
@@ -110,6 +112,7 @@ namespace flex
 		"mobile liquid box",
 		"terminal",
 		"gerstner wave",
+		"blocks",
 
 		"NONE"
 	};

@@ -52,10 +52,10 @@ namespace flex
 	{
 		const JSONObject& tracksObj = obj.GetObject("tracks");
 
-		m_Tracks.reserve(tracksObj.fields.size());
-		for (const JSONField& field : tracksObj.fields)
+		m_Tracks.resize(tracksObj.fields.size());
+		for (u32 i = 0; i < m_Tracks.size(); ++i)
 		{
-			m_Tracks.push_back(BezierCurveList::InitializeFromJSON(field.value.objectValue));
+			m_Tracks[i].InitializeFromJSON(tracksObj.fields[i].value.objectValue);
 		}
 
 		FindJunctions();
@@ -610,21 +610,21 @@ namespace flex
 		const BezierCurveList* track = &m_Tracks[(i32)trackID];
 
 		// Let's brute force it baby
-		i32 sampleCount = 250;
+		i32 sampleCount = 25;
 
 		bool bInRange = false;
-		real smallestDist = range;
+		real smallestSqDist = range*range;
 		// TODO: Pre-compute AABBs for each curve for early pruning
 		for (i32 i = 0; i <= sampleCount; ++i)
 		{
 			real t = (real)i / (real)(sampleCount);
 			i32 curveIndex;
-			real dist = glm::distance(track->GetPointOnCurve(t, &curveIndex), pos);
-			if (dist < smallestDist)
+			real distSq = glm::distance2(track->GetPointOnCurve(t, &curveIndex), pos);
+			if (distSq < smallestSqDist)
 			{
-				smallestDist = dist;
+				smallestSqDist = distSq;
 				*outDistAlongTrack = t;
-				*outDistToTrack = smallestDist;
+				*outDistToTrack = glm::sqrt(smallestSqDist);
 				bInRange = true;
 			}
 		}

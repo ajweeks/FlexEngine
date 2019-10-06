@@ -14,24 +14,11 @@ namespace flex
 	class MeshComponent
 	{
 	public:
-		explicit MeshComponent(GameObject* owner);
-		MeshComponent(MaterialID materialID, GameObject* owner, bool bSetRequiredAttributesFromMat = true);
-		~MeshComponent();
-
-		static void DestroyAllLoadedMeshes();
-
-		static MeshComponent* ParseJSON(const JSONObject& object, GameObject* owner, MaterialID materialID);
-		JSONObject Serialize() const;
-
-		void Update();
-		void Destroy();
-
-		void SetOwner(GameObject* owner);
-
 		enum class Type
 		{
 			PREFAB,
 			FILE,
+			PROCEDURAL,
 
 			_NONE
 		};
@@ -49,6 +36,22 @@ namespace flex
 			_NONE
 		};
 
+		MeshComponent(GameObject* owner, MaterialID materialID = InvalidMaterialID, bool bSetRequiredAttributesFromMat = true);
+		~MeshComponent();
+
+		static void DestroyAllLoadedMeshes();
+
+		static MeshComponent* ParseJSON(const JSONObject& object, GameObject* owner, MaterialID materialID);
+		JSONObject Serialize() const;
+
+		void Update();
+
+		void UpdateProceduralData(VertexBufferDataCreateInfo const* newData);
+
+		void Destroy();
+
+		void SetOwner(GameObject* owner);
+
 		/*
 		* Call before loading to force certain attributes to be filled/ignored based on shader
 		* requirements. Any attribute not set here will be ignored. Any attribute set here will
@@ -64,6 +67,11 @@ namespace flex
 		bool LoadPrefabShape(PrefabShape shape,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
+		bool CreateProcedural(u32 initialMaxVertCount,
+			VertexAttributes attributes,
+			TopologyMode topologyMode = TopologyMode::TRIANGLE_LIST,
+			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
+
 		void Reload();
 
 		MaterialID GetMaterialID() const;
@@ -72,6 +80,9 @@ namespace flex
 
 		static PrefabShape StringToPrefabShape(const std::string& prefabName);
 		static std::string PrefabShapeToString(PrefabShape shape);
+
+		static bool FindPreLoadedMesh(const std::string& relativeFilePath, LoadedMesh** loadedMesh);
+		static LoadedMesh* LoadMesh(const std::string& relativeFilePath, MeshImportSettings* importSettings = nullptr);
 
 		Type GetType() const;
 
@@ -85,22 +96,29 @@ namespace flex
 
 		VertexBufferData* GetVertexBufferData();
 
+		// First field is relative file path (e.g. RESOURCE_LOCATION  "meshes/cube.glb")
+		static std::map<std::string, LoadedMesh*> m_LoadedMeshes;
+
 		glm::vec3 m_MinPoint;
 		glm::vec3 m_MaxPoint;
 
 		real m_BoundingSphereRadius = 0.0f;
 		glm::vec3 m_BoundingSphereCenterPoint;
 
-
-		// First field is relative file path (e.g. RESOURCE_LOCATION  "meshes/cube.glb")
-		static std::map<std::string, LoadedMesh*> m_LoadedMeshes;
-
-		static LoadedMesh* LoadMesh(const std::string& relativeFilePath, MeshImportSettings* importSettings = nullptr);
-		static bool FindPreLoadedMesh(const std::string& relativeFilePath, LoadedMesh** loadedMesh);
-
 	private:
 		real CalculateBoundingSphereScale() const;
-		bool CalculateTangents(VertexBufferData::CreateInfo& createInfo);
+		bool CalculateTangents(VertexBufferDataCreateInfo& createInfo);
+
+		void CopyInOptionalCreateInfo(RenderObjectCreateInfo& createInfo, const RenderObjectCreateInfo& overrides);
+
+		static const real GRID_LINE_SPACING;
+		static const u32 GRID_LINE_COUNT;
+
+		static glm::vec4 m_DefaultColor_4;
+		static glm::vec3 m_DefaultPosition;
+		static glm::vec3 m_DefaultTangent;
+		static glm::vec3 m_DefaultNormal;
+		static glm::vec2 m_DefaultTexCoord;
 
 		GameObject* m_OwningGameObject = nullptr;
 
@@ -110,10 +128,8 @@ namespace flex
 
 		PrefabShape m_Shape = PrefabShape::_NONE;
 
-		static const real GRID_LINE_SPACING;
-		static const u32 GRID_LINE_COUNT;
-
 		Type m_Type = Type::_NONE;
+
 		std::string m_RelativeFilePath;
 		std::string m_FileName;
 
@@ -127,13 +143,6 @@ namespace flex
 		// Saved so we can reload meshes and serialize contents to file
 		MeshImportSettings m_ImportSettings = {};
 		RenderObjectCreateInfo m_OptionalCreateInfo = {};
-
-		static glm::vec4 m_DefaultColor_4;
-		static glm::vec3 m_DefaultPosition;
-		static glm::vec3 m_DefaultTangent;
-		static glm::vec3 m_DefaultBitangent;
-		static glm::vec3 m_DefaultNormal;
-		static glm::vec2 m_DefaultTexCoord;
 
 	};
 } // namespace flex

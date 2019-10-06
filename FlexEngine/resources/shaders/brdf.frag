@@ -3,9 +3,9 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
-in vec2 ex_TexCoord;
+layout (location = 0) in vec2 ex_TexCoord;
 
-out vec4 FragColor;
+layout (location = 0) out vec4 FragColor;
 
 const float PI = 3.14159265359;
 

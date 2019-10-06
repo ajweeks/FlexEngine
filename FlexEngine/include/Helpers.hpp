@@ -4,6 +4,8 @@
 
 namespace flex
 {
+	// TODO: Many of the functions in this file would benefit from unit tests
+
 	static const char* SEPARATOR_STR = ", ";
 
 	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount = 3, bool flipVertically = false, u32* channelCountOut = nullptr);
@@ -32,17 +34,18 @@ namespace flex
 	bool FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileType);
 
 	// Removes all content before final '/' or '\'
-	void StripLeadingDirectories(std::string& filePath);
+	std::string StripLeadingDirectories(std::string filePath);
 
 	// Removes all content after final '/' or '\'
 	// NOTE: If path describes a directory and doesn't end in a slash, final directory will be removed
-	void ExtractDirectoryString(std::string& filePath);
+	std::string ExtractDirectoryString(std::string filePath);
 
 	// Removes all chars after first '.' occurrence
-	void StripFileType(std::string& filePath);
+	std::string StripFileType(std::string filePath);
 
 	// Removes all chars before first '.' occurrence
-	void ExtractFileType(std::string& filePathInTypeOut);
+	// NOTE: Unused!
+	std::string ExtractFileType(std::string filePathInTypeOut);
 
 	// Creates directories for each listed in string
 	void CreateDirectoryRecursive(const std::string& absoluteDirectoryPath);
@@ -54,11 +57,6 @@ namespace flex
 	bool ParseWAVFile(const std::string& filePath, i32* format, u8** data, i32* size, i32* freq);
 
 	std::string TrimStartAndEnd(const std::string& str);
-
-	/* Interpret 4 bytes starting at ptr as an unsigned 32-bit int */
-	u32 Parse32u(char* ptr);
-	/* Interpret 2 bytes starting at ptr as an unsigned 16-bit int */
-	u16 Parse16u(char* ptr);
 
 	// Returns the current year, month, & day  (YYYY-MM-DD)
 	std::string GetDateString_YMD();
@@ -78,13 +76,22 @@ namespace flex
 	bool NearlyEquals(const glm::vec3& a, const glm::vec3& b, real threshhold);
 	bool NearlyEquals(const glm::vec4& a, const glm::vec4& b, real threshhold);
 
+	glm::quat MoveTowards(const glm::quat& a, const glm::quat& b, real delta);
 	glm::vec3 MoveTowards(const glm::vec3& a, const glm::vec3& b, real delta);
-	real MoveTowards(const real& a, real b, real delta);
+	real MoveTowards(const real& a, const real b, real delta);
 
 	real Lerp(real a, real b, real t);
 	glm::vec2 Lerp(const glm::vec2& a, const glm::vec2& b, real t);
 	glm::vec3 Lerp(const glm::vec3& a, const glm::vec3& b, real t);
 	glm::vec4 Lerp(const glm::vec4& a, const glm::vec4& b, real t);
+
+	u32 Pack2FloatToU32(real f1, real f2);
+	void UnpackU32To2Float(u32 u1, real* outF1, real* outF2);
+
+	/* Interpret 4 bytes starting at ptr as an unsigned 32-bit int */
+	u32 Parse32u(char* ptr);
+	/* Interpret 2 bytes starting at ptr as an unsigned 16-bit int */
+	u16 Parse16u(char* ptr);
 
 	bool ParseBool(const std::string& intStr);
 
@@ -107,11 +114,15 @@ namespace flex
 	*/
 	glm::vec4 ParseVec4(const std::string& vecStr, real defaultW = 1.0f);
 
+	glm::quat ParseQuat(const std::string& quatStr);
+
 	bool IsNanOrInf(real val);
 	bool IsNanOrInf(const glm::vec2& vec);
 	bool IsNanOrInf(const glm::vec3& vec);
 	bool IsNanOrInf(const glm::vec4& vec);
 	bool IsNanOrInf(const glm::quat& quat);
+
+	real RoundToNearestPowerOfTwo(real num);
 
 	std::string GetIncrementedPostFixedStr(const std::string& namePrefix, const std::string& defaultName);
 
@@ -124,9 +135,21 @@ namespace flex
 
 	std::string BoolToString(bool b);
 
-	std::string Vec2ToString(glm::vec2 vec, i32 precision);
-	std::string Vec3ToString(glm::vec3 vec, i32 precision);
-	std::string Vec4ToString(glm::vec4 vec, i32 precision);
+	std::string Vec2ToString(const glm::vec2& vec, i32 precision);
+	std::string Vec3ToString(const glm::vec3& vec, i32 precision);
+	std::string Vec4ToString(const glm::vec4& vec, i32 precision);
+
+	std::string Vec2ToString(real* data, i32 precision);
+	std::string Vec3ToString(real* data, i32 precision);
+	std::string Vec4ToString(real* data, i32 precision);
+
+	std::string Vec2ToString(real x, real y, i32 precision);
+	std::string Vec3ToString(real x, real y, real z, i32 precision);
+	std::string Vec4ToString(real x, real y, real z, real w, i32 precision);
+
+	std::string QuatToString(const glm::quat& quat, i32 precision);
+	std::string QuatToString(real x, real y, real z, real w, i32 precision);
+	std::string QuatToString(real* data, i32 precision);
 
 	void CopyVec3ToClipboard(const glm::vec3& vec);
 	void CopyVec4ToClipboard(const glm::vec4& vec);
@@ -159,10 +182,22 @@ namespace flex
 
 	// Must be called at least once to set g_CurrentWorkingDirectory!
 	void RetrieveCurrentWorkingDirectory();
+	std::string ReplaceBackSlashesWithForward(std::string str);
 	std::string RelativePathToAbsolute(const std::string& relativePath);
 
 	// Returns random value in range [min, max)
 	i32 RandomInt(i32 min, i32 max);
+
+	// Returns random value in range [min, max)
+	real RandomFloat(real min, real max);
+
+	template<class T>
+	const T& PickRandomFrom(const std::vector<T>& vec)
+	{
+		return vec[RandomInt(0, vec.size())];
+	}
+
+	i32 RoundUp(i32 val, i32 alignment);
 
 	// Returns true if value changed
 	bool DoImGuiRotationDragFloat3(const char* label, glm::vec3& rotation, glm::vec3& outCleanedRotation);
@@ -212,10 +247,10 @@ namespace flex
 	public:
 		// Screen-space constructor
 		TextCache(const std::string& text, AnchorPoint anchor, const glm::vec2& position,
-			const glm::vec4& col, real xSpacing, bool bRaw);
+			const glm::vec4& col, real xSpacing, real scale);
 		// World-space constructor
 		TextCache(const std::string& text, const glm::vec3& position, const glm::quat& rot,
-			const glm::vec4& col, real xSpacing, bool bRaw);
+			const glm::vec4& col, real xSpacing, real scale);
 
 		std::string str;
 		AnchorPoint anchor;
@@ -223,7 +258,7 @@ namespace flex
 		glm::quat rot;
 		glm::vec4 color;
 		real xSpacing;
-		bool bRaw;
+		real scale;
 
 	private:
 		//TextCache& operator=(const TextCache &tmp);

@@ -10,29 +10,20 @@
 
 namespace flex
 {
-	BitmapFont::BitmapFont(i16 size, const std::string& name, i32 charCount) :
-		m_FontSize(size),
+	BitmapFont::BitmapFont(const FontMetaData& inMetaData, const std::string& name, i32 charCount) :
+		metaData(inMetaData),
 		name(name),
-		m_CharacterCount(charCount)
+		characterCount(charCount)
 	{
-		assert(size > 0);
+		metaData.bitmapFont = this;
+		assert(metaData.size > 0);
 		assert(charCount > 0);
-
-		// TODO: Is this needed? (double check in release config)
-		//for (i32 i = 0; i < CHAR_COUNT; ++i)
-		//{
-		//	m_CharTable[i].kerning = std::map<std::wstring, glm::vec2>();
-		//}
 	}
 
 	BitmapFont::~BitmapFont()
 	{
-		if (m_Texture != nullptr)
-		{
-			m_Texture->Destroy();
-			delete m_Texture;
-			m_Texture = nullptr;
-		}
+		delete m_Texture;
+		m_Texture = nullptr;
 	}
 
 	bool BitmapFont::IsCharValid(wchar_t character)
@@ -65,21 +56,6 @@ namespace flex
 		return kerningVec;
 	}
 
-	i16 BitmapFont::GetSize() const
-	{
-		return m_FontSize;
-	}
-
-	bool BitmapFont::UseKerning() const
-	{
-		return m_bUseKerning;
-	}
-
-	void BitmapFont::SetUseKerning(bool bUseKerning)
-	{
-		m_bUseKerning = bUseKerning;
-	}
-
 	const std::vector<flex::TextCache>& BitmapFont::GetTextCaches() const
 	{
 		return m_TextCaches;
@@ -95,34 +71,9 @@ namespace flex
 		m_Texture = nullptr;
 	}
 
-	void BitmapFont::SetBufferSize(i32 size)
-	{
-		m_BufferSize = size;
-	}
-
-	i32 BitmapFont::GetBufferStart() const
-	{
-		return m_BufferStart;
-	}
-
-	flex::i32 BitmapFont::GetCharCount() const
-	{
-		return m_CharacterCount;
-	}
-
 	glm::vec2u BitmapFont::GetTextureSize() const
 	{
 		return glm::vec2u(m_Texture->width, m_Texture->height);
-	}
-
-	void BitmapFont::SetBufferStart(i32 start)
-	{
-		m_BufferStart = start;
-	}
-
-	i32 BitmapFont::GetBufferSize() const
-	{
-		return m_BufferSize;
 	}
 
 #if COMPILE_OPEN_GL

@@ -3,6 +3,7 @@
 #include "Scene/SceneManager.hpp"
 
 #include "Cameras/CameraManager.hpp"
+#include "Editor.hpp"
 #include "FlexEngine.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
@@ -51,12 +52,21 @@ namespace flex
 
 		//g_EngineInstance->PreSceneChange();
 
+		if (m_CurrentSceneIndex == InvalidID)
+		{
+			m_CurrentSceneIndex = 0;
+		}
+
 		CurrentScene()->Initialize();
 
-		g_Renderer->OnPreSceneChange();
-		g_EngineInstance->OnSceneChanged();
-		g_CameraManager->OnSceneChanged();
-		g_Renderer->OnPostSceneChange();
+		if (m_PreviousSceneIndex != InvalidID)
+		{
+			g_Renderer->OnPreSceneChange();
+			g_EngineInstance->OnSceneChanged();
+			g_Editor->OnSceneChanged();
+			g_CameraManager->OnSceneChanged();
+			g_Renderer->OnPostSceneChange();
+		}
 	}
 
 	void SceneManager::PostInitializeCurrentScene()
@@ -93,10 +103,11 @@ namespace flex
 			return false;
 		}
 
-		g_EngineInstance->PreSceneChange();
+		g_Editor->PreSceneChange();
 
+		m_PreviousSceneIndex = m_CurrentSceneIndex;
 
-		if (m_CurrentSceneIndex != u32_max)
+		if (m_CurrentSceneIndex != InvalidID)
 		{
 			//if (m_Scenes[m_CurrentSceneIndex]->GetPhysicsWorld())
 			//{
@@ -167,7 +178,7 @@ namespace flex
 			return;
 		}
 
-		if (m_CurrentSceneIndex == u32_max)
+		if (m_CurrentSceneIndex == InvalidID)
 		{
 			m_CurrentSceneIndex = 0;
 		}
@@ -197,6 +208,7 @@ namespace flex
 
 		InitializeCurrentScene();
 		PostInitializeCurrentScene();
+		g_Renderer->AddEditorString("Scene reloaded");
 	}
 
 	void SceneManager::AddFoundScenes()
@@ -211,7 +223,7 @@ namespace flex
 		{
 			for (std::string& fileName : foundFileNames)
 			{
-				StripLeadingDirectories(fileName);
+				fileName = StripLeadingDirectories(fileName);
 
 				if (!SceneExists(fileName))
 				{
@@ -229,7 +241,7 @@ namespace flex
 		{
 			for (std::string& fileName : foundFileNames)
 			{
-				StripLeadingDirectories(fileName);
+				fileName = StripLeadingDirectories(fileName);
 
 				if (!SceneExists(fileName))
 				{
@@ -358,7 +370,7 @@ namespace flex
 				m_CurrentSceneIndex = 0;
 			}
 
-			g_EngineInstance->PreSceneChange();
+			g_Editor->PreSceneChange();
 			scene->Destroy();
 		}
 		else
@@ -413,13 +425,9 @@ namespace flex
 
 	void SceneManager::DrawImGuiObjects()
 	{
-		static const char* scenesStr = "Scenes";
-		if (ImGui::TreeNode(scenesStr))
+		if (ImGui::TreeNode("Scenes"))
 		{
-			static const char* arrowPrevStr = "<";
-			static const char* arrowNextStr = ">";
-
-			if (ImGui::Button(arrowPrevStr))
+			if (ImGui::Button("<"))
 			{
 				SetPreviousSceneActive();
 				InitializeCurrentScene();
@@ -445,12 +453,14 @@ namespace flex
 
 			ImGui::SameLine();
 
-			if (ImGui::Button(arrowNextStr))
+			if (ImGui::Button(">"))
 			{
 				SetNextSceneActive();
 				InitializeCurrentScene();
 				PostInitializeCurrentScene();
 			}
+
+			ImGui::Checkbox("Spawn player", &currentScene->m_bSpawnPlayer);
 
 			i32 sceneItemWidth = 240;
 			if (ImGui::BeginChild("Scenes", ImVec2((real)sceneItemWidth, 120), true, ImGuiWindowFlags_NoResize))
@@ -477,14 +487,12 @@ namespace flex
 			}
 			ImGui::EndChild();
 
-			static const char* addSceneStr = "Add scene...";
-			std::string addScenePopupID = "Add scene";
-			if (ImGui::Button(addSceneStr))
+			if (ImGui::Button("Add scene..."))
 			{
-				ImGui::OpenPopup(addScenePopupID.c_str());
+				ImGui::OpenPopup("Add scene");
 			}
 
-			if (ImGui::BeginPopupModal(addScenePopupID.c_str(), NULL, ImGuiWindowFlags_AlwaysAutoResize))
+			if (ImGui::BeginPopupModal("Add scene", NULL, ImGuiWindowFlags_AlwaysAutoResize))
 			{
 				static std::string newSceneName = "scene_" + IntToString(GetSceneCount(), 2);
 
@@ -585,8 +593,7 @@ namespace flex
 				if (bRenameSceneFileName)
 				{
 					std::string newSceneFileNameStr(newSceneFileName);
-					std::string fileDir = RelativePathToAbsolute(scene->GetDefaultRelativeFilePath());
-					ExtractDirectoryString(fileDir);
+					std::string fileDir = ExtractDirectoryString(RelativePathToAbsolute(scene->GetDefaultRelativeFilePath()));
 					std::string newSceneFilePath = fileDir + newSceneFileNameStr;
 					bool bNameEmpty = newSceneFileNameStr.empty();
 					bool bCorrectFileType = EndsWith(newSceneFileNameStr, ".json");
@@ -674,8 +681,7 @@ namespace flex
 				newSceneNameStr += " Copy";
 				strcpy_s(newSceneName, newSceneNameStr.c_str());
 
-				std::string newSceneFileNameStr = scene->GetFileName();
-				StripFileType(newSceneFileNameStr);
+				std::string newSceneFileNameStr = StripFileType(scene->GetFileName());
 
 				bool bValidName = false;
 				do
@@ -694,8 +700,7 @@ namespace flex
 					}
 
 					std::string filePathFrom = RelativePathToAbsolute(scene->GetDefaultRelativeFilePath());
-					std::string fullNewFilePath = filePathFrom;
-					ExtractDirectoryString(fullNewFilePath);
+					std::string fullNewFilePath = ExtractDirectoryString(filePathFrom);
 					fullNewFilePath += newSceneFileNameStr + ".json";
 					bValidName = !FileExists(fullNewFilePath);
 				} while (!bValidName);
@@ -735,9 +740,7 @@ namespace flex
 				if (bDuplicateScene && bValidInput)
 				{
 					std::string filePathFrom = RelativePathToAbsolute(scene->GetDefaultRelativeFilePath());
-					std::string sceneFileDir = filePathFrom;
-					ExtractDirectoryString(sceneFileDir);
-					std::string filePathTo = sceneFileDir + newSceneFileName;
+					std::string filePathTo = ExtractDirectoryString(filePathFrom) + newSceneFileName;
 
 					if (FileExists(filePathTo))
 					{
@@ -782,31 +785,28 @@ namespace flex
 
 			if (ImGui::Button("Open in explorer"))
 			{
-				std::string directory = currentScene->GetRelativeFilePath();
-				ExtractDirectoryString(directory);
-				directory = RelativePathToAbsolute(directory);
+				const std::string directory = RelativePathToAbsolute(ExtractDirectoryString(currentScene->GetRelativeFilePath()));
 				OpenExplorer(directory);
 			}
 
 			ImGui::SameLine();
 
-			static const char* deleteSceneStr = "Delete scene...";
-			const std::string deleteScenePopupID = "Delete scene";
+			const char* deleteScenePopupID = "Delete scene";
 
 			ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
 			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
 			ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
 
-			if (ImGui::Button(deleteSceneStr))
+			if (ImGui::Button("Delete scene..."))
 			{
-				ImGui::OpenPopup(deleteScenePopupID.c_str());
+				ImGui::OpenPopup(deleteScenePopupID);
 			}
 
 			ImGui::PopStyleColor();
 			ImGui::PopStyleColor();
 			ImGui::PopStyleColor();
 
-			if (ImGui::BeginPopupModal(deleteScenePopupID.c_str(), NULL, ImGuiWindowFlags_AlwaysAutoResize))
+			if (ImGui::BeginPopupModal(deleteScenePopupID, NULL, ImGuiWindowFlags_AlwaysAutoResize))
 			{
 				static std::string sceneName = CurrentScene()->GetName();
 

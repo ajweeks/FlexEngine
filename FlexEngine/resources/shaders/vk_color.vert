@@ -3,20 +3,18 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
-layout (location = 0) in vec4 inWorldPos;
-layout (location = 1) in vec4 inColor;
+layout (location = 0) in vec3 in_Position;
+layout (location = 1) in vec4 in_Color;
 
-// Updated once per frame
 layout (binding = 0) uniform UBOConstant
 {
 	mat4 viewProjection;
 } uboConstant;
 
-// Updated once per object
 layout (binding = 1) uniform UBODynamic
 {
 	mat4 model;
-	vec4 multiplier;
+	vec4 colorMultiplier;
 } uboDynamic;
 
 layout (location = 0) out vec4 outColor;
@@ -28,7 +26,7 @@ out gl_PerVertex
 
 void main() 
 {
-	gl_Position = uboConstant.viewProjection * uboDynamic.model * inWorldPos;
+	gl_Position = uboConstant.viewProjection * uboDynamic.model * vec4(in_Position, 1.0);
 
-	outColor = inColor * uboDynamic.multiplier;
+	outColor = in_Color * uboDynamic.colorMultiplier;
 }

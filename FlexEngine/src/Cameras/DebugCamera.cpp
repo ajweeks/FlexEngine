@@ -8,6 +8,7 @@ IGNORE_WARNINGS_PUSH
 IGNORE_WARNINGS_POP
 
 #include "Cameras/CameraManager.hpp"
+#include "Editor.hpp"
 #include "FlexEngine.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
@@ -21,12 +22,13 @@ namespace flex
 		BaseCamera("debug", false, FOV),
 		mouseButtonCallback(this, &DebugCamera::OnMouseButtonEvent),
 		mouseMovedCallback(this, &DebugCamera::OnMouseMovedEvent),
+		m_RollOnTurnAmount(1.5f),
 		m_MouseDragDist(0.0f),
 		m_MoveVel(0.0f),
 		m_TurnVel(0.0f)
 	{
 		ResetOrientation();
-		m_DragHisto = Histogram(120);
+		m_DragHistory = Histogram(120);
 	}
 
 	DebugCamera::~DebugCamera()
@@ -42,7 +44,7 @@ namespace flex
 			g_InputManager->BindMouseButtonCallback(&mouseButtonCallback, 10);
 			g_InputManager->BindMouseMovedCallback(&mouseMovedCallback, 10);
 
-			m_bInitialized = true;
+			BaseCamera::Initialize();
 		}
 	}
 
@@ -52,18 +54,21 @@ namespace flex
 		{
 			g_InputManager->UnbindMouseButtonCallback(&mouseButtonCallback);
 			g_InputManager->UnbindMouseMovedCallback(&mouseMovedCallback);
-			m_bInitialized = false;
+
+			BaseCamera::Destroy();
 		}
 	}
 
 	void DebugCamera::DrawImGuiObjects()
 	{
-		m_DragHisto.DrawImGui();
+		m_DragHistory.DrawImGui();
 	}
 
 	void DebugCamera::Update()
 	{
-		m_DragHisto.AddElement(m_MouseDragDist.y);
+		BaseCamera::Update();
+
+		m_DragHistory.AddElement(m_MouseDragDist.y);
 
 		glm::vec3 targetDPos(0.0f);
 
@@ -75,7 +80,7 @@ namespace flex
 
 		real lookH = g_InputManager->GetActionAxisValue(Action::DBG_CAM_LOOK_LEFT) + g_InputManager->GetActionAxisValue(Action::DBG_CAM_LOOK_RIGHT);
 		real lookV = g_InputManager->GetActionAxisValue(Action::DBG_CAM_LOOK_DOWN) + g_InputManager->GetActionAxisValue(Action::DBG_CAM_LOOK_UP);
-		real yawO = lookH * m_GamepadRotationSpeed * turnSpeedMultiplier * g_DeltaTime;
+		real yawO = -lookH * m_GamepadRotationSpeed * turnSpeedMultiplier * g_DeltaTime;
 		// Horizontal FOV is roughly twice as wide as vertical
 		real pitchO = lookV * 0.6f * m_GamepadRotationSpeed * turnSpeedMultiplier * g_DeltaTime;
 
@@ -116,10 +121,21 @@ namespace flex
 		{
 			if (m_bOrbiting)
 			{
-				orbitingCenter = g_EngineInstance->GetSelectedObjectsCenter();
+				orbitingCenter = g_Editor->GetSelectedObjectsCenter();
 				bOrbiting = true;
-				targetDPos += m_Right * m_MouseDragDist.x * m_OrbitingSpeed * turnSpeedMultiplier +
-					m_Up * m_MouseDragDist.y * m_OrbitingSpeed * turnSpeedMultiplier;
+
+				float dr = glm::dot(m_Forward, VEC3_UP);
+				if (abs(dr) > 0.995f && glm::sign(m_MouseDragDist.y) != glm::sign(dr))
+
+				{
+					// Facing nearly entirely up or down, only allow movement around pole (slowed slightly)
+					targetDPos += m_Right * (m_MouseDragDist.x * m_OrbitingSpeed * turnSpeedMultiplier * 0.5f);
+				}
+				else
+				{
+					targetDPos += m_Right * (m_MouseDragDist.x * m_OrbitingSpeed * turnSpeedMultiplier) +
+						m_Up * (m_MouseDragDist.y * m_OrbitingSpeed * turnSpeedMultiplier);
+				}
 			}
 			else
 			{
@@ -127,6 +143,8 @@ namespace flex
 
 				m_TurnVel += glm::vec2(-m_MouseDragDist.x * m_MouseRotationSpeed * turnSpeedMultiplier,
 					m_MouseDragDist.y * m_MouseRotationSpeed * turnSpeedMultiplier);
+
+				m_Roll += m_TurnVel.x * m_RollOnTurnAmount * g_DeltaTime;
 
 				m_Yaw += m_TurnVel.x;
 				m_Pitch += m_TurnVel.y;
@@ -171,7 +189,9 @@ namespace flex
 			// TODO: Handle in action callback
 			if (g_InputManager->IsMouseButtonDown(MouseButton::MIDDLE))
 			{
-				glm::vec2 dragDist = g_InputManager->GetMouseDragDistance(MouseButton::MIDDLE);
+				const real multiplier = bModFaster ? m_PanSpeedFastMultiplier : bModSlower ? m_PanSpeedSlowMultiplier : 1.0f;
+
+				glm::vec2 dragDist = g_InputManager->GetMouseDragDistance(MouseButton::MIDDLE) * multiplier;
 				glm::vec2 frameBufferSize = (glm::vec2)g_Window->GetFrameBufferSize();
 				glm::vec2 normDragDist = dragDist / frameBufferSize;
 				m_Position = (m_DragStartPosition + (normDragDist.x * m_Right + normDragDist.y * m_Up) * m_PanSpeed);

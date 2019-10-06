@@ -31,16 +31,11 @@ namespace flex
 
 	namespace gl
 	{
-#define InvalidID u32_max
-
 		struct GLShader
 		{
-			GLShader(const std::string& name,
-					 const std::string& vertexShaderFilePath,
-					 const std::string& fragmentShaderFilePath,
-					 const std::string& geometryShaderFilePath = "");
+			GLShader(Shader* shader);
 
-			Shader shader;
+			Shader* shader = nullptr;
 
 			u32 program = 0;
 		};
@@ -60,25 +55,21 @@ namespace flex
 			struct UniformIDs
 			{
 				i32 model;
-				i32 modelInvTranspose;
 				i32 colorMultiplier;
-				i32 lightViewProjection;
 				i32 exposure;
 				i32 viewProjection;
 				i32 view;
 				i32 viewInv;
 				i32 projection;
+				i32 projInv;
 				i32 camPos;
 				i32 enableNormalTexture;
-				i32 enableCubemapTexture;
 				i32 constAlbedo;
 				i32 enableAlbedoSampler;
 				i32 constMetallic;
 				i32 enableMetallicSampler;
 				i32 constRoughness;
 				i32 enableRoughnessSampler;
-				i32 constAO;
-				i32 enableAOSampler;
 				i32 hdrEquirectangularSampler;
 				i32 enableIrradianceSampler;
 				i32 verticalScale;
@@ -88,6 +79,12 @@ namespace flex
 				i32 shadowDarkness;
 				//i32 textureScale;
 				i32 time;
+				i32 enableSSAO;
+				i32 ssaoKernelSize;
+				i32 ssaoRadius;
+				i32 ssaoBlurRadius;
+				i32 ssaoTexelOffset;
+				i32 ssaoPowExp;
 			};
 			UniformIDs uniformIDs;
 
@@ -101,13 +98,17 @@ namespace flex
 			u32 albedoSamplerID = InvalidID;
 			u32 metallicSamplerID = InvalidID;
 			u32 roughnessSamplerID = InvalidID;
-			u32 aoSamplerID = InvalidID;
 
 			u32 hdrTextureID = InvalidID;
 
 			u32 irradianceSamplerID = InvalidID;
 			u32 prefilteredMapSamplerID = InvalidID;
 			u32 brdfLUTSamplerID = InvalidID;
+			u32 depthSamplerID = InvalidID;
+			u32 noiseSamplerID = InvalidID;
+			u32 ssaoNormalSamplerID = InvalidID;
+			u32 ssaoRawSamplerID = InvalidID;
+			u32 ssaoFinalSamplerID = InvalidID;
 		};
 
 		struct GLRenderObject
@@ -223,6 +224,7 @@ namespace flex
 
 			bool CreateEmpty();
 			bool LoadFromFile();
+			bool CreateFromMemory(void* memory, bool bFloat, const TextureParameters& params);
 
 			void Reload();
 
@@ -249,6 +251,8 @@ namespace flex
 			std::string name; // absFilePath but without the leading directories, or a custom name if not loaded from file
 
 		public:
+			TextureID textureID = InvalidTextureID;
+
 			GLuint handle = 0;
 
 			u32 width = 0;

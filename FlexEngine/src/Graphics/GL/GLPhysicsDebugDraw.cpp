@@ -32,7 +32,8 @@ namespace flex
 				MaterialCreateInfo debugMatCreateInfo = {};
 				debugMatCreateInfo.shaderName = "color";
 				debugMatCreateInfo.name = debugMatName;
-				debugMatCreateInfo.engineMaterial = true;
+				debugMatCreateInfo.persistent = true;
+				debugMatCreateInfo.visibleInEditor = true;
 				m_MaterialID = g_Renderer->InitializeMaterial(&debugMatCreateInfo);
 			}
 
@@ -69,30 +70,6 @@ namespace flex
 
 			glDeleteVertexArrays(1, &m_VAO);
 			glDeleteBuffers(1, &m_VBO);
-		}
-
-		void GLPhysicsDebugDraw::UpdateDebugMode()
-		{
-			const PhysicsDebuggingSettings& settings = g_Renderer->GetPhysicsDebuggingSettings();
-
-			m_DebugMode =
-				(settings.DisableAll ? DBG_NoDebug : 0) |
-				(settings.DrawWireframe ? DBG_DrawWireframe : 0) |
-				(settings.DrawAabb ? DBG_DrawAabb : 0) |
-				(settings.DrawFeaturesText ? DBG_DrawFeaturesText : 0) |
-				(settings.DrawContactPoints ? DBG_DrawContactPoints : 0) |
-				(settings.NoDeactivation ? DBG_NoDeactivation : 0) |
-				(settings.NoHelpText ? DBG_NoHelpText : 0) |
-				(settings.DrawText ? DBG_DrawText : 0) |
-				(settings.ProfileTimings ? DBG_ProfileTimings : 0) |
-				(settings.EnableSatComparison ? DBG_EnableSatComparison : 0) |
-				(settings.DisableBulletLCP ? DBG_DisableBulletLCP : 0) |
-				(settings.EnableCCD ? DBG_EnableCCD : 0) |
-				(settings.DrawConstraints ? DBG_DrawConstraints : 0) |
-				(settings.DrawConstraintLimits ? DBG_DrawConstraintLimits : 0) |
-				(settings.FastWireframe ? DBG_FastWireframe : 0) |
-				(settings.DrawNormals ? DBG_DrawNormals : 0) |
-				(settings.DrawFrames ? DBG_DrawFrames : 0);
 		}
 
 		void GLPhysicsDebugDraw::reportErrorWarning(const char* warningString)
@@ -174,17 +151,6 @@ namespace flex
 			drawSphere(radius, tr, color);
 		}
 
-		void GLPhysicsDebugDraw::flushLines()
-		{
-			Draw();
-		}
-
-		void GLPhysicsDebugDraw::ClearLines()
-		{
-			m_pLineSegments = m_LineSegments;
-			m_LineSegments.clear();
-		}
-
 		void GLPhysicsDebugDraw::Draw()
 		{
 			if (m_LineSegments.empty())
@@ -221,9 +187,9 @@ namespace flex
 					*(m_VertexBufferCreateInfo.positions_3D.data() + i) = (ToVec3(line.start));
 					*(m_VertexBufferCreateInfo.positions_3D.data() + i + 1) = (ToVec3(line.end));
 
-					glm::vec4 color = ToVec4(line.color);
-					*(m_VertexBufferCreateInfo.colors_R32G32B32A32.data() + i) = (color);
-					*(m_VertexBufferCreateInfo.colors_R32G32B32A32.data() + i + 1) = (color);
+					glm::vec3 color = ToVec3(line.color);
+					*(m_VertexBufferCreateInfo.colors_R32G32B32A32.data() + i) = glm::vec4(color, 1.0f);
+					*(m_VertexBufferCreateInfo.colors_R32G32B32A32.data() + i + 1) = glm::vec4(color, 1.0f);
 
 					i += 2;
 				}

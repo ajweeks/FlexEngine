@@ -13,11 +13,14 @@ IGNORE_WARNINGS_PUSH
 
 #include <LinearMath/btIDebugDraw.h>
 #include <LinearMath/btTransform.h>
+
+#include <glm/gtx/quaternion.hpp> // for rotate
 IGNORE_WARNINGS_POP
 
 #include "Scene/GameObject.hpp"
 #include "Audio/AudioManager.hpp"
 #include "Cameras/TerminalCamera.hpp"
+#include "Editor.hpp"
 #include "FlexEngine.hpp"
 #include "Graphics/BitmapFont.hpp"
 #include "Graphics/Renderer.hpp"
@@ -31,6 +34,7 @@ IGNORE_WARNINGS_POP
 #include "Scene/BaseScene.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
+#include "VirtualMachine.hpp"
 #include "Window/Window.hpp"
 
 namespace flex
@@ -40,9 +44,7 @@ namespace flex
 	const char* Cart::emptyCartMeshName = "cart-empty.glb";
 	const char* EngineCart::engineMeshName = "cart-engine.glb";
 
-	struct Token g_EmptyToken = Token();
-
-	RandomizedAudioSource GameObject::s_SqueakySounds;
+	AudioCue GameObject::s_SqueakySounds;
 	AudioSourceID GameObject::s_BunkSound;
 
 	GameObject::GameObject(const std::string& name, GameObjectType type) :
@@ -175,6 +177,10 @@ namespace flex
 		{
 			newGameObject = new GerstnerWave(objectName);
 		} break;
+		case GameObjectType::BLOCKS:
+		{
+			newGameObject = new Blocks(objectName);
+		} break;
 		case GameObjectType::OBJECT: // Fall through
 		case GameObjectType::_NONE:
 			newGameObject = new GameObject(objectName, gameObjectType);
@@ -245,6 +251,7 @@ namespace flex
 		{
 			m_MeshComponent->Destroy();
 			delete m_MeshComponent;
+			m_MeshComponent = nullptr;
 		}
 
 		if (m_RenderID != InvalidRenderID)
@@ -257,12 +264,18 @@ namespace flex
 		{
 			m_RigidBody->Destroy();
 			delete m_RigidBody;
+			m_RigidBody = nullptr;
 		}
 
 		if (m_CollisionShape)
 		{
 			delete m_CollisionShape;
 			m_CollisionShape = nullptr;
+		}
+
+		if (g_Editor->IsObjectSelected(this))
+		{
+			g_Editor->DeselectObject(this);
 		}
 	}
 
@@ -433,9 +446,9 @@ namespace flex
 					m_RigidBody->MatchParentTransform();
 				}
 
-				if (g_EngineInstance->IsObjectSelected(this))
+				if (g_Editor->IsObjectSelected(this))
 				{
-					g_EngineInstance->CalculateSelectedObjectsCenter();
+					g_Editor->CalculateSelectedObjectsCenter();
 				}
 			}
 		}
@@ -448,11 +461,7 @@ namespace flex
 		{
 			if (ImGui::Button("Add mesh component"))
 			{
-				MaterialID matID = InvalidMaterialID;
-				// TODO: Don't rely on material names!
-				g_Renderer->GetMaterialID("pbr chrome", matID);
-
-				MeshComponent* mesh = SetMeshComponent(new MeshComponent(matID, this));
+				MeshComponent* mesh = SetMeshComponent(new MeshComponent(this));
 				mesh->LoadFromFile(RESOURCE_LOCATION  "meshes/cube.glb");
 			}
 		}
@@ -752,10 +761,10 @@ namespace flex
 		bool bRefreshNameField = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup) &&
 			ImGui::IsMouseClicked(1);
 
-		if (bActive && g_EngineInstance->GetWantRenameActiveElement())
+		if (bActive && g_Editor->GetWantRenameActiveElement())
 		{
 			ImGui::OpenPopup(contextMenuIDStr.c_str());
-			g_EngineInstance->ClearWantRenameActiveElement();
+			g_Editor->ClearWantRenameActiveElement();
 			bRefreshNameField = true;
 		}
 		if (bRefreshNameField)
@@ -818,7 +827,7 @@ namespace flex
 		{
 			GameObject* newGameObject = CopySelfAndAddToScene(nullptr, true);
 
-			g_EngineInstance->SetSelectedObject(newGameObject);
+			g_Editor->SetSelectedObject(newGameObject);
 
 			return true;
 		}
@@ -895,9 +904,7 @@ namespace flex
 			bool bFound = false;
 			for (const JSONObject& parsedMeshObj : BaseScene::s_ParsedMeshes)
 			{
-				std::string fileName = parsedMeshObj.GetString("file");
-				StripLeadingDirectories(fileName);
-				StripFileType(fileName);
+				std::string fileName = StripFileType(StripLeadingDirectories(parsedMeshObj.GetString("file")));
 
 				if (fileName.compare(meshName) == 0)
 				{
@@ -1099,10 +1106,7 @@ namespace flex
 			bIsBasicObject &&
 			!m_bLoadedFromPrefab)
 		{
-			std::string meshName = m_MeshComponent->GetRelativeFilePath();
-			StripLeadingDirectories(meshName);
-			StripFileType(meshName);
-
+			const std::string meshName = StripFileType(StripLeadingDirectories(m_MeshComponent->GetRelativeFilePath()));
 			object.fields.emplace_back("mesh", JSONValue(meshName));
 		}
 
@@ -1351,7 +1355,7 @@ namespace flex
 
 		if (m_MeshComponent)
 		{
-			MeshComponent* newMeshComponent = newGameObject->SetMeshComponent(new MeshComponent(matID, newGameObject, false));
+			MeshComponent* newMeshComponent = newGameObject->SetMeshComponent(new MeshComponent(newGameObject, matID, false));
 			MeshComponent::Type prefabType = m_MeshComponent->GetType();
 			if (prefabType == MeshComponent::Type::PREFAB)
 			{
@@ -1715,6 +1719,10 @@ namespace flex
 		return &m_Transform;
 	}
 
+	void GameObject::OnTransformChanged()
+	{
+	}
+
 	void GameObject::AddTag(const std::string& tag)
 	{
 		if (std::find(m_Tags.begin(), m_Tags.end(), tag) == m_Tags.end())
@@ -1901,6 +1909,16 @@ namespace flex
 		return meshComponent;
 	}
 
+	bool GameObject::CastsShadow() const
+	{
+		return m_bCastsShadow;
+	}
+
+	void GameObject::SetCastsShadow(bool bCastsShadow)
+	{
+		m_bCastsShadow = bCastsShadow;
+	}
+
 	void GameObject::OnOverlapBegin(GameObject* other)
 	{
 		overlappingObjects.push_back(other);
@@ -1980,7 +1998,7 @@ namespace flex
 
 			if (!m_MeshComponent)
 			{
-				MeshComponent* valveMesh = new MeshComponent(matID, this);
+				MeshComponent* valveMesh = new MeshComponent(this, matID);
 				valveMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/valve.glb");
 				assert(GetMeshComponent() == nullptr);
 				SetMeshComponent(valveMesh);
@@ -2054,7 +2072,7 @@ namespace flex
 		if ((rotationSpeed < 0.0f &&
 			rotation <= minRotation) ||
 			(rotationSpeed > 0.0f &&
-			rotation >= maxRotation))
+				rotation >= maxRotation))
 		{
 			rotationSpeed = 0.0f;
 			pRotationSpeed = 0.0f;
@@ -2144,7 +2162,7 @@ namespace flex
 	{
 		if (!m_MeshComponent)
 		{
-			MeshComponent* cubeMesh = new MeshComponent(matID, this);
+			MeshComponent* cubeMesh = new MeshComponent(this, matID);
 			cubeMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/cube.glb");
 			SetMeshComponent(cubeMesh);
 		}
@@ -2325,7 +2343,7 @@ namespace flex
 
 			if (!m_MeshComponent)
 			{
-				MeshComponent* windowMesh = new MeshComponent(matID, this);
+				MeshComponent* windowMesh = new MeshComponent(this, matID);
 				const char* filePath;
 				if (bBroken)
 				{
@@ -2381,29 +2399,30 @@ namespace flex
 		UNREFERENCED_PARAMETER(matID);
 
 		// Probe capture material
-		MaterialCreateInfo probeCaptureMatCreateInfo = {};
-		probeCaptureMatCreateInfo.name = "Reflection probe capture";
-		probeCaptureMatCreateInfo.shaderName = "deferred_combine_cubemap";
-		probeCaptureMatCreateInfo.generateReflectionProbeMaps = true;
-		probeCaptureMatCreateInfo.generateHDRCubemapSampler = true;
-		probeCaptureMatCreateInfo.generatedCubemapSize = glm::vec2(512.0f, 512.0f); // TODO: Add support for non-512.0f size
-		probeCaptureMatCreateInfo.generateCubemapDepthBuffers = true;
-		probeCaptureMatCreateInfo.enableIrradianceSampler = true;
-		probeCaptureMatCreateInfo.generateIrradianceSampler = true;
-		probeCaptureMatCreateInfo.generatedIrradianceCubemapSize = { 32, 32 };
-		probeCaptureMatCreateInfo.enablePrefilteredMap = true;
-		probeCaptureMatCreateInfo.generatePrefilteredMap = true;
-		probeCaptureMatCreateInfo.generatedPrefilteredCubemapSize = { 128, 128 };
-		probeCaptureMatCreateInfo.enableBRDFLUT = true;
-		probeCaptureMatCreateInfo.engineMaterial = true;
-		probeCaptureMatCreateInfo.frameBuffers = {
-			{ "positionMetallicFrameBufferSampler", nullptr },
-			{ "normalRoughnessFrameBufferSampler", nullptr },
-			{ "albedoAOFrameBufferSampler", nullptr },
-		};
-		captureMatID = g_Renderer->InitializeMaterial(&probeCaptureMatCreateInfo);
+		//MaterialCreateInfo probeCaptureMatCreateInfo = {};
+		//probeCaptureMatCreateInfo.name = "reflection probe capture";
+		//probeCaptureMatCreateInfo.shaderName = "deferred_combine_cubemap";
+		//probeCaptureMatCreateInfo.generateReflectionProbeMaps = true;
+		//probeCaptureMatCreateInfo.generateHDRCubemapSampler = true;
+		//probeCaptureMatCreateInfo.generatedCubemapSize = glm::vec2(512.0f, 512.0f); // TODO: Add support for non-512.0f size
+		//probeCaptureMatCreateInfo.generateCubemapDepthBuffers = true;
+		//probeCaptureMatCreateInfo.enableIrradianceSampler = true;
+		//probeCaptureMatCreateInfo.generateIrradianceSampler = true;
+		//probeCaptureMatCreateInfo.generatedIrradianceCubemapSize = { 32, 32 };
+		//probeCaptureMatCreateInfo.enablePrefilteredMap = true;
+		//probeCaptureMatCreateInfo.generatePrefilteredMap = true;
+		//probeCaptureMatCreateInfo.generatedPrefilteredCubemapSize = { 128, 128 };
+		//probeCaptureMatCreateInfo.enableBRDFLUT = true;
+		//probeCaptureMatCreateInfo.persistent = true;
+		//probeCaptureMatCreateInfo.visibleInEditor = false;
+		//probeCaptureMatCreateInfo.sampledFrameBuffers = {
+		//	{ "positionMetallicFrameBufferSampler", nullptr },
+		//	{ "normalRoughnessFrameBufferSampler", nullptr },
+		//	{ "albedoAOFrameBufferSampler", nullptr },
+		//};
+		//captureMatID = g_Renderer->InitializeMaterial(&probeCaptureMatCreateInfo);
 
-		//MeshComponent* sphereMesh = new MeshComponent(matID, this);
+		//MeshComponent* sphereMesh = new MeshComponent(this, matID);
 
 		//assert(m_MeshComponent == nullptr);
 		//sphereMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/sphere.glb");
@@ -2426,7 +2445,7 @@ namespace flex
 
 		//AddChild(captureObject);
 
-		g_Renderer->SetReflectionProbeMaterial(captureMatID);
+		//g_Renderer->SetReflectionProbeMaterial(captureMatID);
 	}
 
 	void ReflectionProbe::SerializeUniqueFields(JSONObject& parentObject) const
@@ -2446,6 +2465,7 @@ namespace flex
 	Skybox::Skybox(const std::string& name) :
 		GameObject(name, GameObjectType::SKYBOX)
 	{
+		SetCastsShadow(false);
 	}
 
 	GameObject* Skybox::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
@@ -2463,7 +2483,7 @@ namespace flex
 
 		assert(m_MeshComponent == nullptr);
 		assert(matID != InvalidMaterialID);
-		MeshComponent* skyboxMesh = new MeshComponent(matID, this, false);
+		MeshComponent* skyboxMesh = new MeshComponent(this, matID, false);
 		skyboxMesh->LoadPrefabShape(MeshComponent::PrefabShape::SKYBOX);
 		SetMeshComponent(skyboxMesh);
 
@@ -2505,12 +2525,16 @@ namespace flex
 		data.dir = VEC3_RIGHT;
 		data.color = VEC3_ONE;
 		data.brightness = 1.0f;
+		data.castShadows = 1;
+		data.shadowDarkness = 1.0f;
 	}
 
 	void DirectionalLight::Initialize()
 	{
 		g_Renderer->RegisterDirectionalLight(this);
-		data.dir = glm::eulerAngles(m_Transform.GetLocalRotation());
+		data.dir = glm::rotate(m_Transform.GetWorldRotation(), VEC3_RIGHT);
+
+		m_Transform.updateParentOnStateChange = true;
 
 		GameObject::Initialize();
 	}
@@ -2533,51 +2557,49 @@ namespace flex
 			ImGuiColorEditFlags_PickerHueWheel |
 			ImGuiColorEditFlags_HDR;
 
-		if (ImGui::TreeNode("Directional Light"))
+		ImGui::Text("Directional Light");
+
+		if (ImGui::BeginPopupContextItem("##dir light context menu"))
 		{
-			if (ImGui::Checkbox("Enabled", &m_bVisible))
+			if (ImGui::Button("Delete"))
 			{
-				data.enabled = m_bVisible ? 1 : 0;
+				g_SceneManager->CurrentScene()->RemoveObject(this, true);
+				ImGui::CloseCurrentPopup();
 			}
 
-			glm::vec3 position = m_Transform.GetLocalPosition();
-			if (ImGui::DragFloat3("Position", &position.x, 0.1f))
-			{
-				m_Transform.SetLocalPosition(position);
-			}
-			glm::vec3 dirtyRot = glm::degrees(glm::eulerAngles(m_Transform.GetLocalRotation()));
-			glm::vec3 cleanedRot;
-			if (DoImGuiRotationDragFloat3("Rotation", dirtyRot, cleanedRot))
-			{
-				m_Transform.SetLocalRotation(glm::quat(glm::radians(cleanedRot)));
-				data.dir = cleanedRot;
-			}
-			ImGui::SliderFloat("Brightness", &data.brightness, 0.0f, 15.0f);
-			ImGui::ColorEdit4("Color ", &data.color.r, colorEditFlags);
-
-			ImGui::Spacing();
-			ImGui::Text("Shadow");
-
-			ImGui::Checkbox("Cast shadow", &bCastShadow);
-			ImGui::SliderFloat("Shadow darkness", &shadowDarkness, 0.0f, 1.0f);
-
-			ImGui::DragFloat("Near", &shadowMapNearPlane);
-			ImGui::DragFloat("Far", &shadowMapFarPlane);
-			ImGui::DragFloat("Zoom", &shadowMapZoom);
-
-			if (ImGui::CollapsingHeader("Preview"))
-			{
-				ImGui::Image((void*)shadowTextureID, ImVec2(256, 256), ImVec2(0, 1), ImVec2(1, 0));
-			}
-
-			ImGui::TreePop();
+			ImGui::EndPopup();
 		}
+
+		if (ImGui::Checkbox("Enabled", &m_bVisible))
+		{
+			data.enabled = m_bVisible ? 1 : 0;
+		}
+
+		ImGui::SameLine();
+		ImGui::ColorEdit4("Color ", &data.color.r, colorEditFlags);
+		ImGui::SliderFloat("Brightness", &data.brightness, 0.0f, 15.0f);
+
+		ImGui::Spacing();
+		ImGui::Text("Shadow");
+
+		bool bCastShadows = data.castShadows != 0;
+		if (ImGui::Checkbox("Cast shadow", &bCastShadows))
+		{
+			data.castShadows = bCastShadows ? 1 : 0;
+		}
+		ImGui::SliderFloat("Shadow darkness", &data.shadowDarkness, 0.0f, 1.0f);
 	}
 
 	void DirectionalLight::SetVisible(bool bVisible, bool bEffectChildren /* = true */)
 	{
 		data.enabled = (bVisible ? 1 : 0);
 		GameObject::SetVisible(bVisible, bEffectChildren);
+	}
+
+	void DirectionalLight::OnTransformChanged()
+	{
+		pos = m_Transform.GetLocalPosition();
+		data.dir = glm::rotate(m_Transform.GetWorldRotation(), VEC3_RIGHT);
 	}
 
 	void DirectionalLight::SetPos(const glm::vec3& newPos)
@@ -2597,21 +2619,30 @@ namespace flex
 
 	void DirectionalLight::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID)
 	{
-		UNREFERENCED_PARAMETER(scene);
 		UNREFERENCED_PARAMETER(matID);
+
+		i32 sceneFileVersion = scene->GetFileVersion();
 
 		JSONObject directionalLightObj;
 		if (parentObject.SetObjectChecked("directional light info", directionalLightObj))
 		{
-			std::string dirStr = directionalLightObj.GetString("rotation");
-			glm::quat rot(ParseVec3(dirStr));
-			m_Transform.SetLocalRotation(rot);
-			data.dir = glm::eulerAngles(rot);
+			std::string rotStr = directionalLightObj.GetString("rotation");
+			if (sceneFileVersion >= 2)
+			{
+				m_Transform.SetWorldRotation(ParseQuat(rotStr));
+				data.dir = glm::rotate(m_Transform.GetWorldRotation(), VEC3_RIGHT);
+			}
+			else
+			{
+				glm::quat rot(ParseVec3(rotStr));
+				m_Transform.SetWorldRotation(rot);
+			}
 
 			std::string posStr = directionalLightObj.GetString("pos");
 			if (!posStr.empty())
 			{
 				m_Transform.SetLocalPosition(ParseVec3(posStr));
+				pos = m_Transform.GetWorldPosition();
 			}
 
 			directionalLightObj.SetVec3Checked("color", data.color);
@@ -2623,23 +2654,12 @@ namespace flex
 				m_bVisible = directionalLightObj.GetBool("enabled") ? 1 : 0;
 			}
 
-			directionalLightObj.SetBoolChecked("cast shadows", bCastShadow);
-			directionalLightObj.SetFloatChecked("shadow darkness", shadowDarkness);
-
-			if (directionalLightObj.HasField("shadow map near"))
+			bool bCastShadow = false;
+			if (directionalLightObj.SetBoolChecked("cast shadows", bCastShadow))
 			{
-				directionalLightObj.SetFloatChecked("shadow map near", shadowMapNearPlane);
+				data.castShadows = bCastShadow ? 1 : 0;
 			}
-
-			if (directionalLightObj.HasField("shadow map far"))
-			{
-				directionalLightObj.SetFloatChecked("shadow map far", shadowMapFarPlane);
-			}
-
-			if (directionalLightObj.HasField("shadow map zoom"))
-			{
-				directionalLightObj.SetFloatChecked("shadow map zoom", shadowMapZoom);
-			}
+			directionalLightObj.SetFloatChecked("shadow darkness", data.shadowDarkness);
 		}
 	}
 
@@ -2647,8 +2667,7 @@ namespace flex
 	{
 		JSONObject dirLightObj = {};
 
-		glm::vec3 dirLightDir = glm::eulerAngles(m_Transform.GetLocalRotation());
-		std::string dirStr = Vec3ToString(dirLightDir, 3);
+		std::string dirStr = QuatToString(m_Transform.GetWorldRotation(), 3);
 		dirLightObj.fields.emplace_back("rotation", JSONValue(dirStr));
 
 		std::string posStr = Vec3ToString(m_Transform.GetLocalPosition(), 3);
@@ -2660,11 +2679,8 @@ namespace flex
 		dirLightObj.fields.emplace_back("enabled", JSONValue(m_bVisible != 0));
 		dirLightObj.fields.emplace_back("brightness", JSONValue(data.brightness));
 
-		dirLightObj.fields.emplace_back("cast shadows", JSONValue(bCastShadow));
-		dirLightObj.fields.emplace_back("shadow darkness", JSONValue(shadowDarkness));
-		dirLightObj.fields.emplace_back("shadow map near", JSONValue(shadowMapNearPlane));
-		dirLightObj.fields.emplace_back("shadow map far", JSONValue(shadowMapFarPlane));
-		dirLightObj.fields.emplace_back("shadow map zoom", JSONValue(shadowMapZoom));
+		dirLightObj.fields.emplace_back("cast shadows", JSONValue(static_cast<bool>(data.castShadows)));
+		dirLightObj.fields.emplace_back("shadow darkness", JSONValue(data.shadowDarkness));
 
 		parentObject.fields.emplace_back("directional light info", JSONValue(dirLightObj));
 	}
@@ -2680,8 +2696,8 @@ namespace flex
 
 	void DirectionalLight::SetRot(const glm::quat& newRot)
 	{
-		m_Transform.SetLocalRotation(newRot);
-		data.dir = glm::eulerAngles(newRot);
+		m_Transform.SetWorldRotation(newRot);
+		data.dir = glm::rotate(newRot, VEC3_RIGHT);
 	}
 
 	PointLight::PointLight(BaseScene* scene) :
@@ -2695,12 +2711,14 @@ namespace flex
 		data.enabled = 1;
 		data.pos = VEC4_ZERO;
 		data.color = VEC4_ONE;
-		data.brightness = 1.0f;
+		data.brightness = 500.0f;
 	}
 
 	void PointLight::Initialize()
 	{
 		ID = g_Renderer->RegisterPointLight(&data);
+
+		m_Transform.updateParentOnStateChange = true;
 
 		GameObject::Initialize();
 	}
@@ -2716,59 +2734,50 @@ namespace flex
 	{
 		GameObject::DrawImGuiObjects();
 
-		static const ImGuiColorEditFlags colorEditFlags =
-			ImGuiColorEditFlags_NoInputs |
-			ImGuiColorEditFlags_Float |
-			ImGuiColorEditFlags_RGB |
-			ImGuiColorEditFlags_PickerHueWheel |
-			ImGuiColorEditFlags_HDR;
-
-		const std::string objectName("Point Light##" + m_Name);
-		const bool bTreeOpen = ImGui::TreeNode(objectName.c_str());
-		bool bRemovedPointLight = false;
-		bool bEditedPointLightData = false;
-
-		if (ImGui::BeginPopupContextItem())
+		if (ID != InvalidPointLightID)
 		{
-			static const char* removePointLightStr = "Delete";
-			if (ImGui::Button(removePointLightStr))
+			static const ImGuiColorEditFlags colorEditFlags =
+				ImGuiColorEditFlags_NoInputs |
+				ImGuiColorEditFlags_Float |
+				ImGuiColorEditFlags_RGB |
+				ImGuiColorEditFlags_PickerHueWheel |
+				ImGuiColorEditFlags_HDR;
+
+			ImGui::Text("Point Light");
+			bool bRemovedPointLight = false;
+			bool bEditedPointLightData = false;
+
+			if (ImGui::BeginPopupContextItem("##point light context menu"))
 			{
-				g_Renderer->RemovePointLight(ID);
-				bRemovedPointLight = true;
-				ImGui::CloseCurrentPopup();
+				if (ImGui::Button("Delete"))
+				{
+					g_SceneManager->CurrentScene()->RemoveObject(this, true);
+					bRemovedPointLight = true;
+					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::EndPopup();
 			}
 
-			ImGui::EndPopup();
-		}
-
-		if (!bRemovedPointLight && bTreeOpen)
-		{
-			bool bEnabled = (data.enabled == 1);
-			if (ImGui::Checkbox("Enabled", &bEnabled))
+			if (!bRemovedPointLight)
 			{
-				bEditedPointLightData = true;
-				data.enabled = bEnabled ? 1 : 0;
-				m_bVisible = bEnabled;
+				bool bEnabled = (data.enabled == 1);
+				if (ImGui::Checkbox("Enabled", &bEnabled))
+				{
+					bEditedPointLightData = true;
+					data.enabled = bEnabled ? 1 : 0;
+					m_bVisible = bEnabled;
+				}
+
+				ImGui::SameLine();
+				bEditedPointLightData |= ImGui::ColorEdit4("Color ", &data.color.r, colorEditFlags);
+				bEditedPointLightData |= ImGui::SliderFloat("Brightness", &data.brightness, 0.0f, 1000.0f);
+
+				if (bEditedPointLightData)
+				{
+					g_Renderer->UpdatePointLightData(ID, &data);
+				}
 			}
-
-			glm::vec3 position = m_Transform.GetLocalPosition();
-			if (ImGui::DragFloat3("Position", &position.x, 0.1f))
-			{
-				bEditedPointLightData = true;
-				SetPos(position);
-			}
-			bEditedPointLightData |= ImGui::ColorEdit4("Color ", &data.color.r, colorEditFlags);
-			bEditedPointLightData |= ImGui::SliderFloat("Brightness", &data.brightness, 0.0f, 1000.0f);
-		}
-
-		if (bEditedPointLightData)
-		{
-			g_Renderer->UpdatePointLightData(ID, &data);
-		}
-
-		if (bTreeOpen)
-		{
-			ImGui::TreePop();
 		}
 	}
 
@@ -2776,6 +2785,15 @@ namespace flex
 	{
 		data.enabled = (bVisible ? 1 : 0);
 		GameObject::SetVisible(bVisible, bEffectChildren);
+		if (ID != InvalidPointLightID)
+		{
+			g_Renderer->UpdatePointLightData(ID, &data);
+		}
+	}
+
+	void PointLight::OnTransformChanged()
+	{
+		data.pos = m_Transform.GetLocalPosition();
 		if (ID != InvalidPointLightID)
 		{
 			g_Renderer->UpdatePointLightData(ID, &data);
@@ -2865,7 +2883,7 @@ namespace flex
 			// TODO: Create own material
 			matID = 0;
 		}
-		MeshComponent* mesh = SetMeshComponent(new MeshComponent(matID, this));
+		MeshComponent* mesh = SetMeshComponent(new MeshComponent(this, matID));
 		std::string meshFilePath = std::string(RESOURCE("meshes/")) + std::string(meshName);
 		if (!mesh->LoadFromFile(meshFilePath))
 		{
@@ -3228,7 +3246,7 @@ namespace flex
 			// TODO: Create own material
 			matID = 0;
 		}
-		MeshComponent* mesh = SetMeshComponent(new MeshComponent(matID, this));
+		MeshComponent* mesh = SetMeshComponent(new MeshComponent(this, matID));
 		if (!mesh->LoadFromFile(RESOURCE("meshes/mobile-liquid-box.glb")))
 		{
 			PrintWarn("Failed to load mobile-liquid-box mesh!\n");
@@ -3273,23 +3291,21 @@ namespace flex
 		GameObject(name, GameObjectType::GERSTNER_WAVE)
 	{
 		MaterialCreateInfo matCreateInfo = {};
-		matCreateInfo.name = "Gerstner";
+		matCreateInfo.name = "gerstner";
 		matCreateInfo.shaderName = "pbr";
 		matCreateInfo.constAlbedo = glm::vec3(0.4f, 0.5f, 0.8f);
 		matCreateInfo.constMetallic = 0.8f;
 		matCreateInfo.constRoughness = 0.01f;
-		matCreateInfo.constAO = 1.0f;
 
 		MaterialID planeMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
 
-		MeshComponent* planeMesh = SetMeshComponent(new MeshComponent(planeMatID, this));
+		MeshComponent* planeMesh = SetMeshComponent(new MeshComponent(this, planeMatID));
 		planeMesh->LoadPrefabShape(MeshComponent::PrefabShape::GERSTNER_PLANE);
 
 		i32 vertCount = vertSideCount * vertSideCount;
 		bufferInfo.positions_3D.resize(vertCount);
 		bufferInfo.normals.resize(vertCount);
 		bufferInfo.tangents.resize(vertCount);
-		bufferInfo.bitangents.resize(vertCount);
 		bufferInfo.colors_R32G32B32A32.resize(vertCount);
 
 		for (i32 z = 0; z < vertSideCount; ++z)
@@ -3300,7 +3316,6 @@ namespace flex
 
 				bufferInfo.normals[vertIdx] = glm::vec3(0.0f, 1.0f, 0.0f);
 				bufferInfo.tangents[vertIdx] = glm::vec3(1.0f, 0.0f, 0.0f);
-				bufferInfo.bitangents[vertIdx] = glm::vec3(0.0f, 0.0f, 1.0f);
 				bufferInfo.colors_R32G32B32A32[vertIdx] = VEC4_ONE;
 			}
 		}
@@ -3320,7 +3335,7 @@ namespace flex
 		{
 			PrintError("Failed to find material for bobber!\n");
 		}
-		MeshComponent* mesh = bobber->SetMeshComponent(new MeshComponent(matID, bobber));
+		MeshComponent* mesh = bobber->SetMeshComponent(new MeshComponent(bobber, matID));
 		if (!mesh->LoadFromFile(RESOURCE("meshes/sphere.glb")))
 		{
 			PrintError("Failed to load bobber mesh\n");
@@ -3457,7 +3472,6 @@ namespace flex
 		std::vector<glm::vec3>& positions = bufferInfo.positions_3D;
 		std::vector<glm::vec3>& normals = bufferInfo.normals;
 		std::vector<glm::vec3>& tangents = bufferInfo.tangents;
-		std::vector<glm::vec3>& bitangents = bufferInfo.bitangents;
 
 		// Clear positions and normals
 		for (i32 z = 0; z < vertSideCount; ++z)
@@ -3531,8 +3545,8 @@ namespace flex
 			{
 				i32 vertIdx = z * vertSideCount + x;
 				bufferInfo.tangents[vertIdx] = glm::normalize((positions[vertIdx + 1] - positions[vertIdx]) + (positions[vertIdx] - positions[vertIdx - 1]));
-				bufferInfo.bitangents[vertIdx] = glm::normalize((positions[vertIdx + vertSideCount] - positions[vertIdx]) + (positions[vertIdx] - positions[vertIdx - vertSideCount]));
-				bufferInfo.normals[vertIdx] = glm::cross(bitangents[vertIdx], tangents[vertIdx]);
+				// TODO
+				//bufferInfo.normals[vertIdx] = glm::cross(bitangents[vertIdx], tangents[vertIdx]);
 			}
 		}
 
@@ -3540,9 +3554,9 @@ namespace flex
 		bufferInfo.positions_3D = positions;
 		bufferInfo.normals = normals;
 		bufferInfo.tangents = tangents;
-		bufferInfo.bitangents = bitangents;
 		vertexBuffer->UpdateData(&bufferInfo);
-		g_Renderer->UpdateVertexData(m_RenderID, vertexBuffer);
+		// TODO: Get working in Vulkan
+		//g_Renderer->UpdateVertexData(m_RenderID, vertexBuffer);
 
 
 		const glm::vec3 wavePos = m_Transform.GetWorldPosition();
@@ -3574,2205 +3588,43 @@ namespace flex
 		}
 	}
 
-	OperatorType Operator::Parse(Tokenizer& tokenizer)
+	Blocks::Blocks(const std::string& name) :
+		GameObject(name, GameObjectType::BLOCKS)
 	{
-		Token token = tokenizer.GetNextToken();
-		switch (token.type)
+		MaterialCreateInfo matCreateInfo = {};
+		matCreateInfo.name = "block";
+		matCreateInfo.shaderName = "pbr";
+		matCreateInfo.constMetallic = 0.0f;
+
+		std::vector<MaterialID> matIDs;
+		for (i32 i = 0; i < 10; ++i)
 		{
-		case TokenType::ADD: return OperatorType::ADD;
-		case TokenType::SUBTRACT: return OperatorType::SUB;
-		case TokenType::MULTIPLY: return OperatorType::MUL;
-		case TokenType::DIVIDE: return OperatorType::DIV;
-		case TokenType::MODULO: return OperatorType::MOD;
-		case TokenType::BINARY_AND: return OperatorType::BIN_AND;
-		case TokenType::BINARY_OR: return OperatorType::BIN_OR;
-		case TokenType::BINARY_XOR: return OperatorType::BIN_XOR;
-		case TokenType::EQUAL_TEST: return OperatorType::EQUAL;
-		case TokenType::NOT_EQUAL_TEST: return OperatorType::NOT_EQUAL;
-		case TokenType::GREATER: return OperatorType::GREATER;
-		case TokenType::GREATER_EQUAL: return OperatorType::GREATER_EQUAL;
-		case TokenType::LESS: return OperatorType::LESS;
-		case TokenType::LESS_EQUAL: return OperatorType::LESS_EQUAL;
-		case TokenType::BOOLEAN_AND: return OperatorType::BOOLEAN_AND;
-		case TokenType::BOOLEAN_OR: return OperatorType::BOOLEAN_OR;
-		default:
-		{
-			tokenizer.context->errorReason = "Unexpected operator";
-			tokenizer.context->errorToken = token;
-			return OperatorType::_NONE;
+			matCreateInfo.constAlbedo = glm::vec3(RandomFloat(0.3f, 0.6f), RandomFloat(0.4f, 0.8f), RandomFloat(0.4f, 0.7f));
+			matCreateInfo.constRoughness = RandomFloat(0.0f, 1.0f);
+			matIDs.push_back(g_Renderer->InitializeMaterial(&matCreateInfo));
 		}
-		}
-	}
 
-	std::string Token::ToString() const
-	{
-		return std::string(charPtr, len);
-	}
-
-	TokenContext::TokenContext()
-	{
-		Reset();
-	}
-
-	TokenContext::~TokenContext()
-	{
-		if (instantiatedIdentifiers != nullptr)
+		real blockSize = 1.5f;
+		i32 count = 18;
+		for (i32 x = 0; x < count; ++x)
 		{
-			for (i32 i = 0; i < variableCount; ++i)
+			for (i32 z = 0; z < count; ++z)
 			{
-				assert(instantiatedIdentifiers[i].value != nullptr);
-				delete instantiatedIdentifiers[i].value;
-			}
-			delete[] instantiatedIdentifiers;
-		}
-		instantiatedIdentifiers = nullptr;
-		variableCount = 0;
-	}
-
-	void TokenContext::Reset()
-	{
-		buffer = nullptr;
-		bufferPtr = nullptr;
-		bufferLen = -1;
-		errorReason = "";
-		errorToken = g_EmptyToken;
-		linePos = 0;
-		lineNumber = 0;
-
-		errors.clear();
-
-		if (instantiatedIdentifiers != nullptr)
-		{
-			for (i32 i = 0; i < variableCount; ++i)
-			{
-				assert(instantiatedIdentifiers[i].value != nullptr);
-				delete instantiatedIdentifiers[i].value;
-			}
-			delete[] instantiatedIdentifiers;
-		}
-		variableCount = 0;
-		instantiatedIdentifiers = new InstantiatedIdentifier[MAX_VARS];
-		tokenNameToInstantiatedIdentifierIdx.clear();
-	}
-
-	bool TokenContext::HasNextChar() const
-	{
-		return GetRemainingLength() > 0;
-	}
-
-	char TokenContext::ConsumeNextChar()
-	{
-		assert((bufferPtr + 1 - buffer) <= bufferLen);
-
-		char nextChar = bufferPtr[0];
-		bufferPtr++;
-		linePos++;
-		if (nextChar == '\n')
-		{
-			linePos = 0;
-			lineNumber++;
-		}
-		return nextChar;
-	}
-
-	char TokenContext::PeekNextChar() const
-	{
-		assert((bufferPtr - buffer) <= bufferLen);
-
-		return bufferPtr[0];
-	}
-
-	char TokenContext::PeekChar(i32 index) const
-	{
-		assert(index >= 0 && index < GetRemainingLength());
-
-		return bufferPtr[index];
-
-	}
-
-	glm::i32 TokenContext::GetRemainingLength() const
-	{
-		return bufferLen - (bufferPtr - buffer);
-	}
-
-	bool TokenContext::CanNextCharBeIdentifierPart() const
-	{
-		if (!HasNextChar())
-		{
-			return false;
-		}
-
-		char next = PeekNextChar();
-		if (isalpha(next) || isdigit(next) || next == '_')
-		{
-			return true;
-		}
-
-		return false;
-	}
-
-	TokenType TokenContext::AttemptParseKeyword(const char* keywordStr, TokenType keywordType)
-	{
-		i32 keywordPos = 1; // Assume first letter is already consumed
-		char c = PeekNextChar();
-		if (!(isalpha(c) || isdigit(c) || c == '_'))
-		{
-			// Next char is delimiter, token must be one char long
-			return TokenType::IDENTIFIER;
-		}
-
-		while (keywordPos < (i32)strlen(keywordStr) && PeekNextChar() == keywordStr[keywordPos])
-		{
-			c = ConsumeNextChar();
-			++keywordPos;
-		}
-
-		char nc = PeekNextChar();
-		const bool bCIsDelimiter = !(isalpha(nc) || isdigit(nc) || nc == '_');
-		if (keywordPos == (i32)strlen(keywordStr) && bCIsDelimiter)
-		{
-			return keywordType;
-		}
-
-		// Not this keyword, must be a identifier
-		while (CanNextCharBeIdentifierPart())
-		{
-			ConsumeNextChar();
-		}
-
-		return TokenType::IDENTIFIER;
-	}
-
-	TokenType TokenContext::AttemptParseKeywords(const char* potentialKeywordStrs[], TokenType potentialKeywordTypes[], i32 keywordPositions[], i32 potentialCount)
-	{
-		char c = PeekNextChar();
-		if (!(isalpha(c) || isdigit(c) || c == '_'))
-		{
-			// Next char is delimiter, token must be one char long
-			return TokenType::IDENTIFIER;
-		}
-
-		for (i32 i = 0; i < potentialCount; ++i)
-		{
-			keywordPositions[i] = 1;
-		}
-
-		i32 matchedKeywordIndex = -1;
-		bool bMatched = true;
-
-		while (bMatched)
-		{
-			bMatched = false;
-			for (i32 i = 0; i < potentialCount; ++i)
-			{
-				if (keywordPositions[i] != -1)
-				{
-					if (c == potentialKeywordStrs[i][keywordPositions[i]])
-					{
-						bMatched = true;
-						if (++keywordPositions[i] >= (i32)strlen(potentialKeywordStrs[i]))
-						{
-							bool bLastChar = (GetRemainingLength() == 1);
-							char nc = bLastChar ? ' ' : PeekChar(1);
-							if (bLastChar || !(isalpha(nc) || isdigit(nc) || nc == '_'))
-							{
-								matchedKeywordIndex = i;
-								ConsumeNextChar();
-								break;
-							}
-							else
-							{
-								keywordPositions[i] = -1;
-								bMatched = false;
-							}
-						}
-					}
-					else
-					{
-						keywordPositions[i] = -1;
-					}
-				}
-			}
-
-			if (matchedKeywordIndex != -1)
-			{
-				return potentialKeywordTypes[matchedKeywordIndex];
-			}
-
-			if (bMatched)
-			{
-				ConsumeNextChar();
-				c = PeekNextChar();
-			}
-			else
-			{
-				// Doesn't match any keywords, must be a identifier
-
-				while (CanNextCharBeIdentifierPart())
-				{
-					ConsumeNextChar();
-				}
-				return TokenType::IDENTIFIER;
-			}
-		}
-
-		return TokenType::_NONE;
-	}
-
-	Value* TokenContext::InstantiateIdentifier(const Token& identifierToken, TypeName typeName)
-	{
-		const std::string tokenName = identifierToken.ToString();
-
-		if (tokenNameToInstantiatedIdentifierIdx.find(tokenName) != tokenNameToInstantiatedIdentifierIdx.end())
-		{
-			errorReason = "Redeclaration of type";
-			errorToken = identifierToken;
-			return nullptr;
-		}
-
-		const i32 nextIndex = variableCount++;
-		tokenNameToInstantiatedIdentifierIdx.emplace(tokenName, nextIndex);
-
-		assert(nextIndex >= 0 && nextIndex < MAX_VARS);
-
-		assert(instantiatedIdentifiers[nextIndex].index == 0);
-		assert(instantiatedIdentifiers[nextIndex].value == nullptr);
-
-		switch (typeName)
-		{
-		case TypeName::INT:
-			instantiatedIdentifiers[nextIndex].value = new Value(0, false);
-			break;
-		case TypeName::FLOAT:
-			instantiatedIdentifiers[nextIndex].value = new Value(0.0f, false);
-			break;
-		case TypeName::BOOL:
-			instantiatedIdentifiers[nextIndex].value = new Value(false, false);
-			break;
-		default:
-			errorReason = "Unhandled identifier typename encountered in InstantiateIdentifier";
-			errorToken = identifierToken;
-			return nullptr;
-		}
-		// NOTE: Enforce a copy of the string
-		instantiatedIdentifiers[nextIndex].name = tokenName;
-		instantiatedIdentifiers[nextIndex].index = nextIndex;
-		return instantiatedIdentifiers[nextIndex].value;
-	}
-
-	Value* TokenContext::GetVarInstanceFromToken(const Token& token)
-	{
-		assert(token.tokenID >= 0 && token.tokenID < MAX_VARS);
-		std::string tokenName = token.ToString();
-		if (tokenNameToInstantiatedIdentifierIdx.find(tokenName) == tokenNameToInstantiatedIdentifierIdx.end())
-		{
-			errorReason = "Use of undefined type";
-			errorToken = token;
-			return nullptr;
-		}
-		i32 idx = tokenNameToInstantiatedIdentifierIdx[tokenName];
-		assert(idx >= 0 && idx < variableCount);
-		return instantiatedIdentifiers[idx].value;
-	}
-
-	bool TokenContext::IsKeyword(const char* str)
-	{
-		for (const char* keyword : g_KeywordStrings)
-		{
-			if (strcmp(str, keyword) == 0)
-			{
-				return true;
-			}
-		}
-		return false;
-	}
-
-	bool TokenContext::IsKeyword(TokenType type)
-	{
-		return (i32)type > (i32)TokenType::KEYWORDS_START &&
-			   (i32)type < (i32)TokenType::KEYWORDS_END;
-	}
-
-	Tokenizer::Tokenizer()
-	{
-		assert(context == nullptr);
-
-		context = new TokenContext();
-		SetCodeStr("");
-	}
-
-	Tokenizer::Tokenizer(const std::string& codeStr)
-	{
-		assert(context == nullptr);
-
-		context = new TokenContext();
-		SetCodeStr(codeStr);
-	}
-
-	Tokenizer::~Tokenizer()
-	{
-		delete context;
-		codeStrCopy = "";
-	}
-
-	void Tokenizer::SetCodeStr(const std::string& newCodeStr)
-	{
-		assert(context != nullptr);
-
-		codeStrCopy = newCodeStr;
-
-		context->Reset();
-		context->buffer = context->bufferPtr = (char*)codeStrCopy.c_str();
-		context->bufferLen = (i32)codeStrCopy.size();
-		nextTokenID = 0;
-		bConsumedLastParsedToken = true;
-		lastParsedToken = g_EmptyToken;
-	}
-
-	Token Tokenizer::PeekNextToken()
-	{
-		if (bConsumedLastParsedToken)
-		{
-			lastParsedToken = GetNextToken();
-			bConsumedLastParsedToken = false;
-		}
-		return lastParsedToken;
-	}
-
-	Token Tokenizer::GetNextToken()
-	{
-		if (!bConsumedLastParsedToken)
-		{
-			bConsumedLastParsedToken = true;
-			return lastParsedToken;
-		}
-
-		ConsumeWhitespaceAndComments();
-
-		char const* const tokenStart = context->bufferPtr;
-		i32 tokenLineNum = context->lineNumber;
-		i32 tokenLinePos = context->linePos;
-
-		TokenType nextTokenType = TokenType::_NONE;
-
-		if (context->HasNextChar())
-		{
-			char c = context->ConsumeNextChar();
-
-			switch (c)
-			{
-			// Keywords:
-			case 't':
-				nextTokenType = context->AttemptParseKeyword("true", TokenType::KEY_TRUE);
-				break;
-			case 'f':
-				nextTokenType = context->AttemptParseKeyword("false", TokenType::KEY_FALSE);
-				break;
-			case 'b':
-			{
-				const char* potentialKeywords[] = { "bool", "break" };
-				TokenType potentialTokenTypes[] = { TokenType::KEY_BOOL, TokenType::KEY_BREAK };
-				i32 pos[] = { 0, 0 };
-				nextTokenType = context->AttemptParseKeywords(potentialKeywords, potentialTokenTypes, pos, ARRAY_LENGTH(pos));
-			} break;
-			case 'i':
-			{
-				const char* potentialKeywords[] = { "int", "if" };
-				TokenType potentialTokenTypes[] = { TokenType::KEY_INT, TokenType::KEY_IF };
-				i32 pos[] = { 0, 0 };
-				nextTokenType = context->AttemptParseKeywords(potentialKeywords, potentialTokenTypes, pos, ARRAY_LENGTH(pos));
-			} break;
-			case 'e':
-			{
-				const char* potentialKeywords[] = { "else", "elif" };
-				TokenType potentialTokenTypes[] = { TokenType::KEY_ELSE, TokenType::KEY_ELIF };
-				i32 pos[] = { 0, 0 };
-				nextTokenType = context->AttemptParseKeywords(potentialKeywords, potentialTokenTypes, pos, ARRAY_LENGTH(pos));
-			} break;
-			case 'd':
-				nextTokenType = context->AttemptParseKeyword("do", TokenType::KEY_DO);
-				break;
-			case 'w':
-				nextTokenType = context->AttemptParseKeyword("while", TokenType::KEY_WHILE);
-				break;
-
-			// Non-keywords
-			case '{':
-				nextTokenType = TokenType::OPEN_BRACKET;
-				break;
-			case '}':
-				nextTokenType = TokenType::CLOSE_BRACKET;
-				break;
-			case '(':
-				nextTokenType = TokenType::OPEN_PAREN;
-				break;
-			case ')':
-				nextTokenType = TokenType::CLOSE_PAREN;
-				break;
-			case '[':
-				nextTokenType = TokenType::OPEN_SQUARE_BRACKET;
-				break;
-			case ']':
-				nextTokenType = TokenType::CLOSE_SQUARE_BRACKET;
-				break;
-			case ':':
-				nextTokenType = Type1IfNextCharIsCElseType2(':', TokenType::DOUBLE_COLON, TokenType::SINGLE_COLON);
-				break;
-			case ';':
-				nextTokenType = TokenType::SEMICOLON;
-				break;
-			case '!':
-				nextTokenType = Type1IfNextCharIsCElseType2('=', TokenType::NOT_EQUAL_TEST, TokenType::BANG);
-				break;
-			case '?':
-				nextTokenType = TokenType::TERNARY;
-				break;
-			case '=':
-				nextTokenType = Type1IfNextCharIsCElseType2('=', TokenType::EQUAL_TEST, TokenType::ASSIGNMENT);
-				break;
-			case '>':
-				nextTokenType = Type1IfNextCharIsCElseType2('=', TokenType::GREATER_EQUAL, TokenType::GREATER);
-				break;
-			case '<':
-				nextTokenType = Type1IfNextCharIsCElseType2('=', TokenType::LESS_EQUAL, TokenType::LESS);
-				break;
-			case '+':
-				nextTokenType = Type1IfNextCharIsCElseType2('=', TokenType::ADD_ASSIGN, TokenType::ADD);
-				break;
-			case '-':
-				nextTokenType = Type1IfNextCharIsCElseType2('=', TokenType::SUBTRACT_ASSIGN, TokenType::SUBTRACT);
-				break;
-			case '*':
-				nextTokenType = Type1IfNextCharIsCElseType2('=', TokenType::MULTIPLY_ASSIGN, TokenType::MULTIPLY);
-				break;
-			case '/':
-				nextTokenType = Type1IfNextCharIsCElseType2('=', TokenType::DIVIDE_ASSIGN, TokenType::DIVIDE);
-				break;
-			case '%':
-				nextTokenType = Type1IfNextCharIsCElseType2('=', TokenType::MODULO_ASSIGN, TokenType::MODULO);
-				break;
-			case '&':
-				if (context->PeekNextChar() == '=')
-				{
-					nextTokenType = TokenType::BINARY_AND_ASSIGN;
-				}
-				else
-				{
-					nextTokenType = Type1IfNextCharIsCElseType2('&', TokenType::BOOLEAN_AND, TokenType::BINARY_AND);
-				}
-				break;
-			case '|':
-				if (context->PeekNextChar() == '=')
-				{
-					nextTokenType = TokenType::BINARY_OR_ASSIGN;
-				}
-				else
-				{
-					nextTokenType = Type1IfNextCharIsCElseType2('|', TokenType::BOOLEAN_OR, TokenType::BINARY_OR);
-				}
-				break;
-			case '^':
-				nextTokenType = Type1IfNextCharIsCElseType2('=', TokenType::BINARY_XOR_ASSIGN, TokenType::BINARY_XOR);
-				break;
-			case '\\':
-				if (context->HasNextChar())
-				{
-					// Escaped char (unhandled)
-					context->ConsumeNextChar();
-				}
-				else
-				{
-					context->errorReason = "Input ended with a single backslash";
-				}
-				break;
-			case '\'':
-			{
-				nextTokenType = TokenType::STRING;
-				while (context->HasNextChar())
-				{
-					char cn = context->ConsumeNextChar();
-					if (cn == '\\' || cn == '\'')
-					{
-						break;
-					}
-				}
-			} break;
-			case'\"':
-			{
-				nextTokenType = TokenType::STRING;
-				while (context->HasNextChar())
-				{
-					char cn = context->ConsumeNextChar();
-					if (cn == '\\' || cn == '\"')
-					{
-						break;
-					}
-				}
-			} break;
-			case '~':
-				nextTokenType = TokenType::TILDE;
-				break;
-			case '`':
-				nextTokenType = TokenType::BACK_QUOTE;
-				break;
-			default:
-				if (isalpha(c) || c == '_')
-				{
-					nextTokenType = TokenType::IDENTIFIER;
-					while (context->CanNextCharBeIdentifierPart())
-					{
-						context->ConsumeNextChar();
-					}
-				}
-				else if (isdigit(c) || c == '-' || c == '.')
-				{
-					// TODO: Handle "0x" prefix
-
-					bool bConsumedDigit = isdigit(c);
-					bool bConsumedDecimal = c == '.';
-					bool bConsumedF = false;
-					bool bValidNum = bConsumedDigit;
-
-					if (context->HasNextChar())
-					{
-						bool bCharIsValid = true;
-						char nc;
-						do
-						{
-							nc = context->PeekNextChar();
-							bCharIsValid = ValidDigitChar(nc);
-
-							if (isdigit(nc))
-							{
-								bConsumedDigit = true;
-								bValidNum = true;
-							}
-
-							if (nc == 'f')
-							{
-								// Ensure f comes last if at all
-								bConsumedF = true;
-								if (context->HasNextChar())
-								{
-									char nnc = context->PeekChar(1);
-									if (ValidDigitChar(nnc))
-									{
-										context->errorReason = "Incorrectly formatted number, 'f' must be final character";
-										bValidNum = false;
-										break;
-									}
-								}
-							}
-
-							// Ensure . appears only once if at all
-							if (nc == '.')
-							{
-								if (bConsumedDecimal)
-								{
-									context->errorReason = "Incorrectly formatted number";
-									bValidNum = false;
-								}
-								else
-								{
-									bConsumedDecimal = true;
-								}
-							}
-
-							if (bCharIsValid)
-							{
-								context->ConsumeNextChar();
-							}
-						} while (bValidNum && context->HasNextChar() && bCharIsValid && !bConsumedF);
-					}
-
-					if (bConsumedDigit)
-					{
-						if (bConsumedDecimal || bConsumedF)
-						{
-							nextTokenType = TokenType::FLOAT_LITERAL;
-						}
-						else
-						{
-							nextTokenType = TokenType::INT_LITERAL;
-						}
-					}
-				}
-				break;
-			}
-		}
-
-		Token token = {};
-		token.lineNum = tokenLineNum;
-		token.linePos = tokenLinePos;
-		token.charPtr = tokenStart;
-		token.len = (context->bufferPtr - tokenStart);
-		token.type = nextTokenType;
-		token.tokenID = nextTokenID++;
-
-		lastParsedToken = token;
-
-		return token;
-	}
-
-	void Tokenizer::ConsumeWhitespaceAndComments()
-	{
-		while (context->GetRemainingLength() > 1)
-		{
-			char c0 = context->PeekChar(0);
-			char c1 = context->PeekChar(1);
-
-			if (isspace(c0))
-			{
-				context->ConsumeNextChar();
-				continue;
-			}
-			else if (c0 == '/' && c1 == '/')
-			{
-				// Consume remainder of line
-				while (context->HasNextChar())
-				{
-					char c = context->ConsumeNextChar();
-					if (c == '\n')
-					{
-						break;
-					}
-				}
-			}
-			else if (c0 == '/' && c1 == '*')
-			{
-				context->ConsumeNextChar();
-				context->ConsumeNextChar();
-				// Consume (potentially nested) block comment(s)
-				i32 levelsDeep = 1;
-				while (context->HasNextChar())
-				{
-					char bc0 = context->ConsumeNextChar();
-					char bc1 = context->PeekNextChar();
-					if (bc0 == '/' && bc1 == '*')
-					{
-						levelsDeep++;
-						context->ConsumeNextChar();
-					}
-					else if (bc0 == '*' && bc1 == '/')
-					{
-						levelsDeep--;
-						context->ConsumeNextChar();
-					}
-
-					if (levelsDeep == 0)
-					{
-						break;
-					}
-				}
-
-				if (levelsDeep != 0)
-				{
-					context->errorReason = "Uneven number of block comment opens/closes";
-				}
-			}
-			else
-			{
-				return;
-			}
-		}
-		if (context->HasNextChar())
-		{
-			if (isspace(context->PeekNextChar()))
-			{
-				context->ConsumeNextChar();
+				GameObject* obj = new GameObject("block", GameObjectType::OBJECT);
+				obj->SetMeshComponent(new MeshComponent(obj, PickRandomFrom(matIDs)));
+				obj->GetMeshComponent()->LoadFromFile(RESOURCE_LOCATION "meshes/cube.glb");
+				AddChild(obj);
+				obj->GetTransform()->SetLocalScale(glm::vec3(blockSize));
+				obj->GetTransform()->SetLocalPosition(glm::vec3(
+					((real)x / (real)count - 0.5f) * (blockSize * count),
+					RandomFloat(0.0f, 1.2f),
+					((real)z / (real)count - 0.5f) * (blockSize * count)));
 			}
 		}
 	}
 
-	TokenType Tokenizer::Type1IfNextCharIsCElseType2(char c, TokenType ifYes, TokenType ifNo)
+	void Blocks::Update()
 	{
-		if (context->HasNextChar() && context->PeekNextChar() == c)
-		{
-			context->ConsumeNextChar();
-			return ifYes;
-		}
-		else
-		{
-			return ifNo;
-		}
-	}
-
-	bool Tokenizer::ValidDigitChar(char c)
-	{
-		return (isdigit(c) || c == 'f' || c == 'F' || c == '.');
-	}
-
-	TypeName Type::GetTypeNameFromStr(const std::string& str)
-	{
-		const char* tokenCStr = str.c_str();
-		for (i32 i = 0; i < (i32)TypeName::_NONE; ++i)
-		{
-			if (strcmp(g_TypeNameStrings[i], tokenCStr) == 0)
-			{
-				return (TypeName)i;
-			}
-		}
-		return TypeName::_NONE;
-	}
-
-	TypeName Type::Parse(Tokenizer& tokenizer)
-	{
-		Token token = tokenizer.GetNextToken();
-		std::string tokenStr = token.ToString();
-		TypeName result = GetTypeNameFromStr(tokenStr);
-		if (result != TypeName::_NONE)
-		{
-			return result;
-		}
-
-		tokenizer.context->errorReason = "Expected typename";
-		tokenizer.context->errorToken = token;
-		return TypeName::_NONE;
-	}
-
-	Node::Node(const Token& token) :
-		token(token)
-	{
-	}
-
-	// TODO: Support implicit casting
-	bool ValidOperatorOnType(OperatorType op, TypeName type)
-	{
-		switch (op)
-		{
-		case OperatorType::ADD:
-		case OperatorType::SUB:
-		case OperatorType::MUL:
-		case OperatorType::DIV:
-		case OperatorType::MOD:
-		case OperatorType::BIN_AND:
-		case OperatorType::BIN_OR:
-		case OperatorType::BIN_XOR:
-		case OperatorType::GREATER:
-		case OperatorType::GREATER_EQUAL:
-		case OperatorType::LESS:
-		case OperatorType::LESS_EQUAL:
-		case OperatorType::NEGATE:
-			return (type == TypeName::INT || type == TypeName::FLOAT);
-		case OperatorType::ASSIGN:
-		case OperatorType::EQUAL:
-		case OperatorType::NOT_EQUAL:
-			return true;
-		case OperatorType::BOOLEAN_AND:
-		case OperatorType::BOOLEAN_OR:
-			return (type == TypeName::BOOL);
-		default:
-			PrintError("Unhandled operator type in ValidOperatorOnType: %d\n", (i32)op);
-			return false;
-		}
-	}
-
-	TypeName ValueTypeToTypeName(ValueType valueType)
-	{
-		switch (valueType)
-		{
-		case ValueType::INT_RAW: return TypeName::INT;
-		case ValueType::FLOAT_RAW: return TypeName::FLOAT;
-		case ValueType::BOOL_RAW: return TypeName::BOOL;
-		default: return TypeName::_NONE;
-		}
-	}
-
-	Identifier::Identifier(const Token& token, const std::string& identifierStr, TypeName type) :
-		Node(token),
-		identifierStr(identifierStr),
-		type(type)
-	{
-	}
-
-	Identifier* Identifier::Parse(Tokenizer& tokenizer, TypeName type)
-	{
-		Token token = tokenizer.GetNextToken();
-		if (token.type != TokenType::IDENTIFIER)
-		{
-			tokenizer.context->errorReason = "Expected identifier";
-			tokenizer.context->errorToken = token;
-			return nullptr;
-		}
-
-		return new Identifier(token, token.ToString(), type);
-	}
-
-	Operation::Operation(const Token& token, Expression* lhs, OperatorType op, Expression* rhs) :
-		Node(token),
-		lhs(lhs),
-		op(op),
-		rhs(rhs)
-	{
-	}
-
-	Operation::~Operation()
-	{
-		delete lhs;
-		delete rhs;
-	}
-
-	template<class T>
-	Value* EvaluateUnaryOperation(T* val, OperatorType op)
-	{
-		switch (op)
-		{
-		case OperatorType::NEGATE:			return new Value(-(*val), true);
-		default:							return nullptr;
-		}
-	}
-
-	template<class T>
-	Value* EvaluateOperation(T* lhs, T* rhs, OperatorType op)
-	{
-		switch (op)
-		{
-		case OperatorType::ASSIGN:
-			*lhs = *rhs;
-			return nullptr;
-		case OperatorType::ADD:				return new Value(*lhs + *rhs, true);
-		case OperatorType::SUB:				return new Value(*lhs - *rhs, true);
-		case OperatorType::MUL:				return new Value(*lhs * *rhs, true);
-		case OperatorType::DIV:
-			// :grimmacing:
-			if (typeid(*lhs) == typeid(i32))
-			{
-				return new Value((i32)*lhs / (i32)*rhs, true);
-			}
-			else if (typeid(*lhs) == typeid(real))
-			{
-				return new Value((real)*lhs / (real)*rhs, true);
-			}
-			else
-			{
-				return nullptr;
-			}
-		case OperatorType::MOD:
-			if (typeid(*lhs) == typeid(real))
-			{
-				return new Value(fmod((real)*lhs, (real)*rhs), true);
-			}
-			else
-			{
-				return new Value((i32)*lhs % (i32)*rhs, true);
-			}
-		case OperatorType::BIN_AND:			return new Value((bool)*lhs & (bool)*rhs, true);
-		case OperatorType::BIN_OR:			return new Value((bool)*lhs | (bool)*rhs, true);
-		case OperatorType::BIN_XOR:			return new Value((bool)*lhs ^ (bool)*rhs, true);
-		case OperatorType::EQUAL:			return new Value(*lhs == *rhs, true);
-		case OperatorType::NOT_EQUAL:		return new Value(*lhs != *rhs, true);
-		case OperatorType::GREATER:			return new Value(*lhs > *rhs, true);
-		case OperatorType::GREATER_EQUAL:	return new Value(*lhs >= *rhs, true);
-		case OperatorType::LESS:			return new Value(*lhs < *rhs, true);
-		case OperatorType::LESS_EQUAL:		return new Value(*lhs <= *rhs, true);
-		case OperatorType::BOOLEAN_AND:		return new Value(*lhs && *rhs, true);
-		case OperatorType::BOOLEAN_OR:		return new Value(*lhs || *rhs, true);
-		default:							return nullptr;
-		}
-	}
-
-	Value* Operation::Evaluate(TokenContext& context)
-	{
-		Value* newVal = nullptr;
-
-		Value* rhsVar = rhs->Evaluate(context);
-		if (rhsVar == nullptr)
-		{
-			return nullptr;
-		}
-
-		if (lhs == nullptr)
-		{
-			switch (rhsVar->type)
-			{
-			case ValueType::INT_RAW:
-				newVal = EvaluateUnaryOperation(&rhsVar->val.intRaw, op);
-				break;
-			case ValueType::FLOAT_RAW:
-				newVal = EvaluateUnaryOperation(&rhsVar->val.floatRaw, op);
-				break;
-			case ValueType::BOOL_RAW:
-				context.errorReason = "Only unary operation currently supported is negation, which is invalid on type bool";
-				context.errorToken = rhs->token;
-				return nullptr;
-				//newVal = EvaluateUnaryOperation(&rhsVar->val.boolRaw, op);
-				//break;
-			default:
-				context.errorReason = "Unexpected type name in operation";
-				context.errorToken = rhs->token;
-				break;
-			}
-
-			if (rhsVar->bIsTemporary)
-			{
-				delete rhsVar;
-			}
-
-			if (newVal == nullptr)
-			{
-				context.errorReason = "Malformed unary operation";
-				context.errorToken = rhs->token;
-				return nullptr;
-			}
-
-			return newVal;
-		}
-
-		Value* lhsVar = lhs->Evaluate(context);
-
-		// TODO: Handle implicit conversions
-		if (lhsVar->type != rhsVar->type)
-		{
-			context.errorReason = "Operation on different types";
-			context.errorToken = lhs->token;
-			if (lhsVar->bIsTemporary)
-			{
-				delete lhsVar;
-			}
-			if (rhsVar->bIsTemporary)
-			{
-				delete rhsVar;
-			}
-			return nullptr;
-		}
-
-		switch (lhsVar->type)
-		{
-		case ValueType::INT_RAW:
-			newVal = EvaluateOperation(&lhsVar->val.intRaw, &rhsVar->val.intRaw, op);
-			break;
-		case ValueType::FLOAT_RAW:
-			newVal = EvaluateOperation(&lhsVar->val.floatRaw, &rhsVar->val.floatRaw, op);
-			break;
-		case ValueType::BOOL_RAW:
-			newVal = EvaluateOperation(&lhsVar->val.boolRaw, &rhsVar->val.boolRaw, op);
-			break;
-		default:
-			context.errorReason = "Unexpected type name in operation";
-			context.errorToken = lhs->token;
-			break;
-		}
-
-		if (lhsVar->bIsTemporary)
-		{
-			delete lhsVar;
-		}
-		if (rhsVar->bIsTemporary)
-		{
-			delete rhsVar;
-		}
-
-		if (newVal == nullptr)
-		{
-			context.errorReason = "Malformed operation";
-			context.errorToken = token;
-			return nullptr;
-		}
-
-		return newVal;
-	}
-
-	Operation* Operation::Parse(Tokenizer& tokenizer)
-	{
-		Token token = tokenizer.GetNextToken();
-
-		Expression* lhs = Expression::Parse(tokenizer);
-		if (lhs == nullptr)
-		{
-			return nullptr;
-		}
-		OperatorType op = Operator::Parse(tokenizer);
-		if (op == OperatorType::_NONE)
-		{
-			delete lhs;
-			return nullptr;
-		}
-		Expression* rhs = Expression::Parse(tokenizer);
-		if (rhs == nullptr)
-		{
-			delete lhs;
-			return nullptr;
-		}
-		return new Operation(token, lhs, op, rhs);
-	}
-
-	Value::Value() :
-		type(ValueType::NONE),
-		bIsTemporary(true),
-		val()
-	{
-	}
-
-	Value::Value(Operation* opearation) :
-		type(ValueType::OPERATION),
-		bIsTemporary(false),
-		val(opearation)
-	{
-	}
-
-	Value::Value(Identifier* identifier) :
-		type(ValueType::IDENTIFIER),
-		bIsTemporary(false),
-		val(identifier)
-	{
-	}
-
-	Value::Value(i32 intRaw, bool bTemporary) :
-		type(ValueType::INT_RAW),
-		bIsTemporary(bTemporary),
-		val(intRaw)
-	{
-	}
-
-	Value::Value(real floatRaw, bool bTemporary) :
-		type(ValueType::FLOAT_RAW),
-		bIsTemporary(bTemporary),
-		val(floatRaw)
-	{
-	}
-
-	Value::Value(bool boolRaw, bool bTemporary) :
-		type(ValueType::BOOL_RAW),
-		bIsTemporary(bTemporary),
-		val(boolRaw)
-	{
-	}
-
-	Value::~Value()
-	{
-		switch (type)
-		{
-		case ValueType::INT_RAW:
-		case ValueType::FLOAT_RAW:
-		case ValueType::BOOL_RAW:
-			// No memory to free
-			break;
-		case ValueType::IDENTIFIER:
-			delete val.identifier;
-			break;
-		case ValueType::OPERATION:
-			delete val.operation;
-			break;
-		default:
-			PrintError("Unhandled statement type in ~Value(): %d\n", (i32)type);
-			break;
-		}
-	}
-
-	std::string Value::ToString() const
-	{
-		switch (type)
-		{
-		case ValueType::INT_RAW: return IntToString(val.intRaw);
-		case ValueType::FLOAT_RAW: return FloatToString(val.floatRaw, 2);
-		case ValueType::BOOL_RAW: return BoolToString(val.boolRaw);
-		default: return EMPTY_STRING;
-		}
-	}
-
-	Expression::Expression(const Token& token, Operation* operation) :
-		Node(token),
-		value(operation)
-	{
-	}
-
-	Expression::Expression(const Token& token, Identifier* identifier) :
-		Node(token),
-		value(identifier)
-	{
-	}
-
-	Expression::Expression(const Token& token, i32 intRaw) :
-		Node(token),
-		value(intRaw, false)
-	{
-	}
-
-	Expression::Expression(const Token& token, real floatRaw) :
-		Node(token),
-		value(floatRaw, false)
-	{
-	}
-
-	Expression::Expression(const Token& token, bool boolRaw) :
-		Node(token),
-		value(boolRaw, false)
-	{
-	}
-
-	Expression::~Expression()
-	{
-	}
-
-	Value* Expression::Evaluate(TokenContext& context)
-	{
-		switch (value.type)
-		{
-		case ValueType::OPERATION:
-			return value.val.operation->Evaluate(context);
-		case ValueType::IDENTIFIER:
-			// TODO: Apply implicit casting here when necessary
-			return context.GetVarInstanceFromToken(token);
-		case ValueType::INT_RAW:
-		case ValueType::FLOAT_RAW:
-		case ValueType::BOOL_RAW:
-			return &value;
-		}
-
-		context.errorReason = "Unexpected value type";
-		context.errorToken = token;
-		return nullptr;
-	}
-
-	template<class T>
-	bool CompareExpression(T* lhs, T* rhs, OperatorType op, TokenContext& context)
-	{
-		switch (op)
-		{
-		case OperatorType::EQUAL:			return *lhs == *rhs;
-		case OperatorType::NOT_EQUAL:		return *lhs != *rhs;
-		case OperatorType::GREATER:			return *lhs > *rhs;
-		case OperatorType::GREATER_EQUAL:	return *lhs >= *rhs;
-		case OperatorType::LESS:			return *lhs < *rhs;
-		case OperatorType::LESS_EQUAL:		return *lhs <= *rhs;
-		case OperatorType::BOOLEAN_AND:		return *lhs && *rhs;
-		case OperatorType::BOOLEAN_OR:		return *lhs || *rhs;
-		default:
-			context.errorReason = "Unexpected operator on int in expression";
-			context.errorToken = token;
-		}
-	}
-
-	//bool Expression::Compare(TokenContext& context, Expression* other, OperatorType op)
-	//{
-		//if (value.type == ValueType::IDENTIFIER)
-		//{
-
-		//	context.GetVarInstanceFromToken(token)->val.identifier->;
-		//}
-
-		//if (value.type == ValueType::OPERATION)
-		//{
-		//	Value* newVal = value.val.operation->Evaluate(context);
-		//	if (newVal->type == ValueType::BOOL_RAW)
-		//	{
-		//		bool bResult = newVal->val.boolRaw;
-		//		if (newVal->bIsTemporary)
-		//		{
-		//			delete newVal);
-		//		}
-		//		return bResult;
-		//	}
-		//	else
-		//	{
-		//		context.errorReason = "Operation expression didn't evaluate to bool value";
-		//		context.errorToken = token;
-		//		return nullptr;
-		//	}
-		//}
-
-	//	return false;
-	//}
-
-	Expression* Expression::Parse(Tokenizer& tokenizer)
-	{
-		Token token = tokenizer.PeekNextToken();
-		if (token.type == TokenType::SUBTRACT)
-		{
-			tokenizer.GetNextToken();
-			return new Expression(token, new Operation(token, nullptr, OperatorType::NEGATE, Expression::Parse(tokenizer)));
-		}
-
-		if (!tokenizer.context->HasNextChar())
-		{
-			return nullptr;
-		}
-
-		if (token.type == TokenType::IDENTIFIER)
-		{
-			Identifier* identifier = Identifier::Parse(tokenizer, TypeName::_NONE);
-			if (identifier == nullptr)
-			{
-				return nullptr;
-			}
-
-			Token nextToken = tokenizer.PeekNextToken();
-			if (nextToken.type == TokenType::SEMICOLON)
-			{
-				return new Expression(token, identifier);
-			}
-			else
-			{
-				OperatorType op = Operator::Parse(tokenizer);
-				if (op == OperatorType::_NONE)
-				{
-					tokenizer.context->errorReason = "Expected operator";
-					tokenizer.context->errorToken = token;
-					delete identifier;
-					return nullptr;
-				}
-				else
-				{
-					Expression* rhs = Expression::Parse(tokenizer);
-					if (rhs == nullptr)
-					{
-						delete identifier;
-						return nullptr;
-					}
-					Expression* lhs = new Expression(token, identifier);
-					Operation* operation = new Operation(token, lhs, op, rhs);
-					if (operation == nullptr)
-					{
-						delete identifier;
-						delete lhs;
-						delete rhs;
-						return nullptr;
-					}
-					return new Expression(token, operation);
-				}
-			}
-		}
-		if (token.type == TokenType::INT_LITERAL)
-		{
-			i32 intRaw = ParseInt(tokenizer.GetNextToken().ToString());
-
-			Token nextToken = tokenizer.PeekNextToken();
-			if (nextToken.type == TokenType::SEMICOLON)
-			{
-				// TODO: Check able to be ended here
-				tokenizer.GetNextToken();
-				return new Expression(token, intRaw);
-			}
-			else
-			{
-				OperatorType op = OperatorType::_NONE;
-				if (ExpectOperator(tokenizer, token, &op))
-				{
-					if (!ValidOperatorOnType(op, TypeName::INT))
-					{
-						tokenizer.context->errorReason = "Invalid operator on type int";
-						tokenizer.context->errorToken = token;
-						return nullptr;
-					}
-					Expression* rhs = Expression::Parse(tokenizer);
-					if (rhs == nullptr)
-					{
-						return nullptr;
-					}
-					Expression* lhs = new Expression(token, intRaw);
-					Operation* operation = new Operation(token, lhs, op, rhs);
-					return new Expression(token, operation);
-				}
-				else
-				{
-					return nullptr;
-				}
-			}
-		}
-		if (token.type == TokenType::FLOAT_LITERAL)
-		{
-			real floatRaw = ParseFloat(tokenizer.GetNextToken().ToString());
-
-			Token nextToken = tokenizer.PeekNextToken();
-			if (nextToken.type == TokenType::SEMICOLON)
-			{
-				// TODO: Check able to be ended here
-				tokenizer.GetNextToken();
-				return new Expression(token, floatRaw);
-			}
-			else
-			{
-				OperatorType op = OperatorType::_NONE;
-				if (ExpectOperator(tokenizer, token, &op))
-				{
-					if (!ValidOperatorOnType(op, TypeName::FLOAT))
-					{
-						tokenizer.context->errorReason = "Invalid operator on type float";
-						tokenizer.context->errorToken = token;
-						return nullptr;
-					}
-					Expression* rhs = Expression::Parse(tokenizer);
-					if (rhs == nullptr)
-					{
-						return nullptr;
-					}
-					Expression* lhs = new Expression(token, floatRaw);
-					Operation* operation = new Operation(token, lhs, op, rhs);
-					return new Expression(token, operation);
-				}
-				else
-				{
-					return nullptr;
-				}
-			}
-		}
-		if (token.type == TokenType::KEY_TRUE || token.type == TokenType::KEY_FALSE)
-		{
-			bool boolRaw = ParseBool(tokenizer.GetNextToken().ToString());
-
-			Token nextToken = tokenizer.PeekNextToken();
-			if (nextToken.type == TokenType::CLOSE_PAREN)
-			{
-				return new Expression(token, boolRaw);
-			}
-			if (nextToken.type == TokenType::SEMICOLON)
-			{
-				// TODO: Check able to be ended here
-				tokenizer.GetNextToken();
-				return new Expression(token, boolRaw);
-			}
-			else
-			{
-				OperatorType op = OperatorType::_NONE;
-				if (ExpectOperator(tokenizer, token, &op))
-				{
-					if (!ValidOperatorOnType(op, TypeName::BOOL))
-					{
-						tokenizer.context->errorReason = "Invalid operator on type bool";
-						tokenizer.context->errorToken = token;
-						return nullptr;
-					}
-					Expression* rhs = Expression::Parse(tokenizer);
-					if (rhs == nullptr)
-					{
-						return nullptr;
-					}
-					Expression* lhs = new Expression(token, boolRaw);
-					Operation* operation = new Operation(token, lhs, op, rhs);
-					return new Expression(token, operation);
-				}
-				else
-				{
-					return nullptr;
-				}
-			}
-		}
-
-		TypeName typeName = Type::Parse(tokenizer);
-		if (typeName != TypeName::_NONE)
-		{
-			Identifier* identifier = Identifier::Parse(tokenizer, typeName);
-			if (identifier == nullptr)
-			{
-				tokenizer.context->errorReason = "Unexpected identifier after typename";
-				tokenizer.context->errorToken = token;
-				return nullptr;
-			}
-			return new Expression(token, identifier);
-		}
-
-		tokenizer.context->errorReason = "Unexpected expression type";
-		tokenizer.context->errorToken = token;
-		return nullptr;
-	}
-
-	bool Expression::ExpectOperator(Tokenizer &tokenizer, Token token, OperatorType* outOp)
-	{
-		*outOp = Operator::Parse(tokenizer);
-		if (*outOp == OperatorType::_NONE)
-		{
-			tokenizer.context->errorToken = token;
-			tokenizer.context->errorReason = "Expected '=' or ';' after int declaration";
-			return false;
-		}
-		return true;
-	}
-
-	Assignment::Assignment(const Token& token,
-		Identifier* identifier,
-		Expression* rhs,
-		TypeName typeName /* = TypeName::_NONE */) :
-		Node(token),
-		identifier(identifier),
-		rhs(rhs),
-		typeName(typeName)
-	{
-	}
-
-	Assignment::~Assignment()
-	{
-		delete identifier;
-		delete rhs;
-	}
-
-	void Assignment::Evaluate(TokenContext& context)
-	{
-		TypeName varTypeName = TypeName::_NONE;
-		void* varVal = nullptr;
-		{
-			Value* var = nullptr;
-			if (typeName == TypeName::_NONE)
-			{
-				var = context.GetVarInstanceFromToken(identifier->token);
-				if (var == nullptr)
-				{
-					return;
-				}
-				varTypeName = var->val.identifier->type;
-			}
-			else
-			{
-				var = context.InstantiateIdentifier(identifier->token, typeName);
-				if (var == nullptr)
-				{
-					return;
-				}
-				varTypeName = typeName;
-			}
-
-			if (var != nullptr)
-			{
-				switch (varTypeName)
-				{
-				case TypeName::INT:
-					varVal = static_cast<void*>(&var->val.intRaw);
-					break;
-				case TypeName::FLOAT:
-					varVal = static_cast<void*>(&var->val.floatRaw);
-					break;
-				case TypeName::BOOL:
-					varVal = static_cast<void*>(&var->val.boolRaw);
-					break;
-				default:
-					context.errorReason = "Unexpected variable type name";
-					context.errorToken = token;
-					return;
-				}
-			}
-		}
-
-		if (varVal == nullptr)
-		{
-			return;
-		}
-
-		if (rhs != nullptr)
-		{
-			switch (varTypeName)
-			{
-			case TypeName::INT:
-			{
-				Value* rhsVal = rhs->Evaluate(context);
-				if (rhsVal == nullptr)
-				{
-					return;
-				}
-				if (rhsVal->type == ValueType::INT_RAW)
-				{
-					*static_cast<i32*>(varVal) = rhsVal->val.intRaw;
-				}
-				else if (rhsVal->type == ValueType::FLOAT_RAW)
-				{
-					*static_cast<i32*>(varVal) = (i32)rhsVal->val.floatRaw;
-				}
-				else
-				{
-					context.errorReason = "Invalid value type assigned to int";
-					context.errorToken = token;
-				}
-				if (rhsVal->bIsTemporary)
-				{
-					delete rhsVal;
-				}
-			} break;
-			case TypeName::FLOAT:
-			{
-				Value* rhsVal = rhs->Evaluate(context);
-				if (rhsVal == nullptr)
-				{
-					return;
-				}
-				if (rhsVal->type == ValueType::INT_RAW)
-				{
-					*static_cast<real*>(varVal) = (real)rhsVal->val.intRaw;
-				}
-				else if (rhsVal->type == ValueType::FLOAT_RAW)
-				{
-					*static_cast<real*>(varVal) = rhsVal->val.floatRaw;
-				}
-				else
-				{
-					context.errorReason = "Invalid value type assigned to float";
-					context.errorToken = token;
-				}
-				if (rhsVal->bIsTemporary)
-				{
-					delete rhsVal;
-				}
-			} break;
-			case TypeName::BOOL:
-			{
-				Value* rhsVal = rhs->Evaluate(context);
-				if (rhsVal == nullptr)
-				{
-					return;
-				}
-				if (rhsVal->type == ValueType::BOOL_RAW)
-				{
-					*static_cast<bool*>(varVal) = rhsVal->val.boolRaw;
-				}
-				else
-				{
-					context.errorReason = "Invalid value type assigned to bool";
-					context.errorToken = token;
-				}
-				if (rhsVal->bIsTemporary)
-				{
-					delete rhsVal;
-				}
-			} break;
-			default:
-			{
-				context.errorReason = "Unexpected typename encountered in assignment";
-				context.errorToken = token;
-			} break;
-			}
-		}
-	}
-
-	Assignment* Assignment::Parse(Tokenizer& tokenizer)
-	{
-		Token token = tokenizer.PeekNextToken();
-
-		TypeName typeName = TypeName::_NONE;
-		if (Type::GetTypeNameFromStr(token.ToString()) != TypeName::_NONE)
-		{
-			typeName = Type::Parse(tokenizer);
-		}
-
-		Identifier* lhs = Identifier::Parse(tokenizer, typeName);
-		if (lhs == nullptr)
-		{
-			return nullptr;
-		}
-
-		Token nextToken = tokenizer.GetNextToken();
-		if (nextToken.type == TokenType::SEMICOLON)
-		{
-			delete lhs;
-			tokenizer.context->errorReason = "Uninitialized variables are not supported. Add default value";
-			tokenizer.context->errorToken = token;
-			return nullptr;
-		}
-		if (nextToken.type != TokenType::ASSIGNMENT)
-		{
-			delete lhs;
-			tokenizer.context->errorReason = "Expected '=' after identifier";
-			tokenizer.context->errorToken = token;
-			return nullptr;
-		}
-
-		Expression* rhs = Expression::Parse(tokenizer);
-		if (rhs == nullptr)
-		{
-			delete lhs;
-			return nullptr;
-		}
-		return new Assignment(token, lhs, rhs, typeName);
-	}
-
-	Statement::Statement(const Token& token,
-		Assignment* assignment) :
-		Node(token),
-		type(StatementType::ASSIGNMENT),
-		contents(assignment)
-	{
-	}
-
-	Statement::Statement(const Token& token,
-		StatementType type,
-		IfStatement* ifStatement) :
-		Node(token),
-		type(type),
-		contents(ifStatement)
-	{
-		assert(type == StatementType::IF || type == StatementType::ELIF);
-	}
-
-	Statement::Statement(const Token& token,
-		Statement* elseStatement) :
-		Node(token),
-		type(StatementType::ELSE),
-		contents(elseStatement)
-	{
-	}
-
-	Statement::Statement(const Token& token,
-		WhileStatement* whileStatement) :
-		Node(token),
-		type(StatementType::WHILE),
-		contents(whileStatement)
-	{
-	}
-
-	Statement::~Statement()
-	{
-		switch (type)
-		{
-		case StatementType::ASSIGNMENT:
-			delete contents.assignment;
-			break;
-		case StatementType::IF:
-		case StatementType::ELIF:
-			delete contents.ifStatement;
-			break;
-		case StatementType::ELSE:
-			delete contents.elseStatement;
-			break;
-		case StatementType::WHILE:
-			delete contents.whileStatement;
-			break;
-		default:
-			PrintError("Unhandled statement type in ~Statement(): %d\n", (i32)type);
-			break;
-		}
-	}
-
-	void Statement::Evaluate(TokenContext& context)
-	{
-		switch (type)
-		{
-		case StatementType::ASSIGNMENT:
-			contents.assignment->Evaluate(context);
-			break;
-		case StatementType::IF:
-			contents.ifStatement->Evaluate(context);
-			break;
-		case StatementType::ELIF:
-		case StatementType::ELSE:
-			assert(false);
-			break;
-		case StatementType::WHILE:
-			contents.whileStatement->Evaluate(context);
-		default:
-			break;
-		}
-	}
-
-	Statement* Statement::Parse(Tokenizer& tokenizer)
-	{
-		StatementType statementType = StatementType::_NONE;
-
-		IfStatement* ifStatement = nullptr;
-		Statement* elseStatement = nullptr;
-		WhileStatement* whileStatement = nullptr;
-		Assignment* assignmentStatement = nullptr;
-
-		Token token = tokenizer.PeekNextToken();
-
-		if (token.len == 0)
-		{
-			// Likely reached EOF
-			return nullptr;
-		}
-
-		if (token.type == TokenType::SEMICOLON)
-		{
-			// Empty statement
-			return nullptr;
-		}
-		if (token.type == TokenType::KEY_IF)
-		{
-			statementType = StatementType::IF;
-			ifStatement = IfStatement::Parse(tokenizer);
-			if (ifStatement == nullptr)
-			{
-				return nullptr;
-			}
-		}
-		else if (token.type == TokenType::KEY_ELIF)
-		{
-			// elif statements should only be parsed in IfStatement::Parse
-			tokenizer.context->errorReason = "Found elif with no matching if";
-			tokenizer.context->errorToken = token;
-		}
-		else if (token.type == TokenType::KEY_ELSE)
-		{
-			tokenizer.GetNextToken(); // Consume 'else'
-
-			{
-				Token nextToken = tokenizer.GetNextToken();
-				if (nextToken.type != TokenType::OPEN_BRACKET)
-				{
-					tokenizer.context->errorReason = "Expected '{' after else";
-					tokenizer.context->errorToken = token;
-					return nullptr;
-				}
-			}
-
-			statementType = StatementType::ELSE;
-			elseStatement = Statement::Parse(tokenizer);
-			if (elseStatement == nullptr)
-			{
-				return nullptr;
-			}
-
-			{
-				Token nextToken = tokenizer.GetNextToken();
-				if (nextToken.type != TokenType::CLOSE_BRACKET)
-				{
-					tokenizer.context->errorReason = "Expected '}' after else body";
-					tokenizer.context->errorToken = token;
-					return nullptr;
-				}
-			}
-
-		}
-		else if (token.type == TokenType::KEY_WHILE)
-		{
-			statementType = StatementType::WHILE;
-			whileStatement = WhileStatement::Parse(tokenizer);
-			if (whileStatement == nullptr)
-			{
-				return nullptr;
-			}
-		}
-		else
-		{
-			// Assigning to existing instance of var
-			statementType = StatementType::ASSIGNMENT;
-			assignmentStatement = Assignment::Parse(tokenizer);
-			if (assignmentStatement == nullptr)
-			{
-				return nullptr;
-			}
-		}
-
-		if (statementType == StatementType::_NONE)
-		{
-			if (tokenizer.context->errorReason.empty())
-			{
-				tokenizer.context->errorReason = "Expected statement";
-				tokenizer.context->errorToken = token;
-			}
-			return nullptr;
-		}
-
-		Token nextToken = tokenizer.PeekNextToken();
-		if (nextToken.type == TokenType::SEMICOLON)
-		{
-			tokenizer.GetNextToken();
-		}
-
-		switch (statementType)
-		{
-		case StatementType::ASSIGNMENT:
-		{
-			assert(assignmentStatement != nullptr);
-			return new Statement(token, assignmentStatement);
-		} break;
-		case StatementType::IF:
-		{
-			assert(ifStatement != nullptr);
-			return new Statement(token, statementType, ifStatement);
-		} break;
-		case StatementType::ELIF:
-		{
-			assert(false);
-			return nullptr;
-		} break;
-		case StatementType::ELSE:
-		{
-			assert(elseStatement != nullptr);
-			return new Statement(token, elseStatement);
-		} break;
-		case StatementType::WHILE:
-		{
-			assert(whileStatement != nullptr);
-			return new Statement(token, whileStatement);
-		} break;
-		}
-
-		tokenizer.context->errorReason = "Expected statement";
-		tokenizer.context->errorToken = token;
-		return nullptr;
-	}
-
-	IfStatement::IfStatement(const Token& token,
-		Expression* condition,
-		Statement* body,
-		IfStatement* elseIfStatement) :
-		Node(token),
-		ifFalseAction(IfFalseAction::ELIF),
-		condition(condition),
-		body(body),
-		ifFalseStatement(elseIfStatement)
-	{
-	}
-
-	IfStatement::IfStatement(const Token& token,
-		Expression* condition,
-		Statement* body,
-		Statement* elseStatement) :
-		Node(token),
-		ifFalseAction(IfFalseAction::ELSE),
-		condition(condition),
-		body(body),
-		ifFalseStatement(elseStatement)
-	{
-	}
-
-	IfStatement::IfStatement(const Token& token,
-		Expression* condition,
-		Statement* body) :
-		Node(token),
-		ifFalseAction(IfFalseAction::NONE),
-		condition(condition),
-		body(body),
-		ifFalseStatement()
-	{
-	}
-
-	IfStatement::~IfStatement()
-	{
-		delete condition;
-		delete body;
-	}
-
-	void IfStatement::Evaluate(TokenContext& context)
-	{
-		Value* bConditionResult = condition->Evaluate(context);
-		if (bConditionResult->val.boolRaw)
-		{
-			body->Evaluate(context);
-		}
-		else
-		{
-			switch (ifFalseAction)
-			{
-			case IfFalseAction::NONE:
-				break;
-			case IfFalseAction::ELSE:
-				ifFalseStatement.elseStatement->Evaluate(context);
-				break;
-			case IfFalseAction::ELIF:
-				ifFalseStatement.elseIfStatement->Evaluate(context);
-				break;
-			default:
-				context.errorReason = "Unhandled if false action";
-				context.errorToken = token;
-				break;
-			}
-		}
-
-		if (bConditionResult->bIsTemporary)
-		{
-			delete bConditionResult;
-		}
-	}
-
-	IfStatement* IfStatement::Parse(Tokenizer& tokenizer)
-	{
-		Token token = tokenizer.GetNextToken();
-		if (token.type != TokenType::KEY_IF && token.type != TokenType::KEY_ELIF)
-		{
-			tokenizer.context->errorReason = "Expected if or elif";
-			tokenizer.context->errorToken = token;
-			return nullptr;
-		}
-
-		{
-			Token nextToken = tokenizer.GetNextToken();
-			if (nextToken.type != TokenType::OPEN_PAREN)
-			{
-				tokenizer.context->errorReason = "Expected '(' after if";
-				tokenizer.context->errorToken = token;
-				return nullptr;
-			}
-		}
-
-		Expression* condition = Expression::Parse(tokenizer);
-		if (condition == nullptr)
-		{
-			return nullptr;
-		}
-
-		{
-			Token nextToken = tokenizer.GetNextToken();
-			if (nextToken.type != TokenType::CLOSE_PAREN)
-			{
-				tokenizer.context->errorReason = "Expected ')' after if statement condition";
-				tokenizer.context->errorToken = token;
-				return nullptr;
-			}
-		}
-
-		{
-			Token nextToken = tokenizer.GetNextToken();
-			if (nextToken.type != TokenType::OPEN_BRACKET)
-			{
-				tokenizer.context->errorReason = "Expected '{' after if statement condition";
-				tokenizer.context->errorToken = token;
-				delete condition;
-				return nullptr;
-			}
-		}
-
-		Statement* body = Statement::Parse(tokenizer);
-		if (body == nullptr)
-		{
-			return nullptr;
-		}
-
-		{
-			Token nextToken = tokenizer.GetNextToken();
-			if (nextToken.type != TokenType::CLOSE_BRACKET)
-			{
-				tokenizer.context->errorReason = "Expected '}' after if statement body";
-				tokenizer.context->errorToken = token;
-				delete condition;
-				delete body;
-				return nullptr;
-			}
-		}
-
-		IfStatement* elseIfStatement = nullptr;
-		Statement* elseStatement = nullptr;
-
-		Token nextToken = tokenizer.PeekNextToken();
-		if (nextToken.type == TokenType::KEY_ELIF)
-		{
-			elseIfStatement = IfStatement::Parse(tokenizer);
-			if (elseIfStatement == nullptr)
-			{
-				return nullptr;
-			}
-		}
-		else if (nextToken.type == TokenType::KEY_ELSE)
-		{
-			elseStatement = Statement::Parse(tokenizer);
-			if (elseStatement == nullptr)
-			{
-				return nullptr;
-			}
-		}
-
-		if (elseIfStatement != nullptr)
-		{
-			return new IfStatement(token, condition, body, elseIfStatement);
-		}
-		else if (elseStatement != nullptr)
-		{
-			return new IfStatement(token, condition, body, elseStatement);
-		}
-		else
-		{
-			return new IfStatement(token, condition, body);
-		}
-	}
-
-	WhileStatement::WhileStatement(const Token& token, Expression* condition, Statement* body) :
-		Node(token),
-		condition(condition),
-		body(body)
-	{
-	}
-
-	WhileStatement::~WhileStatement()
-	{
-		delete condition;
-		delete body;
-	}
-
-	void WhileStatement::Evaluate(TokenContext& context)
-	{
-		Value* result = condition->Evaluate(context);
-		i32 iterationCount = 0;
-		while (result->val.boolRaw)
-		{
-			body->Evaluate(context);
-			Value* pResult = result;
-			result = condition->Evaluate(context);
-
-			assert(pResult->bIsTemporary);
-			delete pResult;
-
-			if (result == nullptr)
-			{
-				return;
-			}
-
-			if (++iterationCount > 4'194'303)
-			{
-				context.errorReason = "Exceeded max number of iterations in while loop";
-				context.errorToken = token;
-				return;
-			}
-		}
-		assert(result->bIsTemporary);
-		delete result;
-	}
-
-	WhileStatement* WhileStatement::Parse(Tokenizer& tokenizer)
-	{
-		Token token = tokenizer.GetNextToken();
-		if (token.type != TokenType::KEY_WHILE)
-		{
-			tokenizer.context->errorReason = "Expected while";
-			tokenizer.context->errorToken = token;
-			return nullptr;
-		}
-
-		Expression* condition = Expression::Parse(tokenizer);
-		if (condition == nullptr)
-		{
-			return nullptr;
-		}
-
-		// TODO: Handle single line while loops
-		{
-			Token nextToken = tokenizer.GetNextToken();
-			if (nextToken.type != TokenType::OPEN_BRACKET)
-			{
-				tokenizer.context->errorReason = "Expected '{' after while statement";
-				tokenizer.context->errorToken = token;
-				delete condition;
-				return nullptr;
-			}
-		}
-
-		Statement* body = Statement::Parse(tokenizer);
-		if (body == nullptr)
-		{
-			return nullptr;
-		}
-
-		{
-			Token nextToken = tokenizer.GetNextToken();
-			if (nextToken.type != TokenType::CLOSE_BRACKET)
-			{
-				tokenizer.context->errorReason = "Expected '}' after while statement body";
-				tokenizer.context->errorToken = token;
-				delete condition;
-				delete body;
-				return nullptr;
-			}
-		}
-
-		return new WhileStatement(token, condition, body);
-	}
-
-	RootItem::RootItem(Statement* statement, RootItem* nextItem) :
-		statement(statement),
-		nextItem(nextItem)
-	{
-	}
-
-	RootItem::~RootItem()
-	{
-		delete statement;
-		delete nextItem;
-	}
-
-	void RootItem::Evaluate(TokenContext& context)
-	{
-		statement->Evaluate(context);
-
-		if (!context.errorReason.empty())
-		{
-			return;
-		}
-
-		if (nextItem)
-		{
-			nextItem->Evaluate(context);
-		}
-	}
-
-	RootItem* RootItem::Parse(Tokenizer& tokenizer)
-	{
-		Statement* rootStatement = Statement::Parse(tokenizer);
-		if (rootStatement == nullptr ||
-			!tokenizer.context->errorReason.empty())
-		{
-			return nullptr;
-		}
-
-		RootItem* nextItem = nullptr;
-
-		if (tokenizer.context->HasNextChar())
-		{
-			nextItem = RootItem::Parse(tokenizer);
-			if (nextItem == nullptr ||
-				!tokenizer.context->errorReason.empty())
-			{
-				delete rootStatement;
-				return nullptr;
-			}
-		}
-
-		return new RootItem(rootStatement, nextItem);
-	}
-
-	AST::AST(Tokenizer* tokenizer) :
-		tokenizer(tokenizer)
-	{
-	}
-
-	void AST::Destroy()
-	{
-		delete rootItem;
-		bValid = false;
-	}
-
-	void AST::Generate()
-	{
-		delete rootItem;
-
-		bValid = false;
-
-		rootItem = RootItem::Parse(*tokenizer);
-
-		if (!tokenizer->context->errorReason.empty())
-		{
-			PrintError("Creation of AST failed\n");
-			PrintError("Error reason: %s\n", tokenizer->context->errorReason.c_str());
-			PrintError("Error token: %s\n", tokenizer->context->errorToken.ToString().c_str());
-			lastErrorTokenLocation = glm::vec2i(tokenizer->context->errorToken.linePos, tokenizer->context->errorToken.lineNum);
-			tokenizer->context->errors = { Error(tokenizer->context->errorToken.lineNum, tokenizer->context->errorReason) };
-			return;
-		}
-
-		bValid = true;
-
-		lastErrorTokenLocation = glm::vec2i(-1);
-	}
-
-	void AST::Evaluate()
-	{
-		if (bValid == false)
-		{
-			return;
-		}
-
-		bool bSuccess = true;
-
-		RootItem* currentItem = rootItem;
-		while (currentItem != nullptr)
-		{
-			//Print("Type: %d\n", currentItem->statement->type);
-
-			currentItem->statement->Evaluate(*tokenizer->context);
-			if (tokenizer->context->errorReason.empty())
-			{
-				currentItem = currentItem->nextItem;
-			}
-			else
-			{
-				PrintError("Evaluation of AST failed\n");
-				PrintError("Error reason: %s\n", tokenizer->context->errorReason.c_str());
-				PrintError("Error token: %s\n", tokenizer->context->errorToken.ToString().c_str());
-				lastErrorTokenLocation = glm::vec2i(tokenizer->context->errorToken.linePos, tokenizer->context->errorToken.lineNum);
-				bSuccess = false;
-				tokenizer->context->errors = { Error(tokenizer->context->errorToken.lineNum, tokenizer->context->errorReason) };
-				break;
-			}
-		}
-
-		if (bSuccess)
-		{
-			lastErrorTokenLocation = glm::vec2i(-1);
-		}
 	}
 
 	Terminal::Terminal() :
@@ -5788,12 +3640,13 @@ namespace flex
 		m_bInteractable = true;
 
 		MaterialID matID;
-		if (!g_Renderer->GetMaterialID("Terminal Copper", matID))
+		// TODO: Don't rely on material names!
+		if (!g_Renderer->GetMaterialID("terminal copper", matID))
 		{
 			// TODO: Create own material
 			matID = 0;
 		}
-		MeshComponent* mesh = SetMeshComponent(new MeshComponent(matID, this));
+		MeshComponent* mesh = SetMeshComponent(new MeshComponent(this, matID));
 		if (!mesh->LoadFromFile(RESOURCE("meshes/terminal-copper.glb")))
 		{
 			PrintWarn("Failed to load terminal mesh!\n");
@@ -5821,9 +3674,11 @@ namespace flex
 		{
 			ast->Destroy();
 			delete ast;
+			ast = nullptr;
 		}
 
 		delete tokenizer;
+		tokenizer = nullptr;
 
 		GameObject::Destroy();
 	}
@@ -5851,7 +3706,7 @@ namespace flex
 			const glm::vec3 up = m_Transform.GetUp();
 			const glm::vec3 forward = m_Transform.GetForward();
 
-			const real width = 1.3f;
+			const real width = 1.4f;
 			const real height = 1.65f;
 			const glm::vec3 posTL = m_Transform.GetWorldPosition() +
 				right * (width / 2.0f) +
@@ -5861,18 +3716,17 @@ namespace flex
 			glm::vec3 pos = posTL;
 
 			const glm::quat rot = m_Transform.GetWorldRotation();
-			real charHeight = g_Renderer->GetStringHeight("W", font, false);
-			// TODO: Get rid of magic numbers
-			const real lineHeight = charHeight * (magicY/1000.0f); // fontSize / 215.0f;
-			real charWidth = (magicX / 1000.0f) * g_Renderer->GetStringWidth("W", font, letterSpacing, false);
-			const real lineNoWidth = 3.0f * charWidth;
+			real charHeight = g_Renderer->GetStringHeight("W", font, false) * m_LetterScale;
+			const real lineHeight = charHeight * (m_LineHeight / 1000.0f);
+			real charWidth = g_Renderer->GetStringWidth("W", font, letterSpacing, false) / 1000.0f;
+			const real lineNoWidth = 24.0f * charWidth * m_LetterScale;
 
 			if (bRenderCursor)
 			{
-				// TODO: Get rid of magic numbers
 				glm::vec3 cursorPos = pos;
-				cursorPos += (-right * charWidth * (real)cursor.x) + up * (cursor.y * -lineHeight);
-				g_Renderer->DrawStringWS("|", VEC4_ONE, cursorPos, rot, letterSpacing);
+				cursorPos += (right * charWidth) + up * (cursor.y * -lineHeight);
+				std::string spaces(cursor.x, ' ');
+				g_Renderer->DrawStringWS(spaces + "|", VEC4_ONE, cursorPos, rot, letterSpacing, m_LetterScale);
 			}
 
 			if (bRenderText)
@@ -5880,13 +3734,13 @@ namespace flex
 				static const glm::vec4 lineNumberColor(0.4f, 0.4f, 0.4f, 1.0f);
 				static const glm::vec4 lineNumberColorActive(0.5f, 0.5f, 0.5f, 1.0f);
 				static const glm::vec4 textColor(0.85f, 0.81f, 0.80f, 1.0f);
-				static const glm::vec4 errorColor(0.84f, 0.25f, 0.25f, 1.0f);
+				static const glm::vec4 errorColor(0.65f, 0.12f, 0.13f, 1.0f);
 				glm::vec3 firstLinePos = pos;
 				for (i32 lineNumber = 0; lineNumber < (i32)lines.size(); ++lineNumber)
 				{
 					glm::vec4 lineNoCol = (lineNumber == cursor.y ? lineNumberColorActive : lineNumberColor);
-					g_Renderer->DrawStringWS(IntToString(lineNumber + 1, 2, ' '), lineNoCol, pos + right * lineNoWidth, rot, letterSpacing);
-					g_Renderer->DrawStringWS(lines[lineNumber], textColor, pos, rot, letterSpacing);
+					g_Renderer->DrawStringWS(IntToString(lineNumber + 1, 2, ' '), lineNoCol, pos + right * lineNoWidth, rot, letterSpacing, m_LetterScale);
+					g_Renderer->DrawStringWS(lines[lineNumber], textColor, pos, rot, letterSpacing, m_LetterScale);
 					pos.y -= lineHeight;
 				}
 
@@ -5897,7 +3751,10 @@ namespace flex
 					{
 						pos = firstLinePos;
 						pos.y -= lineHeight * lastErrorPos.y;
-						g_Renderer->DrawStringWS("!", errorColor, pos - right * charWidth, rot, letterSpacing);
+						g_Renderer->DrawStringWS("!", errorColor, pos + right * (charWidth * 1.7f), rot, letterSpacing, m_LetterScale);
+						std::string underlineStr = std::string(lastErrorPos.x, ' ') + std::string(ast->lastErrorTokenLen, '_');
+						pos.y -= lineHeight * 0.2f;
+						g_Renderer->DrawStringWS(underlineStr, errorColor, pos, rot, letterSpacing, m_LetterScale);
 					}
 				}
 			}
@@ -5910,8 +3767,8 @@ namespace flex
 
 		ImGui::Begin("Terminal");
 		{
-			ImGui::DragFloat("Magic X", &magicX, 0.01f);
-			ImGui::DragFloat("Magic Y", &magicY, 0.01f);
+			//ImGui::DragFloat("Line height", &m_LineHeight, 0.01f);
+			//ImGui::DragFloat("Scale", &m_LetterScale, 0.01f);
 
 			ImGui::Text("Variables");
 			if (ImGui::BeginChild("Variables", ImVec2(0.0f, 220.0f), true))
@@ -5921,28 +3778,29 @@ namespace flex
 					const TokenContext::InstantiatedIdentifier& var = tokenizer->context->instantiatedIdentifiers[i];
 					std::string valStr = var.value->ToString();
 					const char* typeNameCStr = g_TypeNameStrings[(i32)ValueTypeToTypeName(var.value->type)];
-					ImGui::Text("%s %s = %s", typeNameCStr, var.name.c_str(), valStr.c_str());
+					ImGui::Text("%s = %s", var.name.c_str(), valStr.c_str());
+					ImGui::SameLine();
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
+					ImGui::Text("(%s)", typeNameCStr);
+					ImGui::PopStyleColor();
 				}
 			}
 			ImGui::EndChild();
 
-			ImGui::Text("Errors: %d", tokenizer->context->errors.size());
+			if (tokenizer->context->errors.empty())
 			{
-				if (tokenizer->context->errors.empty())
+				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 1.0f, 0.5f, 1.0f));
+				ImGui::Text("Success");
+				ImGui::PopStyleColor();
+			}
+			else
+			{
+				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.5f, 0.5f, 1.0f));
+				for (const Error& e : tokenizer->context->errors)
 				{
-					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 1.0f, 0.5f, 1.0f));
-					ImGui::Text("Success");
-					ImGui::PopStyleColor();
+					ImGui::Text("L%d: %s", e.lineNumber + 1, e.str.c_str());
 				}
-				else
-				{
-					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.5f, 0.5f, 1.0f));
-					for (const Error& e : tokenizer->context->errors)
-					{
-						ImGui::Text("%2d, %s", e.lineNumber, e.str.c_str());
-					}
-					ImGui::PopStyleColor();
-				}
+				ImGui::PopStyleColor();
 			}
 		}
 		ImGui::End();
@@ -6181,7 +4039,7 @@ namespace flex
 
 		if (bSkipToNextBreak)
 		{
-			if (cursor.x == 0  && cursor.y > 0)
+			if (cursor.x == 0 && cursor.y > 0)
 			{
 				cursor.x = INT_MAX;
 				MoveCursorUp();
@@ -6327,8 +4185,6 @@ namespace flex
 
 	void Terminal::ParseCode()
 	{
-		bParsePassed = true;
-
 		assert(tokenizer != nullptr);
 		assert(ast != nullptr);
 

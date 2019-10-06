@@ -1,0 +1,29 @@
+{
+	"version" : 2,
+	"name" : "Scene Empty",
+	"spawn player" : false,
+	"objects" : 
+	[
+		{
+			"name" : "Reflection Probe 01",
+			"type" : "reflection probe",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 18.600, 0.000"
+			}
+		},
+		{
+			"name" : "Skybox",
+			"type" : "skybox",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"material" : "skybox 02",
+			"skybox info" : 
+			{
+			}
+		}
+	]
+}

@@ -29,23 +29,22 @@ namespace flex
 	glm::vec4 MeshComponent::m_DefaultColor_4(1.0f, 1.0f, 1.0f, 1.0f);
 	glm::vec3 MeshComponent::m_DefaultPosition(0.0f, 0.0f, 0.0f);
 	glm::vec3 MeshComponent::m_DefaultTangent(1.0f, 0.0f, 0.0f);
-	glm::vec3 MeshComponent::m_DefaultBitangent(0.0f, 0.0f, 1.0f);
 	glm::vec3 MeshComponent::m_DefaultNormal(0.0f, 1.0f, 0.0f);
 	glm::vec2 MeshComponent::m_DefaultTexCoord(0.0f, 0.0f);
 
-	MeshComponent::MeshComponent(GameObject* owner) :
-		m_OwningGameObject(owner)
-	{
-	}
-
-	MeshComponent::MeshComponent(MaterialID materialID, GameObject* owner, bool bSetRequiredAttributesFromMat /* = true */) :
+	MeshComponent::MeshComponent(GameObject* owner, MaterialID materialID /* = InvalidMaterialID */, bool bSetRequiredAttributesFromMat /* = true */) :
 		m_OwningGameObject(owner),
 		m_MaterialID(materialID),
 		m_UVScale(1.0f, 1.0f)
 	{
+		if (m_MaterialID == InvalidMaterialID)
+		{
+			m_MaterialID = g_Renderer->GetPlaceholderMaterialID();
+		}
+
 		if (bSetRequiredAttributesFromMat)
 		{
-			SetRequiredAttributesFromMaterialID(materialID);
+			SetRequiredAttributesFromMaterialID(m_MaterialID);
 		}
 	}
 
@@ -80,37 +79,36 @@ namespace flex
 
 		if (materialID == InvalidMaterialID)
 		{
-			PrintError("Mesh component requires material index to be parsed: %s\n", owner->GetName().c_str());
+			PrintWarn("Mesh component requires material index to be parsed: %s\n", owner->GetName().c_str());
+			materialID = g_Renderer->GetPlaceholderMaterialID();
+		}
+
+		if (!meshFilePath.empty())
+		{
+			newMeshComponent = new MeshComponent(owner, materialID);
+
+			MeshImportSettings importSettings = {};
+			importSettings.bFlipU = bFlipU;
+			importSettings.bFlipV = bFlipV;
+			importSettings.bFlipNormalZ = bFlipNormalZ;
+			importSettings.bSwapNormalYZ = bSwapNormalYZ;
+
+			newMeshComponent->LoadFromFile(meshFilePath, &importSettings);
+
+			owner->SetMeshComponent(newMeshComponent);
+		}
+		else if (!meshPrefabName.empty())
+		{
+			newMeshComponent = new MeshComponent(owner, materialID);
+
+			MeshComponent::PrefabShape prefabShape = MeshComponent::StringToPrefabShape(meshPrefabName);
+			newMeshComponent->LoadPrefabShape(prefabShape);
+
+			owner->SetMeshComponent(newMeshComponent);
 		}
 		else
 		{
-			if (!meshFilePath.empty())
-			{
-				newMeshComponent = new MeshComponent(materialID, owner);
-
-				MeshImportSettings importSettings = {};
-				importSettings.bFlipU = bFlipU;
-				importSettings.bFlipV = bFlipV;
-				importSettings.bFlipNormalZ = bFlipNormalZ;
-				importSettings.bSwapNormalYZ = bSwapNormalYZ;
-
-				newMeshComponent->LoadFromFile(meshFilePath, &importSettings);
-
-				owner->SetMeshComponent(newMeshComponent);
-			}
-			else if (!meshPrefabName.empty())
-			{
-				newMeshComponent = new MeshComponent(materialID, owner);
-
-				MeshComponent::PrefabShape prefabShape = MeshComponent::StringToPrefabShape(meshPrefabName);
-				newMeshComponent->LoadPrefabShape(prefabShape);
-
-				owner->SetMeshComponent(newMeshComponent);
-			}
-			else
-			{
-				PrintError("Unhandled mesh field on object: %s\n", owner->GetName().c_str());
-			}
+			PrintError("Unhandled mesh field on object: %s\n", owner->GetName().c_str());
 		}
 
 		return newMeshComponent;
@@ -146,6 +144,27 @@ namespace flex
 		return meshObject;
 	}
 
+	void MeshComponent::Update()
+	{
+		// TODO: Move elsewhere
+		if (m_Shape == PrefabShape::GRID)
+		{
+			Transform* transform = m_OwningGameObject->GetTransform();
+			glm::vec3 camPos = g_CameraManager->CurrentCamera()->GetPosition();
+			glm::vec3 newGridPos = glm::vec3(camPos.x - fmod(
+				camPos.x + GRID_LINE_SPACING / 2.0f, GRID_LINE_SPACING),
+				transform->GetWorldPosition().y,
+				camPos.z - fmod(camPos.z + GRID_LINE_SPACING / 2.0f, GRID_LINE_SPACING));
+			transform->SetWorldPosition(newGridPos);
+		}
+	}
+
+	void MeshComponent::UpdateProceduralData(VertexBufferDataCreateInfo const* newData)
+	{
+		m_VertexBufferData.UpdateData(newData);
+		g_Renderer->UpdateVertexData(m_OwningGameObject->GetRenderID(), &m_VertexBufferData);
+	}
+
 	void MeshComponent::Destroy()
 	{
 		m_VertexBufferData.Destroy();
@@ -167,185 +186,6 @@ namespace flex
 		m_RequiredAttributes = shader.vertexAttributes;
 	}
 
-	bool MeshComponent::FindPreLoadedMesh(const std::string& relativeFilePath, LoadedMesh** loadedMesh)
-	{
-		auto iter = m_LoadedMeshes.find(relativeFilePath);
-		if (iter == m_LoadedMeshes.end())
-		{
-			return false;
-		}
-		else
-		{
-			*loadedMesh = iter->second;
-			return true;
-		}
-	}
-
-	LoadedMesh* MeshComponent::LoadMesh(const std::string& relativeFilePath, MeshImportSettings* importSettings /* = nullptr */)
-	{
-		if (relativeFilePath.find(':') != std::string::npos)
-		{
-			PrintError("Called MeshComponent::LoadMesh with an absolute file path! Filepath must be relative. %s\n", relativeFilePath.c_str());
-			return nullptr;
-		}
-
-		if (!EndsWith(relativeFilePath, "gltf") && !EndsWith(relativeFilePath, "glb"))
-		{
-			PrintWarn("Attempted to load non gltf/glb model! Only those formats are supported! %s\n", relativeFilePath.c_str());
-			return nullptr;
-		}
-
-		std::string fileName = relativeFilePath;
-		StripLeadingDirectories(fileName);
-
-		LoadedMesh* newLoadedMesh = nullptr;
-		{
-			auto existingIter = m_LoadedMeshes.find(relativeFilePath);
-			if (existingIter == m_LoadedMeshes.end())
-			{
-				if (g_bEnableLogging_Loading)
-				{
-					Print("Loading mesh %s\n", fileName.c_str());
-				}
-				newLoadedMesh = new LoadedMesh();
-				m_LoadedMeshes.emplace(relativeFilePath, newLoadedMesh);
-			}
-			else
-			{
-				if (g_bEnableLogging_Loading)
-				{
-					Print("Reloading mesh %s\n", fileName.c_str());
-				}
-				newLoadedMesh = existingIter->second;
-			}
-		}
-
-		// If import settings were passed in, save them in the cached mesh
-		if (importSettings)
-		{
-			newLoadedMesh->importSettings = *importSettings;
-		}
-
-		newLoadedMesh->relativeFilePath = relativeFilePath;
-
-		static constexpr auto cgltf_resultToString = [](cgltf_result result)
-		{
-			switch (result)
-			{
-			case cgltf_result_data_too_short:	return "Data too short";
-			case cgltf_result_unknown_format:	return "Unknown format";
-			case cgltf_result_invalid_json:		return "Invalid json";
-			case cgltf_result_invalid_gltf:		return "Invalid gltf";
-			case cgltf_result_invalid_options:	return "Invalid options";
-			case cgltf_result_file_not_found:	return "File not found";
-			case cgltf_result_io_error:			return "IO error";
-			case cgltf_result_out_of_memory:	return "Out of memory";
-			default:							return "";
-			}
-		};
-
-
-		cgltf_options ops = {};
-		ops.type = cgltf_file_type_invalid; // auto detect gltf or glb
-		cgltf_data* data = nullptr;
-		cgltf_result result = cgltf_parse_file(&ops, relativeFilePath.c_str(), &data);
-		if (result == cgltf_result_success)
-		{
-			result = cgltf_load_buffers(&ops, data, relativeFilePath.c_str());
-		}
-
-		if (result == cgltf_result_success)
-		{
-			result = cgltf_validate(data);
-		}
-
-		if (result != cgltf_result_success)
-		{
-			std::string err = cgltf_resultToString(result);
-			PrintError("Failed to load gltf/glb file at: %s\nError: %s\n", relativeFilePath.c_str(), err.c_str());
-			cgltf_free(data);
-		}
-		else
-		{
-			newLoadedMesh->data = data;
-		}
-
-		return newLoadedMesh;
-	}
-
-	real MeshComponent::CalculateBoundingSphereScale() const
-	{
-		Transform* transform = m_OwningGameObject->GetTransform();
-		glm::vec3 scale = transform->GetWorldScale();
-		glm::vec3 scaledMin = scale * m_MinPoint;
-		glm::vec3 scaledMax = scale * m_MaxPoint;
-
-		real sphereScale = (glm::max(glm::max(glm::abs(scaledMax.x), glm::abs(scaledMin.x)),
-			glm::max(glm::max(glm::abs(scaledMax.y), glm::abs(scaledMin.y)),
-				glm::max(glm::abs(scaledMax.z), glm::abs(scaledMin.z)))));
-		return sphereScale;
-	}
-
-	bool MeshComponent::CalculateTangents(VertexBufferData::CreateInfo& createInfo)
-	{
-		if (createInfo.normals.empty())
-		{
-			PrintError("Can't calculate tangents and bitangents for mesh which contains no normals!\n");
-			return false;
-		}
-
-		//const real angleEpsilon = 0.9999f;
-		const i32 vertCount = (i32)createInfo.normals.size();
-
-		if (!createInfo.tangents.empty() ||
-			createInfo.bitangents.empty())
-		{
-			createInfo.bitangents.reserve(vertCount);
-
-			// TODO: Somehow handle tangent generation if missing
-			for (i32 i = 0; i < vertCount; ++i)
-			{
-				createInfo.bitangents[i] = glm::normalize(glm::cross(createInfo.normals[i], createInfo.tangents[i]));
-			}
-
-			return true;
-		}
-
-		ENSURE_NO_ENTRY();
-
-		// TODO: Implement?
-
-		//if (createInfo.texCoords_UV.empty())
-		//{
-		//	PrintError("Can't calculate tangents and bitangents for mesh which contains no texture coordinates!\n");
-		//	return false;
-		//}
-
-		//if (!createInfo.tangents.empty() ||
-		//	!createInfo.bitangents.empty())
-		//{
-		//	PrintWarn("Attempted to calculate tangents and bitangents on mesh which already has tangents or bitangents\n");
-		//}
-
-		//createInfo.tangents.reserve(vertCount);
-		//createInfo.bitangents.reserve(vertCount);
-
-		//const glm::vec3* meshPos = &createInfo.positions_3D[0];
-		//const glm::vec3* meshNorm = &createInfo.normals[0];
-		//const glm::vec2* meshUV = &createInfo.texCoords_UV[0];
-		//glm::vec3* meshTan = &createInfo.tangents[0];
-		//glm::vec3* meshBitan = &createInfo.bitangents[0];
-
-
-		//i32 numFaces = vertCount / 3;
-		//for (i32 i = 0; i < numFaces; ++i)
-		//{
-
-		//}
-
-		return false;
-	}
-
 	bool MeshComponent::LoadFromFile(
 		const std::string& relativeFilePath,
 		MeshImportSettings* importSettings /* = nullptr */,
@@ -362,8 +202,7 @@ namespace flex
 		m_Type = Type::FILE;
 		m_Shape = PrefabShape::_NONE;
 		m_RelativeFilePath = relativeFilePath;
-		m_FileName = m_RelativeFilePath;
-		StripLeadingDirectories(m_FileName);
+		m_FileName = StripLeadingDirectories(m_RelativeFilePath);
 
 		m_BoundingSphereRadius = 0;
 		m_BoundingSphereCenterPoint = VEC3_ZERO;
@@ -399,14 +238,14 @@ namespace flex
 			return false;
 		}
 
-		VertexBufferData::CreateInfo vertexBufferDataCreateInfo = {};
+		VertexBufferDataCreateInfo vertexBufferDataCreateInfo = {};
 
 		//size_t totalVertCount = 0;
 		m_MinPoint = glm::vec3(FLT_MAX);
 		m_MaxPoint = glm::vec3(-FLT_MAX);
 
-		assert(data->meshes_count == 1);
-		for (i32 i = 0; i < (i32)data->meshes_count; ++i)
+		//assert(data->meshes_count == 1);
+		for (i32 i = 0; i < (i32)1; ++i)
 		{
 			cgltf_mesh* mesh = &(data->meshes[i]);
 
@@ -421,8 +260,8 @@ namespace flex
 					continue;
 				}
 
-				//i32 indexStart = (i32)m_Indices.size();
 				i32 vertexStart = (i32)vertexBufferDataCreateInfo.positions_3D.size();
+				i32 indexStart = m_Indices.size();
 
 				i32 posAttribIndex = -1;
 				i32 normAttribIndex = -1;
@@ -463,12 +302,12 @@ namespace flex
 				assert(primitive->attributes[posAttribIndex].type == cgltf_attribute_type_position);
 				assert(posAccessor->component_type == cgltf_component_type_r_32f);
 				assert(posAccessor->type == cgltf_type_vec3);
-				//assert(posAccessor->buffer_view->type == cgltf_buffer_view_type_vertices);
 				u32 vertCount = posAccessor->count;
 
 				vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
 
 				assert(posAccessor->has_min);
+				assert(posAccessor->has_max);
 				glm::vec3 posMin = glm::make_vec3(&posAccessor->min[0]);
 				glm::vec3 posMax = glm::make_vec3(&posAccessor->max[0]);
 
@@ -476,70 +315,36 @@ namespace flex
 				m_MaxPoint = glm::max(m_MaxPoint, posMax);
 
 
-				if (m_RequiredAttributes & (u32)VertexAttribute::BITANGENT ||
-					(tanAttribIndex == -1 && (m_RequiredAttributes & (u32)VertexAttribute::TANGENT)))
+				if (tanAttribIndex == -1 && (m_RequiredAttributes & (u32)VertexAttribute::TANGENT))
 				{
 					bCalculateTangents = true;
+
+					if (uvAttribIndex == -1)
+					{
+						PrintError("Can't generate tangents for mesh which has no tex coords: %s\n", m_FileName.c_str());
+					}
 				}
 
 				{
-					if (m_RequiredAttributes & (u32)VertexAttribute::POSITION)
-					{
-						vertexBufferDataCreateInfo.positions_3D.resize(vertCount);
-					}
-
-					if (m_RequiredAttributes & (u32)VertexAttribute::POSITION_2D)
-					{
-						vertexBufferDataCreateInfo.positions_2D.resize(vertCount);
-					}
-
-					if (m_RequiredAttributes & (u32)VertexAttribute::NORMAL)
-					{
-						vertexBufferDataCreateInfo.normals.resize(vertCount);
-					}
-
-					if (m_RequiredAttributes & (u32)VertexAttribute::TANGENT)
-					{
-						vertexBufferDataCreateInfo.tangents.resize(vertCount);
-					}
-
-					if (m_RequiredAttributes & (u32)VertexAttribute::BITANGENT)
-					{
-						vertexBufferDataCreateInfo.bitangents.resize(vertCount);
-					}
-
-					if (m_RequiredAttributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)
-					{
-						vertexBufferDataCreateInfo.colors_R32G32B32A32.resize(vertCount);
-					}
-
-					if (m_RequiredAttributes & (u32)VertexAttribute::COLOR_R8G8B8A8_UNORM)
-					{
-						vertexBufferDataCreateInfo.colors_R8G8B8A8.resize(vertCount);
-					}
-
-					if (m_RequiredAttributes & (u32)VertexAttribute::UV)
-					{
-						vertexBufferDataCreateInfo.texCoords_UV.resize(vertCount);
-					}
-
-					if (m_RequiredAttributes & (u32)VertexAttribute::EXTRA_VEC4)
-					{
-						vertexBufferDataCreateInfo.extraVec4s.resize(vertCount);
-					}
-
-					if (m_RequiredAttributes & (u32)VertexAttribute::EXTRA_INT)
-					{
-						vertexBufferDataCreateInfo.extraInts.resize(vertCount);
-					}
+					if (m_RequiredAttributes & (u32)VertexAttribute::POSITION) vertexBufferDataCreateInfo.positions_3D.resize(vertexBufferDataCreateInfo.positions_3D.size() + vertCount);
+					if (m_RequiredAttributes & (u32)VertexAttribute::POSITION_2D) vertexBufferDataCreateInfo.positions_2D.resize(vertexBufferDataCreateInfo.positions_2D.size() + vertCount);
+					if (m_RequiredAttributes & (u32)VertexAttribute::NORMAL) vertexBufferDataCreateInfo.normals.resize(vertexBufferDataCreateInfo.normals.size() + vertCount);
+					if (m_RequiredAttributes & (u32)VertexAttribute::TANGENT) vertexBufferDataCreateInfo.tangents.resize(vertexBufferDataCreateInfo.tangents.size() + vertCount);
+					if (m_RequiredAttributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT) vertexBufferDataCreateInfo.colors_R32G32B32A32.resize(vertexBufferDataCreateInfo.colors_R32G32B32A32.size() + vertCount);
+					if (m_RequiredAttributes & (u32)VertexAttribute::COLOR_R8G8B8A8_UNORM) vertexBufferDataCreateInfo.colors_R8G8B8A8.resize(vertexBufferDataCreateInfo.colors_R8G8B8A8.size() + vertCount);
+					if (m_RequiredAttributes & (u32)VertexAttribute::UV) vertexBufferDataCreateInfo.texCoords_UV.resize(vertexBufferDataCreateInfo.texCoords_UV.size() + vertCount);
+					if (m_RequiredAttributes & (u32)VertexAttribute::EXTRA_VEC4) vertexBufferDataCreateInfo.extraVec4s.resize(vertexBufferDataCreateInfo.extraVec4s.size() + vertCount);
+					if (m_RequiredAttributes & (u32)VertexAttribute::EXTRA_INT) vertexBufferDataCreateInfo.extraInts.resize(vertexBufferDataCreateInfo.extraInts.size() + vertCount);
 				}
 
 				// Vertices
-				for (u32 v = 0; v < vertCount; ++v)
+				for (u32 vi = 0; vi < vertCount; ++vi)
 				{
+					u32 v = vertexStart + vi;
+
 					// Position
 					glm::vec3 pos;
-					cgltf_accessor_read_float(posAccessor, v, &pos.x, 3);
+					cgltf_accessor_read_float(posAccessor, vi, &pos.x, 3);
 					vertexBufferDataCreateInfo.positions_3D[v] = pos;
 
 					// Normal
@@ -559,7 +364,7 @@ namespace flex
 							assert(normAccessor->type == cgltf_type_vec3);
 
 							glm::vec3 norm;
-							cgltf_accessor_read_float(normAccessor, v, &norm.x, 3);
+							cgltf_accessor_read_float(normAccessor, vi, &norm.x, 3);
 							if (importSettings && importSettings->bSwapNormalYZ)
 							{
 								std::swap(norm.y, norm.z);
@@ -589,16 +394,9 @@ namespace flex
 							//assert(tanAccessor->type == cgltf_type_vec3);
 
 							glm::vec4 tangent;
-							cgltf_accessor_read_float(tanAccessor, v, &tangent.x, 4);
+							cgltf_accessor_read_float(tanAccessor, vi, &tangent.x, 4);
 							vertexBufferDataCreateInfo.tangents[v] = tangent;
 						}
-					}
-
-					// Bitangent
-					if (m_RequiredAttributes & (u32)VertexAttribute::BITANGENT)
-					{
-						vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::BITANGENT;
-						vertexBufferDataCreateInfo.bitangents[v] = m_DefaultBitangent;
 					}
 
 					// Color
@@ -618,7 +416,7 @@ namespace flex
 							assert(colAccessor->type == cgltf_type_vec4);
 
 							glm::vec4 col;
-							cgltf_accessor_read_float(colAccessor, v, &col.x, 4);
+							cgltf_accessor_read_float(colAccessor, vi, &col.x, 4);
 							vertexBufferDataCreateInfo.colors_R32G32B32A32[v] = col;
 						}
 					}
@@ -640,7 +438,7 @@ namespace flex
 							assert(uvAccessor->type == cgltf_type_vec2);
 
 							glm::vec2 uv0;
-							cgltf_accessor_read_float(uvAccessor, v, &uv0.x, 2);
+							cgltf_accessor_read_float(uvAccessor, vi, &uv0.x, 2);
 
 							uv0 *= m_UVScale;
 							if (importSettings && importSettings->bFlipU)
@@ -660,7 +458,7 @@ namespace flex
 				{
 					assert(primitive->indices->type == cgltf_type_scalar);
 					const i32 indexCount = (i32)primitive->indices->count;
-					m_Indices.resize(indexCount);
+					m_Indices.resize(m_Indices.size() + indexCount);
 
 					//assert(primitive->indices->buffer_view->type == cgltf_buffer_view_type_indices);
 					assert(primitive->indices->component_type == cgltf_component_type_r_8u ||
@@ -669,7 +467,7 @@ namespace flex
 
 					for (i32 l = 0; l < indexCount; ++l)
 					{
-						m_Indices[l] = vertexStart + cgltf_accessor_read_index(primitive->indices, l);
+						m_Indices[indexStart + l] = vertexStart + cgltf_accessor_read_index(primitive->indices, l);
 					}
 				}
 			}
@@ -678,7 +476,7 @@ namespace flex
 			{
 				if (!CalculateTangents(vertexBufferDataCreateInfo))
 				{
-					PrintWarn("Failed to calculate tangents/bitangents for mesh!\n");
+					PrintWarn("Failed to calculate tangents for mesh!\n");
 				}
 			}
 		}
@@ -708,25 +506,7 @@ namespace flex
 
 		if (optionalCreateInfo)
 		{
-			if (optionalCreateInfo->materialID != InvalidMaterialID)
-			{
-				m_MaterialID = optionalCreateInfo->materialID;
-			}
-			renderObjectCreateInfo.visibleInSceneExplorer = optionalCreateInfo->visibleInSceneExplorer;
-			renderObjectCreateInfo.cullFace = optionalCreateInfo->cullFace;
-			renderObjectCreateInfo.depthTestReadFunc = optionalCreateInfo->depthTestReadFunc;
-			renderObjectCreateInfo.bDepthWriteEnable = optionalCreateInfo->bDepthWriteEnable;
-			renderObjectCreateInfo.bDepthTestEnable = optionalCreateInfo->bDepthTestEnable;
-			renderObjectCreateInfo.bEditorObject = optionalCreateInfo->bEditorObject;
-
-			if (optionalCreateInfo->vertexBufferData != nullptr)
-			{
-				PrintWarn("Attempted to override vertexBufferData in LoadFromFile! Ignoring passed in data\n");
-			}
-			if (optionalCreateInfo->indices != nullptr)
-			{
-				PrintWarn("Attempted to override indices in LoadFromFile! Ignoring passed in data\n");
-			}
+			CopyInOptionalCreateInfo(renderObjectCreateInfo, *optionalCreateInfo);
 		}
 
 		renderObjectCreateInfo.gameObject = m_OwningGameObject;
@@ -770,24 +550,7 @@ namespace flex
 
 		if (optionalCreateInfo)
 		{
-			if (optionalCreateInfo->materialID != InvalidMaterialID)
-			{
-				m_MaterialID = optionalCreateInfo->materialID;
-			}
-			renderObjectCreateInfo.visibleInSceneExplorer = optionalCreateInfo->visibleInSceneExplorer;
-			renderObjectCreateInfo.cullFace = optionalCreateInfo->cullFace;
-			renderObjectCreateInfo.depthTestReadFunc = optionalCreateInfo->depthTestReadFunc;
-			renderObjectCreateInfo.bDepthWriteEnable = optionalCreateInfo->bDepthWriteEnable;
-			renderObjectCreateInfo.bEditorObject = optionalCreateInfo->bEditorObject;
-
-			if (optionalCreateInfo->vertexBufferData != nullptr)
-			{
-				PrintError("Can not override vertexBufferData in LoadPrefabShape! Ignoring passed in data\n");
-			}
-			if (optionalCreateInfo->indices != nullptr)
-			{
-				PrintError("Can not override indices in LoadPrefabShape! Ignoring passed in data\n");
-			}
+			CopyInOptionalCreateInfo(renderObjectCreateInfo, *optionalCreateInfo);
 		}
 
 		renderObjectCreateInfo.gameObject = m_OwningGameObject;
@@ -795,7 +558,7 @@ namespace flex
 
 		TopologyMode topologyMode = TopologyMode::TRIANGLE_LIST;
 
-		VertexBufferData::CreateInfo vertexBufferDataCreateInfo = {};
+		VertexBufferDataCreateInfo vertexBufferDataCreateInfo = {};
 
 		switch (shape)
 		{
@@ -1110,18 +873,6 @@ namespace flex
 			};
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::NORMAL;
 
-			vertexBufferDataCreateInfo.bitangents =
-			{
-				{ 1.0f, 0.0f, 0.0f, },
-				{ 1.0f, 0.0f, 0.0f, },
-				{ 1.0f, 0.0f, 0.0f, },
-
-				{ 1.0f, 0.0f, 0.0f, },
-				{ 1.0f, 0.0f, 0.0f, },
-				{ 1.0f, 0.0f, 0.0f, },
-			};
-			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::BITANGENT;
-
 			vertexBufferDataCreateInfo.tangents =
 			{
 				{ 0.0f, 0.0f, 1.0f, },
@@ -1167,7 +918,6 @@ namespace flex
 			vertexBufferDataCreateInfo.positions_3D.resize(vertCount);
 			vertexBufferDataCreateInfo.normals.resize(vertCount);
 			vertexBufferDataCreateInfo.tangents.resize(vertCount);
-			vertexBufferDataCreateInfo.bitangents.resize(vertCount);
 			vertexBufferDataCreateInfo.colors_R32G32B32A32.resize(vertCount);
 
 			// NOTE: Wave generation is implemented in GerstnerWave::Update
@@ -1179,7 +929,6 @@ namespace flex
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::NORMAL;
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::TANGENT;
-			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::BITANGENT;
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
 
 			i32 indexCount = 6 * vertCount;
@@ -1410,18 +1159,41 @@ namespace flex
 		return true;
 	}
 
-	void MeshComponent::Update()
+	bool MeshComponent::CreateProcedural(u32 initialMaxVertCount,
+		VertexAttributes attributes,
+		TopologyMode topologyMode /* = TopologyMode::TRIANGLE_LIST */,
+		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
 	{
-		if (m_Shape == PrefabShape::GRID)
+		assert(m_VertexBufferData.vertexData == nullptr);
+
+		m_VertexBufferData.InitializeDynamic(attributes, initialMaxVertCount);
+
+		RenderObjectCreateInfo renderObjectCreateInfo = {};
+
+		if (optionalCreateInfo)
 		{
-			Transform* transform = m_OwningGameObject->GetTransform();
-			glm::vec3 camPos = g_CameraManager->CurrentCamera()->GetPosition();
-			glm::vec3 newGridPos = glm::vec3(camPos.x - fmod(
-				camPos.x + GRID_LINE_SPACING/2.0f, GRID_LINE_SPACING),
-				transform->GetWorldPosition().y,
-				camPos.z - fmod(camPos.z + GRID_LINE_SPACING / 2.0f, GRID_LINE_SPACING));
-			transform->SetWorldPosition(newGridPos);
+			CopyInOptionalCreateInfo(renderObjectCreateInfo, *optionalCreateInfo);
 		}
+
+		renderObjectCreateInfo.gameObject = m_OwningGameObject;
+		renderObjectCreateInfo.vertexBufferData = &m_VertexBufferData;
+		renderObjectCreateInfo.indices = &m_Indices;
+		renderObjectCreateInfo.materialID = m_MaterialID;
+
+		if (m_OwningGameObject->GetRenderID() != InvalidRenderID)
+		{
+			g_Renderer->DestroyRenderObject(m_OwningGameObject->GetRenderID());
+		}
+		RenderID renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
+		m_OwningGameObject->SetRenderID(renderID);
+
+		g_Renderer->SetTopologyMode(renderID, topologyMode);
+
+		m_VertexBufferData.DescribeShaderVariables(g_Renderer, renderID);
+
+		m_bInitialized = true;
+
+		return true;
 	}
 
 	void MeshComponent::Reload()
@@ -1449,6 +1221,8 @@ namespace flex
 		{
 			PrintError("Failed to reload mesh at %s\n", m_RelativeFilePath.c_str());
 		}
+
+		g_Renderer->RenderObjectStateChanged();
 	}
 
 	MaterialID MeshComponent::GetMaterialID() const
@@ -1458,10 +1232,14 @@ namespace flex
 
 	void MeshComponent::SetMaterialID(MaterialID materialID)
 	{
-		m_MaterialID = materialID;
-		if (m_bInitialized && m_OwningGameObject)
+		if (m_MaterialID != materialID)
 		{
-			g_Renderer->SetRenderObjectMaterialID(m_OwningGameObject->GetRenderID(), materialID);
+			m_MaterialID = materialID;
+			if (m_bInitialized && m_OwningGameObject)
+			{
+				g_Renderer->SetRenderObjectMaterialID(m_OwningGameObject->GetRenderID(), materialID);
+			}
+			g_Renderer->RenderObjectStateChanged();
 		}
 	}
 
@@ -1521,9 +1299,119 @@ namespace flex
 		}
 	}
 
+	bool MeshComponent::FindPreLoadedMesh(const std::string& relativeFilePath, LoadedMesh** loadedMesh)
+	{
+		auto iter = m_LoadedMeshes.find(relativeFilePath);
+		if (iter == m_LoadedMeshes.end())
+		{
+			return false;
+		}
+		else
+		{
+			*loadedMesh = iter->second;
+			return true;
+		}
+	}
+
+	LoadedMesh* MeshComponent::LoadMesh(const std::string& relativeFilePath, MeshImportSettings* importSettings /* = nullptr */)
+	{
+		if (relativeFilePath.find(':') != std::string::npos)
+		{
+			PrintError("Called MeshComponent::LoadMesh with an absolute file path! Filepath must be relative. %s\n", relativeFilePath.c_str());
+			return nullptr;
+		}
+
+		if (!EndsWith(relativeFilePath, "gltf") && !EndsWith(relativeFilePath, "glb"))
+		{
+			PrintWarn("Attempted to load non gltf/glb model! Only those formats are supported! %s\n", relativeFilePath.c_str());
+			return nullptr;
+		}
+
+		const std::string fileName = StripLeadingDirectories(relativeFilePath);
+
+		LoadedMesh* newLoadedMesh = nullptr;
+		{
+			auto existingIter = m_LoadedMeshes.find(relativeFilePath);
+			if (existingIter == m_LoadedMeshes.end())
+			{
+				if (g_bEnableLogging_Loading)
+				{
+					Print("Loading mesh %s\n", fileName.c_str());
+				}
+				newLoadedMesh = new LoadedMesh();
+				m_LoadedMeshes.emplace(relativeFilePath, newLoadedMesh);
+			}
+			else
+			{
+				if (g_bEnableLogging_Loading)
+				{
+					Print("Reloading mesh %s\n", fileName.c_str());
+				}
+				newLoadedMesh = existingIter->second;
+			}
+		}
+
+		// If import settings were passed in, save them in the cached mesh
+		if (importSettings)
+		{
+			newLoadedMesh->importSettings = *importSettings;
+		}
+
+		newLoadedMesh->relativeFilePath = relativeFilePath;
+
+		cgltf_options ops = {};
+		ops.type = cgltf_file_type_invalid; // auto detect gltf or glb
+		cgltf_data* data = nullptr;
+		cgltf_result result = cgltf_parse_file(&ops, relativeFilePath.c_str(), &data);
+		if (result == cgltf_result_success)
+		{
+			result = cgltf_load_buffers(&ops, data, relativeFilePath.c_str());
+		}
+
+		if (result == cgltf_result_success)
+		{
+			result = cgltf_validate(data);
+		}
+
+		if (result != cgltf_result_success)
+		{
+			std::string err;
+			switch (result)
+			{
+			case cgltf_result_data_too_short:	err = "Data too short"; break;
+			case cgltf_result_unknown_format:	err = "Unknown format"; break;
+			case cgltf_result_invalid_json:		err = "Invalid json"; break;
+			case cgltf_result_invalid_gltf:		err = "Invalid gltf"; break;
+			case cgltf_result_invalid_options:	err = "Invalid options"; break;
+			case cgltf_result_file_not_found:	err = "File not found"; break;
+			case cgltf_result_io_error:			err = "IO error"; break;
+			case cgltf_result_out_of_memory:	err = "Out of memory"; break;
+			default:							err = ""; break;
+			}
+			PrintError("Failed to load gltf/glb file at: %s\nError: %s\n", relativeFilePath.c_str(), err.c_str());
+			cgltf_free(data);
+		}
+		else
+		{
+			newLoadedMesh->data = data;
+		}
+
+		return newLoadedMesh;
+	}
+
 	MeshComponent::Type MeshComponent::GetType() const
 	{
 		return m_Type;
+	}
+
+	std::string MeshComponent::GetRelativeFilePath() const
+	{
+		return m_RelativeFilePath;
+	}
+
+	std::string MeshComponent::GetFileName() const
+	{
+		return m_FileName;
 	}
 
 	MeshComponent::PrefabShape MeshComponent::GetShape() const
@@ -1541,7 +1429,7 @@ namespace flex
 		if (!(m_VertexBufferData.Attributes & (i32)VertexAttribute::POSITION))
 		{
 			PrintError("Attempted to get bounding sphere radius of mesh component which contains no 3D vertices!"
-					   "Radius will always be 0\n");
+				"Radius will always be 0\n");
 		}
 		real sphereScale = CalculateBoundingSphereScale();
 		return m_BoundingSphereRadius * sphereScale;
@@ -1552,7 +1440,7 @@ namespace flex
 		if (!(m_VertexBufferData.Attributes & (i32)VertexAttribute::POSITION))
 		{
 			PrintError("Attempted to get bounding sphere center point of mesh component which contains no 3D vertices!"
-					   "Center point will always be 0\n");
+				"Center point will always be 0\n");
 		}
 
 		Transform* transform = m_OwningGameObject->GetTransform();
@@ -1565,13 +1453,86 @@ namespace flex
 		return &m_VertexBufferData;
 	}
 
-	std::string MeshComponent::GetRelativeFilePath() const
+	real MeshComponent::CalculateBoundingSphereScale() const
 	{
-		return m_RelativeFilePath;
+		Transform* transform = m_OwningGameObject->GetTransform();
+		glm::vec3 scale = transform->GetWorldScale();
+		glm::vec3 scaledMin = scale * m_MinPoint;
+		glm::vec3 scaledMax = scale * m_MaxPoint;
+
+		real sphereScale = (glm::max(glm::max(glm::abs(scaledMax.x), glm::abs(scaledMin.x)),
+			glm::max(glm::max(glm::abs(scaledMax.y), glm::abs(scaledMin.y)),
+				glm::max(glm::abs(scaledMax.z), glm::abs(scaledMin.z)))));
+		return sphereScale;
 	}
 
-	std::string MeshComponent::GetFileName() const
+	bool MeshComponent::CalculateTangents(VertexBufferDataCreateInfo& createInfo)
 	{
-		return m_FileName;
+		if (createInfo.normals.empty())
+		{
+			PrintError("Can't calculate tangents for mesh which contains no normal data!\n");
+			return false;
+		}
+		if (createInfo.positions_3D.empty())
+		{
+			PrintError("Can't calculate tangents for mesh which contains no position data!\n");
+			return false;
+		}
+		if (createInfo.texCoords_UV.empty())
+		{
+			// TODO: Handle this case
+			PrintError("Can't calculate tangents for mesh which contains no tex coord data!\n");
+			return false;
+		}
+
+		for (u32 i = 0; i < createInfo.positions_3D.size() - 2; i += 3)
+		{
+			glm::vec3 p0 = createInfo.positions_3D[i + 0];
+			glm::vec3 p1 = createInfo.positions_3D[i + 1];
+			glm::vec3 p2 = createInfo.positions_3D[i + 2];
+
+			glm::vec2 uv0 = createInfo.texCoords_UV[i + 0];
+			glm::vec2 uv1 = createInfo.texCoords_UV[i + 1];
+			glm::vec2 uv2 = createInfo.texCoords_UV[i + 2];
+
+			glm::vec3 dPos0 = p1 - p0;
+			glm::vec3 dPos1 = p2 - p0;
+
+			glm::vec2 dUV0 = uv1 - uv0;
+			glm::vec2 dUV1 = uv2 - uv0;
+
+			real r = 1.0f / (dUV1.x * dUV0.y - dUV1.y * dUV0.x);
+			glm::vec3 tangent = glm::normalize((dPos0 * dUV0.y - dPos1 * dUV1.y) * r);
+			//glm::vec3 bitangent = (dPos1 * dUV1.x - dPos0 * dUV0.x) * r;
+
+			createInfo.tangents[i + 0] = tangent;
+			createInfo.tangents[i + 1] = tangent;
+			createInfo.tangents[i + 2] = tangent;
+		}
+
+		return true;
+	}
+
+	void MeshComponent::CopyInOptionalCreateInfo(RenderObjectCreateInfo& createInfo, const RenderObjectCreateInfo& overrides)
+	{
+		if (overrides.materialID != InvalidMaterialID)
+		{
+			m_MaterialID = overrides.materialID;
+		}
+		createInfo.visibleInSceneExplorer = overrides.visibleInSceneExplorer;
+		createInfo.cullFace = overrides.cullFace;
+		createInfo.depthTestReadFunc = overrides.depthTestReadFunc;
+		createInfo.bDepthWriteEnable = overrides.bDepthWriteEnable;
+		createInfo.bEditorObject = overrides.bEditorObject;
+		createInfo.bSetDynamicStates = overrides.bSetDynamicStates;
+
+		if (overrides.vertexBufferData != nullptr)
+		{
+			PrintWarn("Attempted to override vertexBufferData in LoadFromFile! Ignoring passed in data\n");
+		}
+		if (overrides.indices != nullptr)
+		{
+			PrintWarn("Attempted to override indices in LoadFromFile! Ignoring passed in data\n");
+		}
 	}
 } // namespace flex

@@ -1,6 +1,7 @@
 {
-	"version" : 1,
+	"version" : 2,
 	"name" : "scene_02",
+	"spawn player" : false,
 	"objects" : 
 	[
 		{
@@ -13,7 +14,7 @@
 				"scale" : "3.000, 3.000, 3.000"
 			},
 			"mesh" : "street-03",
-			"material" : "Grid"
+			"material" : "pbr grey"
 		},
 		{
 			"name" : "ground plane",
@@ -26,7 +27,7 @@
 				"scale" : "500.000, 1.000, 500.000"
 			},
 			"mesh" : "cube",
-			"material" : "Grid",
+			"material" : "pbr grey",
 			"collider" : 
 			{
 				"shape" : "box",
@@ -73,16 +74,13 @@
 			},
 			"directional light info" : 
 			{
-				"rotation" : "2.384, 1.561, 1.426",
+				"rotation" : "0.329, 0.629, -0.323, 0.626",
 				"pos" : "0.000, 15.000, 0.000",
 				"color" : "1.00, 1.00, 1.00",
 				"enabled" : true,
 				"brightness" : 5.000000,
 				"cast shadows" : true,
-				"shadow darkness" : 0.759000,
-				"shadow map near" : -118.000000,
-				"shadow map far" : 51.000000,
-				"shadow map zoom" : 135.000000
+				"shadow darkness" : 0.759000
 			}
 		}
 	]

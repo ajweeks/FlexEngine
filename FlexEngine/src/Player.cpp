@@ -9,8 +9,6 @@ IGNORE_WARNINGS_PUSH
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 #include <BulletDynamics/Dynamics/btRigidBody.h>
 
-#include <LinearMath/btIDebugDraw.h>
-
 #include <glm/gtx/rotate_vector.hpp>
 #include <glm/gtx/norm.hpp> // For distance2
 IGNORE_WARNINGS_POP
@@ -57,7 +55,6 @@ namespace flex
 		matCreateInfo.constAlbedo = glm::vec3(0.89f, 0.93f, 0.98f);
 		matCreateInfo.constMetallic = 0.0f;
 		matCreateInfo.constRoughness = 0.98f;
-		matCreateInfo.constAO = 1.0f;
 		MaterialID matID = g_Renderer->InitializeMaterial(&matCreateInfo);
 
 		RigidBody* rigidBody = new RigidBody();
@@ -67,7 +64,7 @@ namespace flex
 
 		btCapsuleShape* collisionShape = new btCapsuleShape(1.0f, 2.0f);
 
-		m_MeshComponent = new MeshComponent(matID, this);
+		m_MeshComponent = new MeshComponent(this, matID);
 		AddTag("Player" + std::to_string(m_Index));
 		SetRigidBody(rigidBody);
 		SetStatic(false);
@@ -86,7 +83,6 @@ namespace flex
 			mapTabletMatCreateInfo.constAlbedo = glm::vec3(0.34f, 0.38f, 0.39f);
 			mapTabletMatCreateInfo.constMetallic = 1.0f;
 			mapTabletMatCreateInfo.constRoughness = 0.24f;
-			mapTabletMatCreateInfo.constAO = 1.0f;
 			MaterialID mapTabletMatID = g_Renderer->InitializeMaterial(&mapTabletMatCreateInfo);
 
 			m_MapTabletHolder = new GameObject("Map tablet", GameObjectType::_NONE);
@@ -103,7 +99,7 @@ namespace flex
 			}
 
 			m_MapTablet = new GameObject("Map tablet mesh", GameObjectType::_NONE);
-			MeshComponent* mapTabletMesh = m_MapTablet->SetMeshComponent(new MeshComponent(mapTabletMatID, m_MapTablet));
+			MeshComponent* mapTabletMesh = m_MapTablet->SetMeshComponent(new MeshComponent(m_MapTablet, mapTabletMatID));
 			mapTabletMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/map_tablet.glb");
 			m_MapTabletHolder->AddChild(m_MapTablet);
 			m_MapTablet->GetTransform()->SetLocalPosition(glm::vec3(-0.75f, -0.3f, 2.3f));
@@ -158,7 +154,7 @@ namespace flex
 			m_Transform.SetWorldRotation(rot, true);
 		}
 
-		// Draw crosshair
+		// Draw cross hair
 		{
 			SpriteQuadDrawInfo drawInfo = {};
 			drawInfo.anchor = AnchorPoint::CENTER;
@@ -166,8 +162,8 @@ namespace flex
 			drawInfo.bWriteDepth = false;
 			drawInfo.bReadDepth = false;
 			drawInfo.scale = glm::vec3(0.02f);
-			drawInfo.textureHandleID = g_Renderer->GetTextureHandle(m_CrosshairTextureID);
-			g_Renderer->DrawSprite(drawInfo);
+			drawInfo.textureID = m_CrosshairTextureID;
+			g_Renderer->EnqueueSprite(drawInfo);
 		}
 
 		if (m_bTabletUp)
@@ -295,17 +291,12 @@ namespace flex
 			m_bBeingInteractedWith = true;
 
 			TerminalCamera* terminalCam = dynamic_cast<TerminalCamera*>(g_CameraManager->CurrentCamera());
-			bool bNewCam = false;
 			if (terminalCam == nullptr)
 			{
 				terminalCam = static_cast<TerminalCamera*>(g_CameraManager->GetCameraByName("terminal"));
-				bNewCam = true;
-			}
-			terminalCam->SetTerminal(terminal);
-			if (bNewCam)
-			{
 				g_CameraManager->PushCamera(terminalCam, true);
 			}
+			terminalCam->SetTerminal(terminal);
 		}
 	}
 
@@ -442,15 +433,5 @@ namespace flex
 	bool Player::IsRidingTrack()
 	{
 		return m_TrackRidingID != InvalidTrackID;
-	}
-
-	void* Player::operator new(size_t i)
-	{
-		return _mm_malloc(i, 16);
-	}
-
-	void Player::operator delete(void* p)
-	{
-		_mm_free(p);
 	}
 } // namespace flex

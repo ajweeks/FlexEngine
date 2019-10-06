@@ -6,7 +6,7 @@
 
 namespace flex
 {
-	std::vector<AudioManager::Source> AudioManager::s_Sources;
+	std::array<AudioManager::Source, AudioManager::NUM_BUFFERS> AudioManager::s_Sources;
 
 	ALCcontext* AudioManager::s_Context = nullptr;
 	ALCdevice* AudioManager::s_Device = nullptr;
@@ -45,8 +45,6 @@ namespace flex
 			DisplayALError("alGenBuffers: ", error);
 			return;
 		}
-
-		s_Sources.resize(NUM_BUFFERS);
 	}
 
 	void AudioManager::Destroy()
@@ -68,8 +66,7 @@ namespace flex
 
 		if (g_bEnableLogging_Loading)
 		{
-			std::string friendlyName = filePath;
-			StripLeadingDirectories(friendlyName);
+			const std::string friendlyName = StripLeadingDirectories(filePath);
 			Print("Loading audio source %s\n", friendlyName.c_str());
 		}
 
@@ -202,7 +199,7 @@ namespace flex
 		{
 			alDeleteSources(1, &source.source);
 		}
-		s_Sources.clear();
+		s_Sources.fill({});
 	}
 
 	void AudioManager::SetMasterGain(real masterGain)
@@ -397,7 +394,7 @@ namespace flex
 
 		Print("Available OpenAL devices:\n");
 		while (device && *device != '\0' &&
-			   next && *next != '\0')
+			next && *next != '\0')
 		{
 			Print("\t\t%s\n", device);
 			size_t len = strlen(device);
