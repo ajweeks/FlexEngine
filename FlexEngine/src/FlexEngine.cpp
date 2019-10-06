@@ -171,8 +171,7 @@ namespace flex
 		assert(false);
 #endif
 
-		std::string nowStr = GetDateString_YMDHMS();
-		Print("FlexEngine [%s] - Config: [%s x32] - Compiler: [%s %s]\n", nowStr.c_str(), configStr, m_CompilerName.c_str(), m_CompilerVersion.c_str());
+		Print("FlexEngine v%u.%u.%u - Config: [%s x32] - Compiler: [%s %s]\n", EngineVersionMajor, EngineVersionMinor, EngineVersionPatch, configStr, m_CompilerName.c_str(), m_CompilerVersion.c_str());
 	}
 
 	FlexEngine::~FlexEngine()
