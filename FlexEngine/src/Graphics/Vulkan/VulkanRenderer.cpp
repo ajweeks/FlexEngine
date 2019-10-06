@@ -1823,6 +1823,7 @@ namespace flex
 		void VulkanRenderer::SetVSyncEnabled(bool bEnableVSync)
 		{
 			m_bVSyncEnabled = bEnableVSync;
+			m_bSwapChainNeedsRebuilding = true;
 		}
 
 		u32 VulkanRenderer::GetRenderObjectCount() const
@@ -7723,6 +7724,9 @@ namespace flex
 		{
 			m_CurrentSwapChainBufferIndex = 0;
 
+			// Avoid stalls waiting on queries that will never complete
+			m_TimestampQueryNames.clear();
+
 			const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 			if (frameBufferSize.x == 0 || frameBufferSize.y == 0)
 			{
@@ -8526,7 +8530,7 @@ namespace flex
 
 		void VulkanRenderer::BeginGPUTimeStamp(VkCommandBuffer commandBuffer, const std::string& name)
 		{
-			const i32 queryIndex = (i32)(m_TimestampQueryNames.size() * 2);
+			const i32 queryIndex = (i32)(m_TimestampQueryNames.size() * 2) + 1;
 			m_TimestampQueryNames[name] = queryIndex;
 
 			vkCmdResetQueryPool(commandBuffer, m_TimestampQueryPool, (u32)queryIndex, 2);
@@ -8569,6 +8573,12 @@ namespace flex
 			if (queryIndex > 0)
 			{
 				PrintError("Attempted to get duration of GPU timestamp that hasn't been ended.\n");
+				return 0.0f;
+			}
+
+			if (queryIndex == 0)
+			{
+				PrintError("Attempted to query timestamp that hasn't been started yet.\n");
 				return 0.0f;
 			}
 

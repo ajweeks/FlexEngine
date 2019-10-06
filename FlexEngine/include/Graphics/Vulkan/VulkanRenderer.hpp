@@ -454,7 +454,6 @@ namespace flex
 
 			// Points from timestamp names to query indices. Index is negated on timestamp end to signify being ended.
 			std::map<std::string, i32> m_TimestampQueryNames;
-			std::vector<ms> m_TimestampQueryDurations;
 
 			static const u32 NUM_GPU_TIMINGS = 64;
 			std::vector<std::array<real, NUM_GPU_TIMINGS>> m_TimestampHistograms;
