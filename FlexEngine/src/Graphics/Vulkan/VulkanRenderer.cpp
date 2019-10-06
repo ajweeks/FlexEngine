@@ -73,6 +73,7 @@ namespace flex
 
 			// TODO: Kick off texture load here (most importantly, environment maps)
 
+			LoadSettingsFromDisk();
 
 			m_RenderObjects.resize(MAX_NUM_RENDER_OBJECTS);
 
