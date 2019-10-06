@@ -2265,7 +2265,6 @@ namespace flex
 						}
 					}
 				}
-				Profiler::PrintBlockDuration(blockName);
 			}
 			else
 			{

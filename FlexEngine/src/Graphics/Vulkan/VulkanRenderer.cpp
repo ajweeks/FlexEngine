@@ -117,7 +117,7 @@ namespace flex
 
 			VkPhysicalDeviceMemoryProperties physicalDeviceMemProps;
 			vkGetPhysicalDeviceMemoryProperties(physicalDevice, &physicalDeviceMemProps);
-			Print("%u Memory heap(s) present on device:\n\t", physicalDeviceMemProps.memoryHeapCount);
+			Print("%u Memory heap(s) present on device: ", physicalDeviceMemProps.memoryHeapCount);
 			for (u32 i = 0; i < physicalDeviceMemProps.memoryHeapCount; ++i)
 			{
 				const VkMemoryHeap& heap = physicalDeviceMemProps.memoryHeaps[i];
@@ -155,7 +155,6 @@ namespace flex
 
 			FrameBufferAttachment::CreateInfo offscreenDepthCreateInfo = {};
 			offscreenDepthCreateInfo.bIsDepth = true;
-			// TODO: Double check
 			offscreenDepthCreateInfo.bIsTransferedSrc = true;
 			offscreenDepthCreateInfo.bIsSampled = true;
 			offscreenDepthCreateInfo.format = depthFormat;
@@ -185,9 +184,9 @@ namespace flex
 			m_PresentCompleteSemaphore = { m_VulkanDevice->m_LogicalDevice, vkDestroySemaphore };
 			m_RenderCompleteSemaphore = { m_VulkanDevice->m_LogicalDevice, vkDestroySemaphore };
 
-			m_ColorSampler = { m_VulkanDevice->m_LogicalDevice, vkDestroySampler };
+			m_LinMipLinSampler = { m_VulkanDevice->m_LogicalDevice, vkDestroySampler };
 			m_DepthSampler = { m_VulkanDevice->m_LogicalDevice, vkDestroySampler };
-			m_SSAOSampler = { m_VulkanDevice->m_LogicalDevice, vkDestroySampler };
+			m_NearestClampEdgeSampler = { m_VulkanDevice->m_LogicalDevice, vkDestroySampler };
 
 			m_ShadowPipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
 			m_ShadowGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
@@ -294,7 +293,6 @@ namespace flex
 				glm::lookAt(VEC3_ZERO, glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
 			};
 
-			// TODO: Make variable
 			m_GBufferCubemapFrameBuffer->width = 512;
 			m_GBufferCubemapFrameBuffer->height = 512;
 
@@ -716,8 +714,6 @@ namespace flex
 			m_SSAOGraphicsPipelineLayout.replace();
 			m_SSAOBlurGraphicsPipelineLayout.replace();
 
-			m_SSAOSampler.replace();
-
 			m_ShadowGraphicsPipeline.replace();
 			m_ShadowPipelineLayout.replace();
 
@@ -741,8 +737,10 @@ namespace flex
 
 			m_gBufferQuadVertexBufferData.Destroy();
 			m_DescriptorPool.replace();
-			m_ColorSampler.replace();
+
+			m_LinMipLinSampler.replace();
 			m_DepthSampler.replace();
+			m_NearestClampEdgeSampler.replace();
 
 			delete m_BlankTextureArr;
 			m_BlankTextureArr = nullptr;
@@ -1225,7 +1223,7 @@ namespace flex
 				descSetCreateInfo.uniformBuffer = &postProcessShader->uniformBuffer;
 				FrameBufferAttachment& sceneFrameBufferAttachment = m_OffscreenFrameBuffer0->frameBufferAttachments[0].second;
 				descSetCreateInfo.sceneImageView = sceneFrameBufferAttachment.view;
-				descSetCreateInfo.sceneSampler = m_ColorSampler;
+				descSetCreateInfo.sceneSampler = m_LinMipLinSampler;
 				CreateDescriptorSet(&descSetCreateInfo);
 			}
 
@@ -1243,7 +1241,7 @@ namespace flex
 				descSetCreateInfo.uniformBuffer = &gammaCorrectShader->uniformBuffer;
 				FrameBufferAttachment& sceneFrameBufferAttachment = m_OffscreenFrameBuffer1->frameBufferAttachments[0].second;
 				descSetCreateInfo.sceneImageView = sceneFrameBufferAttachment.view;
-				descSetCreateInfo.sceneSampler = m_ColorSampler;
+				descSetCreateInfo.sceneSampler = m_LinMipLinSampler;
 				CreateDescriptorSet(&descSetCreateInfo);
 			}
 
@@ -1261,9 +1259,9 @@ namespace flex
 				descSetCreateInfo.uniformBuffer = &taaResolveShader->uniformBuffer;
 				FrameBufferAttachment& sceneFrameBufferAttachment = m_OffscreenFrameBuffer0->frameBufferAttachments[0].second;
 				descSetCreateInfo.sceneImageView = sceneFrameBufferAttachment.view;
-				descSetCreateInfo.sceneSampler = m_ColorSampler;
+				descSetCreateInfo.sceneSampler = m_LinMipLinSampler;
 				descSetCreateInfo.historyBufferImageView = m_HistoryBuffer->imageView;
-				descSetCreateInfo.historyBufferSampler = m_ColorSampler;
+				descSetCreateInfo.historyBufferSampler = m_LinMipLinSampler;
 				CreateDescriptorSet(&descSetCreateInfo);
 			}
 
@@ -1293,7 +1291,6 @@ namespace flex
 				CreateGraphicsPipeline(&createInfo);
 			}
 
-			// TODO: Check if these need to be recreated on resize or level reload
 			// Post process pipeline
 			{
 				VulkanMaterial& postProcessMat = m_Materials[m_PostProcessMatID];
@@ -1769,7 +1766,6 @@ namespace flex
 			}
 		}
 
-		// TODO: FIXME: This shouldn't be called on startup!!!
 		void VulkanRenderer::OnPreSceneChange()
 		{
 			GenerateGBuffer();
@@ -1848,7 +1844,6 @@ namespace flex
 
 		void VulkanRenderer::DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size, DataType dataType, bool normalized, i32 stride, void* pointer)
 		{
-			// TODO: Implement
 			UNREFERENCED_PARAMETER(renderID);
 			UNREFERENCED_PARAMETER(variableName);
 			UNREFERENCED_PARAMETER(size);
@@ -1966,11 +1961,6 @@ namespace flex
 
 			VkPhysicalDeviceFeatures supportedFeatures;
 			vkGetPhysicalDeviceFeatures(physicalDevice, &supportedFeatures);
-
-			if (supportedFeatures.samplerAnisotropy)
-			{
-				enabledFeatures.samplerAnisotropy = VK_TRUE; // TODO: Remove if not used
-			}
 
 			if (supportedFeatures.geometryShader)
 			{
@@ -2452,10 +2442,6 @@ namespace flex
 				if (ImGui::CollapsingHeader("Meshes"))
 				{
 					static i32 selectedMeshIndex = 0;
-					//const i32 MAX_NAME_LEN = 128;
-					// TODO: Implement mesh naming
-					//static std::string selectedMeshName = "";
-					static bool bUpdateName = true;
 
 					std::string selectedMeshRelativeFilePath;
 					LoadedMesh* selectedMesh = nullptr;
@@ -2525,7 +2511,6 @@ namespace flex
 							if (ImGui::Selectable(meshFileName.c_str(), &bSelected))
 							{
 								selectedMeshIndex = i;
-								bUpdateName = true;
 							}
 
 							if (ImGui::BeginPopupContextItem())
@@ -3645,7 +3630,7 @@ namespace flex
 			FrameBufferAttachment& normalFrameBufferAttachment = m_GBufferFrameBuf->frameBufferAttachments[0].second;
 			// Depth texture is handled for us in CreateDescriptorSet
 			descSetCreateInfo.ssaoNormalImageView = normalFrameBufferAttachment.view;
-			descSetCreateInfo.ssaoNormalSampler = m_SSAOSampler;
+			descSetCreateInfo.ssaoNormalSampler = m_NearestClampEdgeSampler;
 			descSetCreateInfo.noiseTexture = ssaoMaterial->noiseTexture;
 			CreateDescriptorSet(&descSetCreateInfo);
 
@@ -3662,9 +3647,9 @@ namespace flex
 			descSetCreateInfo.uniformBuffer = &ssaoBlurShader->uniformBuffer;
 			FrameBufferAttachment& ssaoFrameBufferAttachment = m_SSAOFrameBuf->frameBufferAttachments[0].second;
 			descSetCreateInfo.ssaoImageView = ssaoFrameBufferAttachment.view;
-			descSetCreateInfo.ssaoSampler = m_SSAOSampler;
+			descSetCreateInfo.ssaoSampler = m_NearestClampEdgeSampler;
 			descSetCreateInfo.ssaoNormalImageView = normalFrameBufferAttachment.view;
-			descSetCreateInfo.ssaoNormalSampler = m_SSAOSampler;
+			descSetCreateInfo.ssaoNormalSampler = m_NearestClampEdgeSampler;
 			// Depth texture is handled in CreateDescriptorSet
 			CreateDescriptorSet(&descSetCreateInfo);
 
@@ -3676,9 +3661,9 @@ namespace flex
 			descSetCreateInfo.uniformBuffer = &ssaoBlurShader->uniformBuffer;
 			FrameBufferAttachment& ssaoBlurHFrameBufferAttachment = m_SSAOBlurHFrameBuf->frameBufferAttachments[0].second;
 			descSetCreateInfo.ssaoImageView = ssaoBlurHFrameBufferAttachment.view;
-			descSetCreateInfo.ssaoSampler = m_SSAOSampler;
+			descSetCreateInfo.ssaoSampler = m_NearestClampEdgeSampler;
 			descSetCreateInfo.ssaoNormalImageView = normalFrameBufferAttachment.view;
-			descSetCreateInfo.ssaoNormalSampler = m_SSAOSampler;
+			descSetCreateInfo.ssaoNormalSampler = m_NearestClampEdgeSampler;
 			CreateDescriptorSet(&descSetCreateInfo);
 		}
 
@@ -3814,7 +3799,6 @@ namespace flex
 			u32 sampleDensity = 32;
 			u32 padding = 1;
 			u32 spread = 5;
-			//u32 totPadding = padding + spread;
 
 			bool bUsingPreRenderedTexture = false;
 			std::string textureName = std::string("Font atlas ") + fileName;
@@ -4772,7 +4756,7 @@ namespace flex
 			FrameBufferAttachment& normalFrameBufferAttachment = m_GBufferFrameBuf->frameBufferAttachments[0].second;
 			// Depth texture is handled for us in CreateDescriptorSet
 			descSetCreateInfo.ssaoNormalImageView = normalFrameBufferAttachment.view;
-			descSetCreateInfo.ssaoNormalSampler = m_SSAOSampler;
+			descSetCreateInfo.ssaoNormalSampler = m_NearestClampEdgeSampler;
 			descSetCreateInfo.noiseTexture = shadowMaterial->noiseTexture;
 			CreateDescriptorSet(&descSetCreateInfo);
 		}
@@ -4793,7 +4777,7 @@ namespace flex
 			if (spriteShader.shader->bTextureArr)
 			{
 				descSetCreateInfo.shadowPreviewView = m_ShadowCascades[layer]->imageView;
-				descSetCreateInfo.shadowSampler = m_ColorSampler;
+				descSetCreateInfo.shadowSampler = m_LinMipLinSampler;
 			}
 			else
 			{
@@ -5246,7 +5230,7 @@ namespace flex
 					}
 				}
 				createInfo.ssaoFinalImageView = ssaoView;
-				createInfo.ssaoFinalSampler = m_SSAOSampler;
+				createInfo.ssaoFinalSampler = m_NearestClampEdgeSampler;
 			}
 
 			for (size_t i = 0; i < material->material.sampledFrameBuffers.size(); ++i)
@@ -5324,7 +5308,7 @@ namespace flex
 				{ U_ALBEDO_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
 				createInfo->albedoView != VK_NULL_HANDLE ? createInfo->albedoView : createInfo->shadowPreviewView != VK_NULL_HANDLE ? createInfo->shadowPreviewView : (createInfo->albedoTexture ? *&createInfo->albedoTexture->imageView : VK_NULL_HANDLE),
-				createInfo->albedoView != VK_NULL_HANDLE ? m_ColorSampler : createInfo->shadowPreviewView != VK_NULL_HANDLE ? createInfo->shadowSampler : (createInfo->albedoTexture ? *&createInfo->albedoTexture->sampler : VK_NULL_HANDLE),
+				createInfo->albedoView != VK_NULL_HANDLE ? m_LinMipLinSampler : createInfo->shadowPreviewView != VK_NULL_HANDLE ? createInfo->shadowSampler : (createInfo->albedoTexture ? *&createInfo->albedoTexture->sampler : VK_NULL_HANDLE),
 				createInfo->albedoView != VK_NULL_HANDLE ? nullptr : createInfo->shadowPreviewView != VK_NULL_HANDLE ? nullptr : (createInfo->albedoTexture ? &createInfo->albedoTexture->imageInfoDescriptor : nullptr) },
 
 				{ U_METALLIC_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -5437,7 +5421,7 @@ namespace flex
 					frameBufferViewPair.first, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 					VK_NULL_HANDLE, 0,
 					frameBufferViewPair.second ? *frameBufferViewPair.second : VK_NULL_HANDLE,
-					m_ColorSampler
+					m_LinMipLinSampler
 				);
 			}
 
@@ -6310,32 +6294,32 @@ namespace flex
 				SetFramebufferName(m_VulkanDevice, m_SSAOBlurVFrameBuf->frameBuffer, "SSAO Blur Vertical");
 			}
 
-			// TODO: Remove redundant samplers
-			VkSamplerCreateInfo ssaoNormalSamplerCreateInfo = vks::samplerCreateInfo();
-			ssaoNormalSamplerCreateInfo.magFilter = VK_FILTER_NEAREST;
-			ssaoNormalSamplerCreateInfo.minFilter = VK_FILTER_NEAREST;
-			ssaoNormalSamplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-			ssaoNormalSamplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-			ssaoNormalSamplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-			ssaoNormalSamplerCreateInfo.mipLodBias = 0.0f;
-			ssaoNormalSamplerCreateInfo.minLod = 0.0f;
-			ssaoNormalSamplerCreateInfo.maxLod = 1.0f;
-			VK_CHECK_RESULT(vkCreateSampler(m_VulkanDevice->m_LogicalDevice, &ssaoNormalSamplerCreateInfo, nullptr, m_SSAOSampler.replace()));
-			SetSamplerName(m_VulkanDevice, m_SSAOSampler, "SSAO sampler");
+			VkSamplerCreateInfo nearestClampEdgeSamplerCreateInfo = vks::samplerCreateInfo();
+			nearestClampEdgeSamplerCreateInfo.magFilter = VK_FILTER_NEAREST;
+			nearestClampEdgeSamplerCreateInfo.minFilter = VK_FILTER_NEAREST;
+			nearestClampEdgeSamplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+			nearestClampEdgeSamplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+			nearestClampEdgeSamplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+			nearestClampEdgeSamplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+			nearestClampEdgeSamplerCreateInfo.mipLodBias = 0.0f;
+			nearestClampEdgeSamplerCreateInfo.minLod = 0.0f;
+			nearestClampEdgeSamplerCreateInfo.maxLod = 1.0f;
+			VK_CHECK_RESULT(vkCreateSampler(m_VulkanDevice->m_LogicalDevice, &nearestClampEdgeSamplerCreateInfo, nullptr, m_NearestClampEdgeSampler.replace()));
+			SetSamplerName(m_VulkanDevice, m_NearestClampEdgeSampler, "Nearest clamp edge sampler");
 
-			VkSamplerCreateInfo colSamplerCreateInfo = vks::samplerCreateInfo();
-			colSamplerCreateInfo.magFilter = VK_FILTER_LINEAR;
-			colSamplerCreateInfo.minFilter = VK_FILTER_LINEAR;
-			colSamplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-			colSamplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-			colSamplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-			colSamplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-			colSamplerCreateInfo.mipLodBias = 0.0f;
-			colSamplerCreateInfo.minLod = 0.0f;
-			colSamplerCreateInfo.maxLod = 1.0f;
-			colSamplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-			VK_CHECK_RESULT(vkCreateSampler(m_VulkanDevice->m_LogicalDevice, &colSamplerCreateInfo, nullptr, m_ColorSampler.replace()));
-			SetSamplerName(m_VulkanDevice, m_ColorSampler, "Color sampler");
+			VkSamplerCreateInfo linMipLinSamplerCreateInfo = vks::samplerCreateInfo();
+			linMipLinSamplerCreateInfo.magFilter = VK_FILTER_LINEAR;
+			linMipLinSamplerCreateInfo.minFilter = VK_FILTER_LINEAR;
+			linMipLinSamplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+			linMipLinSamplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+			linMipLinSamplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+			linMipLinSamplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+			linMipLinSamplerCreateInfo.mipLodBias = 0.0f;
+			linMipLinSamplerCreateInfo.minLod = 0.0f;
+			linMipLinSamplerCreateInfo.maxLod = 1.0f;
+			linMipLinSamplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+			VK_CHECK_RESULT(vkCreateSampler(m_VulkanDevice->m_LogicalDevice, &linMipLinSamplerCreateInfo, nullptr, m_LinMipLinSampler.replace()));
+			SetSamplerName(m_VulkanDevice, m_LinMipLinSampler, "Color sampler");
 
 			VkSamplerCreateInfo depthSamplerCreateInfo = vks::samplerCreateInfo();
 			depthSamplerCreateInfo.magFilter = VK_FILTER_LINEAR;

@@ -393,8 +393,10 @@ namespace flex
 
 			FrameBuffer* m_GBufferFrameBuf = nullptr;
 			FrameBufferAttachment* m_GBufferDepthAttachment = nullptr;
-			VDeleter<VkSampler> m_ColorSampler;
+
+			VDeleter<VkSampler> m_LinMipLinSampler;
 			VDeleter<VkSampler> m_DepthSampler;
+			VDeleter<VkSampler> m_NearestClampEdgeSampler;
 
 			VkFormat m_OffscreenFrameBufferFormat = VK_FORMAT_UNDEFINED;
 			FrameBuffer* m_OffscreenFrameBuffer0 = nullptr;
@@ -576,7 +578,6 @@ namespace flex
 			VkDescriptorSet m_SSAODescSet = VK_NULL_HANDLE;
 			VkDescriptorSet m_SSAOBlurHDescSet = VK_NULL_HANDLE;
 			VkDescriptorSet m_SSAOBlurVDescSet = VK_NULL_HANDLE;
-			VDeleter<VkSampler> m_SSAOSampler;
 
 			// TODO: Create abstraction for specialization constants
 			VkSpecializationMapEntry m_SSAOSpecializationMapEntry;

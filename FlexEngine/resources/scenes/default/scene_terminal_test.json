@@ -152,8 +152,8 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "0.473, 0.633, 5.888",
-				"rot" : "0.000, 0.424, 0.000"
+				"pos" : "-3.227, 0.600, 9.288",
+				"rot" : "-3.142, 0.213, -3.142"
 			},
 			"material" : "terminal copper",
 			"collider" : 
