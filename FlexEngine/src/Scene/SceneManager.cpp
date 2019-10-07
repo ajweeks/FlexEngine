@@ -225,7 +225,7 @@ namespace flex
 			{
 				fileName = StripLeadingDirectories(fileName);
 
-				if (!SceneExists(fileName))
+				if (!SceneFileExists(fileName))
 				{
 					BaseScene* newScene = new BaseScene(fileName);
 					m_Scenes.push_back(newScene);
@@ -243,7 +243,7 @@ namespace flex
 			{
 				fileName = StripLeadingDirectories(fileName);
 
-				if (!SceneExists(fileName))
+				if (!SceneFileExists(fileName))
 				{
 					BaseScene* newScene = new BaseScene(fileName);
 					m_Scenes.push_back(newScene);
@@ -509,22 +509,7 @@ namespace flex
 				{
 					// Remove trailing '\0' characters
 					newSceneName = std::string(newSceneName.c_str());
-
-					bool bSceneNameExists = false;
-					for (BaseScene* scene : m_Scenes)
-					{
-						if (scene->GetName().compare(newSceneName) == 0)
-						{
-							bSceneNameExists = true;
-							break;
-						}
-					}
-
-					if (bSceneNameExists)
-					{
-						newSceneName = GetIncrementedPostFixedStr(newSceneName, "new scene");
-					}
-
+					newSceneName = MakeSceneNameUnique(newSceneName);
 					CreateNewScene(newSceneName, true);
 
 					ImGui::CloseCurrentPopup();
@@ -613,9 +598,7 @@ namespace flex
 					bool bNameEmpty = newSceneFileNameStr.empty();
 					bool bCorrectFileType = EndsWith(newSceneFileNameStr, ".json");
 					bool bFileExists = FileExists(newSceneFilePath);
-					bool bSceneNameValid = (!bNameEmpty &&
-						bCorrectFileType &&
-						!bFileExists);
+					bool bSceneNameValid = (!bNameEmpty && bCorrectFileType && !bFileExists);
 
 					if (bSceneNameValid)
 					{
@@ -905,13 +888,33 @@ namespace flex
 		m_Scenes.clear();
 	}
 
-	bool SceneManager::SceneExists(const std::string& fileName) const
+	std::string SceneManager::MakeSceneNameUnique(const std::string& originalName)
+	{
+		std::string newSceneName = originalName;
+
+		bool bSceneNameExists = false;
+		for (BaseScene* scene : m_Scenes)
+		{
+			if (scene->GetName().compare(newSceneName) == 0)
+			{
+				bSceneNameExists = true;
+				break;
+			}
+		}
+
+		if (bSceneNameExists)
+		{
+			newSceneName = GetIncrementedPostFixedStr(newSceneName, "new scene");
+		}
+
+		return newSceneName;
+	}
+
+	bool SceneManager::SceneFileExists(const std::string& fileName) const
 	{
 		for (BaseScene* scene : m_Scenes)
 		{
-			std::string existingSceneFileName = scene->GetFileName();
-
-			if (existingSceneFileName.compare(fileName) == 0)
+			if (scene->GetFileName().compare(fileName) == 0)
 			{
 				return true;
 			}
