@@ -8351,7 +8351,6 @@ namespace flex
 
 		void VulkanRenderer::OnShaderReloadSuccess()
 		{
-			Print("Async shader recompile completed successfully!\n");
 			AddEditorString("Async shader recompile completed successfully");
 
 			LoadShaders();
