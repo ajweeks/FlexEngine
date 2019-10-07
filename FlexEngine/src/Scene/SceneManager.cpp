@@ -487,12 +487,12 @@ namespace flex
 			}
 			ImGui::EndChild();
 
-			if (ImGui::Button("Add scene..."))
+			if (ImGui::Button("New scene..."))
 			{
-				ImGui::OpenPopup("Add scene");
+				ImGui::OpenPopup("New scene");
 			}
 
-			if (ImGui::BeginPopupModal("Add scene", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+			if (ImGui::BeginPopupModal("New scene", NULL, ImGuiWindowFlags_AlwaysAutoResize))
 			{
 				static std::string newSceneName = "scene_" + IntToString(GetSceneCount(), 2);
 
@@ -509,6 +509,21 @@ namespace flex
 				{
 					// Remove trailing '\0' characters
 					newSceneName = std::string(newSceneName.c_str());
+
+					bool bSceneNameExists = false;
+					for (BaseScene* scene : m_Scenes)
+					{
+						if (scene->GetName().compare(newSceneName) == 0)
+						{
+							bSceneNameExists = true;
+							break;
+						}
+					}
+
+					if (bSceneNameExists)
+					{
+						newSceneName = GetIncrementedPostFixedStr(newSceneName, "new scene");
+					}
 
 					CreateNewScene(newSceneName, true);
 
