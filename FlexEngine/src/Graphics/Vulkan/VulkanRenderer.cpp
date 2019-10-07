@@ -592,6 +592,9 @@ namespace flex
 			ImGui_ImplGlfw_Shutdown();
 			ImGui::DestroyContext();
 
+			delete m_CascadedShadowMapPushConstantBlock;
+			m_CascadedShadowMapPushConstantBlock = nullptr;
+
 			for (const VkDescriptorSetLayout& descriptorSetLayout : m_DescriptorSetLayouts)
 			{
 				vkDestroyDescriptorSetLayout(m_VulkanDevice->m_LogicalDevice, descriptorSetLayout, nullptr);
