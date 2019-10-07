@@ -261,6 +261,10 @@ namespace flex
 
 	extern sec g_SecElapsedSinceProgramStart;
 	extern sec g_DeltaTime;
+
+	extern size_t g_TotalTrackedAllocatedMemory;
+	extern size_t g_TrackedAllocationCount;
+	extern size_t g_TrackedDeallocationCount;
 }
 
 namespace glm

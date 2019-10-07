@@ -87,6 +87,9 @@ namespace flex
 	sec g_SecElapsedSinceProgramStart = 0;
 	sec g_DeltaTime = 0;
 
+	size_t g_TotalTrackedAllocatedMemory = 0;
+	size_t g_TrackedAllocationCount = 0;
+	size_t g_TrackedDeallocationCount = 0;
 
 	FlexEngine::FlexEngine() :
 		m_MouseButtonCallback(this, &FlexEngine::OnMouseButtonEvent),
@@ -843,6 +846,7 @@ namespace flex
 			{
 				ImGui::MenuItem("Main Window", NULL, &m_bMainWindowShowing);
 				ImGui::MenuItem("GPU Timings", NULL, &g_Renderer->bGPUTimingsWindowShowing);
+				ImGui::MenuItem("Memory Stats", NULL, &m_bShowMemoryStatsWindow);
 				ImGui::MenuItem("Asset Browser", NULL, &m_bAssetBrowserShowing);
 				ImGui::MenuItem("Demo Window", NULL, &m_bDemoWindowShowing);
 				ImGui::MenuItem("Key Mapper", NULL, &m_bInputMapperShowing);
@@ -1106,6 +1110,16 @@ namespace flex
 			ImGui::End();
 		}
 #endif
+
+		if (m_bShowMemoryStatsWindow)
+		{
+			if (ImGui::Begin("Memory", &m_bShowMemoryStatsWindow))
+			{
+				ImGui::Text("Memory allocated:       %.3fMB", g_TotalTrackedAllocatedMemory / 1'000'000.0f);
+				ImGui::Text("Delta allocation count: %i", (i32)g_TrackedAllocationCount - (i32)g_TrackedDeallocationCount);
+			}
+			ImGui::End();
+		}
 	}
 
 	i32 FlexEngine::ImGuiConsoleInputCallback(ImGuiInputTextCallbackData *data)

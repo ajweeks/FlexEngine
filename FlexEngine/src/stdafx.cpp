@@ -20,10 +20,6 @@ void operator delete(void* ptr) noexcept
 	free_hooked(ptr);
 }
 
-static size_t totalAllocated = 0;
-static size_t allocationCount = 0;
-static size_t deallocationCount = 0;
-
 void* malloc_hooked(size_t size)
 {
 	if (size == 0)
@@ -32,12 +28,8 @@ void* malloc_hooked(size_t size)
 		return nullptr;
 	}
 	size += sizeof(size_t);
-	totalAllocated += size;
-	++allocationCount;
-	if (allocationCount % 10000 == 0)
-	{
-		//std::cout << "Ka: " << allocationCount / 1000 << ", Kd: " << deallocationCount / 1000 << ", delta: " << (allocationCount - deallocationCount) << ", " << (totalAllocated / 1024) << " KB\n";
-	}
+	flex::g_TotalTrackedAllocatedMemory += size;
+	++flex::g_TrackedAllocationCount;
 	void* ptr = malloc(size);
 	*((size_t*)ptr) = size;
 	ptr = ((size_t*)ptr) + 1;
@@ -51,12 +43,8 @@ void* aligned_malloc_hooked(size_t size, size_t alignment)
 		std::cerr << "Attempted to aligned alloc with a size of 0!\n";
 		return nullptr;
 	}
-	totalAllocated += size;
-	++allocationCount;
-	if (allocationCount % 10000 == 0)
-	{
-		//std::cout << "Ka: " << allocationCount / 1000 << ", Kd: " << deallocationCount / 1000 << ", delta: " << (allocationCount - deallocationCount) << ", " << (totalAllocated / 1024) << " KB\n";
-	}
+	flex::g_TotalTrackedAllocatedMemory += size;
+	++flex::g_TrackedAllocationCount;
 	void* ptr = _aligned_malloc(size, alignment);
 	return ptr;
 }
@@ -69,12 +57,8 @@ void free_hooked(void* ptr)
 	}
 	ptr = ((size_t*)ptr) - 1;
 	size_t size = *((size_t*)ptr);
-	totalAllocated -= size;
-	++deallocationCount;
-	if (deallocationCount % 10000 == 0)
-	{
-		//std::cout << "Ka: " << allocationCount / 1000 << ", Kd: " << deallocationCount / 1000 << ", delta: " << (allocationCount - deallocationCount) << ", " << (totalAllocated / 1024) << " KB\n";
-	}
+	flex::g_TotalTrackedAllocatedMemory -= size;
+	++flex::g_TrackedDeallocationCount;
 	free(ptr);
 }
 
@@ -84,11 +68,7 @@ void aligned_free_hooked(void* ptr)
 	{
 		return;
 	}
-	++deallocationCount;
-	if (deallocationCount % 10000 == 0)
-	{
-		//std::cout << "Ka: " << allocationCount / 1000 << ", Kd: " << deallocationCount / 1000 << ", delta: " << (allocationCount - deallocationCount) << ", " << (totalAllocated / 1024) << " KB\n";
-	}
+	++flex::g_TrackedDeallocationCount;
 	_aligned_free(ptr);
 }
 
@@ -106,10 +86,10 @@ void* realloc_hooked(void* ptr, size_t newsz)
 	}
 	ptr = ((size_t*)ptr) - 1;
 	size_t size = *((size_t*)ptr);
-	totalAllocated -= size;
+	flex::g_TotalTrackedAllocatedMemory -= size;
 
 	newsz += sizeof(size_t);
-	totalAllocated += newsz;
+	flex::g_TotalTrackedAllocatedMemory += newsz;
 	ptr = realloc(ptr, newsz);
 	*((size_t*)ptr) = newsz;
 	ptr = ((size_t*)ptr) + 1;
