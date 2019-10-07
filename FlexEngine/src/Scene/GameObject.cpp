@@ -751,7 +751,7 @@ namespace flex
 
 	bool GameObject::DoImGuiContextMenu(bool bActive)
 	{
-		bool bDeletedSelf = false;
+		bool bDeletedOrDuplicated = false;
 
 		// TODO: Prevent name collisions
 		std::string contextMenuIDStr = "context window game object " + m_Name;
@@ -806,6 +806,7 @@ namespace flex
 			if (DoDuplicateGameObjectButton("Duplicate..."))
 			{
 				ImGui::CloseCurrentPopup();
+				bDeletedOrDuplicated = true;
 			}
 
 			ImGui::SameLine();
@@ -814,7 +815,7 @@ namespace flex
 			{
 				if (g_SceneManager->CurrentScene()->DestroyGameObject(this, true))
 				{
-					bDeletedSelf = true;
+					bDeletedOrDuplicated = true;
 				}
 				else
 				{
@@ -825,7 +826,7 @@ namespace flex
 			ImGui::EndPopup();
 		}
 
-		return bDeletedSelf;
+		return bDeletedOrDuplicated;
 	}
 
 	bool GameObject::DoDuplicateGameObjectButton(const char* buttonName)

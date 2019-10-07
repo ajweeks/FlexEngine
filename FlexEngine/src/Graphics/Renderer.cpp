@@ -2063,9 +2063,8 @@ namespace flex
 			ImGui::EndDragDropTarget();
 		}
 
-		gameObject->DoImGuiContextMenu(false);
-
-		if (gameObject == nullptr)
+		bool bGameObjectDeletedOrDuplicated = gameObject->DoImGuiContextMenu(false);
+		if (bGameObjectDeletedOrDuplicated || gameObject == nullptr)
 		{
 			bParentChildTreeDirty = true;
 		}

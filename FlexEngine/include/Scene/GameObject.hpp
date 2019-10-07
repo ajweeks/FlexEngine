@@ -36,7 +36,7 @@ namespace flex
 		virtual void Update();
 
 		virtual void DrawImGuiObjects();
-		// Returns true if this object was deleted through the context menu
+		// Returns true if this object was deleted or duplicated
 		virtual bool DoImGuiContextMenu(bool bActive);
 		virtual bool DoDuplicateGameObjectButton(const char* buttonName);
 
