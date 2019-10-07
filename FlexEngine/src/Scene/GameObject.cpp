@@ -761,9 +761,11 @@ namespace flex
 		bool bRefreshNameField = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup) &&
 			ImGui::IsMouseClicked(1);
 
+		bool bRenameWindowOpenedThisFrame = false;
 		if (bActive && g_Editor->GetWantRenameActiveElement())
 		{
 			ImGui::OpenPopup(contextMenuIDStr.c_str());
+			bRenameWindowOpenedThisFrame = true;
 			g_Editor->ClearWantRenameActiveElement();
 			bRefreshNameField = true;
 		}
@@ -775,6 +777,11 @@ namespace flex
 
 		if (ImGui::BeginPopupContextItem(contextMenuIDStr.c_str()))
 		{
+			if (ImGui::IsWindowAppearing())
+			{
+				ImGui::SetKeyboardFocusHere();
+			}
+
 			bool bRename = ImGui::InputText("##rename-game-object",
 				(char*)newObjectName.data(),
 				maxStrLen,
