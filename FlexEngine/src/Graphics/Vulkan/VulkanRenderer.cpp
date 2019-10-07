@@ -1147,6 +1147,7 @@ namespace flex
 		void VulkanRenderer::PostInitializeRenderObject(RenderID renderID)
 		{
 			UNREFERENCED_PARAMETER(renderID);
+			m_bRebatchRenderObjects = true;
 		}
 
 		void VulkanRenderer::ClearMaterials(bool bDestroyPersistentMats /* = false */)
