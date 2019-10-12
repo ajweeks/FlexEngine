@@ -4331,7 +4331,7 @@ namespace flex
 				std::vector<TextVertex3D> textVerticesWS;
 				UpdateTextBufferWS(textVerticesWS);
 
-				u32 WSTextBufferByteCount = (u32)(textVerticesWS.size() * sizeof(TextVertex2D));
+				u32 WSTextBufferByteCount = (u32)(textVerticesWS.size() * sizeof(TextVertex3D));
 
 				if (WSTextBufferByteCount > 0)
 				{
