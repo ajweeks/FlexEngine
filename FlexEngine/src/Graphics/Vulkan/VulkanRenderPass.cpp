@@ -34,6 +34,7 @@ namespace flex
 			VkImageLayout initialDepthLayout /* = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL */)
 		{
 			colorAttachmentFrameBuffer = inColorAttachmentFrameBuffer;
+			m_Name = passName;
 
 			// Color attachment
 			VkAttachmentDescription colorAttachment = vks::attachmentDescription(colorFormat, finalLayout);
@@ -102,8 +103,11 @@ namespace flex
 			((VulkanRenderer*)g_Renderer)->SetRenderPassName(m_VulkanDevice, m_RenderPass, passName);
 		}
 
-		void VulkanRenderPass::Create(VkRenderPassCreateInfo* createInfo, const char* passName)
+		void VulkanRenderPass::Create(const char* passName, VkRenderPassCreateInfo* createInfo, FrameBuffer* inColorAttachmentFrameBuffer)
 		{
+			colorAttachmentFrameBuffer = inColorAttachmentFrameBuffer;
+			m_Name = passName;
+
 			VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, createInfo, nullptr, m_RenderPass.replace()));
 			((VulkanRenderer*)g_Renderer)->SetRenderPassName(m_VulkanDevice, m_RenderPass, passName);
 		}
@@ -116,6 +120,63 @@ namespace flex
 		VulkanRenderPass::operator VkRenderPass()
 		{
 			return m_RenderPass;
+		}
+
+		void VulkanRenderPass::Begin(VkCommandBuffer cmdBuf, VkClearValue* clearValue)
+		{
+			if (m_ActiveCommandBuffer != VK_NULL_HANDLE)
+			{
+				PrintError("Attempted to begin render pass (%s) multiple times! Did you forget to call End?\n", m_Name);
+				return;
+			}
+
+			m_ActiveCommandBuffer = cmdBuf;
+			
+			VkRenderPassBeginInfo renderPassBeginInfo = vks::renderPassBeginInfo(m_RenderPass);
+
+			renderPassBeginInfo.renderPass = m_RenderPass;
+			renderPassBeginInfo.framebuffer = colorAttachmentFrameBuffer->frameBuffer;
+			renderPassBeginInfo.renderArea.offset = { 0, 0 };
+			renderPassBeginInfo.renderArea.extent = { colorAttachmentFrameBuffer->width, colorAttachmentFrameBuffer->height };
+			renderPassBeginInfo.clearValueCount = 1;
+			renderPassBeginInfo.pClearValues = clearValue;
+
+			vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+		}
+
+		void VulkanRenderPass::Begin(VkCommandBuffer cmdBuf, const std::vector<VkClearValue>& clearValues)
+		{
+			if (m_ActiveCommandBuffer != VK_NULL_HANDLE)
+			{
+				PrintError("Attempted to begin render pass (%s) multiple times! Did you forget to call End?\n", m_Name);
+				return;
+			}
+
+			m_ActiveCommandBuffer = cmdBuf;
+
+			VkRenderPassBeginInfo renderPassBeginInfo = vks::renderPassBeginInfo(m_RenderPass);
+
+			renderPassBeginInfo.renderPass = m_RenderPass;
+			renderPassBeginInfo.framebuffer = colorAttachmentFrameBuffer->frameBuffer;
+			renderPassBeginInfo.renderArea.offset = { 0, 0 };
+			renderPassBeginInfo.renderArea.extent = { colorAttachmentFrameBuffer->width, colorAttachmentFrameBuffer->height };
+			renderPassBeginInfo.clearValueCount = clearValues.size();
+			renderPassBeginInfo.pClearValues = clearValues.data();
+
+			vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+		}
+
+		void VulkanRenderPass::End()
+		{
+			if (m_ActiveCommandBuffer == VK_NULL_HANDLE)
+			{
+				PrintError("Attempted to end render pass which has invalid m_ActiveCommandBuffer (%s)", m_Name);
+				return;
+			}
+
+			vkCmdEndRenderPass(m_ActiveCommandBuffer);
+
+			m_ActiveCommandBuffer = VK_NULL_HANDLE;
 		}
 	} // namespace vk
 } // namespace flex

@@ -26,15 +26,6 @@ namespace flex
 		void GetVertexAttributeDescriptions(VertexAttributes vertexAttributes,
 			std::vector<VkVertexInputAttributeDescription>& attributeDescriptions);
 
-		struct Cascade
-		{
-			Cascade(const VDeleter<VkDevice>& device);
-
-			VDeleter<VkFramebuffer> frameBuffer;
-			VDeleter<VkImageView> imageView;
-			VkDescriptorSet descSet;
-		};
-
 		// Framebuffer for offscreen rendering
 		struct FrameBufferAttachment
 		{
@@ -79,13 +70,26 @@ namespace flex
 		{
 			FrameBuffer(VulkanDevice* device);
 
+			operator VkFramebuffer()
+			{
+				return frameBuffer;
+			}
+
 			u32 UID = InvalidID;
 			u32 width = 0;
 			u32 height = 0;
 			VDeleter<VkFramebuffer> frameBuffer;
 			std::vector<std::pair<std::string, FrameBufferAttachment>> frameBufferAttachments;
-			// TODO: Should frame buffers own their render passes?
-			VulkanRenderPass renderPass;
+			VulkanRenderPass* renderPass = nullptr;
+		};
+
+		struct Cascade
+		{
+			Cascade(VulkanDevice* device);
+
+			FrameBuffer frameBuffer;
+			VDeleter<VkImageView> imageView;
+			VkDescriptorSet descSet;
 		};
 
 		struct VulkanQueueFamilyIndices

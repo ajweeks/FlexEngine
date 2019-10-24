@@ -2199,7 +2199,6 @@ namespace flex
 
 		FrameBuffer::FrameBuffer(VulkanDevice* device) :
 			frameBuffer(device->m_LogicalDevice, vkDestroyFramebuffer),
-			renderPass(device),
 			UID(GenerateUID())
 		{
 		}
@@ -2369,9 +2368,9 @@ namespace flex
 		}
 #endif // DEBUG
 
-		Cascade::Cascade(const VDeleter<VkDevice>& device) :
-			frameBuffer(device, vkDestroyFramebuffer),
-			imageView(device, vkDestroyImageView)
+		Cascade::Cascade(VulkanDevice* device) :
+			frameBuffer(device),
+			imageView(device->m_LogicalDevice, vkDestroyImageView)
 		{
 		}
 

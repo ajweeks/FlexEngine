@@ -32,10 +32,15 @@ namespace flex
 				VkImageLayout finalDepthLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 				VkImageLayout initialDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
-			void Create(VkRenderPassCreateInfo* createInfo, const char* passName);
+			void Create(const char* passName, VkRenderPassCreateInfo* createInfo, FrameBuffer* inColorAttachmentFrameBuffer);
 
 			VkRenderPass* Replace();
 			operator VkRenderPass();
+
+			void Begin(VkCommandBuffer cmdBuf, VkClearValue* clearValue);
+			void Begin(VkCommandBuffer cmdBuf, const std::vector<VkClearValue>& clearValues);
+
+			void End();
 
 			FrameBuffer* colorAttachmentFrameBuffer = nullptr;
 
@@ -43,6 +48,10 @@ namespace flex
 			VulkanDevice* m_VulkanDevice = nullptr;
 
 			VDeleter<VkRenderPass> m_RenderPass;
+			const char* m_Name = nullptr;
+
+			// Points at a valid command buffer while this render pass is being recorded into (Between calls to Begin/End)
+			VkCommandBuffer m_ActiveCommandBuffer = VK_NULL_HANDLE;
 
 		};
 	} // namespace vk

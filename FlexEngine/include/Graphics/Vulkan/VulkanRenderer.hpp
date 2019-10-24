@@ -257,8 +257,7 @@ namespace flex
 			// Begins the given render pass, renders a fullscreen tri, then ends the render pass
 			void RenderFullscreenTri(
 				VkCommandBuffer commandBuffer,
-				VkRenderPass renderPass,
-				VkFramebuffer framebuffer,
+				VulkanRenderPass& renderPass,
 				ShaderID shaderID,
 				VkPipelineLayout pipelineLayout,
 				VkPipeline graphicsPipeline,
@@ -495,6 +494,8 @@ namespace flex
 			FrameBufferAttachment* m_SwapChainDepthAttachment = nullptr;
 
 			VulkanRenderPass m_ShadowRenderPass;
+			VulkanRenderPass m_DeferredRenderPass;
+			VulkanRenderPass m_DeferredCubemapRenderPass;
 			VulkanRenderPass m_DeferredCombineRenderPass;
 			VulkanRenderPass m_SSAORenderPass;
 			VulkanRenderPass m_SSAOBlurHRenderPass;
@@ -506,7 +507,7 @@ namespace flex
 			VulkanRenderPass m_UIRenderPass;
 			// NOTE: Add new render passes to m_RenderPasses for automatic construction/clean up
 
-			VulkanRenderPass* m_RenderPasses[10] = { &m_ShadowRenderPass, &m_DeferredCombineRenderPass, &m_SSAORenderPass, &m_SSAOBlurHRenderPass, &m_SSAOBlurVRenderPass,
+			VulkanRenderPass* m_RenderPasses[12] = { &m_ShadowRenderPass, &m_DeferredRenderPass, &m_DeferredCubemapRenderPass, &m_DeferredCombineRenderPass, &m_SSAORenderPass, &m_SSAOBlurHRenderPass, &m_SSAOBlurVRenderPass,
 				&m_ForwardRenderPass, &m_PostProcessRenderPass, &m_GammaCorrectRenderPass, &m_TAAResolveRenderPass, &m_UIRenderPass };
 
 			VDeleter<VkPipeline> m_ShadowGraphicsPipeline;
