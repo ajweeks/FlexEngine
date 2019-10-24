@@ -186,6 +186,7 @@ namespace flex
 			void CreateSSAOPipelines();
 			void CreateSSAODescriptorSets();
 
+			// TODO: Make work for multiple attachments & depth-only
 			void CreateRenderPass(VkRenderPass* outPass, VkFormat colorFormat, const char* passName,
 				VkImageLayout finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 				VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
@@ -507,9 +508,9 @@ namespace flex
 			VDeleter<VkRenderPass> m_SSAOBlurVRenderPass;
 			VDeleter<VkRenderPass> m_ForwardRenderPass;
 			VDeleter<VkRenderPass> m_PostProcessRenderPass;
+			VDeleter<VkRenderPass> m_GammaCorrectRenderPass;
 			VDeleter<VkRenderPass> m_TAAResolveRenderPass;
 			VDeleter<VkRenderPass> m_UIRenderPass;
-			VDeleter<VkRenderPass> m_GammaCorrectRenderPass;
 
 			VDeleter<VkPipeline> m_ShadowGraphicsPipeline;
 			VDeleter<VkPipelineLayout> m_ShadowPipelineLayout;

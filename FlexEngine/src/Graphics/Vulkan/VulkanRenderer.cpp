@@ -3733,7 +3733,7 @@ namespace flex
 				attachments.push_back(depthAttachment);
 			}
 
-			// Renderpass
+			// Render pass
 			VkRenderPassCreateInfo renderPassCreateInfo = vks::renderPassCreateInfo();
 			renderPassCreateInfo.attachmentCount = attachments.size();
 			renderPassCreateInfo.pAttachments = attachments.data();
@@ -5145,12 +5145,14 @@ namespace flex
 			//
 
 			VkFormat ssaoFrameBufFormat = m_SSAOFrameBuf->frameBufferAttachments[0].second.format;
-			CreateRenderPass(m_SSAORenderPass.replace(), ssaoFrameBufFormat, "SSAO render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			CreateRenderPass(m_SSAOBlurHRenderPass.replace(), ssaoFrameBufFormat, "SSAO Blur Horizontal render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			CreateRenderPass(m_SSAOBlurVRenderPass.replace(), ssaoFrameBufFormat, "SSAO Blur Vertical render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 			VkFormat depthFormat;
 			GetSupportedDepthFormat(m_VulkanDevice->m_PhysicalDevice, &depthFormat);
+
+
+			CreateRenderPass(m_SSAORenderPass.replace(), ssaoFrameBufFormat, "SSAO render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			CreateRenderPass(m_SSAOBlurHRenderPass.replace(), ssaoFrameBufFormat, "SSAO Blur Horizontal render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			CreateRenderPass(m_SSAOBlurVRenderPass.replace(), ssaoFrameBufFormat, "SSAO Blur Vertical render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 			// Deferred combine render pass
 			// NOTE: We don't need a depth attachment at this point, but we're rendering to the swap chain
@@ -6059,7 +6061,6 @@ namespace flex
 
 			//  Offscreen render passes
 			{
-				// TODO: Don't create these?
 				CreateRenderPass(m_OffscreenFrameBuffer0->renderPass.replace(), m_OffscreenFrameBufferFormat, "Offscreen 0 render pass", VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 					VK_IMAGE_LAYOUT_UNDEFINED, true, m_OffscreenDepthAttachment0->format, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 				CreateRenderPass(m_OffscreenFrameBuffer1->renderPass.replace(), m_OffscreenFrameBufferFormat, "Offscreen 1 render pass", VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
