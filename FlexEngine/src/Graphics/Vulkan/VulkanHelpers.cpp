@@ -2199,7 +2199,7 @@ namespace flex
 
 		FrameBuffer::FrameBuffer(VulkanDevice* device) :
 			frameBuffer(device->m_LogicalDevice, vkDestroyFramebuffer),
-			renderPass(device->m_LogicalDevice, vkDestroyRenderPass)
+			renderPass(device)
 		{
 		}
 

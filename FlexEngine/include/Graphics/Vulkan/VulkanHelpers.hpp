@@ -9,6 +9,7 @@ IGNORE_WARNINGS_POP
 #include "Graphics/VertexBufferData.hpp"
 #include "VDeleter.hpp"
 #include "VulkanBuffer.hpp"
+#include "VulkanRenderPass.hpp"
 
 namespace flex
 {
@@ -83,7 +84,7 @@ namespace flex
 			VDeleter<VkFramebuffer> frameBuffer;
 			std::vector<std::pair<std::string, FrameBufferAttachment>> frameBufferAttachments;
 			// TODO: Should frame buffers own their render passes?
-			VDeleter<VkRenderPass> renderPass;
+			VulkanRenderPass renderPass;
 		};
 
 		struct VulkanQueueFamilyIndices

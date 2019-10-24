@@ -169,15 +169,10 @@ namespace flex
 
 			m_SwapChain = { m_VulkanDevice->m_LogicalDevice, vkDestroySwapchainKHR };
 
-			m_DeferredCombineRenderPass = { m_VulkanDevice->m_LogicalDevice, vkDestroyRenderPass };
-			m_SSAORenderPass = { m_VulkanDevice->m_LogicalDevice, vkDestroyRenderPass };
-			m_SSAOBlurHRenderPass = { m_VulkanDevice->m_LogicalDevice, vkDestroyRenderPass };
-			m_SSAOBlurVRenderPass = { m_VulkanDevice->m_LogicalDevice, vkDestroyRenderPass };
-			m_ForwardRenderPass = { m_VulkanDevice->m_LogicalDevice, vkDestroyRenderPass };
-			m_PostProcessRenderPass = { m_VulkanDevice->m_LogicalDevice, vkDestroyRenderPass };
-			m_TAAResolveRenderPass = { m_VulkanDevice->m_LogicalDevice, vkDestroyRenderPass };
-			m_UIRenderPass = { m_VulkanDevice->m_LogicalDevice, vkDestroyRenderPass };
-			m_GammaCorrectRenderPass = { m_VulkanDevice->m_LogicalDevice, vkDestroyRenderPass };
+			for (u32 i = 0; i < ARRAY_SIZE(m_RenderPasses); ++i)
+			{
+				*(m_RenderPasses[i]) = VulkanRenderPass(m_VulkanDevice);
+			}
 
 			m_DescriptorPool = { m_VulkanDevice->m_LogicalDevice, vkDestroyDescriptorPool };
 
@@ -220,7 +215,6 @@ namespace flex
 			m_ShadowImage = { m_VulkanDevice->m_LogicalDevice, vkDestroyImage };
 			m_ShadowImageView = { m_VulkanDevice->m_LogicalDevice, vkDestroyImageView };
 			m_ShadowImageMemory = { m_VulkanDevice->m_LogicalDevice, vkFreeMemory };
-			m_ShadowRenderPass = { m_VulkanDevice->m_LogicalDevice, vkDestroyRenderPass };
 
 			CreateSwapChain();
 			CreateSwapChainImageViews();
@@ -703,12 +697,17 @@ namespace flex
 				delete m_ShadowCascades[i];
 			}
 
+			for (u32 i = 0; i < ARRAY_SIZE(m_RenderPasses); ++i)
+			{
+				m_RenderPasses[i]->Replace();
+			}
+
 			vkDestroySemaphore(m_VulkanDevice->m_LogicalDevice, m_OffscreenSemaphore, nullptr);
 
 			m_ShadowImage.replace();
 			m_ShadowImageView.replace();
 			m_ShadowImageMemory.replace();
-			m_ShadowRenderPass.replace();
+			m_ShadowRenderPass.Replace();
 
 			m_SSAOGraphicsPipeline.replace();
 			m_SSAOBlurHGraphicsPipeline.replace();
@@ -775,16 +774,6 @@ namespace flex
 				delete font;
 			}
 			m_FontsWS.clear();
-
-			m_DeferredCombineRenderPass.replace();
-			m_SSAORenderPass.replace();
-			m_SSAOBlurHRenderPass.replace();
-			m_SSAOBlurVRenderPass.replace();
-			m_ForwardRenderPass.replace();
-			m_PostProcessRenderPass.replace();
-			m_TAAResolveRenderPass.replace();
-			m_UIRenderPass.replace();
-			m_GammaCorrectRenderPass.replace();
 
 			m_SwapChain.replace();
 			m_SwapChainImageViews.clear();
@@ -2674,8 +2663,8 @@ namespace flex
 			assert(dim <= MAX_TEXTURE_DIM);
 			const u32 mipLevels = static_cast<u32>(floor(log2(dim))) + 1;
 
-			VkRenderPass renderPass;
-			CreateRenderPass(&renderPass, format, "Equirectangular to Cubemap render pass");
+			VulkanRenderPass renderPass(m_VulkanDevice);
+			renderPass.Create(format, "Equirectangular to Cubemap render pass");
 
 			// Offscreen framebuffer
 			struct {
@@ -2912,7 +2901,6 @@ namespace flex
 
 			m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
 
-			vkDestroyRenderPass(m_VulkanDevice->m_LogicalDevice, renderPass, nullptr);
 			vkDestroyFramebuffer(m_VulkanDevice->m_LogicalDevice, offscreen.framebuffer, nullptr);
 			vkFreeMemory(m_VulkanDevice->m_LogicalDevice, offscreen.memory, nullptr);
 			vkDestroyImageView(m_VulkanDevice->m_LogicalDevice, offscreen.view, nullptr);
@@ -2938,8 +2926,8 @@ namespace flex
 			assert(dim <= MAX_TEXTURE_DIM);
 			const u32 mipLevels = static_cast<u32>(floor(log2(dim))) + 1;
 
-			VkRenderPass renderPass;
-			CreateRenderPass(&renderPass, format, "Generate Irradiance render pass");
+			VulkanRenderPass renderPass(m_VulkanDevice);
+			renderPass.Create(format, "Generate Irradiance render pass");
 
 			// Offscreen framebuffer
 			struct {
@@ -3179,7 +3167,6 @@ namespace flex
 
 			m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
 
-			vkDestroyRenderPass(m_VulkanDevice->m_LogicalDevice, renderPass, nullptr);
 			vkDestroyFramebuffer(m_VulkanDevice->m_LogicalDevice, offscreen.framebuffer, nullptr);
 			vkFreeMemory(m_VulkanDevice->m_LogicalDevice, offscreen.memory, nullptr);
 			vkDestroyImageView(m_VulkanDevice->m_LogicalDevice, offscreen.view, nullptr);
@@ -3205,8 +3192,8 @@ namespace flex
 			assert(dim <= MAX_TEXTURE_DIM);
 			const u32 mipLevels = static_cast<u32>(floor(log2(dim))) + 1;
 
-			VkRenderPass renderPass;
-			CreateRenderPass(&renderPass, format, "Generate Prefiltered Cube render pass");
+			VulkanRenderPass renderPass(m_VulkanDevice);
+			renderPass.Create(format, "Generate Prefiltered Cube render pass");
 
 			struct {
 				VkImage image;
@@ -3444,7 +3431,6 @@ namespace flex
 
 			m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
 
-			vkDestroyRenderPass(m_VulkanDevice->m_LogicalDevice, renderPass, nullptr);
 			vkDestroyFramebuffer(m_VulkanDevice->m_LogicalDevice, offscreen.framebuffer, nullptr);
 			vkFreeMemory(m_VulkanDevice->m_LogicalDevice, offscreen.memory, nullptr);
 			vkDestroyImageView(m_VulkanDevice->m_LogicalDevice, offscreen.view, nullptr);
@@ -3461,8 +3447,8 @@ namespace flex
 				const u32 dim = (u32)m_BRDFSize.x;
 				assert(dim <= MAX_TEXTURE_DIM);
 
-				VkRenderPass renderPass;
-				CreateRenderPass(&renderPass, format, "Generate BRDF LUT render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+				VulkanRenderPass renderPass(m_VulkanDevice);
+				renderPass.Create(format, "Generate BRDF LUT render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 				VkFramebufferCreateInfo framebufferCreateInfo = vks::framebufferCreateInfo(renderPass);
 				framebufferCreateInfo.attachmentCount = 1;
@@ -3533,6 +3519,7 @@ namespace flex
 
 				vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 				vkCmdDraw(cmdBuf, 3, 1, 0, 0);
+
 				vkCmdEndRenderPass(cmdBuf);
 
 				EndDebugMarkerRegion(cmdBuf); // Generate BRDF LUT
@@ -3543,7 +3530,6 @@ namespace flex
 
 				vkDestroyPipeline(m_VulkanDevice->m_LogicalDevice, pipeline, nullptr);
 				vkDestroyPipelineLayout(m_VulkanDevice->m_LogicalDevice, pipelinelayout, nullptr);
-				vkDestroyRenderPass(m_VulkanDevice->m_LogicalDevice, renderPass, nullptr);
 				vkDestroyFramebuffer(m_VulkanDevice->m_LogicalDevice, framebuffer, nullptr);
 
 				bRenderedBRDFLUT = true;
@@ -3669,81 +3655,6 @@ namespace flex
 			descSetCreateInfo.ssaoNormalImageView = normalFrameBufferAttachment.view;
 			descSetCreateInfo.ssaoNormalSampler = m_NearestClampEdgeSampler;
 			CreateDescriptorSet(&descSetCreateInfo);
-		}
-
-		void VulkanRenderer::CreateRenderPass(VkRenderPass* outPass, VkFormat colorFormat, const char* passName,
-			VkImageLayout finalLayout /* = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL */,
-			VkImageLayout initialLayout /* = VK_IMAGE_LAYOUT_UNDEFINED */,
-			bool bDepth /* = false */,
-			VkFormat depthFormat /* = VK_FORMAT_UNDEFINED */,
-			VkImageLayout finalDepthLayout /* = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL */,
-			VkImageLayout initialDepthLayout /* = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL */)
-		{
-			// Color attachment
-			VkAttachmentDescription colorAttachment = vks::attachmentDescription(colorFormat, finalLayout);
-			VkAttachmentDescription depthAttachment = vks::attachmentDescription(depthFormat, finalDepthLayout);
-
-			if (initialLayout != VK_IMAGE_LAYOUT_UNDEFINED)
-			{
-				colorAttachment.initialLayout = initialLayout;
-				colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-
-				if (bDepth)
-				{
-					depthAttachment.initialLayout = initialDepthLayout;
-					depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-				}
-			}
-
-			VkAttachmentReference colorReference = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
-			VkAttachmentReference depthAttachmentRef = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
-
-			std::array<VkSubpassDescription, 1> subpasses;
-			subpasses[0] = {};
-			subpasses[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-			subpasses[0].colorAttachmentCount = 1;
-			subpasses[0].pColorAttachments = &colorReference;
-			subpasses[0].pDepthStencilAttachment = bDepth ? &depthAttachmentRef : nullptr;
-
-			// Use subpass dependencies for layout transitions
-			std::array<VkSubpassDependency, 2> dependencies;
-			dependencies[0] = {};
-			dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
-			dependencies[0].dstSubpass = 0;
-			dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-			dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-			dependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-			dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-			dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-			dependencies[1] = {};
-			dependencies[1].srcSubpass = 0;
-			dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
-			dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-			dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-			dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-			dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-			dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-			std::vector<VkAttachmentDescription> attachments;
-			attachments.push_back(colorAttachment);
-
-			if (bDepth)
-			{
-				attachments.push_back(depthAttachment);
-			}
-
-			// Render pass
-			VkRenderPassCreateInfo renderPassCreateInfo = vks::renderPassCreateInfo();
-			renderPassCreateInfo.attachmentCount = attachments.size();
-			renderPassCreateInfo.pAttachments = attachments.data();
-			renderPassCreateInfo.subpassCount = subpasses.size();
-			renderPassCreateInfo.pSubpasses = subpasses.data();
-			renderPassCreateInfo.dependencyCount = dependencies.size();
-			renderPassCreateInfo.pDependencies = dependencies.data();
-			VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassCreateInfo, nullptr, outPass));
-
-			SetRenderPassName(m_VulkanDevice, *outPass, passName);
 		}
 
 		VulkanRenderObject* VulkanRenderer::GetRenderObject(RenderID renderID)
@@ -3880,8 +3791,8 @@ namespace flex
 				ShaderID computeSDFShaderID = m_Materials[m_ComputeSDFMatID].material.shaderID;
 				VulkanShader& computeSDFShader = m_Shaders[computeSDFShaderID];
 
-				VkRenderPass renderPass;
-				CreateRenderPass(&renderPass, fontTexFormat, "Font SDF render pass");
+				VulkanRenderPass renderPass(m_VulkanDevice);
+				renderPass.Create(fontTexFormat, "Font SDF render pass");
 
 				VkFramebufferCreateInfo framebufCreateInfo = vks::framebufferCreateInfo(renderPass);
 				framebufCreateInfo.attachmentCount = 1;
@@ -4069,7 +3980,6 @@ namespace flex
 
 				vkDestroyPipeline(m_VulkanDevice->m_LogicalDevice, graphicsPipeline, nullptr);
 				vkDestroyPipelineLayout(m_VulkanDevice->m_LogicalDevice, pipelineLayout, nullptr);
-				vkDestroyRenderPass(m_VulkanDevice->m_LogicalDevice, renderPass, nullptr);
 				vkDestroyFramebuffer(m_VulkanDevice->m_LogicalDevice, framebuffer, nullptr);
 
 				std::string savedSDFTextureAbsFilePath = RelativePathToAbsolute(fontMetaData.renderedTextureFilePath);
@@ -5150,35 +5060,35 @@ namespace flex
 			GetSupportedDepthFormat(m_VulkanDevice->m_PhysicalDevice, &depthFormat);
 
 
-			CreateRenderPass(m_SSAORenderPass.replace(), ssaoFrameBufFormat, "SSAO render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			CreateRenderPass(m_SSAOBlurHRenderPass.replace(), ssaoFrameBufFormat, "SSAO Blur Horizontal render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			CreateRenderPass(m_SSAOBlurVRenderPass.replace(), ssaoFrameBufFormat, "SSAO Blur Vertical render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			m_SSAORenderPass.Create(ssaoFrameBufFormat, "SSAO render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			m_SSAOBlurHRenderPass.Create(ssaoFrameBufFormat, "SSAO Blur Horizontal render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			m_SSAOBlurVRenderPass.Create(ssaoFrameBufFormat, "SSAO Blur Vertical render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 			// Deferred combine render pass
 			// NOTE: We don't need a depth attachment at this point, but we're rendering to the swap chain
 			// frame buffers (which are created using the m_ForwardRenderPass which contains two attachments)
 			// TODO: Set final depth layout to VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL (triggers validation though...)
-			CreateRenderPass(m_DeferredCombineRenderPass.replace(), m_OffscreenFrameBufferFormat, "Deferred combine render pass", VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			m_DeferredCombineRenderPass.Create(m_OffscreenFrameBufferFormat, "Deferred combine render pass", VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 				VK_IMAGE_LAYOUT_UNDEFINED, true, depthFormat, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
 			// Forward render pass
-			CreateRenderPass(m_ForwardRenderPass.replace(), m_OffscreenFrameBufferFormat, "Forward render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			m_ForwardRenderPass.Create(m_OffscreenFrameBufferFormat, "Forward render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, true, depthFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 			// Post process render pass
-			CreateRenderPass(m_PostProcessRenderPass.replace(), m_OffscreenFrameBufferFormat, "Post Process render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			m_PostProcessRenderPass.Create(m_OffscreenFrameBufferFormat, "Post Process render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 				VK_IMAGE_LAYOUT_UNDEFINED, true, depthFormat, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
 			// Gamma correct render pass
-			CreateRenderPass(m_GammaCorrectRenderPass.replace(), m_OffscreenFrameBufferFormat, "Gamma correct render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			m_GammaCorrectRenderPass.Create(m_OffscreenFrameBufferFormat, "Gamma correct render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 				VK_IMAGE_LAYOUT_UNDEFINED, true, depthFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 			// TAA resolve render pass
-			CreateRenderPass(m_TAAResolveRenderPass.replace(), m_OffscreenFrameBufferFormat, "TAA Resolve render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			m_TAAResolveRenderPass.Create(m_OffscreenFrameBufferFormat, "TAA Resolve render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, true, depthFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 			// UI render pass
-			CreateRenderPass(m_UIRenderPass.replace(), m_SwapChainImageFormat, "UI render pass", VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+			m_UIRenderPass.Create(m_SwapChainImageFormat, "UI render pass", VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 				VK_IMAGE_LAYOUT_UNDEFINED, true, depthFormat, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
 		}
@@ -6055,15 +5965,16 @@ namespace flex
 				renderPassInfo.dependencyCount = dependencies.size();
 				renderPassInfo.pDependencies = dependencies.data();
 
-				VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassInfo, nullptr, m_GBufferFrameBuf->renderPass.replace()));
+				// TODO: Call RenderPass.Create
+				VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassInfo, nullptr, m_GBufferFrameBuf->renderPass.Replace()));
 				SetRenderPassName(m_VulkanDevice, m_GBufferFrameBuf->renderPass, "GBuffer render pass");
 			}
 
 			//  Offscreen render passes
 			{
-				CreateRenderPass(m_OffscreenFrameBuffer0->renderPass.replace(), m_OffscreenFrameBufferFormat, "Offscreen 0 render pass", VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+				m_OffscreenFrameBuffer0->renderPass.Create(m_OffscreenFrameBufferFormat, "Offscreen 0 render pass", VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 					VK_IMAGE_LAYOUT_UNDEFINED, true, m_OffscreenDepthAttachment0->format, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-				CreateRenderPass(m_OffscreenFrameBuffer1->renderPass.replace(), m_OffscreenFrameBufferFormat, "Offscreen 1 render pass", VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+				m_OffscreenFrameBuffer1->renderPass.Create(m_OffscreenFrameBufferFormat, "Offscreen 1 render pass", VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 					VK_IMAGE_LAYOUT_UNDEFINED, true, m_OffscreenDepthAttachment1->format, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 			}
 
@@ -6110,7 +6021,7 @@ namespace flex
 				renderPassCreateInfo.pSubpasses = subpasses.data();
 				renderPassCreateInfo.dependencyCount = dependencies.size();
 				renderPassCreateInfo.pDependencies = dependencies.data();
-				VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassCreateInfo, nullptr, m_ShadowRenderPass.replace()));
+				VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassCreateInfo, nullptr, m_ShadowRenderPass.Replace()));
 				SetRenderPassName(m_VulkanDevice, m_ShadowRenderPass, "Shadow render pass");
 			}
 
@@ -6432,7 +6343,8 @@ namespace flex
 			renderPassInfo.dependencyCount = dependencies.size();
 			renderPassInfo.pDependencies = dependencies.data();
 
-			VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassInfo, nullptr, m_GBufferCubemapFrameBuffer->renderPass.replace()));
+			// TODO: Call RenderPass.Create
+			VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassInfo, nullptr, m_GBufferCubemapFrameBuffer->renderPass.Replace()));
 			SetRenderPassName(m_VulkanDevice, m_GBufferCubemapFrameBuffer->renderPass, "GBuffer Cubemap render pass");
 
 			std::vector<VkImageView> attachments;

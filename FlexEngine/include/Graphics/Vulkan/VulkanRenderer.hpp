@@ -10,6 +10,7 @@
 #include "VDeleter.hpp"
 #include "VulkanCommandBufferManager.hpp"
 #include "VulkanHelpers.hpp"
+#include "VulkanRenderPass.hpp"
 #include "Window/Window.hpp"
 
 namespace flex
@@ -185,15 +186,6 @@ namespace flex
 
 			void CreateSSAOPipelines();
 			void CreateSSAODescriptorSets();
-
-			// TODO: Make work for multiple attachments & depth-only
-			void CreateRenderPass(VkRenderPass* outPass, VkFormat colorFormat, const char* passName,
-				VkImageLayout finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-				VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-				bool bDepth = false,
-				VkFormat depthFormat = VK_FORMAT_UNDEFINED,
-				VkImageLayout finalDepthLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				VkImageLayout initialDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
 			MaterialID GetNextAvailableMaterialID();
 			RenderID GetNextAvailableRenderID() const;
@@ -501,16 +493,20 @@ namespace flex
 			std::vector<VDeleter<VkFramebuffer>> m_SwapChainFramebuffers;
 			FrameBufferAttachment* m_SwapChainDepthAttachment = nullptr;
 
-			VDeleter<VkRenderPass> m_ShadowRenderPass;
-			VDeleter<VkRenderPass> m_DeferredCombineRenderPass;
-			VDeleter<VkRenderPass> m_SSAORenderPass;
-			VDeleter<VkRenderPass> m_SSAOBlurHRenderPass;
-			VDeleter<VkRenderPass> m_SSAOBlurVRenderPass;
-			VDeleter<VkRenderPass> m_ForwardRenderPass;
-			VDeleter<VkRenderPass> m_PostProcessRenderPass;
-			VDeleter<VkRenderPass> m_GammaCorrectRenderPass;
-			VDeleter<VkRenderPass> m_TAAResolveRenderPass;
-			VDeleter<VkRenderPass> m_UIRenderPass;
+			VulkanRenderPass m_ShadowRenderPass;
+			VulkanRenderPass m_DeferredCombineRenderPass;
+			VulkanRenderPass m_SSAORenderPass;
+			VulkanRenderPass m_SSAOBlurHRenderPass;
+			VulkanRenderPass m_SSAOBlurVRenderPass;
+			VulkanRenderPass m_ForwardRenderPass;
+			VulkanRenderPass m_PostProcessRenderPass;
+			VulkanRenderPass m_GammaCorrectRenderPass;
+			VulkanRenderPass m_TAAResolveRenderPass;
+			VulkanRenderPass m_UIRenderPass;
+			// NOTE: Add new render passes to m_RenderPasses for automatic construction/clean up
+
+			VulkanRenderPass* m_RenderPasses[10] = { &m_ShadowRenderPass, &m_DeferredCombineRenderPass, &m_SSAORenderPass, &m_SSAOBlurHRenderPass, &m_SSAOBlurVRenderPass,
+				&m_ForwardRenderPass, &m_PostProcessRenderPass, &m_GammaCorrectRenderPass, &m_TAAResolveRenderPass, &m_UIRenderPass };
 
 			VDeleter<VkPipeline> m_ShadowGraphicsPipeline;
 			VDeleter<VkPipelineLayout> m_ShadowPipelineLayout;
