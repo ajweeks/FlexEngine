@@ -1487,7 +1487,6 @@ namespace flex
 
 			if (m_bSwapChainNeedsRebuilding)
 			{
-				m_bSwapChainNeedsRebuilding = false;
 				RecreateSwapChain();
 			}
 			else
@@ -4963,6 +4962,8 @@ namespace flex
 
 		void VulkanRenderer::CreateSwapChain()
 		{
+			m_bSwapChainNeedsRebuilding = false;
+
 			VulkanSwapChainSupportDetails swapChainSupport = QuerySwapChainSupport(m_VulkanDevice->m_PhysicalDevice);
 
 			VkSurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat(swapChainSupport.formats);
