@@ -520,7 +520,7 @@ namespace flex
 			VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 			VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;
 
-			VkRenderPass renderPass;
+			VkRenderPass renderPass = VK_NULL_HANDLE;
 			u32 subpass = 0;
 
 			VkPushConstantRange* pushConstants = nullptr;

@@ -480,6 +480,7 @@ namespace flex
 			VDeleter<VkDebugReportCallbackEXT> m_Callback{ m_Instance, DestroyDebugReportCallbackEXT };
 			VDeleter<VkSurfaceKHR> m_Surface{ m_Instance, vkDestroySurfaceKHR };
 
+			// TODO: Make globally accessible
 			VulkanDevice* m_VulkanDevice = nullptr;
 
 			VkQueue m_GraphicsQueue = VK_NULL_HANDLE;
