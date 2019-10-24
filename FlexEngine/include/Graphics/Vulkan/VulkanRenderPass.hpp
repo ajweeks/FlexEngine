@@ -12,6 +12,7 @@ namespace flex
 	namespace vk
 	{
 		struct VulkanDevice;
+		struct FrameBuffer;
 
 		class VulkanRenderPass
 		{
@@ -21,8 +22,9 @@ namespace flex
 
 			// TODO: Make work for multiple attachments & depth-only
 			void Create(
-				VkFormat colorFormat,
 				const char* passName,
+				VkFormat colorFormat,
+				FrameBuffer* inColorAttachmentFrameBuffer,
 				VkImageLayout finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 				VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
 				bool bDepth = false,
@@ -34,6 +36,8 @@ namespace flex
 
 			VkRenderPass* Replace();
 			operator VkRenderPass();
+
+			FrameBuffer* colorAttachmentFrameBuffer = nullptr;
 
 		private:
 			VulkanDevice* m_VulkanDevice = nullptr;

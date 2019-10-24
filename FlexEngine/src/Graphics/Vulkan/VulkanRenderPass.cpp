@@ -23,8 +23,9 @@ namespace flex
 		}
 
 		void VulkanRenderPass::Create(
-			VkFormat colorFormat,
 			const char* passName,
+			VkFormat colorFormat,
+			FrameBuffer* inColorAttachmentFrameBuffer,
 			VkImageLayout finalLayout /* = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL */,
 			VkImageLayout initialLayout /* = VK_IMAGE_LAYOUT_UNDEFINED */,
 			bool bDepth /* = false */,
@@ -32,6 +33,8 @@ namespace flex
 			VkImageLayout finalDepthLayout /* = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL */,
 			VkImageLayout initialDepthLayout /* = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL */)
 		{
+			colorAttachmentFrameBuffer = inColorAttachmentFrameBuffer;
+
 			// Color attachment
 			VkAttachmentDescription colorAttachment = vks::attachmentDescription(colorFormat, finalLayout);
 			VkAttachmentDescription depthAttachment = vks::attachmentDescription(depthFormat, finalDepthLayout);

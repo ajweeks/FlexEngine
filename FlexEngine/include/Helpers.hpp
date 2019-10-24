@@ -191,6 +191,8 @@ namespace flex
 	// Returns random value in range [min, max)
 	real RandomFloat(real min, real max);
 
+	u32 GenerateUID();
+
 	template<class T>
 	const T& PickRandomFrom(const std::vector<T>& vec)
 	{

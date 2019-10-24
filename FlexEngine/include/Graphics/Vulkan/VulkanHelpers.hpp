@@ -79,6 +79,7 @@ namespace flex
 		{
 			FrameBuffer(VulkanDevice* device);
 
+			u32 UID = InvalidID;
 			u32 width = 0;
 			u32 height = 0;
 			VDeleter<VkFramebuffer> frameBuffer;

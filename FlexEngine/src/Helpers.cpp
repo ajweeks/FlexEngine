@@ -1434,6 +1434,12 @@ namespace flex
 		return randN * (max - min) + min;
 	}
 
+	static u32 _lastUID = 0;
+	u32 GenerateUID()
+	{
+		return ++_lastUID;
+	}
+
 	i32 RoundUp(i32 val, i32 alignment)
 	{
 		return val + alignment - (val % alignment);

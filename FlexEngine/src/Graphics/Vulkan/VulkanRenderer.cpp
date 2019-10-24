@@ -2664,7 +2664,7 @@ namespace flex
 			const u32 mipLevels = static_cast<u32>(floor(log2(dim))) + 1;
 
 			VulkanRenderPass renderPass(m_VulkanDevice);
-			renderPass.Create(format, "Equirectangular to Cubemap render pass");
+			renderPass.Create("Equirectangular to Cubemap render pass", format, VK_NULL_HANDLE);
 
 			// Offscreen framebuffer
 			struct {
@@ -2927,7 +2927,7 @@ namespace flex
 			const u32 mipLevels = static_cast<u32>(floor(log2(dim))) + 1;
 
 			VulkanRenderPass renderPass(m_VulkanDevice);
-			renderPass.Create(format, "Generate Irradiance render pass");
+			renderPass.Create("Generate Irradiance render pass", format, VK_NULL_HANDLE);
 
 			// Offscreen framebuffer
 			struct {
@@ -3193,7 +3193,7 @@ namespace flex
 			const u32 mipLevels = static_cast<u32>(floor(log2(dim))) + 1;
 
 			VulkanRenderPass renderPass(m_VulkanDevice);
-			renderPass.Create(format, "Generate Prefiltered Cube render pass");
+			renderPass.Create("Generate Prefiltered Cube render pass", format, VK_NULL_HANDLE);
 
 			struct {
 				VkImage image;
@@ -3448,7 +3448,7 @@ namespace flex
 				assert(dim <= MAX_TEXTURE_DIM);
 
 				VulkanRenderPass renderPass(m_VulkanDevice);
-				renderPass.Create(format, "Generate BRDF LUT render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+				renderPass.Create("Generate BRDF LUT render pass", format, VK_NULL_HANDLE, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 				VkFramebufferCreateInfo framebufferCreateInfo = vks::framebufferCreateInfo(renderPass);
 				framebufferCreateInfo.attachmentCount = 1;
@@ -3792,7 +3792,7 @@ namespace flex
 				VulkanShader& computeSDFShader = m_Shaders[computeSDFShaderID];
 
 				VulkanRenderPass renderPass(m_VulkanDevice);
-				renderPass.Create(fontTexFormat, "Font SDF render pass");
+				renderPass.Create("Font SDF render pass", fontTexFormat, VK_NULL_HANDLE);
 
 				VkFramebufferCreateInfo framebufCreateInfo = vks::framebufferCreateInfo(renderPass);
 				framebufCreateInfo.attachmentCount = 1;
@@ -5059,38 +5059,33 @@ namespace flex
 			VkFormat depthFormat;
 			GetSupportedDepthFormat(m_VulkanDevice->m_PhysicalDevice, &depthFormat);
 
+			const i32 SWAP_CHAIN_FRAME_BUFFER = 90909;
 
-			m_SSAORenderPass.Create(ssaoFrameBufFormat, "SSAO render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			m_SSAOBlurHRenderPass.Create(ssaoFrameBufFormat, "SSAO Blur Horizontal render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			m_SSAOBlurVRenderPass.Create(ssaoFrameBufFormat, "SSAO Blur Vertical render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			// TODO: Unify blur H & V buffers?
+			m_SSAORenderPass.Create("SSAO render pass", ssaoFrameBufFormat, m_SSAOFrameBuf, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			m_SSAOBlurHRenderPass.Create("SSAO Blur Horizontal render pass", ssaoFrameBufFormat, m_SSAOBlurHFrameBuf, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			m_SSAOBlurVRenderPass.Create("SSAO Blur Vertical render pass", ssaoFrameBufFormat, m_SSAOBlurVFrameBuf, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-			// Deferred combine render pass
 			// NOTE: We don't need a depth attachment at this point, but we're rendering to the swap chain
 			// frame buffers (which are created using the m_ForwardRenderPass which contains two attachments)
 			// TODO: Set final depth layout to VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL (triggers validation though...)
-			m_DeferredCombineRenderPass.Create(m_OffscreenFrameBufferFormat, "Deferred combine render pass", VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			m_DeferredCombineRenderPass.Create("Deferred combine render pass", m_OffscreenFrameBufferFormat, m_OffscreenFrameBuffer0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 				VK_IMAGE_LAYOUT_UNDEFINED, true, depthFormat, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
-			// Forward render pass
-			m_ForwardRenderPass.Create(m_OffscreenFrameBufferFormat, "Forward render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			m_ForwardRenderPass.Create("Forward render pass", m_OffscreenFrameBufferFormat, m_OffscreenFrameBuffer0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, true, depthFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-			// Post process render pass
-			m_PostProcessRenderPass.Create(m_OffscreenFrameBufferFormat, "Post Process render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			m_PostProcessRenderPass.Create("Post Process render pass", m_OffscreenFrameBufferFormat, m_OffscreenFrameBuffer1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 				VK_IMAGE_LAYOUT_UNDEFINED, true, depthFormat, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
-			// Gamma correct render pass
-			m_GammaCorrectRenderPass.Create(m_OffscreenFrameBufferFormat, "Gamma correct render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			m_GammaCorrectRenderPass.Create("Gamma correct render pass", m_OffscreenFrameBufferFormat, m_OffscreenFrameBuffer0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 				VK_IMAGE_LAYOUT_UNDEFINED, true, depthFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-			// TAA resolve render pass
-			m_TAAResolveRenderPass.Create(m_OffscreenFrameBufferFormat, "TAA Resolve render pass", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			m_TAAResolveRenderPass.Create("TAA Resolve render pass", m_OffscreenFrameBufferFormat, m_OffscreenFrameBuffer1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, true, depthFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-			// UI render pass
-			m_UIRenderPass.Create(m_SwapChainImageFormat, "UI render pass", VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+			m_UIRenderPass.Create("UI render pass", m_SwapChainImageFormat, (FrameBuffer*)SWAP_CHAIN_FRAME_BUFFER, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 				VK_IMAGE_LAYOUT_UNDEFINED, true, depthFormat, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-
 		}
 
 		void VulkanRenderer::CreateDescriptorSet(RenderID renderID)
@@ -5970,10 +5965,10 @@ namespace flex
 
 			//  Offscreen render passes
 			{
-				m_OffscreenFrameBuffer0->renderPass.Create(m_OffscreenFrameBufferFormat, "Offscreen 0 render pass", VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-					VK_IMAGE_LAYOUT_UNDEFINED, true, m_OffscreenDepthAttachment0->format, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-				m_OffscreenFrameBuffer1->renderPass.Create(m_OffscreenFrameBufferFormat, "Offscreen 1 render pass", VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-					VK_IMAGE_LAYOUT_UNDEFINED, true, m_OffscreenDepthAttachment1->format, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+				m_OffscreenFrameBuffer0->renderPass.Create("Offscreen 0 render pass", m_OffscreenFrameBufferFormat, m_OffscreenFrameBuffer0,
+					VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED, true, m_OffscreenDepthAttachment0->format, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+				m_OffscreenFrameBuffer1->renderPass.Create("Offscreen 1 render pass", m_OffscreenFrameBufferFormat, m_OffscreenFrameBuffer1,
+					VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED, true, m_OffscreenDepthAttachment1->format, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 			}
 
 			// TODO: Make render pass helper support depth-only passes
@@ -6019,8 +6014,8 @@ namespace flex
 				renderPassCreateInfo.pSubpasses = subpasses.data();
 				renderPassCreateInfo.dependencyCount = dependencies.size();
 				renderPassCreateInfo.pDependencies = dependencies.data();
-				VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassCreateInfo, nullptr, m_ShadowRenderPass.Replace()));
-				SetRenderPassName(m_VulkanDevice, m_ShadowRenderPass, "Shadow render pass");
+
+				m_ShadowRenderPass.Create(&renderPassCreateInfo, "Shadow render pass");
 			}
 
 			// GBuffer frame buffer
@@ -6271,7 +6266,7 @@ namespace flex
 			VkBool32 validDepthFormat = GetSupportedDepthFormat(m_VulkanDevice->m_PhysicalDevice, &attDepthFormat);
 			assert(validDepthFormat);
 
-			// Set up separate renderpass with references to the color and depth attachments
+			// Set up separate render pass with references to the color and depth attachments
 			std::vector<VkAttachmentDescription> attachmentDescs(frameBufferColorAttachmentCount + 1); // + 1 for depth attachment
 			// Init attachment properties
 			for (u32 i = 0; i < frameBufferColorAttachmentCount; ++i)
@@ -7167,7 +7162,7 @@ namespace flex
 					ssaoClearValues[0].color = m_ClearColor;
 
 					renderPassBeginInfo.renderPass = m_SSAORenderPass;
-					renderPassBeginInfo.framebuffer = m_SSAOFrameBuf->frameBuffer;
+					renderPassBeginInfo.framebuffer = m_SSAORenderPass.colorAttachmentFrameBuffer->frameBuffer;
 					renderPassBeginInfo.renderArea.offset = { 0, 0 };
 					renderPassBeginInfo.renderArea.extent = { m_SSAOFrameBuf->width, m_SSAOFrameBuf->height };
 					renderPassBeginInfo.clearValueCount = ssaoClearValues.size();
@@ -7204,7 +7199,7 @@ namespace flex
 						BeginDebugMarkerRegion(m_OffScreenCmdBuffer, "SSAO Blur");
 
 						renderPassBeginInfo.renderPass = m_SSAOBlurHRenderPass;
-						renderPassBeginInfo.framebuffer = m_SSAOBlurHFrameBuf->frameBuffer;
+						renderPassBeginInfo.framebuffer = m_SSAOBlurHRenderPass.colorAttachmentFrameBuffer->frameBuffer;
 						renderPassBeginInfo.renderArea.extent = { m_SSAOBlurHFrameBuf->width, m_SSAOBlurHFrameBuf->height };
 
 						// Horizontal pass
@@ -7234,7 +7229,7 @@ namespace flex
 						vkCmdEndRenderPass(m_OffScreenCmdBuffer);
 
 						renderPassBeginInfo.renderPass = m_SSAOBlurVRenderPass;
-						renderPassBeginInfo.framebuffer = m_SSAOBlurVFrameBuf->frameBuffer;
+						renderPassBeginInfo.framebuffer = m_SSAOBlurVRenderPass.colorAttachmentFrameBuffer->frameBuffer;
 
 						// Vertical pass
 						vkCmdBeginRenderPass(m_OffScreenCmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -7324,7 +7319,7 @@ namespace flex
 			renderPassBeginInfo.renderArea.extent = m_SwapChainExtent;
 			renderPassBeginInfo.clearValueCount = clearValues.size();
 			renderPassBeginInfo.pClearValues = clearValues.data();
-			renderPassBeginInfo.framebuffer = m_OffscreenFrameBuffer0->frameBuffer;
+			renderPassBeginInfo.framebuffer = m_ForwardRenderPass.colorAttachmentFrameBuffer->frameBuffer;
 
 			//
 			// Forward pass
@@ -7619,6 +7614,8 @@ namespace flex
 
 		void VulkanRenderer::RecreateSwapChain()
 		{
+			m_bSwapChainNeedsRebuilding = false;
+
 			m_CurrentSwapChainBufferIndex = 0;
 
 			// Avoid stalls waiting on queries that will never complete
