@@ -99,6 +99,12 @@ namespace flex
 			((VulkanRenderer*)g_Renderer)->SetRenderPassName(m_VulkanDevice, m_RenderPass, passName);
 		}
 
+		void VulkanRenderPass::Create(VkRenderPassCreateInfo* createInfo, const char* passName)
+		{
+			VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, createInfo, nullptr, m_RenderPass.replace()));
+			((VulkanRenderer*)g_Renderer)->SetRenderPassName(m_VulkanDevice, m_RenderPass, passName);
+		}
+
 		VkRenderPass* VulkanRenderPass::Replace()
 		{
 			return m_RenderPass.replace();

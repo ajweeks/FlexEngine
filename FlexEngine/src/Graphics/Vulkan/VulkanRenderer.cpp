@@ -5965,9 +5965,7 @@ namespace flex
 				renderPassInfo.dependencyCount = dependencies.size();
 				renderPassInfo.pDependencies = dependencies.data();
 
-				// TODO: Call RenderPass.Create
-				VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassInfo, nullptr, m_GBufferFrameBuf->renderPass.Replace()));
-				SetRenderPassName(m_VulkanDevice, m_GBufferFrameBuf->renderPass, "GBuffer render pass");
+				m_GBufferFrameBuf->renderPass.Create(&renderPassInfo, "GBuffer render pass");
 			}
 
 			//  Offscreen render passes
@@ -6343,9 +6341,7 @@ namespace flex
 			renderPassInfo.dependencyCount = dependencies.size();
 			renderPassInfo.pDependencies = dependencies.data();
 
-			// TODO: Call RenderPass.Create
-			VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassInfo, nullptr, m_GBufferCubemapFrameBuffer->renderPass.Replace()));
-			SetRenderPassName(m_VulkanDevice, m_GBufferCubemapFrameBuffer->renderPass, "GBuffer Cubemap render pass");
+			m_GBufferCubemapFrameBuffer->renderPass.Create(&renderPassInfo, "GBuffer Cubemap render pass");
 
 			std::vector<VkImageView> attachments;
 			for (u32 i = 0; i < frameBufferColorAttachmentCount; ++i)

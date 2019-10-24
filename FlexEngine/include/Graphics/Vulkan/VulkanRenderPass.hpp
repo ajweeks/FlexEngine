@@ -30,6 +30,8 @@ namespace flex
 				VkImageLayout finalDepthLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 				VkImageLayout initialDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
+			void Create(VkRenderPassCreateInfo* createInfo, const char* passName);
+
 			VkRenderPass* Replace();
 			operator VkRenderPass();
 
