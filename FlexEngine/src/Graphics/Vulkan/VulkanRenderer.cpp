@@ -6155,6 +6155,8 @@ namespace flex
 					SetFramebufferName(m_VulkanDevice, m_ShadowCascades[i]->frameBuffer.frameBuffer, frameBufferName);
 
 					m_ShadowCascades[i]->frameBuffer.renderPass = &m_ShadowRenderPass;
+					m_ShadowCascades[i]->frameBuffer.width = SHADOW_CASCADE_RES;
+					m_ShadowCascades[i]->frameBuffer.height = SHADOW_CASCADE_RES;
 				}
 			}
 
