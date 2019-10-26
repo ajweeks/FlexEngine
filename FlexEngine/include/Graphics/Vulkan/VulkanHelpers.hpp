@@ -70,11 +70,14 @@ namespace flex
 		{
 			FrameBuffer(VulkanDevice* device);
 
+			void Create(VkFramebufferCreateInfo* createInfo, VulkanRenderPass* inRenderPass, const char* debugName);
+
 			operator VkFramebuffer()
 			{
 				return frameBuffer;
 			}
 
+			VulkanDevice* m_VulkanDevice = nullptr;
 			u32 UID = InvalidID;
 			u32 width = 0;
 			u32 height = 0;

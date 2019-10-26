@@ -2198,9 +2198,20 @@ namespace flex
 		}
 
 		FrameBuffer::FrameBuffer(VulkanDevice* device) :
+			m_VulkanDevice(device),
 			frameBuffer(device->m_LogicalDevice, vkDestroyFramebuffer),
 			UID(GenerateUID())
 		{
+		}
+
+		void FrameBuffer::Create(VkFramebufferCreateInfo* createInfo, VulkanRenderPass* inRenderPass, const char* debugName)
+		{
+			VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, createInfo, nullptr, frameBuffer.replace()));
+			((VulkanRenderer*)g_Renderer)->SetFramebufferName(m_VulkanDevice, frameBuffer, debugName);
+
+			width = createInfo->width;
+			height = createInfo->height;
+			renderPass = inRenderPass;
 		}
 
 		VulkanShader::VulkanShader(const VDeleter<VkDevice>& device, Shader* shader) :
