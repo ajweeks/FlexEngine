@@ -707,7 +707,6 @@ namespace flex
 			m_ShadowImage.replace();
 			m_ShadowImageView.replace();
 			m_ShadowImageMemory.replace();
-			m_ShadowRenderPass.Replace();
 
 			m_SSAOGraphicsPipeline.replace();
 			m_SSAOBlurHGraphicsPipeline.replace();
@@ -5085,6 +5084,54 @@ namespace flex
 
 			m_UIRenderPass.Create("UI render pass", m_SwapChainImageFormat, (FrameBuffer*)SWAP_CHAIN_FRAME_BUFFER, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 				VK_IMAGE_LAYOUT_UNDEFINED, true, depthFormat, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+
+
+			// TODO: Make render pass helper support depth-only passes
+			// Shadow render pass
+			{
+				// Color attachment
+				VkAttachmentDescription depthAttachment = vks::attachmentDescription(m_ShadowBufFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+				VkAttachmentReference depthAttachmentRef = { 0, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+
+				std::array<VkSubpassDescription, 1> subpasses;
+				subpasses[0] = {};
+				subpasses[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+				subpasses[0].pDepthStencilAttachment = &depthAttachmentRef;
+
+				std::array<VkSubpassDependency, 2> dependencies;
+				dependencies[0] = {};
+				dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+				dependencies[0].dstSubpass = 0;
+				dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+				dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+				dependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+				dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+				dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+				dependencies[1] = {};
+				dependencies[1].srcSubpass = 0;
+				dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+				dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+				dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+				dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+				dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+				dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+				std::vector<VkAttachmentDescription> attachments;
+				attachments.push_back(depthAttachment);
+
+				// Renderpass
+				VkRenderPassCreateInfo renderPassCreateInfo = vks::renderPassCreateInfo();
+				renderPassCreateInfo.attachmentCount = attachments.size();
+				renderPassCreateInfo.pAttachments = attachments.data();
+				renderPassCreateInfo.subpassCount = subpasses.size();
+				renderPassCreateInfo.pSubpasses = subpasses.data();
+				renderPassCreateInfo.dependencyCount = dependencies.size();
+				renderPassCreateInfo.pDependencies = dependencies.data();
+
+				m_ShadowRenderPass.Create("Shadow render pass", &renderPassCreateInfo, VK_NULL_HANDLE);
+			}
 		}
 
 		void VulkanRenderer::CreateDescriptorSet(RenderID renderID)
@@ -5880,7 +5927,7 @@ namespace flex
 			m_HistoryBuffer->width = m_SwapChainExtent.width;
 			m_HistoryBuffer->height = m_SwapChainExtent.height;
 
-			m_SSAORes = glm::vec2u((u32)(m_SwapChainExtent.width / 2.0f), (u32)(m_SwapChainExtent.height / 2.0f));
+			m_SSAORes = glm::vec2u(m_SwapChainExtent.width / 2, m_SwapChainExtent.height / 2);
 
 			m_SSAOFrameBuf->width = m_SSAORes.x;
 			m_SSAOFrameBuf->height = m_SSAORes.y;
@@ -5961,53 +6008,6 @@ namespace flex
 
 				m_DeferredRenderPass.Create("GBuffer render pass", &renderPassInfo, m_GBufferFrameBuf);
 				m_GBufferFrameBuf->renderPass = &m_DeferredRenderPass;
-			}
-
-			// TODO: Make render pass helper support depth-only passes
-			// Shadow render pass
-			{
-				// Color attachment
-				VkAttachmentDescription depthAttachment = vks::attachmentDescription(m_ShadowBufFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-				VkAttachmentReference depthAttachmentRef = { 0, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
-
-				std::array<VkSubpassDescription, 1> subpasses;
-				subpasses[0] = {};
-				subpasses[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-				subpasses[0].pDepthStencilAttachment = &depthAttachmentRef;
-
-				std::array<VkSubpassDependency, 2> dependencies;
-				dependencies[0] = {};
-				dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
-				dependencies[0].dstSubpass = 0;
-				dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-				dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-				dependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-				dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-				dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-				dependencies[1] = {};
-				dependencies[1].srcSubpass = 0;
-				dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
-				dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-				dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-				dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-				dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-				dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-				std::vector<VkAttachmentDescription> attachments;
-				attachments.push_back(depthAttachment);
-
-				// Renderpass
-				VkRenderPassCreateInfo renderPassCreateInfo = vks::renderPassCreateInfo();
-				renderPassCreateInfo.attachmentCount = attachments.size();
-				renderPassCreateInfo.pAttachments = attachments.data();
-				renderPassCreateInfo.subpassCount = subpasses.size();
-				renderPassCreateInfo.pSubpasses = subpasses.data();
-				renderPassCreateInfo.dependencyCount = dependencies.size();
-				renderPassCreateInfo.pDependencies = dependencies.data();
-
-				m_ShadowRenderPass.Create("Shadow render pass", &renderPassCreateInfo, VK_NULL_HANDLE);
 			}
 
 			// GBuffer frame buffer
