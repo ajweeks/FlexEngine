@@ -33,10 +33,6 @@ namespace flex
 			VkImageLayout finalDepthLayout /* = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL */,
 			VkImageLayout initialDepthLayout /* = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL */)
 		{
-			colorAttachmentFrameBuffer = inColorAttachmentFrameBuffer;
-			m_Name = passName;
-
-			// Color attachment
 			VkAttachmentDescription colorAttachment = vks::attachmentDescription(colorFormat, finalLayout);
 			VkAttachmentDescription depthAttachment = vks::attachmentDescription(depthFormat, finalDepthLayout);
 
@@ -55,14 +51,69 @@ namespace flex
 			VkAttachmentReference colorReference = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
 			VkAttachmentReference depthAttachmentRef = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 
-			std::array<VkSubpassDescription, 1> subpasses;
-			subpasses[0] = {};
-			subpasses[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-			subpasses[0].colorAttachmentCount = 1;
-			subpasses[0].pColorAttachments = &colorReference;
-			subpasses[0].pDepthStencilAttachment = bDepth ? &depthAttachmentRef : nullptr;
+			Create(passName, inColorAttachmentFrameBuffer,
+				&colorAttachment, &colorReference, 1,
+				bDepth ? &depthAttachment : nullptr, bDepth ? &depthAttachmentRef : nullptr);
+		}
 
-			// Use subpass dependencies for layout transitions
+		void VulkanRenderPass::CreateDepthOnly(
+			const char* passName,
+			FrameBuffer* inColorAttachmentFrameBuffer,
+			VkFormat depthFormat /* = VK_FORMAT_UNDEFINED */,
+			VkImageLayout finalDepthLayout /* = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL */,
+			VkImageLayout initialDepthLayout /* = VK_IMAGE_LAYOUT_UNDEFINED */)
+		{
+			VkAttachmentDescription depthAttachment = vks::attachmentDescription(depthFormat, finalDepthLayout);
+
+			if (initialDepthLayout != VK_IMAGE_LAYOUT_UNDEFINED)
+			{
+				depthAttachment.initialLayout = initialDepthLayout;
+				depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+			}
+
+			VkAttachmentReference depthAttachmentRef = { 0, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+
+			Create(passName, inColorAttachmentFrameBuffer,
+				nullptr, nullptr, 0,
+				&depthAttachment, &depthAttachmentRef);
+		}
+
+		void VulkanRenderPass::Create(
+			const char* passName,
+			FrameBuffer* inColorAttachmentFrameBuffer,
+			VkAttachmentDescription* colorAttachments,
+			VkAttachmentReference* colorAttachmentReferences,
+			u32 colorAttachmentCount,
+			VkAttachmentDescription* depthAttachment,
+			VkAttachmentReference* depthAttachmentRef)
+		{
+			assert(
+				(colorAttachmentCount == 0 && colorAttachments == nullptr && colorAttachmentReferences == nullptr) ||
+				(colorAttachmentCount != 0 && colorAttachments != nullptr && colorAttachmentReferences != nullptr));
+			assert((depthAttachment != nullptr) == (depthAttachmentRef != nullptr));
+
+			colorAttachmentFrameBuffer = inColorAttachmentFrameBuffer;
+			m_Name = passName;
+
+			std::vector<VkAttachmentDescription> attachments(colorAttachmentCount + (depthAttachment != nullptr ? 1 : 0));
+
+			for (u32 i = 0; i < colorAttachmentCount; ++i)
+			{
+				attachments[i] = *colorAttachments;
+			}
+
+			if (depthAttachment)
+			{
+				attachments[attachments.size() - 1] = *depthAttachment;
+			}
+
+			VkSubpassDescription subpass;
+			subpass = {};
+			subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+			subpass.colorAttachmentCount = colorAttachmentCount;
+			subpass.pColorAttachments = colorAttachmentReferences;
+			subpass.pDepthStencilAttachment = depthAttachmentRef ? depthAttachmentRef : nullptr;
+
 			std::array<VkSubpassDependency, 2> dependencies;
 			dependencies[0] = {};
 			dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
@@ -82,20 +133,11 @@ namespace flex
 			dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
 			dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
-			std::vector<VkAttachmentDescription> attachments;
-			attachments.push_back(colorAttachment);
-
-			if (bDepth)
-			{
-				attachments.push_back(depthAttachment);
-			}
-
-			// Render pass
 			VkRenderPassCreateInfo renderPassCreateInfo = vks::renderPassCreateInfo();
 			renderPassCreateInfo.attachmentCount = attachments.size();
 			renderPassCreateInfo.pAttachments = attachments.data();
-			renderPassCreateInfo.subpassCount = subpasses.size();
-			renderPassCreateInfo.pSubpasses = subpasses.data();
+			renderPassCreateInfo.subpassCount = 1;
+			renderPassCreateInfo.pSubpasses = &subpass;
 			renderPassCreateInfo.dependencyCount = dependencies.size();
 			renderPassCreateInfo.pDependencies = dependencies.data();
 			VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassCreateInfo, nullptr, m_RenderPass.replace()));
@@ -131,7 +173,7 @@ namespace flex
 			}
 
 			m_ActiveCommandBuffer = cmdBuf;
-			
+
 			VkRenderPassBeginInfo renderPassBeginInfo = vks::renderPassBeginInfo(m_RenderPass);
 
 			renderPassBeginInfo.renderPass = m_RenderPass;

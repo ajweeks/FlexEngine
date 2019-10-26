@@ -5057,8 +5057,6 @@ namespace flex
 			VkFormat depthFormat;
 			GetSupportedDepthFormat(m_VulkanDevice->m_PhysicalDevice, &depthFormat);
 
-			const i32 SWAP_CHAIN_FRAME_BUFFER = 90909;
-
 			// TODO: Unify blur H & V buffers?
 			m_SSAORenderPass.Create("SSAO render pass", ssaoFrameBufFormat, m_SSAOFrameBuf, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 			m_SSAOBlurHRenderPass.Create("SSAO Blur Horizontal render pass", ssaoFrameBufFormat, m_SSAOBlurHFrameBuf, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -5082,56 +5080,10 @@ namespace flex
 			m_TAAResolveRenderPass.Create("TAA Resolve render pass", m_OffscreenFrameBufferFormat, m_OffscreenFrameBuffer1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, true, depthFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-			m_UIRenderPass.Create("UI render pass", m_SwapChainImageFormat, (FrameBuffer*)SWAP_CHAIN_FRAME_BUFFER, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+			m_UIRenderPass.Create("UI render pass", m_SwapChainImageFormat, nullptr, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 				VK_IMAGE_LAYOUT_UNDEFINED, true, depthFormat, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
-
-			// TODO: Make render pass helper support depth-only passes
-			// Shadow render pass
-			{
-				// Color attachment
-				VkAttachmentDescription depthAttachment = vks::attachmentDescription(m_ShadowBufFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-				VkAttachmentReference depthAttachmentRef = { 0, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
-
-				std::array<VkSubpassDescription, 1> subpasses;
-				subpasses[0] = {};
-				subpasses[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-				subpasses[0].pDepthStencilAttachment = &depthAttachmentRef;
-
-				std::array<VkSubpassDependency, 2> dependencies;
-				dependencies[0] = {};
-				dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
-				dependencies[0].dstSubpass = 0;
-				dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-				dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-				dependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-				dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-				dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-				dependencies[1] = {};
-				dependencies[1].srcSubpass = 0;
-				dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
-				dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-				dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-				dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-				dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-				dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-				std::vector<VkAttachmentDescription> attachments;
-				attachments.push_back(depthAttachment);
-
-				// Renderpass
-				VkRenderPassCreateInfo renderPassCreateInfo = vks::renderPassCreateInfo();
-				renderPassCreateInfo.attachmentCount = attachments.size();
-				renderPassCreateInfo.pAttachments = attachments.data();
-				renderPassCreateInfo.subpassCount = subpasses.size();
-				renderPassCreateInfo.pSubpasses = subpasses.data();
-				renderPassCreateInfo.dependencyCount = dependencies.size();
-				renderPassCreateInfo.pDependencies = dependencies.data();
-
-				m_ShadowRenderPass.Create("Shadow render pass", &renderPassCreateInfo, VK_NULL_HANDLE);
-			}
+			m_ShadowRenderPass.CreateDepthOnly("Shadow render pass", nullptr, m_ShadowBufFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 		}
 
 		void VulkanRenderer::CreateDescriptorSet(RenderID renderID)

@@ -31,7 +31,23 @@ namespace flex
 				VkFormat depthFormat = VK_FORMAT_UNDEFINED,
 				VkImageLayout finalDepthLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 				VkImageLayout initialDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+			
+			void Create(
+				const char* passName,
+				FrameBuffer* inColorAttachmentFrameBuffer,
+				VkAttachmentDescription* colorAttachments,
+				VkAttachmentReference* colorAttachmentReferences,
+				u32 colorAttachmentCount,
+				VkAttachmentDescription* depthAttachment,
+				VkAttachmentReference* depthAttachmentRef);
 
+			void CreateDepthOnly(
+				const char* passName,
+				FrameBuffer* inColorAttachmentFrameBuffer,
+				VkFormat depthFormat = VK_FORMAT_UNDEFINED,
+				VkImageLayout finalDepthLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				VkImageLayout initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED);
+			
 			void Create(const char* passName, VkRenderPassCreateInfo* createInfo, FrameBuffer* inColorAttachmentFrameBuffer);
 
 			VkRenderPass* Replace();
