@@ -20,7 +20,6 @@ namespace flex
 			VulkanRenderPass();
 			VulkanRenderPass(VulkanDevice* device);
 
-			// TODO: Make work for multiple attachments & depth-only
 			void CreateColorAndDepth(
 				const char* passName,
 				VkFormat colorFormat,
@@ -30,7 +29,14 @@ namespace flex
 				VkFormat depthFormat = VK_FORMAT_UNDEFINED,
 				VkImageLayout finalDepthLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 				VkImageLayout initialDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-			
+
+			void CreateMultiColorAndDepth(
+				const char* passName,
+				FrameBuffer* inColorAttachmentFrameBuffer,
+				u32 colorAttachmentCount,
+				VkFormat* colorFormats,
+				VkFormat depthFormat);
+
 			void CreateDepthOnly(
 				const char* passName,
 				FrameBuffer* inColorAttachmentFrameBuffer,

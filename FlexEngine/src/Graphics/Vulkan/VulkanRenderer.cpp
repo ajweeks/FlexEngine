@@ -5892,9 +5892,8 @@ namespace flex
 
 			const size_t frameBufferColorAttachmentCount = m_GBufferFrameBuf->frameBufferAttachments.size();
 
-			//  GBuffer render pass
+			//  Deferred render pass
 			{
-				// Color attachments
 				for (u32 i = 0; i < frameBufferColorAttachmentCount; ++i)
 				{
 					char dbgImageName[256];
@@ -5904,62 +5903,17 @@ namespace flex
 					CreateAttachment(m_VulkanDevice, m_GBufferFrameBuf, i, dbgImageName, dbgImageViewName);
 				}
 
-				// Find a suitable depth format
-				VkFormat attDepthFormat;
-				VkBool32 validDepthFormat = GetSupportedDepthFormat(m_VulkanDevice->m_PhysicalDevice, &attDepthFormat);
+				VkFormat depthFormat;
+				VkBool32 validDepthFormat = GetSupportedDepthFormat(m_VulkanDevice->m_PhysicalDevice, &depthFormat);
 				assert(validDepthFormat);
 
-				std::vector<VkAttachmentDescription> attachmentDescs(frameBufferColorAttachmentCount + 1); // + 1 for depth attachment
-
+				std::vector<VkFormat> colorAttachmentFormats(frameBufferColorAttachmentCount);
 				for (u32 i = 0; i < frameBufferColorAttachmentCount; ++i)
 				{
-					attachmentDescs[i] = vks::attachmentDescription(m_GBufferFrameBuf->frameBufferAttachments[i].second.format, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-				}
-				// Depth is read by SSAO after gbuffer fill
-				attachmentDescs[frameBufferColorAttachmentCount] = vks::attachmentDescription(m_GBufferDepthAttachment->format, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-				std::vector<VkAttachmentReference> colorReferences;
-				for (u32 i = 0; i < frameBufferColorAttachmentCount; ++i)
-				{
-					colorReferences.push_back({ i, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL });
+					colorAttachmentFormats[i] = m_GBufferFrameBuf->frameBufferAttachments[i].second.format;
 				}
 
-				VkAttachmentReference depthReference = { frameBufferColorAttachmentCount, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
-
-				VkSubpassDescription subpass = {};
-				subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-				subpass.pColorAttachments = colorReferences.data();
-				subpass.colorAttachmentCount = static_cast<u32>(colorReferences.size());
-				subpass.pDepthStencilAttachment = &depthReference;
-
-				std::array<VkSubpassDependency, 2> dependencies;
-
-				dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
-				dependencies[0].dstSubpass = 0;
-				dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-				dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-				dependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-				dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-				dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-				dependencies[1].srcSubpass = 0;
-				dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
-				dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-				dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-				dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-				dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-				dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-				VkRenderPassCreateInfo renderPassInfo = vks::renderPassCreateInfo();
-				renderPassInfo.pAttachments = attachmentDescs.data();
-				renderPassInfo.attachmentCount = static_cast<u32>(attachmentDescs.size());
-				renderPassInfo.subpassCount = 1;
-				renderPassInfo.pSubpasses = &subpass;
-				renderPassInfo.dependencyCount = dependencies.size();
-				renderPassInfo.pDependencies = dependencies.data();
-
-				m_DeferredRenderPass.Create("GBuffer render pass", &renderPassInfo, m_GBufferFrameBuf);
-				m_GBufferFrameBuf->renderPass = &m_DeferredRenderPass;
+				m_DeferredRenderPass.CreateMultiColorAndDepth("GBuffer render pass", m_GBufferFrameBuf, frameBufferColorAttachmentCount, colorAttachmentFormats.data(), depthFormat);
 			}
 
 			// GBuffer frame buffer
@@ -6142,7 +6096,6 @@ namespace flex
 				m_SSAOBlurHFrameBuf->Create(&frameBufferCreateInfo, &m_SSAOBlurHRenderPass, "SSAO Blur Horizontal frame buffer");
 
 				attachments[0] = m_SSAOBlurVFrameBuf->frameBufferAttachments[0].second.view;
-				frameBufferCreateInfo.renderPass = m_SSAOBlurVRenderPass;
 				m_SSAOBlurVFrameBuf->Create(&frameBufferCreateInfo, &m_SSAOBlurHRenderPass, "SSAO Blur Vertical frame buffer");
 			}
 
@@ -6188,6 +6141,7 @@ namespace flex
 			SetSamplerName(m_VulkanDevice, m_DepthSampler, "Depth sampler");
 		}
 
+		// TODO: Test that this still works
 		void VulkanRenderer::PrepareCubemapFrameBuffer()
 		{
 			const size_t frameBufferColorAttachmentCount = m_GBufferCubemapFrameBuffer->frameBufferAttachments.size();
@@ -6205,8 +6159,8 @@ namespace flex
 			// Depth attachment
 
 			// Find a suitable depth format
-			VkFormat attDepthFormat;
-			VkBool32 validDepthFormat = GetSupportedDepthFormat(m_VulkanDevice->m_PhysicalDevice, &attDepthFormat);
+			VkFormat depthFormat;
+			VkBool32 validDepthFormat = GetSupportedDepthFormat(m_VulkanDevice->m_PhysicalDevice, &depthFormat);
 			assert(validDepthFormat);
 
 			// Set up separate render pass with references to the color and depth attachments
@@ -6280,7 +6234,6 @@ namespace flex
 			renderPassInfo.pDependencies = dependencies.data();
 
 			m_DeferredCubemapRenderPass.Create("GBuffer Cubemap render pass", &renderPassInfo, m_GBufferCubemapFrameBuffer);
-			m_GBufferCubemapFrameBuffer->renderPass = &m_DeferredCubemapRenderPass;
 
 			std::vector<VkImageView> attachments;
 			for (u32 i = 0; i < frameBufferColorAttachmentCount; ++i)

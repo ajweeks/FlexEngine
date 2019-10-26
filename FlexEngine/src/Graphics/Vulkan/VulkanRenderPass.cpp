@@ -52,6 +52,32 @@ namespace flex
 				&depthAttachment, &depthAttachmentRef);
 		}
 
+		void VulkanRenderPass::CreateMultiColorAndDepth(
+			const char* passName,
+			FrameBuffer* inColorAttachmentFrameBuffer,
+			u32 colorAttachmentCount,
+			VkFormat* colorFormats,
+			VkFormat depthFormat)
+		{
+			std::vector<VkAttachmentDescription> colorAttachments(colorAttachmentCount);
+			for (u32 i = 0; i < colorAttachmentCount; ++i)
+			{
+				colorAttachments[i] = vks::attachmentDescription(colorFormats[i], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			}
+			VkAttachmentDescription depthAttachment = vks::attachmentDescription(depthFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+			std::vector<VkAttachmentReference> colorReferences(colorAttachmentCount);
+			for (u32 i = 0; i < colorAttachmentCount; ++i)
+			{
+				colorReferences[i] = VkAttachmentReference{ i, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+			}
+			VkAttachmentReference depthAttachmentRef = { colorAttachmentCount, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+
+			Create(passName, inColorAttachmentFrameBuffer,
+				colorAttachments.data(), colorReferences.data(), colorAttachmentCount,
+				&depthAttachment, &depthAttachmentRef);
+		}
+
 		void VulkanRenderPass::CreateColorOnly(
 			const char* passName,
 			VkFormat colorFormat,
@@ -110,9 +136,6 @@ namespace flex
 				(colorAttachmentCount != 0 && colorAttachments != nullptr && colorAttachmentReferences != nullptr));
 			assert((depthAttachment != nullptr) == (depthAttachmentRef != nullptr));
 
-			colorAttachmentFrameBuffer = inColorAttachmentFrameBuffer;
-			m_Name = passName;
-
 			std::vector<VkAttachmentDescription> attachments(colorAttachmentCount + (depthAttachment != nullptr ? 1 : 0));
 
 			for (u32 i = 0; i < colorAttachmentCount; ++i)
@@ -125,8 +148,7 @@ namespace flex
 				attachments[attachments.size() - 1] = *depthAttachment;
 			}
 
-			VkSubpassDescription subpass;
-			subpass = {};
+			VkSubpassDescription subpass = {};
 			subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 			subpass.colorAttachmentCount = colorAttachmentCount;
 			subpass.pColorAttachments = colorAttachmentReferences;
@@ -158,15 +180,19 @@ namespace flex
 			renderPassCreateInfo.pSubpasses = &subpass;
 			renderPassCreateInfo.dependencyCount = dependencies.size();
 			renderPassCreateInfo.pDependencies = dependencies.data();
-			VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, &renderPassCreateInfo, nullptr, m_RenderPass.replace()));
-
-			((VulkanRenderer*)g_Renderer)->SetRenderPassName(m_VulkanDevice, m_RenderPass, passName);
+			
+			Create(passName, &renderPassCreateInfo, inColorAttachmentFrameBuffer);
 		}
 
 		void VulkanRenderPass::Create(const char* passName, VkRenderPassCreateInfo* createInfo, FrameBuffer* inColorAttachmentFrameBuffer)
 		{
 			colorAttachmentFrameBuffer = inColorAttachmentFrameBuffer;
 			m_Name = passName;
+
+			if (inColorAttachmentFrameBuffer)
+			{
+				inColorAttachmentFrameBuffer->renderPass = this;
+			}
 
 			VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, createInfo, nullptr, m_RenderPass.replace()));
 			((VulkanRenderer*)g_Renderer)->SetRenderPassName(m_VulkanDevice, m_RenderPass, passName);
