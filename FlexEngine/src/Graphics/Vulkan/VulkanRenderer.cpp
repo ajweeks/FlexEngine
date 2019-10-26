@@ -2662,7 +2662,7 @@ namespace flex
 			const u32 mipLevels = static_cast<u32>(floor(log2(dim))) + 1;
 
 			VulkanRenderPass renderPass(m_VulkanDevice);
-			renderPass.Create("Equirectangular to Cubemap render pass", format, VK_NULL_HANDLE);
+			renderPass.CreateColorOnly("Equirectangular to Cubemap render pass", format, nullptr);
 
 			// Offscreen framebuffer
 			struct {
@@ -2925,7 +2925,7 @@ namespace flex
 			const u32 mipLevels = static_cast<u32>(floor(log2(dim))) + 1;
 
 			VulkanRenderPass renderPass(m_VulkanDevice);
-			renderPass.Create("Generate Irradiance render pass", format, VK_NULL_HANDLE);
+			renderPass.CreateColorOnly("Generate Irradiance render pass", format, nullptr);
 
 			// Offscreen framebuffer
 			struct {
@@ -3191,7 +3191,7 @@ namespace flex
 			const u32 mipLevels = static_cast<u32>(floor(log2(dim))) + 1;
 
 			VulkanRenderPass renderPass(m_VulkanDevice);
-			renderPass.Create("Generate Prefiltered Cube render pass", format, VK_NULL_HANDLE);
+			renderPass.CreateColorOnly("Generate Prefiltered Cube render pass", format, nullptr);
 
 			struct {
 				VkImage image;
@@ -3446,7 +3446,7 @@ namespace flex
 				assert(dim <= MAX_TEXTURE_DIM);
 
 				VulkanRenderPass renderPass(m_VulkanDevice);
-				renderPass.Create("Generate BRDF LUT render pass", format, VK_NULL_HANDLE, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+				renderPass.CreateColorOnly("Generate BRDF LUT render pass", format, nullptr, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 				VkFramebufferCreateInfo framebufferCreateInfo = vks::framebufferCreateInfo(renderPass);
 				framebufferCreateInfo.attachmentCount = 1;
@@ -3790,7 +3790,7 @@ namespace flex
 				VulkanShader& computeSDFShader = m_Shaders[computeSDFShaderID];
 
 				VulkanRenderPass renderPass(m_VulkanDevice);
-				renderPass.Create("Font SDF render pass", fontTexFormat, VK_NULL_HANDLE);
+				renderPass.CreateColorOnly("Font SDF render pass", fontTexFormat, nullptr);
 
 				VkFramebufferCreateInfo framebufCreateInfo = vks::framebufferCreateInfo(renderPass);
 				framebufCreateInfo.attachmentCount = 1;
@@ -5058,30 +5058,30 @@ namespace flex
 			GetSupportedDepthFormat(m_VulkanDevice->m_PhysicalDevice, &depthFormat);
 
 			// TODO: Unify blur H & V buffers?
-			m_SSAORenderPass.Create("SSAO render pass", ssaoFrameBufFormat, m_SSAOFrameBuf, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			m_SSAOBlurHRenderPass.Create("SSAO Blur Horizontal render pass", ssaoFrameBufFormat, m_SSAOBlurHFrameBuf, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			m_SSAOBlurVRenderPass.Create("SSAO Blur Vertical render pass", ssaoFrameBufFormat, m_SSAOBlurVFrameBuf, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			m_SSAORenderPass.CreateColorOnly("SSAO render pass", ssaoFrameBufFormat, m_SSAOFrameBuf, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			m_SSAOBlurHRenderPass.CreateColorOnly("SSAO Blur Horizontal render pass", ssaoFrameBufFormat, m_SSAOBlurHFrameBuf, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			m_SSAOBlurVRenderPass.CreateColorOnly("SSAO Blur Vertical render pass", ssaoFrameBufFormat, m_SSAOBlurVFrameBuf, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 			// NOTE: We don't need a depth attachment at this point, but we're rendering to the swap chain
 			// frame buffers (which are created using the m_ForwardRenderPass which contains two attachments)
 			// TODO: Set final depth layout to VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL (triggers validation though...)
-			m_DeferredCombineRenderPass.Create("Deferred combine render pass", m_OffscreenFrameBufferFormat, m_OffscreenFrameBuffer0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-				VK_IMAGE_LAYOUT_UNDEFINED, true, depthFormat, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+			m_DeferredCombineRenderPass.CreateColorAndDepth("Deferred combine render pass", m_OffscreenFrameBufferFormat, m_OffscreenFrameBuffer0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+				VK_IMAGE_LAYOUT_UNDEFINED, depthFormat, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
-			m_ForwardRenderPass.Create("Forward render pass", m_OffscreenFrameBufferFormat, m_OffscreenFrameBuffer0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, true, depthFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			m_ForwardRenderPass.CreateColorAndDepth("Forward render pass", m_OffscreenFrameBufferFormat, m_OffscreenFrameBuffer0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, depthFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-			m_PostProcessRenderPass.Create("Post Process render pass", m_OffscreenFrameBufferFormat, m_OffscreenFrameBuffer1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-				VK_IMAGE_LAYOUT_UNDEFINED, true, depthFormat, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+			m_PostProcessRenderPass.CreateColorAndDepth("Post Process render pass", m_OffscreenFrameBufferFormat, m_OffscreenFrameBuffer1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+				VK_IMAGE_LAYOUT_UNDEFINED, depthFormat, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
-			m_GammaCorrectRenderPass.Create("Gamma correct render pass", m_OffscreenFrameBufferFormat, m_OffscreenFrameBuffer0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-				VK_IMAGE_LAYOUT_UNDEFINED, true, depthFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			m_GammaCorrectRenderPass.CreateColorAndDepth("Gamma correct render pass", m_OffscreenFrameBufferFormat, m_OffscreenFrameBuffer0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+				VK_IMAGE_LAYOUT_UNDEFINED, depthFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-			m_TAAResolveRenderPass.Create("TAA Resolve render pass", m_OffscreenFrameBufferFormat, m_OffscreenFrameBuffer1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, true, depthFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			m_TAAResolveRenderPass.CreateColorAndDepth("TAA Resolve render pass", m_OffscreenFrameBufferFormat, m_OffscreenFrameBuffer1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, depthFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-			m_UIRenderPass.Create("UI render pass", m_SwapChainImageFormat, nullptr, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-				VK_IMAGE_LAYOUT_UNDEFINED, true, depthFormat, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+			m_UIRenderPass.CreateColorAndDepth("UI render pass", m_SwapChainImageFormat, nullptr, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+				VK_IMAGE_LAYOUT_UNDEFINED, depthFormat, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
 			m_ShadowRenderPass.CreateDepthOnly("Shadow render pass", nullptr, m_ShadowBufFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 		}

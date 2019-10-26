@@ -21,26 +21,16 @@ namespace flex
 			VulkanRenderPass(VulkanDevice* device);
 
 			// TODO: Make work for multiple attachments & depth-only
-			void Create(
+			void CreateColorAndDepth(
 				const char* passName,
 				VkFormat colorFormat,
 				FrameBuffer* inColorAttachmentFrameBuffer,
 				VkImageLayout finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 				VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-				bool bDepth = false,
 				VkFormat depthFormat = VK_FORMAT_UNDEFINED,
 				VkImageLayout finalDepthLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 				VkImageLayout initialDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 			
-			void Create(
-				const char* passName,
-				FrameBuffer* inColorAttachmentFrameBuffer,
-				VkAttachmentDescription* colorAttachments,
-				VkAttachmentReference* colorAttachmentReferences,
-				u32 colorAttachmentCount,
-				VkAttachmentDescription* depthAttachment,
-				VkAttachmentReference* depthAttachmentRef);
-
 			void CreateDepthOnly(
 				const char* passName,
 				FrameBuffer* inColorAttachmentFrameBuffer,
@@ -48,6 +38,13 @@ namespace flex
 				VkImageLayout finalDepthLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 				VkImageLayout initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED);
 			
+			void CreateColorOnly(
+				const char* passName,
+				VkFormat colorFormat,
+				FrameBuffer* inColorAttachmentFrameBuffer,
+				VkImageLayout finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+				VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED);
+
 			void Create(const char* passName, VkRenderPassCreateInfo* createInfo, FrameBuffer* inColorAttachmentFrameBuffer);
 
 			VkRenderPass* Replace();
@@ -61,6 +58,15 @@ namespace flex
 			FrameBuffer* colorAttachmentFrameBuffer = nullptr;
 
 		private:
+			void Create(
+				const char* passName,
+				FrameBuffer* inColorAttachmentFrameBuffer,
+				VkAttachmentDescription* colorAttachments,
+				VkAttachmentReference* colorAttachmentReferences,
+				u32 colorAttachmentCount,
+				VkAttachmentDescription* depthAttachment,
+				VkAttachmentReference* depthAttachmentRef);
+
 			VulkanDevice* m_VulkanDevice = nullptr;
 
 			VDeleter<VkRenderPass> m_RenderPass;

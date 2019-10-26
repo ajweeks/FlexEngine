@@ -22,13 +22,12 @@ namespace flex
 		{
 		}
 
-		void VulkanRenderPass::Create(
+		void VulkanRenderPass::CreateColorAndDepth(
 			const char* passName,
 			VkFormat colorFormat,
 			FrameBuffer* inColorAttachmentFrameBuffer,
 			VkImageLayout finalLayout /* = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL */,
 			VkImageLayout initialLayout /* = VK_IMAGE_LAYOUT_UNDEFINED */,
-			bool bDepth /* = false */,
 			VkFormat depthFormat /* = VK_FORMAT_UNDEFINED */,
 			VkImageLayout finalDepthLayout /* = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL */,
 			VkImageLayout initialDepthLayout /* = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL */)
@@ -41,11 +40,8 @@ namespace flex
 				colorAttachment.initialLayout = initialLayout;
 				colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 
-				if (bDepth)
-				{
-					depthAttachment.initialLayout = initialDepthLayout;
-					depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-				}
+				depthAttachment.initialLayout = initialDepthLayout;
+				depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 			}
 
 			VkAttachmentReference colorReference = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
@@ -53,7 +49,29 @@ namespace flex
 
 			Create(passName, inColorAttachmentFrameBuffer,
 				&colorAttachment, &colorReference, 1,
-				bDepth ? &depthAttachment : nullptr, bDepth ? &depthAttachmentRef : nullptr);
+				&depthAttachment, &depthAttachmentRef);
+		}
+
+		void VulkanRenderPass::CreateColorOnly(
+			const char* passName,
+			VkFormat colorFormat,
+			FrameBuffer* inColorAttachmentFrameBuffer,
+			VkImageLayout finalLayout /* = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL */,
+			VkImageLayout initialLayout /* = VK_IMAGE_LAYOUT_UNDEFINED */)
+		{
+			VkAttachmentDescription colorAttachment = vks::attachmentDescription(colorFormat, finalLayout);
+
+			if (initialLayout != VK_IMAGE_LAYOUT_UNDEFINED)
+			{
+				colorAttachment.initialLayout = initialLayout;
+				colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+			}
+
+			VkAttachmentReference colorReference = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+
+			Create(passName, inColorAttachmentFrameBuffer,
+				&colorAttachment, &colorReference, 1,
+				nullptr, nullptr);
 		}
 
 		void VulkanRenderPass::CreateDepthOnly(
