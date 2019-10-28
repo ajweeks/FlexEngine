@@ -5084,6 +5084,19 @@ namespace flex
 				VK_IMAGE_LAYOUT_UNDEFINED, depthFormat, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
 			m_ShadowRenderPass.CreateDepthOnly("Shadow render pass", nullptr, m_ShadowBufFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+			//  Deferred render pass
+			{
+				const u32 frameBufferColorAttachmentCount = m_GBufferFrameBuf->frameBufferAttachments.size();
+
+				std::vector<VkFormat> colorAttachmentFormats(frameBufferColorAttachmentCount);
+				for (u32 i = 0; i < frameBufferColorAttachmentCount; ++i)
+				{
+					colorAttachmentFormats[i] = m_GBufferFrameBuf->frameBufferAttachments[i].second.format;
+				}
+
+				m_DeferredRenderPass.CreateMultiColorAndDepth("Deferred render pass", m_GBufferFrameBuf, frameBufferColorAttachmentCount, colorAttachmentFormats.data(), depthFormat);
+			}
 		}
 
 		void VulkanRenderer::CreateDescriptorSet(RenderID renderID)
@@ -5890,10 +5903,10 @@ namespace flex
 			m_SSAOBlurVFrameBuf->width = m_SwapChainExtent.width;
 			m_SSAOBlurVFrameBuf->height = m_SwapChainExtent.height;
 
-			const size_t frameBufferColorAttachmentCount = m_GBufferFrameBuf->frameBufferAttachments.size();
-
-			//  Deferred render pass
+			// GBuffer frame buffer
 			{
+				const u32 frameBufferColorAttachmentCount = m_GBufferFrameBuf->frameBufferAttachments.size();
+
 				for (u32 i = 0; i < frameBufferColorAttachmentCount; ++i)
 				{
 					char dbgImageName[256];
@@ -5903,21 +5916,6 @@ namespace flex
 					CreateAttachment(m_VulkanDevice, m_GBufferFrameBuf, i, dbgImageName, dbgImageViewName);
 				}
 
-				VkFormat depthFormat;
-				VkBool32 validDepthFormat = GetSupportedDepthFormat(m_VulkanDevice->m_PhysicalDevice, &depthFormat);
-				assert(validDepthFormat);
-
-				std::vector<VkFormat> colorAttachmentFormats(frameBufferColorAttachmentCount);
-				for (u32 i = 0; i < frameBufferColorAttachmentCount; ++i)
-				{
-					colorAttachmentFormats[i] = m_GBufferFrameBuf->frameBufferAttachments[i].second.format;
-				}
-
-				m_DeferredRenderPass.CreateMultiColorAndDepth("GBuffer render pass", m_GBufferFrameBuf, frameBufferColorAttachmentCount, colorAttachmentFormats.data(), depthFormat);
-			}
-
-			// GBuffer frame buffer
-			{
 				std::vector<VkImageView> attachments;
 				for (u32 i = 0; i < frameBufferColorAttachmentCount; ++i)
 				{
