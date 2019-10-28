@@ -53,6 +53,7 @@ namespace flex
 	using ShaderID = u32;
 	using MaterialID = u32;
 	using TextureID = u32;
+	using FrameBufferID = u32;
 	using PointLightID = u32;
 	using AudioSourceID = u32;
 	using TrackID = u32;
@@ -64,6 +65,7 @@ namespace flex
 #define InvalidShaderID ((ShaderID)u32_max)
 #define InvalidMaterialID ((MaterialID)u32_max)
 #define InvalidTextureID ((TextureID)u32_max)
+#define InvalidFrameBufferID ((FrameBufferID)u32_max)
 #define InvalidPointLightID ((PointLightID)u32_max)
 #define InvalidAudioSourceID ((AudioSourceID)u32_max)
 #define InvalidTrackID ((TrackID)u32_max)

@@ -22,10 +22,20 @@ namespace flex
 		{
 		}
 
+		void VulkanRenderPass::Create(const char* passName, VkRenderPassCreateInfo* createInfo,
+			const std::vector<FrameBufferID>& inFrameBufferIDs)
+		{
+			frameBufferIDs = inFrameBufferIDs;
+			m_Name = passName;
+
+			VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, createInfo, nullptr, m_RenderPass.replace()));
+			((VulkanRenderer*)g_Renderer)->SetRenderPassName(m_VulkanDevice, m_RenderPass, passName);
+		}
+
 		void VulkanRenderPass::CreateColorAndDepth(
 			const char* passName,
 			VkFormat colorFormat,
-			FrameBuffer* inColorAttachmentFrameBuffer,
+			FrameBufferID frameBufferID,
 			VkImageLayout finalLayout /* = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL */,
 			VkImageLayout initialLayout /* = VK_IMAGE_LAYOUT_UNDEFINED */,
 			VkFormat depthFormat /* = VK_FORMAT_UNDEFINED */,
@@ -47,16 +57,16 @@ namespace flex
 			VkAttachmentReference colorReference = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
 			VkAttachmentReference depthAttachmentRef = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 
-			Create(passName, inColorAttachmentFrameBuffer,
+			Create(passName, { frameBufferID },
 				&colorAttachment, &colorReference, 1,
 				&depthAttachment, &depthAttachmentRef);
 		}
 
 		void VulkanRenderPass::CreateMultiColorAndDepth(
 			const char* passName,
-			FrameBuffer* inColorAttachmentFrameBuffer,
-			u32 colorAttachmentCount,
+			FrameBufferID frameBufferID,
 			VkFormat* colorFormats,
+			u32 colorAttachmentCount,
 			VkFormat depthFormat)
 		{
 			std::vector<VkAttachmentDescription> colorAttachments(colorAttachmentCount);
@@ -73,36 +83,14 @@ namespace flex
 			}
 			VkAttachmentReference depthAttachmentRef = { colorAttachmentCount, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 
-			Create(passName, inColorAttachmentFrameBuffer,
+			Create(passName, { frameBufferID },
 				colorAttachments.data(), colorReferences.data(), colorAttachmentCount,
 				&depthAttachment, &depthAttachmentRef);
 		}
 
-		void VulkanRenderPass::CreateColorOnly(
-			const char* passName,
-			VkFormat colorFormat,
-			FrameBuffer* inColorAttachmentFrameBuffer,
-			VkImageLayout finalLayout /* = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL */,
-			VkImageLayout initialLayout /* = VK_IMAGE_LAYOUT_UNDEFINED */)
-		{
-			VkAttachmentDescription colorAttachment = vks::attachmentDescription(colorFormat, finalLayout);
-
-			if (initialLayout != VK_IMAGE_LAYOUT_UNDEFINED)
-			{
-				colorAttachment.initialLayout = initialLayout;
-				colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-			}
-
-			VkAttachmentReference colorReference = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
-
-			Create(passName, inColorAttachmentFrameBuffer,
-				&colorAttachment, &colorReference, 1,
-				nullptr, nullptr);
-		}
-
 		void VulkanRenderPass::CreateDepthOnly(
 			const char* passName,
-			FrameBuffer* inColorAttachmentFrameBuffer,
+			FrameBufferID frameBufferID,
 			VkFormat depthFormat /* = VK_FORMAT_UNDEFINED */,
 			VkImageLayout finalDepthLayout /* = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL */,
 			VkImageLayout initialDepthLayout /* = VK_IMAGE_LAYOUT_UNDEFINED */)
@@ -117,14 +105,36 @@ namespace flex
 
 			VkAttachmentReference depthAttachmentRef = { 0, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 
-			Create(passName, inColorAttachmentFrameBuffer,
+			Create(passName, { frameBufferID },
 				nullptr, nullptr, 0,
 				&depthAttachment, &depthAttachmentRef);
 		}
 
+		void VulkanRenderPass::CreateColorOnly(
+			const char* passName,
+			VkFormat colorFormat,
+			FrameBufferID frameBufferID,
+			VkImageLayout finalLayout /* = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL */,
+			VkImageLayout initialLayout /* = VK_IMAGE_LAYOUT_UNDEFINED */)
+		{
+			VkAttachmentDescription colorAttachment = vks::attachmentDescription(colorFormat, finalLayout);
+
+			if (initialLayout != VK_IMAGE_LAYOUT_UNDEFINED)
+			{
+				colorAttachment.initialLayout = initialLayout;
+				colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+			}
+
+			VkAttachmentReference colorReference = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+
+			Create(passName, { frameBufferID },
+				&colorAttachment, &colorReference, 1,
+				nullptr, nullptr);
+		}
+
 		void VulkanRenderPass::Create(
 			const char* passName,
-			FrameBuffer* inColorAttachmentFrameBuffer,
+			const std::vector<FrameBufferID>& inFrameBufferIDs,
 			VkAttachmentDescription* colorAttachments,
 			VkAttachmentReference* colorAttachmentReferences,
 			u32 colorAttachmentCount,
@@ -181,34 +191,20 @@ namespace flex
 			renderPassCreateInfo.dependencyCount = dependencies.size();
 			renderPassCreateInfo.pDependencies = dependencies.data();
 			
-			Create(passName, &renderPassCreateInfo, inColorAttachmentFrameBuffer);
+			Create(passName, &renderPassCreateInfo, inFrameBufferIDs);
 		}
 
-		void VulkanRenderPass::Create(const char* passName, VkRenderPassCreateInfo* createInfo, FrameBuffer* inColorAttachmentFrameBuffer)
+		void VulkanRenderPass::Begin_WithFrameBuffer(VkCommandBuffer cmdBuf, VkClearValue* clearValues, u32 clearValueCount, FrameBufferID frameBufferID)
 		{
-			colorAttachmentFrameBuffer = inColorAttachmentFrameBuffer;
-			m_Name = passName;
-
-			if (inColorAttachmentFrameBuffer)
-			{
-				inColorAttachmentFrameBuffer->renderPass = this;
-			}
-
-			VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, createInfo, nullptr, m_RenderPass.replace()));
-			((VulkanRenderer*)g_Renderer)->SetRenderPassName(m_VulkanDevice, m_RenderPass, passName);
+			Begin(cmdBuf, clearValues, clearValueCount, frameBufferID);
 		}
 
-		VkRenderPass* VulkanRenderPass::Replace()
+		void VulkanRenderPass::Begin(VkCommandBuffer cmdBuf, VkClearValue* clearValues, u32 clearValueCount)
 		{
-			return m_RenderPass.replace();
+			Begin(cmdBuf, clearValues, clearValueCount, frameBufferIDs[0]);
 		}
 
-		VulkanRenderPass::operator VkRenderPass()
-		{
-			return m_RenderPass;
-		}
-
-		void VulkanRenderPass::Begin(VkCommandBuffer cmdBuf, VkClearValue* clearValue)
+		void VulkanRenderPass::Begin(VkCommandBuffer cmdBuf, VkClearValue* clearValues, u32 clearValueCount, FrameBufferID frameBufferID)
 		{
 			if (m_ActiveCommandBuffer != VK_NULL_HANDLE)
 			{
@@ -218,36 +214,16 @@ namespace flex
 
 			m_ActiveCommandBuffer = cmdBuf;
 
-			VkRenderPassBeginInfo renderPassBeginInfo = vks::renderPassBeginInfo(m_RenderPass);
-
-			renderPassBeginInfo.renderPass = m_RenderPass;
-			renderPassBeginInfo.framebuffer = colorAttachmentFrameBuffer->frameBuffer;
-			renderPassBeginInfo.renderArea.offset = { 0, 0 };
-			renderPassBeginInfo.renderArea.extent = { colorAttachmentFrameBuffer->width, colorAttachmentFrameBuffer->height };
-			renderPassBeginInfo.clearValueCount = 1;
-			renderPassBeginInfo.pClearValues = clearValue;
-
-			vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-		}
-
-		void VulkanRenderPass::Begin(VkCommandBuffer cmdBuf, const std::vector<VkClearValue>& clearValues)
-		{
-			if (m_ActiveCommandBuffer != VK_NULL_HANDLE)
-			{
-				PrintError("Attempted to begin render pass (%s) multiple times! Did you forget to call End?\n", m_Name);
-				return;
-			}
-
-			m_ActiveCommandBuffer = cmdBuf;
+			FrameBuffer* frameBuffer = ((VulkanRenderer*)g_Renderer)->GetFrameBuffer(frameBufferID);
 
 			VkRenderPassBeginInfo renderPassBeginInfo = vks::renderPassBeginInfo(m_RenderPass);
 
 			renderPassBeginInfo.renderPass = m_RenderPass;
-			renderPassBeginInfo.framebuffer = colorAttachmentFrameBuffer->frameBuffer;
+			renderPassBeginInfo.framebuffer = frameBuffer->frameBuffer;
 			renderPassBeginInfo.renderArea.offset = { 0, 0 };
-			renderPassBeginInfo.renderArea.extent = { colorAttachmentFrameBuffer->width, colorAttachmentFrameBuffer->height };
-			renderPassBeginInfo.clearValueCount = clearValues.size();
-			renderPassBeginInfo.pClearValues = clearValues.data();
+			renderPassBeginInfo.renderArea.extent = { frameBuffer->width, frameBuffer->height };
+			renderPassBeginInfo.clearValueCount = clearValueCount;
+			renderPassBeginInfo.pClearValues = clearValues;
 
 			vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 		}
@@ -263,6 +239,16 @@ namespace flex
 			vkCmdEndRenderPass(m_ActiveCommandBuffer);
 
 			m_ActiveCommandBuffer = VK_NULL_HANDLE;
+		}
+
+		VkRenderPass* VulkanRenderPass::Replace()
+		{
+			return m_RenderPass.replace();
+		}
+
+		VulkanRenderPass::operator VkRenderPass()
+		{
+			return m_RenderPass;
 		}
 	} // namespace vk
 } // namespace flex

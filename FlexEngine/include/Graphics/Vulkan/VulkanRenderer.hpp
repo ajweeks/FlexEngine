@@ -111,6 +111,10 @@ namespace flex
 			virtual u32 GetTextureHandle(TextureID textureID) const override;
 			virtual void RenderObjectStateChanged() override;
 
+			void SetFrameBufferRenderPass(FrameBufferID frameBufferID, VulkanRenderPass* renderPass);
+
+			void RegisterFramebuffer(FrameBuffer* frameBuffer);
+
 			static void SetObjectName(VulkanDevice* device, u64 object, VkDebugReportObjectTypeEXT type, const char* name);
 			static void SetCommandBufferName(VulkanDevice* device, VkCommandBuffer commandBuffer, const char* name);
 			static void SetSwapchainName(VulkanDevice* device, VkSwapchainKHR swapchain, const char* name);
@@ -145,6 +149,7 @@ namespace flex
 
 		private:
 			friend VulkanPhysicsDebugDraw;
+			friend VulkanRenderPass;
 
 			void DestroyRenderObject(RenderID renderID, VulkanRenderObject* renderObject);
 
@@ -321,6 +326,7 @@ namespace flex
 			static const u32 MAX_NUM_DESC_DYNAMIC_UNIFORM_BUFFERS = 1024;
 
 			VulkanRenderObject* GetRenderObject(RenderID renderID);
+			FrameBuffer* GetFrameBuffer(FrameBufferID frameBufferID);
 
 			u32 GetActiveRenderObjectCount() const;
 
@@ -418,6 +424,8 @@ namespace flex
 			VkDescriptorSet m_ShadowDescriptorSet = VK_NULL_HANDLE;
 			Cascade* m_ShadowCascades[NUM_SHADOW_CASCADES];
 
+			std::map<FrameBufferID, FrameBuffer*> m_FrameBuffers;
+
 			Material::PushConstantBlock* m_SpritePerspPushConstBlock = nullptr;
 			Material::PushConstantBlock* m_SpriteOrthoPushConstBlock = nullptr;
 			Material::PushConstantBlock* m_SpriteOrthoArrPushConstBlock = nullptr;
@@ -490,7 +498,7 @@ namespace flex
 			VkFormat m_SwapChainImageFormat = VK_FORMAT_UNDEFINED;
 			VkExtent2D m_SwapChainExtent;
 			std::vector<VDeleter<VkImageView>> m_SwapChainImageViews;
-			std::vector<VDeleter<VkFramebuffer>> m_SwapChainFramebuffers;
+			std::vector<FrameBuffer*> m_SwapChainFramebuffers;
 			FrameBufferAttachment* m_SwapChainDepthAttachment = nullptr;
 
 			VulkanRenderPass m_ShadowRenderPass;
@@ -591,6 +599,9 @@ namespace flex
 #ifdef DEBUG
 			AsyncVulkanShaderCompiler* m_ShaderCompiler = nullptr;
 #endif
+
+			const FrameBufferID SWAP_CHAIN_FRAME_BUFFER_ID = 90909;
+			const FrameBufferID SHADOW_CASCADE_FRAME_BUFFER_ID = 80808;
 
 			static std::array<glm::mat4, 6> s_CaptureViews;
 

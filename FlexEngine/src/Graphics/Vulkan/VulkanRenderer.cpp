@@ -702,6 +702,12 @@ namespace flex
 				m_RenderPasses[i]->Replace();
 			}
 
+			for (u32 i = 0; i < m_SwapChainFramebuffers.size(); ++i)
+			{
+				delete m_SwapChainFramebuffers[i];
+			}
+			m_SwapChainFramebuffers.clear();
+
 			vkDestroySemaphore(m_VulkanDevice->m_LogicalDevice, m_OffscreenSemaphore, nullptr);
 
 			m_ShadowImage.replace();
@@ -776,7 +782,6 @@ namespace flex
 
 			m_SwapChain.replace();
 			m_SwapChainImageViews.clear();
-			m_SwapChainFramebuffers.clear();
 
 			vkDestroyQueryPool(m_VulkanDevice->m_LogicalDevice, m_TimestampQueryPool, nullptr);
 
@@ -2662,7 +2667,7 @@ namespace flex
 			const u32 mipLevels = static_cast<u32>(floor(log2(dim))) + 1;
 
 			VulkanRenderPass renderPass(m_VulkanDevice);
-			renderPass.CreateColorOnly("Equirectangular to Cubemap render pass", format, nullptr);
+			renderPass.CreateColorOnly("Equirectangular to Cubemap render pass", format, InvalidFrameBufferID);
 
 			// Offscreen framebuffer
 			struct {
@@ -2925,7 +2930,7 @@ namespace flex
 			const u32 mipLevels = static_cast<u32>(floor(log2(dim))) + 1;
 
 			VulkanRenderPass renderPass(m_VulkanDevice);
-			renderPass.CreateColorOnly("Generate Irradiance render pass", format, nullptr);
+			renderPass.CreateColorOnly("Generate Irradiance render pass", format, InvalidFrameBufferID);
 
 			// Offscreen framebuffer
 			struct {
@@ -3191,7 +3196,7 @@ namespace flex
 			const u32 mipLevels = static_cast<u32>(floor(log2(dim))) + 1;
 
 			VulkanRenderPass renderPass(m_VulkanDevice);
-			renderPass.CreateColorOnly("Generate Prefiltered Cube render pass", format, nullptr);
+			renderPass.CreateColorOnly("Generate Prefiltered Cube render pass", format, InvalidFrameBufferID);
 
 			struct {
 				VkImage image;
@@ -3446,7 +3451,7 @@ namespace flex
 				assert(dim <= MAX_TEXTURE_DIM);
 
 				VulkanRenderPass renderPass(m_VulkanDevice);
-				renderPass.CreateColorOnly("Generate BRDF LUT render pass", format, nullptr, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+				renderPass.CreateColorOnly("Generate BRDF LUT render pass", format, InvalidFrameBufferID, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 				VkFramebufferCreateInfo framebufferCreateInfo = vks::framebufferCreateInfo(renderPass);
 				framebufferCreateInfo.attachmentCount = 1;
@@ -3669,6 +3674,22 @@ namespace flex
 			return m_RenderObjects[renderID];
 		}
 
+		FrameBuffer* VulkanRenderer::GetFrameBuffer(FrameBufferID frameBufferID)
+		{
+			if (frameBufferID == SWAP_CHAIN_FRAME_BUFFER_ID)
+			{
+				return m_SwapChainFramebuffers[m_CurrentSwapChainBufferIndex];
+			}
+			else if (frameBufferID == SHADOW_CASCADE_FRAME_BUFFER_ID)
+			{
+				// There's not enough info at this point to know which shadow cascade is needed, this
+				// function should be bypassed by calling VulkanRenderPass::Begin_WithFrameBuffer directly
+				ENSURE_NO_ENTRY()
+				return nullptr;
+			}
+			return m_FrameBuffers[frameBufferID];
+		}
+
 		u32 VulkanRenderer::GetActiveRenderObjectCount() const
 		{
 			u32 capacity = 0;
@@ -3790,7 +3811,7 @@ namespace flex
 				VulkanShader& computeSDFShader = m_Shaders[computeSDFShaderID];
 
 				VulkanRenderPass renderPass(m_VulkanDevice);
-				renderPass.CreateColorOnly("Font SDF render pass", fontTexFormat, nullptr);
+				renderPass.CreateColorOnly("Font SDF render pass", fontTexFormat, InvalidFrameBufferID);
 
 				VkFramebufferCreateInfo framebufCreateInfo = vks::framebufferCreateInfo(renderPass);
 				framebufCreateInfo.attachmentCount = 1;
@@ -5022,6 +5043,12 @@ namespace flex
 
 			m_SSAORes = glm::vec2u((u32)(m_SwapChainExtent.width / 2.0f), (u32)(m_SwapChainExtent.height / 2.0f));
 
+			for (u32 i = 0; i < m_SwapChainFramebuffers.size(); ++i)
+			{
+				m_SwapChainFramebuffers[i]->width = m_SwapChainExtent.width;
+				m_SwapChainFramebuffers[i]->height = m_SwapChainExtent.height;
+			}
+
 			SetSwapchainName(m_VulkanDevice, m_SwapChain, "Default Swapchain");
 		}
 
@@ -5058,32 +5085,32 @@ namespace flex
 			GetSupportedDepthFormat(m_VulkanDevice->m_PhysicalDevice, &depthFormat);
 
 			// TODO: Unify blur H & V buffers?
-			m_SSAORenderPass.CreateColorOnly("SSAO render pass", ssaoFrameBufFormat, m_SSAOFrameBuf, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			m_SSAOBlurHRenderPass.CreateColorOnly("SSAO Blur Horizontal render pass", ssaoFrameBufFormat, m_SSAOBlurHFrameBuf, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			m_SSAOBlurVRenderPass.CreateColorOnly("SSAO Blur Vertical render pass", ssaoFrameBufFormat, m_SSAOBlurVFrameBuf, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			m_SSAORenderPass.CreateColorOnly("SSAO render pass", ssaoFrameBufFormat, m_SSAOFrameBuf->ID, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			m_SSAOBlurHRenderPass.CreateColorOnly("SSAO Blur Horizontal render pass", ssaoFrameBufFormat, m_SSAOBlurHFrameBuf->ID, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			m_SSAOBlurVRenderPass.CreateColorOnly("SSAO Blur Vertical render pass", ssaoFrameBufFormat, m_SSAOBlurVFrameBuf->ID, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 			// NOTE: We don't need a depth attachment at this point, but we're rendering to the swap chain
 			// frame buffers (which are created using the m_ForwardRenderPass which contains two attachments)
 			// TODO: Set final depth layout to VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL (triggers validation though...)
-			m_DeferredCombineRenderPass.CreateColorAndDepth("Deferred combine render pass", m_OffscreenFrameBufferFormat, m_OffscreenFrameBuffer0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			m_DeferredCombineRenderPass.CreateColorAndDepth("Deferred combine render pass", m_OffscreenFrameBufferFormat, m_OffscreenFrameBuffer0->ID, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 				VK_IMAGE_LAYOUT_UNDEFINED, depthFormat, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
-			m_ForwardRenderPass.CreateColorAndDepth("Forward render pass", m_OffscreenFrameBufferFormat, m_OffscreenFrameBuffer0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			m_ForwardRenderPass.CreateColorAndDepth("Forward render pass", m_OffscreenFrameBufferFormat, m_OffscreenFrameBuffer0->ID, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, depthFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-			m_PostProcessRenderPass.CreateColorAndDepth("Post Process render pass", m_OffscreenFrameBufferFormat, m_OffscreenFrameBuffer1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			m_PostProcessRenderPass.CreateColorAndDepth("Post Process render pass", m_OffscreenFrameBufferFormat, m_OffscreenFrameBuffer1->ID, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 				VK_IMAGE_LAYOUT_UNDEFINED, depthFormat, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
-			m_GammaCorrectRenderPass.CreateColorAndDepth("Gamma correct render pass", m_OffscreenFrameBufferFormat, m_OffscreenFrameBuffer0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			m_GammaCorrectRenderPass.CreateColorAndDepth("Gamma correct render pass", m_OffscreenFrameBufferFormat, m_OffscreenFrameBuffer0->ID, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 				VK_IMAGE_LAYOUT_UNDEFINED, depthFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-			m_TAAResolveRenderPass.CreateColorAndDepth("TAA Resolve render pass", m_OffscreenFrameBufferFormat, m_OffscreenFrameBuffer1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			m_TAAResolveRenderPass.CreateColorAndDepth("TAA Resolve render pass", m_OffscreenFrameBufferFormat, m_OffscreenFrameBuffer1->ID, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, depthFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-			m_UIRenderPass.CreateColorAndDepth("UI render pass", m_SwapChainImageFormat, nullptr, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+			m_UIRenderPass.CreateColorAndDepth("UI render pass", m_SwapChainImageFormat, SWAP_CHAIN_FRAME_BUFFER_ID, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 				VK_IMAGE_LAYOUT_UNDEFINED, depthFormat, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
-			m_ShadowRenderPass.CreateDepthOnly("Shadow render pass", nullptr, m_ShadowBufFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			m_ShadowRenderPass.CreateDepthOnly("Shadow render pass", SHADOW_CASCADE_FRAME_BUFFER_ID, m_ShadowBufFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 			//  Deferred render pass
 			{
@@ -5095,7 +5122,7 @@ namespace flex
 					colorAttachmentFormats[i] = m_GBufferFrameBuf->frameBufferAttachments[i].second.format;
 				}
 
-				m_DeferredRenderPass.CreateMultiColorAndDepth("Deferred render pass", m_GBufferFrameBuf, frameBufferColorAttachmentCount, colorAttachmentFormats.data(), depthFormat);
+				m_DeferredRenderPass.CreateMultiColorAndDepth("Deferred render pass", m_GBufferFrameBuf->ID, colorAttachmentFormats.data(), colorAttachmentFormats.size(), depthFormat);
 			}
 		}
 
@@ -5856,7 +5883,17 @@ namespace flex
 
 		void VulkanRenderer::CreateFramebuffers()
 		{
-			m_SwapChainFramebuffers.resize(m_SwapChainImageViews.size(), VDeleter<VkFramebuffer>{ m_VulkanDevice->m_LogicalDevice, vkDestroyFramebuffer });
+			for (u32 i = 0; i < m_SwapChainFramebuffers.size(); ++i)
+			{
+				delete m_SwapChainFramebuffers[i];
+			}
+			
+			m_SwapChainFramebuffers.resize(m_SwapChainImageViews.size());
+
+			for (u32 i = 0; i < m_SwapChainFramebuffers.size(); ++i)
+			{
+				m_SwapChainFramebuffers[i] = new FrameBuffer(m_VulkanDevice);
+			}
 
 			for (u32 i = 0; i < m_SwapChainImageViews.size(); ++i)
 			{
@@ -5870,11 +5907,13 @@ namespace flex
 				framebufferInfo.pAttachments = attachments.data();
 				framebufferInfo.width = m_SwapChainExtent.width;
 				framebufferInfo.height = m_SwapChainExtent.height;
-				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &framebufferInfo, nullptr, m_SwapChainFramebuffers[i].replace()));
+				m_SwapChainFramebuffers[i]->width = m_SwapChainExtent.width;
+				m_SwapChainFramebuffers[i]->height = m_SwapChainExtent.height;
+				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &framebufferInfo, nullptr, m_SwapChainFramebuffers[i]->Replace()));
 
 				char name[256];
 				sprintf_s(name, "Swapchain %u", i);
-				SetFramebufferName(m_VulkanDevice, m_SwapChainFramebuffers[i], name);
+				SetFramebufferName(m_VulkanDevice, m_SwapChainFramebuffers[i]->frameBuffer, name);
 			}
 		}
 
@@ -5953,6 +5992,7 @@ namespace flex
 				offscreen0FramebufferCreateInfo.attachmentCount = static_cast<u32>(attachments.size());
 				offscreen0FramebufferCreateInfo.width = m_OffscreenFrameBuffer0->width;
 				offscreen0FramebufferCreateInfo.height = m_OffscreenFrameBuffer0->height;
+				// TODO: Register all passes which use this FB, not just m_DeferredCombineRenderPass
 				m_OffscreenFrameBuffer0->Create(&offscreen0FramebufferCreateInfo, &m_DeferredCombineRenderPass, "Offscreen 0 frame buffer");
 
 				attachments[0] = m_OffscreenFrameBuffer1->frameBufferAttachments[0].second.view;
@@ -5963,6 +6003,7 @@ namespace flex
 				offscreen1FramebufferCreateInfo.width = m_OffscreenFrameBuffer1->width;
 				offscreen1FramebufferCreateInfo.height = m_OffscreenFrameBuffer1->height;
 				offscreen1FramebufferCreateInfo.renderPass = m_DeferredCombineRenderPass;
+				// TODO: Register all passes which use this FB, not just m_DeferredCombineRenderPass
 				m_OffscreenFrameBuffer1->Create(&offscreen1FramebufferCreateInfo, &m_DeferredCombineRenderPass, "Offscreen 1 frame buffer");
 			}
 
@@ -6231,7 +6272,7 @@ namespace flex
 			renderPassInfo.dependencyCount = dependencies.size();
 			renderPassInfo.pDependencies = dependencies.data();
 
-			m_DeferredCubemapRenderPass.Create("GBuffer Cubemap render pass", &renderPassInfo, m_GBufferCubemapFrameBuffer);
+			m_DeferredCubemapRenderPass.Create("GBuffer Cubemap render pass", &renderPassInfo, { m_GBufferCubemapFrameBuffer->ID });
 
 			std::vector<VkImageView> attachments;
 			for (u32 i = 0; i < frameBufferColorAttachmentCount; ++i)
@@ -6240,13 +6281,13 @@ namespace flex
 			}
 			attachments.push_back(m_CubemapDepthAttachment->view);
 
-			VkFramebufferCreateInfo fbufCreateInfo = vks::framebufferCreateInfo(*m_GBufferCubemapFrameBuffer->renderPass);
+			VkFramebufferCreateInfo fbufCreateInfo = vks::framebufferCreateInfo(m_DeferredCubemapRenderPass);
 			fbufCreateInfo.pAttachments = attachments.data();
 			fbufCreateInfo.attachmentCount = static_cast<u32>(attachments.size());
 			fbufCreateInfo.width = m_GBufferCubemapFrameBuffer->width;
 			fbufCreateInfo.height = m_GBufferCubemapFrameBuffer->height;
 			fbufCreateInfo.layers = 6;
-			m_GBufferCubemapFrameBuffer->Create(&fbufCreateInfo, m_GBufferCubemapFrameBuffer->renderPass, "GBuffer Cubemap frame buffer");
+			m_GBufferCubemapFrameBuffer->Create(&fbufCreateInfo, &m_DeferredCubemapRenderPass, "GBuffer Cubemap frame buffer");
 		}
 
 		void VulkanRenderer::RemoveMaterial(MaterialID materialID)
@@ -6885,7 +6926,7 @@ namespace flex
 
 			VkDeviceSize offsets[1] = { 0 };
 
-			renderPass.Begin(commandBuffer, clearValues);
+			renderPass.Begin(commandBuffer, clearValues.data(), clearValues.size());
 
 			{
 				BindDescriptorSet(vkShader, 0, commandBuffer, pipelineLayout, descriptorSet);
@@ -6959,9 +7000,7 @@ namespace flex
 
 					for (u32 c = 0; c < NUM_SHADOW_CASCADES; ++c)
 					{
-						// SHADOW_CASCADE_RES
-						m_ShadowRenderPass.colorAttachmentFrameBuffer = &m_ShadowCascades[c]->frameBuffer;
-						m_ShadowRenderPass.Begin(m_OffScreenCmdBuffer, (VkClearValue*)&depthStencilClearValue);
+						m_ShadowRenderPass.Begin_WithFrameBuffer(m_OffScreenCmdBuffer, (VkClearValue*)&depthStencilClearValue, 1, m_ShadowCascades[c]->frameBuffer.ID);
 
 						DrawCallInfo shadowDrawCallInfo = {};
 						shadowDrawCallInfo.materialIDOverride = m_ShadowMaterialID;
@@ -6996,7 +7035,7 @@ namespace flex
 				gBufClearValues[1].color = m_ClearColor;
 				gBufClearValues[2].depthStencil = { 0.0f, 0 };
 
-				m_DeferredRenderPass.Begin(m_OffScreenCmdBuffer, gBufClearValues);
+				m_DeferredRenderPass.Begin(m_OffScreenCmdBuffer, gBufClearValues.data(), gBufClearValues.size());
 
 				VkViewport fullScreenViewport = vks::viewportFlipped((real)m_GBufferFrameBuf->width, (real)m_GBufferFrameBuf->height, 0.0f, 1.0f);
 				vkCmdSetViewport(m_OffScreenCmdBuffer, 0, 1, &fullScreenViewport);
@@ -7032,7 +7071,7 @@ namespace flex
 
 					BeginDebugMarkerRegion(m_OffScreenCmdBuffer, "SSAO");
 
-					m_SSAORenderPass.Begin(m_OffScreenCmdBuffer, (VkClearValue*)&m_ClearColor);
+					m_SSAORenderPass.Begin(m_OffScreenCmdBuffer, (VkClearValue*)&m_ClearColor, 1);
 
 					assert(m_SSAOShaderID != InvalidShaderID);
 
@@ -7062,7 +7101,7 @@ namespace flex
 					{
 						BeginDebugMarkerRegion(m_OffScreenCmdBuffer, "SSAO Blur");
 
-						m_SSAOBlurHRenderPass.Begin(m_OffScreenCmdBuffer, (VkClearValue*)&m_ClearColor);
+						m_SSAOBlurHRenderPass.Begin(m_OffScreenCmdBuffer, (VkClearValue*)&m_ClearColor, 1);
 
 						assert(m_SSAOBlurShaderID != InvalidShaderID);
 
@@ -7088,7 +7127,7 @@ namespace flex
 						m_SSAOBlurHRenderPass.End();
 
 						// Vertical pass
-						m_SSAOBlurVRenderPass.Begin(m_OffScreenCmdBuffer, (VkClearValue*)&m_ClearColor);
+						m_SSAOBlurVRenderPass.Begin(m_OffScreenCmdBuffer, (VkClearValue*)&m_ClearColor, 1);
 
 						vkCmdBindPipeline(m_OffScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_SSAOBlurVGraphicsPipeline);
 
@@ -7170,18 +7209,11 @@ namespace flex
 			clearValues[0].color = m_ClearColor;
 			clearValues[1].depthStencil = { 0.0f, 0 };
 
-			VkRenderPassBeginInfo renderPassBeginInfo = vks::renderPassBeginInfo(m_ForwardRenderPass);
-			renderPassBeginInfo.renderArea.offset = { 0, 0 };
-			renderPassBeginInfo.renderArea.extent = m_SwapChainExtent;
-			renderPassBeginInfo.clearValueCount = clearValues.size();
-			renderPassBeginInfo.pClearValues = clearValues.data();
-			renderPassBeginInfo.framebuffer = m_ForwardRenderPass.colorAttachmentFrameBuffer->frameBuffer;
-
 			//
 			// Forward pass
 			//
 
-			vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+			m_ForwardRenderPass.Begin(commandBuffer, clearValues.data(), clearValues.size());
 			{
 				{
 					BeginDebugMarkerRegion(commandBuffer, "Forward");
@@ -7238,7 +7270,7 @@ namespace flex
 					EndDebugMarkerRegion(commandBuffer); // Editor objects
 				}
 			}
-			vkCmdEndRenderPass(commandBuffer);
+			m_ForwardRenderPass.End();
 
 			FrameBufferAttachment& offscreenBuffer0 = m_OffscreenFrameBuffer0->frameBufferAttachments[0].second;
 			FrameBufferAttachment& offscreenBuffer1 = m_OffscreenFrameBuffer1->frameBufferAttachments[0].second;
@@ -7321,15 +7353,7 @@ namespace flex
 
 			BeginDebugMarkerRegion(commandBuffer, "UI");
 			{
-
-				VkRenderPassBeginInfo uiRenderPassBeginInfo = vks::renderPassBeginInfo(m_UIRenderPass);
-				uiRenderPassBeginInfo.renderArea.offset = { 0, 0 };
-				uiRenderPassBeginInfo.renderArea.extent = m_SwapChainExtent;
-				uiRenderPassBeginInfo.clearValueCount = clearValues.size();
-				uiRenderPassBeginInfo.pClearValues = clearValues.data();
-				uiRenderPassBeginInfo.framebuffer = m_SwapChainFramebuffers[m_CurrentSwapChainBufferIndex];
-
-				vkCmdBeginRenderPass(commandBuffer, &uiRenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+				m_UIRenderPass.Begin(commandBuffer, clearValues.data(), clearValues.size());
 
 				// Fullscreen blit from offscreen frame buffer onto swap chain
 				RenderFullscreenTri(commandBuffer, m_Materials[m_FullscreenBlitMatID].material.shaderID,
@@ -7365,7 +7389,7 @@ namespace flex
 					EndDebugMarkerRegion(commandBuffer);
 				}
 
-				vkCmdEndRenderPass(commandBuffer);
+				m_UIRenderPass.End();
 			}
 
 			EndDebugMarkerRegion(commandBuffer); // UI
@@ -7520,6 +7544,20 @@ namespace flex
 
 			CreateFramebuffers();
 			m_CommandBufferManager.CreateCommandBuffers(m_SwapChainImages.size());
+		}
+
+		void VulkanRenderer::SetFrameBufferRenderPass(FrameBufferID frameBufferID, VulkanRenderPass* renderPass)
+		{
+			FrameBuffer* frameBuffer = GetFrameBuffer(frameBufferID);
+			if (frameBuffer)
+			{
+				frameBuffer->renderPass = renderPass;
+			}
+		}
+
+		void VulkanRenderer::RegisterFramebuffer(FrameBuffer* frameBuffer)
+		{
+			m_FrameBuffers.emplace(frameBuffer->ID, frameBuffer);
 		}
 
 		void VulkanRenderer::SetObjectName(VulkanDevice* device, u64 object, VkDebugReportObjectTypeEXT type, const char* name)

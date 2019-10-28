@@ -72,13 +72,18 @@ namespace flex
 
 			void Create(VkFramebufferCreateInfo* createInfo, VulkanRenderPass* inRenderPass, const char* debugName);
 
+			VkFramebuffer* Replace()
+			{
+				return frameBuffer.replace();
+			}
+
 			operator VkFramebuffer()
 			{
 				return frameBuffer;
 			}
 
 			VulkanDevice* m_VulkanDevice = nullptr;
-			u32 UID = InvalidID;
+			FrameBufferID ID = InvalidFrameBufferID;
 			u32 width = 0;
 			u32 height = 0;
 			VDeleter<VkFramebuffer> frameBuffer;

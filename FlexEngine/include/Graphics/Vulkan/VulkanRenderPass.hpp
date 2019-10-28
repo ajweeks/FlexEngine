@@ -20,10 +20,13 @@ namespace flex
 			VulkanRenderPass();
 			VulkanRenderPass(VulkanDevice* device);
 
+			void Create(const char* passName, VkRenderPassCreateInfo* createInfo,
+				const std::vector<FrameBufferID>& inFrameBufferIDs);
+
 			void CreateColorAndDepth(
 				const char* passName,
 				VkFormat colorFormat,
-				FrameBuffer* inColorAttachmentFrameBuffer,
+				FrameBufferID frameBufferID,
 				VkImageLayout finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 				VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
 				VkFormat depthFormat = VK_FORMAT_UNDEFINED,
@@ -32,14 +35,14 @@ namespace flex
 
 			void CreateMultiColorAndDepth(
 				const char* passName,
-				FrameBuffer* inColorAttachmentFrameBuffer,
-				u32 colorAttachmentCount,
+				FrameBufferID frameBufferID,
 				VkFormat* colorFormats,
+				u32 colorAttachmentCount,
 				VkFormat depthFormat);
 
 			void CreateDepthOnly(
 				const char* passName,
-				FrameBuffer* inColorAttachmentFrameBuffer,
+				FrameBufferID frameBufferID,
 				VkFormat depthFormat = VK_FORMAT_UNDEFINED,
 				VkImageLayout finalDepthLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 				VkImageLayout initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED);
@@ -47,33 +50,33 @@ namespace flex
 			void CreateColorOnly(
 				const char* passName,
 				VkFormat colorFormat,
-				FrameBuffer* inColorAttachmentFrameBuffer,
+				FrameBufferID frameBufferID,
 				VkImageLayout finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 				VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED);
-
-			void Create(const char* passName, VkRenderPassCreateInfo* createInfo, FrameBuffer* inColorAttachmentFrameBuffer);
-
+			
 			VkRenderPass* Replace();
 			operator VkRenderPass();
 
-			void Begin(VkCommandBuffer cmdBuf, VkClearValue* clearValue);
-			void Begin(VkCommandBuffer cmdBuf, const std::vector<VkClearValue>& clearValues);
+			void Begin(VkCommandBuffer cmdBuf, VkClearValue* clearValues, u32 clearValueCount);
+			void Begin_WithFrameBuffer(VkCommandBuffer cmdBuf, VkClearValue* clearValues, u32 clearValueCount, FrameBufferID frameBufferID);
 
 			void End();
-
-			FrameBuffer* colorAttachmentFrameBuffer = nullptr;
 
 		private:
 			void Create(
 				const char* passName,
-				FrameBuffer* inColorAttachmentFrameBuffer,
+				const std::vector<FrameBufferID>& inFrameBufferIDs,
 				VkAttachmentDescription* colorAttachments,
 				VkAttachmentReference* colorAttachmentReferences,
 				u32 colorAttachmentCount,
 				VkAttachmentDescription* depthAttachment,
 				VkAttachmentReference* depthAttachmentRef);
 
+			void Begin(VkCommandBuffer cmdBuf, VkClearValue* clearValues, u32 clearValueCount, FrameBufferID frameBufferID);
+
 			VulkanDevice* m_VulkanDevice = nullptr;
+
+			std::vector<FrameBufferID> frameBufferIDs;
 
 			VDeleter<VkRenderPass> m_RenderPass;
 			const char* m_Name = nullptr;
