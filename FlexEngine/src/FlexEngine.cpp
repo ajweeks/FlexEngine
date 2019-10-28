@@ -927,8 +927,16 @@ namespace flex
 					static const std::string rendererNameStringStr = std::string("Current renderer: " + m_RendererName);
 					static const char* renderNameStr = rendererNameStringStr.c_str();
 					ImGui::TextUnformatted(renderNameStr);
+					static ms latestFrameTime;
+					static u32 framesSinceUpdate = 0;
+					if (framesSinceUpdate++ % 10 == 0)
+					{
+						latestFrameTime = m_FrameTimes[m_FrameTimes.size() - 1];
+					}
+					ImGui::Text("Frames time: %.1fms (%d FPS)", latestFrameTime, (u32)((1.0f / latestFrameTime) * 1000));
+					ImGui::NewLine();
 					ImGui::Text("Frames rendered: %d", g_Renderer->GetFramesRenderedCount());
-					ImGui::Text("Elapsed time (unpaused): %.2fs", g_SecElapsedSinceProgramStart);
+					ImGui::Text("Unpaused elapsed time: %.2fs", g_SecElapsedSinceProgramStart);
 					ImGui::Text("Audio effects loaded: %d", s_AudioSourceIDs.size());
 
 					ImVec2 p = ImGui::GetCursorScreenPos();
