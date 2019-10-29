@@ -963,7 +963,6 @@ namespace flex
 						m_LoadedTextures.push_back(*textureInfo.texture);
 
 						(*textureInfo.texture)->imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-						(*textureInfo.texture)->UpdateImageDescriptor();
 					}
 				}
 			}
@@ -3010,8 +3009,6 @@ namespace flex
 			irradianceDescriptorCreateInfo.uniformBuffer = &irradianceShader.uniformBuffer;
 			irradianceDescriptorCreateInfo.cubemapTexture = renderObjectMat.cubemapTexture;
 			CreateDescriptorSet(&irradianceDescriptorCreateInfo);
-
-			renderObjectMat.cubemapTexture->UpdateImageDescriptor();
 
 			std::array<VkPushConstantRange, 1> pushConstantRanges = {};
 			pushConstantRanges[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
@@ -5212,15 +5209,13 @@ namespace flex
 					VkBuffer buffer,
 					VkDeviceSize bufferSize,
 					VkImageView imageView = VK_NULL_HANDLE,
-					VkSampler imageSampler = VK_NULL_HANDLE,
-					VkDescriptorImageInfo* imageInfoPtr = nullptr) :
+					VkSampler imageSampler = VK_NULL_HANDLE) :
 					uniform(uniform),
 					descriptorType(descriptorType),
 					buffer(buffer),
 					bufferSize(bufferSize),
 					imageView(imageView),
-					imageSampler(imageSampler),
-					imageInfoPtr(imageInfoPtr)
+					imageSampler(imageSampler)
 				{
 				}
 
@@ -5233,11 +5228,7 @@ namespace flex
 				VkImageView imageView = VK_NULL_HANDLE;
 				VkSampler imageSampler = VK_NULL_HANDLE;
 
-				// Fill this member in to override the default ImageInfo below
-				VkDescriptorImageInfo* imageInfoPtr = nullptr;
-
-				// These should not be filled in, they are just here so that they are kept around until the call
-				// to vkUpdateDescriptorSets, and can not be local to the following for loop
+				// Auto-filled
 				VkDescriptorBufferInfo bufferInfo;
 				VkDescriptorImageInfo imageInfo;
 			};
@@ -5245,7 +5236,6 @@ namespace flex
 			// TODO: Refactor this.
 			//		- Rather than require textures, views should be allowed on their own
 			//		- Samplers should optional
-			//		- Remove info descriptors
 			std::vector<DescriptorSetInfo> descriptorSets = {
 				{ U_UNIFORM_BUFFER_CONSTANT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 				createInfo->uniformBuffer->constantBuffer.m_Buffer, createInfo->uniformBuffer->constantData.size },
@@ -5257,110 +5247,85 @@ namespace flex
 				{ U_ALBEDO_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
 				createInfo->albedoView != VK_NULL_HANDLE ? createInfo->albedoView : createInfo->shadowPreviewView != VK_NULL_HANDLE ? createInfo->shadowPreviewView : (createInfo->albedoTexture ? *&createInfo->albedoTexture->imageView : VK_NULL_HANDLE),
-				createInfo->albedoView != VK_NULL_HANDLE ? m_LinMipLinSampler : createInfo->shadowPreviewView != VK_NULL_HANDLE ? createInfo->shadowSampler : (createInfo->albedoTexture ? *&createInfo->albedoTexture->sampler : VK_NULL_HANDLE),
-				createInfo->albedoView != VK_NULL_HANDLE ? nullptr : createInfo->shadowPreviewView != VK_NULL_HANDLE ? nullptr : (createInfo->albedoTexture ? &createInfo->albedoTexture->imageInfoDescriptor : nullptr) },
+				createInfo->albedoView != VK_NULL_HANDLE ? m_LinMipLinSampler : createInfo->shadowPreviewView != VK_NULL_HANDLE ? createInfo->shadowSampler : (createInfo->albedoTexture ? *&createInfo->albedoTexture->sampler : VK_NULL_HANDLE) },
 
 				{ U_METALLIC_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
 				createInfo->metallicTexture ? *&createInfo->metallicTexture->imageView : VK_NULL_HANDLE,
-				createInfo->metallicTexture ? *&createInfo->metallicTexture->sampler : VK_NULL_HANDLE,
-				createInfo->metallicTexture ? &createInfo->metallicTexture->imageInfoDescriptor : nullptr },
+				createInfo->metallicTexture ? *&createInfo->metallicTexture->sampler : VK_NULL_HANDLE },
 
 				{ U_ROUGHNESS_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
 				createInfo->roughnessTexture ? *&createInfo->roughnessTexture->imageView : VK_NULL_HANDLE,
-				createInfo->roughnessTexture ? *&createInfo->roughnessTexture->sampler : VK_NULL_HANDLE,
-				createInfo->roughnessTexture ? &createInfo->roughnessTexture->imageInfoDescriptor : nullptr },
+				createInfo->roughnessTexture ? *&createInfo->roughnessTexture->sampler : VK_NULL_HANDLE },
 
 				{ U_NORMAL_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
 				createInfo->normalTexture ? *&createInfo->normalTexture->imageView : VK_NULL_HANDLE,
-				createInfo->normalTexture ? *&createInfo->normalTexture->sampler : VK_NULL_HANDLE,
-				createInfo->normalTexture ? &createInfo->normalTexture->imageInfoDescriptor : nullptr },
+				createInfo->normalTexture ? *&createInfo->normalTexture->sampler : VK_NULL_HANDLE },
 
 				{ U_HDR_EQUIRECTANGULAR_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
 				createInfo->hdrEquirectangularTexture ? *&createInfo->hdrEquirectangularTexture->imageView : VK_NULL_HANDLE,
-				createInfo->hdrEquirectangularTexture ? *&createInfo->hdrEquirectangularTexture->sampler : VK_NULL_HANDLE,
-				createInfo->hdrEquirectangularTexture ? &createInfo->hdrEquirectangularTexture->imageInfoDescriptor : nullptr },
+				createInfo->hdrEquirectangularTexture ? *&createInfo->hdrEquirectangularTexture->sampler : VK_NULL_HANDLE },
 
 				{ U_CUBEMAP_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
 				createInfo->cubemapTexture ? *&createInfo->cubemapTexture->imageView : VK_NULL_HANDLE,
-				createInfo->cubemapTexture ? *&createInfo->cubemapTexture->sampler : VK_NULL_HANDLE,
-				createInfo->cubemapTexture ? &createInfo->cubemapTexture->imageInfoDescriptor : nullptr },
+				createInfo->cubemapTexture ? *&createInfo->cubemapTexture->sampler : VK_NULL_HANDLE },
 
 				{ U_BRDF_LUT_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
 				createInfo->brdfLUT ? *&createInfo->brdfLUT->imageView : VK_NULL_HANDLE,
-				createInfo->brdfLUT ? *&createInfo->brdfLUT->sampler : VK_NULL_HANDLE,
-				createInfo->brdfLUT ? &createInfo->brdfLUT->imageInfoDescriptor : nullptr },
+				createInfo->brdfLUT ? *&createInfo->brdfLUT->sampler : VK_NULL_HANDLE },
 
 				{ U_IRRADIANCE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
 				createInfo->irradianceTexture ? *&createInfo->irradianceTexture->imageView : VK_NULL_HANDLE,
-				createInfo->irradianceTexture ? *&createInfo->irradianceTexture->sampler : VK_NULL_HANDLE,
-				createInfo->irradianceTexture ? &createInfo->irradianceTexture->imageInfoDescriptor : nullptr },
+				createInfo->irradianceTexture ? *&createInfo->irradianceTexture->sampler : VK_NULL_HANDLE },
 
 				{ U_PREFILTER_MAP, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
 				createInfo->prefilterTexture ? *&createInfo->prefilterTexture->imageView : VK_NULL_HANDLE,
-				createInfo->prefilterTexture ? *&createInfo->prefilterTexture->sampler : VK_NULL_HANDLE,
-				createInfo->prefilterTexture ? &createInfo->prefilterTexture->imageInfoDescriptor : nullptr },
+				createInfo->prefilterTexture ? *&createInfo->prefilterTexture->sampler : VK_NULL_HANDLE },
 
 				{ U_HIGH_RES_TEX, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
 				createInfo->albedoTexture ? *&createInfo->albedoTexture->imageView : VK_NULL_HANDLE,
-				createInfo->albedoTexture ? *&createInfo->albedoTexture->sampler : VK_NULL_HANDLE,
-				createInfo->albedoTexture ? &createInfo->albedoTexture->imageInfoDescriptor : nullptr },
+				createInfo->albedoTexture ? *&createInfo->albedoTexture->sampler : VK_NULL_HANDLE },
 
 				{ U_DEPTH_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
-				*&m_GBufferDepthAttachment->view,
-				*&m_DepthSampler,
-				nullptr },
+				*&m_GBufferDepthAttachment->view, *&m_DepthSampler },
 
 				{ U_SSAO_RAW_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
-				*&createInfo->ssaoImageView,
-				*&createInfo->ssaoSampler,
-				nullptr },
+				*&createInfo->ssaoImageView, *&createInfo->ssaoSampler },
 
 				{ U_SSAO_FINAL_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
-				*&createInfo->ssaoFinalImageView,
-				*&createInfo->ssaoFinalSampler,
-				nullptr },
+				*&createInfo->ssaoFinalImageView, *&createInfo->ssaoFinalSampler },
 
 				{ U_SSAO_NORMAL_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
-				*&createInfo->ssaoNormalImageView,
-				*&createInfo->ssaoNormalSampler,
-				nullptr },
+				*&createInfo->ssaoNormalImageView, *&createInfo->ssaoNormalSampler },
 
 				{ U_NOISE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
 				createInfo->noiseTexture ? *&createInfo->noiseTexture->imageView : VK_NULL_HANDLE,
-				createInfo->noiseTexture ? *&createInfo->noiseTexture->sampler : VK_NULL_HANDLE,
-				createInfo->noiseTexture ? &createInfo->noiseTexture->imageInfoDescriptor : nullptr },
+				createInfo->noiseTexture ? *&createInfo->noiseTexture->sampler : VK_NULL_HANDLE },
 
 				{ U_SHADOW_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
-				*&createInfo->shadowImageView,
-				*&createInfo->shadowSampler,
-				nullptr },
+				*&createInfo->shadowImageView, *&createInfo->shadowSampler },
 
 				{ U_SCENE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
-				*&createInfo->sceneImageView,
-				*&createInfo->sceneSampler,
-				nullptr },
+				*&createInfo->sceneImageView, *&createInfo->sceneSampler },
 
 				{ U_HISTORY_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_NULL_HANDLE, 0,
-				*&createInfo->historyBufferImageView,
-				*&createInfo->historyBufferSampler,
-				nullptr },
+				*&createInfo->historyBufferImageView, *&createInfo->historyBufferSampler },
 			};
 
 
@@ -5421,11 +5386,6 @@ namespace flex
 
 					++descriptorSetIndex;
 					++binding;
-
-					if (descriptorSetInfo.imageInfoPtr)
-					{
-						*descriptorSetInfo.imageInfoPtr = descriptorSetInfo.imageInfo;
-					}
 				}
 			}
 

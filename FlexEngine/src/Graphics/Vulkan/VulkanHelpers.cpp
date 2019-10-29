@@ -220,7 +220,6 @@ namespace flex
 			height(height),
 			channelCount(channelCount)
 		{
-			UpdateImageDescriptor();
 		}
 
 		VulkanTexture::VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue,
@@ -239,7 +238,6 @@ namespace flex
 			bGenerateMipMaps(bGenerateMipMaps),
 			bHDR(bHDR)
 		{
-			UpdateImageDescriptor();
 		}
 
 		VulkanTexture::VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue,
@@ -257,19 +255,11 @@ namespace flex
 			bGenerateMipMaps(bGenerateMipMaps),
 			bHDR(bHDR)
 		{
-			UpdateImageDescriptor();
 		}
 
 		void VulkanTexture::Reload()
 		{
 			// TODO: Implement
-		}
-
-		void VulkanTexture::UpdateImageDescriptor()
-		{
-			imageInfoDescriptor.imageLayout = imageLayout;
-			imageInfoDescriptor.imageView = imageView;
-			imageInfoDescriptor.sampler = sampler;
 		}
 
 		std::string VulkanTexture::GetRelativeFilePath() const

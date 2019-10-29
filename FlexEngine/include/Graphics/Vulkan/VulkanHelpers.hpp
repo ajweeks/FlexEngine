@@ -279,8 +279,6 @@ namespace flex
 			 */
 			VkDeviceSize CreateCubemapFromTextures(VkFormat inFormat, const std::array<std::string, 6>& filePaths, bool enableTrilinearFiltering);
 
-			void UpdateImageDescriptor();
-
 			std::string GetRelativeFilePath() const;
 			std::string GetName() const;
 			void Reload();
@@ -308,7 +306,6 @@ namespace flex
 			VDeleter<VkDeviceMemory> imageMemory;
 			VDeleter<VkImageView> imageView;
 			VDeleter<VkSampler> sampler;
-			VkDescriptorImageInfo imageInfoDescriptor;
 
 		private:
 			VulkanDevice* m_VulkanDevice = nullptr;
