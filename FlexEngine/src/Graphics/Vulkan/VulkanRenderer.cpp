@@ -6123,7 +6123,7 @@ namespace flex
 			linMipLinSamplerCreateInfo.maxLod = 1.0f;
 			linMipLinSamplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
 			VK_CHECK_RESULT(vkCreateSampler(m_VulkanDevice->m_LogicalDevice, &linMipLinSamplerCreateInfo, nullptr, m_LinMipLinSampler.replace()));
-			SetSamplerName(m_VulkanDevice, m_LinMipLinSampler, "Color sampler");
+			SetSamplerName(m_VulkanDevice, m_LinMipLinSampler, "Lin Mip Lin sampler");
 
 			VkSamplerCreateInfo depthSamplerCreateInfo = vks::samplerCreateInfo();
 			depthSamplerCreateInfo.magFilter = VK_FILTER_LINEAR;
