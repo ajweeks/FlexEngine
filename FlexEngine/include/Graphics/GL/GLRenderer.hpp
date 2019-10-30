@@ -97,8 +97,6 @@ namespace flex
 
 			virtual void RecaptureReflectionProbe() override;
 
-			virtual u32 GetTextureHandle(TextureID textureID) const override;
-
 			virtual void RenderObjectStateChanged() override;
 
 		protected:

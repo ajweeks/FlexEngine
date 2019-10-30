@@ -2618,12 +2618,6 @@ namespace flex
 			// UNIMPLEMENTED
 		}
 
-		u32 VulkanRenderer::GetTextureHandle(TextureID textureID) const
-		{
-			assert(textureID < m_LoadedTextures.size());
-			return m_LoadedTextures[textureID]->textureID;
-		}
-
 		void VulkanRenderer::RenderObjectStateChanged()
 		{
 			// TODO: Ignore object visibility changes

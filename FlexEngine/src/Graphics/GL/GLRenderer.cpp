@@ -1593,12 +1593,6 @@ namespace flex
 			AddEditorString("Captured reflection probe");
 		}
 
-		u32 GLRenderer::GetTextureHandle(TextureID textureID) const
-		{
-			assert(textureID < m_LoadedTextures.size());
-			return m_LoadedTextures[textureID]->handle;
-		}
-
 		void GLRenderer::RenderObjectStateChanged()
 		{
 			m_bRebatchRenderObjects = true;

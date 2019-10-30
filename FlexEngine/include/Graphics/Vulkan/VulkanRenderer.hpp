@@ -108,7 +108,6 @@ namespace flex
 			virtual void DrawImGuiForRenderObject(RenderID renderID) override;
 
 			virtual void RecaptureReflectionProbe() override;
-			virtual u32 GetTextureHandle(TextureID textureID) const override;
 			virtual void RenderObjectStateChanged() override;
 
 			void SetFrameBufferRenderPass(FrameBufferID frameBufferID, VulkanRenderPass* renderPass);

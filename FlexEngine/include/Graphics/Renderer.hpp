@@ -166,8 +166,6 @@ namespace flex
 
 		virtual void RecaptureReflectionProbe() = 0;
 
-		virtual u32 GetTextureHandle(TextureID textureID) const = 0;
-
 		// Call whenever a user-controlled field, such as visibility, changes to rebatch render objects
 		virtual void RenderObjectStateChanged() = 0;
 

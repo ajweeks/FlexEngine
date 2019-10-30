@@ -285,7 +285,6 @@ namespace flex
 
 			VkFormat CalculateFormat();
 
-			TextureID textureID = InvalidTextureID;
 			u32 width = 0;
 			u32 height = 0;
 			u32 channelCount = 0;
