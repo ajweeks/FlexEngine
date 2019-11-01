@@ -158,7 +158,7 @@ project "Flex"
 
 
 configuration { "Debug" }
-	links { "BulletCollision_Debug", "BulletDynamics_Debug", "LinearMath_Debug", "freetyped" } 
+	links { "BulletCollision_Debug", "BulletDynamics_Debug", "LinearMath_Debug", "freetyped", "glslangd", "hlsld", "osdependentd", "oglcompilerd", "SPIRVd", "SPIRV-Toolsd" } 
 configuration { "Development" }
 	links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" }
 configuration { "Shipping" }
@@ -170,6 +170,9 @@ configuration {}
 	--Additional includedirs
 	includedirs { 
 		path.join(SOURCE_DIR, "include"),
+		path.join(DEPENDENCIES_DIR, "glslang/glslang/Include"),
+		path.join(DEPENDENCIES_DIR, "glslang/glslang/Public"),
+		path.join(DEPENDENCIES_DIR, "glslang/SPIRV"),
 	}
 
 	--Source files

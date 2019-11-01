@@ -3,6 +3,8 @@
 
 IGNORE_WARNINGS_PUSH
 #include <vulkan/vulkan.hpp>
+
+#include "ShaderLang.h"
 IGNORE_WARNINGS_POP
 
 #include "Graphics/RendererTypes.hpp"
@@ -433,6 +435,8 @@ namespace flex
 
 			// Returns true once task is complete
 			bool TickStatus();
+
+			static std::vector<u8> CompileSPIRVFromGLSL(EShLanguage stage, const std::string& sourceCode, glslang::EShSource language, std::string& outError);
 
 			std::thread taskThread;
 			std::atomic<bool> is_done = false;

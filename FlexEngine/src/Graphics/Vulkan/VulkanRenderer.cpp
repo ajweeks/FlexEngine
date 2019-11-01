@@ -22,6 +22,8 @@ IGNORE_WARNINGS_PUSH
 #endif
 
 #include "BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h"
+
+#include "ShaderLang.h"
 IGNORE_WARNINGS_POP
 
 #include "Cameras/BaseCamera.hpp"
@@ -319,6 +321,17 @@ namespace flex
 			m_SpriteOrthoPushConstBlock = new Material::PushConstantBlock(128);
 			m_SpriteOrthoArrPushConstBlock = new Material::PushConstantBlock(132);
 
+			const char* glslVersionString = glslang::GetGlslVersionString();
+			Print("GLSL Version: %s\n", glslVersionString);
+
+			if (!glslang::InitializeProcess())
+			{
+				PrintWarn("Failed to initialize GLSL process\n");
+			}
+
+			std::string shaderCompilerErrors;
+			std::vector<u8> spirV = AsyncVulkanShaderCompiler::CompileSPIRVFromGLSL(EShLangFragment, RESOURCE_LOCATION "shaders/vk_deferred_combine.frag", glslang::EShSource::EShSourceGlsl, shaderCompilerErrors);
+
 #ifdef DEBUG
 			while (!m_ShaderCompiler->TickStatus())
 			{
@@ -572,6 +585,8 @@ namespace flex
 		void VulkanRenderer::Destroy()
 		{
 			Renderer::Destroy();
+
+			glslang::FinalizeProcess();
 
 #ifdef DEBUG
 			delete m_ShaderCompiler;
