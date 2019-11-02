@@ -453,20 +453,72 @@ namespace flex
 		};
 #endif // DEBUG
 
+		template<typename T>
+		struct ShaderUniformContainer
+		{
+			using iter = typename std::vector<Pair<u64, T>>::iterator;
+
+			void Add(u64 uniform, const T value)
+			{
+				for (auto& pair : values)
+				{
+					if (pair.first == uniform)
+					{
+						pair.second = value;
+						return;
+					}
+				}
+
+				values.emplace_back(uniform, value);
+			}
+
+			u32 Count()
+			{
+				return values.size();
+			}
+
+			iter begin()
+			{
+				return values.begin();
+			}
+
+			iter end()
+			{
+				return values.end();
+			}
+
+			bool Contains(u64 uniform)
+			{
+				for (auto& pair : values)
+				{
+					if (pair.first == uniform)
+					{
+						return true;
+					}
+				}
+				return false;
+			}
+
+			T operator[](u64 uniform)
+			{
+				for (auto& pair : values)
+				{
+					if (pair.first == uniform)
+					{
+						return pair.second;
+					}
+				}
+				return nullptr;
+			}
+
+			std::vector<Pair<u64, T>> values;
+		};
+
 		struct VulkanMaterial
 		{
 			Material material; // More info is stored in the generic material struct
 
-			VulkanTexture* normalTexture = nullptr;
-			VulkanTexture* cubemapTexture = nullptr;
-			VulkanTexture* albedoTexture = nullptr;
-			VulkanTexture* metallicTexture = nullptr;
-			VulkanTexture* roughnessTexture = nullptr;
-			VulkanTexture* hdrEquirectangularTexture = nullptr;
-			VulkanTexture* irradianceTexture = nullptr;
-			VulkanTexture* brdfLUT = nullptr;
-			VulkanTexture* prefilterTexture = nullptr;
-			VulkanTexture* noiseTexture = nullptr;
+			ShaderUniformContainer<VulkanTexture*> textures;
 			VkFramebuffer hdrCubemapFramebuffer = VK_NULL_HANDLE;
 
 			u32 cubemapSamplerID = 0;
@@ -555,6 +607,19 @@ namespace flex
 			VkPipeline* graphicsPipeline = nullptr;
 		};
 
+		struct BufferDescriptorInfo
+		{
+			VkBuffer buffer;
+			VkDeviceSize bufferSize;
+			bool bDynamic;
+		};
+
+		struct ImageDescriptorInfo
+		{
+			VkImageView imageView = VK_NULL_HANDLE;
+			VkSampler imageSampler = VK_NULL_HANDLE;
+		};
+
 		struct DescriptorSetCreateInfo
 		{
 			VkDescriptorSet* descriptorSet = nullptr;
@@ -562,43 +627,8 @@ namespace flex
 			ShaderID shaderID = InvalidShaderID;
 			UniformBuffer* uniformBuffer = nullptr;
 
-			VulkanTexture* normalTexture = nullptr;
-			VulkanTexture* cubemapTexture = nullptr;
-			VulkanTexture* albedoTexture = nullptr;
-			VulkanTexture* metallicTexture = nullptr;
-			VulkanTexture* roughnessTexture = nullptr;
-			VulkanTexture* hdrEquirectangularTexture = nullptr;
-			VulkanTexture* irradianceTexture = nullptr;
-			VulkanTexture* brdfLUT = nullptr;
-			VulkanTexture* prefilterTexture = nullptr;
-			VulkanTexture* noiseTexture = nullptr;
-
-			// TODO: Pass along frame buffer reference for these image/sampler pairs?
-			VkImageView ssaoNormalImageView = VK_NULL_HANDLE;
-			VkSampler ssaoNormalSampler = VK_NULL_HANDLE;
-
-			VkImageView ssaoImageView = VK_NULL_HANDLE;
-			VkSampler ssaoSampler = VK_NULL_HANDLE;
-
-			VkImageView ssaoFinalImageView = VK_NULL_HANDLE;
-			VkSampler ssaoFinalSampler = VK_NULL_HANDLE;
-
-			VkImageView shadowImageView = VK_NULL_HANDLE;
-			VkSampler shadowSampler = VK_NULL_HANDLE;
-
-			VkImageView shadowPreviewView = VK_NULL_HANDLE;
-
-			VkImageView sceneImageView = VK_NULL_HANDLE;
-			VkSampler sceneSampler = VK_NULL_HANDLE;
-
-			VkImageView albedoView = VK_NULL_HANDLE;
-
-			VkImageView historyBufferImageView = VK_NULL_HANDLE;
-			VkSampler historyBufferSampler = VK_NULL_HANDLE;
-
-			bool bDepthSampler = false;
-
-			std::vector<std::pair<u32, VkImageView*>> frameBufferViews; // Name of frame buffer paired with view into frame buffer
+			ShaderUniformContainer<BufferDescriptorInfo> bufferDescriptors;
+			ShaderUniformContainer<ImageDescriptorInfo> imageDescriptors;
 
 			const char* DBG_Name = nullptr;
 		};

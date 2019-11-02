@@ -988,6 +988,31 @@ namespace flex
 		return pow(2.0f, ceil(log(num) / log(2.0f) - 0.5f));
 	}
 
+	u32 NextPowerOfTwo(u32 x)
+	{
+		assert(x != 0);
+		x--;
+		x |= x >> 1;
+		x |= x >> 2;
+		x |= x >> 4;
+		x |= x >> 8;
+		x |= x >> 16;
+		return x + 1;
+	}
+
+	u64 NextPowerOfTwo(u64 x)
+	{
+		assert(x != 0);
+		x--;
+		x |= x >> 1;
+		x |= x >> 2;
+		x |= x >> 4;
+		x |= x >> 8;
+		x |= x >> 16;
+		x |= x >> 32;
+		return x + 1;
+	}
+
 	std::string GetIncrementedPostFixedStr(const std::string& namePrefix, const std::string& defaultName)
 	{
 		if (namePrefix.empty())

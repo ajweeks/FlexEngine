@@ -612,6 +612,7 @@ namespace flex
 
 		Uniforms constantBufferUniforms = {};
 		Uniforms dynamicBufferUniforms = {};
+		Uniforms textureUniforms = {};
 
 		VertexAttributes vertexAttributes = 0;
 		i32 numAttachments = 1;

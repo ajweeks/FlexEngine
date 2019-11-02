@@ -3579,17 +3579,17 @@ namespace flex
 			};
 
 			Tex textures[] = {
-				{ shader->constantBufferUniforms.HasUniform(U_DEPTH_SAMPLER), true, glMaterial->depthSamplerID, GL_TEXTURE_2D },
+				{ shader->textureUniforms.HasUniform(U_DEPTH_SAMPLER), true, glMaterial->depthSamplerID, GL_TEXTURE_2D },
 				{ shader->bNeedAlbedoSampler, material->enableAlbedoSampler, glMaterial->albedoSamplerID, GL_TEXTURE_2D },
 				{ shader->bNeedMetallicSampler, material->enableMetallicSampler, glMaterial->metallicSamplerID, GL_TEXTURE_2D },
 				{ shader->bNeedRoughnessSampler, material->enableRoughnessSampler, glMaterial->roughnessSamplerID, GL_TEXTURE_2D },
 				{ shader->bNeedNormalSampler, material->enableNormalSampler, glMaterial->normalSamplerID, GL_TEXTURE_2D },
 				{ shader->bNeedBRDFLUT, material->enableBRDFLUT, glMaterial->brdfLUTSamplerID, GL_TEXTURE_2D },
-				{ shader->constantBufferUniforms.HasUniform(U_SHADOW_SAMPLER), true, m_ShadowMapTexture.id, GL_TEXTURE_2D_ARRAY },
+				{ shader->textureUniforms.HasUniform(U_SHADOW_SAMPLER), true, m_ShadowMapTexture.id, GL_TEXTURE_2D_ARRAY },
 				{ shader->bNeedIrradianceSampler, material->enableIrradianceSampler, glMaterial->irradianceSamplerID, GL_TEXTURE_CUBE_MAP },
 				{ shader->bNeedPrefilteredMap, material->enablePrefilteredMap, glMaterial->prefilteredMapSamplerID, GL_TEXTURE_CUBE_MAP },
 				{ shader->bNeedCubemapSampler, material->enableCubemapSampler, glMaterial->cubemapSamplerID, GL_TEXTURE_CUBE_MAP },
-				{ shader->constantBufferUniforms.HasUniform(U_NOISE_SAMPLER), true, glMaterial->noiseSamplerID, GL_TEXTURE_2D },
+				{ shader->textureUniforms.HasUniform(U_NOISE_SAMPLER), true, glMaterial->noiseSamplerID, GL_TEXTURE_2D },
 			};
 			// TODO: Update reserve count when adding more textures
 

@@ -1444,18 +1444,19 @@ namespace flex
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SHADOW_SAMPLING_DATA);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SSAO_SAMPLING_DATA);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_NEAR_FAR_PLANES);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_IRRADIANCE_SAMPLER);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_FB_0_SAMPLER);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_FB_1_SAMPLER);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_DEPTH_SAMPLER);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SSAO_FINAL_SAMPLER);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_BRDF_LUT_SAMPLER);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SHADOW_SAMPLER);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PREFILTER_MAP);
 
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_IRRADIANCE_SAMPLER);
-			//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_IRRADIANCE_SAMPLER); // TODO
+
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_BRDF_LUT_SAMPLER);
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_IRRADIANCE_SAMPLER);
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_PREFILTER_MAP);
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_DEPTH_SAMPLER);
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_SSAO_FINAL_SAMPLER);
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_SHADOW_SAMPLER);
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_FB_0_SAMPLER);
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_FB_1_SAMPLER);
 			++shaderID;
 
 			//// Deferred combine cubemap
@@ -1527,15 +1528,16 @@ namespace flex
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_CONST_ALBEDO);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_ALBEDO_SAMPLER);
-			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ALBEDO_SAMPLER);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_CONST_METALLIC);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_METALLIC_SAMPLER);
-			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_METALLIC_SAMPLER);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_CONST_ROUGHNESS);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_ROUGHNESS_SAMPLER);
-			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ROUGHNESS_SAMPLER);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_NORMAL_SAMPLER);
-			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_NORMAL_SAMPLER);
+
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_ALBEDO_SAMPLER);
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_METALLIC_SAMPLER);
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_ROUGHNESS_SAMPLER);
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_NORMAL_SAMPLER);
 			++shaderID;
 
 			// PBR - WORLD SPACE
@@ -1559,17 +1561,18 @@ namespace flex
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_CONST_ALBEDO);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_ALBEDO_SAMPLER);
-			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ALBEDO_SAMPLER);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_CONST_METALLIC);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_METALLIC_SAMPLER);
-			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_METALLIC_SAMPLER);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_CONST_ROUGHNESS);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_ROUGHNESS_SAMPLER);
-			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ROUGHNESS_SAMPLER);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_NORMAL_SAMPLER);
-			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_NORMAL_SAMPLER);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_TEXTURE_SCALE);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_BLEND_SHARPNESS);
+
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_ALBEDO_SAMPLER);
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_METALLIC_SAMPLER);
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_ROUGHNESS_SAMPLER);
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_NORMAL_SAMPLER);
 			++shaderID;
 
 			// Skybox
@@ -1585,9 +1588,8 @@ namespace flex
 			//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PROJECTION);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_EXPOSURE);
 			//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_TIME);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_CUBEMAP_SAMPLER);
 
-			m_BaseShaders[shaderID].dynamicBufferUniforms = {};
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_CUBEMAP_SAMPLER);
 			++shaderID;
 
 			// Equirectangular to Cube
@@ -1598,9 +1600,7 @@ namespace flex
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION;
 
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_HDR_EQUIRECTANGULAR_SAMPLER);
-
-			m_BaseShaders[shaderID].dynamicBufferUniforms = {};
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_HDR_EQUIRECTANGULAR_SAMPLER);
 			++shaderID;
 
 			// Irradiance
@@ -1611,9 +1611,7 @@ namespace flex
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION;
 
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_CUBEMAP_SAMPLER);
-
-			m_BaseShaders[shaderID].dynamicBufferUniforms = {};
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_CUBEMAP_SAMPLER);
 			++shaderID;
 
 			// Prefilter
@@ -1624,19 +1622,15 @@ namespace flex
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION;
 
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_CUBEMAP_SAMPLER);
-
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_CONST_ROUGHNESS);
+
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_CUBEMAP_SAMPLER);
 			++shaderID;
 
 			// BRDF
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
 			m_BaseShaders[shaderID].vertexAttributes = 0;
-
-			m_BaseShaders[shaderID].constantBufferUniforms = {};
-
-			m_BaseShaders[shaderID].dynamicBufferUniforms = {};
 			++shaderID;
 
 			// Sprite
@@ -1648,13 +1642,12 @@ namespace flex
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV;
 
-			m_BaseShaders[shaderID].constantBufferUniforms = {};
-
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_COLOR_MULTIPLIER);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_ALBEDO_SAMPLER);
-			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ALBEDO_SAMPLER);
+
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_ALBEDO_SAMPLER);
 			++shaderID;
 
 			// Sprite - Texture Array
@@ -1669,13 +1662,12 @@ namespace flex
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV;
 
-			m_BaseShaders[shaderID].constantBufferUniforms = {};
-
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_COLOR_MULTIPLIER);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_ALBEDO_SAMPLER);
-			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ALBEDO_SAMPLER);
+
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_ALBEDO_SAMPLER);
 			++shaderID;
 
 			// Post processing
@@ -1684,12 +1676,12 @@ namespace flex
 				(u32)VertexAttribute::POSITION_2D |
 				(u32)VertexAttribute::UV;
 
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SCENE_SAMPLER);
-
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_COLOR_MULTIPLIER);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_ALBEDO_SAMPLER);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_POST_PROCESS_MAT);
+
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_SCENE_SAMPLER);
 			++shaderID;
 
 			// Post FXAA
@@ -1700,9 +1692,8 @@ namespace flex
 
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_FXAA_DATA);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SCENE_SAMPLER);
 
-			m_BaseShaders[shaderID].dynamicBufferUniforms = {};
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_SCENE_SAMPLER);
 			++shaderID;
 
 			// Compute SDF
@@ -1711,12 +1702,10 @@ namespace flex
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV;
 
-			m_BaseShaders[shaderID].constantBufferUniforms = {};
-
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_SDF_DATA);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_TEX_CHANNEL);
-			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_HIGH_RES_TEX); // highResTex
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_HIGH_RES_TEX);
 			//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_CHAR_RESOLUTION);
 			//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_SPREAD);
 			//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_HIGH_RES_TEX);
@@ -1736,13 +1725,13 @@ namespace flex
 				(u32)VertexAttribute::EXTRA_VEC4 |
 				(u32)VertexAttribute::EXTRA_INT;
 
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_ALBEDO_SAMPLER);
-
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_FONT_CHAR_DATA);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_TEX_SIZE);
+
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_ALBEDO_SAMPLER);
 			++shaderID;
 
 			// Font WS
@@ -1757,8 +1746,6 @@ namespace flex
 				(u32)VertexAttribute::EXTRA_VEC4 |
 				(u32)VertexAttribute::EXTRA_INT;
 
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_ALBEDO_SAMPLER);
-
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_FONT_CHAR_DATA);
@@ -1766,6 +1753,8 @@ namespace flex
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_TEX_SIZE);
 			//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_THRESHOLD);
 			//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_SHADOW);
+
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_ALBEDO_SAMPLER);
 			++shaderID;
 
 			// Shadow
@@ -1793,11 +1782,10 @@ namespace flex
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PROJECTION);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PROJECTION_INV);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SSAO_GEN_DATA);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_DEPTH_SAMPLER);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SSAO_NORMAL_SAMPLER);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_NOISE_SAMPLER);
 
-			m_BaseShaders[shaderID].dynamicBufferUniforms = {};
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_DEPTH_SAMPLER);
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_SSAO_NORMAL_SAMPLER);
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_NOISE_SAMPLER);
 			++shaderID;
 
 			// SSAO Blur
@@ -1809,12 +1797,13 @@ namespace flex
 
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SSAO_BLUR_DATA_CONSTANT);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SSAO_RAW_SAMPLER);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SSAO_NORMAL_SAMPLER);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_DEPTH_SAMPLER);
 
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_SSAO_BLUR_DATA_DYNAMIC);
+
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_SSAO_RAW_SAMPLER);
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_SSAO_NORMAL_SAMPLER);
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_DEPTH_SAMPLER);
 			++shaderID;
 
 			// TAA Resolve
@@ -1830,9 +1819,10 @@ namespace flex
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW_INV);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PROJECTION_INV);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_LAST_FRAME_VIEWPROJ);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SCENE_SAMPLER);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_HISTORY_SAMPLER);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_DEPTH_SAMPLER);
+
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_SCENE_SAMPLER);
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_HISTORY_SAMPLER);
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_DEPTH_SAMPLER);
 
 			m_BaseShaders[shaderID].dynamicBufferUniforms = {};
 			++shaderID;
@@ -1844,9 +1834,7 @@ namespace flex
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV;
 
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SCENE_SAMPLER);
-
-			m_BaseShaders[shaderID].dynamicBufferUniforms = {};
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_SCENE_SAMPLER);
 			++shaderID;
 
 			// Blit
@@ -1856,9 +1844,7 @@ namespace flex
 				(u32)VertexAttribute::POSITION_2D |
 				(u32)VertexAttribute::UV;
 
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_ALBEDO_SAMPLER);
-
-			m_BaseShaders[shaderID].dynamicBufferUniforms = {};
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_ALBEDO_SAMPLER);
 			++shaderID;
 
 			assert(shaderID == m_BaseShaders.size());
@@ -1879,9 +1865,9 @@ namespace flex
 					(!shader.bNeedPushConstantBlock && shader.pushConstantBlockSize == 0));
 
 
-				if (shader.constantBufferUniforms.HasUniform(U_HIGH_RES_TEX))
+				if (shader.textureUniforms.HasUniform(U_HIGH_RES_TEX))
 				{
-					assert(!shader.constantBufferUniforms.HasUniform(U_ALBEDO_SAMPLER));
+					assert(!shader.textureUniforms.HasUniform(U_ALBEDO_SAMPLER));
 				}
 			}
 

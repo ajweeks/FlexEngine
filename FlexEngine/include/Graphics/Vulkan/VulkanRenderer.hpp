@@ -205,9 +205,10 @@ namespace flex
 			void CreateSwapChain();
 			void CreateSwapChainImageViews();
 			void CreateRenderPasses();
-			void CreateDescriptorSetLayout(ShaderID shaderID);
+			void FillOutBufferDescriptorInfos(ShaderUniformContainer<BufferDescriptorInfo>* descriptors, UniformBuffer* uniformBuffer, ShaderID shaderID);
 			void CreateDescriptorSet(RenderID renderID);
 			void CreateDescriptorSet(DescriptorSetCreateInfo* createInfo);
+			void CreateDescriptorSetLayout(ShaderID shaderID);
 			void CreateGraphicsPipeline(RenderID renderID, bool bSetCubemapRenderPass);
 			void CreateGraphicsPipeline(GraphicsPipelineCreateInfo* createInfo);
 			void CreateDepthResources();

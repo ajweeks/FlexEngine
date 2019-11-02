@@ -123,6 +123,8 @@ namespace flex
 	bool IsNanOrInf(const glm::quat& quat);
 
 	real RoundToNearestPowerOfTwo(real num);
+	u64 NextPowerOfTwo(u64 x);
+	u32 NextPowerOfTwo(u32 x);
 
 	std::string GetIncrementedPostFixedStr(const std::string& namePrefix, const std::string& defaultName);
 

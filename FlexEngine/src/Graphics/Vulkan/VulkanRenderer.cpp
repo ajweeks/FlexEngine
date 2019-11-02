@@ -869,14 +869,6 @@ namespace flex
 			{
 				mat.material.pushConstantBlock = new Material::PushConstantBlock(shader.shader->pushConstantBlockSize);
 			}
-
-			if (shader.shader->bNeedIrradianceSampler)
-			{
-				if (createInfo->irradianceSamplerMatID < m_Materials.size())
-				{
-					mat.irradianceTexture = m_Materials[createInfo->irradianceSamplerMatID].irradianceTexture;
-				}
-			}
 			if (shader.shader->bNeedBRDFLUT)
 			{
 				if (!m_BRDFTexture)
@@ -885,12 +877,19 @@ namespace flex
 					m_BRDFTexture->CreateEmpty(VK_FORMAT_R16G16_SFLOAT, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 					m_LoadedTextures.push_back(m_BRDFTexture);
 				}
-				mat.brdfLUT = m_BRDFTexture;
+				mat.textures.Add(U_BRDF_LUT_SAMPLER, m_BRDFTexture);
+			}
+			if (shader.shader->bNeedIrradianceSampler)
+			{
+				if (createInfo->irradianceSamplerMatID < m_Materials.size())
+				{
+					mat.textures.Add(U_IRRADIANCE_SAMPLER, m_Materials[createInfo->irradianceSamplerMatID].textures[U_IRRADIANCE_SAMPLER]);
+				}
 			}
 			if (shader.shader->bNeedPrefilteredMap)
 			{
-				mat.prefilterTexture = (createInfo->prefilterMapSamplerMatID < m_Materials.size() ?
-					m_Materials[createInfo->prefilterMapSamplerMatID].prefilterTexture : nullptr);
+				VulkanTexture* prefilterTexture = (createInfo->prefilterMapSamplerMatID < m_Materials.size() ? m_Materials[createInfo->prefilterMapSamplerMatID].textures[U_PREFILTER_MAP] : nullptr);
+				mat.textures.Add(U_PREFILTER_MAP, prefilterTexture);
 			}
 
 			mat.material.enablePrefilteredMap = createInfo->enablePrefilteredMap;
@@ -908,13 +907,13 @@ namespace flex
 			struct TextureInfo
 			{
 				TextureInfo(const std::string& relativeFilePath,
-					VulkanTexture** texture,
+					u64 textureUniform,
 					bool* generate,
 					VkFormat format = VK_FORMAT_R8G8B8A8_UNORM,
 					u32 mipLevels = 1,
 					bool bHDR = false) :
 					relativeFilePath(relativeFilePath),
-					texture(texture),
+					textureUniform(textureUniform),
 					generate(generate),
 					format(format),
 					mipLevels(mipLevels),
@@ -922,7 +921,7 @@ namespace flex
 				{}
 
 				const std::string relativeFilePath;
-				VulkanTexture** texture;
+				u64 textureUniform;
 				bool* generate;
 				VkFormat format;
 				u32 mipLevels;
@@ -931,11 +930,11 @@ namespace flex
 
 			TextureInfo textureInfos[] =
 			{
-				{ createInfo->normalTexturePath, &mat.normalTexture, &mat.material.generateNormalSampler },
-				{ createInfo->albedoTexturePath, &mat.albedoTexture, &mat.material.generateAlbedoSampler },
-				{ createInfo->metallicTexturePath, &mat.metallicTexture, &mat.material.generateMetallicSampler },
-				{ createInfo->roughnessTexturePath, &mat.roughnessTexture, &mat.material.generateRoughnessSampler },
-				{ createInfo->hdrEquirectangularTexturePath, &mat.hdrEquirectangularTexture, &mat.material.generateHDREquirectangularSampler, VK_FORMAT_R32G32B32A32_SFLOAT, 1, true },
+				{ createInfo->albedoTexturePath, U_ALBEDO_SAMPLER, &mat.material.generateAlbedoSampler },
+				{ createInfo->metallicTexturePath, U_METALLIC_SAMPLER, &mat.material.generateMetallicSampler },
+				{ createInfo->roughnessTexturePath, U_ROUGHNESS_SAMPLER, &mat.material.generateRoughnessSampler },
+				{ createInfo->normalTexturePath, U_NORMAL_SAMPLER, &mat.material.generateNormalSampler },
+				{ createInfo->hdrEquirectangularTexturePath, U_HDR_EQUIRECTANGULAR_SAMPLER, &mat.material.generateHDREquirectangularSampler, VK_FORMAT_R32G32B32A32_SFLOAT, 1, true },
 			};
 			const size_t textureCount = sizeof(textureInfos) / sizeof(textureInfos[0]);
 
@@ -945,24 +944,33 @@ namespace flex
 				createInfo->generateIrradianceSampler + createInfo->generateMetallicSampler +
 				createInfo->generateNormalSampler + createInfo->generatePrefilteredMap +
 				createInfo->generateRoughnessSampler + createInfo->generateHDREquirectangularSampler;
-			m_LoadedTextures.reserve(usedTextureCount);
+			m_LoadedTextures.reserve(m_LoadedTextures.size() + usedTextureCount);
 
 			for (TextureInfo& textureInfo : textureInfos)
 			{
 				if (!textureInfo.relativeFilePath.empty() && textureInfo.generate)
 				{
-					*textureInfo.texture = GetLoadedTexture(textureInfo.relativeFilePath);
+					VulkanTexture* texture = GetLoadedTexture(textureInfo.relativeFilePath);
 
-					if (*textureInfo.texture == nullptr)
+					if (texture == nullptr)
 					{
 						u32 channelCount = 4;
 						bool bFlipVertically = false;
-						*textureInfo.texture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue,
+						texture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue,
 							textureInfo.relativeFilePath, channelCount, bFlipVertically, textureInfo.mipLevels > 1, textureInfo.bHDR);
-						(*textureInfo.texture)->CreateFromFile(textureInfo.format);
-						m_LoadedTextures.push_back(*textureInfo.texture);
+						texture->CreateFromFile(textureInfo.format);
+						texture->imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-						(*textureInfo.texture)->imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+						m_LoadedTextures.push_back(texture);
+					}
+
+					mat.textures.Add(textureInfo.textureUniform, texture);
+				}
+				else
+				{
+					if (!mat.textures.Contains(textureInfo.textureUniform) && shader.shader->textureUniforms.HasUniform(textureInfo.textureUniform))
+					{
+						mat.textures.Add(textureInfo.textureUniform, m_BlankTexture);
 					}
 				}
 			}
@@ -972,87 +980,94 @@ namespace flex
 			{
 				if (createInfo->cubeMapFilePaths[0].empty())
 				{
-					assert(mat.cubemapTexture == nullptr);
+					assert(!mat.textures.Contains(U_CUBEMAP_SAMPLER));
 
 					const u32 mipLevels = static_cast<u32>(floor(log2(createInfo->generatedCubemapSize.x))) + 1;
 					u32 channelCount = 4;
-					mat.cubemapTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "Cubemap", (u32)createInfo->generatedCubemapSize.x,
+					VulkanTexture* cubemapTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "Cubemap", (u32)createInfo->generatedCubemapSize.x,
 						(u32)createInfo->generatedCubemapSize.y, channelCount);
-					mat.cubemapTexture->CreateCubemapEmpty(VK_FORMAT_R8G8B8A8_UNORM, mipLevels, createInfo->enableCubemapTrilinearFiltering);
-					m_LoadedTextures.push_back(mat.cubemapTexture);
+					cubemapTexture->CreateCubemapEmpty(VK_FORMAT_R8G8B8A8_UNORM, mipLevels, createInfo->enableCubemapTrilinearFiltering);
+					//texture->imageLayout = VK_IMAGE_LAYOUT_UNDEFINED; // TODO:Set this in creation function?
+
+					m_LoadedTextures.push_back(cubemapTexture);
+					mat.textures.Add(U_CUBEMAP_SAMPLER, cubemapTexture);
 				}
 				else
 				{
-					mat.cubemapTexture = GetLoadedTexture(createInfo->cubeMapFilePaths[0]);
+					VulkanTexture* cubemapTexture = GetLoadedTexture(createInfo->cubeMapFilePaths[0]);
 
-					if (mat.cubemapTexture == nullptr)
+					if (cubemapTexture == nullptr)
 					{
 						u32 channelCount = 4;
-						mat.cubemapTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue,
+						cubemapTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue,
 							createInfo->cubeMapFilePaths, channelCount, false, false, false);
-						mat.cubemapTexture->CreateCubemapFromTextures(VK_FORMAT_R8G8B8A8_UNORM, createInfo->cubeMapFilePaths, true);
-						m_LoadedTextures.push_back(mat.cubemapTexture);
+						cubemapTexture->CreateCubemapFromTextures(VK_FORMAT_R8G8B8A8_UNORM, createInfo->cubeMapFilePaths, true);
+						m_LoadedTextures.push_back(cubemapTexture);
 					}
+
+					mat.textures.Add(U_CUBEMAP_SAMPLER, cubemapTexture);
 				}
 			}
-
-			if (mat.material.generateHDRCubemapSampler)
+			else if (mat.material.generateHDRCubemapSampler)
 			{
-				assert(mat.cubemapTexture == nullptr);
+				assert(!mat.textures.Contains(U_CUBEMAP_SAMPLER));
 
 				const u32 mipLevels = static_cast<u32>(floor(log2(createInfo->generatedCubemapSize.x))) + 1;
-				mat.cubemapTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "HDR Cubemap",
+				VulkanTexture* cubemapTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "HDR Cubemap",
 					(u32)createInfo->generatedCubemapSize.x, (u32)createInfo->generatedCubemapSize.y, 4);
-				mat.cubemapTexture->CreateCubemapEmpty(VK_FORMAT_R32G32B32A32_SFLOAT, mipLevels, false);
-				m_LoadedTextures.push_back(mat.cubemapTexture);
+				cubemapTexture->CreateCubemapEmpty(VK_FORMAT_R32G32B32A32_SFLOAT, mipLevels, false);
+				m_LoadedTextures.push_back(cubemapTexture);
+				mat.textures.Add(U_CUBEMAP_SAMPLER, cubemapTexture);
 			}
-
-			if (shader.shader->bNeedCubemapSampler)
+			else
 			{
-
-			}
-
-
-			if (shader.shader->bNeedBRDFLUT)
-			{
-
+				if (!mat.textures.Contains(U_CUBEMAP_SAMPLER) && shader.shader->textureUniforms.HasUniform(U_CUBEMAP_SAMPLER))
+				{
+					mat.textures.Add(U_CUBEMAP_SAMPLER, m_BlankTextureArr);
+				}
 			}
 
 			if (mat.material.generateIrradianceSampler)
 			{
-				assert(mat.irradianceTexture == nullptr);
+				assert(!mat.textures.Contains(U_IRRADIANCE_SAMPLER));
 
 				const u32 mipLevels = static_cast<u32>(floor(log2(createInfo->generatedIrradianceCubemapSize.x))) + 1;
-				mat.irradianceTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "Irradiance sampler",
+				VulkanTexture* irradianceTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "Irradiance sampler",
 					(u32)createInfo->generatedIrradianceCubemapSize.x,
 					(u32)createInfo->generatedIrradianceCubemapSize.y, 4);
-				mat.irradianceTexture->CreateCubemapEmpty(VK_FORMAT_R32G32B32A32_SFLOAT, mipLevels, false);
-				m_LoadedTextures.push_back(mat.irradianceTexture);
+				irradianceTexture->CreateCubemapEmpty(VK_FORMAT_R32G32B32A32_SFLOAT, mipLevels, false);
+				m_LoadedTextures.push_back(irradianceTexture);
+				mat.textures.Add(U_IRRADIANCE_SAMPLER, irradianceTexture);
 			}
-
-			if (shader.shader->bNeedIrradianceSampler)
+			else
 			{
-
+				if (!mat.textures.Contains(U_IRRADIANCE_SAMPLER) && shader.shader->textureUniforms.HasUniform(U_IRRADIANCE_SAMPLER))
+				{
+					mat.textures.Add(U_IRRADIANCE_SAMPLER, m_BlankTextureArr);
+				}
 			}
 
 			if (mat.material.generatePrefilteredMap)
 			{
-				assert(mat.prefilterTexture == nullptr);
+				assert(!mat.textures.Contains(U_PREFILTER_MAP));
 
 				const u32 mipLevels = static_cast<u32>(floor(log2(createInfo->generatedPrefilteredCubemapSize.x))) + 1;
-				mat.prefilterTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "Prefiltered map",
+				VulkanTexture* prefilterTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "Prefiltered map",
 					(u32)createInfo->generatedPrefilteredCubemapSize.x,
 					(u32)createInfo->generatedPrefilteredCubemapSize.y, 4);
-				mat.prefilterTexture->CreateCubemapEmpty(VK_FORMAT_R16G16B16A16_SFLOAT, mipLevels, true);
-				m_LoadedTextures.push_back(mat.prefilterTexture);
+				prefilterTexture->CreateCubemapEmpty(VK_FORMAT_R16G16B16A16_SFLOAT, mipLevels, true);
+				m_LoadedTextures.push_back(prefilterTexture);
+				mat.textures.Add(U_PREFILTER_MAP, prefilterTexture);
 			}
-
-			if (shader.shader->bNeedPrefilteredMap)
+			else
 			{
-
+				if (!mat.textures.Contains(U_PREFILTER_MAP) && shader.shader->textureUniforms.HasUniform(U_PREFILTER_MAP))
+				{
+					mat.textures.Add(U_PREFILTER_MAP, m_BlankTextureArr);
+				}
 			}
 
-			if (shader.shader->constantBufferUniforms.HasUniform(U_NOISE_SAMPLER))
+			if (shader.shader->textureUniforms.HasUniform(U_NOISE_SAMPLER))
 			{
 				if (m_NoiseTexture == nullptr)
 				{
@@ -1066,8 +1081,9 @@ namespace flex
 					m_LoadedTextures.push_back(m_NoiseTexture);
 				}
 
-				mat.noiseTexture = m_NoiseTexture;
+				mat.textures.Add(U_NOISE_SAMPLER, m_NoiseTexture);
 			}
+
 
 			return matID;
 		}
@@ -1218,8 +1234,8 @@ namespace flex
 				descSetCreateInfo.shaderID = postProcessShaderID;
 				descSetCreateInfo.uniformBuffer = &postProcessShader->uniformBuffer;
 				FrameBufferAttachment& sceneFrameBufferAttachment = m_OffscreenFrameBuffer0->frameBufferAttachments[0].second;
-				descSetCreateInfo.sceneImageView = sceneFrameBufferAttachment.view;
-				descSetCreateInfo.sceneSampler = m_LinMipLinSampler;
+				descSetCreateInfo.imageDescriptors.Add(U_SCENE_SAMPLER, ImageDescriptorInfo{ sceneFrameBufferAttachment.view, m_LinMipLinSampler });
+				FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBuffer, descSetCreateInfo.shaderID);
 				CreateDescriptorSet(&descSetCreateInfo);
 			}
 
@@ -1236,8 +1252,8 @@ namespace flex
 				descSetCreateInfo.shaderID = gammaCorrectShaderID;
 				descSetCreateInfo.uniformBuffer = &gammaCorrectShader->uniformBuffer;
 				FrameBufferAttachment& sceneFrameBufferAttachment = m_OffscreenFrameBuffer1->frameBufferAttachments[0].second;
-				descSetCreateInfo.sceneImageView = sceneFrameBufferAttachment.view;
-				descSetCreateInfo.sceneSampler = m_LinMipLinSampler;
+				descSetCreateInfo.imageDescriptors.Add(U_SCENE_SAMPLER, ImageDescriptorInfo{ sceneFrameBufferAttachment.view, m_LinMipLinSampler });
+				FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBuffer, descSetCreateInfo.shaderID);
 				CreateDescriptorSet(&descSetCreateInfo);
 			}
 
@@ -1254,10 +1270,10 @@ namespace flex
 				descSetCreateInfo.shaderID = taaResolveShaderID;
 				descSetCreateInfo.uniformBuffer = &taaResolveShader->uniformBuffer;
 				FrameBufferAttachment& sceneFrameBufferAttachment = m_OffscreenFrameBuffer0->frameBufferAttachments[0].second;
-				descSetCreateInfo.sceneImageView = sceneFrameBufferAttachment.view;
-				descSetCreateInfo.sceneSampler = m_LinMipLinSampler;
-				descSetCreateInfo.historyBufferImageView = m_HistoryBuffer->imageView;
-				descSetCreateInfo.historyBufferSampler = m_LinMipLinSampler;
+				descSetCreateInfo.imageDescriptors.Add(U_DEPTH_SAMPLER, ImageDescriptorInfo{ m_GBufferDepthAttachment->view, m_DepthSampler });
+				descSetCreateInfo.imageDescriptors.Add(U_SCENE_SAMPLER, ImageDescriptorInfo{ sceneFrameBufferAttachment.view, m_LinMipLinSampler });
+				descSetCreateInfo.imageDescriptors.Add(U_HISTORY_SAMPLER, ImageDescriptorInfo{ m_HistoryBuffer->imageView, m_LinMipLinSampler });
+				FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBuffer, descSetCreateInfo.shaderID);
 				CreateDescriptorSet(&descSetCreateInfo);
 			}
 
@@ -1368,7 +1384,8 @@ namespace flex
 				FrameBufferAttachment& sceneFrameBufferAttachment = m_bEnableTAA ?
 					m_OffscreenFrameBuffer1->frameBufferAttachments[0].second :
 					m_OffscreenFrameBuffer0->frameBufferAttachments[0].second;
-				descSetCreateInfo.albedoView = sceneFrameBufferAttachment.view;
+				descSetCreateInfo.imageDescriptors.Add(U_ALBEDO_SAMPLER, ImageDescriptorInfo{ sceneFrameBufferAttachment.view, m_LinMipLinSampler });
+				FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBuffer, descSetCreateInfo.shaderID);
 				CreateDescriptorSet(&descSetCreateInfo);
 			}
 
@@ -1871,8 +1888,8 @@ namespace flex
 					m_Shaders[m_Materials[renderObject->materialID].material.shaderID].shader->bNeedPrefilteredMap)
 				{
 					VulkanMaterial* mat = &m_Materials[renderObject->materialID];
-					mat->irradianceTexture = m_Materials[skyboxMatierialID].irradianceTexture;
-					mat->prefilterTexture = m_Materials[skyboxMatierialID].prefilterTexture;
+					mat->textures.Add(U_IRRADIANCE_SAMPLER, m_Materials[skyboxMatierialID].textures[U_IRRADIANCE_SAMPLER]);
+					mat->textures.Add(U_PREFILTER_MAP, m_Materials[skyboxMatierialID].textures[U_PREFILTER_MAP]);
 				}
 			}
 
@@ -2040,14 +2057,8 @@ namespace flex
 					static std::string matName = "";
 					static i32 selectedShaderIndex = 0;
 					// Texture index values of 0 represent no texture, 1 = first index into textures array and so on
-					static i32 albedoTextureIndex = 0;
-					static bool bUpdateAlbedoTextureMaterial = false;
-					static i32 metallicTextureIndex = 0;
-					static bool bUpdateMetallicTextureMaterial = false;
-					static i32 roughnessTextureIndex = 0;
-					static bool bUpdateRoughessTextureMaterial = false;
-					static i32 normalTextureIndex = 0;
-					static bool bUpdateNormalTextureMaterial = false;
+					//static i32 albedoTextureIndex = 0;
+					//static bool bUpdateAlbedoTextureMaterial = false;
 					VulkanMaterial& mat = m_Materials[selectedMaterialID];
 
 					if (bUpdateFields)
@@ -2062,45 +2073,45 @@ namespace flex
 						{
 							std::string texturePath = texture->GetRelativeFilePath();
 
-							ImGuiUpdateTextureIndexOrMaterial(bUpdateAlbedoTextureMaterial,
-								texturePath,
-								mat.material.albedoTexturePath,
-								texture,
-								i,
-								&albedoTextureIndex,
-								&mat.albedoTexture);
+							//ImGuiUpdateTextureIndexOrMaterial(bUpdateAlbedoTextureMaterial,
+							//	texturePath,
+							//	mat.material.albedoTexturePath,
+							//	texture,
+							//	i,
+							//	&albedoTextureIndex,
+							//	&mat.albedoTexture);
 
-							ImGuiUpdateTextureIndexOrMaterial(bUpdateMetallicTextureMaterial,
-								texturePath,
-								mat.material.metallicTexturePath,
-								texture,
-								i,
-								&metallicTextureIndex,
-								&mat.metallicTexture);
+							//ImGuiUpdateTextureIndexOrMaterial(bUpdateMetallicTextureMaterial,
+							//	texturePath,
+							//	mat.material.metallicTexturePath,
+							//	texture,
+							//	i,
+							//	&metallicTextureIndex,
+							//	&mat.metallicTexture);
 
-							ImGuiUpdateTextureIndexOrMaterial(bUpdateRoughessTextureMaterial,
-								texturePath,
-								mat.material.roughnessTexturePath,
-								texture,
-								i,
-								&roughnessTextureIndex,
-								&mat.roughnessTexture);
+							//ImGuiUpdateTextureIndexOrMaterial(bUpdateRoughessTextureMaterial,
+							//	texturePath,
+							//	mat.material.roughnessTexturePath,
+							//	texture,
+							//	i,
+							//	&roughnessTextureIndex,
+							//	&mat.roughnessTexture);
 
-							ImGuiUpdateTextureIndexOrMaterial(bUpdateNormalTextureMaterial,
-								texturePath,
-								mat.material.normalTexturePath,
-								texture,
-								i,
-								&normalTextureIndex,
-								&mat.normalTexture);
+							//ImGuiUpdateTextureIndexOrMaterial(bUpdateNormalTextureMaterial,
+							//	texturePath,
+							//	mat.material.normalTexturePath,
+							//	texture,
+							//	i,
+							//	&normalTextureIndex,
+							//	&mat.normalTexture);
 
 							++i;
 						}
 
-						mat.material.enableAlbedoSampler = (albedoTextureIndex > 0);
-						mat.material.enableMetallicSampler = (metallicTextureIndex > 0);
-						mat.material.enableRoughnessSampler = (roughnessTextureIndex > 0);
-						mat.material.enableNormalSampler = (normalTextureIndex > 0);
+						//mat.material.enableAlbedoSampler = (albedoTextureIndex > 0);
+						//mat.material.enableMetallicSampler = (metallicTextureIndex > 0);
+						//mat.material.enableRoughnessSampler = (roughnessTextureIndex > 0);
+						//mat.material.enableNormalSampler = (normalTextureIndex > 0);
 
 						selectedShaderIndex = mat.material.shaderID;
 					}
@@ -2189,18 +2200,18 @@ namespace flex
 						textures.push_back(texture);
 					}
 
-					bUpdateAlbedoTextureMaterial = DoTextureSelector("Albedo texture", textures,
-						&albedoTextureIndex, &mat.material.generateAlbedoSampler);
-					bUpdateFields |= bUpdateAlbedoTextureMaterial;
-					bUpdateMetallicTextureMaterial = DoTextureSelector("Metallic texture", textures,
-						&metallicTextureIndex, &mat.material.generateMetallicSampler);
-					bUpdateFields |= bUpdateMetallicTextureMaterial;
-					bUpdateRoughessTextureMaterial = DoTextureSelector("Roughness texture", textures,
-						&roughnessTextureIndex, &mat.material.generateRoughnessSampler);
-					bUpdateFields |= bUpdateRoughessTextureMaterial;
-					bUpdateNormalTextureMaterial = DoTextureSelector("Normal texture", textures,
-						&normalTextureIndex, &mat.material.generateNormalSampler);
-					bUpdateFields |= bUpdateNormalTextureMaterial;
+					//bUpdateAlbedoTextureMaterial = DoTextureSelector("Albedo texture", textures,
+					//	&albedoTextureIndex, &mat.material.generateAlbedoSampler);
+					//bUpdateFields |= bUpdateAlbedoTextureMaterial;
+					//bUpdateMetallicTextureMaterial = DoTextureSelector("Metallic texture", textures,
+					//	&metallicTextureIndex, &mat.material.generateMetallicSampler);
+					//bUpdateFields |= bUpdateMetallicTextureMaterial;
+					//bUpdateRoughessTextureMaterial = DoTextureSelector("Roughness texture", textures,
+					//	&roughnessTextureIndex, &mat.material.generateRoughnessSampler);
+					//bUpdateFields |= bUpdateRoughessTextureMaterial;
+					//bUpdateNormalTextureMaterial = DoTextureSelector("Normal texture", textures,
+					//	&normalTextureIndex, &mat.material.generateNormalSampler);
+					//bUpdateFields |= bUpdateNormalTextureMaterial;
 
 					ImGui::NewLine();
 
@@ -2734,7 +2745,8 @@ namespace flex
 			equirectangularToCubeDescriptorCreateInfo.descriptorSetLayout = &m_DescriptorSetLayouts[equirectangularToCubeShaderID];
 			equirectangularToCubeDescriptorCreateInfo.shaderID = equirectangularToCubeShaderID;
 			equirectangularToCubeDescriptorCreateInfo.uniformBuffer = &equirectangularToCubeShader.uniformBuffer;
-			equirectangularToCubeDescriptorCreateInfo.hdrEquirectangularTexture = equirectangularToCubeMat.hdrEquirectangularTexture;
+			equirectangularToCubeDescriptorCreateInfo.imageDescriptors.Add(U_HDR_EQUIRECTANGULAR_SAMPLER, ImageDescriptorInfo{ equirectangularToCubeMat.textures[U_HDR_EQUIRECTANGULAR_SAMPLER]->imageView, m_LinMipLinSampler });
+			FillOutBufferDescriptorInfos(&equirectangularToCubeDescriptorCreateInfo.bufferDescriptors, equirectangularToCubeDescriptorCreateInfo.uniformBuffer, equirectangularToCubeDescriptorCreateInfo.shaderID);
 			CreateDescriptorSet(&equirectangularToCubeDescriptorCreateInfo);
 
 			std::array<VkPushConstantRange, 1> pushConstantRanges = {};
@@ -2787,7 +2799,7 @@ namespace flex
 			// Change image layout for all cubemap faces to transfer destination
 			SetImageLayout(
 				cmdBuf,
-				renderObjectMat.cubemapTexture,
+				renderObjectMat.textures[U_CUBEMAP_SAMPLER],
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				subresourceRange);
@@ -2871,7 +2883,7 @@ namespace flex
 						cmdBuf,
 						offscreen.image,
 						VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-						renderObjectMat.cubemapTexture->image,
+						renderObjectMat.textures[U_CUBEMAP_SAMPLER]->image,
 						VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 						1,
 						&copyRegion);
@@ -2888,7 +2900,7 @@ namespace flex
 
 			SetImageLayout(
 				cmdBuf,
-				renderObjectMat.cubemapTexture,
+				renderObjectMat.textures[U_CUBEMAP_SAMPLER],
 				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 				subresourceRange);
@@ -3001,7 +3013,8 @@ namespace flex
 			irradianceDescriptorCreateInfo.descriptorSetLayout = &m_DescriptorSetLayouts[irradianceShaderID];
 			irradianceDescriptorCreateInfo.shaderID = irradianceShaderID;
 			irradianceDescriptorCreateInfo.uniformBuffer = &irradianceShader.uniformBuffer;
-			irradianceDescriptorCreateInfo.cubemapTexture = renderObjectMat.cubemapTexture;
+			irradianceDescriptorCreateInfo.imageDescriptors.Add(U_CUBEMAP_SAMPLER, ImageDescriptorInfo{ renderObjectMat.textures[U_CUBEMAP_SAMPLER]->imageView, m_LinMipLinSampler });
+			FillOutBufferDescriptorInfos(&irradianceDescriptorCreateInfo.bufferDescriptors, irradianceDescriptorCreateInfo.uniformBuffer, irradianceDescriptorCreateInfo.shaderID);
 			CreateDescriptorSet(&irradianceDescriptorCreateInfo);
 
 			std::array<VkPushConstantRange, 1> pushConstantRanges = {};
@@ -3060,11 +3073,11 @@ namespace flex
 			// Change image layout for all cubemap faces to transfer destination
 			SetImageLayout(
 				cmdBuf,
-				renderObjectMat.irradianceTexture,
+				renderObjectMat.textures[U_IRRADIANCE_SAMPLER],
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				subresourceRange);
-			renderObjectMat.irradianceTexture->imageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			renderObjectMat.textures[U_IRRADIANCE_SAMPLER]->imageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 
 			for (u32 mip = 0; mip < mipLevels; ++mip)
 			{
@@ -3134,7 +3147,7 @@ namespace flex
 						cmdBuf,
 						offscreen.image,
 						VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-						renderObjectMat.irradianceTexture->image,
+						renderObjectMat.textures[U_IRRADIANCE_SAMPLER]->image,
 						VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 						1,
 						&copyRegion);
@@ -3151,11 +3164,11 @@ namespace flex
 
 			SetImageLayout(
 				cmdBuf,
-				renderObjectMat.irradianceTexture,
+				renderObjectMat.textures[U_IRRADIANCE_SAMPLER],
 				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 				subresourceRange);
-			renderObjectMat.irradianceTexture->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			renderObjectMat.textures[U_IRRADIANCE_SAMPLER]->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 			EndDebugMarkerRegion(cmdBuf); // Generate Irradiance
 
@@ -3265,7 +3278,8 @@ namespace flex
 			prefilterDescriptorCreateInfo.descriptorSetLayout = &m_DescriptorSetLayouts[prefilterShaderID];
 			prefilterDescriptorCreateInfo.shaderID = prefilterShaderID;
 			prefilterDescriptorCreateInfo.uniformBuffer = &prefilterShader.uniformBuffer;
-			prefilterDescriptorCreateInfo.cubemapTexture = renderObjectMat.cubemapTexture;
+			prefilterDescriptorCreateInfo.imageDescriptors.Add(U_CUBEMAP_SAMPLER, ImageDescriptorInfo{ renderObjectMat.textures[U_CUBEMAP_SAMPLER]->imageView, m_LinMipLinSampler });
+			FillOutBufferDescriptorInfos(&prefilterDescriptorCreateInfo.bufferDescriptors, prefilterDescriptorCreateInfo.uniformBuffer, prefilterDescriptorCreateInfo.shaderID);
 			CreateDescriptorSet(&prefilterDescriptorCreateInfo);
 
 			std::array<VkPushConstantRange, 1> pushConstantRanges = {};
@@ -3324,11 +3338,11 @@ namespace flex
 			// Change image layout for all cubemap faces to transfer destination
 			SetImageLayout(
 				cmdBuf,
-				renderObjectMat.prefilterTexture,
+				renderObjectMat.textures[U_PREFILTER_MAP],
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				subresourceRange);
-			renderObjectMat.prefilterTexture->imageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			renderObjectMat.textures[U_PREFILTER_MAP]->imageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 
 			for (u32 mip = 0; mip < mipLevels; ++mip)
 			{
@@ -3398,7 +3412,7 @@ namespace flex
 						cmdBuf,
 						offscreen.image,
 						VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-						renderObjectMat.prefilterTexture->image,
+						renderObjectMat.textures[U_PREFILTER_MAP]->image,
 						VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 						1,
 						&copyRegion);
@@ -3415,11 +3429,11 @@ namespace flex
 
 			SetImageLayout(
 				cmdBuf,
-				renderObjectMat.prefilterTexture,
+				renderObjectMat.textures[U_PREFILTER_MAP],
 				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 				subresourceRange);
-			renderObjectMat.prefilterTexture->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			renderObjectMat.textures[U_PREFILTER_MAP]->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 			EndDebugMarkerRegion(cmdBuf); // Generate Prefiltered Cube
 
@@ -3612,10 +3626,10 @@ namespace flex
 			descSetCreateInfo.uniformBuffer = &ssaoShader->uniformBuffer;
 			// TODO: Bring line out to function
 			FrameBufferAttachment& normalFrameBufferAttachment = m_GBufferFrameBuf->frameBufferAttachments[0].second;
-			// Depth texture is handled for us in CreateDescriptorSet
-			descSetCreateInfo.ssaoNormalImageView = normalFrameBufferAttachment.view;
-			descSetCreateInfo.ssaoNormalSampler = m_NearestClampEdgeSampler;
-			descSetCreateInfo.noiseTexture = ssaoMaterial->noiseTexture;
+			descSetCreateInfo.imageDescriptors.Add(U_DEPTH_SAMPLER, ImageDescriptorInfo{ m_GBufferDepthAttachment->view, m_DepthSampler });
+			descSetCreateInfo.imageDescriptors.Add(U_SSAO_NORMAL_SAMPLER, ImageDescriptorInfo{ normalFrameBufferAttachment.view, m_NearestClampEdgeSampler });
+			descSetCreateInfo.imageDescriptors.Add(U_NOISE_SAMPLER, ImageDescriptorInfo{ ssaoMaterial->textures[U_NOISE_SAMPLER]->imageView, m_NearestClampEdgeSampler });
+			FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBuffer, descSetCreateInfo.shaderID);
 			CreateDescriptorSet(&descSetCreateInfo);
 
 			VulkanMaterial* ssaoBlurMaterial = &m_Materials[m_SSAOBlurMatID];
@@ -3630,11 +3644,10 @@ namespace flex
 			descSetCreateInfo.shaderID = ssaoBlurMaterial->material.shaderID;
 			descSetCreateInfo.uniformBuffer = &ssaoBlurShader->uniformBuffer;
 			FrameBufferAttachment& ssaoFrameBufferAttachment = m_SSAOFrameBuf->frameBufferAttachments[0].second;
-			descSetCreateInfo.ssaoImageView = ssaoFrameBufferAttachment.view;
-			descSetCreateInfo.ssaoSampler = m_NearestClampEdgeSampler;
-			descSetCreateInfo.ssaoNormalImageView = normalFrameBufferAttachment.view;
-			descSetCreateInfo.ssaoNormalSampler = m_NearestClampEdgeSampler;
-			// Depth texture is handled in CreateDescriptorSet
+			descSetCreateInfo.imageDescriptors.Add(U_DEPTH_SAMPLER, ImageDescriptorInfo{ m_GBufferDepthAttachment->view, m_DepthSampler });
+			descSetCreateInfo.imageDescriptors.Add(U_SSAO_RAW_SAMPLER, ImageDescriptorInfo{ ssaoFrameBufferAttachment.view, m_NearestClampEdgeSampler });
+			descSetCreateInfo.imageDescriptors.Add(U_SSAO_NORMAL_SAMPLER, ImageDescriptorInfo{ normalFrameBufferAttachment.view, m_NearestClampEdgeSampler });
+			FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBuffer, descSetCreateInfo.shaderID);
 			CreateDescriptorSet(&descSetCreateInfo);
 
 			descSetCreateInfo = {};
@@ -3644,10 +3657,10 @@ namespace flex
 			descSetCreateInfo.shaderID = ssaoBlurMaterial->material.shaderID;
 			descSetCreateInfo.uniformBuffer = &ssaoBlurShader->uniformBuffer;
 			FrameBufferAttachment& ssaoBlurHFrameBufferAttachment = m_SSAOBlurHFrameBuf->frameBufferAttachments[0].second;
-			descSetCreateInfo.ssaoImageView = ssaoBlurHFrameBufferAttachment.view;
-			descSetCreateInfo.ssaoSampler = m_NearestClampEdgeSampler;
-			descSetCreateInfo.ssaoNormalImageView = normalFrameBufferAttachment.view;
-			descSetCreateInfo.ssaoNormalSampler = m_NearestClampEdgeSampler;
+			descSetCreateInfo.imageDescriptors.Add(U_DEPTH_SAMPLER, ImageDescriptorInfo{ m_GBufferDepthAttachment->view, m_DepthSampler });
+			descSetCreateInfo.imageDescriptors.Add(U_SSAO_RAW_SAMPLER, ImageDescriptorInfo{ ssaoBlurHFrameBufferAttachment.view, m_NearestClampEdgeSampler });
+			descSetCreateInfo.imageDescriptors.Add(U_SSAO_NORMAL_SAMPLER, ImageDescriptorInfo{ normalFrameBufferAttachment.view, m_NearestClampEdgeSampler });
+			FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBuffer, descSetCreateInfo.shaderID);
 			CreateDescriptorSet(&descSetCreateInfo);
 		}
 
@@ -3676,7 +3689,7 @@ namespace flex
 				// There's not enough info at this point to know which shadow cascade is needed, this
 				// function should be bypassed by calling VulkanRenderPass::Begin_WithFrameBuffer directly
 				ENSURE_NO_ENTRY()
-				return nullptr;
+					return nullptr;
 			}
 			return m_FrameBuffers[frameBufferID];
 		}
@@ -3945,7 +3958,8 @@ namespace flex
 					descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 					descSetCreateInfo.shaderID = computeSDFShaderID;
 					descSetCreateInfo.uniformBuffer = &computeSDFShader.uniformBuffer;
-					descSetCreateInfo.albedoTexture = highResTex;
+					descSetCreateInfo.imageDescriptors.Add(U_ALBEDO_SAMPLER, ImageDescriptorInfo{ highResTex->imageView, m_LinMipLinSampler });
+					FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBuffer, descSetCreateInfo.shaderID);
 					CreateDescriptorSet(&descSetCreateInfo);
 					descSets.push_back(descriptorSet);
 
@@ -4214,9 +4228,10 @@ namespace flex
 						info.DBG_Name = "Font SS descriptor set";
 						info.descriptorSet = &font->m_DescriptorSet;
 						info.descriptorSetLayout = &descSetLayout;
-						info.albedoTexture = font->GetTexture();
 						info.shaderID = fontMaterial.material.shaderID;
 						info.uniformBuffer = &fontShader.uniformBuffer;
+						info.imageDescriptors.Add(U_ALBEDO_SAMPLER, ImageDescriptorInfo{ font->GetTexture()->imageView, m_LinMipLinSampler });
+						FillOutBufferDescriptorInfos(&info.bufferDescriptors, info.uniformBuffer, info.shaderID);
 						CreateDescriptorSet(&info);
 					}
 
@@ -4341,9 +4356,10 @@ namespace flex
 						info.DBG_Name = "Font WS descriptor set";
 						info.descriptorSet = &font->m_DescriptorSet;
 						info.descriptorSetLayout = &descSetLayout;
-						info.albedoTexture = font->GetTexture();
 						info.shaderID = fontMaterial.material.shaderID;
 						info.uniformBuffer = &fontShader.uniformBuffer;
+						info.imageDescriptors.Add(U_ALBEDO_SAMPLER, ImageDescriptorInfo{ font->GetTexture()->imageView, m_LinMipLinSampler });
+						FillOutBufferDescriptorInfos(&info.bufferDescriptors, info.uniformBuffer, info.shaderID);
 						CreateDescriptorSet(&info);
 					}
 
@@ -4677,11 +4693,7 @@ namespace flex
 			descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 			descSetCreateInfo.shaderID = shadowMaterial->material.shaderID;
 			descSetCreateInfo.uniformBuffer = &shadowShader->uniformBuffer;
-			FrameBufferAttachment& normalFrameBufferAttachment = m_GBufferFrameBuf->frameBufferAttachments[0].second;
-			// Depth texture is handled for us in CreateDescriptorSet
-			descSetCreateInfo.ssaoNormalImageView = normalFrameBufferAttachment.view;
-			descSetCreateInfo.ssaoNormalSampler = m_NearestClampEdgeSampler;
-			descSetCreateInfo.noiseTexture = shadowMaterial->noiseTexture;
+			FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBuffer, descSetCreateInfo.shaderID);
 			CreateDescriptorSet(&descSetCreateInfo);
 		}
 
@@ -4700,13 +4712,13 @@ namespace flex
 			descSetCreateInfo.uniformBuffer = &spriteShader.uniformBuffer;
 			if (spriteShader.shader->bTextureArr)
 			{
-				descSetCreateInfo.shadowPreviewView = m_ShadowCascades[layer]->imageView;
-				descSetCreateInfo.shadowSampler = m_LinMipLinSampler;
+				descSetCreateInfo.imageDescriptors.Add(U_ALBEDO_SAMPLER, ImageDescriptorInfo{ m_ShadowCascades[layer]->imageView, m_LinMipLinSampler });
 			}
 			else
 			{
-				descSetCreateInfo.albedoTexture = m_LoadedTextures[textureID];
+				descSetCreateInfo.imageDescriptors.Add(U_ALBEDO_SAMPLER, ImageDescriptorInfo{ m_LoadedTextures[textureID]->imageView, m_LinMipLinSampler });
 			}
+			FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBuffer, descSetCreateInfo.shaderID);
 			CreateDescriptorSet(&descSetCreateInfo);
 
 			return descSet;
@@ -5117,6 +5129,25 @@ namespace flex
 			}
 		}
 
+		void VulkanRenderer::FillOutBufferDescriptorInfos(ShaderUniformContainer<BufferDescriptorInfo>* descriptors, UniformBuffer* uniformBuffer, ShaderID shaderID)
+		{
+			VulkanShader* shader = &m_Shaders[shaderID];
+
+			if (shader->shader->constantBufferUniforms.HasUniform(U_UNIFORM_BUFFER_CONSTANT))
+			{
+				const VulkanBuffer& constantBuffer = uniformBuffer->constantBuffer;
+				descriptors->Add(U_UNIFORM_BUFFER_CONSTANT, BufferDescriptorInfo{ constantBuffer.m_Buffer, uniformBuffer->constantData.size, false });
+			}
+
+			if (shader->shader->dynamicBufferUniforms.HasUniform(U_UNIFORM_BUFFER_DYNAMIC))
+			{
+				const VulkanBuffer& dynamicBuffer = uniformBuffer->dynamicBuffer;
+				// TODO: FIXME: BAD: CLEANUP:
+				const VkDeviceSize dynamicBufferSize = sizeof(VulkanUniformBufferObjectData) * m_RenderObjects.size();
+				descriptors->Add(U_UNIFORM_BUFFER_DYNAMIC, BufferDescriptorInfo{ dynamicBuffer.m_Buffer, dynamicBufferSize, true });
+			}
+		}
+
 		void VulkanRenderer::CreateDescriptorSet(RenderID renderID)
 		{
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
@@ -5137,25 +5168,23 @@ namespace flex
 			createInfo.descriptorSetLayout = &m_DescriptorSetLayouts[material->descriptorSetLayoutIndex];
 			createInfo.shaderID = material->material.shaderID;
 			createInfo.uniformBuffer = &shader->uniformBuffer;
-			createInfo.normalTexture = material->normalTexture;
-			createInfo.cubemapTexture = material->cubemapTexture;
-			createInfo.hdrEquirectangularTexture = material->hdrEquirectangularTexture;
-			createInfo.albedoTexture = material->albedoTexture;
-			createInfo.metallicTexture = material->metallicTexture;
-			createInfo.roughnessTexture = material->roughnessTexture;
-			createInfo.irradianceTexture = material->irradianceTexture;
-			createInfo.brdfLUT = material->brdfLUT;
-			createInfo.prefilterTexture = material->prefilterTexture;
-			createInfo.noiseTexture = material->noiseTexture;
-			createInfo.bDepthSampler = shader->shader->constantBufferUniforms.HasUniform(U_DEPTH_SAMPLER);
 
-			if (shader->shader->constantBufferUniforms.HasUniform(U_SHADOW_SAMPLER))
+			for (auto& pair : material->textures)
 			{
-				createInfo.shadowSampler = m_DepthSampler;
-				createInfo.shadowImageView = (m_DirectionalLight && m_DirectionalLight->data.castShadows) ? m_ShadowImageView : m_BlankTextureArr->imageView;
+				if (shader->shader->textureUniforms.HasUniform(pair.first))
+				{
+					VulkanTexture* texture = pair.second;
+					assert(texture != nullptr);
+					createInfo.imageDescriptors.Add(pair.first, ImageDescriptorInfo{ texture->imageView, m_LinMipLinSampler });
+				}
 			}
 
-			if (shader->shader->constantBufferUniforms.HasUniform(U_SSAO_FINAL_SAMPLER))
+			if (shader->shader->textureUniforms.HasUniform(U_DEPTH_SAMPLER))
+			{
+				createInfo.imageDescriptors.Add(U_DEPTH_SAMPLER, ImageDescriptorInfo{ m_GBufferDepthAttachment->view, m_DepthSampler });
+			}
+
+			if (shader->shader->textureUniforms.HasUniform(U_SSAO_FINAL_SAMPLER))
 			{
 				VkImageView ssaoView = m_BlankTexture->imageView;
 				if (m_SSAOSamplingData.ssaoEnabled)
@@ -5169,14 +5198,22 @@ namespace flex
 						ssaoView = m_SSAOFrameBuf->frameBufferAttachments[0].second.view;
 					}
 				}
-				createInfo.ssaoFinalImageView = ssaoView;
-				createInfo.ssaoFinalSampler = m_NearestClampEdgeSampler;
+				createInfo.imageDescriptors.Add(U_SSAO_FINAL_SAMPLER, ImageDescriptorInfo{ ssaoView, m_NearestClampEdgeSampler });
 			}
 
-			for (size_t i = 0; i < material->material.sampledFrameBuffers.size(); ++i)
+			if (shader->shader->textureUniforms.HasUniform(U_SHADOW_SAMPLER))
 			{
-				createInfo.frameBufferViews.emplace_back(static_cast<u32>(U_FB_0_SAMPLER + i), static_cast<VkImageView*>(material->material.sampledFrameBuffers[i].second));
+				VkImageView imageView = (m_DirectionalLight && m_DirectionalLight->data.castShadows) ? m_ShadowImageView : m_BlankTextureArr->imageView;
+				createInfo.imageDescriptors.Add(U_SHADOW_SAMPLER, ImageDescriptorInfo{ imageView, m_DepthSampler });
 			}
+
+			for (u32 i = 0; i < material->material.sampledFrameBuffers.size(); ++i)
+			{
+				VkImageView imageView = *static_cast<VkImageView*>(material->material.sampledFrameBuffers[i].second);
+				createInfo.imageDescriptors.Add(NextPowerOfTwo(U_FB_0_SAMPLER + i), ImageDescriptorInfo{ imageView, m_LinMipLinSampler });
+			}
+
+			FillOutBufferDescriptorInfos(&createInfo.bufferDescriptors, createInfo.uniformBuffer, createInfo.shaderID);
 
 			CreateDescriptorSet(&createInfo);
 		}
@@ -5195,192 +5232,62 @@ namespace flex
 
 			Uniforms constantBufferUniforms = m_Shaders[createInfo->shaderID].shader->constantBufferUniforms;
 			Uniforms dynamicBufferUniforms = m_Shaders[createInfo->shaderID].shader->dynamicBufferUniforms;
-
-			struct DescriptorSetInfo
-			{
-				DescriptorSetInfo(u64 uniform,
-					VkDescriptorType descriptorType,
-					VkBuffer buffer,
-					VkDeviceSize bufferSize,
-					VkImageView imageView = VK_NULL_HANDLE,
-					VkSampler imageSampler = VK_NULL_HANDLE) :
-					uniform(uniform),
-					descriptorType(descriptorType),
-					buffer(buffer),
-					bufferSize(bufferSize),
-					imageView(imageView),
-					imageSampler(imageSampler)
-				{
-				}
-
-				u64 uniform;
-				VkDescriptorType descriptorType;
-
-				VkBuffer buffer;
-				VkDeviceSize bufferSize;
-
-				VkImageView imageView = VK_NULL_HANDLE;
-				VkSampler imageSampler = VK_NULL_HANDLE;
-
-				// Auto-filled
-				VkDescriptorBufferInfo bufferInfo;
-				VkDescriptorImageInfo imageInfo;
-			};
-
-			// TODO: Refactor this.
-			//		- Rather than require textures, views should be allowed on their own
-			//		- Samplers should optional
-			std::vector<DescriptorSetInfo> descriptorSets = {
-				{ U_UNIFORM_BUFFER_CONSTANT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-				createInfo->uniformBuffer->constantBuffer.m_Buffer, createInfo->uniformBuffer->constantData.size },
-
-				{ U_UNIFORM_BUFFER_DYNAMIC, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
-				// TODO: Size should be something else... (createInfo->uniformBuffer->fullDynamicBufferSize?)
-				createInfo->uniformBuffer->dynamicBuffer.m_Buffer, sizeof(VulkanUniformBufferObjectData) * m_RenderObjects.size() },
-
-				{ U_ALBEDO_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_NULL_HANDLE, 0,
-				createInfo->albedoView != VK_NULL_HANDLE ? createInfo->albedoView : createInfo->shadowPreviewView != VK_NULL_HANDLE ? createInfo->shadowPreviewView : (createInfo->albedoTexture ? *&createInfo->albedoTexture->imageView : VK_NULL_HANDLE),
-				createInfo->albedoView != VK_NULL_HANDLE ? m_LinMipLinSampler : createInfo->shadowPreviewView != VK_NULL_HANDLE ? createInfo->shadowSampler : (createInfo->albedoTexture ? *&createInfo->albedoTexture->sampler : VK_NULL_HANDLE) },
-
-				{ U_METALLIC_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_NULL_HANDLE, 0,
-				createInfo->metallicTexture ? *&createInfo->metallicTexture->imageView : VK_NULL_HANDLE,
-				createInfo->metallicTexture ? *&createInfo->metallicTexture->sampler : VK_NULL_HANDLE },
-
-				{ U_ROUGHNESS_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_NULL_HANDLE, 0,
-				createInfo->roughnessTexture ? *&createInfo->roughnessTexture->imageView : VK_NULL_HANDLE,
-				createInfo->roughnessTexture ? *&createInfo->roughnessTexture->sampler : VK_NULL_HANDLE },
-
-				{ U_NORMAL_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_NULL_HANDLE, 0,
-				createInfo->normalTexture ? *&createInfo->normalTexture->imageView : VK_NULL_HANDLE,
-				createInfo->normalTexture ? *&createInfo->normalTexture->sampler : VK_NULL_HANDLE },
-
-				{ U_HDR_EQUIRECTANGULAR_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_NULL_HANDLE, 0,
-				createInfo->hdrEquirectangularTexture ? *&createInfo->hdrEquirectangularTexture->imageView : VK_NULL_HANDLE,
-				createInfo->hdrEquirectangularTexture ? *&createInfo->hdrEquirectangularTexture->sampler : VK_NULL_HANDLE },
-
-				{ U_CUBEMAP_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_NULL_HANDLE, 0,
-				createInfo->cubemapTexture ? *&createInfo->cubemapTexture->imageView : VK_NULL_HANDLE,
-				createInfo->cubemapTexture ? *&createInfo->cubemapTexture->sampler : VK_NULL_HANDLE },
-
-				{ U_BRDF_LUT_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_NULL_HANDLE, 0,
-				createInfo->brdfLUT ? *&createInfo->brdfLUT->imageView : VK_NULL_HANDLE,
-				createInfo->brdfLUT ? *&createInfo->brdfLUT->sampler : VK_NULL_HANDLE },
-
-				{ U_IRRADIANCE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_NULL_HANDLE, 0,
-				createInfo->irradianceTexture ? *&createInfo->irradianceTexture->imageView : VK_NULL_HANDLE,
-				createInfo->irradianceTexture ? *&createInfo->irradianceTexture->sampler : VK_NULL_HANDLE },
-
-				{ U_PREFILTER_MAP, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_NULL_HANDLE, 0,
-				createInfo->prefilterTexture ? *&createInfo->prefilterTexture->imageView : VK_NULL_HANDLE,
-				createInfo->prefilterTexture ? *&createInfo->prefilterTexture->sampler : VK_NULL_HANDLE },
-
-				{ U_HIGH_RES_TEX, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_NULL_HANDLE, 0,
-				createInfo->albedoTexture ? *&createInfo->albedoTexture->imageView : VK_NULL_HANDLE,
-				createInfo->albedoTexture ? *&createInfo->albedoTexture->sampler : VK_NULL_HANDLE },
-
-				{ U_DEPTH_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_NULL_HANDLE, 0,
-				*&m_GBufferDepthAttachment->view, *&m_DepthSampler },
-
-				{ U_SSAO_RAW_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_NULL_HANDLE, 0,
-				*&createInfo->ssaoImageView, *&createInfo->ssaoSampler },
-
-				{ U_SSAO_FINAL_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_NULL_HANDLE, 0,
-				*&createInfo->ssaoFinalImageView, *&createInfo->ssaoFinalSampler },
-
-				{ U_SSAO_NORMAL_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_NULL_HANDLE, 0,
-				*&createInfo->ssaoNormalImageView, *&createInfo->ssaoNormalSampler },
-
-				{ U_NOISE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_NULL_HANDLE, 0,
-				createInfo->noiseTexture ? *&createInfo->noiseTexture->imageView : VK_NULL_HANDLE,
-				createInfo->noiseTexture ? *&createInfo->noiseTexture->sampler : VK_NULL_HANDLE },
-
-				{ U_SHADOW_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_NULL_HANDLE, 0,
-				*&createInfo->shadowImageView, *&createInfo->shadowSampler },
-
-				{ U_SCENE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_NULL_HANDLE, 0,
-				*&createInfo->sceneImageView, *&createInfo->sceneSampler },
-
-				{ U_HISTORY_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_NULL_HANDLE, 0,
-				*&createInfo->historyBufferImageView, *&createInfo->historyBufferSampler },
-			};
-
-
-			for (auto& frameBufferViewPair : createInfo->frameBufferViews)
-			{
-				descriptorSets.emplace_back(
-					frameBufferViewPair.first, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-					VK_NULL_HANDLE, 0,
-					frameBufferViewPair.second ? *frameBufferViewPair.second : VK_NULL_HANDLE,
-					m_LinMipLinSampler
-				);
-			}
+			Uniforms textureUniforms = m_Shaders[createInfo->shaderID].shader->textureUniforms;
 
 			std::vector<VkWriteDescriptorSet> writeDescriptorSets;
-			writeDescriptorSets.reserve(descriptorSets.size());
+			writeDescriptorSets.reserve(createInfo->bufferDescriptors.Count() + createInfo->imageDescriptors.Count());
 
-			u32 descriptorSetIndex = 0;
 			u32 binding = 0;
 
-			for (DescriptorSetInfo& descriptorSetInfo : descriptorSets)
+			std::vector<VkDescriptorBufferInfo> bufferInfos(createInfo->bufferDescriptors.Count());
+			u32 i = 0;
+			for (auto& pair : createInfo->bufferDescriptors)
 			{
-				if (constantBufferUniforms.HasUniform(descriptorSetInfo.uniform) ||
-					dynamicBufferUniforms.HasUniform(descriptorSetInfo.uniform))
+				const u64 uniform = pair.first;
+				assert((pair.second.bDynamic && dynamicBufferUniforms.HasUniform(uniform)) ||
+					(!pair.second.bDynamic && constantBufferUniforms.HasUniform(uniform)));
+				assert(pair.second.buffer != VK_NULL_HANDLE);
+
+				VkDescriptorBufferInfo& bufferInfo = bufferInfos[i];
+				bufferInfo.buffer = pair.second.buffer;
+				bufferInfo.range = pair.second.bufferSize;
+				writeDescriptorSets.push_back(vks::writeDescriptorSet(*createInfo->descriptorSet,
+					pair.second.bDynamic ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, binding, &bufferInfo));
+
+				++binding;
+				++i;
+			}
+
+			std::vector<VkDescriptorImageInfo> imageInfos(createInfo->imageDescriptors.Count());
+			i = 0;
+			for (auto& pair : createInfo->imageDescriptors)
+			{
+				const u64 uniform = pair.first;
+				assert(textureUniforms.HasUniform(uniform));
+
+				VkDescriptorImageInfo& imageInfo = imageInfos[i];
+				imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+				if (pair.second.imageView != VK_NULL_HANDLE)
 				{
-					descriptorSetInfo.bufferInfo = {};
-					descriptorSetInfo.bufferInfo.buffer = descriptorSetInfo.buffer;
-					descriptorSetInfo.bufferInfo.range = descriptorSetInfo.bufferSize;
-
-					descriptorSetInfo.imageInfo = {};
-					descriptorSetInfo.imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-					if (descriptorSetInfo.imageView)
+					imageInfo.imageView = pair.second.imageView;
+					if (pair.second.imageSampler != VK_NULL_HANDLE)
 					{
-						descriptorSetInfo.imageInfo.imageView = descriptorSetInfo.imageView;
-						descriptorSetInfo.imageInfo.sampler = descriptorSetInfo.imageSampler;
+						imageInfo.sampler = pair.second.imageSampler;
 					}
 					else
 					{
-						if (descriptorSetInfo.descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER ||
-							descriptorSetInfo.descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER ||
-							descriptorSetInfo.descriptorType == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE ||
-							descriptorSetInfo.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE ||
-							descriptorSetInfo.descriptorType == VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT)
-						{
-							// If setting a sampler type, image info must be filled in
-							descriptorSetInfo.imageInfo.imageView = m_BlankTexture->imageView;
-							descriptorSetInfo.imageInfo.sampler = m_BlankTexture->sampler;
-						}
+						imageInfo.sampler = m_LinMipLinSampler;
 					}
-
-					if (descriptorSetInfo.bufferInfo.buffer != VK_NULL_HANDLE)
-					{
-						writeDescriptorSets.push_back(vks::writeDescriptorSet(*createInfo->descriptorSet, descriptorSetInfo.descriptorType, binding, &descriptorSetInfo.bufferInfo));
-					}
-					else
-					{
-						writeDescriptorSets.push_back(vks::writeDescriptorSet(*createInfo->descriptorSet, descriptorSetInfo.descriptorType, binding, &descriptorSetInfo.imageInfo));
-					}
-
-					++descriptorSetIndex;
-					++binding;
 				}
+				else
+				{
+					imageInfo.imageView = m_BlankTexture->imageView;
+					imageInfo.sampler = m_BlankTexture->sampler;
+				}
+				writeDescriptorSets.push_back(vks::writeDescriptorSet(*createInfo->descriptorSet, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, binding, &imageInfo));
+
+				++binding;
+				++i;
 			}
 
 			if (!writeDescriptorSets.empty())
@@ -5482,7 +5389,8 @@ namespace flex
 			for (DescriptorSetInfo& descSetInfo : descriptorSets)
 			{
 				if (shader->shader->constantBufferUniforms.HasUniform(descSetInfo.uniform) ||
-					shader->shader->dynamicBufferUniforms.HasUniform(descSetInfo.uniform))
+					shader->shader->dynamicBufferUniforms.HasUniform(descSetInfo.uniform) ||
+					shader->shader->textureUniforms.HasUniform(descSetInfo.uniform))
 				{
 					VkDescriptorSetLayoutBinding descSetLayoutBinding = {};
 					descSetLayoutBinding.binding = bindings.size();
