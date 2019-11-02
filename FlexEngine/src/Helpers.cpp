@@ -1445,6 +1445,27 @@ namespace flex
 		return absolutePath;
 	}
 
+	std::string Replace(std::string str, const std::string& pattern, const std::string& replacement)
+	{
+		auto iter = str.begin();
+
+		while (iter != str.end())
+		{
+			u32 findIndex = str.find(pattern.c_str(), iter - str.begin());
+			if (findIndex != std::string::npos)
+			{
+				str = str.replace(str.begin() + findIndex, str.begin() + findIndex + pattern.length(), replacement.begin(), replacement.end());
+				iter += pattern.length();
+			}
+			else
+			{
+				break;
+			}
+		}
+
+		return str;
+	}
+
 	i32 RandomInt(i32 min, i32 max)
 	{
 		// TODO: CLEANUP: FIXME: Don't use rand, for the love of God

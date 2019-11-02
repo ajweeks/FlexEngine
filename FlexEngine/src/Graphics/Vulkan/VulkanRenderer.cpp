@@ -8248,24 +8248,19 @@ namespace flex
 			UNREFERENCED_PARAMETER(layerPrefix);
 			UNREFERENCED_PARAMETER(userData);
 
-			switch (flags)
+			std::string msgStr = Replace(msg, " | ", "\n\t");
+
+			if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
 			{
-			case VK_DEBUG_REPORT_INFORMATION_BIT_EXT:
-				Print("%s\n", msg);
-				break;
-			case VK_DEBUG_REPORT_WARNING_BIT_EXT:
-				PrintWarn("%s\n", msg);
-				break;
-			case VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT:
-				PrintWarn("%s\n", msg);
-				break;
-			case VK_DEBUG_REPORT_ERROR_BIT_EXT:
-				PrintError("%s\n", msg);
-				break;
-			case VK_DEBUG_REPORT_DEBUG_BIT_EXT:
-			default:
-				PrintError("%s\n", msg);
-				break;
+				PrintError("%s\n", msgStr.c_str());
+			}
+			else if (flags & VK_DEBUG_REPORT_WARNING_BIT_EXT)
+			{
+				PrintWarn("%s\n", msgStr.c_str());
+			}
+			else
+			{
+				Print("%s\n", msgStr.c_str());
 			}
 
 			return VK_FALSE;

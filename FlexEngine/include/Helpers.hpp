@@ -187,6 +187,8 @@ namespace flex
 	std::string ReplaceBackSlashesWithForward(std::string str);
 	std::string RelativePathToAbsolute(const std::string& relativePath);
 
+	std::string Replace(std::string str, const std::string& pattern, const std::string& replacement);
+
 	// Returns random value in range [min, max)
 	i32 RandomInt(i32 min, i32 max);
 
