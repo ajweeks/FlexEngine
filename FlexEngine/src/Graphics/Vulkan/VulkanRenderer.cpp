@@ -7404,6 +7404,17 @@ namespace flex
 
 			UpdateDynamicUniformBuffer(m_PostProcessMatID, 0, MAT4_IDENTITY, nullptr);
 
+			// Force font descriptor sets to be regenerated
+			for (BitmapFont* font : m_FontsSS)
+			{
+				font->m_DescriptorSet = VK_NULL_HANDLE;
+			}
+
+			for (BitmapFont* font : m_FontsWS)
+			{
+				font->m_DescriptorSet = VK_NULL_HANDLE;
+			}
+
 			CreateFramebuffers();
 			m_CommandBufferManager.CreateCommandBuffers(m_SwapChainImages.size());
 		}
@@ -8020,17 +8031,6 @@ namespace flex
 
 			CreateRenderPasses();
 			PrepareFrameBuffers();
-
-			// Force font descriptor sets to be regenerated
-			for (BitmapFont* font : m_FontsSS)
-			{
-				font->m_DescriptorSet = VK_NULL_HANDLE;
-			}
-
-			for (BitmapFont* font : m_FontsWS)
-			{
-				font->m_DescriptorSet = VK_NULL_HANDLE;
-			}
 
 			for (VulkanShader& shader : m_Shaders)
 			{
