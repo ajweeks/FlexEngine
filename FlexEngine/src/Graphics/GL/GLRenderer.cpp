@@ -620,7 +620,7 @@ namespace flex
 				std::string textureName;
 				i32 channelCount;
 				bool flipVertically;
-				bool generateMipMaps;
+				bool bGenerateMipMaps;
 				bool hdr;
 			};
 
@@ -668,7 +668,7 @@ namespace flex
 								GLTexture* newTexture = new GLTexture(samplerCreateInfo.filepath,
 																	  samplerCreateInfo.channelCount,
 																	  samplerCreateInfo.flipVertically,
-																	  samplerCreateInfo.generateMipMaps,
+																	  samplerCreateInfo.bGenerateMipMaps,
 																	  samplerCreateInfo.hdr);
 
 								newTexture->LoadFromFile();
@@ -727,7 +727,7 @@ namespace flex
 				cubemapCreateInfo.textureID = &mat.cubemapSamplerID;
 				cubemapCreateInfo.HDR = false;
 				cubemapCreateInfo.generateMipmaps = false;
-				cubemapCreateInfo.enableTrilinearFiltering = createInfo->enableCubemapTrilinearFiltering;
+				cubemapCreateInfo.bEnableTrilinearFiltering = createInfo->enableCubemapTrilinearFiltering;
 				cubemapCreateInfo.filePaths = mat.material.cubeMapFilePaths;
 
 				if (createInfo->cubeMapFilePaths[0].empty())
@@ -767,7 +767,7 @@ namespace flex
 				cubemapCreateInfo.textureGBufferIDs = &mat.cubemapSamplerGBuffersIDs;
 				cubemapCreateInfo.depthTextureID = &mat.cubemapDepthSamplerID;
 				cubemapCreateInfo.HDR = true;
-				cubemapCreateInfo.enableTrilinearFiltering = createInfo->enableCubemapTrilinearFiltering;
+				cubemapCreateInfo.bEnableTrilinearFiltering = createInfo->enableCubemapTrilinearFiltering;
 				cubemapCreateInfo.generateMipmaps = false;
 				cubemapCreateInfo.textureSize = createInfo->generatedCubemapSize;
 				cubemapCreateInfo.generateDepthBuffers = createInfo->generateCubemapDepthBuffers;
@@ -782,7 +782,7 @@ namespace flex
 				cubemapCreateInfo.textureGBufferIDs = &mat.cubemapSamplerGBuffersIDs;
 				cubemapCreateInfo.depthTextureID = &mat.cubemapDepthSamplerID;
 				cubemapCreateInfo.HDR = true;
-				cubemapCreateInfo.enableTrilinearFiltering = createInfo->enableCubemapTrilinearFiltering;
+				cubemapCreateInfo.bEnableTrilinearFiltering = createInfo->enableCubemapTrilinearFiltering;
 				cubemapCreateInfo.generateMipmaps = false;
 				cubemapCreateInfo.textureSize = createInfo->generatedCubemapSize;
 				cubemapCreateInfo.generateDepthBuffers = createInfo->generateCubemapDepthBuffers;
@@ -851,7 +851,7 @@ namespace flex
 				cubemapCreateInfo.program = shader.program;
 				cubemapCreateInfo.textureID = &mat.irradianceSamplerID;
 				cubemapCreateInfo.HDR = true;
-				cubemapCreateInfo.enableTrilinearFiltering = createInfo->enableCubemapTrilinearFiltering;
+				cubemapCreateInfo.bEnableTrilinearFiltering = createInfo->enableCubemapTrilinearFiltering;
 				cubemapCreateInfo.generateMipmaps = false;
 				cubemapCreateInfo.textureSize = createInfo->generatedIrradianceCubemapSize;
 
@@ -880,7 +880,7 @@ namespace flex
 				cubemapCreateInfo.program = shader.program;
 				cubemapCreateInfo.textureID = &mat.prefilteredMapSamplerID;
 				cubemapCreateInfo.HDR = true;
-				cubemapCreateInfo.enableTrilinearFiltering = createInfo->enableCubemapTrilinearFiltering;
+				cubemapCreateInfo.bEnableTrilinearFiltering = createInfo->enableCubemapTrilinearFiltering;
 				cubemapCreateInfo.generateMipmaps = true;
 				cubemapCreateInfo.textureSize = createInfo->generatedPrefilteredCubemapSize;
 
@@ -1929,7 +1929,7 @@ namespace flex
 
 			ApplyPostProcessing();
 
-			if (!m_PhysicsDebuggingSettings.DisableAll)
+			if (!m_PhysicsDebuggingSettings.bDisableAll)
 			{
 				PROFILE_AUTO("PhysicsDebugRender");
 

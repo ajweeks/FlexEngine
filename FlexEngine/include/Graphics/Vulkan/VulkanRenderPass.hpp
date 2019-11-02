@@ -46,14 +46,14 @@ namespace flex
 				VkFormat depthFormat = VK_FORMAT_UNDEFINED,
 				VkImageLayout finalDepthLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 				VkImageLayout initialDepthLayout = VK_IMAGE_LAYOUT_UNDEFINED);
-			
+
 			void CreateColorOnly(
 				const char* passName,
 				VkFormat colorFormat,
 				FrameBufferID frameBufferID,
 				VkImageLayout finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 				VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED);
-			
+
 			VkRenderPass* Replace();
 			operator VkRenderPass();
 

@@ -171,12 +171,12 @@ namespace flex
 			u32 channelCount;
 		};
 
-		bool GenerateGLTexture_Empty(u32& textureID, const glm::vec2u& dimensions, bool generateMipMaps, GLenum internalFormat, GLenum format, GLenum type);
-		bool GenerateGLTexture_EmptyWithParams(u32& textureID, const glm::vec2u& dimensions, bool generateMipMaps, GLenum internalFormat, GLenum format, GLenum type, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter);
-		bool GenerateGLTexture(u32& textureID, const std::string& filePath, i32 requestedChannelCount, bool flipVertically, bool generateMipMaps, ImageInfo* infoOut = nullptr);
-		bool GenerateGLTextureWithParams(u32& textureID, const std::string& filePath, i32 requestedChannelCount, bool flipVertically, bool generateMipMaps, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter, ImageInfo* infoOut = nullptr);
-		bool GenerateHDRGLTexture(u32& textureID, const std::string& filePath, i32 requestedChannelCount, bool flipVertically, bool generateMipMaps, ImageInfo* infoOut = nullptr);
-		bool GenerateHDRGLTextureWithParams(u32& textureID, const std::string& filePath, i32 requestedChannelCount, bool flipVertically, bool generateMipMaps, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter, ImageInfo* infoOut = nullptr);
+		bool GenerateGLTexture_Empty(u32& textureID, const glm::vec2u& dimensions, bool bGenerateMipMaps, GLenum internalFormat, GLenum format, GLenum type);
+		bool GenerateGLTexture_EmptyWithParams(u32& textureID, const glm::vec2u& dimensions, bool bGenerateMipMaps, GLenum internalFormat, GLenum format, GLenum type, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter);
+		bool GenerateGLTexture(u32& textureID, const std::string& filePath, i32 requestedChannelCount, bool flipVertically, bool bGenerateMipMaps, ImageInfo* infoOut = nullptr);
+		bool GenerateGLTextureWithParams(u32& textureID, const std::string& filePath, i32 requestedChannelCount, bool flipVertically, bool bGenerateMipMaps, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter, ImageInfo* infoOut = nullptr);
+		bool GenerateHDRGLTexture(u32& textureID, const std::string& filePath, i32 requestedChannelCount, bool flipVertically, bool bGenerateMipMaps, ImageInfo* infoOut = nullptr);
+		bool GenerateHDRGLTextureWithParams(u32& textureID, const std::string& filePath, i32 requestedChannelCount, bool flipVertically, bool bGenerateMipMaps, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter, ImageInfo* infoOut = nullptr);
 
 		struct GLCubemapCreateInfo
 		{
@@ -188,7 +188,7 @@ namespace flex
 			std::array<std::string, 6> filePaths; // Leave empty to generate an "empty" cubemap (no pixel data)
 
 			bool generateMipmaps = false;
-			bool enableTrilinearFiltering = false;
+			bool bEnableTrilinearFiltering = false;
 			bool HDR = false;
 			bool generateDepthBuffers = false;
 		};

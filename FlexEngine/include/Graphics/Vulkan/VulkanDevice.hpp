@@ -1,12 +1,7 @@
 #pragma once
 #if COMPILE_VULKAN
 
-IGNORE_WARNINGS_PUSH
-//#include <vulkan/vulkan.hpp>
-IGNORE_WARNINGS_POP
-
 #include "VDeleter.hpp"
-
 
 namespace flex
 {
@@ -16,7 +11,7 @@ namespace flex
 		{
 			VulkanDevice(VkPhysicalDevice physicalDevice);
 
-			u32 GetMemoryType(u32 typeBits, VkMemoryPropertyFlags properties, VkBool32* memTypeFound = nullptr) const;
+			u32 GetMemoryType(u32 typeBits, VkMemoryPropertyFlags properties, VkBool32* outMemTypeFound = nullptr) const;
 
 			operator VkDevice();
 
@@ -29,7 +24,6 @@ namespace flex
 			VkPhysicalDeviceMemoryProperties m_MemoryProperties;
 			std::vector<VkQueueFamilyProperties> m_QueueFamilyProperties;
 			std::vector<std::string> m_SupportedExtensions;
-			bool m_EnableDebugMarkers = false;
 		};
 	} // namespace vk
 } // namespace flex

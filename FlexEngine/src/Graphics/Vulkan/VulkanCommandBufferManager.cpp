@@ -24,14 +24,14 @@ namespace flex
 		{
 		}
 
-		VkCommandBuffer VulkanCommandBufferManager::CreateCommandBuffer(VulkanDevice* device, VkCommandBufferLevel level, bool begin)
+		VkCommandBuffer VulkanCommandBufferManager::CreateCommandBuffer(VulkanDevice* device, VkCommandBufferLevel level, bool bBegin)
 		{
 			VkCommandBuffer commandBuffer;
 
 			VkCommandBufferAllocateInfo commandBuffferAllocateInfo = vks::commandBufferAllocateInfo(device->m_CommandPool, level, 1);
 			VK_CHECK_RESULT(vkAllocateCommandBuffers(device->m_LogicalDevice, &commandBuffferAllocateInfo, &commandBuffer));
 
-			if (begin)
+			if (bBegin)
 			{
 				VkCommandBufferBeginInfo commandBufferBeginInfo = vks::commandBufferBeginInfo();
 				VK_CHECK_RESULT(vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo));
@@ -40,7 +40,7 @@ namespace flex
 			return commandBuffer;
 		}
 
-		void VulkanCommandBufferManager::FlushCommandBuffer(VulkanDevice* device, VkCommandBuffer commandBuffer, VkQueue queue, bool free)
+		void VulkanCommandBufferManager::FlushCommandBuffer(VulkanDevice* device, VkCommandBuffer commandBuffer, VkQueue queue, bool bFree)
 		{
 			if (commandBuffer == VK_NULL_HANDLE)
 			{
@@ -57,7 +57,7 @@ namespace flex
 			VK_CHECK_RESULT(vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE));
 			VK_CHECK_RESULT(vkQueueWaitIdle(queue));
 
-			if (free)
+			if (bFree)
 			{
 				vkFreeCommandBuffers(device->m_LogicalDevice, device->m_CommandPool, 1, &commandBuffer);
 			}
@@ -105,14 +105,14 @@ namespace flex
 			vkFreeCommandBuffers(m_VulkanDevice->m_LogicalDevice, m_VulkanDevice->m_CommandPool, static_cast<u32>(m_CommandBuffers.size()), m_CommandBuffers.data());
 		}
 
-		VkCommandBuffer VulkanCommandBufferManager::CreateCommandBuffer(VkCommandBufferLevel level, bool begin)
+		VkCommandBuffer VulkanCommandBufferManager::CreateCommandBuffer(VkCommandBufferLevel level, bool bBegin)
 		{
-			return CreateCommandBuffer(m_VulkanDevice, level, begin);
+			return CreateCommandBuffer(m_VulkanDevice, level, bBegin);
 		}
 
-		void VulkanCommandBufferManager::FlushCommandBuffer(VkCommandBuffer commandBuffer, VkQueue queue, bool free)
+		void VulkanCommandBufferManager::FlushCommandBuffer(VkCommandBuffer commandBuffer, VkQueue queue, bool bFree)
 		{
-			FlushCommandBuffer(m_VulkanDevice, commandBuffer, queue, free);
+			FlushCommandBuffer(m_VulkanDevice, commandBuffer, queue, bFree);
 		}
 
 	} // namespace vk

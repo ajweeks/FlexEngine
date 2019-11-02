@@ -398,7 +398,7 @@ namespace flex
 			UNREFERENCED_PARAMETER(graphicsQueue);
 
 			if (createInfo.width == 0 ||
-				createInfo.height== 0 ||
+				createInfo.height == 0 ||
 				createInfo.channels == 0 ||
 				createInfo.mipLevels == 0)
 			{
@@ -406,7 +406,7 @@ namespace flex
 				return 0;
 			}
 
-			const u32 calculatedMipLevels = createInfo.generateMipMaps ? static_cast<u32>(floor(log2(std::min(createInfo.width, createInfo.height)))) + 1 : 0;
+			const u32 calculatedMipLevels = createInfo.bGenerateMipMaps ? static_cast<u32>(floor(log2(std::min(createInfo.width, createInfo.height)))) + 1 : 0;
 
 			VkImageCreateInfo imageCreateInfo = vks::imageCreateInfo();
 			imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -471,7 +471,7 @@ namespace flex
 			return memRequirements.size;
 		}
 
-		VkDeviceSize VulkanTexture::CreateCubemapEmpty(VkFormat inFormat, u32 inMipLevels, bool enableTrilinearFiltering)
+		VkDeviceSize VulkanTexture::CreateCubemapEmpty(VkFormat inFormat, u32 inMipLevels, bool bEnableTrilinearFiltering)
 		{
 			assert(width > 0);
 			assert(height > 0);
@@ -488,7 +488,7 @@ namespace flex
 			createInfo.channels = channelCount;
 			createInfo.totalSize = width * height * channelCount * 6;
 			createInfo.mipLevels = inMipLevels;
-			createInfo.enableTrilinearFiltering = enableTrilinearFiltering;
+			createInfo.bEnableTrilinearFiltering = bEnableTrilinearFiltering;
 
 			VkDeviceSize imageSize = CreateCubemap(m_VulkanDevice, m_GraphicsQueue, createInfo);
 
@@ -499,7 +499,7 @@ namespace flex
 			return imageSize;
 		}
 
-		VkDeviceSize VulkanTexture::CreateCubemapFromTextures(VkFormat inFormat, const std::array<std::string, 6>& filePaths, bool enableTrilinearFiltering)
+		VkDeviceSize VulkanTexture::CreateCubemapFromTextures(VkFormat inFormat, const std::array<std::string, 6>& filePaths, bool bEnableTrilinearFiltering)
 		{
 			struct Image
 			{
@@ -600,7 +600,7 @@ namespace flex
 			createInfo.totalSize = totalSize;
 			createInfo.format = inFormat;
 			createInfo.filePaths = filePaths;
-			createInfo.enableTrilinearFiltering = enableTrilinearFiltering;
+			createInfo.bEnableTrilinearFiltering = bEnableTrilinearFiltering;
 
 			VkDeviceSize imageSize = CreateCubemap(m_VulkanDevice, m_GraphicsQueue, createInfo);
 
@@ -1249,7 +1249,7 @@ namespace flex
 			else
 			{
 				assert(oldLayout != VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL &&
-					   newLayout != VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+					newLayout != VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
 				barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				barrier.subresourceRange.levelCount = mipLevels;
@@ -1325,7 +1325,7 @@ namespace flex
 				barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
 				barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
 			}
-			else if (oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL&&
+			else if (oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL &&
 				newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
 			{
 				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT; // hmm...
@@ -1846,7 +1846,7 @@ namespace flex
 			CreateAttachment(
 				device,
 				fbAttachment->format,
-				VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT | 
+				VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT |
 				(fbAttachment->bIsTransferedDst ? VK_IMAGE_USAGE_TRANSFER_DST_BIT : 0) |
 				(fbAttachment->bIsTransferedSrc ? VK_IMAGE_USAGE_TRANSFER_SRC_BIT : 0),
 				frameBuffer->width,
@@ -2282,16 +2282,16 @@ namespace flex
 
 				// TODO: Use C++ class from https://github.com/KhronosGroup/glslang rather than batch file call to glslang?
 				taskThread = std::thread([=]
-					{
-						std::string workingDir(RESOURCE("shaders"));
-						char cmdStrBuf[512];
-						memset(cmdStrBuf, 0, 512);
-						strcat_s(cmdStrBuf, "pushd \"");
-						strcat_s(cmdStrBuf, workingDir.c_str());
-						strcat_s(cmdStrBuf, "\" && call vk_compile.bat >nul && popd");
-						bSuccess = system(cmdStrBuf) == 0;
-						is_done = true;
-					});
+				{
+					std::string workingDir(RESOURCE("shaders"));
+					char cmdStrBuf[512];
+					memset(cmdStrBuf, 0, 512);
+					strcat_s(cmdStrBuf, "pushd \"");
+					strcat_s(cmdStrBuf, workingDir.c_str());
+					strcat_s(cmdStrBuf, "\" && call vk_compile.bat >nul && popd");
+					bSuccess = system(cmdStrBuf) == 0;
+					is_done = true;
+				});
 
 				secSinceStatusCheck = 0.0f;
 				totalSecWaiting = 0.0f;

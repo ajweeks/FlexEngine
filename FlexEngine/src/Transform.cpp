@@ -341,10 +341,10 @@ namespace flex
 
 	bool Transform::IsIdentity() const
 	{
-		bool identity = (localPosition == m_Identity.localPosition &&
+		bool result = (localPosition == m_Identity.localPosition &&
 			localRotation == m_Identity.localRotation &&
 			localScale == m_Identity.localScale);
-		return identity;
+		return result;
 	}
 
 	Transform Transform::Identity()

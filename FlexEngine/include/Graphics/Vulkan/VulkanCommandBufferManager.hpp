@@ -14,11 +14,11 @@ namespace flex
 			~VulkanCommandBufferManager();
 
 
-			/* Creates an individual command buffer, and optionally "begin"s it */
-			static VkCommandBuffer CreateCommandBuffer(VulkanDevice* device, VkCommandBufferLevel level, bool begin);
+			/* Creates an individual command buffer, and optionally begins it */
+			static VkCommandBuffer CreateCommandBuffer(VulkanDevice* device, VkCommandBufferLevel level, bool bBegin);
 
 			/* Ends commandBuffer and optionally frees its memory */
-			static void FlushCommandBuffer(VulkanDevice* device, VkCommandBuffer commandBuffer, VkQueue queue, bool free);
+			static void FlushCommandBuffer(VulkanDevice* device, VkCommandBuffer commandBuffer, VkQueue queue, bool bFree);
 
 
 			/* Creates a command pool used to generate command buffers */
@@ -35,10 +35,10 @@ namespace flex
 
 
 			/* Shortcut to overloaded function declared above */
-			VkCommandBuffer CreateCommandBuffer(VkCommandBufferLevel level, bool begin);
+			VkCommandBuffer CreateCommandBuffer(VkCommandBufferLevel level, bool bBegin);
 
 			/* Shortcut to overloaded function declared above */
-			void FlushCommandBuffer(VkCommandBuffer commandBuffer, VkQueue queue, bool free);
+			void FlushCommandBuffer(VkCommandBuffer commandBuffer, VkQueue queue, bool bFree);
 
 		private:
 			friend class VulkanRenderer;

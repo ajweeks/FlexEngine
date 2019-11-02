@@ -4,23 +4,23 @@ namespace flex
 {
 	struct PhysicsDebuggingSettings
 	{
-		bool DisableAll = false;
+		bool bDisableAll = false;
 
-		bool DrawWireframe = false;
-		bool DrawAabb = false;
-		bool DrawFeaturesText = false;
-		bool DrawContactPoints = false;
-		bool NoDeactivation = false;
-		bool NoHelpText = false;
-		bool DrawText = false;
-		bool ProfileTimings = false;
-		bool EnableSatComparison = false;
-		bool DisableBulletLCP = false;
-		bool EnableCCD = false;
-		bool DrawConstraints = false;
-		bool DrawConstraintLimits = false;
-		bool FastWireframe = false;
-		bool DrawNormals = false;
-		bool DrawFrames = false;
+		bool bDrawWireframe = false;
+		bool bDrawAabb = false;
+		bool bDrawFeaturesText = false;
+		bool bDrawContactPoints = false;
+		bool bNoDeactivation = false;
+		bool bNoHelpText = false;
+		bool bDrawText = false;
+		bool bProfileTimings = false;
+		bool bEnableSatComparison = false;
+		bool bDisableBulletLCP = false;
+		bool bEnableCCD = false;
+		bool bDrawConstraints = false;
+		bool bDrawConstraintLimits = false;
+		bool bFastWireframe = false;
+		bool bDrawNormals = false;
+		bool bDrawFrames = false;
 	};
 } // namespace flex

@@ -30,7 +30,7 @@ IGNORE_WARNINGS_POP
 
 namespace flex
 {
-	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount, bool flipVertically, u32* channelCountOut /* = nullptr */)
+	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount, bool bFlipVertically, u32* channelCountOut /* = nullptr */)
 	{
 		assert(requestedChannelCount == 3 ||
 			requestedChannelCount == 4);
@@ -43,7 +43,7 @@ namespace flex
 			Print("Loading texture %s\n", fileName.c_str());
 		}
 
-		stbi_set_flip_vertically_on_load(flipVertically);
+		stbi_set_flip_vertically_on_load(bFlipVertically);
 
 		i32 channelCount;
 		unsigned char* data = stbi_load(filePath.c_str(),
@@ -80,7 +80,7 @@ namespace flex
 		image.pixels = nullptr;
 	}
 
-	bool HDRImage::Load(const std::string& hdrFilePath, i32 requestedChannelCount, bool flipVertically)
+	bool HDRImage::Load(const std::string& hdrFilePath, i32 requestedChannelCount, bool bFlipVertically)
 	{
 		assert(requestedChannelCount == 3 ||
 			requestedChannelCount == 4);
@@ -93,7 +93,7 @@ namespace flex
 			Print("Loading HDR texture %s\n", fileName.c_str());
 		}
 
-		stbi_set_flip_vertically_on_load(flipVertically);
+		stbi_set_flip_vertically_on_load(bFlipVertically);
 
 		i32 tempW, tempH, tempC;
 		pixels = stbi_loadf(filePath.c_str(),

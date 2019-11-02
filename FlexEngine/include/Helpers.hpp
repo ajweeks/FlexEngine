@@ -8,7 +8,7 @@ namespace flex
 
 	static const char* SEPARATOR_STR = ", ";
 
-	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount = 3, bool flipVertically = false, u32* channelCountOut = nullptr);
+	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount = 3, bool bFlipVertically = false, u32* channelCountOut = nullptr);
 	void DestroyGLFWimage(GLFWimage& image);
 
 	bool FileExists(const std::string& filePath);
@@ -234,7 +234,7 @@ namespace flex
 
 	struct HDRImage
 	{
-		bool Load(const std::string& hdrFilePath, i32 requestedChannelCount, bool flipVertically);
+		bool Load(const std::string& hdrFilePath, i32 requestedChannelCount, bool bFlipVertically);
 		void Free();
 
 		u32 width;

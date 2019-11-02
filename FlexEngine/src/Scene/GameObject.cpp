@@ -388,23 +388,23 @@ namespace flex
 			glm::vec3 pScale = m_Transform.GetLocalScale();
 			glm::vec3 scale = pScale;
 
-			bool valueChanged = false;
+			bool bValueChanged = false;
 
-			valueChanged = ImGui::DragFloat3("Position", &translation[0], 0.1f) || valueChanged;
+			bValueChanged = ImGui::DragFloat3("Position", &translation[0], 0.1f) || bValueChanged;
 			if (ImGui::IsItemClicked(1))
 			{
 				translation = VEC3_ZERO;
-				valueChanged = true;
+				bValueChanged = true;
 			}
 
 			glm::vec3 cleanedRot;
-			valueChanged = DoImGuiRotationDragFloat3("Rotation", rotation, cleanedRot) || valueChanged;
+			bValueChanged = DoImGuiRotationDragFloat3("Rotation", rotation, cleanedRot) || bValueChanged;
 
-			valueChanged = ImGui::DragFloat3("Scale", &scale[0], 0.01f) || valueChanged;
+			bValueChanged = ImGui::DragFloat3("Scale", &scale[0], 0.01f) || bValueChanged;
 			if (ImGui::IsItemClicked(1))
 			{
 				scale = VEC3_ONE;
-				valueChanged = true;
+				bValueChanged = true;
 			}
 
 			ImGui::SameLine();
@@ -413,7 +413,7 @@ namespace flex
 			if (ImGui::Checkbox("u", &bUseUniformScale))
 			{
 				SetUseUniformScale(bUseUniformScale, true);
-				valueChanged = true;
+				bValueChanged = true;
 			}
 			if (m_bUniformScale)
 			{
@@ -429,7 +429,7 @@ namespace flex
 				scale = glm::vec3(newScale);
 			}
 
-			if (valueChanged)
+			if (bValueChanged)
 			{
 				m_Transform.SetLocalPosition(translation, false);
 

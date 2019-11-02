@@ -27,16 +27,16 @@ namespace flex
 
 	void SceneManager::AddScene(BaseScene* newScene)
 	{
-		bool unique = true;
-		std::for_each(m_Scenes.begin(), m_Scenes.end(), [&unique, newScene](BaseScene* scene) mutable
+		bool bUnique = true;
+		std::for_each(m_Scenes.begin(), m_Scenes.end(), [&bUnique, newScene](BaseScene* scene) mutable
 		{
 			if (scene->GetRelativeFilePath().compare(newScene->GetRelativeFilePath()) == 0)
 			{
-				unique = false;
+				bUnique = false;
 			}
 		});
 
-		if (unique)
+		if (bUnique)
 		{
 			m_Scenes.push_back(newScene);
 		}
@@ -102,7 +102,7 @@ namespace flex
 		if (bPrintErrorOnFailure && sceneIndex >= m_Scenes.size())
 		{
 			PrintError("Attempt to set scene to index %u failed, it does not exist in the SceneManager\n",
-					   sceneIndex);
+				sceneIndex);
 			return false;
 		}
 

@@ -5,11 +5,9 @@
 // Memory leak checking includes
 #if defined(DEBUG)
 #define _CRTDBG_MAP_ALLOC
-//#include <crtdbg.h>
-//#include <stdlib.h>
 #endif
 
-bool gIncludeConsole = true;
+bool g_bShowConsole = true;
 
 int main(int argc, char *argv[])
 {
@@ -32,7 +30,7 @@ int main(int argc, char *argv[])
 		delete engineInstance;
 	}
 
-	if (gIncludeConsole)
+	if (g_bShowConsole)
 	{
 		system("PAUSE");
 	}
@@ -47,7 +45,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 	UNREFERENCED_PARAMETER(lpCmdLine);
 	UNREFERENCED_PARAMETER(nCmdShow);
 
-	gIncludeConsole = false;
+	g_bShowConsole = false;
 
 	return main(0, nullptr);
 }

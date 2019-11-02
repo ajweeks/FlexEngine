@@ -81,9 +81,9 @@ namespace flex
 		virtual void SetCursorMode(CursorMode mode);
 
 		/* If force, window mode will be updated even if value hasn't changed */
-		virtual void SetWindowMode(WindowMode mode, bool force = false) = 0;
+		virtual void SetWindowMode(WindowMode mode, bool bForce = false) = 0;
 		/* Toggles between fullscreen and the last used non-fullscreen mode (windowed or borderless windowed */
-		virtual void ToggleFullscreen(bool force = false) = 0;
+		virtual void ToggleFullscreen(bool bForce = false) = 0;
 		WindowMode GetWindowMode();
 
 		const char* WindowModeToStr(WindowMode mode);

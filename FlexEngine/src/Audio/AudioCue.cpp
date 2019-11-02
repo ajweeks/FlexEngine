@@ -39,9 +39,9 @@ namespace flex
 	{
 	}
 
-	void AudioCue::Play(bool forceRestart)
+	void AudioCue::Play(bool bForceRestart)
 	{
-		if (!forceRestart && m_LastPlayedID != InvalidAudioSourceID)
+		if (!bForceRestart && m_LastPlayedID != InvalidAudioSourceID)
 		{
 			bool stillPlaying = AudioManager::IsSourcePlaying(m_LastPlayedID);
 			if (stillPlaying)
@@ -50,7 +50,7 @@ namespace flex
 			}
 		}
 		m_LastPlayedID = m_SourceIDs[GetRandomIndex()];
-		AudioManager::PlaySource(m_LastPlayedID, forceRestart);
+		AudioManager::PlaySource(m_LastPlayedID, bForceRestart);
 	}
 
 	void AudioCue::Pause()

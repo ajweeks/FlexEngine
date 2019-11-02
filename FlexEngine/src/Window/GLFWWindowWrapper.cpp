@@ -251,7 +251,7 @@ namespace flex
 		i32 widthMM, heightMM;
 		glfwGetMonitorPhysicalSize(monitor, &widthMM, &heightMM);
 		g_Monitor->DPI = glm::vec2(vidMode->width / (widthMM / 25.4f),
-								   vidMode->height / (heightMM / 25.4f));
+			vidMode->height / (heightMM / 25.4f));
 
 		glfwGetMonitorContentScale(monitor, &g_Monitor->contentScaleX, &g_Monitor->contentScaleY);
 	}
@@ -362,9 +362,9 @@ namespace flex
 		glfwSetInputMode(m_Window, GLFW_CURSOR, glfwCursorMode);
 	}
 
-	void GLFWWindowWrapper::SetWindowMode(WindowMode mode, bool force)
+	void GLFWWindowWrapper::SetWindowMode(WindowMode mode, bool bForce)
 	{
-		if (force || m_CurrentWindowMode != mode)
+		if (bForce || m_CurrentWindowMode != mode)
 		{
 			m_CurrentWindowMode = mode;
 
@@ -417,17 +417,17 @@ namespace flex
 		}
 	}
 
-	void GLFWWindowWrapper::ToggleFullscreen(bool force)
+	void GLFWWindowWrapper::ToggleFullscreen(bool bForce)
 	{
 		if (m_CurrentWindowMode == WindowMode::FULLSCREEN)
 		{
 			assert(m_LastNonFullscreenWindowMode == WindowMode::WINDOWED || m_LastNonFullscreenWindowMode == WindowMode::WINDOWED_FULLSCREEN);
 
-			SetWindowMode(m_LastNonFullscreenWindowMode, force);
+			SetWindowMode(m_LastNonFullscreenWindowMode, bForce);
 		}
 		else
 		{
-			SetWindowMode(WindowMode::FULLSCREEN, force);
+			SetWindowMode(WindowMode::FULLSCREEN, bForce);
 		}
 	}
 
@@ -452,34 +452,34 @@ namespace flex
 		}
 
 		GLFWgamepadstate gamepad0State;
-		static bool prevP0JoystickPresent = false;
+		static bool bPrevP0JoystickPresent = false;
 		if (glfwGetGamepadState(0, &gamepad0State) == GLFW_TRUE)
 		{
 			g_InputManager->UpdateGamepadState(0, gamepad0State.axes, gamepad0State.buttons);
-			prevP0JoystickPresent = true;
+			bPrevP0JoystickPresent = true;
 		}
 		else
 		{
-			if (prevP0JoystickPresent)
+			if (bPrevP0JoystickPresent)
 			{
 				g_InputManager->ClearGampadInput(0);
-				prevP0JoystickPresent = false;
+				bPrevP0JoystickPresent = false;
 			}
 		}
 
 		GLFWgamepadstate gamepad1State;
-		static bool prevP1JoystickPresent = false;
+		static bool bPrevP1JoystickPresent = false;
 		if (glfwGetGamepadState(1, &gamepad1State) == GLFW_TRUE)
 		{
 			g_InputManager->UpdateGamepadState(1, gamepad1State.axes, gamepad1State.buttons);
-			prevP1JoystickPresent = true;
+			bPrevP1JoystickPresent = true;
 		}
 		else
 		{
-			if (prevP1JoystickPresent)
+			if (bPrevP1JoystickPresent)
 			{
 				g_InputManager->ClearGampadInput(1);
-				prevP1JoystickPresent = false;
+				bPrevP1JoystickPresent = false;
 			}
 		}
 
@@ -701,7 +701,7 @@ namespace flex
 		case GLFW_RELEASE: inputAction = KeyAction::RELEASE; break;
 		case -1: break; // We don't care about events GLFW can't handle
 		default: PrintError("Unhandled glfw action passed to GLFWActionToInputManagerAction in GLFWWIndowWrapper: %i\n",
-							glfwAction);
+			glfwAction);
 		}
 
 		return inputAction;
@@ -836,7 +836,7 @@ namespace flex
 		case -1: break; // We don't care about events GLFW can't handle
 		default:
 			PrintError("Unhandled glfw key passed to GLFWKeyToInputManagerKey in GLFWWIndowWrapper: %i\n",
-					   glfwKey);
+				glfwKey);
 			break;
 		}
 
@@ -873,14 +873,14 @@ namespace flex
 		case GLFW_MOUSE_BUTTON_8: inputMouseButton = MouseButton::MOUSE_BUTTON_8; break;
 		case -1: break; // We don't care about events GLFW can't handle
 		default: PrintError("Unhandled glfw button passed to GLFWButtonToInputManagerMouseButton in GLFWWIndowWrapper: %i\n",
-							glfwButton); break;
+			glfwButton); break;
 		}
 
 		return inputMouseButton;
 	}
 
 	void WINAPI glDebugOutput(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,
-							  const GLchar* message, const void* userParam)
+		const GLchar* message, const void* userParam)
 	{
 		UNREFERENCED_PARAMETER(userParam);
 		UNREFERENCED_PARAMETER(length);
@@ -925,7 +925,7 @@ namespace flex
 		case GL_DEBUG_SEVERITY_HIGH:         PrintError("Severity: high"); break;
 		case GL_DEBUG_SEVERITY_MEDIUM:       PrintError("Severity: medium"); break;
 		case GL_DEBUG_SEVERITY_LOW:          PrintError("Severity: low"); break;
-		//case GL_DEBUG_SEVERITY_NOTIFICATION: PrintError("Severity: notification"); break;
+			//case GL_DEBUG_SEVERITY_NOTIFICATION: PrintError("Severity: notification"); break;
 		}
 		PrintError("\n-----------------------------------------\n");
 	}

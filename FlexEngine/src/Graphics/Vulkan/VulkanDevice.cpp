@@ -43,7 +43,7 @@ namespace flex
 			return m_LogicalDevice;
 		}
 
-		u32 VulkanDevice::GetMemoryType(u32 typeBits, VkMemoryPropertyFlags properties, VkBool32* memTypeFound) const
+		u32 VulkanDevice::GetMemoryType(u32 typeBits, VkMemoryPropertyFlags properties, VkBool32* outMemTypeFound) const
 		{
 			for (u32 i = 0; i < m_MemoryProperties.memoryTypeCount; i++)
 			{
@@ -51,9 +51,9 @@ namespace flex
 				{
 					if ((m_MemoryProperties.memoryTypes[i].propertyFlags & properties) == properties)
 					{
-						if (memTypeFound)
+						if (outMemTypeFound)
 						{
-							*memTypeFound = true;
+							*outMemTypeFound = true;
 						}
 						return i;
 					}
@@ -61,9 +61,9 @@ namespace flex
 				typeBits >>= 1;
 			}
 
-			if (memTypeFound)
+			if (outMemTypeFound)
 			{
-				*memTypeFound = false;
+				*outMemTypeFound = false;
 				return 0;
 			}
 			else

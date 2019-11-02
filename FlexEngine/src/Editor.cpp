@@ -266,12 +266,12 @@ namespace flex
 		glm::vec3 vecPerp = glm::cross(m_AxisOfRotation, v1);
 
 		real v1ov2 = glm::dot(v1, v2);
-		bool dotPos = (glm::dot(v2, vecPerp) > 0.0f);
-		bool dot2Pos = (v1ov2 > 0.0f);
+		bool bDotPos = (glm::dot(v2, vecPerp) > 0.0f);
+		bool bDot2Pos = (v1ov2 > 0.0f);
 
-		if (dotPos && !m_bLastDotPos)
+		if (bDotPos && !m_bLastDotPos)
 		{
-			if (dot2Pos)
+			if (bDot2Pos)
 			{
 				m_RotationGizmoWrapCount++;
 			}
@@ -280,9 +280,9 @@ namespace flex
 				m_RotationGizmoWrapCount--;
 			}
 		}
-		else if (!dotPos && m_bLastDotPos)
+		else if (!bDotPos && m_bLastDotPos)
 		{
-			if (dot2Pos)
+			if (bDot2Pos)
 			{
 				m_RotationGizmoWrapCount--;
 			}
@@ -292,7 +292,7 @@ namespace flex
 			}
 		}
 
-		m_bLastDotPos = dotPos;
+		m_bLastDotPos = bDotPos;
 
 		real angleRaw = acos(v1ov2);
 		real angle = (m_RotationGizmoWrapCount % 2 == 0 ? angleRaw : -angleRaw);

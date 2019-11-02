@@ -214,13 +214,13 @@ namespace flex
 		return gain;
 	}
 
-	void AudioManager::PlaySource(AudioSourceID sourceID, bool forceRestart)
+	void AudioManager::PlaySource(AudioSourceID sourceID, bool bForceRestart)
 	{
 		assert(sourceID < s_Sources.size());
 
 		alGetSourcei(s_Sources[sourceID].source, AL_SOURCE_STATE, &s_Sources[sourceID].state);
 
-		if (forceRestart || s_Sources[sourceID].state != AL_PLAYING)
+		if (bForceRestart || s_Sources[sourceID].state != AL_PLAYING)
 		{
 			alSourcePlay(s_Sources[sourceID].source);
 			alGetSourcei(s_Sources[sourceID].source, AL_SOURCE_STATE, &s_Sources[sourceID].state);
@@ -256,19 +256,19 @@ namespace flex
 		}
 	}
 
-	void AudioManager::ScaleSourceGain(AudioSourceID sourceID, real gainScale, bool preventZero)
+	void AudioManager::ScaleSourceGain(AudioSourceID sourceID, real gainScale, bool bPreventZero)
 	{
 		assert(sourceID < s_Sources.size());
 
 		const real epsilon = 0.00001f;
 
-		if (preventZero && s_Sources[sourceID].gain == 0.0f)
+		if (bPreventZero && s_Sources[sourceID].gain == 0.0f)
 		{
 			s_Sources[sourceID].gain = epsilon;
 		}
 
 		real newGain = s_Sources[sourceID].gain * gainScale;
-		if (preventZero && newGain < epsilon)
+		if (bPreventZero && newGain < epsilon)
 		{
 			// Prevent gain from reaching 0, so it can be scaled up again
 			newGain = epsilon;
@@ -306,14 +306,14 @@ namespace flex
 		SetSourcePitch(sourceID, s_Sources[sourceID].pitch + deltaPitch);
 	}
 
-	void AudioManager::SetSourceLooping(AudioSourceID sourceID, bool looping)
+	void AudioManager::SetSourceLooping(AudioSourceID sourceID, bool bLooping)
 	{
 		assert(sourceID < s_Sources.size());
 
-		if (s_Sources[sourceID].bLooping != looping)
+		if (s_Sources[sourceID].bLooping != bLooping)
 		{
-			s_Sources[sourceID].bLooping = looping;
-			alSourcei(s_Sources[sourceID].source, AL_LOOPING, looping ? AL_TRUE : AL_FALSE);
+			s_Sources[sourceID].bLooping = bLooping;
+			alSourcei(s_Sources[sourceID].source, AL_LOOPING, bLooping ? AL_TRUE : AL_FALSE);
 
 			DisplayALError("SetSourceLooping: ", alGetError());
 		}

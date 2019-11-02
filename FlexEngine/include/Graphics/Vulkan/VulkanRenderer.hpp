@@ -154,8 +154,6 @@ namespace flex
 
 			VkPhysicalDeviceFeatures GetEnabledFeaturesForDevice(VkPhysicalDevice physicalDevice);
 
-			typedef void (VulkanTexture::*VulkanTextureCreateFunction)(VkQueue graphicsQueue, const std::string&, VkFormat, u32);
-
 			struct UniformOverrides
 			{
 				Uniforms overridenUniforms;

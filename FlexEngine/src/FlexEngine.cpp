@@ -1448,7 +1448,7 @@ namespace flex
 			if (keyCode == KeyCode::KEY_P)
 			{
 				PhysicsDebuggingSettings& settings = g_Renderer->GetPhysicsDebuggingSettings();
-				settings.DrawWireframe = !settings.DrawWireframe;
+				settings.bDrawWireframe = !settings.bDrawWireframe;
 				return EventReply::CONSUMED;
 			}
 

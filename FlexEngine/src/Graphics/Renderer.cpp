@@ -1033,7 +1033,7 @@ namespace flex
 			{
 				PhysicsDebuggingSettings& physicsDebuggingSettings = g_Renderer->GetPhysicsDebuggingSettings();
 
-				ImGui::Checkbox("Disable All", &physicsDebuggingSettings.DisableAll);
+				ImGui::Checkbox("Disable All", &physicsDebuggingSettings.bDisableAll);
 
 				ImGui::Spacing();
 				ImGui::Spacing();
@@ -1045,7 +1045,7 @@ namespace flex
 					g_EngineInstance->SetRenderingEditorObjects(bRenderEditorObjs);
 				}
 
-				if (physicsDebuggingSettings.DisableAll)
+				if (physicsDebuggingSettings.bDisableAll)
 				{
 					ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
 				}
@@ -1056,11 +1056,11 @@ namespace flex
 					g_Renderer->SetDisplayBoundingVolumesEnabled(bDisplayBoundingVolumes);
 				}
 
-				ImGui::Checkbox("Wireframe (P)", &physicsDebuggingSettings.DrawWireframe);
+				ImGui::Checkbox("Wireframe (P)", &physicsDebuggingSettings.bDrawWireframe);
 
-				ImGui::Checkbox("AABB", &physicsDebuggingSettings.DrawAabb);
+				ImGui::Checkbox("AABB", &physicsDebuggingSettings.bDrawAabb);
 
-				if (physicsDebuggingSettings.DisableAll)
+				if (physicsDebuggingSettings.bDisableAll)
 				{
 					ImGui::PopStyleColor();
 				}
@@ -3099,23 +3099,23 @@ namespace flex
 		const PhysicsDebuggingSettings& settings = g_Renderer->GetPhysicsDebuggingSettings();
 
 		m_DebugMode =
-			(settings.DisableAll ? DBG_NoDebug : 0) |
-			(settings.DrawWireframe ? DBG_DrawWireframe : 0) |
-			(settings.DrawAabb ? DBG_DrawAabb : 0) |
-			(settings.DrawFeaturesText ? DBG_DrawFeaturesText : 0) |
-			(settings.DrawContactPoints ? DBG_DrawContactPoints : 0) |
-			(settings.NoDeactivation ? DBG_NoDeactivation : 0) |
-			(settings.NoHelpText ? DBG_NoHelpText : 0) |
-			(settings.DrawText ? DBG_DrawText : 0) |
-			(settings.ProfileTimings ? DBG_ProfileTimings : 0) |
-			(settings.EnableSatComparison ? DBG_EnableSatComparison : 0) |
-			(settings.DisableBulletLCP ? DBG_DisableBulletLCP : 0) |
-			(settings.EnableCCD ? DBG_EnableCCD : 0) |
-			(settings.DrawConstraints ? DBG_DrawConstraints : 0) |
-			(settings.DrawConstraintLimits ? DBG_DrawConstraintLimits : 0) |
-			(settings.FastWireframe ? DBG_FastWireframe : 0) |
-			(settings.DrawNormals ? DBG_DrawNormals : 0) |
-			(settings.DrawFrames ? DBG_DrawFrames : 0);
+			(settings.bDisableAll ? DBG_NoDebug : 0) |
+			(settings.bDrawWireframe ? DBG_DrawWireframe : 0) |
+			(settings.bDrawAabb ? DBG_DrawAabb : 0) |
+			(settings.bDrawFeaturesText ? DBG_DrawFeaturesText : 0) |
+			(settings.bDrawContactPoints ? DBG_DrawContactPoints : 0) |
+			(settings.bNoDeactivation ? DBG_NoDeactivation : 0) |
+			(settings.bNoHelpText ? DBG_NoHelpText : 0) |
+			(settings.bDrawText ? DBG_DrawText : 0) |
+			(settings.bProfileTimings ? DBG_ProfileTimings : 0) |
+			(settings.bEnableSatComparison ? DBG_EnableSatComparison : 0) |
+			(settings.bDisableBulletLCP ? DBG_DisableBulletLCP : 0) |
+			(settings.bEnableCCD ? DBG_EnableCCD : 0) |
+			(settings.bDrawConstraints ? DBG_DrawConstraints : 0) |
+			(settings.bDrawConstraintLimits ? DBG_DrawConstraintLimits : 0) |
+			(settings.bFastWireframe ? DBG_FastWireframe : 0) |
+			(settings.bDrawNormals ? DBG_DrawNormals : 0) |
+			(settings.bDrawFrames ? DBG_DrawFrames : 0);
 	}
 
 	void PhysicsDebugDrawBase::ClearLines()

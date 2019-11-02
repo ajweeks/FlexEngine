@@ -346,7 +346,7 @@ namespace flex
 				if (m_Shaders[i].shader->bDynamic)
 				{
 					VertexIndexBufferPair& pair = m_VertexIndexBufferPairs[m_VertexIndexBufferPairs.size() - 1];
-					pair.useStagingBuffer = false;
+					pair.bUseStagingBuffer = false;
 				}
 			}
 
@@ -1491,7 +1491,7 @@ namespace flex
 
 			DrawCallInfo drawCallInfo = {};
 
-			if (!m_PhysicsDebuggingSettings.DisableAll)
+			if (!m_PhysicsDebuggingSettings.bDisableAll)
 			{
 				PhysicsDebugRender();
 			}
@@ -4486,7 +4486,7 @@ namespace flex
 			VulkanBuffer* vertBuffer = m_VertexIndexBufferPairs[spriteMat.material.shaderID].vertexBuffer;
 
 			// TODO: Use instancing!
-			if (!m_VertexIndexBufferPairs[spriteMat.material.shaderID].useStagingBuffer)
+			if (!m_VertexIndexBufferPairs[spriteMat.material.shaderID].bUseStagingBuffer)
 			{
 				// Copy vertex data into device memory for dynamic shaders
 				u32 copySize = (u32)vertBuffer->m_Size;
@@ -5749,7 +5749,7 @@ namespace flex
 			{
 				delete m_SwapChainFramebuffers[i];
 			}
-			
+
 			m_SwapChainFramebuffers.resize(m_SwapChainImageViews.size());
 
 			for (u32 i = 0; i < m_SwapChainFramebuffers.size(); ++i)
@@ -6180,7 +6180,7 @@ namespace flex
 		{
 			for (u32 i = 0; i < m_VertexIndexBufferPairs.size(); ++i)
 			{
-				if (m_VertexIndexBufferPairs[i].useStagingBuffer)
+				if (m_VertexIndexBufferPairs[i].bUseStagingBuffer)
 				{
 					u32 requiredMemory = 0;
 
@@ -6213,7 +6213,7 @@ namespace flex
 		{
 			for (u32 i = 0; i < m_VertexIndexBufferPairs.size(); ++i)
 			{
-				if (!m_VertexIndexBufferPairs[i].useStagingBuffer)
+				if (!m_VertexIndexBufferPairs[i].bUseStagingBuffer)
 				{
 					u32 requiredMemory = m_Shaders[i].shader->dynamicVertexBufferSize;
 
