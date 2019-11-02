@@ -1215,7 +1215,10 @@ namespace flex
 
 		if (FileExists(m_CommonSettingsAbsFilePath))
 		{
-			Print("Loading common settings from %s\n", m_CommonSettingsFileName.c_str());
+			if (g_bEnableLogging_Loading)
+			{
+				Print("Loading common settings from %s\n", m_CommonSettingsFileName.c_str());
+			}
 
 			JSONObject rootObject = {};
 

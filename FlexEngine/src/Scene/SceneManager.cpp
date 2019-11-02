@@ -75,8 +75,11 @@ namespace flex
 
 		CurrentScene()->PostInitialize();
 
-		std::string currentSceneName = CurrentScene()->GetName();
-		Print("Loaded scene %s\n", currentSceneName.c_str());
+		if (g_bEnableLogging_Loading)
+		{
+			std::string currentSceneName = CurrentScene()->GetName();
+			Print("Loaded scene %s\n", currentSceneName.c_str());
+		}
 	}
 
 	void SceneManager::RemoveScene(BaseScene* scene)
