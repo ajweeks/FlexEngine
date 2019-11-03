@@ -1694,12 +1694,12 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::ReloadShaders()
+		void VulkanRenderer::ReloadShaders(bool bForce)
 		{
 #ifdef DEBUG
 			if (m_ShaderCompiler == nullptr)
 			{
-				m_ShaderCompiler = new AsyncVulkanShaderCompiler(false);
+				m_ShaderCompiler = new AsyncVulkanShaderCompiler(bForce);
 			}
 
 			if (m_ShaderCompiler->bComplete)

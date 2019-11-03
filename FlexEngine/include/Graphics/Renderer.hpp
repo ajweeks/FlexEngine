@@ -101,7 +101,7 @@ namespace flex
 
 		void DrawImGuiForGameObjectWithValidRenderID(GameObject* gameObject);
 
-		virtual void ReloadShaders() = 0;
+		virtual void ReloadShaders(bool bForce) = 0;
 		virtual void LoadFonts(bool bForceRender) = 0;
 
 		virtual void ReloadSkybox(bool bRandomizeTexture) = 0;
