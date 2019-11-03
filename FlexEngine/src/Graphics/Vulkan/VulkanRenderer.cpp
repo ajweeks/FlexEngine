@@ -5091,22 +5091,10 @@ namespace flex
 			VkFormat depthFormat;
 			GetSupportedDepthFormat(m_VulkanDevice->m_PhysicalDevice, &depthFormat);
 
-			// TODO: Unify blur H & V buffers?
-			m_SSAORenderPass.RegisterForColorOnly("SSAO render pass", ssaoFrameBufFormat, m_SSAOFrameBuf->ID, { m_GBufferFrameBuf->ID });
-			m_SSAOBlurHRenderPass.RegisterForColorOnly("SSAO Blur Horizontal render pass", ssaoFrameBufFormat, m_SSAOBlurHFrameBuf->ID, { m_SSAOFrameBuf->ID });
-			m_SSAOBlurVRenderPass.RegisterForColorOnly("SSAO Blur Vertical render pass", ssaoFrameBufFormat, m_SSAOBlurVFrameBuf->ID, { m_SSAOBlurHFrameBuf->ID });
-			// NOTE: We don't need a depth attachment at this point, but we're rendering to the swap chain
-			// frame buffers (which are created using the m_ForwardRenderPass which contains two attachments)
-			// TODO: Set final depth layout to VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL (triggers validation though...)
-			m_DeferredCombineRenderPass.RegisterForColorAndDepth("Deferred combine render pass", m_OffscreenFrameBufferFormat, m_OffscreenFrameBuffer0->ID, { SHADOW_CASCADE_FRAME_BUFFER_ID, m_GBufferFrameBuf->ID, m_SSAOBlurVFrameBuf->ID }, depthFormat);
-			m_ForwardRenderPass.RegisterForColorAndDepth("Forward render pass", m_OffscreenFrameBufferFormat, m_OffscreenFrameBuffer0->ID, {}, depthFormat);
-			m_PostProcessRenderPass.RegisterForColorAndDepth("Post Process render pass", m_OffscreenFrameBufferFormat, m_OffscreenFrameBuffer1->ID, { m_OffscreenFrameBuffer0->ID }, depthFormat);
-			m_GammaCorrectRenderPass.RegisterForColorAndDepth("Gamma correct render pass", m_OffscreenFrameBufferFormat, m_OffscreenFrameBuffer0->ID, { m_OffscreenFrameBuffer1->ID }, depthFormat);
-			m_TAAResolveRenderPass.RegisterForColorAndDepth("TAA Resolve render pass", m_OffscreenFrameBufferFormat, m_OffscreenFrameBuffer1->ID, { m_OffscreenFrameBuffer0->ID }, depthFormat);
-			m_UIRenderPass.RegisterForColorAndDepth("UI render pass", m_SwapChainImageFormat, SWAP_CHAIN_FRAME_BUFFER_ID, {}, depthFormat);
 			m_ShadowRenderPass.RegisterForDepthOnly("Shadow render pass", SHADOW_CASCADE_FRAME_BUFFER_ID, {}, m_ShadowBufFormat);
+			m_AutoTransitionedRenderPasses.push_back(&m_ShadowRenderPass);
 
-			//  Deferred render pass
+			// Deferred render pass
 			{
 				const u32 frameBufferColorAttachmentCount = m_GBufferFrameBuf->frameBufferAttachments.size();
 
@@ -5117,7 +5105,31 @@ namespace flex
 				}
 
 				m_DeferredRenderPass.RegisterForMultiColorAndDepth("Deferred render pass", m_GBufferFrameBuf->ID, {}, colorAttachmentFormats.data(), colorAttachmentFormats.size(), depthFormat);
+				m_AutoTransitionedRenderPasses.push_back(&m_DeferredRenderPass);
 			}
+
+			// TODO: Unify blur H & V buffers?
+			m_SSAORenderPass.RegisterForColorOnly("SSAO render pass", ssaoFrameBufFormat, m_SSAOFrameBuf->ID, { m_GBufferFrameBuf->ID });
+			m_AutoTransitionedRenderPasses.push_back(&m_SSAORenderPass);
+			m_SSAOBlurHRenderPass.RegisterForColorOnly("SSAO Blur Horizontal render pass", ssaoFrameBufFormat, m_SSAOBlurHFrameBuf->ID, { m_SSAOFrameBuf->ID });
+			m_AutoTransitionedRenderPasses.push_back(&m_SSAOBlurHRenderPass);
+			m_SSAOBlurVRenderPass.RegisterForColorOnly("SSAO Blur Vertical render pass", ssaoFrameBufFormat, m_SSAOBlurVFrameBuf->ID, { m_SSAOBlurHFrameBuf->ID });
+			m_AutoTransitionedRenderPasses.push_back(&m_SSAOBlurVRenderPass);
+			// NOTE: We don't need a depth attachment at this point, but we're rendering to the swap chain
+			// frame buffers (which are created using the m_ForwardRenderPass which contains two attachments)
+			// TODO: Set final depth layout to VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL (triggers validation though...)
+			m_DeferredCombineRenderPass.RegisterForColorAndDepth("Deferred combine render pass", m_OffscreenFrameBufferFormat, m_OffscreenFrameBuffer0->ID, { SHADOW_CASCADE_FRAME_BUFFER_ID, m_GBufferFrameBuf->ID, m_SSAOBlurVFrameBuf->ID }, depthFormat);
+			m_AutoTransitionedRenderPasses.push_back(&m_DeferredCombineRenderPass);
+			m_ForwardRenderPass.RegisterForColorAndDepth("Forward render pass", m_OffscreenFrameBufferFormat, m_OffscreenFrameBuffer0->ID, {}, depthFormat);
+			m_AutoTransitionedRenderPasses.push_back(&m_ForwardRenderPass);
+			m_PostProcessRenderPass.RegisterForColorAndDepth("Post Process render pass", m_OffscreenFrameBufferFormat, m_OffscreenFrameBuffer1->ID, { m_OffscreenFrameBuffer0->ID }, depthFormat);
+			m_AutoTransitionedRenderPasses.push_back(&m_PostProcessRenderPass);
+			m_GammaCorrectRenderPass.RegisterForColorAndDepth("Gamma correct render pass", m_OffscreenFrameBufferFormat, m_OffscreenFrameBuffer0->ID, { m_OffscreenFrameBuffer1->ID }, depthFormat);
+			m_AutoTransitionedRenderPasses.push_back(&m_GammaCorrectRenderPass);
+			m_TAAResolveRenderPass.RegisterForColorAndDepth("TAA Resolve render pass", m_OffscreenFrameBufferFormat, m_OffscreenFrameBuffer1->ID, { m_OffscreenFrameBuffer0->ID }, depthFormat);
+			m_AutoTransitionedRenderPasses.push_back(&m_TAAResolveRenderPass);
+			m_UIRenderPass.RegisterForColorAndDepth("UI render pass", m_SwapChainImageFormat, SWAP_CHAIN_FRAME_BUFFER_ID, {}, depthFormat);
+			m_AutoTransitionedRenderPasses.push_back(&m_UIRenderPass);
 
 			// --------------------------------------------
 

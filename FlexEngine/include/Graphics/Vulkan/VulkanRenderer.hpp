@@ -515,6 +515,7 @@ namespace flex
 
 			VulkanRenderPass* m_RenderPasses[12] = { &m_ShadowRenderPass, &m_DeferredRenderPass, &m_DeferredCubemapRenderPass, &m_DeferredCombineRenderPass, &m_SSAORenderPass, &m_SSAOBlurHRenderPass, &m_SSAOBlurVRenderPass,
 				&m_ForwardRenderPass, &m_PostProcessRenderPass, &m_GammaCorrectRenderPass, &m_TAAResolveRenderPass, &m_UIRenderPass };
+			std::vector<VulkanRenderPass*> m_AutoTransitionedRenderPasses;
 
 			VDeleter<VkPipeline> m_ShadowGraphicsPipeline;
 			VDeleter<VkPipelineLayout> m_ShadowPipelineLayout;
