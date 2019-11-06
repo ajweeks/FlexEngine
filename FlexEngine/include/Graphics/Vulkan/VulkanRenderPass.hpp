@@ -73,6 +73,7 @@ namespace flex
 			void End();
 
 		private:
+			friend class VulkanRenderer;
 
 			void Begin(VkCommandBuffer cmdBuf, VkClearValue* clearValues, u32 clearValueCount, FrameBufferID targetFrameBufferID);
 
