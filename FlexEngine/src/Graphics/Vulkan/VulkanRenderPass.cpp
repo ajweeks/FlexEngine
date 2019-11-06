@@ -52,7 +52,7 @@ namespace flex
 			std::vector<VkAttachmentDescription> colorAttachments(m_ColorAttachmentCount);
 			for (u32 i = 0; i < m_ColorAttachmentCount; ++i)
 			{
-				colorAttachments[i] = vks::attachmentDescription(m_ColorFormats[i], finalLayout);
+				colorAttachments[i] = vks::attachmentDescription(m_ColorFormats[i], m_ColorAttachmentFinalLayout);
 			}
 
 			std::vector<VkAttachmentReference> colorAttachmentReferences(m_ColorAttachmentCount);
@@ -61,20 +61,20 @@ namespace flex
 				colorAttachmentReferences[i] = VkAttachmentReference{ i, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
 			}
 
-			if (initialLayout != VK_IMAGE_LAYOUT_UNDEFINED)
+			if (m_ColorAttachmentInitialLayout != VK_IMAGE_LAYOUT_UNDEFINED)
 			{
 				// TODO: Support multiple differing initial layouts
-				colorAttachments[0].initialLayout = initialLayout;
+				colorAttachments[0].initialLayout = m_ColorAttachmentInitialLayout;
 				colorAttachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 			}
 
-			VkAttachmentDescription depthAttachment = vks::attachmentDescription(m_DepthFormat, finalDepthLayout);
+			VkAttachmentDescription depthAttachment = vks::attachmentDescription(m_DepthFormat, m_DepthAttachmentFinalLayout);
 
 			VkAttachmentReference depthAttachmentRef = { m_ColorAttachmentCount, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 
-			if (initialDepthLayout != VK_IMAGE_LAYOUT_UNDEFINED)
+			if (m_DepthAttachmentInitialLayout != VK_IMAGE_LAYOUT_UNDEFINED)
 			{
-				depthAttachment.initialLayout = initialDepthLayout;
+				depthAttachment.initialLayout = m_DepthAttachmentInitialLayout;
 				depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 			}
 
