@@ -110,9 +110,8 @@ namespace flex
 			virtual void RecaptureReflectionProbe() override;
 			virtual void RenderObjectStateChanged() override;
 
-			void SetFrameBufferRenderPass(FrameBufferID frameBufferID, VulkanRenderPass* renderPass);
-
-			void RegisterFramebuffer(FrameBuffer* frameBuffer);
+			void RegisterFramebufferAttachment(FrameBufferAttachment* frameBufferAttachment);
+			FrameBufferAttachment* GetFrameBufferAttachment(FrameBufferAttachmentID frameBufferAttachmentID) const;
 
 			static void SetObjectName(VulkanDevice* device, u64 object, VkDebugReportObjectTypeEXT type, const char* name);
 			static void SetCommandBufferName(VulkanDevice* device, VkCommandBuffer commandBuffer, const char* name);
@@ -203,6 +202,8 @@ namespace flex
 			void CreateSwapChain();
 			void CreateSwapChainImageViews();
 			void CreateRenderPasses();
+			void CalculateAutoLayoutTransitions();
+
 			void FillOutBufferDescriptorInfos(ShaderUniformContainer<BufferDescriptorInfo>* descriptors, UniformBuffer* uniformBuffer, ShaderID shaderID);
 			void CreateDescriptorSet(RenderID renderID);
 			void CreateDescriptorSet(DescriptorSetCreateInfo* createInfo);
@@ -210,8 +211,9 @@ namespace flex
 			void CreateGraphicsPipeline(RenderID renderID, bool bSetCubemapRenderPass);
 			void CreateGraphicsPipeline(GraphicsPipelineCreateInfo* createInfo);
 			void CreateDepthResources();
-			void CreateFramebuffers();
-			void PrepareFrameBuffers();
+			void CreateSwapChainFramebuffers();
+			void CreateFrameBufferAttachments();
+			void CreateFrameBuffers();
 			void PrepareCubemapFrameBuffer();
 			void PhysicsDebugRender();
 
@@ -260,7 +262,7 @@ namespace flex
 			// Begins the given render pass, renders a fullscreen tri, then ends the render pass
 			void RenderFullscreenTri(
 				VkCommandBuffer commandBuffer,
-				VulkanRenderPass& renderPass,
+				VulkanRenderPass* renderPass,
 				ShaderID shaderID,
 				VkPipelineLayout pipelineLayout,
 				VkPipeline graphicsPipeline,
@@ -324,7 +326,6 @@ namespace flex
 			static const u32 MAX_NUM_DESC_DYNAMIC_UNIFORM_BUFFERS = 1024;
 
 			VulkanRenderObject* GetRenderObject(RenderID renderID);
-			FrameBuffer* GetFrameBuffer(FrameBufferID frameBufferID);
 
 			u32 GetActiveRenderObjectCount() const;
 
@@ -387,7 +388,8 @@ namespace flex
 			VulkanTexture* m_BRDFTexture = nullptr;
 			bool bRenderedBRDFLUT = false;
 
-			FrameBuffer* m_GBufferFrameBuf = nullptr;
+			FrameBufferAttachment* m_GBufferColorAttachment0 = nullptr;
+			FrameBufferAttachment* m_GBufferColorAttachment1 = nullptr;
 			FrameBufferAttachment* m_GBufferDepthAttachment = nullptr;
 
 			VDeleter<VkSampler> m_LinMipLinSampler;
@@ -395,11 +397,11 @@ namespace flex
 			VDeleter<VkSampler> m_NearestClampEdgeSampler;
 
 			VkFormat m_OffscreenFrameBufferFormat = VK_FORMAT_UNDEFINED;
-			FrameBuffer* m_OffscreenFrameBuffer0 = nullptr;
-			FrameBuffer* m_OffscreenFrameBuffer1 = nullptr;
+			FrameBufferAttachment* m_OffscreenFB0ColorAttachment0 = nullptr;
+			FrameBufferAttachment* m_OffscreenFB1ColorAttachment0 = nullptr;
 
-			FrameBufferAttachment* m_OffscreenDepthAttachment0 = nullptr;
-			FrameBufferAttachment* m_OffscreenDepthAttachment1 = nullptr;
+			FrameBufferAttachment* m_OffscreenFB0DepthAttachment = nullptr;
+			FrameBufferAttachment* m_OffscreenFB1DepthAttachment = nullptr;
 
 			VulkanTexture* m_HistoryBuffer = nullptr;
 
@@ -408,12 +410,13 @@ namespace flex
 			VkDescriptorSet m_TAAResolveDescriptorSet = VK_NULL_HANDLE;
 			VkDescriptorSet m_FinalFullscreenBlitDescriptorSet = VK_NULL_HANDLE;
 
-			FrameBuffer* m_SSAOFrameBuf = nullptr;
-			FrameBuffer* m_SSAOBlurHFrameBuf = nullptr;
-			FrameBuffer* m_SSAOBlurVFrameBuf = nullptr;
+			FrameBufferAttachment* m_SSAOFBColorAttachment0 = nullptr;
+			FrameBufferAttachment* m_SSAOBlurHFBColorAttachment0 = nullptr;
+			FrameBufferAttachment* m_SSAOBlurVFBColorAttachment0 = nullptr;
 
-			FrameBuffer* m_GBufferCubemapFrameBuffer = nullptr;
-			FrameBufferAttachment* m_CubemapDepthAttachment = nullptr;
+			FrameBufferAttachment* m_GBufferCubemapColorAttachment0 = nullptr;
+			FrameBufferAttachment* m_GBufferCubemapColorAttachment1 = nullptr;
+			FrameBufferAttachment* m_GBufferCubemapDepthAttachment = nullptr;
 
 			VDeleter<VkImage> m_ShadowImage;
 			VDeleter<VkDeviceMemory> m_ShadowImageMemory;
@@ -422,7 +425,7 @@ namespace flex
 			VkDescriptorSet m_ShadowDescriptorSet = VK_NULL_HANDLE;
 			Cascade* m_ShadowCascades[NUM_SHADOW_CASCADES];
 
-			std::map<FrameBufferID, FrameBuffer*> m_FrameBuffers;
+			std::map<FrameBufferAttachmentID, FrameBufferAttachment*> m_FrameBufferAttachments;
 
 			Material::PushConstantBlock* m_SpritePerspPushConstBlock = nullptr;
 			Material::PushConstantBlock* m_SpriteOrthoPushConstBlock = nullptr;
@@ -497,23 +500,25 @@ namespace flex
 			VkExtent2D m_SwapChainExtent;
 			std::vector<VDeleter<VkImageView>> m_SwapChainImageViews;
 			std::vector<FrameBuffer*> m_SwapChainFramebuffers;
+			std::vector<FrameBufferAttachment*> m_SwapChainFramebufferAttachments;
 			FrameBufferAttachment* m_SwapChainDepthAttachment = nullptr;
+			VkFormat m_DepthFormat = VK_FORMAT_UNDEFINED;
 
-			VulkanRenderPass m_ShadowRenderPass;
-			VulkanRenderPass m_DeferredRenderPass;
-			VulkanRenderPass m_DeferredCubemapRenderPass;
-			VulkanRenderPass m_DeferredCombineRenderPass;
-			VulkanRenderPass m_SSAORenderPass;
-			VulkanRenderPass m_SSAOBlurHRenderPass;
-			VulkanRenderPass m_SSAOBlurVRenderPass;
-			VulkanRenderPass m_ForwardRenderPass;
-			VulkanRenderPass m_PostProcessRenderPass;
-			VulkanRenderPass m_GammaCorrectRenderPass;
-			VulkanRenderPass m_TAAResolveRenderPass;
-			VulkanRenderPass m_UIRenderPass;
+			VulkanRenderPass* m_ShadowRenderPass = nullptr;
+			VulkanRenderPass* m_DeferredRenderPass = nullptr;
+			VulkanRenderPass* m_DeferredCubemapRenderPass = nullptr;
+			VulkanRenderPass* m_DeferredCombineRenderPass = nullptr;
+			VulkanRenderPass* m_SSAORenderPass = nullptr;
+			VulkanRenderPass* m_SSAOBlurHRenderPass = nullptr;
+			VulkanRenderPass* m_SSAOBlurVRenderPass = nullptr;
+			VulkanRenderPass* m_ForwardRenderPass = nullptr;
+			VulkanRenderPass* m_PostProcessRenderPass = nullptr;
+			VulkanRenderPass* m_GammaCorrectRenderPass = nullptr;
+			VulkanRenderPass* m_TAAResolveRenderPass = nullptr;
+			VulkanRenderPass* m_UIRenderPass = nullptr;
 			// NOTE: Add new render passes to m_RenderPasses for automatic construction/clean up
 
-			VulkanRenderPass* m_RenderPasses[12] = { &m_ShadowRenderPass, &m_DeferredRenderPass, &m_DeferredCubemapRenderPass, &m_DeferredCombineRenderPass, &m_SSAORenderPass, &m_SSAOBlurHRenderPass, &m_SSAOBlurVRenderPass,
+			VulkanRenderPass** m_RenderPasses[12] = { &m_ShadowRenderPass, &m_DeferredRenderPass, &m_DeferredCubemapRenderPass, &m_DeferredCombineRenderPass, &m_SSAORenderPass, &m_SSAOBlurHRenderPass, &m_SSAOBlurVRenderPass,
 				&m_ForwardRenderPass, &m_PostProcessRenderPass, &m_GammaCorrectRenderPass, &m_TAAResolveRenderPass, &m_UIRenderPass };
 			std::vector<VulkanRenderPass*> m_AutoTransitionedRenderPasses;
 
@@ -599,8 +604,9 @@ namespace flex
 			AsyncVulkanShaderCompiler* m_ShaderCompiler = nullptr;
 #endif
 
-			const FrameBufferID SWAP_CHAIN_FRAME_BUFFER_ID = 90909;
-			const FrameBufferID SHADOW_CASCADE_FRAME_BUFFER_ID = 80808;
+			const FrameBufferAttachmentID SWAP_CHAIN_COLOR_ATTACHMENT_ID = 11000;
+			const FrameBufferAttachmentID SWAP_CHAIN_DEPTH_ATTACHMENT_ID = 11001;
+			const FrameBufferAttachmentID SHADOW_CASCADE_DEPTH_ATTACHMENT_ID = 22001;
 
 			static std::array<glm::mat4, 6> s_CaptureViews;
 

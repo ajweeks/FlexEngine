@@ -43,6 +43,7 @@ namespace flex
 			};
 
 			FrameBufferAttachment(VulkanDevice* device, const CreateInfo& createInfo);
+			~FrameBufferAttachment();
 
 			void CreateImage(u32 inWidth = 0, u32 inHeight = 0, const char* optDBGName = nullptr);
 			void CreateImageView(const char* optDBGName = nullptr);
@@ -51,10 +52,12 @@ namespace flex
 
 			VulkanDevice* device = nullptr;
 
+			FrameBufferAttachmentID ID;
+
 			// TODO: Store data in VulkanTexture
-			VDeleter<VkImage> image;
-			VDeleter<VkDeviceMemory> mem;
-			VDeleter<VkImageView> view;
+			VkImage image = VK_NULL_HANDLE;
+			VkDeviceMemory mem = VK_NULL_HANDLE;
+			VkImageView view = VK_NULL_HANDLE;
 			u32 width = 0;
 			u32 height = 0;
 			bool bIsDepth = false;
@@ -62,6 +65,7 @@ namespace flex
 			bool bIsCubemap = false;
 			bool bIsTransferedSrc = false;
 			bool bIsTransferedDst = false;
+			bool bOwnsResources = true;
 			VkFormat format = VK_FORMAT_UNDEFINED;
 			VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
 		};
@@ -69,13 +73,11 @@ namespace flex
 		struct FrameBuffer
 		{
 			FrameBuffer(VulkanDevice* device);
+			~FrameBuffer();
 
 			void Create(VkFramebufferCreateInfo* createInfo, VulkanRenderPass* inRenderPass, const char* debugName);
 
-			VkFramebuffer* Replace()
-			{
-				return frameBuffer.replace();
-			}
+			VkFramebuffer* Replace();
 
 			operator VkFramebuffer()
 			{
@@ -83,10 +85,9 @@ namespace flex
 			}
 
 			VulkanDevice* m_VulkanDevice = nullptr;
-			FrameBufferID ID = InvalidFrameBufferID;
 			u32 width = 0;
 			u32 height = 0;
-			VDeleter<VkFramebuffer> frameBuffer;
+			VkFramebuffer frameBuffer = VK_NULL_HANDLE;
 			std::vector<std::pair<std::string, FrameBufferAttachment>> frameBufferAttachments;
 			VulkanRenderPass* renderPass = nullptr;
 		};
@@ -94,8 +95,10 @@ namespace flex
 		struct Cascade
 		{
 			Cascade(VulkanDevice* device);
+			~Cascade();
 
 			FrameBuffer frameBuffer;
+			FrameBufferAttachment* attachment = nullptr;
 			VDeleter<VkImageView> imageView;
 			VkDescriptorSet descSet;
 		};
@@ -374,7 +377,7 @@ namespace flex
 			const char* DBG_ImageName = nullptr,
 			const char* DBG_ImageViewName = nullptr);
 
-		void CreateAttachment(VulkanDevice* device, FrameBuffer* frameBuffer, u32 fboIndex = 0, const char* DBG_ImageName = nullptr, const char* DBG_ImageViewName = nullptr);
+		void CreateAttachment(VulkanDevice* device, FrameBufferAttachment* frameBufferAttachment, const char* DBG_ImageName = nullptr, const char* DBG_ImageViewName = nullptr);
 
 		template<class T>
 		void CopyPixels(const T* srcData, T* dstData, u32 dstOffset, u32 width, u32 height, u32 channelCount, u32 pitch, bool bColorSwizzle);

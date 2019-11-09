@@ -1840,26 +1840,37 @@ namespace flex
 			VulkanRenderer::SetImageViewName(device, *imageView, DBG_ImageViewName);
 		}
 
-		void CreateAttachment(VulkanDevice* device, FrameBuffer* frameBuffer, u32 fboIndex /* = 0 */, const char* DBG_ImageName /* = nullptr */, const char* DBG_ImageViewName /* = nullptr */)
+		void CreateAttachment(VulkanDevice* device, FrameBufferAttachment* frameBufferAttachment, const char* DBG_ImageName /* = nullptr */, const char* DBG_ImageViewName /* = nullptr */)
 		{
-			FrameBufferAttachment* fbAttachment = &frameBuffer->frameBufferAttachments[fboIndex].second;
+			if (frameBufferAttachment->image != VK_NULL_HANDLE)
+			{
+				vkDestroyImage(device->m_LogicalDevice, frameBufferAttachment->image, nullptr);
+				frameBufferAttachment->image = VK_NULL_HANDLE;
+				vkDestroyImageView(device->m_LogicalDevice, frameBufferAttachment->view, nullptr);
+				frameBufferAttachment->view = VK_NULL_HANDLE;
+				vkFreeMemory(device->m_LogicalDevice, frameBufferAttachment->mem, nullptr);
+				frameBufferAttachment->mem = VK_NULL_HANDLE;
+			}
+
 			CreateAttachment(
 				device,
-				fbAttachment->format,
+				frameBufferAttachment->format,
 				VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT |
-				(fbAttachment->bIsTransferedDst ? VK_IMAGE_USAGE_TRANSFER_DST_BIT : 0) |
-				(fbAttachment->bIsTransferedSrc ? VK_IMAGE_USAGE_TRANSFER_SRC_BIT : 0),
-				frameBuffer->width,
-				frameBuffer->height,
-				fbAttachment->bIsCubemap ? 6 : 1,
-				fbAttachment->bIsCubemap ? VK_IMAGE_VIEW_TYPE_CUBE : VK_IMAGE_VIEW_TYPE_2D,
-				fbAttachment->bIsCubemap ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0,
-				fbAttachment->image.replace(),
-				fbAttachment->mem.replace(),
-				fbAttachment->view.replace(),
+				(frameBufferAttachment->bIsTransferedDst ? VK_IMAGE_USAGE_TRANSFER_DST_BIT : 0) |
+				(frameBufferAttachment->bIsTransferedSrc ? VK_IMAGE_USAGE_TRANSFER_SRC_BIT : 0),
+				frameBufferAttachment->width,
+				frameBufferAttachment->height,
+				frameBufferAttachment->bIsCubemap ? 6 : 1,
+				frameBufferAttachment->bIsCubemap ? VK_IMAGE_VIEW_TYPE_CUBE : VK_IMAGE_VIEW_TYPE_2D,
+				frameBufferAttachment->bIsCubemap ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0,
+				&frameBufferAttachment->image,
+				&frameBufferAttachment->mem,
+				&frameBufferAttachment->view,
 				DBG_ImageName,
 				DBG_ImageViewName);
-			fbAttachment->layout = VK_IMAGE_LAYOUT_UNDEFINED;
+			frameBufferAttachment->layout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+			((VulkanRenderer*)g_Renderer)->RegisterFramebufferAttachment(frameBufferAttachment);
 		}
 
 		template<class T>
@@ -2096,9 +2107,6 @@ namespace flex
 
 		FrameBufferAttachment::FrameBufferAttachment(VulkanDevice* device, const CreateInfo& createInfo) :
 			device(device),
-			image(device->m_LogicalDevice, vkDestroyImage),
-			mem(device->m_LogicalDevice, vkFreeMemory),
-			view(device->m_LogicalDevice, vkDestroyImageView),
 			width(createInfo.width),
 			height(createInfo.height),
 			format(createInfo.format),
@@ -2107,8 +2115,28 @@ namespace flex
 			bIsCubemap(createInfo.bIsCubemap),
 			bIsTransferedSrc(createInfo.bIsTransferedSrc),
 			bIsTransferedDst(createInfo.bIsTransferedDst),
-			layout(createInfo.initialLayout)
+			layout(createInfo.initialLayout),
+			ID(GenerateUID())
 		{
+		}
+
+		FrameBufferAttachment::~FrameBufferAttachment()
+		{
+			if (bOwnsResources)
+			{
+				if (image != VK_NULL_HANDLE)
+				{
+					vkDestroyImage(device->m_LogicalDevice, image, nullptr);
+				}
+				if (mem != VK_NULL_HANDLE)
+				{
+					vkFreeMemory(device->m_LogicalDevice, mem, nullptr);
+				}
+				if (view != VK_NULL_HANDLE)
+				{
+					vkDestroyImageView(device->m_LogicalDevice, view, nullptr);
+				}
+			}
 		}
 
 		void FrameBufferAttachment::TransitionToLayout(VkImageLayout newLayout, VkQueue graphicsQueue, VkCommandBuffer optCmdBuf /* = VK_NULL_HANDLE */)
@@ -2125,9 +2153,21 @@ namespace flex
 				height = inHeight;
 			}
 
+			if (image != VK_NULL_HANDLE)
+			{
+				vkDestroyImage(device->m_LogicalDevice, image, nullptr);
+				image = VK_NULL_HANDLE;
+			}
+
+			if (mem != VK_NULL_HANDLE)
+			{
+				vkFreeMemory(device->m_LogicalDevice, mem, nullptr);
+				mem = VK_NULL_HANDLE;
+			}
+
 			VulkanTexture::ImageCreateInfo createInfo = {};
-			createInfo.image = image.replace();
-			createInfo.imageMemory = mem.replace();
+			createInfo.image = &image;
+			createInfo.imageMemory = &mem;
 			createInfo.width = width;
 			createInfo.height = height;
 			createInfo.format = format;
@@ -2166,9 +2206,14 @@ namespace flex
 
 		void FrameBufferAttachment::CreateImageView(const char* optDBGName /* = nullptr */)
 		{
+			if (view != VK_NULL_HANDLE)
+			{
+				vkDestroyImageView(device->m_LogicalDevice, view, nullptr);
+			}
+
 			VulkanTexture::ImageViewCreateInfo createInfo = {};
 			createInfo.image = &image;
-			createInfo.imageView = view.replace();
+			createInfo.imageView = &view;
 			createInfo.format = format;
 			if (bIsDepth)
 			{
@@ -2188,21 +2233,33 @@ namespace flex
 		}
 
 		FrameBuffer::FrameBuffer(VulkanDevice* device) :
-			m_VulkanDevice(device),
-			frameBuffer(device->m_LogicalDevice, vkDestroyFramebuffer),
-			ID(GenerateUID())
+			m_VulkanDevice(device)
 		{
+		}
+
+		FrameBuffer::~FrameBuffer()
+		{
+			Replace();
 		}
 
 		void FrameBuffer::Create(VkFramebufferCreateInfo* createInfo, VulkanRenderPass* inRenderPass, const char* debugName)
 		{
-			VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, createInfo, nullptr, frameBuffer.replace()));
+			VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, createInfo, nullptr, Replace()));
 			VulkanRenderer::SetFramebufferName(m_VulkanDevice, frameBuffer, debugName);
-			((VulkanRenderer*)g_Renderer)->RegisterFramebuffer(this);
 
 			width = createInfo->width;
 			height = createInfo->height;
 			renderPass = inRenderPass;
+		}
+
+		VkFramebuffer* FrameBuffer::Replace()
+		{
+			if (frameBuffer != VK_NULL_HANDLE)
+			{
+				vkDestroyFramebuffer(m_VulkanDevice->m_LogicalDevice, frameBuffer, nullptr);
+				frameBuffer = VK_NULL_HANDLE;
+			}
+			return &frameBuffer;
 		}
 
 		VulkanShader::VulkanShader(const VDeleter<VkDevice>& device, Shader* shader) :
@@ -2376,6 +2433,18 @@ namespace flex
 		{
 		}
 
+		Cascade::~Cascade()
+		{
+			if (attachment)
+			{
+				// Prevent cleanup - cascade attachments don't own their resources, they just point at them
+				attachment->image = VK_NULL_HANDLE;
+				attachment->view = VK_NULL_HANDLE;
+				attachment->mem = VK_NULL_HANDLE;
+				delete attachment;
+				attachment = nullptr;
+			}
+		}
 	} // namespace vk
 } // namespace flex
 
