@@ -15,6 +15,10 @@ namespace flex
 		{
 			VertexCount = createInfo->positions_2D.size();
 		}
+		if (VertexCount == 0)
+		{
+			VertexCount = createInfo->positions_4D.size();
+		}
 		Attributes = createInfo->attributes;
 		VertexStride = CalculateVertexStride(createInfo->attributes);
 		VertexBufferSize = VertexCount * VertexStride;
@@ -52,7 +56,7 @@ namespace flex
 		assert(VertexCount > 0);
 
 		real* vertexDataP = vertexData;
-		u32 count = glm::min(VertexCount, createInfo->positions_3D.empty() ? createInfo->positions_2D.size() : createInfo->positions_3D.size());
+		u32 count = glm::min(VertexCount, glm::max(createInfo->positions_2D.size(), glm::max(createInfo->positions_3D.size(), createInfo->positions_4D.size())));
 		for (u32 i = 0; i < count; ++i)
 		{
 			if (Attributes & (u32)VertexAttribute::POSITION)
@@ -61,10 +65,22 @@ namespace flex
 				vertexDataP += 3;
 			}
 
-			if (Attributes & (u32)VertexAttribute::POSITION_2D)
+			if (Attributes & (u32)VertexAttribute::POSITION2)
 			{
 				memcpy(vertexDataP, createInfo->positions_2D.data() + i, sizeof(glm::vec2));
 				vertexDataP += 2;
+			}
+
+			if (Attributes & (u32)VertexAttribute::POSITION4)
+			{
+				memcpy(vertexDataP, createInfo->positions_4D.data() + i, sizeof(glm::vec4));
+				vertexDataP += 4;
+			}
+
+			if (Attributes & (u32)VertexAttribute::VELOCITY4)
+			{
+				memcpy(vertexDataP, createInfo->velocities_4D.data() + i, sizeof(glm::vec4));
+				vertexDataP += 4;
 			}
 
 			if (Attributes & (u32)VertexAttribute::UV)
@@ -147,9 +163,9 @@ namespace flex
 				dst += 3;
 			}
 
-			if (usingAttributes & (u32)VertexAttribute::POSITION_2D)
+			if (usingAttributes & (u32)VertexAttribute::POSITION2)
 			{
-				if (Attributes & (u32)VertexAttribute::POSITION_2D)
+				if (Attributes & (u32)VertexAttribute::POSITION2)
 				{
 					memcpy(dst, src, sizeof(glm::vec2));
 				}
@@ -158,6 +174,32 @@ namespace flex
 					memcpy(dst, &VEC2_ZERO, sizeof(glm::vec2));
 				}
 				dst += 2;
+			}
+
+			if (usingAttributes & (u32)VertexAttribute::POSITION4)
+			{
+				if (Attributes & (u32)VertexAttribute::POSITION4)
+				{
+					memcpy(dst, src, sizeof(glm::vec4));
+				}
+				else
+				{
+					memcpy(dst, &VEC4_ZERO, sizeof(glm::vec4));
+				}
+				dst += 4;
+			}
+
+			if (usingAttributes & (u32)VertexAttribute::VELOCITY4)
+			{
+				if (Attributes & (u32)VertexAttribute::VELOCITY4)
+				{
+					memcpy(dst, src, sizeof(glm::vec4));
+				}
+				else
+				{
+					memcpy(dst, &VEC4_ZERO, sizeof(glm::vec4));
+				}
+				dst += 4;
 			}
 
 			if (usingAttributes & (u32)VertexAttribute::UV)

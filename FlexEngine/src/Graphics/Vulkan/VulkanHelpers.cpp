@@ -55,7 +55,7 @@ namespace flex
 				++location;
 			}
 
-			if (vertexAttributes & (u32)VertexAttribute::POSITION_2D)
+			if (vertexAttributes & (u32)VertexAttribute::POSITION2)
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -65,6 +65,32 @@ namespace flex
 				attributeDescriptions.push_back(attributeDescription);
 
 				offset += sizeof(glm::vec2);
+				++location;
+			}
+
+			if (vertexAttributes & (u32)VertexAttribute::POSITION4)
+			{
+				VkVertexInputAttributeDescription attributeDescription = {};
+				attributeDescription.binding = 0;
+				attributeDescription.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+				attributeDescription.location = location;
+				attributeDescription.offset = offset;
+				attributeDescriptions.push_back(attributeDescription);
+
+				offset += sizeof(glm::vec4);
+				++location;
+			}
+
+			if (vertexAttributes & (u32)VertexAttribute::VELOCITY4)
+			{
+				VkVertexInputAttributeDescription attributeDescription = {};
+				attributeDescription.binding = 0;
+				attributeDescription.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+				attributeDescription.location = location;
+				attributeDescription.offset = offset;
+				attributeDescriptions.push_back(attributeDescription);
+
+				offset += sizeof(glm::vec4);
 				++location;
 			}
 
@@ -2269,6 +2295,7 @@ namespace flex
 			vertShaderModule = { device, vkDestroyShaderModule };
 			fragShaderModule = { device, vkDestroyShaderModule };
 			geomShaderModule = { device, vkDestroyShaderModule };
+			computeShaderModule = { device, vkDestroyShaderModule };
 		}
 
 		VulkanCubemapGBuffer::VulkanCubemapGBuffer(u32 id, const char* name, VkFormat internalFormat) :

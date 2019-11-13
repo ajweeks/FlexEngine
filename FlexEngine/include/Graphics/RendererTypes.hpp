@@ -90,6 +90,13 @@ namespace flex
 		glm::vec4 cascadeDepthSplits;                       // 256
 	};
 
+	// 32 bytes
+	struct ParticleBufferData
+	{
+		glm::vec4 pos; // 16
+		glm::vec4 vel; // 16
+	};
+
 	struct SHCoeffs
 	{
 		glm::vec4 r0;
@@ -161,6 +168,7 @@ namespace flex
 	const u64 U_SCENE_SAMPLER					= (1ull << 56);
 	const u64 U_HISTORY_SAMPLER					= (1ull << 57);
 	const u64 U_LAST_FRAME_VIEWPROJ				= (1ull << 58); const u32 US_LAST_FRAME_VIEWPROJ		= sizeof(glm::mat4);
+	const u64 U_PARTICLE_BUFFER					= (1ull << 59); const u32 US_PARTICLE_BUFFER			= sizeof(ParticleBufferData);
 	// NOTE: New uniforms must be added to Uniforms::CalculateSizeInBytes
 
 	enum class ClearFlag
@@ -560,6 +568,8 @@ namespace flex
 		GAMMA_CORRECT,
 		UI,
 
+		COMPUTE_PARTICLES,
+
 		_NONE
 	};
 
@@ -598,17 +608,20 @@ namespace flex
 		Shader(const std::string& name,
 			const std::string& inVertexShaderFilePath,
 			const std::string& inFragmentShaderFilePath = "",
-			const std::string& inGeometryShaderFilePath = "");
+			const std::string& inGeometryShaderFilePath = "",
+			const std::string& inComputeShaderFilePath = "");
 
 		std::string name = "";
 
 		std::string vertexShaderFilePath = "";
 		std::string fragmentShaderFilePath = "";
 		std::string geometryShaderFilePath = "";
+		std::string computeShaderFilePath = "";
 
 		std::vector<char> vertexShaderCode = {};
 		std::vector<char> fragmentShaderCode = {};
 		std::vector<char> geometryShaderCode = {};
+		std::vector<char> computeShaderCode = {};
 
 		Uniforms constantBufferUniforms = {};
 		Uniforms dynamicBufferUniforms = {};
@@ -620,6 +633,7 @@ namespace flex
 		i32 subpass = 0;
 		bool bDepthWriteEnable = true;
 		bool bTranslucent = false;
+		bool bCompute = false;
 
 		// These variables should be set to true when the shader has these uniforms
 		bool bNeedNormalSampler = false;

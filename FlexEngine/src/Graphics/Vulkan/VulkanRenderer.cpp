@@ -4015,10 +4015,9 @@ namespace flex
 			Shader& shader = *vkShader.shader;
 
 			vkShader.renderPass = ResolveRenderPassType(shader.renderPassType, shader.name.c_str());
-			assert(vkShader.renderPass != VK_NULL_HANDLE);
 
 			// Sanity check
-			if (vkShader.renderPass == VK_NULL_HANDLE)
+			if (!shader.bCompute && vkShader.renderPass == VK_NULL_HANDLE)
 			{
 				PrintError("Shader %s's render pass was not set!\n", shader.name.c_str());
 				bSuccess = false;
@@ -4029,46 +4028,70 @@ namespace flex
 				const std::string vertFileName = StripLeadingDirectories(shader.vertexShaderFilePath);
 				const std::string fragFileName = StripLeadingDirectories(shader.fragmentShaderFilePath);
 				const std::string geomFileName = StripLeadingDirectories(shader.geometryShaderFilePath);
+				const std::string computeFileName = StripLeadingDirectories(shader.computeShaderFilePath);
 
-				Print("Loading shaders %s", vertFileName.c_str());
+				Print("Loading shader %s (", shader.name.c_str());
+
+				if (!vertFileName.empty())
+				{
+					Print(" %s", vertFileName.c_str());
+				}
 
 				if (!fragFileName.empty())
 				{
-					Print(" & %s", fragFileName.c_str());
+					Print(" %s", fragFileName.c_str());
 				}
 
 				if (!geomFileName.empty())
 				{
-					Print(" & %s", geomFileName.c_str());
+					Print(" %s", geomFileName.c_str());
 				}
 
-				Print("\n");
+				if (!computeFileName.empty())
+				{
+					Print(" %s", computeFileName.c_str());
+				}
+
+				Print(")\n");
 			}
 
+			const bool bUseVertexStage = !shader.vertexShaderFilePath.empty();
 			const bool bUseFragmentStage = !shader.fragmentShaderFilePath.empty();
 			const bool bUseGeometryStage = !shader.geometryShaderFilePath.empty();
+			const bool bUseComputeStage = !shader.computeShaderFilePath.empty();
 
-			if (!ReadFile(shader.vertexShaderFilePath, shader.vertexShaderCode, true))
+			if (bUseVertexStage && !ReadFile(shader.vertexShaderFilePath, shader.vertexShaderCode, true))
 			{
-				PrintError("Could not find vertex shader %s\n", shader.name.c_str());
+				PrintError("Could not find vertex shader %s\n", shader.vertexShaderFilePath.c_str());
 				bSuccess = false;
 			}
+
 			if (bUseFragmentStage && !ReadFile(shader.fragmentShaderFilePath, shader.fragmentShaderCode, true))
 			{
-				PrintError("Could not find fragment shader %s\n", shader.name.c_str());
-				bSuccess = false;
-			}
-			if (bUseGeometryStage && !ReadFile(shader.geometryShaderFilePath, shader.geometryShaderCode, true))
-			{
-				PrintError("Could not find geometry shader %s\n", shader.name.c_str());
+				PrintError("Could not find fragment shader %s\n", shader.fragmentShaderFilePath.c_str());
 				bSuccess = false;
 			}
 
-			if (!CreateShaderModule(shader.vertexShaderCode, vkShader.vertShaderModule.replace()))
+			if (bUseGeometryStage && !ReadFile(shader.geometryShaderFilePath, shader.geometryShaderCode, true))
 			{
-				PrintError("Failed to compile vertex shader located at: %s\n", shader.vertexShaderFilePath.c_str());
+				PrintError("Could not find geometry shader %s\n", shader.geometryShaderFilePath.c_str());
+				bSuccess = false;
 			}
-			shader.vertexShaderCode.clear();
+
+			if (bUseComputeStage && !ReadFile(shader.computeShaderFilePath, shader.computeShaderCode, true))
+			{
+				PrintError("Could not find compute shader %s\n", shader.computeShaderFilePath.c_str());
+				bSuccess = false;
+			}
+
+			if (bUseVertexStage)
+			{
+				if (!CreateShaderModule(shader.vertexShaderCode, vkShader.vertShaderModule.replace()))
+				{
+					PrintError("Failed to compile vertex shader located at: %s\n", shader.vertexShaderFilePath.c_str());
+				}
+				shader.vertexShaderCode.clear();
+			}
 
 			if (bUseFragmentStage)
 			{
@@ -4086,6 +4109,15 @@ namespace flex
 					PrintError("Failed to compile geometry shader located at: %s\n", shader.geometryShaderFilePath.c_str());
 				}
 				shader.geometryShaderCode.clear();
+			}
+
+			if (bUseComputeStage)
+			{
+				if (!CreateShaderModule(shader.computeShaderCode, vkShader.computeShaderModule.replace()))
+				{
+					PrintError("Failed to compile compute shader located at: %s\n", shader.computeShaderFilePath.c_str());
+				}
+				shader.computeShaderCode.clear();
 			}
 
 			return bSuccess;
@@ -4628,6 +4660,7 @@ namespace flex
 			case RenderPassType::TAA_RESOLVE: return *m_TAAResolveRenderPass;
 			case RenderPassType::GAMMA_CORRECT: return *m_GammaCorrectRenderPass;
 			case RenderPassType::UI: return *m_UIRenderPass;
+			case RenderPassType::COMPUTE_PARTICLES: return VK_NULL_HANDLE;
 			default:
 				PrintError("Shader's render pass type was not set!\n %s", shaderName ? shaderName : "");
 				ENSURE_NO_ENTRY();
@@ -5913,11 +5946,17 @@ namespace flex
 
 			std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
 
+			const bool bUseVertexStage = !shader.shader->vertexShaderFilePath.empty();
 			const bool bUseFragmentStage = !shader.shader->fragmentShaderFilePath.empty();
 			const bool bUseGeometryStage = !shader.shader->geometryShaderFilePath.empty();
+			const bool bUseComputeStage = !shader.shader->computeShaderFilePath.empty();
 
-			VkPipelineShaderStageCreateInfo vertShaderStageInfo = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, shader.vertShaderModule);
-			shaderStages.push_back(vertShaderStageInfo);
+			VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
+			if (bUseVertexStage)
+			{
+				vertShaderStageInfo = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, shader.vertShaderModule);
+				shaderStages.push_back(vertShaderStageInfo);
+			}
 
 			VkPipelineShaderStageCreateInfo fragShaderStageInfo = {};
 			if (bUseFragmentStage)
@@ -5932,6 +5971,13 @@ namespace flex
 			{
 				geomShaderStageInfo = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_GEOMETRY_BIT, shader.geomShaderModule);
 				shaderStages.push_back(geomShaderStageInfo);
+			}
+
+			VkPipelineShaderStageCreateInfo computeShaderStageInfo = {};
+			if (bUseComputeStage)
+			{
+				computeShaderStageInfo = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_COMPUTE_BIT, shader.computeShaderModule);
+				shaderStages.push_back(computeShaderStageInfo);
 			}
 
 			const u32 vertexStride = CalculateVertexStride(createInfo->vertexAttributes);

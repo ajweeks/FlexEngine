@@ -5,14 +5,16 @@ namespace flex
 	enum class VertexAttribute : u32
 	{
 		POSITION					= (1 << 0),
-		POSITION_2D					= (1 << 1),
-		UV							= (1 << 2),
-		COLOR_R8G8B8A8_UNORM		= (1 << 3),
-		COLOR_R32G32B32A32_SFLOAT	= (1 << 4),
-		TANGENT						= (1 << 5),
-		NORMAL						= (1 << 6),
-		EXTRA_VEC4					= (1 << 7),
-		EXTRA_INT					= (1 << 8),
+		POSITION2					= (1 << 1),
+		POSITION4					= (1 << 2),
+		VELOCITY4					= (1 << 3),
+		UV							= (1 << 4),
+		COLOR_R8G8B8A8_UNORM		= (1 << 5),
+		COLOR_R32G32B32A32_SFLOAT	= (1 << 6),
+		TANGENT						= (1 << 7),
+		NORMAL						= (1 << 8),
+		EXTRA_VEC4					= (1 << 9),
+		EXTRA_INT					= (1 << 10),
 
 		_NONE						= 0,
 	};
@@ -27,6 +29,7 @@ namespace flex
 	{
 		{ "in_Position", 3 },
 		{ "in_Position2D", 2 },
+		{ "in_Position4", 4 },
 		{ "in_TexCoord", 2 },
 		{ "in_Color_32", 1 },
 		{ "in_Color", 4 },

@@ -150,7 +150,7 @@ namespace flex
 			};
 
 			triVertexBufferDataCreateInfo.attributes =
-				(u32)VertexAttribute::POSITION_2D |
+				(u32)VertexAttribute::POSITION2 |
 				(u32)VertexAttribute::UV;
 
 			m_FullScreenTriVertexBufferData = {};
@@ -1419,6 +1419,7 @@ namespace flex
 				{ "taa_resolve", "vk_barebones_pos2_uv_vert.spv", "vk_taa_resolve_frag.spv" },
 				{ "gamma_correct", "vk_barebones_pos2_uv_vert.spv", "vk_gamma_correct_frag.spv" },
 				{ "blit", "vk_barebones_pos2_uv_vert.spv", "vk_blit_frag.spv" },
+				{ "particle_sim", "", "", "", "vk_simulate_particles_comp.spv" },
 			};
 #endif
 
@@ -1431,7 +1432,7 @@ namespace flex
 			m_BaseShaders[shaderID].bNeedIrradianceSampler = true;
 			m_BaseShaders[shaderID].bNeedPrefilteredMap = true;
 			m_BaseShaders[shaderID].vertexAttributes =
-				(u32)VertexAttribute::POSITION_2D |
+				(u32)VertexAttribute::POSITION2 |
 				(u32)VertexAttribute::UV;
 
 			// TODO: Specify that this buffer is only used in the frag shader here
@@ -1673,7 +1674,7 @@ namespace flex
 			// Post processing
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::POST_PROCESS;
 			m_BaseShaders[shaderID].vertexAttributes =
-				(u32)VertexAttribute::POSITION_2D |
+				(u32)VertexAttribute::POSITION2 |
 				(u32)VertexAttribute::UV;
 
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
@@ -1687,7 +1688,7 @@ namespace flex
 			// Post FXAA
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD; // TODO: FIXME:
 			m_BaseShaders[shaderID].vertexAttributes =
-				(u32)VertexAttribute::POSITION_2D |
+				(u32)VertexAttribute::POSITION2 |
 				(u32)VertexAttribute::UV;
 
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
@@ -1719,7 +1720,7 @@ namespace flex
 			m_BaseShaders[shaderID].bDynamic = true;
 			m_BaseShaders[shaderID].dynamicVertexBufferSize = 1024 * 1024; // TODO: FIXME:
 			m_BaseShaders[shaderID].vertexAttributes =
-				(u32)VertexAttribute::POSITION_2D |
+				(u32)VertexAttribute::POSITION2 |
 				(u32)VertexAttribute::UV |
 				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
 				(u32)VertexAttribute::EXTRA_VEC4 |
@@ -1841,10 +1842,20 @@ namespace flex
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::UI;
 			m_BaseShaders[shaderID].bDepthWriteEnable = false;
 			m_BaseShaders[shaderID].vertexAttributes =
-				(u32)VertexAttribute::POSITION_2D |
+				(u32)VertexAttribute::POSITION2 |
 				(u32)VertexAttribute::UV;
 
 			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_ALBEDO_SAMPLER);
+			++shaderID;
+
+			// Simulate particles
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::COMPUTE_PARTICLES;
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PARTICLE_BUFFER);
+			m_BaseShaders[shaderID].bCompute = true;
+			m_BaseShaders[shaderID].vertexAttributes =
+				(u32)VertexAttribute::POSITION4 |
+				(u32)VertexAttribute::VELOCITY4;
+
 			++shaderID;
 
 			assert(shaderID == m_BaseShaders.size());
@@ -1873,14 +1884,22 @@ namespace flex
 
 			if (!LoadShaderCode(shaderID))
 			{
-				PrintError("Couldn't load/compile shaders: %s", shader.vertexShaderFilePath.c_str());
+				PrintError("Couldn't load/compile shader: %s", shader.name.c_str());
+				if (!shader.vertexShaderFilePath.empty())
+				{
+					PrintError(" %s", shader.vertexShaderFilePath.c_str());
+				}
 				if (!shader.fragmentShaderFilePath.empty())
 				{
-					PrintError(", %s", shader.fragmentShaderFilePath.c_str());
+					PrintError(" %s", shader.fragmentShaderFilePath.c_str());
 				}
 				if (!shader.geometryShaderFilePath.empty())
 				{
-					PrintError(", %s", shader.geometryShaderFilePath.c_str());
+					PrintError(" %s", shader.geometryShaderFilePath.c_str());
+				}
+				if (!shader.computeShaderFilePath.empty())
+				{
+					PrintError(" %s", shader.computeShaderFilePath.c_str());
 				}
 				PrintError("\n");
 			}
