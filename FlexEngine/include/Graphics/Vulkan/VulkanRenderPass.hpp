@@ -20,18 +20,7 @@ namespace flex
 			VulkanRenderPass(VulkanDevice* device);
 			~VulkanRenderPass();
 
-			void Create(
-				const char* passName,
-				VkRenderPassCreateInfo* createInfo,
-				const std::vector<VkImageView>& attachmentImageViews,
-				u32 frameBufferWidth,
-				u32 frameBufferHeight);
-
-			void Create(
-				const std::vector<VkImageLayout>& finalLayouts = {}, // VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-				const std::vector<VkImageLayout>& initialLayouts = {}, // VK_IMAGE_LAYOUT_UNDEFINED
-				VkImageLayout finalDepthLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				VkImageLayout initialDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+			void Create();
 
 			void Register(
 				const char* passName,
@@ -61,7 +50,16 @@ namespace flex
 				FrameBufferAttachmentID targetColorAttachmentID,
 				const std::vector<FrameBufferAttachmentID>& sampledAttachmentIDs);
 
+			// This function should ideally not need to be called, instead register render passes in
+			// VulkanRenderer::m_AutoTransitionedRenderPasses and these values will be worked out automatically
+			void ManuallySpecifyLayouts(
+				const std::vector<VkImageLayout>& finalLayouts = {}, // VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+				const std::vector<VkImageLayout>& initialLayouts = {}, // VK_IMAGE_LAYOUT_UNDEFINED
+				VkImageLayout finalDepthLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				VkImageLayout initialDepthLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+
 			VkRenderPass* Replace();
+
 			operator VkRenderPass();
 
 			void Begin(VkCommandBuffer cmdBuf, VkClearValue* clearValues, u32 clearValueCount);
@@ -74,11 +72,17 @@ namespace flex
 		private:
 			friend class VulkanRenderer;
 
+			void Create(
+				const char* passName,
+				VkRenderPassCreateInfo* createInfo,
+				const std::vector<VkImageView>& attachmentImageViews,
+				u32 frameBufferWidth,
+				u32 frameBufferHeight);
+
 			void Begin(VkCommandBuffer cmdBuf, VkClearValue* clearValues, u32 clearValueCount, FrameBuffer* targetFrameBuffer);
 
 			VulkanDevice* m_VulkanDevice = nullptr;
 
-			// Registered values
 			bool m_bRegistered = false;
 			std::vector<VkImageLayout> m_TargetColorAttachmentInitialLayouts;
 			std::vector<VkImageLayout> m_TargetColorAttachmentFinalLayouts;

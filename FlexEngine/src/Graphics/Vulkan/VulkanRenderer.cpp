@@ -2655,7 +2655,8 @@ namespace flex
 			renderPass.RegisterForColorOnly("Equirectangular to Cubemap render pass", InvalidFrameBufferAttachmentID, {});
 			renderPass.bCreateFrameBuffer = false;
 			renderPass.m_ColorAttachmentFormat = format;
-			renderPass.Create({ VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, { VK_IMAGE_LAYOUT_UNDEFINED });
+			renderPass.ManuallySpecifyLayouts({ VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, { VK_IMAGE_LAYOUT_UNDEFINED });
+			renderPass.Create();
 
 			// Offscreen framebuffer
 			struct {
@@ -2922,7 +2923,8 @@ namespace flex
 			renderPass.RegisterForColorOnly("Generate Irradiance render pass", InvalidFrameBufferAttachmentID, {});
 			renderPass.bCreateFrameBuffer = false;
 			renderPass.m_ColorAttachmentFormat = format;
-			renderPass.Create({ VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, { VK_IMAGE_LAYOUT_UNDEFINED });
+			renderPass.ManuallySpecifyLayouts({ VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, { VK_IMAGE_LAYOUT_UNDEFINED });
+			renderPass.Create();
 
 			// Offscreen framebuffer
 			struct {
@@ -3190,7 +3192,8 @@ namespace flex
 			renderPass.RegisterForColorOnly("Generate Prefiltered Cube render pass", InvalidFrameBufferAttachmentID, {});
 			renderPass.bCreateFrameBuffer = false;
 			renderPass.m_ColorAttachmentFormat = format;
-			renderPass.Create({ VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, { VK_IMAGE_LAYOUT_UNDEFINED });
+			renderPass.ManuallySpecifyLayouts({ VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, { VK_IMAGE_LAYOUT_UNDEFINED });
+			renderPass.Create();
 
 			struct {
 				VkImage image;
@@ -3449,7 +3452,8 @@ namespace flex
 				renderPass.RegisterForColorOnly("Generate BRDF LUT render pass", InvalidFrameBufferAttachmentID, {});
 				renderPass.bCreateFrameBuffer = false;
 				renderPass.m_ColorAttachmentFormat = m_BRDFTexture->imageFormat;
-				renderPass.Create({ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, { VK_IMAGE_LAYOUT_UNDEFINED });
+				renderPass.ManuallySpecifyLayouts({ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, { VK_IMAGE_LAYOUT_UNDEFINED });
+				renderPass.Create();
 
 				VkFramebufferCreateInfo framebufferCreateInfo = vks::framebufferCreateInfo(renderPass);
 				framebufferCreateInfo.attachmentCount = 1;
@@ -3791,6 +3795,7 @@ namespace flex
 				renderPass.RegisterForColorOnly("Font SDF render pass", InvalidFrameBufferAttachmentID, {});
 				renderPass.bCreateFrameBuffer = false;
 				renderPass.m_ColorAttachmentFormat = fontTexFormat;
+				renderPass.ManuallySpecifyLayouts();
 				renderPass.Create();
 
 				VkFramebufferCreateInfo framebufCreateInfo = vks::framebufferCreateInfo(renderPass);
@@ -5143,11 +5148,12 @@ namespace flex
 
 			// TODO: Denote that history buffer is copied into from swap chain 
 			// TODO: Denote that swap chain is copied into from m_OffscreenFB0ColorAttachment0
+			//m_AutoTransitionedRenderPasses.push_back(CopyOperation(SWAP_CHAIN_COLOR_ATTACHMENT_ID, m_OffscreenFB1ColorAttachment0->ID));
 
 			m_UIRenderPass->RegisterForColorAndDepth("UI render pass",
 				SWAP_CHAIN_COLOR_ATTACHMENT_ID, // Target color attachment
 				SWAP_CHAIN_DEPTH_ATTACHMENT_ID, // Target depth attachment
-				{} // Sampled attachments
+				{ m_OffscreenFB1ColorAttachment0->ID } // Sampled attachments
 			);
 			m_AutoTransitionedRenderPasses.push_back(m_UIRenderPass);
 
@@ -5181,28 +5187,40 @@ namespace flex
 
 			// --------------------------------------------
 
+			m_ShadowRenderPass->ManuallySpecifyLayouts({}, {}, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED);
+			m_DeferredRenderPass->ManuallySpecifyLayouts({ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_UNDEFINED }, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED);
+			m_SSAORenderPass->ManuallySpecifyLayouts({ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, { VK_IMAGE_LAYOUT_UNDEFINED });
+			m_SSAOBlurHRenderPass->ManuallySpecifyLayouts({ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, { VK_IMAGE_LAYOUT_UNDEFINED });
+			m_SSAOBlurVRenderPass->ManuallySpecifyLayouts({ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, { VK_IMAGE_LAYOUT_UNDEFINED });
+			m_DeferredCombineRenderPass->ManuallySpecifyLayouts({ VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, { VK_IMAGE_LAYOUT_UNDEFINED }, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED);
+			m_ForwardRenderPass->ManuallySpecifyLayouts({ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, { VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			m_PostProcessRenderPass->ManuallySpecifyLayouts({ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, { VK_IMAGE_LAYOUT_UNDEFINED }, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED);
+			m_GammaCorrectRenderPass->ManuallySpecifyLayouts({ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED);
+			m_TAAResolveRenderPass->ManuallySpecifyLayouts({ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+			m_UIRenderPass->ManuallySpecifyLayouts({ VK_IMAGE_LAYOUT_PRESENT_SRC_KHR }, { VK_IMAGE_LAYOUT_UNDEFINED }, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED);
+
 			m_ShadowRenderPass->bCreateFrameBuffer = false; // Uses special shadow frame buffer
 			m_ShadowRenderPass->m_DepthAttachmentFormat = m_ShadowBufFormat;
-			m_ShadowRenderPass->Create({}, {}, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED);
-			m_DeferredRenderPass->Create({ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_UNDEFINED }, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED);
-			m_SSAORenderPass->Create({ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, { VK_IMAGE_LAYOUT_UNDEFINED });
-			m_SSAOBlurHRenderPass->Create({ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, { VK_IMAGE_LAYOUT_UNDEFINED });
-			m_SSAOBlurVRenderPass->Create({ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, { VK_IMAGE_LAYOUT_UNDEFINED });
-			m_DeferredCombineRenderPass->Create({ VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, { VK_IMAGE_LAYOUT_UNDEFINED }, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED);
-			m_ForwardRenderPass->Create({ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, { VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			m_PostProcessRenderPass->Create({ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, { VK_IMAGE_LAYOUT_UNDEFINED }, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED);
-			m_GammaCorrectRenderPass->Create({ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, { VK_IMAGE_LAYOUT_UNDEFINED }, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED);
-			m_TAAResolveRenderPass->Create({ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			m_ShadowRenderPass->Create();
+			m_DeferredRenderPass->Create();
+			m_SSAORenderPass->Create();
+			m_SSAOBlurHRenderPass->Create();
+			m_SSAOBlurVRenderPass->Create();
+			m_DeferredCombineRenderPass->Create();
+			m_ForwardRenderPass->Create();
+			m_PostProcessRenderPass->Create();
+			m_GammaCorrectRenderPass->Create();
+			m_TAAResolveRenderPass->Create();
 			m_UIRenderPass->bCreateFrameBuffer = false; // Uses the swapchain frame buffer
 			m_UIRenderPass->m_ColorAttachmentFormat = m_SwapChainImageFormat;
 			m_UIRenderPass->m_DepthAttachmentFormat = m_DepthFormat;
-			m_UIRenderPass->Create({ VK_IMAGE_LAYOUT_PRESENT_SRC_KHR }, { VK_IMAGE_LAYOUT_UNDEFINED }, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED);
+			m_UIRenderPass->Create();
 
 			// Writes to swapchain... TODO: manage swapchain FrameBuffer wrapper in this class and reference it from this pass (and any other that target the swapchain)
 			m_UIRenderPass->m_FrameBuffer->width = m_SwapChainExtent.width;
 			m_UIRenderPass->m_FrameBuffer->height = m_SwapChainExtent.height;
 
-			PrintWarn("ColorInit ColorFinal - DepthInit DepthFinal\n");
+			//PrintWarn("ColorInit ColorFinal - DepthInit DepthFinal\n");
 
 			i32 successCount = 0;
 			for (i32 i = 0; i < (i32)m_AutoTransitionedRenderPasses.size(); ++i)
@@ -5210,10 +5228,13 @@ namespace flex
 				VulkanRenderPass* pass = m_AutoTransitionedRenderPasses[i];
 				const TEMP_RenderPassImageLayouts& generatedPassLayouts = autoGeneratedLayouts[i];
 
+				const bool bWritesToDepth = pass->m_DepthAttachmentFormat != VK_FORMAT_UNDEFINED;
+
 				if (pass->m_TargetColorAttachmentInitialLayouts != generatedPassLayouts.colorInitialLayouts ||
 					pass->m_TargetColorAttachmentFinalLayouts != generatedPassLayouts.colorFinalLayouts ||
-					pass->m_TargetDepthAttachmentInitialLayout != generatedPassLayouts.depthInitialLayout ||
-					pass->m_TargetDepthAttachmentFinalLayout != generatedPassLayouts.depthFinalLayout)
+					(bWritesToDepth &&
+					(pass->m_TargetDepthAttachmentInitialLayout != generatedPassLayouts.depthInitialLayout ||
+						pass->m_TargetDepthAttachmentFinalLayout != generatedPassLayouts.depthFinalLayout)))
 				{
 					PrintWarn("Unexpected auto generated render pass image layout transitions in \"%s\":\n", pass->m_Name);
 
@@ -5242,7 +5263,14 @@ namespace flex
 					{
 						PrintWarn("} ");
 					}
-					PrintWarn("- %d %d\n", generatedPassLayouts.depthInitialLayout, generatedPassLayouts.depthFinalLayout);
+					if (bWritesToDepth)
+					{
+						PrintWarn("- %d %d\n", generatedPassLayouts.depthInitialLayout, generatedPassLayouts.depthFinalLayout);
+					}
+					else
+					{
+						PrintWarn("-\n");
+					}
 
 					PrintWarn("Expected: ");
 					if (pass->m_TargetColorAttachmentInitialLayouts.size() > 1)
@@ -5269,7 +5297,14 @@ namespace flex
 					{
 						PrintWarn("} ");
 					}
-					PrintWarn("- %d %d\n", pass->m_TargetDepthAttachmentInitialLayout, pass->m_TargetDepthAttachmentFinalLayout);
+					if (bWritesToDepth)
+					{
+						PrintWarn("- %d %d\n", pass->m_TargetDepthAttachmentInitialLayout, pass->m_TargetDepthAttachmentFinalLayout);
+					}
+					else
+					{
+						PrintWarn("-\n");
+					}
 				}
 				else
 				{
@@ -5280,31 +5315,12 @@ namespace flex
 			Print("Successful automatic transition calculations: %d/%d\n", successCount, m_AutoTransitionedRenderPasses.size());
 		}
 
-		void VulkanRenderer::FillOutBufferDescriptorInfos(ShaderUniformContainer<BufferDescriptorInfo>* descriptors, UniformBuffer* uniformBuffer, ShaderID shaderID)
-		{
-			VulkanShader* shader = &m_Shaders[shaderID];
-
-			if (shader->shader->constantBufferUniforms.HasUniform(U_UNIFORM_BUFFER_CONSTANT))
-			{
-				const VulkanBuffer& constantBuffer = uniformBuffer->constantBuffer;
-				descriptors->Add(U_UNIFORM_BUFFER_CONSTANT, BufferDescriptorInfo{ constantBuffer.m_Buffer, uniformBuffer->constantData.size, false });
-			}
-
-			if (shader->shader->dynamicBufferUniforms.HasUniform(U_UNIFORM_BUFFER_DYNAMIC))
-			{
-				const VulkanBuffer& dynamicBuffer = uniformBuffer->dynamicBuffer;
-				// TODO: FIXME: BAD: CLEANUP:
-				const VkDeviceSize dynamicBufferSize = sizeof(VulkanUniformBufferObjectData) * m_RenderObjects.size();
-				descriptors->Add(U_UNIFORM_BUFFER_DYNAMIC, BufferDescriptorInfo{ dynamicBuffer.m_Buffer, dynamicBufferSize, true });
-			}
-		}
-
 		void VulkanRenderer::CalculateAutoLayoutTransitions()
 		{
 			// Handle passes which sample a FB which was previously written to
-			for (i32 i = 0; i < (i32)m_AutoTransitionedRenderPasses.size(); ++i)
+			for (i32 i = 1; i < (i32)m_AutoTransitionedRenderPasses.size(); ++i)
 			{
-				VulkanRenderPass* prevPass = (i > 0) ? m_AutoTransitionedRenderPasses[i - 1] : nullptr;
+				VulkanRenderPass* prevPass = m_AutoTransitionedRenderPasses[i - 1];
 				VulkanRenderPass* currPass = m_AutoTransitionedRenderPasses[i];
 
 				std::vector<FrameBufferAttachmentID> unresolvedSampledAttachments(currPass->m_SampledAttachmentIDs);
@@ -5348,11 +5364,11 @@ namespace flex
 
 					if (prevPass->m_TargetDepthAttachmentID != InvalidFrameBufferAttachmentID)
 					{
-						auto unresolvedAttachmentIter = Find(unresolvedSampledAttachments, prevPass->m_TargetDepthAttachmentID);
-						if (unresolvedAttachmentIter != unresolvedSampledAttachments.end())
+						auto sampledAttachmentIter = Find(unresolvedSampledAttachments, prevPass->m_TargetDepthAttachmentID);
+						if (sampledAttachmentIter != unresolvedSampledAttachments.end())
 						{
 							prevPass->m_TargetDepthAttachmentFinalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-							unresolvedSampledAttachments.erase(unresolvedAttachmentIter);
+							unresolvedSampledAttachments.erase(sampledAttachmentIter);
 						}
 					}
 
@@ -5360,41 +5376,116 @@ namespace flex
 				}
 			}
 
-			// Handle passes which sample the same FB
-			for (i32 i = 0; i < (i32)m_AutoTransitionedRenderPasses.size(); ++i)
+			// Handle passes which target FBs which were previously sampled
+			for (i32 i = 0; i < (i32)m_AutoTransitionedRenderPasses.size() - 1; ++i)
 			{
 				VulkanRenderPass* currPass = m_AutoTransitionedRenderPasses[i];
-				VulkanRenderPass* nextPass = (i < (i32)m_AutoTransitionedRenderPasses.size() - 1) ? m_AutoTransitionedRenderPasses[i + 1] : nullptr;
+				VulkanRenderPass* nextPass = m_AutoTransitionedRenderPasses[i + 1];
 
-				if (nextPass)
+				std::vector<FrameBufferAttachmentID> unresolvedSampledAttachments(currPass->m_SampledAttachmentIDs);
+
+				i32 nextPassIndex = i + 1;
+				while (nextPassIndex < (i32)m_AutoTransitionedRenderPasses.size() && !unresolvedSampledAttachments.empty())
 				{
-					for (auto nextPassTargetAttachmentIter = nextPass->m_TargetColorAttachmentIDs.begin(); nextPassTargetAttachmentIter != nextPass->m_TargetColorAttachmentIDs.end(); ++nextPassTargetAttachmentIter)
-					{
-						auto currPassTargetAttachmentIter = Find(currPass->m_TargetColorAttachmentIDs, *nextPassTargetAttachmentIter);
+					nextPass = m_AutoTransitionedRenderPasses[nextPassIndex];
 
-						if (currPassTargetAttachmentIter != currPass->m_TargetColorAttachmentIDs.end())
+					if (nextPass->m_TargetColorAttachmentIDs.size() > 0)
+					{
+						auto sampledAttachmentIter = unresolvedSampledAttachments.begin();
+						while (sampledAttachmentIter != unresolvedSampledAttachments.end())
 						{
-							if (*nextPassTargetAttachmentIter == *currPassTargetAttachmentIter)
+							bool bRemovedElement = false;
+							std::vector<FrameBufferAttachmentID>::const_iterator targetAttachmentIter;
+							do
 							{
-								const u32 currPassTargetAttachmentIndex = currPassTargetAttachmentIter - currPass->m_TargetColorAttachmentIDs.begin();
-								const u32 nextPassTargetAttachmentIndex = nextPassTargetAttachmentIter - nextPass->m_TargetColorAttachmentIDs.begin();
-								currPass->m_TargetColorAttachmentFinalLayouts[currPassTargetAttachmentIndex] = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-								nextPass->m_TargetColorAttachmentInitialLayouts[nextPassTargetAttachmentIndex] = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+								targetAttachmentIter = Find(nextPass->m_TargetColorAttachmentIDs, *sampledAttachmentIter);
+								if (targetAttachmentIter != nextPass->m_TargetColorAttachmentIDs.end())
+								{
+									const u32 targetAttachmentIndex = targetAttachmentIter - nextPass->m_TargetColorAttachmentIDs.begin();
+									nextPass->m_TargetColorAttachmentInitialLayouts[targetAttachmentIndex] = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+									sampledAttachmentIter = unresolvedSampledAttachments.erase(sampledAttachmentIter);
+									bRemovedElement = true;
+									break;
+								}
+							} while (targetAttachmentIter != nextPass->m_TargetColorAttachmentIDs.end());
+
+							if (sampledAttachmentIter == unresolvedSampledAttachments.end())
+							{
+								break;
+							}
+
+							if (!bRemovedElement)
+							{
+								++sampledAttachmentIter;
 							}
 						}
 					}
-					if (nextPass->m_TargetDepthAttachmentID == currPass->m_TargetDepthAttachmentID)
+
+					if (nextPass->m_TargetDepthAttachmentID != InvalidFrameBufferAttachmentID)
 					{
-						currPass->m_TargetDepthAttachmentFinalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-						nextPass->m_TargetDepthAttachmentInitialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+						auto sampledAttachmentIter = Find(unresolvedSampledAttachments, nextPass->m_TargetDepthAttachmentID);
+						if (sampledAttachmentIter != unresolvedSampledAttachments.end())
+						{
+							nextPass->m_TargetDepthAttachmentInitialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+							unresolvedSampledAttachments.erase(sampledAttachmentIter);
+						}
 					}
+
+					++nextPassIndex;
 				}
 			}
 
-			// Final pass must target swapchain
-			VulkanRenderPass* finalPass = m_AutoTransitionedRenderPasses[m_AutoTransitionedRenderPasses.size() - 1];
-			assert(finalPass->m_TargetColorAttachmentFinalLayouts.size() == 1);
-			finalPass->m_TargetColorAttachmentFinalLayouts[0] = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+			// Handle passes which sequentially target the same FB
+			for (i32 i = 0; i < (i32)m_AutoTransitionedRenderPasses.size() - 1; ++i)
+			{
+				VulkanRenderPass* currPass = m_AutoTransitionedRenderPasses[i];
+				VulkanRenderPass* nextPass = m_AutoTransitionedRenderPasses[i + 1];
+
+				for (auto nextPassTargetAttachmentIter = nextPass->m_TargetColorAttachmentIDs.begin(); nextPassTargetAttachmentIter != nextPass->m_TargetColorAttachmentIDs.end(); ++nextPassTargetAttachmentIter)
+				{
+					auto currPassTargetAttachmentIter = Find(currPass->m_TargetColorAttachmentIDs, *nextPassTargetAttachmentIter);
+					if (currPassTargetAttachmentIter != currPass->m_TargetColorAttachmentIDs.end())
+					{
+						if (*nextPassTargetAttachmentIter == *currPassTargetAttachmentIter)
+						{
+							const u32 currPassTargetAttachmentIndex = currPassTargetAttachmentIter - currPass->m_TargetColorAttachmentIDs.begin();
+							const u32 nextPassTargetAttachmentIndex = nextPassTargetAttachmentIter - nextPass->m_TargetColorAttachmentIDs.begin();
+							currPass->m_TargetColorAttachmentFinalLayouts[currPassTargetAttachmentIndex] = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+							nextPass->m_TargetColorAttachmentInitialLayouts[nextPassTargetAttachmentIndex] = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+						}
+					}
+				}
+				if (nextPass->m_TargetDepthAttachmentID == currPass->m_TargetDepthAttachmentID)
+				{
+					currPass->m_TargetDepthAttachmentFinalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+					nextPass->m_TargetDepthAttachmentInitialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+				}
+
+				// Final pass must target swapchain
+				VulkanRenderPass* finalPass = m_AutoTransitionedRenderPasses[m_AutoTransitionedRenderPasses.size() - 1];
+				assert(finalPass->m_TargetColorAttachmentFinalLayouts.size() == 1);
+				finalPass->m_TargetColorAttachmentFinalLayouts[0] = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+				finalPass->m_TargetDepthAttachmentFinalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+			}
+		}
+
+		void VulkanRenderer::FillOutBufferDescriptorInfos(ShaderUniformContainer<BufferDescriptorInfo>* descriptors, UniformBuffer* uniformBuffer, ShaderID shaderID)
+		{
+			VulkanShader* shader = &m_Shaders[shaderID];
+
+			if (shader->shader->constantBufferUniforms.HasUniform(U_UNIFORM_BUFFER_CONSTANT))
+			{
+				const VulkanBuffer& constantBuffer = uniformBuffer->constantBuffer;
+				descriptors->Add(U_UNIFORM_BUFFER_CONSTANT, BufferDescriptorInfo{ constantBuffer.m_Buffer, uniformBuffer->constantData.size, false });
+			}
+
+			if (shader->shader->dynamicBufferUniforms.HasUniform(U_UNIFORM_BUFFER_DYNAMIC))
+			{
+				const VulkanBuffer& dynamicBuffer = uniformBuffer->dynamicBuffer;
+				// TODO: FIXME: BAD: CLEANUP:
+				const VkDeviceSize dynamicBufferSize = sizeof(VulkanUniformBufferObjectData) * m_RenderObjects.size();
+				descriptors->Add(U_UNIFORM_BUFFER_DYNAMIC, BufferDescriptorInfo{ dynamicBuffer.m_Buffer, dynamicBufferSize, true });
+			}
 		}
 
 		void VulkanRenderer::CreateDescriptorSet(RenderID renderID)
@@ -7115,7 +7206,7 @@ namespace flex
 				EndDebugMarkerRegion(m_OffScreenCmdBuffer); // Deferred
 
 				//
-				// SSAO generation
+				// SSAO
 				//
 
 				VulkanRenderObject* gBufferObject = GetRenderObject(m_GBufferQuadRenderID);
@@ -7161,6 +7252,7 @@ namespace flex
 					{
 						BeginDebugMarkerRegion(m_OffScreenCmdBuffer, "SSAO Blur");
 
+						// Horizontal pass
 						m_SSAOBlurHRenderPass->Begin(m_OffScreenCmdBuffer, (VkClearValue*)&m_ClearColor, 1);
 
 						assert(m_SSAOBlurShaderID != InvalidShaderID);

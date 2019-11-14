@@ -19,7 +19,7 @@ namespace flex
 		{
 			m_FrameBuffer = new FrameBuffer(device);
 		}
-		
+
 		VulkanRenderPass::~VulkanRenderPass()
 		{
 			if (!bCreateFrameBuffer)
@@ -30,47 +30,9 @@ namespace flex
 			delete m_FrameBuffer;
 		}
 
-		void VulkanRenderPass::Create(
-			const char* passName,
-			VkRenderPassCreateInfo* inCreateInfo,
-			const std::vector<VkImageView>& attachmentImageViews,
-			u32 frameBufferWidth,
-			u32 frameBufferHeight)
-		{
-			m_Name = passName;
-			VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, inCreateInfo, nullptr, m_RenderPass.replace()));
-			VulkanRenderer::SetRenderPassName(m_VulkanDevice, m_RenderPass, m_Name);
-			
-			if (bCreateFrameBuffer)
-			{
-				VkFramebufferCreateInfo framebufferInfo = vks::framebufferCreateInfo(m_RenderPass);
-				framebufferInfo.attachmentCount = attachmentImageViews.size();
-				framebufferInfo.pAttachments = attachmentImageViews.data();
-				framebufferInfo.width = frameBufferWidth;
-				framebufferInfo.height = frameBufferHeight;
-				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &framebufferInfo, nullptr, m_FrameBuffer->Replace()));
-
-				m_FrameBuffer->width = frameBufferWidth;
-				m_FrameBuffer->height = frameBufferHeight;
-
-				char name[256];
-				sprintf_s(name, "%s frame buffer", passName);
-				VulkanRenderer::SetFramebufferName(m_VulkanDevice, m_FrameBuffer->frameBuffer, name);
-			}
-		}
-
-		void VulkanRenderPass::Create(
-			const std::vector<VkImageLayout>& finalLayouts, // VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-			const std::vector<VkImageLayout>& initialLayouts, // VK_IMAGE_LAYOUT_UNDEFINED
-			VkImageLayout finalDepthLayout /* = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL */,
-			VkImageLayout initialDepthLayout /* = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL */)
+		void VulkanRenderPass::Create()
 		{
 			assert(m_bRegistered); // This function can only be called on render passes whose Register[...] function has been called
-
-			m_TargetColorAttachmentFinalLayouts = finalLayouts;
-			m_TargetColorAttachmentInitialLayouts = initialLayouts;
-			m_TargetDepthAttachmentFinalLayout = finalDepthLayout;
-			m_TargetDepthAttachmentInitialLayout = initialDepthLayout;
 
 			const bool bDepthAttachmentPresent = m_TargetDepthAttachmentID != InvalidFrameBufferAttachmentID;
 
@@ -88,7 +50,7 @@ namespace flex
 
 				colorAttachments[i] = vks::attachmentDescription(attachment ? attachment->format : m_ColorAttachmentFormat, m_TargetColorAttachmentFinalLayouts[i]);
 				colorAttachmentReferences[i] = VkAttachmentReference{ i, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
-				
+
 				if (attachment != nullptr)
 				{
 					attachmentImageViews[i] = attachment->view;
@@ -233,14 +195,78 @@ namespace flex
 			Register(passName, { targetColorAttachmentID }, InvalidFrameBufferAttachmentID, sampledAttachmentIDs);
 		}
 
-		void VulkanRenderPass::Begin_WithFrameBuffer(VkCommandBuffer cmdBuf, VkClearValue* clearValues, u32 clearValueCount, FrameBuffer* targetFrameBuffer)
+		void VulkanRenderPass::ManuallySpecifyLayouts(
+			const std::vector<VkImageLayout>& finalLayouts, // VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+			const std::vector<VkImageLayout>& initialLayouts, // VK_IMAGE_LAYOUT_UNDEFINED
+			VkImageLayout finalDepthLayout /* = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL */,
+			VkImageLayout initialDepthLayout /* = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL */)
 		{
-			Begin(cmdBuf, clearValues, clearValueCount, targetFrameBuffer);
+			m_TargetColorAttachmentFinalLayouts = finalLayouts;
+			m_TargetColorAttachmentInitialLayouts = initialLayouts;
+			m_TargetDepthAttachmentFinalLayout = finalDepthLayout;
+			m_TargetDepthAttachmentInitialLayout = initialDepthLayout;
+		}
+
+		VkRenderPass* VulkanRenderPass::Replace()
+		{
+			return m_RenderPass.replace();
+		}
+
+		VulkanRenderPass::operator VkRenderPass()
+		{
+			return m_RenderPass;
 		}
 
 		void VulkanRenderPass::Begin(VkCommandBuffer cmdBuf, VkClearValue* clearValues, u32 clearValueCount)
 		{
 			Begin(cmdBuf, clearValues, clearValueCount, m_FrameBuffer);
+		}
+
+		void VulkanRenderPass::Begin_WithFrameBuffer(VkCommandBuffer cmdBuf, VkClearValue* clearValues, u32 clearValueCount, FrameBuffer* targetFrameBuffer)
+		{
+			Begin(cmdBuf, clearValues, clearValueCount, targetFrameBuffer);
+		}
+
+		void VulkanRenderPass::End()
+		{
+			if (m_ActiveCommandBuffer == VK_NULL_HANDLE)
+			{
+				PrintError("Attempted to end render pass which has invalid m_ActiveCommandBuffer (%s)", m_Name);
+				return;
+			}
+
+			vkCmdEndRenderPass(m_ActiveCommandBuffer);
+
+			m_ActiveCommandBuffer = VK_NULL_HANDLE;
+		}
+
+		void VulkanRenderPass::Create(
+			const char* passName,
+			VkRenderPassCreateInfo* inCreateInfo,
+			const std::vector<VkImageView>& attachmentImageViews,
+			u32 frameBufferWidth,
+			u32 frameBufferHeight)
+		{
+			m_Name = passName;
+			VK_CHECK_RESULT(vkCreateRenderPass(m_VulkanDevice->m_LogicalDevice, inCreateInfo, nullptr, m_RenderPass.replace()));
+			VulkanRenderer::SetRenderPassName(m_VulkanDevice, m_RenderPass, m_Name);
+
+			if (bCreateFrameBuffer)
+			{
+				VkFramebufferCreateInfo framebufferInfo = vks::framebufferCreateInfo(m_RenderPass);
+				framebufferInfo.attachmentCount = attachmentImageViews.size();
+				framebufferInfo.pAttachments = attachmentImageViews.data();
+				framebufferInfo.width = frameBufferWidth;
+				framebufferInfo.height = frameBufferHeight;
+				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &framebufferInfo, nullptr, m_FrameBuffer->Replace()));
+
+				m_FrameBuffer->width = frameBufferWidth;
+				m_FrameBuffer->height = frameBufferHeight;
+
+				char name[256];
+				sprintf_s(name, "%s frame buffer", passName);
+				VulkanRenderer::SetFramebufferName(m_VulkanDevice, m_FrameBuffer->frameBuffer, name);
+			}
 		}
 
 		void VulkanRenderPass::Begin(VkCommandBuffer cmdBuf, VkClearValue* clearValues, u32 clearValueCount, FrameBuffer* targetFrameBuffer)
@@ -263,29 +289,6 @@ namespace flex
 			renderPassBeginInfo.pClearValues = clearValues;
 
 			vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-		}
-
-		void VulkanRenderPass::End()
-		{
-			if (m_ActiveCommandBuffer == VK_NULL_HANDLE)
-			{
-				PrintError("Attempted to end render pass which has invalid m_ActiveCommandBuffer (%s)", m_Name);
-				return;
-			}
-
-			vkCmdEndRenderPass(m_ActiveCommandBuffer);
-
-			m_ActiveCommandBuffer = VK_NULL_HANDLE;
-		}
-
-		VkRenderPass* VulkanRenderPass::Replace()
-		{
-			return m_RenderPass.replace();
-		}
-
-		VulkanRenderPass::operator VkRenderPass()
-		{
-			return m_RenderPass;
 		}
 	} // namespace vk
 } // namespace flex
