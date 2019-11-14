@@ -5187,6 +5187,7 @@ namespace flex
 
 			// --------------------------------------------
 
+			// TODO: Remove these at some point
 			m_ShadowRenderPass->ManuallySpecifyLayouts({}, {}, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED);
 			m_DeferredRenderPass->ManuallySpecifyLayouts({ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_UNDEFINED }, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED);
 			m_SSAORenderPass->ManuallySpecifyLayouts({ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, { VK_IMAGE_LAYOUT_UNDEFINED });
@@ -5220,7 +5221,13 @@ namespace flex
 			m_UIRenderPass->m_FrameBuffer->width = m_SwapChainExtent.width;
 			m_UIRenderPass->m_FrameBuffer->height = m_SwapChainExtent.height;
 
-			//PrintWarn("ColorInit ColorFinal - DepthInit DepthFinal\n");
+			const bool bPrintResultsDetailed = false;
+			const bool bPrintResults = false;
+
+			if (bPrintResultsDetailed)
+			{
+				PrintWarn("ColorInit ColorFinal - DepthInit DepthFinal\n");
+			}
 
 			i32 successCount = 0;
 			for (i32 i = 0; i < (i32)m_AutoTransitionedRenderPasses.size(); ++i)
@@ -5236,83 +5243,93 @@ namespace flex
 					(pass->m_TargetDepthAttachmentInitialLayout != generatedPassLayouts.depthInitialLayout ||
 						pass->m_TargetDepthAttachmentFinalLayout != generatedPassLayouts.depthFinalLayout)))
 				{
-					PrintWarn("Unexpected auto generated render pass image layout transitions in \"%s\":\n", pass->m_Name);
+					if (bPrintResultsDetailed)
+					{
+						PrintWarn("Unexpected auto generated render pass image layout transitions in \"%s\":\n", pass->m_Name);
 
-					PrintWarn("Actual:   ");
-					if (generatedPassLayouts.colorInitialLayouts.size() > 1)
-					{
-						PrintWarn("{ ");
-					}
-					for (u32 attachmentIndex = 0; attachmentIndex < generatedPassLayouts.colorInitialLayouts.size(); ++attachmentIndex)
-					{
-						PrintWarn("%d ", generatedPassLayouts.colorInitialLayouts[attachmentIndex]);
-					}
-					if (generatedPassLayouts.colorInitialLayouts.size() > 1)
-					{
-						PrintWarn("} ");
-					}
-					if (generatedPassLayouts.colorFinalLayouts.size() > 1)
-					{
-						PrintWarn("{ ");
-					}
-					for (u32 attachmentIndex = 0; attachmentIndex < generatedPassLayouts.colorFinalLayouts.size(); ++attachmentIndex)
-					{
-						PrintWarn("%d ", generatedPassLayouts.colorFinalLayouts[attachmentIndex]);
-					}
-					if (generatedPassLayouts.colorFinalLayouts.size() > 1)
-					{
-						PrintWarn("} ");
-					}
-					if (bWritesToDepth)
-					{
-						PrintWarn("- %d %d\n", generatedPassLayouts.depthInitialLayout, generatedPassLayouts.depthFinalLayout);
-					}
-					else
-					{
-						PrintWarn("-\n");
-					}
+						PrintWarn("Actual:   ");
+						if (generatedPassLayouts.colorInitialLayouts.size() > 1)
+						{
+							PrintWarn("{ ");
+						}
+						for (u32 attachmentIndex = 0; attachmentIndex < generatedPassLayouts.colorInitialLayouts.size(); ++attachmentIndex)
+						{
+							PrintWarn("%d ", generatedPassLayouts.colorInitialLayouts[attachmentIndex]);
+						}
+						if (generatedPassLayouts.colorInitialLayouts.size() > 1)
+						{
+							PrintWarn("} ");
+						}
+						if (generatedPassLayouts.colorFinalLayouts.size() > 1)
+						{
+							PrintWarn("{ ");
+						}
+						for (u32 attachmentIndex = 0; attachmentIndex < generatedPassLayouts.colorFinalLayouts.size(); ++attachmentIndex)
+						{
+							PrintWarn("%d ", generatedPassLayouts.colorFinalLayouts[attachmentIndex]);
+						}
+						if (generatedPassLayouts.colorFinalLayouts.size() > 1)
+						{
+							PrintWarn("} ");
+						}
+						if (bWritesToDepth)
+						{
+							PrintWarn("- %d %d\n", generatedPassLayouts.depthInitialLayout, generatedPassLayouts.depthFinalLayout);
+						}
+						else
+						{
+							PrintWarn("-\n");
+						}
 
-					PrintWarn("Expected: ");
-					if (pass->m_TargetColorAttachmentInitialLayouts.size() > 1)
-					{
-						PrintWarn("{ ");
-					}
-					for (u32 attachmentIndex = 0; attachmentIndex < pass->m_TargetColorAttachmentInitialLayouts.size(); ++attachmentIndex)
-					{
-						PrintWarn("%d ", pass->m_TargetColorAttachmentInitialLayouts[attachmentIndex]);
-					}
-					if (pass->m_TargetColorAttachmentInitialLayouts.size() > 1)
-					{
-						PrintWarn("} ");
-					}
-					if (pass->m_TargetColorAttachmentFinalLayouts.size() > 1)
-					{
-						PrintWarn("{ ");
-					}
-					for (u32 attachmentIndex = 0; attachmentIndex < pass->m_TargetColorAttachmentFinalLayouts.size(); ++attachmentIndex)
-					{
-						PrintWarn("%d ", pass->m_TargetColorAttachmentFinalLayouts[attachmentIndex]);
-					}
-					if (pass->m_TargetColorAttachmentFinalLayouts.size() > 1)
-					{
-						PrintWarn("} ");
-					}
-					if (bWritesToDepth)
-					{
-						PrintWarn("- %d %d\n", pass->m_TargetDepthAttachmentInitialLayout, pass->m_TargetDepthAttachmentFinalLayout);
-					}
-					else
-					{
-						PrintWarn("-\n");
+						PrintWarn("Expected: ");
+						if (pass->m_TargetColorAttachmentInitialLayouts.size() > 1)
+						{
+							PrintWarn("{ ");
+						}
+						for (u32 attachmentIndex = 0; attachmentIndex < pass->m_TargetColorAttachmentInitialLayouts.size(); ++attachmentIndex)
+						{
+							PrintWarn("%d ", pass->m_TargetColorAttachmentInitialLayouts[attachmentIndex]);
+						}
+						if (pass->m_TargetColorAttachmentInitialLayouts.size() > 1)
+						{
+							PrintWarn("} ");
+						}
+						if (pass->m_TargetColorAttachmentFinalLayouts.size() > 1)
+						{
+							PrintWarn("{ ");
+						}
+						for (u32 attachmentIndex = 0; attachmentIndex < pass->m_TargetColorAttachmentFinalLayouts.size(); ++attachmentIndex)
+						{
+							PrintWarn("%d ", pass->m_TargetColorAttachmentFinalLayouts[attachmentIndex]);
+						}
+						if (pass->m_TargetColorAttachmentFinalLayouts.size() > 1)
+						{
+							PrintWarn("} ");
+						}
+						if (bWritesToDepth)
+						{
+							PrintWarn("- %d %d\n", pass->m_TargetDepthAttachmentInitialLayout, pass->m_TargetDepthAttachmentFinalLayout);
+						}
+						else
+						{
+							PrintWarn("-\n");
+						}
 					}
 				}
 				else
 				{
-					Print("Successful automatic render pass image layout transition calculation in %s!\n", pass->m_Name);
 					++successCount;
+
+					if (bPrintResultsDetailed)
+					{
+						Print("Successful automatic render pass image layout transition calculation in %s!\n", pass->m_Name);
+					}
 				}
 			}
-			Print("Successful automatic transition calculations: %d/%d\n", successCount, m_AutoTransitionedRenderPasses.size());
+			if (bPrintResults)
+			{
+				Print("Successful automatic transition calculations: %d/%d\n", successCount, m_AutoTransitionedRenderPasses.size());
+			}
 		}
 
 		void VulkanRenderer::CalculateAutoLayoutTransitions()
