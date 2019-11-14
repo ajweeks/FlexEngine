@@ -7693,12 +7693,12 @@ namespace flex
 			SetObjectName(device, buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, name);
 		}
 
-		inline void VulkanRenderer::BeginDebugMarkerRegion(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color)
+		void VulkanRenderer::BeginDebugMarkerRegion(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color)
 		{
 			((VulkanRenderer*)g_Renderer)->BeginDebugMarkerRegionInternal(cmdBuf, markerName, color);
 		}
 
-		inline void VulkanRenderer::EndDebugMarkerRegion(VkCommandBuffer cmdBuf)
+		void VulkanRenderer::EndDebugMarkerRegion(VkCommandBuffer cmdBuf)
 		{
 			((VulkanRenderer*)g_Renderer)->EndDebugMarkerRegionInternal(cmdBuf);
 		}
