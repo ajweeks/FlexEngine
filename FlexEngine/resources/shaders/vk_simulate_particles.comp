@@ -6,14 +6,7 @@ struct Particle
 	vec4 vel;
 };
 
-layout (binding = 0) buffer PositionBuffer
-{
-	Particle particles[];
-};
-
-layout (local_size_x = 256) in;
-
-layout (binding = 1) uniform UBODynamic
+layout (binding = 0) uniform UBODynamic
 {
 	float dt;
 	float destX;
@@ -21,6 +14,13 @@ layout (binding = 1) uniform UBODynamic
 	float destZ;
 	int particleCount;
 } uboDynamic;
+
+layout (binding = 1) buffer PositionBuffer
+{
+	Particle particles[];
+};
+
+layout (local_size_x = 256) in;
 
 vec3 attraction(vec3 pos, vec3 attractPos)
 {

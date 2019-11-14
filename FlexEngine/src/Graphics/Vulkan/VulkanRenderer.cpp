@@ -211,6 +211,9 @@ namespace flex
 			m_BlitGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
 			m_BlitGraphicsPipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
 
+			m_ParticleSimulationPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
+			m_ParticleSimulationPipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
+
 			m_ShadowImage = { m_VulkanDevice->m_LogicalDevice, vkDestroyImage };
 			m_ShadowImageView = { m_VulkanDevice->m_LogicalDevice, vkDestroyImageView };
 			m_ShadowImageMemory = { m_VulkanDevice->m_LogicalDevice, vkFreeMemory };
@@ -324,6 +327,8 @@ namespace flex
 			}
 
 			m_FullScreenTriVertexBuffer = new VulkanBuffer(m_VulkanDevice->m_LogicalDevice);
+
+			m_ParticleSimulationUniformBuffer = new VulkanBuffer(m_VulkanDevice->m_LogicalDevice);
 
 			m_SSAOSpecializationMapEntry = { 0, 0, sizeof(i32) };
 			m_SSAOSpecializationInfo.mapEntryCount = 1;
@@ -447,6 +452,8 @@ namespace flex
 			}
 			assert(m_FullscreenBlitMatID != InvalidMaterialID);
 
+			GetShaderID("particle_sim", m_ParticleSimulationShaderID);
+
 			CreateShadowResources();
 
 			m_CommandBufferManager.CreateCommandBuffers(m_SwapChainImages.size());
@@ -502,10 +509,23 @@ namespace flex
 			CreateShadowVertexBuffer();
 			CreateShadowIndexBuffer();
 
-			void* vertData = malloc_hooked(m_FullScreenTriVertexBufferData.VertexBufferSize);
-			memcpy(vertData, m_FullScreenTriVertexBufferData.vertexData, m_FullScreenTriVertexBufferData.VertexBufferSize);
-			CreateStaticVertexBuffer(m_FullScreenTriVertexBuffer, vertData, m_FullScreenTriVertexBufferData.VertexBufferSize);
-			free_hooked(vertData);
+			// Fullscreen tri vertex data
+			{
+				void* vertData = malloc_hooked(m_FullScreenTriVertexBufferData.VertexBufferSize);
+				memcpy(vertData, m_FullScreenTriVertexBufferData.vertexData, m_FullScreenTriVertexBufferData.VertexBufferSize);
+				CreateStaticVertexBuffer(m_FullScreenTriVertexBuffer, vertData, m_FullScreenTriVertexBufferData.VertexBufferSize);
+				free_hooked(vertData);
+			}
+
+			// Particle simulation buffer
+			{
+				CreateAndAllocateBuffer(m_VulkanDevice, 1000 * sizeof(ParticleBufferData), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+					VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_ParticleSimulationUniformBuffer);
+
+				m_ParticleSimulationUniformBuffer->Map();
+				memset(m_ParticleSimulationUniformBuffer->m_Mapped, 0.0f, m_ParticleSimulationUniformBuffer->m_Size);
+				m_ParticleSimulationUniformBuffer->Unmap();
+			}
 
 			// Shadow index/vertex offsets
 			{
@@ -531,6 +551,7 @@ namespace flex
 
 			CreatePostProcessingResources();
 			CreateFullscreenBlitResources();
+			CreateComputeResources();
 
 			m_bPostInitialized = true;
 
@@ -578,6 +599,9 @@ namespace flex
 
 			delete m_FullScreenTriVertexBuffer;
 			m_FullScreenTriVertexBuffer = nullptr;
+
+			delete m_ParticleSimulationUniformBuffer;
+			m_ParticleSimulationUniformBuffer = nullptr;
 
 			m_SkyBoxMesh = nullptr;
 
@@ -727,6 +751,9 @@ namespace flex
 
 			m_BlitGraphicsPipeline.replace();
 			m_BlitGraphicsPipelineLayout.replace();
+
+			m_ParticleSimulationPipeline.replace();
+			m_ParticleSimulationPipelineLayout.replace();
 
 			m_gBufferQuadVertexBufferData.Destroy();
 			m_DescriptorPool.replace();
@@ -1389,6 +1416,35 @@ namespace flex
 				pipelineCreateInfo.renderPass = fullscreenShader->renderPass;
 				CreateGraphicsPipeline(&pipelineCreateInfo);
 			}
+		}
+		
+		void VulkanRenderer::CreateComputeResources()
+		{
+			VulkanShader* particleSimulationShader = &m_Shaders[m_ParticleSimulationShaderID];
+
+			// Particle simulation descriptor set
+			VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[m_ParticleSimulationShaderID];
+
+			DescriptorSetCreateInfo descSetCreateInfo = {};
+			descSetCreateInfo.DBG_Name = "Particle Simulation descriptor set";
+			descSetCreateInfo.descriptorSet = &m_ParticleSimulationDescriptorSet;
+			descSetCreateInfo.descriptorSetLayout = &descSetLayout;
+			descSetCreateInfo.shaderID = m_ParticleSimulationShaderID;
+			descSetCreateInfo.uniformBuffer = &particleSimulationShader->uniformBuffer;
+			FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBuffer, descSetCreateInfo.shaderID, m_ParticleSimulationUniformBuffer);
+			CreateDescriptorSet(&descSetCreateInfo);
+
+			// Particle simulation compute pipeline
+			VkPipelineLayoutCreateInfo pipelineLayoutInfo = vks::pipelineLayoutCreateInfo(1, &descSetLayout);
+			VK_CHECK_RESULT(vkCreatePipelineLayout(m_VulkanDevice->m_LogicalDevice, &pipelineLayoutInfo, nullptr, m_ParticleSimulationPipelineLayout.replace()));
+
+			VkPipelineShaderStageCreateInfo stage = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_COMPUTE_BIT, particleSimulationShader->computeShaderModule);
+
+			VkComputePipelineCreateInfo pipelineCreateInfo = vks::computePipelineCreateInfo(m_ParticleSimulationPipelineLayout);
+			pipelineCreateInfo.stage = stage;
+			VK_CHECK_RESULT(vkCreateComputePipelines(m_VulkanDevice->m_LogicalDevice, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, m_ParticleSimulationPipeline.replace()));
+
+			SetPipelineName(m_VulkanDevice, m_ParticleSimulationPipeline, "Particle simulation pipeline");
 		}
 
 		void VulkanRenderer::Update()
@@ -5519,14 +5575,15 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::FillOutBufferDescriptorInfos(ShaderUniformContainer<BufferDescriptorInfo>* descriptors, UniformBuffer* uniformBuffer, ShaderID shaderID)
+		void VulkanRenderer::FillOutBufferDescriptorInfos(ShaderUniformContainer<BufferDescriptorInfo>* descriptors, UniformBuffer* uniformBuffer, ShaderID shaderID,
+			VulkanBuffer* particleBuffer /* = nullptr */)
 		{
 			VulkanShader* shader = &m_Shaders[shaderID];
 
 			if (shader->shader->constantBufferUniforms.HasUniform(U_UNIFORM_BUFFER_CONSTANT))
 			{
 				const VulkanBuffer& constantBuffer = uniformBuffer->constantBuffer;
-				descriptors->Add(U_UNIFORM_BUFFER_CONSTANT, BufferDescriptorInfo{ constantBuffer.m_Buffer, uniformBuffer->constantData.size, false });
+				descriptors->Add(U_UNIFORM_BUFFER_CONSTANT, BufferDescriptorInfo{ constantBuffer.m_Buffer, uniformBuffer->constantData.size, UniformBufferType::STATIC });
 			}
 
 			if (shader->shader->dynamicBufferUniforms.HasUniform(U_UNIFORM_BUFFER_DYNAMIC))
@@ -5534,7 +5591,12 @@ namespace flex
 				const VulkanBuffer& dynamicBuffer = uniformBuffer->dynamicBuffer;
 				// TODO: FIXME: BAD: CLEANUP:
 				const VkDeviceSize dynamicBufferSize = sizeof(VulkanUniformBufferObjectData) * m_RenderObjects.size();
-				descriptors->Add(U_UNIFORM_BUFFER_DYNAMIC, BufferDescriptorInfo{ dynamicBuffer.m_Buffer, dynamicBufferSize, true });
+				descriptors->Add(U_UNIFORM_BUFFER_DYNAMIC, BufferDescriptorInfo{ dynamicBuffer.m_Buffer, dynamicBufferSize, UniformBufferType::DYNAMIC });
+			}
+
+			if (shader->shader->dynamicBufferUniforms.HasUniform(U_PARTICLE_BUFFER))
+			{
+				descriptors->Add(U_PARTICLE_BUFFER, BufferDescriptorInfo{ particleBuffer->m_Buffer, particleBuffer->m_Size, UniformBufferType::PARTICLE_DATA });
 			}
 		}
 
@@ -5555,7 +5617,7 @@ namespace flex
 			sprintf_s(debugName, "Render Object %s (render ID %u) descriptor set", renderObject->gameObject ? renderObject->gameObject->GetName().c_str() : "", renderID);
 			createInfo.DBG_Name = debugName;
 			createInfo.descriptorSet = &renderObject->descriptorSet;
-			createInfo.descriptorSetLayout = &m_DescriptorSetLayouts[material->descriptorSetLayoutIndex];
+			createInfo.descriptorSetLayout = &m_DescriptorSetLayouts[material->material.shaderID];
 			createInfo.shaderID = material->material.shaderID;
 			createInfo.uniformBuffer = &shader->uniformBuffer;
 
@@ -5634,15 +5696,32 @@ namespace flex
 			for (auto& pair : createInfo->bufferDescriptors)
 			{
 				const u64 uniform = pair.first;
-				assert((pair.second.bDynamic && dynamicBufferUniforms.HasUniform(uniform)) ||
-					(!pair.second.bDynamic && constantBufferUniforms.HasUniform(uniform)));
+				assert(((pair.second.type == UniformBufferType::DYNAMIC || pair.second.type == UniformBufferType::PARTICLE_DATA) && dynamicBufferUniforms.HasUniform(uniform)) ||
+					(pair.second.type == UniformBufferType::STATIC && constantBufferUniforms.HasUniform(uniform)));
 				assert(pair.second.buffer != VK_NULL_HANDLE);
+
+				VkDescriptorType type;
+				switch (pair.second.type)
+				{
+				case UniformBufferType::STATIC:
+					type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+					break;
+				case UniformBufferType::DYNAMIC:
+					type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+					break;
+				case UniformBufferType::PARTICLE_DATA:
+					type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+					break;
+				default:
+					type = VK_DESCRIPTOR_TYPE_MAX_ENUM;
+					ENSURE_NO_ENTRY();
+					break;
+				}
 
 				VkDescriptorBufferInfo& bufferInfo = bufferInfos[i];
 				bufferInfo.buffer = pair.second.buffer;
 				bufferInfo.range = pair.second.bufferSize;
-				writeDescriptorSets.push_back(vks::writeDescriptorSet(*createInfo->descriptorSet,
-					pair.second.bDynamic ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, binding, &bufferInfo));
+				writeDescriptorSets.push_back(vks::writeDescriptorSet(*createInfo->descriptorSet, type, binding, &bufferInfo));
 
 				++binding;
 				++i;
@@ -5711,7 +5790,7 @@ namespace flex
 				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_GEOMETRY_BIT },
 
 				{ U_UNIFORM_BUFFER_DYNAMIC, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
-				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_GEOMETRY_BIT },
+				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_COMPUTE_BIT },
 
 				{ U_ALBEDO_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
@@ -5772,6 +5851,9 @@ namespace flex
 
 				{ U_HISTORY_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_PARTICLE_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,
+				VK_SHADER_STAGE_COMPUTE_BIT },
 			};
 
 			std::vector<VkDescriptorSetLayoutBinding> bindings;
@@ -7380,6 +7462,22 @@ namespace flex
 
 			VK_CHECK_RESULT(vkBeginCommandBuffer(commandBuffer, &cmdBufferbeginInfo));
 
+			// Particle simulation
+			BeginGPUTimeStamp(commandBuffer, "Simulate Particles");
+
+			{
+				VulkanShader* particleSimShader = &m_Shaders[m_ParticleSimulationShaderID];
+
+				u32 dynamicOffsets[2] = { 0, 0 };
+				vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_ParticleSimulationPipelineLayout, 0, 1, &m_ParticleSimulationDescriptorSet, 2, dynamicOffsets);
+
+				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_ParticleSimulationPipeline);
+
+				vkCmdDispatch(commandBuffer, 1, 1, 1);
+			}
+
+			EndGPUTimeStamp(commandBuffer, "Simulate Particles");
+
 			BeginGPUTimeStamp(commandBuffer, "Forward");
 
 			{
@@ -7745,6 +7843,7 @@ namespace flex
 
 			CreatePostProcessingResources();
 			CreateFullscreenBlitResources();
+			CreateComputeResources(); // TODO: Try removing
 
 			UpdateDynamicUniformBuffer(m_PostProcessMatID, 0, MAT4_IDENTITY, nullptr);
 
@@ -8231,7 +8330,14 @@ namespace flex
 			glm::vec4 fontCharData = material.material.fontCharData;
 			glm::vec4 sdfData(0.5f, -0.01f, -0.008f, 0.035f);
 			i32 texChannel = 0;
-			glm::mat4 postProcessMat = GetPostProcessingMatrix();
+			glm::mat4 postProcessMatrix = GetPostProcessingMatrix();
+
+			ParticleSimData particleSimData = {};
+			particleSimData.dt = g_DeltaTime;
+			particleSimData.destX = 1.0f;
+			particleSimData.destY = 2.0f;
+			particleSimData.destZ = 3.0f;
+			particleSimData.particleCount = 1000;
 
 			// TODO: Roll into array?
 			if (uniformOverrides)
@@ -8318,7 +8424,8 @@ namespace flex
 				{ U_SDF_DATA, (void*)&sdfData, US_SDF_DATA },
 				{ U_TEX_CHANNEL, (void*)&texChannel, US_TEX_CHANNEL },
 				{ U_SSAO_BLUR_DATA_DYNAMIC, (void*)&m_SSAOBlurDataDynamic, US_SSAO_BLUR_DATA_DYNAMIC },
-				{ U_POST_PROCESS_MAT, (void*)&postProcessMat, US_POST_PROCESS_MAT },
+				{ U_POST_PROCESS_MAT, (void*)&postProcessMatrix, US_POST_PROCESS_MAT },
+				{ U_PARTICLE_SIM_DATA, (void*)&particleSimData, US_PARTICLE_SIM_DATA },
 			};
 
 			u32 index = 0;
@@ -8410,6 +8517,7 @@ namespace flex
 
 			CreatePostProcessingResources();
 			CreateFullscreenBlitResources();
+			CreateComputeResources();
 		}
 
 		bool VulkanRenderer::DoTextureSelector(const char* label,

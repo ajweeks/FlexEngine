@@ -204,7 +204,9 @@ namespace flex
 			void CreateRenderPasses();
 			void CalculateAutoLayoutTransitions();
 
-			void FillOutBufferDescriptorInfos(ShaderUniformContainer<BufferDescriptorInfo>* descriptors, UniformBuffer* uniformBuffer, ShaderID shaderID);
+			void FillOutBufferDescriptorInfos(ShaderUniformContainer<BufferDescriptorInfo>* descriptors, UniformBuffer* uniformBuffer, ShaderID shaderID,
+				// TODO: Replace with list of uniform buffers!
+				VulkanBuffer* particleBuffer = nullptr);
 			void CreateDescriptorSet(RenderID renderID);
 			void CreateDescriptorSet(DescriptorSetCreateInfo* createInfo);
 			void CreateDescriptorSetLayout(ShaderID shaderID);
@@ -221,6 +223,7 @@ namespace flex
 
 			void CreatePostProcessingResources();
 			void CreateFullscreenBlitResources();
+			void CreateComputeResources();
 
 			// Returns a pointer into m_LoadedTextures if a texture has been loaded from that file path, otherwise returns nullptr
 			VulkanTexture* GetLoadedTexture(const std::string& filePath);
@@ -543,6 +546,13 @@ namespace flex
 			VDeleter<VkPipeline> m_BlitGraphicsPipeline;
 			VDeleter<VkPipelineLayout> m_BlitGraphicsPipelineLayout;
 
+			VDeleter<VkPipeline> m_ParticleSimulationPipeline;
+			VDeleter<VkPipelineLayout> m_ParticleSimulationPipelineLayout;
+
+			VkDescriptorSet m_ParticleSimulationDescriptorSet = VK_NULL_HANDLE;
+
+			VulkanBuffer* m_ParticleSimulationUniformBuffer = nullptr;
+
 			VDeleter<VkDescriptorPool> m_DescriptorPool;
 			std::vector<VkDescriptorSetLayout> m_DescriptorSetLayouts;
 
@@ -599,6 +609,8 @@ namespace flex
 
 			MaterialID m_ComputeSDFMatID = InvalidMaterialID;
 			MaterialID m_FullscreenBlitMatID = InvalidMaterialID;
+			
+			ShaderID m_ParticleSimulationShaderID = InvalidShaderID;
 
 #ifdef DEBUG
 			AsyncVulkanShaderCompiler* m_ShaderCompiler = nullptr;

@@ -611,11 +611,20 @@ namespace flex
 			VkPipeline* graphicsPipeline = nullptr;
 		};
 
+		enum class UniformBufferType
+		{
+			STATIC,
+			DYNAMIC,
+			PARTICLE_DATA,
+			
+			_NONE
+		};
+
 		struct BufferDescriptorInfo
 		{
 			VkBuffer buffer;
 			VkDeviceSize bufferSize;
-			bool bDynamic;
+			UniformBufferType type;
 		};
 
 		struct ImageDescriptorInfo

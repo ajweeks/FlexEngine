@@ -1850,7 +1850,9 @@ namespace flex
 
 			// Simulate particles
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::COMPUTE_PARTICLES;
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PARTICLE_BUFFER);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_PARTICLE_SIM_DATA);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_PARTICLE_BUFFER);
 			m_BaseShaders[shaderID].bCompute = true;
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION4 |

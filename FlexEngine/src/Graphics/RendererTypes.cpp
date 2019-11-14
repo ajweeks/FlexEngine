@@ -60,6 +60,7 @@ namespace flex
 				_u(POST_PROCESS_MAT)
 				_u(LAST_FRAME_VIEWPROJ)
 				_u(PARTICLE_BUFFER)
+				_u(PARTICLE_SIM_DATA)
 #undef _u
 		}
 

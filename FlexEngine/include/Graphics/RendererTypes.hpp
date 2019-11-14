@@ -90,13 +90,6 @@ namespace flex
 		glm::vec4 cascadeDepthSplits;                       // 256
 	};
 
-	// 32 bytes
-	struct ParticleBufferData
-	{
-		glm::vec4 pos; // 16
-		glm::vec4 vel; // 16
-	};
-
 	struct SHCoeffs
 	{
 		glm::vec4 r0;
@@ -106,6 +99,23 @@ namespace flex
 		glm::vec4 g1;
 		glm::vec4 b1;
 		glm::vec4 rgb2;
+	};
+
+	// 32 bytes
+	struct ParticleBufferData
+	{
+		glm::vec4 pos; // 16
+		glm::vec4 vel; // 16
+	};
+
+	// 20 bytes
+	struct ParticleSimData
+	{
+		real dt;			// 4
+		real destX;;		// 4
+		real destY;;		// 4
+		real destZ;;		// 4
+		i32 particleCount;	// 4
 	};
 
 	// Uniforms
@@ -169,6 +179,7 @@ namespace flex
 	const u64 U_HISTORY_SAMPLER					= (1ull << 57);
 	const u64 U_LAST_FRAME_VIEWPROJ				= (1ull << 58); const u32 US_LAST_FRAME_VIEWPROJ		= sizeof(glm::mat4);
 	const u64 U_PARTICLE_BUFFER					= (1ull << 59); const u32 US_PARTICLE_BUFFER			= sizeof(ParticleBufferData);
+	const u64 U_PARTICLE_SIM_DATA				= (1ull << 60); const u32 US_PARTICLE_SIM_DATA			= sizeof(ParticleSimData);
 	// NOTE: New uniforms must be added to Uniforms::CalculateSizeInBytes
 
 	enum class ClearFlag
