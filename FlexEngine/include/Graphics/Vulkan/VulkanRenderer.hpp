@@ -327,6 +327,7 @@ namespace flex
 			static const u32 MAX_NUM_DESC_COMBINED_IMAGE_SAMPLERS = 1024;
 			static const u32 MAX_NUM_DESC_UNIFORM_BUFFERS = 1024;
 			static const u32 MAX_NUM_DESC_DYNAMIC_UNIFORM_BUFFERS = 1024;
+			static const u32 MAX_NUM_DESC_DYNAMIC_STORAGE_BUFFERS = 1; // Particles
 
 			VulkanRenderObject* GetRenderObject(RenderID renderID);
 
@@ -545,6 +546,10 @@ namespace flex
 
 			VDeleter<VkPipeline> m_BlitGraphicsPipeline;
 			VDeleter<VkPipelineLayout> m_BlitGraphicsPipelineLayout;
+
+			std::vector<ParticleBufferData> m_Particles;
+			const u32 MAX_PARTICLE_COUNT = 65536;
+			const u32 PARTICLES_PER_DISPATCH = 256;
 
 			VDeleter<VkPipeline> m_ParticleSimulationPipeline;
 			VDeleter<VkPipelineLayout> m_ParticleSimulationPipelineLayout;

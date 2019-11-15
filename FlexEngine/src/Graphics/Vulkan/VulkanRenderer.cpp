@@ -137,6 +137,8 @@ namespace flex
 				PrintWarn("Failed to find suitable depth format\n");
 			}
 
+			m_Particles.resize(65536);
+
 			m_CommandBufferManager = VulkanCommandBufferManager(m_VulkanDevice);
 
 			FrameBufferAttachment::CreateInfo swapChainDepthCreateInfo = {};
@@ -519,11 +521,11 @@ namespace flex
 
 			// Particle simulation buffer
 			{
-				CreateAndAllocateBuffer(m_VulkanDevice, 1000 * sizeof(ParticleBufferData), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+				CreateAndAllocateBuffer(m_VulkanDevice, MAX_PARTICLE_COUNT * sizeof(ParticleBufferData), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
 					VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, m_ParticleSimulationUniformBuffer);
 
 				m_ParticleSimulationUniformBuffer->Map();
-				memset(m_ParticleSimulationUniformBuffer->m_Mapped, 0.0f, m_ParticleSimulationUniformBuffer->m_Size);
+				memset(m_ParticleSimulationUniformBuffer->m_Mapped, 0, (u32)m_ParticleSimulationUniformBuffer->m_Size);
 				m_ParticleSimulationUniformBuffer->Unmap();
 			}
 
@@ -1417,7 +1419,7 @@ namespace flex
 				CreateGraphicsPipeline(&pipelineCreateInfo);
 			}
 		}
-		
+
 		void VulkanRenderer::CreateComputeResources()
 		{
 			VulkanShader* particleSimulationShader = &m_Shaders[m_ParticleSimulationShaderID];
@@ -1450,6 +1452,18 @@ namespace flex
 		void VulkanRenderer::Update()
 		{
 			Renderer::Update();
+
+			for (u32 i = 0; i < m_Particles.size(); ++i)
+			{
+				m_Particles[i].pos = glm::vec4(i, i * 2.0, 1.0f, 0.0f);
+				m_Particles[i].vel = glm::vec4(0.0f);
+			}
+
+			assert(m_ParticleSimulationUniformBuffer->m_Size == m_Particles.size() * sizeof(m_Particles[0]));
+
+			m_ParticleSimulationUniformBuffer->Map();
+			memcpy(m_ParticleSimulationUniformBuffer->m_Mapped, m_Particles.data(), m_Particles.size() * sizeof(m_Particles[0]));
+			m_ParticleSimulationUniformBuffer->Unmap();
 
 #ifdef DEBUG
 			if (m_ShaderCompiler && m_ShaderCompiler->TickStatus())
@@ -6864,6 +6878,7 @@ namespace flex
 				{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_NUM_DESC_COMBINED_IMAGE_SAMPLERS },
 				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MAX_NUM_DESC_UNIFORM_BUFFERS },
 				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, MAX_NUM_DESC_DYNAMIC_UNIFORM_BUFFERS },
+				{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, MAX_NUM_DESC_DYNAMIC_STORAGE_BUFFERS },
 			};
 
 			VkDescriptorPoolCreateInfo poolInfo = vks::descriptorPoolCreateInfo(poolSizes, MAX_NUM_DESC_SETS);
@@ -7466,14 +7481,28 @@ namespace flex
 			BeginGPUTimeStamp(commandBuffer, "Simulate Particles");
 
 			{
-				VulkanShader* particleSimShader = &m_Shaders[m_ParticleSimulationShaderID];
+				//VulkanShader* particleSimShader = &m_Shaders[m_ParticleSimulationShaderID];
+
+				// TODO: ?
+				//vkCmdPipelineBarrier(
+				//	commandBuffer,
+				//	VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+				//	VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+				// ...);
+
+				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_ParticleSimulationPipeline);
 
 				u32 dynamicOffsets[2] = { 0, 0 };
 				vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_ParticleSimulationPipelineLayout, 0, 1, &m_ParticleSimulationDescriptorSet, 2, dynamicOffsets);
 
-				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_ParticleSimulationPipeline);
+				vkCmdDispatch(commandBuffer, MAX_PARTICLE_COUNT / PARTICLES_PER_DISPATCH, 1, 1);
 
-				vkCmdDispatch(commandBuffer, 1, 1, 1);
+				// TODO: ?
+				//vkCmdPipelineBarrier(
+				//	commandBuffer,
+				//	VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+				//	VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+				//	...);
 			}
 
 			EndGPUTimeStamp(commandBuffer, "Simulate Particles");
@@ -8337,7 +8366,7 @@ namespace flex
 			particleSimData.destX = 1.0f;
 			particleSimData.destY = 2.0f;
 			particleSimData.destZ = 3.0f;
-			particleSimData.particleCount = 1000;
+			particleSimData.particleCount = MAX_PARTICLE_COUNT;
 
 			// TODO: Roll into array?
 			if (uniformOverrides)
