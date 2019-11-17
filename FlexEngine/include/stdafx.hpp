@@ -261,6 +261,7 @@ namespace flex
 
 	extern sec g_SecElapsedSinceProgramStart;
 	extern sec g_DeltaTime;
+	extern sec g_UnpausedDeltaTime; // Unpaused and unscaled
 
 	extern size_t g_TotalTrackedAllocatedMemory;
 	extern size_t g_TrackedAllocationCount;

@@ -80,9 +80,9 @@ namespace flex
 
 		real lookH = g_InputManager->GetActionAxisValue(Action::DBG_CAM_LOOK_LEFT) + g_InputManager->GetActionAxisValue(Action::DBG_CAM_LOOK_RIGHT);
 		real lookV = g_InputManager->GetActionAxisValue(Action::DBG_CAM_LOOK_DOWN) + g_InputManager->GetActionAxisValue(Action::DBG_CAM_LOOK_UP);
-		real yawO = -lookH * m_GamepadRotationSpeed * turnSpeedMultiplier * g_DeltaTime;
+		real yawO = -lookH * m_GamepadRotationSpeed * turnSpeedMultiplier * g_UnpausedDeltaTime;
 		// Horizontal FOV is roughly twice as wide as vertical
-		real pitchO = lookV * 0.6f * m_GamepadRotationSpeed * turnSpeedMultiplier * g_DeltaTime;
+		real pitchO = lookV * 0.6f * m_GamepadRotationSpeed * turnSpeedMultiplier * g_UnpausedDeltaTime;
 
 		m_TurnVel += glm::vec2(yawO, pitchO);
 
@@ -144,7 +144,7 @@ namespace flex
 				m_TurnVel += glm::vec2(-m_MouseDragDist.x * m_MouseRotationSpeed * turnSpeedMultiplier,
 					m_MouseDragDist.y * m_MouseRotationSpeed * turnSpeedMultiplier);
 
-				m_Roll += m_TurnVel.x * m_RollOnTurnAmount * g_DeltaTime;
+				m_Roll += m_TurnVel.x * m_RollOnTurnAmount * g_UnpausedDeltaTime;
 
 				m_Yaw += m_TurnVel.x;
 				m_Pitch += m_TurnVel.y;
@@ -194,7 +194,7 @@ namespace flex
 				glm::vec2 dragDist = g_InputManager->GetMouseDragDistance(MouseButton::MIDDLE) * multiplier;
 				glm::vec2 frameBufferSize = (glm::vec2)g_Window->GetFrameBufferSize();
 				glm::vec2 normDragDist = dragDist / frameBufferSize;
-				m_Position = (m_DragStartPosition + (normDragDist.x * m_Right + normDragDist.y * m_Up) * m_PanSpeed);
+				m_Position = (m_DragStartPosition + (normDragDist.x * m_Right + normDragDist.y * m_Up) * m_PanSpeed * g_UnpausedDeltaTime);
 			}
 		}
 
@@ -207,16 +207,16 @@ namespace flex
 		if (g_InputManager->IsMouseButtonDown(MouseButton::RIGHT))
 		{
 			glm::vec2 zoom = g_InputManager->GetMouseMovement();
-			translation += m_Forward * -zoom.y * m_DragDollySpeed;
+			translation += m_Forward * -zoom.y * m_DragDollySpeed * g_UnpausedDeltaTime;
 		}
 
-		targetDPos += translation * m_MoveSpeed * moveSpeedMultiplier * g_DeltaTime;
+		targetDPos += translation * m_MoveSpeed * moveSpeedMultiplier * g_UnpausedDeltaTime;
 
 		real distFromCenter = glm::length(m_Position - orbitingCenter);
 
 		m_MoveVel += targetDPos;
 
-		// TODO: * deltaTime?
+		// TODO: * g_UnpausedDeltaTime?
 		m_Position += m_MoveVel;
 		m_DragStartPosition += m_MoveVel;
 
