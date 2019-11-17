@@ -102,11 +102,10 @@ namespace flex
 	};
 
 #pragma pack(push, 1)
-	// 64 bytes
+	// 54 bytes
 	struct ParticleBufferData
 	{
 		glm::vec3 pos;		// 12
-		glm::vec2 uv;		// 8
 		glm::vec4 color;	// 16
 		glm::vec3 vel;		// 12
 		glm::vec4 extraVec4;// 16

@@ -349,7 +349,7 @@ namespace flex
 		VertexBufferData m_gBufferQuadVertexBufferData;
 
 		std::vector<ParticleBufferData> m_Particles;
-		const u32 MAX_PARTICLE_COUNT = 65536;
+		const u32 MAX_PARTICLE_COUNT = 2097152;
 		const u32 PARTICLES_PER_DISPATCH = 256;
 
 		// Any editor objects which also require a game object wrapper

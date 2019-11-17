@@ -1464,15 +1464,8 @@ namespace flex
 				descSetCreateInfo.shaderID = particleMaterial->material.shaderID;
 				descSetCreateInfo.uniformBuffer = &particleShader->uniformBuffer;
 
-				for (auto& pair : particleMaterial->textures)
-				{
-					if (particleShader->shader->textureUniforms.HasUniform(pair.first))
-					{
-						VulkanTexture* texture = pair.second;
-						assert(texture != nullptr);
-						descSetCreateInfo.imageDescriptors.Add(pair.first, ImageDescriptorInfo{ texture->imageView, m_LinMipLinSampler });
-					}
-				}
+				VulkanTexture* texture = m_LoadedTextures[m_AlphaBGTextureID];
+				descSetCreateInfo.imageDescriptors.Add(U_ALBEDO_SAMPLER, ImageDescriptorInfo{ texture->imageView, m_LinMipLinSampler });
 
 				FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBuffer, descSetCreateInfo.shaderID);
 				CreateDescriptorSet(&descSetCreateInfo);
@@ -1488,10 +1481,10 @@ namespace flex
 				pipelineCreateInfo.cullMode = VK_CULL_MODE_NONE;
 				pipelineCreateInfo.descriptorSetLayoutIndex = particleMaterial->material.shaderID;
 				pipelineCreateInfo.bSetDynamicStates = true;
-				pipelineCreateInfo.bEnableColorBlending = true;
+				pipelineCreateInfo.bEnableColorBlending = particleShader->shader->bTranslucent;
 				pipelineCreateInfo.subpass = particleShader->shader->subpass;
 				pipelineCreateInfo.depthCompareOp = VK_COMPARE_OP_GREATER_OR_EQUAL;
-				pipelineCreateInfo.depthWriteEnable = VK_TRUE;
+				pipelineCreateInfo.depthWriteEnable = particleShader->shader->bDepthWriteEnable ? VK_TRUE : VK_FALSE;
 				pipelineCreateInfo.renderPass = *m_ForwardRenderPass;
 				CreateGraphicsPipeline(&pipelineCreateInfo);
 			}
@@ -1897,6 +1890,8 @@ namespace flex
 				CreateShadowIndexBuffer();
 
 				GenerateIrradianceMaps();
+
+				InitializeParticleBuffers();
 			}
 		}
 
@@ -4860,19 +4855,27 @@ namespace flex
 			m_Particles.resize(MAX_PARTICLE_COUNT);
 
 			const u32 dim = (u32)glm::pow((real)m_Particles.size(), 1.0f / 3.0f);
-			const real particlePlacementScale = 10.0f;
+			const real invDim = 1.0f / (real)dim;
+			const real particlePlacementScale = 45.0f;
 			for (u32 i = 0; i < m_Particles.size(); ++i)
 			{
 				//real delta = ((real)i) / (real)(m_Particles.size() - 1);
-				real x = (i % dim) * particlePlacementScale;
-				real y = (i / dim % dim) * particlePlacementScale;
-				real z = (i / (dim * dim) % dim) * particlePlacementScale;
+				real x = (i % dim) * invDim - 0.5f;
+				real y = (i / dim % dim) * invDim - 0.5f;
+				real z = (i / (dim * dim) % dim) * invDim - 0.5f;
 
-				m_Particles[i].pos = glm::vec3(x, y, z);
-				m_Particles[i].uv = glm::vec2(0.0f);
+				real mag = glm::length(glm::vec3(x, y, z));
+
+				real dx = x * 2.0f;
+				real dz = z * 2.0f;
+
+				real theta = atan2(dz, dx) - PI_DIV_TWO;
+
+				m_Particles[i].pos = glm::vec3(x, y, z) * particlePlacementScale;
 				m_Particles[i].color = glm::vec4(1.0f);
-				m_Particles[i].vel = glm::normalize(glm::vec3(-x - 1, -y, -z)) * 0.5f;
-				m_Particles[i].extraVec4 = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
+				// Vortex
+				m_Particles[i].vel = glm::vec3(cos(theta), 0.0f, sin(theta)) * mag;
+				m_Particles[i].extraVec4 = glm::vec4(Lerp(0.6f, 0.2f, mag), 0.0f, 0.0f, 0.0f);
 			}
 
 			const u32 particleBufferSize = MAX_PARTICLE_COUNT * sizeof(ParticleBufferData);

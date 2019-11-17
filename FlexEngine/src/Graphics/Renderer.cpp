@@ -1861,11 +1861,12 @@ namespace flex
 
 			// Particles
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
+			m_BaseShaders[shaderID].bDepthWriteEnable = true;
+			m_BaseShaders[shaderID].bTranslucent = false;
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION |
-				(u32)VertexAttribute::UV |
+				(u32)VertexAttribute::VELOCITY3 |	
 				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
-				(u32)VertexAttribute::VELOCITY3 |
 				(u32)VertexAttribute::EXTRA_VEC4;
 
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
