@@ -61,6 +61,10 @@ glslangvalidator --spirv-val -V vk_blit.frag -o spv/vk_blit_frag.spv
 
 glslangvalidator --spirv-val -V vk_simulate_particles.comp -o spv/vk_simulate_particles_comp.spv
 
+glslangvalidator --spirv-val -V vk_particles.vert -o spv/vk_particles_vert.spv
+glslangvalidator --spirv-val -V vk_particles.geom -o spv/vk_particles_geom.spv
+glslangvalidator --spirv-val -V vk_particles.frag -o spv/vk_particles_frag.spv
+
 @REM ImGui
 glslangValidator --spirv-val -V vk_imgui.frag -o spv/vk_imgui_frag.spv
 glslangValidator --spirv-val -V vk_imgui.vert -o spv/vk_imgui_vert.spv

@@ -77,9 +77,9 @@ namespace flex
 				vertexDataP += 4;
 			}
 
-			if (Attributes & (u32)VertexAttribute::VELOCITY4)
+			if (Attributes & (u32)VertexAttribute::VELOCITY3)
 			{
-				memcpy(vertexDataP, createInfo->velocities_4D.data() + i, sizeof(glm::vec4));
+				memcpy(vertexDataP, createInfo->velocities.data() + i, sizeof(glm::vec3));
 				vertexDataP += 4;
 			}
 
@@ -189,17 +189,17 @@ namespace flex
 				dst += 4;
 			}
 
-			if (usingAttributes & (u32)VertexAttribute::VELOCITY4)
+			if (usingAttributes & (u32)VertexAttribute::VELOCITY3)
 			{
-				if (Attributes & (u32)VertexAttribute::VELOCITY4)
+				if (Attributes & (u32)VertexAttribute::VELOCITY3)
 				{
-					memcpy(dst, src, sizeof(glm::vec4));
+					memcpy(dst, src, sizeof(glm::vec3));
 				}
 				else
 				{
-					memcpy(dst, &VEC4_ZERO, sizeof(glm::vec4));
+					memcpy(dst, &VEC4_ZERO, sizeof(glm::vec3));
 				}
-				dst += 4;
+				dst += 3;
 			}
 
 			if (usingAttributes & (u32)VertexAttribute::UV)

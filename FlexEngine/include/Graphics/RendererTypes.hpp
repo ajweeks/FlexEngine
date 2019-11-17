@@ -101,12 +101,17 @@ namespace flex
 		glm::vec4 rgb2;
 	};
 
-	// 32 bytes
+#pragma pack(push, 1)
+	// 64 bytes
 	struct ParticleBufferData
 	{
-		glm::vec4 pos; // 16
-		glm::vec4 vel; // 16
+		glm::vec3 pos;		// 12
+		glm::vec2 uv;		// 8
+		glm::vec4 color;	// 16
+		glm::vec3 vel;		// 12
+		glm::vec4 extraVec4;// 16
 	};
+#pragma pack(pop)
 
 	// 20 bytes
 	struct ParticleSimData
@@ -636,6 +641,7 @@ namespace flex
 
 		Uniforms constantBufferUniforms = {};
 		Uniforms dynamicBufferUniforms = {};
+		Uniforms additionalBufferUniforms = {};
 		Uniforms textureUniforms = {};
 
 		VertexAttributes vertexAttributes = 0;

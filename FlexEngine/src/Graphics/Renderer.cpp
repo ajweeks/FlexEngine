@@ -1420,6 +1420,7 @@ namespace flex
 				{ "gamma_correct", "vk_barebones_pos2_uv_vert.spv", "vk_gamma_correct_frag.spv" },
 				{ "blit", "vk_barebones_pos2_uv_vert.spv", "vk_blit_frag.spv" },
 				{ "particle_sim", "", "", "", "vk_simulate_particles_comp.spv" },
+				{ "particles", "vk_particles_vert.spv", "vk_particles_frag.spv", "vk_particles_geom.spv" },
 			};
 #endif
 
@@ -1850,14 +1851,28 @@ namespace flex
 
 			// Simulate particles
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::COMPUTE_PARTICLES;
+			m_BaseShaders[shaderID].bCompute = true;
+
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_PARTICLE_SIM_DATA);
-			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_PARTICLE_BUFFER);
-			m_BaseShaders[shaderID].bCompute = true;
-			m_BaseShaders[shaderID].vertexAttributes =
-				(u32)VertexAttribute::POSITION4 |
-				(u32)VertexAttribute::VELOCITY4;
 
+			m_BaseShaders[shaderID].additionalBufferUniforms.AddUniform(U_PARTICLE_BUFFER);
+			++shaderID;
+
+			// Particles
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
+			m_BaseShaders[shaderID].vertexAttributes =
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::UV |
+				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
+				(u32)VertexAttribute::VELOCITY3 |
+				(u32)VertexAttribute::EXTRA_VEC4;
+
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_CAM_POS);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
+
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_ALBEDO_SAMPLER);
 			++shaderID;
 
 			assert(shaderID == m_BaseShaders.size());
@@ -2678,6 +2693,38 @@ namespace flex
 		gammaCorrectMatCreateInfo.colorMultiplier = VEC4_ONE;
 		m_GammaCorrectMaterialID = InitializeMaterial(&gammaCorrectMatCreateInfo);
 
+		MaterialCreateInfo fullscreenBlitMatCreateInfo = {};
+		fullscreenBlitMatCreateInfo.name = "fullscreen blit";
+		fullscreenBlitMatCreateInfo.shaderName = "blit";
+		fullscreenBlitMatCreateInfo.persistent = true;
+		fullscreenBlitMatCreateInfo.visibleInEditor = false;
+		fullscreenBlitMatCreateInfo.generateAlbedoSampler = true;
+		fullscreenBlitMatCreateInfo.enableAlbedoSampler = true;
+		m_FullscreenBlitMatID = InitializeMaterial(&fullscreenBlitMatCreateInfo);
+
+		MaterialCreateInfo computeSDFMatCreateInfo = {};
+		computeSDFMatCreateInfo.name = "compute SDF";
+		computeSDFMatCreateInfo.shaderName = "compute_sdf";
+		computeSDFMatCreateInfo.persistent = true;
+		computeSDFMatCreateInfo.visibleInEditor = false;
+		m_ComputeSDFMatID = InitializeMaterial(&computeSDFMatCreateInfo);
+
+		MaterialCreateInfo particleSimMatCreateInfo = {};
+		particleSimMatCreateInfo.name = "Particle Simulation";
+		particleSimMatCreateInfo.shaderName = "particle_sim";
+		particleSimMatCreateInfo.persistent = true;
+		particleSimMatCreateInfo.visibleInEditor = false;
+		m_ParticleSimulationMaterialID = InitializeMaterial(&particleSimMatCreateInfo);
+
+		MaterialCreateInfo particleMatCreateInfo = {};
+		particleMatCreateInfo.name = "particles";
+		particleMatCreateInfo.shaderName = "particles";
+		particleMatCreateInfo.persistent = true;
+		particleMatCreateInfo.visibleInEditor = false;
+		particleMatCreateInfo.generateAlbedoSampler = true;
+		particleMatCreateInfo.enableAlbedoSampler = true;
+		m_ParticleMaterialID = InitializeMaterial(&particleMatCreateInfo);
+
 		MaterialCreateInfo placeholderMatCreateInfo = {};
 		placeholderMatCreateInfo.name = "placeholder";
 		placeholderMatCreateInfo.shaderName = "pbr";
@@ -2685,6 +2732,8 @@ namespace flex
 		placeholderMatCreateInfo.visibleInEditor = true;
 		placeholderMatCreateInfo.constAlbedo = glm::vec3(1.0f, 0.0f, 1.0f);
 		m_PlaceholderMaterialID = InitializeMaterial(&placeholderMatCreateInfo);
+
+		GetShaderID("particle_sim", m_ParticleSimulationShaderID);
 	}
 
 	std::string Renderer::PickRandomSkyboxTexture()

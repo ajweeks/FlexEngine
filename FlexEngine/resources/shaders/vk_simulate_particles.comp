@@ -1,11 +1,5 @@
 #version 450
 
-struct Particle
-{
-	vec4 pos;
-	vec4 vel;
-};
-
 layout (binding = 0) uniform UBODynamic
 {
 	float dt;
@@ -14,6 +8,19 @@ layout (binding = 0) uniform UBODynamic
 	float destZ;
 	int particleCount;
 } uboDynamic;
+
+struct Particle
+{
+	float data[16];
+	/*
+		vec3 pos;
+		vec2 uv;
+		vec4 col;
+		vec3 vel;
+		vec4 extraVec4;
+	*/
+	//float pad[48];
+};
 
 layout (binding = 1) buffer PositionBuffer
 {
@@ -35,7 +42,7 @@ vec3 attraction(vec3 pos, vec3 attractPos)
 vec3 repulsion(vec3 pos, vec3 repulsePos)
 {
 	vec3 delta = repulsePos - pos;
-	float targetDist = sqrt(dot(delta, delta));
+	float targetDist = sqrt(dot(delta, delta))+0.0001;
 	return delta * (1.0 / targetDist * targetDist * targetDist) * -0.000035;
 }
 
@@ -47,17 +54,22 @@ void main()
 		return;
 	}
 
-	vec3 vVel = particles[index].vel.xyz;
-	vec3 vPos = particles[index].pos.xyz;
+	vec3 pPos = vec3(particles[index].data[0]);
+	vec3 pVel = vec3(particles[index].data[10]);
 
 	vec3 destPos = vec3(0);
 
-	vec3 delta = destPos - vPos;
-	float targetDist = sqrt(dot(delta, delta));
-	vVel += repulsion(vPos, destPos) * 0.05;
+	vec3 delta = destPos - pPos;
+	float targetDist = length(pVel);
+	pVel += repulsion(pPos, destPos) * 0.05;
 
-	vPos += vVel * uboDynamic.dt;
+	pPos += pVel * uboDynamic.dt;
 
-	particles[index].pos.xyz = vPos.xyz;
-	particles[index].vel.xyz = vVel.xyz;
+	particles[index].data[0] = pPos[0];
+	particles[index].data[1] = pPos[1];
+	particles[index].data[2] = pPos[2];
+	particles[index].data[10] = pVel[0];
+	particles[index].data[11] = pVel[1];
+	particles[index].data[12] = pVel[2];
+	particles[index].data[13] = 1.0; // Size
 }

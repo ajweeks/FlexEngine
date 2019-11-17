@@ -348,6 +348,10 @@ namespace flex
 		RenderID m_GBufferQuadRenderID = InvalidRenderID;
 		VertexBufferData m_gBufferQuadVertexBufferData;
 
+		std::vector<ParticleBufferData> m_Particles;
+		const u32 MAX_PARTICLE_COUNT = 65536;
+		const u32 PARTICLES_PER_DISPATCH = 256;
+
 		// Any editor objects which also require a game object wrapper
 		std::vector<GameObject*> m_EditorObjects;
 
@@ -399,7 +403,14 @@ namespace flex
 		MaterialID m_SelectedObjectMatID = InvalidMaterialID;
 		MaterialID m_GammaCorrectMaterialID = InvalidMaterialID;
 		MaterialID m_TAAResolveMaterialID = InvalidMaterialID;
+		MaterialID m_ParticleSimulationMaterialID = InvalidMaterialID;
 		MaterialID m_PlaceholderMaterialID = InvalidMaterialID;
+
+		MaterialID m_ComputeSDFMatID = InvalidMaterialID;
+		MaterialID m_FullscreenBlitMatID = InvalidMaterialID;
+
+		ShaderID m_ParticleSimulationShaderID = InvalidShaderID;
+		MaterialID m_ParticleMaterialID = InvalidMaterialID;
 
 		std::string m_FontImageExtension = ".png";
 

@@ -7,11 +7,13 @@ namespace flex
 {
 	namespace vk
 	{
-		VulkanDevice::VulkanDevice(VkPhysicalDevice physicalDevice) :
+		VulkanDevice::VulkanDevice(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface) :
 			m_CommandPool({ m_LogicalDevice, vkDestroyCommandPool })
 		{
 			assert(physicalDevice);
 			m_PhysicalDevice = physicalDevice;
+
+			m_QueueFamilyIndices = FindQueueFamilies(surface, m_PhysicalDevice);
 
 			vkGetPhysicalDeviceProperties(physicalDevice, &m_PhysicalDeviceProperties);
 			vkGetPhysicalDeviceFeatures(physicalDevice, &m_PhysicalDeviceFeatures);

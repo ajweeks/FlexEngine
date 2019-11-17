@@ -174,6 +174,7 @@ namespace flex
 				glm::vec2 texSize;
 				glm::vec4 colorMultiplier;
 				bool bSSAOVerticalPass;
+				ParticleSimData* particleSimData = nullptr;
 			};
 
 			void GenerateCubemapFromHDR(VulkanRenderObject* renderObject, const std::string& environmentMapPath);
@@ -247,7 +248,7 @@ namespace flex
 			void CreateDescriptorPool();
 			u32 AllocateDynamicUniformBuffer(u32 dynamicDataSize, void** data, i32 maxObjectCount = -1);
 			void PrepareUniformBuffer(VulkanBuffer* buffer, u32 bufferSize,
-				VkBufferUsageFlags bufferUseageFlagBits, VkMemoryPropertyFlags memoryPropertyHostFlagBits);
+				VkBufferUsageFlags bufferUseageFlagBits, VkMemoryPropertyFlags memoryPropertyHostFlagBits, bool bMap = true);
 
 			void CreateSemaphores();
 
@@ -338,11 +339,16 @@ namespace flex
 			void DrawTextSS(VkCommandBuffer commandBuffer);
 			void DrawTextWS(VkCommandBuffer commandBuffer);
 			void DrawSpriteBatch(const std::vector<SpriteQuadDrawInfo>& batch, VkCommandBuffer commandBuffer);
+			void DrawParticles(VkCommandBuffer commandBuffer);
+
+			VkDescriptorSet GetSpriteDescriptorSet(TextureID textureID, ShaderID spriteShaderID, u32 textureLayer);
 
 			VkRenderPass ResolveRenderPassType(RenderPassType renderPassType, const char* shaderName = nullptr);
 
 			void CreateShadowResources();
 			VkDescriptorSet CreateSpriteDescSet(ShaderID spriteShaderID, TextureID textureID, u32 layer = 0);
+
+			void InitializeParticleBuffers();
 
 			std::vector<std::string> m_SupportedDeviceExtenions;
 
@@ -436,6 +442,8 @@ namespace flex
 			Material::PushConstantBlock* m_SpriteOrthoArrPushConstBlock = nullptr;
 
 			VulkanBuffer* m_FullScreenTriVertexBuffer = nullptr;
+
+			VulkanBuffer* m_ParticleVertexBuffer = nullptr;
 
 			struct SpriteDescSet
 			{
@@ -547,16 +555,15 @@ namespace flex
 			VDeleter<VkPipeline> m_BlitGraphicsPipeline;
 			VDeleter<VkPipelineLayout> m_BlitGraphicsPipelineLayout;
 
-			std::vector<ParticleBufferData> m_Particles;
-			const u32 MAX_PARTICLE_COUNT = 65536;
-			const u32 PARTICLES_PER_DISPATCH = 256;
+			VDeleter<VkPipeline> m_ParticleGraphicsPipeline;
+			VDeleter<VkPipelineLayout> m_ParticleGraphicsPipelineLayout;
 
-			VDeleter<VkPipeline> m_ParticleSimulationPipeline;
-			VDeleter<VkPipelineLayout> m_ParticleSimulationPipelineLayout;
+			VkDescriptorSet m_ParticlesDescriptorSet = VK_NULL_HANDLE;
+
+			VDeleter<VkPipeline> m_ParticleSimulationComputePipeline;
+			VDeleter<VkPipelineLayout> m_ParticleSimulationComputePipelineLayout;
 
 			VkDescriptorSet m_ParticleSimulationDescriptorSet = VK_NULL_HANDLE;
-
-			VulkanBuffer* m_ParticleSimulationUniformBuffer = nullptr;
 
 			VDeleter<VkDescriptorPool> m_DescriptorPool;
 			std::vector<VkDescriptorSetLayout> m_DescriptorSetLayouts;
@@ -611,11 +618,6 @@ namespace flex
 			VkSpecializationMapEntry m_TAASpecializationMapEntry;
 			VkSpecializationInfo m_TAAOSpecializationInfo;
 			real m_TAA_ks[2];
-
-			MaterialID m_ComputeSDFMatID = InvalidMaterialID;
-			MaterialID m_FullscreenBlitMatID = InvalidMaterialID;
-			
-			ShaderID m_ParticleSimulationShaderID = InvalidShaderID;
 
 #ifdef DEBUG
 			AsyncVulkanShaderCompiler* m_ShaderCompiler = nullptr;

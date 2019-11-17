@@ -106,11 +106,12 @@ namespace flex
 		struct VulkanQueueFamilyIndices
 		{
 			i32 graphicsFamily = -1;
+			i32 computeFamily = -1;
 			i32 presentFamily = -1;
 
 			bool IsComplete()
 			{
-				return graphicsFamily >= 0 && presentFamily >= 0;
+				return graphicsFamily >= 0 && presentFamily >= 0 && computeFamily >= 0;
 			}
 		};
 
@@ -132,12 +133,40 @@ namespace flex
 			UniformBuffer(const VDeleter<VkDevice>& device);
 			~UniformBuffer();
 
+			// TODO: Use list of buffers like shown in block comment below
 			VulkanBuffer constantBuffer;
 			VulkanBuffer dynamicBuffer;
+			VulkanBuffer particleBuffer;
 			VulkanUniformBufferObjectData constantData;
 			VulkanUniformBufferObjectData dynamicData;
+			VulkanUniformBufferObjectData particleData;
 			u32 fullDynamicBufferSize = 0;
 		};
+
+		/*
+
+		enum class UniformBufferType
+		{
+			STATIC,
+			DYNAMIC,
+			PARTICLE_SIM,
+
+			_NONE
+		};
+
+		struct UniformBuffer
+		{
+			UniformBuffer(const VDeleter<VkDevice>& device);
+			~UniformBuffer();
+
+			VulkanBuffer buffer;
+			VulkanUniformBufferObjectData data;
+			u32 fullDynamicBufferSize = 0;
+
+			UniformBufferType type = UniformBufferType::_NONE;
+		};
+
+		*/
 
 		struct VertexIndexBufferPair
 		{

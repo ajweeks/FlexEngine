@@ -20,9 +20,9 @@ namespace flex
 		{
 			stride += sizeof(glm::vec4);
 		}
-		if (vertexAttributes & (u32)VertexAttribute::VELOCITY4)
+		if (vertexAttributes & (u32)VertexAttribute::VELOCITY3)
 		{
-			stride += sizeof(glm::vec4);
+			stride += sizeof(glm::vec3);
 		}
 		if (vertexAttributes & (u32)VertexAttribute::UV)
 		{

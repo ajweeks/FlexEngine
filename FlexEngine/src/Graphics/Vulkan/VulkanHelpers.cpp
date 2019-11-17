@@ -81,16 +81,16 @@ namespace flex
 				++location;
 			}
 
-			if (vertexAttributes & (u32)VertexAttribute::VELOCITY4)
+			if (vertexAttributes & (u32)VertexAttribute::VELOCITY3)
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
-				attributeDescription.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+				attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
 				attributeDescription.location = location;
 				attributeDescription.offset = offset;
 				attributeDescriptions.push_back(attributeDescription);
 
-				offset += sizeof(glm::vec4);
+				offset += sizeof(glm::vec3);
 				++location;
 			}
 
@@ -188,9 +188,8 @@ namespace flex
 
 		UniformBuffer::UniformBuffer(const VDeleter<VkDevice>& device) :
 			constantBuffer(device),
-			constantData{},
 			dynamicBuffer(device),
-			dynamicData{}
+			particleBuffer(device)
 		{
 		}
 
@@ -206,6 +205,12 @@ namespace flex
 			{
 				aligned_free_hooked(dynamicData.data);
 				dynamicData.data = nullptr;
+			}
+
+			if (particleData.data)
+			{
+				free_hooked(particleData.data);
+				particleData.data = nullptr;
 			}
 		}
 
@@ -1501,6 +1506,7 @@ namespace flex
 			}
 		}
 
+		// TODO: Make member function of VulkanBuffer?
 		VkResult CreateAndAllocateBuffer(VulkanDevice* device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VulkanBuffer* buffer)
 		{
 			VkBufferCreateInfo bufferInfo = vks::bufferCreateInfo(usage, size);
@@ -1562,6 +1568,18 @@ namespace flex
 				if (queueFamily.queueCount > 0 && presentSupport)
 				{
 					indices.presentFamily = i;
+				}
+
+				if (queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT)
+				{
+					indices.computeFamily = i;
+					//// If compute family index differs, we need an additional queue create info for the compute queue
+					//VkDeviceQueueCreateInfo queueInfo{};
+					//queueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+					//queueInfo.queueFamilyIndex = queueFamilyIndices.compute;
+					//queueInfo.queueCount = 1;
+					//queueInfo.pQueuePriorities = &defaultQueuePriority;
+					//queueCreateInfos.push_back(queueInfo);
 				}
 
 				if (indices.IsComplete())
