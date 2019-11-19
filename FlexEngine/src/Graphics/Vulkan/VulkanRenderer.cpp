@@ -8794,11 +8794,13 @@ namespace flex
 
 		void VulkanRenderer::BeginGPUTimeStamp(VkCommandBuffer commandBuffer, const std::string& name)
 		{
+			// Start counting at 1 because 0 is the default value
 			const i32 queryIndex = (i32)(m_TimestampQueryNames.size() * 2) + 1;
+			assert(queryIndex < MAX_TIMESTAMP_QUERIES - 2);
 			m_TimestampQueryNames[name] = queryIndex;
 
-			vkCmdResetQueryPool(commandBuffer, m_TimestampQueryPool, (u32)queryIndex, 2);
-			vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, m_TimestampQueryPool, (u32)queryIndex);
+			vkCmdResetQueryPool(commandBuffer, m_TimestampQueryPool, (u32)(queryIndex - 1), 2);
+			vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, m_TimestampQueryPool, (u32)(queryIndex - 1));
 		}
 
 		void VulkanRenderer::EndGPUTimeStamp(VkCommandBuffer commandBuffer, const std::string& name)
@@ -8818,9 +8820,11 @@ namespace flex
 				return;
 			}
 
-			vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, m_TimestampQueryPool, queryIndex + 1);
+			vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, m_TimestampQueryPool, queryIndex);
 
+#if THOROUGH_CHECKS
 			iter->second = -queryIndex;
+#endif
 		}
 
 		ms VulkanRenderer::GetDurationBetweenTimeStamps(const std::string& name)
@@ -8834,6 +8838,7 @@ namespace flex
 
 			i32 queryIndex = iter->second;
 
+#if THOROUGH_CHECKS
 			if (queryIndex > 0)
 			{
 				PrintError("Attempted to get duration of GPU timestamp that hasn't been ended.\n");
@@ -8847,6 +8852,9 @@ namespace flex
 			}
 
 			queryIndex = -queryIndex;
+#endif
+
+			--queryIndex;
 
 			u64 timestamps[2];
 			vkGetQueryPoolResults(m_VulkanDevice->m_LogicalDevice, m_TimestampQueryPool, queryIndex, 2, sizeof(u64) * 2, timestamps, sizeof(u64), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
