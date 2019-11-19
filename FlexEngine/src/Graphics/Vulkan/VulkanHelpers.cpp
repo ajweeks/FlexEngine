@@ -186,31 +186,18 @@ namespace flex
 			}
 		}
 
-		UniformBuffer::UniformBuffer(const VDeleter<VkDevice>& device) :
-			constantBuffer(device),
-			dynamicBuffer(device),
-			particleBuffer(device)
+		UniformBuffer::UniformBuffer(const VDeleter<VkDevice>& device, UniformBufferType type) :
+			buffer(device),
+			type(type)
 		{
 		}
 
 		UniformBuffer::~UniformBuffer()
 		{
-			if (constantData.data)
+			if (data.data)
 			{
-				free_hooked(constantData.data);
-				constantData.data = nullptr;
-			}
-
-			if (dynamicData.data)
-			{
-				aligned_free_hooked(dynamicData.data);
-				dynamicData.data = nullptr;
-			}
-
-			if (particleData.data)
-			{
-				free_hooked(particleData.data);
-				particleData.data = nullptr;
+				free_hooked(data.data);
+				data.data = nullptr;
 			}
 		}
 
@@ -2307,7 +2294,6 @@ namespace flex
 		}
 
 		VulkanShader::VulkanShader(const VDeleter<VkDevice>& device, Shader* shader) :
-			uniformBuffer(device),
 			shader(shader)
 		{
 			vertShaderModule = { device, vkDestroyShaderModule };
@@ -2489,6 +2475,23 @@ namespace flex
 				delete attachment;
 				attachment = nullptr;
 			}
+		}
+
+		void UniformBuffers::Add(VulkanDevice* device, UniformBufferType type)
+		{
+			uniformBuffers.emplace_back(device->m_LogicalDevice, type);
+		}
+
+		UniformBuffer* UniformBuffers::Get(UniformBufferType type)
+		{
+			for (UniformBuffer& buffer : uniformBuffers)
+			{
+				if (buffer.type == type)
+				{
+					return &buffer;
+				}
+			}
+			return nullptr;
 		}
 	} // namespace vk
 } // namespace flex

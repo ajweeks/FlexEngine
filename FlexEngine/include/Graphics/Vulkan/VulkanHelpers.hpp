@@ -128,35 +128,18 @@ namespace flex
 			u32 size = 0;
 		};
 
-		struct UniformBuffer
-		{
-			UniformBuffer(const VDeleter<VkDevice>& device);
-			~UniformBuffer();
-
-			// TODO: Use list of buffers like shown in block comment below
-			VulkanBuffer constantBuffer;
-			VulkanBuffer dynamicBuffer;
-			VulkanBuffer particleBuffer;
-			VulkanUniformBufferObjectData constantData;
-			VulkanUniformBufferObjectData dynamicData;
-			VulkanUniformBufferObjectData particleData;
-			u32 fullDynamicBufferSize = 0;
-		};
-
-		/*
-
 		enum class UniformBufferType
 		{
 			STATIC,
 			DYNAMIC,
-			PARTICLE_SIM,
+			PARTICLE_DATA,
 
 			_NONE
 		};
 
 		struct UniformBuffer
 		{
-			UniformBuffer(const VDeleter<VkDevice>& device);
+			UniformBuffer(const VDeleter<VkDevice>& device, UniformBufferType type);
 			~UniformBuffer();
 
 			VulkanBuffer buffer;
@@ -165,8 +148,6 @@ namespace flex
 
 			UniformBufferType type = UniformBufferType::_NONE;
 		};
-
-		*/
 
 		struct VertexIndexBufferPair
 		{
@@ -442,6 +423,14 @@ namespace flex
 			VkFormat internalFormat = VK_FORMAT_UNDEFINED;
 		};
 
+		struct UniformBuffers
+		{
+			void Add(VulkanDevice* device, UniformBufferType type);
+			UniformBuffer* Get(UniformBufferType type);
+
+			std::vector<UniformBuffer> uniformBuffers;
+		};
+
 		struct VulkanShader
 		{
 			VulkanShader(const VDeleter<VkDevice>& device, Shader* shader);
@@ -449,7 +438,7 @@ namespace flex
 			Shader* shader = nullptr;
 
 			VkRenderPass renderPass = VK_NULL_HANDLE;
-			UniformBuffer uniformBuffer;
+			UniformBuffers uniformBuffers;
 
 			VDeleter<VkShaderModule> vertShaderModule;
 			VDeleter<VkShaderModule> fragShaderModule;
@@ -640,15 +629,6 @@ namespace flex
 			VkPipeline* graphicsPipeline = nullptr;
 		};
 
-		enum class UniformBufferType
-		{
-			STATIC,
-			DYNAMIC,
-			PARTICLE_DATA,
-			
-			_NONE
-		};
-
 		struct BufferDescriptorInfo
 		{
 			VkBuffer buffer;
@@ -667,7 +647,7 @@ namespace flex
 			VkDescriptorSet* descriptorSet = nullptr;
 			VkDescriptorSetLayout* descriptorSetLayout = nullptr;
 			ShaderID shaderID = InvalidShaderID;
-			UniformBuffer* uniformBuffer = nullptr;
+			UniformBuffers* uniformBuffers = nullptr;
 
 			ShaderUniformContainer<BufferDescriptorInfo> bufferDescriptors;
 			ShaderUniformContainer<ImageDescriptorInfo> imageDescriptors;

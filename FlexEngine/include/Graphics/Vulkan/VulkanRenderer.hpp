@@ -205,9 +205,7 @@ namespace flex
 			void CreateRenderPasses();
 			void CalculateAutoLayoutTransitions();
 
-			void FillOutBufferDescriptorInfos(ShaderUniformContainer<BufferDescriptorInfo>* descriptors, UniformBuffer* uniformBuffer, ShaderID shaderID,
-				// TODO: Replace with list of uniform buffers!
-				VulkanBuffer* particleBuffer = nullptr);
+			void FillOutBufferDescriptorInfos(ShaderUniformContainer<BufferDescriptorInfo>* descriptors, UniformBuffers* uniformBuffers, ShaderID shaderID);
 			void CreateDescriptorSet(RenderID renderID);
 			void CreateDescriptorSet(DescriptorSetCreateInfo* createInfo);
 			void CreateDescriptorSetLayout(ShaderID shaderID);
