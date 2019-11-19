@@ -112,13 +112,13 @@ namespace flex
 	};
 #pragma pack(pop)
 
-	// 20 bytes
+	// 44 bytes
 	struct ParticleSimData
 	{
+		glm::vec4 color0;	// 16
+		glm::vec4 color1;	// 16
 		real dt;			// 4
-		real destX;;		// 4
-		real destY;;		// 4
-		real destZ;;		// 4
+		real speed;			// 4
 		i32 particleCount;	// 4
 	};
 

@@ -4,10 +4,10 @@
 
 layout (binding = 0) uniform UBODynamic
 {
+	vec4 color0;
+	vec4 color1;
 	float dt;
-	float destX;
-	float destY;
-	float destZ;
+	float speed;
 	int particleCount;
 } uboDynamic;
 
@@ -47,14 +47,13 @@ void main()
 	float theta = atan(dz, dx) - PI_DIV_TWO;
 
 	vec3 perpVec = vec3(cos(theta), 0, sin(theta));
-	vel += perpVec * 2.5 * (mag + sin(pos.y*0.2));
+	vel += perpVec * uboDynamic.speed * (mag + sin(pos.y*0.2));
 	float velMag = length(perpVec);
 	vel *= 0.5;
 
 	pos += vel * uboDynamic.dt;
 
-	col.rgb = mix(vec3(0.6, 0.1, 0.16), vec3(0.1, 0.11, 0.38), clamp(pow(length(vel)*0.03, 5.0), 0, 1));
-	col.a = 1.0;
+	col = mix(uboDynamic.color0, uboDynamic.color1, clamp(pow(length(vel)*0.03, 5.0), 0, 1));
 
 	particles[index].data[0] = pos[0];
 	particles[index].data[1] = pos[1];

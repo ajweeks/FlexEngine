@@ -443,8 +443,6 @@ namespace flex
 
 			VulkanBuffer* m_FullScreenTriVertexBuffer = nullptr;
 
-			VulkanBuffer* m_ParticleVertexBuffer = nullptr;
-
 			struct SpriteDescSet
 			{
 				ShaderID shaderID;
@@ -576,6 +574,7 @@ namespace flex
 			VulkanTexture* m_BlankTexture = nullptr;
 			VulkanTexture* m_BlankTextureArr = nullptr;
 
+			std::vector<ParticleSystem*> m_ParticleSystems;
 
 			std::vector<VertexIndexBufferPair> m_VertexIndexBufferPairs;
 

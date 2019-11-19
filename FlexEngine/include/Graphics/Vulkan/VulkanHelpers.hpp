@@ -681,6 +681,13 @@ namespace flex
 			glm::vec2 translate;
 		};
 
+		struct ParticleSystem
+		{
+			std::string name;
+			ParticleSimData data;
+			bool bEnabled;
+		};
+
 		VkPrimitiveTopology TopologyModeToVkPrimitiveTopology(TopologyMode mode);
 		VkCullModeFlagBits CullFaceToVkCullMode(CullFace cullFace);
 

@@ -332,7 +332,14 @@ namespace flex
 
 			m_FullScreenTriVertexBuffer = new VulkanBuffer(m_VulkanDevice->m_LogicalDevice);
 
-			m_ParticleVertexBuffer = new VulkanBuffer(m_VulkanDevice->m_LogicalDevice);
+			m_ParticleSystems.push_back(new ParticleSystem());
+
+			m_ParticleSystems[0]->bEnabled = true;
+			m_ParticleSystems[0]->name = "Particle System 0";
+			m_ParticleSystems[0]->data.color0 = glm::vec4(0.60f, 0.10f, 0.16f, 1.0f);
+			m_ParticleSystems[0]->data.color1 = glm::vec4(0.10f, 0.11f, 0.38f, 1.0f);
+			m_ParticleSystems[0]->data.speed = 2.5f;
+			m_ParticleSystems[0]->data.particleCount = MAX_PARTICLE_COUNT;
 
 			m_SSAOSpecializationMapEntry = { 0, 0, sizeof(i32) };
 			m_SSAOSpecializationInfo.mapEntryCount = 1;
@@ -583,11 +590,14 @@ namespace flex
 			}
 			m_VertexIndexBufferPairs.clear();
 
+			for (ParticleSystem* particleSystem : m_ParticleSystems)
+			{
+				delete particleSystem;
+			}
+			m_ParticleSystems.clear();
+
 			delete m_FullScreenTriVertexBuffer;
 			m_FullScreenTriVertexBuffer = nullptr;
-
-			delete m_ParticleVertexBuffer;
-			m_ParticleVertexBuffer = nullptr;
 
 			m_SkyBoxMesh = nullptr;
 
@@ -4725,20 +4735,23 @@ namespace flex
 		{
 			BeginDebugMarkerRegion(commandBuffer, "Particles");
 
-			VulkanMaterial& particleSimMat = m_Materials[m_ParticleSimulationMaterialID];
-			VulkanShader& particleSimShader = m_Shaders[particleSimMat.material.shaderID];
+			for (ParticleSystem* particleSystem : m_ParticleSystems)
+			{
+				VulkanMaterial& particleSimMat = m_Materials[m_ParticleSimulationMaterialID];
+				VulkanShader& particleSimShader = m_Shaders[particleSimMat.material.shaderID];
 
-			VulkanMaterial& particleMat = m_Materials[m_ParticleMaterialID];
-			VulkanShader& particleShader = m_Shaders[particleMat.material.shaderID];
+				VulkanMaterial& particleMat = m_Materials[m_ParticleMaterialID];
+				VulkanShader& particleShader = m_Shaders[particleMat.material.shaderID];
 
-			VkDeviceSize offsets[1] = { 0 };
-			vkCmdBindVertexBuffers(commandBuffer, 0, 1, &particleSimShader.uniformBuffer.particleBuffer.m_Buffer, offsets);
+				VkDeviceSize offsets[1] = { 0 };
+				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &particleSimShader.uniformBuffer.particleBuffer.m_Buffer, offsets);
 
-			vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ParticleGraphicsPipeline);
+				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ParticleGraphicsPipeline);
 
-			BindDescriptorSet(&particleShader, 0, commandBuffer, m_ParticleGraphicsPipelineLayout, m_ParticlesDescriptorSet);
+				BindDescriptorSet(&particleShader, 0, commandBuffer, m_ParticleGraphicsPipelineLayout, m_ParticlesDescriptorSet);
 
-			vkCmdDraw(commandBuffer, MAX_PARTICLE_COUNT, 1, 0, 0);
+				vkCmdDraw(commandBuffer, MAX_PARTICLE_COUNT, 1, 0, 0);
+			}
 
 			EndDebugMarkerRegion(commandBuffer); // Particles
 		}
@@ -7569,6 +7582,7 @@ namespace flex
 			BeginGPUTimeStamp(commandBuffer, "Simulate Particles");
 			BeginDebugMarkerRegion(commandBuffer, "Simulate Particles");
 
+			for (ParticleSystem* particleSystem : m_ParticleSystems)
 			{
 				VulkanMaterial& particleSimMat = m_Materials[m_ParticleSimulationMaterialID];
 				VulkanShader& particleSimShader = m_Shaders[particleSimMat.material.shaderID];
@@ -7596,16 +7610,10 @@ namespace flex
 				u32 dynamicOffsets[2] = { 0, 0 };
 				vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_ParticleSimulationComputePipelineLayout, 0, 1, &m_ParticleSimulationDescriptorSet, 2, dynamicOffsets);
 
-				ParticleSimData particleSimData = {};
-				particleSimData.dt = g_DeltaTime;
-				particleSimData.destX = 1.0f;
-				particleSimData.destY = 2.0f;
-				particleSimData.destZ = 3.0f;
-				particleSimData.particleCount = MAX_PARTICLE_COUNT;
-
 				UniformOverrides overrides = {};
 				overrides.overridenUniforms.AddUniform(U_PARTICLE_SIM_DATA);
-				overrides.particleSimData = &particleSimData;
+				particleSystem->data.dt = g_DeltaTime;
+				overrides.particleSimData = &particleSystem->data;
 				// TODO: Only do once/on edit
 				UpdateDynamicUniformBuffer(m_ParticleSimulationMaterialID, 0, MAT4_IDENTITY, &overrides);
 
