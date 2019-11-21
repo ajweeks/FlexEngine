@@ -110,6 +110,8 @@ namespace flex
 			virtual void RecaptureReflectionProbe() override;
 			virtual void RenderObjectStateChanged() override;
 
+			virtual ParticleSystemID AddParticleSystem(const std::string& name, const ParticleSimData& data, const glm::vec3& pos, real scale) override;
+
 			void RegisterFramebufferAttachment(FrameBufferAttachment* frameBufferAttachment);
 			FrameBufferAttachment* GetFrameBufferAttachment(FrameBufferAttachmentID frameBufferAttachmentID) const;
 
@@ -275,7 +277,7 @@ namespace flex
 
 			void DrawFrame();
 
-			void BindDescriptorSet(VulkanShader* shader, u32 dynamicOffsetOffset, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet);
+			void BindDescriptorSet(const VulkanShader* shader, u32 dynamicOffsetOffset, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet) const;
 			void RecreateSwapChain();
 
 			void BeginDebugMarkerRegionInternal(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color = VEC4_ONE);
@@ -556,10 +558,11 @@ namespace flex
 
 			VkDescriptorSet m_ParticlesDescriptorSet = VK_NULL_HANDLE;
 
-			VDeleter<VkPipeline> m_ParticleSimulationComputePipeline;
 			VDeleter<VkPipelineLayout> m_ParticleSimulationComputePipelineLayout;
 
 			VkDescriptorSet m_ParticleSimulationDescriptorSet = VK_NULL_HANDLE;
+
+			std::vector<ParticleSystem*> m_ParticleSystems;
 
 			VDeleter<VkDescriptorPool> m_DescriptorPool;
 			std::vector<VkDescriptorSetLayout> m_DescriptorSetLayouts;
@@ -571,8 +574,6 @@ namespace flex
 
 			VulkanTexture* m_BlankTexture = nullptr;
 			VulkanTexture* m_BlankTextureArr = nullptr;
-
-			std::vector<ParticleSystem*> m_ParticleSystems;
 
 			std::vector<VertexIndexBufferPair> m_VertexIndexBufferPairs;
 

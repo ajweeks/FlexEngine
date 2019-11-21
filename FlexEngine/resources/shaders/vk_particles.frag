@@ -8,7 +8,7 @@ layout (location = 0) in GSO
 	vec2 texCoord;
 } inputs;
 
-layout (binding = 1) uniform sampler2D in_Texture;
+layout (binding = 2) uniform sampler2D in_Texture;
 
 void main()
 {

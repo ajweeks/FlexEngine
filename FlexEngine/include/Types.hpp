@@ -60,6 +60,7 @@ namespace flex
 	using CartID = u32;
 	using CartChainID = u32;
 	using VariableID = u32;
+	using ParticleSystemID = u32;
 
 #define InvalidRenderID ((RenderID)u32_max)
 #define InvalidShaderID ((ShaderID)u32_max)
@@ -72,6 +73,7 @@ namespace flex
 #define InvalidCartID ((CartChainID)u32_max)
 #define InvalidCartChainID ((CartChainID)u32_max)
 #define InvalidVariableID ((VariableID)u32_max)
+#define InvalidParticleSystemID ((ParticleSystemID)u32_max)
 #define InvalidID u32_max
 
 	//template<bool> struct StaticAssert;

@@ -130,6 +130,27 @@ namespace flex
 		m_ShadowSamplingData.cascadeDepthSplits = glm::vec4(0.1f, 0.25f, 0.5f, 0.8f);
 	}
 
+	void Renderer::LateInitialize()
+	{
+		// TODO: Deserialize info from scene file
+		{
+			ParticleSimData data = {};
+			data.color0 = glm::vec4(0.60f, 0.10f, 0.16f, 1.0f);
+			data.color1 = glm::vec4(0.10f, 0.11f, 0.38f, 1.0f);
+			data.speed = 2.5f;
+			data.particleCount = 8192;
+			AddParticleSystem("Particle System 0", data, glm::vec3(-20.0f, 0.0f, 0.0f), 10.0f);
+		}
+		{
+			ParticleSimData data = {};
+			data.color0 = glm::vec4(0.20f, 0.55f, 0.20f, 1.0f);
+			data.color1 = glm::vec4(0.40f, 0.05f, 0.18f, 1.0f);
+			data.speed = -1.5f;
+			data.particleCount = 8192;
+			AddParticleSystem("Particle System 1", data, glm::vec3(20.0f, 0.0f, 0.0f), 5.0f);
+		}
+	}
+
 	void Renderer::PostInitialize()
 	{
 		// TODO: Use MeshComponent for these objects?
@@ -1863,6 +1884,8 @@ namespace flex
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
 			m_BaseShaders[shaderID].bDepthWriteEnable = true;
 			m_BaseShaders[shaderID].bTranslucent = false;
+			// TODO?
+			//m_BaseShaders[shaderID].bDynamic = true;
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::VELOCITY3 |	
@@ -1872,6 +1895,9 @@ namespace flex
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_CAM_POS);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
+
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
 
 			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_ALBEDO_SAMPLER);
 			++shaderID;
@@ -2710,13 +2736,6 @@ namespace flex
 		computeSDFMatCreateInfo.visibleInEditor = false;
 		m_ComputeSDFMatID = InitializeMaterial(&computeSDFMatCreateInfo);
 
-		MaterialCreateInfo particleSimMatCreateInfo = {};
-		particleSimMatCreateInfo.name = "Particle Simulation";
-		particleSimMatCreateInfo.shaderName = "particle_sim";
-		particleSimMatCreateInfo.persistent = true;
-		particleSimMatCreateInfo.visibleInEditor = false;
-		m_ParticleSimulationMaterialID = InitializeMaterial(&particleSimMatCreateInfo);
-
 		MaterialCreateInfo particleMatCreateInfo = {};
 		particleMatCreateInfo.name = "particles";
 		particleMatCreateInfo.shaderName = "particles";
@@ -2733,8 +2752,6 @@ namespace flex
 		placeholderMatCreateInfo.visibleInEditor = true;
 		placeholderMatCreateInfo.constAlbedo = glm::vec3(1.0f, 0.0f, 1.0f);
 		m_PlaceholderMaterialID = InitializeMaterial(&placeholderMatCreateInfo);
-
-		GetShaderID("particle_sim", m_ParticleSimulationShaderID);
 	}
 
 	std::string Renderer::PickRandomSkyboxTexture()
@@ -3163,6 +3180,16 @@ namespace flex
 			// Random rotations around z-axis
 			noiseSample = glm::vec4(RandomFloat(-1.0f, 1.0f), RandomFloat(-1.0f, 1.0f), 0.0f, 0.0f);
 		}
+	}
+
+	MaterialID Renderer::CreateParticleSystemMaterial(const std::string& name)
+	{
+		MaterialCreateInfo particleSimMatCreateInfo = {};
+		particleSimMatCreateInfo.name = name;
+		particleSimMatCreateInfo.shaderName = "particle_sim";
+		particleSimMatCreateInfo.persistent = true;
+		particleSimMatCreateInfo.visibleInEditor = false;
+		return InitializeMaterial(&particleSimMatCreateInfo);
 	}
 
 	void PhysicsDebugDrawBase::UpdateDebugMode()

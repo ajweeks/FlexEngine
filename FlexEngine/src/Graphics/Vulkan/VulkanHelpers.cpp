@@ -196,7 +196,8 @@ namespace flex
 		{
 			if (data.data)
 			{
-				if (type == UniformBufferType::DYNAMIC)
+				if (type == UniformBufferType::DYNAMIC ||
+					type == UniformBufferType::PARTICLE_DATA)
 				{
 					aligned_free_hooked(data.data);
 				}
@@ -2489,6 +2490,18 @@ namespace flex
 			uniformBuffers.emplace_back(device->m_LogicalDevice, type);
 		}
 
+		const UniformBuffer* UniformBuffers::Get(UniformBufferType type) const
+		{
+			for (const UniformBuffer& buffer : uniformBuffers)
+			{
+				if (buffer.type == type)
+				{
+					return &buffer;
+				}
+			}
+			return nullptr;
+		}
+
 		UniformBuffer* UniformBuffers::Get(UniformBufferType type)
 		{
 			for (UniformBuffer& buffer : uniformBuffers)
@@ -2499,6 +2512,11 @@ namespace flex
 				}
 			}
 			return nullptr;
+		}
+
+		ParticleSystem::ParticleSystem(VulkanDevice* device) :
+			computePipeline(device->m_LogicalDevice, vkDestroyPipeline)
+		{
 		}
 	} // namespace vk
 } // namespace flex

@@ -427,6 +427,7 @@ namespace flex
 		{
 			void Add(VulkanDevice* device, UniformBufferType type);
 			UniformBuffer* Get(UniformBufferType type);
+			const UniformBuffer* Get(UniformBufferType type) const;
 
 			std::vector<UniformBuffer> uniformBuffers;
 		};
@@ -663,9 +664,17 @@ namespace flex
 
 		struct ParticleSystem
 		{
+			ParticleSystem(VulkanDevice* device);
+
 			std::string name;
+			ParticleSystemID ID = InvalidParticleSystemID;
 			ParticleSimData data;
 			bool bEnabled;
+			std::vector<ParticleBufferData> particleBufferData;
+			MaterialID materialID = InvalidMaterialID;
+			VDeleter<VkPipeline> computePipeline;
+			glm::mat4 model;
+			real scale;
 		};
 
 		VkPrimitiveTopology TopologyModeToVkPrimitiveTopology(TopologyMode mode);

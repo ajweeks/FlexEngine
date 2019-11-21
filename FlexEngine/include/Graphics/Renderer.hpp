@@ -79,6 +79,7 @@ namespace flex
 		virtual ~Renderer();
 
 		virtual void Initialize();
+		void LateInitialize();
 		virtual void PostInitialize();
 		virtual void Destroy();
 
@@ -168,6 +169,8 @@ namespace flex
 
 		// Call whenever a user-controlled field, such as visibility, changes to rebatch render objects
 		virtual void RenderObjectStateChanged() = 0;
+
+		virtual ParticleSystemID AddParticleSystem(const std::string& name, const ParticleSimData& data, const glm::vec3& pos, real scale) = 0;
 
 		void DrawImGuiRenderObjects();
 		void DrawImGuiSettings();
@@ -297,6 +300,8 @@ namespace flex
 		void GenerateGBufferVertexBuffer(bool bFlipV);
 		void GenerateSSAONoise(std::vector<glm::vec4>& noise);
 
+		MaterialID CreateParticleSystemMaterial(const std::string& name);
+
 		std::vector<Shader> m_BaseShaders;
 
 		PointLightData* m_PointLights = nullptr;
@@ -348,7 +353,6 @@ namespace flex
 		RenderID m_GBufferQuadRenderID = InvalidRenderID;
 		VertexBufferData m_gBufferQuadVertexBufferData;
 
-		std::vector<ParticleBufferData> m_Particles;
 		const u32 MAX_PARTICLE_COUNT = 2097152;
 		const u32 PARTICLES_PER_DISPATCH = 256;
 
@@ -403,15 +407,12 @@ namespace flex
 		MaterialID m_SelectedObjectMatID = InvalidMaterialID;
 		MaterialID m_GammaCorrectMaterialID = InvalidMaterialID;
 		MaterialID m_TAAResolveMaterialID = InvalidMaterialID;
-		MaterialID m_ParticleSimulationMaterialID = InvalidMaterialID;
 		MaterialID m_PlaceholderMaterialID = InvalidMaterialID;
+		MaterialID m_ParticleMaterialID = InvalidMaterialID;
 
 		MaterialID m_ComputeSDFMatID = InvalidMaterialID;
 		MaterialID m_FullscreenBlitMatID = InvalidMaterialID;
-
-		ShaderID m_ParticleSimulationShaderID = InvalidShaderID;
-		MaterialID m_ParticleMaterialID = InvalidMaterialID;
-
+		
 		std::string m_FontImageExtension = ".png";
 
 		std::map<StringID, FontMetaData> m_Fonts;
