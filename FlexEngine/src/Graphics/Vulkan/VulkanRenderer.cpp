@@ -5719,22 +5719,22 @@ namespace flex
 
 			if (shader->shader->constantBufferUniforms.HasUniform(U_UNIFORM_BUFFER_CONSTANT))
 			{
-				const VulkanBuffer& constantBuffer = uniformBuffers->Get(UniformBufferType::STATIC)->buffer;
-				descriptors->Add(U_UNIFORM_BUFFER_CONSTANT, BufferDescriptorInfo{ constantBuffer.m_Buffer, constantBuffer.m_Size, UniformBufferType::STATIC });
+				UniformBuffer* constantBuffer = uniformBuffers->Get(UniformBufferType::STATIC);
+				descriptors->Add(U_UNIFORM_BUFFER_CONSTANT, BufferDescriptorInfo{ constantBuffer->buffer.m_Buffer, constantBuffer->data.size, UniformBufferType::STATIC });
 			}
 
 			if (shader->shader->dynamicBufferUniforms.HasUniform(U_UNIFORM_BUFFER_DYNAMIC))
 			{
-				const VulkanBuffer& dynamicBuffer = uniformBuffers->Get(UniformBufferType::DYNAMIC)->buffer;
+				UniformBuffer* dynamicBuffer = uniformBuffers->Get(UniformBufferType::DYNAMIC);
 				// TODO: FIXME: BAD: CLEANUP:
 				const VkDeviceSize dynamicBufferSize = sizeof(VulkanUniformBufferObjectData) * m_RenderObjects.size();
-				descriptors->Add(U_UNIFORM_BUFFER_DYNAMIC, BufferDescriptorInfo{ dynamicBuffer.m_Buffer, dynamicBufferSize, UniformBufferType::DYNAMIC });
+				descriptors->Add(U_UNIFORM_BUFFER_DYNAMIC, BufferDescriptorInfo{ dynamicBuffer->buffer.m_Buffer, dynamicBufferSize, UniformBufferType::DYNAMIC });
 			}
 
 			if (shader->shader->additionalBufferUniforms.HasUniform(U_PARTICLE_BUFFER))
 			{
-				const VulkanBuffer& particleBuffer = uniformBuffers->Get(UniformBufferType::PARTICLE_DATA)->buffer;
-				descriptors->Add(U_PARTICLE_BUFFER, BufferDescriptorInfo{ particleBuffer.m_Buffer, particleBuffer.m_Size, UniformBufferType::PARTICLE_DATA });
+				UniformBuffer* particleBuffer = uniformBuffers->Get(UniformBufferType::PARTICLE_DATA);
+				descriptors->Add(U_PARTICLE_BUFFER, BufferDescriptorInfo{ particleBuffer->buffer.m_Buffer, particleBuffer->data.size, UniformBufferType::PARTICLE_DATA });
 			}
 		}
 
