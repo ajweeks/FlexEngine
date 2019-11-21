@@ -196,7 +196,14 @@ namespace flex
 		{
 			if (data.data)
 			{
-				free_hooked(data.data);
+				if (type == UniformBufferType::DYNAMIC)
+				{
+					aligned_free_hooked(data.data);
+				}
+				else
+				{
+					free_hooked(data.data);
+				}
 				data.data = nullptr;
 			}
 		}

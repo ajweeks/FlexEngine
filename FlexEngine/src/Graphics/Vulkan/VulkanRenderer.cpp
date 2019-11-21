@@ -1251,7 +1251,7 @@ namespace flex
 			if (shader->shader->additionalBufferUniforms.HasUniform(U_PARTICLE_BUFFER))
 			{
 				UniformBuffer* particleBuffer = shader->uniformBuffers.Get(UniformBufferType::PARTICLE_DATA);
-				aligned_free_hooked(particleBuffer->data.data);
+				free_hooked(particleBuffer->data.data);
 
 				particleBuffer->data.size = GetAlignedUBOSize(MAX_PARTICLE_COUNT * sizeof(ParticleBufferData));
 
