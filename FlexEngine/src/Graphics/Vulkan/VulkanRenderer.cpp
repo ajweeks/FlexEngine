@@ -6611,7 +6611,10 @@ namespace flex
 					attachmentCreateInfo.width = SHADOW_CASCADE_RES;
 					attachmentCreateInfo.height = SHADOW_CASCADE_RES;
 					attachmentCreateInfo.format = m_ShadowBufFormat;
-					m_ShadowCascades[i]->attachment = new FrameBufferAttachment(m_VulkanDevice, attachmentCreateInfo);
+					if (m_ShadowCascades[i]->attachment == nullptr)
+					{
+						m_ShadowCascades[i]->attachment = new FrameBufferAttachment(m_VulkanDevice, attachmentCreateInfo);
+					}
 					m_ShadowCascades[i]->attachment->bOwnsResources = false;
 					m_ShadowCascades[i]->attachment->image = m_ShadowImage;
 					m_ShadowCascades[i]->attachment->view = m_ShadowCascades[i]->imageView;
@@ -6850,6 +6853,11 @@ namespace flex
 				}
 			}
 
+			if (size == 0)
+			{
+				return;
+			}
+
 			void* vertexDataStart = malloc_hooked(size);
 			if (!vertexDataStart)
 			{
@@ -6881,6 +6889,7 @@ namespace flex
 
 			if (vertexBufferSize == 0 || vertexCount == 0)
 			{
+				free_hooked(vertexDataStart);
 				return;
 			}
 
