@@ -423,13 +423,13 @@ namespace flex
 			VkFormat internalFormat = VK_FORMAT_UNDEFINED;
 		};
 
-		struct UniformBuffers
+		struct UniformBufferList
 		{
 			void Add(VulkanDevice* device, UniformBufferType type);
 			UniformBuffer* Get(UniformBufferType type);
 			const UniformBuffer* Get(UniformBufferType type) const;
 
-			std::vector<UniformBuffer> uniformBuffers;
+			std::vector<UniformBuffer> uniformBufferList;
 		};
 
 		struct VulkanShader
@@ -439,7 +439,7 @@ namespace flex
 			Shader* shader = nullptr;
 
 			VkRenderPass renderPass = VK_NULL_HANDLE;
-			UniformBuffers uniformBuffers;
+			UniformBufferList uniformBufferList;
 
 			VDeleter<VkShaderModule> vertShaderModule;
 			VDeleter<VkShaderModule> fragShaderModule;
@@ -648,7 +648,7 @@ namespace flex
 			VkDescriptorSet* descriptorSet = nullptr;
 			VkDescriptorSetLayout* descriptorSetLayout = nullptr;
 			ShaderID shaderID = InvalidShaderID;
-			UniformBuffers* uniformBuffers = nullptr;
+			UniformBufferList* uniformBufferList = nullptr;
 
 			ShaderUniformContainer<BufferDescriptorInfo> bufferDescriptors;
 			ShaderUniformContainer<ImageDescriptorInfo> imageDescriptors;

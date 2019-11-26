@@ -405,15 +405,15 @@ namespace flex
 			{
 				if (m_Shaders[i].shader->constantBufferUniforms.HasUniform(U_UNIFORM_BUFFER_CONSTANT))
 				{
-					m_Shaders[i].uniformBuffers.Add(m_VulkanDevice, UniformBufferType::STATIC);
+					m_Shaders[i].uniformBufferList.Add(m_VulkanDevice, UniformBufferType::STATIC);
 				}
 				if (m_Shaders[i].shader->dynamicBufferUniforms.HasUniform(U_UNIFORM_BUFFER_DYNAMIC))
 				{
-					m_Shaders[i].uniformBuffers.Add(m_VulkanDevice, UniformBufferType::DYNAMIC);
+					m_Shaders[i].uniformBufferList.Add(m_VulkanDevice, UniformBufferType::DYNAMIC);
 				}
 				if (m_Shaders[i].shader->additionalBufferUniforms.HasUniform(U_PARTICLE_BUFFER))
 				{
-					m_Shaders[i].uniformBuffers.Add(m_VulkanDevice, UniformBufferType::PARTICLE_DATA);
+					m_Shaders[i].uniformBufferList.Add(m_VulkanDevice, UniformBufferType::PARTICLE_DATA);
 				}
 			}
 
@@ -1202,7 +1202,7 @@ namespace flex
 		{
 			if (shader->shader->constantBufferUniforms.HasUniform(U_UNIFORM_BUFFER_CONSTANT))
 			{
-				UniformBuffer* constantBuffer = shader->uniformBuffers.Get(UniformBufferType::STATIC);
+				UniformBuffer* constantBuffer = shader->uniformBufferList.Get(UniformBufferType::STATIC);
 				constantBuffer->data.size = shader->shader->constantBufferUniforms.CalculateSizeInBytes();
 				if (constantBuffer->data.size > 0)
 				{
@@ -1220,7 +1220,7 @@ namespace flex
 
 			if (shader->shader->dynamicBufferUniforms.HasUniform(U_UNIFORM_BUFFER_DYNAMIC))
 			{
-				UniformBuffer* dynamicBuffer = shader->uniformBuffers.Get(UniformBufferType::DYNAMIC);
+				UniformBuffer* dynamicBuffer = shader->uniformBufferList.Get(UniformBufferType::DYNAMIC);
 				dynamicBuffer->data.size = shader->shader->dynamicBufferUniforms.CalculateSizeInBytes();
 				if (dynamicBuffer->data.size > 0 && !m_RenderObjects.empty())
 				{
@@ -1241,7 +1241,7 @@ namespace flex
 
 			if (shader->shader->additionalBufferUniforms.HasUniform(U_PARTICLE_BUFFER))
 			{
-				UniformBuffer* particleBuffer = shader->uniformBuffers.Get(UniformBufferType::PARTICLE_DATA);
+				UniformBuffer* particleBuffer = shader->uniformBufferList.Get(UniformBufferType::PARTICLE_DATA);
 				aligned_free_hooked(particleBuffer->data.data);
 
 				particleBuffer->data.size = GetAlignedUBOSize(MAX_PARTICLE_COUNT * sizeof(ParticleBufferData));
@@ -1267,9 +1267,9 @@ namespace flex
 				descSetCreateInfo.descriptorSet = &m_PostProcessDescriptorSet;
 				descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 				descSetCreateInfo.shaderID = postProcessShaderID;
-				descSetCreateInfo.uniformBuffers = &postProcessShader->uniformBuffers;
+				descSetCreateInfo.uniformBufferList = &postProcessShader->uniformBufferList;
 				descSetCreateInfo.imageDescriptors.Add(U_SCENE_SAMPLER, ImageDescriptorInfo{ m_OffscreenFB0ColorAttachment0->view, m_LinMipLinSampler });
-				FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBuffers, descSetCreateInfo.shaderID);
+				FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
 				CreateDescriptorSet(&descSetCreateInfo);
 			}
 
@@ -1284,9 +1284,9 @@ namespace flex
 				descSetCreateInfo.descriptorSet = &m_GammaCorrectDescriptorSet;
 				descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 				descSetCreateInfo.shaderID = gammaCorrectShaderID;
-				descSetCreateInfo.uniformBuffers = &gammaCorrectShader->uniformBuffers;
+				descSetCreateInfo.uniformBufferList = &gammaCorrectShader->uniformBufferList;
 				descSetCreateInfo.imageDescriptors.Add(U_SCENE_SAMPLER, ImageDescriptorInfo{ m_OffscreenFB1ColorAttachment0->view, m_LinMipLinSampler });
-				FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBuffers, descSetCreateInfo.shaderID);
+				FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
 				CreateDescriptorSet(&descSetCreateInfo);
 			}
 
@@ -1301,11 +1301,11 @@ namespace flex
 				descSetCreateInfo.descriptorSet = &m_TAAResolveDescriptorSet;
 				descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 				descSetCreateInfo.shaderID = taaResolveShaderID;
-				descSetCreateInfo.uniformBuffers = &taaResolveShader->uniformBuffers;
+				descSetCreateInfo.uniformBufferList = &taaResolveShader->uniformBufferList;
 				descSetCreateInfo.imageDescriptors.Add(U_DEPTH_SAMPLER, ImageDescriptorInfo{ m_GBufferDepthAttachment->view, m_DepthSampler });
 				descSetCreateInfo.imageDescriptors.Add(U_SCENE_SAMPLER, ImageDescriptorInfo{ m_OffscreenFB0ColorAttachment0->view, m_LinMipLinSampler });
 				descSetCreateInfo.imageDescriptors.Add(U_HISTORY_SAMPLER, ImageDescriptorInfo{ m_HistoryBuffer->imageView, m_LinMipLinSampler });
-				FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBuffers, descSetCreateInfo.shaderID);
+				FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
 				CreateDescriptorSet(&descSetCreateInfo);
 			}
 
@@ -1412,10 +1412,10 @@ namespace flex
 				descSetCreateInfo.descriptorSet = &m_FinalFullscreenBlitDescriptorSet;
 				descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 				descSetCreateInfo.shaderID = fullscreenShaderID;
-				descSetCreateInfo.uniformBuffers = &fullscreenShader->uniformBuffers;
+				descSetCreateInfo.uniformBufferList = &fullscreenShader->uniformBufferList;
 				FrameBufferAttachment* sceneFrameBufferAttachment = m_bEnableTAA ? m_OffscreenFB1ColorAttachment0 : m_OffscreenFB0ColorAttachment0;
 				descSetCreateInfo.imageDescriptors.Add(U_ALBEDO_SAMPLER, ImageDescriptorInfo{ sceneFrameBufferAttachment->view, m_LinMipLinSampler });
-				FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBuffers, descSetCreateInfo.shaderID);
+				FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
 				CreateDescriptorSet(&descSetCreateInfo);
 			}
 
@@ -1456,8 +1456,8 @@ namespace flex
 				descSetCreateInfo.descriptorSet = &m_ParticleSimulationDescriptorSet;
 				descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 				descSetCreateInfo.shaderID = particleSimulationMaterial->material.shaderID;
-				descSetCreateInfo.uniformBuffers = &particleSimulationShader->uniformBuffers;
-				FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBuffers, descSetCreateInfo.shaderID);
+				descSetCreateInfo.uniformBufferList = &particleSimulationShader->uniformBufferList;
+				FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
 				CreateDescriptorSet(&descSetCreateInfo);
 
 				// Particle simulation compute pipeline
@@ -1488,12 +1488,12 @@ namespace flex
 				descSetCreateInfo.descriptorSet = &m_ParticlesDescriptorSet;
 				descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 				descSetCreateInfo.shaderID = particleMaterial->material.shaderID;
-				descSetCreateInfo.uniformBuffers = &particleShader->uniformBuffers;
+				descSetCreateInfo.uniformBufferList = &particleShader->uniformBufferList;
 
 				VulkanTexture* texture = m_LoadedTextures[m_AlphaBGTextureID];
 				descSetCreateInfo.imageDescriptors.Add(U_ALBEDO_SAMPLER, ImageDescriptorInfo{ texture->imageView, m_LinMipLinSampler });
 
-				FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBuffers, descSetCreateInfo.shaderID);
+				FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
 				CreateDescriptorSet(&descSetCreateInfo);
 
 				// Particles graphics pipeline
@@ -1668,7 +1668,7 @@ namespace flex
 							ShaderBatchPair& shaderBatchPair = shaderBatch->batches[j];
 							VulkanShader& shader = m_Shaders[shaderBatchPair.shaderID];
 
-							if (shader.uniformBuffers.Get(UniformBufferType::DYNAMIC)->fullDynamicBufferSize == 0)
+							if (shader.uniformBufferList.Get(UniformBufferType::DYNAMIC)->fullDynamicBufferSize == 0)
 							{
 								continue;
 							}
@@ -1696,7 +1696,7 @@ namespace flex
 									}
 								}
 
-								UniformBuffer* dynamicBuffer = shader.uniformBuffers.Get(UniformBufferType::DYNAMIC);
+								UniformBuffer* dynamicBuffer = shader.uniformBufferList.Get(UniformBufferType::DYNAMIC);
 								u32 bufferSlotsTotal = (dynamicBuffer->fullDynamicBufferSize / dynamicBuffer->data.size);
 								u32 bufferSlotsFree = bufferSlotsTotal - dynamicObjects.size();
 								for (u32 s = 0; s < bufferSlotsFree; ++s)
@@ -2879,9 +2879,9 @@ namespace flex
 			equirectangularToCubeDescriptorCreateInfo.descriptorSet = &descriptorSet;
 			equirectangularToCubeDescriptorCreateInfo.descriptorSetLayout = &m_DescriptorSetLayouts[equirectangularToCubeShaderID];
 			equirectangularToCubeDescriptorCreateInfo.shaderID = equirectangularToCubeShaderID;
-			equirectangularToCubeDescriptorCreateInfo.uniformBuffers = &equirectangularToCubeShader.uniformBuffers;
+			equirectangularToCubeDescriptorCreateInfo.uniformBufferList = &equirectangularToCubeShader.uniformBufferList;
 			equirectangularToCubeDescriptorCreateInfo.imageDescriptors.Add(U_HDR_EQUIRECTANGULAR_SAMPLER, ImageDescriptorInfo{ equirectangularToCubeMat.textures[U_HDR_EQUIRECTANGULAR_SAMPLER]->imageView, m_LinMipLinSampler });
-			FillOutBufferDescriptorInfos(&equirectangularToCubeDescriptorCreateInfo.bufferDescriptors, equirectangularToCubeDescriptorCreateInfo.uniformBuffers, equirectangularToCubeDescriptorCreateInfo.shaderID);
+			FillOutBufferDescriptorInfos(&equirectangularToCubeDescriptorCreateInfo.bufferDescriptors, equirectangularToCubeDescriptorCreateInfo.uniformBufferList, equirectangularToCubeDescriptorCreateInfo.shaderID);
 			CreateDescriptorSet(&equirectangularToCubeDescriptorCreateInfo);
 
 			std::array<VkPushConstantRange, 1> pushConstantRanges = {};
@@ -3151,9 +3151,9 @@ namespace flex
 			irradianceDescriptorCreateInfo.descriptorSet = &descriptorSet;
 			irradianceDescriptorCreateInfo.descriptorSetLayout = &m_DescriptorSetLayouts[irradianceShaderID];
 			irradianceDescriptorCreateInfo.shaderID = irradianceShaderID;
-			irradianceDescriptorCreateInfo.uniformBuffers = &irradianceShader.uniformBuffers;
+			irradianceDescriptorCreateInfo.uniformBufferList = &irradianceShader.uniformBufferList;
 			irradianceDescriptorCreateInfo.imageDescriptors.Add(U_CUBEMAP_SAMPLER, ImageDescriptorInfo{ renderObjectMat.textures[U_CUBEMAP_SAMPLER]->imageView, m_LinMipLinSampler });
-			FillOutBufferDescriptorInfos(&irradianceDescriptorCreateInfo.bufferDescriptors, irradianceDescriptorCreateInfo.uniformBuffers, irradianceDescriptorCreateInfo.shaderID);
+			FillOutBufferDescriptorInfos(&irradianceDescriptorCreateInfo.bufferDescriptors, irradianceDescriptorCreateInfo.uniformBufferList, irradianceDescriptorCreateInfo.shaderID);
 			CreateDescriptorSet(&irradianceDescriptorCreateInfo);
 
 			std::array<VkPushConstantRange, 1> pushConstantRanges = {};
@@ -3420,9 +3420,9 @@ namespace flex
 			prefilterDescriptorCreateInfo.descriptorSet = &descriptorSet;
 			prefilterDescriptorCreateInfo.descriptorSetLayout = &m_DescriptorSetLayouts[prefilterShaderID];
 			prefilterDescriptorCreateInfo.shaderID = prefilterShaderID;
-			prefilterDescriptorCreateInfo.uniformBuffers = &prefilterShader.uniformBuffers;
+			prefilterDescriptorCreateInfo.uniformBufferList = &prefilterShader.uniformBufferList;
 			prefilterDescriptorCreateInfo.imageDescriptors.Add(U_CUBEMAP_SAMPLER, ImageDescriptorInfo{ renderObjectMat.textures[U_CUBEMAP_SAMPLER]->imageView, m_LinMipLinSampler });
-			FillOutBufferDescriptorInfos(&prefilterDescriptorCreateInfo.bufferDescriptors, prefilterDescriptorCreateInfo.uniformBuffers, prefilterDescriptorCreateInfo.shaderID);
+			FillOutBufferDescriptorInfos(&prefilterDescriptorCreateInfo.bufferDescriptors, prefilterDescriptorCreateInfo.uniformBufferList, prefilterDescriptorCreateInfo.shaderID);
 			CreateDescriptorSet(&prefilterDescriptorCreateInfo);
 
 			std::array<VkPushConstantRange, 1> pushConstantRanges = {};
@@ -3627,7 +3627,7 @@ namespace flex
 				brdfDescriptorCreateInfo.descriptorSet = &descriptorSet;
 				brdfDescriptorCreateInfo.descriptorSetLayout = &m_DescriptorSetLayouts[brdfShaderID];
 				brdfDescriptorCreateInfo.shaderID = brdfShaderID;
-				brdfDescriptorCreateInfo.uniformBuffers = &brdfShader.uniformBuffers;
+				brdfDescriptorCreateInfo.uniformBufferList = &brdfShader.uniformBufferList;
 				CreateDescriptorSet(&brdfDescriptorCreateInfo);
 
 				VkPipelineLayout pipelinelayout = VK_NULL_HANDLE;
@@ -3770,11 +3770,11 @@ namespace flex
 			descSetCreateInfo.descriptorSet = &m_SSAODescSet;
 			descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 			descSetCreateInfo.shaderID = ssaoMaterial->material.shaderID;
-			descSetCreateInfo.uniformBuffers = &ssaoShader->uniformBuffers;
+			descSetCreateInfo.uniformBufferList = &ssaoShader->uniformBufferList;
 			descSetCreateInfo.imageDescriptors.Add(U_DEPTH_SAMPLER, ImageDescriptorInfo{ m_GBufferDepthAttachment->view, m_DepthSampler });
 			descSetCreateInfo.imageDescriptors.Add(U_SSAO_NORMAL_SAMPLER, ImageDescriptorInfo{ m_GBufferColorAttachment0->view, m_NearestClampEdgeSampler });
 			descSetCreateInfo.imageDescriptors.Add(U_NOISE_SAMPLER, ImageDescriptorInfo{ ssaoMaterial->textures[U_NOISE_SAMPLER]->imageView, m_NearestClampEdgeSampler });
-			FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBuffers, descSetCreateInfo.shaderID);
+			FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
 			CreateDescriptorSet(&descSetCreateInfo);
 
 			VulkanMaterial* ssaoBlurMaterial = &m_Materials[m_SSAOBlurMatID];
@@ -3787,11 +3787,11 @@ namespace flex
 			descSetCreateInfo.DBG_Name = "SSAO Blur Horizontal descriptor set";
 			descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 			descSetCreateInfo.shaderID = ssaoBlurMaterial->material.shaderID;
-			descSetCreateInfo.uniformBuffers = &ssaoBlurShader->uniformBuffers;
+			descSetCreateInfo.uniformBufferList = &ssaoBlurShader->uniformBufferList;
 			descSetCreateInfo.imageDescriptors.Add(U_DEPTH_SAMPLER, ImageDescriptorInfo{ m_GBufferDepthAttachment->view, m_DepthSampler });
 			descSetCreateInfo.imageDescriptors.Add(U_SSAO_RAW_SAMPLER, ImageDescriptorInfo{ m_SSAOFBColorAttachment0->view, m_NearestClampEdgeSampler });
 			descSetCreateInfo.imageDescriptors.Add(U_SSAO_NORMAL_SAMPLER, ImageDescriptorInfo{ m_GBufferColorAttachment0->view, m_NearestClampEdgeSampler });
-			FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBuffers, descSetCreateInfo.shaderID);
+			FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
 			CreateDescriptorSet(&descSetCreateInfo);
 
 			descSetCreateInfo = {};
@@ -3799,11 +3799,11 @@ namespace flex
 			descSetCreateInfo.DBG_Name = "SSAO Blur Vertical descriptor set";
 			descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 			descSetCreateInfo.shaderID = ssaoBlurMaterial->material.shaderID;
-			descSetCreateInfo.uniformBuffers = &ssaoBlurShader->uniformBuffers;
+			descSetCreateInfo.uniformBufferList = &ssaoBlurShader->uniformBufferList;
 			descSetCreateInfo.imageDescriptors.Add(U_DEPTH_SAMPLER, ImageDescriptorInfo{ m_GBufferDepthAttachment->view, m_DepthSampler });
 			descSetCreateInfo.imageDescriptors.Add(U_SSAO_RAW_SAMPLER, ImageDescriptorInfo{ m_SSAOBlurHFBColorAttachment0->view, m_NearestClampEdgeSampler });
 			descSetCreateInfo.imageDescriptors.Add(U_SSAO_NORMAL_SAMPLER, ImageDescriptorInfo{ m_GBufferColorAttachment0->view, m_NearestClampEdgeSampler });
-			FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBuffers, descSetCreateInfo.shaderID);
+			FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
 			CreateDescriptorSet(&descSetCreateInfo);
 		}
 
@@ -4077,9 +4077,9 @@ namespace flex
 					descSetCreateInfo.descriptorSet = &descriptorSet;
 					descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 					descSetCreateInfo.shaderID = computeSDFShaderID;
-					descSetCreateInfo.uniformBuffers = &computeSDFShader.uniformBuffers;
+					descSetCreateInfo.uniformBufferList = &computeSDFShader.uniformBufferList;
 					descSetCreateInfo.imageDescriptors.Add(U_ALBEDO_SAMPLER, ImageDescriptorInfo{ highResTex->imageView, m_LinMipLinSampler });
-					FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBuffers, descSetCreateInfo.shaderID);
+					FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
 					CreateDescriptorSet(&descSetCreateInfo);
 					descSets.push_back(descriptorSet);
 
@@ -4381,9 +4381,9 @@ namespace flex
 						info.descriptorSet = &font->m_DescriptorSet;
 						info.descriptorSetLayout = &descSetLayout;
 						info.shaderID = fontMaterial.material.shaderID;
-						info.uniformBuffers = &fontShader.uniformBuffers;
+						info.uniformBufferList = &fontShader.uniformBufferList;
 						info.imageDescriptors.Add(U_ALBEDO_SAMPLER, ImageDescriptorInfo{ font->GetTexture()->imageView, m_LinMipLinSampler });
-						FillOutBufferDescriptorInfos(&info.bufferDescriptors, info.uniformBuffers, info.shaderID);
+						FillOutBufferDescriptorInfos(&info.bufferDescriptors, info.uniformBufferList, info.shaderID);
 						CreateDescriptorSet(&info);
 					}
 
@@ -4509,9 +4509,9 @@ namespace flex
 						info.descriptorSet = &font->m_DescriptorSet;
 						info.descriptorSetLayout = &descSetLayout;
 						info.shaderID = fontMaterial.material.shaderID;
-						info.uniformBuffers = &fontShader.uniformBuffers;
+						info.uniformBufferList = &fontShader.uniformBufferList;
 						info.imageDescriptors.Add(U_ALBEDO_SAMPLER, ImageDescriptorInfo{ font->GetTexture()->imageView, m_LinMipLinSampler });
-						FillOutBufferDescriptorInfos(&info.bufferDescriptors, info.uniformBuffers, info.shaderID);
+						FillOutBufferDescriptorInfos(&info.bufferDescriptors, info.uniformBufferList, info.shaderID);
 						CreateDescriptorSet(&info);
 					}
 
@@ -4778,7 +4778,7 @@ namespace flex
 				UpdateDynamicUniformBuffer(m_ParticleMaterialID, dynamicUBOOffset, particleSystem->model, nullptr);
 
 				VkDeviceSize offsets[1] = { 0 };
-				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &particleSimShader.uniformBuffers.Get(UniformBufferType::PARTICLE_DATA)->buffer.m_Buffer, offsets);
+				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &particleSimShader.uniformBufferList.Get(UniformBufferType::PARTICLE_DATA)->buffer.m_Buffer, offsets);
 
 				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ParticleGraphicsPipeline);
 
@@ -4865,8 +4865,8 @@ namespace flex
 			descSetCreateInfo.descriptorSet = &m_ShadowDescriptorSet;
 			descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 			descSetCreateInfo.shaderID = shadowMaterial->material.shaderID;
-			descSetCreateInfo.uniformBuffers = &shadowShader->uniformBuffers;
-			FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBuffers, descSetCreateInfo.shaderID);
+			descSetCreateInfo.uniformBufferList = &shadowShader->uniformBufferList;
+			FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
 			CreateDescriptorSet(&descSetCreateInfo);
 		}
 
@@ -4882,7 +4882,7 @@ namespace flex
 			descSetCreateInfo.descriptorSet = &descSet;
 			descSetCreateInfo.descriptorSetLayout = &m_DescriptorSetLayouts[spriteShaderID];
 			descSetCreateInfo.shaderID = spriteShaderID;
-			descSetCreateInfo.uniformBuffers = &spriteShader.uniformBuffers;
+			descSetCreateInfo.uniformBufferList = &spriteShader.uniformBufferList;
 			if (spriteShader.shader->bTextureArr)
 			{
 				descSetCreateInfo.imageDescriptors.Add(U_ALBEDO_SAMPLER, ImageDescriptorInfo{ m_ShadowCascades[layer]->imageView, m_LinMipLinSampler });
@@ -4891,7 +4891,7 @@ namespace flex
 			{
 				descSetCreateInfo.imageDescriptors.Add(U_ALBEDO_SAMPLER, ImageDescriptorInfo{ m_LoadedTextures[textureID]->imageView, m_LinMipLinSampler });
 			}
-			FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBuffers, descSetCreateInfo.shaderID);
+			FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
 			CreateDescriptorSet(&descSetCreateInfo);
 
 			return descSet;
@@ -4945,7 +4945,7 @@ namespace flex
 				memcpy(stagingBuffer.m_Mapped, particleSystem->particleBufferData.data(), particleSystem->particleBufferData.size() * sizeof(particleSystem->particleBufferData[0]));
 				stagingBuffer.Unmap();
 
-				UniformBuffer* particleBuffer = particleSimShader.uniformBuffers.Get(UniformBufferType::PARTICLE_DATA);
+				UniformBuffer* particleBuffer = particleSimShader.uniformBufferList.Get(UniformBufferType::PARTICLE_DATA);
 				CopyBuffer(m_VulkanDevice, m_GraphicsQueue, stagingBuffer.m_Buffer, particleBuffer->buffer.m_Buffer, particleBuffer->buffer.m_Size);
 			}
 		}
@@ -5731,19 +5731,19 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::FillOutBufferDescriptorInfos(ShaderUniformContainer<BufferDescriptorInfo>* descriptors, UniformBuffers* uniformBuffers, ShaderID shaderID)
+		void VulkanRenderer::FillOutBufferDescriptorInfos(ShaderUniformContainer<BufferDescriptorInfo>* descriptors, UniformBufferList* uniformBufferList, ShaderID shaderID)
 		{
 			VulkanShader* shader = &m_Shaders[shaderID];
 
 			if (shader->shader->constantBufferUniforms.HasUniform(U_UNIFORM_BUFFER_CONSTANT))
 			{
-				UniformBuffer* constantBuffer = uniformBuffers->Get(UniformBufferType::STATIC);
+				UniformBuffer* constantBuffer = uniformBufferList->Get(UniformBufferType::STATIC);
 				descriptors->Add(U_UNIFORM_BUFFER_CONSTANT, BufferDescriptorInfo{ constantBuffer->buffer.m_Buffer, constantBuffer->data.size, UniformBufferType::STATIC });
 			}
 
 			if (shader->shader->dynamicBufferUniforms.HasUniform(U_UNIFORM_BUFFER_DYNAMIC))
 			{
-				UniformBuffer* dynamicBuffer = uniformBuffers->Get(UniformBufferType::DYNAMIC);
+				UniformBuffer* dynamicBuffer = uniformBufferList->Get(UniformBufferType::DYNAMIC);
 				// TODO: FIXME: BAD: CLEANUP:
 				const VkDeviceSize dynamicBufferSize = sizeof(VulkanUniformBufferObjectData) * m_RenderObjects.size();
 				descriptors->Add(U_UNIFORM_BUFFER_DYNAMIC, BufferDescriptorInfo{ dynamicBuffer->buffer.m_Buffer, dynamicBufferSize, UniformBufferType::DYNAMIC });
@@ -5751,7 +5751,7 @@ namespace flex
 
 			if (shader->shader->additionalBufferUniforms.HasUniform(U_PARTICLE_BUFFER))
 			{
-				UniformBuffer* particleBuffer = uniformBuffers->Get(UniformBufferType::PARTICLE_DATA);
+				UniformBuffer* particleBuffer = uniformBufferList->Get(UniformBufferType::PARTICLE_DATA);
 				descriptors->Add(U_PARTICLE_BUFFER, BufferDescriptorInfo{ particleBuffer->buffer.m_Buffer, particleBuffer->data.size, UniformBufferType::PARTICLE_DATA });
 			}
 		}
@@ -5775,7 +5775,7 @@ namespace flex
 			createInfo.descriptorSet = &renderObject->descriptorSet;
 			createInfo.descriptorSetLayout = &m_DescriptorSetLayouts[material->material.shaderID];
 			createInfo.shaderID = material->material.shaderID;
-			createInfo.uniformBuffers = &shader->uniformBuffers;
+			createInfo.uniformBufferList = &shader->uniformBufferList;
 
 			for (auto& pair : material->textures)
 			{
@@ -5821,7 +5821,7 @@ namespace flex
 				createInfo.imageDescriptors.Add(NextPowerOfTwo(U_FB_0_SAMPLER + i), ImageDescriptorInfo{ imageView, m_LinMipLinSampler });
 			}
 
-			FillOutBufferDescriptorInfos(&createInfo.bufferDescriptors, createInfo.uniformBuffers, createInfo.shaderID);
+			FillOutBufferDescriptorInfos(&createInfo.bufferDescriptors, createInfo.uniformBufferList, createInfo.shaderID);
 
 			CreateDescriptorSet(&createInfo);
 		}
@@ -7153,7 +7153,7 @@ namespace flex
 									renderObject->materialID == matPair.first &&
 									(!renderObject->bIndexed || indexBuffer->m_Buffer != 0))
 								{
-									UniformBuffer* dynamicBuffer = m_Shaders[shaderID].uniformBuffers.Get(UniformBufferType::DYNAMIC);
+									UniformBuffer* dynamicBuffer = m_Shaders[shaderID].uniformBufferList.Get(UniformBufferType::DYNAMIC);
 									if (dynamicBuffer)
 									{
 										dynamicUBOOffset += RoundUp(dynamicBuffer->data.size, m_DynamicAlignment);
@@ -7639,7 +7639,7 @@ namespace flex
 				VulkanMaterial& particleSimMat = m_Materials[particleSystem->materialID];
 				VulkanShader& particleSimShader = m_Shaders[particleSimMat.material.shaderID];
 
-				UniformBuffer* particleBuffer = particleSimShader.uniformBuffers.Get(UniformBufferType::PARTICLE_DATA);
+				UniformBuffer* particleBuffer = particleSimShader.uniformBufferList.Get(UniformBufferType::PARTICLE_DATA);
 
 				VkBufferMemoryBarrier bufferBarrier = vks::bufferMemoryBarrier();
 				bufferBarrier.buffer = particleBuffer->buffer.m_Buffer;
@@ -8001,7 +8001,7 @@ namespace flex
 			//u32 dynamicOffset = dynamicOffsetIndex * m_DynamicAlignment;
 			u32* dynamicOffsetPtr = nullptr;
 			u32 dynamicOffsetCount = 0;
-			const UniformBuffer* dynamicBuffer = shader->uniformBuffers.Get(UniformBufferType::DYNAMIC);
+			const UniformBuffer* dynamicBuffer = shader->uniformBufferList.Get(UniformBufferType::DYNAMIC);
 			if (dynamicBuffer && dynamicBuffer->buffer.m_Size != 0)
 			{
 				// This shader uses a dynamic buffer, so it needs a dynamic offset
@@ -8477,7 +8477,7 @@ namespace flex
 			for (VulkanShader& shader : m_Shaders)
 			{
 				Uniforms& constantUniforms = shader.shader->constantBufferUniforms;
-				UniformBuffer* constantBuffer = shader.uniformBuffers.Get(UniformBufferType::STATIC);
+				UniformBuffer* constantBuffer = shader.uniformBufferList.Get(UniformBufferType::STATIC);
 
 				if (constantBuffer == nullptr || constantBuffer->data.data == nullptr || constantBuffer->data.size == 0)
 				{
@@ -8502,7 +8502,7 @@ namespace flex
 				assert(calculatedSize1 == size);
 #endif
 
-				memcpy(shader.uniformBuffers.Get(UniformBufferType::STATIC)->buffer.m_Mapped, constantBuffer->data.data, size);
+				memcpy(shader.uniformBufferList.Get(UniformBufferType::STATIC)->buffer.m_Mapped, constantBuffer->data.data, size);
 			}
 		}
 
@@ -8527,8 +8527,8 @@ namespace flex
 			VulkanMaterial& material = m_Materials[materialID];
 			VulkanShader& shader = m_Shaders[material.material.shaderID];
 
-			UniformBuffers& uniformBuffers = shader.uniformBuffers;
-			UniformBuffer* dynamicBuffer = uniformBuffers.Get(UniformBufferType::DYNAMIC);
+			UniformBufferList& uniformBufferList = shader.uniformBufferList;
+			UniformBuffer* dynamicBuffer = uniformBufferList.Get(UniformBufferType::DYNAMIC);
 
 			if (dynamicBuffer == nullptr || dynamicBuffer->buffer.m_Size == 0)
 			{

@@ -2485,14 +2485,14 @@ namespace flex
 			}
 		}
 
-		void UniformBuffers::Add(VulkanDevice* device, UniformBufferType type)
+		void UniformBufferList::Add(VulkanDevice* device, UniformBufferType type)
 		{
-			uniformBuffers.emplace_back(device->m_LogicalDevice, type);
+			uniformBufferList.emplace_back(device->m_LogicalDevice, type);
 		}
 
-		const UniformBuffer* UniformBuffers::Get(UniformBufferType type) const
+		const UniformBuffer* UniformBufferList::Get(UniformBufferType type) const
 		{
-			for (const UniformBuffer& buffer : uniformBuffers)
+			for (const UniformBuffer& buffer : uniformBufferList)
 			{
 				if (buffer.type == type)
 				{
@@ -2502,9 +2502,9 @@ namespace flex
 			return nullptr;
 		}
 
-		UniformBuffer* UniformBuffers::Get(UniformBufferType type)
+		UniformBuffer* UniformBufferList::Get(UniformBufferType type)
 		{
-			for (UniformBuffer& buffer : uniformBuffers)
+			for (UniformBuffer& buffer : uniformBufferList)
 			{
 				if (buffer.type == type)
 				{
