@@ -409,6 +409,9 @@ namespace flex
 		MaterialID m_TAAResolveMaterialID = InvalidMaterialID;
 		MaterialID m_PlaceholderMaterialID = InvalidMaterialID;
 		MaterialID m_ParticleMaterialID = InvalidMaterialID;
+		MaterialID m_IrradianceMaterialID = InvalidMaterialID;
+		MaterialID m_PrefilterMaterialID = InvalidMaterialID;
+		MaterialID m_BRDFMaterialID = InvalidMaterialID;
 
 		MaterialID m_ComputeSDFMatID = InvalidMaterialID;
 		MaterialID m_FullscreenBlitMatID = InvalidMaterialID;

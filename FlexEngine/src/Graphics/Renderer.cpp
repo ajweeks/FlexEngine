@@ -2745,6 +2745,27 @@ namespace flex
 		particleMatCreateInfo.enableAlbedoSampler = true;
 		m_ParticleMaterialID = InitializeMaterial(&particleMatCreateInfo);
 
+		MaterialCreateInfo irradianceCreateInfo = {};
+		irradianceCreateInfo.name = "irradiance";
+		irradianceCreateInfo.shaderName = "irradiance";
+		irradianceCreateInfo.persistent = true;
+		irradianceCreateInfo.visibleInEditor = false;
+		m_IrradianceMaterialID = InitializeMaterial(&irradianceCreateInfo);
+
+		MaterialCreateInfo prefilterCreateInfo = {};
+		prefilterCreateInfo.name = "prefilter";
+		prefilterCreateInfo.shaderName = "prefilter";
+		prefilterCreateInfo.persistent = true;
+		prefilterCreateInfo.visibleInEditor = false;
+		m_PrefilterMaterialID = InitializeMaterial(&prefilterCreateInfo);
+
+		MaterialCreateInfo brdfCreateInfo = {};
+		brdfCreateInfo.name = "brdf";
+		brdfCreateInfo.shaderName = "brdf";
+		brdfCreateInfo.persistent = true;
+		brdfCreateInfo.visibleInEditor = false;
+		m_BRDFMaterialID = InitializeMaterial(&brdfCreateInfo);
+
 		MaterialCreateInfo placeholderMatCreateInfo = {};
 		placeholderMatCreateInfo.name = "placeholder";
 		placeholderMatCreateInfo.shaderName = "pbr";

@@ -439,7 +439,6 @@ namespace flex
 			Shader* shader = nullptr;
 
 			VkRenderPass renderPass = VK_NULL_HANDLE;
-			UniformBufferList uniformBufferList;
 
 			VDeleter<VkShaderModule> vertShaderModule;
 			VDeleter<VkShaderModule> fragShaderModule;
@@ -540,6 +539,9 @@ namespace flex
 		struct VulkanMaterial
 		{
 			Material material; // More info is stored in the generic material struct
+
+			// TODO: OPTIMIZE: MEMORY: Only store dynamic buffers here, store constant buffers in shader/globally
+			UniformBufferList uniformBufferList;
 
 			ShaderUniformContainer<VulkanTexture*> textures;
 			VkFramebuffer hdrCubemapFramebuffer = VK_NULL_HANDLE;

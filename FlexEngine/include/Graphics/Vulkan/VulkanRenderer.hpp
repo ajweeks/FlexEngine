@@ -220,7 +220,7 @@ namespace flex
 			void PrepareCubemapFrameBuffer();
 			void PhysicsDebugRender();
 
-			void CreateUniformBuffers(VulkanShader* shader);
+			void CreateUniformBuffers(VulkanMaterial* material);
 
 			void CreatePostProcessingResources();
 			void CreateFullscreenBlitResources();
@@ -258,7 +258,7 @@ namespace flex
 			// Expects a render pass to be in flight, renders a fullscreen tri with minimal state setup
 			void RenderFullscreenTri(
 				VkCommandBuffer commandBuffer,
-				ShaderID shaderID,
+				MaterialID materialID,
 				VkPipelineLayout pipelineLayout,
 				VkPipeline graphicsPipeline,
 				VkDescriptorSet descriptorSet);
@@ -267,7 +267,7 @@ namespace flex
 			void RenderFullscreenTri(
 				VkCommandBuffer commandBuffer,
 				VulkanRenderPass* renderPass,
-				ShaderID shaderID,
+				MaterialID materialID,
 				VkPipelineLayout pipelineLayout,
 				VkPipeline graphicsPipeline,
 				VkDescriptorSet descriptorSet,
@@ -277,7 +277,7 @@ namespace flex
 
 			void DrawFrame();
 
-			void BindDescriptorSet(const VulkanShader* shader, u32 dynamicOffsetOffset, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet) const;
+			void BindDescriptorSet(const VulkanMaterial* material, u32 dynamicOffsetOffset, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet) const;
 			void RecreateSwapChain();
 
 			void BeginDebugMarkerRegionInternal(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color = VEC4_ONE);
@@ -341,12 +341,12 @@ namespace flex
 			void DrawSpriteBatch(const std::vector<SpriteQuadDrawInfo>& batch, VkCommandBuffer commandBuffer);
 			void DrawParticles(VkCommandBuffer commandBuffer);
 
-			VkDescriptorSet GetSpriteDescriptorSet(TextureID textureID, ShaderID spriteShaderID, u32 textureLayer);
+			VkDescriptorSet GetSpriteDescriptorSet(TextureID textureID, MaterialID spriteMaterialID, u32 textureLayer);
 
 			VkRenderPass ResolveRenderPassType(RenderPassType renderPassType, const char* shaderName = nullptr);
 
 			void CreateShadowResources();
-			VkDescriptorSet CreateSpriteDescSet(ShaderID spriteShaderID, TextureID textureID, u32 layer = 0);
+			VkDescriptorSet CreateSpriteDescSet(MaterialID spriteMaterialID, TextureID textureID, u32 layer = 0);
 
 			void InitializeParticleBuffers();
 
@@ -445,7 +445,7 @@ namespace flex
 
 			struct SpriteDescSet
 			{
-				ShaderID shaderID;
+				MaterialID materialID;
 				VkDescriptorSet descSet;
 				u32 textureLayer;
 			};
