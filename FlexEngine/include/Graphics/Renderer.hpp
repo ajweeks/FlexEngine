@@ -300,7 +300,8 @@ namespace flex
 		void GenerateGBufferVertexBuffer(bool bFlipV);
 		void GenerateSSAONoise(std::vector<glm::vec4>& noise);
 
-		MaterialID CreateParticleSystemMaterial(const std::string& name);
+		MaterialID CreateParticleSystemSimulationMaterial(const std::string& name);
+		MaterialID CreateParticleSystemRenderingMaterial(const std::string& name);
 
 		std::vector<Shader> m_BaseShaders;
 
@@ -408,7 +409,6 @@ namespace flex
 		MaterialID m_GammaCorrectMaterialID = InvalidMaterialID;
 		MaterialID m_TAAResolveMaterialID = InvalidMaterialID;
 		MaterialID m_PlaceholderMaterialID = InvalidMaterialID;
-		MaterialID m_ParticleMaterialID = InvalidMaterialID;
 		MaterialID m_IrradianceMaterialID = InvalidMaterialID;
 		MaterialID m_PrefilterMaterialID = InvalidMaterialID;
 		MaterialID m_BRDFMaterialID = InvalidMaterialID;

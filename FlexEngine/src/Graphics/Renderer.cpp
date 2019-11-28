@@ -2736,15 +2736,6 @@ namespace flex
 		computeSDFMatCreateInfo.visibleInEditor = false;
 		m_ComputeSDFMatID = InitializeMaterial(&computeSDFMatCreateInfo);
 
-		MaterialCreateInfo particleMatCreateInfo = {};
-		particleMatCreateInfo.name = "particles";
-		particleMatCreateInfo.shaderName = "particles";
-		particleMatCreateInfo.persistent = true;
-		particleMatCreateInfo.visibleInEditor = false;
-		particleMatCreateInfo.generateAlbedoSampler = true;
-		particleMatCreateInfo.enableAlbedoSampler = true;
-		m_ParticleMaterialID = InitializeMaterial(&particleMatCreateInfo);
-
 		MaterialCreateInfo irradianceCreateInfo = {};
 		irradianceCreateInfo.name = "irradiance";
 		irradianceCreateInfo.shaderName = "irradiance";
@@ -3203,7 +3194,7 @@ namespace flex
 		}
 	}
 
-	MaterialID Renderer::CreateParticleSystemMaterial(const std::string& name)
+	MaterialID Renderer::CreateParticleSystemSimulationMaterial(const std::string& name)
 	{
 		MaterialCreateInfo particleSimMatCreateInfo = {};
 		particleSimMatCreateInfo.name = name;
@@ -3211,6 +3202,16 @@ namespace flex
 		particleSimMatCreateInfo.persistent = true;
 		particleSimMatCreateInfo.visibleInEditor = false;
 		return InitializeMaterial(&particleSimMatCreateInfo);
+	}
+
+	MaterialID Renderer::CreateParticleSystemRenderingMaterial(const std::string& name)
+	{
+		MaterialCreateInfo particleMatCreateInfo = {};
+		particleMatCreateInfo.name = name;
+		particleMatCreateInfo.shaderName = "particles";
+		particleMatCreateInfo.persistent = true;
+		particleMatCreateInfo.visibleInEditor = false;
+		return InitializeMaterial(&particleMatCreateInfo);
 	}
 
 	void PhysicsDebugDrawBase::UpdateDebugMode()
