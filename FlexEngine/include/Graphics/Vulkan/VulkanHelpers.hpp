@@ -680,6 +680,33 @@ namespace flex
 			real scale;
 		};
 
+		enum class GPUVendor : u32
+		{
+			Unknown,
+			ARM,
+			AMD,
+			Broadcom,
+			Imagination,
+			Intel,
+			nVidia,
+			Qualcomm,
+			Verisilicon,
+			Software,
+		};
+		
+		constexpr GPUVendor GPUVendorFromPCIVendor(u32 vendorID)
+		{
+			return vendorID == 0x13B5 ? GPUVendor::ARM
+				: vendorID == 0x1002 ? GPUVendor::AMD
+				: vendorID == 0x1010 ? GPUVendor::Imagination
+				: vendorID == 0x8086 ? GPUVendor::Intel
+				: vendorID == 0x10DE ? GPUVendor::nVidia
+				: vendorID == 0x5143 ? GPUVendor::Qualcomm
+				: vendorID == 0x1AE0 ? GPUVendor::Software   // Google Swiftshader
+				: vendorID == 0x1414 ? GPUVendor::Software   // Microsoft WARP
+				: GPUVendor::Unknown;
+		}
+
 		VkPrimitiveTopology TopologyModeToVkPrimitiveTopology(TopologyMode mode);
 		VkCullModeFlagBits CullFaceToVkCullMode(CullFace cullFace);
 

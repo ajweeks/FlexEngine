@@ -108,11 +108,32 @@ namespace flex
 				u32 deviceVersionMin = VK_VERSION_MINOR(props.apiVersion);
 				u32 deviceVersionPatch = VK_VERSION_PATCH(props.apiVersion);
 
+				u32 driverVersionMaj = VK_VERSION_MAJOR(props.driverVersion);
+				u32 driverVersionMin = VK_VERSION_MINOR(props.driverVersion);
+				u32 driverVersionPatch = VK_VERSION_PATCH(props.driverVersion);
+				
+				GPUVendor vendor = GPUVendorFromPCIVendor(props.vendorID);
+
+				if (vendor == GPUVendor::nVidia)
+				{
+					// NVIDIA's custom version packing:
+					//   10 |  8  |        8       |       6
+					// major|minor|secondary_branch|tertiary_branch
+					driverVersionMaj = ((u32)(props.driverVersion) >> (8 + 8 + 6)) & 0x3ff;
+					driverVersionMin = ((u32)(props.driverVersion) >> (8 + 6)) & 0x0ff;
+
+					u32 secondary = ((u32)(props.driverVersion) >> 6) & 0x0ff;
+					u32 tertiary = props.driverVersion & 0x03f;
+
+					driverVersionPatch = (secondary << 8) | tertiary;
+				}
+
+
 				Print("Vulkan loaded - instance v%u.%u.%u (device v%u.%u.%u)\n", instanceVersionMaj, instanceVersionMin, instanceVersionPatch, deviceVersionMaj, deviceVersionMin, deviceVersionPatch);
 				Print("Vendor ID, Device ID: 0x%u, 0x%u\n", props.vendorID, props.deviceID);
 				Print("Device info: %s, ", (const char*)props.deviceName);
 				Print("(%s), ", DeviceTypeToString(props.deviceType).c_str());
-				Print("driver version: %u\n", props.driverVersion);
+				Print("driver version: %u.%u patch %u\n", driverVersionMaj, driverVersionMin, driverVersionPatch);
 			}
 
 			VkPhysicalDeviceMemoryProperties physicalDeviceMemProps;
