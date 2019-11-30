@@ -553,14 +553,9 @@ namespace flex
 			VDeleter<VkPipeline> m_BlitGraphicsPipeline;
 			VDeleter<VkPipelineLayout> m_BlitGraphicsPipelineLayout;
 
-			VDeleter<VkPipeline> m_ParticleGraphicsPipeline;
 			VDeleter<VkPipelineLayout> m_ParticleGraphicsPipelineLayout;
 
-			VkDescriptorSet m_ParticlesDescriptorSet = VK_NULL_HANDLE;
-
 			VDeleter<VkPipelineLayout> m_ParticleSimulationComputePipelineLayout;
-
-			VkDescriptorSet m_ParticleSimulationDescriptorSet = VK_NULL_HANDLE;
 
 			std::vector<ParticleSystem*> m_ParticleSystems;
 

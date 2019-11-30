@@ -672,9 +672,11 @@ namespace flex
 			ParticleSystemID ID = InvalidParticleSystemID;
 			ParticleSimData data;
 			bool bEnabled;
-			std::vector<ParticleBufferData> particleBufferData;
 			MaterialID simMaterialID = InvalidMaterialID;
 			MaterialID renderingMaterialID = InvalidMaterialID;
+			VkDescriptorSet computeDescriptorSet = VK_NULL_HANDLE;
+			VkDescriptorSet renderingDescriptorSet = VK_NULL_HANDLE;
+			VDeleter<VkPipeline> graphicsPipeline;
 			VDeleter<VkPipeline> computePipeline;
 			glm::mat4 model;
 			real scale;

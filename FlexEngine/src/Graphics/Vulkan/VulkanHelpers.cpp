@@ -2515,7 +2515,8 @@ namespace flex
 		}
 
 		ParticleSystem::ParticleSystem(VulkanDevice* device) :
-			computePipeline(device->m_LogicalDevice, vkDestroyPipeline)
+			computePipeline(device->m_LogicalDevice, vkDestroyPipeline),
+			graphicsPipeline(device->m_LogicalDevice, vkDestroyPipeline)
 		{
 		}
 	} // namespace vk

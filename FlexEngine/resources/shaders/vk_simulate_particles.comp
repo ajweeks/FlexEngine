@@ -8,7 +8,7 @@ layout (binding = 0) uniform UBODynamic
 	vec4 color1;
 	float dt;
 	float speed;
-	int particleCount;
+	uint particleCount;
 } uboDynamic;
 
 struct Particle
@@ -22,7 +22,7 @@ struct Particle
 	*/
 };
 
-layout (binding = 1) buffer PositionBuffer
+layout (binding = 1) buffer ParticleBuffer
 {
 	Particle particles[];
 };
@@ -49,7 +49,7 @@ void main()
 	vec3 perpVec = vec3(cos(theta), 0, sin(theta));
 	vel += perpVec * uboDynamic.speed * (mag + sin(pos.y*0.2));
 	float velMag = length(perpVec);
-	vel *= 0.5;
+	vel *= 0.4;
 
 	pos += vel * uboDynamic.dt;
 

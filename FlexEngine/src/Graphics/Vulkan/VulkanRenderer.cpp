@@ -232,7 +232,6 @@ namespace flex
 			m_BlitGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
 			m_BlitGraphicsPipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
 
-			m_ParticleGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
 			m_ParticleGraphicsPipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
 
 			m_ParticleSimulationComputePipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
@@ -765,7 +764,6 @@ namespace flex
 			m_BlitGraphicsPipeline.replace();
 			m_BlitGraphicsPipelineLayout.replace();
 
-			m_ParticleGraphicsPipeline.replace();
 			m_ParticleGraphicsPipelineLayout.replace();
 
 			m_ParticleSimulationComputePipelineLayout.replace();
@@ -1482,7 +1480,7 @@ namespace flex
 					DescriptorSetCreateInfo descSetCreateInfo = {};
 					std::string descSetName = "Particle simulation descriptor set " + idStr;
 					descSetCreateInfo.DBG_Name = descSetName.c_str();
-					descSetCreateInfo.descriptorSet = &m_ParticleSimulationDescriptorSet;
+					descSetCreateInfo.descriptorSet = &particleSystem->computeDescriptorSet;
 					descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 					descSetCreateInfo.shaderID = particleSimulationMaterial->material.shaderID;
 					descSetCreateInfo.uniformBufferList = &particleSimulationMaterial->uniformBufferList;
@@ -1517,7 +1515,7 @@ namespace flex
 					DescriptorSetCreateInfo descSetCreateInfo = {};
 					std::string descSetName = "Particle rendering descriptor set " + idStr;
 					descSetCreateInfo.DBG_Name = descSetName.c_str();
-					descSetCreateInfo.descriptorSet = &m_ParticlesDescriptorSet;
+					descSetCreateInfo.descriptorSet = &particleSystem->renderingDescriptorSet;
 					descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 					descSetCreateInfo.shaderID = particleRenderingMaterial->material.shaderID;
 					descSetCreateInfo.uniformBufferList = &particleRenderingMaterial->uniformBufferList;
@@ -1529,11 +1527,18 @@ namespace flex
 					CreateDescriptorSet(&descSetCreateInfo);
 
 					// Particles graphics pipeline
+					// Particle simulation compute pipeline
+					if (m_ParticleGraphicsPipelineLayout == VK_NULL_HANDLE)
+					{
+						VkPipelineLayoutCreateInfo pipelineLayoutInfo = vks::pipelineLayoutCreateInfo(1, &descSetLayout);
+						VK_CHECK_RESULT(vkCreatePipelineLayout(m_VulkanDevice->m_LogicalDevice, &pipelineLayoutInfo, nullptr, m_ParticleGraphicsPipelineLayout.replace()));
+					}
+
 					GraphicsPipelineCreateInfo pipelineCreateInfo = {};
 					std::string pipelineName = "Particle rendering graphics pipeline " + idStr;
 					pipelineCreateInfo.DBG_Name = pipelineName.c_str();
-					pipelineCreateInfo.graphicsPipeline = m_ParticleGraphicsPipeline.replace();
-					pipelineCreateInfo.pipelineLayout = m_ParticleGraphicsPipelineLayout.replace();
+					pipelineCreateInfo.graphicsPipeline = particleSystem->graphicsPipeline.replace();
+					pipelineCreateInfo.pipelineLayout = &m_ParticleGraphicsPipelineLayout;
 					pipelineCreateInfo.shaderID = particleRenderingMaterial->material.shaderID;
 					pipelineCreateInfo.vertexAttributes = particleRenderingShader->shader->vertexAttributes;
 					pipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
@@ -2738,6 +2743,11 @@ namespace flex
 
 		ParticleSystemID VulkanRenderer::AddParticleSystem(const std::string& name, const ParticleSimData& data, const glm::vec3& pos, real scale)
 		{
+			if (data.particleCount > MAX_PARTICLE_COUNT)
+			{
+				PrintWarn("Attempted to create particle system with more particles than allowed (%d > %d) Only %d will be created\n", data.particleCount, MAX_PARTICLE_COUNT, MAX_PARTICLE_COUNT);
+			}
+
 			ParticleSystem* particleSystem = new ParticleSystem(m_VulkanDevice);
 			particleSystem->name = name;
 			particleSystem->ID = m_ParticleSystems.size();
@@ -4748,9 +4758,9 @@ namespace flex
 				VkDeviceSize offsets[1] = { 0 };
 				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &particleSimMat.uniformBufferList.Get(UniformBufferType::PARTICLE_DATA)->buffer.m_Buffer, offsets);
 
-				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_ParticleGraphicsPipeline);
+				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, particleSystem->graphicsPipeline);
 
-				BindDescriptorSet(&particleRenderingMat, dynamicUBOOffset, commandBuffer, m_ParticleGraphicsPipelineLayout, m_ParticlesDescriptorSet);
+				BindDescriptorSet(&particleRenderingMat, dynamicUBOOffset, commandBuffer, m_ParticleGraphicsPipelineLayout, particleSystem->renderingDescriptorSet);
 
 				vkCmdDraw(commandBuffer, MAX_PARTICLE_COUNT, 1, 0, 0);
 			}
@@ -4873,22 +4883,22 @@ namespace flex
 				return;
 			}
 
-			const u32 particleBufferSize = MAX_PARTICLE_COUNT * sizeof(ParticleBufferData);
+			const u32 maxParticleBufferSize = MAX_PARTICLE_COUNT * sizeof(ParticleBufferData);
 
 			VulkanBuffer stagingBuffer(m_VulkanDevice->m_LogicalDevice);
 			CreateAndAllocateBuffer(m_VulkanDevice,
-				particleBufferSize,
+				maxParticleBufferSize,
 				VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 				&stagingBuffer);
 
+			std::vector<ParticleBufferData> particleBufferData(MAX_PARTICLE_COUNT);
+
 			for (ParticleSystem* particleSystem : m_ParticleSystems)
 			{
-				particleSystem->particleBufferData.resize(MAX_PARTICLE_COUNT);
-
-				const u32 dim = (u32)glm::pow((real)particleSystem->particleBufferData.size(), 1.0f / 3.0f);
+				const u32 dim = (u32)glm::pow((real)particleBufferData.size(), 1.0f / 3.0f);
 				const real invDim = 1.0f / (real)dim;
-				for (u32 i = 0; i < particleSystem->particleBufferData.size(); ++i)
+				for (u32 i = 0; i < particleSystem->data.particleCount; ++i)
 				{
 					real x = (i % dim) * invDim - 0.5f;
 					real y = (i / dim % dim) * invDim - 0.5f;
@@ -4901,16 +4911,19 @@ namespace flex
 
 					real theta = atan2(dz, dx) - PI_DIV_TWO;
 
-					particleSystem->particleBufferData[i].pos = glm::vec3(x, y, z) * particleSystem->scale;
-					particleSystem->particleBufferData[i].color = glm::vec4(1.0f);
-					particleSystem->particleBufferData[i].vel = glm::vec3(cos(theta), 0.0f, sin(theta)) * mag;
-					particleSystem->particleBufferData[i].extraVec4 = glm::vec4(Lerp(0.6f, 0.2f, mag), 0.0f, 0.0f, 0.0f);
+					particleBufferData[i].pos = glm::vec3(x, y, z) * particleSystem->scale;
+					particleBufferData[i].color = glm::vec4(1.0f);
+					particleBufferData[i].vel = glm::vec3(cos(theta), 0.0f, sin(theta)) * mag;
+					particleBufferData[i].extraVec4 = glm::vec4(Lerp(0.6f, 0.2f, mag), 0.0f, 0.0f, 0.0f);
 				}
 
 				VulkanMaterial& particleSimMat = m_Materials[particleSystem->simMaterialID];
 
+				const u32 particleBufferSize = particleSystem->data.particleCount * sizeof(particleBufferData[0]);
+
 				VK_CHECK_RESULT(stagingBuffer.Map());
-				memcpy(stagingBuffer.m_Mapped, particleSystem->particleBufferData.data(), particleSystem->particleBufferData.size() * sizeof(particleSystem->particleBufferData[0]));
+				memcpy(stagingBuffer.m_Mapped, particleBufferData.data(), particleBufferSize);
+				memset(((u8*)stagingBuffer.m_Mapped) + particleBufferSize, 0, MAX_PARTICLE_COUNT * sizeof(ParticleBufferData) - particleBufferSize);
 				stagingBuffer.Unmap();
 
 				UniformBuffer* particleBuffer = particleSimMat.uniformBufferList.Get(UniformBufferType::PARTICLE_DATA);
@@ -7640,7 +7653,7 @@ namespace flex
 				UpdateDynamicUniformBuffer(particleSystem->simMaterialID, dynamicUBOOffset, MAT4_IDENTITY, &overrides);
 
 				u32 dynamicOffsets[2] = { dynamicUBOOffset, 0 };
-				vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_ParticleSimulationComputePipelineLayout, 0, 1, &m_ParticleSimulationDescriptorSet, ARRAY_LENGTH(dynamicOffsets), dynamicOffsets);
+				vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_ParticleSimulationComputePipelineLayout, 0, 1, &particleSystem->computeDescriptorSet, ARRAY_LENGTH(dynamicOffsets), dynamicOffsets);
 
 				vkCmdDispatch(commandBuffer, MAX_PARTICLE_COUNT / PARTICLES_PER_DISPATCH, 1, 1);
 

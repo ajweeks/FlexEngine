@@ -119,7 +119,7 @@ namespace flex
 		glm::vec4 color1;	// 16
 		real dt;			// 4
 		real speed;			// 4
-		i32 particleCount;	// 4
+		u32 particleCount;	// 4
 	};
 
 	// Uniforms
