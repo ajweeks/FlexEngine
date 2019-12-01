@@ -1124,6 +1124,10 @@ namespace flex
 				mat.textures.Add(U_NOISE_SAMPLER, m_NoiseTexture);
 			}
 
+			if (m_bPostInitialized)
+			{
+				CreateUniformBuffers(&mat);
+			}
 
 			return matID;
 		}
@@ -6018,11 +6022,12 @@ namespace flex
 			VK_CHECK_RESULT(vkCreateDescriptorSetLayout(m_VulkanDevice->m_LogicalDevice, &layoutInfo, nullptr, descriptorSetLayout));
 		}
 
-		bool VulkanRenderer::GetMaterialID(const std::string& materialName, MaterialID& materialID)
+		bool VulkanRenderer::FindOrCreateMaterialByName(const std::string& materialName, MaterialID& materialID)
 		{
 			for (size_t i = 0; i < m_Materials.size(); ++i)
 			{
-				if (m_Materials[i].material.name.compare(materialName) == 0)
+				auto matIter = m_Materials.find(i);
+				if (matIter != m_Materials.end() && matIter->second.material.name.compare(materialName) == 0)
 				{
 					materialID = i;
 					return true;
@@ -6047,7 +6052,7 @@ namespace flex
 			return false;
 		}
 
-		MaterialID VulkanRenderer::GetMaterialID(RenderID renderID)
+		MaterialID VulkanRenderer::GetRenderObjectMaterialID(RenderID renderID)
 		{
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
 			if (renderObject != nullptr)

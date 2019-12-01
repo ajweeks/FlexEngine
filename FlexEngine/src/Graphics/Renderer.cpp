@@ -1182,7 +1182,7 @@ namespace flex
 		RenderID renderID = gameObject->GetRenderID();
 		assert(renderID != InvalidRenderID);
 
-		MaterialID matID = g_Renderer->GetMaterialID(renderID);
+		MaterialID matID = g_Renderer->GetRenderObjectMaterialID(renderID);
 
 		g_Renderer->DrawImGuiForRenderObject(renderID);
 
@@ -2339,11 +2339,11 @@ namespace flex
 			MaterialID existingGBufferQuadMatID = InvalidMaterialID;
 			MaterialID existingGBufferCubeMatID = InvalidMaterialID;
 			// TODO: Don't rely on material names!
-			if (GetMaterialID(gBufferMatName, existingGBufferQuadMatID))
+			if (FindOrCreateMaterialByName(gBufferMatName, existingGBufferQuadMatID))
 			{
 				RemoveMaterial(existingGBufferQuadMatID);
 			}
-			if (GetMaterialID(gBufferCubeMatName, existingGBufferCubeMatID))
+			if (FindOrCreateMaterialByName(gBufferCubeMatName, existingGBufferCubeMatID))
 			{
 				RemoveMaterial(existingGBufferCubeMatID);
 			}

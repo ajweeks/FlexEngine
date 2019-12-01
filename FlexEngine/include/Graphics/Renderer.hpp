@@ -134,8 +134,8 @@ namespace flex
 		virtual Material& GetMaterial(MaterialID matID) = 0;
 		virtual Shader& GetShader(ShaderID shaderID) = 0;
 
-		virtual bool GetMaterialID(const std::string& materialName, MaterialID& materialID) = 0;
-		virtual MaterialID GetMaterialID(RenderID renderID) = 0;
+		virtual bool FindOrCreateMaterialByName(const std::string& materialName, MaterialID& materialID) = 0;
+		virtual MaterialID GetRenderObjectMaterialID(RenderID renderID) = 0;
 		virtual bool GetShaderID(const std::string& shaderName, ShaderID& shaderID) = 0;
 
 		virtual std::vector<Pair<std::string, MaterialID>> GetValidMaterialNames() const = 0;

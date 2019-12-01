@@ -2885,7 +2885,7 @@ namespace flex
 		cartID(cartID)
 	{
 		MaterialID matID;
-		if (!g_Renderer->GetMaterialID("pbr grey", matID))
+		if (!g_Renderer->FindOrCreateMaterialByName("pbr grey", matID))
 		{
 			// :shrug:
 			// TODO: Create own material
@@ -3249,7 +3249,7 @@ namespace flex
 		GameObject(name, GameObjectType::MOBILE_LIQUID_BOX)
 	{
 		MaterialID matID;
-		if (!g_Renderer->GetMaterialID("pbr white", matID))
+		if (!g_Renderer->FindOrCreateMaterialByName("pbr white", matID))
 		{
 			// TODO: Create own material
 			matID = 0;
@@ -3339,7 +3339,7 @@ namespace flex
 		bobber = new GameObject("Bobber", GameObjectType::_NONE);
 		bobber->SetSerializable(false);
 		MaterialID matID = InvalidMaterialID;
-		if (!g_Renderer->GetMaterialID("pbr red", matID))
+		if (!g_Renderer->FindOrCreateMaterialByName("pbr red", matID))
 		{
 			PrintError("Failed to find material for bobber!\n");
 		}
@@ -3649,7 +3649,7 @@ namespace flex
 
 		MaterialID matID;
 		// TODO: Don't rely on material names!
-		if (!g_Renderer->GetMaterialID("terminal copper", matID))
+		if (!g_Renderer->FindOrCreateMaterialByName("terminal copper", matID))
 		{
 			// TODO: Create own material
 			matID = 0;

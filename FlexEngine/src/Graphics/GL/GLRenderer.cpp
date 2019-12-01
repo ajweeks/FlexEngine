@@ -200,7 +200,7 @@ namespace flex
 			{
 				const std::string gridMatName = "Grid";
 				// TODO: Don't rely on material names!
-				if (!GetMaterialID(gridMatName, m_GridMaterialID))
+				if (!FindOrCreateMaterialByName(gridMatName, m_GridMaterialID))
 				{
 					MaterialCreateInfo gridMatInfo = {};
 					gridMatInfo.shaderName = "color";
@@ -227,7 +227,7 @@ namespace flex
 			{
 				const std::string worldOriginMatName = "World origin";
 				// TODO: Don't rely on material names!
-				if (!GetMaterialID(worldOriginMatName, m_WorldAxisMaterialID))
+				if (!FindOrCreateMaterialByName(worldOriginMatName, m_WorldAxisMaterialID))
 				{
 					MaterialCreateInfo worldAxisMatInfo = {};
 					worldAxisMatInfo.shaderName = "color";
@@ -1114,7 +1114,7 @@ namespace flex
 
 				MaterialID equirectangularToCubeMatID = InvalidMaterialID;
 				// TODO: Don't rely on material names!
-				if (!GetMaterialID("Equirectangular to Cube", equirectangularToCubeMatID) || bRandomizeSkybox)
+				if (!FindOrCreateMaterialByName("Equirectangular to Cube", equirectangularToCubeMatID) || bRandomizeSkybox)
 				{
 					std::string equirectangularProfileBlockName = "generating equirectangular mat";
 					PROFILE_BEGIN(equirectangularProfileBlockName);
@@ -1221,7 +1221,7 @@ namespace flex
 
 				MaterialID prefilterMatID = InvalidMaterialID;
 				// TODO: Don't rely on material names!
-				if (!GetMaterialID("Prefilter", prefilterMatID))
+				if (!FindOrCreateMaterialByName("Prefilter", prefilterMatID))
 				{
 					MaterialCreateInfo prefilterMaterialCreateInfo = {};
 					prefilterMaterialCreateInfo.name = "Prefilter";
@@ -1422,7 +1422,7 @@ namespace flex
 
 				MaterialID irrandianceMatID = InvalidMaterialID;
 				// TODO: Don't rely on material names!
-				if (!GetMaterialID("Irradiance", irrandianceMatID))
+				if (!FindOrCreateMaterialByName("Irradiance", irrandianceMatID))
 				{
 					std::string irradianceProfileBlockName = "generating irradiance mat";
 					PROFILE_BEGIN(irradianceProfileBlockName);
@@ -1613,7 +1613,7 @@ namespace flex
 			return false;
 		}
 
-		bool GLRenderer::GetMaterialID(const std::string& materialName, MaterialID& materialID)
+		bool GLRenderer::FindOrCreateMaterialByName(const std::string& materialName, MaterialID& materialID)
 		{
 			// TODO: Store materials using sorted data structure?
 			for (auto& materialPair : m_Materials)
@@ -1643,7 +1643,7 @@ namespace flex
 			return false;
 		}
 
-		MaterialID GLRenderer::GetMaterialID(RenderID renderID)
+		MaterialID GLRenderer::GetRenderObjectMaterialID(RenderID renderID)
 		{
 			GLRenderObject* renderObject = GetRenderObject(renderID);
 			if (renderObject != nullptr)
@@ -4424,7 +4424,7 @@ namespace flex
 				return;
 			}
 
-			MaterialID skyboxMaterialID = m_SkyBoxMesh->GetMeshComponent()->GetMaterialID();
+			MaterialID skyboxMaterialID = m_SkyBoxMesh->GetMeshComponent()->FindOrCreateMaterialByName();
 			if (skyboxMaterialID == InvalidMaterialID)
 			{
 				PrintError("Skybox doesn't have a valid material! Irradiance textures can't be generated\n");
