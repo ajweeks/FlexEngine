@@ -923,12 +923,12 @@ namespace flex
 			{
 				if (createInfo->irradianceSamplerMatID < m_Materials.size())
 				{
-					mat.textures.Add(U_IRRADIANCE_SAMPLER, m_Materials[createInfo->irradianceSamplerMatID].textures[U_IRRADIANCE_SAMPLER]);
+					mat.textures.Add(U_IRRADIANCE_SAMPLER, m_Materials.at(createInfo->irradianceSamplerMatID).textures[U_IRRADIANCE_SAMPLER]);
 				}
 			}
 			if (shader.shader->bNeedPrefilteredMap)
 			{
-				VulkanTexture* prefilterTexture = (createInfo->prefilterMapSamplerMatID < m_Materials.size() ? m_Materials[createInfo->prefilterMapSamplerMatID].textures[U_PREFILTER_MAP] : nullptr);
+				VulkanTexture* prefilterTexture = (createInfo->prefilterMapSamplerMatID < m_Materials.size() ? m_Materials.at(createInfo->prefilterMapSamplerMatID).textures[U_PREFILTER_MAP] : nullptr);
 				mat.textures.Add(U_PREFILTER_MAP, prefilterTexture);
 			}
 
@@ -1168,7 +1168,7 @@ namespace flex
 
 			renderObject->vertexBufferData = createInfo->vertexBufferData;
 			renderObject->cullMode = CullFaceToVkCullMode(createInfo->cullFace);
-			renderObject->materialName = m_Materials[renderObject->materialID].material.name;
+			renderObject->materialName = m_Materials.at(renderObject->materialID).material.name;
 			renderObject->gameObject = createInfo->gameObject;
 			renderObject->bEditorObject = createInfo->bEditorObject;
 			if (createInfo->bEditorObject)
@@ -1475,7 +1475,7 @@ namespace flex
 
 				// Compute pipeline
 				{
-					VulkanMaterial* particleSimulationMaterial = &m_Materials[particleSystem->simMaterialID];
+					VulkanMaterial* particleSimulationMaterial = &m_Materials.at(particleSystem->simMaterialID);
 					VulkanShader* particleSimulationShader = &m_Shaders[particleSimulationMaterial->material.shaderID];
 
 					// Particle simulation descriptor set
@@ -1510,7 +1510,7 @@ namespace flex
 
 				// Graphics pipeline
 				{
-					VulkanMaterial* particleRenderingMaterial = &m_Materials[particleSystem->renderingMaterialID];
+					VulkanMaterial* particleRenderingMaterial = &m_Materials.at(particleSystem->renderingMaterialID);
 					VulkanShader* particleRenderingShader = &m_Shaders[particleRenderingMaterial->material.shaderID];
 
 					VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[particleRenderingMaterial->material.shaderID];
@@ -1714,7 +1714,7 @@ namespace flex
 							for (u32 k = 0; k < shaderBatchPair.batch.batches.size(); ++k)
 							{
 								MaterialBatchPair& materialBatchPair = shaderBatchPair.batch.batches[k];
-								VulkanMaterial& material = m_Materials[materialBatchPair.materialID];
+								VulkanMaterial& material = m_Materials.at(materialBatchPair.materialID);
 
 								if (material.uniformBufferList.Get(UniformBufferType::DYNAMIC)->fullDynamicBufferSize == 0)
 								{
@@ -1774,7 +1774,7 @@ namespace flex
 		void VulkanRenderer::UpdateVertexData(RenderID renderID, VertexBufferData const* vertexBufferData)
 		{
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
-			VulkanBuffer* vertexBuffer = m_VertexIndexBufferPairs[m_Materials[renderObject->materialID].material.shaderID].vertexBuffer;
+			VulkanBuffer* vertexBuffer = m_VertexIndexBufferPairs[m_Materials.at(renderObject->materialID).material.shaderID].vertexBuffer;
 			u32 copySize = std::min(vertexBufferData->VertexBufferSize, (u32)vertexBuffer->m_Size);
 			if (copySize < vertexBufferData->VertexBufferSize)
 			{
@@ -1995,11 +1995,11 @@ namespace flex
 			{
 				VulkanRenderObject* renderObject = GetRenderObject(i);
 				if (renderObject &&
-					m_Shaders[m_Materials[renderObject->materialID].material.shaderID].shader->bNeedPrefilteredMap)
+					m_Shaders[m_Materials.at(renderObject->materialID).material.shaderID].shader->bNeedPrefilteredMap)
 				{
-					VulkanMaterial* mat = &m_Materials[renderObject->materialID];
-					mat->textures.Add(U_IRRADIANCE_SAMPLER, m_Materials[skyboxMatierialID].textures[U_IRRADIANCE_SAMPLER]);
-					mat->textures.Add(U_PREFILTER_MAP, m_Materials[skyboxMatierialID].textures[U_PREFILTER_MAP]);
+					VulkanMaterial* mat = &m_Materials.at(renderObject->materialID);
+					mat->textures.Add(U_IRRADIANCE_SAMPLER, m_Materials.at(skyboxMatierialID).textures[U_IRRADIANCE_SAMPLER]);
+					mat->textures.Add(U_PREFILTER_MAP, m_Materials.at(skyboxMatierialID).textures[U_PREFILTER_MAP]);
 				}
 			}
 
@@ -2019,8 +2019,8 @@ namespace flex
 				MaterialID pMatID = renderObject->materialID;
 				if (materialID != pMatID)
 				{
-					u32 pStride = CalculateVertexStride(m_Shaders[m_Materials[pMatID].material.shaderID].shader->vertexAttributes);
-					u32 newStride = CalculateVertexStride(m_Shaders[m_Materials[materialID].material.shaderID].shader->vertexAttributes);
+					u32 pStride = CalculateVertexStride(m_Shaders[m_Materials.at(pMatID).material.shaderID].shader->vertexAttributes);
+					u32 newStride = CalculateVertexStride(m_Shaders[m_Materials.at(materialID).material.shaderID].shader->vertexAttributes);
 					renderObject->materialID = materialID;
 					if (newStride != pStride)
 					{
@@ -2040,7 +2040,7 @@ namespace flex
 
 		Material& VulkanRenderer::GetMaterial(MaterialID materialID)
 		{
-			return m_Materials[materialID].material;
+			return m_Materials.at(materialID).material;
 		}
 
 		Shader& VulkanRenderer::GetShader(ShaderID shaderID)
@@ -2159,7 +2159,7 @@ namespace flex
 					const i32 MAX_NAME_LEN = 128;
 					static i32 selectedMaterialIndexShort = 0; // Index into shortened array
 					static MaterialID selectedMaterialID = 0;
-					while (!m_Materials[selectedMaterialID].material.visibleInEditor &&
+					while (!m_Materials.at(selectedMaterialID).material.visibleInEditor &&
 						selectedMaterialID < m_Materials.size() - 1)
 					{
 						++selectedMaterialID;
@@ -2169,7 +2169,7 @@ namespace flex
 					// Texture index values of 0 represent no texture, 1 = first index into textures array and so on
 					//static i32 albedoTextureIndex = 0;
 					//static bool bUpdateAlbedoTextureMaterial = false;
-					VulkanMaterial& mat = m_Materials[selectedMaterialID];
+					VulkanMaterial& mat = m_Materials.at(selectedMaterialID);
 
 					if (bUpdateFields)
 					{
@@ -2249,7 +2249,7 @@ namespace flex
 					if (ImGui::Combo("Shader", &selectedShaderIndex, &ShaderFunctor::GetShaderName,
 						(void*)m_Shaders.data(), m_Shaders.size()))
 					{
-						mat = m_Materials[selectedMaterialID];
+						mat = m_Materials.at(selectedMaterialID);
 						mat.material.shaderID = selectedShaderIndex;
 
 						bUpdateFields = true;
@@ -2332,13 +2332,13 @@ namespace flex
 						i32 matShortIndex = 0;
 						for (i32 i = 0; i < (i32)m_Materials.size(); ++i)
 						{
-							if (!m_Materials[i].material.visibleInEditor)
+							if (!m_Materials.at(i).material.visibleInEditor)
 							{
 								continue;
 							}
 
 							bool bSelected = (matShortIndex == selectedMaterialIndexShort);
-							if (ImGui::Selectable(m_Materials[i].material.name.c_str(), &bSelected))
+							if (ImGui::Selectable(m_Materials.at(i).material.name.c_str(), &bSelected))
 							{
 								if (selectedMaterialIndexShort != matShortIndex)
 								{
@@ -2352,7 +2352,7 @@ namespace flex
 							{
 								if (ImGui::Button("Duplicate"))
 								{
-									const Material& dupMat = m_Materials[i].material;
+									const Material& dupMat = m_Materials.at(i).material;
 
 									MaterialCreateInfo createInfo = {};
 									createInfo.name = GetIncrementedPostFixedStr(dupMat.name, "new material");
@@ -2382,7 +2382,7 @@ namespace flex
 
 									ImGui::SetDragDropPayload(m_MaterialPayloadCStr, data, size);
 
-									ImGui::Text("%s", m_Materials[i].material.name.c_str());
+									ImGui::Text("%s", m_Materials.at(i).material.name.c_str());
 
 									ImGui::EndDragDropSource();
 								}
@@ -2774,8 +2774,8 @@ namespace flex
 			}
 
 			VulkanRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetRenderID());
-			Material& skyboxMat = m_Materials[renderObject->materialID].material;
-			VulkanMaterial& renderObjectMat = m_Materials[renderObject->materialID];
+			Material& skyboxMat = m_Materials.at(renderObject->materialID).material;
+			VulkanMaterial& renderObjectMat = m_Materials.at(renderObject->materialID);
 
 			MaterialCreateInfo equirectangularToCubeMatCreateInfo = {};
 			equirectangularToCubeMatCreateInfo.name = "equirectangular to Cube";
@@ -2793,7 +2793,7 @@ namespace flex
 			}
 
 			MaterialID equirectangularToCubeMatID = InitializeMaterial(&equirectangularToCubeMatCreateInfo);
-			VulkanMaterial& equirectangularToCubeMat = m_Materials[equirectangularToCubeMatID];
+			VulkanMaterial& equirectangularToCubeMat = m_Materials.at(equirectangularToCubeMatID);
 
 			const VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
 			const u32 dim = (u32)renderObjectMat.material.cubemapSamplerSize.x;
@@ -3060,8 +3060,8 @@ namespace flex
 			}
 
 			VulkanRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetRenderID());
-			Material& skyboxMat = m_Materials[skyboxRenderObject->materialID].material;
-			VulkanMaterial& renderObjectMat = m_Materials[renderObject->materialID];
+			Material& skyboxMat = m_Materials.at(skyboxRenderObject->materialID).material;
+			VulkanMaterial& renderObjectMat = m_Materials.at(renderObject->materialID);
 
 			const VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
 			const u32 dim = (u32)renderObjectMat.material.irradianceSamplerSize.x;
@@ -3324,8 +3324,8 @@ namespace flex
 			}
 
 			VulkanRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetRenderID());
-			Material& skyboxMat = m_Materials[skyboxRenderObject->materialID].material;
-			VulkanMaterial& renderObjectMat = m_Materials[renderObject->materialID];
+			Material& skyboxMat = m_Materials.at(skyboxRenderObject->materialID).material;
+			VulkanMaterial& renderObjectMat = m_Materials.at(renderObject->materialID);
 
 			const VkFormat format = VK_FORMAT_R16G16B16A16_SFLOAT;
 			const u32 dim = (u32)renderObjectMat.material.prefilteredMapSize.x;
@@ -3973,7 +3973,7 @@ namespace flex
 				CreateGraphicsPipeline(&pipelineCreateInfo);
 
 				VulkanRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
-				VulkanMaterial* gBufferMaterial = &m_Materials[gBufferRenderObject->materialID];
+				VulkanMaterial* gBufferMaterial = &m_Materials.at(gBufferRenderObject->materialID);
 
 				// TODO: Remove/call only once prior to any font load
 				UpdateConstantUniformBuffers();
@@ -4603,7 +4603,7 @@ namespace flex
 			VkDeviceSize offsets[1] = { 0 };
 
 			MaterialID matID = (batch[0].materialID == InvalidMaterialID ? (batch[0].bScreenSpace ? m_SpriteMatSSID : m_SpriteMatWSID) : batch[0].materialID);
-			VulkanMaterial& spriteMat = m_Materials[matID];
+			VulkanMaterial& spriteMat = m_Materials.at(matID);
 			VulkanShader& spriteShader = m_Shaders[spriteMat.material.shaderID];
 
 			VulkanBuffer* vertBuffer = m_VertexIndexBufferPairs[spriteMat.material.shaderID].vertexBuffer;
@@ -4753,8 +4753,8 @@ namespace flex
 
 			for (ParticleSystem* particleSystem : m_ParticleSystems)
 			{
-				VulkanMaterial& particleSimMat = m_Materials[particleSystem->simMaterialID];
-				VulkanMaterial& particleRenderingMat = m_Materials[particleSystem->renderingMaterialID];
+				VulkanMaterial& particleSimMat = m_Materials.at(particleSystem->simMaterialID);
+				VulkanMaterial& particleRenderingMat = m_Materials.at(particleSystem->renderingMaterialID);
 
 				u32 dynamicUBOOffset = particleSystem->ID * m_DynamicAlignment;
 				UpdateDynamicUniformBuffer(particleSystem->renderingMaterialID, dynamicUBOOffset, particleSystem->model, nullptr);
@@ -4856,7 +4856,7 @@ namespace flex
 		{
 			assert(textureID != InvalidTextureID);
 
-			VulkanMaterial& spriteMat = m_Materials[spriteMaterialID];
+			VulkanMaterial& spriteMat = m_Materials.at(spriteMaterialID);
 			VulkanShader& spriteShader = m_Shaders[spriteMat.material.shaderID];
 
 			VkDescriptorSet descSet = VK_NULL_HANDLE;
@@ -4921,7 +4921,7 @@ namespace flex
 					particleBufferData[i].extraVec4 = glm::vec4(Lerp(0.6f, 0.2f, mag), 0.0f, 0.0f, 0.0f);
 				}
 
-				VulkanMaterial& particleSimMat = m_Materials[particleSystem->simMaterialID];
+				VulkanMaterial& particleSimMat = m_Materials.at(particleSystem->simMaterialID);
 
 				const u32 particleBufferSize = particleSystem->data.particleCount * sizeof(particleBufferData[0]);
 
@@ -5749,7 +5749,7 @@ namespace flex
 				return;
 			}
 
-			VulkanMaterial* material = &m_Materials[renderObject->materialID];
+			VulkanMaterial* material = &m_Materials.at(renderObject->materialID);
 			VulkanShader* shader = &m_Shaders[material->material.shaderID];
 
 			DescriptorSetCreateInfo createInfo = {};
@@ -6133,7 +6133,7 @@ namespace flex
 				return;
 			}
 
-			VulkanMaterial* material = &m_Materials[renderObject->materialID];
+			VulkanMaterial* material = &m_Materials.at(renderObject->materialID);
 			VulkanShader& shader = m_Shaders[material->material.shaderID];
 
 			GraphicsPipelineCreateInfo pipelineCreateInfo = {};
@@ -6764,7 +6764,7 @@ namespace flex
 						{
 							if (renderObject &&
 								renderObject->vertexBufferData &&
-								m_Materials[renderObject->materialID].material.shaderID == i)
+								m_Materials.at(renderObject->materialID).material.shaderID == i)
 							{
 								requiredMemory += renderObject->vertexBufferData->VertexBufferSize;
 							}
@@ -6815,7 +6815,7 @@ namespace flex
 			{
 				if (renderObject &&
 					renderObject->vertexBufferData &&
-					m_Materials[renderObject->materialID].material.shaderID == shaderID)
+					m_Materials.at(renderObject->materialID).material.shaderID == shaderID)
 				{
 					renderObject->vertexOffset = vertexCount;
 
@@ -6944,7 +6944,7 @@ namespace flex
 			{
 				if (renderObject &&
 					renderObject->bIndexed &&
-					m_Materials[renderObject->materialID].material.shaderID == shaderID)
+					m_Materials.at(renderObject->materialID).material.shaderID == shaderID)
 				{
 					renderObject->indexOffset = indices.size();
 					indices.insert(indices.end(), renderObject->indices->begin(), renderObject->indices->end());
@@ -7229,7 +7229,7 @@ namespace flex
 			ShaderID shaderID = shaderBatch.shaderID;
 			if (drawCallInfo && drawCallInfo->materialIDOverride != InvalidMaterialID)
 			{
-				shaderID = m_Materials[drawCallInfo->materialIDOverride].material.shaderID;
+				shaderID = m_Materials.at(drawCallInfo->materialIDOverride).material.shaderID;
 			}
 
 			VulkanBuffer* vertBuffer = m_VertexIndexBufferPairs[shaderID].vertexBuffer;
@@ -7251,7 +7251,7 @@ namespace flex
 					matID = drawCallInfo->materialIDOverride;
 				}
 
-				VulkanMaterial& mat = m_Materials[matID];
+				VulkanMaterial& mat = m_Materials.at(matID);
 				VulkanShader& shader = m_Shaders[mat.material.shaderID];
 
 				for (RenderID renderID : matBatch.batch.objects)
@@ -7343,7 +7343,7 @@ namespace flex
 			VkPipeline graphicsPipeline,
 			VkDescriptorSet descriptorSet)
 		{
-			VulkanMaterial& material = m_Materials[materialID];
+			VulkanMaterial& material = m_Materials.at(materialID);
 
 			VkDeviceSize offsets[1] = { 0 };
 			BindDescriptorSet(&material, 0, commandBuffer, pipelineLayout, descriptorSet);
@@ -7368,7 +7368,7 @@ namespace flex
 			clearValues[0].color = m_ClearColor;
 			clearValues[1].depthStencil = { 0.0f, 0 };
 
-			VulkanMaterial& material = m_Materials[materialID];
+			VulkanMaterial& material = m_Materials.at(materialID);
 
 			VkViewport fullscreenViewport = bFlipViewport ?
 				vks::viewportFlipped((real)m_SwapChainExtent.width, (real)m_SwapChainExtent.height, 0.0f, 1.0f) :
@@ -7511,7 +7511,7 @@ namespace flex
 				//
 
 				VulkanRenderObject* gBufferObject = GetRenderObject(m_GBufferQuadRenderID);
-				VulkanMaterial* gBufferMaterial = &m_Materials[gBufferObject->materialID];
+				VulkanMaterial* gBufferMaterial = &m_Materials.at(gBufferObject->materialID);
 
 				VertexIndexBufferPair* gBufferVertexIndexBuffer = &m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID];
 
@@ -7624,7 +7624,7 @@ namespace flex
 
 			for (ParticleSystem* particleSystem : m_ParticleSystems)
 			{
-				VulkanMaterial& particleSimMat = m_Materials[particleSystem->simMaterialID];
+				VulkanMaterial& particleSimMat = m_Materials.at(particleSystem->simMaterialID);
 
 				UniformBuffer* particleBuffer = particleSimMat.uniformBufferList.Get(UniformBufferType::PARTICLE_DATA);
 
@@ -8510,7 +8510,7 @@ namespace flex
 		void VulkanRenderer::UpdateDynamicUniformBuffer(MaterialID materialID, u32 dynamicOffset, const glm::mat4& model,
 			UniformOverrides const* uniformOverrides /* = nullptr */)
 		{
-			VulkanMaterial& material = m_Materials[materialID];
+			VulkanMaterial& material = m_Materials.at(materialID);
 			VulkanShader& shader = m_Shaders[material.material.shaderID];
 
 			UniformBufferList& uniformBufferList = material.uniformBufferList;
@@ -8668,7 +8668,7 @@ namespace flex
 					continue;
 				}
 
-				VulkanMaterial& renderObjectMat = m_Materials[renderObject->materialID];
+				VulkanMaterial& renderObjectMat = m_Materials.at(renderObject->materialID);
 
 				if (renderObjectMat.material.generateIrradianceSampler)
 				{
