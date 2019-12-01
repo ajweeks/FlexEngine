@@ -236,6 +236,8 @@ namespace flex
 		{
 			child->PostInitialize();
 		}
+
+		m_Transform.UpdateParentTransform();
 	}
 
 	void GameObject::Destroy()
