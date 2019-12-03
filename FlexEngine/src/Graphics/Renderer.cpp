@@ -130,27 +130,6 @@ namespace flex
 		m_ShadowSamplingData.cascadeDepthSplits = glm::vec4(0.1f, 0.25f, 0.5f, 0.8f);
 	}
 
-	void Renderer::LateInitialize()
-	{
-		// TODO: Deserialize info from scene file
-		{
-			ParticleSimData data = {};
-			data.color0 = glm::vec4(0.60f, 0.10f, 0.16f, 1.0f);
-			data.color1 = glm::vec4(0.10f, 0.11f, 0.38f, 1.0f);
-			data.speed = 2.5f;
-			data.particleCount = 65536;
-			AddParticleSystem("Particle System 0", data, glm::vec3(-20.0f, 0.0f, 0.0f), 10.0f);
-		}
-		{
-			ParticleSimData data = {};
-			data.color0 = glm::vec4(0.20f, 0.55f, 0.20f, 1.0f);
-			data.color1 = glm::vec4(0.40f, 0.05f, 0.18f, 1.0f);
-			data.speed = -3.0f;
-			data.particleCount = 32768;
-			AddParticleSystem("Particle System 1", data, glm::vec3(20.0f, 0.0f, 0.0f), 5.0f);
-		}
-	}
-
 	void Renderer::PostInitialize()
 	{
 		// TODO: Use MeshComponent for these objects?

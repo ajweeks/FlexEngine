@@ -374,8 +374,6 @@ namespace flex
 
 			m_TAA_ks[0] = 2.25f; // KL
 			m_TAA_ks[1] = 100.0f; // KH
-
-			Renderer::LateInitialize();
 		}
 
 		void VulkanRenderer::PostInitialize()
@@ -647,7 +645,7 @@ namespace flex
 
 			ClearMaterials(true);
 
-			for (ParticleSystem* particleSystem : m_ParticleSystems)
+			for (VulkanParticleSystem* particleSystem : m_ParticleSystems)
 			{
 				delete particleSystem;
 			}
@@ -1469,13 +1467,13 @@ namespace flex
 
 		void VulkanRenderer::CreateComputeResources()
 		{
-			for (ParticleSystem* particleSystem : m_ParticleSystems)
+			for (VulkanParticleSystem* particleSystem : m_ParticleSystems)
 			{
 				const std::string idStr = std::to_string(particleSystem->ID);
 
 				// Compute pipeline
 				{
-					VulkanMaterial* particleSimulationMaterial = &m_Materials.at(particleSystem->simMaterialID);
+					VulkanMaterial* particleSimulationMaterial = &m_Materials.at(particleSystem->system->simMaterialID);
 					VulkanShader* particleSimulationShader = &m_Shaders[particleSimulationMaterial->material.shaderID];
 
 					// Particle simulation descriptor set
@@ -1510,7 +1508,7 @@ namespace flex
 
 				// Graphics pipeline
 				{
-					VulkanMaterial* particleRenderingMaterial = &m_Materials.at(particleSystem->renderingMaterialID);
+					VulkanMaterial* particleRenderingMaterial = &m_Materials.at(particleSystem->system->renderingMaterialID);
 					VulkanShader* particleRenderingShader = &m_Shaders[particleRenderingMaterial->material.shaderID];
 
 					VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[particleRenderingMaterial->material.shaderID];
@@ -2745,23 +2743,22 @@ namespace flex
 			m_bRebatchRenderObjects = true;
 		}
 
-		ParticleSystemID VulkanRenderer::AddParticleSystem(const std::string& name, const ParticleSimData& data, const glm::vec3& pos, real scale)
+		ParticleSystemID VulkanRenderer::AddParticleSystem(const std::string& name, ParticleSystem* system, i32 particleCount)
 		{
-			if (data.particleCount > MAX_PARTICLE_COUNT)
+			if ((u32)particleCount > MAX_PARTICLE_COUNT)
 			{
-				PrintWarn("Attempted to create particle system with more particles than allowed (%d > %d) Only %d will be created\n", data.particleCount, MAX_PARTICLE_COUNT, MAX_PARTICLE_COUNT);
+				PrintWarn("Attempted to create particle system with more particles than allowed (%d > %d) Only %d will be created\n", particleCount, MAX_PARTICLE_COUNT, MAX_PARTICLE_COUNT);
 			}
 
-			ParticleSystem* particleSystem = new ParticleSystem(m_VulkanDevice);
-			particleSystem->name = name;
+			VulkanParticleSystem* particleSystem = new VulkanParticleSystem(m_VulkanDevice);
 			particleSystem->ID = m_ParticleSystems.size();
-			particleSystem->data = data;
-			particleSystem->bEnabled = true;
-			particleSystem->simMaterialID = CreateParticleSystemSimulationMaterial(name + " sim material");
-			particleSystem->renderingMaterialID = CreateParticleSystemRenderingMaterial(name + " rendering material");
-			particleSystem->model = glm::translate(pos);
-			particleSystem->scale = scale;
+			particleSystem->system = system;
+
+			system->simMaterialID = CreateParticleSystemSimulationMaterial(name + " sim material");
+			system->renderingMaterialID = CreateParticleSystemRenderingMaterial(name + " rendering material");
+
 			m_ParticleSystems.emplace_back(particleSystem);
+
 			return particleSystem->ID;
 		}
 
@@ -4751,13 +4748,13 @@ namespace flex
 		{
 			BeginDebugMarkerRegion(commandBuffer, "Particles");
 
-			for (ParticleSystem* particleSystem : m_ParticleSystems)
+			for (VulkanParticleSystem* particleSystem : m_ParticleSystems)
 			{
-				VulkanMaterial& particleSimMat = m_Materials.at(particleSystem->simMaterialID);
-				VulkanMaterial& particleRenderingMat = m_Materials.at(particleSystem->renderingMaterialID);
+				VulkanMaterial& particleSimMat = m_Materials.at(particleSystem->system->simMaterialID);
+				VulkanMaterial& particleRenderingMat = m_Materials.at(particleSystem->system->renderingMaterialID);
 
 				u32 dynamicUBOOffset = particleSystem->ID * m_DynamicAlignment;
-				UpdateDynamicUniformBuffer(particleSystem->renderingMaterialID, dynamicUBOOffset, particleSystem->model, nullptr);
+				UpdateDynamicUniformBuffer(particleSystem->system->renderingMaterialID, dynamicUBOOffset, particleSystem->system->model, nullptr);
 
 				VkDeviceSize offsets[1] = { 0 };
 				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &particleSimMat.uniformBufferList.Get(UniformBufferType::PARTICLE_DATA)->buffer.m_Buffer, offsets);
@@ -4898,11 +4895,11 @@ namespace flex
 
 			std::vector<ParticleBufferData> particleBufferData(MAX_PARTICLE_COUNT);
 
-			for (ParticleSystem* particleSystem : m_ParticleSystems)
+			for (VulkanParticleSystem* particleSystem : m_ParticleSystems)
 			{
 				const u32 dim = (u32)glm::pow((real)particleBufferData.size(), 1.0f / 3.0f);
 				const real invDim = 1.0f / (real)dim;
-				for (u32 i = 0; i < particleSystem->data.particleCount; ++i)
+				for (u32 i = 0; i < particleSystem->system->data.particleCount; ++i)
 				{
 					real x = (i % dim) * invDim - 0.5f;
 					real y = (i / dim % dim) * invDim - 0.5f;
@@ -4915,15 +4912,15 @@ namespace flex
 
 					real theta = atan2(dz, dx) - PI_DIV_TWO;
 
-					particleBufferData[i].pos = glm::vec3(x, y, z) * particleSystem->scale;
+					particleBufferData[i].pos = glm::vec3(x, y, z) * particleSystem->system->scale;
 					particleBufferData[i].color = glm::vec4(1.0f);
 					particleBufferData[i].vel = glm::vec3(cos(theta), 0.0f, sin(theta)) * mag;
 					particleBufferData[i].extraVec4 = glm::vec4(Lerp(0.6f, 0.2f, mag), 0.0f, 0.0f, 0.0f);
 				}
 
-				VulkanMaterial& particleSimMat = m_Materials.at(particleSystem->simMaterialID);
+				VulkanMaterial& particleSimMat = m_Materials.at(particleSystem->system->simMaterialID);
 
-				const u32 particleBufferSize = particleSystem->data.particleCount * sizeof(particleBufferData[0]);
+				const u32 particleBufferSize = particleSystem->system->data.particleCount * sizeof(particleBufferData[0]);
 
 				VK_CHECK_RESULT(stagingBuffer.Map());
 				memcpy(stagingBuffer.m_Mapped, particleBufferData.data(), particleBufferSize);
@@ -7622,9 +7619,9 @@ namespace flex
 			BeginGPUTimeStamp(commandBuffer, "Simulate Particles");
 			BeginDebugMarkerRegion(commandBuffer, "Simulate Particles");
 
-			for (ParticleSystem* particleSystem : m_ParticleSystems)
+			for (VulkanParticleSystem* particleSystem : m_ParticleSystems)
 			{
-				VulkanMaterial& particleSimMat = m_Materials.at(particleSystem->simMaterialID);
+				VulkanMaterial& particleSimMat = m_Materials.at(particleSystem->system->simMaterialID);
 
 				UniformBuffer* particleBuffer = particleSimMat.uniformBufferList.Get(UniformBufferType::PARTICLE_DATA);
 
@@ -7652,10 +7649,10 @@ namespace flex
 
 				UniformOverrides overrides = {};
 				overrides.overridenUniforms.AddUniform(U_PARTICLE_SIM_DATA);
-				particleSystem->data.dt = g_DeltaTime;
-				overrides.particleSimData = &particleSystem->data;
+				particleSystem->system->data.dt = g_DeltaTime;
+				overrides.particleSimData = &particleSystem->system->data;
 				// TODO: Only do once/on edit
-				UpdateDynamicUniformBuffer(particleSystem->simMaterialID, dynamicUBOOffset, MAT4_IDENTITY, &overrides);
+				UpdateDynamicUniformBuffer(particleSystem->system->simMaterialID, dynamicUBOOffset, MAT4_IDENTITY, &overrides);
 
 				u32 dynamicOffsets[2] = { dynamicUBOOffset, 0 };
 				vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_ParticleSimulationComputePipelineLayout, 0, 1, &particleSystem->computeDescriptorSet, ARRAY_LENGTH(dynamicOffsets), dynamicOffsets);

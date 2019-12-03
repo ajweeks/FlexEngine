@@ -31,7 +31,7 @@ namespace flex
 
 		i32 GetInt(const std::string& label) const;
 		/* Sets value to the result of GetString(label) if that field is present */
-		bool SetIntChecked(const std::string& label, int& value) const;
+		bool SetIntChecked(const std::string& label, i32& value) const;
 
 		real GetFloat(const std::string& label) const;
 		/* Sets value to the result of GetString(label) if that field is present */

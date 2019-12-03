@@ -14,6 +14,7 @@ IGNORE_WARNINGS_POP
 namespace flex
 {
 	enum class ImageFormat;
+	class ParticleSystem;
 
 	namespace vk
 	{
@@ -664,22 +665,16 @@ namespace flex
 			glm::vec2 translate;
 		};
 
-		struct ParticleSystem
+		struct VulkanParticleSystem
 		{
-			ParticleSystem(VulkanDevice* device);
+			VulkanParticleSystem(VulkanDevice* device);
 
-			std::string name;
 			ParticleSystemID ID = InvalidParticleSystemID;
-			ParticleSimData data;
-			bool bEnabled;
-			MaterialID simMaterialID = InvalidMaterialID;
-			MaterialID renderingMaterialID = InvalidMaterialID;
 			VkDescriptorSet computeDescriptorSet = VK_NULL_HANDLE;
 			VkDescriptorSet renderingDescriptorSet = VK_NULL_HANDLE;
 			VDeleter<VkPipeline> graphicsPipeline;
 			VDeleter<VkPipeline> computePipeline;
-			glm::mat4 model;
-			real scale;
+			ParticleSystem* system = nullptr;
 		};
 
 		enum class GPUVendor : u32

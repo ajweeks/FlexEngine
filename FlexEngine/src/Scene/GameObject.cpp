@@ -181,6 +181,10 @@ namespace flex
 		{
 			newGameObject = new Blocks(objectName);
 		} break;
+		case GameObjectType::PARTICLE_SYSTEM:
+		{
+			newGameObject = new ParticleSystem(objectName);
+		} break;
 		case GameObjectType::OBJECT: // Fall through
 		case GameObjectType::_NONE:
 			newGameObject = new GameObject(objectName, gameObjectType);
@@ -4477,4 +4481,65 @@ namespace flex
 		return EventReply::UNCONSUMED;
 	}
 
+	ParticleSystem::ParticleSystem(const std::string& name) :
+		GameObject(name, GameObjectType::PARTICLE_SYSTEM)
+	{
+	}
+
+	void ParticleSystem::Update()
+	{
+	}
+
+	GameObject* ParticleSystem::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
+	{
+		GameObject* newGameObject = new ParticleSystem(m_Name);
+
+		CopyGenericFields(newGameObject, parent, bCopyChildren);
+
+		return newGameObject;
+	}
+
+	void ParticleSystem::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID)
+	{
+		UNREFERENCED_PARAMETER(matID);
+		UNREFERENCED_PARAMETER(scene);
+
+		JSONObject particleSystemObj = parentObject.GetObject("particle system info");
+
+		Transform::ParseJSON(particleSystemObj, model);
+		particleSystemObj.SetFloatChecked("scale", scale);
+		particleSystemObj.SetBoolChecked("enabled", bEnabled);
+
+		JSONObject systemDataObj = particleSystemObj.GetObject("data");
+		data = {};
+		systemDataObj.SetVec4Checked("color0", data.color0);
+		systemDataObj.SetVec4Checked("color1", data.color1);
+		systemDataObj.SetFloatChecked("speed", data.speed);
+		i32 particleCount;
+		if (systemDataObj.SetIntChecked("particle count", particleCount))
+		{
+			data.particleCount = particleCount;
+		}
+
+		ID = g_Renderer->AddParticleSystem(m_Name, this, particleCount);
+	}
+
+	void ParticleSystem::SerializeUniqueFields(JSONObject& parentObject) const
+	{
+		JSONObject particleSystemObj = {};
+
+		particleSystemObj.fields.emplace_back(Transform::Serialize(model, m_Name.c_str()));
+		particleSystemObj.fields.emplace_back("scale", JSONValue(scale));
+		particleSystemObj.fields.emplace_back("enabled", JSONValue(bEnabled));
+
+
+		JSONObject systemDataObj = {};
+		systemDataObj.fields.emplace_back("color0", JSONValue(Vec4ToString(data.color0, 2)));
+		systemDataObj.fields.emplace_back("color1", JSONValue(Vec4ToString(data.color1, 2)));
+		systemDataObj.fields.emplace_back("speed", JSONValue(data.speed));
+		systemDataObj.fields.emplace_back("particle count", JSONValue((i32)data.particleCount));
+		particleSystemObj.fields.emplace_back("data", JSONValue(systemDataObj));
+
+		parentObject.fields.emplace_back("particle system info", JSONValue(particleSystemObj));
+	}
 } // namespace flex

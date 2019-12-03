@@ -96,6 +96,7 @@ namespace flex
 		TERMINAL,
 		GERSTNER_WAVE,
 		BLOCKS,
+		PARTICLE_SYSTEM,
 
 		_NONE
 	};
@@ -117,6 +118,7 @@ namespace flex
 		"terminal",
 		"gerstner wave",
 		"blocks",
+		"particle system",
 
 		"NONE"
 	};

@@ -2514,7 +2514,7 @@ namespace flex
 			return nullptr;
 		}
 
-		ParticleSystem::ParticleSystem(VulkanDevice* device) :
+		VulkanParticleSystem::VulkanParticleSystem(VulkanDevice* device) :
 			computePipeline(device->m_LogicalDevice, vkDestroyPipeline),
 			graphicsPipeline(device->m_LogicalDevice, vkDestroyPipeline)
 		{

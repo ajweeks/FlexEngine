@@ -20,6 +20,7 @@ namespace flex
 	class DirectionalLight;
 	class GameObject;
 	class MeshComponent;
+	class ParticleSystem;
 	class PointLight;
 	struct TextCache;
 	struct FontMetaData;
@@ -79,7 +80,6 @@ namespace flex
 		virtual ~Renderer();
 
 		virtual void Initialize();
-		void LateInitialize();
 		virtual void PostInitialize();
 		virtual void Destroy();
 
@@ -170,7 +170,7 @@ namespace flex
 		// Call whenever a user-controlled field, such as visibility, changes to rebatch render objects
 		virtual void RenderObjectStateChanged() = 0;
 
-		virtual ParticleSystemID AddParticleSystem(const std::string& name, const ParticleSimData& data, const glm::vec3& pos, real scale) = 0;
+		virtual ParticleSystemID AddParticleSystem(const std::string& name, ParticleSystem* system, i32 particleCount) = 0;
 
 		void DrawImGuiRenderObjects();
 		void DrawImGuiSettings();

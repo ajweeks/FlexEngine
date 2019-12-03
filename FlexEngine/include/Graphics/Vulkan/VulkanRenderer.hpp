@@ -110,7 +110,7 @@ namespace flex
 			virtual void RecaptureReflectionProbe() override;
 			virtual void RenderObjectStateChanged() override;
 
-			virtual ParticleSystemID AddParticleSystem(const std::string& name, const ParticleSimData& data, const glm::vec3& pos, real scale) override;
+			virtual ParticleSystemID AddParticleSystem(const std::string& name, ParticleSystem* system, i32 particleCount) override;
 
 			void RegisterFramebufferAttachment(FrameBufferAttachment* frameBufferAttachment);
 			FrameBufferAttachment* GetFrameBufferAttachment(FrameBufferAttachmentID frameBufferAttachmentID) const;
@@ -557,7 +557,7 @@ namespace flex
 
 			VDeleter<VkPipelineLayout> m_ParticleSimulationComputePipelineLayout;
 
-			std::vector<ParticleSystem*> m_ParticleSystems;
+			std::vector<VulkanParticleSystem*> m_ParticleSystems;
 
 			VDeleter<VkDescriptorPool> m_DescriptorPool;
 			std::vector<VkDescriptorSetLayout> m_DescriptorSetLayouts;
