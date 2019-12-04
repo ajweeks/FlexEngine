@@ -111,6 +111,7 @@ namespace flex
 			virtual void RenderObjectStateChanged() override;
 
 			virtual ParticleSystemID AddParticleSystem(const std::string& name, ParticleSystem* system, i32 particleCount) override;
+			virtual bool RemoveParticleSystem(ParticleSystemID particleSystemID) override;
 
 			void RegisterFramebufferAttachment(FrameBufferAttachment* frameBufferAttachment);
 			FrameBufferAttachment* GetFrameBufferAttachment(FrameBufferAttachmentID frameBufferAttachmentID) const;
@@ -191,10 +192,13 @@ namespace flex
 			void CreateSSAOPipelines();
 			void CreateSSAODescriptorSets();
 
-			MaterialID GetNextAvailableMaterialID();
+			MaterialID GetNextAvailableMaterialID() const;
 			RenderID GetNextAvailableRenderID() const;
+			ParticleSystemID GetNextAvailableParticleSystemID() const;
 
 			void InsertNewRenderObject(VulkanRenderObject* renderObject);
+			void InsertNewParticleSystem(VulkanParticleSystem* particleSystem);
+
 			void CreateInstance();
 			void SetupDebugCallback();
 			void CreateSurface();
@@ -225,6 +229,7 @@ namespace flex
 			void CreatePostProcessingResources();
 			void CreateFullscreenBlitResources();
 			void CreateComputeResources();
+			void CreateParticleSystemResources(VulkanParticleSystem* particleSystem);
 
 			// Returns a pointer into m_LoadedTextures if a texture has been loaded from that file path, otherwise returns nullptr
 			VulkanTexture* GetLoadedTexture(const std::string& filePath);
@@ -348,7 +353,8 @@ namespace flex
 			void CreateShadowResources();
 			VkDescriptorSet CreateSpriteDescSet(MaterialID spriteMaterialID, TextureID textureID, u32 layer = 0);
 
-			void InitializeParticleBuffers();
+			void InitializeAllParticleSystemBuffers();
+			void InitializeParticleSystemBuffer(VulkanParticleSystem* particleSystem);
 
 			std::vector<std::string> m_SupportedDeviceExtenions;
 

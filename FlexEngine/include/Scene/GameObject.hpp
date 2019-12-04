@@ -535,28 +535,6 @@ namespace flex
 
 	};
 
-	class ParticleSystem : public GameObject
-	{
-	public:
-		explicit ParticleSystem(const std::string& name);
-
-		virtual void Update() override;
-
-		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
-
-		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
-		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
-
-		glm::mat4 model;
-		real scale;
-		ParticleSimData data;
-		bool bEnabled;
-		MaterialID simMaterialID = InvalidMaterialID;
-		MaterialID renderingMaterialID = InvalidMaterialID;
-		ParticleSystemID ID = InvalidParticleSystemID;
-
-	};
-
 	class Terminal : public GameObject
 	{
 	public:
@@ -626,6 +604,36 @@ namespace flex
 
 		const sec m_CursorBlinkRate = 0.6f;
 		sec m_CursorBlinkTimer = 0.0f;
+
+	};
+
+	class ParticleSystem : public GameObject
+	{
+	public:
+		explicit ParticleSystem(const std::string& name);
+
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
+
+		virtual void Update() override;
+		virtual void Destroy() override;
+
+		virtual void DrawImGuiObjects() override;
+
+		virtual void OnTransformChanged() override;
+
+		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+
+		glm::mat4 model;
+		real scale;
+		ParticleSimData data;
+		bool bEnabled;
+		MaterialID simMaterialID = InvalidMaterialID;
+		MaterialID renderingMaterialID = InvalidMaterialID;
+		ParticleSystemID ID = InvalidParticleSystemID;
+
+	private:
+		void UpdateModelMatrix();
 
 	};
 

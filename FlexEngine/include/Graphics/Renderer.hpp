@@ -171,6 +171,7 @@ namespace flex
 		virtual void RenderObjectStateChanged() = 0;
 
 		virtual ParticleSystemID AddParticleSystem(const std::string& name, ParticleSystem* system, i32 particleCount) = 0;
+		virtual bool RemoveParticleSystem(ParticleSystemID particleSystemID) = 0;
 
 		void DrawImGuiRenderObjects();
 		void DrawImGuiSettings();

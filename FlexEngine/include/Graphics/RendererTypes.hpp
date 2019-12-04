@@ -13,8 +13,6 @@ IGNORE_WARNINGS_POP
 #include "JSONTypes.hpp"
 #include "Pair.hpp"
 
-extern const char** DataTypeStrs;
-
 namespace flex
 {
 	class VertexBufferData;

@@ -563,7 +563,7 @@ namespace flex
 				UpdateDynamicUniformBuffer(i);
 			}
 
-			InitializeParticleBuffers();
+			InitializeAllParticleSystemBuffers();
 
 			// TODO: Move down?
 			m_bPostInitialized = true;
@@ -1469,91 +1469,101 @@ namespace flex
 		{
 			for (VulkanParticleSystem* particleSystem : m_ParticleSystems)
 			{
-				const std::string idStr = std::to_string(particleSystem->ID);
-
-				// Compute pipeline
+				if (!particleSystem)
 				{
-					VulkanMaterial* particleSimulationMaterial = &m_Materials.at(particleSystem->system->simMaterialID);
-					VulkanShader* particleSimulationShader = &m_Shaders[particleSimulationMaterial->material.shaderID];
-
-					// Particle simulation descriptor set
-					VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[particleSimulationMaterial->material.shaderID];
-
-					DescriptorSetCreateInfo descSetCreateInfo = {};
-					std::string descSetName = "Particle simulation descriptor set " + idStr;
-					descSetCreateInfo.DBG_Name = descSetName.c_str();
-					descSetCreateInfo.descriptorSet = &particleSystem->computeDescriptorSet;
-					descSetCreateInfo.descriptorSetLayout = &descSetLayout;
-					descSetCreateInfo.shaderID = particleSimulationMaterial->material.shaderID;
-					descSetCreateInfo.uniformBufferList = &particleSimulationMaterial->uniformBufferList;
-					FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
-					CreateDescriptorSet(&descSetCreateInfo);
-
-					// Particle simulation compute pipeline
-					if (m_ParticleSimulationComputePipelineLayout == VK_NULL_HANDLE)
-					{
-						VkPipelineLayoutCreateInfo pipelineLayoutInfo = vks::pipelineLayoutCreateInfo(1, &descSetLayout);
-						VK_CHECK_RESULT(vkCreatePipelineLayout(m_VulkanDevice->m_LogicalDevice, &pipelineLayoutInfo, nullptr, m_ParticleSimulationComputePipelineLayout.replace()));
-					}
-
-					VkPipelineShaderStageCreateInfo stage = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_COMPUTE_BIT, particleSimulationShader->computeShaderModule);
-
-					VkComputePipelineCreateInfo pipelineCreateInfo = vks::computePipelineCreateInfo(m_ParticleSimulationComputePipelineLayout);
-					pipelineCreateInfo.stage = stage;
-					VK_CHECK_RESULT(vkCreateComputePipelines(m_VulkanDevice->m_LogicalDevice, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, particleSystem->computePipeline.replace()));
-
-					std::string pipelineName = "Particle simulation compute pipeline " + idStr;
-					SetPipelineName(m_VulkanDevice, particleSystem->computePipeline, pipelineName.c_str());
+					continue;
 				}
 
-				// Graphics pipeline
+				CreateParticleSystemResources(particleSystem);
+			}
+		}
+
+		void VulkanRenderer::CreateParticleSystemResources(VulkanParticleSystem* particleSystem)
+		{
+			const std::string idStr = std::to_string(particleSystem->ID);
+
+			// Compute pipeline
+			{
+				VulkanMaterial* particleSimulationMaterial = &m_Materials.at(particleSystem->system->simMaterialID);
+				VulkanShader* particleSimulationShader = &m_Shaders[particleSimulationMaterial->material.shaderID];
+
+				// Particle simulation descriptor set
+				VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[particleSimulationMaterial->material.shaderID];
+
+				DescriptorSetCreateInfo descSetCreateInfo = {};
+				std::string descSetName = "Particle simulation descriptor set " + idStr;
+				descSetCreateInfo.DBG_Name = descSetName.c_str();
+				descSetCreateInfo.descriptorSet = &particleSystem->computeDescriptorSet;
+				descSetCreateInfo.descriptorSetLayout = &descSetLayout;
+				descSetCreateInfo.shaderID = particleSimulationMaterial->material.shaderID;
+				descSetCreateInfo.uniformBufferList = &particleSimulationMaterial->uniformBufferList;
+				FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
+				CreateDescriptorSet(&descSetCreateInfo);
+
+				// Particle simulation compute pipeline
+				if (m_ParticleSimulationComputePipelineLayout == VK_NULL_HANDLE)
 				{
-					VulkanMaterial* particleRenderingMaterial = &m_Materials.at(particleSystem->system->renderingMaterialID);
-					VulkanShader* particleRenderingShader = &m_Shaders[particleRenderingMaterial->material.shaderID];
-
-					VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[particleRenderingMaterial->material.shaderID];
-
-					// Particles descriptor set
-					DescriptorSetCreateInfo descSetCreateInfo = {};
-					std::string descSetName = "Particle rendering descriptor set " + idStr;
-					descSetCreateInfo.DBG_Name = descSetName.c_str();
-					descSetCreateInfo.descriptorSet = &particleSystem->renderingDescriptorSet;
-					descSetCreateInfo.descriptorSetLayout = &descSetLayout;
-					descSetCreateInfo.shaderID = particleRenderingMaterial->material.shaderID;
-					descSetCreateInfo.uniformBufferList = &particleRenderingMaterial->uniformBufferList;
-
-					VulkanTexture* texture = m_LoadedTextures[m_AlphaBGTextureID];
-					descSetCreateInfo.imageDescriptors.Add(U_ALBEDO_SAMPLER, ImageDescriptorInfo{ texture->imageView, m_LinMipLinSampler });
-
-					FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
-					CreateDescriptorSet(&descSetCreateInfo);
-
-					// Particles graphics pipeline
-					// Particle simulation compute pipeline
-					if (m_ParticleGraphicsPipelineLayout == VK_NULL_HANDLE)
-					{
-						VkPipelineLayoutCreateInfo pipelineLayoutInfo = vks::pipelineLayoutCreateInfo(1, &descSetLayout);
-						VK_CHECK_RESULT(vkCreatePipelineLayout(m_VulkanDevice->m_LogicalDevice, &pipelineLayoutInfo, nullptr, m_ParticleGraphicsPipelineLayout.replace()));
-					}
-
-					GraphicsPipelineCreateInfo pipelineCreateInfo = {};
-					std::string pipelineName = "Particle rendering graphics pipeline " + idStr;
-					pipelineCreateInfo.DBG_Name = pipelineName.c_str();
-					pipelineCreateInfo.graphicsPipeline = particleSystem->graphicsPipeline.replace();
-					pipelineCreateInfo.pipelineLayout = &m_ParticleGraphicsPipelineLayout;
-					pipelineCreateInfo.shaderID = particleRenderingMaterial->material.shaderID;
-					pipelineCreateInfo.vertexAttributes = particleRenderingShader->shader->vertexAttributes;
-					pipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
-					pipelineCreateInfo.cullMode = VK_CULL_MODE_NONE;
-					pipelineCreateInfo.descriptorSetLayoutIndex = particleRenderingMaterial->material.shaderID;
-					pipelineCreateInfo.bSetDynamicStates = true;
-					pipelineCreateInfo.bEnableColorBlending = particleRenderingShader->shader->bTranslucent;
-					pipelineCreateInfo.subpass = particleRenderingShader->shader->subpass;
-					pipelineCreateInfo.depthCompareOp = VK_COMPARE_OP_GREATER_OR_EQUAL;
-					pipelineCreateInfo.depthWriteEnable = particleRenderingShader->shader->bDepthWriteEnable ? VK_TRUE : VK_FALSE;
-					pipelineCreateInfo.renderPass = *m_ForwardRenderPass;
-					CreateGraphicsPipeline(&pipelineCreateInfo);
+					VkPipelineLayoutCreateInfo pipelineLayoutInfo = vks::pipelineLayoutCreateInfo(1, &descSetLayout);
+					VK_CHECK_RESULT(vkCreatePipelineLayout(m_VulkanDevice->m_LogicalDevice, &pipelineLayoutInfo, nullptr, m_ParticleSimulationComputePipelineLayout.replace()));
 				}
+
+				VkPipelineShaderStageCreateInfo stage = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_COMPUTE_BIT, particleSimulationShader->computeShaderModule);
+
+				VkComputePipelineCreateInfo pipelineCreateInfo = vks::computePipelineCreateInfo(m_ParticleSimulationComputePipelineLayout);
+				pipelineCreateInfo.stage = stage;
+				VK_CHECK_RESULT(vkCreateComputePipelines(m_VulkanDevice->m_LogicalDevice, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, particleSystem->computePipeline.replace()));
+
+				std::string pipelineName = "Particle simulation compute pipeline " + idStr;
+				SetPipelineName(m_VulkanDevice, particleSystem->computePipeline, pipelineName.c_str());
+			}
+
+			// Graphics pipeline
+			{
+				VulkanMaterial* particleRenderingMaterial = &m_Materials.at(particleSystem->system->renderingMaterialID);
+				VulkanShader* particleRenderingShader = &m_Shaders[particleRenderingMaterial->material.shaderID];
+
+				VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[particleRenderingMaterial->material.shaderID];
+
+				// Particles descriptor set
+				DescriptorSetCreateInfo descSetCreateInfo = {};
+				std::string descSetName = "Particle rendering descriptor set " + idStr;
+				descSetCreateInfo.DBG_Name = descSetName.c_str();
+				descSetCreateInfo.descriptorSet = &particleSystem->renderingDescriptorSet;
+				descSetCreateInfo.descriptorSetLayout = &descSetLayout;
+				descSetCreateInfo.shaderID = particleRenderingMaterial->material.shaderID;
+				descSetCreateInfo.uniformBufferList = &particleRenderingMaterial->uniformBufferList;
+
+				VulkanTexture* texture = m_LoadedTextures[m_AlphaBGTextureID];
+				descSetCreateInfo.imageDescriptors.Add(U_ALBEDO_SAMPLER, ImageDescriptorInfo{ texture->imageView, m_LinMipLinSampler });
+
+				FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
+				CreateDescriptorSet(&descSetCreateInfo);
+
+				// Particles graphics pipeline
+				// Particle simulation compute pipeline
+				if (m_ParticleGraphicsPipelineLayout == VK_NULL_HANDLE)
+				{
+					VkPipelineLayoutCreateInfo pipelineLayoutInfo = vks::pipelineLayoutCreateInfo(1, &descSetLayout);
+					VK_CHECK_RESULT(vkCreatePipelineLayout(m_VulkanDevice->m_LogicalDevice, &pipelineLayoutInfo, nullptr, m_ParticleGraphicsPipelineLayout.replace()));
+				}
+
+				GraphicsPipelineCreateInfo pipelineCreateInfo = {};
+				std::string pipelineName = "Particle rendering graphics pipeline " + idStr;
+				pipelineCreateInfo.DBG_Name = pipelineName.c_str();
+				pipelineCreateInfo.graphicsPipeline = particleSystem->graphicsPipeline.replace();
+				pipelineCreateInfo.pipelineLayout = &m_ParticleGraphicsPipelineLayout;
+				pipelineCreateInfo.shaderID = particleRenderingMaterial->material.shaderID;
+				pipelineCreateInfo.vertexAttributes = particleRenderingShader->shader->vertexAttributes;
+				pipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+				pipelineCreateInfo.cullMode = VK_CULL_MODE_NONE;
+				pipelineCreateInfo.descriptorSetLayoutIndex = particleRenderingMaterial->material.shaderID;
+				pipelineCreateInfo.bSetDynamicStates = true;
+				pipelineCreateInfo.bEnableColorBlending = particleRenderingShader->shader->bTranslucent;
+				pipelineCreateInfo.subpass = particleRenderingShader->shader->subpass;
+				pipelineCreateInfo.depthCompareOp = VK_COMPARE_OP_GREATER_OR_EQUAL;
+				pipelineCreateInfo.depthWriteEnable = particleRenderingShader->shader->bDepthWriteEnable ? VK_TRUE : VK_FALSE;
+				pipelineCreateInfo.renderPass = *m_ForwardRenderPass;
+				CreateGraphicsPipeline(&pipelineCreateInfo);
 			}
 		}
 
@@ -1909,7 +1919,7 @@ namespace flex
 
 				GenerateIrradianceMaps();
 
-				InitializeParticleBuffers();
+				InitializeAllParticleSystemBuffers();
 			}
 		}
 
@@ -2757,9 +2767,27 @@ namespace flex
 			system->simMaterialID = CreateParticleSystemSimulationMaterial(name + " sim material");
 			system->renderingMaterialID = CreateParticleSystemRenderingMaterial(name + " rendering material");
 
-			m_ParticleSystems.emplace_back(particleSystem);
+			InsertNewParticleSystem(particleSystem);
+
+			if (m_bPostInitialized)
+			{
+				CreateParticleSystemResources(particleSystem);
+				InitializeParticleSystemBuffer(particleSystem);
+			}
 
 			return particleSystem->ID;
+		}
+
+		bool VulkanRenderer::RemoveParticleSystem(ParticleSystemID particleSystemID)
+		{
+			if (particleSystemID < m_ParticleSystems.size())
+			{
+				delete m_ParticleSystems[particleSystemID];
+				m_ParticleSystems[particleSystemID] = nullptr;
+				return true;
+			}
+
+			return false;
 		}
 
 		void VulkanRenderer::GenerateCubemapFromHDR(VulkanRenderObject* renderObject, const std::string& environmentMapPath)
@@ -4750,6 +4778,11 @@ namespace flex
 
 			for (VulkanParticleSystem* particleSystem : m_ParticleSystems)
 			{
+				if (!particleSystem || !particleSystem->system->IsVisible())
+				{
+					continue;
+				}
+
 				VulkanMaterial& particleSimMat = m_Materials.at(particleSystem->system->simMaterialID);
 				VulkanMaterial& particleRenderingMat = m_Materials.at(particleSystem->system->renderingMaterialID);
 
@@ -4877,13 +4910,19 @@ namespace flex
 			return descSet;
 		}
 
-		void VulkanRenderer::InitializeParticleBuffers()
+		void VulkanRenderer::InitializeAllParticleSystemBuffers()
 		{
-			if (m_ParticleSystems.empty())
+			for (VulkanParticleSystem* particleSystem : m_ParticleSystems)
 			{
-				return;
+				if (particleSystem)
+				{
+					InitializeParticleSystemBuffer(particleSystem);
+				}
 			}
+		}
 
+		void VulkanRenderer::InitializeParticleSystemBuffer(VulkanParticleSystem* particleSystem)
+		{
 			const u32 maxParticleBufferSize = MAX_PARTICLE_COUNT * sizeof(ParticleBufferData);
 
 			VulkanBuffer stagingBuffer(m_VulkanDevice->m_LogicalDevice);
@@ -4895,44 +4934,41 @@ namespace flex
 
 			std::vector<ParticleBufferData> particleBufferData(MAX_PARTICLE_COUNT);
 
-			for (VulkanParticleSystem* particleSystem : m_ParticleSystems)
+			const u32 dim = (u32)glm::pow((real)particleBufferData.size(), 1.0f / 3.0f);
+			const real invDim = 1.0f / (real)dim;
+			for (u32 i = 0; i < particleSystem->system->data.particleCount; ++i)
 			{
-				const u32 dim = (u32)glm::pow((real)particleBufferData.size(), 1.0f / 3.0f);
-				const real invDim = 1.0f / (real)dim;
-				for (u32 i = 0; i < particleSystem->system->data.particleCount; ++i)
-				{
-					real x = (i % dim) * invDim - 0.5f;
-					real y = (i / dim % dim) * invDim - 0.5f;
-					real z = (i / (dim * dim) % dim) * invDim - 0.5f;
+				real x = (i % dim) * invDim - 0.5f;
+				real y = (i / dim % dim) * invDim - 0.5f;
+				real z = (i / (dim * dim) % dim) * invDim - 0.5f;
 
-					real mag = glm::length(glm::vec3(x, y, z));
+				real mag = glm::length(glm::vec3(x, y, z));
 
-					real dx = x * 2.0f;
-					real dz = z * 2.0f;
+				real dx = x * 2.0f;
+				real dz = z * 2.0f;
 
-					real theta = atan2(dz, dx) - PI_DIV_TWO;
+				real theta = atan2(dz, dx) - PI_DIV_TWO;
 
-					particleBufferData[i].pos = glm::vec3(x, y, z) * particleSystem->system->scale;
-					particleBufferData[i].color = glm::vec4(1.0f);
-					particleBufferData[i].vel = glm::vec3(cos(theta), 0.0f, sin(theta)) * mag;
-					particleBufferData[i].extraVec4 = glm::vec4(Lerp(0.6f, 0.2f, mag), 0.0f, 0.0f, 0.0f);
-				}
-
-				VulkanMaterial& particleSimMat = m_Materials.at(particleSystem->system->simMaterialID);
-
-				const u32 particleBufferSize = particleSystem->system->data.particleCount * sizeof(particleBufferData[0]);
-
-				VK_CHECK_RESULT(stagingBuffer.Map());
-				memcpy(stagingBuffer.m_Mapped, particleBufferData.data(), particleBufferSize);
-				memset(((u8*)stagingBuffer.m_Mapped) + particleBufferSize, 0, MAX_PARTICLE_COUNT * sizeof(ParticleBufferData) - particleBufferSize);
-				stagingBuffer.Unmap();
-
-				UniformBuffer* particleBuffer = particleSimMat.uniformBufferList.Get(UniformBufferType::PARTICLE_DATA);
-				CopyBuffer(m_VulkanDevice, m_GraphicsQueue, stagingBuffer.m_Buffer, particleBuffer->buffer.m_Buffer, particleBuffer->buffer.m_Size);
+				particleBufferData[i].pos = glm::vec3(x, y, z) * particleSystem->system->scale;
+				particleBufferData[i].color = glm::vec4(1.0f);
+				particleBufferData[i].vel = glm::vec3(cos(theta), 0.0f, sin(theta)) * mag;
+				particleBufferData[i].extraVec4 = glm::vec4(Lerp(0.6f, 0.2f, mag), 0.0f, 0.0f, 0.0f);
 			}
+
+			VulkanMaterial& particleSimMat = m_Materials.at(particleSystem->system->simMaterialID);
+
+			const u32 particleBufferSize = particleSystem->system->data.particleCount * sizeof(particleBufferData[0]);
+
+			VK_CHECK_RESULT(stagingBuffer.Map());
+			memcpy(stagingBuffer.m_Mapped, particleBufferData.data(), particleBufferSize);
+			memset(((u8*)stagingBuffer.m_Mapped) + particleBufferSize, 0, MAX_PARTICLE_COUNT * sizeof(ParticleBufferData) - particleBufferSize);
+			stagingBuffer.Unmap();
+
+			UniformBuffer* particleBuffer = particleSimMat.uniformBufferList.Get(UniformBufferType::PARTICLE_DATA);
+			CopyBuffer(m_VulkanDevice, m_GraphicsQueue, stagingBuffer.m_Buffer, particleBuffer->buffer.m_Buffer, particleBuffer->buffer.m_Size);
 		}
 
-		MaterialID VulkanRenderer::GetNextAvailableMaterialID()
+		MaterialID VulkanRenderer::GetNextAvailableMaterialID() const
 		{
 			// Return lowest available ID
 			MaterialID result = 0;
@@ -4956,6 +4992,19 @@ namespace flex
 			return m_RenderObjects.size();
 		}
 
+		ParticleSystemID VulkanRenderer::GetNextAvailableParticleSystemID() const
+		{
+			for (u32 i = 0; i < m_ParticleSystems.size(); ++i)
+			{
+				if (m_ParticleSystems[i] == nullptr)
+				{
+					return (ParticleSystemID)i;
+				}
+			}
+
+			return m_ParticleSystems.size();
+		}
+
 		void VulkanRenderer::InsertNewRenderObject(VulkanRenderObject* renderObject)
 		{
 			if (renderObject->renderID < m_RenderObjects.size())
@@ -4965,8 +5014,25 @@ namespace flex
 			}
 			else
 			{
-				m_RenderObjects.push_back(renderObject);
+				m_RenderObjects.emplace_back(renderObject);
 			}
+
+			assert(m_RenderObjects[renderObject->renderID] == renderObject);
+		}
+
+		void VulkanRenderer::InsertNewParticleSystem(VulkanParticleSystem* particleSystem)
+		{
+			if (particleSystem->ID < m_ParticleSystems.size())
+			{
+				assert(m_ParticleSystems[particleSystem->ID] == nullptr);
+				m_ParticleSystems[particleSystem->ID] = particleSystem;
+			}
+			else
+			{
+				m_ParticleSystems.emplace_back(particleSystem);
+			}
+
+			assert(m_ParticleSystems[particleSystem->ID] == particleSystem);
 		}
 
 		void VulkanRenderer::CreateInstance()
@@ -7621,6 +7687,11 @@ namespace flex
 
 			for (VulkanParticleSystem* particleSystem : m_ParticleSystems)
 			{
+				if (!particleSystem || !particleSystem->system->IsVisible() || !particleSystem->system->bEnabled)
+				{
+					continue;
+				}
+
 				VulkanMaterial& particleSimMat = m_Materials.at(particleSystem->system->simMaterialID);
 
 				UniformBuffer* particleBuffer = particleSimMat.uniformBufferList.Get(UniformBufferType::PARTICLE_DATA);
@@ -8720,7 +8791,7 @@ namespace flex
 			CreateSSAODescriptorSets();
 			CreateSSAOPipelines();
 
-			InitializeParticleBuffers();
+			InitializeAllParticleSystemBuffers();
 
 			CreatePostProcessingResources();
 			CreateFullscreenBlitResources();
