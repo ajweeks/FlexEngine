@@ -244,7 +244,7 @@ namespace flex
 			TextureID m_GBufferTexture1ID = InvalidTextureID; // albedo + metallic
 
 			TextureHandle m_ShadowMapTexture;
-			std::array<u32, NUM_SHADOW_CASCADES> m_ShadowMapFBOs;
+			std::array<u32, SHADOW_CASCADE_COUNT> m_ShadowMapFBOs;
 
 			u32 m_SSAOFrameBuffer = 0;
 			u32 m_SSAOBlurHFrameBuffer = 0;

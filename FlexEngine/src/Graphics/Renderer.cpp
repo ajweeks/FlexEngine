@@ -100,8 +100,8 @@ namespace flex
 			PrintWarn("Unable to find hdri directory at %s\n", hdriPath.c_str());
 		}
 
-		m_PointLights = (PointLightData*)malloc_hooked(MAX_NUM_POINT_LIGHTS * sizeof(PointLightData));
-		for (i32 i = 0; i < MAX_NUM_POINT_LIGHTS; ++i)
+		m_PointLights = (PointLightData*)malloc_hooked(MAX_POINT_LIGHT_COUNT * sizeof(PointLightData));
+		for (i32 i = 0; i < MAX_POINT_LIGHT_COUNT; ++i)
 		{
 			m_PointLights[i].color = VEC3_NEG_ONE;
 			m_PointLights[i].enabled = 0;
@@ -531,7 +531,7 @@ namespace flex
 
 	PointLightID Renderer::RegisterPointLight(PointLightData* pointLightData)
 	{
-		if (m_NumPointLightsEnabled < MAX_NUM_POINT_LIGHTS)
+		if (m_NumPointLightsEnabled < MAX_POINT_LIGHT_COUNT)
 		{
 			PointLightID newPointLightID = (PointLightID)m_NumPointLightsEnabled;
 			memcpy(m_PointLights + newPointLightID, pointLightData, sizeof(PointLightData));
@@ -543,7 +543,7 @@ namespace flex
 
 	void Renderer::UpdatePointLightData(PointLightID ID, PointLightData* data)
 	{
-		assert(ID < MAX_NUM_POINT_LIGHTS);
+		assert(ID < MAX_POINT_LIGHT_COUNT);
 		assert(data != nullptr);
 
 		memcpy(m_PointLights + ID, data, sizeof(PointLightData));
@@ -646,7 +646,7 @@ namespace flex
 			drawInfo.materialID = m_SpriteArrMatID;
 			drawInfo.anchor = AnchorPoint::BOTTOM_RIGHT;
 			drawInfo.scale = glm::vec3(0.2f);
-			for (u32 i = 0; i < NUM_SHADOW_CASCADES; ++i)
+			for (u32 i = 0; i < SHADOW_CASCADE_COUNT; ++i)
 			{
 				// TODO:
 				drawInfo.textureID = 999 + i;
@@ -698,7 +698,7 @@ namespace flex
 			glm::mat4 invCam = glm::inverse(modifiedProj * cam->GetView());
 
 			real lastSplitDist = 0.0;
-			for (u32 c = 0; c < NUM_SHADOW_CASCADES; ++c)
+			for (u32 c = 0; c < SHADOW_CASCADE_COUNT; ++c)
 			{
 				real splitDist = depthSplits[c];
 
@@ -921,7 +921,7 @@ namespace flex
 
 		DoCreateGameObjectButton("Add object...", "Add object");
 
-		const bool bShowAddPointLightBtn = m_NumPointLightsEnabled < MAX_NUM_POINT_LIGHTS;
+		const bool bShowAddPointLightBtn = m_NumPointLightsEnabled < MAX_POINT_LIGHT_COUNT;
 		if (bShowAddPointLightBtn)
 		{
 			if (ImGui::Button("Add point light"))

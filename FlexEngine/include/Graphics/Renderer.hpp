@@ -254,6 +254,11 @@ namespace flex
 		bool bUniformBufferWindowShowing = false;
 		bool bGPUTimingsWindowShowing = false;
 
+		static const u32 MAX_PARTICLE_COUNT = 65536;
+		static const u32 PARTICLES_PER_DISPATCH = 256;
+		static const u32 SHADOW_CASCADE_RES = 2048;
+		static const u32 SSAO_NOISE_DIM = 4;
+
 	protected:
 		virtual void LoadShaders();
 		virtual bool LoadShaderCode(ShaderID shaderID) = 0;
@@ -334,9 +339,8 @@ namespace flex
 		//MaterialID m_CubemapGBufferMaterialID = InvalidMaterialID;
 
 		// TODO: Make tweakable at runtime
-		const u32 SHADOW_CASCADE_RES = 2048;
-		glm::mat4 m_ShadowLightViewMats[NUM_SHADOW_CASCADES];
-		glm::mat4 m_ShadowLightProjMats[NUM_SHADOW_CASCADES];
+		glm::mat4 m_ShadowLightViewMats[SHADOW_CASCADE_COUNT];
+		glm::mat4 m_ShadowLightProjMats[SHADOW_CASCADE_COUNT];
 
 		// Filled every frame
 		std::vector<SpriteQuadDrawInfo> m_QueuedWSSprites;
@@ -353,9 +357,6 @@ namespace flex
 		// TODO: Use full screen tri for gbuffer?
 		RenderID m_GBufferQuadRenderID = InvalidRenderID;
 		VertexBufferData m_gBufferQuadVertexBufferData;
-
-		const u32 MAX_PARTICLE_COUNT = 65536;
-		const u32 PARTICLES_PER_DISPATCH = 256;
 
 		// Any editor objects which also require a game object wrapper
 		std::vector<GameObject*> m_EditorObjects;
@@ -433,8 +434,6 @@ namespace flex
 
 		// Contains file paths for each file with a .hdr extension in the `resources/textures/hdri/` directory
 		std::vector<std::string> m_AvailableHDRIs;
-
-		static const u32 SSAO_NOISE_DIM = 4;
 
 		ShadowSamplingData m_ShadowSamplingData;
 

@@ -20,8 +20,8 @@ namespace flex
 	class VertexBufferData;
 	class GameObject;
 
-	static const i32 MAX_NUM_POINT_LIGHTS = 8;
-	static const i32 NUM_SHADOW_CASCADES = 4;
+	static const i32 MAX_POINT_LIGHT_COUNT = 8;
+	static const i32 SHADOW_CASCADE_COUNT = 4;
 
 	// 48 bytes
 	struct DirLightData
@@ -86,7 +86,7 @@ namespace flex
 	// 272 bytes
 	struct ShadowSamplingData
 	{
-		glm::mat4 cascadeViewProjMats[NUM_SHADOW_CASCADES]; // 0
+		glm::mat4 cascadeViewProjMats[SHADOW_CASCADE_COUNT]; // 0
 		glm::vec4 cascadeDepthSplits;                       // 256
 	};
 
@@ -133,7 +133,7 @@ namespace flex
 	const u64 U_COLOR_MULTIPLIER				= (1ull << 7);	const u32 US_COLOR_MULTIPLIER			= sizeof(glm::vec4);
 	const u64 U_CAM_POS							= (1ull << 8);	const u32 US_CAM_POS					= sizeof(glm::vec4);
 	const u64 U_DIR_LIGHT						= (1ull << 9); const u32 US_DIR_LIGHT					= sizeof(DirLightData);
-	const u64 U_POINT_LIGHTS					= (1ull << 10); const u32 US_POINT_LIGHTS				= sizeof(PointLightData) * MAX_NUM_POINT_LIGHTS;
+	const u64 U_POINT_LIGHTS					= (1ull << 10); const u32 US_POINT_LIGHTS				= sizeof(PointLightData) * MAX_POINT_LIGHT_COUNT;
 	const u64 U_ALBEDO_SAMPLER					= (1ull << 11);
 	const u64 U_CONST_ALBEDO					= (1ull << 12); const u32 US_CONST_ALBEDO				= sizeof(glm::vec4);
 	const u64 U_METALLIC_SAMPLER				= (1ull << 13);
@@ -151,7 +151,7 @@ namespace flex
 	const u64 U_FB_0_SAMPLER					= (1ull << 25);
 	const u64 U_FB_1_SAMPLER					= (1ull << 26);
 	const u64 U_SHOW_EDGES						= (1ull << 27); const u32 US_SHOW_EDGES					= sizeof(i32);
-	const u64 U_LIGHT_VIEW_PROJS				= (1ull << 28); const u32 US_LIGHT_VIEW_PROJS			= sizeof(glm::mat4) * NUM_SHADOW_CASCADES;
+	const u64 U_LIGHT_VIEW_PROJS				= (1ull << 28); const u32 US_LIGHT_VIEW_PROJS			= sizeof(glm::mat4) * SHADOW_CASCADE_COUNT;
 	const u64 U_HDR_EQUIRECTANGULAR_SAMPLER		= (1ull << 29);
 	const u64 U_BRDF_LUT_SAMPLER				= (1ull << 30);
 	const u64 U_PREFILTER_MAP					= (1ull << 31);

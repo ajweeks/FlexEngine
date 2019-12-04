@@ -271,7 +271,7 @@ namespace flex
 			m_SSAOBlurVFBColorAttachment0 = new FrameBufferAttachment(m_VulkanDevice, frameBufCreateInfo);
 
 			m_ShadowBufFormat = VK_FORMAT_D16_UNORM;
-			for (u32 i = 0; i < NUM_SHADOW_CASCADES; ++i)
+			for (u32 i = 0; i < SHADOW_CASCADE_COUNT; ++i)
 			{
 				m_ShadowCascades[i] = new Cascade(m_VulkanDevice);
 			}
@@ -705,7 +705,7 @@ namespace flex
 			delete m_OffscreenFB1DepthAttachment;
 			m_OffscreenFB1DepthAttachment = nullptr;
 
-			for (u32 i = 0; i < NUM_SHADOW_CASCADES; ++i)
+			for (u32 i = 0; i < SHADOW_CASCADE_COUNT; ++i)
 			{
 				delete m_ShadowCascades[i];
 			}
@@ -2751,7 +2751,7 @@ namespace flex
 			}
 
 			VulkanParticleSystem* particleSystem = new VulkanParticleSystem(m_VulkanDevice);
-			particleSystem->ID = m_ParticleSystems.size();
+			particleSystem->ID = GetNextAvailableParticleSystemID();
 			particleSystem->system = system;
 
 			system->simMaterialID = CreateParticleSystemSimulationMaterial(name + " sim material");
@@ -6548,7 +6548,7 @@ namespace flex
 				imageCreateInfo.extent.height = SHADOW_CASCADE_RES;
 				imageCreateInfo.extent.depth = 1;
 				imageCreateInfo.mipLevels = 1;
-				imageCreateInfo.arrayLayers = NUM_SHADOW_CASCADES;
+				imageCreateInfo.arrayLayers = SHADOW_CASCADE_COUNT;
 				imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 				imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
 				imageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -6572,14 +6572,14 @@ namespace flex
 				fullImageView.subresourceRange.baseMipLevel = 0;
 				fullImageView.subresourceRange.levelCount = 1; // Number of mipmap levels
 				fullImageView.subresourceRange.baseArrayLayer = 0;
-				fullImageView.subresourceRange.layerCount = NUM_SHADOW_CASCADES;
+				fullImageView.subresourceRange.layerCount = SHADOW_CASCADE_COUNT;
 				fullImageView.image = m_ShadowImage;
 				fullImageView.flags = 0;
 				VK_CHECK_RESULT(vkCreateImageView(m_VulkanDevice->m_LogicalDevice, &fullImageView, nullptr, m_ShadowImageView.replace()));
 				SetImageViewName(m_VulkanDevice, m_ShadowImageView, "Shadow cascade image view (main)");
 
 				// One frame buffer & view per cascade
-				for (u32 i = 0; i < NUM_SHADOW_CASCADES; ++i)
+				for (u32 i = 0; i < SHADOW_CASCADE_COUNT; ++i)
 				{
 					VkImageViewCreateInfo imageView = vks::imageViewCreateInfo();
 					imageView.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
@@ -7446,7 +7446,7 @@ namespace flex
 						m_CascadedShadowMapPushConstantBlock = new Material::PushConstantBlock();
 					}
 
-					for (u32 c = 0; c < NUM_SHADOW_CASCADES; ++c)
+					for (u32 c = 0; c < SHADOW_CASCADE_COUNT; ++c)
 					{
 						m_ShadowRenderPass->Begin_WithFrameBuffer(m_OffScreenCmdBuffer, (VkClearValue*)&depthStencilClearValue, 1, &m_ShadowCascades[c]->frameBuffer);
 

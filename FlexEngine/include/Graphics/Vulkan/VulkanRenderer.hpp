@@ -433,7 +433,7 @@ namespace flex
 			VDeleter<VkImageView> m_ShadowImageView;
 			VkFormat m_ShadowBufFormat = VK_FORMAT_UNDEFINED;
 			VkDescriptorSet m_ShadowDescriptorSet = VK_NULL_HANDLE;
-			Cascade* m_ShadowCascades[NUM_SHADOW_CASCADES];
+			Cascade* m_ShadowCascades[SHADOW_CASCADE_COUNT];
 
 			std::map<FrameBufferAttachmentID, FrameBufferAttachment*> m_FrameBufferAttachments;
 
