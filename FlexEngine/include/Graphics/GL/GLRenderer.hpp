@@ -67,8 +67,8 @@ namespace flex
 			virtual Shader& GetShader(ShaderID shaderID) override;
 
 			virtual bool GetShaderID(const std::string& shaderName, ShaderID& shaderID) override;
-			virtual bool GetMaterialID(const std::string& materialName, MaterialID& materialID) override;
-			virtual MaterialID GetMaterialID(RenderID renderID) override;
+			virtual bool FindOrCreateMaterialByName(const std::string& materialName, MaterialID& materialID) override;
+			virtual MaterialID GetRenderObjectMaterialID(RenderID renderID) override;
 
 			virtual std::vector<Pair<std::string, MaterialID>> GetValidMaterialNames() const override;
 
@@ -244,7 +244,7 @@ namespace flex
 			TextureID m_GBufferTexture1ID = InvalidTextureID; // albedo + metallic
 
 			TextureHandle m_ShadowMapTexture;
-			std::array<u32, NUM_SHADOW_CASCADES> m_ShadowMapFBOs;
+			std::array<u32, SHADOW_CASCADE_COUNT> m_ShadowMapFBOs;
 
 			u32 m_SSAOFrameBuffer = 0;
 			u32 m_SSAOBlurHFrameBuffer = 0;

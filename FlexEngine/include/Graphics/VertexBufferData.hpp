@@ -10,6 +10,8 @@ namespace flex
 
 		std::vector<glm::vec3> positions_3D;
 		std::vector<glm::vec2> positions_2D;
+		std::vector<glm::vec4> positions_4D;
+		std::vector<glm::vec3> velocities;
 		std::vector<glm::vec2> texCoords_UV;
 		std::vector<i32> colors_R8G8B8A8;
 		std::vector<glm::vec4> colors_R32G32B32A32;

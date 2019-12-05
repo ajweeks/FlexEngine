@@ -181,6 +181,10 @@ namespace flex
 		{
 			newGameObject = new Blocks(objectName);
 		} break;
+		case GameObjectType::PARTICLE_SYSTEM:
+		{
+			newGameObject = new ParticleSystem(objectName);
+		} break;
 		case GameObjectType::OBJECT: // Fall through
 		case GameObjectType::_NONE:
 			newGameObject = new GameObject(objectName, gameObjectType);
@@ -236,6 +240,8 @@ namespace flex
 		{
 			child->PostInitialize();
 		}
+
+		m_Transform.UpdateParentTransform();
 	}
 
 	void GameObject::Destroy()
@@ -1330,14 +1336,23 @@ namespace flex
 
 	void GameObject::CopyGenericFields(GameObject* newGameObject, GameObject* parent, bool bCopyChildren)
 	{
-		RenderObjectCreateInfo createInfo = {};
-		g_Renderer->GetRenderObjectCreateInfo(m_RenderID, createInfo);
+		RenderObjectCreateInfo* createInfoPtr = nullptr;
+		RenderObjectCreateInfo renderObjectCreateInfo_DontRef = {};
+		MaterialID matID = InvalidMaterialID;
+		if (m_RenderID != InvalidRenderID)
+		{
+			if (g_Renderer->GetRenderObjectCreateInfo(m_RenderID, renderObjectCreateInfo_DontRef))
+			{
+				// Make it clear we aren't copying vertex or index data directly
+				renderObjectCreateInfo_DontRef.vertexBufferData = nullptr;
+				renderObjectCreateInfo_DontRef.indices = nullptr;
 
-		// Make it clear we aren't copying vertex or index data directly
-		createInfo.vertexBufferData = nullptr;
-		createInfo.indices = nullptr;
+				matID = renderObjectCreateInfo_DontRef.materialID;
 
-		MaterialID matID = createInfo.materialID;
+				createInfoPtr = &renderObjectCreateInfo_DontRef;
+			}
+		}
+
 		*newGameObject->GetTransform() = m_Transform;
 
 		if (parent)
@@ -1369,14 +1384,14 @@ namespace flex
 			{
 				MeshComponent::PrefabShape shape = m_MeshComponent->GetShape();
 				newMeshComponent->SetRequiredAttributesFromMaterialID(matID);
-				newMeshComponent->LoadPrefabShape(shape, &createInfo);
+				newMeshComponent->LoadPrefabShape(shape, createInfoPtr);
 			}
 			else if (prefabType == MeshComponent::Type::FILE)
 			{
 				std::string filePath = m_MeshComponent->GetRelativeFilePath();
 				MeshImportSettings importSettings = m_MeshComponent->GetImportSettings();
 				newMeshComponent->SetRequiredAttributesFromMaterialID(matID);
-				newMeshComponent->LoadFromFile(filePath, &importSettings, &createInfo);
+				newMeshComponent->LoadFromFile(filePath, &importSettings, createInfoPtr);
 			}
 			else
 			{
@@ -2567,17 +2582,6 @@ namespace flex
 
 		ImGui::Text("Directional Light");
 
-		if (ImGui::BeginPopupContextItem("##dir light context menu"))
-		{
-			if (ImGui::Button("Delete"))
-			{
-				g_SceneManager->CurrentScene()->RemoveObject(this, true);
-				ImGui::CloseCurrentPopup();
-			}
-
-			ImGui::EndPopup();
-		}
-
 		if (ImGui::Checkbox("Enabled", &m_bVisible))
 		{
 			data.enabled = m_bVisible ? 1 : 0;
@@ -2755,18 +2759,6 @@ namespace flex
 			bool bRemovedPointLight = false;
 			bool bEditedPointLightData = false;
 
-			if (ImGui::BeginPopupContextItem("##point light context menu"))
-			{
-				if (ImGui::Button("Delete"))
-				{
-					g_SceneManager->CurrentScene()->RemoveObject(this, true);
-					bRemovedPointLight = true;
-					ImGui::CloseCurrentPopup();
-				}
-
-				ImGui::EndPopup();
-			}
-
 			if (!bRemovedPointLight)
 			{
 				bool bEnabled = (data.enabled == 1);
@@ -2885,7 +2877,7 @@ namespace flex
 		cartID(cartID)
 	{
 		MaterialID matID;
-		if (!g_Renderer->GetMaterialID("pbr grey", matID))
+		if (!g_Renderer->FindOrCreateMaterialByName("pbr grey", matID))
 		{
 			// :shrug:
 			// TODO: Create own material
@@ -3249,7 +3241,7 @@ namespace flex
 		GameObject(name, GameObjectType::MOBILE_LIQUID_BOX)
 	{
 		MaterialID matID;
-		if (!g_Renderer->GetMaterialID("pbr white", matID))
+		if (!g_Renderer->FindOrCreateMaterialByName("pbr white", matID))
 		{
 			// TODO: Create own material
 			matID = 0;
@@ -3339,7 +3331,7 @@ namespace flex
 		bobber = new GameObject("Bobber", GameObjectType::_NONE);
 		bobber->SetSerializable(false);
 		MaterialID matID = InvalidMaterialID;
-		if (!g_Renderer->GetMaterialID("pbr red", matID))
+		if (!g_Renderer->FindOrCreateMaterialByName("pbr red", matID))
 		{
 			PrintError("Failed to find material for bobber!\n");
 		}
@@ -3649,7 +3641,7 @@ namespace flex
 
 		MaterialID matID;
 		// TODO: Don't rely on material names!
-		if (!g_Renderer->GetMaterialID("terminal copper", matID))
+		if (!g_Renderer->FindOrCreateMaterialByName("terminal copper", matID))
 		{
 			// TODO: Create own material
 			matID = 0;
@@ -4475,4 +4467,119 @@ namespace flex
 		return EventReply::UNCONSUMED;
 	}
 
+	ParticleSystem::ParticleSystem(const std::string& name) :
+		GameObject(name, GameObjectType::PARTICLE_SYSTEM)
+	{
+		m_Transform.updateParentOnStateChange = true;
+	}
+
+	void ParticleSystem::Update()
+	{
+	}
+
+	void ParticleSystem::Destroy()
+	{
+		g_Renderer->RemoveParticleSystem(ID);
+		GameObject::Destroy();
+	}
+
+	GameObject* ParticleSystem::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
+	{
+		ParticleSystem* newParticleSystem = new ParticleSystem(GetIncrementedPostFixedStr(m_Name, "Particle System"));
+
+		CopyGenericFields(newParticleSystem, parent, bCopyChildren);
+
+		newParticleSystem->data.color0 = data.color0;
+		newParticleSystem->data.color1 = data.color1;
+		newParticleSystem->data.speed = data.speed;
+		newParticleSystem->data.particleCount = data.particleCount;
+		newParticleSystem->bEnabled = true;
+		newParticleSystem->scale = scale;
+		newParticleSystem->model = model;
+		g_Renderer->AddParticleSystem(m_Name, newParticleSystem, data.particleCount);
+
+		return newParticleSystem;
+	}
+
+	void ParticleSystem::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID)
+	{
+		UNREFERENCED_PARAMETER(matID);
+		UNREFERENCED_PARAMETER(scene);
+
+		JSONObject particleSystemObj = parentObject.GetObject("particle system info");
+
+		Transform::ParseJSON(particleSystemObj, model);
+		m_Transform.SetWorldFromMatrix(model);
+		particleSystemObj.SetFloatChecked("scale", scale);
+		particleSystemObj.SetBoolChecked("enabled", bEnabled);
+
+		JSONObject systemDataObj = particleSystemObj.GetObject("data");
+		data = {};
+		systemDataObj.SetVec4Checked("color0", data.color0);
+		systemDataObj.SetVec4Checked("color1", data.color1);
+		systemDataObj.SetFloatChecked("speed", data.speed);
+		i32 particleCount;
+		if (systemDataObj.SetIntChecked("particle count", particleCount))
+		{
+			data.particleCount = particleCount;
+		}
+
+		ID = g_Renderer->AddParticleSystem(m_Name, this, particleCount);
+	}
+
+	void ParticleSystem::SerializeUniqueFields(JSONObject& parentObject) const
+	{
+		JSONObject particleSystemObj = {};
+
+		particleSystemObj.fields.emplace_back(Transform::Serialize(model, m_Name.c_str()));
+		particleSystemObj.fields.emplace_back("scale", JSONValue(scale));
+		particleSystemObj.fields.emplace_back("enabled", JSONValue(bEnabled));
+
+
+		JSONObject systemDataObj = {};
+		systemDataObj.fields.emplace_back("color0", JSONValue(Vec4ToString(data.color0, 2)));
+		systemDataObj.fields.emplace_back("color1", JSONValue(Vec4ToString(data.color1, 2)));
+		systemDataObj.fields.emplace_back("speed", JSONValue(data.speed));
+		systemDataObj.fields.emplace_back("particle count", JSONValue((i32)data.particleCount));
+		particleSystemObj.fields.emplace_back("data", JSONValue(systemDataObj));
+
+		parentObject.fields.emplace_back("particle system info", JSONValue(particleSystemObj));
+	}
+
+	void ParticleSystem::DrawImGuiObjects()
+	{
+		GameObject::DrawImGuiObjects();
+
+		static const ImGuiColorEditFlags colorEditFlags =
+			ImGuiColorEditFlags_NoInputs |
+			ImGuiColorEditFlags_Float |
+			ImGuiColorEditFlags_RGB |
+			ImGuiColorEditFlags_PickerHueWheel |
+			ImGuiColorEditFlags_HDR;
+
+		ImGui::Text("Particle System");
+
+		ImGui::Checkbox("Enabled", &bEnabled);
+
+		ImGui::ColorEdit4("Color 0", &data.color0.r, colorEditFlags);
+		ImGui::SameLine();
+		ImGui::ColorEdit4("Color 1", &data.color1.r, colorEditFlags);
+		ImGui::SliderFloat("Speed", &data.speed, -10.0f, 10.0f);
+		i32 particleCount = (i32)data.particleCount;
+		if (ImGui::SliderInt("Particle count", &particleCount, 0, Renderer::MAX_PARTICLE_COUNT))
+		{
+			data.particleCount = particleCount;
+		}
+	}
+
+	void ParticleSystem::OnTransformChanged()
+	{
+		scale = m_Transform.GetLocalScale().x;
+		UpdateModelMatrix();
+	}
+
+	void ParticleSystem::UpdateModelMatrix()
+	{
+		model = glm::scale(m_Transform.GetWorldTransform(), glm::vec3(scale));
+	}
 } // namespace flex

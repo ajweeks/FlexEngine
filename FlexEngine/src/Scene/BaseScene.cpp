@@ -164,8 +164,7 @@ namespace flex
 					//m_LoadedMaterials.push_back(skyboxMatID);
 
 					MaterialID skyboxMatID = InvalidMaterialID;
-					g_Renderer->GetMaterialID("skybox 01", skyboxMatID);
-
+					g_Renderer->FindOrCreateMaterialByName("skybox 01", skyboxMatID);
 					assert(skyboxMatID != InvalidMaterialID);
 
 					Skybox* skybox = new Skybox("Skybox");
@@ -177,7 +176,7 @@ namespace flex
 				}
 
 				MaterialID sphereMatID = InvalidMaterialID;
-				g_Renderer->GetMaterialID("pbr chrome", sphereMatID);
+				g_Renderer->FindOrCreateMaterialByName("pbr chrome", sphereMatID);
 
 				assert(sphereMatID != InvalidMaterialID);
 
@@ -1061,7 +1060,7 @@ namespace flex
 		{
 			Material& material = g_Renderer->GetMaterial(*iter);
 			MaterialID matID;
-			if (g_Renderer->GetMaterialID(material.name, matID))
+			if (g_Renderer->FindOrCreateMaterialByName(material.name, matID))
 			{
 				if (matID == materialID)
 				{

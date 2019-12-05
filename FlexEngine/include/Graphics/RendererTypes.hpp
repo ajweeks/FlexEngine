@@ -13,15 +13,13 @@ IGNORE_WARNINGS_POP
 #include "JSONTypes.hpp"
 #include "Pair.hpp"
 
-extern const char** DataTypeStrs;
-
 namespace flex
 {
 	class VertexBufferData;
 	class GameObject;
 
-	static const i32 MAX_NUM_POINT_LIGHTS = 8;
-	static const i32 NUM_SHADOW_CASCADES = 4;
+	static const i32 MAX_POINT_LIGHT_COUNT = 8;
+	static const i32 SHADOW_CASCADE_COUNT = 4;
 
 	// 48 bytes
 	struct DirLightData
@@ -86,7 +84,7 @@ namespace flex
 	// 272 bytes
 	struct ShadowSamplingData
 	{
-		glm::mat4 cascadeViewProjMats[NUM_SHADOW_CASCADES]; // 0
+		glm::mat4 cascadeViewProjMats[SHADOW_CASCADE_COUNT]; // 0
 		glm::vec4 cascadeDepthSplits;                       // 256
 	};
 
@@ -101,6 +99,27 @@ namespace flex
 		glm::vec4 rgb2;
 	};
 
+#pragma pack(push, 1)
+	// 54 bytes
+	struct ParticleBufferData
+	{
+		glm::vec3 pos;		// 12
+		glm::vec4 color;	// 16
+		glm::vec3 vel;		// 12
+		glm::vec4 extraVec4;// 16
+	};
+#pragma pack(pop)
+
+	// 44 bytes
+	struct ParticleSimData
+	{
+		glm::vec4 color0;	// 16
+		glm::vec4 color1;	// 16
+		real dt;			// 4
+		real speed;			// 4
+		u32 particleCount;	// 4
+	};
+
 	// Uniforms
 	const u64 U_MODEL							= (1ull << 0);	const u32 US_MODEL						= sizeof(glm::mat4);
 	const u64 U_VIEW							= (1ull << 1);	const u32 US_VIEW						= sizeof(glm::mat4);
@@ -112,7 +131,7 @@ namespace flex
 	const u64 U_COLOR_MULTIPLIER				= (1ull << 7);	const u32 US_COLOR_MULTIPLIER			= sizeof(glm::vec4);
 	const u64 U_CAM_POS							= (1ull << 8);	const u32 US_CAM_POS					= sizeof(glm::vec4);
 	const u64 U_DIR_LIGHT						= (1ull << 9); const u32 US_DIR_LIGHT					= sizeof(DirLightData);
-	const u64 U_POINT_LIGHTS					= (1ull << 10); const u32 US_POINT_LIGHTS				= sizeof(PointLightData) * MAX_NUM_POINT_LIGHTS;
+	const u64 U_POINT_LIGHTS					= (1ull << 10); const u32 US_POINT_LIGHTS				= sizeof(PointLightData) * MAX_POINT_LIGHT_COUNT;
 	const u64 U_ALBEDO_SAMPLER					= (1ull << 11);
 	const u64 U_CONST_ALBEDO					= (1ull << 12); const u32 US_CONST_ALBEDO				= sizeof(glm::vec4);
 	const u64 U_METALLIC_SAMPLER				= (1ull << 13);
@@ -130,7 +149,7 @@ namespace flex
 	const u64 U_FB_0_SAMPLER					= (1ull << 25);
 	const u64 U_FB_1_SAMPLER					= (1ull << 26);
 	const u64 U_SHOW_EDGES						= (1ull << 27); const u32 US_SHOW_EDGES					= sizeof(i32);
-	const u64 U_LIGHT_VIEW_PROJS				= (1ull << 28); const u32 US_LIGHT_VIEW_PROJS			= sizeof(glm::mat4) * NUM_SHADOW_CASCADES;
+	const u64 U_LIGHT_VIEW_PROJS				= (1ull << 28); const u32 US_LIGHT_VIEW_PROJS			= sizeof(glm::mat4) * SHADOW_CASCADE_COUNT;
 	const u64 U_HDR_EQUIRECTANGULAR_SAMPLER		= (1ull << 29);
 	const u64 U_BRDF_LUT_SAMPLER				= (1ull << 30);
 	const u64 U_PREFILTER_MAP					= (1ull << 31);
@@ -161,6 +180,8 @@ namespace flex
 	const u64 U_SCENE_SAMPLER					= (1ull << 56);
 	const u64 U_HISTORY_SAMPLER					= (1ull << 57);
 	const u64 U_LAST_FRAME_VIEWPROJ				= (1ull << 58); const u32 US_LAST_FRAME_VIEWPROJ		= sizeof(glm::mat4);
+	const u64 U_PARTICLE_BUFFER					= (1ull << 59); const u32 US_PARTICLE_BUFFER			= sizeof(ParticleBufferData);
+	const u64 U_PARTICLE_SIM_DATA				= (1ull << 60); const u32 US_PARTICLE_SIM_DATA			= sizeof(ParticleSimData);
 	// NOTE: New uniforms must be added to Uniforms::CalculateSizeInBytes
 
 	enum class ClearFlag
@@ -560,6 +581,8 @@ namespace flex
 		GAMMA_CORRECT,
 		UI,
 
+		COMPUTE_PARTICLES,
+
 		_NONE
 	};
 
@@ -598,20 +621,24 @@ namespace flex
 		Shader(const std::string& name,
 			const std::string& inVertexShaderFilePath,
 			const std::string& inFragmentShaderFilePath = "",
-			const std::string& inGeometryShaderFilePath = "");
+			const std::string& inGeometryShaderFilePath = "",
+			const std::string& inComputeShaderFilePath = "");
 
 		std::string name = "";
 
 		std::string vertexShaderFilePath = "";
 		std::string fragmentShaderFilePath = "";
 		std::string geometryShaderFilePath = "";
+		std::string computeShaderFilePath = "";
 
 		std::vector<char> vertexShaderCode = {};
 		std::vector<char> fragmentShaderCode = {};
 		std::vector<char> geometryShaderCode = {};
+		std::vector<char> computeShaderCode = {};
 
 		Uniforms constantBufferUniforms = {};
 		Uniforms dynamicBufferUniforms = {};
+		Uniforms additionalBufferUniforms = {};
 		Uniforms textureUniforms = {};
 
 		VertexAttributes vertexAttributes = 0;
@@ -620,6 +647,7 @@ namespace flex
 		i32 subpass = 0;
 		bool bDepthWriteEnable = true;
 		bool bTranslucent = false;
+		bool bCompute = false;
 
 		// These variables should be set to true when the shader has these uniforms
 		bool bNeedNormalSampler = false;

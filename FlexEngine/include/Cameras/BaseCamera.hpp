@@ -1,7 +1,7 @@
 #pragma once
 
 // TODO: Move all constants into generic, hotreloadable constants file
-#include "Graphics/RendererTypes.hpp" // For NUM_SHADOW_CASCADES
+#include "Graphics/RendererTypes.hpp" // For SHADOW_CASCADE_COUNT
 
 namespace flex
 {
@@ -127,6 +127,6 @@ namespace flex
 		glm::vec3 m_Up;
 		glm::vec3 m_Right;
 
-		glm::mat4 m_ShadowProjectionMats[NUM_SHADOW_CASCADES];
+		glm::mat4 m_ShadowProjectionMats[SHADOW_CASCADE_COUNT];
 	};
 } // namespace flex

@@ -2,7 +2,7 @@
 #if COMPILE_VULKAN
 
 IGNORE_WARNINGS_PUSH
-#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan.h>
 IGNORE_WARNINGS_POP
 
 #include "Graphics/RendererTypes.hpp"
@@ -14,6 +14,7 @@ IGNORE_WARNINGS_POP
 namespace flex
 {
 	enum class ImageFormat;
+	class ParticleSystem;
 
 	namespace vk
 	{
@@ -106,11 +107,12 @@ namespace flex
 		struct VulkanQueueFamilyIndices
 		{
 			i32 graphicsFamily = -1;
+			i32 computeFamily = -1;
 			i32 presentFamily = -1;
 
 			bool IsComplete()
 			{
-				return graphicsFamily >= 0 && presentFamily >= 0;
+				return graphicsFamily >= 0 && presentFamily >= 0 && computeFamily >= 0;
 			}
 		};
 
@@ -127,16 +129,25 @@ namespace flex
 			u32 size = 0;
 		};
 
+		enum class UniformBufferType
+		{
+			STATIC,
+			DYNAMIC,
+			PARTICLE_DATA,
+
+			_NONE
+		};
+
 		struct UniformBuffer
 		{
-			UniformBuffer(const VDeleter<VkDevice>& device);
+			UniformBuffer(const VDeleter<VkDevice>& device, UniformBufferType type);
 			~UniformBuffer();
 
-			VulkanBuffer constantBuffer;
-			VulkanBuffer dynamicBuffer;
-			VulkanUniformBufferObjectData constantData;
-			VulkanUniformBufferObjectData dynamicData;
+			VulkanBuffer buffer;
+			VulkanUniformBufferObjectData data;
 			u32 fullDynamicBufferSize = 0;
+
+			UniformBufferType type = UniformBufferType::_NONE;
 		};
 
 		struct VertexIndexBufferPair
@@ -413,6 +424,15 @@ namespace flex
 			VkFormat internalFormat = VK_FORMAT_UNDEFINED;
 		};
 
+		struct UniformBufferList
+		{
+			void Add(VulkanDevice* device, UniformBufferType type);
+			UniformBuffer* Get(UniformBufferType type);
+			const UniformBuffer* Get(UniformBufferType type) const;
+
+			std::vector<UniformBuffer> uniformBufferList;
+		};
+
 		struct VulkanShader
 		{
 			VulkanShader(const VDeleter<VkDevice>& device, Shader* shader);
@@ -420,11 +440,11 @@ namespace flex
 			Shader* shader = nullptr;
 
 			VkRenderPass renderPass = VK_NULL_HANDLE;
-			UniformBuffer uniformBuffer;
 
-			VDeleter<VkShaderModule> geomShaderModule;
 			VDeleter<VkShaderModule> vertShaderModule;
 			VDeleter<VkShaderModule> fragShaderModule;
+			VDeleter<VkShaderModule> geomShaderModule;
+			VDeleter<VkShaderModule> computeShaderModule;
 		};
 
 #ifdef DEBUG
@@ -521,6 +541,9 @@ namespace flex
 		{
 			Material material; // More info is stored in the generic material struct
 
+			// TODO: OPTIMIZE: MEMORY: Only store dynamic buffers here, store constant buffers in shader/globally
+			UniformBufferList uniformBufferList;
+
 			ShaderUniformContainer<VulkanTexture*> textures;
 			VkFramebuffer hdrCubemapFramebuffer = VK_NULL_HANDLE;
 
@@ -614,7 +637,7 @@ namespace flex
 		{
 			VkBuffer buffer;
 			VkDeviceSize bufferSize;
-			bool bDynamic;
+			UniformBufferType type;
 		};
 
 		struct ImageDescriptorInfo
@@ -628,7 +651,7 @@ namespace flex
 			VkDescriptorSet* descriptorSet = nullptr;
 			VkDescriptorSetLayout* descriptorSetLayout = nullptr;
 			ShaderID shaderID = InvalidShaderID;
-			UniformBuffer* uniformBuffer = nullptr;
+			UniformBufferList* uniformBufferList = nullptr;
 
 			ShaderUniformContainer<BufferDescriptorInfo> bufferDescriptors;
 			ShaderUniformContainer<ImageDescriptorInfo> imageDescriptors;
@@ -641,6 +664,45 @@ namespace flex
 			glm::vec2 scale;
 			glm::vec2 translate;
 		};
+
+		struct VulkanParticleSystem
+		{
+			VulkanParticleSystem(VulkanDevice* device);
+
+			ParticleSystemID ID = InvalidParticleSystemID;
+			VkDescriptorSet computeDescriptorSet = VK_NULL_HANDLE;
+			VkDescriptorSet renderingDescriptorSet = VK_NULL_HANDLE;
+			VDeleter<VkPipeline> graphicsPipeline;
+			VDeleter<VkPipeline> computePipeline;
+			ParticleSystem* system = nullptr;
+		};
+
+		enum class GPUVendor : u32
+		{
+			Unknown,
+			ARM,
+			AMD,
+			Broadcom,
+			Imagination,
+			Intel,
+			nVidia,
+			Qualcomm,
+			Verisilicon,
+			Software,
+		};
+		
+		constexpr GPUVendor GPUVendorFromPCIVendor(u32 vendorID)
+		{
+			return vendorID == 0x13B5 ? GPUVendor::ARM
+				: vendorID == 0x1002 ? GPUVendor::AMD
+				: vendorID == 0x1010 ? GPUVendor::Imagination
+				: vendorID == 0x8086 ? GPUVendor::Intel
+				: vendorID == 0x10DE ? GPUVendor::nVidia
+				: vendorID == 0x5143 ? GPUVendor::Qualcomm
+				: vendorID == 0x1AE0 ? GPUVendor::Software   // Google Swiftshader
+				: vendorID == 0x1414 ? GPUVendor::Software   // Microsoft WARP
+				: GPUVendor::Unknown;
+		}
 
 		VkPrimitiveTopology TopologyModeToVkPrimitiveTopology(TopologyMode mode);
 		VkCullModeFlagBits CullFaceToVkCullMode(CullFace cullFace);

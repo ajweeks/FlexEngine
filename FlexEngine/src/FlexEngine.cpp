@@ -86,6 +86,7 @@ namespace flex
 
 	sec g_SecElapsedSinceProgramStart = 0;
 	sec g_DeltaTime = 0;
+	sec g_UnpausedDeltaTime = 0;
 
 	size_t g_TotalTrackedAllocatedMemory = 0;
 	size_t g_TrackedAllocationCount = 0;
@@ -464,14 +465,24 @@ namespace flex
 				m_bRenderImGui = !m_bRenderImGui;
 			}
 
-			sec frameEndTime = now;
-			sec dt = frameEndTime - frameStartTime;
+			g_Window->PollEvents();
+
+			const sec frameEndTime = now;
+			const sec secondsElapsed = frameEndTime - frameStartTime;
 			frameStartTime = frameEndTime;
 
-			dt = glm::clamp(dt * m_SimulationSpeed, m_MinDT, m_MaxDT);
 
-			g_DeltaTime = dt;
+			g_UnpausedDeltaTime = glm::clamp(secondsElapsed, m_MinDT, m_MaxDT);
 			g_SecElapsedSinceProgramStart = frameEndTime;
+
+			if (m_bSimulationPaused && !m_bSimulateNextFrame)
+			{
+				g_DeltaTime = 0.0f;
+			}
+			else
+			{
+				g_DeltaTime = glm::clamp(secondsElapsed * m_SimulationSpeed, m_MinDT, m_MaxDT);
+			}
 
 			Profiler::StartFrame();
 
@@ -481,13 +492,12 @@ namespace flex
 				{
 					m_FrameTimes[i - 1] = m_FrameTimes[i];
 				}
-				m_FrameTimes[m_FrameTimes.size() - 1] = dt * 1000.0f;
+				m_FrameTimes[m_FrameTimes.size() - 1] = g_UnpausedDeltaTime * 1000.0f;
 			}
 
 			// Update
 			{
 				PROFILE_BEGIN("Update");
-				g_Window->PollEvents();
 
 				const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 				if (frameBufferSize.x == 0 || frameBufferSize.y == 0)
@@ -523,7 +533,7 @@ namespace flex
 				// Starts new ImGui frame and clears debug draw lines
 				g_Renderer->NewFrame();
 
-				SecSinceLogSave += dt;
+				SecSinceLogSave += g_UnpausedDeltaTime;
 				if (SecSinceLogSave >= LogSaveRate)
 				{
 					SecSinceLogSave -= LogSaveRate;
@@ -573,6 +583,14 @@ namespace flex
 							targetPos = spring.pos;
 							targetVel = spring.vel;
 						}
+					}
+				}
+				else
+				{
+					// Simulation is paused
+					if (!g_CameraManager->CurrentCamera()->bIsGameplayCam)
+					{
+						g_CameraManager->CurrentCamera()->Update();
 					}
 				}
 

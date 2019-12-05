@@ -22,7 +22,7 @@ namespace flex
 
 
 			/* Creates a command pool used to generate command buffers */
-			void CreatePool(VkSurfaceKHR surface);
+			void CreatePool();
 
 			/* Creates count command buffers (should be equal to the number of backbuffers) */
 			void CreateCommandBuffers(u32 count);

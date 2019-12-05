@@ -20,6 +20,7 @@ namespace flex
 	class DirectionalLight;
 	class GameObject;
 	class MeshComponent;
+	class ParticleSystem;
 	class PointLight;
 	struct TextCache;
 	struct FontMetaData;
@@ -133,8 +134,8 @@ namespace flex
 		virtual Material& GetMaterial(MaterialID matID) = 0;
 		virtual Shader& GetShader(ShaderID shaderID) = 0;
 
-		virtual bool GetMaterialID(const std::string& materialName, MaterialID& materialID) = 0;
-		virtual MaterialID GetMaterialID(RenderID renderID) = 0;
+		virtual bool FindOrCreateMaterialByName(const std::string& materialName, MaterialID& materialID) = 0;
+		virtual MaterialID GetRenderObjectMaterialID(RenderID renderID) = 0;
 		virtual bool GetShaderID(const std::string& shaderName, ShaderID& shaderID) = 0;
 
 		virtual std::vector<Pair<std::string, MaterialID>> GetValidMaterialNames() const = 0;
@@ -168,6 +169,9 @@ namespace flex
 
 		// Call whenever a user-controlled field, such as visibility, changes to rebatch render objects
 		virtual void RenderObjectStateChanged() = 0;
+
+		virtual ParticleSystemID AddParticleSystem(const std::string& name, ParticleSystem* system, i32 particleCount) = 0;
+		virtual bool RemoveParticleSystem(ParticleSystemID particleSystemID) = 0;
 
 		void DrawImGuiRenderObjects();
 		void DrawImGuiSettings();
@@ -251,6 +255,11 @@ namespace flex
 		bool bUniformBufferWindowShowing = false;
 		bool bGPUTimingsWindowShowing = false;
 
+		static const u32 MAX_PARTICLE_COUNT = 65536;
+		static const u32 PARTICLES_PER_DISPATCH = 256;
+		static const u32 SHADOW_CASCADE_RES = 2048;
+		static const u32 SSAO_NOISE_DIM = 4;
+
 	protected:
 		virtual void LoadShaders();
 		virtual bool LoadShaderCode(ShaderID shaderID) = 0;
@@ -297,6 +306,9 @@ namespace flex
 		void GenerateGBufferVertexBuffer(bool bFlipV);
 		void GenerateSSAONoise(std::vector<glm::vec4>& noise);
 
+		MaterialID CreateParticleSystemSimulationMaterial(const std::string& name);
+		MaterialID CreateParticleSystemRenderingMaterial(const std::string& name);
+
 		std::vector<Shader> m_BaseShaders;
 
 		PointLightData* m_PointLights = nullptr;
@@ -328,9 +340,8 @@ namespace flex
 		//MaterialID m_CubemapGBufferMaterialID = InvalidMaterialID;
 
 		// TODO: Make tweakable at runtime
-		const u32 SHADOW_CASCADE_RES = 2048;
-		glm::mat4 m_ShadowLightViewMats[NUM_SHADOW_CASCADES];
-		glm::mat4 m_ShadowLightProjMats[NUM_SHADOW_CASCADES];
+		glm::mat4 m_ShadowLightViewMats[SHADOW_CASCADE_COUNT];
+		glm::mat4 m_ShadowLightProjMats[SHADOW_CASCADE_COUNT];
 
 		// Filled every frame
 		std::vector<SpriteQuadDrawInfo> m_QueuedWSSprites;
@@ -400,7 +411,13 @@ namespace flex
 		MaterialID m_GammaCorrectMaterialID = InvalidMaterialID;
 		MaterialID m_TAAResolveMaterialID = InvalidMaterialID;
 		MaterialID m_PlaceholderMaterialID = InvalidMaterialID;
+		MaterialID m_IrradianceMaterialID = InvalidMaterialID;
+		MaterialID m_PrefilterMaterialID = InvalidMaterialID;
+		MaterialID m_BRDFMaterialID = InvalidMaterialID;
 
+		MaterialID m_ComputeSDFMatID = InvalidMaterialID;
+		MaterialID m_FullscreenBlitMatID = InvalidMaterialID;
+		
 		std::string m_FontImageExtension = ".png";
 
 		std::map<StringID, FontMetaData> m_Fonts;
@@ -418,8 +435,6 @@ namespace flex
 
 		// Contains file paths for each file with a .hdr extension in the `resources/textures/hdri/` directory
 		std::vector<std::string> m_AvailableHDRIs;
-
-		static const u32 SSAO_NOISE_DIM = 4;
 
 		ShadowSamplingData m_ShadowSamplingData;
 

@@ -607,4 +607,34 @@ namespace flex
 
 	};
 
+	class ParticleSystem : public GameObject
+	{
+	public:
+		explicit ParticleSystem(const std::string& name);
+
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
+
+		virtual void Update() override;
+		virtual void Destroy() override;
+
+		virtual void DrawImGuiObjects() override;
+
+		virtual void OnTransformChanged() override;
+
+		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+
+		glm::mat4 model;
+		real scale;
+		ParticleSimData data;
+		bool bEnabled;
+		MaterialID simMaterialID = InvalidMaterialID;
+		MaterialID renderingMaterialID = InvalidMaterialID;
+		ParticleSystemID ID = InvalidParticleSystemID;
+
+	private:
+		void UpdateModelMatrix();
+
+	};
+
 } // namespace flex

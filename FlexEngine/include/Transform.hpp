@@ -22,8 +22,13 @@ namespace flex
 
 		~Transform();
 
-		static Transform ParseJSON(const JSONObject& object);
+		static Transform ParseJSON(const JSONObject& transformObject);
+		static void ParseJSON(const JSONObject& object, glm::mat4& outModel);
+		static void ParseJSON(const JSONObject& object, glm::vec3& outPos, glm::quat& outRot, glm::vec3& outScale);
+
 		JSONField Serialize() const;
+		static JSONField Serialize(const glm::mat4 matrix, const char* objName);
+		static JSONField Serialize(const glm::vec3& pos, const glm::quat& rot, const glm::vec3& scale, const char* objName);
 
 		void SetAsIdentity();
 

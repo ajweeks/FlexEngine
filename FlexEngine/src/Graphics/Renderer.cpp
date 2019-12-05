@@ -100,8 +100,8 @@ namespace flex
 			PrintWarn("Unable to find hdri directory at %s\n", hdriPath.c_str());
 		}
 
-		m_PointLights = (PointLightData*)malloc_hooked(MAX_NUM_POINT_LIGHTS * sizeof(PointLightData));
-		for (i32 i = 0; i < MAX_NUM_POINT_LIGHTS; ++i)
+		m_PointLights = (PointLightData*)malloc_hooked(MAX_POINT_LIGHT_COUNT * sizeof(PointLightData));
+		for (i32 i = 0; i < MAX_POINT_LIGHT_COUNT; ++i)
 		{
 			m_PointLights[i].color = VEC3_NEG_ONE;
 			m_PointLights[i].enabled = 0;
@@ -150,7 +150,7 @@ namespace flex
 			};
 
 			triVertexBufferDataCreateInfo.attributes =
-				(u32)VertexAttribute::POSITION_2D |
+				(u32)VertexAttribute::POSITION2 |
 				(u32)VertexAttribute::UV;
 
 			m_FullScreenTriVertexBufferData = {};
@@ -531,7 +531,7 @@ namespace flex
 
 	PointLightID Renderer::RegisterPointLight(PointLightData* pointLightData)
 	{
-		if (m_NumPointLightsEnabled < MAX_NUM_POINT_LIGHTS)
+		if (m_NumPointLightsEnabled < MAX_POINT_LIGHT_COUNT)
 		{
 			PointLightID newPointLightID = (PointLightID)m_NumPointLightsEnabled;
 			memcpy(m_PointLights + newPointLightID, pointLightData, sizeof(PointLightData));
@@ -543,7 +543,7 @@ namespace flex
 
 	void Renderer::UpdatePointLightData(PointLightID ID, PointLightData* data)
 	{
-		assert(ID < MAX_NUM_POINT_LIGHTS);
+		assert(ID < MAX_POINT_LIGHT_COUNT);
 		assert(data != nullptr);
 
 		memcpy(m_PointLights + ID, data, sizeof(PointLightData));
@@ -646,7 +646,7 @@ namespace flex
 			drawInfo.materialID = m_SpriteArrMatID;
 			drawInfo.anchor = AnchorPoint::BOTTOM_RIGHT;
 			drawInfo.scale = glm::vec3(0.2f);
-			for (u32 i = 0; i < NUM_SHADOW_CASCADES; ++i)
+			for (u32 i = 0; i < SHADOW_CASCADE_COUNT; ++i)
 			{
 				// TODO:
 				drawInfo.textureID = 999 + i;
@@ -698,7 +698,7 @@ namespace flex
 			glm::mat4 invCam = glm::inverse(modifiedProj * cam->GetView());
 
 			real lastSplitDist = 0.0;
-			for (u32 c = 0; c < NUM_SHADOW_CASCADES; ++c)
+			for (u32 c = 0; c < SHADOW_CASCADE_COUNT; ++c)
 			{
 				real splitDist = depthSplits[c];
 
@@ -921,7 +921,7 @@ namespace flex
 
 		DoCreateGameObjectButton("Add object...", "Add object");
 
-		const bool bShowAddPointLightBtn = m_NumPointLightsEnabled < MAX_NUM_POINT_LIGHTS;
+		const bool bShowAddPointLightBtn = m_NumPointLightsEnabled < MAX_POINT_LIGHT_COUNT;
 		if (bShowAddPointLightBtn)
 		{
 			if (ImGui::Button("Add point light"))
@@ -1161,7 +1161,7 @@ namespace flex
 		RenderID renderID = gameObject->GetRenderID();
 		assert(renderID != InvalidRenderID);
 
-		MaterialID matID = g_Renderer->GetMaterialID(renderID);
+		MaterialID matID = g_Renderer->GetRenderObjectMaterialID(renderID);
 
 		g_Renderer->DrawImGuiForRenderObject(renderID);
 
@@ -1419,6 +1419,8 @@ namespace flex
 				{ "taa_resolve", "vk_barebones_pos2_uv_vert.spv", "vk_taa_resolve_frag.spv" },
 				{ "gamma_correct", "vk_barebones_pos2_uv_vert.spv", "vk_gamma_correct_frag.spv" },
 				{ "blit", "vk_barebones_pos2_uv_vert.spv", "vk_blit_frag.spv" },
+				{ "particle_sim", "", "", "", "vk_simulate_particles_comp.spv" },
+				{ "particles", "vk_particles_vert.spv", "vk_particles_frag.spv", "vk_particles_geom.spv" },
 			};
 #endif
 
@@ -1431,7 +1433,7 @@ namespace flex
 			m_BaseShaders[shaderID].bNeedIrradianceSampler = true;
 			m_BaseShaders[shaderID].bNeedPrefilteredMap = true;
 			m_BaseShaders[shaderID].vertexAttributes =
-				(u32)VertexAttribute::POSITION_2D |
+				(u32)VertexAttribute::POSITION2 |
 				(u32)VertexAttribute::UV;
 
 			// TODO: Specify that this buffer is only used in the frag shader here
@@ -1673,7 +1675,7 @@ namespace flex
 			// Post processing
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::POST_PROCESS;
 			m_BaseShaders[shaderID].vertexAttributes =
-				(u32)VertexAttribute::POSITION_2D |
+				(u32)VertexAttribute::POSITION2 |
 				(u32)VertexAttribute::UV;
 
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
@@ -1687,7 +1689,7 @@ namespace flex
 			// Post FXAA
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD; // TODO: FIXME:
 			m_BaseShaders[shaderID].vertexAttributes =
-				(u32)VertexAttribute::POSITION_2D |
+				(u32)VertexAttribute::POSITION2 |
 				(u32)VertexAttribute::UV;
 
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
@@ -1719,7 +1721,7 @@ namespace flex
 			m_BaseShaders[shaderID].bDynamic = true;
 			m_BaseShaders[shaderID].dynamicVertexBufferSize = 1024 * 1024; // TODO: FIXME:
 			m_BaseShaders[shaderID].vertexAttributes =
-				(u32)VertexAttribute::POSITION_2D |
+				(u32)VertexAttribute::POSITION2 |
 				(u32)VertexAttribute::UV |
 				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
 				(u32)VertexAttribute::EXTRA_VEC4 |
@@ -1841,8 +1843,40 @@ namespace flex
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::UI;
 			m_BaseShaders[shaderID].bDepthWriteEnable = false;
 			m_BaseShaders[shaderID].vertexAttributes =
-				(u32)VertexAttribute::POSITION_2D |
+				(u32)VertexAttribute::POSITION2 |
 				(u32)VertexAttribute::UV;
+
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_ALBEDO_SAMPLER);
+			++shaderID;
+
+			// Simulate particles
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::COMPUTE_PARTICLES;
+			m_BaseShaders[shaderID].bCompute = true;
+
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_PARTICLE_SIM_DATA);
+
+			m_BaseShaders[shaderID].additionalBufferUniforms.AddUniform(U_PARTICLE_BUFFER);
+			++shaderID;
+
+			// Particles
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
+			m_BaseShaders[shaderID].bDepthWriteEnable = true;
+			m_BaseShaders[shaderID].bTranslucent = false;
+			// TODO?
+			//m_BaseShaders[shaderID].bDynamic = true;
+			m_BaseShaders[shaderID].vertexAttributes =
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::VELOCITY3 |	
+				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
+				(u32)VertexAttribute::EXTRA_VEC4;
+
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_CAM_POS);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
+
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
 
 			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_ALBEDO_SAMPLER);
 			++shaderID;
@@ -1873,14 +1907,22 @@ namespace flex
 
 			if (!LoadShaderCode(shaderID))
 			{
-				PrintError("Couldn't load/compile shaders: %s", shader.vertexShaderFilePath.c_str());
+				PrintError("Couldn't load/compile shader: %s", shader.name.c_str());
+				if (!shader.vertexShaderFilePath.empty())
+				{
+					PrintError(" %s", shader.vertexShaderFilePath.c_str());
+				}
 				if (!shader.fragmentShaderFilePath.empty())
 				{
-					PrintError(", %s", shader.fragmentShaderFilePath.c_str());
+					PrintError(" %s", shader.fragmentShaderFilePath.c_str());
 				}
 				if (!shader.geometryShaderFilePath.empty())
 				{
-					PrintError(", %s", shader.geometryShaderFilePath.c_str());
+					PrintError(" %s", shader.geometryShaderFilePath.c_str());
+				}
+				if (!shader.computeShaderFilePath.empty())
+				{
+					PrintError(" %s", shader.computeShaderFilePath.c_str());
 				}
 				PrintError("\n");
 			}
@@ -2276,11 +2318,11 @@ namespace flex
 			MaterialID existingGBufferQuadMatID = InvalidMaterialID;
 			MaterialID existingGBufferCubeMatID = InvalidMaterialID;
 			// TODO: Don't rely on material names!
-			if (GetMaterialID(gBufferMatName, existingGBufferQuadMatID))
+			if (FindOrCreateMaterialByName(gBufferMatName, existingGBufferQuadMatID))
 			{
 				RemoveMaterial(existingGBufferQuadMatID);
 			}
-			if (GetMaterialID(gBufferCubeMatName, existingGBufferCubeMatID))
+			if (FindOrCreateMaterialByName(gBufferCubeMatName, existingGBufferCubeMatID))
 			{
 				RemoveMaterial(existingGBufferCubeMatID);
 			}
@@ -2656,6 +2698,43 @@ namespace flex
 		gammaCorrectMatCreateInfo.visibleInEditor = false;
 		gammaCorrectMatCreateInfo.colorMultiplier = VEC4_ONE;
 		m_GammaCorrectMaterialID = InitializeMaterial(&gammaCorrectMatCreateInfo);
+
+		MaterialCreateInfo fullscreenBlitMatCreateInfo = {};
+		fullscreenBlitMatCreateInfo.name = "fullscreen blit";
+		fullscreenBlitMatCreateInfo.shaderName = "blit";
+		fullscreenBlitMatCreateInfo.persistent = true;
+		fullscreenBlitMatCreateInfo.visibleInEditor = false;
+		fullscreenBlitMatCreateInfo.generateAlbedoSampler = true;
+		fullscreenBlitMatCreateInfo.enableAlbedoSampler = true;
+		m_FullscreenBlitMatID = InitializeMaterial(&fullscreenBlitMatCreateInfo);
+
+		MaterialCreateInfo computeSDFMatCreateInfo = {};
+		computeSDFMatCreateInfo.name = "compute SDF";
+		computeSDFMatCreateInfo.shaderName = "compute_sdf";
+		computeSDFMatCreateInfo.persistent = true;
+		computeSDFMatCreateInfo.visibleInEditor = false;
+		m_ComputeSDFMatID = InitializeMaterial(&computeSDFMatCreateInfo);
+
+		MaterialCreateInfo irradianceCreateInfo = {};
+		irradianceCreateInfo.name = "irradiance";
+		irradianceCreateInfo.shaderName = "irradiance";
+		irradianceCreateInfo.persistent = true;
+		irradianceCreateInfo.visibleInEditor = false;
+		m_IrradianceMaterialID = InitializeMaterial(&irradianceCreateInfo);
+
+		MaterialCreateInfo prefilterCreateInfo = {};
+		prefilterCreateInfo.name = "prefilter";
+		prefilterCreateInfo.shaderName = "prefilter";
+		prefilterCreateInfo.persistent = true;
+		prefilterCreateInfo.visibleInEditor = false;
+		m_PrefilterMaterialID = InitializeMaterial(&prefilterCreateInfo);
+
+		MaterialCreateInfo brdfCreateInfo = {};
+		brdfCreateInfo.name = "brdf";
+		brdfCreateInfo.shaderName = "brdf";
+		brdfCreateInfo.persistent = true;
+		brdfCreateInfo.visibleInEditor = false;
+		m_BRDFMaterialID = InitializeMaterial(&brdfCreateInfo);
 
 		MaterialCreateInfo placeholderMatCreateInfo = {};
 		placeholderMatCreateInfo.name = "placeholder";
@@ -3092,6 +3171,26 @@ namespace flex
 			// Random rotations around z-axis
 			noiseSample = glm::vec4(RandomFloat(-1.0f, 1.0f), RandomFloat(-1.0f, 1.0f), 0.0f, 0.0f);
 		}
+	}
+
+	MaterialID Renderer::CreateParticleSystemSimulationMaterial(const std::string& name)
+	{
+		MaterialCreateInfo particleSimMatCreateInfo = {};
+		particleSimMatCreateInfo.name = name;
+		particleSimMatCreateInfo.shaderName = "particle_sim";
+		particleSimMatCreateInfo.persistent = true;
+		particleSimMatCreateInfo.visibleInEditor = false;
+		return InitializeMaterial(&particleSimMatCreateInfo);
+	}
+
+	MaterialID Renderer::CreateParticleSystemRenderingMaterial(const std::string& name)
+	{
+		MaterialCreateInfo particleMatCreateInfo = {};
+		particleMatCreateInfo.name = name;
+		particleMatCreateInfo.shaderName = "particles";
+		particleMatCreateInfo.persistent = true;
+		particleMatCreateInfo.visibleInEditor = false;
+		return InitializeMaterial(&particleMatCreateInfo);
 	}
 
 	void PhysicsDebugDrawBase::UpdateDebugMode()

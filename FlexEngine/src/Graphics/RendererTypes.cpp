@@ -59,6 +59,8 @@ namespace flex
 				_u(NEAR_FAR_PLANES)
 				_u(POST_PROCESS_MAT)
 				_u(LAST_FRAME_VIEWPROJ)
+				_u(PARTICLE_BUFFER)
+				_u(PARTICLE_SIM_DATA)
 #undef _u
 		}
 
@@ -68,7 +70,8 @@ namespace flex
 	Shader::Shader(const std::string& name,
 		const std::string& inVertexShaderFilePath,
 		const std::string& inFragmentShaderFilePath /* = "" */,
-		const std::string& inGeometryShaderFilePath /* = "" */) :
+		const std::string& inGeometryShaderFilePath /* = "" */,
+		const std::string& inComputeShaderFilePath /* = "" */) :
 		name(name)
 	{
 #if COMPILE_OPEN_GL
@@ -82,7 +85,10 @@ namespace flex
 			geometryShaderFilePath = RESOURCE_LOCATION "shaders/" + inGeometryShaderFilePath;
 		}
 #elif COMPILE_VULKAN
-		vertexShaderFilePath = RESOURCE_LOCATION "shaders/spv/" + inVertexShaderFilePath;
+		if (!inVertexShaderFilePath.empty())
+		{
+			vertexShaderFilePath = RESOURCE_LOCATION "shaders/spv/" + inVertexShaderFilePath;
+		}
 		if (!inFragmentShaderFilePath.empty())
 		{
 			fragmentShaderFilePath = RESOURCE_LOCATION "shaders/spv/" + inFragmentShaderFilePath;
@@ -90,6 +96,10 @@ namespace flex
 		if (!inGeometryShaderFilePath.empty())
 		{
 			geometryShaderFilePath = RESOURCE_LOCATION "shaders/spv/" + inGeometryShaderFilePath;
+		}
+		if (!inComputeShaderFilePath.empty())
+		{
+			computeShaderFilePath = RESOURCE_LOCATION "shaders/spv/" + inComputeShaderFilePath;
 		}
 #endif
 	}

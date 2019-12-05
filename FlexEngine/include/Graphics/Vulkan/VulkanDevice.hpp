@@ -2,6 +2,7 @@
 #if COMPILE_VULKAN
 
 #include "VDeleter.hpp"
+#include "VulkanHelpers.hpp"
 
 namespace flex
 {
@@ -9,7 +10,7 @@ namespace flex
 	{
 		struct VulkanDevice
 		{
-			VulkanDevice(VkPhysicalDevice physicalDevice);
+			VulkanDevice(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
 
 			u32 GetMemoryType(u32 typeBits, VkMemoryPropertyFlags properties, VkBool32* outMemTypeFound = nullptr) const;
 
@@ -23,6 +24,7 @@ namespace flex
 			VkPhysicalDeviceFeatures m_PhysicalDeviceFeatures;
 			VkPhysicalDeviceMemoryProperties m_MemoryProperties;
 			std::vector<VkQueueFamilyProperties> m_QueueFamilyProperties;
+			VulkanQueueFamilyIndices m_QueueFamilyIndices;
 			std::vector<std::string> m_SupportedExtensions;
 		};
 	} // namespace vk

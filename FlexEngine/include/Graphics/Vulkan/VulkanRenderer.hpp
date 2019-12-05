@@ -79,8 +79,8 @@ namespace flex
 			virtual Shader& GetShader(ShaderID shaderID) override;
 
 			virtual bool GetShaderID(const std::string& shaderName, ShaderID& shaderID) override;
-			virtual bool GetMaterialID(const std::string& materialName, MaterialID& materialID) override;
-			virtual MaterialID GetMaterialID(RenderID renderID) override;
+			virtual bool FindOrCreateMaterialByName(const std::string& materialName, MaterialID& materialID) override;
+			virtual MaterialID GetRenderObjectMaterialID(RenderID renderID) override;
 
 			virtual std::vector<Pair<std::string, MaterialID>> GetValidMaterialNames() const override;
 
@@ -109,6 +109,9 @@ namespace flex
 
 			virtual void RecaptureReflectionProbe() override;
 			virtual void RenderObjectStateChanged() override;
+
+			virtual ParticleSystemID AddParticleSystem(const std::string& name, ParticleSystem* system, i32 particleCount) override;
+			virtual bool RemoveParticleSystem(ParticleSystemID particleSystemID) override;
 
 			void RegisterFramebufferAttachment(FrameBufferAttachment* frameBufferAttachment);
 			FrameBufferAttachment* GetFrameBufferAttachment(FrameBufferAttachmentID frameBufferAttachmentID) const;
@@ -174,6 +177,7 @@ namespace flex
 				glm::vec2 texSize;
 				glm::vec4 colorMultiplier;
 				bool bSSAOVerticalPass;
+				ParticleSimData* particleSimData = nullptr;
 			};
 
 			void GenerateCubemapFromHDR(VulkanRenderObject* renderObject, const std::string& environmentMapPath);
@@ -188,10 +192,13 @@ namespace flex
 			void CreateSSAOPipelines();
 			void CreateSSAODescriptorSets();
 
-			MaterialID GetNextAvailableMaterialID();
+			MaterialID GetNextAvailableMaterialID() const;
 			RenderID GetNextAvailableRenderID() const;
+			ParticleSystemID GetNextAvailableParticleSystemID() const;
 
 			void InsertNewRenderObject(VulkanRenderObject* renderObject);
+			void InsertNewParticleSystem(VulkanParticleSystem* particleSystem);
+
 			void CreateInstance();
 			void SetupDebugCallback();
 			void CreateSurface();
@@ -204,7 +211,7 @@ namespace flex
 			void CreateRenderPasses();
 			void CalculateAutoLayoutTransitions();
 
-			void FillOutBufferDescriptorInfos(ShaderUniformContainer<BufferDescriptorInfo>* descriptors, UniformBuffer* uniformBuffer, ShaderID shaderID);
+			void FillOutBufferDescriptorInfos(ShaderUniformContainer<BufferDescriptorInfo>* descriptors, UniformBufferList* uniformBufferList, ShaderID shaderID);
 			void CreateDescriptorSet(RenderID renderID);
 			void CreateDescriptorSet(DescriptorSetCreateInfo* createInfo);
 			void CreateDescriptorSetLayout(ShaderID shaderID);
@@ -217,10 +224,12 @@ namespace flex
 			void PrepareCubemapFrameBuffer();
 			void PhysicsDebugRender();
 
-			void CreateUniformBuffers(VulkanShader* shader);
+			void CreateUniformBuffers(VulkanMaterial* material);
 
 			void CreatePostProcessingResources();
 			void CreateFullscreenBlitResources();
+			void CreateComputeResources();
+			void CreateParticleSystemResources(VulkanParticleSystem* particleSystem);
 
 			// Returns a pointer into m_LoadedTextures if a texture has been loaded from that file path, otherwise returns nullptr
 			VulkanTexture* GetLoadedTexture(const std::string& filePath);
@@ -244,7 +253,7 @@ namespace flex
 			void CreateDescriptorPool();
 			u32 AllocateDynamicUniformBuffer(u32 dynamicDataSize, void** data, i32 maxObjectCount = -1);
 			void PrepareUniformBuffer(VulkanBuffer* buffer, u32 bufferSize,
-				VkBufferUsageFlags bufferUseageFlagBits, VkMemoryPropertyFlags memoryPropertyHostFlagBits);
+				VkBufferUsageFlags bufferUseageFlagBits, VkMemoryPropertyFlags memoryPropertyHostFlagBits, bool bMap = true);
 
 			void CreateSemaphores();
 
@@ -254,7 +263,7 @@ namespace flex
 			// Expects a render pass to be in flight, renders a fullscreen tri with minimal state setup
 			void RenderFullscreenTri(
 				VkCommandBuffer commandBuffer,
-				ShaderID shaderID,
+				MaterialID materialID,
 				VkPipelineLayout pipelineLayout,
 				VkPipeline graphicsPipeline,
 				VkDescriptorSet descriptorSet);
@@ -263,7 +272,7 @@ namespace flex
 			void RenderFullscreenTri(
 				VkCommandBuffer commandBuffer,
 				VulkanRenderPass* renderPass,
-				ShaderID shaderID,
+				MaterialID materialID,
 				VkPipelineLayout pipelineLayout,
 				VkPipeline graphicsPipeline,
 				VkDescriptorSet descriptorSet,
@@ -273,7 +282,7 @@ namespace flex
 
 			void DrawFrame();
 
-			void BindDescriptorSet(VulkanShader* shader, u32 dynamicOffsetOffset, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet);
+			void BindDescriptorSet(const VulkanMaterial* material, u32 dynamicOffsetOffset, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet) const;
 			void RecreateSwapChain();
 
 			void BeginDebugMarkerRegionInternal(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color = VEC4_ONE);
@@ -324,6 +333,7 @@ namespace flex
 			static const u32 MAX_NUM_DESC_COMBINED_IMAGE_SAMPLERS = 1024;
 			static const u32 MAX_NUM_DESC_UNIFORM_BUFFERS = 1024;
 			static const u32 MAX_NUM_DESC_DYNAMIC_UNIFORM_BUFFERS = 1024;
+			static const u32 MAX_NUM_DESC_DYNAMIC_STORAGE_BUFFERS = 1; // Particles
 
 			VulkanRenderObject* GetRenderObject(RenderID renderID);
 
@@ -334,11 +344,17 @@ namespace flex
 			void DrawTextSS(VkCommandBuffer commandBuffer);
 			void DrawTextWS(VkCommandBuffer commandBuffer);
 			void DrawSpriteBatch(const std::vector<SpriteQuadDrawInfo>& batch, VkCommandBuffer commandBuffer);
+			void DrawParticles(VkCommandBuffer commandBuffer);
+
+			VkDescriptorSet GetSpriteDescriptorSet(TextureID textureID, MaterialID spriteMaterialID, u32 textureLayer);
 
 			VkRenderPass ResolveRenderPassType(RenderPassType renderPassType, const char* shaderName = nullptr);
 
 			void CreateShadowResources();
-			VkDescriptorSet CreateSpriteDescSet(ShaderID spriteShaderID, TextureID textureID, u32 layer = 0);
+			VkDescriptorSet CreateSpriteDescSet(MaterialID spriteMaterialID, TextureID textureID, u32 layer = 0);
+
+			void InitializeAllParticleSystemBuffers();
+			void InitializeParticleSystemBuffer(VulkanParticleSystem* particleSystem);
 
 			std::vector<std::string> m_SupportedDeviceExtenions;
 
@@ -423,7 +439,7 @@ namespace flex
 			VDeleter<VkImageView> m_ShadowImageView;
 			VkFormat m_ShadowBufFormat = VK_FORMAT_UNDEFINED;
 			VkDescriptorSet m_ShadowDescriptorSet = VK_NULL_HANDLE;
-			Cascade* m_ShadowCascades[NUM_SHADOW_CASCADES];
+			Cascade* m_ShadowCascades[SHADOW_CASCADE_COUNT];
 
 			std::map<FrameBufferAttachmentID, FrameBufferAttachment*> m_FrameBufferAttachments;
 
@@ -435,7 +451,7 @@ namespace flex
 
 			struct SpriteDescSet
 			{
-				ShaderID shaderID;
+				MaterialID materialID;
 				VkDescriptorSet descSet;
 				u32 textureLayer;
 			};
@@ -543,6 +559,12 @@ namespace flex
 			VDeleter<VkPipeline> m_BlitGraphicsPipeline;
 			VDeleter<VkPipelineLayout> m_BlitGraphicsPipelineLayout;
 
+			VDeleter<VkPipelineLayout> m_ParticleGraphicsPipelineLayout;
+
+			VDeleter<VkPipelineLayout> m_ParticleSimulationComputePipelineLayout;
+
+			std::vector<VulkanParticleSystem*> m_ParticleSystems;
+
 			VDeleter<VkDescriptorPool> m_DescriptorPool;
 			std::vector<VkDescriptorSetLayout> m_DescriptorSetLayouts;
 
@@ -553,7 +575,6 @@ namespace flex
 
 			VulkanTexture* m_BlankTexture = nullptr;
 			VulkanTexture* m_BlankTextureArr = nullptr;
-
 
 			std::vector<VertexIndexBufferPair> m_VertexIndexBufferPairs;
 
@@ -596,9 +617,6 @@ namespace flex
 			VkSpecializationMapEntry m_TAASpecializationMapEntry;
 			VkSpecializationInfo m_TAAOSpecializationInfo;
 			real m_TAA_ks[2];
-
-			MaterialID m_ComputeSDFMatID = InvalidMaterialID;
-			MaterialID m_FullscreenBlitMatID = InvalidMaterialID;
 
 #ifdef DEBUG
 			AsyncVulkanShaderCompiler* m_ShaderCompiler = nullptr;

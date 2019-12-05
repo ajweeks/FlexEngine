@@ -2,7 +2,7 @@
 #if COMPILE_VULKAN
 
 IGNORE_WARNINGS_PUSH
-#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan.h>
 IGNORE_WARNINGS_POP
 
 #include "VDeleter.hpp"

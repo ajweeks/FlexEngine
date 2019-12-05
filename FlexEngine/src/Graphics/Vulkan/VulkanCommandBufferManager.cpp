@@ -63,13 +63,11 @@ namespace flex
 			}
 		}
 
-		void VulkanCommandBufferManager::CreatePool(VkSurfaceKHR surface)
+		void VulkanCommandBufferManager::CreatePool()
 		{
-			VulkanQueueFamilyIndices queueFamilyIndices = FindQueueFamilies(surface, m_VulkanDevice->m_PhysicalDevice);
-
 			VkCommandPoolCreateInfo poolInfo = vks::commandPoolCreateInfo();
 			poolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-			poolInfo.queueFamilyIndex = (u32)queueFamilyIndices.graphicsFamily;
+			poolInfo.queueFamilyIndex = (u32)m_VulkanDevice->m_QueueFamilyIndices.graphicsFamily;
 
 			VK_CHECK_RESULT(vkCreateCommandPool(m_VulkanDevice->m_LogicalDevice, &poolInfo, nullptr, m_VulkanDevice->m_CommandPool.replace()));
 		}
