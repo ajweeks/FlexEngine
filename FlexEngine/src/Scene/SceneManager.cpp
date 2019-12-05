@@ -27,16 +27,16 @@ namespace flex
 
 	void SceneManager::AddScene(BaseScene* newScene)
 	{
-		bool unique = true;
-		std::for_each(m_Scenes.begin(), m_Scenes.end(), [&unique, newScene](BaseScene* scene) mutable
+		bool bUnique = true;
+		std::for_each(m_Scenes.begin(), m_Scenes.end(), [&bUnique, newScene](BaseScene* scene) mutable
 		{
 			if (scene->GetRelativeFilePath().compare(newScene->GetRelativeFilePath()) == 0)
 			{
-				unique = false;
+				bUnique = false;
 			}
 		});
 
-		if (unique)
+		if (bUnique)
 		{
 			m_Scenes.push_back(newScene);
 		}
@@ -75,8 +75,11 @@ namespace flex
 
 		CurrentScene()->PostInitialize();
 
-		std::string currentSceneName = CurrentScene()->GetName();
-		Print("Loaded scene %s\n", currentSceneName.c_str());
+		if (g_bEnableLogging_Loading)
+		{
+			std::string currentSceneName = CurrentScene()->GetName();
+			Print("Loaded scene %s\n", currentSceneName.c_str());
+		}
 	}
 
 	void SceneManager::RemoveScene(BaseScene* scene)
@@ -99,7 +102,7 @@ namespace flex
 		if (bPrintErrorOnFailure && sceneIndex >= m_Scenes.size())
 		{
 			PrintError("Attempt to set scene to index %u failed, it does not exist in the SceneManager\n",
-					   sceneIndex);
+				sceneIndex);
 			return false;
 		}
 
@@ -225,7 +228,7 @@ namespace flex
 			{
 				fileName = StripLeadingDirectories(fileName);
 
-				if (!SceneExists(fileName))
+				if (!SceneFileExists(fileName))
 				{
 					BaseScene* newScene = new BaseScene(fileName);
 					m_Scenes.push_back(newScene);
@@ -243,7 +246,7 @@ namespace flex
 			{
 				fileName = StripLeadingDirectories(fileName);
 
-				if (!SceneExists(fileName))
+				if (!SceneFileExists(fileName))
 				{
 					BaseScene* newScene = new BaseScene(fileName);
 					m_Scenes.push_back(newScene);
@@ -487,12 +490,12 @@ namespace flex
 			}
 			ImGui::EndChild();
 
-			if (ImGui::Button("Add scene..."))
+			if (ImGui::Button("New scene..."))
 			{
-				ImGui::OpenPopup("Add scene");
+				ImGui::OpenPopup("New scene");
 			}
 
-			if (ImGui::BeginPopupModal("Add scene", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+			if (ImGui::BeginPopupModal("New scene", NULL, ImGuiWindowFlags_AlwaysAutoResize))
 			{
 				static std::string newSceneName = "scene_" + IntToString(GetSceneCount(), 2);
 
@@ -509,7 +512,7 @@ namespace flex
 				{
 					// Remove trailing '\0' characters
 					newSceneName = std::string(newSceneName.c_str());
-
+					newSceneName = MakeSceneNameUnique(newSceneName);
 					CreateNewScene(newSceneName, true);
 
 					ImGui::CloseCurrentPopup();
@@ -598,9 +601,7 @@ namespace flex
 					bool bNameEmpty = newSceneFileNameStr.empty();
 					bool bCorrectFileType = EndsWith(newSceneFileNameStr, ".json");
 					bool bFileExists = FileExists(newSceneFilePath);
-					bool bSceneNameValid = (!bNameEmpty &&
-						bCorrectFileType &&
-						!bFileExists);
+					bool bSceneNameValid = (!bNameEmpty && bCorrectFileType && !bFileExists);
 
 					if (bSceneNameValid)
 					{
@@ -890,13 +891,33 @@ namespace flex
 		m_Scenes.clear();
 	}
 
-	bool SceneManager::SceneExists(const std::string& fileName) const
+	std::string SceneManager::MakeSceneNameUnique(const std::string& originalName)
+	{
+		std::string newSceneName = originalName;
+
+		bool bSceneNameExists = false;
+		for (BaseScene* scene : m_Scenes)
+		{
+			if (scene->GetName().compare(newSceneName) == 0)
+			{
+				bSceneNameExists = true;
+				break;
+			}
+		}
+
+		if (bSceneNameExists)
+		{
+			newSceneName = GetIncrementedPostFixedStr(newSceneName, "new scene");
+		}
+
+		return newSceneName;
+	}
+
+	bool SceneManager::SceneFileExists(const std::string& fileName) const
 	{
 		for (BaseScene* scene : m_Scenes)
 		{
-			std::string existingSceneFileName = scene->GetFileName();
-
-			if (existingSceneFileName.compare(fileName) == 0)
+			if (scene->GetFileName().compare(fileName) == 0)
 			{
 				return true;
 			}

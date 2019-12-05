@@ -311,8 +311,8 @@ namespace flex
 
 			PhysicsDebuggingSettings& physicsDebuggingSettings = g_Renderer->GetPhysicsDebuggingSettings();
 			const bool bRenderBoundingSpheres =
-				!physicsDebuggingSettings.DisableAll &&
-				physicsDebuggingSettings.DrawWireframe &&
+				!physicsDebuggingSettings.bDisableAll &&
+				physicsDebuggingSettings.bDrawWireframe &&
 				g_EngineInstance->IsRenderingEditorObjects();
 			if (bRenderBoundingSpheres)
 			{

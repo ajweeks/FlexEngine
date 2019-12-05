@@ -27,7 +27,7 @@ namespace flex
 		{
 			m_Renderer = static_cast<GLRenderer*>(g_Renderer);
 			const std::string debugMatName = "Debug";
-			if (!m_Renderer->GetMaterialID(debugMatName, m_MaterialID))
+			if (!m_Renderer->FindOrCreateMaterialByName(debugMatName, m_MaterialID))
 			{
 				MaterialCreateInfo debugMatCreateInfo = {};
 				debugMatCreateInfo.shaderName = "color";

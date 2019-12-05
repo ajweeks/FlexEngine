@@ -7,11 +7,13 @@ namespace flex
 {
 	namespace vk
 	{
-		VulkanDevice::VulkanDevice(VkPhysicalDevice physicalDevice) :
+		VulkanDevice::VulkanDevice(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface) :
 			m_CommandPool({ m_LogicalDevice, vkDestroyCommandPool })
 		{
 			assert(physicalDevice);
 			m_PhysicalDevice = physicalDevice;
+
+			m_QueueFamilyIndices = FindQueueFamilies(surface, m_PhysicalDevice);
 
 			vkGetPhysicalDeviceProperties(physicalDevice, &m_PhysicalDeviceProperties);
 			vkGetPhysicalDeviceFeatures(physicalDevice, &m_PhysicalDeviceFeatures);
@@ -43,7 +45,7 @@ namespace flex
 			return m_LogicalDevice;
 		}
 
-		u32 VulkanDevice::GetMemoryType(u32 typeBits, VkMemoryPropertyFlags properties, VkBool32* memTypeFound) const
+		u32 VulkanDevice::GetMemoryType(u32 typeBits, VkMemoryPropertyFlags properties, VkBool32* outMemTypeFound) const
 		{
 			for (u32 i = 0; i < m_MemoryProperties.memoryTypeCount; i++)
 			{
@@ -51,9 +53,9 @@ namespace flex
 				{
 					if ((m_MemoryProperties.memoryTypes[i].propertyFlags & properties) == properties)
 					{
-						if (memTypeFound)
+						if (outMemTypeFound)
 						{
-							*memTypeFound = true;
+							*outMemTypeFound = true;
 						}
 						return i;
 					}
@@ -61,9 +63,9 @@ namespace flex
 				typeBits >>= 1;
 			}
 
-			if (memTypeFound)
+			if (outMemTypeFound)
 			{
-				*memTypeFound = false;
+				*outMemTypeFound = false;
 				return 0;
 			}
 			else

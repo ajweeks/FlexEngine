@@ -1,7 +1,7 @@
 #pragma once
 
 // TODO: Move all constants into generic, hotreloadable constants file
-#include "Graphics/RendererTypes.hpp" // For NUM_SHADOW_CASCADES
+#include "Graphics/RendererTypes.hpp" // For SHADOW_CASCADE_COUNT
 
 namespace flex
 {
@@ -9,7 +9,7 @@ namespace flex
 	{
 	public:
 		BaseCamera(const std::string& cameraName, bool bIsGameplayCam, real FOV = glm::radians(45.0f),
-			real zNear = 0.5f, real zFar = 350.0f);
+			real zNear = 0.5f, real zFar = 1000.0f);
 		virtual ~BaseCamera();
 
 		virtual void Initialize();
@@ -127,6 +127,6 @@ namespace flex
 		glm::vec3 m_Up;
 		glm::vec3 m_Right;
 
-		glm::mat4 m_ShadowProjectionMats[NUM_SHADOW_CASCADES];
+		glm::mat4 m_ShadowProjectionMats[SHADOW_CASCADE_COUNT];
 	};
 } // namespace flex

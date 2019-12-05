@@ -53,23 +53,27 @@ namespace flex
 	using ShaderID = u32;
 	using MaterialID = u32;
 	using TextureID = u32;
+	using FrameBufferAttachmentID = u32;
 	using PointLightID = u32;
 	using AudioSourceID = u32;
 	using TrackID = u32;
 	using CartID = u32;
 	using CartChainID = u32;
 	using VariableID = u32;
+	using ParticleSystemID = u32;
 
 #define InvalidRenderID ((RenderID)u32_max)
 #define InvalidShaderID ((ShaderID)u32_max)
 #define InvalidMaterialID ((MaterialID)u32_max)
 #define InvalidTextureID ((TextureID)u32_max)
+#define InvalidFrameBufferAttachmentID ((FrameBufferAttachmentID)u32_max)
 #define InvalidPointLightID ((PointLightID)u32_max)
 #define InvalidAudioSourceID ((AudioSourceID)u32_max)
 #define InvalidTrackID ((TrackID)u32_max)
 #define InvalidCartID ((CartChainID)u32_max)
 #define InvalidCartChainID ((CartChainID)u32_max)
 #define InvalidVariableID ((VariableID)u32_max)
+#define InvalidParticleSystemID ((ParticleSystemID)u32_max)
 #define InvalidID u32_max
 
 	//template<bool> struct StaticAssert;
@@ -92,6 +96,7 @@ namespace flex
 		TERMINAL,
 		GERSTNER_WAVE,
 		BLOCKS,
+		PARTICLE_SYSTEM,
 
 		_NONE
 	};
@@ -113,6 +118,7 @@ namespace flex
 		"terminal",
 		"gerstner wave",
 		"blocks",
+		"particle system",
 
 		"NONE"
 	};

@@ -635,6 +635,18 @@
 						"mask" : 1,
 						"group" : 1
 					}
+				},
+				{
+					"name" : "reshelfector",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "3.841, 0.000, -35.611",
+						"rot" : "0.000, -0.000, 0.000"
+					},
+					"mesh" : "reshelfector",
+					"material" : "cross hatch"
 				}
 			]
 		},

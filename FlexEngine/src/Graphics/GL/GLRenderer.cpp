@@ -172,7 +172,7 @@ namespace flex
 
 				glGenTextures(1, &m_ShadowMapTexture.id);
 				glBindTexture(GL_TEXTURE_2D_ARRAY, m_ShadowMapTexture.id);
-				glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, m_ShadowMapTexture.internalFormat, SHADOW_CASCADE_RES, SHADOW_CASCADE_RES, NUM_SHADOW_CASCADES, 0, m_ShadowMapTexture.format, m_ShadowMapTexture.type, NULL);
+				glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, m_ShadowMapTexture.internalFormat, SHADOW_CASCADE_RES, SHADOW_CASCADE_RES, SHADOW_CASCADE_COUNT, 0, m_ShadowMapTexture.format, m_ShadowMapTexture.type, NULL);
 				glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 				glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 				glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
@@ -180,7 +180,7 @@ namespace flex
 				real borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 				glTexParameterfv(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BORDER_COLOR, borderColor); // Prevents areas not covered by map to be in shadow
 
-				for (i32 i = 0; i < NUM_SHADOW_CASCADES; ++i)
+				for (i32 i = 0; i < SHADOW_CASCADE_COUNT; ++i)
 				{
 					glGenFramebuffers(1, &m_ShadowMapFBOs[i]);
 					glBindFramebuffer(GL_FRAMEBUFFER, m_ShadowMapFBOs[i]);
@@ -200,7 +200,7 @@ namespace flex
 			{
 				const std::string gridMatName = "Grid";
 				// TODO: Don't rely on material names!
-				if (!GetMaterialID(gridMatName, m_GridMaterialID))
+				if (!FindOrCreateMaterialByName(gridMatName, m_GridMaterialID))
 				{
 					MaterialCreateInfo gridMatInfo = {};
 					gridMatInfo.shaderName = "color";
@@ -227,7 +227,7 @@ namespace flex
 			{
 				const std::string worldOriginMatName = "World origin";
 				// TODO: Don't rely on material names!
-				if (!GetMaterialID(worldOriginMatName, m_WorldAxisMaterialID))
+				if (!FindOrCreateMaterialByName(worldOriginMatName, m_WorldAxisMaterialID))
 				{
 					MaterialCreateInfo worldAxisMatInfo = {};
 					worldAxisMatInfo.shaderName = "color";
@@ -378,7 +378,7 @@ namespace flex
 			glDeleteFramebuffers(1, &m_Offscreen1FBO);
 			glDeleteRenderbuffers(1, &m_Offscreen1RBO);
 
-			for (i32 i = 0; i < NUM_SHADOW_CASCADES; ++i)
+			for (i32 i = 0; i < SHADOW_CASCADE_COUNT; ++i)
 			{
 				glDeleteFramebuffers(1, &m_ShadowMapFBOs[i]);
 			}
@@ -620,7 +620,7 @@ namespace flex
 				std::string textureName;
 				i32 channelCount;
 				bool flipVertically;
-				bool generateMipMaps;
+				bool bGenerateMipMaps;
 				bool hdr;
 			};
 
@@ -668,7 +668,7 @@ namespace flex
 								GLTexture* newTexture = new GLTexture(samplerCreateInfo.filepath,
 																	  samplerCreateInfo.channelCount,
 																	  samplerCreateInfo.flipVertically,
-																	  samplerCreateInfo.generateMipMaps,
+																	  samplerCreateInfo.bGenerateMipMaps,
 																	  samplerCreateInfo.hdr);
 
 								newTexture->LoadFromFile();
@@ -727,7 +727,7 @@ namespace flex
 				cubemapCreateInfo.textureID = &mat.cubemapSamplerID;
 				cubemapCreateInfo.HDR = false;
 				cubemapCreateInfo.generateMipmaps = false;
-				cubemapCreateInfo.enableTrilinearFiltering = createInfo->enableCubemapTrilinearFiltering;
+				cubemapCreateInfo.bEnableTrilinearFiltering = createInfo->enableCubemapTrilinearFiltering;
 				cubemapCreateInfo.filePaths = mat.material.cubeMapFilePaths;
 
 				if (createInfo->cubeMapFilePaths[0].empty())
@@ -767,7 +767,7 @@ namespace flex
 				cubemapCreateInfo.textureGBufferIDs = &mat.cubemapSamplerGBuffersIDs;
 				cubemapCreateInfo.depthTextureID = &mat.cubemapDepthSamplerID;
 				cubemapCreateInfo.HDR = true;
-				cubemapCreateInfo.enableTrilinearFiltering = createInfo->enableCubemapTrilinearFiltering;
+				cubemapCreateInfo.bEnableTrilinearFiltering = createInfo->enableCubemapTrilinearFiltering;
 				cubemapCreateInfo.generateMipmaps = false;
 				cubemapCreateInfo.textureSize = createInfo->generatedCubemapSize;
 				cubemapCreateInfo.generateDepthBuffers = createInfo->generateCubemapDepthBuffers;
@@ -782,7 +782,7 @@ namespace flex
 				cubemapCreateInfo.textureGBufferIDs = &mat.cubemapSamplerGBuffersIDs;
 				cubemapCreateInfo.depthTextureID = &mat.cubemapDepthSamplerID;
 				cubemapCreateInfo.HDR = true;
-				cubemapCreateInfo.enableTrilinearFiltering = createInfo->enableCubemapTrilinearFiltering;
+				cubemapCreateInfo.bEnableTrilinearFiltering = createInfo->enableCubemapTrilinearFiltering;
 				cubemapCreateInfo.generateMipmaps = false;
 				cubemapCreateInfo.textureSize = createInfo->generatedCubemapSize;
 				cubemapCreateInfo.generateDepthBuffers = createInfo->generateCubemapDepthBuffers;
@@ -851,7 +851,7 @@ namespace flex
 				cubemapCreateInfo.program = shader.program;
 				cubemapCreateInfo.textureID = &mat.irradianceSamplerID;
 				cubemapCreateInfo.HDR = true;
-				cubemapCreateInfo.enableTrilinearFiltering = createInfo->enableCubemapTrilinearFiltering;
+				cubemapCreateInfo.bEnableTrilinearFiltering = createInfo->enableCubemapTrilinearFiltering;
 				cubemapCreateInfo.generateMipmaps = false;
 				cubemapCreateInfo.textureSize = createInfo->generatedIrradianceCubemapSize;
 
@@ -880,7 +880,7 @@ namespace flex
 				cubemapCreateInfo.program = shader.program;
 				cubemapCreateInfo.textureID = &mat.prefilteredMapSamplerID;
 				cubemapCreateInfo.HDR = true;
-				cubemapCreateInfo.enableTrilinearFiltering = createInfo->enableCubemapTrilinearFiltering;
+				cubemapCreateInfo.bEnableTrilinearFiltering = createInfo->enableCubemapTrilinearFiltering;
 				cubemapCreateInfo.generateMipmaps = true;
 				cubemapCreateInfo.textureSize = createInfo->generatedPrefilteredCubemapSize;
 
@@ -1114,7 +1114,7 @@ namespace flex
 
 				MaterialID equirectangularToCubeMatID = InvalidMaterialID;
 				// TODO: Don't rely on material names!
-				if (!GetMaterialID("Equirectangular to Cube", equirectangularToCubeMatID) || bRandomizeSkybox)
+				if (!FindOrCreateMaterialByName("Equirectangular to Cube", equirectangularToCubeMatID) || bRandomizeSkybox)
 				{
 					std::string equirectangularProfileBlockName = "generating equirectangular mat";
 					PROFILE_BEGIN(equirectangularProfileBlockName);
@@ -1221,7 +1221,7 @@ namespace flex
 
 				MaterialID prefilterMatID = InvalidMaterialID;
 				// TODO: Don't rely on material names!
-				if (!GetMaterialID("Prefilter", prefilterMatID))
+				if (!FindOrCreateMaterialByName("Prefilter", prefilterMatID))
 				{
 					MaterialCreateInfo prefilterMaterialCreateInfo = {};
 					prefilterMaterialCreateInfo.name = "Prefilter";
@@ -1422,7 +1422,7 @@ namespace flex
 
 				MaterialID irrandianceMatID = InvalidMaterialID;
 				// TODO: Don't rely on material names!
-				if (!GetMaterialID("Irradiance", irrandianceMatID))
+				if (!FindOrCreateMaterialByName("Irradiance", irrandianceMatID))
 				{
 					std::string irradianceProfileBlockName = "generating irradiance mat";
 					PROFILE_BEGIN(irradianceProfileBlockName);
@@ -1593,12 +1593,6 @@ namespace flex
 			AddEditorString("Captured reflection probe");
 		}
 
-		u32 GLRenderer::GetTextureHandle(TextureID textureID) const
-		{
-			assert(textureID < m_LoadedTextures.size());
-			return m_LoadedTextures[textureID]->handle;
-		}
-
 		void GLRenderer::RenderObjectStateChanged()
 		{
 			m_bRebatchRenderObjects = true;
@@ -1619,7 +1613,7 @@ namespace flex
 			return false;
 		}
 
-		bool GLRenderer::GetMaterialID(const std::string& materialName, MaterialID& materialID)
+		bool GLRenderer::FindOrCreateMaterialByName(const std::string& materialName, MaterialID& materialID)
 		{
 			// TODO: Store materials using sorted data structure?
 			for (auto& materialPair : m_Materials)
@@ -1649,7 +1643,7 @@ namespace flex
 			return false;
 		}
 
-		MaterialID GLRenderer::GetMaterialID(RenderID renderID)
+		MaterialID GLRenderer::GetRenderObjectMaterialID(RenderID renderID)
 		{
 			GLRenderObject* renderObject = GetRenderObject(renderID);
 			if (renderObject != nullptr)
@@ -1935,7 +1929,7 @@ namespace flex
 
 			ApplyPostProcessing();
 
-			if (!m_PhysicsDebuggingSettings.DisableAll)
+			if (!m_PhysicsDebuggingSettings.bDisableAll)
 			{
 				PROFILE_AUTO("PhysicsDebugRender");
 
@@ -2198,7 +2192,7 @@ namespace flex
 				drawCallInfo.bRenderingShadows = true;
 				drawCallInfo.cullFace = CullFace::FRONT;
 
-				for (i32 i = 0; i < NUM_SHADOW_CASCADES; ++i)
+				for (i32 i = 0; i < SHADOW_CASCADE_COUNT; ++i)
 				{
 					glBindFramebuffer(GL_FRAMEBUFFER, m_ShadowMapFBOs[i]);
 
@@ -3585,17 +3579,17 @@ namespace flex
 			};
 
 			Tex textures[] = {
-				{ shader->constantBufferUniforms.HasUniform(U_DEPTH_SAMPLER), true, glMaterial->depthSamplerID, GL_TEXTURE_2D },
+				{ shader->textureUniforms.HasUniform(U_DEPTH_SAMPLER), true, glMaterial->depthSamplerID, GL_TEXTURE_2D },
 				{ shader->bNeedAlbedoSampler, material->enableAlbedoSampler, glMaterial->albedoSamplerID, GL_TEXTURE_2D },
 				{ shader->bNeedMetallicSampler, material->enableMetallicSampler, glMaterial->metallicSamplerID, GL_TEXTURE_2D },
 				{ shader->bNeedRoughnessSampler, material->enableRoughnessSampler, glMaterial->roughnessSamplerID, GL_TEXTURE_2D },
 				{ shader->bNeedNormalSampler, material->enableNormalSampler, glMaterial->normalSamplerID, GL_TEXTURE_2D },
 				{ shader->bNeedBRDFLUT, material->enableBRDFLUT, glMaterial->brdfLUTSamplerID, GL_TEXTURE_2D },
-				{ shader->constantBufferUniforms.HasUniform(U_SHADOW_SAMPLER), true, m_ShadowMapTexture.id, GL_TEXTURE_2D_ARRAY },
+				{ shader->textureUniforms.HasUniform(U_SHADOW_SAMPLER), true, m_ShadowMapTexture.id, GL_TEXTURE_2D_ARRAY },
 				{ shader->bNeedIrradianceSampler, material->enableIrradianceSampler, glMaterial->irradianceSamplerID, GL_TEXTURE_CUBE_MAP },
 				{ shader->bNeedPrefilteredMap, material->enablePrefilteredMap, glMaterial->prefilteredMapSamplerID, GL_TEXTURE_CUBE_MAP },
 				{ shader->bNeedCubemapSampler, material->enableCubemapSampler, glMaterial->cubemapSamplerID, GL_TEXTURE_CUBE_MAP },
-				{ shader->constantBufferUniforms.HasUniform(U_NOISE_SAMPLER), true, glMaterial->noiseSamplerID, GL_TEXTURE_2D },
+				{ shader->textureUniforms.HasUniform(U_NOISE_SAMPLER), true, glMaterial->noiseSamplerID, GL_TEXTURE_2D },
 			};
 			// TODO: Update reserve count when adding more textures
 
@@ -4006,12 +4000,12 @@ namespace flex
 
 				if (shader->shader->constantBufferUniforms.HasUniform(U_POINT_LIGHTS))
 				{
-					for (u32 i = 0; i < MAX_NUM_POINT_LIGHTS; ++i)
+					for (u32 i = 0; i < MAX_POINT_LIGHT_COUNT; ++i)
 					{
 						const std::string numberStr(std::to_string(i));
 						const char* numberCStr = numberStr.c_str();
 						static const i32 strStartLen = 16;
-						static_assert(MAX_NUM_POINT_LIGHTS <= 99, "More than 99 point lights are allowed, strStartLen must be larger to compensate for more digits");
+						static_assert(MAX_POINT_LIGHT_COUNT <= 99, "More than 99 point lights are allowed, strStartLen must be larger to compensate for more digits");
 						char pointLightStrStart[strStartLen];
 						// TODO: Replace with safer alternative
 						strcpy_s(pointLightStrStart, "pointLights[");
@@ -4105,7 +4099,7 @@ namespace flex
 				// Shadow sampling data
 				if (shader->shader->constantBufferUniforms.HasUniform(U_SHADOW_SAMPLING_DATA))
 				{
-					for (i32 i = 0; i < NUM_SHADOW_CASCADES; ++i)
+					for (i32 i = 0; i < SHADOW_CASCADE_COUNT; ++i)
 					{
 						std::string u = "cascadeViewProjMats[" + std::to_string(i) + "]";
 						SetMat4f(material->material.shaderID, u.c_str(), m_ShadowSamplingData.cascadeViewProjMats[i]);
@@ -4430,7 +4424,7 @@ namespace flex
 				return;
 			}
 
-			MaterialID skyboxMaterialID = m_SkyBoxMesh->GetMeshComponent()->GetMaterialID();
+			MaterialID skyboxMaterialID = m_SkyBoxMesh->GetMeshComponent()->FindOrCreateMaterialByName();
 			if (skyboxMaterialID == InvalidMaterialID)
 			{
 				PrintError("Skybox doesn't have a valid material! Irradiance textures can't be generated\n");

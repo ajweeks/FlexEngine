@@ -36,7 +36,7 @@ namespace flex
 		virtual void Update();
 
 		virtual void DrawImGuiObjects();
-		// Returns true if this object was deleted through the context menu
+		// Returns true if this object was deleted or duplicated
 		virtual bool DoImGuiContextMenu(bool bActive);
 		virtual bool DoDuplicateGameObjectButton(const char* buttonName);
 
@@ -604,6 +604,36 @@ namespace flex
 
 		const sec m_CursorBlinkRate = 0.6f;
 		sec m_CursorBlinkTimer = 0.0f;
+
+	};
+
+	class ParticleSystem : public GameObject
+	{
+	public:
+		explicit ParticleSystem(const std::string& name);
+
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
+
+		virtual void Update() override;
+		virtual void Destroy() override;
+
+		virtual void DrawImGuiObjects() override;
+
+		virtual void OnTransformChanged() override;
+
+		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+
+		glm::mat4 model;
+		real scale;
+		ParticleSimData data;
+		bool bEnabled;
+		MaterialID simMaterialID = InvalidMaterialID;
+		MaterialID renderingMaterialID = InvalidMaterialID;
+		ParticleSystemID ID = InvalidParticleSystemID;
+
+	private:
+		void UpdateModelMatrix();
 
 	};
 

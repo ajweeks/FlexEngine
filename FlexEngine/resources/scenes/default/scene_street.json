@@ -70,17 +70,17 @@
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "2.384, 1.561, 1.426"
+				"rot" : "0.000, 0.236, 1.068"
 			},
 			"directional light info" : 
 			{
-				"rotation" : "0.329, 0.629, -0.323, 0.626",
+				"rotation" : "-0.060, 0.101, 0.506, 0.855",
 				"pos" : "0.000, 15.000, 0.000",
-				"color" : "1.00, 1.00, 1.00",
+				"color" : "0.99, 1.00, 0.86",
 				"enabled" : true,
-				"brightness" : 5.000000,
+				"brightness" : 4.531000,
 				"cast shadows" : true,
-				"shadow darkness" : 0.759000
+				"shadow darkness" : 0.943000
 			}
 		}
 	]

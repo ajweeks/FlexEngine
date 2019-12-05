@@ -47,7 +47,8 @@ namespace flex
 		void DestroyAllScenes();
 
 	private:
-		bool SceneExists(const std::string& fileName) const;
+		std::string MakeSceneNameUnique(const std::string& originalName);
+		bool SceneFileExists(const std::string& fileName) const;
 		void DoSceneContextMenu(BaseScene* scene);
 
 		u32 m_CurrentSceneIndex = InvalidID;

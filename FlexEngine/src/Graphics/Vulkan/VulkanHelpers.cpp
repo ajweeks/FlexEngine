@@ -55,7 +55,7 @@ namespace flex
 				++location;
 			}
 
-			if (vertexAttributes & (u32)VertexAttribute::POSITION_2D)
+			if (vertexAttributes & (u32)VertexAttribute::POSITION2)
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -65,6 +65,32 @@ namespace flex
 				attributeDescriptions.push_back(attributeDescription);
 
 				offset += sizeof(glm::vec2);
+				++location;
+			}
+
+			if (vertexAttributes & (u32)VertexAttribute::POSITION4)
+			{
+				VkVertexInputAttributeDescription attributeDescription = {};
+				attributeDescription.binding = 0;
+				attributeDescription.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+				attributeDescription.location = location;
+				attributeDescription.offset = offset;
+				attributeDescriptions.push_back(attributeDescription);
+
+				offset += sizeof(glm::vec4);
+				++location;
+			}
+
+			if (vertexAttributes & (u32)VertexAttribute::VELOCITY3)
+			{
+				VkVertexInputAttributeDescription attributeDescription = {};
+				attributeDescription.binding = 0;
+				attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
+				attributeDescription.location = location;
+				attributeDescription.offset = offset;
+				attributeDescriptions.push_back(attributeDescription);
+
+				offset += sizeof(glm::vec3);
 				++location;
 			}
 
@@ -160,26 +186,26 @@ namespace flex
 			}
 		}
 
-		UniformBuffer::UniformBuffer(const VDeleter<VkDevice>& device) :
-			constantBuffer(device),
-			constantData{},
-			dynamicBuffer(device),
-			dynamicData{}
+		UniformBuffer::UniformBuffer(const VDeleter<VkDevice>& device, UniformBufferType type) :
+			buffer(device),
+			type(type)
 		{
 		}
 
 		UniformBuffer::~UniformBuffer()
 		{
-			if (constantData.data)
+			if (data.data)
 			{
-				free_hooked(constantData.data);
-				constantData.data = nullptr;
-			}
-
-			if (dynamicData.data)
-			{
-				aligned_free_hooked(dynamicData.data);
-				dynamicData.data = nullptr;
+				if (type == UniformBufferType::DYNAMIC ||
+					type == UniformBufferType::PARTICLE_DATA)
+				{
+					aligned_free_hooked(data.data);
+				}
+				else
+				{
+					free_hooked(data.data);
+				}
+				data.data = nullptr;
 			}
 		}
 
@@ -220,7 +246,6 @@ namespace flex
 			height(height),
 			channelCount(channelCount)
 		{
-			UpdateImageDescriptor();
 		}
 
 		VulkanTexture::VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue,
@@ -239,7 +264,6 @@ namespace flex
 			bGenerateMipMaps(bGenerateMipMaps),
 			bHDR(bHDR)
 		{
-			UpdateImageDescriptor();
 		}
 
 		VulkanTexture::VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue,
@@ -257,19 +281,11 @@ namespace flex
 			bGenerateMipMaps(bGenerateMipMaps),
 			bHDR(bHDR)
 		{
-			UpdateImageDescriptor();
 		}
 
 		void VulkanTexture::Reload()
 		{
 			// TODO: Implement
-		}
-
-		void VulkanTexture::UpdateImageDescriptor()
-		{
-			imageInfoDescriptor.imageLayout = imageLayout;
-			imageInfoDescriptor.imageView = imageView;
-			imageInfoDescriptor.sampler = sampler;
 		}
 
 		std::string VulkanTexture::GetRelativeFilePath() const
@@ -408,7 +424,7 @@ namespace flex
 			UNREFERENCED_PARAMETER(graphicsQueue);
 
 			if (createInfo.width == 0 ||
-				createInfo.height== 0 ||
+				createInfo.height == 0 ||
 				createInfo.channels == 0 ||
 				createInfo.mipLevels == 0)
 			{
@@ -416,7 +432,7 @@ namespace flex
 				return 0;
 			}
 
-			const u32 calculatedMipLevels = createInfo.generateMipMaps ? static_cast<u32>(floor(log2(std::min(createInfo.width, createInfo.height)))) + 1 : 0;
+			const u32 calculatedMipLevels = createInfo.bGenerateMipMaps ? static_cast<u32>(floor(log2(std::min(createInfo.width, createInfo.height)))) + 1 : 0;
 
 			VkImageCreateInfo imageCreateInfo = vks::imageCreateInfo();
 			imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -481,7 +497,7 @@ namespace flex
 			return memRequirements.size;
 		}
 
-		VkDeviceSize VulkanTexture::CreateCubemapEmpty(VkFormat inFormat, u32 inMipLevels, bool enableTrilinearFiltering)
+		VkDeviceSize VulkanTexture::CreateCubemapEmpty(VkFormat inFormat, u32 inMipLevels, bool bEnableTrilinearFiltering)
 		{
 			assert(width > 0);
 			assert(height > 0);
@@ -498,7 +514,7 @@ namespace flex
 			createInfo.channels = channelCount;
 			createInfo.totalSize = width * height * channelCount * 6;
 			createInfo.mipLevels = inMipLevels;
-			createInfo.enableTrilinearFiltering = enableTrilinearFiltering;
+			createInfo.bEnableTrilinearFiltering = bEnableTrilinearFiltering;
 
 			VkDeviceSize imageSize = CreateCubemap(m_VulkanDevice, m_GraphicsQueue, createInfo);
 
@@ -509,7 +525,7 @@ namespace flex
 			return imageSize;
 		}
 
-		VkDeviceSize VulkanTexture::CreateCubemapFromTextures(VkFormat inFormat, const std::array<std::string, 6>& filePaths, bool enableTrilinearFiltering)
+		VkDeviceSize VulkanTexture::CreateCubemapFromTextures(VkFormat inFormat, const std::array<std::string, 6>& filePaths, bool bEnableTrilinearFiltering)
 		{
 			struct Image
 			{
@@ -610,7 +626,7 @@ namespace flex
 			createInfo.totalSize = totalSize;
 			createInfo.format = inFormat;
 			createInfo.filePaths = filePaths;
-			createInfo.enableTrilinearFiltering = enableTrilinearFiltering;
+			createInfo.bEnableTrilinearFiltering = bEnableTrilinearFiltering;
 
 			VkDeviceSize imageSize = CreateCubemap(m_VulkanDevice, m_GraphicsQueue, createInfo);
 
@@ -1259,7 +1275,7 @@ namespace flex
 			else
 			{
 				assert(oldLayout != VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL &&
-					   newLayout != VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+					newLayout != VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
 				barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				barrier.subresourceRange.levelCount = mipLevels;
@@ -1335,7 +1351,7 @@ namespace flex
 				barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
 				barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
 			}
-			else if (oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL&&
+			else if (oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL &&
 				newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
 			{
 				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT; // hmm...
@@ -1485,6 +1501,7 @@ namespace flex
 			}
 		}
 
+		// TODO: Make member function of VulkanBuffer?
 		VkResult CreateAndAllocateBuffer(VulkanDevice* device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VulkanBuffer* buffer)
 		{
 			VkBufferCreateInfo bufferInfo = vks::bufferCreateInfo(usage, size);
@@ -1546,6 +1563,18 @@ namespace flex
 				if (queueFamily.queueCount > 0 && presentSupport)
 				{
 					indices.presentFamily = i;
+				}
+
+				if (queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT)
+				{
+					indices.computeFamily = i;
+					//// If compute family index differs, we need an additional queue create info for the compute queue
+					//VkDeviceQueueCreateInfo queueInfo{};
+					//queueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+					//queueInfo.queueFamilyIndex = queueFamilyIndices.compute;
+					//queueInfo.queueCount = 1;
+					//queueInfo.pQueuePriorities = &defaultQueuePriority;
+					//queueCreateInfos.push_back(queueInfo);
 				}
 
 				if (indices.IsComplete())
@@ -1850,26 +1879,37 @@ namespace flex
 			VulkanRenderer::SetImageViewName(device, *imageView, DBG_ImageViewName);
 		}
 
-		void CreateAttachment(VulkanDevice* device, FrameBuffer* frameBuffer, u32 fboIndex /* = 0 */, const char* DBG_ImageName /* = nullptr */, const char* DBG_ImageViewName /* = nullptr */)
+		void CreateAttachment(VulkanDevice* device, FrameBufferAttachment* frameBufferAttachment, const char* DBG_ImageName /* = nullptr */, const char* DBG_ImageViewName /* = nullptr */)
 		{
-			FrameBufferAttachment* fbAttachment = &frameBuffer->frameBufferAttachments[fboIndex].second;
+			if (frameBufferAttachment->image != VK_NULL_HANDLE)
+			{
+				vkDestroyImage(device->m_LogicalDevice, frameBufferAttachment->image, nullptr);
+				frameBufferAttachment->image = VK_NULL_HANDLE;
+				vkDestroyImageView(device->m_LogicalDevice, frameBufferAttachment->view, nullptr);
+				frameBufferAttachment->view = VK_NULL_HANDLE;
+				vkFreeMemory(device->m_LogicalDevice, frameBufferAttachment->mem, nullptr);
+				frameBufferAttachment->mem = VK_NULL_HANDLE;
+			}
+
 			CreateAttachment(
 				device,
-				fbAttachment->format,
-				VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT | 
-				(fbAttachment->bIsTransferedDst ? VK_IMAGE_USAGE_TRANSFER_DST_BIT : 0) |
-				(fbAttachment->bIsTransferedSrc ? VK_IMAGE_USAGE_TRANSFER_SRC_BIT : 0),
-				frameBuffer->width,
-				frameBuffer->height,
-				fbAttachment->bIsCubemap ? 6 : 1,
-				fbAttachment->bIsCubemap ? VK_IMAGE_VIEW_TYPE_CUBE : VK_IMAGE_VIEW_TYPE_2D,
-				fbAttachment->bIsCubemap ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0,
-				fbAttachment->image.replace(),
-				fbAttachment->mem.replace(),
-				fbAttachment->view.replace(),
+				frameBufferAttachment->format,
+				VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT |
+				(frameBufferAttachment->bIsTransferedDst ? VK_IMAGE_USAGE_TRANSFER_DST_BIT : 0) |
+				(frameBufferAttachment->bIsTransferedSrc ? VK_IMAGE_USAGE_TRANSFER_SRC_BIT : 0),
+				frameBufferAttachment->width,
+				frameBufferAttachment->height,
+				frameBufferAttachment->bIsCubemap ? 6 : 1,
+				frameBufferAttachment->bIsCubemap ? VK_IMAGE_VIEW_TYPE_CUBE : VK_IMAGE_VIEW_TYPE_2D,
+				frameBufferAttachment->bIsCubemap ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0,
+				&frameBufferAttachment->image,
+				&frameBufferAttachment->mem,
+				&frameBufferAttachment->view,
 				DBG_ImageName,
 				DBG_ImageViewName);
-			fbAttachment->layout = VK_IMAGE_LAYOUT_UNDEFINED;
+			frameBufferAttachment->layout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+			((VulkanRenderer*)g_Renderer)->RegisterFramebufferAttachment(frameBufferAttachment);
 		}
 
 		template<class T>
@@ -2106,9 +2146,6 @@ namespace flex
 
 		FrameBufferAttachment::FrameBufferAttachment(VulkanDevice* device, const CreateInfo& createInfo) :
 			device(device),
-			image(device->m_LogicalDevice, vkDestroyImage),
-			mem(device->m_LogicalDevice, vkFreeMemory),
-			view(device->m_LogicalDevice, vkDestroyImageView),
 			width(createInfo.width),
 			height(createInfo.height),
 			format(createInfo.format),
@@ -2117,8 +2154,28 @@ namespace flex
 			bIsCubemap(createInfo.bIsCubemap),
 			bIsTransferedSrc(createInfo.bIsTransferedSrc),
 			bIsTransferedDst(createInfo.bIsTransferedDst),
-			layout(createInfo.initialLayout)
+			layout(createInfo.initialLayout),
+			ID(GenerateUID())
 		{
+		}
+
+		FrameBufferAttachment::~FrameBufferAttachment()
+		{
+			if (bOwnsResources)
+			{
+				if (image != VK_NULL_HANDLE)
+				{
+					vkDestroyImage(device->m_LogicalDevice, image, nullptr);
+				}
+				if (mem != VK_NULL_HANDLE)
+				{
+					vkFreeMemory(device->m_LogicalDevice, mem, nullptr);
+				}
+				if (view != VK_NULL_HANDLE)
+				{
+					vkDestroyImageView(device->m_LogicalDevice, view, nullptr);
+				}
+			}
 		}
 
 		void FrameBufferAttachment::TransitionToLayout(VkImageLayout newLayout, VkQueue graphicsQueue, VkCommandBuffer optCmdBuf /* = VK_NULL_HANDLE */)
@@ -2135,9 +2192,21 @@ namespace flex
 				height = inHeight;
 			}
 
+			if (image != VK_NULL_HANDLE)
+			{
+				vkDestroyImage(device->m_LogicalDevice, image, nullptr);
+				image = VK_NULL_HANDLE;
+			}
+
+			if (mem != VK_NULL_HANDLE)
+			{
+				vkFreeMemory(device->m_LogicalDevice, mem, nullptr);
+				mem = VK_NULL_HANDLE;
+			}
+
 			VulkanTexture::ImageCreateInfo createInfo = {};
-			createInfo.image = image.replace();
-			createInfo.imageMemory = mem.replace();
+			createInfo.image = &image;
+			createInfo.imageMemory = &mem;
 			createInfo.width = width;
 			createInfo.height = height;
 			createInfo.format = format;
@@ -2176,9 +2245,14 @@ namespace flex
 
 		void FrameBufferAttachment::CreateImageView(const char* optDBGName /* = nullptr */)
 		{
+			if (view != VK_NULL_HANDLE)
+			{
+				vkDestroyImageView(device->m_LogicalDevice, view, nullptr);
+			}
+
 			VulkanTexture::ImageViewCreateInfo createInfo = {};
 			createInfo.image = &image;
-			createInfo.imageView = view.replace();
+			createInfo.imageView = &view;
 			createInfo.format = format;
 			if (bIsDepth)
 			{
@@ -2198,18 +2272,42 @@ namespace flex
 		}
 
 		FrameBuffer::FrameBuffer(VulkanDevice* device) :
-			frameBuffer(device->m_LogicalDevice, vkDestroyFramebuffer),
-			renderPass(device->m_LogicalDevice, vkDestroyRenderPass)
+			m_VulkanDevice(device)
 		{
 		}
 
+		FrameBuffer::~FrameBuffer()
+		{
+			Replace();
+		}
+
+		void FrameBuffer::Create(VkFramebufferCreateInfo* createInfo, VulkanRenderPass* inRenderPass, const char* debugName)
+		{
+			VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, createInfo, nullptr, Replace()));
+			VulkanRenderer::SetFramebufferName(m_VulkanDevice, frameBuffer, debugName);
+
+			width = createInfo->width;
+			height = createInfo->height;
+			renderPass = inRenderPass;
+		}
+
+		VkFramebuffer* FrameBuffer::Replace()
+		{
+			if (frameBuffer != VK_NULL_HANDLE)
+			{
+				vkDestroyFramebuffer(m_VulkanDevice->m_LogicalDevice, frameBuffer, nullptr);
+				frameBuffer = VK_NULL_HANDLE;
+			}
+			return &frameBuffer;
+		}
+
 		VulkanShader::VulkanShader(const VDeleter<VkDevice>& device, Shader* shader) :
-			uniformBuffer(device),
 			shader(shader)
 		{
 			vertShaderModule = { device, vkDestroyShaderModule };
 			fragShaderModule = { device, vkDestroyShaderModule };
 			geomShaderModule = { device, vkDestroyShaderModule };
+			computeShaderModule = { device, vkDestroyShaderModule };
 		}
 
 		VulkanCubemapGBuffer::VulkanCubemapGBuffer(u32 id, const char* name, VkFormat internalFormat) :
@@ -2280,16 +2378,16 @@ namespace flex
 
 				// TODO: Use C++ class from https://github.com/KhronosGroup/glslang rather than batch file call to glslang?
 				taskThread = std::thread([=]
-					{
-						std::string workingDir(RESOURCE("shaders"));
-						char cmdStrBuf[512];
-						memset(cmdStrBuf, 0, 512);
-						strcat_s(cmdStrBuf, "pushd \"");
-						strcat_s(cmdStrBuf, workingDir.c_str());
-						strcat_s(cmdStrBuf, "\" && call vk_compile.bat >nul && popd");
-						bSuccess = system(cmdStrBuf) == 0;
-						is_done = true;
-					});
+				{
+					std::string workingDir(RESOURCE("shaders"));
+					char cmdStrBuf[512];
+					memset(cmdStrBuf, 0, 512);
+					strcat_s(cmdStrBuf, "pushd \"");
+					strcat_s(cmdStrBuf, workingDir.c_str());
+					strcat_s(cmdStrBuf, "\" && call vk_compile.bat >nul && popd");
+					bSuccess = system(cmdStrBuf) == 0;
+					is_done = true;
+				});
 
 				secSinceStatusCheck = 0.0f;
 				totalSecWaiting = 0.0f;
@@ -2368,12 +2466,59 @@ namespace flex
 		}
 #endif // DEBUG
 
-		Cascade::Cascade(const VDeleter<VkDevice>& device) :
-			frameBuffer(device, vkDestroyFramebuffer),
-			imageView(device, vkDestroyImageView)
+		Cascade::Cascade(VulkanDevice* device) :
+			frameBuffer(device),
+			imageView(device->m_LogicalDevice, vkDestroyImageView)
 		{
 		}
 
+		Cascade::~Cascade()
+		{
+			if (attachment)
+			{
+				// Prevent cleanup - cascade attachments don't own their resources, they just point at them
+				attachment->image = VK_NULL_HANDLE;
+				attachment->view = VK_NULL_HANDLE;
+				attachment->mem = VK_NULL_HANDLE;
+				delete attachment;
+				attachment = nullptr;
+			}
+		}
+
+		void UniformBufferList::Add(VulkanDevice* device, UniformBufferType type)
+		{
+			uniformBufferList.emplace_back(device->m_LogicalDevice, type);
+		}
+
+		const UniformBuffer* UniformBufferList::Get(UniformBufferType type) const
+		{
+			for (const UniformBuffer& buffer : uniformBufferList)
+			{
+				if (buffer.type == type)
+				{
+					return &buffer;
+				}
+			}
+			return nullptr;
+		}
+
+		UniformBuffer* UniformBufferList::Get(UniformBufferType type)
+		{
+			for (UniformBuffer& buffer : uniformBufferList)
+			{
+				if (buffer.type == type)
+				{
+					return &buffer;
+				}
+			}
+			return nullptr;
+		}
+
+		VulkanParticleSystem::VulkanParticleSystem(VulkanDevice* device) :
+			computePipeline(device->m_LogicalDevice, vkDestroyPipeline),
+			graphicsPipeline(device->m_LogicalDevice, vkDestroyPipeline)
+		{
+		}
 	} // namespace vk
 } // namespace flex
 

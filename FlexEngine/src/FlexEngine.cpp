@@ -67,7 +67,7 @@ namespace flex
 
 	const u32 FlexEngine::EngineVersionMajor = 0;
 	const u32 FlexEngine::EngineVersionMinor = 8;
-	const u32 FlexEngine::EngineVersionPatch = 2;
+	const u32 FlexEngine::EngineVersionPatch = 3;
 
 	std::string FlexEngine::s_CurrentWorkingDirectory;
 	std::vector<AudioSourceID> FlexEngine::s_AudioSourceIDs;
@@ -86,7 +86,11 @@ namespace flex
 
 	sec g_SecElapsedSinceProgramStart = 0;
 	sec g_DeltaTime = 0;
+	sec g_UnpausedDeltaTime = 0;
 
+	size_t g_TotalTrackedAllocatedMemory = 0;
+	size_t g_TrackedAllocationCount = 0;
+	size_t g_TrackedDeallocationCount = 0;
 
 	FlexEngine::FlexEngine() :
 		m_MouseButtonCallback(this, &FlexEngine::OnMouseButtonEvent),
@@ -171,8 +175,7 @@ namespace flex
 		assert(false);
 #endif
 
-		std::string nowStr = GetDateString_YMDHMS();
-		Print("FlexEngine [%s] - Config: [%s x32] - Compiler: [%s %s]\n", nowStr.c_str(), configStr, m_CompilerName.c_str(), m_CompilerVersion.c_str());
+		Print("FlexEngine v%u.%u.%u - Config: [%s x32] - Compiler: [%s %s]\n", EngineVersionMajor, EngineVersionMinor, EngineVersionPatch, configStr, m_CompilerName.c_str(), m_CompilerVersion.c_str());
 	}
 
 	FlexEngine::~FlexEngine()
@@ -305,7 +308,8 @@ namespace flex
 			MeshComponent::DestroyAllLoadedMeshes();
 			g_SceneManager->ReloadCurrentScene();
 		});
-		m_ConsoleCommands.emplace_back("reload.shaders", []() { g_Renderer->ReloadShaders(); });
+		m_ConsoleCommands.emplace_back("reload.shaders", []() { g_Renderer->ReloadShaders(false); });
+		m_ConsoleCommands.emplace_back("reload.shaders.force", []() { g_Renderer->ReloadShaders(true); });
 		m_ConsoleCommands.emplace_back("reload.fontsdfs", []() { g_Renderer->LoadFonts(true); });
 		m_ConsoleCommands.emplace_back("reload.skybox", []() { g_Renderer->ReloadSkybox(true); });
 		m_ConsoleCommands.emplace_back("select.all", []() { g_Editor->SelectAll(); });
@@ -461,14 +465,24 @@ namespace flex
 				m_bRenderImGui = !m_bRenderImGui;
 			}
 
-			sec frameEndTime = now;
-			sec dt = frameEndTime - frameStartTime;
+			g_Window->PollEvents();
+
+			const sec frameEndTime = now;
+			const sec secondsElapsed = frameEndTime - frameStartTime;
 			frameStartTime = frameEndTime;
 
-			dt = glm::clamp(dt * m_SimulationSpeed, m_MinDT, m_MaxDT);
 
-			g_DeltaTime = dt;
+			g_UnpausedDeltaTime = glm::clamp(secondsElapsed, m_MinDT, m_MaxDT);
 			g_SecElapsedSinceProgramStart = frameEndTime;
+
+			if (m_bSimulationPaused && !m_bSimulateNextFrame)
+			{
+				g_DeltaTime = 0.0f;
+			}
+			else
+			{
+				g_DeltaTime = glm::clamp(secondsElapsed * m_SimulationSpeed, m_MinDT, m_MaxDT);
+			}
 
 			Profiler::StartFrame();
 
@@ -478,13 +492,12 @@ namespace flex
 				{
 					m_FrameTimes[i - 1] = m_FrameTimes[i];
 				}
-				m_FrameTimes[m_FrameTimes.size() - 1] = dt * 1000.0f;
+				m_FrameTimes[m_FrameTimes.size() - 1] = g_UnpausedDeltaTime * 1000.0f;
 			}
 
 			// Update
 			{
 				PROFILE_BEGIN("Update");
-				g_Window->PollEvents();
 
 				const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 				if (frameBufferSize.x == 0 || frameBufferSize.y == 0)
@@ -520,7 +533,7 @@ namespace flex
 				// Starts new ImGui frame and clears debug draw lines
 				g_Renderer->NewFrame();
 
-				SecSinceLogSave += dt;
+				SecSinceLogSave += g_UnpausedDeltaTime;
 				if (SecSinceLogSave >= LogSaveRate)
 				{
 					SecSinceLogSave -= LogSaveRate;
@@ -570,6 +583,14 @@ namespace flex
 							targetPos = spring.pos;
 							targetVel = spring.vel;
 						}
+					}
+				}
+				else
+				{
+					// Simulation is paused
+					if (!g_CameraManager->CurrentCamera()->bIsGameplayCam)
+					{
+						g_CameraManager->CurrentCamera()->Update();
 					}
 				}
 
@@ -768,7 +789,12 @@ namespace flex
 
 					if (ImGui::MenuItem("Shaders", "Ctrl+R"))
 					{
-						g_Renderer->ReloadShaders();
+						g_Renderer->ReloadShaders(false);
+					}
+
+					if (ImGui::MenuItem("Shaders (force)"))
+					{
+						g_Renderer->ReloadShaders(true);
 					}
 
 					if (ImGui::MenuItem("Font textures (render SDFs)"))
@@ -844,6 +870,7 @@ namespace flex
 			{
 				ImGui::MenuItem("Main Window", NULL, &m_bMainWindowShowing);
 				ImGui::MenuItem("GPU Timings", NULL, &g_Renderer->bGPUTimingsWindowShowing);
+				ImGui::MenuItem("Memory Stats", NULL, &m_bShowMemoryStatsWindow);
 				ImGui::MenuItem("Asset Browser", NULL, &m_bAssetBrowserShowing);
 				ImGui::MenuItem("Demo Window", NULL, &m_bDemoWindowShowing);
 				ImGui::MenuItem("Key Mapper", NULL, &m_bInputMapperShowing);
@@ -924,8 +951,16 @@ namespace flex
 					static const std::string rendererNameStringStr = std::string("Current renderer: " + m_RendererName);
 					static const char* renderNameStr = rendererNameStringStr.c_str();
 					ImGui::TextUnformatted(renderNameStr);
+					static ms latestFrameTime;
+					static u32 framesSinceUpdate = 0;
+					if (framesSinceUpdate++ % 10 == 0)
+					{
+						latestFrameTime = m_FrameTimes[m_FrameTimes.size() - 1];
+					}
+					ImGui::Text("Frames time: %.1fms (%d FPS)", latestFrameTime, (u32)((1.0f / latestFrameTime) * 1000));
+					ImGui::NewLine();
 					ImGui::Text("Frames rendered: %d", g_Renderer->GetFramesRenderedCount());
-					ImGui::Text("Elapsed time (unpaused): %.2fs", g_SecElapsedSinceProgramStart);
+					ImGui::Text("Unpaused elapsed time: %.2fs", g_SecElapsedSinceProgramStart);
 					ImGui::Text("Audio effects loaded: %d", s_AudioSourceIDs.size());
 
 					ImVec2 p = ImGui::GetCursorScreenPos();
@@ -1107,6 +1142,16 @@ namespace flex
 			ImGui::End();
 		}
 #endif
+
+		if (m_bShowMemoryStatsWindow)
+		{
+			if (ImGui::Begin("Memory", &m_bShowMemoryStatsWindow))
+			{
+				ImGui::Text("Memory allocated:       %.3fMB", g_TotalTrackedAllocatedMemory / 1'000'000.0f);
+				ImGui::Text("Delta allocation count: %i", (i32)g_TrackedAllocationCount - (i32)g_TrackedDeallocationCount);
+			}
+			ImGui::End();
+		}
 	}
 
 	i32 FlexEngine::ImGuiConsoleInputCallback(ImGuiInputTextCallbackData *data)
@@ -1194,7 +1239,10 @@ namespace flex
 
 		if (FileExists(m_CommonSettingsAbsFilePath))
 		{
-			Print("Loading common settings from %s\n", m_CommonSettingsFileName.c_str());
+			if (g_bEnableLogging_Loading)
+			{
+				Print("Loading common settings from %s\n", m_CommonSettingsFileName.c_str());
+			}
 
 			JSONObject rootObject = {};
 
@@ -1409,7 +1457,7 @@ namespace flex
 			{
 				if (bControlDown)
 				{
-					g_Renderer->ReloadShaders();
+					g_Renderer->ReloadShaders(false);
 					return EventReply::CONSUMED;
 				}
 				else
@@ -1424,7 +1472,7 @@ namespace flex
 			if (keyCode == KeyCode::KEY_P)
 			{
 				PhysicsDebuggingSettings& settings = g_Renderer->GetPhysicsDebuggingSettings();
-				settings.DrawWireframe = !settings.DrawWireframe;
+				settings.bDrawWireframe = !settings.bDrawWireframe;
 				return EventReply::CONSUMED;
 			}
 

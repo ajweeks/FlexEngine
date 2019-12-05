@@ -9,7 +9,7 @@ namespace flex
 		void Initialize(const std::string& filePath0, i32 fileCount);
 		void Destroy();
 
-		void Play(bool forceRestart);
+		void Play(bool bForceRestart);
 		void Pause();
 		void Stop();
 

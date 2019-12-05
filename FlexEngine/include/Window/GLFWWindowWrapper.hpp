@@ -45,8 +45,8 @@ namespace flex
 		virtual void SetCursorPos(const glm::vec2& newCursorPos) override;
 		virtual void SetCursorMode(CursorMode mode) override;
 
-		virtual void SetWindowMode(WindowMode mode, bool force = false) override;
-		virtual void ToggleFullscreen(bool force = false) override;
+		virtual void SetWindowMode(WindowMode mode, bool bForce = false) override;
+		virtual void ToggleFullscreen(bool bForce = false) override;
 
 		virtual void Maximize() override;
 		virtual void Iconify() override;
@@ -94,7 +94,7 @@ namespace flex
 	void GLFWMointorCallback(GLFWmonitor* monitor, int event);
 
 	void WINAPI glDebugOutput(GLenum source, GLenum type, GLuint id, GLenum severity,
-							  GLsizei length, const GLchar *message, const void *userParam);
+		GLsizei length, const GLchar *message, const void *userParam);
 
 	// Stores whether a controller is connected or not
 	const i32 MAX_JOYSTICK_COUNT = 4;

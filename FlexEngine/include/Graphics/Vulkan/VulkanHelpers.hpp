@@ -2,17 +2,19 @@
 #if COMPILE_VULKAN
 
 IGNORE_WARNINGS_PUSH
-#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan.h>
 IGNORE_WARNINGS_POP
 
 #include "Graphics/RendererTypes.hpp"
 #include "Graphics/VertexBufferData.hpp"
 #include "VDeleter.hpp"
 #include "VulkanBuffer.hpp"
+#include "VulkanRenderPass.hpp"
 
 namespace flex
 {
 	enum class ImageFormat;
+	class ParticleSystem;
 
 	namespace vk
 	{
@@ -24,15 +26,6 @@ namespace flex
 
 		void GetVertexAttributeDescriptions(VertexAttributes vertexAttributes,
 			std::vector<VkVertexInputAttributeDescription>& attributeDescriptions);
-
-		struct Cascade
-		{
-			Cascade(const VDeleter<VkDevice>& device);
-
-			VDeleter<VkFramebuffer> frameBuffer;
-			VDeleter<VkImageView> imageView;
-			VkDescriptorSet descSet;
-		};
 
 		// Framebuffer for offscreen rendering
 		struct FrameBufferAttachment
@@ -51,6 +44,7 @@ namespace flex
 			};
 
 			FrameBufferAttachment(VulkanDevice* device, const CreateInfo& createInfo);
+			~FrameBufferAttachment();
 
 			void CreateImage(u32 inWidth = 0, u32 inHeight = 0, const char* optDBGName = nullptr);
 			void CreateImageView(const char* optDBGName = nullptr);
@@ -59,10 +53,12 @@ namespace flex
 
 			VulkanDevice* device = nullptr;
 
+			FrameBufferAttachmentID ID;
+
 			// TODO: Store data in VulkanTexture
-			VDeleter<VkImage> image;
-			VDeleter<VkDeviceMemory> mem;
-			VDeleter<VkImageView> view;
+			VkImage image = VK_NULL_HANDLE;
+			VkDeviceMemory mem = VK_NULL_HANDLE;
+			VkImageView view = VK_NULL_HANDLE;
 			u32 width = 0;
 			u32 height = 0;
 			bool bIsDepth = false;
@@ -70,6 +66,7 @@ namespace flex
 			bool bIsCubemap = false;
 			bool bIsTransferedSrc = false;
 			bool bIsTransferedDst = false;
+			bool bOwnsResources = true;
 			VkFormat format = VK_FORMAT_UNDEFINED;
 			VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
 		};
@@ -77,23 +74,45 @@ namespace flex
 		struct FrameBuffer
 		{
 			FrameBuffer(VulkanDevice* device);
+			~FrameBuffer();
 
+			void Create(VkFramebufferCreateInfo* createInfo, VulkanRenderPass* inRenderPass, const char* debugName);
+
+			VkFramebuffer* Replace();
+
+			operator VkFramebuffer()
+			{
+				return frameBuffer;
+			}
+
+			VulkanDevice* m_VulkanDevice = nullptr;
 			u32 width = 0;
 			u32 height = 0;
-			VDeleter<VkFramebuffer> frameBuffer;
+			VkFramebuffer frameBuffer = VK_NULL_HANDLE;
 			std::vector<std::pair<std::string, FrameBufferAttachment>> frameBufferAttachments;
-			// TODO: Should frame buffers own their render passes?
-			VDeleter<VkRenderPass> renderPass;
+			VulkanRenderPass* renderPass = nullptr;
+		};
+
+		struct Cascade
+		{
+			Cascade(VulkanDevice* device);
+			~Cascade();
+
+			FrameBuffer frameBuffer;
+			FrameBufferAttachment* attachment = nullptr;
+			VDeleter<VkImageView> imageView;
+			VkDescriptorSet descSet;
 		};
 
 		struct VulkanQueueFamilyIndices
 		{
 			i32 graphicsFamily = -1;
+			i32 computeFamily = -1;
 			i32 presentFamily = -1;
 
 			bool IsComplete()
 			{
-				return graphicsFamily >= 0 && presentFamily >= 0;
+				return graphicsFamily >= 0 && presentFamily >= 0 && computeFamily >= 0;
 			}
 		};
 
@@ -110,16 +129,25 @@ namespace flex
 			u32 size = 0;
 		};
 
+		enum class UniformBufferType
+		{
+			STATIC,
+			DYNAMIC,
+			PARTICLE_DATA,
+
+			_NONE
+		};
+
 		struct UniformBuffer
 		{
-			UniformBuffer(const VDeleter<VkDevice>& device);
+			UniformBuffer(const VDeleter<VkDevice>& device, UniformBufferType type);
 			~UniformBuffer();
 
-			VulkanBuffer constantBuffer;
-			VulkanBuffer dynamicBuffer;
-			VulkanUniformBufferObjectData constantData;
-			VulkanUniformBufferObjectData dynamicData;
+			VulkanBuffer buffer;
+			VulkanUniformBufferObjectData data;
 			u32 fullDynamicBufferSize = 0;
+
+			UniformBufferType type = UniformBufferType::_NONE;
 		};
 
 		struct VertexIndexBufferPair
@@ -136,7 +164,7 @@ namespace flex
 			VulkanBuffer* indexBuffer = nullptr;
 			u32 vertexCount = 0;
 			u32 indexCount = 0;
-			bool useStagingBuffer = true; // Set to false for vertex buffers that need to be updated very frequently (e.g. ImGui vertex buffer)
+			bool bUseStagingBuffer = true; // Set to false for vertex buffers that need to be updated very frequently (e.g. ImGui vertex buffer)
 		};
 
 		struct VulkanTexture
@@ -150,7 +178,7 @@ namespace flex
 				VkImage* image = nullptr;
 				VkDeviceMemory* imageMemory = nullptr;
 
-				bool isHDR = false;
+				bool bHDR = false;
 				u32 width = 0;
 				u32 height = 0;
 				VkFormat format = VK_FORMAT_UNDEFINED;
@@ -163,7 +191,7 @@ namespace flex
 				VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
 				u32 arrayLayers = 1;
 				VkImageCreateFlags flags = 0;
-				
+
 				const char* DBG_Name = nullptr;
 			};
 
@@ -211,8 +239,8 @@ namespace flex
 				u32 channels = 0;
 				u32 totalSize = 0;
 				u32 mipLevels = 1;
-				bool generateMipMaps = false;
-				bool enableTrilinearFiltering = true;
+				bool bGenerateMipMaps = false;
+				bool bEnableTrilinearFiltering = true;
 
 				// Leave following field empty to generate uninitialized cubemap
 				std::array<std::string, 6> filePaths;
@@ -257,15 +285,13 @@ namespace flex
 			 * Creates an empty cubemap and returns the size of the generated image
 			 * Returns the size of the image
 			*/
-			VkDeviceSize CreateCubemapEmpty(VkFormat inFormat, u32 inMipLevels, bool enableTrilinearFiltering);
+			VkDeviceSize CreateCubemapEmpty(VkFormat inFormat, u32 inMipLevels, bool bEnableTrilinearFiltering);
 
 			/*
 			 * Creates a cubemap from the given 6 textures
 			 * Returns the size of the image
 			 */
-			VkDeviceSize CreateCubemapFromTextures(VkFormat inFormat, const std::array<std::string, 6>& filePaths, bool enableTrilinearFiltering);
-
-			void UpdateImageDescriptor();
+			VkDeviceSize CreateCubemapFromTextures(VkFormat inFormat, const std::array<std::string, 6>& filePaths, bool bEnableTrilinearFiltering);
 
 			std::string GetRelativeFilePath() const;
 			std::string GetName() const;
@@ -273,7 +299,6 @@ namespace flex
 
 			VkFormat CalculateFormat();
 
-			TextureID textureID = InvalidTextureID;
 			u32 width = 0;
 			u32 height = 0;
 			u32 channelCount = 0;
@@ -294,7 +319,6 @@ namespace flex
 			VDeleter<VkDeviceMemory> imageMemory;
 			VDeleter<VkImageView> imageView;
 			VDeleter<VkSampler> sampler;
-			VkDescriptorImageInfo imageInfoDescriptor;
 
 		private:
 			VulkanDevice* m_VulkanDevice = nullptr;
@@ -364,7 +388,7 @@ namespace flex
 			const char* DBG_ImageName = nullptr,
 			const char* DBG_ImageViewName = nullptr);
 
-		void CreateAttachment(VulkanDevice* device, FrameBuffer* frameBuffer, u32 fboIndex = 0, const char* DBG_ImageName = nullptr, const char* DBG_ImageViewName = nullptr);
+		void CreateAttachment(VulkanDevice* device, FrameBufferAttachment* frameBufferAttachment, const char* DBG_ImageName = nullptr, const char* DBG_ImageViewName = nullptr);
 
 		template<class T>
 		void CopyPixels(const T* srcData, T* dstData, u32 dstOffset, u32 width, u32 height, u32 channelCount, u32 pitch, bool bColorSwizzle);
@@ -400,6 +424,15 @@ namespace flex
 			VkFormat internalFormat = VK_FORMAT_UNDEFINED;
 		};
 
+		struct UniformBufferList
+		{
+			void Add(VulkanDevice* device, UniformBufferType type);
+			UniformBuffer* Get(UniformBufferType type);
+			const UniformBuffer* Get(UniformBufferType type) const;
+
+			std::vector<UniformBuffer> uniformBufferList;
+		};
+
 		struct VulkanShader
 		{
 			VulkanShader(const VDeleter<VkDevice>& device, Shader* shader);
@@ -407,11 +440,11 @@ namespace flex
 			Shader* shader = nullptr;
 
 			VkRenderPass renderPass = VK_NULL_HANDLE;
-			UniformBuffer uniformBuffer;
 
-			VDeleter<VkShaderModule> geomShaderModule;
 			VDeleter<VkShaderModule> vertShaderModule;
 			VDeleter<VkShaderModule> fragShaderModule;
+			VDeleter<VkShaderModule> geomShaderModule;
+			VDeleter<VkShaderModule> computeShaderModule;
 		};
 
 #ifdef DEBUG
@@ -443,20 +476,75 @@ namespace flex
 		};
 #endif // DEBUG
 
+		template<typename T>
+		struct ShaderUniformContainer
+		{
+			using iter = typename std::vector<Pair<u64, T>>::iterator;
+
+			void Add(u64 uniform, const T value)
+			{
+				for (auto& pair : values)
+				{
+					if (pair.first == uniform)
+					{
+						pair.second = value;
+						return;
+					}
+				}
+
+				values.emplace_back(uniform, value);
+			}
+
+			u32 Count()
+			{
+				return values.size();
+			}
+
+			iter begin()
+			{
+				return values.begin();
+			}
+
+			iter end()
+			{
+				return values.end();
+			}
+
+			bool Contains(u64 uniform)
+			{
+				for (auto& pair : values)
+				{
+					if (pair.first == uniform)
+					{
+						return true;
+					}
+				}
+				return false;
+			}
+
+			T operator[](u64 uniform)
+			{
+				for (auto& pair : values)
+				{
+					if (pair.first == uniform)
+					{
+						return pair.second;
+					}
+				}
+				return nullptr;
+			}
+
+			std::vector<Pair<u64, T>> values;
+		};
+
 		struct VulkanMaterial
 		{
 			Material material; // More info is stored in the generic material struct
 
-			VulkanTexture* normalTexture = nullptr;
-			VulkanTexture* cubemapTexture = nullptr;
-			VulkanTexture* albedoTexture = nullptr;
-			VulkanTexture* metallicTexture = nullptr;
-			VulkanTexture* roughnessTexture = nullptr;
-			VulkanTexture* hdrEquirectangularTexture = nullptr;
-			VulkanTexture* irradianceTexture = nullptr;
-			VulkanTexture* brdfLUT = nullptr;
-			VulkanTexture* prefilterTexture = nullptr;
-			VulkanTexture* noiseTexture = nullptr;
+			// TODO: OPTIMIZE: MEMORY: Only store dynamic buffers here, store constant buffers in shader/globally
+			UniformBufferList uniformBufferList;
+
+			ShaderUniformContainer<VulkanTexture*> textures;
 			VkFramebuffer hdrCubemapFramebuffer = VK_NULL_HANDLE;
 
 			u32 cubemapSamplerID = 0;
@@ -518,7 +606,7 @@ namespace flex
 			VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 			VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;
 
-			VkRenderPass renderPass;
+			VkRenderPass renderPass = VK_NULL_HANDLE;
 			u32 subpass = 0;
 
 			VkPushConstantRange* pushConstants = nullptr;
@@ -545,50 +633,28 @@ namespace flex
 			VkPipeline* graphicsPipeline = nullptr;
 		};
 
+		struct BufferDescriptorInfo
+		{
+			VkBuffer buffer;
+			VkDeviceSize bufferSize;
+			UniformBufferType type;
+		};
+
+		struct ImageDescriptorInfo
+		{
+			VkImageView imageView = VK_NULL_HANDLE;
+			VkSampler imageSampler = VK_NULL_HANDLE;
+		};
+
 		struct DescriptorSetCreateInfo
 		{
 			VkDescriptorSet* descriptorSet = nullptr;
 			VkDescriptorSetLayout* descriptorSetLayout = nullptr;
 			ShaderID shaderID = InvalidShaderID;
-			UniformBuffer* uniformBuffer = nullptr;
+			UniformBufferList* uniformBufferList = nullptr;
 
-			VulkanTexture* normalTexture = nullptr;
-			VulkanTexture* cubemapTexture = nullptr;
-			VulkanTexture* albedoTexture = nullptr;
-			VulkanTexture* metallicTexture = nullptr;
-			VulkanTexture* roughnessTexture = nullptr;
-			VulkanTexture* hdrEquirectangularTexture = nullptr;
-			VulkanTexture* irradianceTexture = nullptr;
-			VulkanTexture* brdfLUT = nullptr;
-			VulkanTexture* prefilterTexture = nullptr;
-			VulkanTexture* noiseTexture = nullptr;
-
-			// TODO: Pass along frame buffer reference for these image/sampler pairs?
-			VkImageView ssaoNormalImageView = VK_NULL_HANDLE;
-			VkSampler ssaoNormalSampler = VK_NULL_HANDLE;
-
-			VkImageView ssaoImageView = VK_NULL_HANDLE;
-			VkSampler ssaoSampler = VK_NULL_HANDLE;
-
-			VkImageView ssaoFinalImageView = VK_NULL_HANDLE;
-			VkSampler ssaoFinalSampler = VK_NULL_HANDLE;
-
-			VkImageView shadowImageView = VK_NULL_HANDLE;
-			VkSampler shadowSampler = VK_NULL_HANDLE;
-
-			VkImageView shadowPreviewView = VK_NULL_HANDLE;
-
-			VkImageView sceneImageView = VK_NULL_HANDLE;
-			VkSampler sceneSampler = VK_NULL_HANDLE;
-
-			VkImageView albedoView = VK_NULL_HANDLE;
-
-			VkImageView historyBufferImageView = VK_NULL_HANDLE;
-			VkSampler historyBufferSampler = VK_NULL_HANDLE;
-
-			bool bDepthSampler = false;
-
-			std::vector<std::pair<u32, VkImageView*>> frameBufferViews; // Name of frame buffer paired with view into frame buffer
+			ShaderUniformContainer<BufferDescriptorInfo> bufferDescriptors;
+			ShaderUniformContainer<ImageDescriptorInfo> imageDescriptors;
 
 			const char* DBG_Name = nullptr;
 		};
@@ -599,7 +665,44 @@ namespace flex
 			glm::vec2 translate;
 		};
 
-		typedef std::vector<VulkanRenderObject*>::iterator RenderObjectIter;
+		struct VulkanParticleSystem
+		{
+			VulkanParticleSystem(VulkanDevice* device);
+
+			ParticleSystemID ID = InvalidParticleSystemID;
+			VkDescriptorSet computeDescriptorSet = VK_NULL_HANDLE;
+			VkDescriptorSet renderingDescriptorSet = VK_NULL_HANDLE;
+			VDeleter<VkPipeline> graphicsPipeline;
+			VDeleter<VkPipeline> computePipeline;
+			ParticleSystem* system = nullptr;
+		};
+
+		enum class GPUVendor : u32
+		{
+			Unknown,
+			ARM,
+			AMD,
+			Broadcom,
+			Imagination,
+			Intel,
+			nVidia,
+			Qualcomm,
+			Verisilicon,
+			Software,
+		};
+		
+		constexpr GPUVendor GPUVendorFromPCIVendor(u32 vendorID)
+		{
+			return vendorID == 0x13B5 ? GPUVendor::ARM
+				: vendorID == 0x1002 ? GPUVendor::AMD
+				: vendorID == 0x1010 ? GPUVendor::Imagination
+				: vendorID == 0x8086 ? GPUVendor::Intel
+				: vendorID == 0x10DE ? GPUVendor::nVidia
+				: vendorID == 0x5143 ? GPUVendor::Qualcomm
+				: vendorID == 0x1AE0 ? GPUVendor::Software   // Google Swiftshader
+				: vendorID == 0x1414 ? GPUVendor::Software   // Microsoft WARP
+				: GPUVendor::Unknown;
+		}
 
 		VkPrimitiveTopology TopologyModeToVkPrimitiveTopology(TopologyMode mode);
 		VkCullModeFlagBits CullFaceToVkCullMode(CullFace cullFace);

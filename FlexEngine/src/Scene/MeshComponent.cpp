@@ -327,7 +327,7 @@ namespace flex
 
 				{
 					if (m_RequiredAttributes & (u32)VertexAttribute::POSITION) vertexBufferDataCreateInfo.positions_3D.resize(vertexBufferDataCreateInfo.positions_3D.size() + vertCount);
-					if (m_RequiredAttributes & (u32)VertexAttribute::POSITION_2D) vertexBufferDataCreateInfo.positions_2D.resize(vertexBufferDataCreateInfo.positions_2D.size() + vertCount);
+					if (m_RequiredAttributes & (u32)VertexAttribute::POSITION2) vertexBufferDataCreateInfo.positions_2D.resize(vertexBufferDataCreateInfo.positions_2D.size() + vertCount);
 					if (m_RequiredAttributes & (u32)VertexAttribute::NORMAL) vertexBufferDataCreateInfo.normals.resize(vertexBufferDataCreateInfo.normals.size() + vertCount);
 					if (m_RequiredAttributes & (u32)VertexAttribute::TANGENT) vertexBufferDataCreateInfo.tangents.resize(vertexBufferDataCreateInfo.tangents.size() + vertCount);
 					if (m_RequiredAttributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT) vertexBufferDataCreateInfo.colors_R32G32B32A32.resize(vertexBufferDataCreateInfo.colors_R32G32B32A32.size() + vertCount);

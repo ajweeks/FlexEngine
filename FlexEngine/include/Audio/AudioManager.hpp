@@ -22,7 +22,7 @@ namespace flex
 		static void SetMasterGain(real masterGain);
 		static real GetMasterGain();
 
-		static void PlaySource(AudioSourceID sourceID, bool forceRestart = true);
+		static void PlaySource(AudioSourceID sourceID, bool bForceRestart = true);
 		static void PauseSource(AudioSourceID sourceID);
 		static void StopSource(AudioSourceID sourceID);
 
@@ -31,7 +31,7 @@ namespace flex
 		* Optionally prevents gain from reaching zero so that it
 		* can be scale up again later
 		*/
-		static void ScaleSourceGain(AudioSourceID sourceID, real gainScale, bool preventZero = true);
+		static void ScaleSourceGain(AudioSourceID sourceID, real gainScale, bool bPreventZero = true);
 
 		/* Volume of sound [0.0, 1.0] (logarithmic) */
 		static void SetSourceGain(AudioSourceID sourceID, real gain);
@@ -43,7 +43,7 @@ namespace flex
 		static void SetSourcePitch(AudioSourceID sourceID, real pitch);
 		static real GetSourcePitch(AudioSourceID sourceID);
 
-		static void SetSourceLooping(AudioSourceID sourceID, bool looping);
+		static void SetSourceLooping(AudioSourceID sourceID, bool bLooping);
 		static bool GetSourceLooping(AudioSourceID sourceID);
 
 		static bool IsSourcePlaying(AudioSourceID sourceID);

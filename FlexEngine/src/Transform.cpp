@@ -170,16 +170,38 @@ namespace flex
 	{
 	}
 
-	Transform Transform::ParseJSON(const JSONObject& object)
+	Transform Transform::ParseJSON(const JSONObject& transformObject)
+	{
+		glm::vec3 pos;
+		glm::quat rot;
+		glm::vec3 scale;
+		ParseJSON(transformObject, pos, rot, scale);
+		return Transform(pos, rot, scale);
+	}
+
+	void Transform::ParseJSON(const JSONObject& object, glm::mat4& outModel)
+	{
+		const JSONObject& transformObject = object.GetObject("transform");
+
+		glm::vec3 pos;
+		glm::quat rot;
+		glm::vec3 scale;
+		ParseJSON(transformObject, pos, rot, scale);
+		outModel = glm::translate(MAT4_IDENTITY, pos) *
+			glm::mat4(rot) *
+			glm::scale(MAT4_IDENTITY, scale);
+	}
+
+	void Transform::ParseJSON(const JSONObject& object, glm::vec3& outPos, glm::quat& outRot, glm::vec3& outScale)
 	{
 		std::string posStr = object.GetString("pos");
 		std::string rotStr = object.GetString("rot");
 		std::string scaleStr = object.GetString("scale");
 
-		glm::vec3 pos(0.0f);
+		outPos = glm::vec3(0.0f);
 		if (!posStr.empty())
 		{
-			pos = ParseVec3(posStr);
+			outPos = ParseVec3(posStr);
 		}
 
 		glm::vec3 rotEuler(0.0f);
@@ -188,18 +210,18 @@ namespace flex
 			rotEuler = ParseVec3(rotStr);
 		}
 
-		glm::vec3 scale(1.0f);
+		outScale = glm::vec3(1.0f);
 		if (!scaleStr.empty())
 		{
-			scale = ParseVec3(scaleStr);
+			outScale = ParseVec3(scaleStr);
 		}
 
 		// Check we aren't getting garbage data in
 #if DEBUG
-		if (IsNanOrInf(pos))
+		if (IsNanOrInf(outPos))
 		{
 			PrintError("Read garbage value from transform pos in serialized scene file! Using default value instead\n");
-			pos = VEC3_ZERO;
+			outPos = VEC3_ZERO;
 		}
 
 		if (IsNanOrInf(rotEuler))
@@ -208,46 +230,61 @@ namespace flex
 			rotEuler = VEC3_ZERO;
 		}
 
-		if (IsNanOrInf(scale))
+		if (IsNanOrInf(outScale))
 		{
 			PrintError("Read garbage value from transform scale in serialized scene file! Using default value instead\n");
-			scale = VEC3_ONE;
+			outScale = VEC3_ONE;
 		}
 #endif
 
-		glm::quat rotQuat = glm::quat(rotEuler);
-
-		return Transform(pos, rotQuat, scale);
+		outRot = glm::quat(rotEuler);
 	}
 
 	JSONField Transform::Serialize() const
 	{
+		return Serialize(localPosition, localRotation, localScale, m_GameObject->GetName().c_str());
+	}
+
+	JSONField Transform::Serialize(const glm::mat4 matrix, const char* objName)
+	{
+		glm::vec3 pos;
+		glm::quat rot;
+		glm::vec3 scale;
+		glm::vec3 skew;
+		glm::vec4 persp;
+		glm::decompose(matrix, scale, rot, pos, skew, persp);
+
+		return Serialize(pos, rot, scale, objName);
+	}
+
+	JSONField Transform::Serialize(const glm::vec3& inPos, const glm::quat& inRot, const glm::vec3& inScale, const char* objName)
+	{
 		const i32 floatPrecision = 3;
+
+		glm::vec3 pos = inPos;
+		glm::quat rot = inRot;
+		glm::vec3 scale = inScale;
 
 		JSONField transformField = {};
 		transformField.label = "transform";
 
 		JSONObject transformObject = {};
 
-		glm::vec3 pos = localPosition;
-		glm::quat rot = localRotation;
-		glm::vec3 scale = localScale;
-
 		if (IsNanOrInf(pos))
 		{
-			PrintError("Attempted to serialize garbage value for position of %s, writing default value\n", m_GameObject->GetName().c_str());
+			PrintError("Attempted to serialize garbage value for position of %s, writing default value\n", objName);
 			pos = VEC3_ZERO;
 		}
 
 		if (IsNanOrInf(rot))
 		{
-			PrintError("Attempted to serialize garbage value for rotation of %s, writing default value\n", m_GameObject->GetName().c_str());
+			PrintError("Attempted to serialize garbage value for rotation of %s, writing default value\n", objName);
 			rot = glm::quat();
 		}
 
 		if (IsNanOrInf(scale))
 		{
-			PrintError("Attempted to serialize garbage value for scale of %s, writing default value\n", m_GameObject->GetName().c_str());
+			PrintError("Attempted to serialize garbage value for scale of %s, writing default value\n", objName);
 			scale = VEC3_ONE;
 		}
 
@@ -341,10 +378,10 @@ namespace flex
 
 	bool Transform::IsIdentity() const
 	{
-		bool identity = (localPosition == m_Identity.localPosition &&
+		bool result = (localPosition == m_Identity.localPosition &&
 			localRotation == m_Identity.localRotation &&
 			localScale == m_Identity.localScale);
-		return identity;
+		return result;
 	}
 
 	Transform Transform::Identity()

@@ -2,6 +2,7 @@
 #if COMPILE_VULKAN
 
 #include "Graphics/Vulkan/VulkanBuffer.hpp"
+
 #include "Graphics/Vulkan/VulkanInitializers.hpp"
 
 namespace flex

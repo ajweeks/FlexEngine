@@ -8,7 +8,7 @@ namespace flex
 
 	static const char* SEPARATOR_STR = ", ";
 
-	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount = 3, bool flipVertically = false, u32* channelCountOut = nullptr);
+	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount = 3, bool bFlipVertically = false, u32* channelCountOut = nullptr);
 	void DestroyGLFWimage(GLFWimage& image);
 
 	bool FileExists(const std::string& filePath);
@@ -123,6 +123,8 @@ namespace flex
 	bool IsNanOrInf(const glm::quat& quat);
 
 	real RoundToNearestPowerOfTwo(real num);
+	u64 NextPowerOfTwo(u64 x);
+	u32 NextPowerOfTwo(u32 x);
 
 	std::string GetIncrementedPostFixedStr(const std::string& namePrefix, const std::string& defaultName);
 
@@ -185,11 +187,15 @@ namespace flex
 	std::string ReplaceBackSlashesWithForward(std::string str);
 	std::string RelativePathToAbsolute(const std::string& relativePath);
 
+	std::string Replace(std::string str, const std::string& pattern, const std::string& replacement);
+
 	// Returns random value in range [min, max)
 	i32 RandomInt(i32 min, i32 max);
 
 	// Returns random value in range [min, max)
 	real RandomFloat(real min, real max);
+
+	u32 GenerateUID();
 
 	template<class T>
 	const T& PickRandomFrom(const std::vector<T>& vec)
@@ -230,7 +236,7 @@ namespace flex
 
 	struct HDRImage
 	{
-		bool Load(const std::string& hdrFilePath, i32 requestedChannelCount, bool flipVertically);
+		bool Load(const std::string& hdrFilePath, i32 requestedChannelCount, bool bFlipVertically);
 		void Free();
 
 		u32 width;

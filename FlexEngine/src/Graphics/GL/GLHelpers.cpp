@@ -18,12 +18,12 @@ namespace flex
 {
 	namespace gl
 	{
-		bool GenerateGLTexture_Empty(u32& textureID, const glm::vec2u& dimensions, bool generateMipMaps, GLenum internalFormat, GLenum format, GLenum type)
+		bool GenerateGLTexture_Empty(u32& textureID, const glm::vec2u& dimensions, bool bGenerateMipMaps, GLenum internalFormat, GLenum format, GLenum type)
 		{
-			return GenerateGLTexture_EmptyWithParams(textureID, dimensions, generateMipMaps, internalFormat, format, type, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR);
+			return GenerateGLTexture_EmptyWithParams(textureID, dimensions, bGenerateMipMaps, internalFormat, format, type, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR);
 		}
 
-		bool GenerateGLTexture_EmptyWithParams(u32& textureID, const glm::vec2u& dimensions, bool generateMipMaps, GLenum internalFormat, GLenum format, GLenum type, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter)
+		bool GenerateGLTexture_EmptyWithParams(u32& textureID, const glm::vec2u& dimensions, bool bGenerateMipMaps, GLenum internalFormat, GLenum format, GLenum type, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter)
 		{
 			assert(dimensions.x <= MAX_TEXTURE_DIM);
 			assert(dimensions.y <= MAX_TEXTURE_DIM);
@@ -34,7 +34,7 @@ namespace flex
 
 			glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, dimensions.x, dimensions.y, 0, format, type, 0);
 
-			if (generateMipMaps)
+			if (bGenerateMipMaps)
 			{
 				glGenerateMipmap(GL_TEXTURE_2D);
 			}
@@ -54,14 +54,14 @@ namespace flex
 							   const std::string& filePath,
 							   i32 requestedChannelCount,
 							   bool flipVertically,
-							   bool generateMipMaps,
+							   bool bGenerateMipMaps,
 							   ImageInfo* infoOut /* = nullptr */)
 		{
 			return GenerateGLTextureWithParams(textureID,
 											   filePath,
 											   requestedChannelCount,
 											   flipVertically,
-											   generateMipMaps,
+											   bGenerateMipMaps,
 											   GL_REPEAT,
 											   GL_REPEAT,
 											   GL_LINEAR,
@@ -73,7 +73,7 @@ namespace flex
 										 const std::string& filePath,
 										 i32 requestedChannelCount,
 										 bool flipVertically,
-										 bool generateMipMaps,
+										 bool bGenerateMipMaps,
 										 i32 sWrap,
 										 i32 tWrap,
 										 i32 minFilter,
@@ -110,7 +110,7 @@ namespace flex
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image.width, image.height, 0, GL_RGB, GL_UNSIGNED_BYTE, image.pixels);
 			}
 
-			if (generateMipMaps)
+			if (bGenerateMipMaps)
 			{
 				glGenerateMipmap(GL_TEXTURE_2D);
 			}
@@ -127,12 +127,12 @@ namespace flex
 			return true;
 		}
 
-		bool GenerateHDRGLTexture(u32& textureID, const std::string& filePath, i32 requestedChannelCount, bool flipVertically, bool generateMipMaps, ImageInfo* infoOut /* = nullptr */)
+		bool GenerateHDRGLTexture(u32& textureID, const std::string& filePath, i32 requestedChannelCount, bool flipVertically, bool bGenerateMipMaps, ImageInfo* infoOut /* = nullptr */)
 		{
-			return GenerateHDRGLTextureWithParams(textureID, filePath, requestedChannelCount, flipVertically, generateMipMaps, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR, infoOut);
+			return GenerateHDRGLTextureWithParams(textureID, filePath, requestedChannelCount, flipVertically, bGenerateMipMaps, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR, infoOut);
 		}
 
-		bool GenerateHDRGLTextureWithParams(u32& textureID, const std::string& filePath, i32 requestedChannelCount, bool flipVertically, bool generateMipMaps, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter, ImageInfo* infoOut /* = nullptr */)
+		bool GenerateHDRGLTextureWithParams(u32& textureID, const std::string& filePath, i32 requestedChannelCount, bool flipVertically, bool bGenerateMipMaps, i32 sWrap, i32 tWrap, i32 minFilter, i32 magFilter, ImageInfo* infoOut /* = nullptr */)
 		{
 			assert(requestedChannelCount == 3 ||
 				   requestedChannelCount == 4);
@@ -162,7 +162,7 @@ namespace flex
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, image.width, image.height, 0, GL_RGB, GL_FLOAT, image.pixels);
 			}
 
-			if (generateMipMaps)
+			if (bGenerateMipMaps)
 			{
 				glGenerateMipmap(GL_TEXTURE_2D);
 			}
@@ -276,7 +276,7 @@ namespace flex
 				glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 				glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 				glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER,
-					(createInfo.generateMipmaps || createInfo.enableTrilinearFiltering) ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
+					(createInfo.generateMipmaps || createInfo.bEnableTrilinearFiltering) ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
 				glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 				if (createInfo.generateMipmaps)

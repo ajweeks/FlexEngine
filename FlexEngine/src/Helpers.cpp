@@ -30,7 +30,7 @@ IGNORE_WARNINGS_POP
 
 namespace flex
 {
-	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount, bool flipVertically, u32* channelCountOut /* = nullptr */)
+	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount, bool bFlipVertically, u32* channelCountOut /* = nullptr */)
 	{
 		assert(requestedChannelCount == 3 ||
 			requestedChannelCount == 4);
@@ -43,7 +43,7 @@ namespace flex
 			Print("Loading texture %s\n", fileName.c_str());
 		}
 
-		stbi_set_flip_vertically_on_load(flipVertically);
+		stbi_set_flip_vertically_on_load(bFlipVertically);
 
 		i32 channelCount;
 		unsigned char* data = stbi_load(filePath.c_str(),
@@ -80,7 +80,7 @@ namespace flex
 		image.pixels = nullptr;
 	}
 
-	bool HDRImage::Load(const std::string& hdrFilePath, i32 requestedChannelCount, bool flipVertically)
+	bool HDRImage::Load(const std::string& hdrFilePath, i32 requestedChannelCount, bool bFlipVertically)
 	{
 		assert(requestedChannelCount == 3 ||
 			requestedChannelCount == 4);
@@ -93,7 +93,7 @@ namespace flex
 			Print("Loading HDR texture %s\n", fileName.c_str());
 		}
 
-		stbi_set_flip_vertically_on_load(flipVertically);
+		stbi_set_flip_vertically_on_load(bFlipVertically);
 
 		i32 tempW, tempH, tempC;
 		pixels = stbi_loadf(filePath.c_str(),
@@ -988,6 +988,31 @@ namespace flex
 		return pow(2.0f, ceil(log(num) / log(2.0f) - 0.5f));
 	}
 
+	u32 NextPowerOfTwo(u32 x)
+	{
+		assert(x != 0);
+		x--;
+		x |= x >> 1;
+		x |= x >> 2;
+		x |= x >> 4;
+		x |= x >> 8;
+		x |= x >> 16;
+		return x + 1;
+	}
+
+	u64 NextPowerOfTwo(u64 x)
+	{
+		assert(x != 0);
+		x--;
+		x |= x >> 1;
+		x |= x >> 2;
+		x |= x >> 4;
+		x |= x >> 8;
+		x |= x >> 16;
+		x |= x >> 32;
+		return x + 1;
+	}
+
 	std::string GetIncrementedPostFixedStr(const std::string& namePrefix, const std::string& defaultName)
 	{
 		if (namePrefix.empty())
@@ -1420,6 +1445,27 @@ namespace flex
 		return absolutePath;
 	}
 
+	std::string Replace(std::string str, const std::string& pattern, const std::string& replacement)
+	{
+		auto iter = str.begin();
+
+		while (iter != str.end())
+		{
+			u32 findIndex = str.find(pattern.c_str(), iter - str.begin());
+			if (findIndex != std::string::npos)
+			{
+				str = str.replace(str.begin() + findIndex, str.begin() + findIndex + pattern.length(), replacement.begin(), replacement.end());
+				iter += pattern.length();
+			}
+			else
+			{
+				break;
+			}
+		}
+
+		return str;
+	}
+
 	i32 RandomInt(i32 min, i32 max)
 	{
 		// TODO: CLEANUP: FIXME: Don't use rand, for the love of God
@@ -1432,6 +1478,12 @@ namespace flex
 		// TODO: CLEANUP: FIXME: Don't use rand, please
 		real randN = rand() / (real)RAND_MAX;
 		return randN * (max - min) + min;
+	}
+
+	static u32 _lastUID = 0;
+	u32 GenerateUID()
+	{
+		return ++_lastUID;
 	}
 
 	i32 RoundUp(i32 val, i32 alignment)
