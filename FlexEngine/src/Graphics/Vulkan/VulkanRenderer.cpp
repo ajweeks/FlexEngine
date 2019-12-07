@@ -2683,58 +2683,86 @@ namespace flex
 					}
 					ImGui::EndChild();
 
+					static bool bShowErrorDialogue = false;
+					static std::string errorMessage;
+					const char* importErrorPopupID = "Mesh import failed";
 					if (ImGui::Button("Import Mesh"))
 					{
 						// TODO: Not all models are directly in this directory! CLEANUP to make more robust
-						std::string relativeDirPath = RESOURCE_LOCATION  "meshes/";
-						std::string absoluteDirectoryStr = RelativePathToAbsolute(relativeDirPath);
+						std::string relativeImportDirPath = RESOURCE_LOCATION "meshes/";
+						std::string absoluteImportDirectoryStr = RelativePathToAbsolute(relativeImportDirPath);
 						std::string selectedAbsFilePath;
-						if (OpenFileDialog("Import mesh", absoluteDirectoryStr, selectedAbsFilePath))
+						if (OpenFileDialog("Import mesh", absoluteImportDirectoryStr, selectedAbsFilePath))
 						{
-							const std::string fileNameAndExtension = StripLeadingDirectories(selectedAbsFilePath);
-							std::string selectedRelativeFilePath = relativeDirPath + fileNameAndExtension;
-
-							bool bMeshAlreadyImported = false;
-							for (const auto& meshPair : MeshComponent::m_LoadedMeshes)
+							const std::string absDirectory = ExtractDirectoryString(selectedAbsFilePath);
+							if (absDirectory != absoluteImportDirectoryStr)
 							{
-								if (meshPair.first.compare(selectedRelativeFilePath) == 0)
-								{
-									bMeshAlreadyImported = true;
-									break;
-								}
-							}
-
-							if (bMeshAlreadyImported)
-							{
-								Print("Mesh with filepath %s already imported\n", selectedAbsFilePath.c_str());
+								bShowErrorDialogue = true;
+								errorMessage = "Attempted to import mesh from invalid directory!"
+									"\n" + absDirectory +
+									"\nMeshes must be imported from " + absoluteImportDirectoryStr + "\n";
+								ImGui::OpenPopup(importErrorPopupID);
 							}
 							else
 							{
-								Print("Importing mesh: %s\n", selectedAbsFilePath.c_str());
+								const std::string fileNameAndExtension = StripLeadingDirectories(selectedAbsFilePath);
+								std::string selectedRelativeFilePath = relativeImportDirPath + fileNameAndExtension;
 
-								LoadedMesh* existingMesh = nullptr;
-								if (MeshComponent::FindPreLoadedMesh(selectedRelativeFilePath, &existingMesh))
+								bool bMeshAlreadyImported = false;
+								for (const auto& meshPair : MeshComponent::m_LoadedMeshes)
 								{
-									i32 j = 0;
-									for (const auto& meshPair : MeshComponent::m_LoadedMeshes)
+									if (meshPair.first.compare(selectedRelativeFilePath) == 0)
 									{
-										if (meshPair.first.compare(selectedRelativeFilePath) == 0)
-										{
-											selectedMeshIndex = j;
-											break;
-										}
-
-										++j;
+										bMeshAlreadyImported = true;
+										break;
 									}
+								}
+
+								if (bMeshAlreadyImported)
+								{
+									Print("Mesh with filepath %s already imported\n", selectedAbsFilePath.c_str());
 								}
 								else
 								{
-									MeshComponent::LoadMesh(selectedRelativeFilePath);
-								}
-							}
+									Print("Importing mesh: %s\n", selectedAbsFilePath.c_str());
 
+									LoadedMesh* existingMesh = nullptr;
+									if (MeshComponent::FindPreLoadedMesh(selectedRelativeFilePath, &existingMesh))
+									{
+										i32 j = 0;
+										for (const auto& meshPair : MeshComponent::m_LoadedMeshes)
+										{
+											if (meshPair.first.compare(selectedRelativeFilePath) == 0)
+											{
+												selectedMeshIndex = j;
+												break;
+											}
+
+											++j;
+										}
+									}
+									else
+									{
+										MeshComponent::LoadMesh(selectedRelativeFilePath);
+									}
+								}
+
+								ImGui::CloseCurrentPopup();
+							}
+						}
+					}
+
+					ImGui::SetNextWindowSize(ImVec2(380, 120), ImGuiCond_FirstUseEver);
+					if (ImGui::BeginPopupModal(importErrorPopupID, &bShowErrorDialogue))
+					{
+						ImGui::TextWrapped("%s", errorMessage.c_str());
+						if (ImGui::Button("Ok"))
+						{
+							bShowErrorDialogue = false;
 							ImGui::CloseCurrentPopup();
 						}
+
+						ImGui::EndPopup();
 					}
 				}
 			}

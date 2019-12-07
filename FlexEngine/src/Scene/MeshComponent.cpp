@@ -232,6 +232,12 @@ namespace flex
 		m_ImportSettings = loadedMesh->importSettings;
 
 		cgltf_data* data = loadedMesh->data;
+		if (data == nullptr)
+		{
+			PrintError("Failed to load mesh at %s\n", relativeFilePath.c_str());
+			return false;
+		}
+
 		if (data->meshes_count == 0)
 		{
 			PrintError("Loaded mesh file has no meshes\n");
@@ -1264,20 +1270,20 @@ namespace flex
 		}
 		else if (prefabName.compare("plane") == 0)
 		{
-			return PrefabShape::PLANE;
+		return PrefabShape::PLANE;
 		}
 		else if (prefabName.compare("uv sphere") == 0)
 		{
-			return PrefabShape::UV_SPHERE;
+		return PrefabShape::UV_SPHERE;
 		}
 		else if (prefabName.compare("skybox") == 0)
 		{
-			return PrefabShape::SKYBOX;
+		return PrefabShape::SKYBOX;
 		}
 		else
 		{
-			PrintError("Unhandled prefab shape string: %s\n", prefabName.c_str());
-			return PrefabShape::_NONE;
+		PrintError("Unhandled prefab shape string: %s\n", prefabName.c_str());
+		return PrefabShape::_NONE;
 		}
 
 	}
@@ -1329,7 +1335,8 @@ namespace flex
 
 		const std::string fileName = StripLeadingDirectories(relativeFilePath);
 
-		LoadedMesh* newLoadedMesh = nullptr;
+		LoadedMesh* mesh = nullptr;
+		bool bNewMesh = true;
 		{
 			auto existingIter = m_LoadedMeshes.find(relativeFilePath);
 			if (existingIter == m_LoadedMeshes.end())
@@ -1338,8 +1345,7 @@ namespace flex
 				{
 					Print("Loading mesh %s\n", fileName.c_str());
 				}
-				newLoadedMesh = new LoadedMesh();
-				m_LoadedMeshes.emplace(relativeFilePath, newLoadedMesh);
+				mesh = new LoadedMesh();
 			}
 			else
 			{
@@ -1347,56 +1353,89 @@ namespace flex
 				{
 					Print("Reloading mesh %s\n", fileName.c_str());
 				}
-				newLoadedMesh = existingIter->second;
+				mesh = existingIter->second;
+				bNewMesh = false;
 			}
 		}
 
 		// If import settings were passed in, save them in the cached mesh
 		if (importSettings)
 		{
-			newLoadedMesh->importSettings = *importSettings;
+			mesh->importSettings = *importSettings;
 		}
 
-		newLoadedMesh->relativeFilePath = relativeFilePath;
+		mesh->relativeFilePath = relativeFilePath;
+
+		auto cleanup = [&](const std::string& errorMessage)
+		{
+			Print("%s", errorMessage.c_str());
+			auto existingIter = m_LoadedMeshes.find(relativeFilePath);
+			if (existingIter != m_LoadedMeshes.end())
+			{
+				m_LoadedMeshes.erase(existingIter);
+			}
+			delete mesh;
+		};
+
+		std::string outErrorMessage;
 
 		cgltf_options ops = {};
 		ops.type = cgltf_file_type_invalid; // auto detect gltf or glb
 		cgltf_data* data = nullptr;
+
 		cgltf_result result = cgltf_parse_file(&ops, relativeFilePath.c_str(), &data);
-		if (result == cgltf_result_success)
+		if (!CheckCGLTFResult(result, relativeFilePath, outErrorMessage))
 		{
-			result = cgltf_load_buffers(&ops, data, relativeFilePath.c_str());
+			cleanup("Failed to parse gltf/glb file at " + relativeFilePath + " with error:\n\t" + outErrorMessage);
+			return nullptr;
+		}
+		
+		result = cgltf_load_buffers(&ops, data, relativeFilePath.c_str());
+		if (!CheckCGLTFResult(result, relativeFilePath, outErrorMessage))
+		{
+			cleanup("Failed to load gltf/glb file at " + relativeFilePath + " with error:\n\t" + outErrorMessage);
+			return nullptr;
+		}
+		
+		result = cgltf_validate(data);
+		if (!CheckCGLTFResult(result, relativeFilePath, outErrorMessage))
+		{
+			cleanup("Failed to validate gltf/glb file at " + relativeFilePath + " with error:\n\t" + outErrorMessage);
+			return nullptr;
 		}
 
-		if (result == cgltf_result_success)
-		{
-			result = cgltf_validate(data);
-		}
-
-		if (result != cgltf_result_success)
-		{
-			std::string err;
-			switch (result)
-			{
-			case cgltf_result_data_too_short:	err = "Data too short"; break;
-			case cgltf_result_unknown_format:	err = "Unknown format"; break;
-			case cgltf_result_invalid_json:		err = "Invalid json"; break;
-			case cgltf_result_invalid_gltf:		err = "Invalid gltf"; break;
-			case cgltf_result_invalid_options:	err = "Invalid options"; break;
-			case cgltf_result_file_not_found:	err = "File not found"; break;
-			case cgltf_result_io_error:			err = "IO error"; break;
-			case cgltf_result_out_of_memory:	err = "Out of memory"; break;
-			default:							err = ""; break;
-			}
-			PrintError("Failed to load gltf/glb file at: %s\nError: %s\n", relativeFilePath.c_str(), err.c_str());
-			cgltf_free(data);
-		}
 		else
 		{
-			newLoadedMesh->data = data;
+			mesh->data = data;
+
+			if (bNewMesh)
+			{
+				m_LoadedMeshes.emplace(relativeFilePath, mesh);
+			}
 		}
 
-		return newLoadedMesh;
+		return mesh;
+	}
+
+	bool MeshComponent::CheckCGLTFResult(cgltf_result result, const std::string& relativeFilePath, std::string& outErrorMessage)
+	{
+		if (result != cgltf_result_success)
+		{
+			switch (result)
+			{
+			case cgltf_result_data_too_short:	outErrorMessage = "Data too short"; break;
+			case cgltf_result_unknown_format:	outErrorMessage = "Unknown format"; break;
+			case cgltf_result_invalid_json:		outErrorMessage = "Invalid json"; break;
+			case cgltf_result_invalid_gltf:		outErrorMessage = "Invalid gltf"; break;
+			case cgltf_result_invalid_options:	outErrorMessage = "Invalid options"; break;
+			case cgltf_result_file_not_found:	outErrorMessage = "File not found"; break;
+			case cgltf_result_io_error:			outErrorMessage = "IO error"; break;
+			case cgltf_result_out_of_memory:	outErrorMessage = "Out of memory"; break;
+			default:							outErrorMessage = ""; break;
+			}
+			return false;
+		}
+		return true;
 	}
 
 	MeshComponent::Type MeshComponent::GetType() const

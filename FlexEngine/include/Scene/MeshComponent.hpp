@@ -6,6 +6,9 @@
 #include "JSONTypes.hpp"
 #include "Types.hpp"
 
+struct cgltf_data;
+enum cgltf_result;
+
 namespace flex
 {
 	class GameObject;
@@ -110,6 +113,8 @@ namespace flex
 		bool CalculateTangents(VertexBufferDataCreateInfo& createInfo);
 
 		void CopyInOptionalCreateInfo(RenderObjectCreateInfo& createInfo, const RenderObjectCreateInfo& overrides);
+
+		static bool CheckCGLTFResult(cgltf_result result, const std::string& relativeFilePath, std::string& outErrorMessage);
 
 		static const real GRID_LINE_SPACING;
 		static const u32 GRID_LINE_COUNT;
