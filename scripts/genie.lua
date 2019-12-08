@@ -106,11 +106,9 @@ configuration "Shipping_WithSymbols"
 	flags {"OptimizeSpeed", "Symbols", "No64BitChecks" }
 configuration {}
 
-
-configuration "vs*"
+configuration {}
 	flags { "NoIncrementalLink", "NoEditAndContinue" }
 	linkoptions { "/ignore:4221" }
-	defines { "PLATFORM_Win" }
 	includedirs { 
 		path.join(SOURCE_DIR, "include"),
 		path.join(DEPENDENCIES_DIR, "glad/include"),
@@ -125,12 +123,17 @@ configuration "vs*"
 		DEPENDENCIES_DIR,
 	}
 	debugdir "$(OutDir)"
+configuration "vs*"
+	defines { "PLATFORM_Win" }
 configuration { "vs*", "x32" }
 	flags { "EnableSSE2" }
 	defines { "WIN32" }
 configuration { "x32" }
 	defines { "PLATFORM_x32" }
 configuration {}
+
+
+-- configuration "gcc*"
 
 
 startproject "Flex"

@@ -35,14 +35,16 @@ const bool g_bEnableLogging_Loading = false;
 #define VULKAN_HPP_TYPESAFE_CONVERSION
 #endif
 
-void* operator new(size_t size);
+#include <cstddef>
+
+void* operator new(std::size_t size);
 void operator delete(void* ptr) noexcept;
 
-void* malloc_hooked(size_t size);
-void* aligned_malloc_hooked(size_t size, size_t alignment);
+void* malloc_hooked(std::size_t size);
+void* aligned_malloc_hooked(std::size_t size, std::size_t alignment);
 void free_hooked(void* ptr);
 void aligned_free_hooked(void* ptr);
-void* realloc_hooked(void* ptr, size_t newsz);
+void* realloc_hooked(void* ptr, std::size_t newsz);
 
 #define STBI_MALLOC(size)		malloc_hooked(size)
 #define STBI_REALLOC(p, newsz)	realloc_hooked(p, newsz)
@@ -50,12 +52,16 @@ void* realloc_hooked(void* ptr, size_t newsz);
 
 #define BT_NO_SIMD_OPERATOR_OVERLOADS
 #define NOMINMAX
+
+#ifdef _WINDOWS
 #define GLFW_EXPOSE_NATIVE_WIN32
+// TODO(AJ): Add linux expose define?
+#endif
+
 #define GLFW_INCLUDE_NONE
 
 #if COMPILE_IMGUI
 #define IMGUI_IMPL_OPENGL_LOADER_GLAD
-#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS 1
 #define IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS 1
 #endif
 
@@ -69,6 +75,11 @@ void* realloc_hooked(void* ptr, size_t newsz);
 #elif defined(_MSC_VER)
 #define IGNORE_WARNINGS_PUSH __pragma(warning(push, 0))
 #define IGNORE_WARNINGS_POP __pragma(warning(pop))
+#elif defined(__GNUG__)
+#define IGNORE_WARNINGS_PUSH \
+		_Pragma("GCC diagnostic push") \
+		_Pragma("GCC diagnostic ignored \"-Wall\"")
+#define IGNORE_WARNINGS_POP _Pragma("GCC diagnostic pop")
 #else
 	// Unhandled compiler
 	#error
@@ -76,9 +87,11 @@ void* realloc_hooked(void* ptr, size_t newsz);
 
 #undef FORMAT_STRING
 #if defined(__clang__)
-#define FORMAT_STRING __attribute__ (( format( __printf__, fmtargnumber, firstvarargnumber )))
+#define FORMAT_STRING(n,m) __attribute__ (( format( __printf__, fmtargnumber, firstvarargnumber )))
 #elif defined(_MSC_VER)
-#define FORMAT_STRING _Printf_format_string_
+#define FORMAT_STRING(n,m) _Printf_format_string_
+#elif defined(__GNUG__)
+#define FORMAT_STRING(n,m) __attribute__ (( format( __printf__, n, m )))
 #endif
 
 #define FT_EXPORT(Type) Type
@@ -103,11 +116,13 @@ void* realloc_hooked(void* ptr, size_t newsz);
 #include <limits>
 #include <unordered_map>
 
+#ifdef _WINDOWS
 #include <crtdbg.h>
+#include "MinWindows.hpp"
+#endif
+
 #include <stdlib.h>
 #include <string.h>
-
-#include "MinWindows.hpp"
 
 #include "Logger.hpp"
 #include "Types.hpp"
@@ -263,9 +278,9 @@ namespace flex
 	extern sec g_DeltaTime;
 	extern sec g_UnpausedDeltaTime; // Unpaused and unscaled
 
-	extern size_t g_TotalTrackedAllocatedMemory;
-	extern size_t g_TrackedAllocationCount;
-	extern size_t g_TrackedDeallocationCount;
+	extern std::size_t g_TotalTrackedAllocatedMemory;
+	extern std::size_t g_TrackedAllocationCount;
+	extern std::size_t g_TrackedDeallocationCount;
 }
 
 namespace glm
