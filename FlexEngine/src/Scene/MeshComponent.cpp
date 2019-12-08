@@ -1384,23 +1384,23 @@ namespace flex
 		cgltf_data* data = nullptr;
 
 		cgltf_result result = cgltf_parse_file(&ops, relativeFilePath.c_str(), &data);
-		if (!CheckCGLTFResult(result, relativeFilePath, outErrorMessage))
+		if (!CheckCGLTFResult(result, outErrorMessage))
 		{
-			cleanup("Failed to parse gltf/glb file at " + relativeFilePath + " with error:\n\t" + outErrorMessage);
+			cleanup("Failed to parse gltf/glb file at " + relativeFilePath + " with error:\n\t" + outErrorMessage + "\n");
 			return nullptr;
 		}
 		
 		result = cgltf_load_buffers(&ops, data, relativeFilePath.c_str());
-		if (!CheckCGLTFResult(result, relativeFilePath, outErrorMessage))
+		if (!CheckCGLTFResult(result, outErrorMessage))
 		{
-			cleanup("Failed to load gltf/glb file at " + relativeFilePath + " with error:\n\t" + outErrorMessage);
+			cleanup("Failed to load gltf/glb file at " + relativeFilePath + " with error:\n\t" + outErrorMessage + "\n");
 			return nullptr;
 		}
 		
 		result = cgltf_validate(data);
-		if (!CheckCGLTFResult(result, relativeFilePath, outErrorMessage))
+		if (!CheckCGLTFResult(result, outErrorMessage))
 		{
-			cleanup("Failed to validate gltf/glb file at " + relativeFilePath + " with error:\n\t" + outErrorMessage);
+			cleanup("Failed to validate gltf/glb file at " + relativeFilePath + " with error:\n\t" + outErrorMessage + "\n");
 			return nullptr;
 		}
 
@@ -1417,7 +1417,7 @@ namespace flex
 		return mesh;
 	}
 
-	bool MeshComponent::CheckCGLTFResult(cgltf_result result, const std::string& relativeFilePath, std::string& outErrorMessage)
+	bool MeshComponent::CheckCGLTFResult(cgltf_result result, std::string& outErrorMessage)
 	{
 		if (result != cgltf_result_success)
 		{

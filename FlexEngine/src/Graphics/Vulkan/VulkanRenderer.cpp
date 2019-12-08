@@ -482,7 +482,7 @@ namespace flex
 
 			{
 				// ImGui
-				ImGui_ImplGlfw_InitForVulkan(((GLFWWindowWrapper*)g_Window)->GetWindow(), false);
+				ImGui_ImplGlfw_InitForVulkan(castedWindow->GetWindow(), false);
 
 				ImGui_ImplVulkan_InitInfo init_info = {};
 				init_info.Instance = m_Instance;
@@ -2190,6 +2190,8 @@ namespace flex
 						for (VulkanTexture* texture : m_LoadedTextures)
 						{
 							std::string texturePath = texture->GetRelativeFilePath();
+
+							// TODO: Reimplement
 
 							//ImGuiUpdateTextureIndexOrMaterial(bUpdateAlbedoTextureMaterial,
 							//	texturePath,
