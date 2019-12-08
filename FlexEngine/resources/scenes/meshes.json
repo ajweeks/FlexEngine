@@ -197,6 +197,139 @@
 			"flipNormalZ" : false,
 			"flipU" : false,
 			"flipV" : false
+		},
+		{
+			"file" : "scene.gltf",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "shanghai-comb.glb",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "shanghai_ground.glb",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "shanghai_bridge_1.glb",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "shanghai_river.glb",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "shanghai_boat.glb",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "shanghai_build_1.glb",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "shanghai_build_2.glb",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "shanghai_river_bed.glb",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "shanghai_tables.glb",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "shanghai_misc_1.glb",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "shanghai_misc_2.glb",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "shanghai_veg_1.glb",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "shanghai_benches.glb",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "shanghai_misc_3.glb",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "shanghai_misc_4.glb",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "shanghai_build_3.glb",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "dragon_high.glb",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "dragon_mid.glb",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
 		}
 	]
 }

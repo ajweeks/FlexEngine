@@ -1,0 +1,239 @@
+{
+	"version" : 2,
+	"name" : "scene_shanghai",
+	"spawn player" : false,
+	"objects" : 
+	[
+		{
+			"name" : "Skybox",
+			"type" : "skybox",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"material" : "skybox 01",
+			"skybox info" : 
+			{
+			}
+		},
+		{
+			"name" : "Reflection Probe 01",
+			"type" : "reflection probe",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 8.000, 0.000"
+			}
+		},
+		{
+			"name" : "sphere",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"mesh" : "ico-sphere",
+			"material" : "pbr chrome"
+		},
+		{
+			"name" : "Directional Light",
+			"type" : "directional light",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 15.000, 0.000",
+				"rot" : "-0.000, 0.865, 2.659"
+			},
+			"directional light info" : 
+			{
+				"rotation" : "-0.407, 0.100, 0.882, 0.217",
+				"pos" : "0.000, 15.000, 0.000",
+				"color" : "0.92, 0.92, 0.62",
+				"enabled" : true,
+				"brightness" : 1.172000,
+				"cast shadows" : true,
+				"shadow darkness" : 1.000000
+			}
+		},
+		{
+			"name" : "bridge",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"mesh" : "shanghai_bridge_1",
+			"material" : "shanghai"
+		},
+		{
+			"name" : "ground",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, -1.600, 4.100"
+			},
+			"mesh" : "shanghai_ground",
+			"material" : "shanghai 6"
+		},
+		{
+			"name" : "river",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"mesh" : "shanghai_river",
+			"material" : "shanghai 3"
+		},
+		{
+			"name" : "boat",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"mesh" : "shanghai_boat",
+			"material" : "shanghai 2"
+		},
+		{
+			"name" : "build1",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"mesh" : "shanghai_build_1",
+			"material" : "shanghai 5"
+		},
+		{
+			"name" : "build2",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"mesh" : "shanghai_build_2",
+			"material" : "shanghai 4"
+		},
+		{
+			"name" : "river bed",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"mesh" : "shanghai_river_bed",
+			"material" : "shanghai 6"
+		},
+		{
+			"name" : "tables",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"mesh" : "shanghai_tables",
+			"material" : "shanghai 7"
+		},
+		{
+			"name" : "misc1",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"mesh" : "shanghai_misc_1",
+			"material" : "shanghai 6"
+		},
+		{
+			"name" : "misc2",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"mesh" : "shanghai_misc_2",
+			"material" : "shanghai 6"
+		},
+		{
+			"name" : "veg1",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"mesh" : "shanghai_veg_1",
+			"material" : "shanghai 5"
+		},
+		{
+			"name" : "benches",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"mesh" : "shanghai_benches",
+			"material" : "shanghai 7"
+		},
+		{
+			"name" : "misc3",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"mesh" : "shanghai_misc_3",
+			"material" : "shanghai 6"
+		},
+		{
+			"name" : "misc4",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"mesh" : "shanghai_misc_4",
+			"material" : "shanghai 6"
+		},
+		{
+			"name" : "build3",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"mesh" : "shanghai_build_3",
+			"material" : "shanghai 7"
+		},
+		{
+			"name" : "dragon",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "-88.200, -2.500, 144.400",
+				"rot" : "0.000, -1.138, 0.000",
+				"scale" : "30.000, 30.000, 30.000"
+			},
+			"mesh" : "dragon_mid",
+			"material" : "shanghai 2"
+		},
+		{
+			"name" : "PointLight_00",
+			"type" : "point light",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "-106.600, 22.600, 159.700"
+			},
+			"point light info" : 
+			{
+				"pos" : "-106.600, 22.600, 159.700",
+				"color" : "0.79, 0.80, 0.81",
+				"enabled" : true,
+				"brightness" : 239.582993
+			}
+		}
+	]
+}

@@ -257,7 +257,7 @@ namespace flex
 
 		static const u32 MAX_PARTICLE_COUNT = 65536;
 		static const u32 PARTICLES_PER_DISPATCH = 256;
-		static const u32 SHADOW_CASCADE_RES = 2048;
+		static const u32 SHADOW_CASCADE_RES = 4096;
 		static const u32 SSAO_NOISE_DIM = 4;
 
 	protected:

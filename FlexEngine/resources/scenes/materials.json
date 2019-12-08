@@ -378,6 +378,55 @@
 			"enable albedo sampler" : true,
 			"generate albedo sampler" : true,
 			"albedo texture filepath" : "work_d.jpg"
+		},
+		{
+			"name" : "shanghai",
+			"shader" : "pbr",
+			"const albedo" : "1.000, 1.000, 1.000",
+			"const metallic" : 0.000000,
+			"const roughness" : 1.000000
+		},
+		{
+			"name" : "shanghai 2",
+			"shader" : "pbr",
+			"const albedo" : "0.684, 0.309, 0.309",
+			"const metallic" : 0.000000,
+			"const roughness" : 0.260000
+		},
+		{
+			"name" : "shanghai 3",
+			"shader" : "pbr",
+			"const albedo" : "0.315, 0.451, 0.676",
+			"const metallic" : 0.000000,
+			"const roughness" : 1.000000
+		},
+		{
+			"name" : "shanghai 4",
+			"shader" : "pbr",
+			"const albedo" : "0.743, 0.768, 0.523",
+			"const metallic" : 0.000000,
+			"const roughness" : 1.000000
+		},
+		{
+			"name" : "shanghai 5",
+			"shader" : "pbr",
+			"const albedo" : "0.694, 0.920, 0.529",
+			"const metallic" : 0.000000,
+			"const roughness" : 1.000000
+		},
+		{
+			"name" : "shanghai 6",
+			"shader" : "pbr",
+			"const albedo" : "0.727, 0.727, 0.727",
+			"const metallic" : 0.000000,
+			"const roughness" : 1.000000
+		},
+		{
+			"name" : "shanghai 7",
+			"shader" : "pbr",
+			"const albedo" : "0.441, 0.348, 0.242",
+			"const metallic" : 0.000000,
+			"const roughness" : 1.000000
 		}
 	]
 }
