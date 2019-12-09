@@ -429,6 +429,7 @@ namespace flex
 			void Add(VulkanDevice* device, UniformBufferType type);
 			UniformBuffer* Get(UniformBufferType type);
 			const UniformBuffer* Get(UniformBufferType type) const;
+			bool Has(UniformBufferType type) const;
 
 			std::vector<UniformBuffer> uniformBufferList;
 		};
@@ -481,18 +482,20 @@ namespace flex
 		{
 			using iter = typename std::vector<Pair<u64, T>>::iterator;
 
-			void Add(u64 uniform, const T value)
+			void Add(u64 uniform, const T value, std::string slotName = "")
 			{
-				for (auto& pair : values)
+				for (auto value_iter = values.begin(); value_iter != values.end(); ++value_iter)
 				{
-					if (pair.first == uniform)
+					if (value_iter->first == uniform)
 					{
-						pair.second = value;
+						value_iter->second = value;
+						slotNames[value_iter - values.begin()] = slotName;
 						return;
 					}
 				}
 
 				values.emplace_back(uniform, value);
+				slotNames.emplace_back(slotName);
 			}
 
 			u32 Count()
@@ -535,6 +538,7 @@ namespace flex
 			}
 
 			std::vector<Pair<u64, T>> values;
+			std::vector<std::string> slotNames;
 		};
 
 		struct VulkanMaterial

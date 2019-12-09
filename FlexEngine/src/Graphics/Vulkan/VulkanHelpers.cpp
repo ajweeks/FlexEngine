@@ -2502,6 +2502,18 @@ namespace flex
 			return nullptr;
 		}
 
+		bool UniformBufferList::Has(UniformBufferType type) const
+		{
+			for (const UniformBuffer& buffer : uniformBufferList)
+			{
+				if (buffer.type == type)
+				{
+					return true;
+				}
+			}
+			return false;
+		}
+
 		UniformBuffer* UniformBufferList::Get(UniformBufferType type)
 		{
 			for (UniformBuffer& buffer : uniformBufferList)

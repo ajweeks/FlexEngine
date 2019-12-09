@@ -310,7 +310,7 @@ namespace flex
 			void OnShaderReloadSuccess();
 
 			// Returns true if object was duplicated
-			bool DoTextureSelector(const char* label, const std::vector<VulkanTexture*>& textures, i32* selectedIndex, bool* bGenerateSampler);
+			bool DoTextureSelector(const char* label, const std::vector<VulkanTexture*>& textures, i32* selectedIndex);
 			void ImGuiUpdateTextureIndexOrMaterial(bool bUpdateTextureMaterial,
 				const std::string& texturePath,
 				std::string& matTexturePath,

@@ -911,19 +911,19 @@ namespace flex
 					m_BRDFTexture->CreateEmpty(VK_FORMAT_R16G16_SFLOAT, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 					m_LoadedTextures.push_back(m_BRDFTexture);
 				}
-				mat.textures.Add(U_BRDF_LUT_SAMPLER, m_BRDFTexture);
+				mat.textures.Add(U_BRDF_LUT_SAMPLER, m_BRDFTexture, "BRDF");
 			}
 			if (shader.shader->bNeedIrradianceSampler)
 			{
 				if (createInfo->irradianceSamplerMatID < m_Materials.size())
 				{
-					mat.textures.Add(U_IRRADIANCE_SAMPLER, m_Materials.at(createInfo->irradianceSamplerMatID).textures[U_IRRADIANCE_SAMPLER]);
+					mat.textures.Add(U_IRRADIANCE_SAMPLER, m_Materials.at(createInfo->irradianceSamplerMatID).textures[U_IRRADIANCE_SAMPLER], "Irradiance");
 				}
 			}
 			if (shader.shader->bNeedPrefilteredMap)
 			{
 				VulkanTexture* prefilterTexture = (createInfo->prefilterMapSamplerMatID < m_Materials.size() ? m_Materials.at(createInfo->prefilterMapSamplerMatID).textures[U_PREFILTER_MAP] : nullptr);
-				mat.textures.Add(U_PREFILTER_MAP, prefilterTexture);
+				mat.textures.Add(U_PREFILTER_MAP, prefilterTexture, "Prefilter");
 			}
 
 			mat.material.enablePrefilteredMap = createInfo->enablePrefilteredMap;
@@ -942,13 +942,13 @@ namespace flex
 			{
 				TextureInfo(const std::string& relativeFilePath,
 					u64 textureUniform,
-					bool* generate,
+					const std::string& slotName,
 					VkFormat format = VK_FORMAT_R8G8B8A8_UNORM,
 					u32 mipLevels = 1,
 					bool bHDR = false) :
 					relativeFilePath(relativeFilePath),
 					textureUniform(textureUniform),
-					generate(generate),
+					slotName(slotName),
 					format(format),
 					mipLevels(mipLevels),
 					bHDR(bHDR)
@@ -956,7 +956,7 @@ namespace flex
 
 				const std::string relativeFilePath;
 				u64 textureUniform;
-				bool* generate;
+				const std::string slotName;
 				VkFormat format;
 				u32 mipLevels;
 				bool bHDR;
@@ -964,25 +964,17 @@ namespace flex
 
 			TextureInfo textureInfos[] =
 			{
-				{ createInfo->albedoTexturePath, U_ALBEDO_SAMPLER, &mat.material.generateAlbedoSampler },
-				{ createInfo->metallicTexturePath, U_METALLIC_SAMPLER, &mat.material.generateMetallicSampler },
-				{ createInfo->roughnessTexturePath, U_ROUGHNESS_SAMPLER, &mat.material.generateRoughnessSampler },
-				{ createInfo->normalTexturePath, U_NORMAL_SAMPLER, &mat.material.generateNormalSampler },
-				{ createInfo->hdrEquirectangularTexturePath, U_HDR_EQUIRECTANGULAR_SAMPLER, &mat.material.generateHDREquirectangularSampler, VK_FORMAT_R32G32B32A32_SFLOAT, 1, true },
+				{ createInfo->albedoTexturePath, U_ALBEDO_SAMPLER, "Albedo" },
+				{ createInfo->metallicTexturePath, U_METALLIC_SAMPLER , "Metallic"},
+				{ createInfo->roughnessTexturePath, U_ROUGHNESS_SAMPLER, "Roughnes" },
+				{ createInfo->normalTexturePath, U_NORMAL_SAMPLER, "Normal" },
+				{ createInfo->hdrEquirectangularTexturePath, U_HDR_EQUIRECTANGULAR_SAMPLER, "HDR Equirectangular", VK_FORMAT_R32G32B32A32_SFLOAT, 1, true },
 			};
 			const size_t textureCount = sizeof(textureInfos) / sizeof(textureInfos[0]);
 
-			// Calculate how many textures need to be allocated to prevent texture vector from resizing
-			const size_t usedTextureCount = createInfo->generateAlbedoSampler +
-				createInfo->generateCubemapSampler +
-				createInfo->generateIrradianceSampler + createInfo->generateMetallicSampler +
-				createInfo->generateNormalSampler + createInfo->generatePrefilteredMap +
-				createInfo->generateRoughnessSampler + createInfo->generateHDREquirectangularSampler;
-			m_LoadedTextures.reserve(m_LoadedTextures.size() + usedTextureCount);
-
 			for (TextureInfo& textureInfo : textureInfos)
 			{
-				if (!textureInfo.relativeFilePath.empty() && textureInfo.generate)
+				if (!textureInfo.relativeFilePath.empty())
 				{
 					VulkanTexture* texture = GetLoadedTexture(textureInfo.relativeFilePath);
 
@@ -998,13 +990,13 @@ namespace flex
 						m_LoadedTextures.push_back(texture);
 					}
 
-					mat.textures.Add(textureInfo.textureUniform, texture);
+					mat.textures.Add(textureInfo.textureUniform, texture, textureInfo.slotName);
 				}
 				else
 				{
 					if (!mat.textures.Contains(textureInfo.textureUniform) && shader.shader->textureUniforms.HasUniform(textureInfo.textureUniform))
 					{
-						mat.textures.Add(textureInfo.textureUniform, m_BlankTexture);
+						mat.textures.Add(textureInfo.textureUniform, m_BlankTexture, textureInfo.slotName);
 					}
 				}
 			}
@@ -1024,7 +1016,7 @@ namespace flex
 					//texture->imageLayout = VK_IMAGE_LAYOUT_UNDEFINED; // TODO:Set this in creation function?
 
 					m_LoadedTextures.push_back(cubemapTexture);
-					mat.textures.Add(U_CUBEMAP_SAMPLER, cubemapTexture);
+					mat.textures.Add(U_CUBEMAP_SAMPLER, cubemapTexture, "Cubemap");
 				}
 				else
 				{
@@ -1039,7 +1031,7 @@ namespace flex
 						m_LoadedTextures.push_back(cubemapTexture);
 					}
 
-					mat.textures.Add(U_CUBEMAP_SAMPLER, cubemapTexture);
+					mat.textures.Add(U_CUBEMAP_SAMPLER, cubemapTexture, "Cubemap");
 				}
 			}
 			else if (mat.material.generateHDRCubemapSampler)
@@ -1051,13 +1043,13 @@ namespace flex
 					(u32)createInfo->generatedCubemapSize.x, (u32)createInfo->generatedCubemapSize.y, 4);
 				cubemapTexture->CreateCubemapEmpty(VK_FORMAT_R32G32B32A32_SFLOAT, mipLevels, false);
 				m_LoadedTextures.push_back(cubemapTexture);
-				mat.textures.Add(U_CUBEMAP_SAMPLER, cubemapTexture);
+				mat.textures.Add(U_CUBEMAP_SAMPLER, cubemapTexture, "HDR Cubemap");
 			}
 			else
 			{
 				if (!mat.textures.Contains(U_CUBEMAP_SAMPLER) && shader.shader->textureUniforms.HasUniform(U_CUBEMAP_SAMPLER))
 				{
-					mat.textures.Add(U_CUBEMAP_SAMPLER, m_BlankTextureArr);
+					mat.textures.Add(U_CUBEMAP_SAMPLER, m_BlankTextureArr, "Cubemap"); // TODO: Array?
 				}
 			}
 
@@ -1071,13 +1063,13 @@ namespace flex
 					(u32)createInfo->generatedIrradianceCubemapSize.y, 4);
 				irradianceTexture->CreateCubemapEmpty(VK_FORMAT_R32G32B32A32_SFLOAT, mipLevels, false);
 				m_LoadedTextures.push_back(irradianceTexture);
-				mat.textures.Add(U_IRRADIANCE_SAMPLER, irradianceTexture);
+				mat.textures.Add(U_IRRADIANCE_SAMPLER, irradianceTexture, "Irradiance");
 			}
 			else
 			{
 				if (!mat.textures.Contains(U_IRRADIANCE_SAMPLER) && shader.shader->textureUniforms.HasUniform(U_IRRADIANCE_SAMPLER))
 				{
-					mat.textures.Add(U_IRRADIANCE_SAMPLER, m_BlankTextureArr);
+					mat.textures.Add(U_IRRADIANCE_SAMPLER, m_BlankTexture, "Irradiance");
 				}
 			}
 
@@ -1091,13 +1083,13 @@ namespace flex
 					(u32)createInfo->generatedPrefilteredCubemapSize.y, 4);
 				prefilterTexture->CreateCubemapEmpty(VK_FORMAT_R16G16B16A16_SFLOAT, mipLevels, true);
 				m_LoadedTextures.push_back(prefilterTexture);
-				mat.textures.Add(U_PREFILTER_MAP, prefilterTexture);
+				mat.textures.Add(U_PREFILTER_MAP, prefilterTexture, "Prefilter");
 			}
 			else
 			{
 				if (!mat.textures.Contains(U_PREFILTER_MAP) && shader.shader->textureUniforms.HasUniform(U_PREFILTER_MAP))
 				{
-					mat.textures.Add(U_PREFILTER_MAP, m_BlankTextureArr);
+					mat.textures.Add(U_PREFILTER_MAP, m_BlankTextureArr, "Prefilter"); // TODO: Array?
 				}
 			}
 
@@ -1115,7 +1107,7 @@ namespace flex
 					m_LoadedTextures.push_back(m_NoiseTexture);
 				}
 
-				mat.textures.Add(U_NOISE_SAMPLER, m_NoiseTexture);
+				mat.textures.Add(U_NOISE_SAMPLER, m_NoiseTexture, "SSAO Noise");
 			}
 
 			if (m_bPostInitialized)
@@ -2002,7 +1994,7 @@ namespace flex
 					m_Shaders[m_Materials.at(renderObject->materialID).material.shaderID].shader->bNeedPrefilteredMap)
 				{
 					VulkanMaterial* mat = &m_Materials.at(renderObject->materialID);
-					mat->textures.Add(U_IRRADIANCE_SAMPLER, m_Materials.at(skyboxMatierialID).textures[U_IRRADIANCE_SAMPLER]);
+					mat->textures.Add(U_IRRADIANCE_SAMPLER, m_Materials.at(skyboxMatierialID).textures[U_IRRADIANCE_SAMPLER], "Irradiance");
 					mat->textures.Add(U_PREFILTER_MAP, m_Materials.at(skyboxMatierialID).textures[U_PREFILTER_MAP]);
 				}
 			}
@@ -2160,6 +2152,7 @@ namespace flex
 				if (ImGui::CollapsingHeader("Materials"))
 				{
 					static bool bUpdateFields = true;
+					static bool bMaterialSelectionChanged = true;
 					const i32 MAX_NAME_LEN = 128;
 					static i32 selectedMaterialIndexShort = 0; // Index into shortened array
 					static MaterialID selectedMaterialID = 0;
@@ -2171,23 +2164,50 @@ namespace flex
 					static std::string matName = "";
 					static i32 selectedShaderIndex = 0;
 					// Texture index values of 0 represent no texture, 1 = first index into textures array and so on
-					//static i32 albedoTextureIndex = 0;
-					//static bool bUpdateAlbedoTextureMaterial = false;
+					static i32 albedoTextureIndex = 0;
+					static std::vector<i32> selectedTextureIndices; // One for each of the current material's texture slots
+					static bool bUpdateAlbedoTextureMaterial = false;
 					VulkanMaterial& mat = m_Materials.at(selectedMaterialID);
 
-					if (bUpdateFields)
+					if (bMaterialSelectionChanged)
 					{
-						bUpdateFields = false;
+						bMaterialSelectionChanged = false;
 
 						matName = mat.material.name;
 						matName.resize(MAX_NAME_LEN);
+
+						selectedTextureIndices.resize(mat.textures.Count());
+
+						i32 texIndex = 0;
+						for (auto& pair : mat.textures)
+						{
+							for (u32 loadedTexIndex = 0; loadedTexIndex < m_LoadedTextures.size(); ++loadedTexIndex)
+							{
+								// TODO(AJ): Compare IDs
+								if (pair.second == m_LoadedTextures[loadedTexIndex])
+								{
+									selectedTextureIndices[texIndex] = loadedTexIndex;
+								}
+							}
+							++texIndex;
+						}
+					}
+					else if (bUpdateFields)
+					{
+						bUpdateFields = false;
+
+						
+						for (u32 texIndex = 0; texIndex < mat.textures.Count(); ++texIndex)
+						{
+							mat.textures.values[texIndex].second = m_LoadedTextures[selectedTextureIndices[texIndex]];
+						}
+
 
 						i32 i = 0;
 						for (VulkanTexture* texture : m_LoadedTextures)
 						{
 							std::string texturePath = texture->GetRelativeFilePath();
-
-							// TODO: Reimplement
+							std::string textureName = StripLeadingDirectories(texturePath);
 
 							//ImGuiUpdateTextureIndexOrMaterial(bUpdateAlbedoTextureMaterial,
 							//	texturePath,
@@ -2195,7 +2215,7 @@ namespace flex
 							//	texture,
 							//	i,
 							//	&albedoTextureIndex,
-							//	&mat.albedoTexture);
+							//	U_ALBEDO_SAMPLER);
 
 							//ImGuiUpdateTextureIndexOrMaterial(bUpdateMetallicTextureMaterial,
 							//	texturePath,
@@ -2316,18 +2336,12 @@ namespace flex
 						textures.push_back(texture);
 					}
 
-					//bUpdateAlbedoTextureMaterial = DoTextureSelector("Albedo texture", textures,
-					//	&albedoTextureIndex, &mat.material.generateAlbedoSampler);
-					//bUpdateFields |= bUpdateAlbedoTextureMaterial;
-					//bUpdateMetallicTextureMaterial = DoTextureSelector("Metallic texture", textures,
-					//	&metallicTextureIndex, &mat.material.generateMetallicSampler);
-					//bUpdateFields |= bUpdateMetallicTextureMaterial;
-					//bUpdateRoughessTextureMaterial = DoTextureSelector("Roughness texture", textures,
-					//	&roughnessTextureIndex, &mat.material.generateRoughnessSampler);
-					//bUpdateFields |= bUpdateRoughessTextureMaterial;
-					//bUpdateNormalTextureMaterial = DoTextureSelector("Normal texture", textures,
-					//	&normalTextureIndex, &mat.material.generateNormalSampler);
-					//bUpdateFields |= bUpdateNormalTextureMaterial;
+					for (u32 texIndex = 0; texIndex < mat.textures.Count(); ++texIndex)
+					{
+						VulkanTexture* texture = mat.textures[texIndex];
+						std::string texFieldName = mat.textures.slotNames[texIndex] + "##" + std::to_string(texIndex);
+						bUpdateFields |= DoTextureSelector(texFieldName.c_str(), textures, &selectedTextureIndices[texIndex]);
+					}
 
 					ImGui::NewLine();
 
@@ -2351,6 +2365,7 @@ namespace flex
 									selectedMaterialIndexShort = matShortIndex;
 									selectedMaterialID = i;
 									bUpdateFields = true;
+									bMaterialSelectionChanged = true;
 								}
 							}
 
@@ -2482,6 +2497,7 @@ namespace flex
 					{
 						g_SceneManager->CurrentScene()->RemoveMaterialID(selectedMaterialID);
 						RemoveMaterial(selectedMaterialID);
+						bMaterialSelectionChanged = true;
 					}
 					ImGui::PopStyleColor();
 					ImGui::PopStyleColor();
@@ -8826,8 +8842,7 @@ namespace flex
 
 		bool VulkanRenderer::DoTextureSelector(const char* label,
 			const std::vector<VulkanTexture*>& textures,
-			i32* selectedIndex,
-			bool* bGenerateSampler)
+			i32* selectedIndex)
 		{
 			bool bValueChanged = false;
 
@@ -8842,9 +8857,7 @@ namespace flex
 					{
 						if (ImGui::Selectable("NONE", bTextureSelected))
 						{
-							*bGenerateSampler = false;
-
-							*selectedIndex = i;
+							*selectedIndex = 0;
 							bValueChanged = true;
 						}
 					}
@@ -8852,11 +8865,6 @@ namespace flex
 					{
 						if (ImGui::Selectable(textures[i - 1]->fileName.c_str(), bTextureSelected))
 						{
-							if (*selectedIndex == 0)
-							{
-								*bGenerateSampler = true;
-							}
-
 							*selectedIndex = i;
 							bValueChanged = true;
 						}
