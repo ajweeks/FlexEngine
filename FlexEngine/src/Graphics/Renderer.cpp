@@ -2704,7 +2704,6 @@ namespace flex
 		fullscreenBlitMatCreateInfo.shaderName = "blit";
 		fullscreenBlitMatCreateInfo.persistent = true;
 		fullscreenBlitMatCreateInfo.visibleInEditor = false;
-		fullscreenBlitMatCreateInfo.generateAlbedoSampler = true;
 		fullscreenBlitMatCreateInfo.enableAlbedoSampler = true;
 		m_FullscreenBlitMatID = InitializeMaterial(&fullscreenBlitMatCreateInfo);
 

@@ -77,10 +77,6 @@
 			"enable metallic sampler" : true,
 			"enable roughness sampler" : true,
 			"enable normal sampler" : true,
-			"generate albedo sampler" : true,
-			"generate metallic sampler" : true,
-			"generate roughness sampler" : true,
-			"generate normal sampler" : true,
 			"albedo texture filepath" : "Cerberus_by_Andrew_Maximov/Cerberus_A_1024.jpg",
 			"metallic texture filepath" : "Cerberus_by_Andrew_Maximov/Cerberus_M_1024.jpg",
 			"roughness texture filepath" : "Cerberus_by_Andrew_Maximov/Cerberus_R_1024.jpg",
@@ -254,7 +250,6 @@
 			"const metallic" : 0.000000,
 			"const roughness" : 0.000000,
 			"enable normal sampler" : true,
-			"generate normal sampler" : true,
 			"normal texture filepath" : "work_n.jpg"
 		},
 		{
@@ -292,7 +287,6 @@
 			"const metallic" : 0.000000,
 			"const roughness" : 1.000000,
 			"enable albedo sampler" : true,
-			"generate albedo sampler" : true,
 			"albedo texture filepath" : "alpha-bg.png"
 		},
 		{
@@ -316,7 +310,6 @@
 			"const metallic" : 0.000000,
 			"const roughness" : 0.920000,
 			"enable albedo sampler" : true,
-			"generate albedo sampler" : true,
 			"albedo texture filepath" : "noise1.png"
 		},
 		{
@@ -326,7 +319,6 @@
 			"const metallic" : 0.000000,
 			"const roughness" : 0.890000,
 			"enable albedo sampler" : true,
-			"generate albedo sampler" : true,
 			"albedo texture filepath" : "clouds1.png"
 		},
 		{
@@ -336,7 +328,6 @@
 			"const metallic" : 0.000000,
 			"const roughness" : 0.000000,
 			"enable albedo sampler" : true,
-			"generate albedo sampler" : true,
 			"albedo texture filepath" : "dots.png"
 		},
 		{
@@ -346,7 +337,6 @@
 			"const metallic" : 0.000000,
 			"const roughness" : 1.000000,
 			"enable albedo sampler" : true,
-			"generate albedo sampler" : true,
 			"albedo texture filepath" : "v-stripes.png"
 		},
 		{
@@ -356,7 +346,6 @@
 			"const metallic" : 0.000000,
 			"const roughness" : 0.000000,
 			"enable albedo sampler" : true,
-			"generate albedo sampler" : true,
 			"albedo texture filepath" : "cross-hatch.png"
 		},
 		{
@@ -366,7 +355,6 @@
 			"const metallic" : 0.000000,
 			"const roughness" : 0.000000,
 			"enable albedo sampler" : true,
-			"generate albedo sampler" : true,
 			"albedo texture filepath" : "checker.png"
 		},
 		{
@@ -376,7 +364,6 @@
 			"const metallic" : 0.000000,
 			"const roughness" : 0.000000,
 			"enable albedo sampler" : true,
-			"generate albedo sampler" : true,
 			"albedo texture filepath" : "work_d.jpg"
 		},
 		{

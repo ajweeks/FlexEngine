@@ -112,7 +112,6 @@ namespace flex
 		bool equal =
 			(name == other.name &&
 				shaderID == other.shaderID &&
-				generateNormalSampler == other.generateNormalSampler &&
 				enableNormalSampler == other.enableNormalSampler &&
 				normalTexturePath == other.normalTexturePath &&
 				sampledFrameBuffers.size() == other.sampledFrameBuffers.size() &&
@@ -123,13 +122,10 @@ namespace flex
 				constAlbedo == other.constAlbedo &&
 				constMetallic == other.constMetallic &&
 				constRoughness == other.constRoughness &&
-				generateAlbedoSampler == other.generateAlbedoSampler &&
 				enableAlbedoSampler == other.enableAlbedoSampler &&
 				albedoTexturePath == other.albedoTexturePath &&
-				generateMetallicSampler == other.generateMetallicSampler &&
 				enableMetallicSampler == other.enableMetallicSampler &&
 				metallicTexturePath == other.metallicTexturePath &&
-				generateRoughnessSampler == other.generateRoughnessSampler &&
 				enableRoughnessSampler == other.enableRoughnessSampler &&
 				roughnessTexturePath == other.roughnessTexturePath &&
 				generateHDREquirectangularSampler == other.generateHDREquirectangularSampler &&
@@ -183,13 +179,9 @@ namespace flex
 			}
 		}
 
-		material.SetBoolChecked("generate albedo sampler", createInfoOut.generateAlbedoSampler);
 		material.SetBoolChecked("enable albedo sampler", createInfoOut.enableAlbedoSampler);
-		material.SetBoolChecked("generate metallic sampler", createInfoOut.generateMetallicSampler);
 		material.SetBoolChecked("enable metallic sampler", createInfoOut.enableMetallicSampler);
-		material.SetBoolChecked("generate roughness sampler", createInfoOut.generateRoughnessSampler);
 		material.SetBoolChecked("enable roughness sampler", createInfoOut.enableRoughnessSampler);
-		material.SetBoolChecked("generate normal sampler", createInfoOut.generateNormalSampler);
 		material.SetBoolChecked("enable normal sampler", createInfoOut.enableNormalSampler);
 		material.SetBoolChecked("generate hdr equirectangular sampler", createInfoOut.generateHDREquirectangularSampler);
 		material.SetBoolChecked("enable hdr equirectangular sampler", createInfoOut.enableHDREquirectangularSampler);
@@ -255,30 +247,6 @@ namespace flex
 		if (shader.bNeedNormalSampler && enableNormalSampler != defaultEnableNormal)
 		{
 			materialObject.fields.emplace_back("enable normal sampler", JSONValue(enableNormalSampler));
-		}
-
-		static const bool defaultGenerateAlbedo = false;
-		if (shader.bNeedAlbedoSampler && generateAlbedoSampler != defaultGenerateAlbedo)
-		{
-			materialObject.fields.emplace_back("generate albedo sampler", JSONValue(generateAlbedoSampler));
-		}
-
-		static const bool defaultGenerateMetallicSampler = false;
-		if (shader.bNeedMetallicSampler && generateMetallicSampler != defaultGenerateMetallicSampler)
-		{
-			materialObject.fields.emplace_back("generate metallic sampler", JSONValue(generateMetallicSampler));
-		}
-
-		static const bool defaultGenerateRoughness = false;
-		if (shader.bNeedRoughnessSampler && generateRoughnessSampler != defaultGenerateRoughness)
-		{
-			materialObject.fields.emplace_back("generate roughness sampler", JSONValue(generateRoughnessSampler));
-		}
-
-		static const bool defaultGenerateNormal = false;
-		if (shader.bNeedNormalSampler && generateNormalSampler != defaultGenerateNormal)
-		{
-			materialObject.fields.emplace_back("generate normal sampler", JSONValue(generateNormalSampler));
 		}
 
 		static const std::string texturePrefixStr = RESOURCE_LOCATION  "textures/";

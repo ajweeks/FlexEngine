@@ -866,7 +866,6 @@ namespace flex
 			}
 
 			mat.material.normalTexturePath = createInfo->normalTexturePath;
-			mat.material.generateNormalSampler = createInfo->generateNormalSampler;
 			mat.material.enableNormalSampler = createInfo->enableNormalSampler;
 
 			mat.material.sampledFrameBuffers = createInfo->sampledFrameBuffers;
@@ -877,17 +876,14 @@ namespace flex
 			mat.material.cubeMapFilePaths = createInfo->cubeMapFilePaths;
 
 			mat.material.constAlbedo = glm::vec4(createInfo->constAlbedo, 0);
-			mat.material.generateAlbedoSampler = createInfo->generateAlbedoSampler;
 			mat.material.albedoTexturePath = createInfo->albedoTexturePath;
 			mat.material.enableAlbedoSampler = createInfo->enableAlbedoSampler;
 
 			mat.material.constMetallic = createInfo->constMetallic;
-			mat.material.generateMetallicSampler = createInfo->generateMetallicSampler;
 			mat.material.metallicTexturePath = createInfo->metallicTexturePath;
 			mat.material.enableMetallicSampler = createInfo->enableMetallicSampler;
 
 			mat.material.constRoughness = createInfo->constRoughness;
-			mat.material.generateRoughnessSampler = createInfo->generateRoughnessSampler;
 			mat.material.roughnessTexturePath = createInfo->roughnessTexturePath;
 			mat.material.enableRoughnessSampler = createInfo->enableRoughnessSampler;
 
