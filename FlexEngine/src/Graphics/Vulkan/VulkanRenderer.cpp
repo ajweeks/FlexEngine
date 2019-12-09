@@ -4592,7 +4592,7 @@ namespace flex
 			Renderer::EnqueueWorldSpaceSprites();
 
 			BaseCamera* cam = g_CameraManager->CurrentCamera();
-			if (!cam->bIsGameplayCam)
+			if (!cam->bIsGameplayCam && g_EngineInstance->IsRenderingEditorObjects())
 			{
 				glm::vec3 scale(1.0f, -1.0f, 1.0f);
 

@@ -1033,17 +1033,17 @@ namespace flex
 			{
 				PhysicsDebuggingSettings& physicsDebuggingSettings = g_Renderer->GetPhysicsDebuggingSettings();
 
-				ImGui::Checkbox("Disable All", &physicsDebuggingSettings.bDisableAll);
-
-				ImGui::Spacing();
-				ImGui::Spacing();
-				ImGui::Spacing();
-
 				bool bRenderEditorObjs = g_EngineInstance->IsRenderingEditorObjects();
 				if (ImGui::Checkbox("Editor objects", &bRenderEditorObjs))
 				{
 					g_EngineInstance->SetRenderingEditorObjects(bRenderEditorObjs);
 				}
+
+				ImGui::Spacing();
+				ImGui::Spacing();
+				ImGui::Spacing();
+
+				ImGui::Checkbox("Disable All", &physicsDebuggingSettings.bDisableAll);
 
 				if (physicsDebuggingSettings.bDisableAll)
 				{
