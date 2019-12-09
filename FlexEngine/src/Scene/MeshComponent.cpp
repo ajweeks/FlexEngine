@@ -256,6 +256,7 @@ namespace flex
 			cgltf_mesh* mesh = &(data->meshes[i]);
 
 			bool bCalculateTangents = false;
+			bool bMissingTexCoords = false;
 
 			for (i32 j = 0; j < (i32)mesh->primitives_count; ++j)
 			{
@@ -327,7 +328,7 @@ namespace flex
 
 					if (uvAttribIndex == -1)
 					{
-						PrintError("Can't generate tangents for mesh which has no tex coords: %s\n", m_FileName.c_str());
+						bMissingTexCoords = true;
 					}
 				}
 
@@ -480,7 +481,7 @@ namespace flex
 
 			if (bCalculateTangents)
 			{
-				if (!CalculateTangents(vertexBufferDataCreateInfo))
+				if (!CalculateTangents(vertexBufferDataCreateInfo, bMissingTexCoords))
 				{
 					PrintWarn("Failed to calculate tangents for mesh!\n");
 				}
@@ -1505,7 +1506,7 @@ namespace flex
 		return sphereScale;
 	}
 
-	bool MeshComponent::CalculateTangents(VertexBufferDataCreateInfo& createInfo)
+	bool MeshComponent::CalculateTangents(VertexBufferDataCreateInfo& createInfo, bool bMissingTexCoords)
 	{
 		if (createInfo.normals.empty())
 		{
@@ -1517,36 +1518,52 @@ namespace flex
 			PrintError("Can't calculate tangents for mesh which contains no position data!\n");
 			return false;
 		}
-		if (createInfo.texCoords_UV.empty())
+		
+		if (!bMissingTexCoords)
 		{
-			// TODO: Handle this case
-			PrintError("Can't calculate tangents for mesh which contains no tex coord data!\n");
-			return false;
+			for (u32 i = 0; i < createInfo.positions_3D.size() - 2; i += 3)
+			{
+				glm::vec3 p0 = createInfo.positions_3D[i + 0];
+				glm::vec3 p1 = createInfo.positions_3D[i + 1];
+				glm::vec3 p2 = createInfo.positions_3D[i + 2];
+
+				glm::vec2 uv0 = createInfo.texCoords_UV[i + 0];
+				glm::vec2 uv1 = createInfo.texCoords_UV[i + 1];
+				glm::vec2 uv2 = createInfo.texCoords_UV[i + 2];
+
+				glm::vec3 dPos0 = p1 - p0;
+				glm::vec3 dPos1 = p2 - p0;
+
+				glm::vec2 dUV0 = uv1 - uv0;
+				glm::vec2 dUV1 = uv2 - uv0;
+
+				real r = 1.0f / (dUV1.x * dUV0.y - dUV1.y * dUV0.x);
+				glm::vec3 tangent = glm::normalize((dPos0 * dUV0.y - dPos1 * dUV1.y) * r);
+				//glm::vec3 bitangent = (dPos1 * dUV1.x - dPos0 * dUV0.x) * r;
+
+				createInfo.tangents[i + 0] = tangent;
+				createInfo.tangents[i + 1] = tangent;
+				createInfo.tangents[i + 2] = tangent;
+			}
 		}
-
-		for (u32 i = 0; i < createInfo.positions_3D.size() - 2; i += 3)
+		else
 		{
-			glm::vec3 p0 = createInfo.positions_3D[i + 0];
-			glm::vec3 p1 = createInfo.positions_3D[i + 1];
-			glm::vec3 p2 = createInfo.positions_3D[i + 2];
+			for (u32 i = 0; i < createInfo.positions_3D.size() - 2; i += 3)
+			{
+				glm::vec3 p0 = createInfo.positions_3D[i + 0];
+				glm::vec3 p1 = createInfo.positions_3D[i + 1];
+				glm::vec3 p2 = createInfo.positions_3D[i + 2];
 
-			glm::vec2 uv0 = createInfo.texCoords_UV[i + 0];
-			glm::vec2 uv1 = createInfo.texCoords_UV[i + 1];
-			glm::vec2 uv2 = createInfo.texCoords_UV[i + 2];
+				glm::vec3 dPos0 = p1 - p0;
+				glm::vec3 dPos1 = p2 - p0;
 
-			glm::vec3 dPos0 = p1 - p0;
-			glm::vec3 dPos1 = p2 - p0;
+				glm::vec3 tangent = glm::normalize(dPos0 - dPos1);
+				//glm::vec3 bitangent = (dPos1 * dUV1.x - dPos0 * dUV0.x) * r;
 
-			glm::vec2 dUV0 = uv1 - uv0;
-			glm::vec2 dUV1 = uv2 - uv0;
-
-			real r = 1.0f / (dUV1.x * dUV0.y - dUV1.y * dUV0.x);
-			glm::vec3 tangent = glm::normalize((dPos0 * dUV0.y - dPos1 * dUV1.y) * r);
-			//glm::vec3 bitangent = (dPos1 * dUV1.x - dPos0 * dUV0.x) * r;
-
-			createInfo.tangents[i + 0] = tangent;
-			createInfo.tangents[i + 1] = tangent;
-			createInfo.tangents[i + 2] = tangent;
+				createInfo.tangents[i + 0] = tangent;
+				createInfo.tangents[i + 1] = tangent;
+				createInfo.tangents[i + 2] = tangent;
+			}
 		}
 
 		return true;

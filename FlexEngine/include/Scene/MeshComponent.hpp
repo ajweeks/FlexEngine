@@ -110,7 +110,7 @@ namespace flex
 
 	private:
 		real CalculateBoundingSphereScale() const;
-		bool CalculateTangents(VertexBufferDataCreateInfo& createInfo);
+		bool CalculateTangents(VertexBufferDataCreateInfo& createInfo, bool bMissingTexCoords);
 
 		void CopyInOptionalCreateInfo(RenderObjectCreateInfo& createInfo, const RenderObjectCreateInfo& overrides);
 
