@@ -111,7 +111,7 @@ namespace flex
 				u32 driverVersionMaj = VK_VERSION_MAJOR(props.driverVersion);
 				u32 driverVersionMin = VK_VERSION_MINOR(props.driverVersion);
 				u32 driverVersionPatch = VK_VERSION_PATCH(props.driverVersion);
-				
+
 				GPUVendor vendor = GPUVendorFromPCIVendor(props.vendorID);
 
 				if (vendor == GPUVendor::nVidia)
@@ -2196,7 +2196,7 @@ namespace flex
 					{
 						bUpdateFields = false;
 
-						
+
 						for (u32 texIndex = 0; texIndex < mat.textures.Count(); ++texIndex)
 						{
 							mat.textures.values[texIndex].second = m_LoadedTextures[selectedTextureIndices[texIndex]];
@@ -2352,13 +2352,16 @@ namespace flex
 						i32 matShortIndex = 0;
 						for (i32 i = 0; i < (i32)m_Materials.size(); ++i)
 						{
-							if (!m_Materials.at(i).material.visibleInEditor)
+							auto matIter = m_Materials.find(i);
+							if (matIter == m_Materials.end() || !matIter->second.material.visibleInEditor)
 							{
 								continue;
 							}
 
+							VulkanMaterial* mat = &matIter->second;
+
 							bool bSelected = (matShortIndex == selectedMaterialIndexShort);
-							if (ImGui::Selectable(m_Materials.at(i).material.name.c_str(), &bSelected))
+							if (ImGui::Selectable(mat->material.name.c_str(), &bSelected))
 							{
 								if (selectedMaterialIndexShort != matShortIndex)
 								{
@@ -2373,7 +2376,7 @@ namespace flex
 							{
 								if (ImGui::Button("Duplicate"))
 								{
-									const Material& dupMat = m_Materials.at(i).material;
+									const Material& dupMat = mat->material;
 
 									MaterialCreateInfo createInfo = {};
 									createInfo.name = GetIncrementedPostFixedStr(dupMat.name, "new material");
@@ -2403,7 +2406,7 @@ namespace flex
 
 									ImGui::SetDragDropPayload(m_MaterialPayloadCStr, data, size);
 
-									ImGui::Text("%s", m_Materials.at(i).material.name.c_str());
+									ImGui::Text("%s", mat->material.name.c_str());
 
 									ImGui::EndDragDropSource();
 								}
@@ -5409,7 +5412,7 @@ namespace flex
 		void VulkanRenderer::CreateRenderPasses()
 		{
 			//
-			// See `FlexEngine/screenshots/FlexRenderPasses_2019-10-02.jpg` for 
+			// See `FlexEngine/screenshots/FlexRenderPasses_2019-10-02.jpg` for
 			// a detailed breakdown of render passes and their dependencies
 			//
 
@@ -5481,7 +5484,7 @@ namespace flex
 			);
 			m_AutoTransitionedRenderPasses.push_back(m_TAAResolveRenderPass);
 
-			// TODO: Denote that history buffer is copied into from swap chain 
+			// TODO: Denote that history buffer is copied into from swap chain
 			// TODO: Denote that swap chain is copied into from m_OffscreenFB0ColorAttachment0
 			//m_AutoTransitionedRenderPasses.push_back(CopyOperation(SWAP_CHAIN_COLOR_ATTACHMENT_ID, m_OffscreenFB1ColorAttachment0->ID));
 
@@ -6816,7 +6819,7 @@ namespace flex
 			//renderPassInfo.dependencyCount = dependencies.size();
 			//renderPassInfo.pDependencies = dependencies.data();
 
-			//// m_GBufferCubemapFrameBuffer->ID 
+			//// m_GBufferCubemapFrameBuffer->ID
 			//m_DeferredCubemapRenderPass.Create("GBuffer Cubemap render pass", &renderPassInfo);
 
 			//std::vector<VkImageView> attachments(frameBufferColorAttachmentCount + 1);
@@ -7773,7 +7776,7 @@ namespace flex
 				vkCmdDispatch(commandBuffer, MAX_PARTICLE_COUNT / PARTICLES_PER_DISPATCH, 1, 1);
 
 				// Add memory barrier to ensure that compute shader has finished writing to the buffer
-				// Without this the (rendering) vertex shader may display incomplete results (partial data from last frame) 
+				// Without this the (rendering) vertex shader may display incomplete results (partial data from last frame)
 				bufferBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
 				bufferBarrier.dstAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
 				bufferBarrier.srcQueueFamilyIndex = m_VulkanDevice->m_QueueFamilyIndices.computeFamily;
