@@ -14,14 +14,14 @@
 			"shader" : "pbr",
 			"const albedo" : "0.128, 0.128, 0.128",
 			"const metallic" : 0.000000,
-			"const roughness" : 0.890000
+			"const roughness" : 1.000000
 		},
 		{
 			"name" : "pbr light grey",
 			"shader" : "pbr",
 			"const albedo" : "0.230, 0.250, 0.290",
 			"const metallic" : 0.000000,
-			"const roughness" : 0.820000
+			"const roughness" : 0.450000
 		},
 		{
 			"name" : "pbr white",
@@ -412,6 +412,13 @@
 			"name" : "shanghai 7",
 			"shader" : "pbr",
 			"const albedo" : "0.441, 0.348, 0.242",
+			"const metallic" : 0.000000,
+			"const roughness" : 1.000000
+		},
+		{
+			"name" : "case",
+			"shader" : "pbr",
+			"const albedo" : "0.055, 0.055, 0.055",
 			"const metallic" : 0.000000,
 			"const roughness" : 1.000000
 		}

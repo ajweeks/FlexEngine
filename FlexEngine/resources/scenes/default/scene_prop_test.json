@@ -1,0 +1,320 @@
+{
+	"version" : 2,
+	"name" : "scene_prop_test",
+	"spawn player" : false,
+	"objects" : 
+	[
+		{
+			"name" : "Skybox",
+			"type" : "skybox",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"material" : "skybox 01",
+			"skybox info" : 
+			{
+			}
+		},
+		{
+			"name" : "Reflection Probe 01",
+			"type" : "reflection probe",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 8.000, 0.000"
+			}
+		},
+		{
+			"name" : "Directional Light",
+			"type" : "directional light",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 15.000, 0.000",
+				"rot" : "-0.001, 0.365, 0.824"
+			},
+			"directional light info" : 
+			{
+				"rotation" : "-0.073, 0.166, 0.394, 0.901",
+				"pos" : "0.000, 15.000, 0.000",
+				"color" : "1.00, 1.00, 1.00",
+				"enabled" : true,
+				"brightness" : 5.000000,
+				"cast shadows" : true,
+				"shadow darkness" : 1.000000
+			}
+		},
+		{
+			"name" : "ground plane",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 0.000, 0.178",
+				"scale" : "20.000, 0.100, 20.000"
+			},
+			"mesh" : "cube",
+			"material" : "grid",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "1.000, 1.000, 1.000"
+			},
+			"rigid body" : 
+			{
+				"mass" : 0.000000,
+				"kinematic" : true,
+				"static" : true,
+				"mask" : 1,
+				"group" : 1
+			}
+		},
+		{
+			"name" : "case",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "-5.900, 0.700, 4.600",
+				"rot" : "0.000, -0.555, 0.000"
+			},
+			"mesh" : "case-01",
+			"material" : "case"
+		},
+		{
+			"name" : "battery cell",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "-2.305, 1.100, 2.317",
+				"rot" : "0.525, -0.000, 1.571",
+				"scale" : "1.000, 1.000, 1.000"
+			},
+			"mesh" : "battery_cell",
+			"material" : "pbr light grey",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "1.000, 1.000, 2.000"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : 1,
+				"group" : 1
+			}
+		},
+		{
+			"name" : "battery cell2",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "1.279, 2.100, 6.457",
+				"rot" : "-1.571, -0.472, 3.142",
+				"scale" : "1.000, 1.000, 1.000"
+			},
+			"mesh" : "battery_cell",
+			"material" : "pbr light grey",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "1.000, 1.000, 2.000"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : 1,
+				"group" : 1
+			}
+		},
+		{
+			"name" : "battery cell3",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "1.696, 1.100, 2.694",
+				"rot" : "-0.000, 0.592, 3.142",
+				"scale" : "1.000, 1.000, 1.000"
+			},
+			"mesh" : "battery_cell",
+			"material" : "pbr light grey",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "1.000, 1.000, 2.000"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : 1,
+				"group" : 1
+			}
+		},
+		{
+			"name" : "battery cell4",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "6.142, 1.100, 0.247",
+				"rot" : "0.008, -0.000, -1.571",
+				"scale" : "1.000, 1.000, 1.000"
+			},
+			"mesh" : "battery_cell",
+			"material" : "pbr light grey",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "1.000, 1.000, 2.000"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : 1,
+				"group" : 1
+			}
+		},
+		{
+			"name" : "battery cell5",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "6.947, 3.100, -2.786",
+				"rot" : "-1.603, 0.000, -1.571",
+				"scale" : "1.000, 1.000, 1.000"
+			},
+			"mesh" : "battery_cell",
+			"material" : "pbr light grey",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "1.000, 1.000, 2.000"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : 1,
+				"group" : 1
+			}
+		},
+		{
+			"name" : "battery cell2",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "-1.904, 1.100, -2.974",
+				"rot" : "-3.142, 0.791, -3.142",
+				"scale" : "1.000, 1.000, 1.000"
+			},
+			"mesh" : "battery_cell",
+			"material" : "pbr light grey",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "1.000, 1.000, 2.000"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : 1,
+				"group" : 1
+			}
+		},
+		{
+			"name" : "battery cell3",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "1.222, 1.100, -1.834",
+				"rot" : "0.004, 0.000, -1.571",
+				"scale" : "1.000, 1.000, 1.000"
+			},
+			"mesh" : "battery_cell",
+			"material" : "pbr light grey",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "1.000, 1.000, 2.000"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : 1,
+				"group" : 1
+			}
+		},
+		{
+			"name" : "battery cell4",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "3.984, 1.100, -1.643",
+				"rot" : "-0.000, 0.032, 0.000",
+				"scale" : "1.000, 1.000, 1.000"
+			},
+			"mesh" : "battery_cell",
+			"material" : "pbr light grey",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "1.000, 1.000, 2.000"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : 1,
+				"group" : 1
+			}
+		},
+		{
+			"name" : "battery cell5",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "8.160, 1.100, -2.279",
+				"rot" : "0.000, 0.017, 0.000",
+				"scale" : "1.000, 1.000, 1.000"
+			},
+			"mesh" : "battery_cell",
+			"material" : "pbr light grey",
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "1.000, 1.000, 2.000"
+			},
+			"rigid body" : 
+			{
+				"mass" : 1.000000,
+				"kinematic" : false,
+				"static" : false,
+				"mask" : 1,
+				"group" : 1
+			}
+		}
+	]
+}
