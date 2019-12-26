@@ -569,8 +569,6 @@ namespace flex
 
 			GameObject* gameObject = nullptr;
 
-			std::string materialName = "";
-
 			u32 VAO = 0;
 			u32 VBO = 0;
 			u32 IBO = 0;

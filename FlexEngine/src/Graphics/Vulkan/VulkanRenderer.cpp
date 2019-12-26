@@ -627,13 +627,12 @@ namespace flex
 			if (activeRenderObjectCount > 0)
 			{
 				PrintError("=====================================================\n");
-				PrintError("%u render objects were not destroyed before Vulkan render:\n", activeRenderObjectCount);
+				PrintError("%u render objects were not destroyed before Vulkan render\n", activeRenderObjectCount);
 
 				for (VulkanRenderObject* renderObject : m_RenderObjects)
 				{
 					if (renderObject)
 					{
-						PrintError("render object with material name: %s\n", renderObject->materialName.c_str());
 						DestroyRenderObject(renderObject->renderID);
 					}
 				}
@@ -1147,14 +1146,13 @@ namespace flex
 				}
 				else
 				{
-					PrintError("Render object doesn't have its material ID set! Using first available material\n");
-					renderObject->materialID = 0;
+					PrintError("Render object doesn't have its material ID set! Using placeholder material\n");
+					renderObject->materialID = m_PlaceholderMaterialID;
 				}
 			}
 
 			renderObject->vertexBufferData = createInfo->vertexBufferData;
 			renderObject->cullMode = CullFaceToVkCullMode(createInfo->cullFace);
-			renderObject->materialName = m_Materials.at(renderObject->materialID).material.name;
 			renderObject->gameObject = createInfo->gameObject;
 			renderObject->bEditorObject = createInfo->bEditorObject;
 			if (createInfo->bEditorObject)
