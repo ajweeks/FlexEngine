@@ -268,10 +268,10 @@ namespace flex
 
 				while (*offset < arrayClosingBracket)
 				{
-					JSONField field;
-					ParseField(filePath, fileContents, offset, field);
+					JSONField fieldArrayEntry;
+					ParseField(filePath, fileContents, offset, fieldArrayEntry);
 
-					fields.push_back(field);
+					fields.push_back(fieldArrayEntry);
 				}
 
 				*offset = arrayClosingBracket + 1;
