@@ -1169,6 +1169,8 @@ namespace flex
 
 		if (mesh != nullptr)
 		{
+			ImGui::Text("Materials");
+
 			std::vector<MeshComponent*> subMeshes = mesh->GetSubMeshes();
 			for (u32 slotIndex = 0; slotIndex < subMeshes.size(); ++slotIndex)
 			{
@@ -1197,7 +1199,7 @@ namespace flex
 					++matShortIndex;
 				}
 
-				std::string comboStrID = "Material##" + std::to_string(slotIndex);
+				std::string comboStrID = std::to_string(slotIndex);
 				if (ImGui::BeginCombo(comboStrID.c_str(), currentMaterialName.c_str()))
 				{
 					matShortIndex = 0;

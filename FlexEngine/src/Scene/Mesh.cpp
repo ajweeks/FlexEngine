@@ -52,17 +52,15 @@ namespace flex
 		}
 
 		GameObject* owner = m_OwningGameObject;
-
-		std::vector<MaterialID> materialIDs;
-		materialIDs.reserve(m_Meshes.size());
-		for (MeshComponent* meshComponent : m_Meshes)
-		{
-			materialIDs.emplace_back(meshComponent->GetMaterialID());
-		}
+		std::vector<MaterialID> materialIDs = GetMaterialIDs();
+		std::string relativeFilePath = m_RelativeFilePath;
+		MeshImportSettings importSettings = m_ImportSettings;
 
 		Destroy();
 
 		SetOwner(owner);
+		m_RelativeFilePath = relativeFilePath;
+		m_ImportSettings = importSettings;
 
 		if (!LoadFromFile(m_RelativeFilePath, materialIDs, &m_ImportSettings))
 		{
@@ -472,7 +470,7 @@ namespace flex
 
 				++i;
 			}
-			if (ImGui::BeginCombo("Mesh", currentMeshFileName.c_str()))
+			if (ImGui::BeginCombo("##meshcombo", currentMeshFileName.c_str()))
 			{
 				i = 0;
 
@@ -486,7 +484,9 @@ namespace flex
 						{
 							selectedMeshIndex = i;
 							std::string relativeFilePath = meshPair.first;
+							GameObject* owner = m_OwningGameObject;
 							Destroy();
+							m_OwningGameObject = owner;
 							LoadFromFile(relativeFilePath, GetMaterialIDs(), &m_ImportSettings);
 						}
 					}
@@ -521,7 +521,9 @@ namespace flex
 
 						if (m_RelativeFilePath.compare(newMeshFilePath) != 0)
 						{
+							GameObject* owner = m_OwningGameObject;
 							Destroy();
+							m_OwningGameObject = owner;
 							LoadFromFile(newMeshFilePath, GetMaterialIDs(), &m_ImportSettings);
 						}
 					}

@@ -1783,14 +1783,7 @@ namespace flex
 
 		void VulkanRenderer::DrawImGuiForRenderObject(RenderID renderID)
 		{
-			VulkanRenderObject* renderObject = GetRenderObject(renderID);
-			if (renderObject != nullptr)
-			{
-				// TODO: Show material & shader names here
-				ImGui::Text("Mat ID: %u", renderObject->materialID);
-				ImGui::Text("Shader ID: %u", GetMaterial(renderObject->materialID).shaderID);
-				//ImGui::Text("Dynamic Offset: %u", renderObject->dynamicUBOIndex);
-			}
+			UNREFERENCED_PARAMETER(renderID);
 		}
 
 		void VulkanRenderer::ReloadShaders(bool bForce)
@@ -2012,29 +2005,29 @@ namespace flex
 				{
 					renderObject->materialID = materialID;
 
-					u32 prevStride = CalculateVertexStride(m_Shaders[m_Materials.at(prevMatID).material.shaderID].shader->vertexAttributes);
-					u32 newStride = CalculateVertexStride(m_Shaders[m_Materials.at(materialID).material.shaderID].shader->vertexAttributes);
-					if (newStride != prevStride)
+					// Regenerate vertex data with new stride
+					Mesh* mesh = renderObject->gameObject->GetMesh();
+					if (mesh != nullptr)
 					{
-						// Regenerate vertex data with new stride
-						Mesh* mesh = renderObject->gameObject->GetMesh();
-						if (mesh != nullptr)
+						MeshComponent* submesh = mesh->GetSubMeshWithRenderID(renderID);
+						if (submesh != nullptr)
 						{
-							MeshComponent* submesh = mesh->GetSubMeshWithRenderID(renderID);
-							if (submesh != nullptr)
+							u32 prevStride = CalculateVertexStride(m_Shaders[m_Materials.at(prevMatID).material.shaderID].shader->vertexAttributes);
+							u32 newStride = CalculateVertexStride(m_Shaders[m_Materials.at(materialID).material.shaderID].shader->vertexAttributes);
+							if (newStride != prevStride)
 							{
 								submesh->SetRequiredAttributesFromMaterialID(materialID);
-								submesh->GetOwner()->Reload();
 							}
-							else
-							{
-								PrintWarn("Attempted to set material ID on object with no submeshes\n");
-							}
+							submesh->GetOwner()->Reload();
 						}
 						else
 						{
-							PrintWarn("Attempted to set material ID on object with no mesh\n");
+							PrintWarn("Attempted to set material ID on object with no submesh with renderID %u\n", renderID);
 						}
+					}
+					else
+					{
+						PrintWarn("Attempted to set material ID on object with no mesh\n");
 					}
 				}
 			}
