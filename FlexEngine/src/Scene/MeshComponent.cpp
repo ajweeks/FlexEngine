@@ -112,8 +112,6 @@ namespace flex
 
 	MeshComponent* MeshComponent::LoadFromCGLTF(Mesh* owningMesh,
 		cgltf_primitive* primitive,
-		i32 vertexStart,
-		i32 indexStart,
 		MaterialID materialID,
 		MeshImportSettings* importSettings /* = nullptr */,
 		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
@@ -210,12 +208,10 @@ namespace flex
 		// Vertices
 		for (u32 vi = 0; vi < vertCount; ++vi)
 		{
-			u32 v = vertexStart + vi;
-
 			// Position
 			glm::vec3 pos;
 			cgltf_accessor_read_float(posAccessor, vi, &pos.x, 3);
-			vertexBufferDataCreateInfo.positions_3D[v] = pos;
+			vertexBufferDataCreateInfo.positions_3D[vi] = pos;
 
 			// Normal
 			if (newMeshComponent->m_RequiredAttributes & (u32)VertexAttribute::NORMAL)
@@ -224,7 +220,7 @@ namespace flex
 
 				if (normAttribIndex == -1)
 				{
-					vertexBufferDataCreateInfo.normals[v] = m_DefaultNormal;
+					vertexBufferDataCreateInfo.normals[vi] = m_DefaultNormal;
 				}
 				else
 				{
@@ -243,7 +239,7 @@ namespace flex
 					{
 						norm.z = -norm.z;
 					}
-					vertexBufferDataCreateInfo.normals[v] = norm;
+					vertexBufferDataCreateInfo.normals[vi] = norm;
 				}
 			}
 
@@ -254,7 +250,7 @@ namespace flex
 
 				if (tanAttribIndex == -1)
 				{
-					vertexBufferDataCreateInfo.tangents[v] = m_DefaultTangent;
+					vertexBufferDataCreateInfo.tangents[vi] = m_DefaultTangent;
 				}
 				else
 				{
@@ -265,7 +261,7 @@ namespace flex
 
 					glm::vec4 tangent;
 					cgltf_accessor_read_float(tanAccessor, vi, &tangent.x, 4);
-					vertexBufferDataCreateInfo.tangents[v] = tangent;
+					vertexBufferDataCreateInfo.tangents[vi] = tangent;
 				}
 			}
 
@@ -276,7 +272,7 @@ namespace flex
 
 				if (colAttribIndex == -1)
 				{
-					vertexBufferDataCreateInfo.colors_R32G32B32A32[v] = m_DefaultColor_4;
+					vertexBufferDataCreateInfo.colors_R32G32B32A32[vi] = m_DefaultColor_4;
 				}
 				else
 				{
@@ -287,7 +283,7 @@ namespace flex
 
 					glm::vec4 col;
 					cgltf_accessor_read_float(colAccessor, vi, &col.x, 4);
-					vertexBufferDataCreateInfo.colors_R32G32B32A32[v] = col;
+					vertexBufferDataCreateInfo.colors_R32G32B32A32[vi] = col;
 				}
 			}
 
@@ -298,7 +294,7 @@ namespace flex
 
 				if (uvAttribIndex == -1)
 				{
-					vertexBufferDataCreateInfo.texCoords_UV[v] = m_DefaultTexCoord;
+					vertexBufferDataCreateInfo.texCoords_UV[vi] = m_DefaultTexCoord;
 				}
 				else
 				{
@@ -319,7 +315,7 @@ namespace flex
 					{
 						uv0.y = 1.0f - uv0.y;
 					}
-					vertexBufferDataCreateInfo.texCoords_UV[v] = uv0;
+					vertexBufferDataCreateInfo.texCoords_UV[vi] = uv0;
 				}
 			}
 		}
@@ -337,7 +333,7 @@ namespace flex
 
 			for (i32 l = 0; l < indexCount; ++l)
 			{
-				newMeshComponent->m_Indices[indexStart + l] = vertexStart + cgltf_accessor_read_index(primitive->indices, l);
+				newMeshComponent->m_Indices[l] = cgltf_accessor_read_index(primitive->indices, l);
 			}
 		}
 

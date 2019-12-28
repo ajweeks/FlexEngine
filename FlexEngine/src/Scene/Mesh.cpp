@@ -150,12 +150,8 @@ namespace flex
 
 			for (i32 j = 0; j < (i32)mesh->primitives_count; ++j)
 			{
-				// TODO: ?
-				//i32 vertexStart = (i32)vertexBufferDataCreateInfo.positions_3D.size();
-				//i32 indexStart = m_Indices.size();
-
 				MaterialID matID = materialIDs.size() > 1 ? materialIDs[j] : materialIDs.size() == 1 ? materialIDs[0] : g_Renderer->GetPlaceholderMaterialID();
-				MeshComponent* meshComponent = MeshComponent::LoadFromCGLTF(this, &mesh->primitives[j],  0, 0, matID, importSettings, optionalCreateInfo);
+				MeshComponent* meshComponent = MeshComponent::LoadFromCGLTF(this, &mesh->primitives[j], matID, importSettings, optionalCreateInfo);
 				if (meshComponent)
 				{
 					m_Meshes.push_back(meshComponent);

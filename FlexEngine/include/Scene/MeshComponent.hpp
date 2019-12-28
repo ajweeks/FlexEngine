@@ -50,8 +50,6 @@ namespace flex
 		void SetRequiredAttributesFromMaterialID(MaterialID matID);
 		static MeshComponent* LoadFromCGLTF(Mesh* owningMesh,
 			cgltf_primitive* primitive,
-			i32 vertexStart,
-			i32 indexStart,
 			MaterialID materialID,
 			MeshImportSettings* importSettings = nullptr,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
