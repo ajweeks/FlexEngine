@@ -121,7 +121,7 @@ namespace flex
 		void AddObjectAtEndOFFrame(GameObject* obj);
 		void AddObjectsAtEndOFFrame(const std::vector<GameObject*>& objs);
 
-		i32 GetFileVersion() const;
+		i32 GetSceneFileVersion() const;
 
 	protected:
 		friend GameObject;
@@ -134,12 +134,18 @@ namespace flex
 
 		i32 GetMaterialArrayIndex(const Material& material);
 
-		std::vector<MaterialID> RetrieveMaterialIDsFromJSON(const JSONObject& object);
+		std::vector<MaterialID> RetrieveMaterialIDsFromJSON(const JSONObject& object, i32 fileVersion);
 
 		void UpdateRootObjectSiblingIndices();
 
-		static const i32 LATEST_FILE_VER = 3;
-		i32 m_FileVersion = LATEST_FILE_VER;
+		static const i32 LATEST_SCENE_FILE_VERSION = 3;
+		i32 m_SceneFileVersion = 1;
+
+		static const i32 LATEST_MATERIALS_FILE_VERSION = 1;
+		i32 m_MaterialsFileVersion = 1;
+
+		static const i32 LATEST_MESHES_FILE_VERSION = 1;
+		i32 m_MeshesFileVersion = 1;
 
 		PhysicsWorld* m_PhysicsWorld = nullptr;
 
@@ -180,6 +186,10 @@ namespace flex
 
 		BaseScene(const BaseScene&) = delete;
 		BaseScene& operator=(const BaseScene&) = delete;
+
+		static const char* MATERIALS_FILE_PATH;
+		static const char* MESHES_FILE_PATH;
+		static const char* MESHES_DIRECTORY;
 
 	};
 } // namespace flex

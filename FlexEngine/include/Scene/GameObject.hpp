@@ -28,7 +28,7 @@ namespace flex
 		// If parent == nullptr then new object will have same parent as this object
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren);
 
-		static GameObject* CreateObjectFromJSON(const JSONObject& obj, BaseScene* scene);
+		static GameObject* CreateObjectFromJSON(const JSONObject& obj, BaseScene* scene, i32 fileVersion);
 
 		virtual void Initialize();
 		virtual void PostInitialize();
@@ -52,7 +52,7 @@ namespace flex
 		GameObject* GetObjectInteractingWith();
 
 		JSONObject Serialize(const BaseScene* scene) const;
-		void ParseJSON(const JSONObject& obj, BaseScene* scene, MaterialID overriddenMatID = InvalidMaterialID);
+		void ParseJSON(const JSONObject& obj, BaseScene* scene, i32 fileVersion, MaterialID overriddenMatID = InvalidMaterialID);
 
 		void RemoveRigidBody();
 

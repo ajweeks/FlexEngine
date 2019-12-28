@@ -76,7 +76,7 @@ namespace flex
 		return newGameObject;
 	}
 
-	GameObject* GameObject::CreateObjectFromJSON(const JSONObject& obj, BaseScene* scene)
+	GameObject* GameObject::CreateObjectFromJSON(const JSONObject& obj, BaseScene* scene, i32 fileVersion)
 	{
 		GameObject* newGameObject = nullptr;
 
@@ -105,7 +105,7 @@ namespace flex
 			{
 				std::string name = obj.GetString("name");
 
-				GameObject* prefabInstance = GameObject::CreateObjectFromJSON(*prefab, scene);
+				GameObject* prefabInstance = GameObject::CreateObjectFromJSON(*prefab, scene, fileVersion);
 				prefabInstance->m_bLoadedFromPrefab = true;
 				prefabInstance->m_PrefabName = prefabInstance->m_Name;
 
@@ -195,7 +195,7 @@ namespace flex
 
 		if (newGameObject != nullptr)
 		{
-			newGameObject->ParseJSON(obj, scene);
+			newGameObject->ParseJSON(obj, scene, fileVersion);
 		}
 
 		return newGameObject;
@@ -881,7 +881,7 @@ namespace flex
 		return m_ObjectInteractingWith;
 	}
 
-	void GameObject::ParseJSON(const JSONObject& obj, BaseScene* scene, MaterialID overriddenMatID /* = InvalidMaterialID */)
+	void GameObject::ParseJSON(const JSONObject& obj, BaseScene* scene, i32 fileVersion, MaterialID overriddenMatID /* = InvalidMaterialID */)
 	{
 		bool bVisible = true;
 		obj.SetBoolChecked("visible", bVisible);
@@ -895,7 +895,7 @@ namespace flex
 		}
 		else
 		{
-			matIDs = scene->RetrieveMaterialIDsFromJSON(obj);
+			matIDs = scene->RetrieveMaterialIDsFromJSON(obj, fileVersion);
 		}
 
 		if (matIDs.empty())
@@ -1059,7 +1059,7 @@ namespace flex
 			std::vector<JSONObject> children = obj.GetObjectArray("children");
 			for (JSONObject& child : children)
 			{
-				AddChild(GameObject::CreateObjectFromJSON(child, scene));
+				AddChild(GameObject::CreateObjectFromJSON(child, scene, fileVersion));
 			}
 		}
 	}
@@ -2609,7 +2609,7 @@ namespace flex
 	{
 		UNREFERENCED_PARAMETER(matIDs);
 
-		i32 sceneFileVersion = scene->GetFileVersion();
+		i32 sceneFileVersion = scene->GetSceneFileVersion();
 
 		JSONObject directionalLightObj;
 		if (parentObject.SetObjectChecked("directional light info", directionalLightObj))
