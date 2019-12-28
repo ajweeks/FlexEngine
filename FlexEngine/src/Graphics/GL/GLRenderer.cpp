@@ -117,7 +117,7 @@ namespace flex
 			// TODO: Handle lack of GL_ARB_clip_control (in GL < 4.5)
 			glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
 
-			m_LoadingTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/loading_1.png", 3, false, false, false);
+			m_LoadingTextureID = InitializeTexture(RESOURCE_LOCATION "textures/loading_1.png", 3, false, false, false);
 
 			GL_POP_DEBUG_GROUP();
 
@@ -161,10 +161,10 @@ namespace flex
 			};
 
 			// TODO: Move to Renderer::Init
-			m_AlphaBGTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/alpha-bg.png", 3, false, false, false);
-			m_WorkTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/work_d.jpg", 3, false, true, false);
-			m_PointLightIconID = InitializeTexture(RESOURCE_LOCATION  "textures/icons/point-light-icon-256.png", 4, false, true, false);
-			m_DirectionalLightIconID = InitializeTexture(RESOURCE_LOCATION  "textures/icons/directional-light-icon-256.png", 4, false, true, false);
+			m_AlphaBGTextureID = InitializeTexture(RESOURCE_LOCATION "textures/alpha-bg.png", 3, false, false, false);
+			m_WorkTextureID = InitializeTexture(RESOURCE_LOCATION "textures/work_d.jpg", 3, false, true, false);
+			m_PointLightIconID = InitializeTexture(RESOURCE_LOCATION "textures/icons/point-light-icon-256.png", 4, false, true, false);
+			m_DirectionalLightIconID = InitializeTexture(RESOURCE_LOCATION "textures/icons/directional-light-icon-256.png", 4, false, true, false);
 
 			// Shadow map texture
 			{
@@ -4926,7 +4926,7 @@ namespace flex
 					if (ImGui::Button("Import Texture"))
 					{
 						// TODO: Not all textures are directly in this directory! CLEANUP to make more robust
-						std::string relativeDirPath = RESOURCE_LOCATION  "textures/";
+						std::string relativeDirPath = RESOURCE_LOCATION "textures/";
 						std::string absoluteDirectoryStr = RelativePathToAbsolute(relativeDirPath);
 						std::string selectedAbsFilePath;
 						if (OpenFileDialog("Import texture", absoluteDirectoryStr, selectedAbsFilePath))
@@ -5075,7 +5075,7 @@ namespace flex
 					if (ImGui::Button("Import Mesh"))
 					{
 						// TODO: Not all models are directly in this directory! CLEANUP to make more robust
-						std::string relativeDirPath = RESOURCE_LOCATION  "meshes/";
+						std::string relativeDirPath = RESOURCE_LOCATION "meshes/";
 						std::string absoluteDirectoryStr = RelativePathToAbsolute(relativeDirPath);
 						std::string selectedAbsFilePath;
 						if (OpenFileDialog("Import mesh", absoluteDirectoryStr, selectedAbsFilePath))

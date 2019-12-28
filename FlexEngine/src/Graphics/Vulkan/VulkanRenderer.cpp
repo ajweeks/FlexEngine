@@ -309,11 +309,11 @@ namespace flex
 				m_BlankTextureArr->CreateFromMemory(&blankData, sizeof(blankData), VK_FORMAT_R8G8B8A8_UNORM, 1);
 			}
 
-			m_AlphaBGTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/alpha-bg.png", 4, false, false, false);
-			m_LoadingTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/loading_1.png", 4, false, false, false);
-			m_WorkTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/work_d.jpg", 4, false, true, false);
-			m_PointLightIconID = InitializeTexture(RESOURCE_LOCATION  "textures/icons/point-light-icon-256.png", 4, false, true, false);
-			m_DirectionalLightIconID = InitializeTexture(RESOURCE_LOCATION  "textures/icons/directional-light-icon-256.png", 4, false, true, false);
+			m_AlphaBGTextureID = InitializeTexture(RESOURCE_LOCATION "textures/alpha-bg.png", 4, false, false, false);
+			m_LoadingTextureID = InitializeTexture(RESOURCE_LOCATION "textures/loading_1.png", 4, false, false, false);
+			m_WorkTextureID = InitializeTexture(RESOURCE_LOCATION "textures/work_d.jpg", 4, false, true, false);
+			m_PointLightIconID = InitializeTexture(RESOURCE_LOCATION "textures/icons/point-light-icon-256.png", 4, false, true, false);
+			m_DirectionalLightIconID = InitializeTexture(RESOURCE_LOCATION "textures/icons/directional-light-icon-256.png", 4, false, true, false);
 
 			m_SpritePerspPushConstBlock = new Material::PushConstantBlock(128);
 			m_SpriteOrthoPushConstBlock = new Material::PushConstantBlock(128);
@@ -2558,7 +2558,7 @@ namespace flex
 					if (ImGui::Button("Import Texture"))
 					{
 						// TODO: Not all textures are directly in this directory! CLEANUP to make more robust
-						std::string relativeDirPath = RESOURCE_LOCATION  "textures/";
+						std::string relativeDirPath = RESOURCE_LOCATION "textures/";
 						std::string absoluteDirectoryStr = RelativePathToAbsolute(relativeDirPath);
 						std::string selectedAbsFilePath;
 						if (OpenFileDialog("Import texture", absoluteDirectoryStr, selectedAbsFilePath))

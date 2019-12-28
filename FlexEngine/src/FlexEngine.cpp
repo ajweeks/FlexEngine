@@ -265,9 +265,9 @@ namespace flex
 
 		if (s_AudioSourceIDs.empty())
 		{
-			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(RESOURCE_LOCATION  "audio/dud_dud_dud_dud.wav"));
-			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(RESOURCE_LOCATION  "audio/drmapan.wav"));
-			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(RESOURCE_LOCATION  "audio/blip.wav"));
+			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(RESOURCE_LOCATION "audio/dud_dud_dud_dud.wav"));
+			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(RESOURCE_LOCATION "audio/drmapan.wav"));
+			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(RESOURCE_LOCATION "audio/blip.wav"));
 			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 100.727f));
 			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 200.068f));
 			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 300.811f));
@@ -1119,7 +1119,7 @@ namespace flex
 					{
 						std::string captureFilePath;
 						GetLatestRenderDocCaptureFilePath(captureFilePath);
-						
+
 						CheckForRenderDocUIRunning();
 
 						if (m_RenderDocUIPID == -1)

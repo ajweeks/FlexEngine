@@ -163,7 +163,7 @@ namespace flex
 					//skyboxMatCreateInfo.generatedIrradianceCubemapSize = glm::vec2(32.0f);
 					//skyboxMatCreateInfo.generatePrefilteredMap = true;
 					//skyboxMatCreateInfo.generatedPrefilteredCubemapSize = glm::vec2(128.0f);
-					//skyboxMatCreateInfo.environmentMapPath = RESOURCE_LOCATION  "textures/hdri/Milkyway/Milkyway_Light.hdr";
+					//skyboxMatCreateInfo.environmentMapPath = RESOURCE_LOCATION "textures/hdri/Milkyway/Milkyway_Light.hdr";
 					//MaterialID skyboxMatID = g_Renderer->InitializeMaterial(&skyboxMatCreateInfo);
 
 					//m_LoadedMaterials.push_back(skyboxMatID);
@@ -551,7 +551,7 @@ namespace flex
 		s_ParsedPrefabs.clear();
 
 		std::vector<std::string> foundFiles;
-		if (FindFilesInDirectory(RESOURCE_LOCATION  "scenes/prefabs/", foundFiles, ".json"))
+		if (FindFilesInDirectory(RESOURCE_LOCATION "scenes/prefabs/", foundFiles, ".json"))
 		{
 			for (const std::string& foundFilePath : foundFiles)
 			{
@@ -1227,18 +1227,18 @@ namespace flex
 
 	std::string BaseScene::GetDefaultRelativeFilePath() const
 	{
-		return RESOURCE_LOCATION  "scenes/default/" + m_FileName;
+		return RESOURCE_LOCATION "scenes/default/" + m_FileName;
 	}
 
 	std::string BaseScene::GetRelativeFilePath() const
 	{
 		//if (m_bUsingSaveFile)
 		//{
-		//	return RESOURCE_LOCATION  "scenes/saved/" + m_FileName;
+		//	return RESOURCE_LOCATION "scenes/saved/" + m_FileName;
 		//}
 		//else
 		//{
-		return RESOURCE_LOCATION  "scenes/default/" + m_FileName;
+		return RESOURCE_LOCATION "scenes/default/" + m_FileName;
 		//}
 	}
 

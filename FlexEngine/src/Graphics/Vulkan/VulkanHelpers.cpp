@@ -2348,7 +2348,7 @@ namespace flex
 
 					m_ChecksumFilePath = SAVED_LOCATION "vk-shader-checksum.dat";
 
-					const std::string shaderInputDirectory = RESOURCE_LOCATION  "shaders";
+					const std::string shaderInputDirectory = RESOURCE_LOCATION "shaders";
 					m_ShaderCodeChecksum = CalculteChecksum(shaderInputDirectory);
 
 					if (FileExists(m_ChecksumFilePath))

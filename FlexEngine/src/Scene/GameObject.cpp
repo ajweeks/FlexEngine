@@ -57,9 +57,9 @@ namespace flex
 
 		if (!s_SqueakySounds.IsInitialized())
 		{
-			s_SqueakySounds.Initialize(RESOURCE_LOCATION  "audio/squeak00.wav", 5);
+			s_SqueakySounds.Initialize(RESOURCE_LOCATION "audio/squeak00.wav", 5);
 
-			s_BunkSound = AudioManager::AddAudioSource(RESOURCE_LOCATION  "audio/bunk.wav");
+			s_BunkSound = AudioManager::AddAudioSource(RESOURCE_LOCATION "audio/bunk.wav");
 		}
 	}
 
@@ -461,7 +461,7 @@ namespace flex
 			if (ImGui::Button("Add mesh component"))
 			{
 				Mesh* mesh = SetMesh(new Mesh(this));
-				mesh->LoadFromFile(RESOURCE_LOCATION  "meshes/cube.glb", g_Renderer->GetPlaceholderMaterialID());
+				mesh->LoadFromFile(RESOURCE_LOCATION "meshes/cube.glb", g_Renderer->GetPlaceholderMaterialID());
 			}
 		}
 
@@ -2424,7 +2424,7 @@ namespace flex
 		//MeshComponent* sphereMesh = new MeshComponent(this, matID);
 
 		//assert(m_MeshComponent == nullptr);
-		//sphereMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/sphere.glb");
+		//sphereMesh->LoadFromFile(RESOURCE_LOCATION "meshes/sphere.glb");
 		//SetMeshComponent(sphereMesh);
 
 		//std::string captureName = m_Name + "_capture";

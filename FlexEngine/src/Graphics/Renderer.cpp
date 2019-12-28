@@ -1864,7 +1864,7 @@ namespace flex
 					GameObject* newGameObject = new GameObject(newObjectName, GameObjectType::OBJECT);
 
 					Mesh* mesh = newGameObject->SetMesh(new Mesh(newGameObject));
-					mesh->LoadFromFile(RESOURCE_LOCATION  "meshes/cube.glb", m_PlaceholderMaterialID);
+					mesh->LoadFromFile(RESOURCE_LOCATION "meshes/cube.glb", m_PlaceholderMaterialID);
 
 					g_SceneManager->CurrentScene()->AddRootObject(newGameObject);
 
