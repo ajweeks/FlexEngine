@@ -123,6 +123,8 @@ namespace flex
 
 		i32 GetSceneFileVersion() const;
 
+		bool HasPlayers() const;
+
 	protected:
 		friend GameObject;
 		friend CartManager;

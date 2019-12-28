@@ -795,6 +795,11 @@ namespace flex
 		return m_SceneFileVersion;
 	}
 
+	bool BaseScene::HasPlayers() const
+	{
+		return m_bSpawnPlayer;
+	}
+
 	std::vector<MaterialID> BaseScene::RetrieveMaterialIDsFromJSON(const JSONObject& object, i32 fileVersion)
 	{
 		std::vector<MaterialID> matIDs;

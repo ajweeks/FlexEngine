@@ -802,9 +802,9 @@ namespace flex
 						g_Renderer->LoadFonts(true);
 					}
 
-					if (ImGui::MenuItem("Player position(s)"))
+					BaseScene* currentScene = g_SceneManager->CurrentScene();
+					if (currentScene->HasPlayers() && ImGui::MenuItem("Player position(s)"))
 					{
-						BaseScene* currentScene = g_SceneManager->CurrentScene();
 						if (currentScene->GetPlayer(0))
 						{
 							currentScene->GetPlayer(0)->GetController()->ResetTransformAndVelocities();
