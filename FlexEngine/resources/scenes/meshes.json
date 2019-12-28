@@ -344,6 +344,13 @@
 			"flipNormalZ" : false,
 			"flipU" : false,
 			"flipV" : false
+		},
+		{
+			"file" : "greenhouse.glb",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
 		}
 	]
 }
