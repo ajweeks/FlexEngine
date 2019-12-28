@@ -20,6 +20,7 @@ namespace flex
 	class DirectionalLight;
 	class GameObject;
 	class MeshComponent;
+	class Mesh;
 	class ParticleSystem;
 	class PointLight;
 	struct TextCache;
@@ -100,7 +101,7 @@ namespace flex
 
 		virtual void UpdateVertexData(RenderID renderID, VertexBufferData const* vertexBufferData) = 0;
 
-		void DrawImGuiForGameObjectWithValidRenderID(GameObject* gameObject);
+		void DrawImGuiForGameObject(GameObject* gameObject);
 
 		virtual void ReloadShaders(bool bForce) = 0;
 		virtual void LoadFonts(bool bForceRender) = 0;
@@ -126,8 +127,7 @@ namespace flex
 		virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size, DataType dataType, bool normalized,
 			i32 stride, void* pointer) = 0;
 
-		virtual void SetSkyboxMesh(GameObject* skyboxMesh) = 0;
-		virtual GameObject* GetSkyboxMesh() = 0;
+		virtual void SetSkyboxMesh(Mesh* skyboxMesh) = 0;
 
 		virtual void SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID) = 0;
 
@@ -259,6 +259,10 @@ namespace flex
 		static const u32 PARTICLES_PER_DISPATCH = 256;
 		static const u32 SHADOW_CASCADE_RES = 4096;
 		static const u32 SSAO_NOISE_DIM = 4;
+
+		static const char* GameObjectPayloadCStr;
+		static const char* MaterialPayloadCStr;
+		static const char* MeshPayloadCStr;
 
 	protected:
 		virtual void LoadShaders();
@@ -417,7 +421,7 @@ namespace flex
 
 		MaterialID m_ComputeSDFMatID = InvalidMaterialID;
 		MaterialID m_FullscreenBlitMatID = InvalidMaterialID;
-		
+
 		std::string m_FontImageExtension = ".png";
 
 		std::map<StringID, FontMetaData> m_Fonts;
@@ -426,12 +430,7 @@ namespace flex
 		std::string m_SettingsFilePathAbs;
 		std::string m_FontsFilePathAbs;
 
-		// Must be 12 chars or less
-		const char* m_GameObjectPayloadCStr = "gameobject";
-		const char* m_MaterialPayloadCStr = "material";
-		const char* m_MeshPayloadCStr = "mesh";
-
-		GameObject* m_SkyBoxMesh = nullptr;
+		Mesh* m_SkyBoxMesh = nullptr;
 
 		// Contains file paths for each file with a .hdr extension in the `resources/textures/hdri/` directory
 		std::vector<std::string> m_AvailableHDRIs;

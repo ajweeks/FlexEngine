@@ -1,5 +1,5 @@
 {
-	"version" : 2,
+	"version" : 1,
 	"materials" : 
 	[
 		{
@@ -419,6 +419,41 @@
 			"name" : "case",
 			"shader" : "pbr",
 			"const albedo" : "0.055, 0.055, 0.055",
+			"const metallic" : 0.000000,
+			"const roughness" : 1.000000
+		},
+		{
+			"name" : "gold",
+			"shader" : "pbr",
+			"const albedo" : "0.860, 0.739, 0.264",
+			"const metallic" : 0.560000,
+			"const roughness" : 0.320000
+		},
+		{
+			"name" : "wood",
+			"shader" : "pbr",
+			"const albedo" : "0.170, 0.142, 0.103",
+			"const metallic" : 0.000000,
+			"const roughness" : 1.000000
+		},
+		{
+			"name" : "dirt",
+			"shader" : "pbr",
+			"const albedo" : "0.276, 0.160, 0.090",
+			"const metallic" : 0.000000,
+			"const roughness" : 1.000000
+		},
+		{
+			"name" : "glass",
+			"shader" : "pbr",
+			"const albedo" : "1.000, 1.000, 1.000",
+			"const metallic" : 0.000000,
+			"const roughness" : 0.000000
+		},
+		{
+			"name" : "brick",
+			"shader" : "pbr",
+			"const albedo" : "0.637, 0.565, 0.338",
 			"const metallic" : 0.000000,
 			"const roughness" : 1.000000
 		}

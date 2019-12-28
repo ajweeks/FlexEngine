@@ -41,6 +41,7 @@ IGNORE_WARNINGS_POP
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/LoadedMesh.hpp"
+#include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Window/GLFWWindowWrapper.hpp"
@@ -308,11 +309,11 @@ namespace flex
 				m_BlankTextureArr->CreateFromMemory(&blankData, sizeof(blankData), VK_FORMAT_R8G8B8A8_UNORM, 1);
 			}
 
-			m_AlphaBGTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/alpha-bg.png", 4, false, false, false);
-			m_LoadingTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/loading_1.png", 4, false, false, false);
-			m_WorkTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/work_d.jpg", 4, false, true, false);
-			m_PointLightIconID = InitializeTexture(RESOURCE_LOCATION  "textures/icons/point-light-icon-256.png", 4, false, true, false);
-			m_DirectionalLightIconID = InitializeTexture(RESOURCE_LOCATION  "textures/icons/directional-light-icon-256.png", 4, false, true, false);
+			m_AlphaBGTextureID = InitializeTexture(RESOURCE_LOCATION "textures/alpha-bg.png", 4, false, false, false);
+			m_LoadingTextureID = InitializeTexture(RESOURCE_LOCATION "textures/loading_1.png", 4, false, false, false);
+			m_WorkTextureID = InitializeTexture(RESOURCE_LOCATION "textures/work_d.jpg", 4, false, true, false);
+			m_PointLightIconID = InitializeTexture(RESOURCE_LOCATION "textures/icons/point-light-icon-256.png", 4, false, true, false);
+			m_DirectionalLightIconID = InitializeTexture(RESOURCE_LOCATION "textures/icons/directional-light-icon-256.png", 4, false, true, false);
 
 			m_SpritePerspPushConstBlock = new Material::PushConstantBlock(128);
 			m_SpriteOrthoPushConstBlock = new Material::PushConstantBlock(128);
@@ -627,13 +628,12 @@ namespace flex
 			if (activeRenderObjectCount > 0)
 			{
 				PrintError("=====================================================\n");
-				PrintError("%u render objects were not destroyed before Vulkan render:\n", activeRenderObjectCount);
+				PrintError("%u render objects were not destroyed before Vulkan render\n", activeRenderObjectCount);
 
 				for (VulkanRenderObject* renderObject : m_RenderObjects)
 				{
 					if (renderObject)
 					{
-						PrintError("render object with material name: %s\n", renderObject->materialName.c_str());
 						DestroyRenderObject(renderObject->renderID);
 					}
 				}
@@ -1147,14 +1147,13 @@ namespace flex
 				}
 				else
 				{
-					PrintError("Render object doesn't have its material ID set! Using first available material\n");
-					renderObject->materialID = 0;
+					PrintError("Render object doesn't have its material ID set! Using placeholder material\n");
+					renderObject->materialID = m_PlaceholderMaterialID;
 				}
 			}
 
 			renderObject->vertexBufferData = createInfo->vertexBufferData;
 			renderObject->cullMode = CullFaceToVkCullMode(createInfo->cullFace);
-			renderObject->materialName = m_Materials.at(renderObject->materialID).material.name;
 			renderObject->gameObject = createInfo->gameObject;
 			renderObject->bEditorObject = createInfo->bEditorObject;
 			if (createInfo->bEditorObject)
@@ -1784,13 +1783,7 @@ namespace flex
 
 		void VulkanRenderer::DrawImGuiForRenderObject(RenderID renderID)
 		{
-			VulkanRenderObject* renderObject = GetRenderObject(renderID);
-			if (renderObject != nullptr)
-			{
-				ImGui::Text("Mat ID: %u", renderObject->materialID);
-				ImGui::Text("Shader ID: %u", GetMaterial(renderObject->materialID).shaderID);
-				//ImGui::Text("Dynamic Offset: %u", renderObject->dynamicUBOIndex);
-			}
+			UNREFERENCED_PARAMETER(renderID);
 		}
 
 		void VulkanRenderer::ReloadShaders(bool bForce)
@@ -1971,7 +1964,7 @@ namespace flex
 			UNREFERENCED_PARAMETER(pointer);
 		}
 
-		void VulkanRenderer::SetSkyboxMesh(GameObject* skyboxMesh)
+		void VulkanRenderer::SetSkyboxMesh(Mesh* skyboxMesh)
 		{
 			m_SkyBoxMesh = skyboxMesh;
 
@@ -1980,7 +1973,7 @@ namespace flex
 				return;
 			}
 
-			MaterialID skyboxMatierialID = m_SkyBoxMesh->GetMeshComponent()->GetMaterialID();
+			MaterialID skyboxMatierialID = m_SkyBoxMesh->GetSubMeshes()[0]->GetMaterialID();
 			if (skyboxMatierialID == InvalidMaterialID)
 			{
 				PrintError("Skybox doesn't have a valid material! Irradiance textures can't be generated\n");
@@ -2002,27 +1995,39 @@ namespace flex
 			m_bRebatchRenderObjects = true;
 		}
 
-		GameObject* VulkanRenderer::GetSkyboxMesh()
-		{
-			return m_SkyBoxMesh;
-		}
-
 		void VulkanRenderer::SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID)
 		{
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
 			if (renderObject)
 			{
-				MaterialID pMatID = renderObject->materialID;
-				if (materialID != pMatID)
+				MaterialID prevMatID = renderObject->materialID;
+				if (materialID != prevMatID)
 				{
-					u32 pStride = CalculateVertexStride(m_Shaders[m_Materials.at(pMatID).material.shaderID].shader->vertexAttributes);
-					u32 newStride = CalculateVertexStride(m_Shaders[m_Materials.at(materialID).material.shaderID].shader->vertexAttributes);
 					renderObject->materialID = materialID;
-					if (newStride != pStride)
+
+					// Regenerate vertex data with new stride
+					Mesh* mesh = renderObject->gameObject->GetMesh();
+					if (mesh != nullptr)
 					{
-						// Regenerate vertex data with new stride
-						renderObject->gameObject->GetMeshComponent()->SetRequiredAttributesFromMaterialID(materialID);
-						renderObject->gameObject->GetMeshComponent()->Reload();
+						MeshComponent* submesh = mesh->GetSubMeshWithRenderID(renderID);
+						if (submesh != nullptr)
+						{
+							u32 prevStride = CalculateVertexStride(m_Shaders[m_Materials.at(prevMatID).material.shaderID].shader->vertexAttributes);
+							u32 newStride = CalculateVertexStride(m_Shaders[m_Materials.at(materialID).material.shaderID].shader->vertexAttributes);
+							if (newStride != prevStride)
+							{
+								submesh->SetRequiredAttributesFromMaterialID(materialID);
+							}
+							submesh->GetOwner()->Reload();
+						}
+						else
+						{
+							PrintWarn("Attempted to set material ID on object with no submesh with renderID %u\n", renderID);
+						}
+					}
+					else
+					{
+						PrintWarn("Attempted to set material ID on object with no mesh\n");
 					}
 				}
 			}
@@ -2338,7 +2343,8 @@ namespace flex
 
 					for (u32 texIndex = 0; texIndex < mat.textures.Count(); ++texIndex)
 					{
-						VulkanTexture* texture = mat.textures[texIndex];
+						// TODO: Pass in reference to mat.textures?
+						//VulkanTexture* texture = mat.textures[texIndex];
 						std::string texFieldName = mat.textures.slotNames[texIndex] + "##" + std::to_string(texIndex);
 						bUpdateFields |= DoTextureSelector(texFieldName.c_str(), textures, &selectedTextureIndices[texIndex]);
 					}
@@ -2358,10 +2364,10 @@ namespace flex
 								continue;
 							}
 
-							VulkanMaterial* mat = &matIter->second;
+							VulkanMaterial& material = matIter->second;
 
 							bool bSelected = (matShortIndex == selectedMaterialIndexShort);
-							if (ImGui::Selectable(mat->material.name.c_str(), &bSelected))
+							if (ImGui::Selectable(material.material.name.c_str(), &bSelected))
 							{
 								if (selectedMaterialIndexShort != matShortIndex)
 								{
@@ -2376,7 +2382,7 @@ namespace flex
 							{
 								if (ImGui::Button("Duplicate"))
 								{
-									const Material& dupMat = mat->material;
+									const Material& dupMat = material.material;
 
 									MaterialCreateInfo createInfo = {};
 									createInfo.name = GetIncrementedPostFixedStr(dupMat.name, "new material");
@@ -2404,9 +2410,9 @@ namespace flex
 									const void* data = (void*)(&draggedMaterialID);
 									size_t size = sizeof(MaterialID);
 
-									ImGui::SetDragDropPayload(m_MaterialPayloadCStr, data, size);
+									ImGui::SetDragDropPayload(MaterialPayloadCStr, data, size);
 
-									ImGui::Text("%s", mat->material.name.c_str());
+									ImGui::Text("%s", material.material.name.c_str());
 
 									ImGui::EndDragDropSource();
 								}
@@ -2545,7 +2551,7 @@ namespace flex
 					if (ImGui::Button("Import Texture"))
 					{
 						// TODO: Not all textures are directly in this directory! CLEANUP to make more robust
-						std::string relativeDirPath = RESOURCE_LOCATION  "textures/";
+						std::string relativeDirPath = RESOURCE_LOCATION "textures/";
 						std::string absoluteDirectoryStr = RelativePathToAbsolute(relativeDirPath);
 						std::string selectedAbsFilePath;
 						if (OpenFileDialog("Import texture", absoluteDirectoryStr, selectedAbsFilePath))
@@ -2587,7 +2593,7 @@ namespace flex
 					std::string selectedMeshRelativeFilePath;
 					LoadedMesh* selectedMesh = nullptr;
 					i32 meshIdx = 0;
-					for (const auto& meshPair : MeshComponent::m_LoadedMeshes)
+					for (const auto& meshPair : Mesh::m_LoadedMeshes)
 					{
 						if (meshIdx == selectedMeshIndex)
 						{
@@ -2612,23 +2618,20 @@ namespace flex
 					{
 						for (VulkanRenderObject* renderObject : m_RenderObjects)
 						{
-							if (renderObject && renderObject->gameObject)
+							if (renderObject != nullptr)
 							{
-								MeshComponent* gameObjectMesh = renderObject->gameObject->GetMeshComponent();
-								if (gameObjectMesh &&  gameObjectMesh->GetRelativeFilePath().compare(selectedMeshRelativeFilePath) == 0)
+								GameObject* owningGameObject = renderObject->gameObject;
+								if (owningGameObject)
 								{
-									MeshImportSettings importSettings = selectedMesh->importSettings;
+									Mesh* mesh = owningGameObject->GetMesh();
+									if (mesh && mesh->GetRelativeFilePath().compare(selectedMeshRelativeFilePath) == 0)
+									{
+										MeshImportSettings importSettings = selectedMesh->importSettings;
 
-									MaterialID matID = renderObject->materialID;
-									GameObject* gameObject = renderObject->gameObject;
-
-									DestroyRenderObject(gameObject->GetRenderID());
-									gameObject->SetRenderID(InvalidRenderID);
-
-									gameObjectMesh->Destroy();
-									gameObjectMesh->SetOwner(gameObject);
-									gameObjectMesh->SetRequiredAttributesFromMaterialID(matID);
-									gameObjectMesh->LoadFromFile(selectedMeshRelativeFilePath, &importSettings);
+										mesh->Destroy();
+										mesh->SetOwner(owningGameObject);
+										mesh->LoadFromFile(selectedMeshRelativeFilePath, mesh->GetMaterialIDs(), &importSettings);
+									}
 								}
 							}
 						}
@@ -2644,7 +2647,7 @@ namespace flex
 					if (ImGui::BeginChild("mesh list", ImVec2(0.0f, 120.0f), true))
 					{
 						i32 i = 0;
-						for (const auto& meshIter : MeshComponent::m_LoadedMeshes)
+						for (const auto& meshIter : Mesh::m_LoadedMeshes)
 						{
 							bool bSelected = (i == selectedMeshIndex);
 							const std::string meshFilePath = meshIter.first;
@@ -2658,13 +2661,13 @@ namespace flex
 							{
 								if (ImGui::Button("Reload"))
 								{
-									MeshComponent::LoadMesh(meshIter.second->relativeFilePath);
+									Mesh::LoadMesh(meshIter.second->relativeFilePath);
 
 									for (VulkanRenderObject* renderObject : m_RenderObjects)
 									{
 										if (renderObject)
 										{
-											MeshComponent* mesh = renderObject->gameObject->GetMeshComponent();
+											Mesh* mesh = renderObject->gameObject->GetMesh();
 											if (mesh && mesh->GetRelativeFilePath().compare(meshFilePath) == 0)
 											{
 												mesh->Reload();
@@ -2686,7 +2689,7 @@ namespace flex
 										const void* data = (void*)(meshIter.first.c_str());
 										size_t size = strlen(meshIter.first.c_str()) * sizeof(char);
 
-										ImGui::SetDragDropPayload(m_MeshPayloadCStr, data, size);
+										ImGui::SetDragDropPayload(MeshPayloadCStr, data, size);
 
 										ImGui::Text("%s", meshFileName.c_str());
 
@@ -2726,7 +2729,7 @@ namespace flex
 								std::string selectedRelativeFilePath = relativeImportDirPath + fileNameAndExtension;
 
 								bool bMeshAlreadyImported = false;
-								for (const auto& meshPair : MeshComponent::m_LoadedMeshes)
+								for (const auto& meshPair : Mesh::m_LoadedMeshes)
 								{
 									if (meshPair.first.compare(selectedRelativeFilePath) == 0)
 									{
@@ -2744,10 +2747,10 @@ namespace flex
 									Print("Importing mesh: %s\n", selectedAbsFilePath.c_str());
 
 									LoadedMesh* existingMesh = nullptr;
-									if (MeshComponent::FindPreLoadedMesh(selectedRelativeFilePath, &existingMesh))
+									if (Mesh::FindPreLoadedMesh(selectedRelativeFilePath, &existingMesh))
 									{
 										i32 j = 0;
-										for (const auto& meshPair : MeshComponent::m_LoadedMeshes)
+										for (const auto& meshPair : Mesh::m_LoadedMeshes)
 										{
 											if (meshPair.first.compare(selectedRelativeFilePath) == 0)
 											{
@@ -2760,7 +2763,7 @@ namespace flex
 									}
 									else
 									{
-										MeshComponent::LoadMesh(selectedRelativeFilePath);
+										Mesh::LoadMesh(selectedRelativeFilePath);
 									}
 								}
 
@@ -2843,7 +2846,7 @@ namespace flex
 				return;
 			}
 
-			VulkanRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetRenderID());
+			VulkanRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetSubMeshes()[0]->renderID);
 			Material& skyboxMat = m_Materials.at(renderObject->materialID).material;
 			VulkanMaterial& renderObjectMat = m_Materials.at(renderObject->materialID);
 
@@ -3129,7 +3132,7 @@ namespace flex
 				return;
 			}
 
-			VulkanRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetRenderID());
+			VulkanRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetSubMeshes()[0]->renderID);
 			Material& skyboxMat = m_Materials.at(skyboxRenderObject->materialID).material;
 			VulkanMaterial& renderObjectMat = m_Materials.at(renderObject->materialID);
 
@@ -3393,7 +3396,7 @@ namespace flex
 				return;
 			}
 
-			VulkanRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetRenderID());
+			VulkanRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetSubMeshes()[0]->renderID);
 			Material& skyboxMat = m_Materials.at(skyboxRenderObject->materialID).material;
 			VulkanMaterial& renderObjectMat = m_Materials.at(renderObject->materialID);
 
@@ -7618,8 +7621,8 @@ namespace flex
 				// SSAO
 				//
 
-				VulkanRenderObject* gBufferObject = GetRenderObject(m_GBufferQuadRenderID);
-				VulkanMaterial* gBufferMaterial = &m_Materials.at(gBufferObject->materialID);
+				VulkanRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
+				VulkanMaterial* gBufferMaterial = &m_Materials.at(gBufferRenderObject->materialID);
 
 				VertexIndexBufferPair* gBufferVertexIndexBuffer = &m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID];
 
@@ -7647,7 +7650,7 @@ namespace flex
 
 					vkCmdBindVertexBuffers(m_OffScreenCmdBuffer, 0, 1, &gBufferVertexIndexBuffer->vertexBuffer->m_Buffer, offsets);
 
-					vkCmdDraw(m_OffScreenCmdBuffer, gBufferObject->vertexBufferData->VertexCount, 1, gBufferObject->vertexOffset, 0);
+					vkCmdDraw(m_OffScreenCmdBuffer, gBufferRenderObject->vertexBufferData->VertexCount, 1, gBufferRenderObject->vertexOffset, 0);
 
 					m_SSAORenderPass->End();
 
@@ -7683,7 +7686,7 @@ namespace flex
 						overrides.bSSAOVerticalPass = false;
 						UpdateDynamicUniformBuffer(m_SSAOBlurMatID, 0 * m_DynamicAlignment, MAT4_IDENTITY, &overrides);
 
-						vkCmdDraw(m_OffScreenCmdBuffer, gBufferObject->vertexBufferData->VertexCount, 1, gBufferObject->vertexOffset, 0);
+						vkCmdDraw(m_OffScreenCmdBuffer, gBufferRenderObject->vertexBufferData->VertexCount, 1, gBufferRenderObject->vertexOffset, 0);
 
 						m_SSAOBlurHRenderPass->End();
 
@@ -7697,7 +7700,7 @@ namespace flex
 						overrides.bSSAOVerticalPass = true;
 						UpdateDynamicUniformBuffer(m_SSAOBlurMatID, 1 * m_DynamicAlignment, MAT4_IDENTITY, &overrides);
 
-						vkCmdDraw(m_OffScreenCmdBuffer, gBufferObject->vertexBufferData->VertexCount, 1, gBufferObject->vertexOffset, 0);
+						vkCmdDraw(m_OffScreenCmdBuffer, gBufferRenderObject->vertexBufferData->VertexCount, 1, gBufferRenderObject->vertexOffset, 0);
 
 						m_SSAOBlurVRenderPass->End();
 

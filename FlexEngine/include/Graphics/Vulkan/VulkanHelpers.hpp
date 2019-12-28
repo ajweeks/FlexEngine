@@ -555,6 +555,7 @@ namespace flex
 			std::vector<VulkanCubemapGBuffer> cubemapSamplerGBuffersIDs;
 			u32 cubemapDepthSamplerID = 0;
 
+			// TODO: Remove, this always equals shaderID
 			u32 descriptorSetLayoutIndex = 0;
 		};
 
@@ -568,8 +569,6 @@ namespace flex
 			MaterialID materialID = InvalidMaterialID;
 
 			GameObject* gameObject = nullptr;
-
-			std::string materialName = "";
 
 			u32 VAO = 0;
 			u32 VBO = 0;
@@ -694,7 +693,7 @@ namespace flex
 			Verisilicon,
 			Software,
 		};
-		
+
 		constexpr GPUVendor GPUVendorFromPCIVendor(u32 vendorID)
 		{
 			return vendorID == 0x13B5 ? GPUVendor::ARM

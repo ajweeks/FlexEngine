@@ -1,5 +1,5 @@
 {
-	"version" : 2,
+	"version" : 1,
 	"meshes" : 
 	[
 		{
@@ -340,6 +340,13 @@
 		},
 		{
 			"file" : "case-01.glb",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false
+		},
+		{
+			"file" : "greenhouse.glb",
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,

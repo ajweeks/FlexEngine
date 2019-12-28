@@ -117,7 +117,7 @@ namespace flex
 			// TODO: Handle lack of GL_ARB_clip_control (in GL < 4.5)
 			glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
 
-			m_LoadingTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/loading_1.png", 3, false, false, false);
+			m_LoadingTextureID = InitializeTexture(RESOURCE_LOCATION "textures/loading_1.png", 3, false, false, false);
 
 			GL_POP_DEBUG_GROUP();
 
@@ -161,10 +161,10 @@ namespace flex
 			};
 
 			// TODO: Move to Renderer::Init
-			m_AlphaBGTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/alpha-bg.png", 3, false, false, false);
-			m_WorkTextureID = InitializeTexture(RESOURCE_LOCATION  "textures/work_d.jpg", 3, false, true, false);
-			m_PointLightIconID = InitializeTexture(RESOURCE_LOCATION  "textures/icons/point-light-icon-256.png", 4, false, true, false);
-			m_DirectionalLightIconID = InitializeTexture(RESOURCE_LOCATION  "textures/icons/directional-light-icon-256.png", 4, false, true, false);
+			m_AlphaBGTextureID = InitializeTexture(RESOURCE_LOCATION "textures/alpha-bg.png", 3, false, false, false);
+			m_WorkTextureID = InitializeTexture(RESOURCE_LOCATION "textures/work_d.jpg", 3, false, true, false);
+			m_PointLightIconID = InitializeTexture(RESOURCE_LOCATION "textures/icons/point-light-icon-256.png", 4, false, true, false);
+			m_DirectionalLightIconID = InitializeTexture(RESOURCE_LOCATION "textures/icons/directional-light-icon-256.png", 4, false, true, false);
 
 			// Shadow map texture
 			{
@@ -211,10 +211,10 @@ namespace flex
 				}
 
 				m_Grid = new GameObject("Grid", GameObjectType::OBJECT);
-				MeshComponent* gridMesh = m_Grid->SetMeshComponent(new MeshComponent(m_Grid, m_GridMaterialID, false));
+				Mesh* gridMesh = m_Grid->SetMesh(new Mesh(m_Grid));
 				RenderObjectCreateInfo createInfo = {};
 				createInfo.bEditorObject = true;
-				gridMesh->LoadPrefabShape(MeshComponent::PrefabShape::GRID, &createInfo);
+				gridMesh->LoadPrefabShape(PrefabShape::GRID, m_GridMaterialID, &createInfo);
 				m_Grid->GetTransform()->Translate(0.0f, -0.1f, 0.0f);
 				m_Grid->SetSerializable(false);
 				m_Grid->SetStatic(true);
@@ -238,10 +238,10 @@ namespace flex
 				}
 
 				m_WorldOrigin = new GameObject("World origin", GameObjectType::OBJECT);
-				MeshComponent* orignMesh = m_WorldOrigin->SetMeshComponent(new MeshComponent(m_WorldOrigin, m_WorldAxisMaterialID, false));
+				Mesh* orignMesh = m_WorldOrigin->SetMesh(new Mesh(m_WorldOrigin));
 				RenderObjectCreateInfo createInfo = {};
 				createInfo.bEditorObject = true;
-				orignMesh->LoadPrefabShape(MeshComponent::PrefabShape::WORLD_AXIS_GROUND, &createInfo);
+				orignMesh->LoadPrefabShape(PrefabShape::WORLD_AXIS_GROUND, m_WorldAxisMaterialID, &createInfo);
 				m_WorldOrigin->GetTransform()->Translate(0.0f, -0.09f, 0.0f);
 				m_WorldOrigin->SetSerializable(false);
 				m_WorldOrigin->SetStatic(true);
@@ -4448,11 +4448,6 @@ namespace flex
 			m_bRebatchRenderObjects = true;
 		}
 
-		GameObject* GLRenderer::GetSkyboxMesh()
-		{
-			return m_SkyBoxMesh;
-		}
-
 		void GLRenderer::SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID)
 		{
 			GLRenderObject* renderObject = GetRenderObject(renderID);
@@ -4931,7 +4926,7 @@ namespace flex
 					if (ImGui::Button("Import Texture"))
 					{
 						// TODO: Not all textures are directly in this directory! CLEANUP to make more robust
-						std::string relativeDirPath = RESOURCE_LOCATION  "textures/";
+						std::string relativeDirPath = RESOURCE_LOCATION "textures/";
 						std::string absoluteDirectoryStr = RelativePathToAbsolute(relativeDirPath);
 						std::string selectedAbsFilePath;
 						if (OpenFileDialog("Import texture", absoluteDirectoryStr, selectedAbsFilePath))
@@ -4963,7 +4958,7 @@ namespace flex
 					std::string selectedMeshRelativeFilePath;
 					LoadedMesh* selectedMesh = nullptr;
 					i32 meshIdx = 0;
-					for (auto meshPair : MeshComponent::m_LoadedMeshes)
+					for (auto meshPair : Mesh::m_LoadedMeshes)
 					{
 						if (meshIdx == selectedMeshIndex)
 						{
@@ -5020,7 +5015,7 @@ namespace flex
 					if (ImGui::BeginChild("mesh list", ImVec2(0.0f, 120.0f), true))
 					{
 						i32 i = 0;
-						for (const auto& meshIter : MeshComponent::m_LoadedMeshes)
+						for (const auto& meshIter : Mesh::m_LoadedMeshes)
 						{
 							bool bSelected = (i == selectedMeshIndex);
 							const std::string meshFilePath = meshIter.first;
@@ -5080,7 +5075,7 @@ namespace flex
 					if (ImGui::Button("Import Mesh"))
 					{
 						// TODO: Not all models are directly in this directory! CLEANUP to make more robust
-						std::string relativeDirPath = RESOURCE_LOCATION  "meshes/";
+						std::string relativeDirPath = RESOURCE_LOCATION "meshes/";
 						std::string absoluteDirectoryStr = RelativePathToAbsolute(relativeDirPath);
 						std::string selectedAbsFilePath;
 						if (OpenFileDialog("Import mesh", absoluteDirectoryStr, selectedAbsFilePath))
@@ -5091,10 +5086,10 @@ namespace flex
 							std::string relativeFilePath = relativeDirPath + fileNameAndExtension;
 
 							LoadedMesh* existingMesh = nullptr;
-							if (MeshComponent::FindPreLoadedMesh(relativeFilePath, &existingMesh))
+							if (Mesh::FindPreLoadedMesh(relativeFilePath, &existingMesh))
 							{
 								i32 j = 0;
-								for (auto meshPair : MeshComponent::m_LoadedMeshes)
+								for (auto meshPair : Mesh::m_LoadedMeshes)
 								{
 									if (meshPair.first.compare(relativeFilePath) == 0)
 									{
@@ -5107,7 +5102,7 @@ namespace flex
 							}
 							else
 							{
-								MeshComponent::LoadMesh(relativeFilePath);
+								Mesh::LoadMesh(relativeFilePath);
 							}
 
 							ImGui::CloseCurrentPopup();

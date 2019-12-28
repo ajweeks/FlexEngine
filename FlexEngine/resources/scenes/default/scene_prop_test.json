@@ -1,5 +1,5 @@
 {
-	"version" : 2,
+	"version" : 3,
 	"name" : "scene_prop_test",
 	"spawn player" : false,
 	"objects" : 
@@ -11,7 +11,10 @@
 			"transform" : 
 			{
 			},
-			"material" : "skybox 01",
+			"materials" : 
+			[
+				"skybox 01"
+			],
 			"skybox info" : 
 			{
 			}
@@ -40,7 +43,7 @@
 				"pos" : "0.000, 15.000, 0.000",
 				"color" : "1.00, 1.00, 1.00",
 				"enabled" : true,
-				"brightness" : 5.000000,
+				"brightness" : 3.047000,
 				"cast shadows" : true,
 				"shadow darkness" : 1.000000
 			}
@@ -52,10 +55,13 @@
 			"transform" : 
 			{
 				"pos" : "0.000, 0.000, 0.178",
-				"scale" : "20.000, 0.100, 20.000"
+				"scale" : "100.000, 0.100, 100.000"
 			},
 			"mesh" : "cube",
-			"material" : "grid",
+			"materials" : 
+			[
+				"grid"
+			],
 			"collider" : 
 			{
 				"shape" : "box",
@@ -76,11 +82,16 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-5.900, 0.700, 4.600",
+				"pos" : "-5.900, 0.641, 4.600",
 				"rot" : "0.000, -0.555, 0.000"
 			},
 			"mesh" : "case-01",
-			"material" : "case"
+			"materials" : 
+			[
+				"gold",
+				"pbr white",
+				"pbr grey"
+			]
 		},
 		{
 			"name" : "battery cell",
@@ -88,12 +99,15 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-2.305, 1.100, 2.317",
+				"pos" : "-2.305, 1.100, 2.118",
 				"rot" : "0.525, -0.000, 1.571",
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "battery_cell",
-			"material" : "pbr light grey",
+			"materials" : 
+			[
+				"pbr light grey"
+			],
 			"collider" : 
 			{
 				"shape" : "box",
@@ -114,12 +128,15 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "1.279, 2.100, 6.457",
+				"pos" : "1.304, 2.100, 6.614",
 				"rot" : "-1.571, -0.472, 3.142",
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "battery_cell",
-			"material" : "pbr light grey",
+			"materials" : 
+			[
+				"pbr light grey"
+			],
 			"collider" : 
 			{
 				"shape" : "box",
@@ -140,12 +157,15 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "1.696, 1.100, 2.694",
+				"pos" : "1.698, 1.100, 2.876",
 				"rot" : "-0.000, 0.592, 3.142",
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "battery_cell",
-			"material" : "pbr light grey",
+			"materials" : 
+			[
+				"pbr light grey"
+			],
 			"collider" : 
 			{
 				"shape" : "box",
@@ -166,12 +186,15 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "6.142, 1.100, 0.247",
-				"rot" : "0.008, -0.000, -1.571",
+				"pos" : "6.123, 1.100, 0.226",
+				"rot" : "0.007, 0.000, -1.571",
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "battery_cell",
-			"material" : "pbr light grey",
+			"materials" : 
+			[
+				"pbr light grey"
+			],
 			"collider" : 
 			{
 				"shape" : "box",
@@ -192,12 +215,15 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "6.947, 3.100, -2.786",
-				"rot" : "-1.603, 0.000, -1.571",
+				"pos" : "6.502, 2.771, -2.952",
+				"rot" : "-1.596, 0.009, -1.080",
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "battery_cell",
-			"material" : "pbr light grey",
+			"materials" : 
+			[
+				"pbr light grey"
+			],
 			"collider" : 
 			{
 				"shape" : "box",
@@ -218,12 +244,15 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-1.904, 1.100, -2.974",
+				"pos" : "-1.904, 1.100, -3.021",
 				"rot" : "-3.142, 0.791, -3.142",
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "battery_cell",
-			"material" : "pbr light grey",
+			"materials" : 
+			[
+				"pbr light grey"
+			],
 			"collider" : 
 			{
 				"shape" : "box",
@@ -244,12 +273,15 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "1.222, 1.100, -1.834",
+				"pos" : "1.223, 1.100, -1.834",
 				"rot" : "0.004, 0.000, -1.571",
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "battery_cell",
-			"material" : "pbr light grey",
+			"materials" : 
+			[
+				"pbr light grey"
+			],
 			"collider" : 
 			{
 				"shape" : "box",
@@ -270,12 +302,15 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "3.984, 1.100, -1.643",
-				"rot" : "-0.000, 0.032, 0.000",
+				"pos" : "3.631, 1.100, -1.628",
+				"rot" : "-0.000, 0.031, 0.000",
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "battery_cell",
-			"material" : "pbr light grey",
+			"materials" : 
+			[
+				"pbr light grey"
+			],
 			"collider" : 
 			{
 				"shape" : "box",
@@ -296,12 +331,15 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "8.160, 1.100, -2.279",
-				"rot" : "0.000, 0.017, 0.000",
+				"pos" : "8.378, 1.100, -2.365",
+				"rot" : "-0.000, 0.018, -0.000",
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "battery_cell",
-			"material" : "pbr light grey",
+			"materials" : 
+			[
+				"pbr light grey"
+			],
 			"collider" : 
 			{
 				"shape" : "box",
@@ -315,6 +353,26 @@
 				"mask" : 1,
 				"group" : 1
 			}
+		},
+		{
+			"name" : "greenhouse",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "14.800, 0.000, -20.844",
+				"rot" : "3.141, 0.159, 3.141",
+				"scale" : "3.000, 3.000, 3.000"
+			},
+			"mesh" : "greenhouse",
+			"materials" : 
+			[
+				"wood",
+				"glass",
+				"pbr chrome",
+				"brick",
+				"dirt"
+			]
 		}
 	]
 }
