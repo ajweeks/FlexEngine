@@ -32,6 +32,7 @@ IGNORE_WARNINGS_POP
 #include "Player.hpp"
 #include "Profiler.hpp"
 #include "Scene/BaseScene.hpp"
+#include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
 #include "VirtualMachine.hpp"
@@ -75,7 +76,7 @@ namespace flex
 		return newGameObject;
 	}
 
-	GameObject* GameObject::CreateObjectFromJSON(const JSONObject& obj, BaseScene* scene, MaterialID overriddenMatID /* = InvalidMaterialID */)
+	GameObject* GameObject::CreateObjectFromJSON(const JSONObject& obj, BaseScene* scene)
 	{
 		GameObject* newGameObject = nullptr;
 
@@ -104,9 +105,7 @@ namespace flex
 			{
 				std::string name = obj.GetString("name");
 
-				MaterialID matID = scene->FindMaterialIDByName(obj);
-
-				GameObject* prefabInstance = GameObject::CreateObjectFromJSON(*prefab, scene, matID);
+				GameObject* prefabInstance = GameObject::CreateObjectFromJSON(*prefab, scene);
 				prefabInstance->m_bLoadedFromPrefab = true;
 				prefabInstance->m_PrefabName = prefabInstance->m_Name;
 
@@ -122,7 +121,7 @@ namespace flex
 					prefabInstance->m_Transform = Transform::ParseJSON(transformObj);
 				}
 
-				prefabInstance->ParseUniqueFields(obj, scene, matID);
+				prefabInstance->ParseUniqueFields(obj, scene, newGameObject->m_Mesh->GetMaterialIDs());
 
 				return prefabInstance;
 			}
@@ -196,7 +195,7 @@ namespace flex
 
 		if (newGameObject != nullptr)
 		{
-			newGameObject->ParseJSON(obj, scene, overriddenMatID);
+			newGameObject->ParseJSON(obj, scene);
 		}
 
 		return newGameObject;
@@ -226,9 +225,9 @@ namespace flex
 	{
 		RigidBody* rb = GetRigidBody();
 
-		if (m_RenderID != InvalidRenderID)
+		if (m_Mesh != nullptr)
 		{
-			g_Renderer->PostInitializeRenderObject(m_RenderID);
+			m_Mesh->PostInitialize();
 		}
 
 		if (rb)
@@ -253,17 +252,11 @@ namespace flex
 		}
 		m_Children.clear();
 
-		if (m_MeshComponent)
+		if (m_Mesh)
 		{
-			m_MeshComponent->Destroy();
-			delete m_MeshComponent;
-			m_MeshComponent = nullptr;
-		}
-
-		if (m_RenderID != InvalidRenderID)
-		{
-			g_Renderer->DestroyRenderObject(m_RenderID);
-			m_RenderID = InvalidRenderID;
+			m_Mesh->Destroy();
+			delete m_Mesh;
+			m_Mesh = nullptr;
 		}
 
 		if (m_RigidBody)
@@ -459,16 +452,16 @@ namespace flex
 			}
 		}
 
-		if (m_RenderID != InvalidRenderID)
+		if (m_Mesh != nullptr)
 		{
-			g_Renderer->DrawImGuiForGameObjectWithValidRenderID(this);
+			g_Renderer->DrawImGuiForGameObject(this);
 		}
 		else
 		{
 			if (ImGui::Button("Add mesh component"))
 			{
-				MeshComponent* mesh = SetMeshComponent(new MeshComponent(this));
-				mesh->LoadFromFile(RESOURCE_LOCATION  "meshes/cube.glb");
+				Mesh* mesh = SetMesh(new Mesh(this));
+				mesh->LoadFromFile(RESOURCE_LOCATION  "meshes/cube.glb", g_Renderer->GetPlaceholderMaterialID());
 			}
 		}
 
@@ -895,16 +888,20 @@ namespace flex
 		bool bVisibleInSceneGraph = true;
 		obj.SetBoolChecked("visible in scene graph", bVisibleInSceneGraph);
 
-		MaterialID matID = InvalidMaterialID;
+		std::vector<MaterialID> matIDs;
 		if (overriddenMatID != InvalidMaterialID)
 		{
-			matID = overriddenMatID;
+			matIDs = { overriddenMatID };
 		}
 		else
 		{
-			matID = scene->FindMaterialIDByName(obj);
+			matIDs = scene->RetrieveMaterialIDsFromJSON(obj);
 		}
 
+		if (matIDs.empty())
+		{
+			matIDs.push_back(g_Renderer->GetPlaceholderMaterialID());
+		}
 
 		JSONObject transformObj;
 		if (obj.SetObjectChecked("transform", transformObj))
@@ -922,7 +919,7 @@ namespace flex
 
 				if (fileName.compare(meshName) == 0)
 				{
-					MeshComponent::ParseJSON(parsedMeshObj, this, matID);
+					Mesh::ParseJSON(parsedMeshObj, this, matIDs);
 					bFound = true;
 					break;
 				}
@@ -1046,7 +1043,7 @@ namespace flex
 			m_RigidBody->SetLocalSRT(localScale, localRot, localPos);
 		}
 
-		ParseUniqueFields(obj, scene, matID);
+		ParseUniqueFields(obj, scene, matIDs);
 
 		SetVisible(bVisible, false);
 		SetVisibleInSceneExplorer(bVisibleInSceneGraph);
@@ -1067,7 +1064,7 @@ namespace flex
 		}
 	}
 
-	void GameObject::ParseUniqueFields(const JSONObject& /* parentObj */, BaseScene* /* scene */, MaterialID /* matID*/)
+	void GameObject::ParseUniqueFields(const JSONObject& /* parentObj */, BaseScene* /* scene */,  const std::vector<MaterialID>& /* matIDs */)
 	{
 		// Generic game objects have no unique fields
 	}
@@ -1116,40 +1113,41 @@ namespace flex
 
 		object.fields.push_back(m_Transform.Serialize());
 
-		if (m_MeshComponent &&
+		if (m_Mesh &&
 			bIsBasicObject &&
 			!m_bLoadedFromPrefab)
 		{
-			const std::string meshName = StripFileType(StripLeadingDirectories(m_MeshComponent->GetRelativeFilePath()));
+			const std::string meshName = StripFileType(StripLeadingDirectories(m_Mesh->GetRelativeFilePath()));
 			object.fields.emplace_back("mesh", JSONValue(meshName));
 		}
 
+		if (m_Mesh)
 		{
-			MaterialID matID = InvalidMaterialID;
-			RenderObjectCreateInfo renderObjectCreateInfo;
-			RenderID renderID = GetRenderID();
-			if (m_MeshComponent)
+			std::vector<JSONField> materialFields;
+			for (u32 slotIndex = 0; slotIndex < m_Mesh->GetSubmeshCount(); ++slotIndex)
 			{
-				matID = m_MeshComponent->GetMaterialID();
-			}
-			else if (renderID != InvalidRenderID && g_Renderer->GetRenderObjectCreateInfo(renderID, renderObjectCreateInfo))
-			{
-				matID = renderObjectCreateInfo.materialID;
+				MaterialID matID = InvalidMaterialID;
+				if (m_Mesh)
+				{
+					matID = m_Mesh->GetMaterialID(slotIndex);
+				}
+
+				if (matID != InvalidMaterialID)
+				{
+					const Material& material = g_Renderer->GetMaterial(matID);
+					std::string materialName = material.name;
+					if (materialName.empty())
+					{
+						PrintWarn("Game object contains material with empty material name!\n");
+					}
+					else
+					{
+						materialFields.emplace_back(materialName, JSONValue(""));
+					}
+				}
 			}
 
-			if (matID != InvalidMaterialID)
-			{
-				const Material& material = g_Renderer->GetMaterial(matID);
-				std::string materialName = material.name;
-				if (materialName.empty())
-				{
-					PrintWarn("Game object contains material with empty material name!\n");
-				}
-				else
-				{
-					object.fields.emplace_back("material", JSONValue(materialName));
-				}
-			}
+			object.fields.emplace_back("materials", JSONValue(materialFields));
 		}
 
 		btCollisionShape* collisionShape = GetCollisionShape();
@@ -1338,19 +1336,10 @@ namespace flex
 	{
 		RenderObjectCreateInfo* createInfoPtr = nullptr;
 		RenderObjectCreateInfo renderObjectCreateInfo_DontRef = {};
-		MaterialID matID = InvalidMaterialID;
-		if (m_RenderID != InvalidRenderID)
+		std::vector<MaterialID> matIDs;
+		if (m_Mesh)
 		{
-			if (g_Renderer->GetRenderObjectCreateInfo(m_RenderID, renderObjectCreateInfo_DontRef))
-			{
-				// Make it clear we aren't copying vertex or index data directly
-				renderObjectCreateInfo_DontRef.vertexBufferData = nullptr;
-				renderObjectCreateInfo_DontRef.indices = nullptr;
-
-				matID = renderObjectCreateInfo_DontRef.materialID;
-
-				createInfoPtr = &renderObjectCreateInfo_DontRef;
-			}
+			matIDs = m_Mesh->GetMaterialIDs();
 		}
 
 		*newGameObject->GetTransform() = m_Transform;
@@ -1376,22 +1365,20 @@ namespace flex
 			newGameObject->AddTag(tag);
 		}
 
-		if (m_MeshComponent)
+		if (m_Mesh)
 		{
-			MeshComponent* newMeshComponent = newGameObject->SetMeshComponent(new MeshComponent(newGameObject, matID, false));
-			MeshComponent::Type prefabType = m_MeshComponent->GetType();
-			if (prefabType == MeshComponent::Type::PREFAB)
+			Mesh* newMesh = newGameObject->SetMesh(new Mesh(newGameObject));
+			Mesh::Type prefabType = m_Mesh->GetType();
+			if (prefabType == Mesh::Type::PREFAB)
 			{
-				MeshComponent::PrefabShape shape = m_MeshComponent->GetShape();
-				newMeshComponent->SetRequiredAttributesFromMaterialID(matID);
-				newMeshComponent->LoadPrefabShape(shape, createInfoPtr);
+				PrefabShape shape = m_Mesh->GetSubMeshes()[0]->GetShape();
+				newMesh->LoadPrefabShape(shape, matIDs[0], createInfoPtr);
 			}
-			else if (prefabType == MeshComponent::Type::FILE)
+			else if (prefabType == Mesh::Type::FILE)
 			{
-				std::string filePath = m_MeshComponent->GetRelativeFilePath();
-				MeshImportSettings importSettings = m_MeshComponent->GetImportSettings();
-				newMeshComponent->SetRequiredAttributesFromMaterialID(matID);
-				newMeshComponent->LoadFromFile(filePath, &importSettings, createInfoPtr);
+				std::string filePath = m_Mesh->GetRelativeFilePath();
+				MeshImportSettings importSettings = m_Mesh->GetImportSettings();
+				newMesh->LoadFromFile(filePath, matIDs, &importSettings, createInfoPtr);
 			}
 			else
 			{
@@ -1765,11 +1752,6 @@ namespace flex
 		return m_Tags;
 	}
 
-	RenderID GameObject::GetRenderID() const
-	{
-		return m_RenderID;
-	}
-
 	std::string GameObject::GetName() const
 	{
 		return m_Name;
@@ -1778,11 +1760,6 @@ namespace flex
 	void GameObject::SetName(const std::string& newName)
 	{
 		m_Name = newName;
-	}
-
-	void GameObject::SetRenderID(RenderID renderID)
-	{
-		m_RenderID = renderID;
 	}
 
 	bool GameObject::IsSerializable() const
@@ -1912,24 +1889,22 @@ namespace flex
 		return m_RigidBody;
 	}
 
-	MeshComponent* GameObject::GetMeshComponent()
+	Mesh* GameObject::GetMesh()
 	{
-		return m_MeshComponent;
+		return m_Mesh;
 	}
 
-	MeshComponent* GameObject::SetMeshComponent(MeshComponent* meshComponent)
+	Mesh* GameObject::SetMesh(Mesh* mesh)
 	{
-		if (m_MeshComponent)
+		if (m_Mesh)
 		{
-			g_Renderer->DestroyRenderObject(m_RenderID);
-			m_RenderID = InvalidRenderID;
-			m_MeshComponent->Destroy();
-			delete m_MeshComponent;
+			m_Mesh->Destroy();
+			delete m_Mesh;
 		}
 
-		m_MeshComponent = meshComponent;
+		m_Mesh = mesh;
 		g_Renderer->RenderObjectStateChanged();
-		return meshComponent;
+		return mesh;
 	}
 
 	bool GameObject::CastsShadow() const
@@ -2001,7 +1976,7 @@ namespace flex
 		return newGameObject;
 	}
 
-	void Valve::ParseUniqueFields(const JSONObject& parentObj, BaseScene* scene, MaterialID matID)
+	void Valve::ParseUniqueFields(const JSONObject& parentObj, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		JSONObject valveInfo;
 		if (parentObj.SetObjectChecked("valve info", valveInfo))
@@ -2019,12 +1994,12 @@ namespace flex
 				PrintWarn("Valve's minimum rotation range is greater than its maximum! Undefined behavior\n");
 			}
 
-			if (!m_MeshComponent)
+			if (!m_Mesh)
 			{
-				MeshComponent* valveMesh = new MeshComponent(this, matID);
-				valveMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/valve.glb");
-				assert(GetMeshComponent() == nullptr);
-				SetMeshComponent(valveMesh);
+				Mesh* valveMesh = new Mesh(this);
+				valveMesh->LoadFromFile(RESOURCE_LOCATION "meshes/valve.glb", matIDs[0]);
+				assert(GetMesh() == nullptr);
+				SetMesh(valveMesh);
 			}
 
 			if (!m_CollisionShape)
@@ -2181,13 +2156,13 @@ namespace flex
 		return newGameObject;
 	}
 
-	void RisingBlock::ParseUniqueFields(const JSONObject& parentObj, BaseScene* scene, MaterialID matID)
+	void RisingBlock::ParseUniqueFields(const JSONObject& parentObj, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
-		if (!m_MeshComponent)
+		if (!m_Mesh)
 		{
-			MeshComponent* cubeMesh = new MeshComponent(this, matID);
-			cubeMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/cube.glb");
-			SetMeshComponent(cubeMesh);
+			Mesh* cubeMesh = new Mesh(this);
+			cubeMesh->LoadFromFile(RESOURCE_LOCATION "meshes/cube.glb", matIDs[0]);
+			SetMesh(cubeMesh);
 		}
 
 		if (!m_RigidBody)
@@ -2355,18 +2330,19 @@ namespace flex
 		return newGameObject;
 	}
 
-	void GlassPane::ParseUniqueFields(const JSONObject& parentObj, BaseScene* scene, MaterialID matID)
+	void GlassPane::ParseUniqueFields(const JSONObject& parentObj, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		UNREFERENCED_PARAMETER(scene);
+		UNREFERENCED_PARAMETER(matIDs);
 
 		JSONObject glassInfo;
 		if (parentObj.SetObjectChecked("window info", glassInfo))
 		{
 			glassInfo.SetBoolChecked("broken", bBroken);
 
-			if (!m_MeshComponent)
+			if (!m_Mesh)
 			{
-				MeshComponent* windowMesh = new MeshComponent(this, matID);
+				Mesh* windowMesh = new Mesh(this);
 				const char* filePath;
 				if (bBroken)
 				{
@@ -2376,8 +2352,8 @@ namespace flex
 				{
 					filePath = RESOURCE("meshes/glass-window-whole.glb");
 				}
-				windowMesh->LoadFromFile(filePath);
-				SetMeshComponent(windowMesh);
+				windowMesh->LoadFromFile(filePath, matIDs);
+				SetMesh(windowMesh);
 			}
 		}
 
@@ -2415,11 +2391,11 @@ namespace flex
 		return newGameObject;
 	}
 
-	void ReflectionProbe::ParseUniqueFields(const JSONObject& parentObj, BaseScene* scene, MaterialID matID)
+	void ReflectionProbe::ParseUniqueFields(const JSONObject& parentObj, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		UNREFERENCED_PARAMETER(scene);
 		UNREFERENCED_PARAMETER(parentObj);
-		UNREFERENCED_PARAMETER(matID);
+		UNREFERENCED_PARAMETER(matIDs);
 
 		// Probe capture material
 		//MaterialCreateInfo probeCaptureMatCreateInfo = {};
@@ -2500,15 +2476,15 @@ namespace flex
 		return newGameObject;
 	}
 
-	void Skybox::ParseUniqueFields(const JSONObject& parentObj, BaseScene* scene, MaterialID matID)
+	void Skybox::ParseUniqueFields(const JSONObject& parentObj, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		UNREFERENCED_PARAMETER(scene);
 
-		assert(m_MeshComponent == nullptr);
-		assert(matID != InvalidMaterialID);
-		MeshComponent* skyboxMesh = new MeshComponent(this, matID, false);
-		skyboxMesh->LoadPrefabShape(MeshComponent::PrefabShape::SKYBOX);
-		SetMeshComponent(skyboxMesh);
+		assert(m_Mesh == nullptr);
+		assert(matIDs.size() != 0 && matIDs[0] != InvalidMaterialID);
+		Mesh* skyboxMesh = new Mesh(this);
+		skyboxMesh->LoadPrefabShape(PrefabShape::SKYBOX, matIDs[0]);
+		SetMesh(skyboxMesh);
 
 		JSONObject skyboxInfo;
 		if (parentObj.SetObjectChecked("skybox info", skyboxInfo))
@@ -2520,7 +2496,7 @@ namespace flex
 			}
 		}
 
-		g_Renderer->SetSkyboxMesh(this);
+		g_Renderer->SetSkyboxMesh(m_Mesh);
 	}
 
 	void Skybox::SerializeUniqueFields(JSONObject& parentObject) const
@@ -2629,9 +2605,9 @@ namespace flex
 		return m_Transform.GetWorldRotation();
 	}
 
-	void DirectionalLight::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID)
+	void DirectionalLight::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
-		UNREFERENCED_PARAMETER(matID);
+		UNREFERENCED_PARAMETER(matIDs);
 
 		i32 sceneFileVersion = scene->GetFileVersion();
 
@@ -2815,10 +2791,10 @@ namespace flex
 		return m_Transform.GetWorldPosition();
 	}
 
-	void PointLight::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID)
+	void PointLight::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		UNREFERENCED_PARAMETER(scene);
-		UNREFERENCED_PARAMETER(matID);
+		UNREFERENCED_PARAMETER(matIDs);
 
 		JSONObject pointLightObj;
 		if (parentObject.SetObjectChecked("point light info", pointLightObj))
@@ -2883,9 +2859,9 @@ namespace flex
 			// TODO: Create own material
 			matID = 0;
 		}
-		MeshComponent* mesh = SetMeshComponent(new MeshComponent(this, matID));
+		Mesh* mesh = SetMesh(new Mesh(this));
 		std::string meshFilePath = std::string(RESOURCE("meshes/")) + std::string(meshName);
-		if (!mesh->LoadFromFile(meshFilePath))
+		if (!mesh->LoadFromFile(meshFilePath, matID))
 		{
 			PrintWarn("Failed to load cart mesh!\n");
 		}
@@ -3103,10 +3079,10 @@ namespace flex
 		return 0.0f;
 	}
 
-	void Cart::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID)
+	void Cart::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		UNREFERENCED_PARAMETER(scene);
-		UNREFERENCED_PARAMETER(matID);
+		UNREFERENCED_PARAMETER(matIDs);
 
 		JSONObject cartInfo = parentObject.GetObject("cart info");
 		currentTrackID = (TrackID)cartInfo.GetInt("track ID");
@@ -3206,10 +3182,10 @@ namespace flex
 		return (1.0f - glm::pow(1.0f - powerRemaining, 5.0f)) * moveDirection * speed;
 	}
 
-	void EngineCart::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID)
+	void EngineCart::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		UNREFERENCED_PARAMETER(scene);
-		UNREFERENCED_PARAMETER(matID);
+		UNREFERENCED_PARAMETER(matIDs);
 
 		JSONObject cartInfo = parentObject.GetObject("cart info");
 		currentTrackID = (TrackID)cartInfo.GetInt("track ID");
@@ -3246,8 +3222,8 @@ namespace flex
 			// TODO: Create own material
 			matID = 0;
 		}
-		MeshComponent* mesh = SetMeshComponent(new MeshComponent(this, matID));
-		if (!mesh->LoadFromFile(RESOURCE("meshes/mobile-liquid-box.glb")))
+		Mesh* mesh = SetMesh(new Mesh(this));
+		if (!mesh->LoadFromFile(RESOURCE("meshes/mobile-liquid-box.glb"), matID))
 		{
 			PrintWarn("Failed to load mobile-liquid-box mesh!\n");
 		}
@@ -3275,11 +3251,11 @@ namespace flex
 		}
 	}
 
-	void MobileLiquidBox::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID)
+	void MobileLiquidBox::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		UNREFERENCED_PARAMETER(parentObject);
 		UNREFERENCED_PARAMETER(scene);
-		UNREFERENCED_PARAMETER(matID);
+		UNREFERENCED_PARAMETER(matIDs);
 	}
 
 	void MobileLiquidBox::SerializeUniqueFields(JSONObject& parentObject) const
@@ -3299,8 +3275,8 @@ namespace flex
 
 		MaterialID planeMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
 
-		MeshComponent* planeMesh = SetMeshComponent(new MeshComponent(this, planeMatID));
-		planeMesh->LoadPrefabShape(MeshComponent::PrefabShape::GERSTNER_PLANE);
+		Mesh* planeMesh = SetMesh(new Mesh(this));
+		planeMesh->LoadPrefabShape(PrefabShape::GERSTNER_PLANE, planeMatID);
 
 		i32 vertCount = vertSideCount * vertSideCount;
 		bufferInfo.positions_3D.resize(vertCount);
@@ -3335,8 +3311,8 @@ namespace flex
 		{
 			PrintError("Failed to find material for bobber!\n");
 		}
-		MeshComponent* mesh = bobber->SetMeshComponent(new MeshComponent(bobber, matID));
-		if (!mesh->LoadFromFile(RESOURCE("meshes/sphere.glb")))
+		Mesh* mesh = bobber->SetMesh(new Mesh(bobber));
+		if (!mesh->LoadFromFile(RESOURCE("meshes/sphere.glb"), matID))
 		{
 			PrintError("Failed to load bobber mesh\n");
 		}
@@ -3401,10 +3377,10 @@ namespace flex
 		}
 	}
 
-	void GerstnerWave::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID)
+	void GerstnerWave::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		UNREFERENCED_PARAMETER(scene);
-		UNREFERENCED_PARAMETER(matID);
+		UNREFERENCED_PARAMETER(matIDs);
 
 		JSONObject gerstnerWaveObj;
 		if (parentObject.SetObjectChecked("gerstner wave", gerstnerWaveObj))
@@ -3550,7 +3526,7 @@ namespace flex
 			}
 		}
 
-		VertexBufferData* vertexBuffer = m_MeshComponent->GetVertexBufferData();
+		VertexBufferData* vertexBuffer = m_Mesh->GetSubMeshes()[0]->GetVertexBufferData();
 		bufferInfo.positions_3D = positions;
 		bufferInfo.normals = normals;
 		bufferInfo.tangents = tangents;
@@ -3611,8 +3587,8 @@ namespace flex
 			for (i32 z = 0; z < count; ++z)
 			{
 				GameObject* obj = new GameObject("block", GameObjectType::OBJECT);
-				obj->SetMeshComponent(new MeshComponent(obj, PickRandomFrom(matIDs)));
-				obj->GetMeshComponent()->LoadFromFile(RESOURCE_LOCATION "meshes/cube.glb");
+				obj->SetMesh(new Mesh(obj));
+				obj->GetMesh()->LoadFromFile(RESOURCE_LOCATION "meshes/cube.glb", PickRandomFrom(matIDs));
 				AddChild(obj);
 				obj->GetTransform()->SetLocalScale(glm::vec3(blockSize));
 				obj->GetTransform()->SetLocalPosition(glm::vec3(
@@ -3646,8 +3622,8 @@ namespace flex
 			// TODO: Create own material
 			matID = 0;
 		}
-		MeshComponent* mesh = SetMeshComponent(new MeshComponent(this, matID));
-		if (!mesh->LoadFromFile(RESOURCE("meshes/terminal-copper.glb")))
+		Mesh* mesh = SetMesh(new Mesh(this));
+		if (!mesh->LoadFromFile(RESOURCE("meshes/terminal-copper.glb"), matID))
 		{
 			PrintWarn("Failed to load terminal mesh!\n");
 		}
@@ -3844,10 +3820,10 @@ namespace flex
 		m_Camera = camera;
 	}
 
-	void Terminal::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID)
+	void Terminal::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		UNREFERENCED_PARAMETER(scene);
-		UNREFERENCED_PARAMETER(matID);
+		UNREFERENCED_PARAMETER(matIDs);
 
 		JSONObject obj = parentObject.GetObject("terminal");
 		std::string str = obj.GetString("str");
@@ -4501,9 +4477,9 @@ namespace flex
 		return newParticleSystem;
 	}
 
-	void ParticleSystem::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID)
+	void ParticleSystem::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
-		UNREFERENCED_PARAMETER(matID);
+		UNREFERENCED_PARAMETER(matIDs);
 		UNREFERENCED_PARAMETER(scene);
 
 		JSONObject particleSystemObj = parentObject.GetObject("particle system info");

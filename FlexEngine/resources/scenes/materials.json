@@ -421,6 +421,13 @@
 			"const albedo" : "0.055, 0.055, 0.055",
 			"const metallic" : 0.000000,
 			"const roughness" : 1.000000
+		},
+		{
+			"name" : "gold",
+			"shader" : "pbr",
+			"const albedo" : "0.860, 0.739, 0.264",
+			"const metallic" : 0.560000,
+			"const roughness" : 0.320000
 		}
 	]
 }

@@ -10,6 +10,8 @@
 
 namespace flex
 {
+	class Mesh;
+
 	namespace vk
 	{
 		class VulkanRenderer;
@@ -47,7 +49,7 @@ namespace flex
 			VertexBufferDataCreateInfo m_VertexBufferCreateInfo;
 
 			GameObject* m_Object = nullptr;
-			MeshComponent* m_ObjectMesh = nullptr;
+			Mesh* m_ObjectMesh = nullptr;
 		};
 	} // namespace vk
 } // namespace flex

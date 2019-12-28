@@ -148,129 +148,145 @@ namespace flex
 		field.label = fileContents.substr(quoteStart + 1, quoteEnd - (quoteStart + 1));
 		*offset = quoteEnd + 1;
 
-		if (fileContents[quoteEnd + 1] != ':')
+		if (fileContents[quoteEnd + 1] == ':') // Non field-array field
 		{
-			PrintError("Invalidly formatted JSON file, ':' must occur after a field label - %s\n...\n", filePath.c_str());
-			std::string surroundingText(fileContents.substr(quoteStart - 20, 40));
-			PrintError("%s\n...\n", surroundingText.c_str());
-			return false;
-		}
+			char valueFirstChar = fileContents[quoteEnd + 2];
+			JSONValue::Type fieldType = JSONValue::TypeFromChar(valueFirstChar, fileContents.substr(quoteEnd + 3));
 
-		char valueFirstChar = fileContents[quoteEnd + 2];
-		JSONValue::Type fieldType = JSONValue::TypeFromChar(valueFirstChar, fileContents.substr(quoteEnd + 3));
-
-		switch (fieldType)
-		{
-		case JSONValue::Type::STRING:
-		{
-			size_t strQuoteStart = fileContents.find('\"', *offset);
-
-			if (strQuoteStart == std::string::npos)
+			switch (fieldType)
 			{
-				PrintError("Couldn't find quote after offset %i in %s\n", offset, filePath.c_str());
-				return false;
-			}
-
-			size_t strQuoteEnd = fileContents.find('\"', strQuoteStart + 1);
-			if (strQuoteEnd == std::string::npos)
+			case JSONValue::Type::STRING:
 			{
-				PrintError("Couldn't find end quote after offset %i, %s\n", *offset, filePath.c_str());
-				return false;
-			}
+				size_t strQuoteStart = fileContents.find('\"', *offset);
 
-			std::string stringValue = fileContents.substr(strQuoteStart + 1, strQuoteEnd - (strQuoteStart + 1));
-			field.value = JSONValue(stringValue);
+				if (strQuoteStart == std::string::npos)
+				{
+					PrintError("Couldn't find quote after offset %i in %s\n", offset, filePath.c_str());
+					return false;
+				}
 
-			*offset = strQuoteEnd + 1;
-		} break;
-		case JSONValue::Type::INT:
-		{
-			size_t intStart = quoteEnd + 2;
-			size_t nextNonAlphaNumeric = NextNonAlphaNumeric(fileContents, intStart + 1);
-			size_t intCharCount = nextNonAlphaNumeric - intStart;
-			std::string intStr = fileContents.substr(intStart, intCharCount);
-			i32 intValue = 0;
-			if (!intStr.empty())
+				size_t strQuoteEnd = fileContents.find('\"', strQuoteStart + 1);
+				if (strQuoteEnd == std::string::npos)
+				{
+					PrintError("Couldn't find end quote after offset %i, %s\n", *offset, filePath.c_str());
+					return false;
+				}
+
+				std::string stringValue = fileContents.substr(strQuoteStart + 1, strQuoteEnd - (strQuoteStart + 1));
+				field.value = JSONValue(stringValue);
+
+				*offset = strQuoteEnd + 1;
+			} break;
+			case JSONValue::Type::INT:
 			{
-				intValue = stoi(intStr);
-			}
-			field.value = JSONValue(intValue);
+				size_t intStart = quoteEnd + 2;
+				size_t nextNonAlphaNumeric = NextNonAlphaNumeric(fileContents, intStart + 1);
+				size_t intCharCount = nextNonAlphaNumeric - intStart;
+				std::string intStr = fileContents.substr(intStart, intCharCount);
+				i32 intValue = 0;
+				if (!intStr.empty())
+				{
+					intValue = stoi(intStr);
+				}
+				field.value = JSONValue(intValue);
 
-			*offset = nextNonAlphaNumeric;
-		} break;
-		case JSONValue::Type::FLOAT:
-		{
-			size_t floatStart = quoteEnd + 2;
-			size_t decimalIndex = fileContents.find('.', floatStart);
-			size_t floatEnd = NextNonAlphaNumeric(fileContents, decimalIndex + 1);
-			size_t floatCharCount = floatEnd - floatStart;
-			std::string floatStr = fileContents.substr(floatStart, floatCharCount);
-			real floatValue = 0.0f;
-			if (!floatStr.empty())
+				*offset = nextNonAlphaNumeric;
+			} break;
+			case JSONValue::Type::FLOAT:
 			{
-				floatValue = stof(floatStr);
-			}
-			field.value = JSONValue(floatValue);
+				size_t floatStart = quoteEnd + 2;
+				size_t decimalIndex = fileContents.find('.', floatStart);
+				size_t floatEnd = NextNonAlphaNumeric(fileContents, decimalIndex + 1);
+				size_t floatCharCount = floatEnd - floatStart;
+				std::string floatStr = fileContents.substr(floatStart, floatCharCount);
+				real floatValue = 0.0f;
+				if (!floatStr.empty())
+				{
+					floatValue = stof(floatStr);
+				}
+				field.value = JSONValue(floatValue);
 
-			*offset = floatEnd;
-		} break;
-		case JSONValue::Type::BOOL:
-		{
-			bool boolValue = valueFirstChar == 't';
-			field.value = JSONValue(boolValue);
-
-			*offset = NextNonAlphaNumeric(fileContents, quoteEnd + 3);
-		} break;
-		case JSONValue::Type::OBJECT:
-		{
-			*offset = quoteEnd + 2;
-
-			JSONObject object;
-			ParseObject(filePath, fileContents, offset, object);
-
-			field.value = JSONValue(object);
-		} break;
-		case JSONValue::Type::OBJECT_ARRAY:
-		{
-			std::vector<JSONObject> objects;
-
-			*offset = quoteEnd + 2;
-
-			i32 arrayClosingBracket = MatchingBracket(filePath, '[', fileContents, *offset);
-			if (arrayClosingBracket == -1)
+				*offset = floatEnd;
+			} break;
+			case JSONValue::Type::BOOL:
 			{
-				PrintError("Couldn't find matching bracket %s (for '[') in %s\n", field.label.c_str(), filePath.c_str());
-				return false;
-			}
+				bool boolValue = valueFirstChar == 't';
+				field.value = JSONValue(boolValue);
 
-			*offset += 1;
-
-			while (*offset < arrayClosingBracket)
+				*offset = NextNonAlphaNumeric(fileContents, quoteEnd + 3);
+			} break;
+			case JSONValue::Type::OBJECT:
 			{
+				*offset = quoteEnd + 2;
+
 				JSONObject object;
 				ParseObject(filePath, fileContents, offset, object);
 
-				objects.push_back(object);
+				field.value = JSONValue(object);
+			} break;
+			case JSONValue::Type::OBJECT_ARRAY:
+			{
+				std::vector<JSONObject> objects;
+
+				*offset = quoteEnd + 2;
+
+				i32 arrayClosingBracket = MatchingBracket(filePath, '[', fileContents, *offset);
+				if (arrayClosingBracket == -1)
+				{
+					PrintError("Couldn't find matching bracket %s (for '[') in %s\n", field.label.c_str(), filePath.c_str());
+					return false;
+				}
+
+				*offset += 1;
+
+				while (*offset < arrayClosingBracket)
+				{
+					JSONObject object;
+					ParseObject(filePath, fileContents, offset, object);
+
+					objects.push_back(object);
+				}
+
+				*offset = arrayClosingBracket + 1;
+
+				field.value = JSONValue(objects);
+			} break;
+			case JSONValue::Type::FIELD_ARRAY:
+			{
+				std::vector<JSONField> fields;
+
+				*offset = quoteEnd + 2;
+
+				i32 arrayClosingBracket = MatchingBracket(filePath, '[', fileContents, *offset);
+				if (arrayClosingBracket == -1)
+				{
+					PrintError("Couldn't find matching bracket %s (for '[') in %s\n", field.label.c_str(), filePath.c_str());
+					return false;
+				}
+
+				*offset += 1;
+
+				while (*offset < arrayClosingBracket)
+				{
+					JSONField field;
+					ParseField(filePath, fileContents, offset, field);
+
+					fields.push_back(field);
+				}
+
+				*offset = arrayClosingBracket + 1;
+
+				field.value = JSONValue(fields);
+			} break;
+			case JSONValue::Type::UNINITIALIZED:
+			default:
+			{
+				size_t nextNonAlphaNumeric = NextNonAlphaNumeric(fileContents, *offset);
+				PrintError("Unhandled JSON value type: %s in %s\n", fileContents.substr(quoteEnd + 2, nextNonAlphaNumeric - (quoteEnd + 2)).c_str(), filePath.c_str());
+				*offset = -1;
+				return false;
+			} break;
 			}
-
-			*offset = arrayClosingBracket + 1;
-
-			field.value = JSONValue(objects);
-		} break;
-		case JSONValue::Type::FIELD_ARRAY:
-		{
-			std::vector<JSONField> fields;
-			// TODO:
-			field.value = JSONValue(fields);
-		} break;
-		case JSONValue::Type::UNINITIALIZED:
-		default:
-		{
-			size_t nextNonAlphaNumeric = NextNonAlphaNumeric(fileContents, *offset);
-			PrintError("Unhandled JSON value type: %s in %s\n", fileContents.substr(quoteEnd + 2, nextNonAlphaNumeric - (quoteEnd + 2)).c_str(), filePath.c_str());
-			*offset = -1;
-			return false;
-		} break;
 		}
 
 		return true;

@@ -1,5 +1,5 @@
 {
-	"version" : 2,
+	"version" : 3,
 	"name" : "scene_prop_test",
 	"spawn player" : false,
 	"objects" : 
@@ -11,7 +11,10 @@
 			"transform" : 
 			{
 			},
-			"material" : "skybox 01",
+			"materials" : 
+			[
+				"skybox 01"
+			],
 			"skybox info" : 
 			{
 			}
@@ -55,7 +58,10 @@
 				"scale" : "20.000, 0.100, 20.000"
 			},
 			"mesh" : "cube",
-			"material" : "grid",
+			"materials" : 
+			[
+				"grid"
+			],
 			"collider" : 
 			{
 				"shape" : "box",
@@ -76,11 +82,16 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-5.900, 0.700, 4.600",
+				"pos" : "-5.900, 0.641, 4.600",
 				"rot" : "0.000, -0.555, 0.000"
 			},
 			"mesh" : "case-01",
-			"material" : "case"
+			"materials" : 
+			[
+				"gold",
+				"pbr white",
+				"pbr grey"
+			]
 		},
 		{
 			"name" : "battery cell",
@@ -88,12 +99,15 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-2.305, 1.100, 2.317",
+				"pos" : "-2.305, 1.100, 2.257",
 				"rot" : "0.525, -0.000, 1.571",
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "battery_cell",
-			"material" : "pbr light grey",
+			"materials" : 
+			[
+				"pbr light grey"
+			],
 			"collider" : 
 			{
 				"shape" : "box",
@@ -114,12 +128,15 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "1.279, 2.100, 6.457",
+				"pos" : "1.293, 2.100, 6.500",
 				"rot" : "-1.571, -0.472, 3.142",
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "battery_cell",
-			"material" : "pbr light grey",
+			"materials" : 
+			[
+				"pbr light grey"
+			],
 			"collider" : 
 			{
 				"shape" : "box",
@@ -140,12 +157,15 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "1.696, 1.100, 2.694",
+				"pos" : "1.696, 1.100, 2.750",
 				"rot" : "-0.000, 0.592, 3.142",
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "battery_cell",
-			"material" : "pbr light grey",
+			"materials" : 
+			[
+				"pbr light grey"
+			],
 			"collider" : 
 			{
 				"shape" : "box",
@@ -166,12 +186,15 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "6.142, 1.100, 0.247",
-				"rot" : "0.008, -0.000, -1.571",
+				"pos" : "6.129, 1.100, 0.226",
+				"rot" : "0.007, -0.000, -1.571",
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "battery_cell",
-			"material" : "pbr light grey",
+			"materials" : 
+			[
+				"pbr light grey"
+			],
 			"collider" : 
 			{
 				"shape" : "box",
@@ -192,12 +215,15 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "6.947, 3.100, -2.786",
-				"rot" : "-1.603, 0.000, -1.571",
+				"pos" : "6.941, 3.100, -2.813",
+				"rot" : "-1.603, -0.000, -1.571",
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "battery_cell",
-			"material" : "pbr light grey",
+			"materials" : 
+			[
+				"pbr light grey"
+			],
 			"collider" : 
 			{
 				"shape" : "box",
@@ -218,12 +244,15 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-1.904, 1.100, -2.974",
-				"rot" : "-3.142, 0.791, -3.142",
+				"pos" : "-1.905, 1.100, -2.974",
+				"rot" : "3.142, 0.791, 3.142",
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "battery_cell",
-			"material" : "pbr light grey",
+			"materials" : 
+			[
+				"pbr light grey"
+			],
 			"collider" : 
 			{
 				"shape" : "box",
@@ -249,7 +278,10 @@
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "battery_cell",
-			"material" : "pbr light grey",
+			"materials" : 
+			[
+				"pbr light grey"
+			],
 			"collider" : 
 			{
 				"shape" : "box",
@@ -270,12 +302,15 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "3.984, 1.100, -1.643",
-				"rot" : "-0.000, 0.032, 0.000",
+				"pos" : "3.984, 1.100, -1.653",
+				"rot" : "-0.000, 0.032, -0.000",
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "battery_cell",
-			"material" : "pbr light grey",
+			"materials" : 
+			[
+				"pbr light grey"
+			],
 			"collider" : 
 			{
 				"shape" : "box",
@@ -296,12 +331,15 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "8.160, 1.100, -2.279",
-				"rot" : "0.000, 0.017, 0.000",
+				"pos" : "8.160, 1.100, -2.289",
+				"rot" : "-0.000, 0.017, -0.000",
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "battery_cell",
-			"material" : "pbr light grey",
+			"materials" : 
+			[
+				"pbr light grey"
+			],
 			"collider" : 
 			{
 				"shape" : "box",

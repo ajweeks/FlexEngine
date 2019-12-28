@@ -25,6 +25,7 @@ IGNORE_WARNINGS_POP
 #include "PlayerController.hpp"
 #include "Profiler.hpp"
 #include "Scene/GameObject.hpp"
+#include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Track/BezierCurve.hpp"
@@ -128,7 +129,7 @@ namespace flex
 				const std::vector<JSONObject>& rootObjects = sceneRootObject.GetObjectArray("objects");
 				for (const JSONObject& rootObjectJSON : rootObjects)
 				{
-					GameObject* rootObj = GameObject::CreateObjectFromJSON(rootObjectJSON, this, InvalidMaterialID);
+					GameObject* rootObj = GameObject::CreateObjectFromJSON(rootObjectJSON, this);
 					rootObj->GetTransform()->UpdateParentTransform();
 					AddRootObject(rootObj);
 				}
@@ -202,8 +203,8 @@ namespace flex
 				}
 
 				GameObject* sphere = new GameObject("sphere", GameObjectType::OBJECT);
-				MeshComponent* meshComponent = sphere->SetMeshComponent(new MeshComponent(sphere, sphereMatID));
-				meshComponent->LoadFromFile(RESOURCE_LOCATION "meshes/ico-sphere.glb");
+				Mesh* mesh = sphere->SetMesh(new Mesh(sphere));
+				mesh->LoadFromFile(RESOURCE_LOCATION "meshes/ico-sphere.glb", sphereMatID);
 				AddRootObject(sphere);
 
 				// Default directional light
@@ -380,8 +381,8 @@ namespace flex
 	}
 
 	bool BaseScene::DestroyGameObjectRecursive(GameObject* currentObject,
-											  GameObject* targetObject,
-											  bool bDestroyChildren)
+		GameObject* targetObject,
+		bool bDestroyChildren)
 	{
 		if (currentObject == targetObject)
 		{
@@ -593,7 +594,7 @@ namespace flex
 		std::vector<GameObject*> allObjects = g_SceneManager->CurrentScene()->GetAllObjects();
 		for (GameObject* obj : allObjects)
 		{
-			MeshComponent* mesh = obj->GetMeshComponent();
+			Mesh* mesh = obj->GetMesh();
 			if (mesh)
 			{
 				std::string meshFileName = mesh->GetRelativeFilePath();
@@ -795,39 +796,47 @@ namespace flex
 		return m_FileVersion;
 	}
 
-	MaterialID BaseScene::FindMaterialIDByName(const JSONObject& object)
+	std::vector<MaterialID> BaseScene::RetrieveMaterialIDsFromJSON(const JSONObject& object)
 	{
-		MaterialID matID = InvalidMaterialID;
-		std::string materialName;
-		if (object.SetStringChecked("material", materialName))
+		std::vector<MaterialID> matIDs;
+		std::vector<JSONField> materialNames;
+		if (object.SetFieldArrayChecked("materials", materialNames))
 		{
-			if (!materialName.empty())
+			for (const JSONField& materialNameField : materialNames)
 			{
-				for (MaterialID loadedMatID : m_LoadedMaterials)
+				std::string materialName = materialNameField.label;
+				if (!materialName.empty())
 				{
-					Material& mat = g_Renderer->GetMaterial(loadedMatID);
-					if (mat.name.compare(materialName) == 0)
+					MaterialID materialID = InvalidMaterialID;
+					for (MaterialID loadedMatID : m_LoadedMaterials)
 					{
-						matID = loadedMatID;
-						break;
+						Material& material = g_Renderer->GetMaterial(loadedMatID);
+						if (material.name.compare(materialName) == 0)
+						{
+							materialID = loadedMatID;
+							break;
+						}
+					}
+					if (materialID == InvalidMaterialID)
+					{
+						if (materialName.compare("placeholder") == 0)
+						{
+							materialID = g_Renderer->GetPlaceholderMaterialID();
+						}
+					}
+					if (materialID != InvalidMaterialID)
+					{
+						matIDs.push_back(materialID);
 					}
 				}
-				if (matID == InvalidMaterialID)
+				else
 				{
-					if (materialName.compare("placeholder") == 0)
-					{
-						matID = g_Renderer->GetPlaceholderMaterialID();
-					}
+					PrintError("Invalid material name for object %s: %s\n", object.GetString("name").c_str(), materialName.c_str());
 				}
-			}
-			else
-			{
-				matID = InvalidMaterialID;
-				PrintError("Invalid material name for object %s: %s\n",
-						   object.GetString("name").c_str(), materialName.c_str());
 			}
 		}
-		return matID;
+
+		return matIDs;
 	}
 
 	void BaseScene::UpdateRootObjectSiblingIndices()
@@ -1193,7 +1202,7 @@ namespace flex
 		//}
 		//else
 		//{
-			return RESOURCE_LOCATION  "scenes/default/" + m_FileName;
+		return RESOURCE_LOCATION  "scenes/default/" + m_FileName;
 		//}
 	}
 
@@ -1205,7 +1214,7 @@ namespace flex
 		//}
 		//else
 		//{
-			return "scenes/default/" + m_FileName;
+		return "scenes/default/" + m_FileName;
 		//}
 	}
 

@@ -134,11 +134,11 @@ namespace flex
 
 		i32 GetMaterialArrayIndex(const Material& material);
 
-		MaterialID FindMaterialIDByName(const JSONObject& object);
+		std::vector<MaterialID> RetrieveMaterialIDsFromJSON(const JSONObject& object);
 
 		void UpdateRootObjectSiblingIndices();
 
-		static const i32 LATEST_FILE_VER = 2;
+		static const i32 LATEST_FILE_VER = 3;
 		i32 m_FileVersion = LATEST_FILE_VER;
 
 		PhysicsWorld* m_PhysicsWorld = nullptr;
