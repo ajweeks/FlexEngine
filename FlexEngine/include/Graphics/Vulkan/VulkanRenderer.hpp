@@ -235,17 +235,14 @@ namespace flex
 			void CreateStaticVertexBuffers();
 			void CreateDynamicVertexBuffers();
 
-			u32 CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, ShaderID shaderID, u32 size);
 			void CreateShadowVertexBuffer();
-			void CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, void* vertexBufferData, u32 vertexBufferSize);
+			void CreateAndUploadToStaticVertexBuffer(VulkanBuffer* vertexBuffer, void* vertexBufferData, u32 vertexBufferSize);
 			void CreateDynamicVertexBuffer(VulkanBuffer* vertexBuffer, u32 size);
 
 			void CreateStaticIndexBuffers();
 
-			// Creates index buffer for all render objects' indices which use specified shader index. Returns index count
-			u32 CreateStaticIndexBuffer(VulkanBuffer* indexBuffer, ShaderID shaderID);
 			void CreateShadowIndexBuffer();
-			void CreateStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<u32>& indices);
+			void CreateAndUploadToStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<u32>& indices);
 
 			void CreateDescriptorPool();
 			u32 AllocateDynamicUniformBuffer(u32 dynamicDataSize, void** data, i32 maxObjectCount = -1);

@@ -11,22 +11,22 @@ namespace flex
 {
 	namespace vk
 	{
+		struct VulkanDevice;
+
 		struct VulkanBuffer
 		{
-			VulkanBuffer(const VDeleter<VkDevice>& device);
+			VulkanBuffer(VulkanDevice* device);
 
-			VkResult Map(VkDeviceSize size = VK_WHOLE_SIZE);
-			void Unmap();
+			VkResult Create(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties);
 			void Destroy();
 
-			// TODO: Add Create function to call vkCreateBuffer
-			// TODO: Add AllocateMemory function to call vkGetBufferMemoryRequirements & vkAllocateMemory
-
 			VkResult Bind();
+			VkResult Map(VkDeviceSize size = VK_WHOLE_SIZE);
+			void Unmap();
 
 			VDeleter<VkBuffer> m_Buffer;
 			VDeleter<VkDeviceMemory> m_Memory;
-			VkDevice m_Device = VK_NULL_HANDLE;
+			VulkanDevice* m_Device = nullptr;
 			VkDeviceSize m_Size = 0;
 			VkDeviceSize m_Alignment = 0;
 			void* m_Mapped = nullptr;

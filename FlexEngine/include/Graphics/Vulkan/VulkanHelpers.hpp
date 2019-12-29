@@ -140,7 +140,7 @@ namespace flex
 
 		struct UniformBuffer
 		{
-			UniformBuffer(const VDeleter<VkDevice>& device, UniformBufferType type);
+			UniformBuffer(VulkanDevice* device, UniformBufferType type);
 			~UniformBuffer();
 
 			VulkanBuffer buffer;
@@ -405,8 +405,6 @@ namespace flex
 		void CopyImage(VulkanDevice* device, VkQueue graphicsQueue, VkImage srcImage, VkImage dstImage, u32 width, u32 height,
 			VkCommandBuffer optCmdBuf = VK_NULL_HANDLE, VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_COLOR_BIT);
 		void CopyBufferToImage(VulkanDevice* device, VkQueue graphicsQueue, VkBuffer buffer, VkImage image, u32 width, u32 height, VkCommandBuffer optCommandBuffer = 0);
-		VkResult CreateAndAllocateBuffer(VulkanDevice* device, VkDeviceSize size, VkBufferUsageFlags usage,
-			VkMemoryPropertyFlags properties, VulkanBuffer* buffer);
 		void CopyBuffer(VulkanDevice* device, VkQueue graphicsQueue, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size,
 			VkDeviceSize srcOffset = 0, VkDeviceSize dstOffset = 0);
 

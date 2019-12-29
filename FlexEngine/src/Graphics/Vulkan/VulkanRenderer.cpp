@@ -340,8 +340,8 @@ namespace flex
 			for (size_t i = 0; i < shaderCount; ++i)
 			{
 				m_VertexIndexBufferPairs.emplace_back(
-					new VulkanBuffer(m_VulkanDevice->m_LogicalDevice), // Vertex buffer
-					new VulkanBuffer(m_VulkanDevice->m_LogicalDevice)  // Index buffer
+					new VulkanBuffer(m_VulkanDevice), // Vertex buffer
+					new VulkanBuffer(m_VulkanDevice)  // Index buffer
 				);
 				if (m_Shaders[i].shader->bDynamic)
 				{
@@ -350,7 +350,7 @@ namespace flex
 				}
 			}
 
-			m_FullScreenTriVertexBuffer = new VulkanBuffer(m_VulkanDevice->m_LogicalDevice);
+			m_FullScreenTriVertexBuffer = new VulkanBuffer(m_VulkanDevice);
 
 			m_SSAOSpecializationMapEntry = { 0, 0, sizeof(i32) };
 			m_SSAOSpecializationInfo.mapEntryCount = 1;
@@ -528,7 +528,7 @@ namespace flex
 			{
 				void* vertData = malloc_hooked(m_FullScreenTriVertexBufferData.VertexBufferSize);
 				memcpy(vertData, m_FullScreenTriVertexBufferData.vertexData, m_FullScreenTriVertexBufferData.VertexBufferSize);
-				CreateStaticVertexBuffer(m_FullScreenTriVertexBuffer, vertData, m_FullScreenTriVertexBufferData.VertexBufferSize);
+				CreateAndUploadToStaticVertexBuffer(m_FullScreenTriVertexBuffer, vertData, m_FullScreenTriVertexBufferData.VertexBufferSize);
 				free_hooked(vertData);
 			}
 
@@ -4973,12 +4973,11 @@ namespace flex
 		{
 			const u32 maxParticleBufferSize = MAX_PARTICLE_COUNT * sizeof(ParticleBufferData);
 
-			VulkanBuffer stagingBuffer(m_VulkanDevice->m_LogicalDevice);
-			CreateAndAllocateBuffer(m_VulkanDevice,
+			VulkanBuffer stagingBuffer(m_VulkanDevice);
+			stagingBuffer.Create(
 				maxParticleBufferSize,
 				VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-				&stagingBuffer);
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 			std::vector<ParticleBufferData> particleBufferData(MAX_PARTICLE_COUNT);
 
@@ -6862,6 +6861,14 @@ namespace flex
 
 		void VulkanRenderer::CreateStaticVertexBuffers()
 		{
+			auto renderObjectValid = [this](VulkanRenderObject* renderObject, u32 shaderID)
+			{
+				return renderObject &&
+					renderObject->vertexBufferData &&
+					// TODO: Compare render object's vertexIndexBufferIndex instead of shaderID
+					m_Materials.at(renderObject->materialID).material.shaderID == shaderID;
+			};
+
 			for (u32 i = 0; i < m_VertexIndexBufferPairs.size(); ++i)
 			{
 				if (m_VertexIndexBufferPairs[i].bUseStagingBuffer)
@@ -6873,9 +6880,7 @@ namespace flex
 					{
 						for (VulkanRenderObject* renderObject : m_RenderObjects)
 						{
-							if (renderObject &&
-								renderObject->vertexBufferData &&
-								m_Materials.at(renderObject->materialID).material.shaderID == i)
+							if (renderObjectValid(renderObject, i))
 							{
 								requiredMemory += renderObject->vertexBufferData->VertexBufferSize;
 							}
@@ -6883,10 +6888,44 @@ namespace flex
 
 						if (requiredMemory > 0)
 						{
-							m_VertexIndexBufferPairs[i].vertexCount = CreateStaticVertexBuffer(
-								m_VertexIndexBufferPairs[i].vertexBuffer,
-								i,
-								requiredMemory);
+							VulkanBuffer* vertexBuffer = m_VertexIndexBufferPairs[i].vertexBuffer;
+							ShaderID shaderID = i;
+							u32 size = requiredMemory;
+
+							void* vertexDataStart = malloc_hooked(size);
+							if (!vertexDataStart)
+							{
+								PrintError("Failed to allocate memory for vertex buffer %u! Attempted to allocate %d bytes", shaderID, size);
+								continue;
+							}
+
+							void* vertexBufferData = vertexDataStart;
+
+			u32 vertexCount = 0;
+							u32 vertexBufferSize = 0;
+							for (VulkanRenderObject* renderObject : m_RenderObjects)
+							{
+								if (renderObjectValid(renderObject, i))
+								{
+									renderObject->vertexOffset = vertexCount;
+
+					memcpy(vertexBufferData, renderObject->vertexBufferData->vertexData, renderObject->vertexBufferData->VertexBufferSize);
+
+					vertexCount += renderObject->vertexBufferData->VertexCount;
+					vertexBufferSize += renderObject->vertexBufferData->VertexBufferSize;
+
+					vertexBufferData = (char*)vertexBufferData + renderObject->vertexBufferData->VertexBufferSize;
+				}
+			}
+
+							if (vertexBufferSize == 0 || vertexCount == 0)
+							{
+								PrintError("Failed to create static vertex buffer (no verts use shader index %u)\n", shaderID);
+								continue;
+							}
+
+							CreateAndUploadToStaticVertexBuffer(vertexBuffer, vertexDataStart, vertexBufferSize);
+							free_hooked(vertexDataStart);
 						}
 					}
 				}
@@ -6907,48 +6946,6 @@ namespace flex
 					}
 				}
 			}
-		}
-
-		u32 VulkanRenderer::CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, ShaderID shaderID, u32 size)
-		{
-			void* vertexDataStart = malloc_hooked(size);
-			if (!vertexDataStart)
-			{
-				PrintError("Failed to allocate memory for vertex buffer %u! Attempted to allocate %d bytes", shaderID, size);
-				return 0;
-			}
-
-			void* vertexBufferData = vertexDataStart;
-
-			u32 vertexCount = 0;
-			u32 vertexBufferSize = 0;
-			for (VulkanRenderObject* renderObject : m_RenderObjects)
-			{
-				if (renderObject &&
-					renderObject->vertexBufferData &&
-					m_Materials.at(renderObject->materialID).material.shaderID == shaderID)
-				{
-					renderObject->vertexOffset = vertexCount;
-
-					memcpy(vertexBufferData, renderObject->vertexBufferData->vertexData, renderObject->vertexBufferData->VertexBufferSize);
-
-					vertexCount += renderObject->vertexBufferData->VertexCount;
-					vertexBufferSize += renderObject->vertexBufferData->VertexBufferSize;
-
-					vertexBufferData = (char*)vertexBufferData + renderObject->vertexBufferData->VertexBufferSize;
-				}
-			}
-
-			if (vertexBufferSize == 0 || vertexCount == 0)
-			{
-				PrintError("Failed to create static vertex buffer (no verts use shader index %u)\n", shaderID);
-				return 0;
-			}
-
-			CreateStaticVertexBuffer(vertexBuffer, vertexDataStart, vertexBufferSize);
-			free_hooked(vertexDataStart);
-
-			return vertexCount;
 		}
 
 		void VulkanRenderer::CreateShadowVertexBuffer()
@@ -7009,49 +7006,44 @@ namespace flex
 			}
 
 			VulkanBuffer* vertexBuffer = m_VertexIndexBufferPairs[shadowMat.material.shaderID].vertexBuffer;
-			CreateStaticVertexBuffer(vertexBuffer, vertexDataStart, vertexBufferSize);
+			CreateAndUploadToStaticVertexBuffer(vertexBuffer, vertexDataStart, vertexBufferSize);
 			free_hooked(vertexDataStart);
 		}
 
-		void VulkanRenderer::CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, void* vertexBufferData, u32 vertexBufferSize)
+		void VulkanRenderer::CreateAndUploadToStaticVertexBuffer(VulkanBuffer* vertexBuffer, void* vertexBufferData, u32 vertexBufferSize)
 		{
-			VulkanBuffer stagingBuffer(m_VulkanDevice->m_LogicalDevice);
-			CreateAndAllocateBuffer(m_VulkanDevice, vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-				VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer);
+			VulkanBuffer stagingBuffer(m_VulkanDevice);
+			stagingBuffer.Create(vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+				VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 			VK_CHECK_RESULT(stagingBuffer.Map(vertexBufferSize));
 			memcpy(stagingBuffer.m_Mapped, vertexBufferData, vertexBufferSize);
 			stagingBuffer.Unmap();
 
-			CreateAndAllocateBuffer(m_VulkanDevice, vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer);
+			vertexBuffer->Create(vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 			CopyBuffer(m_VulkanDevice, m_GraphicsQueue, stagingBuffer.m_Buffer, vertexBuffer->m_Buffer, vertexBufferSize);
 		}
 
 		void VulkanRenderer::CreateDynamicVertexBuffer(VulkanBuffer* vertexBuffer, u32 size)
 		{
-			CreateAndAllocateBuffer(m_VulkanDevice, size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vertexBuffer);
+			vertexBuffer->Create(size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 		}
 
 		void VulkanRenderer::CreateStaticIndexBuffers()
 		{
-			for (size_t i = 0; i < m_VertexIndexBufferPairs.size(); ++i)
+			for (u32 i = 0; i < m_VertexIndexBufferPairs.size(); ++i)
 			{
 				Shader* shader = m_Shaders[i].shader;
 				if (!shader->bGenerateVertexBufferForAll)
 				{
-					m_VertexIndexBufferPairs[i].indexCount = CreateStaticIndexBuffer(m_VertexIndexBufferPairs[i].indexBuffer, i);
-				}
-			}
-		}
+					VulkanBuffer* indexBuffer = m_VertexIndexBufferPairs[i].indexBuffer;
+					ShaderID shaderID = i;
 
-		u32 VulkanRenderer::CreateStaticIndexBuffer(VulkanBuffer* indexBuffer, ShaderID shaderID)
-		{
-			std::vector<u32> indices;
+					std::vector<u32> indices;
 
-			for (VulkanRenderObject* renderObject : m_RenderObjects)
+					for (VulkanRenderObject* renderObject : m_RenderObjects)
 			{
 				if (renderObject &&
 					renderObject->bIndexed &&
@@ -7062,15 +7054,17 @@ namespace flex
 				}
 			}
 
-			if (indices.empty())
-			{
-				// No indexed render objects use specified shader
-				return 0;
+					if (indices.empty())
+					{
+						// No indexed render objects use specified shader
+						continue;
+					}
+
+					CreateAndUploadToStaticIndexBuffer(indexBuffer, indices);
+
+					m_VertexIndexBufferPairs[i].indexCount = indices.size();
+				}
 			}
-
-			CreateStaticIndexBuffer(indexBuffer, indices);
-
-			return indices.size();
 		}
 
 		void VulkanRenderer::CreateShadowIndexBuffer()
@@ -7093,24 +7087,23 @@ namespace flex
 			}
 
 			VulkanBuffer* indexBuffer = m_VertexIndexBufferPairs[m_Materials[m_ShadowMaterialID].material.shaderID].indexBuffer;
-			CreateStaticIndexBuffer(indexBuffer, indices);
+			CreateAndUploadToStaticIndexBuffer(indexBuffer, indices);
 		}
 
-		void VulkanRenderer::CreateStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<u32>& indices)
+		void VulkanRenderer::CreateAndUploadToStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<u32>& indices)
 		{
-			const size_t bufferSize = sizeof(indices[0]) * indices.size();
+			const u32 bufferSize = sizeof(indices[0]) * indices.size();
 
-			VulkanBuffer stagingBuffer(m_VulkanDevice->m_LogicalDevice);
-			VK_CHECK_RESULT(CreateAndAllocateBuffer(m_VulkanDevice, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer));
+			VulkanBuffer stagingBuffer(m_VulkanDevice);
+			stagingBuffer.Create(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 			VK_CHECK_RESULT(stagingBuffer.Map(bufferSize));
 			memcpy(stagingBuffer.m_Mapped, indices.data(), bufferSize);
 			stagingBuffer.Unmap();
 
-			VK_CHECK_RESULT(CreateAndAllocateBuffer(m_VulkanDevice, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer));
-
+			indexBuffer->Create(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 			CopyBuffer(m_VulkanDevice, m_GraphicsQueue, stagingBuffer.m_Buffer, indexBuffer->m_Buffer, bufferSize);
 		}
 
@@ -7164,7 +7157,7 @@ namespace flex
 		void VulkanRenderer::PrepareUniformBuffer(VulkanBuffer* buffer, u32 bufferSize,
 			VkBufferUsageFlags bufferUseageFlagBits, VkMemoryPropertyFlags memoryPropertyHostFlagBits, bool bMap /* = true */)
 		{
-			VK_CHECK_RESULT(CreateAndAllocateBuffer(m_VulkanDevice, bufferSize, bufferUseageFlagBits, memoryPropertyHostFlagBits, buffer));
+			buffer->Create(bufferSize, bufferUseageFlagBits, memoryPropertyHostFlagBits);
 			if (bMap)
 			{
 				VK_CHECK_RESULT(buffer->Map());
