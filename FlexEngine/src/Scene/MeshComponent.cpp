@@ -118,6 +118,7 @@ namespace flex
 	{
 		if (primitive->indices == nullptr)
 		{
+			PrintWarn("Attempted to load mesh file which contains no indices!\n");
 			return nullptr;
 		}
 
@@ -371,7 +372,6 @@ namespace flex
 		g_Renderer->SetTopologyMode(newMeshComponent->renderID, TopologyMode::TRIANGLE_LIST);
 
 		newMeshComponent->m_VertexBufferData.DescribeShaderVariables(g_Renderer, newMeshComponent->renderID);
-		newMeshComponent->CalculateBoundingSphereScale();
 
 		newMeshComponent->m_bInitialized = true;
 

@@ -1172,8 +1172,6 @@ namespace flex
 
 		m_TransformGizmo = new GameObject("Transform gizmo", GameObjectType::_NONE);
 
-		// Scene explorer visibility doesn't need to be set because this object isn't a root object
-
 		u32 gizmoRBFlags = ((u32)PhysicsFlag::TRIGGER) | ((u32)PhysicsFlag::UNSELECTABLE);
 		i32 gizmoRBGroup = (u32)CollisionType::EDITOR_OBJECT;
 		i32 gizmoRBMask = (i32)CollisionType::DEFAULT;
@@ -1185,7 +1183,6 @@ namespace flex
 
 			// X Axis
 			GameObject* translateXAxis = new GameObject("Translation gizmo x axis", GameObjectType::_NONE);
-			translateXAxis->SetCastsShadow(false);
 			translateXAxis->AddTag(m_TranslationGizmoTag);
 			Mesh* xAxisMesh = translateXAxis->SetMesh(new Mesh(translateXAxis));
 
@@ -1201,7 +1198,6 @@ namespace flex
 
 			// Y Axis
 			GameObject* translateYAxis = new GameObject("Translation gizmo y axis", GameObjectType::_NONE);
-			translateYAxis->SetCastsShadow(false);
 			translateYAxis->AddTag(m_TranslationGizmoTag);
 			Mesh* yAxisMesh = translateYAxis->SetMesh(new Mesh(translateYAxis));
 
@@ -1217,9 +1213,7 @@ namespace flex
 
 			// Z Axis
 			GameObject* translateZAxis = new GameObject("Translation gizmo z axis", GameObjectType::_NONE);
-			translateZAxis->SetCastsShadow(false);
 			translateZAxis->AddTag(m_TranslationGizmoTag);
-
 			Mesh* zAxisMesh = translateZAxis->SetMesh(new Mesh(translateZAxis));
 
 			btCylinderShape* zAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
@@ -1258,7 +1252,6 @@ namespace flex
 
 			// X Axis
 			GameObject* rotationXAxis = new GameObject("Rotation gizmo x axis", GameObjectType::_NONE);
-			rotationXAxis->SetCastsShadow(false);
 			rotationXAxis->AddTag(m_RotationGizmoTag);
 			Mesh* xAxisMesh = rotationXAxis->SetMesh(new Mesh(rotationXAxis));
 
@@ -1276,7 +1269,6 @@ namespace flex
 
 			// Y Axis
 			GameObject* rotationYAxis = new GameObject("Rotation gizmo y axis", GameObjectType::_NONE);
-			rotationYAxis->SetCastsShadow(false);
 			rotationYAxis->AddTag(m_RotationGizmoTag);
 			Mesh* yAxisMesh = rotationYAxis->SetMesh(new Mesh(rotationYAxis));
 
@@ -1292,9 +1284,7 @@ namespace flex
 
 			// Z Axis
 			GameObject* rotationZAxis = new GameObject("Rotation gizmo z axis", GameObjectType::_NONE);
-			rotationZAxis->SetCastsShadow(false);
 			rotationZAxis->AddTag(m_RotationGizmoTag);
-
 			Mesh* zAxisMesh = rotationZAxis->SetMesh(new Mesh(rotationZAxis));
 
 			btCylinderShape* zAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
@@ -1335,7 +1325,6 @@ namespace flex
 
 			// X Axis
 			GameObject* scaleXAxis = new GameObject("Scale gizmo x axis", GameObjectType::_NONE);
-			scaleXAxis->SetCastsShadow(false);
 			scaleXAxis->AddTag(m_ScaleGizmoTag);
 			Mesh* xAxisMesh = scaleXAxis->SetMesh(new Mesh(scaleXAxis));
 
@@ -1351,7 +1340,6 @@ namespace flex
 
 			// Y Axis
 			GameObject* scaleYAxis = new GameObject("Scale gizmo y axis", GameObjectType::_NONE);
-			scaleYAxis->SetCastsShadow(false);
 			scaleYAxis->AddTag(m_ScaleGizmoTag);
 			Mesh* yAxisMesh = scaleYAxis->SetMesh(new Mesh(scaleYAxis));
 
@@ -1367,9 +1355,7 @@ namespace flex
 
 			// Z Axis
 			GameObject* scaleZAxis = new GameObject("Scale gizmo z axis", GameObjectType::_NONE);
-			scaleZAxis->SetCastsShadow(false);
 			scaleZAxis->AddTag(m_ScaleGizmoTag);
-
 			Mesh* zAxisMesh = scaleZAxis->SetMesh(new Mesh(scaleZAxis));
 
 			btCylinderShape* zAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
@@ -1385,7 +1371,6 @@ namespace flex
 			// Center (all axes)
 			GameObject* scaleAllAxes = new GameObject("Scale gizmo all axes", GameObjectType::_NONE);
 			scaleAllAxes->AddTag(m_ScaleGizmoTag);
-
 			Mesh* allAxesMesh = scaleAllAxes->SetMesh(new Mesh(scaleAllAxes));
 
 			btBoxShape* allAxesShape = new btBoxShape(btVector3(boxScale, boxScale, boxScale));
