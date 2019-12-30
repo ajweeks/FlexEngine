@@ -6901,7 +6901,7 @@ namespace flex
 
 							void* vertexBufferData = vertexDataStart;
 
-			u32 vertexCount = 0;
+							u32 vertexCount = 0;
 							u32 vertexBufferSize = 0;
 							for (VulkanRenderObject* renderObject : m_RenderObjects)
 							{
@@ -6909,14 +6909,14 @@ namespace flex
 								{
 									renderObject->vertexOffset = vertexCount;
 
-					memcpy(vertexBufferData, renderObject->vertexBufferData->vertexData, renderObject->vertexBufferData->VertexBufferSize);
+									memcpy(vertexBufferData, renderObject->vertexBufferData->vertexData, renderObject->vertexBufferData->VertexBufferSize);
 
-					vertexCount += renderObject->vertexBufferData->VertexCount;
-					vertexBufferSize += renderObject->vertexBufferData->VertexBufferSize;
+									vertexCount += renderObject->vertexBufferData->VertexCount;
+									vertexBufferSize += renderObject->vertexBufferData->VertexBufferSize;
 
-					vertexBufferData = (char*)vertexBufferData + renderObject->vertexBufferData->VertexBufferSize;
-				}
-			}
+									vertexBufferData = (char*)vertexBufferData + renderObject->vertexBufferData->VertexBufferSize;
+								}
+							}
 
 							if (vertexBufferSize == 0 || vertexCount == 0)
 							{
@@ -7044,15 +7044,15 @@ namespace flex
 					std::vector<u32> indices;
 
 					for (VulkanRenderObject* renderObject : m_RenderObjects)
-			{
-				if (renderObject &&
-					renderObject->bIndexed &&
-					m_Materials.at(renderObject->materialID).material.shaderID == shaderID)
-				{
-					renderObject->indexOffset = indices.size();
-					indices.insert(indices.end(), renderObject->indices->begin(), renderObject->indices->end());
-				}
-			}
+					{
+						if (renderObject &&
+							renderObject->bIndexed &&
+							m_Materials.at(renderObject->materialID).material.shaderID == shaderID)
+						{
+							renderObject->indexOffset = indices.size();
+							indices.insert(indices.end(), renderObject->indices->begin(), renderObject->indices->end());
+						}
+					}
 
 					if (indices.empty())
 					{
