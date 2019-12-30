@@ -44,9 +44,9 @@ namespace flex
 
 
 	Renderer::Renderer() :
-		m_DefaultSettingsFilePathAbs(RelativePathToAbsolute(ROOT_LOCATION "config/default-renderer-settings.ini")),
-		m_SettingsFilePathAbs(RelativePathToAbsolute(ROOT_LOCATION "config/renderer-settings.ini")),
-		m_FontsFilePathAbs(RelativePathToAbsolute(ROOT_LOCATION "config/fonts.ini"))
+		m_DefaultSettingsFilePathAbs(RelativePathToAbsolute(ROOT_LOCATION "config/default-renderer-settings.json")),
+		m_SettingsFilePathAbs(RelativePathToAbsolute(ROOT_LOCATION "config/renderer-settings.json")),
+		m_FontsFilePathAbs(RelativePathToAbsolute(ROOT_LOCATION "config/fonts.json"))
 	{
 	}
 

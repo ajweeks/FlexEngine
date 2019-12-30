@@ -103,7 +103,7 @@ namespace flex
 
 		{
 			std::string configDirAbs = RelativePathToAbsolute(ROOT_LOCATION "config/");
-			m_CommonSettingsFileName = "common.ini";
+			m_CommonSettingsFileName = "common.json";
 			m_CommonSettingsAbsFilePath = configDirAbs + m_CommonSettingsFileName;
 			CreateDirectoryRecursive(configDirAbs);
 		}
@@ -117,7 +117,7 @@ namespace flex
 
 		{
 			std::string renderDocSettingsDirAbs = RelativePathToAbsolute(ROOT_LOCATION "config/");
-			m_RenderDocSettingsFileName = "renderdoc.ini";
+			m_RenderDocSettingsFileName = "renderdoc.json";
 			m_RenderDocSettingsAbsFilePath = renderDocSettingsDirAbs + m_RenderDocSettingsFileName;
 		}
 

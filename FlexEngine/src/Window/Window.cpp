@@ -13,7 +13,7 @@
 
 namespace flex
 {
-	std::string Window::s_ConfigFilePath = ROOT_LOCATION "config/window-settings.ini";
+	std::string Window::s_ConfigFilePath = ROOT_LOCATION "config/window-settings.json";
 
 	Window::Window(const std::string& title) :
 		m_TitleString(title),
