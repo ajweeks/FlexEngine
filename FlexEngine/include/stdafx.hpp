@@ -5,6 +5,8 @@
 
 #define COMPILE_IMGUI 1
 
+#define RUN_UNIT_TESTS 0
+
 #if COMPILE_OPEN_GL
 const bool g_bOpenGLEnabled = true;
 #else

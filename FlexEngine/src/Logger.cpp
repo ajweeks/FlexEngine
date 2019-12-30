@@ -117,17 +117,26 @@ namespace flex
 
 	void Print(FORMAT_STRING const char* str, va_list argList)
 	{
-		static char s_buffer[MAX_CHARS];
+		if (strlen(str) == 0)
+		{
+			std::cout << "\n";
+			OutputDebugString("\n");
+		}
+		else
+		{
+			static char s_buffer[MAX_CHARS];
 
-		vsnprintf(s_buffer, MAX_CHARS, str, argList);
+			vsnprintf(s_buffer, MAX_CHARS, str, argList);
 
-		std::string s(s_buffer);
-		s[s.size()-1] = '\n';
-		g_LogBuffer << s;
+			std::string s(s_buffer);
+			s[s.size() - 1] = '\n';
+			g_LogBuffer << s;
 
-		std::cout << s_buffer;
+			std::cout << s_buffer;
 
-		// TODO: Disable in shipping
-		OutputDebugString(s.c_str());
+			// TODO: Disable in shipping
+			OutputDebugString(s.c_str());
+		}
+
 	}
 } // namespace flex

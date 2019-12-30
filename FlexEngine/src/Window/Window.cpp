@@ -219,7 +219,7 @@ namespace flex
 		{
 			JSONObject rootObject = {};
 
-			if (JSONParser::Parse(s_ConfigFilePath, rootObject))
+			if (JSONParser::ParseFromFile(s_ConfigFilePath, rootObject))
 			{
 				rootObject.SetBoolChecked("move console to other monitor on bootup", m_bMoveConsoleToOtherMonitor);
 				rootObject.SetBoolChecked("auto restore state", m_bAutoRestoreStateOnBootup);
@@ -257,7 +257,7 @@ namespace flex
 			}
 			else
 			{
-				PrintError("Failed to parse window settings config file\n");
+				PrintError("Failed to parse window settings config file %s\n\terror: %s\n", s_ConfigFilePath.c_str(), JSONParser::GetErrorString());
 			}
 		}
 

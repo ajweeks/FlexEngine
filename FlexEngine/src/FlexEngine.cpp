@@ -127,8 +127,6 @@ namespace flex
 		m_RendererName = "Vulkan";
 #endif
 
-		InitializeLogger();
-
 #if defined(__clang__)
 		m_CompilerName = "Clang";
 
@@ -1246,7 +1244,7 @@ namespace flex
 
 			JSONObject rootObject = {};
 
-			if (JSONParser::Parse(m_CommonSettingsAbsFilePath, rootObject))
+			if (JSONParser::ParseFromFile(m_CommonSettingsAbsFilePath, rootObject))
 			{
 				std::string lastOpenedSceneName = rootObject.GetString("last opened scene");
 				if (!lastOpenedSceneName.empty())
@@ -1316,7 +1314,7 @@ namespace flex
 			}
 			else
 			{
-				PrintError("Failed to parse common settings config file\n");
+				PrintError("Failed to parse common settings config file %s\n\terror: %s\n", m_CommonSettingsAbsFilePath.c_str(), JSONParser::GetErrorString());
 				return false;
 			}
 		}
@@ -1556,13 +1554,13 @@ namespace flex
 		if (FileExists(m_RenderDocSettingsAbsFilePath))
 		{
 			JSONObject rootObject;
-			if (JSONParser::Parse(m_RenderDocSettingsAbsFilePath, rootObject))
+			if (JSONParser::ParseFromFile(m_RenderDocSettingsAbsFilePath, rootObject))
 			{
 				dllDirPath = rootObject.GetString("lib path");
 			}
 			else
 			{
-				PrintError("Failed to parse %s\n", m_RenderDocSettingsFileName.c_str());
+				PrintError("Failed to parse %s\n\terror: %s\n", m_RenderDocSettingsFileName.c_str(), JSONParser::GetErrorString());
 			}
 		}
 

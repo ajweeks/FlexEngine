@@ -63,7 +63,7 @@ namespace flex
 		else
 		{
 			JSONObject fontSettings;
-			if (JSONParser::Parse(m_FontsFilePathAbs, fontSettings))
+			if (JSONParser::ParseFromFile(m_FontsFilePathAbs, fontSettings))
 			{
 				std::vector<JSONObject> fontObjs;
 				if (fontSettings.SetObjectArrayChecked("fonts", fontObjs))
@@ -98,6 +98,10 @@ namespace flex
 						m_Fonts[fontName] = fontMetaData;
 					}
 				}
+			}
+			else
+			{
+				PrintError("Failed to parse font config file %s\n\terror: %s\n", m_FontsFilePathAbs.c_str(), JSONParser::GetErrorString());
 			}
 		}
 
@@ -345,7 +349,7 @@ namespace flex
 		}
 
 		JSONObject rootObject;
-		if (JSONParser::Parse(filePath, rootObject))
+		if (JSONParser::ParseFromFile(filePath, rootObject))
 		{
 			SetVSyncEnabled(rootObject.GetBool("enable v-sync"));
 			m_PostProcessSettings.bEnableFXAA = rootObject.GetBool("enable fxaa");
@@ -365,7 +369,7 @@ namespace flex
 		}
 		else
 		{
-			PrintError("Failed to read renderer settings file, but it exists!\n");
+			PrintError("Failed to parse renderer settings file %s\n\terror: %s\n", filePath.c_str(), JSONParser::GetErrorString());
 		}
 	}
 

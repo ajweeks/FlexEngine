@@ -73,6 +73,7 @@ namespace flex
 			OBJECT,
 			OBJECT_ARRAY,
 			FIELD_ARRAY,
+			FIELD_ENTRY,
 			UNINITIALIZED
 		};
 

@@ -1379,9 +1379,9 @@ namespace flex
 	bool InputManager::LoadInputBindingsFromFile()
 	{
 		JSONObject rootObject;
-		if (!JSONParser::Parse(s_InputBindingFilePath, rootObject))
+		if (!JSONParser::ParseFromFile(s_InputBindingFilePath, rootObject))
 		{
-			PrintError("Failed to load input bindings from file! Won't have any inputs mapped!!\n");
+			PrintError("Failed to load input bindings from file %s\n\terror: %s\n", s_InputBindingFilePath.c_str(), JSONParser::GetErrorString());
 			return false;
 		}
 

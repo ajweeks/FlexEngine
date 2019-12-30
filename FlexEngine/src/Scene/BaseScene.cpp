@@ -96,9 +96,9 @@ namespace flex
 				}
 
 				JSONObject sceneRootObject;
-				if (!JSONParser::Parse(filePath, sceneRootObject))
+				if (!JSONParser::ParseFromFile(filePath, sceneRootObject))
 				{
-					PrintError("Failed to parse scene file: %s\n", shortFilePath.c_str());
+					PrintError("Failed to parse scene file: %s\n\terror: %s\n", shortFilePath.c_str(), JSONParser::GetErrorString());
 					return;
 				}
 
@@ -481,7 +481,7 @@ namespace flex
 			}
 
 			JSONObject obj;
-			if (JSONParser::Parse(MESHES_FILE_PATH, obj))
+			if (JSONParser::ParseFromFile(MESHES_FILE_PATH, obj))
 			{
 				auto meshObjects = obj.GetObjectArray("meshes");
 				for (auto meshObject : meshObjects)
@@ -491,7 +491,7 @@ namespace flex
 			}
 			else
 			{
-				PrintError("Failed to parse mesh file: %s\n", MESHES_FILE_PATH);
+				PrintError("Failed to parse mesh file: %s\n\terror: %s\n", MESHES_FILE_PATH, JSONParser::GetErrorString());
 				return;
 			}
 		}
@@ -520,7 +520,7 @@ namespace flex
 			}
 
 			JSONObject obj;
-			if (JSONParser::Parse(MATERIALS_FILE_PATH, obj))
+			if (JSONParser::ParseFromFile(MATERIALS_FILE_PATH, obj))
 			{
 				auto materialObjects = obj.GetObjectArray("materials");
 				for (auto materialObject : materialObjects)
@@ -530,7 +530,7 @@ namespace flex
 			}
 			else
 			{
-				PrintError("Failed to parse materials file: %s\n", MATERIALS_FILE_PATH);
+				PrintError("Failed to parse materials file: %s\n\terror: %s\n", MATERIALS_FILE_PATH, JSONParser::GetErrorString());
 				return;
 			}
 		}
@@ -562,13 +562,13 @@ namespace flex
 				}
 
 				JSONObject obj;
-				if (JSONParser::Parse(foundFilePath, obj))
+				if (JSONParser::ParseFromFile(foundFilePath, obj))
 				{
 					s_ParsedPrefabs.push_back(obj);
 				}
 				else
 				{
-					PrintError("Failed to parse prefab file: %s\n", foundFilePath.c_str());
+					PrintError("Failed to parse prefab file: %s, error: %s\n", foundFilePath.c_str(), JSONParser::GetErrorString());
 					return;
 				}
 			}

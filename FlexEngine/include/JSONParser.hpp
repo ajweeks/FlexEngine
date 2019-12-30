@@ -27,7 +27,16 @@ namespace flex
 		* Parses a JSON file located at filePath and stores the result in parsedFile
 		* Returns true if the file was parsed successfully
 		*/
-		static bool Parse(const std::string& filePath, JSONObject& rootObject);
+		static bool ParseFromFile(const std::string& filePath, JSONObject& rootObject);
+
+		/*
+		* Returns true if the file was parsed successfully
+		*/
+		static bool Parse(const std::string& fileContents, JSONObject& rootObject);
+
+		static void ClearErrors();
+
+		static const char* GetErrorString();
 
 	private:
 		/*
@@ -35,19 +44,21 @@ namespace flex
 		* Expects offset to point to the opening '{'
 		* Returns true if the parse was successful
 		*/
-		static bool ParseObject(const std::string& filePath, const std::string& fileContents, i32* offset, JSONObject& outObject);
+		static bool ParseObject(const std::string& fileContents, i32* offset, JSONObject& outObject);
 
 		/*
 		* Parses a single field (and recursively parses all children)
 		* Returns true if parse was successful
 		*/
-		static bool ParseField(const std::string& filePath, const std::string& fileContents, i32* offset, JSONField& field);
+		static bool ParseField(const std::string& fileContents, i32* offset, JSONField& field);
 
 		/*
 		 * Expects offset to point at the opening bracket
 		 * Returns the index of the closing bracket for the given opening bracket - (, [, and { are allowed
 		 * Returns -1 if no matching bracket is found
 		*/
-		static i32 MatchingBracket(const std::string& filePath, char openingBracket, const std::string& fileContents, i32 offset);
+		static i32 MatchingBracket(char openingBracket, const std::string& fileContents, i32 offset);
+
+		static std::string s_ErrorStr;
 	};
 } // namespace flex

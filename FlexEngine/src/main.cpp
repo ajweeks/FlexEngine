@@ -1,6 +1,7 @@
 #include "stdafx.hpp"
 
 #include "FlexEngine.hpp"
+#include "Test.hpp"
 
 // Memory leak checking includes
 #if defined(DEBUG)
@@ -23,6 +24,16 @@ int main(int argc, char *argv[])
 	//_CrtSetBreakAlloc(47947);
 #endif
 
+	flex::InitializeLogger();
+
+#if RUN_UNIT_TESTS
+	flex::FlexTest::Run();
+
+	system("PAUSE");
+	return 0;
+
+#else
+
 	{
 		flex::FlexEngine* engineInstance = new flex::FlexEngine();
 		engineInstance->Initialize();
@@ -36,6 +47,7 @@ int main(int argc, char *argv[])
 	}
 
 	return 0;
+#endif
 }
 
 int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPWSTR lpCmdLine, _In_ int nCmdShow)
