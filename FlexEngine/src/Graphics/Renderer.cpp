@@ -291,6 +291,7 @@ namespace flex
 		}
 
 		JSONObject rootObject = {};
+		rootObject.fields.emplace_back("version", JSONValue(m_RendererSettingsFileVersion));
 		rootObject.fields.emplace_back("enable v-sync", JSONValue(m_bVSyncEnabled));
 		rootObject.fields.emplace_back("enable fxaa", JSONValue(m_PostProcessSettings.bEnableFXAA));
 		rootObject.fields.emplace_back("brightness", JSONValue(Vec3ToString(m_PostProcessSettings.brightness, 3)));
@@ -321,6 +322,11 @@ namespace flex
 		JSONObject rootObject;
 		if (JSONParser::ParseFromFile(m_RendererSettingsFilePathAbs, rootObject))
 		{
+			if (rootObject.HasField("version"))
+			{
+				m_RendererSettingsFileVersion = rootObject.GetInt("version");
+			}
+
 			SetVSyncEnabled(rootObject.GetBool("enable v-sync"));
 			m_PostProcessSettings.bEnableFXAA = rootObject.GetBool("enable fxaa");
 			m_PostProcessSettings.brightness = ParseVec3(rootObject.GetString("brightness"));
@@ -337,10 +343,8 @@ namespace flex
 				cam->CalculateExposure();
 			}
 
-			if (rootObject.HasField(""))
-			{
-
-			}
+			// Done loading
+			m_RendererSettingsFileVersion = LATEST_RENDERER_SETTINGS_FILE_VERSION;
 		}
 		else
 		{

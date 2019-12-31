@@ -456,6 +456,9 @@ namespace flex
 
 		PhysicsDebugDrawBase* m_PhysicsDebugDrawer = nullptr;
 
+		static const i32 LATEST_RENDERER_SETTINGS_FILE_VERSION = 1;
+		i32 m_RendererSettingsFileVersion = 0;
+
 	private:
 		Renderer& operator=(const Renderer&) = delete;
 		Renderer(const Renderer&) = delete;
