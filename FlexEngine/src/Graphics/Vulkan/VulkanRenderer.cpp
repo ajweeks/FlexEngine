@@ -852,6 +852,8 @@ namespace flex
 
 			VulkanShader& shader = m_Shaders[mat.material.shaderID];
 
+			mat.vertexIndexBufferIndex = mat.material.shaderID;
+
 			if (shader.shader->constantBufferUniforms.HasUniform(U_UNIFORM_BUFFER_CONSTANT))
 			{
 				mat.uniformBufferList.Add(m_VulkanDevice, UniformBufferType::STATIC);
@@ -1769,7 +1771,7 @@ namespace flex
 		void VulkanRenderer::UpdateVertexData(RenderID renderID, VertexBufferData const* vertexBufferData)
 		{
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
-			VulkanBuffer* vertexBuffer = m_VertexIndexBufferPairs[m_Materials.at(renderObject->materialID).material.shaderID].vertexBuffer;
+			VulkanBuffer* vertexBuffer = m_VertexIndexBufferPairs[m_Materials.at(renderObject->materialID).vertexIndexBufferIndex].vertexBuffer;
 			u32 copySize = std::min(vertexBufferData->VertexBufferSize, (u32)vertexBuffer->m_Size);
 			if (copySize < vertexBufferData->VertexBufferSize)
 			{
@@ -2847,7 +2849,7 @@ namespace flex
 			}
 
 			VulkanRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetSubMeshes()[0]->renderID);
-			Material& skyboxMat = m_Materials.at(renderObject->materialID).material;
+			VulkanMaterial& skyboxMat = m_Materials.at(renderObject->materialID);
 			VulkanMaterial& renderObjectMat = m_Materials.at(renderObject->materialID);
 
 			MaterialCreateInfo equirectangularToCubeMatCreateInfo = {};
@@ -3011,16 +3013,16 @@ namespace flex
 				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				subresourceRange);
 
-			VertexIndexBufferPair& vertexIndexBufferPair = m_VertexIndexBufferPairs[skyboxMat.shaderID];
+			VertexIndexBufferPair& vertexIndexBufferPair = m_VertexIndexBufferPairs[skyboxMat.vertexIndexBufferIndex];
 
 			if (vertexIndexBufferPair.vertexBuffer->m_Buffer == VK_NULL_HANDLE)
 			{
-				PrintError("Attempted to generate cubemap from HDR but vertex buffer has not been generated! (for shader %s)\n", skyboxMat.name.c_str());
+				PrintError("Attempted to generate cubemap from HDR but vertex buffer has not been generated! (for shader %s)\n", skyboxMat.material.name.c_str());
 			}
 			if (skyboxRenderObject->bIndexed &&
 				vertexIndexBufferPair.indexBuffer->m_Buffer == VK_NULL_HANDLE)
 			{
-				PrintError("Attempted to generate cubemap from HDR but index buffer has not been generated! (for shader %s)\n", skyboxMat.name.c_str());
+				PrintError("Attempted to generate cubemap from HDR but index buffer has not been generated! (for shader %s)\n", skyboxMat.material.name.c_str());
 			}
 
 			for (u32 mip = 0; mip < mipLevels; ++mip)
@@ -3037,9 +3039,9 @@ namespace flex
 					vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 					// Push constants
-					skyboxMat.pushConstantBlock->SetData(s_CaptureViews[face], glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (real)dim));
+					skyboxMat.material.pushConstantBlock->SetData(s_CaptureViews[face], glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (real)dim));
 					vkCmdPushConstants(cmdBuf, pipelinelayout, VK_SHADER_STAGE_VERTEX_BIT, 0,
-						skyboxMat.pushConstantBlock->size, skyboxMat.pushConstantBlock->data);
+						skyboxMat.material.pushConstantBlock->size, skyboxMat.material.pushConstantBlock->data);
 
 					vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
@@ -3133,7 +3135,7 @@ namespace flex
 			}
 
 			VulkanRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetSubMeshes()[0]->renderID);
-			Material& skyboxMat = m_Materials.at(skyboxRenderObject->materialID).material;
+			VulkanMaterial& skyboxMat = m_Materials.at(skyboxRenderObject->materialID);
 			VulkanMaterial& renderObjectMat = m_Materials.at(renderObject->materialID);
 
 			const VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
@@ -3299,9 +3301,9 @@ namespace flex
 					vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 					// Push constants
-					skyboxMat.pushConstantBlock->SetData(s_CaptureViews[face], glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (real)dim));
+					skyboxMat.material.pushConstantBlock->SetData(s_CaptureViews[face], glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (real)dim));
 					vkCmdPushConstants(cmdBuf, pipelinelayout, VK_SHADER_STAGE_VERTEX_BIT, 0,
-						skyboxMat.pushConstantBlock->size, skyboxMat.pushConstantBlock->data);
+						skyboxMat.material.pushConstantBlock->size, skyboxMat.material.pushConstantBlock->data);
 
 					vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
@@ -3309,11 +3311,10 @@ namespace flex
 
 					VkDeviceSize offsets[1] = { 0 };
 
-					ShaderID shaderID = skyboxMat.shaderID;
-					vkCmdBindVertexBuffers(cmdBuf, 0, 1, &m_VertexIndexBufferPairs[shaderID].vertexBuffer->m_Buffer, offsets);
+					vkCmdBindVertexBuffers(cmdBuf, 0, 1, &m_VertexIndexBufferPairs[skyboxMat.vertexIndexBufferIndex].vertexBuffer->m_Buffer, offsets);
 					if (skyboxRenderObject->bIndexed)
 					{
-						vkCmdBindIndexBuffer(cmdBuf, m_VertexIndexBufferPairs[shaderID].indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
+						vkCmdBindIndexBuffer(cmdBuf, m_VertexIndexBufferPairs[skyboxMat.vertexIndexBufferIndex].indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
 						vkCmdDrawIndexed(cmdBuf, skyboxRenderObject->indices->size(), 1, 0, 0, 0);
 					}
 					else
@@ -3397,7 +3398,7 @@ namespace flex
 			}
 
 			VulkanRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetSubMeshes()[0]->renderID);
-			Material& skyboxMat = m_Materials.at(skyboxRenderObject->materialID).material;
+			VulkanMaterial& skyboxMat = m_Materials.at(skyboxRenderObject->materialID);
 			VulkanMaterial& renderObjectMat = m_Materials.at(renderObject->materialID);
 
 			const VkFormat format = VK_FORMAT_R16G16B16A16_SFLOAT;
@@ -3564,9 +3565,9 @@ namespace flex
 					vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 					// Push constants
-					skyboxMat.pushConstantBlock->SetData(s_CaptureViews[face], glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (real)dim));
+					skyboxMat.material.pushConstantBlock->SetData(s_CaptureViews[face], glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (real)dim));
 					vkCmdPushConstants(cmdBuf, pipelinelayout, VK_SHADER_STAGE_VERTEX_BIT, 0,
-						skyboxMat.pushConstantBlock->size, skyboxMat.pushConstantBlock->data);
+						skyboxMat.material.pushConstantBlock->size, skyboxMat.material.pushConstantBlock->data);
 
 					vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
@@ -3574,11 +3575,10 @@ namespace flex
 
 					VkDeviceSize offsets[1] = { 0 };
 
-					ShaderID shaderID = skyboxMat.shaderID;
-					vkCmdBindVertexBuffers(cmdBuf, 0, 1, &m_VertexIndexBufferPairs[skyboxMat.shaderID].vertexBuffer->m_Buffer, offsets);
+					vkCmdBindVertexBuffers(cmdBuf, 0, 1, &m_VertexIndexBufferPairs[skyboxMat.vertexIndexBufferIndex].vertexBuffer->m_Buffer, offsets);
 					if (skyboxRenderObject->bIndexed)
 					{
-						vkCmdBindIndexBuffer(cmdBuf, m_VertexIndexBufferPairs[shaderID].indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
+						vkCmdBindIndexBuffer(cmdBuf, m_VertexIndexBufferPairs[skyboxMat.vertexIndexBufferIndex].indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
 						vkCmdDrawIndexed(cmdBuf, skyboxRenderObject->indices->size(), 1, 0, 0, 0);
 					}
 					else
@@ -4123,7 +4123,7 @@ namespace flex
 					vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
 					VkDeviceSize offsets[1] = { 0 };
-					vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID].vertexBuffer->m_Buffer, offsets);
+					vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_VertexIndexBufferPairs[gBufferMaterial->vertexIndexBufferIndex].vertexBuffer->m_Buffer, offsets);
 
 					vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
@@ -4344,7 +4344,7 @@ namespace flex
 				if (SSTextBufferByteCount > 0)
 				{
 					const VulkanMaterial& fontMaterial = m_Materials[m_FontMatSSID];
-					VulkanBuffer* vertexBuffer = m_VertexIndexBufferPairs[fontMaterial.material.shaderID].vertexBuffer;
+					VulkanBuffer* vertexBuffer = m_VertexIndexBufferPairs[fontMaterial.vertexIndexBufferIndex].vertexBuffer;
 					u32 copySize = std::min(SSTextBufferByteCount, (u32)vertexBuffer->m_Size);
 					if (copySize < SSTextBufferByteCount)
 					{
@@ -4462,7 +4462,7 @@ namespace flex
 					UpdateDynamicUniformBuffer(m_FontMatSSID, dynamicOffsetIndex * m_DynamicAlignment, transformMat, &overrides);
 
 					VkDeviceSize offsets[1] = { 0 };
-					vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_VertexIndexBufferPairs[fontMaterial.material.shaderID].vertexBuffer->m_Buffer, offsets);
+					vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_VertexIndexBufferPairs[fontMaterial.vertexIndexBufferIndex].vertexBuffer->m_Buffer, offsets);
 
 					vkCmdDraw(commandBuffer, font->bufferSize, 1, font->bufferStart, 0);
 				}
@@ -4481,7 +4481,7 @@ namespace flex
 				if (WSTextBufferByteCount > 0)
 				{
 					const VulkanMaterial& fontMaterial = m_Materials[m_FontMatWSID];
-					VulkanBuffer* vertexBuffer = m_VertexIndexBufferPairs[fontMaterial.material.shaderID].vertexBuffer;
+					VulkanBuffer* vertexBuffer = m_VertexIndexBufferPairs[fontMaterial.vertexIndexBufferIndex].vertexBuffer;
 					u32 copySize = std::min(WSTextBufferByteCount, (u32)vertexBuffer->m_Size);
 					if (copySize < WSTextBufferByteCount)
 					{
@@ -4592,7 +4592,7 @@ namespace flex
 					UpdateDynamicUniformBuffer(m_FontMatWSID, dynamicOffsetIndex * m_DynamicAlignment, transformMat, &overrides);
 
 					VkDeviceSize offsets[1] = { 0 };
-					vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_VertexIndexBufferPairs[fontMaterial.material.shaderID].vertexBuffer->m_Buffer, offsets);
+					vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_VertexIndexBufferPairs[fontMaterial.vertexIndexBufferIndex].vertexBuffer->m_Buffer, offsets);
 
 					vkCmdDraw(commandBuffer, font->bufferSize, 1, font->bufferStart, 0);
 				}
@@ -4679,10 +4679,10 @@ namespace flex
 			VulkanMaterial& spriteMat = m_Materials.at(matID);
 			VulkanShader& spriteShader = m_Shaders[spriteMat.material.shaderID];
 
-			VulkanBuffer* vertBuffer = m_VertexIndexBufferPairs[spriteMat.material.shaderID].vertexBuffer;
+			VulkanBuffer* vertBuffer = m_VertexIndexBufferPairs[spriteMat.vertexIndexBufferIndex].vertexBuffer;
 
 			// TODO: Use instancing!
-			if (!m_VertexIndexBufferPairs[spriteMat.material.shaderID].bUseStagingBuffer)
+			if (!m_VertexIndexBufferPairs[spriteMat.vertexIndexBufferIndex].bUseStagingBuffer)
 			{
 				// Copy vertex data into device memory for dynamic shaders
 				u32 copySize = (u32)vertBuffer->m_Size;
@@ -7005,7 +7005,7 @@ namespace flex
 				return;
 			}
 
-			VulkanBuffer* vertexBuffer = m_VertexIndexBufferPairs[shadowMat.material.shaderID].vertexBuffer;
+			VulkanBuffer* vertexBuffer = m_VertexIndexBufferPairs[shadowMat.vertexIndexBufferIndex].vertexBuffer;
 			CreateAndUploadToStaticVertexBuffer(vertexBuffer, vertexDataStart, vertexBufferSize);
 			free_hooked(vertexDataStart);
 		}
@@ -7086,7 +7086,7 @@ namespace flex
 				return;
 			}
 
-			VulkanBuffer* indexBuffer = m_VertexIndexBufferPairs[m_Materials[m_ShadowMaterialID].material.shaderID].indexBuffer;
+			VulkanBuffer* indexBuffer = m_VertexIndexBufferPairs[m_Materials[m_ShadowMaterialID].vertexIndexBufferIndex].indexBuffer;
 			CreateAndUploadToStaticIndexBuffer(indexBuffer, indices);
 		}
 
@@ -7198,6 +7198,7 @@ namespace flex
 				//			- Sort render objects based on batching order
 				//			- Reuse previous batching, only removing or adding entries
 
+				// TODO: Iterate over other definition of vertex buffers
 				for (u32 shaderID = 0; shaderID < m_Shaders.size(); ++shaderID)
 				{
 					VulkanBuffer* vertBuffer = m_VertexIndexBufferPairs[shaderID].vertexBuffer;
@@ -7336,16 +7337,6 @@ namespace flex
 				shaderID = m_Materials.at(drawCallInfo->materialIDOverride).material.shaderID;
 			}
 
-			VulkanBuffer* vertBuffer = m_VertexIndexBufferPairs[shaderID].vertexBuffer;
-			VulkanBuffer* indexBuffer = m_VertexIndexBufferPairs[shaderID].indexBuffer;
-
-			VkDeviceSize offsets[1] = { 0 };
-			vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertBuffer->m_Buffer, offsets);
-			if (indexBuffer->m_Buffer != VK_NULL_HANDLE)
-			{
-				vkCmdBindIndexBuffer(commandBuffer, indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
-			}
-
 			u32 i = 0;
 			for (const MaterialBatchPair& matBatch : shaderBatch.batch.batches)
 			{
@@ -7357,6 +7348,16 @@ namespace flex
 
 				VulkanMaterial& mat = m_Materials.at(matID);
 				VulkanShader& shader = m_Shaders[mat.material.shaderID];
+
+				VulkanBuffer* vertBuffer = m_VertexIndexBufferPairs[mat.vertexIndexBufferIndex].vertexBuffer;
+				VulkanBuffer* indexBuffer = m_VertexIndexBufferPairs[mat.vertexIndexBufferIndex].indexBuffer;
+
+				VkDeviceSize offsets[1] = { 0 };
+				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertBuffer->m_Buffer, offsets);
+				if (indexBuffer->m_Buffer != VK_NULL_HANDLE)
+				{
+					vkCmdBindIndexBuffer(commandBuffer, indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
+				}
 
 				for (RenderID renderID : matBatch.batch.objects)
 				{
@@ -7617,7 +7618,7 @@ namespace flex
 				VulkanRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
 				VulkanMaterial* gBufferMaterial = &m_Materials.at(gBufferRenderObject->materialID);
 
-				VertexIndexBufferPair* gBufferVertexIndexBuffer = &m_VertexIndexBufferPairs[gBufferMaterial->material.shaderID];
+				VertexIndexBufferPair* gBufferVertexIndexBuffer = &m_VertexIndexBufferPairs[gBufferMaterial->vertexIndexBufferIndex];
 
 				VkDeviceSize offsets[1] = { 0 };
 
