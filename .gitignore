@@ -25,7 +25,6 @@ FlexEngine/lib/Debug/dbghelp.dll
 
 # User settings files
 common.json
-renderer-settings.json
 window-settings.json
 imgui.ini
 renderdoc.json

@@ -182,8 +182,8 @@ namespace flex
 		real GetStringWidth(const TextCache& textCache, BitmapFont* font) const;
 		real GetStringHeight(const TextCache& textCache, BitmapFont* font) const;
 
-		void SaveSettingsToDisk(bool bSaveOverDefaults = false, bool bAddEditorStr = true);
-		void LoadSettingsFromDisk(bool bLoadDefaults = false);
+		void SaveSettingsToDisk(bool bAddEditorStr = true);
+		void LoadSettingsFromDisk();
 
 		// Pos should lie in range [-1, 1], with y increasing upward
 		// Output pos lies in range [0, 1], with y increasing downward,
@@ -426,8 +426,7 @@ namespace flex
 
 		std::map<StringID, FontMetaData> m_Fonts;
 
-		std::string m_DefaultSettingsFilePathAbs;
-		std::string m_SettingsFilePathAbs;
+		std::string m_RendererSettingsFilePathAbs;
 		std::string m_FontsFilePathAbs;
 
 		Mesh* m_SkyBoxMesh = nullptr;

@@ -335,9 +335,9 @@ namespace flex
 #endif
 			LoadShaders();
 
-			const u32 shaderCount = m_Shaders.size();
-			m_VertexIndexBufferPairs.reserve(shaderCount);
-			for (size_t i = 0; i < shaderCount; ++i)
+			const u32 bufferCount = m_Shaders.size();
+			m_VertexIndexBufferPairs.reserve(bufferCount);
+			for (size_t i = 0; i < bufferCount; ++i)
 			{
 				m_VertexIndexBufferPairs.emplace_back(
 					new VulkanBuffer(m_VulkanDevice), // Vertex buffer
@@ -354,7 +354,6 @@ namespace flex
 
 			m_SSAOSpecializationMapEntry = { 0, 0, sizeof(i32) };
 			m_SSAOSpecializationInfo.mapEntryCount = 1;
-
 			m_SSAOSpecializationInfo.pMapEntries = &m_SSAOSpecializationMapEntry;
 			m_SSAOSpecializationInfo.pData = &m_SSAOKernelSize;
 			m_SSAOSpecializationInfo.dataSize = sizeof(i32);

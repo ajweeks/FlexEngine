@@ -44,8 +44,7 @@ namespace flex
 
 
 	Renderer::Renderer() :
-		m_DefaultSettingsFilePathAbs(RelativePathToAbsolute(ROOT_LOCATION "config/default-renderer-settings.json")),
-		m_SettingsFilePathAbs(RelativePathToAbsolute(ROOT_LOCATION "config/renderer-settings.json")),
+		m_RendererSettingsFilePathAbs(RelativePathToAbsolute(ROOT_LOCATION "config/renderer-settings.json")),
 		m_FontsFilePathAbs(RelativePathToAbsolute(ROOT_LOCATION "config/fonts.json"))
 	{
 	}
@@ -284,19 +283,11 @@ namespace flex
 		return m_bRenderGrid;
 	}
 
-	void Renderer::SaveSettingsToDisk(bool bSaveOverDefaults /* = false */, bool bAddEditorStr /* = true */)
+	void Renderer::SaveSettingsToDisk(bool bAddEditorStr /* = true */)
 	{
-		std::string filePath = (bSaveOverDefaults ? m_DefaultSettingsFilePathAbs : m_SettingsFilePathAbs);
-
-		if (bSaveOverDefaults && FileExists(m_SettingsFilePathAbs))
+		if (FileExists(m_RendererSettingsFilePathAbs))
 		{
-			DeleteFile(m_SettingsFilePathAbs);
-		}
-
-		if (filePath.empty())
-		{
-			PrintError("Failed to save renderer settings to disk: file path is not set!\n");
-			return;
+			DeleteFile(m_RendererSettingsFilePathAbs);
 		}
 
 		JSONObject rootObject = {};
@@ -312,44 +303,23 @@ namespace flex
 		rootObject.fields.emplace_back("light sensitivity", JSONValue(cam->lightSensitivity));
 		std::string fileContents = rootObject.Print(0);
 
-		if (WriteFile(filePath, fileContents, false))
+		if (WriteFile(m_RendererSettingsFilePathAbs, fileContents, false))
 		{
 			if (bAddEditorStr)
 			{
-				if (bSaveOverDefaults)
-				{
-					AddEditorString("Saved default renderer settings");
-				}
-				else
-				{
-					AddEditorString("Saved renderer settings");
-				}
+				AddEditorString("Saved renderer settings");
 			}
+		}
+		else
+		{
+			PrintError("Failed to write render settings to %s\n", m_RendererSettingsFilePathAbs.c_str());
 		}
 	}
 
-	void Renderer::LoadSettingsFromDisk(bool bLoadDefaults /* = false */)
+	void Renderer::LoadSettingsFromDisk()
 	{
-		std::string filePath = (bLoadDefaults ? m_DefaultSettingsFilePathAbs : m_SettingsFilePathAbs);
-
-		if (!bLoadDefaults && !FileExists(m_SettingsFilePathAbs))
-		{
-			filePath = m_DefaultSettingsFilePathAbs;
-
-			if (!FileExists(filePath))
-			{
-				PrintError("Failed to find renderer settings files on disk!\n");
-				return;
-			}
-		}
-
-		if (bLoadDefaults && FileExists(m_SettingsFilePathAbs))
-		{
-			DeleteFile(m_SettingsFilePathAbs);
-		}
-
 		JSONObject rootObject;
-		if (JSONParser::ParseFromFile(filePath, rootObject))
+		if (JSONParser::ParseFromFile(m_RendererSettingsFilePathAbs, rootObject))
 		{
 			SetVSyncEnabled(rootObject.GetBool("enable v-sync"));
 			m_PostProcessSettings.bEnableFXAA = rootObject.GetBool("enable fxaa");
@@ -366,10 +336,15 @@ namespace flex
 				cam->lightSensitivity = rootObject.GetFloat("light sensitivity");
 				cam->CalculateExposure();
 			}
+
+			if (rootObject.HasField(""))
+			{
+
+			}
 		}
 		else
 		{
-			PrintError("Failed to parse renderer settings file %s\n\terror: %s\n", filePath.c_str(), JSONParser::GetErrorString());
+			PrintError("Failed to parse renderer settings file %s\n\terror: %s\n", m_RendererSettingsFilePathAbs.c_str(), JSONParser::GetErrorString());
 		}
 	}
 
@@ -972,30 +947,16 @@ namespace flex
 	{
 		if (ImGui::TreeNode("Renderer settings"))
 		{
-			if (ImGui::Button(" Save "))
+			if (ImGui::Button("Save"))
 			{
-				g_Renderer->SaveSettingsToDisk(false, true);
+				g_Renderer->SaveSettingsToDisk(true);
 			}
 
-			ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
-			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
-			ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
+			ImGui::SameLine();
+			if (ImGui::Button("Reload"))
 			{
-				ImGui::SameLine();
-				if (ImGui::Button("Save defaults"))
-				{
-					g_Renderer->SaveSettingsToDisk(true, true);
-				}
-
-				ImGui::SameLine();
-				if (ImGui::Button("Reload defaults"))
-				{
-					g_Renderer->LoadSettingsFromDisk(true);
-				}
+				g_Renderer->LoadSettingsFromDisk();
 			}
-			ImGui::PopStyleColor();
-			ImGui::PopStyleColor();
-			ImGui::PopStyleColor();
 
 			if (ImGui::Button("Recapture reflection probe"))
 			{

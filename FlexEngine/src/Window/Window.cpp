@@ -290,7 +290,7 @@ namespace flex
 		{
 			if (ImGui::Checkbox("Auto restore state", &m_bAutoRestoreStateOnBootup))
 			{
-				g_Renderer->SaveSettingsToDisk(false, true);
+				g_Renderer->SaveSettingsToDisk(true);
 			}
 
 			if (ImGui::DragInt2("Position", &m_Position.x, 1.0f))
