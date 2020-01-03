@@ -176,12 +176,13 @@ namespace flex
 
 	bool Mesh::CreateProcedural(u32 initialMaxVertCount,
 		VertexAttributes attributes,
+		MaterialID materialID,
 		TopologyMode topologyMode /* = TopologyMode::TRIANGLE_LIST */,
 		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
 	{
 		m_Type = Type::PROCEDURAL;
 
-		m_Meshes = { new MeshComponent(this, g_Renderer->GetPlaceholderMaterialID(), false) };
+		m_Meshes = { new MeshComponent(this, materialID, false) };
 		return m_Meshes[0]->CreateProcedural(initialMaxVertCount, attributes, topologyMode, optionalCreateInfo);
 	}
 

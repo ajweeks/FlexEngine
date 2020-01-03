@@ -259,7 +259,6 @@ namespace flex
 				VkCommandBuffer commandBuffer,
 				MaterialID materialID,
 				VkPipelineLayout pipelineLayout,
-				VkPipeline graphicsPipeline,
 				VkDescriptorSet descriptorSet);
 
 			// Begins the given render pass, renders a fullscreen tri, then ends the render pass
@@ -350,6 +349,9 @@ namespace flex
 			void InitializeAllParticleSystemBuffers();
 			void InitializeParticleSystemBuffer(VulkanParticleSystem* particleSystem);
 
+			u32 GetStaticVertexIndexBufferIndex(u32 stride);
+			u32 GetDynamicVertexIndexBufferIndex(u32 stride);
+
 			std::vector<std::string> m_SupportedDeviceExtenions;
 
 			const u32 MAX_NUM_RENDER_OBJECTS = 4096; // TODO: Not this?
@@ -375,6 +377,7 @@ namespace flex
 			struct ShaderBatchPair
 			{
 				ShaderID shaderID = InvalidShaderID;
+				bool bDynamic = false;
 				MaterialBatch batch;
 			};
 
@@ -570,7 +573,17 @@ namespace flex
 			VulkanTexture* m_BlankTexture = nullptr;
 			VulkanTexture* m_BlankTextureArr = nullptr;
 
-			std::vector<VertexIndexBufferPair> m_VertexIndexBufferPairs;
+			// Pair is: (stride, vertex buffer pair)
+			// Indexed into through Shader::vertexBufferIndex
+			// One element per unique stride
+			// Uploaded to GPU once through staging buffer
+			std::vector<std::pair<u32, VulkanBuffer*>> m_StaticVertexBuffers;
+
+			// Pair is: (stride, vertex index buffer pair)
+			// Indexed into through Material::dynamicVertexBufferIndex
+			std::vector<std::pair<u32, VertexIndexBufferPair*>> m_DynamicVertexIndexBufferPairs;
+			VulkanBuffer* m_StaticIndexBuffer;
+			VertexIndexBufferPair* m_ShadowVertexIndexBufferPair = nullptr;
 
 			u32 m_DynamicAlignment = 0;
 

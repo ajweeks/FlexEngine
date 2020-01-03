@@ -49,6 +49,7 @@ namespace flex
 
 		bool CreateProcedural(u32 initialMaxVertCount,
 			VertexAttributes attributes,
+			MaterialID materialID,
 			TopologyMode topologyMode = TopologyMode::TRIANGLE_LIST,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 

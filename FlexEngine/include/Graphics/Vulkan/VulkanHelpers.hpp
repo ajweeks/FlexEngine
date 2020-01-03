@@ -555,8 +555,6 @@ namespace flex
 
 			// TODO: Remove, this always equals shaderID
 			u32 descriptorSetLayoutIndex = 0;
-
-			u32 vertexIndexBufferIndex = u32_max;
 		};
 
 		struct VulkanRenderObject

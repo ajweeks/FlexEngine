@@ -3272,6 +3272,7 @@ namespace flex
 		matCreateInfo.constAlbedo = glm::vec3(0.4f, 0.5f, 0.8f);
 		matCreateInfo.constMetallic = 0.8f;
 		matCreateInfo.constRoughness = 0.01f;
+		matCreateInfo.bDynamic = true;
 
 		MaterialID planeMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
 
@@ -3531,8 +3532,7 @@ namespace flex
 		bufferInfo.normals = normals;
 		bufferInfo.tangents = tangents;
 		vertexBuffer->UpdateData(&bufferInfo);
-		// TODO: Get working in Vulkan
-		//g_Renderer->UpdateVertexData(m_RenderID, vertexBuffer);
+		g_Renderer->UpdateVertexData(m_Mesh->GetRenderID(0), vertexBuffer);
 
 
 		const glm::vec3 wavePos = m_Transform.GetWorldPosition();

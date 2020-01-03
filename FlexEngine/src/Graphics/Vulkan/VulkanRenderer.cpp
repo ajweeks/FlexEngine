@@ -335,20 +335,63 @@ namespace flex
 #endif
 			LoadShaders();
 
-			const u32 bufferCount = m_Shaders.size();
-			m_VertexIndexBufferPairs.reserve(bufferCount);
-			for (size_t i = 0; i < bufferCount; ++i)
+			m_ShadowVertexIndexBufferPair = new VertexIndexBufferPair(new VulkanBuffer(m_VulkanDevice), new VulkanBuffer(m_VulkanDevice));
+
+			// Allocate static vertex buffers
+			for (u32 shaderID = 0; shaderID < m_Shaders.size(); ++shaderID)
 			{
-				m_VertexIndexBufferPairs.emplace_back(
-					new VulkanBuffer(m_VulkanDevice), // Vertex buffer
-					new VulkanBuffer(m_VulkanDevice)  // Index buffer
-				);
-				if (m_Shaders[i].shader->bDynamic)
+				const u32 stride = CalculateVertexStride(m_Shaders[shaderID].shader->vertexAttributes);
+				if (stride == 0)
 				{
-					VertexIndexBufferPair& pair = m_VertexIndexBufferPairs[m_VertexIndexBufferPairs.size() - 1];
-					pair.bUseStagingBuffer = false;
+					continue;
+				}
+
+				u32 staticVertexBufferIndex = 0;
+				bool bExists = false;
+				for (u32 bufferIndex = 0; bufferIndex < m_StaticVertexBuffers.size(); ++bufferIndex)
+				{
+					auto& pair = m_StaticVertexBuffers[bufferIndex];
+					if (pair.first == stride)
+					{
+						bExists = true;
+						staticVertexBufferIndex = bufferIndex;
+						break;
+					}
+				}
+				if (!bExists)
+				{
+					m_StaticVertexBuffers.emplace_back(stride, new VulkanBuffer(m_VulkanDevice));
+					staticVertexBufferIndex = m_StaticVertexBuffers.size() - 1;
+				}
+				m_Shaders[shaderID].shader->staticVertexBufferIndex = staticVertexBufferIndex;
+			}
+
+			// Allocate dynamic vertex buffers
+			for (u32 shaderID = 0; shaderID < m_Shaders.size(); ++shaderID)
+			{
+				const u32 stride = CalculateVertexStride(m_Shaders[shaderID].shader->vertexAttributes);
+				if (stride == 0)
+				{
+					continue;
+				}
+
+				bool bExists = false;
+				for (u32 bufferIndex = 0; bufferIndex < m_DynamicVertexIndexBufferPairs.size(); ++bufferIndex)
+				{
+					auto& pair = m_DynamicVertexIndexBufferPairs[bufferIndex];
+					if (pair.first == stride)
+					{
+						bExists = true;
+						break;
+					}
+				}
+				if (!bExists)
+				{
+					m_DynamicVertexIndexBufferPairs.emplace_back(stride, new VertexIndexBufferPair(new VulkanBuffer(m_VulkanDevice), new VulkanBuffer(m_VulkanDevice)));
 				}
 			}
+
+			m_StaticIndexBuffer = new VulkanBuffer(m_VulkanDevice);
 
 			m_FullScreenTriVertexBuffer = new VulkanBuffer(m_VulkanDevice);
 
@@ -531,21 +574,6 @@ namespace flex
 				free_hooked(vertData);
 			}
 
-			// Shadow index/vertex offsets
-			{
-				u32 vertexCount = 0;
-				for (VulkanRenderObject* renderObject : m_RenderObjects)
-				{
-					// TODO: Only account for shadow-casting objects?
-					if (renderObject)
-					{
-						renderObject->shadowVertexOffset = vertexCount;
-						vertexCount += renderObject->vertexBufferData->VertexCount;
-					}
-				}
-
-			}
-
 			CreateSemaphores();
 
 			LoadFonts(false);
@@ -598,11 +626,27 @@ namespace flex
 			m_PresentCompleteSemaphore.replace();
 			m_RenderCompleteSemaphore.replace();
 
-			for (VertexIndexBufferPair& pair : m_VertexIndexBufferPairs)
+			for (auto& pair : m_DynamicVertexIndexBufferPairs)
 			{
-				pair.Destroy();
+				pair.second->Destroy();
+				delete pair.second;
 			}
-			m_VertexIndexBufferPairs.clear();
+			m_DynamicVertexIndexBufferPairs.clear();
+
+			m_ShadowVertexIndexBufferPair->Destroy();
+			delete m_ShadowVertexIndexBufferPair;
+			m_ShadowVertexIndexBufferPair = nullptr;
+
+			for (auto& pair : m_StaticVertexBuffers)
+			{
+				pair.second->Destroy();
+				delete pair.second;
+			}
+			m_StaticVertexBuffers.clear();
+
+			m_StaticIndexBuffer->Destroy();
+			delete m_StaticIndexBuffer;
+			m_StaticIndexBuffer = nullptr;
 
 			delete m_FullScreenTriVertexBuffer;
 			m_FullScreenTriVertexBuffer = nullptr;
@@ -851,7 +895,8 @@ namespace flex
 
 			VulkanShader& shader = m_Shaders[mat.material.shaderID];
 
-			mat.vertexIndexBufferIndex = mat.material.shaderID;
+			mat.material.dynamicVertexIndexBufferIndex = GetDynamicVertexIndexBufferIndex(CalculateVertexStride(shader.shader->vertexAttributes));
+			mat.material.bDynamic = createInfo->bDynamic;
 
 			if (shader.shader->constantBufferUniforms.HasUniform(U_UNIFORM_BUFFER_CONSTANT))
 			{
@@ -1770,7 +1815,7 @@ namespace flex
 		void VulkanRenderer::UpdateVertexData(RenderID renderID, VertexBufferData const* vertexBufferData)
 		{
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
-			VulkanBuffer* vertexBuffer = m_VertexIndexBufferPairs[m_Materials.at(renderObject->materialID).vertexIndexBufferIndex].vertexBuffer;
+			VulkanBuffer* vertexBuffer = m_DynamicVertexIndexBufferPairs[m_Materials.at(renderObject->materialID).material.dynamicVertexIndexBufferIndex].second->vertexBuffer;
 			u32 copySize = std::min(vertexBufferData->VertexBufferSize, (u32)vertexBuffer->m_Size);
 			if (copySize < vertexBufferData->VertexBufferSize)
 			{
@@ -1880,9 +1925,9 @@ namespace flex
 		{
 			GenerateGBuffer();
 
-			for (VertexIndexBufferPair& pair : m_VertexIndexBufferPairs)
+			for (auto& pair : m_DynamicVertexIndexBufferPairs)
 			{
-				pair.Empty();
+				pair.second->Empty();
 			}
 		}
 
@@ -3012,16 +3057,18 @@ namespace flex
 				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				subresourceRange);
 
-			VertexIndexBufferPair& vertexIndexBufferPair = m_VertexIndexBufferPairs[skyboxMat.vertexIndexBufferIndex];
-
-			if (vertexIndexBufferPair.vertexBuffer->m_Buffer == VK_NULL_HANDLE)
+			VulkanBuffer* vertexBuffer = m_StaticVertexBuffers[m_Shaders[skyboxMat.material.shaderID].shader->staticVertexBufferIndex].second;
+			VulkanBuffer* indexBuffer = m_StaticIndexBuffer;
+			if (vertexBuffer->m_Buffer == VK_NULL_HANDLE)
 			{
 				PrintError("Attempted to generate cubemap from HDR but vertex buffer has not been generated! (for shader %s)\n", skyboxMat.material.name.c_str());
+				return;
 			}
 			if (skyboxRenderObject->bIndexed &&
-				vertexIndexBufferPair.indexBuffer->m_Buffer == VK_NULL_HANDLE)
+				indexBuffer->m_Buffer == VK_NULL_HANDLE)
 			{
 				PrintError("Attempted to generate cubemap from HDR but index buffer has not been generated! (for shader %s)\n", skyboxMat.material.name.c_str());
+				return;
 			}
 
 			for (u32 mip = 0; mip < mipLevels; ++mip)
@@ -3048,10 +3095,10 @@ namespace flex
 
 					VkDeviceSize offsets[1] = { 0 };
 
-					vkCmdBindVertexBuffers(cmdBuf, 0, 1, &vertexIndexBufferPair.vertexBuffer->m_Buffer, offsets);
+					vkCmdBindVertexBuffers(cmdBuf, 0, 1, &vertexBuffer->m_Buffer, offsets);
 					if (skyboxRenderObject->bIndexed)
 					{
-						vkCmdBindIndexBuffer(cmdBuf, vertexIndexBufferPair.indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
+						vkCmdBindIndexBuffer(cmdBuf, indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
 						vkCmdDrawIndexed(cmdBuf, skyboxRenderObject->indices->size(), 1, 0, 0, 0);
 					}
 					else
@@ -3310,15 +3357,15 @@ namespace flex
 
 					VkDeviceSize offsets[1] = { 0 };
 
-					vkCmdBindVertexBuffers(cmdBuf, 0, 1, &m_VertexIndexBufferPairs[skyboxMat.vertexIndexBufferIndex].vertexBuffer->m_Buffer, offsets);
+					vkCmdBindVertexBuffers(cmdBuf, 0, 1, &m_StaticVertexBuffers[m_Shaders[skyboxMat.material.shaderID].shader->staticVertexBufferIndex].second->m_Buffer, offsets);
 					if (skyboxRenderObject->bIndexed)
 					{
-						vkCmdBindIndexBuffer(cmdBuf, m_VertexIndexBufferPairs[skyboxMat.vertexIndexBufferIndex].indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
-						vkCmdDrawIndexed(cmdBuf, skyboxRenderObject->indices->size(), 1, 0, 0, 0);
+						vkCmdBindIndexBuffer(cmdBuf, m_StaticIndexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
+						vkCmdDrawIndexed(cmdBuf, skyboxRenderObject->indices->size(), 1, skyboxRenderObject->indexOffset, skyboxRenderObject->vertexOffset, 0);
 					}
 					else
 					{
-						vkCmdDraw(cmdBuf, skyboxRenderObject->vertexBufferData->VertexCount, 1, 0, 0);
+						vkCmdDraw(cmdBuf, skyboxRenderObject->vertexBufferData->VertexCount, 1, skyboxRenderObject->vertexOffset, 0);
 					}
 
 					vkCmdEndRenderPass(cmdBuf);
@@ -3574,15 +3621,15 @@ namespace flex
 
 					VkDeviceSize offsets[1] = { 0 };
 
-					vkCmdBindVertexBuffers(cmdBuf, 0, 1, &m_VertexIndexBufferPairs[skyboxMat.vertexIndexBufferIndex].vertexBuffer->m_Buffer, offsets);
+					vkCmdBindVertexBuffers(cmdBuf, 0, 1, &m_StaticVertexBuffers[m_Shaders[skyboxMat.material.shaderID].shader->staticVertexBufferIndex].second->m_Buffer, offsets);
 					if (skyboxRenderObject->bIndexed)
 					{
-						vkCmdBindIndexBuffer(cmdBuf, m_VertexIndexBufferPairs[skyboxMat.vertexIndexBufferIndex].indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
-						vkCmdDrawIndexed(cmdBuf, skyboxRenderObject->indices->size(), 1, 0, 0, 0);
+						vkCmdBindIndexBuffer(cmdBuf, m_StaticIndexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
+						vkCmdDrawIndexed(cmdBuf, skyboxRenderObject->indices->size(), 1, skyboxRenderObject->indexOffset, skyboxRenderObject->vertexOffset, 0);
 					}
 					else
 					{
-						vkCmdDraw(cmdBuf, skyboxRenderObject->vertexBufferData->VertexCount, 1, 0, 0);
+						vkCmdDraw(cmdBuf, skyboxRenderObject->vertexBufferData->VertexCount, 1, skyboxRenderObject->vertexOffset, 0);
 					}
 
 					vkCmdEndRenderPass(cmdBuf);
@@ -4044,8 +4091,8 @@ namespace flex
 				pipelineCreateInfo.renderPass = renderPass;
 				CreateGraphicsPipeline(&pipelineCreateInfo);
 
-				VulkanRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
-				VulkanMaterial* gBufferMaterial = &m_Materials.at(gBufferRenderObject->materialID);
+				//VulkanRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
+				//VulkanMaterial* gBufferMaterial = &m_Materials.at(gBufferRenderObject->materialID);
 
 				// TODO: Remove/call only once prior to any font load
 				UpdateConstantUniformBuffers();
@@ -4122,7 +4169,7 @@ namespace flex
 					vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
 					VkDeviceSize offsets[1] = { 0 };
-					vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_VertexIndexBufferPairs[gBufferMaterial->vertexIndexBufferIndex].vertexBuffer->m_Buffer, offsets);
+					vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_StaticVertexBuffers[computeSDFShader.shader->staticVertexBufferIndex].second->m_Buffer, offsets);
 
 					vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
@@ -4333,34 +4380,10 @@ namespace flex
 		// TODO: Unify with DrawTextWS?
 		void VulkanRenderer::DrawTextSS(VkCommandBuffer commandBuffer)
 		{
-			// Update dynamic text buffer
-			{
-				std::vector<TextVertex2D> textVerticesSS;
-				UpdateTextBufferSS(textVerticesSS);
-
-				u32 SSTextBufferByteCount = (u32)(textVerticesSS.size() * sizeof(TextVertex2D));
-
-				if (SSTextBufferByteCount > 0)
-				{
-					const VulkanMaterial& fontMaterial = m_Materials[m_FontMatSSID];
-					VulkanBuffer* vertexBuffer = m_VertexIndexBufferPairs[fontMaterial.vertexIndexBufferIndex].vertexBuffer;
-					u32 copySize = std::min(SSTextBufferByteCount, (u32)vertexBuffer->m_Size);
-					if (copySize < SSTextBufferByteCount)
-					{
-						PrintError("SS Font vertex buffer is %u bytes too small\n", SSTextBufferByteCount - copySize);
-					}
-					VK_CHECK_RESULT(vertexBuffer->Map(copySize));
-					memcpy(vertexBuffer->m_Mapped, textVerticesSS.data(), copySize);
-					vertexBuffer->Unmap();
-				}
-			}
-
 			if (m_FontMatSSID == InvalidMaterialID)
 			{
 				return;
 			}
-
-			PROFILE_AUTO("DrawTextSS");
 
 			bool bHasText = false;
 			for (BitmapFont* font : m_FontsSS)
@@ -4380,8 +4403,30 @@ namespace flex
 			VulkanMaterial& fontMaterial = m_Materials[m_FontMatSSID];
 			VulkanShader& fontShader = m_Shaders[fontMaterial.material.shaderID];
 
-			glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+			// Update dynamic text buffer
+			{
+				std::vector<TextVertex2D> textVerticesSS;
+				UpdateTextBufferSS(textVerticesSS);
 
+				u32 SSTextBufferByteCount = (u32)(textVerticesSS.size() * sizeof(TextVertex2D));
+
+				if (SSTextBufferByteCount > 0)
+				{
+					VulkanBuffer* vertexBuffer = m_StaticVertexBuffers[fontShader.shader->staticVertexBufferIndex].second;
+					u32 copySize = std::min(SSTextBufferByteCount, (u32)vertexBuffer->m_Size);
+					if (copySize < SSTextBufferByteCount)
+					{
+						PrintError("SS Font vertex buffer is %u bytes too small\n", SSTextBufferByteCount - copySize);
+					}
+					VK_CHECK_RESULT(vertexBuffer->Map(copySize));
+					memcpy(vertexBuffer->m_Mapped, textVerticesSS.data(), copySize);
+					vertexBuffer->Unmap();
+				}
+			}
+
+			PROFILE_AUTO("DrawTextSS");
+
+			glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 			VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[fontMaterial.material.shaderID];
 
 			if (m_FontSSGraphicsPipeline == VK_NULL_HANDLE)
@@ -4461,7 +4506,7 @@ namespace flex
 					UpdateDynamicUniformBuffer(m_FontMatSSID, dynamicOffsetIndex * m_DynamicAlignment, transformMat, &overrides);
 
 					VkDeviceSize offsets[1] = { 0 };
-					vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_VertexIndexBufferPairs[fontMaterial.vertexIndexBufferIndex].vertexBuffer->m_Buffer, offsets);
+					vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_StaticVertexBuffers[fontShader.shader->staticVertexBufferIndex].second->m_Buffer, offsets);
 
 					vkCmdDraw(commandBuffer, font->bufferSize, 1, font->bufferStart, 0);
 				}
@@ -4470,34 +4515,10 @@ namespace flex
 
 		void VulkanRenderer::DrawTextWS(VkCommandBuffer commandBuffer)
 		{
-			// Update dynamic text buffer
-			{
-				std::vector<TextVertex3D> textVerticesWS;
-				UpdateTextBufferWS(textVerticesWS);
-
-				u32 WSTextBufferByteCount = (u32)(textVerticesWS.size() * sizeof(TextVertex3D));
-
-				if (WSTextBufferByteCount > 0)
-				{
-					const VulkanMaterial& fontMaterial = m_Materials[m_FontMatWSID];
-					VulkanBuffer* vertexBuffer = m_VertexIndexBufferPairs[fontMaterial.vertexIndexBufferIndex].vertexBuffer;
-					u32 copySize = std::min(WSTextBufferByteCount, (u32)vertexBuffer->m_Size);
-					if (copySize < WSTextBufferByteCount)
-					{
-						PrintError("SS Font vertex buffer is %u bytes too small\n", WSTextBufferByteCount - copySize);
-					}
-					VK_CHECK_RESULT(vertexBuffer->Map(copySize));
-					memcpy(vertexBuffer->m_Mapped, textVerticesWS.data(), copySize);
-					vertexBuffer->Unmap();
-				}
-			}
-
 			if (m_FontMatWSID == InvalidMaterialID)
 			{
 				return;
 			}
-
-			PROFILE_AUTO("DrawTextWS");
 
 			bool bHasText = false;
 			for (BitmapFont* font : m_FontsWS)
@@ -4516,6 +4537,30 @@ namespace flex
 
 			VulkanMaterial& fontMaterial = m_Materials[m_FontMatWSID];
 			VulkanShader& fontShader = m_Shaders[fontMaterial.material.shaderID];
+
+			// Update dynamic text buffer
+			{
+				std::vector<TextVertex3D> textVerticesWS;
+				UpdateTextBufferWS(textVerticesWS);
+
+				u32 WSTextBufferByteCount = (u32)(textVerticesWS.size() * sizeof(TextVertex3D));
+
+				if (WSTextBufferByteCount > 0)
+				{
+					//const VulkanMaterial& fontMaterial = m_Materials[m_FontMatWSID];
+					VulkanBuffer* vertexBuffer = m_StaticVertexBuffers[fontShader.shader->staticVertexBufferIndex].second;
+					u32 copySize = std::min(WSTextBufferByteCount, (u32)vertexBuffer->m_Size);
+					if (copySize < WSTextBufferByteCount)
+					{
+						PrintError("SS Font vertex buffer is %u bytes too small\n", WSTextBufferByteCount - copySize);
+					}
+					VK_CHECK_RESULT(vertexBuffer->Map(copySize));
+					memcpy(vertexBuffer->m_Mapped, textVerticesWS.data(), copySize);
+					vertexBuffer->Unmap();
+				}
+			}
+
+			PROFILE_AUTO("DrawTextWS");
 
 			glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 
@@ -4591,7 +4636,7 @@ namespace flex
 					UpdateDynamicUniformBuffer(m_FontMatWSID, dynamicOffsetIndex * m_DynamicAlignment, transformMat, &overrides);
 
 					VkDeviceSize offsets[1] = { 0 };
-					vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_VertexIndexBufferPairs[fontMaterial.vertexIndexBufferIndex].vertexBuffer->m_Buffer, offsets);
+					vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_StaticVertexBuffers[fontShader.shader->staticVertexBufferIndex].second->m_Buffer, offsets);
 
 					vkCmdDraw(commandBuffer, font->bufferSize, 1, font->bufferStart, 0);
 				}
@@ -4678,22 +4723,18 @@ namespace flex
 			VulkanMaterial& spriteMat = m_Materials.at(matID);
 			VulkanShader& spriteShader = m_Shaders[spriteMat.material.shaderID];
 
-			VulkanBuffer* vertBuffer = m_VertexIndexBufferPairs[spriteMat.vertexIndexBufferIndex].vertexBuffer;
-
 			// TODO: Use instancing!
-			if (!m_VertexIndexBufferPairs[spriteMat.vertexIndexBufferIndex].bUseStagingBuffer)
+			VulkanBuffer* vertexBuffer = m_StaticVertexBuffers[spriteShader.shader->staticVertexBufferIndex].second;
+			// Copy vertex data into device memory for dynamic shaders
+			u32 copySize = (u32)vertexBuffer->m_Size;
+			VK_CHECK_RESULT(vertexBuffer->Map(copySize));
+			real* dst = (real*)vertexBuffer->m_Mapped;
+			for (u32 i = 0; i < batch.size(); ++i)
 			{
-				// Copy vertex data into device memory for dynamic shaders
-				u32 copySize = (u32)vertBuffer->m_Size;
-				VK_CHECK_RESULT(vertBuffer->Map(copySize));
-				real* dst = (real*)vertBuffer->m_Mapped;
-				for (u32 i = 0; i < batch.size(); ++i)
-				{
-					memcpy(dst, m_Quad3DVertexBufferData.vertexData, m_Quad3DVertexBufferData.VertexBufferSize);
-					dst += m_Quad3DVertexBufferData.VertexBufferSize / sizeof(real);
-				}
-				vertBuffer->Unmap();
+				memcpy(dst, m_Quad3DVertexBufferData.vertexData, m_Quad3DVertexBufferData.VertexBufferSize);
+				dst += m_Quad3DVertexBufferData.VertexBufferSize / sizeof(real);
 			}
+			vertexBuffer->Unmap();
 
 			u32 i = 0;
 			for (const SpriteQuadDrawInfo& drawInfo : batch)
@@ -4757,7 +4798,7 @@ namespace flex
 				overrides.overridenUniforms.AddUniform(U_COLOR_MULTIPLIER);
 				UpdateDynamicUniformBuffer(matID, dynamicUBOOffset, model, &overrides);
 
-				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertBuffer->m_Buffer, offsets);
+				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer->m_Buffer, offsets);
 
 				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
@@ -5012,6 +5053,44 @@ namespace flex
 
 			UniformBuffer* particleBuffer = particleSimMat.uniformBufferList.Get(UniformBufferType::PARTICLE_DATA);
 			CopyBuffer(m_VulkanDevice, m_GraphicsQueue, stagingBuffer.m_Buffer, particleBuffer->buffer.m_Buffer, particleBuffer->buffer.m_Size);
+		}
+
+		u32 VulkanRenderer::GetStaticVertexIndexBufferIndex(u32 stride)
+		{
+			if (stride == 0)
+			{
+				return u32_max;
+			}
+
+			for (u32 bufferIndex = 0; bufferIndex < m_StaticVertexBuffers.size(); ++bufferIndex)
+			{
+				if (m_StaticVertexBuffers[bufferIndex].first == stride)
+				{
+					return bufferIndex;
+				}
+			}
+
+			m_StaticVertexBuffers.emplace_back(stride, new VulkanBuffer(m_VulkanDevice));
+			return m_StaticVertexBuffers.size() - 1;
+		}
+
+		u32 VulkanRenderer::GetDynamicVertexIndexBufferIndex(u32 stride)
+		{
+			if (stride == 0)
+			{
+				return u32_max;
+			}
+
+			for (u32 bufferIndex = 0; bufferIndex < m_DynamicVertexIndexBufferPairs.size(); ++bufferIndex)
+			{
+				if (m_DynamicVertexIndexBufferPairs[bufferIndex].first == stride)
+				{
+					return bufferIndex;
+				}
+			}
+
+			m_DynamicVertexIndexBufferPairs.emplace_back(stride, new VertexIndexBufferPair(new VulkanBuffer(m_VulkanDevice), new VulkanBuffer(m_VulkanDevice)));
+			return m_DynamicVertexIndexBufferPairs.size() - 1;
 		}
 
 		MaterialID VulkanRenderer::GetNextAvailableMaterialID() const
@@ -6860,89 +6939,90 @@ namespace flex
 
 		void VulkanRenderer::CreateStaticVertexBuffers()
 		{
-			auto renderObjectValid = [this](VulkanRenderObject* renderObject, u32 shaderID)
+			auto renderObjectValid = [this](VulkanRenderObject* renderObject, u32 staticVertexBufferIndex)
 			{
 				return renderObject &&
 					renderObject->vertexBufferData &&
-					// TODO: Compare render object's vertexIndexBufferIndex instead of shaderID
-					m_Materials.at(renderObject->materialID).material.shaderID == shaderID;
+					m_Shaders[m_Materials.at(renderObject->materialID).material.shaderID].shader->staticVertexBufferIndex == staticVertexBufferIndex;
 			};
 
-			for (u32 i = 0; i < m_VertexIndexBufferPairs.size(); ++i)
+			for (u32 staticVertexBufferIndex = 0; staticVertexBufferIndex < m_StaticVertexBuffers.size(); ++staticVertexBufferIndex)
 			{
-				if (m_VertexIndexBufferPairs[i].bUseStagingBuffer)
+				auto& vertexBufferPair = m_StaticVertexBuffers[staticVertexBufferIndex];
+				VulkanBuffer* vertexBuffer = vertexBufferPair.second;
+
+				u32 requiredMemory = 0;
+
+				for (VulkanRenderObject* renderObject : m_RenderObjects)
 				{
-					u32 requiredMemory = 0;
-
-					Shader* shader = m_Shaders[i].shader;
-					if (!shader->bGenerateVertexBufferForAll)
+					if (renderObjectValid(renderObject, staticVertexBufferIndex))
 					{
-						for (VulkanRenderObject* renderObject : m_RenderObjects)
-						{
-							if (renderObjectValid(renderObject, i))
-							{
-								requiredMemory += renderObject->vertexBufferData->VertexBufferSize;
-							}
-						}
-
-						if (requiredMemory > 0)
-						{
-							VulkanBuffer* vertexBuffer = m_VertexIndexBufferPairs[i].vertexBuffer;
-							ShaderID shaderID = i;
-							u32 size = requiredMemory;
-
-							void* vertexDataStart = malloc_hooked(size);
-							if (!vertexDataStart)
-							{
-								PrintError("Failed to allocate memory for vertex buffer %u! Attempted to allocate %d bytes", shaderID, size);
-								continue;
-							}
-
-							void* vertexBufferData = vertexDataStart;
-
-							u32 vertexCount = 0;
-							u32 vertexBufferSize = 0;
-							for (VulkanRenderObject* renderObject : m_RenderObjects)
-							{
-								if (renderObjectValid(renderObject, i))
-								{
-									renderObject->vertexOffset = vertexCount;
-
-									memcpy(vertexBufferData, renderObject->vertexBufferData->vertexData, renderObject->vertexBufferData->VertexBufferSize);
-
-									vertexCount += renderObject->vertexBufferData->VertexCount;
-									vertexBufferSize += renderObject->vertexBufferData->VertexBufferSize;
-
-									vertexBufferData = (char*)vertexBufferData + renderObject->vertexBufferData->VertexBufferSize;
-								}
-							}
-
-							if (vertexBufferSize == 0 || vertexCount == 0)
-							{
-								PrintError("Failed to create static vertex buffer (no verts use shader index %u)\n", shaderID);
-								continue;
-							}
-
-							CreateAndUploadToStaticVertexBuffer(vertexBuffer, vertexDataStart, vertexBufferSize);
-							free_hooked(vertexDataStart);
-						}
+						requiredMemory += renderObject->vertexBufferData->VertexBufferSize;
 					}
 				}
+
+				if (requiredMemory == 0)
+				{
+					continue;
+				}
+
+				u32 size = requiredMemory;
+
+				void* vertexDataStart = malloc_hooked(size);
+				if (!vertexDataStart)
+				{
+					PrintError("Failed to allocate %d bytes for static vertex buffer\n", size);
+					return;
+				}
+
+				void* vertexBufferData = vertexDataStart;
+
+				u32 vertexCount = 0;
+				u32 vertexBufferSize = 0;
+				for (VulkanRenderObject* renderObject : m_RenderObjects)
+				{
+					if (renderObjectValid(renderObject, staticVertexBufferIndex))
+					{
+						renderObject->vertexOffset = vertexCount;
+
+						memcpy(vertexBufferData, renderObject->vertexBufferData->vertexData, renderObject->vertexBufferData->VertexBufferSize);
+
+						vertexCount += renderObject->vertexBufferData->VertexCount;
+						vertexBufferSize += renderObject->vertexBufferData->VertexBufferSize;
+
+						vertexBufferData = (char*)vertexBufferData + renderObject->vertexBufferData->VertexBufferSize;
+					}
+				}
+
+				if (vertexBufferSize == 0 || vertexCount == 0)
+				{
+					PrintError("Failed to create static vertex buffer\n");
+					return;
+				}
+
+				CreateAndUploadToStaticVertexBuffer(vertexBuffer, vertexDataStart, vertexBufferSize);
+				free_hooked(vertexDataStart);
 			}
 		}
 
 		void VulkanRenderer::CreateDynamicVertexBuffers()
 		{
-			for (u32 i = 0; i < m_VertexIndexBufferPairs.size(); ++i)
+			std::vector<u32> dynamicVertexBufferSizes(m_DynamicVertexIndexBufferPairs.size(), 0);
+			for (u32 shaderID = 0; shaderID < m_Shaders.size(); ++shaderID)
 			{
-				if (!m_VertexIndexBufferPairs[i].bUseStagingBuffer)
+				if (m_Shaders[shaderID].shader->dynamicVertexBufferSize != 0)
 				{
-					u32 requiredMemory = m_Shaders[i].shader->dynamicVertexBufferSize;
+					const u32 dynamicVertexBufferIndex = GetDynamicVertexIndexBufferIndex(CalculateVertexStride(m_Shaders[shaderID].shader->vertexAttributes));
+					dynamicVertexBufferSizes[dynamicVertexBufferIndex] += m_Shaders[shaderID].shader->dynamicVertexBufferSize;
+				}
+			}
 
-					if (requiredMemory > 0)
-					{
-						CreateDynamicVertexBuffer(m_VertexIndexBufferPairs[i].vertexBuffer, requiredMemory);
-					}
+			for (u32 bufferIndex = 0; bufferIndex < m_DynamicVertexIndexBufferPairs.size(); ++bufferIndex)
+			{
+				u32 requiredMemory = dynamicVertexBufferSizes[bufferIndex];
+				if (requiredMemory > 0)
+				{
+					CreateDynamicVertexBuffer(m_DynamicVertexIndexBufferPairs[bufferIndex].second->vertexBuffer, requiredMemory);
 				}
 			}
 		}
@@ -7004,16 +7084,14 @@ namespace flex
 				return;
 			}
 
-			VulkanBuffer* vertexBuffer = m_VertexIndexBufferPairs[shadowMat.vertexIndexBufferIndex].vertexBuffer;
-			CreateAndUploadToStaticVertexBuffer(vertexBuffer, vertexDataStart, vertexBufferSize);
+			CreateAndUploadToStaticVertexBuffer(m_ShadowVertexIndexBufferPair->vertexBuffer, vertexDataStart, vertexBufferSize);
 			free_hooked(vertexDataStart);
 		}
 
 		void VulkanRenderer::CreateAndUploadToStaticVertexBuffer(VulkanBuffer* vertexBuffer, void* vertexBufferData, u32 vertexBufferSize)
 		{
 			VulkanBuffer stagingBuffer(m_VulkanDevice);
-			stagingBuffer.Create(vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-				VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+			stagingBuffer.Create(vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 			VK_CHECK_RESULT(stagingBuffer.Map(vertexBufferSize));
 			memcpy(stagingBuffer.m_Mapped, vertexBufferData, vertexBufferSize);
@@ -7026,44 +7104,30 @@ namespace flex
 
 		void VulkanRenderer::CreateDynamicVertexBuffer(VulkanBuffer* vertexBuffer, u32 size)
 		{
-			vertexBuffer->Create(size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+			vertexBuffer->Create(size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 		}
 
 		void VulkanRenderer::CreateStaticIndexBuffers()
 		{
-			for (u32 i = 0; i < m_VertexIndexBufferPairs.size(); ++i)
+			std::vector<u32> indices;
+
+			for (VulkanRenderObject* renderObject : m_RenderObjects)
 			{
-				Shader* shader = m_Shaders[i].shader;
-				if (!shader->bGenerateVertexBufferForAll)
+				if (renderObject &&
+					renderObject->bIndexed)
 				{
-					VulkanBuffer* indexBuffer = m_VertexIndexBufferPairs[i].indexBuffer;
-					ShaderID shaderID = i;
-
-					std::vector<u32> indices;
-
-					for (VulkanRenderObject* renderObject : m_RenderObjects)
-					{
-						if (renderObject &&
-							renderObject->bIndexed &&
-							m_Materials.at(renderObject->materialID).material.shaderID == shaderID)
-						{
-							renderObject->indexOffset = indices.size();
-							indices.insert(indices.end(), renderObject->indices->begin(), renderObject->indices->end());
-						}
-					}
-
-					if (indices.empty())
-					{
-						// No indexed render objects use specified shader
-						continue;
-					}
-
-					CreateAndUploadToStaticIndexBuffer(indexBuffer, indices);
-
-					m_VertexIndexBufferPairs[i].indexCount = indices.size();
+					renderObject->indexOffset = indices.size();
+					indices.insert(indices.end(), renderObject->indices->begin(), renderObject->indices->end());
 				}
 			}
+
+			if (indices.empty())
+			{
+				// No indexed render objects use specified shader
+				return;
+			}
+
+			CreateAndUploadToStaticIndexBuffer(m_StaticIndexBuffer, indices);
 		}
 
 		void VulkanRenderer::CreateShadowIndexBuffer()
@@ -7085,8 +7149,8 @@ namespace flex
 				return;
 			}
 
-			VulkanBuffer* indexBuffer = m_VertexIndexBufferPairs[m_Materials[m_ShadowMaterialID].vertexIndexBufferIndex].indexBuffer;
-			CreateAndUploadToStaticIndexBuffer(indexBuffer, indices);
+			CreateAndUploadToStaticIndexBuffer(m_ShadowVertexIndexBufferPair->indexBuffer, indices);
+			m_ShadowVertexIndexBufferPair->indexCount = indices.size();
 		}
 
 		void VulkanRenderer::CreateAndUploadToStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<u32>& indices)
@@ -7094,15 +7158,13 @@ namespace flex
 			const u32 bufferSize = sizeof(indices[0]) * indices.size();
 
 			VulkanBuffer stagingBuffer(m_VulkanDevice);
-			stagingBuffer.Create(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+			stagingBuffer.Create(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 			VK_CHECK_RESULT(stagingBuffer.Map(bufferSize));
 			memcpy(stagingBuffer.m_Mapped, indices.data(), bufferSize);
 			stagingBuffer.Unmap();
 
-			indexBuffer->Create(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			indexBuffer->Create(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 			CopyBuffer(m_VulkanDevice, m_GraphicsQueue, stagingBuffer.m_Buffer, indexBuffer->m_Buffer, bufferSize);
 		}
 
@@ -7200,108 +7262,105 @@ namespace flex
 				// TODO: Iterate over other definition of vertex buffers
 				for (u32 shaderID = 0; shaderID < m_Shaders.size(); ++shaderID)
 				{
-					VulkanBuffer* vertBuffer = m_VertexIndexBufferPairs[shaderID].vertexBuffer;
-					VulkanBuffer* indexBuffer = m_VertexIndexBufferPairs[shaderID].indexBuffer;
-
-					if (vertBuffer->m_Buffer == 0)
-					{
-						continue;
-					}
-
 					const bool bDeferred = m_Shaders[shaderID].shader->numAttachments > 1;
 					ShaderBatch* shaderBatch = (bDeferred ? &m_DeferredObjectBatches : &m_ForwardObjectBatches);
 
-					ShaderBatchPair shaderBatchPair = {};
-					shaderBatchPair.shaderID = shaderID;
-
-					ShaderBatchPair depthAwareEditorShaderBatchPair = {};
-					depthAwareEditorShaderBatchPair.shaderID = shaderID;
-
-					ShaderBatchPair depthUnawareEditorShaderBatchPair = {};
-					depthUnawareEditorShaderBatchPair.shaderID = shaderID;
-
-					i32 dynamicUBOOffset = 0;
-
-					for (auto& matPair : m_Materials)
+					for (u32 dynamic = 0; dynamic <= 1; ++dynamic)
 					{
-						VulkanMaterial& material = matPair.second;
+						ShaderBatchPair shaderBatchPair = {};
+						shaderBatchPair.shaderID = shaderID;
+						shaderBatchPair.bDynamic = (dynamic == 1);
 
-						if (material.material.shaderID == shaderID)
+						ShaderBatchPair depthAwareEditorShaderBatchPair = {};
+						depthAwareEditorShaderBatchPair.shaderID = shaderID;
+						depthAwareEditorShaderBatchPair.bDynamic = (dynamic == 1);
+
+						ShaderBatchPair depthUnawareEditorShaderBatchPair = {};
+						depthUnawareEditorShaderBatchPair.shaderID = shaderID;
+						depthUnawareEditorShaderBatchPair.bDynamic = (dynamic == 1);
+
+						i32 dynamicUBOOffset = 0;
+
+						for (auto& matPair : m_Materials)
 						{
-							MaterialBatchPair matBatchPair = {};
-							matBatchPair.materialID = matPair.first;
+							VulkanMaterial& material = matPair.second;
 
-							MaterialBatchPair depthAwareEditorMatBatchPair = {};
-							depthAwareEditorMatBatchPair.materialID = matPair.first;
-
-							MaterialBatchPair depthUnawareEditorMatBatchPair = {};
-							depthUnawareEditorMatBatchPair.materialID = matPair.first;
-
-							for (u32 renderID = 0; renderID < m_RenderObjects.size(); ++renderID)
+							if (material.material.shaderID == shaderID && ((u32)material.material.bDynamic) == dynamic)
 							{
-								VulkanRenderObject* renderObject = GetRenderObject(renderID);
+								MaterialBatchPair matBatchPair = {};
+								matBatchPair.materialID = matPair.first;
 
-								if (renderObject &&
-									renderObject->materialID == matPair.first &&
-									(!renderObject->bIndexed || indexBuffer->m_Buffer != 0))
+								MaterialBatchPair depthAwareEditorMatBatchPair = {};
+								depthAwareEditorMatBatchPair.materialID = matPair.first;
+
+								MaterialBatchPair depthUnawareEditorMatBatchPair = {};
+								depthUnawareEditorMatBatchPair.materialID = matPair.first;
+
+								for (u32 renderID = 0; renderID < m_RenderObjects.size(); ++renderID)
 								{
-									UniformBuffer* dynamicBuffer = material.uniformBufferList.Get(UniformBufferType::DYNAMIC);
-									if (dynamicBuffer)
-									{
-										dynamicUBOOffset += RoundUp(dynamicBuffer->data.size, m_DynamicAlignment);
-									}
-									renderObject->dynamicUBOOffset = dynamicUBOOffset;
+									VulkanRenderObject* renderObject = GetRenderObject(renderID);
 
-									if (renderObject->gameObject->IsVisible())
+									if (renderObject &&
+										renderObject->materialID == matPair.first)
 									{
-										if (renderObject->bEditorObject)
+										UniformBuffer* dynamicBuffer = material.uniformBufferList.Get(UniformBufferType::DYNAMIC);
+										if (dynamicBuffer)
 										{
-											if (m_Shaders[shaderID].shader->bDepthWriteEnable)
+											dynamicUBOOffset += RoundUp(dynamicBuffer->data.size, m_DynamicAlignment);
+										}
+										renderObject->dynamicUBOOffset = dynamicUBOOffset;
+
+										if (renderObject->gameObject->IsVisible())
+										{
+											if (renderObject->bEditorObject)
 											{
-												depthAwareEditorMatBatchPair.batch.objects.push_back(renderID);
+												if (m_Shaders[shaderID].shader->bDepthWriteEnable)
+												{
+													depthAwareEditorMatBatchPair.batch.objects.push_back(renderID);
+												}
+												else
+												{
+													depthUnawareEditorMatBatchPair.batch.objects.push_back(renderID);
+												}
 											}
 											else
 											{
-												depthUnawareEditorMatBatchPair.batch.objects.push_back(renderID);
+												matBatchPair.batch.objects.push_back(renderID);
 											}
-										}
-										else
-										{
-											matBatchPair.batch.objects.push_back(renderID);
 										}
 									}
 								}
-							}
 
-							if (!matBatchPair.batch.objects.empty())
-							{
-								++renderObjBatchCount;
-								shaderBatchPair.batch.batches.push_back(matBatchPair);
-							}
-							if (!depthAwareEditorMatBatchPair.batch.objects.empty())
-							{
-								++renderObjBatchCount;
-								depthAwareEditorShaderBatchPair.batch.batches.push_back(depthAwareEditorMatBatchPair);
-							}
-							if (!depthUnawareEditorMatBatchPair.batch.objects.empty())
-							{
-								++renderObjBatchCount;
-								depthUnawareEditorShaderBatchPair.batch.batches.push_back(depthUnawareEditorMatBatchPair);
+								if (!matBatchPair.batch.objects.empty())
+								{
+									++renderObjBatchCount;
+									shaderBatchPair.batch.batches.push_back(matBatchPair);
+								}
+								if (!depthAwareEditorMatBatchPair.batch.objects.empty())
+								{
+									++renderObjBatchCount;
+									depthAwareEditorShaderBatchPair.batch.batches.push_back(depthAwareEditorMatBatchPair);
+								}
+								if (!depthUnawareEditorMatBatchPair.batch.objects.empty())
+								{
+									++renderObjBatchCount;
+									depthUnawareEditorShaderBatchPair.batch.batches.push_back(depthUnawareEditorMatBatchPair);
+								}
 							}
 						}
-					}
 
-					if (!shaderBatchPair.batch.batches.empty())
-					{
-						shaderBatch->batches.push_back(shaderBatchPair);
-					}
-					if (!depthAwareEditorShaderBatchPair.batch.batches.empty())
-					{
-						m_DepthAwareEditorObjBatches.batches.push_back(depthAwareEditorShaderBatchPair);
-					}
-					if (!depthUnawareEditorShaderBatchPair.batch.batches.empty())
-					{
-						m_DepthUnawareEditorObjBatches.batches.push_back(depthUnawareEditorShaderBatchPair);
+						if (!shaderBatchPair.batch.batches.empty())
+						{
+							shaderBatch->batches.push_back(shaderBatchPair);
+						}
+						if (!depthAwareEditorShaderBatchPair.batch.batches.empty())
+						{
+							m_DepthAwareEditorObjBatches.batches.push_back(depthAwareEditorShaderBatchPair);
+						}
+						if (!depthUnawareEditorShaderBatchPair.batch.batches.empty())
+						{
+							m_DepthUnawareEditorObjBatches.batches.push_back(depthUnawareEditorShaderBatchPair);
+						}
 					}
 				}
 			}
@@ -7336,7 +7395,29 @@ namespace flex
 				shaderID = m_Materials.at(drawCallInfo->materialIDOverride).material.shaderID;
 			}
 
-			u32 i = 0;
+			VulkanBuffer* indexBuffer;
+			VulkanBuffer* vertBuffer;
+			if (drawCallInfo && drawCallInfo->bRenderingShadows)
+			{
+				vertBuffer = m_ShadowVertexIndexBufferPair->vertexBuffer;
+				indexBuffer = m_ShadowVertexIndexBufferPair->indexBuffer;
+			}
+			else
+			{
+				u32 dynamicVertexIndexBufferIndex = GetDynamicVertexIndexBufferIndex(CalculateVertexStride(m_Shaders[shaderID].shader->vertexAttributes));
+				u32 staticVertexBufferIndex = GetStaticVertexIndexBufferIndex(CalculateVertexStride(m_Shaders[shaderID].shader->vertexAttributes));
+				vertBuffer = shaderBatch.bDynamic ? m_DynamicVertexIndexBufferPairs[dynamicVertexIndexBufferIndex].second->vertexBuffer : m_StaticVertexBuffers[staticVertexBufferIndex].second;
+				indexBuffer = shaderBatch.bDynamic ? m_DynamicVertexIndexBufferPairs[dynamicVertexIndexBufferIndex].second->indexBuffer : m_ShadowVertexIndexBufferPair->indexBuffer;
+			}
+
+			if (indexBuffer->m_Buffer != VK_NULL_HANDLE)
+			{
+				vkCmdBindIndexBuffer(commandBuffer, indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
+			}
+
+			VkDeviceSize offsets[1] = { 0 };
+			vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertBuffer->m_Buffer, offsets);
+
 			for (const MaterialBatchPair& matBatch : shaderBatch.batch.batches)
 			{
 				MaterialID matID = matBatch.materialID;
@@ -7347,16 +7428,9 @@ namespace flex
 
 				VulkanMaterial& mat = m_Materials.at(matID);
 				VulkanShader& shader = m_Shaders[mat.material.shaderID];
+				assert(mat.material.shaderID == shaderID);
 
-				VulkanBuffer* vertBuffer = m_VertexIndexBufferPairs[mat.vertexIndexBufferIndex].vertexBuffer;
-				VulkanBuffer* indexBuffer = m_VertexIndexBufferPairs[mat.vertexIndexBufferIndex].indexBuffer;
-
-				VkDeviceSize offsets[1] = { 0 };
-				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertBuffer->m_Buffer, offsets);
-				if (indexBuffer->m_Buffer != VK_NULL_HANDLE)
-				{
-					vkCmdBindIndexBuffer(commandBuffer, indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
-				}
+				assert(mat.material.bDynamic == shaderBatch.bDynamic);
 
 				for (RenderID renderID : matBatch.batch.objects)
 				{
@@ -7434,8 +7508,6 @@ namespace flex
 							vkCmdDraw(commandBuffer, renderObject->vertexBufferData->VertexCount, 1, renderObject->shadowVertexOffset, 0);
 						}
 					}
-
-					++i;
 				}
 			}
 		}
@@ -7444,15 +7516,12 @@ namespace flex
 			VkCommandBuffer commandBuffer,
 			MaterialID materialID,
 			VkPipelineLayout pipelineLayout,
-			VkPipeline graphicsPipeline,
 			VkDescriptorSet descriptorSet)
 		{
 			VulkanMaterial& material = m_Materials.at(materialID);
 
 			VkDeviceSize offsets[1] = { 0 };
 			BindDescriptorSet(&material, 0, commandBuffer, pipelineLayout, descriptorSet);
-
-			vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
 			vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_FullScreenTriVertexBuffer->m_Buffer, offsets);
 
@@ -7614,11 +7683,6 @@ namespace flex
 				// SSAO
 				//
 
-				VulkanRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
-				VulkanMaterial* gBufferMaterial = &m_Materials.at(gBufferRenderObject->materialID);
-
-				VertexIndexBufferPair* gBufferVertexIndexBuffer = &m_VertexIndexBufferPairs[gBufferMaterial->vertexIndexBufferIndex];
-
 				VkDeviceSize offsets[1] = { 0 };
 
 				if (m_SSAOSamplingData.ssaoEnabled)
@@ -7639,11 +7703,7 @@ namespace flex
 					VkRect2D ssaoScissor = vks::scissor(0u, 0u, m_SSAOFBColorAttachment0->width, m_SSAOFBColorAttachment0->height);
 					vkCmdSetScissor(m_OffScreenCmdBuffer, 0, 1, &ssaoScissor);
 
-					BindDescriptorSet(&m_Materials[m_SSAOMatID], 0, m_OffScreenCmdBuffer, m_SSAOGraphicsPipelineLayout, m_SSAODescSet);
-
-					vkCmdBindVertexBuffers(m_OffScreenCmdBuffer, 0, 1, &gBufferVertexIndexBuffer->vertexBuffer->m_Buffer, offsets);
-
-					vkCmdDraw(m_OffScreenCmdBuffer, gBufferRenderObject->vertexBufferData->VertexCount, 1, gBufferRenderObject->vertexOffset, 0);
+					RenderFullscreenTri(m_OffScreenCmdBuffer, m_SSAOMatID, m_SSAOGraphicsPipelineLayout, m_SSAODescSet);
 
 					m_SSAORenderPass->End();
 
@@ -7672,14 +7732,14 @@ namespace flex
 
 						BindDescriptorSet(&m_Materials[m_SSAOBlurMatID], 0 * m_DynamicAlignment, m_OffScreenCmdBuffer, m_SSAOBlurGraphicsPipelineLayout, m_SSAOBlurHDescSet);
 
-						vkCmdBindVertexBuffers(m_OffScreenCmdBuffer, 0, 1, &gBufferVertexIndexBuffer->vertexBuffer->m_Buffer, offsets);
+						vkCmdBindVertexBuffers(m_OffScreenCmdBuffer, 0, 1, &m_FullScreenTriVertexBuffer->m_Buffer, offsets);
 
 						UniformOverrides overrides = {};
 						overrides.overridenUniforms.AddUniform(U_SSAO_BLUR_DATA_DYNAMIC);
 						overrides.bSSAOVerticalPass = false;
 						UpdateDynamicUniformBuffer(m_SSAOBlurMatID, 0 * m_DynamicAlignment, MAT4_IDENTITY, &overrides);
 
-						vkCmdDraw(m_OffScreenCmdBuffer, gBufferRenderObject->vertexBufferData->VertexCount, 1, gBufferRenderObject->vertexOffset, 0);
+						vkCmdDraw(m_OffScreenCmdBuffer, m_FullScreenTriVertexBufferData.VertexCount, 1, 0, 0);
 
 						m_SSAOBlurHRenderPass->End();
 
@@ -7693,7 +7753,7 @@ namespace flex
 						overrides.bSSAOVerticalPass = true;
 						UpdateDynamicUniformBuffer(m_SSAOBlurMatID, 1 * m_DynamicAlignment, MAT4_IDENTITY, &overrides);
 
-						vkCmdDraw(m_OffScreenCmdBuffer, gBufferRenderObject->vertexBufferData->VertexCount, 1, gBufferRenderObject->vertexOffset, 0);
+						vkCmdDraw(m_OffScreenCmdBuffer, m_FullScreenTriVertexBufferData.VertexCount, 1, 0, 0);
 
 						m_SSAOBlurVRenderPass->End();
 
@@ -7852,21 +7912,22 @@ namespace flex
 
 				DrawParticles(commandBuffer);
 
-				{
-					BeginDebugMarkerRegion(commandBuffer, "World Space Sprites");
+				// TODO: Fix sprite rendering
+				//{
+				//	BeginDebugMarkerRegion(commandBuffer, "World Space Sprites");
 
-					EnqueueWorldSpaceSprites();
-					DrawSpriteBatch(m_QueuedWSSprites, commandBuffer);
-					m_QueuedWSSprites.clear();
+				//	EnqueueWorldSpaceSprites();
+				//	DrawSpriteBatch(m_QueuedWSSprites, commandBuffer);
+				//	m_QueuedWSSprites.clear();
 
-					EndDebugMarkerRegion(commandBuffer); // World Space Sprites
-					BeginDebugMarkerRegion(commandBuffer, "World Space Text");
+				//	EndDebugMarkerRegion(commandBuffer); // World Space Sprites
+				//	BeginDebugMarkerRegion(commandBuffer, "World Space Text");
 
-					EnqueueWorldSpaceText();
-					DrawTextWS(commandBuffer);
+				//	EnqueueWorldSpaceText();
+				//	DrawTextWS(commandBuffer);
 
-					EndDebugMarkerRegion(commandBuffer); // World Space Text
-				}
+				//	EndDebugMarkerRegion(commandBuffer); // World Space Text
+				//}
 
 				bool bUsingGameplayCam = g_CameraManager->CurrentCamera()->bIsGameplayCam;
 				if (g_EngineInstance->IsRenderingEditorObjects() && !bUsingGameplayCam)
@@ -7971,29 +8032,32 @@ namespace flex
 				m_UIRenderPass->m_FrameBuffer->frameBuffer = m_SwapChainFramebuffers[m_CurrentSwapChainBufferIndex]->frameBuffer;
 				m_UIRenderPass->Begin(commandBuffer, clearValues.data(), clearValues.size());
 
+				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_BlitGraphicsPipeline);
+
 				// Fullscreen blit from offscreen frame buffer onto swap chain
-				RenderFullscreenTri(commandBuffer, m_FullscreenBlitMatID, m_BlitGraphicsPipelineLayout, m_BlitGraphicsPipeline, m_FinalFullscreenBlitDescriptorSet);
+				RenderFullscreenTri(commandBuffer, m_FullscreenBlitMatID, m_BlitGraphicsPipelineLayout, m_FinalFullscreenBlitDescriptorSet);
 
-				{
-					BeginDebugMarkerRegion(commandBuffer, "Screen Space Sprites");
+				// TODO: Fix sprite rendering
+				//{
+				//	BeginDebugMarkerRegion(commandBuffer, "Screen Space Sprites");
 
-					EnqueueScreenSpaceSprites();
-					DrawSpriteBatch(m_QueuedSSSprites, commandBuffer);
-					m_QueuedSSSprites.clear();
-					DrawSpriteBatch(m_QueuedSSArrSprites, commandBuffer);
-					m_QueuedSSArrSprites.clear();
+				//	EnqueueScreenSpaceSprites();
+				//	DrawSpriteBatch(m_QueuedSSSprites, commandBuffer);
+				//	m_QueuedSSSprites.clear();
+				//	DrawSpriteBatch(m_QueuedSSArrSprites, commandBuffer);
+				//	m_QueuedSSArrSprites.clear();
 
-					EndDebugMarkerRegion(commandBuffer);
-				}
+				//	EndDebugMarkerRegion(commandBuffer);
+				//}
 
-				{
-					BeginDebugMarkerRegion(commandBuffer, "Screen Space Text");
+				//{
+				//	BeginDebugMarkerRegion(commandBuffer, "Screen Space Text");
 
-					EnqueueScreenSpaceText();
-					DrawTextSS(commandBuffer);
+				//	EnqueueScreenSpaceText();
+				//	DrawTextSS(commandBuffer);
 
-					EndDebugMarkerRegion(commandBuffer);
-				}
+				//	EndDebugMarkerRegion(commandBuffer);
+				//}
 
 				if (g_EngineInstance->IsRenderingImGui())
 				{

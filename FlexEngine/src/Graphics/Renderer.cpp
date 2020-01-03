@@ -1264,8 +1264,8 @@ namespace flex
 				{ "font_ss", "vk_font_ss_vert.spv", "vk_font_frag.spv", "vk_font_ss_geom.spv" },
 				{ "font_ws", "vk_font_ws_vert.spv", "vk_font_frag.spv", "vk_font_ws_geom.spv" },
 				{ "shadow", "vk_shadow_vert.spv" },
-				{ "ssao", "vk_barebones_pos3_uv_vert.spv", "vk_ssao_frag.spv" },
-				{ "ssao_blur", "vk_barebones_pos3_uv_vert.spv", "vk_ssao_blur_frag.spv" },
+				{ "ssao", "vk_barebones_pos2_uv_vert.spv", "vk_ssao_frag.spv" }, // TODO: Why not barebones pos2?
+				{ "ssao_blur", "vk_barebones_pos2_uv_vert.spv", "vk_ssao_blur_frag.spv" },
 				{ "taa_resolve", "vk_barebones_pos2_uv_vert.spv", "vk_taa_resolve_frag.spv" },
 				{ "gamma_correct", "vk_barebones_pos2_uv_vert.spv", "vk_gamma_correct_frag.spv" },
 				{ "blit", "vk_barebones_pos2_uv_vert.spv", "vk_blit_frag.spv" },
@@ -1344,7 +1344,6 @@ namespace flex
 			// Color
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
 			m_BaseShaders[shaderID].bTranslucent = true;
-			m_BaseShaders[shaderID].bDynamic = true;
 			m_BaseShaders[shaderID].dynamicVertexBufferSize = 16384 * 4 * 28; // TODO: FIXME:
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION |
@@ -1365,6 +1364,7 @@ namespace flex
 			m_BaseShaders[shaderID].bNeedMetallicSampler = true;
 			m_BaseShaders[shaderID].bNeedRoughnessSampler = true;
 			m_BaseShaders[shaderID].bNeedNormalSampler = true;
+			m_BaseShaders[shaderID].dynamicVertexBufferSize = 1024 * 1024; // TODO;
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV |
@@ -1507,7 +1507,6 @@ namespace flex
 			m_BaseShaders[shaderID].pushConstantBlockSize = 132;
 			m_BaseShaders[shaderID].bTranslucent = true;
 			m_BaseShaders[shaderID].bTextureArr = true;
-			m_BaseShaders[shaderID].bDynamic = true;
 			m_BaseShaders[shaderID].dynamicVertexBufferSize = 1024 * 1024; // TODO: FIXME:
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::UI;
 			m_BaseShaders[shaderID].vertexAttributes =
@@ -1568,7 +1567,6 @@ namespace flex
 
 			// Font SS
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::UI;
-			m_BaseShaders[shaderID].bDynamic = true;
 			m_BaseShaders[shaderID].dynamicVertexBufferSize = 1024 * 1024; // TODO: FIXME:
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION2 |
@@ -1588,7 +1586,6 @@ namespace flex
 
 			// Font WS
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
-			m_BaseShaders[shaderID].bDynamic = true;
 			m_BaseShaders[shaderID].dynamicVertexBufferSize = 1024 * 1024; // TODO: FIXME:
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION |
@@ -1627,7 +1624,7 @@ namespace flex
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::SSAO;
 			m_BaseShaders[shaderID].bDepthWriteEnable = false;
 			m_BaseShaders[shaderID].vertexAttributes =
-				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::POSITION2 |
 				(u32)VertexAttribute::UV;
 
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
@@ -1644,7 +1641,7 @@ namespace flex
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::SSAO_BLUR;
 			m_BaseShaders[shaderID].bDepthWriteEnable = false;
 			m_BaseShaders[shaderID].vertexAttributes =
-				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::POSITION2 |
 				(u32)VertexAttribute::UV;
 
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
@@ -1664,7 +1661,7 @@ namespace flex
 			m_BaseShaders[shaderID].bNeedPushConstantBlock = true;
 			m_BaseShaders[shaderID].pushConstantBlockSize = 8;
 			m_BaseShaders[shaderID].vertexAttributes =
-				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::POSITION | // TODO: POS2
 				(u32)VertexAttribute::UV;
 
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
@@ -1683,7 +1680,7 @@ namespace flex
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::GAMMA_CORRECT;
 			m_BaseShaders[shaderID].bDepthWriteEnable = false;
 			m_BaseShaders[shaderID].vertexAttributes =
-				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::POSITION | // TODO: POS2
 				(u32)VertexAttribute::UV;
 
 			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_SCENE_SAMPLER);
@@ -2444,6 +2441,7 @@ namespace flex
 		spriteMatSSCreateInfo.persistent = true;
 		spriteMatSSCreateInfo.visibleInEditor = true;
 		spriteMatSSCreateInfo.enableAlbedoSampler = true;
+		spriteMatSSCreateInfo.bDynamic = true;
 		m_SpriteMatSSID = InitializeMaterial(&spriteMatSSCreateInfo);
 
 		MaterialCreateInfo spriteMatWSCreateInfo = {};
@@ -2452,6 +2450,7 @@ namespace flex
 		spriteMatWSCreateInfo.persistent = true;
 		spriteMatWSCreateInfo.visibleInEditor = true;
 		spriteMatWSCreateInfo.enableAlbedoSampler = true;
+		spriteMatWSCreateInfo.bDynamic = true;
 		m_SpriteMatWSID = InitializeMaterial(&spriteMatWSCreateInfo);
 
 		MaterialCreateInfo spriteArrMatCreateInfo = {};
@@ -2460,6 +2459,7 @@ namespace flex
 		spriteArrMatCreateInfo.persistent = true;
 		spriteArrMatCreateInfo.visibleInEditor = true;
 		spriteArrMatCreateInfo.enableAlbedoSampler = true;
+		spriteArrMatCreateInfo.bDynamic = true;
 		m_SpriteArrMatID = InitializeMaterial(&spriteArrMatCreateInfo);
 
 		MaterialCreateInfo fontSSMatCreateInfo = {};
@@ -2467,6 +2467,7 @@ namespace flex
 		fontSSMatCreateInfo.shaderName = "font_ss";
 		fontSSMatCreateInfo.persistent = true;
 		fontSSMatCreateInfo.visibleInEditor = false;
+		fontSSMatCreateInfo.bDynamic = true;
 		m_FontMatSSID = InitializeMaterial(&fontSSMatCreateInfo);
 
 		MaterialCreateInfo fontWSMatCreateInfo = {};
@@ -2474,6 +2475,7 @@ namespace flex
 		fontWSMatCreateInfo.shaderName = "font_ws";
 		fontWSMatCreateInfo.persistent = true;
 		fontWSMatCreateInfo.visibleInEditor = false;
+		fontWSMatCreateInfo.bDynamic = true;
 		m_FontMatWSID = InitializeMaterial(&fontWSMatCreateInfo);
 
 		MaterialCreateInfo shadowMatCreateInfo = {};
