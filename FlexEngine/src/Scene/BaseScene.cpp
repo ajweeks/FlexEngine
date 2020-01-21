@@ -173,9 +173,7 @@ namespace flex
 					assert(skyboxMatID != InvalidMaterialID);
 
 					Skybox* skybox = new Skybox("Skybox");
-
-					JSONObject emptyObj = {};
-					skybox->ParseJSON(emptyObj, this, skyboxMatID);
+					skybox->ProcedurallyInitialize(skyboxMatID);
 
 					AddRootObject(skybox);
 				}

@@ -2161,6 +2161,7 @@ namespace flex
 			if (m_GBufferQuadRenderID != InvalidRenderID)
 			{
 				DestroyRenderObject(m_GBufferQuadRenderID);
+				m_GBufferQuadRenderID = InvalidRenderID;
 			}
 		}
 

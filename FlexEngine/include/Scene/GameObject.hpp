@@ -375,10 +375,13 @@ namespace flex
 
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
 
+		void ProcedurallyInitialize(MaterialID matID);
+
 	protected:
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
 		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
 
+		void InternalInit(MaterialID matID);
 	};
 
 	class EngineCart;

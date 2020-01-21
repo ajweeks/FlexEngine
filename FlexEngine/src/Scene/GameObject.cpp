@@ -2476,15 +2476,15 @@ namespace flex
 		return newGameObject;
 	}
 
+	void Skybox::ProcedurallyInitialize(MaterialID matID)
+	{
+		InternalInit(matID);
+	}
+
 	void Skybox::ParseUniqueFields(const JSONObject& parentObj, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		UNREFERENCED_PARAMETER(scene);
-
-		assert(m_Mesh == nullptr);
-		assert(matIDs.size() != 0 && matIDs[0] != InvalidMaterialID);
-		Mesh* skyboxMesh = new Mesh(this);
-		skyboxMesh->LoadPrefabShape(PrefabShape::SKYBOX, matIDs[0]);
-		SetMesh(skyboxMesh);
+		assert(matIDs.size() == 1);
 
 		JSONObject skyboxInfo;
 		if (parentObj.SetObjectChecked("skybox info", skyboxInfo))
@@ -2496,7 +2496,7 @@ namespace flex
 			}
 		}
 
-		g_Renderer->SetSkyboxMesh(m_Mesh);
+		InternalInit(matIDs[0]);
 	}
 
 	void Skybox::SerializeUniqueFields(JSONObject& parentObject) const
@@ -2510,6 +2510,17 @@ namespace flex
 		}
 
 		parentObject.fields.emplace_back("skybox info", JSONValue(skyboxInfo));
+	}
+
+	void Skybox::InternalInit(MaterialID matID)
+	{
+		assert(m_Mesh == nullptr);
+		assert(matID != InvalidMaterialID);
+		Mesh* skyboxMesh = new Mesh(this);
+		skyboxMesh->LoadPrefabShape(PrefabShape::SKYBOX, matID);
+		SetMesh(skyboxMesh);
+
+		g_Renderer->SetSkyboxMesh(m_Mesh);
 	}
 
 	DirectionalLight::DirectionalLight() :
