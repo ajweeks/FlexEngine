@@ -199,7 +199,7 @@ namespace flex
 		}
 
 		real scrollDistance = g_InputManager->GetVerticalScrollDistance();
-		if (scrollDistance != 0.0f)
+		if (scrollDistance != 0.0f && g_Window->HasFocus())
 		{
 			translation += m_Forward * scrollDistance * m_ScrollDollySpeed;
 		}
