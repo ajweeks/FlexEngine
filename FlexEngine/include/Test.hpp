@@ -1,6 +1,7 @@
 #include "stdafx.hpp"
 
 #include "JSONParser.hpp"
+#include "Helpers.hpp"
 
 namespace flex
 {
@@ -10,10 +11,17 @@ namespace flex
 		using TestFunc = void(*)();
 
 #define JSON_UNIT_TEST(FuncName) static void FuncName() \
-{ \
+	{ \
 		const char* FunctionName = #FuncName;
 
 #define JSON_UNIT_TEST_END JSONParser::ClearErrors(); }
+
+#define UNIT_TEST(FuncName) static void FuncName() \
+	{ \
+		const char* FunctionName = #FuncName;
+
+#define UNIT_TEST_END }
+
 
 #define EXPECT(val, exp) Expect(FunctionName, val, exp, JSONParser::GetErrorString());
 
@@ -27,6 +35,17 @@ namespace flex
 			}
 		}
 
+		template<>
+		static void Expect(const char* funcName, glm::vec3 val, glm::vec3 exp, const char* msg)
+		{
+			if (val != exp)
+			{
+				std::string msgStr = std::string(funcName) + " - Expected " + VecToString(exp) + ", got " + VecToString(val) + ", error message:\n\t" + msg;
+				throw std::exception(msgStr.c_str());
+			}
+		}
+
+		template<>
 		static void Expect(const char* funcName, const char* val, const char* exp, const char* msg)
 		{
 			if (strcmp(val, exp) != 0)
@@ -40,6 +59,10 @@ namespace flex
 		{
 			Expect(funcName, (u32)val, (u32)exp, msg);
 		}
+
+		//
+		// JSON tests
+		//
 
 		JSON_UNIT_TEST(EmptyFileIsParsed)
 		{
@@ -309,12 +332,81 @@ namespace flex
 		}
 		JSON_UNIT_TEST_END;
 
+		//
+		// Math tests
+		//
+
+		UNIT_TEST(RayPlaneIntersectionOriginValid)
+		{
+			glm::vec3 axis(1.0f, 0.0f, 0.0f);
+			glm::vec3 rayOrigin(0.0f, 0.0f, -1.0f);
+			glm::vec3 rayEnd(0.0f, 0.0f, 1.0f);
+			glm::vec3 planeOrigin(0.0f, 0.0f, 0.0f);
+			glm::vec3 planeNorm(0.0f, 0.0f, -1.0f);
+			glm::vec3 startPos(0.0f, 0.0f, 0.0f);
+			glm::vec3 camForward(0.0f, 0.0f, 1.0f);
+			real offset = 0.0f;
+			glm::vec3 constrainedIntersection = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayOrigin, rayEnd, planeOrigin, planeNorm, startPos, camForward, offset);
+			EXPECT(constrainedIntersection, glm::vec3(0.0f, 0.0f, 0.0f));
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(RayPlaneIntersectionXYValid)
+		{
+			glm::vec3 axis(1.0f, 0.0f, 0.0f);
+			glm::vec3 rayOrigin(1.0f, 1.0f, -1.0f);
+			glm::vec3 rayEnd(1.0f, 1.0f, 1.0f);
+			glm::vec3 planeOrigin(0.0f, 0.0f, 0.0f);
+			glm::vec3 planeNorm(0.0f, 0.0f, -1.0f);
+			glm::vec3 startPos(0.0f, 0.0f, 0.0f);
+			glm::vec3 camForward(0.0f, 0.0f, 1.0f);
+			real offset = 0.0f;
+			glm::vec3 constrainedIntersection = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayOrigin, rayEnd, planeOrigin, planeNorm, startPos, camForward, offset);
+			EXPECT(constrainedIntersection, glm::vec3(1.0f, 0.0f, 0.0f)); // intersection point should be (1, 1, 0), constrained to x axis: (1, 0, 0)
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(RayPlaneIntersectionXY2Valid)
+		{
+			glm::vec3 axis(0.0f, 1.0f, 0.0f);
+			glm::vec3 rayOrigin(-1.0f, 3.0f, -1.0f);
+			glm::vec3 rayEnd(-1.0f, 3.0f, 1.0f);
+			glm::vec3 planeOrigin(0.0f, 0.0f, 0.0f);
+			glm::vec3 planeNorm(0.0f, 0.0f, -1.0f);
+			glm::vec3 startPos(0.0f, 0.0f, 0.0f);
+			glm::vec3 camForward(0.0f, 0.0f, 1.0f);
+			real offset = 0.0f;
+			glm::vec3 constrainedIntersection = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayOrigin, rayEnd, planeOrigin, planeNorm, startPos, camForward, offset);
+			EXPECT(constrainedIntersection, glm::vec3(0.0f, 3.0f, 0.0f)); // intersection point should be (-1, 3, 0), constrained to y axis: (0, 3, 0)
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(RayPlaneIntersectionXY3Valid)
+		{
+			glm::vec3 axis(0.0f, 0.0f, 1.0f);
+			glm::vec3 rayOrigin(1.0f, -100.0f, 3.0f);
+			glm::vec3 rayEnd(-1.0f, -100.0f, 3.0f);
+			glm::vec3 planeOrigin(0.0f, 0.0f, 0.0f);
+			glm::vec3 planeNorm(1.0f, 0.0f, 0.0f);
+			glm::vec3 startPos(0.0f, 0.0f, 0.0f);
+			glm::vec3 camForward(-1.0f, 0.0f, 0.0f);
+			real offset = 0.0f;
+			glm::vec3 constrainedIntersection = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayOrigin, rayEnd, planeOrigin, planeNorm, startPos, camForward, offset);
+			EXPECT(constrainedIntersection, glm::vec3(0.0f, 0.0f, 3.0f)); // intersection point should be (0, -100, 3), constrained to z axis: (0, 0, 3)
+		}
+		UNIT_TEST_END;
+
 	public:
 		static void Run()
 		{
-			TestFunc funcs[] = { EmptyFileIsParsed, MinimalFileIsParsed, OneFieldFileIsValid, MissingQuoteFailsToParse, ObjectParsedCorrectly,
+			TestFunc funcs[] = {
+				// JSON tests
+				EmptyFileIsParsed, MinimalFileIsParsed, OneFieldFileIsValid, MissingQuoteFailsToParse, ObjectParsedCorrectly,
 				FieldArrayParsedCorrectly, MissingSquareBracketFailsToParse, MissingCurlyBracketFailsToParse, LineCommentIgnored, MultipleFieldsParsedCorrectly,
-				ArrayParsesCorrectly, MissingCommaInArrayFailsParse, ComplexFileIsValid };
+				ArrayParsesCorrectly, MissingCommaInArrayFailsParse, ComplexFileIsValid,
+				// Math tests
+				RayPlaneIntersectionOriginValid, RayPlaneIntersectionXYValid, RayPlaneIntersectionXY2Valid, RayPlaneIntersectionXY3Valid,
+			};
 			Print("Running %d tests...\n", ARRAY_LENGTH(funcs));
 			u32 failedTestCount = 0;
 			for (auto func : funcs)

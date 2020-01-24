@@ -691,7 +691,7 @@ namespace flex
 				{
 					planeN = gizmoUp;
 				}
-				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, m_DraggingGizmoOffset);
+				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, camForward, m_DraggingGizmoOffset);
 				dPos = intersectionPont - planeOrigin;
 			}
 			else if (m_DraggingAxisIndex == Y_AXIS_IDX)
@@ -702,7 +702,7 @@ namespace flex
 				{
 					planeN = gizmoForward;
 				}
-				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, m_DraggingGizmoOffset);
+				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, camForward, m_DraggingGizmoOffset);
 				dPos = intersectionPont - planeOrigin;
 			}
 			else if (m_DraggingAxisIndex == Z_AXIS_IDX)
@@ -713,7 +713,7 @@ namespace flex
 				{
 					planeN = gizmoRight;
 				}
-				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, m_DraggingGizmoOffset);
+				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, camForward, m_DraggingGizmoOffset);
 				dPos = intersectionPont - planeOrigin;
 			}
 
@@ -825,7 +825,7 @@ namespace flex
 				{
 					planeN = gizmoUp;
 				}
-				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, m_DraggingGizmoOffset);
+				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, camForward, m_DraggingGizmoOffset);
 				glm::vec3 scaleNow = -(intersectionPont - planeOrigin);
 				dScale += (scaleNow - m_DraggingGizmoScaleLast) * scale;
 
@@ -839,7 +839,7 @@ namespace flex
 				{
 					planeN = gizmoForward;
 				}
-				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, m_DraggingGizmoOffset);
+				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, camForward, m_DraggingGizmoOffset);
 				glm::vec3 scaleNow = (intersectionPont - planeOrigin);
 				dScale += (scaleNow - m_DraggingGizmoScaleLast) * scale;
 
@@ -853,7 +853,7 @@ namespace flex
 				{
 					planeN = gizmoRight;
 				}
-				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, m_DraggingGizmoOffset);
+				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, camForward, m_DraggingGizmoOffset);
 				glm::vec3 scaleNow = (intersectionPont - planeOrigin);
 				dScale += (scaleNow - m_DraggingGizmoScaleLast) * scale;
 
@@ -867,7 +867,7 @@ namespace flex
 				{
 					planeN = gizmoUp;
 				}
-				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, m_DraggingGizmoOffset);
+				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, camForward, m_DraggingGizmoOffset);
 				glm::vec3 scaleNow = (intersectionPont - planeOrigin);
 				dScale += (scaleNow - m_DraggingGizmoScaleLast) * scale;
 

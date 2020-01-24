@@ -1656,10 +1656,10 @@ namespace flex
 		const glm::vec3& planeOrigin,
 		const glm::vec3& planeNorm,
 		const glm::vec3& startPos,
+		const glm::vec3& cameraForward,
 		real& inOutOffset)
 	{
 		glm::vec3 rayDir = glm::normalize(rayEnd - rayOrigin);
-		glm::vec3 cameraForward = g_CameraManager->CurrentCamera()->GetForward();
 		glm::vec3 planeN = planeNorm;
 		if (glm::dot(planeN, cameraForward) > 0.0f)
 		{
