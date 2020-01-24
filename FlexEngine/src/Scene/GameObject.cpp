@@ -1167,7 +1167,7 @@ namespace flex
 				btVector3 btHalfExtents = static_cast<btBoxShape*>(collisionShape)->getHalfExtentsWithMargin();
 				glm::vec3 halfExtents = ToVec3(btHalfExtents);
 				halfExtents /= m_Transform.GetWorldScale();
-				std::string halfExtentsStr = Vec3ToString(halfExtents, 3);
+				std::string halfExtentsStr = VecToString(halfExtents, 3);
 				colliderObj.fields.emplace_back("half extents", JSONValue(halfExtentsStr));
 			} break;
 			case SPHERE_SHAPE_PROXYTYPE:
@@ -1199,7 +1199,7 @@ namespace flex
 				btVector3 btHalfExtents = static_cast<btCylinderShape*>(collisionShape)->getHalfExtentsWithMargin();
 				glm::vec3 halfExtents = ToVec3(btHalfExtents);
 				halfExtents /= m_Transform.GetWorldScale();
-				std::string halfExtentsStr = Vec3ToString(halfExtents, 3);
+				std::string halfExtentsStr = VecToString(halfExtents, 3);
 				colliderObj.fields.emplace_back("half extents", JSONValue(halfExtentsStr));
 			} break;
 			default:
@@ -1211,18 +1211,18 @@ namespace flex
 
 			if (m_RigidBody->GetLocalPosition() != VEC3_ZERO)
 			{
-				colliderObj.fields.emplace_back("offset pos", JSONValue(Vec3ToString(m_RigidBody->GetLocalPosition(), 3)));
+				colliderObj.fields.emplace_back("offset pos", JSONValue(VecToString(m_RigidBody->GetLocalPosition(), 3)));
 			}
 
 			if (m_RigidBody->GetLocalRotation() != QUAT_UNIT)
 			{
 				glm::vec3 localRotEuler = glm::eulerAngles(m_RigidBody->GetLocalRotation());
-				colliderObj.fields.emplace_back("offset rot", JSONValue(Vec3ToString(localRotEuler, 3)));
+				colliderObj.fields.emplace_back("offset rot", JSONValue(VecToString(localRotEuler, 3)));
 			}
 
 			if (m_RigidBody->GetLocalScale() != VEC3_ONE)
 			{
-				colliderObj.fields.emplace_back("offset scale", JSONValue(Vec3ToString(m_RigidBody->GetLocalScale(), 3)));
+				colliderObj.fields.emplace_back("offset scale", JSONValue(VecToString(m_RigidBody->GetLocalScale(), 3)));
 			}
 
 			//bool bTrigger = false;
@@ -2029,7 +2029,7 @@ namespace flex
 		JSONObject valveInfo = {};
 
 		glm::vec2 valveRange(minRotation, maxRotation);
-		valveInfo.fields.emplace_back("range", JSONValue(Vec2ToString(valveRange, 2)));
+		valveInfo.fields.emplace_back("range", JSONValue(VecToString(valveRange, 2)));
 
 		parentObject.fields.emplace_back("valve info", JSONValue(valveInfo));
 	}
@@ -2217,7 +2217,7 @@ namespace flex
 		JSONObject blockInfo = {};
 
 		blockInfo.fields.emplace_back("valve name", JSONValue(valve->GetName()));
-		blockInfo.fields.emplace_back("move axis", JSONValue(Vec3ToString(moveAxis, 3)));
+		blockInfo.fields.emplace_back("move axis", JSONValue(VecToString(moveAxis, 3)));
 		blockInfo.fields.emplace_back("affected by gravity", JSONValue(bAffectedByGravity));
 
 		parentObject.fields.emplace_back("block info", JSONValue(blockInfo));
@@ -2505,7 +2505,7 @@ namespace flex
 		glm::quat worldRot = m_Transform.GetWorldRotation();
 		if (worldRot != QUAT_UNIT)
 		{
-			std::string eulerRotStr = Vec3ToString(glm::eulerAngles(worldRot), 2);
+			std::string eulerRotStr = VecToString(glm::eulerAngles(worldRot), 2);
 			skyboxInfo.fields.emplace_back("rot", JSONValue(eulerRotStr));
 		}
 
@@ -2669,10 +2669,10 @@ namespace flex
 		std::string dirStr = QuatToString(m_Transform.GetWorldRotation(), 3);
 		dirLightObj.fields.emplace_back("rotation", JSONValue(dirStr));
 
-		std::string posStr = Vec3ToString(m_Transform.GetLocalPosition(), 3);
+		std::string posStr = VecToString(m_Transform.GetLocalPosition(), 3);
 		dirLightObj.fields.emplace_back("pos", JSONValue(posStr));
 
-		std::string colorStr = Vec3ToString(data.color, 2);
+		std::string colorStr = VecToString(data.color, 2);
 		dirLightObj.fields.emplace_back("color", JSONValue(colorStr));
 
 		dirLightObj.fields.emplace_back("enabled", JSONValue(m_bVisible != 0));
@@ -2831,10 +2831,10 @@ namespace flex
 	{
 		JSONObject pointLightObj = {};
 
-		std::string posStr = Vec3ToString(m_Transform.GetLocalPosition(), 3);
+		std::string posStr = VecToString(m_Transform.GetLocalPosition(), 3);
 		pointLightObj.fields.emplace_back("pos", JSONValue(posStr));
 
-		std::string colorStr = Vec3ToString(data.color, 2);
+		std::string colorStr = VecToString(data.color, 2);
 		pointLightObj.fields.emplace_back("color", JSONValue(colorStr));
 
 		pointLightObj.fields.emplace_back("enabled", JSONValue(m_bVisible != 0));
@@ -4524,8 +4524,8 @@ namespace flex
 
 
 		JSONObject systemDataObj = {};
-		systemDataObj.fields.emplace_back("color0", JSONValue(Vec4ToString(data.color0, 2)));
-		systemDataObj.fields.emplace_back("color1", JSONValue(Vec4ToString(data.color1, 2)));
+		systemDataObj.fields.emplace_back("color0", JSONValue(VecToString(data.color0, 2)));
+		systemDataObj.fields.emplace_back("color1", JSONValue(VecToString(data.color1, 2)));
 		systemDataObj.fields.emplace_back("speed", JSONValue(data.speed));
 		systemDataObj.fields.emplace_back("particle count", JSONValue((i32)data.particleCount));
 		particleSystemObj.fields.emplace_back("data", JSONValue(systemDataObj));

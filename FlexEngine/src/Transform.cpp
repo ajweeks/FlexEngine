@@ -291,20 +291,20 @@ namespace flex
 
 		if (pos != VEC3_ZERO)
 		{
-			std::string posStr = Vec3ToString(pos, floatPrecision);
+			std::string posStr = VecToString(pos, floatPrecision);
 			transformObject.fields.emplace_back("pos", JSONValue(posStr));
 		}
 
 		if (rot != QUAT_UNIT)
 		{
 			glm::vec3 rotEuler = glm::eulerAngles(rot);
-			std::string rotStr = Vec3ToString(rotEuler, floatPrecision);
+			std::string rotStr = VecToString(rotEuler, floatPrecision);
 			transformObject.fields.emplace_back("rot", JSONValue(rotStr));
 		}
 
 		if (scale != VEC3_ONE)
 		{
-			std::string scaleStr = Vec3ToString(scale, floatPrecision);
+			std::string scaleStr = VecToString(scale, floatPrecision);
 			transformObject.fields.emplace_back("scale", JSONValue(scaleStr));
 		}
 

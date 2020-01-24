@@ -753,7 +753,7 @@ namespace flex
 			}
 
 			ImGui::Text("Preview junc idx: %i", m_PreviewJunctionDir.junctionIndex);
-			ImGui::Text("Preview curve dir: %s", Vec3ToString(m_PreviewJunctionDir.dir, 2).c_str());
+			ImGui::Text("Preview curve dir: %s", VecToString(m_PreviewJunctionDir.dir, 2).c_str());
 
 			ImGui::TreePop();
 		}

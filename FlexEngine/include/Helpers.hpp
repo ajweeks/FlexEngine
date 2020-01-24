@@ -6,6 +6,7 @@ namespace flex
 {
 	// TODO: Many of the functions in this file would benefit from unit tests
 
+	static const i32 DEFAULT_FLOAT_PRECISION = 2;
 	static const char* SEPARATOR_STR = ", ";
 
 	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount = 3, bool bFlipVertically = false, u32* channelCountOut = nullptr);
@@ -133,25 +134,25 @@ namespace flex
 	// String will be padded to be at least minChars long (excluding a leading '-' for negative numbers)
 	std::string IntToString(i32 i, u16 minChars = 0, char pad = '0');
 
-	std::string FloatToString(real f, i32 precision);
+	std::string FloatToString(real f, i32 precision = DEFAULT_FLOAT_PRECISION);
 
 	std::string BoolToString(bool b);
 
-	std::string Vec2ToString(const glm::vec2& vec, i32 precision);
-	std::string Vec3ToString(const glm::vec3& vec, i32 precision);
-	std::string Vec4ToString(const glm::vec4& vec, i32 precision);
+	std::string VecToString(const glm::vec2& vec, i32 precision = DEFAULT_FLOAT_PRECISION);
+	std::string VecToString(const glm::vec3& vec, i32 precision = DEFAULT_FLOAT_PRECISION);
+	std::string VecToString(const glm::vec4& vec, i32 precision = DEFAULT_FLOAT_PRECISION);
 
-	std::string Vec2ToString(real* data, i32 precision);
-	std::string Vec3ToString(real* data, i32 precision);
-	std::string Vec4ToString(real* data, i32 precision);
+	std::string Vec2ToString(real* data, i32 precision = DEFAULT_FLOAT_PRECISION);
+	std::string Vec3ToString(real* data, i32 precision = DEFAULT_FLOAT_PRECISION);
+	std::string Vec4ToString(real* data, i32 precision = DEFAULT_FLOAT_PRECISION);
 
-	std::string Vec2ToString(real x, real y, i32 precision);
-	std::string Vec3ToString(real x, real y, real z, i32 precision);
-	std::string Vec4ToString(real x, real y, real z, real w, i32 precision);
+	std::string VecToString(real x, real y, i32 precision = DEFAULT_FLOAT_PRECISION);
+	std::string VecToString(real x, real y, real z, i32 precision = DEFAULT_FLOAT_PRECISION);
+	std::string VecToString(real x, real y, real z, real w, i32 precision = DEFAULT_FLOAT_PRECISION);
 
-	std::string QuatToString(const glm::quat& quat, i32 precision);
-	std::string QuatToString(real x, real y, real z, real w, i32 precision);
-	std::string QuatToString(real* data, i32 precision);
+	std::string QuatToString(const glm::quat& quat, i32 precision = DEFAULT_FLOAT_PRECISION);
+	std::string QuatToString(real x, real y, real z, real w, i32 precision = DEFAULT_FLOAT_PRECISION);
+	std::string QuatToString(real* data, i32 precision = DEFAULT_FLOAT_PRECISION);
 
 	void CopyVec3ToClipboard(const glm::vec3& vec);
 	void CopyVec4ToClipboard(const glm::vec4& vec);

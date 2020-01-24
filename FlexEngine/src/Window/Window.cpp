@@ -270,8 +270,8 @@ namespace flex
 
 		rootObject.fields.emplace_back("move console to other monitor on bootup", JSONValue(m_bMoveConsoleToOtherMonitor));
 		rootObject.fields.emplace_back("auto restore state", JSONValue(m_bAutoRestoreStateOnBootup));
-		rootObject.fields.emplace_back("initial window position", JSONValue(Vec2ToString((glm::vec2)m_Position, 0)));
-		rootObject.fields.emplace_back("initial window size", JSONValue(Vec2ToString((glm::vec2)m_Size, 0)));
+		rootObject.fields.emplace_back("initial window position", JSONValue(VecToString((glm::vec2)m_Position, 0)));
+		rootObject.fields.emplace_back("initial window size", JSONValue(VecToString((glm::vec2)m_Size, 0)));
 		rootObject.fields.emplace_back("maximized", JSONValue(m_bMaximized));
 		const char* windowModeStr = Window::WindowModeToStr(GetWindowMode());
 		rootObject.fields.emplace_back("window mode", JSONValue(windowModeStr));

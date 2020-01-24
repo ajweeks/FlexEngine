@@ -294,8 +294,8 @@ namespace flex
 		rootObject.fields.emplace_back("version", JSONValue(m_RendererSettingsFileVersion));
 		rootObject.fields.emplace_back("enable v-sync", JSONValue(m_bVSyncEnabled));
 		rootObject.fields.emplace_back("enable fxaa", JSONValue(m_PostProcessSettings.bEnableFXAA));
-		rootObject.fields.emplace_back("brightness", JSONValue(Vec3ToString(m_PostProcessSettings.brightness, 3)));
-		rootObject.fields.emplace_back("offset", JSONValue(Vec3ToString(m_PostProcessSettings.offset, 3)));
+		rootObject.fields.emplace_back("brightness", JSONValue(VecToString(m_PostProcessSettings.brightness, 3)));
+		rootObject.fields.emplace_back("offset", JSONValue(VecToString(m_PostProcessSettings.offset, 3)));
 		rootObject.fields.emplace_back("saturation", JSONValue(m_PostProcessSettings.saturation));
 
 		BaseCamera* cam = g_CameraManager->CurrentCamera();

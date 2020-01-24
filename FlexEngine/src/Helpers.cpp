@@ -125,7 +125,7 @@ namespace flex
 		pixels = nullptr;
 	}
 
-	std::string FloatToString(real f, i32 precision)
+	std::string FloatToString(real f, i32 precision /* = DEFAULT_FLOAT_PRECISION */)
 	{
 		std::stringstream stream;
 		stream << std::fixed << std::setprecision(precision) << f;
@@ -1052,37 +1052,37 @@ namespace flex
 		str = std::string(minLen - str.length(), pad) + str;
 	}
 
-	std::string Vec2ToString(const glm::vec2& vec, i32 precision)
+	std::string VecToString(const glm::vec2& vec, i32 precision /* = DEFAULT_FLOAT_PRECISION */)
 	{
-		return Vec2ToString(vec.x, vec.y, precision);
+		return VecToString(vec.x, vec.y, precision);
 	}
 
-	std::string Vec3ToString(const glm::vec3& vec, i32 precision)
+	std::string VecToString(const glm::vec3& vec, i32 precision /* = DEFAULT_FLOAT_PRECISION */)
 	{
-		return Vec3ToString(vec.x, vec.y, vec.z, precision);
+		return VecToString(vec.x, vec.y, vec.z, precision);
 	}
 
-	std::string Vec4ToString(const glm::vec4& vec, i32 precision)
+	std::string VecToString(const glm::vec4& vec, i32 precision /* = DEFAULT_FLOAT_PRECISION */)
 	{
-		return Vec4ToString(vec.x, vec.y, vec.z, vec.w, precision);
+		return VecToString(vec.x, vec.y, vec.z, vec.w, precision);
 	}
 
-	std::string Vec2ToString(real* data, i32 precision)
+	std::string Vec2ToString(real* data, i32 precision /* = DEFAULT_FLOAT_PRECISION */)
 	{
-		return Vec2ToString(*(data + 0), *(data + 1), precision);
+		return VecToString(*(data + 0), *(data + 1), precision);
 	}
 
-	std::string Vec3ToString(real* data, i32 precision)
+	std::string Vec3ToString(real* data, i32 precision /* = DEFAULT_FLOAT_PRECISION */)
 	{
-		return Vec3ToString(*(data + 0), *(data + 1), *(data + 2), precision);
+		return VecToString(*(data + 0), *(data + 1), *(data + 2), precision);
 	}
 
-	std::string Vec4ToString(real* data, i32 precision)
+	std::string Vec4ToString(real* data, i32 precision /* = DEFAULT_FLOAT_PRECISION */)
 	{
-		return Vec4ToString(*(data + 0), *(data + 1), *(data + 2), *(data + 3), precision);
+		return VecToString(*(data + 0), *(data + 1), *(data + 2), *(data + 3), precision);
 	}
 
-	std::string Vec2ToString(real x, real y, i32 precision)
+	std::string VecToString(real x, real y, i32 precision /* = DEFAULT_FLOAT_PRECISION */)
 	{
 #if DEBUG
 		if (IsNanOrInf(x) || IsNanOrInf(y))
@@ -1097,7 +1097,7 @@ namespace flex
 		return result;
 	}
 
-	std::string Vec3ToString(real x, real y, real z, i32 precision)
+	std::string VecToString(real x, real y, real z, i32 precision /* = DEFAULT_FLOAT_PRECISION */)
 	{
 #if DEBUG
 		if (IsNanOrInf(x) || IsNanOrInf(y) || IsNanOrInf(z))
@@ -1113,7 +1113,7 @@ namespace flex
 		return result;
 	}
 
-	std::string Vec4ToString(real x, real y, real z, real w, i32 precision)
+	std::string VecToString(real x, real y, real z, real w, i32 precision /* = DEFAULT_FLOAT_PRECISION */)
 	{
 #if DEBUG
 		if (IsNanOrInf(x) || IsNanOrInf(y) || IsNanOrInf(z) || IsNanOrInf(w))
@@ -1130,17 +1130,17 @@ namespace flex
 		return result;
 	}
 
-	std::string QuatToString(const glm::quat& quat, i32 precision)
+	std::string QuatToString(const glm::quat& quat, i32 precision /* = DEFAULT_FLOAT_PRECISION */)
 	{
 		return QuatToString(quat.x, quat.y, quat.z, quat.w, precision);
 	}
 
-	std::string QuatToString(real* data, i32 precision)
+	std::string QuatToString(real* data, i32 precision /* = DEFAULT_FLOAT_PRECISION */)
 	{
 		return QuatToString(*(data + 0), *(data + 1), *(data + 2), *(data + 3), precision);
 	}
 
-	std::string QuatToString(real x, real y, real z, real w, i32 precision)
+	std::string QuatToString(real x, real y, real z, real w, i32 precision /* = DEFAULT_FLOAT_PRECISION */)
 	{
 #if DEBUG
 		if (IsNanOrInf(x) || IsNanOrInf(y) || IsNanOrInf(z) || IsNanOrInf(w))

@@ -1338,7 +1338,7 @@ namespace flex
 		BaseCamera* cam = g_CameraManager->CurrentCamera();
 		rootObject.fields.emplace_back("render imgui", JSONValue(m_bRenderImGui));
 		rootObject.fields.emplace_back("last camera type", JSONValue(cam->GetName().c_str()));
-		std::string posStr = Vec3ToString(cam->GetPosition(), 3);
+		std::string posStr = VecToString(cam->GetPosition(), 3);
 		real pitch = cam->GetPitch();
 		real yaw = cam->GetYaw();
 		JSONObject cameraTransform = {};
