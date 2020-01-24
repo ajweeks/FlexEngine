@@ -826,7 +826,7 @@ namespace flex
 					planeN = gizmoUp;
 				}
 				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, m_DraggingGizmoOffset);
-				glm::vec3 scaleNow = (intersectionPont - planeOrigin);
+				glm::vec3 scaleNow = -(intersectionPont - planeOrigin);
 				dScale += (scaleNow - m_DraggingGizmoScaleLast) * scale;
 
 				m_DraggingGizmoScaleLast = scaleNow;
