@@ -174,6 +174,11 @@ IGNORE_WARNINGS_POP
 #define THREE_PI_DIV_TWO (glm::three_over_two_pi<real>())
 #define EPSILON (glm::epsilon<real>())
 
+#define X_AXIS_IDX   0
+#define Y_AXIS_IDX   1
+#define Z_AXIS_IDX   2
+#define ALL_AXES_IDX 3
+
 #if ENABLE_PROFILING
 #define PROFILE_BEGIN(blockName) Profiler::Begin(blockName);
 #define PROFILE_END(blockName) Profiler::End(blockName);

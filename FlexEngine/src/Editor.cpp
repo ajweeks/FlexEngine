@@ -102,6 +102,8 @@ namespace flex
 			}
 		}
 
+		FadeOutHeadOnGizmos();
+
 		if (!m_CurrentlySelectedObjects.empty())
 		{
 			m_TransformGizmo->SetVisible(true);
@@ -450,19 +452,19 @@ namespace flex
 		Material& zMat = g_Renderer->GetMaterial(m_TransformGizmoMatZID);
 		Material& allMat = g_Renderer->GetMaterial(m_TransformGizmoMatAllID);
 		glm::vec4 white(1.0f);
-		if (m_DraggingAxisIndex != 0)
+		if (m_DraggingAxisIndex != X_AXIS_IDX)
 		{
 			xMat.colorMultiplier = white;
 		}
-		if (m_DraggingAxisIndex != 1)
+		if (m_DraggingAxisIndex != Y_AXIS_IDX)
 		{
 			yMat.colorMultiplier = white;
 		}
-		if (m_DraggingAxisIndex != 2)
+		if (m_DraggingAxisIndex != Z_AXIS_IDX)
 		{
 			zMat.colorMultiplier = white;
 		}
-		if (m_DraggingAxisIndex != 3)
+		if (m_DraggingAxisIndex != ALL_AXES_IDX)
 		{
 			allMat.colorMultiplier = white;
 		}
@@ -478,19 +480,19 @@ namespace flex
 			{
 				std::vector<GameObject*> translationAxes = m_TranslationGizmo->GetChildren();
 
-				if (pickedTransformGizmo == translationAxes[0]) // X Axis
+				if (pickedTransformGizmo == translationAxes[X_AXIS_IDX])
 				{
-					m_HoveringAxisIndex = 0;
+					m_HoveringAxisIndex = X_AXIS_IDX;
 					xMat.colorMultiplier = hoverColor;
 				}
-				else if (pickedTransformGizmo == translationAxes[1]) // Y Axis
+				else if (pickedTransformGizmo == translationAxes[Y_AXIS_IDX])
 				{
-					m_HoveringAxisIndex = 1;
+					m_HoveringAxisIndex = Y_AXIS_IDX;
 					yMat.colorMultiplier = hoverColor;
 				}
-				else if (pickedTransformGizmo == translationAxes[2]) // Z Axis
+				else if (pickedTransformGizmo == translationAxes[Z_AXIS_IDX])
 				{
-					m_HoveringAxisIndex = 2;
+					m_HoveringAxisIndex = Z_AXIS_IDX;
 					zMat.colorMultiplier = hoverColor;
 				}
 			} break;
@@ -498,19 +500,19 @@ namespace flex
 			{
 				std::vector<GameObject*> rotationAxes = m_RotationGizmo->GetChildren();
 
-				if (pickedTransformGizmo == rotationAxes[0]) // X Axis
+				if (pickedTransformGizmo == rotationAxes[X_AXIS_IDX])
 				{
-					m_HoveringAxisIndex = 0;
+					m_HoveringAxisIndex = X_AXIS_IDX;
 					xMat.colorMultiplier = hoverColor;
 				}
-				else if (pickedTransformGizmo == rotationAxes[1]) // Y Axis
+				else if (pickedTransformGizmo == rotationAxes[Y_AXIS_IDX])
 				{
-					m_HoveringAxisIndex = 1;
+					m_HoveringAxisIndex = Y_AXIS_IDX;
 					yMat.colorMultiplier = hoverColor;
 				}
-				else if (pickedTransformGizmo == rotationAxes[2]) // Z Axis
+				else if (pickedTransformGizmo == rotationAxes[Z_AXIS_IDX])
 				{
-					m_HoveringAxisIndex = 2;
+					m_HoveringAxisIndex = Z_AXIS_IDX;
 					zMat.colorMultiplier = hoverColor;
 				}
 			} break;
@@ -518,24 +520,24 @@ namespace flex
 			{
 				std::vector<GameObject*> scaleAxes = m_ScaleGizmo->GetChildren();
 
-				if (pickedTransformGizmo == scaleAxes[0]) // X Axis
+				if (pickedTransformGizmo == scaleAxes[X_AXIS_IDX])
 				{
-					m_HoveringAxisIndex = 0;
+					m_HoveringAxisIndex = X_AXIS_IDX;
 					xMat.colorMultiplier = hoverColor;
 				}
-				else if (pickedTransformGizmo == scaleAxes[1]) // Y Axis
+				else if (pickedTransformGizmo == scaleAxes[Y_AXIS_IDX])
 				{
-					m_HoveringAxisIndex = 1;
+					m_HoveringAxisIndex = Y_AXIS_IDX;
 					yMat.colorMultiplier = hoverColor;
 				}
-				else if (pickedTransformGizmo == scaleAxes[2]) // Z Axis
+				else if (pickedTransformGizmo == scaleAxes[Z_AXIS_IDX])
 				{
-					m_HoveringAxisIndex = 2;
+					m_HoveringAxisIndex = Z_AXIS_IDX;
 					zMat.colorMultiplier = hoverColor;
 				}
-				else if (pickedTransformGizmo == scaleAxes[3]) // All axes
+				else if (pickedTransformGizmo == scaleAxes[ALL_AXES_IDX])
 				{
-					m_HoveringAxisIndex = 3;
+					m_HoveringAxisIndex = ALL_AXES_IDX;
 					allMat.colorMultiplier = hoverColor;
 				}
 			} break;
@@ -548,30 +550,6 @@ namespace flex
 		else
 		{
 			m_HoveringAxisIndex = -1;
-		}
-
-		// Fade out gizmo parts when facing head-on
-		if (m_CurrentTransformGizmoState != TransformState::ROTATE)
-		{
-			Transform* gizmoTransform = m_TransformGizmo->GetTransform();
-			glm::vec3 camForward = g_CameraManager->CurrentCamera()->GetForward();
-
-			real camForDotR = glm::abs(glm::dot(camForward, gizmoTransform->GetRight()));
-			real camForDotU = glm::abs(glm::dot(camForward, gizmoTransform->GetUp()));
-			real camForDotF = glm::abs(glm::dot(camForward, gizmoTransform->GetForward()));
-			real threshold = 0.98f;
-			if (camForDotR >= threshold)
-			{
-				xMat.colorMultiplier.a = Lerp(1.0f, 0.0f, (camForDotR - threshold) / (1.0f - threshold));
-			}
-			if (camForDotU >= threshold)
-			{
-				yMat.colorMultiplier.a = Lerp(1.0f, 0.0f, (camForDotU - threshold) / (1.0f - threshold));
-			}
-			if (camForDotF >= threshold)
-			{
-				zMat.colorMultiplier.a = Lerp(1.0f, 0.0f, (camForDotF - threshold) / (1.0f - threshold));
-			}
 		}
 
 		return m_HoveringAxisIndex != -1;
@@ -598,49 +576,49 @@ namespace flex
 		{
 		case TransformState::TRANSLATE:
 		{
-			if (m_HoveringAxisIndex == 0) // X Axis
+			if (m_HoveringAxisIndex == X_AXIS_IDX)
 			{
 				xMat.colorMultiplier = selectedColor;
 			}
-			else if (m_HoveringAxisIndex == 1) // Y Axis
+			else if (m_HoveringAxisIndex == Y_AXIS_IDX)
 			{
 				yMat.colorMultiplier = selectedColor;
 			}
-			else if (m_HoveringAxisIndex == 2) // Z Axis
+			else if (m_HoveringAxisIndex == Z_AXIS_IDX)
 			{
 				zMat.colorMultiplier = selectedColor;
 			}
 		} break;
 		case TransformState::ROTATE:
 		{
-			if (m_HoveringAxisIndex == 0) // X Axis
+			if (m_HoveringAxisIndex == X_AXIS_IDX)
 			{
 				xMat.colorMultiplier = selectedColor;
 			}
-			else if (m_HoveringAxisIndex == 1) // Y Axis
+			else if (m_HoveringAxisIndex == Y_AXIS_IDX)
 			{
 				yMat.colorMultiplier = selectedColor;
 			}
-			else if (m_HoveringAxisIndex == 2) // Z Axis
+			else if (m_HoveringAxisIndex == Z_AXIS_IDX)
 			{
 				zMat.colorMultiplier = selectedColor;
 			}
 		} break;
 		case TransformState::SCALE:
 		{
-			if (m_HoveringAxisIndex == 0) // X Axis
+			if (m_HoveringAxisIndex == X_AXIS_IDX)
 			{
 				xMat.colorMultiplier = selectedColor;
 			}
-			else if (m_HoveringAxisIndex == 1) // Y Axis
+			else if (m_HoveringAxisIndex == Y_AXIS_IDX)
 			{
 				yMat.colorMultiplier = selectedColor;
 			}
-			else if (m_HoveringAxisIndex == 2) // Z Axis
+			else if (m_HoveringAxisIndex == Z_AXIS_IDX)
 			{
 				zMat.colorMultiplier = selectedColor;
 			}
-			else if (m_HoveringAxisIndex == 3) // All axes
+			else if (m_HoveringAxisIndex == ALL_AXES_IDX)
 			{
 				allMat.colorMultiplier = selectedColor;
 			}
@@ -680,17 +658,17 @@ namespace flex
 		debugDrawer->drawLine(
 			ToBtVec3(gizmoTransform->GetWorldPosition()),
 			ToBtVec3(gizmoTransform->GetWorldPosition() + gizmoRight * 6.0f),
-			btVector3(1.0f, 0.0f, 0.0f));
+			GetAxisColor(m_DraggingAxisIndex));
 
 		debugDrawer->drawLine(
 			ToBtVec3(gizmoTransform->GetWorldPosition()),
 			ToBtVec3(gizmoTransform->GetWorldPosition() + gizmoUp * 6.0f),
-			btVector3(0.0f, 1.0f, 0.0f));
+			GetAxisColor(m_DraggingAxisIndex));
 
 		debugDrawer->drawLine(
 			ToBtVec3(gizmoTransform->GetWorldPosition()),
 			ToBtVec3(gizmoTransform->GetWorldPosition() + gizmoForward * 6.0f),
-			btVector3(0.0f, 0.0f, 1.0f));
+			GetAxisColor(m_DraggingAxisIndex));
 
 
 		switch (m_CurrentTransformGizmoState)
@@ -705,7 +683,7 @@ namespace flex
 				Print("warp\n");
 			}
 
-			if (m_DraggingAxisIndex == 0) // X Axis
+			if (m_DraggingAxisIndex == X_AXIS_IDX)
 			{
 				glm::vec3 axis = gizmoRight;
 				glm::vec3 planeN = gizmoForward;
@@ -716,7 +694,7 @@ namespace flex
 				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, m_DraggingGizmoOffset);
 				dPos = intersectionPont - planeOrigin;
 			}
-			else if (m_DraggingAxisIndex == 1) // Y Axis
+			else if (m_DraggingAxisIndex == Y_AXIS_IDX)
 			{
 				glm::vec3 axis = gizmoUp;
 				glm::vec3 planeN = gizmoRight;
@@ -727,7 +705,7 @@ namespace flex
 				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, m_DraggingGizmoOffset);
 				dPos = intersectionPont - planeOrigin;
 			}
-			else if (m_DraggingAxisIndex == 2) // Z Axis
+			else if (m_DraggingAxisIndex == Z_AXIS_IDX)
 			{
 				glm::vec3 axis = gizmoForward;
 				glm::vec3 planeN = gizmoUp;
@@ -744,7 +722,7 @@ namespace flex
 			debugDrawer->drawLine(
 				ToBtVec3(m_SelectedObjectDragStartPos),
 				ToBtVec3(selectedObjectTransform->GetLocalPosition()),
-				(m_DraggingAxisIndex == 0 ? btVector3(1.0f, 0.0f, 0.0f) : m_DraggingAxisIndex == 1 ? btVector3(0.0f, 1.0f, 0.0f) : btVector3(0.1f, 0.1f, 1.0f)));
+				GetAxisColor(m_DraggingAxisIndex));
 
 			for (GameObject* gameObject : m_CurrentlySelectedObjects)
 			{
@@ -763,7 +741,7 @@ namespace flex
 			static glm::quat pGizmoRot = gizmoTransform->GetLocalRotation();
 			Print("%.2f,%.2f,%.2f,%.2f\n", pGizmoRot.x, pGizmoRot.y, pGizmoRot.z, pGizmoRot.w);
 
-			if (m_DraggingAxisIndex == 0) // X Axis
+			if (m_DraggingAxisIndex == X_AXIS_IDX)
 			{
 				if (m_bFirstFrameDraggingRotationGizmo)
 				{
@@ -780,7 +758,7 @@ namespace flex
 
 				dRot = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, rayStartG, rayEndG, pGizmoRot);
 			}
-			else if (m_DraggingAxisIndex == 1) // Y Axis
+			else if (m_DraggingAxisIndex == Y_AXIS_IDX)
 			{
 				if (m_bFirstFrameDraggingRotationGizmo)
 				{
@@ -797,7 +775,7 @@ namespace flex
 
 				dRot = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, rayStartG, rayEndG, pGizmoRot);
 			}
-			else if (m_DraggingAxisIndex == 2) // Z Axis
+			else if (m_DraggingAxisIndex == Z_AXIS_IDX)
 			{
 				if (m_bFirstFrameDraggingRotationGizmo)
 				{
@@ -822,7 +800,7 @@ namespace flex
 			debugDrawer->drawLine(
 				ToBtVec3(m_SelectedObjectDragStartPos),
 				ToBtVec3(selectedObjectTransform->GetLocalPosition()),
-				(m_DraggingAxisIndex == 0 ? btVector3(1.0f, 0.0f, 0.0f) : m_DraggingAxisIndex == 1 ? btVector3(0.0f, 1.0f, 0.0f) : btVector3(0.1f, 0.1f, 1.0f)));
+				GetAxisColor(m_DraggingAxisIndex));
 
 			for (GameObject* gameObject : m_CurrentlySelectedObjects)
 			{
@@ -839,7 +817,7 @@ namespace flex
 			glm::vec3 dScale(1.0f);
 			real scale = 0.1f;
 
-			if (m_DraggingAxisIndex == 0) // X Axis
+			if (m_DraggingAxisIndex == X_AXIS_IDX)
 			{
 				glm::vec3 axis = gizmoRight;
 				glm::vec3 planeN = gizmoForward;
@@ -853,7 +831,7 @@ namespace flex
 
 				m_DraggingGizmoScaleLast = scaleNow;
 			}
-			else if (m_DraggingAxisIndex == 1) // Y Axis
+			else if (m_DraggingAxisIndex == Y_AXIS_IDX)
 			{
 				glm::vec3 axis = gizmoUp;
 				glm::vec3 planeN = gizmoRight;
@@ -867,7 +845,7 @@ namespace flex
 
 				m_DraggingGizmoScaleLast = scaleNow;
 			}
-			else if (m_DraggingAxisIndex == 2) // Z Axis
+			else if (m_DraggingAxisIndex == Z_AXIS_IDX)
 			{
 				glm::vec3 axis = gizmoForward;
 				glm::vec3 planeN = gizmoUp;
@@ -881,7 +859,7 @@ namespace flex
 
 				m_DraggingGizmoScaleLast = scaleNow;
 			}
-			else if (m_DraggingAxisIndex == 3) // All axes
+			else if (m_DraggingAxisIndex == ALL_AXES_IDX)
 			{
 				glm::vec3 axis = gizmoRight;
 				glm::vec3 planeN = gizmoForward;
@@ -903,7 +881,7 @@ namespace flex
 			debugDrawer->drawLine(
 				ToBtVec3(m_SelectedObjectDragStartPos),
 				ToBtVec3(selectedObjectTransform->GetLocalPosition()),
-				(m_DraggingAxisIndex == 0 ? btVector3(1.0f, 0.0f, 0.0f) : m_DraggingAxisIndex == 1 ? btVector3(0.0f, 1.0f, 0.0f) : btVector3(0.1f, 0.1f, 1.0f)));
+				GetAxisColor(m_DraggingAxisIndex));
 
 			for (GameObject* gameObject : m_CurrentlySelectedObjects)
 			{
@@ -1410,5 +1388,40 @@ namespace flex
 		m_TransformGizmo->PostInitialize();
 
 		m_CurrentTransformGizmoState = TransformState::TRANSLATE;
+	}
+
+	void Editor::FadeOutHeadOnGizmos()
+	{
+		if (m_CurrentTransformGizmoState != TransformState::ROTATE)
+		{
+			Transform* gizmoTransform = m_TransformGizmo->GetTransform();
+			glm::vec3 camForward = g_CameraManager->CurrentCamera()->GetForward();
+
+			Material& xMat = g_Renderer->GetMaterial(m_TransformGizmoMatXID);
+			Material& yMat = g_Renderer->GetMaterial(m_TransformGizmoMatYID);
+			Material& zMat = g_Renderer->GetMaterial(m_TransformGizmoMatZID);
+
+			real camForDotR = glm::abs(glm::dot(camForward, gizmoTransform->GetRight()));
+			real camForDotU = glm::abs(glm::dot(camForward, gizmoTransform->GetUp()));
+			real camForDotF = glm::abs(glm::dot(camForward, gizmoTransform->GetForward()));
+			real threshold = 0.98f;
+			if (camForDotR >= threshold)
+			{
+				xMat.colorMultiplier.a = Lerp(1.0f, 0.0f, (camForDotR - threshold) / (1.0f - threshold));
+			}
+			if (camForDotU >= threshold)
+			{
+				yMat.colorMultiplier.a = Lerp(1.0f, 0.0f, (camForDotU - threshold) / (1.0f - threshold));
+			}
+			if (camForDotF >= threshold)
+			{
+				zMat.colorMultiplier.a = Lerp(1.0f, 0.0f, (camForDotF - threshold) / (1.0f - threshold));
+			}
+		}
+	}
+
+	btVector3 Editor::GetAxisColor(i32 axisIndex) const
+	{
+		return axisIndex == X_AXIS_IDX ? btVector3(1.0f, 0.0f, 0.0f) : axisIndex == Y_AXIS_IDX ? btVector3(0.0f, 1.0f, 0.0f) : btVector3(0.1f, 0.1f, 1.0f);
 	}
 } // namespace flex

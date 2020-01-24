@@ -1211,7 +1211,10 @@ namespace flex
 
 	void Renderer::OnPostSceneChange()
 	{
-		m_PhysicsDebugDrawer->OnPostSceneChange();
+		if (m_PhysicsDebugDrawer != nullptr)
+		{
+			m_PhysicsDebugDrawer->OnPostSceneChange();
+		}
 	}
 
 	void Renderer::LoadShaders()

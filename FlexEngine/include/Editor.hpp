@@ -58,6 +58,9 @@ namespace flex
 		ActionCallback<Editor> m_ActionCallback;
 
 		void CreateObjects();
+		void FadeOutHeadOnGizmos();
+
+		btVector3 GetAxisColor(i32 axisIndex) const;
 
 		// Parent of translation, rotation, and scale gizmo objects
 		GameObject* m_TransformGizmo = nullptr;
@@ -94,8 +97,7 @@ namespace flex
 		bool m_bLastDotPos = false;
 
 		bool m_bDraggingGizmo = false;
-		// -1,   0, 1, 2, 3
-		// None, X, Y, Z, All Axes
+
 		i32 m_DraggingAxisIndex = -1;
 		i32 m_HoveringAxisIndex = -1;
 
