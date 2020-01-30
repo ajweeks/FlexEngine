@@ -1714,8 +1714,8 @@ namespace flex
 		{
 			Renderer::DrawImGuiWindows();
 
-			ImGui::SliderFloat("TAA KL", &(m_TAA_ks[0]), 0.0f, 100.0f);
-			ImGui::SliderFloat("TAA KH", &(m_TAA_ks[1]), 0.0f, 100.0f);
+			//ImGui::SliderFloat("TAA KL", &(m_TAA_ks[0]), 0.0f, 100.0f);
+			//ImGui::SliderFloat("TAA KH", &(m_TAA_ks[1]), 0.0f, 100.0f);
 
 			if (bGPUTimingsWindowShowing)
 			{
@@ -1757,7 +1757,8 @@ namespace flex
 								MaterialBatchPair& materialBatchPair = shaderBatchPair.batch.batches[k];
 								VulkanMaterial& material = m_Materials.at(materialBatchPair.materialID);
 
-								if (material.uniformBufferList.Get(UniformBufferType::DYNAMIC)->fullDynamicBufferSize == 0)
+								if (!material.uniformBufferList.Has(UniformBufferType::DYNAMIC) ||
+									material.uniformBufferList.Get(UniformBufferType::DYNAMIC)->fullDynamicBufferSize == 0)
 								{
 									continue;
 								}
@@ -1768,7 +1769,7 @@ namespace flex
 								sprintf_s(nodeID0, 256, "%s##%u",
 									shader.shader->name.c_str(),
 									shaderBatchPair.shaderID);
-								if (ImGui::BeginChild(nodeID0, ImVec2(0, 50), true))
+								if (ImGui::BeginChild(nodeID0, ImVec2(0, 200), true))
 								{
 									std::vector<real> dynamicObjects;
 
@@ -1801,7 +1802,8 @@ namespace flex
 										bufferSlotsTotal - bufferSlotsFree,
 										bufferSlotsTotal,
 										shaderBatchPair.shaderID);
-									ImGui::PlotHistogram(histNodeID, dynamicObjects.data(), dynamicObjects.size(), 0, NULL, 0.0f, 1.0f, ImVec2(0, 0));
+									real progress = 1.0f - (bufferSlotsFree / (real)bufferSlotsTotal);
+									ImGui::ProgressBar(progress, ImVec2(0, 0), histNodeID);
 								}
 								ImGui::EndChild();
 							}
