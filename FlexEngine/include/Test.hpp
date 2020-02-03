@@ -396,6 +396,38 @@ namespace flex
 		}
 		UNIT_TEST_END;
 
+		UNIT_TEST(MinComponentValid)
+		{
+			glm::vec2 a(1.0f, 2.0);
+			real result = MinComponent(a);
+			EXPECT(result, 1.0f);
+
+			glm::vec2 b(-9.0f, -12.0f);
+			result = MinComponent(b);
+			EXPECT(result, -12.0f);
+
+			glm::vec2 c(-100506.008f, -100506.009f);
+			result = MinComponent(c);
+			EXPECT(result, -100506.009f);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(MaxComponentValid)
+		{
+			glm::vec2 a(1.0f, 2.0f);
+			real result = MaxComponent(a);
+			EXPECT(result, 2.0f);
+
+			glm::vec2 b(-9.0f, -12.0f);
+			result = MaxComponent(b);
+			EXPECT(result, -9.0f);
+
+			glm::vec2 c(-100506.008f, -100506.009f);
+			result = MaxComponent(c);
+			EXPECT(result, -100506.008f);
+		}
+		UNIT_TEST_END;
+
 	public:
 		static void Run()
 		{
@@ -405,7 +437,7 @@ namespace flex
 				FieldArrayParsedCorrectly, MissingSquareBracketFailsToParse, MissingCurlyBracketFailsToParse, LineCommentIgnored, MultipleFieldsParsedCorrectly,
 				ArrayParsesCorrectly, MissingCommaInArrayFailsParse, ComplexFileIsValid,
 				// Math tests
-				RayPlaneIntersectionOriginValid, RayPlaneIntersectionXYValid, RayPlaneIntersectionXY2Valid, RayPlaneIntersectionXY3Valid,
+				RayPlaneIntersectionOriginValid, RayPlaneIntersectionXYValid, RayPlaneIntersectionXY2Valid, RayPlaneIntersectionXY3Valid, MinComponentValid, MaxComponentValid
 			};
 			Print("Running %d tests...\n", ARRAY_LENGTH(funcs));
 			u32 failedTestCount = 0;

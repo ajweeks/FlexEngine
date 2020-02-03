@@ -1480,6 +1480,36 @@ namespace flex
 		return randN * (max - min) + min;
 	}
 
+	real MinComponent(const glm::vec2& vec)
+	{
+		return glm::min(vec.x, vec.y);
+	}
+
+	real MinComponent(const glm::vec3& vec)
+	{
+		return glm::min(vec.x, glm::min(vec.y, vec.z));
+	}
+
+	real Min(const glm::vec4& vec)
+	{
+		return glm::min(vec.x, glm::min(vec.y, glm::min(vec.z, vec.w)));
+	}
+
+	real MaxComponent(const glm::vec2& vec)
+	{
+		return glm::max(vec.x, vec.y);
+	}
+
+	real MaxComponent(const glm::vec3& vec)
+	{
+		return glm::max(vec.x, glm::max(vec.y, vec.z));
+	}
+
+	real MaxComponent(const glm::vec4& vec)
+	{
+		return glm::max(vec.x, glm::max(vec.y, glm::max(vec.z, vec.w)));
+	}
+
 	static u32 _lastUID = 0;
 	u32 GenerateUID()
 	{

@@ -196,6 +196,14 @@ namespace flex
 	// Returns random value in range [min, max)
 	real RandomFloat(real min, real max);
 
+	real MinComponent(const glm::vec2& vec);
+	real MinComponent(const glm::vec3& vec);
+	real MinComponent(const glm::vec4& vec);
+
+	real MaxComponent(const glm::vec2& vec);
+	real MaxComponent(const glm::vec3& vec);
+	real MaxComponent(const glm::vec4& vec);
+
 	u32 GenerateUID();
 
 	template<class T>
