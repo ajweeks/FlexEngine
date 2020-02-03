@@ -1,0 +1,68 @@
+{
+	"version" : 3,
+	"name" : "scene_donut",
+	"spawn player" : false,
+	"objects" : 
+	[
+		{
+			"name" : "Skybox",
+			"type" : "skybox",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"materials" : 
+			[
+				"skybox 01"
+			],
+			"skybox info" : 
+			{
+			}
+		},
+		{
+			"name" : "Reflection Probe 01",
+			"type" : "reflection probe",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 8.000, 0.000"
+			}
+		},
+		{
+			"name" : "donut",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "-9.565, -3.932, 0.000"
+			},
+			"mesh" : "donut",
+			"materials" : 
+			[
+				"donut_sprinkle",
+				"donut_dough",
+				"donut_icing"
+			]
+		},
+		{
+			"name" : "Directional Light",
+			"type" : "directional light",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 15.000, 0.000",
+				"rot" : "1.194, -0.973, -2.523"
+			},
+			"directional light info" : 
+			{
+				"rotation" : "-0.217, -0.591, -0.616, 0.473",
+				"pos" : "0.000, 15.000, 0.000",
+				"color" : "1.00, 1.00, 1.00",
+				"enabled" : true,
+				"brightness" : 5.000000,
+				"cast shadows" : true,
+				"shadow darkness" : 1.000000
+			}
+		}
+	]
+}
