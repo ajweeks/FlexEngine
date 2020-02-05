@@ -1737,7 +1737,7 @@ namespace flex
 
 			if (bUniformBufferWindowShowing)
 			{
-				if (ImGui::Begin("Dynamic Uniform Buffers", &bUniformBufferWindowShowing))
+				if (ImGui::Begin("Uniform Buffers", &bUniformBufferWindowShowing))
 				{
 					ShaderBatch* shaderBatches[] = { &m_DeferredObjectBatches, &m_ForwardObjectBatches };
 					const char* shaderBatchNames[] = { "Deferred", "Forward" };
@@ -1757,57 +1757,84 @@ namespace flex
 								MaterialBatchPair& materialBatchPair = shaderBatchPair.batch.batches[k];
 								VulkanMaterial& material = m_Materials.at(materialBatchPair.materialID);
 
-								if (!material.uniformBufferList.Has(UniformBufferType::DYNAMIC) ||
-									material.uniformBufferList.Get(UniformBufferType::DYNAMIC)->fullDynamicBufferSize == 0)
+								if (material.uniformBufferList.Has(UniformBufferType::DYNAMIC) &&
+									material.uniformBufferList.Get(UniformBufferType::DYNAMIC)->fullDynamicBufferSize > 0)
 								{
-									continue;
-								}
-
-								ImVec2 p = ImGui::GetCursorScreenPos();
-								char nodeID0[256];
-								memset(nodeID0, 0, 256);
-								sprintf_s(nodeID0, 256, "%s##%u",
-									shader.shader->name.c_str(),
-									shaderBatchPair.shaderID);
-								if (ImGui::BeginChild(nodeID0, ImVec2(0, 200), true))
-								{
-									std::vector<real> dynamicObjects;
-
-									for (u32 l = 0; l < shaderBatchPair.batch.batches.size(); ++l)
+									ImVec2 p = ImGui::GetCursorScreenPos();
+									char nodeID0[256];
+									memset(nodeID0, 0, 256);
+									sprintf_s(nodeID0, 256, "%s##%u",
+										shader.shader->name.c_str(),
+										shaderBatchPair.shaderID);
+									if (ImGui::BeginChild(nodeID0, ImVec2(0, 200), true))
 									{
-										const MaterialBatchPair& matBatchPair = shaderBatchPair.batch.batches[l];
-										for (RenderID renderID : matBatchPair.batch.objects)
+										u32 dynamicObjectCount = 0;
+
+										for (u32 l = 0; l < shaderBatchPair.batch.batches.size(); ++l)
 										{
-											VulkanRenderObject* renderObject = GetRenderObject(renderID);
-											if (renderObject != nullptr)
+											const MaterialBatchPair& matBatchPair = shaderBatchPair.batch.batches[l];
+											for (RenderID renderID : matBatchPair.batch.objects)
 											{
-												dynamicObjects.push_back(1.0f);
+												VulkanRenderObject* renderObject = GetRenderObject(renderID);
+												if (renderObject != nullptr)
+												{
+													++dynamicObjectCount;
+												}
 											}
 										}
-									}
 
-									// TODO: UI: EZ: Display particle buffer size here too
-									UniformBuffer* dynamicBuffer = material.uniformBufferList.Get(UniformBufferType::DYNAMIC);
-									u32 bufferSlotsTotal = (dynamicBuffer->fullDynamicBufferSize / dynamicBuffer->data.size);
-									u32 bufferSlotsFree = bufferSlotsTotal - dynamicObjects.size();
-									for (u32 s = 0; s < bufferSlotsFree; ++s)
-									{
-										dynamicObjects.push_back(0.0f);
+										UniformBuffer* dynamicBuffer = material.uniformBufferList.Get(UniformBufferType::DYNAMIC);
+										u32 bufferSlotsTotal = (dynamicBuffer->fullDynamicBufferSize / dynamicBuffer->data.size);
+										u32 bufferSlotsFree = bufferSlotsTotal - dynamicObjectCount;
+
+										char histNodeID[256];
+										memset(histNodeID, 0, 256);
+										sprintf_s(histNodeID, 256, "%s (%u/%u)##histo%u",
+											shader.shader->name.c_str(),
+											bufferSlotsTotal - bufferSlotsFree,
+											bufferSlotsTotal,
+											shaderBatchPair.shaderID);
+										real progress = 1.0f - (bufferSlotsFree / (real)bufferSlotsTotal);
+										ImGui::ProgressBar(progress, ImVec2(0, 0), histNodeID);
 									}
+									ImGui::EndChild();
+								}
+							}
+						}
+					}
+
+					ImGui::Text("Particle buffers");
+
+					if (m_ParticleSystems.size() == 0)
+					{
+						ImGui::Text("(None in scene)");
+					}
+					else
+					{
+						ImVec2 p = ImGui::GetCursorScreenPos();
+						char nodeID0[256];
+						memset(nodeID0, 0, 256);
+						if (ImGui::BeginChild("##particles", ImVec2(0, 200), true))
+						{
+							for (VulkanParticleSystem* system : m_ParticleSystems)
+							{
+								VulkanMaterial& simMat = m_Materials[system->system->simMaterialID];
+								if (simMat.uniformBufferList.Has(UniformBufferType::PARTICLE_DATA))
+								{
+									UniformBuffer* particleBuffer = simMat.uniformBufferList.Get(UniformBufferType::PARTICLE_DATA);
+									u32 bufferSlotsTotal = particleBuffer->data.size;
 
 									char histNodeID[256];
 									memset(histNodeID, 0, 256);
-									sprintf_s(histNodeID, 256, "%s (%u/%u)##histo%u",
-										shader.shader->name.c_str(),
-										bufferSlotsTotal - bufferSlotsFree,
-										bufferSlotsTotal,
-										shaderBatchPair.shaderID);
-									real progress = 1.0f - (bufferSlotsFree / (real)bufferSlotsTotal);
+									sprintf_s(histNodeID, 256, "%s %uB##particles_size",
+										simMat.material.name.c_str(),
+										bufferSlotsTotal);
+									real progress = 1.0f;
 									ImGui::ProgressBar(progress, ImVec2(0, 0), histNodeID);
 								}
-								ImGui::EndChild();
 							}
 						}
+						ImGui::EndChild();
 					}
 				}
 				ImGui::End();
