@@ -33,7 +33,10 @@ namespace flex
 		m_MouseButtonCallback(this, &Editor::OnMouseButtonEvent),
 		m_MouseMovedCallback(this, &Editor::OnMouseMovedEvent),
 		m_KeyEventCallback(this, &Editor::OnKeyEvent),
-		m_ActionCallback(this, &Editor::OnActionEvent)
+		m_ActionCallback(this, &Editor::OnActionEvent),
+		m_StartPointOnPlane(0.0f),
+		m_LatestRayPlaneIntersection(0.0f),
+		m_PlaneN(0.0f)
 	{
 		SelectNone();
 
@@ -563,6 +566,7 @@ namespace flex
 		m_DraggingAxisIndex = m_HoveringAxisIndex;
 		m_bDraggingGizmo = true;
 		m_SelectedObjectDragStartPos = m_TransformGizmo->GetTransform()->GetWorldPosition();
+		m_SelectedObjectDragStartRot = m_TransformGizmo->GetTransform()->GetWorldRotation();
 
 		real gizmoSelectedMultiplier = 0.4f;
 		glm::vec4 selectedColor(gizmoSelectedMultiplier, gizmoSelectedMultiplier, gizmoSelectedMultiplier, 1.0f);
@@ -591,6 +595,8 @@ namespace flex
 		} break;
 		case TransformState::ROTATE:
 		{
+			m_bFirstFrameDraggingRotationGizmo = true;
+
 			if (m_HoveringAxisIndex == X_AXIS_IDX)
 			{
 				xMat.colorMultiplier = selectedColor;
@@ -642,6 +648,7 @@ namespace flex
 		}
 
 		Transform* gizmoTransform = m_TransformGizmo->GetTransform();
+
 		const glm::vec3 gizmoUp = gizmoTransform->GetUp();
 		const glm::vec3 gizmoRight = gizmoTransform->GetRight();
 		const glm::vec3 gizmoForward = gizmoTransform->GetForward();
@@ -827,7 +834,8 @@ namespace flex
 				}
 				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, camForward, m_DraggingGizmoOffset);
 				glm::vec3 scaleNow = -(intersectionPont - planeOrigin);
-				dScale += (scaleNow - m_DraggingGizmoScaleLast) * scale;
+				glm::vec3 scaleVecGlobal = (scaleNow - m_DraggingGizmoScaleLast) * scale;
+				dLocalScale += glm::vec3(glm::inverse(gizmoTransform->GetWorldTransform()) * glm::vec4(scaleVecGlobal, 0.0f));
 
 				m_DraggingGizmoScaleLast = scaleNow;
 			}
@@ -841,7 +849,8 @@ namespace flex
 				}
 				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, camForward, m_DraggingGizmoOffset);
 				glm::vec3 scaleNow = (intersectionPont - planeOrigin);
-				dScale += (scaleNow - m_DraggingGizmoScaleLast) * scale;
+				glm::vec3 scaleVecGlobal = (scaleNow - m_DraggingGizmoScaleLast) * scale;
+				dLocalScale += glm::vec3(glm::inverse(gizmoTransform->GetWorldTransform()) * glm::vec4(scaleVecGlobal, 0.0f));
 
 				m_DraggingGizmoScaleLast = scaleNow;
 			}
@@ -855,7 +864,8 @@ namespace flex
 				}
 				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, camForward, m_DraggingGizmoOffset);
 				glm::vec3 scaleNow = (intersectionPont - planeOrigin);
-				dScale += (scaleNow - m_DraggingGizmoScaleLast) * scale;
+				glm::vec3 scaleVecGlobal = (scaleNow - m_DraggingGizmoScaleLast) * scale;
+				dLocalScale += glm::vec3(glm::inverse(gizmoTransform->GetWorldTransform()) * glm::vec4(scaleVecGlobal, 0.0f));
 
 				m_DraggingGizmoScaleLast = scaleNow;
 			}
@@ -868,15 +878,18 @@ namespace flex
 					planeN = gizmoUp;
 				}
 				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, camForward, m_DraggingGizmoOffset);
-				glm::vec3 scaleNow = (intersectionPont - planeOrigin);
-				dScale += (scaleNow - m_DraggingGizmoScaleLast) * scale;
+				real max = MaxComponent(intersectionPont - planeOrigin);
+				real min = MinComponent(intersectionPont - planeOrigin);
+				glm::vec3 scaleNow = glm::vec3(abs(max) > abs(min));
+				glm::vec3 scaleVecGlobal = (scaleNow - m_DraggingGizmoScaleLast) * scale;
+				dLocalScale += glm::vec3(glm::inverse(gizmoTransform->GetWorldTransform()) * glm::vec4(scaleVecGlobal, 0.0f));
 
 				m_DraggingGizmoScaleLast = scaleNow;
 			}
 
 			Transform* selectedObjectTransform = m_CurrentlySelectedObjects[m_CurrentlySelectedObjects.size() - 1]->GetTransform();
 
-			dScale = glm::clamp(dScale, 0.01f, 10.0f);
+			dLocalScale = glm::clamp(dLocalScale, 0.01f, 10.0f);
 
 			debugDrawer->drawLine(
 				ToBtVec3(m_SelectedObjectDragStartPos),
@@ -889,7 +902,7 @@ namespace flex
 				bool bObjectIsntChild = (parent == nullptr) || (Find(m_CurrentlySelectedObjects, parent) == m_CurrentlySelectedObjects.end());
 				if (bObjectIsntChild)
 				{
-					gameObject->GetTransform()->Scale(dScale);
+					gameObject->GetTransform()->Scale(dLocalScale);
 				}
 			}
 		} break;
