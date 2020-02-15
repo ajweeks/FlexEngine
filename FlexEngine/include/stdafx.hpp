@@ -1,5 +1,3 @@
-#pragma once
-
 #define COMPILE_OPEN_GL 0
 #define COMPILE_VULKAN 1
 
@@ -37,14 +35,7 @@ const bool g_bEnableLogging_Loading = false;
 
 #include <cstddef>
 
-void* operator new(std::size_t size);
-void operator delete(void* ptr) noexcept;
-
-void* malloc_hooked(std::size_t size);
-void* aligned_malloc_hooked(std::size_t size, std::size_t alignment);
-void free_hooked(void* ptr);
-void aligned_free_hooked(void* ptr);
-void* realloc_hooked(void* ptr, std::size_t newsz);
+#include "memory.hpp"
 
 #define STBI_MALLOC(size)		malloc_hooked(size)
 #define STBI_REALLOC(p, newsz)	realloc_hooked(p, newsz)
