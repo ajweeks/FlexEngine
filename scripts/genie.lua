@@ -130,10 +130,10 @@ configuration { "vs*", "x32" }
 	defines { "WIN32" }
 configuration { "x32" }
 	defines { "PLATFORM_x32" }
+configuration "linux-*"
+	defines { "linux", "__linux", "__linux__" }
 configuration {}
 
-
--- configuration "gcc*"
 
 
 startproject "Flex"
@@ -151,6 +151,10 @@ project "Flex"
 		flags { "Winmain"}
 
 		links { "opengl32" } 
+
+	configuration "linux-*"
+		links { "opengl32" } 
+
 
 	platformLibraries()
 	staticPlatformLibraries()
@@ -197,9 +201,4 @@ configuration {}
 	}
 
 	pchheader "stdafx.hpp"
-	pchsource "../FlexEngine/src/stdafx.cpp"
-
-
-
-
--- TODO: Figure out how to set stdafx.cpp to use /Yc compiler flag to generate precompiled header object
+	pchsource "stdafx.cpp"

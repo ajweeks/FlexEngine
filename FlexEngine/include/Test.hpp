@@ -1,4 +1,4 @@
-#include "stdafx.hpp"
+#pragma once
 
 #include "JSONParser.hpp"
 #include "Helpers.hpp"
