@@ -140,7 +140,7 @@ namespace flex
 
 		struct UniformBuffer
 		{
-			UniformBuffer(const VDeleter<VkDevice>& device, UniformBufferType type);
+			UniformBuffer(VulkanDevice* device, UniformBufferType type);
 			~UniformBuffer();
 
 			VulkanBuffer buffer;
@@ -405,8 +405,6 @@ namespace flex
 		void CopyImage(VulkanDevice* device, VkQueue graphicsQueue, VkImage srcImage, VkImage dstImage, u32 width, u32 height,
 			VkCommandBuffer optCmdBuf = VK_NULL_HANDLE, VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_COLOR_BIT);
 		void CopyBufferToImage(VulkanDevice* device, VkQueue graphicsQueue, VkBuffer buffer, VkImage image, u32 width, u32 height, VkCommandBuffer optCommandBuffer = 0);
-		VkResult CreateAndAllocateBuffer(VulkanDevice* device, VkDeviceSize size, VkBufferUsageFlags usage,
-			VkMemoryPropertyFlags properties, VulkanBuffer* buffer);
 		void CopyBuffer(VulkanDevice* device, VkQueue graphicsQueue, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size,
 			VkDeviceSize srcOffset = 0, VkDeviceSize dstOffset = 0);
 
@@ -429,6 +427,7 @@ namespace flex
 			void Add(VulkanDevice* device, UniformBufferType type);
 			UniformBuffer* Get(UniformBufferType type);
 			const UniformBuffer* Get(UniformBufferType type) const;
+			bool Has(UniformBufferType type) const;
 
 			std::vector<UniformBuffer> uniformBufferList;
 		};
@@ -481,18 +480,20 @@ namespace flex
 		{
 			using iter = typename std::vector<Pair<u64, T>>::iterator;
 
-			void Add(u64 uniform, const T value)
+			void Add(u64 uniform, const T value, std::string slotName = "")
 			{
-				for (auto& pair : values)
+				for (auto value_iter = values.begin(); value_iter != values.end(); ++value_iter)
 				{
-					if (pair.first == uniform)
+					if (value_iter->first == uniform)
 					{
-						pair.second = value;
+						value_iter->second = value;
+						slotNames[value_iter - values.begin()] = slotName;
 						return;
 					}
 				}
 
 				values.emplace_back(uniform, value);
+				slotNames.emplace_back(slotName);
 			}
 
 			u32 Count()
@@ -535,6 +536,7 @@ namespace flex
 			}
 
 			std::vector<Pair<u64, T>> values;
+			std::vector<std::string> slotNames;
 		};
 
 		struct VulkanMaterial
@@ -551,6 +553,7 @@ namespace flex
 			std::vector<VulkanCubemapGBuffer> cubemapSamplerGBuffersIDs;
 			u32 cubemapDepthSamplerID = 0;
 
+			// TODO: Remove, this always equals shaderID
 			u32 descriptorSetLayoutIndex = 0;
 		};
 
@@ -564,8 +567,6 @@ namespace flex
 			MaterialID materialID = InvalidMaterialID;
 
 			GameObject* gameObject = nullptr;
-
-			std::string materialName = "";
 
 			u32 VAO = 0;
 			u32 VBO = 0;
@@ -690,7 +691,7 @@ namespace flex
 			Verisilicon,
 			Software,
 		};
-		
+
 		constexpr GPUVendor GPUVendorFromPCIVendor(u32 vendorID)
 		{
 			return vendorID == 0x13B5 ? GPUVendor::ARM

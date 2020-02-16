@@ -112,7 +112,6 @@ namespace flex
 		bool equal =
 			(name == other.name &&
 				shaderID == other.shaderID &&
-				generateNormalSampler == other.generateNormalSampler &&
 				enableNormalSampler == other.enableNormalSampler &&
 				normalTexturePath == other.normalTexturePath &&
 				sampledFrameBuffers.size() == other.sampledFrameBuffers.size() &&
@@ -123,13 +122,10 @@ namespace flex
 				constAlbedo == other.constAlbedo &&
 				constMetallic == other.constMetallic &&
 				constRoughness == other.constRoughness &&
-				generateAlbedoSampler == other.generateAlbedoSampler &&
 				enableAlbedoSampler == other.enableAlbedoSampler &&
 				albedoTexturePath == other.albedoTexturePath &&
-				generateMetallicSampler == other.generateMetallicSampler &&
 				enableMetallicSampler == other.enableMetallicSampler &&
 				metallicTexturePath == other.metallicTexturePath &&
-				generateRoughnessSampler == other.generateRoughnessSampler &&
 				enableRoughnessSampler == other.enableRoughnessSampler &&
 				roughnessTexturePath == other.roughnessTexturePath &&
 				generateHDREquirectangularSampler == other.generateHDREquirectangularSampler &&
@@ -179,17 +175,13 @@ namespace flex
 		{
 			if (material.HasField(param.name))
 			{
-				*param.path = RESOURCE_LOCATION  "textures/" + material.GetString(param.name);
+				*param.path = RESOURCE_LOCATION "textures/" + material.GetString(param.name);
 			}
 		}
 
-		material.SetBoolChecked("generate albedo sampler", createInfoOut.generateAlbedoSampler);
 		material.SetBoolChecked("enable albedo sampler", createInfoOut.enableAlbedoSampler);
-		material.SetBoolChecked("generate metallic sampler", createInfoOut.generateMetallicSampler);
 		material.SetBoolChecked("enable metallic sampler", createInfoOut.enableMetallicSampler);
-		material.SetBoolChecked("generate roughness sampler", createInfoOut.generateRoughnessSampler);
 		material.SetBoolChecked("enable roughness sampler", createInfoOut.enableRoughnessSampler);
-		material.SetBoolChecked("generate normal sampler", createInfoOut.generateNormalSampler);
 		material.SetBoolChecked("enable normal sampler", createInfoOut.enableNormalSampler);
 		material.SetBoolChecked("generate hdr equirectangular sampler", createInfoOut.generateHDREquirectangularSampler);
 		material.SetBoolChecked("enable hdr equirectangular sampler", createInfoOut.enableHDREquirectangularSampler);
@@ -228,7 +220,7 @@ namespace flex
 
 		// TODO: Find out way of determining if the following four  values
 		// are used by the shader (only currently used by PBR I think)
-		std::string constAlbedoStr = Vec3ToString(constAlbedo, 3);
+		std::string constAlbedoStr = VecToString(constAlbedo, 3);
 		materialObject.fields.emplace_back("const albedo", JSONValue(constAlbedoStr));
 		materialObject.fields.emplace_back("const metallic", JSONValue(constMetallic));
 		materialObject.fields.emplace_back("const roughness", JSONValue(constRoughness));
@@ -257,31 +249,7 @@ namespace flex
 			materialObject.fields.emplace_back("enable normal sampler", JSONValue(enableNormalSampler));
 		}
 
-		static const bool defaultGenerateAlbedo = false;
-		if (shader.bNeedAlbedoSampler && generateAlbedoSampler != defaultGenerateAlbedo)
-		{
-			materialObject.fields.emplace_back("generate albedo sampler", JSONValue(generateAlbedoSampler));
-		}
-
-		static const bool defaultGenerateMetallicSampler = false;
-		if (shader.bNeedMetallicSampler && generateMetallicSampler != defaultGenerateMetallicSampler)
-		{
-			materialObject.fields.emplace_back("generate metallic sampler", JSONValue(generateMetallicSampler));
-		}
-
-		static const bool defaultGenerateRoughness = false;
-		if (shader.bNeedRoughnessSampler && generateRoughnessSampler != defaultGenerateRoughness)
-		{
-			materialObject.fields.emplace_back("generate roughness sampler", JSONValue(generateRoughnessSampler));
-		}
-
-		static const bool defaultGenerateNormal = false;
-		if (shader.bNeedNormalSampler && generateNormalSampler != defaultGenerateNormal)
-		{
-			materialObject.fields.emplace_back("generate normal sampler", JSONValue(generateNormalSampler));
-		}
-
-		static const std::string texturePrefixStr = RESOURCE_LOCATION  "textures/";
+		static const std::string texturePrefixStr = RESOURCE_LOCATION "textures/";
 
 		if (shader.bNeedAlbedoSampler && !albedoTexturePath.empty())
 		{
@@ -318,7 +286,7 @@ namespace flex
 
 			materialObject.fields.emplace_back("enable cubemap trilinear filtering", JSONValue(enableCubemapTrilinearFiltering));
 
-			std::string cubemapSamplerSizeStr = Vec2ToString(cubemapSamplerSize, 0);
+			std::string cubemapSamplerSizeStr = VecToString(cubemapSamplerSize, 0);
 			materialObject.fields.emplace_back("generated cubemap size", JSONValue(cubemapSamplerSizeStr));
 		}
 
@@ -326,7 +294,7 @@ namespace flex
 		{
 			materialObject.fields.emplace_back("generate irradiance sampler", JSONValue(generateIrradianceSampler));
 
-			std::string irradianceSamplerSizeStr = Vec2ToString(irradianceSamplerSize, 0);
+			std::string irradianceSamplerSizeStr = VecToString(irradianceSamplerSize, 0);
 			materialObject.fields.emplace_back("generated irradiance cubemap size", JSONValue(irradianceSamplerSizeStr));
 		}
 
@@ -334,7 +302,7 @@ namespace flex
 		{
 			materialObject.fields.emplace_back("generate prefiltered map", JSONValue(generatePrefilteredMap));
 
-			std::string prefilteredMapSizeStr = Vec2ToString(prefilteredMapSize, 0);
+			std::string prefilteredMapSizeStr = VecToString(prefilteredMapSize, 0);
 			materialObject.fields.emplace_back("generated prefiltered map size", JSONValue(prefilteredMapSizeStr));
 		}
 

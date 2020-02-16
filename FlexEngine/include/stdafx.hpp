@@ -3,6 +3,8 @@
 
 #define COMPILE_IMGUI 1
 
+#define RUN_UNIT_TESTS 0
+
 #if COMPILE_OPEN_GL
 const bool g_bOpenGLEnabled = true;
 #else
@@ -177,6 +179,11 @@ IGNORE_WARNINGS_POP
 #define PI_DIV_FOUR (glm::quarter_pi<real>())
 #define THREE_PI_DIV_TWO (glm::three_over_two_pi<real>())
 #define EPSILON (glm::epsilon<real>())
+
+#define X_AXIS_IDX   0
+#define Y_AXIS_IDX   1
+#define Z_AXIS_IDX   2
+#define ALL_AXES_IDX 3
 
 #if ENABLE_PROFILING
 #define PROFILE_BEGIN(blockName) Profiler::Begin(blockName);

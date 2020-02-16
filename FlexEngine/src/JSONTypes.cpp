@@ -421,7 +421,8 @@ namespace flex
 			result += '\n' + tabs + "[\n";
 			for (u32 i = 0; i < value.fieldArrayValue.size(); ++i)
 			{
-				result += value.fieldArrayValue[i].Print(tabCount + 1);
+				result += tabs + "\t\"" + value.fieldArrayValue[i].label + "\"";
+
 				if (i != value.fieldArrayValue.size() - 1)
 				{
 					result += ",\n";

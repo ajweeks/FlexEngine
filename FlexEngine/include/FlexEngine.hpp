@@ -45,6 +45,7 @@ namespace flex
 			const glm::vec3& planeOrigin,
 			const glm::vec3& planeNorm,
 			const glm::vec3& startPos,
+			const glm::vec3& cameraForward,
 			real& inOutOffset);
 
 		static const u32 EngineVersionMajor;

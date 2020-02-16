@@ -15,8 +15,6 @@
 
 namespace flex
 {
-	class MeshComponent;
-
 	namespace vk
 	{
 		class VulkanPhysicsDebugDraw;
@@ -71,8 +69,7 @@ namespace flex
 
 			virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size, DataType dataType, bool normalized, i32 stride, void* pointer) override;
 
-			virtual void SetSkyboxMesh(GameObject* skyboxMesh) override;
-			virtual GameObject* GetSkyboxMesh() override;
+			virtual void SetSkyboxMesh(Mesh* skyboxMesh) override;
 			virtual void SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID) override;
 
 			virtual Material& GetMaterial(MaterialID materialID) override;
@@ -238,17 +235,14 @@ namespace flex
 			void CreateStaticVertexBuffers();
 			void CreateDynamicVertexBuffers();
 
-			u32 CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, ShaderID shaderID, u32 size);
 			void CreateShadowVertexBuffer();
-			void CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, void* vertexBufferData, u32 vertexBufferSize);
+			void CreateAndUploadToStaticVertexBuffer(VulkanBuffer* vertexBuffer, void* vertexBufferData, u32 vertexBufferSize);
 			void CreateDynamicVertexBuffer(VulkanBuffer* vertexBuffer, u32 size);
 
 			void CreateStaticIndexBuffers();
 
-			// Creates index buffer for all render objects' indices which use specified shader index. Returns index count
-			u32 CreateStaticIndexBuffer(VulkanBuffer* indexBuffer, ShaderID shaderID);
 			void CreateShadowIndexBuffer();
-			void CreateStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<u32>& indices);
+			void CreateAndUploadToStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<u32>& indices);
 
 			void CreateDescriptorPool();
 			u32 AllocateDynamicUniformBuffer(u32 dynamicDataSize, void** data, i32 maxObjectCount = -1);
@@ -265,7 +259,6 @@ namespace flex
 				VkCommandBuffer commandBuffer,
 				MaterialID materialID,
 				VkPipelineLayout pipelineLayout,
-				VkPipeline graphicsPipeline,
 				VkDescriptorSet descriptorSet);
 
 			// Begins the given render pass, renders a fullscreen tri, then ends the render pass
@@ -310,7 +303,7 @@ namespace flex
 			void OnShaderReloadSuccess();
 
 			// Returns true if object was duplicated
-			bool DoTextureSelector(const char* label, const std::vector<VulkanTexture*>& textures, i32* selectedIndex, bool* bGenerateSampler);
+			bool DoTextureSelector(const char* label, const std::vector<VulkanTexture*>& textures, i32* selectedIndex);
 			void ImGuiUpdateTextureIndexOrMaterial(bool bUpdateTextureMaterial,
 				const std::string& texturePath,
 				std::string& matTexturePath,
@@ -356,6 +349,9 @@ namespace flex
 			void InitializeAllParticleSystemBuffers();
 			void InitializeParticleSystemBuffer(VulkanParticleSystem* particleSystem);
 
+			u32 GetStaticVertexIndexBufferIndex(u32 stride);
+			u32 GetDynamicVertexIndexBufferIndex(u32 stride);
+
 			std::vector<std::string> m_SupportedDeviceExtenions;
 
 			const u32 MAX_NUM_RENDER_OBJECTS = 4096; // TODO: Not this?
@@ -381,6 +377,7 @@ namespace flex
 			struct ShaderBatchPair
 			{
 				ShaderID shaderID = InvalidShaderID;
+				bool bDynamic = false;
 				MaterialBatch batch;
 			};
 
@@ -576,7 +573,17 @@ namespace flex
 			VulkanTexture* m_BlankTexture = nullptr;
 			VulkanTexture* m_BlankTextureArr = nullptr;
 
-			std::vector<VertexIndexBufferPair> m_VertexIndexBufferPairs;
+			// Pair is: (stride, vertex buffer pair)
+			// Indexed into through Shader::vertexBufferIndex
+			// One element per unique stride
+			// Uploaded to GPU once through staging buffer
+			std::vector<std::pair<u32, VulkanBuffer*>> m_StaticVertexBuffers;
+
+			// Pair is: (stride, vertex index buffer pair)
+			// Indexed into through Material::dynamicVertexBufferIndex
+			std::vector<std::pair<u32, VertexIndexBufferPair*>> m_DynamicVertexIndexBufferPairs;
+			VulkanBuffer* m_StaticIndexBuffer;
+			VertexIndexBufferPair* m_ShadowVertexIndexBufferPair = nullptr;
 
 			u32 m_DynamicAlignment = 0;
 

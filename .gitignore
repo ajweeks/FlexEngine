@@ -24,11 +24,10 @@ FlexEngine/lib/Debug/dbghelp.dll
 !FlexEngine/lib/Release
 
 # User settings files
-common.ini
-renderer-settings.ini
-window-settings.ini
+common.json
+window-settings.json
 imgui.ini
-renderdoc.ini
+renderdoc.json
 
 *.blend1
 *.bfxrsound

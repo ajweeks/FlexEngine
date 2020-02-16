@@ -186,7 +186,7 @@ namespace flex
 			}
 		}
 
-		UniformBuffer::UniformBuffer(const VDeleter<VkDevice>& device, UniformBufferType type) :
+		UniformBuffer::UniformBuffer(VulkanDevice* device, UniformBufferType type) :
 			buffer(device),
 			type(type)
 		{
@@ -322,9 +322,8 @@ namespace flex
 			imageLayout = imageCreateInfo.initialLayout;
 			imageFormat = inFormat;
 
-			VulkanBuffer stagingBuffer(m_VulkanDevice->m_LogicalDevice);
-			CreateAndAllocateBuffer(m_VulkanDevice, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer);
+			VulkanBuffer stagingBuffer(m_VulkanDevice);
+			stagingBuffer.Create(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 			void* data = nullptr;
 			VK_CHECK_RESULT(vkMapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory, 0, imageSize, 0, &data));
@@ -594,28 +593,14 @@ namespace flex
 				stbi_image_free(cubeImage.pixels);
 			}
 
-
 			// Create a host-visible staging buffer that contains the raw image data
-			VulkanBuffer stagingBuffer(m_VulkanDevice->m_LogicalDevice);
+			VulkanBuffer stagingBuffer(m_VulkanDevice);
+			stagingBuffer.Create(totalSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-			VkBufferCreateInfo bufferCreateInfo = vks::bufferCreateInfo(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, totalSize);
-			bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-			VK_CHECK_RESULT(vkCreateBuffer(m_VulkanDevice->m_LogicalDevice, &bufferCreateInfo, nullptr, &stagingBuffer.m_Buffer));
-
-			VkMemoryRequirements memRequirements;
-			vkGetBufferMemoryRequirements(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Buffer, &memRequirements);
-
-			VkMemoryAllocateInfo memAllocInfo = vks::memoryAllocateInfo(memRequirements.size);
-			memAllocInfo.memoryTypeIndex = m_VulkanDevice->GetMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-			VK_CHECK_RESULT(vkAllocateMemory(m_VulkanDevice->m_LogicalDevice, &memAllocInfo, nullptr, &stagingBuffer.m_Memory));
-			stagingBuffer.Bind();
-
-			stagingBuffer.Map(memRequirements.size);
+			stagingBuffer.Map();
 			memcpy(stagingBuffer.m_Mapped, pixels, totalSize);
-			free_hooked(pixels);
 			stagingBuffer.Unmap();
+			free_hooked(pixels);
 
 
 			CubemapCreateInfo createInfo = {};
@@ -755,7 +740,7 @@ namespace flex
 
 		VkDeviceSize VulkanTexture::CreateFromFile(VkFormat inFormat)
 		{
-			VulkanBuffer stagingBuffer(m_VulkanDevice->m_LogicalDevice);
+			VulkanBuffer stagingBuffer(m_VulkanDevice);
 
 			// TODO: Unify hdr path with non-hdr & cubemap paths
 			if (bHDR)
@@ -801,8 +786,7 @@ namespace flex
 				u32 textureSize = imageSize;// (VkDeviceSize)(width * height * channelCount * sizeof(real));
 
 
-				CreateAndAllocateBuffer(m_VulkanDevice, textureSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-					VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer);
+				stagingBuffer.Create(textureSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 				void* data = nullptr;
 				VK_CHECK_RESULT(vkMapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory, 0, textureSize, 0, &data));
@@ -887,8 +871,8 @@ namespace flex
 				u32 pixelBufSize = (VkDeviceSize)(width * height * channelCount * sizeof(unsigned char));
 				u32 textureSize = imageSize;// (VkDeviceSize)(width * height * channelCount * sizeof(unsigned char));
 
-				CreateAndAllocateBuffer(m_VulkanDevice, textureSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-					VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer);
+				stagingBuffer.Create(textureSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+					VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 				void* data = nullptr;
 				VK_CHECK_RESULT(vkMapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory, 0, textureSize, 0, &data));
@@ -1499,31 +1483,6 @@ namespace flex
 			{
 				EndSingleTimeCommands(device, graphicsQueue, commandBuffer);
 			}
-		}
-
-		// TODO: Make member function of VulkanBuffer?
-		VkResult CreateAndAllocateBuffer(VulkanDevice* device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VulkanBuffer* buffer)
-		{
-			VkBufferCreateInfo bufferInfo = vks::bufferCreateInfo(usage, size);
-			bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-			VK_CHECK_RESULT(vkCreateBuffer(device->m_LogicalDevice, &bufferInfo, nullptr, buffer->m_Buffer.replace()));
-
-			VkMemoryRequirements memRequirements;
-			vkGetBufferMemoryRequirements(device->m_LogicalDevice, buffer->m_Buffer, &memRequirements);
-
-			VkMemoryAllocateInfo allocInfo = vks::memoryAllocateInfo(memRequirements.size);
-			allocInfo.memoryTypeIndex = FindMemoryType(device, memRequirements.memoryTypeBits, properties);
-
-			VK_CHECK_RESULT(vkAllocateMemory(device->m_LogicalDevice, &allocInfo, nullptr, buffer->m_Memory.replace()));
-
-			// Create the memory backing up the buffer handle
-			buffer->m_Alignment = memRequirements.alignment;
-			buffer->m_Size = allocInfo.allocationSize;
-			buffer->m_UsageFlags = usage;
-			buffer->m_MemoryPropertyFlags = properties;
-
-			return vkBindBufferMemory(device->m_LogicalDevice, buffer->m_Buffer, buffer->m_Memory, 0);
 		}
 
 		void CopyBuffer(VulkanDevice* device, VkQueue graphicsQueue, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkDeviceSize srcOffset, VkDeviceSize dstOffset)
@@ -2348,7 +2307,7 @@ namespace flex
 
 					m_ChecksumFilePath = SAVED_LOCATION "vk-shader-checksum.dat";
 
-					const std::string shaderInputDirectory = RESOURCE_LOCATION  "shaders";
+					const std::string shaderInputDirectory = RESOURCE_LOCATION "shaders";
 					m_ShaderCodeChecksum = CalculteChecksum(shaderInputDirectory);
 
 					if (FileExists(m_ChecksumFilePath))
@@ -2487,7 +2446,7 @@ namespace flex
 
 		void UniformBufferList::Add(VulkanDevice* device, UniformBufferType type)
 		{
-			uniformBufferList.emplace_back(device->m_LogicalDevice, type);
+			uniformBufferList.emplace_back(device, type);
 		}
 
 		const UniformBuffer* UniformBufferList::Get(UniformBufferType type) const
@@ -2500,6 +2459,18 @@ namespace flex
 				}
 			}
 			return nullptr;
+		}
+
+		bool UniformBufferList::Has(UniformBufferType type) const
+		{
+			for (const UniformBuffer& buffer : uniformBufferList)
+			{
+				if (buffer.type == type)
+				{
+					return true;
+				}
+			}
+			return false;
 		}
 
 		UniformBuffer* UniformBufferList::Get(UniformBufferType type)

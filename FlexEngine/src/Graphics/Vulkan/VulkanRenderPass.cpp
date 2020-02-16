@@ -12,7 +12,6 @@ namespace flex
 {
 	namespace vk
 	{
-
 		VulkanRenderPass::VulkanRenderPass(VulkanDevice* device) :
 			m_RenderPass{ device->m_LogicalDevice, vkDestroyRenderPass },
 			m_VulkanDevice(device)

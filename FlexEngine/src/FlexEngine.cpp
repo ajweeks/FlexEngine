@@ -103,7 +103,7 @@ namespace flex
 
 		{
 			std::string configDirAbs = RelativePathToAbsolute(ROOT_LOCATION "config/");
-			m_CommonSettingsFileName = "common.ini";
+			m_CommonSettingsFileName = "common.json";
 			m_CommonSettingsAbsFilePath = configDirAbs + m_CommonSettingsFileName;
 			CreateDirectoryRecursive(configDirAbs);
 		}
@@ -117,7 +117,7 @@ namespace flex
 
 		{
 			std::string renderDocSettingsDirAbs = RelativePathToAbsolute(ROOT_LOCATION "config/");
-			m_RenderDocSettingsFileName = "renderdoc.ini";
+			m_RenderDocSettingsFileName = "renderdoc.json";
 			m_RenderDocSettingsAbsFilePath = renderDocSettingsDirAbs + m_RenderDocSettingsFileName;
 		}
 
@@ -126,8 +126,6 @@ namespace flex
 #elif COMPILE_VULKAN
 		m_RendererName = "Vulkan";
 #endif
-
-		InitializeLogger();
 
 #if defined(__clang__)
 		m_CompilerName = "Clang";
@@ -265,9 +263,9 @@ namespace flex
 
 		if (s_AudioSourceIDs.empty())
 		{
-			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(RESOURCE_LOCATION  "audio/dud_dud_dud_dud.wav"));
-			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(RESOURCE_LOCATION  "audio/drmapan.wav"));
-			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(RESOURCE_LOCATION  "audio/blip.wav"));
+			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(RESOURCE_LOCATION "audio/dud_dud_dud_dud.wav"));
+			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(RESOURCE_LOCATION "audio/drmapan.wav"));
+			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(RESOURCE_LOCATION "audio/blip.wav"));
 			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 100.727f));
 			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 200.068f));
 			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 300.811f));
@@ -802,9 +800,9 @@ namespace flex
 						g_Renderer->LoadFonts(true);
 					}
 
-					if (ImGui::MenuItem("Player position(s)"))
+					BaseScene* currentScene = g_SceneManager->CurrentScene();
+					if (currentScene->HasPlayers() && ImGui::MenuItem("Player position(s)"))
 					{
-						BaseScene* currentScene = g_SceneManager->CurrentScene();
 						if (currentScene->GetPlayer(0))
 						{
 							currentScene->GetPlayer(0)->GetController()->ResetTransformAndVelocities();
@@ -872,13 +870,13 @@ namespace flex
 				ImGui::MenuItem("GPU Timings", NULL, &g_Renderer->bGPUTimingsWindowShowing);
 				ImGui::MenuItem("Memory Stats", NULL, &m_bShowMemoryStatsWindow);
 				ImGui::MenuItem("Asset Browser", NULL, &m_bAssetBrowserShowing);
-				ImGui::MenuItem("Demo Window", NULL, &m_bDemoWindowShowing);
 				ImGui::MenuItem("Key Mapper", NULL, &m_bInputMapperShowing);
 				ImGui::MenuItem("Uniform Buffers", NULL, &g_Renderer->bUniformBufferWindowShowing);
 				ImGui::MenuItem("Font Editor", NULL, &g_Renderer->bFontWindowShowing);
 #if COMPILE_RENDERDOC_API
 				ImGui::MenuItem("Render Doc Captures", NULL, &m_bShowingRenderDocWindow);
 #endif
+				ImGui::MenuItem("Demo Window", NULL, &m_bDemoWindowShowing);
 
 				ImGui::EndMenu();
 			}
@@ -1119,7 +1117,7 @@ namespace flex
 					{
 						std::string captureFilePath;
 						GetLatestRenderDocCaptureFilePath(captureFilePath);
-						
+
 						CheckForRenderDocUIRunning();
 
 						if (m_RenderDocUIPID == -1)
@@ -1246,7 +1244,7 @@ namespace flex
 
 			JSONObject rootObject = {};
 
-			if (JSONParser::Parse(m_CommonSettingsAbsFilePath, rootObject))
+			if (JSONParser::ParseFromFile(m_CommonSettingsAbsFilePath, rootObject))
 			{
 				std::string lastOpenedSceneName = rootObject.GetString("last opened scene");
 				if (!lastOpenedSceneName.empty())
@@ -1316,7 +1314,7 @@ namespace flex
 			}
 			else
 			{
-				PrintError("Failed to parse common settings config file\n");
+				PrintError("Failed to parse common settings config file %s\n\terror: %s\n", m_CommonSettingsAbsFilePath.c_str(), JSONParser::GetErrorString());
 				return false;
 			}
 		}
@@ -1340,7 +1338,7 @@ namespace flex
 		BaseCamera* cam = g_CameraManager->CurrentCamera();
 		rootObject.fields.emplace_back("render imgui", JSONValue(m_bRenderImGui));
 		rootObject.fields.emplace_back("last camera type", JSONValue(cam->GetName().c_str()));
-		std::string posStr = Vec3ToString(cam->GetPosition(), 3);
+		std::string posStr = VecToString(cam->GetPosition(), 3);
 		real pitch = cam->GetPitch();
 		real yaw = cam->GetYaw();
 		JSONObject cameraTransform = {};
@@ -1556,13 +1554,13 @@ namespace flex
 		if (FileExists(m_RenderDocSettingsAbsFilePath))
 		{
 			JSONObject rootObject;
-			if (JSONParser::Parse(m_RenderDocSettingsAbsFilePath, rootObject))
+			if (JSONParser::ParseFromFile(m_RenderDocSettingsAbsFilePath, rootObject))
 			{
 				dllDirPath = rootObject.GetString("lib path");
 			}
 			else
 			{
-				PrintError("Failed to parse %s\n", m_RenderDocSettingsFileName.c_str());
+				PrintError("Failed to parse %s\n\terror: %s\n", m_RenderDocSettingsFileName.c_str(), JSONParser::GetErrorString());
 			}
 		}
 
@@ -1658,10 +1656,10 @@ namespace flex
 		const glm::vec3& planeOrigin,
 		const glm::vec3& planeNorm,
 		const glm::vec3& startPos,
+		const glm::vec3& cameraForward,
 		real& inOutOffset)
 	{
 		glm::vec3 rayDir = glm::normalize(rayEnd - rayOrigin);
-		glm::vec3 cameraForward = g_CameraManager->CurrentCamera()->GetForward();
 		glm::vec3 planeN = planeNorm;
 		if (glm::dot(planeN, cameraForward) > 0.0f)
 		{

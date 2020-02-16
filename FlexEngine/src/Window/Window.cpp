@@ -13,7 +13,7 @@
 
 namespace flex
 {
-	std::string Window::s_ConfigFilePath = ROOT_LOCATION "config/window-settings.ini";
+	std::string Window::s_ConfigFilePath = ROOT_LOCATION "config/window-settings.json";
 
 	Window::Window(const std::string& title) :
 		m_TitleString(title),
@@ -219,7 +219,7 @@ namespace flex
 		{
 			JSONObject rootObject = {};
 
-			if (JSONParser::Parse(s_ConfigFilePath, rootObject))
+			if (JSONParser::ParseFromFile(s_ConfigFilePath, rootObject))
 			{
 				rootObject.SetBoolChecked("move console to other monitor on bootup", m_bMoveConsoleToOtherMonitor);
 				rootObject.SetBoolChecked("auto restore state", m_bAutoRestoreStateOnBootup);
@@ -257,7 +257,7 @@ namespace flex
 			}
 			else
 			{
-				PrintError("Failed to parse window settings config file\n");
+				PrintError("Failed to parse window settings config file %s\n\terror: %s\n", s_ConfigFilePath.c_str(), JSONParser::GetErrorString());
 			}
 		}
 
@@ -270,8 +270,8 @@ namespace flex
 
 		rootObject.fields.emplace_back("move console to other monitor on bootup", JSONValue(m_bMoveConsoleToOtherMonitor));
 		rootObject.fields.emplace_back("auto restore state", JSONValue(m_bAutoRestoreStateOnBootup));
-		rootObject.fields.emplace_back("initial window position", JSONValue(Vec2ToString((glm::vec2)m_Position, 0)));
-		rootObject.fields.emplace_back("initial window size", JSONValue(Vec2ToString((glm::vec2)m_Size, 0)));
+		rootObject.fields.emplace_back("initial window position", JSONValue(VecToString((glm::vec2)m_Position, 0)));
+		rootObject.fields.emplace_back("initial window size", JSONValue(VecToString((glm::vec2)m_Size, 0)));
 		rootObject.fields.emplace_back("maximized", JSONValue(m_bMaximized));
 		const char* windowModeStr = Window::WindowModeToStr(GetWindowMode());
 		rootObject.fields.emplace_back("window mode", JSONValue(windowModeStr));
@@ -290,7 +290,7 @@ namespace flex
 		{
 			if (ImGui::Checkbox("Auto restore state", &m_bAutoRestoreStateOnBootup))
 			{
-				g_Renderer->SaveSettingsToDisk(false, true);
+				g_Renderer->SaveSettingsToDisk(true);
 			}
 
 			if (ImGui::DragInt2("Position", &m_Position.x, 1.0f))

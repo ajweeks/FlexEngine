@@ -338,13 +338,9 @@ namespace flex
 
 		real textureScale = 1.0f;
 
-		bool generateNormalSampler = false;
 		bool enableNormalSampler = false;
-		bool generateAlbedoSampler = false;
 		bool enableAlbedoSampler = false;
-		bool generateMetallicSampler = false;
 		bool enableMetallicSampler = false;
-		bool generateRoughnessSampler = false;
 		bool enableRoughnessSampler = false;
 		bool generateHDREquirectangularSampler = false;
 		bool enableHDREquirectangularSampler = false;
@@ -365,6 +361,8 @@ namespace flex
 		bool enablePrefilteredMap = false;
 
 		bool generateReflectionProbeMaps = false;
+
+		bool bDynamic = false; // True if vertex data is uploaded to the GPU often
 
 		bool persistent = false;
 		bool visibleInEditor = true;
@@ -421,20 +419,14 @@ namespace flex
 		glm::vec2 prefilteredMapSize = { 0, 0 };
 		glm::vec4 colorMultiplier = { 1, 1, 1, 1 };
 
-		bool generateNormalSampler = false;
 		bool enableNormalSampler = false;
 
 		bool generateCubemapSampler = false;
 		bool enableCubemapSampler = false;
 
 		// PBR samplers
-		bool generateAlbedoSampler = false;
 		bool enableAlbedoSampler = false;
-
-		bool generateMetallicSampler = false;
 		bool enableMetallicSampler = false;
-
-		bool generateRoughnessSampler = false;
 		bool enableRoughnessSampler = false;
 
 		bool generateHDREquirectangularSampler = false;
@@ -456,6 +448,9 @@ namespace flex
 
 		bool persistent = false;
 		bool visibleInEditor = false;
+
+		bool bDynamic = false;
+		u32 dynamicVertexIndexBufferIndex = 0;
 
 		real textureScale = 1.0f;
 		real blendSharpness = 1.0f;
@@ -664,9 +659,11 @@ namespace flex
 		bool bTextureArr = false;
 		u32 pushConstantBlockSize = 0;
 
-		bool bDynamic = false;
-		u32 dynamicVertexBufferSize = 0;
+		u32 dynamicVertexBufferSize = 0; // TODO: Define through materials
+
 		RenderPassType renderPassType = RenderPassType::_NONE;
+
+		u32 staticVertexBufferIndex = 0;
 	};
 
 	struct SpriteQuadDrawInfo

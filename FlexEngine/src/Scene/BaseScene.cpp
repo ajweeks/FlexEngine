@@ -25,6 +25,7 @@ IGNORE_WARNINGS_POP
 #include "PlayerController.hpp"
 #include "Profiler.hpp"
 #include "Scene/GameObject.hpp"
+#include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Track/BezierCurve.hpp"
@@ -34,6 +35,10 @@ namespace flex
 	std::vector<JSONObject> BaseScene::s_ParsedMaterials;
 	std::vector<JSONObject> BaseScene::s_ParsedMeshes;
 	std::vector<JSONObject> BaseScene::s_ParsedPrefabs;
+
+	const char* BaseScene::MATERIALS_FILE_PATH = RESOURCE_LOCATION "scenes/materials.json";
+	const char* BaseScene::MESHES_FILE_PATH = RESOURCE_LOCATION "scenes/meshes.json";
+	const char* BaseScene::MESHES_DIRECTORY = RESOURCE_LOCATION "meshes/";
 
 	BaseScene::BaseScene(const std::string& fileName) :
 		m_FileName(fileName),
@@ -91,9 +96,9 @@ namespace flex
 				}
 
 				JSONObject sceneRootObject;
-				if (!JSONParser::Parse(filePath, sceneRootObject))
+				if (!JSONParser::ParseFromFile(filePath, sceneRootObject))
 				{
-					PrintError("Failed to parse scene file: %s\n", shortFilePath.c_str());
+					PrintError("Failed to parse scene file: %s\n\terror: %s\n", shortFilePath.c_str(), JSONParser::GetErrorString());
 					return;
 				}
 
@@ -104,9 +109,9 @@ namespace flex
 					PrintLong(sceneRootObject.Print(0).c_str());
 				}
 
-				if (!sceneRootObject.SetIntChecked("version", m_FileVersion))
+				if (!sceneRootObject.SetIntChecked("version", m_SceneFileVersion))
 				{
-					m_FileVersion = 1;
+					m_SceneFileVersion = 1;
 					PrintError("Scene version missing from scene file. Assuming version 1\n");
 				}
 
@@ -128,7 +133,7 @@ namespace flex
 				const std::vector<JSONObject>& rootObjects = sceneRootObject.GetObjectArray("objects");
 				for (const JSONObject& rootObjectJSON : rootObjects)
 				{
-					GameObject* rootObj = GameObject::CreateObjectFromJSON(rootObjectJSON, this, InvalidMaterialID);
+					GameObject* rootObj = GameObject::CreateObjectFromJSON(rootObjectJSON, this, m_SceneFileVersion);
 					rootObj->GetTransform()->UpdateParentTransform();
 					AddRootObject(rootObj);
 				}
@@ -158,7 +163,7 @@ namespace flex
 					//skyboxMatCreateInfo.generatedIrradianceCubemapSize = glm::vec2(32.0f);
 					//skyboxMatCreateInfo.generatePrefilteredMap = true;
 					//skyboxMatCreateInfo.generatedPrefilteredCubemapSize = glm::vec2(128.0f);
-					//skyboxMatCreateInfo.environmentMapPath = RESOURCE_LOCATION  "textures/hdri/Milkyway/Milkyway_Light.hdr";
+					//skyboxMatCreateInfo.environmentMapPath = RESOURCE_LOCATION "textures/hdri/Milkyway/Milkyway_Light.hdr";
 					//MaterialID skyboxMatID = g_Renderer->InitializeMaterial(&skyboxMatCreateInfo);
 
 					//m_LoadedMaterials.push_back(skyboxMatID);
@@ -168,9 +173,7 @@ namespace flex
 					assert(skyboxMatID != InvalidMaterialID);
 
 					Skybox* skybox = new Skybox("Skybox");
-
-					JSONObject emptyObj = {};
-					skybox->ParseJSON(emptyObj, this, skyboxMatID);
+					skybox->ProcedurallyInitialize(skyboxMatID);
 
 					AddRootObject(skybox);
 				}
@@ -202,8 +205,8 @@ namespace flex
 				}
 
 				GameObject* sphere = new GameObject("sphere", GameObjectType::OBJECT);
-				MeshComponent* meshComponent = sphere->SetMeshComponent(new MeshComponent(sphere, sphereMatID));
-				meshComponent->LoadFromFile(RESOURCE_LOCATION "meshes/ico-sphere.glb");
+				Mesh* mesh = sphere->SetMesh(new Mesh(sphere));
+				mesh->LoadFromFile(RESOURCE_LOCATION "meshes/ico-sphere.glb", sphereMatID);
 				AddRootObject(sphere);
 
 				// Default directional light
@@ -238,7 +241,9 @@ namespace flex
 		}
 
 		// All updating to new file version should be complete by this point
-		m_FileVersion = LATEST_FILE_VER;
+		m_SceneFileVersion = LATEST_SCENE_FILE_VERSION;
+		m_MaterialsFileVersion = LATEST_MATERIALS_FILE_VERSION;
+		m_MeshesFileVersion = LATEST_MESHES_FILE_VERSION;
 	}
 
 	void BaseScene::PostInitialize()
@@ -380,8 +385,8 @@ namespace flex
 	}
 
 	bool BaseScene::DestroyGameObjectRecursive(GameObject* currentObject,
-											  GameObject* targetObject,
-											  bool bDestroyChildren)
+		GameObject* targetObject,
+		bool bDestroyChildren)
 	{
 		if (currentObject == targetObject)
 		{
@@ -465,17 +470,16 @@ namespace flex
 	{
 		s_ParsedMeshes.clear();
 
-		std::string meshesFilePath = RESOURCE_LOCATION  "scenes/meshes.json";
-		if (FileExists(meshesFilePath))
+		if (FileExists(MESHES_FILE_PATH))
 		{
 			if (g_bEnableLogging_Loading)
 			{
-				const std::string cleanedFilePath = StripLeadingDirectories(meshesFilePath);
+				const std::string cleanedFilePath = StripLeadingDirectories(MESHES_FILE_PATH);
 				Print("Parsing meshes file at %s\n", cleanedFilePath.c_str());
 			}
 
 			JSONObject obj;
-			if (JSONParser::Parse(meshesFilePath, obj))
+			if (JSONParser::ParseFromFile(MESHES_FILE_PATH, obj))
 			{
 				auto meshObjects = obj.GetObjectArray("meshes");
 				for (auto meshObject : meshObjects)
@@ -485,13 +489,13 @@ namespace flex
 			}
 			else
 			{
-				PrintError("Failed to parse mesh file: %s\n", meshesFilePath.c_str());
+				PrintError("Failed to parse mesh file: %s\n\terror: %s\n", MESHES_FILE_PATH, JSONParser::GetErrorString());
 				return;
 			}
 		}
 		else
 		{
-			PrintError("Failed to parse meshes file at %s\n", meshesFilePath.c_str());
+			PrintError("Failed to parse meshes file at %s\n", MESHES_FILE_PATH);
 			return;
 		}
 
@@ -505,17 +509,16 @@ namespace flex
 	{
 		s_ParsedMaterials.clear();
 
-		std::string materialsFilePath = RESOURCE_LOCATION  "scenes/materials.json";
-		if (FileExists(materialsFilePath))
+		if (FileExists(MATERIALS_FILE_PATH))
 		{
 			if (g_bEnableLogging_Loading)
 			{
-				const std::string cleanedFilePath = StripLeadingDirectories(materialsFilePath);
+				const std::string cleanedFilePath = StripLeadingDirectories(MATERIALS_FILE_PATH);
 				Print("Parsing materials file at %s\n", cleanedFilePath.c_str());
 			}
 
 			JSONObject obj;
-			if (JSONParser::Parse(materialsFilePath, obj))
+			if (JSONParser::ParseFromFile(MATERIALS_FILE_PATH, obj))
 			{
 				auto materialObjects = obj.GetObjectArray("materials");
 				for (auto materialObject : materialObjects)
@@ -525,13 +528,13 @@ namespace flex
 			}
 			else
 			{
-				PrintError("Failed to parse materials file: %s\n", materialsFilePath.c_str());
+				PrintError("Failed to parse materials file: %s\n\terror: %s\n", MATERIALS_FILE_PATH, JSONParser::GetErrorString());
 				return;
 			}
 		}
 		else
 		{
-			PrintError("Failed to parse materials file at %s\n", materialsFilePath.c_str());
+			PrintError("Failed to parse materials file at %s\n", MATERIALS_FILE_PATH);
 			return;
 		}
 
@@ -546,7 +549,7 @@ namespace flex
 		s_ParsedPrefabs.clear();
 
 		std::vector<std::string> foundFiles;
-		if (FindFilesInDirectory(RESOURCE_LOCATION  "scenes/prefabs/", foundFiles, ".json"))
+		if (FindFilesInDirectory(RESOURCE_LOCATION "scenes/prefabs/", foundFiles, ".json"))
 		{
 			for (const std::string& foundFilePath : foundFiles)
 			{
@@ -557,13 +560,13 @@ namespace flex
 				}
 
 				JSONObject obj;
-				if (JSONParser::Parse(foundFilePath, obj))
+				if (JSONParser::ParseFromFile(foundFilePath, obj))
 				{
 					s_ParsedPrefabs.push_back(obj);
 				}
 				else
 				{
-					PrintError("Failed to parse prefab file: %s\n", foundFilePath.c_str());
+					PrintError("Failed to parse prefab file: %s, error: %s\n", foundFilePath.c_str(), JSONParser::GetErrorString());
 					return;
 				}
 			}
@@ -582,24 +585,21 @@ namespace flex
 
 	bool BaseScene::SerializeMeshFile() const
 	{
-		std::string meshesFilePath = RESOURCE_LOCATION  "scenes/meshes.json";
-
 		JSONObject meshesObj = {};
 
-		meshesObj.fields.emplace_back("version", JSONValue(m_FileVersion));
+		meshesObj.fields.emplace_back("version", JSONValue(m_MeshesFileVersion));
 
-		static const std::string meshPrefix = RESOURCE_LOCATION  "meshes/";
 		// Overwrite all meshes in current scene in case any values were tweaked
 		std::vector<GameObject*> allObjects = g_SceneManager->CurrentScene()->GetAllObjects();
 		for (GameObject* obj : allObjects)
 		{
-			MeshComponent* mesh = obj->GetMeshComponent();
+			Mesh* mesh = obj->GetMesh();
 			if (mesh)
 			{
 				std::string meshFileName = mesh->GetRelativeFilePath();
 				if (!meshFileName.empty())
 				{
-					meshFileName = meshFileName.substr(meshPrefix.length());
+					meshFileName = meshFileName.substr(strlen(MESHES_DIRECTORY));
 					bool bFound = false;
 					for (JSONObject& parsedMeshObj : s_ParsedMeshes)
 					{
@@ -625,8 +625,8 @@ namespace flex
 
 		std::string fileContents = meshesObj.Print(0);
 
-		const std::string fileName = StripLeadingDirectories(meshesFilePath);
-		if (WriteFile(meshesFilePath, fileContents, false))
+		const std::string fileName = StripLeadingDirectories(MESHES_FILE_PATH);
+		if (WriteFile(MESHES_FILE_PATH, fileContents, false))
 		{
 			Print("Serialized mesh file to: %s\n", fileName.c_str());
 		}
@@ -641,11 +641,9 @@ namespace flex
 
 	bool BaseScene::SerializeMaterialFile() const
 	{
-		std::string materialsFilePath = RESOURCE_LOCATION  "scenes/materials.json";
-
 		JSONObject materialsObj = {};
 
-		materialsObj.fields.emplace_back("version", JSONValue(m_FileVersion));
+		materialsObj.fields.emplace_back("version", JSONValue(m_MaterialsFileVersion));
 
 		// Overwrite all materials in current scene in case any values were tweaked
 		std::vector<MaterialID> currentSceneMatIDs = g_SceneManager->CurrentScene()->GetMaterialIDs();
@@ -673,8 +671,8 @@ namespace flex
 
 		std::string fileContents = materialsObj.Print(0);
 
-		const std::string fileName = StripLeadingDirectories(materialsFilePath);
-		if (WriteFile(materialsFilePath, fileContents, false))
+		const std::string fileName = StripLeadingDirectories(MATERIALS_FILE_PATH);
+		if (WriteFile(MATERIALS_FILE_PATH, fileContents, false))
 		{
 			Print("Serialized materials file to: %s\n", fileName.c_str());
 		}
@@ -790,44 +788,94 @@ namespace flex
 		m_ObjectsToAddAtEndOfFrame.insert(m_ObjectsToAddAtEndOfFrame.end(), objs.begin(), objs.end());
 	}
 
-	i32 BaseScene::GetFileVersion() const
+	i32 BaseScene::GetSceneFileVersion() const
 	{
-		return m_FileVersion;
+		return m_SceneFileVersion;
 	}
 
-	MaterialID BaseScene::FindMaterialIDByName(const JSONObject& object)
+	bool BaseScene::HasPlayers() const
 	{
-		MaterialID matID = InvalidMaterialID;
-		std::string materialName;
-		if (object.SetStringChecked("material", materialName))
+		return m_bSpawnPlayer;
+	}
+
+	std::vector<MaterialID> BaseScene::RetrieveMaterialIDsFromJSON(const JSONObject& object, i32 fileVersion)
+	{
+		std::vector<MaterialID> matIDs;
+		if (fileVersion >= 3)
 		{
-			if (!materialName.empty())
+			std::vector<JSONField> materialNames;
+			if (object.SetFieldArrayChecked("materials", materialNames))
 			{
-				for (MaterialID loadedMatID : m_LoadedMaterials)
+				for (const JSONField& materialNameField : materialNames)
 				{
-					Material& mat = g_Renderer->GetMaterial(loadedMatID);
-					if (mat.name.compare(materialName) == 0)
+					std::string materialName = materialNameField.label;
+					if (!materialName.empty())
 					{
-						matID = loadedMatID;
-						break;
+						MaterialID materialID = InvalidMaterialID;
+						for (MaterialID loadedMatID : m_LoadedMaterials)
+						{
+							Material& material = g_Renderer->GetMaterial(loadedMatID);
+							if (material.name.compare(materialName) == 0)
+							{
+								materialID = loadedMatID;
+								break;
+							}
+						}
+						if (materialID == InvalidMaterialID)
+						{
+							if (materialName.compare("placeholder") == 0)
+							{
+								materialID = g_Renderer->GetPlaceholderMaterialID();
+							}
+						}
+						if (materialID != InvalidMaterialID)
+						{
+							matIDs.push_back(materialID);
+						}
+					}
+					else
+					{
+						PrintError("Invalid material name for object %s: %s\n", object.GetString("name").c_str(), materialName.c_str());
 					}
 				}
-				if (matID == InvalidMaterialID)
-				{
-					if (materialName.compare("placeholder") == 0)
-					{
-						matID = g_Renderer->GetPlaceholderMaterialID();
-					}
-				}
-			}
-			else
-			{
-				matID = InvalidMaterialID;
-				PrintError("Invalid material name for object %s: %s\n",
-						   object.GetString("name").c_str(), materialName.c_str());
 			}
 		}
-		return matID;
+		else // fileVersion < 3
+		{
+			MaterialID matID = InvalidMaterialID;
+			std::string materialName;
+			if (object.SetStringChecked("material", materialName))
+			{
+				if (!materialName.empty())
+				{
+					for (MaterialID loadedMatID : m_LoadedMaterials)
+					{
+						Material& mat = g_Renderer->GetMaterial(loadedMatID);
+						if (mat.name.compare(materialName) == 0)
+						{
+							matID = loadedMatID;
+							break;
+						}
+					}
+					if (matID == InvalidMaterialID)
+					{
+						if (materialName.compare("placeholder") == 0)
+						{
+							matID = g_Renderer->GetPlaceholderMaterialID();
+						}
+					}
+				}
+				else
+				{
+					matID = InvalidMaterialID;
+					PrintError("Invalid material name for object %s: %s\n",
+						object.GetString("name").c_str(), materialName.c_str());
+				}
+			}
+			matIDs.push_back(matID);
+		}
+
+		return matIDs;
 	}
 
 	void BaseScene::UpdateRootObjectSiblingIndices()
@@ -851,7 +899,7 @@ namespace flex
 
 		JSONObject rootSceneObject = {};
 
-		rootSceneObject.fields.emplace_back("version", JSONValue(m_FileVersion));
+		rootSceneObject.fields.emplace_back("version", JSONValue(m_SceneFileVersion));
 		rootSceneObject.fields.emplace_back("name", JSONValue(m_Name));
 		rootSceneObject.fields.emplace_back("spawn player", JSONValue(m_bSpawnPlayer));
 
@@ -1182,18 +1230,18 @@ namespace flex
 
 	std::string BaseScene::GetDefaultRelativeFilePath() const
 	{
-		return RESOURCE_LOCATION  "scenes/default/" + m_FileName;
+		return RESOURCE_LOCATION "scenes/default/" + m_FileName;
 	}
 
 	std::string BaseScene::GetRelativeFilePath() const
 	{
 		//if (m_bUsingSaveFile)
 		//{
-		//	return RESOURCE_LOCATION  "scenes/saved/" + m_FileName;
+		//	return RESOURCE_LOCATION "scenes/saved/" + m_FileName;
 		//}
 		//else
 		//{
-			return RESOURCE_LOCATION  "scenes/default/" + m_FileName;
+		return RESOURCE_LOCATION "scenes/default/" + m_FileName;
 		//}
 	}
 
@@ -1205,7 +1253,7 @@ namespace flex
 		//}
 		//else
 		//{
-			return "scenes/default/" + m_FileName;
+		return "scenes/default/" + m_FileName;
 		//}
 	}
 

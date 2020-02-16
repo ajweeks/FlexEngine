@@ -1,5 +1,5 @@
 {
-	"version" : 2,
+	"version" : 3,
 	"name" : "Scene_track_test",
 	"spawn player" : true,
 	"objects" : 
@@ -24,7 +24,10 @@
 						"rot" : "0.000, -0.000, 0.000"
 					},
 					"mesh" : "earth",
-					"material" : "grid",
+					"materials" : 
+					[
+						"grid"
+					],
 					"collider" : 
 					{
 						"shape" : "box",
@@ -50,7 +53,10 @@
 						"scale" : "5.413, 4.346, 7.675"
 					},
 					"mesh" : "cube",
-					"material" : "grid",
+					"materials" : 
+					[
+						"grid"
+					],
 					"collider" : 
 					{
 						"shape" : "box",
@@ -76,7 +82,10 @@
 						"scale" : "6.565, 6.070, 10.043"
 					},
 					"mesh" : "cube",
-					"material" : "grid",
+					"materials" : 
+					[
+						"grid"
+					],
 					"collider" : 
 					{
 						"shape" : "box",
@@ -102,7 +111,10 @@
 						"scale" : "4.010, 7.861, 10.030"
 					},
 					"mesh" : "cube",
-					"material" : "grid",
+					"materials" : 
+					[
+						"grid"
+					],
 					"collider" : 
 					{
 						"shape" : "box",
@@ -128,7 +140,10 @@
 						"scale" : "4.021, 10.791, 5.011"
 					},
 					"mesh" : "cube",
-					"material" : "grid",
+					"materials" : 
+					[
+						"grid"
+					],
 					"collider" : 
 					{
 						"shape" : "box",
@@ -154,7 +169,10 @@
 						"scale" : "4.010, 5.325, 10.017"
 					},
 					"mesh" : "cube",
-					"material" : "grid",
+					"materials" : 
+					[
+						"grid"
+					],
 					"collider" : 
 					{
 						"shape" : "box",
@@ -180,7 +198,10 @@
 						"scale" : "4.012, 4.688, 8.645"
 					},
 					"mesh" : "cube",
-					"material" : "grid",
+					"materials" : 
+					[
+						"grid"
+					],
 					"collider" : 
 					{
 						"shape" : "box",
@@ -206,7 +227,10 @@
 						"scale" : "4.020, 6.085, 5.405"
 					},
 					"mesh" : "cube",
-					"material" : "grid",
+					"materials" : 
+					[
+						"grid"
+					],
 					"collider" : 
 					{
 						"shape" : "box",
@@ -232,7 +256,10 @@
 						"scale" : "5.051, 6.080, 6.178"
 					},
 					"mesh" : "cube",
-					"material" : "grid",
+					"materials" : 
+					[
+						"grid"
+					],
 					"collider" : 
 					{
 						"shape" : "box",
@@ -258,7 +285,10 @@
 						"scale" : "4.010, 9.869, 10.042"
 					},
 					"mesh" : "cube",
-					"material" : "grid",
+					"materials" : 
+					[
+						"grid"
+					],
 					"collider" : 
 					{
 						"shape" : "box",
@@ -284,7 +314,10 @@
 						"scale" : "8.866, 6.070, 10.059"
 					},
 					"mesh" : "cube",
-					"material" : "grid",
+					"materials" : 
+					[
+						"grid"
+					],
 					"collider" : 
 					{
 						"shape" : "box",
@@ -310,7 +343,10 @@
 						"scale" : "4.010, 12.723, 10.054"
 					},
 					"mesh" : "cube",
-					"material" : "grid",
+					"materials" : 
+					[
+						"grid"
+					],
 					"collider" : 
 					{
 						"shape" : "box",
@@ -336,7 +372,10 @@
 						"scale" : "6.000, 4.940, 7.000"
 					},
 					"mesh" : "cube",
-					"material" : "grid",
+					"materials" : 
+					[
+						"grid"
+					],
 					"collider" : 
 					{
 						"shape" : "box",
@@ -362,7 +401,10 @@
 						"scale" : "3.998, 6.050, 3.029"
 					},
 					"mesh" : "cube",
-					"material" : "grid",
+					"materials" : 
+					[
+						"grid"
+					],
 					"collider" : 
 					{
 						"shape" : "box",
@@ -386,7 +428,10 @@
 						"scale" : "150.000, 1.000, 150.000"
 					},
 					"mesh" : "unit-plane",
-					"material" : "grid",
+					"materials" : 
+					[
+						"grid"
+					],
 					"collider" : 
 					{
 						"shape" : "box",
@@ -413,7 +458,10 @@
 						"scale" : "6.000, 4.940, 6.050"
 					},
 					"mesh" : "cube",
-					"material" : "clouds",
+					"materials" : 
+					[
+						"clouds"
+					],
 					"collider" : 
 					{
 						"shape" : "box",
@@ -439,7 +487,10 @@
 						"scale" : "6.000, 4.940, 5.660"
 					},
 					"mesh" : "cube",
-					"material" : "noise",
+					"materials" : 
+					[
+						"noise"
+					],
 					"collider" : 
 					{
 						"shape" : "box",
@@ -465,7 +516,10 @@
 						"scale" : "6.000, 4.940, 6.050"
 					},
 					"mesh" : "cube",
-					"material" : "cerberus",
+					"materials" : 
+					[
+						"cerberus"
+					],
 					"collider" : 
 					{
 						"shape" : "box",
@@ -491,7 +545,10 @@
 						"scale" : "6.000, 4.940, 5.510"
 					},
 					"mesh" : "cube",
-					"material" : "grid",
+					"materials" : 
+					[
+						"grid"
+					],
 					"collider" : 
 					{
 						"shape" : "box",
@@ -517,7 +574,10 @@
 						"scale" : "1.370, 0.800, 1.090"
 					},
 					"mesh" : "capsule",
-					"material" : "grid",
+					"materials" : 
+					[
+						"grid"
+					],
 					"collider" : 
 					{
 						"shape" : "box",
@@ -543,7 +603,10 @@
 						"scale" : "3.460, 1.140, 27.570"
 					},
 					"mesh" : "cube",
-					"material" : "stripes",
+					"materials" : 
+					[
+						"stripes"
+					],
 					"collider" : 
 					{
 						"shape" : "box",
@@ -569,7 +632,10 @@
 						"scale" : "3.460, 1.140, 27.570"
 					},
 					"mesh" : "cube",
-					"material" : "stripes",
+					"materials" : 
+					[
+						"stripes"
+					],
 					"collider" : 
 					{
 						"shape" : "box",
@@ -595,7 +661,10 @@
 						"scale" : "3.460, 1.140, 27.570"
 					},
 					"mesh" : "cube",
-					"material" : "stripes",
+					"materials" : 
+					[
+						"stripes"
+					],
 					"collider" : 
 					{
 						"shape" : "box",
@@ -621,7 +690,10 @@
 						"scale" : "3.460, 1.140, 27.570"
 					},
 					"mesh" : "cube",
-					"material" : "stripes",
+					"materials" : 
+					[
+						"stripes"
+					],
 					"collider" : 
 					{
 						"shape" : "box",
@@ -642,11 +714,15 @@
 					"visible" : true,
 					"transform" : 
 					{
-						"pos" : "3.841, 0.000, -35.611",
-						"rot" : "0.000, -0.000, 0.000"
+						"pos" : "3.841, 0.000, -35.611"
 					},
 					"mesh" : "reshelfector",
-					"material" : "cross hatch"
+					"materials" : 
+					[
+						"cross hatch",
+						"cross hatch",
+						"cross hatch"
+					]
 				}
 			]
 		},
@@ -686,7 +762,10 @@
 					"transform" : 
 					{
 					},
-					"material" : "skybox 02",
+					"materials" : 
+					[
+						"skybox 02"
+					],
 					"skybox info" : 
 					{
 					}

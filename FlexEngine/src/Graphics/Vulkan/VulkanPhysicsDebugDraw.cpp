@@ -11,6 +11,7 @@
 #include "Profiler.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
+#include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
 
@@ -37,6 +38,7 @@ namespace flex
 				debugMatCreateInfo.name = debugMatName;
 				debugMatCreateInfo.persistent = true;
 				debugMatCreateInfo.visibleInEditor = true;
+				debugMatCreateInfo.bDynamic = true;
 				m_MaterialID = g_Renderer->InitializeMaterial(&debugMatCreateInfo);
 			}
 
@@ -143,7 +145,7 @@ namespace flex
 					i += 2;
 				}
 
-				m_ObjectMesh->UpdateProceduralData(&m_VertexBufferCreateInfo);
+				m_ObjectMesh->GetSubMeshes()[0]->UpdateProceduralData(&m_VertexBufferCreateInfo);
 			}
 		}
 
@@ -163,9 +165,9 @@ namespace flex
 			m_Object = new GameObject("Vk Physics Debug Draw", GameObjectType::_NONE);
 			m_Object->SetSerializable(false);
 			m_Object->SetVisibleInSceneExplorer(false);
-			m_ObjectMesh = m_Object->SetMeshComponent(new MeshComponent(m_Object, m_MaterialID));
+			m_ObjectMesh = m_Object->SetMesh(new Mesh(m_Object));
 			const VertexAttributes vertexAttributes = (u32)VertexAttribute::POSITION | (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
-			if (!m_ObjectMesh->CreateProcedural(16384 * 4, vertexAttributes, TopologyMode::LINE_LIST, &createInfo))
+			if (!m_ObjectMesh->CreateProcedural(16384 * 4, vertexAttributes, m_MaterialID, TopologyMode::LINE_LIST, &createInfo))
 			{
 				PrintWarn("Vulkan physics debug renderer failed to initialize vertex buffer");
 			}

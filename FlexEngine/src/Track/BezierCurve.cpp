@@ -113,10 +113,10 @@ namespace flex
 	{
 		const i32 precision = 5;
 		const char* delim = ", ";
-		std::string result(Vec3ToString(points[0], precision) + delim +
-			Vec3ToString(points[1], precision) + delim +
-			Vec3ToString(points[2], precision) + delim +
-			Vec3ToString(points[3], precision));
+		std::string result(VecToString(points[0], precision) + delim +
+			VecToString(points[1], precision) + delim +
+			VecToString(points[2], precision) + delim +
+			VecToString(points[3], precision));
 
 		return result;
 	}
