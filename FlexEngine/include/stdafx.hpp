@@ -6,18 +6,18 @@
 #define RUN_UNIT_TESTS 0
 
 #if COMPILE_OPEN_GL
-const bool g_bOpenGLEnabled = true;
+extern bool g_bOpenGLEnabled;
 #else
-const bool g_bOpenGLEnabled = false;
+extern bool g_bOpenGLEnabled;
 #endif
 
 #if COMPILE_VULKAN
-const bool g_bVulkanEnabled = true;
+extern bool g_bVulkanEnabled;
 #else
 const bool g_bVulkanEnabled = false;
 #endif
 
-const bool g_bEnableLogging_Loading = false;
+extern bool g_bEnableLogging_Loading;
 
 #ifdef DEBUG
 #define THOROUGH_CHECKS 1
@@ -49,6 +49,10 @@ const bool g_bEnableLogging_Loading = false;
 #ifdef _WINDOWS
 #define GLFW_EXPOSE_NATIVE_WIN32
 // TODO(AJ): Add linux expose define?
+#endif
+
+#ifndef UNREFERENCED_PARAMETER
+#define UNREFERENCED_PARAMETER(x) ((void)x);
 #endif
 
 #define GLFW_INCLUDE_NONE
@@ -195,9 +199,12 @@ IGNORE_WARNINGS_POP
 #define PROFILE_AUTO(blockName)
 #endif
 
+#ifdef _WIN32
 #define DEBUG_BREAK __debugbreak()
+#else
 // Linux/Max: (untested)
-//#define DEBUG_BREAK __builtin_trap()
+#define DEBUG_BREAK __builtin_trap()
+#endif
 
 #define ENSURE_NO_ENTRY() { PrintError("Execution entered no entry path! %s\n", __FUNCTION__); DEBUG_BREAK; }
 #ifdef DEBUG
@@ -236,29 +243,29 @@ namespace flex
 	// TODO: Calculate string hash here
 #define SID(str) (str)
 
-	static const glm::vec3 VEC3_RIGHT = glm::vec3(1.0f, 0.0f, 0.0f);
-	static const glm::vec3 VEC3_UP = glm::vec3(0.0f, 1.0f, 0.0f);
-	static const glm::vec3 VEC3_FORWARD = glm::vec3(0.0f, 0.0f, 1.0f);
-	static const glm::vec2 VEC2_ONE = glm::vec2(1.0f);
-	static const glm::vec2 VEC2_NEG_ONE = glm::vec2(-1.0f);
-	static const glm::vec2 VEC2_ZERO = glm::vec2(0.0f);
-	static const glm::vec3 VEC3_ONE = glm::vec3(1.0f);
-	static const glm::vec3 VEC3_NEG_ONE = glm::vec3(-1.0f);
-	static const glm::vec3 VEC3_ZERO = glm::vec3(0.0f);
-	static const glm::vec4 VEC4_ONE = glm::vec4(1.0f);
-	static const glm::vec4 VEC4_NEG_ONE = glm::vec4(-1.0f);
-	static const glm::vec4 VEC4_ZERO = glm::vec4(0.0f);
-	static const glm::quat QUAT_UNIT = glm::quat(VEC3_ZERO);
-	static const glm::mat4 MAT4_IDENTITY = glm::mat4(1.0f);
-	static const glm::mat4 MAT4_ZERO = glm::mat4(0.0f);
-	static const u32 COLOR32U_WHITE = 0xFFFFFFFF;
-	static const u32 COLOR32U_BLACK = 0x00000000;
-	static const glm::vec4 COLOR128F_WHITE = VEC4_ONE;
-	static const glm::vec4 COLOR128F_BLACK = VEC4_ZERO;
+	extern glm::vec3 VEC3_RIGHT;
+	extern glm::vec3 VEC3_UP;
+	extern glm::vec3 VEC3_FORWARD;
+	extern glm::vec2 VEC2_ONE;
+	extern glm::vec2 VEC2_NEG_ONE;
+	extern glm::vec2 VEC2_ZERO;
+	extern glm::vec3 VEC3_ONE;
+	extern glm::vec3 VEC3_NEG_ONE;
+	extern glm::vec3 VEC3_ZERO;
+	extern glm::vec4 VEC4_ONE;
+	extern glm::vec4 VEC4_NEG_ONE;
+	extern glm::vec4 VEC4_ZERO;
+	extern glm::quat QUAT_UNIT;
+	extern glm::mat4 MAT4_IDENTITY;
+	extern glm::mat4 MAT4_ZERO;
+	extern u32 COLOR32U_WHITE;
+	extern u32 COLOR32U_BLACK;
+	extern glm::vec4 COLOR128F_WHITE;
+	extern glm::vec4 COLOR128F_BLACK;
 
-	static const std::string EMPTY_STRING = std::string();
+	extern std::string EMPTY_STRING;
 
-	static const u32 MAX_TEXTURE_DIM = 65536;
+	extern u32 MAX_TEXTURE_DIM;
 
 	// These fields are defined and initialized in FlexEngine.cpp
 	extern class Window* g_Window;

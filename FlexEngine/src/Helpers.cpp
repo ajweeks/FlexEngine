@@ -2,11 +2,14 @@
 
 #include "Helpers.hpp"
 
+#ifdef _WIN32
 #include <commdlg.h> // For OPENFILENAME
 #include <shellapi.h> // For ShellExecute
 
 #include <direct.h> // For _getcwd
 #include <stdio.h> // For gcvt, fopen
+#endif
+
 #include <iomanip> // for setprecision
 
 IGNORE_WARNINGS_PUSH
@@ -191,8 +194,7 @@ namespace flex
 
 	bool FileExists(const std::string& filePath)
 	{
-		FILE* file = nullptr;
-		fopen_s(&file, filePath.c_str(), "r");
+		FILE* file = fopen(filePath.c_str(), "r");
 
 		if (file)
 		{
@@ -205,7 +207,7 @@ namespace flex
 
 	bool ReadFile(const std::string& filePath, std::string& fileContents, bool bBinaryFile)
 	{
-		int fileMode = std::ios::in;
+		std::ios::openmode fileMode = std::ios::in;
 		if (bBinaryFile)
 		{
 			fileMode |= std::ios::binary;
@@ -246,7 +248,7 @@ namespace flex
 
 	bool ReadFile(const std::string& filePath, std::vector<char>& vec, bool bBinaryFile)
 	{
-		i32 fileMode = std::ios::in | std::ios::ate;
+		std::ios::openmode fileMode = std::ios::in | std::ios::ate;
 		if (bBinaryFile)
 		{
 			fileMode |= std::ios::binary;
@@ -278,7 +280,7 @@ namespace flex
 
 	bool WriteFile(const std::string& filePath, const std::vector<char>& vec, bool bBinaryFile)
 	{
-		i32 fileMode = std::ios::out | std::ios::trunc;
+		std::ios::openmode fileMode = std::ios::out | std::ios::trunc;
 		if (bBinaryFile)
 		{
 			fileMode |= std::ios::binary;
@@ -298,6 +300,7 @@ namespace flex
 
 	bool DeleteFile(const std::string& filePath, bool bPrintErrorOnFailure)
 	{
+#ifdef _WIN32
 		if (::DeleteFile(filePath.c_str()))
 		{
 			return true;
@@ -310,10 +313,12 @@ namespace flex
 			}
 			return false;
 		}
+#endif
 	}
 
 	bool CopyFile(const std::string& filePathFrom, const std::string& filePathTo)
 	{
+#ifdef _WIN32
 		if (::CopyFile(filePathFrom.c_str(), filePathTo.c_str(), 0))
 		{
 			return true;
@@ -323,10 +328,12 @@ namespace flex
 			PrintError("Failed to copy file from \"%s\" to \"%s\"\n", filePathFrom.c_str(), filePathTo.c_str());
 			return false;
 		}
+#endif
 	}
 
 	bool DirectoryExists(const std::string& absoluteDirectoryPath)
 	{
+#ifdef _WIN32
 		if (absoluteDirectoryPath.find("..") != std::string::npos)
 		{
 			PrintError("Attempted to create directory using relative path! Must specify absolute path!\n");
@@ -337,11 +344,14 @@ namespace flex
 
 		return (dwAttrib != INVALID_FILE_ATTRIBUTES &&
 			dwAttrib & FILE_ATTRIBUTE_DIRECTORY);
+#endif
 	}
 
 	void OpenExplorer(const std::string& absoluteDirectory)
 	{
+#ifdef _WIN32
 		ShellExecute(NULL, "open", absoluteDirectory.c_str(), NULL, NULL, SW_SHOWDEFAULT);
+#endif
 	}
 
 	bool OpenJSONFileDialog(const std::string& windowTitle, const std::string& absoluteDirectory, std::string& outSelectedAbsFilePath)
@@ -352,6 +362,7 @@ namespace flex
 
 	bool OpenFileDialog(const std::string& windowTitle, const std::string& absoluteDirectory, std::string& outSelectedAbsFilePath, char filter[] /* = nullptr */)
 	{
+#ifdef _WIN32
 		OPENFILENAME openFileName = {};
 		openFileName.lStructSize = sizeof(OPENFILENAME);
 		openFileName.lpstrInitialDir = absoluteDirectory.c_str();
@@ -376,10 +387,13 @@ namespace flex
 		}
 
 		return bSuccess;
+#endif
+		return false;
 	}
 
 	bool FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileType)
 	{
+#ifdef _WIN32
 		std::string cleanedFileType = fileType;
 		{
 			size_t dotPos = cleanedFileType.find('.');
@@ -460,6 +474,8 @@ namespace flex
 		}
 
 		return !filePaths.empty();
+#endif
+		return false;
 	}
 
 	std::string StripLeadingDirectories(std::string filePath)
@@ -502,6 +518,7 @@ namespace flex
 
 	void CreateDirectoryRecursive(const std::string& absoluteDirectoryPath)
 	{
+#ifdef _WIN32
 		if (absoluteDirectoryPath.find("..") != std::string::npos)
 		{
 			PrintError("Attempted to create directory using relative path! Must specify absolute path!\n");
@@ -521,6 +538,7 @@ namespace flex
 			CreateDirectory(absoluteDirectoryPath.substr(0, pos).c_str(), NULL);
 			//GetLastError() == ERROR_ALREADY_EXISTS;
 		} while (pos != std::string::npos);
+#endif
 	}
 
 	bool ParseWAVFile(const std::string& filePath, i32* format, u8** data, i32* size, i32* freq)
@@ -673,6 +691,7 @@ namespace flex
 
 	std::string GetDateString_YMD()
 	{
+#ifdef _WIN32
 		std::stringstream result;
 
 		SYSTEMTIME time;
@@ -683,10 +702,13 @@ namespace flex
 			IntToString(time.wDay, 2);
 
 		return result.str();
+#endif
+		return EMPTY_STRING;
 	}
 
 	std::string GetDateString_YMDHMS()
 	{
+#ifdef _WIN32
 		std::stringstream result;
 
 		SYSTEMTIME time;
@@ -700,6 +722,8 @@ namespace flex
 			IntToString(time.wSecond, 2);
 
 		return result.str();
+#endif
+		return EMPTY_STRING;
 	}
 
 	std::vector<std::string> Split(const std::string& str, char delim)
@@ -1394,12 +1418,14 @@ namespace flex
 
 	void RetrieveCurrentWorkingDirectory()
 	{
+#ifdef _WIN32
 		char cwdBuffer[MAX_PATH];
 		char* str = _getcwd(cwdBuffer, sizeof(cwdBuffer));
 		if (str)
 		{
 			FlexEngine::s_CurrentWorkingDirectory = ReplaceBackSlashesWithForward(str);
 		}
+#endif
 	}
 
 	std::string ReplaceBackSlashesWithForward(std::string str)

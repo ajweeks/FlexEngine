@@ -45,7 +45,7 @@ void* aligned_malloc_hooked(size_t size, size_t alignment)
 	}
 	flex::g_TotalTrackedAllocatedMemory += size;
 	++flex::g_TrackedAllocationCount;
-	void* ptr = _aligned_malloc(size, alignment);
+	void* ptr = flex_aligned_malloc(size, alignment);
 	return ptr;
 }
 
@@ -69,7 +69,7 @@ void aligned_free_hooked(void* ptr)
 		return;
 	}
 	++flex::g_TrackedDeallocationCount;
-	_aligned_free(ptr);
+	flex_aligned_free(ptr);
 }
 
 void* realloc_hooked(void* ptr, size_t newsz)
@@ -94,4 +94,25 @@ void* realloc_hooked(void* ptr, size_t newsz)
 	*((size_t*)ptr) = newsz;
 	ptr = ((size_t*)ptr) + 1;
 	return ptr;
+}
+
+void* flex_aligned_malloc(std::size_t size, std::size_t alignment)
+{
+#ifdef _WIN32
+	void* ptr = _aligned_malloc(size, alignment);
+	return ptr;
+#else
+	void* ptr;
+	posix_memalign(&ptr, alignment, size);
+	return ptr;
+#endif
+}
+
+void flex_aligned_free(void* ptr)
+{
+#ifdef _WIN32
+	_aligned_free(ptr);
+#else
+	free(ptr);
+#endif
 }

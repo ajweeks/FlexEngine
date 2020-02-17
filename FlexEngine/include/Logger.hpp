@@ -3,6 +3,8 @@
 #include <sstream>
 #include <stdio.h> // For va_list
 
+#include "Types.hpp"
+
 typedef void * HANDLE;
 typedef unsigned short WORD;
 
@@ -29,6 +31,9 @@ namespace flex
 	void ClearLogFile();
 	void SaveLogBufferToFile();
 
+	void SetConsoleTextColor(u64 color);
+	void OutputDebugString(const char* str);
+
 	// Max number of characters allowed in a single message
 	static const int MAX_CHARS = 1024;
 
@@ -37,10 +42,11 @@ namespace flex
 	static std::stringstream g_LogBuffer;
 	static const char* g_LogBufferFilePath;
 
-#if _WIN32
-	extern HANDLE g_ConsoleHandle;
 	const WORD CONSOLE_COLOR_DEFAULT = 0 | FOREGROUND_INTENSITY;
 	const WORD CONSOLE_COLOR_WARNING = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY;
 	const WORD CONSOLE_COLOR_ERROR = FOREGROUND_RED | FOREGROUND_INTENSITY;
+
+#if _WIN32
+	extern HANDLE g_ConsoleHandle;
 #endif
 } // namespace flex

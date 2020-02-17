@@ -299,7 +299,7 @@ namespace flex
 
 	struct Operation : public Node
 	{
-		Operation(const Token& token, Expression* lhs, OperatorType op, Expression* rhs);
+		Operation(const Token& token, Expression* in_lhs, OperatorType in_op, Expression* in_rhs);
 		~Operation();
 
 		OperatorType op;

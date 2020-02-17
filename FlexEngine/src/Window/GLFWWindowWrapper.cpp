@@ -184,6 +184,8 @@ namespace flex
 
 			gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
 
+#ifdef _WIN32
+// TODO: Find equivalent for nix platforms
 #if DEBUG
 			if (glDebugMessageCallback)
 			{
@@ -198,6 +200,7 @@ namespace flex
 					true);
 			}
 #endif // DEBUG
+#endif // _WIN32
 
 			if (GLAD_GL_KHR_debug)
 			{
@@ -879,6 +882,7 @@ namespace flex
 		return inputMouseButton;
 	}
 
+#ifdef _WIN32
 	void WINAPI glDebugOutput(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,
 		const GLchar* message, const void* userParam)
 	{
@@ -929,6 +933,7 @@ namespace flex
 		}
 		PrintError("\n-----------------------------------------\n");
 	}
+#endif
 } // namespace flex
 
 #endif // COMPILE_OPEN_GL || COMPILE_VULKAN

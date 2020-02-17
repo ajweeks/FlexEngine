@@ -8,7 +8,6 @@
 
 struct cgltf_data;
 struct cgltf_primitive;
-enum cgltf_result;
 
 namespace flex
 {

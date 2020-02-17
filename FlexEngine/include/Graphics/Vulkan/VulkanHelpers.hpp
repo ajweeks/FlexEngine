@@ -456,7 +456,7 @@ namespace flex
 			bool TickStatus();
 
 			std::thread taskThread;
-			std::atomic<bool> is_done = false;
+			std::atomic<bool> is_done;
 
 			sec startTime = 0.0f;
 			sec lastTime = 0.0f;

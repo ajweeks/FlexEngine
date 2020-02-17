@@ -29,8 +29,7 @@ namespace flex
 
 	void ClearLogFile()
 	{
-		FILE* f = nullptr;
-		fopen_s(&f, g_LogBufferFilePath, "w");
+		FILE* f = fopen(g_LogBufferFilePath, "w");
 
 		if (f)
 		{
@@ -43,8 +42,7 @@ namespace flex
 	{
 		// TODO: Only append new content rather than overwriting old content?
 
-		FILE* f = nullptr;
-		fopen_s(&f, g_LogBufferFilePath, "w");
+		FILE* f = fopen(g_LogBufferFilePath, "w");
 
 		if (f)
 		{
@@ -61,7 +59,7 @@ namespace flex
 			return;
 		}
 
-		SetConsoleTextAttribute(g_ConsoleHandle, CONSOLE_COLOR_DEFAULT);
+		SetConsoleTextColor(CONSOLE_COLOR_DEFAULT);
 
 		va_list argList;
 		va_start(argList, str);
@@ -78,7 +76,7 @@ namespace flex
 			return;
 		}
 
-		SetConsoleTextAttribute(g_ConsoleHandle, CONSOLE_COLOR_WARNING);
+		SetConsoleTextColor(CONSOLE_COLOR_WARNING);
 
 		va_list argList;
 		va_start(argList, str);
@@ -95,7 +93,7 @@ namespace flex
 			return;
 		}
 
-		SetConsoleTextAttribute(g_ConsoleHandle, CONSOLE_COLOR_ERROR);
+		SetConsoleTextColor(CONSOLE_COLOR_ERROR);
 
 		va_list argList;
 		va_start(argList, str);
@@ -137,6 +135,21 @@ namespace flex
 			// TODO: Disable in shipping
 			OutputDebugString(s.c_str());
 		}
-
 	}
+
+	void SetConsoleTextColor(flex::u64 color)
+	{
+#ifdef _WIN32
+		SetConsoleTextAttribute(g_ConsoleHandle, color);
+#endif
+	}
+
+	void OutputDebugString(const char* str)
+	{
+#ifdef _WIN32
+		::OutputDebugString(str);
+#endif
+	}
+
+
 } // namespace flex

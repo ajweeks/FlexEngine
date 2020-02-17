@@ -93,8 +93,10 @@ namespace flex
 	void GLFWJoystickCallback(i32 JID, i32 event);
 	void GLFWMointorCallback(GLFWmonitor* monitor, int event);
 
+#ifdef _WIN32
 	void WINAPI glDebugOutput(GLenum source, GLenum type, GLuint id, GLenum severity,
 		GLsizei length, const GLchar *message, const void *userParam);
+#endif
 
 	// Stores whether a controller is connected or not
 	const i32 MAX_JOYSTICK_COUNT = 4;

@@ -136,7 +136,7 @@ namespace flex
 			Timing frameTiming = {};
 			frameTiming.start = s_FrameStartTime;
 			frameTiming.end = s_FrameEndTime;
-			strcpy_s(frameTiming.blockName, "Total frame time");
+			strcpy(frameTiming.blockName, "Total frame time");
 			s_DisplayedFrameTimings.emplace_back(frameTiming);
 
 			for (auto timingPair : s_Timings)
@@ -168,7 +168,7 @@ namespace flex
 			Timing timing = {};
 			timing.start = now;
 			timing.end = real_min;
-			strcpy_s(timing.blockName, blockName);
+			strcpy(timing.blockName, blockName);
 			s_Timings.insert({ hash, timing });
 
 			++s_UnendedTimings;
