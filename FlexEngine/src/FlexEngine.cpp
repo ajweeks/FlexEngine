@@ -155,7 +155,8 @@ namespace flex
 
 		m_CompilerVersion =
 			IntToString(__GNUC__) + '.' +
-			IntToString(__GNUC_MINOR__) +
+			IntToString(__GNUC_MINOR__) + '.' +
+			IntToString(__GNUC_PATCHLEVEL__);
 #else
 		m_CompilerName = "Unknown";
 		m_CompilerVersion = "Unknown";

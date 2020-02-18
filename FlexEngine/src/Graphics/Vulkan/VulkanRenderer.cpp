@@ -1727,7 +1727,7 @@ namespace flex
 						if (arrayIndex < m_TimestampHistograms.size())
 						{
 							char buf[256];
-							sprintf_s(buf, 256, "%s: %.2fms", iter->first.c_str(), m_TimestampHistograms[arrayIndex][0]);
+							snprintf(buf, 256, "%s: %.2fms", iter->first.c_str(), m_TimestampHistograms[arrayIndex][0]);
 							ImGui::PlotLines(buf, m_TimestampHistograms[arrayIndex].data(), NUM_GPU_TIMINGS, m_TimestampHistogramIndex, nullptr, 0.0f, 8.0f);
 						}
 					}
@@ -1763,7 +1763,7 @@ namespace flex
 									ImVec2 p = ImGui::GetCursorScreenPos();
 									char nodeID0[256];
 									memset(nodeID0, 0, 256);
-									sprintf_s(nodeID0, 256, "%s##%u",
+									snprintf(nodeID0, 256, "%s##%u",
 										shader.shader->name.c_str(),
 										shaderBatchPair.shaderID);
 									if (ImGui::BeginChild(nodeID0, ImVec2(0, 200), true))
@@ -1789,7 +1789,7 @@ namespace flex
 
 										char histNodeID[256];
 										memset(histNodeID, 0, 256);
-										sprintf_s(histNodeID, 256, "%s (%u/%u)##histo%u",
+										snprintf(histNodeID, 256, "%s (%u/%u)##histo%u",
 											shader.shader->name.c_str(),
 											bufferSlotsTotal - bufferSlotsFree,
 											bufferSlotsTotal,
@@ -1826,7 +1826,7 @@ namespace flex
 
 									char histNodeID[256];
 									memset(histNodeID, 0, 256);
-									sprintf_s(histNodeID, 256, "%s %uB##particles_size",
+									snprintf(histNodeID, 256, "%s %uB##particles_size",
 										simMat.material.name.c_str(),
 										bufferSlotsTotal);
 									real progress = 1.0f;
@@ -5972,7 +5972,7 @@ namespace flex
 			DescriptorSetCreateInfo createInfo = {};
 
 			char debugName[256];
-			sprintf_s(debugName, "Render Object %s (render ID %u) descriptor set", renderObject->gameObject ? renderObject->gameObject->GetName().c_str() : "", renderID);
+			snprintf(debugName, 256, "Render Object %s (render ID %u) descriptor set", renderObject->gameObject ? renderObject->gameObject->GetName().c_str() : "", renderID);
 			createInfo.DBG_Name = debugName;
 			createInfo.descriptorSet = &renderObject->descriptorSet;
 			createInfo.descriptorSetLayout = &m_DescriptorSetLayouts[material->material.shaderID];
@@ -6355,7 +6355,7 @@ namespace flex
 
 			GraphicsPipelineCreateInfo pipelineCreateInfo = {};
 			char debugName[256];
-			sprintf_s(debugName, "Render Object %s (render ID %u) graphics pipeline", renderObject->gameObject ? renderObject->gameObject->GetName().c_str() : "", renderID);
+			snprintf(debugName, 256, "Render Object %s (render ID %u) graphics pipeline", renderObject->gameObject ? renderObject->gameObject->GetName().c_str() : "", renderID);
 			pipelineCreateInfo.DBG_Name = debugName;
 			pipelineCreateInfo.pipelineLayout = renderObject->pipelineLayout.replace();
 			pipelineCreateInfo.graphicsPipeline = renderObject->graphicsPipeline.replace();
@@ -6620,7 +6620,7 @@ namespace flex
 				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &framebufferInfo, nullptr, m_SwapChainFramebuffers[i]->Replace()));
 
 				char name[256];
-				sprintf_s(name, "Swapchain %u", i);
+				snprintf(name, 256, "Swapchain %u", i);
 				SetFramebufferName(m_VulkanDevice, m_SwapChainFramebuffers[i]->frameBuffer, name);
 			}
 		}
@@ -6814,7 +6814,7 @@ namespace flex
 					imageView.flags = 0;
 					VK_CHECK_RESULT(vkCreateImageView(m_VulkanDevice->m_LogicalDevice, &imageView, nullptr, m_ShadowCascades[i]->imageView.replace()));
 					char imageViewName[256];
-					sprintf_s(imageViewName, "Shadow cascade %u image view", i);
+					snprintf(imageViewName, 256, "Shadow cascade %u image view", i);
 					SetImageViewName(m_VulkanDevice, m_ShadowCascades[i]->imageView, imageViewName);
 
 					VkFramebufferCreateInfo shadowFramebufferCreateInfo = vks::framebufferCreateInfo(*m_ShadowRenderPass);
@@ -6824,7 +6824,7 @@ namespace flex
 					shadowFramebufferCreateInfo.height = SHADOW_CASCADE_RES;
 
 					char frameBufferName[256];
-					sprintf_s(frameBufferName, "Shadow cascade %u frame buffer", i);
+					snprintf(frameBufferName, 256, "Shadow cascade %u frame buffer", i);
 
 					m_ShadowCascades[i]->frameBuffer.Create(&shadowFramebufferCreateInfo, m_ShadowRenderPass, frameBufferName);
 

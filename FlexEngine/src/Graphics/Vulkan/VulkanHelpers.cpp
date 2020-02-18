@@ -26,8 +26,7 @@ namespace flex
 			if (result != VK_SUCCESS)
 			{
 				PrintError("Vulkan fatal error: %s\n", VulkanErrorString(result).c_str());
-				// TODO: Replace with platform-agnostic method
-				DebugBreak();
+				DEBUG_BREAK();
 				assert(result == VK_SUCCESS);
 			}
 		}
@@ -2341,9 +2340,9 @@ namespace flex
 					std::string workingDir(RESOURCE("shaders"));
 					char cmdStrBuf[512];
 					memset(cmdStrBuf, 0, 512);
-					strcat_s(cmdStrBuf, "pushd \"");
-					strcat_s(cmdStrBuf, workingDir.c_str());
-					strcat_s(cmdStrBuf, "\" && call vk_compile.bat >nul && popd");
+					strcat(cmdStrBuf, "pushd \"");
+					strcat(cmdStrBuf, workingDir.c_str());
+					strcat(cmdStrBuf, "\" && call vk_compile.bat >nul && popd");
 					bSuccess = system(cmdStrBuf) == 0;
 					is_done = true;
 				});

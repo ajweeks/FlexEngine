@@ -263,7 +263,7 @@ namespace flex
 				m_FrameBuffer->height = frameBufferHeight;
 
 				char name[256];
-				sprintf_s(name, "%s frame buffer", passName);
+				sprintf(name, "%s frame buffer", passName);
 				VulkanRenderer::SetFramebufferName(m_VulkanDevice, m_FrameBuffer->frameBuffer, name);
 			}
 		}

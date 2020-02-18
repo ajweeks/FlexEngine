@@ -200,15 +200,15 @@ IGNORE_WARNINGS_POP
 #endif
 
 #ifdef _WIN32
-#define DEBUG_BREAK __debugbreak()
+#define DEBUG_BREAK() __debugbreak()
 #else
 // Linux/Max: (untested)
-#define DEBUG_BREAK __builtin_trap()
+#define DEBUG_BREAK() __builtin_trap()
 #endif
 
-#define ENSURE_NO_ENTRY() { PrintError("Execution entered no entry path! %s\n", __FUNCTION__); DEBUG_BREAK; }
+#define ENSURE_NO_ENTRY() { PrintError("Execution entered no entry path! %s\n", __FUNCTION__); DEBUG_BREAK(); }
 #ifdef DEBUG
-#define ENSURE(condition) if (!(condition)) { PrintError("Ensure failed! File: %s, Line: %d\n", __FILE__, __LINE__); DEBUG_BREAK; }
+#define ENSURE(condition) if (!(condition)) { PrintError("Ensure failed! File: %s, Line: %d\n", __FILE__, __LINE__); DEBUG_BREAK(); }
 #else
 #define ENSURE(condition)
 #endif

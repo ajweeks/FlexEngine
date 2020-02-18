@@ -8,6 +8,7 @@
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
+#include "Platform/Platform.hpp"
 #include "Window/Monitor.hpp"
 
 namespace flex
@@ -49,7 +50,7 @@ namespace flex
 			Print("%i joysticks connected on bootup\n", numJoysticksConnected);
 		}
 
-		g_EngineInstance->mainProcessID = (u32)GetCurrentProcessId();
+		g_EngineInstance->mainProcessID = Platform::GetCurrentProcessID();
 
 		// TODO: Look into supporting system-DPI awareness
 		//SetProcessDPIAware();
@@ -80,7 +81,7 @@ namespace flex
 	{
 		if (m_bMoveConsoleToOtherMonitor)
 		{
-			MoveConsole();
+			Platform::MoveConsole();
 		}
 
 		InitFromConfig();
@@ -523,55 +524,6 @@ namespace flex
 		return glm::vec2((real)posX, (real)posY);
 	}
 
-	void GLFWWindowWrapper::MoveConsole()
-	{
-		HWND hWnd = GetConsoleWindow();
-		// TODO: Set these based on display resolution
-		i32 consoleWidth = 800;
-		i32 consoleHeight = 800;
-
-		// The following four variables store the bounding rectangle of all monitors
-		i32 virtualScreenLeft = GetSystemMetrics(SM_XVIRTUALSCREEN);
-		//i32 virtualScreenTop = GetSystemMetrics(SM_YVIRTUALSCREEN);
-		i32 virtualScreenWidth = GetSystemMetrics(SM_CXVIRTUALSCREEN);
-		//i32 virtualScreenHeight = GetSystemMetrics(SM_CYVIRTUALSCREEN);
-
-		i32 monitorWidth = GetSystemMetrics(SM_CXSCREEN);
-		//i32 monitorHeight = GetSystemMetrics(SM_CYSCREEN);
-
-		// If another monitor is present, move the console to it
-		if (virtualScreenWidth > monitorWidth)
-		{
-			i32 newX;
-			i32 newY = 10;
-
-			if (virtualScreenLeft < 0)
-			{
-				// The other monitor is to the left of the main one
-				newX = -(consoleWidth + 67);
-			}
-			else
-			{
-				// The other monitor is to the right of the main one
-				newX = virtualScreenWidth - monitorWidth + 10;
-			}
-
-			MoveWindow(hWnd, newX, newY, consoleWidth, consoleHeight, TRUE);
-
-			// Call again to set size correctly (based on other monitor's DPI)
-			MoveWindow(hWnd, newX, newY, consoleWidth, consoleHeight, TRUE);
-		}
-		else // There's only one monitor, move the console to the top left corner
-		{
-			RECT rect;
-			GetWindowRect(hWnd, &rect);
-			if (rect.top != 0)
-			{
-				// A negative value is needed to line the console up to the left side of my monitor
-				MoveWindow(hWnd, -7, 0, consoleWidth, consoleHeight, TRUE);
-			}
-		}
-	}
 
 	void GLFWErrorCallback(i32 error, const char* description)
 	{
