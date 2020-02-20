@@ -108,7 +108,6 @@ configuration {}
 
 configuration {}
 	flags { "NoIncrementalLink", "NoEditAndContinue" }
-	linkoptions { "/ignore:4221" }
 	includedirs { 
 		path.join(SOURCE_DIR, "include"),
 		path.join(DEPENDENCIES_DIR, "glad/include"),
@@ -125,6 +124,7 @@ configuration {}
 	debugdir "$(OutDir)"
 configuration "vs*"
 	defines { "PLATFORM_Win" }
+	linkoptions { "/ignore:4221" }
 configuration { "vs*", "x32" }
 	flags { "EnableSSE2" }
 	defines { "WIN32" }
