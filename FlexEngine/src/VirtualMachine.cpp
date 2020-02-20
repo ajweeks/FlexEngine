@@ -846,8 +846,8 @@ namespace flex
 
 	Operation::Operation(const Token& token, Expression* in_lhs, OperatorType in_op, Expression* in_rhs) :
 		Node(token),
-		lhs(in_lhs),
 		op(in_op),
+		lhs(in_lhs),
 		rhs(in_rhs)
 	{
 	}
@@ -1178,6 +1178,8 @@ namespace flex
 		case ValueType::FLOAT_RAW:
 		case ValueType::BOOL_RAW:
 			return &value;
+		default:
+			assert(false);
 		}
 
 		context.errorReason = "Unexpected value type";
@@ -1800,6 +1802,10 @@ namespace flex
 		{
 			assert(whileStatement != nullptr);
 			return new Statement(token, whileStatement);
+		} break;
+		default:
+		{
+			assert(false);
 		} break;
 		}
 

@@ -39,9 +39,6 @@ namespace flex
 
 	extern bool g_bEnableLogToConsole;
 
-	static std::stringstream g_LogBuffer;
-	static const char* g_LogBufferFilePath;
-
 	const WORD CONSOLE_COLOR_DEFAULT = 0 | FOREGROUND_INTENSITY;
 	const WORD CONSOLE_COLOR_WARNING = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY;
 	const WORD CONSOLE_COLOR_ERROR = FOREGROUND_RED | FOREGROUND_INTENSITY;

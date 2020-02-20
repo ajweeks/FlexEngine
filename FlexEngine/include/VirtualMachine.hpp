@@ -375,9 +375,9 @@ namespace flex
 			TypeName typeName = TypeName::_NONE);
 		~Assignment();
 
-		TypeName typeName = TypeName::_NONE; // Optional, not used when re-assigning
 		Identifier* identifier = nullptr;
 		Expression* rhs = nullptr; // If null, this assignment is actually just a declaration
+		TypeName typeName = TypeName::_NONE; // Optional, not used when re-assigning
 
 		void Evaluate(TokenContext& context);
 		// Should be called when tokenizer is pointing at char after '='
@@ -449,6 +449,10 @@ namespace flex
 		IfStatement(const Token& token, Expression* condition, Statement* body);
 		~IfStatement();
 
+		IfFalseAction ifFalseAction = IfFalseAction::NONE;
+		Expression* condition = nullptr;
+		Statement* body = nullptr;
+
 		union IfFalse
 		{
 			void* nothingStatement;
@@ -459,10 +463,6 @@ namespace flex
 			IfFalse(IfStatement* elseIfStatement) : elseIfStatement(elseIfStatement) {}
 			IfFalse(Statement* elseStatement) : elseStatement(elseStatement) {}
 		} ifFalseStatement;
-
-		IfFalseAction ifFalseAction = IfFalseAction::NONE;
-		Expression* condition = nullptr;
-		Statement* body = nullptr;
 
 		void Evaluate(TokenContext& context);
 		static IfStatement* Parse(Tokenizer& tokenizer);

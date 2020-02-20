@@ -12,6 +12,8 @@ namespace flex
 #endif
 
 	bool g_bEnableLogToConsole = true;
+	std::stringstream g_LogBuffer;
+	const char* g_LogBufferFilePath;
 
 	void InitializeLogger()
 	{

@@ -31,6 +31,8 @@ IGNORE_WARNINGS_POP
 #define AL_FORMAT_STEREO8                         0x1102
 #define AL_FORMAT_STEREO16                        0x1103
 
+static const char* SEPARATOR_STR = ", ";
+
 namespace flex
 {
 	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount, bool bFlipVertically, u32* channelCountOut /* = nullptr */)
