@@ -105,6 +105,20 @@ namespace flex
 			}
 		}
 
+		btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
+		debugDrawer->drawLine(
+			ToBtVec3(m_TransformGizmo->GetTransform()->GetWorldPosition()),
+			ToBtVec3(m_StartPointOnPlane),
+			btVector3(1, 0, 0),
+			btVector3(0, 1, 0));
+
+
+		debugDrawer->drawLine(
+			ToBtVec3(m_TransformGizmo->GetTransform()->GetWorldPosition()),
+			ToBtVec3(m_TransformGizmo->GetTransform()->GetWorldPosition() + m_PlaneN * 3.0f),
+			btVector3(1, 0, 1),
+			btVector3(0, 1, 1));
+
 		FadeOutHeadOnGizmos();
 
 		if (!m_CurrentlySelectedObjects.empty())
@@ -261,6 +275,9 @@ namespace flex
 			{
 				m_StartPointOnPlane = intersectionPoint;
 			}
+
+			m_LatestRayPlaneIntersection = intersectionPoint;
+			Print("%.3f\n", intersectionPoint.x);
 		}
 
 
@@ -343,7 +360,7 @@ namespace flex
 
 		real dAngle = m_LastAngle - angle;
 		glm::quat result(VEC3_ZERO);
-		if (!IsNanOrInf(dAngle))
+		if (!IsNanOrInf(dAngle) && dAngle != 0.0f)
 		{
 			glm::quat newRot = glm::rotate(pRot, dAngle, m_AxisOfRotation);
 			result = newRot - pRot;
@@ -653,6 +670,18 @@ namespace flex
 		const glm::vec3 gizmoRight = gizmoTransform->GetRight();
 		const glm::vec3 gizmoForward = gizmoTransform->GetForward();
 
+		switch (m_CurrentTransformGizmoState)
+		{
+		case TransformState::TRANSLATE:
+		{
+			if (g_InputManager->DidMouseWrap())
+			{
+				m_DraggingGizmoOffset = -1.0f;
+				//gizmoTransform->Translate();
+			}
+		} break;
+		}
+
 		btVector3 rayStart, rayEnd;
 		FlexEngine::GenerateRayAtMousePos(rayStart, rayEnd);
 
@@ -686,7 +715,10 @@ namespace flex
 
 			if (g_InputManager->DidMouseWrap())
 			{
-				m_DraggingGizmoOffset = -1.0f;
+				m_DraggingGizmoOffset = -1.0f; // Signal to recalculate offset in CalculateRayPlaneIntersectionAlongAxis
+				////m_MouseDragDistX += g_InputManager->GetMouseWrapXInPixels();
+				//m_MouseDragDistY += g_InputManager->GetMouseWrapYInPixels();
+				//g_InputManager->GetMouseDragDistance()
 				Print("warp\n");
 			}
 

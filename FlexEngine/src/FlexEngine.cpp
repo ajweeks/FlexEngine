@@ -1129,9 +1129,11 @@ namespace flex
 				}
 				else
 				{
-					// Only update every second
+					ImGui::Text("QRenderDoc is already running");
+
+					// Only update periodically
 					m_SecSinceRenderDocPIDCheck += g_DeltaTime;
-					if (m_SecSinceRenderDocPIDCheck > 1.0f)
+					if (m_SecSinceRenderDocPIDCheck > 3.0f)
 					{
 						CheckForRenderDocUIRunning();
 					}
@@ -1669,7 +1671,7 @@ namespace flex
 		if (glm::intersectRayPlane(rayOrigin, rayDir, planeOrigin, planeN, intersectionDistance))
 		{
 			glm::vec3 intersectionPoint = rayOrigin + rayDir * intersectionDistance;
-			if (inOutOffset == -1.0f)
+			if (inOutOffset == -1.0f) // Mouse was clicked or wrapped
 			{
 				inOutOffset = glm::dot(intersectionPoint - startPos, axis);
 			}

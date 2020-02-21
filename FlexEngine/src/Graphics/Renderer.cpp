@@ -1347,7 +1347,7 @@ namespace flex
 			// Color
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
 			m_BaseShaders[shaderID].bTranslucent = true;
-			m_BaseShaders[shaderID].dynamicVertexBufferSize = 16384 * 4 * 28; // TODO: FIXME:
+			m_BaseShaders[shaderID].dynamicVertexBufferSize = 16384 * 4 * 28; // (1835008) TODO: FIXME:
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;

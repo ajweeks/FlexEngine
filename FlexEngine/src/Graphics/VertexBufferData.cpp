@@ -45,7 +45,7 @@ namespace flex
 		vertexData = (real*)malloc_hooked(VertexBufferSize);
 		if (vertexData == nullptr)
 		{
-			PrintError("Failed to allocate vertex buffer memory (%u bytes)\n", VertexBufferSize);
+			PrintError("Failed to allocate dynamic vertex buffer memory (%u bytes)\n", VertexBufferSize);
 			return;
 		}
 	}
