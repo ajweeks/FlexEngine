@@ -78,9 +78,14 @@ namespace flex
 
 		void VulkanPhysicsDebugDraw::drawLine(const btVector3& from, const btVector3& to, const btVector3& color)
 		{
+			drawLine(from, to, color, color);
+		}
+
+		void VulkanPhysicsDebugDraw::drawLine(const btVector3& from, const btVector3& to, const btVector3& colorFrom, const btVector3& colorTo)
+		{
 			if (m_LineSegmentIndex < MAX_NUM_LINE_SEGMENTS)
 			{
-				m_LineSegments[m_LineSegmentIndex++] = { from, to, color };
+				m_LineSegments[m_LineSegmentIndex++] = { from, to, colorFrom, colorTo };
 			}
 			else
 			{
@@ -95,20 +100,25 @@ namespace flex
 			UNREFERENCED_PARAMETER(distance);
 			UNREFERENCED_PARAMETER(lifeTime);
 			UNREFERENCED_PARAMETER(color);
-			// TODO: FIXME: UNIMPLEMENTED: Implement me (or don't)
 		}
 
 		void VulkanPhysicsDebugDraw::DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& color)
 		{
+			DrawLineWithAlpha(from, to, color, color);
+		}
+
+		void VulkanPhysicsDebugDraw::DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& colorFrom, const btVector4& colorTo)
+		{
 			if (m_LineSegmentIndex < MAX_NUM_LINE_SEGMENTS)
 			{
-				m_LineSegments[m_LineSegmentIndex++] = { from, to, color };
+				m_LineSegments[m_LineSegmentIndex++] = { from, to, colorFrom, colorTo };
 			}
 			else
 			{
 				PrintWarn("Max number of debug draw lines reached (%d)\n", MAX_NUM_LINE_SEGMENTS);
 			}
 		}
+
 
 		void VulkanPhysicsDebugDraw::Draw()
 		{
@@ -122,6 +132,7 @@ namespace flex
 
 				m_VertexBufferCreateInfo.positions_3D.clear();
 				m_VertexBufferCreateInfo.colors_R32G32B32A32.clear();
+				indexBuffer.clear();
 
 				u32 numVerts = m_LineSegmentIndex * 2;
 
@@ -129,23 +140,36 @@ namespace flex
 				{
 					m_VertexBufferCreateInfo.positions_3D.resize(numVerts * 2);
 					m_VertexBufferCreateInfo.colors_R32G32B32A32.resize(numVerts * 2);
+					indexBuffer.resize(numVerts * 2);
+				}
+				else
+				{
+					m_VertexBufferCreateInfo.positions_3D.resize(numVerts);
+					m_VertexBufferCreateInfo.colors_R32G32B32A32.resize(numVerts);
+					indexBuffer.resize(numVerts);
 				}
 
 				i32 i = 0;
 				glm::vec3* posData = m_VertexBufferCreateInfo.positions_3D.data();
 				glm::vec4* colData = m_VertexBufferCreateInfo.colors_R32G32B32A32.data();
+				u32* idxData = indexBuffer.data();
 				for (u32 li = 0; li < m_LineSegmentIndex; ++li)
 				{
 					memcpy(posData + i, m_LineSegments[li].start, sizeof(real) * 3);
 					memcpy(posData + i + 1, m_LineSegments[li].end, sizeof(real) * 3);
 
-					memcpy(colData + i, m_LineSegments[li].color, sizeof(real) * 4);
-					memcpy(colData + i + 1, m_LineSegments[li].color, sizeof(real) * 4);
+					memcpy(colData + i, m_LineSegments[li].colorFrom, sizeof(real) * 4);
+					memcpy(colData + i + 1, m_LineSegments[li].colorTo, sizeof(real) * 4);
+
+					u32 idx0 = li * 2;
+					u32 idx1 = li * 2 + 1;
+					memcpy(idxData + i, &idx0, sizeof(u32));
+					memcpy(idxData + i + 1, &idx1, sizeof(u32));
 
 					i += 2;
 				}
 
-				m_ObjectMesh->GetSubMeshes()[0]->UpdateProceduralData(&m_VertexBufferCreateInfo);
+				m_ObjectMesh->GetSubMeshes()[0]->UpdateProceduralData(&m_VertexBufferCreateInfo, indexBuffer);
 			}
 		}
 

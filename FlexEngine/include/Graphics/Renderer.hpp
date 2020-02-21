@@ -33,6 +33,7 @@ namespace flex
 		virtual void Initialize() = 0;
 		virtual void Destroy() = 0;
 		virtual void DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& color) = 0;
+		virtual void DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& colorFrom, const btVector4& colorTo) = 0;
 
 		virtual void OnPostSceneChange() = 0;
 
@@ -48,22 +49,26 @@ namespace flex
 		{
 			LineSegment() {}
 
-			LineSegment(const btVector3& vStart, const btVector3& vEnd, const btVector3& vCol)
+			LineSegment(const btVector3& vStart, const btVector3& vEnd, const btVector3& vColFrom, const btVector3& vColTo)
 			{
 				memcpy(start, vStart.m_floats, sizeof(real) * 3);
 				memcpy(end, vEnd.m_floats, sizeof(real) * 3);
-				memcpy(color, vCol.m_floats, sizeof(real) * 3);
-				color[3] = 1.0f;
+				memcpy(colorFrom, vColFrom.m_floats, sizeof(real) * 3);
+				memcpy(colorTo, vColTo.m_floats, sizeof(real) * 3);
+				colorFrom[3] = 1.0f;
+				colorTo[3] = 1.0f;
 			}
-			LineSegment(const btVector3& vStart, const btVector3& vEnd, const btVector4& vCol)
+			LineSegment(const btVector3& vStart, const btVector3& vEnd, const btVector4& vColFrom, const btVector3& vColTo)
 			{
 				memcpy(start, vStart.m_floats, sizeof(real) * 3);
 				memcpy(end, vEnd.m_floats, sizeof(real) * 3);
-				memcpy(color, vCol.m_floats, sizeof(real) * 4);
+				memcpy(colorFrom, vColFrom.m_floats, sizeof(real) * 4);
+				memcpy(colorTo, vColTo.m_floats, sizeof(real) * 4);
 			}
 			real start[3];
 			real end[3];
-			real color[4];
+			real colorFrom[4];
+			real colorTo[4];
 		};
 
 		static const u32 MAX_NUM_LINE_SEGMENTS = 65536;
@@ -99,7 +104,7 @@ namespace flex
 		virtual void DrawImGuiMisc();
 		virtual void DrawImGuiWindows();
 
-		virtual void UpdateVertexData(RenderID renderID, VertexBufferData const* vertexBufferData) = 0;
+		virtual void UpdateVertexData(RenderID renderID, VertexBufferData const* vertexBufferData, const std::vector<u32>& indexData) = 0;
 
 		void DrawImGuiForGameObject(GameObject* gameObject);
 

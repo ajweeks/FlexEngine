@@ -1841,19 +1841,26 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::UpdateVertexData(RenderID renderID, VertexBufferData const* vertexBufferData)
+		void VulkanRenderer::UpdateVertexData(RenderID renderID, VertexBufferData const* vertexBufferData, const std::vector<u32>& indexData)
 		{
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
-			VulkanBuffer* vertexBuffer = m_DynamicVertexIndexBufferPairs[m_Materials.at(renderObject->materialID).material.dynamicVertexIndexBufferIndex].second->vertexBuffer;
+			VertexIndexBufferPair* vertexIndexBufferPair = m_DynamicVertexIndexBufferPairs[m_Materials.at(renderObject->materialID).material.dynamicVertexIndexBufferIndex].second;
+			VulkanBuffer* vertexBuffer = vertexIndexBufferPair->vertexBuffer;
+			VulkanBuffer* indexBuffer = vertexIndexBufferPair->indexBuffer;
 			u32 copySize = std::min(vertexBufferData->VertexBufferSize, (u32)vertexBuffer->m_Size);
+			u32 indexCopySize = std::min(indexData.size() * sizeof(indexData[0]), (u32)indexBuffer->m_Size);
 			if (copySize < vertexBufferData->VertexBufferSize)
 			{
 				PrintError("Dynamic vertex buffer is %u bytes too small for data attempting to be copied in\n", vertexBufferData->VertexBufferSize - copySize);
 			}
 			// TODO: Keep mapped persistently?
 			VK_CHECK_RESULT(vertexBuffer->Map(copySize));
+			VK_CHECK_RESULT(indexBuffer->Map(indexCopySize));
 			memcpy(vertexBuffer->m_Mapped, vertexBufferData->vertexData, copySize);
+			memcpy(indexBuffer->m_Mapped, indexData.data(), indexCopySize);
 			vertexBuffer->Unmap();
+			indexBuffer->Unmap();
+			renderObject->indexOffset = 0;
 		}
 
 		void VulkanRenderer::DrawImGuiForRenderObject(RenderID renderID)

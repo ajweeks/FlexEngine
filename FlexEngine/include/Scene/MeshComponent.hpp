@@ -37,7 +37,7 @@ namespace flex
 		void PostInitialize();
 
 		void Update();
-		void UpdateProceduralData(VertexBufferDataCreateInfo const* newData);
+		void UpdateProceduralData(VertexBufferDataCreateInfo const* newData, const std::vector<u32>& indexData);
 
 		void Destroy();
 		void SetOwner(Mesh* owner);
@@ -80,6 +80,7 @@ namespace flex
 		glm::vec3 GetBoundingSphereCenterPointWS() const;
 
 		VertexBufferData* GetVertexBufferData();
+		std::vector<u32> GetIndexBuffer();
 
 		glm::vec3 m_MinPoint;
 		glm::vec3 m_MaxPoint;

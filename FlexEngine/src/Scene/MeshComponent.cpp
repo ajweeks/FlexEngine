@@ -82,10 +82,11 @@ namespace flex
 		}
 	}
 
-	void MeshComponent::UpdateProceduralData(VertexBufferDataCreateInfo const* newData)
+	void MeshComponent::UpdateProceduralData(VertexBufferDataCreateInfo const* newData, const std::vector<u32>& indexData)
 	{
 		m_VertexBufferData.UpdateData(newData);
-		g_Renderer->UpdateVertexData(renderID, &m_VertexBufferData);
+		m_Indices = indexData;
+		g_Renderer->UpdateVertexData(renderID, &m_VertexBufferData, indexData);
 	}
 
 	void MeshComponent::Destroy()
@@ -1121,6 +1122,11 @@ namespace flex
 	VertexBufferData* MeshComponent::GetVertexBufferData()
 	{
 		return &m_VertexBufferData;
+	}
+
+	std::vector<u32> MeshComponent::GetIndexBuffer()
+	{
+		return m_Indices;
 	}
 
 	real MeshComponent::CalculateBoundingSphereScale() const
