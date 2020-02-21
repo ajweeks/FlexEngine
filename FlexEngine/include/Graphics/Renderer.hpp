@@ -231,7 +231,7 @@ namespace flex
 
 		i32 GetFramesRenderedCount() const;
 
-		BitmapFont* SetFont(StringID fontID);
+		BitmapFont* SetFont(std::string fontID);
 		// Draws the given string in the center of the screen for a short period of time
 		// Passing an empty string will immediately clear the current string
 		void AddEditorString(const std::string& str);
@@ -429,7 +429,7 @@ namespace flex
 
 		std::string m_FontImageExtension = ".png";
 
-		std::map<StringID, FontMetaData> m_Fonts;
+		std::map<std::string, FontMetaData> m_Fonts;
 
 		std::string m_RendererSettingsFilePathAbs;
 		std::string m_FontsFilePathAbs;

@@ -22,7 +22,7 @@ namespace flex
 
 		std::string VulkanErrorString(VkResult errorCode);
 
-		inline void VK_CHECK_RESULT(VkResult result);
+		void VK_CHECK_RESULT(VkResult result);
 
 		void GetVertexAttributeDescriptions(VertexAttributes vertexAttributes,
 			std::vector<VkVertexInputAttributeDescription>& attributeDescriptions);
@@ -299,6 +299,11 @@ namespace flex
 
 			VkFormat CalculateFormat();
 
+			VDeleter<VkImage> image;
+			VDeleter<VkDeviceMemory> imageMemory;
+			VDeleter<VkImageView> imageView;
+			VDeleter<VkSampler> sampler;
+
 			u32 width = 0;
 			u32 height = 0;
 			u32 channelCount = 0;
@@ -313,12 +318,8 @@ namespace flex
 			bool bIsArray = false;
 			bool bSamplerClampToBorder = false;
 
-			VDeleter<VkImage> image;
 			VkImageLayout imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 			VkFormat imageFormat = VK_FORMAT_UNDEFINED;
-			VDeleter<VkDeviceMemory> imageMemory;
-			VDeleter<VkImageView> imageView;
-			VDeleter<VkSampler> sampler;
 
 		private:
 			VulkanDevice* m_VulkanDevice = nullptr;
@@ -456,7 +457,7 @@ namespace flex
 			bool TickStatus();
 
 			std::thread taskThread;
-			std::atomic<bool> is_done = false;
+			std::atomic<bool> is_done;
 
 			sec startTime = 0.0f;
 			sec lastTime = 0.0f;

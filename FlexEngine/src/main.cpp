@@ -15,6 +15,7 @@ int main(int argc, char *argv[])
 	UNREFERENCED_PARAMETER(argc);
 	UNREFERENCED_PARAMETER(argv);
 
+#ifdef _WIN32
 	// Enable run-time memory leak check for debug builds
 #if defined(DEBUG)
 	// Notify user if heap is corrupt
@@ -22,6 +23,7 @@ int main(int argc, char *argv[])
 
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 	//_CrtSetBreakAlloc(47947);
+#endif
 #endif
 
 	flex::InitializeLogger();
@@ -50,6 +52,7 @@ int main(int argc, char *argv[])
 #endif
 }
 
+#ifdef _WIN32
 int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPWSTR lpCmdLine, _In_ int nCmdShow)
 {
 	UNREFERENCED_PARAMETER(hInstance);
@@ -61,3 +64,4 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 
 	return main(0, nullptr);
 }
+#endif

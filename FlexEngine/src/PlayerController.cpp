@@ -13,6 +13,8 @@ IGNORE_WARNINGS_PUSH
 #include <LinearMath/btIDebugDraw.h>
 IGNORE_WARNINGS_POP
 
+#include <list>
+
 #include "Audio/AudioManager.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "Cameras/FirstPersonCamera.hpp"

@@ -844,11 +844,11 @@ namespace flex
 		return new Identifier(token, token.ToString(), type);
 	}
 
-	Operation::Operation(const Token& token, Expression* lhs, OperatorType op, Expression* rhs) :
+	Operation::Operation(const Token& token, Expression* in_lhs, OperatorType in_op, Expression* in_rhs) :
 		Node(token),
-		lhs(lhs),
-		op(op),
-		rhs(rhs)
+		op(in_op),
+		lhs(in_lhs),
+		rhs(in_rhs)
 	{
 	}
 
@@ -1178,30 +1178,13 @@ namespace flex
 		case ValueType::FLOAT_RAW:
 		case ValueType::BOOL_RAW:
 			return &value;
+		default:
+			assert(false);
 		}
 
 		context.errorReason = "Unexpected value type";
 		context.errorToken = token;
 		return nullptr;
-	}
-
-	template<class T>
-	bool CompareExpression(T* lhs, T* rhs, OperatorType op, TokenContext& context)
-	{
-		switch (op)
-		{
-		case OperatorType::EQUAL:			return *lhs == *rhs;
-		case OperatorType::NOT_EQUAL:		return *lhs != *rhs;
-		case OperatorType::GREATER:			return *lhs > *rhs;
-		case OperatorType::GREATER_EQUAL:	return *lhs >= *rhs;
-		case OperatorType::LESS:			return *lhs < *rhs;
-		case OperatorType::LESS_EQUAL:		return *lhs <= *rhs;
-		case OperatorType::BOOLEAN_AND:		return *lhs && *rhs;
-		case OperatorType::BOOLEAN_OR:		return *lhs || *rhs;
-		default:
-			context.errorReason = "Unexpected operator on int in expression";
-			context.errorToken = token;
-		}
 	}
 
 	Expression* Expression::Parse(Tokenizer& tokenizer)
@@ -1819,6 +1802,10 @@ namespace flex
 		{
 			assert(whileStatement != nullptr);
 			return new Statement(token, whileStatement);
+		} break;
+		default:
+		{
+			assert(false);
 		} break;
 		}
 

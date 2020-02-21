@@ -132,7 +132,6 @@ namespace flex
 
 		m_SSAOBlurDataConstant.radius = 4;
 		m_SSAOBlurSamplePixelOffset = 2;
-		glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 
 		m_SSAOSamplingData.ssaoEnabled = 1;
 		m_SSAOSamplingData.ssaoPowExp = 2.0f;
@@ -589,7 +588,7 @@ namespace flex
 		return m_FramesRendered;
 	}
 
-	BitmapFont* Renderer::SetFont(StringID fontID)
+	BitmapFont* Renderer::SetFont(std::string fontID)
 	{
 		m_CurrentFont = m_Fonts[fontID].bitmapFont;
 		return m_CurrentFont;
@@ -1151,15 +1150,13 @@ namespace flex
 
 				std::vector<Pair<std::string, MaterialID>> validMaterialNames = GetValidMaterialNames();
 
-				MaterialID selectedMaterialID = 0;
 				i32 selectedMaterialShortIndex = 0;
 				std::string currentMaterialName = "NONE";
 				i32 matShortIndex = 0;
 				for (const Pair<std::string, MaterialID>& matPair : validMaterialNames)
 				{
-					if (matPair.second == (i32)matID)
+					if (matPair.second == matID)
 					{
-						selectedMaterialID = matPair.second;
 						selectedMaterialShortIndex = matShortIndex;
 						currentMaterialName = matPair.first;
 						break;

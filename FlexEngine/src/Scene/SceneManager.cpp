@@ -559,7 +559,7 @@ namespace flex
 					static char newSceneName[sceneNameMaxCharCount];
 					if (bClicked)
 					{
-						strcpy_s(newSceneName, scene->GetName().c_str());
+						strcpy(newSceneName, scene->GetName().c_str());
 					}
 
 					bool bRenameScene = ImGui::InputText("##rename-scene",
@@ -581,7 +581,7 @@ namespace flex
 				static char newSceneFileName[sceneNameMaxCharCount];
 				if (bClicked)
 				{
-					strcpy_s(newSceneFileName, scene->GetFileName().c_str());
+					strcpy(newSceneFileName, scene->GetFileName().c_str());
 				}
 
 				bool bRenameSceneFileName = ImGui::InputText("##rename-scene-file-name",
@@ -680,7 +680,7 @@ namespace flex
 
 				std::string newSceneNameStr = scene->GetName();
 				newSceneNameStr += " Copy";
-				strcpy_s(newSceneName, newSceneNameStr.c_str());
+				strcpy(newSceneName, newSceneNameStr.c_str());
 
 				std::string newSceneFileNameStr = StripFileType(scene->GetFileName());
 
@@ -708,7 +708,7 @@ namespace flex
 
 				newSceneFileNameStr += ".json";
 
-				strcpy_s(newSceneFileName, newSceneFileNameStr.c_str());
+				strcpy(newSceneFileName, newSceneFileNameStr.c_str());
 			}
 
 			bool bCloseContextMenu = false;

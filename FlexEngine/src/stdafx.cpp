@@ -1,97 +1,30 @@
 #include "stdafx.hpp"
 
-#include <iostream>
-
 namespace flex
 {
-	ImVec4 g_WarningTextColor(1.0f, 0.25f, 0.25f, 1.0f);
-	ImVec4 g_WarningButtonColor(0.65f, 0.12f, 0.09f, 1.0f);
-	ImVec4 g_WarningButtonHoveredColor(0.45f, 0.04f, 0.01f, 1.0f);
-	ImVec4 g_WarningButtonActiveColor(0.35f, 0.0f, 0.0f, 1.0f);
-}
+    bool g_bOpenGLEnabled = false;
+    bool g_bVulkanEnabled = true;
+    bool g_bEnableLogging_Loading = false;
 
-void* operator new(size_t size)
-{
-	return malloc_hooked(size);
-}
-
-void operator delete(void* ptr) noexcept
-{
-	free_hooked(ptr);
-}
-
-void* malloc_hooked(size_t size)
-{
-	if (size == 0)
-	{
-		std::cerr << "Attempted to alloc with a size of 0!\n";
-		return nullptr;
-	}
-	size += sizeof(size_t);
-	flex::g_TotalTrackedAllocatedMemory += size;
-	++flex::g_TrackedAllocationCount;
-	void* ptr = malloc(size);
-	*((size_t*)ptr) = size;
-	ptr = ((size_t*)ptr) + 1;
-	return ptr;
-}
-
-void* aligned_malloc_hooked(size_t size, size_t alignment)
-{
-	if (size == 0)
-	{
-		std::cerr << "Attempted to aligned alloc with a size of 0!\n";
-		return nullptr;
-	}
-	flex::g_TotalTrackedAllocatedMemory += size;
-	++flex::g_TrackedAllocationCount;
-	void* ptr = _aligned_malloc(size, alignment);
-	return ptr;
-}
-
-void free_hooked(void* ptr)
-{
-	if (!ptr)
-	{
-		return;
-	}
-	ptr = ((size_t*)ptr) - 1;
-	size_t size = *((size_t*)ptr);
-	flex::g_TotalTrackedAllocatedMemory -= size;
-	++flex::g_TrackedDeallocationCount;
-	free(ptr);
-}
-
-void aligned_free_hooked(void* ptr)
-{
-	if (!ptr)
-	{
-		return;
-	}
-	++flex::g_TrackedDeallocationCount;
-	_aligned_free(ptr);
-}
-
-void* realloc_hooked(void* ptr, size_t newsz)
-{
-	if (!ptr)
-	{
-		return malloc_hooked(newsz);
-	}
-	if (newsz == 0)
-	{
-		std::cerr << "Attempted to realloc to a size of 0!\n";
-		free_hooked(ptr);
-		return nullptr;
-	}
-	ptr = ((size_t*)ptr) - 1;
-	size_t size = *((size_t*)ptr);
-	flex::g_TotalTrackedAllocatedMemory -= size;
-
-	newsz += sizeof(size_t);
-	flex::g_TotalTrackedAllocatedMemory += newsz;
-	ptr = realloc(ptr, newsz);
-	*((size_t*)ptr) = newsz;
-	ptr = ((size_t*)ptr) + 1;
-	return ptr;
-}
+    glm::vec3 VEC3_RIGHT = glm::vec3(1.0f, 0.0f, 0.0f);
+    glm::vec3 VEC3_UP = glm::vec3(0.0f, 1.0f, 0.0f);
+    glm::vec3 VEC3_FORWARD = glm::vec3(0.0f, 0.0f, 1.0f);
+    glm::vec2 VEC2_ONE = glm::vec2(1.0f);
+    glm::vec2 VEC2_NEG_ONE = glm::vec2(-1.0f);
+    glm::vec2 VEC2_ZERO = glm::vec2(0.0f);
+    glm::vec3 VEC3_ONE = glm::vec3(1.0f);
+    glm::vec3 VEC3_NEG_ONE = glm::vec3(-1.0f);
+    glm::vec3 VEC3_ZERO = glm::vec3(0.0f);
+    glm::vec4 VEC4_ONE = glm::vec4(1.0f);
+    glm::vec4 VEC4_NEG_ONE = glm::vec4(-1.0f);
+    glm::vec4 VEC4_ZERO = glm::vec4(0.0f);
+    glm::quat QUAT_UNIT = glm::quat(VEC3_ZERO);
+    glm::mat4 MAT4_IDENTITY = glm::mat4(1.0f);
+    glm::mat4 MAT4_ZERO = glm::mat4(0.0f);
+    flex::u32 COLOR32U_WHITE = 0xFFFFFFFF;
+    flex::u32 COLOR32U_BLACK = 0x00000000;
+    glm::vec4 COLOR128F_WHITE = VEC4_ONE;
+    glm::vec4 COLOR128F_BLACK = VEC4_ZERO;
+    std::string EMPTY_STRING = std::string();
+    flex::u32 MAX_TEXTURE_DIM = 65536;
+} // namespace flex

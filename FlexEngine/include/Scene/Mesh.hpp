@@ -2,7 +2,7 @@
 
 #include "Graphics/RendererTypes.hpp" // For TopologyMode
 
-enum cgltf_result;
+#include "cgltf/cgltf.h" // for cgltf_result
 
 namespace flex
 {

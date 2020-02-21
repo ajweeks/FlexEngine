@@ -12,6 +12,8 @@ namespace flex
 #endif
 
 	bool g_bEnableLogToConsole = true;
+	std::stringstream g_LogBuffer;
+	const char* g_LogBufferFilePath;
 
 	void InitializeLogger()
 	{
@@ -29,8 +31,7 @@ namespace flex
 
 	void ClearLogFile()
 	{
-		FILE* f = nullptr;
-		fopen_s(&f, g_LogBufferFilePath, "w");
+		FILE* f = fopen(g_LogBufferFilePath, "w");
 
 		if (f)
 		{
@@ -43,8 +44,7 @@ namespace flex
 	{
 		// TODO: Only append new content rather than overwriting old content?
 
-		FILE* f = nullptr;
-		fopen_s(&f, g_LogBufferFilePath, "w");
+		FILE* f = fopen(g_LogBufferFilePath, "w");
 
 		if (f)
 		{
@@ -54,14 +54,14 @@ namespace flex
 		}
 	}
 
-	void Print(FORMAT_STRING const char* str, ...)
+	void Print(const char* str, ...)
 	{
 		if (!g_bEnableLogToConsole)
 		{
 			return;
 		}
 
-		SetConsoleTextAttribute(g_ConsoleHandle, CONSOLE_COLOR_DEFAULT);
+		SetConsoleTextColor(CONSOLE_COLOR_DEFAULT);
 
 		va_list argList;
 		va_start(argList, str);
@@ -71,14 +71,14 @@ namespace flex
 		va_end(argList);
 	}
 
-	void PrintWarn(FORMAT_STRING const char* str, ...)
+	void PrintWarn(const char* str, ...)
 	{
 		if (!g_bEnableLogToConsole)
 		{
 			return;
 		}
 
-		SetConsoleTextAttribute(g_ConsoleHandle, CONSOLE_COLOR_WARNING);
+		SetConsoleTextColor(CONSOLE_COLOR_WARNING);
 
 		va_list argList;
 		va_start(argList, str);
@@ -88,14 +88,14 @@ namespace flex
 		va_end(argList);
 	}
 
-	void PrintError(FORMAT_STRING const char* str, ...)
+	void PrintError(const char* str, ...)
 	{
 		if (!g_bEnableLogToConsole)
 		{
 			return;
 		}
 
-		SetConsoleTextAttribute(g_ConsoleHandle, CONSOLE_COLOR_ERROR);
+		SetConsoleTextColor(CONSOLE_COLOR_ERROR);
 
 		va_list argList;
 		va_start(argList, str);
@@ -105,17 +105,17 @@ namespace flex
 		va_end(argList);
 	}
 
-	void PrintLong(FORMAT_STRING const char* str, ...)
+	void PrintLong(const char* str)
 	{
 		i32 len = strlen(str);
 		for (i32 i = 0; i < len; i += MAX_CHARS)
 		{
-			Print(str + i);
+			Print(str + i, "");
 		}
-		Print(str + len - len % MAX_CHARS);
+		Print(str + len - len % MAX_CHARS, "");
 	}
 
-	void Print(FORMAT_STRING const char* str, va_list argList)
+	void Print(const char* str, va_list argList)
 	{
 		if (strlen(str) == 0)
 		{
@@ -137,6 +137,21 @@ namespace flex
 			// TODO: Disable in shipping
 			OutputDebugString(s.c_str());
 		}
-
 	}
+
+	void SetConsoleTextColor(flex::u64 color)
+	{
+#ifdef _WIN32
+		SetConsoleTextAttribute(g_ConsoleHandle, color);
+#endif
+	}
+
+	void OutputDebugString(const char* str)
+	{
+#ifdef _WIN32
+		::OutputDebugString(str);
+#endif
+	}
+
+
 } // namespace flex

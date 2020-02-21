@@ -832,8 +832,6 @@ namespace flex
 				dRot = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, rayStartG, rayEndG, pGizmoRot);
 			}
 
-			pGizmoRot = m_CurrentRot;
-
 			Transform* selectedObjectTransform = m_CurrentlySelectedObjects[m_CurrentlySelectedObjects.size() - 1]->GetTransform();
 
 			debugDrawer->drawLine(
@@ -853,7 +851,7 @@ namespace flex
 		} break;
 		case TransformState::SCALE:
 		{
-			glm::vec3 dScale(1.0f);
+			glm::vec3 dLocalScale(1.0f);
 			real scale = 0.1f;
 
 			if (m_DraggingAxisIndex == X_AXIS_IDX)

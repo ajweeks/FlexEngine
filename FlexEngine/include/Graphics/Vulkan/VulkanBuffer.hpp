@@ -24,9 +24,9 @@ namespace flex
 			VkResult Map(VkDeviceSize size = VK_WHOLE_SIZE);
 			void Unmap();
 
+			VulkanDevice* m_Device = nullptr;
 			VDeleter<VkBuffer> m_Buffer;
 			VDeleter<VkDeviceMemory> m_Memory;
-			VulkanDevice* m_Device = nullptr;
 			VkDeviceSize m_Size = 0;
 			VkDeviceSize m_Alignment = 0;
 			void* m_Mapped = nullptr;

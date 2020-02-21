@@ -1,4 +1,4 @@
-#include "stdafx.hpp"
+#pragma once
 
 #include "JSONParser.hpp"
 #include "Helpers.hpp"
@@ -31,27 +31,25 @@ namespace flex
 			if (val != exp)
 			{
 				std::string msgStr = std::string(funcName) + " - Expected " + std::to_string(exp) + ", got " + std::to_string(val) + ", error message:\n\t" + msg;
-				throw std::exception(msgStr.c_str());
+				throw std::runtime_error(msgStr.c_str());
 			}
 		}
 
-		template<>
 		static void Expect(const char* funcName, glm::vec3 val, glm::vec3 exp, const char* msg)
 		{
 			if (val != exp)
 			{
 				std::string msgStr = std::string(funcName) + " - Expected " + VecToString(exp) + ", got " + VecToString(val) + ", error message:\n\t" + msg;
-				throw std::exception(msgStr.c_str());
+				throw std::runtime_error(msgStr.c_str());
 			}
 		}
 
-		template<>
 		static void Expect(const char* funcName, const char* val, const char* exp, const char* msg)
 		{
 			if (strcmp(val, exp) != 0)
 			{
 				std::string msgStr = std::string(funcName) + " - Expected " + std::string(exp) + ", got " + std::string(val) + ", error message:\n\t" + std::string(msg);
-				throw std::exception(msgStr.c_str());
+				throw std::runtime_error(msgStr.c_str());
 			}
 		}
 
@@ -462,7 +460,7 @@ namespace flex
 			{
 				Print("%d/%d tests passed\n", ARRAY_LENGTH(funcs), ARRAY_LENGTH(funcs));
 			}
-			Print("");
+			Print("\n");
 		}
 	};
 }

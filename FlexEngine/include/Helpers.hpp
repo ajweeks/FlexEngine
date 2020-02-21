@@ -7,7 +7,6 @@ namespace flex
 	// TODO: Many of the functions in this file would benefit from unit tests
 
 	static const i32 DEFAULT_FLOAT_PRECISION = 2;
-	static const char* SEPARATOR_STR = ", ";
 
 	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount = 3, bool bFlipVertically = false, u32* channelCountOut = nullptr);
 	void DestroyGLFWimage(GLFWimage& image);

@@ -26,8 +26,7 @@ namespace flex
 			if (result != VK_SUCCESS)
 			{
 				PrintError("Vulkan fatal error: %s\n", VulkanErrorString(result).c_str());
-				// TODO: Replace with platform-agnostic method
-				DebugBreak();
+				DEBUG_BREAK();
 				assert(result == VK_SUCCESS);
 			}
 		}
@@ -235,51 +234,51 @@ namespace flex
 
 		VulkanTexture::VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue,
 			const std::string& name, u32 width, u32 height, u32 channelCount) :
-			m_VulkanDevice(device),
-			m_GraphicsQueue(graphicsQueue),
 			image(device->m_LogicalDevice, vkDestroyImage),
 			imageMemory(device->m_LogicalDevice, vkFreeMemory),
 			imageView(device->m_LogicalDevice, vkDestroyImageView),
 			sampler(device->m_LogicalDevice, vkDestroySampler),
-			name(name),
 			width(width),
 			height(height),
-			channelCount(channelCount)
+			channelCount(channelCount),
+			name(name),
+			m_VulkanDevice(device),
+			m_GraphicsQueue(graphicsQueue)
 		{
 		}
 
 		VulkanTexture::VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue,
 			const std::string& relativeFilePath, u32 channelCount, bool bFlipVertically,
 			bool bGenerateMipMaps, bool bHDR) :
-			m_VulkanDevice(device),
-			m_GraphicsQueue(graphicsQueue),
 			image(device->m_LogicalDevice, vkDestroyImage),
 			imageMemory(device->m_LogicalDevice, vkFreeMemory),
 			imageView(device->m_LogicalDevice, vkDestroyImageView),
 			sampler(device->m_LogicalDevice, vkDestroySampler),
+			channelCount(channelCount),
 			relativeFilePath(relativeFilePath),
 			fileName(StripLeadingDirectories(relativeFilePath)),
-			channelCount(channelCount),
 			bFlipVertically(bFlipVertically),
 			bGenerateMipMaps(bGenerateMipMaps),
-			bHDR(bHDR)
+			bHDR(bHDR),
+			m_VulkanDevice(device),
+			m_GraphicsQueue(graphicsQueue)
 		{
 		}
 
 		VulkanTexture::VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue,
 			const std::array<std::string, 6>& relativeCubemapFilePaths, u32 channelCount, bool bFlipVertically,
 			bool bGenerateMipMaps, bool bHDR) :
-			m_VulkanDevice(device),
-			m_GraphicsQueue(graphicsQueue),
 			image(device->m_LogicalDevice, vkDestroyImage),
 			imageMemory(device->m_LogicalDevice, vkFreeMemory),
 			imageView(device->m_LogicalDevice, vkDestroyImageView),
 			sampler(device->m_LogicalDevice, vkDestroySampler),
-			relativeCubemapFilePaths(relativeCubemapFilePaths),
 			channelCount(channelCount),
+			relativeCubemapFilePaths(relativeCubemapFilePaths),
 			bFlipVertically(bFlipVertically),
 			bGenerateMipMaps(bGenerateMipMaps),
-			bHDR(bHDR)
+			bHDR(bHDR),
+			m_VulkanDevice(device),
+			m_GraphicsQueue(graphicsQueue)
 		{
 		}
 
@@ -430,8 +429,6 @@ namespace flex
 				PrintError("Cubemap create info missing required size data\n");
 				return 0;
 			}
-
-			const u32 calculatedMipLevels = createInfo.bGenerateMipMaps ? static_cast<u32>(floor(log2(std::min(createInfo.width, createInfo.height)))) + 1 : 0;
 
 			VkImageCreateInfo imageCreateInfo = vks::imageCreateInfo();
 			imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -1106,7 +1103,7 @@ namespace flex
 					bColorSwizzle = (std::find(formatsBGR.begin(), formatsBGR.end(), imageFormat) != formatsBGR.end());
 				}
 
-				CopyPixels(data, u8Data, (u32)subResourceLayout.offset, width, height, channelCount, (u32)subResourceLayout.rowPitch, false);
+				CopyPixels(data, u8Data, (u32)subResourceLayout.offset, width, height, channelCount, (u32)subResourceLayout.rowPitch, bColorSwizzle);
 
 				bResult = SaveImage(absoluteFilePath, saveFormat, width, height, channelCount, u8Data, bFlipVertically);
 
@@ -1548,9 +1545,9 @@ namespace flex
 		}
 
 		VulkanRenderObject::VulkanRenderObject(const VDeleter<VkDevice>& device, RenderID renderID) :
+			renderID(renderID),
 			pipelineLayout(device, vkDestroyPipelineLayout),
-			graphicsPipeline(device, vkDestroyPipeline),
-			renderID(renderID)
+			graphicsPipeline(device, vkDestroyPipeline)
 		{
 		}
 
@@ -2104,17 +2101,17 @@ namespace flex
 		}
 
 		FrameBufferAttachment::FrameBufferAttachment(VulkanDevice* device, const CreateInfo& createInfo) :
+			ID(GenerateUID()),
 			device(device),
 			width(createInfo.width),
 			height(createInfo.height),
-			format(createInfo.format),
 			bIsDepth(createInfo.bIsDepth),
 			bIsSampled(createInfo.bIsSampled),
 			bIsCubemap(createInfo.bIsCubemap),
 			bIsTransferedSrc(createInfo.bIsTransferedSrc),
 			bIsTransferedDst(createInfo.bIsTransferedDst),
-			layout(createInfo.initialLayout),
-			ID(GenerateUID())
+			format(createInfo.format),
+			layout(createInfo.initialLayout)
 		{
 		}
 
@@ -2341,9 +2338,9 @@ namespace flex
 					std::string workingDir(RESOURCE("shaders"));
 					char cmdStrBuf[512];
 					memset(cmdStrBuf, 0, 512);
-					strcat_s(cmdStrBuf, "pushd \"");
-					strcat_s(cmdStrBuf, workingDir.c_str());
-					strcat_s(cmdStrBuf, "\" && call vk_compile.bat >nul && popd");
+					strcat(cmdStrBuf, "pushd \"");
+					strcat(cmdStrBuf, workingDir.c_str());
+					strcat(cmdStrBuf, "\" && call vk_compile.bat >nul && popd");
 					bSuccess = system(cmdStrBuf) == 0;
 					is_done = true;
 				});

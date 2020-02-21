@@ -106,11 +106,8 @@ configuration "Shipping_WithSymbols"
 	flags {"OptimizeSpeed", "Symbols", "No64BitChecks" }
 configuration {}
 
-
-configuration "vs*"
+configuration {}
 	flags { "NoIncrementalLink", "NoEditAndContinue" }
-	linkoptions { "/ignore:4221" }
-	defines { "PLATFORM_Win" }
 	includedirs { 
 		path.join(SOURCE_DIR, "include"),
 		path.join(DEPENDENCIES_DIR, "glad/include"),
@@ -125,12 +122,18 @@ configuration "vs*"
 		DEPENDENCIES_DIR,
 	}
 	debugdir "$(OutDir)"
+configuration "vs*"
+	defines { "PLATFORM_Win" }
+	linkoptions { "/ignore:4221" }
 configuration { "vs*", "x32" }
 	flags { "EnableSSE2" }
 	defines { "WIN32" }
 configuration { "x32" }
 	defines { "PLATFORM_x32" }
+configuration "linux-*"
+	defines { "linux", "__linux", "__linux__" }
 configuration {}
+
 
 
 startproject "Flex"
@@ -149,15 +152,21 @@ project "Flex"
 
 		links { "opengl32" } 
 
+	configuration "linux-*"
+		links { }  -- Skip OpenGL.. for now
+
+
 	platformLibraries()
 	staticPlatformLibraries()
 	windowsPlatformPostBuild()
 
 	--Linked libraries
+configuration "vs*"
     links { "opengl32", "glfw3", "vulkan-1", "OpenAL32" }
+configuration {}
 
 
-configuration { "Debug" }
+configuration { "Debug", "vs*" }
 	links { "BulletCollision_Debug", "BulletDynamics_Debug", "LinearMath_Debug", "freetyped" } 
 configuration { "Development" }
 	links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" }
@@ -165,38 +174,35 @@ configuration { "Shipping" }
 	links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" } 
 configuration { "Shipping_WithSymbols" }
 	links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" } 
+configuration "linux-*"
+	links { "glfw3", "vulkan-1", "openal", "Bullet3Collision", "Bullet3Dynamics", "LinearMath", "freetyped" }
 configuration {}
 
-	--Additional includedirs
-	includedirs { 
-		path.join(SOURCE_DIR, "include"),
-	}
+--Additional includedirs
+includedirs { 
+	path.join(SOURCE_DIR, "include"),
+}
 
-	--Source files
-    files {
-		path.join(SOURCE_DIR, "include/**.h"), 
-		path.join(SOURCE_DIR, "include/**.hpp"), 
-		path.join(SOURCE_DIR, "src/**.cpp"), 
-		path.join(DEPENDENCIES_DIR, "imgui/**.h"),
-		path.join(DEPENDENCIES_DIR, "imgui/**.cpp"),
-		path.join(DEPENDENCIES_DIR, "glad/src/glad.c"),
-	}
+--Source files
+files {
+	path.join(SOURCE_DIR, "include/**.h"), 
+	path.join(SOURCE_DIR, "include/**.hpp"), 
+	path.join(SOURCE_DIR, "src/**.cpp"), 
+	path.join(DEPENDENCIES_DIR, "imgui/**.h"),
+	path.join(DEPENDENCIES_DIR, "imgui/**.cpp"),
+	path.join(DEPENDENCIES_DIR, "glad/src/glad.c"),
+}
 
-	--Exclude the following files from the build, but keep in the project
-	removefiles {
-		--path.join(DEPENDENCIES_DIR, "imgui/imconfig_demo.cpp")
-	}
+--Exclude the following files from the build, but keep in the project
+removefiles {
+	--path.join(DEPENDENCIES_DIR, "imgui/imconfig_demo.cpp")
+}
 
-	-- Don't use pre-compiled header for the following files
-	nopch {
-		path.join(DEPENDENCIES_DIR, "imgui/**.cpp"),
-		path.join(DEPENDENCIES_DIR, "glad/src/glad.c")
-	}
+-- Don't use pre-compiled header for the following files
+nopch {
+	path.join(DEPENDENCIES_DIR, "imgui/**.cpp"),
+	path.join(DEPENDENCIES_DIR, "glad/src/glad.c")
+}
 
-	pchheader "stdafx.hpp"
-	pchsource "../FlexEngine/src/stdafx.cpp"
-
-
-
-
--- TODO: Figure out how to set stdafx.cpp to use /Yc compiler flag to generate precompiled header object
+pchheader "stdafx.hpp"
+pchsource "stdafx.cpp"

@@ -10,38 +10,17 @@ namespace flex
 {
 	class GameObject;
 
-	using i8 = int8_t;
-	using i16 = int16_t;
-	using i32 = int32_t;
-	using i64 = int64_t;
 	using u8 = uint8_t;
 	using u16 = uint16_t;
 	using u32 = uint32_t;
 	using u64 = uint64_t;
+	using i8 = int8_t;
+	using i16 = int16_t;
+	using i32 = int32_t;
+	using i64 = int64_t;
 	using real = float;
 	using deg = real;
 	using rad = real;
-
-#define u8_min std::numeric_limits<u8>::min()
-#define u8_max std::numeric_limits<u8>::max()
-#define u16_min std::numeric_limits<u16>::min()
-#define u16_max std::numeric_limits<u16>::max()
-#define u32_min std::numeric_limits<u32>::min()
-#define u32_max std::numeric_limits<u32>::max()
-#define u64_min std::numeric_limits<u64>::min()
-#define u64_max std::numeric_limits<u64>::max()
-
-#define i8_min std::numeric_limits<i8>::min()
-#define i8_max std::numeric_limits<i8>::max()
-#define i16_min std::numeric_limits<i16>::min()
-#define i16_max std::numeric_limits<i16>::max()
-#define i32_min std::numeric_limits<i32>::min()
-#define i32_max std::numeric_limits<i32>::max()
-#define i64_min std::numeric_limits<i64>::min()
-#define i64_max std::numeric_limits<i64>::max()
-
-#define real_min std::numeric_limits<real>::min()
-#define real_max std::numeric_limits<real>::max()
 
 	using sec = real;	// Seconds
 	using ms = real;	// Milliseconds		1x10^-3 seconds
@@ -62,19 +41,40 @@ namespace flex
 	using VariableID = u32;
 	using ParticleSystemID = u32;
 
-#define InvalidRenderID ((RenderID)u32_max)
-#define InvalidShaderID ((ShaderID)u32_max)
-#define InvalidMaterialID ((MaterialID)u32_max)
-#define InvalidTextureID ((TextureID)u32_max)
-#define InvalidFrameBufferAttachmentID ((FrameBufferAttachmentID)u32_max)
-#define InvalidPointLightID ((PointLightID)u32_max)
-#define InvalidAudioSourceID ((AudioSourceID)u32_max)
-#define InvalidTrackID ((TrackID)u32_max)
-#define InvalidCartID ((CartChainID)u32_max)
-#define InvalidCartChainID ((CartChainID)u32_max)
-#define InvalidVariableID ((VariableID)u32_max)
-#define InvalidParticleSystemID ((ParticleSystemID)u32_max)
-#define InvalidID u32_max
+	static constexpr auto u8_min = std::numeric_limits<u8>::min();
+	static constexpr auto u8_max = std::numeric_limits<u8>::max();
+	static constexpr auto u16_min = std::numeric_limits<u16>::min();
+	static constexpr auto u16_max = std::numeric_limits<u16>::max();
+	static constexpr auto u32_min = std::numeric_limits<u32>::min();
+	static constexpr auto u32_max = std::numeric_limits<u32>::max();
+	static constexpr auto u64_min = std::numeric_limits<u64>::min();
+	static constexpr auto u64_max = std::numeric_limits<u64>::max();
+
+	static constexpr auto i8_min = std::numeric_limits<i8>::min();
+	static constexpr auto i8_max = std::numeric_limits<i8>::max();
+	static constexpr auto i16_min = std::numeric_limits<i16>::min();
+	static constexpr auto i16_max = std::numeric_limits<i16>::max();
+	static constexpr auto i32_min = std::numeric_limits<i32>::min();
+	static constexpr auto i32_max = std::numeric_limits<i32>::max();
+	static constexpr auto i64_min = std::numeric_limits<i64>::min();
+	static constexpr auto i64_max = std::numeric_limits<i64>::max();
+
+	static constexpr auto real_min = std::numeric_limits<real>::min();
+	static constexpr auto real_max = std::numeric_limits<real>::max();
+
+	static constexpr auto InvalidRenderID = ((RenderID)u32_max);
+	static constexpr auto InvalidShaderID = ((ShaderID)u32_max);
+	static constexpr auto InvalidMaterialID = ((MaterialID)u32_max);
+	static constexpr auto InvalidTextureID = ((TextureID)u32_max);
+	static constexpr auto InvalidFrameBufferAttachmentID = ((FrameBufferAttachmentID)u32_max);
+	static constexpr auto InvalidPointLightID = ((PointLightID)u32_max);
+	static constexpr auto InvalidAudioSourceID = ((AudioSourceID)u32_max);
+	static constexpr auto InvalidTrackID = ((TrackID)u32_max);
+	static constexpr auto InvalidCartID = ((CartChainID)u32_max);
+	static constexpr auto InvalidCartChainID = ((CartChainID)u32_max);
+	static constexpr auto InvalidVariableID = ((VariableID)u32_max);
+	static constexpr auto InvalidParticleSystemID = ((ParticleSystemID)u32_max);
+	static constexpr auto InvalidID = u32_max;
 
 	//template<bool> struct StaticAssert;
 	//template<> struct StaticAssert<true> {};

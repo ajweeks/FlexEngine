@@ -53,13 +53,15 @@ IGNORE_WARNINGS_POP
 #include "Graphics/Vulkan/VulkanRenderer.hpp"
 #endif
 
-
+// TODO: Find out equivalent for nix systems
+#ifdef _WIN32
 // Specify that we prefer to be run on a discrete card on laptops when available
 extern "C"
 {
 	__declspec(dllexport) DWORD NvOptimusEnablement = 0x01;
 	__declspec(dllexport) DWORD AmdPowerXpressRequestHighPerformance = 0x01;
 }
+#endif
 
 namespace flex
 {
@@ -153,7 +155,8 @@ namespace flex
 
 		m_CompilerVersion =
 			IntToString(__GNUC__) + '.' +
-			IntToString(__GNUC_MINOR__) +
+			IntToString(__GNUC_MINOR__) + '.' +
+			IntToString(__GNUC_PATCHLEVEL__);
 #else
 		m_CompilerName = "Unknown";
 		m_CompilerVersion = "Unknown";

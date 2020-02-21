@@ -1017,7 +1017,6 @@ namespace flex
 				{ createInfo->normalTexturePath, U_NORMAL_SAMPLER, "Normal" },
 				{ createInfo->hdrEquirectangularTexturePath, U_HDR_EQUIRECTANGULAR_SAMPLER, "HDR Equirectangular", VK_FORMAT_R32G32B32A32_SFLOAT, 1, true },
 			};
-			const size_t textureCount = sizeof(textureInfos) / sizeof(textureInfos[0]);
 
 			for (TextureInfo& textureInfo : textureInfos)
 			{
@@ -1728,7 +1727,7 @@ namespace flex
 						if (arrayIndex < m_TimestampHistograms.size())
 						{
 							char buf[256];
-							sprintf_s(buf, 256, "%s: %.2fms", iter->first.c_str(), m_TimestampHistograms[arrayIndex][0]);
+							snprintf(buf, 256, "%s: %.2fms", iter->first.c_str(), m_TimestampHistograms[arrayIndex][0]);
 							ImGui::PlotLines(buf, m_TimestampHistograms[arrayIndex].data(), NUM_GPU_TIMINGS, m_TimestampHistogramIndex, nullptr, 0.0f, 8.0f);
 						}
 					}
@@ -1761,10 +1760,9 @@ namespace flex
 								if (material.uniformBufferList.Has(UniformBufferType::DYNAMIC) &&
 									material.uniformBufferList.Get(UniformBufferType::DYNAMIC)->fullDynamicBufferSize > 0)
 								{
-									ImVec2 p = ImGui::GetCursorScreenPos();
 									char nodeID0[256];
 									memset(nodeID0, 0, 256);
-									sprintf_s(nodeID0, 256, "%s##%u",
+									snprintf(nodeID0, 256, "%s##%u",
 										shader.shader->name.c_str(),
 										shaderBatchPair.shaderID);
 									if (ImGui::BeginChild(nodeID0, ImVec2(0, 200), true))
@@ -1790,7 +1788,7 @@ namespace flex
 
 										char histNodeID[256];
 										memset(histNodeID, 0, 256);
-										sprintf_s(histNodeID, 256, "%s (%u/%u)##histo%u",
+										snprintf(histNodeID, 256, "%s (%u/%u)##histo%u",
 											shader.shader->name.c_str(),
 											bufferSlotsTotal - bufferSlotsFree,
 											bufferSlotsTotal,
@@ -1812,7 +1810,6 @@ namespace flex
 					}
 					else
 					{
-						ImVec2 p = ImGui::GetCursorScreenPos();
 						char nodeID0[256];
 						memset(nodeID0, 0, 256);
 						if (ImGui::BeginChild("##particles", ImVec2(0, 200), true))
@@ -1827,7 +1824,7 @@ namespace flex
 
 									char histNodeID[256];
 									memset(histNodeID, 0, 256);
-									sprintf_s(histNodeID, 256, "%s %uB##particles_size",
+									snprintf(histNodeID, 256, "%s %uB##particles_size",
 										simMat.material.name.c_str(),
 										bufferSlotsTotal);
 									real progress = 1.0f;
@@ -5982,7 +5979,7 @@ namespace flex
 			DescriptorSetCreateInfo createInfo = {};
 
 			char debugName[256];
-			sprintf_s(debugName, "Render Object %s (render ID %u) descriptor set", renderObject->gameObject ? renderObject->gameObject->GetName().c_str() : "", renderID);
+			snprintf(debugName, 256, "Render Object %s (render ID %u) descriptor set", renderObject->gameObject ? renderObject->gameObject->GetName().c_str() : "", renderID);
 			createInfo.DBG_Name = debugName;
 			createInfo.descriptorSet = &renderObject->descriptorSet;
 			createInfo.descriptorSetLayout = &m_DescriptorSetLayouts[material->material.shaderID];
@@ -6365,7 +6362,7 @@ namespace flex
 
 			GraphicsPipelineCreateInfo pipelineCreateInfo = {};
 			char debugName[256];
-			sprintf_s(debugName, "Render Object %s (render ID %u) graphics pipeline", renderObject->gameObject ? renderObject->gameObject->GetName().c_str() : "", renderID);
+			snprintf(debugName, 256, "Render Object %s (render ID %u) graphics pipeline", renderObject->gameObject ? renderObject->gameObject->GetName().c_str() : "", renderID);
 			pipelineCreateInfo.DBG_Name = debugName;
 			pipelineCreateInfo.pipelineLayout = renderObject->pipelineLayout.replace();
 			pipelineCreateInfo.graphicsPipeline = renderObject->graphicsPipeline.replace();
@@ -6630,7 +6627,7 @@ namespace flex
 				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &framebufferInfo, nullptr, m_SwapChainFramebuffers[i]->Replace()));
 
 				char name[256];
-				sprintf_s(name, "Swapchain %u", i);
+				snprintf(name, 256, "Swapchain %u", i);
 				SetFramebufferName(m_VulkanDevice, m_SwapChainFramebuffers[i]->frameBuffer, name);
 			}
 		}
@@ -6671,8 +6668,6 @@ namespace flex
 
 			// GBuffer frame buffer attachments
 			{
-				const u32 frameBufferColorAttachmentCount = 2;
-
 				CreateAttachment(m_VulkanDevice, m_GBufferColorAttachment0, "GBuffer image 0", "GBuffer image view 0");
 				CreateAttachment(m_VulkanDevice, m_GBufferColorAttachment1, "GBuffer image 1", "GBuffer image view 1");
 			}
@@ -6824,7 +6819,7 @@ namespace flex
 					imageView.flags = 0;
 					VK_CHECK_RESULT(vkCreateImageView(m_VulkanDevice->m_LogicalDevice, &imageView, nullptr, m_ShadowCascades[i]->imageView.replace()));
 					char imageViewName[256];
-					sprintf_s(imageViewName, "Shadow cascade %u image view", i);
+					snprintf(imageViewName, 256, "Shadow cascade %u image view", i);
 					SetImageViewName(m_VulkanDevice, m_ShadowCascades[i]->imageView, imageViewName);
 
 					VkFramebufferCreateInfo shadowFramebufferCreateInfo = vks::framebufferCreateInfo(*m_ShadowRenderPass);
@@ -6834,7 +6829,7 @@ namespace flex
 					shadowFramebufferCreateInfo.height = SHADOW_CASCADE_RES;
 
 					char frameBufferName[256];
-					sprintf_s(frameBufferName, "Shadow cascade %u frame buffer", i);
+					snprintf(frameBufferName, 256, "Shadow cascade %u frame buffer", i);
 
 					m_ShadowCascades[i]->frameBuffer.Create(&shadowFramebufferCreateInfo, m_ShadowRenderPass, frameBufferName);
 
@@ -6856,7 +6851,7 @@ namespace flex
 		// TODO: Test that this still works
 		void VulkanRenderer::PrepareCubemapFrameBuffer()
 		{
-			const u32 frameBufferColorAttachmentCount = 2;
+			// const u32 frameBufferColorAttachmentCount = 2;
 
 			m_GBufferCubemapColorAttachment0->width = m_CubemapFramebufferSize.x;
 			m_GBufferCubemapColorAttachment0->height = m_CubemapFramebufferSize.y;
@@ -8621,7 +8616,7 @@ namespace flex
 			real exposure = cam->exposure;
 			glm::vec2 m_NearFarPlanes(cam->GetZNear(), cam->GetZFar());
 
-			static DirLightData defaultDirLightData = { VEC3_RIGHT, 0, VEC3_ONE, 0.0f, 0, 0.0f };
+			static DirLightData defaultDirLightData = { VEC3_RIGHT, 0, VEC3_ONE, 0.0f, 0, 0.0f, { 0.0f, 0.0f } };
 
 			DirLightData* dirLightData = &defaultDirLightData;
 			if (m_DirectionalLight)
