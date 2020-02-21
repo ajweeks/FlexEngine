@@ -153,7 +153,7 @@ project "Flex"
 		links { "opengl32" } 
 
 	configuration "linux-*"
-		links { "opengl32" } 
+		links { }  -- Skip OpenGL.. for now
 
 
 	platformLibraries()
@@ -161,10 +161,12 @@ project "Flex"
 	windowsPlatformPostBuild()
 
 	--Linked libraries
+configuration "vs*"
     links { "opengl32", "glfw3", "vulkan-1", "OpenAL32" }
+configuration {}
 
 
-configuration { "Debug" }
+configuration { "Debug", "vs*" }
 	links { "BulletCollision_Debug", "BulletDynamics_Debug", "LinearMath_Debug", "freetyped" } 
 configuration { "Development" }
 	links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" }
@@ -172,33 +174,35 @@ configuration { "Shipping" }
 	links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" } 
 configuration { "Shipping_WithSymbols" }
 	links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" } 
+configuration "linux-*"
+	links { "glfw3", "vulkan-1", "openal", "Bullet3Collision", "Bullet3Dynamics", "LinearMath", "freetyped" }
 configuration {}
 
-	--Additional includedirs
-	includedirs { 
-		path.join(SOURCE_DIR, "include"),
-	}
+--Additional includedirs
+includedirs { 
+	path.join(SOURCE_DIR, "include"),
+}
 
-	--Source files
-    files {
-		path.join(SOURCE_DIR, "include/**.h"), 
-		path.join(SOURCE_DIR, "include/**.hpp"), 
-		path.join(SOURCE_DIR, "src/**.cpp"), 
-		path.join(DEPENDENCIES_DIR, "imgui/**.h"),
-		path.join(DEPENDENCIES_DIR, "imgui/**.cpp"),
-		path.join(DEPENDENCIES_DIR, "glad/src/glad.c"),
-	}
+--Source files
+files {
+	path.join(SOURCE_DIR, "include/**.h"), 
+	path.join(SOURCE_DIR, "include/**.hpp"), 
+	path.join(SOURCE_DIR, "src/**.cpp"), 
+	path.join(DEPENDENCIES_DIR, "imgui/**.h"),
+	path.join(DEPENDENCIES_DIR, "imgui/**.cpp"),
+	path.join(DEPENDENCIES_DIR, "glad/src/glad.c"),
+}
 
-	--Exclude the following files from the build, but keep in the project
-	removefiles {
-		--path.join(DEPENDENCIES_DIR, "imgui/imconfig_demo.cpp")
-	}
+--Exclude the following files from the build, but keep in the project
+removefiles {
+	--path.join(DEPENDENCIES_DIR, "imgui/imconfig_demo.cpp")
+}
 
-	-- Don't use pre-compiled header for the following files
-	nopch {
-		path.join(DEPENDENCIES_DIR, "imgui/**.cpp"),
-		path.join(DEPENDENCIES_DIR, "glad/src/glad.c")
-	}
+-- Don't use pre-compiled header for the following files
+nopch {
+	path.join(DEPENDENCIES_DIR, "imgui/**.cpp"),
+	path.join(DEPENDENCIES_DIR, "glad/src/glad.c")
+}
 
-	pchheader "stdafx.hpp"
-	pchsource "stdafx.cpp"
+pchheader "stdafx.hpp"
+pchsource "stdafx.cpp"
