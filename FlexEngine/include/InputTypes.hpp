@@ -292,18 +292,6 @@ namespace flex
 		_NONE		= 0,
 	};
 
-	static const char* InputModifierStrings[] =
-	{
-		"Shift",
-		"Control",
-		"Alt",
-		"Super",
-		"Caps lock",
-		"Num lock",
-
-		"NONE"
-	};
-
 	enum class MouseButton
 	{
 		MOUSE_BUTTON_1,

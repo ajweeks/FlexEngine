@@ -228,18 +228,14 @@ if (FlexEngine::s_bHasGLDebugExtension) { glPopDebugGroupKHR(); }
 #define GL_POP_DEBUG_GROUP()
 #endif // COMPILE_OPEN_GL
 
-namespace flex
-{
 #define ROOT_LOCATION "../../../FlexEngine/"
 #define SAVED_LOCATION "../../../FlexEngine/saved/"
 #define RESOURCE_LOCATION "../../../FlexEngine/resources/"
 #define RESOURCE(path) "../../../FlexEngine/resources/" path
 #define RESOURCE_STR(path) "../../../FlexEngine/resources/" + path
 
-	// TODO: Use int to represent string
-	//typedef u32 StringID;
-	typedef std::string StringID;
-
+namespace flex
+{
 	// TODO: Calculate string hash here
 #define SID(str) (str)
 

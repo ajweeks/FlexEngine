@@ -460,7 +460,7 @@ namespace flex
 			{
 				Print("%d/%d tests passed\n", ARRAY_LENGTH(funcs), ARRAY_LENGTH(funcs));
 			}
-			Print("");
+			Print("\n");
 		}
 	};
 }

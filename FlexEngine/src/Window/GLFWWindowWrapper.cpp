@@ -415,7 +415,7 @@ namespace flex
 			case WindowMode::_NONE:
 			default:
 			{
-				PrintError("Unhandled window mode: %d\n", mode);
+				PrintError("Unhandled window mode: %u\n", (u32)mode);
 			} break;
 			}
 		}

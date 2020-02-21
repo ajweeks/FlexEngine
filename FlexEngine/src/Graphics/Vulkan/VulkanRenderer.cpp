@@ -1016,7 +1016,6 @@ namespace flex
 				{ createInfo->normalTexturePath, U_NORMAL_SAMPLER, "Normal" },
 				{ createInfo->hdrEquirectangularTexturePath, U_HDR_EQUIRECTANGULAR_SAMPLER, "HDR Equirectangular", VK_FORMAT_R32G32B32A32_SFLOAT, 1, true },
 			};
-			const size_t textureCount = sizeof(textureInfos) / sizeof(textureInfos[0]);
 
 			for (TextureInfo& textureInfo : textureInfos)
 			{
@@ -1760,7 +1759,6 @@ namespace flex
 								if (material.uniformBufferList.Has(UniformBufferType::DYNAMIC) &&
 									material.uniformBufferList.Get(UniformBufferType::DYNAMIC)->fullDynamicBufferSize > 0)
 								{
-									ImVec2 p = ImGui::GetCursorScreenPos();
 									char nodeID0[256];
 									memset(nodeID0, 0, 256);
 									snprintf(nodeID0, 256, "%s##%u",
@@ -1811,7 +1809,6 @@ namespace flex
 					}
 					else
 					{
-						ImVec2 p = ImGui::GetCursorScreenPos();
 						char nodeID0[256];
 						memset(nodeID0, 0, 256);
 						if (ImGui::BeginChild("##particles", ImVec2(0, 200), true))
@@ -6661,8 +6658,6 @@ namespace flex
 
 			// GBuffer frame buffer attachments
 			{
-				const u32 frameBufferColorAttachmentCount = 2;
-
 				CreateAttachment(m_VulkanDevice, m_GBufferColorAttachment0, "GBuffer image 0", "GBuffer image view 0");
 				CreateAttachment(m_VulkanDevice, m_GBufferColorAttachment1, "GBuffer image 1", "GBuffer image view 1");
 			}
@@ -6846,7 +6841,7 @@ namespace flex
 		// TODO: Test that this still works
 		void VulkanRenderer::PrepareCubemapFrameBuffer()
 		{
-			const u32 frameBufferColorAttachmentCount = 2;
+			// const u32 frameBufferColorAttachmentCount = 2;
 
 			m_GBufferCubemapColorAttachment0->width = m_CubemapFramebufferSize.x;
 			m_GBufferCubemapColorAttachment0->height = m_CubemapFramebufferSize.y;
@@ -8596,7 +8591,7 @@ namespace flex
 			real exposure = cam->exposure;
 			glm::vec2 m_NearFarPlanes(cam->GetZNear(), cam->GetZFar());
 
-			static DirLightData defaultDirLightData = { VEC3_RIGHT, 0, VEC3_ONE, 0.0f, 0, 0.0f };
+			static DirLightData defaultDirLightData = { VEC3_RIGHT, 0, VEC3_ONE, 0.0f, 0, 0.0f, { 0.0f, 0.0f } };
 
 			DirLightData* dirLightData = &defaultDirLightData;
 			if (m_DirectionalLight)

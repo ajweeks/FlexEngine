@@ -192,7 +192,7 @@ namespace flex
 		auto iter = s_Timings.find(hash);
 		if (iter == s_Timings.end())
 		{
-			PrintError("Profiler::End called before Begin was called! Block name: %s (hash: %ul)\n", blockName, hash);
+			PrintError("Profiler::End called before Begin was called! Block name: %s (hash: %llu)\n", blockName, hash);
 			return;
 		}
 

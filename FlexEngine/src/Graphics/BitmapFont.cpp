@@ -11,9 +11,9 @@
 namespace flex
 {
 	BitmapFont::BitmapFont(const FontMetaData& inMetaData, const std::string& name, i32 charCount) :
-		metaData(inMetaData),
 		name(name),
-		characterCount(charCount)
+		characterCount(charCount),
+		metaData(inMetaData)
 	{
 		metaData.bitmapFont = this;
 		assert(metaData.size > 0);

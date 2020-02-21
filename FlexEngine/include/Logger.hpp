@@ -24,7 +24,7 @@ namespace flex
 	void PrintWarn(const char* str, ...) FORMAT_STRING(1,2);
 	void PrintError(const char* str, ...) FORMAT_STRING(1,2);
 	// Call when results are expected to be larger than MAX_CHARS
-	void PrintLong(const char* str, ...) FORMAT_STRING(1,2);
+	void PrintLong(const char* str);
 	void Print(const char* str, va_list argList);
 
 	void InitializeLogger();
