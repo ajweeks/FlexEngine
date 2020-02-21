@@ -1,5 +1,5 @@
 {
-	"version" : 2,
+	"version" : 3,
 	"name" : "scene_shanghai",
 	"spawn player" : false,
 	"objects" : 
@@ -11,7 +11,10 @@
 			"transform" : 
 			{
 			},
-			"material" : "skybox 01",
+			"materials" : 
+			[
+				"skybox 01"
+			],
 			"skybox info" : 
 			{
 			}
@@ -33,7 +36,10 @@
 			{
 			},
 			"mesh" : "ico-sphere",
-			"material" : "pbr chrome"
+			"materials" : 
+			[
+				"pbr chrome"
+			]
 		},
 		{
 			"name" : "Directional Light",
@@ -63,7 +69,10 @@
 			{
 			},
 			"mesh" : "shanghai_bridge_1",
-			"material" : "shanghai"
+			"materials" : 
+			[
+				"shanghai"
+			]
 		},
 		{
 			"name" : "ground",
@@ -74,7 +83,10 @@
 				"pos" : "0.000, -1.600, 4.100"
 			},
 			"mesh" : "shanghai_ground",
-			"material" : "shanghai 6"
+			"materials" : 
+			[
+				"shanghai 6"
+			]
 		},
 		{
 			"name" : "river",
@@ -84,7 +96,10 @@
 			{
 			},
 			"mesh" : "shanghai_river",
-			"material" : "shanghai 3"
+			"materials" : 
+			[
+				"shanghai 3"
+			]
 		},
 		{
 			"name" : "boat",
@@ -94,7 +109,10 @@
 			{
 			},
 			"mesh" : "shanghai_boat",
-			"material" : "shanghai 2"
+			"materials" : 
+			[
+				"shanghai 2"
+			]
 		},
 		{
 			"name" : "build1",
@@ -104,7 +122,10 @@
 			{
 			},
 			"mesh" : "shanghai_build_1",
-			"material" : "shanghai 5"
+			"materials" : 
+			[
+				"shanghai 5"
+			]
 		},
 		{
 			"name" : "build2",
@@ -114,7 +135,10 @@
 			{
 			},
 			"mesh" : "shanghai_build_2",
-			"material" : "shanghai 4"
+			"materials" : 
+			[
+				"shanghai 4"
+			]
 		},
 		{
 			"name" : "river bed",
@@ -124,7 +148,10 @@
 			{
 			},
 			"mesh" : "shanghai_river_bed",
-			"material" : "shanghai 6"
+			"materials" : 
+			[
+				"shanghai 6"
+			]
 		},
 		{
 			"name" : "tables",
@@ -134,7 +161,10 @@
 			{
 			},
 			"mesh" : "shanghai_tables",
-			"material" : "shanghai 7"
+			"materials" : 
+			[
+				"shanghai 7"
+			]
 		},
 		{
 			"name" : "misc1",
@@ -144,7 +174,10 @@
 			{
 			},
 			"mesh" : "shanghai_misc_1",
-			"material" : "shanghai 6"
+			"materials" : 
+			[
+				"shanghai 6"
+			]
 		},
 		{
 			"name" : "misc2",
@@ -154,7 +187,10 @@
 			{
 			},
 			"mesh" : "shanghai_misc_2",
-			"material" : "shanghai 6"
+			"materials" : 
+			[
+				"shanghai 6"
+			]
 		},
 		{
 			"name" : "veg1",
@@ -164,7 +200,10 @@
 			{
 			},
 			"mesh" : "shanghai_veg_1",
-			"material" : "shanghai 5"
+			"materials" : 
+			[
+				"shanghai 5"
+			]
 		},
 		{
 			"name" : "benches",
@@ -174,7 +213,10 @@
 			{
 			},
 			"mesh" : "shanghai_benches",
-			"material" : "shanghai 7"
+			"materials" : 
+			[
+				"shanghai 7"
+			]
 		},
 		{
 			"name" : "misc3",
@@ -184,7 +226,10 @@
 			{
 			},
 			"mesh" : "shanghai_misc_3",
-			"material" : "shanghai 6"
+			"materials" : 
+			[
+				"shanghai 6"
+			]
 		},
 		{
 			"name" : "misc4",
@@ -194,7 +239,10 @@
 			{
 			},
 			"mesh" : "shanghai_misc_4",
-			"material" : "shanghai 6"
+			"materials" : 
+			[
+				"shanghai 6"
+			]
 		},
 		{
 			"name" : "build3",
@@ -204,7 +252,10 @@
 			{
 			},
 			"mesh" : "shanghai_build_3",
-			"material" : "shanghai 7"
+			"materials" : 
+			[
+				"shanghai 7"
+			]
 		},
 		{
 			"name" : "dragon",
@@ -217,7 +268,10 @@
 				"scale" : "30.000, 30.000, 30.000"
 			},
 			"mesh" : "dragon_mid",
-			"material" : "shanghai 2"
+			"materials" : 
+			[
+				"shanghai 2"
+			]
 		},
 		{
 			"name" : "PointLight_00",
@@ -233,6 +287,93 @@
 				"color" : "0.79, 0.80, 0.81",
 				"enabled" : true,
 				"brightness" : 239.582993
+			}
+		},
+		{
+			"name" : "New_Object_00",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 5.469, 0.000"
+			},
+			"mesh" : "donut",
+			"materials" : 
+			[
+				"New Material 02",
+				"placeholder",
+				"placeholder"
+			],
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "1.000, 1.000, 1.000"
+			},
+			"rigid body" : 
+			{
+				"mass" : 0.000000,
+				"kinematic" : true,
+				"static" : true,
+				"mask" : 1,
+				"group" : 1
+			}
+		},
+		{
+			"name" : "New_Object_01",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "-4.131, 5.469, 0.000"
+			},
+			"mesh" : "donut",
+			"materials" : 
+			[
+				"New Material 02",
+				"placeholder",
+				"placeholder"
+			],
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "1.000, 1.000, 1.000"
+			},
+			"rigid body" : 
+			{
+				"mass" : 0.000000,
+				"kinematic" : true,
+				"static" : true,
+				"mask" : 1,
+				"group" : 1
+			}
+		},
+		{
+			"name" : "New_Object_02",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "-4.131, 5.469, 4.469"
+			},
+			"mesh" : "donut",
+			"materials" : 
+			[
+				"New Material 02",
+				"placeholder",
+				"placeholder"
+			],
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "1.000, 1.000, 1.000"
+			},
+			"rigid body" : 
+			{
+				"mass" : 0.000000,
+				"kinematic" : true,
+				"static" : true,
+				"mask" : 1,
+				"group" : 1
 			}
 		}
 	]
