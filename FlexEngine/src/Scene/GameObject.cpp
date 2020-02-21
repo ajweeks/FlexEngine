@@ -3543,7 +3543,7 @@ namespace flex
 		bufferInfo.normals = normals;
 		bufferInfo.tangents = tangents;
 		vertexBuffer->UpdateData(&bufferInfo);
-		g_Renderer->UpdateVertexData(m_Mesh->GetRenderID(0), vertexBuffer);
+		g_Renderer->UpdateVertexData(m_Mesh->GetRenderID(0), vertexBuffer, m_Mesh->GetSubMeshes()[0]->GetIndexBuffer());
 
 
 		const glm::vec3 wavePos = m_Transform.GetWorldPosition();

@@ -125,6 +125,7 @@ namespace flex
 				vertexDataP += 1;
 			}
 		}
+		VertexCount = count;
 		assert(vertexDataP == vertexData + (VertexStride / sizeof(real) * count));
 	}
 

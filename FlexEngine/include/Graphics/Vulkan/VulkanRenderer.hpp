@@ -45,7 +45,7 @@ namespace flex
 			virtual void Draw() override;
 			virtual void DrawImGuiWindows() override;
 
-			virtual void UpdateVertexData(RenderID renderID, VertexBufferData const* vertexBufferData) override;
+			virtual void UpdateVertexData(RenderID renderID, VertexBufferData const* vertexBufferData, const std::vector<u32>& indexData) override;
 
 			virtual void ReloadShaders(bool bForce) override;
 			virtual void LoadFonts(bool bForceRender) override;
@@ -233,11 +233,12 @@ namespace flex
 			bool RemoveLoadedTexture(VulkanTexture* texture, bool bDestroy);
 
 			void CreateStaticVertexBuffers();
-			void CreateDynamicVertexBuffers();
+			void CreateDynamicVertexAndIndexBuffers();
 
 			void CreateShadowVertexBuffer();
 			void CreateAndUploadToStaticVertexBuffer(VulkanBuffer* vertexBuffer, void* vertexBufferData, u32 vertexBufferSize);
 			void CreateDynamicVertexBuffer(VulkanBuffer* vertexBuffer, u32 size);
+			void CreateDynamicIndexBuffer(VulkanBuffer* indexBuffer, u32 size);
 
 			void CreateStaticIndexBuffers();
 
@@ -578,11 +579,11 @@ namespace flex
 			// One element per unique stride
 			// Uploaded to GPU once through staging buffer
 			std::vector<std::pair<u32, VulkanBuffer*>> m_StaticVertexBuffers;
+			VulkanBuffer* m_StaticIndexBuffer;
 
 			// Pair is: (stride, vertex index buffer pair)
 			// Indexed into through Material::dynamicVertexBufferIndex
 			std::vector<std::pair<u32, VertexIndexBufferPair*>> m_DynamicVertexIndexBufferPairs;
-			VulkanBuffer* m_StaticIndexBuffer;
 			VertexIndexBufferPair* m_ShadowVertexIndexBufferPair = nullptr;
 
 			u32 m_DynamicAlignment = 0;

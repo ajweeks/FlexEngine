@@ -561,13 +561,14 @@ namespace flex
 
 			CreateStaticVertexBuffers();
 			CreateStaticIndexBuffers();
-			CreateDynamicVertexBuffers();
+			CreateDynamicVertexAndIndexBuffers();
 
 			CreateShadowVertexBuffer();
 			CreateShadowIndexBuffer();
 
 			// Fullscreen tri vertex data
 			{
+				// TODO: Bring out to Mesh class?
 				void* vertData = malloc_hooked(m_FullScreenTriVertexBufferData.VertexBufferSize);
 				memcpy(vertData, m_FullScreenTriVertexBufferData.vertexData, m_FullScreenTriVertexBufferData.VertexBufferSize);
 				CreateAndUploadToStaticVertexBuffer(m_FullScreenTriVertexBuffer, vertData, m_FullScreenTriVertexBufferData.VertexBufferSize);
@@ -1975,7 +1976,7 @@ namespace flex
 			{
 				CreateStaticVertexBuffers();
 				CreateStaticIndexBuffers();
-				CreateDynamicVertexBuffers();
+				CreateDynamicVertexAndIndexBuffers();
 
 				CreateShadowVertexBuffer();
 				CreateShadowIndexBuffer();
@@ -3393,7 +3394,9 @@ namespace flex
 
 					VkDeviceSize offsets[1] = { 0 };
 
-					vkCmdBindVertexBuffers(cmdBuf, 0, 1, &m_StaticVertexBuffers[m_Shaders[skyboxMat.material.shaderID].shader->staticVertexBufferIndex].second->m_Buffer, offsets);
+					VulkanShader& skyboxShader = m_Shaders[skyboxMat.material.shaderID];
+					VulkanBuffer* vertBuffer = m_StaticVertexBuffers[skyboxShader.shader->staticVertexBufferIndex].second;
+					vkCmdBindVertexBuffers(cmdBuf, 0, 1, &vertBuffer->m_Buffer, offsets);
 					if (skyboxRenderObject->bIndexed)
 					{
 						vkCmdBindIndexBuffer(cmdBuf, m_StaticIndexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
@@ -7002,19 +7005,18 @@ namespace flex
 					continue;
 				}
 
-				u32 size = requiredMemory;
+				const u32 vertexBufferSize = requiredMemory;
 
-				void* vertexDataStart = malloc_hooked(size);
+				void* vertexDataStart = malloc_hooked(vertexBufferSize);
 				if (!vertexDataStart)
 				{
-					PrintError("Failed to allocate %d bytes for static vertex buffer\n", size);
+					PrintError("Failed to allocate %d bytes for static vertex buffer\n", vertexBufferSize);
 					return;
 				}
 
 				void* vertexBufferData = vertexDataStart;
 
 				u32 vertexCount = 0;
-				u32 vertexBufferSize = 0;
 				for (VulkanRenderObject* renderObject : m_RenderObjects)
 				{
 					if (renderObjectValid(renderObject, staticVertexBufferIndex))
@@ -7024,7 +7026,6 @@ namespace flex
 						memcpy(vertexBufferData, renderObject->vertexBufferData->vertexData, renderObject->vertexBufferData->VertexBufferSize);
 
 						vertexCount += renderObject->vertexBufferData->VertexCount;
-						vertexBufferSize += renderObject->vertexBufferData->VertexBufferSize;
 
 						vertexBufferData = (char*)vertexBufferData + renderObject->vertexBufferData->VertexBufferSize;
 					}
@@ -7036,29 +7037,41 @@ namespace flex
 					return;
 				}
 
+				assert(vertexBufferData == ((char*)vertexDataStart + vertexBufferSize));
+
 				CreateAndUploadToStaticVertexBuffer(vertexBuffer, vertexDataStart, vertexBufferSize);
 				free_hooked(vertexDataStart);
 			}
 		}
 
-		void VulkanRenderer::CreateDynamicVertexBuffers()
+		void VulkanRenderer::CreateDynamicVertexAndIndexBuffers()
 		{
-			std::vector<u32> dynamicVertexBufferSizes(m_DynamicVertexIndexBufferPairs.size(), 0);
+			struct SizePair
+			{
+				u32 vertMemoryReq;
+				u32 indexMemoryReq;
+			};
+			std::vector<SizePair> dynamicVertexBufferSizes(m_DynamicVertexIndexBufferPairs.size());
 			for (u32 shaderID = 0; shaderID < m_Shaders.size(); ++shaderID)
 			{
-				if (m_Shaders[shaderID].shader->dynamicVertexBufferSize != 0)
+				Shader* shader = m_Shaders[shaderID].shader;
+				if (shader->dynamicVertexBufferSize != 0)
 				{
-					const u32 dynamicVertexBufferIndex = GetDynamicVertexIndexBufferIndex(CalculateVertexStride(m_Shaders[shaderID].shader->vertexAttributes));
-					dynamicVertexBufferSizes[dynamicVertexBufferIndex] += m_Shaders[shaderID].shader->dynamicVertexBufferSize;
+					const u32 stride = CalculateVertexStride(shader->vertexAttributes);
+					const u32 dynamicVertexBufferIndex = GetDynamicVertexIndexBufferIndex(stride);
+					dynamicVertexBufferSizes[dynamicVertexBufferIndex].vertMemoryReq += shader->dynamicVertexBufferSize;
+					u32 vertexCount = (u32)glm::ceil(shader->dynamicVertexBufferSize / (real)stride / sizeof(real));
+					// Assume worst case of no shared verts
+					dynamicVertexBufferSizes[dynamicVertexBufferIndex].indexMemoryReq += vertexCount * sizeof(u32);
 				}
 			}
 
 			for (u32 bufferIndex = 0; bufferIndex < m_DynamicVertexIndexBufferPairs.size(); ++bufferIndex)
 			{
-				u32 requiredMemory = dynamicVertexBufferSizes[bufferIndex];
-				if (requiredMemory > 0)
+				if (dynamicVertexBufferSizes[bufferIndex].vertMemoryReq > 0)
 				{
-					CreateDynamicVertexBuffer(m_DynamicVertexIndexBufferPairs[bufferIndex].second->vertexBuffer, requiredMemory);
+					CreateDynamicVertexBuffer(m_DynamicVertexIndexBufferPairs[bufferIndex].second->vertexBuffer, dynamicVertexBufferSizes[bufferIndex].vertMemoryReq);
+					CreateDynamicIndexBuffer(m_DynamicVertexIndexBufferPairs[bufferIndex].second->indexBuffer, dynamicVertexBufferSizes[bufferIndex].indexMemoryReq);
 				}
 			}
 		}
@@ -7141,6 +7154,11 @@ namespace flex
 		void VulkanRenderer::CreateDynamicVertexBuffer(VulkanBuffer* vertexBuffer, u32 size)
 		{
 			vertexBuffer->Create(size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+		}
+
+		void VulkanRenderer::CreateDynamicIndexBuffer(VulkanBuffer* indexBuffer, u32 size)
+		{
+			indexBuffer->Create(size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 		}
 
 		void VulkanRenderer::CreateStaticIndexBuffers()
@@ -7274,7 +7292,7 @@ namespace flex
 			// TODO: OPTIMIZE: This isn't always necessary, but it is always expensive!
 			CreateStaticVertexBuffers();
 			CreateStaticIndexBuffers();
-			CreateDynamicVertexBuffers();
+			CreateDynamicVertexAndIndexBuffers();
 
 			CreateShadowVertexBuffer();
 			CreateShadowIndexBuffer();
@@ -7443,7 +7461,7 @@ namespace flex
 				u32 dynamicVertexIndexBufferIndex = GetDynamicVertexIndexBufferIndex(CalculateVertexStride(m_Shaders[shaderID].shader->vertexAttributes));
 				u32 staticVertexBufferIndex = GetStaticVertexIndexBufferIndex(CalculateVertexStride(m_Shaders[shaderID].shader->vertexAttributes));
 				vertBuffer = shaderBatch.bDynamic ? m_DynamicVertexIndexBufferPairs[dynamicVertexIndexBufferIndex].second->vertexBuffer : m_StaticVertexBuffers[staticVertexBufferIndex].second;
-				indexBuffer = shaderBatch.bDynamic ? m_DynamicVertexIndexBufferPairs[dynamicVertexIndexBufferIndex].second->indexBuffer : m_ShadowVertexIndexBufferPair->indexBuffer;
+				indexBuffer = shaderBatch.bDynamic ? m_DynamicVertexIndexBufferPairs[dynamicVertexIndexBufferIndex].second->indexBuffer : m_StaticIndexBuffer;
 			}
 
 			if (indexBuffer->m_Buffer != VK_NULL_HANDLE)
