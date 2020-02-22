@@ -1,9 +1,9 @@
 
--- 
+--
 -- NOTES:
 -- - DLLs should be built using the Multi-threaded Debug DLL flag (/MDd) in debug,
 --   and the Multi-threade DLL flag (/MD) in release
--- 
+--
 
 
 solution "Flex"
@@ -57,7 +57,7 @@ function platformLibraries()
 			else subdir = "Release"
 		end
 		configuration { "vs*", cfgs[i] }
-			libdirs { 
+			libdirs {
 				path.join(SOURCE_DIR, path.join("lib/", subdir))
 			}
 	end
@@ -68,7 +68,7 @@ function staticPlatformLibraries()
 	local p = platforms()
 	for j = 1, #p do
 		configuration { "vs*", p[j] }
-			libdirs { 
+			libdirs {
 				path.join(DEPENDENCIES_DIR, path.join("vulkan/lib/", p[j])),
 			}
 	end
@@ -83,7 +83,7 @@ function windowsPlatformPostBuild()
 	for i = 1, #cfgs do
 		--copy dlls and resources after build
 		configuration { "vs*", cfgs[i] }
-			postbuildcommands { 
+			postbuildcommands {
 				"copy \"$(SolutionDir)..\\FlexEngine\\lib\\openal32.dll\" " ..
 				"\"$(OutDir)openal32.dll\""
 			}
@@ -108,16 +108,16 @@ configuration {}
 
 configuration {}
 	flags { "NoIncrementalLink", "NoEditAndContinue" }
-	includedirs { 
+	includedirs {
 		path.join(SOURCE_DIR, "include"),
 	}
 
 	-- Files to include that shouldn't get warnings reported on
 	systemincludedirs {
 		path.join(DEPENDENCIES_DIR, "glad/include"),
-		path.join(DEPENDENCIES_DIR, "glfw/include"), 
-		path.join(DEPENDENCIES_DIR, "glm"), 
-		path.join(DEPENDENCIES_DIR, "stb"), 
+		path.join(DEPENDENCIES_DIR, "glfw/include"),
+		path.join(DEPENDENCIES_DIR, "glm"),
+		path.join(DEPENDENCIES_DIR, "stb"),
 		path.join(DEPENDENCIES_DIR, "imgui"),
 		path.join(DEPENDENCIES_DIR, "vulkan/include"),
 		path.join(DEPENDENCIES_DIR, "bullet/src"),
@@ -125,6 +125,7 @@ configuration {}
 		path.join(DEPENDENCIES_DIR, "freetype/include"),
 		DEPENDENCIES_DIR,
 	}
+
 	debugdir "$(OutDir)"
 configuration "vs*"
 	defines { "PLATFORM_Win" }
@@ -193,9 +194,9 @@ configuration {}
 
 --Source files
 files {
-	path.join(SOURCE_DIR, "include/**.h"), 
-	path.join(SOURCE_DIR, "include/**.hpp"), 
-	path.join(SOURCE_DIR, "src/**.cpp"), 
+	path.join(SOURCE_DIR, "include/**.h"),
+	path.join(SOURCE_DIR, "include/**.hpp"),
+	path.join(SOURCE_DIR, "src/**.cpp"),
 	path.join(DEPENDENCIES_DIR, "imgui/**.h"),
 	path.join(DEPENDENCIES_DIR, "imgui/**.cpp"),
 	path.join(DEPENDENCIES_DIR, "glad/src/glad.c"),
