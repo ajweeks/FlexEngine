@@ -110,6 +110,10 @@ configuration {}
 	flags { "NoIncrementalLink", "NoEditAndContinue" }
 	includedirs { 
 		path.join(SOURCE_DIR, "include"),
+	}
+
+	-- Files to include that shouldn't get warnings reported on
+	systemincludedirs {
 		path.join(DEPENDENCIES_DIR, "glad/include"),
 		path.join(DEPENDENCIES_DIR, "glfw/include"), 
 		path.join(DEPENDENCIES_DIR, "glm"), 
@@ -130,7 +134,7 @@ configuration { "vs*", "x32" }
 	defines { "WIN32" }
 configuration { "x32" }
 	defines { "PLATFORM_x32" }
-configuration "linux-*"
+configuration "linux*"
 	defines { "linux", "__linux", "__linux__" }
 configuration {}
 
@@ -150,38 +154,42 @@ project "Flex"
 	configuration "vs*"
 		flags { "Winmain"}
 
-		links { "opengl32" } 
+		links { "opengl32" }
 
-	configuration "linux-*"
-		links { }  -- Skip OpenGL.. for now
-
+	configuration "linux*"
+		linkoptions {
+			"-L../../lib/Debug/",
+		}
+		buildoptions_cpp {
+			-- Ignored warnings:
+			"-Wno-reorder", "-Wno-unused-parameter"
+		}
+		buildoptions_c {
+			-- no-reorder isn't valid in c
+		}
 
 	platformLibraries()
 	staticPlatformLibraries()
 	windowsPlatformPostBuild()
 
-	--Linked libraries
-configuration "vs*"
-    links { "opengl32", "glfw3", "vulkan-1", "OpenAL32" }
+--Linked libraries
+	-- Windows
+		-- Common
+		configuration "vs*"
+			links { "opengl32", "glfw3", "vulkan-1", "OpenAL32" }
+		-- Debug-only
+		configuration { "vs*", "Debug" }
+			links { "BulletCollision_Debug", "BulletDynamics_Debug", "LinearMath_Debug", "freetyped" }
+		configuration { "vs*", "Development" }
+			links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" }
+		configuration { "vs*", "Shipping" }
+			links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" }
+		configuration { "vs*", "Shipping_WithSymbols" }
+			links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" }
+	-- linux
+		configuration "linux*"
+			links { "glfw3", "vulkan-1", "openal", "Bullet3Collision", "Bullet3Dynamics", "LinearMath" } -- freetyped
 configuration {}
-
-
-configuration { "Debug", "vs*" }
-	links { "BulletCollision_Debug", "BulletDynamics_Debug", "LinearMath_Debug", "freetyped" } 
-configuration { "Development" }
-	links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" }
-configuration { "Shipping" }
-	links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" } 
-configuration { "Shipping_WithSymbols" }
-	links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" } 
-configuration "linux-*"
-	links { "glfw3", "vulkan-1", "openal", "Bullet3Collision", "Bullet3Dynamics", "LinearMath", "freetyped" }
-configuration {}
-
---Additional includedirs
-includedirs { 
-	path.join(SOURCE_DIR, "include"),
-}
 
 --Source files
 files {

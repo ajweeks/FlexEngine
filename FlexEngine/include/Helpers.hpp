@@ -19,19 +19,7 @@ namespace flex
 	bool WriteFile(const std::string& filePath, const std::string& fileContents, bool bBinaryFile);
 	bool WriteFile(const std::string& filePath, const std::vector<char>& vec, bool bBinaryFile);
 
-	bool DeleteFile(const std::string& filePath, bool bPrintErrorOnFailure = true);
-
-	bool CopyFile(const std::string& filePathFrom, const std::string& filePathTo);
-
-	bool DirectoryExists(const std::string& absoluteDirectoryPath);
-
-	void OpenExplorer(const std::string& absoluteDirectory);
 	bool OpenJSONFileDialog(const std::string& windowTitle, const std::string& absoluteDirectory, std::string& outSelectedAbsFilePath);
-	bool OpenFileDialog(const std::string& windowTitle, const std::string& absoluteDirectory, std::string& outSelectedAbsFilePath, char filter[] = nullptr);
-
-	// Returns true if any files were found
-	// Set fileType to "*" to retrieve all files
-	bool FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileType);
 
 	// Removes all content before final '/' or '\'
 	std::string StripLeadingDirectories(std::string filePath);
@@ -47,9 +35,6 @@ namespace flex
 	// NOTE: Unused!
 	std::string ExtractFileType(std::string filePathInTypeOut);
 
-	// Creates directories for each listed in string
-	void CreateDirectoryRecursive(const std::string& absoluteDirectoryPath);
-
 	/*
 	* Reads in a .wav file and fills in given values according to file contents
 	* Returns true if reading and parsing succeeded
@@ -57,11 +42,6 @@ namespace flex
 	bool ParseWAVFile(const std::string& filePath, i32* format, u8** data, i32* size, i32* freq);
 
 	std::string TrimStartAndEnd(const std::string& str);
-
-	// Returns the current year, month, & day  (YYYY-MM-DD)
-	std::string GetDateString_YMD();
-	// Returns the current year, month, day, hour, minute, & second (YYYY-MM-DD_HH-MM-SS)
-	std::string GetDateString_YMDHMS();
 
 	std::vector<std::string> Split(const std::string& str, char delim);
 
@@ -182,8 +162,6 @@ namespace flex
 	const char* GameObjectTypeToString(GameObjectType type);
 	GameObjectType StringToGameObjectType(const char* gameObjectTypeStr);
 
-	// Must be called at least once to set g_CurrentWorkingDirectory!
-	void RetrieveCurrentWorkingDirectory();
 	std::string ReplaceBackSlashesWithForward(std::string str);
 	std::string RelativePathToAbsolute(const std::string& relativePath);
 

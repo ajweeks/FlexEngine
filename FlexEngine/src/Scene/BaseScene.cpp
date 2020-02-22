@@ -24,6 +24,7 @@ IGNORE_WARNINGS_POP
 #include "Player.hpp"
 #include "PlayerController.hpp"
 #include "Profiler.hpp"
+#include "Platform/Platform.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
@@ -549,7 +550,7 @@ namespace flex
 		s_ParsedPrefabs.clear();
 
 		std::vector<std::string> foundFiles;
-		if (FindFilesInDirectory(RESOURCE_LOCATION "scenes/prefabs/", foundFiles, ".json"))
+		if (Platform::FindFilesInDirectory(RESOURCE_LOCATION "scenes/prefabs/", foundFiles, ".json"))
 		{
 			for (const std::string& foundFilePath : foundFiles)
 			{
@@ -941,7 +942,7 @@ namespace flex
 
 			if (FileExists(savedSaveFilePath))
 			{
-				DeleteFile(savedSaveFilePath);
+				Platform::DeleteFile(savedSaveFilePath);
 			}
 		}
 
@@ -984,12 +985,12 @@ namespace flex
 
 			if (bDefaultFileExists)
 			{
-				DeleteFile(defaultSaveFilePath);
+				Platform::DeleteFile(defaultSaveFilePath);
 			}
 
 			if (bSavedFileExists)
 			{
-				DeleteFile(savedSaveFilePath);
+				Platform::DeleteFile(savedSaveFilePath);
 			}
 		}
 
@@ -1268,13 +1269,13 @@ namespace flex
 
 		std::string absDefaultFilePathFrom = RelativePathToAbsolute(GetDefaultRelativeFilePath());
 		std::string absDefaultFilePathTo = ExtractDirectoryString(absDefaultFilePathFrom) + fileName;
-		if (CopyFile(absDefaultFilePathFrom, absDefaultFilePathTo))
+		if (Platform::CopyFile(absDefaultFilePathFrom, absDefaultFilePathTo))
 		{
 			//if (m_bUsingSaveFile)
 			{
 				std::string absSavedFilePathFrom = RelativePathToAbsolute(GetRelativeFilePath());
 				std::string absSavedFilePathTo = ExtractDirectoryString(absSavedFilePathFrom) + fileName;
-				if (CopyFile(absSavedFilePathFrom, absSavedFilePathTo))
+				if (Platform::CopyFile(absSavedFilePathFrom, absSavedFilePathTo))
 				{
 					success = true;
 				}
@@ -1290,12 +1291,12 @@ namespace flex
 				if (bDeletePreviousFiles)
 				{
 					std::string pAbsDefaultFilePath = RelativePathToAbsolute(GetDefaultRelativeFilePath());
-					DeleteFile(pAbsDefaultFilePath, false);
+					Platform::DeleteFile(pAbsDefaultFilePath, false);
 
 					//if (m_bUsingSaveFile)
 					//{
 					//	std::string pAbsSavedFilePath = RelativePathToAbsolute(GetRelativeFilePath());
-					//	DeleteFile(pAbsSavedFilePath, false);
+					//	Platform::DeleteFile(pAbsSavedFilePath, false);
 					//}
 				}
 

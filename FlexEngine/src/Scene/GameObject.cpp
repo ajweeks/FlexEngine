@@ -354,7 +354,7 @@ namespace flex
 		}
 
 		// Transform
-		ImGui::Text("");
+		ImGui::Text(" ");
 		{
 			if (ImGui::BeginPopupContextItem("transform context menu"))
 			{
@@ -760,11 +760,9 @@ namespace flex
 		bool bRefreshNameField = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup) &&
 			ImGui::IsMouseClicked(1);
 
-		bool bRenameWindowOpenedThisFrame = false;
 		if (bActive && g_Editor->GetWantRenameActiveElement())
 		{
 			ImGui::OpenPopup(contextMenuIDStr.c_str());
-			bRenameWindowOpenedThisFrame = true;
 			g_Editor->ClearWantRenameActiveElement();
 			bRefreshNameField = true;
 		}
@@ -860,7 +858,7 @@ namespace flex
 
 	bool GameObject::AllowInteractionWith(GameObject* gameObject)
 	{
-		UNREFERENCED_PARAMETER(gameObject);
+		FLEX_UNUSED(gameObject);
 
 		return true;
 	}
@@ -1335,7 +1333,6 @@ namespace flex
 	void GameObject::CopyGenericFields(GameObject* newGameObject, GameObject* parent, bool bCopyChildren)
 	{
 		RenderObjectCreateInfo* createInfoPtr = nullptr;
-		RenderObjectCreateInfo renderObjectCreateInfo_DontRef = {};
 		std::vector<MaterialID> matIDs;
 		if (m_Mesh)
 		{
@@ -2332,8 +2329,8 @@ namespace flex
 
 	void GlassPane::ParseUniqueFields(const JSONObject& parentObj, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
-		UNREFERENCED_PARAMETER(scene);
-		UNREFERENCED_PARAMETER(matIDs);
+		FLEX_UNUSED(scene);
+		FLEX_UNUSED(matIDs);
 
 		JSONObject glassInfo;
 		if (parentObj.SetObjectChecked("window info", glassInfo))
@@ -2393,9 +2390,9 @@ namespace flex
 
 	void ReflectionProbe::ParseUniqueFields(const JSONObject& parentObj, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
-		UNREFERENCED_PARAMETER(scene);
-		UNREFERENCED_PARAMETER(parentObj);
-		UNREFERENCED_PARAMETER(matIDs);
+		FLEX_UNUSED(scene);
+		FLEX_UNUSED(parentObj);
+		FLEX_UNUSED(matIDs);
 
 		// Probe capture material
 		//MaterialCreateInfo probeCaptureMatCreateInfo = {};
@@ -2449,7 +2446,7 @@ namespace flex
 
 	void ReflectionProbe::SerializeUniqueFields(JSONObject& parentObject) const
 	{
-		UNREFERENCED_PARAMETER(parentObject);
+		FLEX_UNUSED(parentObject);
 
 		// Reflection probes have no unique fields currently
 	}
@@ -2483,7 +2480,7 @@ namespace flex
 
 	void Skybox::ParseUniqueFields(const JSONObject& parentObj, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
-		UNREFERENCED_PARAMETER(scene);
+		FLEX_UNUSED(scene);
 		assert(matIDs.size() == 1);
 
 		JSONObject skyboxInfo;
@@ -2618,7 +2615,7 @@ namespace flex
 
 	void DirectionalLight::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
-		UNREFERENCED_PARAMETER(matIDs);
+		FLEX_UNUSED(matIDs);
 
 		i32 sceneFileVersion = scene->GetSceneFileVersion();
 
@@ -2804,8 +2801,8 @@ namespace flex
 
 	void PointLight::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
-		UNREFERENCED_PARAMETER(scene);
-		UNREFERENCED_PARAMETER(matIDs);
+		FLEX_UNUSED(scene);
+		FLEX_UNUSED(matIDs);
 
 		JSONObject pointLightObj;
 		if (parentObject.SetObjectChecked("point light info", pointLightObj))
@@ -2944,7 +2941,7 @@ namespace flex
 
 	void Cart::SetItemHolding(GameObject* obj)
 	{
-		UNREFERENCED_PARAMETER(obj);
+		FLEX_UNUSED(obj);
 		// TODO:
 	}
 
@@ -3092,8 +3089,8 @@ namespace flex
 
 	void Cart::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
-		UNREFERENCED_PARAMETER(scene);
-		UNREFERENCED_PARAMETER(matIDs);
+		FLEX_UNUSED(scene);
+		FLEX_UNUSED(matIDs);
 
 		JSONObject cartInfo = parentObject.GetObject("cart info");
 		currentTrackID = (TrackID)cartInfo.GetInt("track ID");
@@ -3195,8 +3192,8 @@ namespace flex
 
 	void EngineCart::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
-		UNREFERENCED_PARAMETER(scene);
-		UNREFERENCED_PARAMETER(matIDs);
+		FLEX_UNUSED(scene);
+		FLEX_UNUSED(matIDs);
 
 		JSONObject cartInfo = parentObject.GetObject("cart info");
 		currentTrackID = (TrackID)cartInfo.GetInt("track ID");
@@ -3264,14 +3261,14 @@ namespace flex
 
 	void MobileLiquidBox::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
-		UNREFERENCED_PARAMETER(parentObject);
-		UNREFERENCED_PARAMETER(scene);
-		UNREFERENCED_PARAMETER(matIDs);
+		FLEX_UNUSED(parentObject);
+		FLEX_UNUSED(scene);
+		FLEX_UNUSED(matIDs);
 	}
 
 	void MobileLiquidBox::SerializeUniqueFields(JSONObject& parentObject) const
 	{
-		UNREFERENCED_PARAMETER(parentObject);
+		FLEX_UNUSED(parentObject);
 	}
 
 	GerstnerWave::GerstnerWave(const std::string& name) :
@@ -3391,8 +3388,8 @@ namespace flex
 
 	void GerstnerWave::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
-		UNREFERENCED_PARAMETER(scene);
-		UNREFERENCED_PARAMETER(matIDs);
+		FLEX_UNUSED(scene);
+		FLEX_UNUSED(matIDs);
 
 		JSONObject gerstnerWaveObj;
 		if (parentObject.SetObjectChecked("gerstner wave", gerstnerWaveObj))
@@ -3547,7 +3544,7 @@ namespace flex
 
 
 		const glm::vec3 wavePos = m_Transform.GetWorldPosition();
-		const glm::vec3 waveScale = m_Transform.GetWorldScale();
+		//const glm::vec3 waveScale = m_Transform.GetWorldScale();
 		glm::vec3 surfacePos = positions[positions.size() / 2 + vertSideCount / 2];
 		bobberTarget.SetTargetPos(surfacePos.y);
 		bobberTarget.Tick(g_DeltaTime);
@@ -3833,8 +3830,8 @@ namespace flex
 
 	void Terminal::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
-		UNREFERENCED_PARAMETER(scene);
-		UNREFERENCED_PARAMETER(matIDs);
+		FLEX_UNUSED(scene);
+		FLEX_UNUSED(matIDs);
 
 		JSONObject obj = parentObject.GetObject("terminal");
 		std::string str = obj.GetString("str");
@@ -4490,8 +4487,8 @@ namespace flex
 
 	void ParticleSystem::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
-		UNREFERENCED_PARAMETER(matIDs);
-		UNREFERENCED_PARAMETER(scene);
+		FLEX_UNUSED(matIDs);
+		FLEX_UNUSED(scene);
 
 		JSONObject particleSystemObj = parentObject.GetObject("particle system info");
 

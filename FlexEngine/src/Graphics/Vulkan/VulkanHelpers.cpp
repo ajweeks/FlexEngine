@@ -14,6 +14,7 @@ IGNORE_WARNINGS_POP
 #include "Graphics/Vulkan/VulkanInitializers.hpp"
 #include "Graphics/Vulkan/VulkanRenderer.hpp"
 #include "Helpers.hpp"
+#include "Platform/Platform.hpp"
 #include "Profiler.hpp"
 #include "Time.hpp"
 
@@ -419,7 +420,7 @@ namespace flex
 
 		VkDeviceSize VulkanTexture::CreateCubemap(VulkanDevice* device, VkQueue graphicsQueue, CubemapCreateInfo& createInfo)
 		{
-			UNREFERENCED_PARAMETER(graphicsQueue);
+			FLEX_UNUSED(graphicsQueue);
 
 			if (createInfo.width == 0 ||
 				createInfo.height == 0 ||
@@ -1123,7 +1124,7 @@ namespace flex
 
 		void VulkanTexture::Build(void* data /* = nullptr */)
 		{
-			UNREFERENCED_PARAMETER(data);
+			FLEX_UNUSED(data);
 		}
 
 		VkFormat VulkanTexture::CalculateFormat()
@@ -2296,7 +2297,7 @@ namespace flex
 			bool bCodeOutOfDate = true;
 
 			std::string compiledDir = RelativePathToAbsolute(RESOURCE_LOCATION "shaders/spv");
-			if (DirectoryExists(compiledDir))
+			if (Platform::DirectoryExists(compiledDir))
 			{
 				const char* blockName = "Calculate shader contents checksum";
 				{
@@ -2323,7 +2324,7 @@ namespace flex
 			}
 			else
 			{
-				CreateDirectoryRecursive(compiledDir);
+				Platform::CreateDirectoryRecursive(compiledDir);
 			}
 
 			if (bForceRecompile || bCodeOutOfDate)
@@ -2360,7 +2361,7 @@ namespace flex
 		{
 			i64 checksum = 0;
 			std::vector<std::string> filePaths;
-			if (FindFilesInDirectory(directory, filePaths, "*"))
+			if (Platform::FindFilesInDirectory(directory, filePaths, "*"))
 			{
 				m_ShaderCodeChecksum = 0;
 				for (const std::string& filePath : filePaths)

@@ -20,6 +20,12 @@ void operator delete(void* ptr) noexcept
 	free_hooked(ptr);
 }
 
+void operator delete(void* ptr, std::size_t size) noexcept
+{
+	free_hooked(ptr, size);
+}
+
+
 void* malloc_hooked(size_t size)
 {
 	if (size == 0)
@@ -57,6 +63,20 @@ void free_hooked(void* ptr)
 	}
 	ptr = ((size_t*)ptr) - 1;
 	size_t size = *((size_t*)ptr);
+	flex::g_TotalTrackedAllocatedMemory -= size;
+	++flex::g_TrackedDeallocationCount;
+	free(ptr);
+}
+
+void free_hooked(void* ptr, std::size_t size)
+{
+	if (!ptr)
+	{
+		return;
+	}
+	ptr = ((size_t*)ptr) - 1;
+	size_t stored_size = *((size_t*)ptr);
+	assert(stored_size == size); // Only full deallocations are permitted
 	flex::g_TotalTrackedAllocatedMemory -= size;
 	++flex::g_TrackedDeallocationCount;
 	free(ptr);

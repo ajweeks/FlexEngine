@@ -61,13 +61,13 @@ namespace flex
 
 		void VulkanPhysicsDebugDraw::draw3dText(const btVector3& location, const char* textString)
 		{
-			UNREFERENCED_PARAMETER(location);
-			UNREFERENCED_PARAMETER(textString);
+			FLEX_UNUSED(location);
+			FLEX_UNUSED(textString);
 		}
 
 		void VulkanPhysicsDebugDraw::setDebugMode(int debugMode)
 		{
-			UNREFERENCED_PARAMETER(debugMode);
+			FLEX_UNUSED(debugMode);
 			// NOTE: Call UpdateDebugMode instead of this
 		}
 
@@ -95,11 +95,11 @@ namespace flex
 
 		void VulkanPhysicsDebugDraw::drawContactPoint(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector3& color)
 		{
-			UNREFERENCED_PARAMETER(PointOnB);
-			UNREFERENCED_PARAMETER(normalOnB);
-			UNREFERENCED_PARAMETER(distance);
-			UNREFERENCED_PARAMETER(lifeTime);
-			UNREFERENCED_PARAMETER(color);
+			FLEX_UNUSED(PointOnB);
+			FLEX_UNUSED(normalOnB);
+			FLEX_UNUSED(distance);
+			FLEX_UNUSED(lifeTime);
+			FLEX_UNUSED(color);
 		}
 
 		void VulkanPhysicsDebugDraw::DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& color)

@@ -2038,7 +2038,7 @@ namespace flex
 				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, newFrameBufferFBO);
 				glBlitFramebuffer(0, 0, frameBufferSize.x, frameBufferSize.y, 0, 0, frameBufferSize.x, frameBufferSize.y, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
-				std::string dateTimeStr = GetDateString_YMDHMS();
+				std::string dateTimeStr = Platform::GetDateString_YMDHMS();
 				std::string relativeFilePath = ROOT_LOCATION "screenshots/";
 				relativeFilePath += dateTimeStr + ".png";
 				const std::string absoluteFilePath = RelativePathToAbsolute(relativeFilePath);
@@ -2554,7 +2554,7 @@ namespace flex
 
 		void GLRenderer::DrawSelectedObjectWireframe(const DrawCallInfo& drawCallInfo)
 		{
-			UNREFERENCED_PARAMETER(drawCallInfo);
+			FLEX_UNUSED(drawCallInfo);
 
 			const std::vector<GameObject*> selectedObjects = g_EngineInstance->GetSelectedObjects();
 			if (!selectedObjects.empty())
@@ -4929,7 +4929,7 @@ namespace flex
 						std::string relativeDirPath = RESOURCE_LOCATION "textures/";
 						std::string absoluteDirectoryStr = RelativePathToAbsolute(relativeDirPath);
 						std::string selectedAbsFilePath;
-						if (OpenFileDialog("Import texture", absoluteDirectoryStr, selectedAbsFilePath))
+						if (Platform::OpenFileDialog("Import texture", absoluteDirectoryStr, selectedAbsFilePath))
 						{
 							const std::string fileNameAndExtension = StripLeadingDirectories(selectedAbsFilePath);
 							std::string relativeFilePath = relativeDirPath + fileNameAndExtension;
@@ -5078,7 +5078,7 @@ namespace flex
 						std::string relativeDirPath = RESOURCE_LOCATION "meshes/";
 						std::string absoluteDirectoryStr = RelativePathToAbsolute(relativeDirPath);
 						std::string selectedAbsFilePath;
-						if (OpenFileDialog("Import mesh", absoluteDirectoryStr, selectedAbsFilePath))
+						if (Platform::OpenFileDialog("Import mesh", absoluteDirectoryStr, selectedAbsFilePath))
 						{
 							Print("Importing mesh: %s\n", selectedAbsFilePath.c_str());
 
@@ -5116,7 +5116,7 @@ namespace flex
 
 		void GLRenderer::DrawImGuiForRenderObject(RenderID renderID)
 		{
-			UNREFERENCED_PARAMETER(renderID);
+			FLEX_UNUSED(renderID);
 		}
 
 		void GLRenderer::UpdateVertexData(RenderID renderID, VertexBufferData* vertexBufferData)

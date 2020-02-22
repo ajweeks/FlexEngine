@@ -8,6 +8,7 @@
 #include "InputManager.hpp"
 #include "Time.hpp"
 #include "Window/Window.hpp"
+#include "Platform/Platform.hpp"
 
 namespace flex
 {
@@ -242,8 +243,8 @@ namespace flex
 
 		std::string directory = SAVED_LOCATION "profiles/";
 		std::string absoluteDirectory = RelativePathToAbsolute(directory);
-		CreateDirectoryRecursive(absoluteDirectory);
-		std::string dateString = GetDateString_YMDHMS();
+		Platform::CreateDirectoryRecursive(absoluteDirectory);
+		std::string dateString = Platform::GetDateString_YMDHMS();
 
 		if (!s_PendingCSV.empty())
 		{

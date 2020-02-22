@@ -101,20 +101,20 @@ namespace flex
 	{
 		std::srand((u32)time(NULL));
 
-		RetrieveCurrentWorkingDirectory();
+		Platform::RetrieveCurrentWorkingDirectory();
 
 		{
 			std::string configDirAbs = RelativePathToAbsolute(ROOT_LOCATION "config/");
 			m_CommonSettingsFileName = "common.json";
 			m_CommonSettingsAbsFilePath = configDirAbs + m_CommonSettingsFileName;
-			CreateDirectoryRecursive(configDirAbs);
+			Platform::CreateDirectoryRecursive(configDirAbs);
 		}
 
 		{
 			std::string bootupDirAbs = RelativePathToAbsolute(SAVED_LOCATION "");
 			m_BootupTimesFileName = "bootup-times.log";
 			m_BootupTimesAbsFilePath = bootupDirAbs + m_BootupTimesFileName;
-			CreateDirectoryRecursive(bootupDirAbs);
+			Platform::CreateDirectoryRecursive(bootupDirAbs);
 		}
 
 		{
@@ -290,7 +290,7 @@ namespace flex
 		PROFILE_END(engineInitBlockName);
 
 		ms blockDuration = Profiler::GetBlockDuration(engineInitBlockName);
-		std::string bootupTimesEntry = GetDateString_YMDHMS() + "," + FloatToString(blockDuration, 2);
+		std::string bootupTimesEntry = Platform::GetDateString_YMDHMS() + "," + FloatToString(blockDuration, 2);
 		AppendToBootupTimesFile(bootupTimesEntry);
 
 		ImGuiIO& io = ImGui::GetIO();
@@ -1397,8 +1397,8 @@ namespace flex
 
 	EventReply FlexEngine::OnMouseButtonEvent(MouseButton button, KeyAction action)
 	{
-		UNREFERENCED_PARAMETER(button);
-		UNREFERENCED_PARAMETER(action);
+		FLEX_UNUSED(button);
+		FLEX_UNUSED(action);
 		return EventReply::UNCONSUMED;
 	}
 
@@ -1609,7 +1609,7 @@ namespace flex
 				Print("Auto capturing %i frame(s) starting at frame %i\n", m_RenderDocAutoCaptureFrameCount, m_RenderDocAutoCaptureFrameOffset);
 			}
 
-			const std::string dateStr = GetDateString_YMDHMS();
+			const std::string dateStr = Platform::GetDateString_YMDHMS();
 			const std::string captureFilePath = RelativePathToAbsolute(SAVED_LOCATION "RenderDocCaptures/FlexEngine_" + dateStr);
 			m_RenderDocAPI->SetCaptureFilePathTemplate(captureFilePath.c_str());
 

@@ -1,6 +1,7 @@
 #include "stdafx.hpp"
 
 #include "FlexEngine.hpp"
+#include "Platform/Platform.hpp"
 #include "Test.hpp"
 
 // Memory leak checking includes
@@ -12,8 +13,8 @@ bool g_bShowConsole = true;
 
 int main(int argc, char *argv[])
 {
-	UNREFERENCED_PARAMETER(argc);
-	UNREFERENCED_PARAMETER(argv);
+	FLEX_UNUSED(argc);
+	FLEX_UNUSED(argv);
 
 #ifdef _WIN32
 	// Enable run-time memory leak check for debug builds
@@ -26,6 +27,7 @@ int main(int argc, char *argv[])
 #endif
 #endif
 
+	flex::Platform::GetConsoleHandle();
 	flex::InitializeLogger();
 
 #if RUN_UNIT_TESTS
@@ -55,10 +57,10 @@ int main(int argc, char *argv[])
 #ifdef _WIN32
 int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPWSTR lpCmdLine, _In_ int nCmdShow)
 {
-	UNREFERENCED_PARAMETER(hInstance);
-	UNREFERENCED_PARAMETER(hPrevInstance);
-	UNREFERENCED_PARAMETER(lpCmdLine);
-	UNREFERENCED_PARAMETER(nCmdShow);
+	FLEX_UNUSED(hInstance);
+	FLEX_UNUSED(hPrevInstance);
+	FLEX_UNUSED(lpCmdLine);
+	FLEX_UNUSED(nCmdShow);
 
 	g_bShowConsole = false;
 

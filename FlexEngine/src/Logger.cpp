@@ -4,6 +4,7 @@
 #include <cstdio> // For fprintf, ...
 
 #include "Helpers.hpp"
+#include "Platform/Platform.hpp"
 
 namespace flex
 {
@@ -17,16 +18,11 @@ namespace flex
 
 	void InitializeLogger()
 	{
-#ifdef _WIN32
-		g_ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
-		SetConsoleTextAttribute(g_ConsoleHandle, CONSOLE_COLOR_DEFAULT);
-#endif
-
 		g_LogBufferFilePath = SAVED_LOCATION "flex.log";
 
 		ClearLogFile();
 
-		g_LogBuffer << '[' << GetDateString_YMDHMS() << ']' << '\n';
+		g_LogBuffer << '[' << Platform::GetDateString_YMDHMS() << ']' << '\n';
 	}
 
 	void ClearLogFile()
@@ -61,7 +57,7 @@ namespace flex
 			return;
 		}
 
-		SetConsoleTextColor(CONSOLE_COLOR_DEFAULT);
+		Platform::SetConsoleTextColor(Platform::ConsoleColour::DEFAULT);
 
 		va_list argList;
 		va_start(argList, str);
@@ -78,7 +74,7 @@ namespace flex
 			return;
 		}
 
-		SetConsoleTextColor(CONSOLE_COLOR_WARNING);
+		Platform::SetConsoleTextColor(Platform::ConsoleColour::WARNING);
 
 		va_list argList;
 		va_start(argList, str);
@@ -95,7 +91,7 @@ namespace flex
 			return;
 		}
 
-		SetConsoleTextColor(CONSOLE_COLOR_ERROR);
+		Platform::SetConsoleTextColor(Platform::ConsoleColour::ERROR);
 
 		va_list argList;
 		va_start(argList, str);
@@ -110,9 +106,31 @@ namespace flex
 		i32 len = strlen(str);
 		for (i32 i = 0; i < len; i += MAX_CHARS)
 		{
-			Print(str + i, "");
+			PrintSimple(str + i);
 		}
-		Print(str + len - len % MAX_CHARS, "");
+		PrintSimple(str + len - len % MAX_CHARS);
+	}
+
+	void PrintSimple(const char* str)
+	{
+		if (!g_bEnableLogToConsole)
+		{
+			return;
+		}
+
+		Platform::SetConsoleTextColor(Platform::ConsoleColour::DEFAULT);
+
+		if (strlen(str) == 0)
+		{
+			std::cout << "\n";
+			Platform::PrintStringToDebuggerConsole("\n");
+		}
+		else
+		{
+			std::cout << str;
+
+			Platform::PrintStringToDebuggerConsole(str);
+		}
 	}
 
 	void Print(const char* str, va_list argList)
@@ -120,7 +138,7 @@ namespace flex
 		if (strlen(str) == 0)
 		{
 			std::cout << "\n";
-			OutputDebugString("\n");
+			Platform::PrintStringToDebuggerConsole("\n");
 		}
 		else
 		{
@@ -134,24 +152,7 @@ namespace flex
 
 			std::cout << s_buffer;
 
-			// TODO: Disable in shipping
-			OutputDebugString(s.c_str());
+			Platform::PrintStringToDebuggerConsole(s.c_str());
 		}
 	}
-
-	void SetConsoleTextColor(flex::u64 color)
-	{
-#ifdef _WIN32
-		SetConsoleTextAttribute(g_ConsoleHandle, color);
-#endif
-	}
-
-	void OutputDebugString(const char* str)
-	{
-#ifdef _WIN32
-		::OutputDebugString(str);
-#endif
-	}
-
-
 } // namespace flex

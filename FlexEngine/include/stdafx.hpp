@@ -1,3 +1,5 @@
+// Configuration variables:
+
 #define COMPILE_OPEN_GL 0
 #define COMPILE_VULKAN 1
 
@@ -5,19 +7,7 @@
 
 #define RUN_UNIT_TESTS 0
 
-#if COMPILE_OPEN_GL
-extern bool g_bOpenGLEnabled;
-#else
-extern bool g_bOpenGLEnabled;
-#endif
-
-#if COMPILE_VULKAN
-extern bool g_bVulkanEnabled;
-#else
-const bool g_bVulkanEnabled = false;
-#endif
-
-extern bool g_bEnableLogging_Loading;
+#define ENABLE_CONSOLE_COLOURS 1
 
 #ifdef DEBUG
 #define THOROUGH_CHECKS 1
@@ -29,10 +19,24 @@ extern bool g_bEnableLogging_Loading;
 #define COMPILE_RENDERDOC_API 0
 #endif
 
+// End configuration variables
+
 #define VC_EXTRALEAN
 
 #if COMPILE_VULKAN
 #define VULKAN_HPP_TYPESAFE_CONVERSION
+#endif
+
+#if COMPILE_OPEN_GL
+extern bool g_bOpenGLEnabled;
+#else
+extern bool g_bOpenGLEnabled;
+#endif
+
+#if COMPILE_VULKAN
+extern bool g_bVulkanEnabled;
+#else
+const bool g_bVulkanEnabled = false;
 #endif
 
 #include <cstddef>
@@ -51,9 +55,7 @@ extern bool g_bEnableLogging_Loading;
 // TODO(AJ): Add linux expose define?
 #endif
 
-#ifndef UNREFERENCED_PARAMETER
-#define UNREFERENCED_PARAMETER(x) ((void)x);
-#endif
+#define FLEX_UNUSED(param) ((void)param)
 
 #define GLFW_INCLUDE_NONE
 
@@ -92,11 +94,6 @@ extern bool g_bEnableLogging_Loading;
 #endif
 
 #define FT_EXPORT(Type) Type
-
-//#pragma warning(disable : 4201) // nonstandard extension used: nameless struct/union
-//#pragma warning(disable : 4820) // bytes' bytes padding added after construct 'member_name'
-//#pragma warning(disable : 4868) // compiler may not enforce left-to-right evaluation order in braced initializer list
-//#pragma warning(disable : 4710) // function not inlined
 
 #include <algorithm>
 #include <functional>
@@ -282,6 +279,8 @@ namespace flex
 	extern std::size_t g_TotalTrackedAllocatedMemory;
 	extern std::size_t g_TrackedAllocationCount;
 	extern std::size_t g_TrackedDeallocationCount;
+	
+	extern bool g_bEnableLogging_Loading;
 }
 
 namespace glm

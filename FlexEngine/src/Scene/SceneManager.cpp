@@ -8,6 +8,7 @@
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "Scene/BaseScene.hpp"
+#include "Platform/Platform.hpp"
 
 namespace flex
 {
@@ -15,9 +16,9 @@ namespace flex
 		m_SavedDirStr(RelativePathToAbsolute(RESOURCE_LOCATION "scenes/saved")),
 		m_DefaultDirStr(RelativePathToAbsolute(RESOURCE_LOCATION "scenes/default"))
 	{
-		if (!DirectoryExists(m_SavedDirStr))
+		if (!Platform::DirectoryExists(m_SavedDirStr))
 		{
-			CreateDirectoryRecursive(m_SavedDirStr);
+			Platform::CreateDirectoryRecursive(m_SavedDirStr);
 		}
 	}
 
@@ -222,7 +223,7 @@ namespace flex
 
 		// Find and load all saved scene files
 		std::vector<std::string> foundFileNames;
-		if (FindFilesInDirectory(m_SavedDirStr, foundFileNames, "json"))
+		if (Platform::FindFilesInDirectory(m_SavedDirStr, foundFileNames, "json"))
 		{
 			for (std::string& fileName : foundFileNames)
 			{
@@ -240,7 +241,7 @@ namespace flex
 
 		// Load the default for any scenes which don't have a corresponding save file
 		foundFileNames.clear();
-		if (FindFilesInDirectory(m_DefaultDirStr, foundFileNames, "json"))
+		if (Platform::FindFilesInDirectory(m_DefaultDirStr, foundFileNames, "json"))
 		{
 			for (std::string& fileName : foundFileNames)
 			{
@@ -658,7 +659,7 @@ namespace flex
 
 					if (ImGui::Button("Hard reload (deletes save file!)"))
 					{
-						DeleteFile(scene->GetRelativeFilePath());
+						Platform::DeleteFile(scene->GetRelativeFilePath());
 						ReloadCurrentScene();
 
 						ImGui::CloseCurrentPopup();
@@ -749,7 +750,7 @@ namespace flex
 					}
 					else
 					{
-						if (CopyFile(filePathFrom, filePathTo))
+						if (Platform::CopyFile(filePathFrom, filePathTo))
 						{
 							BaseScene* newScene = new BaseScene(newSceneFileName);
 							AddScene(newScene);
@@ -787,7 +788,7 @@ namespace flex
 			if (ImGui::Button("Open in explorer"))
 			{
 				const std::string directory = RelativePathToAbsolute(ExtractDirectoryString(currentScene->GetRelativeFilePath()));
-				OpenExplorer(directory);
+				Platform::OpenExplorer(directory);
 			}
 
 			ImGui::SameLine();

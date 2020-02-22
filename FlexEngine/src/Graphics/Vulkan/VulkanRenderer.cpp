@@ -38,6 +38,7 @@ IGNORE_WARNINGS_POP
 #include "InputManager.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Profiler.hpp"
+#include "Platform/Platform.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/LoadedMesh.hpp"
@@ -1229,7 +1230,7 @@ namespace flex
 
 		void VulkanRenderer::PostInitializeRenderObject(RenderID renderID)
 		{
-			UNREFERENCED_PARAMETER(renderID);
+			FLEX_UNUSED(renderID);
 			m_bRebatchRenderObjects = true;
 		}
 
@@ -1863,7 +1864,7 @@ namespace flex
 
 		void VulkanRenderer::DrawImGuiForRenderObject(RenderID renderID)
 		{
-			UNREFERENCED_PARAMETER(renderID);
+			FLEX_UNUSED(renderID);
 		}
 
 		void VulkanRenderer::ReloadShaders(bool bForce)
@@ -1911,7 +1912,7 @@ namespace flex
 
 		void VulkanRenderer::ReloadSkybox(bool bRandomizeTexture)
 		{
-			UNREFERENCED_PARAMETER(bRandomizeTexture);
+			FLEX_UNUSED(bRandomizeTexture);
 		}
 
 		void VulkanRenderer::SetTopologyMode(RenderID renderID, TopologyMode topology)
@@ -1941,8 +1942,8 @@ namespace flex
 
 		void VulkanRenderer::OnWindowSizeChanged(i32 width, i32 height)
 		{
-			UNREFERENCED_PARAMETER(width);
-			UNREFERENCED_PARAMETER(height);
+			FLEX_UNUSED(width);
+			FLEX_UNUSED(height);
 
 			if (width != 0 && height != 0)
 			{
@@ -2035,13 +2036,13 @@ namespace flex
 
 		void VulkanRenderer::DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size, DataType dataType, bool normalized, i32 stride, void* pointer)
 		{
-			UNREFERENCED_PARAMETER(renderID);
-			UNREFERENCED_PARAMETER(variableName);
-			UNREFERENCED_PARAMETER(size);
-			UNREFERENCED_PARAMETER(dataType);
-			UNREFERENCED_PARAMETER(normalized);
-			UNREFERENCED_PARAMETER(stride);
-			UNREFERENCED_PARAMETER(pointer);
+			FLEX_UNUSED(renderID);
+			FLEX_UNUSED(variableName);
+			FLEX_UNUSED(size);
+			FLEX_UNUSED(dataType);
+			FLEX_UNUSED(normalized);
+			FLEX_UNUSED(stride);
+			FLEX_UNUSED(pointer);
 		}
 
 		void VulkanRenderer::SetSkyboxMesh(Mesh* skyboxMesh)
@@ -2249,9 +2250,9 @@ namespace flex
 					static std::string matName = "";
 					static i32 selectedShaderIndex = 0;
 					// Texture index values of 0 represent no texture, 1 = first index into textures array and so on
-					static i32 albedoTextureIndex = 0;
+					//static i32 albedoTextureIndex = 0;
 					static std::vector<i32> selectedTextureIndices; // One for each of the current material's texture slots
-					static bool bUpdateAlbedoTextureMaterial = false;
+					//static bool bUpdateAlbedoTextureMaterial = false;
 					VulkanMaterial& mat = m_Materials.at(selectedMaterialID);
 
 					if (bMaterialSelectionChanged)
@@ -2634,7 +2635,7 @@ namespace flex
 						std::string relativeDirPath = RESOURCE_LOCATION "textures/";
 						std::string absoluteDirectoryStr = RelativePathToAbsolute(relativeDirPath);
 						std::string selectedAbsFilePath;
-						if (OpenFileDialog("Import texture", absoluteDirectoryStr, selectedAbsFilePath))
+						if (Platform::OpenFileDialog("Import texture", absoluteDirectoryStr, selectedAbsFilePath))
 						{
 							const std::string fileNameAndExtension = StripLeadingDirectories(selectedAbsFilePath);
 							std::string relativeFilePath = relativeDirPath + fileNameAndExtension;
@@ -2792,7 +2793,7 @@ namespace flex
 						std::string relativeImportDirPath = RESOURCE_LOCATION "meshes/";
 						std::string absoluteImportDirectoryStr = RelativePathToAbsolute(relativeImportDirPath);
 						std::string selectedAbsFilePath;
-						if (OpenFileDialog("Import mesh", absoluteImportDirectoryStr, selectedAbsFilePath))
+						if (Platform::OpenFileDialog("Import mesh", absoluteImportDirectoryStr, selectedAbsFilePath))
 						{
 							const std::string absDirectory = ExtractDirectoryString(selectedAbsFilePath);
 							if (absDirectory != absoluteImportDirectoryStr)
@@ -3739,7 +3740,6 @@ namespace flex
 		{
 			if (!bRenderedBRDFLUT)
 			{
-				const VkFormat format = VK_FORMAT_R16G16_SFLOAT;
 				const u32 dim = (u32)m_BRDFSize.x;
 				assert(dim <= MAX_TEXTURE_DIM);
 
@@ -3834,17 +3834,17 @@ namespace flex
 
 		void VulkanRenderer::CaptureSceneToCubemap(RenderID cubemapRenderID)
 		{
-			UNREFERENCED_PARAMETER(cubemapRenderID);
+			FLEX_UNUSED(cubemapRenderID);
 		}
 
 		void VulkanRenderer::GeneratePrefilteredMapFromCubemap(MaterialID cubemapMaterialID)
 		{
-			UNREFERENCED_PARAMETER(cubemapMaterialID);
+			FLEX_UNUSED(cubemapMaterialID);
 		}
 
 		void VulkanRenderer::GenerateIrradianceSamplerFromCubemap(MaterialID cubemapMaterialID)
 		{
-			UNREFERENCED_PARAMETER(cubemapMaterialID);
+			FLEX_UNUSED(cubemapMaterialID);
 		}
 
 		void VulkanRenderer::CreateSSAOPipelines()
@@ -6349,7 +6349,7 @@ namespace flex
 
 		void VulkanRenderer::CreateGraphicsPipeline(RenderID renderID, bool bSetCubemapRenderPass)
 		{
-			UNREFERENCED_PARAMETER(bSetCubemapRenderPass);
+			FLEX_UNUSED(bSetCubemapRenderPass);
 
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
 			if (!renderObject || !renderObject->vertexBufferData)
@@ -9066,7 +9066,7 @@ namespace flex
 		{
 			// Start counting at 1 because 0 is the default value
 			const i32 queryIndex = (i32)(m_TimestampQueryNames.size() * 2) + 1;
-			assert(queryIndex < MAX_TIMESTAMP_QUERIES - 2);
+			assert(queryIndex < (i32)MAX_TIMESTAMP_QUERIES - 2);
 			m_TimestampQueryNames[name] = queryIndex;
 
 			vkCmdResetQueryPool(commandBuffer, m_TimestampQueryPool, (u32)(queryIndex - 1), 2);
@@ -9134,12 +9134,12 @@ namespace flex
 		VKAPI_ATTR VkBool32 VKAPI_CALL VulkanRenderer::DebugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType,
 			u64 obj, size_t location, i32 code, const char* layerPrefix, const char* msg, void* userData)
 		{
-			UNREFERENCED_PARAMETER(objType);
-			UNREFERENCED_PARAMETER(obj);
-			UNREFERENCED_PARAMETER(location);
-			UNREFERENCED_PARAMETER(code);
-			UNREFERENCED_PARAMETER(layerPrefix);
-			UNREFERENCED_PARAMETER(userData);
+			FLEX_UNUSED(objType);
+			FLEX_UNUSED(obj);
+			FLEX_UNUSED(location);
+			FLEX_UNUSED(code);
+			FLEX_UNUSED(layerPrefix);
+			FLEX_UNUSED(userData);
 
 			std::string msgStr = Replace(msg, " | ", "\n\t");
 

@@ -6,6 +6,7 @@
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp" // For WriteFile
 #include "JSONParser.hpp"
+#include "Platform/Platform.hpp"
 #include "Window/Window.hpp"
 
 namespace flex
@@ -667,7 +668,7 @@ namespace flex
 
 	void InputManager::MouseButtonCallback(MouseButton mouseButton, KeyAction action, i32 mods)
 	{
-		UNREFERENCED_PARAMETER(mods);
+		FLEX_UNUSED(mods);
 
 		assert((u32)mouseButton < MOUSE_BUTTON_COUNT);
 
@@ -780,7 +781,7 @@ namespace flex
 
 	void InputManager::KeyCallback(KeyCode keyCode, KeyAction action, i32 mods)
 	{
-		UNREFERENCED_PARAMETER(mods);
+		FLEX_UNUSED(mods);
 
 		m_Keys[keyCode].pDown = m_Keys[keyCode].down;
 

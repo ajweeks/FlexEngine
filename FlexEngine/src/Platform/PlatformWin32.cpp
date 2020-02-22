@@ -6,10 +6,52 @@
 
 IGNORE_WARNINGS_PUSH
 #include <tlhelp32.h> // For CreateToolhelp32Snapshot, Process32First
+
+#include <commdlg.h> // For OPENFILENAME
+#include <shellapi.h> // For ShellExecute
+
+#include <direct.h> // For _getcwd
+#include <stdio.h> // For gcvt, fopen
 IGNORE_WARNINGS_POP
 
 namespace flex
 {
+	typedef void* HANDLE;
+	typedef unsigned short WORD;
+
+	// Taken from ntddvdeo.h:
+#define FOREGROUND_BLUE      0x0001
+#define FOREGROUND_GREEN     0x0002
+#define FOREGROUND_RED       0x0004
+#define FOREGROUND_INTENSITY 0x0008
+#define BACKGROUND_BLUE      0x0010
+#define BACKGROUND_GREEN     0x0020
+#define BACKGROUND_RED       0x0040
+#define BACKGROUND_INTENSITY 0x0080
+
+	const WORD CONSOLE_COLOR_DEFAULT = 0 | FOREGROUND_INTENSITY;
+	const WORD CONSOLE_COLOR_WARNING = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY;
+	const WORD CONSOLE_COLOR_ERROR = FOREGROUND_RED | FOREGROUND_INTENSITY;
+
+	HANDLE g_ConsoleHandle;
+
+	void Platform::GetConsoleHandle()
+	{
+		g_ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+		SetConsoleTextAttribute(g_ConsoleHandle, CONSOLE_COLOR_DEFAULT);
+	}
+
+	void Platform::SetConsoleTextColor(ConsoleColour colour)
+	{
+#if ENABLE_CONSOLE_COLOURS
+		static WORD[] w_colours = { CONSOLE_COLOR_DEFAULT, CONSOLE_COLOR_WARNING, CONSOLE_COLOR_ERROR };
+
+		SetConsoleTextAttribute(g_ConsoleHandle, w_colours[(u32)colour]);
+#else
+		FLEX_UNUSED(colour);
+#endif
+	}
+
 	bool Platform::IsProcessRunning(u32 PID)
 	{
 		HANDLE h = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, PID);
@@ -83,5 +125,237 @@ namespace flex
 			}
 		}
 	}
+
+	void Platform::PrintStringToDebuggerConsole(const char* str)
+	{
+		OutputDebugString(str);
+	}
+
+	void Platform::RetrieveCurrentWorkingDirectory()
+	{
+		char cwdBuffer[MAX_PATH];
+		char* str = _getcwd(cwdBuffer, sizeof(cwdBuffer));
+		if (str)
+		{
+			FlexEngine::s_CurrentWorkingDirectory = ReplaceBackSlashesWithForward(str);
+		}
+	}
+
+	bool Platform::CreateDirectoryRecursive(const std::string& absoluteDirectoryPath)
+	{
+		if (absoluteDirectoryPath.find("..") != std::string::npos)
+		{
+			PrintError("Attempted to create directory using relative path! Must specify absolute path!\n");
+			return false;
+		}
+
+		if (Platform::DirectoryExists(absoluteDirectoryPath))
+		{
+			// Directory already exists
+			return true;
+		}
+
+		u32 pos = 0;
+		do
+		{
+			pos = absoluteDirectoryPath.find_first_of('/', pos + 1);
+			CreateDirectory(absoluteDirectoryPath.substr(0, pos).c_str(), NULL);
+			// TODO: Return false on failure here
+			//GetLastError() == ERROR_ALREADY_EXISTS;
+		} while (pos != std::string::npos);
+
+		return true;
+	}
+
+	bool Platform::DeleteFile(const std::string& filePath, bool bPrintErrorOnFailure /* = true */)
+	{
+		if (::DeleteFile(filePath.c_str()))
+		{
+			return true;
+		}
+		else
+		{
+			if (bPrintErrorOnFailure)
+			{
+				PrintError("Failed to delete file %s\n", filePath.c_str());
+			}
+			return false;
+		}
+	}
+
+	bool Platform::CopyFile(const std::string& filePathFrom, const std::string& filePathTo)
+	{
+		if (::CopyFile(filePathFrom.c_str(), filePathTo.c_str(), 0))
+		{
+			return true;
+		}
+		else
+		{
+			PrintError("Failed to copy file from \"%s\" to \"%s\"\n", filePathFrom.c_str(), filePathTo.c_str());
+			return false;
+		}
+	}
+
+	bool Platform::DirectoryExists(const std::string& absoluteDirectoryPath)
+	{
+		if (absoluteDirectoryPath.find("..") != std::string::npos)
+		{
+			PrintError("Attempted to create directory using relative path! Must specify absolute path!\n");
+			return false;
+		}
+
+		DWORD dwAttrib = GetFileAttributes(absoluteDirectoryPath.c_str());
+
+		return (dwAttrib != INVALID_FILE_ATTRIBUTES && dwAttrib & FILE_ATTRIBUTE_DIRECTORY);
+	}
+
+	void Platform::OpenExplorer(const std::string& absoluteDirectory)
+	{
+		ShellExecute(NULL, "open", absoluteDirectory.c_str(), NULL, NULL, SW_SHOWDEFAULT);
+	}
+
+	bool Platform::OpenFileDialog(const std::string& windowTitle, const std::string& absoluteDirectory, std::string& outSelectedAbsFilePath, char filter[] /* = nullptr */)
+	{
+		OPENFILENAME openFileName = {};
+		openFileName.lStructSize = sizeof(OPENFILENAME);
+		openFileName.lpstrInitialDir = absoluteDirectory.c_str();
+		openFileName.nMaxFile = (filter == nullptr ? 0 : strlen(filter));
+		if (openFileName.nMaxFile && filter)
+		{
+			openFileName.lpstrFilter = filter;
+		}
+		openFileName.nFilterIndex = 0;
+		const i32 MAX_FILE_PATH_LEN = 512;
+		char fileBuf[MAX_FILE_PATH_LEN];
+		memset(fileBuf, '\0', MAX_FILE_PATH_LEN - 1);
+		openFileName.lpstrFile = fileBuf;
+		openFileName.nMaxFile = MAX_FILE_PATH_LEN;
+		openFileName.lpstrTitle = windowTitle.c_str();
+		openFileName.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+		bool bSuccess = GetOpenFileName(&openFileName) == 1;
+
+		if (openFileName.lpstrFile)
+		{
+			outSelectedAbsFilePath = ReplaceBackSlashesWithForward(openFileName.lpstrFile);
+		}
+
+		return bSuccess;
+	}
+
+	bool Platform::FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileType)
+	{
+		std::string cleanedFileType = fileType;
+		{
+			size_t dotPos = cleanedFileType.find('.');
+			if (dotPos != std::string::npos)
+			{
+				cleanedFileType.erase(dotPos, 1);
+			}
+		}
+
+		std::string cleanedDirPath = directoryPath;
+		if (cleanedDirPath[cleanedDirPath.size() - 1] != '/')
+		{
+			cleanedDirPath += '/';
+		}
+
+		std::string cleanedDirPathWithWildCard = cleanedDirPath + '*';
+
+
+		HANDLE hFind;
+		WIN32_FIND_DATAA findData;
+
+		hFind = FindFirstFile(cleanedDirPathWithWildCard.c_str(), &findData);
+
+		if (hFind == INVALID_HANDLE_VALUE)
+		{
+			PrintError("Failed to find any file in directory %s\n", cleanedDirPath.c_str());
+			return false;
+		}
+
+		do
+		{
+			if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+			{
+				// Skip over directories
+				//Print(findData.cFileName);
+			}
+			else
+			{
+				bool foundFileTypeMatches = false;
+				if (cleanedFileType == "*")
+				{
+					foundFileTypeMatches = true;
+				}
+				else
+				{
+					std::string fileNameStr(findData.cFileName);
+					size_t dotPos = fileNameStr.find('.');
+
+					if (dotPos != std::string::npos)
+					{
+						std::string foundFileType = Split(fileNameStr, '.')[1];
+						if (foundFileType == cleanedFileType)
+						{
+							foundFileTypeMatches = true;
+						}
+					}
+				}
+
+				if (foundFileTypeMatches)
+				{
+					// File size retrieval:
+					//LARGE_INTEGER filesize;
+					//filesize.LowPart = findData.nFileSizeLow;
+					//filesize.HighPart = findData.nFileSizeHigh;
+
+					filePaths.push_back(cleanedDirPath + findData.cFileName);
+				}
+			}
+		} while (FindNextFile(hFind, &findData) != 0);
+
+		FindClose(hFind);
+
+		DWORD dwError = GetLastError();
+		if (dwError != ERROR_NO_MORE_FILES)
+		{
+			PrintError("Error encountered while finding files in directory %s\n", cleanedDirPath.c_str());
+			return false;
+		}
+
+		return !filePaths.empty();
+	}
+
+	std::string Platform::GetDateString_YMD()
+	{
+		std::stringstream result;
+
+		SYSTEMTIME time;
+		GetLocalTime(&time);
+
+		result << IntToString(time.wYear, 4) << '-' <<
+			IntToString(time.wMonth, 2) << '-' <<
+			IntToString(time.wDay, 2);
+
+		return result.str();
+	}
+
+	std::string Platform::GetDateString_YMDHMS()
+	{
+		std::stringstream result;
+
+		SYSTEMTIME time;
+		GetLocalTime(&time);
+
+		result << IntToString(time.wYear, 4) << '-' <<
+			IntToString(time.wMonth, 2) << '-' <<
+			IntToString(time.wDay, 2) << '_' <<
+			IntToString(time.wHour, 2) << '-' <<
+			IntToString(time.wMinute, 2) << '-' <<
+			IntToString(time.wSecond, 2);
+
+		return result.str();
+	}
+
 } // namespace flex
 #endif // _WIN32

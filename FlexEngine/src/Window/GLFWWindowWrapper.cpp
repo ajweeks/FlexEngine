@@ -532,7 +532,7 @@ namespace flex
 
 	void GLFWKeyCallback(GLFWwindow* glfwWindow, i32 key, i32 scancode, i32 action, i32 mods)
 	{
-		UNREFERENCED_PARAMETER(scancode);
+		FLEX_UNUSED(scancode);
 
 		Window* window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
 		const KeyAction inputAction = GLFWActionToInputManagerAction(action);
@@ -838,8 +838,8 @@ namespace flex
 	void WINAPI glDebugOutput(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,
 		const GLchar* message, const void* userParam)
 	{
-		UNREFERENCED_PARAMETER(userParam);
-		UNREFERENCED_PARAMETER(length);
+		FLEX_UNUSED(userParam);
+		FLEX_UNUSED(length);
 
 		// Ignore insignificant error/warning codes and notification messages
 		if (id == 131169 || id == 131185 || id == 131218 || id == 131204 ||

@@ -2,15 +2,6 @@
 
 #include "Editor.hpp"
 
-#include "Graphics/RendererTypes.hpp"
-#include "Graphics/Renderer.hpp"
-#include "Scene/GameObject.hpp"
-#include "InputManager.hpp"
-#include "Cameras/CameraManager.hpp"
-#include "Cameras/BaseCamera.hpp"
-#include "Physics/PhysicsHelpers.hpp"
-#include "Helpers.hpp"
-
 IGNORE_WARNINGS_PUSH
 #include <BulletCollision/CollisionShapes/btCylinderShape.h>
 #include <BulletDynamics/Dynamics/btDynamicsWorld.h>
@@ -19,13 +10,23 @@ IGNORE_WARNINGS_PUSH
 #include <glm/gtx/intersect.hpp>
 
 #include <LinearMath/btIDebugDraw.h>
-#include "Scene/Mesh.hpp"
-#include "Physics/RigidBody.hpp"
-#include "Scene/SceneManager.hpp"
-#include "Scene/BaseScene.hpp"
-#include "Physics/PhysicsWorld.hpp"
-#include "FlexEngine.hpp"
 IGNORE_WARNINGS_POP
+
+#include "Cameras/BaseCamera.hpp"
+#include "Cameras/CameraManager.hpp"
+#include "FlexEngine.hpp"
+#include "Graphics/Renderer.hpp"
+#include "Graphics/RendererTypes.hpp"
+#include "Helpers.hpp"
+#include "InputManager.hpp"
+#include "Physics/PhysicsHelpers.hpp"
+#include "Physics/PhysicsWorld.hpp"
+#include "Physics/RigidBody.hpp"
+#include "Platform/Platform.hpp"
+#include "Scene/BaseScene.hpp"
+#include "Scene/GameObject.hpp"
+#include "Scene/Mesh.hpp"
+#include "Scene/SceneManager.hpp"
 
 namespace flex
 {
@@ -680,6 +681,9 @@ namespace flex
 				//gizmoTransform->Translate();
 			}
 		} break;
+		default:
+		{
+		} break;
 		}
 
 		btVector3 rayStart, rayEnd;
@@ -1042,7 +1046,7 @@ namespace flex
 
 	EventReply Editor::OnMouseMovedEvent(const glm::vec2& dMousePos)
 	{
-		UNREFERENCED_PARAMETER(dMousePos);
+		FLEX_UNUSED(dMousePos);
 
 		if (m_bDraggingGizmo)
 		{
@@ -1055,7 +1059,6 @@ namespace flex
 	EventReply Editor::OnKeyEvent(KeyCode keyCode, KeyAction action, i32 modifiers)
 	{
 		const bool bControlDown = (modifiers & (i32)InputModifier::CONTROL) > 0;
-		const bool bAltDown = (modifiers & (i32)InputModifier::ALT) > 0;
 
 		if (action == KeyAction::PRESS)
 		{

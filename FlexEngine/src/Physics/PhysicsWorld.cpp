@@ -185,7 +185,7 @@ namespace flex
 	// CLEANUP:
 	void PhysicsInternalTickCallback(btDynamicsWorld* world, btScalar timeStep)
 	{
-		UNREFERENCED_PARAMETER(timeStep);
+		FLEX_UNUSED(timeStep);
 
 		PhysicsWorld* physWorld = static_cast<PhysicsWorld*>(world->getWorldUserInfo());
 

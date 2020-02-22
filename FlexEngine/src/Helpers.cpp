@@ -2,14 +2,6 @@
 
 #include "Helpers.hpp"
 
-#ifdef _WIN32
-#include <commdlg.h> // For OPENFILENAME
-#include <shellapi.h> // For ShellExecute
-
-#include <direct.h> // For _getcwd
-#include <stdio.h> // For gcvt, fopen
-#endif
-
 #include <iomanip> // for setprecision
 
 IGNORE_WARNINGS_PUSH
@@ -23,6 +15,7 @@ IGNORE_WARNINGS_POP
 
 #include "FlexEngine.hpp" // For FlexEngine::s_CurrentWorkingDirectory
 #include "Graphics/Renderer.hpp" // For MAX_TEXTURE_DIM
+#include "Platform/Platform.hpp"
 #include "Transform.hpp"
 
 // Taken from "AL/al.h":
@@ -300,184 +293,10 @@ namespace flex
 		return false;
 	}
 
-	bool DeleteFile(const std::string& filePath, bool bPrintErrorOnFailure)
-	{
-#ifdef _WIN32
-		if (::DeleteFile(filePath.c_str()))
-		{
-			return true;
-		}
-		else
-		{
-			if (bPrintErrorOnFailure)
-			{
-				PrintError("Failed to delete file %s\n", filePath.c_str());
-			}
-			return false;
-		}
-#endif
-	}
-
-	bool CopyFile(const std::string& filePathFrom, const std::string& filePathTo)
-	{
-#ifdef _WIN32
-		if (::CopyFile(filePathFrom.c_str(), filePathTo.c_str(), 0))
-		{
-			return true;
-		}
-		else
-		{
-			PrintError("Failed to copy file from \"%s\" to \"%s\"\n", filePathFrom.c_str(), filePathTo.c_str());
-			return false;
-		}
-#endif
-	}
-
-	bool DirectoryExists(const std::string& absoluteDirectoryPath)
-	{
-#ifdef _WIN32
-		if (absoluteDirectoryPath.find("..") != std::string::npos)
-		{
-			PrintError("Attempted to create directory using relative path! Must specify absolute path!\n");
-			return false;
-		}
-
-		DWORD dwAttrib = GetFileAttributes(absoluteDirectoryPath.c_str());
-
-		return (dwAttrib != INVALID_FILE_ATTRIBUTES &&
-			dwAttrib & FILE_ATTRIBUTE_DIRECTORY);
-#endif
-	}
-
-	void OpenExplorer(const std::string& absoluteDirectory)
-	{
-#ifdef _WIN32
-		ShellExecute(NULL, "open", absoluteDirectory.c_str(), NULL, NULL, SW_SHOWDEFAULT);
-#endif
-	}
-
 	bool OpenJSONFileDialog(const std::string& windowTitle, const std::string& absoluteDirectory, std::string& outSelectedAbsFilePath)
 	{
 		char filter[] = "JSON files\0*.json\0\0";
-		return OpenFileDialog(windowTitle, absoluteDirectory, outSelectedAbsFilePath, filter);
-	}
-
-	bool OpenFileDialog(const std::string& windowTitle, const std::string& absoluteDirectory, std::string& outSelectedAbsFilePath, char filter[] /* = nullptr */)
-	{
-#ifdef _WIN32
-		OPENFILENAME openFileName = {};
-		openFileName.lStructSize = sizeof(OPENFILENAME);
-		openFileName.lpstrInitialDir = absoluteDirectory.c_str();
-		openFileName.nMaxFile = (filter == nullptr ? 0 : strlen(filter));
-		if (openFileName.nMaxFile && filter)
-		{
-			openFileName.lpstrFilter = filter;
-		}
-		openFileName.nFilterIndex = 0;
-		const i32 MAX_FILE_PATH_LEN = 512;
-		char fileBuf[MAX_FILE_PATH_LEN];
-		memset(fileBuf, '\0', MAX_FILE_PATH_LEN - 1);
-		openFileName.lpstrFile = fileBuf;
-		openFileName.nMaxFile = MAX_FILE_PATH_LEN;
-		openFileName.lpstrTitle = windowTitle.c_str();
-		openFileName.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
-		bool bSuccess = GetOpenFileName(&openFileName) == 1;
-
-		if (openFileName.lpstrFile)
-		{
-			outSelectedAbsFilePath = ReplaceBackSlashesWithForward(openFileName.lpstrFile);
-		}
-
-		return bSuccess;
-#endif
-		return false;
-	}
-
-	bool FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileType)
-	{
-#ifdef _WIN32
-		std::string cleanedFileType = fileType;
-		{
-			size_t dotPos = cleanedFileType.find('.');
-			if (dotPos != std::string::npos)
-			{
-				cleanedFileType.erase(dotPos, 1);
-			}
-		}
-
-		std::string cleanedDirPath = directoryPath;
-		if (cleanedDirPath[cleanedDirPath.size() - 1] != '/')
-		{
-			cleanedDirPath += '/';
-		}
-
-		std::string cleanedDirPathWithWildCard = cleanedDirPath + '*';
-
-
-		HANDLE hFind;
-		WIN32_FIND_DATAA findData;
-
-		hFind = FindFirstFile(cleanedDirPathWithWildCard.c_str(), &findData);
-
-		if (hFind == INVALID_HANDLE_VALUE)
-		{
-			PrintError("Failed to find any file in directory %s\n", cleanedDirPath.c_str());
-			return false;
-		}
-
-		do
-		{
-			if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-			{
-				// Skip over directories
-				//Print(findData.cFileName);
-			}
-			else
-			{
-				bool foundFileTypeMatches = false;
-				if (cleanedFileType == "*")
-				{
-					foundFileTypeMatches = true;
-				}
-				else
-				{
-					std::string fileNameStr(findData.cFileName);
-					size_t dotPos = fileNameStr.find('.');
-
-					if (dotPos != std::string::npos)
-					{
-						std::string foundFileType = Split(fileNameStr, '.')[1];
-						if (foundFileType == cleanedFileType)
-						{
-							foundFileTypeMatches = true;
-						}
-					}
-				}
-
-				if (foundFileTypeMatches)
-				{
-					// File size retrieval:
-					//LARGE_INTEGER filesize;
-					//filesize.LowPart = findData.nFileSizeLow;
-					//filesize.HighPart = findData.nFileSizeHigh;
-
-					filePaths.push_back(cleanedDirPath + findData.cFileName);
-				}
-			}
-		} while (FindNextFile(hFind, &findData) != 0);
-
-		FindClose(hFind);
-
-		DWORD dwError = GetLastError();
-		if (dwError != ERROR_NO_MORE_FILES)
-		{
-			PrintError("Error encountered while finding files in directory %s\n", cleanedDirPath.c_str());
-			return false;
-		}
-
-		return !filePaths.empty();
-#endif
-		return false;
+		return Platform::OpenFileDialog(windowTitle, absoluteDirectory, outSelectedAbsFilePath, filter);
 	}
 
 	std::string StripLeadingDirectories(std::string filePath)
@@ -516,31 +335,6 @@ namespace flex
 			filePathInTypeOut = Split(filePathInTypeOut, '.')[1];
 		}
 		return filePathInTypeOut;
-	}
-
-	void CreateDirectoryRecursive(const std::string& absoluteDirectoryPath)
-	{
-#ifdef _WIN32
-		if (absoluteDirectoryPath.find("..") != std::string::npos)
-		{
-			PrintError("Attempted to create directory using relative path! Must specify absolute path!\n");
-			return;
-		}
-
-		if (DirectoryExists(absoluteDirectoryPath))
-		{
-			// Directory already exists!
-			return;
-		}
-
-		u32 pos = 0;
-		do
-		{
-			pos = absoluteDirectoryPath.find_first_of('/', pos + 1);
-			CreateDirectory(absoluteDirectoryPath.substr(0, pos).c_str(), NULL);
-			//GetLastError() == ERROR_ALREADY_EXISTS;
-		} while (pos != std::string::npos);
-#endif
 	}
 
 	bool ParseWAVFile(const std::string& filePath, i32* format, u8** data, i32* size, i32* freq)
@@ -689,43 +483,6 @@ namespace flex
 		}
 
 		return std::string(iter, riter + 1);
-	}
-
-	std::string GetDateString_YMD()
-	{
-#ifdef _WIN32
-		std::stringstream result;
-
-		SYSTEMTIME time;
-		GetLocalTime(&time);
-
-		result << IntToString(time.wYear, 4) << '-' <<
-			IntToString(time.wMonth, 2) << '-' <<
-			IntToString(time.wDay, 2);
-
-		return result.str();
-#endif
-		return EMPTY_STRING;
-	}
-
-	std::string GetDateString_YMDHMS()
-	{
-#ifdef _WIN32
-		std::stringstream result;
-
-		SYSTEMTIME time;
-		GetLocalTime(&time);
-
-		result << IntToString(time.wYear, 4) << '-' <<
-			IntToString(time.wMonth, 2) << '-' <<
-			IntToString(time.wDay, 2) << '_' <<
-			IntToString(time.wHour, 2) << '-' <<
-			IntToString(time.wMinute, 2) << '-' <<
-			IntToString(time.wSecond, 2);
-
-		return result.str();
-#endif
-		return EMPTY_STRING;
 	}
 
 	std::vector<std::string> Split(const std::string& str, char delim)
@@ -1418,18 +1175,6 @@ namespace flex
 		return GameObjectType::_NONE;
 	}
 
-	void RetrieveCurrentWorkingDirectory()
-	{
-#ifdef _WIN32
-		char cwdBuffer[MAX_PATH];
-		char* str = _getcwd(cwdBuffer, sizeof(cwdBuffer));
-		if (str)
-		{
-			FlexEngine::s_CurrentWorkingDirectory = ReplaceBackSlashesWithForward(str);
-		}
-#endif
-	}
-
 	std::string ReplaceBackSlashesWithForward(std::string str)
 	{
 		std::for_each(str.begin(), str.end(), [](char& c)
@@ -1518,7 +1263,7 @@ namespace flex
 		return glm::min(vec.x, glm::min(vec.y, vec.z));
 	}
 
-	real Min(const glm::vec4& vec)
+	real MinComponent(const glm::vec4& vec)
 	{
 		return glm::min(vec.x, glm::min(vec.y, glm::min(vec.z, vec.w)));
 	}

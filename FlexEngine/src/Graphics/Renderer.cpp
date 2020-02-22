@@ -27,6 +27,7 @@ IGNORE_WARNINGS_POP
 #include "JSONParser.hpp"
 #include "Physics/RigidBody.hpp"
 #include "Profiler.hpp"
+#include "Platform/Platform.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/Mesh.hpp"
@@ -105,7 +106,7 @@ namespace flex
 		}
 
 		std::string hdriPath = RESOURCE("textures/hdri/");
-		if (!FindFilesInDirectory(hdriPath, m_AvailableHDRIs, "hdr"))
+		if (!Platform::FindFilesInDirectory(hdriPath, m_AvailableHDRIs, "hdr"))
 		{
 			PrintWarn("Unable to find hdri directory at %s\n", hdriPath.c_str());
 		}
@@ -286,7 +287,7 @@ namespace flex
 	{
 		if (FileExists(m_RendererSettingsFilePathAbs))
 		{
-			DeleteFile(m_RendererSettingsFilePathAbs);
+			Platform::DeleteFile(m_RendererSettingsFilePathAbs);
 		}
 
 		JSONObject rootObject = {};
@@ -818,12 +819,12 @@ namespace flex
 						if (ImGui::Button("View SDF"))
 						{
 							std::string absDir = RelativePathToAbsolute(fontMeta.renderedTextureFilePath);
-							OpenExplorer(absDir);
+							Platform::OpenExplorer(absDir);
 						}
 						if (ImGui::Button("Open in explorer"))
 						{
 							const std::string absDir = ExtractDirectoryString(RelativePathToAbsolute(fontMeta.renderedTextureFilePath));
-							OpenExplorer(absDir);
+							Platform::OpenExplorer(absDir);
 						}
 						ImGui::EndColumns();
 					}

@@ -2,8 +2,18 @@
 
 namespace flex
 {
+#if COMPILE_OPEN_GL
+    bool g_bOpenGLEnabled = true;
+#else
     bool g_bOpenGLEnabled = false;
+#endif
+
+#if COMPILE_VULKAN
     bool g_bVulkanEnabled = true;
+#else
+    bool g_bVulkanEnabled = false;
+#endif
+
     bool g_bEnableLogging_Loading = false;
 
     glm::vec3 VEC3_RIGHT = glm::vec3(1.0f, 0.0f, 0.0f);
