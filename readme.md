@@ -1,4 +1,4 @@
-![](FlexEngine/screenshots/flex_engine_banner_2.png)
+![](FlexEngine/screenshots/flex_engine_banner_3.png)
 
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.md)
 <!-- [![Build status](https://ci.appveyor.com/api/projects/status/vae2k07y8a802odn?svg=true)](https://ci.appveyor.com/project/ajweeks/flexengine) -->
