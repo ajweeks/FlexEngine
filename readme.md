@@ -53,7 +53,8 @@ Flex Engine is a personal game engine I began work on in February 2017. I use it
 
 See more screenshots [here](https://github.com/ajweeks/FlexEngine/tree/development/FlexEngine/screenshots)
 
-## Building Flex (Windows-only)
+## Building Flex
+### Windows
 If you want to build Flex Engine on your own system, follow these steps. You an always download the latest release binaries [here](https://github.com/ajweeks/flexengine/releases) if that's what you're after.
 
 #### Requirements:
@@ -66,6 +67,30 @@ If you want to build Flex Engine on your own system, follow these steps. You an 
 3. Run `scripts/generate-vs-*-files.bat` (this simply runs the command `genie vs2015` or `genie vs2017`)
 4. Open `build/FlexEngine.sln`
 5. Build and run!
+
+### Linux (tested only on Ubuntu 18.04)
+#### Steps
+1. Recursively clone the repository to get all submodules
+2. Install [GENie](https://github.com/bkaradzic/GENie) from  https://github.com/bkaradzic/bx/raw/master/tools/bin/linux/genie
+3. From the root directory run `genie --file=scripts/genie.lua ninja`, replacing ninja with cmake, gmake, or any other preferred supported build system.
+4. Clone and compile openAL in a sibling directory:
+  `git clone git://repo.or.cz/openal-soft.git`
+  `cd openal-soft `
+  `cd build`
+  `cmake ..`
+  `make`
+5. Install python dev tools as a prerequisite to Bullet
+  `sudo apt-get install python3-dev`
+6. Clone and compile bullet:
+  `git clone https://github.com/bulletphysics/bullet3`
+  `cd bullet3`
+  `./build_cmake_pybullet_double.sh`
+7. Install the Vulkan SDK:
+  `wget -qO - http://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -`
+  `sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.2.131-bionic.list http://packages.lunarg.com/vulkan/1.2.131/lunarg-vulkan-1.2.131-bionic.list`
+  `sudo apt update`
+  `sudo apt install vulkan-sdk`
+6. Run `make`
 
 ## Dependencies
 Flex Engine uses the following open-source libraries:
