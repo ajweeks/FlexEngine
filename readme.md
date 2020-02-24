@@ -84,13 +84,20 @@ If you want to build Flex Engine on your own system, follow these steps. You an 
 6. Clone and compile bullet:
   `git clone https://github.com/bulletphysics/bullet3`
   `cd bullet3`
-  `./build_cmake_pybullet_double.sh`
-7. Install the Vulkan SDK:
+  `cmake -DCMAKE_CXX_FLAGS="-m32" -DCMAKE_C_FLAGS="-m32" -DBUILD_BULLET2_DEMOS=false -DBUILD_CPU_DEMOS=false -DBUILD_UNIT_TESTS=false .`
+  `make`
+7. Compile GLFW:
+  `cmake -DGLFW_BUILD_EXAMPLES=false -DGLFW_BUILD_TESTS=false -DGLFW_BUILD_DOCS=false -SCMAKE_CXX_FLAGS="-m32" -DCMAKE_C_FLAGS="-m32"`
+  `make`
+8. Install the Vulkan SDK:
   `wget -qO - http://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -`
   `sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.2.131-bionic.list http://packages.lunarg.com/vulkan/1.2.131/lunarg-vulkan-1.2.131-bionic.list`
   `sudo apt update`
   `sudo apt install vulkan-sdk`
-6. Run `make`
+9. Compile OpenAL:
+  ` cmake -DALSOFT_TESTS=false -DALSOFT_EXAMPLES=false -DCMAKE_CXX_FLAGS="-m32" -DCMAKE_C_FLAGS="-m32" -DCMAKE_EXE_LINKER_FLAGS="-m32" .`
+  `make`
+10. Run `make` in the root directory of the project.
 
 ## Dependencies
 Flex Engine uses the following open-source libraries:
