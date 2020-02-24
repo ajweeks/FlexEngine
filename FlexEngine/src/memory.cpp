@@ -1,3 +1,5 @@
+#include "stdafx.hpp"
+
 #include "memory.hpp"
 
 #include <iostream>

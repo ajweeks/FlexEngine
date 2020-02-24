@@ -57,7 +57,10 @@ namespace flex
 		PFN_vkCmdDebugMarkerBeginEXT VulkanRenderer::m_vkCmdDebugMarkerBegin = nullptr;
 		PFN_vkCmdDebugMarkerEndEXT VulkanRenderer::m_vkCmdDebugMarkerEnd = nullptr;
 
-		VulkanRenderer::VulkanRenderer()
+		VulkanRenderer::VulkanRenderer() :
+			m_ClearColor({ 1.0f, 0.0f, 1.0f, 1.0f }),
+			m_BRDFSize({ 512, 512 }),
+			m_CubemapFramebufferSize({ 512, 512 })
 		{
 		}
 
@@ -78,10 +81,6 @@ namespace flex
 			LoadSettingsFromDisk();
 
 			m_RenderObjects.resize(MAX_NUM_RENDER_OBJECTS);
-
-			m_ClearColor = { 1.0f, 0.0f, 1.0f, 1.0f };
-			m_BRDFSize = { 512, 512 };
-			m_CubemapFramebufferSize = { 512, 512 };
 
 			CreateInstance();
 			SetupDebugCallback();
