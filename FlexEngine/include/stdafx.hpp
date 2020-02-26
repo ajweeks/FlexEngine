@@ -27,6 +27,8 @@
 #define VULKAN_HPP_TYPESAFE_CONVERSION
 #endif
 
+#define _CRT_SECURE_NO_WARNINGS
+
 #include <cstddef>
 
 #include "memory.hpp"
