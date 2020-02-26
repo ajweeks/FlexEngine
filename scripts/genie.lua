@@ -204,7 +204,6 @@ files {
 
 --Exclude the following files from the build, but keep in the project
 removefiles {
-	--path.join(DEPENDENCIES_DIR, "imgui/imconfig_demo.cpp")
 }
 
 -- Don't use pre-compiled header for the following files

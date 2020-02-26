@@ -78,7 +78,7 @@ void free_hooked(void* ptr, std::size_t size)
 	}
 	ptr = ((size_t*)ptr) - 1;
 	size_t stored_size = *((size_t*)ptr);
-	assert(stored_size == size); // Only full deallocations are permitted
+	assert(stored_size == (size + sizeof(size_t))); // Only full deallocations are permitted
 	flex::g_TotalTrackedAllocatedMemory -= size;
 	++flex::g_TrackedDeallocationCount;
 	free(ptr);

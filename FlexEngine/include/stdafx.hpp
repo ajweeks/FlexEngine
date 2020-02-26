@@ -27,18 +27,6 @@
 #define VULKAN_HPP_TYPESAFE_CONVERSION
 #endif
 
-#if COMPILE_OPEN_GL
-extern bool g_bOpenGLEnabled;
-#else
-extern bool g_bOpenGLEnabled;
-#endif
-
-#if COMPILE_VULKAN
-extern bool g_bVulkanEnabled;
-#else
-const bool g_bVulkanEnabled = false;
-#endif
-
 #include <cstddef>
 
 #include "memory.hpp"
@@ -281,6 +269,9 @@ namespace flex
 	extern std::size_t g_TrackedDeallocationCount;
 	
 	extern bool g_bEnableLogging_Loading;
+
+	extern bool g_bOpenGLEnabled;
+	extern bool g_bVulkanEnabled;
 }
 
 namespace glm

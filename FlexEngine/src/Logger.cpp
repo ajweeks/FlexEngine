@@ -8,10 +8,6 @@
 
 namespace flex
 {
-#ifdef _WIN32
-	HANDLE g_ConsoleHandle;
-#endif
-
 	bool g_bEnableLogToConsole = true;
 	std::stringstream g_LogBuffer;
 	const char* g_LogBufferFilePath;

@@ -1,5 +1,7 @@
 #pragma once
 
+#undef ERROR
+
 namespace flex
 {
 	class Platform

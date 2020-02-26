@@ -57,8 +57,6 @@ namespace flex
 
 	void Platform::GetConsoleHandle()
 	{
-		// g_ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
-		// SetConsoleTextAttribute(g_ConsoleHandle, CONSOLE_COLOR_DEFAULT);
 	}
 
 	void Platform::SetConsoleTextColor(ConsoleColour colour)

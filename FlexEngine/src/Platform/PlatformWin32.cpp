@@ -14,6 +14,9 @@ IGNORE_WARNINGS_PUSH
 #include <stdio.h> // For gcvt, fopen
 IGNORE_WARNINGS_POP
 
+#include "FlexEngine.hpp"
+#include "Helpers.hpp"
+
 namespace flex
 {
 	typedef void* HANDLE;
@@ -44,7 +47,7 @@ namespace flex
 	void Platform::SetConsoleTextColor(ConsoleColour colour)
 	{
 #if ENABLE_CONSOLE_COLOURS
-		static WORD[] w_colours = { CONSOLE_COLOR_DEFAULT, CONSOLE_COLOR_WARNING, CONSOLE_COLOR_ERROR };
+		static WORD w_colours[] = { CONSOLE_COLOR_DEFAULT, CONSOLE_COLOR_WARNING, CONSOLE_COLOR_ERROR };
 
 		SetConsoleTextAttribute(g_ConsoleHandle, w_colours[(u32)colour]);
 #else
