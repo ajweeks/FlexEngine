@@ -159,7 +159,8 @@ project "Flex"
 
 	configuration "linux*"
 		linkoptions {
-			"-L../../lib/Debug/",
+			"-pthread"
+			"-L../../FlexEngine/lib/Debug/",
 		}
 		buildoptions_cpp {
 			-- Ignored warnings:

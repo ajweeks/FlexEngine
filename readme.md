@@ -71,6 +71,8 @@ If you want to build Flex Engine on your own system, follow these steps. You an 
 ### Linux (tested only on Ubuntu 18.04)
 #### Steps
 1. Recursively clone the repository to get all submodules
+2. Ensure you have the g++ prerequisites:
+  `sudo apt-get install g++-multilib`
 2. Install [GENie](https://github.com/bkaradzic/GENie) from  https://github.com/bkaradzic/bx/raw/master/tools/bin/linux/genie
 3. From the root directory run `genie --file=scripts/genie.lua ninja`, replacing ninja with cmake, gmake, or any other preferred supported build system.
 4. Clone and compile openAL in a sibling directory:
@@ -82,12 +84,12 @@ If you want to build Flex Engine on your own system, follow these steps. You an 
 5. Install python dev tools as a prerequisite to Bullet
   `sudo apt-get install python3-dev`
 6. Clone and compile bullet:
-  `git clone https://github.com/bulletphysics/bullet3`
-  `cd bullet3`
+  `cd bullet`
   `cmake -DCMAKE_CXX_FLAGS="-m32" -DCMAKE_C_FLAGS="-m32" -DBUILD_BULLET2_DEMOS=false -DBUILD_CPU_DEMOS=false -DBUILD_UNIT_TESTS=false .`
   `make`
 7. Compile GLFW:
-  `cmake -DGLFW_BUILD_EXAMPLES=false -DGLFW_BUILD_TESTS=false -DGLFW_BUILD_DOCS=false -SCMAKE_CXX_FLAGS="-m32" -DCMAKE_C_FLAGS="-m32"`
+  `cd glfw`
+  `cmake -DGLFW_BUILD_EXAMPLES=false -DGLFW_BUILD_TESTS=false -DGLFW_BUILD_DOCS=false -DCMAKE_CXX_FLAGS="-m32" -DCMAKE_C_FLAGS="-m32" .`
   `make`
 8. Install the Vulkan SDK:
   `wget -qO - http://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -`
