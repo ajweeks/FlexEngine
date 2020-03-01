@@ -68,7 +68,8 @@ If you want to build Flex Engine on your own system, follow these steps. You an 
 4. Open `build/FlexEngine.sln`
 5. Build and run!
 
-### Linux (tested only on Ubuntu 18.04)
+# (WIP! These steps will be reconciled into a single job at some point soon(tm))
+### Linux (tested only on Ubuntu 18.04, enter at your own risk)
 #### Steps
 1. Recursively clone the repository to get all submodules
 2. Ensure you have the g++ prerequisites:
@@ -78,9 +79,9 @@ If you want to build Flex Engine on your own system, follow these steps. You an 
 4. Clone and compile openAL in a sibling directory:
   `git clone git://repo.or.cz/openal-soft.git`
   `cd openal-soft `
-  `cd build`
-  `cmake ..`
-  `make`
+  `mkdir build && cd build`
+  `cmake -DALSOFT_TESTS=false -DALSOFT_EXAMPLES=false -DCMAKE_CXX_FLAGS="-m32" -DCMAKE_C_FLAGS="-m32" -DCMAKE_EXE_LINKER_FLAGS="-m32" ..`
+  `cd .. && make`
 5. Install python dev tools as a prerequisite to Bullet
   `sudo apt-get install python3-dev`
 6. Clone and compile bullet:
@@ -96,9 +97,20 @@ If you want to build Flex Engine on your own system, follow these steps. You an 
   `sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.2.131-bionic.list http://packages.lunarg.com/vulkan/1.2.131/lunarg-vulkan-1.2.131-bionic.list`
   `sudo apt update`
   `sudo apt install vulkan-sdk`
-9. Compile OpenAL:
-  `cmake -DALSOFT_TESTS=false -DALSOFT_EXAMPLES=false -DCMAKE_CXX_FLAGS="-m32" -DCMAKE_C_FLAGS="-m32" -DCMAKE_EXE_LINKER_FLAGS="-m32" .`
-  `make`
+10. Compile FreeType:
+  Download freetype-2.10.0.tar.bz2 from https://download.savannah.gnu.org/releases/freetype/
+  Unzip
+  10. a. Compile libpng as 32 bit:
+    Clone libpng from https://downloads.sourceforge.net/libpng/libpng-1.6.37.tar.xz
+    Unzip
+    `./configure --disable-static`
+    Modify `libpng-1.6.37/Makefile`:
+      Replace `-lz` with `-l:libz.so.1`
+      Add `-m32` to CFLAGS, CPPFLAGS, and LDFLAGS
+      `make`
+    10. b. Copy libz.so.* from `/lib/i386-linux-gnu/libz.so.1` to freetype root dir (TODO: Set `SYSTEM_ZLIB` instead)
+  Modify `builds/unix/unix-cc.mk:102` to specify lib names exactly  (`-l:libz.so.1 -l:libpng16.so.16` instead of `-lz -lpng16`)
+  `./configure CFLAGS=-m32 LDFLAGS=-m32 CPPFLAGS=-m32 LT_SYS_LIBRARY_PATH=/home/aj/Dowloads/` (pointing to your local 32 bit build of zlib)
 10. Run `make` in the root directory of the project.
 
 ## Dependencies
