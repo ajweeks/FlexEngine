@@ -3983,6 +3983,13 @@ namespace flex
 				return false;
 			}
 
+			{
+				i32 maj, min, pat;
+				FT_Library_Version(ft, &maj, &min, &pat);
+
+				Print("Free type v%d.%d.%d\n", maj, min, pat);
+			}
+
 			std::vector<char> fileMemory;
 			ReadFile(fontMetaData.filePath, fileMemory, true);
 

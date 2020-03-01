@@ -15,6 +15,7 @@ namespace flex
 
 	void AudioManager::Initialize()
 	{
+		return;
 		// Retrieve preferred device
 		s_Device = alcOpenDevice(NULL);
 
@@ -22,6 +23,15 @@ namespace flex
 		{
 			PrintError("Failed to create an openAL device!\n");
 			return;
+		}
+
+		{
+			i32 maj;
+			alcGetIntegerv(s_Device, ALC_MAJOR_VERSION, sizeof(maj), &maj);
+			i32 min;
+			alcGetIntegerv(s_Device, ALC_MINOR_VERSION, sizeof(min), &min);
+
+			Print("OpenAL v%d.%d\n", maj, min);
 		}
 
 		constexpr bool printAvailableAudioDeviceNames = false;

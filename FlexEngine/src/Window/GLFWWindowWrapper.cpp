@@ -33,6 +33,13 @@ namespace flex
 		{
 			PrintError("Failed to initialize glfw! Exiting...\n");
 			exit(EXIT_FAILURE);
+			return;
+		}
+
+		{
+			i32 maj, min, rev;
+			glfwGetVersion(&maj, &min, &rev);
+			Print("GLFW v%d.%d.%d\n", maj, min, rev);
 		}
 
 		i32 numJoysticksConnected = 0;
@@ -229,6 +236,11 @@ namespace flex
 
 	void GLFWWindowWrapper::RetrieveMonitorInfo()
 	{
+		i32 count;
+		GLFWmonitor** monitors = glfwGetMonitors(&count);
+
+		Print("%d monitors found\n", count);
+
 		GLFWmonitor* monitor = glfwGetPrimaryMonitor();
 		if (!monitor)
 		{

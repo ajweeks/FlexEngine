@@ -36,6 +36,10 @@ namespace flex
 		{
 			m_World = g_PhysicsManager->CreateWorld();
 
+			{
+				Print("Bullet v%d\n", btGetVersion());
+			}
+			
 			m_World->setInternalTickCallback(PhysicsInternalTickCallback, this);
 
 			//m_World->getPairCache()->setInternalGhostPairCallback()
