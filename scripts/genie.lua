@@ -159,7 +159,8 @@ project "Flex"
 
 	configuration "linux*"
 		linkoptions {
-			"-pthread",
+			"-pthread", -- For pthread_create
+			"-ldl", -- For dlopen, etc.
 			"-L../../FlexEngine/lib/Debug/",
 		}
 		buildoptions {
@@ -193,7 +194,7 @@ project "Flex"
 			links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" }
 	-- linux
 		configuration "linux*"
-			links { "glfw3", "openal", "Bullet3Collision", "Bullet3Dynamics", "LinearMath" } -- freetyped
+			links { "glfw3", "openal", "BulletDynamics", "BulletCollision", "LinearMath", "freetype" } -- freetyped  "Bullet3Dynamics", "Bullet3Collision", 
 configuration {}
 
 --Source files
