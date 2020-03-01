@@ -159,8 +159,11 @@ project "Flex"
 
 	configuration "linux*"
 		linkoptions {
-			"-pthread"
+			"-pthread",
 			"-L../../FlexEngine/lib/Debug/",
+		}
+		buildoptions {
+			"-Wfatal-errors"
 		}
 		buildoptions_cpp {
 			-- Ignored warnings:
@@ -190,7 +193,7 @@ project "Flex"
 			links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" }
 	-- linux
 		configuration "linux*"
-			links { "glfw3", "vulkan-1", "openal", "Bullet3Collision", "Bullet3Dynamics", "LinearMath" } -- freetyped
+			links { "glfw3", "openal", "Bullet3Collision", "Bullet3Dynamics", "LinearMath" } -- freetyped
 configuration {}
 
 --Source files

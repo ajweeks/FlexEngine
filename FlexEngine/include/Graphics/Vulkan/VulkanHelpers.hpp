@@ -2,7 +2,7 @@
 #if COMPILE_VULKAN
 
 IGNORE_WARNINGS_PUSH
-#include <vulkan/vulkan.h>
+#include "volk/volk.h"
 IGNORE_WARNINGS_POP
 
 #include "Graphics/RendererTypes.hpp"

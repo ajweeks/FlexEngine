@@ -124,7 +124,8 @@ IGNORE_WARNINGS_POP
 
 #if COMPILE_VULKAN
 IGNORE_WARNINGS_PUSH
-#include <vulkan/vulkan.h>
+#include "volk/volk.h"
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>

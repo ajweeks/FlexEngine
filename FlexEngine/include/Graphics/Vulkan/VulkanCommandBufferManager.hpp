@@ -1,5 +1,9 @@
 #pragma once
 
+IGNORE_WARNINGS_PUSH
+#include "volk/volk.h"
+IGNORE_WARNINGS_POP
+
 namespace flex
 {
 	namespace vk

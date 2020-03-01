@@ -87,7 +87,7 @@ If you want to build Flex Engine on your own system, follow these steps. You an 
   `cd bullet`
   `cmake -DCMAKE_CXX_FLAGS="-m32" -DCMAKE_C_FLAGS="-m32" -DBUILD_BULLET2_DEMOS=false -DBUILD_CPU_DEMOS=false -DBUILD_UNIT_TESTS=false .`
   `make`
-7. Compile GLFW:
+7. Compile GLFW: (install `libx11-dev:i386` ?)
   `cd glfw`
   `cmake -DGLFW_BUILD_EXAMPLES=false -DGLFW_BUILD_TESTS=false -DGLFW_BUILD_DOCS=false -DCMAKE_CXX_FLAGS="-m32" -DCMAKE_C_FLAGS="-m32" .`
   `make`
@@ -97,7 +97,7 @@ If you want to build Flex Engine on your own system, follow these steps. You an 
   `sudo apt update`
   `sudo apt install vulkan-sdk`
 9. Compile OpenAL:
-  ` cmake -DALSOFT_TESTS=false -DALSOFT_EXAMPLES=false -DCMAKE_CXX_FLAGS="-m32" -DCMAKE_C_FLAGS="-m32" -DCMAKE_EXE_LINKER_FLAGS="-m32" .`
+  `cmake -DALSOFT_TESTS=false -DALSOFT_EXAMPLES=false -DCMAKE_CXX_FLAGS="-m32" -DCMAKE_C_FLAGS="-m32" -DCMAKE_EXE_LINKER_FLAGS="-m32" .`
   `make`
 10. Run `make` in the root directory of the project.
 
@@ -112,6 +112,7 @@ Flex Engine uses the following open-source libraries:
  - [OpenAL](https://www.openal.org) - Audio loading and playback
  - [stb](https://github.com/nothings/stb) - Image loading
  - [cgltf](https://github.com/jkuhlmann/cgltf) - Mesh loading
+ - [volk](https://github.com/zeux/volk) - Vulkan meta-loader
 
 ## License
 Flex engine is released as open source under The MIT License. See [license.md](license.md) for details.

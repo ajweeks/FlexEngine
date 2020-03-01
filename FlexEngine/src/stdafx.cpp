@@ -1,5 +1,8 @@
 #include "stdafx.hpp"
 
+#define VOLK_IMPLEMENTATION
+#include "volk/volk.h"
+
 namespace flex
 {
 #if COMPILE_OPEN_GL
