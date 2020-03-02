@@ -498,7 +498,7 @@ namespace flex
 			const bool m_bEnableValidationLayers = true;
 #endif
 
-			VDeleter<VkInstance> m_Instance{ vkDestroyInstance };
+			VkInstance m_Instance = VK_NULL_HANDLE;
 			VDeleter<VkDebugReportCallbackEXT> m_Callback{ m_Instance, DestroyDebugReportCallbackEXT };
 			VDeleter<VkSurfaceKHR> m_Surface{ m_Instance, vkDestroySurfaceKHR };
 

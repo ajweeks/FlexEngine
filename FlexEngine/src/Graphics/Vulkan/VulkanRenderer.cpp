@@ -37,14 +37,15 @@ IGNORE_WARNINGS_POP
 #include "Helpers.hpp"
 #include "InputManager.hpp"
 #include "Physics/PhysicsWorld.hpp"
-#include "Profiler.hpp"
 #include "Platform/Platform.hpp"
+#include "Profiler.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/LoadedMesh.hpp"
 #include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
+#include "volk/volk.h"
 #include "Window/GLFWWindowWrapper.hpp"
 
 namespace flex
@@ -81,6 +82,16 @@ namespace flex
 			LoadSettingsFromDisk();
 
 			m_RenderObjects.resize(MAX_NUM_RENDER_OBJECTS);
+
+			VkResult res = volkInitialize();
+
+			if (res != VK_SUCCESS)
+			{
+				PrintError("No valid Vulkan loader found on the system. Exiting...\n");
+				// TODO: Replace with platform-agnostic quit call
+				exit(-1);
+				return;
+			}
 
 			CreateInstance();
 			SetupDebugCallback();
@@ -5204,11 +5215,7 @@ namespace flex
 
 		void VulkanRenderer::CreateInstance()
 		{
-			if (m_bEnableValidationLayers && !CheckValidationLayerSupport())
-			{
-				// TODO: Remove all exceptions
-				throw std::runtime_error("validation layers requested, but not available!");
-			}
+			assert(m_Instance == VK_NULL_HANDLE);
 
 			const u32 requestedVkVersion = VK_MAKE_VERSION(1, 1, 0);
 
@@ -5239,7 +5246,15 @@ namespace flex
 				createInfo.enabledLayerCount = 0;
 			}
 
-			VK_CHECK_RESULT(vkCreateInstance(&createInfo, nullptr, m_Instance.replace()));
+			VK_CHECK_RESULT(vkCreateInstance(&createInfo, nullptr, &m_Instance));
+
+			volkLoadInstance(m_Instance);
+
+			if (m_bEnableValidationLayers && !CheckValidationLayerSupport())
+			{
+				// TODO: Remove all exceptions
+				throw std::runtime_error("validation layers requested, but not available!");
+			}
 		}
 
 		void VulkanRenderer::SetupDebugCallback()
@@ -5396,6 +5411,8 @@ namespace flex
 
 			vkGetDeviceQueue(m_VulkanDevice->m_LogicalDevice, (u32)m_VulkanDevice->m_QueueFamilyIndices.graphicsFamily, 0, &m_GraphicsQueue);
 			vkGetDeviceQueue(m_VulkanDevice->m_LogicalDevice, (u32)m_VulkanDevice->m_QueueFamilyIndices.presentFamily, 0, &m_PresentQueue);
+
+			volkLoadDevice(m_VulkanDevice->m_LogicalDevice);
 		}
 
 		void VulkanRenderer::FindPresentInstanceExtensions()

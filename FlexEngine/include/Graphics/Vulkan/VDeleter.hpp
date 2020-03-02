@@ -19,7 +19,7 @@ namespace flex
 			VDeleter();
 
 			VDeleter(std::function<void(T, VkAllocationCallbacks*)> deletef);
-			VDeleter(const VDeleter<VkInstance>& instance, std::function<void(VkInstance, T, VkAllocationCallbacks*)> deletef);
+			VDeleter(VkInstance instance, std::function<void(VkInstance, T, VkAllocationCallbacks*)> deletef);
 			VDeleter(const VDeleter<VkDevice>& device, std::function<void(VkDevice, T, VkAllocationCallbacks*)> deletef);
 			~VDeleter();
 
@@ -49,7 +49,7 @@ namespace flex
 		}
 
 		template<typename T>
-		VDeleter<T>::VDeleter(const VDeleter<VkInstance>& instance, std::function<void(VkInstance, T, VkAllocationCallbacks*)> deletef)
+		VDeleter<T>::VDeleter(VkInstance instance, std::function<void(VkInstance, T, VkAllocationCallbacks*)> deletef)
 		{
 			this->deleter = [&instance, deletef](T obj) { deletef(instance, obj, nullptr); };
 		}
