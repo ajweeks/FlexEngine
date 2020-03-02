@@ -64,17 +64,6 @@ function platformLibraries()
 	configuration {}
 end
 
-function staticPlatformLibraries()
-	local p = platforms()
-	for j = 1, #p do
-		configuration { "vs*", p[j] }
-			libdirs {
-				path.join(DEPENDENCIES_DIR, path.join("vulkan/lib/", p[j])),
-			}
-	end
-	configuration {}
-end
-
 
 -- copy files that are specific for the platform being built for
 function windowsPlatformPostBuild()
@@ -175,14 +164,13 @@ project "Flex"
 		}
 
 	platformLibraries()
-	staticPlatformLibraries()
 	windowsPlatformPostBuild()
 
 --Linked libraries
 	-- Windows
 		-- Common
 		configuration "vs*"
-			links { "opengl32", "glfw3", "vulkan-1", "OpenAL32" }
+			links { "opengl32", "glfw3", "OpenAL32" }
 		-- Debug-only
 		configuration { "vs*", "Debug" }
 			links { "BulletCollision_Debug", "BulletDynamics_Debug", "LinearMath_Debug", "freetyped" }
