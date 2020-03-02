@@ -148,7 +148,7 @@ project "Flex"
 
 	location "../build"
 
-    defines { "_CONSOLE" }
+	defines { "_CONSOLE" }
 
 	outputDirectories("FlexEngine")
 
@@ -194,7 +194,7 @@ project "Flex"
 			links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" }
 	-- linux
 		configuration "linux*"
-			links { "glfw3", "openal", "BulletDynamics", "BulletCollision", "LinearMath", "freetype", "xkbcommon", "xkbfile" } -- freetyped  "Bullet3Dynamics", "Bullet3Collision", 
+			links { "glfw3", "openal", "BulletDynamics", "BulletCollision", "LinearMath", "freetype", "xkbcommon", "xkbfile" } -- freetyped  "Bullet3Dynamics", "Bullet3Collision",
 configuration {}
 
 --Source files
@@ -205,6 +205,7 @@ files {
 	path.join(DEPENDENCIES_DIR, "imgui/**.h"),
 	path.join(DEPENDENCIES_DIR, "imgui/**.cpp"),
 	path.join(DEPENDENCIES_DIR, "glad/src/glad.c"),
+	path.join(DEPENDENCIES_DIR, "volk/volk.h"),
 }
 
 --Exclude the following files from the build, but keep in the project
