@@ -314,12 +314,16 @@ namespace flex
 				{
 					size_t dotPos = fileNameStr.find('.');
 
-					if (dotPos != std::string::npos)
+					if (dotPos != std::string::npos && fileNameStr != "..")
 					{
-						std::string foundFileType = Split(fileNameStr, '.')[1];
-						if (foundFileType == cleanedFileType)
+						std::vector<std::string> parts = Split(fileNameStr, '.');
+						if (parts.size() > 0)
 						{
-							foundFileTypeMatches = true;
+							std::string foundFileType = parts[1];
+							if (foundFileType == cleanedFileType)
+							{
+								foundFileTypeMatches = true;
+							}
 						}
 					}
 				}
