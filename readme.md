@@ -88,7 +88,9 @@ If you want to build Flex Engine on your own system, follow these steps. You an 
   `cd bullet`
   `cmake -DCMAKE_CXX_FLAGS="-m32" -DCMAKE_C_FLAGS="-m32" -DBUILD_BULLET2_DEMOS=false -DBUILD_CPU_DEMOS=false -DBUILD_UNIT_TESTS=false .`
   `make`
-7. Compile GLFW: (install `libx11-dev:i386` ?)
+7. Compile GLFW:
+  Install X11 libs:
+    `sudo apt-get install xserver-xorg-dev:i386`
   `cd glfw`
   `cmake -DGLFW_BUILD_EXAMPLES=false -DGLFW_BUILD_TESTS=false -DGLFW_BUILD_DOCS=false -DCMAKE_CXX_FLAGS="-m32" -DCMAKE_C_FLAGS="-m32" .`
   `make`

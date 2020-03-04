@@ -182,7 +182,7 @@ project "Flex"
 			links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" }
 	-- linux
 		configuration "linux*"
-			links { "glfw3", "openal", "BulletDynamics", "BulletCollision", "LinearMath", "freetype", "xkbcommon", "xkbfile" } -- freetyped  "Bullet3Dynamics", "Bullet3Collision",
+			links { "glfw3", "openal", "BulletDynamics", "BulletCollision", "LinearMath", "freetype", "X11" }
 configuration {}
 
 --Source files
