@@ -205,6 +205,3 @@ nopch {
 	path.join(DEPENDENCIES_DIR, "imgui/**.cpp"),
 	path.join(DEPENDENCIES_DIR, "glad/src/glad.c")
 }
-
-pchheader "stdafx.hpp"
-pchsource "stdafx.cpp"
