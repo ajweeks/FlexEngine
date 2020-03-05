@@ -1,10 +1,11 @@
 #include "stdafx.hpp"
-#if COMPILE_OPEN_GL || COMPILE_VULKAN
 
 #include "Window/GLFWWindowWrapper.hpp"
 
 #include "FlexEngine.hpp"
+#if COMPILE_OPEN_GL
 #include "Graphics/GL/GLHelpers.hpp"
+#endif
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
@@ -111,7 +112,7 @@ namespace flex
 
 		if (g_bOpenGLEnabled)
 		{
-#if DEBUG
+#if COMPILE_OPEN_GL && DEBUG
 			glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
 #endif // DEBUG
 
@@ -129,7 +130,7 @@ namespace flex
 
 		if (m_bMaximized)
 		{
-			glfwWindowHint(GLFW_MAXIMIZED, GL_TRUE);
+			glfwWindowHint(GLFW_MAXIMIZED, 1);
 		}
 
 
@@ -186,6 +187,7 @@ namespace flex
 		glfwFocusWindow(m_Window);
 		m_bHasFocus = true;
 
+#if COMPILE_OPEN_GL
 		if (g_bOpenGLEnabled)
 		{
 			glfwMakeContextCurrent(m_Window);
@@ -221,6 +223,7 @@ namespace flex
 			Print("Version:    %s\n\n", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
 			//Print("Extensions: %s\n\n", reinterpret_cast<const char*>(glGetString(GL_EXTENSIONS)));
 		}
+#endif // COMPILE_OPEN_GL
 
 		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION "icons/flex-logo-03_128.png", 4));
 		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION "icons/flex-logo-03_64.png", 4));
@@ -845,7 +848,7 @@ namespace flex
 		return inputMouseButton;
 	}
 
-#ifdef _WIN32
+#if defined(_WIN32) && COMPILE_OPEN_GL
 	void WINAPI glDebugOutput(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,
 		const GLchar* message, const void* userParam)
 	{
@@ -898,5 +901,3 @@ namespace flex
 	}
 #endif
 } // namespace flex
-
-#endif // COMPILE_OPEN_GL || COMPILE_VULKAN
