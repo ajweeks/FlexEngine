@@ -2339,9 +2339,9 @@ namespace flex
 					std::string workingDir(RESOURCE("shaders"));
 					char cmdStrBuf[512];
 					memset(cmdStrBuf, 0, 512);
-					strcat(cmdStrBuf, "pushd \"");
+					strcat(cmdStrBuf, "cd ");
 					strcat(cmdStrBuf, workingDir.c_str());
-					strcat(cmdStrBuf, "\" && call vk_compile.bat >nul && popd");
+					strcat(cmdStrBuf, " && ./vk_compile.sh >/dev/null");
 					bSuccess = system(cmdStrBuf) == 0;
 					is_done = true;
 				});
