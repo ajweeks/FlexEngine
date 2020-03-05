@@ -15,7 +15,6 @@ namespace flex
 
 	void AudioManager::Initialize()
 	{
-		return;
 		// Retrieve preferred device
 		s_Device = alcOpenDevice(NULL);
 
