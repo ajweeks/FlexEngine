@@ -236,15 +236,14 @@ namespace flex
 
 	void GLFWWindowWrapper::RetrieveMonitorInfo()
 	{
-		i32 count;
-		GLFWmonitor** monitors = glfwGetMonitors(&count);
-
-		Print("%d monitors found\n", count);
-
 		GLFWmonitor* monitor = glfwGetPrimaryMonitor();
 		if (!monitor)
 		{
+			i32 count;
+			glfwGetMonitors(&count);
+
 			PrintError("Failed to find primary monitor!\n");
+			PrintError("%d monitors found\n", count);
 			return;
 		}
 
