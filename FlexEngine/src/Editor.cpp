@@ -691,7 +691,10 @@ namespace flex
 
 		glm::vec3 rayStartG = ToVec3(rayStart);
 		glm::vec3 rayEndG = ToVec3(rayEnd);
-		glm::vec3 camForward = g_CameraManager->CurrentCamera()->GetForward();
+		BaseCamera* cam = g_CameraManager->CurrentCamera();
+		glm::vec3 camForward = cam->GetForward();
+		glm::vec3 camRight = cam->GetRight();
+		glm::vec3 camUp = cam->GetUp();
 		glm::vec3 planeOrigin = gizmoTransform->GetWorldPosition();
 
 		btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
@@ -905,20 +908,23 @@ namespace flex
 			}
 			else if (m_DraggingAxisIndex == ALL_AXES_IDX)
 			{
-				glm::vec3 axis = gizmoRight;
-				glm::vec3 planeN = gizmoForward;
-				if (glm::abs(glm::dot(planeN, camForward)) < 0.5f)
+				glm::vec3 axis1 = -camRight;
+				glm::vec3 axis2 = camUp;
+				glm::vec3 planeN = -camForward;
+				glm::vec3 intersectionPont1 = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis1, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, camForward, m_DraggingGizmoOffset);
+				glm::vec3 intersectionPont2 = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis2, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, camForward, m_DraggingGizmoOffset);
+				glm::vec3 intersectionRay1 = (intersectionPont1 - planeOrigin);
+				glm::vec3 intersectionRay2 = (intersectionPont2 - planeOrigin);
+				if (glm::length(intersectionRay1) > 0.0f && glm::length(intersectionRay2) > 0.0f)
 				{
-					planeN = gizmoUp;
-				}
-				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, camForward, m_DraggingGizmoOffset);
-				real max = MaxComponent(intersectionPont - planeOrigin);
-				real min = MinComponent(intersectionPont - planeOrigin);
-				glm::vec3 scaleNow = glm::vec3(abs(max) > abs(min));
-				glm::vec3 scaleVecGlobal = (scaleNow - m_DraggingGizmoScaleLast) * scale;
-				dLocalScale += glm::vec3(glm::inverse(gizmoTransform->GetWorldTransform()) * glm::vec4(scaleVecGlobal, 0.0f));
+					real dotResult1 = glm::length(intersectionRay1) * glm::dot(intersectionRay1, axis1);
+					real dotResult2 = glm::length(intersectionRay2) * glm::dot(intersectionRay2, axis2);
+					real largerDot = abs(dotResult1) > abs(dotResult2) ? dotResult1 : dotResult2;
+					glm::vec3 scaleNow = glm::vec3(glm::clamp(largerDot, -9999.0f, 9999.0f));
+					dLocalScale += (scaleNow - m_DraggingGizmoScaleLast) * scale;
 
-				m_DraggingGizmoScaleLast = scaleNow;
+					m_DraggingGizmoScaleLast = scaleNow;
+				}
 			}
 
 			Transform* selectedObjectTransform = m_CurrentlySelectedObjects[m_CurrentlySelectedObjects.size() - 1]->GetTransform();
