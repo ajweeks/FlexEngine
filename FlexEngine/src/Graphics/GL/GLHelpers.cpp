@@ -590,11 +590,11 @@ namespace flex
 
 			i32 floatBufStride = channelCount * sizeof(real);
 			i32 floatBufSize = floatBufStride * pixelCount;
-			real* readBackTextureData = (real*)malloc_hooked((u32)floatBufSize);
+			real* readBackTextureData = (real*)malloc((u32)floatBufSize);
 
 			i32 u8BufStride = channelCount * sizeof(u8);
 			i32 u8BufSize = u8BufStride * pixelCount;
-			u8* u8Data = (u8*)malloc_hooked((u32)u8BufSize);
+			u8* u8Data = (u8*)malloc((u32)u8BufSize);
 
 			if (readBackTextureData && u8Data)
 			{
@@ -617,8 +617,8 @@ namespace flex
 				PrintError("Failed to allocate %d bytes to save out to texture at %s\n", floatBufSize, absoluteFilePath.c_str());
 			}
 
-			free_hooked(u8Data);
-			free_hooked(readBackTextureData);
+			free(u8Data);
+			free(readBackTextureData);
 
 			return bResult;
 		}
@@ -634,11 +634,11 @@ namespace flex
 
 			i32 floatBufStride = channelCount * sizeof(real);
 			i32 floatBufSize = floatBufStride * pixelCount;
-			real* readBackTextureData = (real*)malloc_hooked((u32)floatBufSize);
+			real* readBackTextureData = (real*)malloc((u32)floatBufSize);
 
 			i32 u8BufStride = channelCount * sizeof(u8);
 			i32 u8BufSize = u8BufStride * pixelCount;
-			u8* u8Data = (u8*)malloc_hooked((u32)u8BufSize);
+			u8* u8Data = (u8*)malloc((u32)u8BufSize);
 
 			if (readBackTextureData && u8Data)
 			{
@@ -664,8 +664,8 @@ namespace flex
 				PrintError("Failed to allocate %d bytes to save out to texture at %s\n", floatBufSize, absoluteFilePath.c_str());
 			}
 
-			free_hooked(u8Data);
-			free_hooked(readBackTextureData);
+			free(u8Data);
+			free(readBackTextureData);
 		}
 
 		bool LoadGLShaders(u32 program, GLShader& shader)
@@ -1239,7 +1239,7 @@ namespace flex
 			userData(userData),
 			callback(callback)
 		{
-			data = (u8*)malloc_hooked((u32)numBytes);
+			data = (u8*)malloc((u32)numBytes);
 			if (!data)
 			{
 				PrintError("Failed to allocate %d bytes for asynchronous texture save\n", numBytes);
@@ -1266,7 +1266,7 @@ namespace flex
 					taskThread.join();
 				}
 				bComplete = true;
-				free_hooked(data);
+				free(data);
 				data = nullptr;
 			}
 		}

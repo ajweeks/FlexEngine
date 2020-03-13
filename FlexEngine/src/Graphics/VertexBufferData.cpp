@@ -24,7 +24,7 @@ namespace flex
 		VertexBufferSize = VertexCount * VertexStride;
 
 		assert(vertexData == nullptr);
-		vertexData = (real*)malloc_hooked(VertexBufferSize);
+		vertexData = (real*)malloc(VertexBufferSize);
 		if (vertexData == nullptr)
 		{
 			PrintError("Failed to allocate vertex buffer memory (%u bytes)\n", VertexBufferSize);
@@ -42,7 +42,7 @@ namespace flex
 		VertexBufferSize = VertexCount * VertexStride;
 
 		assert(vertexData == nullptr);
-		vertexData = (real*)malloc_hooked(VertexBufferSize);
+		vertexData = (real*)malloc(VertexBufferSize);
 		if (vertexData == nullptr)
 		{
 			PrintError("Failed to allocate dynamic vertex buffer memory (%u bytes)\n", VertexBufferSize);
@@ -133,7 +133,7 @@ namespace flex
 	{
 		if (vertexData)
 		{
-			free_hooked(vertexData);
+			free(vertexData);
 			vertexData = nullptr;
 		}
 		VertexCount = 0;

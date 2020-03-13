@@ -111,7 +111,7 @@ namespace flex
 			PrintWarn("Unable to find hdri directory at %s\n", hdriPath.c_str());
 		}
 
-		m_PointLights = (PointLightData*)malloc_hooked(MAX_POINT_LIGHT_COUNT * sizeof(PointLightData));
+		m_PointLights = (PointLightData*)malloc(MAX_POINT_LIGHT_COUNT * sizeof(PointLightData));
 		for (i32 i = 0; i < MAX_POINT_LIGHT_COUNT; ++i)
 		{
 			m_PointLights[i].color = VEC3_NEG_ONE;
@@ -243,7 +243,7 @@ namespace flex
 
 	void Renderer::Destroy()
 	{
-		free_hooked(m_PointLights);
+		free(m_PointLights);
 
 		m_Quad3DVertexBufferData.Destroy();
 		m_FullScreenTriVertexBufferData.Destroy();

@@ -199,11 +199,11 @@ namespace flex
 				if (type == UniformBufferType::DYNAMIC ||
 					type == UniformBufferType::PARTICLE_DATA)
 				{
-					aligned_free_hooked(data.data);
+					_aligned_free(data.data);
 				}
 				else
 				{
-					free_hooked(data.data);
+					free(data.data);
 				}
 				data.data = nullptr;
 			}
@@ -576,7 +576,7 @@ namespace flex
 				return 0;
 			}
 
-			unsigned char* pixels = (unsigned char*)malloc_hooked(totalSize);
+			unsigned char* pixels = (unsigned char*)malloc(totalSize);
 			if (pixels == nullptr)
 			{
 				PrintError("CreateCubemapFromTextures Failed to allocate %u bytes\n", totalSize);
@@ -598,7 +598,7 @@ namespace flex
 			stagingBuffer.Map();
 			memcpy(stagingBuffer.m_Mapped, pixels, totalSize);
 			stagingBuffer.Unmap();
-			free_hooked(pixels);
+			free(pixels);
 
 
 			CubemapCreateInfo createInfo = {};
@@ -980,7 +980,7 @@ namespace flex
 
 			i32 u8BufStride = channelCount * sizeof(u8);
 			i32 u8BufSize = u8BufStride * pixelCount;
-			u8* u8Data = (u8*)malloc_hooked((u32)u8BufSize);
+			u8* u8Data = (u8*)malloc((u32)u8BufSize);
 
 			if (u8Data)
 			{
@@ -1117,7 +1117,7 @@ namespace flex
 				PrintError("Failed to allocate %d bytes to save out to texture at %s\n", u8BufSize, absoluteFilePath.c_str());
 			}
 
-			free_hooked(u8Data);
+			free(u8Data);
 
 			return bResult;
 		}

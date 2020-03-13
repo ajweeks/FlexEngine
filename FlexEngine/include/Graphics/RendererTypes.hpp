@@ -490,7 +490,7 @@ namespace flex
 			{
 				if (data)
 				{
-					free_hooked(data);
+					free(data);
 					data = nullptr;
 					size = 0;
 				}
@@ -503,7 +503,7 @@ namespace flex
 					assert(size == dataSize || size == 0);
 
 					size = dataSize;
-					data = malloc_hooked(dataSize);
+					data = malloc(dataSize);
 				}
 				else
 				{
@@ -544,7 +544,7 @@ namespace flex
 					assert(size == dataSize || size == 0);
 
 					size = dataSize;
-					data = malloc_hooked(dataSize);
+					data = malloc(dataSize);
 				}
 				else
 				{

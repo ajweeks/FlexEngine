@@ -9,6 +9,10 @@
 
 #define ENABLE_CONSOLE_COLOURS 1
 
+#define FLEX_OVERRIDE_NEW_DELETE 1
+#define FLEX_OVERRIDE_MALLOC 1
+#define FLEX_OVERRIDE_NEW_DELETE 0
+#define FLEX_OVERRIDE_MALLOC 0
 #ifdef DEBUG
 #define THOROUGH_CHECKS 1
 #define ENABLE_PROFILING 1
@@ -32,10 +36,6 @@
 #include <cstddef>
 
 #include "memory.hpp"
-
-#define STBI_MALLOC(size)		malloc_hooked(size)
-#define STBI_REALLOC(p, newsz)	realloc_hooked(p, newsz)
-#define STBI_FREE(ptr)			free_hooked(ptr)
 
 #define BT_NO_SIMD_OPERATOR_OVERLOADS
 #define NOMINMAX
@@ -155,6 +155,7 @@ namespace flex
 	extern ImVec4 g_WarningButtonHoveredColor;
 	extern ImVec4 g_WarningButtonActiveColor;
 }
+
 IGNORE_WARNINGS_POP
 #endif // COMPILE_IMGUI
 
@@ -270,7 +271,7 @@ namespace flex
 	extern std::size_t g_TotalTrackedAllocatedMemory;
 	extern std::size_t g_TrackedAllocationCount;
 	extern std::size_t g_TrackedDeallocationCount;
-	
+
 	extern bool g_bEnableLogging_Loading;
 
 	extern bool g_bOpenGLEnabled;

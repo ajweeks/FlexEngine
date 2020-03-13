@@ -131,7 +131,7 @@ namespace flex
 		i32 format = AL_FORMAT_STEREO8;
 		i32 sampleRate = 44100;
 		i32 size = (i32)(sampleRate * length);
-		u8* data = (u8*)malloc_hooked((u32)size);
+		u8* data = (u8*)malloc((u32)size);
 
 		// See http://iquilezles.org/apps/soundtoy/index.html for more patterns
 		for (i32 i = 0; i < size; ++i)
@@ -162,7 +162,7 @@ namespace flex
 			alDeleteBuffers(NUM_BUFFERS, s_Buffers);
 			return InvalidAudioSourceID;
 		}
-		free_hooked(data);
+		free(data);
 
 
 		// Source

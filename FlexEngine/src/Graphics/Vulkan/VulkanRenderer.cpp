@@ -580,10 +580,10 @@ namespace flex
 			// Fullscreen tri vertex data
 			{
 				// TODO: Bring out to Mesh class?
-				void* vertData = malloc_hooked(m_FullScreenTriVertexBufferData.VertexBufferSize);
+				void* vertData = malloc(m_FullScreenTriVertexBufferData.VertexBufferSize);
 				memcpy(vertData, m_FullScreenTriVertexBufferData.vertexData, m_FullScreenTriVertexBufferData.VertexBufferSize);
 				CreateAndUploadToStaticVertexBuffer(m_FullScreenTriVertexBuffer, vertData, m_FullScreenTriVertexBufferData.VertexBufferSize);
-				free_hooked(vertData);
+				free(vertData);
 			}
 
 			CreateSemaphores();
@@ -1275,11 +1275,11 @@ namespace flex
 				constantBuffer->data.size = shader->shader->constantBufferUniforms.CalculateSizeInBytes();
 				if (constantBuffer->data.size > 0)
 				{
-					free_hooked(constantBuffer->data.data);
+					free(constantBuffer->data.data);
 
 					constantBuffer->data.size = GetAlignedUBOSize(constantBuffer->data.size);
 
-					constantBuffer->data.data = static_cast<real*>(malloc_hooked(constantBuffer->data.size));
+					constantBuffer->data.data = static_cast<real*>(malloc(constantBuffer->data.size));
 					assert(constantBuffer->data.data);
 
 					PrepareUniformBuffer(&constantBuffer->buffer, constantBuffer->data.size,
@@ -1293,7 +1293,7 @@ namespace flex
 				dynamicBuffer->data.size = shader->shader->dynamicBufferUniforms.CalculateSizeInBytes();
 				if (dynamicBuffer->data.size > 0 && !m_RenderObjects.empty())
 				{
-					aligned_free_hooked(dynamicBuffer->data.data);
+					_aligned_free(dynamicBuffer->data.data);
 
 					dynamicBuffer->data.size = GetAlignedUBOSize(dynamicBuffer->data.size);
 
@@ -1311,11 +1311,11 @@ namespace flex
 			if (shader->shader->additionalBufferUniforms.HasUniform(U_PARTICLE_BUFFER))
 			{
 				UniformBuffer* particleBuffer = material->uniformBufferList.Get(UniformBufferType::PARTICLE_DATA);
-				aligned_free_hooked(particleBuffer->data.data);
+				_aligned_free(particleBuffer->data.data);
 
 				particleBuffer->data.size = GetAlignedUBOSize(MAX_PARTICLE_COUNT * sizeof(ParticleBufferData));
 
-				particleBuffer->data.data = static_cast<real*>(aligned_malloc_hooked(particleBuffer->data.size, m_DynamicAlignment));
+				particleBuffer->data.data = static_cast<real*>(_aligned_malloc(particleBuffer->data.size, m_DynamicAlignment));
 				// Will be copied into from staging buffer
 				PrepareUniformBuffer(&particleBuffer->buffer, particleBuffer->data.size,
 					VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -7025,7 +7025,7 @@ namespace flex
 
 				const u32 vertexBufferSize = requiredMemory;
 
-				void* vertexDataStart = malloc_hooked(vertexBufferSize);
+				void* vertexDataStart = malloc(vertexBufferSize);
 				if (!vertexDataStart)
 				{
 					PrintError("Failed to allocate %d bytes for static vertex buffer\n", vertexBufferSize);
@@ -7058,7 +7058,7 @@ namespace flex
 				assert(vertexBufferData == ((char*)vertexDataStart + vertexBufferSize));
 
 				CreateAndUploadToStaticVertexBuffer(vertexBuffer, vertexDataStart, vertexBufferSize);
-				free_hooked(vertexDataStart);
+				free(vertexDataStart);
 			}
 		}
 
@@ -7116,7 +7116,7 @@ namespace flex
 				return;
 			}
 
-			void* vertexDataStart = malloc_hooked(size);
+			void* vertexDataStart = malloc(size);
 			if (!vertexDataStart)
 			{
 				PrintError("Failed to allocate memory for shadow vertex buffer! Attempted to allocate %d bytes", size);
@@ -7147,12 +7147,12 @@ namespace flex
 
 			if (vertexBufferSize == 0 || vertexCount == 0)
 			{
-				free_hooked(vertexDataStart);
+				free(vertexDataStart);
 				return;
 			}
 
 			CreateAndUploadToStaticVertexBuffer(m_ShadowVertexIndexBufferPair->vertexBuffer, vertexDataStart, vertexBufferSize);
-			free_hooked(vertexDataStart);
+			free(vertexDataStart);
 		}
 
 		void VulkanRenderer::CreateAndUploadToStaticVertexBuffer(VulkanBuffer* vertexBuffer, void* vertexBufferData, u32 vertexBufferSize)
@@ -7281,7 +7281,7 @@ namespace flex
 			}
 			size_t dynamicBufferSize = maxObjectCount * m_DynamicAlignment;
 
-			(*data) = aligned_malloc_hooked(dynamicBufferSize, m_DynamicAlignment);
+			(*data) = _aligned_malloc(dynamicBufferSize, m_DynamicAlignment);
 			assert(*data);
 
 			return dynamicBufferSize;
