@@ -718,8 +718,6 @@ namespace flex
 
 		VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* createInfo,
 			const VkAllocationCallbacks* allocator, VkDebugReportCallbackEXT* callback);
-
-		void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks* pAllocator);
 	} // namespace vk
 } // namespace flex
 

@@ -94,6 +94,7 @@ namespace flex
 			}
 
 			CreateInstance();
+
 			SetupDebugCallback();
 			CreateSurface();
 			VkPhysicalDevice physicalDevice = PickPhysicalDevice();
@@ -861,6 +862,9 @@ namespace flex
 
 			m_SwapChain.replace();
 			m_SwapChainImageViews.clear();
+
+			vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
+			vkDestroyDebugReportCallbackEXT(m_Instance, m_Callback, nullptr);
 
 			vkDestroyQueryPool(m_VulkanDevice->m_LogicalDevice, m_TimestampQueryPool, nullptr);
 
@@ -5272,12 +5276,13 @@ namespace flex
 				VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
 			createInfo.pfnCallback = DebugCallback;
 
-			VK_CHECK_RESULT(CreateDebugReportCallbackEXT(m_Instance, &createInfo, nullptr, m_Callback.replace()));
+			VK_CHECK_RESULT(CreateDebugReportCallbackEXT(m_Instance, &createInfo, nullptr, &m_Callback));
 		}
 
 		void VulkanRenderer::CreateSurface()
 		{
-			VK_CHECK_RESULT(glfwCreateWindowSurface(m_Instance, static_cast<GLFWWindowWrapper*>(g_Window)->GetWindow(), nullptr, m_Surface.replace()));
+			assert(m_Surface == VK_NULL_HANDLE);
+			VK_CHECK_RESULT(glfwCreateWindowSurface(m_Instance, static_cast<GLFWWindowWrapper*>(g_Window)->GetWindow(), nullptr, &m_Surface));
 		}
 
 		//void VulkanRenderer::SetupImGuiWindowData(ImGui_ImplVulkanH_WindowData* data, VkSurfaceKHR surface, i32 width, i32 height)

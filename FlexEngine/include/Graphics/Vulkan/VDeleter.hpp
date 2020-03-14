@@ -19,7 +19,6 @@ namespace flex
 			VDeleter();
 
 			VDeleter(std::function<void(T, VkAllocationCallbacks*)> deletef);
-			VDeleter(VkInstance instance, std::function<void(VkInstance, T, VkAllocationCallbacks*)> deletef);
 			VDeleter(const VDeleter<VkDevice>& device, std::function<void(VkDevice, T, VkAllocationCallbacks*)> deletef);
 			~VDeleter();
 
@@ -35,7 +34,6 @@ namespace flex
 			void cleanup();
 		};
 
-		// TODO: Monitor number of VDeleters being created/destroyed
 		template<typename T>
 		VDeleter<T>::VDeleter() :
 			VDeleter([](T, VkAllocationCallbacks*) {})
@@ -46,12 +44,6 @@ namespace flex
 		VDeleter<T>::VDeleter(std::function<void(T, VkAllocationCallbacks*)> deletef)
 		{
 			this->deleter = [=](T obj) { deletef(obj, nullptr); };
-		}
-
-		template<typename T>
-		VDeleter<T>::VDeleter(VkInstance instance, std::function<void(VkInstance, T, VkAllocationCallbacks*)> deletef)
-		{
-			this->deleter = [&instance, deletef](T obj) { deletef(instance, obj, nullptr); };
 		}
 
 		template<typename T>

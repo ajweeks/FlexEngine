@@ -2092,15 +2092,6 @@ namespace flex
 			}
 		}
 
-		void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks* allocator)
-		{
-			auto func = (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugReportCallbackEXT");
-			if (func != nullptr)
-			{
-				func(instance, callback, allocator);
-			}
-		}
-
 		FrameBufferAttachment::FrameBufferAttachment(VulkanDevice* device, const CreateInfo& createInfo) :
 			ID(GenerateUID()),
 			device(device),
