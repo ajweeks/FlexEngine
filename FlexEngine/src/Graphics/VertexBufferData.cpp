@@ -10,14 +10,14 @@ namespace flex
 {
 	void VertexBufferData::Initialize(VertexBufferDataCreateInfo* createInfo)
 	{
-		VertexCount = createInfo->positions_3D.size();
+		VertexCount = (u32)createInfo->positions_3D.size();
 		if (VertexCount == 0)
 		{
-			VertexCount = createInfo->positions_2D.size();
+			VertexCount = (u32)createInfo->positions_2D.size();
 		}
 		if (VertexCount == 0)
 		{
-			VertexCount = createInfo->positions_4D.size();
+			VertexCount = (u32)createInfo->positions_4D.size();
 		}
 		Attributes = createInfo->attributes;
 		VertexStride = CalculateVertexStride(createInfo->attributes);
@@ -56,7 +56,7 @@ namespace flex
 		assert(VertexCount > 0);
 
 		real* vertexDataP = vertexData;
-		u32 count = glm::min(VertexCount, glm::max(createInfo->positions_2D.size(), glm::max(createInfo->positions_3D.size(), createInfo->positions_4D.size())));
+		u32 count = glm::min(VertexCount, glm::max((u32)createInfo->positions_2D.size(), glm::max((u32)createInfo->positions_3D.size(), (u32)createInfo->positions_4D.size())));
 		for (u32 i = 0; i < count; ++i)
 		{
 			if (Attributes & (u32)VertexAttribute::POSITION)
@@ -297,7 +297,7 @@ namespace flex
 
 			src += VertexStride / sizeof(real);
 		}
-		u32 bytesCopied = (dst - initialDst) * sizeof(real);
+		u32 bytesCopied = (u32)(dst - initialDst) * sizeof(real);
 		return bytesCopied;
 	}
 

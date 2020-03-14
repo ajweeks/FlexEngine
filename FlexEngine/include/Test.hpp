@@ -44,6 +44,15 @@ namespace flex
 			}
 		}
 
+		static void Expect(const char* funcName, std::size_t val, std::size_t exp, const char* msg)
+		{
+			if (val != exp)
+			{
+				std::string msgStr = std::string(funcName) + " - Expected " + std::to_string(exp) + ", got " + std::to_string(val) + ", error message:\n\t" + msg;
+				throw std::runtime_error(msgStr.c_str());
+			}
+		}
+
 		static void Expect(const char* funcName, const char* val, const char* exp, const char* msg)
 		{
 			if (strcmp(val, exp) != 0)

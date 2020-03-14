@@ -233,7 +233,7 @@ namespace flex
 
 		if (!m_WindowIcons.empty() && m_WindowIcons[0].pixels)
 		{
-			glfwSetWindowIcon(m_Window, m_WindowIcons.size(), m_WindowIcons.data());
+			glfwSetWindowIcon(m_Window, (i32)m_WindowIcons.size(), m_WindowIcons.data());
 		}
 	}
 

@@ -3561,7 +3561,7 @@ namespace flex
 	void GerstnerWave::AddWave()
 	{
 		waves.push_back({});
-		UpdateDependentVariables(waves.size() - 1);
+		UpdateDependentVariables((u32)waves.size() - 1);
 	}
 
 	void GerstnerWave::RemoveWave(i32 index)

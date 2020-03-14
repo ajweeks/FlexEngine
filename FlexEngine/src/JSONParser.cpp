@@ -57,7 +57,7 @@ namespace flex
 							endLine = dirtyFileContents.size();
 						}
 
-						i += endLine - i;
+						i += (u32)endLine - i;
 						//fileContents.erase(i, endLine - i);
 						continue;
 					}
@@ -167,7 +167,7 @@ namespace flex
 		}
 
 		field.label = fileContents.substr(quoteStart + 1, quoteEnd - (quoteStart + 1));
-		*offset = quoteEnd + 1;
+		*offset = (i32)quoteEnd + 1;
 
 		if (fileContents[quoteEnd + 1] == ':') // Non field-array field
 		{
@@ -196,12 +196,12 @@ namespace flex
 				std::string stringValue = fileContents.substr(strQuoteStart + 1, strQuoteEnd - (strQuoteStart + 1));
 				field.value = JSONValue(stringValue);
 
-				*offset = strQuoteEnd + 1;
+				*offset = (i32)strQuoteEnd + 1;
 			} break;
 			case JSONValue::Type::INT:
 			{
 				size_t intStart = quoteEnd + 2;
-				size_t nextNonAlphaNumeric = NextNonAlphaNumeric(fileContents, intStart + 1);
+				size_t nextNonAlphaNumeric = NextNonAlphaNumeric(fileContents, (i32)intStart + 1);
 				size_t intCharCount = nextNonAlphaNumeric - intStart;
 				std::string intStr = fileContents.substr(intStart, intCharCount);
 				i32 intValue = 0;
@@ -211,13 +211,13 @@ namespace flex
 				}
 				field.value = JSONValue(intValue);
 
-				*offset = nextNonAlphaNumeric;
+				*offset = (i32)nextNonAlphaNumeric;
 			} break;
 			case JSONValue::Type::FLOAT:
 			{
 				size_t floatStart = quoteEnd + 2;
 				size_t decimalIndex = fileContents.find('.', floatStart);
-				size_t floatEnd = NextNonAlphaNumeric(fileContents, decimalIndex + 1);
+				size_t floatEnd = NextNonAlphaNumeric(fileContents, (i32)decimalIndex + 1);
 				size_t floatCharCount = floatEnd - floatStart;
 				std::string floatStr = fileContents.substr(floatStart, floatCharCount);
 				real floatValue = 0.0f;
@@ -227,18 +227,18 @@ namespace flex
 				}
 				field.value = JSONValue(floatValue);
 
-				*offset = floatEnd;
+				*offset = (i32)floatEnd;
 			} break;
 			case JSONValue::Type::BOOL:
 			{
 				bool boolValue = valueFirstChar == 't';
 				field.value = JSONValue(boolValue);
 
-				*offset = NextNonAlphaNumeric(fileContents, quoteEnd + 3);
+				*offset = NextNonAlphaNumeric(fileContents, (i32)quoteEnd + 3);
 			} break;
 			case JSONValue::Type::OBJECT:
 			{
-				*offset = quoteEnd + 2;
+				*offset = (i32)quoteEnd + 2;
 
 				JSONObject object;
 				ParseObject(fileContents, offset, object);
@@ -249,7 +249,7 @@ namespace flex
 			{
 				std::vector<JSONObject> objects;
 
-				*offset = quoteEnd + 2;
+				*offset = (i32)quoteEnd + 2;
 
 				i32 arrayClosingBracket = MatchingBracket('[', fileContents, *offset);
 				if (arrayClosingBracket == -1)
@@ -276,7 +276,7 @@ namespace flex
 			{
 				std::vector<JSONField> fields;
 
-				*offset = quoteEnd + 2;
+				*offset = (i32)quoteEnd + 2;
 
 				i32 arrayClosingBracket = MatchingBracket('[', fileContents, *offset);
 				if (arrayClosingBracket == -1)

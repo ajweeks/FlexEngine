@@ -172,7 +172,7 @@ namespace flex
 		assert(primitive->attributes[posAttribIndex].type == cgltf_attribute_type_position);
 		assert(posAccessor->component_type == cgltf_component_type_r_32f);
 		assert(posAccessor->type == cgltf_type_vec3);
-		u32 vertCount = posAccessor->count;
+		u32 vertCount = (u32)posAccessor->count;
 
 		vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
 
@@ -335,7 +335,7 @@ namespace flex
 
 			for (i32 l = 0; l < indexCount; ++l)
 			{
-				newMeshComponent->m_Indices[l] = cgltf_accessor_read_index(primitive->indices, l);
+				newMeshComponent->m_Indices[l] = (u32)cgltf_accessor_read_index(primitive->indices, l);
 			}
 		}
 
@@ -839,27 +839,27 @@ namespace flex
 			vertexBufferDataCreateInfo.texCoords_UV.emplace_back(0.0f, 0.0f);
 			vertexBufferDataCreateInfo.normals.emplace_back(0.0f, -1.0f, 0.0f);
 
-			const u32 numVerts = vertexBufferDataCreateInfo.positions_3D.size();
+			const u32 numVerts = (u32)vertexBufferDataCreateInfo.positions_3D.size();
 
 			// Indices
 			m_Indices.clear();
 
 			// Top triangles
-			for (size_t i = 0; i < meridianCount; ++i)
+			for (u32 i = 0; i < meridianCount; ++i)
 			{
-				u32 a = i + 1;
-				u32 b = (i + 1) % meridianCount + 1;
+				u32 a = (u32)i + 1;
+				u32 b = (u32)((i + 1) % meridianCount + 1);
 				m_Indices.push_back(0);
 				m_Indices.push_back(b);
 				m_Indices.push_back(a);
 			}
 
 			// Center quads
-			for (size_t j = 0; j < parallelCount - 2; ++j)
+			for (u32 j = 0; j < parallelCount - 2; ++j)
 			{
-				u32 aStart = j * meridianCount + 1;
-				u32 bStart = (j + 1) * meridianCount + 1;
-				for (size_t i = 0; i < meridianCount; ++i)
+				u32 aStart = (u32)(j * meridianCount + 1);
+				u32 bStart = (u32)((j + 1) * meridianCount + 1);
+				for (u32 i = 0; i < meridianCount; ++i)
 				{
 					u32 a = aStart + i;
 					u32 a1 = aStart + (i + 1) % meridianCount;
@@ -876,10 +876,10 @@ namespace flex
 			}
 
 			// Bottom triangles
-			for (size_t i = 0; i < meridianCount; ++i)
+			for (u32 i = 0; i < meridianCount; ++i)
 			{
-				u32 a = i + meridianCount * (parallelCount - 2) + 1;
-				u32 b = (i + 1) % meridianCount + meridianCount * (parallelCount - 2) + 1;
+				u32 a = (u32)(i + meridianCount * (parallelCount - 2) + 1);
+				u32 b = (u32)((i + 1) % meridianCount + meridianCount * (parallelCount - 2) + 1);
 				m_Indices.push_back(numVerts - 1);
 				m_Indices.push_back(a);
 				m_Indices.push_back(b);

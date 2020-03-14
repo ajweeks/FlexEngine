@@ -1224,7 +1224,7 @@ namespace flex
 
 		while (iter != str.end())
 		{
-			u32 findIndex = str.find(pattern.c_str(), iter - str.begin());
+			size_t findIndex = str.find(pattern.c_str(), iter - str.begin());
 			if (findIndex != std::string::npos)
 			{
 				str = str.replace(str.begin() + findIndex, str.begin() + findIndex + pattern.length(), replacement.begin(), replacement.end());

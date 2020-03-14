@@ -99,8 +99,8 @@ namespace flex
 
 	void PrintLong(const char* str)
 	{
-		i32 len = strlen(str);
-		for (i32 i = 0; i < len; i += MAX_CHARS)
+		u32 len = (u32)strlen(str);
+		for (u32 i = 0; i < len; i += MAX_CHARS)
 		{
 			PrintSimple(str + i);
 		}

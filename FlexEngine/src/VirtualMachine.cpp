@@ -124,9 +124,9 @@ namespace flex
 
 	}
 
-	glm::i32 TokenContext::GetRemainingLength() const
+	i32 TokenContext::GetRemainingLength() const
 	{
-		return bufferLen - (bufferPtr - buffer);
+		return bufferLen - (i32)(bufferPtr - buffer);
 	}
 
 	bool TokenContext::CanNextCharBeIdentifierPart() const
@@ -640,7 +640,7 @@ namespace flex
 		token.lineNum = tokenLineNum;
 		token.linePos = tokenLinePos;
 		token.charPtr = tokenStart;
-		token.len = (context->bufferPtr - tokenStart);
+		token.len = (i32)(context->bufferPtr - tokenStart);
 		token.type = nextTokenType;
 		token.tokenID = nextTokenID++;
 

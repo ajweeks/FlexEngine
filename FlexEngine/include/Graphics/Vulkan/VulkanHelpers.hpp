@@ -499,7 +499,7 @@ namespace flex
 
 			u32 Count()
 			{
-				return values.size();
+				return (u32)values.size();
 			}
 
 			iter begin()

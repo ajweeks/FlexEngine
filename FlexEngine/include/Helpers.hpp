@@ -186,7 +186,7 @@ namespace flex
 	template<class T>
 	const T& PickRandomFrom(const std::vector<T>& vec)
 	{
-		return vec[RandomInt(0, vec.size())];
+		return vec[RandomInt(0, (i32)vec.size())];
 	}
 
 	i32 RoundUp(i32 val, i32 alignment);

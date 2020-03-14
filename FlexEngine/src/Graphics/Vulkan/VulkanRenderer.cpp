@@ -373,7 +373,7 @@ namespace flex
 				if (!bExists)
 				{
 					m_StaticVertexBuffers.emplace_back(stride, new VulkanBuffer(m_VulkanDevice));
-					staticVertexBufferIndex = m_StaticVertexBuffers.size() - 1;
+					staticVertexBufferIndex = (u32)(m_StaticVertexBuffers.size() - 1);
 				}
 				m_Shaders[shaderID].shader->staticVertexBufferIndex = staticVertexBufferIndex;
 			}
@@ -452,7 +452,7 @@ namespace flex
 
 			// Figure out largest shader uniform buffer to set m_DynamicAlignment correctly
 			{
-				size_t uboAlignment = (size_t)m_VulkanDevice->m_PhysicalDeviceProperties.limits.minUniformBufferOffsetAlignment;
+				u32 uboAlignment = (u32)m_VulkanDevice->m_PhysicalDeviceProperties.limits.minUniformBufferOffsetAlignment;
 				for (const VulkanShader& shader : m_Shaders)
 				{
 					u32 size = GetAlignedUBOSize(shader.shader->dynamicBufferUniforms.CalculateSizeInBytes());
@@ -474,7 +474,7 @@ namespace flex
 				}
 			}
 
-			for (size_t i = 0; i < m_Shaders.size(); ++i)
+			for (u32 i = 0; i < m_Shaders.size(); ++i)
 			{
 				CreateDescriptorSetLayout(i);
 			}
@@ -512,7 +512,7 @@ namespace flex
 				CreateUniformBuffers(&matPair.second);
 			}
 
-			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
+			for (u32 i = 0; i < (u32)m_RenderObjects.size(); ++i)
 			{
 				CreateDescriptorSet(i);
 				CreateGraphicsPipeline(i, true);
@@ -525,7 +525,7 @@ namespace flex
 
 			CreateShadowResources();
 
-			m_CommandBufferManager.CreateCommandBuffers(m_SwapChainImages.size());
+			m_CommandBufferManager.CreateCommandBuffers((u32)m_SwapChainImages.size());
 
 			GLFWWindowWrapper* castedWindow = dynamic_cast<GLFWWindowWrapper*>(g_Window);
 			if (castedWindow == nullptr)
@@ -599,7 +599,7 @@ namespace flex
 
 			UpdateConstantUniformBuffers();
 
-			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
+			for (u32 i = 0; i < (u32)m_RenderObjects.size(); ++i)
 			{
 				UpdateDynamicUniformBuffer(i);
 			}
@@ -1163,7 +1163,7 @@ namespace flex
 
 					m_NoiseTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "SSAO Noise", SSAO_NOISE_DIM, SSAO_NOISE_DIM, 4);
 					void* buffer = ssaoNoise.data();
-					u32 bufferSize = ssaoNoise.size() * sizeof(glm::vec4);
+					u32 bufferSize = (u32)ssaoNoise.size() * sizeof(glm::vec4);
 					m_NoiseTexture->CreateFromMemory(buffer, bufferSize, VK_FORMAT_R32G32B32A32_SFLOAT, 1, VK_FILTER_NEAREST);
 					m_LoadedTextures.push_back(m_NoiseTexture);
 				}
@@ -1301,8 +1301,7 @@ namespace flex
 
 					dynamicBuffer->data.size = GetAlignedUBOSize(dynamicBuffer->data.size);
 
-					const size_t dynamicBufferSize = AllocateDynamicUniformBuffer(
-						dynamicBuffer->data.size, (void**)&dynamicBuffer->data.data);
+					const u32 dynamicBufferSize = AllocateDynamicUniformBuffer(dynamicBuffer->data.size, (void**)&dynamicBuffer->data.data);
 					dynamicBuffer->fullDynamicBufferSize = dynamicBufferSize;
 					if (dynamicBufferSize > 0)
 					{
@@ -1403,7 +1402,7 @@ namespace flex
 				createInfo.bEnableColorBlending = true;
 				createInfo.depthTestEnable = VK_FALSE;
 				createInfo.depthWriteEnable = VK_FALSE;
-				createInfo.pushConstantRangeCount = pushConstantRanges.size();
+				createInfo.pushConstantRangeCount = (u32)pushConstantRanges.size();
 				createInfo.pushConstants = pushConstantRanges.data();
 				CreateGraphicsPipeline(&createInfo);
 			}
@@ -1465,7 +1464,7 @@ namespace flex
 				createInfo.depthTestEnable = VK_FALSE;
 				createInfo.depthWriteEnable = VK_FALSE;
 				createInfo.fragSpecializationInfo = &m_TAAOSpecializationInfo;
-				createInfo.pushConstantRangeCount = pushConstantRanges.size();
+				createInfo.pushConstantRangeCount = (u32)pushConstantRanges.size();
 				createInfo.pushConstants = pushConstantRanges.data();
 				CreateGraphicsPipeline(&createInfo);
 			}
@@ -1861,7 +1860,7 @@ namespace flex
 			VulkanBuffer* vertexBuffer = vertexIndexBufferPair->vertexBuffer;
 			VulkanBuffer* indexBuffer = vertexIndexBufferPair->indexBuffer;
 			u32 copySize = std::min(vertexBufferData->VertexBufferSize, (u32)vertexBuffer->m_Size);
-			u32 indexCopySize = std::min(indexData.size() * sizeof(indexData[0]), (u32)indexBuffer->m_Size);
+			u32 indexCopySize = std::min((u32)(indexData.size() * sizeof(indexData[0])), (u32)indexBuffer->m_Size);
 			if (copySize < vertexBufferData->VertexBufferSize)
 			{
 				PrintError("Dynamic vertex buffer is %u bytes too small for data attempting to be copied in\n", vertexBufferData->VertexBufferSize - copySize);
@@ -2045,7 +2044,7 @@ namespace flex
 
 		u32 VulkanRenderer::GetRenderObjectCapacity() const
 		{
-			return m_RenderObjects.size();
+			return (u32)m_RenderObjects.size();
 		}
 
 		void VulkanRenderer::DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size, DataType dataType, bool normalized, i32 stride, void* pointer)
@@ -2372,8 +2371,7 @@ namespace flex
 						}
 					};
 					ImGui::PushItemWidth(240.0f);
-					if (ImGui::Combo("Shader", &selectedShaderIndex, &ShaderFunctor::GetShaderName,
-						(void*)m_Shaders.data(), m_Shaders.size()))
+					if (ImGui::Combo("Shader", &selectedShaderIndex, &ShaderFunctor::GetShaderName, (void*)m_Shaders.data(), (u32)m_Shaders.size()))
 					{
 						mat = m_Materials.at(selectedMaterialID);
 						mat.material.shaderID = selectedShaderIndex;
@@ -3073,7 +3071,7 @@ namespace flex
 			pipelineCreateInfo.subpass = 0;
 			pipelineCreateInfo.depthTestEnable = VK_FALSE;
 			pipelineCreateInfo.depthWriteEnable = VK_FALSE;
-			pipelineCreateInfo.pushConstantRangeCount = pushConstantRanges.size();
+			pipelineCreateInfo.pushConstantRangeCount = (u32)pushConstantRanges.size();
 			pipelineCreateInfo.pushConstants = pushConstantRanges.data();
 			CreateGraphicsPipeline(&pipelineCreateInfo);
 
@@ -3148,7 +3146,7 @@ namespace flex
 					if (skyboxRenderObject->bIndexed)
 					{
 						vkCmdBindIndexBuffer(cmdBuf, indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
-						vkCmdDrawIndexed(cmdBuf, skyboxRenderObject->indices->size(), 1, 0, 0, 0);
+						vkCmdDrawIndexed(cmdBuf, (u32)skyboxRenderObject->indices->size(), 1, 0, 0, 0);
 					}
 					else
 					{
@@ -3342,7 +3340,7 @@ namespace flex
 			pipelineCreateInfo.subpass = 0;
 			pipelineCreateInfo.depthTestEnable = VK_FALSE;
 			pipelineCreateInfo.depthWriteEnable = VK_FALSE;
-			pipelineCreateInfo.pushConstantRangeCount = pushConstantRanges.size();
+			pipelineCreateInfo.pushConstantRangeCount = (u32)pushConstantRanges.size();
 			pipelineCreateInfo.pushConstants = pushConstantRanges.data();
 			CreateGraphicsPipeline(&pipelineCreateInfo);
 
@@ -3412,7 +3410,7 @@ namespace flex
 					if (skyboxRenderObject->bIndexed)
 					{
 						vkCmdBindIndexBuffer(cmdBuf, m_StaticIndexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
-						vkCmdDrawIndexed(cmdBuf, skyboxRenderObject->indices->size(), 1, skyboxRenderObject->indexOffset, skyboxRenderObject->vertexOffset, 0);
+						vkCmdDrawIndexed(cmdBuf, (u32)skyboxRenderObject->indices->size(), 1, skyboxRenderObject->indexOffset, skyboxRenderObject->vertexOffset, 0);
 					}
 					else
 					{
@@ -3608,7 +3606,7 @@ namespace flex
 			pipelineCreateInfo.subpass = 0;
 			pipelineCreateInfo.depthTestEnable = VK_FALSE;
 			pipelineCreateInfo.depthWriteEnable = VK_FALSE;
-			pipelineCreateInfo.pushConstantRangeCount = pushConstantRanges.size();
+			pipelineCreateInfo.pushConstantRangeCount = (u32)pushConstantRanges.size();
 			pipelineCreateInfo.pushConstants = pushConstantRanges.data();
 			CreateGraphicsPipeline(&pipelineCreateInfo);
 
@@ -3676,7 +3674,7 @@ namespace flex
 					if (skyboxRenderObject->bIndexed)
 					{
 						vkCmdBindIndexBuffer(cmdBuf, m_StaticIndexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
-						vkCmdDrawIndexed(cmdBuf, skyboxRenderObject->indices->size(), 1, skyboxRenderObject->indexOffset, skyboxRenderObject->vertexOffset, 0);
+						vkCmdDrawIndexed(cmdBuf, (u32)skyboxRenderObject->indices->size(), 1, skyboxRenderObject->indexOffset, skyboxRenderObject->vertexOffset, 0);
 					}
 					else
 					{
@@ -4280,7 +4278,7 @@ namespace flex
 				}
 				charTextures.clear();
 
-				vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPool, descSets.size(), descSets.data());
+				vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPool, (u32)descSets.size(), descSets.data());
 				descSets.clear();
 
 				vkDestroyPipeline(m_VulkanDevice->m_LogicalDevice, graphicsPipeline, nullptr);
@@ -5128,7 +5126,7 @@ namespace flex
 			}
 
 			m_StaticVertexBuffers.emplace_back(stride, new VulkanBuffer(m_VulkanDevice));
-			return m_StaticVertexBuffers.size() - 1;
+			return (u32)m_StaticVertexBuffers.size() - 1;
 		}
 
 		u32 VulkanRenderer::GetDynamicVertexIndexBufferIndex(u32 stride)
@@ -5147,7 +5145,7 @@ namespace flex
 			}
 
 			m_DynamicVertexIndexBufferPairs.emplace_back(stride, new VertexIndexBufferPair(new VulkanBuffer(m_VulkanDevice), new VulkanBuffer(m_VulkanDevice)));
-			return m_DynamicVertexIndexBufferPairs.size() - 1;
+			return (u32)m_DynamicVertexIndexBufferPairs.size() - 1;
 		}
 
 		MaterialID VulkanRenderer::GetNextAvailableMaterialID() const
@@ -5171,7 +5169,7 @@ namespace flex
 				}
 			}
 
-			return m_RenderObjects.size();
+			return (u32)m_RenderObjects.size();
 		}
 
 		ParticleSystemID VulkanRenderer::GetNextAvailableParticleSystemID() const
@@ -5184,7 +5182,7 @@ namespace flex
 				}
 			}
 
-			return m_ParticleSystems.size();
+			return (u32)m_ParticleSystems.size();
 		}
 
 		void VulkanRenderer::InsertNewRenderObject(VulkanRenderObject* renderObject)
@@ -5237,12 +5235,12 @@ namespace flex
 			createInfo.pApplicationInfo = &appInfo;
 
 			std::vector<const char*> extensions = GetRequiredExtensions();
-			createInfo.enabledExtensionCount = extensions.size();
+			createInfo.enabledExtensionCount = (u32)extensions.size();
 			createInfo.ppEnabledExtensionNames = extensions.data();
 
 			if (m_bEnableValidationLayers)
 			{
-				createInfo.enabledLayerCount = m_ValidationLayers.size();
+				createInfo.enabledLayerCount = (u32)m_ValidationLayers.size();
 				createInfo.ppEnabledLayerNames = m_ValidationLayers.data();
 			}
 			else
@@ -5395,12 +5393,12 @@ namespace flex
 
 			createInfo.pEnabledFeatures = &deviceFeatures;
 
-			createInfo.enabledExtensionCount = deviceExtensions.size();
+			createInfo.enabledExtensionCount = (u32)deviceExtensions.size();
 			createInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
 			if (m_bEnableValidationLayers)
 			{
-				createInfo.enabledLayerCount = m_ValidationLayers.size();
+				createInfo.enabledLayerCount = (u32)m_ValidationLayers.size();
 				createInfo.ppEnabledLayerNames = m_ValidationLayers.data();
 			}
 			else
@@ -5655,7 +5653,7 @@ namespace flex
 			{
 				VulkanRenderPass* pass = m_AutoTransitionedRenderPasses[passIndex];
 				assert(pass->m_TargetColorAttachmentInitialLayouts.size() == pass->m_TargetColorAttachmentFinalLayouts.size());
-				const u32 colorAttachmentCount = pass->m_TargetColorAttachmentInitialLayouts.size();
+				const u32 colorAttachmentCount = (u32)pass->m_TargetColorAttachmentInitialLayouts.size();
 				autoGeneratedLayouts[passIndex].colorInitialLayouts.resize(colorAttachmentCount, VK_IMAGE_LAYOUT_UNDEFINED);
 				autoGeneratedLayouts[passIndex].colorFinalLayouts.resize(colorAttachmentCount, VK_IMAGE_LAYOUT_UNDEFINED);
 				for (u32 attachmentIndex = 0; attachmentIndex < colorAttachmentCount; ++attachmentIndex)
@@ -5841,7 +5839,7 @@ namespace flex
 								targetAttachmentIter = Find(prevPass->m_TargetColorAttachmentIDs, *sampledAttachmentIter);
 								if (targetAttachmentIter != prevPass->m_TargetColorAttachmentIDs.end())
 								{
-									const u32 targetAttachmentIndex = targetAttachmentIter - prevPass->m_TargetColorAttachmentIDs.begin();
+									const u32 targetAttachmentIndex = (u32)(targetAttachmentIter - prevPass->m_TargetColorAttachmentIDs.begin());
 									prevPass->m_TargetColorAttachmentFinalLayouts[targetAttachmentIndex] = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 									sampledAttachmentIter = unresolvedSampledAttachments.erase(sampledAttachmentIter);
 									bRemovedElement = true;
@@ -5900,7 +5898,7 @@ namespace flex
 								targetAttachmentIter = Find(nextPass->m_TargetColorAttachmentIDs, *sampledAttachmentIter);
 								if (targetAttachmentIter != nextPass->m_TargetColorAttachmentIDs.end())
 								{
-									const u32 targetAttachmentIndex = targetAttachmentIter - nextPass->m_TargetColorAttachmentIDs.begin();
+									const u32 targetAttachmentIndex = (u32)(targetAttachmentIter - nextPass->m_TargetColorAttachmentIDs.begin());
 									nextPass->m_TargetColorAttachmentInitialLayouts[targetAttachmentIndex] = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 									sampledAttachmentIter = unresolvedSampledAttachments.erase(sampledAttachmentIter);
 									bRemovedElement = true;
@@ -5947,8 +5945,8 @@ namespace flex
 					{
 						if (*nextPassTargetAttachmentIter == *currPassTargetAttachmentIter)
 						{
-							const u32 currPassTargetAttachmentIndex = currPassTargetAttachmentIter - currPass->m_TargetColorAttachmentIDs.begin();
-							const u32 nextPassTargetAttachmentIndex = nextPassTargetAttachmentIter - nextPass->m_TargetColorAttachmentIDs.begin();
+							const size_t currPassTargetAttachmentIndex = currPassTargetAttachmentIter - currPass->m_TargetColorAttachmentIDs.begin();
+							const size_t nextPassTargetAttachmentIndex = nextPassTargetAttachmentIter - nextPass->m_TargetColorAttachmentIDs.begin();
 							currPass->m_TargetColorAttachmentFinalLayouts[currPassTargetAttachmentIndex] = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 							nextPass->m_TargetColorAttachmentInitialLayouts[nextPassTargetAttachmentIndex] = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 						}
@@ -6156,7 +6154,7 @@ namespace flex
 
 			if (!writeDescriptorSets.empty())
 			{
-				vkUpdateDescriptorSets(m_VulkanDevice->m_LogicalDevice, writeDescriptorSets.size(), writeDescriptorSets.data(), 0, nullptr);
+				vkUpdateDescriptorSets(m_VulkanDevice->m_LogicalDevice, (u32)writeDescriptorSets.size(), writeDescriptorSets.data(), 0u, nullptr);
 			}
 
 			if (createInfo->DBG_Name)
@@ -6261,7 +6259,7 @@ namespace flex
 					shader->shader->textureUniforms.HasUniform(descSetInfo.uniform))
 				{
 					VkDescriptorSetLayoutBinding descSetLayoutBinding = {};
-					descSetLayoutBinding.binding = bindings.size();
+					descSetLayoutBinding.binding = (u32)bindings.size();
 					descSetLayoutBinding.descriptorCount = 1;
 					descSetLayoutBinding.descriptorType = descSetInfo.descriptorType;
 					descSetLayoutBinding.stageFlags = descSetInfo.shaderStageFlags;
@@ -6276,7 +6274,7 @@ namespace flex
 
 		bool VulkanRenderer::FindOrCreateMaterialByName(const std::string& materialName, MaterialID& materialID)
 		{
-			for (size_t i = 0; i < m_Materials.size(); ++i)
+			for (u32 i = 0; i < (u32)m_Materials.size(); ++i)
 			{
 				auto matIter = m_Materials.find(i);
 				if (matIter != m_Materials.end() && matIter->second.material.name.compare(materialName) == 0)
@@ -6332,7 +6330,7 @@ namespace flex
 		bool VulkanRenderer::GetShaderID(const std::string& shaderName, ShaderID& shaderID)
 		{
 			// TODO: Store shaders using sorted data structure?
-			for (size_t i = 0; i < m_Shaders.size(); ++i)
+			for (u32 i = 0; i < (u32)m_Shaders.size(); ++i)
 			{
 				if (m_Shaders[i].shader->name.compare(shaderName) == 0)
 				{
@@ -6460,7 +6458,7 @@ namespace flex
 			VkPipelineVertexInputStateCreateInfo vertexInputInfo;
 			if (vertexStride > 0)
 			{
-				vertexInputInfo = vks::pipelineVertexInputStateCreateInfo(1, &bindingDescription, attributeDescriptions.size(), attributeDescriptions.data());
+				vertexInputInfo = vks::pipelineVertexInputStateCreateInfo(1, &bindingDescription, (u32)attributeDescriptions.size(), attributeDescriptions.data());
 			}
 			else
 			{
@@ -6556,7 +6554,7 @@ namespace flex
 
 			VkGraphicsPipelineCreateInfo pipelineInfo = {};
 			pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-			pipelineInfo.stageCount = shaderStages.size();
+			pipelineInfo.stageCount = (u32)shaderStages.size();
 			pipelineInfo.pStages = shaderStages.data();
 			pipelineInfo.pVertexInputState = &vertexInputInfo;
 			pipelineInfo.pInputAssemblyState = &inputAssembly;
@@ -6646,7 +6644,7 @@ namespace flex
 				};
 
 				VkFramebufferCreateInfo framebufferInfo = vks::framebufferCreateInfo(*m_UIRenderPass);
-				framebufferInfo.attachmentCount = attachments.size();
+				framebufferInfo.attachmentCount = (u32)attachments.size();
 				framebufferInfo.pAttachments = attachments.data();
 				framebufferInfo.width = m_SwapChainExtent.width;
 				framebufferInfo.height = m_SwapChainExtent.height;
@@ -7193,7 +7191,7 @@ namespace flex
 				if (renderObject &&
 					renderObject->bIndexed)
 				{
-					renderObject->indexOffset = indices.size();
+					renderObject->indexOffset = (u32)indices.size();
 					indices.insert(indices.end(), renderObject->indices->begin(), renderObject->indices->end());
 				}
 			}
@@ -7216,7 +7214,7 @@ namespace flex
 				if (renderObject &&
 					renderObject->bIndexed)
 				{
-					renderObject->shadowIndexOffset = indices.size();
+					renderObject->shadowIndexOffset = (u32)indices.size();
 					indices.insert(indices.end(), renderObject->indices->begin(), renderObject->indices->end());
 				}
 			}
@@ -7227,12 +7225,12 @@ namespace flex
 			}
 
 			CreateAndUploadToStaticIndexBuffer(m_ShadowVertexIndexBufferPair->indexBuffer, indices);
-			m_ShadowVertexIndexBufferPair->indexCount = indices.size();
+			m_ShadowVertexIndexBufferPair->indexCount = (u32)indices.size();
 		}
 
 		void VulkanRenderer::CreateAndUploadToStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<u32>& indices)
 		{
-			const u32 bufferSize = sizeof(indices[0]) * indices.size();
+			const u32 bufferSize = sizeof(indices[0]) * (u32)indices.size();
 
 			VulkanBuffer stagingBuffer(m_VulkanDevice);
 			stagingBuffer.Create(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
@@ -7265,18 +7263,16 @@ namespace flex
 		u32 VulkanRenderer::AllocateDynamicUniformBuffer(u32 dynamicDataSize, void** data, i32 maxObjectCount /* = -1 */)
 		{
 			size_t uboAlignment = (size_t)m_VulkanDevice->m_PhysicalDeviceProperties.limits.minUniformBufferOffsetAlignment;
-			u32 dynamicAllignment =
-				(dynamicDataSize / uboAlignment) * uboAlignment +
-				((dynamicDataSize % uboAlignment) > 0 ? uboAlignment : 0);
+			size_t dynamicAllignment = (dynamicDataSize / uboAlignment) * uboAlignment + ((dynamicDataSize % uboAlignment) > 0 ? uboAlignment : 0);
 
 			if (dynamicAllignment > m_DynamicAlignment)
 			{
-				u32 newDynamicAllignment = 1;
+				size_t newDynamicAllignment = 1;
 				while (newDynamicAllignment < dynamicAllignment)
 				{
 					newDynamicAllignment <<= 1;
 				}
-				m_DynamicAlignment = newDynamicAllignment;
+				m_DynamicAlignment = (u32)newDynamicAllignment;
 			}
 
 			if (maxObjectCount == -1)
@@ -7284,12 +7280,12 @@ namespace flex
 				// TODO: FIXME: Use better metric for initial size
 				maxObjectCount = (i32)m_RenderObjects.size();
 			}
-			size_t dynamicBufferSize = maxObjectCount * m_DynamicAlignment;
+			size_t dynamicBufferSize = (size_t)maxObjectCount * m_DynamicAlignment;
 
 			(*data) = flex_aligned_malloc(dynamicBufferSize, m_DynamicAlignment);
 			assert(*data);
 
-			return dynamicBufferSize;
+			return (u32)dynamicBufferSize;
 		}
 
 		void VulkanRenderer::PrepareUniformBuffer(VulkanBuffer* buffer, u32 bufferSize,
@@ -7445,7 +7441,7 @@ namespace flex
 			ShaderBatchPair shadowShaderBatch;
 			shadowShaderBatch.batch.batches.resize(1);
 			u32 dynamicShadowUBOOffset = 0;
-			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
+			for (u32 i = 0; i < (u32)m_RenderObjects.size(); ++i)
 			{
 				VulkanRenderObject* renderObject = GetRenderObject(i);
 				if (renderObject &&
@@ -7522,13 +7518,13 @@ namespace flex
 					{
 						if (drawCallInfo->graphicsPipelineOverride != InvalidID)
 						{
-							graphicsPipeline = drawCallInfo->graphicsPipelineOverride;
+							graphicsPipeline = (VkPipeline)drawCallInfo->graphicsPipelineOverride;
 							assert(drawCallInfo->pipelineLayoutOverride != InvalidID);
-							pipelineLayout = drawCallInfo->pipelineLayoutOverride;
+							pipelineLayout = (VkPipelineLayout)drawCallInfo->pipelineLayoutOverride;
 						}
 						if (drawCallInfo->descriptorSetOverride != InvalidID)
 						{
-							descriptorSet = drawCallInfo->descriptorSetOverride;
+							descriptorSet = (VkDescriptorSet)drawCallInfo->descriptorSetOverride;
 						}
 						if (drawCallInfo->bRenderingShadows)
 						{
@@ -7566,11 +7562,11 @@ namespace flex
 						if (drawCallInfo == nullptr ||
 							!drawCallInfo->bRenderingShadows)
 						{
-							vkCmdDrawIndexed(commandBuffer, renderObject->indices->size(), 1, renderObject->indexOffset, renderObject->vertexOffset, 0);
+							vkCmdDrawIndexed(commandBuffer, (u32)renderObject->indices->size(), 1, renderObject->indexOffset, renderObject->vertexOffset, 0);
 						}
 						else
 						{
-							vkCmdDrawIndexed(commandBuffer, renderObject->indices->size(), 1, renderObject->shadowIndexOffset, renderObject->shadowVertexOffset, 0);
+							vkCmdDrawIndexed(commandBuffer, (u32)renderObject->indices->size(), 1, renderObject->shadowIndexOffset, renderObject->shadowVertexOffset, 0);
 						}
 					}
 					else
@@ -7627,7 +7623,7 @@ namespace flex
 
 			VkDeviceSize offsets[1] = { 0 };
 
-			renderPass->Begin(commandBuffer, clearValues.data(), clearValues.size());
+			renderPass->Begin(commandBuffer, clearValues.data(), (u32)clearValues.size());
 
 			{
 				BindDescriptorSet(&material, 0, commandBuffer, pipelineLayout, descriptorSet);
@@ -7705,9 +7701,9 @@ namespace flex
 
 						DrawCallInfo shadowDrawCallInfo = {};
 						shadowDrawCallInfo.materialIDOverride = m_ShadowMaterialID;
-						shadowDrawCallInfo.graphicsPipelineOverride = m_ShadowGraphicsPipeline;
-						shadowDrawCallInfo.pipelineLayoutOverride = m_ShadowPipelineLayout;
-						shadowDrawCallInfo.descriptorSetOverride = m_ShadowDescriptorSet;
+						shadowDrawCallInfo.graphicsPipelineOverride = (u64)(VkPipeline)m_ShadowGraphicsPipeline;
+						shadowDrawCallInfo.pipelineLayoutOverride = (u64)(VkPipelineLayout)m_ShadowPipelineLayout;
+						shadowDrawCallInfo.descriptorSetOverride = (u64)(VkDescriptorSet)m_ShadowDescriptorSet;
 						shadowDrawCallInfo.bRenderingShadows = true;
 
 						// TODO: Upload as one draw
@@ -7736,7 +7732,7 @@ namespace flex
 				gBufClearValues[1].color = m_ClearColor;
 				gBufClearValues[2].depthStencil = { 0.0f, 0 };
 
-				m_DeferredRenderPass->Begin(m_OffScreenCmdBuffer, gBufClearValues.data(), gBufClearValues.size());
+				m_DeferredRenderPass->Begin(m_OffScreenCmdBuffer, gBufClearValues.data(), (u32)gBufClearValues.size());
 
 				VkViewport fullScreenViewport = vks::viewportFlipped((real)m_GBufferColorAttachment0->width, (real)m_GBufferColorAttachment0->height, 0.0f, 1.0f);
 				vkCmdSetViewport(m_OffScreenCmdBuffer, 0, 1, &fullScreenViewport);
@@ -7974,7 +7970,7 @@ namespace flex
 			// Forward pass
 			//
 
-			m_ForwardRenderPass->Begin(commandBuffer, clearValues.data(), clearValues.size());
+			m_ForwardRenderPass->Begin(commandBuffer, clearValues.data(), (u32)clearValues.size());
 			{
 				{
 					BeginDebugMarkerRegion(commandBuffer, "Forward");
@@ -8107,7 +8103,7 @@ namespace flex
 			BeginDebugMarkerRegion(commandBuffer, "UI");
 			{
 				m_UIRenderPass->m_FrameBuffer->frameBuffer = m_SwapChainFramebuffers[m_CurrentSwapChainBufferIndex]->frameBuffer;
-				m_UIRenderPass->Begin(commandBuffer, clearValues.data(), clearValues.size());
+				m_UIRenderPass->Begin(commandBuffer, clearValues.data(), (u32)clearValues.size());
 
 				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_BlitGraphicsPipeline);
 
@@ -8312,7 +8308,7 @@ namespace flex
 			}
 
 			CreateSwapChainFramebuffers();
-			m_CommandBufferManager.CreateCommandBuffers(m_SwapChainImages.size());
+			m_CommandBufferManager.CreateCommandBuffers((u32)m_SwapChainImages.size());
 		}
 
 		void VulkanRenderer::RegisterFramebufferAttachment(FrameBufferAttachment* frameBufferAttachment)
@@ -8357,47 +8353,47 @@ namespace flex
 
 		void VulkanRenderer::SetSwapchainName(VulkanDevice* device, VkSwapchainKHR swapchain, const char* name)
 		{
-			SetObjectName(device, swapchain, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, name);
+			SetObjectName(device, (u64)swapchain, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, name);
 		}
 
 		void VulkanRenderer::SetDescriptorSetName(VulkanDevice* device, VkDescriptorSet descSet, const char* name)
 		{
-			SetObjectName(device, descSet, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, name);
+			SetObjectName(device, (u64)descSet, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, name);
 		}
 
 		void VulkanRenderer::SetPipelineName(VulkanDevice* device, VkPipeline pipeline, const char* name)
 		{
-			SetObjectName(device, pipeline, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, name);
+			SetObjectName(device, (u64)pipeline, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, name);
 		}
 
 		void VulkanRenderer::SetFramebufferName(VulkanDevice* device, VkFramebuffer framebuffer, const char* name)
 		{
-			SetObjectName(device, framebuffer, VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT, name);
+			SetObjectName(device, (u64)framebuffer, VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT, name);
 		}
 
 		void VulkanRenderer::SetRenderPassName(VulkanDevice* device, VkRenderPass renderPass, const char* name)
 		{
-			SetObjectName(device, renderPass, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, name);
+			SetObjectName(device, (u64)renderPass, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, name);
 		}
 
 		void VulkanRenderer::SetImageName(VulkanDevice* device, VkImage image, const char* name)
 		{
-			SetObjectName(device, image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, name);
+			SetObjectName(device, (u64)image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, name);
 		}
 
 		void VulkanRenderer::SetImageViewName(VulkanDevice* device, VkImageView imageView, const char* name)
 		{
-			SetObjectName(device, imageView, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT, name);
+			SetObjectName(device, (u64)imageView, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT, name);
 		}
 
 		void VulkanRenderer::SetSamplerName(VulkanDevice* device, VkSampler sampler, const char* name)
 		{
-			SetObjectName(device, sampler, VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT, name);
+			SetObjectName(device, (u64)sampler, VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT, name);
 		}
 
 		void VulkanRenderer::SetBufferName(VulkanDevice* device, VkBuffer buffer, const char* name)
 		{
-			SetObjectName(device, buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, name);
+			SetObjectName(device, (u64)buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, name);
 		}
 
 		void VulkanRenderer::BeginDebugMarkerRegion(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color)
@@ -8654,7 +8650,7 @@ namespace flex
 
 			struct UniformInfo
 			{
-				UniformInfo(u64 uniform, void* dataStart, size_t copySize) :
+				UniformInfo(u64 uniform, void* dataStart, u32 copySize) :
 					uniform(uniform),
 					dataStart(dataStart),
 					copySize(copySize)
@@ -8662,7 +8658,7 @@ namespace flex
 
 				u64 uniform;
 				void* dataStart = nullptr;
-				size_t copySize;
+				u32 copySize;
 			};
 
 			if (overridenUniforms)
@@ -8720,7 +8716,7 @@ namespace flex
 					continue; // There is no constant data to update
 				}
 
-				size_t index = 0;
+				u32 index = 0;
 				for (UniformInfo& uniformInfo : uniformInfos)
 				{
 					if (constantUniforms.HasUniform(uniformInfo.uniform))
@@ -8857,7 +8853,7 @@ namespace flex
 			{
 				u64 uniform;
 				void* dataStart = nullptr;
-				size_t copySize;
+				u32 copySize;
 			};
 			UniformInfo uniformInfos[] = {
 				{ U_MODEL, (void*)&model, US_MODEL },
@@ -8910,7 +8906,7 @@ namespace flex
 
 		void VulkanRenderer::GenerateIrradianceMaps()
 		{
-			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
+			for (u32 i = 0; i < (u32)m_RenderObjects.size(); ++i)
 			{
 				VulkanRenderObject* renderObject = GetRenderObject(i);
 				if (!renderObject)
@@ -8929,7 +8925,7 @@ namespace flex
 			}
 
 			// Generate graphics pipelines with correct render pass set
-			for (size_t i = 0; i < m_RenderObjects.size(); ++i)
+			for (u32 i = 0; i < (u32)m_RenderObjects.size(); ++i)
 			{
 				CreateDescriptorSet(i);
 				CreateGraphicsPipeline(i, false);

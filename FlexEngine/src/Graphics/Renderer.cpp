@@ -1732,7 +1732,7 @@ namespace flex
 			assert(shaderID == m_BaseShaders.size());
 		}
 
-		SetShaderCount(m_BaseShaders.size());
+		SetShaderCount((u32)m_BaseShaders.size());
 
 		for (u32 shaderID = 0; shaderID < m_BaseShaders.size(); ++shaderID)
 		{
@@ -2009,7 +2009,7 @@ namespace flex
 						}
 						else
 						{
-							dragDropText = IntToString(draggedGameObjects.size()) + " objects";
+							dragDropText = IntToString((u32)draggedGameObjects.size()) + " objects";
 						}
 					}
 					else
@@ -2703,7 +2703,7 @@ namespace flex
 			const std::vector<TextCache>& caches = font->GetTextCaches();
 			for (const TextCache& textCache : caches)
 			{
-				charCountUpperBound += textCache.str.length();
+				charCountUpperBound += (u32)textCache.str.length();
 			}
 		}
 		outTextVertices.reserve(charCountUpperBound);
@@ -2844,7 +2844,7 @@ namespace flex
 			const std::vector<TextCache>& caches = font->GetTextCaches();
 			for (const TextCache& textCache : caches)
 			{
-				charCountUpperBound += textCache.str.length();
+				charCountUpperBound += (u32)textCache.str.length();
 			}
 		}
 		outTextVertices.reserve(charCountUpperBound);

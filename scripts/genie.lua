@@ -16,7 +16,7 @@ solution "Flex"
 
 	platforms {
 		"x32",
-		--"x64",
+		"x64",
 	}
 
 	language "C++"

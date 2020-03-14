@@ -161,7 +161,7 @@ namespace flex
 		u32 pos = 0;
 		do
 		{
-			pos = absoluteDirectoryPath.find_first_of('/', pos + 1);
+			pos = (u32)absoluteDirectoryPath.find_first_of('/', pos + 1);
 			CreateDirectory(absoluteDirectoryPath.substr(0, pos).c_str(), NULL);
 			// TODO: Return false on failure here
 			//GetLastError() == ERROR_ALREADY_EXISTS;
@@ -222,7 +222,7 @@ namespace flex
 		OPENFILENAME openFileName = {};
 		openFileName.lStructSize = sizeof(OPENFILENAME);
 		openFileName.lpstrInitialDir = absoluteDirectory.c_str();
-		openFileName.nMaxFile = (filter == nullptr ? 0 : strlen(filter));
+		openFileName.nMaxFile = (filter == nullptr ? 0 : (u32)strlen(filter));
 		if (openFileName.nMaxFile && filter)
 		{
 			openFileName.lpstrFilter = filter;

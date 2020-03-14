@@ -969,7 +969,7 @@ namespace flex
 					real height = 100.0f;
 					real minMS = 0.0f;
 					real maxMS = 100.0f;
-					ImGui::PlotLines("", m_FrameTimes.data(), m_FrameTimes.size(), 0, 0, minMS, maxMS, ImVec2(width, height));
+					ImGui::PlotLines("", m_FrameTimes.data(), (u32)m_FrameTimes.size(), 0, 0, minMS, maxMS, ImVec2(width, height));
 					real targetFrameRate = 60.0f;
 					p.y += (1.0f - (1000.0f / targetFrameRate) / (maxMS - minMS)) * height;
 					ImGui::GetWindowDrawList()->AddLine(p, ImVec2(p.x + width, p.y), IM_COL32(128, 0, 0, 255), 1.0f);

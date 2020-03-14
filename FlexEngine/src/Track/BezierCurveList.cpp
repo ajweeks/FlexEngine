@@ -145,7 +145,7 @@ namespace flex
 
 	void BezierCurveList::GetCurveIndexAndLocalTFromGlobalT(real globalT, i32* outCurveIndex, real* outLocalT) const
 	{
-		i32 curveCount = curves.size();
+		i32 curveCount = (i32)curves.size();
 		real scaledT = glm::clamp(globalT * curveCount, 0.0f, (real)curveCount - EPSILON);
 		*outCurveIndex = glm::clamp((i32)scaledT, 0, curveCount - 1);
 
@@ -155,7 +155,7 @@ namespace flex
 
 	real BezierCurveList::GetGlobalTFromCurveIndexAndLocalT(i32 curveIndex, real localT) const
 	{
-		i32 curveCount = curves.size();
+		i32 curveCount = (i32)curves.size();
 		real globalT = (real)(localT + curveIndex) / (real)curveCount;
 
 		globalT = glm::clamp(globalT, 0.0f, 1.0f);

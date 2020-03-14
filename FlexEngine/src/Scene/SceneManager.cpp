@@ -143,7 +143,7 @@ namespace flex
 		{
 			if (m_Scenes[i]->GetFileName().compare(scene->GetFileName()) == 0)
 			{
-				return SetCurrentScene(i, bPrintErrorOnFailure);
+				return SetCurrentScene((u32)i, bPrintErrorOnFailure);
 			}
 		}
 
@@ -161,7 +161,7 @@ namespace flex
 		{
 			if (m_Scenes[i]->GetFileName().compare(sceneFileName) == 0)
 			{
-				return SetCurrentScene(i, bPrintErrorOnFailure);
+				return SetCurrentScene((u32)i, bPrintErrorOnFailure);
 			}
 		}
 
@@ -200,7 +200,7 @@ namespace flex
 		}
 
 		// Loop around to previous index but stay positive cause things are unsigned
-		u32 newCurrentSceneIndex = (m_CurrentSceneIndex + m_Scenes.size() - 1) % m_Scenes.size();
+		u32 newCurrentSceneIndex = (u32)((m_CurrentSceneIndex + m_Scenes.size() - 1) % m_Scenes.size());
 		SetCurrentScene(newCurrentSceneIndex);
 	}
 
@@ -406,7 +406,7 @@ namespace flex
 
 	void SceneManager::CreateNewScene(const std::string& name, bool bSwitchImmediately)
 	{
-		const i32 newSceneIndex = m_Scenes.size();
+		const i32 newSceneIndex = (i32)m_Scenes.size();
 
 		std::string fileName = name + ".json";
 
@@ -692,7 +692,7 @@ namespace flex
 					i32 numEndingWith = GetNumberEndingWith(newSceneFileNameStr, numNumericalChars);
 					if (numNumericalChars > 0)
 					{
-						u32 charsBeforeNum = (newSceneFileNameStr.length() - numNumericalChars);
+						u32 charsBeforeNum = (u32)(newSceneFileNameStr.length() - numNumericalChars);
 						newSceneFileNameStr = newSceneFileNameStr.substr(0, charsBeforeNum) +
 							IntToString(numEndingWith + 1, numNumericalChars);
 					}
@@ -863,7 +863,7 @@ namespace flex
 
 	u32 SceneManager::GetSceneCount() const
 	{
-		return m_Scenes.size();
+		return (u32)m_Scenes.size();
 	}
 
 	i32 SceneManager::GetCurrentSceneIndex() const

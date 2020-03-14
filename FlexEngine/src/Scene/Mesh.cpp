@@ -588,7 +588,7 @@ namespace flex
 
 	u32 Mesh::GetSubmeshCount() const
 	{
-		return m_Meshes.size();
+		return (u32)m_Meshes.size();
 	}
 
 	MaterialID Mesh::GetMaterialID(u32 slotIndex)
