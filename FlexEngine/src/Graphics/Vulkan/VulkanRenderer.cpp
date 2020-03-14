@@ -1297,7 +1297,7 @@ namespace flex
 				dynamicBuffer->data.size = shader->shader->dynamicBufferUniforms.CalculateSizeInBytes();
 				if (dynamicBuffer->data.size > 0 && !m_RenderObjects.empty())
 				{
-					_aligned_free(dynamicBuffer->data.data);
+					flex_aligned_free(dynamicBuffer->data.data);
 
 					dynamicBuffer->data.size = GetAlignedUBOSize(dynamicBuffer->data.size);
 
@@ -1315,11 +1315,11 @@ namespace flex
 			if (shader->shader->additionalBufferUniforms.HasUniform(U_PARTICLE_BUFFER))
 			{
 				UniformBuffer* particleBuffer = material->uniformBufferList.Get(UniformBufferType::PARTICLE_DATA);
-				_aligned_free(particleBuffer->data.data);
+				flex_aligned_free(particleBuffer->data.data);
 
 				particleBuffer->data.size = GetAlignedUBOSize(MAX_PARTICLE_COUNT * sizeof(ParticleBufferData));
 
-				particleBuffer->data.data = static_cast<real*>(_aligned_malloc(particleBuffer->data.size, m_DynamicAlignment));
+				particleBuffer->data.data = static_cast<real*>(flex_aligned_malloc(particleBuffer->data.size, m_DynamicAlignment));
 				// Will be copied into from staging buffer
 				PrepareUniformBuffer(&particleBuffer->buffer, particleBuffer->data.size,
 					VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -7286,7 +7286,7 @@ namespace flex
 			}
 			size_t dynamicBufferSize = maxObjectCount * m_DynamicAlignment;
 
-			(*data) = _aligned_malloc(dynamicBufferSize, m_DynamicAlignment);
+			(*data) = flex_aligned_malloc(dynamicBufferSize, m_DynamicAlignment);
 			assert(*data);
 
 			return dynamicBufferSize;

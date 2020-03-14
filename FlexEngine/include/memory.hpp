@@ -9,11 +9,12 @@ void operator delete(void* ptr, std::size_t size) noexcept;
 
 #endif // FLEX_OVERRIDE_NEW_DELETE
 
-#if FLEX_OVERRIDE_MALLOC
 namespace flex
 {
 	namespace mem
 	{
+
+#if FLEX_OVERRIDE_MALLOC
 		// TODO: Look into using LD_PRELOAD to hook in custom malloc/free/etc.
 
 		// TODO: Re-enable:
@@ -27,9 +28,10 @@ namespace flex
 		void free_hooked(void* ptr, std::size_t size);
 		void aligned_free_hooked(void* ptr);
 		void* realloc_hooked(void* ptr, std::size_t newsz);
-
-		void* flex_aligned_malloc(std::size_t size, std::size_t alignment);
-		void flex_aligned_free(void* ptr);
-	} // namespace mem
-} // namespace flex
 #endif // FLEX_OVERRIDE_MALLOC
+
+	} // namespace mem
+
+	void* flex_aligned_malloc(std::size_t size, std::size_t alignment);
+	void flex_aligned_free(void* ptr);
+} // namespace flex

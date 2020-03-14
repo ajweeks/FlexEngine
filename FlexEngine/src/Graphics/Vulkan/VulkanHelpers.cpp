@@ -199,7 +199,7 @@ namespace flex
 				if (type == UniformBufferType::DYNAMIC ||
 					type == UniformBufferType::PARTICLE_DATA)
 				{
-					_aligned_free(data.data);
+					flex_aligned_free(data.data);
 				}
 				else
 				{

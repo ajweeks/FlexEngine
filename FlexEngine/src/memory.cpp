@@ -23,11 +23,11 @@ void operator delete(void* ptr, std::size_t size) noexcept
 
 #endif // FLEX_OVERRIDE_NEW_DELETE
 
-#if FLEX_OVERRIDE_MALLOC
 namespace flex
 {
 	namespace mem
 	{
+#if FLEX_OVERRIDE_MALLOC
 		void* malloc_hooked(size_t size)
 		{
 			if (size == 0)
@@ -117,28 +117,27 @@ namespace flex
 			ptr = ((std::size_t*)ptr) + 1;
 			return ptr;
 		}
-
-		void* flex_aligned_malloc(std::size_t size, std::size_t alignment)
-		{
-#ifdef _WIN32
-			void* ptr = _aligned_malloc(size, alignment);
-			return ptr;
-#else
-			void* ptr;
-			posix_memalign(&ptr, alignment, size);
-			return ptr;
-#endif
-		}
-
-		void flex_aligned_free(void* ptr)
-		{
-#ifdef _WIN32
-			_aligned_free(ptr);
-#else
-			free(ptr);
-#endif
-		}
-	}
-}
-
 #endif // FLEX_OVERRIDE_MALLOC
+	} // namespace mem
+
+	void* flex_aligned_malloc(std::size_t size, std::size_t alignment)
+	{
+#ifdef _WIN32
+		void* ptr = _aligned_malloc(size, alignment);
+		return ptr;
+#else
+		void* ptr;
+		posix_memalign(&ptr, alignment, size);
+		return ptr;
+#endif
+	}
+	
+	void flex_aligned_free(void* ptr)
+	{
+#ifdef _WIN32
+		_aligned_free(ptr);
+#else
+		free(ptr);
+#endif
+	}
+} // namespace flex
