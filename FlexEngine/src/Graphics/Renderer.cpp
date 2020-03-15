@@ -1564,6 +1564,8 @@ namespace flex
 			//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_TEX_CHANNEL);
 			//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_SDF_RESOLUTION);
 			//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_HIGH_RES);
+
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_ALBEDO_SAMPLER);
 			++shaderID;
 
 			// Font SS

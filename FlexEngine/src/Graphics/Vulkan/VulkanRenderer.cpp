@@ -4093,7 +4093,6 @@ namespace flex
 				renderPass.RegisterForColorOnly("Font SDF render pass", InvalidFrameBufferAttachmentID, {});
 				renderPass.bCreateFrameBuffer = false;
 				renderPass.m_ColorAttachmentFormat = fontTexFormat;
-				renderPass.ManuallySpecifyLayouts();
 				renderPass.Create();
 
 				VkFramebufferCreateInfo framebufCreateInfo = vks::framebufferCreateInfo(renderPass);
