@@ -251,6 +251,8 @@ namespace flex
 		const glm::vec3& rayEnd,
 		const glm::quat& pRot)
 	{
+		UNREFERENCED_PARAMETER(axis);
+
 		glm::vec3 intersectionPoint(0.0f);
 
 		Transform* gizmoTransform = m_TransformGizmo->GetTransform();
