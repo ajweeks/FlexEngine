@@ -5814,7 +5814,7 @@ namespace flex
 			}
 			if (bPrintResults)
 			{
-				Print("Successful automatic transition calculations: %d/%d\n", successCount, m_AutoTransitionedRenderPasses.size());
+				Print("Successful automatic transition calculations: %d/%u\n", successCount, (u32)m_AutoTransitionedRenderPasses.size());
 			}
 		}
 
@@ -7463,7 +7463,7 @@ namespace flex
 			m_ShadowBatch.batches.push_back(shadowShaderBatch);
 
 			ms blockMS = Profiler::GetBlockDuration(blockName);
-			Print("Batched %u render objects into %u batches in %.2fms\n", m_RenderObjects.size(), renderObjBatchCount, blockMS);
+			Print("Batched %u render objects into %u batches in %.2fms\n", (u32)m_RenderObjects.size(), renderObjBatchCount, blockMS);
 		}
 
 		void VulkanRenderer::DrawShaderBatch(const ShaderBatchPair& shaderBatch, VkCommandBuffer& commandBuffer, DrawCallInfo* drawCallInfo /* = nullptr */)

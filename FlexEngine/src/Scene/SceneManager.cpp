@@ -261,7 +261,7 @@ namespace flex
 		{
 			if (g_bEnableLogging_Loading)
 			{
-				Print("Added %u scenes to list:\n", addedSceneFileNames.size());
+				Print("Added %u scenes to list:\n", (u32)addedSceneFileNames.size());
 				for (std::string& fileName : addedSceneFileNames)
 				{
 					Print("%s, ", fileName.c_str());

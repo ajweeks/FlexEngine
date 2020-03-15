@@ -962,7 +962,7 @@ namespace flex
 					ImGui::NewLine();
 					ImGui::Text("Frames rendered: %d", g_Renderer->GetFramesRenderedCount());
 					ImGui::Text("Unpaused elapsed time: %.2fs", g_SecElapsedSinceProgramStart);
-					ImGui::Text("Audio effects loaded: %d", s_AudioSourceIDs.size());
+					ImGui::Text("Audio effects loaded: %u", (u32)s_AudioSourceIDs.size());
 
 					ImVec2 p = ImGui::GetCursorScreenPos();
 					real width = 300.0f;

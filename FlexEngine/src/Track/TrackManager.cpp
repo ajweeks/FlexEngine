@@ -732,7 +732,7 @@ namespace flex
 	{
 		if (ImGui::TreeNode("Track Manager"))
 		{
-			ImGui::Text("%d tracks, %d junctions", m_Tracks.size(), m_Junctions.size());
+			ImGui::Text("%u tracks, %u junctions", (u32)m_Tracks.size(), (u32)m_Junctions.size());
 			if (ImGui::SmallButton("<"))
 			{
 				m_DEBUG_highlightedJunctionIndex--;
