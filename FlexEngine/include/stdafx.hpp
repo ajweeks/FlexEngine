@@ -24,6 +24,8 @@
 
 // End configuration variables
 
+#define VK_NO_PROTOTYPES
+
 #define VC_EXTRALEAN
 
 #if COMPILE_VULKAN
