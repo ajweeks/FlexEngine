@@ -99,6 +99,10 @@ configuration "Shipping"
 configuration "Shipping_WithSymbols"
 	defines { "SHIPPING", "SYMBOLS" }
 	flags {"OptimizeSpeed", "Symbols", "No64BitChecks" }
+configuration "x32"
+	defines "FLEX_32"
+configuration "x64"
+	defines "FLEX_64"
 configuration {}
 
 configuration {}
