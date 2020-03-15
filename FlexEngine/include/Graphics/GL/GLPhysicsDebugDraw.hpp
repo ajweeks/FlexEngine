@@ -1,10 +1,6 @@
 #pragma once
 #if COMPILE_OPEN_GL
 
-IGNORE_WARNINGS_PUSH
-#include <glad/glad.h>
-IGNORE_WARNINGS_POP
-
 #include "Graphics/Renderer.hpp"
 #include "Graphics/VertexBufferData.hpp"
 

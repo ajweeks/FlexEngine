@@ -49,7 +49,6 @@
 #define GLFW_INCLUDE_NONE
 
 #if COMPILE_IMGUI
-#define IMGUI_IMPL_OPENGL_LOADER_GLAD
 #define IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS 1
 #endif
 
@@ -125,23 +124,10 @@ IGNORE_WARNINGS_POP
 IGNORE_WARNINGS_PUSH
 #include "volk/volk.h"
 
-#include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
 IGNORE_WARNINGS_POP
 #endif // COMPILE_VULKAN
-
-#if COMPILE_OPEN_GL
-IGNORE_WARNINGS_PUSH
-
-#if !COMPILE_IMGUI
-#include <glad/glad.h>
-#endif // !COMPILE_IMGUI
-
-#include <GLFW/glfw3.h>
-#include <GLFW/glfw3native.h>
-IGNORE_WARNINGS_POP
-#endif // COMPILE_OPEN_GL
 
 #if COMPILE_IMGUI
 IGNORE_WARNINGS_PUSH

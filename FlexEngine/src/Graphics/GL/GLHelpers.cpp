@@ -6,7 +6,6 @@
 IGNORE_WARNINGS_PUSH
 #include "stb_image.h"
 
-#include <glad/glad.h>
 #include <GLFW/glfw3.h>
 IGNORE_WARNINGS_POP
 

@@ -187,44 +187,6 @@ namespace flex
 		glfwFocusWindow(m_Window);
 		m_bHasFocus = true;
 
-#if COMPILE_OPEN_GL
-		if (g_bOpenGLEnabled)
-		{
-			glfwMakeContextCurrent(m_Window);
-
-			gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
-
-#ifdef _WINDOWS
-// TODO: Find equivalent for nix platforms
-#if DEBUG
-			if (glDebugMessageCallback)
-			{
-				glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-				glDebugMessageCallback(glDebugOutput, nullptr);
-				GLuint unusedIds = 0;
-				glDebugMessageControl(GL_DONT_CARE,
-					GL_DONT_CARE,
-					GL_DONT_CARE,
-					0,
-					&unusedIds,
-					true);
-			}
-#endif // DEBUG
-#endif // _WINDOWS
-
-			if (GLAD_GL_KHR_debug)
-			{
-				FlexEngine::s_bHasGLDebugExtension = true;
-			}
-
-			Print("OpenGL loaded\n");
-			Print("Vendor:     %s\n", reinterpret_cast<const char*>(glGetString(GL_VENDOR)));
-			Print("Renderer:   %s\n", reinterpret_cast<const char*>(glGetString(GL_RENDERER)));
-			Print("Version:    %s\n\n", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
-			//Print("Extensions: %s\n\n", reinterpret_cast<const char*>(glGetString(GL_EXTENSIONS)));
-		}
-#endif // COMPILE_OPEN_GL
-
 		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION "icons/flex-logo-03_128.png", 4));
 		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION "icons/flex-logo-03_64.png", 4));
 		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION "icons/flex-logo-03_48.png", 4));

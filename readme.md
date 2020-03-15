@@ -152,7 +152,6 @@ If you want to build Flex Engine on your own system, follow these steps. You an 
 Flex Engine uses the following open-source libraries:
  - [Bullet](https://github.com/bulletphysics/bullet3) - Collision detection & rigid body simulation
  - [FreeType](https://www.freetype.org/) - Font loading
- - [glad](https://github.com/Dav1dde/glad) - OpenGL profile loading
  - [glfw](https://github.com/glfw/glfw) - Window creation, input handling
  - [glm](https://github.com/g-truc/glm) - Math operations
  - [ImGui](https://github.com/ocornut/imgui) - User interface

@@ -107,7 +107,6 @@ configuration {}
 
 	-- Files to include that shouldn't get warnings reported on
 	systemincludedirs {
-		path.join(DEPENDENCIES_DIR, "glad/include"),
 		path.join(DEPENDENCIES_DIR, "glfw/include"),
 		path.join(DEPENDENCIES_DIR, "glm"),
 		path.join(DEPENDENCIES_DIR, "stb"),
@@ -191,7 +190,6 @@ files {
 	path.join(SOURCE_DIR, "src/**.cpp"),
 	path.join(DEPENDENCIES_DIR, "imgui/**.h"),
 	path.join(DEPENDENCIES_DIR, "imgui/**.cpp"),
-	path.join(DEPENDENCIES_DIR, "glad/src/glad.c"),
 	path.join(DEPENDENCIES_DIR, "volk/volk.h"),
 }
 
@@ -202,5 +200,4 @@ removefiles {
 -- Don't use pre-compiled header for the following files
 nopch {
 	path.join(DEPENDENCIES_DIR, "imgui/**.cpp"),
-	path.join(DEPENDENCIES_DIR, "glad/src/glad.c")
 }
