@@ -122,6 +122,7 @@ IGNORE_WARNINGS_POP
 
 #if COMPILE_VULKAN
 IGNORE_WARNINGS_PUSH
+#define VK_USE_PLATFORM_WIN32_KHR
 #include "volk/volk.h"
 
 #include <GLFW/glfw3.h>
@@ -173,7 +174,7 @@ IGNORE_WARNINGS_POP
 #define PROFILE_AUTO(blockName)
 #endif
 
-#ifdef _WIN32
+#ifdef _WINDOWS
 #define DEBUG_BREAK() __debugbreak()
 #else
 // Linux/Max: (untested)
