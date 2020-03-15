@@ -13,15 +13,6 @@ FlexEngine/saved/**
 FlexEngine/resources/textures/hdri/**
 !FlexEngine/resources/textures/hdri/Milkyway_small.hdr
 
-# !FlexEngine/lib/Debug/*
-FlexEngine/lib/Debug/renderdoc.pdb
-FlexEngine/lib/Debug/renderdoc.dll
-FlexEngine/lib/Debug/dbghelp.dll
-
-
-# Excludes
-!FlexEngine/lib/Debug
-!FlexEngine/lib/Release
 
 # User settings files
 common.json
@@ -48,6 +39,8 @@ sh.exe.stackdump
 *.amplxeproj
 AdditionalFiles/flex-cppcheck-build-dir/**
 AdditionalFiles/FlexVTune/**
+
+FlexEngine/dependencies/freetype/objs
 
 
 # --------------------------
