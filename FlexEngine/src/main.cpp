@@ -5,8 +5,9 @@
 #include "Test.hpp"
 
 // Memory leak checking includes
-#if defined(DEBUG)
+#if defined(DEBUG) && defined(_WINDOWS)
 #define _CRTDBG_MAP_ALLOC
+#include <heapapi.h>
 #endif
 
 bool g_bShowConsole = true;
@@ -16,7 +17,7 @@ int main(int argc, char *argv[])
 	FLEX_UNUSED(argc);
 	FLEX_UNUSED(argv);
 
-#ifdef _WIN32
+#ifdef _WINDOWS
 	// Enable run-time memory leak check for debug builds
 #if defined(DEBUG)
 	// Notify user if heap is corrupt
@@ -54,7 +55,7 @@ int main(int argc, char *argv[])
 #endif
 }
 
-#ifdef _WIN32
+#ifdef _WINDOWS
 int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPWSTR lpCmdLine, _In_ int nCmdShow)
 {
 	FLEX_UNUSED(hInstance);

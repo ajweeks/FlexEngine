@@ -1,6 +1,6 @@
 #include "stdafx.hpp"
 
-#ifdef _WIN32
+#ifdef _WINDOWS
 
 #include "Platform/Platform.hpp"
 
@@ -361,4 +361,4 @@ namespace flex
 	}
 
 } // namespace flex
-#endif // _WIN32
+#endif // _WINDOWS

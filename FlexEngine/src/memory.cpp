@@ -122,7 +122,7 @@ namespace flex
 
 	void* flex_aligned_malloc(std::size_t size, std::size_t alignment)
 	{
-#ifdef _WIN32
+#ifdef _WINDOWS
 		void* ptr = _aligned_malloc(size, alignment);
 		return ptr;
 #else
@@ -131,10 +131,10 @@ namespace flex
 		return ptr;
 #endif
 	}
-	
+
 	void flex_aligned_free(void* ptr)
 	{
-#ifdef _WIN32
+#ifdef _WINDOWS
 		_aligned_free(ptr);
 #else
 		free(ptr);
