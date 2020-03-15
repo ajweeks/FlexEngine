@@ -182,7 +182,13 @@ namespace flex
 		const char* targetStr = "x32";
 #endif
 
-		Print("FlexEngine v%u.%u.%u - Config: [%s %s] - Compiler: [%s %s]\n", EngineVersionMajor, EngineVersionMinor, EngineVersionPatch, configStr, targetStr, m_CompilerName.c_str(), m_CompilerVersion.c_str());
+#if defined(_WINDOWS)
+		const char* platformStr = "Windows";
+#elif defined(linux)
+		const char* platformStr = "Linux";
+#endif
+
+		Print("FlexEngine v%u.%u.%u - Config: [%s %s, %s] - Compiler: [%s %s]\n", EngineVersionMajor, EngineVersionMinor, EngineVersionPatch, configStr, targetStr, platformStr, m_CompilerName.c_str(), m_CompilerVersion.c_str());
 	}
 
 	FlexEngine::~FlexEngine()
