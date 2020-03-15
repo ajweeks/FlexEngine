@@ -251,7 +251,7 @@ namespace flex
 		const glm::vec3& rayEnd,
 		const glm::quat& pRot)
 	{
-		UNREFERENCED_PARAMETER(axis);
+		FLEX_UNUSED(axis);
 
 		glm::vec3 intersectionPoint(0.0f);
 

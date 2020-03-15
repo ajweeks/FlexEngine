@@ -1391,7 +1391,7 @@ namespace flex
 		const u32 actionCount = (u32)Action::_NONE;
 		if (rootObject.fields.size() != actionCount)
 		{
-			PrintWarn("Unexpected number of inputs found in input-bindings.ini! (%u expected, %u found)\n", actionCount, rootObject.fields.size());
+			PrintWarn("Unexpected number of inputs found in input-bindings.ini! (%u expected, %u found)\n", actionCount, (u32)rootObject.fields.size());
 			bFileComplete = false;
 		}
 

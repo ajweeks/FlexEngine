@@ -446,7 +446,7 @@ namespace flex
 				// Math tests
 				RayPlaneIntersectionOriginValid, RayPlaneIntersectionXYValid, RayPlaneIntersectionXY2Valid, RayPlaneIntersectionXY3Valid, MinComponentValid, MaxComponentValid
 			};
-			Print("Running %d tests...\n", ARRAY_LENGTH(funcs));
+			Print("Running %u tests...\n", (u32)ARRAY_LENGTH(funcs));
 			u32 failedTestCount = 0;
 			for (auto func : funcs)
 			{
@@ -463,11 +463,11 @@ namespace flex
 
 			if (failedTestCount > 0)
 			{
-				PrintError("%d test%s failed!\n", failedTestCount, failedTestCount > 1 ? "s" : "");
+				PrintError("%u test%s failed!\n", failedTestCount, failedTestCount > 1 ? "s" : "");
 			}
 			else
 			{
-				Print("%d/%d tests passed\n", ARRAY_LENGTH(funcs), ARRAY_LENGTH(funcs));
+				Print("%u/%u tests passed\n", (u32)ARRAY_LENGTH(funcs), (u32)ARRAY_LENGTH(funcs));
 			}
 			Print("\n");
 		}

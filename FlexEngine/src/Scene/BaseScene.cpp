@@ -502,7 +502,7 @@ namespace flex
 
 		if (g_bEnableLogging_Loading)
 		{
-			Print("Parsed %u meshes\n", s_ParsedMeshes.size());
+			Print("Parsed %u meshes\n", (u32)s_ParsedMeshes.size());
 		}
 	}
 
@@ -541,7 +541,7 @@ namespace flex
 
 		if (g_bEnableLogging_Loading)
 		{
-			Print("Parsed %u materials\n", s_ParsedMaterials.size());
+			Print("Parsed %u materials\n", (u32)s_ParsedMaterials.size());
 		}
 	}
 
@@ -580,7 +580,7 @@ namespace flex
 
 		if (g_bEnableLogging_Loading)
 		{
-			Print("Parsed %u prefabs\n", s_ParsedPrefabs.size());
+			Print("Parsed %u prefabs\n", (u32)s_ParsedPrefabs.size());
 		}
 	}
 
