@@ -1,10 +1,14 @@
 
 --
 -- NOTES:
--- - DLLs should be built using the Multi-threaded Debug DLL flag (/MDd) in debug,
---   and the Multi-threade DLL flag (/MD) in release
+-- - DLLs should be built using the
+--     - Multi-threaded Debug DLL flag (/MDd) in debug
+--     - Multi-threaded DLL flag (/MD)        in release
 --
 
+PROJECT_DIR = path.getabsolute("..")
+SOURCE_DIR = path.join(PROJECT_DIR, "FlexEngine/")
+DEPENDENCIES_DIR = path.join(SOURCE_DIR, "dependencies/")
 
 solution "Flex"
 	configurations {
@@ -14,22 +18,13 @@ solution "Flex"
 		"Shipping_WithSymbols"
 	}
 
-	platforms {
-		"x32",
-		"x64",
-	}
+	platforms { "x32", "x64" }
 
 	language "C++"
 
 	location "../build/"
 	objdir "../build/"
 	windowstargetplatformversion "10.0.17763.0"
-
-
-PROJECT_DIR = path.getabsolute("..")
-SOURCE_DIR = path.join(PROJECT_DIR, "FlexEngine/")
-DEPENDENCIES_DIR = path.join(SOURCE_DIR, "dependencies/")
-
 
 -- Put intermediate files under build/Intermediate/config_platform/project
 -- Put binaries under bin/config/project/platform --TODO: Really? confirm
@@ -48,18 +43,26 @@ function outputDirectories(_project)
 end
 
 
+function configName(config)
+	local cfgStr = ""
+	if (string.startswith(config, "Debug"))
+		then cfgStr = "Debug"
+		else cfgStr = "Release"
+	end
+	return cfgStr
+end
+
 function platformLibraries()
 	local cfgs = configurations()
-	for i = 1, #cfgs do
-		local subdir = ""
-		if (string.startswith(cfgs[i], "Debug"))
-			then subdir = "Debug"
-			else subdir = "Release"
+	local pfms = platforms()
+	for p = 1, #pfms do
+		local platformStr = pfms[p]
+		for i = 1, #cfgs do
+			local cfgStr = configName(cfgs[i])
+			local subdir = path.join(platformStr, cfgStr)
+			configuration { "vs*", pfms[p], cfgs[i] }
+				libdirs { path.join(SOURCE_DIR, path.join("lib/", subdir)) }
 		end
-		configuration { "vs*", cfgs[i] }
-			libdirs {
-				path.join(SOURCE_DIR, path.join("lib/", subdir))
-			}
 	end
 	configuration {}
 end
@@ -68,14 +71,17 @@ end
 -- copy files that are specific for the platform being built for
 function windowsPlatformPostBuild()
 	local cfgs = configurations()
-
+	local p = platforms()
 	for i = 1, #cfgs do
-		--copy dlls and resources after build
-		configuration { "vs*", cfgs[i] }
-			postbuildcommands {
-				"copy \"$(SolutionDir)..\\FlexEngine\\lib\\openal32.dll\" " ..
-				"\"$(OutDir)openal32.dll\""
-			}
+		for j = 1, #p do
+			configuration { "vs*", cfgs[i], p[j] }
+				--copy dlls and resources after build
+				local cfgStr = configName(cfgs[i])
+				postbuildcommands {
+					-- TODO: Copy into x32 & x64 build dirs
+					"copy \"$(SolutionDir)..\\FlexEngine\\lib\\" .. p[j] .. "\\" .. cfgStr .. "\\openal32.dll\" \"$(OutDir)\\\""
+				}
+		end
 	end
 	configuration {}
 end
@@ -97,9 +103,7 @@ configuration {}
 
 configuration {}
 	flags { "NoIncrementalLink", "NoEditAndContinue" }
-	includedirs {
-		path.join(SOURCE_DIR, "include"),
-	}
+	includedirs { path.join(SOURCE_DIR, "include") }
 
 	-- Files to include that shouldn't get warnings reported on
 	systemincludedirs {
@@ -110,14 +114,14 @@ configuration {}
 		path.join(DEPENDENCIES_DIR, "imgui"),
 		path.join(DEPENDENCIES_DIR, "vulkan/include"),
 		path.join(DEPENDENCIES_DIR, "bullet/src"),
-		path.join(DEPENDENCIES_DIR, "openAL"),
+		path.join(DEPENDENCIES_DIR, "openAL/include"),
 		path.join(DEPENDENCIES_DIR, "freetype/include"),
 		DEPENDENCIES_DIR,
 	}
 
 	debugdir "$(OutDir)"
 configuration "vs*"
-	defines { "PLATFORM_Win" }
+	defines { "PLATFORM_Win", "_WINDOWS" }
 	linkoptions { "/ignore:4221" }
 configuration { "vs*", "x32" }
 	flags { "EnableSSE2" }
@@ -129,28 +133,23 @@ configuration "linux*"
 configuration {}
 
 
-
 startproject "Flex"
 
 project "Flex"
 	kind "ConsoleApp"
-
-	location "../build"
-
 	defines { "_CONSOLE" }
-
+	location "../build"
 	outputDirectories("FlexEngine")
 
 	configuration "vs*"
 		flags { "Winmain"}
-
 		links { "opengl32" }
 
 	configuration "linux*"
 		linkoptions {
 			"-pthread", -- For pthread_create
 			"-ldl", -- For dlopen, etc.
-			"-L../../FlexEngine/lib/Debug/",
+			"-L../../FlexEngine/lib/Debug/", -- TODO: Use SOURCE_DIR
 		}
 		buildoptions {
 			"-Wfatal-errors"
@@ -173,7 +172,7 @@ project "Flex"
 			links { "opengl32", "glfw3", "OpenAL32" }
 		-- Debug-only
 		configuration { "vs*", "Debug" }
-			links { "BulletCollision_Debug", "BulletDynamics_Debug", "LinearMath_Debug", "freetyped" }
+			links { "BulletCollision_Debug", "BulletDynamics_Debug", "LinearMath_Debug", "freetype" }
 		configuration { "vs*", "Development" }
 			links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" }
 		configuration { "vs*", "Shipping" }

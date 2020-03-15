@@ -64,7 +64,35 @@ If you want to build Flex Engine on your own system, follow these steps. You an 
 #### Steps
 1. Recursively clone the repository to get all submodules
 2. Ensure [GENie](https://github.com/bkaradzic/GENie) is either on your PATH, or `genie.exe` is in the `scripts/` directory
-3. Run `scripts/generate-vs-*-files.bat` (this simply runs the command `genie vs2015` or `genie vs2017`)
+4. Build GLFW:
+    `cd FlexEngine\dependencies\glfw`
+    `mkdir build && cd build`  --   -DGLFW_VULKAN_STATIC=ON --  -DCMAKE_CXX_FLAGS="-m32" -DCMAKE_C_FLAGS="-m32"
+    `cmake -DGLFW_BUILD_EXAMPLES=false -DGLFW_BUILD_TESTS=false -DGLFW_BUILD_DOCS=false -G"Visual Studio 16 2019" ..`
+    `start GLFW.sln`
+    Build ALL_BUILD (`F7`)
+    `copy src\Debug\glfw3.lib ..\..\..\lib\x64\Debug\`
+5. Build OpenAL:
+    `cd FlexEngine\dependencies\openAL\build`
+    `cmake -DALSOFT_EXAMPLES=OFF -DALSOFT_TESTS=OFF -G"Visual Studio 16 2019 ..`
+    `start OpenAL.sln`
+    Build ALL_BUILD (`F7`)
+    `copy Debug\common.lib ..\..\..\lib\x64\Debug\`
+6. Build Bullet:
+    `mkdir build && cd build`
+    `cmake -DUSE_MSVC_RUNTIME_LIBRARY_DLL=ON -DBUILD_UNIT_TESTS=OFF -DBUILD_CPU_DEMOS=OFF -DBUILD_BULLET2_DEMOS=OFF -DBUILD_EXTRAS=OFF -G"Visual Studio 16 2019" ..`
+    `start BULLET_PHYSICS.sln`
+    Build ALL_BUILD (`F7`)
+    `copy lib\Debug\BulletCollision_Debug.lib ..\..\..\lib\x64\Debug\`
+    `copy lib\Debug\BulletDynamics_Debug.lib ..\..\..\lib\x64\Debug\`
+    `copy lib\Debug\LinearMath_Debug.lib ..\..\..\lib\x64\Debug\`
+7. Build freetype:
+    `cd FlexEngine\dependencies\freetype`
+    `start builds\windows\vc2010\freetype.sln`
+    Target `Debug Static` & `x64`
+    Build freetype (`F7`)
+    `copy "objs\x64\Debug Static\freetype.lib" ..\..\lib\x64\Debug\`
+    `copy "objs\x64\Debug Static\freetype.pdb" ..\..\lib\x64\Debug\`
+3. (from root dir) `genie --file=scripts/genie.lua vs2019`
 4. Open `build/FlexEngine.sln`
 5. Build and run!
 
@@ -78,9 +106,10 @@ If you want to build Flex Engine on your own system, follow these steps. You an 
 3. From the root directory run `genie --file=scripts/genie.lua ninja`, replacing ninja with cmake, gmake, or any other preferred supported build system.
 4. Clone and compile openAL in a sibling directory:
   `git clone git://repo.or.cz/openal-soft.git`
+  `sudo apt-get install libasound2-dev libpulse-dev`
   `cd openal-soft `
   `mkdir build && cd build`
-  `cmake -DALSOFT_TESTS=false -DALSOFT_EXAMPLES=false -DCMAKE_CXX_FLAGS="-m32" -DCMAKE_C_FLAGS="-m32" -DCMAKE_EXE_LINKER_FLAGS="-m32" ..`
+  `cmake -DALSOFT_EXAMPLES=false -DALSOFT_TESTS=false -DCMAKE_CXX_FLAGS="-m32" -DCMAKE_C_FLAGS="-m32" -DCMAKE_EXE_LINKER_FLAGS="-m32" ..`
   `cd .. && make`
 5. Install python dev tools as a prerequisite to Bullet
   `sudo apt-get install python3-dev`
@@ -92,8 +121,12 @@ If you want to build Flex Engine on your own system, follow these steps. You an 
   Install X11 libs:
     `sudo apt-get install xserver-xorg-dev:i386`
   `cd glfw`
-  `cmake -DGLFW_BUILD_EXAMPLES=false -DGLFW_BUILD_TESTS=false -DGLFW_BUILD_DOCS=false -DCMAKE_CXX_FLAGS="-m32" -DCMAKE_C_FLAGS="-m32" .`
-  `make`
+  32 bit:
+      `cmake -DGLFW_VULKAN_STATIC=ON -DCMAKE_CXX_FLAGS="-m32" -DCMAKE_C_FLAGS="-m32" -DGLFW_BUILD_EXAMPLES=false -DGLFW_BUILD_TESTS=false -DGLFW_BUILD_DOCS=false -G"Unix Makefiles" ..`
+      `make`
+  64 bit:
+      `cmake -DGLFW_VULKAN_STATIC=ON -DGLFW_BUILD_EXAMPLES=false -DGLFW_BUILD_TESTS=false -DGLFW_BUILD_DOCS=false -G"Unix Makefiles" ..`
+      `make`
 8. Install the Vulkan SDK:
   `wget -qO - http://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -`
   `sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.2.131-bionic.list http://packages.lunarg.com/vulkan/1.2.131/lunarg-vulkan-1.2.131-bionic.list`
