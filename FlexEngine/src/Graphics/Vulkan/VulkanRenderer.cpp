@@ -83,15 +83,22 @@ namespace flex
 
 			m_RenderObjects.resize(MAX_NUM_RENDER_OBJECTS);
 
-			VkResult res = volkInitialize();
-
-			if (res != VK_SUCCESS)
 			{
-				PrintError("No valid Vulkan loader found on the system. Exiting...\n");
-				// TODO: Replace with platform-agnostic quit call
-				exit(-1);
-				return;
+				VkResult res = volkInitialize();
+				if (res != VK_SUCCESS)
+				{
+					PrintError("No valid Vulkan loader found on the system. Exiting...\n");
+					exit(-1);
+					return;
+				}
 			}
+
+#if COMPILE_VULKAN
+			if (!glfwVulkanSupported())
+			{
+				PrintError("Vulkan is not supported on this platform. Exiting...\n");
+			}
+#endif
 
 			CreateInstance();
 
