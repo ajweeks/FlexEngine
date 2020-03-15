@@ -66,13 +66,14 @@ If you want to build Flex Engine on your own system, follow these steps. You an 
 2. Ensure [GENie](https://github.com/bkaradzic/GENie) is either on your PATH, or `genie.exe` is in the `scripts/` directory
 4. Build GLFW:
     `cd FlexEngine\dependencies\glfw`
-    `mkdir build && cd build`  --   -DGLFW_VULKAN_STATIC=ON --  -DCMAKE_CXX_FLAGS="-m32" -DCMAKE_C_FLAGS="-m32"
-    `cmake -DGLFW_BUILD_EXAMPLES=false -DGLFW_BUILD_TESTS=false -DGLFW_BUILD_DOCS=false -G"Visual Studio 16 2019" ..`
+    `mkdir build && cd build`
+    `cmake -DGLFW_BUILD_EXAMPLES=OFF -DGLFW_BUILD_TESTS=OFF -DGLFW_BUILD_DOCS=OFF -G"Visual Studio 16 2019" ..`
     `start GLFW.sln`
     Build ALL_BUILD (`F7`)
     `copy src\Debug\glfw3.lib ..\..\..\lib\x64\Debug\`
 5. Build OpenAL:
-    `cd FlexEngine\dependencies\openAL\build`
+    `cd FlexEngine\dependencies\openAL`
+    `mkdir build && cd build`
     `cmake -DALSOFT_EXAMPLES=OFF -DALSOFT_TESTS=OFF -G"Visual Studio 16 2019 ..`
     `start OpenAL.sln`
     Build ALL_BUILD (`F7`)
@@ -102,51 +103,50 @@ If you want to build Flex Engine on your own system, follow these steps. You an 
 1. Recursively clone the repository to get all submodules
 2. Ensure you have the g++ prerequisites:
   `sudo apt-get install g++-multilib`
-2. Install [GENie](https://github.com/bkaradzic/GENie) from  https://github.com/bkaradzic/bx/raw/master/tools/bin/linux/genie
-3. From the root directory run `genie --file=scripts/genie.lua ninja`, replacing ninja with cmake, gmake, or any other preferred supported build system.
-4. Clone and compile openAL in a sibling directory:
-  `git clone git://repo.or.cz/openal-soft.git`
-  `sudo apt-get install libasound2-dev libpulse-dev`
-  `cd openal-soft `
-  `mkdir build && cd build`
-  `cmake -DALSOFT_EXAMPLES=false -DALSOFT_TESTS=false -DCMAKE_CXX_FLAGS="-m32" -DCMAKE_C_FLAGS="-m32" -DCMAKE_EXE_LINKER_FLAGS="-m32" ..`
-  `cd .. && make`
+4. Install openAL SDK:
+  `sudo apt-get install libopenal-dev`
 5. Install python dev tools as a prerequisite to Bullet
   `sudo apt-get install python3-dev`
 6. Clone and compile bullet:
   `cd bullet`
-  `cmake -DCMAKE_CXX_FLAGS="-m32" -DCMAKE_C_FLAGS="-m32" -DBUILD_BULLET2_DEMOS=false -DBUILD_CPU_DEMOS=false -DBUILD_UNIT_TESTS=false .`
+  `mkdir build && cd build`
+  `cmake -DBUILD_UNIT_TESTS=OFF -DBUILD_CPU_DEMOS=OFF -DBUILD_BULLET2_DEMOS=OFF -DBUILD_EXTRAS=OFF ..`
   `make`
+  `cp src/BulletCollision/libBulletCollision.a ../../../lib/x64/Debug/`
+  `cp src/BulletDynamics/libBulletDynamics.a ../../../lib/x64/Debug/`
+  `cp src/LinearMath/libLinearMath.a ../../../lib/x64/Debug/`
 7. Compile GLFW:
   Install X11 libs:
-    `sudo apt-get install xserver-xorg-dev:i386`
-  `cd glfw`
+    `sudo apt-get install xserver-xorg-dev libxcursor-dev libxi-dev` (`xserver-xorg-dev:i386` for x32)
+    `cd glfw`
   32 bit:
-      `cmake -DGLFW_VULKAN_STATIC=ON -DCMAKE_CXX_FLAGS="-m32" -DCMAKE_C_FLAGS="-m32" -DGLFW_BUILD_EXAMPLES=false -DGLFW_BUILD_TESTS=false -DGLFW_BUILD_DOCS=false -G"Unix Makefiles" ..`
+      `cmake -DCMAKE_CXX_FLAGS="-m32" -DCMAKE_C_FLAGS="-m32" -DGLFW_BUILD_EXAMPLES=OFF -DGLFW_BUILD_TESTS=OFF -DGLFW_BUILD_DOCS=OFF -G"Unix Makefiles" .`
       `make`
   64 bit:
-      `cmake -DGLFW_VULKAN_STATIC=ON -DGLFW_BUILD_EXAMPLES=false -DGLFW_BUILD_TESTS=false -DGLFW_BUILD_DOCS=false -G"Unix Makefiles" ..`
+      `cmake -DGLFW_BUILD_EXAMPLES=OFF -DGLFW_BUILD_TESTS=OFF -DGLFW_BUILD_DOCS=OFF -G"Unix Makefiles" .`
       `make`
+  `cp src/libglfw3.a ../../lib/x64/Debug/`
 8. Install the Vulkan SDK:
   `wget -qO - http://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -`
   `sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.2.131-bionic.list http://packages.lunarg.com/vulkan/1.2.131/lunarg-vulkan-1.2.131-bionic.list`
   `sudo apt update`
   `sudo apt install vulkan-sdk`
 10. Compile FreeType:
-  Download freetype-2.10.0.tar.bz2 from https://download.savannah.gnu.org/releases/freetype/
-  Unzip
-  10. a. Compile libpng as 32 bit:
-    Clone libpng from https://downloads.sourceforge.net/libpng/libpng-1.6.37.tar.xz
-    Unzip
-    `./configure --disable-static`
-    Modify `libpng-1.6.37/Makefile`:
-      Replace `-lz` with `-l:libz.so.1`
-      Add `-m32` to CFLAGS, CPPFLAGS, and LDFLAGS
-      `make`
-    10. b. Copy libz.so.* from `/lib/i386-linux-gnu/libz.so.1` to freetype root dir (TODO: Set `SYSTEM_ZLIB` instead)
-  Modify `builds/unix/unix-cc.mk:102` to specify lib names exactly  (`-l:libz.so.1 -l:libpng16.so.16` instead of `-lz -lpng16`)
-  `./configure CFLAGS=-m32 LDFLAGS=-m32 CPPFLAGS=-m32 LT_SYS_LIBRARY_PATH=/home/aj/Dowloads/` (pointing to your local 32 bit build of zlib)
-10. Run `make` in the root directory of the project.
+  `cd freetype`
+  Install dependencies:
+  `sudo apt-get install automake libtool autoconf`
+  `sh autogen.sh`
+  Build:
+  `mkdir build && cd build`
+  `cmake -DCMAKE_DISABLE_FIND_PACKAGE_HarfBuzz=ON ..`
+  `make`
+  `cp libfreetype.a ../../../lib/x64/Debug/`
+2. Install [GENie](https://github.com/bkaradzic/GENie) from  https://github.com/bkaradzic/bx/raw/master/tools/bin/linux/genie
+3. From the root directory run `genie --file=scripts/genie.lua ninja`, replacing ninja with cmake, gmake, or any other preferred supported build system.
+4. Build:
+  `ninja -C debug64`
+5. Run!
+  `./../bin/Debug_x64/FlexEngine/Flex`
 
 ## Dependencies
 Flex Engine uses the following open-source libraries:
@@ -161,7 +161,7 @@ Flex Engine uses the following open-source libraries:
  - [volk](https://github.com/zeux/volk) - Vulkan meta-loader
 
 ## License
-Flex engine is released as open source under The MIT License. See [license.md](license.md) for details.
+Flex engine is released under The MIT License. See [license.md](license.md) for details.
 
 ## Acknowledgements
 A huge thank you must be given to the following individuals and organizations for their incredibly useful resources:

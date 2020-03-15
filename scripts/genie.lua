@@ -52,7 +52,7 @@ function configName(config)
 	return cfgStr
 end
 
-function platformLibraries()
+function platformLibraries(config)
 	local cfgs = configurations()
 	local pfms = platforms()
 	for p = 1, #pfms do
@@ -60,8 +60,8 @@ function platformLibraries()
 		for i = 1, #cfgs do
 			local cfgStr = configName(cfgs[i])
 			local subdir = path.join(platformStr, cfgStr)
-			configuration { "vs*", pfms[p], cfgs[i] }
-				libdirs { path.join(SOURCE_DIR, path.join("lib/", subdir)) }
+			configuration { config, pfms[p], cfgs[i] }
+			libdirs { path.join(SOURCE_DIR, path.join("lib/", subdir)) }
 		end
 	end
 	configuration {}
@@ -140,6 +140,8 @@ project "Flex"
 	location "../build"
 	outputDirectories("FlexEngine")
 
+	iif(os.is("windows"), platformLibraries("vs*"), platformLibraries("linux*"))
+
 	configuration "vs*"
 		flags { "Winmain"}
 		links { "opengl32" }
@@ -148,7 +150,6 @@ project "Flex"
 		linkoptions {
 			"-pthread", -- For pthread_create
 			"-ldl", -- For dlopen, etc.
-			"-L../../FlexEngine/lib/Debug/", -- TODO: Use SOURCE_DIR
 		}
 		buildoptions {
 			"-Wfatal-errors"
@@ -160,8 +161,8 @@ project "Flex"
 		buildoptions_c {
 			-- no-reorder isn't valid in c
 		}
+	configuration {}
 
-	platformLibraries()
 	windowsPlatformPostBuild()
 
 --Linked libraries
@@ -180,7 +181,7 @@ project "Flex"
 			links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" }
 	-- linux
 		configuration "linux*"
-			links { "glfw3", "openal", "BulletDynamics", "BulletCollision", "LinearMath", "freetype", "X11" }
+			links { "glfw3", "openal", "BulletDynamics", "BulletCollision", "LinearMath", "freetype", "X11", "png", "z" }
 configuration {}
 
 --Source files

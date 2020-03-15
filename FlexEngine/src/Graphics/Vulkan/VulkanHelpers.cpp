@@ -2287,14 +2287,14 @@ namespace flex
 		{
 			bool bCodeOutOfDate = true;
 
+			m_ChecksumFilePath = SAVED_LOCATION "vk-shader-checksum.dat";
+
 			std::string compiledDir = RelativePathToAbsolute(RESOURCE_LOCATION "shaders/spv");
 			if (Platform::DirectoryExists(compiledDir))
 			{
 				const char* blockName = "Calculate shader contents checksum";
 				{
 					PROFILE_AUTO(blockName);
-
-					m_ChecksumFilePath = SAVED_LOCATION "vk-shader-checksum.dat";
 
 					const std::string shaderInputDirectory = RESOURCE_LOCATION "shaders";
 					m_ShaderCodeChecksum = CalculteChecksum(shaderInputDirectory);
@@ -2405,7 +2405,10 @@ namespace flex
 					if (bSuccess)
 					{
 						std::string fileContents = std::to_string(m_ShaderCodeChecksum);
-						WriteFile(m_ChecksumFilePath, fileContents, false);
+						if (!WriteFile(m_ChecksumFilePath, fileContents, false))
+						{
+							PrintError("Failed to write out shader checksum file to %s\n", m_ChecksumFilePath.c_str());
+						}
 					}
 				}
 			}

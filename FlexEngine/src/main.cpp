@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
 #if RUN_UNIT_TESTS
 	flex::FlexTest::Run();
 
-	system("PAUSE");
+	system("pause");
 	return 0;
 
 #else
@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
 
 	if (g_bShowConsole)
 	{
-		system("PAUSE");
+		system("pause");
 	}
 
 	return 0;

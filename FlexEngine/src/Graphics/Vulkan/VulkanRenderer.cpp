@@ -4390,36 +4390,60 @@ namespace flex
 
 			if (bUseVertexStage)
 			{
-				if (!CreateShaderModule(shader.vertexShaderCode, vkShader.vertShaderModule.replace()))
+				if (shader.vertexShaderCode.size() == 0)
+				{
+					PrintError("Vertex shader code failed to load %s\n", shader.vertexShaderFilePath.c_str());
+					bSuccess = false;
+				}
+				else if (!CreateShaderModule(shader.vertexShaderCode, vkShader.vertShaderModule.replace()))
 				{
 					PrintError("Failed to compile vertex shader located at: %s\n", shader.vertexShaderFilePath.c_str());
+					bSuccess = false;
 				}
 				shader.vertexShaderCode.clear();
 			}
 
 			if (bUseFragmentStage)
 			{
-				if (!CreateShaderModule(shader.fragmentShaderCode, vkShader.fragShaderModule.replace()))
+				if (shader.fragmentShaderCode.size() == 0)
+				{
+					PrintError("Fragment shader code failed to load %s\n", shader.fragmentShaderFilePath.c_str());
+					bSuccess = false;
+				}
+				else if (!CreateShaderModule(shader.fragmentShaderCode, vkShader.fragShaderModule.replace()))
 				{
 					PrintError("Failed to compile fragment shader located at: %s\n", shader.fragmentShaderFilePath.c_str());
+					bSuccess = false;
 				}
 				shader.fragmentShaderCode.clear();
 			}
 
 			if (bUseGeometryStage)
 			{
-				if (!CreateShaderModule(shader.geometryShaderCode, vkShader.geomShaderModule.replace()))
+				if (shader.geometryShaderCode.size() == 0)
+				{
+					PrintError("Geometry shader code failed to load %s\n", shader.geometryShaderFilePath.c_str());
+					bSuccess = false;
+				}
+				else if (!CreateShaderModule(shader.geometryShaderCode, vkShader.geomShaderModule.replace()))
 				{
 					PrintError("Failed to compile geometry shader located at: %s\n", shader.geometryShaderFilePath.c_str());
+					bSuccess = false;
 				}
 				shader.geometryShaderCode.clear();
 			}
 
 			if (bUseComputeStage)
 			{
-				if (!CreateShaderModule(shader.computeShaderCode, vkShader.computeShaderModule.replace()))
+				if (shader.computeShaderCode.size() == 0)
+				{
+					PrintError("Compute shader code failed to load %s\n", shader.computeShaderFilePath.c_str());
+					bSuccess = false;
+				}
+				else if (!CreateShaderModule(shader.computeShaderCode, vkShader.computeShaderModule.replace()))
 				{
 					PrintError("Failed to compile compute shader located at: %s\n", shader.computeShaderFilePath.c_str());
+					bSuccess = false;
 				}
 				shader.computeShaderCode.clear();
 			}
@@ -6436,23 +6460,47 @@ namespace flex
 			VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
 			if (bUseVertexStage)
 			{
-				vertShaderStageInfo = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, shader.vertShaderModule);
-				shaderStages.push_back(vertShaderStageInfo);
+				if ((VkShaderModule)shader.vertShaderModule == VK_NULL_HANDLE)
+				{
+					PrintError("Failed to create graphics pipeline, required vertex shader module is empty\n");
+					return;
+				}
+				else
+				{
+					vertShaderStageInfo = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, shader.vertShaderModule);
+					shaderStages.push_back(vertShaderStageInfo);
+				}
 			}
 
 			VkPipelineShaderStageCreateInfo fragShaderStageInfo = {};
 			if (bUseFragmentStage)
-			{
-				fragShaderStageInfo = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, shader.fragShaderModule);
-				fragShaderStageInfo.pSpecializationInfo = createInfo->fragSpecializationInfo;
-				shaderStages.push_back(fragShaderStageInfo);
+			{				
+				if ((VkShaderModule)shader.fragShaderModule == VK_NULL_HANDLE)
+				{
+					PrintError("Failed to create graphics pipeline, required fragment shader module is empty\n");
+					return;
+				}
+				else
+				{
+					fragShaderStageInfo = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, shader.fragShaderModule);
+					fragShaderStageInfo.pSpecializationInfo = createInfo->fragSpecializationInfo;
+					shaderStages.push_back(fragShaderStageInfo);
+				}
 			}
 
 			VkPipelineShaderStageCreateInfo geomShaderStageInfo = {};
 			if (bUseGeometryStage)
 			{
-				geomShaderStageInfo = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_GEOMETRY_BIT, shader.geomShaderModule);
-				shaderStages.push_back(geomShaderStageInfo);
+				if ((VkShaderModule)shader.geomShaderModule == VK_NULL_HANDLE)
+				{
+					PrintError("Failed to create graphics pipeline, required geometry shader module is empty\n");
+					return;
+				}
+				else
+				{
+					geomShaderStageInfo = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_GEOMETRY_BIT, shader.geomShaderModule);
+					shaderStages.push_back(geomShaderStageInfo);
+				}
 			}
 
 			const u32 vertexStride = CalculateVertexStride(createInfo->vertexAttributes);
@@ -7260,7 +7308,7 @@ namespace flex
 			};
 
 			VkDescriptorPoolCreateInfo poolInfo = vks::descriptorPoolCreateInfo(poolSizes, MAX_NUM_DESC_SETS);
-			// TODO: Have additional pool which doesn't have this flag set for constant descriptor sets
+			// TODO: Avoid using this flag at all
 			poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT; // Allow descriptor sets to be added/removed often
 
 			VK_CHECK_RESULT(vkCreateDescriptorPool(m_VulkanDevice->m_LogicalDevice, &poolInfo, nullptr, m_DescriptorPool.replace()));
@@ -7380,6 +7428,7 @@ namespace flex
 									VulkanRenderObject* renderObject = GetRenderObject(renderID);
 
 									if (renderObject &&
+										(VkPipeline)renderObject->graphicsPipeline != 0 &&
 										renderObject->materialID == matPair.first)
 									{
 										UniformBuffer* dynamicBuffer = material.uniformBufferList.Get(UniformBufferType::DYNAMIC);
@@ -8437,6 +8486,11 @@ namespace flex
 			VkShaderModuleCreateInfo createInfo = vks::shaderModuleCreateInfo();
 			createInfo.codeSize = code.size();
 			createInfo.pCode = (u32*)code.data();
+
+			if (createInfo.codeSize == 0)
+			{
+				return false;
+			}
 
 			VkResult result = vkCreateShaderModule(m_VulkanDevice->m_LogicalDevice, &createInfo, nullptr, shaderModule);
 			VK_CHECK_RESULT(result);
