@@ -177,6 +177,9 @@ namespace flex
 				ParticleSimData* particleSimData = nullptr;
 			};
 
+			bool InitializeFreeType();
+			void DestroyFreeType();
+
 			void GenerateCubemapFromHDR(VulkanRenderObject* renderObject, const std::string& environmentMapPath);
 			void GenerateIrradianceSampler(VulkanRenderObject* renderObject);
 			void GeneratePrefilteredCube(VulkanRenderObject* renderObject);
@@ -603,6 +606,8 @@ namespace flex
 			VkClearColorValue m_ClearColor;
 
 			u32 m_CurrentSwapChainBufferIndex = 0;
+
+			FT_Library m_FTLibrary;
 
 			VulkanTexture* m_NoiseTexture = nullptr;
 			ShaderID m_SSAOShaderID = InvalidShaderID;

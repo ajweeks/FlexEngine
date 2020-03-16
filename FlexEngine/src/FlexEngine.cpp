@@ -209,8 +209,6 @@ namespace flex
 
 		m_FrameTimes.resize(256);
 
-		AudioManager::Initialize();
-
 		CreateWindowAndRenderer();
 
 		g_Editor = new Editor();
@@ -235,6 +233,10 @@ namespace flex
 		g_CameraManager->AddCamera(terminalCamera, false);
 
 		InitializeWindowAndRenderer();
+
+		AudioManager::Initialize();
+
+		Print("Bullet v%d\n", btGetVersion());
 
 #if COMPILE_RENDERDOC_API
 		if (m_RenderDocAPI &&

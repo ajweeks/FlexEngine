@@ -40,7 +40,7 @@ namespace flex
 		}
 
 		const ALchar* deviceName = alcGetString(s_Device, ALC_DEVICE_SPECIFIER);
-		Print("Chosen audio device name: \"%s\"\n", deviceName);
+		Print("Chosen audio device: %s\n", deviceName);
 
 		s_Context = alcCreateContext(s_Device, NULL);
 		alcMakeContextCurrent(s_Context);
@@ -101,7 +101,6 @@ namespace flex
 			return InvalidAudioSourceID;
 		}
 		delete[] data;
-
 
 		// Source
 		alGenSources(1, &s_Sources[newID].source);
@@ -196,7 +195,10 @@ namespace flex
 	{
 		for (Source& source : s_Sources)
 		{
-			alDeleteSources(1, &source.source);
+			if (source.source != InvalidAudioSourceID)
+			{
+				alDeleteSources(1, &source.source);
+			}
 		}
 		s_Sources.fill({});
 	}

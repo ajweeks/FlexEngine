@@ -596,6 +596,7 @@ namespace flex
 
 			CreateSemaphores();
 
+			InitializeFreeType();
 			LoadFonts(false);
 
 			GenerateIrradianceMaps();
@@ -869,6 +870,8 @@ namespace flex
 
 			m_SwapChain.replace();
 			m_SwapChainImageViews.clear();
+
+			DestroyFreeType();
 
 			vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
 			vkDestroyDebugReportCallbackEXT(m_Instance, m_Callback, nullptr);
@@ -2938,6 +2941,29 @@ namespace flex
 			return false;
 		}
 
+		bool VulkanRenderer::InitializeFreeType()
+		{
+			if (FT_Init_FreeType(&m_FTLibrary) != FT_Err_Ok)
+			{
+				PrintError("Failed to initialize FreeType\n");
+				return false;
+			}
+
+			{
+				i32 maj, min, pat;
+				FT_Library_Version(m_FTLibrary, &maj, &min, &pat);
+
+				Print("Free type v%d.%d.%d\n", maj, min, pat);
+			}
+
+			return true;
+		}
+
+		void VulkanRenderer::DestroyFreeType()
+		{
+			FT_Done_FreeType(m_FTLibrary);
+		}
+
 		void VulkanRenderer::GenerateCubemapFromHDR(VulkanRenderObject* renderObject, const std::string& environmentMapPath)
 		{
 			if (!m_SkyBoxMesh)
@@ -3994,29 +4020,13 @@ namespace flex
 
 		bool VulkanRenderer::LoadFont(FontMetaData& fontMetaData, bool bForceRender)
 		{
-			// TODO: Consolidate with GLRenderer
-			FT_Library ft;
-			// TODO: Only do once per session?
-			if (FT_Init_FreeType(&ft) != FT_Err_Ok)
-			{
-				PrintError("Failed to initialize FreeType\n");
-				return false;
-			}
-
-			{
-				i32 maj, min, pat;
-				FT_Library_Version(ft, &maj, &min, &pat);
-
-				Print("Free type v%d.%d.%d\n", maj, min, pat);
-			}
-
 			std::vector<char> fileMemory;
 			ReadFile(fontMetaData.filePath, fileMemory, true);
 
 			std::map<i32, FontMetric*> characters;
 			std::array<glm::vec2i, 4> maxPos;
 			FT_Face face = {};
-			if (!LoadFontMetrics(fileMemory, ft, fontMetaData, &characters, &maxPos, &face))
+			if (!LoadFontMetrics(fileMemory, m_FTLibrary, fontMetaData, &characters, &maxPos, &face))
 			{
 				return false;
 			}
@@ -4197,7 +4207,7 @@ namespace flex
 					}
 
 					FT_Bitmap alignedBitmap = {};
-					if (FT_Bitmap_Convert(ft, &face->glyph->bitmap, &alignedBitmap, 1))
+					if (FT_Bitmap_Convert(m_FTLibrary, &face->glyph->bitmap, &alignedBitmap, 1))
 					{
 						PrintError("Couldn't align free type bitmap size\n");
 						continue;
@@ -4261,7 +4271,7 @@ namespace flex
 
 					metric->texCoord = metric->texCoord / fontTexSize;
 
-					FT_Bitmap_Done(ft, &alignedBitmap);
+					FT_Bitmap_Done(m_FTLibrary, &alignedBitmap);
 				}
 
 				vkCmdEndRenderPass(commandBuffer);
@@ -4298,7 +4308,6 @@ namespace flex
 			}
 
 			FT_Done_Face(face);
-			FT_Done_FreeType(ft);
 
 			return true;
 		}
@@ -6474,7 +6483,7 @@ namespace flex
 
 			VkPipelineShaderStageCreateInfo fragShaderStageInfo = {};
 			if (bUseFragmentStage)
-			{				
+			{
 				if ((VkShaderModule)shader.fragShaderModule == VK_NULL_HANDLE)
 				{
 					PrintError("Failed to create graphics pipeline, required fragment shader module is empty\n");
