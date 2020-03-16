@@ -676,7 +676,7 @@ namespace flex
 				} break;
 				default:
 				{
-					PrintWarn("Unhandled shape type in GameObject::DrawImGuiObjects");
+					PrintWarn("Unhandled shape type in GameObject::DrawImGuiObjects\n");
 				} break;
 				}
 
