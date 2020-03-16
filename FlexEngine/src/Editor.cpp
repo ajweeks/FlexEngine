@@ -1260,7 +1260,7 @@ namespace flex
 
 
 			gizmoXAxisRB->SetLocalRotation(glm::quat(glm::vec3(0, 0, PI / 2.0f)));
-			gizmoXAxisRB->SetLocalPosition(glm::vec3(-cylinderHeight, 0, 0));
+			gizmoXAxisRB->SetLocalPosition(glm::vec3(cylinderHeight, 0, 0));
 
 			gizmoYAxisRB->SetLocalPosition(glm::vec3(0, cylinderHeight, 0));
 
