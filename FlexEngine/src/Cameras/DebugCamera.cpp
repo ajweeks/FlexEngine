@@ -61,7 +61,11 @@ namespace flex
 
 	void DebugCamera::DrawImGuiObjects()
 	{
-		m_DragHistory.DrawImGui();
+		if (ImGui::TreeNode("Debug Cam"))
+		{
+			m_DragHistory.DrawImGui();
+			ImGui::TreePop();
+		}
 	}
 
 	void DebugCamera::Update()
