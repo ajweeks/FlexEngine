@@ -106,20 +106,6 @@ namespace flex
 			}
 		}
 
-		btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
-		debugDrawer->drawLine(
-			ToBtVec3(m_TransformGizmo->GetTransform()->GetWorldPosition()),
-			ToBtVec3(m_StartPointOnPlane),
-			btVector3(1, 0, 0),
-			btVector3(0, 1, 0));
-
-
-		debugDrawer->drawLine(
-			ToBtVec3(m_TransformGizmo->GetTransform()->GetWorldPosition()),
-			ToBtVec3(m_TransformGizmo->GetTransform()->GetWorldPosition() + m_PlaneN * 3.0f),
-			btVector3(1, 0, 1),
-			btVector3(0, 1, 1));
-
 		FadeOutHeadOnGizmos();
 
 		if (!m_CurrentlySelectedObjects.empty())
@@ -328,38 +314,6 @@ namespace flex
 			m_LastAngle = angle;
 			m_RotationGizmoWrapCount = 0;
 		}
-
-		btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
-		debugDrawer->drawLine(
-			ToBtVec3(planeOrigin),
-			ToBtVec3(planeOrigin + axis * 5.0f),
-			btVector3(1.0f, 1.0f, 0.0f));
-
-		debugDrawer->drawLine(
-			ToBtVec3(planeOrigin),
-			ToBtVec3(planeOrigin + v1),
-			btVector3(1.0f, 0.0f, 0.0f));
-
-		debugDrawer->drawArc(
-			ToBtVec3(planeOrigin),
-			ToBtVec3(m_PlaneN),
-			ToBtVec3(v1),
-			1.0f,
-			1.0f,
-			(m_RotationGizmoWrapCount * PI) - angle,
-			0.0f,
-			btVector3(0.1f, 0.1f, 0.15f),
-			true);
-
-		debugDrawer->drawLine(
-			ToBtVec3(planeOrigin + v2L),
-			ToBtVec3(planeOrigin),
-			btVector3(1.0f, 1.0f, 1.0f));
-
-		debugDrawer->drawLine(
-			ToBtVec3(planeOrigin),
-			ToBtVec3(planeOrigin + vecPerp * 3.0f),
-			btVector3(0.5f, 1.0f, 1.0f));
 
 		real dAngle = m_LastAngle - angle;
 		glm::quat result(VEC3_ZERO);
@@ -699,23 +653,6 @@ namespace flex
 		glm::vec3 camUp = cam->GetUp();
 		glm::vec3 planeOrigin = gizmoTransform->GetWorldPosition();
 
-		btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
-		debugDrawer->drawLine(
-			ToBtVec3(gizmoTransform->GetWorldPosition()),
-			ToBtVec3(gizmoTransform->GetWorldPosition() + gizmoRight * 6.0f),
-			GetAxisColor(m_DraggingAxisIndex));
-
-		debugDrawer->drawLine(
-			ToBtVec3(gizmoTransform->GetWorldPosition()),
-			ToBtVec3(gizmoTransform->GetWorldPosition() + gizmoUp * 6.0f),
-			GetAxisColor(m_DraggingAxisIndex));
-
-		debugDrawer->drawLine(
-			ToBtVec3(gizmoTransform->GetWorldPosition()),
-			ToBtVec3(gizmoTransform->GetWorldPosition() + gizmoForward * 6.0f),
-			GetAxisColor(m_DraggingAxisIndex));
-
-
 		switch (m_CurrentTransformGizmoState)
 		{
 		case TransformState::TRANSLATE:
@@ -856,11 +793,6 @@ namespace flex
 
 			Transform* selectedObjectTransform = m_CurrentlySelectedObjects[0]->GetTransform();
 
-			debugDrawer->drawLine(
-				ToBtVec3(m_SelectedObjectDragStartPos),
-				ToBtVec3(selectedObjectTransform->GetLocalPosition()),
-				GetAxisColor(m_DraggingAxisIndex));
-
 			for (GameObject* gameObject : m_CurrentlySelectedObjects)
 			{
 				GameObject* parent = gameObject->GetParent();
@@ -947,11 +879,6 @@ namespace flex
 			Transform* selectedObjectTransform = m_CurrentlySelectedObjects[0]->GetTransform();
 
 			dLocalScale = glm::clamp(dLocalScale, 0.01f, 10.0f);
-
-			debugDrawer->drawLine(
-				ToBtVec3(m_SelectedObjectDragStartPos),
-				ToBtVec3(selectedObjectTransform->GetLocalPosition()),
-				GetAxisColor(m_DraggingAxisIndex));
 
 			for (GameObject* gameObject : m_CurrentlySelectedObjects)
 			{
