@@ -18,7 +18,7 @@ IGNORE_WARNINGS_POP
 
 namespace flex
 {
-	Transform Transform::m_Identity = Transform(VEC3_ZERO, QUAT_UNIT, VEC3_ONE);
+	Transform Transform::m_Identity = Transform(VEC3_ZERO, QUAT_IDENTITY, VEC3_ONE);
 
 	Transform::Transform()
 	{
@@ -67,7 +67,7 @@ namespace flex
 
 	Transform::Transform(const glm::vec3& position) :
 		localPosition(position),
-		localRotation(VEC3_ZERO),
+		localRotation(QUAT_IDENTITY),
 		localScale(VEC3_ONE),
 		worldPosition(position),
 		worldRotation(VEC3_ZERO),
@@ -295,7 +295,7 @@ namespace flex
 			transformObject.fields.emplace_back("pos", JSONValue(posStr));
 		}
 
-		if (rot != QUAT_UNIT)
+		if (rot != QUAT_IDENTITY)
 		{
 			glm::vec3 rotEuler = glm::eulerAngles(rot);
 			std::string rotStr = VecToString(rotEuler, floatPrecision);

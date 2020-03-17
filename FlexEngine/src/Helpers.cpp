@@ -167,7 +167,7 @@ namespace flex
 		str(str),
 		anchor(anchor),
 		pos(pos.x, pos.y, -1.0f),
-		rot(QUAT_UNIT),
+		rot(QUAT_IDENTITY),
 		color(color),
 		xSpacing(xSpacing),
 		scale(scale)

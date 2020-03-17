@@ -1212,7 +1212,7 @@ namespace flex
 				colliderObj.fields.emplace_back("offset pos", JSONValue(VecToString(m_RigidBody->GetLocalPosition(), 3)));
 			}
 
-			if (m_RigidBody->GetLocalRotation() != QUAT_UNIT)
+			if (m_RigidBody->GetLocalRotation() != QUAT_IDENTITY)
 			{
 				glm::vec3 localRotEuler = glm::eulerAngles(m_RigidBody->GetLocalRotation());
 				colliderObj.fields.emplace_back("offset rot", JSONValue(VecToString(localRotEuler, 3)));
@@ -2504,7 +2504,7 @@ namespace flex
 	{
 		JSONObject skyboxInfo = {};
 		glm::quat worldRot = m_Transform.GetWorldRotation();
-		if (worldRot != QUAT_UNIT)
+		if (worldRot != QUAT_IDENTITY)
 		{
 			std::string eulerRotStr = VecToString(glm::eulerAngles(worldRot), 2);
 			skyboxInfo.fields.emplace_back("rot", JSONValue(eulerRotStr));

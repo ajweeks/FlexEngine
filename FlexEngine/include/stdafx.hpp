@@ -228,7 +228,7 @@ namespace flex
 	extern glm::vec4 VEC4_ONE;
 	extern glm::vec4 VEC4_NEG_ONE;
 	extern glm::vec4 VEC4_ZERO;
-	extern glm::quat QUAT_UNIT;
+	extern glm::quat QUAT_IDENTITY;
 	extern glm::mat4 MAT4_IDENTITY;
 	extern glm::mat4 MAT4_ZERO;
 	extern u32 COLOR32U_WHITE;

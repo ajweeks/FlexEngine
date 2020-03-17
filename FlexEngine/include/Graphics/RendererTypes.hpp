@@ -675,7 +675,7 @@ namespace flex
 		u32 RBO = 0; // 0 for rendering to final RT
 		MaterialID materialID = InvalidMaterialID;
 		glm::vec3 pos = VEC3_ZERO;
-		glm::quat rotation = QUAT_UNIT;
+		glm::quat rotation = QUAT_IDENTITY;
 		glm::vec3 scale = VEC3_ONE;
 		AnchorPoint anchor = AnchorPoint::TOP_LEFT;
 		glm::vec4 color = VEC4_ONE;

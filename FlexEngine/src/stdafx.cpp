@@ -38,7 +38,7 @@ namespace flex
 	glm::vec4 VEC4_ONE = glm::vec4(1.0f);
 	glm::vec4 VEC4_NEG_ONE = glm::vec4(-1.0f);
 	glm::vec4 VEC4_ZERO = glm::vec4(0.0f);
-	glm::quat QUAT_UNIT = glm::quat(VEC3_ZERO);
+	glm::quat QUAT_IDENTITY = glm::quat(VEC3_ZERO);
 	glm::mat4 MAT4_IDENTITY = glm::mat4(1.0f);
 	glm::mat4 MAT4_ZERO = glm::mat4(0.0f);
 	flex::u32 COLOR32U_WHITE = 0xFFFFFFFF;
