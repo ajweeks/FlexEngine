@@ -100,6 +100,11 @@ namespace flex
 		glm::vec3 m_AxisOfRotation;
 		bool m_bLastDotPos = false;
 
+		// TODO: EZ: Define these in config file
+		real m_ScaleDragSpeed = 0.05f;
+		real m_ScaleSlowDragSpeedMultiplier = 0.2f;
+		real m_ScaleFastDragSpeedMultiplier = 2.5f;
+
 		bool m_bDraggingGizmo = false;
 
 		i32 m_DraggingAxisIndex = -1;

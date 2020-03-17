@@ -874,7 +874,9 @@ namespace flex
 		case TransformState::SCALE:
 		{
 			glm::vec3 dLocalScale(1.0f);
-			real scale = 0.1f;
+			bool bControlDown = g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_CONTROL);
+			bool bShiftDown = g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_SHIFT);
+			real dragSpeed = m_ScaleDragSpeed * (bControlDown ? m_ScaleSlowDragSpeedMultiplier : bShiftDown ? m_ScaleFastDragSpeedMultiplier : 1.0f);
 
 			if (m_DraggingAxisIndex == X_AXIS_IDX)
 			{
@@ -886,7 +888,7 @@ namespace flex
 				}
 				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, camForward, m_DraggingGizmoOffset);
 				glm::vec3 scaleNow = -(intersectionPont - planeOrigin);
-				glm::vec3 scaleVecGlobal = (scaleNow - m_DraggingGizmoScaleLast) * scale;
+				glm::vec3 scaleVecGlobal = (scaleNow - m_DraggingGizmoScaleLast) * dragSpeed;
 				dLocalScale += glm::vec3(glm::inverse(gizmoTransform->GetWorldTransform()) * glm::vec4(scaleVecGlobal, 0.0f));
 
 				m_DraggingGizmoScaleLast = scaleNow;
@@ -901,7 +903,7 @@ namespace flex
 				}
 				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, camForward, m_DraggingGizmoOffset);
 				glm::vec3 scaleNow = (intersectionPont - planeOrigin);
-				glm::vec3 scaleVecGlobal = (scaleNow - m_DraggingGizmoScaleLast) * scale;
+				glm::vec3 scaleVecGlobal = (scaleNow - m_DraggingGizmoScaleLast) * dragSpeed;
 				dLocalScale += glm::vec3(glm::inverse(gizmoTransform->GetWorldTransform()) * glm::vec4(scaleVecGlobal, 0.0f));
 
 				m_DraggingGizmoScaleLast = scaleNow;
@@ -916,7 +918,7 @@ namespace flex
 				}
 				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, camForward, m_DraggingGizmoOffset);
 				glm::vec3 scaleNow = (intersectionPont - planeOrigin);
-				glm::vec3 scaleVecGlobal = (scaleNow - m_DraggingGizmoScaleLast) * scale;
+				glm::vec3 scaleVecGlobal = (scaleNow - m_DraggingGizmoScaleLast) * dragSpeed;
 				dLocalScale += glm::vec3(glm::inverse(gizmoTransform->GetWorldTransform()) * glm::vec4(scaleVecGlobal, 0.0f));
 
 				m_DraggingGizmoScaleLast = scaleNow;
@@ -936,7 +938,7 @@ namespace flex
 					real dotResult2 = glm::length(intersectionRay2) * glm::dot(intersectionRay2, axis2);
 					real largerDot = abs(dotResult1) > abs(dotResult2) ? dotResult1 : dotResult2;
 					glm::vec3 scaleNow = glm::vec3(glm::clamp(largerDot, -9999.0f, 9999.0f));
-					dLocalScale += (scaleNow - m_DraggingGizmoScaleLast) * scale;
+					dLocalScale += (scaleNow - m_DraggingGizmoScaleLast) * dragSpeed;
 
 					m_DraggingGizmoScaleLast = scaleNow;
 				}
