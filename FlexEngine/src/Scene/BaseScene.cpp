@@ -340,7 +340,7 @@ namespace flex
 				}
 			}
 			m_ObjectsToDestroyAtEndOfFrame.clear();
-
+			UpdateRootObjectSiblingIndices();
 			g_Renderer->RenderObjectStateChanged();
 		}
 
@@ -361,7 +361,7 @@ namespace flex
 				gameObject->PostInitialize();
 			}
 			m_ObjectsToAddAtEndOfFrame.clear();
-
+			UpdateRootObjectSiblingIndices();
 			g_Renderer->RenderObjectStateChanged();
 		}
 	}
@@ -1077,6 +1077,7 @@ namespace flex
 				}
 
 				m_RootObjects.erase(iter);
+				UpdateRootObjectSiblingIndices();
 				return true;
 			}
 

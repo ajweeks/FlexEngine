@@ -1556,6 +1556,8 @@ namespace flex
 			childTransform->SetWorldTransform(childWorldTransform);
 		}
 
+		g_SceneManager->CurrentScene()->UpdateRootObjectSiblingIndices();
+
 		return child;
 	}
 
@@ -1575,6 +1577,8 @@ namespace flex
 				child->SetParent(nullptr);
 
 				child->GetTransform()->SetWorldTransform(childWorldTransform);
+
+				g_SceneManager->CurrentScene()->UpdateRootObjectSiblingIndices();
 
 				m_Children.erase(iter);
 				return true;
