@@ -29,7 +29,11 @@ namespace flex
 		glm::vec3 GetSelectedObjectsCenter();
 		void SelectNone();
 
-		glm::quat CalculateDeltaRotationFromGizmoDrag(const glm::vec3 & axis, const glm::vec3 & rayOrigin, const glm::vec3 & rayEnd, const glm::quat & pRot);
+		glm::quat CalculateDeltaRotationFromGizmoDrag(
+			const glm::vec3& axis,
+			const glm::vec3& rayOrigin,
+			const glm::vec3& rayEnd,
+			glm::vec3* outIntersectionPoint);
 
 		void UpdateGizmoVisibility();
 		void SetTransformState(TransformState state);

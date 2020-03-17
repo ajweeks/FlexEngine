@@ -8,6 +8,7 @@ IGNORE_WARNINGS_PUSH
 
 #include <BulletDynamics/Dynamics/btRigidBody.h>
 #include <glm/gtx/intersect.hpp>
+#include <glm/gtx/euler_angles.hpp>
 
 #include <LinearMath/btIDebugDraw.h>
 IGNORE_WARNINGS_POP
@@ -235,7 +236,7 @@ namespace flex
 		const glm::vec3& axis,
 		const glm::vec3& rayOrigin,
 		const glm::vec3& rayEnd,
-		const glm::quat& pRot)
+		glm::vec3* outIntersectionPoint)
 	{
 		FLEX_UNUSED(axis);
 
@@ -255,6 +256,10 @@ namespace flex
 		if (glm::intersectRayPlane(rayOrigin, rayDir, planeOrigin, planeN, intersectionDistance))
 		{
 			intersectionPoint = rayOrigin + rayDir * intersectionDistance;
+			if (outIntersectionPoint)
+			{
+				*outIntersectionPoint = intersectionPoint;
+			}
 			if (m_DraggingGizmoOffset == -1.0f)
 			{
 				m_DraggingGizmoOffset = glm::dot(intersectionPoint - m_SelectedObjectDragStartPos, m_AxisProjectedOnto);
@@ -266,7 +271,6 @@ namespace flex
 			}
 
 			m_LatestRayPlaneIntersection = intersectionPoint;
-			Print("%.3f\n", intersectionPoint.x);
 		}
 
 
@@ -319,8 +323,8 @@ namespace flex
 		glm::quat result(VEC3_ZERO);
 		if (!IsNanOrInf(dAngle) && dAngle != 0.0f)
 		{
-			glm::quat newRot = glm::rotate(pRot, dAngle, m_AxisOfRotation);
-			result = newRot - pRot;
+			glm::quat newRot = glm::rotate(QUAT_IDENTITY, dAngle, m_AxisOfRotation);
+			result = newRot;
 		}
 
 		m_LastAngle = angle;
@@ -652,6 +656,7 @@ namespace flex
 		glm::vec3 camRight = cam->GetRight();
 		glm::vec3 camUp = cam->GetUp();
 		glm::vec3 planeOrigin = gizmoTransform->GetWorldPosition();
+		Transform* transform = m_CurrentlySelectedObjects[0]->GetTransform();
 
 		switch (m_CurrentTransformGizmoState)
 		{
@@ -682,7 +687,6 @@ namespace flex
 
 				m_TestShape->GetTransform()->SetWorldPosition(p);
 
-				Transform* transform = m_CurrentlySelectedObjects[0]->GetTransform();
 				dPos = transform->GetLocalRotation() * glm::inverse(transform->GetWorldRotation()) * deltaPosWS;
 			}
 			else if (m_DraggingAxisIndex == Y_AXIS_IDX)
@@ -699,7 +703,6 @@ namespace flex
 
 				m_TestShape->GetTransform()->SetWorldPosition(p);
 
-				Transform* transform = m_CurrentlySelectedObjects[0]->GetTransform();
 				dPos = transform->GetLocalRotation() * glm::inverse(transform->GetWorldRotation()) * deltaPosWS;
 			}
 			else if (m_DraggingAxisIndex == Z_AXIS_IDX)
@@ -716,11 +719,8 @@ namespace flex
 
 				m_TestShape->GetTransform()->SetWorldPosition(p);
 
-				Transform* transform = m_CurrentlySelectedObjects[0]->GetTransform();
 				dPos = transform->GetLocalRotation() * glm::inverse(transform->GetWorldRotation()) * deltaPosWS;
 			}
-
-			//Transform* selectedObjectTransform = m_CurrentlySelectedObjects[0]->GetTransform();
 
 			for (GameObject* gameObject : m_CurrentlySelectedObjects)
 			{
@@ -734,10 +734,13 @@ namespace flex
 		} break;
 		case TransformState::ROTATE:
 		{
-			glm::quat dRot(VEC3_ZERO);
+			glm::quat dRotWS(VEC3_ZERO);
 
-			static glm::quat pGizmoRot = gizmoTransform->GetLocalRotation();
-			Print("%.2f,%.2f,%.2f,%.2f\n", pGizmoRot.x, pGizmoRot.y, pGizmoRot.z, pGizmoRot.w);
+			glm::quat lRot = transform->GetLocalRotation();
+			glm::vec3 lEuler = glm::eulerAngles(transform->GetLocalRotation());
+			glm::quat wRot = transform->GetWorldRotation();
+			Print("Local: %5.2f,%5.2f,%5.2f,%5.2f  -  L Euler: %5.2f,%5.2f,%5.2f - Wrap: %d\n", lRot.x, lRot.y, lRot.z, lRot.w, lEuler.x, lEuler.y, lEuler.z, m_RotationGizmoWrapCount);
+			//Print("Local: %5.2f,%5.2f,%5.2f,%5.2f  -  Global: %5.2f,%5.2f,%5.2f,%5.2f  -  L Euler: %5.2f,%5.2f,%5.2f\n", lRot.x, lRot.y, lRot.z, lRot.w, wRot.x, wRot.y, wRot.z, wRot.w, lEuler.x, lEuler.y, lEuler.z);
 
 			if (m_DraggingAxisIndex == X_AXIS_IDX)
 			{
@@ -750,11 +753,13 @@ namespace flex
 					if (glm::abs(glm::dot(m_AxisProjectedOnto, camForward)) > 0.5f)
 					{
 						m_AxisProjectedOnto = gizmoForward;
-						m_PlaneN = gizmoUp;
 					}
 				}
 
-				dRot = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, rayStartG, rayEndG, pGizmoRot);
+				glm::vec3 p;
+				dRotWS = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, rayStartG, rayEndG, &p);
+
+				m_TestShape->GetTransform()->SetWorldPosition(p);
 			}
 			else if (m_DraggingAxisIndex == Y_AXIS_IDX)
 			{
@@ -767,11 +772,13 @@ namespace flex
 					if (glm::abs(glm::dot(m_AxisProjectedOnto, camForward)) > 0.5f)
 					{
 						m_AxisProjectedOnto = gizmoForward;
-						//m_PlaneN = gizmoUp;
 					}
 				}
 
-				dRot = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, rayStartG, rayEndG, pGizmoRot);
+				glm::vec3 p;
+				dRotWS = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, rayStartG, rayEndG, &p);
+
+				m_TestShape->GetTransform()->SetWorldPosition(p);
 			}
 			else if (m_DraggingAxisIndex == Z_AXIS_IDX)
 			{
@@ -784,22 +791,25 @@ namespace flex
 					if (glm::abs(glm::dot(m_AxisProjectedOnto, camForward)) > 0.5f)
 					{
 						m_AxisProjectedOnto = gizmoForward;
-						m_PlaneN = gizmoRight;
 					}
 				}
 
-				dRot = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, rayStartG, rayEndG, pGizmoRot);
+				glm::vec3 p;
+				dRotWS = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, rayStartG, rayEndG, &p);
+
+				m_TestShape->GetTransform()->SetWorldPosition(p);
 			}
 
-			Transform* selectedObjectTransform = m_CurrentlySelectedObjects[0]->GetTransform();
-
-			for (GameObject* gameObject : m_CurrentlySelectedObjects)
+			if (dRotWS != QUAT_IDENTITY)
 			{
-				GameObject* parent = gameObject->GetParent();
-				bool bObjectIsntChild = (parent == nullptr) || (Find(m_CurrentlySelectedObjects, parent) == m_CurrentlySelectedObjects.end());
-				if (bObjectIsntChild)
+				for (GameObject* gameObject : m_CurrentlySelectedObjects)
 				{
-					gameObject->GetTransform()->Rotate(dRot);
+					GameObject* parent = gameObject->GetParent();
+					bool bObjectIsntChild = (parent == nullptr) || (Find(m_CurrentlySelectedObjects, parent) == m_CurrentlySelectedObjects.end());
+					if (bObjectIsntChild)
+					{
+						gameObject->GetTransform()->SetWorldRotation(dRotWS * gameObject->GetTransform()->GetWorldRotation());
+					}
 				}
 			}
 		} break;
@@ -875,8 +885,6 @@ namespace flex
 					m_DraggingGizmoScaleLast = scaleNow;
 				}
 			}
-
-			Transform* selectedObjectTransform = m_CurrentlySelectedObjects[0]->GetTransform();
 
 			dLocalScale = glm::clamp(dLocalScale, 0.01f, 10.0f);
 

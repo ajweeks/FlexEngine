@@ -354,8 +354,10 @@ namespace flex
 		}
 
 		// Transform
-		ImGui::Text(" ");
+		ImGui::Text("Transform");
 		{
+			// TODO: Add local/global switch
+			// TODO: EZ: Ensure precision is retained
 			if (ImGui::BeginPopupContextItem("transform context menu"))
 			{
 				if (ImGui::Button("Copy"))
@@ -375,15 +377,8 @@ namespace flex
 				ImGui::EndPopup();
 			}
 
-			static glm::vec3 sRot = glm::degrees((glm::eulerAngles(m_Transform.GetLocalRotation())));
-
-			if (!ImGui::IsMouseDown(0))
-			{
-				sRot = glm::degrees((glm::eulerAngles(m_Transform.GetLocalRotation())));
-			}
-
 			glm::vec3 translation = m_Transform.GetLocalPosition();
-			glm::vec3 rotation = sRot;
+			glm::vec3 rotation = glm::degrees((glm::eulerAngles(m_Transform.GetLocalRotation())));
 			glm::vec3 pScale = m_Transform.GetLocalScale();
 			glm::vec3 scale = pScale;
 
@@ -431,8 +426,6 @@ namespace flex
 			if (bValueChanged)
 			{
 				m_Transform.SetLocalPosition(translation, false);
-
-				sRot = rotation;
 
 				glm::quat rotQuat(glm::quat(glm::radians(cleanedRot)));
 
