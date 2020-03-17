@@ -68,6 +68,9 @@ namespace flex
 		GameObject* m_TranslationGizmo = nullptr;
 		GameObject* m_RotationGizmo = nullptr;
 		GameObject* m_ScaleGizmo = nullptr;
+
+		GameObject* m_TestShape = nullptr;
+
 		MaterialID m_TransformGizmoMatXID = InvalidMaterialID;
 		MaterialID m_TransformGizmoMatYID = InvalidMaterialID;
 		MaterialID m_TransformGizmoMatZID = InvalidMaterialID;

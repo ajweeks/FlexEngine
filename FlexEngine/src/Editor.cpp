@@ -422,7 +422,7 @@ namespace flex
 			avgPos += gameObject->GetTransform()->GetWorldPosition();
 		}
 		m_SelectedObjectsCenterPos = m_SelectedObjectDragStartPos;
-		m_SelectedObjectRotation = m_CurrentlySelectedObjects[m_CurrentlySelectedObjects.size() - 1]->GetTransform()->GetWorldRotation();
+		m_SelectedObjectRotation = m_CurrentlySelectedObjects[0]->GetTransform()->GetWorldRotation();
 
 		m_SelectedObjectsCenterPos = (avgPos / (real)m_CurrentlySelectedObjects.size());
 	}
@@ -739,8 +739,14 @@ namespace flex
 				{
 					planeN = gizmoUp;
 				}
-				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, camForward, m_DraggingGizmoOffset);
-				dPos = intersectionPont - planeOrigin;
+				glm::vec3 p;
+				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, camForward, m_DraggingGizmoOffset, &p);
+				glm::vec3 deltaPosWS = (intersectionPont - planeOrigin);
+
+				m_TestShape->GetTransform()->SetWorldPosition(p);
+
+				Transform* transform = m_CurrentlySelectedObjects[0]->GetTransform();
+				dPos = transform->GetLocalRotation() * glm::inverse(transform->GetWorldRotation()) * deltaPosWS;
 			}
 			else if (m_DraggingAxisIndex == Y_AXIS_IDX)
 			{
@@ -750,8 +756,14 @@ namespace flex
 				{
 					planeN = gizmoForward;
 				}
-				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, camForward, m_DraggingGizmoOffset);
-				dPos = intersectionPont - planeOrigin;
+				glm::vec3 p;
+				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, camForward, m_DraggingGizmoOffset, &p);
+				glm::vec3 deltaPosWS = (intersectionPont - planeOrigin);
+
+				m_TestShape->GetTransform()->SetWorldPosition(p);
+
+				Transform* transform = m_CurrentlySelectedObjects[0]->GetTransform();
+				dPos = transform->GetLocalRotation() * glm::inverse(transform->GetWorldRotation()) * deltaPosWS;
 			}
 			else if (m_DraggingAxisIndex == Z_AXIS_IDX)
 			{
@@ -761,16 +773,17 @@ namespace flex
 				{
 					planeN = gizmoRight;
 				}
-				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, camForward, m_DraggingGizmoOffset);
-				dPos = intersectionPont - planeOrigin;
+				glm::vec3 p;
+				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, camForward, m_DraggingGizmoOffset, &p);
+				glm::vec3 deltaPosWS = (intersectionPont - planeOrigin);
+
+				m_TestShape->GetTransform()->SetWorldPosition(p);
+
+				Transform* transform = m_CurrentlySelectedObjects[0]->GetTransform();
+				dPos = transform->GetLocalRotation() * glm::inverse(transform->GetWorldRotation()) * deltaPosWS;
 			}
 
-			Transform* selectedObjectTransform = m_CurrentlySelectedObjects[m_CurrentlySelectedObjects.size() - 1]->GetTransform();
-
-			debugDrawer->drawLine(
-				ToBtVec3(m_SelectedObjectDragStartPos),
-				ToBtVec3(selectedObjectTransform->GetLocalPosition()),
-				GetAxisColor(m_DraggingAxisIndex));
+			//Transform* selectedObjectTransform = m_CurrentlySelectedObjects[0]->GetTransform();
 
 			for (GameObject* gameObject : m_CurrentlySelectedObjects)
 			{
@@ -841,7 +854,7 @@ namespace flex
 				dRot = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, rayStartG, rayEndG, pGizmoRot);
 			}
 
-			Transform* selectedObjectTransform = m_CurrentlySelectedObjects[m_CurrentlySelectedObjects.size() - 1]->GetTransform();
+			Transform* selectedObjectTransform = m_CurrentlySelectedObjects[0]->GetTransform();
 
 			debugDrawer->drawLine(
 				ToBtVec3(m_SelectedObjectDragStartPos),
@@ -929,7 +942,7 @@ namespace flex
 				}
 			}
 
-			Transform* selectedObjectTransform = m_CurrentlySelectedObjects[m_CurrentlySelectedObjects.size() - 1]->GetTransform();
+			Transform* selectedObjectTransform = m_CurrentlySelectedObjects[0]->GetTransform();
 
 			dLocalScale = glm::clamp(dLocalScale, 0.01f, 10.0f);
 
@@ -1201,6 +1214,11 @@ namespace flex
 		gizmoCreateInfo.bEditorObject = true;
 		gizmoCreateInfo.bSetDynamicStates = true;
 		gizmoCreateInfo.cullFace = CullFace::BACK;
+
+		m_TestShape = new GameObject("Test Shape", GameObjectType::OBJECT);
+		Mesh* mesh = m_TestShape->SetMesh(new Mesh(m_TestShape));
+		mesh->LoadFromFile(RESOURCE("meshes/sphere.glb"), m_TransformGizmoMatXID);
+		m_TestShape->GetTransform()->Scale(0.5f);
 
 		m_TransformGizmo = new GameObject("Transform gizmo", GameObjectType::_NONE);
 

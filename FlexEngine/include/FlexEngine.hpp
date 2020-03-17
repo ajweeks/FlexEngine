@@ -46,7 +46,8 @@ namespace flex
 			const glm::vec3& planeNorm,
 			const glm::vec3& startPos,
 			const glm::vec3& cameraForward,
-			real& inOutOffset);
+			real& inOutOffset,
+			glm::vec3* outTrueIntersectionPoint = nullptr);
 
 		static const u32 EngineVersionMajor;
 		static const u32 EngineVersionMinor;

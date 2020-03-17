@@ -1676,7 +1676,8 @@ namespace flex
 		const glm::vec3& planeNorm,
 		const glm::vec3& startPos,
 		const glm::vec3& cameraForward,
-		real& inOutOffset)
+		real& inOutOffset,
+		glm::vec3* outTrueIntersectionPoint)
 	{
 		glm::vec3 rayDir = glm::normalize(rayEnd - rayOrigin);
 		glm::vec3 planeN = planeNorm;
@@ -1688,6 +1689,10 @@ namespace flex
 		if (glm::intersectRayPlane(rayOrigin, rayDir, planeOrigin, planeN, intersectionDistance))
 		{
 			glm::vec3 intersectionPoint = rayOrigin + rayDir * intersectionDistance;
+			if (outTrueIntersectionPoint)
+			{
+				*outTrueIntersectionPoint = intersectionPoint;
+			}
 			if (inOutOffset == -1.0f) // Mouse was clicked or wrapped
 			{
 				inOutOffset = glm::dot(intersectionPoint - startPos, axis);
