@@ -247,8 +247,7 @@ namespace flex
 		glm::vec3 planeOrigin = gizmoTransform->GetWorldPosition();
 		glm::vec3 cameraForward = g_CameraManager->CurrentCamera()->GetForward();
 		glm::vec3 planeN = m_PlaneN;
-		bool bFlip = glm::dot(planeN, cameraForward) > 0.0f;
-		if (bFlip)
+		if (glm::dot(planeN, cameraForward) > 0.0f)
 		{
 			planeN = -planeN;
 		}
@@ -273,20 +272,23 @@ namespace flex
 			m_LatestRayPlaneIntersection = intersectionPoint;
 		}
 
+		glm::vec3 startVec = glm::normalize(m_StartPointOnPlane - planeOrigin);
+		glm::vec3 intersectVec = glm::normalize(intersectionPoint - planeOrigin);
 
-		glm::vec3 v1 = glm::normalize(m_StartPointOnPlane - planeOrigin);
-		glm::vec3 v2L = intersectionPoint - planeOrigin;
-		glm::vec3 v2 = glm::normalize(v2L);
+		glm::vec3 vecPerp = glm::cross(m_AxisOfRotation, startVec);
 
-		glm::vec3 vecPerp = glm::cross(m_AxisOfRotation, v1);
+		real projectedDiff = glm::dot(startVec, intersectVec);
+		bool intersectVecOnSameHalfAsPerp = (glm::dot(intersectVec, vecPerp) > 0.0f);
+		bool intersectVecOnSameHalfAsStartVec = (projectedDiff > 0.0f);
 
-		real v1ov2 = glm::dot(v1, v2);
-		bool bDotPos = (glm::dot(v2, vecPerp) > 0.0f);
-		bool bDot2Pos = (v1ov2 > 0.0f);
-
-		if (bDotPos && !m_bLastDotPos)
+		// __Increment/decrement wrap count on quadrant changes__
+		// The cross product above gives us a perpendicular vector to startVec
+		// to project onto so we can monitor when the intersection vector
+		// (from plane origin to mouse cursor on plane) crosses over 180
+		// degree marks to properly negate angle returned from acos below.
+		if (intersectVecOnSameHalfAsPerp && !m_bLastDotPos)
 		{
-			if (bDot2Pos)
+			if (intersectVecOnSameHalfAsStartVec)
 			{
 				m_RotationGizmoWrapCount++;
 			}
@@ -295,9 +297,9 @@ namespace flex
 				m_RotationGizmoWrapCount--;
 			}
 		}
-		else if (!bDotPos && m_bLastDotPos)
+		else if (!intersectVecOnSameHalfAsPerp && m_bLastDotPos)
 		{
-			if (bDot2Pos)
+			if (intersectVecOnSameHalfAsStartVec)
 			{
 				m_RotationGizmoWrapCount--;
 			}
@@ -306,22 +308,23 @@ namespace flex
 				m_RotationGizmoWrapCount++;
 			}
 		}
+		// We only care if this is even or odd
+		m_RotationGizmoWrapCount %= 2;
 
-		m_bLastDotPos = bDotPos;
+		m_bLastDotPos = intersectVecOnSameHalfAsPerp;
 
-		real angleRaw = acos(v1ov2);
+		real angleRaw = acos(projectedDiff);
 		real angle = (m_RotationGizmoWrapCount % 2 == 0 ? angleRaw : -angleRaw);
 
 		if (m_bFirstFrameDraggingRotationGizmo)
 		{
 			m_bFirstFrameDraggingRotationGizmo = false;
 			m_LastAngle = angle;
-			m_RotationGizmoWrapCount = 0;
 		}
 
 		real dAngle = m_LastAngle - angle;
 		glm::quat result(VEC3_ZERO);
-		if (!IsNanOrInf(dAngle) && dAngle != 0.0f)
+		if (dAngle != 0.0f && !IsNanOrInf(dAngle))
 		{
 			glm::quat newRot = glm::rotate(QUAT_IDENTITY, dAngle, m_AxisOfRotation);
 			result = newRot;
@@ -746,8 +749,7 @@ namespace flex
 			{
 				if (m_bFirstFrameDraggingRotationGizmo)
 				{
-					m_UnmodifiedAxisProjectedOnto = gizmoUp;
-					m_AxisProjectedOnto = m_UnmodifiedAxisProjectedOnto;
+					m_AxisProjectedOnto = gizmoUp;
 					m_AxisOfRotation = gizmoRight;
 					m_PlaneN = m_AxisOfRotation;
 					if (glm::abs(glm::dot(m_AxisProjectedOnto, camForward)) > 0.5f)
@@ -765,8 +767,7 @@ namespace flex
 			{
 				if (m_bFirstFrameDraggingRotationGizmo)
 				{
-					m_UnmodifiedAxisProjectedOnto = gizmoRight;
-					m_AxisProjectedOnto = m_UnmodifiedAxisProjectedOnto;
+					m_AxisProjectedOnto = gizmoRight;
 					m_AxisOfRotation = gizmoUp;
 					m_PlaneN = m_AxisOfRotation;
 					if (glm::abs(glm::dot(m_AxisProjectedOnto, camForward)) > 0.5f)
@@ -784,8 +785,7 @@ namespace flex
 			{
 				if (m_bFirstFrameDraggingRotationGizmo)
 				{
-					m_UnmodifiedAxisProjectedOnto = gizmoUp;
-					m_AxisProjectedOnto = m_UnmodifiedAxisProjectedOnto;
+					m_AxisProjectedOnto = gizmoUp;
 					m_AxisOfRotation = gizmoForward;
 					m_PlaneN = m_AxisOfRotation;
 					if (glm::abs(glm::dot(m_AxisProjectedOnto, camForward)) > 0.5f)
