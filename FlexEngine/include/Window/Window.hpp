@@ -157,7 +157,7 @@ namespace flex
 		// Used to store previous window size and position to restore after exiting fullscreen
 		glm::vec2i m_LastWindowedSize;
 		glm::vec2i m_LastWindowedPos;
-		WindowMode m_LastNonFullscreenWindowMode; // Stores which mode we were in before entering fullscreen
+		WindowMode m_LastNonFullscreenWindowMode = WindowMode::_NONE; // Stores which mode we were in before entering fullscreen
 
 		bool m_bShowFPSInWindowTitle = true;
 		bool m_bShowMSInWindowTitle = true;

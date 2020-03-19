@@ -103,6 +103,8 @@ namespace flex
 
 		Platform::RetrieveCurrentWorkingDirectory();
 
+		memset(m_CmdLineStrBuf, 0, MAX_CHARS_CMD_LINE_STR);
+
 		{
 			std::string configDirAbs = RelativePathToAbsolute(ROOT_LOCATION "config/");
 			m_CommonSettingsFileName = "common.json";

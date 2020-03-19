@@ -200,7 +200,7 @@ namespace flex
 		return false;
 	}
 
-	bool ReadFile(const std::string& filePath, std::string& fileContents, bool bBinaryFile)
+	bool ReadFile(const std::string& filePath, std::string& outFileContents, bool bBinaryFile)
 	{
 		std::ios::openmode fileMode = std::ios::in;
 		if (bBinaryFile)
@@ -222,18 +222,18 @@ namespace flex
 
 		if ((size_t)fileLen > 0)
 		{
-			fileContents.resize((size_t)fileLen);
+			outFileContents.resize((size_t)fileLen);
 
 			file.seekg(0, std::ios::beg);
-			file.read(&fileContents[0], fileLen);
+			file.read(&outFileContents[0], fileLen);
 			file.close();
 
 			// Remove extra null terminators caused by Windows line endings
-			for (i32 charIndex = 0; charIndex < (i32)fileContents.size() - 1; ++charIndex)
+			for (i32 charIndex = 0; charIndex < (i32)outFileContents.size() - 1; ++charIndex)
 			{
-				if (fileContents[charIndex] == '\0')
+				if (outFileContents[charIndex] == '\0')
 				{
-					fileContents = fileContents.substr(0, charIndex);
+					outFileContents = outFileContents.substr(0, charIndex);
 				}
 			}
 		}
@@ -622,12 +622,12 @@ namespace flex
 		*outF2 = (u1 & 0xFFFF) / 65535.0f;
 	}
 
-	u32 Parse32u(char* ptr)
+	u32 Parse32u(const char* ptr)
 	{
 		return ((u8)ptr[0]) + ((u8)ptr[1] << 8) + ((u8)ptr[2] << 16) + ((u8)ptr[3] << 24);
 	}
 
-	u16 Parse16u(char* ptr)
+	u16 Parse16u(const char* ptr)
 	{
 		return ((u8)ptr[0]) + ((u8)ptr[1] << 8);
 	}
@@ -1218,16 +1218,18 @@ namespace flex
 		return absolutePath;
 	}
 
-	std::string Replace(std::string str, const std::string& pattern, const std::string& replacement)
+	std::string Replace(const std::string& str, const std::string& pattern, const std::string& replacement)
 	{
-		auto iter = str.begin();
+		std::string result(str);
 
-		while (iter != str.end())
+		auto iter = result.begin();
+
+		while (iter != result.end())
 		{
-			size_t findIndex = str.find(pattern.c_str(), iter - str.begin());
+			size_t findIndex = result.find(pattern.c_str(), iter - result.begin());
 			if (findIndex != std::string::npos)
 			{
-				str = str.replace(str.begin() + findIndex, str.begin() + findIndex + pattern.length(), replacement.begin(), replacement.end());
+				result = result.replace(result.begin() + findIndex, result.begin() + findIndex + pattern.length(), replacement.begin(), replacement.end());
 				iter += pattern.length();
 			}
 			else
@@ -1236,7 +1238,7 @@ namespace flex
 			}
 		}
 
-		return str;
+		return result;
 	}
 
 	i32 RandomInt(i32 min, i32 max)

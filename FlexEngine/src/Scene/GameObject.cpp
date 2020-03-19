@@ -1992,7 +1992,7 @@ namespace flex
 			{
 				Mesh* valveMesh = new Mesh(this);
 				valveMesh->LoadFromFile(RESOURCE_LOCATION "meshes/valve.glb", matIDs[0]);
-				assert(GetMesh() == nullptr);
+				assert(m_Mesh == nullptr);
 				SetMesh(valveMesh);
 			}
 

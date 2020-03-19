@@ -13,7 +13,7 @@ namespace flex
 
 	bool FileExists(const std::string& filePath);
 
-	bool ReadFile(const std::string& filePath, std::string& fileContents, bool bBinaryFile);
+	bool ReadFile(const std::string& filePath, std::string& outFileContents, bool bBinaryFile);
 	bool ReadFile(const std::string& filePath, std::vector<char>& vec, bool bBinaryFile);
 
 	bool WriteFile(const std::string& filePath, const std::string& fileContents, bool bBinaryFile);
@@ -69,9 +69,9 @@ namespace flex
 	void UnpackU32To2Float(u32 u1, real* outF1, real* outF2);
 
 	/* Interpret 4 bytes starting at ptr as an unsigned 32-bit int */
-	u32 Parse32u(char* ptr);
+	u32 Parse32u(const char* ptr);
 	/* Interpret 2 bytes starting at ptr as an unsigned 16-bit int */
-	u16 Parse16u(char* ptr);
+	u16 Parse16u(const char* ptr);
 
 	bool ParseBool(const std::string& intStr);
 
@@ -165,7 +165,7 @@ namespace flex
 	std::string ReplaceBackSlashesWithForward(std::string str);
 	std::string RelativePathToAbsolute(const std::string& relativePath);
 
-	std::string Replace(std::string str, const std::string& pattern, const std::string& replacement);
+	std::string Replace(const std::string& str, const std::string& pattern, const std::string& replacement);
 
 	// Returns random value in range [min, max)
 	i32 RandomInt(i32 min, i32 max);

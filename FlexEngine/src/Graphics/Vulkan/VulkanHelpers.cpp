@@ -380,8 +380,8 @@ namespace flex
 		void VulkanTexture::CopyFromBuffer(VkBuffer buffer, u32 inWidth, u32 inHeight, VkCommandBuffer optCommandBuffer /* = 0 */)
 		{
 			CopyBufferToImage(m_VulkanDevice, m_GraphicsQueue, buffer, image, inWidth, inHeight, optCommandBuffer);
-			width = width;
-			height = height;
+			width = inWidth;
+			height = inHeight;
 		}
 
 		VkDeviceSize VulkanTexture::CreateEmpty(VkFormat inFormat, u32 inMipLevels, VkImageUsageFlags inUsage)
@@ -2187,7 +2187,6 @@ namespace flex
 			createInfo.DBG_Name = optDBGName;
 			VulkanTexture::CreateImage(device, createInfo);
 
-			format = format;
 			layout = VK_IMAGE_LAYOUT_UNDEFINED;
 		}
 

@@ -1379,7 +1379,7 @@ namespace flex
 		return nullptr;
 	}
 
-	bool Expression::ExpectOperator(Tokenizer &tokenizer, Token token, OperatorType* outOp)
+	bool Expression::ExpectOperator(Tokenizer& tokenizer, Token token, OperatorType* outOp)
 	{
 		*outOp = Operator::Parse(tokenizer);
 		if (*outOp == OperatorType::_NONE)

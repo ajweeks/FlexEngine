@@ -6,7 +6,7 @@ namespace flex
 	class Pair
 	{
 	public:
-		Pair<T1, T2>(T1 t1, T2 t2) :
+		Pair<T1, T2>(const T1& t1, const T2& t2) :
 			first(t1), second(t2)
 		{
 		}

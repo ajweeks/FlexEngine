@@ -169,6 +169,11 @@ namespace flex
 		TokenContext();
 		~TokenContext();
 
+		TokenContext(const TokenContext&) = delete;
+		TokenContext(TokenContext&&) = delete;
+		TokenContext& operator=(const TokenContext&) = delete;
+		TokenContext& operator=(TokenContext&&) = delete;
+
 		void Reset();
 
 		bool HasNextChar() const;
@@ -217,6 +222,11 @@ namespace flex
 		Tokenizer();
 		explicit Tokenizer(const std::string& codeStr);
 		~Tokenizer();
+
+		Tokenizer(Tokenizer&) = delete;
+		Tokenizer(Tokenizer&&) = delete;
+		Tokenizer& operator=(Tokenizer&) = delete;
+		Tokenizer& operator=(Tokenizer&&) = delete;
 
 		void SetCodeStr(const std::string& newCodeStr);
 
@@ -362,7 +372,7 @@ namespace flex
 		//bool Compare(TokenContext& context, Expression* other, OperatorType op);
 
 		static Expression* Parse(Tokenizer& tokenizer);
-		static bool ExpectOperator(Tokenizer &tokenizer, Token token, OperatorType* outOp);
+		static bool ExpectOperator(Tokenizer& tokenizer, Token token, OperatorType* outOp);
 	};
 
 	struct Assignment : public Node

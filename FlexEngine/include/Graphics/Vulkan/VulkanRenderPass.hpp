@@ -20,6 +20,11 @@ namespace flex
 			VulkanRenderPass(VulkanDevice* device);
 			~VulkanRenderPass();
 
+			VulkanRenderPass(const VulkanRenderPass&) = delete;
+			VulkanRenderPass(VulkanRenderPass&&) = delete;
+			VulkanRenderPass& operator=(const VulkanRenderPass&) = delete;
+			VulkanRenderPass& operator=(VulkanRenderPass&&) = delete;
+
 			void Create();
 
 			void Register(

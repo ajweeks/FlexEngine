@@ -7,12 +7,14 @@ namespace flex
 	template <class T>
 	struct RollingAverage
 	{
-		RollingAverage()
+		RollingAverage() :
+			currentAverage(T())
 		{
 		}
 
 		RollingAverage(i32 valueCount, SamplingType samplingType = SamplingType::CONSTANT) :
-			samplingType(samplingType)
+			samplingType(samplingType),
+			currentAverage(T())
 		{
 			prevValues.resize(valueCount);
 		}

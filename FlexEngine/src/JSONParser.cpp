@@ -345,7 +345,7 @@ namespace flex
 		}
 		else
 		{
-			s_ErrorStr = "Unhandled opening bracket type: " + openingBracket;
+			s_ErrorStr = "Unhandled opening bracket type: " + std::string(openingBracket, 1);
 			return -1;
 		}
 

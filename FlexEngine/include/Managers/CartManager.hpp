@@ -25,7 +25,7 @@ namespace flex
 		std::vector<CartID> carts;
 		CartChainID chainID = InvalidCartChainID;
 
-		real velT;
+		real velT = 0.0f;
 
 	private:
 		void Sort();

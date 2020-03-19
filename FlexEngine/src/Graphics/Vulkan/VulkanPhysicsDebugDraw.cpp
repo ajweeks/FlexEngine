@@ -19,7 +19,8 @@ namespace flex
 {
 	namespace vk
 	{
-		VulkanPhysicsDebugDraw::VulkanPhysicsDebugDraw()
+		VulkanPhysicsDebugDraw::VulkanPhysicsDebugDraw() :
+			m_VertexBufferCreateInfo({})
 		{
 		}
 
