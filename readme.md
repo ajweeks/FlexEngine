@@ -64,6 +64,8 @@ If you want to build Flex Engine on your own system, follow these steps. You an 
 #### Steps
 1. Recursively clone the repository to get all submodules
 2. Ensure [GENie](https://github.com/bkaradzic/GENie) is either on your PATH, or `genie.exe` is in the `scripts/` directory
+3. Create libs dir:
+  `mkdir FlexEngine/lib/x64/Debug`
 4. Build GLFW:
     `cd FlexEngine\dependencies\glfw`
     `mkdir build && cd build`
@@ -74,10 +76,12 @@ If you want to build Flex Engine on your own system, follow these steps. You an 
 5. Build OpenAL:
     `cd FlexEngine\dependencies\openAL`
     `mkdir build && cd build`
-    `cmake -DALSOFT_EXAMPLES=OFF -DALSOFT_TESTS=OFF -G"Visual Studio 16 2019 ..`
+    `cmake -DALSOFT_EXAMPLES=OFF -DALSOFT_TESTS=OFF -G"Visual Studio 16 2019" ..`
     `start OpenAL.sln`
     Build ALL_BUILD (`F7`)
     `copy Debug\common.lib ..\..\..\lib\x64\Debug\`
+    `copy Debug\OpenAL32.lib ..\..\..\lib\x64\Debug\`
+    `copy Debug\OpenAL32.pdb ..\..\..\lib\x64\Debug\`
 6. Build Bullet:
     `mkdir build && cd build`
     `cmake -DUSE_MSVC_RUNTIME_LIBRARY_DLL=ON -DBUILD_UNIT_TESTS=OFF -DBUILD_CPU_DEMOS=OFF -DBUILD_BULLET2_DEMOS=OFF -DBUILD_EXTRAS=OFF -G"Visual Studio 16 2019" ..`
@@ -95,6 +99,7 @@ If you want to build Flex Engine on your own system, follow these steps. You an 
     `copy "objs\x64\Debug Static\freetype.pdb" ..\..\lib\x64\Debug\`
 3. (from root dir) `genie --file=scripts/genie.lua vs2019`
 4. Open `build/FlexEngine.sln`
+5. Target `Debug` & `x64`
 5. Build and run!
 
 # (WIP! These steps will be reconciled into a single job at some point soon(tm))
