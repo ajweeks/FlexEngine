@@ -80,6 +80,7 @@ If you want to build Flex Engine on your own system, follow these steps. You an 
     `start OpenAL.sln`
     Build ALL_BUILD (`F7`)
     `copy Debug\common.lib ..\..\..\lib\x64\Debug\`
+    `copy Debug\OpenAL32.dll ..\..\..\lib\x64\Debug\`
     `copy Debug\OpenAL32.lib ..\..\..\lib\x64\Debug\`
     `copy Debug\OpenAL32.pdb ..\..\..\lib\x64\Debug\`
 6. Build Bullet:
