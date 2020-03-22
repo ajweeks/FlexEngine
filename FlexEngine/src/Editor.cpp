@@ -232,7 +232,7 @@ namespace flex
 		m_bDraggingGizmo = false;
 	}
 
-	glm::quat Editor::CalculateDeltaRotationFromGizmoDrag(
+	real Editor::CalculateDeltaRotationFromGizmoDrag(
 		const glm::vec3& axis,
 		const glm::vec3& rayOrigin,
 		const glm::vec3& rayEnd,
@@ -278,7 +278,7 @@ namespace flex
 		glm::vec3 vecPerp = glm::cross(m_AxisOfRotation, startVec);
 
 		// NOTE: This dot product somehow results in values > 1 occasionally, causing acos to return NaN below; clamp it
-		real projectedDiff = Saturate(glm::dot(startVec, intersectVec));
+		real projectedDiff = glm::clamp(glm::dot(startVec, intersectVec), -1.0f, 1.0f);
 		bool intersectVecOnSameHalfAsPerp = (glm::dot(intersectVec, vecPerp) > 0.0f);
 		bool intersectVecOnSameHalfAsStartVec = (projectedDiff > 0.0f);
 
@@ -324,16 +324,10 @@ namespace flex
 		}
 
 		real dAngle = m_LastAngle - angle;
-		glm::quat result(VEC3_ZERO);
-		if (dAngle != 0.0f && !IsNanOrInf(dAngle))
-		{
-			glm::quat newRot = glm::rotate(QUAT_IDENTITY, dAngle, m_AxisOfRotation);
-			result = newRot;
-		}
 
 		m_LastAngle = angle;
 
-		return result;
+		return dAngle;
 	}
 
 	void Editor::UpdateGizmoVisibility()
@@ -740,7 +734,7 @@ namespace flex
 		} break;
 		case TransformState::ROTATE:
 		{
-			glm::quat dRotWS(VEC3_ZERO);
+			glm::quat dRotOS(VEC3_ZERO);
 
 			glm::quat lRot = transform->GetLocalRotation();
 			glm::vec3 lEuler = glm::eulerAngles(transform->GetLocalRotation());
@@ -762,7 +756,11 @@ namespace flex
 				}
 
 				glm::vec3 p;
-				dRotWS = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, rayStartG, rayEndG, &p);
+				real dAngle = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, rayStartG, rayEndG, &p);
+				if (dAngle != 0.0f)
+				{
+					dRotOS = glm::angleAxis(dAngle, m_AxisOfRotation);
+				}
 
 				m_TestShape->GetTransform()->SetWorldPosition(p);
 			}
@@ -780,7 +778,11 @@ namespace flex
 				}
 
 				glm::vec3 p;
-				dRotWS = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, rayStartG, rayEndG, &p);
+				real dAngle = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, rayStartG, rayEndG, &p);
+				if (dAngle != 0.0f)
+				{
+					dRotOS = glm::angleAxis(dAngle, m_AxisOfRotation);
+				}
 
 				m_TestShape->GetTransform()->SetWorldPosition(p);
 			}
@@ -798,12 +800,15 @@ namespace flex
 				}
 
 				glm::vec3 p;
-				dRotWS = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, rayStartG, rayEndG, &p);
-
+				real dAngle = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, rayStartG, rayEndG, &p);
+				if (dAngle != 0.0f)
+				{
+					dRotOS = glm::angleAxis(dAngle, m_AxisOfRotation);
+				}
 				m_TestShape->GetTransform()->SetWorldPosition(p);
 			}
 
-			if (dRotWS != QUAT_IDENTITY)
+			if (dRotOS != QUAT_IDENTITY)
 			{
 				for (GameObject* gameObject : m_CurrentlySelectedObjects)
 				{
@@ -811,7 +816,7 @@ namespace flex
 					bool bObjectIsntChild = (parent == nullptr) || (Find(m_CurrentlySelectedObjects, parent) == m_CurrentlySelectedObjects.end());
 					if (bObjectIsntChild)
 					{
-						gameObject->GetTransform()->SetWorldRotation(dRotWS * gameObject->GetTransform()->GetWorldRotation());
+						gameObject->GetTransform()->SetLocalRotation(dRotOS * gameObject->GetTransform()->GetLocalRotation());
 					}
 				}
 			}
@@ -1446,8 +1451,9 @@ namespace flex
 		}
 		else
 		{
-			real threshold = 0.965f;
-			real power = 0.5f;
+			// TODO: Use different scheme for rotating when facing head-on (screen-space rather than world-space)
+			real threshold = m_CurrentTransformGizmoState == TransformState::ROTATE ? 0.965f : 0.9f;
+			real power = m_CurrentTransformGizmoState == TransformState::ROTATE ? 0.5f : 0.2f;
 			if (camViewXAlignment >= threshold)
 			{
 				xMat.colorMultiplier.a = Lerp(1.0f, 0.0f, glm::pow((camViewXAlignment - threshold) / (1.0f - threshold), power));
