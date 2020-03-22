@@ -2198,6 +2198,11 @@ namespace flex
 				PrintError("Selected GPU does not support geometry shaders!\n");
 			}
 
+			if (supportedFeatures.wideLines)
+			{
+				enabledFeatures.wideLines = VK_TRUE;
+			}
+
 			return enabledFeatures;
 		}
 
@@ -6541,8 +6546,6 @@ namespace flex
 			}
 
 			VkPipelineRasterizationStateCreateInfo rasterizer = vks::pipelineRasterizationStateCreateInfo(VK_POLYGON_MODE_FILL, createInfo->cullMode, VK_FRONT_FACE_CLOCKWISE);
-			// TODO: Query for wide-line support
-			//rasterizer.lineWidth = 3.0f;
 
 			VkPipelineMultisampleStateCreateInfo multisampling = vks::pipelineMultisampleStateCreateInfo(VK_SAMPLE_COUNT_1_BIT);
 
@@ -7728,6 +7731,8 @@ namespace flex
 
 				BeginGPUTimeStamp(m_OffScreenCmdBuffer, "Deferred");
 
+				SetLineWidthForCmdBuffer(m_OffScreenCmdBuffer);
+
 				//
 				// Cascaded shadow mapping
 				//
@@ -7918,6 +7923,8 @@ namespace flex
 			cmdBufferbeginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 
 			VK_CHECK_RESULT(vkBeginCommandBuffer(commandBuffer, &cmdBufferbeginInfo));
+
+			SetLineWidthForCmdBuffer(commandBuffer);
 
 			// Particle simulation
 			BeginGPUTimeStamp(commandBuffer, "Simulate Particles");
@@ -9043,6 +9050,16 @@ namespace flex
 			CreatePostProcessingResources();
 			CreateFullscreenBlitResources();
 			CreateComputeResources();
+		}
+
+		void VulkanRenderer::SetLineWidthForCmdBuffer(VkCommandBuffer cmdBuffer, real requestedWidth /* = 3.0f */)
+		{
+			if (m_VulkanDevice->m_PhysicalDeviceFeatures.wideLines)
+			{
+				VkPhysicalDeviceLimits limits = m_VulkanDevice->m_PhysicalDeviceProperties.limits;
+				real lineWidth = glm::clamp(requestedWidth - fmod(requestedWidth, limits.lineWidthGranularity), limits.lineWidthRange[0], limits.lineWidthRange[1]);
+				vkCmdSetLineWidth(cmdBuffer, lineWidth);
+			}
 		}
 
 		bool VulkanRenderer::DoTextureSelector(const char* label,

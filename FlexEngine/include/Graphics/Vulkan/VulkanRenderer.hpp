@@ -306,6 +306,8 @@ namespace flex
 
 			void OnShaderReloadSuccess();
 
+			void SetLineWidthForCmdBuffer(VkCommandBuffer cmdBuffer, real requestedWidth = 3.0f);
+
 			// Returns true if object was duplicated
 			bool DoTextureSelector(const char* label, const std::vector<VulkanTexture*>& textures, i32* selectedIndex);
 			void ImGuiUpdateTextureIndexOrMaterial(bool bUpdateTextureMaterial,
