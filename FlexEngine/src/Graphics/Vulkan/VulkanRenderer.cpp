@@ -4778,7 +4778,7 @@ namespace flex
 						drawInfo.pos = m_PointLights[i].pos;
 						glm::mat4 rotMat = glm::lookAt(m_PointLights[i].pos, camPos, camUp);
 						drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
-						real alpha = glm::clamp(glm::distance(drawInfo.pos, camPos) / maxSpriteDist - minSpriteDist, 0.0f, 1.0f);
+						real alpha = Saturate(glm::distance(drawInfo.pos, camPos) / maxSpriteDist - minSpriteDist);
 						drawInfo.color = glm::vec4(m_PointLights[i].color * 1.5f, alpha);
 						EnqueueSprite(drawInfo);
 					}
@@ -4790,7 +4790,7 @@ namespace flex
 					drawInfo.pos = m_DirectionalLight->pos;
 					glm::mat4 rotMat = glm::lookAt(camPos, m_DirectionalLight->pos, camUp);
 					drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
-					real alpha = glm::clamp(glm::distance(drawInfo.pos, camPos) / maxSpriteDist - minSpriteDist, 0.0f, 1.0f);
+					real alpha = Saturate(glm::distance(drawInfo.pos, camPos) / maxSpriteDist - minSpriteDist);
 					drawInfo.color = glm::vec4(m_DirectionalLight->data.color * 1.5f, alpha);
 					EnqueueSprite(drawInfo);
 

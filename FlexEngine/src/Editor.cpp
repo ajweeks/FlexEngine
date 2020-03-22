@@ -277,7 +277,8 @@ namespace flex
 
 		glm::vec3 vecPerp = glm::cross(m_AxisOfRotation, startVec);
 
-		real projectedDiff = glm::dot(startVec, intersectVec);
+		// NOTE: This dot product somehow results in values > 1 occasionally, causing acos to return NaN below; clamp it
+		real projectedDiff = Saturate(glm::dot(startVec, intersectVec));
 		bool intersectVecOnSameHalfAsPerp = (glm::dot(intersectVec, vecPerp) > 0.0f);
 		bool intersectVecOnSameHalfAsStartVec = (projectedDiff > 0.0f);
 

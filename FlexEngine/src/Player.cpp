@@ -377,7 +377,7 @@ namespace flex
 			DetachFromTrack();
 		}
 
-		distAlongTrack = glm::clamp(distAlongTrack, 0.0f, 1.0f);
+		distAlongTrack = Saturate(distAlongTrack);
 
 		m_TrackRidingID = trackID;
 		m_DistAlongTrack = distAlongTrack;

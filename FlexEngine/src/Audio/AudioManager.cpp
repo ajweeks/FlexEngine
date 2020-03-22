@@ -293,7 +293,7 @@ namespace flex
 	{
 		assert(sourceID < s_Sources.size());
 
-		gain = glm::clamp(gain, 0.0f, 1.0f);
+		gain = Saturate(gain);
 
 		if (s_Sources[sourceID].gain != gain)
 		{

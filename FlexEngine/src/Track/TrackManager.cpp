@@ -257,7 +257,7 @@ namespace flex
 									PrintWarn("Unexpected track state when desired dir != 1\n");
 								}
 							}
-							newDistAlongTrack = glm::clamp(newDistAlongTrack, 0.0f, 1.0f);
+							newDistAlongTrack = Saturate(newDistAlongTrack);
 						}
 					}
 				}
@@ -265,7 +265,7 @@ namespace flex
 
 			if (newTrackID == InvalidTrackID && newDistAlongTrack == -1.0f)
 			{
-				newDistAlongTrack = glm::clamp(distAlongTrack, 0.0f, 1.0f);
+				newDistAlongTrack = Saturate(distAlongTrack);
 			}
 		}
 		else
@@ -309,7 +309,7 @@ namespace flex
 		{
 			queryDist -= range;
 		}
-		queryDist = glm::clamp(queryDist, 0.0f, 1.0f);
+		queryDist = Saturate(queryDist);
 		TrackID newTrackID = InvalidTrackID;
 		real newDist = -1.0f;
 		i32 junctionIndex = -1;

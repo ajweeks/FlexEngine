@@ -2,12 +2,12 @@
 
 #include "Track/BezierCurveList.hpp"
 
-#include "Graphics/Renderer.hpp"
-
 IGNORE_WARNINGS_PUSH
 #include "LinearMath/btIDebugDraw.h"
 IGNORE_WARNINGS_POP
 
+#include "Graphics/Renderer.hpp"
+#include "Helpers.hpp"
 #include "Track/BezierCurve.hpp"
 
 namespace flex
@@ -150,7 +150,7 @@ namespace flex
 		*outCurveIndex = glm::clamp((i32)scaledT, 0, curveCount - 1);
 
 		*outLocalT = scaledT - *outCurveIndex;
-		*outLocalT = glm::clamp(*outLocalT, 0.0f, 1.0f);
+		*outLocalT = Saturate(*outLocalT);
 	}
 
 	real BezierCurveList::GetGlobalTFromCurveIndexAndLocalT(i32 curveIndex, real localT) const
@@ -158,7 +158,7 @@ namespace flex
 		i32 curveCount = (i32)curves.size();
 		real globalT = (real)(localT + curveIndex) / (real)curveCount;
 
-		globalT = glm::clamp(globalT, 0.0f, 1.0f);
+		globalT = Saturate(globalT);
 		return globalT;
 	}
 

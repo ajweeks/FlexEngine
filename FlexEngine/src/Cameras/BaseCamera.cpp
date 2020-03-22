@@ -152,7 +152,7 @@ namespace flex
 
 	void BaseCamera::LookAt(glm::vec3 point, real speed)
 	{
-		speed = glm::clamp(speed, 0.0f, 1.0f);
+		speed = Saturate(speed);
 
 		glm::vec3 targetForward = glm::normalize(point - m_Position);
 		m_Forward = glm::normalize(Lerp(m_Forward, targetForward, speed));

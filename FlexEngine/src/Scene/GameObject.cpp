@@ -2104,7 +2104,7 @@ namespace flex
 			currentAbsAvgRotationSpeed > 0.01f)
 		{
 			real gain = glm::abs(overshoot) * 8.0f;
-			gain = glm::clamp(gain, 0.0f, 1.0f);
+			gain = Saturate(gain);
 			AudioManager::SetSourceGain(s_BunkSound, gain);
 			AudioManager::PlaySource(s_BunkSound, true);
 			//Print(std::to_string(overshoot) + ", " + std::to_string(gain));
@@ -2264,7 +2264,7 @@ namespace flex
 		{
 			// Apply gravity by rotating valve
 			real fallSpeed = 6.0f;
-			real distMult = 1.0f - glm::clamp(playerControlledValveRotationSpeed / 2.0f, 0.0f, 1.0f);
+			real distMult = 1.0f - Saturate(playerControlledValveRotationSpeed / 2.0f);
 			real dDist = (fallSpeed * g_DeltaTime * distMult);
 			dist -= Lerp(pdDistBlockMoved, dDist, 0.1f);
 			pdDistBlockMoved = dDist;
@@ -3512,7 +3512,7 @@ namespace flex
 				diff = glm::normalize(diff) * rippleLen;
 				real c = cos(g_SecElapsedSinceProgramStart * 1.8f - d);
 				real s = sin(g_SecElapsedSinceProgramStart * 1.5f - d);
-				real a = Lerp(0.0f, rippleAmp, 1.0f - glm::clamp(d / rippleFadeOut, 0.0f, 1.0f));
+				real a = Lerp(0.0f, rippleAmp, 1.0f - Saturate(d / rippleFadeOut));
 				positions[vertIdx] += glm::vec3(
 					-diff.x * a * s,
 					a * c,

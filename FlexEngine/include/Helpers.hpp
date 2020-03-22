@@ -181,6 +181,16 @@ namespace flex
 	real MaxComponent(const glm::vec3& vec);
 	real MaxComponent(const glm::vec4& vec);
 
+	inline real Saturate(real val)
+	{
+		return glm::clamp(val, 0.0f, 1.0f);
+	}
+
+	template<typename T>
+	T Saturate(T val)
+	{
+		return glm::saturate(val);
+	}
 	u32 GenerateUID();
 
 	template<class T>
