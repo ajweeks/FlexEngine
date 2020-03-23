@@ -734,7 +734,7 @@ namespace flex
 		} break;
 		case TransformState::ROTATE:
 		{
-			glm::quat dRotOS(VEC3_ZERO);
+			glm::quat dRotWS(VEC3_ZERO);
 
 			glm::quat lRot = transform->GetLocalRotation();
 			glm::vec3 lEuler = glm::eulerAngles(transform->GetLocalRotation());
@@ -759,7 +759,7 @@ namespace flex
 				real dAngle = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, rayStartG, rayEndG, &p);
 				if (dAngle != 0.0f)
 				{
-					dRotOS = glm::angleAxis(dAngle, m_AxisOfRotation);
+					dRotWS = glm::angleAxis(dAngle, m_AxisOfRotation);
 				}
 
 				m_TestShape->GetTransform()->SetWorldPosition(p);
@@ -781,7 +781,7 @@ namespace flex
 				real dAngle = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, rayStartG, rayEndG, &p);
 				if (dAngle != 0.0f)
 				{
-					dRotOS = glm::angleAxis(dAngle, m_AxisOfRotation);
+					dRotWS = glm::angleAxis(dAngle, m_AxisOfRotation);
 				}
 
 				m_TestShape->GetTransform()->SetWorldPosition(p);
@@ -803,12 +803,12 @@ namespace flex
 				real dAngle = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, rayStartG, rayEndG, &p);
 				if (dAngle != 0.0f)
 				{
-					dRotOS = glm::angleAxis(dAngle, m_AxisOfRotation);
+					dRotWS = glm::angleAxis(dAngle, m_AxisOfRotation);
 				}
 				m_TestShape->GetTransform()->SetWorldPosition(p);
 			}
 
-			if (dRotOS != QUAT_IDENTITY)
+			if (dRotWS != QUAT_IDENTITY)
 			{
 				for (GameObject* gameObject : m_CurrentlySelectedObjects)
 				{
@@ -816,7 +816,8 @@ namespace flex
 					bool bObjectIsntChild = (parent == nullptr) || (Find(m_CurrentlySelectedObjects, parent) == m_CurrentlySelectedObjects.end());
 					if (bObjectIsntChild)
 					{
-						gameObject->GetTransform()->SetLocalRotation(dRotOS * gameObject->GetTransform()->GetLocalRotation());
+						Transform* t = gameObject->GetTransform();
+						t->SetWorldRotation(dRotWS * t->GetWorldRotation());
 					}
 				}
 			}

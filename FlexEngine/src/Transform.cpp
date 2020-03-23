@@ -573,7 +573,7 @@ namespace flex
 		GameObject* parent = m_GameObject->GetParent();
 		if (parent)
 		{
-			localRotation = quatRotation - parent->GetTransform()->GetWorldRotation();
+			localRotation = glm::inverse(glm::normalize(parent->GetTransform()->GetWorldRotation())) * glm::normalize(quatRotation);
 		}
 		else
 		{
