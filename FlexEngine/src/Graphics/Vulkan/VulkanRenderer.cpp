@@ -1890,7 +1890,7 @@ namespace flex
 			FLEX_UNUSED(renderID);
 		}
 
-		void VulkanRenderer::ReloadShaders(bool bForce)
+		void VulkanRenderer::RecompileAllShaders(bool bForce)
 		{
 #ifdef DEBUG
 			if (m_ShaderCompiler == nullptr)
@@ -1908,6 +1908,8 @@ namespace flex
 			{
 				AddEditorString("Kicking off async shader recompile");
 			}
+#else
+			FLEX_UNUSED(bForce);
 #endif
 		}
 

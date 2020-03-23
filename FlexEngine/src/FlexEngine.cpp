@@ -325,8 +325,8 @@ namespace flex
 			MeshComponent::DestroyAllLoadedMeshes();
 			g_SceneManager->ReloadCurrentScene();
 		});
-		m_ConsoleCommands.emplace_back("reload.shaders", []() { g_Renderer->ReloadShaders(false); });
-		m_ConsoleCommands.emplace_back("reload.shaders.force", []() { g_Renderer->ReloadShaders(true); });
+		m_ConsoleCommands.emplace_back("reload.shaders", []() { g_Renderer->RecompileAllShaders(false); });
+		m_ConsoleCommands.emplace_back("reload.shaders.force", []() { g_Renderer->RecompileAllShaders(true); });
 		m_ConsoleCommands.emplace_back("reload.fontsdfs", []() { g_Renderer->LoadFonts(true); });
 		m_ConsoleCommands.emplace_back("reload.skybox", []() { g_Renderer->ReloadSkybox(true); });
 		m_ConsoleCommands.emplace_back("select.all", []() { g_Editor->SelectAll(); });
@@ -806,12 +806,12 @@ namespace flex
 
 					if (ImGui::MenuItem("Shaders", "Ctrl+R"))
 					{
-						g_Renderer->ReloadShaders(false);
+						g_Renderer->RecompileAllShaders(false);
 					}
 
 					if (ImGui::MenuItem("Shaders (force)"))
 					{
-						g_Renderer->ReloadShaders(true);
+						g_Renderer->RecompileAllShaders(true);
 					}
 
 					if (ImGui::MenuItem("Font textures (render SDFs)"))
@@ -1476,7 +1476,7 @@ namespace flex
 			{
 				if (bControlDown)
 				{
-					g_Renderer->ReloadShaders(false);
+					g_Renderer->RecompileAllShaders(false);
 					return EventReply::CONSUMED;
 				}
 				else

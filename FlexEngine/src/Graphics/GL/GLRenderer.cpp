@@ -3853,7 +3853,7 @@ namespace flex
 			return false;
 		}
 
-		void GLRenderer::ReloadShaders()
+		void GLRenderer::RecompileAllShaders()
 		{
 			UnloadShaders();
 			LoadShaders();
