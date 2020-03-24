@@ -890,6 +890,7 @@ namespace flex
 			iter = m_Scenes.erase(iter);
 		}
 		m_Scenes.clear();
+		m_CurrentSceneIndex = InvalidID;
 	}
 
 	std::string SceneManager::MakeSceneNameUnique(const std::string& originalName)

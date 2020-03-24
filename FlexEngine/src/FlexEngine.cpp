@@ -357,27 +357,32 @@ namespace flex
 		g_Window->SaveToConfig();
 
 		g_Editor->Destroy();
-
 		g_SceneManager->DestroyAllScenes();
-		delete g_SceneManager;
-
-		g_PhysicsManager->Destroy();
-		delete g_PhysicsManager;
-
 		g_CameraManager->Destroy();
-		delete g_CameraManager;
-
+		g_PhysicsManager->Destroy();
 		DestroyWindowAndRenderer();
-
-		delete g_Monitor;
-
 		MeshComponent::DestroyAllLoadedMeshes();
 
 		AudioManager::Destroy();
 
-		delete g_InputManager;
+		delete g_SceneManager;
+		g_SceneManager = nullptr;
+
+		delete g_PhysicsManager;
+		g_PhysicsManager = nullptr;
+
+		delete g_CameraManager;
+		g_CameraManager = nullptr;
 
 		delete g_Editor;
+		g_Editor = nullptr;
+
+		delete g_Monitor;
+		g_Monitor = nullptr;
+
+		delete g_InputManager;
+		g_InputManager = nullptr;
+
 
 		// Reset console color to default
 		Print("\n");

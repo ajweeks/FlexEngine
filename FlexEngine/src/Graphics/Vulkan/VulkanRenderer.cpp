@@ -698,6 +698,10 @@ namespace flex
 				{
 					if (renderObject)
 					{
+						if (renderObject->gameObject)
+						{
+							Print("%s\n", renderObject->gameObject->GetName().c_str());
+						}
 						DestroyRenderObject(renderObject->renderID);
 					}
 				}
@@ -874,9 +878,15 @@ namespace flex
 			DestroyFreeType();
 
 			vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
-			vkDestroyDebugReportCallbackEXT(m_Instance, m_Callback, nullptr);
+
+			if (m_Callback)
+			{
+				vkDestroyDebugReportCallbackEXT(m_Instance, m_Callback, nullptr);
+				m_Callback = VK_NULL_HANDLE;
+			}
 
 			vkDestroyQueryPool(m_VulkanDevice->m_LogicalDevice, m_TimestampQueryPool, nullptr);
+			m_TimestampQueryPool = VK_NULL_HANDLE;
 
 			m_CommandBufferManager.DestroyCommandBuffers();
 

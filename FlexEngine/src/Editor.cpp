@@ -82,6 +82,12 @@ namespace flex
 			delete m_TransformGizmo;
 		}
 
+		if (m_TestShape)
+		{
+			m_TestShape->Destroy();
+			m_TestShape = nullptr;
+		}
+
 		g_InputManager->UnbindMouseButtonCallback(&m_MouseButtonCallback);
 		g_InputManager->UnbindMouseMovedCallback(&m_MouseMovedCallback);
 		g_InputManager->UnbindKeyEventCallback(&m_KeyEventCallback);
