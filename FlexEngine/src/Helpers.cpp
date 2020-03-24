@@ -530,28 +530,37 @@ namespace flex
 
 	bool NearlyEquals(real a, real b, real threshold)
 	{
-		return (abs(a - b) < threshold);
+		return (abs(a - b) < threshold) && (abs(b - a) < threshold);
 	}
 
 	bool NearlyEquals(const glm::vec2& a, const glm::vec2& b, real threshold)
 	{
-		return (abs(a.x - b.x) < threshold) &&
-			(abs(a.y - b.y) < threshold);
+		return (abs(a.x - b.x) < threshold) && (abs(b.x - a.x) < threshold) &&
+			(abs(a.y - b.y) < threshold) && (abs(b.y - a.y) < threshold);
 	}
 
 	bool NearlyEquals(const glm::vec3& a, const glm::vec3& b, real threshold)
 	{
-		return (abs(a.x - b.x) < threshold) &&
-			(abs(a.y - b.y) < threshold) &&
-			(abs(a.z - b.z) < threshold);
+		return (abs(a.x - b.x) < threshold) && (abs(b.x - a.x) < threshold) &&
+			(abs(a.y - b.y) < threshold) && (abs(b.y - a.y) < threshold) &&
+			(abs(a.z - b.z) < threshold) && (abs(b.z - a.z) < threshold);
 	}
 
 	bool NearlyEquals(const glm::vec4& a, const glm::vec4& b, real threshold)
 	{
-		return (abs(a.x - b.x) < threshold) &&
-			(abs(a.y - b.y) < threshold) &&
-			(abs(a.z - b.z) < threshold) &&
-			(abs(a.w - b.w) < threshold);
+		return (abs(a.x - b.x) < threshold) && (abs(b.x - a.x) < threshold) &&
+			(abs(a.y - b.y) < threshold) && (abs(b.y - a.y) < threshold) &&
+			(abs(a.z - b.z) < threshold) && (abs(b.z - a.z) < threshold) &&
+			(abs(a.w - b.w) < threshold) && (abs(b.w - a.w) < threshold);
+	}
+
+	bool NearlyEquals(const glm::quat& a, const glm::quat& b, real threshold)
+	{
+		// TODO: Handle wrap around/double cover
+		return (abs(a.x - b.x) < threshold) && (abs(b.x - a.x) < threshold) &&
+			(abs(a.y - b.y) < threshold) && (abs(b.y - a.y) < threshold) &&
+			(abs(a.z - b.z) < threshold) && (abs(b.z - a.z) < threshold) &&
+			(abs(a.w - b.w) < threshold) && (abs(b.w - a.w) < threshold);
 	}
 
 	glm::quat MoveTowards(const glm::quat& a, const glm::quat& b, real delta)

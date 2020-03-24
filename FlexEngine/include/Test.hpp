@@ -3,6 +3,11 @@
 #include "JSONParser.hpp"
 #include "Helpers.hpp"
 
+IGNORE_WARNINGS_PUSH
+#include <glm/gtx/euler_angles.hpp>
+IGNORE_WARNINGS_POP
+
+
 namespace flex
 {
 	class FlexTest
@@ -23,53 +28,53 @@ namespace flex
 #define UNIT_TEST_END }
 
 
-#define EXPECT(val, exp) Expect(FunctionName, val, exp, JSONParser::GetErrorString());
-
 		template<class T>
-		static void Expect(const char* funcName, T val, T exp, const char* msg)
+		static void Expect(const char* funcName, int lineNumber, T val, T exp, const char* msg)
 		{
 			if (val != exp)
 			{
-				std::string msgStr = std::string(funcName) + " - Expected " + std::to_string(exp) + ", got " + std::to_string(val) + ", error message:\n\t" + msg;
+				std::string msgStr = std::string(funcName) + " L" + std::to_string(lineNumber) + " - Expected " + std::to_string(exp) + ", got " + std::to_string(val) + ", error message:\n\t" + msg;
 				throw std::runtime_error(msgStr.c_str());
 			}
 		}
 
-		static void Expect(const char* funcName, glm::vec3 val, glm::vec3 exp, const char* msg)
+		static void Expect(const char* funcName, int lineNumber, glm::vec3 val, glm::vec3 exp, const char* msg)
 		{
 			if (val != exp)
 			{
-				std::string msgStr = std::string(funcName) + " - Expected " + VecToString(exp) + ", got " + VecToString(val) + ", error message:\n\t" + msg;
+				std::string msgStr = std::string(funcName) + " L" + std::to_string(lineNumber) + " - Expected " + VecToString(exp) + ", got " + VecToString(val) + ", error message:\n\t" + msg;
 				throw std::runtime_error(msgStr.c_str());
 			}
 		}
 
-		static void Expect(const char* funcName, std::size_t val, std::size_t exp, const char* msg)
+		static void Expect(const char* funcName, int lineNumber, std::size_t val, std::size_t exp, const char* msg)
 		{
 			if (val != exp)
 			{
-				std::string msgStr = std::string(funcName) + " - Expected " + std::to_string(exp) + ", got " + std::to_string(val) + ", error message:\n\t" + msg;
+				std::string msgStr = std::string(funcName) + " L" + std::to_string(lineNumber) + " - Expected " + std::to_string(exp) + ", got " + std::to_string(val) + ", error message:\n\t" + msg;
 				throw std::runtime_error(msgStr.c_str());
 			}
 		}
 
-		static void Expect(const char* funcName, const char* val, const char* exp, const char* msg)
+		static void Expect(const char* funcName, int lineNumber, const char* val, const char* exp, const char* msg)
 		{
 			if (strcmp(val, exp) != 0)
 			{
-				std::string msgStr = std::string(funcName) + " - Expected " + std::string(exp) + ", got " + std::string(val) + ", error message:\n\t" + std::string(msg);
+				std::string msgStr = std::string(funcName) + " L" + std::to_string(lineNumber) + " - Expected " + std::string(exp) + ", got " + std::string(val) + ", error message:\n\t" + std::string(msg);
 				throw std::runtime_error(msgStr.c_str());
 			}
 		}
 
-		static void Expect(const char* funcName, JSONValue::Type val, JSONValue::Type exp, const char* msg)
+		static void Expect(const char* funcName, int lineNumber, JSONValue::Type val, JSONValue::Type exp, const char* msg)
 		{
-			Expect(funcName, (u32)val, (u32)exp, msg);
+			Expect(funcName, lineNumber, (u32)val, (u32)exp, msg);
 		}
 
 		//
 		// JSON tests
 		//
+
+#define EXPECT(val, exp) Expect(FunctionName, __LINE__, val, exp, JSONParser::GetErrorString());
 
 		JSON_UNIT_TEST(EmptyFileIsParsed)
 		{
@@ -339,9 +344,13 @@ namespace flex
 		}
 		JSON_UNIT_TEST_END;
 
+#undef EXPECT
+
 		//
 		// Math tests
 		//
+
+#define EXPECT(val, exp) Expect(FunctionName, __LINE__, val, exp, "");
 
 		UNIT_TEST(RayPlaneIntersectionOriginValid)
 		{
@@ -435,6 +444,68 @@ namespace flex
 		}
 		UNIT_TEST_END;
 
+		UNIT_TEST(QuaternionsAreNearlyEqual)
+		{
+			glm::quat a(glm::vec3(PI + EPSILON, PI / 2.0f, EPSILON));
+			glm::quat b(glm::vec3(PI, PI / 2.0f - EPSILON, -EPSILON));
+			bool result = NearlyEquals(a, b, 0.0001f);
+			EXPECT(result, true);
+
+			glm::quat c(glm::vec3((1.0f - PI) * 2.0f, -PI / 2.0f, 1.0f + EPSILON));
+			glm::quat d(glm::vec3(2.0f - TWO_PI, -PI / 2.0f - EPSILON, 0.5 * 2.0f));
+			result = NearlyEquals(c, d, 0.0001f);
+			EXPECT(result, true);
+
+			glm::quat e(-glm::sin(PI / 2.0f), glm::sin(PI / 4.0f), 0.0f, 0.0f);
+			glm::quat f(-glm::sin(TWO_PI / 4.0f), glm::sin(PI / 4.0f), 0.0f, 0.0f);
+			result = NearlyEquals(e, f, 0.0001f);
+			EXPECT(result, true);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(QuaternionsAreNotNearlyEqual)
+		{
+			glm::quat a(glm::vec3(TWO_PI, 2.0f, 0.0f));
+			glm::quat b(glm::vec3(PI, PI / 2.0f, -EPSILON));
+			bool result = NearlyEquals(a, b, 0.0001f);
+			EXPECT(result, false);
+
+			glm::quat c(glm::vec3((1.0f - PI) * 2.0f, -PI / 2.0f, 0.01f));
+			glm::quat d(glm::vec3(2.0f - TWO_PI, -PI / 2.0f - EPSILON, -0.01f));
+			result = NearlyEquals(c, d, 0.0001f);
+			EXPECT(result, false);
+
+			glm::quat e(-glm::sin(PI / 4.0f), glm::sin(PI / 4.0f), 0.0f, 0.0f);
+			glm::quat f(glm::sin(-TWO_PI / 2.0f), glm::sin(PI / 4.0f), 0.0f, 1.0f);
+			result = NearlyEquals(e, f, 0.0001f);
+			EXPECT(result, false);
+
+			glm::quat g(0.0f, 0.0f, 0.0f, 0.0f);
+			glm::quat h(1.0f, 0.0f, 0.0f, 0.0f);
+			glm::quat i(0.0f, 1.0f, 0.0f, 0.0f);
+			glm::quat j(0.0f, 0.0f, 1.0f, 0.0f);
+			glm::quat k(0.0f, 0.0f, 0.0f, 1.0f);
+			result = NearlyEquals(g, h, 0.0001f);
+			EXPECT(result, false);
+			result = NearlyEquals(g, i, 0.0001f);
+			EXPECT(result, false);
+			result = NearlyEquals(g, j, 0.0001f);
+			EXPECT(result, false);
+			result = NearlyEquals(g, k, 0.0001f);
+			EXPECT(result, false);
+
+			glm::quat l(0.0f, 0.0f, 0.0f, 0.0001f);
+			glm::quat m(0.0f, 0.0f, 0.0f, -0.0001f);
+			result = NearlyEquals(l, m, 0.0001f);
+			EXPECT(result, false);
+
+			glm::quat n(0.0f, 0.0f, 0.0f, -0.0001f);
+			glm::quat o(0.0f, 0.0f, 0.0f, 0.0001f);
+			result = NearlyEquals(n, o, 0.0001f);
+			EXPECT(result, false);
+		}
+		UNIT_TEST_END;
+
 	public:
 		static void Run()
 		{
@@ -444,7 +515,8 @@ namespace flex
 				FieldArrayParsedCorrectly, MissingSquareBracketFailsToParse, MissingCurlyBracketFailsToParse, LineCommentIgnored, MultipleFieldsParsedCorrectly,
 				ArrayParsesCorrectly, MissingCommaInArrayFailsParse, ComplexFileIsValid,
 				// Math tests
-				RayPlaneIntersectionOriginValid, RayPlaneIntersectionXYValid, RayPlaneIntersectionXY2Valid, RayPlaneIntersectionXY3Valid, MinComponentValid, MaxComponentValid
+				RayPlaneIntersectionOriginValid, RayPlaneIntersectionXYValid, RayPlaneIntersectionXY2Valid, RayPlaneIntersectionXY3Valid, MinComponentValid, MaxComponentValid,
+				QuaternionsAreNearlyEqual, QuaternionsAreNotNearlyEqual
 			};
 			Print("Running %u tests...\n", (u32)ARRAY_LENGTH(funcs));
 			u32 failedTestCount = 0;
