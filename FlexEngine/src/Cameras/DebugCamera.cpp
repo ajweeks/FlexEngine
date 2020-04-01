@@ -190,7 +190,6 @@ namespace flex
 
 		if (m_bDraggingMMB)
 		{
-			// TODO: Handle in action callback
 			if (g_InputManager->IsMouseButtonDown(MouseButton::MIDDLE))
 			{
 				const real multiplier = bModFaster ? m_PanSpeedFastMultiplier : bModSlower ? m_PanSpeedSlowMultiplier : 1.0f;
@@ -220,7 +219,6 @@ namespace flex
 
 		m_MoveVel += targetDPos;
 
-		// TODO: * g_UnpausedDeltaTime?
 		m_Position += m_MoveVel;
 		m_DragStartPosition += m_MoveVel;
 
@@ -232,7 +230,7 @@ namespace flex
 			LookAt(orbitingCenter);
 		}
 
-		// TODO: Incorporate lag in frame-rate-indepedent way that doesn't change max vel
+		// TODO: Incorporate lag in frame-rate-independent way that doesn't change max vel
 		m_MoveVel *= m_MoveLag;
 		m_TurnVel *= m_TurnLag;
 
@@ -267,10 +265,12 @@ namespace flex
 			{
 				m_DragStartPosition = m_Position;
 				m_bDraggingMMB = true;
+				return EventReply::CONSUMED;
 			}
 			else
 			{
 				m_bDraggingMMB = false;
+				return EventReply::CONSUMED;
 			}
 		}
 		return EventReply::UNCONSUMED;
