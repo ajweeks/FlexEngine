@@ -28,7 +28,7 @@ namespace flex
 		m_ZNear(zNear),
 		m_ZFar(zFar),
 		m_MoveSpeed(18.0f),
-		m_PanSpeed(3000.0f),
+		m_PanSpeed(60.0f),
 		m_DragDollySpeed(40.0f),
 		m_ScrollDollySpeed(20.0f),
 		m_OrbitingSpeed(0.1f),

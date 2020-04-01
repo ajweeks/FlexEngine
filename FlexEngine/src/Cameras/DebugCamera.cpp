@@ -198,7 +198,7 @@ namespace flex
 				glm::vec2 dragDist = g_InputManager->GetMouseDragDistance(MouseButton::MIDDLE) * multiplier;
 				glm::vec2 frameBufferSize = (glm::vec2)g_Window->GetFrameBufferSize();
 				glm::vec2 normDragDist = dragDist / frameBufferSize;
-				m_Position = (m_DragStartPosition + (normDragDist.x * m_Right + normDragDist.y * m_Up) * m_PanSpeed * g_UnpausedDeltaTime);
+				m_Position = (m_DragStartPosition + (normDragDist.x * m_Right + normDragDist.y * m_Up) * m_PanSpeed);
 			}
 		}
 
