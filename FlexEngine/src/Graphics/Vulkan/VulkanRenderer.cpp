@@ -4836,16 +4836,6 @@ namespace flex
 
 			// TODO: Use instancing!
 			VulkanBuffer* vertexBuffer = m_StaticVertexBuffers[spriteShader.shader->staticVertexBufferIndex].second;
-			// Copy vertex data into device memory for dynamic shaders
-			u32 copySize = (u32)vertexBuffer->m_Size;
-			VK_CHECK_RESULT(vertexBuffer->Map(copySize));
-			real* dst = (real*)vertexBuffer->m_Mapped;
-			for (u32 i = 0; i < batch.size(); ++i)
-			{
-				memcpy(dst, m_Quad3DVertexBufferData.vertexData, m_Quad3DVertexBufferData.VertexBufferSize);
-				dst += m_Quad3DVertexBufferData.VertexBufferSize / sizeof(real);
-			}
-			vertexBuffer->Unmap();
 
 			u32 i = 0;
 			for (const SpriteQuadDrawInfo& drawInfo : batch)
@@ -8068,23 +8058,6 @@ namespace flex
 
 				DrawParticles(commandBuffer);
 
-				// TODO: Fix sprite rendering
-				//{
-				//	BeginDebugMarkerRegion(commandBuffer, "World Space Sprites");
-
-				//	EnqueueWorldSpaceSprites();
-				//	DrawSpriteBatch(m_QueuedWSSprites, commandBuffer);
-				//	m_QueuedWSSprites.clear();
-
-				//	EndDebugMarkerRegion(commandBuffer); // World Space Sprites
-				//	BeginDebugMarkerRegion(commandBuffer, "World Space Text");
-
-				//	EnqueueWorldSpaceText();
-				//	DrawTextWS(commandBuffer);
-
-				//	EndDebugMarkerRegion(commandBuffer); // World Space Text
-				//}
-
 				bool bUsingGameplayCam = g_CameraManager->CurrentCamera()->bIsGameplayCam;
 				if (g_EngineInstance->IsRenderingEditorObjects() && !bUsingGameplayCam)
 				{
@@ -8111,6 +8084,22 @@ namespace flex
 					}
 
 					EndDebugMarkerRegion(commandBuffer); // Editor objects
+				}
+
+				{
+					BeginDebugMarkerRegion(commandBuffer, "World Space Sprites");
+
+					EnqueueWorldSpaceSprites();
+					DrawSpriteBatch(m_QueuedWSSprites, commandBuffer);
+					m_QueuedWSSprites.clear();
+
+					EndDebugMarkerRegion(commandBuffer); // World Space Sprites
+					BeginDebugMarkerRegion(commandBuffer, "World Space Text");
+
+					EnqueueWorldSpaceText();
+					DrawTextWS(commandBuffer);
+
+					EndDebugMarkerRegion(commandBuffer); // World Space Text
 				}
 			}
 			m_ForwardRenderPass->End();
@@ -8193,27 +8182,26 @@ namespace flex
 				// Fullscreen blit from offscreen frame buffer onto swap chain
 				RenderFullscreenTri(commandBuffer, m_FullscreenBlitMatID, m_BlitGraphicsPipelineLayout, m_FinalFullscreenBlitDescriptorSet);
 
-				// TODO: Fix sprite rendering
-				//{
-				//	BeginDebugMarkerRegion(commandBuffer, "Screen Space Sprites");
+				{
+					BeginDebugMarkerRegion(commandBuffer, "Screen Space Sprites");
 
-				//	EnqueueScreenSpaceSprites();
-				//	DrawSpriteBatch(m_QueuedSSSprites, commandBuffer);
-				//	m_QueuedSSSprites.clear();
-				//	DrawSpriteBatch(m_QueuedSSArrSprites, commandBuffer);
-				//	m_QueuedSSArrSprites.clear();
+					EnqueueScreenSpaceSprites();
+					DrawSpriteBatch(m_QueuedSSSprites, commandBuffer);
+					m_QueuedSSSprites.clear();
+					DrawSpriteBatch(m_QueuedSSArrSprites, commandBuffer);
+					m_QueuedSSArrSprites.clear();
 
-				//	EndDebugMarkerRegion(commandBuffer);
-				//}
+					EndDebugMarkerRegion(commandBuffer);
+				}
 
-				//{
-				//	BeginDebugMarkerRegion(commandBuffer, "Screen Space Text");
+				{
+					BeginDebugMarkerRegion(commandBuffer, "Screen Space Text");
 
-				//	EnqueueScreenSpaceText();
-				//	DrawTextSS(commandBuffer);
+					EnqueueScreenSpaceText();
+					DrawTextSS(commandBuffer);
 
-				//	EndDebugMarkerRegion(commandBuffer);
-				//}
+					EndDebugMarkerRegion(commandBuffer);
+				}
 
 				if (g_EngineInstance->IsRenderingImGui())
 				{

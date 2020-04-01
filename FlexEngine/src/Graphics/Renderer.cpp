@@ -228,7 +228,7 @@ namespace flex
 			quad3DCreateInfo.gameObject = quad3DGameObject;
 			quad3DCreateInfo.cullFace = CullFace::NONE;
 			quad3DCreateInfo.visibleInSceneExplorer = false;
-			quad3DCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
+			quad3DCreateInfo.depthTestReadFunc = DepthTestFunc::GEQUAL;
 			quad3DCreateInfo.bEditorObject = true; // TODO: Create other quad which is identical but is not an editor object for gameplay objects?
 			quad3DCreateInfo.renderPassOverride = RenderPassType::FORWARD;
 			m_Quad3DRenderID = InitializeRenderObject(&quad3DCreateInfo);
@@ -1490,6 +1490,7 @@ namespace flex
 			m_BaseShaders[shaderID].bNeedPushConstantBlock = true;
 			m_BaseShaders[shaderID].pushConstantBlockSize = 132;
 			m_BaseShaders[shaderID].bTranslucent = true;
+			m_BaseShaders[shaderID].bDepthWriteEnable = false;
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::UI;
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION |
