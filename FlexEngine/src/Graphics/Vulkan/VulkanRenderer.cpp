@@ -4909,54 +4909,6 @@ namespace flex
 
 				vkCmdDraw(commandBuffer, spriteRenderObject->vertexBufferData->VertexCount, 1, spriteRenderObject->vertexOffset, 0);
 
-
-				//if (drawInfo.bScreenSpace)
-				//{
-				//	real r = aspectRatio;
-				//	real t = 1.0f;
-				//	glm::mat4 viewProjection = glm::ortho(-r, r, -t, t);
-
-				//	glUniformMatrix4fv(spriteMaterial.uniformIDs.viewProjection, 1, GL_FALSE, &viewProjection[0][0]);
-				//}
-				//else
-				//{
-				//	glm::mat4 viewProjection = g_CameraManager->CurrentCamera()->GetViewProjection();
-
-				//	glUniformMatrix4fv(spriteMaterial.uniformIDs.viewProjection, 1, GL_FALSE, &viewProjection[0][0]);
-				//}
-
-				//if (spriteShader.shader->dynamicBufferUniforms.HasUniform(U_COLOR_MULTIPLIER))
-				//{
-				//	glUniform4fv(spriteMaterial.uniformIDs.colorMultiplier, 1, &drawInfo.color.r);
-				//}
-
-				//bool bEnableAlbedoSampler = (drawInfo.textureHandleID != 0 && drawInfo.bEnableAlbedoSampler);
-				//if (spriteShader.shader->dynamicBufferUniforms.HasUniform(U_ALBEDO_SAMPLER))
-				//{
-				//	// TODO: glUniform1ui vs glUniform1i ?
-				//	glUniform1ui(spriteMaterial.uniformIDs.enableAlbedoSampler, bEnableAlbedoSampler ? 1 : 0);
-				//}
-
-				//// http://www.graficaobscura.com/matrix/
-				//GLint cBSLocation = glGetUniformLocation(spriteShader.program, "contrastBrightnessSaturation");
-				//if (cBSLocation != -1)
-				//{
-				//	glm::mat4 contrastBrightnessSaturation = GetPostProcessingMatrix();
-				//	glUniformMatrix4fv(cBSLocation, 1, GL_FALSE, &contrastBrightnessSaturation[0][0]);
-				//}
-
-				//glBindFramebuffer(GL_FRAMEBUFFER, drawInfo.FBO);
-				//glBindRenderbuffer(GL_RENDERBUFFER, drawInfo.RBO);
-
-				//glBindVertexArray(spriteRenderObject->VAO);
-				//glBindBuffer(GL_ARRAY_BUFFER, spriteRenderObject->VBO);
-
-				//if (bEnableAlbedoSampler)
-				//{
-				//	glActiveTexture(GL_TEXTURE0);
-				//	glBindTexture(GL_TEXTURE_2D, drawInfo.textureHandleID);
-				//}
-
 				++i;
 			}
 		}
