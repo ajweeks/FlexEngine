@@ -1613,7 +1613,13 @@ namespace flex
 
 			if (m_RenderDocModule == NULL)
 			{
-				PrintWarn("Found render doc dll but failed to load it. Is the bitness correct? (must be x86)\n");
+#if defined(FLEX_64)
+				const char* targetStr = "x64";
+#elif defined(FLEX_32)
+				const char* targetStr = "x32";
+#endif
+
+				PrintWarn("Found render doc dll but failed to load it. Is the bitness correct? (must be %s)\n", targetStr);
 				return;
 			}
 
