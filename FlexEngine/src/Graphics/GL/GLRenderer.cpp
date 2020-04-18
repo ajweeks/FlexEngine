@@ -117,7 +117,7 @@ namespace flex
 			// TODO: Handle lack of GL_ARB_clip_control (in GL < 4.5)
 			glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
 
-			m_LoadingTextureID = InitializeTexture(RESOURCE_LOCATION "textures/loading_1.png", 3, false, false, false);
+			m_LoadingTextureID = InitializeTextureFromFile(RESOURCE_LOCATION "textures/loading_1.png", 3, false, false, false);
 
 			GL_POP_DEBUG_GROUP();
 
@@ -161,10 +161,10 @@ namespace flex
 			};
 
 			// TODO: Move to Renderer::Init
-			m_AlphaBGTextureID = InitializeTexture(RESOURCE_LOCATION "textures/alpha-bg.png", 3, false, false, false);
-			m_WorkTextureID = InitializeTexture(RESOURCE_LOCATION "textures/work_d.jpg", 3, false, true, false);
-			m_PointLightIconID = InitializeTexture(RESOURCE_LOCATION "textures/icons/point-light-icon-256.png", 4, false, true, false);
-			m_DirectionalLightIconID = InitializeTexture(RESOURCE_LOCATION "textures/icons/directional-light-icon-256.png", 4, false, true, false);
+			m_AlphaBGTextureID = InitializeTextureFromFile(RESOURCE_LOCATION "textures/alpha-bg.png", 3, false, false, false);
+			m_WorkTextureID = InitializeTextureFromFile(RESOURCE_LOCATION "textures/work_d.jpg", 3, false, true, false);
+			m_PointLightIconID = InitializeTextureFromFile(RESOURCE_LOCATION "textures/icons/point-light-icon-256.png", 4, false, true, false);
+			m_DirectionalLightIconID = InitializeTextureFromFile(RESOURCE_LOCATION "textures/icons/directional-light-icon-256.png", 4, false, true, false);
 
 			// Shadow map texture
 			{
@@ -925,7 +925,7 @@ namespace flex
 			return matID;
 		}
 
-		TextureID GLRenderer::InitializeTexture(const std::string& relativeFilePath, i32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR)
+		TextureID GLRenderer::InitializeTextureFromFile(const std::string& relativeFilePath, i32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR)
 		{
 			GLTexture* newTexture = new GLTexture(relativeFilePath, channelCount, bFlipVertically, bGenerateMipMaps, bHDR);
 			if (newTexture->LoadFromFile())

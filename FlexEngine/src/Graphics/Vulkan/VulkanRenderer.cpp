@@ -328,11 +328,11 @@ namespace flex
 				m_BlankTextureArr->CreateFromMemory(&blankData, sizeof(blankData), VK_FORMAT_R8G8B8A8_UNORM, 1);
 			}
 
-			m_AlphaBGTextureID = InitializeTexture(RESOURCE_LOCATION "textures/alpha-bg.png", 4, false, false, false);
-			m_LoadingTextureID = InitializeTexture(RESOURCE_LOCATION "textures/loading_1.png", 4, false, false, false);
-			m_WorkTextureID = InitializeTexture(RESOURCE_LOCATION "textures/work_d.jpg", 4, false, true, false);
-			m_PointLightIconID = InitializeTexture(RESOURCE_LOCATION "textures/icons/point-light-icon-256.png", 4, false, true, false);
-			m_DirectionalLightIconID = InitializeTexture(RESOURCE_LOCATION "textures/icons/directional-light-icon-256.png", 4, false, true, false);
+			m_AlphaBGTextureID = InitializeTextureFromFile(RESOURCE_LOCATION "textures/alpha-bg.png", 4, false, false, false);
+			m_LoadingTextureID = InitializeTextureFromFile(RESOURCE_LOCATION "textures/loading_1.png", 4, false, false, false);
+			m_WorkTextureID = InitializeTextureFromFile(RESOURCE_LOCATION "textures/work_d.jpg", 4, false, true, false);
+			m_PointLightIconID = InitializeTextureFromFile(RESOURCE_LOCATION "textures/icons/point-light-icon-256.png", 4, false, true, false);
+			m_DirectionalLightIconID = InitializeTextureFromFile(RESOURCE_LOCATION "textures/icons/directional-light-icon-256.png", 4, false, true, false);
 
 			m_SpritePerspPushConstBlock = new Material::PushConstantBlock(128);
 			m_SpriteOrthoPushConstBlock = new Material::PushConstantBlock(128);
@@ -1199,11 +1199,20 @@ namespace flex
 			return matID;
 		}
 
-		TextureID VulkanRenderer::InitializeTexture(const std::string& relativeFilePath, i32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR)
+		TextureID VulkanRenderer::InitializeTextureFromFile(const std::string& relativeFilePath, i32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR)
 		{
 			VulkanTexture* newTex = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, relativeFilePath,
 				channelCount, bFlipVertically, bGenerateMipMaps, bHDR);
 			newTex->CreateFromFile(newTex->CalculateFormat());
+			m_LoadedTextures.push_back(newTex);
+
+			return (TextureID)(m_LoadedTextures.size() - 1);
+		}
+
+		TextureID VulkanRenderer::InitializeTextureFromMemory(void* data, u32 size, VkFormat inFormat, const std::string& name, u32 width, u32 height, u32 channelCount, VkFilter inFilter)
+		{
+			VulkanTexture* newTex = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, name, width, height, channelCount);
+			newTex->CreateFromMemory(data, size, inFormat, 1, inFilter);
 			m_LoadedTextures.push_back(newTex);
 
 			return (TextureID)(m_LoadedTextures.size() - 1);
@@ -1280,6 +1289,15 @@ namespace flex
 		{
 			FLEX_UNUSED(renderID);
 			m_bRebatchRenderObjects = true;
+		}
+
+		void VulkanRenderer::DestroyTexture(TextureID textureID)
+		{
+			if (textureID < m_LoadedTextures.size())
+			{
+				VulkanTexture* texture = m_LoadedTextures[textureID];
+				RemoveLoadedTexture(texture, true);
+			}
 		}
 
 		void VulkanRenderer::ClearMaterials(bool bDestroyPersistentMats /* = false */)
