@@ -99,11 +99,11 @@ namespace flex
 		real m_BoundingSphereRadius = 0.0f;
 		glm::vec3 m_BoundingSphereCenterPoint;
 
+		std::vector<MeshComponent*> m_Meshes;
 	private:
 		void CalculateBounds();
 		static bool CheckCGLTFResult(cgltf_result result, std::string& outErrorMessage);
 
-		std::vector<MeshComponent*> m_Meshes;
 
 		Type m_Type = Type::_NONE;
 

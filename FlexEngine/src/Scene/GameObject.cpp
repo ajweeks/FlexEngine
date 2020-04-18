@@ -15,6 +15,8 @@ IGNORE_WARNINGS_PUSH
 #include <LinearMath/btTransform.h>
 
 #include <glm/gtx/quaternion.hpp> // for rotate
+
+#include <random>
 IGNORE_WARNINGS_POP
 
 #include "Scene/GameObject.hpp"
@@ -1059,7 +1061,7 @@ namespace flex
 		}
 	}
 
-	void GameObject::ParseUniqueFields(const JSONObject& /* parentObj */, BaseScene* /* scene */,  const std::vector<MaterialID>& /* matIDs */)
+	void GameObject::ParseUniqueFields(const JSONObject& /* parentObj */, BaseScene* /* scene */, const std::vector<MaterialID>& /* matIDs */)
 	{
 		// Generic game objects have no unique fields
 	}
@@ -4591,6 +4593,13 @@ namespace flex
 		m_Mesh = new Mesh(this);
 		m_Mesh->SetTypeToMemory();
 
+		GenerateGradients();
+
+		GenerateAllChunks();
+	}
+
+	void ChunkGenerator::GenerateAllChunks()
+	{
 		GenerateChunk(glm::ivec2(0, 0));
 	}
 
@@ -4599,7 +4608,8 @@ namespace flex
 		ShaderID shaderID = g_Renderer->GetMaterial(m_TerrainMatID).shaderID;
 
 		const u32 vertexCount = VertCountPerChunkAxis * VertCountPerChunkAxis;
-		const u32 indexCount = VertCountPerChunkAxis * VertCountPerChunkAxis;
+		const u32 triCount = ((VertCountPerChunkAxis - 1) * (VertCountPerChunkAxis - 1)) * 2;
+		const u32 indexCount = triCount * 3;
 
 		VertexBufferDataCreateInfo vertexBufferCreateInfo = {};
 		vertexBufferCreateInfo.attributes = g_Renderer->GetShader(shaderID).vertexAttributes;
@@ -4611,30 +4621,46 @@ namespace flex
 
 		std::vector<u32> indices(indexCount);
 
-		for (u32 x = 0; x < VertCountPerChunkAxis; ++x)
+		for (u32 z = 0; z < VertCountPerChunkAxis; ++z)
 		{
-			for (u32 z = 0; z < VertCountPerChunkAxis; ++z)
+			for (u32 x = 0; x < VertCountPerChunkAxis; ++x)
 			{
-				glm::vec2 uv((x - 1) / (real)VertCountPerChunkAxis, (z - 1) / (real)VertCountPerChunkAxis);
+				glm::vec2 uv(x / (real)(VertCountPerChunkAxis - 1), z / (real)(VertCountPerChunkAxis - 1));
 
-				glm::vec3 pos = glm::vec3(x * ChunkSize, 0.0f, z * ChunkSize);
+				glm::vec3 pos = glm::vec3(uv.x * ChunkSize, 0.0f, uv.y * ChunkSize);
 
 				const real e = 0.001f;
 				glm::vec3 vertPosWS = pos + glm::vec3(index.x * ChunkSize, 0.0f, index.y * ChunkSize);
-				real height = SampleNoise(vertPosWS);
+				real height = SampleNoise(glm::vec2(vertPosWS.x, vertPosWS.z));
 				real heightDX = SampleNoise(vertPosWS + glm::vec3(e, 0.0f, 0.0f)) - height;
 				real heightDZ = SampleNoise(vertPosWS + glm::vec3(0.0f, 0.0f, e)) - height;
+				vertPosWS.y = height * MaxHeight;
 
 				glm::vec3 normal = glm::normalize(glm::vec3(heightDX, 1.0f, heightDZ));
 				glm::vec3 tangent = glm::normalize(glm::cross(normal, glm::vec3(0.0f, 0.0f, 1.0f)));
 
-				vertexBufferCreateInfo.positions_3D.emplace_back(pos);
+				vertexBufferCreateInfo.positions_3D.emplace_back(vertPosWS);
 				vertexBufferCreateInfo.texCoords_UV.emplace_back(uv);
 				vertexBufferCreateInfo.colors_R32G32B32A32.emplace_back(glm::vec4(0.2f, height, 0.2f, 1.0f));
 				vertexBufferCreateInfo.normals.emplace_back(normal);
 				vertexBufferCreateInfo.tangents.emplace_back(tangent);
+			}
+		}
 
-				indices.push_back(x * VertCountPerChunkAxis + z);
+
+		for (u32 z = 0; z < VertCountPerChunkAxis - 1; ++z)
+		{
+			for (u32 x = 0; x < VertCountPerChunkAxis - 1; ++x)
+			{
+				u32 vertIdx = z * (VertCountPerChunkAxis - 1) + x;
+				u32 i = z * VertCountPerChunkAxis + x;
+				indices[vertIdx * 6 + 0] = i;
+				indices[vertIdx * 6 + 1] = i + 1 + VertCountPerChunkAxis;
+				indices[vertIdx * 6 + 2] = i + 1;
+
+				indices[vertIdx * 6 + 3] = i;
+				indices[vertIdx * 6 + 4] = i + VertCountPerChunkAxis;
+				indices[vertIdx * 6 + 5] = i + 1 + VertCountPerChunkAxis;
 			}
 		}
 
@@ -4646,9 +4672,31 @@ namespace flex
 		}
 	}
 
-	real ChunkGenerator::SampleNoise(const glm::vec3& pos)
+	void ChunkGenerator::GenerateGradients()
 	{
-		return 0.0f;
+		std::mt19937 m_RandGenerator;
+		std::uniform_real_distribution<real> m_RandDistribution;
+
+		m_RandGenerator.seed(m_UseRandomSeed ? time(0) : m_ManualSeed);
+
+		auto dice = std::bind(m_RandDistribution, m_RandGenerator);
+
+		for (u32 i = 0; i < m_RandomTable.size(); ++i)
+		{
+			m_RandomTable[i] = dice();
+		}
+	}
+
+	real ChunkGenerator::SampleNoise(const glm::vec2& pos)
+	{
+		glm::vec2 posi = Floor(pos);
+		glm::vec2 posf = Fract(pos);
+
+		posf = posf * posf * (3.0f - 2.0f * posf);
+
+		u32 i = (u32)(posi.x * 37.0f * posi.y + (posi.y + 956.265f) * 17.0f * (posi.x + posi.x + 2.85f) + posf.x + posf.y) % (u32)m_RandomTable.size();
+
+		return m_RandomTable[i];
 	}
 
 	void ChunkGenerator::PostInitialize()
@@ -4661,11 +4709,35 @@ namespace flex
 
 	void ChunkGenerator::Destroy()
 	{
+		for (u32 i = 0; i < m_Meshes.size(); ++i)
+		{
+			m_Meshes[i]->Destroy();
+		}
+		m_Meshes.clear();
 	}
 
 	void ChunkGenerator::DrawImGuiObjects()
 	{
 		GameObject::DrawImGuiObjects();
+
+		bool bRegen = false;
+
+		bRegen = ImGui::Checkbox("Random seed", &m_UseRandomSeed) || bRegen;
+
+		if (!m_UseRandomSeed)
+		{
+			bRegen = ImGui::InputInt("Manual seed", &m_ManualSeed) || bRegen;
+		}
+
+		bRegen = ImGuiExt::InputUInt("Verts per chunk", &VertCountPerChunkAxis) || bRegen;
+		bRegen = ImGui::SliderFloat("Chunk size", &ChunkSize, 0.1f, 512.0f) || bRegen;
+		bRegen = ImGui::SliderFloat("Height", &MaxHeight, 0.1f, 64.0f) || bRegen;
+
+		if (bRegen)
+		{
+			GenerateGradients();
+			GenerateAllChunks();
+		}
 	}
 
 	void ChunkGenerator::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)

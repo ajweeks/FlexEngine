@@ -654,18 +654,24 @@ namespace flex
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
 		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
 
-		u32 VertCountPerChunkAxis = 256;
-		real ChunkSize = 3.0f;
-		real MaxHeight = 10.0f;
+		u32 VertCountPerChunkAxis = 32;
+		real ChunkSize = 16.0f;
+		real MaxHeight = 3.0f;
 		u32 Seed = 0;
 
 	private:
+		void GenerateGradients();
+		void GenerateAllChunks();
+		void GenerateChunk(const glm::ivec2& index);
+		real SampleNoise(const glm::vec2& pos);
+
 		MaterialID m_TerrainMatID = InvalidMaterialID;
 		std::vector<MeshComponent*> m_Meshes;
 
-		void GenerateChunk(const glm::ivec2& index);
-		real SampleNoise(const glm::vec3& pos);
+		bool m_UseRandomSeed = true;
+		i32 m_ManualSeed = 0;
 
+		std::array<real, 128> m_RandomTable;
 
 	};
 
