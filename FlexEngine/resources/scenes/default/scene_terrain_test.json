@@ -35,11 +35,11 @@
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "1.194, -0.973, -2.523"
+				"rot" : "0.628, 0.681, 0.830"
 			},
 			"directional light info" : 
 			{
-				"rotation" : "-0.217, -0.591, -0.616, 0.473",
+				"rotation" : "0.138, 0.408, 0.267, 0.862",
 				"pos" : "0.000, 15.000, 0.000",
 				"color" : "1.00, 1.00, 1.00",
 				"enabled" : true,
@@ -57,6 +57,29 @@
 			},
 			"materials" : 
 			[
+			],
+			"chunk generator info" : 
+			{
+				"vert count per chunk axis" : 32,
+				"chunk size" : 350.613007,
+				"max height" : 7.025000,
+				"use manual seed" : true,
+				"manual seed" : 1234123
+			}
+		},
+		{
+			"name" : "cube",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "190.176, 0.000, 158.723",
+				"scale" : "61.318, 59.842, 59.842"
+			},
+			"mesh" : "cube",
+			"materials" : 
+			[
+				"placeholder"
 			]
 		}
 	]

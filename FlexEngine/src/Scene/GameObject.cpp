@@ -37,6 +37,7 @@ IGNORE_WARNINGS_POP
 #include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
+#include "Time.hpp"
 #include "VirtualMachine.hpp"
 #include "Window/Window.hpp"
 
@@ -4577,6 +4578,8 @@ namespace flex
 
 	GameObject* ChunkGenerator::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
 	{
+		UNREFERENCED_PARAMETER(parent);
+		UNREFERENCED_PARAMETER(bCopyChildren);
 		return nullptr;
 	}
 
@@ -4588,6 +4591,7 @@ namespace flex
 		matCreateInfo.constAlbedo = glm::vec3(1.0f, 0.0f, 0.0f);
 		matCreateInfo.constRoughness = 1.0f;
 		matCreateInfo.constMetallic = 0.0f;
+		matCreateInfo.enableIrradianceSampler = false;
 		m_TerrainMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
 
 		m_Mesh = new Mesh(this);
@@ -4600,6 +4604,12 @@ namespace flex
 
 	void ChunkGenerator::GenerateAllChunks()
 	{
+		for (u32 i = 0; i < m_Meshes.size(); ++i)
+		{
+			m_Meshes[i]->Destroy();
+		}
+		m_Meshes.clear();
+
 		GenerateChunk(glm::ivec2(0, 0));
 	}
 
@@ -4621,6 +4631,7 @@ namespace flex
 
 		std::vector<u32> indices(indexCount);
 
+		real cell = 1.0f / (VertCountPerChunkAxis - 1) * ChunkSize;
 		for (u32 z = 0; z < VertCountPerChunkAxis; ++z)
 		{
 			for (u32 x = 0; x < VertCountPerChunkAxis; ++x)
@@ -4629,14 +4640,15 @@ namespace flex
 
 				glm::vec3 pos = glm::vec3(uv.x * ChunkSize, 0.0f, uv.y * ChunkSize);
 
-				const real e = 0.001f;
 				glm::vec3 vertPosWS = pos + glm::vec3(index.x * ChunkSize, 0.0f, index.y * ChunkSize);
-				real height = SampleNoise(glm::vec2(vertPosWS.x, vertPosWS.z));
-				real heightDX = SampleNoise(vertPosWS + glm::vec3(e, 0.0f, 0.0f)) - height;
-				real heightDZ = SampleNoise(vertPosWS + glm::vec3(0.0f, 0.0f, e)) - height;
+				glm::vec2 sampleCenter(vertPosWS.x, vertPosWS.z);
+				real height = SampleNoise(sampleCenter);
 				vertPosWS.y = height * MaxHeight;
 
-				glm::vec3 normal = glm::normalize(glm::vec3(heightDX, 1.0f, heightDZ));
+				real heightDX = (SampleNoise(sampleCenter + glm::vec2(cell, 0.0f)) - height) - (SampleNoise(sampleCenter + glm::vec2(-cell, 0.0f)) - height);
+				real heightDZ = (SampleNoise(sampleCenter + glm::vec2(0.0f, -cell)) - height) - (SampleNoise(sampleCenter + glm::vec2(0.0f, cell)) - height);
+
+				glm::vec3 normal = glm::normalize(glm::vec3(heightDX*nscale, 1.0f, heightDZ * nscale));
 				glm::vec3 tangent = glm::normalize(glm::cross(normal, glm::vec3(0.0f, 0.0f, 1.0f)));
 
 				vertexBufferCreateInfo.positions_3D.emplace_back(vertPosWS);
@@ -4647,6 +4659,13 @@ namespace flex
 			}
 		}
 
+
+		for (u32 z = 0; z < VertCountPerChunkAxis; ++z)
+		{
+			for (u32 x = 0; x < VertCountPerChunkAxis; ++x)
+			{
+			}
+		}
 
 		for (u32 z = 0; z < VertCountPerChunkAxis - 1; ++z)
 		{
@@ -4677,7 +4696,7 @@ namespace flex
 		std::mt19937 m_RandGenerator;
 		std::uniform_real_distribution<real> m_RandDistribution;
 
-		m_RandGenerator.seed(m_UseRandomSeed ? time(0) : m_ManualSeed);
+		m_RandGenerator.seed(m_UseManualSeed ? m_ManualSeed : (u32)Time::CurrentMilliseconds());
 
 		auto dice = std::bind(m_RandDistribution, m_RandGenerator);
 
@@ -4694,9 +4713,19 @@ namespace flex
 
 		posf = posf * posf * (3.0f - 2.0f * posf);
 
-		u32 i = (u32)(posi.x * 37.0f * posi.y + (posi.y + 956.265f) * 17.0f * (posi.x + posi.x + 2.85f) + posf.x + posf.y) % (u32)m_RandomTable.size();
+		real f = posi.x * 0.0037f * posi.y + (posi.y + 0.00265f) * 0.0017f * (posi.x + posi.x + 0.0025f) + posf.x + posf.y;
+		u32 i = (u32)(f) % (u32)m_RandomTable.size();
+		u32 edgeLen = (u32)glm::sqrt((real)m_RandomTable.size());
+		real a0 = m_RandomTable[i];
+		real a1 = m_RandomTable[((i + 1) % m_RandomTable.size())];
+		real a2 = m_RandomTable[((i + edgeLen) % m_RandomTable.size())];
+		real a3 = m_RandomTable[((i + edgeLen + 1)% m_RandomTable.size())];
 
-		return m_RandomTable[i];
+		real val1 = Lerp(a0, a1, posf.x);
+		real val2 = Lerp(a2, a3, posf.y);
+		real val = Lerp(val1, val2, glm::fract(f));
+
+		return val;
 	}
 
 	void ChunkGenerator::PostInitialize()
@@ -4720,18 +4749,41 @@ namespace flex
 	{
 		GameObject::DrawImGuiObjects();
 
-		bool bRegen = false;
+		bool bRegen = ImGui::Button("Regen");
 
-		bRegen = ImGui::Checkbox("Random seed", &m_UseRandomSeed) || bRegen;
+		ImGui::SameLine();
 
-		if (!m_UseRandomSeed)
+		bRegen = ImGui::Checkbox("Use manual seed", &m_UseManualSeed) || bRegen;
+
+		if (m_UseManualSeed)
 		{
 			bRegen = ImGui::InputInt("Manual seed", &m_ManualSeed) || bRegen;
 		}
 
 		bRegen = ImGuiExt::InputUInt("Verts per chunk", &VertCountPerChunkAxis) || bRegen;
+
+		if (VertCountPerChunkAxis > 2)
+		{
+			if (ImGui::Button("/2"))
+			{
+				bRegen = true;
+				VertCountPerChunkAxis /= 2;
+			}
+
+			ImGui::SameLine();
+		}
+
+		if (ImGui::Button("x2"))
+		{
+			bRegen = true;
+			VertCountPerChunkAxis *= 2;
+		}
+
 		bRegen = ImGui::SliderFloat("Chunk size", &ChunkSize, 0.1f, 512.0f) || bRegen;
+
 		bRegen = ImGui::SliderFloat("Height", &MaxHeight, 0.1f, 64.0f) || bRegen;
+
+		bRegen = ImGui::SliderFloat("nscale", &nscale, 0.01f, 2.0f) || bRegen;
 
 		if (bRegen)
 		{
@@ -4742,9 +4794,33 @@ namespace flex
 
 	void ChunkGenerator::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
+		UNREFERENCED_PARAMETER(matIDs);
+		UNREFERENCED_PARAMETER(scene);
+
+		if (parentObject.HasField("chunk generator info"))
+		{
+			JSONObject chunkGenInfo = parentObject.GetObject("chunk generator info");
+			VertCountPerChunkAxis = (u32)chunkGenInfo.GetInt("vert count per chunk axis");
+			ChunkSize = chunkGenInfo.GetFloat("chunk size");
+			MaxHeight = chunkGenInfo.GetFloat("max height");
+			m_UseManualSeed = chunkGenInfo.GetBool("use manual seed");
+			m_ManualSeed = (u32)chunkGenInfo.GetInt("manual seed");
+		}
 	}
 
 	void ChunkGenerator::SerializeUniqueFields(JSONObject& parentObject) const
 	{
+		JSONObject chunkGenInfo = {};
+
+		//chunkGenInfo.fields.emplace_back("name", JSONValue(m_Name));
+		//chunkGenInfo.fields.emplace_back("enabled", JSONValue(bEnabled));
+
+		chunkGenInfo.fields.emplace_back("vert count per chunk axis", JSONValue((i32)VertCountPerChunkAxis));
+		chunkGenInfo.fields.emplace_back("chunk size", JSONValue(ChunkSize));
+		chunkGenInfo.fields.emplace_back("max height", JSONValue(MaxHeight));
+		chunkGenInfo.fields.emplace_back("use manual seed", JSONValue(m_UseManualSeed));
+		chunkGenInfo.fields.emplace_back("manual seed", JSONValue((i32)m_ManualSeed));
+
+		parentObject.fields.emplace_back("chunk generator info", JSONValue(chunkGenInfo));
 	}
 } // namespace flex

@@ -657,7 +657,6 @@ namespace flex
 		u32 VertCountPerChunkAxis = 32;
 		real ChunkSize = 16.0f;
 		real MaxHeight = 3.0f;
-		u32 Seed = 0;
 
 	private:
 		void GenerateGradients();
@@ -668,7 +667,9 @@ namespace flex
 		MaterialID m_TerrainMatID = InvalidMaterialID;
 		std::vector<MeshComponent*> m_Meshes;
 
-		bool m_UseRandomSeed = true;
+		real nscale = 1.0f;
+
+		bool m_UseManualSeed = true;
 		i32 m_ManualSeed = 0;
 
 		std::array<real, 128> m_RandomTable;
