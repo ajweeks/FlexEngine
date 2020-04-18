@@ -664,8 +664,8 @@ namespace flex
 
 	private:
 		void GenerateGradients();
-		void GenerateAllChunks();
 		void GenerateChunk(const glm::ivec2& index);
+		void DestroyAllChunks();
 		real SampleNoise(const glm::vec2& pos, real octave);
 
 		MaterialID m_TerrainMatID = InvalidMaterialID;

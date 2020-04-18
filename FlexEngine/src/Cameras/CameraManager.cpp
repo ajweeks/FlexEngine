@@ -220,7 +220,7 @@ namespace flex
 				}
 			}
 
-			ImGui::SliderFloat("Move speed", &currentCamera->moveSpeed, 1.0f, 250.0f);
+			ImGui::SliderFloat("Move speed", &currentCamera->moveSpeed, 1.0f, 750.0f);
 
 			real turnSpeed = glm::degrees(currentCamera->mouseRotationSpeed);
 			if (ImGui::SliderFloat("Turn speed", &turnSpeed, 0.01f, 0.3f))

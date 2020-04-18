@@ -4602,19 +4602,15 @@ namespace flex
 		m_Mesh->SetTypeToMemory();
 
 		GenerateGradients();
-
-		GenerateAllChunks();
 	}
 
-	void ChunkGenerator::GenerateAllChunks()
+	void ChunkGenerator::DestroyAllChunks()
 	{
 		for (auto iter = m_Meshes.begin(); iter != m_Meshes.end(); ++iter)
 		{
 			iter->second->Destroy();
 		}
 		m_Meshes.clear();
-
-		GenerateChunk(glm::ivec2(0, 0));
 	}
 
 	void ChunkGenerator::GenerateChunk(const glm::ivec2& chunkIndex)
@@ -4661,7 +4657,7 @@ namespace flex
 				real heightDX = (SampleNoise(sampleCenter + glm::vec2(cell, 0.0f), m_Octave) - height) - (SampleNoise(sampleCenter + glm::vec2(-cell, 0.0f), m_Octave) - height);
 				real heightDZ = (SampleNoise(sampleCenter + glm::vec2(0.0f, -cell), m_Octave) - height) - (SampleNoise(sampleCenter + glm::vec2(0.0f, cell), m_Octave) - height);
 
-				glm::vec3 normal = glm::normalize(glm::vec3(heightDX*nscale, 1.0f, heightDZ * nscale));
+				glm::vec3 normal = glm::normalize(glm::vec3(heightDX * nscale, 1.0f, heightDZ * nscale));
 				glm::vec3 tangent = glm::normalize(glm::cross(normal, glm::vec3(0.0f, 0.0f, 1.0f)));
 
 				glm::vec2 posi = Floor(sampleCenter * m_Octave);
@@ -4947,7 +4943,7 @@ namespace flex
 		if (bRegen)
 		{
 			GenerateGradients();
-			GenerateAllChunks();
+			DestroyAllChunks();
 		}
 
 		ImGui::SliderFloat("View radius", &m_LoadedChunkRadius, 0.01f, 8192.0f);
