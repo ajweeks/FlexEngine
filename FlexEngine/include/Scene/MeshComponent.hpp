@@ -114,7 +114,7 @@ namespace flex
 
 		PrefabShape m_Shape = PrefabShape::_NONE;
 
-		glm::vec2 m_UVScale = { 1,1 };
+		glm::vec2 m_UVScale = { 1, 1 };
 
 		VertexAttributes m_RequiredAttributes = (u32)VertexAttribute::_NONE;
 		VertexBufferData m_VertexBufferData = {};

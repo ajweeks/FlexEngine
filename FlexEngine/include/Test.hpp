@@ -362,7 +362,8 @@ namespace flex
 			glm::vec3 startPos(0.0f, 0.0f, 0.0f);
 			glm::vec3 camForward(0.0f, 0.0f, 1.0f);
 			real offset = 0.0f;
-			glm::vec3 constrainedIntersection = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayOrigin, rayEnd, planeOrigin, planeNorm, startPos, camForward, offset);
+			glm::vec3 z(VEC3_ZERO);
+			glm::vec3 constrainedIntersection = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayOrigin, rayEnd, planeOrigin, planeNorm, startPos, camForward, offset, false, z);
 			EXPECT(constrainedIntersection, glm::vec3(0.0f, 0.0f, 0.0f));
 		}
 		UNIT_TEST_END;
@@ -377,7 +378,8 @@ namespace flex
 			glm::vec3 startPos(0.0f, 0.0f, 0.0f);
 			glm::vec3 camForward(0.0f, 0.0f, 1.0f);
 			real offset = 0.0f;
-			glm::vec3 constrainedIntersection = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayOrigin, rayEnd, planeOrigin, planeNorm, startPos, camForward, offset);
+			glm::vec3 z(VEC3_ZERO);
+			glm::vec3 constrainedIntersection = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayOrigin, rayEnd, planeOrigin, planeNorm, startPos, camForward, offset, false, z);
 			EXPECT(constrainedIntersection, glm::vec3(1.0f, 0.0f, 0.0f)); // intersection point should be (1, 1, 0), constrained to x axis: (1, 0, 0)
 		}
 		UNIT_TEST_END;
@@ -392,7 +394,8 @@ namespace flex
 			glm::vec3 startPos(0.0f, 0.0f, 0.0f);
 			glm::vec3 camForward(0.0f, 0.0f, 1.0f);
 			real offset = 0.0f;
-			glm::vec3 constrainedIntersection = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayOrigin, rayEnd, planeOrigin, planeNorm, startPos, camForward, offset);
+			glm::vec3 z(VEC3_ZERO);
+			glm::vec3 constrainedIntersection = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayOrigin, rayEnd, planeOrigin, planeNorm, startPos, camForward, offset, false, z);
 			EXPECT(constrainedIntersection, glm::vec3(0.0f, 3.0f, 0.0f)); // intersection point should be (-1, 3, 0), constrained to y axis: (0, 3, 0)
 		}
 		UNIT_TEST_END;
@@ -407,7 +410,8 @@ namespace flex
 			glm::vec3 startPos(0.0f, 0.0f, 0.0f);
 			glm::vec3 camForward(-1.0f, 0.0f, 0.0f);
 			real offset = 0.0f;
-			glm::vec3 constrainedIntersection = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayOrigin, rayEnd, planeOrigin, planeNorm, startPos, camForward, offset);
+			glm::vec3 z(VEC3_ZERO);
+			glm::vec3 constrainedIntersection = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayOrigin, rayEnd, planeOrigin, planeNorm, startPos, camForward, offset, false, z);
 			EXPECT(constrainedIntersection, glm::vec3(0.0f, 0.0f, 3.0f)); // intersection point should be (0, -100, 3), constrained to z axis: (0, 0, 3)
 		}
 		UNIT_TEST_END;

@@ -207,7 +207,15 @@ namespace flex
 				i32 intValue = 0;
 				if (!intStr.empty())
 				{
-					intValue = stoi(intStr);
+					if (intStr == "nan" || intStr == "-nan")
+					{
+						PrintWarn("Found NaN in json string, replacing with 0\n");
+						intValue = 0;
+					}
+					else
+					{
+						intValue = stoi(intStr);
+					}
 				}
 				field.value = JSONValue(intValue);
 
@@ -223,7 +231,15 @@ namespace flex
 				real floatValue = 0.0f;
 				if (!floatStr.empty())
 				{
-					floatValue = stof(floatStr);
+					if (floatStr == "nan" || floatStr == "-nan")
+					{
+						PrintWarn("Found NaN in json string, replacing with 0.0f\n");
+						floatValue = 0.0f;
+					}
+					else
+					{
+						floatValue = stof(floatStr);
+					}
 				}
 				field.value = JSONValue(floatValue);
 

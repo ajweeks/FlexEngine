@@ -28,6 +28,8 @@ static const char* SEPARATOR_STR = ", ";
 
 namespace flex
 {
+	static const real UnitializedMemoryFloat = -431602080.0f;
+
 	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount, bool bFlipVertically, u32* channelCountOut /* = nullptr */)
 	{
 		assert(requestedChannelCount == 3 ||
@@ -880,7 +882,13 @@ namespace flex
 		if (IsNanOrInf(x) || IsNanOrInf(y))
 		{
 			PrintError("Attempted to convert vec2 with NAN or inf components to string! Setting to zero\n");
-			return "INVALID VEC";
+			return "0,0";
+		}
+
+		if (x == UnitializedMemoryFloat || y == UnitializedMemoryFloat)
+		{
+			PrintError("Attempted to convert vec2 with values corresponding to unintialized memory (%.0f)\n", UnitializedMemoryFloat);
+			return "0,0";
 		}
 #endif
 
@@ -894,8 +902,14 @@ namespace flex
 #if DEBUG
 		if (IsNanOrInf(x) || IsNanOrInf(y) || IsNanOrInf(z))
 		{
-			PrintError("Attempted to convert vec3 with NAN or inf components to string! Setting to zero\n");
-			return "INVALID VEC";
+			PrintError("Attempted to convert vec3 with NAN or inf components to string (%.2f, %.2f, %.2f), setting to zero\n", x, y, z);
+			return "0,0,0";
+		}
+
+		if (x == UnitializedMemoryFloat || y == UnitializedMemoryFloat || z == UnitializedMemoryFloat)
+		{
+			PrintError("Attempted to convert vec3 with values corresponding to unintialized memory (%.0f)\n", UnitializedMemoryFloat);
+			return "0,0,0";
 		}
 #endif
 
@@ -911,7 +925,13 @@ namespace flex
 		if (IsNanOrInf(x) || IsNanOrInf(y) || IsNanOrInf(z) || IsNanOrInf(w))
 		{
 			PrintError("Attempted to convert vec4 with NAN or inf components to string! Setting to zero\n");
-			return "INVALID VEC";
+			return "0,0,0,0";
+		}
+
+		if (x == UnitializedMemoryFloat || y == UnitializedMemoryFloat || z == UnitializedMemoryFloat || w == UnitializedMemoryFloat)
+		{
+			PrintError("Attempted to convert vec4 with values corresponding to unintialized memory (%.0f)\n", UnitializedMemoryFloat);
+			return "0,0,0,0";
 		}
 #endif
 
@@ -937,8 +957,14 @@ namespace flex
 #if DEBUG
 		if (IsNanOrInf(x) || IsNanOrInf(y) || IsNanOrInf(z) || IsNanOrInf(w))
 		{
-			PrintError("Attempted to convert vec4 with NAN or inf components to string! Setting to zero\n");
-			return "INVALID QUAT";
+			PrintError("Attempted to convert quat with NAN or inf components to string! Setting to zero\n");
+			return "0,0,0,0";
+		}
+
+		if (x == UnitializedMemoryFloat || y == UnitializedMemoryFloat || z == UnitializedMemoryFloat || w == UnitializedMemoryFloat)
+		{
+			PrintError("Attempted to convert quat with values corresponding to unintialized memory (%.0f)\n", UnitializedMemoryFloat);
+			return "0,0,0";
 		}
 #endif
 

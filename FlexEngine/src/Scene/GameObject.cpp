@@ -330,7 +330,7 @@ namespace flex
 		//	}
 		//}
 
-		ImGui::Text("%s", m_Name.c_str());
+		ImGui::Text("%s : %s", m_Name.c_str(), GameObjectTypeStrings[(i32)m_Type]);
 
 		if (DoImGuiContextMenu(true))
 		{

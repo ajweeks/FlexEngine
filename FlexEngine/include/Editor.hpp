@@ -92,7 +92,9 @@ namespace flex
 		glm::vec3 m_SelectedObjectDragStartPos;
 		glm::quat m_SelectedObjectDragStartRot;
 		glm::vec3 m_DraggingGizmoScaleLast;
-		real m_DraggingGizmoOffset = -1.0f; // How far along the axis the cursor was when pressed
+		real m_DraggingGizmoOffset = 0.0f; // How far along the axis the cursor was when pressed
+		glm::vec3 m_PreviousIntersectionPoint;
+		bool m_DraggingGizmoOffsetNeedsRecalculation = true;
 		bool m_bFirstFrameDraggingRotationGizmo = false;
 		glm::vec3 m_AxisProjectedOnto;
 		glm::vec3 m_StartPointOnPlane;

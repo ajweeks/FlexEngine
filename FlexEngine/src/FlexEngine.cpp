@@ -1690,6 +1690,8 @@ namespace flex
 		const glm::vec3& startPos,
 		const glm::vec3& cameraForward,
 		real& inOutOffset,
+		bool recalculateOffset,
+		glm::vec3& inOutPrevIntersectionPoint,
 		glm::vec3* outTrueIntersectionPoint)
 	{
 		glm::vec3 rayDir = glm::normalize(rayEnd - rayOrigin);
@@ -1706,10 +1708,13 @@ namespace flex
 			{
 				*outTrueIntersectionPoint = intersectionPoint;
 			}
-			if (inOutOffset == -1.0f) // Mouse was clicked or wrapped
+			if (recalculateOffset) // Mouse was clicked or wrapped
 			{
+				real oldOffset = glm::dot(inOutPrevIntersectionPoint - startPos, axis);
 				inOutOffset = glm::dot(intersectionPoint - startPos, axis);
+				//Print("(%.2f) => (%.2f)\n", oldOffset, inOutOffset);
 			}
+			inOutPrevIntersectionPoint = intersectionPoint;
 
 			glm::vec3 constrainedPoint = planeOrigin + (glm::dot(intersectionPoint - planeOrigin, axis) - inOutOffset) * axis;
 			return constrainedPoint;

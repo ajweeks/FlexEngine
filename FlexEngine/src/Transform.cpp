@@ -415,7 +415,6 @@ namespace flex
 
 	void Transform::UpdateParentTransform()
 	{
-		// TODO: Move this
 		localTransform = (glm::translate(MAT4_IDENTITY, localPosition) *
 			glm::mat4(localRotation) *
 			glm::scale(MAT4_IDENTITY, localScale));
@@ -429,11 +428,6 @@ namespace flex
 			worldScale = localScale;
 		}
 
-		glm::mat3 rotMat(worldRotation);
-		right = rotMat[0];
-		up = rotMat[1];
-		forward = rotMat[2];
-
 		if (parent)
 		{
 			parent->GetTransform()->UpdateParentTransform();
@@ -442,6 +436,11 @@ namespace flex
 		{
 			UpdateChildTransforms();
 		}
+
+		glm::mat3 rotMat(worldRotation);
+		right = rotMat[0];
+		up = rotMat[1];
+		forward = rotMat[2];
 
 		if (updateParentOnStateChange && m_GameObject)
 		{
@@ -573,7 +572,7 @@ namespace flex
 		GameObject* parent = m_GameObject->GetParent();
 		if (parent)
 		{
-			localRotation = glm::inverse(glm::normalize(parent->GetTransform()->GetWorldRotation())) * glm::normalize(quatRotation);
+			localRotation = glm::inverse(parent->GetTransform()->GetWorldRotation()) * quatRotation;
 		}
 		else
 		{
