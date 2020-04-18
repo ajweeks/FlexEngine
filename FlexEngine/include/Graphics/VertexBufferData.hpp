@@ -22,6 +22,8 @@ namespace flex
 		std::vector<i32> extraInts;
 	};
 
+	u32 HashVertexBufferDataCreateInfo(const VertexBufferDataCreateInfo& info);
+
 	class VertexBufferData
 	{
 	public:
@@ -36,6 +38,7 @@ namespace flex
 
 		void DescribeShaderVariables(Renderer* renderer, RenderID renderID);
 
+		bool bDynamic = false;
 		real* vertexData = nullptr;
 		u32 VertexBufferSize = 0;
 		u32 VertexCount = 0;

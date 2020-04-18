@@ -10,6 +10,7 @@ namespace flex
 {
 	void VertexBufferData::Initialize(const VertexBufferDataCreateInfo& createInfo)
 	{
+		bDynamic = false;
 		VertexCount = (u32)createInfo.positions_3D.size();
 		if (VertexCount == 0)
 		{
@@ -36,6 +37,7 @@ namespace flex
 
 	void VertexBufferData::InitializeDynamic(VertexAttributes attributes, u32 maxNumVerts)
 	{
+		bDynamic = true;
 		VertexCount = maxNumVerts;
 		Attributes = attributes;
 		VertexStride = CalculateVertexStride(attributes);
@@ -315,5 +317,27 @@ namespace flex
 				currentLocation += s_VertexTypes[i].size;
 			}
 		}
+	}
+
+	u32 HashVertexBufferDataCreateInfo(const VertexBufferDataCreateInfo& info)
+	{
+		u32 result = (u32)info.attributes;
+
+		// TODO: Test
+		// TODO: Use smarter hash
+		for (const glm::vec2& pos : info.positions_2D) result += (u32)(pos.x + pos.y);
+		for (const glm::vec3& pos : info.positions_3D) result += (u32)(pos.x + pos.y + pos.z);
+		for (const glm::vec4& pos : info.positions_4D) result += (u32)(pos.x + pos.y + pos.z + pos.w);
+		for (const glm::vec3& v : info.velocities) result += (u32)(v.x + v.y + v.z);
+		for (const glm::vec2& uv : info.texCoords_UV) result += (u32)(uv.x + uv.y);
+		for (i32 i : info.colors_R8G8B8A8) result += (u32)(i);
+		for (const glm::vec4& col : info.colors_R32G32B32A32) result += (u32)(col.x + col.y + col.z + col.w);
+		for (const glm::vec3& pos : info.tangents) result += (u32)(pos.x + pos.y + pos.z);
+		for (const glm::vec3& pos : info.normals) result += (u32)(pos.x + pos.y + pos.z);
+
+		for (const glm::vec4& v : info.extraVec4s) result += (u32)(v.x + v.y + v.z + v.w);
+		for (i32 i : info.extraInts) result += (u32)(i);
+
+		return result;
 	}
 } // namespace flex

@@ -636,6 +636,19 @@ namespace flex
 			AsyncVulkanShaderCompiler* m_ShaderCompiler = nullptr;
 #endif
 
+			enum DirtyFlags : u32
+			{
+				CLEAN			= 0,
+				STATIC_DATA		= 1 << 0,
+				DYNAMIC_DATA	= 1 << 1,
+				SHADOW_DATA		= 1 << 2,
+
+				MAX_VALUE		= 1 << 30,
+				_NONE
+			};
+
+			u32 m_DirtyFlagBits = (u32)DirtyFlags::CLEAN;
+
 			const FrameBufferAttachmentID SWAP_CHAIN_COLOR_ATTACHMENT_ID = 11000;
 			const FrameBufferAttachmentID SWAP_CHAIN_DEPTH_ATTACHMENT_ID = 11001;
 			const FrameBufferAttachmentID SHADOW_CASCADE_DEPTH_ATTACHMENT_ID = 22001;
