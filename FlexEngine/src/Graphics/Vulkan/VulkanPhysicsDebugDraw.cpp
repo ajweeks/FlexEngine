@@ -131,11 +131,9 @@ namespace flex
 			{
 				PROFILE_AUTO("PhysicsDebugRender > Update vertex buffer");
 
-				u32 oldHash;
-				{
-					PROFILE_AUTO("Hash vertex buffer");
-					oldHash = HashVertexBufferDataCreateInfo(m_VertexBufferCreateInfo);
-				}
+				PROFILE_BEGIN("Hash vertex buffer");
+				u32 oldHash = HashVertexBufferDataCreateInfo(m_VertexBufferCreateInfo);
+				PROFILE_END("Hash vertex buffer");
 
 				m_VertexBufferCreateInfo.positions_3D.clear();
 				m_VertexBufferCreateInfo.colors_R32G32B32A32.clear();
@@ -176,11 +174,9 @@ namespace flex
 					i += 2;
 				}
 
-				u32 newHash;
-				{
-					PROFILE_AUTO("Hash vertex buffer");
-					newHash = HashVertexBufferDataCreateInfo(m_VertexBufferCreateInfo);
-				}
+				PROFILE_BEGIN("Hash vertex buffer");
+				u32 newHash = HashVertexBufferDataCreateInfo(m_VertexBufferCreateInfo);
+				PROFILE_END("Hash vertex buffer");
 
 				if (newHash != oldHash)
 				{
