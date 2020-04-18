@@ -685,6 +685,8 @@ namespace flex
 
 		real m_Octave = 0.005f;
 
+		bool m_bHighlightGrid;
+
 		glm::vec3 m_LowCol;
 		glm::vec3 m_MidCol;
 		glm::vec3 m_HighCol;

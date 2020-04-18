@@ -4678,7 +4678,8 @@ namespace flex
 				//vertexBufferCreateInfo.colors_R32G32B32A32.emplace_back(glm::vec4(height, height, height, 1.0f));
 				//vertexBufferCreateInfo.colors_R32G32B32A32.emplace_back(glm::vec4(0.2f, height, 0.2f, 1.0f));
 
-				glm::vec3 vertCol = (height <= 0.5f ? Lerp(m_LowCol, m_MidCol, height * 2.0f) : Lerp(m_MidCol, m_HighCol, (height - 0.5f) * 2.0f));
+				bool bShowEdge = (m_bHighlightGrid && (x == 0 || x == (VertCountPerChunkAxis - 1) || z == 0 || z == (VertCountPerChunkAxis - 1)));
+				glm::vec3 vertCol = (bShowEdge ? glm::vec3(0.75f) : (height <= 0.5f ? Lerp(m_LowCol, m_MidCol, height * 2.0f) : Lerp(m_MidCol, m_HighCol, (height - 0.5f) * 2.0f)));
 				vertexBufferCreateInfo.colors_R32G32B32A32.emplace_back(glm::vec4(vertCol.x, vertCol.y, vertCol.z, 1.0f));
 				vertexBufferCreateInfo.normals.emplace_back(normal);
 				vertexBufferCreateInfo.tangents.emplace_back(tangent);
@@ -4887,6 +4888,8 @@ namespace flex
 		ImGui::Text("Chunks destroying: %u", m_ChunksToDestroy.size());
 
 		bool bRegen = false;
+
+		bRegen = ImGui::Checkbox("Highlight grid", &m_bHighlightGrid) || bRegen;
 
 		u32 oldTableSize = m_PerlinTableSize;
 		if (ImGuiExt::SliderUInt("Table size", &m_PerlinTableSize, 2, 512))
