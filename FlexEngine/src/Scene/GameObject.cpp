@@ -4788,20 +4788,17 @@ namespace flex
 		}
 
 		// Freshly unloaded chunks
-		for (auto chunkIter = m_Meshes.begin(); chunkIter != m_Meshes.end(); /**/)
+		for (auto chunkIter = m_Meshes.begin(); chunkIter != m_Meshes.end(); ++chunkIter)
 		{
 			const glm::vec2i& chunkIdx = chunkIter->first;
-			if (Find(chunksInRadius, chunkIdx) == chunksInRadius.end())
+			if (Find(chunksInRadius, chunkIdx) == chunksInRadius.end() && m_ChunksToDestroy.find(chunkIdx) == m_ChunksToDestroy.end())
 			{
-				Print("Destroying chunk %d,%d\n", chunkIdx.x, chunkIdx.y);
-				auto iter = m_Meshes.find(chunkIdx);
-				assert(iter != m_Meshes.end());
-				iter->second->Destroy();
-				chunkIter = m_Meshes.erase(chunkIter);
-			}
-			else
-			{
-				++chunkIter;
+				m_ChunksToDestroy.emplace(chunkIdx);
+
+				if (m_ChunksToLoad.find(chunkIdx) != m_ChunksToLoad.end())
+				{
+					m_ChunksToLoad.erase(chunkIdx);
+				}
 			}
 		}
 
@@ -4811,15 +4808,64 @@ namespace flex
 			auto meshIter = m_Meshes.find(chunkIdx);
 			if (meshIter == m_Meshes.end() && m_ChunksToLoad.find(chunkIdx) == m_ChunksToLoad.end())
 			{
-				Print("Scheduling chunk %d,%d\n", chunkIdx.x, chunkIdx.y);
 				m_ChunksToLoad.emplace(chunkIdx);
+
+				if (m_ChunksToDestroy.find(chunkIdx) != m_ChunksToDestroy.end())
+				{
+					m_ChunksToDestroy.erase(chunkIdx);
+				}
 			}
 		}
 
-		if (m_ChunksToLoad.size() > 0)
 		{
-			GenerateChunk(*m_ChunksToLoad.begin());
-			m_ChunksToLoad.erase(m_ChunksToLoad.begin());
+			ns start = Time::CurrentNanoseconds();
+			i32 iterationCount = 0;
+			while (m_ChunksToDestroy.size() > 0)
+			{
+				glm::vec2i chunkIdx = *m_ChunksToDestroy.begin();
+				m_ChunksToDestroy.erase(m_ChunksToDestroy.begin());
+
+				auto iter = m_Meshes.find(chunkIdx);
+				assert(iter != m_Meshes.end());
+				iter->second->Destroy();
+				m_Meshes.erase(iter);
+
+				++iterationCount;
+
+				ns now = Time::CurrentNanoseconds();
+				if ((now - start) > m_CreationBudgetPerFrame)
+				{
+					break;
+				}
+			}
+			if (iterationCount > 0)
+			{
+				ns now = Time::CurrentNanoseconds();
+				Print("Destroyed %d chunks in %.2fms\n", iterationCount, Time::ConvertFormats(now - start, Time::Format::NANOSECOND, Time::Format::MILLISECOND));
+			}
+		}
+
+		{
+			ns start = Time::CurrentNanoseconds();
+			i32 iterationCount = 0;
+			while (m_ChunksToLoad.size() > 0)
+			{
+				GenerateChunk(*m_ChunksToLoad.begin());
+				m_ChunksToLoad.erase(m_ChunksToLoad.begin());
+
+				++iterationCount;
+
+				ns now = Time::CurrentNanoseconds();
+				if ((now - start) > m_CreationBudgetPerFrame)
+				{
+					break;
+				}
+			}
+			if (iterationCount > 0)
+			{
+				ns now = Time::CurrentNanoseconds();
+				Print("Generated %d chunks in %.2fms\n", iterationCount, Time::ConvertFormats(now - start, Time::Format::NANOSECOND, Time::Format::MILLISECOND));
+			}
 		}
 	}
 
@@ -4835,6 +4881,10 @@ namespace flex
 	void ChunkGenerator::DrawImGuiObjects()
 	{
 		GameObject::DrawImGuiObjects();
+
+		ImGui::Text("Loaded chunks: %u", m_Meshes.size());
+		ImGui::Text("Chunks loading: %u", m_ChunksToLoad.size());
+		ImGui::Text("Chunks destroying: %u", m_ChunksToDestroy.size());
 
 		bool bRegen = false;
 

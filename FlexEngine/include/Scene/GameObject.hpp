@@ -7,6 +7,7 @@
 #include "Helpers.hpp"
 #include "Spring.hpp"
 #include "Transform.hpp"
+#include "Time.hpp"
 
 #include <set>
 
@@ -674,6 +675,10 @@ namespace flex
 		real m_LoadedChunkRadius = 100.0f;
 
 		std::set<glm::vec2i, Vec2iCompare> m_ChunksToLoad;
+		std::set<glm::vec2i, Vec2iCompare> m_ChunksToDestroy;
+
+		const ns m_CreationBudgetPerFrame = Time::ConvertFormatsConstexpr(1.0f, Time::Format::MILLISECOND, Time::Format::NANOSECOND);
+		const ns m_DeletionBudgetPerFrame = Time::ConvertFormatsConstexpr(0.5f, Time::Format::MILLISECOND, Time::Format::NANOSECOND);
 
 		bool m_UseManualSeed = true;
 		i32 m_ManualSeed = 0;

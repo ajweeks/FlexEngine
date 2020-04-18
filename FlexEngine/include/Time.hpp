@@ -20,5 +20,9 @@ namespace flex
 
 		static real ConvertFormats(real value, Format from, Format to);
 
+		static constexpr real ConvertFormatsConstexpr(real value, Format from, Format to)
+		{
+			return value * ((real)to / (real)from);
+		}
 	};
 } // namespace flex
