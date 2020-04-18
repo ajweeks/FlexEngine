@@ -36,7 +36,7 @@ namespace flex
 		void PostInitialize();
 
 		void Update();
-		void UpdateProceduralData(VertexBufferDataCreateInfo const* newData, const std::vector<u32>& indexData);
+		void UpdateProceduralData(const VertexBufferDataCreateInfo& newData, const std::vector<u32>& indexData);
 
 		void Destroy();
 		void SetOwner(Mesh* owner);
@@ -51,6 +51,12 @@ namespace flex
 			cgltf_primitive* primitive,
 			MaterialID materialID,
 			MeshImportSettings* importSettings = nullptr,
+			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
+
+		static MeshComponent* LoadFromMemory(Mesh* owningMesh,
+			const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
+			const std::vector<u32>& indices,
+			MaterialID materialID,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
 		bool LoadPrefabShape(PrefabShape shape,

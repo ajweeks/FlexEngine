@@ -164,7 +164,7 @@ namespace flex
 				(u32)VertexAttribute::UV;
 
 			m_FullScreenTriVertexBufferData = {};
-			m_FullScreenTriVertexBufferData.Initialize(&triVertexBufferDataCreateInfo);
+			m_FullScreenTriVertexBufferData.Initialize(triVertexBufferDataCreateInfo);
 
 
 			GameObject* fullScreenTriGameObject = new GameObject("Full screen triangle", GameObjectType::_NONE);
@@ -213,7 +213,7 @@ namespace flex
 				(u32)VertexAttribute::UV;
 
 			m_Quad3DVertexBufferData = {};
-			m_Quad3DVertexBufferData.Initialize(&quad3DVertexBufferDataCreateInfo);
+			m_Quad3DVertexBufferData.Initialize(quad3DVertexBufferDataCreateInfo);
 
 
 			GameObject* quad3DGameObject = new GameObject("Sprite Quad 3D", GameObjectType::_NONE);
@@ -1822,6 +1822,20 @@ namespace flex
 				maxStrLen,
 				ImGuiInputTextFlags_EnterReturnsTrue);
 
+			if (ImGui::BeginCombo("Type", GameObjectTypeStrings[(i32)m_NewObjectImGuiSelectedType]))
+			{
+				for (i32 i = 0; i < (i32)GameObjectType::_NONE; ++i)
+				{
+					bool bSelected = (i == (i32)m_NewObjectImGuiSelectedType);
+					if (ImGui::Selectable(GameObjectTypeStrings[i], &bSelected))
+					{
+						m_NewObjectImGuiSelectedType = (GameObjectType)i;
+					}
+				}
+
+				ImGui::EndCombo();
+			}
+
 			bCreate |= ImGui::Button("Create");
 
 			bool bInvalidName = std::string(newObjectName.c_str()).empty();
@@ -1833,17 +1847,38 @@ namespace flex
 
 				if (!newObjectName.empty())
 				{
-					GameObject* newGameObject = new GameObject(newObjectName, GameObjectType::OBJECT);
+					switch (m_NewObjectImGuiSelectedType)
+					{
+					case GameObjectType::OBJECT:
+					{
+						GameObject* newGameObject = new GameObject(newObjectName, GameObjectType::OBJECT);
 
-					Mesh* mesh = newGameObject->SetMesh(new Mesh(newGameObject));
-					mesh->LoadFromFile(RESOURCE_LOCATION "meshes/cube.glb", m_PlaceholderMaterialID);
+						Mesh* mesh = newGameObject->SetMesh(new Mesh(newGameObject));
+						mesh->LoadFromFile(RESOURCE_LOCATION "meshes/cube.glb", m_PlaceholderMaterialID);
 
-					g_SceneManager->CurrentScene()->AddRootObject(newGameObject);
+						g_SceneManager->CurrentScene()->AddRootObject(newGameObject);
 
-					newGameObject->Initialize();
-					newGameObject->PostInitialize();
+						newGameObject->Initialize();
+						newGameObject->PostInitialize();
 
-					g_Editor->SetSelectedObject(newGameObject);
+						g_Editor->SetSelectedObject(newGameObject);
+
+					} break;
+					case GameObjectType:: CHUNK_GENERATOR:
+					{
+						ChunkGenerator* chunkGenerator = new ChunkGenerator(newObjectName);
+
+						g_SceneManager->CurrentScene()->AddRootObject(chunkGenerator);
+
+						chunkGenerator->Initialize();
+						chunkGenerator->PostInitialize();
+
+						g_Editor->SetSelectedObject(chunkGenerator);
+					} break;
+					default:
+						PrintWarn("Unhandled game object type %s\n", GameObjectTypeStrings[(i32)m_NewObjectImGuiSelectedType]);
+						break;
+					};
 
 					ImGui::CloseCurrentPopup();
 				}
@@ -2987,7 +3022,7 @@ namespace flex
 			};
 
 			gBufferQuadVertexBufferDataCreateInfo.attributes = (u32)VertexAttribute::POSITION | (u32)VertexAttribute::UV;
-			m_gBufferQuadVertexBufferData.Initialize(&gBufferQuadVertexBufferDataCreateInfo);
+			m_gBufferQuadVertexBufferData.Initialize(gBufferQuadVertexBufferDataCreateInfo);
 		}
 	}
 

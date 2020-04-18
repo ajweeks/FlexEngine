@@ -184,6 +184,10 @@ namespace flex
 		{
 			newGameObject = new ParticleSystem(objectName);
 		} break;
+		case GameObjectType::CHUNK_GENERATOR:
+		{
+			newGameObject = new ChunkGenerator(objectName);
+		} break;
 		case GameObjectType::OBJECT: // Fall through
 		case GameObjectType::_NONE:
 			newGameObject = new GameObject(objectName, gameObjectType);
@@ -3536,7 +3540,7 @@ namespace flex
 		bufferInfo.positions_3D = positions;
 		bufferInfo.normals = normals;
 		bufferInfo.tangents = tangents;
-		vertexBuffer->UpdateData(&bufferInfo);
+		vertexBuffer->UpdateData(bufferInfo);
 		g_Renderer->UpdateVertexData(m_Mesh->GetRenderID(0), vertexBuffer, m_Mesh->GetSubMeshes()[0]->GetIndexBuffer());
 
 
@@ -4562,5 +4566,113 @@ namespace flex
 	void ParticleSystem::UpdateModelMatrix()
 	{
 		model = glm::scale(m_Transform.GetWorldTransform(), glm::vec3(scale));
+	}
+
+	ChunkGenerator::ChunkGenerator(const std::string& name) :
+		GameObject(name, GameObjectType::CHUNK_GENERATOR)
+	{
+	}
+
+	GameObject* ChunkGenerator::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
+	{
+		return nullptr;
+	}
+
+	void ChunkGenerator::Initialize()
+	{
+		MaterialCreateInfo matCreateInfo = {};
+		matCreateInfo.name = "Terrain";
+		matCreateInfo.shaderName = "pbr";
+		matCreateInfo.constAlbedo = glm::vec3(1.0f, 0.0f, 0.0f);
+		matCreateInfo.constRoughness = 1.0f;
+		matCreateInfo.constMetallic = 0.0f;
+		m_TerrainMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
+
+		m_Mesh = new Mesh(this);
+		m_Mesh->SetTypeToMemory();
+
+		GenerateChunk(glm::ivec2(0, 0));
+	}
+
+	void ChunkGenerator::GenerateChunk(const glm::ivec2& index)
+	{
+		ShaderID shaderID = g_Renderer->GetMaterial(m_TerrainMatID).shaderID;
+
+		const u32 vertexCount = VertCountPerChunkAxis * VertCountPerChunkAxis;
+		const u32 indexCount = VertCountPerChunkAxis * VertCountPerChunkAxis;
+
+		VertexBufferDataCreateInfo vertexBufferCreateInfo = {};
+		vertexBufferCreateInfo.attributes = g_Renderer->GetShader(shaderID).vertexAttributes;
+		vertexBufferCreateInfo.positions_3D.reserve(vertexCount);
+		vertexBufferCreateInfo.texCoords_UV.reserve(vertexCount);
+		vertexBufferCreateInfo.colors_R32G32B32A32.reserve(vertexCount);
+		vertexBufferCreateInfo.normals.reserve(vertexCount);
+		vertexBufferCreateInfo.tangents.reserve(vertexCount);
+
+		std::vector<u32> indices(indexCount);
+
+		for (u32 x = 0; x < VertCountPerChunkAxis; ++x)
+		{
+			for (u32 z = 0; z < VertCountPerChunkAxis; ++z)
+			{
+				glm::vec2 uv((x - 1) / (real)VertCountPerChunkAxis, (z - 1) / (real)VertCountPerChunkAxis);
+
+				glm::vec3 pos = glm::vec3(x * ChunkSize, 0.0f, z * ChunkSize);
+
+				const real e = 0.001f;
+				glm::vec3 vertPosWS = pos + glm::vec3(index.x * ChunkSize, 0.0f, index.y * ChunkSize);
+				real height = SampleNoise(vertPosWS);
+				real heightDX = SampleNoise(vertPosWS + glm::vec3(e, 0.0f, 0.0f)) - height;
+				real heightDZ = SampleNoise(vertPosWS + glm::vec3(0.0f, 0.0f, e)) - height;
+
+				glm::vec3 normal = glm::normalize(glm::vec3(heightDX, 1.0f, heightDZ));
+				glm::vec3 tangent = glm::normalize(glm::cross(normal, glm::vec3(0.0f, 0.0f, 1.0f)));
+
+				vertexBufferCreateInfo.positions_3D.emplace_back(pos);
+				vertexBufferCreateInfo.texCoords_UV.emplace_back(uv);
+				vertexBufferCreateInfo.colors_R32G32B32A32.emplace_back(glm::vec4(0.2f, height, 0.2f, 1.0f));
+				vertexBufferCreateInfo.normals.emplace_back(normal);
+				vertexBufferCreateInfo.tangents.emplace_back(tangent);
+
+				indices.push_back(x * VertCountPerChunkAxis + z);
+			}
+		}
+
+		RenderObjectCreateInfo renderObjectCreateInfo = {};
+		MeshComponent* meshComponent = MeshComponent::LoadFromMemory(m_Mesh, vertexBufferCreateInfo, indices, m_TerrainMatID, &renderObjectCreateInfo);
+		if (meshComponent)
+		{
+			m_Meshes.push_back(meshComponent);
+		}
+	}
+
+	real ChunkGenerator::SampleNoise(const glm::vec3& pos)
+	{
+		return 0.0f;
+	}
+
+	void ChunkGenerator::PostInitialize()
+	{
+	}
+
+	void ChunkGenerator::Update()
+	{
+	}
+
+	void ChunkGenerator::Destroy()
+	{
+	}
+
+	void ChunkGenerator::DrawImGuiObjects()
+	{
+		GameObject::DrawImGuiObjects();
+	}
+
+	void ChunkGenerator::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	{
+	}
+
+	void ChunkGenerator::SerializeUniqueFields(JSONObject& parentObject) const
+	{
 	}
 } // namespace flex

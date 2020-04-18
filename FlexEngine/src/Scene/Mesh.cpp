@@ -166,6 +166,42 @@ namespace flex
 		return true;
 	}
 
+	// NOTE(AJ): Unused! Might be stale
+	bool Mesh::LoadFromMemory(const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
+		const std::vector<u32>& indices,
+		MaterialID matID,
+		RenderObjectCreateInfo* optionalCreateInfo)
+	{
+		if (m_bInitialized)
+		{
+			PrintError("Attempted to load mesh after already initialized! If reloading, first call Destroy\n");
+			return false;
+		}
+
+		m_Type = Type::MEMORY;
+
+		m_BoundingSphereRadius = 0;
+		m_BoundingSphereCenterPoint = VEC3_ZERO;
+
+		if (vertexBufferCreateInfo.attributes == 0)
+		{
+			PrintError("Invalid vertex buffer data passed into Mesh::LoadFromMemory");
+			return false;
+		}
+
+		MeshComponent* meshComponent = MeshComponent::LoadFromMemory(this, vertexBufferCreateInfo, indices, matID, optionalCreateInfo);
+		if (meshComponent)
+		{
+			m_Meshes.push_back(meshComponent);
+		}
+
+		CalculateBounds();
+
+		m_bInitialized = true;
+
+		return true;
+	}
+
 	bool Mesh::LoadPrefabShape(PrefabShape shape, MaterialID materialID, RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
 	{
 		m_Type = Type::PREFAB;
@@ -560,12 +596,20 @@ namespace flex
 			ImGui::Text("Procedural mesh");
 			ImGui::Text("Vertex count: %u", meshComponent->GetVertexBufferData()->VertexCount);
 		} break;
+		case Mesh::Type::MEMORY:
+		{
+		} break;
 		default:
 		{
 			PrintError("Unhandled Mesh::Type in Renderer::DrawImGuiForGameObject: %d\n", (i32)m_Type);
 			assert(false);
 		} break;
 		}
+	}
+
+	void Mesh::SetTypeToMemory()
+	{
+		m_Type = Type::MEMORY;
 	}
 
 	std::vector<MaterialID> Mesh::GetMaterialIDs() const

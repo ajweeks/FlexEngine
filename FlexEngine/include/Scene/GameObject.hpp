@@ -13,6 +13,7 @@ namespace flex
 {
 	class BaseScene;
 	class Mesh;
+	class MeshComponent;
 	class BezierCurveList;
 	class TerminalCamera;
 	struct AST;
@@ -633,6 +634,38 @@ namespace flex
 
 	private:
 		void UpdateModelMatrix();
+
+	};
+
+	class ChunkGenerator : public GameObject
+	{
+	public:
+		explicit ChunkGenerator(const std::string& name);
+
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
+
+		virtual void Initialize();
+		virtual void PostInitialize();
+		virtual void Update() override;
+		virtual void Destroy() override;
+
+		virtual void DrawImGuiObjects() override;
+
+		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+
+		u32 VertCountPerChunkAxis = 256;
+		real ChunkSize = 3.0f;
+		real MaxHeight = 10.0f;
+		u32 Seed = 0;
+
+	private:
+		MaterialID m_TerrainMatID = InvalidMaterialID;
+		std::vector<MeshComponent*> m_Meshes;
+
+		void GenerateChunk(const glm::ivec2& index);
+		real SampleNoise(const glm::vec3& pos);
+
 
 	};
 

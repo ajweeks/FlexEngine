@@ -170,7 +170,7 @@ namespace flex
 					i += 2;
 				}
 
-				m_ObjectMesh->GetSubMeshes()[0]->UpdateProceduralData(&m_VertexBufferCreateInfo, indexBuffer);
+				m_ObjectMesh->GetSubMeshes()[0]->UpdateProceduralData(m_VertexBufferCreateInfo, indexBuffer);
 			}
 		}
 

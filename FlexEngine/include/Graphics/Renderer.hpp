@@ -401,6 +401,8 @@ namespace flex
 		MaterialID m_GridMaterialID = InvalidMaterialID;
 		MaterialID m_WorldAxisMaterialID = InvalidMaterialID;
 
+		GameObjectType m_NewObjectImGuiSelectedType = GameObjectType::OBJECT;
+
 		sec m_EditorStrSecRemaining = 0.0f;
 		sec m_EditorStrSecDuration = 1.5f;
 		real m_EditorStrFadeDurationPercent = 0.25f;

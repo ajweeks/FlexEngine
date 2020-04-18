@@ -8,6 +8,7 @@ namespace flex
 {
 	struct LoadedMesh;
 	struct RenderObjectCreateInfo;
+	struct VertexBufferDataCreateInfo;
 
 	class MeshComponent;
 	enum class PrefabShape;
@@ -20,6 +21,7 @@ namespace flex
 			PREFAB,
 			FILE,
 			PROCEDURAL,
+			MEMORY,
 
 			_NONE
 		};
@@ -43,6 +45,11 @@ namespace flex
 			MeshImportSettings* importSettings = nullptr,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
+		bool LoadFromMemory(const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
+			const std::vector<u32>& indices,
+			MaterialID matID,
+			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
+
 		bool LoadPrefabShape(PrefabShape shape,
 			MaterialID materialID,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
@@ -56,6 +63,8 @@ namespace flex
 		void SetOwner(GameObject* owner);
 
 		void DrawImGui();
+
+		void SetTypeToMemory();
 
 		std::vector<MaterialID> GetMaterialIDs() const;
 

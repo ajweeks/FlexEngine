@@ -2095,16 +2095,27 @@ namespace flex
 				PrintError("Skybox doesn't have a valid material! Irradiance textures can't be generated\n");
 				return;
 			}
+			VulkanMaterial& skyboxMaterial = m_Materials.at(skyboxMatierialID);
 
 			for (u32 i = 0; i < m_RenderObjects.size(); ++i)
 			{
 				VulkanRenderObject* renderObject = GetRenderObject(i);
-				if (renderObject &&
-					m_Shaders[m_Materials.at(renderObject->materialID).material.shaderID].shader->bNeedPrefilteredMap)
+				if (renderObject)
 				{
-					VulkanMaterial* mat = &m_Materials.at(renderObject->materialID);
-					mat->textures.Add(U_IRRADIANCE_SAMPLER, m_Materials.at(skyboxMatierialID).textures[U_IRRADIANCE_SAMPLER], "Irradiance");
-					mat->textures.Add(U_PREFILTER_MAP, m_Materials.at(skyboxMatierialID).textures[U_PREFILTER_MAP]);
+					auto matIter = m_Materials.find(renderObject->materialID);
+					if (matIter != m_Materials.end())
+					{
+						if (m_Shaders[matIter->second.material.shaderID].shader->bNeedPrefilteredMap)
+						{
+							VulkanMaterial& renderObjectMat = matIter->second;
+							renderObjectMat.textures.Add(U_IRRADIANCE_SAMPLER, skyboxMaterial.textures[U_IRRADIANCE_SAMPLER], "Irradiance");
+							renderObjectMat.textures.Add(U_PREFILTER_MAP, skyboxMaterial.textures[U_PREFILTER_MAP]);
+						}
+					}
+					else
+					{
+						PrintError("Skybox's material doesn't exist!\n");
+					}
 				}
 			}
 

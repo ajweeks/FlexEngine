@@ -1,0 +1,63 @@
+{
+	"version" : 3,
+	"name" : "scene_terrain_test",
+	"spawn player" : false,
+	"objects" : 
+	[
+		{
+			"name" : "Skybox",
+			"type" : "skybox",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"materials" : 
+			[
+				"skybox 01"
+			],
+			"skybox info" : 
+			{
+			}
+		},
+		{
+			"name" : "Reflection Probe 01",
+			"type" : "reflection probe",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 8.000, 0.000"
+			}
+		},
+		{
+			"name" : "Directional Light",
+			"type" : "directional light",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 15.000, 0.000",
+				"rot" : "1.194, -0.973, -2.523"
+			},
+			"directional light info" : 
+			{
+				"rotation" : "-0.217, -0.591, -0.616, 0.473",
+				"pos" : "0.000, 15.000, 0.000",
+				"color" : "1.00, 1.00, 1.00",
+				"enabled" : true,
+				"brightness" : 5.000000,
+				"cast shadows" : true,
+				"shadow darkness" : 1.000000
+			}
+		},
+		{
+			"name" : "Chunk Generator",
+			"type" : "chunk generator",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"materials" : 
+			[
+			]
+		}
+	]
+}

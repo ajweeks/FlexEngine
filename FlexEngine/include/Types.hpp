@@ -97,6 +97,7 @@ namespace flex
 		GERSTNER_WAVE,
 		BLOCKS,
 		PARTICLE_SYSTEM,
+		CHUNK_GENERATOR,
 
 		_NONE
 	};
@@ -119,6 +120,7 @@ namespace flex
 		"gerstner wave",
 		"blocks",
 		"particle system",
+		"chunk generator",
 
 		"NONE"
 	};

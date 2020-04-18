@@ -82,7 +82,7 @@ namespace flex
 		}
 	}
 
-	void MeshComponent::UpdateProceduralData(VertexBufferDataCreateInfo const* newData, const std::vector<u32>& indexData)
+	void MeshComponent::UpdateProceduralData(const VertexBufferDataCreateInfo& newData, const std::vector<u32>& indexData)
 	{
 		m_VertexBufferData.UpdateData(newData);
 		m_Indices = indexData;
@@ -349,7 +349,51 @@ namespace flex
 
 		newMeshComponent->CalculateBoundingSphereRadius(vertexBufferDataCreateInfo.positions_3D);
 
-		newMeshComponent->m_VertexBufferData.Initialize(&vertexBufferDataCreateInfo);
+		newMeshComponent->m_VertexBufferData.Initialize(vertexBufferDataCreateInfo);
+
+		RenderObjectCreateInfo renderObjectCreateInfo = {};
+
+		if (optionalCreateInfo)
+		{
+			newMeshComponent->CopyInOptionalCreateInfo(renderObjectCreateInfo, *optionalCreateInfo);
+		}
+
+		renderObjectCreateInfo.gameObject = owningMesh->GetOwningGameObject();
+		renderObjectCreateInfo.vertexBufferData = &newMeshComponent->m_VertexBufferData;
+		renderObjectCreateInfo.indices = &newMeshComponent->m_Indices;
+		renderObjectCreateInfo.materialID = materialID;
+
+		if (newMeshComponent->renderID != InvalidRenderID)
+		{
+			g_Renderer->DestroyRenderObject(newMeshComponent->renderID);
+		}
+
+		newMeshComponent->renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
+
+		g_Renderer->SetTopologyMode(newMeshComponent->renderID, TopologyMode::TRIANGLE_LIST);
+
+		newMeshComponent->m_VertexBufferData.DescribeShaderVariables(g_Renderer, newMeshComponent->renderID);
+
+		newMeshComponent->m_bInitialized = true;
+
+		return newMeshComponent;
+	}
+
+	MeshComponent* MeshComponent::LoadFromMemory(Mesh* owningMesh,
+		const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
+		const std::vector<u32>& indices,
+		MaterialID materialID,
+		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
+	{
+		MeshComponent* newMeshComponent = new MeshComponent(owningMesh, materialID);
+
+		// TODO:
+		//newMeshComponent->m_MinPoint = glm::min(newMeshComponent->m_MinPoint, posMin);
+		//newMeshComponent->m_MaxPoint = glm::max(newMeshComponent->m_MaxPoint, posMax);
+
+		newMeshComponent->CalculateBoundingSphereRadius(vertexBufferCreateInfo.positions_3D);
+		newMeshComponent->m_Indices = indices;
+		newMeshComponent->m_VertexBufferData.Initialize(vertexBufferCreateInfo);
 
 		RenderObjectCreateInfo renderObjectCreateInfo = {};
 
@@ -959,7 +1003,7 @@ namespace flex
 
 		CalculateBoundingSphereRadius(vertexBufferDataCreateInfo.positions_3D);
 
-		m_VertexBufferData.Initialize(&vertexBufferDataCreateInfo);
+		m_VertexBufferData.Initialize(vertexBufferDataCreateInfo);
 
 		renderObjectCreateInfo.vertexBufferData = &m_VertexBufferData;
 		renderObjectCreateInfo.indices = &m_Indices;

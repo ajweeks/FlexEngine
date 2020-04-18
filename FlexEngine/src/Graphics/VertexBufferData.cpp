@@ -8,19 +8,19 @@
 
 namespace flex
 {
-	void VertexBufferData::Initialize(VertexBufferDataCreateInfo* createInfo)
+	void VertexBufferData::Initialize(const VertexBufferDataCreateInfo& createInfo)
 	{
-		VertexCount = (u32)createInfo->positions_3D.size();
+		VertexCount = (u32)createInfo.positions_3D.size();
 		if (VertexCount == 0)
 		{
-			VertexCount = (u32)createInfo->positions_2D.size();
+			VertexCount = (u32)createInfo.positions_2D.size();
 		}
 		if (VertexCount == 0)
 		{
-			VertexCount = (u32)createInfo->positions_4D.size();
+			VertexCount = (u32)createInfo.positions_4D.size();
 		}
-		Attributes = createInfo->attributes;
-		VertexStride = CalculateVertexStride(createInfo->attributes);
+		Attributes = createInfo.attributes;
+		VertexStride = CalculateVertexStride(createInfo.attributes);
 		VertexBufferSize = VertexCount * VertexStride;
 
 		assert(vertexData == nullptr);
@@ -50,78 +50,78 @@ namespace flex
 		}
 	}
 
-	void VertexBufferData::UpdateData(VertexBufferDataCreateInfo const* createInfo)
+	void VertexBufferData::UpdateData(const VertexBufferDataCreateInfo& createInfo)
 	{
 		assert(vertexData != nullptr);
 		assert(VertexCount > 0);
 
 		real* vertexDataP = vertexData;
-		u32 count = glm::min(VertexCount, glm::max((u32)createInfo->positions_2D.size(), glm::max((u32)createInfo->positions_3D.size(), (u32)createInfo->positions_4D.size())));
+		u32 count = glm::min(VertexCount, glm::max((u32)createInfo.positions_2D.size(), glm::max((u32)createInfo.positions_3D.size(), (u32)createInfo.positions_4D.size())));
 		for (u32 i = 0; i < count; ++i)
 		{
 			if (Attributes & (u32)VertexAttribute::POSITION)
 			{
-				memcpy(vertexDataP, createInfo->positions_3D.data() + i, sizeof(glm::vec3));
+				memcpy(vertexDataP, createInfo.positions_3D.data() + i, sizeof(glm::vec3));
 				vertexDataP += 3;
 			}
 
 			if (Attributes & (u32)VertexAttribute::POSITION2)
 			{
-				memcpy(vertexDataP, createInfo->positions_2D.data() + i, sizeof(glm::vec2));
+				memcpy(vertexDataP, createInfo.positions_2D.data() + i, sizeof(glm::vec2));
 				vertexDataP += 2;
 			}
 
 			if (Attributes & (u32)VertexAttribute::POSITION4)
 			{
-				memcpy(vertexDataP, createInfo->positions_4D.data() + i, sizeof(glm::vec4));
+				memcpy(vertexDataP, createInfo.positions_4D.data() + i, sizeof(glm::vec4));
 				vertexDataP += 4;
 			}
 
 			if (Attributes & (u32)VertexAttribute::VELOCITY3)
 			{
-				memcpy(vertexDataP, createInfo->velocities.data() + i, sizeof(glm::vec3));
+				memcpy(vertexDataP, createInfo.velocities.data() + i, sizeof(glm::vec3));
 				vertexDataP += 4;
 			}
 
 			if (Attributes & (u32)VertexAttribute::UV)
 			{
-				memcpy(vertexDataP, createInfo->texCoords_UV.data() + i, sizeof(glm::vec2));
+				memcpy(vertexDataP, createInfo.texCoords_UV.data() + i, sizeof(glm::vec2));
 				vertexDataP += 2;
 			}
 
 			if (Attributes & (u32)VertexAttribute::COLOR_R8G8B8A8_UNORM)
 			{
-				memcpy(vertexDataP, createInfo->colors_R8G8B8A8.data() + i, sizeof(i32));
+				memcpy(vertexDataP, createInfo.colors_R8G8B8A8.data() + i, sizeof(i32));
 				vertexDataP += 1;
 			}
 
 			if (Attributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)
 			{
-				memcpy(vertexDataP, createInfo->colors_R32G32B32A32.data() + i, sizeof(glm::vec4));
+				memcpy(vertexDataP, createInfo.colors_R32G32B32A32.data() + i, sizeof(glm::vec4));
 				vertexDataP += 4;
 			}
 
 			if (Attributes & (u32)VertexAttribute::NORMAL)
 			{
-				memcpy(vertexDataP, createInfo->normals.data() + i, sizeof(glm::vec3));
+				memcpy(vertexDataP, createInfo.normals.data() + i, sizeof(glm::vec3));
 				vertexDataP += 3;
 			}
 
 			if (Attributes & (u32)VertexAttribute::TANGENT)
 			{
-				memcpy(vertexDataP, createInfo->tangents.data() + i, sizeof(glm::vec3));
+				memcpy(vertexDataP, createInfo.tangents.data() + i, sizeof(glm::vec3));
 				vertexDataP += 3;
 			}
 
 			if (Attributes & (u32)VertexAttribute::EXTRA_VEC4)
 			{
-				memcpy(vertexDataP, createInfo->extraVec4s.data() + i, sizeof(glm::vec4));
+				memcpy(vertexDataP, createInfo.extraVec4s.data() + i, sizeof(glm::vec4));
 				vertexDataP += 4;
 			}
 
 			if (Attributes & (u32)VertexAttribute::EXTRA_INT)
 			{
-				memcpy(vertexDataP, createInfo->extraInts.data() + i, sizeof(i32));
+				memcpy(vertexDataP, createInfo.extraInts.data() + i, sizeof(i32));
 				vertexDataP += 1;
 			}
 		}
