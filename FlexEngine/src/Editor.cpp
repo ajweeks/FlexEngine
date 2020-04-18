@@ -1164,7 +1164,7 @@ namespace flex
 	void Editor::CreateObjects()
 	{
 		RenderObjectCreateInfo gizmoCreateInfo = {};
-		gizmoCreateInfo.depthTestReadFunc = DepthTestFunc::GEQUAL;
+		gizmoCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
 		gizmoCreateInfo.bDepthWriteEnable = false;
 		gizmoCreateInfo.bEditorObject = true;
 		gizmoCreateInfo.bSetDynamicStates = true;
