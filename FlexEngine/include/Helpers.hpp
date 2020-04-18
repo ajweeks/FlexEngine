@@ -192,6 +192,13 @@ namespace flex
 	{
 		return glm::saturate(val);
 	}
+
+	glm::vec2 Floor(const glm::vec2& p);
+	glm::vec2 Fract(const glm::vec2& p);
+
+	glm::vec3 Floor(const glm::vec3& p);
+	glm::vec3 Fract(const glm::vec3& p);
+
 	u32 GenerateUID();
 
 	template<class T>
@@ -267,4 +274,9 @@ namespace flex
 		//TextCache& operator=(const TextCache &tmp);
 
 	};
+
+	namespace ImGuiExt
+	{
+		bool InputUInt(const char* message, u32* v, u32 step = 1, u32 step_fast = 100, ImGuiInputTextFlags flags = 0);
+	} // namespace ImGuiExt
 } // namespace flex

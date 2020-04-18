@@ -30,6 +30,8 @@ namespace flex
 {
 	static const real UnitializedMemoryFloat = -431602080.0f;
 
+	static u32 _lastUID = 0;
+
 	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount, bool bFlipVertically, u32* channelCountOut /* = nullptr */)
 	{
 		assert(requestedChannelCount == 3 ||
@@ -1320,7 +1322,26 @@ namespace flex
 		return glm::max(vec.x, glm::max(vec.y, glm::max(vec.z, vec.w)));
 	}
 
-	static u32 _lastUID = 0;
+	glm::vec2 Floor(const glm::vec2& p)
+	{
+		return glm::vec2(floor(p.x), floor(p.y));
+	}
+
+	glm::vec2 Fract(const glm::vec2& p)
+	{
+		return glm::vec2(glm::mod(p.x, 1.0f), glm::mod(p.y, 1.0f));
+	}
+
+	glm::vec3 Floor(const glm::vec3& p)
+	{
+		return glm::vec3(floor(p.x), floor(p.y), floor(p.z));
+	}
+
+	glm::vec3 Fract(const glm::vec3& p)
+	{
+		return glm::vec3(glm::mod(p.x, 1.0f), glm::mod(p.y, 1.0f), glm::mod(p.z, 1.0f));
+	}
+
 	u32 GenerateUID()
 	{
 		return ++_lastUID;
@@ -1428,4 +1449,12 @@ namespace flex
 		return bResult;
 	}
 
+	namespace ImGuiExt
+	{
+		bool InputUInt(const char* message, u32* v, u32 step /* = 1 */, u32 step_fast /* = 100 */, ImGuiInputTextFlags flags /* = 0 */)
+		{
+			return ImGui::InputScalar(message, ImGuiDataType_U32, v, (void*)(step > 0 ? &step : NULL), (void*)(step_fast > 0 ? &step_fast : NULL), NULL, flags);
+		}
+	} // namespace ImGuiExt
 } // namespace flex
+
