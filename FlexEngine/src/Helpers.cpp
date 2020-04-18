@@ -1460,6 +1460,12 @@ namespace flex
 		{
 			return ImGui::InputScalar(message, ImGuiDataType_U32, v, (void*)(step > 0 ? &step : NULL), (void*)(step_fast > 0 ? &step_fast : NULL), NULL, flags);
 		}
+
+		bool SliderUInt(const char* label, u32* v, u32 v_min, u32 v_max, const char* format /* = NULL */)
+		{
+			return ImGui::SliderScalar(label, ImGuiDataType_U32, v, &v_min, &v_max, format);
+		}
+
 	} // namespace ImGuiExt
 } // namespace flex
 

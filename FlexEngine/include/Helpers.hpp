@@ -283,5 +283,6 @@ namespace flex
 	namespace ImGuiExt
 	{
 		bool InputUInt(const char* message, u32* v, u32 step = 1, u32 step_fast = 100, ImGuiInputTextFlags flags = 0);
+		bool SliderUInt(const char* label, u32* v, u32 v_min, u32 v_max, const char* format = NULL);
 	} // namespace ImGuiExt
 } // namespace flex

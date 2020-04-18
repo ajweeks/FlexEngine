@@ -237,6 +237,18 @@ namespace flex
 		return false;
 	}
 
+	bool JSONObject::SetUIntChecked(const std::string& label, u32& value) const
+	{
+		if (HasField(label))
+		{
+			i32 iValue = GetInt(label);
+			value = (u32)value;
+			assert((i32)value == iValue); // Lost precision in uint storage! Implement uint serialization!
+			return true;
+		}
+		return false;
+	}
+
 	real JSONObject::GetFloat(const std::string& label) const
 	{
 		for (const JSONField& field : fields)

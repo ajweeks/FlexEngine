@@ -33,6 +33,8 @@ namespace flex
 		/* Sets value to the result of GetString(label) if that field is present */
 		bool SetIntChecked(const std::string& label, i32& value) const;
 
+		bool SetUIntChecked(const std::string& label, u32& value) const;
+
 		real GetFloat(const std::string& label) const;
 		// TODO: Rename SetXChecked functions to TryGetX
 		/* Sets value to the result of GetString(label) if that field is present */
