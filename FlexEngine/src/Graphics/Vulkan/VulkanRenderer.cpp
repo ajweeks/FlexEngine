@@ -4790,8 +4790,8 @@ namespace flex
 				const real minSpriteDist = 1.5f;
 				const real maxSpriteDist = 3.0f;
 
-				glm::vec3 camPos = cam->GetPosition();
-				glm::vec3 camUp = cam->GetUp();
+				glm::vec3 camPos = cam->position;
+				glm::vec3 camUp = cam->up;
 				for (i32 i = 0; i < m_NumPointLightsEnabled; ++i)
 				{
 					if (m_PointLights[i].enabled)
@@ -8675,9 +8675,9 @@ namespace flex
 			glm::mat4 view = cam->GetView();
 			glm::mat4 viewInv; // Calculated below
 			glm::mat4 viewProjection = cam->GetViewProjection();
-			glm::vec4 camPos = glm::vec4(cam->GetPosition(), 0.0f);
+			glm::vec4 camPos = glm::vec4(cam->position, 0.0f);
 			real exposure = cam->exposure;
-			glm::vec2 m_NearFarPlanes(cam->GetZNear(), cam->GetZFar());
+			glm::vec2 m_NearFarPlanes(cam->zNear, cam->zFar);
 
 			static DirLightData defaultDirLightData = { VEC3_RIGHT, 0, VEC3_ONE, 0.0f, 0, 0.0f, { 0.0f, 0.0f } };
 

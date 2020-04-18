@@ -665,7 +665,7 @@ namespace flex
 		void GenerateGradients();
 		void GenerateAllChunks();
 		void GenerateChunk(const glm::ivec2& index);
-		real SampleNoise(const glm::vec2& pos);
+		real SampleNoise(const glm::vec2& pos, real octave);
 
 		MaterialID m_TerrainMatID = InvalidMaterialID;
 		std::map<glm::vec2i, MeshComponent*, Vec2iCompare> m_Meshes; // Chunk index to mesh
@@ -678,7 +678,14 @@ namespace flex
 		bool m_UseManualSeed = true;
 		i32 m_ManualSeed = 0;
 
-		std::array<real, 128> m_RandomTable;
+		real m_Octave = 0.005f;
+
+		glm::vec3 m_LowCol;
+		glm::vec3 m_MidCol;
+		glm::vec3 m_HighCol;
+
+		std::vector<glm::vec2> m_RandomTable;
+		u32 m_PerlinTableSize = 128;
 
 	};
 

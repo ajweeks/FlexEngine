@@ -53,17 +53,17 @@ namespace flex
 						{
 							Transform* terminalTransform = closestTerminal->GetTransform();
 							glm::vec3 terminalForward = terminalTransform->GetForward();
-							m_Forward = -terminalForward;
+							forward = -terminalForward;
 							CalculateYawAndPitchFromForward();
 
 							glm::vec3 targetXZPos = terminalTransform->GetWorldPosition() + terminalForward * 2.5f;
 
-							m_StartingPitch = m_Pitch;
-							m_StartingYaw = m_Yaw;
-							m_StartingPos = glm::vec3(targetXZPos.x, m_Position.y, targetXZPos.z);
+							m_StartingPitch = pitch;
+							m_StartingYaw = yaw;
+							m_StartingPos = glm::vec3(targetXZPos.x, position.y, targetXZPos.z);
 
 							m_TargetPlayerPos = m_StartingPos + terminalForward * 3.0f;
-							m_TargetPlayerRot = glm::quat(glm::vec3(0, atan2(m_Forward.x, m_Forward.z), 0));
+							m_TargetPlayerRot = glm::quat(glm::vec3(0, atan2(forward.x, forward.z), 0));
 
 							// Will call SetTerminal on us
 							p0->SetInteractingWith(closestTerminal);
@@ -83,9 +83,9 @@ namespace flex
 
 		if (m_bTransitioningIn || m_bTransitioningOut)
 		{
-			m_Yaw = MoveTowards(m_Yaw, m_TargetYaw, g_DeltaTime * m_LerpSpeed);
-			m_Pitch = MoveTowards(m_Pitch, m_TargetPitch, g_DeltaTime * m_LerpSpeed);
-			m_Position = MoveTowards(m_Position, m_TargetPos, g_DeltaTime * m_LerpSpeed);
+			yaw = MoveTowards(yaw, m_TargetYaw, g_DeltaTime * m_LerpSpeed);
+			pitch = MoveTowards(pitch, m_TargetPitch, g_DeltaTime * m_LerpSpeed);
+			position = MoveTowards(position, m_TargetPos, g_DeltaTime * m_LerpSpeed);
 
 			if (m_bTransitioningIn)
 			{
@@ -95,9 +95,9 @@ namespace flex
 				playerTransform->SetWorldRotation(MoveTowards(playerTransform->GetWorldRotation(), m_TargetPlayerRot, g_DeltaTime * m_LerpSpeed));
 			}
 
-			if (NearlyEquals(m_Yaw, m_TargetYaw, 0.01f) &&
-				NearlyEquals(m_Pitch, m_TargetPitch, 0.01f) &&
-				NearlyEquals(m_Position, m_TargetPos, 0.01f))
+			if (NearlyEquals(yaw, m_TargetYaw, 0.01f) &&
+				NearlyEquals(pitch, m_TargetPitch, 0.01f) &&
+				NearlyEquals(position, m_TargetPos, 0.01f))
 			{
 				if (m_bTransitioningIn)
 				{
@@ -129,9 +129,9 @@ namespace flex
 			m_Terminal = terminal;
 			m_Terminal->SetCamera(this);
 
-			m_StartingPitch = m_Pitch;
-			m_StartingYaw = m_Yaw;
-			m_StartingPos = m_Position;
+			m_StartingPitch = pitch;
+			m_StartingYaw = yaw;
+			m_StartingPos = position;
 
 			Transform* terminalTransform = terminal->GetTransform();
 			m_TargetPos = terminalTransform->GetWorldPosition() +
@@ -157,11 +157,11 @@ namespace flex
 
 	void TerminalCamera::WrapTargetYaw()
 	{
-		if (m_TargetYaw - m_Yaw > PI)
+		if (m_TargetYaw - yaw > PI)
 		{
 			m_TargetYaw -= TWO_PI;
 		}
-		if (m_TargetYaw - m_Yaw < -PI)
+		if (m_TargetYaw - yaw < -PI)
 		{
 			m_TargetYaw += TWO_PI;
 		}

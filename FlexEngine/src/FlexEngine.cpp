@@ -220,9 +220,9 @@ namespace flex
 		g_CameraManager = new CameraManager();
 
 		DebugCamera* debugCamera = new DebugCamera();
-		debugCamera->SetPosition(glm::vec3(20.0f, 8.0f, -16.0f));
-		debugCamera->SetYaw(glm::radians(130.0f));
-		debugCamera->SetPitch(glm::radians(-10.0f));
+		debugCamera->position = glm::vec3(20.0f, 8.0f, -16.0f);
+		debugCamera->yaw = glm::radians(130.0f);
+		debugCamera->pitch = glm::radians(-10.0f);
 		g_CameraManager->AddCamera(debugCamera, false);
 
 		OverheadCamera* overheadCamera = new OverheadCamera();
@@ -1290,46 +1290,6 @@ namespace flex
 					m_bRenderImGui = bRenderImGui;
 				}
 
-				std::string cameraName;
-				if (rootObject.SetStringChecked("last camera type", cameraName))
-				{
-					if (cameraName.compare("terminal") == 0)
-					{
-						// Ensure there's a camera to pop back to after exiting the terminal
-						g_CameraManager->SetCameraByName("first-person", false);
-					}
-					g_CameraManager->PushCameraByName(cameraName, true);
-				}
-
-				JSONObject cameraTransform;
-				if (rootObject.SetObjectChecked("camera transform", cameraTransform))
-				{
-					BaseCamera* cam = g_CameraManager->CurrentCamera();
-					glm::vec3 camPos = ParseVec3(cameraTransform.GetString("position"));
-					if (IsNanOrInf(camPos))
-					{
-						PrintError("Camera pos was saved out as nan or inf, resetting to 0\n");
-						camPos = VEC3_ZERO;
-					}
-					cam->SetPosition(camPos);
-
-					real camPitch = cameraTransform.GetFloat("pitch");
-					if (IsNanOrInf(camPitch))
-					{
-						PrintError("Camera pitch was saved out as nan or inf, resetting to 0\n");
-						camPitch = 0.0f;
-					}
-					cam->SetPitch(camPitch);
-
-					real camYaw = cameraTransform.GetFloat("yaw");
-					if (IsNanOrInf(camYaw))
-					{
-						PrintError("Camera yaw was saved out as nan or inf, resetting to 0\n");
-						camYaw = 0.0f;
-					}
-					cam->SetYaw(camYaw);
-				}
-
 				real masterGain;
 				if (rootObject.SetFloatChecked("master gain", masterGain))
 				{
@@ -1361,17 +1321,7 @@ namespace flex
 		std::string lastOpenedSceneName = g_SceneManager->CurrentScene()->GetFileName();
 		rootObject.fields.emplace_back("last opened scene", JSONValue(lastOpenedSceneName));
 
-		BaseCamera* cam = g_CameraManager->CurrentCamera();
 		rootObject.fields.emplace_back("render imgui", JSONValue(m_bRenderImGui));
-		rootObject.fields.emplace_back("last camera type", JSONValue(cam->GetName().c_str()));
-		std::string posStr = VecToString(cam->GetPosition(), 3);
-		real pitch = cam->GetPitch();
-		real yaw = cam->GetYaw();
-		JSONObject cameraTransform = {};
-		cameraTransform.fields.emplace_back("position", JSONValue(posStr));
-		cameraTransform.fields.emplace_back("pitch", JSONValue(pitch));
-		cameraTransform.fields.emplace_back("yaw", JSONValue(yaw));
-		rootObject.fields.emplace_back("camera transform", JSONValue(cameraTransform));
 
 		real masterGain = AudioManager::GetMasterGain();
 		rootObject.fields.emplace_back("master gain", JSONValue(masterGain));
@@ -1728,7 +1678,7 @@ namespace flex
 		PhysicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld();
 
 		const real maxDist = 1000.0f;
-		outRayStart = ToBtVec3(g_CameraManager->CurrentCamera()->GetPosition());
+		outRayStart = ToBtVec3(g_CameraManager->CurrentCamera()->position);
 		glm::vec2 mousePos = g_InputManager->GetMousePosition();
 		btVector3 rayDir = physicsWorld->GenerateDirectionRayFromScreenPos((i32)mousePos.x, (i32)mousePos.y);
 		outRayEnd = outRayStart + rayDir * maxDist;

@@ -85,7 +85,7 @@ namespace flex
 		btScalar aspectRatio = frameBufferWidth / frameBufferHeight;
 
 		BaseCamera* camera = g_CameraManager->CurrentCamera();
-		real fov = camera->GetFOV();
+		real fov = camera->FOV;
 		real tanFov = tanf(0.5f * fov);
 
 		real pixelScreenX = 2.0f * ((x + 0.5f) / frameBufferWidth) - 1.0f;

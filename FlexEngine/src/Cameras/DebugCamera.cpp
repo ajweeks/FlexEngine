@@ -79,21 +79,21 @@ namespace flex
 		const bool bModFaster = g_InputManager->GetActionDown(Action::EDITOR_MOD_FASTER) > 0;
 		const bool bModSlower = g_InputManager->GetActionDown(Action::EDITOR_MOD_SLOWER) > 0;
 
-		const real moveSpeedMultiplier = bModFaster ? m_MoveSpeedFastMultiplier : bModSlower ? m_MoveSpeedSlowMultiplier : 1.0f;
-		const real turnSpeedMultiplier = bModFaster ? m_TurnSpeedFastMultiplier : bModSlower ? m_TurnSpeedSlowMultiplier : 1.0f;
+		const real moveSpeedMultiplier = bModFaster ? moveSpeedFastMultiplier : bModSlower ? moveSpeedSlowMultiplier : 1.0f;
+		const real turnSpeedMultiplier = bModFaster ? turnSpeedFastMultiplier : bModSlower ? turnSpeedSlowMultiplier : 1.0f;
 
 		real lookH = g_InputManager->GetActionAxisValue(Action::DBG_CAM_LOOK_LEFT) + g_InputManager->GetActionAxisValue(Action::DBG_CAM_LOOK_RIGHT);
 		real lookV = g_InputManager->GetActionAxisValue(Action::DBG_CAM_LOOK_DOWN) + g_InputManager->GetActionAxisValue(Action::DBG_CAM_LOOK_UP);
-		real yawO = -lookH * m_GamepadRotationSpeed * turnSpeedMultiplier * g_UnpausedDeltaTime;
+		real yawO = -lookH * gamepadRotationSpeed * turnSpeedMultiplier * g_UnpausedDeltaTime;
 		// Horizontal FOV is roughly twice as wide as vertical
-		real pitchO = lookV * 0.6f * m_GamepadRotationSpeed * turnSpeedMultiplier * g_UnpausedDeltaTime;
+		real pitchO = lookV * 0.6f * gamepadRotationSpeed * turnSpeedMultiplier * g_UnpausedDeltaTime;
 
 		m_TurnVel += glm::vec2(yawO, pitchO);
 
-		m_Yaw += m_TurnVel.x;
-		m_Pitch += m_TurnVel.y;
+		yaw += m_TurnVel.x;
+		pitch += m_TurnVel.y;
 		ClampPitch();
-		m_Pitch = glm::clamp(m_Pitch, -glm::pi<real>(), glm::pi<real>());
+		pitch = glm::clamp(pitch, -glm::pi<real>(), glm::pi<real>());
 
 		CalculateAxisVectorsFromPitchAndYaw();
 
@@ -128,30 +128,30 @@ namespace flex
 				orbitingCenter = g_Editor->GetSelectedObjectsCenter();
 				bOrbiting = true;
 
-				float dr = glm::dot(m_Forward, VEC3_UP);
+				float dr = glm::dot(forward, VEC3_UP);
 				if (abs(dr) > 0.995f && glm::sign(m_MouseDragDist.y) != glm::sign(dr))
 
 				{
 					// Facing nearly entirely up or down, only allow movement around pole (slowed slightly)
-					targetDPos += m_Right * (m_MouseDragDist.x * m_OrbitingSpeed * turnSpeedMultiplier * 0.5f);
+					targetDPos += right * (m_MouseDragDist.x * orbitingSpeed * turnSpeedMultiplier * 0.5f);
 				}
 				else
 				{
-					targetDPos += m_Right * (m_MouseDragDist.x * m_OrbitingSpeed * turnSpeedMultiplier) +
-						m_Up * (m_MouseDragDist.y * m_OrbitingSpeed * turnSpeedMultiplier);
+					targetDPos += right * (m_MouseDragDist.x * orbitingSpeed * turnSpeedMultiplier) +
+						up * (m_MouseDragDist.y * orbitingSpeed * turnSpeedMultiplier);
 				}
 			}
 			else
 			{
 				m_MouseDragDist.y = -m_MouseDragDist.y;
 
-				m_TurnVel += glm::vec2(-m_MouseDragDist.x * m_MouseRotationSpeed * turnSpeedMultiplier,
-					m_MouseDragDist.y * m_MouseRotationSpeed * turnSpeedMultiplier);
+				m_TurnVel += glm::vec2(-m_MouseDragDist.x * mouseRotationSpeed * turnSpeedMultiplier,
+					m_MouseDragDist.y * mouseRotationSpeed * turnSpeedMultiplier);
 
-				m_Roll += m_TurnVel.x * m_RollOnTurnAmount * g_UnpausedDeltaTime;
+				roll += m_TurnVel.x * m_RollOnTurnAmount * g_UnpausedDeltaTime;
 
-				m_Yaw += m_TurnVel.x;
-				m_Pitch += m_TurnVel.y;
+				yaw += m_TurnVel.x;
+				pitch += m_TurnVel.y;
 				ClampPitch();
 			}
 		}
@@ -160,72 +160,72 @@ namespace flex
 		real moveF = g_InputManager->GetActionAxisValue(Action::DBG_CAM_MOVE_FORWARD);
 		if (moveF != 0.0f)
 		{
-			translation += m_Forward * moveF;
+			translation += forward * moveF;
 		}
 		real moveB = g_InputManager->GetActionAxisValue(Action::DBG_CAM_MOVE_BACKWARD);
 		if (moveB != 0.0f)
 		{
-			translation += m_Forward * moveB;
+			translation += forward * moveB;
 		}
 		real moveL = g_InputManager->GetActionAxisValue(Action::DBG_CAM_MOVE_LEFT);
 		if (moveL != 0.0f)
 		{
-			translation += -m_Right * moveL;
+			translation += -right * moveL;
 		}
 		real moveR = g_InputManager->GetActionAxisValue(Action::DBG_CAM_MOVE_RIGHT);
 		if (moveR != 0.0f)
 		{
-			translation += -m_Right * moveR;
+			translation += -right * moveR;
 		}
 		real moveU = g_InputManager->GetActionAxisValue(Action::DBG_CAM_MOVE_UP);
 		if (moveU != 0.0f)
 		{
-			translation += m_Up * moveU;
+			translation += up * moveU;
 		}
 		real moveD = g_InputManager->GetActionAxisValue(Action::DBG_CAM_MOVE_DOWN);
 		if (moveD != 0.0f)
 		{
-			translation += m_Up * moveD;
+			translation += up * moveD;
 		}
 
 		if (m_bDraggingMMB)
 		{
 			if (g_InputManager->IsMouseButtonDown(MouseButton::MIDDLE))
 			{
-				const real multiplier = bModFaster ? m_PanSpeedFastMultiplier : bModSlower ? m_PanSpeedSlowMultiplier : 1.0f;
+				const real multiplier = bModFaster ? panSpeedFastMultiplier : bModSlower ? panSpeedSlowMultiplier : 1.0f;
 
 				glm::vec2 dragDist = g_InputManager->GetMouseDragDistance(MouseButton::MIDDLE) * multiplier;
 				glm::vec2 frameBufferSize = (glm::vec2)g_Window->GetFrameBufferSize();
 				glm::vec2 normDragDist = dragDist / frameBufferSize;
-				m_Position = (m_DragStartPosition + (normDragDist.x * m_Right + normDragDist.y * m_Up) * m_PanSpeed);
+				position = (m_DragStartPosition + (normDragDist.x * right + normDragDist.y * up) * panSpeed);
 			}
 		}
 
 		real scrollDistance = g_InputManager->GetVerticalScrollDistance();
 		if (scrollDistance != 0.0f && g_Window->HasFocus())
 		{
-			translation += m_Forward * scrollDistance * m_ScrollDollySpeed;
+			translation += forward * scrollDistance * scrollDollySpeed;
 		}
 
 		if (g_InputManager->IsMouseButtonDown(MouseButton::RIGHT))
 		{
 			glm::vec2 zoom = g_InputManager->GetMouseMovement();
-			translation += m_Forward * -zoom.y * m_DragDollySpeed * g_UnpausedDeltaTime;
+			translation += forward * -zoom.y * dragDollySpeed * g_UnpausedDeltaTime;
 		}
 
-		targetDPos += translation * m_MoveSpeed * moveSpeedMultiplier * g_UnpausedDeltaTime;
+		targetDPos += translation * moveSpeed * moveSpeedMultiplier * g_UnpausedDeltaTime;
 
-		real distFromCenter = glm::length(m_Position - orbitingCenter);
+		real distFromCenter = glm::length(position - orbitingCenter);
 
 		m_MoveVel += targetDPos;
 
-		m_Position += m_MoveVel;
+		position += m_MoveVel;
 		m_DragStartPosition += m_MoveVel;
 
 		if (bOrbiting)
 		{
-			glm::vec3 orientationFromCenter = glm::normalize(m_Position - orbitingCenter);
-			m_Position = orbitingCenter + orientationFromCenter * distFromCenter;
+			glm::vec3 orientationFromCenter = glm::normalize(position - orbitingCenter);
+			position = orbitingCenter + orientationFromCenter * distFromCenter;
 
 			LookAt(orbitingCenter);
 		}
@@ -263,7 +263,7 @@ namespace flex
 		{
 			if (action == KeyAction::PRESS)
 			{
-				m_DragStartPosition = m_Position;
+				m_DragStartPosition = position;
 				m_bDraggingMMB = true;
 				return EventReply::CONSUMED;
 			}

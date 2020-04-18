@@ -73,7 +73,7 @@ namespace flex
 		if (m_Shape == PrefabShape::GRID)
 		{
 			Transform* transform = m_OwningMesh->GetOwningGameObject()->GetTransform();
-			glm::vec3 camPos = g_CameraManager->CurrentCamera()->GetPosition();
+			glm::vec3 camPos = g_CameraManager->CurrentCamera()->position;
 			glm::vec3 newGridPos = glm::vec3(camPos.x - fmod(
 				camPos.x + GRID_LINE_SPACING / 2.0f, GRID_LINE_SPACING),
 				transform->GetWorldPosition().y,

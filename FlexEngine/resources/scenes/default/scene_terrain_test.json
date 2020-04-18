@@ -2,6 +2,24 @@
 	"version" : 3,
 	"name" : "scene_terrain_test",
 	"spawn player" : false,
+	"camera" : 
+	{
+		"type" : "debug",
+		"near plane" : 0.500000,
+		"far plane" : 10000.000000,
+		"fov" : 0.785398,
+		"aperture" : 1.000000,
+		"shutter speed" : 0.125000,
+		"light sensitivity" : 800.000000,
+		"exposure" : 1.200000,
+		"move speed" : 94.521004,
+		"transform" : 
+		{
+			"position" : "-141.878, 364.509, 108.240",
+			"pitch" : -0.128640,
+			"yaw" : -11.620549
+		}
+	},
 	"objects" : 
 	[
 		{
@@ -60,13 +78,17 @@
 			],
 			"chunk generator info" : 
 			{
-				"vert count per chunk axis" : 32,
-				"chunk size" : 350.613007,
-				"max height" : 7.025000,
+				"vert count per chunk axis" : 16,
+				"chunk size" : 512.000000,
+				"max height" : 64.000000,
 				"use manual seed" : true,
 				"manual seed" : 1234123,
-				"loaded chunk radius" : 1291.359009
-			}
+				"loaded chunk radius" : 2000.000000
+			},
+			"table size" : 128,
+			"low colour" : "0.20, 0.30, 0.45",
+			"mid colour" : "0.45, 0.55, 0.25",
+			"high colour" : "0.65, 0.67, 0.69"
 		},
 		{
 			"name" : "cube",

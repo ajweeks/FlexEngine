@@ -120,6 +120,72 @@ namespace flex
 
 				sceneRootObject.SetBoolChecked("spawn player", m_bSpawnPlayer);
 
+				JSONObject cameraObj;
+				if (sceneRootObject.SetObjectChecked("camera", cameraObj))
+				{
+					std::string cameraName;
+					if (cameraObj.SetStringChecked("last camera type", cameraName))
+					{
+						if (cameraName.compare("terminal") == 0)
+						{
+							// Ensure there's a camera to pop back to after exiting the terminal
+							g_CameraManager->SetCameraByName("first-person", false);
+						}
+						g_CameraManager->PushCameraByName(cameraName, true);
+					}
+
+					std::string camType;
+					if (cameraObj.SetStringChecked("type", camType))
+					{
+						if (cameraName.compare("terminal") == 0)
+						{
+							// Ensure there's a camera to pop back to after exiting the terminal
+							g_CameraManager->SetCameraByName("first-person", false);
+						}
+						g_CameraManager->SetCameraByName(camType, true);
+					}
+
+					BaseCamera* cam = g_CameraManager->CurrentCamera();
+
+					real zNear, zFar, fov, aperture, shutterSpeed, lightSensitivity, exposure, moveSpeed;
+					if (cameraObj.SetFloatChecked("near plane", zNear)) cam->zNear = zNear;
+					if (cameraObj.SetFloatChecked("far plane", zFar)) cam->zFar = zFar;
+					if (cameraObj.SetFloatChecked("fov", fov)) cam->FOV = fov;
+					if (cameraObj.SetFloatChecked("aperture", aperture)) cam->aperture = aperture;
+					if (cameraObj.SetFloatChecked("shutter speed", shutterSpeed)) cam->shutterSpeed= shutterSpeed;
+					if (cameraObj.SetFloatChecked("light sensitivity", lightSensitivity)) cam->lightSensitivity = lightSensitivity;
+					if (cameraObj.SetFloatChecked("exposure", exposure)) cam->exposure = exposure;
+					if (cameraObj.SetFloatChecked("move speed", moveSpeed)) cam->moveSpeed = moveSpeed;
+
+					JSONObject cameraTransform;
+					if (cameraObj.SetObjectChecked("transform", cameraTransform))
+					{
+						glm::vec3 camPos = ParseVec3(cameraTransform.GetString("position"));
+						if (IsNanOrInf(camPos))
+						{
+							PrintError("Camera pos was saved out as nan or inf, resetting to 0\n");
+							camPos = VEC3_ZERO;
+						}
+						cam->position = camPos;
+
+						real camPitch = cameraTransform.GetFloat("pitch");
+						if (IsNanOrInf(camPitch))
+						{
+							PrintError("Camera pitch was saved out as nan or inf, resetting to 0\n");
+							camPitch = 0.0f;
+						}
+						cam->pitch = camPitch;
+
+						real camYaw = cameraTransform.GetFloat("yaw");
+						if (IsNanOrInf(camYaw))
+						{
+							PrintError("Camera yaw was saved out as nan or inf, resetting to 0\n");
+							camYaw = 0.0f;
+						}
+						cam->yaw = camYaw;
+					}
+				}
+
 				// TODO: Only initialize materials currently present in this scene
 				for (JSONObject& materialObj : s_ParsedMaterials)
 				{
@@ -903,6 +969,36 @@ namespace flex
 		rootSceneObject.fields.emplace_back("version", JSONValue(m_SceneFileVersion));
 		rootSceneObject.fields.emplace_back("name", JSONValue(m_Name));
 		rootSceneObject.fields.emplace_back("spawn player", JSONValue(m_bSpawnPlayer));
+
+		{
+			JSONObject cameraObj = {};
+
+			BaseCamera* cam = g_CameraManager->CurrentCamera();
+
+			// TODO: Serialize all non-procedural cameras & last used
+
+			cameraObj.fields.emplace_back("type", JSONValue(cam->GetName().c_str()));
+
+			cameraObj.fields.emplace_back("near plane", JSONValue(cam->zNear));
+			cameraObj.fields.emplace_back("far plane", JSONValue(cam->zFar));
+			cameraObj.fields.emplace_back("fov", JSONValue(cam->FOV));
+			cameraObj.fields.emplace_back("aperture", JSONValue(cam->aperture));
+			cameraObj.fields.emplace_back("shutter speed", JSONValue(cam->shutterSpeed));
+			cameraObj.fields.emplace_back("light sensitivity", JSONValue(cam->lightSensitivity));
+			cameraObj.fields.emplace_back("exposure", JSONValue(cam->exposure));
+			cameraObj.fields.emplace_back("move speed", JSONValue(cam->moveSpeed));
+
+			std::string posStr = VecToString(cam->position, 3);
+			real pitch = cam->pitch;
+			real yaw = cam->yaw;
+			JSONObject cameraTransform = {};
+			cameraTransform.fields.emplace_back("position", JSONValue(posStr));
+			cameraTransform.fields.emplace_back("pitch", JSONValue(pitch));
+			cameraTransform.fields.emplace_back("yaw", JSONValue(yaw));
+			cameraObj.fields.emplace_back("transform", JSONValue(cameraTransform));
+
+			rootSceneObject.fields.emplace_back("camera", JSONValue(cameraObj));
+		}
 
 		std::vector<JSONObject> objectsArray;
 		for (GameObject* rootObject : m_RootObjects)

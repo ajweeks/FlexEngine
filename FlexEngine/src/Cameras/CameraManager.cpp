@@ -220,50 +220,34 @@ namespace flex
 				}
 			}
 
-			real moveSpeed = currentCamera->GetMoveSpeed();
-			if (ImGui::SliderFloat("Move speed", &moveSpeed, 1.0f, 250.0f))
-			{
-				currentCamera->SetMoveSpeed(moveSpeed);
-			}
+			ImGui::SliderFloat("Move speed", &currentCamera->moveSpeed, 1.0f, 250.0f);
 
-			real turnSpeed = glm::degrees(currentCamera->GetRotationSpeed());
+			real turnSpeed = glm::degrees(currentCamera->mouseRotationSpeed);
 			if (ImGui::SliderFloat("Turn speed", &turnSpeed, 0.01f, 0.3f))
 			{
-				currentCamera->SetRotationSpeed(glm::radians(turnSpeed));
+				currentCamera->mouseRotationSpeed = glm::radians(turnSpeed);
 			}
 
-			glm::vec3 camPos = currentCamera->GetPosition();
-			if (ImGui::DragFloat3("Position", &camPos.x, 0.1f))
-			{
-				currentCamera->SetPosition(camPos);
-			}
+			ImGui::DragFloat3("Position", &currentCamera->position.x, 0.1f);
 
 			glm::vec2 camYawPitch;
-			camYawPitch[0] = glm::degrees(currentCamera->GetYaw());
-			camYawPitch[1] = glm::degrees(currentCamera->GetPitch());
+			camYawPitch[0] = glm::degrees(currentCamera->yaw);
+			camYawPitch[1] = glm::degrees(currentCamera->pitch);
 			if (ImGui::DragFloat2("Yaw & Pitch", &camYawPitch.x, 0.05f))
 			{
-				currentCamera->SetYaw(glm::radians(camYawPitch[0]));
-				currentCamera->SetPitch(glm::radians(camYawPitch[1]));
+				currentCamera->yaw = glm::radians(camYawPitch[0]);
+				currentCamera->pitch = glm::radians(camYawPitch[1]);
 			}
 
-			real camFOV = glm::degrees(currentCamera->GetFOV());
+			real camFOV = glm::degrees(currentCamera->FOV);
 			if (ImGui::DragFloat("FOV", &camFOV, 0.05f, 10.0f, 150.0f))
 			{
-				currentCamera->SetFOV(glm::radians(camFOV));
+				currentCamera->FOV = glm::radians(camFOV);
 			}
 
-			real zNear = currentCamera->GetZNear();
-			if (ImGui::DragFloat("near", &zNear, 0.05f, -1000.0f, 1000.0f))
-			{
-				currentCamera->SetZNear(zNear);
-			}
+			ImGui::DragFloat("near", &currentCamera->zNear, 0.05f, -1000.0f, 1000.0f);
 
-			real zFar = currentCamera->GetZFar();
-			if (ImGui::DragFloat("far", &zFar, 0.05f, -1000.0f, 1000.0f))
-			{
-				currentCamera->SetZFar(zFar);
-			}
+			ImGui::DragFloat("far", &currentCamera->zFar, 0.05f, -1000.0f, 1000.0f);
 
 			if (ImGui::Button("Reset orientation"))
 			{
@@ -295,10 +279,10 @@ namespace flex
 
 	void CameraManager::AlignCameras(BaseCamera* from, BaseCamera* to)
 	{
-		to->SetPosition(from->GetPosition());
-		to->SetPitch(from->GetPitch());
-		to->SetYaw(from->GetYaw());
-		to->SetFOV(from->GetFOV());
+		to->position = from->position;
+		to->pitch = from->pitch;
+		to->yaw = from->yaw;
+		to->FOV = from->FOV;
 	}
 
 	EventReply CameraManager::OnActionEvent(Action action)

@@ -24,30 +24,30 @@ namespace flex
 		m_View(MAT4_ZERO),
 		m_Proj(MAT4_ZERO),
 		m_ViewProjection(MAT4_ZERO),
-		m_FOV(FOV),
-		m_ZNear(zNear),
-		m_ZFar(zFar),
-		m_MoveSpeed(18.0f),
-		m_PanSpeed(60.0f),
-		m_DragDollySpeed(40.0f),
-		m_ScrollDollySpeed(20.0f),
-		m_OrbitingSpeed(0.1f),
-		m_MouseRotationSpeed(0.0015f),
-		m_GamepadRotationSpeed(2.0f),
-		m_MoveSpeedFastMultiplier(3.5f),
-		m_MoveSpeedSlowMultiplier(0.05f),
-		m_TurnSpeedFastMultiplier(2.0f),
-		m_TurnSpeedSlowMultiplier(0.1f),
-		m_PanSpeedFastMultiplier(2.5f),
-		m_PanSpeedSlowMultiplier(0.2f),
-		m_RollRestorationSpeed(12.0f),
-		m_Position(VEC3_ZERO),
-		m_Yaw(0.0f),
-		m_Pitch(0.0f),
-		m_Roll(0.0f),
-		m_Forward(VEC3_FORWARD),
-		m_Up(VEC3_UP),
-		m_Right(VEC3_RIGHT)
+		FOV(FOV),
+		zNear(zNear),
+		zFar(zFar),
+		moveSpeed(18.0f),
+		panSpeed(60.0f),
+		dragDollySpeed(40.0f),
+		scrollDollySpeed(20.0f),
+		orbitingSpeed(0.1f),
+		mouseRotationSpeed(0.0015f),
+		gamepadRotationSpeed(2.0f),
+		moveSpeedFastMultiplier(3.5f),
+		moveSpeedSlowMultiplier(0.05f),
+		turnSpeedFastMultiplier(2.0f),
+		turnSpeedSlowMultiplier(0.1f),
+		panSpeedFastMultiplier(2.5f),
+		panSpeedSlowMultiplier(0.2f),
+		rollRestorationSpeed(12.0f),
+		position(VEC3_ZERO),
+		yaw(0.0f),
+		pitch(0.0f),
+		roll(0.0f),
+		forward(VEC3_FORWARD),
+		up(VEC3_UP),
+		right(VEC3_RIGHT)
 	{
 		ResetOrientation();
 		CalculateAxisVectorsFromPitchAndYaw();
@@ -66,7 +66,7 @@ namespace flex
 
 	void BaseCamera::Update()
 	{
-		m_Roll = Lerp(m_Roll, 0.0f, m_RollRestorationSpeed * g_DeltaTime);
+		roll = Lerp(roll, 0.0f, rollRestorationSpeed * g_DeltaTime);
 	}
 
 	void BaseCamera::Destroy()
@@ -105,36 +105,6 @@ namespace flex
 	{
 	}
 
-	void BaseCamera::SetFOV(real FOV)
-	{
-		m_FOV = FOV;
-	}
-
-	real BaseCamera::GetFOV() const
-	{
-		return m_FOV;
-	}
-
-	void BaseCamera::SetZNear(real zNear)
-	{
-		m_ZNear = zNear;
-	}
-
-	real BaseCamera::GetZNear() const
-	{
-		return m_ZNear;
-	}
-
-	void BaseCamera::SetZFar(real zFar)
-	{
-		m_ZFar = zFar;
-	}
-
-	real BaseCamera::GetZFar() const
-	{
-		return m_ZFar;
-	}
-
 	glm::mat4 BaseCamera::GetViewProjection() const
 	{
 		return m_ViewProjection;
@@ -154,11 +124,11 @@ namespace flex
 	{
 		speed = Saturate(speed);
 
-		glm::vec3 targetForward = glm::normalize(point - m_Position);
-		m_Forward = glm::normalize(Lerp(m_Forward, targetForward, speed));
+		glm::vec3 targetForward = glm::normalize(point - position);
+		forward = glm::normalize(Lerp(forward, targetForward, speed));
 
 #if THOROUGH_CHECKS
-		ENSURE(!IsNanOrInf(m_Forward));
+		ENSURE(!IsNanOrInf(forward));
 #endif
 
 		CalculateYawAndPitchFromForward();
@@ -167,78 +137,53 @@ namespace flex
 
 	void BaseCamera::Translate(glm::vec3 translation)
 	{
-		m_Position += translation;
-	}
-
-	void BaseCamera::SetPosition(glm::vec3 position)
-	{
-		m_Position = position;
-	}
-
-	glm::vec3 BaseCamera::GetPosition() const
-	{
-		return m_Position;
+		position += translation;
 	}
 
 	void BaseCamera::SetViewDirection(real yawRad, real pitchRad)
 	{
-		m_Yaw = yawRad;
-		m_Pitch = pitchRad;
-		m_Roll = 0.0f;
-	}
-
-	glm::vec3 BaseCamera::GetRight() const
-	{
-		return m_Right;
-	}
-
-	glm::vec3 BaseCamera::GetUp() const
-	{
-		return m_Up;
-	}
-
-	glm::vec3 BaseCamera::GetForward() const
-	{
-		return m_Forward;
+		yaw = yawRad;
+		pitch = pitchRad;
+		roll = 0.0f;
 	}
 
 	void BaseCamera::ResetPosition()
 	{
-		m_Position = VEC3_ZERO;
+		position = VEC3_ZERO;
 	}
 
 	void BaseCamera::ResetOrientation()
 	{
-		m_Pitch = 0.0f;
-		m_Yaw = PI;
-		m_Roll = 0.0f;
+		pitch = 0.0f;
+		yaw = PI;
+		roll = 0.0f;
 	}
 
 	void BaseCamera::CalculateAxisVectorsFromPitchAndYaw()
 	{
-		m_Forward = {};
-		m_Forward.x = cos(m_Pitch) * cos(m_Yaw);
-		m_Forward.y = sin(m_Pitch);
-		m_Forward.z = cos(m_Pitch) * sin(m_Yaw);
-		m_Forward = normalize(m_Forward);
+		forward = {};
+		forward.x = cos(pitch) * cos(yaw);
+		forward.y = sin(pitch);
+		forward.z = cos(pitch) * sin(yaw);
+		forward = normalize(forward);
 
 		glm::vec3 worldUp(0.0f, 1.0f, 0.0f);
-		worldUp += m_Right * m_Roll;
+		worldUp += right * roll;
 
-		m_Right = normalize(glm::cross(m_Forward, worldUp));
-		m_Up = cross(m_Right, m_Forward);
+		right = normalize(glm::cross(forward, worldUp));
+		up = cross(right, forward);
 	}
 
 	void BaseCamera::CalculateYawAndPitchFromForward()
 	{
-		m_Pitch = asin(m_Forward.y);
+		pitch = asin(forward.y);
 		ClampPitch();
-		m_Yaw = atan2(m_Forward.z, m_Forward.x);
-		m_Roll = 0.0f;
+		yaw = atan2(forward.z, forward.x);
+		roll = 0.0f;
 
 #if THOROUGH_CHECKS
-		ENSURE(!IsNanOrInf(m_Pitch));
-		ENSURE(!IsNanOrInf(m_Yaw));
+		ENSURE(!IsNanOrInf(pitch));
+		ENSURE(!IsNanOrInf(yaw));
 #endif
 	}
 
@@ -250,10 +195,10 @@ namespace flex
 			return;
 		}
 
-		m_View = glm::lookAt(m_Position, m_Position + m_Forward, m_Up);
+		m_View = glm::lookAt(position, position + forward, up);
 
 		real aspectRatio = (real)windowSize.x / (real)windowSize.y;
-		m_Proj = glm::perspective(m_FOV, aspectRatio, m_ZFar, m_ZNear);
+		m_Proj = glm::perspective(FOV, aspectRatio, zFar, zNear);
 
 		m_ViewProjection = m_Proj * m_View;
 
@@ -333,7 +278,7 @@ namespace flex
 	void BaseCamera::ClampPitch()
 	{
 		real pitchLimit = glm::radians(89.5f);
-		m_Pitch = glm::clamp(m_Pitch, -pitchLimit, pitchLimit);
+		pitch = glm::clamp(pitch, -pitchLimit, pitchLimit);
 	}
 
 	real BaseCamera::CalculateEV100(real aperture, real shutterSpeed, real sensitivity)
@@ -344,46 +289,6 @@ namespace flex
 	real BaseCamera::ComputeExposureNormFactor(real EV100)
 	{
 		return pow(2.0f, EV100) * 1.2f;
-	}
-
-	real BaseCamera::GetYaw() const
-	{
-		return m_Yaw;
-	}
-
-	void BaseCamera::SetYaw(real yawRad)
-	{
-		m_Yaw = yawRad;
-	}
-
-	real BaseCamera::GetPitch() const
-	{
-		return m_Pitch;
-	}
-
-	void BaseCamera::SetPitch(real pitchRad)
-	{
-		m_Pitch = pitchRad;
-	}
-
-	void BaseCamera::SetMoveSpeed(real moveSpeed)
-	{
-		m_MoveSpeed = moveSpeed;
-	}
-
-	real BaseCamera::GetMoveSpeed() const
-	{
-		return m_MoveSpeed;
-	}
-
-	void BaseCamera::SetRotationSpeed(real rotationSpeed)
-	{
-		m_MouseRotationSpeed = rotationSpeed;
-	}
-
-	real BaseCamera::GetRotationSpeed() const
-	{
-		return m_MouseRotationSpeed;
 	}
 
 	std::string BaseCamera::GetName() const

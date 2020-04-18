@@ -4573,7 +4573,10 @@ namespace flex
 	}
 
 	ChunkGenerator::ChunkGenerator(const std::string& name) :
-		GameObject(name, GameObjectType::CHUNK_GENERATOR)
+		GameObject(name, GameObjectType::CHUNK_GENERATOR),
+		m_LowCol(0.2f, 0.3f, 0.45f),
+		m_MidCol(0.45f, 0.55f, 0.25f),
+		m_HighCol(0.65f, 0.67f, 0.69f)
 	{
 	}
 
@@ -4588,7 +4591,7 @@ namespace flex
 	{
 		MaterialCreateInfo matCreateInfo = {};
 		matCreateInfo.name = "Terrain";
-		matCreateInfo.shaderName = "pbr";
+		matCreateInfo.shaderName = "color";
 		matCreateInfo.constAlbedo = glm::vec3(1.0f, 0.0f, 0.0f);
 		matCreateInfo.constRoughness = 1.0f;
 		matCreateInfo.constMetallic = 0.0f;
@@ -4652,23 +4655,35 @@ namespace flex
 
 				glm::vec3 vertPosWS = pos + glm::vec3(chunkIndex.x * ChunkSize, 0.0f, chunkIndex.y * ChunkSize);
 				glm::vec2 sampleCenter(vertPosWS.x, vertPosWS.z);
-				real height = SampleNoise(sampleCenter);
+				real height = SampleNoise(sampleCenter, m_Octave);
 				vertPosWS.y = height * MaxHeight;
 
-				real heightDX = (SampleNoise(sampleCenter + glm::vec2(cell, 0.0f)) - height) - (SampleNoise(sampleCenter + glm::vec2(-cell, 0.0f)) - height);
-				real heightDZ = (SampleNoise(sampleCenter + glm::vec2(0.0f, -cell)) - height) - (SampleNoise(sampleCenter + glm::vec2(0.0f, cell)) - height);
+				real heightDX = (SampleNoise(sampleCenter + glm::vec2(cell, 0.0f), m_Octave) - height) - (SampleNoise(sampleCenter + glm::vec2(-cell, 0.0f), m_Octave) - height);
+				real heightDZ = (SampleNoise(sampleCenter + glm::vec2(0.0f, -cell), m_Octave) - height) - (SampleNoise(sampleCenter + glm::vec2(0.0f, cell), m_Octave) - height);
 
 				glm::vec3 normal = glm::normalize(glm::vec3(heightDX*nscale, 1.0f, heightDZ * nscale));
 				glm::vec3 tangent = glm::normalize(glm::cross(normal, glm::vec3(0.0f, 0.0f, 1.0f)));
 
+				glm::vec2 posi = Floor(sampleCenter * m_Octave);
+				glm::vec2 posf = Fract(sampleCenter * m_Octave);
+
+				const u32 tableEntryCount = (u32)m_RandomTable.size();
+				const u32 tableWidth = (u32)glm::sqrt(tableEntryCount);
+
 				vertexBufferCreateInfo.positions_3D.emplace_back(vertPosWS);
 				vertexBufferCreateInfo.texCoords_UV.emplace_back(uv);
-				vertexBufferCreateInfo.colors_R32G32B32A32.emplace_back(glm::vec4(0.2f, height, 0.2f, 1.0f));
+				glm::vec2 vec = m_RandomTable[(u32)((i32)(posi.y * tableWidth + posi.x) % tableEntryCount)];
+
+				//vertexBufferCreateInfo.colors_R32G32B32A32.emplace_back(glm::vec4(abs(vec.x), 0.0f, abs(vec.y), 1.0f));
+				//vertexBufferCreateInfo.colors_R32G32B32A32.emplace_back(glm::vec4(height, height, height, 1.0f));
+				//vertexBufferCreateInfo.colors_R32G32B32A32.emplace_back(glm::vec4(0.2f, height, 0.2f, 1.0f));
+
+				glm::vec3 vertCol = (height <= 0.5f ? Lerp(m_LowCol, m_MidCol, height * 2.0f) : Lerp(m_MidCol, m_HighCol, (height - 0.5f) * 2.0f));
+				vertexBufferCreateInfo.colors_R32G32B32A32.emplace_back(glm::vec4(vertCol.x, vertCol.y, vertCol.z, 1.0f));
 				vertexBufferCreateInfo.normals.emplace_back(normal);
 				vertexBufferCreateInfo.tangents.emplace_back(tangent);
 			}
 		}
-
 
 		for (u32 z = 0; z < VertCountPerChunkAxis; ++z)
 		{
@@ -4703,6 +4718,8 @@ namespace flex
 
 	void ChunkGenerator::GenerateGradients()
 	{
+		m_RandomTable = std::vector<glm::vec2>(m_PerlinTableSize);
+
 		std::mt19937 m_RandGenerator;
 		std::uniform_real_distribution<real> m_RandDistribution;
 
@@ -4712,28 +4729,36 @@ namespace flex
 
 		for (u32 i = 0; i < m_RandomTable.size(); ++i)
 		{
-			m_RandomTable[i] = dice();
+			m_RandomTable[i] = glm::normalize(glm::vec2(dice() * 2.0 - 1.0f, dice() * 2.0 - 1.0f));
 		}
 	}
 
-	real ChunkGenerator::SampleNoise(const glm::vec2& pos)
+	real ChunkGenerator::SampleNoise(const glm::vec2& pos, real octave)
 	{
-		glm::vec2 posi = Floor(pos);
-		glm::vec2 posf = Fract(pos);
+		glm::vec2 posi = Floor(pos * octave);
+		glm::vec2 posf = Fract(pos * octave);
 
-		posf = posf * posf * (3.0f - 2.0f * posf);
+		const u32 tableEntryCount = (u32)m_RandomTable.size();
+		const u32 tableWidth = (u32)glm::sqrt(tableEntryCount);
 
-		real f = posi.x * 0.0037f * posi.y + (posi.y + 0.00265f) * 0.0017f * (posi.x + posi.x + 0.0025f) + posf.x + posf.y;
-		u32 i = (u32)(f) % (u32)m_RandomTable.size();
-		u32 edgeLen = (u32)glm::sqrt((real)m_RandomTable.size());
-		real a0 = m_RandomTable[i];
-		real a1 = m_RandomTable[((i + 1) % m_RandomTable.size())];
-		real a2 = m_RandomTable[((i + edgeLen) % m_RandomTable.size())];
-		real a3 = m_RandomTable[((i + edgeLen + 1)% m_RandomTable.size())];
+		glm::vec2 r00 = m_RandomTable[(u32)((i32)(posi.y * tableWidth + posi.x) % tableEntryCount)];
+		glm::vec2 r10 = m_RandomTable[(u32)((i32)(posi.y * tableWidth + posi.x + 1) % tableEntryCount)];
+		glm::vec2 r01 = m_RandomTable[(u32)((i32)((posi.y + 1) * tableWidth + posi.x) % tableEntryCount)];
+		glm::vec2 r11 = m_RandomTable[(u32)((i32)((posi.y + 1) * tableWidth + posi.x + 1) % tableEntryCount)];
 
-		real val1 = Lerp(a0, a1, posf.x);
-		real val2 = Lerp(a2, a3, posf.y);
-		real val = Lerp(val1, val2, glm::fract(f));
+		//real halfCellSize = (0.5f / octave);
+		//posf += glm::vec2(halfCellSize);
+
+		real r00p = glm::dot(posf, r00);
+		real r10p = glm::dot(glm::vec2(posf.x - 1.0f, posf.y), r10);
+		real r01p = glm::dot(glm::vec2(posf.x, posf.y - 1.0f), r01);
+		real r11p = glm::dot(glm::vec2(posf.x - 1.0f, posf.y - 1.0f), r11);
+
+		real xval0 = Lerp(r00p, r10p, posf.x);
+		real xval1 = Lerp(r01p, r11p, posf.x);
+		real val = Lerp(xval0, xval1, posf.y);
+
+		val = val * 0.5f + 0.5f; // Remap [-1, 1], => [0, 1]
 
 		return val;
 	}
@@ -4746,7 +4771,7 @@ namespace flex
 	{
 		std::vector<glm::vec2i> chunksInRadius(m_Meshes.size()); // Likely to be same size as m_LoadedChunks
 
-		const glm::vec3 camPos = g_CameraManager->CurrentCamera()->GetPosition();
+		const glm::vec3 camPos = g_CameraManager->CurrentCamera()->position;
 		const glm::vec2i camChunkIdx = (glm::vec2i)(glm::vec2(camPos.x, camPos.z) / ChunkSize);
 		const i32 maxChunkIdxDiff = (i32)glm::ceil(m_LoadedChunkRadius / (real)ChunkSize);
 		const real radiusSqr = m_LoadedChunkRadius * m_LoadedChunkRadius;
@@ -4811,7 +4836,20 @@ namespace flex
 	{
 		GameObject::DrawImGuiObjects();
 
-		bool bRegen = ImGui::Button("Regen");
+		bool bRegen = false;
+
+		u32 oldTableSize = m_PerlinTableSize;
+		if (ImGuiExt::SliderUInt("Table size", &m_PerlinTableSize, 2, 512))
+		{
+			m_PerlinTableSize = NextPowerOfTwo(m_PerlinTableSize);
+			if (m_PerlinTableSize != oldTableSize)
+			{
+				GenerateGradients();
+				bRegen = true;
+			}
+		}
+
+		bRegen = ImGui::Button("Regen") || bRegen;
 
 		ImGui::SameLine();
 
@@ -4847,6 +4885,12 @@ namespace flex
 
 		bRegen = ImGui::SliderFloat("nscale", &nscale, 0.01f, 2.0f) || bRegen;
 
+		bRegen = ImGui::SliderFloat("octave", &m_Octave, 0.01f, 64.0f) || bRegen;
+
+		bRegen = ImGui::ColorEdit3("low", &m_LowCol.x) || bRegen;
+		bRegen = ImGui::ColorEdit3("mid", &m_MidCol.x) || bRegen;
+		bRegen = ImGui::ColorEdit3("high", &m_HighCol.x) || bRegen;
+
 		if (bRegen)
 		{
 			GenerateGradients();
@@ -4871,15 +4915,17 @@ namespace flex
 			m_ManualSeed = (u32)chunkGenInfo.GetInt("manual seed");
 
 			chunkGenInfo.SetFloatChecked("loaded chunk radius", m_LoadedChunkRadius);
+			chunkGenInfo.SetUIntChecked("table size", m_PerlinTableSize);
+
+			chunkGenInfo.SetVec3Checked("low colour", m_LowCol);
+			chunkGenInfo.SetVec3Checked("mid colour", m_MidCol);
+			chunkGenInfo.SetVec3Checked("high colour", m_HighCol);
 		}
 	}
 
 	void ChunkGenerator::SerializeUniqueFields(JSONObject& parentObject) const
 	{
 		JSONObject chunkGenInfo = {};
-
-		//chunkGenInfo.fields.emplace_back("name", JSONValue(m_Name));
-		//chunkGenInfo.fields.emplace_back("enabled", JSONValue(bEnabled));
 
 		chunkGenInfo.fields.emplace_back("vert count per chunk axis", JSONValue((i32)VertCountPerChunkAxis));
 		chunkGenInfo.fields.emplace_back("chunk size", JSONValue(ChunkSize));
@@ -4890,5 +4936,10 @@ namespace flex
 		chunkGenInfo.fields.emplace_back("loaded chunk radius", JSONValue(m_LoadedChunkRadius));
 
 		parentObject.fields.emplace_back("chunk generator info", JSONValue(chunkGenInfo));
+		parentObject.fields.emplace_back("table size", JSONValue((i32)m_PerlinTableSize));
+
+		parentObject.fields.emplace_back("low colour", JSONValue(VecToString(m_LowCol)));
+		parentObject.fields.emplace_back("mid colour", JSONValue(VecToString(m_MidCol)));
+		parentObject.fields.emplace_back("high colour", JSONValue(VecToString(m_HighCol)));
 	}
 } // namespace flex

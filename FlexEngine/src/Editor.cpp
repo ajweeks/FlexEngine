@@ -125,7 +125,7 @@ namespace flex
 			gizmoTransform->SetWorldPosition(m_SelectedObjectsCenterPos, false);
 			gizmoTransform->SetWorldRotation(m_SelectedObjectRotation, true);
 
-			glm::vec3 camPos = g_CameraManager->CurrentCamera()->GetPosition();
+			glm::vec3 camPos = g_CameraManager->CurrentCamera()->position;
 			real scale = glm::max(glm::distance(gizmoTransform->GetWorldPosition(), camPos) / 50.0f, 0.2f);
 			gizmoTransform->SetWorldScale(glm::vec3(scale));
 		}
@@ -257,7 +257,7 @@ namespace flex
 		Transform* gizmoTransform = m_TransformGizmo->GetTransform();
 		glm::vec3 rayDir = glm::normalize(rayEnd - rayOrigin);
 		glm::vec3 planeOrigin = gizmoTransform->GetWorldPosition();
-		glm::vec3 cameraForward = g_CameraManager->CurrentCamera()->GetForward();
+		glm::vec3 cameraForward = g_CameraManager->CurrentCamera()->forward;
 		glm::vec3 planeN = m_PlaneN;
 		if (glm::dot(planeN, cameraForward) > 0.0f)
 		{
@@ -664,9 +664,9 @@ namespace flex
 		glm::vec3 rayStartG = ToVec3(rayStart);
 		glm::vec3 rayEndG = ToVec3(rayEnd);
 		BaseCamera* cam = g_CameraManager->CurrentCamera();
-		glm::vec3 camForward = cam->GetForward();
-		glm::vec3 camRight = cam->GetRight();
-		glm::vec3 camUp = cam->GetUp();
+		glm::vec3 camForward = cam->forward;
+		glm::vec3 camRight = cam->right;
+		glm::vec3 camUp = cam->up;
 		glm::vec3 planeOrigin = gizmoTransform->GetWorldPosition();
 		Transform* transform = m_CurrentlySelectedObjects[0]->GetTransform();
 
@@ -1101,10 +1101,10 @@ namespace flex
 
 					BaseCamera* cam = g_CameraManager->CurrentCamera();
 
-					glm::vec3 currentOffset = cam->GetPosition() - sphereCenterWS;
+					glm::vec3 currentOffset = cam->position - sphereCenterWS;
 					glm::vec3 newOffset = glm::normalize(currentOffset) * sphereRadius * 2.0f;
 
-					cam->SetPosition(sphereCenterWS + newOffset);
+					cam->position = sphereCenterWS + newOffset;
 					cam->LookAt(sphereCenterWS);
 				}
 				return EventReply::CONSUMED;
@@ -1425,7 +1425,7 @@ namespace flex
 	void Editor::FadeOutHeadOnGizmos()
 	{
 		Transform* gizmoTransform = m_TransformGizmo->GetTransform();
-		glm::vec3 centerToCam = glm::normalize(g_CameraManager->CurrentCamera()->GetPosition() - gizmoTransform->GetWorldPosition());
+		glm::vec3 centerToCam = glm::normalize(g_CameraManager->CurrentCamera()->position - gizmoTransform->GetWorldPosition());
 
 		Material& xMat = g_Renderer->GetMaterial(m_TransformGizmoMatXID);
 		Material& yMat = g_Renderer->GetMaterial(m_TransformGizmoMatYID);
