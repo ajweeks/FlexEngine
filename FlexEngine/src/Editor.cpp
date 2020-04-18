@@ -121,8 +121,13 @@ namespace flex
 			m_TransformGizmo->SetVisible(true);
 			UpdateGizmoVisibility();
 			CalculateSelectedObjectsCenter();
-			m_TransformGizmo->GetTransform()->SetWorldPosition(m_SelectedObjectsCenterPos);
-			m_TransformGizmo->GetTransform()->SetWorldRotation(m_SelectedObjectRotation);
+			Transform* gizmoTransform = m_TransformGizmo->GetTransform();
+			gizmoTransform->SetWorldPosition(m_SelectedObjectsCenterPos, false);
+			gizmoTransform->SetWorldRotation(m_SelectedObjectRotation, true);
+
+			glm::vec3 camPos = g_CameraManager->CurrentCamera()->GetPosition();
+			real scale = glm::max(glm::distance(gizmoTransform->GetWorldPosition(), camPos) / 50.0f, 0.2f);
+			gizmoTransform->SetWorldScale(glm::vec3(scale));
 		}
 		else
 		{
