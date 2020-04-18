@@ -87,12 +87,12 @@ namespace flex
 
 	void GLFWWindowWrapper::Create(const glm::vec2i& size, const glm::vec2i& pos)
 	{
+		InitFromConfig();
+
 		if (m_bMoveConsoleToOtherMonitor)
 		{
 			Platform::MoveConsole();
 		}
-
-		InitFromConfig();
 
 		// Only use parameters if values weren't set through config file
 		if (m_Size.x == 0)
