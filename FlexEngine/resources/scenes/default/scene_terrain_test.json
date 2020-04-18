@@ -35,7 +35,7 @@
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "0.628, 0.681, 0.830"
+				"rot" : "0.627, 0.681, 0.830"
 			},
 			"directional light info" : 
 			{
@@ -64,7 +64,8 @@
 				"chunk size" : 350.613007,
 				"max height" : 7.025000,
 				"use manual seed" : true,
-				"manual seed" : 1234123
+				"manual seed" : 1234123,
+				"loaded chunk radius" : 1291.359009
 			}
 		},
 		{
@@ -79,7 +80,7 @@
 			"mesh" : "cube",
 			"materials" : 
 			[
-				"placeholder"
+				"pbr chrome"
 			]
 		}
 	]

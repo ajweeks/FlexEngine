@@ -1449,6 +1449,11 @@ namespace flex
 		return bResult;
 	}
 
+	bool Vec2iCompare::operator()(const glm::vec2i& lhs, const glm::vec2i& rhs) const
+	{
+		return (lhs.y < rhs.y ? true : lhs.y > rhs.y ? false : lhs.x < rhs.x);
+	}
+
 	namespace ImGuiExt
 	{
 		bool InputUInt(const char* message, u32* v, u32 step /* = 1 */, u32 step_fast /* = 100 */, ImGuiInputTextFlags flags /* = 0 */)

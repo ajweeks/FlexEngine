@@ -275,6 +275,11 @@ namespace flex
 
 	};
 
+	struct Vec2iCompare
+	{
+		bool operator()(const glm::vec2i& lhs, const glm::vec2i& rhs) const;
+	};
+
 	namespace ImGuiExt
 	{
 		bool InputUInt(const char* message, u32* v, u32 step = 1, u32 step_fast = 100, ImGuiInputTextFlags flags = 0);

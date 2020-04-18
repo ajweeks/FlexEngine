@@ -4,6 +4,7 @@
 #include "Callbacks/InputCallbacks.hpp"
 #include "Graphics/RendererTypes.hpp"
 #include "Graphics/VertexBufferData.hpp" // For VertexBufferDataCreateInfo
+#include "Helpers.hpp"
 #include "Spring.hpp"
 #include "Transform.hpp"
 
@@ -665,9 +666,12 @@ namespace flex
 		real SampleNoise(const glm::vec2& pos);
 
 		MaterialID m_TerrainMatID = InvalidMaterialID;
-		std::vector<MeshComponent*> m_Meshes;
+		std::map<glm::vec2i, MeshComponent*, Vec2iCompare> m_Meshes; // Chunk index to mesh
 
 		real nscale = 1.0f;
+		real m_LoadedChunkRadius = 100.0f;
+
+		std::vector<glm::vec2i> m_LoadedChunks;
 
 		bool m_UseManualSeed = true;
 		i32 m_ManualSeed = 0;

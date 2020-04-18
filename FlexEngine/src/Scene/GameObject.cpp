@@ -21,6 +21,7 @@ IGNORE_WARNINGS_POP
 
 #include "Scene/GameObject.hpp"
 #include "Audio/AudioManager.hpp"
+#include "Cameras/CameraManager.hpp"
 #include "Cameras/TerminalCamera.hpp"
 #include "Editor.hpp"
 #include "FlexEngine.hpp"
@@ -4604,17 +4605,26 @@ namespace flex
 
 	void ChunkGenerator::GenerateAllChunks()
 	{
-		for (u32 i = 0; i < m_Meshes.size(); ++i)
+		for (auto iter = m_Meshes.begin(); iter != m_Meshes.end(); ++iter)
 		{
-			m_Meshes[i]->Destroy();
+			iter->second->Destroy();
 		}
 		m_Meshes.clear();
 
 		GenerateChunk(glm::ivec2(0, 0));
 	}
 
-	void ChunkGenerator::GenerateChunk(const glm::ivec2& index)
+	void ChunkGenerator::GenerateChunk(const glm::ivec2& chunkIndex)
 	{
+		{
+			auto existingChunkIter = m_Meshes.find(chunkIndex);
+			if (existingChunkIter != m_Meshes.end())
+			{
+				existingChunkIter->second->Destroy();
+				m_Meshes.erase(existingChunkIter);
+			}
+		}
+
 		ShaderID shaderID = g_Renderer->GetMaterial(m_TerrainMatID).shaderID;
 
 		const u32 vertexCount = VertCountPerChunkAxis * VertCountPerChunkAxis;
@@ -4640,7 +4650,7 @@ namespace flex
 
 				glm::vec3 pos = glm::vec3(uv.x * ChunkSize, 0.0f, uv.y * ChunkSize);
 
-				glm::vec3 vertPosWS = pos + glm::vec3(index.x * ChunkSize, 0.0f, index.y * ChunkSize);
+				glm::vec3 vertPosWS = pos + glm::vec3(chunkIndex.x * ChunkSize, 0.0f, chunkIndex.y * ChunkSize);
 				glm::vec2 sampleCenter(vertPosWS.x, vertPosWS.z);
 				real height = SampleNoise(sampleCenter);
 				vertPosWS.y = height * MaxHeight;
@@ -4687,7 +4697,7 @@ namespace flex
 		MeshComponent* meshComponent = MeshComponent::LoadFromMemory(m_Mesh, vertexBufferCreateInfo, indices, m_TerrainMatID, &renderObjectCreateInfo);
 		if (meshComponent)
 		{
-			m_Meshes.push_back(meshComponent);
+			m_Meshes[chunkIndex] = meshComponent;
 		}
 	}
 
@@ -4734,13 +4744,53 @@ namespace flex
 
 	void ChunkGenerator::Update()
 	{
+		std::vector<glm::vec2i> previouslyLoadedChunks(m_LoadedChunks.begin(), m_LoadedChunks.end());
+		m_LoadedChunks.clear();
+
+		const glm::vec3 camPos = g_CameraManager->CurrentCamera()->GetPosition();
+		const glm::vec2i camChunkIdx = (glm::vec2i)(glm::vec2(camPos.x, camPos.z) / ChunkSize);
+		const i32 maxChunkIdxDiff = (i32)glm::ceil(m_LoadedChunkRadius / (real)ChunkSize);
+		const real radiusSqr = m_LoadedChunkRadius * m_LoadedChunkRadius;
+		for (i32 x = camChunkIdx.x - maxChunkIdxDiff; x < camChunkIdx.x + maxChunkIdxDiff; ++x)
+		{
+			for (i32 z = camChunkIdx.y - maxChunkIdxDiff; z < camChunkIdx.y + maxChunkIdxDiff; ++z)
+			{
+				glm::vec3 chunkCenter((x + 0.5f) * ChunkSize, 0.0f, (z + 0.5f) * ChunkSize);
+				if (glm::distance2(chunkCenter, camPos) < radiusSqr)
+				{
+					m_LoadedChunks.push_back(glm::vec2i(x, z));
+				}
+			}
+		}
+
+		for (const glm::vec2i& chunkIdx : previouslyLoadedChunks)
+		{
+			if (Find(m_LoadedChunks, chunkIdx) == m_LoadedChunks.end())
+			{
+				Print("Destroying chunk %d,%d\n", chunkIdx.x, chunkIdx.y);
+				auto iter = m_Meshes.find(chunkIdx);
+				assert(iter != m_Meshes.end());
+				iter->second->Destroy();
+				m_Meshes.erase(chunkIdx);
+			}
+		}
+
+		for (const glm::vec2i& chunkIdx : m_LoadedChunks)
+		{
+			auto meshIter = m_Meshes.find(chunkIdx);
+			if (meshIter == m_Meshes.end())
+			{
+				Print("Generating chunk %d,%d\n", chunkIdx.x, chunkIdx.y);
+				GenerateChunk(chunkIdx);
+			}
+		}
 	}
 
 	void ChunkGenerator::Destroy()
 	{
-		for (u32 i = 0; i < m_Meshes.size(); ++i)
+		for (auto iter = m_Meshes.begin(); iter != m_Meshes.end(); ++iter)
 		{
-			m_Meshes[i]->Destroy();
+			iter->second->Destroy();
 		}
 		m_Meshes.clear();
 	}
@@ -4790,6 +4840,8 @@ namespace flex
 			GenerateGradients();
 			GenerateAllChunks();
 		}
+
+		ImGui::SliderFloat("View radius", &m_LoadedChunkRadius, 0.01f, 8192.0f);
 	}
 
 	void ChunkGenerator::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
@@ -4805,6 +4857,8 @@ namespace flex
 			MaxHeight = chunkGenInfo.GetFloat("max height");
 			m_UseManualSeed = chunkGenInfo.GetBool("use manual seed");
 			m_ManualSeed = (u32)chunkGenInfo.GetInt("manual seed");
+
+			chunkGenInfo.SetFloatChecked("loaded chunk radius", m_LoadedChunkRadius);
 		}
 	}
 
@@ -4820,6 +4874,8 @@ namespace flex
 		chunkGenInfo.fields.emplace_back("max height", JSONValue(MaxHeight));
 		chunkGenInfo.fields.emplace_back("use manual seed", JSONValue(m_UseManualSeed));
 		chunkGenInfo.fields.emplace_back("manual seed", JSONValue((i32)m_ManualSeed));
+
+		chunkGenInfo.fields.emplace_back("loaded chunk radius", JSONValue(m_LoadedChunkRadius));
 
 		parentObject.fields.emplace_back("chunk generator info", JSONValue(chunkGenInfo));
 	}
