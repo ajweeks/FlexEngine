@@ -4651,32 +4651,22 @@ namespace flex
 
 				glm::vec3 vertPosWS = pos + glm::vec3(chunkIndex.x * ChunkSize, 0.0f, chunkIndex.y * ChunkSize);
 				glm::vec2 sampleCenter(vertPosWS.x, vertPosWS.z);
-				real height = SampleNoise(sampleCenter, m_Octave);
+				real height = SampleTerrain(sampleCenter);
+
 				vertPosWS.y = height * MaxHeight;
 
-				real heightDX = (SampleNoise(sampleCenter + glm::vec2(cell, 0.0f), m_Octave) - height) - (SampleNoise(sampleCenter + glm::vec2(-cell, 0.0f), m_Octave) - height);
-				real heightDZ = (SampleNoise(sampleCenter + glm::vec2(0.0f, -cell), m_Octave) - height) - (SampleNoise(sampleCenter + glm::vec2(0.0f, cell), m_Octave) - height);
+				real heightDX = (SampleTerrain(sampleCenter + glm::vec2(cell, 0.0f)) - height) - (SampleTerrain(sampleCenter + glm::vec2(-cell, 0.0f)) - height);
+				real heightDZ = (SampleTerrain(sampleCenter + glm::vec2(0.0f, -cell)) - height) - (SampleTerrain(sampleCenter + glm::vec2(0.0f, cell)) - height);
 
 				glm::vec3 normal = glm::normalize(glm::vec3(heightDX * nscale, 1.0f, heightDZ * nscale));
 				glm::vec3 tangent = glm::normalize(glm::cross(normal, glm::vec3(0.0f, 0.0f, 1.0f)));
 
-				glm::vec2 posi = Floor(sampleCenter * m_Octave);
-				glm::vec2 posf = Fract(sampleCenter * m_Octave);
-
-				const u32 tableEntryCount = (u32)m_RandomTable.size();
-				const u32 tableWidth = (u32)glm::sqrt(tableEntryCount);
-
 				vertexBufferCreateInfo.positions_3D.emplace_back(vertPosWS);
 				vertexBufferCreateInfo.texCoords_UV.emplace_back(uv);
-				glm::vec2 vec = m_RandomTable[(u32)((i32)(posi.y * tableWidth + posi.x) % tableEntryCount)];
-
-				//vertexBufferCreateInfo.colors_R32G32B32A32.emplace_back(glm::vec4(abs(vec.x), 0.0f, abs(vec.y), 1.0f));
-				//vertexBufferCreateInfo.colors_R32G32B32A32.emplace_back(glm::vec4(height, height, height, 1.0f));
-				//vertexBufferCreateInfo.colors_R32G32B32A32.emplace_back(glm::vec4(0.2f, height, 0.2f, 1.0f));
-
 				bool bShowEdge = (m_bHighlightGrid && (x == 0 || x == (VertCountPerChunkAxis - 1) || z == 0 || z == (VertCountPerChunkAxis - 1)));
 				glm::vec3 vertCol = (bShowEdge ? glm::vec3(0.75f) : (height <= 0.5f ? Lerp(m_LowCol, m_MidCol, height * 2.0f) : Lerp(m_MidCol, m_HighCol, (height - 0.5f) * 2.0f)));
 				vertexBufferCreateInfo.colors_R32G32B32A32.emplace_back(glm::vec4(vertCol.x, vertCol.y, vertCol.z, 1.0f));
+				//vertexBufferCreateInfo.colors_R32G32B32A32.emplace_back(glm::vec4(height, height, height, 1.0f));
 				vertexBufferCreateInfo.normals.emplace_back(normal);
 				vertexBufferCreateInfo.tangents.emplace_back(tangent);
 			}
@@ -4715,47 +4705,91 @@ namespace flex
 
 	void ChunkGenerator::GenerateGradients()
 	{
-		m_RandomTable = std::vector<glm::vec2>(m_PerlinTableSize);
+		m_RandomTables = std::vector<std::vector<glm::vec2>>(m_NumOctaves);
 
-		std::mt19937 m_RandGenerator;
-		std::uniform_real_distribution<real> m_RandDistribution;
-
-		m_RandGenerator.seed(m_UseManualSeed ? m_ManualSeed : (u32)Time::CurrentMilliseconds());
-
-		auto dice = std::bind(m_RandDistribution, m_RandGenerator);
-
-		for (u32 i = 0; i < m_RandomTable.size(); ++i)
+		u32 tableSize = m_BasePerlinTableSize;
+		for (u32 octave = 0; octave < m_NumOctaves; ++octave)
 		{
-			m_RandomTable[i] = glm::normalize(glm::vec2(dice() * 2.0 - 1.0f, dice() * 2.0 - 1.0f));
+			m_RandomTables[octave] = std::vector<glm::vec2>(tableSize);
+
+			std::mt19937 m_RandGenerator;
+			std::uniform_real_distribution<real> m_RandDistribution;
+
+			m_RandGenerator.seed(m_UseManualSeed ? m_ManualSeed : (u32)Time::CurrentMilliseconds());
+
+			auto dice = std::bind(m_RandDistribution, m_RandGenerator);
+
+			for (u32 i = 0; i < m_RandomTables[octave].size(); ++i)
+			{
+				m_RandomTables[octave][i] = glm::normalize(glm::vec2(dice() * 2.0 - 1.0f, dice() * 2.0 - 1.0f));
+			}
+
+			tableSize /= 2;
+		}
+
+		for (u32 i = 0; i < m_TableTextureIDs.size(); ++i)
+		{
+			g_Renderer->DestroyTexture(m_TableTextureIDs[i]);
+		}
+		m_TableTextureIDs.resize(m_RandomTables.size());
+		for (u32 i = 0; i < m_TableTextureIDs.size(); ++i)
+		{
+			const u32 tableWidth = (u32)glm::sqrt(m_RandomTables[i].size());
+			if (tableWidth < 1) break;
+			std::vector<glm::vec4> textureMem(m_RandomTables[i].size());
+			for (u32 j = 0; j < m_RandomTables[i].size(); ++j)
+			{
+				textureMem[j] = glm::vec4(m_RandomTables[i][j].x * 0.5f + 0.5f, m_RandomTables[i][j].y * 0.5f + 0.5f, 0.0f, 1.0f);
+			}
+			m_TableTextureIDs[i] = g_Renderer->InitializeTextureFromMemory(&textureMem[0], textureMem.size() * sizeof(u32) * 4, VK_FORMAT_R32G32B32A32_SFLOAT, "Perlin random table", tableWidth, tableWidth, 2, VK_FILTER_NEAREST);
 		}
 	}
 
-	real ChunkGenerator::SampleNoise(const glm::vec2& pos, real octave)
+	// Returns a value in [0, 1]
+	real ChunkGenerator::SampleTerrain(const glm::vec2& pos)
 	{
-		glm::vec2 posi = Floor(pos * octave);
-		glm::vec2 posf = Fract(pos * octave);
+		real result = 0.0f;
+		real octave = m_BaseOctave;
+		u32 octaveIdx = m_NumOctaves - 1;
+		for (u32 i = 0; i < m_NumOctaves; ++i)
+		{
+			if (m_IsolateOctave == -1 || i == m_IsolateOctave)
+			{
+				result += SampleNoise(pos, octave, octaveIdx) * (octave * m_OctaveScale);
+			}
+			octave = octave / 2.0f;
+			--octaveIdx;
+		}
+		return glm::clamp((result / (real)(m_NumOctaves * 2.0f)) + 0.5f, 0.0f, 1.0f);
+	}
 
-		const u32 tableEntryCount = (u32)m_RandomTable.size();
+	real SmoothBlend(real t)
+	{
+		return 6.0f * glm::pow(t, 5.0f) - 15.0f * glm::pow(t, 4.0f) + 10.0f * glm::pow(t, 3.0f);
+	}
+
+	// Returns a value in [-1, 1]
+	real ChunkGenerator::SampleNoise(const glm::vec2& pos, real octave, u32 octaveIdx)
+	{
+		glm::vec2 posi = Floor(pos / octave);
+		glm::vec2 posf = Fract(pos / octave);
+
+		const u32 tableEntryCount = (u32)m_RandomTables[octaveIdx].size();
 		const u32 tableWidth = (u32)glm::sqrt(tableEntryCount);
 
-		glm::vec2 r00 = m_RandomTable[(u32)((i32)(posi.y * tableWidth + posi.x) % tableEntryCount)];
-		glm::vec2 r10 = m_RandomTable[(u32)((i32)(posi.y * tableWidth + posi.x + 1) % tableEntryCount)];
-		glm::vec2 r01 = m_RandomTable[(u32)((i32)((posi.y + 1) * tableWidth + posi.x) % tableEntryCount)];
-		glm::vec2 r11 = m_RandomTable[(u32)((i32)((posi.y + 1) * tableWidth + posi.x + 1) % tableEntryCount)];
-
-		//real halfCellSize = (0.5f / octave);
-		//posf += glm::vec2(halfCellSize);
+		glm::vec2 r00 = m_RandomTables[octaveIdx][(u32)((i32)(posi.y * tableWidth + posi.x) % tableEntryCount)];
+		glm::vec2 r10 = m_RandomTables[octaveIdx][(u32)((i32)(posi.y * tableWidth + posi.x + 1) % tableEntryCount)];
+		glm::vec2 r01 = m_RandomTables[octaveIdx][(u32)((i32)((posi.y + 1) * tableWidth + posi.x) % tableEntryCount)];
+		glm::vec2 r11 = m_RandomTables[octaveIdx][(u32)((i32)((posi.y + 1) * tableWidth + posi.x + 1) % tableEntryCount)];
 
 		real r00p = glm::dot(posf, r00);
 		real r10p = glm::dot(glm::vec2(posf.x - 1.0f, posf.y), r10);
 		real r01p = glm::dot(glm::vec2(posf.x, posf.y - 1.0f), r01);
 		real r11p = glm::dot(glm::vec2(posf.x - 1.0f, posf.y - 1.0f), r11);
 
-		real xval0 = Lerp(r00p, r10p, posf.x);
-		real xval1 = Lerp(r01p, r11p, posf.x);
-		real val = Lerp(xval0, xval1, posf.y);
-
-		val = val * 0.5f + 0.5f; // Remap [-1, 1], => [0, 1]
+		real xval0 = Lerp(r00p, r10p, SmoothBlend(posf.x));
+		real xval1 = Lerp(r01p, r11p, SmoothBlend(posf.x));
+		real val = Lerp(xval0, xval1, SmoothBlend(posf.y));
 
 		return val;
 	}
@@ -4768,7 +4802,8 @@ namespace flex
 	{
 		std::vector<glm::vec2i> chunksInRadius(m_Meshes.size()); // Likely to be same size as m_LoadedChunks
 
-		const glm::vec3 camPos = g_CameraManager->CurrentCamera()->position;
+		glm::vec3 camPos = g_CameraManager->CurrentCamera()->position;
+		const glm::vec2 camPosXZ(camPos.x, camPos.z);
 		const glm::vec2i camChunkIdx = (glm::vec2i)(glm::vec2(camPos.x, camPos.z) / ChunkSize);
 		const i32 maxChunkIdxDiff = (i32)glm::ceil(m_LoadedChunkRadius / (real)ChunkSize);
 		const real radiusSqr = m_LoadedChunkRadius * m_LoadedChunkRadius;
@@ -4776,8 +4811,8 @@ namespace flex
 		{
 			for (i32 z = camChunkIdx.y - maxChunkIdxDiff; z < camChunkIdx.y + maxChunkIdxDiff; ++z)
 			{
-				glm::vec3 chunkCenter((x + 0.5f) * ChunkSize, 0.0f, (z + 0.5f) * ChunkSize);
-				if (glm::distance2(chunkCenter, camPos) < radiusSqr)
+				glm::vec2 chunkCenter((x + 0.5f) * ChunkSize, (z + 0.5f) * ChunkSize);
+				if (glm::distance2(chunkCenter, camPosXZ) < radiusSqr)
 				{
 					chunksInRadius.push_back(glm::vec2i(x, z));
 				}
@@ -4864,6 +4899,24 @@ namespace flex
 				Print("Generated %d chunks in %.2fms\n", iterationCount, Time::ConvertFormats(now - start, Time::Format::NANOSECOND, Time::Format::MILLISECOND));
 			}
 		}
+
+		real textureScale = 0.3f;
+		real textureY = 0.0f;
+		for (u32 i = 0; i < m_TableTextureIDs.size(); ++i)
+		{
+			SpriteQuadDrawInfo drawInfo = {};
+			drawInfo.anchor = AnchorPoint::TOP_RIGHT;
+			drawInfo.bScreenSpace = true;
+			drawInfo.bWriteDepth = false;
+			drawInfo.bReadDepth = false;
+			drawInfo.scale = glm::vec3(textureScale);
+			drawInfo.pos = glm::vec3(0.0f, textureY, 0.0f);
+			drawInfo.textureID = m_TableTextureIDs[i];
+			g_Renderer->EnqueueSprite(drawInfo);
+
+			textureY -= textureScale * 2.0f;
+			textureScale /= 2.0f;
+		}
 	}
 
 	void ChunkGenerator::Destroy()
@@ -4887,11 +4940,17 @@ namespace flex
 
 		bRegen = ImGui::Checkbox("Highlight grid", &m_bHighlightGrid) || bRegen;
 
-		u32 oldTableSize = m_PerlinTableSize;
-		if (ImGuiExt::SliderUInt("Table size", &m_PerlinTableSize, 2, 512))
+		bRegen = ImGui::SliderFloat("Octave scale", &m_OctaveScale, 0.1f, 10.0f) || bRegen;
+		const u32 maxOctaveCount = (u32)glm::log(m_BasePerlinTableSize) + 1;
+		bRegen = ImGuiExt::SliderUInt("Octave count", &m_NumOctaves, 1, maxOctaveCount) || bRegen;
+
+		bRegen = ImGui::SliderInt("Isolate octave", &m_IsolateOctave, -1, m_NumOctaves - 1) || bRegen;
+
+		u32 oldTableSize = m_BasePerlinTableSize;
+		if (ImGuiExt::SliderUInt("Base table size", &m_BasePerlinTableSize, 2, 512))
 		{
-			m_PerlinTableSize = NextPowerOfTwo(m_PerlinTableSize);
-			if (m_PerlinTableSize != oldTableSize)
+			m_BasePerlinTableSize = NextPowerOfTwo(m_BasePerlinTableSize);
+			if (m_BasePerlinTableSize != oldTableSize)
 			{
 				GenerateGradients();
 				bRegen = true;
@@ -4930,11 +4989,11 @@ namespace flex
 
 		bRegen = ImGui::SliderFloat("Chunk size", &ChunkSize, 0.1f, 512.0f) || bRegen;
 
-		bRegen = ImGui::SliderFloat("Height", &MaxHeight, 0.1f, 64.0f) || bRegen;
+		bRegen = ImGui::SliderFloat("Max height", &MaxHeight, 0.1f, 512.0f) || bRegen;
 
 		bRegen = ImGui::SliderFloat("nscale", &nscale, 0.01f, 2.0f) || bRegen;
 
-		bRegen = ImGui::SliderFloat("octave", &m_Octave, 0.01f, 64.0f) || bRegen;
+		bRegen = ImGui::SliderFloat("octave", &m_BaseOctave, 1.0f, 512.0f) || bRegen;
 
 		bRegen = ImGui::ColorEdit3("low", &m_LowCol.x) || bRegen;
 		bRegen = ImGui::ColorEdit3("mid", &m_MidCol.x) || bRegen;
@@ -4964,7 +5023,7 @@ namespace flex
 			m_ManualSeed = (u32)chunkGenInfo.GetInt("manual seed");
 
 			chunkGenInfo.SetFloatChecked("loaded chunk radius", m_LoadedChunkRadius);
-			chunkGenInfo.SetUIntChecked("table size", m_PerlinTableSize);
+			chunkGenInfo.SetUIntChecked("base table size", m_BasePerlinTableSize);
 
 			chunkGenInfo.SetVec3Checked("low colour", m_LowCol);
 			chunkGenInfo.SetVec3Checked("mid colour", m_MidCol);
@@ -4985,7 +5044,7 @@ namespace flex
 		chunkGenInfo.fields.emplace_back("loaded chunk radius", JSONValue(m_LoadedChunkRadius));
 
 		parentObject.fields.emplace_back("chunk generator info", JSONValue(chunkGenInfo));
-		parentObject.fields.emplace_back("table size", JSONValue((i32)m_PerlinTableSize));
+		parentObject.fields.emplace_back("base table size", JSONValue((i32)m_BasePerlinTableSize));
 
 		parentObject.fields.emplace_back("low colour", JSONValue(VecToString(m_LowCol)));
 		parentObject.fields.emplace_back("mid colour", JSONValue(VecToString(m_MidCol)));

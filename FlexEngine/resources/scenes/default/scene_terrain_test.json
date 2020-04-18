@@ -15,9 +15,9 @@
 		"move speed" : 514.398987,
 		"transform" : 
 		{
-			"position" : "-1299.198, 833.252, -1551.687",
-			"pitch" : -0.028623,
-			"yaw" : -17.468481
+			"position" : "-641.310, 477.843, -1278.566",
+			"pitch" : -0.351289,
+			"yaw" : -18.062532
 		}
 	},
 	"objects" : 
@@ -80,10 +80,10 @@
 			{
 				"vert count per chunk axis" : 16,
 				"chunk size" : 512.000000,
-				"max height" : 64.000000,
+				"max height" : 252.266998,
 				"use manual seed" : true,
 				"manual seed" : 1234123,
-				"loaded chunk radius" : 6012.850098
+				"loaded chunk radius" : 2582.706055
 			},
 			"table size" : 128,
 			"low colour" : "0.20, 0.30, 0.45",
