@@ -8,6 +8,8 @@
 #include "Spring.hpp"
 #include "Transform.hpp"
 
+#include <set>
+
 class btCollisionShape;
 
 namespace flex
@@ -671,7 +673,7 @@ namespace flex
 		real nscale = 1.0f;
 		real m_LoadedChunkRadius = 100.0f;
 
-		std::vector<glm::vec2i> m_LoadedChunks;
+		std::set<glm::vec2i, Vec2iCompare> m_ChunksToLoad;
 
 		bool m_UseManualSeed = true;
 		i32 m_ManualSeed = 0;

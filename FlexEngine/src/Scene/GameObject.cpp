@@ -4744,8 +4744,7 @@ namespace flex
 
 	void ChunkGenerator::Update()
 	{
-		std::vector<glm::vec2i> previouslyLoadedChunks(m_LoadedChunks.begin(), m_LoadedChunks.end());
-		m_LoadedChunks.clear();
+		std::vector<glm::vec2i> chunksInRadius(m_Meshes.size()); // Likely to be same size as m_LoadedChunks
 
 		const glm::vec3 camPos = g_CameraManager->CurrentCamera()->GetPosition();
 		const glm::vec2i camChunkIdx = (glm::vec2i)(glm::vec2(camPos.x, camPos.z) / ChunkSize);
@@ -4758,31 +4757,44 @@ namespace flex
 				glm::vec3 chunkCenter((x + 0.5f) * ChunkSize, 0.0f, (z + 0.5f) * ChunkSize);
 				if (glm::distance2(chunkCenter, camPos) < radiusSqr)
 				{
-					m_LoadedChunks.push_back(glm::vec2i(x, z));
+					chunksInRadius.push_back(glm::vec2i(x, z));
 				}
 			}
 		}
 
-		for (const glm::vec2i& chunkIdx : previouslyLoadedChunks)
+		// Freshly unloaded chunks
+		for (auto chunkIter = m_Meshes.begin(); chunkIter != m_Meshes.end(); /**/)
 		{
-			if (Find(m_LoadedChunks, chunkIdx) == m_LoadedChunks.end())
+			const glm::vec2i& chunkIdx = chunkIter->first;
+			if (Find(chunksInRadius, chunkIdx) == chunksInRadius.end())
 			{
 				Print("Destroying chunk %d,%d\n", chunkIdx.x, chunkIdx.y);
 				auto iter = m_Meshes.find(chunkIdx);
 				assert(iter != m_Meshes.end());
 				iter->second->Destroy();
-				m_Meshes.erase(chunkIdx);
+				chunkIter = m_Meshes.erase(chunkIter);
+			}
+			else
+			{
+				++chunkIter;
 			}
 		}
 
-		for (const glm::vec2i& chunkIdx : m_LoadedChunks)
+		// Freshly loaded chunks
+		for (const glm::vec2i& chunkIdx : chunksInRadius)
 		{
 			auto meshIter = m_Meshes.find(chunkIdx);
-			if (meshIter == m_Meshes.end())
+			if (meshIter == m_Meshes.end() && m_ChunksToLoad.find(chunkIdx) == m_ChunksToLoad.end())
 			{
-				Print("Generating chunk %d,%d\n", chunkIdx.x, chunkIdx.y);
-				GenerateChunk(chunkIdx);
+				Print("Scheduling chunk %d,%d\n", chunkIdx.x, chunkIdx.y);
+				m_ChunksToLoad.emplace(chunkIdx);
 			}
+		}
+
+		if (m_ChunksToLoad.size() > 0)
+		{
+			GenerateChunk(*m_ChunksToLoad.begin());
+			m_ChunksToLoad.erase(m_ChunksToLoad.begin());
 		}
 	}
 
