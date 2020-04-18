@@ -212,7 +212,7 @@ namespace flex
 	// Returns true if value changed
 	bool DoImGuiRotationDragFloat3(const char* label, glm::vec3& rotation, glm::vec3& outCleanedRotation);
 
-	void CalculateOrthonormalBasis(const glm::vec3&n, glm::vec3& b1, glm::vec3& b2);
+	void CalculateOrthonormalBasis(const glm::vec3& n, glm::vec3& b1, glm::vec3& b2);
 
 	enum class ImageFormat
 	{

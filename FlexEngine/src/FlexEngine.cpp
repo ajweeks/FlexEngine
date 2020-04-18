@@ -1710,7 +1710,7 @@ namespace flex
 			}
 			if (recalculateOffset) // Mouse was clicked or wrapped
 			{
-				real oldOffset = glm::dot(inOutPrevIntersectionPoint - startPos, axis);
+				//real oldOffset = glm::dot(inOutPrevIntersectionPoint - startPos, axis);
 				inOutOffset = glm::dot(intersectionPoint - startPos, axis);
 				//Print("(%.2f) => (%.2f)\n", oldOffset, inOutOffset);
 			}

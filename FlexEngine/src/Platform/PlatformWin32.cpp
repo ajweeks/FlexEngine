@@ -82,6 +82,7 @@ namespace flex
 		return (u32)GetCurrentProcessId();
 	}
 
+	// TODO: Optionally save exact position of console in window-settings.json
 	void Platform::MoveConsole(i32 width /* = 800 */, i32 height /* = 800 */)
 	{
 		HWND hWnd = GetConsoleWindow();

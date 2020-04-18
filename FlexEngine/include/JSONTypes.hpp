@@ -34,6 +34,7 @@ namespace flex
 		bool SetIntChecked(const std::string& label, i32& value) const;
 
 		real GetFloat(const std::string& label) const;
+		// TODO: Rename SetXChecked functions to TryGetX
 		/* Sets value to the result of GetString(label) if that field is present */
 		bool SetFloatChecked(const std::string& label, real& value) const;
 

@@ -601,7 +601,7 @@ namespace flex
 		return a * (1.0f - t) + b * t;
 	}
 
-	glm::vec2 Lerp(const glm::vec2 & a, const glm::vec2 & b, real t)
+	glm::vec2 Lerp(const glm::vec2& a, const glm::vec2& b, real t)
 	{
 		return a * (1.0f - t) + b * t;
 	}
@@ -1386,7 +1386,7 @@ namespace flex
 	}
 
 	// See https://graphics.pixar.com/library/OrthonormalB/paper.pdf
-	void CalculateOrthonormalBasis(const glm::vec3&n, glm::vec3& b1, glm::vec3& b2)
+	void CalculateOrthonormalBasis(const glm::vec3& n, glm::vec3& b1, glm::vec3& b2)
 	{
 		real sign = copysignf(1.0f, n.z);
 		const real a = -1.0f / (sign + n.z);
