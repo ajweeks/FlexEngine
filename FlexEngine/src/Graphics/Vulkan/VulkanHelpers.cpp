@@ -5,6 +5,11 @@
 
 IGNORE_WARNINGS_PUSH
 #include "stb_image.h"
+
+#if COMPILE_SHADER_COMPILER
+#include "shaderc/spvc.hpp"
+#include "shaderc/shaderc.hpp"
+#endif
 IGNORE_WARNINGS_POP
 
 #include "Graphics/VertexAttribute.hpp"
@@ -2280,7 +2285,13 @@ namespace flex
 			}
 		}
 
-#ifdef DEBUG
+#if COMPILE_SHADER_COMPILER
+
+		const char* AsyncVulkanShaderCompiler::s_ChecksumFilePath = SAVED_LOCATION "vk-shader-checksum.dat";
+		const char* AsyncVulkanShaderCompiler::s_ShaderDirectory = RESOURCE_LOCATION "shaders/";
+
+		const char* AsyncVulkanShaderCompiler::s_RecognizedShaderTypes[] = { "vert", "geom", "frag", "comp" };
+
 		AsyncVulkanShaderCompiler::AsyncVulkanShaderCompiler()
 		{
 		}
@@ -2288,8 +2299,6 @@ namespace flex
 		AsyncVulkanShaderCompiler::AsyncVulkanShaderCompiler(bool bForceRecompile)
 		{
 			bool bCodeOutOfDate = true;
-
-			m_ChecksumFilePath = SAVED_LOCATION "vk-shader-checksum.dat";
 
 			std::string compiledDir = RelativePathToAbsolute(RESOURCE_LOCATION "shaders/spv");
 			if (Platform::DirectoryExists(compiledDir))
@@ -2301,10 +2310,10 @@ namespace flex
 					const std::string shaderInputDirectory = RESOURCE_LOCATION "shaders";
 					m_ShaderCodeChecksum = CalculteChecksum(shaderInputDirectory);
 
-					if (FileExists(m_ChecksumFilePath))
+					if (FileExists(s_ChecksumFilePath))
 					{
 						std::string fileContents;
-						if (ReadFile(m_ChecksumFilePath, fileContents, false))
+						if (ReadFile(s_ChecksumFilePath, fileContents, false))
 						{
 							i64 pShaderCodeChecksum = atoll(fileContents.c_str());
 							if (m_ShaderCodeChecksum == pShaderCodeChecksum)
@@ -2326,28 +2335,144 @@ namespace flex
 				lastTime = startTime;
 				Print("Kicking off async Vulkan shader compilation\n");
 
-				// TODO: Use C++ class from https://github.com/KhronosGroup/glslang rather than batch file call to glslang?
-				taskThread = std::thread([=]
+				shaderc::Compiler compiler;
+				if (compiler.IsValid())
 				{
-					std::string workingDir(RESOURCE("shaders"));
-					char cmdStrBuf[512];
-					memset(cmdStrBuf, 0, 512);
-					strcat(cmdStrBuf, "cd ");
-					strcat(cmdStrBuf, workingDir.c_str());
-					strcat(cmdStrBuf, " && ./vk_compile.sh >/dev/null");
-					bSuccess = system(cmdStrBuf) == 0;
-					is_done = true;
-				});
+					std::vector<std::string> filePaths;
+					if (Platform::FindFilesInDirectory(s_ShaderDirectory, filePaths, "*"))
+					{
+
+						//class FlexIncluder : public shaderc::CompileOptions::IncluderInterface
+						//{
+						//	virtual shaderc_include_result* GetInclude(const char* requested_source,
+						//		shaderc_include_type type,
+						//		const char* requesting_source,
+						//		size_t include_depth) override
+						//	{
+						//		UNREFERENCED_PARAMETER(type);
+						//		UNREFERENCED_PARAMETER(include_depth);
+						//		Print("%s, requesting %s\n", requesting_source, requested_source);
+						//		shaderc_include_result* result;
+						//	}
+
+						//	virtual void ReleaseInclude(shaderc_include_result* data) override
+						//	{
+						//		UNREFERENCED_PARAMETER(data);
+						//	}
+						//};
+						//FlexIncluder includer;
+
+						for (const std::string& filePath : filePaths)
+						{
+							std::string fileType = ExtractFileType(filePath);
+
+							if (!Contains(s_RecognizedShaderTypes, ARRAY_SIZE(s_RecognizedShaderTypes), fileType.c_str()))
+							{
+								continue;
+							}
+
+							shaderc_shader_kind shaderKind = FilePathToShaderKind(fileType);
+							if (shaderKind != -1)
+							{
+								const std::string fileName = StripLeadingDirectories(filePath);
+
+								if (!StartsWith(fileName, "vk_"))
+								{
+									// TODO: EZ: Move vulkan shaders into their own directory
+									continue;
+								}
+
+								std::string fileContents;
+								if (ReadFile(filePath, fileContents, false))
+								{
+									shaderc::CompileOptions options = {};
+									options.SetOptimizationLevel(shaderc_optimization_level_performance);
+									options.SetWarningsAsErrors();
+									options.SetTargetSpirv(shaderc_spirv_version_1_5);
+
+									//options.SetIncluder(std::unique_ptr<shaderc::CompileOptions::IncluderInterface>(includer));
+
+									shaderc::SpvCompilationResult result = compiler.CompileGlslToSpv(fileContents, shaderKind, fileName.c_str());
+									if (result.GetCompilationStatus() == shaderc_compilation_status_success)
+									{
+										Print("Compiled %s\n", fileName.c_str());
+
+										if (result.GetNumWarnings() > 0)
+										{
+											PrintWarn("%s\n", result.GetErrorMessage().c_str());
+										}
+
+										std::vector<u32> spvBytes(result.begin(), result.end());
+										std::string strippedFileName = StripFileType(fileName);
+										std::string spvFilePath = RelativePathToAbsolute(RESOURCE_LOCATION "shaders/spv/") + strippedFileName + "_" + fileType + ".spv";
+										std::ofstream fileStream(spvFilePath, std::ios::out | std::ios::binary);
+										if (fileStream.is_open())
+										{
+											fileStream.write((char*)spvBytes.data(), spvBytes.size() * sizeof(u32));
+											fileStream.close();
+										}
+										else
+										{
+											PrintError("Failed to write compiled shader to %s\n", spvFilePath.c_str());
+											return;
+										}
+									}
+									else
+									{
+										PrintError("Failed to compile %s, error: %s\n", fileName.c_str(), result.GetErrorMessage().c_str());
+										return;
+									}
+								}
+								else
+								{
+									PrintError("Failed to read shader file %s\n", fileName.c_str());
+									return;
+								}
+							}
+							else
+							{
+								PrintError("Unhandled shader kind %s\n", filePath.c_str());
+								DEBUG_BREAK();
+								return;
+							}
+						}
+
+						bSuccess = true;
+						bComplete = true;
+					}
+					else
+					{
+						PrintError("Didn't find any shaders!\n");
+						bSuccess = false;
+						bComplete = true;
+					}
+				}
+				else
+				{
+					PrintError("Unable to compile shaders, compiler is not valid!\n");
+					bSuccess = false;
+					bComplete = true;
+				}
 
 				secSinceStatusCheck = 0.0f;
 				totalSecWaiting = 0.0f;
 			}
 			else
 			{
-				is_done = true;
+				//is_done = true;
 				bSuccess = true;
 				bComplete = true;
 			}
+		}
+
+		shaderc_shader_kind AsyncVulkanShaderCompiler::FilePathToShaderKind(const std::string& fileSuffix)
+		{
+			if (fileSuffix.compare("vert") == 0) return shaderc_vertex_shader;
+			if (fileSuffix.compare("frag") == 0) return shaderc_fragment_shader;
+			if (fileSuffix.compare("geom") == 0) return shaderc_geometry_shader;
+			if (fileSuffix.compare("comp") == 0) return shaderc_compute_shader;
+
+			return (shaderc_shader_kind)-1;
 		}
 
 		i64 AsyncVulkanShaderCompiler::CalculteChecksum(const std::string& directory)
@@ -2387,37 +2512,38 @@ namespace flex
 
 		bool AsyncVulkanShaderCompiler::TickStatus()
 		{
-			sec now = Time::CurrentSeconds();
-			secSinceStatusCheck += (now - lastTime);
-			totalSecWaiting += (now - lastTime);
-			lastTime = now;
-			if (secSinceStatusCheck > secBetweenStatusChecks)
-			{
-				secSinceStatusCheck -= secBetweenStatusChecks;
+			//sec now = Time::CurrentSeconds();
+			//secSinceStatusCheck += (now - lastTime);
+			//totalSecWaiting += (now - lastTime);
+			//lastTime = now;
+			//if (secSinceStatusCheck > secBetweenStatusChecks)
+			//{
+			//	secSinceStatusCheck -= secBetweenStatusChecks;
 
-				if (is_done)
-				{
-					bComplete = true;
-					if (taskThread.joinable())
-					{
-						Print("Vulkan async shader compilation completed after %.2fs\n", totalSecWaiting);
-						taskThread.join();
-					}
+			//	if (is_done)
+			//	{
+			//		bComplete = true;
+			//		if (taskThread.joinable())
+			//		{
+			//			Print("Vulkan async shader compilation completed after %.2fs\n", totalSecWaiting);
+			//			taskThread.join();
+			//		}
 
-					if (bSuccess)
-					{
-						std::string fileContents = std::to_string(m_ShaderCodeChecksum);
-						if (!WriteFile(m_ChecksumFilePath, fileContents, false))
-						{
-							PrintError("Failed to write out shader checksum file to %s\n", m_ChecksumFilePath.c_str());
-						}
-					}
-				}
-			}
-
-			return bComplete;
+			//		if (bSuccess)
+			//		{
+			//			std::string fileContents = std::to_string(m_ShaderCodeChecksum);
+			//			if (!WriteFile(m_ChecksumFilePath, fileContents, false))
+			//			{
+			//				PrintError("Failed to write out shader checksum file to %s\n", m_ChecksumFilePath.c_str());
+			//			}
+			//		}
+			//	}
+			//}
+			//
+			//return bComplete;
+			return true;
 		}
-#endif // DEBUG
+#endif // COMPILE_SHADER_COMPILER
 
 		Cascade::Cascade(VulkanDevice* device) :
 			frameBuffer(device),

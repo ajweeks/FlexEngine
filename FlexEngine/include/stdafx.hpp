@@ -16,10 +16,12 @@
 #define THOROUGH_CHECKS 1
 #define ENABLE_PROFILING 1
 #define COMPILE_RENDERDOC_API 0
+#define COMPILE_SHADER_COMPILER 1
 #else
 #define THOROUGH_CHECKS 0
 #define ENABLE_PROFILING 0
 #define COMPILE_RENDERDOC_API 0
+#define COMPILE_SHADER_COMPILER 0
 #endif
 
 // End configuration variables

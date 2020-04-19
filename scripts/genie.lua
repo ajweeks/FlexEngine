@@ -119,6 +119,7 @@ configuration {}
 		path.join(DEPENDENCIES_DIR, "bullet/src"),
 		path.join(DEPENDENCIES_DIR, "openAL/include"),
 		path.join(DEPENDENCIES_DIR, "freetype/include"),
+		path.join(DEPENDENCIES_DIR, "shaderc/include"),
 		DEPENDENCIES_DIR,
 	}
 
@@ -152,6 +153,7 @@ project "Flex"
 
 	configuration "linux*"
 		linkoptions {
+			-- lpthread for shaderc?
 			"-pthread", -- For pthread_create
 			"-ldl", -- For dlopen, etc.
 		}
@@ -173,7 +175,7 @@ project "Flex"
 	-- Windows
 		-- Common
 		configuration "vs*"
-			links { "opengl32", "glfw3", "OpenAL32" }
+			links { "opengl32", "glfw3", "OpenAL32", "shaderc_combined" }
 		-- Debug-only
 		configuration { "vs*", "Debug" }
 			links { "BulletCollision_Debug", "BulletDynamics_Debug", "LinearMath_Debug", "freetype" }
@@ -185,7 +187,7 @@ project "Flex"
 			links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" }
 	-- linux
 		configuration "linux*"
-			links { "glfw3", "openal", "BulletDynamics", "BulletCollision", "LinearMath", "freetype", "X11", "png", "z" }
+			links { "glfw3", "openal", "BulletDynamics", "BulletCollision", "LinearMath", "freetype", "X11", "png", "z", "shaderc_combined" }
 configuration {}
 
 --Source files

@@ -32,8 +32,8 @@ namespace flex
 	std::string StripFileType(std::string filePath);
 
 	// Removes all chars before first '.' occurrence
-	// NOTE: Unused!
-	std::string ExtractFileType(std::string filePathInTypeOut);
+	// TODO: EZ: Test
+	std::string ExtractFileType(const std::string& filePath);
 
 	/*
 	* Reads in a .wav file and fills in given values according to file contents
@@ -200,6 +200,8 @@ namespace flex
 	glm::vec3 Fract(const glm::vec3& p);
 
 	u32 GenerateUID();
+
+	bool Contains(const char* arr[], u32 arrLen, const char* val);
 
 	template<class T>
 	const T& PickRandomFrom(const std::vector<T>& vec)

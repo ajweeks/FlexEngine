@@ -332,13 +332,14 @@ namespace flex
 		return filePath;
 	}
 
-	std::string ExtractFileType(std::string filePathInTypeOut)
+	std::string ExtractFileType(const std::string& filePath)
 	{
-		if (filePathInTypeOut.find('.') != std::string::npos)
+		const size_t dotPos = filePath.find_last_of('.');
+		if (dotPos != std::string::npos)
 		{
-			filePathInTypeOut = Split(filePathInTypeOut, '.')[1];
+			return filePath.substr(dotPos + 1);
 		}
-		return filePathInTypeOut;
+		return "";
 	}
 
 	bool ParseWAVFile(const std::string& filePath, i32* format, u8** data, i32* size, i32* freq)
@@ -1345,6 +1346,15 @@ namespace flex
 	u32 GenerateUID()
 	{
 		return ++_lastUID;
+	}
+
+	bool Contains(const char* arr[], u32 arrLen, const char* val)
+	{
+		for (u32 i = 0; i < arrLen; ++i)
+		{
+			if (strcmp(arr[i], val) == 0) return true;
+		}
+		return false;
 	}
 
 	i32 RoundUp(i32 val, i32 alignment)

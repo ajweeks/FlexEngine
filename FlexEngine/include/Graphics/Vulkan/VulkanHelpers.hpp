@@ -3,6 +3,10 @@
 
 IGNORE_WARNINGS_PUSH
 #include "volk/volk.h"
+
+#if COMPILE_SHADER_COMPILER
+#include "shaderc/shaderc.h" // For shaderc_shader_kind
+#endif
 IGNORE_WARNINGS_POP
 
 #include "Graphics/RendererTypes.hpp"
@@ -447,7 +451,7 @@ namespace flex
 			VDeleter<VkShaderModule> computeShaderModule;
 		};
 
-#ifdef DEBUG
+#if COMPILE_SHADER_COMPILER
 		struct AsyncVulkanShaderCompiler
 		{
 			AsyncVulkanShaderCompiler();
@@ -456,8 +460,8 @@ namespace flex
 			// Returns true once task is complete
 			bool TickStatus();
 
-			std::thread taskThread;
-			std::atomic<bool> is_done;
+			//std::thread taskThread;
+			//std::atomic<bool> is_done;
 
 			sec startTime = 0.0f;
 			sec lastTime = 0.0f;
@@ -468,13 +472,18 @@ namespace flex
 			bool bSuccess = false;
 			bool bComplete = false;
 
-		private:
-			i64 CalculteChecksum(const std::string& directory);
 
-			std::string m_ChecksumFilePath;
+		private:
+			static const char* s_ChecksumFilePath;
+			static const char* s_ShaderDirectory;
+			static const char* s_RecognizedShaderTypes[];
+
+			i64 CalculteChecksum(const std::string& directory);
+			shaderc_shader_kind FilePathToShaderKind(const std::string& fileSuffix);
+
 			i64 m_ShaderCodeChecksum = 0;
 		};
-#endif // DEBUG
+#endif // COMPILE_SHADER_COMPILER
 
 		template<typename T>
 		struct ShaderUniformContainer
