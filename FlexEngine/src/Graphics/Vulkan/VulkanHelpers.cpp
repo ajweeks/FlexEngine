@@ -2300,47 +2300,67 @@ namespace flex
 		{
 			bool bCodeOutOfDate = true;
 
-			std::string compiledDir = RelativePathToAbsolute(RESOURCE_LOCATION "shaders/spv");
-			if (Platform::DirectoryExists(compiledDir))
+			const std::string spvDirectory = RelativePathToAbsolute(RESOURCE_LOCATION "shaders/spv");
+			if (!Platform::DirectoryExists(spvDirectory))
+			{
+				Platform::CreateDirectoryRecursive(spvDirectory);
+			}
+
+			// Absolute file path => checksum
+			// Any file in the shaders directory not in this map still need to be compiled
+			std::map<std::string, u64> compiledShaders;
+
+			if (!bForceRecompile)
 			{
 				const char* blockName = "Calculate shader contents checksum";
 				{
 					PROFILE_AUTO(blockName);
 
 					const std::string shaderInputDirectory = RESOURCE_LOCATION "shaders";
-					m_ShaderCodeChecksum = CalculteChecksum(shaderInputDirectory);
 
 					if (FileExists(s_ChecksumFilePath))
 					{
 						std::string fileContents;
 						if (ReadFile(s_ChecksumFilePath, fileContents, false))
 						{
-							i64 pShaderCodeChecksum = atoll(fileContents.c_str());
-							if (m_ShaderCodeChecksum == pShaderCodeChecksum)
+							std::vector<std::string> lines = Split(fileContents, '\n');
+
+							for (const std::string& line : lines)
 							{
-								bCodeOutOfDate = false;
+								size_t midPoint = line.find('=');
+								if (midPoint != std::string::npos && line.length() > 7) // Ignore degenerate lines
+								{
+									std::string filePath = TrimStartAndEnd(line.substr(0, midPoint));
+
+									if (filePath.length() > 0)
+									{
+										std::string storedChecksumStr = TrimStartAndEnd(line.substr(midPoint + 1));
+										u64 storedChecksum = std::stoull(storedChecksumStr);
+
+										u64 calculatedChecksum = CalculteChecksum(filePath);
+										if (calculatedChecksum == storedChecksum)
+										{
+											compiledShaders.emplace(RelativePathToAbsolute(filePath), calculatedChecksum);
+										}
+									}
+								}
 							}
 						}
 					}
 				}
 			}
-			else
-			{
-				Platform::CreateDirectoryRecursive(compiledDir);
-			}
 
 			if (bForceRecompile || bCodeOutOfDate)
 			{
-				startTime = Time::CurrentSeconds();
-				lastTime = startTime;
-				Print("Kicking off async Vulkan shader compilation\n");
-
 				shaderc::Compiler compiler;
 				if (compiler.IsValid())
 				{
 					std::vector<std::string> filePaths;
 					if (Platform::FindFilesInDirectory(s_ShaderDirectory, filePaths, "*"))
 					{
+						startTime = Time::CurrentMilliseconds();
+
+						u32 compiledShaderCount = 0;
 
 						//class FlexIncluder : public shaderc::CompileOptions::IncluderInterface
 						//{
@@ -2362,8 +2382,11 @@ namespace flex
 						//};
 						//FlexIncluder includer;
 
+						std::string newChecksumFileContents;
+
 						for (const std::string& filePath : filePaths)
 						{
+							const std::string absoluteFilePath = RelativePathToAbsolute(filePath);
 							std::string fileType = ExtractFileType(filePath);
 
 							if (!Contains(s_RecognizedShaderTypes, ARRAY_SIZE(s_RecognizedShaderTypes), fileType.c_str()))
@@ -2382,6 +2405,12 @@ namespace flex
 									continue;
 								}
 
+								if (compiledShaders.find(absoluteFilePath) != compiledShaders.end())
+								{
+									// Already compiled
+									continue;
+								}
+
 								std::string fileContents;
 								if (ReadFile(filePath, fileContents, false))
 								{
@@ -2397,10 +2426,15 @@ namespace flex
 									{
 										Print("Compiled %s\n", fileName.c_str());
 
+										++compiledShaderCount;
+
 										if (result.GetNumWarnings() > 0)
 										{
 											PrintWarn("%s\n", result.GetErrorMessage().c_str());
 										}
+
+										const u64 calculatedChecksum = CalculteChecksum(filePath);
+										compiledShaders.emplace(absoluteFilePath, calculatedChecksum);
 
 										std::vector<u32> spvBytes(result.begin(), result.end());
 										std::string strippedFileName = StripFileType(fileName);
@@ -2437,6 +2471,28 @@ namespace flex
 							}
 						}
 
+						for (auto iter = compiledShaders.begin(); iter != compiledShaders.end(); ++iter)
+						{
+							newChecksumFileContents.append(iter->first + " = " + std::to_string(iter->second) + "\n");
+						}
+
+						if (compiledShaderCount > 0 && newChecksumFileContents.length() > 0)
+						{
+							std::ofstream checksumFileStream(s_ChecksumFilePath, std::ios::out);
+							if (checksumFileStream.is_open())
+							{
+								checksumFileStream.write(newChecksumFileContents.c_str(), newChecksumFileContents.size());
+								checksumFileStream.close();
+							}
+							else
+							{
+								PrintWarn("Failed to write shader checksum file to %s\n", s_ChecksumFilePath);
+							}
+						}
+
+						lastCompileDuration = Time::CurrentMilliseconds() - startTime;
+						if (compiledShaderCount > 0) Print("Compiled %u shader%s in %.1fms\n", compiledShaderCount, (compiledShaderCount > 1 ? "s" : ""), lastCompileDuration);
+
 						bSuccess = true;
 						bComplete = true;
 					}
@@ -2453,13 +2509,9 @@ namespace flex
 					bSuccess = false;
 					bComplete = true;
 				}
-
-				secSinceStatusCheck = 0.0f;
-				totalSecWaiting = 0.0f;
 			}
 			else
 			{
-				//is_done = true;
 				bSuccess = true;
 				bComplete = true;
 			}
@@ -2475,35 +2527,24 @@ namespace flex
 			return (shaderc_shader_kind)-1;
 		}
 
-		i64 AsyncVulkanShaderCompiler::CalculteChecksum(const std::string& directory)
+		u64 AsyncVulkanShaderCompiler::CalculteChecksum(const std::string& filePath)
 		{
-			i64 checksum = 0;
-			std::vector<std::string> filePaths;
-			if (Platform::FindFilesInDirectory(directory, filePaths, "*"))
+			u64 checksum = 0;
+
+			const std::string fileName = StripLeadingDirectories(filePath);
+			const std::string fileSuffix = ExtractFileType(filePath);
+			bool bGoodStart = StartsWith(fileName, "vk_");
+			bool bGoodEnd = Contains(s_RecognizedShaderTypes, ARRAY_SIZE(s_RecognizedShaderTypes), fileSuffix.c_str());
+			if (bGoodStart && bGoodEnd)
 			{
-				m_ShaderCodeChecksum = 0;
-				for (const std::string& filePath : filePaths)
+				std::string fileContents;
+				if (ReadFile(filePath, fileContents, false))
 				{
-					const std::string fileName = StripLeadingDirectories(filePath);
-					bool bGoodStart = StartsWith(fileName, "vk_");
-					bool bGoodEnd = EndsWith(fileName, ".vert") ||
-						EndsWith(fileName, ".frag") ||
-						EndsWith(fileName, ".geom") ||
-						EndsWith(fileName, ".comp");
-					if (bGoodStart && bGoodEnd)
+					u64 i = 1;
+					for (char c : fileContents)
 					{
-						std::string fileContents;
-						if (ReadFile(filePath, fileContents, false))
-						{
-							i64 fileChecksum = 0;
-							i32 i = 1;
-							for (char c : fileContents)
-							{
-								fileChecksum += (i32)i * c;
-								++i;
-							}
-							checksum += fileChecksum;
-						}
+						checksum += i * (u64)c;
+						++i;
 					}
 				}
 			}

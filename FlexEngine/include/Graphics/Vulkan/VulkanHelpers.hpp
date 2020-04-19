@@ -452,36 +452,28 @@ namespace flex
 		};
 
 #if COMPILE_SHADER_COMPILER
+		// NOTE: Not actually async at the moment! Compiling all shaders takes less than a second my machine though, so...
 		struct AsyncVulkanShaderCompiler
 		{
 			AsyncVulkanShaderCompiler();
 			AsyncVulkanShaderCompiler(bool bForceRecompile);
 
-			// Returns true once task is complete
 			bool TickStatus();
 
-			//std::thread taskThread;
-			//std::atomic<bool> is_done;
-
-			sec startTime = 0.0f;
-			sec lastTime = 0.0f;
-			sec totalSecWaiting = 0.0f;
-			sec secBetweenStatusChecks = 0.05f;
-			sec secSinceStatusCheck = 0.0f;
+			ms startTime = 0.0f;
+			ms lastCompileDuration = 0.0f;
 
 			bool bSuccess = false;
 			bool bComplete = false;
-
 
 		private:
 			static const char* s_ChecksumFilePath;
 			static const char* s_ShaderDirectory;
 			static const char* s_RecognizedShaderTypes[];
 
-			i64 CalculteChecksum(const std::string& directory);
+			u64 CalculteChecksum(const std::string& filePath);
 			shaderc_shader_kind FilePathToShaderKind(const std::string& fileSuffix);
 
-			i64 m_ShaderCodeChecksum = 0;
 		};
 #endif // COMPILE_SHADER_COMPILER
 
