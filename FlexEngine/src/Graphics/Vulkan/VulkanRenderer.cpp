@@ -5088,7 +5088,8 @@ namespace flex
 			}
 			else
 			{
-				descSetCreateInfo.imageDescriptors.Add(U_ALBEDO_SAMPLER, ImageDescriptorInfo{ m_LoadedTextures[textureID]->imageView, m_LinMipLinSampler });
+				VulkanTexture* texture = m_LoadedTextures[textureID];
+				descSetCreateInfo.imageDescriptors.Add(U_ALBEDO_SAMPLER, ImageDescriptorInfo{ m_LoadedTextures[textureID]->imageView, texture->sampler });
 			}
 			FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
 			CreateDescriptorSet(&descSetCreateInfo);
