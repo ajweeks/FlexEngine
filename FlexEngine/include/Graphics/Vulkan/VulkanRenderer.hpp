@@ -360,6 +360,10 @@ namespace flex
 			u32 GetStaticVertexIndexBufferIndex(u32 stride);
 			u32 GetDynamicVertexIndexBufferIndex(u32 stride);
 
+			TextureID GetNextAvailableTextureID();
+			TextureID AddLoadedTexture(VulkanTexture* texture);
+			VulkanTexture* GetLoadedTexture(TextureID textureID);
+
 			std::vector<std::string> m_SupportedDeviceExtenions;
 
 			const u32 MAX_NUM_RENDER_OBJECTS = 4096; // TODO: Not this?

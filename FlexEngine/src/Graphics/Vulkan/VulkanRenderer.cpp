@@ -991,7 +991,7 @@ namespace flex
 				{
 					m_BRDFTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "BRDF", m_BRDFSize.x, m_BRDFSize.y, 1);
 					m_BRDFTexture->CreateEmpty(VK_FORMAT_R16G16_SFLOAT, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-					m_LoadedTextures.push_back(m_BRDFTexture);
+					AddLoadedTexture(m_BRDFTexture);
 				}
 				mat.textures.Add(U_BRDF_LUT_SAMPLER, m_BRDFTexture, "BRDF");
 			}
@@ -1068,7 +1068,7 @@ namespace flex
 						texture->CreateFromFile(textureInfo.format);
 						texture->imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-						m_LoadedTextures.push_back(texture);
+						AddLoadedTexture(texture);
 					}
 
 					mat.textures.Add(textureInfo.textureUniform, texture, textureInfo.slotName);
@@ -1096,7 +1096,7 @@ namespace flex
 					cubemapTexture->CreateCubemapEmpty(VK_FORMAT_R8G8B8A8_UNORM, mipLevels, createInfo->enableCubemapTrilinearFiltering);
 					//texture->imageLayout = VK_IMAGE_LAYOUT_UNDEFINED; // TODO:Set this in creation function?
 
-					m_LoadedTextures.push_back(cubemapTexture);
+					AddLoadedTexture(cubemapTexture);
 					mat.textures.Add(U_CUBEMAP_SAMPLER, cubemapTexture, "Cubemap");
 				}
 				else
@@ -1109,7 +1109,7 @@ namespace flex
 						cubemapTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue,
 							createInfo->cubeMapFilePaths, channelCount, false, false, false);
 						cubemapTexture->CreateCubemapFromTextures(VK_FORMAT_R8G8B8A8_UNORM, createInfo->cubeMapFilePaths, true);
-						m_LoadedTextures.push_back(cubemapTexture);
+						AddLoadedTexture(cubemapTexture);
 					}
 
 					mat.textures.Add(U_CUBEMAP_SAMPLER, cubemapTexture, "Cubemap");
@@ -1123,7 +1123,7 @@ namespace flex
 				VulkanTexture* cubemapTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "HDR Cubemap",
 					(u32)createInfo->generatedCubemapSize.x, (u32)createInfo->generatedCubemapSize.y, 4);
 				cubemapTexture->CreateCubemapEmpty(VK_FORMAT_R32G32B32A32_SFLOAT, mipLevels, false);
-				m_LoadedTextures.push_back(cubemapTexture);
+				AddLoadedTexture(cubemapTexture);
 				mat.textures.Add(U_CUBEMAP_SAMPLER, cubemapTexture, "HDR Cubemap");
 			}
 			else
@@ -1143,7 +1143,7 @@ namespace flex
 					(u32)createInfo->generatedIrradianceCubemapSize.x,
 					(u32)createInfo->generatedIrradianceCubemapSize.y, 4);
 				irradianceTexture->CreateCubemapEmpty(VK_FORMAT_R32G32B32A32_SFLOAT, mipLevels, false);
-				m_LoadedTextures.push_back(irradianceTexture);
+				AddLoadedTexture(irradianceTexture);
 				mat.textures.Add(U_IRRADIANCE_SAMPLER, irradianceTexture, "Irradiance");
 			}
 			else
@@ -1163,7 +1163,7 @@ namespace flex
 					(u32)createInfo->generatedPrefilteredCubemapSize.x,
 					(u32)createInfo->generatedPrefilteredCubemapSize.y, 4);
 				prefilterTexture->CreateCubemapEmpty(VK_FORMAT_R16G16B16A16_SFLOAT, mipLevels, true);
-				m_LoadedTextures.push_back(prefilterTexture);
+				AddLoadedTexture(prefilterTexture);
 				mat.textures.Add(U_PREFILTER_MAP, prefilterTexture, "Prefilter");
 			}
 			else
@@ -1185,7 +1185,7 @@ namespace flex
 					void* buffer = ssaoNoise.data();
 					u32 bufferSize = (u32)ssaoNoise.size() * sizeof(glm::vec4);
 					m_NoiseTexture->CreateFromMemory(buffer, bufferSize, VK_FORMAT_R32G32B32A32_SFLOAT, 1, VK_FILTER_NEAREST);
-					m_LoadedTextures.push_back(m_NoiseTexture);
+					AddLoadedTexture(m_NoiseTexture);
 				}
 
 				mat.textures.Add(U_NOISE_SAMPLER, m_NoiseTexture, "SSAO Noise");
@@ -1204,18 +1204,18 @@ namespace flex
 			VulkanTexture* newTex = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, relativeFilePath,
 				channelCount, bFlipVertically, bGenerateMipMaps, bHDR);
 			newTex->CreateFromFile(newTex->CalculateFormat());
-			m_LoadedTextures.push_back(newTex);
+			TextureID textureID = AddLoadedTexture(newTex);
 
-			return (TextureID)(m_LoadedTextures.size() - 1);
+			return textureID;
 		}
 
 		TextureID VulkanRenderer::InitializeTextureFromMemory(void* data, u32 size, VkFormat inFormat, const std::string& name, u32 width, u32 height, u32 channelCount, VkFilter inFilter)
 		{
 			VulkanTexture* newTex = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, name, width, height, channelCount);
 			newTex->CreateFromMemory(data, size, inFormat, 1, inFilter);
-			m_LoadedTextures.push_back(newTex);
+			TextureID textureID = AddLoadedTexture(newTex);
 
-			return (TextureID)(m_LoadedTextures.size() - 1);
+			return textureID;
 		}
 
 		u32 VulkanRenderer::InitializeRenderObject(const RenderObjectCreateInfo* createInfo)
@@ -1295,8 +1295,17 @@ namespace flex
 		{
 			if (textureID < m_LoadedTextures.size())
 			{
-				VulkanTexture* texture = m_LoadedTextures[textureID];
-				RemoveLoadedTexture(texture, true);
+				VulkanTexture* texture = GetLoadedTexture(textureID);
+				if (texture)
+				{
+					RemoveLoadedTexture(texture, true);
+
+					auto spriteDescSetIter = m_SpriteDescSets.find(textureID);
+					if (spriteDescSetIter != m_SpriteDescSets.end())
+					{
+						m_SpriteDescSets.erase(spriteDescSetIter);
+					}
+				}
 			}
 		}
 
@@ -1632,7 +1641,7 @@ namespace flex
 				descSetCreateInfo.shaderID = particleRenderingMaterial->material.shaderID;
 				descSetCreateInfo.uniformBufferList = &particleRenderingMaterial->uniformBufferList;
 
-				VulkanTexture* texture = m_LoadedTextures[m_AlphaBGTextureID];
+				VulkanTexture* texture = GetLoadedTexture(m_AlphaBGTextureID);
 				descSetCreateInfo.imageDescriptors.Add(U_ALBEDO_SAMPLER, ImageDescriptorInfo{ texture->imageView, m_LinMipLinSampler });
 
 				FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
@@ -2355,7 +2364,7 @@ namespace flex
 							for (u32 loadedTexIndex = 0; loadedTexIndex < m_LoadedTextures.size(); ++loadedTexIndex)
 							{
 								// TODO(AJ): Compare IDs
-								if (pair.second == m_LoadedTextures[loadedTexIndex])
+								if (pair.second == GetLoadedTexture(loadedTexIndex))
 								{
 									selectedTextureIndices[texIndex] = loadedTexIndex;
 								}
@@ -2370,7 +2379,7 @@ namespace flex
 
 						for (u32 texIndex = 0; texIndex < mat.textures.Count(); ++texIndex)
 						{
-							mat.textures.values[texIndex].second = m_LoadedTextures[selectedTextureIndices[texIndex]];
+							mat.textures.values[texIndex].second = GetLoadedTexture(selectedTextureIndices[texIndex]);
 						}
 
 
@@ -2498,6 +2507,7 @@ namespace flex
 							return true;
 						}
 					};
+
 
 					std::vector<VulkanTexture*> textures;
 					textures.reserve(m_LoadedTextures.size());
@@ -2743,7 +2753,7 @@ namespace flex
 								Print("Importing texture: %s\n", relativeFilePath.c_str());
 
 								VulkanTexture* newTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, relativeFilePath, 3, false, false, false);
-								m_LoadedTextures.push_back(newTexture);
+								AddLoadedTexture(newTexture);
 							}
 
 							ImGui::CloseCurrentPopup();
@@ -5088,7 +5098,7 @@ namespace flex
 			}
 			else
 			{
-				VulkanTexture* texture = m_LoadedTextures[textureID];
+				VulkanTexture* texture = GetLoadedTexture(textureID);
 				descSetCreateInfo.imageDescriptors.Add(U_ALBEDO_SAMPLER, ImageDescriptorInfo{ texture->imageView, texture->sampler });
 			}
 			FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
@@ -5190,6 +5200,35 @@ namespace flex
 
 			m_DynamicVertexIndexBufferPairs.emplace_back(stride, new VertexIndexBufferPair(new VulkanBuffer(m_VulkanDevice), new VulkanBuffer(m_VulkanDevice)));
 			return (u32)m_DynamicVertexIndexBufferPairs.size() - 1;
+		}
+
+		TextureID VulkanRenderer::GetNextAvailableTextureID()
+		{
+			for (u32 i = 0; i < m_LoadedTextures.size(); ++i)
+			{
+				if (m_LoadedTextures[i] == nullptr)
+				{
+					return (TextureID)i;
+				}
+			}
+			m_LoadedTextures.push_back(nullptr);
+			return (TextureID)(m_LoadedTextures.size() - 1);
+		}
+
+		TextureID VulkanRenderer::AddLoadedTexture(VulkanTexture* texture)
+		{
+			TextureID textureID = GetNextAvailableTextureID();
+			m_LoadedTextures[textureID] = texture;
+			return textureID;
+		}
+
+		VulkanTexture* VulkanRenderer::GetLoadedTexture(TextureID textureID)
+		{
+			if (textureID < m_LoadedTextures.size())
+			{
+				return m_LoadedTextures[textureID];
+			}
+			return nullptr;
 		}
 
 		MaterialID VulkanRenderer::GetNextAvailableMaterialID() const
@@ -6390,7 +6429,7 @@ namespace flex
 		{
 			for (VulkanTexture* vulkanTexture : m_LoadedTextures)
 			{
-				if (!filePath.empty() && filePath.compare(vulkanTexture->relativeFilePath) == 0)
+				if (vulkanTexture && !filePath.empty() && filePath.compare(vulkanTexture->relativeFilePath) == 0)
 				{
 					return vulkanTexture;
 				}
@@ -6409,7 +6448,7 @@ namespace flex
 					{
 						delete* iter;
 					}
-					m_LoadedTextures.erase(iter);
+					m_LoadedTextures[iter - m_LoadedTextures.begin()] = nullptr;
 					return true;
 				}
 			}
@@ -9169,7 +9208,7 @@ namespace flex
 				real tiling = 3.0f;
 				ImVec2 uv0(0.0f, 0.0f);
 				ImVec2 uv1(tiling * textureAspectRatio, tiling);
-				VulkanTexture* alphaBGTexture = m_LoadedTextures[m_AlphaBGTextureID];
+				VulkanTexture* alphaBGTexture = GetLoadedTexture(m_AlphaBGTextureID);
 				ImGui::Image((void*)&alphaBGTexture->image, ImVec2(texSize * textureAspectRatio, texSize), uv0, uv1);
 			}
 
