@@ -175,10 +175,10 @@ project "Flex"
 	-- Windows
 		-- Common
 		configuration "vs*"
-			links { "opengl32", "glfw3", "OpenAL32", "shaderc_combined" }
+			links { "opengl32", "glfw3", "OpenAL32" }
 		-- Debug-only
 		configuration { "vs*", "Debug" }
-			links { "BulletCollision_Debug", "BulletDynamics_Debug", "LinearMath_Debug", "freetype" }
+			links { "BulletCollision_Debug", "BulletDynamics_Debug", "LinearMath_Debug", "freetype", "shaderc_combined" }
 		configuration { "vs*", "Development" }
 			links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" }
 		configuration { "vs*", "Shipping" }
