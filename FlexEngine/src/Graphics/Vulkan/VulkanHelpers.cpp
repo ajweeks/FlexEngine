@@ -305,6 +305,7 @@ namespace flex
 			assert((!bIsArray && layerCount == 1) || (bIsArray && layerCount >= 1));
 
 			ImageCreateInfo imageCreateInfo = {};
+			imageCreateInfo.DBG_Name = name.c_str();
 			imageCreateInfo.image = image.replace();
 			imageCreateInfo.imageMemory = imageMemory.replace();
 			imageCreateInfo.format = inFormat;
@@ -343,6 +344,7 @@ namespace flex
 			}
 
 			ImageViewCreateInfo viewCreateInfo = {};
+			viewCreateInfo.DBG_Name = name.c_str();
 			viewCreateInfo.viewType = (bIsArray ? VK_IMAGE_VIEW_TYPE_2D_ARRAY : VK_IMAGE_VIEW_TYPE_2D);
 			viewCreateInfo.format = inFormat;
 			viewCreateInfo.image = &image;
@@ -351,6 +353,7 @@ namespace flex
 			CreateImageView(m_VulkanDevice, viewCreateInfo);
 
 			SamplerCreateInfo samplerCreateInfo = {};
+			samplerCreateInfo.DBG_Name = name.c_str();
 			samplerCreateInfo.sampler = &sampler;
 			samplerCreateInfo.minFilter = filter;
 			samplerCreateInfo.magFilter = filter;
