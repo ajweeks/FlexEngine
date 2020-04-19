@@ -258,7 +258,7 @@ namespace flex
 			void CreateSemaphores();
 
 			void BatchRenderObjects();
-			void DrawShaderBatch(const ShaderBatchPair &shaderBatches, VkCommandBuffer& commandBuffer, DrawCallInfo* drawCallInfo = nullptr);
+			void DrawShaderBatch(const ShaderBatchPair& shaderBatches, VkCommandBuffer& commandBuffer, DrawCallInfo* drawCallInfo = nullptr);
 
 			// Expects a render pass to be in flight, renders a fullscreen tri with minimal state setup
 			void RenderFullscreenTri(
@@ -300,7 +300,7 @@ namespace flex
 			bool ExtensionSupported(const std::string& extStr) const;
 
 			void UpdateConstantUniformBuffers(UniformOverrides const* overridenUniforms = nullptr);
-			void UpdateDynamicUniformBuffer(RenderID renderID, UniformOverrides const * overridenUniforms = nullptr,
+			void UpdateDynamicUniformBuffer(RenderID renderID, UniformOverrides const* overridenUniforms = nullptr,
 				MaterialID materialIDOverride = InvalidMaterialID, u32 dynamicUBOOffsetOverride = InvalidID);
 			void UpdateDynamicUniformBuffer(MaterialID materialID, u32 dynamicOffsetIndex, const glm::mat4& model, UniformOverrides const* uniformOverrides = nullptr);
 

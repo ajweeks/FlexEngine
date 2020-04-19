@@ -1864,7 +1864,7 @@ namespace flex
 						g_Editor->SetSelectedObject(newGameObject);
 
 					} break;
-					case GameObjectType:: CHUNK_GENERATOR:
+					case GameObjectType::CHUNK_GENERATOR:
 					{
 						ChunkGenerator* chunkGenerator = new ChunkGenerator(newObjectName);
 
@@ -2281,7 +2281,7 @@ namespace flex
 		if (m_EditorStrSecRemaining > 0.0f)
 		{
 			SetFont(SID("editor-01"));
-			real alpha = glm::clamp(m_EditorStrSecRemaining / (m_EditorStrSecDuration*m_EditorStrFadeDurationPercent),
+			real alpha = glm::clamp(m_EditorStrSecRemaining / (m_EditorStrSecDuration * m_EditorStrFadeDurationPercent),
 				0.0f, 1.0f);
 			DrawStringSS(m_EditorMessage, glm::vec4(1.0f, 1.0f, 1.0f, alpha), AnchorPoint::CENTER, VEC2_ZERO, 3);
 		}

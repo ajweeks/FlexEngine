@@ -1913,7 +1913,7 @@ namespace flex
 			}
 		}
 
-		VkBool32 GetSupportedDepthFormat(VkPhysicalDevice physicalDevice, VkFormat *depthFormat)
+		VkBool32 GetSupportedDepthFormat(VkPhysicalDevice physicalDevice, VkFormat* depthFormat)
 		{
 			// Since all depth formats may be optional, we need to find a suitable depth format to use
 			// Start with the highest precision packed format

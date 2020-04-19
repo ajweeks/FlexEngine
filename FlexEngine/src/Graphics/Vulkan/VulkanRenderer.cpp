@@ -781,7 +781,7 @@ namespace flex
 			for (u32 i = 0; i < ARRAY_SIZE(m_RenderPasses); ++i)
 			{
 				(*m_RenderPasses[i])->Replace();
-				delete *m_RenderPasses[i];
+				delete* m_RenderPasses[i];
 			}
 
 			for (u32 i = 0; i < m_SwapChainFramebuffers.size(); ++i)
@@ -5089,7 +5089,7 @@ namespace flex
 			else
 			{
 				VulkanTexture* texture = m_LoadedTextures[textureID];
-				descSetCreateInfo.imageDescriptors.Add(U_ALBEDO_SAMPLER, ImageDescriptorInfo{ m_LoadedTextures[textureID]->imageView, texture->sampler });
+				descSetCreateInfo.imageDescriptors.Add(U_ALBEDO_SAMPLER, ImageDescriptorInfo{ texture->imageView, texture->sampler });
 			}
 			FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
 			CreateDescriptorSet(&descSetCreateInfo);
@@ -6407,7 +6407,7 @@ namespace flex
 				{
 					if (bDestroy)
 					{
-						delete *iter;
+						delete* iter;
 					}
 					m_LoadedTextures.erase(iter);
 					return true;

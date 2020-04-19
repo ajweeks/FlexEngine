@@ -1097,7 +1097,7 @@ namespace flex
 				}
 				if (ImGui::InputTextEx("", m_CmdLineStrBuf, MAX_CHARS_CMD_LINE_STR, ImVec2(consoleWindowWidth - 16.0f, consoleWindowHeight - 8.0f),
 					ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackCharFilter | ImGuiInputTextFlags_CallbackCompletion | ImGuiInputTextFlags_CallbackHistory,
-					[](ImGuiInputTextCallbackData *data) { return g_EngineInstance->ImGuiConsoleInputCallback(data); }))
+					[](ImGuiInputTextCallbackData* data) { return g_EngineInstance->ImGuiConsoleInputCallback(data); }))
 				{
 					ToLower(m_CmdLineStrBuf);
 					for (const ConsoleCommand& cmd : m_ConsoleCommands)
@@ -1130,7 +1130,7 @@ namespace flex
 					m_bRenderDocTriggerCaptureNextFrame = true;
 				}
 
-				if (m_bRenderDocTriggerCaptureNextFrame|| m_bRenderDocCapturingFrame)
+				if (m_bRenderDocTriggerCaptureNextFrame || m_bRenderDocCapturingFrame)
 				{
 					ImGui::Text("Capturing frame...");
 				}
@@ -1178,7 +1178,7 @@ namespace flex
 		}
 	}
 
-	i32 FlexEngine::ImGuiConsoleInputCallback(ImGuiInputTextCallbackData *data)
+	i32 FlexEngine::ImGuiConsoleInputCallback(ImGuiInputTextCallbackData* data)
 	{
 		const i32 cmdHistCount = (i32)m_PreviousCmdLineEntries.size();
 
