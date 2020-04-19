@@ -242,7 +242,7 @@ namespace flex
 		if (HasField(label))
 		{
 			i32 iValue = GetInt(label);
-			value = (u32)value;
+			value = (u32)iValue;
 			assert((i32)value == iValue); // Lost precision in uint storage! Implement uint serialization!
 			return true;
 		}

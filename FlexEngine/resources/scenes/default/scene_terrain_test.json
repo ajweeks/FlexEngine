@@ -15,9 +15,9 @@
 		"move speed" : 514.398987,
 		"transform" : 
 		{
-			"position" : "-641.310, 477.843, -1278.566",
-			"pitch" : -0.351289,
-			"yaw" : -18.062532
+			"position" : "-2807.820, 571.018, -2728.796",
+			"pitch" : -0.105383,
+			"yaw" : -6.613081
 		}
 	},
 	"objects" : 
@@ -53,11 +53,11 @@
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "0.627, 0.681, 0.830"
+				"rot" : "0.626, 1.321, 0.496"
 			},
 			"directional light info" : 
 			{
-				"rotation" : "0.138, 0.408, 0.267, 0.862",
+				"rotation" : "0.092, 0.626, 0.001, 0.774",
 				"pos" : "0.000, 15.000, 0.000",
 				"color" : "1.00, 1.00, 1.00",
 				"enabled" : true,
@@ -80,15 +80,18 @@
 			{
 				"vert count per chunk axis" : 16,
 				"chunk size" : 512.000000,
-				"max height" : 252.266998,
+				"max height" : 512.000000,
 				"use manual seed" : true,
 				"manual seed" : 1234123,
-				"loaded chunk radius" : 2582.706055
-			},
-			"table size" : 128,
-			"low colour" : "0.20, 0.30, 0.45",
-			"mid colour" : "0.45, 0.55, 0.25",
-			"high colour" : "0.65, 0.67, 0.69"
+				"loaded chunk radius" : 3026.606934,
+				"base table width" : 32,
+				"low colour" : "0.20, 0.30, 0.45",
+				"mid colour" : "0.45, 0.55, 0.25",
+				"high colour" : "0.65, 0.67, 0.69",
+				"base octave" : 512.000000,
+				"octave scale" : 101.581001,
+				"num octaves" : 4
+			}
 		},
 		{
 			"name" : "cube",

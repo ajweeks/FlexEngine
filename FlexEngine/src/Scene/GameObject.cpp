@@ -4591,7 +4591,7 @@ namespace flex
 	{
 		MaterialCreateInfo matCreateInfo = {};
 		matCreateInfo.name = "Terrain";
-		matCreateInfo.shaderName = "color";
+		matCreateInfo.shaderName = "pbr";
 		matCreateInfo.constAlbedo = glm::vec3(1.0f, 0.0f, 0.0f);
 		matCreateInfo.constRoughness = 1.0f;
 		matCreateInfo.constMetallic = 0.0f;
@@ -4713,17 +4713,19 @@ namespace flex
 
 		auto dice = std::bind(m_RandDistribution, m_RandGenerator);
 
-		u32 tableWidth = m_BasePerlinTableWidth;
-		for (u32 octave = 0; octave < m_NumOctaves; ++octave)
 		{
-			m_RandomTables[octave] = std::vector<glm::vec2>(tableWidth * tableWidth);
-
-			for (u32 i = 0; i < m_RandomTables[octave].size(); ++i)
+			u32 tableWidth = m_BasePerlinTableWidth;
+			for (u32 octave = 0; octave < m_NumOctaves; ++octave)
 			{
-				m_RandomTables[octave][i] = glm::normalize(glm::vec2(dice() * 2.0 - 1.0f, dice() * 2.0 - 1.0f));
-			}
+				m_RandomTables[octave] = std::vector<glm::vec2>(tableWidth * tableWidth);
 
-			tableWidth /= 2;
+				for (u32 i = 0; i < m_RandomTables[octave].size(); ++i)
+				{
+					m_RandomTables[octave][i] = glm::normalize(glm::vec2(dice() * 2.0 - 1.0f, dice() * 2.0 - 1.0f));
+				}
+
+				tableWidth /= 2;
+			}
 		}
 
 		for (u32 i = 0; i < m_TableTextureIDs.size(); ++i)
@@ -4740,7 +4742,7 @@ namespace flex
 			{
 				textureMem[j] = glm::vec4(m_RandomTables[i][j].x * 0.5f + 0.5f, m_RandomTables[i][j].y * 0.5f + 0.5f, 0.0f, 1.0f);
 			}
-			m_TableTextureIDs[i] = g_Renderer->InitializeTextureFromMemory(&textureMem[0], textureMem.size() * sizeof(u32) * 4, VK_FORMAT_R32G32B32A32_SFLOAT, "Perlin random table", tableWidth, tableWidth, 2, VK_FILTER_NEAREST);
+			m_TableTextureIDs[i] = g_Renderer->InitializeTextureFromMemory(&textureMem[0], (u32)(textureMem.size() * sizeof(u32) * 4), VK_FORMAT_R32G32B32A32_SFLOAT, "Perlin random table", tableWidth, tableWidth, 2, VK_FILTER_NEAREST);
 		}
 	}
 
@@ -4752,9 +4754,9 @@ namespace flex
 		u32 octaveIdx = m_NumOctaves - 1;
 		for (u32 i = 0; i < m_NumOctaves; ++i)
 		{
-			if (m_IsolateOctave == -1 || i == m_IsolateOctave)
+			if (m_IsolateOctave == -1 || i == (u32)m_IsolateOctave)
 			{
-				result += SampleNoise(pos, octave, octaveIdx) * (octave * m_OctaveScale);
+				result += SampleNoise(pos, octave, octaveIdx) * (octave / m_OctaveScale);
 			}
 			octave = octave / 2.0f;
 			--octaveIdx;
@@ -4946,14 +4948,14 @@ namespace flex
 
 		ImGui::Checkbox("Display tables", &m_bDisplayTables);
 
-		bRegen = ImGui::SliderFloat("Octave scale", &m_OctaveScale, 0.1f, 10.0f) || bRegen;
+		bRegen = ImGui::SliderFloat("Octave scale", &m_OctaveScale, 1.0f, 250.0f) || bRegen;
 		const u32 maxOctaveCount = (u32)glm::ceil(glm::log(m_BasePerlinTableWidth)) + 1;
 		bRegen = ImGuiExt::SliderUInt("Octave count", &m_NumOctaves, 1, maxOctaveCount) || bRegen;
 
 		bRegen = ImGui::SliderInt("Isolate octave", &m_IsolateOctave, -1, m_NumOctaves - 1) || bRegen;
 
 		u32 oldtableWidth = m_BasePerlinTableWidth;
-		if (ImGuiExt::SliderUInt("Base table width", &m_BasePerlinTableWidth, 2, 512))
+		if (ImGuiExt::InputUInt("Base table width", &m_BasePerlinTableWidth, 1, 10, ImGuiInputTextFlags_EnterReturnsTrue))
 		{
 			m_BasePerlinTableWidth = NextPowerOfTwo(m_BasePerlinTableWidth);
 			if (m_BasePerlinTableWidth != oldtableWidth)
@@ -4993,13 +4995,13 @@ namespace flex
 			VertCountPerChunkAxis *= 2;
 		}
 
-		bRegen = ImGui::SliderFloat("Chunk size", &ChunkSize, 0.1f, 512.0f) || bRegen;
+		bRegen = ImGui::InputFloat("Chunk size", &ChunkSize, 0.1f, 1.0f, "%.0f", ImGuiInputTextFlags_EnterReturnsTrue) || bRegen;
 
 		bRegen = ImGui::SliderFloat("Max height", &MaxHeight, 0.1f, 512.0f) || bRegen;
 
 		bRegen = ImGui::SliderFloat("nscale", &nscale, 0.01f, 2.0f) || bRegen;
 
-		bRegen = ImGui::SliderFloat("octave", &m_BaseOctave, 1.0f, 512.0f) || bRegen;
+		bRegen = ImGui::SliderFloat("octave", &m_BaseOctave, 1.0f, 2048.0f) || bRegen;
 
 		bRegen = ImGui::ColorEdit3("low", &m_LowCol.x) || bRegen;
 		bRegen = ImGui::ColorEdit3("mid", &m_MidCol.x) || bRegen;
@@ -5034,6 +5036,10 @@ namespace flex
 			chunkGenInfo.SetVec3Checked("low colour", m_LowCol);
 			chunkGenInfo.SetVec3Checked("mid colour", m_MidCol);
 			chunkGenInfo.SetVec3Checked("high colour", m_HighCol);
+
+			chunkGenInfo.SetFloatChecked("base octave", m_BaseOctave);
+			chunkGenInfo.SetFloatChecked("octave scale", m_OctaveScale);
+			chunkGenInfo.SetUIntChecked("num octaves", m_NumOctaves);
 		}
 	}
 
@@ -5049,11 +5055,16 @@ namespace flex
 
 		chunkGenInfo.fields.emplace_back("loaded chunk radius", JSONValue(m_LoadedChunkRadius));
 
-		parentObject.fields.emplace_back("chunk generator info", JSONValue(chunkGenInfo));
-		parentObject.fields.emplace_back("base table width", JSONValue((i32)m_BasePerlinTableWidth));
+		chunkGenInfo.fields.emplace_back("base table width", JSONValue((i32)m_BasePerlinTableWidth));
 
-		parentObject.fields.emplace_back("low colour", JSONValue(VecToString(m_LowCol)));
-		parentObject.fields.emplace_back("mid colour", JSONValue(VecToString(m_MidCol)));
-		parentObject.fields.emplace_back("high colour", JSONValue(VecToString(m_HighCol)));
+		chunkGenInfo.fields.emplace_back("low colour", JSONValue(VecToString(m_LowCol)));
+		chunkGenInfo.fields.emplace_back("mid colour", JSONValue(VecToString(m_MidCol)));
+		chunkGenInfo.fields.emplace_back("high colour", JSONValue(VecToString(m_HighCol)));
+
+		chunkGenInfo.fields.emplace_back("base octave", JSONValue(m_BaseOctave));
+		chunkGenInfo.fields.emplace_back("octave scale", JSONValue(m_OctaveScale));
+		chunkGenInfo.fields.emplace_back("num octaves", JSONValue((i32)m_NumOctaves));
+
+		parentObject.fields.emplace_back("chunk generator info", JSONValue(chunkGenInfo));
 	}
 } // namespace flex
