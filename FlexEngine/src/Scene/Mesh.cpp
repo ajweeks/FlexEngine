@@ -13,7 +13,10 @@ namespace flex
 	std::map<std::string, LoadedMesh*> Mesh::m_LoadedMeshes;
 
 	Mesh::Mesh(GameObject* owner) :
-		m_OwningGameObject(owner)
+		m_OwningGameObject(owner),
+		m_MinPoint(VEC3_ZERO),
+		m_MaxPoint(VEC3_ZERO),
+		m_BoundingSphereCenterPoint(VEC3_ZERO)
 	{
 	}
 

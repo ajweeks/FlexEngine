@@ -1094,7 +1094,7 @@ namespace flex
 					}
 				}
 
-				if (minPos.x != FLT_MAX && maxPos.x != -FLT_MAX)
+				if (minPos.x != FLT_MAX && maxPos.x != -FLT_MAX && minPos != maxPos)
 				{
 					glm::vec3 sphereCenterWS = minPos + (maxPos - minPos) / 2.0f;
 					real sphereRadius = glm::length(maxPos - minPos) / 2.0f;
