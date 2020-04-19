@@ -688,14 +688,15 @@ namespace flex
 		real m_BaseOctave = 1.0f;
 		u32 m_NumOctaves = 1;
 
-		bool m_bHighlightGrid;
+		bool m_bHighlightGrid = false;
+		bool m_bDisplayTables = false;
 
 		glm::vec3 m_LowCol;
 		glm::vec3 m_MidCol;
 		glm::vec3 m_HighCol;
 
 		std::vector<std::vector<glm::vec2>> m_RandomTables;
-		u32 m_BasePerlinTableSize = 128;
+		u32 m_BasePerlinTableWidth = 16;
 
 		std::vector<TextureID> m_TableTextureIDs;
 

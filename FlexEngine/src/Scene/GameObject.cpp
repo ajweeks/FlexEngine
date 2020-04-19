@@ -4707,24 +4707,23 @@ namespace flex
 	{
 		m_RandomTables = std::vector<std::vector<glm::vec2>>(m_NumOctaves);
 
-		u32 tableSize = m_BasePerlinTableSize;
+		std::mt19937 m_RandGenerator;
+		std::uniform_real_distribution<real> m_RandDistribution;
+		m_RandGenerator.seed(m_UseManualSeed ? m_ManualSeed : (u32)Time::CurrentMilliseconds());
+
+		auto dice = std::bind(m_RandDistribution, m_RandGenerator);
+
+		u32 tableWidth = m_BasePerlinTableWidth;
 		for (u32 octave = 0; octave < m_NumOctaves; ++octave)
 		{
-			m_RandomTables[octave] = std::vector<glm::vec2>(tableSize);
-
-			std::mt19937 m_RandGenerator;
-			std::uniform_real_distribution<real> m_RandDistribution;
-
-			m_RandGenerator.seed(m_UseManualSeed ? m_ManualSeed : (u32)Time::CurrentMilliseconds());
-
-			auto dice = std::bind(m_RandDistribution, m_RandGenerator);
+			m_RandomTables[octave] = std::vector<glm::vec2>(tableWidth * tableWidth);
 
 			for (u32 i = 0; i < m_RandomTables[octave].size(); ++i)
 			{
 				m_RandomTables[octave][i] = glm::normalize(glm::vec2(dice() * 2.0 - 1.0f, dice() * 2.0 - 1.0f));
 			}
 
-			tableSize /= 2;
+			tableWidth /= 2;
 		}
 
 		for (u32 i = 0; i < m_TableTextureIDs.size(); ++i)
@@ -4900,22 +4899,25 @@ namespace flex
 			}
 		}
 
-		real textureScale = 0.3f;
-		real textureY = 0.0f;
-		for (u32 i = 0; i < m_TableTextureIDs.size(); ++i)
+		if (m_bDisplayTables)
 		{
-			SpriteQuadDrawInfo drawInfo = {};
-			drawInfo.anchor = AnchorPoint::TOP_RIGHT;
-			drawInfo.bScreenSpace = true;
-			drawInfo.bWriteDepth = false;
-			drawInfo.bReadDepth = false;
-			drawInfo.scale = glm::vec3(textureScale);
-			drawInfo.pos = glm::vec3(0.0f, textureY, 0.0f);
-			drawInfo.textureID = m_TableTextureIDs[i];
-			g_Renderer->EnqueueSprite(drawInfo);
+			real textureScale = 0.3f;
+			real textureY = -0.05f;
+			for (u32 i = 0; i < m_TableTextureIDs.size(); ++i)
+			{
+				SpriteQuadDrawInfo drawInfo = {};
+				drawInfo.anchor = AnchorPoint::TOP_RIGHT;
+				drawInfo.bScreenSpace = true;
+				drawInfo.bWriteDepth = false;
+				drawInfo.bReadDepth = false;
+				drawInfo.scale = glm::vec3(textureScale);
+				drawInfo.pos = glm::vec3(0.0f, textureY, 0.0f);
+				drawInfo.textureID = m_TableTextureIDs[i];
+				g_Renderer->EnqueueSprite(drawInfo);
 
-			textureY -= textureScale * 2.0f;
-			textureScale /= 2.0f;
+				textureY -= (textureScale * 2.0f + 0.01f);
+				textureScale /= 2.0f;
+			}
 		}
 	}
 
@@ -4940,17 +4942,21 @@ namespace flex
 
 		bRegen = ImGui::Checkbox("Highlight grid", &m_bHighlightGrid) || bRegen;
 
+		ImGui::SameLine();
+
+		ImGui::Checkbox("Display tables", &m_bDisplayTables);
+
 		bRegen = ImGui::SliderFloat("Octave scale", &m_OctaveScale, 0.1f, 10.0f) || bRegen;
-		const u32 maxOctaveCount = (u32)glm::log(m_BasePerlinTableSize) + 1;
+		const u32 maxOctaveCount = (u32)glm::ceil(glm::log(m_BasePerlinTableWidth)) + 1;
 		bRegen = ImGuiExt::SliderUInt("Octave count", &m_NumOctaves, 1, maxOctaveCount) || bRegen;
 
 		bRegen = ImGui::SliderInt("Isolate octave", &m_IsolateOctave, -1, m_NumOctaves - 1) || bRegen;
 
-		u32 oldTableSize = m_BasePerlinTableSize;
-		if (ImGuiExt::SliderUInt("Base table size", &m_BasePerlinTableSize, 2, 512))
+		u32 oldtableWidth = m_BasePerlinTableWidth;
+		if (ImGuiExt::SliderUInt("Base table width", &m_BasePerlinTableWidth, 2, 512))
 		{
-			m_BasePerlinTableSize = NextPowerOfTwo(m_BasePerlinTableSize);
-			if (m_BasePerlinTableSize != oldTableSize)
+			m_BasePerlinTableWidth = NextPowerOfTwo(m_BasePerlinTableWidth);
+			if (m_BasePerlinTableWidth != oldtableWidth)
 			{
 				GenerateGradients();
 				bRegen = true;
@@ -5023,7 +5029,7 @@ namespace flex
 			m_ManualSeed = (u32)chunkGenInfo.GetInt("manual seed");
 
 			chunkGenInfo.SetFloatChecked("loaded chunk radius", m_LoadedChunkRadius);
-			chunkGenInfo.SetUIntChecked("base table size", m_BasePerlinTableSize);
+			chunkGenInfo.SetUIntChecked("base table width", m_BasePerlinTableWidth);
 
 			chunkGenInfo.SetVec3Checked("low colour", m_LowCol);
 			chunkGenInfo.SetVec3Checked("mid colour", m_MidCol);
@@ -5044,7 +5050,7 @@ namespace flex
 		chunkGenInfo.fields.emplace_back("loaded chunk radius", JSONValue(m_LoadedChunkRadius));
 
 		parentObject.fields.emplace_back("chunk generator info", JSONValue(chunkGenInfo));
-		parentObject.fields.emplace_back("base table size", JSONValue((i32)m_BasePerlinTableSize));
+		parentObject.fields.emplace_back("base table width", JSONValue((i32)m_BasePerlinTableWidth));
 
 		parentObject.fields.emplace_back("low colour", JSONValue(VecToString(m_LowCol)));
 		parentObject.fields.emplace_back("mid colour", JSONValue(VecToString(m_MidCol)));
