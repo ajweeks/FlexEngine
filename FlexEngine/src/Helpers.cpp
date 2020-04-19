@@ -1227,6 +1227,12 @@ namespace flex
 
 	std::string RelativePathToAbsolute(const std::string& relativePath)
 	{
+		if (relativePath.find(':') != std::string::npos)
+		{
+			// File must already be absolute if it contains a drive character
+			return relativePath;
+		}
+
 		size_t nextDoubleDot = relativePath.find("..");
 
 		std::string workingDirectory = FlexEngine::s_CurrentWorkingDirectory;
