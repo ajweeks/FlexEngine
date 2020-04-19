@@ -306,8 +306,11 @@ namespace flex
 		PROFILE_END(engineInitBlockName);
 
 		ms blockDuration = Profiler::GetBlockDuration(engineInitBlockName);
-		std::string bootupTimesEntry = Platform::GetDateString_YMDHMS() + "," + FloatToString(blockDuration, 2);
-		AppendToBootupTimesFile(bootupTimesEntry);
+		if (blockDuration != -1.0f && blockDuration < 20000) // Exceptionally long times are almost always due to hitting breakpoints
+		{
+			std::string bootupTimesEntry = Platform::GetDateString_YMDHMS() + "," + FloatToString(blockDuration, 2);
+			AppendToBootupTimesFile(bootupTimesEntry);
+		}
 
 		ImGuiIO& io = ImGui::GetIO();
 		m_ImGuiIniFilepathStr = ROOT_LOCATION "config/imgui.ini";
