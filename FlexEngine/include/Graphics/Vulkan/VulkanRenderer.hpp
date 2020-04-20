@@ -336,7 +336,10 @@ namespace flex
 			static const u32 MAX_NUM_DESC_DYNAMIC_UNIFORM_BUFFERS = 1024;
 			static const u32 MAX_NUM_DESC_DYNAMIC_STORAGE_BUFFERS = 1; // Particles
 
-			VulkanRenderObject* GetRenderObject(RenderID renderID);
+			inline VulkanRenderObject* GetRenderObject(RenderID renderID)
+			{
+				return m_RenderObjects[renderID];
+			}
 
 			u32 GetActiveRenderObjectCount() const;
 

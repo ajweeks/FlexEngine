@@ -4053,20 +4053,6 @@ namespace flex
 			CreateDescriptorSet(&descSetCreateInfo);
 		}
 
-		VulkanRenderObject* VulkanRenderer::GetRenderObject(RenderID renderID)
-		{
-#if DEBUG
-			if (renderID > m_RenderObjects.size() ||
-				renderID == InvalidRenderID)
-			{
-				PrintError("Invalid renderID passed to GetRenderObject: %u\n", renderID);
-				return nullptr;
-			}
-#endif
-
-			return m_RenderObjects[renderID];
-		}
-
 		u32 VulkanRenderer::GetActiveRenderObjectCount() const
 		{
 			u32 capacity = 0;
