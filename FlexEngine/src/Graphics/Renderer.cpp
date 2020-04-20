@@ -43,7 +43,6 @@ namespace flex
 	const char* Renderer::MaterialPayloadCStr = "material";
 	const char* Renderer::MeshPayloadCStr = "mesh";
 
-
 	Renderer::Renderer() :
 		m_RendererSettingsFilePathAbs(RelativePathToAbsolute(ROOT_LOCATION "config/renderer-settings.json")),
 		m_FontsFilePathAbs(RelativePathToAbsolute(ROOT_LOCATION "config/fonts.json"))
@@ -138,6 +137,14 @@ namespace flex
 		m_SSAOSamplingData.ssaoPowExp = 2.0f;
 
 		m_ShadowSamplingData.cascadeDepthSplits = glm::vec4(0.1f, 0.25f, 0.5f, 0.8f);
+
+		m_ShaderDirectoryWatcher = new DirectoryWatcher(RESOURCE_LOCATION "shaders/", false);
+		if (!m_ShaderDirectoryWatcher->Installed())
+		{
+			PrintWarn("Failed to install shader directory watcher\n");
+			delete m_ShaderDirectoryWatcher;
+			m_ShaderDirectoryWatcher = nullptr;
+		}
 	}
 
 	void Renderer::PostInitialize()
@@ -244,6 +251,8 @@ namespace flex
 	void Renderer::Destroy()
 	{
 		free(m_PointLights);
+
+		delete m_ShaderDirectoryWatcher;
 
 		m_Quad3DVertexBufferData.Destroy();
 		m_FullScreenTriVertexBufferData.Destroy();
@@ -673,6 +682,11 @@ namespace flex
 			{
 				m_EditorStrSecRemaining = 0.0f;
 			}
+		}
+
+		if (m_ShaderDirectoryWatcher && m_ShaderDirectoryWatcher->Update())
+		{
+			RecompileShaders(false);
 		}
 
 		glm::vec4 depthSplits(0.04f, 0.15f, 0.4f, 1.0f);
@@ -1741,8 +1755,7 @@ namespace flex
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV |
 				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
-				(u32)VertexAttribute::NORMAL |
-				(u32)VertexAttribute::TANGENT;
+				(u32)VertexAttribute::NORMAL;
 
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW);

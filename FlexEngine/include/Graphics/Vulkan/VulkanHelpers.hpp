@@ -306,6 +306,7 @@ namespace flex
 			VDeleter<VkImage> image;
 			VDeleter<VkDeviceMemory> imageMemory;
 			VDeleter<VkImageView> imageView;
+			// TODO: CLEANUP: Don't store sampler per texture, pool together all unique samplers in VulkanRenderer
 			VDeleter<VkSampler> sampler;
 
 			u32 width = 0;

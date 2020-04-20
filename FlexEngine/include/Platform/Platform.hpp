@@ -46,4 +46,23 @@ namespace flex
 		static std::string GetDateString_YMDHMS();
 
 	};
+
+	class DirectoryWatcher
+	{
+	public:
+		DirectoryWatcher(const std::string& directory, bool bWatchSubtree);
+		~DirectoryWatcher();
+
+		// Returns true when directory has changed
+		bool Update();
+
+		bool Installed() const;
+
+	private:
+		bool m_bInstalled = false;
+		bool m_bWatchSubtree = false;
+		std::string m_Directory;
+		HANDLE m_ChangeHandle;
+
+	};
 } // namespace flex

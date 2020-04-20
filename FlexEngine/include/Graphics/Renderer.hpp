@@ -18,6 +18,7 @@ namespace flex
 {
 	class BitmapFont;
 	class DirectionalLight;
+	class DirectoryWatcher;
 	class GameObject;
 	class MeshComponent;
 	class Mesh;
@@ -110,7 +111,7 @@ namespace flex
 
 		void DrawImGuiForGameObject(GameObject* gameObject);
 
-		virtual void RecompileAllShaders(bool bForce) = 0;
+		virtual void RecompileShaders(bool bForce) = 0;
 		virtual void LoadFonts(bool bForceRender) = 0;
 
 		virtual void ReloadSkybox(bool bRandomizeTexture) = 0;
@@ -467,6 +468,8 @@ namespace flex
 
 		static const i32 LATEST_RENDERER_SETTINGS_FILE_VERSION = 1;
 		i32 m_RendererSettingsFileVersion = 0;
+
+		DirectoryWatcher* m_ShaderDirectoryWatcher = nullptr;
 
 	private:
 		Renderer& operator=(const Renderer&) = delete;

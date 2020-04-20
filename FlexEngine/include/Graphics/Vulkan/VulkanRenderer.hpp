@@ -49,7 +49,7 @@ namespace flex
 
 			virtual void UpdateVertexData(RenderID renderID, VertexBufferData const* vertexBufferData, const std::vector<u32>& indexData) override;
 
-			virtual void RecompileAllShaders(bool bForce) override;
+			virtual void RecompileShaders(bool bForce) override;
 			virtual void LoadFonts(bool bForceRender) override;
 
 			virtual void ReloadSkybox(bool bRandomizeTexture) override;

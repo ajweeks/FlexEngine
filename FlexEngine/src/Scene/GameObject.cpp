@@ -4636,11 +4636,9 @@ namespace flex
 		vertexBufferCreateInfo.texCoords_UV.reserve(vertexCount);
 		vertexBufferCreateInfo.colors_R32G32B32A32.reserve(vertexCount);
 		vertexBufferCreateInfo.normals.reserve(vertexCount);
-		vertexBufferCreateInfo.tangents.reserve(vertexCount);
 
 		std::vector<u32> indices(indexCount);
 
-		real cell = 1.0f / (VertCountPerChunkAxis - 1) * ChunkSize;
 		for (u32 z = 0; z < VertCountPerChunkAxis; ++z)
 		{
 			for (u32 x = 0; x < VertCountPerChunkAxis; ++x)
@@ -4655,11 +4653,11 @@ namespace flex
 
 				vertPosWS.y = height * MaxHeight;
 
-				real heightDX = (SampleTerrain(sampleCenter + glm::vec2(cell, 0.0f)) - height) - (SampleTerrain(sampleCenter + glm::vec2(-cell, 0.0f)) - height);
-				real heightDZ = (SampleTerrain(sampleCenter + glm::vec2(0.0f, -cell)) - height) - (SampleTerrain(sampleCenter + glm::vec2(0.0f, cell)) - height);
+				const real e = 0.1f*m_BaseOctave;
+				real heightDX = (SampleTerrain(sampleCenter - glm::vec2(e, 0.0f)) - SampleTerrain(sampleCenter + glm::vec2(e, 0.0f)));
+				real heightDZ = (SampleTerrain(sampleCenter - glm::vec2(0.0f, e)) - SampleTerrain(sampleCenter + glm::vec2(0.0f, e)));
 
-				glm::vec3 normal = glm::normalize(glm::vec3(heightDX * nscale, 1.0f, heightDZ * nscale));
-				glm::vec3 tangent = glm::normalize(glm::cross(normal, glm::vec3(0.0f, 0.0f, 1.0f)));
+				glm::vec3 normal = glm::normalize(glm::vec3(heightDX * nscale, 2.0f * e, heightDZ * nscale));
 
 				vertexBufferCreateInfo.positions_3D.emplace_back(vertPosWS);
 				vertexBufferCreateInfo.texCoords_UV.emplace_back(uv);
@@ -4668,7 +4666,6 @@ namespace flex
 				vertexBufferCreateInfo.colors_R32G32B32A32.emplace_back(glm::vec4(vertCol.x, vertCol.y, vertCol.z, 1.0f));
 				//vertexBufferCreateInfo.colors_R32G32B32A32.emplace_back(glm::vec4(height, height, height, 1.0f));
 				vertexBufferCreateInfo.normals.emplace_back(normal);
-				vertexBufferCreateInfo.tangents.emplace_back(tangent);
 			}
 		}
 

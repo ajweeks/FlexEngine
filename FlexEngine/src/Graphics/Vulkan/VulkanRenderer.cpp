@@ -1691,8 +1691,8 @@ namespace flex
 				}
 				else
 				{
-					PrintError("Async shader recompile failed\n");
-					AddEditorString("Async shader recompile failed");
+					PrintError("Shader recompile failed\n");
+					AddEditorString("Shader recompile failed");
 				}
 
 				m_bSwapChainNeedsRebuilding = true; // This is needed to recreate some resources for SSAO, etc.
@@ -1943,7 +1943,7 @@ namespace flex
 			FLEX_UNUSED(renderID);
 		}
 
-		void VulkanRenderer::RecompileAllShaders(bool bForce)
+		void VulkanRenderer::RecompileShaders(bool bForce)
 		{
 #ifdef DEBUG
 			if (m_ShaderCompiler == nullptr)

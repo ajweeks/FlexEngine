@@ -361,5 +361,61 @@ namespace flex
 		return result.str();
 	}
 
+	DirectoryWatcher::DirectoryWatcher(const std::string& directory, bool bWatchSubtree) :
+		m_Directory(directory),
+		m_bWatchSubtree(bWatchSubtree)
+	{
+		{
+			m_ChangeHandle = FindFirstChangeNotification(
+				directory.c_str(),
+				m_bWatchSubtree ? TRUE : FALSE,
+				FILE_NOTIFY_CHANGE_LAST_WRITE);
+
+			if (m_ChangeHandle == INVALID_HANDLE_VALUE)
+			{
+				PrintError("FindFirstChangeNotification failed! Directory watch not installed for %s\n", directory.c_str());
+				m_bInstalled = false;
+			}
+			else
+			{
+				m_bInstalled = true;
+			}
+		}
+
+	}
+
+	DirectoryWatcher::~DirectoryWatcher()
+	{
+		if (m_bInstalled)
+		{
+			FindCloseChangeNotification(m_ChangeHandle);
+			m_bInstalled = false;
+		}
+	}
+
+	bool DirectoryWatcher::Update()
+	{
+		DWORD dwWaitStatus = WaitForSingleObject(m_ChangeHandle, 0);
+		switch (dwWaitStatus)
+		{
+		case WAIT_OBJECT_0:
+			// Clear modification flag (needs to be called twice for some reason...)
+			if (FindNextChangeNotification(m_ChangeHandle) == FALSE ||
+				FindNextChangeNotification(m_ChangeHandle) == FALSE)
+			{
+				PrintError("Something bad happened with the directory watch on %s\n", m_Directory.c_str());
+			}
+
+			return true;
+		}
+
+		return false;
+	}
+
+	bool DirectoryWatcher::Installed() const
+	{
+		return m_bInstalled;
+	}
+
 } // namespace flex
 #endif // _WINDOWS
