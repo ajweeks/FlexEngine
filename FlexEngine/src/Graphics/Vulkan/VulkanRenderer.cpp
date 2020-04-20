@@ -338,20 +338,6 @@ namespace flex
 			m_SpriteOrthoPushConstBlock = new Material::PushConstantBlock(128);
 			m_SpriteOrthoArrPushConstBlock = new Material::PushConstantBlock(132);
 
-#ifdef DEBUG
-			while (!m_ShaderCompiler->TickStatus())
-			{
-				// Spin lock
-			}
-
-			if (m_ShaderCompiler->bSuccess == false)
-			{
-				PrintError("Failed to compile shader code!\n");
-			}
-
-			delete m_ShaderCompiler;
-			m_ShaderCompiler = nullptr;
-#endif
 			LoadShaders();
 
 			m_ShadowVertexIndexBufferPair = new VertexIndexBufferPair(new VulkanBuffer(m_VulkanDevice), new VulkanBuffer(m_VulkanDevice));

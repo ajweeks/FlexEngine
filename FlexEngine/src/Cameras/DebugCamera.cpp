@@ -150,8 +150,8 @@ namespace flex
 
 				roll += m_TurnVel.x * m_RollOnTurnAmount * g_UnpausedDeltaTime;
 
-				yaw += m_TurnVel.x;
-				pitch += m_TurnVel.y;
+				yaw += m_TurnVel.x * g_UnpausedDeltaTime;
+				pitch += m_TurnVel.y * g_UnpausedDeltaTime;
 				ClampPitch();
 			}
 		}
