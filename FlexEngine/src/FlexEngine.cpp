@@ -1299,6 +1299,8 @@ namespace flex
 					AudioManager::SetMasterGain(masterGain);
 				}
 
+				rootObject.SetBoolChecked("install shader directory watch", m_bInstallShaderDirectoryWatch);
+
 				return true;
 			}
 			else
@@ -1311,6 +1313,7 @@ namespace flex
 		return false;
 	}
 
+	// TODO: EZ: Add config window to set common settings
 	void FlexEngine::SaveCommonSettingsToDisk(bool bAddEditorStr)
 	{
 		if (m_CommonSettingsAbsFilePath.empty())
@@ -1328,6 +1331,8 @@ namespace flex
 
 		real masterGain = AudioManager::GetMasterGain();
 		rootObject.fields.emplace_back("master gain", JSONValue(masterGain));
+
+		rootObject.fields.emplace_back("install shader directory watch", JSONValue(m_bInstallShaderDirectoryWatch));
 
 		std::string fileContents = rootObject.Print(0);
 
@@ -1690,6 +1695,11 @@ namespace flex
 	bool FlexEngine::IsSimulationPaused() const
 	{
 		return m_bSimulationPaused;
+	}
+
+	bool FlexEngine::InstallShaderDirectoryWatch() const
+	{
+		return m_bInstallShaderDirectoryWatch;
 	}
 
 } // namespace flex

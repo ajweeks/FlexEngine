@@ -1949,17 +1949,21 @@ namespace flex
 			if (m_ShaderCompiler == nullptr)
 			{
 				m_ShaderCompiler = new AsyncVulkanShaderCompiler(bForce);
-			}
 
-			if (m_ShaderCompiler->bComplete)
-			{
-				AddEditorString("Found no shader changes to recompile");
+				if (m_ShaderCompiler->bSuccess)
+				{
+					OnShaderReloadSuccess();
+				}
+				else
+				{
+					PrintError("Shader recompile failed\n");
+					AddEditorString("Shader recompile failed");
+				}
+
+				m_bSwapChainNeedsRebuilding = true; // This is needed to recreate some resources for SSAO, etc.
+
 				delete m_ShaderCompiler;
 				m_ShaderCompiler = nullptr;
-			}
-			else
-			{
-				AddEditorString("Kicking off async shader recompile");
 			}
 #else
 			FLEX_UNUSED(bForce);

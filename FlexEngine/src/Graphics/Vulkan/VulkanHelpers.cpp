@@ -2311,35 +2311,33 @@ namespace flex
 			if (!bForceRecompile)
 			{
 				const char* blockName = "Calculate shader contents checksum";
+				PROFILE_AUTO(blockName);
+
+				const std::string shaderInputDirectory = RESOURCE_LOCATION "shaders";
+
+				if (FileExists(s_ChecksumFilePath))
 				{
-					PROFILE_AUTO(blockName);
-
-					const std::string shaderInputDirectory = RESOURCE_LOCATION "shaders";
-
-					if (FileExists(s_ChecksumFilePath))
+					std::string fileContents;
+					if (ReadFile(s_ChecksumFilePath, fileContents, false))
 					{
-						std::string fileContents;
-						if (ReadFile(s_ChecksumFilePath, fileContents, false))
+						std::vector<std::string> lines = Split(fileContents, '\n');
+
+						for (const std::string& line : lines)
 						{
-							std::vector<std::string> lines = Split(fileContents, '\n');
-
-							for (const std::string& line : lines)
+							size_t midPoint = line.find('=');
+							if (midPoint != std::string::npos && line.length() > 7) // Ignore degenerate lines
 							{
-								size_t midPoint = line.find('=');
-								if (midPoint != std::string::npos && line.length() > 7) // Ignore degenerate lines
+								std::string filePath = TrimStartAndEnd(line.substr(0, midPoint));
+
+								if (filePath.length() > 0)
 								{
-									std::string filePath = TrimStartAndEnd(line.substr(0, midPoint));
+									std::string storedChecksumStr = TrimStartAndEnd(line.substr(midPoint + 1));
+									u64 storedChecksum = std::stoull(storedChecksumStr);
 
-									if (filePath.length() > 0)
+									u64 calculatedChecksum = CalculteChecksum(filePath);
+									if (calculatedChecksum == storedChecksum)
 									{
-										std::string storedChecksumStr = TrimStartAndEnd(line.substr(midPoint + 1));
-										u64 storedChecksum = std::stoull(storedChecksumStr);
-
-										u64 calculatedChecksum = CalculteChecksum(filePath);
-										if (calculatedChecksum == storedChecksum)
-										{
-											compiledShaders.emplace(RelativePathToAbsolute(filePath), calculatedChecksum);
-										}
+										compiledShaders.emplace(RelativePathToAbsolute(filePath), calculatedChecksum);
 									}
 								}
 							}
@@ -2453,7 +2451,7 @@ namespace flex
 								}
 								else
 								{
-									PrintError("%s\n", result.GetErrorMessage().c_str());
+									PrintError("%s", result.GetErrorMessage().c_str());
 									++invalidShaderCount;
 									bSuccess = false;
 									auto iter = compiledShaders.find(absoluteFilePath);
@@ -2505,7 +2503,7 @@ namespace flex
 
 					if (invalidShaderCount > 0)
 					{
-						Print("%u shader%s had errors\n", invalidShaderCount, (invalidShaderCount > 1 ? "s" : ""));
+						PrintError("%u shader%s had errors\n", invalidShaderCount, (invalidShaderCount > 1 ? "s" : ""));
 					}
 
 					bComplete = true;

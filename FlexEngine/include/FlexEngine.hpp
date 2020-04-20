@@ -33,6 +33,8 @@ namespace flex
 
 		bool IsSimulationPaused() const;
 
+		bool InstallShaderDirectoryWatch() const;
+
 		static std::string EngineVersionString();
 
 		static void GenerateRayAtMousePos(btVector3& outRayStart, btVector3& outRayEnd);
@@ -185,6 +187,8 @@ namespace flex
 		i32 m_PreviousCmdLineIndex = -1;
 		std::vector<std::string> m_PreviousCmdLineEntries;
 		bool m_bShouldFocusKeyboardOnConsole = false;
+
+		bool m_bInstallShaderDirectoryWatch = true;
 
 		std::vector<Spring<glm::vec3>> m_TestSprings;
 		real m_SpringTimer = 0.0f;

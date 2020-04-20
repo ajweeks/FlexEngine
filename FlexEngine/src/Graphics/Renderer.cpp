@@ -137,19 +137,22 @@ namespace flex
 		m_SSAOSamplingData.ssaoPowExp = 2.0f;
 
 		m_ShadowSamplingData.cascadeDepthSplits = glm::vec4(0.1f, 0.25f, 0.5f, 0.8f);
-
-		m_ShaderDirectoryWatcher = new DirectoryWatcher(RESOURCE_LOCATION "shaders/", false);
-		if (!m_ShaderDirectoryWatcher->Installed())
-		{
-			PrintWarn("Failed to install shader directory watcher\n");
-			delete m_ShaderDirectoryWatcher;
-			m_ShaderDirectoryWatcher = nullptr;
-		}
 	}
 
 	void Renderer::PostInitialize()
 	{
 		// TODO: Use MeshComponent for these objects?
+
+		if (g_EngineInstance->InstallShaderDirectoryWatch())
+		{
+			m_ShaderDirectoryWatcher = new DirectoryWatcher(RESOURCE_LOCATION "shaders/", false);
+			if (!m_ShaderDirectoryWatcher->Installed())
+			{
+				PrintWarn("Failed to install shader directory watcher\n");
+				delete m_ShaderDirectoryWatcher;
+				m_ShaderDirectoryWatcher = nullptr;
+			}
+		}
 
 		// Full screen Triangle
 		{
