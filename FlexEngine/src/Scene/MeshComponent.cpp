@@ -11,6 +11,7 @@ IGNORE_WARNINGS_PUSH
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp> // For make_vec3
+#include <glm/gtx/norm.hpp> // For length2
 IGNORE_WARNINGS_POP
 
 #include "Cameras/BaseCamera.hpp"
@@ -1264,17 +1265,22 @@ namespace flex
 
 			m_BoundingSphereCenterPoint = m_MinPoint + (m_MaxPoint - m_MinPoint) / 2.0f;
 
+			real sqrBoundingSphereRadius = 0.0f;
 			for (const glm::vec3& pos : positions)
 			{
-				real posMagnitude = glm::length(pos - m_BoundingSphereCenterPoint);
-				if (posMagnitude > m_BoundingSphereRadius)
+				real sqrDist = glm::length2(pos - m_BoundingSphereCenterPoint);
+				if (sqrDist > sqrBoundingSphereRadius)
 				{
-					m_BoundingSphereRadius = posMagnitude;
+					sqrBoundingSphereRadius = sqrDist;
 				}
 			}
-			if (m_BoundingSphereRadius == 0.0f)
+			if (sqrBoundingSphereRadius == 0.0f)
 			{
 				PrintWarn("Mesh's bounding sphere's radius is 0, do any valid vertices exist?\n");
+			}
+			else
+			{
+				m_BoundingSphereRadius = std::sqrt(sqrBoundingSphereRadius);
 			}
 		}
 
