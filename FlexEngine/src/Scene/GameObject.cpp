@@ -4615,6 +4615,8 @@ namespace flex
 
 	void ChunkGenerator::GenerateChunk(const glm::ivec2& chunkIndex)
 	{
+		PROFILE_AUTO("Generate terrain chunk");
+
 		{
 			auto existingChunkIter = m_Meshes.find(chunkIndex);
 			if (existingChunkIter != m_Meshes.end())
@@ -4653,26 +4655,19 @@ namespace flex
 
 				vertPosWS.y = height * MaxHeight;
 
-				const real e = 0.1f*m_BaseOctave;
-				real heightDX = (SampleTerrain(sampleCenter - glm::vec2(e, 0.0f)) - SampleTerrain(sampleCenter + glm::vec2(e, 0.0f)));
-				real heightDZ = (SampleTerrain(sampleCenter - glm::vec2(0.0f, e)) - SampleTerrain(sampleCenter + glm::vec2(0.0f, e)));
+				const real e = 0.01f;
+				real heightDX = (SampleTerrain(sampleCenter - glm::vec2(e, 0.0f)) - SampleTerrain(sampleCenter + glm::vec2(e, 0.0f))) * MaxHeight;
+				real heightDZ = (SampleTerrain(sampleCenter - glm::vec2(0.0f, e)) - SampleTerrain(sampleCenter + glm::vec2(0.0f, e))) * MaxHeight;
 
 				glm::vec3 normal = glm::normalize(glm::vec3(heightDX * nscale, 2.0f * e, heightDZ * nscale));
 
 				vertexBufferCreateInfo.positions_3D.emplace_back(vertPosWS);
 				vertexBufferCreateInfo.texCoords_UV.emplace_back(uv);
 				bool bShowEdge = (m_bHighlightGrid && (x == 0 || x == (VertCountPerChunkAxis - 1) || z == 0 || z == (VertCountPerChunkAxis - 1)));
-				glm::vec3 vertCol = (bShowEdge ? glm::vec3(0.75f) : (height <= 0.5f ? Lerp(m_LowCol, m_MidCol, height * 2.0f) : Lerp(m_MidCol, m_HighCol, (height - 0.5f) * 2.0f)));
+				glm::vec3 vertCol = (bShowEdge ? glm::vec3(0.75f) : (height <= 0.5f ? Lerp(m_LowCol, m_MidCol, glm::pow(height * 2.0f, 4.0f)) : Lerp(m_MidCol, m_HighCol, glm::pow((height - 0.5f) * 2.0f, 1.0f/5.0f))));
 				vertexBufferCreateInfo.colors_R32G32B32A32.emplace_back(glm::vec4(vertCol.x, vertCol.y, vertCol.z, 1.0f));
 				//vertexBufferCreateInfo.colors_R32G32B32A32.emplace_back(glm::vec4(height, height, height, 1.0f));
 				vertexBufferCreateInfo.normals.emplace_back(normal);
-			}
-		}
-
-		for (u32 z = 0; z < VertCountPerChunkAxis; ++z)
-		{
-			for (u32 x = 0; x < VertCountPerChunkAxis; ++x)
-			{
 			}
 		}
 
@@ -4702,6 +4697,8 @@ namespace flex
 
 	void ChunkGenerator::GenerateGradients()
 	{
+		PROFILE_AUTO("Generate terrain chunk gradient tables");
+
 		m_RandomTables = std::vector<std::vector<glm::vec2>>(m_NumOctaves);
 
 		std::mt19937 m_RandGenerator;
@@ -4746,6 +4743,8 @@ namespace flex
 	// Returns a value in [0, 1]
 	real ChunkGenerator::SampleTerrain(const glm::vec2& pos)
 	{
+		PROFILE_AUTO("Sample terrain function");
+
 		real result = 0.0f;
 		real octave = m_BaseOctave;
 		u32 octaveIdx = m_NumOctaves - 1;
@@ -4769,6 +4768,8 @@ namespace flex
 	// Returns a value in [-1, 1]
 	real ChunkGenerator::SampleNoise(const glm::vec2& pos, real octave, u32 octaveIdx)
 	{
+		PROFILE_AUTO("Sample noise");
+
 		glm::vec2 posi = Floor(pos / octave);
 		glm::vec2 posf = Fract(pos / octave);
 
@@ -4800,9 +4801,9 @@ namespace flex
 	{
 		std::vector<glm::vec2i> chunksInRadius(m_Meshes.size()); // Likely to be same size as m_LoadedChunks
 
-		glm::vec3 camPos = g_CameraManager->CurrentCamera()->position;
-		const glm::vec2 camPosXZ(camPos.x, camPos.z);
-		const glm::vec2i camChunkIdx = (glm::vec2i)(glm::vec2(camPos.x, camPos.z) / ChunkSize);
+		glm::vec3 center = m_bPinCenter ? m_PinnedPos : g_CameraManager->CurrentCamera()->position;
+		const glm::vec2 centerXZ(center.x, center.z);
+		const glm::vec2i camChunkIdx = (glm::vec2i)(glm::vec2(center.x, center.z) / ChunkSize);
 		const i32 maxChunkIdxDiff = (i32)glm::ceil(m_LoadedChunkRadius / (real)ChunkSize);
 		const real radiusSqr = m_LoadedChunkRadius * m_LoadedChunkRadius;
 		for (i32 x = camChunkIdx.x - maxChunkIdxDiff; x < camChunkIdx.x + maxChunkIdxDiff; ++x)
@@ -4810,7 +4811,7 @@ namespace flex
 			for (i32 z = camChunkIdx.y - maxChunkIdxDiff; z < camChunkIdx.y + maxChunkIdxDiff; ++z)
 			{
 				glm::vec2 chunkCenter((x + 0.5f) * ChunkSize, (z + 0.5f) * ChunkSize);
-				if (glm::distance2(chunkCenter, camPosXZ) < radiusSqr)
+				if (glm::distance2(chunkCenter, centerXZ) < radiusSqr)
 				{
 					chunksInRadius.push_back(glm::vec2i(x, z));
 				}
@@ -4848,6 +4849,7 @@ namespace flex
 		}
 
 		{
+			PROFILE_AUTO("Destroy terrain chunks");
 			ns start = Time::CurrentNanoseconds();
 			i32 iterationCount = 0;
 			while (m_ChunksToDestroy.size() > 0)
@@ -4868,14 +4870,10 @@ namespace flex
 					break;
 				}
 			}
-			if (iterationCount > 0)
-			{
-				ns now = Time::CurrentNanoseconds();
-				Print("Destroyed %d chunks in %.2fms\n", iterationCount, Time::ConvertFormats(now - start, Time::Format::NANOSECOND, Time::Format::MILLISECOND));
-			}
 		}
 
 		{
+			PROFILE_AUTO("Generate terrain chunks");
 			ns start = Time::CurrentNanoseconds();
 			i32 iterationCount = 0;
 			while (m_ChunksToLoad.size() > 0)
@@ -4890,11 +4888,6 @@ namespace flex
 				{
 					break;
 				}
-			}
-			if (iterationCount > 0)
-			{
-				ns now = Time::CurrentNanoseconds();
-				Print("Generated %d chunks in %.2fms\n", iterationCount, Time::ConvertFormats(now - start, Time::Format::NANOSECOND, Time::Format::MILLISECOND));
 			}
 		}
 
@@ -4933,9 +4926,7 @@ namespace flex
 	{
 		GameObject::DrawImGuiObjects();
 
-		ImGui::Text("Loaded chunks: %u", m_Meshes.size());
-		ImGui::Text("Chunks loading: %u", m_ChunksToLoad.size());
-		ImGui::Text("Chunks destroying: %u", m_ChunksToDestroy.size());
+		ImGui::Text("Loaded chunks: %u (loading: %u)", m_Meshes.size(),  m_ChunksToLoad.size());
 
 		bool bRegen = false;
 
@@ -4944,6 +4935,14 @@ namespace flex
 		ImGui::SameLine();
 
 		ImGui::Checkbox("Display tables", &m_bDisplayTables);
+
+		if (ImGui::Checkbox("Pin center", &m_bPinCenter))
+		{
+			if (m_bPinCenter)
+			{
+				m_PinnedPos = g_CameraManager->CurrentCamera()->position;
+			}
+		}
 
 		bRegen = ImGui::SliderFloat("Octave scale", &m_OctaveScale, 1.0f, 250.0f) || bRegen;
 		const u32 maxOctaveCount = (u32)glm::ceil(glm::log(m_BasePerlinTableWidth)) + 1;
@@ -5037,6 +5036,9 @@ namespace flex
 			chunkGenInfo.SetFloatChecked("base octave", m_BaseOctave);
 			chunkGenInfo.SetFloatChecked("octave scale", m_OctaveScale);
 			chunkGenInfo.SetUIntChecked("num octaves", m_NumOctaves);
+
+			chunkGenInfo.SetBoolChecked("pin center", m_bPinCenter);
+			chunkGenInfo.SetVec3Checked("pinned center", m_PinnedPos);
 		}
 	}
 
@@ -5061,6 +5063,9 @@ namespace flex
 		chunkGenInfo.fields.emplace_back("base octave", JSONValue(m_BaseOctave));
 		chunkGenInfo.fields.emplace_back("octave scale", JSONValue(m_OctaveScale));
 		chunkGenInfo.fields.emplace_back("num octaves", JSONValue((i32)m_NumOctaves));
+
+		chunkGenInfo.fields.emplace_back("pin center", JSONValue(m_bPinCenter));
+		chunkGenInfo.fields.emplace_back("pinned center", JSONValue(VecToString(m_PinnedPos)));
 
 		parentObject.fields.emplace_back("chunk generator info", JSONValue(chunkGenInfo));
 	}

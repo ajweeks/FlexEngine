@@ -691,6 +691,9 @@ namespace flex
 		bool m_bHighlightGrid = false;
 		bool m_bDisplayTables = false;
 
+		bool m_bPinCenter = false;
+		glm::vec3 m_PinnedPos;
+
 		glm::vec3 m_LowCol;
 		glm::vec3 m_MidCol;
 		glm::vec3 m_HighCol;

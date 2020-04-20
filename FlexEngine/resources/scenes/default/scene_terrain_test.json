@@ -7,7 +7,7 @@
 		"type" : "debug",
 		"near plane" : 0.500000,
 		"far plane" : 10000.000000,
-		"fov" : 0.785398,
+		"fov" : 1.216494,
 		"aperture" : 1.000000,
 		"shutter speed" : 0.125000,
 		"light sensitivity" : 800.000000,
@@ -15,9 +15,9 @@
 		"move speed" : 514.398987,
 		"transform" : 
 		{
-			"position" : "-2807.820, 571.018, -2728.796",
-			"pitch" : -0.105383,
-			"yaw" : -6.613081
+			"position" : "1064.915, 629.242, 142.905",
+			"pitch" : -0.549736,
+			"yaw" : -3.093882
 		}
 	},
 	"objects" : 
@@ -78,19 +78,21 @@
 			],
 			"chunk generator info" : 
 			{
-				"vert count per chunk axis" : 16,
+				"vert count per chunk axis" : 64,
 				"chunk size" : 512.000000,
 				"max height" : 512.000000,
 				"use manual seed" : true,
 				"manual seed" : 1234123,
-				"loaded chunk radius" : 3026.606934,
+				"loaded chunk radius" : 1962.673950,
 				"base table width" : 32,
 				"low colour" : "0.20, 0.30, 0.45",
 				"mid colour" : "0.45, 0.55, 0.25",
 				"high colour" : "0.65, 0.67, 0.69",
-				"base octave" : 512.000000,
+				"base octave" : 331.000000,
 				"octave scale" : 101.581001,
-				"num octaves" : 4
+				"num octaves" : 5,
+				"pin center" : true,
+				"pinned center" : "1064.91, 629.24, 142.91"
 			}
 		},
 		{
