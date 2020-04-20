@@ -4591,7 +4591,7 @@ namespace flex
 	{
 		MaterialCreateInfo matCreateInfo = {};
 		matCreateInfo.name = "Terrain";
-		matCreateInfo.shaderName = "pbr";
+		matCreateInfo.shaderName = "terrain";
 		matCreateInfo.constAlbedo = glm::vec3(1.0f, 0.0f, 0.0f);
 		matCreateInfo.constRoughness = 1.0f;
 		matCreateInfo.constMetallic = 0.0f;

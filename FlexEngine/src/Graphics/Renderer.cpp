@@ -1272,6 +1272,7 @@ namespace flex
 				{ "blit", "vk_barebones_pos2_uv_vert.spv", "vk_blit_frag.spv" },
 				{ "particle_sim", "", "", "", "vk_simulate_particles_comp.spv" },
 				{ "particles", "vk_particles_vert.spv", "vk_particles_frag.spv", "vk_particles_geom.spv" },
+				{ "terrain", "vk_terrain_vert.spv", "vk_terrain_frag.spv" },
 			};
 #endif
 
@@ -1724,6 +1725,27 @@ namespace flex
 
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_CAM_POS);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
+
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
+
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_ALBEDO_SAMPLER);
+			++shaderID;
+
+			// Terrain
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
+			m_BaseShaders[shaderID].bDepthWriteEnable = true;
+			m_BaseShaders[shaderID].bTranslucent = false;
+			m_BaseShaders[shaderID].vertexAttributes =
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::UV |
+				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
+				(u32)VertexAttribute::NORMAL |
+				(u32)VertexAttribute::TANGENT;
+
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
 
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
