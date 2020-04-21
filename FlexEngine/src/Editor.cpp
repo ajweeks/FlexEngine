@@ -86,6 +86,7 @@ namespace flex
 		if (m_TestShape)
 		{
 			m_TestShape->Destroy();
+			delete m_TestShape;
 			m_TestShape = nullptr;
 		}
 
