@@ -27,8 +27,10 @@ IGNORE_WARNINGS_POP
 #include "JSONParser.hpp"
 #include "Physics/RigidBody.hpp"
 #include "Profiler.hpp"
+#include "Platform/Platform.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
+#include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Window/Monitor.hpp"
@@ -36,10 +38,14 @@ IGNORE_WARNINGS_POP
 
 namespace flex
 {
+	// Must be 12 chars or less
+	const char* Renderer::GameObjectPayloadCStr = "gameobject";
+	const char* Renderer::MaterialPayloadCStr = "material";
+	const char* Renderer::MeshPayloadCStr = "mesh";
+
 	Renderer::Renderer() :
-		m_DefaultSettingsFilePathAbs(RelativePathToAbsolute(ROOT_LOCATION "config/default-renderer-settings.ini")),
-		m_SettingsFilePathAbs(RelativePathToAbsolute(ROOT_LOCATION "config/renderer-settings.ini")),
-		m_FontsFilePathAbs(RelativePathToAbsolute(ROOT_LOCATION "config/fonts.ini"))
+		m_RendererSettingsFilePathAbs(RelativePathToAbsolute(ROOT_LOCATION "config/renderer-settings.json")),
+		m_FontsFilePathAbs(RelativePathToAbsolute(ROOT_LOCATION "config/fonts.json"))
 	{
 	}
 
@@ -56,7 +62,7 @@ namespace flex
 		else
 		{
 			JSONObject fontSettings;
-			if (JSONParser::Parse(m_FontsFilePathAbs, fontSettings))
+			if (JSONParser::ParseFromFile(m_FontsFilePathAbs, fontSettings))
 			{
 				std::vector<JSONObject> fontObjs;
 				if (fontSettings.SetObjectArrayChecked("fonts", fontObjs))
@@ -92,15 +98,19 @@ namespace flex
 					}
 				}
 			}
+			else
+			{
+				PrintError("Failed to parse font config file %s\n\terror: %s\n", m_FontsFilePathAbs.c_str(), JSONParser::GetErrorString());
+			}
 		}
 
 		std::string hdriPath = RESOURCE("textures/hdri/");
-		if (!FindFilesInDirectory(hdriPath, m_AvailableHDRIs, "hdr"))
+		if (!Platform::FindFilesInDirectory(hdriPath, m_AvailableHDRIs, "hdr"))
 		{
 			PrintWarn("Unable to find hdri directory at %s\n", hdriPath.c_str());
 		}
 
-		m_PointLights = (PointLightData*)malloc_hooked(MAX_POINT_LIGHT_COUNT * sizeof(PointLightData));
+		m_PointLights = (PointLightData*)malloc(MAX_POINT_LIGHT_COUNT * sizeof(PointLightData));
 		for (i32 i = 0; i < MAX_POINT_LIGHT_COUNT; ++i)
 		{
 			m_PointLights[i].color = VEC3_NEG_ONE;
@@ -122,7 +132,6 @@ namespace flex
 
 		m_SSAOBlurDataConstant.radius = 4;
 		m_SSAOBlurSamplePixelOffset = 2;
-		glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 
 		m_SSAOSamplingData.ssaoEnabled = 1;
 		m_SSAOSamplingData.ssaoPowExp = 2.0f;
@@ -133,6 +142,17 @@ namespace flex
 	void Renderer::PostInitialize()
 	{
 		// TODO: Use MeshComponent for these objects?
+
+		if (g_EngineInstance->InstallShaderDirectoryWatch())
+		{
+			m_ShaderDirectoryWatcher = new DirectoryWatcher(RESOURCE_LOCATION "shaders/", false);
+			if (!m_ShaderDirectoryWatcher->Installed())
+			{
+				PrintWarn("Failed to install shader directory watcher\n");
+				delete m_ShaderDirectoryWatcher;
+				m_ShaderDirectoryWatcher = nullptr;
+			}
+		}
 
 		// Full screen Triangle
 		{
@@ -154,7 +174,7 @@ namespace flex
 				(u32)VertexAttribute::UV;
 
 			m_FullScreenTriVertexBufferData = {};
-			m_FullScreenTriVertexBufferData.Initialize(&triVertexBufferDataCreateInfo);
+			m_FullScreenTriVertexBufferData.Initialize(triVertexBufferDataCreateInfo);
 
 
 			GameObject* fullScreenTriGameObject = new GameObject("Full screen triangle", GameObjectType::_NONE);
@@ -203,7 +223,7 @@ namespace flex
 				(u32)VertexAttribute::UV;
 
 			m_Quad3DVertexBufferData = {};
-			m_Quad3DVertexBufferData.Initialize(&quad3DVertexBufferDataCreateInfo);
+			m_Quad3DVertexBufferData.Initialize(quad3DVertexBufferDataCreateInfo);
 
 
 			GameObject* quad3DGameObject = new GameObject("Sprite Quad 3D", GameObjectType::_NONE);
@@ -218,7 +238,7 @@ namespace flex
 			quad3DCreateInfo.gameObject = quad3DGameObject;
 			quad3DCreateInfo.cullFace = CullFace::NONE;
 			quad3DCreateInfo.visibleInSceneExplorer = false;
-			quad3DCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
+			quad3DCreateInfo.depthTestReadFunc = DepthTestFunc::GEQUAL;
 			quad3DCreateInfo.bEditorObject = true; // TODO: Create other quad which is identical but is not an editor object for gameplay objects?
 			quad3DCreateInfo.renderPassOverride = RenderPassType::FORWARD;
 			m_Quad3DRenderID = InitializeRenderObject(&quad3DCreateInfo);
@@ -233,7 +253,9 @@ namespace flex
 
 	void Renderer::Destroy()
 	{
-		free_hooked(m_PointLights);
+		free(m_PointLights);
+
+		delete m_ShaderDirectoryWatcher;
 
 		m_Quad3DVertexBufferData.Destroy();
 		m_FullScreenTriVertexBufferData.Destroy();
@@ -273,26 +295,19 @@ namespace flex
 		return m_bRenderGrid;
 	}
 
-	void Renderer::SaveSettingsToDisk(bool bSaveOverDefaults /* = false */, bool bAddEditorStr /* = true */)
+	void Renderer::SaveSettingsToDisk(bool bAddEditorStr /* = true */)
 	{
-		std::string filePath = (bSaveOverDefaults ? m_DefaultSettingsFilePathAbs : m_SettingsFilePathAbs);
-
-		if (bSaveOverDefaults && FileExists(m_SettingsFilePathAbs))
+		if (FileExists(m_RendererSettingsFilePathAbs))
 		{
-			DeleteFile(m_SettingsFilePathAbs);
-		}
-
-		if (filePath.empty())
-		{
-			PrintError("Failed to save renderer settings to disk: file path is not set!\n");
-			return;
+			Platform::DeleteFile(m_RendererSettingsFilePathAbs);
 		}
 
 		JSONObject rootObject = {};
+		rootObject.fields.emplace_back("version", JSONValue(m_RendererSettingsFileVersion));
 		rootObject.fields.emplace_back("enable v-sync", JSONValue(m_bVSyncEnabled));
 		rootObject.fields.emplace_back("enable fxaa", JSONValue(m_PostProcessSettings.bEnableFXAA));
-		rootObject.fields.emplace_back("brightness", JSONValue(Vec3ToString(m_PostProcessSettings.brightness, 3)));
-		rootObject.fields.emplace_back("offset", JSONValue(Vec3ToString(m_PostProcessSettings.offset, 3)));
+		rootObject.fields.emplace_back("brightness", JSONValue(VecToString(m_PostProcessSettings.brightness, 3)));
+		rootObject.fields.emplace_back("offset", JSONValue(VecToString(m_PostProcessSettings.offset, 3)));
 		rootObject.fields.emplace_back("saturation", JSONValue(m_PostProcessSettings.saturation));
 
 		BaseCamera* cam = g_CameraManager->CurrentCamera();
@@ -301,45 +316,29 @@ namespace flex
 		rootObject.fields.emplace_back("light sensitivity", JSONValue(cam->lightSensitivity));
 		std::string fileContents = rootObject.Print(0);
 
-		if (WriteFile(filePath, fileContents, false))
+		if (WriteFile(m_RendererSettingsFilePathAbs, fileContents, false))
 		{
 			if (bAddEditorStr)
 			{
-				if (bSaveOverDefaults)
-				{
-					AddEditorString("Saved default renderer settings");
-				}
-				else
-				{
-					AddEditorString("Saved renderer settings");
-				}
+				AddEditorString("Saved renderer settings");
 			}
+		}
+		else
+		{
+			PrintError("Failed to write render settings to %s\n", m_RendererSettingsFilePathAbs.c_str());
 		}
 	}
 
-	void Renderer::LoadSettingsFromDisk(bool bLoadDefaults /* = false */)
+	void Renderer::LoadSettingsFromDisk()
 	{
-		std::string filePath = (bLoadDefaults ? m_DefaultSettingsFilePathAbs : m_SettingsFilePathAbs);
-
-		if (!bLoadDefaults && !FileExists(m_SettingsFilePathAbs))
-		{
-			filePath = m_DefaultSettingsFilePathAbs;
-
-			if (!FileExists(filePath))
-			{
-				PrintError("Failed to find renderer settings files on disk!\n");
-				return;
-			}
-		}
-
-		if (bLoadDefaults && FileExists(m_SettingsFilePathAbs))
-		{
-			DeleteFile(m_SettingsFilePathAbs);
-		}
-
 		JSONObject rootObject;
-		if (JSONParser::Parse(filePath, rootObject))
+		if (JSONParser::ParseFromFile(m_RendererSettingsFilePathAbs, rootObject))
 		{
+			if (rootObject.HasField("version"))
+			{
+				m_RendererSettingsFileVersion = rootObject.GetInt("version");
+			}
+
 			SetVSyncEnabled(rootObject.GetBool("enable v-sync"));
 			m_PostProcessSettings.bEnableFXAA = rootObject.GetBool("enable fxaa");
 			m_PostProcessSettings.brightness = ParseVec3(rootObject.GetString("brightness"));
@@ -355,10 +354,13 @@ namespace flex
 				cam->lightSensitivity = rootObject.GetFloat("light sensitivity");
 				cam->CalculateExposure();
 			}
+
+			// Done loading
+			m_RendererSettingsFileVersion = LATEST_RENDERER_SETTINGS_FILE_VERSION;
 		}
 		else
 		{
-			PrintError("Failed to read renderer settings file, but it exists!\n");
+			PrintError("Failed to parse renderer settings file %s\n\terror: %s\n", m_RendererSettingsFilePathAbs.c_str(), JSONParser::GetErrorString());
 		}
 	}
 
@@ -599,7 +601,7 @@ namespace flex
 		return m_FramesRendered;
 	}
 
-	BitmapFont* Renderer::SetFont(StringID fontID)
+	BitmapFont* Renderer::SetFont(std::string fontID)
 	{
 		m_CurrentFont = m_Fonts[fontID].bitmapFont;
 		return m_CurrentFont;
@@ -683,6 +685,11 @@ namespace flex
 			{
 				m_EditorStrSecRemaining = 0.0f;
 			}
+		}
+
+		if (m_ShaderDirectoryWatcher && m_ShaderDirectoryWatcher->Update())
+		{
+			RecompileShaders(false);
 		}
 
 		glm::vec4 depthSplits(0.04f, 0.15f, 0.4f, 1.0f);
@@ -829,12 +836,12 @@ namespace flex
 						if (ImGui::Button("View SDF"))
 						{
 							std::string absDir = RelativePathToAbsolute(fontMeta.renderedTextureFilePath);
-							OpenExplorer(absDir);
+							Platform::OpenExplorer(absDir);
 						}
 						if (ImGui::Button("Open in explorer"))
 						{
 							const std::string absDir = ExtractDirectoryString(RelativePathToAbsolute(fontMeta.renderedTextureFilePath));
-							OpenExplorer(absDir);
+							Platform::OpenExplorer(absDir);
 						}
 						ImGui::EndColumns();
 					}
@@ -876,7 +883,7 @@ namespace flex
 		// Dropping objects onto this text makes them root objects
 		if (ImGui::BeginDragDropTarget())
 		{
-			const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(m_GameObjectPayloadCStr);
+			const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(GameObjectPayloadCStr);
 
 			if (payload && payload->Data)
 			{
@@ -961,30 +968,16 @@ namespace flex
 	{
 		if (ImGui::TreeNode("Renderer settings"))
 		{
-			if (ImGui::Button(" Save "))
+			if (ImGui::Button("Save"))
 			{
-				g_Renderer->SaveSettingsToDisk(false, true);
+				g_Renderer->SaveSettingsToDisk(true);
 			}
 
-			ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
-			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
-			ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
+			ImGui::SameLine();
+			if (ImGui::Button("Reload"))
 			{
-				ImGui::SameLine();
-				if (ImGui::Button("Save defaults"))
-				{
-					g_Renderer->SaveSettingsToDisk(true, true);
-				}
-
-				ImGui::SameLine();
-				if (ImGui::Button("Reload defaults"))
-				{
-					g_Renderer->LoadSettingsFromDisk(true);
-				}
+				g_Renderer->LoadSettingsFromDisk();
 			}
-			ImGui::PopStyleColor();
-			ImGui::PopStyleColor();
-			ImGui::PopStyleColor();
 
 			if (ImGui::Button("Recapture reflection probe"))
 			{
@@ -1033,17 +1026,17 @@ namespace flex
 			{
 				PhysicsDebuggingSettings& physicsDebuggingSettings = g_Renderer->GetPhysicsDebuggingSettings();
 
-				ImGui::Checkbox("Disable All", &physicsDebuggingSettings.bDisableAll);
-
-				ImGui::Spacing();
-				ImGui::Spacing();
-				ImGui::Spacing();
-
 				bool bRenderEditorObjs = g_EngineInstance->IsRenderingEditorObjects();
 				if (ImGui::Checkbox("Editor objects", &bRenderEditorObjs))
 				{
 					g_EngineInstance->SetRenderingEditorObjects(bRenderEditorObjs);
 				}
+
+				ImGui::Spacing();
+				ImGui::Spacing();
+				ImGui::Spacing();
+
+				ImGui::Checkbox("Disable All", &physicsDebuggingSettings.bDisableAll);
 
 				if (physicsDebuggingSettings.bDisableAll)
 				{
@@ -1156,212 +1149,87 @@ namespace flex
 		}
 	}
 
-	void Renderer::DrawImGuiForGameObjectWithValidRenderID(GameObject* gameObject)
+	void Renderer::DrawImGuiForGameObject(GameObject* gameObject)
 	{
-		RenderID renderID = gameObject->GetRenderID();
-		assert(renderID != InvalidRenderID);
+		Mesh* mesh = gameObject->GetMesh();
 
-		MaterialID matID = g_Renderer->GetRenderObjectMaterialID(renderID);
-
-		g_Renderer->DrawImGuiForRenderObject(renderID);
-
-		MeshComponent* mesh = gameObject->GetMeshComponent();
-
-		std::vector<Pair<std::string, MaterialID>> validMaterialNames = g_Renderer->GetValidMaterialNames();
-
-		MaterialID selectedMaterialID = 0;
-		i32 selectedMaterialShortIndex = 0;
-		std::string currentMaterialName = "NONE";
-		i32 matShortIndex = 0;
-		for (const Pair<std::string, MaterialID>& matPair : validMaterialNames)
+		if (mesh != nullptr)
 		{
-			if (matPair.second == (i32)matID)
-			{
-				selectedMaterialID = matPair.second;
-				selectedMaterialShortIndex = matShortIndex;
-				currentMaterialName = matPair.first;
-				break;
-			}
+			ImGui::Text("Materials");
 
-			++matShortIndex;
-		}
-		if (ImGui::BeginCombo("Material", currentMaterialName.c_str()))
-		{
-			matShortIndex = 0;
-			for (const Pair<std::string, MaterialID>& matPair : validMaterialNames)
+			std::vector<MeshComponent*> subMeshes = mesh->GetSubMeshes();
+			for (u32 slotIndex = 0; slotIndex < subMeshes.size(); ++slotIndex)
 			{
-				bool bSelected = (matShortIndex == selectedMaterialShortIndex);
-				std::string materialName = matPair.first;
-				if (ImGui::Selectable(materialName.c_str(), &bSelected))
+				MeshComponent* meshComponent = subMeshes[slotIndex];
+
+				MaterialID matID = GetRenderObjectMaterialID(meshComponent->renderID);
+
+				DrawImGuiForRenderObject(meshComponent->renderID);
+
+				std::vector<Pair<std::string, MaterialID>> validMaterialNames = GetValidMaterialNames();
+
+				i32 selectedMaterialShortIndex = 0;
+				std::string currentMaterialName = "NONE";
+				i32 matShortIndex = 0;
+				for (const Pair<std::string, MaterialID>& matPair : validMaterialNames)
 				{
-					if (mesh)
+					if (matPair.second == matID)
 					{
-						mesh->SetMaterialID(matPair.second);
-					}
-					selectedMaterialShortIndex = matShortIndex;
-				}
-
-				++matShortIndex;
-			}
-
-			ImGui::EndCombo();
-		}
-
-		if (ImGui::BeginDragDropTarget())
-		{
-			const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(m_MaterialPayloadCStr);
-
-			if (payload && payload->Data)
-			{
-				MaterialID* draggedMaterialID = (MaterialID*)payload->Data;
-				if (draggedMaterialID)
-				{
-					if (mesh)
-					{
-						mesh->SetMaterialID(*draggedMaterialID);
-					}
-				}
-			}
-
-			ImGui::EndDragDropTarget();
-		}
-
-		if (mesh)
-		{
-			MeshComponent::Type meshType = mesh->GetType();
-			switch (meshType)
-			{
-			case MeshComponent::Type::FILE:
-			{
-				i32 selectedMeshIndex = 0;
-				std::string currentMeshFileName = "NONE";
-				i32 i = 0;
-				for (auto iter : MeshComponent::m_LoadedMeshes)
-				{
-					const std::string meshFileName = StripLeadingDirectories(iter.first);
-					if (mesh->GetFileName().compare(meshFileName) == 0)
-					{
-						selectedMeshIndex = i;
-						currentMeshFileName = meshFileName;
+						selectedMaterialShortIndex = matShortIndex;
+						currentMaterialName = matPair.first;
 						break;
 					}
 
-					++i;
+					++matShortIndex;
 				}
-				if (ImGui::BeginCombo("Mesh", currentMeshFileName.c_str()))
-				{
-					i = 0;
 
-					for (auto meshPair : MeshComponent::m_LoadedMeshes)
+				std::string comboStrID = std::to_string(slotIndex);
+				if (ImGui::BeginCombo(comboStrID.c_str(), currentMaterialName.c_str()))
+				{
+					matShortIndex = 0;
+					for (const Pair<std::string, MaterialID>& matPair : validMaterialNames)
 					{
-						bool bSelected = (i == selectedMeshIndex);
-						const std::string meshFileName = StripLeadingDirectories(meshPair.first);
-						if (ImGui::Selectable(meshFileName.c_str(), &bSelected))
+						bool bSelected = (matShortIndex == selectedMaterialShortIndex);
+						std::string materialName = matPair.first;
+						if (ImGui::Selectable(materialName.c_str(), &bSelected))
 						{
-							if (selectedMeshIndex != i)
-							{
-								selectedMeshIndex = i;
-								std::string relativeFilePath = meshPair.first;
-								MaterialID meshMatID = mesh->GetMaterialID();
-								DestroyRenderObject(renderID);
-								gameObject->SetRenderID(InvalidRenderID);
-								mesh->Destroy();
-								mesh->SetOwner(gameObject);
-								mesh->SetRequiredAttributesFromMaterialID(meshMatID);
-								mesh->LoadFromFile(relativeFilePath);
-							}
+							meshComponent->SetMaterialID(matPair.second);
+							selectedMaterialShortIndex = matShortIndex;
 						}
 
-						++i;
+						++matShortIndex;
 					}
 
 					ImGui::EndCombo();
-				}
-
-				if (ImGui::BeginPopupContextItem("mesh context menu"))
-				{
-					if (ImGui::Button("Remove mesh component"))
-					{
-						gameObject->SetMeshComponent(nullptr);
-					}
-
-					ImGui::EndPopup();
 				}
 
 				if (ImGui::BeginDragDropTarget())
 				{
-					const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(m_MeshPayloadCStr);
+					const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(MaterialPayloadCStr);
 
 					if (payload && payload->Data)
 					{
-						std::string draggedMeshFileName((const char*)payload->Data, payload->DataSize);
-						auto meshIter = MeshComponent::m_LoadedMeshes.find(draggedMeshFileName);
-						if (meshIter != MeshComponent::m_LoadedMeshes.end())
+						MaterialID* draggedMaterialID = (MaterialID*)payload->Data;
+						if (draggedMaterialID)
 						{
-							std::string newMeshFilePath = meshIter->first;
-
-							if (mesh->GetRelativeFilePath().compare(newMeshFilePath) != 0)
-							{
-								MaterialID meshMatID = mesh->GetMaterialID();
-								DestroyRenderObject(gameObject->GetRenderID());
-								gameObject->SetRenderID(InvalidRenderID);
-								mesh->Destroy();
-								mesh->SetOwner(gameObject);
-								mesh->SetRequiredAttributesFromMaterialID(meshMatID);
-								mesh->LoadFromFile(newMeshFilePath);
-							}
+							meshComponent->SetMaterialID(*draggedMaterialID);
 						}
 					}
+
 					ImGui::EndDragDropTarget();
 				}
-			} break;
-			case MeshComponent::Type::PREFAB:
-			{
-				i32 selectedMeshIndex = (i32)mesh->GetShape();
-				std::string currentMeshName = MeshComponent::PrefabShapeToString(mesh->GetShape());
-
-				if (ImGui::BeginCombo("Prefab", currentMeshName.c_str()))
-				{
-					for (i32 i = 0; i < (i32)MeshComponent::PrefabShape::_NONE; ++i)
-					{
-						std::string shapeStr = MeshComponent::PrefabShapeToString((MeshComponent::PrefabShape)i);
-						bool bSelected = (selectedMeshIndex == i);
-						if (ImGui::Selectable(shapeStr.c_str(), &bSelected))
-						{
-							if (selectedMeshIndex != i)
-							{
-								selectedMeshIndex = i;
-								MaterialID meshMatID = mesh->GetMaterialID();
-								DestroyRenderObject(gameObject->GetRenderID());
-								gameObject->SetRenderID(InvalidRenderID);
-								mesh->Destroy();
-								mesh->SetOwner(gameObject);
-								mesh->SetRequiredAttributesFromMaterialID(meshMatID);
-								mesh->LoadPrefabShape((MeshComponent::PrefabShape)i);
-							}
-						}
-					}
-
-					ImGui::EndCombo();
-				}
-			} break;
-			case MeshComponent::Type::PROCEDURAL:
-			{
-				ImGui::Text("Procedural mesh");
-				ImGui::Text("Vertex count: %u", mesh->GetVertexBufferData()->VertexCount);
-			} break;
-			default:
-			{
-				PrintError("Unhandled MeshComponent::Type in Renderer::DrawImGuiForGameObject: %d\n", (i32)meshType);
-				assert(false);
-			} break;
 			}
+
+			mesh->DrawImGui();
 		}
 	}
 
 	void Renderer::OnPostSceneChange()
 	{
-		m_PhysicsDebugDrawer->OnPostSceneChange();
+		if (m_PhysicsDebugDrawer != nullptr)
+		{
+			m_PhysicsDebugDrawer->OnPostSceneChange();
+		}
 	}
 
 	void Renderer::LoadShaders()
@@ -1414,13 +1282,14 @@ namespace flex
 				{ "font_ss", "vk_font_ss_vert.spv", "vk_font_frag.spv", "vk_font_ss_geom.spv" },
 				{ "font_ws", "vk_font_ws_vert.spv", "vk_font_frag.spv", "vk_font_ws_geom.spv" },
 				{ "shadow", "vk_shadow_vert.spv" },
-				{ "ssao", "vk_barebones_pos3_uv_vert.spv", "vk_ssao_frag.spv" },
-				{ "ssao_blur", "vk_barebones_pos3_uv_vert.spv", "vk_ssao_blur_frag.spv" },
+				{ "ssao", "vk_barebones_pos2_uv_vert.spv", "vk_ssao_frag.spv" }, // TODO: Why not barebones pos2?
+				{ "ssao_blur", "vk_barebones_pos2_uv_vert.spv", "vk_ssao_blur_frag.spv" },
 				{ "taa_resolve", "vk_barebones_pos2_uv_vert.spv", "vk_taa_resolve_frag.spv" },
 				{ "gamma_correct", "vk_barebones_pos2_uv_vert.spv", "vk_gamma_correct_frag.spv" },
 				{ "blit", "vk_barebones_pos2_uv_vert.spv", "vk_blit_frag.spv" },
 				{ "particle_sim", "", "", "", "vk_simulate_particles_comp.spv" },
 				{ "particles", "vk_particles_vert.spv", "vk_particles_frag.spv", "vk_particles_geom.spv" },
+				{ "terrain", "vk_terrain_vert.spv", "vk_terrain_frag.spv" },
 			};
 #endif
 
@@ -1494,8 +1363,7 @@ namespace flex
 			// Color
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
 			m_BaseShaders[shaderID].bTranslucent = true;
-			m_BaseShaders[shaderID].bDynamic = true;
-			m_BaseShaders[shaderID].dynamicVertexBufferSize = 16384 * 4 * 28; // TODO: FIXME:
+			m_BaseShaders[shaderID].dynamicVertexBufferSize = 16384 * 4 * 28; // (1835008) TODO: FIXME:
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
@@ -1515,6 +1383,7 @@ namespace flex
 			m_BaseShaders[shaderID].bNeedMetallicSampler = true;
 			m_BaseShaders[shaderID].bNeedRoughnessSampler = true;
 			m_BaseShaders[shaderID].bNeedNormalSampler = true;
+			m_BaseShaders[shaderID].dynamicVertexBufferSize = 1024 * 1024; // TODO;
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV |
@@ -1639,6 +1508,7 @@ namespace flex
 			m_BaseShaders[shaderID].bNeedPushConstantBlock = true;
 			m_BaseShaders[shaderID].pushConstantBlockSize = 132;
 			m_BaseShaders[shaderID].bTranslucent = true;
+			m_BaseShaders[shaderID].bDepthWriteEnable = false;
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::UI;
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION |
@@ -1657,7 +1527,6 @@ namespace flex
 			m_BaseShaders[shaderID].pushConstantBlockSize = 132;
 			m_BaseShaders[shaderID].bTranslucent = true;
 			m_BaseShaders[shaderID].bTextureArr = true;
-			m_BaseShaders[shaderID].bDynamic = true;
 			m_BaseShaders[shaderID].dynamicVertexBufferSize = 1024 * 1024; // TODO: FIXME:
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::UI;
 			m_BaseShaders[shaderID].vertexAttributes =
@@ -1714,11 +1583,12 @@ namespace flex
 			//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_TEX_CHANNEL);
 			//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_SDF_RESOLUTION);
 			//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_HIGH_RES);
+
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_ALBEDO_SAMPLER);
 			++shaderID;
 
 			// Font SS
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::UI;
-			m_BaseShaders[shaderID].bDynamic = true;
 			m_BaseShaders[shaderID].dynamicVertexBufferSize = 1024 * 1024; // TODO: FIXME:
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION2 |
@@ -1738,7 +1608,6 @@ namespace flex
 
 			// Font WS
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
-			m_BaseShaders[shaderID].bDynamic = true;
 			m_BaseShaders[shaderID].dynamicVertexBufferSize = 1024 * 1024; // TODO: FIXME:
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION |
@@ -1777,7 +1646,7 @@ namespace flex
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::SSAO;
 			m_BaseShaders[shaderID].bDepthWriteEnable = false;
 			m_BaseShaders[shaderID].vertexAttributes =
-				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::POSITION2 |
 				(u32)VertexAttribute::UV;
 
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
@@ -1794,7 +1663,7 @@ namespace flex
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::SSAO_BLUR;
 			m_BaseShaders[shaderID].bDepthWriteEnable = false;
 			m_BaseShaders[shaderID].vertexAttributes =
-				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::POSITION2 |
 				(u32)VertexAttribute::UV;
 
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
@@ -1814,7 +1683,7 @@ namespace flex
 			m_BaseShaders[shaderID].bNeedPushConstantBlock = true;
 			m_BaseShaders[shaderID].pushConstantBlockSize = 8;
 			m_BaseShaders[shaderID].vertexAttributes =
-				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::POSITION | // TODO: POS2
 				(u32)VertexAttribute::UV;
 
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
@@ -1833,7 +1702,7 @@ namespace flex
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::GAMMA_CORRECT;
 			m_BaseShaders[shaderID].bDepthWriteEnable = false;
 			m_BaseShaders[shaderID].vertexAttributes =
-				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::POSITION | // TODO: POS2
 				(u32)VertexAttribute::UV;
 
 			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_SCENE_SAMPLER);
@@ -1867,7 +1736,7 @@ namespace flex
 			//m_BaseShaders[shaderID].bDynamic = true;
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION |
-				(u32)VertexAttribute::VELOCITY3 |	
+				(u32)VertexAttribute::VELOCITY3 |
 				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
 				(u32)VertexAttribute::EXTRA_VEC4;
 
@@ -1881,10 +1750,30 @@ namespace flex
 			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_ALBEDO_SAMPLER);
 			++shaderID;
 
+			// Terrain
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
+			m_BaseShaders[shaderID].bDepthWriteEnable = true;
+			m_BaseShaders[shaderID].bTranslucent = false;
+			m_BaseShaders[shaderID].vertexAttributes =
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::UV |
+				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
+				(u32)VertexAttribute::NORMAL;
+
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
+
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
+
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_ALBEDO_SAMPLER);
+			++shaderID;
+
 			assert(shaderID == m_BaseShaders.size());
 		}
 
-		SetShaderCount(m_BaseShaders.size());
+		SetShaderCount((u32)m_BaseShaders.size());
 
 		for (u32 shaderID = 0; shaderID < m_BaseShaders.size(); ++shaderID)
 		{
@@ -1971,6 +1860,20 @@ namespace flex
 				maxStrLen,
 				ImGuiInputTextFlags_EnterReturnsTrue);
 
+			if (ImGui::BeginCombo("Type", GameObjectTypeStrings[(i32)m_NewObjectImGuiSelectedType]))
+			{
+				for (i32 i = 0; i < (i32)GameObjectType::_NONE; ++i)
+				{
+					bool bSelected = (i == (i32)m_NewObjectImGuiSelectedType);
+					if (ImGui::Selectable(GameObjectTypeStrings[i], &bSelected))
+					{
+						m_NewObjectImGuiSelectedType = (GameObjectType)i;
+					}
+				}
+
+				ImGui::EndCombo();
+			}
+
 			bCreate |= ImGui::Button("Create");
 
 			bool bInvalidName = std::string(newObjectName.c_str()).empty();
@@ -1982,17 +1885,38 @@ namespace flex
 
 				if (!newObjectName.empty())
 				{
-					GameObject* newGameObject = new GameObject(newObjectName, GameObjectType::OBJECT);
+					switch (m_NewObjectImGuiSelectedType)
+					{
+					case GameObjectType::OBJECT:
+					{
+						GameObject* newGameObject = new GameObject(newObjectName, GameObjectType::OBJECT);
 
-					newGameObject->SetMeshComponent(new MeshComponent(newGameObject));
-					newGameObject->GetMeshComponent()->LoadFromFile(RESOURCE_LOCATION  "meshes/cube.glb");
+						Mesh* mesh = newGameObject->SetMesh(new Mesh(newGameObject));
+						mesh->LoadFromFile(RESOURCE_LOCATION "meshes/cube.glb", m_PlaceholderMaterialID);
 
-					g_SceneManager->CurrentScene()->AddRootObject(newGameObject);
+						g_SceneManager->CurrentScene()->AddRootObject(newGameObject);
 
-					newGameObject->Initialize();
-					newGameObject->PostInitialize();
+						newGameObject->Initialize();
+						newGameObject->PostInitialize();
 
-					g_Editor->SetSelectedObject(newGameObject);
+						g_Editor->SetSelectedObject(newGameObject);
+
+					} break;
+					case GameObjectType::CHUNK_GENERATOR:
+					{
+						ChunkGenerator* chunkGenerator = new ChunkGenerator(newObjectName);
+
+						g_SceneManager->CurrentScene()->AddRootObject(chunkGenerator);
+
+						chunkGenerator->Initialize();
+						chunkGenerator->PostInitialize();
+
+						g_Editor->SetSelectedObject(chunkGenerator);
+					} break;
+					default:
+						PrintWarn("Unhandled game object type %s\n", GameObjectTypeStrings[(i32)m_NewObjectImGuiSelectedType]);
+						break;
+					};
 
 					ImGui::CloseCurrentPopup();
 				}
@@ -2011,24 +1935,15 @@ namespace flex
 
 	bool Renderer::DrawImGuiGameObjectNameAndChildren(GameObject* gameObject)
 	{
+		if (!gameObject->IsVisibleInSceneExplorer())
+		{
+			return false;
+		}
+
 		bool bParentChildTreeDirty = false;
 
-		RenderID renderID = gameObject->GetRenderID();
 		std::string objectName = gameObject->GetName();
-		std::string objectID;
-		if (renderID == InvalidRenderID)
-		{
-			objectID = "##" + objectName;
-		}
-		else
-		{
-			objectID = "##" + std::to_string(renderID);
-
-			if (!gameObject->IsVisibleInSceneExplorer())
-			{
-				return false;
-			}
-		}
+		std::string objectID = "##" + objectName; // TODO: Add unique ID here to prevent ImGui conflicts
 
 		const std::vector<GameObject*>& gameObjectChildren = gameObject->GetChildren();
 		bool bHasChildren = !gameObjectChildren.empty();
@@ -2071,25 +1986,6 @@ namespace flex
 		}
 
 		bool node_open = ImGui::TreeNodeEx((void*)gameObject, node_flags, "%s", objectName.c_str());
-
-		if (ImGui::BeginDragDropTarget())
-		{
-			const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(m_MaterialPayloadCStr);
-
-			if (payload && payload->Data)
-			{
-				MaterialID* draggedMaterialID = (MaterialID*)payload->Data;
-				if (draggedMaterialID)
-				{
-					if (gameObject->GetMeshComponent())
-					{
-						gameObject->GetMeshComponent()->SetMaterialID(*draggedMaterialID);
-					}
-				}
-			}
-
-			ImGui::EndDragDropTarget();
-		}
 
 		bool bGameObjectDeletedOrDuplicated = gameObject->DoImGuiContextMenu(false);
 		if (bGameObjectDeletedOrDuplicated || gameObject == nullptr)
@@ -2189,7 +2085,7 @@ namespace flex
 						}
 						else
 						{
-							dragDropText = IntToString(draggedGameObjects.size()) + " objects";
+							dragDropText = IntToString((u32)draggedGameObjects.size()) + " objects";
 						}
 					}
 					else
@@ -2201,7 +2097,7 @@ namespace flex
 						dragDropText = gameObject->GetName();
 					}
 
-					ImGui::SetDragDropPayload(m_GameObjectPayloadCStr, data, size);
+					ImGui::SetDragDropPayload(GameObjectPayloadCStr, data, size);
 
 					ImGui::Text("%s", dragDropText.c_str());
 
@@ -2211,7 +2107,7 @@ namespace flex
 
 			if (ImGui::BeginDragDropTarget())
 			{
-				const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(m_GameObjectPayloadCStr);
+				const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(GameObjectPayloadCStr);
 
 				if (payload && payload->Data)
 				{
@@ -2307,7 +2203,7 @@ namespace flex
 		}
 
 		assert(m_SkyBoxMesh != nullptr);
-		MaterialID skyboxMaterialID = m_SkyBoxMesh->GetMeshComponent()->GetMaterialID();
+		MaterialID skyboxMaterialID = m_SkyBoxMesh->GetSubMeshes()[0]->GetMaterialID();
 
 		const std::string gBufferMatName = "GBuffer material";
 		const std::string gBufferCubeMatName = "GBuffer cubemap material";
@@ -2342,6 +2238,7 @@ namespace flex
 			if (m_GBufferQuadRenderID != InvalidRenderID)
 			{
 				DestroyRenderObject(m_GBufferQuadRenderID);
+				m_GBufferQuadRenderID = InvalidRenderID;
 			}
 		}
 
@@ -2422,7 +2319,7 @@ namespace flex
 		if (m_EditorStrSecRemaining > 0.0f)
 		{
 			SetFont(SID("editor-01"));
-			real alpha = glm::clamp(m_EditorStrSecRemaining / (m_EditorStrSecDuration*m_EditorStrFadeDurationPercent),
+			real alpha = glm::clamp(m_EditorStrSecRemaining / (m_EditorStrSecDuration * m_EditorStrFadeDurationPercent),
 				0.0f, 1.0f);
 			DrawStringSS(m_EditorMessage, glm::vec4(1.0f, 1.0f, 1.0f, alpha), AnchorPoint::CENTER, VEC2_ZERO, 3);
 		}
@@ -2433,13 +2330,13 @@ namespace flex
 #if 0
 		SetFont(SID("editor-02-ws"));
 		real s = g_SecElapsedSinceProgramStart * 3.5f;
-		DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(1.0f), 1.0f), glm::vec3(2.0f, 5.0f, 0.0f), QUAT_UNIT, 0.0f, 100.0f);
-		DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.95f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 1) * 0.05f, 5.0f + sin(s + 0.3f * 1) * 0.05f, -0.075f * 1), QUAT_UNIT, 0.0f, 100.0f);
-		DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.90f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 2) * 0.07f, 5.0f + sin(s + 0.3f * 2) * 0.07f, -0.075f * 2), QUAT_UNIT, 0.0f, 100.0f);
-		DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.85f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 3) * 0.10f, 5.0f + sin(s + 0.3f * 3) * 0.10f, -0.075f * 3), QUAT_UNIT, 0.0f, 100.0f);
-		DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.80f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 4) * 0.12f, 5.0f + sin(s + 0.3f * 4) * 0.12f, -0.075f * 4), QUAT_UNIT, 0.0f, 100.0f);
-		DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.75f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 5) * 0.15f, 5.0f + sin(s + 0.3f * 5) * 0.15f, -0.075f * 5), QUAT_UNIT, 0.0f, 100.0f);
-		DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.70f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 6) * 0.17f, 5.0f + sin(s + 0.3f * 6) * 0.17f, -0.075f * 6), QUAT_UNIT, 0.0f, 100.0f);
+		DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(1.0f), 1.0f), glm::vec3(2.0f, 5.0f, 0.0f), QUAT_IDENTITY, 0.0f, 100.0f);
+		DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.95f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 1) * 0.05f, 5.0f + sin(s + 0.3f * 1) * 0.05f, -0.075f * 1), QUAT_IDENTITY, 0.0f, 100.0f);
+		DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.90f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 2) * 0.07f, 5.0f + sin(s + 0.3f * 2) * 0.07f, -0.075f * 2), QUAT_IDENTITY, 0.0f, 100.0f);
+		DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.85f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 3) * 0.10f, 5.0f + sin(s + 0.3f * 3) * 0.10f, -0.075f * 3), QUAT_IDENTITY, 0.0f, 100.0f);
+		DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.80f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 4) * 0.12f, 5.0f + sin(s + 0.3f * 4) * 0.12f, -0.075f * 4), QUAT_IDENTITY, 0.0f, 100.0f);
+		DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.75f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 5) * 0.15f, 5.0f + sin(s + 0.3f * 5) * 0.15f, -0.075f * 5), QUAT_IDENTITY, 0.0f, 100.0f);
+		DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.70f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 6) * 0.17f, 5.0f + sin(s + 0.3f * 6) * 0.17f, -0.075f * 6), QUAT_IDENTITY, 0.0f, 100.0f);
 #endif
 	}
 
@@ -2622,6 +2519,7 @@ namespace flex
 		spriteMatSSCreateInfo.persistent = true;
 		spriteMatSSCreateInfo.visibleInEditor = true;
 		spriteMatSSCreateInfo.enableAlbedoSampler = true;
+		spriteMatSSCreateInfo.bDynamic = true;
 		m_SpriteMatSSID = InitializeMaterial(&spriteMatSSCreateInfo);
 
 		MaterialCreateInfo spriteMatWSCreateInfo = {};
@@ -2630,6 +2528,7 @@ namespace flex
 		spriteMatWSCreateInfo.persistent = true;
 		spriteMatWSCreateInfo.visibleInEditor = true;
 		spriteMatWSCreateInfo.enableAlbedoSampler = true;
+		spriteMatWSCreateInfo.bDynamic = true;
 		m_SpriteMatWSID = InitializeMaterial(&spriteMatWSCreateInfo);
 
 		MaterialCreateInfo spriteArrMatCreateInfo = {};
@@ -2638,6 +2537,7 @@ namespace flex
 		spriteArrMatCreateInfo.persistent = true;
 		spriteArrMatCreateInfo.visibleInEditor = true;
 		spriteArrMatCreateInfo.enableAlbedoSampler = true;
+		spriteArrMatCreateInfo.bDynamic = true;
 		m_SpriteArrMatID = InitializeMaterial(&spriteArrMatCreateInfo);
 
 		MaterialCreateInfo fontSSMatCreateInfo = {};
@@ -2645,6 +2545,7 @@ namespace flex
 		fontSSMatCreateInfo.shaderName = "font_ss";
 		fontSSMatCreateInfo.persistent = true;
 		fontSSMatCreateInfo.visibleInEditor = false;
+		fontSSMatCreateInfo.bDynamic = true;
 		m_FontMatSSID = InitializeMaterial(&fontSSMatCreateInfo);
 
 		MaterialCreateInfo fontWSMatCreateInfo = {};
@@ -2652,6 +2553,7 @@ namespace flex
 		fontWSMatCreateInfo.shaderName = "font_ws";
 		fontWSMatCreateInfo.persistent = true;
 		fontWSMatCreateInfo.visibleInEditor = false;
+		fontWSMatCreateInfo.bDynamic = true;
 		m_FontMatWSID = InitializeMaterial(&fontWSMatCreateInfo);
 
 		MaterialCreateInfo shadowMatCreateInfo = {};
@@ -2704,7 +2606,6 @@ namespace flex
 		fullscreenBlitMatCreateInfo.shaderName = "blit";
 		fullscreenBlitMatCreateInfo.persistent = true;
 		fullscreenBlitMatCreateInfo.visibleInEditor = false;
-		fullscreenBlitMatCreateInfo.generateAlbedoSampler = true;
 		fullscreenBlitMatCreateInfo.enableAlbedoSampler = true;
 		m_FullscreenBlitMatID = InitializeMaterial(&fullscreenBlitMatCreateInfo);
 
@@ -2878,7 +2779,7 @@ namespace flex
 			const std::vector<TextCache>& caches = font->GetTextCaches();
 			for (const TextCache& textCache : caches)
 			{
-				charCountUpperBound += textCache.str.length();
+				charCountUpperBound += (u32)textCache.str.length();
 			}
 		}
 		outTextVertices.reserve(charCountUpperBound);
@@ -3019,7 +2920,7 @@ namespace flex
 			const std::vector<TextCache>& caches = font->GetTextCaches();
 			for (const TextCache& textCache : caches)
 			{
-				charCountUpperBound += textCache.str.length();
+				charCountUpperBound += (u32)textCache.str.length();
 			}
 		}
 		outTextVertices.reserve(charCountUpperBound);
@@ -3159,7 +3060,7 @@ namespace flex
 			};
 
 			gBufferQuadVertexBufferDataCreateInfo.attributes = (u32)VertexAttribute::POSITION | (u32)VertexAttribute::UV;
-			m_gBufferQuadVertexBufferData.Initialize(&gBufferQuadVertexBufferDataCreateInfo);
+			m_gBufferQuadVertexBufferData.Initialize(gBufferQuadVertexBufferDataCreateInfo);
 		}
 	}
 

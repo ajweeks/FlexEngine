@@ -29,7 +29,11 @@ namespace flex
 		glm::vec3 GetSelectedObjectsCenter();
 		void SelectNone();
 
-		glm::quat CalculateDeltaRotationFromGizmoDrag(const glm::vec3 & axis, const glm::vec3 & rayOrigin, const glm::vec3 & rayEnd, const glm::quat & pRot);
+		real CalculateDeltaRotationFromGizmoDrag(
+			const glm::vec3& axis,
+			const glm::vec3& rayOrigin,
+			const glm::vec3& rayEnd,
+			glm::vec3* outIntersectionPoint);
 
 		void UpdateGizmoVisibility();
 		void SetTransformState(TransformState state);
@@ -58,6 +62,9 @@ namespace flex
 		ActionCallback<Editor> m_ActionCallback;
 
 		void CreateObjects();
+		void FadeOutHeadOnGizmos();
+
+		btVector3 GetAxisColor(i32 axisIndex) const;
 
 		// Parent of translation, rotation, and scale gizmo objects
 		GameObject* m_TransformGizmo = nullptr;
@@ -65,6 +72,9 @@ namespace flex
 		GameObject* m_TranslationGizmo = nullptr;
 		GameObject* m_RotationGizmo = nullptr;
 		GameObject* m_ScaleGizmo = nullptr;
+
+		GameObject* m_TestShape = nullptr;
+
 		MaterialID m_TransformGizmoMatXID = InvalidMaterialID;
 		MaterialID m_TransformGizmoMatYID = InvalidMaterialID;
 		MaterialID m_TransformGizmoMatZID = InvalidMaterialID;
@@ -80,22 +90,28 @@ namespace flex
 		glm::vec2i m_LMBDownPos;
 
 		glm::vec3 m_SelectedObjectDragStartPos;
+		glm::quat m_SelectedObjectDragStartRot;
 		glm::vec3 m_DraggingGizmoScaleLast;
-		real m_DraggingGizmoOffset = -1.0f; // How far along the axis the cursor was when pressed
+		real m_DraggingGizmoOffset = 0.0f; // How far along the axis the cursor was when pressed
+		glm::vec3 m_PreviousIntersectionPoint;
+		bool m_DraggingGizmoOffsetNeedsRecalculation = true;
 		bool m_bFirstFrameDraggingRotationGizmo = false;
-		glm::vec3 m_UnmodifiedAxisProjectedOnto;
 		glm::vec3 m_AxisProjectedOnto;
 		glm::vec3 m_StartPointOnPlane;
+		glm::vec3 m_LatestRayPlaneIntersection;
 		i32 m_RotationGizmoWrapCount = 0;
 		real m_LastAngle = -1.0f;
 		glm::vec3 m_PlaneN;
 		glm::vec3 m_AxisOfRotation;
-		glm::quat m_CurrentRot;
 		bool m_bLastDotPos = false;
 
+		// TODO: EZ: Define these in config file
+		real m_ScaleDragSpeed = 0.05f;
+		real m_ScaleSlowDragSpeedMultiplier = 0.2f;
+		real m_ScaleFastDragSpeedMultiplier = 2.5f;
+
 		bool m_bDraggingGizmo = false;
-		// -1,   0, 1, 2, 3
-		// None, X, Y, Z, All Axes
+
 		i32 m_DraggingAxisIndex = -1;
 		i32 m_HoveringAxisIndex = -1;
 

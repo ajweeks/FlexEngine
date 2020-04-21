@@ -169,6 +169,11 @@ namespace flex
 		TokenContext();
 		~TokenContext();
 
+		TokenContext(const TokenContext&) = delete;
+		TokenContext(TokenContext&&) = delete;
+		TokenContext& operator=(const TokenContext&) = delete;
+		TokenContext& operator=(TokenContext&&) = delete;
+
 		void Reset();
 
 		bool HasNextChar() const;
@@ -217,6 +222,11 @@ namespace flex
 		Tokenizer();
 		explicit Tokenizer(const std::string& codeStr);
 		~Tokenizer();
+
+		Tokenizer(Tokenizer&) = delete;
+		Tokenizer(Tokenizer&&) = delete;
+		Tokenizer& operator=(Tokenizer&) = delete;
+		Tokenizer& operator=(Tokenizer&&) = delete;
 
 		void SetCodeStr(const std::string& newCodeStr);
 
@@ -299,7 +309,7 @@ namespace flex
 
 	struct Operation : public Node
 	{
-		Operation(const Token& token, Expression* lhs, OperatorType op, Expression* rhs);
+		Operation(const Token& token, Expression* in_lhs, OperatorType in_op, Expression* in_rhs);
 		~Operation();
 
 		OperatorType op;
@@ -362,7 +372,7 @@ namespace flex
 		//bool Compare(TokenContext& context, Expression* other, OperatorType op);
 
 		static Expression* Parse(Tokenizer& tokenizer);
-		static bool ExpectOperator(Tokenizer &tokenizer, Token token, OperatorType* outOp);
+		static bool ExpectOperator(Tokenizer& tokenizer, Token token, OperatorType* outOp);
 	};
 
 	struct Assignment : public Node
@@ -375,9 +385,9 @@ namespace flex
 			TypeName typeName = TypeName::_NONE);
 		~Assignment();
 
-		TypeName typeName = TypeName::_NONE; // Optional, not used when re-assigning
 		Identifier* identifier = nullptr;
 		Expression* rhs = nullptr; // If null, this assignment is actually just a declaration
+		TypeName typeName = TypeName::_NONE; // Optional, not used when re-assigning
 
 		void Evaluate(TokenContext& context);
 		// Should be called when tokenizer is pointing at char after '='
@@ -449,6 +459,10 @@ namespace flex
 		IfStatement(const Token& token, Expression* condition, Statement* body);
 		~IfStatement();
 
+		IfFalseAction ifFalseAction = IfFalseAction::NONE;
+		Expression* condition = nullptr;
+		Statement* body = nullptr;
+
 		union IfFalse
 		{
 			void* nothingStatement;
@@ -459,10 +473,6 @@ namespace flex
 			IfFalse(IfStatement* elseIfStatement) : elseIfStatement(elseIfStatement) {}
 			IfFalse(Statement* elseStatement) : elseStatement(elseStatement) {}
 		} ifFalseStatement;
-
-		IfFalseAction ifFalseAction = IfFalseAction::NONE;
-		Expression* condition = nullptr;
-		Statement* body = nullptr;
 
 		void Evaluate(TokenContext& context);
 		static IfStatement* Parse(Tokenizer& tokenizer);

@@ -53,7 +53,7 @@ namespace flex
 
 	glm::vec3 BezierCurve::GetPointOnCurve(real t) const
 	{
-		t = glm::clamp(t, 0.0f, 1.0f);
+		t = Saturate(t);
 		real oneMinusT = 1.0f - t;
 		return oneMinusT * oneMinusT * oneMinusT * points[0] +
 			3.0f * oneMinusT * oneMinusT * t * points[1] +
@@ -63,7 +63,7 @@ namespace flex
 
 	glm::vec3 BezierCurve::GetFirstDerivativeOnCurve(real t) const
 	{
-		t = glm::clamp(t, 0.0f, 1.0f);
+		t = Saturate(t);
 		real oneMinusT = 1.0f - t;
 		return 3.0f * oneMinusT * oneMinusT * (points[1] - points[0]) +
 			6.0f * oneMinusT * t * (points[2] - points[1]) +
@@ -113,10 +113,10 @@ namespace flex
 	{
 		const i32 precision = 5;
 		const char* delim = ", ";
-		std::string result(Vec3ToString(points[0], precision) + delim +
-			Vec3ToString(points[1], precision) + delim +
-			Vec3ToString(points[2], precision) + delim +
-			Vec3ToString(points[3], precision));
+		std::string result(VecToString(points[0], precision) + delim +
+			VecToString(points[1], precision) + delim +
+			VecToString(points[2], precision) + delim +
+			VecToString(points[3], precision));
 
 		return result;
 	}

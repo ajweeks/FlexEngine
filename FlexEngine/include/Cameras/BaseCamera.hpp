@@ -23,12 +23,6 @@ namespace flex
 
 		virtual void DrawImGuiObjects();
 
-		void SetFOV(real FOV);
-		real GetFOV() const;
-		void SetZNear(real zNear);
-		real GetZNear() const;
-		void SetZFar(real zFar);
-		real GetZFar() const;
 		glm::mat4 GetViewProjection() const;
 		glm::mat4 GetView() const;
 		glm::mat4 GetProjection() const;
@@ -37,27 +31,11 @@ namespace flex
 		void LookAt(glm::vec3 point, real speed = 1.0f);
 
 		void Translate(glm::vec3 translation);
-		void SetPosition(glm::vec3 position);
-		glm::vec3 GetPosition() const;
 
 		void SetViewDirection(real yawRad, real pitchRad);
 
-		glm::vec3 GetRight() const;
-		glm::vec3 GetUp() const;
-		glm::vec3 GetForward() const;
-
 		void ResetPosition();
 		void ResetOrientation();
-
-		void SetYaw(real rawRad);
-		real GetYaw() const;
-		void SetPitch(real pitchRad);
-		real GetPitch() const;
-
-		void SetMoveSpeed(real moveSpeed);
-		real GetMoveSpeed() const;
-		void SetRotationSpeed(real rotationSpeed);
-		real GetRotationSpeed() const;
 
 		std::string GetName() const;
 
@@ -69,11 +47,39 @@ namespace flex
 		real lightSensitivity = 800.0f; // ISO
 		real exposure = 0.0f;
 
+		real FOV = 0.0f;
+		real zNear = 0.0f;
+		real zFar = 0.0f;
+
+		real moveSpeed = 0.0f;				// WASD or gamepad left stick
+		real panSpeed = 0.0f;				// MMB
+		real dragDollySpeed = 0.0f;			// RMB
+		real scrollDollySpeed = 0.0f;		// Scroll wheel
+		real orbitingSpeed = 0.0f;			// Alt-LMB drag
+		real mouseRotationSpeed = 0.0f;		// LMB drag
+		real gamepadRotationSpeed = 0.0f;	// Gamepad right stick
+		real moveSpeedFastMultiplier = 0.0f;
+		real moveSpeedSlowMultiplier = 0.0f;
+		real turnSpeedFastMultiplier = 0.0f;
+		real turnSpeedSlowMultiplier = 0.0f;
+		real panSpeedFastMultiplier = 0.0f;
+		real panSpeedSlowMultiplier = 0.0f;
+		real rollRestorationSpeed = 0.0f;
+
+		glm::vec3 position;
+
+		real yaw;
+		real pitch;
+		real roll;
+		glm::vec3 forward;
+		glm::vec3 up;
+		glm::vec3 right;
+
 		bool bIsGameplayCam;
 		bool bDEBUGCyclable = true;
 
 	protected:
-		// Sets m_Right, m_Up, and m_Forward based on m_Yaw and m_Pitch
+		// Sets right, up, and forward based on yaw and pitch
 		void CalculateAxisVectorsFromPitchAndYaw();
 		void CalculateYawAndPitchFromForward();
 		void RecalculateViewProjection();
@@ -98,34 +104,6 @@ namespace flex
 		glm::mat4 m_View;
 		glm::mat4 m_Proj;
 		glm::mat4 m_ViewProjection;
-
-		real m_FOV = 0.0f;
-		real m_ZNear = 0.0f;
-		real m_ZFar = 0.0f;
-
-		real m_MoveSpeed = 0.0f;				// WASD or gamepad left stick
-		real m_PanSpeed = 0.0f;					// MMB
-		real m_DragDollySpeed = 0.0f;			// RMB
-		real m_ScrollDollySpeed = 0.0f;			// Scroll wheel
-		real m_OrbitingSpeed = 0.0f;			// Alt-LMB drag
-		real m_MouseRotationSpeed = 0.0f;		// LMB drag
-		real m_GamepadRotationSpeed = 0.0f;		// Gamepad right stick
-		real m_MoveSpeedFastMultiplier = 0.0f;
-		real m_MoveSpeedSlowMultiplier = 0.0f;
-		real m_TurnSpeedFastMultiplier = 0.0f;
-		real m_TurnSpeedSlowMultiplier = 0.0f;
-		real m_PanSpeedFastMultiplier = 0.0f;
-		real m_PanSpeedSlowMultiplier = 0.0f;
-		real m_RollRestorationSpeed = 0.0f;
-
-		glm::vec3 m_Position;
-
-		real m_Yaw;
-		real m_Pitch;
-		real m_Roll;
-		glm::vec3 m_Forward;
-		glm::vec3 m_Up;
-		glm::vec3 m_Right;
 
 		glm::mat4 m_ShadowProjectionMats[SHADOW_CASCADE_COUNT];
 	};

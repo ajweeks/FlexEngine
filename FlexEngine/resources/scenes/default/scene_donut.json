@@ -1,0 +1,110 @@
+{
+	"version" : 3,
+	"name" : "scene_donut",
+	"spawn player" : false,
+	"objects" : 
+	[
+		{
+			"name" : "Skybox",
+			"type" : "skybox",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"materials" : 
+			[
+				"skybox 01"
+			],
+			"skybox info" : 
+			{
+			}
+		},
+		{
+			"name" : "Reflection Probe 01",
+			"type" : "reflection probe",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 8.000, 0.000"
+			}
+		},
+		{
+			"name" : "donut",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "2.622, -0.304, -1.214",
+				"rot" : "0.699, 1.534, 0.495"
+			},
+			"mesh" : "donut",
+			"materials" : 
+			[
+				"donut_sprinkle",
+				"donut_dough",
+				"donut_icing"
+			],
+			"children" : 
+			[
+				{
+					"name" : "donut2",
+					"type" : "object",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "13.047, -2.297, -13.776",
+						"rot" : "1.330, 1.045, 2.346"
+					},
+					"mesh" : "donut",
+					"materials" : 
+					[
+						"donut_sprinkle",
+						"donut_dough",
+						"donut_icing"
+					],
+					"children" : 
+					[
+						{
+							"name" : "donut3",
+							"type" : "object",
+							"visible" : true,
+							"transform" : 
+							{
+								"pos" : "-3.094, 11.297, 8.041",
+								"rot" : "0.556, 1.343, 0.690",
+								"scale" : "1.000, 1.000, 1.000"
+							},
+							"mesh" : "donut",
+							"materials" : 
+							[
+								"donut_sprinkle",
+								"donut_dough",
+								"donut_icing"
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"name" : "Directional Light",
+			"type" : "directional light",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 15.000, 0.000",
+				"rot" : "1.194, -0.973, -2.523"
+			},
+			"directional light info" : 
+			{
+				"rotation" : "-0.217, -0.591, -0.616, 0.473",
+				"pos" : "0.000, 15.000, 0.000",
+				"color" : "1.00, 1.00, 1.00",
+				"enabled" : true,
+				"brightness" : 5.000000,
+				"cast shadows" : true,
+				"shadow darkness" : 1.000000
+			}
+		}
+	]
+}

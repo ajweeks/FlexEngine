@@ -1,0 +1,114 @@
+{
+	"version" : 3,
+	"name" : "scene_terrain_test",
+	"spawn player" : false,
+	"camera" : 
+	{
+		"type" : "debug",
+		"near plane" : 0.500000,
+		"far plane" : 10000.000000,
+		"fov" : 1.216494,
+		"aperture" : 1.000000,
+		"shutter speed" : 0.125000,
+		"light sensitivity" : 800.000000,
+		"exposure" : 1.200000,
+		"move speed" : 514.398987,
+		"transform" : 
+		{
+			"position" : "1064.915, 629.242, 142.905",
+			"pitch" : -0.549736,
+			"yaw" : -3.093882
+		}
+	},
+	"objects" : 
+	[
+		{
+			"name" : "Skybox",
+			"type" : "skybox",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"materials" : 
+			[
+				"skybox 01"
+			],
+			"skybox info" : 
+			{
+			}
+		},
+		{
+			"name" : "Reflection Probe 01",
+			"type" : "reflection probe",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 8.000, 0.000"
+			}
+		},
+		{
+			"name" : "Directional Light",
+			"type" : "directional light",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "0.000, 15.000, 0.000",
+				"rot" : "0.626, 1.321, 0.496"
+			},
+			"directional light info" : 
+			{
+				"rotation" : "0.092, 0.626, 0.001, 0.774",
+				"pos" : "0.000, 15.000, 0.000",
+				"color" : "1.00, 1.00, 1.00",
+				"enabled" : true,
+				"brightness" : 5.000000,
+				"cast shadows" : true,
+				"shadow darkness" : 1.000000
+			}
+		},
+		{
+			"name" : "Chunk Generator",
+			"type" : "chunk generator",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"materials" : 
+			[
+			],
+			"chunk generator info" : 
+			{
+				"vert count per chunk axis" : 64,
+				"chunk size" : 512.000000,
+				"max height" : 512.000000,
+				"use manual seed" : true,
+				"manual seed" : 1234123,
+				"loaded chunk radius" : 1962.673950,
+				"base table width" : 32,
+				"low colour" : "0.20, 0.30, 0.45",
+				"mid colour" : "0.45, 0.55, 0.25",
+				"high colour" : "0.65, 0.67, 0.69",
+				"base octave" : 331.000000,
+				"octave scale" : 101.581001,
+				"num octaves" : 5,
+				"pin center" : true,
+				"pinned center" : "1064.91, 629.24, 142.91"
+			}
+		},
+		{
+			"name" : "cube",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "190.176, 0.000, 158.723",
+				"scale" : "61.318, 59.842, 59.842"
+			},
+			"mesh" : "cube",
+			"materials" : 
+			[
+				"pbr chrome"
+			]
+		}
+	]
+}

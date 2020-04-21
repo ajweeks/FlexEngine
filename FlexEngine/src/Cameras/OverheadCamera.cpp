@@ -96,7 +96,7 @@ namespace flex
 		SetLookAt();
 
 		glm::vec3 desiredPos = GetOffsetPosition(m_TargetLookAtPos);
-		m_Position = desiredPos;
+		position = desiredPos;
 
 		CalculateYawAndPitchFromForward();
 		RecalculateViewProjection();
@@ -110,8 +110,8 @@ namespace flex
 			glm::vec3 end = start + m_PlayerForwardRollingAvg.currentAverage * 10.0f;
 			g_Renderer->GetDebugDrawer()->drawLine(ToBtVec3(start), ToBtVec3(end), btVector3(1.0f, 1.0f, 1.0f));
 
-			ImGui::Text("Avg player forward: %s", Vec3ToString(m_PlayerForwardRollingAvg.currentAverage, 2).c_str());
-			ImGui::Text("For: %s", Vec3ToString(m_Forward, 2).c_str());
+			ImGui::Text("Avg player forward: %s", VecToString(m_PlayerForwardRollingAvg.currentAverage, 2).c_str());
+			ImGui::Text("For: %s", VecToString(forward, 2).c_str());
 
 			ImGui::TreePop();
 		}
@@ -121,7 +121,7 @@ namespace flex
 	{
 		glm::vec3 backward = -m_PlayerForwardRollingAvg.currentAverage;
 		glm::vec3 offsetVec = glm::vec3(VEC3_UP * 2.0f + backward * 2.0f) * m_ZoomLevel;
-		//glm::vec3 offsetVec = glm::rotate(backward, m_Pitch, m_Player0->GetTransform()->GetRight()) * m_ZoomLevel;
+		//glm::vec3 offsetVec = glm::rotate(backward, pitch, m_Player0->GetTransform()->GetRight()) * m_ZoomLevel;
 		return pos + offsetVec;
 	}
 
@@ -135,16 +135,16 @@ namespace flex
 		m_TargetLookAtPos = m_Player0->GetTransform()->GetWorldPosition();
 
 		glm::vec3 desiredPos = GetOffsetPosition(m_TargetLookAtPos);
-		m_Position = desiredPos;
+		position = desiredPos;
 
 		SetLookAt();
 	}
 
 	void OverheadCamera::SetLookAt()
 	{
-		m_Forward = glm::normalize(m_TargetLookAtPos - m_Position);
-		m_Right = normalize(glm::cross(VEC3_UP, m_Forward));
-		m_Up = cross(m_Forward, m_Right);
+		forward = glm::normalize(m_TargetLookAtPos - position);
+		right = normalize(glm::cross(VEC3_UP, forward));
+		up = cross(forward, right);
 	}
 
 	void OverheadCamera::FindPlayer()
@@ -159,7 +159,7 @@ namespace flex
 		m_Vel = VEC3_ZERO;
 		m_TargetZoomLevel = (real)(m_ZoomLevels / 2) * ((m_MaxZoomLevel - m_MinZoomLevel) / (real)(m_ZoomLevels - 1)) + m_MinZoomLevel;
 		m_ZoomLevel = m_TargetZoomLevel;
-		m_Pitch = -PI_DIV_FOUR;
+		pitch = -PI_DIV_FOUR;
 		SetPosAndLookAt();
 
 		if (m_Player0)

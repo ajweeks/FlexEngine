@@ -6,12 +6,13 @@
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp" // For WriteFile
 #include "JSONParser.hpp"
+#include "Platform/Platform.hpp"
 #include "Window/Window.hpp"
 
 namespace flex
 {
 	const real InputManager::MAX_JOYSTICK_ROTATION_SPEED = 15.0f;
-	const std::string InputManager::s_InputBindingFilePath = ROOT_LOCATION "config/input-bindings.ini";
+	const std::string InputManager::s_InputBindingFilePath = ROOT_LOCATION "config/input-bindings.json";
 
 	void InputManager::Initialize()
 	{
@@ -667,7 +668,7 @@ namespace flex
 
 	void InputManager::MouseButtonCallback(MouseButton mouseButton, KeyAction action, i32 mods)
 	{
-		UNREFERENCED_PARAMETER(mods);
+		FLEX_UNUSED(mods);
 
 		assert((u32)mouseButton < MOUSE_BUTTON_COUNT);
 
@@ -780,7 +781,7 @@ namespace flex
 
 	void InputManager::KeyCallback(KeyCode keyCode, KeyAction action, i32 mods)
 	{
-		UNREFERENCED_PARAMETER(mods);
+		FLEX_UNUSED(mods);
 
 		m_Keys[keyCode].pDown = m_Keys[keyCode].down;
 
@@ -1379,9 +1380,9 @@ namespace flex
 	bool InputManager::LoadInputBindingsFromFile()
 	{
 		JSONObject rootObject;
-		if (!JSONParser::Parse(s_InputBindingFilePath, rootObject))
+		if (!JSONParser::ParseFromFile(s_InputBindingFilePath, rootObject))
 		{
-			PrintError("Failed to load input bindings from file! Won't have any inputs mapped!!\n");
+			PrintError("Failed to load input bindings from file %s\n\terror: %s\n", s_InputBindingFilePath.c_str(), JSONParser::GetErrorString());
 			return false;
 		}
 
@@ -1390,7 +1391,7 @@ namespace flex
 		const u32 actionCount = (u32)Action::_NONE;
 		if (rootObject.fields.size() != actionCount)
 		{
-			PrintWarn("Unexpected number of inputs found in input-bindings.ini! (%u expected, %u found)\n", actionCount, rootObject.fields.size());
+			PrintWarn("Unexpected number of inputs found in input-bindings.ini! (%u expected, %u found)\n", actionCount, (u32)rootObject.fields.size());
 			bFileComplete = false;
 		}
 

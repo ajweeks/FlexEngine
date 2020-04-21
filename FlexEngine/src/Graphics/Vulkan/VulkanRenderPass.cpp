@@ -12,10 +12,9 @@ namespace flex
 {
 	namespace vk
 	{
-
 		VulkanRenderPass::VulkanRenderPass(VulkanDevice* device) :
-			m_RenderPass{ device->m_LogicalDevice, vkDestroyRenderPass },
-			m_VulkanDevice(device)
+			m_VulkanDevice(device),
+			m_RenderPass{ device->m_LogicalDevice, vkDestroyRenderPass }
 		{
 			m_FrameBuffer = new FrameBuffer(device);
 		}
@@ -36,7 +35,7 @@ namespace flex
 
 			const bool bDepthAttachmentPresent = m_TargetDepthAttachmentID != InvalidFrameBufferAttachmentID;
 
-			const u32 colorAttachmentCount = m_TargetColorAttachmentIDs.size();
+			const u32 colorAttachmentCount = (u32)m_TargetColorAttachmentIDs.size();
 			const u32 attachmentCount = colorAttachmentCount + (bDepthAttachmentPresent ? 1 : 0);
 			i32 frameBufferWidth = -1;
 			i32 frameBufferHeight = -1;
@@ -106,7 +105,7 @@ namespace flex
 
 			VkSubpassDescription subpass = {};
 			subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-			subpass.colorAttachmentCount = colorAttachmentReferences.size();
+			subpass.colorAttachmentCount = (u32)colorAttachmentReferences.size();
 			subpass.pColorAttachments = colorAttachmentReferences.data();
 			subpass.pDepthStencilAttachment = bDepthAttachmentPresent ? &depthAttachmentRef : nullptr;
 
@@ -130,11 +129,11 @@ namespace flex
 			dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
 			VkRenderPassCreateInfo renderPassCreateInfo = vks::renderPassCreateInfo();
-			renderPassCreateInfo.attachmentCount = attachmentDescriptions.size();
+			renderPassCreateInfo.attachmentCount = (u32)attachmentDescriptions.size();
 			renderPassCreateInfo.pAttachments = attachmentDescriptions.data();
 			renderPassCreateInfo.subpassCount = 1;
 			renderPassCreateInfo.pSubpasses = &subpass;
-			renderPassCreateInfo.dependencyCount = dependencies.size();
+			renderPassCreateInfo.dependencyCount = (u32)dependencies.size();
 			renderPassCreateInfo.pDependencies = dependencies.data();
 
 			if (bCreateFrameBuffer)
@@ -254,7 +253,7 @@ namespace flex
 			if (bCreateFrameBuffer)
 			{
 				VkFramebufferCreateInfo framebufferInfo = vks::framebufferCreateInfo(m_RenderPass);
-				framebufferInfo.attachmentCount = attachmentImageViews.size();
+				framebufferInfo.attachmentCount = (u32)attachmentImageViews.size();
 				framebufferInfo.pAttachments = attachmentImageViews.data();
 				framebufferInfo.width = frameBufferWidth;
 				framebufferInfo.height = frameBufferHeight;
@@ -264,7 +263,7 @@ namespace flex
 				m_FrameBuffer->height = frameBufferHeight;
 
 				char name[256];
-				sprintf_s(name, "%s frame buffer", passName);
+				sprintf(name, "%s frame buffer", passName);
 				VulkanRenderer::SetFramebufferName(m_VulkanDevice, m_FrameBuffer->frameBuffer, name);
 			}
 		}

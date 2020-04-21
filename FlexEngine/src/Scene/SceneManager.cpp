@@ -8,6 +8,7 @@
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "Scene/BaseScene.hpp"
+#include "Platform/Platform.hpp"
 
 namespace flex
 {
@@ -15,9 +16,9 @@ namespace flex
 		m_SavedDirStr(RelativePathToAbsolute(RESOURCE_LOCATION "scenes/saved")),
 		m_DefaultDirStr(RelativePathToAbsolute(RESOURCE_LOCATION "scenes/default"))
 	{
-		if (!DirectoryExists(m_SavedDirStr))
+		if (!Platform::DirectoryExists(m_SavedDirStr))
 		{
-			CreateDirectoryRecursive(m_SavedDirStr);
+			Platform::CreateDirectoryRecursive(m_SavedDirStr);
 		}
 	}
 
@@ -142,7 +143,7 @@ namespace flex
 		{
 			if (m_Scenes[i]->GetFileName().compare(scene->GetFileName()) == 0)
 			{
-				return SetCurrentScene(i, bPrintErrorOnFailure);
+				return SetCurrentScene((u32)i, bPrintErrorOnFailure);
 			}
 		}
 
@@ -160,7 +161,7 @@ namespace flex
 		{
 			if (m_Scenes[i]->GetFileName().compare(sceneFileName) == 0)
 			{
-				return SetCurrentScene(i, bPrintErrorOnFailure);
+				return SetCurrentScene((u32)i, bPrintErrorOnFailure);
 			}
 		}
 
@@ -199,7 +200,7 @@ namespace flex
 		}
 
 		// Loop around to previous index but stay positive cause things are unsigned
-		u32 newCurrentSceneIndex = (m_CurrentSceneIndex + m_Scenes.size() - 1) % m_Scenes.size();
+		u32 newCurrentSceneIndex = (u32)((m_CurrentSceneIndex + m_Scenes.size() - 1) % m_Scenes.size());
 		SetCurrentScene(newCurrentSceneIndex);
 	}
 
@@ -222,7 +223,7 @@ namespace flex
 
 		// Find and load all saved scene files
 		std::vector<std::string> foundFileNames;
-		if (FindFilesInDirectory(m_SavedDirStr, foundFileNames, "json"))
+		if (Platform::FindFilesInDirectory(m_SavedDirStr, foundFileNames, "json"))
 		{
 			for (std::string& fileName : foundFileNames)
 			{
@@ -240,7 +241,7 @@ namespace flex
 
 		// Load the default for any scenes which don't have a corresponding save file
 		foundFileNames.clear();
-		if (FindFilesInDirectory(m_DefaultDirStr, foundFileNames, "json"))
+		if (Platform::FindFilesInDirectory(m_DefaultDirStr, foundFileNames, "json"))
 		{
 			for (std::string& fileName : foundFileNames)
 			{
@@ -260,7 +261,7 @@ namespace flex
 		{
 			if (g_bEnableLogging_Loading)
 			{
-				Print("Added %u scenes to list:\n", addedSceneFileNames.size());
+				Print("Added %u scenes to list:\n", (u32)addedSceneFileNames.size());
 				for (std::string& fileName : addedSceneFileNames)
 				{
 					Print("%s, ", fileName.c_str());
@@ -405,7 +406,7 @@ namespace flex
 
 	void SceneManager::CreateNewScene(const std::string& name, bool bSwitchImmediately)
 	{
-		const i32 newSceneIndex = m_Scenes.size();
+		const i32 newSceneIndex = (i32)m_Scenes.size();
 
 		std::string fileName = name + ".json";
 
@@ -559,7 +560,7 @@ namespace flex
 					static char newSceneName[sceneNameMaxCharCount];
 					if (bClicked)
 					{
-						strcpy_s(newSceneName, scene->GetName().c_str());
+						strcpy(newSceneName, scene->GetName().c_str());
 					}
 
 					bool bRenameScene = ImGui::InputText("##rename-scene",
@@ -581,7 +582,7 @@ namespace flex
 				static char newSceneFileName[sceneNameMaxCharCount];
 				if (bClicked)
 				{
-					strcpy_s(newSceneFileName, scene->GetFileName().c_str());
+					strcpy(newSceneFileName, scene->GetFileName().c_str());
 				}
 
 				bool bRenameSceneFileName = ImGui::InputText("##rename-scene-file-name",
@@ -658,7 +659,7 @@ namespace flex
 
 					if (ImGui::Button("Hard reload (deletes save file!)"))
 					{
-						DeleteFile(scene->GetRelativeFilePath());
+						Platform::DeleteFile(scene->GetRelativeFilePath());
 						ReloadCurrentScene();
 
 						ImGui::CloseCurrentPopup();
@@ -680,7 +681,7 @@ namespace flex
 
 				std::string newSceneNameStr = scene->GetName();
 				newSceneNameStr += " Copy";
-				strcpy_s(newSceneName, newSceneNameStr.c_str());
+				strcpy(newSceneName, newSceneNameStr.c_str());
 
 				std::string newSceneFileNameStr = StripFileType(scene->GetFileName());
 
@@ -691,7 +692,7 @@ namespace flex
 					i32 numEndingWith = GetNumberEndingWith(newSceneFileNameStr, numNumericalChars);
 					if (numNumericalChars > 0)
 					{
-						u32 charsBeforeNum = (newSceneFileNameStr.length() - numNumericalChars);
+						u32 charsBeforeNum = (u32)(newSceneFileNameStr.length() - numNumericalChars);
 						newSceneFileNameStr = newSceneFileNameStr.substr(0, charsBeforeNum) +
 							IntToString(numEndingWith + 1, numNumericalChars);
 					}
@@ -708,7 +709,7 @@ namespace flex
 
 				newSceneFileNameStr += ".json";
 
-				strcpy_s(newSceneFileName, newSceneFileNameStr.c_str());
+				strcpy(newSceneFileName, newSceneFileNameStr.c_str());
 			}
 
 			bool bCloseContextMenu = false;
@@ -749,7 +750,7 @@ namespace flex
 					}
 					else
 					{
-						if (CopyFile(filePathFrom, filePathTo))
+						if (Platform::CopyFile(filePathFrom, filePathTo))
 						{
 							BaseScene* newScene = new BaseScene(newSceneFileName);
 							AddScene(newScene);
@@ -787,7 +788,7 @@ namespace flex
 			if (ImGui::Button("Open in explorer"))
 			{
 				const std::string directory = RelativePathToAbsolute(ExtractDirectoryString(currentScene->GetRelativeFilePath()));
-				OpenExplorer(directory);
+				Platform::OpenExplorer(directory);
 			}
 
 			ImGui::SameLine();
@@ -862,7 +863,7 @@ namespace flex
 
 	u32 SceneManager::GetSceneCount() const
 	{
-		return m_Scenes.size();
+		return (u32)m_Scenes.size();
 	}
 
 	i32 SceneManager::GetCurrentSceneIndex() const
@@ -889,6 +890,7 @@ namespace flex
 			iter = m_Scenes.erase(iter);
 		}
 		m_Scenes.clear();
+		m_CurrentSceneIndex = InvalidID;
 	}
 
 	std::string SceneManager::MakeSceneNameUnique(const std::string& originalName)

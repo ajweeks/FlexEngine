@@ -10,6 +10,8 @@
 
 namespace flex
 {
+	class Mesh;
+
 	namespace vk
 	{
 		class VulkanRenderer;
@@ -30,9 +32,11 @@ namespace flex
 			virtual int	getDebugMode() const override;
 
 			virtual void drawLine(const btVector3& from, const btVector3& to, const btVector3& color) override;
+			virtual void drawLine(const btVector3& from, const btVector3& to, const btVector3& colorFrom, const btVector3& colorTo) override;
 			virtual void drawContactPoint(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector3& color) override;
 
 			virtual void DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& color) override;
+			virtual void DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& colorFrom, const btVector4& colorTo) override;
 
 		private:
 			virtual void Draw() override;
@@ -44,10 +48,11 @@ namespace flex
 			MaterialID m_MaterialID = InvalidMaterialID;
 
 			// Per-frame data
+			std::vector<u32> indexBuffer;
 			VertexBufferDataCreateInfo m_VertexBufferCreateInfo;
 
 			GameObject* m_Object = nullptr;
-			MeshComponent* m_ObjectMesh = nullptr;
+			Mesh* m_ObjectMesh = nullptr;
 		};
 	} // namespace vk
 } // namespace flex

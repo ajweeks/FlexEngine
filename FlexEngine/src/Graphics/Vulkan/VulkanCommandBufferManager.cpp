@@ -76,7 +76,7 @@ namespace flex
 		{
 			if (!m_CommandBuffers.empty())
 			{
-				vkFreeCommandBuffers(m_VulkanDevice->m_LogicalDevice, m_VulkanDevice->m_CommandPool, m_CommandBuffers.size(), m_CommandBuffers.data());
+				vkFreeCommandBuffers(m_VulkanDevice->m_LogicalDevice, m_VulkanDevice->m_CommandPool, (u32)m_CommandBuffers.size(), m_CommandBuffers.data());
 				m_CommandBuffers.clear();
 			}
 

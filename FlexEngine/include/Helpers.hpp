@@ -6,32 +6,20 @@ namespace flex
 {
 	// TODO: Many of the functions in this file would benefit from unit tests
 
-	static const char* SEPARATOR_STR = ", ";
+	static const i32 DEFAULT_FLOAT_PRECISION = 2;
 
 	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount = 3, bool bFlipVertically = false, u32* channelCountOut = nullptr);
 	void DestroyGLFWimage(GLFWimage& image);
 
 	bool FileExists(const std::string& filePath);
 
-	bool ReadFile(const std::string& filePath, std::string& fileContents, bool bBinaryFile);
+	bool ReadFile(const std::string& filePath, std::string& outFileContents, bool bBinaryFile);
 	bool ReadFile(const std::string& filePath, std::vector<char>& vec, bool bBinaryFile);
 
 	bool WriteFile(const std::string& filePath, const std::string& fileContents, bool bBinaryFile);
 	bool WriteFile(const std::string& filePath, const std::vector<char>& vec, bool bBinaryFile);
 
-	bool DeleteFile(const std::string& filePath, bool bPrintErrorOnFailure = true);
-
-	bool CopyFile(const std::string& filePathFrom, const std::string& filePathTo);
-
-	bool DirectoryExists(const std::string& absoluteDirectoryPath);
-
-	void OpenExplorer(const std::string& absoluteDirectory);
 	bool OpenJSONFileDialog(const std::string& windowTitle, const std::string& absoluteDirectory, std::string& outSelectedAbsFilePath);
-	bool OpenFileDialog(const std::string& windowTitle, const std::string& absoluteDirectory, std::string& outSelectedAbsFilePath, char filter[] = nullptr);
-
-	// Returns true if any files were found
-	// Set fileType to "*" to retrieve all files
-	bool FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileType);
 
 	// Removes all content before final '/' or '\'
 	std::string StripLeadingDirectories(std::string filePath);
@@ -44,11 +32,8 @@ namespace flex
 	std::string StripFileType(std::string filePath);
 
 	// Removes all chars before first '.' occurrence
-	// NOTE: Unused!
-	std::string ExtractFileType(std::string filePathInTypeOut);
-
-	// Creates directories for each listed in string
-	void CreateDirectoryRecursive(const std::string& absoluteDirectoryPath);
+	// TODO: EZ: Test
+	std::string ExtractFileType(const std::string& filePath);
 
 	/*
 	* Reads in a .wav file and fills in given values according to file contents
@@ -58,11 +43,6 @@ namespace flex
 
 	std::string TrimStartAndEnd(const std::string& str);
 
-	// Returns the current year, month, & day  (YYYY-MM-DD)
-	std::string GetDateString_YMD();
-	// Returns the current year, month, day, hour, minute, & second (YYYY-MM-DD_HH-MM-SS)
-	std::string GetDateString_YMDHMS();
-
 	std::vector<std::string> Split(const std::string& str, char delim);
 
 	/*
@@ -71,10 +51,11 @@ namespace flex
 	 */
 	i32 NextNonAlphaNumeric(const std::string& str, i32 offset);
 
-	bool NearlyEquals(real a, real b, real threshhold);
-	bool NearlyEquals(const glm::vec2& a, const glm::vec2& b, real threshhold);
-	bool NearlyEquals(const glm::vec3& a, const glm::vec3& b, real threshhold);
-	bool NearlyEquals(const glm::vec4& a, const glm::vec4& b, real threshhold);
+	bool NearlyEquals(real a, real b, real threshold);
+	bool NearlyEquals(const glm::vec2& a, const glm::vec2& b, real threshold);
+	bool NearlyEquals(const glm::vec3& a, const glm::vec3& b, real threshold);
+	bool NearlyEquals(const glm::vec4& a, const glm::vec4& b, real threshold);
+	bool NearlyEquals(const glm::quat& a, const glm::quat& b, real threshold);
 
 	glm::quat MoveTowards(const glm::quat& a, const glm::quat& b, real delta);
 	glm::vec3 MoveTowards(const glm::vec3& a, const glm::vec3& b, real delta);
@@ -89,9 +70,9 @@ namespace flex
 	void UnpackU32To2Float(u32 u1, real* outF1, real* outF2);
 
 	/* Interpret 4 bytes starting at ptr as an unsigned 32-bit int */
-	u32 Parse32u(char* ptr);
+	u32 Parse32u(const char* ptr);
 	/* Interpret 2 bytes starting at ptr as an unsigned 16-bit int */
-	u16 Parse16u(char* ptr);
+	u16 Parse16u(const char* ptr);
 
 	bool ParseBool(const std::string& intStr);
 
@@ -133,25 +114,25 @@ namespace flex
 	// String will be padded to be at least minChars long (excluding a leading '-' for negative numbers)
 	std::string IntToString(i32 i, u16 minChars = 0, char pad = '0');
 
-	std::string FloatToString(real f, i32 precision);
+	std::string FloatToString(real f, i32 precision = DEFAULT_FLOAT_PRECISION);
 
 	std::string BoolToString(bool b);
 
-	std::string Vec2ToString(const glm::vec2& vec, i32 precision);
-	std::string Vec3ToString(const glm::vec3& vec, i32 precision);
-	std::string Vec4ToString(const glm::vec4& vec, i32 precision);
+	std::string VecToString(const glm::vec2& vec, i32 precision = DEFAULT_FLOAT_PRECISION);
+	std::string VecToString(const glm::vec3& vec, i32 precision = DEFAULT_FLOAT_PRECISION);
+	std::string VecToString(const glm::vec4& vec, i32 precision = DEFAULT_FLOAT_PRECISION);
 
-	std::string Vec2ToString(real* data, i32 precision);
-	std::string Vec3ToString(real* data, i32 precision);
-	std::string Vec4ToString(real* data, i32 precision);
+	std::string Vec2ToString(real* data, i32 precision = DEFAULT_FLOAT_PRECISION);
+	std::string Vec3ToString(real* data, i32 precision = DEFAULT_FLOAT_PRECISION);
+	std::string Vec4ToString(real* data, i32 precision = DEFAULT_FLOAT_PRECISION);
 
-	std::string Vec2ToString(real x, real y, i32 precision);
-	std::string Vec3ToString(real x, real y, real z, i32 precision);
-	std::string Vec4ToString(real x, real y, real z, real w, i32 precision);
+	std::string VecToString(real x, real y, i32 precision = DEFAULT_FLOAT_PRECISION);
+	std::string VecToString(real x, real y, real z, i32 precision = DEFAULT_FLOAT_PRECISION);
+	std::string VecToString(real x, real y, real z, real w, i32 precision = DEFAULT_FLOAT_PRECISION);
 
-	std::string QuatToString(const glm::quat& quat, i32 precision);
-	std::string QuatToString(real x, real y, real z, real w, i32 precision);
-	std::string QuatToString(real* data, i32 precision);
+	std::string QuatToString(const glm::quat& quat, i32 precision = DEFAULT_FLOAT_PRECISION);
+	std::string QuatToString(real x, real y, real z, real w, i32 precision = DEFAULT_FLOAT_PRECISION);
+	std::string QuatToString(real* data, i32 precision = DEFAULT_FLOAT_PRECISION);
 
 	void CopyVec3ToClipboard(const glm::vec3& vec);
 	void CopyVec4ToClipboard(const glm::vec4& vec);
@@ -182,12 +163,10 @@ namespace flex
 	const char* GameObjectTypeToString(GameObjectType type);
 	GameObjectType StringToGameObjectType(const char* gameObjectTypeStr);
 
-	// Must be called at least once to set g_CurrentWorkingDirectory!
-	void RetrieveCurrentWorkingDirectory();
 	std::string ReplaceBackSlashesWithForward(std::string str);
 	std::string RelativePathToAbsolute(const std::string& relativePath);
 
-	std::string Replace(std::string str, const std::string& pattern, const std::string& replacement);
+	std::string Replace(const std::string& str, const std::string& pattern, const std::string& replacement);
 
 	// Returns random value in range [min, max)
 	i32 RandomInt(i32 min, i32 max);
@@ -195,12 +174,39 @@ namespace flex
 	// Returns random value in range [min, max)
 	real RandomFloat(real min, real max);
 
+	real MinComponent(const glm::vec2& vec);
+	real MinComponent(const glm::vec3& vec);
+	real MinComponent(const glm::vec4& vec);
+
+	real MaxComponent(const glm::vec2& vec);
+	real MaxComponent(const glm::vec3& vec);
+	real MaxComponent(const glm::vec4& vec);
+
+	inline real Saturate(real val)
+	{
+		return glm::clamp(val, 0.0f, 1.0f);
+	}
+
+	template<typename T>
+	T Saturate(T val)
+	{
+		return glm::saturate(val);
+	}
+
+	glm::vec2 Floor(const glm::vec2& p);
+	glm::vec2 Fract(const glm::vec2& p);
+
+	glm::vec3 Floor(const glm::vec3& p);
+	glm::vec3 Fract(const glm::vec3& p);
+
 	u32 GenerateUID();
+
+	bool Contains(const char* arr[], u32 arrLen, const char* val);
 
 	template<class T>
 	const T& PickRandomFrom(const std::vector<T>& vec)
 	{
-		return vec[RandomInt(0, vec.size())];
+		return vec[RandomInt(0, (i32)vec.size())];
 	}
 
 	i32 RoundUp(i32 val, i32 alignment);
@@ -208,7 +214,7 @@ namespace flex
 	// Returns true if value changed
 	bool DoImGuiRotationDragFloat3(const char* label, glm::vec3& rotation, glm::vec3& outCleanedRotation);
 
-	void CalculateOrthonormalBasis(const glm::vec3&n, glm::vec3& b1, glm::vec3& b2);
+	void CalculateOrthonormalBasis(const glm::vec3& n, glm::vec3& b1, glm::vec3& b2);
 
 	enum class ImageFormat
 	{
@@ -270,4 +276,15 @@ namespace flex
 		//TextCache& operator=(const TextCache &tmp);
 
 	};
+
+	struct Vec2iCompare
+	{
+		bool operator()(const glm::vec2i& lhs, const glm::vec2i& rhs) const;
+	};
+
+	namespace ImGuiExt
+	{
+		bool InputUInt(const char* message, u32* v, u32 step = 1, u32 step_fast = 100, ImGuiInputTextFlags flags = 0);
+		bool SliderUInt(const char* label, u32* v, u32 v_min, u32 v_max, const char* format = NULL);
+	} // namespace ImGuiExt
 } // namespace flex

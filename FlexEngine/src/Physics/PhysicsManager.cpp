@@ -6,7 +6,7 @@ IGNORE_WARNINGS_PUSH
 #include <BulletCollision/CollisionDispatch/btDefaultCollisionConfiguration.h>
 #include <BulletDynamics/ConstraintSolver/btSequentialImpulseConstraintSolver.h>
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
-#pragma warning(pop)
+IGNORE_WARNINGS_POP
 
 #include "Physics/PhysicsManager.hpp"
 

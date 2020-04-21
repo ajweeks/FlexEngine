@@ -22,12 +22,14 @@ namespace flex
 		std::vector<i32> extraInts;
 	};
 
+	u32 HashVertexBufferDataCreateInfo(const VertexBufferDataCreateInfo& info);
+
 	class VertexBufferData
 	{
 	public:
-		void Initialize(VertexBufferDataCreateInfo* createInfo);
+		void Initialize(const VertexBufferDataCreateInfo& createInfo);
 		void InitializeDynamic(VertexAttributes attributes, u32 maxNumVerts); // Allocates enough memory for maxNumVerts with given attributes
-		void UpdateData(VertexBufferDataCreateInfo const* createInfo);
+		void UpdateData(const VertexBufferDataCreateInfo& createInfo);
 		void Destroy();
 
 		// Copies data from this buffer into dst for each given attribute
@@ -36,6 +38,7 @@ namespace flex
 
 		void DescribeShaderVariables(Renderer* renderer, RenderID renderID);
 
+		bool bDynamic = false;
 		real* vertexData = nullptr;
 		u32 VertexBufferSize = 0;
 		u32 VertexCount = 0;

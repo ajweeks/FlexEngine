@@ -4,33 +4,26 @@
 #include <cstdio> // For fprintf, ...
 
 #include "Helpers.hpp"
+#include "Platform/Platform.hpp"
 
 namespace flex
 {
-#ifdef _WIN32
-	HANDLE g_ConsoleHandle;
-#endif
-
 	bool g_bEnableLogToConsole = true;
+	std::stringstream g_LogBuffer;
+	const char* g_LogBufferFilePath;
 
 	void InitializeLogger()
 	{
-#ifdef _WIN32
-		g_ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
-		SetConsoleTextAttribute(g_ConsoleHandle, CONSOLE_COLOR_DEFAULT);
-#endif
-
 		g_LogBufferFilePath = SAVED_LOCATION "flex.log";
 
 		ClearLogFile();
 
-		g_LogBuffer << '[' << GetDateString_YMDHMS() << ']' << '\n';
+		g_LogBuffer << '[' << Platform::GetDateString_YMDHMS() << ']' << '\n';
 	}
 
 	void ClearLogFile()
 	{
-		FILE* f = nullptr;
-		fopen_s(&f, g_LogBufferFilePath, "w");
+		FILE* f = fopen(g_LogBufferFilePath, "w");
 
 		if (f)
 		{
@@ -43,8 +36,7 @@ namespace flex
 	{
 		// TODO: Only append new content rather than overwriting old content?
 
-		FILE* f = nullptr;
-		fopen_s(&f, g_LogBufferFilePath, "w");
+		FILE* f = fopen(g_LogBufferFilePath, "w");
 
 		if (f)
 		{
@@ -54,14 +46,14 @@ namespace flex
 		}
 	}
 
-	void Print(FORMAT_STRING const char* str, ...)
+	void Print(const char* str, ...)
 	{
 		if (!g_bEnableLogToConsole)
 		{
 			return;
 		}
 
-		SetConsoleTextAttribute(g_ConsoleHandle, CONSOLE_COLOR_DEFAULT);
+		Platform::SetConsoleTextColor(Platform::ConsoleColour::DEFAULT);
 
 		va_list argList;
 		va_start(argList, str);
@@ -71,14 +63,14 @@ namespace flex
 		va_end(argList);
 	}
 
-	void PrintWarn(FORMAT_STRING const char* str, ...)
+	void PrintWarn(const char* str, ...)
 	{
 		if (!g_bEnableLogToConsole)
 		{
 			return;
 		}
 
-		SetConsoleTextAttribute(g_ConsoleHandle, CONSOLE_COLOR_WARNING);
+		Platform::SetConsoleTextColor(Platform::ConsoleColour::WARNING);
 
 		va_list argList;
 		va_start(argList, str);
@@ -88,14 +80,14 @@ namespace flex
 		va_end(argList);
 	}
 
-	void PrintError(FORMAT_STRING const char* str, ...)
+	void PrintError(const char* str, ...)
 	{
 		if (!g_bEnableLogToConsole)
 		{
 			return;
 		}
 
-		SetConsoleTextAttribute(g_ConsoleHandle, CONSOLE_COLOR_ERROR);
+		Platform::SetConsoleTextColor(Platform::ConsoleColour::ERROR);
 
 		va_list argList;
 		va_start(argList, str);
@@ -105,29 +97,58 @@ namespace flex
 		va_end(argList);
 	}
 
-	void PrintLong(FORMAT_STRING const char* str, ...)
+	void PrintLong(const char* str)
 	{
-		i32 len = strlen(str);
-		for (i32 i = 0; i < len; i += MAX_CHARS)
+		u32 len = (u32)strlen(str);
+		for (u32 i = 0; i < len; i += MAX_CHARS)
 		{
-			Print(str + i);
+			PrintSimple(str + i);
 		}
-		Print(str + len - len % MAX_CHARS);
+		PrintSimple(str + len - len % MAX_CHARS);
 	}
 
-	void Print(FORMAT_STRING const char* str, va_list argList)
+	void PrintSimple(const char* str)
 	{
-		static char s_buffer[MAX_CHARS];
+		if (!g_bEnableLogToConsole)
+		{
+			return;
+		}
 
-		vsnprintf(s_buffer, MAX_CHARS, str, argList);
+		Platform::SetConsoleTextColor(Platform::ConsoleColour::DEFAULT);
 
-		std::string s(s_buffer);
-		s[s.size()-1] = '\n';
-		g_LogBuffer << s;
+		if (strlen(str) == 0)
+		{
+			std::cout << "\n";
+			Platform::PrintStringToDebuggerConsole("\n");
+		}
+		else
+		{
+			std::cout << str;
 
-		std::cout << s_buffer;
+			Platform::PrintStringToDebuggerConsole(str);
+		}
+	}
 
-		// TODO: Disable in shipping
-		OutputDebugString(s.c_str());
+	void Print(const char* str, va_list argList)
+	{
+		if (strlen(str) == 0)
+		{
+			std::cout << "\n";
+			Platform::PrintStringToDebuggerConsole("\n");
+		}
+		else
+		{
+			static char s_buffer[MAX_CHARS];
+
+			vsnprintf(s_buffer, MAX_CHARS, str, argList);
+
+			std::string s(s_buffer);
+			s[s.size() - 1] = '\n';
+			g_LogBuffer << s;
+
+			std::cout << s_buffer;
+
+			Platform::PrintStringToDebuggerConsole(s.c_str());
+		}
 	}
 } // namespace flex

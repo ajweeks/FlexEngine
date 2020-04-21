@@ -2,7 +2,6 @@
 #if COMPILE_OPEN_GL || COMPILE_VULKAN
 
 IGNORE_WARNINGS_PUSH
-#include <glad/glad.h>
 #include <GLFW/glfw3.h> // For GLFWimage (other types are forward declared
 IGNORE_WARNINGS_POP
 
@@ -93,8 +92,10 @@ namespace flex
 	void GLFWJoystickCallback(i32 JID, i32 event);
 	void GLFWMointorCallback(GLFWmonitor* monitor, int event);
 
+#ifdef _WINDOWS
 	void WINAPI glDebugOutput(GLenum source, GLenum type, GLuint id, GLenum severity,
 		GLsizei length, const GLchar *message, const void *userParam);
+#endif // _WINDOWS
 
 	// Stores whether a controller is connected or not
 	const i32 MAX_JOYSTICK_COUNT = 4;

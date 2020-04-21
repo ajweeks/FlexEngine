@@ -27,7 +27,7 @@ namespace flex
 			virtual void Destroy() override;
 
 			virtual MaterialID InitializeMaterial(const MaterialCreateInfo* createInfo, MaterialID matToReplace = InvalidMaterialID) override;
-			virtual TextureID InitializeTexture(const std::string& relativeFilePath, i32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR) override;
+			virtual TextureID InitializeTextureFromFile(const std::string& relativeFilePath, i32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR) override;
 			virtual RenderID InitializeRenderObject(const RenderObjectCreateInfo* createInfo) override;
 			virtual void PostInitializeRenderObject(RenderID renderID) override;
 
@@ -38,7 +38,7 @@ namespace flex
 
 			virtual void UpdateVertexData(RenderID renderID, VertexBufferData const* vertexBufferData) override;
 
-			virtual void ReloadShaders() override;
+			virtual void RecompileShaders() override;
 			virtual void LoadFonts(bool bForceRender) override;
 
 			virtual void ReloadSkybox(bool bRandomizeTexture) override;
@@ -60,7 +60,6 @@ namespace flex
 			virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size, DataType dataType, bool normalized, i32 stride, void* pointer) override;
 
 			virtual void SetSkyboxMesh(GameObject* skyboxMesh) override;
-			virtual GameObject* GetSkyboxMesh() override;
 			virtual void SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID) override;
 
 			virtual Material& GetMaterial(MaterialID materialID) override;

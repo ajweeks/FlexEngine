@@ -36,7 +36,7 @@ namespace flex
 				highestMax = glm::max(highestMax, element);
 			}
 			real maxAbs = glm::max(abs(lowestMin), abs(highestMax));
-			ImGui::PlotLines("", data.data(), data.size(), 0, 0, -maxAbs, maxAbs, ImVec2(width, height));
+			ImGui::PlotLines("", data.data(), (u32)data.size(), 0, 0, -maxAbs, maxAbs, ImVec2(width, height));
 			ImGui::GetWindowDrawList()->AddLine(ImVec2(p.x, p.y + height * 0.5f), ImVec2(p.x + width, p.y + height * 0.5f), IM_COL32(0, 128, 0, 255), 1.0f);
 			p.x += width * ((real)index / data.size());
 			ImGui::GetWindowDrawList()->AddLine(p, ImVec2(p.x, p.y + height), IM_COL32(128, 0, 0, 255), 1.0f);

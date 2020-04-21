@@ -80,15 +80,15 @@ namespace flex
 		void GLPhysicsDebugDraw::draw3dText(const btVector3& location, const char* textString)
 		{
 			// TODO: FIXME: UNIMPLEMENTED: Implement me (or don't)
-			UNREFERENCED_PARAMETER(location);
-			UNREFERENCED_PARAMETER(textString);
+			FLEX_UNUSED(location);
+			FLEX_UNUSED(textString);
 		}
 
 		void GLPhysicsDebugDraw::setDebugMode(int debugMode)
 		{
 			// NOTE: Call UpdateDebugMode instead of this
 			// This stub needs to exist to override pure virtual function
-			UNREFERENCED_PARAMETER(debugMode);
+			FLEX_UNUSED(debugMode);
 		}
 
 		int GLPhysicsDebugDraw::getDebugMode() const
@@ -103,9 +103,9 @@ namespace flex
 
 		void GLPhysicsDebugDraw::DrawContactPointWithAlpha(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector4& color)
 		{
-			UNREFERENCED_PARAMETER(normalOnB);
-			UNREFERENCED_PARAMETER(distance);
-			UNREFERENCED_PARAMETER(lifeTime);
+			FLEX_UNUSED(normalOnB);
+			FLEX_UNUSED(distance);
+			FLEX_UNUSED(lifeTime);
 
 			DrawLineWithAlpha(PointOnB + btVector3(-1.0f, 0.0f, 0.0f), PointOnB + btVector3(1.0f, 0.0f, 0.0f), color);
 			DrawLineWithAlpha(PointOnB + btVector3(0.0f, 0.0f, -1.0f), PointOnB + btVector3(0.0f, 0.0f, 1.0f), color);
@@ -120,9 +120,9 @@ namespace flex
 
 		void GLPhysicsDebugDraw::drawContactPoint(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector3& color)
 		{
-			UNREFERENCED_PARAMETER(normalOnB);
-			UNREFERENCED_PARAMETER(distance);
-			UNREFERENCED_PARAMETER(lifeTime);
+			FLEX_UNUSED(normalOnB);
+			FLEX_UNUSED(distance);
+			FLEX_UNUSED(lifeTime);
 
 			drawLine(PointOnB + btVector3(-1.0f, 0.0f, 0.0f), PointOnB + btVector3(1.0f, 0.0f, 0.0f), color);
 			drawLine(PointOnB + btVector3(0.0f, 0.0f, -1.0f), PointOnB + btVector3(0.0f, 0.0f, 1.0f), color);

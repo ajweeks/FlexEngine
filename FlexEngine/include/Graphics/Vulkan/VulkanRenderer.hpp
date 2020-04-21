@@ -15,8 +15,6 @@
 
 namespace flex
 {
-	class MeshComponent;
-
 	namespace vk
 	{
 		class VulkanPhysicsDebugDraw;
@@ -37,9 +35,11 @@ namespace flex
 			virtual void Destroy() override;
 
 			virtual MaterialID InitializeMaterial(const MaterialCreateInfo* createInfo, MaterialID matToReplace = InvalidMaterialID) override;
-			virtual TextureID InitializeTexture(const std::string& relativeFilePath, i32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR) override;
+			virtual TextureID InitializeTextureFromFile(const std::string& relativeFilePath, i32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR) override;
+			virtual TextureID InitializeTextureFromMemory(void* data, u32 size, VkFormat inFormat, const std::string& name, u32 width, u32 height, u32 channelCount, VkFilter inFilter) override;
 			virtual RenderID InitializeRenderObject(const RenderObjectCreateInfo* createInfo) override;
 			virtual void PostInitializeRenderObject(RenderID renderID) override;
+			virtual void DestroyTexture(TextureID textureID) override;
 
 			virtual void ClearMaterials(bool bDestroyPersistentMats = false) override;
 
@@ -47,9 +47,9 @@ namespace flex
 			virtual void Draw() override;
 			virtual void DrawImGuiWindows() override;
 
-			virtual void UpdateVertexData(RenderID renderID, VertexBufferData const* vertexBufferData) override;
+			virtual void UpdateVertexData(RenderID renderID, VertexBufferData const* vertexBufferData, const std::vector<u32>& indexData) override;
 
-			virtual void ReloadShaders(bool bForce) override;
+			virtual void RecompileShaders(bool bForce) override;
 			virtual void LoadFonts(bool bForceRender) override;
 
 			virtual void ReloadSkybox(bool bRandomizeTexture) override;
@@ -71,8 +71,7 @@ namespace flex
 
 			virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size, DataType dataType, bool normalized, i32 stride, void* pointer) override;
 
-			virtual void SetSkyboxMesh(GameObject* skyboxMesh) override;
-			virtual GameObject* GetSkyboxMesh() override;
+			virtual void SetSkyboxMesh(Mesh* skyboxMesh) override;
 			virtual void SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID) override;
 
 			virtual Material& GetMaterial(MaterialID materialID) override;
@@ -180,6 +179,9 @@ namespace flex
 				ParticleSimData* particleSimData = nullptr;
 			};
 
+			bool InitializeFreeType();
+			void DestroyFreeType();
+
 			void GenerateCubemapFromHDR(VulkanRenderObject* renderObject, const std::string& environmentMapPath);
 			void GenerateIrradianceSampler(VulkanRenderObject* renderObject);
 			void GeneratePrefilteredCube(VulkanRenderObject* renderObject);
@@ -236,19 +238,17 @@ namespace flex
 			bool RemoveLoadedTexture(VulkanTexture* texture, bool bDestroy);
 
 			void CreateStaticVertexBuffers();
-			void CreateDynamicVertexBuffers();
+			void CreateDynamicVertexAndIndexBuffers();
 
-			u32 CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, ShaderID shaderID, u32 size);
 			void CreateShadowVertexBuffer();
-			void CreateStaticVertexBuffer(VulkanBuffer* vertexBuffer, void* vertexBufferData, u32 vertexBufferSize);
+			void CreateAndUploadToStaticVertexBuffer(VulkanBuffer* vertexBuffer, void* vertexBufferData, u32 vertexBufferSize);
 			void CreateDynamicVertexBuffer(VulkanBuffer* vertexBuffer, u32 size);
+			void CreateDynamicIndexBuffer(VulkanBuffer* indexBuffer, u32 size);
 
 			void CreateStaticIndexBuffers();
 
-			// Creates index buffer for all render objects' indices which use specified shader index. Returns index count
-			u32 CreateStaticIndexBuffer(VulkanBuffer* indexBuffer, ShaderID shaderID);
 			void CreateShadowIndexBuffer();
-			void CreateStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<u32>& indices);
+			void CreateAndUploadToStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<u32>& indices);
 
 			void CreateDescriptorPool();
 			u32 AllocateDynamicUniformBuffer(u32 dynamicDataSize, void** data, i32 maxObjectCount = -1);
@@ -258,14 +258,13 @@ namespace flex
 			void CreateSemaphores();
 
 			void BatchRenderObjects();
-			void DrawShaderBatch(const ShaderBatchPair &shaderBatches, VkCommandBuffer& commandBuffer, DrawCallInfo* drawCallInfo = nullptr);
+			void DrawShaderBatch(const ShaderBatchPair& shaderBatches, VkCommandBuffer& commandBuffer, DrawCallInfo* drawCallInfo = nullptr);
 
 			// Expects a render pass to be in flight, renders a fullscreen tri with minimal state setup
 			void RenderFullscreenTri(
 				VkCommandBuffer commandBuffer,
 				MaterialID materialID,
 				VkPipelineLayout pipelineLayout,
-				VkPipeline graphicsPipeline,
 				VkDescriptorSet descriptorSet);
 
 			// Begins the given render pass, renders a fullscreen tri, then ends the render pass
@@ -301,7 +300,7 @@ namespace flex
 			bool ExtensionSupported(const std::string& extStr) const;
 
 			void UpdateConstantUniformBuffers(UniformOverrides const* overridenUniforms = nullptr);
-			void UpdateDynamicUniformBuffer(RenderID renderID, UniformOverrides const * overridenUniforms = nullptr,
+			void UpdateDynamicUniformBuffer(RenderID renderID, UniformOverrides const* overridenUniforms = nullptr,
 				MaterialID materialIDOverride = InvalidMaterialID, u32 dynamicUBOOffsetOverride = InvalidID);
 			void UpdateDynamicUniformBuffer(MaterialID materialID, u32 dynamicOffsetIndex, const glm::mat4& model, UniformOverrides const* uniformOverrides = nullptr);
 
@@ -309,8 +308,10 @@ namespace flex
 
 			void OnShaderReloadSuccess();
 
+			void SetLineWidthForCmdBuffer(VkCommandBuffer cmdBuffer, real requestedWidth = 3.0f);
+
 			// Returns true if object was duplicated
-			bool DoTextureSelector(const char* label, const std::vector<VulkanTexture*>& textures, i32* selectedIndex, bool* bGenerateSampler);
+			bool DoTextureSelector(const char* label, const std::vector<VulkanTexture*>& textures, i32* selectedIndex);
 			void ImGuiUpdateTextureIndexOrMaterial(bool bUpdateTextureMaterial,
 				const std::string& texturePath,
 				std::string& matTexturePath,
@@ -335,7 +336,10 @@ namespace flex
 			static const u32 MAX_NUM_DESC_DYNAMIC_UNIFORM_BUFFERS = 1024;
 			static const u32 MAX_NUM_DESC_DYNAMIC_STORAGE_BUFFERS = 1; // Particles
 
-			VulkanRenderObject* GetRenderObject(RenderID renderID);
+			inline VulkanRenderObject* GetRenderObject(RenderID renderID)
+			{
+				return m_RenderObjects[renderID];
+			}
 
 			u32 GetActiveRenderObjectCount() const;
 
@@ -355,6 +359,13 @@ namespace flex
 
 			void InitializeAllParticleSystemBuffers();
 			void InitializeParticleSystemBuffer(VulkanParticleSystem* particleSystem);
+
+			u32 GetStaticVertexIndexBufferIndex(u32 stride);
+			u32 GetDynamicVertexIndexBufferIndex(u32 stride);
+
+			TextureID GetNextAvailableTextureID();
+			TextureID AddLoadedTexture(VulkanTexture* texture);
+			VulkanTexture* GetLoadedTexture(TextureID textureID);
 
 			std::vector<std::string> m_SupportedDeviceExtenions;
 
@@ -381,6 +392,7 @@ namespace flex
 			struct ShaderBatchPair
 			{
 				ShaderID shaderID = InvalidShaderID;
+				bool bDynamic = false;
 				MaterialBatch batch;
 			};
 
@@ -500,11 +512,10 @@ namespace flex
 			const bool m_bEnableValidationLayers = true;
 #endif
 
-			VDeleter<VkInstance> m_Instance{ vkDestroyInstance };
-			VDeleter<VkDebugReportCallbackEXT> m_Callback{ m_Instance, DestroyDebugReportCallbackEXT };
-			VDeleter<VkSurfaceKHR> m_Surface{ m_Instance, vkDestroySurfaceKHR };
+			VkInstance m_Instance = VK_NULL_HANDLE;
+			VkDebugReportCallbackEXT m_Callback = VK_NULL_HANDLE;
+			VkSurfaceKHR m_Surface = VK_NULL_HANDLE;
 
-			// TODO: Make globally accessible
 			VulkanDevice* m_VulkanDevice = nullptr;
 
 			VkQueue m_GraphicsQueue = VK_NULL_HANDLE;
@@ -576,7 +587,17 @@ namespace flex
 			VulkanTexture* m_BlankTexture = nullptr;
 			VulkanTexture* m_BlankTextureArr = nullptr;
 
-			std::vector<VertexIndexBufferPair> m_VertexIndexBufferPairs;
+			// Pair is: (stride, vertex buffer pair)
+			// Indexed into through Shader::vertexBufferIndex
+			// One element per unique stride
+			// Uploaded to GPU once through staging buffer
+			std::vector<std::pair<u32, VulkanBuffer*>> m_StaticVertexBuffers;
+			VulkanBuffer* m_StaticIndexBuffer;
+
+			// Pair is: (stride, vertex index buffer pair)
+			// Indexed into through Material::dynamicVertexBufferIndex
+			std::vector<std::pair<u32, VertexIndexBufferPair*>> m_DynamicVertexIndexBufferPairs;
+			VertexIndexBufferPair* m_ShadowVertexIndexBufferPair = nullptr;
 
 			u32 m_DynamicAlignment = 0;
 
@@ -596,6 +617,8 @@ namespace flex
 			VkClearColorValue m_ClearColor;
 
 			u32 m_CurrentSwapChainBufferIndex = 0;
+
+			FT_Library m_FTLibrary;
 
 			VulkanTexture* m_NoiseTexture = nullptr;
 			ShaderID m_SSAOShaderID = InvalidShaderID;
@@ -621,6 +644,19 @@ namespace flex
 #ifdef DEBUG
 			AsyncVulkanShaderCompiler* m_ShaderCompiler = nullptr;
 #endif
+
+			enum DirtyFlags : u32
+			{
+				CLEAN			= 0,
+				STATIC_DATA		= 1 << 0,
+				DYNAMIC_DATA	= 1 << 1,
+				SHADOW_DATA		= 1 << 2,
+
+				MAX_VALUE		= 1 << 30,
+				_NONE
+			};
+
+			u32 m_DirtyFlagBits = (u32)DirtyFlags::CLEAN;
 
 			const FrameBufferAttachmentID SWAP_CHAIN_COLOR_ATTACHMENT_ID = 11000;
 			const FrameBufferAttachmentID SWAP_CHAIN_DEPTH_ATTACHMENT_ID = 11001;

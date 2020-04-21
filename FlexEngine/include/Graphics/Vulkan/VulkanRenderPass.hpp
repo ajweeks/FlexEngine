@@ -2,7 +2,7 @@
 #if COMPILE_VULKAN
 
 IGNORE_WARNINGS_PUSH
-#include <vulkan/vulkan.h>
+#include "volk/volk.h"
 IGNORE_WARNINGS_POP
 
 #include "VDeleter.hpp"
@@ -19,6 +19,11 @@ namespace flex
 		public:
 			VulkanRenderPass(VulkanDevice* device);
 			~VulkanRenderPass();
+
+			VulkanRenderPass(const VulkanRenderPass&) = delete;
+			VulkanRenderPass(VulkanRenderPass&&) = delete;
+			VulkanRenderPass& operator=(const VulkanRenderPass&) = delete;
+			VulkanRenderPass& operator=(VulkanRenderPass&&) = delete;
 
 			void Create();
 

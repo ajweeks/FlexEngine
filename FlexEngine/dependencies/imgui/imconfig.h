@@ -13,11 +13,20 @@
 
 #pragma once
 
+#if defined(_MSC_VER)
 #pragma warning(push, 0)
+#elif defined(__GNUG__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
+#endif
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
+#if defined(_MSC_VER)
 #pragma warning(pop)
+#elif defined(__GNUG__)
+#pragma GCC diagnostic pop
+#endif
 
 //---- Define assertion handler. Defaults to calling assert().
 //#define IM_ASSERT(_EXPR)  MyAssert(_EXPR)

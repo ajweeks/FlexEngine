@@ -8,23 +8,24 @@
 
 namespace flex
 {
-	void VertexBufferData::Initialize(VertexBufferDataCreateInfo* createInfo)
+	void VertexBufferData::Initialize(const VertexBufferDataCreateInfo& createInfo)
 	{
-		VertexCount = createInfo->positions_3D.size();
+		bDynamic = false;
+		VertexCount = (u32)createInfo.positions_3D.size();
 		if (VertexCount == 0)
 		{
-			VertexCount = createInfo->positions_2D.size();
+			VertexCount = (u32)createInfo.positions_2D.size();
 		}
 		if (VertexCount == 0)
 		{
-			VertexCount = createInfo->positions_4D.size();
+			VertexCount = (u32)createInfo.positions_4D.size();
 		}
-		Attributes = createInfo->attributes;
-		VertexStride = CalculateVertexStride(createInfo->attributes);
+		Attributes = createInfo.attributes;
+		VertexStride = CalculateVertexStride(createInfo.attributes);
 		VertexBufferSize = VertexCount * VertexStride;
 
 		assert(vertexData == nullptr);
-		vertexData = (real*)malloc_hooked(VertexBufferSize);
+		vertexData = (real*)malloc(VertexBufferSize);
 		if (vertexData == nullptr)
 		{
 			PrintError("Failed to allocate vertex buffer memory (%u bytes)\n", VertexBufferSize);
@@ -36,95 +37,97 @@ namespace flex
 
 	void VertexBufferData::InitializeDynamic(VertexAttributes attributes, u32 maxNumVerts)
 	{
+		bDynamic = true;
 		VertexCount = maxNumVerts;
 		Attributes = attributes;
 		VertexStride = CalculateVertexStride(attributes);
 		VertexBufferSize = VertexCount * VertexStride;
 
 		assert(vertexData == nullptr);
-		vertexData = (real*)malloc_hooked(VertexBufferSize);
+		vertexData = (real*)malloc(VertexBufferSize);
 		if (vertexData == nullptr)
 		{
-			PrintError("Failed to allocate vertex buffer memory (%u bytes)\n", VertexBufferSize);
+			PrintError("Failed to allocate dynamic vertex buffer memory (%u bytes)\n", VertexBufferSize);
 			return;
 		}
 	}
 
-	void VertexBufferData::UpdateData(VertexBufferDataCreateInfo const* createInfo)
+	void VertexBufferData::UpdateData(const VertexBufferDataCreateInfo& createInfo)
 	{
 		assert(vertexData != nullptr);
 		assert(VertexCount > 0);
 
 		real* vertexDataP = vertexData;
-		u32 count = glm::min(VertexCount, glm::max(createInfo->positions_2D.size(), glm::max(createInfo->positions_3D.size(), createInfo->positions_4D.size())));
+		u32 count = glm::min(VertexCount, glm::max((u32)createInfo.positions_2D.size(), glm::max((u32)createInfo.positions_3D.size(), (u32)createInfo.positions_4D.size())));
 		for (u32 i = 0; i < count; ++i)
 		{
 			if (Attributes & (u32)VertexAttribute::POSITION)
 			{
-				memcpy(vertexDataP, createInfo->positions_3D.data() + i, sizeof(glm::vec3));
+				memcpy(vertexDataP, createInfo.positions_3D.data() + i, sizeof(glm::vec3));
 				vertexDataP += 3;
 			}
 
 			if (Attributes & (u32)VertexAttribute::POSITION2)
 			{
-				memcpy(vertexDataP, createInfo->positions_2D.data() + i, sizeof(glm::vec2));
+				memcpy(vertexDataP, createInfo.positions_2D.data() + i, sizeof(glm::vec2));
 				vertexDataP += 2;
 			}
 
 			if (Attributes & (u32)VertexAttribute::POSITION4)
 			{
-				memcpy(vertexDataP, createInfo->positions_4D.data() + i, sizeof(glm::vec4));
+				memcpy(vertexDataP, createInfo.positions_4D.data() + i, sizeof(glm::vec4));
 				vertexDataP += 4;
 			}
 
 			if (Attributes & (u32)VertexAttribute::VELOCITY3)
 			{
-				memcpy(vertexDataP, createInfo->velocities.data() + i, sizeof(glm::vec3));
+				memcpy(vertexDataP, createInfo.velocities.data() + i, sizeof(glm::vec3));
 				vertexDataP += 4;
 			}
 
 			if (Attributes & (u32)VertexAttribute::UV)
 			{
-				memcpy(vertexDataP, createInfo->texCoords_UV.data() + i, sizeof(glm::vec2));
+				memcpy(vertexDataP, createInfo.texCoords_UV.data() + i, sizeof(glm::vec2));
 				vertexDataP += 2;
 			}
 
 			if (Attributes & (u32)VertexAttribute::COLOR_R8G8B8A8_UNORM)
 			{
-				memcpy(vertexDataP, createInfo->colors_R8G8B8A8.data() + i, sizeof(i32));
+				memcpy(vertexDataP, createInfo.colors_R8G8B8A8.data() + i, sizeof(i32));
 				vertexDataP += 1;
 			}
 
 			if (Attributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)
 			{
-				memcpy(vertexDataP, createInfo->colors_R32G32B32A32.data() + i, sizeof(glm::vec4));
+				memcpy(vertexDataP, createInfo.colors_R32G32B32A32.data() + i, sizeof(glm::vec4));
 				vertexDataP += 4;
 			}
 
 			if (Attributes & (u32)VertexAttribute::NORMAL)
 			{
-				memcpy(vertexDataP, createInfo->normals.data() + i, sizeof(glm::vec3));
+				memcpy(vertexDataP, createInfo.normals.data() + i, sizeof(glm::vec3));
 				vertexDataP += 3;
 			}
 
 			if (Attributes & (u32)VertexAttribute::TANGENT)
 			{
-				memcpy(vertexDataP, createInfo->tangents.data() + i, sizeof(glm::vec3));
+				memcpy(vertexDataP, createInfo.tangents.data() + i, sizeof(glm::vec3));
 				vertexDataP += 3;
 			}
 
 			if (Attributes & (u32)VertexAttribute::EXTRA_VEC4)
 			{
-				memcpy(vertexDataP, createInfo->extraVec4s.data() + i, sizeof(glm::vec4));
+				memcpy(vertexDataP, createInfo.extraVec4s.data() + i, sizeof(glm::vec4));
 				vertexDataP += 4;
 			}
 
 			if (Attributes & (u32)VertexAttribute::EXTRA_INT)
 			{
-				memcpy(vertexDataP, createInfo->extraInts.data() + i, sizeof(i32));
+				memcpy(vertexDataP, createInfo.extraInts.data() + i, sizeof(i32));
 				vertexDataP += 1;
 			}
 		}
+		VertexCount = count;
 		assert(vertexDataP == vertexData + (VertexStride / sizeof(real) * count));
 	}
 
@@ -132,7 +135,7 @@ namespace flex
 	{
 		if (vertexData)
 		{
-			free_hooked(vertexData);
+			free(vertexData);
 			vertexData = nullptr;
 		}
 		VertexCount = 0;
@@ -296,7 +299,7 @@ namespace flex
 
 			src += VertexStride / sizeof(real);
 		}
-		u32 bytesCopied = (dst - initialDst) * sizeof(real);
+		u32 bytesCopied = (u32)(dst - initialDst) * sizeof(real);
 		return bytesCopied;
 	}
 
@@ -314,5 +317,27 @@ namespace flex
 				currentLocation += s_VertexTypes[i].size;
 			}
 		}
+	}
+
+	u32 HashVertexBufferDataCreateInfo(const VertexBufferDataCreateInfo& info)
+	{
+		u32 result = (u32)info.attributes;
+
+		// TODO: Test
+		// TODO: Use smarter hash
+		for (const glm::vec2& pos : info.positions_2D) result += (u32)(pos.x + pos.y);
+		for (const glm::vec3& pos : info.positions_3D) result += (u32)(pos.x + pos.y + pos.z);
+		for (const glm::vec4& pos : info.positions_4D) result += (u32)(pos.x + pos.y + pos.z + pos.w);
+		for (const glm::vec3& v : info.velocities) result += (u32)(v.x + v.y + v.z);
+		for (const glm::vec2& uv : info.texCoords_UV) result += (u32)(uv.x + uv.y);
+		for (i32 i : info.colors_R8G8B8A8) result += (u32)(i);
+		for (const glm::vec4& col : info.colors_R32G32B32A32) result += (u32)(col.x + col.y + col.z + col.w);
+		for (const glm::vec3& pos : info.tangents) result += (u32)(pos.x + pos.y + pos.z);
+		for (const glm::vec3& pos : info.normals) result += (u32)(pos.x + pos.y + pos.z);
+
+		for (const glm::vec4& v : info.extraVec4s) result += (u32)(v.x + v.y + v.z + v.w);
+		for (i32 i : info.extraInts) result += (u32)(i);
+
+		return result;
 	}
 } // namespace flex

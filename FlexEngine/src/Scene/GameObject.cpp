@@ -15,10 +15,13 @@ IGNORE_WARNINGS_PUSH
 #include <LinearMath/btTransform.h>
 
 #include <glm/gtx/quaternion.hpp> // for rotate
+
+#include <random>
 IGNORE_WARNINGS_POP
 
 #include "Scene/GameObject.hpp"
 #include "Audio/AudioManager.hpp"
+#include "Cameras/CameraManager.hpp"
 #include "Cameras/TerminalCamera.hpp"
 #include "Editor.hpp"
 #include "FlexEngine.hpp"
@@ -32,8 +35,10 @@ IGNORE_WARNINGS_POP
 #include "Player.hpp"
 #include "Profiler.hpp"
 #include "Scene/BaseScene.hpp"
+#include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
+#include "Time.hpp"
 #include "VirtualMachine.hpp"
 #include "Window/Window.hpp"
 
@@ -56,9 +61,9 @@ namespace flex
 
 		if (!s_SqueakySounds.IsInitialized())
 		{
-			s_SqueakySounds.Initialize(RESOURCE_LOCATION  "audio/squeak00.wav", 5);
+			s_SqueakySounds.Initialize(RESOURCE_LOCATION "audio/squeak00.wav", 5);
 
-			s_BunkSound = AudioManager::AddAudioSource(RESOURCE_LOCATION  "audio/bunk.wav");
+			s_BunkSound = AudioManager::AddAudioSource(RESOURCE_LOCATION "audio/bunk.wav");
 		}
 	}
 
@@ -75,7 +80,7 @@ namespace flex
 		return newGameObject;
 	}
 
-	GameObject* GameObject::CreateObjectFromJSON(const JSONObject& obj, BaseScene* scene, MaterialID overriddenMatID /* = InvalidMaterialID */)
+	GameObject* GameObject::CreateObjectFromJSON(const JSONObject& obj, BaseScene* scene, i32 fileVersion)
 	{
 		GameObject* newGameObject = nullptr;
 
@@ -104,9 +109,7 @@ namespace flex
 			{
 				std::string name = obj.GetString("name");
 
-				MaterialID matID = scene->FindMaterialIDByName(obj);
-
-				GameObject* prefabInstance = GameObject::CreateObjectFromJSON(*prefab, scene, matID);
+				GameObject* prefabInstance = GameObject::CreateObjectFromJSON(*prefab, scene, fileVersion);
 				prefabInstance->m_bLoadedFromPrefab = true;
 				prefabInstance->m_PrefabName = prefabInstance->m_Name;
 
@@ -122,7 +125,7 @@ namespace flex
 					prefabInstance->m_Transform = Transform::ParseJSON(transformObj);
 				}
 
-				prefabInstance->ParseUniqueFields(obj, scene, matID);
+				prefabInstance->ParseUniqueFields(obj, scene, newGameObject->m_Mesh->GetMaterialIDs());
 
 				return prefabInstance;
 			}
@@ -185,6 +188,10 @@ namespace flex
 		{
 			newGameObject = new ParticleSystem(objectName);
 		} break;
+		case GameObjectType::CHUNK_GENERATOR:
+		{
+			newGameObject = new ChunkGenerator(objectName);
+		} break;
 		case GameObjectType::OBJECT: // Fall through
 		case GameObjectType::_NONE:
 			newGameObject = new GameObject(objectName, gameObjectType);
@@ -196,7 +203,7 @@ namespace flex
 
 		if (newGameObject != nullptr)
 		{
-			newGameObject->ParseJSON(obj, scene, overriddenMatID);
+			newGameObject->ParseJSON(obj, scene, fileVersion);
 		}
 
 		return newGameObject;
@@ -226,9 +233,9 @@ namespace flex
 	{
 		RigidBody* rb = GetRigidBody();
 
-		if (m_RenderID != InvalidRenderID)
+		if (m_Mesh != nullptr)
 		{
-			g_Renderer->PostInitializeRenderObject(m_RenderID);
+			m_Mesh->PostInitialize();
 		}
 
 		if (rb)
@@ -253,17 +260,11 @@ namespace flex
 		}
 		m_Children.clear();
 
-		if (m_MeshComponent)
+		if (m_Mesh)
 		{
-			m_MeshComponent->Destroy();
-			delete m_MeshComponent;
-			m_MeshComponent = nullptr;
-		}
-
-		if (m_RenderID != InvalidRenderID)
-		{
-			g_Renderer->DestroyRenderObject(m_RenderID);
-			m_RenderID = InvalidRenderID;
+			m_Mesh->Destroy();
+			delete m_Mesh;
+			m_Mesh = nullptr;
 		}
 
 		if (m_RigidBody)
@@ -337,7 +338,7 @@ namespace flex
 		//	}
 		//}
 
-		ImGui::Text("%s", m_Name.c_str());
+		ImGui::Text("%s : %s", m_Name.c_str(), GameObjectTypeStrings[(i32)m_Type]);
 
 		if (DoImGuiContextMenu(true))
 		{
@@ -361,8 +362,10 @@ namespace flex
 		}
 
 		// Transform
-		ImGui::Text("");
+		ImGui::Text("Transform");
 		{
+			// TODO: Add local/global switch
+			// TODO: EZ: Ensure precision is retained
 			if (ImGui::BeginPopupContextItem("transform context menu"))
 			{
 				if (ImGui::Button("Copy"))
@@ -382,15 +385,8 @@ namespace flex
 				ImGui::EndPopup();
 			}
 
-			static glm::vec3 sRot = glm::degrees((glm::eulerAngles(m_Transform.GetLocalRotation())));
-
-			if (!ImGui::IsMouseDown(0))
-			{
-				sRot = glm::degrees((glm::eulerAngles(m_Transform.GetLocalRotation())));
-			}
-
 			glm::vec3 translation = m_Transform.GetLocalPosition();
-			glm::vec3 rotation = sRot;
+			glm::vec3 rotation = glm::degrees((glm::eulerAngles(m_Transform.GetLocalRotation())));
 			glm::vec3 pScale = m_Transform.GetLocalScale();
 			glm::vec3 scale = pScale;
 
@@ -439,8 +435,6 @@ namespace flex
 			{
 				m_Transform.SetLocalPosition(translation, false);
 
-				sRot = rotation;
-
 				glm::quat rotQuat(glm::quat(glm::radians(cleanedRot)));
 
 				m_Transform.SetLocalRotation(rotQuat, false);
@@ -459,16 +453,16 @@ namespace flex
 			}
 		}
 
-		if (m_RenderID != InvalidRenderID)
+		if (m_Mesh != nullptr)
 		{
-			g_Renderer->DrawImGuiForGameObjectWithValidRenderID(this);
+			g_Renderer->DrawImGuiForGameObject(this);
 		}
 		else
 		{
 			if (ImGui::Button("Add mesh component"))
 			{
-				MeshComponent* mesh = SetMeshComponent(new MeshComponent(this));
-				mesh->LoadFromFile(RESOURCE_LOCATION  "meshes/cube.glb");
+				Mesh* mesh = SetMesh(new Mesh(this));
+				mesh->LoadFromFile(RESOURCE_LOCATION "meshes/cube.glb", g_Renderer->GetPlaceholderMaterialID());
 			}
 		}
 
@@ -683,7 +677,7 @@ namespace flex
 				} break;
 				default:
 				{
-					PrintWarn("Unhandled shape type in GameObject::DrawImGuiObjects");
+					PrintWarn("Unhandled shape type in GameObject::DrawImGuiObjects\n");
 				} break;
 				}
 
@@ -767,11 +761,9 @@ namespace flex
 		bool bRefreshNameField = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup) &&
 			ImGui::IsMouseClicked(1);
 
-		bool bRenameWindowOpenedThisFrame = false;
 		if (bActive && g_Editor->GetWantRenameActiveElement())
 		{
 			ImGui::OpenPopup(contextMenuIDStr.c_str());
-			bRenameWindowOpenedThisFrame = true;
 			g_Editor->ClearWantRenameActiveElement();
 			bRefreshNameField = true;
 		}
@@ -867,7 +859,7 @@ namespace flex
 
 	bool GameObject::AllowInteractionWith(GameObject* gameObject)
 	{
-		UNREFERENCED_PARAMETER(gameObject);
+		FLEX_UNUSED(gameObject);
 
 		return true;
 	}
@@ -888,23 +880,27 @@ namespace flex
 		return m_ObjectInteractingWith;
 	}
 
-	void GameObject::ParseJSON(const JSONObject& obj, BaseScene* scene, MaterialID overriddenMatID /* = InvalidMaterialID */)
+	void GameObject::ParseJSON(const JSONObject& obj, BaseScene* scene, i32 fileVersion, MaterialID overriddenMatID /* = InvalidMaterialID */)
 	{
 		bool bVisible = true;
 		obj.SetBoolChecked("visible", bVisible);
 		bool bVisibleInSceneGraph = true;
 		obj.SetBoolChecked("visible in scene graph", bVisibleInSceneGraph);
 
-		MaterialID matID = InvalidMaterialID;
+		std::vector<MaterialID> matIDs;
 		if (overriddenMatID != InvalidMaterialID)
 		{
-			matID = overriddenMatID;
+			matIDs = { overriddenMatID };
 		}
 		else
 		{
-			matID = scene->FindMaterialIDByName(obj);
+			matIDs = scene->RetrieveMaterialIDsFromJSON(obj, fileVersion);
 		}
 
+		if (matIDs.empty())
+		{
+			matIDs.push_back(g_Renderer->GetPlaceholderMaterialID());
+		}
 
 		JSONObject transformObj;
 		if (obj.SetObjectChecked("transform", transformObj))
@@ -922,7 +918,7 @@ namespace flex
 
 				if (fileName.compare(meshName) == 0)
 				{
-					MeshComponent::ParseJSON(parsedMeshObj, this, matID);
+					Mesh::ParseJSON(parsedMeshObj, this, matIDs);
 					bFound = true;
 					break;
 				}
@@ -1046,7 +1042,7 @@ namespace flex
 			m_RigidBody->SetLocalSRT(localScale, localRot, localPos);
 		}
 
-		ParseUniqueFields(obj, scene, matID);
+		ParseUniqueFields(obj, scene, matIDs);
 
 		SetVisible(bVisible, false);
 		SetVisibleInSceneExplorer(bVisibleInSceneGraph);
@@ -1062,12 +1058,12 @@ namespace flex
 			std::vector<JSONObject> children = obj.GetObjectArray("children");
 			for (JSONObject& child : children)
 			{
-				AddChild(GameObject::CreateObjectFromJSON(child, scene));
+				AddChild(GameObject::CreateObjectFromJSON(child, scene, fileVersion));
 			}
 		}
 	}
 
-	void GameObject::ParseUniqueFields(const JSONObject& /* parentObj */, BaseScene* /* scene */, MaterialID /* matID*/)
+	void GameObject::ParseUniqueFields(const JSONObject& /* parentObj */, BaseScene* /* scene */, const std::vector<MaterialID>& /* matIDs */)
 	{
 		// Generic game objects have no unique fields
 	}
@@ -1116,40 +1112,41 @@ namespace flex
 
 		object.fields.push_back(m_Transform.Serialize());
 
-		if (m_MeshComponent &&
+		if (m_Mesh &&
 			bIsBasicObject &&
 			!m_bLoadedFromPrefab)
 		{
-			const std::string meshName = StripFileType(StripLeadingDirectories(m_MeshComponent->GetRelativeFilePath()));
+			const std::string meshName = StripFileType(StripLeadingDirectories(m_Mesh->GetRelativeFilePath()));
 			object.fields.emplace_back("mesh", JSONValue(meshName));
 		}
 
+		if (m_Mesh)
 		{
-			MaterialID matID = InvalidMaterialID;
-			RenderObjectCreateInfo renderObjectCreateInfo;
-			RenderID renderID = GetRenderID();
-			if (m_MeshComponent)
+			std::vector<JSONField> materialFields;
+			for (u32 slotIndex = 0; slotIndex < m_Mesh->GetSubmeshCount(); ++slotIndex)
 			{
-				matID = m_MeshComponent->GetMaterialID();
-			}
-			else if (renderID != InvalidRenderID && g_Renderer->GetRenderObjectCreateInfo(renderID, renderObjectCreateInfo))
-			{
-				matID = renderObjectCreateInfo.materialID;
+				MaterialID matID = InvalidMaterialID;
+				if (m_Mesh)
+				{
+					matID = m_Mesh->GetMaterialID(slotIndex);
+				}
+
+				if (matID != InvalidMaterialID)
+				{
+					const Material& material = g_Renderer->GetMaterial(matID);
+					std::string materialName = material.name;
+					if (materialName.empty())
+					{
+						PrintWarn("Game object contains material with empty material name!\n");
+					}
+					else
+					{
+						materialFields.emplace_back(materialName, JSONValue(""));
+					}
+				}
 			}
 
-			if (matID != InvalidMaterialID)
-			{
-				const Material& material = g_Renderer->GetMaterial(matID);
-				std::string materialName = material.name;
-				if (materialName.empty())
-				{
-					PrintWarn("Game object contains material with empty material name!\n");
-				}
-				else
-				{
-					object.fields.emplace_back("material", JSONValue(materialName));
-				}
-			}
+			object.fields.emplace_back("materials", JSONValue(materialFields));
 		}
 
 		btCollisionShape* collisionShape = GetCollisionShape();
@@ -1169,7 +1166,7 @@ namespace flex
 				btVector3 btHalfExtents = static_cast<btBoxShape*>(collisionShape)->getHalfExtentsWithMargin();
 				glm::vec3 halfExtents = ToVec3(btHalfExtents);
 				halfExtents /= m_Transform.GetWorldScale();
-				std::string halfExtentsStr = Vec3ToString(halfExtents, 3);
+				std::string halfExtentsStr = VecToString(halfExtents, 3);
 				colliderObj.fields.emplace_back("half extents", JSONValue(halfExtentsStr));
 			} break;
 			case SPHERE_SHAPE_PROXYTYPE:
@@ -1201,7 +1198,7 @@ namespace flex
 				btVector3 btHalfExtents = static_cast<btCylinderShape*>(collisionShape)->getHalfExtentsWithMargin();
 				glm::vec3 halfExtents = ToVec3(btHalfExtents);
 				halfExtents /= m_Transform.GetWorldScale();
-				std::string halfExtentsStr = Vec3ToString(halfExtents, 3);
+				std::string halfExtentsStr = VecToString(halfExtents, 3);
 				colliderObj.fields.emplace_back("half extents", JSONValue(halfExtentsStr));
 			} break;
 			default:
@@ -1213,18 +1210,18 @@ namespace flex
 
 			if (m_RigidBody->GetLocalPosition() != VEC3_ZERO)
 			{
-				colliderObj.fields.emplace_back("offset pos", JSONValue(Vec3ToString(m_RigidBody->GetLocalPosition(), 3)));
+				colliderObj.fields.emplace_back("offset pos", JSONValue(VecToString(m_RigidBody->GetLocalPosition(), 3)));
 			}
 
-			if (m_RigidBody->GetLocalRotation() != QUAT_UNIT)
+			if (m_RigidBody->GetLocalRotation() != QUAT_IDENTITY)
 			{
 				glm::vec3 localRotEuler = glm::eulerAngles(m_RigidBody->GetLocalRotation());
-				colliderObj.fields.emplace_back("offset rot", JSONValue(Vec3ToString(localRotEuler, 3)));
+				colliderObj.fields.emplace_back("offset rot", JSONValue(VecToString(localRotEuler, 3)));
 			}
 
 			if (m_RigidBody->GetLocalScale() != VEC3_ONE)
 			{
-				colliderObj.fields.emplace_back("offset scale", JSONValue(Vec3ToString(m_RigidBody->GetLocalScale(), 3)));
+				colliderObj.fields.emplace_back("offset scale", JSONValue(VecToString(m_RigidBody->GetLocalScale(), 3)));
 			}
 
 			//bool bTrigger = false;
@@ -1337,20 +1334,10 @@ namespace flex
 	void GameObject::CopyGenericFields(GameObject* newGameObject, GameObject* parent, bool bCopyChildren)
 	{
 		RenderObjectCreateInfo* createInfoPtr = nullptr;
-		RenderObjectCreateInfo renderObjectCreateInfo_DontRef = {};
-		MaterialID matID = InvalidMaterialID;
-		if (m_RenderID != InvalidRenderID)
+		std::vector<MaterialID> matIDs;
+		if (m_Mesh)
 		{
-			if (g_Renderer->GetRenderObjectCreateInfo(m_RenderID, renderObjectCreateInfo_DontRef))
-			{
-				// Make it clear we aren't copying vertex or index data directly
-				renderObjectCreateInfo_DontRef.vertexBufferData = nullptr;
-				renderObjectCreateInfo_DontRef.indices = nullptr;
-
-				matID = renderObjectCreateInfo_DontRef.materialID;
-
-				createInfoPtr = &renderObjectCreateInfo_DontRef;
-			}
+			matIDs = m_Mesh->GetMaterialIDs();
 		}
 
 		*newGameObject->GetTransform() = m_Transform;
@@ -1376,22 +1363,20 @@ namespace flex
 			newGameObject->AddTag(tag);
 		}
 
-		if (m_MeshComponent)
+		if (m_Mesh)
 		{
-			MeshComponent* newMeshComponent = newGameObject->SetMeshComponent(new MeshComponent(newGameObject, matID, false));
-			MeshComponent::Type prefabType = m_MeshComponent->GetType();
-			if (prefabType == MeshComponent::Type::PREFAB)
+			Mesh* newMesh = newGameObject->SetMesh(new Mesh(newGameObject));
+			Mesh::Type prefabType = m_Mesh->GetType();
+			if (prefabType == Mesh::Type::PREFAB)
 			{
-				MeshComponent::PrefabShape shape = m_MeshComponent->GetShape();
-				newMeshComponent->SetRequiredAttributesFromMaterialID(matID);
-				newMeshComponent->LoadPrefabShape(shape, createInfoPtr);
+				PrefabShape shape = m_Mesh->GetSubMeshes()[0]->GetShape();
+				newMesh->LoadPrefabShape(shape, matIDs[0], createInfoPtr);
 			}
-			else if (prefabType == MeshComponent::Type::FILE)
+			else if (prefabType == Mesh::Type::FILE)
 			{
-				std::string filePath = m_MeshComponent->GetRelativeFilePath();
-				MeshImportSettings importSettings = m_MeshComponent->GetImportSettings();
-				newMeshComponent->SetRequiredAttributesFromMaterialID(matID);
-				newMeshComponent->LoadFromFile(filePath, &importSettings, createInfoPtr);
+				std::string filePath = m_Mesh->GetRelativeFilePath();
+				MeshImportSettings importSettings = m_Mesh->GetImportSettings();
+				newMesh->LoadFromFile(filePath, matIDs, &importSettings, createInfoPtr);
 			}
 			else
 			{
@@ -1572,6 +1557,8 @@ namespace flex
 			childTransform->SetWorldTransform(childWorldTransform);
 		}
 
+		g_SceneManager->CurrentScene()->UpdateRootObjectSiblingIndices();
+
 		return child;
 	}
 
@@ -1591,6 +1578,8 @@ namespace flex
 				child->SetParent(nullptr);
 
 				child->GetTransform()->SetWorldTransform(childWorldTransform);
+
+				g_SceneManager->CurrentScene()->UpdateRootObjectSiblingIndices();
 
 				m_Children.erase(iter);
 				return true;
@@ -1765,11 +1754,6 @@ namespace flex
 		return m_Tags;
 	}
 
-	RenderID GameObject::GetRenderID() const
-	{
-		return m_RenderID;
-	}
-
 	std::string GameObject::GetName() const
 	{
 		return m_Name;
@@ -1778,11 +1762,6 @@ namespace flex
 	void GameObject::SetName(const std::string& newName)
 	{
 		m_Name = newName;
-	}
-
-	void GameObject::SetRenderID(RenderID renderID)
-	{
-		m_RenderID = renderID;
 	}
 
 	bool GameObject::IsSerializable() const
@@ -1912,24 +1891,22 @@ namespace flex
 		return m_RigidBody;
 	}
 
-	MeshComponent* GameObject::GetMeshComponent()
+	Mesh* GameObject::GetMesh()
 	{
-		return m_MeshComponent;
+		return m_Mesh;
 	}
 
-	MeshComponent* GameObject::SetMeshComponent(MeshComponent* meshComponent)
+	Mesh* GameObject::SetMesh(Mesh* mesh)
 	{
-		if (m_MeshComponent)
+		if (m_Mesh)
 		{
-			g_Renderer->DestroyRenderObject(m_RenderID);
-			m_RenderID = InvalidRenderID;
-			m_MeshComponent->Destroy();
-			delete m_MeshComponent;
+			m_Mesh->Destroy();
+			delete m_Mesh;
 		}
 
-		m_MeshComponent = meshComponent;
+		m_Mesh = mesh;
 		g_Renderer->RenderObjectStateChanged();
-		return meshComponent;
+		return mesh;
 	}
 
 	bool GameObject::CastsShadow() const
@@ -2001,7 +1978,7 @@ namespace flex
 		return newGameObject;
 	}
 
-	void Valve::ParseUniqueFields(const JSONObject& parentObj, BaseScene* scene, MaterialID matID)
+	void Valve::ParseUniqueFields(const JSONObject& parentObj, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		JSONObject valveInfo;
 		if (parentObj.SetObjectChecked("valve info", valveInfo))
@@ -2019,12 +1996,12 @@ namespace flex
 				PrintWarn("Valve's minimum rotation range is greater than its maximum! Undefined behavior\n");
 			}
 
-			if (!m_MeshComponent)
+			if (!m_Mesh)
 			{
-				MeshComponent* valveMesh = new MeshComponent(this, matID);
-				valveMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/valve.glb");
-				assert(GetMeshComponent() == nullptr);
-				SetMeshComponent(valveMesh);
+				Mesh* valveMesh = new Mesh(this);
+				valveMesh->LoadFromFile(RESOURCE_LOCATION "meshes/valve.glb", matIDs[0]);
+				assert(m_Mesh == nullptr);
+				SetMesh(valveMesh);
 			}
 
 			if (!m_CollisionShape)
@@ -2054,7 +2031,7 @@ namespace flex
 		JSONObject valveInfo = {};
 
 		glm::vec2 valveRange(minRotation, maxRotation);
-		valveInfo.fields.emplace_back("range", JSONValue(Vec2ToString(valveRange, 2)));
+		valveInfo.fields.emplace_back("range", JSONValue(VecToString(valveRange, 2)));
 
 		parentObject.fields.emplace_back("valve info", JSONValue(valveInfo));
 	}
@@ -2135,7 +2112,7 @@ namespace flex
 			currentAbsAvgRotationSpeed > 0.01f)
 		{
 			real gain = glm::abs(overshoot) * 8.0f;
-			gain = glm::clamp(gain, 0.0f, 1.0f);
+			gain = Saturate(gain);
 			AudioManager::SetSourceGain(s_BunkSound, gain);
 			AudioManager::PlaySource(s_BunkSound, true);
 			//Print(std::to_string(overshoot) + ", " + std::to_string(gain));
@@ -2181,13 +2158,13 @@ namespace flex
 		return newGameObject;
 	}
 
-	void RisingBlock::ParseUniqueFields(const JSONObject& parentObj, BaseScene* scene, MaterialID matID)
+	void RisingBlock::ParseUniqueFields(const JSONObject& parentObj, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
-		if (!m_MeshComponent)
+		if (!m_Mesh)
 		{
-			MeshComponent* cubeMesh = new MeshComponent(this, matID);
-			cubeMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/cube.glb");
-			SetMeshComponent(cubeMesh);
+			Mesh* cubeMesh = new Mesh(this);
+			cubeMesh->LoadFromFile(RESOURCE_LOCATION "meshes/cube.glb", matIDs[0]);
+			SetMesh(cubeMesh);
 		}
 
 		if (!m_RigidBody)
@@ -2242,7 +2219,7 @@ namespace flex
 		JSONObject blockInfo = {};
 
 		blockInfo.fields.emplace_back("valve name", JSONValue(valve->GetName()));
-		blockInfo.fields.emplace_back("move axis", JSONValue(Vec3ToString(moveAxis, 3)));
+		blockInfo.fields.emplace_back("move axis", JSONValue(VecToString(moveAxis, 3)));
 		blockInfo.fields.emplace_back("affected by gravity", JSONValue(bAffectedByGravity));
 
 		parentObject.fields.emplace_back("block info", JSONValue(blockInfo));
@@ -2295,7 +2272,7 @@ namespace flex
 		{
 			// Apply gravity by rotating valve
 			real fallSpeed = 6.0f;
-			real distMult = 1.0f - glm::clamp(playerControlledValveRotationSpeed / 2.0f, 0.0f, 1.0f);
+			real distMult = 1.0f - Saturate(playerControlledValveRotationSpeed / 2.0f);
 			real dDist = (fallSpeed * g_DeltaTime * distMult);
 			dist -= Lerp(pdDistBlockMoved, dDist, 0.1f);
 			pdDistBlockMoved = dDist;
@@ -2355,18 +2332,19 @@ namespace flex
 		return newGameObject;
 	}
 
-	void GlassPane::ParseUniqueFields(const JSONObject& parentObj, BaseScene* scene, MaterialID matID)
+	void GlassPane::ParseUniqueFields(const JSONObject& parentObj, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
-		UNREFERENCED_PARAMETER(scene);
+		FLEX_UNUSED(scene);
+		FLEX_UNUSED(matIDs);
 
 		JSONObject glassInfo;
 		if (parentObj.SetObjectChecked("window info", glassInfo))
 		{
 			glassInfo.SetBoolChecked("broken", bBroken);
 
-			if (!m_MeshComponent)
+			if (!m_Mesh)
 			{
-				MeshComponent* windowMesh = new MeshComponent(this, matID);
+				Mesh* windowMesh = new Mesh(this);
 				const char* filePath;
 				if (bBroken)
 				{
@@ -2376,8 +2354,8 @@ namespace flex
 				{
 					filePath = RESOURCE("meshes/glass-window-whole.glb");
 				}
-				windowMesh->LoadFromFile(filePath);
-				SetMeshComponent(windowMesh);
+				windowMesh->LoadFromFile(filePath, matIDs);
+				SetMesh(windowMesh);
 			}
 		}
 
@@ -2415,11 +2393,11 @@ namespace flex
 		return newGameObject;
 	}
 
-	void ReflectionProbe::ParseUniqueFields(const JSONObject& parentObj, BaseScene* scene, MaterialID matID)
+	void ReflectionProbe::ParseUniqueFields(const JSONObject& parentObj, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
-		UNREFERENCED_PARAMETER(scene);
-		UNREFERENCED_PARAMETER(parentObj);
-		UNREFERENCED_PARAMETER(matID);
+		FLEX_UNUSED(scene);
+		FLEX_UNUSED(parentObj);
+		FLEX_UNUSED(matIDs);
 
 		// Probe capture material
 		//MaterialCreateInfo probeCaptureMatCreateInfo = {};
@@ -2448,7 +2426,7 @@ namespace flex
 		//MeshComponent* sphereMesh = new MeshComponent(this, matID);
 
 		//assert(m_MeshComponent == nullptr);
-		//sphereMesh->LoadFromFile(RESOURCE_LOCATION  "meshes/sphere.glb");
+		//sphereMesh->LoadFromFile(RESOURCE_LOCATION "meshes/sphere.glb");
 		//SetMeshComponent(sphereMesh);
 
 		//std::string captureName = m_Name + "_capture";
@@ -2473,7 +2451,7 @@ namespace flex
 
 	void ReflectionProbe::SerializeUniqueFields(JSONObject& parentObject) const
 	{
-		UNREFERENCED_PARAMETER(parentObject);
+		FLEX_UNUSED(parentObject);
 
 		// Reflection probes have no unique fields currently
 	}
@@ -2500,15 +2478,15 @@ namespace flex
 		return newGameObject;
 	}
 
-	void Skybox::ParseUniqueFields(const JSONObject& parentObj, BaseScene* scene, MaterialID matID)
+	void Skybox::ProcedurallyInitialize(MaterialID matID)
 	{
-		UNREFERENCED_PARAMETER(scene);
+		InternalInit(matID);
+	}
 
-		assert(m_MeshComponent == nullptr);
-		assert(matID != InvalidMaterialID);
-		MeshComponent* skyboxMesh = new MeshComponent(this, matID, false);
-		skyboxMesh->LoadPrefabShape(MeshComponent::PrefabShape::SKYBOX);
-		SetMeshComponent(skyboxMesh);
+	void Skybox::ParseUniqueFields(const JSONObject& parentObj, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	{
+		FLEX_UNUSED(scene);
+		assert(matIDs.size() == 1);
 
 		JSONObject skyboxInfo;
 		if (parentObj.SetObjectChecked("skybox info", skyboxInfo))
@@ -2520,20 +2498,31 @@ namespace flex
 			}
 		}
 
-		g_Renderer->SetSkyboxMesh(this);
+		InternalInit(matIDs[0]);
 	}
 
 	void Skybox::SerializeUniqueFields(JSONObject& parentObject) const
 	{
 		JSONObject skyboxInfo = {};
 		glm::quat worldRot = m_Transform.GetWorldRotation();
-		if (worldRot != QUAT_UNIT)
+		if (worldRot != QUAT_IDENTITY)
 		{
-			std::string eulerRotStr = Vec3ToString(glm::eulerAngles(worldRot), 2);
+			std::string eulerRotStr = VecToString(glm::eulerAngles(worldRot), 2);
 			skyboxInfo.fields.emplace_back("rot", JSONValue(eulerRotStr));
 		}
 
 		parentObject.fields.emplace_back("skybox info", JSONValue(skyboxInfo));
+	}
+
+	void Skybox::InternalInit(MaterialID matID)
+	{
+		assert(m_Mesh == nullptr);
+		assert(matID != InvalidMaterialID);
+		Mesh* skyboxMesh = new Mesh(this);
+		skyboxMesh->LoadPrefabShape(PrefabShape::SKYBOX, matID);
+		SetMesh(skyboxMesh);
+
+		g_Renderer->SetSkyboxMesh(m_Mesh);
 	}
 
 	DirectionalLight::DirectionalLight() :
@@ -2629,11 +2618,11 @@ namespace flex
 		return m_Transform.GetWorldRotation();
 	}
 
-	void DirectionalLight::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID)
+	void DirectionalLight::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
-		UNREFERENCED_PARAMETER(matID);
+		FLEX_UNUSED(matIDs);
 
-		i32 sceneFileVersion = scene->GetFileVersion();
+		i32 sceneFileVersion = scene->GetSceneFileVersion();
 
 		JSONObject directionalLightObj;
 		if (parentObject.SetObjectChecked("directional light info", directionalLightObj))
@@ -2682,10 +2671,10 @@ namespace flex
 		std::string dirStr = QuatToString(m_Transform.GetWorldRotation(), 3);
 		dirLightObj.fields.emplace_back("rotation", JSONValue(dirStr));
 
-		std::string posStr = Vec3ToString(m_Transform.GetLocalPosition(), 3);
+		std::string posStr = VecToString(m_Transform.GetLocalPosition(), 3);
 		dirLightObj.fields.emplace_back("pos", JSONValue(posStr));
 
-		std::string colorStr = Vec3ToString(data.color, 2);
+		std::string colorStr = VecToString(data.color, 2);
 		dirLightObj.fields.emplace_back("color", JSONValue(colorStr));
 
 		dirLightObj.fields.emplace_back("enabled", JSONValue(m_bVisible != 0));
@@ -2815,10 +2804,10 @@ namespace flex
 		return m_Transform.GetWorldPosition();
 	}
 
-	void PointLight::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID)
+	void PointLight::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
-		UNREFERENCED_PARAMETER(scene);
-		UNREFERENCED_PARAMETER(matID);
+		FLEX_UNUSED(scene);
+		FLEX_UNUSED(matIDs);
 
 		JSONObject pointLightObj;
 		if (parentObject.SetObjectChecked("point light info", pointLightObj))
@@ -2844,10 +2833,10 @@ namespace flex
 	{
 		JSONObject pointLightObj = {};
 
-		std::string posStr = Vec3ToString(m_Transform.GetLocalPosition(), 3);
+		std::string posStr = VecToString(m_Transform.GetLocalPosition(), 3);
 		pointLightObj.fields.emplace_back("pos", JSONValue(posStr));
 
-		std::string colorStr = Vec3ToString(data.color, 2);
+		std::string colorStr = VecToString(data.color, 2);
 		pointLightObj.fields.emplace_back("color", JSONValue(colorStr));
 
 		pointLightObj.fields.emplace_back("enabled", JSONValue(m_bVisible != 0));
@@ -2883,9 +2872,9 @@ namespace flex
 			// TODO: Create own material
 			matID = 0;
 		}
-		MeshComponent* mesh = SetMeshComponent(new MeshComponent(this, matID));
+		Mesh* mesh = SetMesh(new Mesh(this));
 		std::string meshFilePath = std::string(RESOURCE("meshes/")) + std::string(meshName);
-		if (!mesh->LoadFromFile(meshFilePath))
+		if (!mesh->LoadFromFile(meshFilePath, matID))
 		{
 			PrintWarn("Failed to load cart mesh!\n");
 		}
@@ -2957,7 +2946,7 @@ namespace flex
 
 	void Cart::SetItemHolding(GameObject* obj)
 	{
-		UNREFERENCED_PARAMETER(obj);
+		FLEX_UNUSED(obj);
 		// TODO:
 	}
 
@@ -3103,10 +3092,10 @@ namespace flex
 		return 0.0f;
 	}
 
-	void Cart::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID)
+	void Cart::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
-		UNREFERENCED_PARAMETER(scene);
-		UNREFERENCED_PARAMETER(matID);
+		FLEX_UNUSED(scene);
+		FLEX_UNUSED(matIDs);
 
 		JSONObject cartInfo = parentObject.GetObject("cart info");
 		currentTrackID = (TrackID)cartInfo.GetInt("track ID");
@@ -3206,10 +3195,10 @@ namespace flex
 		return (1.0f - glm::pow(1.0f - powerRemaining, 5.0f)) * moveDirection * speed;
 	}
 
-	void EngineCart::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID)
+	void EngineCart::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
-		UNREFERENCED_PARAMETER(scene);
-		UNREFERENCED_PARAMETER(matID);
+		FLEX_UNUSED(scene);
+		FLEX_UNUSED(matIDs);
 
 		JSONObject cartInfo = parentObject.GetObject("cart info");
 		currentTrackID = (TrackID)cartInfo.GetInt("track ID");
@@ -3246,8 +3235,8 @@ namespace flex
 			// TODO: Create own material
 			matID = 0;
 		}
-		MeshComponent* mesh = SetMeshComponent(new MeshComponent(this, matID));
-		if (!mesh->LoadFromFile(RESOURCE("meshes/mobile-liquid-box.glb")))
+		Mesh* mesh = SetMesh(new Mesh(this));
+		if (!mesh->LoadFromFile(RESOURCE("meshes/mobile-liquid-box.glb"), matID))
 		{
 			PrintWarn("Failed to load mobile-liquid-box mesh!\n");
 		}
@@ -3275,16 +3264,16 @@ namespace flex
 		}
 	}
 
-	void MobileLiquidBox::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID)
+	void MobileLiquidBox::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
-		UNREFERENCED_PARAMETER(parentObject);
-		UNREFERENCED_PARAMETER(scene);
-		UNREFERENCED_PARAMETER(matID);
+		FLEX_UNUSED(parentObject);
+		FLEX_UNUSED(scene);
+		FLEX_UNUSED(matIDs);
 	}
 
 	void MobileLiquidBox::SerializeUniqueFields(JSONObject& parentObject) const
 	{
-		UNREFERENCED_PARAMETER(parentObject);
+		FLEX_UNUSED(parentObject);
 	}
 
 	GerstnerWave::GerstnerWave(const std::string& name) :
@@ -3296,11 +3285,12 @@ namespace flex
 		matCreateInfo.constAlbedo = glm::vec3(0.4f, 0.5f, 0.8f);
 		matCreateInfo.constMetallic = 0.8f;
 		matCreateInfo.constRoughness = 0.01f;
+		matCreateInfo.bDynamic = true;
 
 		MaterialID planeMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
 
-		MeshComponent* planeMesh = SetMeshComponent(new MeshComponent(this, planeMatID));
-		planeMesh->LoadPrefabShape(MeshComponent::PrefabShape::GERSTNER_PLANE);
+		Mesh* planeMesh = SetMesh(new Mesh(this));
+		planeMesh->LoadPrefabShape(PrefabShape::GERSTNER_PLANE, planeMatID);
 
 		i32 vertCount = vertSideCount * vertSideCount;
 		bufferInfo.positions_3D.resize(vertCount);
@@ -3335,8 +3325,8 @@ namespace flex
 		{
 			PrintError("Failed to find material for bobber!\n");
 		}
-		MeshComponent* mesh = bobber->SetMeshComponent(new MeshComponent(bobber, matID));
-		if (!mesh->LoadFromFile(RESOURCE("meshes/sphere.glb")))
+		Mesh* mesh = bobber->SetMesh(new Mesh(bobber));
+		if (!mesh->LoadFromFile(RESOURCE("meshes/sphere.glb"), matID))
 		{
 			PrintError("Failed to load bobber mesh\n");
 		}
@@ -3401,10 +3391,10 @@ namespace flex
 		}
 	}
 
-	void GerstnerWave::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID)
+	void GerstnerWave::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
-		UNREFERENCED_PARAMETER(scene);
-		UNREFERENCED_PARAMETER(matID);
+		FLEX_UNUSED(scene);
+		FLEX_UNUSED(matIDs);
 
 		JSONObject gerstnerWaveObj;
 		if (parentObject.SetObjectChecked("gerstner wave", gerstnerWaveObj))
@@ -3530,7 +3520,7 @@ namespace flex
 				diff = glm::normalize(diff) * rippleLen;
 				real c = cos(g_SecElapsedSinceProgramStart * 1.8f - d);
 				real s = sin(g_SecElapsedSinceProgramStart * 1.5f - d);
-				real a = Lerp(0.0f, rippleAmp, 1.0f - glm::clamp(d / rippleFadeOut, 0.0f, 1.0f));
+				real a = Lerp(0.0f, rippleAmp, 1.0f - Saturate(d / rippleFadeOut));
 				positions[vertIdx] += glm::vec3(
 					-diff.x * a * s,
 					a * c,
@@ -3550,17 +3540,16 @@ namespace flex
 			}
 		}
 
-		VertexBufferData* vertexBuffer = m_MeshComponent->GetVertexBufferData();
+		VertexBufferData* vertexBuffer = m_Mesh->GetSubMeshes()[0]->GetVertexBufferData();
 		bufferInfo.positions_3D = positions;
 		bufferInfo.normals = normals;
 		bufferInfo.tangents = tangents;
-		vertexBuffer->UpdateData(&bufferInfo);
-		// TODO: Get working in Vulkan
-		//g_Renderer->UpdateVertexData(m_RenderID, vertexBuffer);
+		vertexBuffer->UpdateData(bufferInfo);
+		g_Renderer->UpdateVertexData(m_Mesh->GetRenderID(0), vertexBuffer, m_Mesh->GetSubMeshes()[0]->GetIndexBuffer());
 
 
 		const glm::vec3 wavePos = m_Transform.GetWorldPosition();
-		const glm::vec3 waveScale = m_Transform.GetWorldScale();
+		//const glm::vec3 waveScale = m_Transform.GetWorldScale();
 		glm::vec3 surfacePos = positions[positions.size() / 2 + vertSideCount / 2];
 		bobberTarget.SetTargetPos(surfacePos.y);
 		bobberTarget.Tick(g_DeltaTime);
@@ -3577,7 +3566,7 @@ namespace flex
 	void GerstnerWave::AddWave()
 	{
 		waves.push_back({});
-		UpdateDependentVariables(waves.size() - 1);
+		UpdateDependentVariables((u32)waves.size() - 1);
 	}
 
 	void GerstnerWave::RemoveWave(i32 index)
@@ -3611,8 +3600,8 @@ namespace flex
 			for (i32 z = 0; z < count; ++z)
 			{
 				GameObject* obj = new GameObject("block", GameObjectType::OBJECT);
-				obj->SetMeshComponent(new MeshComponent(obj, PickRandomFrom(matIDs)));
-				obj->GetMeshComponent()->LoadFromFile(RESOURCE_LOCATION "meshes/cube.glb");
+				obj->SetMesh(new Mesh(obj));
+				obj->GetMesh()->LoadFromFile(RESOURCE_LOCATION "meshes/cube.glb", PickRandomFrom(matIDs));
 				AddChild(obj);
 				obj->GetTransform()->SetLocalScale(glm::vec3(blockSize));
 				obj->GetTransform()->SetLocalPosition(glm::vec3(
@@ -3646,8 +3635,8 @@ namespace flex
 			// TODO: Create own material
 			matID = 0;
 		}
-		MeshComponent* mesh = SetMeshComponent(new MeshComponent(this, matID));
-		if (!mesh->LoadFromFile(RESOURCE("meshes/terminal-copper.glb")))
+		Mesh* mesh = SetMesh(new Mesh(this));
+		if (!mesh->LoadFromFile(RESOURCE("meshes/terminal-copper.glb"), matID))
 		{
 			PrintWarn("Failed to load terminal mesh!\n");
 		}
@@ -3844,10 +3833,10 @@ namespace flex
 		m_Camera = camera;
 	}
 
-	void Terminal::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID)
+	void Terminal::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
-		UNREFERENCED_PARAMETER(scene);
-		UNREFERENCED_PARAMETER(matID);
+		FLEX_UNUSED(scene);
+		FLEX_UNUSED(matIDs);
 
 		JSONObject obj = parentObject.GetObject("terminal");
 		std::string str = obj.GetString("str");
@@ -4501,10 +4490,10 @@ namespace flex
 		return newParticleSystem;
 	}
 
-	void ParticleSystem::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, MaterialID matID)
+	void ParticleSystem::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
-		UNREFERENCED_PARAMETER(matID);
-		UNREFERENCED_PARAMETER(scene);
+		FLEX_UNUSED(matIDs);
+		FLEX_UNUSED(scene);
 
 		JSONObject particleSystemObj = parentObject.GetObject("particle system info");
 
@@ -4537,8 +4526,8 @@ namespace flex
 
 
 		JSONObject systemDataObj = {};
-		systemDataObj.fields.emplace_back("color0", JSONValue(Vec4ToString(data.color0, 2)));
-		systemDataObj.fields.emplace_back("color1", JSONValue(Vec4ToString(data.color1, 2)));
+		systemDataObj.fields.emplace_back("color0", JSONValue(VecToString(data.color0, 2)));
+		systemDataObj.fields.emplace_back("color1", JSONValue(VecToString(data.color1, 2)));
 		systemDataObj.fields.emplace_back("speed", JSONValue(data.speed));
 		systemDataObj.fields.emplace_back("particle count", JSONValue((i32)data.particleCount));
 		particleSystemObj.fields.emplace_back("data", JSONValue(systemDataObj));
@@ -4581,5 +4570,505 @@ namespace flex
 	void ParticleSystem::UpdateModelMatrix()
 	{
 		model = glm::scale(m_Transform.GetWorldTransform(), glm::vec3(scale));
+	}
+
+	ChunkGenerator::ChunkGenerator(const std::string& name) :
+		GameObject(name, GameObjectType::CHUNK_GENERATOR),
+		m_LowCol(0.2f, 0.3f, 0.45f),
+		m_MidCol(0.45f, 0.55f, 0.25f),
+		m_HighCol(0.65f, 0.67f, 0.69f)
+	{
+	}
+
+	GameObject* ChunkGenerator::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
+	{
+		UNREFERENCED_PARAMETER(parent);
+		UNREFERENCED_PARAMETER(bCopyChildren);
+		return nullptr;
+	}
+
+	void ChunkGenerator::Initialize()
+	{
+		MaterialCreateInfo matCreateInfo = {};
+		matCreateInfo.name = "Terrain";
+		matCreateInfo.shaderName = "terrain";
+		matCreateInfo.constAlbedo = glm::vec3(1.0f, 0.0f, 0.0f);
+		matCreateInfo.constRoughness = 1.0f;
+		matCreateInfo.constMetallic = 0.0f;
+		matCreateInfo.enableIrradianceSampler = false;
+		m_TerrainMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
+
+		m_Mesh = new Mesh(this);
+		m_Mesh->SetTypeToMemory();
+
+		GenerateGradients();
+	}
+
+	void ChunkGenerator::DestroyAllChunks()
+	{
+		for (auto iter = m_Meshes.begin(); iter != m_Meshes.end(); ++iter)
+		{
+			iter->second->Destroy();
+		}
+		m_Meshes.clear();
+	}
+
+	void ChunkGenerator::GenerateChunk(const glm::ivec2& chunkIndex)
+	{
+		PROFILE_AUTO("Generate terrain chunk");
+
+		{
+			auto existingChunkIter = m_Meshes.find(chunkIndex);
+			if (existingChunkIter != m_Meshes.end())
+			{
+				existingChunkIter->second->Destroy();
+				m_Meshes.erase(existingChunkIter);
+			}
+		}
+
+		ShaderID shaderID = g_Renderer->GetMaterial(m_TerrainMatID).shaderID;
+
+		const u32 vertexCount = VertCountPerChunkAxis * VertCountPerChunkAxis;
+		const u32 triCount = ((VertCountPerChunkAxis - 1) * (VertCountPerChunkAxis - 1)) * 2;
+		const u32 indexCount = triCount * 3;
+
+		VertexBufferDataCreateInfo vertexBufferCreateInfo = {};
+		vertexBufferCreateInfo.attributes = g_Renderer->GetShader(shaderID).vertexAttributes;
+		vertexBufferCreateInfo.positions_3D.reserve(vertexCount);
+		vertexBufferCreateInfo.texCoords_UV.reserve(vertexCount);
+		vertexBufferCreateInfo.colors_R32G32B32A32.reserve(vertexCount);
+		vertexBufferCreateInfo.normals.reserve(vertexCount);
+
+		std::vector<u32> indices(indexCount);
+
+		for (u32 z = 0; z < VertCountPerChunkAxis; ++z)
+		{
+			for (u32 x = 0; x < VertCountPerChunkAxis; ++x)
+			{
+				glm::vec2 uv(x / (real)(VertCountPerChunkAxis - 1), z / (real)(VertCountPerChunkAxis - 1));
+
+				glm::vec3 pos = glm::vec3(uv.x * ChunkSize, 0.0f, uv.y * ChunkSize);
+
+				glm::vec3 vertPosWS = pos + glm::vec3(chunkIndex.x * ChunkSize, 0.0f, chunkIndex.y * ChunkSize);
+				glm::vec2 sampleCenter(vertPosWS.x, vertPosWS.z);
+				real height = SampleTerrain(sampleCenter);
+
+				vertPosWS.y = height * MaxHeight;
+
+				const real e = 0.01f;
+				real heightDX = (SampleTerrain(sampleCenter - glm::vec2(e, 0.0f)) - SampleTerrain(sampleCenter + glm::vec2(e, 0.0f))) * MaxHeight;
+				real heightDZ = (SampleTerrain(sampleCenter - glm::vec2(0.0f, e)) - SampleTerrain(sampleCenter + glm::vec2(0.0f, e))) * MaxHeight;
+
+				glm::vec3 normal = glm::normalize(glm::vec3(heightDX * nscale, 2.0f * e, heightDZ * nscale));
+
+				vertexBufferCreateInfo.positions_3D.emplace_back(vertPosWS);
+				vertexBufferCreateInfo.texCoords_UV.emplace_back(uv);
+				bool bShowEdge = (m_bHighlightGrid && (x == 0 || x == (VertCountPerChunkAxis - 1) || z == 0 || z == (VertCountPerChunkAxis - 1)));
+				glm::vec3 vertCol = (bShowEdge ? glm::vec3(0.75f) : (height <= 0.5f ? Lerp(m_LowCol, m_MidCol, glm::pow(height * 2.0f, 4.0f)) : Lerp(m_MidCol, m_HighCol, glm::pow((height - 0.5f) * 2.0f, 1.0f/5.0f))));
+				vertexBufferCreateInfo.colors_R32G32B32A32.emplace_back(glm::vec4(vertCol.x, vertCol.y, vertCol.z, 1.0f));
+				//vertexBufferCreateInfo.colors_R32G32B32A32.emplace_back(glm::vec4(height, height, height, 1.0f));
+				vertexBufferCreateInfo.normals.emplace_back(normal);
+			}
+		}
+
+		for (u32 z = 0; z < VertCountPerChunkAxis - 1; ++z)
+		{
+			for (u32 x = 0; x < VertCountPerChunkAxis - 1; ++x)
+			{
+				u32 vertIdx = z * (VertCountPerChunkAxis - 1) + x;
+				u32 i = z * VertCountPerChunkAxis + x;
+				indices[vertIdx * 6 + 0] = i;
+				indices[vertIdx * 6 + 1] = i + 1 + VertCountPerChunkAxis;
+				indices[vertIdx * 6 + 2] = i + 1;
+
+				indices[vertIdx * 6 + 3] = i;
+				indices[vertIdx * 6 + 4] = i + VertCountPerChunkAxis;
+				indices[vertIdx * 6 + 5] = i + 1 + VertCountPerChunkAxis;
+			}
+		}
+
+		RenderObjectCreateInfo renderObjectCreateInfo = {};
+		MeshComponent* meshComponent = MeshComponent::LoadFromMemory(m_Mesh, vertexBufferCreateInfo, indices, m_TerrainMatID, &renderObjectCreateInfo);
+		if (meshComponent)
+		{
+			m_Meshes[chunkIndex] = meshComponent;
+		}
+	}
+
+	void ChunkGenerator::GenerateGradients()
+	{
+		PROFILE_AUTO("Generate terrain chunk gradient tables");
+
+		m_RandomTables = std::vector<std::vector<glm::vec2>>(m_NumOctaves);
+
+		std::mt19937 m_RandGenerator;
+		std::uniform_real_distribution<real> m_RandDistribution;
+		m_RandGenerator.seed(m_UseManualSeed ? m_ManualSeed : (u32)Time::CurrentMilliseconds());
+
+		auto dice = std::bind(m_RandDistribution, m_RandGenerator);
+
+		{
+			u32 tableWidth = m_BasePerlinTableWidth;
+			for (u32 octave = 0; octave < m_NumOctaves; ++octave)
+			{
+				m_RandomTables[octave] = std::vector<glm::vec2>(tableWidth * tableWidth);
+
+				for (u32 i = 0; i < m_RandomTables[octave].size(); ++i)
+				{
+					m_RandomTables[octave][i] = glm::normalize(glm::vec2(dice() * 2.0 - 1.0f, dice() * 2.0 - 1.0f));
+				}
+
+				tableWidth /= 2;
+			}
+		}
+
+		for (u32 i = 0; i < m_TableTextureIDs.size(); ++i)
+		{
+			g_Renderer->DestroyTexture(m_TableTextureIDs[i]);
+		}
+		m_TableTextureIDs.resize(m_RandomTables.size());
+		for (u32 i = 0; i < m_TableTextureIDs.size(); ++i)
+		{
+			const u32 tableWidth = (u32)glm::sqrt(m_RandomTables[i].size());
+			if (tableWidth < 1) break;
+			std::vector<glm::vec4> textureMem(m_RandomTables[i].size());
+			for (u32 j = 0; j < m_RandomTables[i].size(); ++j)
+			{
+				textureMem[j] = glm::vec4(m_RandomTables[i][j].x * 0.5f + 0.5f, m_RandomTables[i][j].y * 0.5f + 0.5f, 0.0f, 1.0f);
+			}
+			m_TableTextureIDs[i] = g_Renderer->InitializeTextureFromMemory(&textureMem[0], (u32)(textureMem.size() * sizeof(u32) * 4), VK_FORMAT_R32G32B32A32_SFLOAT, "Perlin random table", tableWidth, tableWidth, 2, VK_FILTER_NEAREST);
+		}
+	}
+
+	// TODO: Create SoA style SampleTerrain which fills out a buffer iteratively, sampling each octave in turn
+
+	// Returns a value in [0, 1]
+	real ChunkGenerator::SampleTerrain(const glm::vec2& pos)
+	{
+		real result = 0.0f;
+		real octave = m_BaseOctave;
+		u32 octaveIdx = m_NumOctaves - 1;
+		for (u32 i = 0; i < m_NumOctaves; ++i)
+		{
+			if (m_IsolateOctave == -1 || i == (u32)m_IsolateOctave)
+			{
+				result += SampleNoise(pos, octave, octaveIdx) * (octave / m_OctaveScale);
+			}
+			octave = octave / 2.0f;
+			--octaveIdx;
+		}
+		return glm::clamp((result / (real)(m_NumOctaves * 2.0f)) + 0.5f, 0.0f, 1.0f);
+	}
+
+	real SmoothBlend(real t)
+	{
+		return 6.0f * glm::pow(t, 5.0f) - 15.0f * glm::pow(t, 4.0f) + 10.0f * glm::pow(t, 3.0f);
+	}
+
+	// Returns a value in [-1, 1]
+	real ChunkGenerator::SampleNoise(const glm::vec2& pos, real octave, u32 octaveIdx)
+	{
+		const glm::vec2 scaledPos = pos / octave;
+		glm::vec2 posi = glm::vec2(std::floor(scaledPos.x), std::floor(scaledPos.y));
+		glm::vec2 posf = scaledPos - posi;
+
+		const std::vector<glm::vec2>& randomTables = m_RandomTables[octaveIdx];
+		const u32 tableEntryCount = (u32)randomTables.size();
+		const u32 tableWidth = (u32)std::sqrt(tableEntryCount);
+
+		glm::vec2 r00 = randomTables[(u32)((i32)(posi.y * tableWidth + posi.x) % tableEntryCount)];
+		glm::vec2 r10 = randomTables[(u32)((i32)(posi.y * tableWidth + posi.x + 1) % tableEntryCount)];
+		glm::vec2 r01 = randomTables[(u32)((i32)((posi.y + 1) * tableWidth + posi.x) % tableEntryCount)];
+		glm::vec2 r11 = randomTables[(u32)((i32)((posi.y + 1) * tableWidth + posi.x + 1) % tableEntryCount)];
+
+		real r00p = glm::dot(posf, r00);
+		real r10p = glm::dot(glm::vec2(posf.x - 1.0f, posf.y), r10);
+		real r01p = glm::dot(glm::vec2(posf.x, posf.y - 1.0f), r01);
+		real r11p = glm::dot(glm::vec2(posf.x - 1.0f, posf.y - 1.0f), r11);
+
+		real xBlend = SmoothBlend(posf.x);
+		real yBlend = SmoothBlend(posf.y);
+		real xval0 = Lerp(r00p, r10p, xBlend);
+		real xval1 = Lerp(r01p, r11p, xBlend);
+		real val = Lerp(xval0, xval1, yBlend);
+
+		return val;
+	}
+
+	void ChunkGenerator::PostInitialize()
+	{
+	}
+
+	void ChunkGenerator::Update()
+	{
+		std::vector<glm::vec2i> chunksInRadius(m_Meshes.size()); // Likely to be same size as m_LoadedChunks
+
+		glm::vec3 center = m_bPinCenter ? m_PinnedPos : g_CameraManager->CurrentCamera()->position;
+		const glm::vec2 centerXZ(center.x, center.z);
+		const glm::vec2i camChunkIdx = (glm::vec2i)(glm::vec2(center.x, center.z) / ChunkSize);
+		const i32 maxChunkIdxDiff = (i32)glm::ceil(m_LoadedChunkRadius / (real)ChunkSize);
+		const real radiusSqr = m_LoadedChunkRadius * m_LoadedChunkRadius;
+		for (i32 x = camChunkIdx.x - maxChunkIdxDiff; x < camChunkIdx.x + maxChunkIdxDiff; ++x)
+		{
+			for (i32 z = camChunkIdx.y - maxChunkIdxDiff; z < camChunkIdx.y + maxChunkIdxDiff; ++z)
+			{
+				glm::vec2 chunkCenter((x + 0.5f) * ChunkSize, (z + 0.5f) * ChunkSize);
+				if (glm::distance2(chunkCenter, centerXZ) < radiusSqr)
+				{
+					chunksInRadius.push_back(glm::vec2i(x, z));
+				}
+			}
+		}
+
+		// Freshly unloaded chunks
+		for (auto chunkIter = m_Meshes.begin(); chunkIter != m_Meshes.end(); ++chunkIter)
+		{
+			const glm::vec2i& chunkIdx = chunkIter->first;
+			if (Find(chunksInRadius, chunkIdx) == chunksInRadius.end() && m_ChunksToDestroy.find(chunkIdx) == m_ChunksToDestroy.end())
+			{
+				m_ChunksToDestroy.emplace(chunkIdx);
+
+				if (m_ChunksToLoad.find(chunkIdx) != m_ChunksToLoad.end())
+				{
+					m_ChunksToLoad.erase(chunkIdx);
+				}
+			}
+		}
+
+		// Freshly loaded chunks
+		for (const glm::vec2i& chunkIdx : chunksInRadius)
+		{
+			auto meshIter = m_Meshes.find(chunkIdx);
+			if (meshIter == m_Meshes.end() && m_ChunksToLoad.find(chunkIdx) == m_ChunksToLoad.end())
+			{
+				m_ChunksToLoad.emplace(chunkIdx);
+
+				if (m_ChunksToDestroy.find(chunkIdx) != m_ChunksToDestroy.end())
+				{
+					m_ChunksToDestroy.erase(chunkIdx);
+				}
+			}
+		}
+
+		{
+			PROFILE_AUTO("Destroy terrain chunks");
+			ns start = Time::CurrentNanoseconds();
+			i32 iterationCount = 0;
+			while (m_ChunksToDestroy.size() > 0)
+			{
+				glm::vec2i chunkIdx = *m_ChunksToDestroy.begin();
+				m_ChunksToDestroy.erase(m_ChunksToDestroy.begin());
+
+				auto iter = m_Meshes.find(chunkIdx);
+				assert(iter != m_Meshes.end());
+				iter->second->Destroy();
+				m_Meshes.erase(iter);
+
+				++iterationCount;
+
+				ns now = Time::CurrentNanoseconds();
+				if ((now - start) > m_CreationBudgetPerFrame)
+				{
+					break;
+				}
+			}
+		}
+
+		{
+			PROFILE_AUTO("Generate terrain chunks");
+			ns start = Time::CurrentNanoseconds();
+			i32 iterationCount = 0;
+			while (m_ChunksToLoad.size() > 0)
+			{
+				GenerateChunk(*m_ChunksToLoad.begin());
+				m_ChunksToLoad.erase(m_ChunksToLoad.begin());
+
+				++iterationCount;
+
+				ns now = Time::CurrentNanoseconds();
+				if ((now - start) > m_CreationBudgetPerFrame)
+				{
+					break;
+				}
+			}
+		}
+
+		if (m_bDisplayTables)
+		{
+			real textureScale = 0.3f;
+			real textureY = -0.05f;
+			for (u32 i = 0; i < m_TableTextureIDs.size(); ++i)
+			{
+				SpriteQuadDrawInfo drawInfo = {};
+				drawInfo.anchor = AnchorPoint::TOP_RIGHT;
+				drawInfo.bScreenSpace = true;
+				drawInfo.bWriteDepth = false;
+				drawInfo.bReadDepth = false;
+				drawInfo.scale = glm::vec3(textureScale);
+				drawInfo.pos = glm::vec3(0.0f, textureY, 0.0f);
+				drawInfo.textureID = m_TableTextureIDs[i];
+				g_Renderer->EnqueueSprite(drawInfo);
+
+				textureY -= (textureScale * 2.0f + 0.01f);
+				textureScale /= 2.0f;
+			}
+		}
+	}
+
+	void ChunkGenerator::Destroy()
+	{
+		for (auto iter = m_Meshes.begin(); iter != m_Meshes.end(); ++iter)
+		{
+			iter->second->Destroy();
+		}
+		m_Meshes.clear();
+	}
+
+	void ChunkGenerator::DrawImGuiObjects()
+	{
+		GameObject::DrawImGuiObjects();
+
+		ImGui::Text("Loaded chunks: %u (loading: %u)", m_Meshes.size(),  m_ChunksToLoad.size());
+
+		bool bRegen = false;
+
+		bRegen = ImGui::Checkbox("Highlight grid", &m_bHighlightGrid) || bRegen;
+
+		ImGui::SameLine();
+
+		ImGui::Checkbox("Display tables", &m_bDisplayTables);
+
+		if (ImGui::Checkbox("Pin center", &m_bPinCenter))
+		{
+			if (m_bPinCenter)
+			{
+				m_PinnedPos = g_CameraManager->CurrentCamera()->position;
+			}
+		}
+
+		bRegen = ImGui::SliderFloat("Octave scale", &m_OctaveScale, 1.0f, 250.0f) || bRegen;
+		const u32 maxOctaveCount = (u32)glm::ceil(glm::log(m_BasePerlinTableWidth)) + 1;
+		bRegen = ImGuiExt::SliderUInt("Octave count", &m_NumOctaves, 1, maxOctaveCount) || bRegen;
+
+		bRegen = ImGui::SliderInt("Isolate octave", &m_IsolateOctave, -1, m_NumOctaves - 1) || bRegen;
+
+		u32 oldtableWidth = m_BasePerlinTableWidth;
+		if (ImGuiExt::InputUInt("Base table width", &m_BasePerlinTableWidth, 1, 10, ImGuiInputTextFlags_EnterReturnsTrue))
+		{
+			m_BasePerlinTableWidth = NextPowerOfTwo(m_BasePerlinTableWidth);
+			if (m_BasePerlinTableWidth != oldtableWidth)
+			{
+				GenerateGradients();
+				bRegen = true;
+			}
+		}
+
+		bRegen = ImGui::Button("Regen") || bRegen;
+
+		ImGui::SameLine();
+
+		bRegen = ImGui::Checkbox("Use manual seed", &m_UseManualSeed) || bRegen;
+
+		if (m_UseManualSeed)
+		{
+			bRegen = ImGui::InputInt("Manual seed", &m_ManualSeed) || bRegen;
+		}
+
+		bRegen = ImGuiExt::InputUInt("Verts per chunk", &VertCountPerChunkAxis) || bRegen;
+
+		if (VertCountPerChunkAxis > 2)
+		{
+			if (ImGui::Button("/2"))
+			{
+				bRegen = true;
+				VertCountPerChunkAxis /= 2;
+			}
+
+			ImGui::SameLine();
+		}
+
+		if (ImGui::Button("x2"))
+		{
+			bRegen = true;
+			VertCountPerChunkAxis *= 2;
+		}
+
+		bRegen = ImGui::InputFloat("Chunk size", &ChunkSize, 0.1f, 1.0f, "%.0f", ImGuiInputTextFlags_EnterReturnsTrue) || bRegen;
+
+		bRegen = ImGui::SliderFloat("Max height", &MaxHeight, 0.1f, 512.0f) || bRegen;
+
+		bRegen = ImGui::SliderFloat("nscale", &nscale, 0.01f, 2.0f) || bRegen;
+
+		bRegen = ImGui::SliderFloat("octave", &m_BaseOctave, 1.0f, 2048.0f) || bRegen;
+
+		bRegen = ImGui::ColorEdit3("low", &m_LowCol.x) || bRegen;
+		bRegen = ImGui::ColorEdit3("mid", &m_MidCol.x) || bRegen;
+		bRegen = ImGui::ColorEdit3("high", &m_HighCol.x) || bRegen;
+
+		if (bRegen)
+		{
+			GenerateGradients();
+			DestroyAllChunks();
+		}
+
+		ImGui::SliderFloat("View radius", &m_LoadedChunkRadius, 0.01f, 8192.0f);
+	}
+
+	void ChunkGenerator::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	{
+		UNREFERENCED_PARAMETER(matIDs);
+		UNREFERENCED_PARAMETER(scene);
+
+		if (parentObject.HasField("chunk generator info"))
+		{
+			JSONObject chunkGenInfo = parentObject.GetObject("chunk generator info");
+			VertCountPerChunkAxis = (u32)chunkGenInfo.GetInt("vert count per chunk axis");
+			ChunkSize = chunkGenInfo.GetFloat("chunk size");
+			MaxHeight = chunkGenInfo.GetFloat("max height");
+			m_UseManualSeed = chunkGenInfo.GetBool("use manual seed");
+			m_ManualSeed = (u32)chunkGenInfo.GetInt("manual seed");
+
+			chunkGenInfo.SetFloatChecked("loaded chunk radius", m_LoadedChunkRadius);
+			chunkGenInfo.SetUIntChecked("base table width", m_BasePerlinTableWidth);
+
+			chunkGenInfo.SetVec3Checked("low colour", m_LowCol);
+			chunkGenInfo.SetVec3Checked("mid colour", m_MidCol);
+			chunkGenInfo.SetVec3Checked("high colour", m_HighCol);
+
+			chunkGenInfo.SetFloatChecked("base octave", m_BaseOctave);
+			chunkGenInfo.SetFloatChecked("octave scale", m_OctaveScale);
+			chunkGenInfo.SetUIntChecked("num octaves", m_NumOctaves);
+
+			chunkGenInfo.SetBoolChecked("pin center", m_bPinCenter);
+			chunkGenInfo.SetVec3Checked("pinned center", m_PinnedPos);
+		}
+	}
+
+	void ChunkGenerator::SerializeUniqueFields(JSONObject& parentObject) const
+	{
+		JSONObject chunkGenInfo = {};
+
+		chunkGenInfo.fields.emplace_back("vert count per chunk axis", JSONValue((i32)VertCountPerChunkAxis));
+		chunkGenInfo.fields.emplace_back("chunk size", JSONValue(ChunkSize));
+		chunkGenInfo.fields.emplace_back("max height", JSONValue(MaxHeight));
+		chunkGenInfo.fields.emplace_back("use manual seed", JSONValue(m_UseManualSeed));
+		chunkGenInfo.fields.emplace_back("manual seed", JSONValue((i32)m_ManualSeed));
+
+		chunkGenInfo.fields.emplace_back("loaded chunk radius", JSONValue(m_LoadedChunkRadius));
+
+		chunkGenInfo.fields.emplace_back("base table width", JSONValue((i32)m_BasePerlinTableWidth));
+
+		chunkGenInfo.fields.emplace_back("low colour", JSONValue(VecToString(m_LowCol)));
+		chunkGenInfo.fields.emplace_back("mid colour", JSONValue(VecToString(m_MidCol)));
+		chunkGenInfo.fields.emplace_back("high colour", JSONValue(VecToString(m_HighCol)));
+
+		chunkGenInfo.fields.emplace_back("base octave", JSONValue(m_BaseOctave));
+		chunkGenInfo.fields.emplace_back("octave scale", JSONValue(m_OctaveScale));
+		chunkGenInfo.fields.emplace_back("num octaves", JSONValue((i32)m_NumOctaves));
+
+		chunkGenInfo.fields.emplace_back("pin center", JSONValue(m_bPinCenter));
+		chunkGenInfo.fields.emplace_back("pinned center", JSONValue(VecToString(m_PinnedPos)));
+
+		parentObject.fields.emplace_back("chunk generator info", JSONValue(chunkGenInfo));
 	}
 } // namespace flex

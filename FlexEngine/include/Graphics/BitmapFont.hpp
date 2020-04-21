@@ -2,6 +2,12 @@
 
 #include "Helpers.hpp"
 
+#if COMPILE_VULKAN
+IGNORE_WARNINGS_PUSH
+#include "volk/volk.h"
+IGNORE_WARNINGS_POP
+#endif
+
 namespace flex
 {
 #if COMPILE_OPEN_GL
@@ -71,6 +77,7 @@ namespace flex
 #elif COMPILE_VULKAN
 		vk::VulkanTexture* SetTexture(vk::VulkanTexture* newTex);
 		vk::VulkanTexture* GetTexture();
+		// TODO: Remove all platform specific code from file
 		VkDescriptorSet m_DescriptorSet = VK_NULL_HANDLE;
 #endif
 		void ClearTexture();

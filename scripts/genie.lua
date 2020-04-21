@@ -1,10 +1,14 @@
 
--- 
+--
 -- NOTES:
--- - DLLs should be built using the Multi-threaded Debug DLL flag (/MDd) in debug,
---   and the Multi-threade DLL flag (/MD) in release
--- 
+-- - DLLs should be built using the
+--     - Multi-threaded Debug DLL flag (/MDd) in debug
+--     - Multi-threaded DLL flag (/MD)        in release
+--
 
+PROJECT_DIR = path.getabsolute("..")
+SOURCE_DIR = path.join(PROJECT_DIR, "FlexEngine/")
+DEPENDENCIES_DIR = path.join(SOURCE_DIR, "dependencies/")
 
 solution "Flex"
 	configurations {
@@ -14,22 +18,13 @@ solution "Flex"
 		"Shipping_WithSymbols"
 	}
 
-	platforms {
-		"x32",
-		--"x64",
-	}
+	platforms { "x32", "x64" }
 
 	language "C++"
 
 	location "../build/"
 	objdir "../build/"
 	windowstargetplatformversion "10.0.17763.0"
-
-
-PROJECT_DIR = path.getabsolute("..")
-SOURCE_DIR = path.join(PROJECT_DIR, "FlexEngine/")
-DEPENDENCIES_DIR = path.join(SOURCE_DIR, "dependencies/")
-
 
 -- Put intermediate files under build/Intermediate/config_platform/project
 -- Put binaries under bin/config/project/platform --TODO: Really? confirm
@@ -48,29 +43,26 @@ function outputDirectories(_project)
 end
 
 
-function platformLibraries()
-	local cfgs = configurations()
-	for i = 1, #cfgs do
-		local subdir = ""
-		if (string.startswith(cfgs[i], "Debug"))
-			then subdir = "Debug"
-			else subdir = "Release"
-		end
-		configuration { "vs*", cfgs[i] }
-			libdirs { 
-				path.join(SOURCE_DIR, path.join("lib/", subdir))
-			}
+function configName(config)
+	local cfgStr = ""
+	if (string.startswith(config, "Debug"))
+		then cfgStr = "Debug"
+		else cfgStr = "Release"
 	end
-	configuration {}
+	return cfgStr
 end
 
-function staticPlatformLibraries()
-	local p = platforms()
-	for j = 1, #p do
-		configuration { "vs*", p[j] }
-			libdirs { 
-				path.join(DEPENDENCIES_DIR, path.join("vulkan/lib/", p[j])),
-			}
+function platformLibraries(config)
+	local cfgs = configurations()
+	local pfms = platforms()
+	for p = 1, #pfms do
+		local platformStr = pfms[p]
+		for i = 1, #cfgs do
+			local cfgStr = configName(cfgs[i])
+			local subdir = path.join(platformStr, cfgStr)
+			configuration { config, pfms[p], cfgs[i] }
+			libdirs { path.join(SOURCE_DIR, path.join("lib/", subdir)) }
+		end
 	end
 	configuration {}
 end
@@ -79,14 +71,17 @@ end
 -- copy files that are specific for the platform being built for
 function windowsPlatformPostBuild()
 	local cfgs = configurations()
-
+	local p = platforms()
 	for i = 1, #cfgs do
-		--copy dlls and resources after build
-		configuration { "vs*", cfgs[i] }
-			postbuildcommands { 
-				"copy \"$(SolutionDir)..\\FlexEngine\\lib\\openal32.dll\" " ..
-				"\"$(OutDir)openal32.dll\""
-			}
+		for j = 1, #p do
+			configuration { "vs*", cfgs[i], p[j] }
+				--copy dlls and resources after build
+				local cfgStr = configName(cfgs[i])
+				postbuildcommands {
+					-- TODO: Copy into x32 & x64 build dirs
+					"copy \"$(SolutionDir)..\\FlexEngine\\lib\\" .. p[j] .. "\\" .. cfgStr .. "\\openal32.dll\" \"$(OutDir)\\\""
+				}
+		end
 	end
 	configuration {}
 end
@@ -104,32 +99,41 @@ configuration "Shipping"
 configuration "Shipping_WithSymbols"
 	defines { "SHIPPING", "SYMBOLS" }
 	flags {"OptimizeSpeed", "Symbols", "No64BitChecks" }
+configuration "x32"
+	defines "FLEX_32"
+configuration "x64"
+	defines "FLEX_64"
 configuration {}
 
-
-configuration "vs*"
+configuration {}
 	flags { "NoIncrementalLink", "NoEditAndContinue" }
-	linkoptions { "/ignore:4221" }
-	defines { "PLATFORM_Win" }
-	includedirs { 
-		path.join(SOURCE_DIR, "include"),
-		path.join(DEPENDENCIES_DIR, "glad/include"),
-		path.join(DEPENDENCIES_DIR, "glfw/include"), 
-		path.join(DEPENDENCIES_DIR, "glm"), 
-		path.join(DEPENDENCIES_DIR, "stb"), 
+	includedirs { path.join(SOURCE_DIR, "include") }
+
+	-- Files to include that shouldn't get warnings reported on
+	systemincludedirs {
+		path.join(DEPENDENCIES_DIR, "glfw/include"),
+		path.join(DEPENDENCIES_DIR, "glm"),
+		path.join(DEPENDENCIES_DIR, "stb"),
 		path.join(DEPENDENCIES_DIR, "imgui"),
 		path.join(DEPENDENCIES_DIR, "vulkan/include"),
 		path.join(DEPENDENCIES_DIR, "bullet/src"),
-		path.join(DEPENDENCIES_DIR, "openAL"),
+		path.join(DEPENDENCIES_DIR, "openAL/include"),
 		path.join(DEPENDENCIES_DIR, "freetype/include"),
+		path.join(DEPENDENCIES_DIR, "shaderc/include"),
 		DEPENDENCIES_DIR,
 	}
+
 	debugdir "$(OutDir)"
+configuration "vs*"
+	defines { "PLATFORM_Win", "_WINDOWS" }
+	linkoptions { "/ignore:4221" }
 configuration { "vs*", "x32" }
 	flags { "EnableSSE2" }
 	defines { "WIN32" }
 configuration { "x32" }
 	defines { "PLATFORM_x32" }
+configuration "linux*"
+	defines { "linux", "__linux", "__linux__" }
 configuration {}
 
 
@@ -137,66 +141,70 @@ startproject "Flex"
 
 project "Flex"
 	kind "ConsoleApp"
-
+	defines { "_CONSOLE" }
 	location "../build"
-
-    defines { "_CONSOLE" }
-
 	outputDirectories("FlexEngine")
+
+	iif(os.is("windows"), platformLibraries("vs*"), platformLibraries("linux*"))
 
 	configuration "vs*"
 		flags { "Winmain"}
+		links { "opengl32" }
 
-		links { "opengl32" } 
+	configuration "linux*"
+		linkoptions {
+			-- lpthread for shaderc?
+			"-pthread", -- For pthread_create
+			"-ldl", -- For dlopen, etc.
+		}
+		buildoptions {
+			"-Wfatal-errors"
+		}
+		buildoptions_cpp {
+			-- Ignored warnings:
+			"-Wno-reorder", "-Wno-unused-parameter"
+		}
+		buildoptions_c {
+			-- no-reorder isn't valid in c
+		}
+	configuration {}
 
-	platformLibraries()
-	staticPlatformLibraries()
 	windowsPlatformPostBuild()
 
-	--Linked libraries
-    links { "opengl32", "glfw3", "vulkan-1", "OpenAL32" }
-
-
-configuration { "Debug" }
-	links { "BulletCollision_Debug", "BulletDynamics_Debug", "LinearMath_Debug", "freetyped" } 
-configuration { "Development" }
-	links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" }
-configuration { "Shipping" }
-	links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" } 
-configuration { "Shipping_WithSymbols" }
-	links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" } 
+--Linked libraries
+	-- Windows
+		-- Common
+		configuration "vs*"
+			links { "opengl32", "glfw3", "OpenAL32" }
+		-- Debug-only
+		configuration { "vs*", "Debug" }
+			links { "BulletCollision_Debug", "BulletDynamics_Debug", "LinearMath_Debug", "freetype", "shaderc_combined" }
+		configuration { "vs*", "Development" }
+			links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" }
+		configuration { "vs*", "Shipping" }
+			links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" }
+		configuration { "vs*", "Shipping_WithSymbols" }
+			links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" }
+	-- linux
+		configuration "linux*"
+			links { "glfw3", "openal", "BulletDynamics", "BulletCollision", "LinearMath", "freetype", "X11", "png", "z", "shaderc_combined" }
 configuration {}
 
-	--Additional includedirs
-	includedirs { 
-		path.join(SOURCE_DIR, "include"),
-	}
+--Source files
+files {
+	path.join(SOURCE_DIR, "include/**.h"),
+	path.join(SOURCE_DIR, "include/**.hpp"),
+	path.join(SOURCE_DIR, "src/**.cpp"),
+	path.join(DEPENDENCIES_DIR, "imgui/**.h"),
+	path.join(DEPENDENCIES_DIR, "imgui/**.cpp"),
+	path.join(DEPENDENCIES_DIR, "volk/volk.h"),
+}
 
-	--Source files
-    files {
-		path.join(SOURCE_DIR, "include/**.h"), 
-		path.join(SOURCE_DIR, "include/**.hpp"), 
-		path.join(SOURCE_DIR, "src/**.cpp"), 
-		path.join(DEPENDENCIES_DIR, "imgui/**.h"),
-		path.join(DEPENDENCIES_DIR, "imgui/**.cpp"),
-		path.join(DEPENDENCIES_DIR, "glad/src/glad.c"),
-	}
+--Exclude the following files from the build, but keep in the project
+removefiles {
+}
 
-	--Exclude the following files from the build, but keep in the project
-	removefiles {
-		--path.join(DEPENDENCIES_DIR, "imgui/imconfig_demo.cpp")
-	}
-
-	-- Don't use pre-compiled header for the following files
-	nopch {
-		path.join(DEPENDENCIES_DIR, "imgui/**.cpp"),
-		path.join(DEPENDENCIES_DIR, "glad/src/glad.c")
-	}
-
-	pchheader "stdafx.hpp"
-	pchsource "../FlexEngine/src/stdafx.cpp"
-
-
-
-
--- TODO: Figure out how to set stdafx.cpp to use /Yc compiler flag to generate precompiled header object
+-- Don't use pre-compiled header for the following files
+nopch {
+	path.join(DEPENDENCIES_DIR, "imgui/**.cpp"),
+}

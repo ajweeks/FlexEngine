@@ -11,6 +11,7 @@
 #include "Profiler.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
+#include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
 
@@ -18,7 +19,8 @@ namespace flex
 {
 	namespace vk
 	{
-		VulkanPhysicsDebugDraw::VulkanPhysicsDebugDraw()
+		VulkanPhysicsDebugDraw::VulkanPhysicsDebugDraw() :
+			m_VertexBufferCreateInfo({})
 		{
 		}
 
@@ -37,6 +39,7 @@ namespace flex
 				debugMatCreateInfo.name = debugMatName;
 				debugMatCreateInfo.persistent = true;
 				debugMatCreateInfo.visibleInEditor = true;
+				debugMatCreateInfo.bDynamic = true;
 				m_MaterialID = g_Renderer->InitializeMaterial(&debugMatCreateInfo);
 			}
 
@@ -59,13 +62,13 @@ namespace flex
 
 		void VulkanPhysicsDebugDraw::draw3dText(const btVector3& location, const char* textString)
 		{
-			UNREFERENCED_PARAMETER(location);
-			UNREFERENCED_PARAMETER(textString);
+			FLEX_UNUSED(location);
+			FLEX_UNUSED(textString);
 		}
 
 		void VulkanPhysicsDebugDraw::setDebugMode(int debugMode)
 		{
-			UNREFERENCED_PARAMETER(debugMode);
+			FLEX_UNUSED(debugMode);
 			// NOTE: Call UpdateDebugMode instead of this
 		}
 
@@ -76,9 +79,14 @@ namespace flex
 
 		void VulkanPhysicsDebugDraw::drawLine(const btVector3& from, const btVector3& to, const btVector3& color)
 		{
+			drawLine(from, to, color, color);
+		}
+
+		void VulkanPhysicsDebugDraw::drawLine(const btVector3& from, const btVector3& to, const btVector3& colorFrom, const btVector3& colorTo)
+		{
 			if (m_LineSegmentIndex < MAX_NUM_LINE_SEGMENTS)
 			{
-				m_LineSegments[m_LineSegmentIndex++] = { from, to, color };
+				m_LineSegments[m_LineSegmentIndex++] = { from, to, colorFrom, colorTo };
 			}
 			else
 			{
@@ -88,25 +96,30 @@ namespace flex
 
 		void VulkanPhysicsDebugDraw::drawContactPoint(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector3& color)
 		{
-			UNREFERENCED_PARAMETER(PointOnB);
-			UNREFERENCED_PARAMETER(normalOnB);
-			UNREFERENCED_PARAMETER(distance);
-			UNREFERENCED_PARAMETER(lifeTime);
-			UNREFERENCED_PARAMETER(color);
-			// TODO: FIXME: UNIMPLEMENTED: Implement me (or don't)
+			FLEX_UNUSED(PointOnB);
+			FLEX_UNUSED(normalOnB);
+			FLEX_UNUSED(distance);
+			FLEX_UNUSED(lifeTime);
+			FLEX_UNUSED(color);
 		}
 
 		void VulkanPhysicsDebugDraw::DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& color)
 		{
+			DrawLineWithAlpha(from, to, color, color);
+		}
+
+		void VulkanPhysicsDebugDraw::DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& colorFrom, const btVector4& colorTo)
+		{
 			if (m_LineSegmentIndex < MAX_NUM_LINE_SEGMENTS)
 			{
-				m_LineSegments[m_LineSegmentIndex++] = { from, to, color };
+				m_LineSegments[m_LineSegmentIndex++] = { from, to, colorFrom, colorTo };
 			}
 			else
 			{
 				PrintWarn("Max number of debug draw lines reached (%d)\n", MAX_NUM_LINE_SEGMENTS);
 			}
 		}
+
 
 		void VulkanPhysicsDebugDraw::Draw()
 		{
@@ -118,8 +131,13 @@ namespace flex
 			{
 				PROFILE_AUTO("PhysicsDebugRender > Update vertex buffer");
 
+				PROFILE_BEGIN("Hash vertex buffer");
+				u32 oldHash = HashVertexBufferDataCreateInfo(m_VertexBufferCreateInfo);
+				PROFILE_END("Hash vertex buffer");
+
 				m_VertexBufferCreateInfo.positions_3D.clear();
 				m_VertexBufferCreateInfo.colors_R32G32B32A32.clear();
+				indexBuffer.clear();
 
 				u32 numVerts = m_LineSegmentIndex * 2;
 
@@ -127,23 +145,43 @@ namespace flex
 				{
 					m_VertexBufferCreateInfo.positions_3D.resize(numVerts * 2);
 					m_VertexBufferCreateInfo.colors_R32G32B32A32.resize(numVerts * 2);
+					indexBuffer.resize(numVerts * 2);
+				}
+				else
+				{
+					m_VertexBufferCreateInfo.positions_3D.resize(numVerts);
+					m_VertexBufferCreateInfo.colors_R32G32B32A32.resize(numVerts);
+					indexBuffer.resize(numVerts);
 				}
 
 				i32 i = 0;
 				glm::vec3* posData = m_VertexBufferCreateInfo.positions_3D.data();
 				glm::vec4* colData = m_VertexBufferCreateInfo.colors_R32G32B32A32.data();
+				u32* idxData = indexBuffer.data();
 				for (u32 li = 0; li < m_LineSegmentIndex; ++li)
 				{
 					memcpy(posData + i, m_LineSegments[li].start, sizeof(real) * 3);
 					memcpy(posData + i + 1, m_LineSegments[li].end, sizeof(real) * 3);
 
-					memcpy(colData + i, m_LineSegments[li].color, sizeof(real) * 4);
-					memcpy(colData + i + 1, m_LineSegments[li].color, sizeof(real) * 4);
+					memcpy(colData + i, m_LineSegments[li].colorFrom, sizeof(real) * 4);
+					memcpy(colData + i + 1, m_LineSegments[li].colorTo, sizeof(real) * 4);
+
+					u32 idx0 = li * 2;
+					u32 idx1 = li * 2 + 1;
+					memcpy(idxData + i, &idx0, sizeof(u32));
+					memcpy(idxData + i + 1, &idx1, sizeof(u32));
 
 					i += 2;
 				}
 
-				m_ObjectMesh->UpdateProceduralData(&m_VertexBufferCreateInfo);
+				PROFILE_BEGIN("Hash vertex buffer");
+				u32 newHash = HashVertexBufferDataCreateInfo(m_VertexBufferCreateInfo);
+				PROFILE_END("Hash vertex buffer");
+
+				if (newHash != oldHash)
+				{
+					m_ObjectMesh->GetSubMeshes()[0]->UpdateProceduralData(m_VertexBufferCreateInfo, indexBuffer);
+				}
 			}
 		}
 
@@ -163,9 +201,9 @@ namespace flex
 			m_Object = new GameObject("Vk Physics Debug Draw", GameObjectType::_NONE);
 			m_Object->SetSerializable(false);
 			m_Object->SetVisibleInSceneExplorer(false);
-			m_ObjectMesh = m_Object->SetMeshComponent(new MeshComponent(m_Object, m_MaterialID));
+			m_ObjectMesh = m_Object->SetMesh(new Mesh(m_Object));
 			const VertexAttributes vertexAttributes = (u32)VertexAttribute::POSITION | (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
-			if (!m_ObjectMesh->CreateProcedural(16384 * 4, vertexAttributes, TopologyMode::LINE_LIST, &createInfo))
+			if (!m_ObjectMesh->CreateProcedural(256, vertexAttributes, m_MaterialID, TopologyMode::LINE_LIST, &createInfo))
 			{
 				PrintWarn("Vulkan physics debug renderer failed to initialize vertex buffer");
 			}

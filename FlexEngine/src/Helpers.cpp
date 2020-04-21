@@ -2,11 +2,6 @@
 
 #include "Helpers.hpp"
 
-#include <commdlg.h> // For OPENFILENAME
-#include <shellapi.h> // For ShellExecute
-
-#include <direct.h> // For _getcwd
-#include <stdio.h> // For gcvt, fopen
 #include <iomanip> // for setprecision
 
 IGNORE_WARNINGS_PUSH
@@ -20,6 +15,7 @@ IGNORE_WARNINGS_POP
 
 #include "FlexEngine.hpp" // For FlexEngine::s_CurrentWorkingDirectory
 #include "Graphics/Renderer.hpp" // For MAX_TEXTURE_DIM
+#include "Platform/Platform.hpp"
 #include "Transform.hpp"
 
 // Taken from "AL/al.h":
@@ -28,8 +24,14 @@ IGNORE_WARNINGS_POP
 #define AL_FORMAT_STEREO8                         0x1102
 #define AL_FORMAT_STEREO16                        0x1103
 
+static const char* SEPARATOR_STR = ", ";
+
 namespace flex
 {
+	static const real UnitializedMemoryFloat = -431602080.0f;
+
+	static u32 _lastUID = 0;
+
 	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount, bool bFlipVertically, u32* channelCountOut /* = nullptr */)
 	{
 		assert(requestedChannelCount == 3 ||
@@ -125,7 +127,7 @@ namespace flex
 		pixels = nullptr;
 	}
 
-	std::string FloatToString(real f, i32 precision)
+	std::string FloatToString(real f, i32 precision /* = DEFAULT_FLOAT_PRECISION */)
 	{
 		std::stringstream stream;
 		stream << std::fixed << std::setprecision(precision) << f;
@@ -169,7 +171,7 @@ namespace flex
 		str(str),
 		anchor(anchor),
 		pos(pos.x, pos.y, -1.0f),
-		rot(QUAT_UNIT),
+		rot(QUAT_IDENTITY),
 		color(color),
 		xSpacing(xSpacing),
 		scale(scale)
@@ -191,8 +193,7 @@ namespace flex
 
 	bool FileExists(const std::string& filePath)
 	{
-		FILE* file = nullptr;
-		fopen_s(&file, filePath.c_str(), "r");
+		FILE* file = fopen(filePath.c_str(), "r");
 
 		if (file)
 		{
@@ -203,9 +204,9 @@ namespace flex
 		return false;
 	}
 
-	bool ReadFile(const std::string& filePath, std::string& fileContents, bool bBinaryFile)
+	bool ReadFile(const std::string& filePath, std::string& outFileContents, bool bBinaryFile)
 	{
-		int fileMode = std::ios::in;
+		std::ios::openmode fileMode = std::ios::in;
 		if (bBinaryFile)
 		{
 			fileMode |= std::ios::binary;
@@ -225,18 +226,18 @@ namespace flex
 
 		if ((size_t)fileLen > 0)
 		{
-			fileContents.resize((size_t)fileLen);
+			outFileContents.resize((size_t)fileLen);
 
 			file.seekg(0, std::ios::beg);
-			file.read(&fileContents[0], fileLen);
+			file.read(&outFileContents[0], fileLen);
 			file.close();
 
 			// Remove extra null terminators caused by Windows line endings
-			for (i32 charIndex = 0; charIndex < (i32)fileContents.size() - 1; ++charIndex)
+			for (i32 charIndex = 0; charIndex < (i32)outFileContents.size() - 1; ++charIndex)
 			{
-				if (fileContents[charIndex] == '\0')
+				if (outFileContents[charIndex] == '\0')
 				{
-					fileContents = fileContents.substr(0, charIndex);
+					outFileContents = outFileContents.substr(0, charIndex);
 				}
 			}
 		}
@@ -246,7 +247,7 @@ namespace flex
 
 	bool ReadFile(const std::string& filePath, std::vector<char>& vec, bool bBinaryFile)
 	{
-		i32 fileMode = std::ios::in | std::ios::ate;
+		std::ios::openmode fileMode = std::ios::in | std::ios::ate;
 		if (bBinaryFile)
 		{
 			fileMode |= std::ios::binary;
@@ -278,7 +279,7 @@ namespace flex
 
 	bool WriteFile(const std::string& filePath, const std::vector<char>& vec, bool bBinaryFile)
 	{
-		i32 fileMode = std::ios::out | std::ios::trunc;
+		std::ios::openmode fileMode = std::ios::out | std::ios::trunc;
 		if (bBinaryFile)
 		{
 			fileMode |= std::ios::binary;
@@ -296,170 +297,10 @@ namespace flex
 		return false;
 	}
 
-	bool DeleteFile(const std::string& filePath, bool bPrintErrorOnFailure)
-	{
-		if (::DeleteFile(filePath.c_str()))
-		{
-			return true;
-		}
-		else
-		{
-			if (bPrintErrorOnFailure)
-			{
-				PrintError("Failed to delete file %s\n", filePath.c_str());
-			}
-			return false;
-		}
-	}
-
-	bool CopyFile(const std::string& filePathFrom, const std::string& filePathTo)
-	{
-		if (::CopyFile(filePathFrom.c_str(), filePathTo.c_str(), 0))
-		{
-			return true;
-		}
-		else
-		{
-			PrintError("Failed to copy file from \"%s\" to \"%s\"\n", filePathFrom.c_str(), filePathTo.c_str());
-			return false;
-		}
-	}
-
-	bool DirectoryExists(const std::string& absoluteDirectoryPath)
-	{
-		if (absoluteDirectoryPath.find("..") != std::string::npos)
-		{
-			PrintError("Attempted to create directory using relative path! Must specify absolute path!\n");
-			return false;
-		}
-
-		DWORD dwAttrib = GetFileAttributes(absoluteDirectoryPath.c_str());
-
-		return (dwAttrib != INVALID_FILE_ATTRIBUTES &&
-			dwAttrib & FILE_ATTRIBUTE_DIRECTORY);
-	}
-
-	void OpenExplorer(const std::string& absoluteDirectory)
-	{
-		ShellExecute(NULL, "open", absoluteDirectory.c_str(), NULL, NULL, SW_SHOWDEFAULT);
-	}
-
 	bool OpenJSONFileDialog(const std::string& windowTitle, const std::string& absoluteDirectory, std::string& outSelectedAbsFilePath)
 	{
 		char filter[] = "JSON files\0*.json\0\0";
-		return OpenFileDialog(windowTitle, absoluteDirectory, outSelectedAbsFilePath, filter);
-	}
-
-	bool OpenFileDialog(const std::string& windowTitle, const std::string& absoluteDirectory, std::string& outSelectedAbsFilePath, char filter[] /* = nullptr */)
-	{
-		OPENFILENAME openFileName = {};
-		openFileName.lStructSize = sizeof(OPENFILENAME);
-		openFileName.lpstrInitialDir = absoluteDirectory.c_str();
-		openFileName.nMaxFile = (filter == nullptr ? 0 : strlen(filter));
-		if (openFileName.nMaxFile && filter)
-		{
-			openFileName.lpstrFilter = filter;
-		}
-		openFileName.nFilterIndex = 0;
-		const i32 MAX_FILE_PATH_LEN = 512;
-		char fileBuf[MAX_FILE_PATH_LEN];
-		memset(fileBuf, '\0', MAX_FILE_PATH_LEN - 1);
-		openFileName.lpstrFile = fileBuf;
-		openFileName.nMaxFile = MAX_FILE_PATH_LEN;
-		openFileName.lpstrTitle = windowTitle.c_str();
-		openFileName.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
-		bool bSuccess = GetOpenFileName(&openFileName) == 1;
-
-		if (openFileName.lpstrFile)
-		{
-			outSelectedAbsFilePath = ReplaceBackSlashesWithForward(openFileName.lpstrFile);
-		}
-
-		return bSuccess;
-	}
-
-	bool FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileType)
-	{
-		std::string cleanedFileType = fileType;
-		{
-			size_t dotPos = cleanedFileType.find('.');
-			if (dotPos != std::string::npos)
-			{
-				cleanedFileType.erase(dotPos, 1);
-			}
-		}
-
-		std::string cleanedDirPath = directoryPath;
-		if (cleanedDirPath[cleanedDirPath.size() - 1] != '/')
-		{
-			cleanedDirPath += '/';
-		}
-
-		std::string cleanedDirPathWithWildCard = cleanedDirPath + '*';
-
-
-		HANDLE hFind;
-		WIN32_FIND_DATAA findData;
-
-		hFind = FindFirstFile(cleanedDirPathWithWildCard.c_str(), &findData);
-
-		if (hFind == INVALID_HANDLE_VALUE)
-		{
-			PrintError("Failed to find any file in directory %s\n", cleanedDirPath.c_str());
-			return false;
-		}
-
-		do
-		{
-			if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-			{
-				// Skip over directories
-				//Print(findData.cFileName);
-			}
-			else
-			{
-				bool foundFileTypeMatches = false;
-				if (cleanedFileType == "*")
-				{
-					foundFileTypeMatches = true;
-				}
-				else
-				{
-					std::string fileNameStr(findData.cFileName);
-					size_t dotPos = fileNameStr.find('.');
-
-					if (dotPos != std::string::npos)
-					{
-						std::string foundFileType = Split(fileNameStr, '.')[1];
-						if (foundFileType == cleanedFileType)
-						{
-							foundFileTypeMatches = true;
-						}
-					}
-				}
-
-				if (foundFileTypeMatches)
-				{
-					// File size retrieval:
-					//LARGE_INTEGER filesize;
-					//filesize.LowPart = findData.nFileSizeLow;
-					//filesize.HighPart = findData.nFileSizeHigh;
-
-					filePaths.push_back(cleanedDirPath + findData.cFileName);
-				}
-			}
-		} while (FindNextFile(hFind, &findData) != 0);
-
-		FindClose(hFind);
-
-		DWORD dwError = GetLastError();
-		if (dwError != ERROR_NO_MORE_FILES)
-		{
-			PrintError("Error encountered while finding files in directory %s\n", cleanedDirPath.c_str());
-			return false;
-		}
-
-		return !filePaths.empty();
+		return Platform::OpenFileDialog(windowTitle, absoluteDirectory, outSelectedAbsFilePath, filter);
 	}
 
 	std::string StripLeadingDirectories(std::string filePath)
@@ -491,36 +332,14 @@ namespace flex
 		return filePath;
 	}
 
-	std::string ExtractFileType(std::string filePathInTypeOut)
+	std::string ExtractFileType(const std::string& filePath)
 	{
-		if (filePathInTypeOut.find('.') != std::string::npos)
+		const size_t dotPos = filePath.find_last_of('.');
+		if (dotPos != std::string::npos)
 		{
-			filePathInTypeOut = Split(filePathInTypeOut, '.')[1];
+			return filePath.substr(dotPos + 1);
 		}
-		return filePathInTypeOut;
-	}
-
-	void CreateDirectoryRecursive(const std::string& absoluteDirectoryPath)
-	{
-		if (absoluteDirectoryPath.find("..") != std::string::npos)
-		{
-			PrintError("Attempted to create directory using relative path! Must specify absolute path!\n");
-			return;
-		}
-
-		if (DirectoryExists(absoluteDirectoryPath))
-		{
-			// Directory already exists!
-			return;
-		}
-
-		u32 pos = 0;
-		do
-		{
-			pos = absoluteDirectoryPath.find_first_of('/', pos + 1);
-			CreateDirectory(absoluteDirectoryPath.substr(0, pos).c_str(), NULL);
-			//GetLastError() == ERROR_ALREADY_EXISTS;
-		} while (pos != std::string::npos);
+		return "";
 	}
 
 	bool ParseWAVFile(const std::string& filePath, i32* format, u8** data, i32* size, i32* freq)
@@ -671,37 +490,6 @@ namespace flex
 		return std::string(iter, riter + 1);
 	}
 
-	std::string GetDateString_YMD()
-	{
-		std::stringstream result;
-
-		SYSTEMTIME time;
-		GetLocalTime(&time);
-
-		result << IntToString(time.wYear, 4) << '-' <<
-			IntToString(time.wMonth, 2) << '-' <<
-			IntToString(time.wDay, 2);
-
-		return result.str();
-	}
-
-	std::string GetDateString_YMDHMS()
-	{
-		std::stringstream result;
-
-		SYSTEMTIME time;
-		GetLocalTime(&time);
-
-		result << IntToString(time.wYear, 4) << '-' <<
-			IntToString(time.wMonth, 2) << '-' <<
-			IntToString(time.wDay, 2) << '_' <<
-			IntToString(time.wHour, 2) << '-' <<
-			IntToString(time.wMinute, 2) << '-' <<
-			IntToString(time.wSecond, 2);
-
-		return result.str();
-	}
-
 	std::vector<std::string> Split(const std::string& str, char delim)
 	{
 		std::vector<std::string> result;
@@ -747,28 +535,37 @@ namespace flex
 
 	bool NearlyEquals(real a, real b, real threshold)
 	{
-		return (abs(a - b) < threshold);
+		return (abs(a - b) < threshold) && (abs(b - a) < threshold);
 	}
 
 	bool NearlyEquals(const glm::vec2& a, const glm::vec2& b, real threshold)
 	{
-		return (abs(a.x - b.x) < threshold) &&
-			(abs(a.y - b.y) < threshold);
+		return (abs(a.x - b.x) < threshold) && (abs(b.x - a.x) < threshold) &&
+			(abs(a.y - b.y) < threshold) && (abs(b.y - a.y) < threshold);
 	}
 
 	bool NearlyEquals(const glm::vec3& a, const glm::vec3& b, real threshold)
 	{
-		return (abs(a.x - b.x) < threshold) &&
-			(abs(a.y - b.y) < threshold) &&
-			(abs(a.z - b.z) < threshold);
+		return (abs(a.x - b.x) < threshold) && (abs(b.x - a.x) < threshold) &&
+			(abs(a.y - b.y) < threshold) && (abs(b.y - a.y) < threshold) &&
+			(abs(a.z - b.z) < threshold) && (abs(b.z - a.z) < threshold);
 	}
 
 	bool NearlyEquals(const glm::vec4& a, const glm::vec4& b, real threshold)
 	{
-		return (abs(a.x - b.x) < threshold) &&
-			(abs(a.y - b.y) < threshold) &&
-			(abs(a.z - b.z) < threshold) &&
-			(abs(a.w - b.w) < threshold);
+		return (abs(a.x - b.x) < threshold) && (abs(b.x - a.x) < threshold) &&
+			(abs(a.y - b.y) < threshold) && (abs(b.y - a.y) < threshold) &&
+			(abs(a.z - b.z) < threshold) && (abs(b.z - a.z) < threshold) &&
+			(abs(a.w - b.w) < threshold) && (abs(b.w - a.w) < threshold);
+	}
+
+	bool NearlyEquals(const glm::quat& a, const glm::quat& b, real threshold)
+	{
+		// TODO: Handle wrap around/double cover
+		return (abs(a.x - b.x) < threshold) && (abs(b.x - a.x) < threshold) &&
+			(abs(a.y - b.y) < threshold) && (abs(b.y - a.y) < threshold) &&
+			(abs(a.z - b.z) < threshold) && (abs(b.z - a.z) < threshold) &&
+			(abs(a.w - b.w) < threshold) && (abs(b.w - a.w) < threshold);
 	}
 
 	glm::quat MoveTowards(const glm::quat& a, const glm::quat& b, real delta)
@@ -805,7 +602,7 @@ namespace flex
 		return a * (1.0f - t) + b * t;
 	}
 
-	glm::vec2 Lerp(const glm::vec2 & a, const glm::vec2 & b, real t)
+	glm::vec2 Lerp(const glm::vec2& a, const glm::vec2& b, real t)
 	{
 		return a * (1.0f - t) + b * t;
 	}
@@ -839,12 +636,12 @@ namespace flex
 		*outF2 = (u1 & 0xFFFF) / 65535.0f;
 	}
 
-	u32 Parse32u(char* ptr)
+	u32 Parse32u(const char* ptr)
 	{
 		return ((u8)ptr[0]) + ((u8)ptr[1] << 8) + ((u8)ptr[2] << 16) + ((u8)ptr[3] << 24);
 	}
 
-	u16 Parse16u(char* ptr)
+	u16 Parse16u(const char* ptr)
 	{
 		return ((u8)ptr[0]) + ((u8)ptr[1] << 8);
 	}
@@ -1052,43 +849,49 @@ namespace flex
 		str = std::string(minLen - str.length(), pad) + str;
 	}
 
-	std::string Vec2ToString(const glm::vec2& vec, i32 precision)
+	std::string VecToString(const glm::vec2& vec, i32 precision /* = DEFAULT_FLOAT_PRECISION */)
 	{
-		return Vec2ToString(vec.x, vec.y, precision);
+		return VecToString(vec.x, vec.y, precision);
 	}
 
-	std::string Vec3ToString(const glm::vec3& vec, i32 precision)
+	std::string VecToString(const glm::vec3& vec, i32 precision /* = DEFAULT_FLOAT_PRECISION */)
 	{
-		return Vec3ToString(vec.x, vec.y, vec.z, precision);
+		return VecToString(vec.x, vec.y, vec.z, precision);
 	}
 
-	std::string Vec4ToString(const glm::vec4& vec, i32 precision)
+	std::string VecToString(const glm::vec4& vec, i32 precision /* = DEFAULT_FLOAT_PRECISION */)
 	{
-		return Vec4ToString(vec.x, vec.y, vec.z, vec.w, precision);
+		return VecToString(vec.x, vec.y, vec.z, vec.w, precision);
 	}
 
-	std::string Vec2ToString(real* data, i32 precision)
+	std::string Vec2ToString(real* data, i32 precision /* = DEFAULT_FLOAT_PRECISION */)
 	{
-		return Vec2ToString(*(data + 0), *(data + 1), precision);
+		return VecToString(*(data + 0), *(data + 1), precision);
 	}
 
-	std::string Vec3ToString(real* data, i32 precision)
+	std::string Vec3ToString(real* data, i32 precision /* = DEFAULT_FLOAT_PRECISION */)
 	{
-		return Vec3ToString(*(data + 0), *(data + 1), *(data + 2), precision);
+		return VecToString(*(data + 0), *(data + 1), *(data + 2), precision);
 	}
 
-	std::string Vec4ToString(real* data, i32 precision)
+	std::string Vec4ToString(real* data, i32 precision /* = DEFAULT_FLOAT_PRECISION */)
 	{
-		return Vec4ToString(*(data + 0), *(data + 1), *(data + 2), *(data + 3), precision);
+		return VecToString(*(data + 0), *(data + 1), *(data + 2), *(data + 3), precision);
 	}
 
-	std::string Vec2ToString(real x, real y, i32 precision)
+	std::string VecToString(real x, real y, i32 precision /* = DEFAULT_FLOAT_PRECISION */)
 	{
 #if DEBUG
 		if (IsNanOrInf(x) || IsNanOrInf(y))
 		{
 			PrintError("Attempted to convert vec2 with NAN or inf components to string! Setting to zero\n");
-			return "INVALID VEC";
+			return "0,0";
+		}
+
+		if (x == UnitializedMemoryFloat || y == UnitializedMemoryFloat)
+		{
+			PrintError("Attempted to convert vec2 with values corresponding to unintialized memory (%.0f)\n", UnitializedMemoryFloat);
+			return "0,0";
 		}
 #endif
 
@@ -1097,13 +900,19 @@ namespace flex
 		return result;
 	}
 
-	std::string Vec3ToString(real x, real y, real z, i32 precision)
+	std::string VecToString(real x, real y, real z, i32 precision /* = DEFAULT_FLOAT_PRECISION */)
 	{
 #if DEBUG
 		if (IsNanOrInf(x) || IsNanOrInf(y) || IsNanOrInf(z))
 		{
-			PrintError("Attempted to convert vec3 with NAN or inf components to string! Setting to zero\n");
-			return "INVALID VEC";
+			PrintError("Attempted to convert vec3 with NAN or inf components to string (%.2f, %.2f, %.2f), setting to zero\n", x, y, z);
+			return "0,0,0";
+		}
+
+		if (x == UnitializedMemoryFloat || y == UnitializedMemoryFloat || z == UnitializedMemoryFloat)
+		{
+			PrintError("Attempted to convert vec3 with values corresponding to unintialized memory (%.0f)\n", UnitializedMemoryFloat);
+			return "0,0,0";
 		}
 #endif
 
@@ -1113,13 +922,19 @@ namespace flex
 		return result;
 	}
 
-	std::string Vec4ToString(real x, real y, real z, real w, i32 precision)
+	std::string VecToString(real x, real y, real z, real w, i32 precision /* = DEFAULT_FLOAT_PRECISION */)
 	{
 #if DEBUG
 		if (IsNanOrInf(x) || IsNanOrInf(y) || IsNanOrInf(z) || IsNanOrInf(w))
 		{
 			PrintError("Attempted to convert vec4 with NAN or inf components to string! Setting to zero\n");
-			return "INVALID VEC";
+			return "0,0,0,0";
+		}
+
+		if (x == UnitializedMemoryFloat || y == UnitializedMemoryFloat || z == UnitializedMemoryFloat || w == UnitializedMemoryFloat)
+		{
+			PrintError("Attempted to convert vec4 with values corresponding to unintialized memory (%.0f)\n", UnitializedMemoryFloat);
+			return "0,0,0,0";
 		}
 #endif
 
@@ -1130,23 +945,29 @@ namespace flex
 		return result;
 	}
 
-	std::string QuatToString(const glm::quat& quat, i32 precision)
+	std::string QuatToString(const glm::quat& quat, i32 precision /* = DEFAULT_FLOAT_PRECISION */)
 	{
 		return QuatToString(quat.x, quat.y, quat.z, quat.w, precision);
 	}
 
-	std::string QuatToString(real* data, i32 precision)
+	std::string QuatToString(real* data, i32 precision /* = DEFAULT_FLOAT_PRECISION */)
 	{
 		return QuatToString(*(data + 0), *(data + 1), *(data + 2), *(data + 3), precision);
 	}
 
-	std::string QuatToString(real x, real y, real z, real w, i32 precision)
+	std::string QuatToString(real x, real y, real z, real w, i32 precision /* = DEFAULT_FLOAT_PRECISION */)
 	{
 #if DEBUG
 		if (IsNanOrInf(x) || IsNanOrInf(y) || IsNanOrInf(z) || IsNanOrInf(w))
 		{
-			PrintError("Attempted to convert vec4 with NAN or inf components to string! Setting to zero\n");
-			return "INVALID QUAT";
+			PrintError("Attempted to convert quat with NAN or inf components to string! Setting to zero\n");
+			return "0,0,0,0";
+		}
+
+		if (x == UnitializedMemoryFloat || y == UnitializedMemoryFloat || z == UnitializedMemoryFloat || w == UnitializedMemoryFloat)
+		{
+			PrintError("Attempted to convert quat with values corresponding to unintialized memory (%.0f)\n", UnitializedMemoryFloat);
+			return "0,0,0";
 		}
 #endif
 
@@ -1392,16 +1213,6 @@ namespace flex
 		return GameObjectType::_NONE;
 	}
 
-	void RetrieveCurrentWorkingDirectory()
-	{
-		char cwdBuffer[MAX_PATH];
-		char* str = _getcwd(cwdBuffer, sizeof(cwdBuffer));
-		if (str)
-		{
-			FlexEngine::s_CurrentWorkingDirectory = ReplaceBackSlashesWithForward(str);
-		}
-	}
-
 	std::string ReplaceBackSlashesWithForward(std::string str)
 	{
 		std::for_each(str.begin(), str.end(), [](char& c)
@@ -1416,6 +1227,12 @@ namespace flex
 
 	std::string RelativePathToAbsolute(const std::string& relativePath)
 	{
+		if (relativePath.find(':') != std::string::npos)
+		{
+			// File must already be absolute if it contains a drive character
+			return relativePath;
+		}
+
 		size_t nextDoubleDot = relativePath.find("..");
 
 		std::string workingDirectory = FlexEngine::s_CurrentWorkingDirectory;
@@ -1445,16 +1262,18 @@ namespace flex
 		return absolutePath;
 	}
 
-	std::string Replace(std::string str, const std::string& pattern, const std::string& replacement)
+	std::string Replace(const std::string& str, const std::string& pattern, const std::string& replacement)
 	{
-		auto iter = str.begin();
+		std::string result(str);
 
-		while (iter != str.end())
+		auto iter = result.begin();
+
+		while (iter != result.end())
 		{
-			u32 findIndex = str.find(pattern.c_str(), iter - str.begin());
+			size_t findIndex = result.find(pattern.c_str(), iter - result.begin());
 			if (findIndex != std::string::npos)
 			{
-				str = str.replace(str.begin() + findIndex, str.begin() + findIndex + pattern.length(), replacement.begin(), replacement.end());
+				result = result.replace(result.begin() + findIndex, result.begin() + findIndex + pattern.length(), replacement.begin(), replacement.end());
 				iter += pattern.length();
 			}
 			else
@@ -1463,7 +1282,7 @@ namespace flex
 			}
 		}
 
-		return str;
+		return result;
 	}
 
 	i32 RandomInt(i32 min, i32 max)
@@ -1480,10 +1299,68 @@ namespace flex
 		return randN * (max - min) + min;
 	}
 
-	static u32 _lastUID = 0;
+	real MinComponent(const glm::vec2& vec)
+	{
+		return glm::min(vec.x, vec.y);
+	}
+
+	real MinComponent(const glm::vec3& vec)
+	{
+		return glm::min(vec.x, glm::min(vec.y, vec.z));
+	}
+
+	real MinComponent(const glm::vec4& vec)
+	{
+		return glm::min(vec.x, glm::min(vec.y, glm::min(vec.z, vec.w)));
+	}
+
+	real MaxComponent(const glm::vec2& vec)
+	{
+		return glm::max(vec.x, vec.y);
+	}
+
+	real MaxComponent(const glm::vec3& vec)
+	{
+		return glm::max(vec.x, glm::max(vec.y, vec.z));
+	}
+
+	real MaxComponent(const glm::vec4& vec)
+	{
+		return glm::max(vec.x, glm::max(vec.y, glm::max(vec.z, vec.w)));
+	}
+
+	glm::vec2 Floor(const glm::vec2& p)
+	{
+		return glm::vec2(floor(p.x), floor(p.y));
+	}
+
+	glm::vec2 Fract(const glm::vec2& p)
+	{
+		return glm::vec2(glm::mod(p.x, 1.0f), glm::mod(p.y, 1.0f));
+	}
+
+	glm::vec3 Floor(const glm::vec3& p)
+	{
+		return glm::vec3(floor(p.x), floor(p.y), floor(p.z));
+	}
+
+	glm::vec3 Fract(const glm::vec3& p)
+	{
+		return glm::vec3(glm::mod(p.x, 1.0f), glm::mod(p.y, 1.0f), glm::mod(p.z, 1.0f));
+	}
+
 	u32 GenerateUID()
 	{
 		return ++_lastUID;
+	}
+
+	bool Contains(const char* arr[], u32 arrLen, const char* val)
+	{
+		for (u32 i = 0; i < arrLen; ++i)
+		{
+			if (strcmp(arr[i], val) == 0) return true;
+		}
+		return false;
 	}
 
 	i32 RoundUp(i32 val, i32 alignment)
@@ -1525,7 +1402,7 @@ namespace flex
 	}
 
 	// See https://graphics.pixar.com/library/OrthonormalB/paper.pdf
-	void CalculateOrthonormalBasis(const glm::vec3&n, glm::vec3& b1, glm::vec3& b2)
+	void CalculateOrthonormalBasis(const glm::vec3& n, glm::vec3& b1, glm::vec3& b2)
 	{
 		real sign = copysignf(1.0f, n.z);
 		const real a = -1.0f / (sign + n.z);
@@ -1588,4 +1465,23 @@ namespace flex
 		return bResult;
 	}
 
+	bool Vec2iCompare::operator()(const glm::vec2i& lhs, const glm::vec2i& rhs) const
+	{
+		return (lhs.y < rhs.y ? true : lhs.y > rhs.y ? false : lhs.x < rhs.x);
+	}
+
+	namespace ImGuiExt
+	{
+		bool InputUInt(const char* message, u32* v, u32 step /* = 1 */, u32 step_fast /* = 100 */, ImGuiInputTextFlags flags /* = 0 */)
+		{
+			return ImGui::InputScalar(message, ImGuiDataType_U32, v, (void*)(step > 0 ? &step : NULL), (void*)(step_fast > 0 ? &step_fast : NULL), NULL, flags);
+		}
+
+		bool SliderUInt(const char* label, u32* v, u32 v_min, u32 v_max, const char* format /* = NULL */)
+		{
+			return ImGui::SliderScalar(label, ImGuiDataType_U32, v, &v_min, &v_max, format);
+		}
+
+	} // namespace ImGuiExt
 } // namespace flex
+

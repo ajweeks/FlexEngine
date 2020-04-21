@@ -1,13 +1,15 @@
 #include "stdafx.hpp"
-#if COMPILE_OPEN_GL || COMPILE_VULKAN
 
 #include "Window/GLFWWindowWrapper.hpp"
 
 #include "FlexEngine.hpp"
+#if COMPILE_OPEN_GL
 #include "Graphics/GL/GLHelpers.hpp"
+#endif
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
+#include "Platform/Platform.hpp"
 #include "Window/Monitor.hpp"
 
 namespace flex
@@ -32,6 +34,13 @@ namespace flex
 		{
 			PrintError("Failed to initialize glfw! Exiting...\n");
 			exit(EXIT_FAILURE);
+			return;
+		}
+
+		{
+			i32 maj, min, rev;
+			glfwGetVersion(&maj, &min, &rev);
+			Print("GLFW v%d.%d.%d\n", maj, min, rev);
 		}
 
 		i32 numJoysticksConnected = 0;
@@ -49,7 +58,7 @@ namespace flex
 			Print("%i joysticks connected on bootup\n", numJoysticksConnected);
 		}
 
-		g_EngineInstance->mainProcessID = (u32)GetCurrentProcessId();
+		g_EngineInstance->mainProcessID = Platform::GetCurrentProcessID();
 
 		// TODO: Look into supporting system-DPI awareness
 		//SetProcessDPIAware();
@@ -78,12 +87,12 @@ namespace flex
 
 	void GLFWWindowWrapper::Create(const glm::vec2i& size, const glm::vec2i& pos)
 	{
+		InitFromConfig();
+
 		if (m_bMoveConsoleToOtherMonitor)
 		{
-			MoveConsole();
+			Platform::MoveConsole();
 		}
-
-		InitFromConfig();
 
 		// Only use parameters if values weren't set through config file
 		if (m_Size.x == 0)
@@ -103,7 +112,7 @@ namespace flex
 
 		if (g_bOpenGLEnabled)
 		{
-#if DEBUG
+#if COMPILE_OPEN_GL && DEBUG
 			glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
 #endif // DEBUG
 
@@ -121,7 +130,7 @@ namespace flex
 
 		if (m_bMaximized)
 		{
-			glfwWindowHint(GLFW_MAXIMIZED, GL_TRUE);
+			glfwWindowHint(GLFW_MAXIMIZED, 1);
 		}
 
 
@@ -178,48 +187,15 @@ namespace flex
 		glfwFocusWindow(m_Window);
 		m_bHasFocus = true;
 
-		if (g_bOpenGLEnabled)
-		{
-			glfwMakeContextCurrent(m_Window);
-
-			gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
-
-#if DEBUG
-			if (glDebugMessageCallback)
-			{
-				glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-				glDebugMessageCallback(glDebugOutput, nullptr);
-				GLuint unusedIds = 0;
-				glDebugMessageControl(GL_DONT_CARE,
-					GL_DONT_CARE,
-					GL_DONT_CARE,
-					0,
-					&unusedIds,
-					true);
-			}
-#endif // DEBUG
-
-			if (GLAD_GL_KHR_debug)
-			{
-				FlexEngine::s_bHasGLDebugExtension = true;
-			}
-
-			Print("OpenGL loaded\n");
-			Print("Vendor:     %s\n", reinterpret_cast<const char*>(glGetString(GL_VENDOR)));
-			Print("Renderer:   %s\n", reinterpret_cast<const char*>(glGetString(GL_RENDERER)));
-			Print("Version:    %s\n\n", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
-			//Print("Extensions: %s\n\n", reinterpret_cast<const char*>(glGetString(GL_EXTENSIONS)));
-		}
-
-		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION  "icons/flex-logo-03_128.png", 4));
-		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION  "icons/flex-logo-03_64.png", 4));
-		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION  "icons/flex-logo-03_48.png", 4));
-		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION  "icons/flex-logo-03_32.png", 4));
-		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION  "icons/flex-logo-03_16.png", 4));
+		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION "icons/flex-logo-03_128.png", 4));
+		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION "icons/flex-logo-03_64.png", 4));
+		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION "icons/flex-logo-03_48.png", 4));
+		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION "icons/flex-logo-03_32.png", 4));
+		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION "icons/flex-logo-03_16.png", 4));
 
 		if (!m_WindowIcons.empty() && m_WindowIcons[0].pixels)
 		{
-			glfwSetWindowIcon(m_Window, m_WindowIcons.size(), m_WindowIcons.data());
+			glfwSetWindowIcon(m_Window, (i32)m_WindowIcons.size(), m_WindowIcons.data());
 		}
 	}
 
@@ -228,7 +204,11 @@ namespace flex
 		GLFWmonitor* monitor = glfwGetPrimaryMonitor();
 		if (!monitor)
 		{
+			i32 count;
+			glfwGetMonitors(&count);
+
 			PrintError("Failed to find primary monitor!\n");
+			PrintError("%d monitors found\n", count);
 			return;
 		}
 
@@ -411,7 +391,7 @@ namespace flex
 			case WindowMode::_NONE:
 			default:
 			{
-				PrintError("Unhandled window mode: %d\n", mode);
+				PrintError("Unhandled window mode: %u\n", (u32)mode);
 			} break;
 			}
 		}
@@ -520,55 +500,6 @@ namespace flex
 		return glm::vec2((real)posX, (real)posY);
 	}
 
-	void GLFWWindowWrapper::MoveConsole()
-	{
-		HWND hWnd = GetConsoleWindow();
-		// TODO: Set these based on display resolution
-		i32 consoleWidth = 800;
-		i32 consoleHeight = 800;
-
-		// The following four variables store the bounding rectangle of all monitors
-		i32 virtualScreenLeft = GetSystemMetrics(SM_XVIRTUALSCREEN);
-		//i32 virtualScreenTop = GetSystemMetrics(SM_YVIRTUALSCREEN);
-		i32 virtualScreenWidth = GetSystemMetrics(SM_CXVIRTUALSCREEN);
-		//i32 virtualScreenHeight = GetSystemMetrics(SM_CYVIRTUALSCREEN);
-
-		i32 monitorWidth = GetSystemMetrics(SM_CXSCREEN);
-		//i32 monitorHeight = GetSystemMetrics(SM_CYSCREEN);
-
-		// If another monitor is present, move the console to it
-		if (virtualScreenWidth > monitorWidth)
-		{
-			i32 newX;
-			i32 newY = 10;
-
-			if (virtualScreenLeft < 0)
-			{
-				// The other monitor is to the left of the main one
-				newX = -(consoleWidth + 67);
-			}
-			else
-			{
-				// The other monitor is to the right of the main one
-				newX = virtualScreenWidth - monitorWidth + 10;
-			}
-
-			MoveWindow(hWnd, newX, newY, consoleWidth, consoleHeight, TRUE);
-
-			// Call again to set size correctly (based on other monitor's DPI)
-			MoveWindow(hWnd, newX, newY, consoleWidth, consoleHeight, TRUE);
-		}
-		else // There's only one monitor, move the console to the top left corner
-		{
-			RECT rect;
-			GetWindowRect(hWnd, &rect);
-			if (rect.top != 0)
-			{
-				// A negative value is needed to line the console up to the left side of my monitor
-				MoveWindow(hWnd, -7, 0, consoleWidth, consoleHeight, TRUE);
-			}
-		}
-	}
 
 	void GLFWErrorCallback(i32 error, const char* description)
 	{
@@ -577,7 +508,7 @@ namespace flex
 
 	void GLFWKeyCallback(GLFWwindow* glfwWindow, i32 key, i32 scancode, i32 action, i32 mods)
 	{
-		UNREFERENCED_PARAMETER(scancode);
+		FLEX_UNUSED(scancode);
 
 		Window* window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
 		const KeyAction inputAction = GLFWActionToInputManagerAction(action);
@@ -879,11 +810,12 @@ namespace flex
 		return inputMouseButton;
 	}
 
+#if defined(_WINDOWS) && COMPILE_OPEN_GL
 	void WINAPI glDebugOutput(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,
 		const GLchar* message, const void* userParam)
 	{
-		UNREFERENCED_PARAMETER(userParam);
-		UNREFERENCED_PARAMETER(length);
+		FLEX_UNUSED(userParam);
+		FLEX_UNUSED(length);
 
 		// Ignore insignificant error/warning codes and notification messages
 		if (id == 131169 || id == 131185 || id == 131218 || id == 131204 ||
@@ -929,6 +861,5 @@ namespace flex
 		}
 		PrintError("\n-----------------------------------------\n");
 	}
+#endif
 } // namespace flex
-
-#endif // COMPILE_OPEN_GL || COMPILE_VULKAN

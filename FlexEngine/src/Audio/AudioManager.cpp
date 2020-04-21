@@ -24,6 +24,15 @@ namespace flex
 			return;
 		}
 
+		{
+			i32 maj;
+			alcGetIntegerv(s_Device, ALC_MAJOR_VERSION, sizeof(maj), &maj);
+			i32 min;
+			alcGetIntegerv(s_Device, ALC_MINOR_VERSION, sizeof(min), &min);
+
+			Print("OpenAL v%d.%d\n", maj, min);
+		}
+
 		constexpr bool printAvailableAudioDeviceNames = false;
 		if (printAvailableAudioDeviceNames)
 		{
@@ -31,7 +40,7 @@ namespace flex
 		}
 
 		const ALchar* deviceName = alcGetString(s_Device, ALC_DEVICE_SPECIFIER);
-		Print("Chosen audio device name: \"%s\"\n", deviceName);
+		Print("Chosen audio device: %s\n", deviceName);
 
 		s_Context = alcCreateContext(s_Device, NULL);
 		alcMakeContextCurrent(s_Context);
@@ -42,7 +51,7 @@ namespace flex
 		ALenum error = alGetError();
 		if (error != AL_NO_ERROR)
 		{
-			DisplayALError("alGenBuffers: ", error);
+			DisplayALError("alGenBuffers", error);
 			return;
 		}
 	}
@@ -60,6 +69,7 @@ namespace flex
 		AudioSourceID newID = GetNextAvailableSourceAndBufferIndex();
 		if (newID == InvalidAudioSourceID)
 		{
+			// TODO: Resize buffers dynamically
 			PrintError("Failed to add new audio source! All %d buffers are in use\n", NUM_BUFFERS);
 			return InvalidAudioSourceID;
 		}
@@ -81,38 +91,28 @@ namespace flex
 			return InvalidAudioSourceID;
 		}
 
+		// Buffer
+		alBufferData(s_Buffers[newID], format, data, size, freq);
 		ALenum error = alGetError();
 		if (error != AL_NO_ERROR)
 		{
-			DisplayALError("OpenAndParseWAVFile: ", error);
-			alDeleteBuffers(NUM_BUFFERS, s_Buffers);
-			return InvalidAudioSourceID;
-		}
-
-
-		// Buffer
-		alBufferData(s_Buffers[newID], format, data, size, freq);
-		error = alGetError();
-		if (error != AL_NO_ERROR)
-		{
-			DisplayALError("alBufferData: ", error);
+			DisplayALError("alBufferData", error);
 			alDeleteBuffers(NUM_BUFFERS, s_Buffers);
 			return InvalidAudioSourceID;
 		}
 		delete[] data;
-
 
 		// Source
 		alGenSources(1, &s_Sources[newID].source);
 		error = alGetError();
 		if (error != AL_NO_ERROR)
 		{
-			DisplayALError("alGenSources 1: ", error);
+			DisplayALError("alGenSources 1", error);
 			return InvalidAudioSourceID;
 		}
 
 		alSourcei(s_Sources[newID].source, AL_BUFFER, s_Buffers[newID]);
-		DisplayALError("alSourcei: ", alGetError());
+		DisplayALError("alSourcei", alGetError());
 
 		return newID;
 	}
@@ -126,13 +126,11 @@ namespace flex
 			return InvalidAudioSourceID;
 		}
 
-		//Print("Synthesizing audio source\n");
-
 		// WAVE file
 		i32 format = AL_FORMAT_STEREO8;
 		i32 sampleRate = 44100;
 		i32 size = (i32)(sampleRate * length);
-		u8* data = (u8*)malloc_hooked((u32)size);
+		u8* data = (u8*)malloc((u32)size);
 
 		// See http://iquilezles.org/apps/soundtoy/index.html for more patterns
 		for (i32 i = 0; i < size; ++i)
@@ -148,7 +146,7 @@ namespace flex
 		ALenum error = alGetError();
 		if (error != AL_NO_ERROR)
 		{
-			DisplayALError("OpenAndParseWAVFile: ", error);
+			DisplayALError("OpenAndParseWAVFile", error);
 			alDeleteBuffers(NUM_BUFFERS, s_Buffers);
 			return InvalidAudioSourceID;
 		}
@@ -159,11 +157,11 @@ namespace flex
 		error = alGetError();
 		if (error != AL_NO_ERROR)
 		{
-			DisplayALError("alBufferData: ", error);
+			DisplayALError("alBufferData", error);
 			alDeleteBuffers(NUM_BUFFERS, s_Buffers);
 			return InvalidAudioSourceID;
 		}
-		free_hooked(data);
+		free(data);
 
 
 		// Source
@@ -171,12 +169,12 @@ namespace flex
 		error = alGetError();
 		if (error != AL_NO_ERROR)
 		{
-			DisplayALError("alGenSources 1: ", error);
+			DisplayALError("alGenSources 1", error);
 			return InvalidAudioSourceID;
 		}
 
 		alSourcei(s_Sources[newID].source, AL_BUFFER, s_Buffers[newID]);
-		DisplayALError("alSourcei: ", alGetError());
+		DisplayALError("alSourcei", alGetError());
 
 		return newID;
 	}
@@ -197,7 +195,10 @@ namespace flex
 	{
 		for (Source& source : s_Sources)
 		{
-			alDeleteSources(1, &source.source);
+			if (source.source != InvalidAudioSourceID)
+			{
+				alDeleteSources(1, &source.source);
+			}
 		}
 		s_Sources.fill({});
 	}
@@ -216,7 +217,11 @@ namespace flex
 
 	void AudioManager::PlaySource(AudioSourceID sourceID, bool bForceRestart)
 	{
-		assert(sourceID < s_Sources.size());
+		if (sourceID >= s_Sources.size())
+		{
+			PrintError("Attempted to play invalid source %d\n", (u32)sourceID);
+			return;
+		}
 
 		alGetSourcei(s_Sources[sourceID].source, AL_SOURCE_STATE, &s_Sources[sourceID].state);
 
@@ -224,13 +229,17 @@ namespace flex
 		{
 			alSourcePlay(s_Sources[sourceID].source);
 			alGetSourcei(s_Sources[sourceID].source, AL_SOURCE_STATE, &s_Sources[sourceID].state);
-			DisplayALError("PlaySource: ", alGetError());
+			DisplayALError("PlaySource", alGetError());
 		}
 	}
 
 	void AudioManager::PauseSource(AudioSourceID sourceID)
 	{
-		assert(sourceID < s_Sources.size());
+		if (sourceID >= s_Sources.size())
+		{
+			PrintError("Attempted to pause invalid source %d\n", (u32)sourceID);
+			return;
+		}
 
 		alGetSourcei(s_Sources[sourceID].source, AL_SOURCE_STATE, &s_Sources[sourceID].state);
 
@@ -238,13 +247,17 @@ namespace flex
 		{
 			alSourcePause(s_Sources[sourceID].source);
 			alGetSourcei(s_Sources[sourceID].source, AL_SOURCE_STATE, &s_Sources[sourceID].state);
-			DisplayALError("PauseSource: ", alGetError());
+			DisplayALError("PauseSource", alGetError());
 		}
 	}
 
 	void AudioManager::StopSource(AudioSourceID sourceID)
 	{
-		assert(sourceID < s_Sources.size());
+		if (sourceID >= s_Sources.size())
+		{
+			PrintError("Attempted to stop invalid source %d\n", (u32)sourceID);
+			return;
+		}
 
 		alGetSourcei(s_Sources[sourceID].source, AL_SOURCE_STATE, &s_Sources[sourceID].state);
 
@@ -252,7 +265,7 @@ namespace flex
 		{
 			alSourceStop(s_Sources[sourceID].source);
 			alGetSourcei(s_Sources[sourceID].source, AL_SOURCE_STATE, &s_Sources[sourceID].state);
-			DisplayALError("StopSource: ", alGetError());
+			DisplayALError("StopSource", alGetError());
 		}
 	}
 
@@ -280,15 +293,14 @@ namespace flex
 	{
 		assert(sourceID < s_Sources.size());
 
-		gain = glm::clamp(gain, 0.0f, 1.0f);
+		gain = Saturate(gain);
 
 		if (s_Sources[sourceID].gain != gain)
 		{
 			s_Sources[sourceID].gain = gain;
-			//Print("gain: %.2f\n", gain);
 			alSourcef(s_Sources[sourceID].source, AL_GAIN, gain);
 
-			DisplayALError("SetSourceGain: ", alGetError());
+			DisplayALError("SetSourceGain", alGetError());
 		}
 	}
 
@@ -315,7 +327,7 @@ namespace flex
 			s_Sources[sourceID].bLooping = bLooping;
 			alSourcei(s_Sources[sourceID].source, AL_LOOPING, bLooping ? AL_TRUE : AL_FALSE);
 
-			DisplayALError("SetSourceLooping: ", alGetError());
+			DisplayALError("SetSourceLooping", alGetError());
 		}
 	}
 
@@ -358,10 +370,9 @@ namespace flex
 		if (s_Sources[sourceID].pitch != pitch)
 		{
 			s_Sources[sourceID].pitch = pitch;
-			//Print("pitch: %.2f\n", pitch);
 			alSourcef(s_Sources[sourceID].source, AL_PITCH, pitch);
 
-			DisplayALError("SetSourcePitch: ", alGetError());
+			DisplayALError("SetSourcePitch", alGetError());
 		}
 	}
 

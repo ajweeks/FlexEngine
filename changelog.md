@@ -1,8 +1,49 @@
 
 ### Flex Engine change log (reverse chronological order)
 
+**2020**
+_March_
+- Finish implementing edior gizmos (translate, rotate, scale)
+- Finish linux port
+- Remove glad
+- Add support for 64 bit compilation
+- Add volk to handle Vulkan loading
+
+_February_
+- Fix remaining linux compilation errors/warnings
+
+_January_
+- Fade out gizmos when facing head-on
+
+
 **2019**
+_December_
+- Add support for multiple material IDs per mesh
+- Add unit test framework
+- Start porting to linux
+
+_November_
+- Add compute-based GPU particles
+- Calculate render pass image transitions automatically (mini render graph)
+
+_October_
+- Wrap render passes in abstraction
+- Improve scene management
+- Improve TAA implementation
+
+_September_
+- Improve RenderDoc API integration
+- Improve editor sprite rendering (fade when close, fix billboard issue)
+
+_August_
+- Add GPU timings via timestamps
+
+_July_
+- Lots of cleanup of Vulkan renderer
+- Add first pass of TAA (temporal anti-aliasing)
+
 _June_
+- Add Vulkan debug markers
 - Add debug preview of cascades
 - Add cascaded shadow mapping to GL & Vulkan
 - Lots of cleanup, refactoring, and bug fixing
@@ -16,6 +57,7 @@ _April_
 - Add async Vulkan shader compilation on bootup (based on shader file checksums)
 - Add shader hot-reloading support to Vulkan
 - Add font metadata viewer
+- Track memory allocations via custom new/delete/malloc/free/etc.
 - Batch render objects (editor/gameplay > deferred/forward > shader > material)
 - Use negative viewport heights in Vulkan to avoid negation in shader
 - Add SDF font generation & rendering support to Vulkan

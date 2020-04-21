@@ -257,7 +257,7 @@ namespace flex
 									PrintWarn("Unexpected track state when desired dir != 1\n");
 								}
 							}
-							newDistAlongTrack = glm::clamp(newDistAlongTrack, 0.0f, 1.0f);
+							newDistAlongTrack = Saturate(newDistAlongTrack);
 						}
 					}
 				}
@@ -265,7 +265,7 @@ namespace flex
 
 			if (newTrackID == InvalidTrackID && newDistAlongTrack == -1.0f)
 			{
-				newDistAlongTrack = glm::clamp(distAlongTrack, 0.0f, 1.0f);
+				newDistAlongTrack = Saturate(distAlongTrack);
 			}
 		}
 		else
@@ -309,7 +309,7 @@ namespace flex
 		{
 			queryDist -= range;
 		}
-		queryDist = glm::clamp(queryDist, 0.0f, 1.0f);
+		queryDist = Saturate(queryDist);
 		TrackID newTrackID = InvalidTrackID;
 		real newDist = -1.0f;
 		i32 junctionIndex = -1;
@@ -732,7 +732,7 @@ namespace flex
 	{
 		if (ImGui::TreeNode("Track Manager"))
 		{
-			ImGui::Text("%d tracks, %d junctions", m_Tracks.size(), m_Junctions.size());
+			ImGui::Text("%u tracks, %u junctions", (u32)m_Tracks.size(), (u32)m_Junctions.size());
 			if (ImGui::SmallButton("<"))
 			{
 				m_DEBUG_highlightedJunctionIndex--;
@@ -753,7 +753,7 @@ namespace flex
 			}
 
 			ImGui::Text("Preview junc idx: %i", m_PreviewJunctionDir.junctionIndex);
-			ImGui::Text("Preview curve dir: %s", Vec3ToString(m_PreviewJunctionDir.dir, 2).c_str());
+			ImGui::Text("Preview curve dir: %s", VecToString(m_PreviewJunctionDir.dir, 2).c_str());
 
 			ImGui::TreePop();
 		}

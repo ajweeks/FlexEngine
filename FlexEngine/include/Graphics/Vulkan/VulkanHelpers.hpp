@@ -2,7 +2,11 @@
 #if COMPILE_VULKAN
 
 IGNORE_WARNINGS_PUSH
-#include <vulkan/vulkan.h>
+#include "volk/volk.h"
+
+#if COMPILE_SHADER_COMPILER
+#include "shaderc/shaderc.h" // For shaderc_shader_kind
+#endif
 IGNORE_WARNINGS_POP
 
 #include "Graphics/RendererTypes.hpp"
@@ -22,7 +26,7 @@ namespace flex
 
 		std::string VulkanErrorString(VkResult errorCode);
 
-		inline void VK_CHECK_RESULT(VkResult result);
+		void VK_CHECK_RESULT(VkResult result);
 
 		void GetVertexAttributeDescriptions(VertexAttributes vertexAttributes,
 			std::vector<VkVertexInputAttributeDescription>& attributeDescriptions);
@@ -140,7 +144,7 @@ namespace flex
 
 		struct UniformBuffer
 		{
-			UniformBuffer(const VDeleter<VkDevice>& device, UniformBufferType type);
+			UniformBuffer(VulkanDevice* device, UniformBufferType type);
 			~UniformBuffer();
 
 			VulkanBuffer buffer;
@@ -299,6 +303,12 @@ namespace flex
 
 			VkFormat CalculateFormat();
 
+			VDeleter<VkImage> image;
+			VDeleter<VkDeviceMemory> imageMemory;
+			VDeleter<VkImageView> imageView;
+			// TODO: CLEANUP: Don't store sampler per texture, pool together all unique samplers in VulkanRenderer
+			VDeleter<VkSampler> sampler;
+
 			u32 width = 0;
 			u32 height = 0;
 			u32 channelCount = 0;
@@ -313,12 +323,8 @@ namespace flex
 			bool bIsArray = false;
 			bool bSamplerClampToBorder = false;
 
-			VDeleter<VkImage> image;
 			VkImageLayout imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 			VkFormat imageFormat = VK_FORMAT_UNDEFINED;
-			VDeleter<VkDeviceMemory> imageMemory;
-			VDeleter<VkImageView> imageView;
-			VDeleter<VkSampler> sampler;
 
 		private:
 			VulkanDevice* m_VulkanDevice = nullptr;
@@ -405,8 +411,6 @@ namespace flex
 		void CopyImage(VulkanDevice* device, VkQueue graphicsQueue, VkImage srcImage, VkImage dstImage, u32 width, u32 height,
 			VkCommandBuffer optCmdBuf = VK_NULL_HANDLE, VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_COLOR_BIT);
 		void CopyBufferToImage(VulkanDevice* device, VkQueue graphicsQueue, VkBuffer buffer, VkImage image, u32 width, u32 height, VkCommandBuffer optCommandBuffer = 0);
-		VkResult CreateAndAllocateBuffer(VulkanDevice* device, VkDeviceSize size, VkBufferUsageFlags usage,
-			VkMemoryPropertyFlags properties, VulkanBuffer* buffer);
 		void CopyBuffer(VulkanDevice* device, VkQueue graphicsQueue, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size,
 			VkDeviceSize srcOffset = 0, VkDeviceSize dstOffset = 0);
 
@@ -429,6 +433,7 @@ namespace flex
 			void Add(VulkanDevice* device, UniformBufferType type);
 			UniformBuffer* Get(UniformBufferType type);
 			const UniformBuffer* Get(UniformBufferType type) const;
+			bool Has(UniformBufferType type) const;
 
 			std::vector<UniformBuffer> uniformBufferList;
 		};
@@ -447,57 +452,56 @@ namespace flex
 			VDeleter<VkShaderModule> computeShaderModule;
 		};
 
-#ifdef DEBUG
+#if COMPILE_SHADER_COMPILER
+		// NOTE: Not actually async at the moment! Compiling all shaders takes less than a second my machine though, so...
 		struct AsyncVulkanShaderCompiler
 		{
 			AsyncVulkanShaderCompiler();
 			AsyncVulkanShaderCompiler(bool bForceRecompile);
 
-			// Returns true once task is complete
 			bool TickStatus();
 
-			std::thread taskThread;
-			std::atomic<bool> is_done = false;
-
-			sec startTime = 0.0f;
-			sec lastTime = 0.0f;
-			sec totalSecWaiting = 0.0f;
-			sec secBetweenStatusChecks = 0.05f;
-			sec secSinceStatusCheck = 0.0f;
+			ms startTime = 0.0f;
+			ms lastCompileDuration = 0.0f;
 
 			bool bSuccess = false;
 			bool bComplete = false;
 
 		private:
-			i64 CalculteChecksum(const std::string& directory);
+			static const char* s_ChecksumFilePath;
+			static const char* s_ShaderDirectory;
+			static const char* s_RecognizedShaderTypes[];
 
-			std::string m_ChecksumFilePath;
-			i64 m_ShaderCodeChecksum = 0;
+			u64 CalculteChecksum(const std::string& filePath);
+			shaderc_shader_kind FilePathToShaderKind(const std::string& fileSuffix);
+
 		};
-#endif // DEBUG
+#endif // COMPILE_SHADER_COMPILER
 
 		template<typename T>
 		struct ShaderUniformContainer
 		{
 			using iter = typename std::vector<Pair<u64, T>>::iterator;
 
-			void Add(u64 uniform, const T value)
+			void Add(u64 uniform, const T value, std::string slotName = "")
 			{
-				for (auto& pair : values)
+				for (auto value_iter = values.begin(); value_iter != values.end(); ++value_iter)
 				{
-					if (pair.first == uniform)
+					if (value_iter->first == uniform)
 					{
-						pair.second = value;
+						value_iter->second = value;
+						slotNames[value_iter - values.begin()] = slotName;
 						return;
 					}
 				}
 
 				values.emplace_back(uniform, value);
+				slotNames.emplace_back(slotName);
 			}
 
 			u32 Count()
 			{
-				return values.size();
+				return (u32)values.size();
 			}
 
 			iter begin()
@@ -535,6 +539,7 @@ namespace flex
 			}
 
 			std::vector<Pair<u64, T>> values;
+			std::vector<std::string> slotNames;
 		};
 
 		struct VulkanMaterial
@@ -551,6 +556,7 @@ namespace flex
 			std::vector<VulkanCubemapGBuffer> cubemapSamplerGBuffersIDs;
 			u32 cubemapDepthSamplerID = 0;
 
+			// TODO: Remove, this always equals shaderID
 			u32 descriptorSetLayoutIndex = 0;
 		};
 
@@ -564,8 +570,6 @@ namespace flex
 			MaterialID materialID = InvalidMaterialID;
 
 			GameObject* gameObject = nullptr;
-
-			std::string materialName = "";
 
 			u32 VAO = 0;
 			u32 VBO = 0;
@@ -690,7 +694,7 @@ namespace flex
 			Verisilicon,
 			Software,
 		};
-		
+
 		constexpr GPUVendor GPUVendorFromPCIVendor(u32 vendorID)
 		{
 			return vendorID == 0x13B5 ? GPUVendor::ARM
@@ -716,8 +720,6 @@ namespace flex
 
 		VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* createInfo,
 			const VkAllocationCallbacks* allocator, VkDebugReportCallbackEXT* callback);
-
-		void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks* pAllocator);
 	} // namespace vk
 } // namespace flex
 
