@@ -881,6 +881,8 @@ namespace flex
 			delete m_VulkanDevice;
 			m_VulkanDevice = nullptr;
 
+			vkDestroyInstance(m_Instance, nullptr);
+
 			glfwTerminate();
 		}
 

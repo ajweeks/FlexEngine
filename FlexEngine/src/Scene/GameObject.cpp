@@ -4691,6 +4691,7 @@ namespace flex
 		MeshComponent* meshComponent = MeshComponent::LoadFromMemory(m_Mesh, vertexBufferCreateInfo, indices, m_TerrainMatID, &renderObjectCreateInfo);
 		if (meshComponent)
 		{
+			assert(m_Meshes[chunkIndex] == nullptr);
 			m_Meshes[chunkIndex] = meshComponent;
 		}
 	}
@@ -4861,8 +4862,10 @@ namespace flex
 
 				auto iter = m_Meshes.find(chunkIdx);
 				assert(iter != m_Meshes.end());
-				iter->second->Destroy();
+				MeshComponent* mesh = iter->second;
 				m_Meshes.erase(iter);
+				mesh->Destroy();
+				delete mesh;
 
 				++iterationCount;
 
@@ -4922,6 +4925,8 @@ namespace flex
 			iter->second->Destroy();
 		}
 		m_Meshes.clear();
+
+		GameObject::Destroy();
 	}
 
 	void ChunkGenerator::DrawImGuiObjects()
