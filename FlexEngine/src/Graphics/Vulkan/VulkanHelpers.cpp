@@ -27,6 +27,14 @@ namespace flex
 {
 	namespace vk
 	{
+#if COMPILE_SHADER_COMPILER
+		const char* AsyncVulkanShaderCompiler::s_ChecksumFilePath = SAVED_LOCATION "vk-shader-checksum.dat";
+		std::string AsyncVulkanShaderCompiler::s_ChecksumFilePathAbs;
+		const char* AsyncVulkanShaderCompiler::s_ShaderDirectory = RESOURCE_LOCATION "shaders/";
+
+		const char* AsyncVulkanShaderCompiler::s_RecognizedShaderTypes[] = { "vert", "geom", "frag", "comp" };
+#endif //  COMPILE_SHADER_COMPILER
+
 		void VK_CHECK_RESULT(VkResult result)
 		{
 			if (result != VK_SUCCESS)
@@ -2286,18 +2294,10 @@ namespace flex
 		}
 
 #if COMPILE_SHADER_COMPILER
-
-		const char* AsyncVulkanShaderCompiler::s_ChecksumFilePath = SAVED_LOCATION "vk-shader-checksum.dat";
-		const char* AsyncVulkanShaderCompiler::s_ShaderDirectory = RESOURCE_LOCATION "shaders/";
-
-		const char* AsyncVulkanShaderCompiler::s_RecognizedShaderTypes[] = { "vert", "geom", "frag", "comp" };
-
-		AsyncVulkanShaderCompiler::AsyncVulkanShaderCompiler()
-		{
-		}
-
 		AsyncVulkanShaderCompiler::AsyncVulkanShaderCompiler(bool bForceRecompile)
 		{
+			s_ChecksumFilePathAbs = RelativePathToAbsolute(s_ChecksumFilePath);
+
 			const std::string spvDirectory = RelativePathToAbsolute(RESOURCE_LOCATION "shaders/spv");
 			if (!Platform::DirectoryExists(spvDirectory))
 			{
@@ -2337,7 +2337,7 @@ namespace flex
 									u64 calculatedChecksum = CalculteChecksum(filePath);
 									if (calculatedChecksum == storedChecksum)
 									{
-										compiledShaders.emplace(RelativePathToAbsolute(filePath), calculatedChecksum);
+										compiledShaders.emplace(filePath, calculatedChecksum);
 									}
 								}
 							}
@@ -2366,15 +2366,15 @@ namespace flex
 					//		const char* requesting_source,
 					//		size_t include_depth) override
 					//	{
-					//		UNREFERENCED_PARAMETER(type);
-					//		UNREFERENCED_PARAMETER(include_depth);
+					//		FLEX_UNUSED(type);
+					//		FLEX_UNUSED(include_depth);
 					//		Print("%s, requesting %s\n", requesting_source, requested_source);
 					//		shaderc_include_result* result;
 					//	}
 
 					//	virtual void ReleaseInclude(shaderc_include_result* data) override
 					//	{
-					//		UNREFERENCED_PARAMETER(data);
+					//		FLEX_UNUSED(data);
 					//	}
 					//};
 					//FlexIncluder includer;
@@ -2483,7 +2483,8 @@ namespace flex
 
 					if ((compiledShaderCount > 0 || invalidShaderCount > 0) && newChecksumFileContents.length() > 0)
 					{
-						std::ofstream checksumFileStream(s_ChecksumFilePath, std::ios::out);
+						Platform::CreateDirectoryRecursive(ExtractDirectoryString(s_ChecksumFilePathAbs).c_str());
+						std::ofstream checksumFileStream(s_ChecksumFilePathAbs, std::ios::out);
 						if (checksumFileStream.is_open())
 						{
 							checksumFileStream.write(newChecksumFileContents.c_str(), newChecksumFileContents.size());

@@ -456,7 +456,6 @@ namespace flex
 		// NOTE: Not actually async at the moment! Compiling all shaders takes less than a second my machine though, so...
 		struct AsyncVulkanShaderCompiler
 		{
-			AsyncVulkanShaderCompiler();
 			AsyncVulkanShaderCompiler(bool bForceRecompile);
 
 			bool TickStatus();
@@ -469,6 +468,7 @@ namespace flex
 
 		private:
 			static const char* s_ChecksumFilePath;
+			static std::string s_ChecksumFilePathAbs;
 			static const char* s_ShaderDirectory;
 			static const char* s_RecognizedShaderTypes[];
 

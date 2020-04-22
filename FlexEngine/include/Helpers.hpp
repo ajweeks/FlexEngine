@@ -2,6 +2,11 @@
 
 #include "Graphics/RendererTypes.hpp"
 
+IGNORE_WARNINGS_PUSH
+#include <glm/gtx/compatibility.hpp> // For saturate
+IGNORE_WARNINGS_POP
+
+
 namespace flex
 {
 	// TODO: Many of the functions in this file would benefit from unit tests

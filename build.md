@@ -58,7 +58,7 @@ If you want to build Flex Engine on your own system, follow these steps. You an 
   `mkdir build && cd build`
   `cmake .. -DBUILD_GMOCK=OFF -DBUILD_TESTING=OFF -DENABLE_BUILD_SAMPLES=OFF -DENABLE_CTEST=OFF -DINSTALL_GTEST=OFF -DSHADERC_ENABLE_SHARED_CRT=ON -DLLVM_USE_CRT_DEBUG="MDd" -DLLVM_USE_CRT_MINSIZEREL="MD" -DLLVM_USE_CRT_RELEASE="MD" -DLLVM_USE_CRT_RELWITHDEBINFO="MD"`
   `cmake --build .`
-  `copy /y libshaderc\Debug\shaderc_combined.lib ..\..\Flex\FlexEngine\lib\x64\Debug\`
+  `copy /y libshaderc\Debug\shaderc_combined.lib ..\..\FlexEngine\FlexEngine\lib\x64\Debug\`
 9. (from root dir) `genie --file=scripts/genie.lua vs2019`
 10. Open `build/FlexEngine.sln`
 11. Target `Debug` & `x64`
@@ -108,9 +108,18 @@ If you want to build Flex Engine on your own system, follow these steps. You an 
   `cmake -DCMAKE_DISABLE_FIND_PACKAGE_HarfBuzz=ON ..`
   `make`
   `cp libfreetype.a ../../../lib/x64/Debug/`
-9. Install [GENie](https://github.com/bkaradzic/GENie) from  https://github.com/bkaradzic/bx/raw/master/tools/bin/linux/genie
-10. From the root directory run `genie --file=scripts/genie.lua ninja`, replacing ninja with cmake, gmake, or any other preferred supported build system.
-11. Build:
+9. Build shaderc:
+  `cd ..`
+  `git clone https://github.com/google/shaderc`
+  `cd shaderc`
+  `./utils/git-sync-deps`
+  `mkdir build && cd build`
+  `cmake .. -DBUILD_GMOCK=OFF -DBUILD_TESTING=OFF -DENABLE_BUILD_SAMPLES=OFF -DENABLE_CTEST=OFF -DINSTALL_GTEST=OFF -DSHADERC_ENABLE_SHARED_CRT=ON -DLLVM_USE_CRT_DEBUG="MDd" -DLLVM_USE_CRT_MINSIZEREL="MD" -DLLVM_USE_CRT_RELEASE="MD" -DLLVM_USE_CRT_RELWITHDEBINFO="MD" -DSHADERC_SKIP_TESTS=ON`
+  `cmake --build .`
+  `cp libshaderc/Debug/shaderc_combined.lib ../../FlexEngine/FlexEngine/lib/x64/Debug/`
+10. Install [GENie](https://github.com/bkaradzic/GENie) from  https://github.com/bkaradzic/bx/raw/master/tools/bin/linux/genie
+11. From the root directory run `genie --file=scripts/genie.lua ninja`, replacing ninja with cmake, gmake, or any other preferred supported build system.
+12. Build:
   `ninja -C debug64`
-12. Run!
+13. Run!
   `./../bin/Debug_x64/FlexEngine/Flex`

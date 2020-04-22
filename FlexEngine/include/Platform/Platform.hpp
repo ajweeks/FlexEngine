@@ -62,7 +62,7 @@ namespace flex
 		bool m_bInstalled = false;
 		bool m_bWatchSubtree = false;
 		std::string m_Directory;
-		HANDLE m_ChangeHandle;
+		u64 m_ChangeHandle;
 
 	};
 } // namespace flex

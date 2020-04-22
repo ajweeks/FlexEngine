@@ -492,7 +492,7 @@ namespace flex
 
 			std::vector<const char*> m_ValidationLayers =
 			{
-				"VK_LAYER_LUNARG_standard_validation",
+				//"VK_LAYER_LUNARG_standard_validation",
 				//"VK_LAYER_LUNARG_monitor", // FPS in title bar
 				//"VK_LAYER_LUNARG_api_dump", // Log content
 				//"VK_LAYER_LUNARG_screenshot",

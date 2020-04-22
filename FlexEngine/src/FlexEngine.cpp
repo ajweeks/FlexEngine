@@ -164,18 +164,18 @@ namespace flex
 		m_CompilerVersion = "Unknown";
 #endif
 
-#if DEBUG
+#ifdef DEBUG
 		const char* configStr = "Debug";
-#elif DEVELOPMENT
+#elif defined(DEVELOPMENT)
 		const char* configStr = "Development";
-#elif SHIPPING
-#if SYMBOLS
+#elif defined(SHIPPING)
+#if defined(SYMBOLS)
 		const char* configStr = "Shipping (with symbols)";
 #else
 		const char* configStr = "Shipping";
 #endif
 #else
-		assert(false);
+		static_assert(false);
 #endif
 
 #if defined(FLEX_64)

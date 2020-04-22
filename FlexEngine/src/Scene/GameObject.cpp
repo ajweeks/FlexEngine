@@ -4582,8 +4582,8 @@ namespace flex
 
 	GameObject* ChunkGenerator::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
 	{
-		UNREFERENCED_PARAMETER(parent);
-		UNREFERENCED_PARAMETER(bCopyChildren);
+		FLEX_UNUSED(parent);
+		FLEX_UNUSED(bCopyChildren);
 		return nullptr;
 	}
 
@@ -4928,7 +4928,7 @@ namespace flex
 	{
 		GameObject::DrawImGuiObjects();
 
-		ImGui::Text("Loaded chunks: %u (loading: %u)", m_Meshes.size(),  m_ChunksToLoad.size());
+		ImGui::Text("Loaded chunks: %u (loading: %u)", (u32)m_Meshes.size(),  (u32)m_ChunksToLoad.size());
 
 		bool bRegen = false;
 
@@ -5016,8 +5016,8 @@ namespace flex
 
 	void ChunkGenerator::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
-		UNREFERENCED_PARAMETER(matIDs);
-		UNREFERENCED_PARAMETER(scene);
+		FLEX_UNUSED(matIDs);
+		FLEX_UNUSED(scene);
 
 		if (parentObject.HasField("chunk generator info"))
 		{

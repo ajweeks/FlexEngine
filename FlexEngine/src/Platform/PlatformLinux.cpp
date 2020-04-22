@@ -305,16 +305,20 @@ namespace flex
 			while ((ent = readdir(dir)) != NULL)
 			{
 				std::string fileNameStr(ent->d_name);
-				bool foundFileTypeMatches = false;
-				if (cleanedFileType == "*")
+				bool bFoundFileTypeMatches = false;
+				if (fileNameStr.compare(".") == 0 || fileNameStr.compare("..") == 0)
 				{
-					foundFileTypeMatches = true;
+					bFoundFileTypeMatches = false;
+				}
+				else if (cleanedFileType == "*")
+				{
+					bFoundFileTypeMatches = true;
 				}
 				else
 				{
 					size_t dotPos = fileNameStr.find('.');
 
-					if (dotPos != std::string::npos && fileNameStr != "..")
+					if (dotPos != std::string::npos)
 					{
 						std::vector<std::string> parts = Split(fileNameStr, '.');
 						if (parts.size() > 0)
@@ -322,13 +326,13 @@ namespace flex
 							std::string foundFileType = parts[1];
 							if (foundFileType == cleanedFileType)
 							{
-								foundFileTypeMatches = true;
+								bFoundFileTypeMatches = true;
 							}
 						}
 					}
 				}
 
-				if (foundFileTypeMatches)
+				if (bFoundFileTypeMatches)
 				{
 					filePaths.push_back(cleanedDirPath + fileNameStr);
 				}
@@ -380,6 +384,28 @@ namespace flex
 		}
 
 		return result.str();
+	}
+
+	DirectoryWatcher::DirectoryWatcher(const std::string& directory, bool bWatchSubtree) :
+		m_Directory(directory),
+		m_bWatchSubtree(bWatchSubtree)
+	{
+		// TODO: Add support for directory watching on linux
+		m_bInstalled = false;
+	}
+
+	DirectoryWatcher::~DirectoryWatcher()
+	{
+	}
+
+	bool DirectoryWatcher::Update()
+	{
+		return false;
+	}
+
+	bool DirectoryWatcher::Installed() const
+	{
+		return m_bInstalled;
 	}
 
 } // namespace flex
