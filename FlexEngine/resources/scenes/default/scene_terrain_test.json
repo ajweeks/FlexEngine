@@ -15,9 +15,9 @@
 		"move speed" : 514.398987,
 		"transform" : 
 		{
-			"position" : "1064.915, 629.242, 142.905",
-			"pitch" : -0.549736,
-			"yaw" : -3.093882
+			"position" : "-783.311, 833.233, 1749.117",
+			"pitch" : -0.160273,
+			"yaw" : -13.722377
 		}
 	},
 	"objects" : 
@@ -79,17 +79,17 @@
 			"chunk generator info" : 
 			{
 				"vert count per chunk axis" : 64,
-				"chunk size" : 512.000000,
-				"max height" : 512.000000,
+				"chunk size" : 768.000000,
+				"max height" : 768.000000,
 				"use manual seed" : true,
 				"manual seed" : 1234123,
-				"loaded chunk radius" : 1962.673950,
+				"loaded chunk radius" : 4181.337891,
 				"base table width" : 32,
 				"low colour" : "0.20, 0.30, 0.45",
 				"mid colour" : "0.45, 0.55, 0.25",
 				"high colour" : "0.65, 0.67, 0.69",
-				"base octave" : 331.000000,
-				"octave scale" : 101.581001,
+				"base octave" : 949.869995,
+				"octave scale" : 151.438004,
 				"num octaves" : 5,
 				"pin center" : true,
 				"pinned center" : "1064.91, 629.24, 142.91"

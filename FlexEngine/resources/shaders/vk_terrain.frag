@@ -26,7 +26,7 @@ void main()
 	mat4 invView = inverse(uboConstant.view);
 	vec3 camPos = vec3(invView[3][0], invView[3][1], invView[3][2]);
 
-	float dist = clamp(length(camPos - ex_PositionWS)*0.0004,0.0,1.0);
+	float dist = clamp(length(camPos - ex_PositionWS)*0.0002,0.15,1.0);
 
 	dist = smoothstep(dist, 0.0, 0.1);
 
