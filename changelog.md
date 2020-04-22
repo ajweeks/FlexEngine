@@ -2,6 +2,11 @@
 ### Flex Engine change log (reverse chronological order)
 
 **2020**
+_April_
+- Add directory watch to auto-recompile shaders on file modification for lightning-fast iteration times
+- Add more granular shader compilation using shaderc library
+- Add basic terrain generation/streaming
+
 _March_
 - Finish implementing edior gizmos (translate, rotate, scale)
 - Finish linux port
