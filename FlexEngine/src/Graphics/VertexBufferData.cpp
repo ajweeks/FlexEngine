@@ -43,23 +43,38 @@ namespace flex
 		VertexStride = CalculateVertexStride(attributes);
 		VertexBufferSize = VertexCount * VertexStride;
 
-		assert(vertexData == nullptr);
-		vertexData = (real*)malloc(VertexBufferSize);
-		if (vertexData == nullptr)
+		if (VertexBufferSize > 0)
 		{
-			PrintError("Failed to allocate dynamic vertex buffer memory (%u bytes)\n", VertexBufferSize);
-			return;
+			assert(vertexData == nullptr);
+			vertexData = (real*)malloc(VertexBufferSize);
+			if (vertexData == nullptr)
+			{
+				PrintError("Failed to allocate dynamic vertex buffer memory (%u bytes)\n", VertexBufferSize);
+				return;
+			}
 		}
 	}
 
 	void VertexBufferData::UpdateData(const VertexBufferDataCreateInfo& createInfo)
 	{
+		u32 newVertCount = glm::max((u32)createInfo.positions_2D.size(), glm::max((u32)createInfo.positions_3D.size(), (u32)createInfo.positions_4D.size()));
+		if (newVertCount > VertexCount)
+		{
+			VertexCount = newVertCount;
+			VertexBufferSize = VertexCount * VertexStride;
+			free(vertexData);
+			vertexData = (real*)malloc(VertexBufferSize);
+			if (vertexData == nullptr)
+			{
+				PrintError("Failed to allocate dynamic vertex buffer memory (%u bytes)\n", VertexBufferSize);
+				return;
+			}
+		}
+
 		assert(vertexData != nullptr);
-		assert(VertexCount > 0);
 
 		real* vertexDataP = vertexData;
-		u32 count = glm::min(VertexCount, glm::max((u32)createInfo.positions_2D.size(), glm::max((u32)createInfo.positions_3D.size(), (u32)createInfo.positions_4D.size())));
-		for (u32 i = 0; i < count; ++i)
+		for (u32 i = 0; i < VertexCount; ++i)
 		{
 			if (Attributes & (u32)VertexAttribute::POSITION)
 			{
@@ -82,7 +97,7 @@ namespace flex
 			if (Attributes & (u32)VertexAttribute::VELOCITY3)
 			{
 				memcpy(vertexDataP, createInfo.velocities.data() + i, sizeof(glm::vec3));
-				vertexDataP += 4;
+				vertexDataP += 3;
 			}
 
 			if (Attributes & (u32)VertexAttribute::UV)
@@ -127,8 +142,7 @@ namespace flex
 				vertexDataP += 1;
 			}
 		}
-		VertexCount = count;
-		assert(vertexDataP == vertexData + (VertexStride / sizeof(real) * count));
+		assert(vertexDataP == vertexData + (VertexStride / sizeof(real) * VertexCount));
 	}
 
 	void VertexBufferData::Destroy()
