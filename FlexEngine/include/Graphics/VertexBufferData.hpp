@@ -28,7 +28,7 @@ namespace flex
 	{
 	public:
 		void Initialize(const VertexBufferDataCreateInfo& createInfo);
-		void InitializeDynamic(VertexAttributes attributes, u32 maxNumVerts); // Allocates enough memory for maxNumVerts with given attributes
+		void InitializeDynamic(VertexAttributes attributes, u32 initialMaxVertCount);
 		void UpdateData(const VertexBufferDataCreateInfo& createInfo);
 		void Destroy();
 

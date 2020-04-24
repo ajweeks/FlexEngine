@@ -50,6 +50,12 @@ namespace flex
 			MaterialID matID,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
+		bool LoadFromMemoryDynamic(const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
+			const std::vector<u32>& indices,
+			MaterialID matID,
+			u32 initialMaxVertexCount,
+			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
+
 		bool LoadPrefabShape(PrefabShape shape,
 			MaterialID materialID,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
@@ -101,8 +107,16 @@ namespace flex
 
 		std::vector<MeshComponent*> m_Meshes;
 	private:
-		void CalculateBounds();
 		static bool CheckCGLTFResult(cgltf_result result, std::string& outErrorMessage);
+
+		void CalculateBounds();
+
+		bool LoadFromMemoryInternal(const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
+			const std::vector<u32>& indices,
+			MaterialID matID,
+			bool bDynamic,
+			u32 initialMaxVertexCount,
+			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
 
 		Type m_Type = Type::_NONE;

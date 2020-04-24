@@ -1383,7 +1383,7 @@ namespace flex
 			m_BaseShaders[shaderID].bNeedMetallicSampler = true;
 			m_BaseShaders[shaderID].bNeedRoughnessSampler = true;
 			m_BaseShaders[shaderID].bNeedNormalSampler = true;
-			m_BaseShaders[shaderID].dynamicVertexBufferSize = 1024 * 1024; // TODO;
+			m_BaseShaders[shaderID].dynamicVertexBufferSize = 10 * 1024 * 1024; // 10MB
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV |

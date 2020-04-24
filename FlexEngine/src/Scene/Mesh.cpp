@@ -175,6 +175,25 @@ namespace flex
 		MaterialID matID,
 		RenderObjectCreateInfo* optionalCreateInfo)
 	{
+		return LoadFromMemoryInternal(vertexBufferCreateInfo, indices, matID, false, 0, optionalCreateInfo);
+	}
+
+	bool Mesh::LoadFromMemoryDynamic(const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
+		const std::vector<u32>& indices,
+		MaterialID matID,
+		u32 initialMaxVertexCount,
+		RenderObjectCreateInfo* optionalCreateInfo)
+	{
+		return LoadFromMemoryInternal(vertexBufferCreateInfo, indices, matID, true, initialMaxVertexCount, optionalCreateInfo);
+	}
+
+	bool Mesh::LoadFromMemoryInternal(const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
+		const std::vector<u32>& indices,
+		MaterialID matID,
+		bool bDynamic,
+		u32 initialMaxVertexCount,
+		RenderObjectCreateInfo* optionalCreateInfo)
+	{
 		if (m_bInitialized)
 		{
 			PrintError("Attempted to load mesh after already initialized! If reloading, first call Destroy\n");
@@ -192,7 +211,17 @@ namespace flex
 			return false;
 		}
 
-		MeshComponent* meshComponent = MeshComponent::LoadFromMemory(this, vertexBufferCreateInfo, indices, matID, optionalCreateInfo);
+		MeshComponent* meshComponent = nullptr;
+
+		if (bDynamic)
+		{
+			meshComponent = MeshComponent::LoadFromMemoryDynamic(this, vertexBufferCreateInfo, indices, matID, initialMaxVertexCount, optionalCreateInfo);
+		}
+		else
+		{
+			meshComponent = MeshComponent::LoadFromMemory(this, vertexBufferCreateInfo, indices, matID, optionalCreateInfo);
+		}
+
 		if (meshComponent)
 		{
 			m_Meshes.push_back(meshComponent);

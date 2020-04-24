@@ -1905,7 +1905,8 @@ namespace flex
 		void VulkanRenderer::UpdateVertexData(RenderID renderID, VertexBufferData const* vertexBufferData, const std::vector<u32>& indexData)
 		{
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
-			VertexIndexBufferPair* vertexIndexBufferPair = m_DynamicVertexIndexBufferPairs[m_Materials.at(renderObject->materialID).material.dynamicVertexIndexBufferIndex].second;
+			VulkanMaterial& mat = m_Materials.at(renderObject->materialID);
+			VertexIndexBufferPair* vertexIndexBufferPair = m_DynamicVertexIndexBufferPairs[mat.material.dynamicVertexIndexBufferIndex].second;
 			VulkanBuffer* vertexBuffer = vertexIndexBufferPair->vertexBuffer;
 			VulkanBuffer* indexBuffer = vertexIndexBufferPair->indexBuffer;
 			u32 copySize = std::min(vertexBufferData->VertexBufferSize, (u32)vertexBuffer->m_Size);

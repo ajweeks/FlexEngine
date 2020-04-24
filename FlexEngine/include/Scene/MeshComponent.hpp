@@ -21,7 +21,6 @@ namespace flex
 		PLANE,
 		UV_SPHERE,
 		SKYBOX,
-		GERSTNER_PLANE,
 
 		_NONE
 	};
@@ -57,6 +56,13 @@ namespace flex
 			const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
 			const std::vector<u32>& indices,
 			MaterialID materialID,
+			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
+
+		static MeshComponent* LoadFromMemoryDynamic(Mesh* owningMesh,
+			const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
+			const std::vector<u32>& indices,
+			MaterialID materialID,
+			u32 initialMaxVertexCount,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
 		bool LoadPrefabShape(PrefabShape shape,
@@ -96,6 +102,14 @@ namespace flex
 		RenderID renderID = InvalidRenderID;
 
 	private:
+		static MeshComponent* LoadFromMemoryInternal(Mesh* owningMesh,
+			const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
+			const std::vector<u32>& indices,
+			MaterialID materialID,
+			bool bDyanmic,
+			u32 initialMaxDynamicVertexCount,
+			RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */);
+
 		real CalculateBoundingSphereScale() const;
 		bool CalculateTangents(VertexBufferDataCreateInfo& createInfo, bool bMissingTexCoords);
 
@@ -126,8 +140,6 @@ namespace flex
 		VertexBufferData m_VertexBufferData = {};
 
 		std::vector<u32> m_Indices;
-
-		RenderObjectCreateInfo m_OptionalCreateInfo = {};
 
 	};
 } // namespace flex

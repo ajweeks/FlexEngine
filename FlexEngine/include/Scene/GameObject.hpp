@@ -496,15 +496,16 @@ namespace flex
 
 		virtual void DrawImGuiObjects() override;
 
-	protected:
+	private:
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
 		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
 
 		void UpdateDependentVariables(i32 waveIndex);
 
+		void UpdateWaveVertexData();
+
 		i32 vertSideCount = 100;
 		real size = 30.0f;
-		VertexBufferDataCreateInfo bufferInfo;
 
 		struct WaveInfo
 		{
@@ -522,6 +523,9 @@ namespace flex
 		};
 
 		std::vector<WaveInfo> waves;
+
+		VertexBufferDataCreateInfo m_VertexBufferCreateInfo;
+		std::vector<u32> m_Indices;
 
 		GameObject* bobber = nullptr;
 		Spring<real> bobberTarget;

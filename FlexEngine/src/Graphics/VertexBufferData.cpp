@@ -35,10 +35,10 @@ namespace flex
 		UpdateData(createInfo);
 	}
 
-	void VertexBufferData::InitializeDynamic(VertexAttributes attributes, u32 maxNumVerts)
+	void VertexBufferData::InitializeDynamic(VertexAttributes attributes, u32 initialMaxVertCount)
 	{
 		bDynamic = true;
-		VertexCount = maxNumVerts;
+		VertexCount = initialMaxVertCount;
 		Attributes = attributes;
 		VertexStride = CalculateVertexStride(attributes);
 		VertexBufferSize = VertexCount * VertexStride;
@@ -57,10 +57,10 @@ namespace flex
 
 	void VertexBufferData::UpdateData(const VertexBufferDataCreateInfo& createInfo)
 	{
-		u32 newVertCount = glm::max((u32)createInfo.positions_2D.size(), glm::max((u32)createInfo.positions_3D.size(), (u32)createInfo.positions_4D.size()));
-		if (newVertCount > VertexCount)
+		u32 vertCountToUpdate = glm::max((u32)createInfo.positions_2D.size(), glm::max((u32)createInfo.positions_3D.size(), (u32)createInfo.positions_4D.size()));
+		if (vertCountToUpdate * VertexStride > VertexBufferSize)
 		{
-			VertexCount = newVertCount;
+			VertexCount = vertCountToUpdate;
 			VertexBufferSize = VertexCount * VertexStride;
 			free(vertexData);
 			vertexData = (real*)malloc(VertexBufferSize);
@@ -74,7 +74,7 @@ namespace flex
 		assert(vertexData != nullptr);
 
 		real* vertexDataP = vertexData;
-		for (u32 i = 0; i < VertexCount; ++i)
+		for (u32 i = 0; i < vertCountToUpdate; ++i)
 		{
 			if (Attributes & (u32)VertexAttribute::POSITION)
 			{
@@ -142,7 +142,7 @@ namespace flex
 				vertexDataP += 1;
 			}
 		}
-		assert(vertexDataP == vertexData + (VertexStride / sizeof(real) * VertexCount));
+		assert(vertexDataP == vertexData + (VertexStride / sizeof(real) * vertCountToUpdate));
 	}
 
 	void VertexBufferData::Destroy()

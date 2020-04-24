@@ -380,21 +380,46 @@ namespace flex
 		return newMeshComponent;
 	}
 
+	MeshComponent* MeshComponent::LoadFromMemoryDynamic(Mesh* owningMesh,
+		const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
+		const std::vector<u32>& indices,
+		MaterialID materialID,
+		u32 initialMaxVertexCount,
+		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
+	{
+		return LoadFromMemoryInternal(owningMesh, vertexBufferCreateInfo, indices, materialID, true, initialMaxVertexCount, optionalCreateInfo);
+	}
+
 	MeshComponent* MeshComponent::LoadFromMemory(Mesh* owningMesh,
 		const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
 		const std::vector<u32>& indices,
 		MaterialID materialID,
 		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
 	{
-		MeshComponent* newMeshComponent = new MeshComponent(owningMesh, materialID);
+		return LoadFromMemoryInternal(owningMesh, vertexBufferCreateInfo, indices, materialID, false, 0, optionalCreateInfo);
+	}
 
-		// TODO:
-		//newMeshComponent->m_MinPoint = glm::min(newMeshComponent->m_MinPoint, posMin);
-		//newMeshComponent->m_MaxPoint = glm::max(newMeshComponent->m_MaxPoint, posMax);
+	MeshComponent* MeshComponent::LoadFromMemoryInternal(Mesh* owningMesh,
+		const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
+		const std::vector<u32>& indices,
+		MaterialID materialID,
+		bool bDynamic,
+		u32 initialMaxDynamicVertexCount,
+		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
+		{
+		MeshComponent* newMeshComponent = new MeshComponent(owningMesh, materialID);
 
 		newMeshComponent->CalculateBoundingSphereRadius(vertexBufferCreateInfo.positions_3D);
 		newMeshComponent->m_Indices = indices;
-		newMeshComponent->m_VertexBufferData.Initialize(vertexBufferCreateInfo);
+		if (bDynamic)
+		{
+			newMeshComponent->m_VertexBufferData.InitializeDynamic(vertexBufferCreateInfo.attributes, initialMaxDynamicVertexCount);
+			newMeshComponent->m_VertexBufferData.UpdateData(vertexBufferCreateInfo);
+		}
+		else
+		{
+			newMeshComponent->m_VertexBufferData.Initialize(vertexBufferCreateInfo);
+		}
 
 		RenderObjectCreateInfo renderObjectCreateInfo = {};
 
@@ -799,47 +824,6 @@ namespace flex
 			};
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::UV;
 		} break;
-		case PrefabShape::GERSTNER_PLANE:
-		{
-			// TODO: Provide as input
-			i32 vertCountH = 100;
-
-			i32 vertCount = vertCountH * vertCountH;
-			vertexBufferDataCreateInfo.positions_3D.resize(vertCount);
-			vertexBufferDataCreateInfo.normals.resize(vertCount);
-			vertexBufferDataCreateInfo.tangents.resize(vertCount);
-			vertexBufferDataCreateInfo.colors_R32G32B32A32.resize(vertCount);
-
-			// NOTE: Wave generation is implemented in GerstnerWave::Update
-
-			// Init two values so bounding sphere radius isn't zero
-			vertexBufferDataCreateInfo.positions_3D[0] = VEC3_NEG_ONE;
-			vertexBufferDataCreateInfo.positions_3D[1] = VEC3_ONE;
-
-			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
-			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::NORMAL;
-			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::TANGENT;
-			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
-
-			i32 indexCount = 6 * vertCount;
-			m_Indices.resize(indexCount);
-			i32 i = 0;
-			for (i32 z = 0; z < vertCountH - 1; ++z)
-			{
-				for (i32 x = 0; x < vertCountH - 1; ++x)
-				{
-					i32 vertIdx = z * vertCountH + x;
-					m_Indices[i++] = vertIdx;
-					m_Indices[i++] = vertIdx + vertCountH;
-					m_Indices[i++] = vertIdx + 1;
-
-					vertIdx = vertIdx + 1 + vertCountH;
-					m_Indices[i++] = vertIdx;
-					m_Indices[i++] = vertIdx - vertCountH;
-					m_Indices[i++] = vertIdx - 1;
-				}
-			}
-		} break;
 		case PrefabShape::UV_SPHERE:
 		{
 			// Vertices
@@ -1124,7 +1108,6 @@ namespace flex
 		case PrefabShape::PLANE:				return "plane";
 		case PrefabShape::UV_SPHERE:			return "uv sphere";
 		case PrefabShape::SKYBOX:			return "skybox";
-		case PrefabShape::GERSTNER_PLANE:	return "gerstner plane";
 		case PrefabShape::_NONE:				return "NONE";
 		default:											return "UNHANDLED PREFAB SHAPE";
 		}
