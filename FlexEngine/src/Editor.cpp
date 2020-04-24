@@ -15,6 +15,7 @@ IGNORE_WARNINGS_POP
 
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
+#include "Cameras/DebugCamera.hpp"
 #include "FlexEngine.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Graphics/RendererTypes.hpp"
@@ -1094,7 +1095,8 @@ namespace flex
 				return EventReply::CONSUMED;
 			}
 
-			if (keyCode == KeyCode::KEY_F && !m_CurrentlySelectedObjects.empty())
+			// TODO: Add camera types!
+			if (keyCode == KeyCode::KEY_F && !m_CurrentlySelectedObjects.empty() && dynamic_cast<DebugCamera*>(g_CameraManager->CurrentCamera()) != nullptr)
 			{
 				// Focus on selected objects
 
@@ -1120,10 +1122,13 @@ namespace flex
 
 					BaseCamera* cam = g_CameraManager->CurrentCamera();
 
-					glm::vec3 currentOffset = cam->position - sphereCenterWS;
-					glm::vec3 newOffset = glm::normalize(currentOffset) * sphereRadius * 2.0f;
+					if (sphereRadius > 0.0f)
+					{
+						glm::vec3 currentOffset = cam->position - sphereCenterWS;
+						glm::vec3 newOffset = ((currentOffset != VEC3_ZERO) ? (glm::normalize(currentOffset) * sphereRadius * 2.0f) : glm::vec3(0.0f, 0.0f, sphereRadius * 2.0f));
+						cam->position = sphereCenterWS + newOffset;
+					}
 
-					cam->position = sphereCenterWS + newOffset;
 					cam->LookAt(sphereCenterWS);
 				}
 				return EventReply::CONSUMED;
