@@ -488,6 +488,8 @@ namespace flex
 	public:
 		explicit GerstnerWave(const std::string& name);
 
+		virtual void Initialize() override;
+		virtual void PostInitialize() override;
 		virtual void Update() override;
 		void AddWave();
 		void RemoveWave(i32 index);
@@ -506,6 +508,7 @@ namespace flex
 
 		i32 vertSideCount = 100;
 		real size = 30.0f;
+		MaterialID m_WaveMaterialID;
 
 		struct WaveInfo
 		{

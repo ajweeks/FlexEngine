@@ -422,6 +422,8 @@ namespace flex
 
 			m_TAA_ks[0] = 2.25f; // KL
 			m_TAA_ks[1] = 100.0f; // KH
+
+			CreateDynamicVertexAndIndexBuffers();
 		}
 
 		void VulkanRenderer::PostInitialize()
@@ -566,7 +568,6 @@ namespace flex
 
 			CreateStaticVertexBuffers();
 			CreateStaticIndexBuffers();
-			CreateDynamicVertexAndIndexBuffers();
 
 			CreateShadowVertexBuffer();
 			CreateShadowIndexBuffer();
@@ -1905,26 +1906,43 @@ namespace flex
 		void VulkanRenderer::UpdateVertexData(RenderID renderID, VertexBufferData const* vertexBufferData, const std::vector<u32>& indexData)
 		{
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
+
 			VulkanMaterial& mat = m_Materials.at(renderObject->materialID);
 			VertexIndexBufferPair* vertexIndexBufferPair = m_DynamicVertexIndexBufferPairs[mat.material.dynamicVertexIndexBufferIndex].second;
 			VulkanBuffer* vertexBuffer = vertexIndexBufferPair->vertexBuffer;
 			VulkanBuffer* indexBuffer = vertexIndexBufferPair->indexBuffer;
-			u32 copySize = std::min(vertexBufferData->VertexBufferSize, (u32)vertexBuffer->m_Size);
-			u32 indexCopySize = std::min((u32)(indexData.size() * sizeof(indexData[0])), (u32)indexBuffer->m_Size);
-			if (copySize < vertexBufferData->VertexBufferSize)
+
+			if (renderObject->dynamicVertexBufferOffset == u64_max)
 			{
-				PrintError("Dynamic vertex buffer is %u bytes too small for data attempting to be copied in\n", vertexBufferData->VertexBufferSize - copySize);
+				// First upload of data
+				renderObject->dynamicVertexBufferOffset = vertexBuffer->Alloc((VkDeviceSize)vertexBufferData->VertexBufferSize, true);
+				renderObject->dynamicIndexBufferOffset = indexBuffer->Alloc((VkDeviceSize)(indexData.size() * sizeof(u32)), true);
 			}
-			// TODO: Keep mapped persistently?
-			VK_CHECK_RESULT(vertexBuffer->Map(copySize));
-			VK_CHECK_RESULT(indexBuffer->Map(indexCopySize));
-			memcpy(vertexBuffer->m_Mapped, vertexBufferData->vertexData, copySize);
+
+			u32 vertCopySize = std::min(vertexBufferData->VertexBufferSize, (u32)vertexBuffer->m_Size);
+			u32 indexCopySize = std::min((u32)(indexData.size() * sizeof(u32)), (u32)indexBuffer->m_Size);
+			if (vertCopySize < vertexBufferData->VertexBufferSize)
+			{
+				PrintError("Dynamic vertex buffer is %u bytes too small for data attempting to be copied in\n", vertexBufferData->VertexBufferSize - vertCopySize);
+			}
+			VkDeviceSize vertOffset = renderObject->dynamicVertexBufferOffset;
+			VkDeviceSize indexOffset = renderObject->dynamicIndexBufferOffset;
+
+			assert((vertOffset + vertCopySize) <= vertexBuffer->m_Size);
+			assert((indexOffset + indexCopySize) <= indexBuffer->m_Size);
+
+			VK_CHECK_RESULT(vertexBuffer->Map(vertOffset, vertCopySize));
+			VK_CHECK_RESULT(indexBuffer->Map(indexOffset, indexCopySize));
+			memcpy(vertexBuffer->m_Mapped, vertexBufferData->vertexData, vertCopySize);
 			memcpy(indexBuffer->m_Mapped, indexData.data(), indexCopySize);
 			vertexBuffer->Unmap();
 			indexBuffer->Unmap();
-			renderObject->indexOffset = 0;
 
-			m_DirtyFlagBits |= DirtyFlags::DYNAMIC_DATA;
+
+			renderObject->vertexOffset = (u32)vertOffset;
+			renderObject->indexOffset = (u32)indexOffset;
+
+			m_DirtyFlagBits |= DirtyFlags::DYNAMIC_DATA; // TODO: Is this needed?
 		}
 
 		void VulkanRenderer::DrawImGuiForRenderObject(RenderID renderID)
@@ -7087,6 +7105,7 @@ namespace flex
 			{
 				return renderObject &&
 					renderObject->vertexBufferData &&
+					!m_Materials[renderObject->materialID].material.bDynamic &&
 					m_Shaders[m_Materials.at(renderObject->materialID).material.shaderID].shader->staticVertexBufferIndex == staticVertexBufferIndex;
 			};
 
@@ -7273,7 +7292,8 @@ namespace flex
 			for (VulkanRenderObject* renderObject : m_RenderObjects)
 			{
 				if (renderObject &&
-					renderObject->bIndexed)
+					renderObject->bIndexed &&
+					!m_Materials[renderObject->materialID].material.bDynamic)
 				{
 					renderObject->indexOffset = (u32)indices.size();
 					indices.insert(indices.end(), renderObject->indices->begin(), renderObject->indices->end());
@@ -7397,11 +7417,6 @@ namespace flex
 				CreateStaticVertexBuffers();
 				CreateStaticIndexBuffers();
 			}
-			if (m_DirtyFlagBits & DirtyFlags::DYNAMIC_DATA)
-			{
-				CreateDynamicVertexAndIndexBuffers();
-			}
-
 			if (m_DirtyFlagBits & DirtyFlags::SHADOW_DATA)
 			{
 				CreateShadowVertexBuffer();

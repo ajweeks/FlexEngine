@@ -414,7 +414,6 @@ namespace flex
 		if (bDynamic)
 		{
 			newMeshComponent->m_VertexBufferData.InitializeDynamic(vertexBufferCreateInfo.attributes, initialMaxDynamicVertexCount);
-			newMeshComponent->m_VertexBufferData.UpdateData(vertexBufferCreateInfo);
 		}
 		else
 		{

@@ -57,12 +57,83 @@ namespace flex
 			return vkMapMemory(m_Device->m_LogicalDevice, m_Memory, 0, size, 0, &m_Mapped);
 		}
 
+		VkResult VulkanBuffer::Map(VkDeviceSize offset, VkDeviceSize size)
+		{
+			return vkMapMemory(m_Device->m_LogicalDevice, m_Memory, offset, size, 0, &m_Mapped);
+		}
+
 		void VulkanBuffer::Unmap()
 		{
 			if (m_Mapped)
 			{
 				vkUnmapMemory(m_Device->m_LogicalDevice, m_Memory);
 				m_Mapped = nullptr;
+			}
+		}
+
+		VkDeviceSize VulkanBuffer::Alloc(VkDeviceSize size, bool bCanResize)
+		{
+			const VkDeviceSize errorCode = (VkDeviceSize)-1;
+
+			if (size > m_Size && !bCanResize)
+			{
+				return errorCode;
+			}
+
+			VkDeviceSize offset = 0;
+			for (VkDeviceSize i = 0; i < (VkDeviceSize)allocations.size(); /**/)
+			{
+				if (allocations[i].offset >= offset && allocations[i].offset < (offset + size))
+				{
+					// Overlaps current guess
+					offset = allocations[i].offset + allocations[i].size;
+					if (offset + size > m_Size)
+					{
+						if (!bCanResize)
+						{
+							return errorCode;
+						}
+						VkDeviceSize newSize = offset + size; // TODO: Grow by larger amount?
+						VkResult result = Create(newSize, m_UsageFlags, m_MemoryPropertyFlags);
+						if (result == VK_SUCCESS)
+						{
+							// TODO: Copy previous contents in to new buffer?
+							allocations.push_back({ offset, size });
+							return offset;
+						}
+						else
+						{
+							VK_CHECK_RESULT(result);
+							return errorCode;
+						}
+					}
+					i = 0;
+					continue;
+				}
+
+				++i;
+			}
+
+			if (offset + size < m_Size)
+			{
+				allocations.push_back({ offset, size });
+				return offset;
+			}
+			else
+			{
+				VkDeviceSize newSize = offset + size; // TODO: Grow by larger amount?
+				VkResult result = Create(newSize, m_UsageFlags, m_MemoryPropertyFlags);
+				if (result == VK_SUCCESS)
+				{
+					// TODO: Copy previous contents in to new buffer?
+					allocations.push_back({ offset, size });
+					return offset;
+				}
+				else
+				{
+					VK_CHECK_RESULT(result);
+					return errorCode;
+				}
 			}
 		}
 	} // namespace vk

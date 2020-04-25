@@ -3287,42 +3287,47 @@ namespace flex
 		matCreateInfo.constRoughness = 0.01f;
 		matCreateInfo.bDynamic = true;
 
-		MaterialID planeMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
-
-
-		for (i32 i = 0; i < (i32)waves.size(); ++i)
-		{
-			UpdateDependentVariables(i);
-		}
-
-		m_VertexBufferCreateInfo = {};
-		m_VertexBufferCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
-		m_VertexBufferCreateInfo.attributes |= (u32)VertexAttribute::NORMAL;
-		m_VertexBufferCreateInfo.attributes |= (u32)VertexAttribute::TANGENT;
-		m_VertexBufferCreateInfo.attributes |= (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
-
-		UpdateWaveVertexData();
-
-		SetMesh(new Mesh(this));
-
-		m_Mesh->LoadFromMemoryDynamic(m_VertexBufferCreateInfo, m_Indices, planeMatID, 4096);
+		m_WaveMaterialID = g_Renderer->InitializeMaterial(&matCreateInfo);
 
 		bobberTarget = Spring<real>(0.0f);
 		bobberTarget.DR = 2.5f;
 		bobberTarget.UAF = 40.0f;
 		bobber = new GameObject("Bobber", GameObjectType::_NONE);
 		bobber->SetSerializable(false);
-		MaterialID matID = InvalidMaterialID;
-		if (!g_Renderer->FindOrCreateMaterialByName("pbr red", matID))
+		MaterialID bobberMatID = InvalidMaterialID;
+		if (!g_Renderer->FindOrCreateMaterialByName("pbr red", bobberMatID))
 		{
 			PrintError("Failed to find material for bobber!\n");
 		}
+		else
+		{
+			bobberMatID = g_Renderer->GetPlaceholderMaterialID();
+		}
 		Mesh* mesh = bobber->SetMesh(new Mesh(bobber));
-		if (!mesh->LoadFromFile(RESOURCE("meshes/sphere.glb"), matID))
+		if (!mesh->LoadFromFile(RESOURCE("meshes/sphere.glb"), bobberMatID))
 		{
 			PrintError("Failed to load bobber mesh\n");
 		}
 		g_SceneManager->CurrentScene()->AddRootObject(bobber);
+	}
+
+	void GerstnerWave::Initialize()
+	{
+		m_VertexBufferCreateInfo = {};
+		m_VertexBufferCreateInfo.attributes = g_Renderer->GetShader(g_Renderer->GetMaterial(m_WaveMaterialID).shaderID).vertexAttributes;
+
+		UpdateWaveVertexData();
+
+		SetMesh(new Mesh(this));
+
+		m_Mesh->LoadFromMemoryDynamic(m_VertexBufferCreateInfo, m_Indices, m_WaveMaterialID, (u32)m_VertexBufferCreateInfo.positions_3D.size());
+	}
+
+	void GerstnerWave::PostInitialize()
+	{
+		MeshComponent* meshComponent = m_Mesh->GetSubMeshes()[0];
+		// TODO: Find out why this isn't enough!
+		meshComponent->UpdateProceduralData(m_VertexBufferCreateInfo, m_Indices);
 	}
 
 	void GerstnerWave::Update()
@@ -3343,16 +3348,16 @@ namespace flex
 		glm::vec3 newPos = wavePos + glm::vec3(surfacePos.x, bobberTarget.pos + vOffset, surfacePos.z);
 		bobber->GetTransform()->SetWorldPosition(newPos);
 
-		//btVector3 targetPosBT = btVector3(wavePos.x + surfacePos.x, wavePos.y + bobberTarget.targetPos, wavePos.z + surfacePos.z);
-		//g_Renderer->GetDebugDrawer()->drawSphere(targetPosBT, 1.0f, btVector3(1.0f, 0.0f, 0.1f));
-		//btVector3 posBT = btVector3(wavePos.x + surfacePos.x, wavePos.y + bobberTarget.pos, wavePos.z + surfacePos.z);
-		//g_Renderer->GetDebugDrawer()->drawSphere(posBT, 0.7f, btVector3(0.75f, 0.5f, 0.6f));
+		btVector3 targetPosBT = btVector3(wavePos.x + surfacePos.x, wavePos.y + bobberTarget.targetPos, wavePos.z + surfacePos.z);
+		g_Renderer->GetDebugDrawer()->drawSphere(targetPosBT, 1.0f, btVector3(1.0f, 0.0f, 0.1f));
+		btVector3 posBT = btVector3(wavePos.x + surfacePos.x, wavePos.y + bobberTarget.pos, wavePos.z + surfacePos.z);
+		g_Renderer->GetDebugDrawer()->drawSphere(posBT, 0.7f, btVector3(0.75f, 0.5f, 0.6f));
 	}
 
 	void GerstnerWave::UpdateWaveVertexData()
 	{
 		const i32 vertCount = vertSideCount * vertSideCount;
-		const i32 indexCount = 6 * vertCount;
+		const i32 indexCount = 6 * (vertSideCount - 1) * (vertSideCount - 1);
 
 		// Resize index buffer
 		if (m_Indices.size() != indexCount)
@@ -3380,38 +3385,33 @@ namespace flex
 		if (vertCount > m_VertexBufferCreateInfo.positions_3D.size())
 		{
 			m_VertexBufferCreateInfo.positions_3D.resize(vertCount);
+			m_VertexBufferCreateInfo.texCoords_UV.resize(vertCount);
+			m_VertexBufferCreateInfo.colors_R32G32B32A32.resize(vertCount);
 			m_VertexBufferCreateInfo.normals.resize(vertCount);
 			m_VertexBufferCreateInfo.tangents.resize(vertCount);
-			m_VertexBufferCreateInfo.colors_R32G32B32A32.resize(vertCount);
 		}
 
 		// Update vertex positions/normals
 		const glm::vec3 startPos(-size / 2.0f, 0.0f, -size / 2.0f);
 
 		std::vector<glm::vec3>& positions = m_VertexBufferCreateInfo.positions_3D;
-		std::vector<glm::vec3>& normals = m_VertexBufferCreateInfo.normals;
-		//std::vector<glm::vec3>& tangents = m_VertexBufferCreateInfo.tangents;
+		std::vector<glm::vec2>& texCoords = m_VertexBufferCreateInfo.texCoords_UV;
 		std::vector<glm::vec4>& colours = m_VertexBufferCreateInfo.colors_R32G32B32A32;
+		std::vector<glm::vec3>& normals = m_VertexBufferCreateInfo.normals;
+		std::vector<glm::vec3>& tangents = m_VertexBufferCreateInfo.tangents;
 
 		// Clear positions and normals
-		// TODO: Is this necessary?
 		for (i32 z = 0; z < vertSideCount; ++z)
 		{
 			for (i32 x = 0; x < vertSideCount; ++x)
 			{
-				positions[z * vertSideCount + x] = startPos + glm::vec3(
+				const i32 vertIdx = z * vertSideCount + x;
+				positions[vertIdx] = startPos + glm::vec3(
 					size * ((real)x / (vertSideCount - 1)),
 					0.0f,
 					size * ((real)z / (vertSideCount - 1)));
-				normals[z * vertSideCount + x] = VEC3_UP;
-			}
-		}
-
-		for (i32 z = 0; z < vertSideCount; ++z)
-		{
-			for (i32 x = 0; x < vertSideCount; ++x)
-			{
-				i32 vertIdx = z * vertSideCount + x;
+				normals[vertIdx] = VEC3_UP;
+				texCoords[vertIdx] = glm::vec2(x / (real)(vertSideCount - 1), z / (real)(vertSideCount - 1));
 				colours[vertIdx] = glm::vec4(1, 1, 1, 1);
 			}
 		}
@@ -3430,7 +3430,7 @@ namespace flex
 				{
 					for (i32 x = 0; x < vertSideCount; ++x)
 					{
-						i32 vertIdx = z * vertSideCount + x;
+						const i32 vertIdx = z * vertSideCount + x;
 
 						real d = glm::dot(waveVec, positions[vertIdx]);
 						real c = cos(d + wave.accumOffset);
@@ -3453,7 +3453,7 @@ namespace flex
 		{
 			for (i32 x = 0; x < vertSideCount; ++x)
 			{
-				i32 vertIdx = z * vertSideCount + x;
+				const i32 vertIdx = z * vertSideCount + x;
 
 				glm::vec3 diff = (ripplePos - positions[vertIdx]);
 				real d = glm::length(diff);
@@ -3469,14 +3469,16 @@ namespace flex
 		}
 
 		// Calculate normals
+		const real cellSize = size / vertSideCount;
 		for (i32 z = 0; z < vertSideCount; ++z)
 		{
 			for (i32 x = 0; x < vertSideCount; ++x)
 			{
 				i32 vertIdx = z * vertSideCount + x;
-				m_VertexBufferCreateInfo.tangents[vertIdx] = glm::vec3(1, 0, 0);
-				// TODO
-				m_VertexBufferCreateInfo.normals[vertIdx] = glm::vec3(0, 1, 0);
+				real dX = (vertIdx < 1 || vertIdx >= positions.size() - (vertSideCount - 1)) ? 0.0f : (positions[vertIdx - 1].y - positions[vertIdx + 1].y);
+				real dZ = (vertIdx < vertSideCount || vertIdx >= positions.size() - vertSideCount) ? 0.0f : (positions[vertIdx - vertSideCount].y - positions[vertIdx + vertSideCount].y);
+				normals[vertIdx] = glm::normalize(glm::vec3(dX, 2.0f * cellSize, dZ));
+				tangents[vertIdx] = glm::cross(normals[vertIdx], VEC3_FORWARD);
 			}
 		}
 	}

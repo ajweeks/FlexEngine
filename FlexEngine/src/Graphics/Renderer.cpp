@@ -2519,7 +2519,7 @@ namespace flex
 		spriteMatSSCreateInfo.persistent = true;
 		spriteMatSSCreateInfo.visibleInEditor = true;
 		spriteMatSSCreateInfo.enableAlbedoSampler = true;
-		spriteMatSSCreateInfo.bDynamic = true;
+		spriteMatSSCreateInfo.bDynamic = false;
 		m_SpriteMatSSID = InitializeMaterial(&spriteMatSSCreateInfo);
 
 		MaterialCreateInfo spriteMatWSCreateInfo = {};
@@ -2528,7 +2528,7 @@ namespace flex
 		spriteMatWSCreateInfo.persistent = true;
 		spriteMatWSCreateInfo.visibleInEditor = true;
 		spriteMatWSCreateInfo.enableAlbedoSampler = true;
-		spriteMatWSCreateInfo.bDynamic = true;
+		spriteMatWSCreateInfo.bDynamic = false;
 		m_SpriteMatWSID = InitializeMaterial(&spriteMatWSCreateInfo);
 
 		MaterialCreateInfo spriteArrMatCreateInfo = {};
@@ -2537,7 +2537,7 @@ namespace flex
 		spriteArrMatCreateInfo.persistent = true;
 		spriteArrMatCreateInfo.visibleInEditor = true;
 		spriteArrMatCreateInfo.enableAlbedoSampler = true;
-		spriteArrMatCreateInfo.bDynamic = true;
+		spriteArrMatCreateInfo.bDynamic = false;
 		m_SpriteArrMatID = InitializeMaterial(&spriteArrMatCreateInfo);
 
 		MaterialCreateInfo fontSSMatCreateInfo = {};
@@ -2545,7 +2545,7 @@ namespace flex
 		fontSSMatCreateInfo.shaderName = "font_ss";
 		fontSSMatCreateInfo.persistent = true;
 		fontSSMatCreateInfo.visibleInEditor = false;
-		fontSSMatCreateInfo.bDynamic = true;
+		fontSSMatCreateInfo.bDynamic = false;
 		m_FontMatSSID = InitializeMaterial(&fontSSMatCreateInfo);
 
 		MaterialCreateInfo fontWSMatCreateInfo = {};
@@ -2553,7 +2553,7 @@ namespace flex
 		fontWSMatCreateInfo.shaderName = "font_ws";
 		fontWSMatCreateInfo.persistent = true;
 		fontWSMatCreateInfo.visibleInEditor = false;
-		fontWSMatCreateInfo.bDynamic = true;
+		fontWSMatCreateInfo.bDynamic = false;
 		m_FontMatWSID = InitializeMaterial(&fontWSMatCreateInfo);
 
 		MaterialCreateInfo shadowMatCreateInfo = {};

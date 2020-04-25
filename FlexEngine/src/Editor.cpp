@@ -117,19 +117,19 @@ namespace flex
 		}
 
 
-
+#if 0
 		// TEMP
 		for (u32 i = 0; i < 128; ++i)
 		{
 			real x = sin(g_SecElapsedSinceProgramStart) + i * 0.25f;
 			real z = cos(g_SecElapsedSinceProgramStart + i / 10.0f);
-			m_PhysicsDebugDrawer->drawLine(
+			g_Renderer->GetDebugDrawer()->drawLine(
 				btVector3(x, 0, z),
 				g_Editor->GetSelectedObjects().size() > 0 ? ToBtVec3(g_Editor->GetSelectedObjectsCenter()) : btVector3(x, 10, z),
 				btVector3(sin(g_SecElapsedSinceProgramStart * 5.0f) * 0.5f + 0.5f, cos(g_SecElapsedSinceProgramStart * 2.5f) * 0.5f + 0.5f, 1.0f),
 				btVector3(1.0f, 0.0f, sin(g_SecElapsedSinceProgramStart * 5.0f) * 0.5f + 0.5f));
 		}
-
+#endif
 
 
 
