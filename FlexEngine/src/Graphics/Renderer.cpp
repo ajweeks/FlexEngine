@@ -1290,6 +1290,7 @@ namespace flex
 				{ "particle_sim", "", "", "", "vk_simulate_particles_comp.spv" },
 				{ "particles", "vk_particles_vert.spv", "vk_particles_frag.spv", "vk_particles_geom.spv" },
 				{ "terrain", "vk_terrain_vert.spv", "vk_terrain_frag.spv" },
+				{ "water", "vk_water_vert.spv", "vk_water_frag.spv" },
 			};
 #endif
 
@@ -1768,6 +1769,20 @@ namespace flex
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
 
 			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_ALBEDO_SAMPLER);
+			++shaderID;
+
+			// Water
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
+			m_BaseShaders[shaderID].bDepthWriteEnable = true;
+			m_BaseShaders[shaderID].bTranslucent = false;
+			m_BaseShaders[shaderID].dynamicVertexBufferSize = 32 * 1024 * 1024;
+			m_BaseShaders[shaderID].vertexAttributes =
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::NORMAL |
+				(u32)VertexAttribute::EXTRA_VEC4;
+
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
 			++shaderID;
 
 			assert(shaderID == m_BaseShaders.size());

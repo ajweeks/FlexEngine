@@ -69,7 +69,7 @@
 		{
 			"name" : "Gerstner Wave",
 			"type" : "gerstner wave",
-			"visible" : true,
+			"visible" : false,
 			"transform" : 
 			{
 				"pos" : "0.000, 3.400, 0.000"

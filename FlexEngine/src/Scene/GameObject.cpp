@@ -3281,7 +3281,7 @@ namespace flex
 	{
 		MaterialCreateInfo matCreateInfo = {};
 		matCreateInfo.name = "gerstner";
-		matCreateInfo.shaderName = "pbr";
+		matCreateInfo.shaderName = "water";
 		matCreateInfo.constAlbedo = glm::vec3(0.4f, 0.5f, 0.8f);
 		matCreateInfo.constMetallic = 0.8f;
 		matCreateInfo.constRoughness = 0.01f;
@@ -3325,9 +3325,6 @@ namespace flex
 
 	void GerstnerWave::PostInitialize()
 	{
-		MeshComponent* meshComponent = m_Mesh->GetSubMeshes()[0];
-		// TODO: Find out why this isn't enough!
-		meshComponent->UpdateProceduralData(m_VertexBufferCreateInfo, m_Indices);
 	}
 
 	void GerstnerWave::Update()
@@ -3385,20 +3382,17 @@ namespace flex
 		if (vertCount > m_VertexBufferCreateInfo.positions_3D.size())
 		{
 			m_VertexBufferCreateInfo.positions_3D.resize(vertCount);
-			m_VertexBufferCreateInfo.texCoords_UV.resize(vertCount);
-			m_VertexBufferCreateInfo.colors_R32G32B32A32.resize(vertCount);
 			m_VertexBufferCreateInfo.normals.resize(vertCount);
-			m_VertexBufferCreateInfo.tangents.resize(vertCount);
+			m_VertexBufferCreateInfo.extraVec4s.resize(vertCount);
 		}
 
 		// Update vertex positions/normals
 		const glm::vec3 startPos(-size / 2.0f, 0.0f, -size / 2.0f);
 
 		std::vector<glm::vec3>& positions = m_VertexBufferCreateInfo.positions_3D;
-		std::vector<glm::vec2>& texCoords = m_VertexBufferCreateInfo.texCoords_UV;
-		std::vector<glm::vec4>& colours = m_VertexBufferCreateInfo.colors_R32G32B32A32;
+		//std::vector<glm::vec2>& texCoords = m_VertexBufferCreateInfo.texCoords_UV;
 		std::vector<glm::vec3>& normals = m_VertexBufferCreateInfo.normals;
-		std::vector<glm::vec3>& tangents = m_VertexBufferCreateInfo.tangents;
+		std::vector<glm::vec4>& extraVec4s = m_VertexBufferCreateInfo.extraVec4s;
 
 		// Clear positions and normals
 		for (i32 z = 0; z < vertSideCount; ++z)
@@ -3411,8 +3405,8 @@ namespace flex
 					0.0f,
 					size * ((real)z / (vertSideCount - 1)));
 				normals[vertIdx] = VEC3_UP;
-				texCoords[vertIdx] = glm::vec2(x / (real)(vertSideCount - 1), z / (real)(vertSideCount - 1));
-				colours[vertIdx] = glm::vec4(1, 1, 1, 1);
+				//texCoords[vertIdx] = glm::vec2(x / (real)(vertSideCount - 1), z / (real)(vertSideCount - 1));
+				extraVec4s[vertIdx] = VEC4_ZERO;
 			}
 		}
 
@@ -3478,7 +3472,6 @@ namespace flex
 				real dX = (vertIdx < 1 || vertIdx >= positions.size() - (vertSideCount - 1)) ? 0.0f : (positions[vertIdx - 1].y - positions[vertIdx + 1].y);
 				real dZ = (vertIdx < vertSideCount || vertIdx >= positions.size() - vertSideCount) ? 0.0f : (positions[vertIdx - vertSideCount].y - positions[vertIdx + vertSideCount].y);
 				normals[vertIdx] = glm::normalize(glm::vec3(dX, 2.0f * cellSize, dZ));
-				tangents[vertIdx] = glm::cross(normals[vertIdx], VEC3_FORWARD);
 			}
 		}
 	}
