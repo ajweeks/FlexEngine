@@ -40,6 +40,7 @@ namespace flex
 			if (result != VK_SUCCESS)
 			{
 				PrintError("Vulkan fatal error: %s\n", VulkanErrorString(result).c_str());
+				((VulkanRenderer*)g_Renderer)->GetCheckPointData();
 				DEBUG_BREAK();
 				assert(result == VK_SUCCESS);
 			}

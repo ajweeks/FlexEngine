@@ -7,6 +7,7 @@
 #include <map>
 
 #include "Callbacks/InputCallbacks.hpp"
+#include "PoolAllocator.hpp"
 #include "VDeleter.hpp"
 #include "VulkanCommandBufferManager.hpp"
 #include "VulkanHelpers.hpp"
@@ -115,6 +116,8 @@ namespace flex
 			void RegisterFramebufferAttachment(FrameBufferAttachment* frameBufferAttachment);
 			FrameBufferAttachment* GetFrameBufferAttachment(FrameBufferAttachmentID frameBufferAttachmentID) const;
 
+			void GetCheckPointData();
+
 			static void SetObjectName(VulkanDevice* device, u64 object, VkDebugReportObjectTypeEXT type, const char* name);
 			static void SetCommandBufferName(VulkanDevice* device, VkCommandBuffer commandBuffer, const char* name);
 			static void SetSwapchainName(VulkanDevice* device, VkSwapchainKHR swapchain, const char* name);
@@ -130,12 +133,9 @@ namespace flex
 			static void BeginDebugMarkerRegion(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color = VEC4_ONE);
 			static void EndDebugMarkerRegion(VkCommandBuffer cmdBuf);
 
-			bool bDebugUtilsExtensionPresent = false;
-
 			static PFN_vkDebugMarkerSetObjectNameEXT m_vkDebugMarkerSetObjectName;
 			static PFN_vkCmdDebugMarkerBeginEXT m_vkCmdDebugMarkerBegin;
 			static PFN_vkCmdDebugMarkerEndEXT m_vkCmdDebugMarkerEnd;
-			bool m_bEnableDebugMarkers = false;
 
 		protected:
 			virtual bool LoadShaderCode(ShaderID shaderID) override;
@@ -152,8 +152,6 @@ namespace flex
 			friend VulkanRenderPass;
 
 			void DestroyRenderObject(RenderID renderID, VulkanRenderObject* renderObject);
-
-			VkPhysicalDeviceFeatures GetEnabledFeaturesForDevice(VkPhysicalDevice physicalDevice);
 
 			struct UniformOverrides
 			{
@@ -177,6 +175,11 @@ namespace flex
 				glm::vec4 colorMultiplier;
 				bool bSSAOVerticalPass;
 				ParticleSimData* particleSimData = nullptr;
+			};
+
+			struct DeviceDiagnosticCheckpoint
+			{
+				char name[48];
 			};
 
 			bool InitializeFreeType();
@@ -206,8 +209,6 @@ namespace flex
 			void CreateSurface();
 			//void SetupImGuiWindowData(ImGui_ImplVulkanH_WindowData* data, VkSurfaceKHR surface, i32 width, i32 height);
 			VkPhysicalDevice PickPhysicalDevice();
-			void CreateLogicalDevice(VkPhysicalDevice physicalDevice);
-			void FindPresentInstanceExtensions();
 			void CreateSwapChain();
 			void CreateSwapChainImageViews();
 			void CreateRenderPasses();
@@ -293,11 +294,8 @@ namespace flex
 			VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) const;
 			VulkanSwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device) const;
 			bool IsDeviceSuitable(VkPhysicalDevice device);
-			bool CheckDeviceExtensionSupport(VkPhysicalDevice device);
 			std::vector<const char*> GetRequiredExtensions() const;
 			bool CheckValidationLayerSupport() const;
-
-			bool ExtensionSupported(const std::string& extStr) const;
 
 			void UpdateConstantUniformBuffers(UniformOverrides const* overridenUniforms = nullptr);
 			void UpdateDynamicUniformBuffer(RenderID renderID, UniformOverrides const* overridenUniforms = nullptr,
@@ -324,6 +322,8 @@ namespace flex
 			void BeginGPUTimeStamp(VkCommandBuffer commandBuffer, const std::string& name);
 			void EndGPUTimeStamp(VkCommandBuffer commandBuffer, const std::string& name);
 			ms GetDurationBetweenTimeStamps(const std::string& name);
+
+			DeviceDiagnosticCheckpoint* AllocCheckpoint();
 
 			static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugReportFlagsEXT flags,
 				VkDebugReportObjectTypeEXT objType, u64 obj, size_t location, i32 code, const char* layerPrefix,
@@ -366,8 +366,6 @@ namespace flex
 			TextureID GetNextAvailableTextureID();
 			TextureID AddLoadedTexture(VulkanTexture* texture);
 			VulkanTexture* GetLoadedTexture(TextureID textureID);
-
-			std::vector<std::string> m_SupportedDeviceExtenions;
 
 			const u32 MAX_NUM_RENDER_OBJECTS = 4096; // TODO: Not this?
 			std::vector<VulkanRenderObject*> m_RenderObjects;
@@ -470,6 +468,8 @@ namespace flex
 
 			std::map<TextureID, SpriteDescSet> m_SpriteDescSets;
 
+
+
 			Material::PushConstantBlock* m_CascadedShadowMapPushConstantBlock = nullptr;
 
 			i32 m_DeferredQuadVertexBufferIndex = -1;
@@ -505,6 +505,21 @@ namespace flex
 				VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME,
 				VK_KHR_MAINTENANCE1_EXTENSION_NAME, // For negative viewport height
 			};
+
+			// Optional instance extensions
+			const std::vector<const char*> m_OptionalInstanceExtensions =
+			{
+				VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+			};
+
+			// Optional device extensions
+			const std::vector<const char*> m_OptionalDeviceExtensions =
+			{
+				VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
+				VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME,
+			};
+
+			bool m_bDiagnosticCheckpointsEnabled = false;
 
 #ifdef SHIPPING
 			const bool m_bEnableValidationLayers = false;
@@ -640,6 +655,8 @@ namespace flex
 			VkSpecializationMapEntry m_TAASpecializationMapEntry;
 			VkSpecializationInfo m_TAAOSpecializationInfo;
 			real m_TAA_ks[2];
+
+			PoolAllocator<DeviceDiagnosticCheckpoint, 32> m_CheckPointAllocator;
 
 #ifdef DEBUG
 			AsyncVulkanShaderCompiler* m_ShaderCompiler = nullptr;

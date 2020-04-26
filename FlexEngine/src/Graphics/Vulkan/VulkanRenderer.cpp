@@ -105,11 +105,23 @@ namespace flex
 			SetupDebugCallback();
 			CreateSurface();
 			VkPhysicalDevice physicalDevice = PickPhysicalDevice();
-			CreateLogicalDevice(physicalDevice);
+			VulkanDevice::CreateInfo deviceCreateInfo = {};
+			deviceCreateInfo.physicalDevice = physicalDevice;
+			deviceCreateInfo.surface = m_Surface;
+			deviceCreateInfo.requiredExtensions = &m_RequiredDeviceExtensions;
+			deviceCreateInfo.optionalExtensions = &m_OptionalDeviceExtensions;
+			deviceCreateInfo.bEnableValidationLayers = m_bEnableValidationLayers;
+			deviceCreateInfo.validationLayers = &m_ValidationLayers;
+			m_VulkanDevice = new VulkanDevice(deviceCreateInfo);
 
-			FindPresentInstanceExtensions();
+			m_bDiagnosticCheckpointsEnabled = m_VulkanDevice->ExtensionEnabled(VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME);
+			const char* s = (m_bDiagnosticCheckpointsEnabled ? "" : "not ");
+			Print("Diagnostic checkpoints are %senabled\n", s);
 
-			if (m_bEnableDebugMarkers)
+			vkGetDeviceQueue(m_VulkanDevice->m_LogicalDevice, (u32)m_VulkanDevice->m_QueueFamilyIndices.graphicsFamily, 0, &m_GraphicsQueue);
+			vkGetDeviceQueue(m_VulkanDevice->m_LogicalDevice, (u32)m_VulkanDevice->m_QueueFamilyIndices.presentFamily, 0, &m_PresentQueue);
+
+			if (m_VulkanDevice->ExtensionEnabled(VK_EXT_DEBUG_REPORT_EXTENSION_NAME))
 			{
 				m_vkDebugMarkerSetObjectName = reinterpret_cast<PFN_vkDebugMarkerSetObjectNameEXT>(vkGetInstanceProcAddr(m_Instance, "vkDebugMarkerSetObjectNameEXT"));
 				m_vkCmdDebugMarkerBegin = reinterpret_cast<PFN_vkCmdDebugMarkerBeginEXT>(vkGetDeviceProcAddr(m_VulkanDevice->m_LogicalDevice, "vkCmdDebugMarkerBeginEXT"));
@@ -2257,30 +2269,6 @@ namespace flex
 			}
 			m_RenderObjects[renderID] = nullptr;
 			m_bRebatchRenderObjects = true;
-		}
-
-		VkPhysicalDeviceFeatures VulkanRenderer::GetEnabledFeaturesForDevice(VkPhysicalDevice physicalDevice)
-		{
-			VkPhysicalDeviceFeatures enabledFeatures = {};
-
-			VkPhysicalDeviceFeatures supportedFeatures;
-			vkGetPhysicalDeviceFeatures(physicalDevice, &supportedFeatures);
-
-			if (supportedFeatures.geometryShader)
-			{
-				enabledFeatures.geometryShader = VK_TRUE;
-			}
-			else
-			{
-				PrintError("Selected GPU does not support geometry shaders!\n");
-			}
-
-			if (supportedFeatures.wideLines)
-			{
-				enabledFeatures.wideLines = VK_TRUE;
-			}
-
-			return enabledFeatures;
 		}
 
 		void VulkanRenderer::NewFrame()
@@ -5432,91 +5420,6 @@ namespace flex
 			return physicalDevice;
 		}
 
-		void VulkanRenderer::CreateLogicalDevice(VkPhysicalDevice physicalDevice)
-		{
-			VulkanQueueFamilyIndices indices = FindQueueFamilies(m_Surface, physicalDevice);
-
-			std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-			std::set<i32> uniqueQueueFamilies = { indices.graphicsFamily, indices.presentFamily };
-
-			real queuePriority = 1.0f;
-			for (i32 queueFamily : uniqueQueueFamilies)
-			{
-				VkDeviceQueueCreateInfo queueCreateInfo = {};
-				queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-				queueCreateInfo.queueFamilyIndex = (u32)queueFamily;
-				queueCreateInfo.queueCount = 1;
-				queueCreateInfo.pQueuePriorities = &queuePriority;
-				queueCreateInfos.push_back(queueCreateInfo);
-			}
-
-			VkPhysicalDeviceFeatures deviceFeatures = GetEnabledFeaturesForDevice(physicalDevice);
-
-			std::vector<const char*> deviceExtensions;
-
-			for (const char* extStr : m_RequiredDeviceExtensions)
-			{
-				deviceExtensions.push_back(extStr);
-			}
-
-			if (ExtensionSupported(VK_EXT_DEBUG_MARKER_EXTENSION_NAME))
-			{
-				deviceExtensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
-				m_bEnableDebugMarkers = true;
-			}
-
-			VkDeviceCreateInfo createInfo = {};
-			createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-
-			createInfo.pQueueCreateInfos = queueCreateInfos.data();
-			createInfo.queueCreateInfoCount = (u32)queueCreateInfos.size();
-
-			createInfo.pEnabledFeatures = &deviceFeatures;
-
-			createInfo.enabledExtensionCount = (u32)deviceExtensions.size();
-			createInfo.ppEnabledExtensionNames = deviceExtensions.data();
-
-			if (m_bEnableValidationLayers)
-			{
-				createInfo.enabledLayerCount = (u32)m_ValidationLayers.size();
-				createInfo.ppEnabledLayerNames = m_ValidationLayers.data();
-			}
-			else
-			{
-				createInfo.enabledLayerCount = 0;
-			}
-
-			m_VulkanDevice = new VulkanDevice(physicalDevice, m_Surface);
-
-			VK_CHECK_RESULT(vkCreateDevice(physicalDevice, &createInfo, nullptr, m_VulkanDevice->m_LogicalDevice.replace()));
-
-			vkGetPhysicalDeviceProperties(physicalDevice, &m_VulkanDevice->m_PhysicalDeviceProperties);
-
-			vkGetDeviceQueue(m_VulkanDevice->m_LogicalDevice, (u32)m_VulkanDevice->m_QueueFamilyIndices.graphicsFamily, 0, &m_GraphicsQueue);
-			vkGetDeviceQueue(m_VulkanDevice->m_LogicalDevice, (u32)m_VulkanDevice->m_QueueFamilyIndices.presentFamily, 0, &m_PresentQueue);
-
-			volkLoadDevice(m_VulkanDevice->m_LogicalDevice);
-		}
-
-		void VulkanRenderer::FindPresentInstanceExtensions()
-		{
-			u32 extensionCount = 0;
-			vkEnumerateInstanceExtensionProperties("VK_LAYER_LUNARG_standard_validation", &extensionCount, nullptr);
-
-			std::vector<VkExtensionProperties> availableExtensions(extensionCount);
-			vkEnumerateInstanceExtensionProperties("VK_LAYER_LUNARG_standard_validation", &extensionCount, availableExtensions.data());
-
-			for (VkExtensionProperties& prop : availableExtensions)
-			{
-				if (strcmp(prop.extensionName, "VK_EXT_debug_report") == 0)
-				{
-					bDebugUtilsExtensionPresent = true;
-				}
-
-				//Print("%s v%d\n", prop.extensionName, prop.specVersion);
-			}
-		}
-
 		void SetClipboardText(void* userData, const char* text)
 		{
 			GLFWWindowWrapper* glfwWindow = static_cast<GLFWWindowWrapper*>(userData);
@@ -8336,6 +8239,11 @@ namespace flex
 
 			// TODO: FIXME: BAD!! PLS REMOVE
 			VK_CHECK_RESULT(vkQueueWaitIdle(m_PresentQueue));
+
+			if (m_bDiagnosticCheckpointsEnabled)
+			{
+				m_CheckPointAllocator.ReleaseAll(); // TODO: Test?
+			}
 		}
 
 		void VulkanRenderer::BindDescriptorSet(const VulkanMaterial* material, u32 dynamicOffset, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet) const
@@ -8445,6 +8353,29 @@ namespace flex
 			return m_FrameBufferAttachments.at(frameBufferAttachmentID);
 		}
 
+		void VulkanRenderer::GetCheckPointData()
+		{
+			if (m_bDiagnosticCheckpointsEnabled)
+			{
+				u32 checkpointCount = 0;
+				vkGetQueueCheckpointDataNV(m_GraphicsQueue, &checkpointCount, nullptr);
+
+				VkCheckpointDataNV* data = new VkCheckpointDataNV[checkpointCount];
+				vkGetQueueCheckpointDataNV(m_GraphicsQueue, &checkpointCount, data);
+
+				for (u32 i = 0; i < checkpointCount; ++i)
+				{
+					DeviceDiagnosticCheckpoint* checkpoint = (DeviceDiagnosticCheckpoint*)(data[i].pCheckpointMarker);
+					if (checkpoint)
+					{
+						Print("Checkpoint: %s\n", checkpoint->name);
+					}
+				}
+
+				delete[] data;
+			}
+		}
+
 		void VulkanRenderer::SetObjectName(VulkanDevice* device, u64 object, VkDebugReportObjectTypeEXT type, const char* name)
 		{
 			if (name != nullptr && m_vkDebugMarkerSetObjectName != nullptr)
@@ -8527,6 +8458,18 @@ namespace flex
 				memcpy(markerInfo.color, &color[0], sizeof(float) * 4);
 				markerInfo.pMarkerName = markerName;
 				m_vkCmdDebugMarkerBegin(cmdBuf, &markerInfo);
+			}
+
+			if (m_bDiagnosticCheckpointsEnabled)
+			{
+				DeviceDiagnosticCheckpoint* checkpointData = AllocCheckpoint();
+				strncpy(checkpointData->name, markerName, strlen(markerName));
+				checkpointData->name[ARRAY_LENGTH(checkpointData->name) - 1] = '\0';
+
+				VkCheckpointDataNV checkpoint = {};
+				checkpoint.sType = VK_STRUCTURE_TYPE_CHECKPOINT_DATA_NV;
+				checkpoint.stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+				checkpoint.pCheckpointMarker = checkpointData;
 			}
 		}
 
@@ -8647,7 +8590,7 @@ namespace flex
 		{
 			VulkanQueueFamilyIndices indices = FindQueueFamilies(m_Surface, device);
 
-			bool extensionsSupported = CheckDeviceExtensionSupport(device);
+			bool extensionsSupported = VulkanDevice::CheckDeviceSupportsExtensions(device, m_RequiredDeviceExtensions);
 
 			bool swapChainAdequate = false;
 			if (extensionsSupported)
@@ -8661,31 +8604,6 @@ namespace flex
 
 			const bool isSuitable = indices.IsComplete() && extensionsSupported && swapChainAdequate && supportedFeatures.samplerAnisotropy;
 			return isSuitable;
-		}
-
-		bool VulkanRenderer::CheckDeviceExtensionSupport(VkPhysicalDevice device)
-		{
-			u32 extensionCount;
-			vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
-
-			std::vector<VkExtensionProperties> extensions(extensionCount);
-			vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, extensions.data());
-
-			m_SupportedDeviceExtenions.clear();
-			m_SupportedDeviceExtenions.reserve(extensionCount);
-			for (VkExtensionProperties& prop : extensions)
-			{
-				m_SupportedDeviceExtenions.push_back(prop.extensionName);
-			}
-
-			std::set<std::string> requiredExtensions(m_RequiredDeviceExtensions.begin(), m_RequiredDeviceExtensions.end());
-
-			for (const VkExtensionProperties& extension : extensions)
-			{
-				requiredExtensions.erase(extension.extensionName);
-			}
-
-			return requiredExtensions.empty();
 		}
 
 		std::vector<const char*> VulkanRenderer::GetRequiredExtensions() const
@@ -8738,11 +8656,6 @@ namespace flex
 			}
 
 			return true;
-		}
-
-		bool VulkanRenderer::ExtensionSupported(const std::string& extStr) const
-		{
-			return (std::find(m_SupportedDeviceExtenions.begin(), m_SupportedDeviceExtenions.end(), extStr) != m_SupportedDeviceExtenions.end());
 		}
 
 		void VulkanRenderer::UpdateConstantUniformBuffers(UniformOverrides const* overridenUniforms)
@@ -9280,6 +9193,11 @@ namespace flex
 			u64 timestamps[2];
 			vkGetQueryPoolResults(m_VulkanDevice->m_LogicalDevice, m_TimestampQueryPool, queryIndex, 2, sizeof(u64) * 2, timestamps, sizeof(u64), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
 			return (timestamps[1] - timestamps[0]) / 1000000.0f;
+		}
+
+		VulkanRenderer::DeviceDiagnosticCheckpoint* VulkanRenderer::AllocCheckpoint()
+		{
+			return m_CheckPointAllocator.Alloc();
 		}
 
 		VKAPI_ATTR VkBool32 VKAPI_CALL VulkanRenderer::DebugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType,

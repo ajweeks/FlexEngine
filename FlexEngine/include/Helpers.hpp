@@ -206,6 +206,12 @@ namespace flex
 
 	u32 GenerateUID();
 
+	template<typename T>
+	bool Contains(const std::vector<T>& vec, T val)
+	{
+		return std::find(vec.begin(), vec.end(), val) != vec.end();
+	}
+
 	bool Contains(const char* arr[], u32 arrLen, const char* val);
 
 	template<class T>
