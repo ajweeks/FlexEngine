@@ -126,7 +126,8 @@ IGNORE_WARNINGS_POP
 
 #if COMPILE_VULKAN
 IGNORE_WARNINGS_PUSH
-#define VK_USE_PLATFORM_WIN32_KHR
+#define VOLK_VULKAN_H_PATH <vulkan/vulkan.hpp>
+#define VULKAN_HPP_NAMESPACE vkhpp
 #include "volk/volk.h"
 
 #include <GLFW/glfw3.h>

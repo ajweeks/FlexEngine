@@ -4,6 +4,8 @@
 #include "Graphics/Vulkan/VulkanRenderer.hpp"
 
 IGNORE_WARNINGS_PUSH
+#include <vulkan/vulkan.hpp>
+
 #include "stb_image.h"
 
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
@@ -20,7 +22,6 @@ IGNORE_WARNINGS_PUSH
 #include "imgui/imgui_impl_glfw.h"
 #include "imgui/imgui_impl_vulkan.h"
 #endif
-
 #include "BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h"
 IGNORE_WARNINGS_POP
 
@@ -115,8 +116,6 @@ namespace flex
 			m_VulkanDevice = new VulkanDevice(deviceCreateInfo);
 
 			m_bDiagnosticCheckpointsEnabled = m_VulkanDevice->ExtensionEnabled(VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME);
-			const char* s = (m_bDiagnosticCheckpointsEnabled ? "" : "not ");
-			Print("Diagnostic checkpoints are %senabled\n", s);
 
 			vkGetDeviceQueue(m_VulkanDevice->m_LogicalDevice, (u32)m_VulkanDevice->m_QueueFamilyIndices.graphicsFamily, 0, &m_GraphicsQueue);
 			vkGetDeviceQueue(m_VulkanDevice->m_LogicalDevice, (u32)m_VulkanDevice->m_QueueFamilyIndices.presentFamily, 0, &m_PresentQueue);
@@ -3311,7 +3310,7 @@ namespace flex
 				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 				subresourceRange);
 
-			EndDebugMarkerRegion(cmdBuf); // Generate Cubemap from HDR
+			EndDebugMarkerRegion(cmdBuf, "End Generate Cubemap from HDR");
 
 			m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
 
@@ -3576,7 +3575,7 @@ namespace flex
 				subresourceRange);
 			renderObjectMat.textures[U_IRRADIANCE_SAMPLER]->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-			EndDebugMarkerRegion(cmdBuf); // Generate Irradiance
+			EndDebugMarkerRegion(cmdBuf, "End Generate Irradiance");
 
 			m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
 
@@ -3840,7 +3839,7 @@ namespace flex
 				subresourceRange);
 			renderObjectMat.textures[U_PREFILTER_MAP]->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-			EndDebugMarkerRegion(cmdBuf); // Generate Prefiltered Cube
+			EndDebugMarkerRegion(cmdBuf, "End Generate Prefiltered Cube");
 
 			m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
 
@@ -3934,7 +3933,7 @@ namespace flex
 
 				vkCmdEndRenderPass(cmdBuf);
 
-				EndDebugMarkerRegion(cmdBuf); // Generate BRDF LUT
+				EndDebugMarkerRegion(cmdBuf, "End Generate BRDF LUT");
 
 				m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
 
@@ -4333,7 +4332,7 @@ namespace flex
 
 				vkCmdEndRenderPass(commandBuffer);
 
-				EndDebugMarkerRegion(commandBuffer); // Generate Font SDF
+				EndDebugMarkerRegion(commandBuffer, "End Generate Font SDF");
 
 				VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
 				SetCommandBufferName(m_VulkanDevice, commandBuffer, "Load font command buffer");
@@ -4980,7 +4979,7 @@ namespace flex
 				vkCmdDraw(commandBuffer, MAX_PARTICLE_COUNT, 1, 0, 0);
 			}
 
-			EndDebugMarkerRegion(commandBuffer); // Particles
+			EndDebugMarkerRegion(commandBuffer, "End Particles");
 		}
 
 		VkDescriptorSet VulkanRenderer::GetSpriteDescriptorSet(TextureID textureID, MaterialID spriteMaterialID, u32 textureLayer)
@@ -5302,7 +5301,16 @@ namespace flex
 			createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 			createInfo.pApplicationInfo = &appInfo;
 
-			std::vector<const char*> extensions = GetRequiredExtensions();
+			std::vector<const char*> extensions = GetRequiredInstanceExtensions();
+
+			for (u32 i = 0; i < m_OptionalInstanceExtensions.size(); ++i)
+			{
+				if (InstanceExtensionSupported(m_OptionalInstanceExtensions[i]))
+				{
+					extensions.push_back(m_OptionalInstanceExtensions[i]);
+				}
+			}
+
 			createInfo.enabledExtensionCount = (u32)extensions.size();
 			createInfo.ppEnabledExtensionNames = extensions.data();
 
@@ -5397,7 +5405,9 @@ namespace flex
 
 			if (deviceCount == 0)
 			{
-				throw std::runtime_error("Failed to find GPUs with Vulkan support!");
+				PrintError("Failed to find GPUs with Vulkan support!\n");
+				ENSURE_NO_ENTRY();
+				return VK_NULL_HANDLE;
 			}
 
 			std::vector<VkPhysicalDevice> devices(deviceCount);
@@ -5414,7 +5424,8 @@ namespace flex
 
 			if (physicalDevice == VK_NULL_HANDLE)
 			{
-				throw std::runtime_error("Failed to find a suitable GPU!");
+				PrintError("Failed to find a suitable GPU which supports all required extensions\n");
+				return VK_NULL_HANDLE;
 			}
 
 			return physicalDevice;
@@ -6622,7 +6633,7 @@ namespace flex
 			m_GBufferCubemapDepthAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, m_GraphicsQueue, transitionCmdBuffer);
 			RegisterFramebufferAttachment(m_GBufferCubemapDepthAttachment);
 
-			EndDebugMarkerRegion(transitionCmdBuffer); // Create Depth Resources
+			EndDebugMarkerRegion(transitionCmdBuffer, "End Create Depth Resources");
 
 			EndSingleTimeCommands(m_VulkanDevice, m_GraphicsQueue, transitionCmdBuffer);
 		}
@@ -7733,7 +7744,7 @@ namespace flex
 						m_ShadowRenderPass->End();
 					}
 
-					EndDebugMarkerRegion(m_OffScreenCmdBuffer); // Shadow cascades
+					EndDebugMarkerRegion(m_OffScreenCmdBuffer, "End Shadow cascades");
 				}
 
 				BeginDebugMarkerRegion(m_OffScreenCmdBuffer, "Deferred");
@@ -7765,7 +7776,7 @@ namespace flex
 				// NOTE: Only needed on the first frame
 				m_GBufferDepthAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_GraphicsQueue);
 
-				EndDebugMarkerRegion(m_OffScreenCmdBuffer); // Deferred
+				EndDebugMarkerRegion(m_OffScreenCmdBuffer, "End Deferred");
 
 				//
 				// SSAO
@@ -7795,7 +7806,7 @@ namespace flex
 
 					m_SSAORenderPass->End();
 
-					EndDebugMarkerRegion(m_OffScreenCmdBuffer); // SSAO
+					EndDebugMarkerRegion(m_OffScreenCmdBuffer, "End SSAO");
 
 					//
 					// SSAO blur
@@ -7845,7 +7856,7 @@ namespace flex
 
 						m_SSAOBlurVRenderPass->End();
 
-						EndDebugMarkerRegion(m_OffScreenCmdBuffer); // SSAO Blur
+						EndDebugMarkerRegion(m_OffScreenCmdBuffer, "End SSAO Blur");
 					}
 
 					EndGPUTimeStamp(m_OffScreenCmdBuffer, "SSAO");
@@ -7937,7 +7948,7 @@ namespace flex
 					0, nullptr);
 			}
 
-			EndDebugMarkerRegion(commandBuffer); // Simulate Particles
+			EndDebugMarkerRegion(commandBuffer, "End Simulate Particles");
 			EndGPUTimeStamp(commandBuffer, "Simulate Particles");
 
 			BeginGPUTimeStamp(commandBuffer, "Forward");
@@ -7950,7 +7961,7 @@ namespace flex
 				RenderFullscreenTri(commandBuffer, m_DeferredCombineRenderPass, gBufferObject->materialID,
 					gBufferObject->pipelineLayout, gBufferObject->graphicsPipeline, gBufferObject->descriptorSet, true);
 
-				EndDebugMarkerRegion(commandBuffer); // Shade deferred
+				EndDebugMarkerRegion(commandBuffer, "End Shade deferred");
 			}
 
 			{
@@ -7976,7 +7987,7 @@ namespace flex
 				// m_OffscreenDepthAttachment0 was copied into, now will be written to in forward pass
 				m_OffscreenFB0DepthAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, m_GraphicsQueue, commandBuffer);
 
-				EndDebugMarkerRegion(commandBuffer); // Copy depth
+				EndDebugMarkerRegion(commandBuffer, "End Copy depth");
 			}
 
 			std::array<VkClearValue, 2> clearValues = {};
@@ -7997,7 +8008,7 @@ namespace flex
 						DrawShaderBatch(shaderBatch, commandBuffer);
 					}
 
-					EndDebugMarkerRegion(commandBuffer); // Forward
+					EndDebugMarkerRegion(commandBuffer, "End Forward");
 				}
 
 				DrawParticles(commandBuffer);
@@ -8027,7 +8038,7 @@ namespace flex
 						DrawShaderBatch(shaderBatch, commandBuffer);
 					}
 
-					EndDebugMarkerRegion(commandBuffer); // Editor objects
+					EndDebugMarkerRegion(commandBuffer, "End Editor objects");
 				}
 
 				{
@@ -8037,13 +8048,13 @@ namespace flex
 					DrawSpriteBatch(m_QueuedWSSprites, commandBuffer);
 					m_QueuedWSSprites.clear();
 
-					EndDebugMarkerRegion(commandBuffer); // World Space Sprites
+					EndDebugMarkerRegion(commandBuffer, "End World Space Sprites");
 					BeginDebugMarkerRegion(commandBuffer, "World Space Text");
 
 					EnqueueWorldSpaceText();
 					DrawTextWS(commandBuffer);
 
-					EndDebugMarkerRegion(commandBuffer); // World Space Text
+					EndDebugMarkerRegion(commandBuffer, "End World Space Text");
 				}
 			}
 			m_ForwardRenderPass->End();
@@ -8057,14 +8068,12 @@ namespace flex
 
 			{
 				BeginGPUTimeStamp(commandBuffer, "Post Process");
-
 				BeginDebugMarkerRegion(commandBuffer, "Post process");
 
 				RenderFullscreenTri(commandBuffer, m_PostProcessRenderPass, m_PostProcessMatID,
 					m_PostProcessGraphicsPipelineLayout, m_PostProcessGraphicsPipeline, m_PostProcessDescriptorSet, true);
 
-				EndDebugMarkerRegion(commandBuffer); // Post process
-
+				EndDebugMarkerRegion(commandBuffer, "End Post process");
 				EndGPUTimeStamp(commandBuffer, "Post Process");
 			}
 
@@ -8077,7 +8086,7 @@ namespace flex
 				RenderFullscreenTri(commandBuffer, m_GammaCorrectRenderPass, m_GammaCorrectMaterialID,
 					m_GammaCorrectGraphicsPipelineLayout, m_GammaCorrectGraphicsPipeline, m_GammaCorrectDescriptorSet, true);
 
-				EndDebugMarkerRegion(commandBuffer); // Gamma Correct
+				EndDebugMarkerRegion(commandBuffer, "End Gamma Correct");
 			}
 
 			if (m_bEnableTAA)
@@ -8095,7 +8104,7 @@ namespace flex
 				RenderFullscreenTri(commandBuffer, m_TAAResolveRenderPass, m_TAAResolveMaterialID,
 					m_TAAResolveGraphicsPipelineLayout, m_TAAResolveGraphicsPipeline, m_TAAResolveDescriptorSet, true);
 
-				EndDebugMarkerRegion(commandBuffer); // TAA Resolve
+				EndDebugMarkerRegion(commandBuffer, "End TAA Resolve");
 
 				EndGPUTimeStamp(commandBuffer, "TAA");
 
@@ -8135,7 +8144,7 @@ namespace flex
 					DrawSpriteBatch(m_QueuedSSArrSprites, commandBuffer);
 					m_QueuedSSArrSprites.clear();
 
-					EndDebugMarkerRegion(commandBuffer);
+					EndDebugMarkerRegion(commandBuffer, "End Screen Space Sprites");
 				}
 
 				{
@@ -8144,7 +8153,7 @@ namespace flex
 					EnqueueScreenSpaceText();
 					DrawTextSS(commandBuffer);
 
-					EndDebugMarkerRegion(commandBuffer);
+					EndDebugMarkerRegion(commandBuffer, "End Screen Space Text");
 				}
 
 				if (g_EngineInstance->IsRenderingImGui())
@@ -8153,13 +8162,13 @@ namespace flex
 
 					ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
 
-					EndDebugMarkerRegion(commandBuffer);
+					EndDebugMarkerRegion(commandBuffer, "End ImGui");
 				}
 
 				m_UIRenderPass->End();
 			}
 
-			EndDebugMarkerRegion(commandBuffer); // UI
+			EndDebugMarkerRegion(commandBuffer, "End UI");
 
 			EndGPUTimeStamp(commandBuffer, "Forward");
 
@@ -8360,19 +8369,19 @@ namespace flex
 				u32 checkpointCount = 0;
 				vkGetQueueCheckpointDataNV(m_GraphicsQueue, &checkpointCount, nullptr);
 
-				VkCheckpointDataNV* data = new VkCheckpointDataNV[checkpointCount];
-				vkGetQueueCheckpointDataNV(m_GraphicsQueue, &checkpointCount, data);
+				std::vector<VkCheckpointDataNV> data(checkpointCount);
+				vkGetQueueCheckpointDataNV(m_GraphicsQueue, &checkpointCount, data.data());
 
 				for (u32 i = 0; i < checkpointCount; ++i)
 				{
 					DeviceDiagnosticCheckpoint* checkpoint = (DeviceDiagnosticCheckpoint*)(data[i].pCheckpointMarker);
 					if (checkpoint)
 					{
-						Print("Checkpoint: %s\n", checkpoint->name);
+						vkhpp::PipelineStageFlagBits flagBits = (vkhpp::PipelineStageFlagBits) data[i].stage;
+						std::string stageStr = vkhpp::to_string(flagBits);
+						PrintError("Checkpoint: %s - %s\n", stageStr.c_str(), (const char*)checkpoint->name);
 					}
 				}
-
-				delete[] data;
 			}
 		}
 
@@ -8444,9 +8453,9 @@ namespace flex
 			((VulkanRenderer*)g_Renderer)->BeginDebugMarkerRegionInternal(cmdBuf, markerName, color);
 		}
 
-		void VulkanRenderer::EndDebugMarkerRegion(VkCommandBuffer cmdBuf)
+		void VulkanRenderer::EndDebugMarkerRegion(VkCommandBuffer cmdBuf, const char* markerName /* = nullptr */)
 		{
-			((VulkanRenderer*)g_Renderer)->EndDebugMarkerRegionInternal(cmdBuf);
+			((VulkanRenderer*)g_Renderer)->EndDebugMarkerRegionInternal(cmdBuf, markerName);
 		}
 
 		void VulkanRenderer::BeginDebugMarkerRegionInternal(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color)
@@ -8460,24 +8469,31 @@ namespace flex
 				m_vkCmdDebugMarkerBegin(cmdBuf, &markerInfo);
 			}
 
-			if (m_bDiagnosticCheckpointsEnabled)
-			{
-				DeviceDiagnosticCheckpoint* checkpointData = AllocCheckpoint();
-				strncpy(checkpointData->name, markerName, strlen(markerName));
-				checkpointData->name[ARRAY_LENGTH(checkpointData->name) - 1] = '\0';
-
-				VkCheckpointDataNV checkpoint = {};
-				checkpoint.sType = VK_STRUCTURE_TYPE_CHECKPOINT_DATA_NV;
-				checkpoint.stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-				checkpoint.pCheckpointMarker = checkpointData;
-			}
+			SetCheckPoint(cmdBuf, markerName);
 		}
 
-		void VulkanRenderer::EndDebugMarkerRegionInternal(VkCommandBuffer cmdBuf)
+		void VulkanRenderer::EndDebugMarkerRegionInternal(VkCommandBuffer cmdBuf, const char* markerName /* = nullptr */)
 		{
 			if (m_vkCmdDebugMarkerEnd)
 			{
 				m_vkCmdDebugMarkerEnd(cmdBuf);
+			}
+
+			if (markerName != nullptr)
+			{
+				SetCheckPoint(cmdBuf, markerName);
+			}
+		}
+
+		void VulkanRenderer::SetCheckPoint(VkCommandBuffer cmdBuf, const char* checkPointName)
+		{
+			if (m_bDiagnosticCheckpointsEnabled)
+			{
+				DeviceDiagnosticCheckpoint* checkpointData = m_CheckPointAllocator.Alloc();
+				memset(checkpointData->name, 0, ARRAY_LENGTH(checkpointData->name));
+				strncpy(checkpointData->name, checkPointName, std::min(strlen(checkPointName), ARRAY_LENGTH(checkpointData->name) - 1));
+
+				vkCmdSetCheckpointNV(cmdBuf, checkpointData);
 			}
 		}
 
@@ -8606,7 +8622,7 @@ namespace flex
 			return isSuitable;
 		}
 
-		std::vector<const char*> VulkanRenderer::GetRequiredExtensions() const
+		std::vector<const char*> VulkanRenderer::GetRequiredInstanceExtensions() const
 		{
 			std::vector<const char*> extensions;
 
@@ -8620,9 +8636,10 @@ namespace flex
 				extensions.push_back(glfwExtensions[i]);
 			}
 
-			if (m_bEnableValidationLayers)
+			// TODO: Mark up debug-only extensions to only be enabled in debug
+			for (u32 i = 0; i < m_RequiredInstanceExtensions.size(); ++i)
 			{
-				extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+				extensions.push_back(m_RequiredInstanceExtensions[i]);
 			}
 
 			return extensions;
@@ -9195,9 +9212,23 @@ namespace flex
 			return (timestamps[1] - timestamps[0]) / 1000000.0f;
 		}
 
-		VulkanRenderer::DeviceDiagnosticCheckpoint* VulkanRenderer::AllocCheckpoint()
+		bool VulkanRenderer::InstanceExtensionSupported(const char* instanceExtensionName)
 		{
-			return m_CheckPointAllocator.Alloc();
+			u32 instanceExtensionCount;
+			vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionCount, nullptr);
+
+			std::vector<VkExtensionProperties> instanceExtensions(instanceExtensionCount);
+			vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionCount, instanceExtensions.data());
+
+			for (u32 i = 0; i < instanceExtensionCount; ++i)
+			{
+				if (strcmp(instanceExtensions[i].extensionName, instanceExtensionName) == 0)
+				{
+					return true;
+				}
+			}
+
+			return false;
 		}
 
 		VKAPI_ATTR VkBool32 VKAPI_CALL VulkanRenderer::DebugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType,

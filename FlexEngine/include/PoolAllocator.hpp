@@ -2,6 +2,7 @@
 
 namespace flex
 {
+	// TODO: Test
 	template<typename T, int PoolSize>
 	class PoolAllocator
 	{

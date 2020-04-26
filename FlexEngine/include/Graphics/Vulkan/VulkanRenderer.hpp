@@ -131,7 +131,7 @@ namespace flex
 			static void SetBufferName(VulkanDevice* device, VkBuffer buffer, const char* name);
 
 			static void BeginDebugMarkerRegion(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color = VEC4_ONE);
-			static void EndDebugMarkerRegion(VkCommandBuffer cmdBuf);
+			static void EndDebugMarkerRegion(VkCommandBuffer cmdBuf, const char* markerName = nullptr); // markerName optional, useful for device check-pointing though
 
 			static PFN_vkDebugMarkerSetObjectNameEXT m_vkDebugMarkerSetObjectName;
 			static PFN_vkCmdDebugMarkerBeginEXT m_vkCmdDebugMarkerBegin;
@@ -286,7 +286,9 @@ namespace flex
 			void RecreateSwapChain();
 
 			void BeginDebugMarkerRegionInternal(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color = VEC4_ONE);
-			void EndDebugMarkerRegionInternal(VkCommandBuffer cmdBuf);
+			void EndDebugMarkerRegionInternal(VkCommandBuffer cmdBuf, const char* markerName);
+
+			void SetCheckPoint(VkCommandBuffer cmdBuf, const char* checkPointName);
 
 			bool CreateShaderModule(const std::vector<char>& code, VkShaderModule* shaderModule) const;
 			VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) const;
@@ -294,7 +296,7 @@ namespace flex
 			VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) const;
 			VulkanSwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device) const;
 			bool IsDeviceSuitable(VkPhysicalDevice device);
-			std::vector<const char*> GetRequiredExtensions() const;
+			std::vector<const char*> GetRequiredInstanceExtensions() const;
 			bool CheckValidationLayerSupport() const;
 
 			void UpdateConstantUniformBuffers(UniformOverrides const* overridenUniforms = nullptr);
@@ -323,7 +325,7 @@ namespace flex
 			void EndGPUTimeStamp(VkCommandBuffer commandBuffer, const std::string& name);
 			ms GetDurationBetweenTimeStamps(const std::string& name);
 
-			DeviceDiagnosticCheckpoint* AllocCheckpoint();
+			bool InstanceExtensionSupported(const char* instanceExtensionName);
 
 			static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugReportFlagsEXT flags,
 				VkDebugReportObjectTypeEXT objType, u64 obj, size_t location, i32 code, const char* layerPrefix,
@@ -506,13 +508,17 @@ namespace flex
 				VK_KHR_MAINTENANCE1_EXTENSION_NAME, // For negative viewport height
 			};
 
-			// Optional instance extensions
+			const std::vector<const char*> m_RequiredInstanceExtensions =
+			{
+				VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
+			};
+
 			const std::vector<const char*> m_OptionalInstanceExtensions =
 			{
 				VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+				VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
 			};
 
-			// Optional device extensions
 			const std::vector<const char*> m_OptionalDeviceExtensions =
 			{
 				VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
