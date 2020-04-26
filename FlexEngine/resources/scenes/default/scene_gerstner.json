@@ -15,9 +15,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-23.089, 23.796, 9.102",
-			"pitch" : -0.697927,
-			"yaw" : 12.324517
+			"position" : "13.102, 7.881, 15.373",
+			"pitch" : -0.369334,
+			"yaw" : 10.324690
 		}
 	},
 	"objects" : 
@@ -53,11 +53,11 @@
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "2.092, 0.610, -3.113"
+				"rot" : "0.000, 0.881, 0.075"
 			},
 			"directional light info" : 
 			{
-				"rotation" : "0.162, -0.823, -0.482, -0.253",
+				"rotation" : "-0.016, 0.426, 0.034, 0.904",
 				"pos" : "0.000, 15.000, 0.000",
 				"color" : "1.00, 1.00, 1.00",
 				"enabled" : true,
@@ -69,10 +69,9 @@
 		{
 			"name" : "Gerstner Wave",
 			"type" : "gerstner wave",
-			"visible" : false,
+			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "0.000, 3.400, 0.000"
 			},
 			"materials" : 
 			[
@@ -114,9 +113,9 @@
 					},
 					{
 						"enabled" : true,
-						"amplitude" : 0.010000,
-						"waveDir" : 0.500000,
-						"waveLen" : 0.810000
+						"amplitude" : 0.040000,
+						"waveDir" : 3.400000,
+						"waveLen" : 2.620000
 					},
 					{
 						"enabled" : true,
