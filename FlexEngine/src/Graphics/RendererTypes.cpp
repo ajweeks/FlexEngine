@@ -112,37 +112,19 @@ namespace flex
 		bool equal =
 			(name == other.name &&
 				shaderID == other.shaderID &&
-				enableNormalSampler == other.enableNormalSampler &&
 				normalTexturePath == other.normalTexturePath &&
 				sampledFrameBuffers.size() == other.sampledFrameBuffers.size() &&
-				generateCubemapSampler == other.generateCubemapSampler &&
-				enableCubemapSampler == other.enableCubemapSampler &&
 				cubemapSamplerSize == other.cubemapSamplerSize &&
 				cubeMapFilePaths[0] == other.cubeMapFilePaths[0] &&
 				constAlbedo == other.constAlbedo &&
 				constMetallic == other.constMetallic &&
 				constRoughness == other.constRoughness &&
-				enableAlbedoSampler == other.enableAlbedoSampler &&
 				albedoTexturePath == other.albedoTexturePath &&
-				enableMetallicSampler == other.enableMetallicSampler &&
 				metallicTexturePath == other.metallicTexturePath &&
-				enableRoughnessSampler == other.enableRoughnessSampler &&
 				roughnessTexturePath == other.roughnessTexturePath &&
-				generateHDREquirectangularSampler == other.generateHDREquirectangularSampler &&
-				enableHDREquirectangularSampler == other.enableHDREquirectangularSampler &&
 				hdrEquirectangularTexturePath == other.hdrEquirectangularTexturePath &&
-				enableCubemapTrilinearFiltering == other.enableCubemapTrilinearFiltering &&
-				generateHDRCubemapSampler == other.generateHDRCubemapSampler &&
-				enableIrradianceSampler == other.enableIrradianceSampler &&
-				generateIrradianceSampler == other.generateIrradianceSampler &&
 				irradianceSamplerSize == other.irradianceSamplerSize &&
-				environmentMapPath == other.environmentMapPath &&
-				enablePrefilteredMap == other.enablePrefilteredMap &&
-				generatePrefilteredMap == other.generatePrefilteredMap &&
 				prefilteredMapSize == other.prefilteredMapSize &&
-				enableBRDFLUT == other.enableBRDFLUT &&
-				renderToCubemap == other.renderToCubemap &&
-				generateReflectionProbeMaps == other.generateReflectionProbeMaps &&
 				colorMultiplier == other.colorMultiplier &&
 				textureScale == other.textureScale
 				);
@@ -179,25 +161,6 @@ namespace flex
 			}
 		}
 
-		material.SetBoolChecked("enable albedo sampler", createInfoOut.enableAlbedoSampler);
-		material.SetBoolChecked("enable metallic sampler", createInfoOut.enableMetallicSampler);
-		material.SetBoolChecked("enable roughness sampler", createInfoOut.enableRoughnessSampler);
-		material.SetBoolChecked("enable normal sampler", createInfoOut.enableNormalSampler);
-		material.SetBoolChecked("generate hdr equirectangular sampler", createInfoOut.generateHDREquirectangularSampler);
-		material.SetBoolChecked("enable hdr equirectangular sampler", createInfoOut.enableHDREquirectangularSampler);
-		material.SetBoolChecked("generate hdr cubemap sampler", createInfoOut.generateHDRCubemapSampler);
-		material.SetBoolChecked("enable irradiance sampler", createInfoOut.enableIrradianceSampler);
-		material.SetBoolChecked("generate irradiance sampler", createInfoOut.generateIrradianceSampler);
-		material.SetBoolChecked("enable brdf lut", createInfoOut.enableBRDFLUT);
-		material.SetBoolChecked("render to cubemap", createInfoOut.renderToCubemap);
-		material.SetBoolChecked("enable cubemap sampler", createInfoOut.enableCubemapSampler);
-		material.SetBoolChecked("enable cubemap trilinear filtering", createInfoOut.enableCubemapTrilinearFiltering);
-		material.SetBoolChecked("generate cubemap sampler", createInfoOut.generateCubemapSampler);
-		material.SetBoolChecked("generate cubemap depth buffers", createInfoOut.generateCubemapDepthBuffers);
-		material.SetBoolChecked("generate prefiltered map", createInfoOut.generatePrefilteredMap);
-		material.SetBoolChecked("enable prefiltered map", createInfoOut.enablePrefilteredMap);
-		material.SetBoolChecked("generate reflection probe maps", createInfoOut.generateReflectionProbeMaps);
-
 		material.SetVec2Checked("generated irradiance cubemap size", createInfoOut.generatedIrradianceCubemapSize);
 		material.SetVec2Checked("generated prefiltered map size", createInfoOut.generatedPrefilteredCubemapSize);
 		material.SetVec2Checked("generated cubemap size", createInfoOut.generatedCubemapSize);
@@ -225,83 +188,46 @@ namespace flex
 		materialObject.fields.emplace_back("const metallic", JSONValue(constMetallic));
 		materialObject.fields.emplace_back("const roughness", JSONValue(constRoughness));
 
-		static const bool defaultEnableAlbedo = false;
-		if (shader.bNeedAlbedoSampler && enableAlbedoSampler != defaultEnableAlbedo)
-		{
-			materialObject.fields.emplace_back("enable albedo sampler", JSONValue(enableAlbedoSampler));
-		}
-
-		static const bool defaultEnableMetallicSampler = false;
-		if (shader.bNeedMetallicSampler && enableMetallicSampler != defaultEnableMetallicSampler)
-		{
-			materialObject.fields.emplace_back("enable metallic sampler", JSONValue(enableMetallicSampler));
-		}
-
-		static const bool defaultEnableRoughness = false;
-		if (shader.bNeedRoughnessSampler && enableRoughnessSampler != defaultEnableRoughness)
-		{
-			materialObject.fields.emplace_back("enable roughness sampler", JSONValue(enableRoughnessSampler));
-		}
-
-		static const bool defaultEnableNormal = false;
-		if (shader.bNeedNormalSampler && enableNormalSampler != defaultEnableNormal)
-		{
-			materialObject.fields.emplace_back("enable normal sampler", JSONValue(enableNormalSampler));
-		}
-
 		static const std::string texturePrefixStr = RESOURCE_LOCATION "textures/";
 
-		if (shader.bNeedAlbedoSampler && !albedoTexturePath.empty())
+		if (shader.textureUniforms.HasUniform(U_ALBEDO_SAMPLER) && !albedoTexturePath.empty())
 		{
 			std::string shortAlbedoTexturePath = albedoTexturePath.substr(texturePrefixStr.length());
 			materialObject.fields.emplace_back("albedo texture filepath", JSONValue(shortAlbedoTexturePath));
 		}
 
-		if (shader.bNeedMetallicSampler && !metallicTexturePath.empty())
+		if (shader.textureUniforms.HasUniform(U_METALLIC_SAMPLER) && !metallicTexturePath.empty())
 		{
 			std::string shortMetallicTexturePath = metallicTexturePath.substr(texturePrefixStr.length());
 			materialObject.fields.emplace_back("metallic texture filepath", JSONValue(shortMetallicTexturePath));
 		}
 
-		if (shader.bNeedRoughnessSampler && !roughnessTexturePath.empty())
+		if (shader.textureUniforms.HasUniform(U_ROUGHNESS_SAMPLER) && !roughnessTexturePath.empty())
 		{
 			std::string shortRoughnessTexturePath = roughnessTexturePath.substr(texturePrefixStr.length());
 			materialObject.fields.emplace_back("roughness texture filepath", JSONValue(shortRoughnessTexturePath));
 		}
 
-		if (shader.bNeedNormalSampler && !normalTexturePath.empty())
+		if (shader.textureUniforms.HasUniform(U_NORMAL_SAMPLER) && !normalTexturePath.empty())
 		{
 			std::string shortNormalTexturePath = normalTexturePath.substr(texturePrefixStr.length());
 			materialObject.fields.emplace_back("normal texture filepath", JSONValue(shortNormalTexturePath));
 		}
 
-		if (generateHDRCubemapSampler)
+		if (shader.textureUniforms.HasUniform(U_CUBEMAP_SAMPLER))
 		{
-			materialObject.fields.emplace_back("generate hdr cubemap sampler", JSONValue(generateHDRCubemapSampler));
-		}
-
-		if (shader.bNeedCubemapSampler)
-		{
-			materialObject.fields.emplace_back("enable cubemap sampler", JSONValue(enableCubemapSampler));
-
-			materialObject.fields.emplace_back("enable cubemap trilinear filtering", JSONValue(enableCubemapTrilinearFiltering));
-
 			std::string cubemapSamplerSizeStr = VecToString(cubemapSamplerSize, 0);
 			materialObject.fields.emplace_back("generated cubemap size", JSONValue(cubemapSamplerSizeStr));
 		}
 
-		if (shader.bNeedIrradianceSampler || irradianceSamplerSize.x > 0)
+		if (shader.textureUniforms.HasUniform(U_IRRADIANCE_SAMPLER) || irradianceSamplerSize.x > 0)
 		{
-			materialObject.fields.emplace_back("generate irradiance sampler", JSONValue(generateIrradianceSampler));
-
 			std::string irradianceSamplerSizeStr = VecToString(irradianceSamplerSize, 0);
 			materialObject.fields.emplace_back("generated irradiance cubemap size", JSONValue(irradianceSamplerSizeStr));
 		}
 
-		if (shader.bNeedPrefilteredMap || prefilteredMapSize.x > 0)
+		if (shader.textureUniforms.HasUniform(U_PREFILTER_MAP) || prefilteredMapSize.x > 0)
 		{
-			materialObject.fields.emplace_back("generate prefiltered map", JSONValue(generatePrefilteredMap));
-
 			std::string prefilteredMapSizeStr = VecToString(prefilteredMapSize, 0);
 			materialObject.fields.emplace_back("generated prefiltered map size", JSONValue(prefilteredMapSizeStr));
 		}

@@ -34,6 +34,8 @@ layout (binding = 0) uniform UBOConstant
 	DirectionalLight dirLight;
 } uboConstant;
 
+layout (binding = 2) uniform samplerCube skySampler;
+
 void main()
 {
 	vec3 N = normalize(ex_NormalWS);
@@ -43,6 +45,8 @@ void main()
 	{
 		light = max(dot(ex_NormalWS, uboConstant.dirLight.direction), 0.0) * uboConstant.dirLight.brightness * uboConstant.dirLight.color;
 	}
+
+	vec3 sky = texture(skySampler, N).xyz;
 
 	vec3 V = normalize(uboConstant.camPos.xyz - ex_PositionWS);
 	vec3 R = reflect(-V, N);
@@ -57,5 +61,5 @@ void main()
 	vec3 deepBlue = vec3(0.02, 0.06, 0.25);
 	vec3 lightBlue = vec3(0.1, 0.15, 0.3);
 
-	fragColor = vec4(mix(mix(black, deepBlue, deepness), lightBlue, clamp(fresnel,0,1)), 1); return;
+	fragColor = vec4(mix(mix(black, deepBlue, deepness), lightBlue, clamp(fresnel,0,1)) * sky, 1); return;
 }

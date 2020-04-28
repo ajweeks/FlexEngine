@@ -948,44 +948,39 @@ namespace flex
 			}
 
 			mat.material.normalTexturePath = createInfo->normalTexturePath;
-			mat.material.enableNormalSampler = createInfo->enableNormalSampler;
 
 			mat.material.sampledFrameBuffers = createInfo->sampledFrameBuffers;
 
-			mat.material.enableCubemapSampler = createInfo->enableCubemapSampler;
-			mat.material.generateCubemapSampler = createInfo->generateCubemapSampler;
 			mat.material.cubemapSamplerSize = createInfo->generatedCubemapSize;
 			mat.material.cubeMapFilePaths = createInfo->cubeMapFilePaths;
 
 			mat.material.constAlbedo = glm::vec4(createInfo->constAlbedo, 0);
 			mat.material.albedoTexturePath = createInfo->albedoTexturePath;
-			mat.material.enableAlbedoSampler = createInfo->enableAlbedoSampler;
 
 			mat.material.constMetallic = createInfo->constMetallic;
 			mat.material.metallicTexturePath = createInfo->metallicTexturePath;
-			mat.material.enableMetallicSampler = createInfo->enableMetallicSampler;
 
 			mat.material.constRoughness = createInfo->constRoughness;
 			mat.material.roughnessTexturePath = createInfo->roughnessTexturePath;
-			mat.material.enableRoughnessSampler = createInfo->enableRoughnessSampler;
 
 			mat.material.colorMultiplier = createInfo->colorMultiplier;
 
-			mat.material.enableHDREquirectangularSampler = createInfo->enableHDREquirectangularSampler;
-			mat.material.generateHDREquirectangularSampler = createInfo->generateHDREquirectangularSampler;
 			mat.material.hdrEquirectangularTexturePath = createInfo->hdrEquirectangularTexturePath;
 
-			mat.material.generateHDRCubemapSampler = createInfo->generateHDRCubemapSampler;
-
-			mat.material.enableIrradianceSampler = createInfo->enableIrradianceSampler;
-			mat.material.generateIrradianceSampler = createInfo->generateIrradianceSampler;
 			mat.material.irradianceSamplerSize = createInfo->generatedIrradianceCubemapSize;
+
+			mat.material.prefilteredMapSize = createInfo->generatedPrefilteredCubemapSize;
+
+			mat.material.persistent = createInfo->persistent;
+			mat.material.visibleInEditor = createInfo->visibleInEditor;
+
+			mat.descriptorSetLayoutIndex = mat.material.shaderID;
 
 			if (shader.shader->bNeedPushConstantBlock)
 			{
 				mat.material.pushConstantBlock = new Material::PushConstantBlock(shader.shader->pushConstantBlockSize);
 			}
-			if (shader.shader->bNeedBRDFLUT)
+			if (shader.shader->textureUniforms.HasUniform(U_BRDF_LUT_SAMPLER))
 			{
 				if (!m_BRDFTexture)
 				{
@@ -995,30 +990,18 @@ namespace flex
 				}
 				mat.textures.Add(U_BRDF_LUT_SAMPLER, m_BRDFTexture, "BRDF");
 			}
-			if (shader.shader->bNeedIrradianceSampler)
+			if (shader.shader->textureUniforms.HasUniform(U_IRRADIANCE_SAMPLER))
 			{
 				if (createInfo->irradianceSamplerMatID < m_Materials.size())
 				{
 					mat.textures.Add(U_IRRADIANCE_SAMPLER, m_Materials.at(createInfo->irradianceSamplerMatID).textures[U_IRRADIANCE_SAMPLER], "Irradiance");
 				}
 			}
-			if (shader.shader->bNeedPrefilteredMap)
+			if (shader.shader->textureUniforms.HasUniform(U_PREFILTER_MAP))
 			{
 				VulkanTexture* prefilterTexture = (createInfo->prefilterMapSamplerMatID < m_Materials.size() ? m_Materials.at(createInfo->prefilterMapSamplerMatID).textures[U_PREFILTER_MAP] : nullptr);
 				mat.textures.Add(U_PREFILTER_MAP, prefilterTexture, "Prefilter");
 			}
-
-			mat.material.enablePrefilteredMap = createInfo->enablePrefilteredMap;
-			mat.material.generatePrefilteredMap = createInfo->generatePrefilteredMap;
-			mat.material.prefilteredMapSize = createInfo->generatedPrefilteredCubemapSize;
-
-			mat.material.enableBRDFLUT = createInfo->enableBRDFLUT;
-			mat.material.renderToCubemap = createInfo->renderToCubemap;
-
-			mat.material.persistent = createInfo->persistent;
-			mat.material.visibleInEditor = createInfo->visibleInEditor;
-
-			mat.descriptorSetLayoutIndex = mat.material.shaderID;
 
 			struct TextureInfo
 			{
@@ -1082,22 +1065,30 @@ namespace flex
 				}
 			}
 
-			// Cubemaps are treated differently than regular textures because they require 6 filepaths
-			if (mat.material.generateCubemapSampler)
+			if (shader.shader->textureUniforms.HasUniform(U_CUBEMAP_SAMPLER))
 			{
 				if (createInfo->cubeMapFilePaths[0].empty())
 				{
 					assert(!mat.textures.Contains(U_CUBEMAP_SAMPLER));
 
-					const u32 mipLevels = static_cast<u32>(floor(log2(createInfo->generatedCubemapSize.x))) + 1;
-					u32 channelCount = 4;
-					VulkanTexture* cubemapTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "Cubemap", (u32)createInfo->generatedCubemapSize.x,
-						(u32)createInfo->generatedCubemapSize.y, channelCount);
-					cubemapTexture->CreateCubemapEmpty(VK_FORMAT_R8G8B8A8_UNORM, mipLevels, createInfo->enableCubemapTrilinearFiltering);
-					//texture->imageLayout = VK_IMAGE_LAYOUT_UNDEFINED; // TODO:Set this in creation function?
+					if (createInfo->generatedCubemapSize.x == 0 || createInfo->generatedCubemapSize.y == 0)
+					{
+						PrintError("Shader requires irradiance texture but createInfo->generatedCubemapSize is %ux%u!\n", (u32)createInfo->generatedCubemapSize.x, (u32)createInfo->generatedCubemapSize.y);
+						mat.textures.Add(U_CUBEMAP_SAMPLER, m_BlankTextureArr, "Cubemap");
+					}
+					else
+					{
+						// TODO: Make mip generation optional
+						const u32 mipLevels = static_cast<u32>(floor(log2(createInfo->generatedCubemapSize.x))) + 1;
+						u32 channelCount = 4;
+						VulkanTexture* cubemapTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "Cubemap", (u32)createInfo->generatedCubemapSize.x,
+							(u32)createInfo->generatedCubemapSize.y, channelCount);
+						cubemapTexture->CreateCubemapEmpty(VK_FORMAT_R8G8B8A8_UNORM, mipLevels, true);
+						//texture->imageLayout = VK_IMAGE_LAYOUT_UNDEFINED; // TODO:Set this in creation function?
 
-					AddLoadedTexture(cubemapTexture);
-					mat.textures.Add(U_CUBEMAP_SAMPLER, cubemapTexture, "Cubemap");
+						AddLoadedTexture(cubemapTexture);
+						mat.textures.Add(U_CUBEMAP_SAMPLER, cubemapTexture, "Cubemap");
+					}
 				}
 				else
 				{
@@ -1115,26 +1106,8 @@ namespace flex
 					mat.textures.Add(U_CUBEMAP_SAMPLER, cubemapTexture, "Cubemap");
 				}
 			}
-			else if (mat.material.generateHDRCubemapSampler)
-			{
-				assert(!mat.textures.Contains(U_CUBEMAP_SAMPLER));
 
-				const u32 mipLevels = static_cast<u32>(floor(log2(createInfo->generatedCubemapSize.x))) + 1;
-				VulkanTexture* cubemapTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "HDR Cubemap",
-					(u32)createInfo->generatedCubemapSize.x, (u32)createInfo->generatedCubemapSize.y, 4);
-				cubemapTexture->CreateCubemapEmpty(VK_FORMAT_R32G32B32A32_SFLOAT, mipLevels, false);
-				AddLoadedTexture(cubemapTexture);
-				mat.textures.Add(U_CUBEMAP_SAMPLER, cubemapTexture, "HDR Cubemap");
-			}
-			else
-			{
-				if (!mat.textures.Contains(U_CUBEMAP_SAMPLER) && shader.shader->textureUniforms.HasUniform(U_CUBEMAP_SAMPLER))
-				{
-					mat.textures.Add(U_CUBEMAP_SAMPLER, m_BlankTextureArr, "Cubemap"); // TODO: Array?
-				}
-			}
-
-			if (mat.material.generateIrradianceSampler)
+			if (shader.shader->textureUniforms.HasUniform(U_IRRADIANCE_SAMPLER))
 			{
 				assert(!mat.textures.Contains(U_IRRADIANCE_SAMPLER));
 
@@ -1146,15 +1119,8 @@ namespace flex
 				AddLoadedTexture(irradianceTexture);
 				mat.textures.Add(U_IRRADIANCE_SAMPLER, irradianceTexture, "Irradiance");
 			}
-			else
-			{
-				if (!mat.textures.Contains(U_IRRADIANCE_SAMPLER) && shader.shader->textureUniforms.HasUniform(U_IRRADIANCE_SAMPLER))
-				{
-					mat.textures.Add(U_IRRADIANCE_SAMPLER, m_BlankTexture, "Irradiance");
-				}
-			}
 
-			if (mat.material.generatePrefilteredMap)
+			if (shader.shader->textureUniforms.HasUniform(U_PREFILTER_MAP))
 			{
 				assert(!mat.textures.Contains(U_PREFILTER_MAP));
 
@@ -1165,13 +1131,6 @@ namespace flex
 				prefilterTexture->CreateCubemapEmpty(VK_FORMAT_R16G16B16A16_SFLOAT, mipLevels, true);
 				AddLoadedTexture(prefilterTexture);
 				mat.textures.Add(U_PREFILTER_MAP, prefilterTexture, "Prefilter");
-			}
-			else
-			{
-				if (!mat.textures.Contains(U_PREFILTER_MAP) && shader.shader->textureUniforms.HasUniform(U_PREFILTER_MAP))
-				{
-					mat.textures.Add(U_PREFILTER_MAP, m_BlankTextureArr, "Prefilter"); // TODO: Array?
-				}
 			}
 
 			if (shader.shader->textureUniforms.HasUniform(U_NOISE_SAMPLER))
@@ -2170,7 +2129,7 @@ namespace flex
 					auto matIter = m_Materials.find(renderObject->materialID);
 					if (matIter != m_Materials.end())
 					{
-						if (m_Shaders[matIter->second.material.shaderID].shader->bNeedPrefilteredMap)
+						if (m_Shaders[matIter->second.material.shaderID].shader->textureUniforms.HasUniform(U_PREFILTER_MAP))
 						{
 							VulkanMaterial& renderObjectMat = matIter->second;
 							renderObjectMat.textures.Add(U_IRRADIANCE_SAMPLER, skyboxMaterial.textures[U_IRRADIANCE_SAMPLER], "Irradiance");
@@ -2466,25 +2425,9 @@ namespace flex
 
 					ImGui::ColorEdit3("Albedo", &mat.material.constAlbedo.x, ImGuiColorEditFlags_Float | ImGuiColorEditFlags_PickerHueWheel);
 
-					if (mat.material.enableMetallicSampler)
-					{
-						ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
-					}
 					ImGui::SliderFloat("Metallic", &mat.material.constMetallic, 0.0f, 1.0f, "%.2f");
-					if (mat.material.enableMetallicSampler)
-					{
-						ImGui::PopStyleColor();
-					}
 
-					if (mat.material.enableRoughnessSampler)
-					{
-						ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
-					}
 					ImGui::SliderFloat("Roughness", &mat.material.constRoughness, 0.0f, 1.0f, "%.2f");
-					if (mat.material.enableRoughnessSampler)
-					{
-						ImGui::PopStyleColor();
-					}
 
 					ImGui::DragFloat("Texture scale", &mat.material.textureScale, 0.1f);
 
@@ -3049,8 +2992,6 @@ namespace flex
 			MaterialCreateInfo equirectangularToCubeMatCreateInfo = {};
 			equirectangularToCubeMatCreateInfo.name = "equirectangular to Cube";
 			equirectangularToCubeMatCreateInfo.shaderName = "equirectangular_to_cube";
-			equirectangularToCubeMatCreateInfo.enableHDREquirectangularSampler = true;
-			equirectangularToCubeMatCreateInfo.generateHDREquirectangularSampler = true;
 			equirectangularToCubeMatCreateInfo.hdrEquirectangularTexturePath = environmentMapPath;
 			equirectangularToCubeMatCreateInfo.persistent = true;
 			equirectangularToCubeMatCreateInfo.visibleInEditor = false;
@@ -8818,17 +8759,13 @@ namespace flex
 			glm::mat4 view = g_CameraManager->CurrentCamera()->GetView();
 			glm::mat4 viewProj = projection * view;
 			glm::vec4 colorMultiplier = material.material.colorMultiplier;
-			u32 enableAlbedoSampler = material.material.enableAlbedoSampler;
-			u32 enableMetallicSampler = material.material.enableMetallicSampler;
-			u32 enableRoughnessSampler = material.material.enableRoughnessSampler;
-			u32 enableNormalSampler = material.material.enableNormalSampler;
-			u32 enableIrradianceSampler = material.material.enableIrradianceSampler;
 			real textureScale = material.material.textureScale;
 			real blendSharpness = material.material.blendSharpness;
 			glm::vec2 texSize = material.material.texSize;
 			glm::vec4 fontCharData = material.material.fontCharData;
 			glm::vec4 sdfData(0.5f, -0.01f, -0.008f, 0.035f);
 			i32 texChannel = 0;
+			u32 trueVal = 1;
 			glm::mat4 postProcessMatrix = GetPostProcessingMatrix();
 			ParticleSimData particleSimData = {};
 
@@ -8838,26 +8775,6 @@ namespace flex
 				if (uniformOverrides->overridenUniforms.HasUniform(U_VIEW_PROJECTION))
 				{
 					viewProj = uniformOverrides->viewProjection;
-				}
-				if (uniformOverrides->overridenUniforms.HasUniform(U_ENABLE_ALBEDO_SAMPLER))
-				{
-					enableAlbedoSampler = uniformOverrides->enableAlbedoSampler;
-				}
-				if (uniformOverrides->overridenUniforms.HasUniform(U_ENABLE_METALLIC_SAMPLER))
-				{
-					enableMetallicSampler = uniformOverrides->enableMetallicSampler;
-				}
-				if (uniformOverrides->overridenUniforms.HasUniform(U_ENABLE_ROUGHNESS_SAMPLER))
-				{
-					enableRoughnessSampler = uniformOverrides->enableRoughnessSampler;
-				}
-				if (uniformOverrides->overridenUniforms.HasUniform(U_ENABLE_NORMAL_SAMPLER))
-				{
-					enableNormalSampler = uniformOverrides->enableNormalSampler;
-				}
-				if (uniformOverrides->overridenUniforms.HasUniform(U_ENABLE_IRRADIANCE_SAMPLER))
-				{
-					enableIrradianceSampler = uniformOverrides->enableIrradianceSampler;
 				}
 				if (uniformOverrides->overridenUniforms.HasUniform(U_SDF_DATA))
 				{
@@ -8909,11 +8826,14 @@ namespace flex
 				{ U_CONST_ALBEDO, (void*)&material.material.constAlbedo, US_CONST_ALBEDO },
 				{ U_CONST_METALLIC, (void*)&material.material.constMetallic, US_CONST_METALLIC },
 				{ U_CONST_ROUGHNESS, (void*)&material.material.constRoughness, US_CONST_ROUGHNESS },
-				{ U_ENABLE_ALBEDO_SAMPLER, (void*)&enableAlbedoSampler, US_ENABLE_ALBEDO_SAMPLER },
-				{ U_ENABLE_METALLIC_SAMPLER, (void*)&enableMetallicSampler, US_ENABLE_METALLIC_SAMPLER },
-				{ U_ENABLE_ROUGHNESS_SAMPLER, (void*)&enableRoughnessSampler, US_ENABLE_ROUGHNESS_SAMPLER },
-				{ U_ENABLE_NORMAL_SAMPLER, (void*)&enableNormalSampler, US_ENABLE_NORMAL_SAMPLER },
-				{ U_ENABLE_IRRADIANCE_SAMPLER, (void*)&enableIrradianceSampler, US_ENABLE_IRRADIANCE_SAMPLER },
+
+				// TODO: Remove
+				{ U_ENABLE_ALBEDO_SAMPLER, (void*)&trueVal, US_ENABLE_ALBEDO_SAMPLER },
+				{ U_ENABLE_METALLIC_SAMPLER, (void*)&trueVal, US_ENABLE_METALLIC_SAMPLER },
+				{ U_ENABLE_ROUGHNESS_SAMPLER, (void*)&trueVal, US_ENABLE_ROUGHNESS_SAMPLER },
+				{ U_ENABLE_NORMAL_SAMPLER, (void*)&trueVal, US_ENABLE_NORMAL_SAMPLER },
+				{ U_ENABLE_IRRADIANCE_SAMPLER, (void*)&trueVal, US_ENABLE_IRRADIANCE_SAMPLER },
+
 				{ U_BLEND_SHARPNESS, (void*)&blendSharpness, US_BLEND_SHARPNESS },
 				{ U_TEXTURE_SCALE, (void*)&textureScale, US_TEXTURE_SCALE },
 				{ U_FONT_CHAR_DATA, (void*)&fontCharData, US_FONT_CHAR_DATA },
@@ -8962,9 +8882,11 @@ namespace flex
 				}
 
 				VulkanMaterial& renderObjectMat = m_Materials.at(renderObject->materialID);
+				VulkanShader& renderObjShader = m_Shaders[renderObjectMat.material.shaderID];
 
-				if (renderObjectMat.material.generateIrradianceSampler)
+				if (renderObjShader.shader->textureUniforms.HasUniform(U_IRRADIANCE_SAMPLER))
 				{
+					// TODO: Support generation of any mix of these
 					GenerateCubemapFromHDR(renderObject, renderObjectMat.material.environmentMapPath);
 					GenerateIrradianceSampler(renderObject);
 					GeneratePrefilteredCube(renderObject);

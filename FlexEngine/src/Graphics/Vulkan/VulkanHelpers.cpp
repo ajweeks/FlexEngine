@@ -550,7 +550,7 @@ namespace flex
 				i32 size;
 			};
 
-			std::vector<Image> images;
+			std::array<Image, 6> images;
 			u32 totalSize = 0;
 
 			fileName = StripLeadingDirectories(filePaths[0]);
@@ -565,9 +565,10 @@ namespace flex
 				Print("Loading cubemap textures %s, %s, %s, %s, %s, %s\n", filePaths[0].c_str(), filePaths[1].c_str(), filePaths[2].c_str(), filePaths[3].c_str(), filePaths[4].c_str(), filePaths[5].c_str());
 			}
 
-			images.reserve(filePaths.size());
-			for (const std::string& path : filePaths)
+			for (u32 i =0; i < (u32)filePaths.size(); ++i)
 			{
+				const std::string& path = filePaths[i];
+
 				int w, h, c;
 				unsigned char* pixels = stbi_load(path.c_str(), &w, &h, &c, STBI_rgb_alpha);
 				if (!pixels)
@@ -583,7 +584,7 @@ namespace flex
 				channelCount = (u32)c;
 
 				i32 size = width * height * channelCount * sizeof(unsigned char);
-				images.push_back({ pixels, (i32)width, (i32)height, (i32)channelCount, size });
+				images[i] = { pixels, (i32)width, (i32)height, (i32)channelCount, size };
 				totalSize += size;
 			}
 

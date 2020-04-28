@@ -4628,7 +4628,6 @@ namespace flex
 		matCreateInfo.constAlbedo = glm::vec3(1.0f, 0.0f, 0.0f);
 		matCreateInfo.constRoughness = 1.0f;
 		matCreateInfo.constMetallic = 0.0f;
-		matCreateInfo.enableIrradianceSampler = false;
 		m_TerrainMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
 
 		m_Mesh = new Mesh(this);

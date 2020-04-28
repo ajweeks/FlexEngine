@@ -338,30 +338,6 @@ namespace flex
 
 		real textureScale = 1.0f;
 
-		bool enableNormalSampler = false;
-		bool enableAlbedoSampler = false;
-		bool enableMetallicSampler = false;
-		bool enableRoughnessSampler = false;
-		bool generateHDREquirectangularSampler = false;
-		bool enableHDREquirectangularSampler = false;
-		bool generateHDRCubemapSampler = false;
-
-		bool enableIrradianceSampler = false;
-		bool generateIrradianceSampler = false;
-
-		bool enableBRDFLUT = false;
-		bool renderToCubemap = true;
-
-		bool enableCubemapSampler = false;
-		bool enableCubemapTrilinearFiltering = false;
-		bool generateCubemapSampler = false;
-		bool generateCubemapDepthBuffers = false;
-
-		bool generatePrefilteredMap = false;
-		bool enablePrefilteredMap = false;
-
-		bool generateReflectionProbeMaps = false;
-
 		bool bDynamic = false; // True if vertex data is uploaded to the GPU often
 
 		bool persistent = false;
@@ -418,33 +394,6 @@ namespace flex
 		std::string environmentMapPath = "";
 		glm::vec2 prefilteredMapSize = { 0, 0 };
 		glm::vec4 colorMultiplier = { 1, 1, 1, 1 };
-
-		bool enableNormalSampler = false;
-
-		bool generateCubemapSampler = false;
-		bool enableCubemapSampler = false;
-
-		// PBR samplers
-		bool enableAlbedoSampler = false;
-		bool enableMetallicSampler = false;
-		bool enableRoughnessSampler = false;
-
-		bool generateHDREquirectangularSampler = false;
-		bool enableHDREquirectangularSampler = false;
-
-		bool enableCubemapTrilinearFiltering = false;
-		bool generateHDRCubemapSampler = false;
-
-		bool enableIrradianceSampler = false;
-		bool generateIrradianceSampler = false;
-
-		bool enablePrefilteredMap = false;
-		bool generatePrefilteredMap = false;
-
-		bool enableBRDFLUT = false;
-		bool renderToCubemap = false; // NOTE: This flag is currently ignored by GL renderer!
-
-		bool generateReflectionProbeMaps = false;
 
 		bool persistent = false;
 		bool visibleInEditor = false;
@@ -645,15 +594,6 @@ namespace flex
 		bool bCompute = false;
 
 		// These variables should be set to true when the shader has these uniforms
-		bool bNeedNormalSampler = false;
-		bool bNeedCubemapSampler = false;
-		bool bNeedAlbedoSampler = false;
-		bool bNeedMetallicSampler = false;
-		bool bNeedRoughnessSampler = false;
-		bool bNeedHDREquirectangularSampler = false;
-		bool bNeedIrradianceSampler = false;
-		bool bNeedPrefilteredMap = false;
-		bool bNeedBRDFLUT = false;
 		bool bNeedPushConstantBlock = false;
 		bool bGenerateVertexBufferForAll = false;
 		bool bTextureArr = false;

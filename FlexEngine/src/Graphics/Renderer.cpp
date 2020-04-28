@@ -1299,9 +1299,6 @@ namespace flex
 			// Deferred combine
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::DEFERRED_COMBINE;
 			m_BaseShaders[shaderID].bDepthWriteEnable = false;
-			m_BaseShaders[shaderID].bNeedBRDFLUT = true;
-			m_BaseShaders[shaderID].bNeedIrradianceSampler = true;
-			m_BaseShaders[shaderID].bNeedPrefilteredMap = true;
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION2 |
 				(u32)VertexAttribute::UV;
@@ -1380,10 +1377,6 @@ namespace flex
 			// PBR
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::DEFERRED;
 			m_BaseShaders[shaderID].numAttachments = 2; // TODO: Work out automatically from samplers?
-			m_BaseShaders[shaderID].bNeedAlbedoSampler = true;
-			m_BaseShaders[shaderID].bNeedMetallicSampler = true;
-			m_BaseShaders[shaderID].bNeedRoughnessSampler = true;
-			m_BaseShaders[shaderID].bNeedNormalSampler = true;
 			m_BaseShaders[shaderID].dynamicVertexBufferSize = 10 * 1024 * 1024; // 10MB
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION |
@@ -1415,10 +1408,6 @@ namespace flex
 			// PBR - WORLD SPACE
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::DEFERRED;
 			m_BaseShaders[shaderID].numAttachments = 2;
-			m_BaseShaders[shaderID].bNeedMetallicSampler = true;
-			m_BaseShaders[shaderID].bNeedRoughnessSampler = true;
-			m_BaseShaders[shaderID].bNeedAlbedoSampler = true;
-			m_BaseShaders[shaderID].bNeedNormalSampler = true;
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV |
@@ -1449,7 +1438,6 @@ namespace flex
 
 			// Skybox
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
-			m_BaseShaders[shaderID].bNeedCubemapSampler = true;
 			m_BaseShaders[shaderID].bNeedPushConstantBlock = true;
 			m_BaseShaders[shaderID].pushConstantBlockSize = 128;
 			m_BaseShaders[shaderID].vertexAttributes =
@@ -1466,7 +1454,6 @@ namespace flex
 
 			// Equirectangular to Cube
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
-			m_BaseShaders[shaderID].bNeedHDREquirectangularSampler = true;
 			m_BaseShaders[shaderID].bNeedPushConstantBlock = true;
 			m_BaseShaders[shaderID].pushConstantBlockSize = 128;
 			m_BaseShaders[shaderID].vertexAttributes =
@@ -1477,7 +1464,6 @@ namespace flex
 
 			// Irradiance
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
-			m_BaseShaders[shaderID].bNeedCubemapSampler = true;
 			m_BaseShaders[shaderID].bNeedPushConstantBlock = true;
 			m_BaseShaders[shaderID].pushConstantBlockSize = 128;
 			m_BaseShaders[shaderID].vertexAttributes =
@@ -1488,7 +1474,6 @@ namespace flex
 
 			// Prefilter
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
-			m_BaseShaders[shaderID].bNeedCubemapSampler = true;
 			m_BaseShaders[shaderID].bNeedPushConstantBlock = true;
 			m_BaseShaders[shaderID].pushConstantBlockSize = 128;
 			m_BaseShaders[shaderID].vertexAttributes =
@@ -1773,8 +1758,11 @@ namespace flex
 
 			// Water
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
+			//m_BaseShaders[shaderID].bNeedIrradianceSampler = true;
+			//m_BaseShaders[shaderID].bNeedHDREquirectangularSampler = true;
+			//m_BaseShaders[shaderID].bNeedPrefilteredMap= true;
 			m_BaseShaders[shaderID].bDepthWriteEnable = true;
-			m_BaseShaders[shaderID].bTranslucent = false;
+			m_BaseShaders[shaderID].bTranslucent = true;
 			m_BaseShaders[shaderID].dynamicVertexBufferSize = 32 * 1024 * 1024;
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION |
@@ -1788,6 +1776,10 @@ namespace flex
 
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
+
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_CUBEMAP_SAMPLER);
+			//m_BaseShaders[shaderID].textureUniforms.AddUniform(U_IRRADIANCE_SAMPLER);
+			//m_BaseShaders[shaderID].textureUniforms.AddUniform(U_PREFILTER_MAP);
 			++shaderID;
 
 			assert(shaderID == m_BaseShaders.size());
@@ -2266,12 +2258,8 @@ namespace flex
 			MaterialCreateInfo gBufferMaterialCreateInfo = {};
 			gBufferMaterialCreateInfo.name = gBufferMatName;
 			gBufferMaterialCreateInfo.shaderName = "deferred_combine";
-			gBufferMaterialCreateInfo.enableIrradianceSampler = true;
 			gBufferMaterialCreateInfo.irradianceSamplerMatID = skyboxMaterialID;
-			gBufferMaterialCreateInfo.enablePrefilteredMap = true;
 			gBufferMaterialCreateInfo.prefilterMapSamplerMatID = skyboxMaterialID;
-			gBufferMaterialCreateInfo.enableBRDFLUT = true;
-			gBufferMaterialCreateInfo.renderToCubemap = false;
 			gBufferMaterialCreateInfo.persistent = true;
 			gBufferMaterialCreateInfo.visibleInEditor = false;
 			FillOutGBufferFrameBufferAttachments(gBufferMaterialCreateInfo.sampledFrameBuffers);
@@ -2538,7 +2526,6 @@ namespace flex
 		spriteMatSSCreateInfo.shaderName = "sprite";
 		spriteMatSSCreateInfo.persistent = true;
 		spriteMatSSCreateInfo.visibleInEditor = true;
-		spriteMatSSCreateInfo.enableAlbedoSampler = true;
 		spriteMatSSCreateInfo.bDynamic = false;
 		m_SpriteMatSSID = InitializeMaterial(&spriteMatSSCreateInfo);
 
@@ -2547,7 +2534,6 @@ namespace flex
 		spriteMatWSCreateInfo.shaderName = "sprite";
 		spriteMatWSCreateInfo.persistent = true;
 		spriteMatWSCreateInfo.visibleInEditor = true;
-		spriteMatWSCreateInfo.enableAlbedoSampler = true;
 		spriteMatWSCreateInfo.bDynamic = false;
 		m_SpriteMatWSID = InitializeMaterial(&spriteMatWSCreateInfo);
 
@@ -2556,7 +2542,6 @@ namespace flex
 		spriteArrMatCreateInfo.shaderName = "sprite_arr";
 		spriteArrMatCreateInfo.persistent = true;
 		spriteArrMatCreateInfo.visibleInEditor = true;
-		spriteArrMatCreateInfo.enableAlbedoSampler = true;
 		spriteArrMatCreateInfo.bDynamic = false;
 		m_SpriteArrMatID = InitializeMaterial(&spriteArrMatCreateInfo);
 
@@ -2626,7 +2611,6 @@ namespace flex
 		fullscreenBlitMatCreateInfo.shaderName = "blit";
 		fullscreenBlitMatCreateInfo.persistent = true;
 		fullscreenBlitMatCreateInfo.visibleInEditor = false;
-		fullscreenBlitMatCreateInfo.enableAlbedoSampler = true;
 		m_FullscreenBlitMatID = InitializeMaterial(&fullscreenBlitMatCreateInfo);
 
 		MaterialCreateInfo computeSDFMatCreateInfo = {};
