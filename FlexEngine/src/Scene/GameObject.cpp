@@ -3316,6 +3316,7 @@ namespace flex
 		m_VertexBufferCreateInfo = {};
 		m_VertexBufferCreateInfo.attributes = g_Renderer->GetShader(g_Renderer->GetMaterial(m_WaveMaterialID).shaderID).vertexAttributes;
 
+		DiscoverChunks();
 		UpdateWaveVertexData();
 
 		SetMesh(new Mesh(this));
@@ -3331,6 +3332,7 @@ namespace flex
 	{
 		PROFILE_AUTO("Gerstner update");
 
+		DiscoverChunks();
 		UpdateWaveVertexData();
 
 		MeshComponent* meshComponent = m_Mesh->GetSubMeshes()[0];
@@ -3351,29 +3353,58 @@ namespace flex
 		g_Renderer->GetDebugDrawer()->drawSphere(posBT, 0.7f, btVector3(0.75f, 0.5f, 0.6f));
 	}
 
+	void GerstnerWave::DiscoverChunks()
+	{
+		std::vector<glm::vec2i> chunksInRadius;
+
+		glm::vec3 center = m_bPinCenter ? m_PinnedPos : g_CameraManager->CurrentCamera()->position;
+		const glm::vec2 centerXZ(center.x, center.z);
+		const glm::vec2i camChunkIdx = (glm::vec2i)(glm::vec2(center.x, center.z) / size);
+		const i32 maxChunkIdxDiff = (i32)glm::ceil(loadedDist / (real)size);
+		const real radiusSqr = loadedDist * loadedDist;
+		for (i32 x = camChunkIdx.x - maxChunkIdxDiff; x < camChunkIdx.x + maxChunkIdxDiff; ++x)
+		{
+			for (i32 z = camChunkIdx.y - maxChunkIdxDiff; z < camChunkIdx.y + maxChunkIdxDiff; ++z)
+			{
+				glm::vec2 chunkCenter((x + 0.5f) * size, (z + 0.5f) * size);
+				if (glm::distance2(chunkCenter, centerXZ) < radiusSqr)
+				{
+					chunksInRadius.push_back(glm::vec2i(x, z));
+				}
+			}
+		}
+		waveChunks = chunksInRadius;
+	}
+
 	void GerstnerWave::UpdateWaveVertexData()
 	{
-		const i32 vertCount = vertSideCount * vertSideCount;
-		const i32 indexCount = 6 * (vertSideCount - 1) * (vertSideCount - 1);
+		const i32 vertCount = vertSideCount * vertSideCount * (i32)waveChunks.size();
+		const i32 vertCountPerChunk = vertSideCount * vertSideCount;
+		const i32 indexCount = 6 * (vertSideCount - 1) * (vertSideCount - 1) * (i32)waveChunks.size();
+
+
 
 		// Resize index buffer
 		if (m_Indices.size() != indexCount)
 		{
 			m_Indices.resize(indexCount);
 			i32 i = 0;
-			for (i32 z = 0; z < vertSideCount - 1; ++z)
+			for (u32 chunkIdx = 0; chunkIdx < (u32)waveChunks.size(); ++chunkIdx)
 			{
-				for (i32 x = 0; x < vertSideCount - 1; ++x)
+				for (i32 z = 0; z < vertSideCount - 1; ++z)
 				{
-					i32 vertIdx = z * vertSideCount + x;
-					m_Indices[i++] = vertIdx;
-					m_Indices[i++] = vertIdx + vertSideCount;
-					m_Indices[i++] = vertIdx + 1;
+					for (i32 x = 0; x < vertSideCount - 1; ++x)
+					{
+						i32 vertIdx = z * vertSideCount + x + chunkIdx * vertCountPerChunk;
+						m_Indices[i++] = vertIdx;
+						m_Indices[i++] = vertIdx + vertSideCount;
+						m_Indices[i++] = vertIdx + 1;
 
-					vertIdx = vertIdx + 1 + vertSideCount;
-					m_Indices[i++] = vertIdx;
-					m_Indices[i++] = vertIdx - vertSideCount;
-					m_Indices[i++] = vertIdx - 1;
+						vertIdx = vertIdx + 1 + vertSideCount + chunkIdx * vertCountPerChunk;
+						m_Indices[i++] = vertIdx;
+						m_Indices[i++] = vertIdx - vertSideCount;
+						m_Indices[i++] = vertIdx - 1;
+					}
 				}
 			}
 		}
@@ -3386,92 +3417,94 @@ namespace flex
 			m_VertexBufferCreateInfo.extraVec4s.resize(vertCount);
 		}
 
-		// Update vertex positions/normals
-		const glm::vec3 startPos(-size / 2.0f, 0.0f, -size / 2.0f);
-
 		std::vector<glm::vec3>& positions = m_VertexBufferCreateInfo.positions_3D;
 		//std::vector<glm::vec2>& texCoords = m_VertexBufferCreateInfo.texCoords_UV;
 		std::vector<glm::vec3>& normals = m_VertexBufferCreateInfo.normals;
 		std::vector<glm::vec4>& extraVec4s = m_VertexBufferCreateInfo.extraVec4s;
 
-		// Clear positions and normals
-		for (i32 z = 0; z < vertSideCount; ++z)
+		for (u32 chunkIdx = 0; chunkIdx < (u32)waveChunks.size(); ++chunkIdx)
 		{
-			for (i32 x = 0; x < vertSideCount; ++x)
+			const glm::vec3 startPos((waveChunks[chunkIdx].x - 0.5f) * size, 0.0f, (waveChunks[chunkIdx].y - 0.5f) * size);
+
+			// Clear positions and normals
+			for (i32 z = 0; z < vertSideCount; ++z)
 			{
-				const i32 vertIdx = z * vertSideCount + x;
-				positions[vertIdx] = startPos + glm::vec3(
-					size * ((real)x / (vertSideCount - 1)),
-					0.0f,
-					size * ((real)z / (vertSideCount - 1)));
-				normals[vertIdx] = VEC3_UP;
-				//texCoords[vertIdx] = glm::vec2(x / (real)(vertSideCount - 1), z / (real)(vertSideCount - 1));
-				extraVec4s[vertIdx] = VEC4_ZERO;
-			}
-		}
-
-		// Calculate positions
-		for (WaveInfo& wave : waves)
-		{
-			if (wave.enabled)
-			{
-				const glm::vec3 waveVec = glm::vec3(wave.waveDirCos, 0.0f, wave.waveDirSin) * wave.waveVecMag;
-				const glm::vec3 waveVecN = glm::normalize(waveVec);
-
-				wave.accumOffset += (wave.moveSpeed * g_DeltaTime);
-
-				for (i32 z = 0; z < vertSideCount; ++z)
+				for (i32 x = 0; x < vertSideCount; ++x)
 				{
-					for (i32 x = 0; x < vertSideCount; ++x)
-					{
-						const i32 vertIdx = z * vertSideCount + x;
+					const i32 vertIdx = z * vertSideCount + x + chunkIdx * vertCountPerChunk;
+					positions[vertIdx] = startPos + glm::vec3(
+						size * ((real)x / (vertSideCount - 1)),
+						0.0f,
+						size * ((real)z / (vertSideCount - 1)));
+					normals[vertIdx] = VEC3_UP;
+					//texCoords[vertIdx] = glm::vec2(x / (real)(vertSideCount - 1), z / (real)(vertSideCount - 1));
+					extraVec4s[vertIdx] = VEC4_ZERO;
+				}
+			}
 
-						real d = glm::dot(waveVec, positions[vertIdx]);
-						real c = cos(d + wave.accumOffset);
-						real s = sin(d + wave.accumOffset);
-						positions[vertIdx] += glm::vec3(
-							-waveVecN.x * wave.a * s,
-							wave.a * c,
-							-waveVecN.y * wave.a * s);
+			// Calculate positions
+			for (WaveInfo& wave : waves)
+			{
+				if (wave.enabled)
+				{
+					const glm::vec3 waveVec = glm::vec3(wave.waveDirCos, 0.0f, wave.waveDirSin) * wave.waveVecMag;
+					const glm::vec3 waveVecN = glm::normalize(waveVec);
+
+					wave.accumOffset += (wave.moveSpeed * g_DeltaTime);
+
+					for (i32 z = 0; z < vertSideCount; ++z)
+					{
+						for (i32 x = 0; x < vertSideCount; ++x)
+						{
+							const i32 vertIdx = z * vertSideCount + x + chunkIdx * vertCountPerChunk;
+
+							real d = glm::dot(waveVec, positions[vertIdx]);
+							real c = cos(d + wave.accumOffset);
+							real s = sin(d + wave.accumOffset);
+							positions[vertIdx] += glm::vec3(
+								-waveVecN.x * wave.a * s,
+								wave.a * c,
+								-waveVecN.y * wave.a * s);
+						}
 					}
 				}
 			}
-		}
 
-		// Ripple
-		glm::vec3 ripplePos = VEC3_ZERO;
-		real rippleAmp = 0.8f;
-		real rippleLen = 0.6f;
-		real rippleFadeOut = 12.0f;
-		for (i32 z = 0; z < vertSideCount; ++z)
-		{
-			for (i32 x = 0; x < vertSideCount; ++x)
+			// Ripple
+			glm::vec3 ripplePos = VEC3_ZERO;
+			real rippleAmp = 0.8f;
+			real rippleLen = 0.6f;
+			real rippleFadeOut = 12.0f;
+			for (i32 z = 0; z < vertSideCount; ++z)
 			{
-				const i32 vertIdx = z * vertSideCount + x;
+				for (i32 x = 0; x < vertSideCount; ++x)
+				{
+					const i32 vertIdx = z * vertSideCount + x + chunkIdx * vertCountPerChunk;
 
-				glm::vec3 diff = (ripplePos - positions[vertIdx]);
-				real d = glm::length(diff);
-				diff = glm::normalize(diff) * rippleLen;
-				real c = cos(g_SecElapsedSinceProgramStart * 1.8f - d);
-				real s = sin(g_SecElapsedSinceProgramStart * 1.5f - d);
-				real a = Lerp(0.0f, rippleAmp, 1.0f - Saturate(d / rippleFadeOut));
-				positions[vertIdx] += glm::vec3(
-					-diff.x * a * s,
-					a * c,
-					-diff.z * a * s);
+					glm::vec3 diff = (ripplePos - positions[vertIdx]);
+					real d = glm::length(diff);
+					diff = glm::normalize(diff) * rippleLen;
+					real c = cos(g_SecElapsedSinceProgramStart * 1.8f - d);
+					real s = sin(g_SecElapsedSinceProgramStart * 1.5f - d);
+					real a = Lerp(0.0f, rippleAmp, 1.0f - Saturate(d / rippleFadeOut));
+					positions[vertIdx] += glm::vec3(
+						-diff.x * a * s,
+						a * c,
+						-diff.z * a * s);
+				}
 			}
-		}
 
-		// Calculate normals
-		const real cellSize = size / vertSideCount;
-		for (i32 z = 0; z < vertSideCount; ++z)
-		{
-			for (i32 x = 0; x < vertSideCount; ++x)
+			// Calculate normals
+			const real cellSize = size / vertSideCount;
+			for (i32 z = 0; z < vertSideCount; ++z)
 			{
-				i32 vertIdx = z * vertSideCount + x;
-				real dX = (vertIdx < 1 || vertIdx >= positions.size() - (vertSideCount - 1)) ? 0.0f : (positions[vertIdx - 1].y - positions[vertIdx + 1].y);
-				real dZ = (vertIdx < vertSideCount || vertIdx >= positions.size() - vertSideCount) ? 0.0f : (positions[vertIdx - vertSideCount].y - positions[vertIdx + vertSideCount].y);
-				normals[vertIdx] = glm::normalize(glm::vec3(dX, 2.0f * cellSize, dZ));
+				for (i32 x = 0; x < vertSideCount; ++x)
+				{
+					const i32 vertIdx = z * vertSideCount + x + chunkIdx * vertCountPerChunk;
+					real dX = (vertIdx < 1 || vertIdx >= positions.size() - (vertSideCount - 1)) ? 0.0f : (positions[vertIdx - 1].y - positions[vertIdx + 1].y);
+					real dZ = (vertIdx < vertSideCount || vertIdx >= positions.size() - vertSideCount) ? 0.0f : (positions[vertIdx - vertSideCount].y - positions[vertIdx + vertSideCount].y);
+					normals[vertIdx] = glm::normalize(glm::vec3(dX, 2.0f * cellSize, dZ));
+				}
 			}
 		}
 	}
@@ -3487,12 +3520,16 @@ namespace flex
 	{
 		GameObject::DrawImGuiObjects();
 
+		ImGui::Text("Loaded chunks: %d", (u32)waveChunks.size());
+
 		ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.95f, 1.0f), "Gerstner");
 
 		if (ImGui::Button("+"))
 		{
 			AddWave();
 		}
+
+		ImGui::DragFloat("Loaded distance", &loadedDist, 0.01f);
 
 		ImGui::PushItemWidth(30.0f);
 		ImGui::DragFloat("Bobber DR", &bobberTarget.DR, 0.01f);

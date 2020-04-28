@@ -160,8 +160,10 @@ namespace flex
 
 	u32 VertexBufferData::CopyInto(real* dst, VertexAttributes usingAttributes)
 	{
-		assert(vertexData != nullptr);
-		assert(VertexCount > 0);
+		if (vertexData == nullptr || VertexCount == 0)
+		{
+			return 0;
+		}
 
 		const real* initialDst = dst;
 		real* src = vertexData;

@@ -504,6 +504,7 @@ namespace flex
 
 		void UpdateDependentVariables(i32 waveIndex);
 
+		void DiscoverChunks();
 		void UpdateWaveVertexData();
 
 		i32 vertSideCount = 100;
@@ -526,6 +527,12 @@ namespace flex
 		};
 
 		std::vector<WaveInfo> waves;
+
+		std::vector<glm::vec2i> waveChunks;
+		real loadedDist = 30.0f;
+
+		bool m_bPinCenter = false;
+		glm::vec3 m_PinnedPos;
 
 		VertexBufferDataCreateInfo m_VertexBufferCreateInfo;
 		std::vector<u32> m_Indices;
