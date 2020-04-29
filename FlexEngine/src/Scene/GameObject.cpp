@@ -3378,13 +3378,12 @@ namespace flex
 
 	void GerstnerWave::UpdateWaveVertexData()
 	{
-		const i32 vertCount = vertSideCount * vertSideCount * (i32)waveChunks.size();
 		const i32 vertCountPerChunk = vertSideCount * vertSideCount;
-		const i32 indexCount = 6 * (vertSideCount - 1) * (vertSideCount - 1) * (i32)waveChunks.size();
+		const i32 vertCount = vertCountPerChunk * (i32)waveChunks.size();
+		const i32 indexCountPerChunk = 6 * (vertSideCount - 1) * (vertSideCount - 1);
+		const i32 indexCount = indexCountPerChunk * (i32)waveChunks.size();
 
-
-
-		// Resize index buffer
+		// Resize & regenerate index buffer
 		if (m_Indices.size() != indexCount)
 		{
 			m_Indices.resize(indexCount);
@@ -3417,16 +3416,15 @@ namespace flex
 			m_VertexBufferCreateInfo.extraVec4s.resize(vertCount);
 		}
 
-		std::vector<glm::vec3>& positions = m_VertexBufferCreateInfo.positions_3D;
-		//std::vector<glm::vec2>& texCoords = m_VertexBufferCreateInfo.texCoords_UV;
-		std::vector<glm::vec3>& normals = m_VertexBufferCreateInfo.normals;
-		std::vector<glm::vec4>& extraVec4s = m_VertexBufferCreateInfo.extraVec4s;
+		glm::vec3* positions = m_VertexBufferCreateInfo.positions_3D.data();
+		glm::vec3* normals = m_VertexBufferCreateInfo.normals.data();
+		glm::vec4* extraVec4s = m_VertexBufferCreateInfo.extraVec4s.data();
 
 		for (u32 chunkIdx = 0; chunkIdx < (u32)waveChunks.size(); ++chunkIdx)
 		{
 			const glm::vec3 startPos((waveChunks[chunkIdx].x - 0.5f) * size, 0.0f, (waveChunks[chunkIdx].y - 0.5f) * size);
 
-			// Clear positions and normals
+			// Set default positions and normals (to lie on a plane)
 			for (i32 z = 0; z < vertSideCount; ++z)
 			{
 				for (i32 x = 0; x < vertSideCount; ++x)
@@ -3447,8 +3445,8 @@ namespace flex
 			{
 				if (wave.enabled)
 				{
-					const glm::vec3 waveVec = glm::vec3(wave.waveDirCos, 0.0f, wave.waveDirSin) * wave.waveVecMag;
-					const glm::vec3 waveVecN = glm::normalize(waveVec);
+					const glm::vec2 waveVec = glm::vec2(wave.waveDirCos, wave.waveDirSin) * wave.waveVecMag;
+					const glm::vec2 waveVecN = glm::normalize(waveVec);
 
 					wave.accumOffset += (wave.moveSpeed * g_DeltaTime);
 
@@ -3458,7 +3456,7 @@ namespace flex
 						{
 							const i32 vertIdx = z * vertSideCount + x + chunkIdx * vertCountPerChunk;
 
-							real d = glm::dot(waveVec, positions[vertIdx]);
+							real d = waveVec.x * positions[vertIdx].x + waveVec.y * positions[vertIdx].z; // Inline dot
 							real c = cos(d + wave.accumOffset);
 							real s = sin(d + wave.accumOffset);
 							positions[vertIdx] += glm::vec3(
@@ -3483,7 +3481,7 @@ namespace flex
 
 					glm::vec3 diff = (ripplePos - positions[vertIdx]);
 					real d = glm::length(diff);
-					diff = glm::normalize(diff) * rippleLen;
+					diff = diff / d * rippleLen;
 					real c = cos(g_SecElapsedSinceProgramStart * 1.8f - d);
 					real s = sin(g_SecElapsedSinceProgramStart * 1.5f - d);
 					real a = Lerp(0.0f, rippleAmp, 1.0f - Saturate(d / rippleFadeOut));
@@ -3501,8 +3499,8 @@ namespace flex
 				for (i32 x = 0; x < vertSideCount; ++x)
 				{
 					const i32 vertIdx = z * vertSideCount + x + chunkIdx * vertCountPerChunk;
-					real dX = (vertIdx < 1 || vertIdx >= positions.size() - (vertSideCount - 1)) ? 0.0f : (positions[vertIdx - 1].y - positions[vertIdx + 1].y);
-					real dZ = (vertIdx < vertSideCount || vertIdx >= positions.size() - vertSideCount) ? 0.0f : (positions[vertIdx - vertSideCount].y - positions[vertIdx + vertSideCount].y);
+					real dX = (vertIdx < 1 || vertIdx >= vertCount - (vertSideCount - 1)) ? 0.0f : (positions[vertIdx - 1].y - positions[vertIdx + 1].y);
+					real dZ = (vertIdx < vertSideCount || vertIdx >= vertCount - vertSideCount) ? 0.0f : (positions[vertIdx - vertSideCount].y - positions[vertIdx + vertSideCount].y);
 					normals[vertIdx] = glm::normalize(glm::vec3(dX, 2.0f * cellSize, dZ));
 				}
 			}
