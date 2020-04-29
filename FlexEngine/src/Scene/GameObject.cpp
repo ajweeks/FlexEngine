@@ -3400,7 +3400,7 @@ namespace flex
 						m_Indices[i++] = vertIdx + vertSideCount;
 						m_Indices[i++] = vertIdx + 1;
 
-						vertIdx = vertIdx + 1 + vertSideCount + chunkIdx * vertCountPerChunk;
+						vertIdx = vertIdx + 1 + vertSideCount;
 						m_Indices[i++] = vertIdx;
 						m_Indices[i++] = vertIdx - vertSideCount;
 						m_Indices[i++] = vertIdx - 1;
