@@ -3,6 +3,7 @@
 
 **2020**
 _April_
+- Fix water generation & center around camera
 - Add directory watch to auto-recompile shaders on file modification for lightning-fast iteration times
 - Add more granular shader compilation using shaderc library
 - Add basic terrain generation/streaming
