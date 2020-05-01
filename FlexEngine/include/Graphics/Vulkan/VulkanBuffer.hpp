@@ -32,8 +32,10 @@ namespace flex
 			void Unmap();
 
 			// Reserves size bytes in buffer and returns offset to that range, returns (VkDeviceSize)-1 if bCanResize is false and allocation won't fit, or if resize failed
-			// TODO: Add tests for resizing
+			// TODO: Add tests
 			VkDeviceSize Alloc(VkDeviceSize size, bool bCanResize);
+			// TODO: Add tests
+			VkDeviceSize Realloc(VkDeviceSize offset, VkDeviceSize size, bool bCanResize);
 
 			VulkanDevice* m_Device = nullptr;
 			VDeleter<VkBuffer> m_Buffer;
@@ -45,6 +47,10 @@ namespace flex
 
 			VkBufferUsageFlags m_UsageFlags = 0;
 			VkMemoryPropertyFlags m_MemoryPropertyFlags = 0;
+
+		private:
+			void UpdateAllocationSize(VkDeviceSize offset, VkDeviceSize newSize);
+
 		};
 	} // namespace vk
 } // namespace flex

@@ -1923,18 +1923,30 @@ namespace flex
 			VulkanBuffer* vertexBuffer = vertexIndexBufferPair->vertexBuffer;
 			VulkanBuffer* indexBuffer = vertexIndexBufferPair->indexBuffer;
 
+			const u32 newIndexDataSize = (u32)indexData.size() * sizeof(u32);
+
 			if (renderObject->dynamicVertexBufferOffset == u64_max)
 			{
 				// First upload of data
 				renderObject->dynamicVertexBufferOffset = vertexBuffer->Alloc((VkDeviceSize)vertexBufferData->VertexBufferSize, true);
-				renderObject->dynamicIndexBufferOffset = indexBuffer->Alloc((VkDeviceSize)(indexData.size() * sizeof(u32)), true);
+				renderObject->dynamicIndexBufferOffset = indexBuffer->Alloc((VkDeviceSize)newIndexDataSize, true);
 			}
 
 			u32 vertCopySize = std::min(vertexBufferData->VertexBufferSize, (u32)vertexBuffer->m_Size);
-			u32 indexCopySize = std::min((u32)(indexData.size() * sizeof(u32)), (u32)indexBuffer->m_Size);
+			u32 indexCopySize = std::min(newIndexDataSize, (u32)indexBuffer->m_Size);
 			if (vertCopySize < vertexBufferData->VertexBufferSize)
 			{
-				PrintError("Dynamic vertex buffer is %u bytes too small for data attempting to be copied in\n", vertexBufferData->VertexBufferSize - vertCopySize);
+				Print("Allocating more data for dynamic vertex buffer. (old size: %u, new requested size: %u)\n", (u32)vertexBuffer->m_Size, vertexBufferData->VertexBufferSize);
+				renderObject->dynamicVertexBufferOffset = vertexBuffer->Realloc(renderObject->dynamicVertexBufferOffset, vertexBufferData->VertexBufferSize, true);
+				// TODO: Handle failed allocs
+				vertCopySize = (u32)vertexBuffer->m_Size;
+			}
+			if (indexCopySize < newIndexDataSize)
+			{
+				Print("Allocating more data for dynamic index buffer. (old size: %u, new requested size: %u)\n", (u32)indexBuffer->m_Size, newIndexDataSize);
+				renderObject->dynamicIndexBufferOffset = indexBuffer->Realloc(renderObject->dynamicIndexBufferOffset, newIndexDataSize, true);
+				// TODO: Handle failed allocs
+				indexCopySize = (u32)indexBuffer->m_Size;
 			}
 			VkDeviceSize vertOffset = renderObject->dynamicVertexBufferOffset;
 			VkDeviceSize indexOffset = renderObject->dynamicIndexBufferOffset;
