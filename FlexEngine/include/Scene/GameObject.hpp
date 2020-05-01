@@ -507,6 +507,9 @@ namespace flex
 		void DiscoverChunks();
 		void UpdateWaveVertexData();
 
+		void UpdateWavesLinear();
+		void UpdateWavesSIMD();
+
 		i32 vertSideCount = 100;
 		real size = 30.0f;
 		MaterialID m_WaveMaterialID;

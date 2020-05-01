@@ -3416,15 +3416,33 @@ namespace flex
 			m_VertexBufferCreateInfo.extraVec4s.resize(vertCount);
 		}
 
+#define SIMD_WAVES 1
+
+#if SIMD_WAVES
+		UpdateWavesSIMD();
+#else
+		UpdateWavesLinear();
+#endif
+
+	}
+
+	void GerstnerWave::UpdateWavesLinear()
+	{
+		const i32 vertCountPerChunk = vertSideCount * vertSideCount;
+		const i32 vertCount = vertCountPerChunk * (i32)waveChunks.size();
+		const i32 indexCountPerChunk = 6 * (vertSideCount - 1) * (vertSideCount - 1);
+		const i32 indexCount = indexCountPerChunk * (i32)waveChunks.size();
+
 		glm::vec3* positions = m_VertexBufferCreateInfo.positions_3D.data();
 		glm::vec3* normals = m_VertexBufferCreateInfo.normals.data();
 		glm::vec4* extraVec4s = m_VertexBufferCreateInfo.extraVec4s.data();
+
+		memset(extraVec4s, 0, vertCount * sizeof(glm::vec4));
 
 		for (u32 chunkIdx = 0; chunkIdx < (u32)waveChunks.size(); ++chunkIdx)
 		{
 			const glm::vec3 startPos((waveChunks[chunkIdx].x - 0.5f) * size, 0.0f, (waveChunks[chunkIdx].y - 0.5f) * size);
 
-			// Set default positions and normals (to lie on a plane)
 			for (i32 z = 0; z < vertSideCount; ++z)
 			{
 				for (i32 x = 0; x < vertSideCount; ++x)
@@ -3434,13 +3452,9 @@ namespace flex
 						size * ((real)x / (vertSideCount - 1)),
 						0.0f,
 						size * ((real)z / (vertSideCount - 1)));
-					normals[vertIdx] = VEC3_UP;
-					//texCoords[vertIdx] = glm::vec2(x / (real)(vertSideCount - 1), z / (real)(vertSideCount - 1));
-					extraVec4s[vertIdx] = VEC4_ZERO;
 				}
 			}
 
-			// Calculate positions
 			for (WaveInfo& wave : waves)
 			{
 				if (wave.enabled)
@@ -3468,6 +3482,8 @@ namespace flex
 				}
 			}
 
+#if 0
+
 			// Ripple
 			glm::vec3 ripplePos = VEC3_ZERO;
 			real rippleAmp = 0.8f;
@@ -3491,6 +3507,160 @@ namespace flex
 						-diff.z * a * s);
 				}
 			}
+#endif
+
+			// Calculate normals
+			const real cellSize = size / vertSideCount;
+			for (i32 z = 0; z < vertSideCount; ++z)
+			{
+				for (i32 x = 0; x < vertSideCount; ++x)
+				{
+					const i32 vertIdx = z * vertSideCount + x + chunkIdx * vertCountPerChunk;
+					real dX = (vertIdx < 1 || vertIdx >= vertCount - (vertSideCount - 1)) ? 0.0f : (positions[vertIdx - 1].y - positions[vertIdx + 1].y);
+					real dZ = (vertIdx < vertSideCount || vertIdx >= vertCount - vertSideCount) ? 0.0f : (positions[vertIdx - vertSideCount].y - positions[vertIdx + vertSideCount].y);
+					normals[vertIdx] = glm::normalize(glm::vec3(dX, 2.0f * cellSize, dZ));
+				}
+			}
+		}
+	}
+
+	void GerstnerWave::UpdateWavesSIMD()
+	{
+		const i32 vertCountPerChunk = vertSideCount * vertSideCount;
+		const i32 vertCount = vertCountPerChunk * (i32)waveChunks.size();
+		const i32 indexCountPerChunk = 6 * (vertSideCount - 1) * (vertSideCount - 1);
+		const i32 indexCount = indexCountPerChunk * (i32)waveChunks.size();
+
+		glm::vec3* positions = m_VertexBufferCreateInfo.positions_3D.data();
+		glm::vec3* normals = m_VertexBufferCreateInfo.normals.data();
+		glm::vec4* extraVec4s = m_VertexBufferCreateInfo.extraVec4s.data();
+
+		memset(extraVec4s, 0, vertCount * sizeof(glm::vec4));
+
+		__m128 vertCountMin1_4 = _mm_set1_ps((real)(vertSideCount - 1));
+		__m128 size_4 = _mm_set1_ps(size);
+
+		for (u32 chunkIdx = 0; chunkIdx < (u32)waveChunks.size(); ++chunkIdx)
+		{
+			const glm::vec3 startPos((waveChunks[chunkIdx].x - 0.5f) * size, 0.0f, (waveChunks[chunkIdx].y - 0.5f) * size);
+
+			// Positions verts on flat plane
+			for (i32 z = 0; z < vertSideCount; ++z)
+			{
+				__m128 zIdx_4 = _mm_set1_ps((real)z);
+
+				for (i32 x = 0; x < vertSideCount; ++x)
+				{
+					const i32 vertIdx = z * vertSideCount + x + chunkIdx * vertCountPerChunk;
+					positions[vertIdx] = startPos + glm::vec3(
+						size * ((real)x / (vertSideCount - 1)),
+						0.0f,
+						size * ((real)z / (vertSideCount - 1)));
+				}
+			}
+
+			// Modulate based on waves
+			for (WaveInfo& wave : waves)
+			{
+				if (wave.enabled)
+				{
+					const glm::vec2 waveVec = glm::vec2(wave.waveDirCos, wave.waveDirSin) * wave.waveVecMag;
+					const glm::vec2 waveVecN = glm::normalize(waveVec);
+
+					wave.accumOffset += (wave.moveSpeed * g_DeltaTime);
+
+					__m128 accumOffset_4 = _mm_set1_ps(wave.accumOffset);
+					__m128 negWaveVecNX_4 = _mm_set1_ps(-waveVecN.x);
+					__m128 negWaveVecNZ_4 = _mm_set1_ps(-waveVecN.y);
+					__m128 waveA_4 = _mm_set1_ps(wave.a);
+
+					__m128 waveVecX_4 = _mm_set1_ps(waveVec.x);
+					__m128 waveVecZ_4 = _mm_set1_ps(waveVec.y);
+
+					for (i32 z = 0; z < vertSideCount; ++z)
+					{
+						__m128 zIdx_4 = _mm_set1_ps((real)z);
+
+						for (i32 x = 0; x < vertSideCount; x += 4)
+						{
+							const i32 vertIdx = z * vertSideCount + x + chunkIdx * vertCountPerChunk;
+
+							/*
+								positions[vertIdx] = startPos + glm::vec3(
+									size * ((real)x / (vertSideCount - 1)),
+									0.0f,
+									size * ((real)z / (vertSideCount - 1)));
+
+								real d = waveVec.x * positions[vertIdx].x + waveVec.y * positions[vertIdx].z;
+								real c = cos(d + wave.accumOffset);
+								real s = sin(d + wave.accumOffset);
+								positions[vertIdx] += glm::vec3(
+									-waveVecN.x * wave.a * s,
+									wave.a * c,
+									-waveVecN.y * wave.a * s);
+							*/
+
+							glm::vec4 xs(positions[vertIdx + 0].x, positions[vertIdx + 1].x, positions[vertIdx + 2].x, positions[vertIdx + 3].x);
+							glm::vec4 ys(positions[vertIdx + 0].y, positions[vertIdx + 1].y, positions[vertIdx + 2].y, positions[vertIdx + 3].y);
+							glm::vec4 zs(positions[vertIdx + 0].z, positions[vertIdx + 1].z, positions[vertIdx + 2].z, positions[vertIdx + 3].z);
+
+							//__m128 xIdx_4 = _mm_set_ps((real)(x + 3), (real)(x + 2), (real)(x + 1), (real)(x + 0));
+							__m128 positionsx_4 = _mm_load_ps(&xs.x); // , _mm_mul_ps(size_4, _mm_div_ps(xIdx_4, vertCountMin1_4))
+							__m128 positionsy_4 = _mm_load_ps(&ys.x);
+							__m128 positionsz_4 = _mm_load_ps(&zs.x); // , _mm_mul_ps(size_4, _mm_div_ps(zIdx_4, vertCountMin1_4))
+
+							__m128 d = _mm_add_ps(_mm_mul_ps(positionsx_4, waveVecX_4), _mm_mul_ps(positionsz_4, waveVecZ_4));
+
+							__m128 totalAccum = _mm_add_ps(d, accumOffset_4);
+
+							__m128 c = _mm_cos_ps(totalAccum);
+							__m128 s = _mm_sin_ps(totalAccum);
+
+							__m128 as = _mm_mul_ps(waveA_4, s);
+
+							positionsx_4 = _mm_add_ps(positionsx_4, _mm_mul_ps(negWaveVecNX_4, as));
+							positionsy_4 = _mm_add_ps(positionsy_4, _mm_mul_ps(waveA_4, c));
+							positionsz_4 = _mm_add_ps(positionsz_4, _mm_mul_ps(negWaveVecNZ_4, as));
+
+							_mm_store_ps(&xs.x, positionsx_4);
+							_mm_store_ps(&ys.x, positionsy_4);
+							_mm_store_ps(&zs.x, positionsz_4);
+
+							positions[vertIdx + 0] = glm::vec3(xs.x, ys.x, zs.x);
+							positions[vertIdx + 1] = glm::vec3(xs.y, ys.y, zs.y);
+							positions[vertIdx + 2] = glm::vec3(xs.z, ys.z, zs.z);
+							positions[vertIdx + 3] = glm::vec3(xs.w, ys.w, zs.w);
+						}
+					}
+				}
+			}
+
+#if 0
+
+			// Ripple
+			glm::vec3 ripplePos = VEC3_ZERO;
+			real rippleAmp = 0.8f;
+			real rippleLen = 0.6f;
+			real rippleFadeOut = 12.0f;
+			for (i32 z = 0; z < vertSideCount; ++z)
+			{
+				for (i32 x = 0; x < vertSideCount; ++x)
+				{
+					const i32 vertIdx = z * vertSideCount + x + chunkIdx * vertCountPerChunk;
+
+					glm::vec3 diff = (ripplePos - positions[vertIdx]);
+					real d = glm::length(diff);
+					diff = diff / d * rippleLen;
+					real c = cos(g_SecElapsedSinceProgramStart * 1.8f - d);
+					real s = sin(g_SecElapsedSinceProgramStart * 1.5f - d);
+					real a = Lerp(0.0f, rippleAmp, 1.0f - Saturate(d / rippleFadeOut));
+					positions[vertIdx] += glm::vec3(
+						-diff.x * a * s,
+						a * c,
+						-diff.z * a * s);
+				}
+			}
+#endif
 
 			// Calculate normals
 			const real cellSize = size / vertSideCount;
