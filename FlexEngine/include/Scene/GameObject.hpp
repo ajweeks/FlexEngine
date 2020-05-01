@@ -502,6 +502,8 @@ namespace flex
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
 		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
 
+		void OnVertCountChange();
+
 		void UpdateDependentVariables(i32 waveIndex);
 
 		void DiscoverChunks();
@@ -542,6 +544,11 @@ namespace flex
 
 		GameObject* bobber = nullptr;
 		Spring<real> bobberTarget;
+
+		__m128* positionsx_4 = nullptr;
+		__m128* positionsy_4 = nullptr;
+		__m128* positionsz_4 = nullptr;
+
 
 	};
 

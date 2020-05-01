@@ -3316,8 +3316,10 @@ namespace flex
 		m_VertexBufferCreateInfo = {};
 		m_VertexBufferCreateInfo.attributes = g_Renderer->GetShader(g_Renderer->GetMaterial(m_WaveMaterialID).shaderID).vertexAttributes;
 
+		OnVertCountChange();
 		DiscoverChunks();
 		UpdateWaveVertexData();
+
 
 		SetMesh(new Mesh(this));
 
@@ -3542,20 +3544,24 @@ namespace flex
 
 		for (u32 chunkIdx = 0; chunkIdx < (u32)waveChunks.size(); ++chunkIdx)
 		{
-			const glm::vec3 startPos((waveChunks[chunkIdx].x - 0.5f) * size, 0.0f, (waveChunks[chunkIdx].y - 0.5f) * size);
+			const glm::vec2 startPos((waveChunks[chunkIdx].x - 0.5f) * size, (waveChunks[chunkIdx].y - 0.5f) * size);
+			__m128 startPosX_4 = _mm_set1_ps(startPos.x);
+			__m128 startPosY_4 = _mm_setzero_ps();
+			__m128 startPosZ_4 = _mm_set1_ps(startPos.y);
 
 			// Positions verts on flat plane
 			for (i32 z = 0; z < vertSideCount; ++z)
 			{
 				__m128 zIdx_4 = _mm_set1_ps((real)z);
 
-				for (i32 x = 0; x < vertSideCount; ++x)
+				for (i32 x = 0; x < vertSideCount; x += 4)
 				{
-					const i32 vertIdx = z * vertSideCount + x + chunkIdx * vertCountPerChunk;
-					positions[vertIdx] = startPos + glm::vec3(
-						size * ((real)x / (vertSideCount - 1)),
-						0.0f,
-						size * ((real)z / (vertSideCount - 1)));
+					const i32 chunkLocalVertIdx = z * vertSideCount + x;
+					__m128 xIdx_4 = _mm_set_ps((real)(x + 3), (real)(x + 2), (real)(x + 1), (real)(x + 0));
+					const i32 chunkLocalVertIdxDiv4 = chunkLocalVertIdx / 4;
+					positionsx_4[chunkLocalVertIdxDiv4] = _mm_add_ps(startPosX_4, _mm_mul_ps(size_4, _mm_div_ps(xIdx_4, vertCountMin1_4)));
+					positionsy_4[chunkLocalVertIdxDiv4] = startPosY_4;
+					positionsz_4[chunkLocalVertIdxDiv4] = _mm_add_ps(startPosZ_4, _mm_mul_ps(size_4, _mm_div_ps(zIdx_4, vertCountMin1_4)));
 				}
 			}
 
@@ -3579,11 +3585,10 @@ namespace flex
 
 					for (i32 z = 0; z < vertSideCount; ++z)
 					{
-						__m128 zIdx_4 = _mm_set1_ps((real)z);
-
 						for (i32 x = 0; x < vertSideCount; x += 4)
 						{
-							const i32 vertIdx = z * vertSideCount + x + chunkIdx * vertCountPerChunk;
+							const i32 chunkLocalVertIdx = z * vertSideCount + x;
+							const i32 chunkLocalVertIdxDiv4 = chunkLocalVertIdx / 4;
 
 							/*
 								positions[vertIdx] = startPos + glm::vec3(
@@ -3600,16 +3605,7 @@ namespace flex
 									-waveVecN.y * wave.a * s);
 							*/
 
-							glm::vec4 xs(positions[vertIdx + 0].x, positions[vertIdx + 1].x, positions[vertIdx + 2].x, positions[vertIdx + 3].x);
-							glm::vec4 ys(positions[vertIdx + 0].y, positions[vertIdx + 1].y, positions[vertIdx + 2].y, positions[vertIdx + 3].y);
-							glm::vec4 zs(positions[vertIdx + 0].z, positions[vertIdx + 1].z, positions[vertIdx + 2].z, positions[vertIdx + 3].z);
-
-							//__m128 xIdx_4 = _mm_set_ps((real)(x + 3), (real)(x + 2), (real)(x + 1), (real)(x + 0));
-							__m128 positionsx_4 = _mm_load_ps(&xs.x); // , _mm_mul_ps(size_4, _mm_div_ps(xIdx_4, vertCountMin1_4))
-							__m128 positionsy_4 = _mm_load_ps(&ys.x);
-							__m128 positionsz_4 = _mm_load_ps(&zs.x); // , _mm_mul_ps(size_4, _mm_div_ps(zIdx_4, vertCountMin1_4))
-
-							__m128 d = _mm_add_ps(_mm_mul_ps(positionsx_4, waveVecX_4), _mm_mul_ps(positionsz_4, waveVecZ_4));
+							__m128 d = _mm_add_ps(_mm_mul_ps(positionsx_4[chunkLocalVertIdxDiv4], waveVecX_4), _mm_mul_ps(positionsz_4[chunkLocalVertIdxDiv4], waveVecZ_4));
 
 							__m128 totalAccum = _mm_add_ps(d, accumOffset_4);
 
@@ -3618,18 +3614,9 @@ namespace flex
 
 							__m128 as = _mm_mul_ps(waveA_4, s);
 
-							positionsx_4 = _mm_add_ps(positionsx_4, _mm_mul_ps(negWaveVecNX_4, as));
-							positionsy_4 = _mm_add_ps(positionsy_4, _mm_mul_ps(waveA_4, c));
-							positionsz_4 = _mm_add_ps(positionsz_4, _mm_mul_ps(negWaveVecNZ_4, as));
-
-							_mm_store_ps(&xs.x, positionsx_4);
-							_mm_store_ps(&ys.x, positionsy_4);
-							_mm_store_ps(&zs.x, positionsz_4);
-
-							positions[vertIdx + 0] = glm::vec3(xs.x, ys.x, zs.x);
-							positions[vertIdx + 1] = glm::vec3(xs.y, ys.y, zs.y);
-							positions[vertIdx + 2] = glm::vec3(xs.z, ys.z, zs.z);
-							positions[vertIdx + 3] = glm::vec3(xs.w, ys.w, zs.w);
+							positionsx_4[chunkLocalVertIdxDiv4] = _mm_add_ps(positionsx_4[chunkLocalVertIdxDiv4], _mm_mul_ps(negWaveVecNX_4, as));
+							positionsy_4[chunkLocalVertIdxDiv4] = _mm_add_ps(positionsy_4[chunkLocalVertIdxDiv4], _mm_mul_ps(waveA_4, c));
+							positionsz_4[chunkLocalVertIdxDiv4] = _mm_add_ps(positionsz_4[chunkLocalVertIdxDiv4], _mm_mul_ps(negWaveVecNZ_4, as));
 						}
 					}
 				}
@@ -3674,6 +3661,27 @@ namespace flex
 					normals[vertIdx] = glm::normalize(glm::vec3(dX, 2.0f * cellSize, dZ));
 				}
 			}
+
+			// Read back SIMD vars into standard format
+			for (i32 z = 0; z < vertSideCount; ++z)
+			{
+				for (i32 x = 0; x < vertSideCount; x += 4)
+				{
+					const i32 vertIdx = z * vertSideCount + x + chunkIdx * vertCountPerChunk;
+					const i32 chunkLocalVertIdx = z * vertSideCount + x;
+					const i32 chunkLocalVertIdxDiv4 = chunkLocalVertIdx / 4;
+
+					glm::vec4 xs, ys, zs;
+					_mm_store_ps(&xs.x, positionsx_4[chunkLocalVertIdxDiv4]);
+					_mm_store_ps(&ys.x, positionsy_4[chunkLocalVertIdxDiv4]);
+					_mm_store_ps(&zs.x, positionsz_4[chunkLocalVertIdxDiv4]);
+
+					positions[vertIdx + 0] = glm::vec3(xs.x, ys.x, zs.x);
+					positions[vertIdx + 1] = glm::vec3(xs.y, ys.y, zs.y);
+					positions[vertIdx + 2] = glm::vec3(xs.z, ys.z, zs.z);
+					positions[vertIdx + 3] = glm::vec3(xs.w, ys.w, zs.w);
+				}
+			}
 		}
 	}
 
@@ -3692,11 +3700,6 @@ namespace flex
 
 		ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.95f, 1.0f), "Gerstner");
 
-		if (ImGui::Button("+"))
-		{
-			AddWave();
-		}
-
 		ImGui::DragFloat("Loaded distance", &loadedDist, 0.01f);
 
 		ImGui::PushItemWidth(30.0f);
@@ -3705,37 +3708,50 @@ namespace flex
 		ImGui::DragFloat("UAF", &bobberTarget.UAF, 0.01f);
 		ImGui::PopItemWidth();
 
-		for (i32 i = 0; i < (i32)waves.size(); ++i)
+		if (ImGui::TreeNode("Wave factors"))
 		{
-			std::string childName = "##wave " + IntToString(i, 2);
-
-			std::string removeStr = "-" + childName;
-			if (ImGui::Button(removeStr.c_str()))
+			for (i32 i = 0; i < (i32)waves.size(); ++i)
 			{
-				RemoveWave(i);
-				break;
+				std::string childName = "##wave " + IntToString(i, 2);
+
+				std::string removeStr = "-" + childName;
+				if (ImGui::Button(removeStr.c_str()))
+				{
+					RemoveWave(i);
+					break;
+				}
+
+				ImGui::SameLine();
+
+				bool bNeedUpdate = false;
+
+				ImGui::Checkbox(childName.c_str(), &waves[i].enabled);
+
+				std::string aStr = "amplitude" + childName;
+				ImGui::DragFloat(aStr.c_str(), &waves[i].a, 0.01f);
+				std::string waveLenStr = "wave len" + childName;
+				bNeedUpdate |= ImGui::DragFloat(waveLenStr.c_str(), &waves[i].waveLen, 0.01f);
+				std::string dirStr = "dir" + childName;
+				if (ImGui::DragFloat(dirStr.c_str(), &waves[i].waveDirTheta, 0.004f))
+				{
+					bNeedUpdate = true;
+					waves[i].waveDirTheta = fmod(waves[i].waveDirTheta, TWO_PI);
+				}
+
+				if (bNeedUpdate)
+				{
+					UpdateDependentVariables(i);
+				}
+
+				ImGui::Separator();
 			}
 
-			ImGui::SameLine();
-
-			bool bNeedUpdate = false;
-
-			std::string enabledStr = "enabled" + childName;
-			ImGui::Checkbox(enabledStr.c_str(), &waves[i].enabled);
-
-			std::string aStr = "amplitude" + childName;
-			ImGui::DragFloat(aStr.c_str(), &waves[i].a, 0.01f);
-			std::string waveLenStr = "wave len" + childName;
-			bNeedUpdate |= ImGui::DragFloat(waveLenStr.c_str(), &waves[i].waveLen, 0.01f);
-			std::string dirStr = "dir" + childName;
-			bNeedUpdate |= ImGui::DragFloat(dirStr.c_str(), &waves[i].waveDirTheta, 0.004f);
-
-			if (bNeedUpdate)
+			if (ImGui::Button("+"))
 			{
-				UpdateDependentVariables(i);
+				AddWave();
 			}
 
-			ImGui::Separator();
+			ImGui::TreePop();
 		}
 	}
 
@@ -3799,6 +3815,20 @@ namespace flex
 			waves[waveIndex].waveDirCos = cos(waves[waveIndex].waveDirTheta);
 			waves[waveIndex].waveDirSin = sin(waves[waveIndex].waveDirTheta);
 		}
+	}
+
+	void GerstnerWave::OnVertCountChange()
+	{
+		_mm_free(positionsx_4);
+		_mm_free(positionsy_4);
+		_mm_free(positionsz_4);
+
+		const u32 vertCountPerChunk = vertSideCount * vertSideCount;
+		const u32 vertCountPerChunkDiv4 = vertCountPerChunk / 4;
+
+		positionsx_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
+		positionsy_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
+		positionsz_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
 	}
 
 	void GerstnerWave::AddWave()
