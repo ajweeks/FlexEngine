@@ -15,9 +15,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "13.102, 7.881, 15.373",
-			"pitch" : -0.369334,
-			"yaw" : 10.324690
+			"position" : "3.009, 12.738, -0.024",
+			"pitch" : -0.493133,
+			"yaw" : 16.689972
 		}
 	},
 	"objects" : 
@@ -83,51 +83,39 @@
 				[
 					{
 						"enabled" : true,
-						"amplitude" : 0.350000,
-						"waveDir" : 0.500000,
-						"waveLen" : 11.180000
-					},
-					{
-						"enabled" : true,
-						"amplitude" : 0.860000,
-						"waveDir" : -0.088000,
-						"waveLen" : 23.200001
+						"amplitude" : 0.490000,
+						"waveDir" : 0.309000,
+						"waveLen" : 12.090000
 					},
 					{
 						"enabled" : true,
 						"amplitude" : 0.180000,
-						"waveDir" : 1.116000,
-						"waveLen" : 3.980000
+						"waveDir" : 1.700000,
+						"waveLen" : 6.060000
 					},
 					{
 						"enabled" : true,
-						"amplitude" : 0.140000,
-						"waveDir" : -0.336000,
-						"waveLen" : 7.000000
+						"amplitude" : 0.420000,
+						"waveDir" : 1.420000,
+						"waveLen" : 12.820000
 					},
 					{
 						"enabled" : true,
-						"amplitude" : 0.230000,
-						"waveDir" : 1.064000,
-						"waveLen" : 7.600000
+						"amplitude" : 0.060000,
+						"waveDir" : -1.332000,
+						"waveLen" : 2.890000
 					},
 					{
 						"enabled" : true,
-						"amplitude" : 0.040000,
-						"waveDir" : 3.400000,
-						"waveLen" : 2.620000
+						"amplitude" : 0.290000,
+						"waveDir" : 3.120000,
+						"waveLen" : 6.730000
 					},
 					{
 						"enabled" : true,
-						"amplitude" : 0.360000,
-						"waveDir" : 1.152000,
-						"waveLen" : 18.030001
-					},
-					{
-						"enabled" : true,
-						"amplitude" : 0.190000,
-						"waveDir" : -0.664000,
-						"waveLen" : 8.130000
+						"amplitude" : 1.180000,
+						"waveDir" : 0.760000,
+						"waveLen" : 22.650000
 					}
 				]
 			}
