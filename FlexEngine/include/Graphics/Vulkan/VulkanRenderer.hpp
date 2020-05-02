@@ -118,7 +118,7 @@ namespace flex
 
 			void GetCheckPointData();
 
-			static void SetObjectName(VulkanDevice* device, u64 object, VkDebugReportObjectTypeEXT type, const char* name);
+			static void SetObjectName(VulkanDevice* device, u64 object, VkObjectType type, const char* name);
 			static void SetCommandBufferName(VulkanDevice* device, VkCommandBuffer commandBuffer, const char* name);
 			static void SetSwapchainName(VulkanDevice* device, VkSwapchainKHR swapchain, const char* name);
 			static void SetDescriptorSetName(VulkanDevice* device, VkDescriptorSet descSet, const char* name);
@@ -130,12 +130,12 @@ namespace flex
 			static void SetSamplerName(VulkanDevice* device, VkSampler sampler, const char* name);
 			static void SetBufferName(VulkanDevice* device, VkBuffer buffer, const char* name);
 
-			static void BeginDebugMarkerRegion(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color = VEC4_ONE);
+			static void BeginDebugMarkerRegion(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f));
 			static void EndDebugMarkerRegion(VkCommandBuffer cmdBuf, const char* markerName = nullptr); // markerName optional, useful for device check-pointing though
 
-			static PFN_vkDebugMarkerSetObjectNameEXT m_vkDebugMarkerSetObjectName;
-			static PFN_vkCmdDebugMarkerBeginEXT m_vkCmdDebugMarkerBegin;
-			static PFN_vkCmdDebugMarkerEndEXT m_vkCmdDebugMarkerEnd;
+			static PFN_vkSetDebugUtilsObjectNameEXT m_vkSetDebugUtilsObjectNameEXT;
+			static PFN_vkCmdBeginDebugUtilsLabelEXT m_vkCmdBeginDebugUtilsLabelEXT;
+			static PFN_vkCmdEndDebugUtilsLabelEXT m_vkCmdEndDebugUtilsLabelEXT;
 
 		protected:
 			virtual bool LoadShaderCode(ShaderID shaderID) override;
@@ -285,7 +285,7 @@ namespace flex
 			void BindDescriptorSet(const VulkanMaterial* material, u32 dynamicOffsetOffset, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet) const;
 			void RecreateSwapChain();
 
-			void BeginDebugMarkerRegionInternal(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color = VEC4_ONE);
+			void BeginDebugMarkerRegionInternal(VkCommandBuffer cmdBuf, const char* markerName, const glm::vec4& color);
 			void EndDebugMarkerRegionInternal(VkCommandBuffer cmdBuf, const char* markerName);
 
 			void SetCheckPoint(VkCommandBuffer cmdBuf, const char* checkPointName);
@@ -327,9 +327,11 @@ namespace flex
 
 			bool InstanceExtensionSupported(const char* instanceExtensionName);
 
-			static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugReportFlagsEXT flags,
-				VkDebugReportObjectTypeEXT objType, u64 obj, size_t location, i32 code, const char* layerPrefix,
-				const char* msg, void* userData);
+			static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
+				VkDebugUtilsMessageSeverityFlagBitsEXT           messageSeverity,
+				VkDebugUtilsMessageTypeFlagsEXT                  messageTypes,
+				const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+				void* pUserData);
 
 			// TODO: Monitor number of used desc sets to set this value intelligently
 			static const u32 MAX_NUM_DESC_SETS = 1024;
@@ -510,7 +512,6 @@ namespace flex
 
 			const std::vector<const char*> m_RequiredInstanceExtensions =
 			{
-				VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
 			};
 
 			const std::vector<const char*> m_OptionalInstanceExtensions =
@@ -525,6 +526,8 @@ namespace flex
 				VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME,
 			};
 
+			std::vector<const char*> m_EnabledInstanceExtensions;
+
 			bool m_bDiagnosticCheckpointsEnabled = false;
 
 #ifdef SHIPPING
@@ -534,7 +537,7 @@ namespace flex
 #endif
 
 			VkInstance m_Instance = VK_NULL_HANDLE;
-			VkDebugReportCallbackEXT m_Callback = VK_NULL_HANDLE;
+			VkDebugUtilsMessengerEXT m_DebugUtilsMessengerCallback = VK_NULL_HANDLE;
 			VkSurfaceKHR m_Surface = VK_NULL_HANDLE;
 
 			VulkanDevice* m_VulkanDevice = nullptr;

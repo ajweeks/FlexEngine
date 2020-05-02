@@ -55,9 +55,9 @@ namespace flex
 	{
 		std::array<glm::mat4, 6> VulkanRenderer::s_CaptureViews;
 
-		PFN_vkDebugMarkerSetObjectNameEXT VulkanRenderer::m_vkDebugMarkerSetObjectName = nullptr;
-		PFN_vkCmdDebugMarkerBeginEXT VulkanRenderer::m_vkCmdDebugMarkerBegin = nullptr;
-		PFN_vkCmdDebugMarkerEndEXT VulkanRenderer::m_vkCmdDebugMarkerEnd = nullptr;
+		PFN_vkSetDebugUtilsObjectNameEXT VulkanRenderer::m_vkSetDebugUtilsObjectNameEXT = nullptr;
+		PFN_vkCmdBeginDebugUtilsLabelEXT VulkanRenderer::m_vkCmdBeginDebugUtilsLabelEXT = nullptr;
+		PFN_vkCmdEndDebugUtilsLabelEXT VulkanRenderer::m_vkCmdEndDebugUtilsLabelEXT = nullptr;
 
 		VulkanRenderer::VulkanRenderer() :
 			m_ClearColor({ 1.0f, 0.0f, 1.0f, 1.0f }),
@@ -120,11 +120,11 @@ namespace flex
 			vkGetDeviceQueue(m_VulkanDevice->m_LogicalDevice, (u32)m_VulkanDevice->m_QueueFamilyIndices.graphicsFamily, 0, &m_GraphicsQueue);
 			vkGetDeviceQueue(m_VulkanDevice->m_LogicalDevice, (u32)m_VulkanDevice->m_QueueFamilyIndices.presentFamily, 0, &m_PresentQueue);
 
-			if (m_VulkanDevice->ExtensionEnabled(VK_EXT_DEBUG_REPORT_EXTENSION_NAME))
+			if (Contains(m_EnabledInstanceExtensions, VK_EXT_DEBUG_UTILS_EXTENSION_NAME))
 			{
-				m_vkDebugMarkerSetObjectName = reinterpret_cast<PFN_vkDebugMarkerSetObjectNameEXT>(vkGetInstanceProcAddr(m_Instance, "vkDebugMarkerSetObjectNameEXT"));
-				m_vkCmdDebugMarkerBegin = reinterpret_cast<PFN_vkCmdDebugMarkerBeginEXT>(vkGetDeviceProcAddr(m_VulkanDevice->m_LogicalDevice, "vkCmdDebugMarkerBeginEXT"));
-				m_vkCmdDebugMarkerEnd = reinterpret_cast<PFN_vkCmdDebugMarkerEndEXT>(vkGetDeviceProcAddr(m_VulkanDevice->m_LogicalDevice, "vkCmdDebugMarkerEndEXT"));
+				m_vkSetDebugUtilsObjectNameEXT = reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(vkGetInstanceProcAddr(m_Instance, "vkSetDebugUtilsObjectNameEXT"));
+				m_vkCmdBeginDebugUtilsLabelEXT = reinterpret_cast<PFN_vkCmdBeginDebugUtilsLabelEXT>(vkGetDeviceProcAddr(m_VulkanDevice->m_LogicalDevice, "vkCmdBeginDebugUtilsLabelEXT"));
+				m_vkCmdEndDebugUtilsLabelEXT = reinterpret_cast<PFN_vkCmdEndDebugUtilsLabelEXT>(vkGetDeviceProcAddr(m_VulkanDevice->m_LogicalDevice, "vkCmdEndDebugUtilsLabelEXT"));
 			}
 
 			{
@@ -877,10 +877,10 @@ namespace flex
 
 			vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
 
-			if (m_Callback)
+			if (m_DebugUtilsMessengerCallback)
 			{
-				vkDestroyDebugReportCallbackEXT(m_Instance, m_Callback, nullptr);
-				m_Callback = VK_NULL_HANDLE;
+				vkDestroyDebugUtilsMessengerEXT(m_Instance, m_DebugUtilsMessengerCallback, nullptr);
+				m_DebugUtilsMessengerCallback = VK_NULL_HANDLE;
 			}
 
 			vkDestroyQueryPool(m_VulkanDevice->m_LogicalDevice, m_TimestampQueryPool, nullptr);
@@ -5323,6 +5323,8 @@ namespace flex
 				}
 			}
 
+			m_EnabledInstanceExtensions = extensions;
+
 			createInfo.enabledExtensionCount = (u32)extensions.size();
 			createInfo.ppEnabledExtensionNames = extensions.data();
 
@@ -5354,15 +5356,15 @@ namespace flex
 				return;
 			}
 
-			VkDebugReportCallbackCreateInfoEXT createInfo = {};
-			createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
-			createInfo.flags =
-				VK_DEBUG_REPORT_ERROR_BIT_EXT |
-				VK_DEBUG_REPORT_WARNING_BIT_EXT |
-				VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
-			createInfo.pfnCallback = DebugCallback;
+			VkDebugUtilsMessengerCreateInfoEXT createInfo = {};
+			createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+			createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
+				VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
+			createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+			createInfo.flags = 0;
+			createInfo.pfnUserCallback = DebugCallback;
 
-			VK_CHECK_RESULT(CreateDebugReportCallbackEXT(m_Instance, &createInfo, nullptr, &m_Callback));
+			VK_CHECK_RESULT(vkCreateDebugUtilsMessengerEXT(m_Instance, &createInfo, nullptr, &m_DebugUtilsMessengerCallback));
 		}
 
 		void VulkanRenderer::CreateSurface()
@@ -8397,70 +8399,70 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::SetObjectName(VulkanDevice* device, u64 object, VkDebugReportObjectTypeEXT type, const char* name)
+		void VulkanRenderer::SetObjectName(VulkanDevice* device, u64 object, VkObjectType type, const char* name)
 		{
-			if (name != nullptr && m_vkDebugMarkerSetObjectName != nullptr)
+			if (name != nullptr && m_vkSetDebugUtilsObjectNameEXT != nullptr)
 			{
-				VkDebugMarkerObjectNameInfoEXT info = {};
-				info.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT;
-				info.object = object;
+				VkDebugUtilsObjectNameInfoEXT info = {};
+				info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+				info.objectHandle = object;
 				info.objectType = type;
 				info.pObjectName = name;
-				VK_CHECK_RESULT(m_vkDebugMarkerSetObjectName(device->m_LogicalDevice, &info));
+				VK_CHECK_RESULT(m_vkSetDebugUtilsObjectNameEXT(device->m_LogicalDevice, &info));
 			}
 		}
 
 		void VulkanRenderer::SetCommandBufferName(VulkanDevice* device, VkCommandBuffer commandBuffer, const char* name)
 		{
-			SetObjectName(device, (u64)commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, name);
+			SetObjectName(device, (u64)commandBuffer, VK_OBJECT_TYPE_COMMAND_BUFFER, name);
 		}
 
 		void VulkanRenderer::SetSwapchainName(VulkanDevice* device, VkSwapchainKHR swapchain, const char* name)
 		{
-			SetObjectName(device, (u64)swapchain, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, name);
+			SetObjectName(device, (u64)swapchain, VK_OBJECT_TYPE_SWAPCHAIN_KHR, name);
 		}
 
 		void VulkanRenderer::SetDescriptorSetName(VulkanDevice* device, VkDescriptorSet descSet, const char* name)
 		{
-			SetObjectName(device, (u64)descSet, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, name);
+			SetObjectName(device, (u64)descSet, VK_OBJECT_TYPE_DESCRIPTOR_SET, name);
 		}
 
 		void VulkanRenderer::SetPipelineName(VulkanDevice* device, VkPipeline pipeline, const char* name)
 		{
-			SetObjectName(device, (u64)pipeline, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, name);
+			SetObjectName(device, (u64)pipeline, VK_OBJECT_TYPE_PIPELINE, name);
 		}
 
 		void VulkanRenderer::SetFramebufferName(VulkanDevice* device, VkFramebuffer framebuffer, const char* name)
 		{
-			SetObjectName(device, (u64)framebuffer, VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT, name);
+			SetObjectName(device, (u64)framebuffer, VK_OBJECT_TYPE_FRAMEBUFFER, name);
 		}
 
 		void VulkanRenderer::SetRenderPassName(VulkanDevice* device, VkRenderPass renderPass, const char* name)
 		{
-			SetObjectName(device, (u64)renderPass, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, name);
+			SetObjectName(device, (u64)renderPass, VK_OBJECT_TYPE_RENDER_PASS, name);
 		}
 
 		void VulkanRenderer::SetImageName(VulkanDevice* device, VkImage image, const char* name)
 		{
-			SetObjectName(device, (u64)image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, name);
+			SetObjectName(device, (u64)image, VK_OBJECT_TYPE_IMAGE, name);
 		}
 
 		void VulkanRenderer::SetImageViewName(VulkanDevice* device, VkImageView imageView, const char* name)
 		{
-			SetObjectName(device, (u64)imageView, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT, name);
+			SetObjectName(device, (u64)imageView, VK_OBJECT_TYPE_IMAGE_VIEW, name);
 		}
 
 		void VulkanRenderer::SetSamplerName(VulkanDevice* device, VkSampler sampler, const char* name)
 		{
-			SetObjectName(device, (u64)sampler, VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT, name);
+			SetObjectName(device, (u64)sampler, VK_OBJECT_TYPE_SAMPLER, name);
 		}
 
 		void VulkanRenderer::SetBufferName(VulkanDevice* device, VkBuffer buffer, const char* name)
 		{
-			SetObjectName(device, (u64)buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, name);
+			SetObjectName(device, (u64)buffer, VK_OBJECT_TYPE_BUFFER, name);
 		}
 
-		void VulkanRenderer::BeginDebugMarkerRegion(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color)
+		void VulkanRenderer::BeginDebugMarkerRegion(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color /* =  = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f) */)
 		{
 			((VulkanRenderer*)g_Renderer)->BeginDebugMarkerRegionInternal(cmdBuf, markerName, color);
 		}
@@ -8470,15 +8472,15 @@ namespace flex
 			((VulkanRenderer*)g_Renderer)->EndDebugMarkerRegionInternal(cmdBuf, markerName);
 		}
 
-		void VulkanRenderer::BeginDebugMarkerRegionInternal(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color)
+		void VulkanRenderer::BeginDebugMarkerRegionInternal(VkCommandBuffer cmdBuf, const char* markerName, const glm::vec4& color)
 		{
-			if (m_vkCmdDebugMarkerBegin)
+			if (m_vkCmdBeginDebugUtilsLabelEXT)
 			{
-				VkDebugMarkerMarkerInfoEXT markerInfo = {};
-				markerInfo.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
-				memcpy(markerInfo.color, &color[0], sizeof(float) * 4);
-				markerInfo.pMarkerName = markerName;
-				m_vkCmdDebugMarkerBegin(cmdBuf, &markerInfo);
+				VkDebugUtilsLabelEXT labelInfo = {};
+				labelInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
+				memcpy(labelInfo.color, &color[0], sizeof(float) * 4);
+				labelInfo.pLabelName = markerName;
+				m_vkCmdBeginDebugUtilsLabelEXT(cmdBuf, &labelInfo);
 			}
 
 			SetCheckPoint(cmdBuf, markerName);
@@ -8486,9 +8488,9 @@ namespace flex
 
 		void VulkanRenderer::EndDebugMarkerRegionInternal(VkCommandBuffer cmdBuf, const char* markerName /* = nullptr */)
 		{
-			if (m_vkCmdDebugMarkerEnd)
+			if (m_vkCmdEndDebugUtilsLabelEXT)
 			{
-				m_vkCmdDebugMarkerEnd(cmdBuf);
+				m_vkCmdEndDebugUtilsLabelEXT(cmdBuf);
 			}
 
 			if (markerName != nullptr)
@@ -9243,23 +9245,23 @@ namespace flex
 			return false;
 		}
 
-		VKAPI_ATTR VkBool32 VKAPI_CALL VulkanRenderer::DebugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType,
-			u64 obj, size_t location, i32 code, const char* layerPrefix, const char* msg, void* userData)
+		VKAPI_ATTR VkBool32 VKAPI_CALL VulkanRenderer::DebugCallback(
+			VkDebugUtilsMessageSeverityFlagBitsEXT           messageSeverity,
+			VkDebugUtilsMessageTypeFlagsEXT                  messageTypes,
+			const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+			void* pUserData)
 		{
-			FLEX_UNUSED(objType);
-			FLEX_UNUSED(obj);
-			FLEX_UNUSED(location);
-			FLEX_UNUSED(code);
-			FLEX_UNUSED(layerPrefix);
-			FLEX_UNUSED(userData);
+			FLEX_UNUSED(messageTypes);
+			FLEX_UNUSED(pCallbackData);
+			FLEX_UNUSED(pUserData);
 
-			std::string msgStr = Replace(msg, " | ", "\n\t");
+			std::string msgStr = Replace(pCallbackData->pMessage, " | ", "\n\t");
 
-			if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
+			if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
 			{
 				PrintError("%s\n", msgStr.c_str());
 			}
-			else if (flags & VK_DEBUG_REPORT_WARNING_BIT_EXT)
+			else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
 			{
 				PrintWarn("%s\n", msgStr.c_str());
 			}

@@ -1354,6 +1354,15 @@ namespace flex
 		return ++_lastUID;
 	}
 
+	bool Contains(const std::vector<const char*>& vec, const char* val)
+	{
+		for (u32 i = 0; i < (u32)vec.size(); ++i)
+		{
+			if (strcmp(vec[i], val) == 0) return true;
+		}
+		return false;
+	}
+
 	bool Contains(const char* arr[], u32 arrLen, const char* val)
 	{
 		for (u32 i = 0; i < arrLen; ++i)

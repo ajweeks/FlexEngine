@@ -212,6 +212,8 @@ namespace flex
 		return std::find(vec.begin(), vec.end(), val) != vec.end();
 	}
 
+	bool Contains(const std::vector<const char*>& vec, const char* val);
+
 	bool Contains(const char* arr[], u32 arrLen, const char* val);
 
 	template<class T>
