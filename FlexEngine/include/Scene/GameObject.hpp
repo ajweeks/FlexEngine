@@ -511,9 +511,12 @@ namespace flex
 
 		void UpdateWavesLinear();
 		void UpdateWavesSIMD();
+		glm::vec3 QueryHeightField(const glm::vec3& queryPos);
 
-		i32 vertSideCount = 100;
+		i32 chunkVertCountPerAxis = 100;
 		real size = 30.0f;
+		real loadRadius = 35.0f;
+
 		MaterialID m_WaveMaterialID;
 
 		struct WaveInfo
@@ -534,7 +537,6 @@ namespace flex
 		std::vector<WaveInfo> waves;
 
 		std::vector<glm::vec2i> waveChunks;
-		real loadedDist = 30.0f;
 
 		bool m_bPinCenter = false;
 		glm::vec3 m_PinnedPos;
