@@ -6,7 +6,7 @@
 	{
 		"type" : "debug",
 		"near plane" : 0.500000,
-		"far plane" : 1000.000000,
+		"far plane" : 10000.000000,
 		"fov" : 0.785398,
 		"aperture" : 1.000000,
 		"shutter speed" : 0.125000,
@@ -15,9 +15,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "169.041, 37.898, -58.996",
-			"pitch" : -0.208595,
-			"yaw" : 2.805803
+			"position" : "820.540, 129.559, 286.588",
+			"pitch" : -0.133590,
+			"yaw" : -9.107839
 		}
 	},
 	"objects" : 
@@ -83,33 +83,9 @@
 				[
 					{
 						"enabled" : true,
-						"amplitude" : 0.670000,
-						"waveDir" : 0.309000,
-						"waveLen" : 47.830002
-					},
-					{
-						"enabled" : true,
-						"amplitude" : 0.120000,
-						"waveDir" : 1.700000,
-						"waveLen" : 8.690000
-					},
-					{
-						"enabled" : true,
-						"amplitude" : 0.480000,
-						"waveDir" : 1.420000,
-						"waveLen" : 17.559999
-					},
-					{
-						"enabled" : true,
-						"amplitude" : 0.040000,
-						"waveDir" : -1.332000,
-						"waveLen" : 4.720000
-					},
-					{
-						"enabled" : true,
-						"amplitude" : 0.090000,
-						"waveDir" : 3.120000,
-						"waveLen" : 6.730000
+						"amplitude" : 1.650000,
+						"waveDir" : 1.244000,
+						"waveLen" : 83.050003
 					},
 					{
 						"enabled" : true,
@@ -119,15 +95,39 @@
 					},
 					{
 						"enabled" : true,
-						"amplitude" : 1.650000,
-						"waveDir" : 1.244000,
-						"waveLen" : 83.050003
+						"amplitude" : 0.670000,
+						"waveDir" : 0.309000,
+						"waveLen" : 47.830002
+					},
+					{
+						"enabled" : true,
+						"amplitude" : 0.480000,
+						"waveDir" : 1.420000,
+						"waveLen" : 17.559999
 					},
 					{
 						"enabled" : true,
 						"amplitude" : 0.300000,
 						"waveDir" : 0.856000,
 						"waveLen" : 15.360000
+					},
+					{
+						"enabled" : true,
+						"amplitude" : 0.120000,
+						"waveDir" : 1.700000,
+						"waveLen" : 8.690000
+					},
+					{
+						"enabled" : true,
+						"amplitude" : 0.090000,
+						"waveDir" : 3.120000,
+						"waveLen" : 6.730000
+					},
+					{
+						"enabled" : true,
+						"amplitude" : 0.040000,
+						"waveDir" : -1.332000,
+						"waveLen" : 4.720000
 					},
 					{
 						"enabled" : true,
@@ -138,10 +138,16 @@
 				],
 				"chunk vert count per axis" : 100,
 				"chunk size" : 100.000000,
-				"chunk load radius" : 166.610001,
-				"update speed" : 30.400000,
+				"chunk load radius" : 136.830002,
+				"update speed" : 16.700001,
 				"pin center" : true,
-				"pinned center position" : "-11.87, 316.56, 14.48"
+				"pinned center position" : "-11.87, 316.56, 14.48",
+				"wave amplitude lod cutoffs" : 
+				[
+					"215.000000,0.341000",
+					"173.000000,0.085000",
+					"147.000000,0.059000"
+				]
 			}
 		},
 		{

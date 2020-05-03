@@ -3316,10 +3316,11 @@ namespace flex
 		m_VertexBufferCreateInfo = {};
 		m_VertexBufferCreateInfo.attributes = g_Renderer->GetShader(g_Renderer->GetMaterial(m_WaveMaterialID).shaderID).vertexAttributes;
 
+		SortWaveAmplitudeCutoffs();
+
 		OnVertCountChange();
 		DiscoverChunks();
 		UpdateWaveVertexData();
-
 
 		SetMesh(new Mesh(this));
 
@@ -3509,14 +3510,17 @@ namespace flex
 
 		for (u32 chunkIdx = 0; chunkIdx < (u32)waveChunks.size(); ++chunkIdx)
 		{
-			const glm::vec3 startPos((waveChunks[chunkIdx].x - 0.5f) * size, 0.0f, (waveChunks[chunkIdx].y - 0.5f) * size);
+			const glm::vec3 chunkCenter((waveChunks[chunkIdx].x - 0.5f) * size, 0.0f, (waveChunks[chunkIdx].y - 0.5f) * size);
+
+			real chunkDist = glm::distance(glm::vec3(chunkCenter.x, 0.0f, chunkCenter.y), g_CameraManager->CurrentCamera()->position);
+			real amplitudeLODCutoff = GetWaveAmplitudeLODCutoffForDistance(chunkDist);
 
 			for (i32 z = 0; z < chunkVertCountPerAxis; ++z)
 			{
 				for (i32 x = 0; x < chunkVertCountPerAxis; ++x)
 				{
 					const i32 vertIdx = z * chunkVertCountPerAxis + x + chunkIdx * vertCountPerChunk;
-					positions[vertIdx] = startPos + glm::vec3(
+					positions[vertIdx] = chunkCenter + glm::vec3(
 						size * ((real)x / (chunkVertCountPerAxis - 1)),
 						0.0f,
 						size * ((real)z / (chunkVertCountPerAxis - 1)));
@@ -3525,6 +3529,11 @@ namespace flex
 
 			for (const WaveInfo& wave : waves)
 			{
+				if (wave.a < amplitudeLODCutoff)
+				{
+					break;
+				}
+
 				if (wave.enabled)
 				{
 					const glm::vec2 waveVec = glm::vec2(wave.waveDirCos, wave.waveDirSin) * wave.waveVecMag;
@@ -3596,10 +3605,13 @@ namespace flex
 
 		for (u32 chunkIdx = 0; chunkIdx < (u32)waveChunks.size(); ++chunkIdx)
 		{
-			const glm::vec2 startPos((waveChunks[chunkIdx].x - 0.5f) * size, (waveChunks[chunkIdx].y - 0.5f) * size);
-			__m128 startPosX_4 = _mm_set1_ps(startPos.x);
-			__m128 startPosY_4 = _mm_setzero_ps();
-			__m128 startPosZ_4 = _mm_set1_ps(startPos.y);
+			const glm::vec2 chunkCenter((waveChunks[chunkIdx].x - 0.5f) * size, (waveChunks[chunkIdx].y - 0.5f) * size);
+			__m128 chunkCenterX_4 = _mm_set1_ps(chunkCenter.x);
+			__m128 chunkCenterY_4 = _mm_setzero_ps();
+			__m128 chunkCenterZ_4 = _mm_set1_ps(chunkCenter.y);
+
+			real chunkDist = glm::distance(glm::vec3(chunkCenter.x, 0.0f, chunkCenter.y), g_CameraManager->CurrentCamera()->position);
+			real amplitudeLODCutoff = GetWaveAmplitudeLODCutoffForDistance(chunkDist);
 
 			// Positions verts on flat plane
 			for (i32 z = 0; z < chunkVertCountPerAxis; ++z)
@@ -3611,15 +3623,20 @@ namespace flex
 					const i32 chunkLocalVertIdx = z * chunkVertCountPerAxis + x;
 					__m128 xIdx_4 = _mm_set_ps((real)(x + 3), (real)(x + 2), (real)(x + 1), (real)(x + 0));
 					const i32 chunkLocalVertIdxDiv4 = chunkLocalVertIdx / 4;
-					positionsx_4[chunkLocalVertIdxDiv4] = _mm_add_ps(startPosX_4, _mm_mul_ps(size_4, _mm_div_ps(xIdx_4, vertCountMin1_4)));
-					positionsy_4[chunkLocalVertIdxDiv4] = startPosY_4;
-					positionsz_4[chunkLocalVertIdxDiv4] = _mm_add_ps(startPosZ_4, _mm_mul_ps(size_4, _mm_div_ps(zIdx_4, vertCountMin1_4)));
+					positionsx_4[chunkLocalVertIdxDiv4] = _mm_add_ps(chunkCenterX_4, _mm_mul_ps(size_4, _mm_div_ps(xIdx_4, vertCountMin1_4)));
+					positionsy_4[chunkLocalVertIdxDiv4] = chunkCenterY_4;
+					positionsz_4[chunkLocalVertIdxDiv4] = _mm_add_ps(chunkCenterZ_4, _mm_mul_ps(size_4, _mm_div_ps(zIdx_4, vertCountMin1_4)));
 				}
 			}
 
 			// Modulate based on waves
 			for (const WaveInfo& wave : waves)
 			{
+				if (wave.a < amplitudeLODCutoff)
+				{
+					break;
+				}
+
 				if (wave.enabled)
 				{
 					const glm::vec2 waveVec = glm::vec2(wave.waveDirCos, wave.waveDirSin) * wave.waveVecMag;
@@ -3641,7 +3658,7 @@ namespace flex
 							const i32 chunkLocalVertIdxDiv4 = chunkLocalVertIdx / 4;
 
 							/*
-								positions[vertIdx] = startPos + glm::vec3(
+								positions[vertIdx] = chunkCenter + glm::vec3(
 									size * ((real)x / (chunkVertCountPerAxis - 1)),
 									0.0f,
 									size * ((real)z / (chunkVertCountPerAxis - 1)));
@@ -3731,7 +3748,7 @@ namespace flex
 
 		const i32 vertCountPerChunk = chunkVertCountPerAxis * chunkVertCountPerAxis;
 
-		const glm::vec2 startPos((waveChunks[chunkIdx].x - 0.5f) * size, (waveChunks[chunkIdx].y - 0.5f) * size);
+		const glm::vec2 chunkCenter((waveChunks[chunkIdx].x - 0.5f) * size, (waveChunks[chunkIdx].y - 0.5f) * size);
 
 		const real cellSize = size / chunkVertCountPerAxis;
 		for (i32 z = 0; z < chunkVertCountPerAxis; ++z)
@@ -3741,9 +3758,9 @@ namespace flex
 				const i32 vertIdx = z * chunkVertCountPerAxis + x + chunkIdx * vertCountPerChunk;
 
 				glm::vec3 planePos = glm::vec3(
-					startPos.x + size * ((real)x / (chunkVertCountPerAxis - 1)),
+					chunkCenter.x + size * ((real)x / (chunkVertCountPerAxis - 1)),
 					0.0f,
-					startPos.y + size * ((real)z / (chunkVertCountPerAxis - 1)));
+					chunkCenter.y + size * ((real)z / (chunkVertCountPerAxis - 1)));
 
 				real left = (x >= 1) ? positions[vertIdx - 1].y : QueryHeightFieldExpensive(planePos - glm::vec3(cellSize, 0.0f, 0.0f)).y;
 				real right = (x < chunkVertCountPerAxis - 1) ? positions[vertIdx + 1].y : QueryHeightFieldExpensive(planePos + glm::vec3(cellSize, 0.0f, 0.0f)).y;
@@ -3798,6 +3815,7 @@ namespace flex
 
 		ImGui::SliderFloat("Chunk size", &size, 0.1f, 100.0f);
 
+		ImGui::Checkbox("Disable LODs", &bDisableLODs);
 
 		glm::vec3 bobberPosWS = bobber->GetTransform()->GetWorldPosition();
 		ImGui::DragFloat3("Bobber", &bobberPosWS.x);
@@ -3807,6 +3825,44 @@ namespace flex
 		ImGui::SameLine();
 		ImGui::DragFloat("UAF", &bobberTarget.UAF, 0.01f);
 		ImGui::PopItemWidth();
+
+		if (ImGui::TreeNode("LOD amplitude dist cutoffs"))
+		{
+			bool bNeedsSort = false;
+
+			for (i32 i = 0; i < (i32)waveAmplitudeCutoffs.size(); ++i)
+			{
+				std::string childName = "##cutoff " + IntToString(i, 2);
+				std::string removeStr = "-" + childName;
+				if (ImGui::Button(removeStr.c_str()))
+				{
+					waveAmplitudeCutoffs.erase(waveAmplitudeCutoffs.begin() + i);
+					bNeedsSort = true;
+					break;
+				}
+
+				ImGui::SameLine();
+
+				std::string distStr = "distance" + childName;
+				bNeedsSort |= ImGui::DragFloat(distStr.c_str(), &waveAmplitudeCutoffs[i].first, 1.0f, 0.0f, 10000.0f);
+				std::string amplitudeStr = "amplitude" + childName;
+				ImGui::DragFloat(amplitudeStr.c_str(), &waveAmplitudeCutoffs[i].second, 0.001f, 0.0f, 10.0f);
+			}
+
+			if (ImGui::Button("+"))
+			{
+				real dist = waveAmplitudeCutoffs.empty() ? 100.0f : waveAmplitudeCutoffs[waveAmplitudeCutoffs.size() - 1].first + 10.0f;
+				real amplitude = waveAmplitudeCutoffs.empty() ? 1.0f : waveAmplitudeCutoffs[waveAmplitudeCutoffs.size() - 1].second + 1.0f;
+				waveAmplitudeCutoffs.emplace_back(dist, dist);
+			}
+
+			ImGui::TreePop();
+
+			if (bNeedsSort)
+			{
+				SortWaveAmplitudeCutoffs();
+			}
+		}
 
 		if (ImGui::TreeNode("Wave factors"))
 		{
@@ -3858,7 +3914,6 @@ namespace flex
 
 	void GerstnerWave::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
-		FLEX_UNUSED(scene);
 		FLEX_UNUSED(matIDs);
 
 		JSONObject gerstnerWaveObj;
@@ -3885,6 +3940,29 @@ namespace flex
 
 			gerstnerWaveObj.SetBoolChecked("pin center", m_bPinCenter);
 			gerstnerWaveObj.SetVec3Checked("pinned center position", m_PinnedPos);
+
+			std::vector<JSONField> waveAmplitudesArrObj;
+			if (gerstnerWaveObj.SetFieldArrayChecked("wave amplitude lod cutoffs", waveAmplitudesArrObj))
+			{
+				waveAmplitudeCutoffs.clear();
+				waveAmplitudeCutoffs.reserve(waveAmplitudesArrObj.size());
+				for (u32 i = 0; i < (u32)waveAmplitudesArrObj.size(); ++i)
+				{
+					std::string amplitudeCutoffPair = waveAmplitudesArrObj[i].label;
+					std::vector<std::string> strParts = Split(amplitudeCutoffPair, ',');
+					if (strParts.size() != 2)
+					{
+						std::string sceneName = scene->GetFileName();
+						PrintError("Invalid wave amplitude LOD cutoff pair (%s) in scene %s\n", amplitudeCutoffPair.c_str(), sceneName.c_str());
+						continue;
+					}
+					real dist = (real)atof(strParts[0].c_str());
+					real amplitude = (real)atof(strParts[1].c_str());
+					waveAmplitudeCutoffs.emplace_back(dist, amplitude);
+				}
+
+				SortWaveAmplitudeCutoffs();
+			}
 		}
 
 		SortWaves();
@@ -3920,6 +3998,14 @@ namespace flex
 
 		gerstnerWaveObj.fields.emplace_back("pin center", JSONValue(m_bPinCenter));
 		gerstnerWaveObj.fields.emplace_back("pinned center position", JSONValue(VecToString(m_PinnedPos)));
+
+		JSONObject amplitudeCutoffsObj = {};
+		std::vector<JSONField> amplitudeCutoffsArrObj(waveAmplitudeCutoffs.size());
+		for (u32 i = 0; i < (u32)waveAmplitudeCutoffs.size(); ++i)
+		{
+			amplitudeCutoffsArrObj[i] = JSONField(std::to_string(waveAmplitudeCutoffs[i].first) + "," + std::to_string(waveAmplitudeCutoffs[i].second), JSONValue(0));
+		}
+		gerstnerWaveObj.fields.emplace_back("wave amplitude lod cutoffs", JSONValue(amplitudeCutoffsArrObj));
 
 		parentObject.fields.emplace_back("gerstner wave", JSONValue(gerstnerWaveObj));
 	}
@@ -3975,6 +4061,31 @@ namespace flex
 		});
 	}
 
+	real GerstnerWave::GetWaveAmplitudeLODCutoffForDistance(real dist)
+	{
+		if (bDisableLODs)
+		{
+			return 0.0f;
+		}
+
+		for (u32 i = 0; i < (u32)waveAmplitudeCutoffs.size(); ++i)
+		{
+			if (dist >= waveAmplitudeCutoffs[i].first)
+			{
+				return waveAmplitudeCutoffs[i].second;
+			}
+		}
+		return 0.0f;
+	}
+
+	void GerstnerWave::SortWaveAmplitudeCutoffs()
+	{
+		std::sort(waveAmplitudeCutoffs.begin(), waveAmplitudeCutoffs.end(),
+			[](const Pair<real, real>& waveAmplitudePairA, const Pair<real, real>& waveAmplitudePairB)
+		{
+			return abs(waveAmplitudePairA.first) > abs(waveAmplitudePairB.first);
+		});
+	}
 	Blocks::Blocks(const std::string& name) :
 		GameObject(name, GameObjectType::BLOCKS)
 	{

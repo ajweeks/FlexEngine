@@ -515,13 +515,18 @@ namespace flex
 		glm::vec3 QueryHeightFieldFromVerts(const glm::vec3& queryPos);
 		void UpdateNormalsForChunk(u32 chunkIdx);
 		void SortWaves();
+		real GetWaveAmplitudeLODCutoffForDistance(real dist);
+		void SortWaveAmplitudeCutoffs();
 
 		i32 chunkVertCountPerAxis = 100;
 		real size = 30.0f;
 		real loadRadius = 35.0f;
 		real updateSpeed = 20.0f;
+		bool bDisableLODs = false;
 
 		MaterialID m_WaveMaterialID;
+
+		std::vector<Pair<real, real>> waveAmplitudeCutoffs;
 
 		struct WaveInfo
 		{
