@@ -3334,6 +3334,14 @@ namespace flex
 	{
 		PROFILE_AUTO("Gerstner update");
 
+		for (WaveInfo& wave : waves)
+		{
+			if (wave.enabled)
+			{
+				wave.accumOffset += (wave.moveSpeed * g_DeltaTime);
+			}
+		}
+
 		DiscoverChunks();
 		UpdateWaveVertexData();
 
@@ -3499,8 +3507,6 @@ namespace flex
 					const glm::vec2 waveVec = glm::vec2(wave.waveDirCos, wave.waveDirSin) * wave.waveVecMag;
 					const glm::vec2 waveVecN = glm::normalize(waveVec);
 
-					wave.accumOffset += (wave.moveSpeed * g_DeltaTime);
-
 					for (i32 z = 0; z < chunkVertCountPerAxis; ++z)
 					{
 						for (i32 x = 0; x < chunkVertCountPerAxis; ++x)
@@ -3607,8 +3613,6 @@ namespace flex
 				{
 					const glm::vec2 waveVec = glm::vec2(wave.waveDirCos, wave.waveDirSin) * wave.waveVecMag;
 					const glm::vec2 waveVecN = glm::normalize(waveVec);
-
-					wave.accumOffset += (wave.moveSpeed * g_DeltaTime);
 
 					__m128 accumOffset_4 = _mm_set1_ps(wave.accumOffset);
 					__m128 negWaveVecNX_4 = _mm_set1_ps(-waveVecN.x);
