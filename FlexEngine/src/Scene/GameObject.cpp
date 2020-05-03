@@ -3503,7 +3503,6 @@ namespace flex
 		const i32 indexCount = indexCountPerChunk * (i32)waveChunks.size();
 
 		glm::vec3* positions = m_VertexBufferCreateInfo.positions_3D.data();
-		glm::vec3* normals = m_VertexBufferCreateInfo.normals.data();
 		glm::vec4* extraVec4s = m_VertexBufferCreateInfo.extraVec4s.data();
 
 		memset(extraVec4s, 0, vertCount * sizeof(glm::vec4));
@@ -3576,18 +3575,7 @@ namespace flex
 			}
 #endif
 
-			// Calculate normals
-			const real cellSize = size / chunkVertCountPerAxis;
-			for (i32 z = 0; z < chunkVertCountPerAxis; ++z)
-			{
-				for (i32 x = 0; x < chunkVertCountPerAxis; ++x)
-				{
-					const i32 vertIdx = z * chunkVertCountPerAxis + x + chunkIdx * vertCountPerChunk;
-					real dX = (vertIdx < 1 || vertIdx >= vertCount - (chunkVertCountPerAxis - 1)) ? 0.0f : (positions[vertIdx - 1].y - positions[vertIdx + 1].y);
-					real dZ = (vertIdx < chunkVertCountPerAxis || vertIdx >= vertCount - chunkVertCountPerAxis) ? 0.0f : (positions[vertIdx - chunkVertCountPerAxis].y - positions[vertIdx + chunkVertCountPerAxis].y);
-					normals[vertIdx] = glm::normalize(glm::vec3(dX, 2.0f * cellSize, dZ));
-				}
-			}
+			UpdateNormalsForChunk(chunkIdx);
 		}
 	}
 
@@ -3599,7 +3587,6 @@ namespace flex
 		const i32 indexCount = indexCountPerChunk * (i32)waveChunks.size();
 
 		glm::vec3* positions = m_VertexBufferCreateInfo.positions_3D.data();
-		glm::vec3* normals = m_VertexBufferCreateInfo.normals.data();
 		glm::vec4* extraVec4s = m_VertexBufferCreateInfo.extraVec4s.data();
 
 		memset(extraVec4s, 0, vertCount * sizeof(glm::vec4));
@@ -3712,29 +3699,7 @@ namespace flex
 			}
 #endif
 
-			// Calculate normals
-			const real cellSize = size / chunkVertCountPerAxis;
-			for (i32 z = 0; z < chunkVertCountPerAxis; ++z)
-			{
-				for (i32 x = 0; x < chunkVertCountPerAxis; ++x)
-				{
-					const i32 vertIdx = z * chunkVertCountPerAxis + x + chunkIdx * vertCountPerChunk;
-
-					glm::vec3 planePos = glm::vec3(
-						startPos.x + size * ((real)x / (chunkVertCountPerAxis - 1)),
-						0.0f,
-						startPos.y + size * ((real)z / (chunkVertCountPerAxis - 1)));
-
-					real left = (x >= 1) ? positions[vertIdx - 1].y : QueryHeightFieldExpensive(planePos - glm::vec3(cellSize, 0.0f, 0.0f)).y;
-					real right = (x < chunkVertCountPerAxis - 1) ? positions[vertIdx + 1].y : QueryHeightFieldExpensive(planePos + glm::vec3(cellSize, 0.0f, 0.0f)).y;
-					real back = (z >= 1) ? positions[vertIdx - chunkVertCountPerAxis].y : QueryHeightFieldExpensive(planePos - glm::vec3(0.0f, 0.0f, cellSize)).y;
-					real forward = (z < chunkVertCountPerAxis - 1) ? positions[vertIdx + chunkVertCountPerAxis].y : QueryHeightFieldExpensive(planePos + glm::vec3(0.0f, 0.0f, cellSize)).y;
-
-					real dX = left - right;
-					real dZ = back - forward;
-					normals[vertIdx] = glm::normalize(glm::vec3(dX, 2.0f * cellSize, dZ));
-				}
-			}
+			UpdateNormalsForChunk(chunkIdx);
 
 			// Read back SIMD vars into standard format
 			for (i32 z = 0; z < chunkVertCountPerAxis; ++z)
@@ -3755,6 +3720,39 @@ namespace flex
 					positions[vertIdx + 2] = glm::vec3(xs.z, ys.z, zs.z);
 					positions[vertIdx + 3] = glm::vec3(xs.w, ys.w, zs.w);
 				}
+			}
+		}
+	}
+
+	void GerstnerWave::UpdateNormalsForChunk(u32 chunkIdx)
+	{
+		glm::vec3* positions = m_VertexBufferCreateInfo.positions_3D.data();
+		glm::vec3* normals = m_VertexBufferCreateInfo.normals.data();
+
+		const i32 vertCountPerChunk = chunkVertCountPerAxis * chunkVertCountPerAxis;
+
+		const glm::vec2 startPos((waveChunks[chunkIdx].x - 0.5f) * size, (waveChunks[chunkIdx].y - 0.5f) * size);
+
+		const real cellSize = size / chunkVertCountPerAxis;
+		for (i32 z = 0; z < chunkVertCountPerAxis; ++z)
+		{
+			for (i32 x = 0; x < chunkVertCountPerAxis; ++x)
+			{
+				const i32 vertIdx = z * chunkVertCountPerAxis + x + chunkIdx * vertCountPerChunk;
+
+				glm::vec3 planePos = glm::vec3(
+					startPos.x + size * ((real)x / (chunkVertCountPerAxis - 1)),
+					0.0f,
+					startPos.y + size * ((real)z / (chunkVertCountPerAxis - 1)));
+
+				real left = (x >= 1) ? positions[vertIdx - 1].y : QueryHeightFieldExpensive(planePos - glm::vec3(cellSize, 0.0f, 0.0f)).y;
+				real right = (x < chunkVertCountPerAxis - 1) ? positions[vertIdx + 1].y : QueryHeightFieldExpensive(planePos + glm::vec3(cellSize, 0.0f, 0.0f)).y;
+				real back = (z >= 1) ? positions[vertIdx - chunkVertCountPerAxis].y : QueryHeightFieldExpensive(planePos - glm::vec3(0.0f, 0.0f, cellSize)).y;
+				real forward = (z < chunkVertCountPerAxis - 1) ? positions[vertIdx + chunkVertCountPerAxis].y : QueryHeightFieldExpensive(planePos + glm::vec3(0.0f, 0.0f, cellSize)).y;
+
+				real dX = left - right;
+				real dZ = back - forward;
+				normals[vertIdx] = glm::normalize(glm::vec3(dX, 2.0f * cellSize, dZ));
 			}
 		}
 	}
