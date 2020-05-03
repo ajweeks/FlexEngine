@@ -24,15 +24,18 @@ void main()
 {
 	vec3 dir = normalize(ex_TexCoord);
 
-	float n = noise(abs(ex_TexCoord.x + ex_TexCoord.y)) * 0.03; // Noise to prevent banding
+	// Noise to prevent banding
+	float n = noise(abs(ex_TexCoord.x + ex_TexCoord.y)) * 0.03;
 
-	// vec3 top = vec3(0.15, 0.39, 0.65); // baby blue
-	// vec3 mid = vec3(0.66, 0.86, 0.95); // ultra pale blue
-	// vec3 btm = vec3(0.75, 0.91, 0.99); // off-white
+	// Day theme
+	vec3 top = vec3(0.22, 0.58, 0.88);
+	vec3 mid = vec3(0.66, 0.86, 0.95); // ultra pale blue
+	vec3 btm = vec3(0.75, 0.91, 0.99); // off-white
 
-	vec3 top = vec3(0.07, 0.09, 0.14); // dark pale blue
-	vec3 mid = vec3(0.06, 0.08, 0.12); // pale blue
-	vec3 btm = vec3(0.07, 0.07, 0.14); // dark-blue
+	// Night theme
+	//vec3 top = vec3(0.07, 0.09, 0.14); // dark pale blue
+	//vec3 mid = vec3(0.06, 0.08, 0.12); // pale blue
+	//vec3 btm = vec3(0.07, 0.07, 0.14); // dark-blue
 
 	float h = sign(dir.y)*pow(abs(dir.y), 0.5) + n;
 
@@ -40,7 +43,7 @@ void main()
 	float mw = pow(1.0-abs(dir.y), 10.0) * 0.8;
 	float bw = max(-h, 0.0);
 
-	fragmentColor = vec4((top * tw) + (mid * mw) + (btm * bw), 1.0); return;
+	fragmentColor = vec4(clamp((top * tw) + (mid * mw) + (btm * bw), 0, 1), 1.0);
 
-	fragmentColor = texture(cubemap, ex_TexCoord) * uboConstant.exposure;
+	//fragmentColor = texture(cubemap, ex_TexCoord) * uboConstant.exposure;
 }

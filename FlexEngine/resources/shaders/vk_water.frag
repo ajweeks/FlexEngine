@@ -34,6 +34,21 @@ layout (binding = 0) uniform UBOConstant
 	DirectionalLight dirLight;
 } uboConstant;
 
+vec3 SampleSkybox(vec3 dir)
+{
+	vec3 top = vec3(0.22, 0.58, 0.88);
+	vec3 mid = vec3(0.66, 0.86, 0.95);
+	vec3 btm = vec3(0.75, 0.91, 0.99);
+
+	float h = sign(dir.y)*pow(abs(dir.y), 0.5);
+
+	float tw = max(h, 0.0);
+	float mw = pow(1.0-abs(dir.y), 10.0) * 0.8;
+	float bw = max(-h, 0.0);
+
+	return vec3(clamp((top * tw) + (mid * mw) + (btm * bw), 0, 1));
+}
+
 void main()
 {
 	vec3 N = normalize(ex_NormalWS);
@@ -49,7 +64,7 @@ void main()
 
 	float NoV = max(dot(N, V), 0.0);
 
-	float fresnel = max(pow(1.0-NoV, 7.0), 0.0);
+	float fresnel = clamp(pow(1.0-NoV+0.07, 7.0), 0, 1);
 
 	float deepness = pow(1.0-clamp(abs(V.y),0,1), 3.0);
 
@@ -57,5 +72,9 @@ void main()
 	vec3 deepBlue = vec3(0.02, 0.06, 0.25);
 	vec3 lightBlue = vec3(0.1, 0.15, 0.3);
 
-	fragColor = vec4(mix(mix(black, deepBlue, deepness), lightBlue, clamp(fresnel,0,1)), 1); return;
+	vec3 sky = SampleSkybox(R);
+
+	fragColor = vec4(mix(mix(black, deepBlue, deepness), sky, clamp(fresnel,0,1)), 1);
+	//fragColor = vec4(SampleSkybox(R), 1);
+	//fragColor = vec4(clamp(R,0,1), 1);
 }

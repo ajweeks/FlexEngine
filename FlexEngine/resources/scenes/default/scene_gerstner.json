@@ -15,9 +15,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "161.993, 36.549, -151.520",
-			"pitch" : -0.383564,
-			"yaw" : -10.147111
+			"position" : "169.041, 37.898, -58.996",
+			"pitch" : -0.208595,
+			"yaw" : 2.805803
 		}
 	},
 	"objects" : 
@@ -83,27 +83,27 @@
 				[
 					{
 						"enabled" : true,
-						"amplitude" : 1.000000,
+						"amplitude" : 0.670000,
 						"waveDir" : 0.309000,
 						"waveLen" : 47.830002
 					},
 					{
 						"enabled" : true,
-						"amplitude" : 0.220000,
+						"amplitude" : 0.120000,
 						"waveDir" : 1.700000,
-						"waveLen" : 7.920000
+						"waveLen" : 8.690000
 					},
 					{
 						"enabled" : true,
-						"amplitude" : 0.690000,
+						"amplitude" : 0.480000,
 						"waveDir" : 1.420000,
-						"waveLen" : 15.200000
+						"waveLen" : 17.559999
 					},
 					{
 						"enabled" : true,
-						"amplitude" : 0.110000,
+						"amplitude" : 0.040000,
 						"waveDir" : -1.332000,
-						"waveLen" : 2.890000
+						"waveLen" : 4.720000
 					},
 					{
 						"enabled" : true,
@@ -113,24 +113,30 @@
 					},
 					{
 						"enabled" : true,
-						"amplitude" : 1.440000,
+						"amplitude" : 0.690000,
 						"waveDir" : 0.968000,
 						"waveLen" : 47.340000
 					},
 					{
 						"enabled" : true,
-						"amplitude" : 1.870000,
+						"amplitude" : 1.650000,
 						"waveDir" : 1.244000,
-						"waveLen" : 70.110001
+						"waveLen" : 83.050003
 					},
 					{
 						"enabled" : true,
-						"amplitude" : 0.380000,
+						"amplitude" : 0.300000,
 						"waveDir" : 0.856000,
-						"waveLen" : 14.520000
+						"waveLen" : 15.360000
+					},
+					{
+						"enabled" : true,
+						"amplitude" : 0.015000,
+						"waveDir" : -1.936000,
+						"waveLen" : 2.150000
 					}
 				],
-				"chunk vert count per axis" : 64,
+				"chunk vert count per axis" : 100,
 				"chunk size" : 100.000000,
 				"chunk load radius" : 166.610001,
 				"update speed" : 30.400000,
