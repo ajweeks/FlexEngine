@@ -2,6 +2,9 @@
 ### Flex Engine change log (reverse chronological order)
 
 **2020**
+_May_
+- Make water generation infinite & vastly more optimial (utilize SIMD & multithreading)
+
 _April_
 - Fix water generation & center around camera
 - Add directory watch to auto-recompile shaders on file modification for lightning-fast iteration times

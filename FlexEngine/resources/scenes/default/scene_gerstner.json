@@ -15,9 +15,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "820.540, 129.559, 286.588",
-			"pitch" : -0.133590,
-			"yaw" : -9.107839
+			"position" : "-81.210, 35.987, -28.103",
+			"pitch" : -0.396576,
+			"yaw" : 0.333156
 		}
 	},
 	"objects" : 
@@ -138,8 +138,8 @@
 				],
 				"chunk vert count per axis" : 100,
 				"chunk size" : 100.000000,
-				"chunk load radius" : 136.830002,
-				"update speed" : 16.700001,
+				"chunk load radius" : 206.020004,
+				"update speed" : 19.700001,
 				"pin center" : true,
 				"pinned center position" : "-11.87, 316.56, 14.48",
 				"wave amplitude lod cutoffs" : 

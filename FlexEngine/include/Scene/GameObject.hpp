@@ -498,36 +498,6 @@ namespace flex
 
 		virtual void DrawImGuiObjects() override;
 
-	private:
-		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
-
-		void OnVertCountChange();
-
-		void UpdateDependentVariables(i32 waveIndex);
-
-		void DiscoverChunks();
-		void UpdateWaveVertexData();
-
-		void UpdateWavesLinear();
-		void UpdateWavesSIMD();
-		glm::vec3 QueryHeightFieldExpensive(const glm::vec3& queryPos);
-		glm::vec3 QueryHeightFieldFromVerts(const glm::vec3& queryPos);
-		void UpdateNormalsForChunk(u32 chunkIdx);
-		void SortWaves();
-		real GetWaveAmplitudeLODCutoffForDistance(real dist);
-		void SortWaveAmplitudeCutoffs();
-
-		i32 chunkVertCountPerAxis = 100;
-		real size = 30.0f;
-		real loadRadius = 35.0f;
-		real updateSpeed = 20.0f;
-		bool bDisableLODs = false;
-
-		MaterialID m_WaveMaterialID;
-
-		std::vector<Pair<real, real>> waveAmplitudeCutoffs;
-
 		struct WaveInfo
 		{
 			bool enabled = true;
@@ -543,6 +513,42 @@ namespace flex
 			real accumOffset = 0.0f;
 		};
 
+	private:
+		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+
+		void OnVertCountChange();
+
+		void UpdateDependentVariables(i32 waveIndex);
+
+		void DiscoverChunks();
+		void UpdateWaveVertexData();
+
+		void UpdateWavesLinear();
+		void UpdateWavesSIMD();
+		glm::vec3 QueryHeightFieldFromVerts(const glm::vec3& queryPos);
+		void UpdateNormalsForChunk(u32 chunkIdx);
+		void SortWaves();
+		real GetWaveAmplitudeLODCutoffForDistance(real dist);
+		void SortWaveAmplitudeCutoffs();
+
+		void ResizeThreadPool(u32 newSize);
+		void AllocThreadData(u32 poolIdx);
+		void FreeThreadData(u32 poolIdx);
+
+		// Returns pool index
+		u32 GetNextFreeThreadData();
+
+		i32 chunkVertCountPerAxis = 100;
+		real size = 30.0f;
+		real loadRadius = 35.0f;
+		real updateSpeed = 20.0f;
+		bool bDisableLODs = false;
+
+		MaterialID m_WaveMaterialID;
+
+		std::vector<Pair<real, real>> waveAmplitudeCutoffs;
+
 		std::vector<WaveInfo> waves;
 
 		std::vector<glm::vec2i> waveChunks;
@@ -556,12 +562,24 @@ namespace flex
 		GameObject* bobber = nullptr;
 		Spring<real> bobberTarget;
 
-		__m128* positionsx_4 = nullptr;
-		__m128* positionsy_4 = nullptr;
-		__m128* positionsz_4 = nullptr;
+		struct ThreadData
+		{
+			__m128* positionsx_4 = nullptr;
+			__m128* positionsy_4 = nullptr;
+			__m128* positionsz_4 = nullptr;
+			std::thread thread;
+			bool bInUse = false;
+		};
 
+		std::vector<ThreadData> threadPool;
 
 	};
+
+	static void UpdateChunkSIMD(i32 chunkVertCountPerAxis, u32 chunkIdx, bool bDisableLODs, const std::vector<GerstnerWave::WaveInfo>& waves,
+		const std::vector<glm::vec2i>& waveChunks, const std::vector<Pair<real, real>>& waveAmplitudeCutoffs, real size,
+		__m128* positionsx_4, __m128* positionsy_4, __m128* positionsz_4, glm::vec3* positions);
+
+	static glm::vec3 QueryHeightFieldExpensive(const glm::vec3& queryPos, const std::vector<GerstnerWave::WaveInfo>& waves);
 
 	class Blocks : public GameObject
 	{
