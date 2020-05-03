@@ -3368,7 +3368,7 @@ namespace flex
 	{
 		glm::vec3 result = queryPos;
 
-		for (WaveInfo& wave : waves)
+		for (const WaveInfo& wave : waves)
 		{
 			if (wave.enabled)
 			{
@@ -3523,7 +3523,7 @@ namespace flex
 				}
 			}
 
-			for (WaveInfo& wave : waves)
+			for (const WaveInfo& wave : waves)
 			{
 				if (wave.enabled)
 				{
@@ -3618,7 +3618,7 @@ namespace flex
 			}
 
 			// Modulate based on waves
-			for (WaveInfo& wave : waves)
+			for (const WaveInfo& wave : waves)
 			{
 				if (wave.enabled)
 				{
@@ -3828,7 +3828,7 @@ namespace flex
 				ImGui::Checkbox(childName.c_str(), &waves[i].enabled);
 
 				std::string aStr = "amplitude" + childName;
-				ImGui::DragFloat(aStr.c_str(), &waves[i].a, 0.01f);
+				bNeedUpdate |= ImGui::DragFloat(aStr.c_str(), &waves[i].a, 0.01f);
 				std::string waveLenStr = "wave len" + childName;
 				bNeedUpdate |= ImGui::DragFloat(waveLenStr.c_str(), &waves[i].waveLen, 0.01f);
 				std::string dirStr = "dir" + childName;
@@ -3840,6 +3840,7 @@ namespace flex
 
 				if (bNeedUpdate)
 				{
+					SortWaves();
 					UpdateDependentVariables(i);
 				}
 
@@ -3885,6 +3886,8 @@ namespace flex
 			gerstnerWaveObj.SetBoolChecked("pin center", m_bPinCenter);
 			gerstnerWaveObj.SetVec3Checked("pinned center position", m_PinnedPos);
 		}
+
+		SortWaves();
 
 		// Init dependent variables
 		for (i32 i = 0; i < (i32)waves.size(); ++i)
@@ -3951,6 +3954,7 @@ namespace flex
 	{
 		waves.push_back({});
 		UpdateDependentVariables((u32)waves.size() - 1);
+		SortWaves();
 	}
 
 	void GerstnerWave::RemoveWave(i32 index)
@@ -3958,7 +3962,17 @@ namespace flex
 		if (index >= 0 && index < (i32)waves.size())
 		{
 			waves.erase(waves.begin() + index);
+			SortWaves();
 		}
+	}
+
+	void GerstnerWave::SortWaves()
+	{
+		std::sort(waves.begin(), waves.end(),
+			[](const WaveInfo& waveA, const WaveInfo& waveB)
+		{
+			return abs(waveA.a) > abs(waveB.a);
+		});
 	}
 
 	Blocks::Blocks(const std::string& name) :

@@ -514,6 +514,7 @@ namespace flex
 		glm::vec3 QueryHeightFieldExpensive(const glm::vec3& queryPos);
 		glm::vec3 QueryHeightFieldFromVerts(const glm::vec3& queryPos);
 		void UpdateNormalsForChunk(u32 chunkIdx);
+		void SortWaves();
 
 		i32 chunkVertCountPerAxis = 100;
 		real size = 30.0f;
