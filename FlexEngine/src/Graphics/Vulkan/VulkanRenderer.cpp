@@ -8027,8 +8027,8 @@ namespace flex
 
 				DrawParticles(commandBuffer);
 
-				bool bUsingGameplayCam = g_CameraManager->CurrentCamera()->bIsGameplayCam;
-				if (g_EngineInstance->IsRenderingEditorObjects() && !bUsingGameplayCam)
+				//bool bUsingGameplayCam = g_CameraManager->CurrentCamera()->bIsGameplayCam;
+				if (g_EngineInstance->IsRenderingEditorObjects())// && !bUsingGameplayCam)
 				{
 					BeginDebugMarkerRegion(commandBuffer, "Editor objects");
 
