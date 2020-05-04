@@ -106,7 +106,7 @@ configuration "x64"
 configuration {}
 
 configuration {}
-	flags { "NoIncrementalLink", "NoEditAndContinue" }
+	flags { "NoIncrementalLink", "NoEditAndContinue", "NoJMC" }
 	includedirs { path.join(SOURCE_DIR, "include") }
 
 	-- Files to include that shouldn't get warnings reported on
@@ -150,7 +150,6 @@ project "Flex"
 	configuration "vs*"
 		flags { "Winmain"}
 		links { "opengl32" }
-
 	configuration "linux*"
 		linkoptions {
 			-- lpthread for shaderc?
