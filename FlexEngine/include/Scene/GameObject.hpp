@@ -513,6 +513,27 @@ namespace flex
 			real accumOffset = 0.0f;
 		};
 
+		struct ThreadData
+		{
+			// General
+			std::vector<GerstnerWave::WaveInfo> const* waves;
+			std::vector<glm::vec2i> const* waveChunks;
+			std::vector<Pair<real, real>> const* waveAmplitudeCutoffs;
+			real size;
+			i32 chunkVertCountPerAxis;
+			u32 chunkIdx;
+			bool bDisableLODs;
+			// Chunk-specific
+			glm::vec3* positions;
+			__m128* positionsx_4 = nullptr;
+			__m128* positionsy_4 = nullptr;
+			__m128* positionsz_4 = nullptr;
+			bool bInUse = false;
+
+			// TEMP: Just being stored here for now
+			std::thread thread;
+		};
+
 	private:
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
 		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
@@ -559,22 +580,11 @@ namespace flex
 		GameObject* bobber = nullptr;
 		Spring<real> bobberTarget;
 
-		struct ThreadData
-		{
-			__m128* positionsx_4 = nullptr;
-			__m128* positionsy_4 = nullptr;
-			__m128* positionsz_4 = nullptr;
-			std::thread thread;
-			bool bInUse = false;
-		};
-
 		std::vector<ThreadData> threadPool;
 
 	};
 
-	static void UpdateChunkSIMD(i32 chunkVertCountPerAxis, u32 chunkIdx, bool bDisableLODs, const std::vector<GerstnerWave::WaveInfo>& waves,
-		const std::vector<glm::vec2i>& waveChunks, const std::vector<Pair<real, real>>& waveAmplitudeCutoffs, real size,
-		__m128* positionsx_4, __m128* positionsy_4, __m128* positionsz_4, glm::vec3* positions);
+	static void UpdateChunkSIMD(GerstnerWave::ThreadData* data);
 
 	static glm::vec3 QueryHeightFieldExpensive(const glm::vec3& queryPos, const std::vector<GerstnerWave::WaveInfo>& waves);
 

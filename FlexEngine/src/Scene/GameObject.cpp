@@ -3644,35 +3644,36 @@ namespace flex
 		{
 #if MULTITHREADED_UPDATE
 			ThreadData& threadData = threadPool[chunkIdx];
-			threadData.bInUse = true;
-			threadData.thread = std::thread(UpdateChunkSIMD, chunkVertCountPerAxis, chunkIdx, bDisableLODs, waves, waveChunks, waveAmplitudeCutoffs, size, threadData.positionsx_4, threadData.positionsy_4, threadData.positionsz_4, nullptr);
 #else
 			ThreadData& threadData = threadPool[0];
-			UpdateChunkSIMD(chunkVertCountPerAxis, chunkIdx, bDisableLODs, waves, waveChunks, waveAmplitudeCutoffs, size, threadData.positionsx_4, threadData.positionsy_4, threadData.positionsz_4, positions);
+#endif
+			threadData.waves = &waves;
+			threadData.waveChunks = &waveChunks;
+			threadData.waveAmplitudeCutoffs = &waveAmplitudeCutoffs;
+			threadData.size = size;
+			threadData.chunkVertCountPerAxis = chunkVertCountPerAxis;
+			threadData.chunkIdx = chunkIdx;
+			threadData.bDisableLODs = bDisableLODs;
+			threadData.bInUse = true;
+
+#if MULTITHREADED_UPDATE
+			threadData.positions = nullptr;
+			threadData.thread = std::thread(UpdateChunkSIMD, &threadData);
+#else
+			threadData.positions = &positions;
+			UpdateChunkSIMD(&threadData);
 			UpdateNormalsForChunk(chunkIdx);
 #endif
 		}
 
 #if MULTITHREADED_UPDATE
 		// Wait for all threads to complete
-		bool bAllComplete = false;
-		while (!bAllComplete)
+		for (u32 chunkIdx = 0; chunkIdx < (u32)waveChunks.size(); ++chunkIdx)
 		{
-			bAllComplete = true;
-			for (u32 chunkIdx = 0; chunkIdx < (u32)waveChunks.size(); ++chunkIdx)
+			if (threadPool[chunkIdx].bInUse)
 			{
-				if (threadPool[chunkIdx].bInUse)
-				{
-					if (threadPool[chunkIdx].thread.joinable())
-					{
-						threadPool[chunkIdx].thread.join();
-						threadPool[chunkIdx].bInUse = false;
-					}
-					else
-					{
-						bAllComplete = false;
-					}
-				}
+				threadPool[chunkIdx].thread.join();
+				threadPool[chunkIdx].bInUse = false;
 			}
 		}
 
@@ -3704,12 +3705,21 @@ namespace flex
 #endif
 	}
 
-	void UpdateChunkSIMD(i32 chunkVertCountPerAxis, u32 chunkIdx, bool bDisableLODs, const std::vector<GerstnerWave::WaveInfo>& waves,
-		const std::vector<glm::vec2i>& waveChunks, const std::vector<Pair<real, real>>& waveAmplitudeCutoffs, real size,
-		__m128* positionsx_4, __m128* positionsy_4, __m128* positionsz_4, glm::vec3* positions)
+	void UpdateChunkSIMD(GerstnerWave::ThreadData* data)
 	{
-#if MULTITHREADED_UPDATE
-		UNREFERENCED_PARAMETER(positions);
+		const std::vector<GerstnerWave::WaveInfo>& waves = *data->waves;
+		const std::vector<glm::vec2i>& waveChunks = *data->waveChunks;
+		const std::vector<Pair<real, real>>& waveAmplitudeCutoffs = *data->waveAmplitudeCutoffs;
+		real size = data->size;
+		i32 chunkVertCountPerAxis = data->chunkVertCountPerAxis;
+		u32 chunkIdx = data->chunkIdx;
+		bool bDisableLODs = data->bDisableLODs;
+
+		__m128* positionsx_4 = data->positionsx_4;
+		__m128* positionsy_4 = data->positionsy_4;
+		__m128* positionsz_4 = data->positionsz_4;
+#if !MULTITHREADED_UPDATE
+		glm::vec3* positions = data->positions;
 #endif
 
 		const i32 vertCountPerChunk = chunkVertCountPerAxis * chunkVertCountPerAxis;
