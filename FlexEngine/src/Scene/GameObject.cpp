@@ -3481,22 +3481,6 @@ namespace flex
 		_mm_free(threadPool[poolIdx].positionsz_4);
 	}
 
-	u32 GerstnerWave::GetNextFreeThreadData()
-	{
-		for (u32 i = 0; i < (u32)threadPool.size(); ++i)
-		{
-			if (!threadPool[i].bInUse)
-			{
-				return i;
-			}
-		}
-
-		// TODO: Evaluate growth rate
-		u32 oldSize = (u32)threadPool.size();
-		ResizeThreadPool((u32)(oldSize * 1.5f));
-		return oldSize;
-	}
-
 	void GerstnerWave::UpdateWaveVertexData()
 	{
 		const i32 vertCountPerChunk = chunkVertCountPerAxis * chunkVertCountPerAxis;

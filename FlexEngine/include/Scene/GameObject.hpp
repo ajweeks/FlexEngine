@@ -536,9 +536,6 @@ namespace flex
 		void AllocThreadData(u32 poolIdx);
 		void FreeThreadData(u32 poolIdx);
 
-		// Returns pool index
-		u32 GetNextFreeThreadData();
-
 		i32 chunkVertCountPerAxis = 100;
 		real size = 30.0f;
 		real loadRadius = 35.0f;
