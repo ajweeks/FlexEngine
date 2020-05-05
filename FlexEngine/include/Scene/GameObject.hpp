@@ -491,6 +491,7 @@ namespace flex
 		virtual void Initialize() override;
 		virtual void PostInitialize() override;
 		virtual void Update() override;
+		virtual void Destroy() override;
 		void AddWave();
 		void RemoveWave(i32 index);
 
@@ -513,7 +514,7 @@ namespace flex
 			real accumOffset = 0.0f;
 		};
 
-		struct ThreadData
+		struct WaveGenInOut
 		{
 			// General
 			std::vector<GerstnerWave::WaveInfo> const* waves;
@@ -529,9 +530,20 @@ namespace flex
 			__m128* positionsy_4 = nullptr;
 			__m128* positionsz_4 = nullptr;
 			bool bInUse = false;
+		};
 
-			// TEMP: Just being stored here for now
-			std::thread thread;
+		using ThreadID = u32;
+
+		//struct Thread
+		//{
+		//	std::thread thread;
+		//	bool bInUse;
+		//};
+
+		struct ThreadData
+		{
+			WaveGenInOut waveGenInOut;
+			ThreadID threadID;
 		};
 
 	private:
@@ -557,6 +569,11 @@ namespace flex
 		void AllocThreadData(u32 poolIdx);
 		void FreeThreadData(u32 poolIdx);
 
+		ThreadData& GetThreadData(u32 threadDataIdx);
+		ThreadID GetNextAvailableThreadID();
+
+		void KickoffThread(ThreadID threadID, void* inData);
+
 		i32 chunkVertCountPerAxis = 100;
 		real size = 30.0f;
 		real loadRadius = 35.0f;
@@ -580,11 +597,39 @@ namespace flex
 		GameObject* bobber = nullptr;
 		Spring<real> bobberTarget;
 
-		std::vector<ThreadData> threadPool;
+		std::vector<struct Thread*> threadPool;
+		std::vector<ThreadData> threadDataPool;
 
 	};
 
-	static void UpdateChunkSIMD(GerstnerWave::ThreadData* data);
+	typedef void (*threadUpdateFunc)(void*);
+
+	struct Thread
+	{
+		threadUpdateFunc updateFunc = nullptr;
+
+		std::thread thread;
+		void* data = nullptr;
+		std::timed_mutex sleeperMutex;
+		bool bSleeping = false;
+
+		std::atomic_bool isLocked;
+		std::atomic_bool isComplete;
+		std::atomic_bool hasTask;
+		std::atomic_bool stopLooping;
+
+		void SetDataAndWake(void* inData);
+		void SetTaskComplete();
+
+		void StartUpdateLoop();
+		void SleepFor(ms time);
+		void Wake();
+
+		void Lock();
+		void Unlock();
+	};
+
+	static void UpdateChunkSIMD(void* inData);
 
 	static glm::vec3 QueryHeightFieldExpensive(const glm::vec3& queryPos, const std::vector<GerstnerWave::WaveInfo>& waves);
 

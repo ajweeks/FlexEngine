@@ -3367,6 +3367,20 @@ namespace flex
 		}
 	}
 
+	void GerstnerWave::Destroy()
+	{
+		GameObject::Destroy();
+
+		for (u32 i = 0; i < (u32)threadPool.size(); ++i)
+		{
+			threadPool[i]->Unlock();
+			threadPool[i]->stopLooping = true;
+			threadPool[i]->thread.join();
+			delete threadPool[i];
+		}
+		threadPool.clear();
+	}
+
 	glm::vec3 QueryHeightFieldExpensive(const glm::vec3& queryPos, const std::vector<GerstnerWave::WaveInfo>& waves)
 	{
 		glm::vec3 result = queryPos;
@@ -3456,10 +3470,15 @@ namespace flex
 		if (newSize > oldSize)
 		{
 			threadPool.resize(newSize);
+			threadDataPool.resize(newSize);
 
 			for (u32 i = oldSize; i < newSize; ++i)
 			{
 				AllocThreadData(i);
+				threadPool[i] = new Thread();
+				threadPool[i]->hasTask = false;
+				threadPool[i]->updateFunc = UpdateChunkSIMD;
+				threadPool[i]->thread = std::thread(&Thread::StartUpdateLoop, threadPool[i]);
 			}
 		}
 	}
@@ -3469,16 +3488,38 @@ namespace flex
 		const u32 vertCountPerChunk = chunkVertCountPerAxis * chunkVertCountPerAxis;
 		const u32 vertCountPerChunkDiv4 = vertCountPerChunk / 4;
 
-		threadPool[poolIdx].positionsx_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
-		threadPool[poolIdx].positionsy_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
-		threadPool[poolIdx].positionsz_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
+		threadDataPool[poolIdx].waveGenInOut.positionsx_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
+		threadDataPool[poolIdx].waveGenInOut.positionsy_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
+		threadDataPool[poolIdx].waveGenInOut.positionsz_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
 	}
 
 	void GerstnerWave::FreeThreadData(u32 poolIdx)
 	{
-		_mm_free(threadPool[poolIdx].positionsx_4);
-		_mm_free(threadPool[poolIdx].positionsy_4);
-		_mm_free(threadPool[poolIdx].positionsz_4);
+		_mm_free(threadDataPool[poolIdx].waveGenInOut.positionsx_4);
+		_mm_free(threadDataPool[poolIdx].waveGenInOut.positionsy_4);
+		_mm_free(threadDataPool[poolIdx].waveGenInOut.positionsz_4);
+	}
+
+	GerstnerWave::ThreadData& GerstnerWave::GetThreadData(u32 threadDataIdx)
+	{
+		return threadDataPool[threadDataIdx];
+	}
+
+	GerstnerWave::ThreadID GerstnerWave::GetNextAvailableThreadID()
+	{
+		for (u32 i = 0; i < (u32)threadPool.size(); ++i)
+		{
+			if (!threadPool[i]->hasTask)
+			{
+				return (ThreadID)i;
+			}
+		}
+
+		// TODO: Revisit growth rate
+		u32 oldSize = (u32)threadPool.size();
+		ResizeThreadPool((u32)(oldSize * 1.5f));
+
+		return (ThreadID)oldSize;
 	}
 
 	void GerstnerWave::UpdateWaveVertexData()
@@ -3643,24 +3684,24 @@ namespace flex
 		for (u32 chunkIdx = 0; chunkIdx < (u32)waveChunks.size(); ++chunkIdx)
 		{
 #if MULTITHREADED_UPDATE
-			ThreadData& threadData = threadPool[chunkIdx];
+			ThreadData& threadData = GetThreadData(chunkIdx);
 #else
-			ThreadData& threadData = threadPool[0];
+			ThreadData& threadData = GetThreadData(0);
 #endif
-			threadData.waves = &waves;
-			threadData.waveChunks = &waveChunks;
-			threadData.waveAmplitudeCutoffs = &waveAmplitudeCutoffs;
-			threadData.size = size;
-			threadData.chunkVertCountPerAxis = chunkVertCountPerAxis;
-			threadData.chunkIdx = chunkIdx;
-			threadData.bDisableLODs = bDisableLODs;
-			threadData.bInUse = true;
+			threadData.threadID = GetNextAvailableThreadID();
+			threadData.waveGenInOut.waves = &waves;
+			threadData.waveGenInOut.waveChunks = &waveChunks;
+			threadData.waveGenInOut.waveAmplitudeCutoffs = &waveAmplitudeCutoffs;
+			threadData.waveGenInOut.size = size;
+			threadData.waveGenInOut.chunkVertCountPerAxis = chunkVertCountPerAxis;
+			threadData.waveGenInOut.chunkIdx = chunkIdx;
+			threadData.waveGenInOut.bDisableLODs = bDisableLODs;
 
 #if MULTITHREADED_UPDATE
-			threadData.positions = nullptr;
-			threadData.thread = std::thread(UpdateChunkSIMD, &threadData);
+			threadData.waveGenInOut.positions = nullptr;
+			KickoffThread(threadData.threadID, &threadData);
 #else
-			threadData.positions = &positions;
+			threadData.waveGenInOut.positions = &positions;
 			UpdateChunkSIMD(&threadData);
 			UpdateNormalsForChunk(chunkIdx);
 #endif
@@ -3668,12 +3709,17 @@ namespace flex
 
 #if MULTITHREADED_UPDATE
 		// Wait for all threads to complete
-		for (u32 chunkIdx = 0; chunkIdx < (u32)waveChunks.size(); ++chunkIdx)
+		bool bAllComplete = false;
+		while (!bAllComplete)
 		{
-			if (threadPool[chunkIdx].bInUse)
+			bAllComplete = true;
+			for (u32 chunkIdx = 0; chunkIdx < (u32)waveChunks.size(); ++chunkIdx)
 			{
-				threadPool[chunkIdx].thread.join();
-				threadPool[chunkIdx].bInUse = false;
+				if (threadPool[chunkIdx]->hasTask && !threadPool[chunkIdx]->isComplete)
+				{
+					bAllComplete = false;
+					break;
+				}
 			}
 		}
 
@@ -3689,9 +3735,9 @@ namespace flex
 					const i32 chunkLocalVertIdxDiv4 = chunkLocalVertIdx / 4;
 
 					glm::vec4 xs, ys, zs;
-					_mm_store_ps(&xs.x, threadPool[chunkIdx].positionsx_4[chunkLocalVertIdxDiv4]);
-					_mm_store_ps(&ys.x, threadPool[chunkIdx].positionsy_4[chunkLocalVertIdxDiv4]);
-					_mm_store_ps(&zs.x, threadPool[chunkIdx].positionsz_4[chunkLocalVertIdxDiv4]);
+					_mm_store_ps(&xs.x, threadDataPool[chunkIdx].waveGenInOut.positionsx_4[chunkLocalVertIdxDiv4]);
+					_mm_store_ps(&ys.x, threadDataPool[chunkIdx].waveGenInOut.positionsy_4[chunkLocalVertIdxDiv4]);
+					_mm_store_ps(&zs.x, threadDataPool[chunkIdx].waveGenInOut.positionsz_4[chunkLocalVertIdxDiv4]);
 
 					positions[vertIdx + 0] = glm::vec3(xs.x, ys.x, zs.x);
 					positions[vertIdx + 1] = glm::vec3(xs.y, ys.y, zs.y);
@@ -3702,24 +3748,38 @@ namespace flex
 
 			UpdateNormalsForChunk(chunkIdx);
 		}
+
+		for (u32 chunkIdx = 0; chunkIdx < (u32)waveChunks.size(); ++chunkIdx)
+		{
+			if (threadPool[chunkIdx]->hasTask)
+			{
+				threadPool[chunkIdx]->SetTaskComplete();
+			}
+		}
 #endif
 	}
 
-	void UpdateChunkSIMD(GerstnerWave::ThreadData* data)
+	void GerstnerWave::KickoffThread(ThreadID threadID, void* inData)
 	{
-		const std::vector<GerstnerWave::WaveInfo>& waves = *data->waves;
-		const std::vector<glm::vec2i>& waveChunks = *data->waveChunks;
-		const std::vector<Pair<real, real>>& waveAmplitudeCutoffs = *data->waveAmplitudeCutoffs;
-		real size = data->size;
-		i32 chunkVertCountPerAxis = data->chunkVertCountPerAxis;
-		u32 chunkIdx = data->chunkIdx;
-		bool bDisableLODs = data->bDisableLODs;
+		threadPool[threadID]->SetDataAndWake(inData);
+	}
 
-		__m128* positionsx_4 = data->positionsx_4;
-		__m128* positionsy_4 = data->positionsy_4;
-		__m128* positionsz_4 = data->positionsz_4;
+	void UpdateChunkSIMD(void* inData)
+	{
+		GerstnerWave::ThreadData* data = (GerstnerWave::ThreadData*)inData;
+		const std::vector<GerstnerWave::WaveInfo>& waves = *data->waveGenInOut.waves;
+		const std::vector<glm::vec2i>& waveChunks = *data->waveGenInOut.waveChunks;
+		const std::vector<Pair<real, real>>& waveAmplitudeCutoffs = *data->waveGenInOut.waveAmplitudeCutoffs;
+		real size = data->waveGenInOut.size;
+		i32 chunkVertCountPerAxis = data->waveGenInOut.chunkVertCountPerAxis;
+		u32 chunkIdx = data->waveGenInOut.chunkIdx;
+		bool bDisableLODs = data->waveGenInOut.bDisableLODs;
+
+		__m128* positionsx_4 = data->waveGenInOut.positionsx_4;
+		__m128* positionsy_4 = data->waveGenInOut.positionsy_4;
+		__m128* positionsz_4 = data->waveGenInOut.positionsz_4;
 #if !MULTITHREADED_UPDATE
-		glm::vec3* positions = data->positions;
+		glm::vec3* positions = data->waveGenInOut.positions;
 #endif
 
 		const i32 vertCountPerChunk = chunkVertCountPerAxis * chunkVertCountPerAxis;
@@ -3905,6 +3965,74 @@ namespace flex
 				normals[vertIdx] = glm::vec3(dX, 2.0f * cellSize, dZ);
 			}
 		}
+	}
+
+	void Thread::SetDataAndWake(void* inData)
+	{
+		assert(!hasTask);
+
+		data = inData;
+		hasTask = true;
+		Wake();
+	}
+
+	void Thread::SetTaskComplete()
+	{
+		assert(hasTask);
+
+		hasTask = false;
+		data = nullptr;
+	}
+
+	void Thread::StartUpdateLoop()
+	{
+		while (!stopLooping)
+		{
+			if (hasTask)
+			{
+				Unlock();
+				isComplete = false;
+				updateFunc(data);
+				isComplete = true;
+				Lock();
+			}
+
+			SleepFor(100000.0f); // Sleep until woken
+		}
+	}
+
+	void Thread::SleepFor(ms time)
+	{
+		if (!bSleeping)
+		{
+			bSleeping = true;
+			if (sleeperMutex.try_lock_for(std::chrono::milliseconds((long long)time)))
+			{
+				bSleeping = false;
+				sleeperMutex.unlock();
+			}
+		}
+	}
+
+	void Thread::Wake()
+	{
+		if (isLocked)
+		{
+			Unlock();
+		}
+	}
+
+	void Thread::Lock()
+	{
+		sleeperMutex.lock();
+		isLocked = true;
+	}
+
+	void Thread::Unlock()
+	{
+		sleeperMutex.unlock();
+		isLocked = false;
+		bSleeping = false;
 	}
 
 	GameObject* GerstnerWave::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
