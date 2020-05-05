@@ -569,7 +569,6 @@ namespace flex
 		void AllocThreadData(u32 poolIdx);
 		void FreeThreadData(u32 poolIdx);
 
-		ThreadData& GetThreadData(u32 threadDataIdx);
 		ThreadID GetNextAvailableThreadID();
 
 		void KickoffThread(ThreadID threadID, void* inData);

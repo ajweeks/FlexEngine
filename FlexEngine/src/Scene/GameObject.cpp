@@ -3500,11 +3500,6 @@ namespace flex
 		_mm_free(threadDataPool[poolIdx].waveGenInOut.positionsz_4);
 	}
 
-	GerstnerWave::ThreadData& GerstnerWave::GetThreadData(u32 threadDataIdx)
-	{
-		return threadDataPool[threadDataIdx];
-	}
-
 	GerstnerWave::ThreadID GerstnerWave::GetNextAvailableThreadID()
 	{
 		for (u32 i = 0; i < (u32)threadPool.size(); ++i)
@@ -3684,9 +3679,9 @@ namespace flex
 		for (u32 chunkIdx = 0; chunkIdx < (u32)waveChunks.size(); ++chunkIdx)
 		{
 #if MULTITHREADED_UPDATE
-			ThreadData& threadData = GetThreadData(chunkIdx);
+			ThreadData& threadData = threadDataPool[chunkIdx];
 #else
-			ThreadData& threadData = GetThreadData(0);
+			ThreadData& threadData = threadDataPool[0];
 #endif
 			threadData.threadID = GetNextAvailableThreadID();
 			threadData.waveGenInOut.waves = &waves;
