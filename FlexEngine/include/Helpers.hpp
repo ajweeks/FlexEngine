@@ -102,6 +102,8 @@ namespace flex
 
 	glm::quat ParseQuat(const std::string& quatStr);
 
+	u32 CountSetBits(u32 bits);
+
 	bool IsNanOrInf(real val);
 	bool IsNanOrInf(const glm::vec2& vec);
 	bool IsNanOrInf(const glm::vec3& vec);

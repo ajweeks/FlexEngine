@@ -510,6 +510,18 @@ namespace flex
 		}
 		UNIT_TEST_END;
 
+		UNIT_TEST(CountSetBitsValid)
+		{
+			EXPECT(CountSetBits(0b00000000), 0);
+			EXPECT(CountSetBits(0b00000001), 1);
+			EXPECT(CountSetBits(0b10000000), 1);
+			EXPECT(CountSetBits(0b01010101), 4);
+			EXPECT(CountSetBits(0b11111111), 8);
+			EXPECT(CountSetBits(0b1111111100000000), 8);
+			EXPECT(CountSetBits(0b1111111111111111), 16);
+		}
+		UNIT_TEST_END;
+
 	public:
 		static void Run()
 		{
@@ -520,7 +532,9 @@ namespace flex
 				ArrayParsesCorrectly, MissingCommaInArrayFailsParse, ComplexFileIsValid,
 				// Math tests
 				RayPlaneIntersectionOriginValid, RayPlaneIntersectionXYValid, RayPlaneIntersectionXY2Valid, RayPlaneIntersectionXY3Valid, MinComponentValid, MaxComponentValid,
-				QuaternionsAreNearlyEqual, QuaternionsAreNotNearlyEqual
+				QuaternionsAreNearlyEqual, QuaternionsAreNotNearlyEqual,
+				// Misc
+				CountSetBitsValid
 			};
 			Print("Running %u tests...\n", (u32)ARRAY_LENGTH(funcs));
 			u32 failedTestCount = 0;

@@ -751,6 +751,22 @@ namespace flex
 		return result;
 	}
 
+	u32 CountSetBits(u32 bits)
+	{
+		u32 LSHIFT = sizeof(u32*) * 8 - 1;
+		u32 bitSetCount = 0;
+		u32 bitTest = (u32)1 << LSHIFT;
+		u32 i;
+
+		for (i = 0; i <= LSHIFT; ++i)
+		{
+			bitSetCount += ((bits & bitTest) ? 1 : 0);
+			bitTest /= 2;
+		}
+
+		return bitSetCount;
+	}
+
 	bool IsNanOrInf(real val)
 	{
 		return isnan(val) || isinf(val);

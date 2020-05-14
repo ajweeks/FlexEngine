@@ -4,6 +4,15 @@
 
 namespace flex
 {
+	struct CPUInfo
+	{
+		u32 logicalProcessorCount;
+		u32 physicalCoreCount;
+		u32 l1CacheCount;
+		u32 l2CacheCount;
+		u32 l3CacheCount;
+	};
+
 	class Platform
 	{
 	public:
@@ -29,6 +38,7 @@ namespace flex
 
 		static void PrintStringToDebuggerConsole(const char* str);
 
+		static u32 GetLogicalProcessorCount();
 
 		// File system helpers
 		static void RetrieveCurrentWorkingDirectory();
@@ -47,6 +57,11 @@ namespace flex
 		// Returns the current year, month, day, hour, minute, & second (YYYY-MM-DD_HH-MM-SS)
 		static std::string GetDateString_YMD();
 		static std::string GetDateString_YMDHMS();
+
+		static CPUInfo cpuInfo;
+
+	private:
+		static void RetrieveCPUInfo();
 
 	};
 

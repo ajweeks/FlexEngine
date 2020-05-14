@@ -40,6 +40,8 @@ namespace flex
 
 	HANDLE g_ConsoleHandle;
 
+	CPUInfo Platform::cpuInfo;
+
 	void Platform::GetConsoleHandle()
 	{
 		g_ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -109,7 +111,7 @@ namespace flex
 				{
 					if (InterlockedCompareExchange(&CompletedWorkItemsLock, 1, 0) == 0)
 					{
-						Print("Thread %u computed ans: %u\n", threadData->num, ans);
+						Print("Thread %u (processor %u) computed ans: %u\n", threadData->num, GetCurrentProcessorNumber(), ans);
 						CompletedWorkItems[CompletedWorkItemsCount].ans = ans;
 						++CompletedWorkItemsCount;
 
@@ -129,7 +131,11 @@ namespace flex
 
 	void Platform::Init()
 	{
-		ThreadHandles.resize(16);
+		RetrieveCPUInfo();
+
+		u32 threadCount = (u32)glm::clamp(((i32)GetLogicalProcessorCount()) - 1, 1, 16);
+
+		ThreadHandles.resize(threadCount);
 		ThreadDatas.resize(ThreadHandles.size());
 		WorkQueue.resize(WorkItems);
 		CompletedWorkItems.resize(WorkItems);
@@ -255,6 +261,11 @@ namespace flex
 	void Platform::PrintStringToDebuggerConsole(const char* str)
 	{
 		OutputDebugString(str);
+	}
+
+	u32 Platform::GetLogicalProcessorCount()
+	{
+		return cpuInfo.logicalProcessorCount;
 	}
 
 	void Platform::RetrieveCurrentWorkingDirectory()
@@ -481,6 +492,117 @@ namespace flex
 			IntToString(time.wSecond, 2);
 
 		return result.str();
+	}
+
+	void Platform::RetrieveCPUInfo()
+	{
+		typedef BOOL(WINAPI* LPFN_GLPI)(PSYSTEM_LOGICAL_PROCESSOR_INFORMATION, PDWORD);
+
+		LPFN_GLPI glpi;
+		BOOL done = FALSE;
+		PSYSTEM_LOGICAL_PROCESSOR_INFORMATION buffer = NULL;
+		PSYSTEM_LOGICAL_PROCESSOR_INFORMATION ptr = NULL;
+
+		cpuInfo = {};
+		cpuInfo.logicalProcessorCount = 0;
+		cpuInfo.physicalCoreCount = 0;
+		cpuInfo.l1CacheCount = 0;
+		cpuInfo.l2CacheCount = 0;
+		cpuInfo.l3CacheCount = 0;
+
+		DWORD returnLength = 0;
+		DWORD numaNodeCount = 0;
+		DWORD processorPackageCount = 0;
+		DWORD byteOffset = 0;
+		PCACHE_DESCRIPTOR Cache;
+
+		glpi = (LPFN_GLPI)GetProcAddress(GetModuleHandle(TEXT("kernel32")), "GetLogicalProcessorInformation");
+		if (glpi == NULL)
+		{
+			PrintError("GetLogicalProcessorInformation is not supported.\n");
+			return;
+		}
+
+		while (!done)
+		{
+			DWORD rc = glpi(buffer, &returnLength);
+
+			if (rc == FALSE)
+			{
+				if (GetLastError() == ERROR_INSUFFICIENT_BUFFER)
+				{
+					if (buffer)
+					{
+						free(buffer);
+					}
+
+					buffer = (PSYSTEM_LOGICAL_PROCESSOR_INFORMATION)malloc(returnLength);
+
+					if (buffer == NULL)
+					{
+						PrintError("Allocation failure in GetLogicalProcessorCount\n");
+						return;
+					}
+				}
+				else
+				{
+					PrintError("Error encountered in GetLogicalProcessorCount: %d\n", GetLastError());
+					return;
+				}
+			}
+			else
+			{
+				done = TRUE;
+			}
+		}
+
+		ptr = buffer;
+
+		while (byteOffset + sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION) <= returnLength)
+		{
+			switch (ptr->Relationship)
+			{
+			case RelationNumaNode:
+				// Non-NUMA systems report a single record of this type.
+				numaNodeCount++;
+				break;
+
+			case RelationProcessorCore:
+				cpuInfo.physicalCoreCount++;
+
+				// A hyperthreaded core supplies more than one logical processor.
+				cpuInfo.logicalProcessorCount += CountSetBits((u32)ptr->ProcessorMask);
+				break;
+
+			case RelationCache:
+				// Cache data is in ptr->Cache, one CACHE_DESCRIPTOR structure for each cache.
+				Cache = &ptr->Cache;
+				if (Cache->Level == 1)
+				{
+					cpuInfo.l1CacheCount++;
+				}
+				else if (Cache->Level == 2)
+				{
+					cpuInfo.l2CacheCount++;
+				}
+				else if (Cache->Level == 3)
+				{
+					cpuInfo.l3CacheCount++;
+				}
+				break;
+
+			case RelationProcessorPackage:
+				// Logical processors share a physical package.
+				processorPackageCount++;
+				break;
+
+			default:
+				PrintError("Unsupported LOGICAL_PROCESSOR_RELATIONSHIP value.\n");
+				break;
+			}
+			byteOffset += sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION);
+			ptr++;
+		}
 	}
 
 	DirectoryWatcher::DirectoryWatcher(const std::string& directory, bool bWatchSubtree) :
