@@ -32,6 +32,8 @@ namespace flex
 #define BACKGROUND_RED       0x0040
 #define BACKGROUND_INTENSITY 0x0080
 
+#define WRITE_BARRIER _WriteBarrier(); _mm_sfence()
+
 	const WORD CONSOLE_COLOR_DEFAULT = 0 | FOREGROUND_INTENSITY;
 	const WORD CONSOLE_COLOR_WARNING = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY;
 	const WORD CONSOLE_COLOR_ERROR = FOREGROUND_RED | FOREGROUND_INTENSITY;
@@ -42,6 +44,126 @@ namespace flex
 	{
 		g_ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
 		SetConsoleTextAttribute(g_ConsoleHandle, CONSOLE_COLOR_DEFAULT);
+	}
+
+	struct ThreadData
+	{
+		u32 num;
+	};
+
+	struct WorkItem
+	{
+		u32 a;
+	};
+
+	struct CompletedWorkItem
+	{
+		u32 ans;
+	};
+
+	const u32 WorkItems = 16;
+	std::vector<HANDLE> ThreadHandles;
+	std::vector<ThreadData> ThreadDatas;
+
+	volatile u32 WorkItemsProcessedLock = 0;
+	volatile u32 WorkItemsProcessed = 0;
+
+	std::vector<WorkItem> WorkQueue;
+
+	volatile u32 CompletedWorkItemsLock = 0;
+	volatile u32 CompletedWorkItemsCount = 0;
+	std::vector<CompletedWorkItem> CompletedWorkItems;
+
+	volatile u32 workCompleteCount = 0;
+
+	DWORD ThreadLoop(void* userData)
+	{
+		ThreadData* threadData = (ThreadData*)userData;
+
+		while (1)
+		{
+			if (WorkItemsProcessed >= WorkItems)
+			{
+				Sleep(1000);
+			}
+
+			WorkItem* work = nullptr;
+			if (WorkItemsProcessed < WorkItems && InterlockedCompareExchange(&WorkItemsProcessedLock, 1, 0) == 0) // Acquire lock
+			{
+				work = &WorkQueue[WorkItemsProcessed++];
+
+				WRITE_BARRIER;
+
+				InterlockedExchange(&WorkItemsProcessedLock, 0);
+			}
+
+			if (work)
+			{
+				u32 ans = work->a;
+				while (ans < 1000000000)
+				{
+					ans = ans + ans;
+				}
+
+				while (1)
+				{
+					if (InterlockedCompareExchange(&CompletedWorkItemsLock, 1, 0) == 0)
+					{
+						Print("Thread %u computed ans: %u\n", threadData->num, ans);
+						CompletedWorkItems[CompletedWorkItemsCount].ans = ans;
+						++CompletedWorkItemsCount;
+
+						WRITE_BARRIER;
+
+						InterlockedExchange(&CompletedWorkItemsLock, 0);
+						break;
+					}
+				}
+
+				InterlockedIncrement(&workCompleteCount);
+			}
+		}
+
+		return 0;
+	}
+
+	void Platform::Init()
+	{
+		ThreadHandles.resize(16);
+		ThreadDatas.resize(ThreadHandles.size());
+		WorkQueue.resize(WorkItems);
+		CompletedWorkItems.resize(WorkItems);
+		for (u32 i = 0; i < (u32)WorkQueue.size(); ++i)
+		{
+			WorkQueue[i].a = i+1;
+		}
+
+		WRITE_BARRIER;
+
+		for (u32 i = 0; i < (u32)ThreadHandles.size(); ++i)
+		{
+			ThreadData* threadData = &ThreadDatas[i];
+			threadData->num = i;
+
+			WRITE_BARRIER;
+
+			ThreadHandles[i] = CreateThread(0, 0, &ThreadLoop, threadData, 0, 0);
+		}
+	}
+
+	void Platform::Update()
+	{
+		static bool bWorkComplete = false;
+		if (!bWorkComplete && workCompleteCount == WorkItems)
+		{
+			bWorkComplete = true;
+			Print("Work complete!\n");
+
+			for (u32 i = 0; i < (u32)CompletedWorkItems.size(); ++i)
+			{
+				Print("%u\n", CompletedWorkItems[i].ans);
+			}
+		}
 	}
 
 	void Platform::SetConsoleTextColor(ConsoleColour colour)

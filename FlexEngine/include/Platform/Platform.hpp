@@ -16,6 +16,9 @@ namespace flex
 			_NONE
 		};
 
+		static void Init();
+		static void Update();
+
 		static void GetConsoleHandle();
 		static void SetConsoleTextColor(ConsoleColour colour);
 
