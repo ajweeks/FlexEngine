@@ -138,15 +138,16 @@ namespace flex
 		}
 		else
 		{
-			static char s_buffer[MAX_CHARS];
+			char buffer[MAX_CHARS];
 
-			vsnprintf(s_buffer, MAX_CHARS, str, argList);
+			vsnprintf(buffer, MAX_CHARS, str, argList);
 
-			std::string s(s_buffer);
+			std::string s(buffer);
 			s[s.size() - 1] = '\n';
+			// TODO: Make thread-safe
 			g_LogBuffer << s;
 
-			std::cout << s_buffer;
+			std::cout << buffer;
 
 			Platform::PrintStringToDebuggerConsole(s.c_str());
 		}
