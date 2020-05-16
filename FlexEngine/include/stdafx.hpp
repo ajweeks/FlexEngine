@@ -44,6 +44,13 @@
 #define NOMINMAX
 
 #ifdef _WINDOWS
+#define WRITE_BARRIER _WriteBarrier(); _mm_sfence()
+#else
+// TODO:
+#error
+#endif
+
+#ifdef _WINDOWS
 #define GLFW_EXPOSE_NATIVE_WIN32
 // TODO(AJ): Add linux expose define?
 #endif

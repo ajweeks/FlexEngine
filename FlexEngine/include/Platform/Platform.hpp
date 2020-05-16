@@ -58,6 +58,12 @@ namespace flex
 		static std::string GetDateString_YMD();
 		static std::string GetDateString_YMDHMS();
 
+		static u32 AtomicIncrement(volatile u32* value);
+		static u32 AtomicCompareExchange(volatile u32* value, u32 exchange, u32 comparand);
+		static u32 AtomicExchange(volatile u32* value, u32 exchange);
+
+		static void SpawnThreads(u32 threadCount, void* entryPoint);
+
 		static CPUInfo cpuInfo;
 
 	private:

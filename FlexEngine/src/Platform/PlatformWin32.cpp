@@ -32,8 +32,6 @@ namespace flex
 #define BACKGROUND_RED       0x0040
 #define BACKGROUND_INTENSITY 0x0080
 
-#define WRITE_BARRIER _WriteBarrier(); _mm_sfence()
-
 	const WORD CONSOLE_COLOR_DEFAULT = 0 | FOREGROUND_INTENSITY;
 	const WORD CONSOLE_COLOR_WARNING = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY;
 	const WORD CONSOLE_COLOR_ERROR = FOREGROUND_RED | FOREGROUND_INTENSITY;
@@ -65,19 +63,19 @@ namespace flex
 
 	const u32 WorkItems = 16;
 	std::vector<HANDLE> ThreadHandles;
-	std::vector<ThreadData> ThreadDatas;
+	//std::vector<ThreadData> ThreadDatas;
 
-	volatile u32 WorkItemsProcessedLock = 0;
-	volatile u32 WorkItemsProcessed = 0;
+	//volatile u32 WorkItemsProcessedLock = 0;
+	//volatile u32 WorkItemsProcessed = 0;
 
-	std::vector<WorkItem> WorkQueue;
+	//std::vector<WorkItem> WorkQueue;
 
-	volatile u32 CompletedWorkItemsLock = 0;
-	volatile u32 CompletedWorkItemsCount = 0;
-	std::vector<CompletedWorkItem> CompletedWorkItems;
+	//volatile u32 CompletedWorkItemsLock = 0;
+	//volatile u32 CompletedWorkItemsCount = 0;
+	//std::vector<CompletedWorkItem> CompletedWorkItems;
 
-	volatile u32 workCompleteCount = 0;
-
+	//volatile u32 workCompleteCount = 0;
+#if 0
 	DWORD ThreadLoop(void* userData)
 	{
 		ThreadData* threadData = (ThreadData*)userData;
@@ -128,48 +126,48 @@ namespace flex
 
 		return 0;
 	}
-
+#endif
 	void Platform::Init()
 	{
 		RetrieveCPUInfo();
+	}
 
-		u32 threadCount = (u32)glm::clamp(((i32)GetLogicalProcessorCount()) - 1, 1, 16);
-
+	void Platform::SpawnThreads(u32 threadCount, void* entryPoint)
+	{
 		ThreadHandles.resize(threadCount);
-		ThreadDatas.resize(ThreadHandles.size());
-		WorkQueue.resize(WorkItems);
-		CompletedWorkItems.resize(WorkItems);
-		for (u32 i = 0; i < (u32)WorkQueue.size(); ++i)
-		{
-			WorkQueue[i].a = i+1;
-		}
+		//ThreadDatas.resize(ThreadHandles.size());
+		//WorkQueue.resize(WorkItems);
+		//CompletedWorkItems.resize(WorkItems);
+		//for (u32 i = 0; i < (u32)WorkQueue.size(); ++i)
+		//{
+			//WorkQueue[i].a = i + 1;
+		//}
 
-		WRITE_BARRIER;
+		//WRITE_BARRIER;
 
 		for (u32 i = 0; i < (u32)ThreadHandles.size(); ++i)
 		{
-			ThreadData* threadData = &ThreadDatas[i];
-			threadData->num = i;
+			//ThreadData* threadData = &ThreadDatas[i];
+			//threadData->num = i;
+			//WRITE_BARRIER;
 
-			WRITE_BARRIER;
-
-			ThreadHandles[i] = CreateThread(0, 0, &ThreadLoop, threadData, 0, 0);
+			ThreadHandles[i] = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)entryPoint, nullptr, 0, 0);
 		}
 	}
 
 	void Platform::Update()
 	{
-		static bool bWorkComplete = false;
-		if (!bWorkComplete && workCompleteCount == WorkItems)
-		{
-			bWorkComplete = true;
-			Print("Work complete!\n");
+		//static bool bWorkComplete = false;
+		//if (!bWorkComplete && workCompleteCount == WorkItems)
+		//{
+			//bWorkComplete = true;
+			//Print("Work complete!\n");
 
-			for (u32 i = 0; i < (u32)CompletedWorkItems.size(); ++i)
-			{
-				Print("%u\n", CompletedWorkItems[i].ans);
-			}
-		}
+			//for (u32 i = 0; i < (u32)CompletedWorkItems.size(); ++i)
+			//{
+				//Print("%u\n", CompletedWorkItems[i].ans);
+			//}
+		//}
 	}
 
 	void Platform::SetConsoleTextColor(ConsoleColour colour)
@@ -492,6 +490,21 @@ namespace flex
 			IntToString(time.wSecond, 2);
 
 		return result.str();
+	}
+
+	u32 Platform::AtomicIncrement(volatile u32* value)
+	{
+		return InterlockedIncrement(value);
+	}
+
+	u32 Platform::AtomicCompareExchange(volatile u32* value, u32 exchange, u32 comparand)
+	{
+		return InterlockedCompareExchange(value, exchange, comparand);
+	}
+
+	u32 Platform::AtomicExchange(volatile u32* value, u32 exchange)
+	{
+		return InterlockedExchange(value, exchange);
 	}
 
 	void Platform::RetrieveCPUInfo()

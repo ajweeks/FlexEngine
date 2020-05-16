@@ -483,6 +483,43 @@ namespace flex
 
 	};
 
+	template<class T>
+	struct ThreadSafeArray
+	{
+		ThreadSafeArray()
+		{
+		}
+
+		explicit ThreadSafeArray<T>(u32 inSize)
+		{
+			size = inSize;
+			t = new T[inSize];
+		}
+
+		~ThreadSafeArray()
+		{
+			delete[] t;
+		}
+
+		volatile T& operator[](u32 index) volatile
+		{
+			return t[index];
+		}
+
+		const volatile T& operator[](u32 index) volatile const
+		{
+			return t[index];
+		}
+
+		u32 Size()volatile const
+		{
+			return size;
+		}
+
+		u32 size;
+		volatile T* t = nullptr;
+	};
+
 	class GerstnerWave : public GameObject
 	{
 	public:
@@ -514,8 +551,9 @@ namespace flex
 			real accumOffset = 0.0f;
 		};
 
-		struct WaveGenInOut
+		struct WaveGenData
 		{
+			// Inputs
 			// General
 			std::vector<GerstnerWave::WaveInfo> const* waves;
 			std::vector<glm::vec2i> const* waveChunks;
@@ -526,10 +564,11 @@ namespace flex
 			bool bDisableLODs;
 			// Chunk-specific
 			glm::vec3* positions;
+
+			// Outputs:
 			__m128* positionsx_4 = nullptr;
 			__m128* positionsy_4 = nullptr;
 			__m128* positionsz_4 = nullptr;
-			bool bInUse = false;
 		};
 
 		using ThreadID = u32;
@@ -540,19 +579,20 @@ namespace flex
 		//	bool bInUse;
 		//};
 
-		struct ThreadData
-		{
-			WaveGenInOut waveGenInOut;
-			ThreadID threadID;
-		};
+		//struct ThreadData
+		//{
+		//	WaveGenData waveGenInOut;
+		//	ThreadID threadID;
+		//};
 
 	private:
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
 		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
 
-		void OnVertCountChange();
-
 		void UpdateDependentVariables(i32 waveIndex);
+
+		void AllocWorkQueueEntry(u32 workQueueIndex);
+		void FreeWorkQueueEntry(u32 workQueueIndex);
 
 		void DiscoverChunks();
 		void UpdateWaveVertexData();
@@ -562,16 +602,8 @@ namespace flex
 		glm::vec3 QueryHeightFieldFromVerts(const glm::vec3& queryPos);
 		void UpdateNormalsForChunk(u32 chunkIdx);
 		void SortWaves();
-		real GetWaveAmplitudeLODCutoffForDistance(real dist);
 		void SortWaveAmplitudeCutoffs();
-
-		void ResizeThreadPool(u32 newSize);
-		void AllocThreadData(u32 poolIdx);
-		void FreeThreadData(u32 poolIdx);
-
-		ThreadID GetNextAvailableThreadID();
-
-		void KickoffThread(ThreadID threadID, void* inData);
+		real GetWaveAmplitudeLODCutoffForDistance(real dist);
 
 		i32 chunkVertCountPerAxis = 100;
 		real size = 30.0f;
@@ -596,39 +628,24 @@ namespace flex
 		GameObject* bobber = nullptr;
 		Spring<real> bobberTarget;
 
-		std::vector<struct Thread*> threadPool;
-		std::vector<ThreadData> threadDataPool;
-
 	};
 
-	typedef void (*threadUpdateFunc)(void*);
+	static volatile u32 workQueueLock = 0;
+	static volatile u32 workQueueEntriesCreated = 0;
+	static volatile u32 workQueueEntriesClaimed = 0;
+	static volatile u32 workQueueEntriesCompleted = 0;
+	static ThreadSafeArray<GerstnerWave::WaveGenData>* workQueue = nullptr;
 
 	struct Thread
 	{
-		threadUpdateFunc updateFunc = nullptr;
-
-		std::thread thread;
+		ThreadHandle threadHandle = InvalidThreadHandle;
 		void* data = nullptr;
-		std::timed_mutex sleeperMutex;
 		bool bSleeping = false;
-
-		std::atomic_bool isLocked;
-		std::atomic_bool isComplete;
-		std::atomic_bool hasTask;
-		std::atomic_bool stopLooping;
-
-		void SetDataAndWake(void* inData);
-		void SetTaskComplete();
-
-		void StartUpdateLoop();
-		void SleepFor(ms time);
-		void Wake();
-
-		void Lock();
-		void Unlock();
 	};
 
-	static void UpdateChunkSIMD(void* inData);
+#define SIMD_WAVES 1
+
+	static u32 ThreadUpdate(void* inData);
 
 	static glm::vec3 QueryHeightFieldExpensive(const glm::vec3& queryPos, const std::vector<GerstnerWave::WaveInfo>& waves);
 

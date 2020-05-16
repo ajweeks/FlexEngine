@@ -211,6 +211,8 @@ namespace flex
 
 		m_FrameTimes.resize(256);
 
+		Platform::Init();
+
 		CreateWindowAndRenderer();
 
 		g_Editor = new Editor();
@@ -334,8 +336,6 @@ namespace flex
 		m_ConsoleCommands.emplace_back("reload.skybox", []() { g_Renderer->ReloadSkybox(true); });
 		m_ConsoleCommands.emplace_back("select.all", []() { g_Editor->SelectAll(); });
 		m_ConsoleCommands.emplace_back("select.none", []() { g_Editor->SelectNone(); });
-
-		Platform::Init();
 	}
 
 	AudioSourceID FlexEngine::GetAudioSourceID(SoundEffect effect)
