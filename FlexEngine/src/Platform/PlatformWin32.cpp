@@ -127,6 +127,7 @@ namespace flex
 		return 0;
 	}
 #endif
+
 	void Platform::Init()
 	{
 		RetrieveCPUInfo();
@@ -153,6 +154,11 @@ namespace flex
 
 			ThreadHandles[i] = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)entryPoint, nullptr, 0, 0);
 		}
+	}
+
+	void Platform::YieldProcessor()
+	{
+		::YieldProcessor();
 	}
 
 	void Platform::Update()

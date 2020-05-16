@@ -63,6 +63,7 @@ namespace flex
 		static u32 AtomicExchange(volatile u32* value, u32 exchange);
 
 		static void SpawnThreads(u32 threadCount, void* entryPoint);
+		static void YieldProcessor();
 
 		static CPUInfo cpuInfo;
 

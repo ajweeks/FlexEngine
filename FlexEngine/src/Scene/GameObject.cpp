@@ -3680,7 +3680,7 @@ namespace flex
 		// Wait for all threads to complete
 		while (workQueueEntriesCompleted != workQueueEntriesCreated)
 		{
-			Sleep(0.1f);
+			Platform::YieldProcessor();
 		}
 
 		// Read back SIMD vars into standard format
