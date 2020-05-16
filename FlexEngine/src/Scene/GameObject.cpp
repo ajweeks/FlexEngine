@@ -3680,7 +3680,7 @@ namespace flex
 		// Wait for all threads to complete
 		while (workQueueEntriesCompleted != workQueueEntriesCreated)
 		{
-			// Spin lock
+			Sleep(0.1f);
 		}
 
 		// Read back SIMD vars into standard format
@@ -3879,6 +3879,10 @@ namespace flex
 				WRITE_BARRIER;
 
 				Platform::AtomicIncrement(&workQueueEntriesCompleted);
+			}
+			else
+			{
+				Sleep(1.5f);
 			}
 		}
 	}
