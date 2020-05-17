@@ -3319,6 +3319,8 @@ namespace flex
 		m_VertexBufferCreateInfo = {};
 		m_VertexBufferCreateInfo.attributes = g_Renderer->GetShader(g_Renderer->GetMaterial(m_WaveMaterialID).shaderID).vertexAttributes;
 
+		avgWaveUpdateTime = RollingAverage<ms>(128, SamplingType::LINEAR);
+
 		for (u32 i = 0; i < workQueue->Size(); ++i)
 		{
 			AllocWorkQueueEntry(i);
@@ -3346,6 +3348,11 @@ namespace flex
 
 	void GerstnerWave::Update()
 	{
+		if (!m_bVisible)
+		{
+			return;
+		}
+
 		PROFILE_AUTO("Gerstner update");
 
 		for (WaveInfo& wave : waves)
@@ -3526,8 +3533,6 @@ namespace flex
 			m_VertexBufferCreateInfo.extraVec4s.resize(vertCount);
 		}
 
-		static RollingAverage<ms> avgWaveUpdateTime(256);
-
 		{
 			PROFILE_AUTO("Update waves");
 #if SIMD_WAVES
@@ -3545,7 +3550,6 @@ namespace flex
 		{
 			avgWaveUpdateTime.AddValue(waveTime);
 		}
-		Print("%.2f\n", avgWaveUpdateTime.currentAverage);
 	}
 
 	void GerstnerWave::UpdateWavesLinear()
@@ -3882,11 +3886,10 @@ namespace flex
 			}
 			else
 			{
-				Sleep(1.5f);
+				Sleep(2);
 			}
 		}
 	}
-
 
 	void GerstnerWave::UpdateNormalsForChunk(u32 chunkIdx)
 	{
@@ -3936,6 +3939,21 @@ namespace flex
 		ImGui::Text("Loaded chunks: %d", (u32)waveChunks.size());
 
 		ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.95f, 1.0f), "Gerstner");
+
+		{
+			ImVec2 p = ImGui::GetCursorScreenPos();
+
+			real width = 300.0f;
+			real height = 100.0f;
+			real minMS = 0.0f;
+			real maxMS = 40.0f;
+			p.y += (1.0f - avgWaveUpdateTime.currentAverage / (maxMS - minMS)) * height;
+			ImGui::GetWindowDrawList()->AddLine(p, ImVec2(p.x + width, p.y), IM_COL32(240, 220, 20, 255), 1.0f);
+
+			ImGui::PlotLines("", avgWaveUpdateTime.prevValues.data(), (u32)avgWaveUpdateTime.prevValues.size(), 0, 0, minMS, maxMS, ImVec2(width, height));
+
+			ImGui::Text("%.2fms", avgWaveUpdateTime.currentAverage);
+		}
 
 		ImGui::DragFloat("Loaded distance", &loadRadius, 0.01f);
 		if (ImGui::DragFloat("Update speed", &updateSpeed, 0.1f))

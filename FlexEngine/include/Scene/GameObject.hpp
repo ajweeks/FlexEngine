@@ -628,6 +628,8 @@ namespace flex
 		GameObject* bobber = nullptr;
 		Spring<real> bobberTarget;
 
+		RollingAverage<ms> avgWaveUpdateTime;
+
 	};
 
 	static volatile u32 workQueueLock = 0;
