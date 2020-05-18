@@ -3646,6 +3646,16 @@ namespace flex
 
 	void GerstnerWave::UpdateWavesSIMD()
 	{
+		if (waveChunks.size() > workQueue->Size())
+		{
+			for (u32 i = 0; i < workQueue->Size(); ++i)
+			{
+				FreeWorkQueueEntry(i);
+			}
+			delete workQueue;
+			workQueue = new ThreadSafeArray<WaveGenData>((u32)(waveChunks.size() * 1.2f));
+		}
+
 		workQueueEntriesCompleted = 0;
 		workQueueEntriesCreated = 0;
 		WRITE_BARRIER;
