@@ -3768,13 +3768,13 @@ namespace flex
 
 				const i32 vertCountPerChunk = chunkVertCountPerAxis * chunkVertCountPerAxis;
 
-				__m128 vertCountMin1_4 = _mm_set1_ps((real)(chunkVertCountPerAxis - 1));
-				__m128 size_4 = _mm_set1_ps(size);
+				__m128 vertCountMin1_4 = _mm_set_ps1((real)(chunkVertCountPerAxis - 1));
+				__m128 size_4 = _mm_set_ps1(size);
 
 				const glm::vec2 chunkCenter((waveChunks[chunkIdx].x - 0.5f) * size, (waveChunks[chunkIdx].y - 0.5f) * size);
-				__m128 chunkCenterX_4 = _mm_set1_ps(chunkCenter.x);
+				__m128 chunkCenterX_4 = _mm_set_ps1(chunkCenter.x);
 				__m128 chunkCenterY_4 = _mm_setzero_ps();
-				__m128 chunkCenterZ_4 = _mm_set1_ps(chunkCenter.y);
+				__m128 chunkCenterZ_4 = _mm_set_ps1(chunkCenter.y);
 
 				real amplitudeLODCutoff = 0.0f;
 				if (!bDisableLODs)
@@ -3793,7 +3793,7 @@ namespace flex
 				// Positions verts on flat plane
 				for (i32 z = 0; z < chunkVertCountPerAxis; ++z)
 				{
-					__m128 zIdx_4 = _mm_set1_ps((real)z);
+					__m128 zIdx_4 = _mm_set_ps1((real)z);
 
 					for (i32 x = 0; x < chunkVertCountPerAxis; x += 4)
 					{
@@ -3819,13 +3819,13 @@ namespace flex
 						const glm::vec2 waveVec = glm::vec2(wave.waveDirCos, wave.waveDirSin) * wave.waveVecMag;
 						const glm::vec2 waveVecN = glm::normalize(waveVec);
 
-						__m128 accumOffset_4 = _mm_set1_ps(wave.accumOffset);
-						__m128 negWaveVecNX_4 = _mm_set1_ps(-waveVecN.x);
-						__m128 negWaveVecNZ_4 = _mm_set1_ps(-waveVecN.y);
-						__m128 waveA_4 = _mm_set1_ps(wave.a);
+						__m128 accumOffset_4 = _mm_set_ps1(wave.accumOffset);
+						__m128 negWaveVecNX_4 = _mm_set_ps1(-waveVecN.x);
+						__m128 negWaveVecNZ_4 = _mm_set_ps1(-waveVecN.y);
+						__m128 waveA_4 = _mm_set_ps1(wave.a);
 
-						__m128 waveVecX_4 = _mm_set1_ps(waveVec.x);
-						__m128 waveVecZ_4 = _mm_set1_ps(waveVec.y);
+						__m128 waveVecX_4 = _mm_set_ps1(waveVec.x);
+						__m128 waveVecZ_4 = _mm_set_ps1(waveVec.y);
 
 						for (i32 z = 0; z < chunkVertCountPerAxis; ++z)
 						{
