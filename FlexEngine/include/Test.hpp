@@ -522,51 +522,6 @@ namespace flex
 		}
 		UNIT_TEST_END;
 
-		UNIT_TEST(FastSinCosValid)
-		{
-			{
-				glm::vec4 input(1.0f, 2.0f, 3.0f, 4.0f);
-
-				__m128 s, c;
-				sincos_ps_fast(_mm_load_ps(&input.x), &s, &c);
-				glm::vec4 sv, cv;
-				_mm_store_ps(&sv.x, s);
-				_mm_store_ps(&cv.x, c);
-
-				glm::vec4 sv_e(sin(input[0]), sin(input[1]), sin(input[2]), sin(input[3]));
-				glm::vec4 cv_e(cos(input[0]), cos(input[1]), cos(input[2]), cos(input[3]));
-
-				bool result = NearlyEquals(sv, sv_e, 0.001f);
-				EXPECT(result, true);
-
-				result = NearlyEquals(cv, cv_e, 0.001f);
-				EXPECT(result, true);
-			}
-
-			{
-				glm::vec4 input(0.0f, -1.0f, 999.0f, 0.0f);
-
-				__m128 s, c;
-				sincos_ps_fast(_mm_load_ps(&input.x), &s, &c);
-				glm::vec4 sv, cv;
-				_mm_store_ps(&sv.x, s);
-				_mm_store_ps(&cv.x, c);
-
-				glm::vec4 sv_e(sin(input[0]), sin(input[1]), sin(input[2]), sin(input[3]));
-				glm::vec4 cv_e(cos(input[0]), cos(input[1]), cos(input[2]), cos(input[3]));
-
-				bool result = NearlyEquals(sv, sv_e, 0.001f);
-				EXPECT(result, true);
-
-				result = NearlyEquals(cv, cv_e, 0.001f);
-				EXPECT(result, true);
-
-				result = NearlyEquals(cv[0], cv[3], 0.00001f);
-				EXPECT(result, true);
-			}
-		}
-		UNIT_TEST_END;
-
 	public:
 		static void Run()
 		{
@@ -579,7 +534,7 @@ namespace flex
 				RayPlaneIntersectionOriginValid, RayPlaneIntersectionXYValid, RayPlaneIntersectionXY2Valid, RayPlaneIntersectionXY3Valid, MinComponentValid, MaxComponentValid,
 				QuaternionsAreNearlyEqual, QuaternionsAreNotNearlyEqual,
 				// Misc
-				CountSetBitsValid, FastSinCosValid
+				CountSetBitsValid
 			};
 			Print("Running %u tests...\n", (u32)ARRAY_LENGTH(funcs));
 			u32 failedTestCount = 0;
