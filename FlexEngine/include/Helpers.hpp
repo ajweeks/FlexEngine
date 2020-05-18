@@ -241,6 +241,8 @@ namespace flex
 
 	bool SaveImage(const std::string& absoluteFilePath, ImageFormat imageFormat, i32 width, i32 height, i32 channelCount, u8* data, bool bFlipVertically = false);
 
+	void sincos_ps_fast(__m128 x, __m128* s, __m128* c);
+
 	template<class T>
 	inline typename std::vector<T>::const_iterator Find(const std::vector<T>& vec, const T& t)
 	{

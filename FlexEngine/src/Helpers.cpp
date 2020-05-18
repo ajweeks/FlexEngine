@@ -26,6 +26,28 @@ IGNORE_WARNINGS_POP
 
 static const char* SEPARATOR_STR = ", ";
 
+#define set1_ps_hex(x) _mm_castsi128_ps(_mm_set1_epi32(x))
+
+static const __m128 _ps_1 = _mm_set1_ps(1.f);
+static const __m128 _ps_0p5 = _mm_set1_ps(0.5f);
+static const __m128 _ps_sign_mask = set1_ps_hex(0x80000000);
+
+static const __m128i _pi32_1 = _mm_set1_epi32(1);
+static const __m128i _pi32_inv1 = _mm_set1_epi32(~1);
+static const __m128i _pi32_2 = _mm_set1_epi32(2);
+static const __m128i _pi32_4 = _mm_set1_epi32(4);
+
+static const __m128 _ps_minus_cephes_DP1 = _mm_set1_ps(-0.78515625f);
+static const __m128 _ps_minus_cephes_DP2 = _mm_set1_ps(-2.4187564849853515625e-4f);
+static const __m128 _ps_minus_cephes_DP3 = _mm_set1_ps(-3.77489497744594108e-8f);
+static const __m128 _ps_sincof_p0 = _mm_set1_ps(-1.9515295891E-4f);
+static const __m128 _ps_sincof_p1 = _mm_set1_ps(8.3321608736E-3f);
+static const __m128 _ps_sincof_p2 = _mm_set1_ps(-1.6666654611E-1f);
+static const __m128 _ps_coscof_p0 = _mm_set1_ps(2.443315711809948E-005f);
+static const __m128 _ps_coscof_p1 = _mm_set1_ps(-1.388731625493765E-003f);
+static const __m128 _ps_coscof_p2 = _mm_set1_ps(4.166664568298827E-002f);
+static const __m128 _ps_cephes_FOPI = _mm_set1_ps(1.27323954473516f);
+
 namespace flex
 {
 	static const real UnitializedMemoryFloat = -431602080.0f;
@@ -1488,6 +1510,88 @@ namespace flex
 		}
 
 		return bResult;
+	}
+
+	// This function originally taken from http://gruntthepeon.free.fr/ssemath/sse_mathfun.h
+	void sincos_ps_fast(__m128 x, __m128* s, __m128* c)
+	{
+		/* extract the sign bit (upper one) */
+		__m128 sign_bit_sin = _mm_and_ps(x, _ps_sign_mask);
+		/* take the absolute value */
+		x = _mm_xor_ps(x, sign_bit_sin);
+
+		/* scale by 4/Pi */
+		__m128 y = _mm_mul_ps(x, _ps_cephes_FOPI);
+
+		/* store the integer part of y in emm2 */
+		__m128i emm2 = _mm_cvttps_epi32(y);
+
+		/* j=(j+1) & (~1) (see the cephes sources) */
+		emm2 = _mm_add_epi32(emm2, _pi32_1);
+		emm2 = _mm_and_si128(emm2, _pi32_inv1);
+		y = _mm_cvtepi32_ps(emm2);
+
+		__m128i emm4 = emm2;
+
+		/* get the swap sign flag for the sine */
+		__m128i emm0 = _mm_and_si128(emm2, _pi32_4);
+		emm0 = _mm_slli_epi32(emm0, 29);
+		__m128 swap_sign_bit_sin = _mm_castsi128_ps(emm0);
+
+		/* get the polynom selection mask for the sine*/
+		emm2 = _mm_and_si128(emm2, _pi32_2);
+		emm2 = _mm_cmpeq_epi32(emm2, _mm_setzero_si128());
+		__m128 poly_mask = _mm_castsi128_ps(emm2);
+		/* The magic pass: "Extended precision modular arithmetic"
+		   x = ((x - y * DP1) - y * DP2) - y * DP3; */
+		__m128 xmm1 = _mm_mul_ps(y, _ps_minus_cephes_DP1);
+		__m128 xmm2 = _mm_mul_ps(y, _ps_minus_cephes_DP2);
+		__m128 xmm3 = _mm_mul_ps(y, _ps_minus_cephes_DP3);
+		x = _mm_add_ps(_mm_add_ps(x, xmm1), _mm_add_ps(xmm2, xmm3));
+
+		emm4 = _mm_sub_epi32(emm4, _pi32_2);
+		emm4 = _mm_andnot_si128(emm4, _pi32_4);
+		emm4 = _mm_slli_epi32(emm4, 29);
+		__m128 sign_bit_cos = _mm_castsi128_ps(emm4);
+
+		sign_bit_sin = _mm_xor_ps(sign_bit_sin, swap_sign_bit_sin);
+
+		/* Evaluate the first polynom  (0 <= x <= Pi/4) */
+		__m128 z = _mm_mul_ps(x, x);
+		y = _ps_coscof_p0;
+
+		y = _mm_mul_ps(y, z);
+		y = _mm_add_ps(y, _ps_coscof_p1);
+		y = _mm_mul_ps(y, z);
+		y = _mm_add_ps(y, _ps_coscof_p2);
+		y = _mm_mul_ps(y, _mm_mul_ps(z, z));
+		__m128 tmp = _mm_mul_ps(z, _ps_0p5);
+		y = _mm_sub_ps(y, tmp);
+		y = _mm_add_ps(y, _ps_1);
+
+		/* Evaluate the second polynom  (Pi/4 <= x <= 0) */
+
+		__m128 y2 = _ps_sincof_p0;
+		y2 = _mm_mul_ps(y2, z);
+		y2 = _mm_add_ps(y2, _ps_sincof_p1);
+		y2 = _mm_mul_ps(y2, z);
+		y2 = _mm_add_ps(y2, _ps_sincof_p2);
+		y2 = _mm_mul_ps(y2, _mm_mul_ps(z, x));
+		y2 = _mm_add_ps(y2, x);
+
+		/* select the correct result from the two polynoms */
+		xmm3 = poly_mask;
+		__m128 ysin2 = _mm_and_ps(xmm3, y2);
+		__m128 ysin1 = _mm_andnot_ps(xmm3, y);
+		y2 = _mm_sub_ps(y2, ysin2);
+		y = _mm_sub_ps(y, ysin1);
+
+		xmm1 = _mm_add_ps(ysin1, ysin2);
+		xmm2 = _mm_add_ps(y, y2);
+
+		/* update the sign */
+		*s = _mm_xor_ps(xmm1, sign_bit_sin);
+		*c = _mm_xor_ps(xmm2, sign_bit_cos);
 	}
 
 	bool Vec2iCompare::operator()(const glm::vec2i& lhs, const glm::vec2i& rhs) const
