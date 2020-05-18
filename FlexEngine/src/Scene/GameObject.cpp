@@ -3743,6 +3743,7 @@ namespace flex
 					WRITE_BARRIER;
 
 					assert(workQueueEntriesClaimed <= workQueueEntriesCreated);
+					assert(workQueueEntriesClaimed < workQueue->Size());
 				}
 
 				u32 p = Platform::AtomicExchange(&workQueueLock, 0);
@@ -3762,6 +3763,8 @@ namespace flex
 				__m128* positionsx_4 = work->positionsx_4;
 				__m128* positionsy_4 = work->positionsy_4;
 				__m128* positionsz_4 = work->positionsz_4;
+
+				assert(positionsx_4 != nullptr);
 
 				const i32 vertCountPerChunk = chunkVertCountPerAxis * chunkVertCountPerAxis;
 
@@ -3957,7 +3960,7 @@ namespace flex
 			real height = 100.0f;
 			real minMS = 0.0f;
 			real maxMS = 40.0f;
-			p.y += (1.0f - avgWaveUpdateTime.currentAverage / (maxMS - minMS)) * height;
+			p.y += glm::clamp((1.0f - avgWaveUpdateTime.currentAverage / (maxMS - minMS)), 0.0f, 1.0f) * height;
 			ImGui::GetWindowDrawList()->AddLine(p, ImVec2(p.x + width, p.y), IM_COL32(240, 220, 20, 255), 1.0f);
 
 			ImGui::PlotLines("", avgWaveUpdateTime.prevValues.data(), (u32)avgWaveUpdateTime.prevValues.size(), 0, 0, minMS, maxMS, ImVec2(width, height));

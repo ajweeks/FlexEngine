@@ -1204,6 +1204,11 @@ namespace flex
 		mesh->LoadFromFile(RESOURCE("meshes/sphere.glb"), m_TransformGizmoMatXID);
 		m_TestShape->GetTransform()->Scale(0.5f);
 
+
+		m_TestShape->SetVisible(false);
+
+
+
 		m_TransformGizmo = new GameObject("Transform gizmo", GameObjectType::_NONE);
 
 		u32 gizmoRBFlags = ((u32)PhysicsFlag::TRIGGER) | ((u32)PhysicsFlag::UNSELECTABLE);

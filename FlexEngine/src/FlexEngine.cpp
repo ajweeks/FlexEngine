@@ -623,6 +623,7 @@ namespace flex
 					}
 				}
 
+#if 0
 				btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
 				for (i32 i = 0; i < (i32)m_TestSprings.size(); ++i)
 				{
@@ -630,6 +631,7 @@ namespace flex
 					real t = (real)i / (real)m_TestSprings.size();
 					debugDrawer->drawSphere(ToBtVec3(m_TestSprings[i].pos), (1.0f - t + 0.1f) * 0.5f, btVector3(0.5f - 0.3f * t, 0.8f - 0.4f * t, 0.6f - 0.2f * t));
 				}
+#endif
 
 				g_Window->Update();
 
