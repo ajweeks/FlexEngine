@@ -26,7 +26,6 @@ namespace flex
 		};
 
 		static void Init();
-		static void Update();
 
 		static void GetConsoleHandle();
 		static void SetConsoleTextColor(ConsoleColour colour);
@@ -62,8 +61,15 @@ namespace flex
 		static u32 AtomicCompareExchange(volatile u32* value, u32 exchange, u32 comparand);
 		static u32 AtomicExchange(volatile u32* value, u32 exchange);
 
-		static void SpawnThreads(u32 threadCount, void* entryPoint);
+		static void JoinThreads();
+		static void SpawnThreads(u32 threadCount, void* entryPoint, void* userData);
 		static void YieldProcessor();
+
+		static void* InitCriticalSection();
+		static void FreeCriticalSection(void* criticalSection);
+		static void EnterCriticalSection(void* criticalSection);
+		static void LeaveCriticalSection(void* criticalSection);
+
 
 		static CPUInfo cpuInfo;
 

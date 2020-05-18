@@ -520,6 +520,12 @@ namespace flex
 		volatile T* t = nullptr;
 	};
 
+	struct ThreadData
+	{
+		void* criticalSection = nullptr;
+		volatile bool running = true;
+	};
+
 	class GerstnerWave : public GameObject
 	{
 	public:
@@ -611,6 +617,8 @@ namespace flex
 		real updateSpeed = 20.0f;
 		bool bDisableLODs = false;
 
+		void* criticalSection = nullptr;
+
 		MaterialID m_WaveMaterialID;
 
 		std::vector<Pair<real, real>> waveAmplitudeCutoffs;
@@ -630,6 +638,8 @@ namespace flex
 
 		RollingAverage<ms> avgWaveUpdateTime;
 
+		ThreadData threadUserData;
+
 	};
 
 	static volatile u32 workQueueLock = 0;
@@ -637,13 +647,6 @@ namespace flex
 	static volatile u32 workQueueEntriesClaimed = 0;
 	static volatile u32 workQueueEntriesCompleted = 0;
 	static ThreadSafeArray<GerstnerWave::WaveGenData>* workQueue = nullptr;
-
-	struct Thread
-	{
-		ThreadHandle threadHandle = InvalidThreadHandle;
-		void* data = nullptr;
-		bool bSleeping = false;
-	};
 
 #define SIMD_WAVES 1
 

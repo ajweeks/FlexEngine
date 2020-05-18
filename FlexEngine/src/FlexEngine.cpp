@@ -526,8 +526,6 @@ namespace flex
 			{
 				PROFILE_BEGIN("Update");
 
-				Platform::Update();
-
 				const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 				if (frameBufferSize.x == 0 || frameBufferSize.y == 0)
 				{

@@ -61,98 +61,29 @@ namespace flex
 		u32 ans;
 	};
 
-	const u32 WorkItems = 16;
 	std::vector<HANDLE> ThreadHandles;
-	//std::vector<ThreadData> ThreadDatas;
-
-	//volatile u32 WorkItemsProcessedLock = 0;
-	//volatile u32 WorkItemsProcessed = 0;
-
-	//std::vector<WorkItem> WorkQueue;
-
-	//volatile u32 CompletedWorkItemsLock = 0;
-	//volatile u32 CompletedWorkItemsCount = 0;
-	//std::vector<CompletedWorkItem> CompletedWorkItems;
-
-	//volatile u32 workCompleteCount = 0;
-#if 0
-	DWORD ThreadLoop(void* userData)
-	{
-		ThreadData* threadData = (ThreadData*)userData;
-
-		while (1)
-		{
-			if (WorkItemsProcessed >= WorkItems)
-			{
-				Sleep(1000);
-			}
-
-			WorkItem* work = nullptr;
-			if (WorkItemsProcessed < WorkItems && InterlockedCompareExchange(&WorkItemsProcessedLock, 1, 0) == 0) // Acquire lock
-			{
-				work = &WorkQueue[WorkItemsProcessed++];
-
-				WRITE_BARRIER;
-
-				InterlockedExchange(&WorkItemsProcessedLock, 0);
-			}
-
-			if (work)
-			{
-				u32 ans = work->a;
-				while (ans < 1000000000)
-				{
-					ans = ans + ans;
-				}
-
-				while (1)
-				{
-					if (InterlockedCompareExchange(&CompletedWorkItemsLock, 1, 0) == 0)
-					{
-						Print("Thread %u (processor %u) computed ans: %u\n", threadData->num, GetCurrentProcessorNumber(), ans);
-						CompletedWorkItems[CompletedWorkItemsCount].ans = ans;
-						++CompletedWorkItemsCount;
-
-						WRITE_BARRIER;
-
-						InterlockedExchange(&CompletedWorkItemsLock, 0);
-						break;
-					}
-				}
-
-				InterlockedIncrement(&workCompleteCount);
-			}
-		}
-
-		return 0;
-	}
-#endif
 
 	void Platform::Init()
 	{
 		RetrieveCPUInfo();
 	}
 
-	void Platform::SpawnThreads(u32 threadCount, void* entryPoint)
+	void Platform::JoinThreads()
+	{
+		for (u32 i = 0; i < (u32)ThreadHandles.size(); ++i)
+		{
+			WaitForSingleObject(ThreadHandles[i], INFINITE);
+		}
+		ThreadHandles.clear();
+	}
+
+	void Platform::SpawnThreads(u32 threadCount, void* entryPoint, void* userData)
 	{
 		ThreadHandles.resize(threadCount);
-		//ThreadDatas.resize(ThreadHandles.size());
-		//WorkQueue.resize(WorkItems);
-		//CompletedWorkItems.resize(WorkItems);
-		//for (u32 i = 0; i < (u32)WorkQueue.size(); ++i)
-		//{
-			//WorkQueue[i].a = i + 1;
-		//}
-
-		//WRITE_BARRIER;
 
 		for (u32 i = 0; i < (u32)ThreadHandles.size(); ++i)
 		{
-			//ThreadData* threadData = &ThreadDatas[i];
-			//threadData->num = i;
-			//WRITE_BARRIER;
-
-			ThreadHandles[i] = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)entryPoint, nullptr, 0, 0);
+			ThreadHandles[i] = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)entryPoint, userData, 0, 0);
 		}
 	}
 
@@ -161,19 +92,26 @@ namespace flex
 		::YieldProcessor();
 	}
 
-	void Platform::Update()
+	void* Platform::InitCriticalSection()
 	{
-		//static bool bWorkComplete = false;
-		//if (!bWorkComplete && workCompleteCount == WorkItems)
-		//{
-			//bWorkComplete = true;
-			//Print("Work complete!\n");
+		CRITICAL_SECTION* criticalSection = new CRITICAL_SECTION();
+		InitializeCriticalSection(criticalSection);
+		return criticalSection;
+	}
 
-			//for (u32 i = 0; i < (u32)CompletedWorkItems.size(); ++i)
-			//{
-				//Print("%u\n", CompletedWorkItems[i].ans);
-			//}
-		//}
+	void Platform::FreeCriticalSection(void* criticalSection)
+	{
+		delete (CRITICAL_SECTION*)criticalSection;
+	}
+
+	void Platform::EnterCriticalSection(void* criticalSection)
+	{
+		::EnterCriticalSection((CRITICAL_SECTION*)criticalSection);
+	}
+
+	void Platform::LeaveCriticalSection(void* criticalSection)
+	{
+		::LeaveCriticalSection((CRITICAL_SECTION*)criticalSection);
 	}
 
 	void Platform::SetConsoleTextColor(ConsoleColour colour)

@@ -3321,6 +3321,8 @@ namespace flex
 
 		avgWaveUpdateTime = RollingAverage<ms>(128, SamplingType::LINEAR);
 
+		criticalSection = Platform::InitCriticalSection();
+
 		for (u32 i = 0; i < workQueue->Size(); ++i)
 		{
 			AllocWorkQueueEntry(i);
@@ -3330,7 +3332,10 @@ namespace flex
 
 		u32 threadCount = (u32)glm::clamp(((i32)Platform::GetLogicalProcessorCount()) - 1, 1, 16);
 
-		Platform::SpawnThreads(threadCount, &ThreadUpdate);
+		threadUserData = {};
+		threadUserData.running = true;
+		threadUserData.criticalSection = criticalSection;
+		Platform::SpawnThreads(threadCount, &ThreadUpdate, &threadUserData);
 
 		SortWaveAmplitudeCutoffs();
 
@@ -3389,10 +3394,17 @@ namespace flex
 	{
 		GameObject::Destroy();
 
+		threadUserData.running = false;
+
+		Platform::JoinThreads();
+
 		for (u32 i = 0; i < workQueue->Size(); ++i)
 		{
 			FreeWorkQueueEntry(i);
 		}
+
+		Platform::FreeCriticalSection(criticalSection);
+		criticalSection = nullptr;
 	}
 
 	glm::vec3 QueryHeightFieldExpensive(const glm::vec3& queryPos, const std::vector<GerstnerWave::WaveInfo>& waves)
@@ -3726,28 +3738,30 @@ namespace flex
 
 	u32 ThreadUpdate(void* inData)
 	{
-		//Thread* data = (Thread*)inData;
+		ThreadData* threadData = (ThreadData*)inData;
 
-		while (1)
+		while (threadData->running)
 		{
 			volatile GerstnerWave::WaveGenData* work = nullptr;
 
-			if (Platform::AtomicCompareExchange(&workQueueLock, 1, 0) == 0)
+			if (workQueueEntriesClaimed < workQueueEntriesCreated)
 			{
-				if (workQueueEntriesClaimed < workQueueEntriesCreated)
+				Platform::EnterCriticalSection(threadData->criticalSection);
 				{
-					work = &(*workQueue)[workQueueEntriesClaimed];
+					if (workQueueEntriesClaimed < workQueueEntriesCreated)
+					{
+						work = &(*workQueue)[workQueueEntriesClaimed];
 
-					workQueueEntriesClaimed += 1;
+						workQueueEntriesClaimed += 1;
 
-					WRITE_BARRIER;
+						WRITE_BARRIER;
 
-					assert(workQueueEntriesClaimed <= workQueueEntriesCreated);
-					assert(workQueueEntriesClaimed < workQueue->Size());
+						assert(workQueueEntriesClaimed <= workQueueEntriesCreated);
+						assert(workQueueEntriesClaimed < workQueue->Size());
+					}
+
 				}
-
-				u32 p = Platform::AtomicExchange(&workQueueLock, 0);
-				assert(p == 1);
+				Platform::LeaveCriticalSection(threadData->criticalSection);
 			}
 
 			if (work)
@@ -3902,6 +3916,8 @@ namespace flex
 				Sleep(2);
 			}
 		}
+
+		return 0;
 	}
 
 	void GerstnerWave::UpdateNormalsForChunk(u32 chunkIdx)
