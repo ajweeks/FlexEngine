@@ -5344,8 +5344,7 @@ namespace flex
 
 			if (m_bEnableValidationLayers && !CheckValidationLayerSupport())
 			{
-				// TODO: Remove all exceptions
-				throw std::runtime_error("validation layers requested, but not available!");
+				PrintError("Validation layers requested, but not available!");
 			}
 		}
 
@@ -8204,7 +8203,7 @@ namespace flex
 			}
 			else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
 			{
-				throw std::runtime_error("failed to acquire swap chain image!");
+				PrintError("Failed to acquire swap chain image!");
 			}
 
 			// Offscreen rendering

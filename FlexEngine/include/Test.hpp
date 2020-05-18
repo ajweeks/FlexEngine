@@ -34,7 +34,7 @@ namespace flex
 			if (val != exp)
 			{
 				std::string msgStr = std::string(funcName) + " L" + std::to_string(lineNumber) + " - Expected " + std::to_string(exp) + ", got " + std::to_string(val) + ", error message:\n\t" + msg;
-				throw std::runtime_error(msgStr.c_str());
+				PrintError("%s\n", msgStr.c_str());
 			}
 		}
 
@@ -43,7 +43,7 @@ namespace flex
 			if (val != exp)
 			{
 				std::string msgStr = std::string(funcName) + " L" + std::to_string(lineNumber) + " - Expected " + VecToString(exp) + ", got " + VecToString(val) + ", error message:\n\t" + msg;
-				throw std::runtime_error(msgStr.c_str());
+				PrintError("%s\n", msgStr.c_str());
 			}
 		}
 
@@ -52,7 +52,7 @@ namespace flex
 			if (val != exp)
 			{
 				std::string msgStr = std::string(funcName) + " L" + std::to_string(lineNumber) + " - Expected " + std::to_string(exp) + ", got " + std::to_string(val) + ", error message:\n\t" + msg;
-				throw std::runtime_error(msgStr.c_str());
+				PrintError("%s\n", msgStr.c_str());
 			}
 		}
 
@@ -61,7 +61,7 @@ namespace flex
 			if (strcmp(val, exp) != 0)
 			{
 				std::string msgStr = std::string(funcName) + " L" + std::to_string(lineNumber) + " - Expected " + std::string(exp) + ", got " + std::string(val) + ", error message:\n\t" + std::string(msg);
-				throw std::runtime_error(msgStr.c_str());
+				PrintError("%s\n", msgStr.c_str());
 			}
 		}
 
