@@ -176,10 +176,13 @@ IGNORE_WARNINGS_POP
 #define Z_AXIS_IDX   2
 #define ALL_AXES_IDX 3
 
+#define TOKEN_PASTE2(x, y) x ## y
+#define TOKEN_PASTE(x, y) TOKEN_PASTE2(x, y)
+
 #if ENABLE_PROFILING
 #define PROFILE_BEGIN(blockName) Profiler::Begin(blockName);
 #define PROFILE_END(blockName) Profiler::End(blockName);
-#define PROFILE_AUTO(blockName) AutoProfilerBlock autoProfileBlock(blockName);
+#define PROFILE_AUTO(blockName) AutoProfilerBlock TOKEN_PASTE(autoProfileBlock_, __LINE__)(blockName);
 #else
 #define PROFILE_BEGIN(blockName)
 #define PROFILE_END(blockName)
