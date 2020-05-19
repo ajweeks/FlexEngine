@@ -606,6 +606,7 @@ namespace flex
 		void UpdateWavesLinear();
 		void UpdateWavesSIMD();
 		glm::vec3 QueryHeightFieldFromVerts(const glm::vec3& queryPos);
+		u32 GetChunkIdxAtPos(const glm::vec2& pos);
 		void UpdateNormalsForChunk(u32 chunkIdx);
 		void SortWaves();
 		void SortWaveAmplitudeCutoffs();
@@ -651,8 +652,6 @@ namespace flex
 #define SIMD_WAVES 1
 
 	static u32 ThreadUpdate(void* inData);
-
-	static glm::vec3 QueryHeightFieldExpensive(const glm::vec3& queryPos, const std::vector<GerstnerWave::WaveInfo>& waves);
 
 	class Blocks : public GameObject
 	{

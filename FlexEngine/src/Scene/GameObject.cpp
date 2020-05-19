@@ -3407,55 +3407,42 @@ namespace flex
 		criticalSection = nullptr;
 	}
 
-	glm::vec3 QueryHeightFieldExpensive(const glm::vec3& queryPos, const std::vector<GerstnerWave::WaveInfo>& waves)
+	u32 GerstnerWave::GetChunkIdxAtPos(const glm::vec2& pos)
 	{
-		glm::vec3 result = queryPos;
-
-		for (const GerstnerWave::WaveInfo& wave : waves)
+		glm::vec2i queryPosInt(ceil(pos.x / size + 0.5f), ceil(pos.y / size + 0.5f));
+		for (u32 chunkIdx = 0; chunkIdx < (u32)waveChunks.size(); ++chunkIdx)
 		{
-			if (wave.enabled)
+			if (waveChunks[chunkIdx] == queryPosInt)
 			{
-				const glm::vec2 waveVec = glm::vec2(wave.waveDirCos, wave.waveDirSin) * wave.waveVecMag;
-				const glm::vec2 waveVecN = glm::normalize(waveVec);
-
-				real d = waveVec.x * result.x + waveVec.y * result.z;
-				real c = cos(d + wave.accumOffset);
-				real s = sin(d + wave.accumOffset);
-				result += glm::vec3(
-					-waveVecN.x * wave.a * s,
-					wave.a * c,
-					-waveVecN.y * wave.a * s);
+				return chunkIdx;
 			}
 		}
 
-		return result;
+		return u32_max;
 	}
 
 	glm::vec3 GerstnerWave::QueryHeightFieldFromVerts(const glm::vec3& queryPos)
 	{
-		glm::vec2i queryChunkIdx(ceil(queryPos.x / size - 0.5f), ceil(queryPos.z / size - 0.5f));
-		for (u32 chunkIdx = 0; chunkIdx < (u32)waveChunks.size(); ++chunkIdx)
+		u32 chunkIdx = GetChunkIdxAtPos(queryPos);
+		if (chunkIdx != u32_max)
 		{
-			if (waveChunks[chunkIdx] == queryChunkIdx)
-			{
-				const u32 vertsPerChunk = chunkVertCountPerAxis * chunkVertCountPerAxis;
-				const u32 chunkVertexOffset = chunkIdx * vertsPerChunk;
-				glm::vec2 chunkMin((waveChunks[chunkIdx].x - 0.5f) * size, (waveChunks[chunkIdx].y - 0.5f) * size);
-				glm::vec2 chunkUV = glm::saturate(glm::vec2((queryPos.x - chunkMin.x) / size, (queryPos.z - chunkMin.y) / size));
-				u32 chunkLocalVertexIndex = (u32)(chunkUV.x * (chunkVertCountPerAxis - 1)) + ((u32)(chunkUV.y * ((real)chunkVertCountPerAxis - 1.0f)) * chunkVertCountPerAxis);
-				const u32 idxMax = vertsPerChunk - 1;
-				glm::vec3 A(m_VertexBufferCreateInfo.positions_3D[chunkVertexOffset + glm::min(chunkLocalVertexIndex + 0, idxMax)]);
-				glm::vec3 B(m_VertexBufferCreateInfo.positions_3D[chunkVertexOffset + glm::min(chunkLocalVertexIndex + 1, idxMax)]);
-				glm::vec3 C(m_VertexBufferCreateInfo.positions_3D[chunkVertexOffset + glm::min(chunkLocalVertexIndex + chunkVertCountPerAxis, idxMax)]);
-				glm::vec3 D(m_VertexBufferCreateInfo.positions_3D[chunkVertexOffset + glm::min(chunkLocalVertexIndex + chunkVertCountPerAxis + 1, idxMax)]);
-				glm::vec2 vertexUV = glm::saturate(glm::vec2((queryPos.x - A.x) / (B.x - A.x), (queryPos.z - B.z) / (D.z - B.z)));
-				glm::vec3 result = Lerp(Lerp(A, B, vertexUV.x), Lerp(C, D, vertexUV.x), vertexUV.y);
+			const u32 vertsPerChunk = chunkVertCountPerAxis * chunkVertCountPerAxis;
+			const u32 chunkVertexOffset = chunkIdx * vertsPerChunk;
+			glm::vec2 chunkMin((waveChunks[chunkIdx].x - 0.5f) * size, (waveChunks[chunkIdx].y - 0.5f) * size);
+			glm::vec2 chunkUV = glm::saturate(glm::vec2((queryPos.x - chunkMin.x) / size, (queryPos.z - chunkMin.y) / size));
+			u32 chunkLocalVertexIndex = (u32)(chunkUV.x * (chunkVertCountPerAxis - 1)) + ((u32)(chunkUV.y * ((real)chunkVertCountPerAxis - 1.0f)) * chunkVertCountPerAxis);
+			const u32 idxMax = vertsPerChunk - 1;
+			glm::vec3 A(m_VertexBufferCreateInfo.positions_3D[chunkVertexOffset + glm::min(chunkLocalVertexIndex + 0, idxMax)]);
+			glm::vec3 B(m_VertexBufferCreateInfo.positions_3D[chunkVertexOffset + glm::min(chunkLocalVertexIndex + 1, idxMax)]);
+			glm::vec3 C(m_VertexBufferCreateInfo.positions_3D[chunkVertexOffset + glm::min(chunkLocalVertexIndex + chunkVertCountPerAxis, idxMax)]);
+			glm::vec3 D(m_VertexBufferCreateInfo.positions_3D[chunkVertexOffset + glm::min(chunkLocalVertexIndex + chunkVertCountPerAxis + 1, idxMax)]);
+			glm::vec2 vertexUV = glm::saturate(glm::vec2((queryPos.x - A.x) / (B.x - A.x), (queryPos.z - B.z) / (D.z - B.z)));
+			glm::vec3 result = Lerp(Lerp(A, B, vertexUV.x), Lerp(C, D, vertexUV.x), vertexUV.y);
 
-				return result;
-			}
+			return result;
 		}
 
-		// No chunk corresponds with query pos!
+		// No chunk corresponds with query pos
 		return VEC3_ZERO;
 	}
 
@@ -3929,23 +3916,28 @@ namespace flex
 
 		const glm::vec2 chunkCenter((waveChunks[chunkIdx].x - 0.5f) * size, (waveChunks[chunkIdx].y - 0.5f) * size);
 
+		u32 chunkLeft = GetChunkIdxAtPos(chunkCenter - glm::vec2(size, 0.0f));
+		u32 chunkRight = GetChunkIdxAtPos(chunkCenter + glm::vec2(size, 0.0f));
+		u32 chunkBack = GetChunkIdxAtPos(chunkCenter - glm::vec2(0.0f, size));
+		u32 chunkFor = GetChunkIdxAtPos(chunkCenter + glm::vec2(0.0f, size));
+
 		const real cellSize = size / chunkVertCountPerAxis;
 		for (i32 z = 0; z < chunkVertCountPerAxis; ++z)
 		{
 			for (i32 x = 0; x < chunkVertCountPerAxis; ++x)
 			{
-				const i32 vertIdx = z * chunkVertCountPerAxis + x + chunkIdx * vertCountPerChunk;
+				const i32 localIdx = z * chunkVertCountPerAxis + x;
+				const i32 vertIdx = localIdx + chunkIdx * vertCountPerChunk;
 
 				glm::vec3 planePos = glm::vec3(
 					chunkCenter.x + size * ((real)x / (chunkVertCountPerAxis - 1)),
 					0.0f,
 					chunkCenter.y + size * ((real)z / (chunkVertCountPerAxis - 1)));
 
-				// TODO: Sample neighboring chunks when present
-				real left = (x >= 1) ? positions[vertIdx - 1].y : QueryHeightFieldExpensive(planePos - glm::vec3(cellSize, 0.0f, 0.0f), waves).y;
-				real right = (x < chunkVertCountPerAxis - 1) ? positions[vertIdx + 1].y : QueryHeightFieldExpensive(planePos + glm::vec3(cellSize, 0.0f, 0.0f), waves).y;
-				real back = (z >= 1) ? positions[vertIdx - chunkVertCountPerAxis].y : QueryHeightFieldExpensive(planePos - glm::vec3(0.0f, 0.0f, cellSize), waves).y;
-				real forward = (z < chunkVertCountPerAxis - 1) ? positions[vertIdx + chunkVertCountPerAxis].y : QueryHeightFieldExpensive(planePos + glm::vec3(0.0f, 0.0f, cellSize), waves).y;
+				real left = (x >= 1) ? positions[vertIdx - 1].y : (chunkLeft != u32_max ? positions[(z * chunkVertCountPerAxis + chunkVertCountPerAxis - 2) + chunkLeft * vertCountPerChunk].y : 0.0f);
+				real right = (x < chunkVertCountPerAxis - 1) ? positions[vertIdx + 1].y : (chunkRight != u32_max ? positions[(z * chunkVertCountPerAxis + 1) + chunkRight * vertCountPerChunk].y : 0.0f);
+				real back = (z >= 1) ? positions[vertIdx - chunkVertCountPerAxis].y : (chunkBack != u32_max ? positions[(chunkVertCountPerAxis - 2) * chunkVertCountPerAxis + x + chunkBack * vertCountPerChunk].y : 0.0f);
+				real forward = (z < chunkVertCountPerAxis - 1) ? positions[vertIdx + chunkVertCountPerAxis].y : (chunkFor != u32_max ? positions[1 * chunkVertCountPerAxis + x + chunkFor * vertCountPerChunk].y : 0.0f);
 
 				real dX = left - right;
 				real dZ = back - forward;
