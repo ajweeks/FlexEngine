@@ -3368,6 +3368,17 @@ namespace flex
 			}
 		}
 
+#if 0
+		for (u32 i = 0; i < (u32)waveChunks.size(); ++i)
+		{
+			const glm::vec2i& chunkPosInt = waveChunks[i];
+			for (u32 j = 0; j < i; ++j)
+			{
+				g_Renderer->GetDebugDrawer()->drawSphere(btVector3((chunkPosInt.x) * size, 8.0f + 1.5f * j, (chunkPosInt.y) * size), 0.5f, btVector4(1, 1, 1, 1));
+			}
+		}
+#endif
+
 		DiscoverChunks();
 		UpdateWaveVertexData();
 
