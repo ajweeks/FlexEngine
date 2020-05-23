@@ -4966,32 +4966,35 @@ namespace flex
 
 		void VulkanRenderer::DrawParticles(VkCommandBuffer commandBuffer)
 		{
-			BeginDebugMarkerRegion(commandBuffer, "Particles");
-
-			for (VulkanParticleSystem* particleSystem : m_ParticleSystems)
+			if (!m_ParticleSystems.empty())
 			{
-				if (!particleSystem || !particleSystem->system->IsVisible())
+				BeginDebugMarkerRegion(commandBuffer, "Particles");
+
+				for (VulkanParticleSystem* particleSystem : m_ParticleSystems)
 				{
-					continue;
+					if (!particleSystem || !particleSystem->system->IsVisible())
+					{
+						continue;
+					}
+
+					VulkanMaterial& particleSimMat = m_Materials.at(particleSystem->system->simMaterialID);
+					VulkanMaterial& particleRenderingMat = m_Materials.at(particleSystem->system->renderingMaterialID);
+
+					u32 dynamicUBOOffset = particleSystem->ID * m_DynamicAlignment;
+					UpdateDynamicUniformBuffer(particleSystem->system->renderingMaterialID, dynamicUBOOffset, particleSystem->system->model, nullptr);
+
+					VkDeviceSize offsets[1] = { 0 };
+					vkCmdBindVertexBuffers(commandBuffer, 0, 1, &particleSimMat.uniformBufferList.Get(UniformBufferType::PARTICLE_DATA)->buffer.m_Buffer, offsets);
+
+					vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, particleSystem->graphicsPipeline);
+
+					BindDescriptorSet(&particleRenderingMat, dynamicUBOOffset, commandBuffer, m_ParticleGraphicsPipelineLayout, particleSystem->renderingDescriptorSet);
+
+					vkCmdDraw(commandBuffer, MAX_PARTICLE_COUNT, 1, 0, 0);
 				}
 
-				VulkanMaterial& particleSimMat = m_Materials.at(particleSystem->system->simMaterialID);
-				VulkanMaterial& particleRenderingMat = m_Materials.at(particleSystem->system->renderingMaterialID);
-
-				u32 dynamicUBOOffset = particleSystem->ID * m_DynamicAlignment;
-				UpdateDynamicUniformBuffer(particleSystem->system->renderingMaterialID, dynamicUBOOffset, particleSystem->system->model, nullptr);
-
-				VkDeviceSize offsets[1] = { 0 };
-				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &particleSimMat.uniformBufferList.Get(UniformBufferType::PARTICLE_DATA)->buffer.m_Buffer, offsets);
-
-				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, particleSystem->graphicsPipeline);
-
-				BindDescriptorSet(&particleRenderingMat, dynamicUBOOffset, commandBuffer, m_ParticleGraphicsPipelineLayout, particleSystem->renderingDescriptorSet);
-
-				vkCmdDraw(commandBuffer, MAX_PARTICLE_COUNT, 1, 0, 0);
+				EndDebugMarkerRegion(commandBuffer, "End Particles");
 			}
-
-			EndDebugMarkerRegion(commandBuffer, "End Particles");
 		}
 
 		VkDescriptorSet VulkanRenderer::GetSpriteDescriptorSet(TextureID textureID, MaterialID spriteMaterialID, u32 textureLayer)
@@ -5315,11 +5318,23 @@ namespace flex
 
 			std::vector<const char*> extensions = GetRequiredInstanceExtensions();
 
-			for (u32 i = 0; i < m_OptionalInstanceExtensions.size(); ++i)
+			// Optional instance extensions
 			{
-				if (InstanceExtensionSupported(m_OptionalInstanceExtensions[i]))
+				u32 instanceExtensionCount;
+				vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionCount, nullptr);
+
+				std::vector<VkExtensionProperties> instanceExtensions(instanceExtensionCount);
+				vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionCount, instanceExtensions.data());
+
+				for (const char* optionalExtName : m_OptionalInstanceExtensions)
 				{
-					extensions.push_back(m_OptionalInstanceExtensions[i]);
+					for (VkExtensionProperties& properties : instanceExtensions)
+					{
+						if (strcmp(properties.extensionName, optionalExtName) == 0)
+						{
+							extensions.push_back(optionalExtName);
+						}
+					}
 				}
 			}
 
@@ -5338,6 +5353,7 @@ namespace flex
 				createInfo.enabledLayerCount = 0;
 			}
 
+			// TODO: PERFORMANCE: Call on separate thread? (taking 10% of bootup time!)
 			VK_CHECK_RESULT(vkCreateInstance(&createInfo, nullptr, &m_Instance));
 
 			volkLoadInstance(m_Instance);
@@ -7897,72 +7913,75 @@ namespace flex
 			SetLineWidthForCmdBuffer(commandBuffer);
 
 			// Particle simulation
-			BeginGPUTimeStamp(commandBuffer, "Simulate Particles");
-			BeginDebugMarkerRegion(commandBuffer, "Simulate Particles");
-
-			for (VulkanParticleSystem* particleSystem : m_ParticleSystems)
+			if (!m_ParticleSystems.empty())
 			{
-				if (!particleSystem || !particleSystem->system->IsVisible() || !particleSystem->system->bEnabled)
+				BeginGPUTimeStamp(commandBuffer, "Simulate Particles");
+				BeginDebugMarkerRegion(commandBuffer, "Simulate Particles");
+
+				for (VulkanParticleSystem* particleSystem : m_ParticleSystems)
 				{
-					continue;
+					if (!particleSystem || !particleSystem->system->IsVisible() || !particleSystem->system->bEnabled)
+					{
+						continue;
+					}
+
+					VulkanMaterial& particleSimMat = m_Materials.at(particleSystem->system->simMaterialID);
+
+					UniformBuffer* particleBuffer = particleSimMat.uniformBufferList.Get(UniformBufferType::PARTICLE_DATA);
+
+					VkBufferMemoryBarrier bufferBarrier = vks::bufferMemoryBarrier();
+					bufferBarrier.buffer = particleBuffer->buffer.m_Buffer;
+					bufferBarrier.size = particleBuffer->buffer.m_Size;
+					bufferBarrier.srcAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
+					bufferBarrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+					// Compute and graphics queue may have different queue families
+					// For the barrier to work across different queues, we need to set their family indices
+					bufferBarrier.srcQueueFamilyIndex = m_VulkanDevice->m_QueueFamilyIndices.graphicsFamily;
+					bufferBarrier.dstQueueFamilyIndex = m_VulkanDevice->m_QueueFamilyIndices.computeFamily;
+					vkCmdPipelineBarrier(
+						commandBuffer,
+						VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+						VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+						0,
+						0, nullptr,
+						1, &bufferBarrier,
+						0, nullptr);
+
+					vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, particleSystem->computePipeline);
+
+					u32 dynamicUBOOffset = particleSystem->ID * m_DynamicAlignment;
+
+					UniformOverrides overrides = {};
+					overrides.overridenUniforms.AddUniform(U_PARTICLE_SIM_DATA);
+					particleSystem->system->data.dt = g_DeltaTime;
+					overrides.particleSimData = &particleSystem->system->data;
+					// TODO: Only do once/on edit
+					UpdateDynamicUniformBuffer(particleSystem->system->simMaterialID, dynamicUBOOffset, MAT4_IDENTITY, &overrides);
+
+					u32 dynamicOffsets[2] = { dynamicUBOOffset, 0 };
+					vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_ParticleSimulationComputePipelineLayout, 0, 1, &particleSystem->computeDescriptorSet, ARRAY_LENGTH(dynamicOffsets), dynamicOffsets);
+
+					vkCmdDispatch(commandBuffer, MAX_PARTICLE_COUNT / PARTICLES_PER_DISPATCH, 1, 1);
+
+					// Add memory barrier to ensure that compute shader has finished writing to the buffer
+					// Without this the (rendering) vertex shader may display incomplete results (partial data from last frame)
+					bufferBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+					bufferBarrier.dstAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
+					bufferBarrier.srcQueueFamilyIndex = m_VulkanDevice->m_QueueFamilyIndices.computeFamily;
+					bufferBarrier.dstQueueFamilyIndex = m_VulkanDevice->m_QueueFamilyIndices.graphicsFamily;
+					vkCmdPipelineBarrier(
+						commandBuffer,
+						VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+						VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+						0,
+						0, nullptr,
+						1, &bufferBarrier,
+						0, nullptr);
 				}
 
-				VulkanMaterial& particleSimMat = m_Materials.at(particleSystem->system->simMaterialID);
-
-				UniformBuffer* particleBuffer = particleSimMat.uniformBufferList.Get(UniformBufferType::PARTICLE_DATA);
-
-				VkBufferMemoryBarrier bufferBarrier = vks::bufferMemoryBarrier();
-				bufferBarrier.buffer = particleBuffer->buffer.m_Buffer;
-				bufferBarrier.size = particleBuffer->buffer.m_Size;
-				bufferBarrier.srcAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
-				bufferBarrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-				// Compute and graphics queue may have different queue families
-				// For the barrier to work across different queues, we need to set their family indices
-				bufferBarrier.srcQueueFamilyIndex = m_VulkanDevice->m_QueueFamilyIndices.graphicsFamily;
-				bufferBarrier.dstQueueFamilyIndex = m_VulkanDevice->m_QueueFamilyIndices.computeFamily;
-				vkCmdPipelineBarrier(
-					commandBuffer,
-					VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
-					VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-					0,
-					0, nullptr,
-					1, &bufferBarrier,
-					0, nullptr);
-
-				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, particleSystem->computePipeline);
-
-				u32 dynamicUBOOffset = particleSystem->ID * m_DynamicAlignment;
-
-				UniformOverrides overrides = {};
-				overrides.overridenUniforms.AddUniform(U_PARTICLE_SIM_DATA);
-				particleSystem->system->data.dt = g_DeltaTime;
-				overrides.particleSimData = &particleSystem->system->data;
-				// TODO: Only do once/on edit
-				UpdateDynamicUniformBuffer(particleSystem->system->simMaterialID, dynamicUBOOffset, MAT4_IDENTITY, &overrides);
-
-				u32 dynamicOffsets[2] = { dynamicUBOOffset, 0 };
-				vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_ParticleSimulationComputePipelineLayout, 0, 1, &particleSystem->computeDescriptorSet, ARRAY_LENGTH(dynamicOffsets), dynamicOffsets);
-
-				vkCmdDispatch(commandBuffer, MAX_PARTICLE_COUNT / PARTICLES_PER_DISPATCH, 1, 1);
-
-				// Add memory barrier to ensure that compute shader has finished writing to the buffer
-				// Without this the (rendering) vertex shader may display incomplete results (partial data from last frame)
-				bufferBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-				bufferBarrier.dstAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
-				bufferBarrier.srcQueueFamilyIndex = m_VulkanDevice->m_QueueFamilyIndices.computeFamily;
-				bufferBarrier.dstQueueFamilyIndex = m_VulkanDevice->m_QueueFamilyIndices.graphicsFamily;
-				vkCmdPipelineBarrier(
-					commandBuffer,
-					VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-					VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
-					0,
-					0, nullptr,
-					1, &bufferBarrier,
-					0, nullptr);
+				EndDebugMarkerRegion(commandBuffer, "End Simulate Particles");
+				EndGPUTimeStamp(commandBuffer, "Simulate Particles");
 			}
-
-			EndDebugMarkerRegion(commandBuffer, "End Simulate Particles");
-			EndGPUTimeStamp(commandBuffer, "Simulate Particles");
 
 			BeginGPUTimeStamp(commandBuffer, "Forward");
 
@@ -9223,25 +9242,6 @@ namespace flex
 			u64 timestamps[2];
 			vkGetQueryPoolResults(m_VulkanDevice->m_LogicalDevice, m_TimestampQueryPool, queryIndex, 2, sizeof(u64) * 2, timestamps, sizeof(u64), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
 			return (timestamps[1] - timestamps[0]) / 1000000.0f;
-		}
-
-		bool VulkanRenderer::InstanceExtensionSupported(const char* instanceExtensionName)
-		{
-			u32 instanceExtensionCount;
-			vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionCount, nullptr);
-
-			std::vector<VkExtensionProperties> instanceExtensions(instanceExtensionCount);
-			vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionCount, instanceExtensions.data());
-
-			for (u32 i = 0; i < instanceExtensionCount; ++i)
-			{
-				if (strcmp(instanceExtensions[i].extensionName, instanceExtensionName) == 0)
-				{
-					return true;
-				}
-			}
-
-			return false;
 		}
 
 		VKAPI_ATTR VkBool32 VKAPI_CALL VulkanRenderer::DebugCallback(

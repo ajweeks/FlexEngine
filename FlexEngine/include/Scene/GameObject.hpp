@@ -570,6 +570,7 @@ namespace flex
 			bool bDisableLODs;
 			// Chunk-specific
 			glm::vec3* positions;
+			u32 blendVertCount;
 
 			// Outputs:
 			__m128* positionsx_4 = nullptr;
@@ -605,8 +606,8 @@ namespace flex
 
 		void UpdateWavesLinear();
 		void UpdateWavesSIMD();
-		glm::vec3 QueryHeightFieldFromVerts(const glm::vec3& queryPos);
-		u32 GetChunkIdxAtPos(const glm::vec2& pos);
+		glm::vec3 QueryHeightFieldFromVerts(const glm::vec3& queryPos) const;
+		u32 GetChunkIdxAtPos(const glm::vec2& pos) const;
 		void UpdateNormalsForChunk(u32 chunkIdx);
 		void SortWaves();
 		void SortWaveAmplitudeCutoffs();
@@ -616,13 +617,15 @@ namespace flex
 		real size = 30.0f;
 		real loadRadius = 35.0f;
 		real updateSpeed = 20.0f;
+		real blendDist = 1.0f;
 		bool bDisableLODs = false;
+		u32 blendVertCount = 4;
 
 		void* criticalSection = nullptr;
 
 		MaterialID m_WaveMaterialID;
 
-		std::vector<Pair<real, real>> waveAmplitudeCutoffs;
+		std::vector<Pair<real, real>> waveAmplitudeCutoffs; // square distance : amplitude
 
 		std::vector<WaveInfo> waves;
 
@@ -652,6 +655,8 @@ namespace flex
 #define SIMD_WAVES 1
 
 	static u32 ThreadUpdate(void* inData);
+
+	static u32 GetChunkIdxAtPos(const glm::vec2& pos, const std::vector<glm::vec2i>& waveChunks, real size);
 
 	class Blocks : public GameObject
 	{
@@ -766,6 +771,7 @@ namespace flex
 
 	};
 
+	// TODO: Rename to landscape generator
 	class ChunkGenerator : public GameObject
 	{
 	public:

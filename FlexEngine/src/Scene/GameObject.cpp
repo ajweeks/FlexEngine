@@ -15,6 +15,7 @@ IGNORE_WARNINGS_PUSH
 #include <LinearMath/btTransform.h>
 
 #include <glm/gtx/quaternion.hpp> // for rotate
+#include <glm/gtx/norm.hpp> // for distance2
 
 #include <random>
 IGNORE_WARNINGS_POP
@@ -3319,7 +3320,7 @@ namespace flex
 		m_VertexBufferCreateInfo = {};
 		m_VertexBufferCreateInfo.attributes = g_Renderer->GetShader(g_Renderer->GetMaterial(m_WaveMaterialID).shaderID).vertexAttributes;
 
-		avgWaveUpdateTime = RollingAverage<ms>(128, SamplingType::LINEAR);
+		avgWaveUpdateTime = RollingAverage<ms>(256, SamplingType::CONSTANT);
 
 		criticalSection = Platform::InitCriticalSection();
 
@@ -3418,21 +3419,12 @@ namespace flex
 		criticalSection = nullptr;
 	}
 
-	u32 GerstnerWave::GetChunkIdxAtPos(const glm::vec2& pos)
+	u32 GerstnerWave::GetChunkIdxAtPos(const glm::vec2& pos) const
 	{
-		glm::vec2i queryPosInt(ceil(pos.x / size + 0.5f), ceil(pos.y / size + 0.5f));
-		for (u32 chunkIdx = 0; chunkIdx < (u32)waveChunks.size(); ++chunkIdx)
-		{
-			if (waveChunks[chunkIdx] == queryPosInt)
-			{
-				return chunkIdx;
-			}
-		}
-
-		return u32_max;
+		return flex::GetChunkIdxAtPos(pos, waveChunks, size);
 	}
 
-	glm::vec3 GerstnerWave::QueryHeightFieldFromVerts(const glm::vec3& queryPos)
+	glm::vec3 GerstnerWave::QueryHeightFieldFromVerts(const glm::vec3& queryPos) const
 	{
 		u32 chunkIdx = GetChunkIdxAtPos(queryPos);
 		if (chunkIdx != u32_max)
@@ -3693,6 +3685,7 @@ namespace flex
 			waveGenData->chunkVertCountPerAxis = chunkVertCountPerAxis;
 			waveGenData->chunkIdx = chunkIdx;
 			waveGenData->bDisableLODs = bDisableLODs;
+			waveGenData->blendVertCount = blendVertCount;
 
 			waveGenData->positions = nullptr;
 
@@ -3702,6 +3695,7 @@ namespace flex
 		}
 
 		// Wait for all threads to complete
+		// TODO: Call later in frame
 		while (workQueueEntriesCompleted != workQueueEntriesCreated)
 		{
 			Platform::YieldProcessor();
@@ -3788,13 +3782,52 @@ namespace flex
 				__m128 chunkCenterY_4 = _mm_setzero_ps();
 				__m128 chunkCenterZ_4 = _mm_set_ps1(chunkCenter.y);
 
+				glm::vec2 chunkRight = chunkCenter + glm::vec2(size, 0.0f);
+				glm::vec2 chunkLeft = chunkCenter - glm::vec2(size, 0.0f);
+				glm::vec2 chunkForward = chunkCenter + glm::vec2(0.0f, size);
+				glm::vec2 chunkBack = chunkCenter - glm::vec2(0.0f, size);
+
+				u32 chunkRightIdx = GetChunkIdxAtPos(chunkRight, waveChunks, size);
+				u32 chunkLeftIdx = GetChunkIdxAtPos(chunkLeft, waveChunks, size);
+				u32 chunkForwardIdx = GetChunkIdxAtPos(chunkForward, waveChunks, size);
+				u32 chunkBackIdx = GetChunkIdxAtPos(chunkBack, waveChunks, size);
+
 				real amplitudeLODCutoff = 0.0f;
+				// Not "true" cutoffs, but instead min(cutoff, center cutoff)
+				real amplitudeLODCutoffRight = 0.0f;
+				real amplitudeLODCutoffLeft = 0.0f;
+				real amplitudeLODCutoffForward = 0.0f;
+				real amplitudeLODCutoffBack = 0.0f;
+
 				if (!bDisableLODs)
 				{
-					real chunkDist = glm::distance(glm::vec3(chunkCenter.x, 0.0f, chunkCenter.y), g_CameraManager->CurrentCamera()->position);
+					glm::vec3 camPos = g_CameraManager->CurrentCamera()->position;
+					real chunkSqrDist = glm::distance2(glm::vec3(chunkCenter.x, 0.0f, chunkCenter.y), camPos);
+					real chunkRightSqrDist = glm::distance2(glm::vec3(chunkRight.x, 0.0f, chunkRight.y), camPos);
+					real chunkLeftSqrDist = glm::distance2(glm::vec3(chunkLeft.x, 0.0f, chunkLeft.y), camPos);
+					real chunkForwardSqrDist = glm::distance2(glm::vec3(chunkForward.x, 0.0f, chunkForward.y), camPos);
+					real chunkBackSqrDist = glm::distance2(glm::vec3(chunkBack.x, 0.0f, chunkBack.y), camPos);
 					for (u32 i = 0; i < (u32)waveAmplitudeCutoffs.size(); ++i)
 					{
-						if (chunkDist >= waveAmplitudeCutoffs[i].first)
+						real chunkSqrDistCutoff = waveAmplitudeCutoffs[i].first;
+						if (chunkRightIdx != u32_max && chunkRightSqrDist >= chunkSqrDistCutoff)
+						{
+							amplitudeLODCutoffRight = waveAmplitudeCutoffs[i].second;
+						}
+						if (chunkLeftIdx != u32_max && chunkLeftSqrDist >= chunkSqrDistCutoff)
+						{
+							amplitudeLODCutoffLeft = waveAmplitudeCutoffs[i].second;
+						}
+						if (chunkForwardIdx != u32_max && chunkForwardSqrDist >= chunkSqrDistCutoff)
+						{
+							amplitudeLODCutoffForward = waveAmplitudeCutoffs[i].second;
+						}
+						if (chunkBackIdx != u32_max && chunkBackSqrDist >= chunkSqrDistCutoff)
+						{
+							amplitudeLODCutoffBack = waveAmplitudeCutoffs[i].second;
+						}
+
+						if (chunkSqrDist >= chunkSqrDistCutoff)
 						{
 							amplitudeLODCutoff = waveAmplitudeCutoffs[i].second;
 							break;
@@ -3839,12 +3872,48 @@ namespace flex
 						__m128 waveVecX_4 = _mm_set_ps1(waveVec.x);
 						__m128 waveVecZ_4 = _mm_set_ps1(waveVec.y);
 
+						bool bRightBlend = wave.a < amplitudeLODCutoffRight;
+						bool bLeftBlend = wave.a < amplitudeLODCutoffLeft;
+						bool bForwardBlend= wave.a < amplitudeLODCutoffForward;
+						bool bBackBlend = wave.a < amplitudeLODCutoffBack;
+
+						u32 countMinOne = chunkVertCountPerAxis - 1;
+						u32 blendVertCount = work->blendVertCount;
+						__m128 blendVertCount_4 = _mm_set_ps1((real)blendVertCount);
+
+						__m128 one_4 = _mm_set_ps1(1.0f);
+						__m128 zero_4 = _mm_set_ps1(0.0f);
+
 						for (i32 z = 0; z < chunkVertCountPerAxis; ++z)
 						{
+							__m128 zIdxMin_4 = _mm_set_ps1((real)z);
+							__m128 zIdxMax_4 = _mm_set_ps1((real)(countMinOne - z));
+
 							for (i32 x = 0; x < chunkVertCountPerAxis; x += 4)
 							{
 								const i32 chunkLocalVertIdx = z * chunkVertCountPerAxis + x;
 								const i32 chunkLocalVertIdxDiv4 = chunkLocalVertIdx / 4;
+
+								/*
+								real blendFactor = glm::min(
+									glm::min(
+										bRightBlend ? glm::clamp((real)(chunkVertCountPerAxis - x - 1) / blendVertCount, 0.0f, 1.0f) : 1.0f,
+										bLeftBlend ? glm::clamp((real)x / blendVertCount, 0.0f, 1.0f) : 1.0f),
+										glm::min(
+											bForwardBlend ? glm::clamp((real)z / blendVertCount, 0.0f, 1.0f) : 1.0f,
+											bBackBlend ? glm::clamp(1.0f - (real)z / blendVertCount, 0.0f, 1.0f) : 1.0f));
+								*/
+
+								// 0 at edge, 1 in center, blend between
+								__m128 xIdxMin_4 = _mm_set_ps((real)(x + 3), (real)(x + 2), (real)(x + 1), (real)(x + 0));
+								__m128 xIdxMax_4 = _mm_set_ps((real)(countMinOne - (x + 3)), (real)(countMinOne - (x + 2)), (real)(countMinOne - (x + 1)), (real)(countMinOne - (x + 0)));
+
+								__m128 br = bRightBlend ? _mm_min_ps(_mm_div_ps(xIdxMax_4, blendVertCount_4), one_4) : one_4;
+								__m128 bl = bLeftBlend  ? _mm_min_ps(_mm_div_ps(xIdxMin_4, blendVertCount_4), one_4) : one_4;
+								__m128 bf = bForwardBlend ? _mm_min_ps(_mm_div_ps(zIdxMax_4, blendVertCount_4), one_4) : one_4;
+								__m128 bb = bBackBlend ? _mm_min_ps(_mm_div_ps(zIdxMin_4, blendVertCount_4), one_4) : one_4;
+
+								__m128 blendFactor_4 = _mm_min_ps(_mm_min_ps(bl, br), _mm_min_ps(bf, bb));
 
 								/*
 									positions[vertIdx] = chunkCenter + glm::vec3(
@@ -3861,18 +3930,20 @@ namespace flex
 										-waveVecN.y * wave.a * s);
 								*/
 
+
 								__m128 d = _mm_add_ps(_mm_mul_ps(positionsx_4[chunkLocalVertIdxDiv4], waveVecX_4), _mm_mul_ps(positionsz_4[chunkLocalVertIdxDiv4], waveVecZ_4));
 
 								__m128 totalAccum = _mm_add_ps(d, accumOffset_4);
+
 
 								__m128 c = _mm_cos_ps(totalAccum);
 								__m128 s = _mm_sin_ps(totalAccum);
 
 								__m128 as = _mm_mul_ps(waveA_4, s);
 
-								positionsx_4[chunkLocalVertIdxDiv4] = _mm_add_ps(positionsx_4[chunkLocalVertIdxDiv4], _mm_mul_ps(negWaveVecNX_4, as));
-								positionsy_4[chunkLocalVertIdxDiv4] = _mm_add_ps(positionsy_4[chunkLocalVertIdxDiv4], _mm_mul_ps(waveA_4, c));
-								positionsz_4[chunkLocalVertIdxDiv4] = _mm_add_ps(positionsz_4[chunkLocalVertIdxDiv4], _mm_mul_ps(negWaveVecNZ_4, as));
+								positionsx_4[chunkLocalVertIdxDiv4] = _mm_add_ps(positionsx_4[chunkLocalVertIdxDiv4], _mm_mul_ps(blendFactor_4, _mm_mul_ps(negWaveVecNX_4, as)));
+								positionsy_4[chunkLocalVertIdxDiv4] = _mm_add_ps(positionsy_4[chunkLocalVertIdxDiv4], _mm_mul_ps(blendFactor_4, _mm_mul_ps(waveA_4, c)));
+								positionsz_4[chunkLocalVertIdxDiv4] = _mm_add_ps(positionsz_4[chunkLocalVertIdxDiv4], _mm_mul_ps(blendFactor_4, _mm_mul_ps(negWaveVecNZ_4, as)));
 							}
 						}
 					}
@@ -3916,6 +3987,20 @@ namespace flex
 		}
 
 		return 0;
+	}
+
+	u32 GetChunkIdxAtPos(const glm::vec2& pos, const std::vector<glm::vec2i>& waveChunks, real size)
+	{
+		glm::vec2i queryPosInt(ceil(pos.x / size + 0.5f), ceil(pos.y / size + 0.5f));
+		for (u32 chunkIdx = 0; chunkIdx < (u32)waveChunks.size(); ++chunkIdx)
+		{
+			if (waveChunks[chunkIdx] == queryPosInt)
+			{
+				return chunkIdx;
+			}
+		}
+
+		return u32_max;
 	}
 
 	void GerstnerWave::UpdateNormalsForChunk(u32 chunkIdx)
@@ -3997,6 +4082,8 @@ namespace flex
 			}
 		}
 
+		ImGuiExt::SliderUInt("Blend dist", &blendVertCount, 0, chunkVertCountPerAxis / 2);
+
 		if (ImGui::Checkbox("Pin center", &m_bPinCenter))
 		{
 			if (m_bPinCenter)
@@ -4044,7 +4131,12 @@ namespace flex
 				ImGui::SameLine();
 
 				std::string distStr = "distance" + childName;
-				bNeedsSort |= ImGui::DragFloat(distStr.c_str(), &waveAmplitudeCutoffs[i].first, 1.0f, 0.0f, 10000.0f);
+				real dist = glm::sqrt(waveAmplitudeCutoffs[i].first);
+				if (ImGui::DragFloat(distStr.c_str(), &dist, 1.0f, 0.0f, 10000.0f))
+				{
+					waveAmplitudeCutoffs[i].first = dist * dist;
+					bNeedsSort = true;
+				}
 				std::string amplitudeStr = "amplitude" + childName;
 				ImGui::DragFloat(amplitudeStr.c_str(), &waveAmplitudeCutoffs[i].second, 0.001f, 0.0f, 10.0f);
 			}
@@ -4141,6 +4233,8 @@ namespace flex
 			gerstnerWaveObj.SetBoolChecked("pin center", m_bPinCenter);
 			gerstnerWaveObj.SetVec3Checked("pinned center position", m_PinnedPos);
 
+			gerstnerWaveObj.SetUIntChecked("blend vert count", blendVertCount);
+
 			std::vector<JSONField> waveAmplitudesArrObj;
 			if (gerstnerWaveObj.SetFieldArrayChecked("wave amplitude lod cutoffs", waveAmplitudesArrObj))
 			{
@@ -4198,6 +4292,9 @@ namespace flex
 
 		gerstnerWaveObj.fields.emplace_back("pin center", JSONValue(m_bPinCenter));
 		gerstnerWaveObj.fields.emplace_back("pinned center position", JSONValue(VecToString(m_PinnedPos)));
+
+		// TODO: Add full uint support to JSON parserblendVertCount
+		gerstnerWaveObj.fields.emplace_back("blend vert count", JSONValue((i32)blendVertCount));
 
 		JSONObject amplitudeCutoffsObj = {};
 		std::vector<JSONField> amplitudeCutoffsArrObj(waveAmplitudeCutoffs.size());

@@ -15,9 +15,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-81.210, 35.987, -28.103",
-			"pitch" : -0.396576,
-			"yaw" : 0.333156
+			"position" : "-38.756, 27.909, -16.112",
+			"pitch" : -0.461778,
+			"yaw" : 1.868982
 		}
 	},
 	"objects" : 
@@ -142,11 +142,10 @@
 				"update speed" : 19.700001,
 				"pin center" : true,
 				"pinned center position" : "-11.87, 316.56, 14.48",
+				"blend vert count" : 18,
 				"wave amplitude lod cutoffs" : 
 				[
-					"215.000000,0.341000",
-					"173.000000,0.085000",
-					"147.000000,0.059000"
+					"17072.818359,0.387000"
 				]
 			}
 		},
