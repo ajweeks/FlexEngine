@@ -570,7 +570,10 @@ namespace flex
 			bool bDisableLODs;
 			// Chunk-specific
 			glm::vec3* positions;
-			u32 blendVertCount;
+			real blendDist;
+
+			// Intermediate values:
+			__m128* lodCutoffs_4 = nullptr;
 
 			// Outputs:
 			__m128* positionsx_4 = nullptr;
@@ -617,9 +620,8 @@ namespace flex
 		real size = 30.0f;
 		real loadRadius = 35.0f;
 		real updateSpeed = 20.0f;
-		real blendDist = 1.0f;
+		real blendDist = 10.0f;
 		bool bDisableLODs = false;
-		u32 blendVertCount = 4;
 
 		void* criticalSection = nullptr;
 
