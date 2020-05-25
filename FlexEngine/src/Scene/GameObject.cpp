@@ -3487,7 +3487,10 @@ namespace flex
 		(*workQueue)[workQueueIndex].positionsy_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
 		(*workQueue)[workQueueIndex].positionsz_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
 
-		(*workQueue)[workQueueIndex].lodCutoffs_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
+		(*workQueue)[workQueueIndex].lodCutoffsAmplitudes_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
+		(*workQueue)[workQueueIndex].lodNextCutoffDistances_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
+		(*workQueue)[workQueueIndex].lodNextCutoffAmplitudes_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
+		(*workQueue)[workQueueIndex].lodBlendWeights_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
 	}
 
 	void GerstnerWave::FreeWorkQueueEntry(u32 workQueueIndex)
@@ -3495,6 +3498,11 @@ namespace flex
 		_mm_free((*workQueue)[workQueueIndex].positionsx_4);
 		_mm_free((*workQueue)[workQueueIndex].positionsy_4);
 		_mm_free((*workQueue)[workQueueIndex].positionsz_4);
+
+		_mm_free((*workQueue)[workQueueIndex].lodCutoffsAmplitudes_4);
+		_mm_free((*workQueue)[workQueueIndex].lodNextCutoffDistances_4);
+		_mm_free((*workQueue)[workQueueIndex].lodNextCutoffAmplitudes_4);
+		_mm_free((*workQueue)[workQueueIndex].lodBlendWeights_4);
 	}
 
 	void GerstnerWave::UpdateWaveVertexData()
@@ -3771,9 +3779,14 @@ namespace flex
 				__m128* positionsx_4 = work->positionsx_4;
 				__m128* positionsy_4 = work->positionsy_4;
 				__m128* positionsz_4 = work->positionsz_4;
-				__m128* lodCutoffs_4 = work->lodCutoffs_4;
+				__m128* lodCutoffsAmplitudes_4 = work->lodCutoffsAmplitudes_4;
+				__m128* lodNextCutoffDistances_4 = work->lodNextCutoffDistances_4;
+				__m128* lodNextCutoffAmplitudes_4 = work->lodNextCutoffAmplitudes_4;
+				__m128* lodBlendWeights_4 = work->lodBlendWeights_4;
 
 				real blendDist = work->blendDist;
+				__m128 blendDist_4 = _mm_set_ps1(blendDist);
+				__m128 blendDistSqr_4 = _mm_set_ps1(blendDist * blendDist);
 
 				assert(positionsx_4 != nullptr);
 
@@ -3798,29 +3811,9 @@ namespace flex
 				u32 chunkBackIdx = GetChunkIdxAtPos(chunkBack, waveChunks, size);
 
 				// TODO: Work out max LOD in chunk
-				real amplitudeLODCutoff = 0.0f;
 				glm::vec3 camPos = g_CameraManager->CurrentCamera()->position;
 				__m128 camPosx_4 = _mm_set_ps1(camPos.x);
 				__m128 camPosz_4 = _mm_set_ps1(camPos.z);
-
-				if (!bDisableLODs)
-				{
-					// TODO: Take dist to each vert to avoid cracks at corners
-					real chunkSqrDist = glm::distance2(glm::vec3(chunkCenter.x, 0.0f, chunkCenter.y), camPos);
-					real chunkRightSqrDist = glm::distance2(glm::vec3(chunkRight.x, 0.0f, chunkRight.y), camPos);
-					real chunkLeftSqrDist = glm::distance2(glm::vec3(chunkLeft.x, 0.0f, chunkLeft.y), camPos);
-					real chunkForwardSqrDist = glm::distance2(glm::vec3(chunkForward.x, 0.0f, chunkForward.y), camPos);
-					real chunkBackSqrDist = glm::distance2(glm::vec3(chunkBack.x, 0.0f, chunkBack.y), camPos);
-					for (u32 i = 0; i < (u32)waveAmplitudeCutoffs.size(); ++i)
-					{
-						real chunkSqrDistCutoff = waveAmplitudeCutoffs[i].first;
-						if (chunkSqrDist >= chunkSqrDistCutoff)
-						{
-							amplitudeLODCutoff = waveAmplitudeCutoffs[i].second;
-							break;
-						}
-					}
-				}
 
 				__m128 one_4 = _mm_set_ps1(1.0f);
 				__m128 zero_4 = _mm_set_ps1(0.0f);
@@ -3832,7 +3825,10 @@ namespace flex
 					{
 						const i32 chunkLocalVertIdx = z * chunkVertCountPerAxis + x;
 						const i32 chunkLocalVertIdxDiv4 = chunkLocalVertIdx / 4;
-						lodCutoffs_4[chunkLocalVertIdxDiv4] = _mm_setzero_ps();
+						lodCutoffsAmplitudes_4[chunkLocalVertIdxDiv4] = _mm_setzero_ps();
+						lodNextCutoffDistances_4[chunkLocalVertIdxDiv4] = _mm_setzero_ps();
+						lodNextCutoffAmplitudes_4[chunkLocalVertIdxDiv4] = _mm_setzero_ps();
+						lodBlendWeights_4[chunkLocalVertIdxDiv4] = _mm_set_ps1(1.0f);
 					}
 				}
 
@@ -3854,12 +3850,31 @@ namespace flex
 						__m128 zr = _mm_sub_ps(positionsz_4[chunkLocalVertIdxDiv4], camPosz_4);
 						__m128 vertSqrDist = _mm_add_ps(_mm_mul_ps(xr, xr), _mm_mul_ps(zr, zr));
 
-						for (u32 i = 0; i < (u32)waveAmplitudeCutoffs.size(); ++i)
+						if (!bDisableLODs)
 						{
-							__m128 waveSqrDistCutoff_4 = _mm_set_ps1(waveAmplitudeCutoffs[i].first);
-							__m128 waveAmplitudeCutoff_4 = _mm_set_ps1(waveAmplitudeCutoffs[i].second);
-							__m128 cmpMask = _mm_blendv_ps(zero_4, _mm_cmpge_ps(vertSqrDist, waveSqrDistCutoff_4), _mm_cmpeq_ps(lodCutoffs_4[chunkLocalVertIdxDiv4], zero_4));
-							lodCutoffs_4[chunkLocalVertIdxDiv4] = _mm_blendv_ps(lodCutoffs_4[chunkLocalVertIdxDiv4], waveAmplitudeCutoff_4, cmpMask);
+							for (u32 i = 0; i < (u32)waveAmplitudeCutoffs.size(); ++i)
+							{
+								__m128 waveSqrDistCutoff_4 = _mm_set_ps1(waveAmplitudeCutoffs[i].first);
+								__m128 waveAmplitudeCutoff_4 = _mm_set_ps1(waveAmplitudeCutoffs[i].second);
+								__m128 eqZ = _mm_cmpeq_ps(lodCutoffsAmplitudes_4[chunkLocalVertIdxDiv4], zero_4);
+								__m128 cmpMask = _mm_blendv_ps(zero_4, _mm_cmpge_ps(vertSqrDist, waveSqrDistCutoff_4), eqZ);
+								lodCutoffsAmplitudes_4[chunkLocalVertIdxDiv4] = _mm_blendv_ps(lodCutoffsAmplitudes_4[chunkLocalVertIdxDiv4], waveAmplitudeCutoff_4, cmpMask);
+
+								bool bLastCutoff = (i == waveAmplitudeCutoffs.size() - 1);
+								lodNextCutoffDistances_4[chunkLocalVertIdxDiv4] = _mm_blendv_ps(lodNextCutoffDistances_4[chunkLocalVertIdxDiv4], _mm_set_ps1(bLastCutoff ? FLT_MAX : waveAmplitudeCutoffs[i + 1].first), cmpMask);
+								lodNextCutoffAmplitudes_4[chunkLocalVertIdxDiv4] = _mm_blendv_ps(lodNextCutoffAmplitudes_4[chunkLocalVertIdxDiv4], _mm_set_ps1(bLastCutoff ? FLT_MAX : waveAmplitudeCutoffs[i + 1].second), cmpMask);
+
+								__m128 cmpMask3 = _mm_and_ps(_mm_cmpeq_ps(cmpMask, zero_4), _mm_cmpeq_ps(_mm_set_ps1((real)i), zero_4));
+								// Set next on verts in first LOD level
+								lodNextCutoffDistances_4[chunkLocalVertIdxDiv4] = _mm_blendv_ps(lodNextCutoffDistances_4[chunkLocalVertIdxDiv4], _mm_set_ps1(waveAmplitudeCutoffs[0].first), cmpMask3);
+								lodNextCutoffAmplitudes_4[chunkLocalVertIdxDiv4] = _mm_blendv_ps(lodNextCutoffAmplitudes_4[chunkLocalVertIdxDiv4], _mm_set_ps1(waveAmplitudeCutoffs[0].second), cmpMask3);
+
+								__m128 pushedDist = _mm_add_ps(vertSqrDist, blendDistSqr_4);
+								__m128 cmp2Mask = _mm_or_ps(_mm_cmpeq_ps(lodBlendWeights_4[chunkLocalVertIdxDiv4], zero_4), _mm_cmpeq_ps(lodNextCutoffDistances_4[chunkLocalVertIdxDiv4], zero_4));
+								__m128 delta = _mm_max_ps(_mm_sub_ps(_mm_sqrt_ps(lodNextCutoffDistances_4[chunkLocalVertIdxDiv4]), _mm_sqrt_ps(vertSqrDist)), zero_4);
+								// 0 at edge, 1 at blend dist inward, blend between
+								lodBlendWeights_4[chunkLocalVertIdxDiv4] = _mm_blendv_ps(_mm_min_ps(_mm_div_ps(delta, blendDist_4), one_4), lodBlendWeights_4[chunkLocalVertIdxDiv4], cmp2Mask);
+							}
 						}
 					}
 				}
@@ -3867,10 +3882,7 @@ namespace flex
 				// Modulate based on waves
 				for (const GerstnerWave::WaveInfo& wave : waves)
 				{
-					//if (wave.a < amplitudeLODCutoff)
-					//{
-					//	break;
-					//}
+					// TODO: Early out once wave amplitude isn't used by any vert in chunk
 
 					if (wave.enabled)
 					{
@@ -3886,7 +3898,6 @@ namespace flex
 						__m128 waveVecZ_4 = _mm_set_ps1(waveVec.y);
 
 						u32 countMinOne = chunkVertCountPerAxis - 1;
-						__m128 blendDist_4 = _mm_set_ps1(blendDist);
 
 						for (i32 z = 0; z < chunkVertCountPerAxis; ++z)
 						{
@@ -3908,16 +3919,10 @@ namespace flex
 											bBackBlend ? glm::clamp(1.0f - (real)z / blendVertCount, 0.0f, 1.0f) : 1.0f));
 								*/
 
-								// 0 at edge, 1 in center, blend between
-								__m128 xIdxMin_4 = _mm_set_ps((real)(x + 3), (real)(x + 2), (real)(x + 1), (real)(x + 0));
-								__m128 xIdxMax_4 = _mm_set_ps((real)(countMinOne - (x + 3)), (real)(countMinOne - (x + 2)), (real)(countMinOne - (x + 1)), (real)(countMinOne - (x + 0)));
-
-								__m128 xr = _mm_sub_ps(positionsx_4[chunkLocalVertIdxDiv4], camPosx_4);
-								__m128 zr = _mm_sub_ps(positionsz_4[chunkLocalVertIdxDiv4], camPosz_4);
-								// TODO: Store in intermediate memory
-								__m128 vertDist_4 = _mm_sqrt_ps(_mm_add_ps(_mm_mul_ps(xr, xr), _mm_mul_ps(zr, zr)));
-
-								__m128 blendFactor_4 = _mm_blendv_ps(_mm_min_ps(_mm_div_ps(vertDist_4, blendDist_4), one_4), zero_4, _mm_cmplt_ps(waveA_4, lodCutoffs_4[chunkLocalVertIdxDiv4]));
+								__m128 blendMask_4 = _mm_cmplt_ps(waveA_4, lodNextCutoffAmplitudes_4[chunkLocalVertIdxDiv4]);
+								__m128 blendFactor_4 = _mm_blendv_ps(
+									_mm_blendv_ps(one_4, lodBlendWeights_4[chunkLocalVertIdxDiv4], blendMask_4),
+									zero_4, _mm_cmplt_ps(waveA_4, lodCutoffsAmplitudes_4[chunkLocalVertIdxDiv4]));
 
 								/*
 									positions[vertIdx] = chunkCenter + glm::vec3(

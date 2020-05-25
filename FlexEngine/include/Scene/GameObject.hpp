@@ -573,7 +573,10 @@ namespace flex
 			real blendDist;
 
 			// Intermediate values:
-			__m128* lodCutoffs_4 = nullptr;
+			__m128* lodCutoffsAmplitudes_4 = nullptr;
+			__m128* lodNextCutoffDistances_4 = nullptr;
+			__m128* lodNextCutoffAmplitudes_4 = nullptr;
+			__m128* lodBlendWeights_4 = nullptr;
 
 			// Outputs:
 			__m128* positionsx_4 = nullptr;
