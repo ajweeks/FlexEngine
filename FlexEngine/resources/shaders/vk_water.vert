@@ -4,11 +4,12 @@
 #extension GL_ARB_shading_language_420pack : enable
 
 layout (location = 0) in vec3 in_Position;
-layout (location = 1) in vec3 in_Normal;
-layout (location = 2) in vec4 in_ExtraVec4;
+layout (location = 1) in vec4 in_Colour;
+layout (location = 2) in vec3 in_Normal;
 
-layout (location = 0) out vec3 ex_NormalWS;
-layout (location = 1) out vec3 ex_PositionWS;
+layout (location = 0) out vec3 ex_PositionWS;
+layout (location = 1) out vec4 ex_Colour;
+layout (location = 2) out vec3 ex_NormalWS;
 
 struct DirectionalLight 
 {
@@ -39,4 +40,5 @@ void main()
     vec4 posWS = uboDynamic.model * vec4(in_Position, 0.0);
     ex_PositionWS = posWS.xyz;
     gl_Position = uboConstant.viewProjection * vec4(posWS.xyz, 1.0);
+    ex_Colour = in_Colour;
 }

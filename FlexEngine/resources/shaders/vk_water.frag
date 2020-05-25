@@ -5,8 +5,9 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
-layout (location = 0) in vec3 ex_NormalWS;
-layout (location = 1) in vec3 ex_PositionWS;
+layout (location = 0) in vec3 ex_PositionWS;
+layout (location = 1) in vec4 ex_Colour;
+layout (location = 2) in vec3 ex_NormalWS;
 
 layout (location = 0) out vec4 fragColor;
 
@@ -74,7 +75,10 @@ void main()
 
 	vec3 sky = SampleSkybox(R);
 
-	fragColor = vec4(mix(mix(black, deepBlue, deepness), sky, clamp(fresnel,0,1)), 1);
+	// TODO: Add toggle bool
+	// fragColor = vec4(mix(mix(black, deepBlue, deepness), sky, clamp(fresnel,0,1)), 1);
+	fragColor = mix(0.05, 0.9, NoV) * ex_Colour;
+
 	//fragColor = vec4(SampleSkybox(R), 1);
 	//fragColor = vec4(clamp(R,0,1), 1);
 }

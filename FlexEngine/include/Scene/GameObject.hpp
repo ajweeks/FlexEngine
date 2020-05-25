@@ -582,6 +582,7 @@ namespace flex
 			__m128* positionsx_4 = nullptr;
 			__m128* positionsy_4 = nullptr;
 			__m128* positionsz_4 = nullptr;
+			__m128* lodSelected_4 = nullptr;
 		};
 
 		using ThreadID = u32;
@@ -612,6 +613,7 @@ namespace flex
 
 		void UpdateWavesLinear();
 		void UpdateWavesSIMD();
+		glm::vec4 ChooseColourFromLOD(real LOD);
 		glm::vec3 QueryHeightFieldFromVerts(const glm::vec3& queryPos) const;
 		u32 GetChunkIdxAtPos(const glm::vec2& pos) const;
 		void UpdateNormalsForChunk(u32 chunkIdx);

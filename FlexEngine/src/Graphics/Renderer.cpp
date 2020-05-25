@@ -1779,7 +1779,7 @@ namespace flex
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::NORMAL |
-				(u32)VertexAttribute::EXTRA_VEC4;
+				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
 
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_CAM_POS);

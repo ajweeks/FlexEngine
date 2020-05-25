@@ -3486,6 +3486,7 @@ namespace flex
 		(*workQueue)[workQueueIndex].positionsx_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
 		(*workQueue)[workQueueIndex].positionsy_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
 		(*workQueue)[workQueueIndex].positionsz_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
+		(*workQueue)[workQueueIndex].lodSelected_4 = (__m128*)_mm_malloc(vertCountPerChunk * sizeof(__m128), 16);
 
 		(*workQueue)[workQueueIndex].lodCutoffsAmplitudes_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
 		(*workQueue)[workQueueIndex].lodNextCutoffDistances_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
@@ -3498,6 +3499,7 @@ namespace flex
 		_mm_free((*workQueue)[workQueueIndex].positionsx_4);
 		_mm_free((*workQueue)[workQueueIndex].positionsy_4);
 		_mm_free((*workQueue)[workQueueIndex].positionsz_4);
+		_mm_free((*workQueue)[workQueueIndex].lodSelected_4);
 
 		_mm_free((*workQueue)[workQueueIndex].lodCutoffsAmplitudes_4);
 		_mm_free((*workQueue)[workQueueIndex].lodNextCutoffDistances_4);
@@ -3542,7 +3544,7 @@ namespace flex
 		{
 			m_VertexBufferCreateInfo.positions_3D.resize(vertCount);
 			m_VertexBufferCreateInfo.normals.resize(vertCount);
-			m_VertexBufferCreateInfo.extraVec4s.resize(vertCount);
+			m_VertexBufferCreateInfo.colors_R32G32B32A32.resize(vertCount);
 		}
 
 		{
@@ -3572,9 +3574,8 @@ namespace flex
 		const i32 indexCount = indexCountPerChunk * (i32)waveChunks.size();
 
 		glm::vec3* positions = m_VertexBufferCreateInfo.positions_3D.data();
-		glm::vec4* extraVec4s = m_VertexBufferCreateInfo.extraVec4s.data();
 
-		memset(extraVec4s, 0, vertCount * sizeof(glm::vec4));
+		// TODO: Add LOD blending
 
 		for (u32 chunkIdx = 0; chunkIdx < (u32)waveChunks.size(); ++chunkIdx)
 		{
@@ -3680,9 +3681,7 @@ namespace flex
 		const i32 indexCount = indexCountPerChunk * (i32)waveChunks.size();
 
 		glm::vec3* positions = m_VertexBufferCreateInfo.positions_3D.data();
-		glm::vec4* extraVec4s = m_VertexBufferCreateInfo.extraVec4s.data();
-
-		memset(extraVec4s, 0, vertCount * sizeof(glm::vec4));
+		glm::vec4* colours = m_VertexBufferCreateInfo.colors_R32G32B32A32.data();
 
 		for (u32 chunkIdx = 0; chunkIdx < (u32)waveChunks.size(); ++chunkIdx)
 		{
@@ -3722,20 +3721,38 @@ namespace flex
 					const i32 chunkLocalVertIdx = z * chunkVertCountPerAxis + x;
 					const i32 chunkLocalVertIdxDiv4 = chunkLocalVertIdx / 4;
 
-					glm::vec4 xs, ys, zs;
+					glm::vec4 xs, ys, zs, lodSelections;
 					_mm_store_ps(&xs.x, (*workQueue)[chunkIdx].positionsx_4[chunkLocalVertIdxDiv4]);
 					_mm_store_ps(&ys.x, (*workQueue)[chunkIdx].positionsy_4[chunkLocalVertIdxDiv4]);
 					_mm_store_ps(&zs.x, (*workQueue)[chunkIdx].positionsz_4[chunkLocalVertIdxDiv4]);
+					_mm_store_ps(&lodSelections.x, (*workQueue)[chunkIdx].lodSelected_4[chunkLocalVertIdxDiv4]);
 
 					positions[vertIdx + 0] = glm::vec3(xs.x, ys.x, zs.x);
 					positions[vertIdx + 1] = glm::vec3(xs.y, ys.y, zs.y);
 					positions[vertIdx + 2] = glm::vec3(xs.z, ys.z, zs.z);
 					positions[vertIdx + 3] = glm::vec3(xs.w, ys.w, zs.w);
+
+					colours[vertIdx + 0] = ChooseColourFromLOD(lodSelections.x);
+					colours[vertIdx + 1] = ChooseColourFromLOD(lodSelections.y);
+					colours[vertIdx + 2] = ChooseColourFromLOD(lodSelections.z);
+					colours[vertIdx + 3] = ChooseColourFromLOD(lodSelections.w);
 				}
 			}
 
 			UpdateNormalsForChunk(chunkIdx);
 		}
+	}
+
+	glm::vec4 GerstnerWave::ChooseColourFromLOD(real LOD)
+	{
+		static const glm::vec4 COLOURS[] = { glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f) };
+		//static const glm::vec4 COLOURS[] = { glm::vec4(0.8f, 0.4f, 0.2f, 1.0f), glm::vec4(0.1f, 0.8f, 0.3f, 1.0f), glm::vec4(0.2f, 0.4f, 0.8f, 1.0f), glm::vec4(0.5f, 0.7f, 0.5f, 1.0f) };
+		static const u32 colourCount = ARRAY_SIZE(COLOURS);
+
+		u32 lodLevel = (u32)LOD;
+		real blend = LOD - lodLevel;
+
+		return blend == 0.0f ? COLOURS[lodLevel] : (blend == 1.0f ? COLOURS[glm::clamp(lodLevel + 1, 0u, colourCount - 1)] : Lerp(COLOURS[lodLevel], COLOURS[glm::clamp(lodLevel + 1, 0u, colourCount - 1)], blend));
 	}
 
 	u32 ThreadUpdate(void* inData)
@@ -3768,23 +3785,29 @@ namespace flex
 
 			if (work)
 			{
+				// Inputs
 				const std::vector<GerstnerWave::WaveInfo>& waves = *work->waves;
 				const std::vector<glm::vec2i>& waveChunks = *work->waveChunks;
 				const std::vector<Pair<real, real>>& waveAmplitudeCutoffs = *work->waveAmplitudeCutoffs;
+
 				real size = work->size;
 				i32 chunkVertCountPerAxis = work->chunkVertCountPerAxis;
 				u32 chunkIdx = work->chunkIdx;
 				bool bDisableLODs = work->bDisableLODs;
+				real blendDist = work->blendDist;
 
-				__m128* positionsx_4 = work->positionsx_4;
-				__m128* positionsy_4 = work->positionsy_4;
-				__m128* positionsz_4 = work->positionsz_4;
 				__m128* lodCutoffsAmplitudes_4 = work->lodCutoffsAmplitudes_4;
 				__m128* lodNextCutoffDistances_4 = work->lodNextCutoffDistances_4;
 				__m128* lodNextCutoffAmplitudes_4 = work->lodNextCutoffAmplitudes_4;
 				__m128* lodBlendWeights_4 = work->lodBlendWeights_4;
 
-				real blendDist = work->blendDist;
+				// Outputs
+				__m128* positionsx_4 = work->positionsx_4;
+				__m128* positionsy_4 = work->positionsy_4;
+				__m128* positionsz_4 = work->positionsz_4;
+				__m128* lodSelected_4 = work->lodSelected_4;
+
+
 				__m128 blendDist_4 = _mm_set_ps1(blendDist);
 				__m128 blendDistSqr_4 = _mm_set_ps1(blendDist * blendDist);
 
@@ -3828,6 +3851,7 @@ namespace flex
 						lodCutoffsAmplitudes_4[chunkLocalVertIdxDiv4] = _mm_setzero_ps();
 						lodNextCutoffDistances_4[chunkLocalVertIdxDiv4] = _mm_setzero_ps();
 						lodNextCutoffAmplitudes_4[chunkLocalVertIdxDiv4] = _mm_setzero_ps();
+						lodSelected_4[chunkLocalVertIdxDiv4] = _mm_setzero_ps();
 						lodBlendWeights_4[chunkLocalVertIdxDiv4] = _mm_set_ps1(1.0f);
 					}
 				}
@@ -3874,6 +3898,10 @@ namespace flex
 								__m128 delta = _mm_max_ps(_mm_sub_ps(_mm_sqrt_ps(lodNextCutoffDistances_4[chunkLocalVertIdxDiv4]), _mm_sqrt_ps(vertSqrDist)), zero_4);
 								// 0 at edge, 1 at blend dist inward, blend between
 								lodBlendWeights_4[chunkLocalVertIdxDiv4] = _mm_blendv_ps(_mm_min_ps(_mm_div_ps(delta, blendDist_4), one_4), lodBlendWeights_4[chunkLocalVertIdxDiv4], cmp2Mask);
+								lodSelected_4[chunkLocalVertIdxDiv4] = _mm_blendv_ps(_mm_add_ps(lodBlendWeights_4[chunkLocalVertIdxDiv4], _mm_set_ps1((real)i - 1)), lodSelected_4[chunkLocalVertIdxDiv4], cmp2Mask);
+
+								__m128 cmpMask4 = _mm_and_ps(_mm_cmpge_ps(vertSqrDist, waveSqrDistCutoff_4), _mm_cmpeq_ps(_mm_set_ps1((real)i), _mm_set_ps1((real)(waveAmplitudeCutoffs.size() - 1))));
+								lodSelected_4[chunkLocalVertIdxDiv4] = _mm_blendv_ps(_mm_add_ps(lodBlendWeights_4[chunkLocalVertIdxDiv4], _mm_set_ps1((real)(i))), lodSelected_4[chunkLocalVertIdxDiv4], cmpMask4);
 							}
 						}
 					}
