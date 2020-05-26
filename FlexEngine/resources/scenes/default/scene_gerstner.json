@@ -15,9 +15,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-47.895, 45.877, -87.973",
-			"pitch" : -0.386992,
-			"yaw" : -5.175846
+			"position" : "-151.081, 29.065, -65.075",
+			"pitch" : -0.174895,
+			"yaw" : 0.536819
 		}
 	},
 	"objects" : 
@@ -136,16 +136,21 @@
 						"waveLen" : 2.150000
 					}
 				],
-				"chunk vert count per axis" : 100,
+				"max chunk vert count per axis" : 64,
 				"chunk size" : 100.000000,
 				"chunk load radius" : 206.020004,
 				"update speed" : 19.700001,
 				"pin center" : true,
 				"pinned center position" : "-11.87, 316.56, 14.48",
-				"blend dist" : 52.083000,
-				"wave amplitude lod cutoffs" : 
+				"blend dist" : 18.229000,
+				"wave sampling lods" : 
 				[
-					"32761.000000,0.911000"
+					"32761.0,0.911000"
+				],
+				"wave tessellation lods" : 
+				[
+					"0.0,64",
+					"2601.0,16"
 				]
 			}
 		},

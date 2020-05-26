@@ -557,13 +557,49 @@ namespace flex
 			real accumOffset = 0.0f;
 		};
 
+		struct WaveTessellationLOD
+		{
+			WaveTessellationLOD(real squareDist, u32 vertCountPerAxis) :
+				squareDist(squareDist),
+				vertCountPerAxis(vertCountPerAxis)
+			{}
+
+			real squareDist;
+			u32 vertCountPerAxis;
+		};
+
+		struct WaveSamplingLOD
+		{
+			WaveSamplingLOD(real squareDist, real amplitudeCutoff) :
+				squareDist(squareDist),
+				amplitudeCutoff(amplitudeCutoff)
+			{}
+
+			real squareDist;
+			real amplitudeCutoff;
+		};
+
+		struct WaveChunk
+		{
+			WaveChunk(const glm::vec2i& index, u32 vertOffset, u32 tessellationLODLevel) :
+				index(index),
+				vertOffset(vertOffset),
+				tessellationLODLevel(tessellationLODLevel)
+			{}
+
+			glm::vec2i index;
+			u32 vertOffset;
+			u32 tessellationLODLevel;
+		};
+
 		struct WaveGenData
 		{
 			// Inputs
 			// General
-			std::vector<GerstnerWave::WaveInfo> const* waves;
-			std::vector<glm::vec2i> const* waveChunks;
-			std::vector<Pair<real, real>> const* waveAmplitudeCutoffs;
+			std::vector<WaveInfo> const* waves;
+			std::vector<WaveChunk> const* waveChunks;
+			std::vector<WaveSamplingLOD> const* waveSamplingLODs;
+			std::vector<WaveTessellationLOD> const* waveTessellationLODs;
 			real size;
 			i32 chunkVertCountPerAxis;
 			u32 chunkIdx;
@@ -615,28 +651,32 @@ namespace flex
 		void UpdateWavesSIMD();
 		glm::vec4 ChooseColourFromLOD(real LOD);
 		glm::vec3 QueryHeightFieldFromVerts(const glm::vec3& queryPos) const;
-		u32 GetChunkIdxAtPos(const glm::vec2& pos) const;
+		WaveChunk const * GetChunkAtPos(const glm::vec2& pos) const;
+		WaveTessellationLOD const * GetTessellationLOD(u32 lodLevel) const;
+		u32 ComputeTesellationLODLevel(const glm::vec2i& chunkIdx);
 		void UpdateNormalsForChunk(u32 chunkIdx);
 		void SortWaves();
-		void SortWaveAmplitudeCutoffs();
-		real GetWaveAmplitudeLODCutoffForDistance(real dist);
+		void SortWaveSamplingLODs();
+		real GetWaveAmplitudeLODCutoffForDistance(real dist) const;
 
-		i32 chunkVertCountPerAxis = 100;
 		real size = 30.0f;
 		real loadRadius = 35.0f;
 		real updateSpeed = 20.0f;
 		real blendDist = 10.0f;
 		bool bDisableLODs = false;
+		u32 maxChunkVertCountPerAxis = 64;
 
 		void* criticalSection = nullptr;
 
 		MaterialID m_WaveMaterialID;
 
-		std::vector<Pair<real, real>> waveAmplitudeCutoffs; // square distance : amplitude
+		std::vector<WaveTessellationLOD> waveTessellationLODs;
+		std::vector<WaveSamplingLOD> waveSamplingLODs;
 
+		// TODO: Rename to wave contributions?
 		std::vector<WaveInfo> waves;
 
-		std::vector<glm::vec2i> waveChunks;
+		std::vector<WaveChunk> waveChunks;
 
 		bool m_bPinCenter = false;
 		glm::vec3 m_PinnedPos;
@@ -663,7 +703,7 @@ namespace flex
 
 	static u32 ThreadUpdate(void* inData);
 
-	static u32 GetChunkIdxAtPos(const glm::vec2& pos, const std::vector<glm::vec2i>& waveChunks, real size);
+	static GerstnerWave::WaveChunk const * GetChunkAtPos(const glm::vec2& pos, const std::vector<GerstnerWave::WaveChunk>& waveChunks, real size);
 
 	class Blocks : public GameObject
 	{

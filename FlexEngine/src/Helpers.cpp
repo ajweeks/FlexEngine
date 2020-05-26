@@ -1529,6 +1529,11 @@ namespace flex
 			return ImGui::SliderScalar(label, ImGuiDataType_U32, v, &v_min, &v_max, format);
 		}
 
+		bool DragUInt(const char* label, u32* v, u32 v_min /* = 0 */, u32 v_max /* = 0 */, const char* format /* = "%d" */)
+		{
+			return ImGui::DragScalar(label, ImGuiDataType_U32, v, 1.0f, &v_min, &v_max, format);
+		}
+
 	} // namespace ImGuiExt
 } // namespace flex
 
