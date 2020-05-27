@@ -1291,6 +1291,7 @@ namespace flex
 				{ "particles", "vk_particles_vert.spv", "vk_particles_frag.spv", "vk_particles_geom.spv" },
 				{ "terrain", "vk_terrain_vert.spv", "vk_terrain_frag.spv" },
 				{ "water", "vk_water_vert.spv", "vk_water_frag.spv" },
+				{ "wireframe", "vk_wireframe_vert.spv", "vk_wireframe_frag.spv", "vk_wireframe_geom.spv" },
 			};
 #endif
 
@@ -1785,6 +1786,20 @@ namespace flex
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_CAM_POS);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_DIR_LIGHT);
+
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
+			++shaderID;
+
+			// Wireframe
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
+			m_BaseShaders[shaderID].bDepthWriteEnable = false;
+			m_BaseShaders[shaderID].bTranslucent = true;
+			m_BaseShaders[shaderID].vertexAttributes =
+				(u32)VertexAttribute::POSITION;
+
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
 
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
