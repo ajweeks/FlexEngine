@@ -74,7 +74,7 @@ namespace flex
 		{
 			Renderer::Initialize();
 
-#ifdef DEBUG
+#if COMPILE_SHADER_COMPILER
 			m_ShaderCompiler = new AsyncVulkanShaderCompiler(false);
 #endif
 
@@ -625,7 +625,7 @@ namespace flex
 		{
 			Renderer::Destroy();
 
-#ifdef DEBUG
+#if COMPILE_SHADER_COMPILER
 			delete m_ShaderCompiler;
 			m_ShaderCompiler = nullptr;
 #endif
@@ -1689,7 +1689,7 @@ namespace flex
 			// NOTE: This doesn't respect TAA jitter!
 			m_SpritePerspPushConstBlock->SetData(g_CameraManager->CurrentCamera()->GetView(), g_CameraManager->CurrentCamera()->GetProjection());
 
-#ifdef DEBUG
+#if COMPILE_SHADER_COMPILER
 			if (m_ShaderCompiler && m_ShaderCompiler->TickStatus())
 			{
 				if (m_ShaderCompiler->bSuccess)
@@ -1982,7 +1982,7 @@ namespace flex
 
 		void VulkanRenderer::RecompileShaders(bool bForce)
 		{
-#ifdef DEBUG
+#if COMPILE_SHADER_COMPILER
 			if (m_ShaderCompiler == nullptr)
 			{
 				m_ShaderCompiler = new AsyncVulkanShaderCompiler(bForce);

@@ -1703,7 +1703,11 @@ namespace flex
 
 	bool FlexEngine::InstallShaderDirectoryWatch() const
 	{
+#if COMPILE_SHADER_COMPILER
 		return m_bInstallShaderDirectoryWatch;
+#else
+		return false;
+#endif
 	}
 
 } // namespace flex

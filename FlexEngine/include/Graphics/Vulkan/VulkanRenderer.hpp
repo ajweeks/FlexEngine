@@ -677,8 +677,8 @@ namespace flex
 
 			PoolAllocator<DeviceDiagnosticCheckpoint, 32> m_CheckPointAllocator;
 
-#ifdef DEBUG
-			AsyncVulkanShaderCompiler* m_ShaderCompiler = nullptr;
+#if COMPILE_SHADER_COMPILER
+			struct AsyncVulkanShaderCompiler* m_ShaderCompiler = nullptr;
 #endif
 
 			enum DirtyFlags : u32
