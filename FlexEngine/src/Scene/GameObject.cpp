@@ -127,7 +127,7 @@ namespace flex
 					prefabInstance->m_Transform = Transform::ParseJSON(transformObj);
 				}
 
-				prefabInstance->ParseUniqueFields(obj, scene, newGameObject->m_Mesh->GetMaterialIDs());
+				prefabInstance->ParseUniqueFields(obj, scene, prefabInstance->m_Mesh->GetMaterialIDs());
 
 				return prefabInstance;
 			}
@@ -3339,6 +3339,7 @@ namespace flex
 		Platform::SpawnThreads(threadCount, &ThreadUpdate, &threadUserData);
 
 		SortWaveSamplingLODs();
+		SortWaveTessellationLODs();
 
 		DiscoverChunks();
 		UpdateWaveVertexData();
@@ -3415,22 +3416,20 @@ namespace flex
 			FreeWorkQueueEntry(i);
 		}
 
+		delete workQueue;
+
 		Platform::FreeCriticalSection(criticalSection);
 		criticalSection = nullptr;
 	}
 
-	GerstnerWave::WaveChunk const * GerstnerWave::GetChunkAtPos(const glm::vec2& pos) const
+	GerstnerWave::WaveChunk const* GerstnerWave::GetChunkAtPos(const glm::vec2& pos) const
 	{
 		return flex::GetChunkAtPos(pos, waveChunks, size);
 	}
 
-	GerstnerWave::WaveTessellationLOD const * GerstnerWave::GetTessellationLOD(u32 lodLevel) const
+	GerstnerWave::WaveTessellationLOD const* GerstnerWave::GetTessellationLOD(u32 lodLevel) const
 	{
-		if (lodLevel < (u32)waveTessellationLODs.size())
-		{
-			return &waveTessellationLODs[lodLevel];
-		}
-		return nullptr;
+		return flex::GetTessellationLOD(lodLevel, waveTessellationLODs);
 	}
 
 	u32 GerstnerWave::ComputeTesellationLODLevel(const glm::vec2i& chunkIdx)
@@ -3456,21 +3455,21 @@ namespace flex
 
 	glm::vec3 GerstnerWave::QueryHeightFieldFromVerts(const glm::vec3& queryPos) const
 	{
-		WaveChunk const * chunk = GetChunkAtPos(queryPos);
+		WaveChunk const* chunk = GetChunkAtPos(queryPos);
 		if (chunk)
 		{
 			glm::vec2i chunkIdx = chunk->index;
-			WaveTessellationLOD const * tessellationLOD = GetTessellationLOD(chunk->tessellationLODLevel);
+			WaveTessellationLOD const* tessellationLOD = GetTessellationLOD(chunk->tessellationLODLevel);
 			u32 chunkVertCountPerAxis = tessellationLOD->vertCountPerAxis;
 			const u32 vertsPerChunk = chunkVertCountPerAxis * chunkVertCountPerAxis;
 			glm::vec2 chunkMin((chunkIdx.x - 0.5f) * size, (chunkIdx.y - 0.5f) * size);
 			glm::vec2 chunkUV = glm::saturate(glm::vec2((queryPos.x - chunkMin.x) / size, (queryPos.z - chunkMin.y) / size));
 			u32 chunkLocalVertexIndex = (u32)(chunkUV.x * (chunkVertCountPerAxis - 1)) + ((u32)(chunkUV.y * ((real)chunkVertCountPerAxis - 1.0f)) * chunkVertCountPerAxis);
 			const u32 idxMax = vertsPerChunk - 1;
-			glm::vec3 A(m_VertexBufferCreateInfo.positions_3D[chunk->vertOffset + glm::min(chunkLocalVertexIndex + 0, idxMax)]);
-			glm::vec3 B(m_VertexBufferCreateInfo.positions_3D[chunk->vertOffset + glm::min(chunkLocalVertexIndex + 1, idxMax)]);
+			glm::vec3 A(m_VertexBufferCreateInfo.positions_3D[chunk->vertOffset + glm::min(chunkLocalVertexIndex + 0u, idxMax)]);
+			glm::vec3 B(m_VertexBufferCreateInfo.positions_3D[chunk->vertOffset + glm::min(chunkLocalVertexIndex + 1u, idxMax)]);
 			glm::vec3 C(m_VertexBufferCreateInfo.positions_3D[chunk->vertOffset + glm::min(chunkLocalVertexIndex + chunkVertCountPerAxis, idxMax)]);
-			glm::vec3 D(m_VertexBufferCreateInfo.positions_3D[chunk->vertOffset + glm::min(chunkLocalVertexIndex + chunkVertCountPerAxis + 1, idxMax)]);
+			glm::vec3 D(m_VertexBufferCreateInfo.positions_3D[chunk->vertOffset + glm::min(chunkLocalVertexIndex + chunkVertCountPerAxis + 1u, idxMax)]);
 			glm::vec2 vertexUV = glm::saturate(glm::vec2((queryPos.x - A.x) / (B.x - A.x), (queryPos.z - B.z) / (D.z - B.z)));
 			glm::vec3 result = Lerp(Lerp(A, B, vertexUV.x), Lerp(C, D, vertexUV.x), vertexUV.y);
 
@@ -3519,10 +3518,12 @@ namespace flex
 		const u32 vertCountPerChunk = maxChunkVertCountPerAxis * maxChunkVertCountPerAxis;
 		const u32 vertCountPerChunkDiv4 = vertCountPerChunk / 4;
 
+		assert((*workQueue)[workQueueIndex].positionsx_4 == nullptr);
+
 		(*workQueue)[workQueueIndex].positionsx_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
 		(*workQueue)[workQueueIndex].positionsy_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
 		(*workQueue)[workQueueIndex].positionsz_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
-		(*workQueue)[workQueueIndex].lodSelected_4 = (__m128*)_mm_malloc(vertCountPerChunk * sizeof(__m128), 16);
+		(*workQueue)[workQueueIndex].lodSelected_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
 
 		(*workQueue)[workQueueIndex].lodCutoffsAmplitudes_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
 		(*workQueue)[workQueueIndex].lodNextCutoffDistances_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
@@ -3550,7 +3551,7 @@ namespace flex
 		for (u32 chunkIdx = 0; chunkIdx < (u32)waveChunks.size(); ++chunkIdx)
 		{
 			WaveChunk& waveChunk = waveChunks[chunkIdx];
-			WaveTessellationLOD const * tessellationLOD = GetTessellationLOD(waveChunk.tessellationLODLevel);
+			WaveTessellationLOD const* tessellationLOD = GetTessellationLOD(waveChunk.tessellationLODLevel);
 			vertCount += tessellationLOD->vertCountPerAxis * tessellationLOD->vertCountPerAxis;
 			indexCount += 6 * (tessellationLOD->vertCountPerAxis - 1) * (tessellationLOD->vertCountPerAxis - 1);
 		}
@@ -3563,7 +3564,7 @@ namespace flex
 			for (u32 chunkIdx = 0; chunkIdx < (u32)waveChunks.size(); ++chunkIdx)
 			{
 				WaveChunk& waveChunk = waveChunks[chunkIdx];
-				WaveTessellationLOD const * tessellationLOD = GetTessellationLOD(waveChunk.tessellationLODLevel);
+				WaveTessellationLOD const* tessellationLOD = GetTessellationLOD(waveChunk.tessellationLODLevel);
 				for (u32 z = 0; z < tessellationLOD->vertCountPerAxis - 1; ++z)
 				{
 					for (u32 x = 0; x < tessellationLOD->vertCountPerAxis - 1; ++x)
@@ -3704,10 +3705,18 @@ namespace flex
 		{
 			for (u32 i = 0; i < workQueue->Size(); ++i)
 			{
+				// TODO: Reuse memory
 				FreeWorkQueueEntry(i);
 			}
 			delete workQueue;
-			workQueue = new ThreadSafeArray<WaveGenData>((u32)(waveChunks.size() * 1.2f));
+
+			u32 newSize = (u32)(waveChunks.size() * 1.2f);
+			Print("Resizing to %u\n", newSize);
+			workQueue = new ThreadSafeArray<WaveGenData>(newSize);
+			for (u32 i = 0; i < workQueue->Size(); ++i)
+			{
+				AllocWorkQueueEntry(i);
+			}
 		}
 
 		workQueueEntriesCompleted = 0;
@@ -3721,9 +3730,6 @@ namespace flex
 
 		for (u32 chunkIdx = 0; chunkIdx < (u32)waveChunks.size(); ++chunkIdx)
 		{
-			WaveChunk& waveChunk = waveChunks[chunkIdx];
-			WaveTessellationLOD const* tessellationLOD = GetTessellationLOD(waveChunk.tessellationLODLevel);
-
 			volatile WaveGenData* waveGenData = &(*workQueue)[chunkIdx];
 
 			waveGenData->waves = &waves;
@@ -3731,7 +3737,6 @@ namespace flex
 			waveGenData->waveSamplingLODs = &waveSamplingLODs;
 			waveGenData->waveTessellationLODs = &waveTessellationLODs;
 			waveGenData->size = size;
-			waveGenData->chunkVertCountPerAxis = tessellationLOD->vertCountPerAxis;
 			waveGenData->chunkIdx = chunkIdx;
 			waveGenData->bDisableLODs = bDisableLODs;
 			waveGenData->blendDist = blendDist;
@@ -3819,7 +3824,7 @@ namespace flex
 						WRITE_BARRIER;
 
 						assert(workQueueEntriesClaimed <= workQueueEntriesCreated);
-						assert(workQueueEntriesClaimed < workQueue->Size());
+						assert(workQueueEntriesClaimed <= workQueue->Size());
 					}
 
 				}
@@ -3832,10 +3837,12 @@ namespace flex
 				const std::vector<GerstnerWave::WaveInfo>& waves = *work->waves;
 				const std::vector<GerstnerWave::WaveChunk>& waveChunks = *work->waveChunks;
 				const std::vector<GerstnerWave::WaveSamplingLOD>& waveSamplingLODs = *work->waveSamplingLODs;
-				//const std::vector<GerstnerWave::WaveTessellationLOD>& waveTessellationLODs= *work->waveTessellationLODs;
+				const std::vector<GerstnerWave::WaveTessellationLOD>& waveTessellationLODs = *work->waveTessellationLODs;
+
+				GerstnerWave::WaveTessellationLOD const* tessellationLOD = GetTessellationLOD(waveChunks[work->chunkIdx].tessellationLODLevel, waveTessellationLODs);
 
 				real size = work->size;
-				i32 chunkVertCountPerAxis = work->chunkVertCountPerAxis;
+				i32 chunkVertCountPerAxis = tessellationLOD->vertCountPerAxis;
 				u32 chunkIdx = work->chunkIdx;
 				bool bDisableLODs = work->bDisableLODs;
 				real blendDist = work->blendDist;
@@ -3854,8 +3861,6 @@ namespace flex
 
 				__m128 blendDist_4 = _mm_set_ps1(blendDist);
 				__m128 blendDistSqr_4 = _mm_set_ps1(blendDist * blendDist);
-
-				assert(positionsx_4 != nullptr);
 
 				const i32 vertCountPerChunk = chunkVertCountPerAxis * chunkVertCountPerAxis;
 
@@ -4036,7 +4041,7 @@ namespace flex
 				{
 					for (i32 x = 0; x < chunkVertCountPerAxis; ++x)
 					{
-						const i32 vertIdx = z * chunkVertCountPerAxis + x + chunkIdx * vertCountPerChunk;
+						const i32 vertIdx = z * chunkVertCountPerAxis + x + waveChunk->vertOffset;
 
 						glm::vec3 diff = (ripplePos - positions[vertIdx]);
 						real d = glm::length(diff);
@@ -4065,7 +4070,7 @@ namespace flex
 		return 0;
 	}
 
-	GerstnerWave::WaveChunk const * GetChunkAtPos(const glm::vec2& pos, const std::vector<GerstnerWave::WaveChunk>& waveChunks, real size)
+	GerstnerWave::WaveChunk const* GetChunkAtPos(const glm::vec2& pos, const std::vector<GerstnerWave::WaveChunk>& waveChunks, real size)
 	{
 		glm::vec2i queryPosInt(ceil(pos.x / size + 0.5f), ceil(pos.y / size + 0.5f));
 		for (u32 chunkIdx = 0; chunkIdx < (u32)waveChunks.size(); ++chunkIdx)
@@ -4079,10 +4084,19 @@ namespace flex
 		return nullptr;
 	}
 
+	GerstnerWave::WaveTessellationLOD const* GetTessellationLOD(u32 lodLevel, const std::vector<GerstnerWave::WaveTessellationLOD>& waveTessellationLODs)
+	{
+		if (lodLevel < (u32)waveTessellationLODs.size())
+		{
+			return &waveTessellationLODs[lodLevel];
+		}
+		return nullptr;
+	}
+
 	void GerstnerWave::UpdateNormalsForChunk(u32 chunkIdx)
 	{
 		WaveChunk const* waveChunk = &waveChunks[chunkIdx];
-		WaveTessellationLOD const * tessellationLOD = GetTessellationLOD(waveChunk->tessellationLODLevel);
+		WaveTessellationLOD const* tessellationLOD = GetTessellationLOD(waveChunk->tessellationLODLevel);
 
 		glm::vec3* positions = m_VertexBufferCreateInfo.positions_3D.data();
 		glm::vec3* normals = m_VertexBufferCreateInfo.normals.data();
@@ -4093,10 +4107,14 @@ namespace flex
 
 		const glm::vec2 chunkCenter((waveChunk->index.x - 0.5f) * size, (waveChunk->index.y - 0.5f) * size);
 
-		WaveChunk const * chunkLeft = GetChunkAtPos(chunkCenter - glm::vec2(size, 0.0f));
-		WaveChunk const * chunkRight = GetChunkAtPos(chunkCenter + glm::vec2(size, 0.0f));
-		WaveChunk const * chunkBack = GetChunkAtPos(chunkCenter - glm::vec2(0.0f, size));
-		WaveChunk const * chunkFor = GetChunkAtPos(chunkCenter + glm::vec2(0.0f, size));
+		WaveChunk const* chunkLeft = GetChunkAtPos(chunkCenter - glm::vec2(size, 0.0f));
+		WaveChunk const* chunkRight = GetChunkAtPos(chunkCenter + glm::vec2(size, 0.0f));
+		WaveChunk const* chunkBack = GetChunkAtPos(chunkCenter - glm::vec2(0.0f, size));
+		WaveChunk const* chunkFor = GetChunkAtPos(chunkCenter + glm::vec2(0.0f, size));
+		WaveTessellationLOD const* LODLeft = chunkLeft ? GetTessellationLOD(chunkLeft->tessellationLODLevel) : nullptr;
+		WaveTessellationLOD const* LODRight = chunkRight ? GetTessellationLOD(chunkRight->tessellationLODLevel) : nullptr;
+		WaveTessellationLOD const* LODBack = chunkBack ? GetTessellationLOD(chunkBack->tessellationLODLevel) : nullptr;
+		WaveTessellationLOD const* LODFor = chunkFor ? GetTessellationLOD(chunkFor->tessellationLODLevel) : nullptr;
 
 		const real cellSize = size / chunkVertCountPerAxis;
 		for (u32 z = 0; z < chunkVertCountPerAxis; ++z)
@@ -4104,23 +4122,70 @@ namespace flex
 			for (u32 x = 0; x < chunkVertCountPerAxis; ++x)
 			{
 				const u32 localIdx = z * chunkVertCountPerAxis + x;
-				const u32 vertIdx = localIdx + chunkIdx * vertCountPerChunk;
+				const u32 vertIdx = localIdx + waveChunk->vertOffset;
 
 				glm::vec3 planePos = glm::vec3(
 					chunkCenter.x + size * ((real)x / (chunkVertCountPerAxis - 1)),
 					0.0f,
 					chunkCenter.y + size * ((real)z / (chunkVertCountPerAxis - 1)));
 
-				real left = (x >= 1) ? positions[vertIdx - 1].y : (chunkLeft ? positions[(z * chunkVertCountPerAxis + chunkVertCountPerAxis - 2) + chunkLeft->vertOffset].y : 0.0f);
-				real right = (x < chunkVertCountPerAxis - 1) ? positions[vertIdx + 1].y : (chunkRight ? positions[(z * chunkVertCountPerAxis + 1) + chunkRight->vertOffset].y : 0.0f);
-				real back = (z >= 1) ? positions[vertIdx - chunkVertCountPerAxis].y : (chunkBack ? positions[(chunkVertCountPerAxis - 2) * chunkVertCountPerAxis + x + chunkBack->vertOffset].y : 0.0f);
-				real forward = (z < chunkVertCountPerAxis - 1) ? positions[vertIdx + chunkVertCountPerAxis].y : (chunkFor ? positions[1 * chunkVertCountPerAxis + x + chunkFor->vertOffset].y : 0.0f);
+				real left = 0.0f;
+				real right = 0.0f;
+				real back = 0.0f;
+				real forward = 0.0f;
+				if (x >= 1)
+				{
+					left = positions[vertIdx - 1].y;
+				}
+				else if (chunkLeft)
+				{
+					u32 zz = MapVertIndexAcrossLODs(z, tessellationLOD, LODLeft);
+					left = positions[(zz * LODLeft->vertCountPerAxis + LODLeft->vertCountPerAxis - 2) + chunkLeft->vertOffset].y;
+				}
+				if (x < chunkVertCountPerAxis - 1)
+				{
+					right = positions[vertIdx + 1].y;
+				}
+				else if (chunkRight)
+				{
+					u32 zz = MapVertIndexAcrossLODs(z, tessellationLOD, LODRight);
+					right = positions[(zz * LODRight->vertCountPerAxis + 1) + chunkRight->vertOffset].y;
+				}
+				if (z >= 1)
+				{
+					back = positions[vertIdx - chunkVertCountPerAxis].y;
+				}
+				else if (chunkBack)
+				{
+					u32 xx = MapVertIndexAcrossLODs(x, tessellationLOD, LODBack);
+					back = positions[(LODBack->vertCountPerAxis - 2) * LODBack->vertCountPerAxis + xx + chunkBack->vertOffset].y;
+				}
+				if (z < chunkVertCountPerAxis - 1)
+				{
+					forward = positions[vertIdx + chunkVertCountPerAxis].y;
+				}
+				else if (chunkFor)
+				{
+					u32 xx = MapVertIndexAcrossLODs(x, tessellationLOD, LODFor);
+					forward = positions[LODFor->vertCountPerAxis + xx + chunkFor->vertOffset].y;
+				}
 
 				real dX = left - right;
 				real dZ = back - forward;
 				normals[vertIdx] = glm::vec3(dX, 2.0f * cellSize, dZ);
 			}
 		}
+	}
+
+	u32 MapVertIndexAcrossLODs(u32 vertIndex, GerstnerWave::WaveTessellationLOD const* lod0, GerstnerWave::WaveTessellationLOD const* lod1)
+	{
+		if (lod0->vertCountPerAxis == lod1->vertCountPerAxis)
+		{
+			return vertIndex;
+		}
+
+		u32 result = (u32)((real)vertIndex / lod0->vertCountPerAxis * lod1->vertCountPerAxis);
+		return result;
 	}
 
 	GameObject* GerstnerWave::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
@@ -4173,7 +4238,7 @@ namespace flex
 			}
 		}
 
-		if (ImGuiExt::SliderUInt("Max chunk vert count", &maxChunkVertCountPerAxis, 2, 256))
+		if (ImGuiExt::SliderUInt("Max chunk vert count", &maxChunkVertCountPerAxis, 4, 256))
 		{
 			maxChunkVertCountPerAxis = glm::clamp(maxChunkVertCountPerAxis - (maxChunkVertCountPerAxis % 4), 4u, 256u);
 		}
@@ -4227,6 +4292,7 @@ namespace flex
 				real sqrDist = waveSamplingLODs.empty() ? 100.0f : waveSamplingLODs[waveSamplingLODs.size() - 1].squareDist + 10.0f;
 				real amplitude = waveSamplingLODs.empty() ? 1.0f : waveSamplingLODs[waveSamplingLODs.size() - 1].amplitudeCutoff + 1.0f;
 				waveSamplingLODs.emplace_back(sqrDist, amplitude);
+				bNeedsSort = true;
 			}
 
 			ImGui::TreePop();
@@ -4262,7 +4328,10 @@ namespace flex
 					bNeedsSort = true;
 				}
 				std::string vertCountStr = "vert count per axis" + childName;
-				ImGuiExt::DragUInt(vertCountStr.c_str(), &waveTessellationLODs[i].vertCountPerAxis, 2u, 32u);
+				if (ImGuiExt::SliderUInt(vertCountStr.c_str(), &waveTessellationLODs[i].vertCountPerAxis, 2u, 128u))
+				{
+					waveTessellationLODs[i].vertCountPerAxis = glm::clamp(waveTessellationLODs[i].vertCountPerAxis - (waveTessellationLODs[i].vertCountPerAxis % 4), 2u, 512u);
+				}
 			}
 
 			if (ImGui::Button("+"))
@@ -4270,13 +4339,14 @@ namespace flex
 				real sqrDist = waveTessellationLODs.empty() ? 100.0f : waveTessellationLODs[waveTessellationLODs.size() - 1].squareDist + 10.0f;
 				u32 vertCount = 16;
 				waveTessellationLODs.emplace_back(sqrDist, vertCount);
+				bNeedsSort = true;
 			}
 
 			ImGui::TreePop();
 
 			if (bNeedsSort)
 			{
-				SortWaveSamplingLODs();
+				SortWaveTessellationLODs();
 			}
 		}
 
@@ -4501,6 +4571,15 @@ namespace flex
 	{
 		std::sort(waveSamplingLODs.begin(), waveSamplingLODs.end(),
 			[](const WaveSamplingLOD& lodA, const WaveSamplingLOD& lodB)
+		{
+			return abs(lodA.squareDist) > abs(lodB.squareDist);
+		});
+	}
+
+	void GerstnerWave::SortWaveTessellationLODs()
+	{
+		std::sort(waveTessellationLODs.begin(), waveTessellationLODs.end(),
+			[](const WaveTessellationLOD& lodA, const WaveTessellationLOD& lodB)
 		{
 			return abs(lodA.squareDist) > abs(lodB.squareDist);
 		});
