@@ -20,6 +20,6 @@ layout (binding = 1) uniform UBODynamic
 void main()
 {
     vec4 worldPos = uboDynamic.model * vec4(in_Position, 1.0);
-    gl_Position = uboConstant.viewProjection * worldPos;
+    gl_Position = worldPos;
     outputs.positionWS = worldPos.xyz;
 }

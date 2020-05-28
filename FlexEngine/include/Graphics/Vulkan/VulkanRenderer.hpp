@@ -197,6 +197,11 @@ namespace flex
 			void CreateSSAOPipelines();
 			void CreateSSAODescriptorSets();
 
+			void CreateWireframeDescriptorSets();
+			VkPipeline CreateWireframePipeline(VertexAttributes vertexAttributes);
+			VkPipeline GetOrCreateWireframePipeline(VertexAttributes vertexAttributes);
+			void DestroyWireframePipelines();
+
 			MaterialID GetNextAvailableMaterialID() const;
 			RenderID GetNextAvailableRenderID() const;
 			ParticleSystemID GetNextAvailableParticleSystemID() const;
@@ -657,6 +662,11 @@ namespace flex
 			VkDescriptorSet m_SSAODescSet = VK_NULL_HANDLE;
 			VkDescriptorSet m_SSAOBlurHDescSet = VK_NULL_HANDLE;
 			VkDescriptorSet m_SSAOBlurVDescSet = VK_NULL_HANDLE;
+
+			// Maps vertex attributes to pipeline
+			std::map<VertexAttributes, VkPipeline> m_WireframeGraphicsPipelines;
+			VDeleter<VkPipelineLayout> m_WireframePipelineLayout;
+			VkDescriptorSet m_WireframeDescSet = VK_NULL_HANDLE;
 
 			// TODO: Create abstraction for specialization constants
 			VkSpecializationMapEntry m_SSAOSpecializationMapEntry;

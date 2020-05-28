@@ -250,6 +250,8 @@ namespace flex
 			m_SSAOBlurHGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
 			m_SSAOBlurVGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
 
+			m_WireframePipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
+
 			m_PostProcessGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
 			m_PostProcessGraphicsPipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
 			m_TAAResolveGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
@@ -529,6 +531,8 @@ namespace flex
 			CreateSSAOPipelines();
 			CreateSSAODescriptorSets();
 
+			CreateWireframeDescriptorSets();
+
 			CreateShadowResources();
 
 			m_CommandBufferManager.CreateCommandBuffers((u32)m_SwapChainImages.size());
@@ -806,6 +810,9 @@ namespace flex
 
 			m_SSAOGraphicsPipelineLayout.replace();
 			m_SSAOBlurGraphicsPipelineLayout.replace();
+
+			DestroyWireframePipelines();
+			m_WireframePipelineLayout.replace();
 
 			m_ShadowGraphicsPipeline.replace();
 			m_ShadowPipelineLayout.replace();
@@ -4071,6 +4078,71 @@ namespace flex
 			descSetCreateInfo.imageDescriptors.Add(U_SSAO_NORMAL_SAMPLER, ImageDescriptorInfo{ m_GBufferColorAttachment0->view, m_NearestClampEdgeSampler });
 			FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
 			CreateDescriptorSet(&descSetCreateInfo);
+		}
+
+		VkPipeline VulkanRenderer::CreateWireframePipeline(VertexAttributes vertexAttributes)
+		{
+			VulkanMaterial* wireframeMaterial = &m_Materials[m_WireframeMatID];
+			VulkanShader* wireframeShader = &m_Shaders[wireframeMaterial->material.shaderID];
+
+			VkPipeline pipeline = VK_NULL_HANDLE;
+
+			GraphicsPipelineCreateInfo pipelineCreateInfo = {};
+			pipelineCreateInfo.DBG_Name = "Wireframe pipeline";
+			pipelineCreateInfo.graphicsPipeline = &pipeline;
+			// TODO: Prevent layout recreation
+			pipelineCreateInfo.pipelineLayout = m_WireframePipelineLayout.replace();
+			pipelineCreateInfo.shaderID = wireframeMaterial->material.shaderID;
+			pipelineCreateInfo.vertexAttributes = vertexAttributes;
+			pipelineCreateInfo.descriptorSetLayoutIndex = wireframeMaterial->descriptorSetLayoutIndex;
+			pipelineCreateInfo.bEnableColorBlending = wireframeShader->shader->bTranslucent;
+			pipelineCreateInfo.subpass = 0;
+			pipelineCreateInfo.cullMode = VK_CULL_MODE_NONE;
+			pipelineCreateInfo.depthCompareOp = VK_COMPARE_OP_ALWAYS;
+			pipelineCreateInfo.depthTestEnable = false;
+			pipelineCreateInfo.depthWriteEnable = wireframeShader->shader->bDepthWriteEnable ? VK_TRUE : VK_FALSE;
+			pipelineCreateInfo.renderPass = wireframeShader->renderPass;
+			CreateGraphicsPipeline(&pipelineCreateInfo);
+
+			return pipeline;
+		}
+
+		void VulkanRenderer::CreateWireframeDescriptorSets()
+		{
+			VulkanMaterial* wireframeMaterial = &m_Materials[m_WireframeMatID];
+
+			VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[wireframeMaterial->material.shaderID];
+
+			DescriptorSetCreateInfo descSetCreateInfo = {};
+			descSetCreateInfo.descriptorSet = &m_WireframeDescSet;
+			descSetCreateInfo.DBG_Name = "Wireframe descriptor set";
+			descSetCreateInfo.descriptorSetLayout = &descSetLayout;
+			descSetCreateInfo.shaderID = wireframeMaterial->material.shaderID;
+			descSetCreateInfo.uniformBufferList = &wireframeMaterial->uniformBufferList;
+			FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
+			CreateDescriptorSet(&descSetCreateInfo);
+		}
+
+		VkPipeline VulkanRenderer::GetOrCreateWireframePipeline(VertexAttributes vertexAttributes)
+		{
+			auto pipelineIter = m_WireframeGraphicsPipelines.find(vertexAttributes);
+			if (pipelineIter != m_WireframeGraphicsPipelines.end())
+			{
+				return pipelineIter->second;
+			}
+
+			VkPipeline newWireframePipeline = CreateWireframePipeline(vertexAttributes);
+			m_WireframeGraphicsPipelines[vertexAttributes] = newWireframePipeline;
+			return newWireframePipeline;
+		}
+
+		void VulkanRenderer::DestroyWireframePipelines()
+		{
+			for (auto& pipelineIter : m_WireframeGraphicsPipelines)
+			{
+				vkDestroyPipeline(m_VulkanDevice->m_LogicalDevice, pipelineIter.second, nullptr);
+			}
+			m_WireframeGraphicsPipelines.clear();
 		}
 
 		u32 VulkanRenderer::GetActiveRenderObjectCount() const
@@ -7547,16 +7619,17 @@ namespace flex
 			for (const MaterialBatchPair& matBatch : shaderBatch.batch.batches)
 			{
 				MaterialID matID = matBatch.materialID;
-				if (drawCallInfo && drawCallInfo->materialIDOverride != InvalidMaterialID)
+				if (drawCallInfo && drawCallInfo->bWireframe)
+				{
+					matID = m_WireframeMatID;
+				}
+				else if (drawCallInfo && drawCallInfo->materialIDOverride != InvalidMaterialID)
 				{
 					matID = drawCallInfo->materialIDOverride;
 				}
 
 				VulkanMaterial& mat = m_Materials.at(matID);
 				VulkanShader& shader = m_Shaders[mat.material.shaderID];
-				assert(mat.material.shaderID == shaderID);
-
-				assert(mat.material.bDynamic == shaderBatch.bDynamic);
 
 				for (RenderID renderID : matBatch.batch.objects)
 				{
@@ -7582,6 +7655,15 @@ namespace flex
 						if (drawCallInfo->bRenderingShadows)
 						{
 							dynamicUBOOffset = renderObject->dynamicShadowUBOOffset;
+						}
+
+						if (drawCallInfo->bWireframe)
+						{
+							VulkanMaterial* objectMaterial = &m_Materials[matBatch.materialID];
+							VulkanShader* objectShader = &m_Shaders[objectMaterial->material.shaderID];
+							graphicsPipeline = GetOrCreateWireframePipeline(objectShader->shader->vertexAttributes);
+							pipelineLayout = m_WireframePipelineLayout;
+							descriptorSet = m_WireframeDescSet;
 						}
 					}
 
@@ -8088,6 +8170,32 @@ namespace flex
 
 					EndDebugMarkerRegion(commandBuffer, "End World Space Text");
 				}
+
+				// All objects wireframe
+				{
+					BeginDebugMarkerRegion(commandBuffer, "Wireframe");
+
+					u32 dynamicIndex = 0;
+					for (const ShaderBatchPair& shaderBatch : m_ShadowBatch.batches)
+					{
+						for (RenderID renderID : shaderBatch.batch.batches[0].batch.objects)
+						{
+							VulkanRenderObject* renderObject = GetRenderObject(renderID);
+							UpdateDynamicUniformBuffer(renderID, nullptr, m_WireframeMatID, renderObject->dynamicUBOOffset);
+							++dynamicIndex;
+						}
+					}
+
+					DrawCallInfo wireframeDrawCallInfo = {};
+					wireframeDrawCallInfo.bWireframe = true;
+
+					for (const ShaderBatchPair& shaderBatch : m_ForwardObjectBatches.batches)
+					{
+						DrawShaderBatch(shaderBatch, commandBuffer, &wireframeDrawCallInfo);
+					}
+
+					EndDebugMarkerRegion(commandBuffer, "End Wireframe");
+				}
 			}
 			m_ForwardRenderPass->End();
 
@@ -8350,6 +8458,8 @@ namespace flex
 
 			CreateSSAODescriptorSets();
 			CreateSSAOPipelines();
+
+			CreateWireframeDescriptorSets();
 
 			CreatePostProcessingResources();
 			CreateFullscreenBlitResources();
@@ -9047,6 +9157,9 @@ namespace flex
 
 			CreateSSAODescriptorSets();
 			CreateSSAOPipelines();
+
+			CreateWireframeDescriptorSets();
+			DestroyWireframePipelines();
 
 			InitializeAllParticleSystemBuffers();
 

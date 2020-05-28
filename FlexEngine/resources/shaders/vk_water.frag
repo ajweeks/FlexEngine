@@ -76,8 +76,8 @@ void main()
 	vec3 sky = SampleSkybox(R);
 
 	// TODO: Add toggle bool
-	// fragColor = vec4(mix(mix(black, deepBlue, deepness), sky, clamp(fresnel,0,1)), 1);
-	fragColor = mix(0.05, 0.9, NoV) * ex_Colour;
+	fragColor = vec4(mix(mix(black, deepBlue, deepness), sky, clamp(fresnel,0,1)), 1);
+	//fragColor = mix(0.05, 0.9, NoV) * ex_Colour;
 
 	//fragColor = vec4(SampleSkybox(R), 1);
 	//fragColor = vec4(clamp(R,0,1), 1);

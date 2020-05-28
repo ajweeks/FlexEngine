@@ -428,6 +428,7 @@ namespace flex
 		MaterialID m_IrradianceMaterialID = InvalidMaterialID;
 		MaterialID m_PrefilterMaterialID = InvalidMaterialID;
 		MaterialID m_BRDFMaterialID = InvalidMaterialID;
+		MaterialID m_WireframeMatID = InvalidMaterialID;
 
 		MaterialID m_ComputeSDFMatID = InvalidMaterialID;
 		MaterialID m_FullscreenBlitMatID = InvalidMaterialID;

@@ -484,13 +484,6 @@
 			"const albedo" : "1.000, 0.000, 0.000, 0.000",
 			"const metallic" : 1.000000,
 			"const roughness" : 1.000000
-		},
-		{
-			"name" : "wireframe",
-			"shader" : "wireframe",
-			"const albedo" : "1.000, 1.000, 1.000, 0.000",
-			"const metallic" : 0.000000,
-			"const roughness" : 0.000000
 		}
 	]
 }

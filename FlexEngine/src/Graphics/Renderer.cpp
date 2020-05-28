@@ -2672,6 +2672,13 @@ namespace flex
 		brdfCreateInfo.visibleInEditor = false;
 		m_BRDFMaterialID = InitializeMaterial(&brdfCreateInfo);
 
+		MaterialCreateInfo wireframeCreateInfo = {};
+		wireframeCreateInfo.name = "wireframe";
+		wireframeCreateInfo.shaderName = "wireframe";
+		wireframeCreateInfo.persistent = true;
+		wireframeCreateInfo.visibleInEditor = false;
+		m_WireframeMatID = InitializeMaterial(&wireframeCreateInfo);
+
 		MaterialCreateInfo placeholderMatCreateInfo = {};
 		placeholderMatCreateInfo.name = "placeholder";
 		placeholderMatCreateInfo.shaderName = "pbr";
