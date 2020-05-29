@@ -1026,6 +1026,8 @@ namespace flex
 			{
 				PhysicsDebuggingSettings& physicsDebuggingSettings = g_Renderer->GetPhysicsDebuggingSettings();
 
+				ImGui::Checkbox("Wireframe overlay", &m_bEnableWireframeOverlay);
+
 				bool bRenderEditorObjs = g_EngineInstance->IsRenderingEditorObjects();
 				if (ImGui::Checkbox("Editor objects", &bRenderEditorObjs))
 				{
@@ -1803,6 +1805,7 @@ namespace flex
 
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_COLOR_MULTIPLIER);
 			++shaderID;
 
 			assert(shaderID == m_BaseShaders.size());

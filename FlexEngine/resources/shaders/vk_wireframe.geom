@@ -21,6 +21,7 @@ layout (binding = 0) uniform UBOConstant
 layout (binding = 1) uniform UBODynamic
 {
 	mat4 model;
+	vec4 colour;
 } uboDynamic;
 
 void main()

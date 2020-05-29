@@ -461,6 +461,8 @@ namespace flex
 		i32 m_TAASampleCount = 2;
 		bool m_bTAAStateChanged = false;
 
+		bool m_bEnableWireframeOverlay = true;
+
 		FXAAData m_FXAAData;
 
 		i32 m_DebugMode = 0;

@@ -1729,6 +1729,12 @@ namespace flex
 
 			m_PhysicsDebugDrawer->UpdateDebugMode();
 
+			{
+				VulkanMaterial* wireframeMat = &m_Materials[m_WireframeMatID];
+				real f = glm::clamp(sin(g_SecElapsedSinceProgramStart * 4.0f) * 0.2f + 0.55f, 0.0f, 1.0f);
+				wireframeMat->material.colorMultiplier = glm::vec4(f, f * 0.25f, f * 0.75f, 1.0f);
+			}
+
 			UpdateConstantUniformBuffers();
 
 			// TODO: Only update when things have changed
@@ -8137,11 +8143,32 @@ namespace flex
 						DrawShaderBatch(shaderBatch, commandBuffer);
 					}
 
-					// Selected object wireframe
-					// TODO:
+					if (m_bEnableWireframeOverlay)
+					{
+						// All objects wireframe
+						BeginDebugMarkerRegion(commandBuffer, "Wireframe");
 
-					//glDepthMask(GL_TRUE);
-					//glClear(GL_DEPTH_BUFFER_BIT);
+						u32 dynamicIndex = 0;
+						for (const ShaderBatchPair& shaderBatch : m_ShadowBatch.batches)
+						{
+							for (RenderID renderID : shaderBatch.batch.batches[0].batch.objects)
+							{
+								VulkanRenderObject* renderObject = GetRenderObject(renderID);
+								UpdateDynamicUniformBuffer(renderID, nullptr, m_WireframeMatID, renderObject->dynamicUBOOffset);
+								++dynamicIndex;
+							}
+						}
+
+						DrawCallInfo wireframeDrawCallInfo = {};
+						wireframeDrawCallInfo.bWireframe = true;
+
+						for (const ShaderBatchPair& shaderBatch : m_ForwardObjectBatches.batches)
+						{
+							DrawShaderBatch(shaderBatch, commandBuffer, &wireframeDrawCallInfo);
+						}
+
+						EndDebugMarkerRegion(commandBuffer, "End Wireframe");
+					}
 
 					// Depth unaware objects write to a cleared depth buffer so they
 					// draw on top of previous geometry but are still eclipsed by other
@@ -8169,32 +8196,6 @@ namespace flex
 					DrawTextWS(commandBuffer);
 
 					EndDebugMarkerRegion(commandBuffer, "End World Space Text");
-				}
-
-				// All objects wireframe
-				{
-					BeginDebugMarkerRegion(commandBuffer, "Wireframe");
-
-					u32 dynamicIndex = 0;
-					for (const ShaderBatchPair& shaderBatch : m_ShadowBatch.batches)
-					{
-						for (RenderID renderID : shaderBatch.batch.batches[0].batch.objects)
-						{
-							VulkanRenderObject* renderObject = GetRenderObject(renderID);
-							UpdateDynamicUniformBuffer(renderID, nullptr, m_WireframeMatID, renderObject->dynamicUBOOffset);
-							++dynamicIndex;
-						}
-					}
-
-					DrawCallInfo wireframeDrawCallInfo = {};
-					wireframeDrawCallInfo.bWireframe = true;
-
-					for (const ShaderBatchPair& shaderBatch : m_ForwardObjectBatches.batches)
-					{
-						DrawShaderBatch(shaderBatch, commandBuffer, &wireframeDrawCallInfo);
-					}
-
-					EndDebugMarkerRegion(commandBuffer, "End Wireframe");
 				}
 			}
 			m_ForwardRenderPass->End();
