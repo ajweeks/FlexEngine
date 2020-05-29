@@ -3439,8 +3439,8 @@ namespace flex
 			waveTessellationLODs.emplace_back(0.0f, maxChunkVertCountPerAxis);
 		}
 
-		glm::vec3 camPos = g_CameraManager->CurrentCamera()->position;
-		real sqrDist = glm::distance2(glm::vec2(camPos.x, camPos.z), glm::vec2(chunkIdx) * size);
+		glm::vec3 center = m_bPinCenter ? m_PinnedPos : g_CameraManager->CurrentCamera()->position;
+		real sqrDist = glm::distance2(glm::vec2(center.x, center.z), glm::vec2(chunkIdx) * size);
 
 		for (u32 i = 0; i < (u32)waveTessellationLODs.size(); ++i)
 		{
