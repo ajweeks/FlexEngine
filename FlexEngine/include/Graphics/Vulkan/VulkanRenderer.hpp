@@ -330,8 +330,6 @@ namespace flex
 			void EndGPUTimeStamp(VkCommandBuffer commandBuffer, const std::string& name);
 			ms GetDurationBetweenTimeStamps(const std::string& name);
 
-			bool InstanceExtensionSupported(const char* instanceExtensionName);
-
 			static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
 				VkDebugUtilsMessageSeverityFlagBitsEXT           messageSeverity,
 				VkDebugUtilsMessageTypeFlagsEXT                  messageTypes,
