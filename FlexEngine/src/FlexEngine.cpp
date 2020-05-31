@@ -972,6 +972,11 @@ namespace flex
 
 					ImGui::SliderFloat("Speed", &m_SimulationSpeed, 0.0001f, 10.0f);
 
+					if (ImGui::IsItemClicked(1))
+					{
+						m_SimulationSpeed = 1.0f;
+					}
+
 					ImGui::TreePop();
 				}
 
@@ -1419,13 +1424,6 @@ namespace flex
 				return EventReply::CONSUMED;
 			}
 
-			if (keyCode == KeyCode::KEY_F10)
-			{
-				m_bSimulationPaused = true;
-				m_bSimulateNextFrame = true;
-				return EventReply::CONSUMED;
-			}
-
 			if (keyCode == KeyCode::KEY_G)
 			{
 				g_Renderer->ToggleRenderGrid();
@@ -1508,6 +1506,16 @@ namespace flex
 			if (keyCode == KeyCode::KEY_K)
 			{
 				m_bWriteProfilerResultsToFile = true;
+				return EventReply::CONSUMED;
+			}
+		}
+
+		if (action == KeyAction::PRESS || action == KeyAction::REPEAT)
+		{
+			if (keyCode == KeyCode::KEY_F10)
+			{
+				m_bSimulationPaused = true;
+				m_bSimulateNextFrame = true;
 				return EventReply::CONSUMED;
 			}
 		}

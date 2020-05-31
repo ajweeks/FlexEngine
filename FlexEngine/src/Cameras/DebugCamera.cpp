@@ -71,6 +71,8 @@ namespace flex
 	void DebugCamera::Update()
 	{
 		BaseCamera::Update();
+		// Override value from base update
+		roll = Lerp(roll, 0.0f, rollRestorationSpeed * g_UnpausedDeltaTime);
 
 		m_DragHistory.AddElement(m_MouseDragDist.y);
 
