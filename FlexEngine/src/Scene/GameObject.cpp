@@ -3526,7 +3526,6 @@ namespace flex
 		(*workQueue)[workQueueIndex].lodSelected_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
 
 		(*workQueue)[workQueueIndex].lodCutoffsAmplitudes_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
-		(*workQueue)[workQueueIndex].lodNextCutoffDistances_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
 		(*workQueue)[workQueueIndex].lodNextCutoffAmplitudes_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
 		(*workQueue)[workQueueIndex].lodBlendWeights_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
 	}
@@ -3539,7 +3538,6 @@ namespace flex
 		_mm_free((*workQueue)[workQueueIndex].lodSelected_4);
 
 		_mm_free((*workQueue)[workQueueIndex].lodCutoffsAmplitudes_4);
-		_mm_free((*workQueue)[workQueueIndex].lodNextCutoffDistances_4);
 		_mm_free((*workQueue)[workQueueIndex].lodNextCutoffAmplitudes_4);
 		_mm_free((*workQueue)[workQueueIndex].lodBlendWeights_4);
 	}
@@ -3711,7 +3709,6 @@ namespace flex
 			delete workQueue;
 
 			u32 newSize = (u32)(waveChunks.size() * 1.2f);
-			Print("Resizing to %u\n", newSize);
 			workQueue = new ThreadSafeArray<WaveGenData>(newSize);
 			for (u32 i = 0; i < workQueue->Size(); ++i)
 			{
@@ -3848,7 +3845,6 @@ namespace flex
 				real blendDist = work->blendDist;
 
 				__m128* lodCutoffsAmplitudes_4 = work->lodCutoffsAmplitudes_4;
-				__m128* lodNextCutoffDistances_4 = work->lodNextCutoffDistances_4;
 				__m128* lodNextCutoffAmplitudes_4 = work->lodNextCutoffAmplitudes_4;
 				__m128* lodBlendWeights_4 = work->lodBlendWeights_4;
 
@@ -3882,8 +3878,9 @@ namespace flex
 				__m128 camPosx_4 = _mm_set_ps1(camPos.x);
 				__m128 camPosz_4 = _mm_set_ps1(camPos.z);
 
-				__m128 one_4 = _mm_set_ps1(1.0f);
 				__m128 zero_4 = _mm_set_ps1(0.0f);
+				__m128 one_4 = _mm_set_ps1(1.0f);
+				__m128 two_4 = _mm_set_ps1(2.0f);
 
 				// Clear out intermediate data
 				for (i32 z = 0; z < chunkVertCountPerAxis; ++z)
@@ -3893,10 +3890,9 @@ namespace flex
 						const i32 chunkLocalVertIdx = z * chunkVertCountPerAxis + x;
 						const i32 chunkLocalVertIdxDiv4 = chunkLocalVertIdx / 4;
 						lodCutoffsAmplitudes_4[chunkLocalVertIdxDiv4] = _mm_setzero_ps();
-						lodNextCutoffDistances_4[chunkLocalVertIdxDiv4] = _mm_setzero_ps();
 						lodNextCutoffAmplitudes_4[chunkLocalVertIdxDiv4] = _mm_setzero_ps();
 						lodSelected_4[chunkLocalVertIdxDiv4] = _mm_setzero_ps();
-						lodBlendWeights_4[chunkLocalVertIdxDiv4] = _mm_set_ps1(1.0f);
+						lodBlendWeights_4[chunkLocalVertIdxDiv4] = one_4;
 					}
 				}
 
@@ -3920,32 +3916,35 @@ namespace flex
 
 						if (!bDisableLODs)
 						{
+							__m128 lodNextCutoffDistances_4 = zero_4;
 							for (u32 i = 0; i < (u32)waveSamplingLODs.size(); ++i)
 							{
+								__m128 i_4 = _mm_set_ps1((real)i);
 								__m128 waveSqrDistCutoff_4 = _mm_set_ps1(waveSamplingLODs[i].squareDist);
 								__m128 waveAmplitudeCutoff_4 = _mm_set_ps1(waveSamplingLODs[i].amplitudeCutoff);
+								__m128 mask0_4 = _mm_cmpge_ps(vertSqrDist, waveSqrDistCutoff_4);
 								__m128 eqZ = _mm_cmpeq_ps(lodCutoffsAmplitudes_4[chunkLocalVertIdxDiv4], zero_4);
-								__m128 cmpMask = _mm_blendv_ps(zero_4, _mm_cmpge_ps(vertSqrDist, waveSqrDistCutoff_4), eqZ);
+								__m128 cmpMask = _mm_blendv_ps(zero_4, mask0_4, eqZ);
 								lodCutoffsAmplitudes_4[chunkLocalVertIdxDiv4] = _mm_blendv_ps(lodCutoffsAmplitudes_4[chunkLocalVertIdxDiv4], waveAmplitudeCutoff_4, cmpMask);
 
 								bool bLastCutoff = (i == waveSamplingLODs.size() - 1);
-								lodNextCutoffDistances_4[chunkLocalVertIdxDiv4] = _mm_blendv_ps(lodNextCutoffDistances_4[chunkLocalVertIdxDiv4], _mm_set_ps1(bLastCutoff ? FLT_MAX : waveSamplingLODs[i + 1].squareDist), cmpMask);
+								lodNextCutoffDistances_4 = _mm_blendv_ps(lodNextCutoffDistances_4, _mm_set_ps1(bLastCutoff ? FLT_MAX : waveSamplingLODs[i + 1].squareDist), cmpMask);
 								lodNextCutoffAmplitudes_4[chunkLocalVertIdxDiv4] = _mm_blendv_ps(lodNextCutoffAmplitudes_4[chunkLocalVertIdxDiv4], _mm_set_ps1(bLastCutoff ? FLT_MAX : waveSamplingLODs[i + 1].amplitudeCutoff), cmpMask);
 
-								__m128 cmpMask3 = _mm_and_ps(_mm_cmpeq_ps(cmpMask, zero_4), _mm_cmpeq_ps(_mm_set_ps1((real)i), zero_4));
+								__m128 cmpMask3 = _mm_and_ps(_mm_cmpeq_ps(cmpMask, zero_4), _mm_cmpeq_ps(i_4, zero_4));
 								// Set next on verts in first LOD level
-								lodNextCutoffDistances_4[chunkLocalVertIdxDiv4] = _mm_blendv_ps(lodNextCutoffDistances_4[chunkLocalVertIdxDiv4], _mm_set_ps1(waveSamplingLODs[0].squareDist), cmpMask3);
+								lodNextCutoffDistances_4 = _mm_blendv_ps(lodNextCutoffDistances_4, _mm_set_ps1(waveSamplingLODs[0].squareDist), cmpMask3);
 								lodNextCutoffAmplitudes_4[chunkLocalVertIdxDiv4] = _mm_blendv_ps(lodNextCutoffAmplitudes_4[chunkLocalVertIdxDiv4], _mm_set_ps1(waveSamplingLODs[0].amplitudeCutoff), cmpMask3);
 
 								__m128 pushedDist = _mm_add_ps(vertSqrDist, blendDistSqr_4);
-								__m128 cmp2Mask = _mm_or_ps(_mm_cmpeq_ps(lodBlendWeights_4[chunkLocalVertIdxDiv4], zero_4), _mm_cmpeq_ps(lodNextCutoffDistances_4[chunkLocalVertIdxDiv4], zero_4));
-								__m128 delta = _mm_max_ps(_mm_sub_ps(_mm_sqrt_ps(lodNextCutoffDistances_4[chunkLocalVertIdxDiv4]), _mm_sqrt_ps(vertSqrDist)), zero_4);
+								__m128 cmp2Mask = _mm_or_ps(_mm_cmpeq_ps(lodBlendWeights_4[chunkLocalVertIdxDiv4], zero_4), _mm_cmpeq_ps(lodNextCutoffDistances_4, zero_4));
+								__m128 delta = _mm_max_ps(_mm_sub_ps(_mm_sqrt_ps(lodNextCutoffDistances_4), _mm_sqrt_ps(vertSqrDist)), zero_4);
 								// 0 at edge, 1 at blend dist inward, blend between
 								lodBlendWeights_4[chunkLocalVertIdxDiv4] = _mm_blendv_ps(_mm_min_ps(_mm_div_ps(delta, blendDist_4), one_4), lodBlendWeights_4[chunkLocalVertIdxDiv4], cmp2Mask);
 								lodSelected_4[chunkLocalVertIdxDiv4] = _mm_blendv_ps(_mm_add_ps(lodBlendWeights_4[chunkLocalVertIdxDiv4], _mm_set_ps1((real)i - 1)), lodSelected_4[chunkLocalVertIdxDiv4], cmp2Mask);
 
-								__m128 cmpMask4 = _mm_and_ps(_mm_cmpge_ps(vertSqrDist, waveSqrDistCutoff_4), _mm_cmpeq_ps(_mm_set_ps1((real)i), _mm_set_ps1((real)(waveSamplingLODs.size() - 1))));
-								lodSelected_4[chunkLocalVertIdxDiv4] = _mm_blendv_ps(_mm_add_ps(lodBlendWeights_4[chunkLocalVertIdxDiv4], _mm_set_ps1((real)(i))), lodSelected_4[chunkLocalVertIdxDiv4], cmpMask4);
+								__m128 cmpMask4 = _mm_and_ps(mask0_4, _mm_cmpeq_ps(i_4, _mm_set_ps1((real)(waveSamplingLODs.size() - 1))));
+								lodSelected_4[chunkLocalVertIdxDiv4] = _mm_blendv_ps(_mm_add_ps(lodBlendWeights_4[chunkLocalVertIdxDiv4], i_4), lodSelected_4[chunkLocalVertIdxDiv4], cmpMask4);
 							}
 						}
 					}

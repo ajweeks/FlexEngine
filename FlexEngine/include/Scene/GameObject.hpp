@@ -609,7 +609,6 @@ namespace flex
 
 			// Intermediate values:
 			__m128* lodCutoffsAmplitudes_4 = nullptr;
-			__m128* lodNextCutoffDistances_4 = nullptr;
 			__m128* lodNextCutoffAmplitudes_4 = nullptr;
 			__m128* lodBlendWeights_4 = nullptr;
 
