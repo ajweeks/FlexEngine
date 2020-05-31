@@ -8,7 +8,8 @@ namespace flex
 	struct RollingAverage
 	{
 		RollingAverage() :
-			currentAverage(T())
+			currentAverage(T()),
+			samplingType(SamplingType::LINEAR)
 		{
 		}
 
