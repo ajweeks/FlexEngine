@@ -18,6 +18,8 @@ IGNORE_WARNINGS_PUSH
 #include <glm/gtx/norm.hpp> // for distance2
 
 #include <random>
+
+#include <xmmintrin.h>
 IGNORE_WARNINGS_POP
 
 #include "Scene/GameObject.hpp"
@@ -3823,7 +3825,6 @@ namespace flex
 						assert(workQueueEntriesClaimed <= workQueueEntriesCreated);
 						assert(workQueueEntriesClaimed <= workQueue->Size());
 					}
-
 				}
 				Platform::LeaveCriticalSection(threadData->criticalSection);
 			}
@@ -3839,10 +3840,23 @@ namespace flex
 				GerstnerWave::WaveTessellationLOD const* tessellationLOD = GetTessellationLOD(waveChunks[work->chunkIdx].tessellationLODLevel, waveTessellationLODs);
 
 				real size = work->size;
-				i32 chunkVertCountPerAxis = tessellationLOD->vertCountPerAxis;
+				u32 chunkVertCountPerAxis = tessellationLOD->vertCountPerAxis;
 				u32 chunkIdx = work->chunkIdx;
 				bool bDisableLODs = work->bDisableLODs;
 				real blendDist = work->blendDist;
+
+				const glm::vec2 chunkCenter((waveChunks[chunkIdx].index.x - 0.5f) * size, (waveChunks[chunkIdx].index.y - 0.5f) * size);
+
+#if 1
+				GerstnerWave::WaveChunk const* chunkLeft = GetChunkAtPos(chunkCenter - glm::vec2(size, 0.0f), waveChunks, size);
+				GerstnerWave::WaveChunk const* chunkRight = GetChunkAtPos(chunkCenter + glm::vec2(size, 0.0f), waveChunks, size);
+				GerstnerWave::WaveChunk const* chunkBack = GetChunkAtPos(chunkCenter - glm::vec2(0.0f, size), waveChunks, size);
+				GerstnerWave::WaveChunk const* chunkFor = GetChunkAtPos(chunkCenter + glm::vec2(0.0f, size), waveChunks, size);
+				GerstnerWave::WaveTessellationLOD const* LODLeft = chunkLeft ? GetTessellationLOD(chunkLeft->tessellationLODLevel, waveTessellationLODs) : nullptr;
+				GerstnerWave::WaveTessellationLOD const* LODRight = chunkRight ? GetTessellationLOD(chunkRight->tessellationLODLevel, waveTessellationLODs) : nullptr;
+				GerstnerWave::WaveTessellationLOD const* LODBack = chunkBack ? GetTessellationLOD(chunkBack->tessellationLODLevel, waveTessellationLODs) : nullptr;
+				GerstnerWave::WaveTessellationLOD const* LODFor = chunkFor ? GetTessellationLOD(chunkFor->tessellationLODLevel, waveTessellationLODs) : nullptr;
+#endif
 
 				__m128* lodCutoffsAmplitudes_4 = work->lodCutoffsAmplitudes_4;
 				__m128* lodNextCutoffAmplitudes_4 = work->lodNextCutoffAmplitudes_4;
@@ -3860,18 +3874,13 @@ namespace flex
 
 				const i32 vertCountPerChunk = chunkVertCountPerAxis * chunkVertCountPerAxis;
 
+				__m128 vertCount_4 = _mm_set_ps1((real)(chunkVertCountPerAxis));
 				__m128 vertCountMin1_4 = _mm_set_ps1((real)(chunkVertCountPerAxis - 1));
 				__m128 size_4 = _mm_set_ps1(size);
 
-				const glm::vec2 chunkCenter((waveChunks[chunkIdx].index.x - 0.5f) * size, (waveChunks[chunkIdx].index.y - 0.5f) * size);
 				__m128 chunkCenterX_4 = _mm_set_ps1(chunkCenter.x);
 				__m128 chunkCenterY_4 = _mm_setzero_ps();
 				__m128 chunkCenterZ_4 = _mm_set_ps1(chunkCenter.y);
-
-				glm::vec2 chunkRight = chunkCenter + glm::vec2(size, 0.0f);
-				glm::vec2 chunkLeft = chunkCenter - glm::vec2(size, 0.0f);
-				glm::vec2 chunkForward = chunkCenter + glm::vec2(0.0f, size);
-				glm::vec2 chunkBack = chunkCenter - glm::vec2(0.0f, size);
 
 				// TODO: Work out max LOD in chunk
 				glm::vec3 camPos = g_CameraManager->CurrentCamera()->position;
@@ -3883,12 +3892,12 @@ namespace flex
 				__m128 two_4 = _mm_set_ps1(2.0f);
 
 				// Clear out intermediate data
-				for (i32 z = 0; z < chunkVertCountPerAxis; ++z)
+				for (u32 z = 0; z < chunkVertCountPerAxis; ++z)
 				{
-					for (i32 x = 0; x < chunkVertCountPerAxis; x += 4)
+					for (u32 x = 0; x < chunkVertCountPerAxis; x += 4)
 					{
-						const i32 chunkLocalVertIdx = z * chunkVertCountPerAxis + x;
-						const i32 chunkLocalVertIdxDiv4 = chunkLocalVertIdx / 4;
+						const u32 chunkLocalVertIdx = z * chunkVertCountPerAxis + x;
+						const u32 chunkLocalVertIdxDiv4 = chunkLocalVertIdx / 4;
 						lodCutoffsAmplitudes_4[chunkLocalVertIdxDiv4] = _mm_setzero_ps();
 						lodNextCutoffAmplitudes_4[chunkLocalVertIdxDiv4] = _mm_setzero_ps();
 						lodSelected_4[chunkLocalVertIdxDiv4] = _mm_setzero_ps();
@@ -3897,15 +3906,15 @@ namespace flex
 				}
 
 				// Positions verts on flat plane
-				for (i32 z = 0; z < chunkVertCountPerAxis; ++z)
+				for (u32 z = 0; z < chunkVertCountPerAxis; ++z)
 				{
 					__m128 zIdx_4 = _mm_set_ps1((real)z);
 
-					for (i32 x = 0; x < chunkVertCountPerAxis; x += 4)
+					for (u32 x = 0; x < chunkVertCountPerAxis; x += 4)
 					{
-						const i32 chunkLocalVertIdx = z * chunkVertCountPerAxis + x;
+						const u32 chunkLocalVertIdx = z * chunkVertCountPerAxis + x;
 						__m128 xIdx_4 = _mm_set_ps((real)(x + 3), (real)(x + 2), (real)(x + 1), (real)(x + 0));
-						const i32 chunkLocalVertIdxDiv4 = chunkLocalVertIdx / 4;
+						const u32 chunkLocalVertIdxDiv4 = chunkLocalVertIdx / 4;
 						positionsx_4[chunkLocalVertIdxDiv4] = _mm_add_ps(chunkCenterX_4, _mm_mul_ps(size_4, _mm_div_ps(xIdx_4, vertCountMin1_4)));
 						positionsy_4[chunkLocalVertIdxDiv4] = chunkCenterY_4;
 						positionsz_4[chunkLocalVertIdxDiv4] = _mm_add_ps(chunkCenterZ_4, _mm_mul_ps(size_4, _mm_div_ps(zIdx_4, vertCountMin1_4)));
@@ -3970,15 +3979,15 @@ namespace flex
 
 						u32 countMinOne = chunkVertCountPerAxis - 1;
 
-						for (i32 z = 0; z < chunkVertCountPerAxis; ++z)
+						for (u32 z = 0; z < chunkVertCountPerAxis; ++z)
 						{
 							__m128 zIdxMin_4 = _mm_set_ps1((real)z);
 							__m128 zIdxMax_4 = _mm_set_ps1((real)(countMinOne - z));
 
-							for (i32 x = 0; x < chunkVertCountPerAxis; x += 4)
+							for (u32 x = 0; x < chunkVertCountPerAxis; x += 4)
 							{
-								const i32 chunkLocalVertIdx = z * chunkVertCountPerAxis + x;
-								const i32 chunkLocalVertIdxDiv4 = chunkLocalVertIdx / 4;
+								const u32 chunkLocalVertIdx = z * chunkVertCountPerAxis + x;
+								const u32 chunkLocalVertIdxDiv4 = chunkLocalVertIdx / 4;
 
 								/*
 								real blendFactor = glm::min(
@@ -4028,6 +4037,83 @@ namespace flex
 						}
 					}
 				}
+
+#if 1
+				// Tessellation blending post process
+				// Higher level LODs match neighboring lower level LODs to fix cracks along seam
+				for (u32 i = 0; i < 2; ++i)
+				{
+					bool bFront = i == 0;
+
+					u32 z = bFront ? 0 : (chunkVertCountPerAxis - 1);
+					__m128 zIdx_4 = _mm_set_ps1((real)z);
+
+					for (u32 x = 0; x < chunkVertCountPerAxis; x += 4)
+					{
+						GerstnerWave::WaveTessellationLOD const* lod = bFront ? LODFor : LODBack;
+
+						if (lod == nullptr)
+						{
+							continue;
+						}
+
+						u32 neighborLODVertCount = lod->vertCountPerAxis;
+
+						if (neighborLODVertCount < chunkVertCountPerAxis)
+						{
+							__m128 neighborLODVertCount_4 = _mm_set_ps1((real)neighborLODVertCount);
+
+							// TODO: Mask off corners?
+							const u32 chunkLocalVertIdx = z * chunkVertCountPerAxis + x;
+
+							__m128 xIdx_4 = _mm_set_ps((real)(x + 3), (real)(x + 2), (real)(x + 1), (real)(x + 0));
+							const u32 chunkLocalVertIdxDiv4 = chunkLocalVertIdx / 4;
+
+							u32 neighborX = (u32)((real)x / chunkVertCountPerAxis * neighborLODVertCount);
+							u32 neighborZ = bFront ? (neighborLODVertCount - 1) : 0;
+							u32 lowerLODLocalVertIdx = neighborZ * neighborLODVertCount + neighborX;
+
+							__m128 neighborXIdx_4 = _mm_round_ps(_mm_mul_ps(_mm_div_ps(xIdx_4, vertCount_4), neighborLODVertCount_4), _MM_FROUND_TO_NEAREST_INT);
+
+							i32 neighborXIdxs[4];
+							__m128i neighborXIdx_4i = _mm_cvtps_epi32(neighborXIdx_4);
+							// TODO: Find store function that does this
+							memcpy(neighborXIdxs, neighborXIdx_4i.m128i_i32, sizeof(i32) * 4);
+
+							u32 neighborVertIdxs[4] = {
+								neighborZ * neighborLODVertCount + (u32)neighborXIdxs[0],
+								neighborZ * neighborLODVertCount + (u32)neighborXIdxs[1],
+								neighborZ * neighborLODVertCount + (u32)neighborXIdxs[2],
+								neighborZ * neighborLODVertCount + (u32)neighborXIdxs[3]
+							};
+
+							real neighborXs[4];
+							__m128i mask1 = _mm_set_epi32(1, 0, 0, 0);
+							_mm_extract_epi32(neighborXs, mask1, positionsx_4[neighborVertIdxs[0] / 4]);
+							_mm_mask_store_ps(neighborXs, 0b00110000, positionsx_4[neighborVertIdxs[1] / 4]);
+							_mm_mask_store_ps(neighborXs, 0b00001100, positionsx_4[neighborVertIdxs[2] / 4]);
+							_mm_mask_store_ps(neighborXs, 0b00000011, positionsx_4[neighborVertIdxs[3] / 4]);
+
+							real neighborYs[4];
+							_mm_mask_store_ps(neighborYs, 0b11000000, positionsy_4[neighborVertIdxs[0] / 4]);
+							_mm_mask_store_ps(neighborYs, 0b00110000, positionsy_4[neighborVertIdxs[1] / 4]);
+							_mm_mask_store_ps(neighborYs, 0b00001100, positionsy_4[neighborVertIdxs[2] / 4]);
+							_mm_mask_store_ps(neighborYs, 0b00000011, positionsy_4[neighborVertIdxs[3] / 4]);
+
+							real neighborZs[4];
+							_mm_mask_store_ps(neighborZs, 0b11000000, positionsz_4[neighborVertIdxs[0] / 4]);
+							_mm_mask_store_ps(neighborZs, 0b00110000, positionsz_4[neighborVertIdxs[1] / 4]);
+							_mm_mask_store_ps(neighborZs, 0b00001100, positionsz_4[neighborVertIdxs[2] / 4]);
+							_mm_mask_store_ps(neighborZs, 0b00000011, positionsz_4[neighborVertIdxs[3] / 4]);
+
+							// Snap
+							positionsx_4[chunkLocalVertIdxDiv4] = _mm_load_ps(neighborXs);
+							positionsy_4[chunkLocalVertIdxDiv4] = _mm_load_ps(neighborYs);
+							positionsz_4[chunkLocalVertIdxDiv4] = _mm_load_ps(neighborZs);
+						}
+					}
+				}
+#endif
 
 #if 0
 
