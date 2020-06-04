@@ -43,6 +43,8 @@ namespace flex
 	const char* Renderer::MaterialPayloadCStr = "material";
 	const char* Renderer::MeshPayloadCStr = "mesh";
 
+	std::array<glm::mat4, 6> Renderer::s_CaptureViews;
+
 	Renderer::Renderer() :
 		m_RendererSettingsFilePathAbs(RelativePathToAbsolute(ROOT_LOCATION "config/renderer-settings.json")),
 		m_FontsFilePathAbs(RelativePathToAbsolute(ROOT_LOCATION "config/fonts.json"))

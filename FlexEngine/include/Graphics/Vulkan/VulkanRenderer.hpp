@@ -16,6 +16,8 @@
 
 namespace flex
 {
+	struct ShaderBatchPair;
+
 	namespace vk
 	{
 		class VulkanPhysicsDebugDraw;
@@ -24,8 +26,6 @@ namespace flex
 
 		class VulkanRenderer : public Renderer
 		{
-			struct ShaderBatchPair;
-
 		public:
 			VulkanRenderer();
 			virtual ~VulkanRenderer();
@@ -152,35 +152,6 @@ namespace flex
 			friend VulkanRenderPass;
 
 			void DestroyRenderObject(RenderID renderID, VulkanRenderObject* renderObject);
-
-			struct UniformOverrides
-			{
-				Uniforms overridenUniforms;
-
-				glm::mat4 projection;
-				glm::mat4 view;
-				glm::mat4 viewProjection;
-				glm::vec4 camPos;
-				glm::mat4 model;
-				glm::mat4 modelInvTranspose;
-				u32 enableAlbedoSampler;
-				u32 enableMetallicSampler;
-				u32 enableRoughnessSampler;
-				u32 enableNormalSampler;
-				u32 enableIrradianceSampler;
-				i32 texChannel;
-				glm::vec4 sdfData;
-				glm::vec4 fontCharData;
-				glm::vec2 texSize;
-				glm::vec4 colorMultiplier;
-				bool bSSAOVerticalPass;
-				ParticleSimData* particleSimData = nullptr;
-			};
-
-			struct DeviceDiagnosticCheckpoint
-			{
-				char name[48];
-			};
 
 			bool InitializeFreeType();
 			void DestroyFreeType();
@@ -377,44 +348,6 @@ namespace flex
 			const u32 MAX_NUM_RENDER_OBJECTS = 4096; // TODO: Not this?
 			std::vector<VulkanRenderObject*> m_RenderObjects;
 			std::map<MaterialID, VulkanMaterial> m_Materials;
-			struct RenderObjectBatch
-			{
-				std::vector<RenderID> objects;
-			};
-
-			struct MaterialBatchPair
-			{
-				MaterialID materialID = InvalidMaterialID;
-				RenderObjectBatch batch;
-			};
-
-			struct MaterialBatch
-			{
-				// One per material
-				std::vector<MaterialBatchPair> batches;
-			};
-
-			struct ShaderBatchPair
-			{
-				ShaderID shaderID = InvalidShaderID;
-				bool bDynamic = false;
-				MaterialBatch batch;
-			};
-
-			struct ShaderBatch
-			{
-				// One per shader
-				std::vector<ShaderBatchPair> batches;
-			};
-
-			// One per deferred-rendered shader
-			ShaderBatch m_DeferredObjectBatches;
-			// One per forward-rendered shader
-			ShaderBatch m_ForwardObjectBatches;
-			ShaderBatch m_ShadowBatch;
-
-			ShaderBatch m_DepthAwareEditorObjBatches;
-			ShaderBatch m_DepthUnawareEditorObjBatches;
 
 			glm::vec2i m_CubemapFramebufferSize;
 			glm::vec2i m_BRDFSize;
@@ -460,10 +393,6 @@ namespace flex
 
 			std::map<FrameBufferAttachmentID, FrameBufferAttachment*> m_FrameBufferAttachments;
 
-			Material::PushConstantBlock* m_SpritePerspPushConstBlock = nullptr;
-			Material::PushConstantBlock* m_SpriteOrthoPushConstBlock = nullptr;
-			Material::PushConstantBlock* m_SpriteOrthoArrPushConstBlock = nullptr;
-
 			VulkanBuffer* m_FullScreenTriVertexBuffer = nullptr;
 
 			struct SpriteDescSet
@@ -475,27 +404,12 @@ namespace flex
 
 			std::map<TextureID, SpriteDescSet> m_SpriteDescSets;
 
-
-
-			Material::PushConstantBlock* m_CascadedShadowMapPushConstantBlock = nullptr;
-
-			i32 m_DeferredQuadVertexBufferIndex = -1;
-
-			glm::mat4 m_LastFrameViewProj;
-
-			bool m_bPostInitialized = false;
-			bool m_bSwapChainNeedsRebuilding = false;
-
 			// TODO: Create other query pools
 			VkQueryPool m_TimestampQueryPool = VK_NULL_HANDLE;
 			static const u64 MAX_TIMESTAMP_QUERIES = 1024;
 
 			// Points from timestamp names to query indices. Index is negated on timestamp end to signify being ended.
 			std::map<std::string, i32> m_TimestampQueryNames;
-
-			static const u32 NUM_GPU_TIMINGS = 64;
-			std::vector<std::array<real, NUM_GPU_TIMINGS>> m_TimestampHistograms;
-			u32 m_TimestampHistogramIndex = 0;
 
 			std::vector<const char*> m_ValidationLayers =
 			{
@@ -628,13 +542,6 @@ namespace flex
 
 			u32 m_DynamicAlignment = 0;
 
-			TextureID m_AlphaBGTextureID = InvalidTextureID;
-			TextureID m_LoadingTextureID = InvalidTextureID;
-			TextureID m_WorkTextureID = InvalidTextureID;
-
-			TextureID m_PointLightIconID = InvalidTextureID;
-			TextureID m_DirectionalLightIconID = InvalidTextureID;
-
 			VDeleter<VkSemaphore> m_PresentCompleteSemaphore;
 			VDeleter<VkSemaphore> m_RenderCompleteSemaphore;
 
@@ -645,13 +552,8 @@ namespace flex
 
 			u32 m_CurrentSwapChainBufferIndex = 0;
 
-			FT_Library m_FTLibrary;
-
 			VulkanTexture* m_NoiseTexture = nullptr;
-			ShaderID m_SSAOShaderID = InvalidShaderID;
-			MaterialID m_SSAOMatID = InvalidMaterialID;
-			ShaderID m_SSAOBlurShaderID = InvalidShaderID;
-			MaterialID m_SSAOBlurMatID = InvalidMaterialID;
+
 			VDeleter<VkPipeline> m_SSAOGraphicsPipeline;
 			VDeleter<VkPipeline> m_SSAOBlurHGraphicsPipeline;
 			VDeleter<VkPipeline> m_SSAOBlurVGraphicsPipeline;
@@ -671,7 +573,6 @@ namespace flex
 			VkSpecializationInfo m_SSAOSpecializationInfo;
 			VkSpecializationMapEntry m_TAASpecializationMapEntry;
 			VkSpecializationInfo m_TAAOSpecializationInfo;
-			real m_TAA_ks[2];
 
 			PoolAllocator<DeviceDiagnosticCheckpoint, 32> m_CheckPointAllocator;
 
@@ -679,24 +580,9 @@ namespace flex
 			struct AsyncVulkanShaderCompiler* m_ShaderCompiler = nullptr;
 #endif
 
-			enum DirtyFlags : u32
-			{
-				CLEAN			= 0,
-				STATIC_DATA		= 1 << 0,
-				DYNAMIC_DATA	= 1 << 1,
-				SHADOW_DATA		= 1 << 2,
-
-				MAX_VALUE		= 1 << 30,
-				_NONE
-			};
-
-			u32 m_DirtyFlagBits = (u32)DirtyFlags::CLEAN;
-
 			const FrameBufferAttachmentID SWAP_CHAIN_COLOR_ATTACHMENT_ID = 11000;
 			const FrameBufferAttachmentID SWAP_CHAIN_DEPTH_ATTACHMENT_ID = 11001;
 			const FrameBufferAttachmentID SHADOW_CASCADE_DEPTH_ATTACHMENT_ID = 22001;
-
-			static std::array<glm::mat4, 6> s_CaptureViews;
 
 			VulkanRenderer(const VulkanRenderer&) = delete;
 			VulkanRenderer& operator=(const VulkanRenderer&) = delete;

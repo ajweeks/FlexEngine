@@ -387,17 +387,23 @@ namespace flex
 
 		PostProcessSettings m_PostProcessSettings;
 
-		bool m_bDisplayBoundingVolumes = false;
-		bool m_bDisplayShadowCascadePreview = false;
-
-		bool m_bRenderGrid = true;
-
 		u32 m_FramesRendered = 0;
 
+		bool m_bPostInitialized = false;
+		bool m_bSwapChainNeedsRebuilding = false;
 		bool m_bRebatchRenderObjects = true;
+
+		bool m_bEnableWireframeOverlay = true;
+		bool m_bDisplayBoundingVolumes = false;
+		bool m_bDisplayShadowCascadePreview = false;
+		bool m_bRenderGrid = true;
 
 		bool m_bCaptureScreenshot = false;
 		bool m_bCaptureReflectionProbes = false;
+
+		bool m_bEnableTAA = true;
+		i32 m_TAASampleCount = 2;
+		bool m_bTAAStateChanged = false;
 
 		GameObject* m_Grid = nullptr;
 		GameObject* m_WorldOrigin = nullptr;
@@ -433,6 +439,11 @@ namespace flex
 		MaterialID m_ComputeSDFMatID = InvalidMaterialID;
 		MaterialID m_FullscreenBlitMatID = InvalidMaterialID;
 
+		MaterialID m_SSAOMatID = InvalidMaterialID;
+		MaterialID m_SSAOBlurMatID = InvalidMaterialID;
+		ShaderID m_SSAOShaderID = InvalidShaderID;
+		ShaderID m_SSAOBlurShaderID = InvalidShaderID;
+
 		std::string m_FontImageExtension = ".png";
 
 		std::map<std::string, FontMetaData> m_Fonts;
@@ -442,10 +453,38 @@ namespace flex
 
 		Mesh* m_SkyBoxMesh = nullptr;
 
+		glm::mat4 m_LastFrameViewProj;
+
 		// Contains file paths for each file with a .hdr extension in the `resources/textures/hdri/` directory
 		std::vector<std::string> m_AvailableHDRIs;
 
 		ShadowSamplingData m_ShadowSamplingData;
+
+		Material::PushConstantBlock* m_SpritePerspPushConstBlock = nullptr;
+		Material::PushConstantBlock* m_SpriteOrthoPushConstBlock = nullptr;
+		Material::PushConstantBlock* m_SpriteOrthoArrPushConstBlock = nullptr;
+
+		Material::PushConstantBlock* m_CascadedShadowMapPushConstantBlock = nullptr;
+
+		// One per deferred-rendered shader
+		ShaderBatch m_DeferredObjectBatches;
+		// One per forward-rendered shader
+		ShaderBatch m_ForwardObjectBatches;
+		ShaderBatch m_ShadowBatch;
+
+		ShaderBatch m_DepthAwareEditorObjBatches;
+		ShaderBatch m_DepthUnawareEditorObjBatches;
+
+		static const u32 NUM_GPU_TIMINGS = 64;
+		std::vector<std::array<real, NUM_GPU_TIMINGS>> m_TimestampHistograms;
+		u32 m_TimestampHistogramIndex = 0;
+
+		TextureID m_AlphaBGTextureID = InvalidTextureID;
+		TextureID m_LoadingTextureID = InvalidTextureID;
+		TextureID m_WorkTextureID = InvalidTextureID;
+
+		TextureID m_PointLightIconID = InvalidTextureID;
+		TextureID m_DirectionalLightIconID = InvalidTextureID;
 
 		SSAOGenData m_SSAOGenData;
 		SSAOBlurDataConstant m_SSAOBlurDataConstant;
@@ -457,17 +496,30 @@ namespace flex
 		bool m_bSSAOBlurEnabled = true;
 		bool m_bSSAOStateChanged = false;
 
-		bool m_bEnableTAA = true;
-		i32 m_TAASampleCount = 2;
-		bool m_bTAAStateChanged = false;
-
-		bool m_bEnableWireframeOverlay = true;
-
 		FXAAData m_FXAAData;
+
+		FT_Library m_FTLibrary;
 
 		i32 m_DebugMode = 0;
 
+		real m_TAA_ks[2];
+
+		enum DirtyFlags : u32
+		{
+			CLEAN = 0,
+			STATIC_DATA = 1 << 0,
+			DYNAMIC_DATA = 1 << 1,
+			SHADOW_DATA = 1 << 2,
+
+			MAX_VALUE = 1 << 30,
+			_NONE
+		};
+
+		u32 m_DirtyFlagBits = (u32)DirtyFlags::CLEAN;
+
 		PhysicsDebugDrawBase* m_PhysicsDebugDrawer = nullptr;
+
+		static std::array<glm::mat4, 6> s_CaptureViews;
 
 		static const i32 LATEST_RENDERER_SETTINGS_FILE_VERSION = 1;
 		i32 m_RendererSettingsFileVersion = 0;

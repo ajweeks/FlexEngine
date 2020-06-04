@@ -130,7 +130,7 @@ namespace flex
 	const u64 U_BLEND_SHARPNESS					= (1ull << 6);	const u32 US_BLEND_SHARPNESS			= sizeof(real);
 	const u64 U_COLOR_MULTIPLIER				= (1ull << 7);	const u32 US_COLOR_MULTIPLIER			= sizeof(glm::vec4);
 	const u64 U_CAM_POS							= (1ull << 8);	const u32 US_CAM_POS					= sizeof(glm::vec4);
-	const u64 U_DIR_LIGHT						= (1ull << 9); const u32 US_DIR_LIGHT					= sizeof(DirLightData);
+	const u64 U_DIR_LIGHT						= (1ull << 9);  const u32 US_DIR_LIGHT					= sizeof(DirLightData);
 	const u64 U_POINT_LIGHTS					= (1ull << 10); const u32 US_POINT_LIGHTS				= sizeof(PointLightData) * MAX_POINT_LIGHT_COUNT;
 	const u64 U_ALBEDO_SAMPLER					= (1ull << 11);
 	const u64 U_CONST_ALBEDO					= (1ull << 12); const u32 US_CONST_ALBEDO				= sizeof(glm::vec4);
@@ -710,6 +710,65 @@ namespace flex
 		                                      // + 4
 		glm::vec4 charSizePixelsCharSizeNorm; // 48 - RG: char size in pixels, BA: char size in [0, 1] in screen space
 		i32 channel;                          // 64 - uses extra int slot
+	};
+
+	struct RenderObjectBatch
+	{
+		std::vector<RenderID> objects;
+	};
+
+	struct MaterialBatchPair
+	{
+		MaterialID materialID = InvalidMaterialID;
+		RenderObjectBatch batch;
+	};
+
+	struct MaterialBatch
+	{
+		// One per material
+		std::vector<MaterialBatchPair> batches;
+	};
+
+	struct ShaderBatchPair
+	{
+		ShaderID shaderID = InvalidShaderID;
+		bool bDynamic = false;
+		MaterialBatch batch;
+	};
+
+	struct ShaderBatch
+	{
+		// One per shader
+		std::vector<ShaderBatchPair> batches;
+	};
+
+	struct UniformOverrides
+	{
+		Uniforms overridenUniforms;
+
+		glm::mat4 projection;
+		glm::mat4 view;
+		glm::mat4 viewProjection;
+		glm::vec4 camPos;
+		glm::mat4 model;
+		glm::mat4 modelInvTranspose;
+		u32 enableAlbedoSampler;
+		u32 enableMetallicSampler;
+		u32 enableRoughnessSampler;
+		u32 enableNormalSampler;
+		u32 enableIrradianceSampler;
+		i32 texChannel;
+		glm::vec4 sdfData;
+		glm::vec4 fontCharData;
+		glm::vec2 texSize;
+		glm::vec4 colorMultiplier;
+		bool bSSAOVerticalPass;
+		ParticleSimData* particleSimData = nullptr;
+	};
+
+	struct DeviceDiagnosticCheckpoint
+	{
+		char name[48];
 	};
 
 } // namespace flex
