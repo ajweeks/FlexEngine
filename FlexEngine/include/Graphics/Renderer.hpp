@@ -334,8 +334,11 @@ namespace flex
 			bool bWireframe = false;
 			bool bWriteToDepth = true;
 			bool bRenderingShadows = false;
+			bool bCalculateDynamicUBOOffset = false;
 
 			MaterialID materialIDOverride = InvalidMaterialID;
+
+			u32 dynamicUBOOffset = 0;
 
 			u64 graphicsPipelineOverride = InvalidID;
 			u64 pipelineLayoutOverride = InvalidID;
@@ -393,7 +396,7 @@ namespace flex
 		bool m_bSwapChainNeedsRebuilding = false;
 		bool m_bRebatchRenderObjects = true;
 
-		bool m_bEnableWireframeOverlay = true;
+		bool m_bEnableWireframeOverlay = false;
 		bool m_bDisplayBoundingVolumes = false;
 		bool m_bDisplayShadowCascadePreview = false;
 		bool m_bRenderGrid = true;
@@ -452,6 +455,7 @@ namespace flex
 		std::string m_FontsFilePathAbs;
 
 		Mesh* m_SkyBoxMesh = nullptr;
+		ShaderID m_SkyboxShaderID = InvalidShaderID;
 
 		glm::mat4 m_LastFrameViewProj;
 

@@ -2243,6 +2243,7 @@ namespace flex
 		}
 
 		assert(m_SkyBoxMesh != nullptr);
+		assert(m_SkyboxShaderID != InvalidShaderID);
 		MaterialID skyboxMaterialID = m_SkyBoxMesh->GetSubMeshes()[0]->GetMaterialID();
 
 		const std::string gBufferMatName = "GBuffer material";

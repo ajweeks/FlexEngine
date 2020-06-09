@@ -19,8 +19,9 @@ namespace flex
 		void PreSceneChange();
 		void OnSceneChanged();
 
-		std::vector<GameObject*> GetSelectedObjects();
+		std::vector<GameObject*> GetSelectedObjects(bool bForceIncludeChildren = false);
 		void SetSelectedObject(GameObject* gameObject, bool bSelectChildren = false);
+		bool HasSelectedObject() const;
 		void ToggleSelectedObject(GameObject* gameObject);
 		void AddSelectedObject(GameObject* gameObject);
 		void SelectAll();

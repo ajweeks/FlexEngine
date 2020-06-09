@@ -172,9 +172,26 @@ namespace flex
 		CreateObjects();
 	}
 
-	std::vector<GameObject*> Editor::GetSelectedObjects()
+	bool Editor::HasSelectedObject() const
 	{
-		return m_CurrentlySelectedObjects;
+		return m_CurrentlySelectedObjects.empty();
+	}
+
+	std::vector<GameObject*> Editor::GetSelectedObjects(bool bForceIncludeChildren)
+	{
+		if (bForceIncludeChildren)
+		{
+			std::vector<GameObject*> selectedObjects;
+			for (GameObject* gameObject : m_CurrentlySelectedObjects)
+			{
+				gameObject->AddSelfAndChildrenToVec(selectedObjects);
+			}
+			return selectedObjects;
+		}
+		else
+		{
+			return m_CurrentlySelectedObjects;
+		}
 	}
 
 	void Editor::SetSelectedObject(GameObject* gameObject, bool bSelectChildren /* = false */)

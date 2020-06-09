@@ -27,6 +27,7 @@ IGNORE_WARNINGS_POP
 
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
+#include "Editor.hpp"
 #include "FlexEngine.hpp"
 #include "Graphics/BitmapFont.hpp"
 #include "Graphics/VertexAttribute.hpp"
@@ -2177,13 +2178,14 @@ namespace flex
 				return;
 			}
 
-			MaterialID skyboxMatierialID = m_SkyBoxMesh->GetSubMeshes()[0]->GetMaterialID();
-			if (skyboxMatierialID == InvalidMaterialID)
+			MaterialID skyboxMaterialID = m_SkyBoxMesh->GetSubMeshes()[0]->GetMaterialID();
+			if (skyboxMaterialID == InvalidMaterialID)
 			{
 				PrintError("Skybox doesn't have a valid material! Irradiance textures can't be generated\n");
 				return;
 			}
-			VulkanMaterial& skyboxMaterial = m_Materials.at(skyboxMatierialID);
+			VulkanMaterial& skyboxMaterial = m_Materials.at(skyboxMaterialID);
+			m_SkyboxShaderID = skyboxMaterial.material.shaderID;
 
 			for (u32 i = 0; i < m_RenderObjects.size(); ++i)
 			{
@@ -5819,8 +5821,8 @@ namespace flex
 				if (pass->m_TargetColorAttachmentInitialLayouts != generatedPassLayouts.colorInitialLayouts ||
 					pass->m_TargetColorAttachmentFinalLayouts != generatedPassLayouts.colorFinalLayouts ||
 					(bWritesToDepth &&
-					(pass->m_TargetDepthAttachmentInitialLayout != generatedPassLayouts.depthInitialLayout ||
-						pass->m_TargetDepthAttachmentFinalLayout != generatedPassLayouts.depthFinalLayout)))
+						(pass->m_TargetDepthAttachmentInitialLayout != generatedPassLayouts.depthInitialLayout ||
+							pass->m_TargetDepthAttachmentFinalLayout != generatedPassLayouts.depthFinalLayout)))
 				{
 					if (bPrintResultsDetailed)
 					{
@@ -7429,6 +7431,53 @@ namespace flex
 			VK_CHECK_RESULT(vkCreateSemaphore(m_VulkanDevice->m_LogicalDevice, &semaphoreInfo, nullptr, m_RenderCompleteSemaphore.replace()));
 		}
 
+		void VulkanRenderer::FillOutShaderBatches(const std::vector<RenderID>& renderIDs, i32* inOutDynamicUBOOffset,
+			MaterialBatchPair& matBatchPair, MaterialBatchPair& depthAwareEditorMatBatchPair, MaterialBatchPair& depthUnawareEditorMatBatchPair,
+			MaterialID matID, bool bWriteUBOOffsets /* = true */)
+		{
+			const VulkanMaterial& material = m_Materials[matID];
+			const VulkanShader& shader = m_Shaders[material.material.shaderID];
+
+			for (u32 renderID : renderIDs)
+			{
+				VulkanRenderObject* renderObject = GetRenderObject(renderID);
+
+				if (renderObject &&
+					(VkPipeline)renderObject->graphicsPipeline != 0 &&
+					renderObject->materialID == matID)
+				{
+					const UniformBuffer* dynamicBuffer = material.uniformBufferList.Get(UniformBufferType::DYNAMIC);
+					if (dynamicBuffer)
+					{
+						*inOutDynamicUBOOffset += RoundUp(dynamicBuffer->data.size, m_DynamicAlignment);
+					}
+					if (bWriteUBOOffsets)
+					{
+						renderObject->dynamicUBOOffset = *inOutDynamicUBOOffset;
+					}
+
+					if (renderObject->gameObject->IsVisible())
+					{
+						if (renderObject->bEditorObject)
+						{
+							if (shader.shader->bDepthWriteEnable)
+							{
+								depthAwareEditorMatBatchPair.batch.objects.push_back(renderID);
+							}
+							else
+							{
+								depthUnawareEditorMatBatchPair.batch.objects.push_back(renderID);
+							}
+						}
+						else
+						{
+							matBatchPair.batch.objects.push_back(renderID);
+						}
+					}
+				}
+			}
+		}
+
 		void VulkanRenderer::BatchRenderObjects()
 		{
 			if (m_DirtyFlagBits & DirtyFlags::STATIC_DATA)
@@ -7454,6 +7503,16 @@ namespace flex
 				m_ShadowBatch.batches.clear();
 				m_DepthAwareEditorObjBatches.batches.clear();
 				m_DepthUnawareEditorObjBatches.batches.clear();
+
+				std::vector<RenderID> renderIDs;
+				renderIDs.reserve(m_RenderObjects.size());
+				for (u32 renderID = 0; renderID < (u32)m_RenderObjects.size(); ++renderID)
+				{
+					if (m_RenderObjects[renderID])
+					{
+						renderIDs.push_back(renderID);
+					}
+				}
 
 				// NOTE: Optimization options:
 				//			- Sort materials by shader ID to allow early out on second loop
@@ -7482,56 +7541,23 @@ namespace flex
 
 						i32 dynamicUBOOffset = 0;
 
-						for (auto& matPair : m_Materials)
+						for (const auto& matPair : m_Materials)
 						{
-							VulkanMaterial& material = matPair.second;
+							MaterialID matID = matPair.first;
+							const VulkanMaterial& material = matPair.second;
 
 							if (material.material.shaderID == shaderID && ((u32)material.material.bDynamic) == dynamic)
 							{
 								MaterialBatchPair matBatchPair = {};
-								matBatchPair.materialID = matPair.first;
+								matBatchPair.materialID = matID;
 
 								MaterialBatchPair depthAwareEditorMatBatchPair = {};
-								depthAwareEditorMatBatchPair.materialID = matPair.first;
+								depthAwareEditorMatBatchPair.materialID = matID;
 
 								MaterialBatchPair depthUnawareEditorMatBatchPair = {};
-								depthUnawareEditorMatBatchPair.materialID = matPair.first;
+								depthUnawareEditorMatBatchPair.materialID = matID;
 
-								for (u32 renderID = 0; renderID < m_RenderObjects.size(); ++renderID)
-								{
-									VulkanRenderObject* renderObject = GetRenderObject(renderID);
-
-									if (renderObject &&
-										(VkPipeline)renderObject->graphicsPipeline != 0 &&
-										renderObject->materialID == matPair.first)
-									{
-										UniformBuffer* dynamicBuffer = material.uniformBufferList.Get(UniformBufferType::DYNAMIC);
-										if (dynamicBuffer)
-										{
-											dynamicUBOOffset += RoundUp(dynamicBuffer->data.size, m_DynamicAlignment);
-										}
-										renderObject->dynamicUBOOffset = dynamicUBOOffset;
-
-										if (renderObject->gameObject->IsVisible())
-										{
-											if (renderObject->bEditorObject)
-											{
-												if (m_Shaders[shaderID].shader->bDepthWriteEnable)
-												{
-													depthAwareEditorMatBatchPair.batch.objects.push_back(renderID);
-												}
-												else
-												{
-													depthUnawareEditorMatBatchPair.batch.objects.push_back(renderID);
-												}
-											}
-											else
-											{
-												matBatchPair.batch.objects.push_back(renderID);
-											}
-										}
-									}
-								}
+								FillOutShaderBatches(renderIDs, &dynamicUBOOffset, matBatchPair, depthAwareEditorMatBatchPair, depthUnawareEditorMatBatchPair, matID);
 
 								if (!matBatchPair.batch.objects.empty())
 								{
@@ -7660,7 +7686,6 @@ namespace flex
 						{
 							dynamicUBOOffset = renderObject->dynamicShadowUBOOffset;
 						}
-
 						if (drawCallInfo->bWireframe)
 						{
 							VulkanMaterial* objectMaterial = &m_Materials[matBatch.materialID];
@@ -7668,6 +7693,11 @@ namespace flex
 							graphicsPipeline = GetOrCreateWireframePipeline(objectShader->shader->vertexAttributes);
 							pipelineLayout = m_WireframePipelineLayout;
 							descriptorSet = m_WireframeDescSet;
+						}
+						if (drawCallInfo->bCalculateDynamicUBOOffset)
+						{
+							dynamicUBOOffset = drawCallInfo->dynamicUBOOffset;
+							drawCallInfo->dynamicUBOOffset += m_DynamicAlignment;
 						}
 					}
 
@@ -8141,28 +8171,154 @@ namespace flex
 						DrawShaderBatch(shaderBatch, commandBuffer);
 					}
 
-					if (m_bEnableWireframeOverlay)
+					bool bDrawSelectedObjectWireframe = !g_Editor->HasSelectedObject();
+					if (bDrawSelectedObjectWireframe || m_bEnableWireframeOverlay)
 					{
-						// All objects wireframe
 						BeginDebugMarkerRegion(commandBuffer, "Wireframe");
 
-						u32 dynamicIndex = 0;
-						for (const ShaderBatchPair& shaderBatch : m_ShadowBatch.batches)
+						if (m_bEnableWireframeOverlay)
 						{
-							for (RenderID renderID : shaderBatch.batch.batches[0].batch.objects)
+							// All objects wireframe
+							ShaderBatch* batches[] = { &m_ForwardObjectBatches, &m_DeferredObjectBatches };
+							for (ShaderBatch* batch : batches)
 							{
-								VulkanRenderObject* renderObject = GetRenderObject(renderID);
-								UpdateDynamicUniformBuffer(renderID, nullptr, m_WireframeMatID, renderObject->dynamicUBOOffset);
-								++dynamicIndex;
+								for (const ShaderBatchPair& shaderBatch : batch->batches)
+								{
+									if (shaderBatch.shaderID == m_SkyboxShaderID)
+									{
+										continue;
+									}
+									for (const MaterialBatchPair& matBatch : shaderBatch.batch.batches)
+									{
+										for (RenderID renderID : matBatch.batch.objects)
+										{
+											VulkanRenderObject* renderObject = GetRenderObject(renderID);
+											UpdateDynamicUniformBuffer(renderID, nullptr, m_WireframeMatID, renderObject->dynamicUBOOffset);
+										}
+									}
+								}
+							}
+
+							DrawCallInfo wireframeDrawCallInfo = {};
+							wireframeDrawCallInfo.bWireframe = true;
+
+							for (ShaderBatch* batch : batches)
+							{
+								for (const ShaderBatchPair& shaderBatch : batch->batches)
+								{
+									if (shaderBatch.shaderID == m_SkyboxShaderID)
+									{
+										continue;
+									}
+									DrawShaderBatch(shaderBatch, commandBuffer, &wireframeDrawCallInfo);
+								}
 							}
 						}
-
-						DrawCallInfo wireframeDrawCallInfo = {};
-						wireframeDrawCallInfo.bWireframe = true;
-
-						for (const ShaderBatchPair& shaderBatch : m_ForwardObjectBatches.batches)
+						else
 						{
-							DrawShaderBatch(shaderBatch, commandBuffer, &wireframeDrawCallInfo);
+							std::vector<GameObject*> selectedObjects = g_Editor->GetSelectedObjects(true);
+							std::vector<RenderID> renderIDs;
+							renderIDs.reserve(selectedObjects.size());
+
+							u32 dynamicUBOOffset = 0;
+							for (GameObject* selectedObj : selectedObjects)
+							{
+								Mesh* mesh = selectedObj->GetMesh();
+								if (mesh != nullptr)
+								{
+									std::vector<MeshComponent*> meshes = mesh->GetSubMeshes();
+									for (MeshComponent* meshComponent : meshes)
+									{
+										//VulkanRenderObject* renderObject = GetRenderObject(meshComponent->renderID);
+										UpdateDynamicUniformBuffer(meshComponent->renderID, nullptr, m_WireframeMatID, dynamicUBOOffset);
+										renderIDs.push_back(meshComponent->renderID);
+										dynamicUBOOffset += m_DynamicAlignment;
+									}
+								}
+							}
+
+							ShaderID wireframeShaderID = m_Materials[m_WireframeMatID].material.shaderID;
+
+							i32 dynamicUniformBufferOffset = 0;
+							ShaderBatch selectedObjectBatch = {};
+							for (u32 shaderID = 0; shaderID < m_Shaders.size(); ++shaderID)
+							{
+								const bool bDeferred = m_Shaders[shaderID].shader->numAttachments > 1;
+								ShaderBatch* shaderBatch = (bDeferred ? &m_DeferredObjectBatches : &m_ForwardObjectBatches);
+
+								for (u32 dynamic = 0; dynamic <= 1; ++dynamic)
+								{
+									ShaderBatchPair shaderBatchPair = {};
+									shaderBatchPair.shaderID = shaderID;
+									shaderBatchPair.bDynamic = (dynamic == 1);
+
+									ShaderBatchPair depthAwareEditorShaderBatchPair = {};
+									depthAwareEditorShaderBatchPair.shaderID = shaderID;
+									depthAwareEditorShaderBatchPair.bDynamic = (dynamic == 1);
+
+									ShaderBatchPair depthUnawareEditorShaderBatchPair = {};
+									depthUnawareEditorShaderBatchPair.shaderID = shaderID;
+									depthUnawareEditorShaderBatchPair.bDynamic = (dynamic == 1);
+
+									i32 dynamicUBOOffset = 0;
+
+									for (const auto& matPair : m_Materials)
+									{
+										MaterialID matID = matPair.first;
+										const VulkanMaterial& material = matPair.second;
+
+										if (material.material.shaderID == shaderID && ((u32)material.material.bDynamic) == dynamic)
+										{
+											MaterialBatchPair matBatchPair = {};
+											matBatchPair.materialID = matID;
+
+											MaterialBatchPair depthAwareEditorMatBatchPair = {};
+											depthAwareEditorMatBatchPair.materialID = matID;
+
+											MaterialBatchPair depthUnawareEditorMatBatchPair = {};
+											depthUnawareEditorMatBatchPair.materialID = matID;
+
+											FillOutShaderBatches(renderIDs, &dynamicUBOOffset, matBatchPair, depthAwareEditorMatBatchPair, depthUnawareEditorMatBatchPair, matID, false);
+
+											if (!matBatchPair.batch.objects.empty())
+											{
+												shaderBatchPair.batch.batches.push_back(matBatchPair);
+											}
+											if (!depthAwareEditorMatBatchPair.batch.objects.empty())
+											{
+												depthAwareEditorShaderBatchPair.batch.batches.push_back(depthAwareEditorMatBatchPair);
+											}
+											if (!depthUnawareEditorMatBatchPair.batch.objects.empty())
+											{
+												depthUnawareEditorShaderBatchPair.batch.batches.push_back(depthUnawareEditorMatBatchPair);
+											}
+										}
+									}
+
+									if (!shaderBatchPair.batch.batches.empty())
+									{
+										selectedObjectBatch.batches.push_back(shaderBatchPair);
+									}
+									if (!depthAwareEditorShaderBatchPair.batch.batches.empty())
+									{
+										selectedObjectBatch.batches.push_back(depthAwareEditorShaderBatchPair);
+									}
+									if (!depthUnawareEditorShaderBatchPair.batch.batches.empty())
+									{
+										selectedObjectBatch.batches.push_back(depthUnawareEditorShaderBatchPair);
+									}
+								}
+							}
+
+							DrawCallInfo wireframeDrawCallInfo = {};
+							wireframeDrawCallInfo.bWireframe = true;
+							wireframeDrawCallInfo.bCalculateDynamicUBOOffset = true;
+							wireframeDrawCallInfo.dynamicUBOOffset = 0;
+
+							for (const ShaderBatchPair& shaderBatch : selectedObjectBatch.batches)
+							{
+								DrawShaderBatch(shaderBatch, commandBuffer, &wireframeDrawCallInfo);
+							}
 						}
 
 						EndDebugMarkerRegion(commandBuffer, "End Wireframe");

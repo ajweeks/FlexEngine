@@ -234,6 +234,9 @@ namespace flex
 
 			void CreateSemaphores();
 
+			void FillOutShaderBatches(const std::vector<RenderID>& renderIDs, i32* inOutDynamicUBOOffset,
+				MaterialBatchPair& matBatchPair, MaterialBatchPair& depthAwareEditorMatBatchPair, MaterialBatchPair& depthUnawareEditorMatBatchPair,
+				MaterialID matID, bool bWriteUBOOffsets = true);
 			void BatchRenderObjects();
 			void DrawShaderBatch(const ShaderBatchPair& shaderBatches, VkCommandBuffer& commandBuffer, DrawCallInfo* drawCallInfo = nullptr);
 
