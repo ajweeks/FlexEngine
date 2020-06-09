@@ -54,6 +54,6 @@
   </Type>
 
   <Type Name="flex::vk::VulkanRenderObject">
-    <DisplayString>{gameObject->m_Name},{materialName}</DisplayString>
+    <DisplayString>{gameObject->m_Name}, mat ID = {materialID}, {topology}</DisplayString>
   </Type>
 </AutoVisualizer>
