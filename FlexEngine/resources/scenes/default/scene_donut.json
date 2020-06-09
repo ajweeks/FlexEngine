@@ -2,6 +2,24 @@
 	"version" : 3,
 	"name" : "scene_donut",
 	"spawn player" : false,
+	"camera" : 
+	{
+		"type" : "debug",
+		"near plane" : 0.500000,
+		"far plane" : 1000.000000,
+		"fov" : 0.785398,
+		"aperture" : 1.000000,
+		"shutter speed" : 0.125000,
+		"light sensitivity" : 800.000000,
+		"exposure" : 1.200000,
+		"move speed" : 18.000000,
+		"transform" : 
+		{
+			"position" : "-88.684, 25.407, -7.697",
+			"pitch" : -0.278025,
+			"yaw" : 0.086571
+		}
+	},
 	"objects" : 
 	[
 		{
@@ -71,8 +89,7 @@
 							"transform" : 
 							{
 								"pos" : "-3.094, 11.297, 8.041",
-								"rot" : "0.556, 1.343, 0.690",
-								"scale" : "1.000, 1.000, 1.000"
+								"rot" : "0.556, 1.343, 0.690"
 							},
 							"mesh" : "donut",
 							"materials" : 

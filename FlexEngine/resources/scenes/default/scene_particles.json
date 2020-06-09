@@ -1,7 +1,25 @@
 {
-	"version" : 2,
+	"version" : 3,
 	"name" : "scene_particles",
 	"spawn player" : false,
+	"camera" : 
+	{
+		"type" : "debug",
+		"near plane" : 0.500000,
+		"far plane" : 10000.000000,
+		"fov" : 0.785398,
+		"aperture" : 1.000000,
+		"shutter speed" : 0.125000,
+		"light sensitivity" : 800.000000,
+		"exposure" : 1.200000,
+		"move speed" : 18.000000,
+		"transform" : 
+		{
+			"position" : "-151.291, 29.108, -65.200",
+			"pitch" : -0.174895,
+			"yaw" : 0.536819
+		}
+	},
 	"objects" : 
 	[
 		{
@@ -11,7 +29,10 @@
 			"transform" : 
 			{
 			},
-			"material" : "skybox 01",
+			"materials" : 
+			[
+				"skybox 01"
+			],
 			"skybox info" : 
 			{
 			}
@@ -33,7 +54,10 @@
 			{
 			},
 			"mesh" : "ico-sphere",
-			"material" : "pbr chrome"
+			"materials" : 
+			[
+				"pbr chrome"
+			]
 		},
 		{
 			"name" : "Directional Light",
@@ -123,8 +147,8 @@
 				"enabled" : true,
 				"data" : 
 				{
-					"color0" : "0.37, 0.74, 0.28, -431602080.00",
-					"color1" : "0.98, 0.08, 0.08, -431602080.00",
+					"color0" : "0,0,0,0",
+					"color1" : "0,0,0,0",
 					"speed" : 1.667000,
 					"particle count" : 51541
 				}

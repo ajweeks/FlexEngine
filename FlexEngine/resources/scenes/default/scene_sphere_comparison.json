@@ -1,7 +1,25 @@
 {
-	"version" : 2,
+	"version" : 3,
 	"name" : "Scene_sphere_comparison",
 	"spawn player" : false,
+	"camera" : 
+	{
+		"type" : "debug",
+		"near plane" : 0.500000,
+		"far plane" : 1000.000000,
+		"fov" : 0.785398,
+		"aperture" : 1.000000,
+		"shutter speed" : 0.125000,
+		"light sensitivity" : 800.000000,
+		"exposure" : 1.200000,
+		"move speed" : 18.000000,
+		"transform" : 
+		{
+			"position" : "-88.191, 25.266, -7.654",
+			"pitch" : -0.278025,
+			"yaw" : 0.086571
+		}
+	},
 	"objects" : 
 	[
 		{
@@ -12,7 +30,10 @@
 			{
 				"rot" : "-3.140, 1.410, -3.140"
 			},
-			"material" : "skybox 01",
+			"materials" : 
+			[
+				"skybox 01"
+			],
 			"skybox info" : 
 			{
 				"rot" : "-3.14, 1.41, -3.14"
@@ -47,7 +68,10 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "sphere 10"
+					"materials" : 
+					[
+						"sphere 10"
+					]
 				},
 				{
 					"name" : "Sphere 09",
@@ -59,7 +83,10 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "sphere 09"
+					"materials" : 
+					[
+						"sphere 09"
+					]
 				},
 				{
 					"name" : "Sphere 08",
@@ -71,7 +98,10 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "sphere 08"
+					"materials" : 
+					[
+						"sphere 08"
+					]
 				},
 				{
 					"name" : "Sphere 00",
@@ -83,7 +113,10 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "sphere 00"
+					"materials" : 
+					[
+						"sphere 00"
+					]
 				},
 				{
 					"name" : "Sphere 07",
@@ -95,7 +128,10 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "sphere 07"
+					"materials" : 
+					[
+						"sphere 07"
+					]
 				},
 				{
 					"name" : "Sphere 05",
@@ -107,7 +143,10 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "sphere 05"
+					"materials" : 
+					[
+						"sphere 05"
+					]
 				},
 				{
 					"name" : "Sphere 06",
@@ -119,7 +158,10 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "sphere 06"
+					"materials" : 
+					[
+						"sphere 06"
+					]
 				},
 				{
 					"name" : "Sphere 04",
@@ -131,7 +173,10 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "sphere 04"
+					"materials" : 
+					[
+						"sphere 04"
+					]
 				},
 				{
 					"name" : "Sphere 03",
@@ -143,7 +188,10 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "sphere 03"
+					"materials" : 
+					[
+						"sphere 03"
+					]
 				},
 				{
 					"name" : "Sphere 02",
@@ -155,7 +203,10 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "sphere 02"
+					"materials" : 
+					[
+						"sphere 02"
+					]
 				},
 				{
 					"name" : "Sphere 01",
@@ -167,7 +218,10 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "sphere 01"
+					"materials" : 
+					[
+						"sphere 01"
+					]
 				}
 			]
 		},
@@ -191,7 +245,10 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "sphere 11"
+					"materials" : 
+					[
+						"sphere 11"
+					]
 				},
 				{
 					"name" : "Sphere 12",
@@ -203,7 +260,10 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "sphere 12"
+					"materials" : 
+					[
+						"sphere 12"
+					]
 				},
 				{
 					"name" : "Sphere 13",
@@ -215,7 +275,10 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "sphere 13"
+					"materials" : 
+					[
+						"sphere 13"
+					]
 				},
 				{
 					"name" : "Sphere 14",
@@ -227,7 +290,10 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "sphere 14"
+					"materials" : 
+					[
+						"sphere 14"
+					]
 				},
 				{
 					"name" : "Sphere 15",
@@ -239,7 +305,10 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "sphere 15"
+					"materials" : 
+					[
+						"sphere 15"
+					]
 				},
 				{
 					"name" : "Sphere 16",
@@ -251,7 +320,10 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "sphere 16"
+					"materials" : 
+					[
+						"sphere 16"
+					]
 				},
 				{
 					"name" : "Sphere 17",
@@ -263,7 +335,10 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "sphere 17"
+					"materials" : 
+					[
+						"sphere 17"
+					]
 				},
 				{
 					"name" : "Sphere 18",
@@ -275,7 +350,10 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "sphere 18"
+					"materials" : 
+					[
+						"sphere 18"
+					]
 				},
 				{
 					"name" : "Sphere 19",
@@ -287,7 +365,10 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "sphere 19"
+					"materials" : 
+					[
+						"sphere 19"
+					]
 				},
 				{
 					"name" : "Sphere 20",
@@ -299,7 +380,10 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "sphere 20"
+					"materials" : 
+					[
+						"sphere 20"
+					]
 				},
 				{
 					"name" : "Sphere 21",
@@ -311,7 +395,10 @@
 						"scale" : "3.000, 3.000, 3.000"
 					},
 					"mesh" : "sphere",
-					"material" : "sphere 21"
+					"materials" : 
+					[
+						"sphere 21"
+					]
 				}
 			]
 		},

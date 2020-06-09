@@ -2,6 +2,24 @@
 	"version" : 3,
 	"name" : "scene_shanghai",
 	"spawn player" : false,
+	"camera" : 
+	{
+		"type" : "debug",
+		"near plane" : 0.500000,
+		"far plane" : 10000.000000,
+		"fov" : 0.785398,
+		"aperture" : 1.000000,
+		"shutter speed" : 0.125000,
+		"light sensitivity" : 800.000000,
+		"exposure" : 1.200000,
+		"move speed" : 18.000000,
+		"transform" : 
+		{
+			"position" : "-151.999, 29.254, -65.621",
+			"pitch" : -0.174895,
+			"yaw" : 0.536819
+		}
+	},
 	"objects" : 
 	[
 		{

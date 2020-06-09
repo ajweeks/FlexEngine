@@ -1,7 +1,25 @@
 {
-	"version" : 2,
+	"version" : 3,
 	"name" : "scene_sibnek",
 	"spawn player" : false,
+	"camera" : 
+	{
+		"type" : "debug",
+		"near plane" : 0.500000,
+		"far plane" : 10000.000000,
+		"fov" : 0.785398,
+		"aperture" : 1.000000,
+		"shutter speed" : 0.125000,
+		"light sensitivity" : 800.000000,
+		"exposure" : 1.200000,
+		"move speed" : 18.000000,
+		"transform" : 
+		{
+			"position" : "-152.222, 29.300, -65.754",
+			"pitch" : -0.174895,
+			"yaw" : 0.536819
+		}
+	},
 	"objects" : 
 	[
 		{
@@ -11,7 +29,10 @@
 			"transform" : 
 			{
 			},
-			"material" : "skybox 01",
+			"materials" : 
+			[
+				"skybox 01"
+			],
 			"skybox info" : 
 			{
 			}
@@ -35,7 +56,26 @@
 				"scale" : "3.000, 3.000, 3.000"
 			},
 			"mesh" : "sibnek",
-			"material" : "pbr chrome"
+			"materials" : 
+			[
+				"pbr chrome",
+				"pbr chrome",
+				"pbr chrome",
+				"pbr chrome",
+				"pbr chrome",
+				"pbr chrome",
+				"pbr chrome",
+				"pbr chrome",
+				"pbr chrome",
+				"pbr chrome",
+				"pbr chrome",
+				"pbr chrome",
+				"pbr chrome",
+				"pbr chrome",
+				"pbr chrome",
+				"pbr chrome",
+				"pbr chrome"
+			]
 		},
 		{
 			"name" : "PointLight_00",

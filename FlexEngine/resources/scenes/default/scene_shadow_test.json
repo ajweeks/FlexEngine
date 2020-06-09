@@ -1,7 +1,25 @@
 {
-	"version" : 2,
+	"version" : 3,
 	"name" : "scene_shadow_test",
 	"spawn player" : true,
+	"camera" : 
+	{
+		"type" : "debug",
+		"near plane" : 0.500000,
+		"far plane" : 10000.000000,
+		"fov" : 0.785398,
+		"aperture" : 1.000000,
+		"shutter speed" : 0.125000,
+		"light sensitivity" : 800.000000,
+		"exposure" : 1.200000,
+		"move speed" : 18.000000,
+		"transform" : 
+		{
+			"position" : "-151.774, 29.207, -65.487",
+			"pitch" : -0.174895,
+			"yaw" : 0.536819
+		}
+	},
 	"objects" : 
 	[
 		{
@@ -11,7 +29,10 @@
 			"transform" : 
 			{
 			},
-			"material" : "skybox 01",
+			"materials" : 
+			[
+				"skybox 01"
+			],
 			"skybox info" : 
 			{
 			}
@@ -35,7 +56,10 @@
 				"scale" : "60.000, 1.000, 60.000"
 			},
 			"mesh" : "cube",
-			"material" : "grid",
+			"materials" : 
+			[
+				"grid"
+			],
 			"collider" : 
 			{
 				"shape" : "box",
@@ -61,7 +85,10 @@
 				"scale" : "1.000, 5.360, 5.350"
 			},
 			"mesh" : "cube",
-			"material" : "sphere 02",
+			"materials" : 
+			[
+				"sphere 02"
+			],
 			"collider" : 
 			{
 				"shape" : "box",
@@ -86,7 +113,10 @@
 				"scale" : "1.000, 5.360, 5.350"
 			},
 			"mesh" : "cube",
-			"material" : "sphere 01",
+			"materials" : 
+			[
+				"sphere 01"
+			],
 			"collider" : 
 			{
 				"shape" : "box",
@@ -112,7 +142,10 @@
 				"scale" : "1.000, 5.360, 5.350"
 			},
 			"mesh" : "cube",
-			"material" : "pbr red",
+			"materials" : 
+			[
+				"pbr red"
+			],
 			"collider" : 
 			{
 				"shape" : "box",
@@ -138,7 +171,10 @@
 				"scale" : "1.000, 5.360, 5.350"
 			},
 			"mesh" : "cube",
-			"material" : "pbr white",
+			"materials" : 
+			[
+				"pbr white"
+			],
 			"collider" : 
 			{
 				"shape" : "box",
@@ -164,7 +200,10 @@
 				"scale" : "1.000, 1.370, 1.000"
 			},
 			"mesh" : "cylinder",
-			"material" : "pbr white",
+			"materials" : 
+			[
+				"pbr white"
+			],
 			"collider" : 
 			{
 				"shape" : "cylinder",
@@ -189,7 +228,10 @@
 				"scale" : "1.500, 1.500, 1.500"
 			},
 			"mesh" : "sphere",
-			"material" : "pbr white"
+			"materials" : 
+			[
+				"pbr white"
+			]
 		},
 		{
 			"name" : "tablet",
@@ -201,7 +243,10 @@
 				"scale" : "1.500, 1.500, 1.500"
 			},
 			"mesh" : "cone",
-			"material" : "pbr red"
+			"materials" : 
+			[
+				"pbr red"
+			]
 		},
 		{
 			"name" : "New_Game_Object_01",
@@ -213,7 +258,10 @@
 				"scale" : "1.500, 1.500, 1.500"
 			},
 			"mesh" : "sphere",
-			"material" : "pbr white"
+			"materials" : 
+			[
+				"pbr white"
+			]
 		},
 		{
 			"name" : "New_Game_Object_02",
@@ -225,7 +273,10 @@
 				"scale" : "1.500, 1.500, 1.500"
 			},
 			"mesh" : "sphere",
-			"material" : "pbr white"
+			"materials" : 
+			[
+				"pbr white"
+			]
 		},
 		{
 			"name" : "New_Game_Object_03",
@@ -237,7 +288,10 @@
 				"scale" : "1.500, 1.500, 1.500"
 			},
 			"mesh" : "sphere",
-			"material" : "pbr white"
+			"materials" : 
+			[
+				"pbr white"
+			]
 		},
 		{
 			"name" : "New_Game_Object_00",
@@ -249,7 +303,10 @@
 				"scale" : "1.500, 1.500, 1.500"
 			},
 			"mesh" : "sphere",
-			"material" : "pbr white"
+			"materials" : 
+			[
+				"pbr white"
+			]
 		},
 		{
 			"name" : "New_Game_Object_01",
@@ -261,7 +318,10 @@
 				"scale" : "1.500, 1.500, 1.500"
 			},
 			"mesh" : "sphere",
-			"material" : "pbr white"
+			"materials" : 
+			[
+				"pbr white"
+			]
 		},
 		{
 			"name" : "New_Game_Object_02",
@@ -273,7 +333,10 @@
 				"scale" : "1.500, 1.500, 1.500"
 			},
 			"mesh" : "sphere",
-			"material" : "pbr white"
+			"materials" : 
+			[
+				"pbr white"
+			]
 		},
 		{
 			"name" : "Directional Light",
@@ -433,7 +496,14 @@
 				"rot" : "-3.141, -0.239, -3.141"
 			},
 			"mesh" : "che",
-			"material" : "pbr chrome"
+			"materials" : 
+			[
+				"pbr chrome",
+				"pbr chrome",
+				"pbr chrome",
+				"pbr chrome",
+				"pbr chrome"
+			]
 		},
 		{
 			"name" : "Wall 03",
@@ -445,7 +515,10 @@
 				"scale" : "1.000, 5.360, 5.350"
 			},
 			"mesh" : "cube",
-			"material" : "sphere 01",
+			"materials" : 
+			[
+				"sphere 01"
+			],
 			"collider" : 
 			{
 				"shape" : "box",
@@ -470,7 +543,10 @@
 				"scale" : "1.000, 5.360, 5.350"
 			},
 			"mesh" : "cube",
-			"material" : "sphere 01",
+			"materials" : 
+			[
+				"sphere 01"
+			],
 			"collider" : 
 			{
 				"shape" : "box",
@@ -495,7 +571,10 @@
 				"scale" : "60.000, 1.000, 60.000"
 			},
 			"mesh" : "cube",
-			"material" : "grid",
+			"materials" : 
+			[
+				"grid"
+			],
 			"collider" : 
 			{
 				"shape" : "box",
@@ -520,7 +599,10 @@
 				"scale" : "60.000, 1.000, 60.000"
 			},
 			"mesh" : "cube",
-			"material" : "grid",
+			"materials" : 
+			[
+				"grid"
+			],
 			"collider" : 
 			{
 				"shape" : "box",
@@ -545,7 +627,10 @@
 				"scale" : "60.000, 1.000, 60.000"
 			},
 			"mesh" : "cube",
-			"material" : "grid",
+			"materials" : 
+			[
+				"grid"
+			],
 			"collider" : 
 			{
 				"shape" : "box",
@@ -570,7 +655,10 @@
 				"scale" : "60.000, 1.000, 60.000"
 			},
 			"mesh" : "cube",
-			"material" : "grid",
+			"materials" : 
+			[
+				"grid"
+			],
 			"collider" : 
 			{
 				"shape" : "box",

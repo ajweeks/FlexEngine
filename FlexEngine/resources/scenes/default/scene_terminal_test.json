@@ -1,7 +1,25 @@
 {
-	"version" : 2,
+	"version" : 3,
 	"name" : "Scene_terminal_test",
 	"spawn player" : true,
+	"camera" : 
+	{
+		"type" : "debug",
+		"near plane" : 0.500000,
+		"far plane" : 1000.000000,
+		"fov" : 0.785398,
+		"aperture" : 1.000000,
+		"shutter speed" : 0.125000,
+		"light sensitivity" : 800.000000,
+		"exposure" : 1.200000,
+		"move speed" : 18.000000,
+		"transform" : 
+		{
+			"position" : "-88.888, 25.466, -7.715",
+			"pitch" : -0.278025,
+			"yaw" : 0.086571
+		}
+	},
 	"objects" : 
 	[
 		{
@@ -14,7 +32,10 @@
 				"scale" : "100.000, 1.000, 100.000"
 			},
 			"mesh" : "unit-plane",
-			"material" : "grid",
+			"materials" : 
+			[
+				"grid"
+			],
 			"collider" : 
 			{
 				"shape" : "box",
@@ -46,7 +67,10 @@
 					"transform" : 
 					{
 					},
-					"material" : "skybox 01",
+					"materials" : 
+					[
+						"skybox 01"
+					],
 					"skybox info" : 
 					{
 					}
@@ -153,9 +177,12 @@
 			"transform" : 
 			{
 				"pos" : "-3.227, 0.600, 9.288",
-				"rot" : "-3.142, 0.213, -3.142"
+				"rot" : "3.141, 0.213, 3.141"
 			},
-			"material" : "terminal copper",
+			"materials" : 
+			[
+				"terminal copper"
+			],
 			"collider" : 
 			{
 				"shape" : "box",
@@ -199,7 +226,10 @@ foo = 1 + 1 + foo * foo;"
 						"scale" : "1.760, 1.790, 1.000"
 					},
 					"mesh" : "cube",
-					"material" : "terminal display"
+					"materials" : 
+					[
+						"terminal display"
+					]
 				}
 			]
 		}
