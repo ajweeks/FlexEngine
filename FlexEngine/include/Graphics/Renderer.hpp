@@ -315,7 +315,6 @@ namespace flex
 		glm::vec4 GetSelectedObjectColorMultiplier() const;
 		glm::mat4 GetPostProcessingMatrix() const;
 
-		void GenerateGBufferVertexBuffer(bool bFlipV);
 		void GenerateSSAONoise(std::vector<glm::vec4>& noise);
 
 		MaterialID CreateParticleSystemSimulationMaterial(const std::string& name);
@@ -370,10 +369,7 @@ namespace flex
 		VertexBufferData m_FullScreenTriVertexBufferData;
 		RenderID m_FullScreenTriRenderID = InvalidRenderID;
 
-		// TODO: Use full screen tri for gbuffer?
 		RenderID m_GBufferQuadRenderID = InvalidRenderID;
-		VertexBufferData m_gBufferQuadVertexBufferData;
-
 		// Any editor objects which also require a game object wrapper
 		std::vector<GameObject*> m_EditorObjects;
 
@@ -422,6 +418,7 @@ namespace flex
 
 		MaterialID m_ReflectionProbeMaterialID = InvalidMaterialID; // Set by the user via SetReflecionProbeMaterial
 
+		MaterialID m_GBufferMaterialID = InvalidMaterialID;
 		MaterialID m_SpriteMatSSID = InvalidMaterialID;
 		MaterialID m_SpriteMatWSID = InvalidMaterialID;
 		MaterialID m_SpriteArrMatID = InvalidMaterialID;

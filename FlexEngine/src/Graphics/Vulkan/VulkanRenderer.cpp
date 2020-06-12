@@ -597,7 +597,10 @@ namespace flex
 
 			CreateSemaphores();
 
+
 			InitializeFreeType();
+			// Needs to be called prior to rendering fonts, call here just in case
+			UpdateConstantUniformBuffers();
 			LoadFonts(false);
 
 			GenerateIrradianceMaps();
@@ -606,6 +609,7 @@ namespace flex
 			CreateFullscreenBlitResources();
 			CreateComputeResources();
 
+			// TODO: Reduce calls to this to a minimum during startup
 			UpdateConstantUniformBuffers();
 
 			for (u32 i = 0; i < (u32)m_RenderObjects.size(); ++i)
@@ -838,7 +842,6 @@ namespace flex
 
 			m_ParticleSimulationComputePipelineLayout.replace();
 
-			m_gBufferQuadVertexBufferData.Destroy();
 			m_DescriptorPool.replace();
 
 			m_LinMipLinSampler.replace();
@@ -1711,9 +1714,10 @@ namespace flex
 			if (m_bSSAOStateChanged)
 			{
 				m_bSSAOStateChanged = false;
-				// Update GBuffer in case blur or ssao entirely was toggled
-				CreateDescriptorSet(m_GBufferQuadRenderID);
+
+				// Update GBuffer pipeline in case blur or SSAO entirely was toggled
 				CreateGraphicsPipeline(m_GBufferQuadRenderID, false);
+
 				// Update SSAO pipelines in case kernel size changed
 				CreateSSAOPipelines();
 			}
@@ -4268,6 +4272,8 @@ namespace flex
 
 				VkCommandBuffer commandBuffer = m_CommandBufferManager.CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
 
+				BeginDebugMarkerRegion(commandBuffer, "Generate font SDF");
+
 				SetImageLayout(
 					commandBuffer,
 					fontTexColAttachment->image,
@@ -4285,8 +4291,6 @@ namespace flex
 				clearCol.color = { 0.0f, 0.0f, 0.0f, 0.0f };
 				renderPassBeginInfo.pClearValues = &clearCol;
 				vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-				BeginDebugMarkerRegion(commandBuffer, "Generate Font SDF");
 
 				VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
 				VkPipeline graphicsPipeline = VK_NULL_HANDLE;
@@ -4307,14 +4311,6 @@ namespace flex
 				pipelineCreateInfo.depthWriteEnable = VK_FALSE;
 				pipelineCreateInfo.renderPass = renderPass;
 				CreateGraphicsPipeline(&pipelineCreateInfo);
-
-				//VulkanRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
-				//VulkanMaterial* gBufferMaterial = &m_Materials.at(gBufferRenderObject->materialID);
-
-				// TODO: Remove/call only once prior to any font load
-				UpdateConstantUniformBuffers();
-
-				VulkanRenderObject* gBufferObject = GetRenderObject(m_GBufferQuadRenderID);
 
 				glm::vec2 fontTexSize((real)fontTexColAttachment->width, (real)fontTexColAttachment->height);
 
@@ -4370,6 +4366,7 @@ namespace flex
 					++dynamicOffsetIndex;
 
 					highResTex->bSamplerClampToBorder = true;
+					// TODO: Pass in command buffer?
 					highResTex->CreateFromMemory(alignedBitmap.buffer, width * height * sizeof(u8), VK_FORMAT_R8_UNORM, 1);
 
 					glm::vec2i res = glm::vec2i(metric->width - padding * 2, metric->height - padding * 2);
@@ -4399,7 +4396,7 @@ namespace flex
 					descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 					descSetCreateInfo.shaderID = computeSDFShaderID;
 					descSetCreateInfo.uniformBufferList = &computeSDFMaterial.uniformBufferList;
-					descSetCreateInfo.imageDescriptors.Add(U_ALBEDO_SAMPLER, ImageDescriptorInfo{ highResTex->imageView, m_LinMipLinSampler });
+					descSetCreateInfo.imageDescriptors.Add(U_ALBEDO_SAMPLER, ImageDescriptorInfo{ highResTex->imageView, highResTex->sampler });
 					FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
 					CreateDescriptorSet(&descSetCreateInfo);
 					descSets.push_back(descriptorSet);
@@ -4413,7 +4410,7 @@ namespace flex
 					overrides.overridenUniforms.AddUniform(U_SDF_DATA);
 					UpdateDynamicUniformBuffer(m_ComputeSDFMatID, dynamicOffsetIndex * m_DynamicAlignment, MAT4_IDENTITY, &overrides);
 
-					vkCmdDraw(commandBuffer, gBufferObject->vertexBufferData->VertexCount, 1, gBufferObject->vertexOffset, 0);
+					vkCmdDraw(commandBuffer, m_Quad3DVertexBufferData.VertexCount, 1, 0, 0);
 
 					metric->texCoord = metric->texCoord / fontTexSize;
 
@@ -4422,7 +4419,7 @@ namespace flex
 
 				vkCmdEndRenderPass(commandBuffer);
 
-				EndDebugMarkerRegion(commandBuffer, "End Generate Font SDF");
+				EndDebugMarkerRegion(commandBuffer, "End generate font SDF");
 
 				VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
 				SetCommandBufferName(m_VulkanDevice, commandBuffer, "Load font command buffer");
@@ -4431,6 +4428,7 @@ namespace flex
 				VkPipelineStageFlags waitStages = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 				submitInfo.pWaitDstStageMask = &waitStages;
 
+				// TODO: Allow game to progress while this completes
 				VK_CHECK_RESULT(vkQueueSubmit(m_GraphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
 				VK_CHECK_RESULT(vkQueueWaitIdle(m_GraphicsQueue));
 
@@ -4625,6 +4623,34 @@ namespace flex
 				return;
 			}
 
+			VulkanMaterial& fontMaterial = m_Materials[m_FontMatSSID];
+			VulkanShader& fontShader = m_Shaders[fontMaterial.material.shaderID];
+
+			VulkanBuffer* fontVertexBuffer = nullptr;
+
+			// Update dynamic text buffer
+			{
+				std::vector<TextVertex2D> textVerticesSS;
+				UpdateTextBufferSS(textVerticesSS);
+
+				u32 SSTextBufferByteCount = (u32)(textVerticesSS.size() * sizeof(TextVertex2D));
+
+				if (SSTextBufferByteCount > 0)
+				{
+					std::pair<u32, VertexIndexBufferPair*> vertexBufferPair = m_DynamicVertexIndexBufferPairs[GetDynamicVertexIndexBufferIndex(CalculateVertexStride(fontShader.shader->vertexAttributes))];
+					fontVertexBuffer = vertexBufferPair.second->vertexBuffer;
+					u32 copySize = std::min(SSTextBufferByteCount, (u32)fontVertexBuffer->m_Size);
+					if (copySize < SSTextBufferByteCount)
+					{
+						PrintError("SS Font vertex buffer is %u bytes too small\n", SSTextBufferByteCount - copySize);
+					}
+					// TODO: HIDDEN BUG: Probably should have an offset into this?
+					VK_CHECK_RESULT(fontVertexBuffer->Map(copySize));
+					memcpy(fontVertexBuffer->m_Mapped, textVerticesSS.data(), copySize);
+					fontVertexBuffer->Unmap();
+				}
+			}
+
 			bool bHasText = false;
 			for (BitmapFont* font : m_FontsSS)
 			{
@@ -4638,30 +4664,6 @@ namespace flex
 			if (!bHasText)
 			{
 				return;
-			}
-
-			VulkanMaterial& fontMaterial = m_Materials[m_FontMatSSID];
-			VulkanShader& fontShader = m_Shaders[fontMaterial.material.shaderID];
-
-			// Update dynamic text buffer
-			{
-				std::vector<TextVertex2D> textVerticesSS;
-				UpdateTextBufferSS(textVerticesSS);
-
-				u32 SSTextBufferByteCount = (u32)(textVerticesSS.size() * sizeof(TextVertex2D));
-
-				if (SSTextBufferByteCount > 0)
-				{
-					VulkanBuffer* vertexBuffer = m_StaticVertexBuffers[fontShader.shader->staticVertexBufferIndex].second;
-					u32 copySize = std::min(SSTextBufferByteCount, (u32)vertexBuffer->m_Size);
-					if (copySize < SSTextBufferByteCount)
-					{
-						PrintError("SS Font vertex buffer is %u bytes too small\n", SSTextBufferByteCount - copySize);
-					}
-					VK_CHECK_RESULT(vertexBuffer->Map(copySize));
-					memcpy(vertexBuffer->m_Mapped, textVerticesSS.data(), copySize);
-					vertexBuffer->Unmap();
-				}
 			}
 
 			PROFILE_AUTO("DrawTextSS");
@@ -4746,7 +4748,7 @@ namespace flex
 					UpdateDynamicUniformBuffer(m_FontMatSSID, dynamicOffsetIndex * m_DynamicAlignment, transformMat, &overrides);
 
 					VkDeviceSize offsets[1] = { 0 };
-					vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_StaticVertexBuffers[fontShader.shader->staticVertexBufferIndex].second->m_Buffer, offsets);
+					vkCmdBindVertexBuffers(commandBuffer, 0, 1, &fontVertexBuffer->m_Buffer, offsets);
 
 					vkCmdDraw(commandBuffer, font->bufferSize, 1, font->bufferStart, 0);
 				}
@@ -6100,15 +6102,23 @@ namespace flex
 				return;
 			}
 
-			VulkanMaterial* material = &m_Materials.at(renderObject->materialID);
-			VulkanShader* shader = &m_Shaders[material->material.shaderID];
-
 			DescriptorSetCreateInfo createInfo = {};
 
 			char debugName[256];
 			snprintf(debugName, 256, "Render Object %s (render ID %u) descriptor set", renderObject->gameObject ? renderObject->gameObject->GetName().c_str() : "", renderID);
 			createInfo.DBG_Name = debugName;
 			createInfo.descriptorSet = &renderObject->descriptorSet;
+
+			CreateDescriptorSet(createInfo, renderObject->materialID);
+		}
+
+		void VulkanRenderer::CreateDescriptorSet(DescriptorSetCreateInfo& createInfo, MaterialID materialID)
+		{
+			assert(createInfo.descriptorSet != nullptr);
+
+			VulkanMaterial* material = &m_Materials.at(materialID);
+			VulkanShader* shader = &m_Shaders[material->material.shaderID];
+
 			createInfo.descriptorSetLayout = &m_DescriptorSetLayouts[material->material.shaderID];
 			createInfo.shaderID = material->material.shaderID;
 			createInfo.uniformBufferList = &material->uniformBufferList;
@@ -8237,15 +8247,9 @@ namespace flex
 								}
 							}
 
-							ShaderID wireframeShaderID = m_Materials[m_WireframeMatID].material.shaderID;
-
-							i32 dynamicUniformBufferOffset = 0;
 							ShaderBatch selectedObjectBatch = {};
 							for (u32 shaderID = 0; shaderID < m_Shaders.size(); ++shaderID)
 							{
-								const bool bDeferred = m_Shaders[shaderID].shader->numAttachments > 1;
-								ShaderBatch* shaderBatch = (bDeferred ? &m_DeferredObjectBatches : &m_ForwardObjectBatches);
-
 								for (u32 dynamic = 0; dynamic <= 1; ++dynamic)
 								{
 									ShaderBatchPair shaderBatchPair = {};
@@ -8260,7 +8264,7 @@ namespace flex
 									depthUnawareEditorShaderBatchPair.shaderID = shaderID;
 									depthUnawareEditorShaderBatchPair.bDynamic = (dynamic == 1);
 
-									i32 dynamicUBOOffset = 0;
+									i32 inOutDynamicUBOOffset = 0;
 
 									for (const auto& matPair : m_Materials)
 									{
@@ -8278,7 +8282,7 @@ namespace flex
 											MaterialBatchPair depthUnawareEditorMatBatchPair = {};
 											depthUnawareEditorMatBatchPair.materialID = matID;
 
-											FillOutShaderBatches(renderIDs, &dynamicUBOOffset, matBatchPair, depthAwareEditorMatBatchPair, depthUnawareEditorMatBatchPair, matID, false);
+											FillOutShaderBatches(renderIDs, &inOutDynamicUBOOffset, matBatchPair, depthAwareEditorMatBatchPair, depthUnawareEditorMatBatchPair, matID, false);
 
 											if (!matBatchPair.batch.objects.empty())
 											{

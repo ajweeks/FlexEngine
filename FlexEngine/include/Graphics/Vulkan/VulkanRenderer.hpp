@@ -192,6 +192,7 @@ namespace flex
 
 			void FillOutBufferDescriptorInfos(ShaderUniformContainer<BufferDescriptorInfo>* descriptors, UniformBufferList* uniformBufferList, ShaderID shaderID);
 			void CreateDescriptorSet(RenderID renderID);
+			void CreateDescriptorSet(DescriptorSetCreateInfo& createInfo, MaterialID materialID);
 			void CreateDescriptorSet(DescriptorSetCreateInfo* createInfo);
 			void CreateDescriptorSetLayout(ShaderID shaderID);
 			void CreateGraphicsPipeline(RenderID renderID, bool bSetCubemapRenderPass);

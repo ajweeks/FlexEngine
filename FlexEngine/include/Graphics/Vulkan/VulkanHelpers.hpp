@@ -454,6 +454,7 @@ namespace flex
 
 #if COMPILE_SHADER_COMPILER
 		// NOTE: Not actually async at the moment! Compiling all shaders takes less than a second my machine though, so...
+		// TODO: Either rename, or make async!
 		struct AsyncVulkanShaderCompiler
 		{
 			AsyncVulkanShaderCompiler(bool bForceRecompile);

@@ -2237,11 +2237,6 @@ namespace flex
 
 	void Renderer::GenerateGBuffer()
 	{
-		if (m_gBufferQuadVertexBufferData.vertexData == nullptr)
-		{
-			GenerateGBufferVertexBuffer(g_bVulkanEnabled);
-		}
-
 		assert(m_SkyBoxMesh != nullptr);
 		assert(m_SkyboxShaderID != InvalidShaderID);
 		MaterialID skyboxMaterialID = m_SkyBoxMesh->GetSubMeshes()[0]->GetMaterialID();
@@ -2307,7 +2302,7 @@ namespace flex
 			RenderObjectCreateInfo gBufferQuadCreateInfo = {};
 			gBufferQuadCreateInfo.materialID = gBufferMatID;
 			gBufferQuadCreateInfo.gameObject = gBufferQuadGameObject;
-			gBufferQuadCreateInfo.vertexBufferData = &m_gBufferQuadVertexBufferData;
+			gBufferQuadCreateInfo.vertexBufferData = &m_FullScreenTriVertexBufferData;
 			gBufferQuadCreateInfo.cullFace = CullFace::NONE;
 			gBufferQuadCreateInfo.visibleInSceneExplorer = false;
 			gBufferQuadCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
@@ -2315,8 +2310,6 @@ namespace flex
 			gBufferQuadCreateInfo.bSetDynamicStates = true;
 
 			m_GBufferQuadRenderID = InitializeRenderObject(&gBufferQuadCreateInfo);
-
-			m_gBufferQuadVertexBufferData.DescribeShaderVariables(this, m_GBufferQuadRenderID);
 		}
 
 		// Initialize GBuffer cubemap material & mesh
@@ -3087,29 +3080,6 @@ namespace flex
 
 		contrastBrightnessSaturation = glm::translate(glm::scale(satMat, brightness), offset);
 		return contrastBrightnessSaturation;
-	}
-
-	void Renderer::GenerateGBufferVertexBuffer(bool bFlipV)
-	{
-		if (m_gBufferQuadVertexBufferData.vertexData == nullptr)
-		{
-			VertexBufferDataCreateInfo gBufferQuadVertexBufferDataCreateInfo = {};
-
-			gBufferQuadVertexBufferDataCreateInfo.positions_3D = {
-				glm::vec3(-1.0f, -1.0f, 0.0f),
-				glm::vec3(-1.0f, 3.0f,  0.0f),
-				glm::vec3(3.0f,  -1.0f, 0.0f),
-			};
-
-			gBufferQuadVertexBufferDataCreateInfo.texCoords_UV = {
-				glm::vec2(0.0f, bFlipV ? 1.0f : 0.0f),
-				glm::vec2(0.0f, bFlipV ? -1.0f : 2.0f),
-				glm::vec2(2.0f, bFlipV ? 1.0f : 0.0f),
-			};
-
-			gBufferQuadVertexBufferDataCreateInfo.attributes = (u32)VertexAttribute::POSITION | (u32)VertexAttribute::UV;
-			m_gBufferQuadVertexBufferData.Initialize(gBufferQuadVertexBufferDataCreateInfo);
-		}
 	}
 
 	void Renderer::GenerateSSAONoise(std::vector<glm::vec4>& noise)
