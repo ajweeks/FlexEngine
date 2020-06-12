@@ -80,6 +80,8 @@ namespace flex
 			UNINITIALIZED
 		};
 
+		static const u32 DEFAULT_FLOAT_PRECISION = 7;
+
 		static Type TypeFromChar(char c, const std::string& stringAfter);
 
 		explicit JSONValue();
@@ -87,6 +89,7 @@ namespace flex
 		explicit JSONValue(const char* inStrValue);
 		explicit JSONValue(i32 inIntValue);
 		explicit JSONValue(real inFloatValue);
+		explicit JSONValue(real inFloatValue, u32 precision);
 		explicit JSONValue(bool inBoolValue);
 		explicit JSONValue(const JSONObject& inObjectValue);
 		explicit JSONValue(const std::vector<JSONObject>& inObjectArrayValue);
@@ -101,6 +104,7 @@ namespace flex
 		};
 		JSONObject objectValue;
 		std::string strValue;
+		u32 floatPrecision;
 		std::vector<JSONField> fieldArrayValue;
 		std::vector<JSONObject> objectArrayValue;
 	};
