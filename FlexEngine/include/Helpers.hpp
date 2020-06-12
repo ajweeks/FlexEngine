@@ -181,6 +181,8 @@ namespace flex
 	// Returns random value in range [min, max)
 	real RandomFloat(real min, real max);
 
+	void ByteCountToString(char* buf, u32 bytes);
+
 	real MinComponent(const glm::vec2& vec);
 	real MinComponent(const glm::vec3& vec);
 	real MinComponent(const glm::vec4& vec);
@@ -302,5 +304,6 @@ namespace flex
 		bool InputUInt(const char* message, u32* v, u32 step = 1, u32 step_fast = 100, ImGuiInputTextFlags flags = 0);
 		bool SliderUInt(const char* label, u32* v, u32 v_min, u32 v_max, const char* format = NULL);
 		bool DragUInt(const char* label, u32* v, u32 v_min = 0, u32 v_max = 0, const char* format = "%d");
+		bool DragInt16(const char* label, i16* v, i16 v_min = 0, i16 v_max = 0, const char* format = "%d");
 	} // namespace ImGuiExt
 } // namespace flex

@@ -1337,6 +1337,27 @@ namespace flex
 		return randN * (max - min) + min;
 	}
 
+	void ByteCountToString(char* buf, u32 bytes)
+	{
+		const char* suffixes[] = { "B", "KB", "MB", "GB", "TB", "PB" };
+		u32 s = 0;
+		double count = bytes;
+		while (count >= 1024 && s < 6)
+		{
+			s++;
+			count /= 1024;
+		}
+
+		if (count - floor(count) == 0.0)
+		{
+			sprintf(buf, "%d%s", (int)count, suffixes[s]);
+		}
+		else
+		{
+			sprintf(buf, "%.1f%s", count, suffixes[s]);
+		}
+	}
+
 	real MinComponent(const glm::vec2& vec)
 	{
 		return glm::min(vec.x, vec.y);
@@ -1532,6 +1553,21 @@ namespace flex
 		bool DragUInt(const char* label, u32* v, u32 v_min /* = 0 */, u32 v_max /* = 0 */, const char* format /* = "%d" */)
 		{
 			return ImGui::DragScalar(label, ImGuiDataType_U32, v, 1.0f, &v_min, &v_max, format);
+		}
+
+		bool DragInt16(const char* label, i16* v, i16 v_min /* = 0 */, i16 v_max /* = 0 */, const char* format /* = "%d" */)
+		{
+			i32 v32 = (i32)*v;
+			i32 v_min32 = (i32)v_min;
+			i32 v_max32 = (i32)v_max;
+			bool bResult = ImGui::DragScalar(label, ImGuiDataType_S32, &v32, 1.0f, &v_min32, &v_max32, format);
+
+			if (bResult)
+			{
+				*v = (i16)v32;
+			}
+
+			return bResult;
 		}
 
 	} // namespace ImGuiExt

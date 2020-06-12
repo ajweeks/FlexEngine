@@ -320,6 +320,9 @@ namespace flex
 		MaterialID CreateParticleSystemSimulationMaterial(const std::string& name);
 		MaterialID CreateParticleSystemRenderingMaterial(const std::string& name);
 
+		void ParseFontFile();
+		void SerializeFontFile();
+
 		std::vector<Shader> m_BaseShaders;
 
 		PointLightData* m_PointLights = nullptr;
@@ -403,6 +406,8 @@ namespace flex
 		bool m_bEnableTAA = true;
 		i32 m_TAASampleCount = 2;
 		bool m_bTAAStateChanged = false;
+
+		std::string m_PreviewedFont;
 
 		GameObject* m_Grid = nullptr;
 		GameObject* m_WorldOrigin = nullptr;

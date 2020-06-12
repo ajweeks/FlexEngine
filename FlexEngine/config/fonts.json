@@ -1,32 +1,45 @@
 {
-	"fonts" :
+	"fonts" : 
 	[
 		{
-			"name": "editor-01",
-			"file path": "UbuntuCondensed-Regular.ttf",
-			"size": 28,
-			"screen space": true
+			"name" : "editor-01",
+			"file path" : "UbuntuCondensed-Regular.ttf",
+			"size" : 75,
+			"screen space" : true,
+			"threshold" : 0.50,
+			"shadow opacity" : 0.50,
+			"shadow offset" : "0.00, 0.00",
+			"soften" : 0.04
 		},
 		{
-			"name": "editor-02",
-			"file path": "SourceCodePro-regular.ttf",
-			"size": 24,
-			"threshold" : 0.45,
-			"shadow opacity": 0.6,
-			"shadow offset": "-0.007, -0.007",
-			"screen space": true
+			"name" : "editor-02",
+			"file path" : "SourceCodePro-regular.ttf",
+			"size" : 38,
+			"screen space" : true,
+			"threshold" : 0.46,
+			"shadow opacity" : 0.60,
+			"shadow offset" : "-0.01, -0.01",
+			"soften" : 0.04
 		},
 		{
-			"name": "editor-02-ws",
-			"file path": "SourceCodePro-regular.ttf",
-			"size": 48,
-			"screen space": false
+			"name" : "editor-02-ws",
+			"file path" : "SourceCodePro-regular.ttf",
+			"size" : 48,
+			"screen space" : false,
+			"threshold" : 0.50,
+			"shadow opacity" : 0.50,
+			"shadow offset" : "0.00, 0.00",
+			"soften" : 0.04
 		},
 		{
-			"name": "editor-03",
-			"file path": "gant.ttf",
-			"size": 20,
-			"screen space": true
+			"name" : "editor-03",
+			"file path" : "gant.ttf",
+			"size" : 20,
+			"screen space" : true,
+			"threshold" : 0.50,
+			"shadow opacity" : 0.50,
+			"shadow offset" : "0.00, 0.00",
+			"soften" : 0.04
 		}
 	]
 }

@@ -57,54 +57,7 @@ namespace flex
 
 	void Renderer::Initialize()
 	{
-		if (!FileExists(m_FontsFilePathAbs))
-		{
-			PrintError("Fonts file missing!\n");
-		}
-		else
-		{
-			JSONObject fontSettings;
-			if (JSONParser::ParseFromFile(m_FontsFilePathAbs, fontSettings))
-			{
-				std::vector<JSONObject> fontObjs;
-				if (fontSettings.SetObjectArrayChecked("fonts", fontObjs))
-				{
-					static const std::string DPIStr = FloatToString(g_Monitor->DPI.x, 0) + "DPI";
-
-					for (const JSONObject& fontObj : fontObjs)
-					{
-						FontMetaData fontMetaData = {};
-
-						fontObj.SetStringChecked("file path", fontMetaData.filePath);
-						fontMetaData.size = (i16)fontObj.GetInt("size");
-						fontObj.SetBoolChecked("screen space", fontMetaData.bScreenSpace);
-						fontObj.SetFloatChecked("threshold", fontMetaData.threshold);
-						fontObj.SetFloatChecked("shadow opacity", fontMetaData.shadowOpacity);
-						fontObj.SetVec2Checked("shadow offset", fontMetaData.shadowOffset);
-						fontObj.SetFloatChecked("soften", fontMetaData.soften);
-
-						if (fontMetaData.filePath.empty())
-						{
-							PrintError("Font doesn't contain file path!\n");
-							continue;
-						}
-
-						fontMetaData.renderedTextureFilePath = StripFileType(fontMetaData.filePath);
-
-						fontMetaData.renderedTextureFilePath += "-" + IntToString(fontMetaData.size, 2) + "-" + DPIStr + m_FontImageExtension;
-						fontMetaData.renderedTextureFilePath = RESOURCE_LOCATION "fonts/" + fontMetaData.renderedTextureFilePath;
-						fontMetaData.filePath = RESOURCE_LOCATION "fonts/" + fontMetaData.filePath;
-
-						std::string fontName = fontObj.GetString("name");
-						m_Fonts[fontName] = fontMetaData;
-					}
-				}
-			}
-			else
-			{
-				PrintError("Failed to parse font config file %s\n\terror: %s\n", m_FontsFilePathAbs.c_str(), JSONParser::GetErrorString());
-			}
-		}
+		ParseFontFile();
 
 		std::string hdriPath = RESOURCE("textures/hdri/");
 		if (!Platform::FindFilesInDirectory(hdriPath, m_AvailableHDRIs, "hdr"))
@@ -790,19 +743,25 @@ namespace flex
 						ImGui::Columns(2);
 						ImGui::SetColumnWidth(0, 350.0f);
 
-						ImGui::DragFloat("Threshold", &font->metaData.threshold, 0.001f, 0.0f, 1.0f);
-						ImGui::DragFloat2("Shadow Offset", &font->metaData.shadowOffset.x, 0.0007f);
-						ImGui::DragFloat("Shadow Opacity", &font->metaData.shadowOpacity, 0.005f, 0.0f, 0.999f);
-						ImGui::DragFloat("Soften", &font->metaData.soften, 0.001f, 0.0f, 1.0f);
+						fontMeta.bDirty |= ImGui::DragFloat("Threshold", &fontMeta.threshold, 0.001f, 0.0f, 1.0f);
+						fontMeta.bDirty |= ImGui::DragFloat2("Shadow Offset", &fontMeta.shadowOffset.x, 0.0007f);
+						fontMeta.bDirty |= ImGui::DragFloat("Shadow Opacity", &fontMeta.shadowOpacity, 0.005f, 0.0f, 0.999f);
+						fontMeta.bDirty |= ImGui::DragFloat("Soften", &fontMeta.soften, 0.001f, 0.0f, 1.0f);
+						// TODO: Store "needs bake" flag as well
+						fontMeta.bDirty |= ImGuiExt::DragInt16("Size", &fontMeta.size, 4, 256);
 
-						ImGui::Text("Size: %i", font->metaData.size);
+						ImGui::Text("Size: %i", fontMeta.size);
 						ImGui::SameLine();
 						ImGui::Text("%s space", fontMeta.bScreenSpace ? "Screen" : "World");
 						glm::vec2u texSize(font->GetTextureSize());
-						ImGui::Text("Resolution: %ux%u", texSize.x, texSize.y);
+						u32 texChannelCount = font->GetTextureChannelCount();
+						char texSizeBuf[64];
+						ByteCountToString(texSizeBuf, texSize.x * texSize.y * texChannelCount * sizeof(u32));
+						ImGui::Text("Resolution: %ux%u (%s)", texSize.x, texSize.y, texSizeBuf);
 						ImGui::Text("Char count: %i", font->characterCount);
 						ImGui::Text("Byte count: %i", font->bufferSize);
 						ImGui::Text("Use kerning: %s", font->bUseKerning ? "true" : "false");
+
 						// TODO: Add support to ImGui vulkan renderer for images
 						//VulkanTexture* tex = font->GetTexture();
 						//ImVec2 texSize((real)tex->width, (real)tex->height);
@@ -833,7 +792,6 @@ namespace flex
 							font = nullptr;
 
 							LoadFont(fontMeta, true);
-
 						}
 						if (ImGui::Button("View SDF"))
 						{
@@ -844,6 +802,35 @@ namespace flex
 						{
 							const std::string absDir = ExtractDirectoryString(RelativePathToAbsolute(fontMeta.renderedTextureFilePath));
 							Platform::OpenExplorer(absDir);
+						}
+						bool bPreviewing = m_PreviewedFont == fontPair.first;
+						if (ImGui::Checkbox("Preview", &bPreviewing))
+						{
+							if (bPreviewing)
+							{
+								m_PreviewedFont = fontPair.first;
+							}
+							else
+							{
+								m_PreviewedFont = "";
+							}
+						}
+
+						const bool bWasDirty = fontMeta.bDirty;
+						if (bWasDirty)
+						{
+							ImVec4 buttonCol = ImGui::GetStyle().Colors[ImGuiCol_Button];
+							ImVec4 darkButtonCol = ImVec4(buttonCol.x * 1.2f, buttonCol.y * 1.2f, buttonCol.z * 1.2f, buttonCol.w);
+							ImGui::PushStyleColor(ImGuiCol_Button, darkButtonCol);
+						}
+						if (ImGui::Button(fontMeta.bDirty ? "Save*" : "Save"))
+						{
+							SerializeFontFile();
+							fontMeta.bDirty = false;
+						}
+						if (bWasDirty)
+						{
+							ImGui::PopStyleColor();
 						}
 						ImGui::EndColumns();
 					}
@@ -2357,6 +2344,12 @@ namespace flex
 				0.0f, 1.0f);
 			DrawStringSS(m_EditorMessage, glm::vec4(1.0f, 1.0f, 1.0f, alpha), AnchorPoint::CENTER, VEC2_ZERO, 3);
 		}
+
+		if (!m_PreviewedFont.empty())
+		{
+			SetFont(m_PreviewedFont);
+			DrawStringSS("Preview text... 123 -*!~? ", VEC4_ONE, AnchorPoint::CENTER, VEC2_ZERO, 3);
+		}
 	}
 
 	void Renderer::EnqueueWorldSpaceText()
@@ -3110,6 +3103,93 @@ namespace flex
 		particleMatCreateInfo.persistent = true;
 		particleMatCreateInfo.visibleInEditor = false;
 		return InitializeMaterial(&particleMatCreateInfo);
+	}
+
+	void Renderer::ParseFontFile()
+	{
+		if (!FileExists(m_FontsFilePathAbs))
+		{
+			PrintError("Fonts file missing!\n");
+		}
+		else
+		{
+			JSONObject fontSettings;
+			if (JSONParser::ParseFromFile(m_FontsFilePathAbs, fontSettings))
+			{
+				std::vector<JSONObject> fontObjs;
+				if (fontSettings.SetObjectArrayChecked("fonts", fontObjs))
+				{
+					static const std::string DPIStr = FloatToString(g_Monitor->DPI.x, 0) + "DPI";
+
+					for (const JSONObject& fontObj : fontObjs)
+					{
+						FontMetaData fontMetaData = {};
+
+						fontObj.SetStringChecked("file path", fontMetaData.filePath);
+						// TODO: Add 16 bit int support to JSON parser
+						fontMetaData.size = (i16)fontObj.GetInt("size");
+						fontObj.SetBoolChecked("screen space", fontMetaData.bScreenSpace);
+						fontObj.SetFloatChecked("threshold", fontMetaData.threshold);
+						fontObj.SetFloatChecked("shadow opacity", fontMetaData.shadowOpacity);
+						fontObj.SetVec2Checked("shadow offset", fontMetaData.shadowOffset);
+						fontObj.SetFloatChecked("soften", fontMetaData.soften);
+
+						if (fontMetaData.filePath.empty())
+						{
+							PrintError("Font doesn't contain file path!\n");
+							continue;
+						}
+
+						fontMetaData.renderedTextureFilePath = StripFileType(fontMetaData.filePath);
+
+						fontMetaData.renderedTextureFilePath += "-" + IntToString(fontMetaData.size, 2) + "-" + DPIStr + m_FontImageExtension;
+						fontMetaData.renderedTextureFilePath = RESOURCE_LOCATION "fonts/" + fontMetaData.renderedTextureFilePath;
+						fontMetaData.filePath = RESOURCE_LOCATION "fonts/" + fontMetaData.filePath;
+
+						std::string fontName = fontObj.GetString("name");
+						m_Fonts[fontName] = fontMetaData;
+					}
+				}
+			}
+			else
+			{
+				PrintError("Failed to parse font config file %s\n\terror: %s\n", m_FontsFilePathAbs.c_str(), JSONParser::GetErrorString());
+			}
+		}
+	}
+
+	void Renderer::SerializeFontFile()
+	{
+		std::vector<JSONObject> fontObjs;
+
+		for (auto& fontPair : m_Fonts)
+		{
+			FontMetaData fontMetaData = m_Fonts[fontPair.first];
+
+			JSONObject fontObj = {};
+
+			fontObj.fields.emplace_back("name", JSONValue(fontPair.first));
+			std::string relativeFilePath = StripLeadingDirectories(fontMetaData.filePath);
+			fontObj.fields.emplace_back("file path", JSONValue(relativeFilePath));
+			fontObj.fields.emplace_back("size", JSONValue((i32)fontMetaData.size));
+			fontObj.fields.emplace_back("screen space", JSONValue(fontMetaData.bScreenSpace));
+			fontObj.fields.emplace_back("threshold", JSONValue(fontMetaData.threshold, 2));
+			fontObj.fields.emplace_back("shadow opacity", JSONValue(fontMetaData.shadowOpacity, 2));
+			fontObj.fields.emplace_back("shadow offset", JSONValue(VecToString(fontMetaData.shadowOffset, 2)));
+			fontObj.fields.emplace_back("soften", JSONValue(fontMetaData.soften, 2));
+
+			fontObjs.push_back(fontObj);
+		}
+
+		JSONObject fontSettings;
+		fontSettings.fields.push_back(JSONField("fonts", JSONValue(fontObjs)));
+
+		std::string fileContents = fontSettings.Print(0);
+
+		if (!WriteFile(m_FontsFilePathAbs, fileContents, false))
+		{
+			PrintError("Failed to write font file to %s\n", m_FontsFilePathAbs.c_str());
+		}
 	}
 
 	void PhysicsDebugDrawBase::UpdateDebugMode()
