@@ -245,9 +245,9 @@ namespace flex
 				currentCamera->FOV = glm::radians(camFOV);
 			}
 
-			ImGui::DragFloat("near", &currentCamera->zNear, 0.05f, -1000.0f, 1000.0f);
+			ImGui::DragFloat("near", &currentCamera->zNear, 0.05f, 0.0f, 10.0f);
 
-			ImGui::DragFloat("far", &currentCamera->zFar, 0.05f, -1000.0f, 1000.0f);
+			ImGui::DragFloat("far", &currentCamera->zFar, 0.05f, 0.0f, 10000.0f);
 
 			if (ImGui::Button("Reset orientation"))
 			{
