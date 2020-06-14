@@ -2325,10 +2325,13 @@ namespace flex
 	{
 		SetFont(SID("editor-02"));
 		static const glm::vec4 color(0.95f);
-		DrawStringSS("FLEX ENGINE", color, AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -0.055f), 1.0f, 0.6f);
+		DrawStringSS("FLEX ENGINE", color, AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -0.055f), 1.5f, 0.6f);
 		if (g_EngineInstance->IsSimulationPaused())
 		{
-			DrawStringSS("PAUSED", color, AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -0.09f), 0.0f);
+			const std::vector<TextCache>& textCaches = m_CurrentFont->GetTextCaches();
+			real height = GetStringHeight(textCaches[textCaches.size() - 1], m_CurrentFont) / (real)g_Window->GetSize().y;
+			// TODO: Allow specifying text pos in different units (absolute, relative, ...)
+			DrawStringSS("PAUSED", color, AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -(height + 0.09f)), 0.0f, 0.6f);
 		}
 
 #if 0
