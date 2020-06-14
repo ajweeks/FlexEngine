@@ -1337,7 +1337,7 @@ namespace flex
 		return randN * (max - min) + min;
 	}
 
-	void ByteCountToString(char* buf, u32 bytes)
+	void ByteCountToString(char buf[], u32 bufSize, u32 bytes)
 	{
 		const char* suffixes[] = { "B", "KB", "MB", "GB", "TB", "PB" };
 		u32 s = 0;
@@ -1350,11 +1350,11 @@ namespace flex
 
 		if (count - floor(count) == 0.0)
 		{
-			sprintf(buf, "%d%s", (int)count, suffixes[s]);
+			sprintf_s(buf, bufSize, "%d%s", (int)count, suffixes[s]);
 		}
 		else
 		{
-			sprintf(buf, "%.1f%s", count, suffixes[s]);
+			sprintf_s(buf, bufSize, "%.1f%s", count, suffixes[s]);
 		}
 	}
 

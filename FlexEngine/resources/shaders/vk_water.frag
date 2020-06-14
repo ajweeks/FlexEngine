@@ -28,11 +28,22 @@ struct DirectionalLight
 	vec2 _dirLightPad;
 };
 
+struct OceanColours
+{
+	vec4 top;
+	vec4 mid;
+	vec4 btm;
+	float fresnelFactor;
+	float fresnelPower;
+};
+
 layout (binding = 0) uniform UBOConstant
 {
 	vec4 camPos;
-	mat4 viewProjection;
+	mat4 view;
+	mat4 projection;
 	DirectionalLight dirLight;
+	OceanColours oceanColours;
 } uboConstant;
 
 vec3 SampleSkybox(vec3 dir)
@@ -65,20 +76,28 @@ void main()
 
 	float NoV = max(dot(N, V), 0.0);
 
-	float fresnel = clamp(pow(1.0-NoV+0.07, 7.0), 0, 1);
+	float upness = max(dot(N, normalize(vec3(0.0, 1.2, 0.4))), 0);
 
-	float deepness = pow(1.0-clamp(abs(V.y),0,1), 3.0);
+	float fresnel = clamp(pow(1.0-NoV+0.07, uboConstant.oceanColours.fresnelPower), 0, 1);
 
-	vec3 black = vec3(0.005, 0.01, 0.03);
-	vec3 deepBlue = vec3(0.02, 0.06, 0.25);
-	vec3 lightBlue = vec3(0.1, 0.15, 0.3);
+	float deepness = (0.5+fresnel*0.5) * pow(1.0-clamp(abs(V.y),0,1), 5.0);
+
+	vec3 oceanTop = pow(uboConstant.oceanColours.top.xyz, vec3(2.2));
+	vec3 oceanMid = pow(uboConstant.oceanColours.mid.xyz, vec3(2.2));
+	vec3 oceanBtm = pow(uboConstant.oceanColours.btm.xyz, vec3(2.2));
+
+	vec3 skyHorizon = vec3(0.66, 0.86, 0.95)*0.80;
 
 	vec3 sky = SampleSkybox(R);
 
-	// TODO: Add toggle bool
-	fragColor = vec4(mix(mix(black, deepBlue, deepness), sky, clamp(fresnel,0,1)), 1);
-	//fragColor = mix(0.05, 0.9, NoV) * ex_Colour;
+	vec3 waterCol = mix(oceanBtm, mix(oceanMid, oceanTop, clamp((deepness - 0.5) * 2.0, 0, 1)), clamp(deepness * 2.0, 0, 1));
+	fragColor = vec4(mix(waterCol, sky, clamp(fresnel * uboConstant.oceanColours.fresnelFactor,0,1)), 1);
+
+	vec4 posCS = uboConstant.view * vec4(ex_PositionWS, 1);	
+	float depthFade = clamp(pow(pow(posCS.z, 1.0)*0.002, 1.65), 0, 1);
+	fragColor = mix(fragColor, vec4(skyHorizon, 1.0), depthFade);
 
 	//fragColor = vec4(SampleSkybox(R), 1);
-	//fragColor = vec4(clamp(R,0,1), 1);
+	// fragColor = vec4(fresnel.xxx, 1);
+	// fragColor = vec4(deepness.xxx, 1.0);
 }

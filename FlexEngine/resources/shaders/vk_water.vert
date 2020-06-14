@@ -22,11 +22,22 @@ struct DirectionalLight
 	vec2 _dirLightPad;
 };
 
+struct OceanColours
+{
+	vec4 top;
+	vec4 mid;
+	vec4 btm;
+	float fresnelFactor;
+	float fresnelPower;
+};
+
 layout (binding = 0) uniform UBOConstant
 {
 	vec4 camPos;
-	mat4 viewProjection;
+	mat4 view;
+	mat4 projection;
 	DirectionalLight dirLight;
+	OceanColours oceanColours;
 } uboConstant;
 
 layout (binding = 1) uniform UBODynamic
@@ -39,6 +50,6 @@ void main()
     ex_NormalWS = mat3(uboDynamic.model) * in_Normal;
     vec4 posWS = uboDynamic.model * vec4(in_Position, 0.0);
     ex_PositionWS = posWS.xyz;
-    gl_Position = uboConstant.viewProjection * vec4(posWS.xyz, 1.0);
+    gl_Position = (uboConstant.projection * uboConstant.view) * vec4(posWS.xyz, 1.0);
     ex_Colour = in_Colour;
 }

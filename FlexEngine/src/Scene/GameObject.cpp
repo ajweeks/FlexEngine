@@ -17,6 +17,8 @@ IGNORE_WARNINGS_PUSH
 #include <glm/gtx/quaternion.hpp> // for rotate
 #include <glm/gtx/norm.hpp> // for distance2
 
+#include <imgui/imgui_internal.h> // For PushItemFlag
+
 #include <random>
 IGNORE_WARNINGS_POP
 
@@ -1103,8 +1105,7 @@ namespace flex
 		// TODO: Only save/read this value when editor is included in build
 		if (!IsVisibleInSceneExplorer())
 		{
-			object.fields.emplace_back("visible in scene graph",
-				JSONValue(IsVisibleInSceneExplorer()));
+			object.fields.emplace_back("visible in scene graph", JSONValue(IsVisibleInSceneExplorer()));
 		}
 
 		if (IsStatic())
@@ -3283,6 +3284,13 @@ namespace flex
 	{
 		workQueue = new ThreadSafeArray<WaveGenData>(32);
 
+		// Defaults to use if not set in file
+		oceanColours.top = glm::vec4(0.1f, 0.3f, 0.6f, 0.0f);
+		oceanColours.mid = glm::vec4(0.1f, 0.2f, 0.5f, 0.0f);
+		oceanColours.btm = glm::vec4(0.05f, 0.15f, 0.4f, 0.0f);
+		oceanColours.fresnelFactor = 0.8f;
+		oceanColours.fresnelPower = 7.0f;
+
 		MaterialCreateInfo matCreateInfo = {};
 		matCreateInfo.name = "gerstner";
 		matCreateInfo.shaderName = "water";
@@ -3401,6 +3409,8 @@ namespace flex
 			glm::vec3 newPos = wavePos + glm::vec3(bobberTargetPos.x, bobberTarget.pos + bobberYOffset, bobberTargetPos.z);
 			bobber->GetTransform()->SetWorldPosition(newPos);
 		}
+
+		g_Renderer->SetGlobalUniform(U_OCEAN_COLOURS, &oceanColours, sizeof(oceanColours));
 	}
 
 	void GerstnerWave::Destroy()
@@ -3733,6 +3743,7 @@ namespace flex
 			waveGenData->waveChunks = &waveChunks;
 			waveGenData->waveSamplingLODs = &waveSamplingLODs;
 			waveGenData->waveTessellationLODs = &waveTessellationLODs;
+			waveGenData->soloWave = soloWave;
 			waveGenData->size = size;
 			waveGenData->chunkIdx = chunkIdx;
 			waveGenData->bDisableLODs = bDisableLODs;
@@ -3835,6 +3846,7 @@ namespace flex
 				const std::vector<GerstnerWave::WaveChunk>& waveChunks = *work->waveChunks;
 				const std::vector<GerstnerWave::WaveSamplingLOD>& waveSamplingLODs = *work->waveSamplingLODs;
 				const std::vector<GerstnerWave::WaveTessellationLOD>& waveTessellationLODs = *work->waveTessellationLODs;
+				GerstnerWave::WaveInfo const * soloWave = work->soloWave;
 
 				GerstnerWave::WaveTessellationLOD const* tessellationLOD = GetTessellationLOD(waveChunks[work->chunkIdx].tessellationLODLevel, waveTessellationLODs);
 
@@ -3955,7 +3967,7 @@ namespace flex
 				{
 					// TODO: Early out once wave amplitude isn't used by any vert in chunk
 
-					if (wave.enabled)
+					if (wave.enabled && (soloWave == nullptr || soloWave == &wave))
 					{
 						const glm::vec2 waveVec = glm::vec2(wave.waveDirCos, wave.waveDirSin) * wave.waveVecMag;
 						const glm::vec2 waveVecN = glm::normalize(waveVec);
@@ -4237,6 +4249,12 @@ namespace flex
 			}
 		}
 
+		ImGui::ColorEdit3("Top", &oceanColours.top.x);
+		ImGui::ColorEdit3("Mid", &oceanColours.mid.x);
+		ImGui::ColorEdit3("Bottom", &oceanColours.btm.x);
+		ImGui::SliderFloat("Fresnel factor", &oceanColours.fresnelFactor, 0.0f, 1.0f);
+		ImGui::DragFloat("Fresnel power", &oceanColours.fresnelPower, 0.01f, 0.0f, 75.0f);
+
 		if (ImGuiExt::SliderUInt("Max chunk vert count", &maxChunkVertCountPerAxis, 4u, 256u))
 		{
 			maxChunkVertCountPerAxis = glm::clamp(maxChunkVertCountPerAxis - (maxChunkVertCountPerAxis % 4), 4u, 256u);
@@ -4260,7 +4278,7 @@ namespace flex
 
 		if (ImGui::TreeNode("Sampling LODs"))
 		{
-			bool bNeedsSort = false;
+			static bool bNeedsSort = false;
 
 			for (i32 i = 0; i < (i32)waveSamplingLODs.size(); ++i)
 			{
@@ -4282,6 +4300,7 @@ namespace flex
 					waveSamplingLODs[i].squareDist = dist * dist;
 					bNeedsSort = true;
 				}
+
 				std::string amplitudeStr = "amplitude" + childName;
 				ImGui::DragFloat(amplitudeStr.c_str(), &waveSamplingLODs[i].amplitudeCutoff, 0.001f, 0.0f, 10.0f);
 			}
@@ -4296,15 +4315,16 @@ namespace flex
 
 			ImGui::TreePop();
 
-			if (bNeedsSort)
+			if (bNeedsSort && ImGui::IsMouseReleased(0))
 			{
+				bNeedsSort = false;
 				SortWaveSamplingLODs();
 			}
 		}
 
 		if (ImGui::TreeNode("Tessellation LODs"))
 		{
-			bool bNeedsSort = false;
+			static bool bNeedsSort = false;
 
 			for (i32 i = 0; i < (i32)waveTessellationLODs.size(); ++i)
 			{
@@ -4343,8 +4363,9 @@ namespace flex
 
 			ImGui::TreePop();
 
-			if (bNeedsSort)
+			if (bNeedsSort && ImGui::IsMouseReleased(0))
 			{
+				bNeedsSort = false;
 				SortWaveTessellationLODs();
 			}
 		}
@@ -4353,6 +4374,13 @@ namespace flex
 		{
 			for (i32 i = 0; i < (i32)waves.size(); ++i)
 			{
+				const bool bWasDisabled = soloWave != nullptr && soloWave != &waves[i];
+				if (bWasDisabled)
+				{
+					ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+					ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
+				}
+
 				std::string childName = "##wave " + IntToString(i, 2);
 
 				std::string removeStr = "-" + childName;
@@ -4364,14 +4392,35 @@ namespace flex
 
 				ImGui::SameLine();
 
-				bool bNeedUpdate = false;
+				static bool bNeedUpdate = false;
+				static bool bNeedSort = false;
 
-				ImGui::Checkbox(childName.c_str(), &waves[i].enabled);
+				std::string enabledStr = "Enabled" + childName;
+
+				ImGui::Checkbox(enabledStr.c_str(), &waves[i].enabled);
+
+				ImGui::SameLine();
+
+				bool bSolo = soloWave == &waves[i];
+				std::string soloStr = "Solo" + childName;
+				if (ImGui::Checkbox(soloStr.c_str(), &bSolo))
+				{
+					if (bSolo)
+					{
+						soloWave = &waves[i];
+					}
+					else
+					{
+						soloWave = nullptr;
+					}
+				}
 
 				std::string aStr = "amplitude" + childName;
 				bNeedUpdate |= ImGui::DragFloat(aStr.c_str(), &waves[i].a, 0.01f);
+				bNeedSort |= bNeedUpdate;
 				std::string waveLenStr = "wave len" + childName;
 				bNeedUpdate |= ImGui::DragFloat(waveLenStr.c_str(), &waves[i].waveLen, 0.01f);
+				bNeedSort |= bNeedUpdate;
 				std::string dirStr = "dir" + childName;
 				if (ImGui::DragFloat(dirStr.c_str(), &waves[i].waveDirTheta, 0.004f))
 				{
@@ -4379,10 +4428,22 @@ namespace flex
 					waves[i].waveDirTheta = fmod(waves[i].waveDirTheta, TWO_PI);
 				}
 
+				if (bNeedSort && ImGui::IsMouseReleased(0))
+				{
+					bNeedSort = false;
+					SortWaves();
+				}
+
 				if (bNeedUpdate)
 				{
-					SortWaves();
+					bNeedUpdate = false;
 					UpdateDependentVariables(i);
+				}
+
+				if (bWasDisabled)
+				{
+					ImGui::PopItemFlag();
+					ImGui::PopStyleVar();
 				}
 
 				ImGui::Separator();
@@ -4395,6 +4456,11 @@ namespace flex
 
 			ImGui::TreePop();
 		}
+	}
+
+	bool operator==(const GerstnerWave::WaveInfo& lhs, const GerstnerWave::WaveInfo& rhs)
+	{
+		return memcmp(&lhs, &rhs, sizeof(GerstnerWave::WaveInfo)) == 0;
 	}
 
 	void GerstnerWave::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
@@ -4473,6 +4539,12 @@ namespace flex
 					waveTessellationLODs.emplace_back(sqrDist, vertCount);
 				}
 			}
+
+			gerstnerWaveObj.SetVec4Checked("ocean colour top", oceanColours.top);
+			gerstnerWaveObj.SetVec4Checked("ocean colour mid", oceanColours.mid);
+			gerstnerWaveObj.SetVec4Checked("ocean colour btm", oceanColours.btm);
+			gerstnerWaveObj.SetFloatChecked("ocean fresnel factor", oceanColours.fresnelFactor);
+			gerstnerWaveObj.SetFloatChecked("ocean fresnel power", oceanColours.fresnelPower);
 		}
 
 		SortWaves();
@@ -4526,6 +4598,12 @@ namespace flex
 		}
 		gerstnerWaveObj.fields.emplace_back("wave tessellation lods", JSONValue(waveTessellationLODsArrObj));
 
+		gerstnerWaveObj.fields.emplace_back("ocean colour top", JSONValue(VecToString(oceanColours.top)));
+		gerstnerWaveObj.fields.emplace_back("ocean colour mid", JSONValue(VecToString(oceanColours.mid)));
+		gerstnerWaveObj.fields.emplace_back("ocean colour btm", JSONValue(VecToString(oceanColours.btm)));
+		gerstnerWaveObj.fields.emplace_back("ocean fresnel factor", JSONValue(oceanColours.fresnelFactor));
+		gerstnerWaveObj.fields.emplace_back("ocean fresnel power", JSONValue(oceanColours.fresnelPower));
+
 		parentObject.fields.emplace_back("gerstner wave", JSONValue(gerstnerWaveObj));
 	}
 
@@ -4559,11 +4637,27 @@ namespace flex
 
 	void GerstnerWave::SortWaves()
 	{
+		WaveInfo soloWaveCopy;
+		if (soloWave)
+		{
+			soloWaveCopy = *soloWave;
+		}
 		std::sort(waves.begin(), waves.end(),
 			[](const WaveInfo& waveA, const WaveInfo& waveB)
 		{
 			return abs(waveA.a) > abs(waveB.a);
 		});
+		if (soloWave)
+		{
+			for (const WaveInfo& waveInfo : waves)
+			{
+				if (waveInfo == soloWaveCopy)
+				{
+					soloWave = &waveInfo;
+					break;
+				}
+			}
+		}
 	}
 
 	void GerstnerWave::SortWaveSamplingLODs()

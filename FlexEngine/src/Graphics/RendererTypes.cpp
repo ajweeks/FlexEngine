@@ -61,6 +61,7 @@ namespace flex
 				_u(LAST_FRAME_VIEWPROJ)
 				_u(PARTICLE_BUFFER)
 				_u(PARTICLE_SIM_DATA)
+				_u(OCEAN_COLOURS)
 #undef _u
 		}
 

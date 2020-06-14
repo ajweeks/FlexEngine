@@ -15,9 +15,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-151.081, 29.065, -65.075",
-			"pitch" : -0.174895,
-			"yaw" : 0.536819
+			"position" : "-57.233, 9.842, 45.191",
+			"pitch" : -0.146290,
+			"yaw" : 4.103945
 		}
 	},
 	"objects" : 
@@ -136,22 +136,29 @@
 						"waveLen" : 2.150000
 					}
 				],
-				"max chunk vert count per axis" : 64,
+				"max chunk vert count per axis" : 96,
 				"chunk size" : 100.000000,
-				"chunk load radius" : 206.020004,
+				"chunk load radius" : 674.239990,
 				"update speed" : 19.700001,
 				"pin center" : true,
-				"pinned center position" : "-11.87, 316.56, 14.48",
+				"pinned center position" : "-90.47, 25.15, -30.96",
 				"blend dist" : 18.229000,
 				"wave sampling lods" : 
 				[
-					"32761.0,0.911000"
+					"35721.0,0.000000"
 				],
 				"wave tessellation lods" : 
 				[
-					"2601.0,16",
-					"0.0,64"
-				]
+					"37636.0,8",
+					"14438.9,20",
+					"4116.8,32",
+					"0.0,96"
+				],
+				"ocean colour top" : "0.21, 0.29, 0.42, 0.00",
+				"ocean colour mid" : "0.02, 0.03, 0.06, 0.00",
+				"ocean colour btm" : "0.00, 0.01, 0.01, 0.00",
+				"ocean fresnel factor" : 0.245000,
+				"ocean fresnel power" : 7.790000
 			}
 		},
 		{

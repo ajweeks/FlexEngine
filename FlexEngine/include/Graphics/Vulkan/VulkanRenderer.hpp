@@ -86,6 +86,8 @@ namespace flex
 
 			virtual void DestroyRenderObject(RenderID renderID) override;
 
+			virtual void SetGlobalUniform(u64 uniform, void* data, u32 dataSize) override;
+
 			virtual void NewFrame() override;
 
 			virtual PhysicsDebugDrawBase* GetDebugDrawer() override;
@@ -407,6 +409,8 @@ namespace flex
 			};
 
 			std::map<TextureID, SpriteDescSet> m_SpriteDescSets;
+
+			std::map<u64, Pair<void*, u32>> m_GlobalUserUniforms;
 
 			// TODO: Create other query pools
 			VkQueryPool m_TimestampQueryPool = VK_NULL_HANDLE;

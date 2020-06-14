@@ -80,7 +80,7 @@ namespace flex
 			UNINITIALIZED
 		};
 
-		static const u32 DEFAULT_FLOAT_PRECISION = 7;
+		static const u32 DEFAULT_FLOAT_PRECISION = 6;
 
 		static Type TypeFromChar(char c, const std::string& stringAfter);
 

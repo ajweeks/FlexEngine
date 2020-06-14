@@ -545,9 +545,9 @@ namespace flex
 		struct WaveInfo
 		{
 			bool enabled = true;
-			real a = 0.35f;
-			real waveDirTheta = 0.5f;
-			real waveLen = 5.0f;
+			real a = 0.0f;
+			real waveDirTheta = 0.0f;
+			real waveLen = 0.0f;
 
 			// Non-serialized, calculated from fields above
 			real waveDirCos;
@@ -600,6 +600,7 @@ namespace flex
 			std::vector<WaveChunk> const* waveChunks;
 			std::vector<WaveSamplingLOD> const* waveSamplingLODs;
 			std::vector<WaveTessellationLOD> const* waveTessellationLODs;
+			WaveInfo const * soloWave;
 			real size;
 			u32 chunkIdx;
 			bool bDisableLODs;
@@ -665,6 +666,8 @@ namespace flex
 		bool bDisableLODs = false;
 		u32 maxChunkVertCountPerAxis = 64;
 
+		OceanColourData oceanColours;
+
 		void* criticalSection = nullptr;
 
 		MaterialID m_WaveMaterialID;
@@ -674,6 +677,7 @@ namespace flex
 
 		// TODO: Rename to wave contributions?
 		std::vector<WaveInfo> waves;
+		WaveInfo const * soloWave = nullptr;
 
 		std::vector<WaveChunk> waveChunks;
 
@@ -689,8 +693,9 @@ namespace flex
 		RollingAverage<ms> avgWaveUpdateTime;
 
 		ThreadData threadUserData;
-
 	};
+
+	bool operator==(const GerstnerWave::WaveInfo& lhs, const GerstnerWave::WaveInfo& rhs);
 
 	// TODO: MOVE!!
 	static volatile u32 workQueueLock = 0;

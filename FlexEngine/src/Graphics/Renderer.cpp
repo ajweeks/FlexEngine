@@ -755,8 +755,9 @@ namespace flex
 						ImGui::Text("%s space", fontMeta.bScreenSpace ? "Screen" : "World");
 						glm::vec2u texSize(font->GetTextureSize());
 						u32 texChannelCount = font->GetTextureChannelCount();
-						char texSizeBuf[64];
-						ByteCountToString(texSizeBuf, texSize.x * texSize.y * texChannelCount * sizeof(u32));
+						const u32 bufSize = 64;
+						char texSizeBuf[bufSize];
+						ByteCountToString(texSizeBuf, bufSize, texSize.x * texSize.y * texChannelCount * sizeof(u32));
 						ImGui::Text("Resolution: %ux%u (%s)", texSize.x, texSize.y, texSizeBuf);
 						ImGui::Text("Char count: %i", font->characterCount);
 						ImGui::Text("Byte count: %i", font->bufferSize);
@@ -1775,8 +1776,10 @@ namespace flex
 
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_CAM_POS);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PROJECTION);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_DIR_LIGHT);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_OCEAN_COLOURS);
 
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);

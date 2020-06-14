@@ -1952,14 +1952,24 @@ namespace flex
 			u32 indexCopySize = std::min(newIndexDataSize, (u32)indexBuffer->m_Size);
 			if (vertCopySize < vertexBufferData->VertexBufferSize)
 			{
-				Print("Allocating more data for dynamic vertex buffer. (old size: %u, new requested size: %u)\n", (u32)vertexBuffer->m_Size, vertexBufferData->VertexBufferSize);
+				const u32 bufSize = 64;
+				char oldSizeBuf[bufSize];
+				char newSizeBuf[bufSize];
+				ByteCountToString(oldSizeBuf, bufSize, (u32)vertexBuffer->m_Size);
+				ByteCountToString(newSizeBuf, bufSize, vertexBufferData->VertexBufferSize);
+				Print("Allocating more data for dynamic vertex buffer (old size: %s, new requested size: %s)\n", oldSizeBuf, newSizeBuf);
 				renderObject->dynamicVertexBufferOffset = vertexBuffer->Realloc(renderObject->dynamicVertexBufferOffset, vertexBufferData->VertexBufferSize, true);
 				// TODO: Handle failed allocs
 				vertCopySize = (u32)vertexBuffer->m_Size;
 			}
 			if (indexCopySize < newIndexDataSize)
 			{
-				Print("Allocating more data for dynamic index buffer. (old size: %u, new requested size: %u)\n", (u32)indexBuffer->m_Size, newIndexDataSize);
+				const u32 bufSize = 64;
+				char oldSizeBuf[bufSize];
+				char newSizeBuf[bufSize];
+				ByteCountToString(oldSizeBuf, bufSize, (u32)indexBuffer->m_Size);
+				ByteCountToString(newSizeBuf, bufSize, newIndexDataSize);
+				Print("Allocating more data for dynamic index buffer (old size: %s, new requested size: %s)\n", oldSizeBuf, newSizeBuf);
 				renderObject->dynamicIndexBufferOffset = indexBuffer->Realloc(renderObject->dynamicIndexBufferOffset, newIndexDataSize, true);
 				// TODO: Handle failed allocs
 				indexCopySize = (u32)indexBuffer->m_Size;
@@ -2280,6 +2290,13 @@ namespace flex
 					return;
 				}
 			}
+		}
+
+		void VulkanRenderer::SetGlobalUniform(u64 uniform, void* data, u32 dataSize)
+		{
+			auto& pair = m_GlobalUserUniforms[uniform];
+			pair.first = data;
+			pair.second = dataSize;
 		}
 
 		void VulkanRenderer::DestroyRenderObject(RenderID renderID, VulkanRenderObject* renderObject)
@@ -8988,6 +9005,7 @@ namespace flex
 			real exposure = cam->exposure;
 			glm::vec2 m_NearFarPlanes(cam->zNear, cam->zFar);
 
+			static OceanColourData defaultOceanColourData = { glm::vec4(1, 0, 0, 0), glm::vec4(0, 1, 0, 0), glm::vec4(0, 0, 1, 0) };
 			static DirLightData defaultDirLightData = { VEC3_RIGHT, 0, VEC3_ONE, 0.0f, 0, 0.0f, { 0.0f, 0.0f } };
 
 			DirLightData* dirLightData = &defaultDirLightData;
@@ -9050,7 +9068,17 @@ namespace flex
 				{ U_FXAA_DATA, (void*)&m_FXAAData, US_FXAA_DATA },
 				{ U_EXPOSURE, (void*)&exposure, US_EXPOSURE },
 				{ U_NEAR_FAR_PLANES, (void*)&m_NearFarPlanes, US_NEAR_FAR_PLANES },
+				{ U_OCEAN_COLOURS, (void*)&defaultOceanColourData, US_OCEAN_COLOURS },
 			};
+
+			for (UniformInfo& info : uniformInfos)
+			{
+				auto iter = m_GlobalUserUniforms.find(info.uniform);
+				if (iter != m_GlobalUserUniforms.end())
+				{
+					info.dataStart = iter->second.first;
+				}
+			}
 
 			for (auto& materialPair : m_Materials)
 			{

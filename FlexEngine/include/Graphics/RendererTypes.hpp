@@ -120,6 +120,16 @@ namespace flex
 		u32 particleCount;	// 4
 	};
 
+	// 56 bytes
+	struct OceanColourData
+	{
+		glm::vec4 top; // 16
+		glm::vec4 mid; // 16
+		glm::vec4 btm; // 16
+		real fresnelFactor; // 4
+		real fresnelPower; // 4
+	};
+
 	// Uniforms
 	const u64 U_MODEL							= (1ull << 0);	const u32 US_MODEL						= sizeof(glm::mat4);
 	const u64 U_VIEW							= (1ull << 1);	const u32 US_VIEW						= sizeof(glm::mat4);
@@ -182,6 +192,7 @@ namespace flex
 	const u64 U_LAST_FRAME_VIEWPROJ				= (1ull << 58); const u32 US_LAST_FRAME_VIEWPROJ		= sizeof(glm::mat4);
 	const u64 U_PARTICLE_BUFFER					= (1ull << 59); const u32 US_PARTICLE_BUFFER			= sizeof(ParticleBufferData);
 	const u64 U_PARTICLE_SIM_DATA				= (1ull << 60); const u32 US_PARTICLE_SIM_DATA			= sizeof(ParticleSimData);
+	const u64 U_OCEAN_COLOURS					= (1ull << 61); const u32 US_OCEAN_COLOURS				= sizeof(OceanColourData);
 	// NOTE: New uniforms must be added to Uniforms::CalculateSizeInBytes
 
 	enum class ClearFlag

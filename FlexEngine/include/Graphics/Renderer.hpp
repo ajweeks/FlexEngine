@@ -150,6 +150,8 @@ namespace flex
 
 		virtual void DestroyRenderObject(RenderID renderID) = 0;
 
+		virtual void SetGlobalUniform(u64 uniform, void* data, u32 dataSize) = 0;
+
 		virtual void NewFrame() = 0;
 
 		virtual void SetReflectionProbeMaterial(MaterialID reflectionProbeMaterialID);
