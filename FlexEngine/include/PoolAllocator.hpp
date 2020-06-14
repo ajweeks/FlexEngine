@@ -18,12 +18,12 @@ namespace flex
 
 		T* Alloc()
 		{
-			if (data.size() == 0 || data[data.size() - 1].second == PoolSize - 1)
+			if (data.size() == 0 || data.back().second == PoolSize - 1)
 			{
 				Resize();
 			}
 
-			auto& arrPair = data[data.size() - 1];
+			auto& arrPair = data.back();
 			return &arrPair.first[arrPair.second++];
 		}
 
@@ -39,6 +39,6 @@ namespace flex
 		}
 
 		u32 m_PoolSize;
-		std::vector<Pair<std::array<T, PoolSize>, u32>> data;
+		std::list<Pair<std::array<T, PoolSize>, u32>> data;
 	};
 } // namespace flex
