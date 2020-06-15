@@ -1771,11 +1771,14 @@ namespace flex
 			m_BaseShaders[shaderID].dynamicVertexBufferSize = 32 * 1024 * 1024;
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::UV |
 				(u32)VertexAttribute::NORMAL |
+				(u32)VertexAttribute::TANGENT |
 				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
 
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_CAM_POS);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_TIME);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PROJECTION);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_DIR_LIGHT);
@@ -1783,6 +1786,8 @@ namespace flex
 
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
+
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_ALBEDO_SAMPLER);
 			++shaderID;
 
 			// Wireframe

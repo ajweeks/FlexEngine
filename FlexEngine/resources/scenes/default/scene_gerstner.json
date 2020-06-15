@@ -15,9 +15,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-57.233, 9.842, 45.191",
-			"pitch" : -0.146290,
-			"yaw" : 4.103945
+			"position" : "-51.502, 8.671, 30.739",
+			"pitch" : -0.118148,
+			"yaw" : 3.833872
 		}
 	},
 	"objects" : 
@@ -53,11 +53,11 @@
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "0.000, 0.881, 0.075"
+				"rot" : "-0.002, 1.296, 1.308"
 			},
 			"directional light info" : 
 			{
-				"rotation" : "-0.016, 0.426, 0.034, 0.904",
+				"rotation" : "-0.368, 0.479, 0.485, 0.632",
 				"pos" : "0.000, 15.000, 0.000",
 				"color" : "1.00, 1.00, 1.00",
 				"enabled" : true,
@@ -83,33 +83,21 @@
 				[
 					{
 						"enabled" : true,
-						"amplitude" : 1.650000,
-						"waveDir" : 1.244000,
-						"waveLen" : 83.050003
-					},
-					{
-						"enabled" : true,
-						"amplitude" : 0.690000,
-						"waveDir" : 0.968000,
-						"waveLen" : 47.340000
-					},
-					{
-						"enabled" : true,
-						"amplitude" : 0.670000,
-						"waveDir" : 0.309000,
-						"waveLen" : 47.830002
-					},
-					{
-						"enabled" : true,
-						"amplitude" : 0.480000,
-						"waveDir" : 1.420000,
-						"waveLen" : 17.559999
+						"amplitude" : 1.400000,
+						"waveDir" : 0.384000,
+						"waveLen" : 95.839996
 					},
 					{
 						"enabled" : true,
 						"amplitude" : 0.300000,
-						"waveDir" : 0.856000,
-						"waveLen" : 15.360000
+						"waveDir" : 2.832000,
+						"waveLen" : 19.190001
+					},
+					{
+						"enabled" : true,
+						"amplitude" : 0.180000,
+						"waveDir" : 0.000000,
+						"waveLen" : 20.350000
 					},
 					{
 						"enabled" : true,
@@ -125,15 +113,33 @@
 					},
 					{
 						"enabled" : true,
-						"amplitude" : 0.040000,
-						"waveDir" : -1.332000,
-						"waveLen" : 4.720000
+						"amplitude" : 0.070000,
+						"waveDir" : 0.856000,
+						"waveLen" : 15.360000
 					},
 					{
 						"enabled" : true,
-						"amplitude" : 0.015000,
+						"amplitude" : 0.055000,
 						"waveDir" : -1.936000,
 						"waveLen" : 2.150000
+					},
+					{
+						"enabled" : true,
+						"amplitude" : 0.050000,
+						"waveDir" : 0.968000,
+						"waveLen" : 4.040000
+					},
+					{
+						"enabled" : true,
+						"amplitude" : -0.050000,
+						"waveDir" : 0.309000,
+						"waveLen" : 47.830002
+					},
+					{
+						"enabled" : true,
+						"amplitude" : 0.040000,
+						"waveDir" : -1.332000,
+						"waveLen" : 4.720000
 					}
 				],
 				"max chunk vert count per axis" : 96,
@@ -155,10 +161,10 @@
 					"0.0,96"
 				],
 				"ocean colour top" : "0.21, 0.29, 0.42, 0.00",
-				"ocean colour mid" : "0.02, 0.03, 0.06, 0.00",
-				"ocean colour btm" : "0.00, 0.01, 0.01, 0.00",
-				"ocean fresnel factor" : 0.245000,
-				"ocean fresnel power" : 7.790000
+				"ocean colour mid" : "0.03, 0.04, 0.07, 0.00",
+				"ocean colour btm" : "0.03, 0.06, 0.09, 0.00",
+				"ocean fresnel factor" : 0.604000,
+				"ocean fresnel power" : 10.740000
 			}
 		},
 		{

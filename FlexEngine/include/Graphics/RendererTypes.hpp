@@ -128,6 +128,7 @@ namespace flex
 		glm::vec4 btm; // 16
 		real fresnelFactor; // 4
 		real fresnelPower; // 4
+		real pad[2];
 	};
 
 	// Uniforms

@@ -6,8 +6,10 @@
 #extension GL_ARB_shading_language_420pack : enable
 
 layout (location = 0) in vec3 ex_PositionWS;
-layout (location = 1) in vec4 ex_Colour;
-layout (location = 2) in vec3 ex_NormalWS;
+layout (location = 1) in vec2 ex_TexCoord;
+layout (location = 2) in vec4 ex_Colour;
+layout (location = 3) in vec3 ex_NormalWS;
+layout (location = 4) in mat3 ex_TBN;
 
 layout (location = 0) out vec4 fragColor;
 
@@ -44,7 +46,16 @@ layout (binding = 0) uniform UBOConstant
 	mat4 projection;
 	DirectionalLight dirLight;
 	OceanColours oceanColours;
+	float time;
 } uboConstant;
+
+// Just needed for binding
+layout (binding = 1) uniform UBODynamic
+{
+	mat4 model;
+} uboDynamic;
+
+layout (binding = 2) uniform sampler2D normalSampler;
 
 vec3 SampleSkybox(vec3 dir)
 {
@@ -63,13 +74,23 @@ vec3 SampleSkybox(vec3 dir)
 
 void main()
 {
-	vec3 N = normalize(ex_NormalWS);
+	vec2 uv0 = ex_TexCoord;
+	vec2 uv1 = 2.0 * (ex_TexCoord + vec2(-0.015 * uboConstant.time, 0.005 * uboConstant.time));
+	vec2 uv2 = 0.8 * (ex_TexCoord + vec2(-0.014 * uboConstant.time, 0.011 * uboConstant.time));
+	vec3 n2 = texture(normalSampler, uv1).xyz;
+	vec3 n1 = texture(normalSampler, uv2).xyz;
+	vec3 n3 = mix(n1, n2, 0.5);
+	vec3 sampledN = normalize(ex_TBN * (n3.xyz * 2.0 - 1.0));
+
+	vec3 N = sampledN;//normalize(ex_NormalWS);
 
 	vec3 light = vec3(0);
 	if (uboConstant.dirLight.enabled != 0)
 	{
 		light = max(dot(ex_NormalWS, uboConstant.dirLight.direction), 0.0) * uboConstant.dirLight.brightness * uboConstant.dirLight.color;
 	}
+
+	vec3 camViewDir = vec3(uboConstant.view[0][2], uboConstant.view[1][2], uboConstant.view[2][2]);
 
 	vec3 V = normalize(uboConstant.camPos.xyz - ex_PositionWS);
 	vec3 R = reflect(-V, N);
@@ -81,6 +102,7 @@ void main()
 	float fresnel = clamp(pow(1.0-NoV+0.07, uboConstant.oceanColours.fresnelPower), 0, 1);
 
 	float deepness = (0.5+fresnel*0.5) * pow(1.0-clamp(abs(V.y),0,1), 5.0);
+	deepness = pow(max(dot(V, N), 0), 5.0);
 
 	vec3 oceanTop = pow(uboConstant.oceanColours.top.xyz, vec3(2.2));
 	vec3 oceanMid = pow(uboConstant.oceanColours.mid.xyz, vec3(2.2));
@@ -95,9 +117,12 @@ void main()
 
 	vec4 posCS = uboConstant.view * vec4(ex_PositionWS, 1);	
 	float depthFade = clamp(pow(pow(posCS.z, 1.0)*0.002, 1.65), 0, 1);
-	fragColor = mix(fragColor, vec4(skyHorizon, 1.0), depthFade);
+	fragColor = vec4(mix(fragColor.xyz, skyHorizon, depthFade), 1);
 
 	//fragColor = vec4(SampleSkybox(R), 1);
 	// fragColor = vec4(fresnel.xxx, 1);
-	// fragColor = vec4(deepness.xxx, 1.0);
+	//fragColor = vec4(camViewDir, 1.0);
+	//fragColor = vec4(ex_TBN[0].xxx*0.5+0.5, 1.0);
+	//fragColor = vec4(clamp(sampledN,0,1), 1);
+	// fragColor = vec4(pow(NoV,2.0).xxx, 1);
 }

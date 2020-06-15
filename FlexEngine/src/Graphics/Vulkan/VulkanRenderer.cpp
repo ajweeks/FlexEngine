@@ -6910,9 +6910,9 @@ namespace flex
 			linMipLinSamplerCreateInfo.magFilter = VK_FILTER_LINEAR;
 			linMipLinSamplerCreateInfo.minFilter = VK_FILTER_LINEAR;
 			linMipLinSamplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-			linMipLinSamplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-			linMipLinSamplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-			linMipLinSamplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+			linMipLinSamplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+			linMipLinSamplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+			linMipLinSamplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 			linMipLinSamplerCreateInfo.mipLodBias = 0.0f;
 			linMipLinSamplerCreateInfo.minLod = 0.0f;
 			linMipLinSamplerCreateInfo.maxLod = 1.0f;
@@ -9060,6 +9060,7 @@ namespace flex
 				{ U_LAST_FRAME_VIEWPROJ, (void*)&m_LastFrameViewProj, US_LAST_FRAME_VIEWPROJ },
 				{ U_DIR_LIGHT, (void*)dirLightData, US_DIR_LIGHT },
 				{ U_POINT_LIGHTS, (void*)m_PointLights, US_POINT_LIGHTS },
+				{ U_OCEAN_COLOURS, (void*)&defaultOceanColourData, US_OCEAN_COLOURS },
 				{ U_TIME, (void*)&g_SecElapsedSinceProgramStart, US_TIME },
 				{ U_SHADOW_SAMPLING_DATA, (void*)&m_ShadowSamplingData, US_SHADOW_SAMPLING_DATA },
 				{ U_SSAO_GEN_DATA, (void*)&m_SSAOGenData, US_SSAO_GEN_DATA },
@@ -9068,7 +9069,6 @@ namespace flex
 				{ U_FXAA_DATA, (void*)&m_FXAAData, US_FXAA_DATA },
 				{ U_EXPOSURE, (void*)&exposure, US_EXPOSURE },
 				{ U_NEAR_FAR_PLANES, (void*)&m_NearFarPlanes, US_NEAR_FAR_PLANES },
-				{ U_OCEAN_COLOURS, (void*)&defaultOceanColourData, US_OCEAN_COLOURS },
 			};
 
 			for (UniformInfo& info : uniformInfos)

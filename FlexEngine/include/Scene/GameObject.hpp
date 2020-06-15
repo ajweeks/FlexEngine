@@ -547,7 +547,7 @@ namespace flex
 			bool enabled = true;
 			real a = 0.0f;
 			real waveDirTheta = 0.0f;
-			real waveLen = 0.0f;
+			real waveLen = 1.0f;
 
 			// Non-serialized, calculated from fields above
 			real waveDirCos;
@@ -618,6 +618,8 @@ namespace flex
 			__m128* positionsy_4 = nullptr;
 			__m128* positionsz_4 = nullptr;
 			__m128* lodSelected_4 = nullptr;
+			__m128* uvUs_4 = nullptr;
+			__m128* uvVs_4 = nullptr;
 		};
 
 		using ThreadID = u32;

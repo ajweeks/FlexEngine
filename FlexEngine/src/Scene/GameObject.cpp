@@ -3298,6 +3298,8 @@ namespace flex
 		matCreateInfo.constMetallic = 0.8f;
 		matCreateInfo.constRoughness = 0.01f;
 		matCreateInfo.bDynamic = true;
+		matCreateInfo.albedoTexturePath = RESOURCE("textures/wave-normals-01.png");
+		matCreateInfo.enableAlbedoSampler = true;
 
 		m_WaveMaterialID = g_Renderer->InitializeMaterial(&matCreateInfo);
 
@@ -3534,6 +3536,8 @@ namespace flex
 		(*workQueue)[workQueueIndex].positionsy_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
 		(*workQueue)[workQueueIndex].positionsz_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
 		(*workQueue)[workQueueIndex].lodSelected_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
+		(*workQueue)[workQueueIndex].uvUs_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
+		(*workQueue)[workQueueIndex].uvVs_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
 
 		(*workQueue)[workQueueIndex].lodCutoffsAmplitudes_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
 		(*workQueue)[workQueueIndex].lodNextCutoffAmplitudes_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
@@ -3546,6 +3550,8 @@ namespace flex
 		_mm_free((*workQueue)[workQueueIndex].positionsy_4);
 		_mm_free((*workQueue)[workQueueIndex].positionsz_4);
 		_mm_free((*workQueue)[workQueueIndex].lodSelected_4);
+		_mm_free((*workQueue)[workQueueIndex].uvUs_4);
+		_mm_free((*workQueue)[workQueueIndex].uvVs_4);
 
 		_mm_free((*workQueue)[workQueueIndex].lodCutoffsAmplitudes_4);
 		_mm_free((*workQueue)[workQueueIndex].lodNextCutoffAmplitudes_4);
@@ -3595,7 +3601,9 @@ namespace flex
 		if (vertCount > m_VertexBufferCreateInfo.positions_3D.size())
 		{
 			m_VertexBufferCreateInfo.positions_3D.resize(vertCount);
+			m_VertexBufferCreateInfo.texCoords_UV.resize(vertCount);
 			m_VertexBufferCreateInfo.normals.resize(vertCount);
+			m_VertexBufferCreateInfo.tangents.resize(vertCount);
 			m_VertexBufferCreateInfo.colors_R32G32B32A32.resize(vertCount);
 		}
 
@@ -3733,6 +3741,7 @@ namespace flex
 		WRITE_BARRIER;
 
 		glm::vec3* positions = m_VertexBufferCreateInfo.positions_3D.data();
+		glm::vec2* texCoords = m_VertexBufferCreateInfo.texCoords_UV.data();
 		glm::vec4* colours = m_VertexBufferCreateInfo.colors_R32G32B32A32.data();
 
 		for (u32 chunkIdx = 0; chunkIdx < (u32)waveChunks.size(); ++chunkIdx)
@@ -3777,16 +3786,23 @@ namespace flex
 					const u32 chunkLocalVertIdx = z * tessellationLOD->vertCountPerAxis + x;
 					const u32 chunkLocalVertIdxDiv4 = chunkLocalVertIdx / 4;
 
-					glm::vec4 xs, ys, zs, lodSelections;
+					glm::vec4 xs, ys, zs, lodSelections, uvUs, uvVs;
 					_mm_store_ps(&xs.x, (*workQueue)[chunkIdx].positionsx_4[chunkLocalVertIdxDiv4]);
 					_mm_store_ps(&ys.x, (*workQueue)[chunkIdx].positionsy_4[chunkLocalVertIdxDiv4]);
 					_mm_store_ps(&zs.x, (*workQueue)[chunkIdx].positionsz_4[chunkLocalVertIdxDiv4]);
 					_mm_store_ps(&lodSelections.x, (*workQueue)[chunkIdx].lodSelected_4[chunkLocalVertIdxDiv4]);
+					_mm_store_ps(&uvUs.x, (*workQueue)[chunkIdx].uvUs_4[chunkLocalVertIdxDiv4]);
+					_mm_store_ps(&uvVs.x, (*workQueue)[chunkIdx].uvVs_4[chunkLocalVertIdxDiv4]);
 
 					positions[vertIdx + 0] = glm::vec3(xs.x, ys.x, zs.x);
 					positions[vertIdx + 1] = glm::vec3(xs.y, ys.y, zs.y);
 					positions[vertIdx + 2] = glm::vec3(xs.z, ys.z, zs.z);
 					positions[vertIdx + 3] = glm::vec3(xs.w, ys.w, zs.w);
+
+					texCoords[vertIdx + 0] = glm::vec2(uvUs.x, uvVs.x);
+					texCoords[vertIdx + 1] = glm::vec2(uvUs.y, uvVs.y);
+					texCoords[vertIdx + 2] = glm::vec2(uvUs.z, uvVs.z);
+					texCoords[vertIdx + 3] = glm::vec2(uvUs.w, uvVs.w);
 
 					colours[vertIdx + 0] = ChooseColourFromLOD(lodSelections.x);
 					colours[vertIdx + 1] = ChooseColourFromLOD(lodSelections.y);
@@ -3865,7 +3881,8 @@ namespace flex
 				__m128* positionsy_4 = work->positionsy_4;
 				__m128* positionsz_4 = work->positionsz_4;
 				__m128* lodSelected_4 = work->lodSelected_4;
-
+				__m128* uvUs = work->uvUs_4;
+				__m128* uvVs = work->uvVs_4;
 
 				__m128 blendDist_4 = _mm_set_ps1(blendDist);
 				__m128 blendDistSqr_4 = _mm_set_ps1(blendDist * blendDist);
@@ -3913,14 +3930,21 @@ namespace flex
 				{
 					__m128 zIdx_4 = _mm_set_ps1((real)z);
 
+					__m128 uvV_4 = _mm_div_ps(zIdx_4, vertCountMin1_4);
+					__m128 posZ_4 = _mm_add_ps(chunkCenterZ_4, _mm_mul_ps(size_4, uvV_4));
+
 					for (i32 x = 0; x < chunkVertCountPerAxis; x += 4)
 					{
 						const i32 chunkLocalVertIdx = z * chunkVertCountPerAxis + x;
 						__m128 xIdx_4 = _mm_set_ps((real)(x + 3), (real)(x + 2), (real)(x + 1), (real)(x + 0));
 						const i32 chunkLocalVertIdxDiv4 = chunkLocalVertIdx / 4;
-						positionsx_4[chunkLocalVertIdxDiv4] = _mm_add_ps(chunkCenterX_4, _mm_mul_ps(size_4, _mm_div_ps(xIdx_4, vertCountMin1_4)));
+						__m128 uvU_4 = _mm_div_ps(xIdx_4, vertCountMin1_4);
+						positionsx_4[chunkLocalVertIdxDiv4] = _mm_add_ps(chunkCenterX_4, _mm_mul_ps(size_4, uvU_4));
 						positionsy_4[chunkLocalVertIdxDiv4] = chunkCenterY_4;
-						positionsz_4[chunkLocalVertIdxDiv4] = _mm_add_ps(chunkCenterZ_4, _mm_mul_ps(size_4, _mm_div_ps(zIdx_4, vertCountMin1_4)));
+						positionsz_4[chunkLocalVertIdxDiv4] = posZ_4;
+
+						uvUs[chunkLocalVertIdxDiv4] = uvU_4;
+						uvVs[chunkLocalVertIdxDiv4] = uvV_4;
 
 						__m128 xr = _mm_sub_ps(positionsx_4[chunkLocalVertIdxDiv4], camPosx_4);
 						__m128 zr = _mm_sub_ps(positionsz_4[chunkLocalVertIdxDiv4], camPosz_4);
@@ -4111,6 +4135,7 @@ namespace flex
 
 		glm::vec3* positions = m_VertexBufferCreateInfo.positions_3D.data();
 		glm::vec3* normals = m_VertexBufferCreateInfo.normals.data();
+		glm::vec3* tangents = m_VertexBufferCreateInfo.tangents.data();
 
 		const u32 chunkVertCountPerAxis = tessellationLOD->vertCountPerAxis;
 
@@ -4184,6 +4209,7 @@ namespace flex
 				real dX = left - right;
 				real dZ = back - forward;
 				normals[vertIdx] = glm::vec3(dX, 2.0f * cellSize, dZ);
+				tangents[vertIdx] = glm::normalize(-glm::cross(normals[vertIdx], glm::vec3(0.0f, 0.0f, 1.0f)));
 			}
 		}
 	}
@@ -4302,7 +4328,7 @@ namespace flex
 				}
 
 				std::string amplitudeStr = "amplitude" + childName;
-				ImGui::DragFloat(amplitudeStr.c_str(), &waveSamplingLODs[i].amplitudeCutoff, 0.001f, 0.0f, 10.0f);
+				ImGui::DragFloat(amplitudeStr.c_str(), &waveSamplingLODs[i].amplitudeCutoff, 0.0001f, 0.0f, 10.0f);
 			}
 
 			if (ImGui::Button("+"))
@@ -4422,7 +4448,7 @@ namespace flex
 				bNeedUpdate |= ImGui::DragFloat(waveLenStr.c_str(), &waves[i].waveLen, 0.01f);
 				bNeedSort |= bNeedUpdate;
 				std::string dirStr = "dir" + childName;
-				if (ImGui::DragFloat(dirStr.c_str(), &waves[i].waveDirTheta, 0.004f))
+				if (ImGui::DragFloat(dirStr.c_str(), &waves[i].waveDirTheta, 0.001f, 0.0f, 10.0f))
 				{
 					bNeedUpdate = true;
 					waves[i].waveDirTheta = fmod(waves[i].waveDirTheta, TWO_PI);
