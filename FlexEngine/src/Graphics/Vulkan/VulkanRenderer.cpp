@@ -4735,6 +4735,8 @@ namespace flex
 			{
 				if (font->bufferSize > 0)
 				{
+					VulkanTexture* fontTex = font->GetTexture();
+
 					if (font->m_DescriptorSet == VK_NULL_HANDLE)
 					{
 						DescriptorSetCreateInfo info;
@@ -4743,7 +4745,7 @@ namespace flex
 						info.descriptorSetLayout = &descSetLayout;
 						info.shaderID = fontMaterial.material.shaderID;
 						info.uniformBufferList = &fontMaterial.uniformBufferList;
-						info.imageDescriptors.Add(U_ALBEDO_SAMPLER, ImageDescriptorInfo{ font->GetTexture()->imageView, m_LinMipLinSampler });
+						info.imageDescriptors.Add(U_ALBEDO_SAMPLER, ImageDescriptorInfo{ fontTex->imageView, fontTex->sampler });
 						FillOutBufferDescriptorInfos(&info.bufferDescriptors, info.uniformBufferList, info.shaderID);
 						CreateDescriptorSet(&info);
 					}
@@ -4751,7 +4753,6 @@ namespace flex
 					u32 dynamicOffsetIndex = 0;
 					BindDescriptorSet(&fontMaterial, dynamicOffsetIndex * m_DynamicAlignment, commandBuffer, m_FontSSPipelineLayout, font->m_DescriptorSet);
 
-					VulkanTexture* fontTex = font->GetTexture();
 					glm::vec2 texSize(fontTex->width, fontTex->height);
 
 					u32 packedSoftnessOpacity = Pack2FloatToU32(font->metaData.soften, font->metaData.shadowOpacity);
@@ -4863,6 +4864,8 @@ namespace flex
 			{
 				if (font->bufferSize > 0)
 				{
+					VulkanTexture* fontTex = font->GetTexture();
+
 					if (font->m_DescriptorSet == VK_NULL_HANDLE)
 					{
 						DescriptorSetCreateInfo info;
@@ -4871,7 +4874,7 @@ namespace flex
 						info.descriptorSetLayout = &descSetLayout;
 						info.shaderID = fontMaterial.material.shaderID;
 						info.uniformBufferList = &fontMaterial.uniformBufferList;
-						info.imageDescriptors.Add(U_ALBEDO_SAMPLER, ImageDescriptorInfo{ font->GetTexture()->imageView, m_LinMipLinSampler });
+						info.imageDescriptors.Add(U_ALBEDO_SAMPLER, ImageDescriptorInfo{ fontTex->imageView, fontTex->sampler });
 						FillOutBufferDescriptorInfos(&info.bufferDescriptors, info.uniformBufferList, info.shaderID);
 						CreateDescriptorSet(&info);
 					}
@@ -4879,7 +4882,6 @@ namespace flex
 					u32 dynamicOffsetIndex = 0;
 					BindDescriptorSet(&fontMaterial, dynamicOffsetIndex * m_DynamicAlignment, commandBuffer, m_FontWSPipelineLayout, font->m_DescriptorSet);
 
-					VulkanTexture* fontTex = font->GetTexture();
 					glm::vec2 texSize(fontTex->width, fontTex->height);
 
 					real threshold = 0.5f;
