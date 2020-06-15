@@ -1074,7 +1074,7 @@ namespace flex
 						bool bFlipVertically = false;
 						texture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue,
 							textureInfo.relativeFilePath, channelCount, bFlipVertically, textureInfo.mipLevels > 1, textureInfo.bHDR);
-						texture->CreateFromFile(textureInfo.format);
+						texture->CreateFromFile(textureInfo.format, true);
 						texture->imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
 						AddLoadedTexture(texture);
@@ -6146,7 +6146,7 @@ namespace flex
 				{
 					VulkanTexture* texture = pair.second;
 					assert(texture != nullptr);
-					createInfo.imageDescriptors.Add(pair.first, ImageDescriptorInfo{ texture->imageView, m_LinMipLinSampler });
+					createInfo.imageDescriptors.Add(pair.first, ImageDescriptorInfo{ texture->imageView, texture->sampler });
 				}
 			}
 

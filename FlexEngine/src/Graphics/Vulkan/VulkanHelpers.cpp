@@ -695,6 +695,87 @@ namespace flex
 			return imageSize;
 		}
 
+		void VulkanTexture::GenerateMipmaps()
+		{
+			VkCommandBuffer cmdBuffer = BeginSingleTimeCommands(m_VulkanDevice);
+
+			if (imageLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+			{
+				TransitionToLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, cmdBuffer);
+			}
+
+			VkImageMemoryBarrier barrier = vks::imageMemoryBarrier();
+			barrier.image = image;
+			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			barrier.subresourceRange.baseArrayLayer = 0;
+			barrier.subresourceRange.layerCount = 1;
+			barrier.subresourceRange.levelCount = 1;
+
+			i32 mipWidth = width;
+			i32 mipHeight = height;
+
+			for (u32 i = 1; i < mipLevels; ++i)
+			{
+				i32 nextMipWidth = mipWidth > 1 ? mipWidth / 2 : 1;
+				i32 nextMipHeight = mipHeight > 1 ? mipHeight / 2 : 1;
+
+				barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+				barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+				barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+				barrier.subresourceRange.baseMipLevel = i - 1;
+
+				VkImageSubresourceLayers srcSubresource = {};
+				srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				srcSubresource.mipLevel = i - 1;
+				srcSubresource.baseArrayLayer = 0;
+				srcSubresource.layerCount = 1;
+
+				VkImageSubresourceLayers dstSubresource = {};
+				dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				dstSubresource.mipLevel = i;
+				dstSubresource.baseArrayLayer = 0;
+				dstSubresource.layerCount = 1;
+
+				VkImageBlit blitRegion = {};
+				blitRegion.srcOffsets[0] = { 0, 0, 0 };
+				blitRegion.srcOffsets[1] = { mipWidth, mipHeight, 1 };
+				blitRegion.dstOffsets[0] = { 0, 0, 0 };
+				blitRegion.dstOffsets[1] = { nextMipWidth, nextMipHeight, 1 };
+				blitRegion.srcSubresource = srcSubresource;
+				blitRegion.dstSubresource = dstSubresource;
+
+				vkCmdBlitImage(cmdBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blitRegion, VK_FILTER_LINEAR);
+
+				barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+				barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+				barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+				barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+				vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+					0, nullptr,
+					0, nullptr,
+					1, &barrier);
+
+				mipWidth = nextMipWidth;
+				mipHeight = nextMipHeight;
+			}
+
+			// Transition final mip layer
+			barrier.subresourceRange.baseMipLevel = mipLevels - 1;
+			barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+
+			vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+				0, nullptr,
+				0, nullptr,
+				1, &barrier);
+
+			EndSingleTimeCommands(m_VulkanDevice, m_GraphicsQueue, cmdBuffer);
+		}
+
 		VkDeviceSize VulkanTexture::CreateImage(VulkanDevice* device, ImageCreateInfo& createInfo)
 		{
 			assert(createInfo.width != 0);
@@ -753,9 +834,27 @@ namespace flex
 			return memRequirements.size;
 		}
 
-		VkDeviceSize VulkanTexture::CreateFromFile(VkFormat inFormat)
+		VkDeviceSize VulkanTexture::CreateFromFile(VkFormat inFormat, bool bGenerateFullMipChain /* = false */)
 		{
 			VulkanBuffer stagingBuffer(m_VulkanDevice);
+
+			if (bGenerateFullMipChain)
+			{
+				bool bFormatSupportsBlit = true;
+
+				VkFormatProperties formatProps;
+				vkGetPhysicalDeviceFormatProperties(m_VulkanDevice->m_PhysicalDevice, inFormat, &formatProps);
+				if (!(formatProps.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT))
+				{
+					bFormatSupportsBlit = false;
+				}
+
+				if (!bFormatSupportsBlit)
+				{
+					// TODO: Create mip chain manually when support doesn't exist
+					bGenerateFullMipChain = false;
+				}
+			}
 
 			// TODO: Unify hdr path with non-hdr & cubemap paths
 			if (bHDR)
@@ -780,12 +879,18 @@ namespace flex
 					return 0;
 				}
 
+				if (bGenerateFullMipChain)
+				{
+					mipLevels = ((u32)(glm::log2((real)glm::max(width, height))));
+				}
+
 				ImageCreateInfo imageCreateInfo = {};
 				imageCreateInfo.image = image.replace();
 				imageCreateInfo.imageMemory = imageMemory.replace();
 				imageCreateInfo.format = inFormat;
 				imageCreateInfo.width = (u32)width;
 				imageCreateInfo.height = (u32)height;
+				imageCreateInfo.mipLevels = mipLevels;
 				imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
 				imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
 				imageCreateInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -797,7 +902,7 @@ namespace flex
 				imageFormat = inFormat;
 				imageLayout = imageCreateInfo.initialLayout;
 
-				//u32 pixelBufSize = (VkDeviceSize)(width * height * channelCount * sizeof(real));
+				u32 pixelBufSize = (VkDeviceSize)(width * height * channelCount * sizeof(real));
 				u32 textureSize = imageSize;// (VkDeviceSize)(width * height * channelCount * sizeof(real));
 
 
@@ -805,7 +910,7 @@ namespace flex
 
 				void* data = nullptr;
 				VK_CHECK_RESULT(vkMapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory, 0, textureSize, 0, &data));
-				memcpy(data, hdrImage.pixels, (size_t)textureSize);
+				memcpy(data, hdrImage.pixels, (size_t)pixelBufSize);
 				vkUnmapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory);
 
 				hdrImage.Free();
@@ -817,7 +922,11 @@ namespace flex
 
 					TransitionToLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, cmdBuffer);
 					CopyFromBuffer(stagingBuffer.m_Buffer, width, height, cmdBuffer);
-					TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, cmdBuffer);
+					if (!bGenerateFullMipChain)
+					{
+						// If generating mipmaps we'll be blitting to and from this image
+						TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, cmdBuffer);
+					}
 
 					VulkanRenderer::EndDebugMarkerRegion(cmdBuffer);
 					EndSingleTimeCommands(m_VulkanDevice, m_GraphicsQueue, cmdBuffer);
@@ -832,7 +941,13 @@ namespace flex
 
 				SamplerCreateInfo samplerCreateInfo = {};
 				samplerCreateInfo.sampler = &sampler;
+				samplerCreateInfo.maxLod = (real)mipLevels;
 				CreateSampler(m_VulkanDevice, samplerCreateInfo);
+
+				if (bGenerateFullMipChain)
+				{
+					GenerateMipmaps();
+				}
 
 				return imageSize;
 			}
@@ -866,15 +981,21 @@ namespace flex
 					return 0;
 				}
 
+				if (bGenerateFullMipChain)
+				{
+					mipLevels = (u32)(glm::log2((real)glm::max(width, height))) + 1;
+				}
+
 				ImageCreateInfo imageCreateInfo = {};
 				imageCreateInfo.image = image.replace();
 				imageCreateInfo.imageMemory = imageMemory.replace();
 				imageCreateInfo.format = inFormat;
 				imageCreateInfo.width = (u32)width;
 				imageCreateInfo.height = (u32)height;
+				imageCreateInfo.mipLevels = mipLevels;
 				imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
 				imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-				imageCreateInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+				imageCreateInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | (bGenerateFullMipChain ? VK_IMAGE_USAGE_TRANSFER_SRC_BIT : 0);
 				imageCreateInfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 				imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
 
@@ -886,8 +1007,7 @@ namespace flex
 				u32 pixelBufSize = (VkDeviceSize)(width * height * channelCount * sizeof(unsigned char));
 				u32 textureSize = imageSize;// (VkDeviceSize)(width * height * channelCount * sizeof(unsigned char));
 
-				stagingBuffer.Create(textureSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-					VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+				stagingBuffer.Create(textureSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 				void* data = nullptr;
 				VK_CHECK_RESULT(vkMapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory, 0, textureSize, 0, &data));
@@ -903,7 +1023,11 @@ namespace flex
 
 					TransitionToLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, cmdBuffer);
 					CopyFromBuffer(stagingBuffer.m_Buffer, width, height, cmdBuffer);
-					TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, cmdBuffer);
+					if (!bGenerateFullMipChain)
+					{
+						// If generating mipmaps we'll be blitting to and from this image
+						TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, cmdBuffer);
+					}
 
 					VulkanRenderer::EndDebugMarkerRegion(cmdBuffer);
 					EndSingleTimeCommands(m_VulkanDevice, m_GraphicsQueue, cmdBuffer);
@@ -918,7 +1042,13 @@ namespace flex
 
 				SamplerCreateInfo samplerCreateInfo = {};
 				samplerCreateInfo.sampler = &sampler;
+				samplerCreateInfo.maxLod = (real)mipLevels;
 				CreateSampler(m_VulkanDevice, samplerCreateInfo);
+
+				if (bGenerateFullMipChain)
+				{
+					GenerateMipmaps();
+				}
 
 				return imageSize;
 			}
@@ -979,7 +1109,6 @@ namespace flex
 			vkGetPhysicalDeviceFormatProperties(m_VulkanDevice->m_PhysicalDevice, imageFormat, &formatProps);
 			if (!(formatProps.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT))
 			{
-				//PrintError("Device does not support blitting from optimal tiled images, using copy instead of blit!\n");
 				bSupportsBlit = false;
 			}
 
@@ -987,7 +1116,6 @@ namespace flex
 			vkGetPhysicalDeviceFormatProperties(m_VulkanDevice->m_PhysicalDevice, VK_FORMAT_R8G8B8A8_UNORM, &formatProps);
 			if (!(formatProps.linearTilingFeatures & VK_FORMAT_FEATURE_BLIT_DST_BIT))
 			{
-				//PrintError("Device does not support blitting to linear tiled images, using copy instead of blit\n!");
 				bSupportsBlit = false;
 			}
 

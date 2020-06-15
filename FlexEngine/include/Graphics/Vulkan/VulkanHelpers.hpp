@@ -219,7 +219,7 @@ namespace flex
 
 				real maxAnisotropy = 16.0f;
 				real minLod = 0.0f;
-				real maxLod = 0.0f;
+				real maxLod = 1.0f;
 				VkFilter magFilter = VK_FILTER_LINEAR;
 				VkFilter minFilter = VK_FILTER_LINEAR;
 				VkSamplerAddressMode samplerAddressMode = VK_SAMPLER_ADDRESS_MODE_REPEAT;
@@ -277,7 +277,7 @@ namespace flex
 			 * Creates image, image view, and sampler based on the texture at filePath
 			 * Returns size of image in bytes
 			 */
-			VkDeviceSize CreateFromFile(VkFormat inFormat);
+			VkDeviceSize CreateFromFile(VkFormat inFormat, bool bGenerateFullMipChain = false);
 
 			/*
 			 * Creates image, image view, and sampler
@@ -296,6 +296,8 @@ namespace flex
 			 * Returns the size of the image
 			 */
 			VkDeviceSize CreateCubemapFromTextures(VkFormat inFormat, const std::array<std::string, 6>& filePaths, bool bEnableTrilinearFiltering);
+
+			void GenerateMipmaps();
 
 			std::string GetRelativeFilePath() const;
 			std::string GetName() const;
