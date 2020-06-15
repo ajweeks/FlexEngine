@@ -101,8 +101,8 @@ void main()
 
 	float fresnel = clamp(pow(1.0-NoV+0.07, uboConstant.oceanColours.fresnelPower), 0, 1);
 
-	float deepness = (0.5+fresnel*0.5) * pow(1.0-clamp(abs(V.y),0,1), 5.0);
-	deepness = pow(max(dot(V, N), 0), 5.0);
+	float deepness = (fresnel) * pow(1.0-clamp(abs(V.y),0,1), 5.0);
+	//deepness = pow(max(dot(V, N), 0), 5.0);
 
 	vec3 oceanTop = pow(uboConstant.oceanColours.top.xyz, vec3(2.2));
 	vec3 oceanMid = pow(uboConstant.oceanColours.mid.xyz, vec3(2.2));
@@ -112,17 +112,19 @@ void main()
 
 	vec3 sky = SampleSkybox(R);
 
-	vec3 waterCol = mix(oceanBtm, mix(oceanMid, oceanTop, clamp((deepness - 0.5) * 2.0, 0, 1)), clamp(deepness * 2.0, 0, 1));
-	fragColor = vec4(mix(waterCol, sky, clamp(fresnel * uboConstant.oceanColours.fresnelFactor,0,1)), 1);
+	vec3 waterCol = mix(oceanBtm, mix(oceanMid, oceanTop, clamp((fresnel - 0.5) * 2.0, 0, 1)), clamp(fresnel * 2.0, 0, 1));
+	fragColor = vec4(mix(waterCol, sky, 0), 1);
 
 	vec4 posCS = uboConstant.view * vec4(ex_PositionWS, 1);	
 	float depthFade = clamp(pow(pow(posCS.z, 1.0)*0.002, 1.65), 0, 1);
 	fragColor = vec4(mix(fragColor.xyz, skyHorizon, depthFade), 1);
 
 	//fragColor = vec4(SampleSkybox(R), 1);
-	// fragColor = vec4(fresnel.xxx, 1);
+	//fragColor = vec4(fresnel.xxx, 1);
+	//fragColor = vec4(deepness.xxx, 1);
 	//fragColor = vec4(camViewDir, 1.0);
 	//fragColor = vec4(ex_TBN[0].xxx*0.5+0.5, 1.0);
 	//fragColor = vec4(clamp(sampledN,0,1), 1);
 	// fragColor = vec4(pow(NoV,2.0).xxx, 1);
+	// fragColor = vec4(waterCol, 1);
 }

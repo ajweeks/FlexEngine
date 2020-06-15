@@ -15,9 +15,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-51.502, 8.671, 30.739",
-			"pitch" : -0.118148,
-			"yaw" : 3.833872
+			"position" : "-51.767, 4.544, 46.059",
+			"pitch" : -0.162764,
+			"yaw" : 3.853050
 		}
 	},
 	"objects" : 
@@ -160,11 +160,11 @@
 					"4116.8,32",
 					"0.0,96"
 				],
-				"ocean colour top" : "0.21, 0.29, 0.42, 0.00",
-				"ocean colour mid" : "0.03, 0.04, 0.07, 0.00",
-				"ocean colour btm" : "0.03, 0.06, 0.09, 0.00",
-				"ocean fresnel factor" : 0.604000,
-				"ocean fresnel power" : 10.740000
+				"ocean colour top" : "0.19, 0.25, 0.30, 0.00",
+				"ocean colour mid" : "0.08, 0.13, 0.17, 0.00",
+				"ocean colour btm" : "0.03, 0.07, 0.11, 0.00",
+				"ocean fresnel factor" : 0.208000,
+				"ocean fresnel power" : 2.850000
 			}
 		},
 		{
