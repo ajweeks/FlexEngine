@@ -668,7 +668,7 @@ namespace flex
 		bool bDisableLODs = false;
 		u32 maxChunkVertCountPerAxis = 64;
 
-		OceanColourData oceanColours;
+		OceanData oceanData;
 
 		void* criticalSection = nullptr;
 

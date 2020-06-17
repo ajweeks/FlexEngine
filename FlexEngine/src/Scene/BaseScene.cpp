@@ -46,6 +46,11 @@ namespace flex
 		m_TrackManager(this),
 		m_CartManager(this)
 	{
+		// Default day sky
+		m_SkyboxData = {};
+		m_SkyboxData.top = glm::pow(glm::vec4(0.22f, 0.58f, 0.88f, 0.0f), glm::vec4(2.2f));
+		m_SkyboxData.mid = glm::pow(glm::vec4(0.66f, 0.86f, 0.95f, 0.0f), glm::vec4(2.2f));
+		m_SkyboxData.btm = glm::pow(glm::vec4(0.75f, 0.91f, 0.99f, 0.0f), glm::vec4(2.2f));
 	}
 
 	BaseScene::~BaseScene()
@@ -120,6 +125,24 @@ namespace flex
 
 				sceneRootObject.SetBoolChecked("spawn player", m_bSpawnPlayer);
 
+				JSONObject skyboxDataObj;
+				if (sceneRootObject.SetObjectChecked("skybox data", skyboxDataObj))
+				{
+					// TODO: Add SetGammaColourChecked
+					if (skyboxDataObj.SetVec4Checked("top colour", m_SkyboxData.top))
+					{
+						m_SkyboxData.top = glm::pow(m_SkyboxData.top, glm::vec4(2.2f));
+					}
+					if (skyboxDataObj.SetVec4Checked("mid colour", m_SkyboxData.mid))
+					{
+						m_SkyboxData.mid = glm::pow(m_SkyboxData.mid, glm::vec4(2.2f));
+					}
+					if (skyboxDataObj.SetVec4Checked("btm colour", m_SkyboxData.btm))
+					{
+						m_SkyboxData.btm = glm::pow(m_SkyboxData.btm, glm::vec4(2.2f));
+					}
+				}
+
 				JSONObject cameraObj;
 				if (sceneRootObject.SetObjectChecked("camera", cameraObj))
 				{
@@ -152,7 +175,7 @@ namespace flex
 					if (cameraObj.SetFloatChecked("far plane", zFar)) cam->zFar = zFar;
 					if (cameraObj.SetFloatChecked("fov", fov)) cam->FOV = fov;
 					if (cameraObj.SetFloatChecked("aperture", aperture)) cam->aperture = aperture;
-					if (cameraObj.SetFloatChecked("shutter speed", shutterSpeed)) cam->shutterSpeed= shutterSpeed;
+					if (cameraObj.SetFloatChecked("shutter speed", shutterSpeed)) cam->shutterSpeed = shutterSpeed;
 					if (cameraObj.SetFloatChecked("light sensitivity", lightSensitivity)) cam->lightSensitivity = lightSensitivity;
 					if (cameraObj.SetFloatChecked("exposure", exposure)) cam->exposure = exposure;
 					if (cameraObj.SetFloatChecked("move speed", moveSpeed)) cam->moveSpeed = moveSpeed;
@@ -429,6 +452,296 @@ namespace flex
 			m_ObjectsToAddAtEndOfFrame.clear();
 			UpdateRootObjectSiblingIndices();
 			g_Renderer->RenderObjectStateChanged();
+		}
+	}
+
+	void BaseScene::DrawImGuiObjects()
+	{
+		ImGui::Checkbox("Spawn player", &m_bSpawnPlayer);
+
+		ImGuiExt::ColorEdit3Gamma("Top", &m_SkyboxData.top.x);
+		ImGuiExt::ColorEdit3Gamma("Mid", &m_SkyboxData.mid.x);
+		ImGuiExt::ColorEdit3Gamma("Bottom", &m_SkyboxData.btm.x);
+
+		DoSceneContextMenu();
+	}
+
+	void BaseScene::DoSceneContextMenu()
+	{
+		bool bClicked = ImGui::IsMouseReleased(1) && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup);
+
+		std::string contextMenuID = "scene context menu " + m_FileName;
+		if (ImGui::BeginPopupContextItem(contextMenuID.c_str()))
+		{
+			{
+				const i32 sceneNameMaxCharCount = 256;
+
+				// We don't know the names of scene's that haven't been loaded
+				if (m_bLoaded)
+				{
+					static char newSceneName[sceneNameMaxCharCount];
+					if (bClicked)
+					{
+						strcpy(newSceneName, m_Name.c_str());
+					}
+
+					bool bRenameScene = ImGui::InputText("##rename-scene",
+						newSceneName,
+						sceneNameMaxCharCount,
+						ImGuiInputTextFlags_EnterReturnsTrue);
+
+					ImGui::SameLine();
+
+					bRenameScene |= ImGui::Button("Rename scene");
+
+					if (bRenameScene)
+					{
+						SetName(newSceneName);
+						// Don't close popup here since we will likely want to save that change
+					}
+				}
+
+				static char newSceneFileName[sceneNameMaxCharCount];
+				if (bClicked)
+				{
+					strcpy(newSceneFileName, m_FileName.c_str());
+				}
+
+				bool bRenameSceneFileName = ImGui::InputText("##rename-scene-file-name",
+					newSceneFileName,
+					sceneNameMaxCharCount,
+					ImGuiInputTextFlags_EnterReturnsTrue);
+
+				ImGui::SameLine();
+
+				bRenameSceneFileName |= ImGui::Button("Rename file");
+
+				if (bRenameSceneFileName)
+				{
+					std::string newSceneFileNameStr(newSceneFileName);
+					std::string fileDir = ExtractDirectoryString(RelativePathToAbsolute(GetDefaultRelativeFilePath()));
+					std::string newSceneFilePath = fileDir + newSceneFileNameStr;
+					bool bNameEmpty = newSceneFileNameStr.empty();
+					bool bCorrectFileType = EndsWith(newSceneFileNameStr, ".json");
+					bool bFileExists = FileExists(newSceneFilePath);
+					bool bSceneNameValid = (!bNameEmpty && bCorrectFileType && !bFileExists);
+
+					if (bSceneNameValid)
+					{
+						if (SetFileName(newSceneFileNameStr, true))
+						{
+							ImGui::CloseCurrentPopup();
+						}
+					}
+					else
+					{
+						PrintError("Attempted name scene with invalid name: %s\n", newSceneFileNameStr.c_str());
+						if (bNameEmpty)
+						{
+							PrintError("(file name is empty!)\n");
+						}
+						else if (!bCorrectFileType)
+						{
+							PrintError("(must end with \".json\"!)\n");
+						}
+						else if (bFileExists)
+						{
+							PrintError("(file already exists!)\n");
+						}
+					}
+				}
+			}
+
+			// Only allow current scene to be saved
+			if (g_SceneManager->CurrentScene() == this)
+			{
+				if (ImGui::Button("Save"))
+				{
+					SerializeToFile(false);
+
+					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::SameLine();
+
+				ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
+
+				if (ImGui::Button("Save over default"))
+				{
+					SerializeToFile(true);
+
+					ImGui::CloseCurrentPopup();
+				}
+
+				if (IsUsingSaveFile())
+				{
+					ImGui::SameLine();
+
+					if (ImGui::Button("Hard reload (deletes save file!)"))
+					{
+						Platform::DeleteFile(GetRelativeFilePath());
+						g_SceneManager->ReloadCurrentScene();
+
+						ImGui::CloseCurrentPopup();
+					}
+				}
+
+				ImGui::PopStyleColor();
+				ImGui::PopStyleColor();
+				ImGui::PopStyleColor();
+			}
+
+			static const char* duplicateScenePopupLabel = "Duplicate scene";
+			const i32 sceneNameMaxCharCount = 256;
+			static char newSceneName[sceneNameMaxCharCount];
+			static char newSceneFileName[sceneNameMaxCharCount];
+			if (ImGui::Button("Duplicate..."))
+			{
+				ImGui::OpenPopup(duplicateScenePopupLabel);
+
+				std::string newSceneNameStr = m_Name;
+				newSceneNameStr += " Copy";
+				strcpy(newSceneName, newSceneNameStr.c_str());
+
+				std::string newSceneFileNameStr = StripFileType(m_FileName);
+
+				bool bValidName = false;
+				do
+				{
+					i16 numNumericalChars = 0;
+					i32 numEndingWith = GetNumberEndingWith(newSceneFileNameStr, numNumericalChars);
+					if (numNumericalChars > 0)
+					{
+						u32 charsBeforeNum = (u32)(newSceneFileNameStr.length() - numNumericalChars);
+						newSceneFileNameStr = newSceneFileNameStr.substr(0, charsBeforeNum) +
+							IntToString(numEndingWith + 1, numNumericalChars);
+					}
+					else
+					{
+						newSceneFileNameStr += "_01";
+					}
+
+					std::string filePathFrom = RelativePathToAbsolute(GetDefaultRelativeFilePath());
+					std::string fullNewFilePath = ExtractDirectoryString(filePathFrom);
+					fullNewFilePath += newSceneFileNameStr + ".json";
+					bValidName = !FileExists(fullNewFilePath);
+				} while (!bValidName);
+
+				newSceneFileNameStr += ".json";
+
+				strcpy(newSceneFileName, newSceneFileNameStr.c_str());
+			}
+
+			bool bCloseContextMenu = false;
+			if (ImGui::BeginPopupModal(duplicateScenePopupLabel,
+				NULL,
+				ImGuiWindowFlags_AlwaysAutoResize))
+			{
+
+				bool bDuplicateScene = ImGui::InputText("Name##duplicate-scene-name",
+					newSceneName,
+					sceneNameMaxCharCount,
+					ImGuiInputTextFlags_EnterReturnsTrue);
+
+				bDuplicateScene |= ImGui::InputText("File name##duplicate-scene-file-path",
+					newSceneFileName,
+					sceneNameMaxCharCount,
+					ImGuiInputTextFlags_EnterReturnsTrue);
+
+				bDuplicateScene |= ImGui::Button("Duplicate");
+
+				bool bValidInput = true;
+
+				if (strlen(newSceneName) == 0 ||
+					strlen(newSceneFileName) == 0 ||
+					!EndsWith(newSceneFileName, ".json"))
+				{
+					bValidInput = false;
+				}
+
+				if (bDuplicateScene && bValidInput)
+				{
+					if (g_SceneManager->DuplicateScene(this, newSceneFileName, newSceneName))
+					{
+						bCloseContextMenu = true;
+					}
+				}
+
+				ImGui::SameLine();
+
+				if (ImGui::Button("Cancel"))
+				{
+					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::EndPopup();
+			}
+
+			ImGui::SameLine();
+
+			if (ImGui::Button("Open in explorer"))
+			{
+				const std::string directory = RelativePathToAbsolute(ExtractDirectoryString(GetRelativeFilePath()));
+				Platform::OpenExplorer(directory);
+			}
+
+			ImGui::SameLine();
+
+			const char* deleteScenePopupID = "Delete scene";
+
+			ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
+
+			if (ImGui::Button("Delete scene..."))
+			{
+				ImGui::OpenPopup(deleteScenePopupID);
+			}
+
+			ImGui::PopStyleColor();
+			ImGui::PopStyleColor();
+			ImGui::PopStyleColor();
+
+			if (ImGui::BeginPopupModal(deleteScenePopupID, NULL, ImGuiWindowFlags_AlwaysAutoResize))
+			{
+				ImGui::PushStyleColor(ImGuiCol_Text, g_WarningTextColor);
+				std::string textStr = "Are you sure you want to permanently delete " + m_Name + "? (both the default & saved files)";
+				ImGui::Text("%s", textStr.c_str());
+				ImGui::PopStyleColor();
+
+				ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
+				if (ImGui::Button("Delete"))
+				{
+					g_SceneManager->DeleteScene(this);
+
+					ImGui::CloseCurrentPopup();
+
+					bCloseContextMenu = true;
+				}
+				ImGui::PopStyleColor();
+				ImGui::PopStyleColor();
+				ImGui::PopStyleColor();
+
+				ImGui::SameLine();
+
+				if (ImGui::Button("Cancel"))
+				{
+					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::EndPopup();
+			}
+
+			if (bCloseContextMenu)
+			{
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::EndPopup();
 		}
 	}
 
@@ -865,6 +1178,11 @@ namespace flex
 		return m_bSpawnPlayer;
 	}
 
+	const SkyboxData& BaseScene::GetSkyboxData() const
+	{
+		return m_SkyboxData;
+	}
+
 	std::vector<MaterialID> BaseScene::RetrieveMaterialIDsFromJSON(const JSONObject& object, i32 fileVersion)
 	{
 		std::vector<MaterialID> matIDs;
@@ -969,6 +1287,12 @@ namespace flex
 		rootSceneObject.fields.emplace_back("version", JSONValue(m_SceneFileVersion));
 		rootSceneObject.fields.emplace_back("name", JSONValue(m_Name));
 		rootSceneObject.fields.emplace_back("spawn player", JSONValue(m_bSpawnPlayer));
+
+		JSONObject skyboxDataObj = {};
+		skyboxDataObj.fields.emplace_back("top colour", JSONValue(VecToString(glm::pow(m_SkyboxData.top, glm::vec4(1.0f / 2.2f)))));
+		skyboxDataObj.fields.emplace_back("mid colour", JSONValue(VecToString(glm::pow(m_SkyboxData.mid, glm::vec4(1.0f / 2.2f)))));
+		skyboxDataObj.fields.emplace_back("btm colour", JSONValue(VecToString(glm::pow(m_SkyboxData.btm, glm::vec4(1.0f / 2.2f)))));
+		rootSceneObject.fields.emplace_back("skybox data", JSONValue(skyboxDataObj));
 
 		{
 			JSONObject cameraObj = {};
@@ -1127,7 +1451,7 @@ namespace flex
 				if (bDestroy)
 				{
 					(*iter)->Destroy();
-					delete *iter;
+					delete* iter;
 				}
 
 				iter = m_RootObjects.erase(iter);
@@ -1151,7 +1475,7 @@ namespace flex
 		{
 			if (bDestroy)
 			{
-				delete *iter;
+				delete* iter;
 			}
 
 			iter = m_RootObjects.erase(iter);
@@ -1169,7 +1493,7 @@ namespace flex
 				if (bDestroy)
 				{
 					(*iter)->Destroy();
-					delete *iter;
+					delete* iter;
 				}
 
 				m_RootObjects.erase(iter);

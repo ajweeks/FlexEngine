@@ -2,6 +2,12 @@
 	"version" : 3,
 	"name" : "Scene Gerstner",
 	"spawn player" : false,
+	"skybox data" : 
+	{
+		"top colour" : "0.54, 0.75, 0.95, 0.00",
+		"mid colour" : "0.41, 0.56, 0.66, 0.00",
+		"btm colour" : "0.41, 0.56, 0.66, 0.00"
+	},
 	"camera" : 
 	{
 		"type" : "debug",
@@ -15,9 +21,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-50.535, 5.157, 46.044",
-			"pitch" : -0.182237,
-			"yaw" : 3.892146
+			"position" : "35.683, 9.737, 147.792",
+			"pitch" : -0.124421,
+			"yaw" : -2.317486
 		}
 	},
 	"objects" : 
@@ -72,6 +78,7 @@
 			"visible" : true,
 			"transform" : 
 			{
+				"pos" : "2.539, -4.574, 0.000"
 			},
 			"materials" : 
 			[
@@ -147,7 +154,7 @@
 				"chunk load radius" : 674.239990,
 				"update speed" : 19.700001,
 				"pin center" : true,
-				"pinned center position" : "-90.47, 25.15, -30.96",
+				"pinned center position" : "25.00, 7.45, 115.33",
 				"blend dist" : 18.229000,
 				"wave sampling lods" : 
 				[
@@ -160,11 +167,14 @@
 					"4116.8,32",
 					"0.0,96"
 				],
-				"ocean colour top" : "0.43, 0.52, 0.56, 0.00",
-				"ocean colour mid" : "0.18, 0.26, 0.35, 0.00",
-				"ocean colour btm" : "0.02, 0.09, 0.14, 0.00",
-				"ocean fresnel factor" : 0.208000,
-				"ocean fresnel power" : 5.370000
+				"colour top" : "1.00, 1.00, 1.00, 0.00",
+				"colour mid" : "1.00, 1.00, 1.00, 0.00",
+				"colour btm" : "0.01, 0.06, 0.11, 0.00",
+				"fresnel factor" : 1.000000,
+				"fresnel power" : 6.380000,
+				"sky reflection factor" : 0.177000,
+				"fog falloff" : 1.060000,
+				"fog density" : 1.350000
 			}
 		},
 		{

@@ -12,8 +12,7 @@ layout (location = 4) in vec3 in_Tangent;
 layout (location = 0) out vec3 ex_PositionWS;
 layout (location = 1) out vec2 ex_TexCoord;
 layout (location = 2) out vec4 ex_Colour;
-layout (location = 3) out vec3 ex_NormalWS;
-layout (location = 4) out mat3 ex_TBN;
+layout (location = 3) out mat3 ex_TBN;
 
 struct DirectionalLight 
 {
@@ -52,7 +51,6 @@ layout (binding = 1) uniform UBODynamic
 void main()
 {
 	ex_TexCoord = in_TexCoord;
-    ex_NormalWS = mat3(uboDynamic.model) * in_Normal;
 
 	vec3 bitan = cross(in_Normal, in_Tangent);
 	ex_TBN = mat3(

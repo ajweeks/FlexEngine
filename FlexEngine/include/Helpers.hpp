@@ -305,5 +305,7 @@ namespace flex
 		bool SliderUInt(const char* label, u32* v, u32 v_min, u32 v_max, const char* format = NULL);
 		bool DragUInt(const char* label, u32* v, u32 v_min = 0, u32 v_max = 0, const char* format = "%d");
 		bool DragInt16(const char* label, i16* v, i16 v_min = 0, i16 v_max = 0, const char* format = "%d");
+		bool ColorEdit3Gamma(const char* label, real* v, ImGuiColorEditFlags flags = 0);
+		bool ColorEdit4Gamma(const char* label, real* v, ImGuiColorEditFlags flags = 0);
 	} // namespace ImGuiExt
 } // namespace flex

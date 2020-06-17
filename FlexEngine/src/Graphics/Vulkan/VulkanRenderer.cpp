@@ -9005,9 +9005,10 @@ namespace flex
 			glm::mat4 viewProjection = cam->GetViewProjection();
 			glm::vec4 camPos = glm::vec4(cam->position, 0.0f);
 			real exposure = cam->exposure;
-			glm::vec2 m_NearFarPlanes(cam->zNear, cam->zFar);
+			glm::vec2 nearFarPlanes(cam->zNear, cam->zFar);
+			const SkyboxData& skyboxData = g_SceneManager->CurrentScene()->GetSkyboxData();
 
-			static OceanColourData defaultOceanColourData = { glm::vec4(1, 0, 0, 0), glm::vec4(0, 1, 0, 0), glm::vec4(0, 0, 1, 0) };
+			static OceanData defaultOceanData = { glm::vec4(1, 0, 0, 0), glm::vec4(0, 1, 0, 0), glm::vec4(0, 0, 1, 0) };
 			static DirLightData defaultDirLightData = { VEC3_RIGHT, 0, VEC3_ONE, 0.0f, 0, 0.0f, { 0.0f, 0.0f } };
 
 			DirLightData* dirLightData = &defaultDirLightData;
@@ -9062,7 +9063,8 @@ namespace flex
 				{ U_LAST_FRAME_VIEWPROJ, (void*)&m_LastFrameViewProj, US_LAST_FRAME_VIEWPROJ },
 				{ U_DIR_LIGHT, (void*)dirLightData, US_DIR_LIGHT },
 				{ U_POINT_LIGHTS, (void*)m_PointLights, US_POINT_LIGHTS },
-				{ U_OCEAN_COLOURS, (void*)&defaultOceanColourData, US_OCEAN_COLOURS },
+				{ U_OCEAN_DATA, (void*)&defaultOceanData, US_OCEAN_DATA },
+				{ U_SKYBOX_DATA, (void*)&skyboxData, US_SKYBOX_DATA},
 				{ U_TIME, (void*)&g_SecElapsedSinceProgramStart, US_TIME },
 				{ U_SHADOW_SAMPLING_DATA, (void*)&m_ShadowSamplingData, US_SHADOW_SAMPLING_DATA },
 				{ U_SSAO_GEN_DATA, (void*)&m_SSAOGenData, US_SSAO_GEN_DATA },
@@ -9070,7 +9072,7 @@ namespace flex
 				{ U_SSAO_SAMPLING_DATA, (void*)&m_SSAOSamplingData, US_SSAO_SAMPLING_DATA },
 				{ U_FXAA_DATA, (void*)&m_FXAAData, US_FXAA_DATA },
 				{ U_EXPOSURE, (void*)&exposure, US_EXPOSURE },
-				{ U_NEAR_FAR_PLANES, (void*)&m_NearFarPlanes, US_NEAR_FAR_PLANES },
+				{ U_NEAR_FAR_PLANES, (void*)&nearFarPlanes, US_NEAR_FAR_PLANES },
 			};
 
 			for (UniformInfo& info : uniformInfos)

@@ -1449,10 +1449,7 @@ namespace flex
 				(u32)VertexAttribute::POSITION;
 
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
-			//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW);
-			//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PROJECTION);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_EXPOSURE);
-			//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_TIME);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SKYBOX_DATA);
 
 			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_CUBEMAP_SAMPLER);
 			++shaderID;
@@ -1778,11 +1775,12 @@ namespace flex
 
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_CAM_POS);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_TIME);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PROJECTION);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_DIR_LIGHT);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_OCEAN_COLOURS);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_OCEAN_DATA);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SKYBOX_DATA);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_TIME);
 
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);

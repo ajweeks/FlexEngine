@@ -3285,11 +3285,15 @@ namespace flex
 		workQueue = new ThreadSafeArray<WaveGenData>(32);
 
 		// Defaults to use if not set in file
-		oceanColours.top = glm::vec4(0.1f, 0.3f, 0.6f, 0.0f);
-		oceanColours.mid = glm::vec4(0.1f, 0.2f, 0.5f, 0.0f);
-		oceanColours.btm = glm::vec4(0.05f, 0.15f, 0.4f, 0.0f);
-		oceanColours.fresnelFactor = 0.8f;
-		oceanColours.fresnelPower = 7.0f;
+		oceanData = {};
+		oceanData.top = glm::vec4(0.1f, 0.3f, 0.6f, 0.0f);
+		oceanData.mid = glm::vec4(0.1f, 0.2f, 0.5f, 0.0f);
+		oceanData.btm = glm::vec4(0.05f, 0.15f, 0.4f, 0.0f);
+		oceanData.fresnelFactor = 0.8f;
+		oceanData.fresnelPower = 7.0f;
+		oceanData.skyReflectionFactor = 0.8f;
+		oceanData.fogFalloff = 1.2f;
+		oceanData.fogDensity = 1.2f;
 
 		MaterialCreateInfo matCreateInfo = {};
 		matCreateInfo.name = "gerstner";
@@ -3412,7 +3416,7 @@ namespace flex
 			bobber->GetTransform()->SetWorldPosition(newPos);
 		}
 
-		g_Renderer->SetGlobalUniform(U_OCEAN_COLOURS, &oceanColours, sizeof(oceanColours));
+		g_Renderer->SetGlobalUniform(U_OCEAN_DATA, &oceanData, sizeof(oceanData));
 	}
 
 	void GerstnerWave::Destroy()
@@ -4275,11 +4279,14 @@ namespace flex
 			}
 		}
 
-		ImGui::ColorEdit3("Top", &oceanColours.top.x);
-		ImGui::ColorEdit3("Mid", &oceanColours.mid.x);
-		ImGui::ColorEdit3("Bottom", &oceanColours.btm.x);
-		ImGui::SliderFloat("Fresnel factor", &oceanColours.fresnelFactor, 0.0f, 1.0f);
-		ImGui::DragFloat("Fresnel power", &oceanColours.fresnelPower, 0.01f, 0.0f, 75.0f);
+		ImGuiExt::ColorEdit3Gamma("Top", &oceanData.top.x);
+		ImGuiExt::ColorEdit3Gamma("Mid", &oceanData.mid.x);
+		ImGuiExt::ColorEdit3Gamma("Bottom", &oceanData.btm.x);
+		ImGui::SliderFloat("Fresnel factor", &oceanData.fresnelFactor, 0.0f, 1.0f);
+		ImGui::DragFloat("Fresnel power", &oceanData.fresnelPower, 0.01f, 0.0f, 75.0f);
+		ImGui::SliderFloat("Sky reflection", &oceanData.skyReflectionFactor, 0.0f, 1.0f);
+		ImGui::DragFloat("Fog falloff", &oceanData.fogFalloff, 0.01f, 0.0f, 3.0f);
+		ImGui::DragFloat("Fog density", &oceanData.fogDensity, 0.01f, 0.0f, 3.0f);
 
 		if (ImGuiExt::SliderUInt("Max chunk vert count", &maxChunkVertCountPerAxis, 4u, 256u))
 		{
@@ -4566,11 +4573,23 @@ namespace flex
 				}
 			}
 
-			gerstnerWaveObj.SetVec4Checked("ocean colour top", oceanColours.top);
-			gerstnerWaveObj.SetVec4Checked("ocean colour mid", oceanColours.mid);
-			gerstnerWaveObj.SetVec4Checked("ocean colour btm", oceanColours.btm);
-			gerstnerWaveObj.SetFloatChecked("ocean fresnel factor", oceanColours.fresnelFactor);
-			gerstnerWaveObj.SetFloatChecked("ocean fresnel power", oceanColours.fresnelPower);
+			if (gerstnerWaveObj.SetVec4Checked("colour top", oceanData.top))
+			{
+				oceanData.top = glm::pow(oceanData.top, glm::vec4(2.2f));
+			}
+			if (gerstnerWaveObj.SetVec4Checked("colour mid", oceanData.mid))
+			{
+				oceanData.mid = glm::pow(oceanData.mid, glm::vec4(2.2f));
+			}
+			if (gerstnerWaveObj.SetVec4Checked("colour btm", oceanData.btm))
+			{
+				oceanData.btm = glm::pow(oceanData.btm, glm::vec4(2.2f));
+			}
+			gerstnerWaveObj.SetFloatChecked("fresnel factor", oceanData.fresnelFactor);
+			gerstnerWaveObj.SetFloatChecked("fresnel power", oceanData.fresnelPower);
+			gerstnerWaveObj.SetFloatChecked("sky reflection factor", oceanData.skyReflectionFactor);
+			gerstnerWaveObj.SetFloatChecked("fog falloff", oceanData.fogFalloff);
+			gerstnerWaveObj.SetFloatChecked("fog density", oceanData.fogDensity);
 		}
 
 		SortWaves();
@@ -4624,11 +4643,14 @@ namespace flex
 		}
 		gerstnerWaveObj.fields.emplace_back("wave tessellation lods", JSONValue(waveTessellationLODsArrObj));
 
-		gerstnerWaveObj.fields.emplace_back("ocean colour top", JSONValue(VecToString(oceanColours.top)));
-		gerstnerWaveObj.fields.emplace_back("ocean colour mid", JSONValue(VecToString(oceanColours.mid)));
-		gerstnerWaveObj.fields.emplace_back("ocean colour btm", JSONValue(VecToString(oceanColours.btm)));
-		gerstnerWaveObj.fields.emplace_back("ocean fresnel factor", JSONValue(oceanColours.fresnelFactor));
-		gerstnerWaveObj.fields.emplace_back("ocean fresnel power", JSONValue(oceanColours.fresnelPower));
+		gerstnerWaveObj.fields.emplace_back("colour top", JSONValue(VecToString(glm::pow(oceanData.top, glm::vec4(1.0f / 2.2f)))));
+		gerstnerWaveObj.fields.emplace_back("colour mid", JSONValue(VecToString(glm::pow(oceanData.mid, glm::vec4(1.0f / 2.2f)))));
+		gerstnerWaveObj.fields.emplace_back("colour btm", JSONValue(VecToString(glm::pow(oceanData.btm, glm::vec4(1.0f / 2.2f)))));
+		gerstnerWaveObj.fields.emplace_back("fresnel factor", JSONValue(oceanData.fresnelFactor));
+		gerstnerWaveObj.fields.emplace_back("fresnel power", JSONValue(oceanData.fresnelPower));
+		gerstnerWaveObj.fields.emplace_back("sky reflection factor", JSONValue(oceanData.skyReflectionFactor));
+		gerstnerWaveObj.fields.emplace_back("fog falloff", JSONValue(oceanData.fogFalloff));
+		gerstnerWaveObj.fields.emplace_back("fog density", JSONValue(oceanData.fogDensity));
 
 		parentObject.fields.emplace_back("gerstner wave", JSONValue(gerstnerWaveObj));
 	}

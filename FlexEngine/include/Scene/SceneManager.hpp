@@ -44,12 +44,13 @@ namespace flex
 		i32 GetCurrentSceneIndex() const;
 		BaseScene* GetSceneAtIndex(i32 index);
 
+		bool DuplicateScene(BaseScene* scene, const std::string& newSceneFileName, const std::string& newSceneName);
+
 		void DestroyAllScenes();
 
 	private:
 		std::string MakeSceneNameUnique(const std::string& originalName);
 		bool SceneFileExists(const std::string& fileName) const;
-		void DoSceneContextMenu(BaseScene* scene);
 
 		u32 m_CurrentSceneIndex = InvalidID;
 		u32 m_PreviousSceneIndex = InvalidID;

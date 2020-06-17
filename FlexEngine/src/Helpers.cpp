@@ -1570,6 +1570,37 @@ namespace flex
 			return bResult;
 		}
 
+		bool ColorEdit3Gamma(const char* label, real* v, ImGuiColorEditFlags flags /* = 0 */)
+		{
+			glm::vec3 vg = glm::pow(glm::vec3(v[0], v[1], v[2]), glm::vec3(1.0f/2.2f));
+			bool bResult = ImGui::ColorEdit3(label, &vg.x, flags);
+
+			if (bResult)
+			{
+				v[0] = glm::pow(vg.x, 2.2f);
+				v[1] = glm::pow(vg.y, 2.2f);
+				v[2] = glm::pow(vg.z, 2.2f);
+			}
+
+			return bResult;
+		}
+
+		bool ColorEdit4Gamma(const char* label, real* v, ImGuiColorEditFlags flags /* = 0 */)
+		{
+			glm::vec4 vg = glm::pow(glm::vec4(v[0], v[1], v[2], v[3]), glm::vec4(1.0f / 2.2f));
+			bool bResult = ImGui::ColorEdit4(label, &vg.x, flags);
+
+			if (bResult)
+			{
+				v[0] = glm::pow(vg.x, 2.2f);
+				v[1] = glm::pow(vg.y, 2.2f);
+				v[2] = glm::pow(vg.z, 2.2f);
+				v[3] = glm::pow(vg.w, 2.2f);
+			}
+
+			return bResult;
+		}
+
 	} // namespace ImGuiExt
 } // namespace flex
 

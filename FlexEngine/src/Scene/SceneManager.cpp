@@ -442,10 +442,9 @@ namespace flex
 
 			BaseScene* currentScene = CurrentScene();
 
-			const std::string currentSceneNameStr(currentScene->GetName() + (currentScene->IsUsingSaveFile() ? " (saved)" : " (default)"));
+			// TODO: Display dirty status here
+			const std::string currentSceneNameStr(currentScene->GetName());
 			ImGui::Text("%s", currentSceneNameStr.c_str());
-
-			DoSceneContextMenu(currentScene);
 
 			if (ImGui::IsItemHovered())
 			{
@@ -464,7 +463,7 @@ namespace flex
 				PostInitializeCurrentScene();
 			}
 
-			ImGui::Checkbox("Spawn player", &currentScene->m_bSpawnPlayer);
+			currentScene->DrawImGuiObjects();
 
 			i32 sceneItemWidth = 240;
 			if (ImGui::BeginChild("Scenes", ImVec2((real)sceneItemWidth, 120), true, ImGuiWindowFlags_NoResize))
@@ -486,7 +485,7 @@ namespace flex
 						}
 					}
 
-					DoSceneContextMenu(scene);
+					scene->DoSceneContextMenu();
 				}
 			}
 			ImGui::EndChild();
@@ -541,316 +540,6 @@ namespace flex
 		}
 	}
 
-	void SceneManager::DoSceneContextMenu(BaseScene* scene)
-	{
-		bool bClicked = ImGui::IsMouseReleased(1) &&
-			ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup);
-
-		BaseScene* currentScene = CurrentScene();
-
-		std::string contextMenuID = "scene context menu " + scene->GetFileName();
-		if (ImGui::BeginPopupContextItem(contextMenuID.c_str()))
-		{
-			{
-				const i32 sceneNameMaxCharCount = 256;
-
-				// We don't know the names of scene's that haven't been loaded
-				if (scene->IsLoaded())
-				{
-					static char newSceneName[sceneNameMaxCharCount];
-					if (bClicked)
-					{
-						strcpy(newSceneName, scene->GetName().c_str());
-					}
-
-					bool bRenameScene = ImGui::InputText("##rename-scene",
-						newSceneName,
-						sceneNameMaxCharCount,
-						ImGuiInputTextFlags_EnterReturnsTrue);
-
-					ImGui::SameLine();
-
-					bRenameScene |= ImGui::Button("Rename scene");
-
-					if (bRenameScene)
-					{
-						scene->SetName(newSceneName);
-						// Don't close popup here since we will likely want to save that change
-					}
-				}
-
-				static char newSceneFileName[sceneNameMaxCharCount];
-				if (bClicked)
-				{
-					strcpy(newSceneFileName, scene->GetFileName().c_str());
-				}
-
-				bool bRenameSceneFileName = ImGui::InputText("##rename-scene-file-name",
-					newSceneFileName,
-					sceneNameMaxCharCount,
-					ImGuiInputTextFlags_EnterReturnsTrue);
-
-				ImGui::SameLine();
-
-				bRenameSceneFileName |= ImGui::Button("Rename file");
-
-				if (bRenameSceneFileName)
-				{
-					std::string newSceneFileNameStr(newSceneFileName);
-					std::string fileDir = ExtractDirectoryString(RelativePathToAbsolute(scene->GetDefaultRelativeFilePath()));
-					std::string newSceneFilePath = fileDir + newSceneFileNameStr;
-					bool bNameEmpty = newSceneFileNameStr.empty();
-					bool bCorrectFileType = EndsWith(newSceneFileNameStr, ".json");
-					bool bFileExists = FileExists(newSceneFilePath);
-					bool bSceneNameValid = (!bNameEmpty && bCorrectFileType && !bFileExists);
-
-					if (bSceneNameValid)
-					{
-						if (scene->SetFileName(newSceneFileNameStr, true))
-						{
-							ImGui::CloseCurrentPopup();
-						}
-					}
-					else
-					{
-						PrintError("Attempted name scene with invalid name: %s\n", newSceneFileNameStr.c_str());
-						if (bNameEmpty)
-						{
-							PrintError("(file name is empty!)\n");
-						}
-						else if (!bCorrectFileType)
-						{
-							PrintError("(must end with \".json\"!)\n");
-						}
-						else if (bFileExists)
-						{
-							PrintError("(file already exists!)\n");
-						}
-					}
-				}
-			}
-
-			// Only allow current scene to be saved
-			if (currentScene == scene)
-			{
-				if (ImGui::Button("Save"))
-				{
-					scene->SerializeToFile(false);
-
-					ImGui::CloseCurrentPopup();
-				}
-
-				ImGui::SameLine();
-
-				ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
-				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
-				ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
-
-				if (ImGui::Button("Save over default"))
-				{
-					scene->SerializeToFile(true);
-
-					ImGui::CloseCurrentPopup();
-				}
-
-				if (scene->IsUsingSaveFile())
-				{
-					ImGui::SameLine();
-
-					if (ImGui::Button("Hard reload (deletes save file!)"))
-					{
-						Platform::DeleteFile(scene->GetRelativeFilePath());
-						ReloadCurrentScene();
-
-						ImGui::CloseCurrentPopup();
-					}
-				}
-
-				ImGui::PopStyleColor();
-				ImGui::PopStyleColor();
-				ImGui::PopStyleColor();
-			}
-
-			static const char* duplicateScenePopupLabel = "Duplicate scene";
-			const i32 sceneNameMaxCharCount = 256;
-			static char newSceneName[sceneNameMaxCharCount];
-			static char newSceneFileName[sceneNameMaxCharCount];
-			if (ImGui::Button("Duplicate..."))
-			{
-				ImGui::OpenPopup(duplicateScenePopupLabel);
-
-				std::string newSceneNameStr = scene->GetName();
-				newSceneNameStr += " Copy";
-				strcpy(newSceneName, newSceneNameStr.c_str());
-
-				std::string newSceneFileNameStr = StripFileType(scene->GetFileName());
-
-				bool bValidName = false;
-				do
-				{
-					i16 numNumericalChars = 0;
-					i32 numEndingWith = GetNumberEndingWith(newSceneFileNameStr, numNumericalChars);
-					if (numNumericalChars > 0)
-					{
-						u32 charsBeforeNum = (u32)(newSceneFileNameStr.length() - numNumericalChars);
-						newSceneFileNameStr = newSceneFileNameStr.substr(0, charsBeforeNum) +
-							IntToString(numEndingWith + 1, numNumericalChars);
-					}
-					else
-					{
-						newSceneFileNameStr += "_01";
-					}
-
-					std::string filePathFrom = RelativePathToAbsolute(scene->GetDefaultRelativeFilePath());
-					std::string fullNewFilePath = ExtractDirectoryString(filePathFrom);
-					fullNewFilePath += newSceneFileNameStr + ".json";
-					bValidName = !FileExists(fullNewFilePath);
-				} while (!bValidName);
-
-				newSceneFileNameStr += ".json";
-
-				strcpy(newSceneFileName, newSceneFileNameStr.c_str());
-			}
-
-			bool bCloseContextMenu = false;
-			if (ImGui::BeginPopupModal(duplicateScenePopupLabel,
-				NULL,
-				ImGuiWindowFlags_AlwaysAutoResize))
-			{
-
-				bool bDuplicateScene = ImGui::InputText("Name##duplicate-scene-name",
-					newSceneName,
-					sceneNameMaxCharCount,
-					ImGuiInputTextFlags_EnterReturnsTrue);
-
-				bDuplicateScene |= ImGui::InputText("File name##duplicate-scene-file-path",
-					newSceneFileName,
-					sceneNameMaxCharCount,
-					ImGuiInputTextFlags_EnterReturnsTrue);
-
-				bDuplicateScene |= ImGui::Button("Duplicate");
-
-				bool bValidInput = true;
-
-				if (strlen(newSceneName) == 0 ||
-					strlen(newSceneFileName) == 0 ||
-					!EndsWith(newSceneFileName, ".json"))
-				{
-					bValidInput = false;
-				}
-
-				if (bDuplicateScene && bValidInput)
-				{
-					std::string filePathFrom = RelativePathToAbsolute(scene->GetDefaultRelativeFilePath());
-					std::string filePathTo = ExtractDirectoryString(filePathFrom) + newSceneFileName;
-
-					if (FileExists(filePathTo))
-					{
-						PrintError("Attempting to duplicate scene onto already existing file name!\n");
-					}
-					else
-					{
-						if (Platform::CopyFile(filePathFrom, filePathTo))
-						{
-							BaseScene* newScene = new BaseScene(newSceneFileName);
-							AddScene(newScene);
-							SetCurrentScene(newScene);
-
-							InitializeCurrentScene();
-							PostInitializeCurrentScene();
-							newScene->SetName(newSceneName);
-
-							CurrentScene()->SerializeToFile(true);
-
-							bCloseContextMenu = true;
-
-							ImGui::CloseCurrentPopup();
-						}
-						else
-						{
-							PrintError("Failed to copy scene's file to %s\n", newSceneFileName);
-						}
-					}
-				}
-
-				ImGui::SameLine();
-
-				if (ImGui::Button("Cancel"))
-				{
-					ImGui::CloseCurrentPopup();
-				}
-
-				ImGui::EndPopup();
-			}
-
-			ImGui::SameLine();
-
-			if (ImGui::Button("Open in explorer"))
-			{
-				const std::string directory = RelativePathToAbsolute(ExtractDirectoryString(currentScene->GetRelativeFilePath()));
-				Platform::OpenExplorer(directory);
-			}
-
-			ImGui::SameLine();
-
-			const char* deleteScenePopupID = "Delete scene";
-
-			ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
-			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
-			ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
-
-			if (ImGui::Button("Delete scene..."))
-			{
-				ImGui::OpenPopup(deleteScenePopupID);
-			}
-
-			ImGui::PopStyleColor();
-			ImGui::PopStyleColor();
-			ImGui::PopStyleColor();
-
-			if (ImGui::BeginPopupModal(deleteScenePopupID, NULL, ImGuiWindowFlags_AlwaysAutoResize))
-			{
-				static std::string sceneName = CurrentScene()->GetName();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, g_WarningTextColor);
-				std::string textStr = "Are you sure you want to permanently delete " + sceneName + "? (both the default & saved files)";
-				ImGui::Text("%s", textStr.c_str());
-				ImGui::PopStyleColor();
-
-				ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
-				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
-				ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
-				if (ImGui::Button("Delete"))
-				{
-					DeleteScene(scene);
-
-					ImGui::CloseCurrentPopup();
-
-					bCloseContextMenu = true;
-				}
-				ImGui::PopStyleColor();
-				ImGui::PopStyleColor();
-				ImGui::PopStyleColor();
-
-				ImGui::SameLine();
-
-				if (ImGui::Button("Cancel"))
-				{
-					ImGui::CloseCurrentPopup();
-				}
-
-				ImGui::EndPopup();
-			}
-
-			if (bCloseContextMenu)
-			{
-				ImGui::CloseCurrentPopup();
-			}
-
-			ImGui::EndPopup();
-		}
-	}
-
 	u32 SceneManager::CurrentSceneIndex() const
 	{
 		return m_CurrentSceneIndex;
@@ -877,6 +566,44 @@ namespace flex
 		assert(index < (i32)m_Scenes.size());
 
 		return m_Scenes[index];
+	}
+
+	bool SceneManager::DuplicateScene(BaseScene* scene, const std::string& newSceneFileName, const std::string& newSceneName)
+	{
+		bool bResult = false;
+
+		std::string filePathFrom = RelativePathToAbsolute(scene->GetDefaultRelativeFilePath());
+		std::string filePathTo = ExtractDirectoryString(filePathFrom) + newSceneFileName;
+
+		if (FileExists(filePathTo))
+		{
+			PrintError("Attempting to duplicate scene onto already existing file name!\n");
+		}
+		else
+		{
+			if (Platform::CopyFile(filePathFrom, filePathTo))
+			{
+				BaseScene* newScene = new BaseScene(newSceneFileName);
+				AddScene(newScene);
+				SetCurrentScene(newScene);
+
+				InitializeCurrentScene();
+				PostInitializeCurrentScene();
+				newScene->SetName(newSceneName);
+
+				CurrentScene()->SerializeToFile(true);
+
+				bResult = true;
+
+				ImGui::CloseCurrentPopup();
+			}
+			else
+			{
+				PrintError("Failed to copy scene's file to %s\n", newSceneFileName.c_str());
+			}
+		}
+
+		return bResult;
 	}
 
 	void SceneManager::DestroyAllScenes()
