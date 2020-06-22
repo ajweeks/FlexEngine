@@ -461,6 +461,8 @@ namespace flex
 		{
 			AsyncVulkanShaderCompiler(bool bForceRecompile);
 
+			static void ClearShaderHash(const std::string& shaderName);
+
 			bool TickStatus();
 
 			ms startTime = 0.0f;

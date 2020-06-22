@@ -2653,6 +2653,39 @@ namespace flex
 			}
 		}
 
+		void AsyncVulkanShaderCompiler::ClearShaderHash(const std::string& shaderName)
+		{
+			if (FileExists(s_ChecksumFilePath))
+			{
+				std::string fileContents;
+				if (ReadFile(s_ChecksumFilePath, fileContents, false))
+				{
+					std::string searchStr = "vk_" + shaderName + '.';
+					size_t index = 0;
+					do
+					{
+						index = fileContents.find(searchStr, index);
+						if (index != std::string::npos)
+						{
+							size_t prevNewLine = fileContents.rfind('\n', index);
+							size_t nextNewLine = fileContents.find('\n', index);
+							if (prevNewLine == std::string::npos)
+							{
+								prevNewLine = 0;
+							}
+							if (nextNewLine == std::string::npos)
+							{
+								nextNewLine = fileContents.size() - 1;
+							}
+							fileContents = fileContents.substr(0, prevNewLine + 1) + fileContents.substr(nextNewLine + 1);
+						}
+					} while (index != std::string::npos);
+
+					WriteFile(s_ChecksumFilePathAbs, fileContents, false);
+				}
+			}
+		}
+
 		shaderc_shader_kind AsyncVulkanShaderCompiler::FilePathToShaderKind(const std::string& fileSuffix)
 		{
 			if (fileSuffix.compare("vert") == 0) return shaderc_vertex_shader;
