@@ -2380,11 +2380,16 @@ namespace flex
 					const i32 MAX_NAME_LEN = 128;
 					static i32 selectedMaterialIndexShort = 0; // Index into shortened array
 					static MaterialID selectedMaterialID = 0;
-					while (!m_Materials.at(selectedMaterialID).material.visibleInEditor &&
-						selectedMaterialID < m_Materials.size() - 1)
+
+					// Skip by any editor materials in case m_bShowEditorMaterials was set to false while we had one selected
+					if (!m_bShowEditorMaterials)
 					{
-						++selectedMaterialID;
+						while (!m_Materials.at(selectedMaterialID).material.visibleInEditor && selectedMaterialID < m_Materials.size() - 1)
+						{
+							++selectedMaterialID;
+						}
 					}
+
 					static std::string matName = "";
 					static i32 selectedShaderIndex = 0;
 					// Texture index values of 0 represent no texture, 1 = first index into textures array and so on
@@ -2510,6 +2515,8 @@ namespace flex
 					ImGui::Columns(2);
 					ImGui::SetColumnWidth(0, 240.0f);
 
+					ImGui::ColorEdit3("Colour multiplier", &mat.material.colorMultiplier.x, ImGuiColorEditFlags_Float | ImGuiColorEditFlags_PickerHueWheel);
+
 					ImGui::ColorEdit3("Albedo", &mat.material.constAlbedo.x, ImGuiColorEditFlags_Float | ImGuiColorEditFlags_PickerHueWheel);
 
 					if (mat.material.enableMetallicSampler)
@@ -2533,6 +2540,10 @@ namespace flex
 					}
 
 					ImGui::DragFloat("Texture scale", &mat.material.textureScale, 0.1f);
+
+					ImGui::Checkbox("Dynamic", &mat.material.bDynamic);
+					ImGui::Checkbox("Persistent", &mat.material.persistent);
+					ImGui::Checkbox("Visible in editor", &mat.material.visibleInEditor);
 
 					ImGui::NextColumn();
 
@@ -2578,7 +2589,7 @@ namespace flex
 						for (i32 i = 0; i < (i32)m_Materials.size(); ++i)
 						{
 							auto matIter = m_Materials.find(i);
-							if (matIter == m_Materials.end() || !matIter->second.material.visibleInEditor)
+							if (matIter == m_Materials.end() || (!m_bShowEditorMaterials && !matIter->second.material.visibleInEditor))
 							{
 								continue;
 							}
@@ -2586,6 +2597,12 @@ namespace flex
 							VulkanMaterial& material = matIter->second;
 
 							bool bSelected = (matShortIndex == selectedMaterialIndexShort);
+							const bool bWasMatVisibleInEditor = material.material.visibleInEditor;
+							if (!bWasMatVisibleInEditor)
+							{
+								ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+							}
+
 							if (ImGui::Selectable(material.material.name.c_str(), &bSelected))
 							{
 								if (selectedMaterialIndexShort != matShortIndex)
@@ -2597,6 +2614,15 @@ namespace flex
 								}
 							}
 
+							if (!bWasMatVisibleInEditor)
+							{
+								ImGui::PopStyleColor();
+							}
+
+							std::string renamePopupWindowStr = "Rename material##popup" + std::to_string(i);
+							static const u32 bufSize = 256;
+							static char newNameBuf[bufSize];
+							bool bOpenRename = false;
 							if (ImGui::BeginPopupContextItem())
 							{
 								if (ImGui::Button("Duplicate"))
@@ -2616,6 +2642,49 @@ namespace flex
 									g_SceneManager->CurrentScene()->AddMaterialID(newMaterialID);
 
 									ImGui::CloseCurrentPopup();
+								}
+								if (ImGui::Button("Rename"))
+								{
+									bOpenRename = true;
+								}
+
+								ImGui::EndPopup();
+							}
+
+							if (bOpenRename)
+							{
+								ImGui::OpenPopup(renamePopupWindowStr.c_str());
+								strcpy(newNameBuf, material.material.name.c_str());
+							}
+
+							if (ImGui::BeginPopupModal(renamePopupWindowStr.c_str(), NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize))
+							{
+								bool bRename = false;
+
+								if (ImGui::InputText("Material name", newNameBuf, bufSize, ImGuiInputTextFlags_EnterReturnsTrue))
+								{
+									bRename = true;
+									ImGui::CloseCurrentPopup();
+								}
+
+								if (ImGui::Button("Rename"))
+								{
+									bRename = true;
+									ImGui::CloseCurrentPopup();
+								}
+
+								ImGui::SameLine();
+
+								if (ImGui::Button("Cancel"))
+								{
+									ImGui::CloseCurrentPopup();
+								}
+
+								if (bRename)
+								{
+									newNameBuf[bufSize - 1] = '\0';
+									material.material.name = std::string(newNameBuf);
+									bMaterialSelectionChanged = true;
 								}
 
 								ImGui::EndPopup();
@@ -2730,6 +2799,54 @@ namespace flex
 					ImGui::PopStyleColor();
 					ImGui::PopStyleColor();
 					ImGui::PopStyleColor();
+
+					ImGui::Checkbox("Show editor materials", &m_bShowEditorMaterials);
+				}
+
+				if (ImGui::CollapsingHeader("Shaders"))
+				{
+					static u32 selectedShaderIndex = 0;
+
+					if (ImGui::BeginChild("Shader list", ImVec2(0, 120), true))
+					{
+						for (u32 i = 0; i < (u32)m_Shaders.size(); ++i)
+						{
+							VulkanShader& shader = m_Shaders[i];
+							bool bSelected = selectedShaderIndex == i;
+							if (ImGui::Selectable(shader.shader->name.c_str(), &bSelected))
+							{
+								if (bSelected)
+								{
+									selectedShaderIndex = i;
+								}
+							}
+						}
+
+						ImGui::EndChild();
+					}
+
+					VulkanShader& shader = m_Shaders[selectedShaderIndex];
+
+					ImGui::Text(shader.shader->name.c_str());
+
+					ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+					ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+
+					ImGui::Checkbox("Enable depth write", &shader.shader->bDepthWriteEnable);
+					ImGui::SameLine();
+					ImGui::Checkbox("Translucent", &shader.shader->bTranslucent);
+					ImGui::Checkbox("Compute", &shader.shader->bCompute);
+
+					ImGui::PopStyleColor();
+					ImGui::PopItemFlag();
+
+#if COMPILE_SHADER_COMPILER
+					if (ImGui::Button("Recompile"))
+					{
+						AsyncVulkanShaderCompiler::ClearShaderHash(shader.shader->name);
+						RecompileShaders(false);
+					}
+#endif
 				}
 
 				if (ImGui::CollapsingHeader("Textures"))

@@ -2553,7 +2553,7 @@ namespace flex
 		spriteMatSSCreateInfo.name = "Sprite SS material";
 		spriteMatSSCreateInfo.shaderName = "sprite";
 		spriteMatSSCreateInfo.persistent = true;
-		spriteMatSSCreateInfo.visibleInEditor = true;
+		spriteMatSSCreateInfo.visibleInEditor = false;
 		spriteMatSSCreateInfo.enableAlbedoSampler = true;
 		spriteMatSSCreateInfo.bDynamic = false;
 		m_SpriteMatSSID = InitializeMaterial(&spriteMatSSCreateInfo);
@@ -2562,7 +2562,7 @@ namespace flex
 		spriteMatWSCreateInfo.name = "Sprite WS material";
 		spriteMatWSCreateInfo.shaderName = "sprite";
 		spriteMatWSCreateInfo.persistent = true;
-		spriteMatWSCreateInfo.visibleInEditor = true;
+		spriteMatWSCreateInfo.visibleInEditor = false;
 		spriteMatWSCreateInfo.enableAlbedoSampler = true;
 		spriteMatWSCreateInfo.bDynamic = false;
 		m_SpriteMatWSID = InitializeMaterial(&spriteMatWSCreateInfo);
@@ -2571,7 +2571,7 @@ namespace flex
 		spriteArrMatCreateInfo.name = "Sprite Texture Array material";
 		spriteArrMatCreateInfo.shaderName = "sprite_arr";
 		spriteArrMatCreateInfo.persistent = true;
-		spriteArrMatCreateInfo.visibleInEditor = true;
+		spriteArrMatCreateInfo.visibleInEditor = false;
 		spriteArrMatCreateInfo.enableAlbedoSampler = true;
 		spriteArrMatCreateInfo.bDynamic = false;
 		m_SpriteArrMatID = InitializeMaterial(&spriteArrMatCreateInfo);
