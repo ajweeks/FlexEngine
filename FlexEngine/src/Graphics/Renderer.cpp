@@ -2550,7 +2550,7 @@ namespace flex
 	void Renderer::InitializeMaterials()
 	{
 		MaterialCreateInfo spriteMatSSCreateInfo = {};
-		spriteMatSSCreateInfo.name = "Sprite material";
+		spriteMatSSCreateInfo.name = "Sprite SS material";
 		spriteMatSSCreateInfo.shaderName = "sprite";
 		spriteMatSSCreateInfo.persistent = true;
 		spriteMatSSCreateInfo.visibleInEditor = true;
@@ -2559,7 +2559,7 @@ namespace flex
 		m_SpriteMatSSID = InitializeMaterial(&spriteMatSSCreateInfo);
 
 		MaterialCreateInfo spriteMatWSCreateInfo = {};
-		spriteMatWSCreateInfo.name = "Sprite material";
+		spriteMatWSCreateInfo.name = "Sprite WS material";
 		spriteMatWSCreateInfo.shaderName = "sprite";
 		spriteMatWSCreateInfo.persistent = true;
 		spriteMatWSCreateInfo.visibleInEditor = true;

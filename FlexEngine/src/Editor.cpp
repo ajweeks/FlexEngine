@@ -52,14 +52,17 @@ namespace flex
 		// Transform gizmo materials
 		{
 			MaterialCreateInfo matCreateInfo = {};
-			matCreateInfo.name = "transform";
 			matCreateInfo.shaderName = "color";
 			matCreateInfo.constAlbedo = VEC3_ONE;
 			matCreateInfo.persistent = true;
 			matCreateInfo.visibleInEditor = false;
+			matCreateInfo.name = "transform x";
 			m_TransformGizmoMatXID = g_Renderer->InitializeMaterial(&matCreateInfo);
+			matCreateInfo.name = "transform y";
 			m_TransformGizmoMatYID = g_Renderer->InitializeMaterial(&matCreateInfo);
+			matCreateInfo.name = "transform z";
 			m_TransformGizmoMatZID = g_Renderer->InitializeMaterial(&matCreateInfo);
+			matCreateInfo.name = "transform all";
 			m_TransformGizmoMatAllID = g_Renderer->InitializeMaterial(&matCreateInfo);
 		}
 
