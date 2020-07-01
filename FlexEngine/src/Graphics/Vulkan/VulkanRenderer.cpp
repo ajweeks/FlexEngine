@@ -2002,21 +2002,25 @@ namespace flex
 		{
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
 
-			VulkanMaterial& mat = m_Materials.at(renderObject->materialID);
-			VertexIndexBufferPair* vertexIndexBufferPair = m_DynamicVertexIndexBufferPairs[mat.material.dynamicVertexIndexBufferIndex].second;
-			VulkanBuffer* vertexBuffer = vertexIndexBufferPair->vertexBuffer;
-			VulkanBuffer* indexBuffer = vertexIndexBufferPair->indexBuffer;
-
-			if (renderObject->dynamicVertexBufferOffset != u32_max)
+			if (renderObject->dynamicVertexBufferOffset != InvalidBufferID ||
+				renderObject->dynamicIndexBufferOffset != InvalidBufferID)
 			{
-				vertexBuffer->Free(renderObject->dynamicVertexBufferOffset);
-				renderObject->dynamicVertexBufferOffset = u32_max;
-			}
+				VulkanMaterial& mat = m_Materials.at(renderObject->materialID);
+				VertexIndexBufferPair* vertexIndexBufferPair = m_DynamicVertexIndexBufferPairs[mat.material.dynamicVertexIndexBufferIndex].second;
+				VulkanBuffer* vertexBuffer = vertexIndexBufferPair->vertexBuffer;
+				VulkanBuffer* indexBuffer = vertexIndexBufferPair->indexBuffer;
 
-			if (renderObject->dynamicIndexBufferOffset != u32_max)
-			{
-				indexBuffer->Free(renderObject->dynamicIndexBufferOffset);
-				renderObject->dynamicIndexBufferOffset = u32_max;
+				if (renderObject->dynamicVertexBufferOffset != InvalidBufferID)
+				{
+					vertexBuffer->Free(renderObject->dynamicVertexBufferOffset);
+					renderObject->dynamicVertexBufferOffset = InvalidBufferID;
+				}
+
+				if (renderObject->dynamicIndexBufferOffset != InvalidBufferID)
+				{
+					indexBuffer->Free(renderObject->dynamicIndexBufferOffset);
+					renderObject->dynamicIndexBufferOffset = InvalidBufferID;
+				}
 			}
 		}
 
@@ -2029,12 +2033,12 @@ namespace flex
 			VulkanBuffer* vertexBuffer = vertexIndexBufferPair->vertexBuffer;
 			VulkanBuffer* indexBuffer = vertexIndexBufferPair->indexBuffer;
 
-			if (renderObject->dynamicVertexBufferOffset != u32_max)
+			if (renderObject->dynamicVertexBufferOffset != InvalidBufferID)
 			{
 				vertexBuffer->Shrink(minUnused);
 			}
 
-			if (renderObject->dynamicIndexBufferOffset != u32_max)
+			if (renderObject->dynamicIndexBufferOffset != InvalidBufferID)
 			{
 				indexBuffer->Shrink(minUnused);
 			}

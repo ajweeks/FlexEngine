@@ -601,8 +601,8 @@ namespace flex
 			u32 dynamicUBOOffset = 0;
 			u32 dynamicShadowUBOOffset = 0;
 
-			u64 dynamicVertexBufferOffset = u64_max;
-			u64 dynamicIndexBufferOffset = u64_max;
+			u64 dynamicVertexBufferOffset = InvalidBufferID;
+			u64 dynamicIndexBufferOffset = InvalidBufferID;
 
 			VDeleter<VkPipelineLayout> pipelineLayout;
 			VDeleter<VkPipeline> graphicsPipeline;

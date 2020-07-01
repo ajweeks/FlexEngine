@@ -77,6 +77,7 @@ namespace flex
 	static constexpr auto InvalidVariableID = ((VariableID)u32_max);
 	static constexpr auto InvalidParticleSystemID = ((ParticleSystemID)u32_max);
 	static constexpr auto InvalidThreadHandle = ((ThreadHandle)u64_max);
+	static constexpr auto InvalidBufferID = u64_max;
 	static constexpr auto InvalidID = u32_max;
 
 	//template<bool> struct StaticAssert;
