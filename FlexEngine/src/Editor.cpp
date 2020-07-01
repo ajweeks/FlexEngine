@@ -119,7 +119,6 @@ namespace flex
 			}
 		}
 
-
 #if 0
 		// TEMP
 		for (u32 i = 0; i < 128; ++i)
@@ -133,9 +132,6 @@ namespace flex
 				btVector3(1.0f, 0.0f, sin(g_SecElapsedSinceProgramStart * 5.0f) * 0.5f + 0.5f));
 		}
 #endif
-
-
-
 
 		FadeOutHeadOnGizmos();
 
@@ -155,6 +151,15 @@ namespace flex
 		else
 		{
 			m_TransformGizmo->SetVisible(false);
+		}
+	}
+
+	void Editor::LateUpdate()
+	{
+		bool bControlDown = g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_CONTROL);
+		if (bControlDown && g_InputManager->GetKeyDown(KeyCode::KEY_N))
+		{
+			g_SceneManager->OpenNewSceneWindow();
 		}
 	}
 

@@ -7,8 +7,9 @@
 #include "FlexEngine.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
-#include "Scene/BaseScene.hpp"
+#include "InputManager.hpp"
 #include "Platform/Platform.hpp"
+#include "Scene/BaseScene.hpp"
 
 namespace flex
 {
@@ -429,6 +430,8 @@ namespace flex
 
 	void SceneManager::DrawImGuiObjects()
 	{
+		static const char* newSceneModalWindowID = "New scene";
+
 		if (ImGui::TreeNode("Scenes"))
 		{
 			if (ImGui::Button("<"))
@@ -465,67 +468,48 @@ namespace flex
 
 			currentScene->DrawImGuiObjects();
 
+			ImGui::Separator();
+
+			static ImGuiTextFilter sceneFilter;
+			sceneFilter.Draw("##scene-filter");
+
+			ImGui::SameLine();
+			if (ImGui::Button("x"))
+			{
+				sceneFilter.Clear();
+			}
+
 			i32 sceneItemWidth = 240;
 			if (ImGui::BeginChild("Scenes", ImVec2((real)sceneItemWidth, 120), true, ImGuiWindowFlags_NoResize))
 			{
 				for (i32 i = 0; i < (i32)m_Scenes.size(); ++i)
 				{
-					bool bSceneSelected = (i == (i32)m_CurrentSceneIndex);
 					BaseScene* scene = GetSceneAtIndex(i);
 					std::string sceneFileName = scene->GetFileName();
-					if (ImGui::Selectable(sceneFileName.c_str(), &bSceneSelected, 0, ImVec2((real)sceneItemWidth, 0)))
+					if (sceneFilter.PassFilter(sceneFileName.c_str()))
 					{
-						if (i != (i32)m_CurrentSceneIndex)
+						bool bSceneSelected = (i == (i32)m_CurrentSceneIndex);
+						if (ImGui::Selectable(sceneFileName.c_str(), &bSceneSelected, 0, ImVec2((real)sceneItemWidth, 0)))
 						{
-							if (SetCurrentScene(i))
+							if (i != (i32)m_CurrentSceneIndex)
 							{
-								InitializeCurrentScene();
-								PostInitializeCurrentScene();
+								if (SetCurrentScene(i))
+								{
+									InitializeCurrentScene();
+									PostInitializeCurrentScene();
+								}
 							}
 						}
-					}
 
-					scene->DoSceneContextMenu();
+						scene->DoSceneContextMenu();
+					}
 				}
 			}
 			ImGui::EndChild();
 
 			if (ImGui::Button("New scene..."))
 			{
-				ImGui::OpenPopup("New scene");
-			}
-
-			if (ImGui::BeginPopupModal("New scene", NULL, ImGuiWindowFlags_AlwaysAutoResize))
-			{
-				static std::string newSceneName = "scene_" + IntToString(GetSceneCount(), 2);
-
-				const size_t maxStrLen = 256;
-				newSceneName.resize(maxStrLen);
-				bool bCreate = ImGui::InputText("Scene name",
-					(char*)newSceneName.data(),
-					maxStrLen,
-					ImGuiInputTextFlags_EnterReturnsTrue);
-
-				bCreate |= ImGui::Button("Create");
-
-				if (bCreate)
-				{
-					// Remove trailing '\0' characters
-					newSceneName = std::string(newSceneName.c_str());
-					newSceneName = MakeSceneNameUnique(newSceneName);
-					CreateNewScene(newSceneName, true);
-
-					ImGui::CloseCurrentPopup();
-				}
-
-				ImGui::SameLine();
-
-				if (ImGui::Button("Cancel"))
-				{
-					ImGui::CloseCurrentPopup();
-				}
-
-				ImGui::EndPopup();
+				ImGui::OpenPopup(newSceneModalWindowID);
 			}
 
 			ImGui::SameLine();
@@ -538,6 +522,55 @@ namespace flex
 
 			ImGui::TreePop();
 		}
+
+		if (m_bOpenNewSceneWindow)
+		{
+			m_bOpenNewSceneWindow = false;
+			ImGui::OpenPopup(newSceneModalWindowID);
+		}
+
+		if (ImGui::BeginPopupModal(newSceneModalWindowID, NULL, ImGuiWindowFlags_AlwaysAutoResize))
+		{
+			static std::string newSceneName = "scene_" + IntToString(GetSceneCount(), 2);
+
+			const size_t maxStrLen = 256;
+			newSceneName.resize(maxStrLen);
+			bool bCreate = ImGui::InputText("Scene name",
+				(char*)newSceneName.data(),
+				maxStrLen,
+				ImGuiInputTextFlags_EnterReturnsTrue);
+
+			bCreate |= ImGui::Button("Create");
+
+			if (bCreate)
+			{
+				// Remove trailing '\0' characters
+				newSceneName = std::string(newSceneName.c_str());
+				newSceneName = MakeSceneNameUnique(newSceneName);
+				CreateNewScene(newSceneName, true);
+
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::SameLine();
+
+			if (ImGui::Button("Cancel"))
+			{
+				ImGui::CloseCurrentPopup();
+			}
+
+			if (g_InputManager->GetKeyPressed(KeyCode::KEY_ESCAPE, true))
+			{
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::EndPopup();
+		}
+	}
+
+	void SceneManager::OpenNewSceneWindow()
+	{
+		m_bOpenNewSceneWindow = true;
 	}
 
 	u32 SceneManager::CurrentSceneIndex() const

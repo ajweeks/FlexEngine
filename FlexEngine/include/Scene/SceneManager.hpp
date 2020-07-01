@@ -48,6 +48,8 @@ namespace flex
 
 		void DestroyAllScenes();
 
+		void OpenNewSceneWindow();
+
 	private:
 		std::string MakeSceneNameUnique(const std::string& originalName);
 		bool SceneFileExists(const std::string& fileName) const;
@@ -58,6 +60,8 @@ namespace flex
 
 		std::string m_SavedDirStr;
 		std::string m_DefaultDirStr;
+
+		bool m_bOpenNewSceneWindow = false;
 
 		SceneManager(const SceneManager&) = delete;
 		SceneManager& operator=(const SceneManager&) = delete;

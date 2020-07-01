@@ -16,6 +16,7 @@ namespace flex
 		void PostInitialize();
 		void Destroy();
 		void EarlyUpdate();
+		void LateUpdate();
 		void PreSceneChange();
 		void OnSceneChanged();
 

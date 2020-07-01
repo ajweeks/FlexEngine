@@ -74,7 +74,6 @@ namespace flex
 	std::string FlexEngine::s_CurrentWorkingDirectory;
 	std::vector<AudioSourceID> FlexEngine::s_AudioSourceIDs;
 
-
 	// Globals declared in stdafx.hpp
 	class Window* g_Window = nullptr;
 	class CameraManager* g_CameraManager = nullptr;
@@ -633,6 +632,8 @@ namespace flex
 
 				g_Window->Update();
 
+				g_Editor->LateUpdate();
+
 				if (bSimulateFrame)
 				{
 					g_SceneManager->CurrentScene()->LateUpdate();
@@ -907,7 +908,7 @@ namespace flex
 #if COMPILE_RENDERDOC_API
 				ImGui::MenuItem("Render Doc Captures", NULL, &m_bShowingRenderDocWindow);
 #endif
-				ImGui::MenuItem("Demo Window", NULL, &m_bDemoWindowShowing);
+				ImGui::MenuItem("ImGui Demo Window", NULL, &m_bDemoWindowShowing);
 
 				ImGui::EndMenu();
 			}
