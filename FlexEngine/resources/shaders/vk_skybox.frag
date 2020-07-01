@@ -38,14 +38,19 @@ void main()
 	//vec3 mid = vec3(0.06, 0.08, 0.12); // pale blue
 	//vec3 btm = vec3(0.07, 0.07, 0.14); // dark-blue
 
-	float h = sign(dir.y)*pow(abs(dir.y), 0.5) + n;
+	float h = sign(dir.y) * pow(abs(dir.y), 0.3) + n;
 
-	float tw = max(h, 0.0);
-	float mw = pow(1.0-abs(dir.y), 10.0);
-	float bw = 1.0-tw-mw;
+	float tw = 1.0-max(h, 0.0);
+	// float mw = pow(1.0-abs(dir.y), 10.0);
+	float bw = max(-h, 0.0);
+
+	float w0 = tw;
+	float w1 = bw;
+	float w2 = h > 0 ? 0.0 : 1.0;
 
 	fragmentColor = vec4(clamp(
-		(uboConstant.skyboxData.colourTop.xyz * tw) +
-		(uboConstant.skyboxData.colourMid.xyz * mw) +
-		(uboConstant.skyboxData.colourBtm.xyz * bw), 0, 1), 1.0);
+		mix(
+			mix(uboConstant.skyboxData.colourTop.xyz, uboConstant.skyboxData.colourMid.xyz, w0),
+			mix(uboConstant.skyboxData.colourMid.xyz, uboConstant.skyboxData.colourBtm.xyz, w1), w2),
+			 0.0, 1.0), 1.0);
 }

@@ -2,6 +2,12 @@
 	"version" : 3,
 	"name" : "scene_particles",
 	"spawn player" : false,
+	"skybox data" : 
+	{
+		"top colour" : "0.64, 0.88, 0.94, 0.00",
+		"mid colour" : "0.43, 0.75, 0.91, 0.00",
+		"btm colour" : "0.37, 0.37, 0.37, 0.00"
+	},
 	"camera" : 
 	{
 		"type" : "debug",
@@ -15,9 +21,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-151.291, 29.108, -65.200",
-			"pitch" : -0.174895,
-			"yaw" : 0.536819
+			"position" : "-136.998, 27.015, -59.352",
+			"pitch" : -0.053752,
+			"yaw" : 0.893817
 		}
 	},
 	"objects" : 
@@ -147,8 +153,8 @@
 				"enabled" : true,
 				"data" : 
 				{
-					"color0" : "0,0,0,0",
-					"color1" : "0,0,0,0",
+					"color0" : "0.00, 0.00, 0.00, 0.00",
+					"color1" : "0.00, 0.00, 0.00, 0.00",
 					"speed" : 1.667000,
 					"particle count" : 51541
 				}
