@@ -676,6 +676,11 @@ namespace flex
 					ImGui::CloseCurrentPopup();
 				}
 
+				if (g_InputManager->GetKeyPressed(KeyCode::KEY_ESCAPE, true))
+				{
+					ImGui::CloseCurrentPopup();
+				}
+
 				ImGui::EndPopup();
 			}
 
@@ -733,10 +738,20 @@ namespace flex
 					ImGui::CloseCurrentPopup();
 				}
 
+				if (g_InputManager->GetKeyPressed(KeyCode::KEY_ESCAPE, true))
+				{
+					ImGui::CloseCurrentPopup();
+				}
+
 				ImGui::EndPopup();
 			}
 
 			if (bCloseContextMenu)
+			{
+				ImGui::CloseCurrentPopup();
+			}
+
+			if (g_InputManager->GetKeyPressed(KeyCode::KEY_ESCAPE, true))
 			{
 				ImGui::CloseCurrentPopup();
 			}

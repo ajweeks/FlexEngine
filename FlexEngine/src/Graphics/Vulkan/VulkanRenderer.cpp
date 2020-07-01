@@ -2762,6 +2762,16 @@ namespace flex
 									bMaterialSelectionChanged = true;
 								}
 
+								if (g_InputManager->GetKeyPressed(KeyCode::KEY_ESCAPE, true))
+								{
+									ImGui::CloseCurrentPopup();
+								}
+
+								if (g_InputManager->GetKeyPressed(KeyCode::KEY_ESCAPE, true))
+								{
+									ImGui::CloseCurrentPopup();
+								}
+
 								ImGui::EndPopup();
 							}
 
@@ -2853,6 +2863,11 @@ namespace flex
 						ImGui::SameLine();
 
 						if (ImGui::Button("Cancel"))
+						{
+							ImGui::CloseCurrentPopup();
+						}
+
+						if (g_InputManager->GetKeyPressed(KeyCode::KEY_ESCAPE, true))
 						{
 							ImGui::CloseCurrentPopup();
 						}
@@ -3190,6 +3205,11 @@ namespace flex
 						if (ImGui::Button("Ok"))
 						{
 							bShowErrorDialogue = false;
+							ImGui::CloseCurrentPopup();
+						}
+
+						if (g_InputManager->GetKeyPressed(KeyCode::KEY_ESCAPE, true))
+						{
 							ImGui::CloseCurrentPopup();
 						}
 
