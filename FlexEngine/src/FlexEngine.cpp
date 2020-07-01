@@ -1309,6 +1309,12 @@ namespace flex
 					AudioManager::SetMasterGain(masterGain);
 				}
 
+				bool bMuted;
+				if (rootObject.SetBoolChecked("muted", bMuted))
+				{
+					AudioManager::SetMuted(bMuted);
+				}
+
 				rootObject.SetBoolChecked("install shader directory watch", m_bInstallShaderDirectoryWatch);
 
 				return true;
@@ -1339,8 +1345,8 @@ namespace flex
 
 		rootObject.fields.emplace_back("render imgui", JSONValue(m_bRenderImGui));
 
-		real masterGain = AudioManager::GetMasterGain();
-		rootObject.fields.emplace_back("master gain", JSONValue(masterGain));
+		rootObject.fields.emplace_back("master gain", JSONValue(AudioManager::GetMasterGain()));
+		rootObject.fields.emplace_back("muted", JSONValue(AudioManager::IsMuted()));
 
 		rootObject.fields.emplace_back("install shader directory watch", JSONValue(m_bInstallShaderDirectoryWatch));
 

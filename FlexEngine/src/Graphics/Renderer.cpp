@@ -17,6 +17,7 @@ IGNORE_WARNINGS_PUSH
 #include <freetype/fterrors.h>
 IGNORE_WARNINGS_POP
 
+#include "Audio/AudioManager.hpp"
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "Editor.hpp"
@@ -2339,6 +2340,13 @@ namespace flex
 			real height = GetStringHeight(textCaches[textCaches.size() - 1], m_CurrentFont) / (real)g_Window->GetSize().y;
 			// TODO: Allow specifying text pos in different units (absolute, relative, ...)
 			DrawStringSS("PAUSED", color, AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -(height + 0.09f)), 0.0f, 0.6f);
+		}
+
+		if (AudioManager::IsMuted())
+		{
+			const std::vector<TextCache>& textCaches = m_CurrentFont->GetTextCaches();
+			real height = GetStringHeight(textCaches[textCaches.size() - 1], m_CurrentFont) / (real)g_Window->GetSize().y;
+			DrawStringSS("Muted", color, AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -(height + 0.09f)), 0.0f, 0.6f);
 		}
 
 #if 0

@@ -13,6 +13,7 @@ IGNORE_WARNINGS_PUSH
 #include <LinearMath/btIDebugDraw.h>
 IGNORE_WARNINGS_POP
 
+#include "Audio/AudioManager.hpp"
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "Cameras/DebugCamera.hpp"
@@ -160,6 +161,11 @@ namespace flex
 		if (bControlDown && g_InputManager->GetKeyDown(KeyCode::KEY_N))
 		{
 			g_SceneManager->OpenNewSceneWindow();
+		}
+
+		if (g_InputManager->GetKeyPressed(KeyCode::KEY_M))
+		{
+			AudioManager::ToggleMuted();
 		}
 	}
 

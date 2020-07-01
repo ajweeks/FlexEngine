@@ -48,6 +48,10 @@ namespace flex
 
 		static bool IsSourcePlaying(AudioSourceID sourceID);
 
+		static void ToggleMuted();
+		static void SetMuted(bool bMuted);
+		static bool IsMuted();
+
 		static void DrawImGuiObjects();
 
 	private:
@@ -60,6 +64,9 @@ namespace flex
 
 		static const i32 NUM_BUFFERS = 32;
 		static ALuint s_Buffers[NUM_BUFFERS];
+
+		static real s_MasterGain;
+		static bool s_Muted;
 
 		struct Source
 		{
