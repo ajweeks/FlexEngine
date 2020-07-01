@@ -1765,7 +1765,6 @@ namespace flex
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
 			m_BaseShaders[shaderID].bDepthWriteEnable = true;
 			m_BaseShaders[shaderID].bTranslucent = false;
-			m_BaseShaders[shaderID].dynamicVertexBufferSize = 32 * 1024 * 1024;
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV |
