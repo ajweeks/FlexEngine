@@ -59,6 +59,8 @@ namespace flex
 
 		// Reserve first ID for beep to play on volume change
 		s_BeepID = AudioManager::AddAudioSource(RESOURCE_LOCATION "audio/wah-wah-02.wav");
+
+		SetMasterGain(0.2f);
 	}
 
 	void AudioManager::Destroy()
