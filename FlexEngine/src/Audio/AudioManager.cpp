@@ -13,6 +13,8 @@ namespace flex
 
 	ALuint AudioManager::s_Buffers[NUM_BUFFERS];
 
+	AudioSourceID AudioManager::s_BeepID = InvalidAudioSourceID;
+
 	void AudioManager::Initialize()
 	{
 		// Retrieve preferred device
@@ -54,6 +56,9 @@ namespace flex
 			DisplayALError("alGenBuffers", error);
 			return;
 		}
+
+		// Reserve first ID for beep to play on volume change
+		s_BeepID = AudioManager::AddAudioSource(RESOURCE_LOCATION "audio/wah-wah-02.wav");
 	}
 
 	void AudioManager::Destroy()
@@ -353,7 +358,13 @@ namespace flex
 			real gain = GetMasterGain();
 			if (ImGui::SliderFloat("Master volume", &gain, 0.0f, 1.0f))
 			{
+
 				SetMasterGain(gain);
+			}
+
+			if (ImGui::IsItemDeactivatedAfterEdit())
+			{
+				PlaySource(s_BeepID, true);
 			}
 
 			ImGui::TreePop();

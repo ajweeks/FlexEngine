@@ -78,6 +78,8 @@ namespace flex
 		static ALCdevice* s_Device;
 		static ALCcontext* s_Context;
 
+		static AudioSourceID s_BeepID;
+
 		AudioManager() = delete;
 		~AudioManager() = delete;
 	};
