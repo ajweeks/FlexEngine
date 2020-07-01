@@ -3302,7 +3302,7 @@ namespace flex
 		matCreateInfo.constMetallic = 0.8f;
 		matCreateInfo.constRoughness = 0.01f;
 		matCreateInfo.bDynamic = true;
-		matCreateInfo.albedoTexturePath = RESOURCE("textures/wave-normals-01.png");
+		matCreateInfo.albedoTexturePath = RESOURCE("textures/wave-n-2.png");
 		matCreateInfo.enableAlbedoSampler = true;
 
 		m_WaveMaterialID = g_Renderer->InitializeMaterial(&matCreateInfo);
@@ -3363,10 +3363,6 @@ namespace flex
 		m_Mesh->LoadFromMemoryDynamic(m_VertexBufferCreateInfo, m_Indices, m_WaveMaterialID, (u32)m_VertexBufferCreateInfo.positions_3D.size());
 	}
 
-	void GerstnerWave::PostInitialize()
-	{
-	}
-
 	void GerstnerWave::Update()
 	{
 		if (!m_bVisible)
@@ -3401,7 +3397,8 @@ namespace flex
 		MeshComponent* meshComponent = m_Mesh->GetSubMeshes()[0];
 		if (!m_Indices.empty())
 		{
-			meshComponent->UpdateProceduralData(m_VertexBufferCreateInfo, m_Indices);
+			meshComponent->UpdateDynamicVertexData(m_VertexBufferCreateInfo, m_Indices);
+			g_Renderer->ShrinkDynamicVertexData(meshComponent->renderID, 0.5f);
 		}
 
 		// Bobber
@@ -3574,6 +3571,8 @@ namespace flex
 			indexCount += 6 * (tessellationLOD->vertCountPerAxis - 1) * (tessellationLOD->vertCountPerAxis - 1);
 		}
 
+		DEBUG_lastUsedVertCount = vertCount;
+
 		// Resize & regenerate index buffer
 		if (m_Indices.size() != indexCount)
 		{
@@ -3609,6 +3608,24 @@ namespace flex
 			m_VertexBufferCreateInfo.normals.resize(vertCount);
 			m_VertexBufferCreateInfo.tangents.resize(vertCount);
 			m_VertexBufferCreateInfo.colors_R32G32B32A32.resize(vertCount);
+		}
+		else
+		{
+			// Shrink vertex buffers once they have > 50% unused space
+			real excess = (real)(m_VertexBufferCreateInfo.positions_3D.size() - vertCount) / m_VertexBufferCreateInfo.positions_3D.size();
+			if (excess > 0.5f)
+			{
+				m_VertexBufferCreateInfo.positions_3D.resize(vertCount);
+				m_VertexBufferCreateInfo.positions_3D.shrink_to_fit();
+				m_VertexBufferCreateInfo.texCoords_UV.resize(vertCount);
+				m_VertexBufferCreateInfo.texCoords_UV.shrink_to_fit();
+				m_VertexBufferCreateInfo.normals.resize(vertCount);
+				m_VertexBufferCreateInfo.normals.shrink_to_fit();
+				m_VertexBufferCreateInfo.tangents.resize(vertCount);
+				m_VertexBufferCreateInfo.tangents.shrink_to_fit();
+				m_VertexBufferCreateInfo.colors_R32G32B32A32.resize(vertCount);
+				m_VertexBufferCreateInfo.colors_R32G32B32A32.shrink_to_fit();
+			}
 		}
 
 		{
@@ -4308,6 +4325,42 @@ namespace flex
 		ImGui::SameLine();
 		ImGui::DragFloat("UAF", &bobberTarget.UAF, 0.01f);
 		ImGui::PopItemWidth();
+
+		// Vertex buffer size
+		{
+			ImGui::NewLine();
+
+			MeshComponent* meshComponent = m_Mesh->GetSubMeshes()[0];
+
+			{
+				char byteCountStr[64];
+				ByteCountToString(byteCountStr, 64, (u32)(m_VertexBufferCreateInfo.positions_3D.size() * sizeof(glm::vec3)));
+
+				char nameBuf[256];
+				sprintf_s(nameBuf, "CPU Vertex buffer size %s", byteCountStr);
+
+				real usage = (real)DEBUG_lastUsedVertCount / meshComponent->GetVertexBufferData()->VertexCount;
+				ImGui::ProgressBar(usage, ImVec2(0, 0), "");
+				ImGui::Text(nameBuf);
+			}
+
+			{
+				u32 gpuSize = meshComponent->GetVertexBufferData()->UsedVertexBufferSize;
+				u32 usedGPUSize = g_Renderer->GetDynamicVertexBufferUsedSize(meshComponent->renderID);
+
+				char byteCountStr[64];
+				ByteCountToString(byteCountStr, 64, gpuSize);
+
+				char nameBuf[256];
+				sprintf_s(nameBuf, "GPU Vertex buffer size %s", byteCountStr);
+
+				real usage = (real)usedGPUSize / gpuSize;
+				ImGui::ProgressBar(usage, ImVec2(0, 0), "");
+				ImGui::Text(nameBuf);
+			}
+
+			ImGui::NewLine();
+		}
 
 		if (ImGui::TreeNode("Sampling LODs"))
 		{

@@ -73,6 +73,8 @@ namespace flex
 
 		VkDeviceSize VulkanBuffer::Alloc(VkDeviceSize size, bool bCanResize)
 		{
+			Unmap();
+
 			const VkDeviceSize errorCode = (VkDeviceSize)-1;
 
 			if (size > m_Size && !bCanResize)
@@ -139,6 +141,8 @@ namespace flex
 
 		VkDeviceSize VulkanBuffer::Realloc(VkDeviceSize offset, VkDeviceSize size, bool bCanResize)
 		{
+			Unmap();
+
 			const VkDeviceSize errorCode = (VkDeviceSize)-1;
 
 			bool bCanResizeInPlace = true;
@@ -180,6 +184,52 @@ namespace flex
 			}
 
 			return Alloc(size, bCanResize);
+		}
+
+		void VulkanBuffer::Free(VkDeviceSize offset)
+		{
+			Unmap();
+
+			for (u32 i = 0; i < (u32)allocations.size(); ++i)
+			{
+				if (allocations[i].offset == offset)
+				{
+					allocations.erase(allocations.begin() + i);
+					break;
+				}
+			}
+		}
+
+		void VulkanBuffer::Shrink(real minUnused /* = 0.0f */)
+		{
+			VkDeviceSize usedSize = 0;
+			for (u32 i = 0; i < (u32)allocations.size(); ++i)
+			{
+				usedSize = glm::max(allocations[i].offset + allocations[i].size, usedSize);
+			}
+
+			VkDeviceSize excessBytes = m_Size - usedSize;
+			real unused = (real)excessBytes / m_Size;
+			if (unused >= minUnused)
+			{
+				VkDeviceSize newSize = usedSize;
+				VkResult result = Create(newSize, m_UsageFlags, m_MemoryPropertyFlags);
+
+				VK_CHECK_RESULT(result);
+			}
+		}
+
+		VkDeviceSize VulkanBuffer::SizeOf(VkDeviceSize offset)
+		{
+			for (u32 i = 0; i < (u32)allocations.size(); ++i)
+			{
+				if (allocations[i].offset == offset)
+				{
+					return allocations[i].size;
+				}
+			}
+
+			return (VkDeviceSize)-1;
 		}
 
 		void VulkanBuffer::UpdateAllocationSize(VkDeviceSize offset, VkDeviceSize newSize)

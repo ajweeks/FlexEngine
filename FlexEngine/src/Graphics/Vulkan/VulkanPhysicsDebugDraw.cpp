@@ -181,7 +181,7 @@ namespace flex
 
 				if (newHash != oldHash)
 				{
-					m_ObjectMesh->GetSubMeshes()[0]->UpdateProceduralData(m_VertexBufferCreateInfo, indexBuffer);
+					m_ObjectMesh->GetSubMeshes()[0]->UpdateDynamicVertexData(m_VertexBufferCreateInfo, indexBuffer);
 				}
 			}
 		}

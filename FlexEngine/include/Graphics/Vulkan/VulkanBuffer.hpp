@@ -36,6 +36,13 @@ namespace flex
 			VkDeviceSize Alloc(VkDeviceSize size, bool bCanResize);
 			// TODO: Add tests
 			VkDeviceSize Realloc(VkDeviceSize offset, VkDeviceSize size, bool bCanResize);
+			// TODO: Add tests
+			void Free(VkDeviceSize offset);
+			// TODO: Add tests
+			void Shrink(real minUnused = 0.0f);
+			// TODO: Add defragment helper
+
+			VkDeviceSize SizeOf(VkDeviceSize offset);
 
 			VulkanDevice* m_Device = nullptr;
 			VDeleter<VkBuffer> m_Buffer;

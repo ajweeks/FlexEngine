@@ -5,6 +5,7 @@
 
 #include "Graphics/Renderer.hpp"
 #include "Graphics/VertexAttribute.hpp"
+#include "Helpers.hpp"
 
 namespace flex
 {
@@ -20,9 +21,11 @@ namespace flex
 		{
 			VertexCount = (u32)createInfo.positions_4D.size();
 		}
+		UsedVertexCount = VertexCount;
 		Attributes = createInfo.attributes;
 		VertexStride = CalculateVertexStride(createInfo.attributes);
 		VertexBufferSize = VertexCount * VertexStride;
+		UsedVertexBufferSize = VertexBufferSize;
 
 		assert(vertexData == nullptr);
 		vertexData = (real*)malloc(VertexBufferSize);
@@ -39,9 +42,11 @@ namespace flex
 	{
 		bDynamic = true;
 		VertexCount = initialMaxVertCount;
+		UsedVertexCount = initialMaxVertCount;
 		Attributes = attributes;
 		VertexStride = CalculateVertexStride(attributes);
 		VertexBufferSize = VertexCount * VertexStride;
+		UsedVertexBufferSize = VertexBufferSize;
 
 		if (VertexBufferSize > 0)
 		{
@@ -70,6 +75,11 @@ namespace flex
 				return;
 			}
 		}
+
+		// NOTE: We _could_ just be doing a partial update, while still using the remaining
+		// data - but that's unlikely. This assumes we always update the whole buffer.
+		UsedVertexCount = vertCountToUpdate;
+		UsedVertexBufferSize = UsedVertexCount * VertexStride;
 
 		assert(vertexData != nullptr);
 
@@ -153,9 +163,35 @@ namespace flex
 			vertexData = nullptr;
 		}
 		VertexCount = 0;
+		UsedVertexCount = 0;
 		VertexBufferSize = 0;
+		UsedVertexBufferSize = 0;
 		VertexStride = 0;
 		Attributes = 0;
+	}
+
+	void VertexBufferData::Shrink(real minExcess /* = 0.0f */)
+	{
+		// Only dynamic buffers can be resized
+		assert(bDynamic);
+
+		real excess = (real)(VertexBufferSize - UsedVertexBufferSize) / VertexBufferSize;
+		if (excess >= minExcess)
+		{
+			VertexCount = UsedVertexCount;
+			VertexBufferSize = VertexCount * VertexStride;
+			real* newVertexData = (real*)malloc(VertexBufferSize);
+			if (newVertexData == nullptr)
+			{
+				PrintError("Failed to allocate dynamic vertex buffer memory (%u bytes)\n", VertexBufferSize);
+				return;
+			}
+
+			real* oldVertexData = vertexData;
+			memcpy(newVertexData, vertexData, VertexBufferSize);
+			vertexData = newVertexData;
+			free(oldVertexData);
+		}
 	}
 
 	u32 VertexBufferData::CopyInto(real* dst, VertexAttributes usingAttributes)

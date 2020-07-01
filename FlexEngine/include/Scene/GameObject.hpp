@@ -532,7 +532,6 @@ namespace flex
 		explicit GerstnerWave(const std::string& name);
 
 		virtual void Initialize() override;
-		virtual void PostInitialize() override;
 		virtual void Update() override;
 		virtual void Destroy() override;
 		void AddWave();
@@ -693,6 +692,8 @@ namespace flex
 		Spring<real> bobberTarget;
 
 		RollingAverage<ms> avgWaveUpdateTime;
+
+		u32 DEBUG_lastUsedVertCount = 0;
 
 		ThreadData threadUserData;
 	};

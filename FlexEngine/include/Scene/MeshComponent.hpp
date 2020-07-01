@@ -35,7 +35,7 @@ namespace flex
 		void PostInitialize();
 
 		void Update();
-		void UpdateProceduralData(const VertexBufferDataCreateInfo& newData, const std::vector<u32>& indexData);
+		void UpdateDynamicVertexData(const VertexBufferDataCreateInfo& newData, const std::vector<u32>& indexData);
 
 		void Destroy();
 		void SetOwner(Mesh* owner);
@@ -92,6 +92,8 @@ namespace flex
 
 		VertexBufferData* GetVertexBufferData();
 		std::vector<u32> GetIndexBuffer();
+
+		real GetVertexBufferUsage() const;
 
 		glm::vec3 m_MinPoint;
 		glm::vec3 m_MaxPoint;

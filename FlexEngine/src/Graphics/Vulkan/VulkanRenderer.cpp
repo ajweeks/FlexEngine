@@ -1930,7 +1930,7 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::UpdateVertexData(RenderID renderID, VertexBufferData const* vertexBufferData, const std::vector<u32>& indexData)
+		void VulkanRenderer::UpdateDynamicVertexData(RenderID renderID, VertexBufferData const* vertexBufferData, const std::vector<u32>& indexData)
 		{
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
 
@@ -1952,28 +1952,32 @@ namespace flex
 			u32 indexCopySize = std::min(newIndexDataSize, (u32)indexBuffer->m_Size);
 			if (vertCopySize < vertexBufferData->VertexBufferSize)
 			{
-				const u32 bufSize = 64;
-				char oldSizeBuf[bufSize];
-				char newSizeBuf[bufSize];
-				ByteCountToString(oldSizeBuf, bufSize, (u32)vertexBuffer->m_Size);
-				ByteCountToString(newSizeBuf, bufSize, vertexBufferData->VertexBufferSize);
-				Print("Allocating more data for dynamic vertex buffer (old size: %s, new requested size: %s)\n", oldSizeBuf, newSizeBuf);
 				renderObject->dynamicVertexBufferOffset = vertexBuffer->Realloc(renderObject->dynamicVertexBufferOffset, vertexBufferData->VertexBufferSize, true);
 				// TODO: Handle failed allocs
-				vertCopySize = (u32)vertexBuffer->m_Size;
+				vertCopySize = std::min(vertexBufferData->VertexBufferSize, (u32)vertexBuffer->m_Size);
 			}
 			if (indexCopySize < newIndexDataSize)
 			{
-				const u32 bufSize = 64;
-				char oldSizeBuf[bufSize];
-				char newSizeBuf[bufSize];
-				ByteCountToString(oldSizeBuf, bufSize, (u32)indexBuffer->m_Size);
-				ByteCountToString(newSizeBuf, bufSize, newIndexDataSize);
-				Print("Allocating more data for dynamic index buffer (old size: %s, new requested size: %s)\n", oldSizeBuf, newSizeBuf);
 				renderObject->dynamicIndexBufferOffset = indexBuffer->Realloc(renderObject->dynamicIndexBufferOffset, newIndexDataSize, true);
 				// TODO: Handle failed allocs
-				indexCopySize = (u32)indexBuffer->m_Size;
+				indexCopySize = std::min(newIndexDataSize, (u32)indexBuffer->m_Size);
 			}
+
+			VkDeviceSize vertAllocSize = vertexBuffer->SizeOf(renderObject->dynamicVertexBufferOffset);
+			VkDeviceSize indexAllocSize = indexBuffer->SizeOf(renderObject->dynamicIndexBufferOffset);
+			assert(vertAllocSize != ((VkDeviceSize)-1));
+			assert(indexAllocSize != ((VkDeviceSize)-1));
+			real vertExcess = 1.0f - (real)vertexBufferData->UsedVertexBufferSize / vertAllocSize;
+			real indexExcess = 1.0f - (real)indexCopySize / indexAllocSize;
+			if (vertExcess > 0.5f || indexExcess > 0.5f)
+			{
+				vertexBuffer->Realloc(renderObject->dynamicVertexBufferOffset, vertexBufferData->UsedVertexBufferSize, true);
+				indexBuffer->Realloc(renderObject->dynamicIndexBufferOffset, indexCopySize, true);
+				ShrinkDynamicVertexData(renderID);
+
+				vkDeviceWaitIdle(m_VulkanDevice->m_LogicalDevice);
+			}
+
 			VkDeviceSize vertOffset = renderObject->dynamicVertexBufferOffset;
 			VkDeviceSize indexOffset = renderObject->dynamicIndexBufferOffset;
 
@@ -1992,6 +1996,70 @@ namespace flex
 			renderObject->indexOffset = (u32)indexOffset;
 
 			m_DirtyFlagBits |= DirtyFlags::DYNAMIC_DATA; // TODO: Is this needed?
+		}
+
+		void VulkanRenderer::FreeDynamicVertexData(RenderID renderID)
+		{
+			VulkanRenderObject* renderObject = GetRenderObject(renderID);
+
+			VulkanMaterial& mat = m_Materials.at(renderObject->materialID);
+			VertexIndexBufferPair* vertexIndexBufferPair = m_DynamicVertexIndexBufferPairs[mat.material.dynamicVertexIndexBufferIndex].second;
+			VulkanBuffer* vertexBuffer = vertexIndexBufferPair->vertexBuffer;
+			VulkanBuffer* indexBuffer = vertexIndexBufferPair->indexBuffer;
+
+			if (renderObject->dynamicVertexBufferOffset != u32_max)
+			{
+				vertexBuffer->Free(renderObject->dynamicVertexBufferOffset);
+				renderObject->dynamicVertexBufferOffset = u32_max;
+			}
+
+			if (renderObject->dynamicIndexBufferOffset != u32_max)
+			{
+				indexBuffer->Free(renderObject->dynamicIndexBufferOffset);
+				renderObject->dynamicIndexBufferOffset = u32_max;
+			}
+		}
+
+		void VulkanRenderer::ShrinkDynamicVertexData(RenderID renderID, real minUnused /* = 0.0f */)
+		{
+			VulkanRenderObject* renderObject = GetRenderObject(renderID);
+
+			VulkanMaterial& mat = m_Materials.at(renderObject->materialID);
+			VertexIndexBufferPair* vertexIndexBufferPair = m_DynamicVertexIndexBufferPairs[mat.material.dynamicVertexIndexBufferIndex].second;
+			VulkanBuffer* vertexBuffer = vertexIndexBufferPair->vertexBuffer;
+			VulkanBuffer* indexBuffer = vertexIndexBufferPair->indexBuffer;
+
+			if (renderObject->dynamicVertexBufferOffset != u32_max)
+			{
+				vertexBuffer->Shrink(minUnused);
+			}
+
+			if (renderObject->dynamicIndexBufferOffset != u32_max)
+			{
+				indexBuffer->Shrink(minUnused);
+			}
+		}
+
+		u32 VulkanRenderer::GetDynamicVertexBufferSize(RenderID renderID)
+		{
+			VulkanRenderObject* renderObject = GetRenderObject(renderID);
+
+			VulkanMaterial& mat = m_Materials.at(renderObject->materialID);
+			VertexIndexBufferPair* vertexIndexBufferPair = m_DynamicVertexIndexBufferPairs[mat.material.dynamicVertexIndexBufferIndex].second;
+			VulkanBuffer* vertexBuffer = vertexIndexBufferPair->vertexBuffer;
+
+			return (u32)vertexBuffer->m_Size;
+		}
+
+		u32 VulkanRenderer::GetDynamicVertexBufferUsedSize(RenderID renderID)
+		{
+			VulkanRenderObject* renderObject = GetRenderObject(renderID);
+
+			VulkanMaterial& mat = m_Materials.at(renderObject->materialID);
+			VertexIndexBufferPair* vertexIndexBufferPair = m_DynamicVertexIndexBufferPairs[mat.material.dynamicVertexIndexBufferIndex].second;
+			VulkanBuffer* vertexBuffer = vertexIndexBufferPair->vertexBuffer;
+
+			return (u32)vertexBuffer->SizeOf(renderObject->dynamicVertexBufferOffset);
 		}
 
 		void VulkanRenderer::DrawImGuiForRenderObject(RenderID renderID)
@@ -2303,12 +2371,15 @@ namespace flex
 		{
 			if (renderObject)
 			{
+				FreeDynamicVertexData(renderID);
+
 				if (renderObject->descriptorSet)
 				{
 					vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPool, 1, &(renderObject->descriptorSet));
 				}
 				renderObject->graphicsPipeline.replace();
 				renderObject->pipelineLayout.replace();
+
 				delete renderObject;
 				renderObject = nullptr;
 			}

@@ -32,6 +32,8 @@ namespace flex
 		void UpdateData(const VertexBufferDataCreateInfo& createInfo);
 		void Destroy();
 
+		void Shrink(real minExcess = 0.0f);
+
 		// Copies data from this buffer into dst for each given attribute
 		// If this buffer doesn't contain a given attribute, default values will be used
 		u32 CopyInto(real* dst, VertexAttributes usingAttributes);
@@ -41,7 +43,9 @@ namespace flex
 		bool bDynamic = false;
 		real* vertexData = nullptr;
 		u32 VertexBufferSize = 0;
+		u32 UsedVertexBufferSize = 0;
 		u32 VertexCount = 0;
+		u32 UsedVertexCount = 0;
 		u32 VertexStride = 0;
 		VertexAttributes Attributes = 0;
 	};
