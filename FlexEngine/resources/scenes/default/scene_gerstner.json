@@ -21,9 +21,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "35.683, 9.737, 147.792",
-			"pitch" : -0.124421,
-			"yaw" : -2.317486
+			"position" : "51.588, 7.863, 59.260",
+			"pitch" : -0.044222,
+			"yaw" : -2.172696
 		}
 	},
 	"objects" : 
@@ -78,7 +78,6 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "2.539, -4.574, 0.000"
 			},
 			"materials" : 
 			[
@@ -154,7 +153,7 @@
 				"chunk load radius" : 674.239990,
 				"update speed" : 19.700001,
 				"pin center" : true,
-				"pinned center position" : "25.00, 7.45, 115.33",
+				"pinned center position" : "4.08, 8.98, 2.91",
 				"blend dist" : 18.229000,
 				"wave sampling lods" : 
 				[
@@ -163,9 +162,9 @@
 				"wave tessellation lods" : 
 				[
 					"37636.0,8",
-					"14438.9,20",
-					"4116.8,32",
-					"0.0,96"
+					"14438.9,28",
+					"4116.8,52",
+					"0.0,80"
 				],
 				"colour top" : "1.00, 1.00, 1.00, 0.00",
 				"colour mid" : "1.00, 1.00, 1.00, 0.00",

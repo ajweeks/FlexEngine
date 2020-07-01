@@ -85,11 +85,11 @@ vec3 SampleSkybox(vec3 dir)
 void main()
 {
 	vec2 uv0 = ex_TexCoord;
-	vec2 uv1 = 2.0 * (ex_TexCoord + vec2(-0.015 * uboConstant.time, 0.005 * uboConstant.time));
-	vec2 uv2 = 0.8 * (ex_TexCoord + vec2(-0.014 * uboConstant.time, 0.011 * uboConstant.time));
-	vec3 n2 = texture(normalSampler, uv1).xyz;
-	vec3 n1 = texture(normalSampler, uv2).xyz;
-	vec3 n3 = mix(n1, n2, 0.5);
+	vec2 uv1 = 3.5 * (ex_TexCoord);//; + vec2(-0.015 * uboConstant.time, 0.005 * uboConstant.time));
+	vec2 uv2 = 3.0 * (ex_TexCoord + vec2(-0.014 * uboConstant.time, 0.011 * uboConstant.time));
+	vec3 n1 = texture(normalSampler, uv1).xyz;
+	vec3 n2 = texture(normalSampler, uv2).xyz;
+	vec3 n3 = mix(n1, n2, 0.3);
 	vec3 sampledN = normalize(ex_TBN * (n3.xyz * 2.0 - 1.0));
 
 	vec3 N = sampledN;
