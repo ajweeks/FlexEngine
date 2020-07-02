@@ -1365,6 +1365,7 @@ namespace flex
 
 			// Color
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
+			m_BaseShaders[shaderID].bDepthWriteEnable = false;
 			m_BaseShaders[shaderID].bTranslucent = true;
 			m_BaseShaders[shaderID].dynamicVertexBufferSize = 16384 * 4 * 28; // (1835008) TODO: FIXME:
 			m_BaseShaders[shaderID].vertexAttributes =
