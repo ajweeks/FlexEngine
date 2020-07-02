@@ -732,11 +732,11 @@ namespace flex
 			{
 				for (auto& fontPair : m_Fonts)
 				{
-					FontMetaData& fontMeta = fontPair.second;
-					BitmapFont* font = fontMeta.bitmapFont;
+					FontMetaData& fontMetaData = fontPair.second;
+					BitmapFont* font = fontMetaData.bitmapFont;
 
 					ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollWithMouse;
-					if (ImGui::BeginChild(fontMeta.renderedTextureFilePath.c_str(), ImVec2(0, 240), true, flags))
+					if (ImGui::BeginChild(fontMetaData.renderedTextureFilePath.c_str(), ImVec2(0, 240), true, flags))
 					{
 						ImGui::Text("%s", fontPair.first.c_str());
 						ImGui::Text("%s", font->name.c_str());
@@ -744,16 +744,16 @@ namespace flex
 						ImGui::Columns(2);
 						ImGui::SetColumnWidth(0, 350.0f);
 
-						fontMeta.bDirty |= ImGui::DragFloat("Threshold", &fontMeta.threshold, 0.001f, 0.0f, 1.0f);
-						fontMeta.bDirty |= ImGui::DragFloat2("Shadow Offset", &fontMeta.shadowOffset.x, 0.0007f);
-						fontMeta.bDirty |= ImGui::DragFloat("Shadow Opacity", &fontMeta.shadowOpacity, 0.005f, 0.0f, 0.999f);
-						fontMeta.bDirty |= ImGui::DragFloat("Soften", &fontMeta.soften, 0.001f, 0.0f, 1.0f);
+						fontMetaData.bDirty |= ImGui::DragFloat("Threshold", &fontMetaData.threshold, 0.001f, 0.0f, 1.0f);
+						fontMetaData.bDirty |= ImGui::DragFloat2("Shadow Offset", &fontMetaData.shadowOffset.x, 0.0007f);
+						fontMetaData.bDirty |= ImGui::DragFloat("Shadow Opacity", &fontMetaData.shadowOpacity, 0.005f, 0.0f, 0.999f);
+						fontMetaData.bDirty |= ImGui::DragFloat("Soften", &fontMetaData.soften, 0.001f, 0.0f, 1.0f);
 						// TODO: Store "needs bake" flag as well
-						fontMeta.bDirty |= ImGuiExt::DragInt16("Size", &fontMeta.size, 4, 256);
+						fontMetaData.bDirty |= ImGuiExt::DragInt16("Size", &fontMetaData.size, 4, 256);
 
-						ImGui::Text("Size: %i", fontMeta.size);
+						ImGui::Text("Size: %i", fontMetaData.size);
 						ImGui::SameLine();
-						ImGui::Text("%s space", fontMeta.bScreenSpace ? "Screen" : "World");
+						ImGui::Text("%s space", fontMetaData.bScreenSpace ? "Screen" : "World");
 						glm::vec2u texSize(font->GetTextureSize());
 						u32 texChannelCount = font->GetTextureChannelCount();
 						const u32 bufSize = 64;
@@ -774,35 +774,43 @@ namespace flex
 						ImGui::NextColumn();
 						if (ImGui::Button("Re-bake"))
 						{
-							if (fontMeta.bScreenSpace)
+							if (fontMetaData.bScreenSpace)
 							{
-								auto vecIterSS = std::find(m_FontsSS.begin(), m_FontsSS.end(), fontMeta.bitmapFont);
+								auto vecIterSS = std::find(m_FontsSS.begin(), m_FontsSS.end(), fontMetaData.bitmapFont);
 								assert(vecIterSS != m_FontsSS.end());
 
 								m_FontsSS.erase(vecIterSS);
 							}
 							else
 							{
-								auto vecIterWS = std::find(m_FontsWS.begin(), m_FontsWS.end(), fontMeta.bitmapFont);
+								auto vecIterWS = std::find(m_FontsWS.begin(), m_FontsWS.end(), fontMetaData.bitmapFont);
 								assert(vecIterWS != m_FontsWS.end());
 
 								m_FontsWS.erase(vecIterWS);
 							}
 
-							delete fontMeta.bitmapFont;
-							fontMeta.bitmapFont = nullptr;
+							delete fontMetaData.bitmapFont;
+							fontMetaData.bitmapFont = nullptr;
 							font = nullptr;
 
-							LoadFont(fontMeta, true);
+							SetRenderedSDFFilePath(fontMetaData);
+
+							LoadFont(fontMetaData, true);
 						}
 						if (ImGui::Button("View SDF"))
 						{
-							std::string absDir = RelativePathToAbsolute(fontMeta.renderedTextureFilePath);
+							std::string absDir = RelativePathToAbsolute(fontMetaData.renderedTextureFilePath);
 							Platform::OpenExplorer(absDir);
 						}
-						if (ImGui::Button("Open in explorer"))
+						if (ImGui::Button("Open SDF in explorer"))
 						{
-							const std::string absDir = ExtractDirectoryString(RelativePathToAbsolute(fontMeta.renderedTextureFilePath));
+							const std::string absDir = ExtractDirectoryString(RelativePathToAbsolute(fontMetaData.renderedTextureFilePath));
+							Platform::OpenExplorer(absDir);
+						}
+						ImGui::SameLine();
+						if (ImGui::Button("Open font in explorer"))
+						{
+							const std::string absDir = ExtractDirectoryString(RelativePathToAbsolute(fontMetaData.filePath));
 							Platform::OpenExplorer(absDir);
 						}
 						bool bPreviewing = m_PreviewedFont == fontPair.first;
@@ -818,17 +826,17 @@ namespace flex
 							}
 						}
 
-						const bool bWasDirty = fontMeta.bDirty;
+						const bool bWasDirty = fontMetaData.bDirty;
 						if (bWasDirty)
 						{
 							ImVec4 buttonCol = ImGui::GetStyle().Colors[ImGuiCol_Button];
 							ImVec4 darkButtonCol = ImVec4(buttonCol.x * 1.2f, buttonCol.y * 1.2f, buttonCol.z * 1.2f, buttonCol.w);
 							ImGui::PushStyleColor(ImGuiCol_Button, darkButtonCol);
 						}
-						if (ImGui::Button(fontMeta.bDirty ? "Save*" : "Save"))
+						if (ImGui::Button(fontMetaData.bDirty ? "Save*" : "Save"))
 						{
 							SerializeFontFile();
-							fontMeta.bDirty = false;
+							fontMetaData.bDirty = false;
 						}
 						if (bWasDirty)
 						{
@@ -3140,13 +3148,12 @@ namespace flex
 				std::vector<JSONObject> fontObjs;
 				if (fontSettings.SetObjectArrayChecked("fonts", fontObjs))
 				{
-					static const std::string DPIStr = FloatToString(g_Monitor->DPI.x, 0) + "DPI";
-
 					for (const JSONObject& fontObj : fontObjs)
 					{
 						FontMetaData fontMetaData = {};
 
-						fontObj.SetStringChecked("file path", fontMetaData.filePath);
+						std::string fileName;
+						fontObj.SetStringChecked("file path", fileName);
 						// TODO: Add 16 bit int support to JSON parser
 						fontMetaData.size = (i16)fontObj.GetInt("size");
 						fontObj.SetBoolChecked("screen space", fontMetaData.bScreenSpace);
@@ -3155,17 +3162,14 @@ namespace flex
 						fontObj.SetVec2Checked("shadow offset", fontMetaData.shadowOffset);
 						fontObj.SetFloatChecked("soften", fontMetaData.soften);
 
-						if (fontMetaData.filePath.empty())
+						if (fileName.empty())
 						{
-							PrintError("Font doesn't contain file path!\n");
+							PrintError("Font doesn't contain file name!\n");
 							continue;
 						}
 
-						fontMetaData.renderedTextureFilePath = StripFileType(fontMetaData.filePath);
-
-						fontMetaData.renderedTextureFilePath += "-" + IntToString(fontMetaData.size, 2) + "-" + DPIStr + m_FontImageExtension;
-						fontMetaData.renderedTextureFilePath = FONT_SDF_LOCATION + fontMetaData.renderedTextureFilePath;
-						fontMetaData.filePath = FONT_LOCATION + fontMetaData.filePath;
+						fontMetaData.filePath = FONT_LOCATION + fileName;
+						SetRenderedSDFFilePath(fontMetaData);
 
 						std::string fontName = fontObj.GetString("name");
 						m_Fonts[fontName] = fontMetaData;
@@ -3177,6 +3181,15 @@ namespace flex
 				PrintError("Failed to parse font config file %s\n\terror: %s\n", m_FontsFilePathAbs.c_str(), JSONParser::GetErrorString());
 			}
 		}
+	}
+
+	void Renderer::SetRenderedSDFFilePath(FontMetaData& fontMetaData)
+	{
+		static const std::string DPIStr = FloatToString(g_Monitor->DPI.x, 0) + "DPI";
+
+		fontMetaData.renderedTextureFilePath = StripFileType(StripLeadingDirectories(fontMetaData.filePath));
+		fontMetaData.renderedTextureFilePath += "-" + IntToString(fontMetaData.size, 2) + "-" + DPIStr + m_FontImageExtension;
+		fontMetaData.renderedTextureFilePath = FONT_SDF_LOCATION + fontMetaData.renderedTextureFilePath;
 	}
 
 	void Renderer::SerializeFontFile()

@@ -4,7 +4,7 @@
 		{
 			"name" : "editor-01",
 			"file path" : "UbuntuCondensed-Regular.ttf",
-			"size" : 75,
+			"size" : 28,
 			"screen space" : true,
 			"threshold" : 0.50,
 			"shadow opacity" : 0.50,
@@ -14,7 +14,7 @@
 		{
 			"name" : "editor-02",
 			"file path" : "SourceCodePro-regular.ttf",
-			"size" : 38,
+			"size" : 26,
 			"screen space" : true,
 			"threshold" : 0.46,
 			"shadow opacity" : 0.60,
@@ -34,7 +34,7 @@
 		{
 			"name" : "editor-03",
 			"file path" : "gant.ttf",
-			"size" : 20,
+			"size" : 22,
 			"screen space" : true,
 			"threshold" : 0.50,
 			"shadow opacity" : 0.50,

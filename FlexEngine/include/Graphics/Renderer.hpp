@@ -327,6 +327,7 @@ namespace flex
 		MaterialID CreateParticleSystemRenderingMaterial(const std::string& name);
 
 		void ParseFontFile();
+		void SetRenderedSDFFilePath(FontMetaData& metaData);
 		void SerializeFontFile();
 
 		std::vector<Shader> m_BaseShaders;
