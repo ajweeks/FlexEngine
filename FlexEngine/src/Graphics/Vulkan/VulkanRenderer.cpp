@@ -4865,10 +4865,10 @@ namespace flex
 
 			// Update dynamic text buffer
 			{
-				std::vector<TextVertex2D> textVerticesSS;
-				UpdateTextBufferSS(textVerticesSS);
+				static std::vector<TextVertex2D> textVerticesSS;
+				u32 textVertCount = UpdateTextBufferSS(textVerticesSS);
 
-				u32 SSTextBufferByteCount = (u32)(textVerticesSS.size() * sizeof(TextVertex2D));
+				u32 SSTextBufferByteCount = (u32)(textVertCount * sizeof(TextVertex2D));
 
 				if (SSTextBufferByteCount > 0)
 				{
@@ -5018,10 +5018,10 @@ namespace flex
 
 			// Update dynamic text buffer
 			{
-				std::vector<TextVertex3D> textVerticesWS;
-				UpdateTextBufferWS(textVerticesWS);
+				static std::vector<TextVertex3D> textVerticesWS;
+				u32 textVertCount = UpdateTextBufferWS(textVerticesWS);
 
-				u32 WSTextBufferByteCount = (u32)(textVerticesWS.size() * sizeof(TextVertex3D));
+				u32 WSTextBufferByteCount = (u32)(textVertCount * sizeof(TextVertex3D));
 
 				if (WSTextBufferByteCount > 0)
 				{

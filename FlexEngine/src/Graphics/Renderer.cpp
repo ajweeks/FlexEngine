@@ -2829,7 +2829,7 @@ namespace flex
 	}
 
 	// TODO: Consolidate with UpdateTextBufferWS
-	void Renderer::UpdateTextBufferSS(std::vector<TextVertex2D>& outTextVertices)
+	u32 Renderer::UpdateTextBufferSS(std::vector<TextVertex2D>& outTextVertices)
 	{
 		PROFILE_AUTO("Update Text Buffer SS");
 
@@ -2837,7 +2837,7 @@ namespace flex
 		real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
 
 		u32 charCountUpperBound = 0;
-		for (BitmapFont* font : m_FontsWS)
+		for (BitmapFont* font : m_FontsSS)
 		{
 			const std::vector<TextCache>& caches = font->GetTextCaches();
 			for (const TextCache& textCache : caches)
@@ -2845,15 +2845,16 @@ namespace flex
 				charCountUpperBound += (u32)textCache.str.length();
 			}
 		}
-		outTextVertices.reserve(charCountUpperBound);
+		outTextVertices.resize(charCountUpperBound);
 
 		const real frameBufferScale = glm::max(2.0f / (real)frameBufferSize.x, 2.0f / (real)frameBufferSize.y);
 
+		u32 charIndex = 0;
 		for (BitmapFont* font : m_FontsSS)
 		{
 			real baseTextScale = frameBufferScale * (font->metaData.size / 12.0f);
 
-			font->bufferStart = (i32)(outTextVertices.size());
+			font->bufferStart = (i32)charIndex;
 
 			const std::vector<TextCache>& textCaches = font->GetTextCaches();
 			for (const TextCache& textCache : textCaches)
@@ -2945,7 +2946,7 @@ namespace flex
 							vert.charSizePixelsCharSizeNorm = charSizePixelsCharSizeNorm;
 							vert.channel = texChannel;
 
-							outTextVertices.push_back(vert);
+							outTextVertices[charIndex++] = vert;
 
 							totalAdvanceX += metric->advanceX + textCache.xSpacing;
 						}
@@ -2963,12 +2964,14 @@ namespace flex
 				}
 			}
 
-			font->bufferSize = (i32)outTextVertices.size() - font->bufferStart;
+			font->bufferSize = (i32)charIndex - font->bufferStart;
 			font->ClearCaches();
 		}
+
+		return charIndex;
 	}
 
-	void Renderer::UpdateTextBufferWS(std::vector<TextVertex3D>& outTextVertices)
+	u32 Renderer::UpdateTextBufferWS(std::vector<TextVertex3D>& outTextVertices)
 	{
 		// TODO: Consolidate with UpdateTextBufferSS
 
@@ -2986,13 +2989,14 @@ namespace flex
 				charCountUpperBound += (u32)textCache.str.length();
 			}
 		}
-		outTextVertices.reserve(charCountUpperBound);
+		outTextVertices.resize(charCountUpperBound);
 
+		u32 charIndex = 0;
 		for (BitmapFont* font : m_FontsWS)
 		{
 			real textScale = frameBufferScale * (font->metaData.size / 12.0f);
 
-			font->bufferStart = (i32)(outTextVertices.size());
+			font->bufferStart = (i32)charIndex;
 
 			const std::vector<TextCache>& caches = font->GetTextCaches();
 			for (const TextCache& textCache : caches)
@@ -3045,7 +3049,7 @@ namespace flex
 							vert.charSizePixelsCharSizeNorm = charSizePixelsCharSizeNorm;
 							vert.channel = texChannel;
 
-							outTextVertices.push_back(vert);
+							outTextVertices[charIndex++] = vert;
 
 							totalAdvanceX += metric->advanceX + textCache.xSpacing;
 						}
@@ -3063,9 +3067,11 @@ namespace flex
 				}
 			}
 
-			font->bufferSize = (i32)outTextVertices.size() - font->bufferStart;
+			font->bufferSize = (i32)charIndex - font->bufferStart;
 			font->ClearCaches();
 		}
+
+		return charIndex;
 	}
 
 	glm::vec4 Renderer::GetSelectedObjectColorMultiplier() const

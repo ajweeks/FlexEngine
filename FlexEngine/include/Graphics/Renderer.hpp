@@ -315,8 +315,8 @@ namespace flex
 
 		std::string PickRandomSkyboxTexture();
 
-		void UpdateTextBufferSS(std::vector<TextVertex2D>& outTextVertices);
-		void UpdateTextBufferWS(std::vector<TextVertex3D>& outTextVertices);
+		u32 UpdateTextBufferSS(std::vector<TextVertex2D>& outTextVertices);
+		u32 UpdateTextBufferWS(std::vector<TextVertex3D>& outTextVertices);
 
 		glm::vec4 GetSelectedObjectColorMultiplier() const;
 		glm::mat4 GetPostProcessingMatrix() const;
