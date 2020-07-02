@@ -234,14 +234,14 @@ namespace flex
 			return true;
 		}
 
-		u32 pos = 0;
-		do
+		size_t pos = absoluteDirectoryPath.find_first_of('/', 0);
+		while (pos != std::string::npos)
 		{
-			pos = (u32)absoluteDirectoryPath.find_first_of('/', pos + 1);
 			CreateDirectory(absoluteDirectoryPath.substr(0, pos).c_str(), NULL);
+			pos = absoluteDirectoryPath.find_first_of('/', pos + 1);
 			// TODO: Return false on failure here
 			//GetLastError() == ERROR_ALREADY_EXISTS;
-		} while (pos != std::string::npos);
+		}
 
 		return true;
 	}
