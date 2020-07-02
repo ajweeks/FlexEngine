@@ -101,7 +101,7 @@ namespace flex
 
 		if (g_EngineInstance->InstallShaderDirectoryWatch())
 		{
-			m_ShaderDirectoryWatcher = new DirectoryWatcher(RESOURCE_LOCATION "shaders/", false);
+			m_ShaderDirectoryWatcher = new DirectoryWatcher(SHADER_SOURCE_LOCATION, false);
 			if (!m_ShaderDirectoryWatcher->Installed())
 			{
 				PrintWarn("Failed to install shader directory watcher\n");

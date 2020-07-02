@@ -472,9 +472,7 @@ namespace flex
 			bool bComplete = false;
 
 		private:
-			static const char* s_ChecksumFilePath;
 			static std::string s_ChecksumFilePathAbs;
-			static const char* s_ShaderDirectory;
 			static const char* s_RecognizedShaderTypes[];
 
 			u64 CalculteChecksum(const std::string& filePath);

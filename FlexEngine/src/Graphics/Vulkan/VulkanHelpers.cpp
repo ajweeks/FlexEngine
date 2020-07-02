@@ -28,9 +28,7 @@ namespace flex
 	namespace vk
 	{
 #if COMPILE_SHADER_COMPILER
-		const char* AsyncVulkanShaderCompiler::s_ChecksumFilePath = SAVED_LOCATION "vk-shader-checksum.dat";
 		std::string AsyncVulkanShaderCompiler::s_ChecksumFilePathAbs;
-		const char* AsyncVulkanShaderCompiler::s_ShaderDirectory = RESOURCE_LOCATION "shaders/";
 
 		const char* AsyncVulkanShaderCompiler::s_RecognizedShaderTypes[] = { "vert", "geom", "frag", "comp" };
 #endif //  COMPILE_SHADER_COMPILER
@@ -2425,9 +2423,9 @@ namespace flex
 #if COMPILE_SHADER_COMPILER
 		AsyncVulkanShaderCompiler::AsyncVulkanShaderCompiler(bool bForceRecompile)
 		{
-			s_ChecksumFilePathAbs = RelativePathToAbsolute(s_ChecksumFilePath);
+			s_ChecksumFilePathAbs = RelativePathToAbsolute(SHADER_CHECKSUM_LOCATION);
 
-			const std::string spvDirectory = RelativePathToAbsolute(RESOURCE_LOCATION "shaders/spv");
+			const std::string spvDirectory = RelativePathToAbsolute(SPV_LOCATION);
 			if (!Platform::DirectoryExists(spvDirectory))
 			{
 				Platform::CreateDirectoryRecursive(spvDirectory);
@@ -2444,10 +2442,10 @@ namespace flex
 
 				const std::string shaderInputDirectory = RESOURCE_LOCATION "shaders";
 
-				if (FileExists(s_ChecksumFilePath))
+				if (FileExists(SHADER_CHECKSUM_LOCATION))
 				{
 					std::string fileContents;
-					if (ReadFile(s_ChecksumFilePath, fileContents, false))
+					if (ReadFile(SHADER_CHECKSUM_LOCATION, fileContents, false))
 					{
 						std::vector<std::string> lines = Split(fileContents, '\n');
 
@@ -2481,7 +2479,7 @@ namespace flex
 				bSuccess = true;
 
 				std::vector<std::string> filePaths;
-				if (Platform::FindFilesInDirectory(s_ShaderDirectory, filePaths, "*"))
+				if (Platform::FindFilesInDirectory(SHADER_SOURCE_LOCATION, filePaths, "*"))
 				{
 					startTime = Time::CurrentMilliseconds();
 
@@ -2564,7 +2562,7 @@ namespace flex
 
 									std::vector<u32> spvBytes(result.begin(), result.end());
 									std::string strippedFileName = StripFileType(fileName);
-									std::string spvFilePath = RelativePathToAbsolute(RESOURCE_LOCATION "shaders/spv/") + strippedFileName + "_" + fileType + ".spv";
+									std::string spvFilePath = RelativePathToAbsolute(SPV_LOCATION) + strippedFileName + "_" + fileType + ".spv";
 									std::ofstream fileStream(spvFilePath, std::ios::out | std::ios::binary);
 									if (fileStream.is_open())
 									{
@@ -2621,7 +2619,7 @@ namespace flex
 						}
 						else
 						{
-							PrintWarn("Failed to write shader checksum file to %s\n", s_ChecksumFilePath);
+							PrintWarn("Failed to write shader checksum file to %s\n", SHADER_SOURCE_LOCATION);
 						}
 					}
 
@@ -2655,10 +2653,10 @@ namespace flex
 
 		void AsyncVulkanShaderCompiler::ClearShaderHash(const std::string& shaderName)
 		{
-			if (FileExists(s_ChecksumFilePath))
+			if (FileExists(SHADER_SOURCE_LOCATION))
 			{
 				std::string fileContents;
-				if (ReadFile(s_ChecksumFilePath, fileContents, false))
+				if (ReadFile(SHADER_SOURCE_LOCATION, fileContents, false))
 				{
 					std::string searchStr = "vk_" + shaderName + '.';
 					size_t index = 0;

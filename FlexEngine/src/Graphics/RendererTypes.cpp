@@ -77,31 +77,31 @@ namespace flex
 		name(name)
 	{
 #if COMPILE_OPEN_GL
-		vertexShaderFilePath = RESOURCE_LOCATION "shaders/" + inVertexShaderFilePath;
+		vertexShaderFilePath = SHADER_SOURCE_LOCATION + inVertexShaderFilePath;
 		if (!inFragmentShaderFilePath.empty())
 		{
-			fragmentShaderFilePath = RESOURCE_LOCATION "shaders/" + inFragmentShaderFilePath;
+			fragmentShaderFilePath = SHADER_SOURCE_LOCATION + inFragmentShaderFilePath;
 		}
 		if (!inGeometryShaderFilePath.empty())
 		{
-			geometryShaderFilePath = RESOURCE_LOCATION "shaders/" + inGeometryShaderFilePath;
+			geometryShaderFilePath = SHADER_SOURCE_LOCATION + inGeometryShaderFilePath;
 		}
 #elif COMPILE_VULKAN
 		if (!inVertexShaderFilePath.empty())
 		{
-			vertexShaderFilePath = RESOURCE_LOCATION "shaders/spv/" + inVertexShaderFilePath;
+			vertexShaderFilePath = SPV_LOCATION + inVertexShaderFilePath;
 		}
 		if (!inFragmentShaderFilePath.empty())
 		{
-			fragmentShaderFilePath = RESOURCE_LOCATION "shaders/spv/" + inFragmentShaderFilePath;
+			fragmentShaderFilePath = SPV_LOCATION + inFragmentShaderFilePath;
 		}
 		if (!inGeometryShaderFilePath.empty())
 		{
-			geometryShaderFilePath = RESOURCE_LOCATION "shaders/spv/" + inGeometryShaderFilePath;
+			geometryShaderFilePath = SPV_LOCATION + inGeometryShaderFilePath;
 		}
 		if (!inComputeShaderFilePath.empty())
 		{
-			computeShaderFilePath = RESOURCE_LOCATION "shaders/spv/" + inComputeShaderFilePath;
+			computeShaderFilePath = SPV_LOCATION + inComputeShaderFilePath;
 		}
 #endif
 	}
