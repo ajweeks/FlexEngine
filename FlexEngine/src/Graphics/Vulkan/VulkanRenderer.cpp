@@ -4470,6 +4470,7 @@ namespace flex
 			if (!bUsingPreRenderedTexture)
 			{
 				// Render to glyph atlas
+				Print("Rendering font %s to sdf texture...\n", fileName.c_str());
 
 				glm::vec2i textureSize(
 					std::max(std::max(maxPos[0].x, maxPos[1].x), std::max(maxPos[2].x, maxPos[3].x)),
@@ -4675,7 +4676,12 @@ namespace flex
 				vkDestroyFramebuffer(m_VulkanDevice->m_LogicalDevice, framebuffer, nullptr);
 
 				std::string savedSDFTextureAbsFilePath = RelativePathToAbsolute(fontMetaData.renderedTextureFilePath);
-				fontTexColAttachment->SaveToFile(savedSDFTextureAbsFilePath, ImageFormat::PNG);
+				std::string savedSDFDirectory = ExtractDirectoryString(savedSDFTextureAbsFilePath);
+				Platform::CreateDirectoryRecursive(savedSDFDirectory);
+				if (!fontTexColAttachment->SaveToFile(savedSDFTextureAbsFilePath, ImageFormat::PNG))
+				{
+					PrintError("Failed to write generated font SDF to %s\n", savedSDFTextureAbsFilePath.c_str());
+				}
 
 				fontTexColAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 			}

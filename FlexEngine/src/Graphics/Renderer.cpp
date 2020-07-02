@@ -3164,8 +3164,8 @@ namespace flex
 						fontMetaData.renderedTextureFilePath = StripFileType(fontMetaData.filePath);
 
 						fontMetaData.renderedTextureFilePath += "-" + IntToString(fontMetaData.size, 2) + "-" + DPIStr + m_FontImageExtension;
-						fontMetaData.renderedTextureFilePath = RESOURCE_LOCATION "fonts/" + fontMetaData.renderedTextureFilePath;
-						fontMetaData.filePath = RESOURCE_LOCATION "fonts/" + fontMetaData.filePath;
+						fontMetaData.renderedTextureFilePath = FONT_SDF_LOCATION + fontMetaData.renderedTextureFilePath;
+						fontMetaData.filePath = FONT_LOCATION + fontMetaData.filePath;
 
 						std::string fontName = fontObj.GetString("name");
 						m_Fonts[fontName] = fontMetaData;

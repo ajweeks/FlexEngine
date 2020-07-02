@@ -157,7 +157,7 @@ namespace flex
 IGNORE_WARNINGS_POP
 #endif // COMPILE_IMGUI
 
-
+#include "Filepaths.hpp"
 #include "Physics/PhysicsTypeConversions.hpp"
 
 #ifndef btAssert
@@ -217,12 +217,6 @@ if (FlexEngine::s_bHasGLDebugExtension) { glPopDebugGroupKHR(); }
 #define GL_PUSH_DEBUG_GROUP(str)
 #define GL_POP_DEBUG_GROUP()
 #endif // COMPILE_OPEN_GL
-
-#define ROOT_LOCATION "../../../FlexEngine/"
-#define SAVED_LOCATION "../../../FlexEngine/saved/"
-#define RESOURCE_LOCATION "../../../FlexEngine/resources/"
-#define RESOURCE(path) "../../../FlexEngine/resources/" path
-#define RESOURCE_STR(path) "../../../FlexEngine/resources/" + path
 
 namespace flex
 {
