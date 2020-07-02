@@ -139,6 +139,7 @@ namespace flex
 				}
 				else
 				{
+					// TODO: Orbit faster when far from orbit center
 					targetDPos += right * (m_MouseDragDist.x * orbitingSpeed * turnSpeedMultiplier) +
 						up * (m_MouseDragDist.y * orbitingSpeed * turnSpeedMultiplier);
 				}
