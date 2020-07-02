@@ -799,11 +799,13 @@ namespace flex
 		{
 			glm::quat dRotWS(VEC3_ZERO);
 
+#if 0
 			glm::quat lRot = transform->GetLocalRotation();
 			glm::vec3 lEuler = glm::eulerAngles(transform->GetLocalRotation());
 			glm::quat wRot = transform->GetWorldRotation();
 			Print("Local: %5.2f,%5.2f,%5.2f,%5.2f  -  L Euler: %5.2f,%5.2f,%5.2f - Wrap: %d\n", lRot.x, lRot.y, lRot.z, lRot.w, lEuler.x, lEuler.y, lEuler.z, m_RotationGizmoWrapCount);
-			//Print("Local: %5.2f,%5.2f,%5.2f,%5.2f  -  Global: %5.2f,%5.2f,%5.2f,%5.2f  -  L Euler: %5.2f,%5.2f,%5.2f\n", lRot.x, lRot.y, lRot.z, lRot.w, wRot.x, wRot.y, wRot.z, wRot.w, lEuler.x, lEuler.y, lEuler.z);
+			Print("Local: %5.2f,%5.2f,%5.2f,%5.2f  -  Global: %5.2f,%5.2f,%5.2f,%5.2f  -  L Euler: %5.2f,%5.2f,%5.2f\n", lRot.x, lRot.y, lRot.z, lRot.w, wRot.x, wRot.y, wRot.z, wRot.w, lEuler.x, lEuler.y, lEuler.z);
+#endif
 
 			if (m_DraggingAxisIndex == X_AXIS_IDX)
 			{
@@ -1249,7 +1251,7 @@ namespace flex
 
 		// Translation gizmo
 		{
-			real cylinderRadius = 0.3f;
+			real cylinderRadius = 0.35f;
 			real cylinderHeight = 1.8f;
 
 			// X Axis
@@ -1333,8 +1335,6 @@ namespace flex
 			gizmoXAxisRB->SetMass(0.0f);
 			gizmoXAxisRB->SetKinematic(true);
 			gizmoXAxisRB->SetPhysicsFlags(gizmoRBFlags);
-			// TODO: Get this to work (-cylinderHeight / 2.0f?)
-			gizmoXAxisRB->SetLocalPosition(glm::vec3(100.0f, 0.0f, 0.0f));
 
 			xAxisMesh->LoadFromFile(RESOURCE_LOCATION "meshes/rotation-gizmo-flat-x.glb", m_TransformGizmoMatXID, nullptr, &gizmoCreateInfo);
 
@@ -1391,7 +1391,7 @@ namespace flex
 		// Scale gizmo
 		{
 			real boxScale = 0.5f;
-			real cylinderRadius = 0.3f;
+			real cylinderRadius = 0.35f;
 			real cylinderHeight = 1.8f;
 
 			// X Axis
@@ -1456,7 +1456,7 @@ namespace flex
 
 
 			gizmoXAxisRB->SetLocalRotation(glm::quat(glm::vec3(0, 0, PI / 2.0f)));
-			gizmoXAxisRB->SetLocalPosition(glm::vec3(-cylinderHeight, 0, 0));
+			gizmoXAxisRB->SetLocalPosition(glm::vec3(cylinderHeight, 0, 0));
 
 			gizmoYAxisRB->SetLocalPosition(glm::vec3(0, cylinderHeight, 0));
 
