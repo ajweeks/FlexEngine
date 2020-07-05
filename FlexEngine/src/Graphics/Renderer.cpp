@@ -266,6 +266,9 @@ namespace flex
 		rootObject.fields.emplace_back("offset", JSONValue(VecToString(m_PostProcessSettings.offset, 3)));
 		rootObject.fields.emplace_back("saturation", JSONValue(m_PostProcessSettings.saturation));
 
+		rootObject.fields.emplace_back("shadow cascade count", JSONValue(m_ShadowCascadeCount));
+		rootObject.fields.emplace_back("shadow cascade base resolution", JSONValue((i32)m_ShadowMapBaseResolution));
+
 		BaseCamera* cam = g_CameraManager->CurrentCamera();
 		rootObject.fields.emplace_back("aperture", JSONValue(cam->aperture));
 		rootObject.fields.emplace_back("shutter speed", JSONValue(cam->shutterSpeed));
@@ -300,6 +303,9 @@ namespace flex
 			m_PostProcessSettings.brightness = ParseVec3(rootObject.GetString("brightness"));
 			m_PostProcessSettings.offset = ParseVec3(rootObject.GetString("offset"));
 			m_PostProcessSettings.saturation = rootObject.GetFloat("saturation");
+
+			rootObject.SetIntChecked("shadow cascade count", m_ShadowCascadeCount);
+			rootObject.SetUIntChecked("shadow cascade base resolution", m_ShadowMapBaseResolution);
 
 			if (rootObject.HasField("aperture"))
 			{
@@ -604,7 +610,7 @@ namespace flex
 			drawInfo.materialID = m_SpriteArrMatID;
 			drawInfo.anchor = AnchorPoint::BOTTOM_RIGHT;
 			drawInfo.scale = glm::vec3(0.2f);
-			for (u32 i = 0; i < SHADOW_CASCADE_COUNT; ++i)
+			for (u32 i = 0; i < (u32)m_ShadowCascadeCount; ++i)
 			{
 				// TODO:
 				drawInfo.textureID = 999 + i;
@@ -660,8 +666,14 @@ namespace flex
 			modifiedProj[3][2] = -modifiedProj[3][2];
 			glm::mat4 invCam = glm::inverse(modifiedProj * cam->GetView());
 
-			real lastSplitDist = 0.0;
-			for (u32 c = 0; c < SHADOW_CASCADE_COUNT; ++c)
+			if (m_ShadowLightViewMats.size() != m_ShadowCascadeCount)
+			{
+				m_ShadowLightViewMats.resize(m_ShadowCascadeCount);
+				m_ShadowLightProjMats.resize(m_ShadowCascadeCount);
+			}
+
+			real lastSplitDist = 0.0f;
+			for (u32 c = 0; c < (u32)m_ShadowCascadeCount; ++c)
 			{
 				real splitDist = depthSplits[c];
 
@@ -1019,6 +1031,17 @@ namespace flex
 				ImGui::PopItemWidth();
 
 				ImGui::TreePop();
+			}
+
+			if (ImGui::SliderInt("Shadow cascade count", &m_ShadowCascadeCount, 1, 4))
+			{
+				RecreateShadowFrameBuffers();
+			}
+
+			if (ImGuiExt::SliderUInt("Shadow cascade base resolution", &m_ShadowMapBaseResolution, 128u, 4096u))
+			{
+				m_ShadowMapBaseResolution = NextPowerOfTwo(m_ShadowMapBaseResolution);
+				RecreateShadowFrameBuffers();
 			}
 
 			if (ImGui::TreeNode("Debug objects"))

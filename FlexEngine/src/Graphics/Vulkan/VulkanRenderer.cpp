@@ -303,7 +303,8 @@ namespace flex
 			m_SSAOBlurVFBColorAttachment0 = new FrameBufferAttachment(m_VulkanDevice, frameBufCreateInfo);
 
 			m_ShadowBufFormat = VK_FORMAT_D16_UNORM;
-			for (u32 i = 0; i < SHADOW_CASCADE_COUNT; ++i)
+			m_ShadowCascades.resize(m_ShadowCascadeCount);
+			for (i32 i = 0; i < m_ShadowCascadeCount; ++i)
 			{
 				m_ShadowCascades[i] = new Cascade(m_VulkanDevice);
 			}
@@ -328,7 +329,7 @@ namespace flex
 			CreateSwapChainFramebuffers();
 
 			PrepareCubemapFrameBuffer();
-			CreateFrameBuffers();
+			RecreateShadowFrameBuffers();
 
 			{
 				u32 blankData = 0xFFFFFFFF;
@@ -778,7 +779,7 @@ namespace flex
 			delete m_OffscreenFB1DepthAttachment;
 			m_OffscreenFB1DepthAttachment = nullptr;
 
-			for (u32 i = 0; i < SHADOW_CASCADE_COUNT; ++i)
+			for (i32 i = 0; i < m_ShadowCascadeCount; ++i)
 			{
 				delete m_ShadowCascades[i];
 			}
@@ -4691,6 +4692,110 @@ namespace flex
 			return true;
 		}
 
+		void VulkanRenderer::RecreateShadowFrameBuffers()
+		{
+			VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+
+			VkImageCreateInfo imageCreateInfo = vks::imageCreateInfo();
+			imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+			imageCreateInfo.format = m_ShadowBufFormat;
+			imageCreateInfo.extent.width = m_ShadowMapBaseResolution;
+			imageCreateInfo.extent.height = m_ShadowMapBaseResolution;
+			imageCreateInfo.extent.depth = 1;
+			imageCreateInfo.mipLevels = 1;
+			imageCreateInfo.arrayLayers = m_ShadowCascadeCount;
+			imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+			imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+			imageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+			imageCreateInfo.flags = 0;
+
+			VK_CHECK_RESULT(vkCreateImage(m_VulkanDevice->m_LogicalDevice, &imageCreateInfo, nullptr, m_ShadowImage.replace()));
+			SetImageName(m_VulkanDevice, m_ShadowImage, "Shadow cascade image");
+			VkMemoryRequirements memRequirements;
+			vkGetImageMemoryRequirements(m_VulkanDevice->m_LogicalDevice, m_ShadowImage, &memRequirements);
+			VkMemoryAllocateInfo memAlloc = vks::memoryAllocateInfo(memRequirements.size);
+			memAlloc.memoryTypeIndex = m_VulkanDevice->GetMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			VK_CHECK_RESULT(vkAllocateMemory(m_VulkanDevice->m_LogicalDevice, &memAlloc, nullptr, m_ShadowImageMemory.replace()));
+			VK_CHECK_RESULT(vkBindImageMemory(m_VulkanDevice->m_LogicalDevice, m_ShadowImage, m_ShadowImageMemory, 0));
+
+			// Full image view (for all layers)
+			VkImageViewCreateInfo fullImageView = vks::imageViewCreateInfo();
+			fullImageView.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+			fullImageView.format = m_ShadowBufFormat;
+			fullImageView.subresourceRange = {};
+			fullImageView.subresourceRange.aspectMask = aspectMask;
+			fullImageView.subresourceRange.baseMipLevel = 0;
+			fullImageView.subresourceRange.levelCount = 1; // Number of mipmap levels
+			fullImageView.subresourceRange.baseArrayLayer = 0;
+			fullImageView.subresourceRange.layerCount = m_ShadowCascadeCount;
+			fullImageView.image = m_ShadowImage;
+			fullImageView.flags = 0;
+			VK_CHECK_RESULT(vkCreateImageView(m_VulkanDevice->m_LogicalDevice, &fullImageView, nullptr, m_ShadowImageView.replace()));
+			SetImageViewName(m_VulkanDevice, m_ShadowImageView, "Shadow cascade image view (main)");
+
+			if (m_ShadowCascades.size() < m_ShadowCascadeCount)
+			{
+				i32 prevSize = (i32)m_ShadowCascades.size();
+				m_ShadowCascades.resize(m_ShadowCascadeCount);
+				for (i32 i = prevSize; i < (i32)m_ShadowCascadeCount; ++i)
+				{
+					m_ShadowCascades[i] = new Cascade(m_VulkanDevice);
+				}
+			}
+			else if (m_ShadowCascades.size() > m_ShadowCascadeCount)
+			{
+				for (i32 i = (i32)m_ShadowCascades.size() - 1; i >= (i32)m_ShadowCascadeCount; --i)
+				{
+					delete m_ShadowCascades[i];
+				}
+				m_ShadowCascades.resize(m_ShadowCascadeCount);
+				m_ShadowCascades.shrink_to_fit();
+			}
+
+			// One frame buffer & view per cascade
+			for (i32 i = 0; i < m_ShadowCascadeCount; ++i)
+			{
+				VkImageViewCreateInfo imageView = vks::imageViewCreateInfo();
+				imageView.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+				imageView.format = m_ShadowBufFormat;
+				imageView.subresourceRange = {};
+				imageView.subresourceRange.aspectMask = aspectMask;
+				imageView.subresourceRange.baseMipLevel = 0;
+				imageView.subresourceRange.levelCount = 1; // Number of mipmap levels
+				imageView.subresourceRange.baseArrayLayer = i;
+				imageView.subresourceRange.layerCount = 1;
+				imageView.image = m_ShadowImage;
+				imageView.flags = 0;
+				VK_CHECK_RESULT(vkCreateImageView(m_VulkanDevice->m_LogicalDevice, &imageView, nullptr, m_ShadowCascades[i]->imageView.replace()));
+				char imageViewName[256];
+				snprintf(imageViewName, 256, "Shadow cascade %u image view", i);
+				SetImageViewName(m_VulkanDevice, m_ShadowCascades[i]->imageView, imageViewName);
+
+				VkFramebufferCreateInfo shadowFramebufferCreateInfo = vks::framebufferCreateInfo(*m_ShadowRenderPass);
+				shadowFramebufferCreateInfo.pAttachments = &m_ShadowCascades[i]->imageView;
+				shadowFramebufferCreateInfo.attachmentCount = 1;
+				shadowFramebufferCreateInfo.width = m_ShadowMapBaseResolution;
+				shadowFramebufferCreateInfo.height = m_ShadowMapBaseResolution;
+
+				char frameBufferName[256];
+				snprintf(frameBufferName, 256, "Shadow cascade %u frame buffer", i);
+
+				m_ShadowCascades[i]->frameBuffer.Create(&shadowFramebufferCreateInfo, m_ShadowRenderPass, frameBufferName);
+
+				FrameBufferAttachment::CreateInfo attachmentCreateInfo = {};
+				attachmentCreateInfo.width = m_ShadowMapBaseResolution;
+				attachmentCreateInfo.height = m_ShadowMapBaseResolution;
+				attachmentCreateInfo.format = m_ShadowBufFormat;
+				if (m_ShadowCascades[i]->attachment == nullptr)
+				{
+					m_ShadowCascades[i]->attachment = new FrameBufferAttachment(m_VulkanDevice, attachmentCreateInfo);
+				}
+				m_ShadowCascades[i]->attachment->bOwnsResources = false;
+				m_ShadowCascades[i]->attachment->image = m_ShadowImage;
+				m_ShadowCascades[i]->attachment->view = m_ShadowCascades[i]->imageView;
+			}
+		}
+
 		void VulkanRenderer::SetShaderCount(u32 shaderCount)
 		{
 			m_Shaders.clear();
@@ -7155,95 +7260,6 @@ namespace flex
 			SetSamplerName(m_VulkanDevice, m_DepthSampler, "Depth sampler");
 		}
 
-		void VulkanRenderer::CreateFrameBuffers()
-		{
-			// TODO: Create in shader render pass?
-			// Shadow frame buffers
-			{
-				VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-
-				VkImageCreateInfo imageCreateInfo = vks::imageCreateInfo();
-				imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
-				imageCreateInfo.format = m_ShadowBufFormat;
-				imageCreateInfo.extent.width = SHADOW_CASCADE_RES;
-				imageCreateInfo.extent.height = SHADOW_CASCADE_RES;
-				imageCreateInfo.extent.depth = 1;
-				imageCreateInfo.mipLevels = 1;
-				imageCreateInfo.arrayLayers = SHADOW_CASCADE_COUNT;
-				imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-				imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-				imageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-				imageCreateInfo.flags = 0;
-
-				VK_CHECK_RESULT(vkCreateImage(m_VulkanDevice->m_LogicalDevice, &imageCreateInfo, nullptr, m_ShadowImage.replace()));
-				SetImageName(m_VulkanDevice, m_ShadowImage, "Shadow cascade image");
-				VkMemoryRequirements memRequirements;
-				vkGetImageMemoryRequirements(m_VulkanDevice->m_LogicalDevice, m_ShadowImage, &memRequirements);
-				VkMemoryAllocateInfo memAlloc = vks::memoryAllocateInfo(memRequirements.size);
-				memAlloc.memoryTypeIndex = m_VulkanDevice->GetMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-				VK_CHECK_RESULT(vkAllocateMemory(m_VulkanDevice->m_LogicalDevice, &memAlloc, nullptr, m_ShadowImageMemory.replace()));
-				VK_CHECK_RESULT(vkBindImageMemory(m_VulkanDevice->m_LogicalDevice, m_ShadowImage, m_ShadowImageMemory, 0));
-
-				// Full image view (for all layers)
-				VkImageViewCreateInfo fullImageView = vks::imageViewCreateInfo();
-				fullImageView.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-				fullImageView.format = m_ShadowBufFormat;
-				fullImageView.subresourceRange = {};
-				fullImageView.subresourceRange.aspectMask = aspectMask;
-				fullImageView.subresourceRange.baseMipLevel = 0;
-				fullImageView.subresourceRange.levelCount = 1; // Number of mipmap levels
-				fullImageView.subresourceRange.baseArrayLayer = 0;
-				fullImageView.subresourceRange.layerCount = SHADOW_CASCADE_COUNT;
-				fullImageView.image = m_ShadowImage;
-				fullImageView.flags = 0;
-				VK_CHECK_RESULT(vkCreateImageView(m_VulkanDevice->m_LogicalDevice, &fullImageView, nullptr, m_ShadowImageView.replace()));
-				SetImageViewName(m_VulkanDevice, m_ShadowImageView, "Shadow cascade image view (main)");
-
-				// One frame buffer & view per cascade
-				for (u32 i = 0; i < SHADOW_CASCADE_COUNT; ++i)
-				{
-					VkImageViewCreateInfo imageView = vks::imageViewCreateInfo();
-					imageView.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-					imageView.format = m_ShadowBufFormat;
-					imageView.subresourceRange = {};
-					imageView.subresourceRange.aspectMask = aspectMask;
-					imageView.subresourceRange.baseMipLevel = 0;
-					imageView.subresourceRange.levelCount = 1; // Number of mipmap levels
-					imageView.subresourceRange.baseArrayLayer = i;
-					imageView.subresourceRange.layerCount = 1;
-					imageView.image = m_ShadowImage;
-					imageView.flags = 0;
-					VK_CHECK_RESULT(vkCreateImageView(m_VulkanDevice->m_LogicalDevice, &imageView, nullptr, m_ShadowCascades[i]->imageView.replace()));
-					char imageViewName[256];
-					snprintf(imageViewName, 256, "Shadow cascade %u image view", i);
-					SetImageViewName(m_VulkanDevice, m_ShadowCascades[i]->imageView, imageViewName);
-
-					VkFramebufferCreateInfo shadowFramebufferCreateInfo = vks::framebufferCreateInfo(*m_ShadowRenderPass);
-					shadowFramebufferCreateInfo.pAttachments = &m_ShadowCascades[i]->imageView;
-					shadowFramebufferCreateInfo.attachmentCount = 1;
-					shadowFramebufferCreateInfo.width = SHADOW_CASCADE_RES;
-					shadowFramebufferCreateInfo.height = SHADOW_CASCADE_RES;
-
-					char frameBufferName[256];
-					snprintf(frameBufferName, 256, "Shadow cascade %u frame buffer", i);
-
-					m_ShadowCascades[i]->frameBuffer.Create(&shadowFramebufferCreateInfo, m_ShadowRenderPass, frameBufferName);
-
-					FrameBufferAttachment::CreateInfo attachmentCreateInfo = {};
-					attachmentCreateInfo.width = SHADOW_CASCADE_RES;
-					attachmentCreateInfo.height = SHADOW_CASCADE_RES;
-					attachmentCreateInfo.format = m_ShadowBufFormat;
-					if (m_ShadowCascades[i]->attachment == nullptr)
-					{
-						m_ShadowCascades[i]->attachment = new FrameBufferAttachment(m_VulkanDevice, attachmentCreateInfo);
-					}
-					m_ShadowCascades[i]->attachment->bOwnsResources = false;
-					m_ShadowCascades[i]->attachment->image = m_ShadowImage;
-					m_ShadowCascades[i]->attachment->view = m_ShadowCascades[i]->imageView;
-				}
-			}
-		}
-
 		// TODO: Test that this still works
 		void VulkanRenderer::PrepareCubemapFrameBuffer()
 		{
@@ -8102,10 +8118,10 @@ namespace flex
 						}
 					}
 
-					VkViewport viewport = vks::viewportFlipped((real)SHADOW_CASCADE_RES, (real)SHADOW_CASCADE_RES, 0.0f, 1.0f);
+					VkViewport viewport = vks::viewportFlipped((real)m_ShadowCascades[0]->frameBuffer.width, (real)m_ShadowCascades[0]->frameBuffer.height, 0.0f, 1.0f);
 					vkCmdSetViewport(m_OffScreenCmdBuffer, 0, 1, &viewport);
 
-					VkRect2D shadowScissor = vks::scissor(0u, 0u, SHADOW_CASCADE_RES, SHADOW_CASCADE_RES);
+					VkRect2D shadowScissor = vks::scissor(0u, 0u, m_ShadowCascades[0]->frameBuffer.width, m_ShadowCascades[0]->frameBuffer.height);
 					vkCmdSetScissor(m_OffScreenCmdBuffer, 0, 1, &shadowScissor);
 
 					if (m_CascadedShadowMapPushConstantBlock == nullptr)
@@ -8113,7 +8129,7 @@ namespace flex
 						m_CascadedShadowMapPushConstantBlock = new Material::PushConstantBlock();
 					}
 
-					for (u32 c = 0; c < SHADOW_CASCADE_COUNT; ++c)
+					for (i32 c = 0; c < m_ShadowCascadeCount; ++c)
 					{
 						m_ShadowRenderPass->Begin_WithFrameBuffer(m_OffScreenCmdBuffer, (VkClearValue*)&depthStencilClearValue, 1, &m_ShadowCascades[c]->frameBuffer);
 
@@ -8833,7 +8849,7 @@ namespace flex
 
 			CreateFrameBufferAttachments();
 			CreateRenderPasses();
-			CreateFrameBuffers();
+			RecreateShadowFrameBuffers();
 
 			for (u32 i = 0; i < m_Shaders.size(); ++i)
 			{
@@ -9538,7 +9554,7 @@ namespace flex
 
 			CreateFrameBufferAttachments();
 			CreateRenderPasses();
-			CreateFrameBuffers();
+			RecreateShadowFrameBuffers();
 
 			for (VulkanShader& shader : m_Shaders)
 			{

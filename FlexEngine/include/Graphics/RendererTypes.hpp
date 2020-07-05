@@ -19,7 +19,7 @@ namespace flex
 	class GameObject;
 
 	static const i32 MAX_POINT_LIGHT_COUNT = 8;
-	static const i32 SHADOW_CASCADE_COUNT = 4;
+	static const i32 MAX_SHADOW_CASCADE_COUNT = 4;
 
 	// 48 bytes
 	struct DirLightData
@@ -84,8 +84,8 @@ namespace flex
 	// 272 bytes
 	struct ShadowSamplingData
 	{
-		glm::mat4 cascadeViewProjMats[SHADOW_CASCADE_COUNT]; // 0
-		glm::vec4 cascadeDepthSplits;                       // 256
+		glm::mat4 cascadeViewProjMats[MAX_SHADOW_CASCADE_COUNT];	// 0
+		glm::vec4 cascadeDepthSplits;								// 256
 	};
 
 	struct SHCoeffs
@@ -171,7 +171,7 @@ namespace flex
 	const u64 U_FB_0_SAMPLER					= (1ull << 25);
 	const u64 U_FB_1_SAMPLER					= (1ull << 26);
 	const u64 U_SHOW_EDGES						= (1ull << 27); const u32 US_SHOW_EDGES					= sizeof(i32);
-	const u64 U_LIGHT_VIEW_PROJS				= (1ull << 28); const u32 US_LIGHT_VIEW_PROJS			= sizeof(glm::mat4) * SHADOW_CASCADE_COUNT;
+	const u64 U_LIGHT_VIEW_PROJS				= (1ull << 28); const u32 US_LIGHT_VIEW_PROJS			= sizeof(glm::mat4) * MAX_SHADOW_CASCADE_COUNT;
 	const u64 U_HDR_EQUIRECTANGULAR_SAMPLER		= (1ull << 29);
 	const u64 U_BRDF_LUT_SAMPLER				= (1ull << 30);
 	const u64 U_PREFILTER_MAP					= (1ull << 31);

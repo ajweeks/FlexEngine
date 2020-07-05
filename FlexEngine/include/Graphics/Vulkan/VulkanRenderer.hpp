@@ -149,6 +149,7 @@ namespace flex
 			virtual void RemoveMaterial(MaterialID materialID) override;
 			virtual void FillOutGBufferFrameBufferAttachments(std::vector<Pair<std::string, void*>>& outVec) override;
 			virtual bool LoadFont(FontMetaData& fontMetaData, bool bForceRender) override;
+			virtual void RecreateShadowFrameBuffers() override;
 
 			virtual void EnqueueScreenSpaceSprites() override;
 			virtual void EnqueueWorldSpaceSprites() override;
@@ -206,7 +207,6 @@ namespace flex
 			void CreateDepthResources();
 			void CreateSwapChainFramebuffers();
 			void CreateFrameBufferAttachments();
-			void CreateFrameBuffers();
 			void PrepareCubemapFrameBuffer();
 			void PhysicsDebugRender();
 
@@ -399,7 +399,7 @@ namespace flex
 			VDeleter<VkImageView> m_ShadowImageView;
 			VkFormat m_ShadowBufFormat = VK_FORMAT_UNDEFINED;
 			VkDescriptorSet m_ShadowDescriptorSet = VK_NULL_HANDLE;
-			Cascade* m_ShadowCascades[SHADOW_CASCADE_COUNT];
+			std::vector<Cascade*> m_ShadowCascades;
 
 			std::map<FrameBufferAttachmentID, FrameBufferAttachment*> m_FrameBufferAttachments;
 

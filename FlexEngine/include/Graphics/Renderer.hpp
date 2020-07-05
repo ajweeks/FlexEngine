@@ -271,7 +271,6 @@ namespace flex
 
 		static const u32 MAX_PARTICLE_COUNT = 65536;
 		static const u32 PARTICLES_PER_DISPATCH = 256;
-		static const u32 SHADOW_CASCADE_RES = 4096;
 		static const u32 SSAO_NOISE_DIM = 4;
 
 		static const char* GameObjectPayloadCStr;
@@ -284,6 +283,7 @@ namespace flex
 		virtual void SetShaderCount(u32 shaderCount) = 0;
 		virtual void RemoveMaterial(MaterialID materialID) = 0;
 		virtual void FillOutGBufferFrameBufferAttachments(std::vector<Pair<std::string, void*>>& outVec) = 0;
+		virtual void RecreateShadowFrameBuffers() = 0;
 
 		// Will attempt to find pre-rendered font at specified path, and
 		// only render a new file if not present or if bForceRender is true
@@ -363,9 +363,11 @@ namespace flex
 
 		//MaterialID m_CubemapGBufferMaterialID = InvalidMaterialID;
 
-		// TODO: Make tweakable at runtime
-		glm::mat4 m_ShadowLightViewMats[SHADOW_CASCADE_COUNT];
-		glm::mat4 m_ShadowLightProjMats[SHADOW_CASCADE_COUNT];
+		i32 m_ShadowCascadeCount = MAX_SHADOW_CASCADE_COUNT;
+		u32 m_ShadowMapBaseResolution = 4096;
+
+		std::vector<glm::mat4> m_ShadowLightViewMats;
+		std::vector<glm::mat4> m_ShadowLightProjMats;
 
 		// Filled every frame
 		std::vector<SpriteQuadDrawInfo> m_QueuedWSSprites;
