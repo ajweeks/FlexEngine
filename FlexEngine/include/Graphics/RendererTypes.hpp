@@ -62,11 +62,12 @@ namespace flex
 		glm::vec2 ssaoTexelOffset; // 0
 	};
 
-	// 8 bytes
+	// 16 bytes
 	struct SSAOSamplingData
 	{
-		i32 ssaoEnabled; // 0
-		real ssaoPowExp; // 4
+		i32 enabled; // 0
+		real powExp; // 4
+		real pad[2]; // 8
 	};
 
 	// 32 bytes

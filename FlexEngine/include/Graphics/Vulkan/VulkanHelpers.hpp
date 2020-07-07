@@ -129,7 +129,7 @@ namespace flex
 
 		struct VulkanUniformBufferObjectData
 		{
-			real* data = nullptr;
+			u8* data = nullptr;
 			u32 size = 0;
 		};
 
@@ -443,6 +443,7 @@ namespace flex
 		struct VulkanShader
 		{
 			VulkanShader(const VDeleter<VkDevice>& device, Shader* shader);
+			~VulkanShader();
 
 			Shader* shader = nullptr;
 
@@ -452,6 +453,8 @@ namespace flex
 			VDeleter<VkShaderModule> fragShaderModule;
 			VDeleter<VkShaderModule> geomShaderModule;
 			VDeleter<VkShaderModule> computeShaderModule;
+
+			VkSpecializationInfo* fragSpecializationInfo = nullptr;
 		};
 
 #if COMPILE_SHADER_COMPILER
@@ -563,6 +566,23 @@ namespace flex
 			u32 descriptorSetLayoutIndex = 0;
 		};
 
+		struct SpecializationConstantCreateInfo
+		{
+			SpecializationConstantID constantID = InvalidSpecializationConstantID;
+			u32 size = 0;
+			void* data = nullptr;
+		};
+
+		struct GraphicsPipeline
+		{
+			GraphicsPipeline(const VDeleter<VkDevice>& vulkanDevice);
+
+			VDeleter<VkPipeline> pipeline;
+			VDeleter<VkPipelineLayout> pipelineLayout;
+
+			void* specializationInfos = nullptr;
+		};
+
 		struct VulkanRenderObject
 		{
 			VulkanRenderObject(const VDeleter<VkDevice>& device, RenderID renderID);
@@ -602,8 +622,7 @@ namespace flex
 			u64 dynamicVertexBufferOffset = InvalidBufferID;
 			u64 dynamicIndexBufferOffset = InvalidBufferID;
 
-			VDeleter<VkPipelineLayout> pipelineLayout;
-			VDeleter<VkPipeline> graphicsPipeline;
+			GraphicsPipeline graphicsPipeline;
 
 			RenderPassType renderPassOverride = RenderPassType::_NONE;
 		};
@@ -661,7 +680,7 @@ namespace flex
 			VkDescriptorSet* descriptorSet = nullptr;
 			VkDescriptorSetLayout* descriptorSetLayout = nullptr;
 			ShaderID shaderID = InvalidShaderID;
-			UniformBufferList* uniformBufferList = nullptr;
+			UniformBufferList const * uniformBufferList = nullptr;
 
 			ShaderUniformContainer<BufferDescriptorInfo> bufferDescriptors;
 			ShaderUniformContainer<ImageDescriptorInfo> imageDescriptors;

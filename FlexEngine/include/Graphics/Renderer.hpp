@@ -187,6 +187,8 @@ namespace flex
 		virtual ParticleSystemID AddParticleSystem(const std::string& name, ParticleSystem* system, i32 particleCount) = 0;
 		virtual bool RemoveParticleSystem(ParticleSystemID particleSystemID) = 0;
 
+		virtual void RecreateEverything() = 0;
+
 		void DrawImGuiRenderObjects();
 		void DrawImGuiSettings();
 
@@ -278,7 +280,7 @@ namespace flex
 		static const char* MeshPayloadCStr;
 
 	protected:
-		virtual void LoadShaders();
+		void LoadShaders();
 		virtual bool LoadShaderCode(ShaderID shaderID) = 0;
 		virtual void SetShaderCount(u32 shaderCount) = 0;
 		virtual void RemoveMaterial(MaterialID materialID) = 0;
@@ -361,8 +363,6 @@ namespace flex
 			CullFace cullFace = CullFace::_INVALID;
 		};
 
-		//MaterialID m_CubemapGBufferMaterialID = InvalidMaterialID;
-
 		i32 m_ShadowCascadeCount = MAX_SHADOW_CASCADE_COUNT;
 		u32 m_ShadowMapBaseResolution = 4096;
 
@@ -418,6 +418,8 @@ namespace flex
 		i32 m_TAASampleCount = 2;
 		bool m_bTAAStateChanged = false;
 
+		i32 m_ShaderQualityLevel = 1;
+
 		std::string m_PreviewedFont;
 
 		GameObject* m_Grid = nullptr;
@@ -459,6 +461,11 @@ namespace flex
 		MaterialID m_SSAOBlurMatID = InvalidMaterialID;
 		ShaderID m_SSAOShaderID = InvalidShaderID;
 		ShaderID m_SSAOBlurShaderID = InvalidShaderID;
+
+		SpecializationConstantID m_SSAOKernelSizeSpecializationID = InvalidSpecializationConstantID;
+		SpecializationConstantID m_TAASampleCountSpecializationID = InvalidSpecializationConstantID;
+		SpecializationConstantID m_ShaderQualityLevelSpecializationID = InvalidSpecializationConstantID;
+		SpecializationConstantID m_ShadowCascadeCountSpecializationID = InvalidSpecializationConstantID;
 
 		std::string m_FontImageExtension = ".png";
 

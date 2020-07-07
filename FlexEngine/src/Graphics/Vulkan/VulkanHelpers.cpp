@@ -1690,8 +1690,7 @@ namespace flex
 
 		VulkanRenderObject::VulkanRenderObject(const VDeleter<VkDevice>& device, RenderID renderID) :
 			renderID(renderID),
-			pipelineLayout(device, vkDestroyPipelineLayout),
-			graphicsPipeline(device, vkDestroyPipeline)
+			graphicsPipeline(device)
 		{
 		}
 
@@ -2400,6 +2399,16 @@ namespace flex
 			computeShaderModule = { device, vkDestroyShaderModule };
 		}
 
+		VulkanShader::~VulkanShader()
+		{
+			if (fragSpecializationInfo != nullptr)
+			{
+				free((void*)fragSpecializationInfo->pMapEntries);
+				free((void*)fragSpecializationInfo->pData);
+				delete fragSpecializationInfo;
+			}
+		}
+
 		VulkanCubemapGBuffer::VulkanCubemapGBuffer(u32 id, const char* name, VkFormat internalFormat) :
 			id(id),
 			name(name),
@@ -2816,6 +2825,12 @@ namespace flex
 		VulkanParticleSystem::VulkanParticleSystem(VulkanDevice* device) :
 			computePipeline(device->m_LogicalDevice, vkDestroyPipeline),
 			graphicsPipeline(device->m_LogicalDevice, vkDestroyPipeline)
+		{
+		}
+
+		GraphicsPipeline::GraphicsPipeline(const VDeleter<VkDevice>& vulkanDevice) :
+			pipeline(vulkanDevice, vkDestroyPipeline),
+			pipelineLayout(vulkanDevice, vkDestroyPipelineLayout)
 		{
 		}
 	} // namespace vk

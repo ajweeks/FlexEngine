@@ -89,10 +89,15 @@ namespace flex
 		m_SSAOBlurDataConstant.radius = 4;
 		m_SSAOBlurSamplePixelOffset = 2;
 
-		m_SSAOSamplingData.ssaoEnabled = 1;
-		m_SSAOSamplingData.ssaoPowExp = 2.0f;
+		m_SSAOSamplingData.enabled = 1;
+		m_SSAOSamplingData.powExp = 2.0f;
 
 		m_ShadowSamplingData.cascadeDepthSplits = glm::vec4(0.1f, 0.25f, 0.5f, 0.8f);
+
+		m_SSAOKernelSizeSpecializationID = 0;
+		m_TAASampleCountSpecializationID = 1;
+		m_ShaderQualityLevelSpecializationID = 2;
+		m_ShadowCascadeCountSpecializationID = 3;
 	}
 
 	void Renderer::PostInitialize()
@@ -1035,13 +1040,20 @@ namespace flex
 
 			if (ImGui::SliderInt("Shadow cascade count", &m_ShadowCascadeCount, 1, 4))
 			{
+				m_ShadowCascadeCount = glm::clamp(m_ShadowCascadeCount, 1, 4);
 				RecreateShadowFrameBuffers();
 			}
 
 			if (ImGuiExt::SliderUInt("Shadow cascade base resolution", &m_ShadowMapBaseResolution, 128u, 4096u))
 			{
-				m_ShadowMapBaseResolution = NextPowerOfTwo(m_ShadowMapBaseResolution);
+				m_ShadowMapBaseResolution = NextPowerOfTwo(glm::clamp(m_ShadowMapBaseResolution, 128u, 4096u));
 				RecreateShadowFrameBuffers();
+			}
+
+			if (ImGui::SliderInt("Shader quality level", &m_ShaderQualityLevel, 0, 3))
+			{
+				m_ShaderQualityLevel = glm::clamp(m_ShaderQualityLevel, 0, 3);
+				RecreateEverything();
 			}
 
 			if (ImGui::TreeNode("Debug objects"))
@@ -1136,10 +1148,10 @@ namespace flex
 				m_PostProcessSettings.saturation / maxSaturation,
 				m_PostProcessSettings.saturation / maxSaturation, 1));
 
-			bool bSSAOEnabled = m_SSAOSamplingData.ssaoEnabled != 0;
+			bool bSSAOEnabled = m_SSAOSamplingData.enabled != 0;
 			if (ImGui::Checkbox("SSAO", &bSSAOEnabled))
 			{
-				m_SSAOSamplingData.ssaoEnabled = bSSAOEnabled ? 1 : 0;
+				m_SSAOSamplingData.enabled = bSSAOEnabled ? 1 : 0;
 				if (m_bSSAOBlurEnabled != bSSAOEnabled)
 				{
 					m_bSSAOBlurEnabled = bSSAOEnabled;
@@ -1154,7 +1166,7 @@ namespace flex
 				m_bSSAOStateChanged = true;
 				if (m_bSSAOBlurEnabled)
 				{
-					m_SSAOSamplingData.ssaoEnabled = 1;
+					m_SSAOSamplingData.enabled = 1;
 				}
 			}
 
@@ -1165,7 +1177,7 @@ namespace flex
 			ImGui::SliderFloat("Radius", &m_SSAOGenData.radius, 0.0001f, 15.0f);
 			ImGui::SliderInt("Blur Radius", &m_SSAOBlurDataConstant.radius, 1, 16);
 			ImGui::SliderInt("Blur Offset Count", &m_SSAOBlurSamplePixelOffset, 1, 10);
-			ImGui::SliderFloat("Pow", &m_SSAOSamplingData.ssaoPowExp, 0.1f, 10.0f);
+			ImGui::SliderFloat("Pow", &m_SSAOSamplingData.powExp, 0.1f, 10.0f);
 
 			ImGui::PopItemWidth();
 

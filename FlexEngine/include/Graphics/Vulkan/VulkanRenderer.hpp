@@ -116,6 +116,8 @@ namespace flex
 			virtual void RecaptureReflectionProbe() override;
 			virtual void RenderObjectStateChanged() override;
 
+			virtual void RecreateEverything() override;
+
 			virtual ParticleSystemID AddParticleSystem(const std::string& name, ParticleSystem* system, i32 particleCount) override;
 			virtual bool RemoveParticleSystem(ParticleSystemID particleSystemID) override;
 
@@ -148,8 +150,9 @@ namespace flex
 			virtual void SetShaderCount(u32 shaderCount) override;
 			virtual void RemoveMaterial(MaterialID materialID) override;
 			virtual void FillOutGBufferFrameBufferAttachments(std::vector<Pair<std::string, void*>>& outVec) override;
-			virtual bool LoadFont(FontMetaData& fontMetaData, bool bForceRender) override;
 			virtual void RecreateShadowFrameBuffers() override;
+
+			virtual bool LoadFont(FontMetaData& fontMetaData, bool bForceRender) override;
 
 			virtual void EnqueueScreenSpaceSprites() override;
 			virtual void EnqueueWorldSpaceSprites() override;
@@ -197,7 +200,7 @@ namespace flex
 			void CreateRenderPasses();
 			void CalculateAutoLayoutTransitions();
 
-			void FillOutBufferDescriptorInfos(ShaderUniformContainer<BufferDescriptorInfo>* descriptors, UniformBufferList* uniformBufferList, ShaderID shaderID);
+			void FillOutBufferDescriptorInfos(ShaderUniformContainer<BufferDescriptorInfo>* descriptors, UniformBufferList const * uniformBufferList, ShaderID shaderID);
 			void CreateDescriptorSet(RenderID renderID);
 			void CreateDescriptorSet(DescriptorSetCreateInfo& createInfo, MaterialID materialID);
 			void CreateDescriptorSet(DescriptorSetCreateInfo* createInfo);
@@ -214,6 +217,7 @@ namespace flex
 
 			void CreatePostProcessingResources();
 			void CreateFullscreenBlitResources();
+			VkSpecializationInfo* GenerateSpecializationInfo(const std::vector<SpecializationConstantCreateInfo>& entries);
 			void CreateComputeResources();
 			void CreateParticleSystemResources(VulkanParticleSystem* particleSystem);
 
@@ -290,9 +294,9 @@ namespace flex
 				MaterialID materialIDOverride = InvalidMaterialID, u32 dynamicUBOOffsetOverride = InvalidID);
 			void UpdateDynamicUniformBuffer(MaterialID materialID, u32 dynamicOffsetIndex, const glm::mat4& model, UniformOverrides const* uniformOverrides = nullptr);
 
-			void GenerateIrradianceMaps();
+			void CreateFontGraphicsPipelines();
 
-			void OnShaderReloadSuccess();
+			void GenerateIrradianceMaps();
 
 			void SetLineWidthForCmdBuffer(VkCommandBuffer cmdBuffer, real requestedWidth = 3.0f);
 
@@ -333,8 +337,7 @@ namespace flex
 
 			u32 GetAlignedUBOSize(u32 unalignedSize);
 
-			void DrawTextSS(VkCommandBuffer commandBuffer);
-			void DrawTextWS(VkCommandBuffer commandBuffer);
+			void DrawText(VkCommandBuffer commandBuffer, bool bScreenSpace);
 			void DrawSpriteBatch(const std::vector<SpriteQuadDrawInfo>& batch, VkCommandBuffer commandBuffer);
 			void DrawParticles(VkCommandBuffer commandBuffer);
 
@@ -502,6 +505,7 @@ namespace flex
 				&m_ForwardRenderPass, &m_PostProcessRenderPass, &m_GammaCorrectRenderPass, &m_TAAResolveRenderPass, &m_UIRenderPass };
 			std::vector<VulkanRenderPass*> m_AutoTransitionedRenderPasses;
 
+			// TODO: Replace with `GraphicsPipeline`s
 			VDeleter<VkPipeline> m_ShadowGraphicsPipeline;
 			VDeleter<VkPipelineLayout> m_ShadowPipelineLayout;
 
@@ -579,12 +583,6 @@ namespace flex
 			std::map<VertexAttributes, VkPipeline> m_WireframeGraphicsPipelines;
 			VDeleter<VkPipelineLayout> m_WireframePipelineLayout;
 			VkDescriptorSet m_WireframeDescSet = VK_NULL_HANDLE;
-
-			// TODO: Create abstraction for specialization constants
-			VkSpecializationMapEntry m_SSAOSpecializationMapEntry;
-			VkSpecializationInfo m_SSAOSpecializationInfo;
-			VkSpecializationMapEntry m_TAASpecializationMapEntry;
-			VkSpecializationInfo m_TAAOSpecializationInfo;
 
 			PoolAllocator<DeviceDiagnosticCheckpoint, 32> m_CheckPointAllocator;
 

@@ -43,6 +43,8 @@ namespace flex
 
 	using ThreadHandle = u64;
 
+	using SpecializationConstantID = u32;
+
 	static constexpr auto u8_min = std::numeric_limits<u8>::min();
 	static constexpr auto u8_max = std::numeric_limits<u8>::max();
 	static constexpr auto u16_min = std::numeric_limits<u16>::min();
@@ -78,6 +80,7 @@ namespace flex
 	static constexpr auto InvalidParticleSystemID = ((ParticleSystemID)u32_max);
 	static constexpr auto InvalidThreadHandle = ((ThreadHandle)u64_max);
 	static constexpr auto InvalidBufferID = u64_max;
+	static constexpr auto InvalidSpecializationConstantID = (SpecializationConstantID)u32_max;
 	static constexpr auto InvalidID = u32_max;
 
 	//template<bool> struct StaticAssert;
