@@ -109,6 +109,21 @@ namespace flex
 			{
 				m_HoveringAxisIndex = -1;
 			}
+			else
+			{
+				if (m_HoveringAxisIndex != ALL_AXES_IDX)
+				{
+					Transform* gizmoTransform = m_TransformGizmo->GetTransform();
+					glm::vec3 axes[] = { gizmoTransform->GetRight(), gizmoTransform->GetUp(), gizmoTransform->GetForward() };
+					static real alpha = 0.8f;
+					static btVector4 colours[] = { btVector4(0.8f, 0.1f, 0.1f, alpha), btVector4(0.1f, 0.8f, 0.1f, alpha), btVector4(0.2f, 0.2f, 0.9f, alpha) };
+					glm::vec3 pos = gizmoTransform->GetWorldPosition();
+					glm::vec3 dir = axes[m_HoveringAxisIndex];
+					btVector3 p0 = ToBtVec3(pos + dir * 1000.0f);
+					btVector3 p1 = ToBtVec3(pos - dir * 1000.0f);
+					g_Renderer->GetDebugDrawer()->DrawLineWithAlpha(p0, p1, colours[m_HoveringAxisIndex], colours[m_HoveringAxisIndex]);
+				}
+			}
 		}
 		else
 		{
