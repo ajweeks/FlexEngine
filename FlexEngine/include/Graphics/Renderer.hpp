@@ -176,7 +176,7 @@ namespace flex
 			real spacing,
 			real scale = 1.0f) = 0;
 
-		virtual void DrawAssetBrowserImGui(bool* bShowing) = 0;
+		virtual void DrawAssetWindowsImGui(bool* bMaterialWindowShowing, bool* bShaderWindowShowing, bool* bTextureWindowShowing, bool* bMeshWindowShowing) = 0;
 		virtual void DrawImGuiForRenderObject(RenderID renderID) = 0;
 
 		virtual void RecaptureReflectionProbe() = 0;

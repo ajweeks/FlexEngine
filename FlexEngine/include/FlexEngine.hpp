@@ -162,7 +162,10 @@ namespace flex
 		real m_SecondsSinceLastCommonSettingsFileSave = 0.0f;
 
 		bool m_bMainWindowShowing = true;
-		bool m_bAssetBrowserShowing = false;
+		bool m_bMaterialWindowShowing = false;
+		bool m_bShaderWindowShowing = false;
+		bool m_bTextureWindowShowing = false;
+		bool m_bMeshWindowShowing = false;
 		bool m_bDemoWindowShowing = false;
 		bool m_bInputMapperShowing = false;
 		bool m_bShowMemoryStatsWindow = false;

@@ -2478,13 +2478,11 @@ namespace flex
 			m_CurrentFont->AddTextCache(newCache);
 		}
 
-		void VulkanRenderer::DrawAssetBrowserImGui(bool* bShowing)
+		void VulkanRenderer::DrawAssetWindowsImGui(bool* bMaterialWindowShowing, bool* bShaderWindowShowing, bool* bTextureWindowShowing, bool* bMeshWindowShowing)
 		{
-			// TODO: Consolidate with GL renderer
-			ImGui::SetNextWindowSize(ImVec2(400.0f, 350.0f), ImGuiCond_FirstUseEver);
-			if (ImGui::Begin("Asset browser", bShowing))
+			if (*bMaterialWindowShowing)
 			{
-				if (ImGui::CollapsingHeader("Materials"))
+				if (ImGui::Begin("Materials", bMaterialWindowShowing))
 				{
 					static bool bUpdateFields = true;
 					static bool bMaterialSelectionChanged = true;
@@ -2523,7 +2521,7 @@ namespace flex
 						{
 							for (u32 loadedTexIndex = 0; loadedTexIndex < m_LoadedTextures.size(); ++loadedTexIndex)
 							{
-								// TODO(AJ): Compare IDs
+								// TODO: Compare IDs
 								if (pair.second == GetLoadedTexture(loadedTexIndex))
 								{
 									selectedTextureIndices[texIndex] = loadedTexIndex;
@@ -2536,12 +2534,10 @@ namespace flex
 					{
 						bUpdateFields = false;
 
-
 						for (u32 texIndex = 0; texIndex < mat.textures.Count(); ++texIndex)
 						{
 							mat.textures.values[texIndex].second = GetLoadedTexture(selectedTextureIndices[texIndex]);
 						}
-
 
 						i32 i = 0;
 						for (VulkanTexture* texture : m_LoadedTextures)
@@ -2549,45 +2545,8 @@ namespace flex
 							std::string texturePath = texture->GetRelativeFilePath();
 							std::string textureName = StripLeadingDirectories(texturePath);
 
-							//ImGuiUpdateTextureIndexOrMaterial(bUpdateAlbedoTextureMaterial,
-							//	texturePath,
-							//	mat.material.albedoTexturePath,
-							//	texture,
-							//	i,
-							//	&albedoTextureIndex,
-							//	U_ALBEDO_SAMPLER);
-
-							//ImGuiUpdateTextureIndexOrMaterial(bUpdateMetallicTextureMaterial,
-							//	texturePath,
-							//	mat.material.metallicTexturePath,
-							//	texture,
-							//	i,
-							//	&metallicTextureIndex,
-							//	&mat.metallicTexture);
-
-							//ImGuiUpdateTextureIndexOrMaterial(bUpdateRoughessTextureMaterial,
-							//	texturePath,
-							//	mat.material.roughnessTexturePath,
-							//	texture,
-							//	i,
-							//	&roughnessTextureIndex,
-							//	&mat.roughnessTexture);
-
-							//ImGuiUpdateTextureIndexOrMaterial(bUpdateNormalTextureMaterial,
-							//	texturePath,
-							//	mat.material.normalTexturePath,
-							//	texture,
-							//	i,
-							//	&normalTextureIndex,
-							//	&mat.normalTexture);
-
 							++i;
 						}
-
-						//mat.material.enableAlbedoSampler = (albedoTextureIndex > 0);
-						//mat.material.enableMetallicSampler = (metallicTextureIndex > 0);
-						//mat.material.enableRoughnessSampler = (roughnessTextureIndex > 0);
-						//mat.material.enableNormalSampler = (normalTextureIndex > 0);
 
 						selectedShaderIndex = mat.material.shaderID;
 					}
@@ -2682,17 +2641,29 @@ namespace flex
 						textures.push_back(texture);
 					}
 
-					for (u32 texIndex = 0; texIndex < mat.textures.Count(); ++texIndex)
+					if (selectedTextureIndices.size() == mat.textures.Count())
 					{
-						// TODO: Pass in reference to mat.textures?
-						//VulkanTexture* texture = mat.textures[texIndex];
-						std::string texFieldName = mat.textures.slotNames[texIndex] + "##" + std::to_string(texIndex);
-						bUpdateFields |= DoTextureSelector(texFieldName.c_str(), textures, &selectedTextureIndices[texIndex]);
+						for (u32 texIndex = 0; texIndex < mat.textures.Count(); ++texIndex)
+						{
+							// TODO: Pass in reference to mat.textures?
+							//VulkanTexture* texture = mat.textures[texIndex];
+							std::string texFieldName = mat.textures.slotNames[texIndex] + "##" + std::to_string(texIndex);
+							bUpdateFields |= DoTextureSelector(texFieldName.c_str(), textures, &selectedTextureIndices[texIndex]);
+						}
 					}
 
 					ImGui::NewLine();
 
 					ImGui::EndColumns();
+
+					static ImGuiTextFilter materialFilter;
+					materialFilter.Draw("##material-filter");
+
+					ImGui::SameLine();
+					if (ImGui::Button("x"))
+					{
+						materialFilter.Clear();
+					}
 
 					if (ImGui::BeginChild("material list", ImVec2(0.0f, 120.0f), true))
 					{
@@ -2706,6 +2677,11 @@ namespace flex
 							}
 
 							VulkanMaterial& material = matIter->second;
+
+							if (!materialFilter.PassFilter(material.material.name.c_str()))
+							{
+								continue;
+							}
 
 							bool bSelected = (matShortIndex == selectedMaterialIndexShort);
 							const bool bWasMatVisibleInEditor = material.material.visibleInEditor;
@@ -2864,7 +2840,7 @@ namespace flex
 								++i;
 							}
 						}
-						ImGui::EndChild(); // Shader list
+						ImGui::EndChild(); // Shader
 
 						if (ImGui::Button("Create new material"))
 						{
@@ -2929,8 +2905,22 @@ namespace flex
 					ImGui::Checkbox("Show editor materials", &m_bShowEditorMaterials);
 				}
 
-				if (ImGui::CollapsingHeader("Shaders"))
+				ImGui::End();
+			}
+
+			if (*bShaderWindowShowing)
+			{
+				if (ImGui::Begin("Shaders", bShaderWindowShowing))
 				{
+					static ImGuiTextFilter shaderFilter;
+					shaderFilter.Draw("##shader-filter");
+
+					ImGui::SameLine();
+					if (ImGui::Button("x"))
+					{
+						shaderFilter.Clear();
+					}
+
 					static u32 selectedShaderIndex = 0;
 
 					if (ImGui::BeginChild("Shader list", ImVec2(0, 120), true))
@@ -2940,18 +2930,20 @@ namespace flex
 						for (u32 i = 0; i < (u32)m_Shaders.size(); ++i)
 						{
 							VulkanShader& shader = m_Shaders[i];
-							bool bSelected = selectedShaderIndex == i;
-							if (ImGui::Selectable(shader.shader->name.c_str(), &bSelected))
+							if (shaderFilter.PassFilter(shader.shader->name.c_str()))
 							{
-								if (bSelected)
+								bool bSelected = selectedShaderIndex == i;
+								if (ImGui::Selectable(shader.shader->name.c_str(), &bSelected))
 								{
-									selectedShaderIndex = i;
+									if (bSelected)
+									{
+										selectedShaderIndex = i;
+									}
 								}
 							}
 						}
-
-						ImGui::EndChild();
 					}
+					ImGui::EndChild(); // Shader list
 
 					VulkanShader& shader = m_Shaders[selectedShaderIndex];
 
@@ -2977,37 +2969,54 @@ namespace flex
 #endif
 				}
 
-				if (ImGui::CollapsingHeader("Textures"))
+				ImGui::End();
+			}
+
+			if (*bTextureWindowShowing)
+			{
+				if (ImGui::Begin("Textures", bTextureWindowShowing))
 				{
+					static ImGuiTextFilter textureFilter;
+					textureFilter.Draw("##texture-filter");
+
+					ImGui::SameLine();
+					if (ImGui::Button("x"))
+					{
+						textureFilter.Clear();
+					}
+
 					static i32 selectedTextureIndex = 0;
 					if (ImGui::BeginChild("texture list", ImVec2(0.0f, 120.0f), true))
 					{
 						i32 i = 0;
 						for (VulkanTexture* texture : m_LoadedTextures)
 						{
-							bool bSelected = (i == selectedTextureIndex);
 							std::string textureName = texture->GetName();
-							if (ImGui::Selectable(textureName.c_str(), &bSelected))
+							if (textureFilter.PassFilter(textureName.c_str()))
 							{
-								selectedTextureIndex = i;
-							}
-
-							if (ImGui::BeginPopupContextItem())
-							{
-								if (ImGui::Button("Reload"))
+								bool bSelected = (i == selectedTextureIndex);
+								if (ImGui::Selectable(textureName.c_str(), &bSelected))
 								{
-									texture->Reload();
-									ImGui::CloseCurrentPopup();
+									selectedTextureIndex = i;
 								}
 
-								ImGui::EndPopup();
-							}
+								if (ImGui::BeginPopupContextItem())
+								{
+									if (ImGui::Button("Reload"))
+									{
+										texture->Reload();
+										ImGui::CloseCurrentPopup();
+									}
 
-							if (ImGui::IsItemHovered())
-							{
-								DoTexturePreviewTooltip(texture);
+									ImGui::EndPopup();
+								}
+
+								if (ImGui::IsItemHovered())
+								{
+									DoTexturePreviewTooltip(texture);
+								}
+								++i;
 							}
-							++i;
 						}
 					}
 					ImGui::EndChild();
@@ -3015,7 +3024,7 @@ namespace flex
 					if (ImGui::Button("Import Texture"))
 					{
 						// TODO: Not all textures are directly in this directory! CLEANUP to make more robust
-						std::string relativeDirPath = RESOURCE_LOCATION "textures/";
+						std::string relativeDirPath = TEXTURE_LOCATION;
 						std::string absoluteDirectoryStr = RelativePathToAbsolute(relativeDirPath);
 						std::string selectedAbsFilePath;
 						if (Platform::OpenFileDialog("Import texture", absoluteDirectoryStr, selectedAbsFilePath))
@@ -3050,7 +3059,12 @@ namespace flex
 					}
 				}
 
-				if (ImGui::CollapsingHeader("Meshes"))
+				ImGui::End();
+			}
+
+			if (*bMeshWindowShowing)
+			{
+				if (ImGui::Begin("Meshes", bMeshWindowShowing))
 				{
 					static i32 selectedMeshIndex = 0;
 
@@ -3108,6 +3122,15 @@ namespace flex
 						g_SceneManager->CurrentScene()->SerializeToFile(true);
 					}
 
+					static ImGuiTextFilter meshFilter;
+					meshFilter.Draw("##mesh-filter");
+
+					ImGui::SameLine();
+					if (ImGui::Button("x"))
+					{
+						meshFilter.Clear();
+					}
+
 					if (ImGui::BeginChild("mesh list", ImVec2(0.0f, 120.0f), true))
 					{
 						i32 i = 0;
@@ -3116,53 +3139,56 @@ namespace flex
 							bool bSelected = (i == selectedMeshIndex);
 							const std::string meshFilePath = meshIter.first;
 							const std::string meshFileName = StripLeadingDirectories(meshIter.first);
-							if (ImGui::Selectable(meshFileName.c_str(), &bSelected))
+							if (meshFilter.PassFilter(meshFileName.c_str()))
 							{
-								selectedMeshIndex = i;
-							}
-
-							if (ImGui::BeginPopupContextItem())
-							{
-								if (ImGui::Button("Reload"))
+								if (ImGui::Selectable(meshFileName.c_str(), &bSelected))
 								{
-									Mesh::LoadMesh(meshIter.second->relativeFilePath);
+									selectedMeshIndex = i;
+								}
 
-									for (VulkanRenderObject* renderObject : m_RenderObjects)
+								if (ImGui::BeginPopupContextItem())
+								{
+									if (ImGui::Button("Reload"))
 									{
-										if (renderObject)
+										Mesh::LoadMesh(meshIter.second->relativeFilePath);
+
+										for (VulkanRenderObject* renderObject : m_RenderObjects)
 										{
-											Mesh* mesh = renderObject->gameObject->GetMesh();
-											if (mesh && mesh->GetRelativeFilePath().compare(meshFilePath) == 0)
+											if (renderObject)
 											{
-												mesh->Reload();
+												Mesh* mesh = renderObject->gameObject->GetMesh();
+												if (mesh && mesh->GetRelativeFilePath().compare(meshFilePath) == 0)
+												{
+													mesh->Reload();
+												}
 											}
 										}
+
+										ImGui::CloseCurrentPopup();
 									}
 
-									ImGui::CloseCurrentPopup();
+									ImGui::EndPopup();
 								}
-
-								ImGui::EndPopup();
-							}
-							else
-							{
-								if (ImGui::IsItemActive())
+								else
 								{
-									if (ImGui::BeginDragDropSource())
+									if (ImGui::IsItemActive())
 									{
-										const void* data = (void*)(meshIter.first.c_str());
-										size_t size = strlen(meshIter.first.c_str()) * sizeof(char);
+										if (ImGui::BeginDragDropSource())
+										{
+											const void* data = (void*)(meshIter.first.c_str());
+											size_t size = strlen(meshIter.first.c_str()) * sizeof(char);
 
-										ImGui::SetDragDropPayload(MeshPayloadCStr, data, size);
+											ImGui::SetDragDropPayload(MeshPayloadCStr, data, size);
 
-										ImGui::Text("%s", meshFileName.c_str());
+											ImGui::Text("%s", meshFileName.c_str());
 
-										ImGui::EndDragDropSource();
+											ImGui::EndDragDropSource();
+										}
 									}
 								}
-							}
 
-							++i;
+								++i;
+							}
 						}
 					}
 					ImGui::EndChild();
@@ -3254,9 +3280,9 @@ namespace flex
 						ImGui::EndPopup();
 					}
 				}
-			}
 
-			ImGui::End();
+				ImGui::End();
+			}
 		}
 
 		void VulkanRenderer::RecaptureReflectionProbe()
@@ -6311,19 +6337,19 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::FillOutBufferDescriptorInfos(ShaderUniformContainer<BufferDescriptorInfo>* descriptors, UniformBufferList const * uniformBufferList, ShaderID shaderID)
+		void VulkanRenderer::FillOutBufferDescriptorInfos(ShaderUniformContainer<BufferDescriptorInfo>* descriptors, UniformBufferList const* uniformBufferList, ShaderID shaderID)
 		{
 			VulkanShader* shader = &m_Shaders[shaderID];
 
 			if (shader->shader->constantBufferUniforms.HasUniform(U_UNIFORM_BUFFER_CONSTANT))
 			{
-				UniformBuffer const * constantBuffer = uniformBufferList->Get(UniformBufferType::STATIC);
+				UniformBuffer const* constantBuffer = uniformBufferList->Get(UniformBufferType::STATIC);
 				descriptors->Add(U_UNIFORM_BUFFER_CONSTANT, BufferDescriptorInfo{ constantBuffer->buffer.m_Buffer, constantBuffer->data.size, UniformBufferType::STATIC });
 			}
 
 			if (shader->shader->dynamicBufferUniforms.HasUniform(U_UNIFORM_BUFFER_DYNAMIC))
 			{
-				UniformBuffer const * dynamicBuffer = uniformBufferList->Get(UniformBufferType::DYNAMIC);
+				UniformBuffer const* dynamicBuffer = uniformBufferList->Get(UniformBufferType::DYNAMIC);
 				// TODO: FIXME: BAD: CLEANUP:
 				const VkDeviceSize dynamicBufferSize = sizeof(VulkanUniformBufferObjectData) * m_RenderObjects.size();
 				descriptors->Add(U_UNIFORM_BUFFER_DYNAMIC, BufferDescriptorInfo{ dynamicBuffer->buffer.m_Buffer, dynamicBufferSize, UniformBufferType::DYNAMIC });
@@ -6331,7 +6357,7 @@ namespace flex
 
 			if (shader->shader->additionalBufferUniforms.HasUniform(U_PARTICLE_BUFFER))
 			{
-				UniformBuffer const * particleBuffer = uniformBufferList->Get(UniformBufferType::PARTICLE_DATA);
+				UniformBuffer const* particleBuffer = uniformBufferList->Get(UniformBufferType::PARTICLE_DATA);
 				descriptors->Add(U_PARTICLE_BUFFER, BufferDescriptorInfo{ particleBuffer->buffer.m_Buffer, particleBuffer->data.size, UniformBufferType::PARTICLE_DATA });
 			}
 		}

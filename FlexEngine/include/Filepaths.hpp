@@ -10,6 +10,8 @@ namespace flex
 	// TODO: Remove
 #define RESOURCE_STR(path)		"../../../FlexEngine/resources/" + path
 
+#define TEXTURE_LOCATION		RESOURCE_LOCATION "textures/"
+
 #define FONT_LOCATION			RESOURCE_LOCATION "fonts/"
 #define FONT_SDF_LOCATION		SAVED_LOCATION "fonts/"
 

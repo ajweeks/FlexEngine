@@ -2542,6 +2542,7 @@ namespace flex
 		data.brightness = 1.0f;
 		data.castShadows = 1;
 		data.shadowDarkness = 1.0f;
+		data.pad[0] = data.pad[1] = 0;
 	}
 
 	void DirectionalLight::Initialize()

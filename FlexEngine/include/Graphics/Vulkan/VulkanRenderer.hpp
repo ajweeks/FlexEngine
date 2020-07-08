@@ -110,7 +110,7 @@ namespace flex
 				real spacing,
 				real scale = 1.0f) override;
 
-			virtual void DrawAssetBrowserImGui(bool* bShowing) override;
+			virtual void DrawAssetWindowsImGui(bool* bMaterialWindowShowing, bool* bShaderWindowShowing, bool* bTextureWindowShowing, bool* bMeshWindowShowing) override;
 			virtual void DrawImGuiForRenderObject(RenderID renderID) override;
 
 			virtual void RecaptureReflectionProbe() override;

@@ -313,7 +313,7 @@ namespace flex
 		openFileName.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
 		bool bSuccess = GetOpenFileName(&openFileName) == 1;
 
-		if (openFileName.lpstrFile)
+		if (bSuccess && openFileName.lpstrFile)
 		{
 			outSelectedAbsFilePath = ReplaceBackSlashesWithForward(openFileName.lpstrFile);
 		}

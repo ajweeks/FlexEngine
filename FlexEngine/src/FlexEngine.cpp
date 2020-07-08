@@ -901,13 +901,17 @@ namespace flex
 				ImGui::MenuItem("Main Window", NULL, &m_bMainWindowShowing);
 				ImGui::MenuItem("GPU Timings", NULL, &g_Renderer->bGPUTimingsWindowShowing);
 				ImGui::MenuItem("Memory Stats", NULL, &m_bShowMemoryStatsWindow);
-				ImGui::MenuItem("Asset Browser", NULL, &m_bAssetBrowserShowing);
+				ImGui::MenuItem("Materials", NULL, &m_bMaterialWindowShowing);
+				ImGui::MenuItem("Shaders", NULL, &m_bShaderWindowShowing);
+				ImGui::MenuItem("Textures", NULL, &m_bTextureWindowShowing);
+				ImGui::MenuItem("Meshes", NULL, &m_bMeshWindowShowing);
 				ImGui::MenuItem("Key Mapper", NULL, &m_bInputMapperShowing);
 				ImGui::MenuItem("Uniform Buffers", NULL, &g_Renderer->bUniformBufferWindowShowing);
 				ImGui::MenuItem("Font Editor", NULL, &g_Renderer->bFontWindowShowing);
 #if COMPILE_RENDERDOC_API
 				ImGui::MenuItem("Render Doc Captures", NULL, &m_bShowingRenderDocWindow);
 #endif
+				ImGui::Separator();
 				ImGui::MenuItem("ImGui Demo Window", NULL, &m_bDemoWindowShowing);
 
 				ImGui::EndMenu();
@@ -1082,10 +1086,7 @@ namespace flex
 
 		g_Renderer->DrawImGuiWindows();
 
-		if (m_bAssetBrowserShowing)
-		{
-			g_Renderer->DrawAssetBrowserImGui(&m_bAssetBrowserShowing);
-		}
+		g_Renderer->DrawAssetWindowsImGui(&m_bMaterialWindowShowing, &m_bShaderWindowShowing, &m_bTextureWindowShowing, &m_bMeshWindowShowing);
 
 		if (m_bInputMapperShowing)
 		{

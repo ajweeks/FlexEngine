@@ -1194,7 +1194,8 @@ namespace flex
 			ImGui::Text("Materials");
 
 			std::vector<MeshComponent*> subMeshes = mesh->GetSubMeshes();
-			for (u32 slotIndex = 0; slotIndex < subMeshes.size(); ++slotIndex)
+			bool bMatChanged = false;
+			for (u32 slotIndex = 0; !bMatChanged && slotIndex < subMeshes.size(); ++slotIndex)
 			{
 				MeshComponent* meshComponent = subMeshes[slotIndex];
 
@@ -1231,6 +1232,7 @@ namespace flex
 						{
 							meshComponent->SetMaterialID(matPair.second);
 							selectedMaterialShortIndex = matShortIndex;
+							bMatChanged = true;
 						}
 
 						++matShortIndex;
@@ -1249,6 +1251,7 @@ namespace flex
 						if (draggedMaterialID)
 						{
 							meshComponent->SetMaterialID(*draggedMaterialID);
+							bMatChanged = true;
 						}
 					}
 
