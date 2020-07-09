@@ -72,9 +72,9 @@ namespace flex
 
 			// Use save file if exists, otherwise use default
 			//const std::string savedShortPath = SCENE_SAVED_LOCATION + m_FileName;
-			const std::string defaultShortPath = SCENE_DEFAULT_LOCATION + m_FileName;
+			const std::string defaultPath = SCENE_DEFAULT_LOCATION + m_FileName;
+			const std::string defaultShortPath = StripLeadingDirectories(defaultPath);
 			//const std::string savedPath = RESOURCE_LOCATION + savedShortPath;
-			const std::string defaultPath = RESOURCE_LOCATION + defaultShortPath;
 			//m_bUsingSaveFile = FileExists(savedPath);
 
 			std::string shortFilePath;
