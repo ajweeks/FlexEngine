@@ -14,8 +14,8 @@
 namespace flex
 {
 	SceneManager::SceneManager() :
-		m_SavedDirStr(RelativePathToAbsolute(RESOURCE_LOCATION "scenes/saved")),
-		m_DefaultDirStr(RelativePathToAbsolute(RESOURCE_LOCATION "scenes/default"))
+		m_SavedDirStr(RelativePathToAbsolute(SCENE_SAVED_LOCATION)),
+		m_DefaultDirStr(RelativePathToAbsolute(SCENE_DEFAULT_LOCATION))
 	{
 		if (!Platform::DirectoryExists(m_SavedDirStr))
 		{

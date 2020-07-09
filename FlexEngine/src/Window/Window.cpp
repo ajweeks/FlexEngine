@@ -13,8 +13,6 @@
 
 namespace flex
 {
-	std::string Window::s_ConfigFilePath = ROOT_LOCATION "config/window-settings.json";
-
 	Window::Window(const std::string& title) :
 		m_TitleString(title),
 		m_CurrentWindowMode(WindowMode::WINDOWED)
@@ -215,11 +213,11 @@ namespace flex
 
 	bool Window::InitFromConfig()
 	{
-		if (FileExists(s_ConfigFilePath))
+		if (FileExists(WINDOW_CONFIG_LOCATION))
 		{
 			JSONObject rootObject = {};
 
-			if (JSONParser::ParseFromFile(s_ConfigFilePath, rootObject))
+			if (JSONParser::ParseFromFile(WINDOW_CONFIG_LOCATION, rootObject))
 			{
 				rootObject.SetBoolChecked("move console to other monitor on bootup", m_bMoveConsoleToOtherMonitor);
 				rootObject.SetBoolChecked("auto restore state", m_bAutoRestoreStateOnBootup);
@@ -257,7 +255,7 @@ namespace flex
 			}
 			else
 			{
-				PrintError("Failed to parse window settings config file %s\n\terror: %s\n", s_ConfigFilePath.c_str(), JSONParser::GetErrorString());
+				PrintError("Failed to parse window settings config file %s\n\terror: %s\n", WINDOW_CONFIG_LOCATION, JSONParser::GetErrorString());
 			}
 		}
 
@@ -278,7 +276,7 @@ namespace flex
 		rootObject.fields.emplace_back("v-sync", JSONValue(m_bVSyncEnabled));
 		std::string fileContents = rootObject.Print(0);
 
-		if (!WriteFile(s_ConfigFilePath, fileContents, false))
+		if (!WriteFile(WINDOW_CONFIG_LOCATION, fileContents, false))
 		{
 			PrintError("Failed to write window settings config file\n");
 		}

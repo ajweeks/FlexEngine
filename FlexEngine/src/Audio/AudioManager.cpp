@@ -63,7 +63,7 @@ namespace flex
 		}
 
 		// Reserve first ID for beep to play on volume change
-		s_BeepID = AudioManager::AddAudioSource(RESOURCE_LOCATION "audio/wah-wah-02.wav");
+		s_BeepID = AudioManager::AddAudioSource(SFX_LOCATION "wah-wah-02.wav");
 
 		SetMasterGain(s_MasterGain);
 	}

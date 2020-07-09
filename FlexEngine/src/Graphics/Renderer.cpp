@@ -47,8 +47,8 @@ namespace flex
 	std::array<glm::mat4, 6> Renderer::s_CaptureViews;
 
 	Renderer::Renderer() :
-		m_RendererSettingsFilePathAbs(RelativePathToAbsolute(ROOT_LOCATION "config/renderer-settings.json")),
-		m_FontsFilePathAbs(RelativePathToAbsolute(ROOT_LOCATION "config/fonts.json"))
+		m_RendererSettingsFilePathAbs(RelativePathToAbsolute(RENDERER_SETTINGS_LOCATION)),
+		m_FontsFilePathAbs(RelativePathToAbsolute(FONT_DEFINITION_LOCATION))
 	{
 	}
 
@@ -60,7 +60,7 @@ namespace flex
 	{
 		ParseFontFile();
 
-		std::string hdriPath = RESOURCE("textures/hdri/");
+		std::string hdriPath = TEXTURE_LOCATION "hdri/";
 		if (!Platform::FindFilesInDirectory(hdriPath, m_AvailableHDRIs, "hdr"))
 		{
 			PrintWarn("Unable to find hdri directory at %s\n", hdriPath.c_str());
@@ -1972,7 +1972,7 @@ namespace flex
 						GameObject* newGameObject = new GameObject(newObjectName, GameObjectType::OBJECT);
 
 						Mesh* mesh = newGameObject->SetMesh(new Mesh(newGameObject));
-						mesh->LoadFromFile(RESOURCE_LOCATION "meshes/cube.glb", m_PlaceholderMaterialID);
+						mesh->LoadFromFile(MESH_DIRECTORY "cube.glb", m_PlaceholderMaterialID);
 
 						g_SceneManager->CurrentScene()->AddRootObject(newGameObject);
 

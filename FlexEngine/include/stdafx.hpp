@@ -268,6 +268,7 @@ namespace flex
 	extern std::size_t g_TrackedDeallocationCount;
 
 	extern bool g_bEnableLogging_Loading;
+	extern bool g_bEnableLogging_Shaders;
 
 	extern bool g_bOpenGLEnabled;
 	extern bool g_bVulkanEnabled;

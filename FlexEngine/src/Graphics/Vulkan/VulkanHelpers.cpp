@@ -2449,7 +2449,7 @@ namespace flex
 				const char* blockName = "Calculate shader contents checksum";
 				PROFILE_AUTO(blockName);
 
-				const std::string shaderInputDirectory = RESOURCE_LOCATION "shaders";
+				const std::string shaderInputDirectory = SHADER_SOURCE_LOCATION;
 
 				if (FileExists(SHADER_CHECKSUM_LOCATION))
 				{

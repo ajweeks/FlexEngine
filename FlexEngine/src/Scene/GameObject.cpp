@@ -65,9 +65,9 @@ namespace flex
 
 		if (!s_SqueakySounds.IsInitialized())
 		{
-			s_SqueakySounds.Initialize(RESOURCE_LOCATION "audio/squeak00.wav", 5);
+			s_SqueakySounds.Initialize(SFX_LOCATION "squeak00.wav", 5);
 
-			s_BunkSound = AudioManager::AddAudioSource(RESOURCE_LOCATION "audio/bunk.wav");
+			s_BunkSound = AudioManager::AddAudioSource(SFX_LOCATION "bunk.wav");
 		}
 	}
 
@@ -466,7 +466,7 @@ namespace flex
 			if (ImGui::Button("Add mesh component"))
 			{
 				Mesh* mesh = SetMesh(new Mesh(this));
-				mesh->LoadFromFile(RESOURCE_LOCATION "meshes/cube.glb", g_Renderer->GetPlaceholderMaterialID());
+				mesh->LoadFromFile(MESH_DIRECTORY "cube.glb", g_Renderer->GetPlaceholderMaterialID());
 			}
 		}
 
@@ -2002,7 +2002,7 @@ namespace flex
 			if (!m_Mesh)
 			{
 				Mesh* valveMesh = new Mesh(this);
-				valveMesh->LoadFromFile(RESOURCE_LOCATION "meshes/valve.glb", matIDs[0]);
+				valveMesh->LoadFromFile(MESH_DIRECTORY "valve.glb", matIDs[0]);
 				assert(m_Mesh == nullptr);
 				SetMesh(valveMesh);
 			}
@@ -2166,7 +2166,7 @@ namespace flex
 		if (!m_Mesh)
 		{
 			Mesh* cubeMesh = new Mesh(this);
-			cubeMesh->LoadFromFile(RESOURCE_LOCATION "meshes/cube.glb", matIDs[0]);
+			cubeMesh->LoadFromFile(MESH_DIRECTORY "cube.glb", matIDs[0]);
 			SetMesh(cubeMesh);
 		}
 
@@ -2351,11 +2351,11 @@ namespace flex
 				const char* filePath;
 				if (bBroken)
 				{
-					filePath = RESOURCE("meshes/glass-window-broken.glb");
+					filePath = MESH_DIRECTORY "glass-window-broken.glb";
 				}
 				else
 				{
-					filePath = RESOURCE("meshes/glass-window-whole.glb");
+					filePath = MESH_DIRECTORY "glass-window-whole.glb";
 				}
 				windowMesh->LoadFromFile(filePath, matIDs);
 				SetMesh(windowMesh);
@@ -2429,7 +2429,7 @@ namespace flex
 		//MeshComponent* sphereMesh = new MeshComponent(this, matID);
 
 		//assert(m_MeshComponent == nullptr);
-		//sphereMesh->LoadFromFile(RESOURCE_LOCATION "meshes/sphere.glb");
+		//sphereMesh->LoadFromFile(MESH_DIRECTORY "sphere.glb");
 		//SetMeshComponent(sphereMesh);
 
 		//std::string captureName = m_Name + "_capture";
@@ -2877,7 +2877,7 @@ namespace flex
 			matID = 0;
 		}
 		Mesh* mesh = SetMesh(new Mesh(this));
-		std::string meshFilePath = std::string(RESOURCE("meshes/")) + std::string(meshName);
+		std::string meshFilePath = std::string(MESH_DIRECTORY) + std::string(meshName);
 		if (!mesh->LoadFromFile(meshFilePath, matID))
 		{
 			PrintWarn("Failed to load cart mesh!\n");
@@ -3240,7 +3240,7 @@ namespace flex
 			matID = 0;
 		}
 		Mesh* mesh = SetMesh(new Mesh(this));
-		if (!mesh->LoadFromFile(RESOURCE("meshes/mobile-liquid-box.glb"), matID))
+		if (!mesh->LoadFromFile(MESH_DIRECTORY "mobile-liquid-box.glb", matID))
 		{
 			PrintWarn("Failed to load mobile-liquid-box mesh!\n");
 		}
@@ -3303,7 +3303,7 @@ namespace flex
 		matCreateInfo.constMetallic = 0.8f;
 		matCreateInfo.constRoughness = 0.01f;
 		matCreateInfo.bDynamic = true;
-		matCreateInfo.albedoTexturePath = RESOURCE("textures/wave-n-2.png");
+		matCreateInfo.albedoTexturePath = TEXTURE_LOCATION "wave-n-2.png";
 		matCreateInfo.enableAlbedoSampler = true;
 
 		m_WaveMaterialID = g_Renderer->InitializeMaterial(&matCreateInfo);
@@ -3323,7 +3323,7 @@ namespace flex
 			bobberMatID = g_Renderer->GetPlaceholderMaterialID();
 		}
 		Mesh* mesh = bobber->SetMesh(new Mesh(bobber));
-		if (!mesh->LoadFromFile(RESOURCE("meshes/sphere.glb"), bobberMatID))
+		if (!mesh->LoadFromFile(MESH_DIRECTORY "sphere.glb", bobberMatID))
 		{
 			PrintError("Failed to load bobber mesh\n");
 		}
@@ -4821,7 +4821,7 @@ namespace flex
 			{
 				GameObject* obj = new GameObject("block", GameObjectType::OBJECT);
 				obj->SetMesh(new Mesh(obj));
-				obj->GetMesh()->LoadFromFile(RESOURCE_LOCATION "meshes/cube.glb", PickRandomFrom(matIDs));
+				obj->GetMesh()->LoadFromFile(MESH_DIRECTORY "cube.glb", PickRandomFrom(matIDs));
 				AddChild(obj);
 				obj->GetTransform()->SetLocalScale(glm::vec3(blockSize));
 				obj->GetTransform()->SetLocalPosition(glm::vec3(
@@ -4856,7 +4856,7 @@ namespace flex
 			matID = 0;
 		}
 		Mesh* mesh = SetMesh(new Mesh(this));
-		if (!mesh->LoadFromFile(RESOURCE("meshes/terminal-copper.glb"), matID))
+		if (!mesh->LoadFromFile(MESH_DIRECTORY "terminal-copper.glb", matID))
 		{
 			PrintWarn("Failed to load terminal mesh!\n");
 		}

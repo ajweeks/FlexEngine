@@ -105,9 +105,10 @@ namespace flex
 		memset(m_CmdLineStrBuf, 0, MAX_CHARS_CMD_LINE_STR);
 
 		{
-			std::string configDirAbs = RelativePathToAbsolute(ROOT_LOCATION "config/");
-			m_CommonSettingsFileName = "common.json";
-			m_CommonSettingsAbsFilePath = configDirAbs + m_CommonSettingsFileName;
+			std::string configPathAbs = RelativePathToAbsolute(COMMON_CONFIG_LOCATION);
+			m_CommonSettingsAbsFilePath = configPathAbs;
+			m_CommonSettingsFileName = StripLeadingDirectories(configPathAbs);
+			std::string configDirAbs = ExtractDirectoryString(configPathAbs);
 			Platform::CreateDirectoryRecursive(configDirAbs);
 		}
 
@@ -119,7 +120,7 @@ namespace flex
 		}
 
 		{
-			std::string renderDocSettingsDirAbs = RelativePathToAbsolute(ROOT_LOCATION "config/");
+			std::string renderDocSettingsDirAbs = RelativePathToAbsolute(CONFIG_LOCATION);
 			m_RenderDocSettingsFileName = "renderdoc.json";
 			m_RenderDocSettingsAbsFilePath = renderDocSettingsDirAbs + m_RenderDocSettingsFileName;
 		}
@@ -283,9 +284,9 @@ namespace flex
 
 		if (s_AudioSourceIDs.empty())
 		{
-			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(RESOURCE_LOCATION "audio/dud_dud_dud_dud.wav"));
-			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(RESOURCE_LOCATION "audio/drmapan.wav"));
-			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(RESOURCE_LOCATION "audio/blip.wav"));
+			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(SFX_LOCATION "dud_dud_dud_dud.wav"));
+			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(SFX_LOCATION "drmapan.wav"));
+			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(SFX_LOCATION "blip.wav"));
 			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 100.727f));
 			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 200.068f));
 			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 300.811f));
@@ -314,9 +315,9 @@ namespace flex
 		}
 
 		ImGuiIO& io = ImGui::GetIO();
-		m_ImGuiIniFilepathStr = ROOT_LOCATION "config/imgui.ini";
+		m_ImGuiIniFilepathStr = IMGUI_INI_LOCATION;
 		io.IniFilename = m_ImGuiIniFilepathStr.c_str();
-		m_ImGuiLogFilepathStr = ROOT_LOCATION "config/imgui.log";
+		m_ImGuiLogFilepathStr = IMGUI_LOG_LOCATION;
 		io.LogFilename = m_ImGuiLogFilepathStr.c_str();
 		io.DisplaySize = (ImVec2)g_Window->GetFrameBufferSize();
 		io.IniSavingRate = 10.0f;
@@ -717,7 +718,7 @@ namespace flex
 		//io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 		io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange; // glfwSetCursor overruns buffer somewhere (currently Window::m_FrameBufferSize.y...)
 
-		std::string fontFilePath(RESOURCE_LOCATION "fonts/lucon.ttf");
+		std::string fontFilePath(FONT_LOCATION "lucon.ttf");
 		io.Fonts->AddFontFromFileTTF(fontFilePath.c_str(), 13);
 
 		io.FontGlobalScale = g_Monitor->contentScaleX;

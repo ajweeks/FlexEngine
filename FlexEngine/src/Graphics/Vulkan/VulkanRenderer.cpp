@@ -341,11 +341,11 @@ namespace flex
 				m_BlankTextureArr->CreateFromMemory(&blankData, sizeof(blankData), VK_FORMAT_R8G8B8A8_UNORM, 1);
 			}
 
-			m_AlphaBGTextureID = InitializeTextureFromFile(RESOURCE_LOCATION "textures/alpha-bg.png", 4, false, false, false);
-			m_LoadingTextureID = InitializeTextureFromFile(RESOURCE_LOCATION "textures/loading_1.png", 4, false, false, false);
-			m_WorkTextureID = InitializeTextureFromFile(RESOURCE_LOCATION "textures/work_d.jpg", 4, false, true, false);
-			m_PointLightIconID = InitializeTextureFromFile(RESOURCE_LOCATION "textures/icons/point-light-icon-256.png", 4, false, true, false);
-			m_DirectionalLightIconID = InitializeTextureFromFile(RESOURCE_LOCATION "textures/icons/directional-light-icon-256.png", 4, false, true, false);
+			m_AlphaBGTextureID = InitializeTextureFromFile(TEXTURE_LOCATION "alpha-bg.png", 4, false, false, false);
+			m_LoadingTextureID = InitializeTextureFromFile(TEXTURE_LOCATION "loading_1.png", 4, false, false, false);
+			m_WorkTextureID = InitializeTextureFromFile(TEXTURE_LOCATION "work_d.jpg", 4, false, true, false);
+			m_PointLightIconID = InitializeTextureFromFile(TEXTURE_LOCATION "icons/point-light-icon-256.png", 4, false, true, false);
+			m_DirectionalLightIconID = InitializeTextureFromFile(TEXTURE_LOCATION "icons/directional-light-icon-256.png", 4, false, true, false);
 
 			m_SpritePerspPushConstBlock = new Material::PushConstantBlock(128);
 			m_SpriteOrthoPushConstBlock = new Material::PushConstantBlock(128);
@@ -3199,7 +3199,7 @@ namespace flex
 					if (ImGui::Button("Import Mesh"))
 					{
 						// TODO: Not all models are directly in this directory! CLEANUP to make more robust
-						std::string relativeImportDirPath = RESOURCE_LOCATION "meshes/";
+						std::string relativeImportDirPath = MESH_DIRECTORY;
 						std::string absoluteImportDirectoryStr = RelativePathToAbsolute(relativeImportDirPath);
 						std::string selectedAbsFilePath;
 						if (Platform::OpenFileDialog("Import mesh", absoluteImportDirectoryStr, selectedAbsFilePath))

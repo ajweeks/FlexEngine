@@ -187,11 +187,11 @@ namespace flex
 		glfwFocusWindow(m_Window);
 		m_bHasFocus = true;
 
-		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION "icons/flex-logo-03_128.png", 4));
-		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION "icons/flex-logo-03_64.png", 4));
-		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION "icons/flex-logo-03_48.png", 4));
-		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION "icons/flex-logo-03_32.png", 4));
-		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION "icons/flex-logo-03_16.png", 4));
+		m_WindowIcons.push_back(LoadGLFWimage(APP_ICON_LOCATION "flex-logo-03_128.png", 4));
+		m_WindowIcons.push_back(LoadGLFWimage(APP_ICON_LOCATION "flex-logo-03_64.png", 4));
+		m_WindowIcons.push_back(LoadGLFWimage(APP_ICON_LOCATION "flex-logo-03_48.png", 4));
+		m_WindowIcons.push_back(LoadGLFWimage(APP_ICON_LOCATION "flex-logo-03_32.png", 4));
+		m_WindowIcons.push_back(LoadGLFWimage(APP_ICON_LOCATION "flex-logo-03_16.png", 4));
 
 		if (!m_WindowIcons.empty() && m_WindowIcons[0].pixels)
 		{

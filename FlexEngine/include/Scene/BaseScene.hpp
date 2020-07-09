@@ -197,9 +197,5 @@ namespace flex
 		BaseScene(const BaseScene&) = delete;
 		BaseScene& operator=(const BaseScene&) = delete;
 
-		static const char* MATERIALS_FILE_PATH;
-		static const char* MESHES_FILE_PATH;
-		static const char* MESHES_DIRECTORY;
-
 	};
 } // namespace flex

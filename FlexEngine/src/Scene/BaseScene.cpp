@@ -37,10 +37,6 @@ namespace flex
 	std::vector<JSONObject> BaseScene::s_ParsedMeshes;
 	std::vector<JSONObject> BaseScene::s_ParsedPrefabs;
 
-	const char* BaseScene::MATERIALS_FILE_PATH = RESOURCE_LOCATION "scenes/materials.json";
-	const char* BaseScene::MESHES_FILE_PATH = RESOURCE_LOCATION "scenes/meshes.json";
-	const char* BaseScene::MESHES_DIRECTORY = RESOURCE_LOCATION "meshes/";
-
 	BaseScene::BaseScene(const std::string& fileName) :
 		m_FileName(fileName),
 		m_TrackManager(this),
@@ -75,10 +71,10 @@ namespace flex
 			m_CartManager.Initialize();
 
 			// Use save file if exists, otherwise use default
-			//const std::string savedShortPath = "scenes/saved/" + m_FileName;
-			const std::string defaultShortPath = "scenes/default/" + m_FileName;
-			//const std::string savedPath = RESOURCE_STR(savedShortPath);
-			const std::string defaultPath = RESOURCE_STR(defaultShortPath);
+			//const std::string savedShortPath = SCENE_SAVED_LOCATION + m_FileName;
+			const std::string defaultShortPath = SCENE_DEFAULT_LOCATION + m_FileName;
+			//const std::string savedPath = RESOURCE_LOCATION + savedShortPath;
+			const std::string defaultPath = RESOURCE_LOCATION + defaultShortPath;
 			//m_bUsingSaveFile = FileExists(savedPath);
 
 			std::string shortFilePath;
@@ -253,7 +249,7 @@ namespace flex
 					//skyboxMatCreateInfo.generatedIrradianceCubemapSize = glm::vec2(32.0f);
 					//skyboxMatCreateInfo.generatePrefilteredMap = true;
 					//skyboxMatCreateInfo.generatedPrefilteredCubemapSize = glm::vec2(128.0f);
-					//skyboxMatCreateInfo.environmentMapPath = RESOURCE_LOCATION "textures/hdri/Milkyway/Milkyway_Light.hdr";
+					//skyboxMatCreateInfo.environmentMapPath = TEXTURE_LOCATION "hdri/Milkyway/Milkyway_Light.hdr";
 					//MaterialID skyboxMatID = g_Renderer->InitializeMaterial(&skyboxMatCreateInfo);
 
 					//m_LoadedMaterials.push_back(skyboxMatID);
@@ -296,7 +292,7 @@ namespace flex
 
 				GameObject* sphere = new GameObject("sphere", GameObjectType::OBJECT);
 				Mesh* mesh = sphere->SetMesh(new Mesh(sphere));
-				mesh->LoadFromFile(RESOURCE_LOCATION "meshes/ico-sphere.glb", sphereMatID);
+				mesh->LoadFromFile(MESH_DIRECTORY "ico-sphere.glb", sphereMatID);
 				AddRootObject(sphere);
 
 				// Default directional light
@@ -865,16 +861,16 @@ namespace flex
 	{
 		s_ParsedMeshes.clear();
 
-		if (FileExists(MESHES_FILE_PATH))
+		if (FileExists(MESHES_FILE_LOCATION))
 		{
 			if (g_bEnableLogging_Loading)
 			{
-				const std::string cleanedFilePath = StripLeadingDirectories(MESHES_FILE_PATH);
+				const std::string cleanedFilePath = StripLeadingDirectories(MESHES_FILE_LOCATION);
 				Print("Parsing meshes file at %s\n", cleanedFilePath.c_str());
 			}
 
 			JSONObject obj;
-			if (JSONParser::ParseFromFile(MESHES_FILE_PATH, obj))
+			if (JSONParser::ParseFromFile(MESHES_FILE_LOCATION, obj))
 			{
 				auto meshObjects = obj.GetObjectArray("meshes");
 				for (auto meshObject : meshObjects)
@@ -884,13 +880,13 @@ namespace flex
 			}
 			else
 			{
-				PrintError("Failed to parse mesh file: %s\n\terror: %s\n", MESHES_FILE_PATH, JSONParser::GetErrorString());
+				PrintError("Failed to parse mesh file: %s\n\terror: %s\n", MESHES_FILE_LOCATION, JSONParser::GetErrorString());
 				return;
 			}
 		}
 		else
 		{
-			PrintError("Failed to parse meshes file at %s\n", MESHES_FILE_PATH);
+			PrintError("Failed to parse meshes file at %s\n", MESHES_FILE_LOCATION);
 			return;
 		}
 
@@ -904,16 +900,16 @@ namespace flex
 	{
 		s_ParsedMaterials.clear();
 
-		if (FileExists(MATERIALS_FILE_PATH))
+		if (FileExists(MATERIALS_FILE_LOCATION))
 		{
 			if (g_bEnableLogging_Loading)
 			{
-				const std::string cleanedFilePath = StripLeadingDirectories(MATERIALS_FILE_PATH);
+				const std::string cleanedFilePath = StripLeadingDirectories(MATERIALS_FILE_LOCATION);
 				Print("Parsing materials file at %s\n", cleanedFilePath.c_str());
 			}
 
 			JSONObject obj;
-			if (JSONParser::ParseFromFile(MATERIALS_FILE_PATH, obj))
+			if (JSONParser::ParseFromFile(MATERIALS_FILE_LOCATION, obj))
 			{
 				auto materialObjects = obj.GetObjectArray("materials");
 				for (auto materialObject : materialObjects)
@@ -923,13 +919,13 @@ namespace flex
 			}
 			else
 			{
-				PrintError("Failed to parse materials file: %s\n\terror: %s\n", MATERIALS_FILE_PATH, JSONParser::GetErrorString());
+				PrintError("Failed to parse materials file: %s\n\terror: %s\n", MATERIALS_FILE_LOCATION, JSONParser::GetErrorString());
 				return;
 			}
 		}
 		else
 		{
-			PrintError("Failed to parse materials file at %s\n", MATERIALS_FILE_PATH);
+			PrintError("Failed to parse materials file at %s\n", MATERIALS_FILE_LOCATION);
 			return;
 		}
 
@@ -944,7 +940,7 @@ namespace flex
 		s_ParsedPrefabs.clear();
 
 		std::vector<std::string> foundFiles;
-		if (Platform::FindFilesInDirectory(RESOURCE_LOCATION "scenes/prefabs/", foundFiles, ".json"))
+		if (Platform::FindFilesInDirectory(PREFAB_LOCATION, foundFiles, ".json"))
 		{
 			for (const std::string& foundFilePath : foundFiles)
 			{
@@ -968,7 +964,7 @@ namespace flex
 		}
 		else
 		{
-			PrintError("Failed to find files in \"scenes/prefabs/\"!\n");
+			PrintError("Failed to find files in \"" PREFAB_LOCATION "\"!\n");
 			return;
 		}
 
@@ -994,7 +990,7 @@ namespace flex
 				std::string meshFileName = mesh->GetRelativeFilePath();
 				if (!meshFileName.empty())
 				{
-					meshFileName = meshFileName.substr(strlen(MESHES_DIRECTORY));
+					meshFileName = meshFileName.substr(strlen(MESH_DIRECTORY));
 					bool bFound = false;
 					for (JSONObject& parsedMeshObj : s_ParsedMeshes)
 					{
@@ -1020,8 +1016,8 @@ namespace flex
 
 		std::string fileContents = meshesObj.Print(0);
 
-		const std::string fileName = StripLeadingDirectories(MESHES_FILE_PATH);
-		if (WriteFile(MESHES_FILE_PATH, fileContents, false))
+		const std::string fileName = StripLeadingDirectories(MESHES_FILE_LOCATION);
+		if (WriteFile(MESHES_FILE_LOCATION, fileContents, false))
 		{
 			Print("Serialized mesh file to: %s\n", fileName.c_str());
 		}
@@ -1066,8 +1062,8 @@ namespace flex
 
 		std::string fileContents = materialsObj.Print(0);
 
-		const std::string fileName = StripLeadingDirectories(MATERIALS_FILE_PATH);
-		if (WriteFile(MATERIALS_FILE_PATH, fileContents, false))
+		const std::string fileName = StripLeadingDirectories(MATERIALS_FILE_LOCATION);
+		if (WriteFile(MATERIALS_FILE_LOCATION, fileContents, false))
 		{
 			Print("Serialized materials file to: %s\n", fileName.c_str());
 		}
@@ -1356,10 +1352,10 @@ namespace flex
 
 		std::string fileContents = rootSceneObject.Print(0);
 
-		const std::string defaultSaveFilePathShort = "scenes/default/" + m_FileName;
-		const std::string savedSaveFilePathShort = "scenes/saved/" + m_FileName;
-		const std::string defaultSaveFilePath = RESOURCE_STR(defaultSaveFilePathShort);
-		const std::string savedSaveFilePath = RESOURCE_STR(savedSaveFilePathShort);
+		const std::string defaultSaveFilePath = SCENE_DEFAULT_LOCATION + m_FileName;
+		const std::string savedSaveFilePath = SCENE_SAVED_LOCATION + m_FileName;
+		const std::string defaultSaveFilePathShort = StripLeadingDirectories(defaultSaveFilePath);
+		const std::string savedSaveFilePathShort = StripLeadingDirectories(savedSaveFilePath);
 		std::string shortSavedFileName;
 		if (bSaveOverDefault)
 		{
@@ -1382,7 +1378,7 @@ namespace flex
 		}
 
 
-		std::string savedFilePathName = RESOURCE_STR(shortSavedFileName);
+		std::string savedFilePathName = RESOURCE_LOCATION + shortSavedFileName;
 		savedFilePathName = RelativePathToAbsolute(savedFilePathName);
 		success &= WriteFile(savedFilePathName, fileContents, false);
 
@@ -1407,8 +1403,8 @@ namespace flex
 
 	void BaseScene::DeleteSaveFiles()
 	{
-		const std::string defaultSaveFilePath = RESOURCE("scenes/default/" + m_FileName);
-		const std::string savedSaveFilePath = RESOURCE("scenes/saved/" + m_FileName);
+		const std::string defaultSaveFilePath = SCENE_DEFAULT_LOCATION + m_FileName;
+		const std::string savedSaveFilePath = SCENE_SAVED_LOCATION + m_FileName;
 
 		bool bDefaultFileExists = FileExists(defaultSaveFilePath);
 		bool bSavedFileExists = FileExists(savedSaveFilePath);
@@ -1667,18 +1663,18 @@ namespace flex
 
 	std::string BaseScene::GetDefaultRelativeFilePath() const
 	{
-		return RESOURCE_LOCATION "scenes/default/" + m_FileName;
+		return SCENE_DEFAULT_LOCATION + m_FileName;
 	}
 
 	std::string BaseScene::GetRelativeFilePath() const
 	{
 		//if (m_bUsingSaveFile)
 		//{
-		//	return RESOURCE_LOCATION "scenes/saved/" + m_FileName;
+		//	return SCENE_SAVED_LOCATION + m_FileName;
 		//}
 		//else
 		//{
-		return RESOURCE_LOCATION "scenes/default/" + m_FileName;
+		return SCENE_DEFAULT_LOCATION + m_FileName;
 		//}
 	}
 
@@ -1686,11 +1682,11 @@ namespace flex
 	{
 		//if (m_bUsingSaveFile)
 		//{
-		//	return "scenes/saved/" + m_FileName;
+		//	return SCENE_SAVED_LOCATION + m_FileName;
 		//}
 		//else
 		//{
-		return "scenes/default/" + m_FileName;
+		return SCENE_DEFAULT_LOCATION + m_FileName;
 		//}
 	}
 

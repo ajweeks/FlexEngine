@@ -394,7 +394,7 @@ namespace flex
 		std::string meshFilePath = object.GetString("file");
 		if (!meshFilePath.empty())
 		{
-			meshFilePath = RESOURCE_LOCATION "meshes/" + meshFilePath;
+			meshFilePath = MESH_DIRECTORY + meshFilePath;
 		}
 		std::string meshPrefabName = object.GetString("prefab");
 		bool bSwapNormalYZ = object.GetBool("swapNormalYZ");
@@ -446,7 +446,7 @@ namespace flex
 
 		if (m_Type == Mesh::Type::FILE)
 		{
-			std::string prefixStr = RESOURCE_LOCATION "meshes/";
+			std::string prefixStr = MESH_DIRECTORY;
 			std::string meshFilepath = GetRelativeFilePath().substr(prefixStr.length());
 			meshObject.fields.emplace_back("file", JSONValue(meshFilepath));
 		}
