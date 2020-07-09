@@ -125,6 +125,11 @@ namespace flex
 			m_RenderDocSettingsAbsFilePath = renderDocSettingsDirAbs + m_RenderDocSettingsFileName;
 		}
 
+		{
+			// Default, can be overriden in common.json
+			m_ShaderEditorPath = "C:/Program Files/Sublime Text 3/sublime_text.exe";
+		}
+
 #if COMPILE_OPEN_GL
 		m_RendererName = "Open GL";
 #elif COMPILE_VULKAN
@@ -862,6 +867,10 @@ namespace flex
 				ImGui::EndMenu();
 			}
 
+			const char* shaderEditorPopup = "Shader editor path##popup";
+			const u32 shaderEditorBufSize = 256;
+			static char shaderEditorBuf[shaderEditorBufSize];
+			bool bOpenShaderEditorPathPopup = false;
 			if (ImGui::BeginMenu("Edit"))
 			{
 				BaseScene* scene = g_SceneManager->CurrentScene();
@@ -894,7 +903,44 @@ namespace flex
 					ImGui::EndMenu();
 				}
 
+				if (ImGui::MenuItem("Shader editor path"))
+				{
+					bOpenShaderEditorPathPopup = true;
+					memset(shaderEditorBuf, 0, shaderEditorBufSize);
+					strcpy(shaderEditorBuf, m_ShaderEditorPath.c_str());
+				}
+
 				ImGui::EndMenu();
+			}
+
+			if (bOpenShaderEditorPathPopup)
+			{
+				ImGui::OpenPopup(shaderEditorPopup);
+			}
+
+			ImGui::SetNextWindowSize(ImVec2(500.0f, 80.0f), ImGuiCond_Appearing);
+			if (ImGui::BeginPopupModal(shaderEditorPopup, NULL))
+			{
+				if (ImGui::InputText("", shaderEditorBuf, shaderEditorBufSize))
+				{
+					m_ShaderEditorPath = std::string(shaderEditorBuf);
+				}
+
+				if (ImGui::Button("Cancel"))
+				{
+					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::SameLine();
+
+				if (ImGui::Button("Confirm"))
+				{
+					m_ShaderEditorPath = std::string(shaderEditorBuf);
+					SaveCommonSettingsToDisk(false);
+					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::EndPopup();
 			}
 
 			if (ImGui::BeginMenu("Window"))
@@ -1319,6 +1365,12 @@ namespace flex
 
 				rootObject.SetBoolChecked("install shader directory watch", m_bInstallShaderDirectoryWatch);
 
+				std::string shaderEditorPath;
+				if (rootObject.SetStringChecked("shader editor path", shaderEditorPath))
+				{
+					m_ShaderEditorPath = shaderEditorPath;
+				}
+
 				return true;
 			}
 			else
@@ -1351,6 +1403,8 @@ namespace flex
 		rootObject.fields.emplace_back("muted", JSONValue(AudioManager::IsMuted()));
 
 		rootObject.fields.emplace_back("install shader directory watch", JSONValue(m_bInstallShaderDirectoryWatch));
+
+		rootObject.fields.emplace_back("shader editor path", JSONValue(m_ShaderEditorPath));
 
 		std::string fileContents = rootObject.Print(0);
 
@@ -1390,6 +1444,11 @@ namespace flex
 		return IntToString(EngineVersionMajor) + "." +
 			IntToString(EngineVersionMinor) + "." +
 			IntToString(EngineVersionPatch);
+	}
+
+	std::string FlexEngine::GetShaderEditorPath()
+	{
+		return m_ShaderEditorPath;
 	}
 
 	EventReply FlexEngine::OnMouseButtonEvent(MouseButton button, KeyAction action)

@@ -12,6 +12,7 @@ IGNORE_WARNINGS_PUSH
 #endif
 IGNORE_WARNINGS_POP
 
+#include "FlexEngine.hpp"
 #include "Graphics/VertexAttribute.hpp"
 #include "Graphics/VertexBufferData.hpp"
 #include "Graphics/Vulkan/VulkanCommandBufferManager.hpp"
@@ -2581,18 +2582,31 @@ namespace flex
 						ImGui::Text(s_ShaderErrors.size() > 1 ? "%u errors" : "%u error", s_ShaderErrors.size());
 						ImGui::PopStyleColor();
 
+						ImGui::Separator();
+
 						for (const ShaderError& shaderError : s_ShaderErrors)
 						{
 							ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
 							ImGui::TextWrapped("%s", shaderError.errorStr.c_str());
 							ImGui::PopStyleColor();
 
-							std::string openStr = "Open##" + shaderError.filePath + std::to_string(shaderError.lineNumber);
+							std::string fileName = StripLeadingDirectories(shaderError.filePath);
+							std::string openStr = "Open " + fileName + ":" + std::to_string(shaderError.lineNumber);
 							if (ImGui::Button(openStr.c_str()))
 							{
-								std::string param0 = shaderError.filePath + ":" + std::to_string(shaderError.lineNumber);
-								Platform::LaunchApplication("C:/Program Files/Sublime Text 3/sublime_text.exe", param0);
+								std::string shaderEditorPath = g_EngineInstance->GetShaderEditorPath();
+								if (shaderEditorPath.empty())
+								{
+									Platform::OpenFileWithDefaultApplication(shaderError.filePath);
+								}
+								else
+								{
+									std::string param0 = shaderError.filePath + ":" + std::to_string(shaderError.lineNumber);
+									Platform::LaunchApplication(shaderEditorPath.c_str(), param0);
+								}
 							}
+
+							ImGui::Separator();
 						}
 
 					}
