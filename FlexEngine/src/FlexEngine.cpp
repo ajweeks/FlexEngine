@@ -867,10 +867,14 @@ namespace flex
 				ImGui::EndMenu();
 			}
 
+			const u32 buffSize = 256;
 			const char* shaderEditorPopup = "Shader editor path##popup";
-			const u32 shaderEditorBufSize = 256;
-			static char shaderEditorBuf[shaderEditorBufSize];
+			static char shaderEditorBuf[buffSize];
 			bool bOpenShaderEditorPathPopup = false;
+
+			const char* renderDocDLLEditorPopup = "Renderdoc DLL path##popup";
+			static char renderDocDLLBuf[buffSize];
+			bool bOpenRenderDocDLLPathPopup = false;
 			if (ImGui::BeginMenu("Edit"))
 			{
 				BaseScene* scene = g_SceneManager->CurrentScene();
@@ -906,8 +910,17 @@ namespace flex
 				if (ImGui::MenuItem("Shader editor path"))
 				{
 					bOpenShaderEditorPathPopup = true;
-					memset(shaderEditorBuf, 0, shaderEditorBufSize);
+					memset(shaderEditorBuf, 0, buffSize);
 					strcpy(shaderEditorBuf, m_ShaderEditorPath.c_str());
+				}
+
+				if (ImGui::MenuItem("Renderdoc DLL path"))
+				{
+					bOpenRenderDocDLLPathPopup = true;
+					memset(renderDocDLLBuf, 0, buffSize);
+					std::string renderDocDLLPath;
+					ReadRenderDocSettingsFileFromDisk(renderDocDLLPath);
+					strcpy(renderDocDLLBuf, renderDocDLLPath.c_str());
 				}
 
 				ImGui::EndMenu();
@@ -921,9 +934,10 @@ namespace flex
 			ImGui::SetNextWindowSize(ImVec2(500.0f, 80.0f), ImGuiCond_Appearing);
 			if (ImGui::BeginPopupModal(shaderEditorPopup, NULL))
 			{
-				if (ImGui::InputText("", shaderEditorBuf, shaderEditorBufSize))
+				bool bUpdate = false;
+				if (ImGui::InputText("", shaderEditorBuf, buffSize, ImGuiInputTextFlags_EnterReturnsTrue))
 				{
-					m_ShaderEditorPath = std::string(shaderEditorBuf);
+					bUpdate = true;
 				}
 
 				if (ImGui::Button("Cancel"))
@@ -935,9 +949,83 @@ namespace flex
 
 				if (ImGui::Button("Confirm"))
 				{
+					bUpdate = true;
+				}
+
+				if (bUpdate)
+				{
 					m_ShaderEditorPath = std::string(shaderEditorBuf);
 					SaveCommonSettingsToDisk(false);
 					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::EndPopup();
+			}
+
+			if (bOpenRenderDocDLLPathPopup)
+			{
+				ImGui::OpenPopup(renderDocDLLEditorPopup);
+			}
+
+			ImGui::SetNextWindowSize(ImVec2(500.0f, 160.0f), ImGuiCond_Appearing);
+			if (ImGui::BeginPopupModal(renderDocDLLEditorPopup, NULL))
+			{
+				bool bUpdate = false;
+				static bool bInvalidLocation = false;
+				if (ImGui::InputText("", renderDocDLLBuf, buffSize, ImGuiInputTextFlags_EnterReturnsTrue))
+				{
+					bUpdate = true;
+				}
+
+				if (ImGui::Button("Cancel"))
+				{
+					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::SameLine();
+
+				if (ImGui::Button("Confirm"))
+				{
+					bUpdate = true;
+				}
+
+				if (bInvalidLocation)
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.4f, 0.4f, 1.0f));
+					ImGui::TextWrapped("Invalid path - couldn't find renderdoc.dll at location provided.");
+					ImGui::PopStyleColor();
+				}
+
+				if (bUpdate)
+				{
+					bInvalidLocation = false;
+					std::string dllPathRaw = std::string(renderDocDLLBuf);
+					std::string dllPathClean = dllPathRaw;
+
+					dllPathClean = ReplaceBackSlashesWithForward(dllPathClean);
+
+					if (!dllPathClean.empty() && dllPathClean.find('.') == std::string::npos && *(dllPathClean.end() - 1) != '/')
+					{
+						dllPathClean += "/";
+					}
+
+					dllPathClean = ExtractDirectoryString(dllPathClean);
+
+					if (!dllPathClean.empty() && *(dllPathClean.end() - 1) != '/')
+					{
+						dllPathClean += "/";
+					}
+
+					if (!FileExists(dllPathClean + "renderdoc.dll"))
+					{
+						bInvalidLocation = true;
+					}
+
+					if (!bInvalidLocation)
+					{
+						SaveRenderDocSettingsFileToDisk(dllPathClean);
+						ImGui::CloseCurrentPopup();
+					}
 				}
 
 				ImGui::EndPopup();
@@ -1615,28 +1703,13 @@ namespace flex
 	void FlexEngine::SetupRenderDocAPI()
 	{
 		std::string dllDirPath;
-		if (FileExists(m_RenderDocSettingsAbsFilePath))
-		{
-			JSONObject rootObject;
-			if (JSONParser::ParseFromFile(m_RenderDocSettingsAbsFilePath, rootObject))
-			{
-				dllDirPath = rootObject.GetString("lib path");
-			}
-			else
-			{
-				PrintError("Failed to parse %s\n\terror: %s\n", m_RenderDocSettingsFileName.c_str(), JSONParser::GetErrorString());
-			}
-		}
 
-		if (dllDirPath.empty())
+		if (!ReadRenderDocSettingsFileFromDisk(dllDirPath))
 		{
-			PrintError("Unable to setup RenderDoc API - renderdoc settings file missing. "
-				"Please create one in the format: "
-				"\"{ \"lib path\" : \"C:/Path/To/RenderDocLibs/\" }\" "
-				"and save it at: \"%s\"\n", m_RenderDocSettingsAbsFilePath.c_str());
+			PrintError("Unable to setup RenderDoc API - settings file missing.\n"
+						"Set path to DLL under Edit > Renderdoc DLL path\n");
 			return;
 		}
-
 
 		if (!EndsWith(dllDirPath, "/"))
 		{
@@ -1717,7 +1790,32 @@ namespace flex
 
 		return false;
 	}
-#endif
+
+	bool FlexEngine::ReadRenderDocSettingsFileFromDisk(std::string& dllDirPathOut)
+	{
+		if (FileExists(m_RenderDocSettingsAbsFilePath))
+		{
+			JSONObject rootObject;
+			if (JSONParser::ParseFromFile(m_RenderDocSettingsAbsFilePath, rootObject))
+			{
+				dllDirPathOut = rootObject.GetString("lib path");
+				return true;
+			}
+			else
+			{
+				PrintError("Failed to parse %s\n\terror: %s\n", m_RenderDocSettingsFileName.c_str(), JSONParser::GetErrorString());
+			}
+		}
+		return false;
+	}
+
+	void FlexEngine::SaveRenderDocSettingsFileToDisk(const std::string& dllDir)
+	{
+		JSONObject rootObject;
+		rootObject.fields.emplace_back("lib path", JSONValue(dllDir));
+		WriteFile(m_RenderDocSettingsAbsFilePath, rootObject.Print(0), false);
+	}
+#endif // COMPILE_RENDERDOC_API
 
 	glm::vec3 FlexEngine::CalculateRayPlaneIntersectionAlongAxis(
 		const glm::vec3& axis,

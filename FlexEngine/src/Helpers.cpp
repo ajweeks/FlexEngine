@@ -337,8 +337,9 @@ namespace flex
 
 	std::string ExtractDirectoryString(std::string filePath)
 	{
+		// TODO: When no trailing slash exists check if final token is directory
 		size_t finalSlash = filePath.rfind('/');
-		if (finalSlash != std::string::npos)
+		if (finalSlash != std::string::npos && finalSlash != filePath.length() - 1)
 		{
 			filePath = filePath.substr(0, finalSlash + 1);
 		}
@@ -1452,6 +1453,11 @@ namespace flex
 			if (strcmp(arr[i], val) == 0) return true;
 		}
 		return false;
+	}
+
+	bool Contains(const std::string& str, const std::string& pattern)
+	{
+		return str.find(pattern) != std::string::npos;
 	}
 
 	i32 RoundUp(i32 val, i32 alignment)

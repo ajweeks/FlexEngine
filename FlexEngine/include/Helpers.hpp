@@ -221,6 +221,8 @@ namespace flex
 
 	bool Contains(const char* arr[], u32 arrLen, const char* val);
 
+	bool Contains(const std::string& str, const std::string& pattern);
+
 	template<class T>
 	const T& PickRandomFrom(const std::vector<T>& vec)
 	{

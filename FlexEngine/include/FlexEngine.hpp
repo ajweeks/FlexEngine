@@ -97,6 +97,8 @@ namespace flex
 		void SetupRenderDocAPI();
 		void CheckForRenderDocUIRunning();
 		bool GetLatestRenderDocCaptureFilePath(std::string& outFilePath);
+		bool ReadRenderDocSettingsFileFromDisk(std::string& dllDirPathOut);
+		void SaveRenderDocSettingsFileToDisk(const std::string& dllDir);
 #endif
 
 		void Destroy();
