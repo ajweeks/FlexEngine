@@ -174,6 +174,7 @@ namespace flex
 	std::string RelativePathToAbsolute(const std::string& relativePath);
 
 	std::string Replace(const std::string& str, const std::string& pattern, const std::string& replacement);
+	std::string Replace(const std::string& str, char pattern, char replacement);
 
 	// Returns random value in range [min, max)
 	i32 RandomInt(i32 min, i32 max);

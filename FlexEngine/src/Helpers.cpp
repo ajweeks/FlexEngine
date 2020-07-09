@@ -1323,6 +1323,29 @@ namespace flex
 		return result;
 	}
 
+	std::string Replace(const std::string& str, char pattern, char replacement)
+	{
+		std::string result(str);
+
+		auto iter = result.begin();
+
+		while (iter != result.end())
+		{
+			size_t findIndex = result.find(pattern, iter - result.begin());
+			if (findIndex != std::string::npos)
+			{
+				result = result.replace(result.begin() + findIndex, result.begin() + findIndex + 1, 1, replacement);
+				iter++;
+			}
+			else
+			{
+				break;
+			}
+		}
+
+		return result;
+	}
+
 	i32 RandomInt(i32 min, i32 max)
 	{
 		// TODO: CLEANUP: FIXME: Don't use rand, for the love of God

@@ -436,6 +436,16 @@ namespace flex
 		return result.str();
 	}
 
+	void Platform::OpenFileWithDefaultApplication(const std::string& absoluteDirectory)
+	{
+		ShellExecute(0, 0, absoluteDirectory.c_str(), 0, 0, SW_SHOW);
+	}
+
+	void Platform::LaunchApplication(const std::string& applicationName, const std::string& param0)
+	{
+		ShellExecute(0, 0, applicationName.c_str(), param0.c_str(), 0, SW_SHOW);
+	}
+
 	u32 Platform::AtomicIncrement(volatile u32* value)
 	{
 		return InterlockedIncrement(value);

@@ -468,6 +468,8 @@ namespace flex
 			const bool m_bEnableValidationLayers = true;
 #endif
 
+			bool m_bShaderErrorWindowShowing = true;
+
 			VkInstance m_Instance = VK_NULL_HANDLE;
 			VkDebugUtilsMessengerEXT m_DebugUtilsMessengerCallback = VK_NULL_HANDLE;
 			VkSurfaceKHR m_Surface = VK_NULL_HANDLE;
@@ -587,7 +589,7 @@ namespace flex
 			PoolAllocator<DeviceDiagnosticCheckpoint, 32> m_CheckPointAllocator;
 
 #if COMPILE_SHADER_COMPILER
-			struct AsyncVulkanShaderCompiler* m_ShaderCompiler = nullptr;
+			struct VulkanShaderCompiler* m_ShaderCompiler = nullptr;
 #endif
 
 			const FrameBufferAttachmentID SWAP_CHAIN_COLOR_ATTACHMENT_ID = 11000;

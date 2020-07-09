@@ -28,9 +28,9 @@ namespace flex
 	namespace vk
 	{
 #if COMPILE_SHADER_COMPILER
-		std::string AsyncVulkanShaderCompiler::s_ChecksumFilePathAbs;
+		std::string VulkanShaderCompiler::s_ChecksumFilePathAbs;
 
-		const char* AsyncVulkanShaderCompiler::s_RecognizedShaderTypes[] = { "vert", "geom", "frag", "comp" };
+		const char* VulkanShaderCompiler::s_RecognizedShaderTypes[] = { "vert", "geom", "frag", "comp" };
 #endif //  COMPILE_SHADER_COMPILER
 
 		void VK_CHECK_RESULT(VkResult result)
@@ -2107,133 +2107,6 @@ namespace flex
 			vkFreeCommandBuffers(device->m_LogicalDevice, device->m_CommandPool, 1, &commandBuffer);
 		}
 
-		VkPrimitiveTopology TopologyModeToVkPrimitiveTopology(TopologyMode mode)
-		{
-			switch (mode)
-			{
-			case TopologyMode::POINT_LIST:		return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
-			case TopologyMode::LINE_LIST:		return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
-			case TopologyMode::LINE_STRIP:		return VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
-			case TopologyMode::TRIANGLE_LIST:	return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-			case TopologyMode::TRIANGLE_STRIP:	return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
-			case TopologyMode::TRIANGLE_FAN:	return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN;
-			case TopologyMode::LINE_LOOP:
-			{
-				PrintError("LINE_LOOP is an unsupported TopologyMode passed to TopologyModeToVkPrimitiveTopology\n");
-				return VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
-			}
-			default:
-			{
-				PrintError("Unhandled TopologyMode passed to TopologyModeToVkPrimitiveTopology: %d\n", (i32)mode);
-				return VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
-			}
-			}
-		}
-
-		VkCullModeFlagBits CullFaceToVkCullMode(CullFace cullFace)
-		{
-			switch (cullFace)
-			{
-			case CullFace::BACK:			return VK_CULL_MODE_BACK_BIT;
-			case CullFace::FRONT:			return VK_CULL_MODE_FRONT_BIT;
-			case CullFace::FRONT_AND_BACK:	return VK_CULL_MODE_FRONT_AND_BACK;
-			case CullFace::NONE:			return VK_CULL_MODE_NONE;
-			default:
-			{
-				PrintError("Unhandled CullFace passed to CullFaceToVkCullMode: %d\n", (i32)cullFace);
-				return VK_CULL_MODE_NONE;
-			}
-			}
-		}
-
-		TopologyMode VkPrimitiveTopologyToTopologyMode(VkPrimitiveTopology primitiveTopology)
-		{
-			if (primitiveTopology == VK_PRIMITIVE_TOPOLOGY_POINT_LIST)
-			{
-				return TopologyMode::POINT_LIST;
-			}
-			else if (primitiveTopology == VK_PRIMITIVE_TOPOLOGY_LINE_LIST)
-			{
-				return TopologyMode::LINE_LIST;
-			}
-			else if (primitiveTopology == VK_PRIMITIVE_TOPOLOGY_LINE_STRIP)
-			{
-				return TopologyMode::LINE_STRIP;
-			}
-			else if (primitiveTopology == VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
-			{
-				return TopologyMode::TRIANGLE_LIST;
-			}
-			else if (primitiveTopology == VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP)
-			{
-				return TopologyMode::TRIANGLE_STRIP;
-			}
-			else if (primitiveTopology == VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN)
-			{
-				return TopologyMode::TRIANGLE_FAN;
-			}
-			else
-			{
-				PrintError("Unhandled VkPrimitiveTopology passed to VkPrimitiveTopologyToTopologyMode: %d\n", (i32)primitiveTopology);
-				return TopologyMode::_NONE;
-			}
-		}
-
-		CullFace VkCullModeToCullFace(VkCullModeFlags cullMode)
-		{
-			if (cullMode == VK_CULL_MODE_BACK_BIT)
-			{
-				return CullFace::BACK;
-			}
-			else if (cullMode == VK_CULL_MODE_FRONT_BIT)
-			{
-				return CullFace::FRONT;
-			}
-			else if (cullMode == VK_CULL_MODE_FRONT_AND_BACK)
-			{
-				return CullFace::FRONT_AND_BACK;
-			}
-			else if (cullMode == VK_CULL_MODE_NONE)
-			{
-				return CullFace::NONE;
-			}
-			else
-			{
-				PrintError("Unhandled VkCullModeFlagBits passed to VkCullModeToCullFace: %d\n", (i32)cullMode);
-				return CullFace::_INVALID;
-			}
-		}
-
-
-		VkCompareOp DepthTestFuncToVkCompareOp(DepthTestFunc func)
-		{
-			switch (func)
-			{
-			case DepthTestFunc::ALWAYS:		return VK_COMPARE_OP_ALWAYS;
-			case DepthTestFunc::NEVER:		return VK_COMPARE_OP_NEVER;
-			case DepthTestFunc::LESS:		return VK_COMPARE_OP_LESS;
-			case DepthTestFunc::LEQUAL:		return VK_COMPARE_OP_LESS_OR_EQUAL;
-			case DepthTestFunc::GREATER:	return VK_COMPARE_OP_GREATER;
-			case DepthTestFunc::GEQUAL:		return VK_COMPARE_OP_GREATER_OR_EQUAL;
-			case DepthTestFunc::EQUAL:		return VK_COMPARE_OP_EQUAL;
-			case DepthTestFunc::NOTEQUAL:	return VK_COMPARE_OP_NOT_EQUAL;
-			default:						return VK_COMPARE_OP_MAX_ENUM;
-			}
-		}
-
-		VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* createInfo, const VkAllocationCallbacks* allocator, VkDebugReportCallbackEXT* callback)
-		{
-			auto func = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT");
-			if (func != nullptr)
-			{
-				return func(instance, createInfo, allocator, callback);
-			}
-			else
-			{
-				return VK_ERROR_EXTENSION_NOT_PRESENT;
-			}
-		}
-
 		FrameBufferAttachment::FrameBufferAttachment(VulkanDevice* device, const CreateInfo& createInfo) :
 			ID(GenerateUID()),
 			device(device),
@@ -2390,6 +2263,13 @@ namespace flex
 			return &frameBuffer;
 		}
 
+		VulkanCubemapGBuffer::VulkanCubemapGBuffer(u32 id, const char* name, VkFormat internalFormat) :
+			id(id),
+			name(name),
+			internalFormat(internalFormat)
+		{
+		}
+
 		VulkanShader::VulkanShader(const VDeleter<VkDevice>& device, Shader* shader) :
 			shader(shader)
 		{
@@ -2409,28 +2289,10 @@ namespace flex
 			}
 		}
 
-		VulkanCubemapGBuffer::VulkanCubemapGBuffer(u32 id, const char* name, VkFormat internalFormat) :
-			id(id),
-			name(name),
-			internalFormat(internalFormat)
-		{
-		}
-
-		std::string DeviceTypeToString(VkPhysicalDeviceType type)
-		{
-			switch (type)
-			{
-			case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU: return "Integrated GPU";
-			case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU: return "Discrete GPU";
-			case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU: return "Virtual GPU";
-			case VK_PHYSICAL_DEVICE_TYPE_CPU: return "CPU";
-			case VK_PHYSICAL_DEVICE_TYPE_OTHER:
-			default: return  "Other";
-			}
-		}
-
 #if COMPILE_SHADER_COMPILER
-		AsyncVulkanShaderCompiler::AsyncVulkanShaderCompiler(bool bForceRecompile)
+		std::vector<VulkanShaderCompiler::ShaderError> VulkanShaderCompiler::s_ShaderErrors;
+
+		VulkanShaderCompiler::VulkanShaderCompiler(bool bForceRecompile)
 		{
 			s_ChecksumFilePathAbs = RelativePathToAbsolute(SHADER_CHECKSUM_LOCATION);
 
@@ -2443,6 +2305,8 @@ namespace flex
 			// Absolute file path => checksum
 			// Any file in the shaders directory not in this map still need to be compiled
 			std::map<std::string, u64> compiledShaders;
+
+			s_ShaderErrors.clear();
 
 			if (!bForceRecompile)
 			{
@@ -2561,11 +2425,6 @@ namespace flex
 
 									++compiledShaderCount;
 
-									if (result.GetNumWarnings() > 0)
-									{
-										PrintWarn("%s\n", result.GetErrorMessage().c_str());
-									}
-
 									const u64 calculatedChecksum = CalculteChecksum(filePath);
 									compiledShaders.emplace(absoluteFilePath, calculatedChecksum);
 
@@ -2587,7 +2446,23 @@ namespace flex
 								}
 								else
 								{
-									PrintError("%s", result.GetErrorMessage().c_str());
+									std::string errorStr = result.GetErrorMessage();
+									if (g_bEnableLogging_Shaders)
+									{
+										PrintWarn("%s\n", errorStr.c_str());
+									}
+
+									size_t colon0 = errorStr.find_first_of(':');
+									size_t colon1 = errorStr.find_first_of(':', colon0 + 1);
+
+									u32 lineNumber = 0;
+									if (colon0 != std::string::npos && colon1 != std::string::npos)
+									{
+										lineNumber = ParseInt(errorStr.substr(colon0 + 1, colon1 - colon0 - 1));
+									}
+
+									s_ShaderErrors.push_back({ errorStr, absoluteFilePath, lineNumber });
+
 									++invalidShaderCount;
 									bSuccess = false;
 									auto iter = compiledShaders.find(absoluteFilePath);
@@ -2660,7 +2535,7 @@ namespace flex
 			}
 		}
 
-		void AsyncVulkanShaderCompiler::ClearShaderHash(const std::string& shaderName)
+		void VulkanShaderCompiler::ClearShaderHash(const std::string& shaderName)
 		{
 			if (FileExists(SHADER_SOURCE_LOCATION))
 			{
@@ -2693,7 +2568,44 @@ namespace flex
 			}
 		}
 
-		shaderc_shader_kind AsyncVulkanShaderCompiler::FilePathToShaderKind(const std::string& fileSuffix)
+		void VulkanShaderCompiler::DisplayShaderErrorsImGui(bool* bWindowShowing)
+		{
+			if (!s_ShaderErrors.empty())
+			{
+				if (bWindowShowing == nullptr || *bWindowShowing)
+				{
+					ImGui::SetNextWindowSize(ImVec2(800.0f, 150.0f), ImGuiCond_Appearing);
+					if (bWindowShowing != nullptr && ImGui::Begin("Shader errors", bWindowShowing))
+					{
+						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
+						ImGui::Text(s_ShaderErrors.size() > 1 ? "%u errors" : "%u error", s_ShaderErrors.size());
+						ImGui::PopStyleColor();
+
+						for (const ShaderError& shaderError : s_ShaderErrors)
+						{
+							ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
+							ImGui::TextWrapped("%s", shaderError.errorStr.c_str());
+							ImGui::PopStyleColor();
+
+							std::string openStr = "Open##" + shaderError.filePath + std::to_string(shaderError.lineNumber);
+							if (ImGui::Button(openStr.c_str()))
+							{
+								std::string param0 = shaderError.filePath + ":" + std::to_string(shaderError.lineNumber);
+								Platform::LaunchApplication("C:/Program Files/Sublime Text 3/sublime_text.exe", param0);
+							}
+						}
+
+					}
+
+					if (bWindowShowing != nullptr)
+					{
+						ImGui::End();
+					}
+				}
+			}
+		}
+
+		shaderc_shader_kind VulkanShaderCompiler::FilePathToShaderKind(const std::string& fileSuffix)
 		{
 			if (fileSuffix.compare("vert") == 0) return shaderc_vertex_shader;
 			if (fileSuffix.compare("frag") == 0) return shaderc_fragment_shader;
@@ -2703,7 +2615,7 @@ namespace flex
 			return (shaderc_shader_kind)-1;
 		}
 
-		u64 AsyncVulkanShaderCompiler::CalculteChecksum(const std::string& filePath)
+		u64 VulkanShaderCompiler::CalculteChecksum(const std::string& filePath)
 		{
 			u64 checksum = 0;
 
@@ -2727,7 +2639,7 @@ namespace flex
 			return checksum;
 		}
 
-		bool AsyncVulkanShaderCompiler::TickStatus()
+		bool VulkanShaderCompiler::TickStatus()
 		{
 			//sec now = Time::CurrentSeconds();
 			//secSinceStatusCheck += (now - lastTime);
@@ -2833,6 +2745,147 @@ namespace flex
 			pipelineLayout(vulkanDevice, vkDestroyPipelineLayout)
 		{
 		}
+
+		VkPrimitiveTopology TopologyModeToVkPrimitiveTopology(TopologyMode mode)
+		{
+			switch (mode)
+			{
+			case TopologyMode::POINT_LIST:		return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+			case TopologyMode::LINE_LIST:		return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+			case TopologyMode::LINE_STRIP:		return VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+			case TopologyMode::TRIANGLE_LIST:	return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+			case TopologyMode::TRIANGLE_STRIP:	return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+			case TopologyMode::TRIANGLE_FAN:	return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN;
+			case TopologyMode::LINE_LOOP:
+			{
+				PrintError("LINE_LOOP is an unsupported TopologyMode passed to TopologyModeToVkPrimitiveTopology\n");
+				return VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
+			}
+			default:
+			{
+				PrintError("Unhandled TopologyMode passed to TopologyModeToVkPrimitiveTopology: %d\n", (i32)mode);
+				return VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
+			}
+			}
+		}
+
+		VkCullModeFlagBits CullFaceToVkCullMode(CullFace cullFace)
+		{
+			switch (cullFace)
+			{
+			case CullFace::BACK:			return VK_CULL_MODE_BACK_BIT;
+			case CullFace::FRONT:			return VK_CULL_MODE_FRONT_BIT;
+			case CullFace::FRONT_AND_BACK:	return VK_CULL_MODE_FRONT_AND_BACK;
+			case CullFace::NONE:			return VK_CULL_MODE_NONE;
+			default:
+			{
+				PrintError("Unhandled CullFace passed to CullFaceToVkCullMode: %d\n", (i32)cullFace);
+				return VK_CULL_MODE_NONE;
+			}
+			}
+		}
+
+		TopologyMode VkPrimitiveTopologyToTopologyMode(VkPrimitiveTopology primitiveTopology)
+		{
+			if (primitiveTopology == VK_PRIMITIVE_TOPOLOGY_POINT_LIST)
+			{
+				return TopologyMode::POINT_LIST;
+			}
+			else if (primitiveTopology == VK_PRIMITIVE_TOPOLOGY_LINE_LIST)
+			{
+				return TopologyMode::LINE_LIST;
+			}
+			else if (primitiveTopology == VK_PRIMITIVE_TOPOLOGY_LINE_STRIP)
+			{
+				return TopologyMode::LINE_STRIP;
+			}
+			else if (primitiveTopology == VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+			{
+				return TopologyMode::TRIANGLE_LIST;
+			}
+			else if (primitiveTopology == VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP)
+			{
+				return TopologyMode::TRIANGLE_STRIP;
+			}
+			else if (primitiveTopology == VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN)
+			{
+				return TopologyMode::TRIANGLE_FAN;
+			}
+			else
+			{
+				PrintError("Unhandled VkPrimitiveTopology passed to VkPrimitiveTopologyToTopologyMode: %d\n", (i32)primitiveTopology);
+				return TopologyMode::_NONE;
+			}
+		}
+
+		CullFace VkCullModeToCullFace(VkCullModeFlags cullMode)
+		{
+			if (cullMode == VK_CULL_MODE_BACK_BIT)
+			{
+				return CullFace::BACK;
+			}
+			else if (cullMode == VK_CULL_MODE_FRONT_BIT)
+			{
+				return CullFace::FRONT;
+			}
+			else if (cullMode == VK_CULL_MODE_FRONT_AND_BACK)
+			{
+				return CullFace::FRONT_AND_BACK;
+			}
+			else if (cullMode == VK_CULL_MODE_NONE)
+			{
+				return CullFace::NONE;
+			}
+			else
+			{
+				PrintError("Unhandled VkCullModeFlagBits passed to VkCullModeToCullFace: %d\n", (i32)cullMode);
+				return CullFace::_INVALID;
+			}
+		}
+
+
+		VkCompareOp DepthTestFuncToVkCompareOp(DepthTestFunc func)
+		{
+			switch (func)
+			{
+			case DepthTestFunc::ALWAYS:		return VK_COMPARE_OP_ALWAYS;
+			case DepthTestFunc::NEVER:		return VK_COMPARE_OP_NEVER;
+			case DepthTestFunc::LESS:		return VK_COMPARE_OP_LESS;
+			case DepthTestFunc::LEQUAL:		return VK_COMPARE_OP_LESS_OR_EQUAL;
+			case DepthTestFunc::GREATER:	return VK_COMPARE_OP_GREATER;
+			case DepthTestFunc::GEQUAL:		return VK_COMPARE_OP_GREATER_OR_EQUAL;
+			case DepthTestFunc::EQUAL:		return VK_COMPARE_OP_EQUAL;
+			case DepthTestFunc::NOTEQUAL:	return VK_COMPARE_OP_NOT_EQUAL;
+			default:						return VK_COMPARE_OP_MAX_ENUM;
+			}
+		}
+
+		std::string DeviceTypeToString(VkPhysicalDeviceType type)
+		{
+			switch (type)
+			{
+			case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU: return "Integrated GPU";
+			case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU: return "Discrete GPU";
+			case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU: return "Virtual GPU";
+			case VK_PHYSICAL_DEVICE_TYPE_CPU: return "CPU";
+			case VK_PHYSICAL_DEVICE_TYPE_OTHER:
+			default: return  "Other";
+			}
+		}
+
+		VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* createInfo, const VkAllocationCallbacks* allocator, VkDebugReportCallbackEXT* callback)
+		{
+			auto func = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT");
+			if (func != nullptr)
+			{
+				return func(instance, createInfo, allocator, callback);
+			}
+			else
+			{
+				return VK_ERROR_EXTENSION_NOT_PRESENT;
+			}
+		}
+
 	} // namespace vk
 } // namespace flex
 

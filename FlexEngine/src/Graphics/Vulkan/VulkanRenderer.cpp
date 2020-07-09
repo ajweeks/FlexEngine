@@ -74,7 +74,7 @@ namespace flex
 			Renderer::Initialize();
 
 #if COMPILE_SHADER_COMPILER
-			m_ShaderCompiler = new AsyncVulkanShaderCompiler(false);
+			m_ShaderCompiler = new VulkanShaderCompiler(false);
 #endif
 
 			// TODO: Kick off texture load here (most importantly, environment maps)
@@ -1962,6 +1962,10 @@ namespace flex
 				}
 				ImGui::End();
 			}
+
+#if COMPILE_SHADER_COMPILER
+			VulkanShaderCompiler::DisplayShaderErrorsImGui(&m_bShaderErrorWindowShowing);
+#endif
 		}
 
 		void VulkanRenderer::UpdateDynamicVertexData(RenderID renderID, VertexBufferData const* vertexBufferData, const std::vector<u32>& indexData)
@@ -2110,12 +2114,12 @@ namespace flex
 #if COMPILE_SHADER_COMPILER
 			if (m_ShaderCompiler == nullptr)
 			{
-				m_ShaderCompiler = new AsyncVulkanShaderCompiler(bForce);
+				m_bShaderErrorWindowShowing = true;
+				m_ShaderCompiler = new VulkanShaderCompiler(bForce);
 
 				if (m_ShaderCompiler->bSuccess)
 				{
 					AddEditorString("Shader recompile completed successfully");
-
 					RecreateEverything();
 				}
 				else
@@ -2945,6 +2949,8 @@ namespace flex
 					}
 					ImGui::EndChild(); // Shader list
 
+					VulkanShaderCompiler::DisplayShaderErrorsImGui(nullptr);
+
 					VulkanShader& shader = m_Shaders[selectedShaderIndex];
 
 					ImGui::Text(shader.shader->name.c_str());
@@ -2963,7 +2969,7 @@ namespace flex
 #if COMPILE_SHADER_COMPILER
 					if (ImGui::Button("Recompile"))
 					{
-						AsyncVulkanShaderCompiler::ClearShaderHash(shader.shader->name);
+						VulkanShaderCompiler::ClearShaderHash(shader.shader->name);
 						RecompileShaders(false);
 					}
 #endif

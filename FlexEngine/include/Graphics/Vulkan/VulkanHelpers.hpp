@@ -458,13 +458,13 @@ namespace flex
 		};
 
 #if COMPILE_SHADER_COMPILER
-		// NOTE: Not actually async at the moment! Compiling all shaders takes less than a second my machine though, so...
-		// TODO: Either rename, or make async!
-		struct AsyncVulkanShaderCompiler
+		struct VulkanShaderCompiler
 		{
-			AsyncVulkanShaderCompiler(bool bForceRecompile);
+			VulkanShaderCompiler(bool bForceRecompile);
 
 			static void ClearShaderHash(const std::string& shaderName);
+
+			static void DisplayShaderErrorsImGui(bool* bWindowShowing);
 
 			bool TickStatus();
 
@@ -473,6 +473,15 @@ namespace flex
 
 			bool bSuccess = false;
 			bool bComplete = false;
+
+			struct ShaderError
+			{
+				std::string errorStr;
+				std::string filePath;
+				u32 lineNumber;
+			};
+
+			static std::vector<ShaderError> s_ShaderErrors;
 
 		private:
 			static std::string s_ChecksumFilePathAbs;

@@ -52,6 +52,9 @@ namespace flex
 		static bool FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileType);
 		static bool OpenFileDialog(const std::string& windowTitle, const std::string& absoluteDirectory, std::string& outSelectedAbsFilePath, char filter[] = nullptr);
 
+		static void OpenFileWithDefaultApplication(const std::string& absoluteDirectory);
+		static void LaunchApplication(const std::string& applicationName, const std::string& param0);
+
 		// Returns the current year, month, & day  (YYYY-MM-DD)
 		// Returns the current year, month, day, hour, minute, & second (YYYY-MM-DD_HH-MM-SS)
 		static std::string GetDateString_YMD();
@@ -69,7 +72,6 @@ namespace flex
 		static void FreeCriticalSection(void* criticalSection);
 		static void EnterCriticalSection(void* criticalSection);
 		static void LeaveCriticalSection(void* criticalSection);
-
 
 		static CPUInfo cpuInfo;
 
