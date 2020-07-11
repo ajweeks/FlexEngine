@@ -2743,7 +2743,7 @@ namespace flex
 		placeholderMatCreateInfo.name = "placeholder";
 		placeholderMatCreateInfo.shaderName = "pbr";
 		placeholderMatCreateInfo.persistent = true;
-		placeholderMatCreateInfo.visibleInEditor = true;
+		placeholderMatCreateInfo.visibleInEditor = false;
 		placeholderMatCreateInfo.constAlbedo = glm::vec3(1.0f, 0.0f, 1.0f);
 		m_PlaceholderMaterialID = InitializeMaterial(&placeholderMatCreateInfo);
 	}

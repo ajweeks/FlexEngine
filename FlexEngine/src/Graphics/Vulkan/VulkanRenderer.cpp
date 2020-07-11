@@ -2474,7 +2474,8 @@ namespace flex
 					// Skip by any editor materials in case m_bShowEditorMaterials was set to false while we had one selected
 					if (!m_bShowEditorMaterials)
 					{
-						while (!m_Materials.at(selectedMaterialID).material.visibleInEditor && selectedMaterialID < m_Materials.size() - 1)
+						while (m_Materials.find(selectedMaterialID) == m_Materials.end() ||
+							(!m_Materials.at(selectedMaterialID).material.visibleInEditor && selectedMaterialID < m_Materials.size() - 1))
 						{
 							++selectedMaterialID;
 						}
@@ -2868,22 +2869,30 @@ namespace flex
 						ImGui::EndPopup();
 					}
 
-					ImGui::SameLine();
-
-					ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
-					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
-					ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
-					if (ImGui::Button("Delete material"))
+					// Only non-editor materials can be deleted
+					if (mat.material.visibleInEditor)
 					{
-						g_SceneManager->CurrentScene()->RemoveMaterialID(selectedMaterialID);
-						RemoveMaterial(selectedMaterialID);
+						ImGui::SameLine();
+
+						ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
+						ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
+						ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
+						if (ImGui::Button("Delete material"))
+						{
+							g_SceneManager->CurrentScene()->RemoveMaterialID(selectedMaterialID);
+							RemoveMaterial(selectedMaterialID);
+							selectedMaterialID = 0;
+							bMaterialSelectionChanged = true;
+						}
+						ImGui::PopStyleColor();
+						ImGui::PopStyleColor();
+						ImGui::PopStyleColor();
+					}
+
+					if (ImGui::Checkbox("Show editor materials", &m_bShowEditorMaterials))
+					{
 						bMaterialSelectionChanged = true;
 					}
-					ImGui::PopStyleColor();
-					ImGui::PopStyleColor();
-					ImGui::PopStyleColor();
-
-					ImGui::Checkbox("Show editor materials", &m_bShowEditorMaterials);
 				}
 
 				ImGui::End();
@@ -7276,11 +7285,31 @@ namespace flex
 
 		void VulkanRenderer::RemoveMaterial(MaterialID materialID)
 		{
+			if (!GetMaterial(materialID).visibleInEditor)
+			{
+				PrintWarn("Attempted to delete editor material - this is not permitted!\n");
+				return;
+			}
+
 			assert(materialID != InvalidMaterialID);
 
 			m_Materials.erase(materialID);
 
-			// TODO: Iterate through all objects and replace material ID with placeholder/dialogue box
+			for (RenderID renderID = 0; renderID < MAX_NUM_RENDER_OBJECTS; ++renderID)
+			{
+				VulkanRenderObject* renderObject = m_RenderObjects[renderID];
+				if (renderObject)
+				{
+					if (renderObject->materialID == materialID)
+					{
+						RenderObjectCreateInfo info;
+						GetRenderObjectCreateInfo(renderID, info);
+						DestroyRenderObject(renderID, renderObject);
+						info.materialID = m_PlaceholderMaterialID;
+						InitializeRenderObject(&info);
+					}
+				}
+			}
 		}
 
 		void VulkanRenderer::FillOutGBufferFrameBufferAttachments(std::vector<Pair<std::string, void*>>& outVec)
