@@ -1036,12 +1036,15 @@ namespace flex
 				ImGui::MenuItem("Main Window", NULL, &m_bMainWindowShowing);
 				ImGui::MenuItem("GPU Timings", NULL, &g_Renderer->bGPUTimingsWindowShowing);
 				ImGui::MenuItem("Memory Stats", NULL, &m_bShowMemoryStatsWindow);
+				ImGui::MenuItem("CPU Stats", NULL, &m_bShowCPUStatsWindow);
+				ImGui::MenuItem("Uniform Buffers", NULL, &g_Renderer->bUniformBufferWindowShowing);
+				ImGui::Separator();
 				ImGui::MenuItem("Materials", NULL, &m_bMaterialWindowShowing);
 				ImGui::MenuItem("Shaders", NULL, &m_bShaderWindowShowing);
 				ImGui::MenuItem("Textures", NULL, &m_bTextureWindowShowing);
 				ImGui::MenuItem("Meshes", NULL, &m_bMeshWindowShowing);
+				ImGui::Separator();
 				ImGui::MenuItem("Key Mapper", NULL, &m_bInputMapperShowing);
-				ImGui::MenuItem("Uniform Buffers", NULL, &g_Renderer->bUniformBufferWindowShowing);
 				ImGui::MenuItem("Font Editor", NULL, &g_Renderer->bFontWindowShowing);
 #if COMPILE_RENDERDOC_API
 				ImGui::MenuItem("Render Doc Captures", NULL, &m_bShowingRenderDocWindow);
@@ -1322,6 +1325,20 @@ namespace flex
 			{
 				ImGui::Text("Memory allocated:       %.3fMB", g_TotalTrackedAllocatedMemory / 1'000'000.0f);
 				ImGui::Text("Delta allocation count: %i", (i32)g_TrackedAllocationCount - (i32)g_TrackedDeallocationCount);
+			}
+			ImGui::End();
+		}
+
+		if (m_bShowCPUStatsWindow)
+		{
+			if (ImGui::Begin("CPU Stats", &m_bShowCPUStatsWindow))
+			{
+				ImGui::Text("Logical processor count: %u", Platform::cpuInfo.logicalProcessorCount);
+				ImGui::Text("Physical core count: %u", Platform::cpuInfo.physicalCoreCount);
+				ImGui::Separator();
+				ImGui::Text("L1 cache count: %u", Platform::cpuInfo.l1CacheCount);
+				ImGui::Text("L2 cache count: %u", Platform::cpuInfo.l2CacheCount);
+				ImGui::Text("L3 cache count: %u", Platform::cpuInfo.l3CacheCount);
 			}
 			ImGui::End();
 		}
