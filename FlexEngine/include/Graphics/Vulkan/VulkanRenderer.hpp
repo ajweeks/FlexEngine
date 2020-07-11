@@ -507,27 +507,18 @@ namespace flex
 				&m_ForwardRenderPass, &m_PostProcessRenderPass, &m_GammaCorrectRenderPass, &m_TAAResolveRenderPass, &m_UIRenderPass };
 			std::vector<VulkanRenderPass*> m_AutoTransitionedRenderPasses;
 
-			// TODO: Replace with `GraphicsPipeline`s
-			VDeleter<VkPipeline> m_ShadowGraphicsPipeline;
-			VDeleter<VkPipelineLayout> m_ShadowPipelineLayout;
+			GraphicsPipeline m_ShadowGraphicsPipeline;
 
-			VDeleter<VkPipeline> m_FontSSGraphicsPipeline;
-			VDeleter<VkPipelineLayout> m_FontSSPipelineLayout;
-			VDeleter<VkPipeline> m_FontWSGraphicsPipeline;
-			VDeleter<VkPipelineLayout> m_FontWSPipelineLayout;
+			GraphicsPipeline m_FontSSGraphicsPipeline;
+			GraphicsPipeline m_FontWSGraphicsPipeline;
 
-			VDeleter<VkPipeline> m_PostProcessGraphicsPipeline;
-			VDeleter<VkPipelineLayout> m_PostProcessGraphicsPipelineLayout;
-			VDeleter<VkPipeline> m_TAAResolveGraphicsPipeline;
-			VDeleter<VkPipelineLayout> m_TAAResolveGraphicsPipelineLayout;
-			VDeleter<VkPipeline> m_GammaCorrectGraphicsPipeline;
-			VDeleter<VkPipelineLayout> m_GammaCorrectGraphicsPipelineLayout;
+			GraphicsPipeline m_PostProcessGraphicsPipeline;
+			GraphicsPipeline m_TAAResolveGraphicsPipeline;
+			GraphicsPipeline m_GammaCorrectGraphicsPipeline;
 
-			VDeleter<VkPipeline> m_SpriteArrGraphicsPipeline;
-			VDeleter<VkPipelineLayout> m_SpriteArrGraphicsPipelineLayout;
+			GraphicsPipeline m_SpriteArrGraphicsPipeline;
 
-			VDeleter<VkPipeline> m_BlitGraphicsPipeline;
-			VDeleter<VkPipelineLayout> m_BlitGraphicsPipelineLayout;
+			GraphicsPipeline m_BlitGraphicsPipeline;
 
 			VDeleter<VkPipelineLayout> m_ParticleGraphicsPipelineLayout;
 
@@ -572,11 +563,9 @@ namespace flex
 
 			VulkanTexture* m_NoiseTexture = nullptr;
 
-			VDeleter<VkPipeline> m_SSAOGraphicsPipeline;
-			VDeleter<VkPipeline> m_SSAOBlurHGraphicsPipeline;
-			VDeleter<VkPipeline> m_SSAOBlurVGraphicsPipeline;
-			VDeleter<VkPipelineLayout> m_SSAOGraphicsPipelineLayout;
-			VDeleter<VkPipelineLayout> m_SSAOBlurGraphicsPipelineLayout;
+			GraphicsPipeline m_SSAOGraphicsPipeline;
+			GraphicsPipeline m_SSAOBlurHGraphicsPipeline;
+			GraphicsPipeline m_SSAOBlurVGraphicsPipeline;
 			VkDescriptorSet m_SSAODescSet = VK_NULL_HANDLE;
 			VkDescriptorSet m_SSAOBlurHDescSet = VK_NULL_HANDLE;
 			VkDescriptorSet m_SSAOBlurVDescSet = VK_NULL_HANDLE;

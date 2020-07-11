@@ -2754,10 +2754,20 @@ namespace flex
 		{
 		}
 
+		GraphicsPipeline::GraphicsPipeline()
+		{
+		}
+
 		GraphicsPipeline::GraphicsPipeline(const VDeleter<VkDevice>& vulkanDevice) :
 			pipeline(vulkanDevice, vkDestroyPipeline),
-			pipelineLayout(vulkanDevice, vkDestroyPipelineLayout)
+			layout(vulkanDevice, vkDestroyPipelineLayout)
 		{
+		}
+
+		void GraphicsPipeline::replace()
+		{
+			pipeline.replace();
+			layout.replace();
 		}
 
 		VkPrimitiveTopology TopologyModeToVkPrimitiveTopology(TopologyMode mode)

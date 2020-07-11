@@ -584,10 +584,13 @@ namespace flex
 
 		struct GraphicsPipeline
 		{
+			GraphicsPipeline();
 			GraphicsPipeline(const VDeleter<VkDevice>& vulkanDevice);
 
+			void replace();
+
 			VDeleter<VkPipeline> pipeline;
-			VDeleter<VkPipelineLayout> pipelineLayout;
+			VDeleter<VkPipelineLayout> layout;
 
 			void* specializationInfos = nullptr;
 		};
