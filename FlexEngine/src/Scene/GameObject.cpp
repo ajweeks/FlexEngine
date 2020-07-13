@@ -3575,7 +3575,7 @@ namespace flex
 		DEBUG_lastUsedVertCount = vertCount;
 
 		// Resize & regenerate index buffer
-		if (m_Indices.size() != indexCount)
+		if ((i32)m_Indices.size() != indexCount)
 		{
 			m_Indices.resize(indexCount);
 			i32 i = 0;
@@ -3602,7 +3602,7 @@ namespace flex
 		}
 
 		// Resize vertex buffers
-		if (vertCount > m_VertexBufferCreateInfo.positions_3D.size())
+		if (vertCount > (i32)m_VertexBufferCreateInfo.positions_3D.size())
 		{
 			m_VertexBufferCreateInfo.positions_3D.resize(vertCount);
 			m_VertexBufferCreateInfo.texCoords_UV.resize(vertCount);

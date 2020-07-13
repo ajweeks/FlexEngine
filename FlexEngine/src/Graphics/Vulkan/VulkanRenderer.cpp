@@ -4789,7 +4789,7 @@ namespace flex
 			VK_CHECK_RESULT(vkCreateImageView(m_VulkanDevice->m_LogicalDevice, &fullImageView, nullptr, m_ShadowImageView.replace()));
 			SetImageViewName(m_VulkanDevice, m_ShadowImageView, "Shadow cascade image view (main)");
 
-			if (m_ShadowCascades.size() < m_ShadowCascadeCount)
+			if ((i32)m_ShadowCascades.size() < m_ShadowCascadeCount)
 			{
 				i32 prevSize = (i32)m_ShadowCascades.size();
 				m_ShadowCascades.resize(m_ShadowCascadeCount);
@@ -4798,7 +4798,7 @@ namespace flex
 					m_ShadowCascades[i] = new Cascade(m_VulkanDevice);
 				}
 			}
-			else if (m_ShadowCascades.size() > m_ShadowCascadeCount)
+			else if ((i32)m_ShadowCascades.size() > m_ShadowCascadeCount)
 			{
 				for (i32 i = (i32)m_ShadowCascades.size() - 1; i >= (i32)m_ShadowCascadeCount; --i)
 				{

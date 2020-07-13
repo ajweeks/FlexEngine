@@ -671,7 +671,7 @@ namespace flex
 			modifiedProj[3][2] = -modifiedProj[3][2];
 			glm::mat4 invCam = glm::inverse(modifiedProj * cam->GetView());
 
-			if (m_ShadowLightViewMats.size() != m_ShadowCascadeCount)
+			if ((i32)m_ShadowLightViewMats.size() != m_ShadowCascadeCount)
 			{
 				m_ShadowLightViewMats.resize(m_ShadowCascadeCount);
 				m_ShadowLightProjMats.resize(m_ShadowCascadeCount);
