@@ -2,6 +2,7 @@ import os
 import subprocess
 import shutil
 import importlib.util
+import time
 
 msbuild_path = 'C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\MSBuild\\Current\\Bin\\MSBuild.exe'
 git_path = 'C:\\Program Files\\Git\\bin\\git.exe'
@@ -24,13 +25,17 @@ def run_git(arguments = []):
     cmd = [git_path] + arguments
     subprocess.check_call(cmd, stderr=subprocess.STDOUT, shell=True)
 
-print("Building Flex Engine...");
+start_time = time.perf_counter()
 
-project_root = 'FlexEngine/'
+print("Building Flex Engine...\n\n");
+
+project_root = '../FlexEngine/'
 libs_target = project_root + 'lib/x64/Debug/'
 
 if not os.path.exists(project_root + 'lib/x64/Debug'):
     os.makedirs(project_root + 'lib/x64/Debug')
+
+print("\n------------------------------------------\n\nBuilding GLFW...\n\n------------------------------------------\n")
 
 #GLFW
 glfw_path = project_root + 'dependencies/glfw/'
@@ -40,6 +45,8 @@ if not os.path.exists(glfw_build_path):
 run_cmake(glfw_path, glfw_build_path, ['-DGLFW_BUILD_EXAMPLES=OFF', '-DGLFW_BUILD_TESTS=OFF' , '-DGLFW_BUILD_DOCS=OFF'])
 run_msbuild(glfw_build_path + 'glfw.sln')
 shutil.copyfile(glfw_build_path + '/src/Debug/glfw3.lib', libs_target + 'glfw3.lib')
+
+print("\n------------------------------------------\n\nBuilding OpenAL...\n\n------------------------------------------\n")
 
 #OpenAL
 openAL_path = project_root + 'dependencies/openAL/'
@@ -52,6 +59,9 @@ shutil.copyfile(openAL_build_path + 'Debug/common.lib', libs_target + 'common.li
 shutil.copyfile(openAL_build_path + 'Debug/OpenAL32.dll', libs_target + 'OpenAL32.dll')
 shutil.copyfile(openAL_build_path + 'Debug/OpenAL32.lib', libs_target + 'OpenAL32.lib')
 
+
+print("\n------------------------------------------\n\nBuilding Bullet...\n\n------------------------------------------\n")
+
 #Bullet
 bullet_path = project_root + 'dependencies/bullet/'
 bullet_build_path = bullet_path + 'build/'
@@ -63,6 +73,9 @@ shutil.copyfile(bullet_build_path + 'lib/Debug/BulletCollision_Debug.lib', libs_
 shutil.copyfile(bullet_build_path + 'lib/Debug/BulletDynamics_Debug.lib', libs_target + 'BulletDynamics_Debug.lib')
 shutil.copyfile(bullet_build_path + 'lib/Debug/LinearMath_Debug.lib', libs_target + 'LinearMath_Debug.lib')
 
+
+print("\n------------------------------------------\n\nBuilding FreeType...\n\n------------------------------------------\n")
+
 #FreeType
 free_type_path = project_root + 'dependencies/freetype/'
 free_type_build_path = free_type_path
@@ -72,19 +85,29 @@ run_msbuild(free_type_path + 'builds/windows/vc2010/freetype.sln', ['/property:C
 shutil.copyfile(free_type_build_path + 'objs/x64/Debug Static/freetype.lib', libs_target + 'freetype.lib')
 shutil.copyfile(free_type_build_path + 'objs/x64/Debug Static/freetype.pdb', libs_target + 'freetype.pdb')
 
+
+print("\n------------------------------------------\n\nBuilding Shaderc...\n\n------------------------------------------\n")
+
 #Shaderc
 shader_c_path = project_root + 'dependencies/shaderc_test/'
 shader_c_build_path = shader_c_path + 'build/'
 if not os.path.exists(shader_c_path):
-    run_git(['clone', 'https://github.com/google/shaderc', shader_c_path, '--recurse-submodules'])
+    run_git(['clone', 'https://github.com/google/shaderc', shader_c_path, '--recurse-submodules', '--depth=1'])
 if not os.path.exists(shader_c_build_path):
     os.makedirs(shader_c_build_path)
 
 os.environ['GIT_EXECUTABLE'] = git_path
 subprocess.check_call(['python', shader_c_path + 'utils/git-sync-deps'], stderr=subprocess.STDOUT, shell=True)
-run_cmake(shader_c_path, shader_c_build_path, ['-DBUILD_GMOCK=OFF', '-DBUILD_TESTING=OFF', '-DENABLE_BUILD_SAMPLES=OFF', '-DENABLE_CTEST=OFF', '-DINSTALL_GTEST=OFF', '-DSHADERC_ENABLE_SHARED_CRT=ON', '-DLLVM_USE_CRT_DEBUG=MDd', '-DLLVM_USE_CRT_MINSIZEREL=MD', '-DLLVM_USE_CRT_RELEASE=MD', '-DLLVM_USE_CRT_RELWITHDEBINFO=MD'])
+run_cmake(shader_c_path, shader_c_build_path, ['-DSHADERC_SKIP_TESTS=ON', '-DBUILD_GMOCK=OFF', '-DBUILD_TESTING=OFF', '-DENABLE_BUILD_SAMPLES=OFF', '-DENABLE_CTEST=OFF', '-DINSTALL_GTEST=OFF', '-DSHADERC_ENABLE_SHARED_CRT=ON', '-DLLVM_USE_CRT_DEBUG=MDd', '-DLLVM_USE_CRT_MINSIZEREL=MD', '-DLLVM_USE_CRT_RELEASE=MD', '-DLLVM_USE_CRT_RELWITHDEBINFO=MD', '-Wno-dev'])
 run_cmake_build(shader_c_build_path)
 shutil.copyfile(shader_c_build_path + 'libshaderc/Debug/shaderc_combined.lib', libs_target + 'shaderc_combined.lib')
 
+
+print("\n------------------------------------------\n\nBuilding genie project...\n\n------------------------------------------\n")
+
 #Project
-subprocess.check_call(['genie.exe', '--file=scripts/genie.lua', 'vs2019'], stderr=subprocess.STDOUT, shell=True)
+subprocess.check_call(['genie.exe', '--file=genie.lua', 'vs2019'], stderr=subprocess.STDOUT, shell=True)
+
+end_time = time.perf_counter()
+total_elapsed = end_time - start_time
+print(f"Building all Flex dependencies took {total_elapsed:0.1f}s")
