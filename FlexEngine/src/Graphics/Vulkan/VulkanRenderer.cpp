@@ -2935,7 +2935,9 @@ namespace flex
 					}
 					ImGui::EndChild(); // Shader list
 
+#if COMPILE_SHADER_COMPILER
 					VulkanShaderCompiler::DisplayShaderErrorsImGui(nullptr);
+#endif
 
 					VulkanShader& shader = m_Shaders[selectedShaderIndex];
 

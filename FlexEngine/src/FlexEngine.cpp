@@ -872,9 +872,11 @@ namespace flex
 			static char shaderEditorBuf[buffSize];
 			bool bOpenShaderEditorPathPopup = false;
 
+#if COMPILE_RENDERDOC_API
 			const char* renderDocDLLEditorPopup = "Renderdoc DLL path##popup";
 			static char renderDocDLLBuf[buffSize];
 			bool bOpenRenderDocDLLPathPopup = false;
+#endif
 			if (ImGui::BeginMenu("Edit"))
 			{
 				BaseScene* scene = g_SceneManager->CurrentScene();
@@ -914,6 +916,7 @@ namespace flex
 					strcpy(shaderEditorBuf, m_ShaderEditorPath.c_str());
 				}
 
+#if COMPILE_RENDERDOC_API
 				if (ImGui::MenuItem("Renderdoc DLL path"))
 				{
 					bOpenRenderDocDLLPathPopup = true;
@@ -922,6 +925,7 @@ namespace flex
 					ReadRenderDocSettingsFileFromDisk(renderDocDLLPath);
 					strcpy(renderDocDLLBuf, renderDocDLLPath.c_str());
 				}
+#endif
 
 				ImGui::EndMenu();
 			}
@@ -962,6 +966,7 @@ namespace flex
 				ImGui::EndPopup();
 			}
 
+#if COMPILE_RENDERDOC_API
 			if (bOpenRenderDocDLLPathPopup)
 			{
 				ImGui::OpenPopup(renderDocDLLEditorPopup);
@@ -1030,6 +1035,7 @@ namespace flex
 
 				ImGui::EndPopup();
 			}
+#endif
 
 			if (ImGui::BeginMenu("Window"))
 			{
