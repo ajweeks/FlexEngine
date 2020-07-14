@@ -7267,12 +7267,6 @@ namespace flex
 
 		void VulkanRenderer::RemoveMaterial(MaterialID materialID)
 		{
-			if (!GetMaterial(materialID).visibleInEditor)
-			{
-				PrintWarn("Attempted to delete editor material - this is not permitted!\n");
-				return;
-			}
-
 			assert(materialID != InvalidMaterialID);
 
 			m_Materials.erase(materialID);
