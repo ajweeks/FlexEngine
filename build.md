@@ -16,7 +16,7 @@ If you want to build Flex Engine on your own system, follow these steps. You an 
 
 #### Steps
 1. `cd scripts`
-2. `py build.py`
+2. `py build_dependencies.py`
   a. If GENie isn't on your path, you will need to run `genie --file=scripts/genie.lua vs2019` manually after running the build script.
 3. Open `build/Flex.sln`
 4. Change configuration to x64
