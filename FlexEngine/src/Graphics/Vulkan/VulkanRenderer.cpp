@@ -75,6 +75,8 @@ namespace flex
 
 #if COMPILE_SHADER_COMPILER
 			m_ShaderCompiler = new VulkanShaderCompiler(false);
+			delete m_ShaderCompiler;
+			m_ShaderCompiler = nullptr;
 #endif
 
 			// TODO: Kick off texture load here (most importantly, environment maps)
@@ -1699,28 +1701,6 @@ namespace flex
 
 			// NOTE: This doesn't respect TAA jitter!
 			m_SpritePerspPushConstBlock->SetData(g_CameraManager->CurrentCamera()->GetView(), g_CameraManager->CurrentCamera()->GetProjection());
-
-#if COMPILE_SHADER_COMPILER
-			if (m_ShaderCompiler && m_ShaderCompiler->TickStatus())
-			{
-				if (m_ShaderCompiler->bSuccess)
-				{
-					AddEditorString("Shader recompile completed successfully");
-
-					RecreateEverything();
-				}
-				else
-				{
-					PrintError("Shader recompile failed\n");
-					AddEditorString("Shader recompile failed");
-				}
-
-				m_bSwapChainNeedsRebuilding = true; // This is needed to recreate some resources for SSAO, etc.
-
-				delete m_ShaderCompiler;
-				m_ShaderCompiler = nullptr;
-			}
-#endif
 
 			if (m_bSSAOStateChanged)
 			{
