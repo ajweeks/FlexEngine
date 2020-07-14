@@ -75,6 +75,7 @@ namespace flex
 		std::vector<MaterialID> GetMaterialIDs() const;
 
 		static Mesh* ParseJSON(const JSONObject& object, GameObject* owner, const std::vector<MaterialID>& inMaterialIDs);
+		static Mesh* ImportFromFile(const std::string& meshFilePath, GameObject* owner);
 		JSONObject Serialize() const;
 
 		Type GetType() const;

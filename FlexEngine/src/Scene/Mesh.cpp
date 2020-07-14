@@ -440,6 +440,20 @@ namespace flex
 		return newMesh;
 	}
 
+	Mesh* Mesh::ImportFromFile(const std::string& meshFilePath, GameObject* owner)
+	{
+		Mesh* newMesh = new Mesh(owner);
+
+		std::vector<MaterialID> materialIDs = { g_Renderer->GetPlaceholderMaterialID() };
+
+		MeshImportSettings importSettings = {};
+
+		owner->SetMesh(newMesh);
+		newMesh->LoadFromFile(meshFilePath, materialIDs, &importSettings);
+
+		return newMesh;
+	}
+
 	JSONObject Mesh::Serialize() const
 	{
 		JSONObject meshObject = {};

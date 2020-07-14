@@ -3,6 +3,7 @@
 #include "Window/GLFWWindowWrapper.hpp"
 
 #include "FlexEngine.hpp"
+#include "Editor.hpp"
 #if COMPILE_OPEN_GL
 #include "Graphics/GL/GLHelpers.hpp"
 #endif
@@ -253,6 +254,8 @@ namespace flex
 		glfwSetFramebufferSizeCallback(m_Window, GLFWFramebufferSizeCallback);
 		glfwSetWindowFocusCallback(m_Window, GLFWWindowFocusCallback);
 		glfwSetWindowPosCallback(m_Window, GLFWWindowPosCallback);
+		// TODO: Only enable in editor builds
+		glfwSetDropCallback(m_Window, GLFWDropCallback);
 		glfwSetJoystickCallback(GLFWJoystickCallback);
 		glfwSetMonitorCallback(GLFWMointorCallback);
 	}
@@ -585,6 +588,12 @@ namespace flex
 	{
 		Window* window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
 		window->FrameBufferSizeCallback(width, height);
+	}
+
+	void GLFWDropCallback(GLFWwindow* glfwWindow, int count, const char** paths)
+	{
+		g_Editor->OnDragDrop(count, paths);
+		glfwFocusWindow(glfwWindow);
 	}
 
 	void GLFWJoystickCallback(i32 JID, i32 event)

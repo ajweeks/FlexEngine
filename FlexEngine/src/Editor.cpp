@@ -242,6 +242,13 @@ namespace flex
 		CalculateSelectedObjectsCenter();
 	}
 
+	void Editor::SetSelectedObjects(const std::vector<GameObject*>& selectedObjects)
+	{
+		m_CurrentlySelectedObjects = selectedObjects;
+
+		CalculateSelectedObjectsCenter();
+	}
+
 	void Editor::ToggleSelectedObject(GameObject* gameObject)
 	{
 		auto iter = Find(m_CurrentlySelectedObjects, gameObject);
@@ -1034,6 +1041,56 @@ namespace flex
 		}
 
 		return false;
+	}
+
+	void Editor::OnDragDrop(i32 count, const char** paths)
+	{
+		std::vector<GameObject*> createdObjs;
+
+		for (i32 i = 0; i < count; ++i)
+		{
+			std::string path = ReplaceBackSlashesWithForward(paths[i]);
+			bool bDir = path.find('.') == std::string::npos;
+			if (!bDir)
+			{
+				std::string fileType = ExtractFileType(path);
+				if (fileType == "glb" || fileType == "gltf")
+				{
+					BaseScene* scene = g_SceneManager->CurrentScene();
+					GameObject* newObj = new GameObject(scene->GetUniqueObjectName("New mesh ", 1), GameObjectType::OBJECT);
+
+					std::string absoluteMeshDir = RelativePathToAbsolute(MESH_DIRECTORY);
+
+					std::string fileName = path.substr(path.rfind('/') + 1);
+					if (!StartsWith(path, absoluteMeshDir))
+					{
+						std::string newPath = absoluteMeshDir + fileName;
+						Print("Copying mesh file from %s to %s\n", path.c_str(), newPath.c_str());
+						Platform::CopyFile(path, newPath);
+						path = newPath;
+					}
+
+					std::string relativeFilePath = MESH_DIRECTORY + fileName;
+					Mesh::ImportFromFile(relativeFilePath, newObj);
+					// TODO: Position object relative to mouse position & camera transform
+					scene->AddRootObject(newObj);
+					createdObjs.push_back(newObj);
+				}
+				else
+				{
+					PrintWarn("Attempted to import unhandled file type %s.\n", fileType.c_str());
+				}
+			}
+			else
+			{
+				PrintWarn("Directory imports are not currently supported.\n");
+			}
+		}
+
+		if (!createdObjs.empty())
+		{
+			SetSelectedObjects(createdObjs);
+		}
 	}
 
 	EventReply Editor::OnMouseButtonEvent(MouseButton button, KeyAction action)

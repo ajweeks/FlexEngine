@@ -22,6 +22,7 @@ namespace flex
 
 		std::vector<GameObject*> GetSelectedObjects(bool bForceIncludeChildren = false);
 		void SetSelectedObject(GameObject* gameObject, bool bSelectChildren = false);
+		void SetSelectedObjects(const std::vector<GameObject*>& selectedObjects);
 		bool HasSelectedObject() const;
 		void ToggleSelectedObject(GameObject* gameObject);
 		void AddSelectedObject(GameObject* gameObject);
@@ -49,6 +50,8 @@ namespace flex
 		void HandleGizmoClick();
 		void HandleGizmoMovement();
 		bool HandleObjectClick();
+
+		void OnDragDrop(i32 count, const char** paths);
 
 	private:
 		EventReply OnMouseButtonEvent(MouseButton button, KeyAction action);
