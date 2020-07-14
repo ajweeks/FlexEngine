@@ -1143,44 +1143,6 @@ namespace flex
 				return EventReply::CONSUMED;
 			}
 
-			// TODO: Add camera types!
-			if (keyCode == KeyCode::KEY_F && !m_CurrentlySelectedObjects.empty() && dynamic_cast<DebugCamera*>(g_CameraManager->CurrentCamera()) != nullptr)
-			{
-				// Focus on selected objects
-
-				glm::vec3 minPos(FLT_MAX);
-				glm::vec3 maxPos(-FLT_MAX);
-				for (GameObject* gameObject : m_CurrentlySelectedObjects)
-				{
-					Mesh* mesh = gameObject->GetMesh();
-					if (mesh)
-					{
-						Transform* transform = gameObject->GetTransform();
-						glm::vec3 min = transform->GetWorldTransform() * glm::vec4(mesh->m_MinPoint, 1.0f);
-						glm::vec3 max = transform->GetWorldTransform() * glm::vec4(mesh->m_MaxPoint, 1.0f);
-						minPos = glm::min(minPos, min);
-						maxPos = glm::max(maxPos, max);
-					}
-				}
-
-				if (minPos.x != FLT_MAX && maxPos.x != -FLT_MAX && minPos != maxPos)
-				{
-					glm::vec3 sphereCenterWS = minPos + (maxPos - minPos) / 2.0f;
-					real sphereRadius = glm::length(maxPos - minPos) / 2.0f;
-
-					BaseCamera* cam = g_CameraManager->CurrentCamera();
-
-					if (sphereRadius > 0.0f)
-					{
-						glm::vec3 currentOffset = cam->position - sphereCenterWS;
-						glm::vec3 newOffset = ((currentOffset != VEC3_ZERO) ? (glm::normalize(currentOffset) * sphereRadius * 2.0f) : glm::vec3(0.0f, 0.0f, sphereRadius * 2.0f));
-						cam->position = sphereCenterWS + newOffset;
-					}
-
-					cam->LookAt(sphereCenterWS);
-				}
-				return EventReply::CONSUMED;
-			}
 
 			if (bControlDown && keyCode == KeyCode::KEY_A)
 			{
@@ -1235,6 +1197,42 @@ namespace flex
 			return EventReply::CONSUMED;
 		}
 
+		// TODO: Add camera types!
+		if (action == Action::EDITOR_FOCUS_ON_SELECTION && !m_CurrentlySelectedObjects.empty() && dynamic_cast<DebugCamera*>(g_CameraManager->CurrentCamera()) != nullptr)
+		{
+			glm::vec3 minPos(FLT_MAX);
+			glm::vec3 maxPos(-FLT_MAX);
+			for (GameObject* gameObject : m_CurrentlySelectedObjects)
+			{
+				Mesh* mesh = gameObject->GetMesh();
+				if (mesh)
+				{
+					Transform* transform = gameObject->GetTransform();
+					glm::vec3 min = transform->GetWorldTransform() * glm::vec4(mesh->m_MinPoint, 1.0f);
+					glm::vec3 max = transform->GetWorldTransform() * glm::vec4(mesh->m_MaxPoint, 1.0f);
+					minPos = glm::min(minPos, min);
+					maxPos = glm::max(maxPos, max);
+				}
+			}
+
+			if (minPos.x != FLT_MAX && maxPos.x != -FLT_MAX && minPos != maxPos)
+			{
+				glm::vec3 sphereCenterWS = minPos + (maxPos - minPos) / 2.0f;
+				real sphereRadius = glm::length(maxPos - minPos) / 2.0f;
+
+				BaseCamera* cam = g_CameraManager->CurrentCamera();
+
+				if (sphereRadius > 0.0f)
+				{
+					glm::vec3 currentOffset = cam->position - sphereCenterWS;
+					glm::vec3 newOffset = ((currentOffset != VEC3_ZERO) ? (glm::normalize(currentOffset) * sphereRadius * 2.0f) : glm::vec3(0.0f, 0.0f, sphereRadius * 2.0f));
+					cam->position = sphereCenterWS + newOffset;
+				}
+
+				cam->LookAt(m_SelectedObjectsCenterPos);
+			}
+			return EventReply::CONSUMED;
+		}
 		return EventReply::UNCONSUMED;
 	}
 
