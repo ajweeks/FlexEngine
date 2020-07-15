@@ -8354,7 +8354,7 @@ namespace flex
 					}
 
 					bool bDrawSelectedObjectWireframe = !g_Editor->HasSelectedObject();
-					if (bDrawSelectedObjectWireframe || m_bEnableWireframeOverlay)
+					if (bDrawSelectedObjectWireframe || m_bEnableWireframeOverlay || m_bEnableSelectionWireframe)
 					{
 						BeginDebugMarkerRegion(commandBuffer, "Wireframe");
 
@@ -8396,7 +8396,7 @@ namespace flex
 								}
 							}
 						}
-						else
+						else if (m_bEnableSelectionWireframe)
 						{
 							std::vector<GameObject*> selectedObjects = g_Editor->GetSelectedObjects(true);
 							std::vector<RenderID> renderIDs;

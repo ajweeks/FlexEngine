@@ -405,6 +405,7 @@ namespace flex
 		bool m_bRebatchRenderObjects = true;
 
 		bool m_bEnableWireframeOverlay = false;
+		bool m_bEnableSelectionWireframe = false;
 		bool m_bDisplayBoundingVolumes = false;
 		bool m_bDisplayShadowCascadePreview = false;
 		bool m_bRenderGrid = true;

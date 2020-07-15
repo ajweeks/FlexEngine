@@ -1000,6 +1000,8 @@ namespace flex
 				g_Renderer->RecaptureReflectionProbe();
 			}
 
+			ImGui::Checkbox("Selection wireframe", &m_bEnableSelectionWireframe);
+
 			bool bVSyncEnabled = g_Window->GetVSyncEnabled();
 			if (ImGui::Checkbox("VSync", &bVSyncEnabled))
 			{
