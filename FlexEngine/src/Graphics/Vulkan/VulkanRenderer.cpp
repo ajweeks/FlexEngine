@@ -5082,8 +5082,7 @@ namespace flex
 			//real scale = ((real)font->GetFontSize()) / 12.0f + sin(g_SecElapsedSinceProgramStart) * 2.0f;
 			glm::vec3 scaleVec(1.0f);
 
-			glm::mat4 transformMat = glm::scale(MAT4_IDENTITY, scaleVec) * ortho;
-
+			glm::mat4 transformMat = bScreenSpace ? (glm::scale(MAT4_IDENTITY, scaleVec) * ortho) : g_CameraManager->CurrentCamera()->GetViewProjection();
 			for (BitmapFont* font : fonts)
 			{
 				if (font->bufferSize > 0)
@@ -5116,7 +5115,7 @@ namespace flex
 					overrides.texSize = texSize;
 					overrides.overridenUniforms.AddUniform(U_FONT_CHAR_DATA);
 					overrides.fontCharData = fontCharData;
-					UpdateDynamicUniformBuffer(m_FontMatSSID, dynamicOffsetIndex * m_DynamicAlignment, transformMat, &overrides);
+					UpdateDynamicUniformBuffer(matID, dynamicOffsetIndex * m_DynamicAlignment, transformMat, &overrides);
 
 					VkDeviceSize offsets[1] = { 0 };
 					vkCmdBindVertexBuffers(commandBuffer, 0, 1, &fontVertexBuffer->m_Buffer, offsets);
