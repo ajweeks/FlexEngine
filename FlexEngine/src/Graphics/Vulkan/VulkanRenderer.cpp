@@ -7629,7 +7629,7 @@ namespace flex
 					const UniformBuffer* dynamicBuffer = material.uniformBufferList.Get(UniformBufferType::DYNAMIC);
 					if (dynamicBuffer)
 					{
-						*inOutDynamicUBOOffset += RoundUp(dynamicBuffer->data.size, m_DynamicAlignment);
+						*inOutDynamicUBOOffset += RoundUp(dynamicBuffer->data.size - 1, m_DynamicAlignment);
 					}
 					if (bWriteUBOOffsets)
 					{
@@ -7877,7 +7877,9 @@ namespace flex
 						if (drawCallInfo->bCalculateDynamicUBOOffset)
 						{
 							dynamicUBOOffset = drawCallInfo->dynamicUBOOffset;
-							drawCallInfo->dynamicUBOOffset += m_DynamicAlignment;
+
+							const UniformBuffer* wireframeDynamicBuffer = mat.uniformBufferList.Get(UniformBufferType::DYNAMIC);
+							drawCallInfo->dynamicUBOOffset += RoundUp(wireframeDynamicBuffer->data.size - 1, m_DynamicAlignment);
 						}
 					}
 
@@ -8400,7 +8402,6 @@ namespace flex
 							std::vector<RenderID> renderIDs;
 							renderIDs.reserve(selectedObjects.size());
 
-							u32 dynamicUBOOffset = 0;
 							for (GameObject* selectedObj : selectedObjects)
 							{
 								Mesh* mesh = selectedObj->GetMesh();
@@ -8409,10 +8410,7 @@ namespace flex
 									std::vector<MeshComponent*> meshes = mesh->GetSubMeshes();
 									for (MeshComponent* meshComponent : meshes)
 									{
-										//VulkanRenderObject* renderObject = GetRenderObject(meshComponent->renderID);
-										UpdateDynamicUniformBuffer(meshComponent->renderID, nullptr, m_WireframeMatID, dynamicUBOOffset);
 										renderIDs.push_back(meshComponent->renderID);
-										dynamicUBOOffset += m_DynamicAlignment;
 									}
 								}
 							}
@@ -8480,6 +8478,21 @@ namespace flex
 									if (!depthUnawareEditorShaderBatchPair.batch.batches.empty())
 									{
 										selectedObjectBatch.batches.push_back(depthUnawareEditorShaderBatchPair);
+									}
+								}
+							}
+
+							VulkanMaterial& wireframeMaterial = m_Materials[m_WireframeMatID];
+							const UniformBuffer* wireframeDynamicBuffer = wireframeMaterial.uniformBufferList.Get(UniformBufferType::DYNAMIC);
+							u32 dynamicUBOOffset = 0;
+							for (const ShaderBatchPair& shaderBatch : selectedObjectBatch.batches)
+							{
+								for (const MaterialBatchPair& matBatchPair : shaderBatch.batch.batches)
+								{
+									for (RenderID renderID : matBatchPair.batch.objects)
+									{
+										UpdateDynamicUniformBuffer(renderID, nullptr, m_WireframeMatID, dynamicUBOOffset);
+										dynamicUBOOffset += RoundUp(wireframeDynamicBuffer->data.size - 1, m_DynamicAlignment);
 									}
 								}
 							}
