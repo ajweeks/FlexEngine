@@ -4970,12 +4970,14 @@ namespace flex
 		}
 	}
 
-	void Terminal::DrawImGuiObjects()
+	void Terminal::DrawTerminalUI()
 	{
-		GameObject::DrawImGuiObjects();
-
 		ImGui::Begin("Terminal");
 		{
+			ImGui::TextWrapped("Hit F5 to compile and evaluate code.");
+
+			ImGui::Separator();
+
 			//ImGui::DragFloat("Line height", &m_LineHeight, 0.01f);
 			//ImGui::DragFloat("Scale", &m_LetterScale, 0.01f);
 

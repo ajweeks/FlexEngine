@@ -735,13 +735,14 @@ namespace flex
 		virtual void Initialize() override;
 		virtual void Destroy() override;
 		virtual void Update() override;
-		virtual void DrawImGuiObjects() override;
 
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
 
 		virtual bool AllowInteractionWith(GameObject* gameObject) override;
 
 		void SetCamera(TerminalCamera* camera);
+
+		void DrawTerminalUI();
 
 	protected:
 		void TypeChar(char c);

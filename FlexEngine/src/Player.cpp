@@ -176,6 +176,15 @@ namespace flex
 		}
 		m_MapTabletHolder->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(0.0f, glm::radians(m_TabletOrbitAngle), 0.0f)));
 
+		if (m_ObjectInteractingWith != nullptr)
+		{
+			Terminal* terminal = dynamic_cast<Terminal*>(m_ObjectInteractingWith);
+			if (terminal != nullptr)
+			{
+				terminal->DrawTerminalUI();
+			}
+		}
+
 		GameObject::Update();
 	}
 
