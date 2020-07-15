@@ -9777,7 +9777,10 @@ namespace flex
 			}
 			else
 			{
-				Print("%s\n", msgStr.c_str());
+				if (!(messageTypes & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT))
+				{
+					Print("%s\n", msgStr.c_str());
+				}
 			}
 
 			return VK_FALSE;
