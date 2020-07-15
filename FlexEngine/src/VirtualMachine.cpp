@@ -259,7 +259,7 @@ namespace flex
 
 		if (tokenNameToInstantiatedIdentifierIdx.find(tokenName) != tokenNameToInstantiatedIdentifierIdx.end())
 		{
-			errorReason = "Redeclaration of type";
+			errorReason = "Redeclaration of identifier \"" + tokenName + "\"";
 			errorToken = identifierToken;
 			return nullptr;
 		}
@@ -300,7 +300,7 @@ namespace flex
 		std::string tokenName = token.ToString();
 		if (tokenNameToInstantiatedIdentifierIdx.find(tokenName) == tokenNameToInstantiatedIdentifierIdx.end())
 		{
-			errorReason = "Use of undefined type";
+			errorReason = "Use of undefined identifier \"" + tokenName + "\"";
 			errorToken = token;
 			return nullptr;
 		}
@@ -1541,7 +1541,7 @@ namespace flex
 			} break;
 			default:
 			{
-				context.errorReason = "Unexpected typename encountered in assignment";
+				context.errorReason = "Unexpected typename encountered";
 				context.errorToken = token;
 			} break;
 			}
@@ -1568,7 +1568,7 @@ namespace flex
 		if (nextToken.type == TokenType::SEMICOLON)
 		{
 			delete lhs;
-			tokenizer.context->errorReason = "Uninitialized variables are not supported. Add default value";
+			tokenizer.context->errorReason = "Uninitialized variables are not supported";
 			tokenizer.context->errorToken = token;
 			return nullptr;
 		}
