@@ -591,8 +591,6 @@ namespace flex
 
 			VDeleter<VkPipeline> pipeline;
 			VDeleter<VkPipelineLayout> layout;
-
-			void* specializationInfos = nullptr;
 		};
 
 		struct VulkanRenderObject

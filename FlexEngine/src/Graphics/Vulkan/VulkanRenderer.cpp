@@ -1484,11 +1484,12 @@ namespace flex
 			// TAA Resolve pipeline
 			{
 				VulkanMaterial& taaResolveMat = m_Materials[m_TAAResolveMaterialID];
+				VulkanShader& taaResolveShader = m_Shaders[taaResolveMat.material.shaderID];
 
 				std::array<VkPushConstantRange, 1> pushConstantRanges = {};
 				pushConstantRanges[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 				pushConstantRanges[0].offset = 0;
-				pushConstantRanges[0].size = m_Shaders[taaResolveMat.material.shaderID].shader->pushConstantBlockSize;
+				pushConstantRanges[0].size = taaResolveShader.shader->pushConstantBlockSize;
 
 				GraphicsPipelineCreateInfo createInfo = {};
 				createInfo.DBG_Name = "TAA Resolve pipeline";
@@ -1501,7 +1502,7 @@ namespace flex
 				createInfo.bSetDynamicStates = true;
 				createInfo.depthTestEnable = VK_FALSE;
 				createInfo.depthWriteEnable = VK_FALSE;
-				createInfo.fragSpecializationInfo = GenerateSpecializationInfo({ { m_TAASampleCountSpecializationID, sizeof(i32), (void*)&m_TAASampleCount } });
+				createInfo.fragSpecializationInfo = taaResolveShader.fragSpecializationInfo;
 				createInfo.pushConstantRangeCount = (u32)pushConstantRanges.size();
 				createInfo.pushConstants = pushConstantRanges.data();
 				CreateGraphicsPipeline(&createInfo);
@@ -4281,7 +4282,7 @@ namespace flex
 			pipelineCreateInfo.depthWriteEnable = ssaoShader->shader->bDepthWriteEnable ? VK_TRUE : VK_FALSE;
 			pipelineCreateInfo.depthCompareOp = gBufferObject->depthCompareOp;
 			pipelineCreateInfo.renderPass = ssaoShader->renderPass;
-			pipelineCreateInfo.fragSpecializationInfo = GenerateSpecializationInfo({ {m_SSAOKernelSizeSpecializationID, sizeof(i32), &m_SSAOKernelSize} });
+			pipelineCreateInfo.fragSpecializationInfo = ssaoShader->fragSpecializationInfo;
 			CreateGraphicsPipeline(&pipelineCreateInfo);
 
 			VulkanMaterial* ssaoBlurMaterial = &m_Materials[m_SSAOBlurMatID];
@@ -9516,13 +9517,28 @@ namespace flex
 		{
 			LoadShaders();
 
-			ShaderID deferredCombineShaderID = InvalidShaderID;
-			GetShaderID("deferred_combine", deferredCombineShaderID);
-			VulkanShader& deferredCombineShader = m_Shaders[deferredCombineShaderID];
-			deferredCombineShader.fragSpecializationInfo = GenerateSpecializationInfo({
-					{ m_ShaderQualityLevelSpecializationID, sizeof(i32), (void*)&m_ShaderQualityLevel },
-					{ m_ShadowCascadeCountSpecializationID, sizeof(i32), (void*)&m_ShadowCascadeCount }
-				});
+			// Recreate specialization infos
+			{
+				ShaderID deferredCombineShaderID = InvalidShaderID;
+				GetShaderID("deferred_combine", deferredCombineShaderID);
+				VulkanShader& deferredCombineShader = m_Shaders[deferredCombineShaderID];
+				deferredCombineShader.fragSpecializationInfo = GenerateSpecializationInfo({
+						{ m_ShaderQualityLevelSpecializationID, sizeof(i32), (void*)&m_ShaderQualityLevel },
+						{ m_ShadowCascadeCountSpecializationID, sizeof(i32), (void*)&m_ShadowCascadeCount }
+					});
+
+				ShaderID taaShaderID = m_Materials[m_TAAResolveMaterialID].material.shaderID;
+				VulkanShader& taaShader = m_Shaders[taaShaderID];
+				taaShader.fragSpecializationInfo = GenerateSpecializationInfo({
+						{ m_TAASampleCountSpecializationID, sizeof(i32), (void*)&m_TAASampleCount }
+					});
+
+				ShaderID ssaoShaderID = m_Materials[m_SSAOMatID].material.shaderID;
+				VulkanShader& ssaoShader = m_Shaders[ssaoShaderID];
+				ssaoShader.fragSpecializationInfo = GenerateSpecializationInfo({
+						{m_SSAOKernelSizeSpecializationID, sizeof(i32), &m_SSAOKernelSize}
+					});
+			}
 
 			CreateFrameBufferAttachments();
 			CreateRenderPasses();

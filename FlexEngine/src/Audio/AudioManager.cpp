@@ -71,6 +71,7 @@ namespace flex
 	void AudioManager::Destroy()
 	{
 		ClearAllAudioSources();
+		alDeleteBuffers(NUM_BUFFERS, s_Buffers);
 		alcMakeContextCurrent(NULL);
 		alcDestroyContext(s_Context);
 		alcCloseDevice(s_Device);
