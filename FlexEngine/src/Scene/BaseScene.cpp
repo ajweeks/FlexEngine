@@ -1290,8 +1290,7 @@ namespace flex
 		success &= SerializeMaterialFile();
 		//success &= BaseScene::SerializePrefabFile();
 
-		const std::string profileBlockName = "serialize scene to file: " + m_FileName;
-		PROFILE_BEGIN(profileBlockName);
+		PROFILE_AUTO("Serialize scene");
 
 		JSONObject rootSceneObject = {};
 
@@ -1350,22 +1349,23 @@ namespace flex
 			rootSceneObject.fields.emplace_back("track manager", JSONValue(m_TrackManager.Serialize()));
 		}
 
+		Print("Serializing scene to %s\n", m_FileName.c_str());
+
 		std::string fileContents = rootSceneObject.Print(0);
 
 		const std::string defaultSaveFilePath = SCENE_DEFAULT_LOCATION + m_FileName;
 		const std::string savedSaveFilePath = SCENE_SAVED_LOCATION + m_FileName;
-		const std::string defaultSaveFilePathShort = StripLeadingDirectories(defaultSaveFilePath);
-		const std::string savedSaveFilePathShort = StripLeadingDirectories(savedSaveFilePath);
-		std::string shortSavedFileName;
+		std::string saveFilePath;
 		if (bSaveOverDefault)
 		{
-			shortSavedFileName = defaultSaveFilePathShort;
+			saveFilePath = defaultSaveFilePath;
 		}
 		else
 		{
-			shortSavedFileName = savedSaveFilePathShort;
+			saveFilePath = savedSaveFilePath;
 		}
-		Print("Serializing scene to %s\n", shortSavedFileName.c_str());
+
+		saveFilePath = RelativePathToAbsolute(saveFilePath);
 
 		if (bSaveOverDefault)
 		{
@@ -1378,9 +1378,7 @@ namespace flex
 		}
 
 
-		std::string savedFilePathName = RESOURCE_LOCATION + shortSavedFileName;
-		savedFilePathName = RelativePathToAbsolute(savedFilePathName);
-		success &= WriteFile(savedFilePathName, fileContents, false);
+		success &= WriteFile(saveFilePath, fileContents, false);
 
 		if (success)
 		{
@@ -1394,11 +1392,9 @@ namespace flex
 		}
 		else
 		{
-			PrintError("Failed to open file for writing at \"%s\", Can't serialize scene\n", savedFilePathName.c_str());
+			PrintError("Failed to open file for writing at \"%s\", Can't serialize scene\n", m_FileName.c_str());
 			AudioManager::PlaySource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud));
 		}
-
-		PROFILE_END(profileBlockName);
 	}
 
 	void BaseScene::DeleteSaveFiles()
