@@ -1272,22 +1272,33 @@ namespace flex
 				}
 			}
 
-			if (minPos.x != FLT_MAX && maxPos.x != -FLT_MAX && minPos != maxPos)
+			if (minPos.x == FLT_MAX || maxPos.x == -FLT_MAX || minPos == maxPos)
 			{
-				glm::vec3 sphereCenterWS = minPos + (maxPos - minPos) / 2.0f;
-				real sphereRadius = glm::length(maxPos - minPos) / 2.0f;
-
-				BaseCamera* cam = g_CameraManager->CurrentCamera();
-
-				if (sphereRadius > 0.0f)
-				{
-					glm::vec3 currentOffset = cam->position - sphereCenterWS;
-					glm::vec3 newOffset = ((currentOffset != VEC3_ZERO) ? (glm::normalize(currentOffset) * sphereRadius * 2.0f) : glm::vec3(0.0f, 0.0f, sphereRadius * 2.0f));
-					cam->position = sphereCenterWS + newOffset;
-				}
-
-				cam->LookAt(m_SelectedObjectsCenterPos);
+				minPos = glm::vec3(-1.0f);
+				maxPos = glm::vec3(1.0f);
 			}
+
+			glm::vec3 sphereCenterWS = minPos + (maxPos - minPos) / 2.0f;
+			real sphereRadius = glm::length(maxPos - minPos) / 2.0f;
+
+			BaseCamera* cam = g_CameraManager->CurrentCamera();
+
+			if (sphereRadius > 0.0f)
+			{
+				glm::vec3 currentOffset = cam->position - sphereCenterWS;
+				glm::vec3 newOffset;
+				if (currentOffset != VEC3_ZERO)
+				{
+					newOffset = glm::normalize(currentOffset) * sphereRadius * 3.0f;
+				}
+				else
+				{
+					newOffset = glm::vec3(0.0f, 0.0f, sphereRadius * 3.0f);
+				}
+				cam->position = sphereCenterWS + newOffset;
+			}
+
+			cam->LookAt(m_SelectedObjectsCenterPos);
 			return EventReply::CONSUMED;
 		}
 		return EventReply::UNCONSUMED;
