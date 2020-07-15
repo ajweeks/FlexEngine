@@ -967,16 +967,17 @@ namespace flex
 			}
 
 #if COMPILE_RENDERDOC_API
+			static bool bInvalidDLLLocation = false;
 			if (bOpenRenderDocDLLPathPopup)
 			{
 				ImGui::OpenPopup(renderDocDLLEditorPopup);
+				bInvalidDLLLocation = false;
 			}
 
 			ImGui::SetNextWindowSize(ImVec2(500.0f, 160.0f), ImGuiCond_Appearing);
 			if (ImGui::BeginPopupModal(renderDocDLLEditorPopup, NULL))
 			{
 				bool bUpdate = false;
-				static bool bInvalidLocation = false;
 				if (ImGui::InputText("", renderDocDLLBuf, buffSize, ImGuiInputTextFlags_EnterReturnsTrue))
 				{
 					bUpdate = true;
@@ -994,7 +995,7 @@ namespace flex
 					bUpdate = true;
 				}
 
-				if (bInvalidLocation)
+				if (bInvalidDLLLocation)
 				{
 					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.4f, 0.4f, 1.0f));
 					ImGui::TextWrapped("Invalid path - couldn't find renderdoc.dll at location provided.");
@@ -1003,7 +1004,7 @@ namespace flex
 
 				if (bUpdate)
 				{
-					bInvalidLocation = false;
+					bInvalidDLLLocation = false;
 					std::string dllPathRaw = std::string(renderDocDLLBuf);
 					std::string dllPathClean = dllPathRaw;
 
@@ -1023,10 +1024,10 @@ namespace flex
 
 					if (!FileExists(dllPathClean + "renderdoc.dll"))
 					{
-						bInvalidLocation = true;
+						bInvalidDLLLocation = true;
 					}
 
-					if (!bInvalidLocation)
+					if (!bInvalidDLLLocation)
 					{
 						SaveRenderDocSettingsFileToDisk(dllPathClean);
 						ImGui::CloseCurrentPopup();
