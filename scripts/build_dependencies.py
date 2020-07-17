@@ -3,10 +3,16 @@ import subprocess
 import shutil
 import importlib.util
 import time
+import sys
 
 msbuild_path = 'C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\MSBuild\\Current\\Bin\\MSBuild.exe'
 git_path = 'C:\\Program Files\\Git\\bin\\git.exe'
 cmake_path = 'cmake.exe'
+
+genie_target = 'vs2019'
+
+if len(sys.argv) == 2:
+    genie_target = sys.argv[1]
 
 def run_cmake(source, build, arguments = []):
     cmakeCmd = [cmake_path, '-S', source, '-B', build]
@@ -89,7 +95,7 @@ shutil.copyfile(free_type_build_path + 'objs/x64/Debug Static/freetype.pdb', lib
 print("\n------------------------------------------\n\nBuilding Shaderc...\n\n------------------------------------------\n")
 
 #Shaderc
-shader_c_path = project_root + 'dependencies/shaderc_test/'
+shader_c_path = project_root + 'dependencies/shaderc/'
 shader_c_build_path = shader_c_path + 'build/'
 if not os.path.exists(shader_c_path):
     run_git(['clone', 'https://github.com/google/shaderc', shader_c_path, '--recurse-submodules', '--depth=1'])
@@ -106,7 +112,7 @@ shutil.copyfile(shader_c_build_path + 'libshaderc/Debug/shaderc_combined.lib', l
 print("\n------------------------------------------\n\nBuilding genie project...\n\n------------------------------------------\n")
 
 #Project
-subprocess.check_call(['genie.exe', '--file=genie.lua', 'vs2019'], stderr=subprocess.STDOUT, shell=True)
+subprocess.check_call(['genie.exe', '--file=genie.lua', genie_target], stderr=subprocess.STDOUT, shell=True)
 
 end_time = time.perf_counter()
 total_elapsed = end_time - start_time

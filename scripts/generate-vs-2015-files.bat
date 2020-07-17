@@ -1,2 +1,2 @@
-@call genie vs2015
+@call python build_dependencies.py vs2015
 PAUSE
