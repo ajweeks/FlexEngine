@@ -142,26 +142,18 @@ namespace flex
 				JSONObject cameraObj;
 				if (sceneRootObject.SetObjectChecked("camera", cameraObj))
 				{
-					std::string cameraName;
-					if (cameraObj.SetStringChecked("last camera type", cameraName))
-					{
-						if (cameraName.compare("terminal") == 0)
-						{
-							// Ensure there's a camera to pop back to after exiting the terminal
-							g_CameraManager->SetCameraByName("first-person", false);
-						}
-						g_CameraManager->PushCameraByName(cameraName, true);
-					}
-
 					std::string camType;
 					if (cameraObj.SetStringChecked("type", camType))
 					{
-						if (cameraName.compare("terminal") == 0)
+						if (camType.compare("terminal") == 0)
 						{
-							// Ensure there's a camera to pop back to after exiting the terminal
-							g_CameraManager->SetCameraByName("first-person", false);
+							g_CameraManager->PushCameraByName(camType, true);
+
 						}
-						g_CameraManager->SetCameraByName(camType, true);
+						else
+						{
+							g_CameraManager->SetCameraByName(camType, true);
+						}
 					}
 
 					BaseCamera* cam = g_CameraManager->CurrentCamera();

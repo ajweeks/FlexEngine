@@ -39,6 +39,8 @@ namespace flex
 
 		std::string GetShaderEditorPath();
 
+		void CreateCameraInstances();
+
 		static void GenerateRayAtMousePos(btVector3& outRayStart, btVector3& outRayEnd);
 
 		// Returns the intersection point of the given ray & plane, projected on to axis

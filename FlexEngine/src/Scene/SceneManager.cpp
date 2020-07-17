@@ -209,10 +209,16 @@ namespace flex
 	{
 		Print("Reloading current scene\n");
 
+		g_CameraManager->Destroy();
+
 		SetCurrentScene(m_CurrentSceneIndex);
+
+		g_EngineInstance->CreateCameraInstances();
 
 		InitializeCurrentScene();
 		PostInitializeCurrentScene();
+
+		g_CameraManager->Initialize();
 		g_Renderer->AddEditorString("Scene reloaded");
 	}
 

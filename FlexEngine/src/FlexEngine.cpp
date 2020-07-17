@@ -226,20 +226,7 @@ namespace flex
 
 		g_CameraManager = new CameraManager();
 
-		DebugCamera* debugCamera = new DebugCamera();
-		debugCamera->position = glm::vec3(20.0f, 8.0f, -16.0f);
-		debugCamera->yaw = glm::radians(130.0f);
-		debugCamera->pitch = glm::radians(-10.0f);
-		g_CameraManager->AddCamera(debugCamera, false);
-
-		OverheadCamera* overheadCamera = new OverheadCamera();
-		g_CameraManager->AddCamera(overheadCamera, false);
-
-		FirstPersonCamera* fpCamera = new FirstPersonCamera();
-		g_CameraManager->AddCamera(fpCamera, true);
-
-		TerminalCamera* terminalCamera = new TerminalCamera();
-		g_CameraManager->AddCamera(terminalCamera, false);
+		CreateCameraInstances();
 
 		InitializeWindowAndRenderer();
 
@@ -1561,6 +1548,24 @@ namespace flex
 	std::string FlexEngine::GetShaderEditorPath()
 	{
 		return m_ShaderEditorPath;
+	}
+
+	void FlexEngine::CreateCameraInstances()
+	{
+		FirstPersonCamera* fpCamera = new FirstPersonCamera();
+		g_CameraManager->AddCamera(fpCamera, true);
+
+		DebugCamera* debugCamera = new DebugCamera();
+		debugCamera->position = glm::vec3(20.0f, 8.0f, -16.0f);
+		debugCamera->yaw = glm::radians(130.0f);
+		debugCamera->pitch = glm::radians(-10.0f);
+		g_CameraManager->AddCamera(debugCamera, false);
+
+		OverheadCamera* overheadCamera = new OverheadCamera();
+		g_CameraManager->AddCamera(overheadCamera, false);
+
+		TerminalCamera* terminalCamera = new TerminalCamera();
+		g_CameraManager->AddCamera(terminalCamera, false);
 	}
 
 	EventReply FlexEngine::OnMouseButtonEvent(MouseButton button, KeyAction action)
