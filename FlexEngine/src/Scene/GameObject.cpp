@@ -3369,6 +3369,8 @@ namespace flex
 		SetMesh(new Mesh(this));
 
 		m_Mesh->LoadFromMemoryDynamic(m_VertexBufferCreateInfo, m_Indices, m_WaveMaterialID, (u32)m_VertexBufferCreateInfo.positions_3D.size());
+
+		GameObject::Initialize();
 	}
 
 	void GerstnerWave::Update()
@@ -3422,6 +3424,8 @@ namespace flex
 		}
 
 		g_Renderer->SetGlobalUniform(U_OCEAN_DATA, &oceanData, sizeof(oceanData));
+
+		GameObject::Update();
 	}
 
 	void GerstnerWave::Destroy()
@@ -4841,6 +4845,7 @@ namespace flex
 
 	void Blocks::Update()
 	{
+		GameObject::Update();
 	}
 
 	Terminal::Terminal() :
@@ -4993,6 +4998,8 @@ namespace flex
 			o = glm::vec3(0.0f, 2.0f, 0.0f);
 			debugDrawer->drawTriangle(ToBtVec3(v1 + o), ToBtVec3(v2 + o), ToBtVec3(v3 + o), btVector3(0.9f, 0.3f, 0.2f), 1.0f);
 		}
+
+		GameObject::Update();
 	}
 
 	void Terminal::DrawTerminalUI()
@@ -5711,6 +5718,7 @@ namespace flex
 
 	void ParticleSystem::Update()
 	{
+		GameObject::Update();
 	}
 
 	void ParticleSystem::Destroy()
@@ -5817,6 +5825,8 @@ namespace flex
 	void ParticleSystem::UpdateModelMatrix()
 	{
 		model = glm::scale(m_Transform.GetWorldTransform(), glm::vec3(scale));
+
+		GameObject::Update();
 	}
 
 	ChunkGenerator::ChunkGenerator(const std::string& name) :
@@ -5849,6 +5859,8 @@ namespace flex
 		m_Mesh->SetTypeToMemory();
 
 		GenerateGradients();
+
+		GameObject::Initialize();
 	}
 
 	void ChunkGenerator::DestroyAllChunks()
@@ -6045,6 +6057,7 @@ namespace flex
 
 	void ChunkGenerator::PostInitialize()
 	{
+		GameObject::PostInitialize();
 	}
 
 	void ChunkGenerator::Update()
@@ -6163,6 +6176,8 @@ namespace flex
 				textureScale /= 2.0f;
 			}
 		}
+
+		GameObject::Update();
 	}
 
 	void ChunkGenerator::Destroy()
