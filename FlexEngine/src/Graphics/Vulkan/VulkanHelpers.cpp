@@ -7,7 +7,7 @@ IGNORE_WARNINGS_PUSH
 #include "stb_image.h"
 
 #if COMPILE_SHADER_COMPILER
-#include "shaderc/spvc.hpp"
+#include "spvc/spvc.hpp"
 #include "shaderc/shaderc.hpp"
 #endif
 IGNORE_WARNINGS_POP

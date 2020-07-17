@@ -119,7 +119,9 @@ configuration {}
 		path.join(DEPENDENCIES_DIR, "bullet/src"),
 		path.join(DEPENDENCIES_DIR, "openAL/include"),
 		path.join(DEPENDENCIES_DIR, "freetype/include"),
-		path.join(DEPENDENCIES_DIR, "shaderc/include"),
+		path.join(DEPENDENCIES_DIR, "shaderc/libshaderc/include"),
+		path.join(DEPENDENCIES_DIR, "shaderc/libshaderc_spvc/include"),
+		path.join(DEPENDENCIES_DIR, "shaderc/libshaderc_util/include"),
 		DEPENDENCIES_DIR,
 	}
 
