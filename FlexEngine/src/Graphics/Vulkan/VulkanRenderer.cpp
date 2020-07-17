@@ -1946,13 +1946,13 @@ namespace flex
 
 			u32 vertCopySize = std::min(vertexBufferData->VertexBufferSize, (u32)vertexBuffer->m_Size);
 			u32 indexCopySize = std::min(newIndexDataSize, (u32)indexBuffer->m_Size);
-			if (vertCopySize < vertexBufferData->VertexBufferSize)
+			if (vertCopySize < vertexBuffer->m_Size)
 			{
 				renderObject->dynamicVertexBufferOffset = vertexBuffer->Realloc(renderObject->dynamicVertexBufferOffset, vertexBufferData->VertexBufferSize, true);
 				// TODO: Handle failed allocs
 				vertCopySize = std::min(vertexBufferData->VertexBufferSize, (u32)vertexBuffer->m_Size);
 			}
-			if (indexCopySize < newIndexDataSize)
+			if (indexCopySize < indexBuffer->m_Size)
 			{
 				renderObject->dynamicIndexBufferOffset = indexBuffer->Realloc(renderObject->dynamicIndexBufferOffset, newIndexDataSize, true);
 				// TODO: Handle failed allocs
