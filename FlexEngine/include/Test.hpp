@@ -1,7 +1,9 @@
 #pragma once
 
-#include "JSONParser.hpp"
 #include "Helpers.hpp"
+#include "JSONParser.hpp"
+#include "Pair.hpp"
+#include "PoolAllocator.hpp"
 
 IGNORE_WARNINGS_PUSH
 #include <glm/gtx/euler_angles.hpp>
@@ -522,6 +524,64 @@ namespace flex
 		}
 		UNIT_TEST_END;
 
+		//
+		// Pool tests
+		//
+
+		UNIT_TEST(PoolTests)
+		{
+			PoolAllocator<real, 4> pool;
+			EXPECT(pool.GetPoolSize(), 4);
+			EXPECT(pool.GetPoolCount(), 0);
+
+			pool.Alloc();
+			pool.Alloc();
+			pool.Alloc();
+			pool.Alloc();
+			EXPECT(pool.GetPoolCount(), 1);
+			EXPECT(pool.MemoryUsed(), sizeof(real) * 4);
+
+			pool.Alloc();
+			EXPECT(pool.GetPoolCount(), 2);
+			EXPECT(pool.MemoryUsed(), sizeof(real) * 8);
+
+			pool.ReleaseAll();
+			EXPECT(pool.GetPoolCount(), 0);
+			EXPECT(pool.MemoryUsed(), 0);
+		}
+		UNIT_TEST_END;
+
+		//
+		// Pair tests
+		//
+
+		UNIT_TEST(PairTests)
+		{
+			Pair<real, u32> p(1.0f, 23);
+
+			EXPECT(p.first, 1.0f);
+			EXPECT(p.second, 23);
+
+			p.first = 2.9f;
+			p.second = 992;
+			EXPECT(p.first, 2.9f);
+			EXPECT(p.second, 992);
+
+			Pair<real, u32> p2 = p;
+			EXPECT(p2.first, 2.9f);
+			EXPECT(p2.second, 992);
+
+			Pair<real, u32> p3(p);
+			EXPECT(p3.first, 2.9f);
+			EXPECT(p3.second, 992);
+
+			Pair<real, u32> p4(std::move(p));
+			EXPECT(p4.first, 2.9f);
+			EXPECT(p4.second, 992);
+
+		}
+		UNIT_TEST_END;
+
 	public:
 		static void Run()
 		{
@@ -534,7 +594,7 @@ namespace flex
 				RayPlaneIntersectionOriginValid, RayPlaneIntersectionXYValid, RayPlaneIntersectionXY2Valid, RayPlaneIntersectionXY3Valid, MinComponentValid, MaxComponentValid,
 				QuaternionsAreNearlyEqual, QuaternionsAreNotNearlyEqual,
 				// Misc
-				CountSetBitsValid
+				CountSetBitsValid, PoolTests, PairTests
 			};
 			Print("Running %u tests...\n", (u32)ARRAY_LENGTH(funcs));
 			u32 failedTestCount = 0;
