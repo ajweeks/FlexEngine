@@ -42,6 +42,7 @@ AdditionalFiles/FlexVTune/**
 
 FlexEngine/dependencies/freetype/objs
 
+FlexEngine/dependencies/shaderc**
 
 # --------------------------
 
