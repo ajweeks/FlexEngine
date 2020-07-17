@@ -4932,36 +4932,57 @@ namespace flex
 			const glm::vec3 posTL = m_Transform.GetWorldPosition() +
 				right * (width / 2.0f) +
 				up * height +
-				forward * 0.992f;
+				forward * 1.05f;
+
+			const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+			const real frameBufferScale = glm::max(1.0f / (real)frameBufferSize.x, 1.0f / (real)frameBufferSize.y);
 
 			glm::vec3 pos = posTL;
 
 			const glm::quat rot = m_Transform.GetWorldRotation();
-			real charHeight = g_Renderer->GetStringHeight("W", font, false) * m_LetterScale;
-			const real lineHeight = charHeight * (m_LineHeight / 1000.0f);
-			real charWidth = g_Renderer->GetStringWidth("W", font, letterSpacing, false) / 1000.0f;
-			const real lineNoWidth = 24.0f * charWidth * m_LetterScale;
+			real charHeight = g_Renderer->GetStringHeight("W", font, false) * frameBufferScale * font->metaData.size * m_LetterScale;
+			const real lineHeight = charHeight * m_LineHeight;
+			real charWidth = g_Renderer->GetStringWidth("W", font, letterSpacing, false) * frameBufferScale * font->metaData.size * m_LetterScale;
+			const real lineNoWidth = 3.0f * charWidth;
 
 			if (bRenderCursor)
 			{
 				glm::vec3 cursorPos = pos;
-				cursorPos += (right * charWidth) + up * (cursor.y * -lineHeight);
-				std::string spaces(cursor.x, ' ');
-				g_Renderer->DrawStringWS(spaces + "|", VEC4_ONE, cursorPos, rot, letterSpacing, m_LetterScale);
+				cursorPos += (right * (charWidth * (-cursor.x + 0.5f))) + up * (cursor.y * -lineHeight);
+				g_Renderer->DrawStringWS("|", VEC4_ONE, cursorPos, rot, letterSpacing, m_LetterScale);
 			}
 
 			if (bRenderText)
 			{
-				static const glm::vec4 lineNumberColor(0.4f, 0.4f, 0.4f, 1.0f);
-				static const glm::vec4 lineNumberColorActive(0.5f, 0.5f, 0.5f, 1.0f);
-				static const glm::vec4 textColor(0.85f, 0.81f, 0.80f, 1.0f);
-				static const glm::vec4 errorColor(0.65f, 0.12f, 0.13f, 1.0f);
+				static const glm::vec4 lineNumberColour(0.4f, 0.4f, 0.4f, 1.0f);
+				static const glm::vec4 lineNumberColourActive(0.65f, 0.65f, 0.65f, 1.0f);
+				static const glm::vec4 textColour(0.85f, 0.81f, 0.80f, 1.0f);
+				static const glm::vec4 errorColour(0.65f, 0.12f, 0.13f, 1.0f);
+				static const glm::vec4 commentColour(0.35f, 0.35f, 0.35f, 1.0f);
 				glm::vec3 firstLinePos = pos;
 				for (i32 lineNumber = 0; lineNumber < (i32)lines.size(); ++lineNumber)
 				{
-					glm::vec4 lineNoCol = (lineNumber == cursor.y ? lineNumberColorActive : lineNumberColor);
+					std::string line = lines[lineNumber];
+					size_t lineCommentIdx = line.find("//");
+					glm::vec4 lineNoCol = (lineNumber == cursor.y ? lineNumberColourActive : lineNumberColour);
 					g_Renderer->DrawStringWS(IntToString(lineNumber + 1, 2, ' '), lineNoCol, pos + right * lineNoWidth, rot, letterSpacing, m_LetterScale);
-					g_Renderer->DrawStringWS(lines[lineNumber], textColor, pos, rot, letterSpacing, m_LetterScale);
+					if (lineCommentIdx == std::string::npos)
+					{
+						g_Renderer->DrawStringWS(lines[lineNumber], textColour, pos, rot, letterSpacing, m_LetterScale);
+					}
+					else
+					{
+						glm::vec3 tPos = pos;
+						if (lineCommentIdx > 0)
+						{
+							std::string codeStr = lines[lineNumber].substr(0, lineCommentIdx);
+							g_Renderer->DrawStringWS(codeStr, textColour, pos, rot, letterSpacing, m_LetterScale);
+							tPos += -right *
+								(g_Renderer->GetStringWidth(codeStr, font, letterSpacing, false) * frameBufferScale * font->metaData.size * m_LetterScale);
+						}
+
+						g_Renderer->DrawStringWS(lines[lineNumber].substr(lineCommentIdx), commentColour, tPos, rot, letterSpacing, m_LetterScale);
+					}
 					pos.y -= lineHeight;
 				}
 
@@ -4972,10 +4993,10 @@ namespace flex
 					{
 						pos = firstLinePos;
 						pos.y -= lineHeight * lastErrorPos.y;
-						g_Renderer->DrawStringWS("!", errorColor, pos + right * (charWidth * 1.7f), rot, letterSpacing, m_LetterScale);
+						g_Renderer->DrawStringWS("!", errorColour, pos + right * (charWidth * 1.f), rot, letterSpacing, m_LetterScale);
 						std::string underlineStr = std::string(lastErrorPos.x, ' ') + std::string(ast->lastErrorTokenLen, '_');
 						pos.y -= lineHeight * 0.2f;
-						g_Renderer->DrawStringWS(underlineStr, errorColor, pos, rot, letterSpacing, m_LetterScale);
+						g_Renderer->DrawStringWS(underlineStr, errorColour, pos, rot, letterSpacing, m_LetterScale);
 					}
 				}
 			}
@@ -5014,7 +5035,7 @@ namespace flex
 			//ImGui::DragFloat("Scale", &m_LetterScale, 0.01f);
 
 			ImGui::Text("Variables");
-			if (ImGui::BeginChild("Variables", ImVec2(0.0f, 220.0f), true))
+			if (ImGui::BeginChild("", ImVec2(0.0f, 220.0f), true))
 			{
 				for (i32 i = 0; i < tokenizer->context->variableCount; ++i)
 				{

@@ -786,8 +786,8 @@ namespace flex
 
 		std::vector<std::string> lines;
 
-		real m_LineHeight = 9.0f;
-		real m_LetterScale = 0.23f;
+		real m_LineHeight = 1.0f;
+		real m_LetterScale = 0.04f;
 
 		glm::vec2i cursor;
 		// Keeps track of the cursor x to be able to position the cursor correctly

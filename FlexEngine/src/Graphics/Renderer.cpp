@@ -3019,7 +3019,7 @@ namespace flex
 		PROFILE_AUTO("Update Text Buffer WS");
 
 		const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
-		const real frameBufferScale = glm::max(2.0f / (real)frameBufferSize.x, 2.0f / (real)frameBufferSize.y);
+		const real frameBufferScale = glm::max(1.0f / (real)frameBufferSize.x, 1.0f / (real)frameBufferSize.y);
 
 		u32 charCountUpperBound = 0;
 		for (BitmapFont* font : m_FontsWS)
@@ -3035,7 +3035,7 @@ namespace flex
 		u32 charIndex = 0;
 		for (BitmapFont* font : m_FontsWS)
 		{
-			real textScale = frameBufferScale * (font->metaData.size / 12.0f);
+			real textScale = frameBufferScale * font->metaData.size;
 
 			font->bufferStart = (i32)charIndex;
 
