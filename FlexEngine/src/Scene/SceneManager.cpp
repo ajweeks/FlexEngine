@@ -52,8 +52,6 @@ namespace flex
 	{
 		assert(!m_Scenes.empty());
 
-		//g_EngineInstance->PreSceneChange();
-
 		if (m_CurrentSceneIndex == InvalidID)
 		{
 			m_CurrentSceneIndex = 0;
@@ -114,22 +112,6 @@ namespace flex
 
 		if (m_CurrentSceneIndex != InvalidID)
 		{
-			//if (m_Scenes[m_CurrentSceneIndex]->GetPhysicsWorld())
-			//{
-			//	std::string editorStr = "Switching to ";
-			//	if (m_Scenes[sceneIndex]->GetName().empty())
-			//	{
-			//		editorStr += m_Scenes[sceneIndex]->GetFileName();
-			//	}
-			//	else
-			//	{
-			//		editorStr += m_Scenes[sceneIndex]->GetName();
-			//	}
-			//	g_Renderer->AddEditorString(editorStr);
-			//	// TODO: LATER: HACK: Kinda hacky, but it works... maybe instead of this put a one-frame delay in?
-			//	g_Renderer->Draw();
-			//}
-
 			m_Scenes[m_CurrentSceneIndex]->Destroy();
 		}
 
