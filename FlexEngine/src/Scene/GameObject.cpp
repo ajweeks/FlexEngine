@@ -292,6 +292,8 @@ namespace flex
 
 	void GameObject::Update()
 	{
+		m_bNearbyInteractable = false;
+
 		if (m_ObjectInteractingWith)
 		{
 			// TODO: Write real fancy-lookin outline shader instead of drawing a lil cross
@@ -1327,6 +1329,11 @@ namespace flex
 
 			child->RemoveSelfAndChildrenToVec(vec);
 		}
+	}
+
+	void GameObject::SetNearbyInteractable(bool bNearbyInteractable)
+	{
+		m_bNearbyInteractable = bNearbyInteractable;
 	}
 
 	GameObjectType GameObject::GetType() const
@@ -4967,6 +4974,24 @@ namespace flex
 					}
 				}
 			}
+		}
+
+		if (m_bNearbyInteractable)
+		{
+			const real scale = 2.0f;
+			const glm::vec3 right = m_Transform.GetRight();
+			const glm::vec3 forward = m_Transform.GetForward();
+			const glm::vec3 up = m_Transform.GetUp();
+			glm::vec3 c = m_Transform.GetWorldPosition();
+			glm::vec3 v1 = c + (right + forward) * scale;
+			glm::vec3 v2 = c + (-right + forward) * scale;
+			glm::vec3 v3 = c - (forward * scale);
+			btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
+			debugDrawer->drawTriangle(ToBtVec3(v1), ToBtVec3(v2), ToBtVec3(v3), btVector3(0.9f, 0.3f, 0.2f), 1.0f);
+			glm::vec3 o(0.0f, sin(g_SecElapsedSinceProgramStart * 2.0f) + 1.0f, 0.0f);
+			debugDrawer->drawTriangle(ToBtVec3(v1 + o), ToBtVec3(v2 + o), ToBtVec3(v3 + o), btVector3(0.9f, 0.3f, 0.2f), 1.0f);
+			o = glm::vec3(0.0f, 2.0f, 0.0f);
+			debugDrawer->drawTriangle(ToBtVec3(v1 + o), ToBtVec3(v2 + o), ToBtVec3(v3 + o), btVector3(0.9f, 0.3f, 0.2f), 1.0f);
 		}
 	}
 

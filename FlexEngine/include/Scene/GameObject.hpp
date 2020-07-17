@@ -132,6 +132,8 @@ namespace flex
 		void AddSelfAndChildrenToVec(std::vector<GameObject*>& vec);
 		void RemoveSelfAndChildrenToVec(std::vector<GameObject*>& vec);
 
+		void SetNearbyInteractable(bool bNearbyInteractable);
+
 		// Filled if this object is a trigger
 		std::vector<GameObject*> overlappingObjects;
 
@@ -206,6 +208,8 @@ namespace flex
 		* Will point at the player we're interacting with, or the object if we're the player
 		*/
 		GameObject* m_ObjectInteractingWith = nullptr;
+
+		bool m_bNearbyInteractable = false;
 
 		i32 m_SiblingIndex = 0;
 
