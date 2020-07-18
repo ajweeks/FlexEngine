@@ -159,7 +159,8 @@ project "Flex"
 			"-ldl", -- For dlopen, etc.
 		}
 		buildoptions {
-			"-Wfatal-errors"
+			"-Wfatal-errors",
+			"-march=haswell"
 		}
 		buildoptions_cpp {
 			-- Ignored warnings:
