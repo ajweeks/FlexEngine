@@ -2,22 +2,28 @@
 	"version" : 3,
 	"name" : "Scene_track_test",
 	"spawn player" : true,
+	"skybox data" : 
+	{
+		"top colour" : "0.22, 0.58, 0.88, 0.00",
+		"mid colour" : "0.66, 0.86, 0.95, 0.00",
+		"btm colour" : "0.75, 0.91, 0.99, 0.00"
+	},
 	"camera" : 
 	{
 		"type" : "debug",
 		"near plane" : 0.500000,
-		"far plane" : 10000.000000,
+		"far plane" : 836.500000,
 		"fov" : 1.216494,
 		"aperture" : 1.000000,
 		"shutter speed" : 0.125000,
 		"light sensitivity" : 800.000000,
 		"exposure" : 1.200000,
-		"move speed" : 514.398987,
+		"move speed" : 18.582001,
 		"transform" : 
 		{
-			"position" : "-4.812, 6.565, 10.014",
-			"pitch" : -0.292146,
-			"yaw" : -15.138489
+			"position" : "-69.147, 15.031, 58.696",
+			"pitch" : -0.273638,
+			"yaw" : 5.458113
 		}
 	},
 	"objects" : 
