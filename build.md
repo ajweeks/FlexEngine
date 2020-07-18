@@ -35,6 +35,6 @@ NOTE: If GENie isn't on your path, you will need to run `genie --file=scripts/ge
   - `sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.2.131-bionic.list http://packages.lunarg.com/vulkan/1.2.131/lunarg-vulkan-1.2.131-bionic.list` (substitute in any newer vulkan version)
 2. `cd scripts`
 3. `python3 build_dependencies.py linux gmake`
-5. `ninja -C debug64`
-6. `cd ../bin/Debug_x64/FlexEngine`
-7. `./Flex`
+4. `ninja -C debug64`
+5. `cd ../bin/Debug_x64/FlexEngine`
+6. `./Flex`
