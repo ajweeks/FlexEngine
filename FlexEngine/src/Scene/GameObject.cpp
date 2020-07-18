@@ -14,6 +14,9 @@ IGNORE_WARNINGS_PUSH
 #include <LinearMath/btIDebugDraw.h>
 #include <LinearMath/btTransform.h>
 
+#define SSE_MATHFUN_WITH_CODE
+#include "sse_mathfun.h"
+
 #include <glm/gtx/quaternion.hpp> // for rotate
 #include <glm/gtx/norm.hpp> // for distance2
 
@@ -4076,9 +4079,8 @@ namespace flex
 
 								__m128 totalAccum = _mm_add_ps(d, accumOffset_4);
 
-
-								__m128 c = _mm_cos_ps(totalAccum);
-								__m128 s = _mm_sin_ps(totalAccum);
+								__m128 c = cos_ps(totalAccum);
+								__m128 s = sin_ps(totalAccum);
 
 								__m128 as = _mm_mul_ps(waveA_4, s);
 
