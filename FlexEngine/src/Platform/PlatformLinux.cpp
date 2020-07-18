@@ -472,7 +472,7 @@ namespace flex
 
 		if (index >= (u32)mutexes.size())
 		{
-			mutexes.resize((u32)(index * 1.5f));
+			mutexes.resize((u32)((index+1) * 1.5f));
 		}
 
 		mutexes[index] = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
