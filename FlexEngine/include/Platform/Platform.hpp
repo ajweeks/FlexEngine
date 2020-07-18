@@ -76,7 +76,7 @@ namespace flex
 		static void EnterCriticalSection(void* criticalSection);
 		static void LeaveCriticalSection(void* criticalSection);
 
-		static void Sleep(u32 seconds);
+		static void Sleep(ms milliseconds);
 
 		static CPUInfo cpuInfo;
 

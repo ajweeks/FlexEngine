@@ -456,9 +456,9 @@ namespace flex
 		::LeaveCriticalSection((CRITICAL_SECTION*)criticalSection);
 	}
 
-	void Platform::Sleep(u32 seconds)
+	void Platform::Sleep(ms milliseconds)
 	{
-		::Sleep(seconds);
+		::Sleep(milliseconds);
 	}
 
 	void Platform::RetrieveCPUInfo()

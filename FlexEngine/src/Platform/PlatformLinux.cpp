@@ -22,6 +22,7 @@ IGNORE_WARNINGS_POP
 
 #include "FlexEngine.hpp"
 #include "Helpers.hpp"
+#include "Time.hpp"
 
 #ifndef MAX_PATH
 // Match Windows behaviour
@@ -494,9 +495,9 @@ namespace flex
 		pthread_mutex_unlock(&mutexes[(u64)criticalSection]);
 	}
 
-	void Platform::Sleep(u32 seconds)
+	void Platform::Sleep(ms milliseconds)
 	{
-		sleep(seconds);
+		usleep((useconds_t)Time::ConvertFormats(milliseconds, Time::Format::MILLISECOND, Time::Format::MICROSECOND));
 	}
 
 	void Platform::RetrieveCPUInfo()
