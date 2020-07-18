@@ -2922,7 +2922,7 @@ namespace flex
 
 					VulkanShader& shader = m_Shaders[selectedShaderIndex];
 
-					ImGui::Text(shader.shader->name.c_str());
+					ImGui::Text("%s", shader.shader->name.c_str());
 
 					ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
 					ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
@@ -9172,7 +9172,7 @@ namespace flex
 			glm::vec2 nearFarPlanes(cam->zNear, cam->zFar);
 			const SkyboxData& skyboxData = g_SceneManager->CurrentScene()->GetSkyboxData();
 
-			static OceanData defaultOceanData = { glm::vec4(1, 0, 0, 0), glm::vec4(0, 1, 0, 0), glm::vec4(0, 0, 1, 0) };
+			static OceanData defaultOceanData = { glm::vec4(1, 0, 0, 0), glm::vec4(0, 1, 0, 0), glm::vec4(0, 0, 1, 0), 1.0f, 3.0f, 1.0f, 1.0f, 1.0f, { } };
 			static DirLightData defaultDirLightData = { VEC3_RIGHT, 0, VEC3_ONE, 0.0f, 0, 0.0f, { 0.0f, 0.0f } };
 
 			DirLightData* dirLightData = &defaultDirLightData;

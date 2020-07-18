@@ -56,6 +56,8 @@ namespace flex
 	AudioCue GameObject::s_SqueakySounds;
 	AudioSourceID GameObject::s_BunkSound;
 
+	static ThreadSafeArray<GerstnerWave::WaveGenData>* workQueue = nullptr;
+
 	GameObject::GameObject(const std::string& name, GameObjectType type) :
 		m_Name(name),
 		m_Type(type)
@@ -3860,7 +3862,7 @@ namespace flex
 		return blend == 0.0f ? COLOURS[lodLevel] : (blend == 1.0f ? COLOURS[glm::clamp(lodLevel + 1, 0u, colourCount - 1)] : Lerp(COLOURS[lodLevel], COLOURS[glm::clamp(lodLevel + 1, 0u, colourCount - 1)], blend));
 	}
 
-	u32 ThreadUpdate(void* inData)
+	void* ThreadUpdate(void* inData)
 	{
 		ThreadData* threadData = (ThreadData*)inData;
 
@@ -3918,9 +3920,6 @@ namespace flex
 				__m128* uvVs = work->uvVs_4;
 
 				__m128 blendDist_4 = _mm_set_ps1(blendDist);
-				__m128 blendDistSqr_4 = _mm_set_ps1(blendDist * blendDist);
-
-				const i32 vertCountPerChunk = chunkVertCountPerAxis * chunkVertCountPerAxis;
 
 				__m128 vertCountMin1_4 = _mm_set_ps1((real)(chunkVertCountPerAxis - 1));
 				__m128 size_4 = _mm_set_ps1(size);
@@ -3930,11 +3929,6 @@ namespace flex
 				__m128 chunkCenterY_4 = _mm_setzero_ps();
 				__m128 chunkCenterZ_4 = _mm_set_ps1(chunkCenter.y);
 
-				glm::vec2 chunkRight = chunkCenter + glm::vec2(size, 0.0f);
-				glm::vec2 chunkLeft = chunkCenter - glm::vec2(size, 0.0f);
-				glm::vec2 chunkForward = chunkCenter + glm::vec2(0.0f, size);
-				glm::vec2 chunkBack = chunkCenter - glm::vec2(0.0f, size);
-
 				// TODO: Work out max LOD in chunk
 				glm::vec3 camPos = g_CameraManager->CurrentCamera()->position;
 				__m128 camPosx_4 = _mm_set_ps1(camPos.x);
@@ -3942,7 +3936,6 @@ namespace flex
 
 				__m128 zero_4 = _mm_set_ps1(0.0f);
 				__m128 one_4 = _mm_set_ps1(1.0f);
-				__m128 two_4 = _mm_set_ps1(2.0f);
 
 				// Clear out intermediate data
 				for (i32 z = 0; z < chunkVertCountPerAxis; ++z)
@@ -4005,7 +3998,6 @@ namespace flex
 								lodNextCutoffDistances_4 = _mm_blendv_ps(lodNextCutoffDistances_4, _mm_set_ps1(waveSamplingLODs[0].squareDist), cmpMask3);
 								lodNextCutoffAmplitudes_4[chunkLocalVertIdxDiv4] = _mm_blendv_ps(lodNextCutoffAmplitudes_4[chunkLocalVertIdxDiv4], _mm_set_ps1(waveSamplingLODs[0].amplitudeCutoff), cmpMask3);
 
-								__m128 pushedDist = _mm_add_ps(vertSqrDist, blendDistSqr_4);
 								__m128 cmp2Mask = _mm_or_ps(_mm_cmpeq_ps(lodBlendWeights_4[chunkLocalVertIdxDiv4], zero_4), _mm_cmpeq_ps(lodNextCutoffDistances_4, zero_4));
 								__m128 delta = _mm_max_ps(_mm_sub_ps(_mm_sqrt_ps(lodNextCutoffDistances_4), _mm_sqrt_ps(vertSqrDist)), zero_4);
 								// 0 at edge, 1 at blend dist inward, blend between
@@ -4037,12 +4029,12 @@ namespace flex
 						__m128 waveVecX_4 = _mm_set_ps1(waveVec.x);
 						__m128 waveVecZ_4 = _mm_set_ps1(waveVec.y);
 
-						u32 countMinOne = chunkVertCountPerAxis - 1;
+						//u32 countMinOne = chunkVertCountPerAxis - 1;
 
 						for (i32 z = 0; z < chunkVertCountPerAxis; ++z)
 						{
-							__m128 zIdxMin_4 = _mm_set_ps1((real)z);
-							__m128 zIdxMax_4 = _mm_set_ps1((real)(countMinOne - z));
+							//__m128 zIdxMin_4 = _mm_set_ps1((real)z);
+							//__m128 zIdxMax_4 = _mm_set_ps1((real)(countMinOne - z));
 
 							for (i32 x = 0; x < chunkVertCountPerAxis; x += 4)
 							{
@@ -4131,11 +4123,11 @@ namespace flex
 			}
 			else
 			{
-				Sleep(2);
+				Platform::Sleep(2);
 			}
 		}
 
-		return 0;
+		return nullptr;
 	}
 
 	GerstnerWave::WaveChunk const* GetChunkAtPos(const glm::vec2& pos, const std::vector<GerstnerWave::WaveChunk>& waveChunks, real size)
@@ -4172,8 +4164,6 @@ namespace flex
 
 		const u32 chunkVertCountPerAxis = tessellationLOD->vertCountPerAxis;
 
-		const i32 vertCountPerChunk = chunkVertCountPerAxis * chunkVertCountPerAxis;
-
 		const glm::vec2 chunkCenter((waveChunk->index.x - 0.5f) * size, (waveChunk->index.y - 0.5f) * size);
 
 		WaveChunk const* chunkLeft = GetChunkAtPos(chunkCenter - glm::vec2(size, 0.0f));
@@ -4193,10 +4183,10 @@ namespace flex
 				const u32 localIdx = z * chunkVertCountPerAxis + x;
 				const u32 vertIdx = localIdx + waveChunk->vertOffset;
 
-				glm::vec3 planePos = glm::vec3(
-					chunkCenter.x + size * ((real)x / (chunkVertCountPerAxis - 1)),
-					0.0f,
-					chunkCenter.y + size * ((real)z / (chunkVertCountPerAxis - 1)));
+				// glm::vec3 planePos = glm::vec3(
+					// chunkCenter.x + size * ((real)x / (chunkVertCountPerAxis - 1)),
+					// 0.0f,
+					// chunkCenter.y + size * ((real)z / (chunkVertCountPerAxis - 1)));
 
 				real left = 0.0f;
 				real right = 0.0f;
@@ -4349,11 +4339,11 @@ namespace flex
 				ByteCountToString(byteCountStr, 64, (u32)(m_VertexBufferCreateInfo.positions_3D.size() * sizeof(glm::vec3)));
 
 				char nameBuf[256];
-				sprintf_s(nameBuf, "CPU Vertex buffer size %s", byteCountStr);
+				snprintf(nameBuf, 256, "CPU Vertex buffer size %s", byteCountStr);
 
 				real usage = (real)DEBUG_lastUsedVertCount / meshComponent->GetVertexBufferData()->VertexCount;
 				ImGui::ProgressBar(usage, ImVec2(0, 0), "");
-				ImGui::Text(nameBuf);
+				ImGui::Text("%s", nameBuf);
 			}
 
 			{
@@ -4364,11 +4354,11 @@ namespace flex
 				ByteCountToString(byteCountStr, 64, gpuSize);
 
 				char nameBuf[256];
-				sprintf_s(nameBuf, "GPU Vertex buffer size %s", byteCountStr);
+				snprintf(nameBuf, 256, "GPU Vertex buffer size %s", byteCountStr);
 
 				real usage = (real)usedGPUSize / gpuSize;
 				ImGui::ProgressBar(usage, ImVec2(0, 0), "");
-				ImGui::Text(nameBuf);
+				ImGui::Text("%s", nameBuf);
 			}
 
 			ImGui::NewLine();
@@ -5007,7 +4997,6 @@ namespace flex
 			const real scale = 2.0f;
 			const glm::vec3 right = m_Transform.GetRight();
 			const glm::vec3 forward = m_Transform.GetForward();
-			const glm::vec3 up = m_Transform.GetUp();
 			glm::vec3 c = m_Transform.GetWorldPosition();
 			glm::vec3 v1 = c + (right + forward) * scale;
 			glm::vec3 v2 = c + (-right + forward) * scale;

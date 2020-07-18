@@ -1374,11 +1374,11 @@ namespace flex
 
 		if (count - floor(count) == 0.0)
 		{
-			sprintf_s(buf, bufSize, "%d%s", (int)count, suffixes[s]);
+			snprintf(buf, bufSize, "%d%s", (int)count, suffixes[s]);
 		}
 		else
 		{
-			sprintf_s(buf, bufSize, "%.1f%s", count, suffixes[s]);
+			snprintf(buf, bufSize, "%.1f%s", count, suffixes[s]);
 		}
 	}
 

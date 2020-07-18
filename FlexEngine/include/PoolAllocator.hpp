@@ -1,5 +1,7 @@
 #pragma once
 
+#include <list>
+
 namespace flex
 {
 	template<typename T, u32 PoolSize>

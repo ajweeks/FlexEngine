@@ -2579,7 +2579,7 @@ namespace flex
 					if (bWindowShowing != nullptr && ImGui::Begin("Shader errors", bWindowShowing))
 					{
 						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
-						ImGui::Text(s_ShaderErrors.size() > 1 ? "%u errors" : "%u error", s_ShaderErrors.size());
+						ImGui::Text(s_ShaderErrors.size() > 1 ? "%u errors" : "%u error", (u32)s_ShaderErrors.size());
 						ImGui::PopStyleColor();
 
 						ImGui::Separator();

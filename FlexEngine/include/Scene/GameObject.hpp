@@ -709,15 +709,14 @@ namespace flex
 	static volatile u32 workQueueEntriesCreated = 0;
 	static volatile u32 workQueueEntriesClaimed = 0;
 	static volatile u32 workQueueEntriesCompleted = 0;
-	static ThreadSafeArray<GerstnerWave::WaveGenData>* workQueue = nullptr;
 
 #define SIMD_WAVES 1
 
-	static u32 ThreadUpdate(void* inData);
+	void* ThreadUpdate(void* inData);
 
-	static GerstnerWave::WaveChunk const * GetChunkAtPos(const glm::vec2& pos, const std::vector<GerstnerWave::WaveChunk>& waveChunks, real size);
-	static GerstnerWave::WaveTessellationLOD const * GetTessellationLOD(u32 lodLevel, const std::vector<GerstnerWave::WaveTessellationLOD>& waveTessellationLODs);
-	static u32 MapVertIndexAcrossLODs(u32 vertIndex, GerstnerWave::WaveTessellationLOD const* lod0, GerstnerWave::WaveTessellationLOD const* lod1);
+	GerstnerWave::WaveChunk const * GetChunkAtPos(const glm::vec2& pos, const std::vector<GerstnerWave::WaveChunk>& waveChunks, real size);
+	GerstnerWave::WaveTessellationLOD const * GetTessellationLOD(u32 lodLevel, const std::vector<GerstnerWave::WaveTessellationLOD>& waveTessellationLODs);
+	u32 MapVertIndexAcrossLODs(u32 vertIndex, GerstnerWave::WaveTessellationLOD const* lod0, GerstnerWave::WaveTessellationLOD const* lod1);
 
 	class Blocks : public GameObject
 	{

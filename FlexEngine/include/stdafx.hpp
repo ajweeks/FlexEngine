@@ -43,16 +43,18 @@
 #define BT_NO_SIMD_OPERATOR_OVERLOADS
 #define NOMINMAX
 
-#ifdef _WINDOWS
+#if defined(_WINDOWS)
 #define WRITE_BARRIER _WriteBarrier(); _mm_sfence()
+#elif defined(__linux__)
+#define WRITE_BARRIER __sync_synchronize()
+#define ACQUIRE_BARRIER smp_cond_load_acquire()
+#define RELEASE_BARRIER smp_cond_store_release()
 #else
-// TODO:
 #error
 #endif
 
 #ifdef _WINDOWS
 #define GLFW_EXPOSE_NATIVE_WIN32
-// TODO(AJ): Add linux expose define?
 #endif
 
 #define FLEX_UNUSED(param) ((void)param)
@@ -189,11 +191,13 @@ IGNORE_WARNINGS_POP
 #define PROFILE_AUTO(blockName)
 #endif
 
-#ifdef _WINDOWS
+#if defined(_WINDOWS)
 #define DEBUG_BREAK() __debugbreak()
-#else
-// Linux/Max: (untested)
+#elif defined(__linux__)
+// Linux: (untested)
 #define DEBUG_BREAK() __builtin_trap()
+#else
+#error
 #endif
 
 #define ENSURE_NO_ENTRY() { PrintError("Execution entered no entry path! %s\n", __FUNCTION__); DEBUG_BREAK(); }

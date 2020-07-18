@@ -17,12 +17,7 @@ IGNORE_WARNINGS_POP
 #include "FlexEngine.hpp"
 #include "Helpers.hpp"
 
-namespace flex
-{
-	typedef void* HANDLE;
-	typedef unsigned short WORD;
-
-	// Taken from ntddvdeo.h:
+// Taken from ntddvdeo.h:
 #define FOREGROUND_BLUE      0x0001
 #define FOREGROUND_GREEN     0x0002
 #define FOREGROUND_RED       0x0004
@@ -32,6 +27,11 @@ namespace flex
 #define BACKGROUND_RED       0x0040
 #define BACKGROUND_INTENSITY 0x0080
 
+namespace flex
+{
+	typedef void* HANDLE;
+	typedef unsigned short WORD;
+
 	const WORD CONSOLE_COLOR_DEFAULT = 0 | FOREGROUND_INTENSITY;
 	const WORD CONSOLE_COLOR_WARNING = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY;
 	const WORD CONSOLE_COLOR_ERROR = FOREGROUND_RED | FOREGROUND_INTENSITY;
@@ -39,12 +39,6 @@ namespace flex
 	HANDLE g_ConsoleHandle;
 
 	CPUInfo Platform::cpuInfo;
-
-	void Platform::GetConsoleHandle()
-	{
-		g_ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
-		SetConsoleTextAttribute(g_ConsoleHandle, CONSOLE_COLOR_DEFAULT);
-	}
 
 	struct ThreadData
 	{
@@ -68,50 +62,10 @@ namespace flex
 		RetrieveCPUInfo();
 	}
 
-	void Platform::JoinThreads()
+	void Platform::GetConsoleHandle()
 	{
-		for (u32 i = 0; i < (u32)ThreadHandles.size(); ++i)
-		{
-			WaitForSingleObject(ThreadHandles[i], INFINITE);
-		}
-		ThreadHandles.clear();
-	}
-
-	void Platform::SpawnThreads(u32 threadCount, void* entryPoint, void* userData)
-	{
-		ThreadHandles.resize(threadCount);
-
-		for (u32 i = 0; i < (u32)ThreadHandles.size(); ++i)
-		{
-			ThreadHandles[i] = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)entryPoint, userData, 0, 0);
-		}
-	}
-
-	void Platform::YieldProcessor()
-	{
-		::YieldProcessor();
-	}
-
-	void* Platform::InitCriticalSection()
-	{
-		CRITICAL_SECTION* criticalSection = new CRITICAL_SECTION();
-		InitializeCriticalSection(criticalSection);
-		return criticalSection;
-	}
-
-	void Platform::FreeCriticalSection(void* criticalSection)
-	{
-		delete (CRITICAL_SECTION*)criticalSection;
-	}
-
-	void Platform::EnterCriticalSection(void* criticalSection)
-	{
-		::EnterCriticalSection((CRITICAL_SECTION*)criticalSection);
-	}
-
-	void Platform::LeaveCriticalSection(void* criticalSection)
-	{
-		::LeaveCriticalSection((CRITICAL_SECTION*)criticalSection);
+		g_ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+		SetConsoleTextAttribute(g_ConsoleHandle, CONSOLE_COLOR_DEFAULT);
 	}
 
 	void Platform::SetConsoleTextColor(ConsoleColour colour)
@@ -205,11 +159,6 @@ namespace flex
 		OutputDebugString(str);
 	}
 
-	u32 Platform::GetLogicalProcessorCount()
-	{
-		return cpuInfo.logicalProcessorCount;
-	}
-
 	void Platform::RetrieveCurrentWorkingDirectory()
 	{
 		char cwdBuffer[MAX_PATH];
@@ -246,33 +195,9 @@ namespace flex
 		return true;
 	}
 
-	bool Platform::DeleteFile(const std::string& filePath, bool bPrintErrorOnFailure /* = true */)
+	void Platform::OpenExplorer(const std::string& absoluteDirectory)
 	{
-		if (::DeleteFile(filePath.c_str()))
-		{
-			return true;
-		}
-		else
-		{
-			if (bPrintErrorOnFailure)
-			{
-				PrintError("Failed to delete file %s\n", filePath.c_str());
-			}
-			return false;
-		}
-	}
-
-	bool Platform::CopyFile(const std::string& filePathFrom, const std::string& filePathTo)
-	{
-		if (::CopyFile(filePathFrom.c_str(), filePathTo.c_str(), 0))
-		{
-			return true;
-		}
-		else
-		{
-			PrintError("Failed to copy file from \"%s\" to \"%s\"\n", filePathFrom.c_str(), filePathTo.c_str());
-			return false;
-		}
+		ShellExecute(NULL, "open", absoluteDirectory.c_str(), NULL, NULL, SW_SHOWDEFAULT);
 	}
 
 	bool Platform::DirectoryExists(const std::string& absoluteDirectoryPath)
@@ -288,37 +213,33 @@ namespace flex
 		return (dwAttrib != INVALID_FILE_ATTRIBUTES && dwAttrib & FILE_ATTRIBUTE_DIRECTORY);
 	}
 
-	void Platform::OpenExplorer(const std::string& absoluteDirectory)
+	bool Platform::CopyFile(const std::string& filePathFrom, const std::string& filePathTo)
 	{
-		ShellExecute(NULL, "open", absoluteDirectory.c_str(), NULL, NULL, SW_SHOWDEFAULT);
+		if (::CopyFile(filePathFrom.c_str(), filePathTo.c_str(), 0))
+		{
+			return true;
+		}
+		else
+		{
+			PrintError("Failed to copy file from \"%s\" to \"%s\"\n", filePathFrom.c_str(), filePathTo.c_str());
+			return false;
+		}
 	}
 
-	bool Platform::OpenFileDialog(const std::string& windowTitle, const std::string& absoluteDirectory, std::string& outSelectedAbsFilePath, char filter[] /* = nullptr */)
+	bool Platform::DeleteFile(const std::string& filePath, bool bPrintErrorOnFailure /* = true */)
 	{
-		OPENFILENAME openFileName = {};
-		openFileName.lStructSize = sizeof(OPENFILENAME);
-		openFileName.lpstrInitialDir = absoluteDirectory.c_str();
-		openFileName.nMaxFile = (filter == nullptr ? 0 : (u32)strlen(filter));
-		if (openFileName.nMaxFile && filter)
+		if (::DeleteFile(filePath.c_str()))
 		{
-			openFileName.lpstrFilter = filter;
+			return true;
 		}
-		openFileName.nFilterIndex = 0;
-		const i32 MAX_FILE_PATH_LEN = 512;
-		char fileBuf[MAX_FILE_PATH_LEN];
-		memset(fileBuf, '\0', MAX_FILE_PATH_LEN - 1);
-		openFileName.lpstrFile = fileBuf;
-		openFileName.nMaxFile = MAX_FILE_PATH_LEN;
-		openFileName.lpstrTitle = windowTitle.c_str();
-		openFileName.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
-		bool bSuccess = GetOpenFileName(&openFileName) == 1;
-
-		if (bSuccess && openFileName.lpstrFile)
+		else
 		{
-			outSelectedAbsFilePath = ReplaceBackSlashesWithForward(openFileName.lpstrFile);
+			if (bPrintErrorOnFailure)
+			{
+				PrintError("Failed to delete file %s\n", filePath.c_str());
+			}
+			return false;
 		}
-
-		return bSuccess;
 	}
 
 	bool Platform::FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileType)
@@ -405,6 +326,44 @@ namespace flex
 		return !filePaths.empty();
 	}
 
+	bool Platform::OpenFileDialog(const std::string& windowTitle, const std::string& absoluteDirectory, std::string& outSelectedAbsFilePath, char filter[] /* = nullptr */)
+	{
+		OPENFILENAME openFileName = {};
+		openFileName.lStructSize = sizeof(OPENFILENAME);
+		openFileName.lpstrInitialDir = absoluteDirectory.c_str();
+		openFileName.nMaxFile = (filter == nullptr ? 0 : (u32)strlen(filter));
+		if (openFileName.nMaxFile && filter)
+		{
+			openFileName.lpstrFilter = filter;
+		}
+		openFileName.nFilterIndex = 0;
+		const i32 MAX_FILE_PATH_LEN = 512;
+		char fileBuf[MAX_FILE_PATH_LEN];
+		memset(fileBuf, '\0', MAX_FILE_PATH_LEN - 1);
+		openFileName.lpstrFile = fileBuf;
+		openFileName.nMaxFile = MAX_FILE_PATH_LEN;
+		openFileName.lpstrTitle = windowTitle.c_str();
+		openFileName.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+		bool bSuccess = GetOpenFileName(&openFileName) == 1;
+
+		if (bSuccess && openFileName.lpstrFile)
+		{
+			outSelectedAbsFilePath = ReplaceBackSlashesWithForward(openFileName.lpstrFile);
+		}
+
+		return bSuccess;
+	}
+
+	void Platform::OpenFileWithDefaultApplication(const std::string& absoluteDirectory)
+	{
+		ShellExecute(0, 0, absoluteDirectory.c_str(), 0, 0, SW_SHOW);
+	}
+
+	void Platform::LaunchApplication(const std::string& applicationName, const std::string& param0)
+	{
+		ShellExecute(0, 0, applicationName.c_str(), param0.c_str(), 0, SW_SHOW);
+	}
+
 	std::string Platform::GetDateString_YMD()
 	{
 		std::stringstream result;
@@ -436,16 +395,6 @@ namespace flex
 		return result.str();
 	}
 
-	void Platform::OpenFileWithDefaultApplication(const std::string& absoluteDirectory)
-	{
-		ShellExecute(0, 0, absoluteDirectory.c_str(), 0, 0, SW_SHOW);
-	}
-
-	void Platform::LaunchApplication(const std::string& applicationName, const std::string& param0)
-	{
-		ShellExecute(0, 0, applicationName.c_str(), param0.c_str(), 0, SW_SHOW);
-	}
-
 	u32 Platform::AtomicIncrement(volatile u32* value)
 	{
 		return InterlockedIncrement(value);
@@ -459,6 +408,57 @@ namespace flex
 	u32 Platform::AtomicExchange(volatile u32* value, u32 exchange)
 	{
 		return InterlockedExchange(value, exchange);
+	}
+
+	void Platform::JoinThreads()
+	{
+		for (u32 i = 0; i < (u32)ThreadHandles.size(); ++i)
+		{
+			WaitForSingleObject(ThreadHandles[i], INFINITE);
+		}
+		ThreadHandles.clear();
+	}
+
+	void Platform::SpawnThreads(u32 threadCount, u32 (entryPoint)(void*), void* userData)
+	{
+		ThreadHandles.resize(threadCount);
+
+		for (u32 i = 0; i < (u32)ThreadHandles.size(); ++i)
+		{
+			ThreadHandles[i] = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)entryPoint, userData, 0, 0);
+		}
+	}
+
+	void Platform::YieldProcessor()
+	{
+		::YieldProcessor();
+	}
+
+	void* Platform::InitCriticalSection()
+	{
+		CRITICAL_SECTION* criticalSection = new CRITICAL_SECTION();
+		InitializeCriticalSection(criticalSection);
+		return criticalSection;
+	}
+
+	void Platform::FreeCriticalSection(void* criticalSection)
+	{
+		delete (CRITICAL_SECTION*)criticalSection;
+	}
+
+	void Platform::EnterCriticalSection(void* criticalSection)
+	{
+		::EnterCriticalSection((CRITICAL_SECTION*)criticalSection);
+	}
+
+	void Platform::LeaveCriticalSection(void* criticalSection)
+	{
+		::LeaveCriticalSection((CRITICAL_SECTION*)criticalSection);
+	}
+
+	void Platform::Sleep(u32 seconds)
+	{
+		::Sleep(seconds);
 	}
 
 	void Platform::RetrieveCPUInfo()

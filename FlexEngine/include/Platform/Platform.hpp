@@ -37,7 +37,10 @@ namespace flex
 
 		static void PrintStringToDebuggerConsole(const char* str);
 
-		static u32 GetLogicalProcessorCount();
+		static u32 GetLogicalProcessorCount()
+		{
+			return cpuInfo.logicalProcessorCount;
+		}
 
 		// File system helpers
 		static void RetrieveCurrentWorkingDirectory();
@@ -65,13 +68,15 @@ namespace flex
 		static u32 AtomicExchange(volatile u32* value, u32 exchange);
 
 		static void JoinThreads();
-		static void SpawnThreads(u32 threadCount, void* entryPoint, void* userData);
+		static void SpawnThreads(u32 threadCount, void* (entryPoint)(void*), void* userData);
 		static void YieldProcessor();
 
 		static void* InitCriticalSection();
 		static void FreeCriticalSection(void* criticalSection);
 		static void EnterCriticalSection(void* criticalSection);
 		static void LeaveCriticalSection(void* criticalSection);
+
+		static void Sleep(u32 seconds);
 
 		static CPUInfo cpuInfo;
 
