@@ -23,7 +23,7 @@ NOTE: If GENie isn't on your path, you will need to run `genie --file=scripts/ge
 
 ### Linux (tested only on Ubuntu 18.04, enter at your own risk)
 #### Requirements:
-- [GENie](https://github.com/bkaradzic/GENie) ([binary](https://github.com/bkaradzic/bx/raw/master/tools/bin/linux/genie))
+- [GENie](https://github.com/bkaradzic/GENie)
 - Python 3
 - cmake 3.13+
 
@@ -35,6 +35,6 @@ NOTE: If GENie isn't on your path, you will need to run `genie --file=scripts/ge
   - `sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.2.131-bionic.list http://packages.lunarg.com/vulkan/1.2.131/lunarg-vulkan-1.2.131-bionic.list` (substitute in any newer vulkan version)
 2. `cd scripts`
 3. `python3 build_dependencies.py linux gmake`
-4. `ninja -C debug64`
+4. `make`
 5. `cd ../bin/Debug_x64/FlexEngine`
 6. `./Flex`
