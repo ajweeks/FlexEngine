@@ -14,7 +14,7 @@ If you want to build Flex Engine on your own system, follow these steps. You an 
 
 #### Steps
 1. `cd scripts`
-2. `python3 build_dependencies.py windows vs2019`
+2. `python build_dependencies.py windows vs2019`
 3. Open `build/Flex.sln`
 4. Change configuration to x64
 5. Build and run!

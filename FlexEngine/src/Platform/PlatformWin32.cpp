@@ -419,7 +419,7 @@ namespace flex
 		ThreadHandles.clear();
 	}
 
-	void Platform::SpawnThreads(u32 threadCount, u32 (entryPoint)(void*), void* userData)
+	void Platform::SpawnThreads(u32 threadCount, void* (entryPoint)(void*), void* userData)
 	{
 		ThreadHandles.resize(threadCount);
 
@@ -458,7 +458,7 @@ namespace flex
 
 	void Platform::Sleep(ms milliseconds)
 	{
-		::Sleep(milliseconds);
+		::Sleep((DWORD)milliseconds);
 	}
 
 	void Platform::RetrieveCPUInfo()

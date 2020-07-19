@@ -12,6 +12,8 @@ cmake_path_windows = 'cmake.exe'
 cmake_path_linux = 'cmake'
 genie_path_windows = 'genie.exe'
 genie_path_linux = 'genie'
+python_path_windows = 'python'
+python_path_linux = 'python3'
 
 def run_cmake(source, build, arguments = []):
 	cmakeCmd = [cmake_path, '-S', source, '-B', build]
@@ -52,11 +54,16 @@ if platform not in supported_platforms:
 git_path = git_path_windows if platform == 'windows' else git_path_linux
 cmake_path = cmake_path_windows if platform == 'windows' else cmake_path_linux
 genie_path = genie_path_windows if platform == 'windows' else genie_path_linux
+python_path = python_path_windows if platform == 'windows' else python_path_linux
 
 ps = subprocess.Popen(('cmake', '--version'), stdout=subprocess.PIPE)
-cmake_version = str(subprocess.check_output(('grep', 'ver'), stdin=ps.stdout))
+cmake_version = str(ps.stdout.read())
 ps.wait()
-cmake_version = cmake_version.split(' ')[-1][:-3]
+cmake_version = cmake_version.split('\\n')[0]
+cmake_version = cmake_version.split(' ')[-1]
+if '-' in cmake_version:
+	cmake_version = cmake_version.split('-')[0]
+
 
 (cmake_version_maj, cmake_version_min, cmake_version_pat) = map(int, cmake_version.split('.'))
 print('Detected cmake version {0}.{1}.{2}'.format(cmake_version_maj, cmake_version_min, cmake_version_pat))
@@ -161,7 +168,7 @@ if not os.path.exists(shader_c_build_path):
 
 if platform == 'windows':
 	os.environ['GIT_EXECUTABLE'] = git_path
-subprocess.check_call(['python3', shader_c_path + 'utils/git-sync-deps'], stderr=subprocess.STDOUT)
+subprocess.check_call([python_path, shader_c_path + 'utils/git-sync-deps'], stderr=subprocess.STDOUT)
 
 shader_c_cmake_args = ['-DSHADERC_SKIP_TESTS=ON', '-DBUILD_GMOCK=OFF', '-DBUILD_TESTING=OFF', '-DENABLE_BUILD_SAMPLES=OFF', '-DENABLE_CTEST=OFF', '-DINSTALL_GTEST=OFF', '-DSHADERC_ENABLE_SHARED_CRT=ON', '-DLLVM_USE_CRT_DEBUG=MDd', '-DLLVM_USE_CRT_MINSIZEREL=MD', '-DLLVM_USE_CRT_RELEASE=MD', '-DLLVM_USE_CRT_RELWITHDEBINFO=MD', '-Wno-dev']
 if platform == 'linux':

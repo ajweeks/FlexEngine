@@ -150,7 +150,7 @@ project "Flex"
 	iif(os.is("windows"), platformLibraries("vs*"), platformLibraries("linux*"))
 
 	configuration "vs*"
-		flags { "Winmain"}
+		flags { "Winmain" }
 		links { "opengl32" }
 	configuration "linux*"
 		linkoptions {

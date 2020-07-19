@@ -30,6 +30,8 @@
 
 #define VC_EXTRALEAN
 
+#define USE_SSE2
+
 #if COMPILE_VULKAN
 #define VULKAN_HPP_TYPESAFE_CONVERSION
 #endif

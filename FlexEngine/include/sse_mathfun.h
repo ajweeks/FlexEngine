@@ -1322,11 +1322,11 @@ static inline double scalCumSumSumSq( double *xa, int n, double *sumSQ )
 	{ const static long long am1[2] = {~0x8000000000000000LL,~0x8000000000000000LL};
 		return _mm_and_pd(a, *((v2df*)am1) );
 	}
-	static inline double _mm_abs_sd( double a )
-	{ const static long long am2 = {~0x8000000000000000LL};
-	  v2si r = _mm_and_si64( *((v2si*)&a), *((v2si*)&am2) );
-		return *((double*) &r);
-	}
+	//static inline double _mm_abs_sd( double a )
+	//{ const static long long am2 = {~0x8000000000000000LL};
+	//  v2si r = _mm_and_si64( *((v2si*)&a), *((v2si*)&am2) );
+	//	return *((double*) &r);
+	//}
 #	else
 	// no native support for 64bit ints: don't lose time on that!
 	/*!
@@ -1336,17 +1336,17 @@ static inline double scalCumSumSumSq( double *xa, int n, double *sumSQ )
  	{ const v4si am1 = _mm_set_epi32(0x7fffffff,0xffffffff,0x7fffffff,0xffffffff);
  		return _mm_and_pd(a, *((v2df*)&am1) );
  	}
-	static inline double _mm_abs_sd( double a )
-	{ const static unsigned long long am2 = 0x7fffffffffffffffLL;
-	  const v4si am1 = _mm_set_epi32(0x7fffffff,0xffffffff,0x7fffffff,0xffffffff);
-	  v2si r = _mm_and_si64( *((v2si*)&a), *((v2si*)&am1) );
-		_mm_empty();
-		return *((double*)&r);
+	//static inline double _mm_abs_sd( double a )
+	//{ const static unsigned long long am2 = 0x7fffffffffffffffLL;
+	//  const v4si am1 = _mm_set_epi32(0x7fffffff,0xffffffff,0x7fffffff,0xffffffff);
+	//  v2si r = _mm_and_si64( *((v2si*)&a), *((v2si*)&am1) );
+	//	_mm_empty();
+	//	return *((double*)&r);
 //	  union { double d; v2si r; } ret;
 //		ret.r = _mm_and_si64( *((v2si*)&a), *((v2si*)&am1) );
 //		a = ret.d;
 //		return a;
-	}
+	//}
 #	endif // i386 or x86_64
  	static inline v4sf _mm_abs_ps( register v4sf a )
  	{ const v4si am1 = _mm_set_epi32(0x7fffffff,0x7fffffff,0x7fffffff,0x7fffffff);
