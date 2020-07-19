@@ -128,7 +128,7 @@ configuration {}
 	debugdir "$(OutDir)"
 configuration "vs*"
 	defines { "PLATFORM_Win", "_WINDOWS" }
-	linkoptions { "/ignore:4221" }
+	linkoptions { "/ignore:4221", "/NODEFAULTLIB:LIBCMTD" }
 configuration { "vs*", "x32" }
 	flags { "EnableSSE2" }
 	defines { "WIN32" }
