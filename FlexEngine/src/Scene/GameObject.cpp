@@ -46,7 +46,8 @@ IGNORE_WARNINGS_POP
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Time.hpp"
-#include "VirtualMachine/Frontend/Frontend.hpp"
+#include "VirtualMachine/Frontend/Lexer.hpp"
+#include "VirtualMachine/Frontend/Parser.hpp"
 #include "VirtualMachine/Backend/VirtualMachine.hpp"
 #include "Window/Window.hpp"
 
