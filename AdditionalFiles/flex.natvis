@@ -56,4 +56,18 @@
   <Type Name="flex::vk::VulkanRenderObject">
     <DisplayString>{gameObject->m_Name}, mat ID = {materialID}, {topology}</DisplayString>
   </Type>
+
+  <Type Name="flex::SourceIter">
+    <DisplayString Condition="index &lt; source.size() - 1">{lineNumber}:{columnIndex} ({index}) - {source[index]} (peek: {(char)source[index + 1]})</DisplayString>
+    <DisplayString Condition="index == source.size() - 1">  {lineNumber}:{columnIndex} ({index}) - {source[index]}</DisplayString>
+  </Type>
+
+  <Type Name="flex::Span">
+    <DisplayString>{low}:{high} (len {high-low})</DisplayString>
+  </Type>
+
+  <Type Name="flex::StringBuilder">
+    <DisplayString>{(const char*)&amp;(buffer[0])} (len {length}, cap {buffer.size()})</DisplayString>
+  </Type>
+
 </AutoVisualizer>

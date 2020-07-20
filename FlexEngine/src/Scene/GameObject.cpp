@@ -46,7 +46,8 @@ IGNORE_WARNINGS_POP
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Time.hpp"
-#include "VirtualMachine.hpp"
+#include "VirtualMachine/Frontend/Frontend.hpp"
+#include "VirtualMachine/Backend/VirtualMachine.hpp"
 #include "Window/Window.hpp"
 
 namespace flex
@@ -4867,8 +4868,8 @@ namespace flex
 
 		m_Transform.UpdateParentTransform();
 
-		tokenizer = new Tokenizer();
-		ast = new AST(tokenizer);
+		lexer = new Lexer();
+		ast = new AST(lexer);
 	}
 
 	void Terminal::Initialize()
@@ -4890,8 +4891,8 @@ namespace flex
 			ast = nullptr;
 		}
 
-		delete tokenizer;
-		tokenizer = nullptr;
+		delete lexer;
+		lexer = nullptr;
 
 		GameObject::Destroy();
 	}
@@ -4980,15 +4981,19 @@ namespace flex
 
 				if (ast != nullptr)
 				{
-					glm::vec2i lastErrorPos = ast->lastErrorTokenLocation;
-					if (lastErrorPos.x != -1)
+					std::vector<Diagnostic> diagnostics = ast->lexer->diagnostics;
+					if (!diagnostics.empty())
 					{
-						pos = firstLinePos;
-						pos.y -= lineHeight * lastErrorPos.y;
-						g_Renderer->DrawStringWS("!", errorColour, pos + right * (charWidth * 1.f), rot, letterSpacing, m_LetterScale);
-						std::string underlineStr = std::string(lastErrorPos.x, ' ') + std::string(ast->lastErrorTokenLen, '_');
-						pos.y -= lineHeight * 0.2f;
-						g_Renderer->DrawStringWS(underlineStr, errorColour, pos, rot, letterSpacing, m_LetterScale);
+						for (u32 i = 0; i < (u32)diagnostics.size(); ++i)
+						{
+							Span span = diagnostics[i].span;
+							pos = firstLinePos;
+							pos.y -= lineHeight * diagnostics[i].lineNumber;
+							g_Renderer->DrawStringWS("!", errorColour, pos + right * (charWidth * 1.f), rot, letterSpacing, m_LetterScale);
+							std::string underlineStr = std::string(diagnostics[i].columnIndex, ' ') + std::string(diagnostics[i].message.size(), '_');
+							pos.y -= lineHeight * 0.2f;
+							g_Renderer->DrawStringWS(underlineStr, errorColour, pos, rot, letterSpacing, m_LetterScale);
+						}
 					}
 				}
 			}
@@ -5025,24 +5030,24 @@ namespace flex
 			//ImGui::DragFloat("Line height", &m_LineHeight, 0.01f);
 			//ImGui::DragFloat("Scale", &m_LetterScale, 0.01f);
 
-			ImGui::Text("Variables");
-			if (ImGui::BeginChild("", ImVec2(0.0f, 220.0f), true))
-			{
-				for (i32 i = 0; i < tokenizer->context->variableCount; ++i)
-				{
-					const TokenContext::InstantiatedIdentifier& var = tokenizer->context->instantiatedIdentifiers[i];
-					std::string valStr = var.value->ToString();
-					const char* typeNameCStr = g_TypeNameStrings[(i32)ValueTypeToTypeName(var.value->type)];
-					ImGui::Text("%s = %s", var.name.c_str(), valStr.c_str());
-					ImGui::SameLine();
-					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
-					ImGui::Text("(%s)", typeNameCStr);
-					ImGui::PopStyleColor();
-				}
-			}
-			ImGui::EndChild();
+			//ImGui::Text("Variables");
+			//if (ImGui::BeginChild("", ImVec2(0.0f, 220.0f), true))
+			//{
+			//	for (i32 i = 0; i < lexer->context->variableCount; ++i)
+			//	{
+			//		const Context::InstantiatedIdentifier& var = lexer->context->instantiatedIdentifiers[i];
+			//		std::string valStr = var.value->ToString();
+			//		const char* typeNameCStr = g_TypeNameStrings[(i32)ValueTypeToTypeName(var.value->type)];
+			//		ImGui::Text("%s = %s", var.name.c_str(), valStr.c_str());
+			//		ImGui::SameLine();
+			//		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
+			//		ImGui::Text("(%s)", typeNameCStr);
+			//		ImGui::PopStyleColor();
+			//	}
+			//}
+			//ImGui::EndChild();
 
-			if (tokenizer->context->errors.empty())
+			if (lexer->diagnostics.empty())
 			{
 				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 1.0f, 0.5f, 1.0f));
 				ImGui::Text("Success");
@@ -5051,9 +5056,9 @@ namespace flex
 			else
 			{
 				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.5f, 0.5f, 1.0f));
-				for (const Error& e : tokenizer->context->errors)
+				for (const Diagnostic& diagnostic : lexer->diagnostics)
 				{
-					ImGui::Text("L%d: %s", e.lineNumber + 1, e.str.c_str());
+					ImGui::Text("L%d: %s", diagnostic.lineNumber + 1, diagnostic.message.c_str());
 				}
 				ImGui::PopStyleColor();
 			}
@@ -5440,7 +5445,7 @@ namespace flex
 
 	void Terminal::ParseCode()
 	{
-		assert(tokenizer != nullptr);
+		assert(lexer != nullptr);
 		assert(ast != nullptr);
 
 		std::string str;
@@ -5452,13 +5457,12 @@ namespace flex
 
 		ast->Destroy();
 
-		tokenizer->SetCodeStr(str);
+		lexer->SetSource(str);
 		ast->Generate();
 	}
 
 	void Terminal::EvaluateCode()
 	{
-		ast->Evaluate();
 	}
 
 	EventReply Terminal::OnKeyEvent(KeyCode keyCode, KeyAction action, i32 modifiers)

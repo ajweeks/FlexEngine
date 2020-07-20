@@ -21,7 +21,7 @@ namespace flex
 	class BezierCurveList;
 	class TerminalCamera;
 	struct AST;
-	struct Tokenizer;
+	struct Lexer;
 
 	class GameObject
 	{
@@ -781,7 +781,7 @@ namespace flex
 		void EvaluateCode();
 
 		AST* ast = nullptr;
-		Tokenizer* tokenizer = nullptr;
+		Lexer* lexer = nullptr;
 
 		std::vector<std::string> lines;
 
