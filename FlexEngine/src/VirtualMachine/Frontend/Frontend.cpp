@@ -294,6 +294,11 @@ namespace flex
 					Advance();
 					return Token(GetSpan(), TokenKind::SUBTRACT_ASSIGN);
 				}
+				else if (sourceIter.Current() == '>')
+				{
+					Advance();
+					return Token(GetSpan(), TokenKind::ARROW);
+				}
 			}
 
 			return Token(GetSpan(), TokenKind::SUBTRACT);
