@@ -22,10 +22,9 @@ namespace flex
 			Resize((length + (u32)strlen(str)) * 2);
 		}
 
-		char* c = (char*)str;
-		while (c != '\0')
+		for (u32 i = 0; i < strlen(str); ++i)
 		{
-			buffer[length++] = *c++;
+			buffer[length++] = str[i];
 		}
 	}
 
