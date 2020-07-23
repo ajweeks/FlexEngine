@@ -31,10 +31,11 @@ namespace flex
 			stringBuilder.Append(value);
 			stringBuilder.Append("'");
 			break;
-		case TokenKind::BOOL_LITERAL:
-			stringBuilder.Append("bool literal '");
-			stringBuilder.Append(value);
-			stringBuilder.Append("'");
+		case TokenKind::TRUE:
+			stringBuilder.Append("true");
+			break;
+		case TokenKind::FALSE:
+			stringBuilder.Append("false");
 			break;
 		case TokenKind::STRING_LITERAL:
 			stringBuilder.Append("string literal '");

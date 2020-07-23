@@ -780,8 +780,7 @@ namespace flex
 		void ParseCode();
 		void EvaluateCode();
 
-		AST* ast = nullptr;
-		Lexer* lexer = nullptr;
+		AST* m_AST = nullptr;
 
 		std::vector<std::string> lines;
 

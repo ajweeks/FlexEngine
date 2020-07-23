@@ -48,7 +48,6 @@ IGNORE_WARNINGS_POP
 #include "Time.hpp"
 #include "VirtualMachine/Frontend/Lexer.hpp"
 #include "VirtualMachine/Frontend/Parser.hpp"
-#include "VirtualMachine/Backend/VirtualMachine.hpp"
 #include "Window/Window.hpp"
 
 namespace flex
@@ -4869,8 +4868,7 @@ namespace flex
 
 		m_Transform.UpdateParentTransform();
 
-		lexer = new Lexer();
-		ast = new AST(lexer);
+		m_AST = new AST();
 	}
 
 	void Terminal::Initialize()
@@ -4885,15 +4883,12 @@ namespace flex
 	{
 		g_InputManager->UnbindKeyEventCallback(&m_KeyEventCallback);
 
-		if (ast != nullptr)
+		if (m_AST != nullptr)
 		{
-			ast->Destroy();
-			delete ast;
-			ast = nullptr;
+			m_AST->Destroy();
+			delete m_AST;
+			m_AST = nullptr;
 		}
-
-		delete lexer;
-		lexer = nullptr;
 
 		GameObject::Destroy();
 	}
@@ -4980,9 +4975,9 @@ namespace flex
 					pos.y -= lineHeight;
 				}
 
-				if (ast != nullptr)
+				if (m_AST != nullptr)
 				{
-					std::vector<Diagnostic> diagnostics = ast->lexer->diagnostics;
+					std::vector<Diagnostic> diagnostics = m_AST->diagnosticContainer->diagnostics;
 					if (!diagnostics.empty())
 					{
 						for (u32 i = 0; i < (u32)diagnostics.size(); ++i)
@@ -5048,7 +5043,7 @@ namespace flex
 			//}
 			//ImGui::EndChild();
 
-			if (lexer->diagnostics.empty())
+			if (m_AST->diagnosticContainer->diagnostics.empty())
 			{
 				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 1.0f, 0.5f, 1.0f));
 				ImGui::Text("Success");
@@ -5057,7 +5052,7 @@ namespace flex
 			else
 			{
 				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.5f, 0.5f, 1.0f));
-				for (const Diagnostic& diagnostic : lexer->diagnostics)
+				for (const Diagnostic& diagnostic : m_AST->diagnosticContainer->diagnostics)
 				{
 					ImGui::Text("L%d: %s", diagnostic.lineNumber + 1, diagnostic.message.c_str());
 				}
@@ -5446,8 +5441,7 @@ namespace flex
 
 	void Terminal::ParseCode()
 	{
-		assert(lexer != nullptr);
-		assert(ast != nullptr);
+		assert(m_AST != nullptr);
 
 		std::string str;
 		for (const std::string& line : lines)
@@ -5456,10 +5450,9 @@ namespace flex
 			str.push_back('\n');
 		}
 
-		ast->Destroy();
+		m_AST->Destroy();
 
-		lexer->SetSource(str);
-		ast->Generate();
+		m_AST->Generate(str);
 	}
 
 	void Terminal::EvaluateCode()

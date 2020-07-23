@@ -5,6 +5,8 @@
 
 namespace flex
 {
+	struct DiagnosticContainer;
+
 	extern Token g_EmptyToken;
 
 	struct SourceIter
@@ -77,25 +79,16 @@ namespace flex
 
 	struct Lexer
 	{
-		Lexer();
-		explicit Lexer(const std::string& inSource);
-		~Lexer();
+		Lexer(const std::string& sourceText, DiagnosticContainer* diagnosticContainer);
 
 		Lexer(Lexer&) = delete;
 		Lexer(Lexer&&) = delete;
 		Lexer& operator=(Lexer&) = delete;
 		Lexer& operator=(Lexer&&) = delete;
 
-		void SetSource(const std::string& source);
-		struct StatementBlock* Parse();
-
 		bool Advance();
 
-		static bool IsKeyword(const char* str);
-		static bool IsKeyword(TokenKind type);
-
 		Token Next();
-
 		Token NextNumericLiteral();
 		Token NextStringLiteral();
 		Token NextIdentifierOrKeyword();
@@ -105,17 +98,14 @@ namespace flex
 		bool IsLetter(char c);
 		bool IsSpace(char c);
 
+		// Consumes all ignored characters and advances the
+		// source iter to point at the next non-ignored char
 		void EatWhitespaceAndComments();
 		TokenKind Type1IfNextCharIsCElseType2(char c, TokenKind ifYes, TokenKind ifNo);
 
-		void AddDiagnostic(Span span, u32 lineNumber, u32 columnIndex, const std::string& message);
-		void AddDiagnostic(const Diagnostic& diagnostic);
-
 		SourceIter sourceIter;
+		DiagnosticContainer* diagnosticContainer = nullptr;
 
-		std::vector<Diagnostic> diagnostics;
-
-	private:
 		Span GetSpan();
 
 		Span m_CurrentSpan;

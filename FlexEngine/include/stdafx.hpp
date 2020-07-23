@@ -88,6 +88,10 @@
 #endif
 
 #undef FORMAT_STRING
+
+#undef TRUE
+#undef FALSE
+
 #if defined(__clang__)
 #define FORMAT_STRING(n,m) __attribute__ (( format( __printf__, fmtargnumber, firstvarargnumber )))
 #elif defined(_MSC_VER)

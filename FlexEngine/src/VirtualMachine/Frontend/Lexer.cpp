@@ -3,56 +3,18 @@
 #include "VirtualMachine/Frontend/Lexer.hpp"
 
 #include "StringBuilder.hpp"
+#include "VirtualMachine/Diagnostics.hpp"
 #include "VirtualMachine/Frontend/Parser.hpp"
 
 namespace flex
 {
 	struct Token g_EmptyToken = Token(Span(0, 0), TokenKind::_NONE, "");
 
-	Lexer::Lexer() :
-		m_CurrentSpan(0, 0)
+	Lexer::Lexer(const std::string& sourceText, DiagnosticContainer* diagnosticContainer) :
+		m_CurrentSpan(0, 0),
+		diagnosticContainer(diagnosticContainer)
 	{
-		SetSource("");
-	}
-
-	Lexer::Lexer(const std::string& inSource) :
-		m_CurrentSpan(0, 0)
-	{
-		SetSource(inSource);
-	}
-
-	Lexer::~Lexer()
-	{
-	}
-
-	void Lexer::SetSource(const std::string& source)
-	{
-		sourceIter = SourceIter(source);
-	}
-
-	StatementBlock* Lexer::Parse()
-	{
-		StatementBlock* rootBlock = new StatementBlock(Span(0, (u32)sourceIter.source.size()));
-
-		while (true)
-		{
-			Token next = Next();
-			std::string tokenKindStr = TokenKindToString(next.kind);
-			if (next.value.empty())
-			{
-				Print("%s (%i:%i)\n", tokenKindStr.c_str(), next.span.low, next.span.high);
-			}
-			else
-			{
-				Print("%s (%i:%i): %s\n", tokenKindStr.c_str(), next.span.low, next.span.high, next.value.c_str());
-			}
-			if (next.kind == TokenKind::END_OF_FILE)
-			{
-				break;
-			}
-		}
-
-		return rootBlock;
+		sourceIter = SourceIter(sourceText);
 	}
 
 	bool Lexer::Advance()
@@ -124,25 +86,25 @@ namespace flex
 				if (sourceIter.Current() == '=')
 				{
 					Advance();
-					return Token(GetSpan(), TokenKind::NOT_EQUAL_TEST);
+					return Token(GetSpan(), TokenKind::NOT_EQUAL);
 				}
 			}
 
 			return Token(GetSpan(), TokenKind::BANG);
 		case '?':
 			Advance();
-			return Token(GetSpan(), TokenKind::TERNARY);
+			return Token(GetSpan(), TokenKind::QUESTION);
 		case '=':
 			if (Advance())
 			{
 				if (sourceIter.Current() == '=')
 				{
 					Advance();
-					return Token(GetSpan(), TokenKind::EQUAL_TEST);
+					return Token(GetSpan(), TokenKind::EQUAL_EQUAL);
 				}
 			}
 
-			return Token(GetSpan(), TokenKind::ASSIGNMENT);
+			return Token(GetSpan(), TokenKind::EQUALS);
 		case '>':
 			if (Advance())
 			{
@@ -171,18 +133,18 @@ namespace flex
 				if (sourceIter.Current() == '=')
 				{
 					Advance();
-					return Token(GetSpan(), TokenKind::ADD_ASSIGN);
+					return Token(GetSpan(), TokenKind::PLUS_EQUALS);
 				}
 			}
 
-			return Token(GetSpan(), TokenKind::ADD);
+			return Token(GetSpan(), TokenKind::PLUS);
 		case '-':
 			if (Advance())
 			{
 				if (sourceIter.Current() == '=')
 				{
 					Advance();
-					return Token(GetSpan(), TokenKind::SUBTRACT_ASSIGN);
+					return Token(GetSpan(), TokenKind::MINUS_EQUALS);
 				}
 				else if (sourceIter.Current() == '>')
 				{
@@ -191,40 +153,40 @@ namespace flex
 				}
 			}
 
-			return Token(GetSpan(), TokenKind::SUBTRACT);
+			return Token(GetSpan(), TokenKind::MINUS);
 		case '*':
 			if (Advance())
 			{
 				if (sourceIter.Current() == '=')
 				{
 					Advance();
-					return Token(GetSpan(), TokenKind::MULTIPLY_ASSIGN);
+					return Token(GetSpan(), TokenKind::STAR_EQUALS);
 				}
 			}
 
-			return Token(GetSpan(), TokenKind::MULTIPLY);
+			return Token(GetSpan(), TokenKind::STAR);
 		case '/':
 			if (Advance())
 			{
 				if (sourceIter.Current() == '=')
 				{
 					Advance();
-					return Token(GetSpan(), TokenKind::DIVIDE_ASSIGN);
+					return Token(GetSpan(), TokenKind::FOR_SLASH_EQUALS);
 				}
 			}
 
-			return Token(GetSpan(), TokenKind::DIVIDE);
+			return Token(GetSpan(), TokenKind::FOR_SLASH);
 		case '%':
 			if (Advance())
 			{
 				if (sourceIter.Current() == '=')
 				{
 					Advance();
-					return Token(GetSpan(), TokenKind::MODULO_ASSIGN);
+					return Token(GetSpan(), TokenKind::PERCENT_EQUALS);
 				}
 			}
 
-			return Token(GetSpan(), TokenKind::MODULO);
+			return Token(GetSpan(), TokenKind::PERCENT);
 		case '&':
 			if (Advance())
 			{
@@ -277,13 +239,13 @@ namespace flex
 				Advance();
 				if (c1 != '\'')
 				{
-					AddDiagnostic(GetSpan(), sourceIter.lineNumber, sourceIter.columnIndex, "Expected closing quote for char literal");
+					diagnosticContainer->AddDiagnostic(GetSpan(), sourceIter.lineNumber, sourceIter.columnIndex, "Expected closing quote for char literal");
 					return g_EmptyToken;
 				}
 				return Token(GetSpan(), TokenKind::CHAR_LITERAL, std::string(1, c0));
 			}
 
-			AddDiagnostic(GetSpan(), sourceIter.lineNumber, sourceIter.columnIndex, "Expected closing quote for char literal");
+			diagnosticContainer->AddDiagnostic(GetSpan(), sourceIter.lineNumber, sourceIter.columnIndex, "Expected closing quote for char literal");
 			return g_EmptyToken;
 		case'\"':
 			Advance();
@@ -305,7 +267,7 @@ namespace flex
 			return Token(GetSpan(), TokenKind::HASH);
 		default:
 			Advance();
-			AddDiagnostic(GetSpan(), sourceIter.lineNumber, sourceIter.columnIndex, "Unrecognized character encountered");
+			diagnosticContainer->AddDiagnostic(GetSpan(), sourceIter.lineNumber, sourceIter.columnIndex, "Unrecognized character encountered");
 			return g_EmptyToken;
 		}
 	}
@@ -361,7 +323,7 @@ namespace flex
 		{
 			if (IsNewLine(sourceIter.Current()))
 			{
-				AddDiagnostic(GetSpan(), sourceIter.lineNumber, sourceIter.columnIndex, "Unexpected termination of string literal");
+				diagnosticContainer->AddDiagnostic(GetSpan(), sourceIter.lineNumber, sourceIter.columnIndex, "Unexpected termination of string literal");
 				return g_EmptyToken;
 			}
 
@@ -369,7 +331,7 @@ namespace flex
 			{
 				if (!Advance())
 				{
-					AddDiagnostic(GetSpan(), sourceIter.lineNumber, sourceIter.columnIndex, "Unexpected trailing backslash");
+					diagnosticContainer->AddDiagnostic(GetSpan(), sourceIter.lineNumber, sourceIter.columnIndex, "Unexpected trailing backslash");
 					return g_EmptyToken;
 				}
 				switch (sourceIter.Current())
@@ -390,7 +352,7 @@ namespace flex
 					stringBuilder.Append('\"');
 					break;
 				default:
-					AddDiagnostic(GetSpan(), sourceIter.lineNumber, sourceIter.columnIndex, "Invalid escaped character");
+					diagnosticContainer->AddDiagnostic(GetSpan(), sourceIter.lineNumber, sourceIter.columnIndex, "Invalid escaped character");
 					return g_EmptyToken;
 				}
 			}
@@ -401,7 +363,7 @@ namespace flex
 
 			if (!Advance())
 			{
-				AddDiagnostic(GetSpan(), sourceIter.lineNumber, sourceIter.columnIndex, "Unexpected termination of string literal");
+				diagnosticContainer->AddDiagnostic(GetSpan(), sourceIter.lineNumber, sourceIter.columnIndex, "Unexpected termination of string literal");
 				return g_EmptyToken;
 			}
 		}
@@ -485,7 +447,7 @@ namespace flex
 		}
 		else if (identifier.compare("func") == 0)
 		{
-			return Token(GetSpan(), TokenKind::FUNCTION_DEF);
+			return Token(GetSpan(), TokenKind::FUNC);
 		}
 		else if (identifier.compare("return") == 0)
 		{
@@ -517,8 +479,6 @@ namespace flex
 		return isspace(c);
 	}
 
-	// Consume all ignored characters and leave the source
-	// iter one index before the next non-ingored char
 	void Lexer::EatWhitespaceAndComments()
 	{
 		bool bAdvanced = true;
@@ -593,7 +553,7 @@ namespace flex
 
 					if (levelsDeep != 0)
 					{
-						AddDiagnostic(GetSpan(), sourceIter.lineNumber, sourceIter.columnIndex, "Uneven number of block comment opens/closes");
+						diagnosticContainer->AddDiagnostic(GetSpan(), sourceIter.lineNumber, sourceIter.columnIndex, "Uneven number of block comment opens/closes");
 					}
 				}
 			}
@@ -611,16 +571,6 @@ namespace flex
 		{
 			return ifNo;
 		}
-	}
-
-	void Lexer::AddDiagnostic(Span span, u32 lineNumber, u32 columnIndex, const std::string& message)
-	{
-		AddDiagnostic({ span, lineNumber, columnIndex, message });
-	}
-
-	void Lexer::AddDiagnostic(const Diagnostic& diagnostic)
-	{
-		diagnostics.push_back(diagnostic);
 	}
 
 	Span Lexer::GetSpan()

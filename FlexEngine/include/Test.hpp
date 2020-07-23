@@ -5,6 +5,9 @@
 #include "Pair.hpp"
 #include "PoolAllocator.hpp"
 
+#include "VirtualMachine/Frontend/Parser.hpp"
+#include "VirtualMachine/Frontend/Lexer.hpp"
+
 IGNORE_WARNINGS_PUSH
 #include <glm/gtx/euler_angles.hpp>
 IGNORE_WARNINGS_POP
@@ -582,10 +585,50 @@ namespace flex
 		}
 		UNIT_TEST_END;
 
+		static void RunTerminalTests()
+		{
+			AST* ast = new AST();
+
+			ast->Generate("\n//int abcdefghi = 115615; \n\
+				float basicBit = 55.21235f; int    aaa   =    111111  ;   //\n\
+				/* \n \
+					 blocky \n\
+					comment \n \
+				*/ \n \
+\
+				func my_function(int index, string name) -> int { \n\
+					int result = name[index]; \n\
+					return result; \n \
+				} \n \
+				int result = my_function(1, \"test\"); \
+				\
+				string str = \"long   string with \\\"lots\\\"  of fun spaces! // /* */ \"; \n\
+				bool b = abcdefghi != 115615 || 7 ^ ~33; \n\
+				int[] list = { 11, 22, 33, 44, 55 }; \n\
+				int chosen_one = list[0*1+2+1]; \n\
+				int a = (2 * 3 + 1) * 4 + 5 - 1 * 50 / 2; \n\
+				basicBit = b ? (basicBit * 3.5f + 7 / aaa) : 0.0f;\n\n");
+
+			Print(ast->diagnosticContainer->diagnostics.empty() ? "Success\n" : "Errors present\n");
+			for (const Diagnostic& diagnostic : ast->diagnosticContainer->diagnostics)
+			{
+				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
+			}
+
+			std::string reconstructedStr = ast->rootBlock->ToString();
+			Print("%s\n", reconstructedStr.c_str());
+
+			Print("Complete\n");
+
+			ast->Destroy();
+			delete ast;
+		}
+
 	public:
 		static void Run()
 		{
 			TestFunc funcs[] = {
+				/*
 				// JSON tests
 				EmptyFileIsParsed, MinimalFileIsParsed, OneFieldFileIsValid, MissingQuoteFailsToParse, ObjectParsedCorrectly,
 				FieldArrayParsedCorrectly, MissingSquareBracketFailsToParse, MissingCurlyBracketFailsToParse, LineCommentIgnored, MultipleFieldsParsedCorrectly,
@@ -595,6 +638,8 @@ namespace flex
 				QuaternionsAreNearlyEqual, QuaternionsAreNotNearlyEqual,
 				// Misc
 				CountSetBitsValid, PoolTests, PairTests
+				*/
+				RunTerminalTests
 			};
 			Print("Running %u tests...\n", (u32)ARRAY_LENGTH(funcs));
 			u32 failedTestCount = 0;

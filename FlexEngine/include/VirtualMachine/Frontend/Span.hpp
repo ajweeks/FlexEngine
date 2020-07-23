@@ -1,5 +1,10 @@
 #pragma once
 
+#include "Types.hpp"
+
+#include <string>
+#include <cassert>
+
 namespace flex
 {
 	struct Span
@@ -29,6 +34,11 @@ namespace flex
 		Span Grow()
 		{
 			return Span(low, high + 1);
+		}
+
+		Span Extend(const Span& other)
+		{
+			return Span(low, other.high);
 		}
 
 		i32 low;
