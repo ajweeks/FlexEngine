@@ -117,50 +117,6 @@ namespace flex
 		}
 	}
 
-	TypeName Type::GetTypeNameFromStr(const std::string& str)
-	{
-		const char* tokenCStr = str.c_str();
-		for (i32 i = 0; i < (i32)TypeName::_NONE; ++i)
-		{
-			if (strcmp(g_TypeNameStrings[i], tokenCStr) == 0)
-			{
-				return (TypeName)i;
-			}
-		}
-		return TypeName::_NONE;
-	}
-
-	Statement::Statement(const Span& span) :
-		span(span)
-	{
-	}
-
-	StatementBlock::StatementBlock(const Span& span, const std::vector<Statement*>& statements) :
-		Statement(span),
-		statements(statements)
-	{
-	}
-
-	void StatementBlock::Push(Statement* statement)
-	{
-		statements.push_back(statement);
-	}
-
-	std::string StatementBlock::ToString() const
-	{
-		StringBuilder stringBuilder;
-
-		stringBuilder.Append("{\n");
-		for (Statement* statement : statements)
-		{
-			stringBuilder.Append(statement->ToString());
-			stringBuilder.Append("\n");
-		}
-		stringBuilder.Append("}");
-
-		return stringBuilder.ToString();
-	}
-
 	std::string TypeNameToString(TypeName typeName)
 	{
 		return g_TypeNameStrings[(u32)typeName];
@@ -196,9 +152,9 @@ namespace flex
 	{
 		switch (valueType)
 		{
-		case ValueType::INT_RAW: return TypeName::INT;
-		case ValueType::FLOAT_RAW: return TypeName::FLOAT;
-		case ValueType::BOOL_RAW: return TypeName::BOOL;
+		case ValueType::INT_RAW:	return TypeName::INT;
+		case ValueType::FLOAT_RAW:	return TypeName::FLOAT;
+		case ValueType::BOOL_RAW:	return TypeName::BOOL;
 		default: return TypeName::_NONE;
 		}
 	}
@@ -207,11 +163,52 @@ namespace flex
 	{
 		switch (typeName)
 		{
-		case TypeName::INT: return ValueType::INT_RAW;
-		case TypeName::FLOAT: return ValueType::FLOAT_RAW;
-		case TypeName::BOOL: return ValueType::BOOL_RAW;
+		case TypeName::INT:		return ValueType::INT_RAW;
+		case TypeName::FLOAT:	return ValueType::FLOAT_RAW;
+		case TypeName::BOOL:	return ValueType::BOOL_RAW;
 		default: return ValueType::_NONE;
 		}
+	}
+
+	Statement::Statement(const Span& span) :
+		span(span)
+	{
+	}
+
+	StatementBlock::StatementBlock(const Span& span, const std::vector<Statement*>& statements) :
+		Statement(span),
+		statements(statements)
+	{
+	}
+
+	StatementBlock::~StatementBlock()
+	{
+		for (u32 i = 0; i < (u32)statements.size(); ++i)
+		{
+			delete statements[i];
+		}
+	}
+
+	std::string StatementBlock::ToString() const
+	{
+		StringBuilder stringBuilder;
+
+		stringBuilder.Append("{\n");
+		for (Statement* statement : statements)
+		{
+			stringBuilder.Append(statement->ToString());
+			stringBuilder.Append("\n");
+		}
+		stringBuilder.Append("}");
+
+		return stringBuilder.ToString();
+	}
+
+	IfStatement::~IfStatement()
+	{
+		delete condition;
+		delete then;
+		delete otherwise;
 	}
 
 	std::string IfStatement::ToString() const
@@ -231,6 +228,14 @@ namespace flex
 		return stringBuilder.ToString();
 	}
 
+	ForStatement::~ForStatement()
+	{
+		delete setup;
+		delete condition;
+		delete update;
+		delete body;
+	}
+
 	std::string ForStatement::ToString() const
 	{
 		StringBuilder stringBuilder;
@@ -248,6 +253,12 @@ namespace flex
 		return stringBuilder.ToString();
 	}
 
+	WhileStatement::~WhileStatement()
+	{
+		delete condition;
+		delete body;
+	}
+
 	std::string WhileStatement::ToString() const
 	{
 		StringBuilder stringBuilder;
@@ -261,6 +272,12 @@ namespace flex
 		return stringBuilder.ToString();
 	}
 
+	DoWhileStatement::~DoWhileStatement()
+	{
+		delete condition;
+		delete body;
+	}
+
 	std::string DoWhileStatement::ToString() const
 	{
 		StringBuilder stringBuilder;
@@ -272,6 +289,16 @@ namespace flex
 		stringBuilder.Append(")");
 
 		return stringBuilder.ToString();
+	}
+
+	FunctionDeclaration::~FunctionDeclaration()
+	{
+		for (u32 i = 0; i < (u32)arguments.size(); ++i)
+		{
+			delete arguments[i];
+		}
+
+		delete body;
 	}
 
 	std::string FunctionDeclaration::ToString() const
@@ -299,14 +326,98 @@ namespace flex
 		return stringBuilder.ToString();
 	}
 
-	std::string IndexOperation::ToString() const
+	YieldStatement::~YieldStatement()
+	{
+		delete yieldValue;
+	}
+
+	std::string YieldStatement::ToString() const
 	{
 		StringBuilder stringBuilder;
-		stringBuilder.Append(container);
-		stringBuilder.Append("[");
-		stringBuilder.Append(indexExpression->ToString());
-		stringBuilder.Append("]");
+
+		stringBuilder.Append("yield");
+
+		if (yieldValue != nullptr)
+		{
+			stringBuilder.Append(" ");
+			stringBuilder.Append(yieldValue->ToString());
+		}
+
+		stringBuilder.Append(";");
+
 		return stringBuilder.ToString();
+	}
+
+	ReturnStatement::~ReturnStatement()
+	{
+		delete returnValue;
+	}
+
+	std::string ReturnStatement::ToString() const
+	{
+		StringBuilder stringBuilder;
+
+		stringBuilder.Append("return");
+
+		if (returnValue != nullptr)
+		{
+			stringBuilder.Append(" ");
+			stringBuilder.Append(returnValue->ToString());
+		}
+
+		stringBuilder.Append(";");
+
+		return stringBuilder.ToString();
+	}
+
+	Declaration::~Declaration()
+	{
+		delete initializer;
+	}
+
+	std::string Declaration::ToString() const
+	{
+		StringBuilder stringBuilder;
+
+		stringBuilder.Append(TypeNameToString(typeName));
+		stringBuilder.Append(" ");
+		stringBuilder.Append(identifierStr);
+
+		if (initializer != nullptr)
+		{
+			stringBuilder.Append(" = ");
+			stringBuilder.Append(initializer->ToString());
+		}
+
+		stringBuilder.Append(";");
+
+		return stringBuilder.ToString();
+	}
+
+	Assignment::~Assignment()
+	{
+		delete lhs;
+		delete rhs;
+	}
+
+	std::string Assignment::ToString() const
+	{
+		StringBuilder stringBuilder;
+
+		stringBuilder.Append(lhs->ToString());
+		stringBuilder.Append(" = ");
+		stringBuilder.Append(rhs->ToString());
+		stringBuilder.Append(";");
+
+		return stringBuilder.ToString();
+	}
+
+	ListInitializer::~ListInitializer()
+	{
+		for (u32 i = 0; i < (u32)listValues.size(); ++i)
+		{
+			delete listValues[i];
+		}
 	}
 
 	std::string ListInitializer::ToString() const
@@ -325,6 +436,26 @@ namespace flex
 		stringBuilder.Append(" }");
 
 		return stringBuilder.ToString();
+	}
+
+	IndexOperation::~IndexOperation()
+	{
+		delete indexExpression;
+	}
+
+	std::string IndexOperation::ToString() const
+	{
+		StringBuilder stringBuilder;
+		stringBuilder.Append(container);
+		stringBuilder.Append("[");
+		stringBuilder.Append(indexExpression->ToString());
+		stringBuilder.Append("]");
+		return stringBuilder.ToString();
+	}
+
+	UnaryOperation::~UnaryOperation()
+	{
+		delete expression;
 	}
 
 	std::string UnaryOperation::ToString() const
@@ -354,6 +485,32 @@ namespace flex
 		return stringBuilder.ToString();
 	}
 
+	BinaryOperation::~BinaryOperation()
+	{
+		delete lhs;
+		delete rhs;
+	}
+
+	std::string BinaryOperation::ToString() const
+	{
+		StringBuilder stringBuilder;
+
+		stringBuilder.Append(lhs->ToString());
+		stringBuilder.Append(" ");
+		stringBuilder.Append(BinaryOperatorTypeToString(type));
+		stringBuilder.Append(" ");
+		stringBuilder.Append(rhs->ToString());
+
+		return stringBuilder.ToString();
+	}
+
+	TernaryOperation::~TernaryOperation()
+	{
+		delete condition;
+		delete ifTrue;
+		delete ifFalse;
+	}
+
 	std::string TernaryOperation::ToString() const
 	{
 		StringBuilder stringBuilder;
@@ -365,6 +522,14 @@ namespace flex
 		stringBuilder.Append(ifFalse->ToString());
 
 		return stringBuilder.ToString();
+	}
+
+	FunctionCall::~FunctionCall()
+	{
+		for (u32 i = 0; i < (u32)arguments.size(); ++i)
+		{
+			delete arguments[i];
+		}
 	}
 
 	std::string FunctionCall::ToString() const
@@ -388,39 +553,7 @@ namespace flex
 		return stringBuilder.ToString();
 	}
 
-	AST::AST()
-	{
-	}
-
-	void AST::Generate(const std::string& sourceText)
-	{
-		bValid = false;
-
-		delete rootBlock;
-		delete parser;
-		delete diagnosticContainer;
-
-		diagnosticContainer = new DiagnosticContainer();
-		lexer = new Lexer(sourceText, diagnosticContainer);
-		parser = new Parser(lexer, diagnosticContainer);
-
-		rootBlock = parser->Parse();
-
-		bValid = true;
-	}
-
-	void AST::Destroy()
-	{
-		bValid = false;
-
-		delete rootBlock;
-		rootBlock = nullptr;
-		delete parser;
-		parser = nullptr;
-	}
-
 	Parser::Parser(Lexer* lexer, DiagnosticContainer* diagnosticContainer) :
-		m_Current(g_EmptyToken),
 		m_Lexer(lexer),
 		diagnosticContainer(diagnosticContainer)
 	{
@@ -714,9 +847,7 @@ namespace flex
 			}
 		}
 
-		Eat(TokenKind::CLOSE_CURLY);
-
-		return new ListInitializer(span.Extend(Eat(TokenKind::SEMICOLON).span), listValues);
+		return new ListInitializer(span.Extend(Eat(TokenKind::CLOSE_CURLY).span), listValues);
 	}
 
 	Statement* Parser::NextStatement()
@@ -882,8 +1013,6 @@ namespace flex
 			Eat(TokenKind::COMMA);
 		}
 
-		Eat(TokenKind::CLOSE_PAREN);
-
 		return result;
 	}
 
@@ -906,4 +1035,32 @@ namespace flex
 		return result;
 	}
 
+	AST::AST()
+	{
+	}
+
+	void AST::Generate(const std::string& sourceText)
+	{
+		bValid = false;
+
+		diagnosticContainer = new DiagnosticContainer();
+		lexer = new Lexer(sourceText, diagnosticContainer);
+		parser = new Parser(lexer, diagnosticContainer);
+
+		rootBlock = parser->Parse();
+
+		bValid = true;
+	}
+
+	void AST::Destroy()
+	{
+		bValid = false;
+
+		delete diagnosticContainer;
+		diagnosticContainer = nullptr;
+		delete rootBlock;
+		rootBlock = nullptr;
+		delete parser;
+		parser = nullptr;
+	}
 } // namespace flex

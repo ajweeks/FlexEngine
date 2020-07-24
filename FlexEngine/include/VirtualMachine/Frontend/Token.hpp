@@ -155,6 +155,12 @@ namespace flex
 
 	struct Token
 	{
+		Token() :
+			span(0, 0),
+			kind(TokenKind::_NONE)
+		{
+		}
+
 		Token(Span span, TokenKind kind, const std::string& value) :
 			span(span),
 			kind(kind),

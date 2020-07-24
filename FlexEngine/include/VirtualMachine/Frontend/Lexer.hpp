@@ -19,7 +19,7 @@ namespace flex
 		{
 		}
 
-		SourceIter(const std::string source) :
+		SourceIter(const std::string& source) :
 			source(source),
 			index(0),
 			lineNumber(0),

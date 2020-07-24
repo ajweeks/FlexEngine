@@ -97,11 +97,11 @@ namespace flex
 
 	const char* BinaryOperatorTypeToString(BinaryOperatorType opType);
 
+	bool IsCompoundAssignment(BinaryOperatorType type);
+
 	BinaryOperatorType TokenKindToBinaryOperatorType(TokenKind tokenKind);
 
 	i32 GetBinaryOperatorPrecedence(TokenKind tokenKind);
-
-	bool IsCompoundAssignment(BinaryOperatorType type);
 
 	enum class TypeName
 	{
@@ -143,11 +143,6 @@ namespace flex
 	TypeName TokenKindToTypeName(TokenKind tokenKind);
 	TypeName TypeNameToListVariant(TypeName baseType);
 
-	struct Type
-	{
-		static TypeName GetTypeNameFromStr(const std::string& str);
-	};
-
 	enum class ValueType
 	{
 		OPERATION,
@@ -166,6 +161,10 @@ namespace flex
 	{
 		explicit Statement(const Span& span);
 
+		virtual ~Statement()
+		{
+		}
+
 		virtual std::string ToString() const = 0;
 
 		Span span;
@@ -179,6 +178,10 @@ namespace flex
 		{
 		}
 
+		virtual ~Expression()
+		{
+		}
+
 		Expression(Span span) :
 			Statement(span)
 		{
@@ -187,7 +190,7 @@ namespace flex
 		TypeName typeName = TypeName::UNKNOWN;
 	};
 
-	struct EmptyStatement : public Statement
+	struct EmptyStatement final : public Statement
 	{
 		EmptyStatement(const Span& span) :
 			Statement(span)
@@ -200,18 +203,17 @@ namespace flex
 		}
 	};
 
-	struct StatementBlock : public Statement
+	struct StatementBlock final : public Statement
 	{
-		explicit StatementBlock(const Span& span, const std::vector<Statement*>& statements);
-
-		void Push(Statement* statement);
+		StatementBlock(const Span& span, const std::vector<Statement*>& statements);
+		virtual ~StatementBlock();
 
 		virtual std::string ToString() const override;
 
 		std::vector<Statement*> statements;
 	};
 
-	struct IfStatement : public Statement
+	struct IfStatement final : public Statement
 	{
 		IfStatement(const Span& span, Expression* condition, Statement* then, Statement* otherwise) :
 			Statement(span),
@@ -221,6 +223,8 @@ namespace flex
 		{
 		}
 
+		virtual ~IfStatement();
+
 		virtual std::string ToString() const override;
 
 		Expression* condition = nullptr;
@@ -228,7 +232,7 @@ namespace flex
 		Statement* otherwise = nullptr;
 	};
 
-	struct ForStatement : public Statement
+	struct ForStatement final : public Statement
 	{
 		ForStatement(const Span& span, Expression* setup, Expression* condition, Expression* update, Statement* body) :
 			Statement(span),
@@ -239,6 +243,8 @@ namespace flex
 		{
 		}
 
+		virtual ~ForStatement();
+
 		virtual std::string ToString() const override;
 
 		Expression* setup = nullptr;
@@ -247,7 +253,7 @@ namespace flex
 		Statement* body = nullptr;
 	};
 
-	struct WhileStatement : public Statement
+	struct WhileStatement final : public Statement
 	{
 		WhileStatement(const Span& span, Expression* condition, Statement* body) :
 			Statement(span),
@@ -256,13 +262,15 @@ namespace flex
 		{
 		}
 
+		virtual ~WhileStatement();
+
 		virtual std::string ToString() const override;
 
 		Expression* condition = nullptr;
 		Statement* body = nullptr;
 	};
 
-	struct DoWhileStatement : public Statement
+	struct DoWhileStatement final : public Statement
 	{
 		DoWhileStatement(const Span& span, Expression* condition, Statement* body) :
 			Statement(span),
@@ -271,13 +279,15 @@ namespace flex
 		{
 		}
 
+		virtual ~DoWhileStatement();
+
 		virtual std::string ToString() const override;
 
 		Expression* condition = nullptr;
 		Statement* body = nullptr;
 	};
 
-	struct FunctionDeclaration : Statement
+	struct FunctionDeclaration final : Statement
 	{
 		FunctionDeclaration(Span span, const std::string& name, const std::vector<struct Identifier*>& arguments, TypeName returnType, StatementBlock* body) :
 			Statement(span),
@@ -288,6 +298,8 @@ namespace flex
 		{
 		}
 
+		virtual ~FunctionDeclaration();
+
 		virtual std::string ToString() const override;
 
 		std::string name;
@@ -296,7 +308,7 @@ namespace flex
 		StatementBlock* body;
 	};
 
-	struct BreakStatement : Statement
+	struct BreakStatement final : Statement
 	{
 		BreakStatement(Span span) :
 			Statement(span)
@@ -309,7 +321,7 @@ namespace flex
 		}
 	};
 
-	struct YieldStatement : Statement
+	struct YieldStatement final : Statement
 	{
 		YieldStatement(Span span, Expression* yieldValue) :
 			Statement(span),
@@ -317,22 +329,14 @@ namespace flex
 		{
 		}
 
-		virtual std::string ToString() const override
-		{
-			if (yieldValue != nullptr)
-			{
-				return "yield " + yieldValue->ToString() + ";";
-			}
-			else
-			{
-				return "yield;";
-			}
-		}
+		virtual ~YieldStatement();
+
+		virtual std::string ToString() const override;
 
 		Expression* yieldValue = nullptr;
 	};
 
-	struct ReturnStatement : Statement
+	struct ReturnStatement final : Statement
 	{
 		ReturnStatement(Span span, Expression* returnValue) :
 			Statement(span),
@@ -340,22 +344,14 @@ namespace flex
 		{
 		}
 
-		virtual std::string ToString() const override
-		{
-			if (returnValue != nullptr)
-			{
-				return "return " + returnValue->ToString() + ";";
-			}
-			else
-			{
-				return "return;";
-			}
-		}
+		virtual ~ReturnStatement();
+
+		virtual std::string ToString() const override;
 
 		Expression* returnValue = nullptr;
 	};
 
-	struct Declaration : Expression
+	struct Declaration final : Expression
 	{
 		Declaration(const Span& span, const std::string& identifierStr, Expression* initializer, TypeName typeName) :
 			Expression(span, typeName),
@@ -364,23 +360,15 @@ namespace flex
 		{
 		}
 
-		virtual std::string ToString() const override
-		{
-			if (initializer != nullptr)
-			{
-				return TypeNameToString(typeName) + " " + identifierStr + " = " + initializer->ToString() + ";";
-			}
-			else
-			{
-				return TypeNameToString(typeName) + " " + identifierStr + ";";
-			}
-		}
+		virtual ~Declaration();
+
+		virtual std::string ToString() const override;
 
 		std::string identifierStr;
 		Expression* initializer = nullptr;
 	};
 
-	struct Identifier : Expression
+	struct Identifier final : Expression
 	{
 		Identifier(const Span& span, const std::string& identifierStr, TypeName typeName) :
 			Expression(span, typeName),
@@ -402,7 +390,7 @@ namespace flex
 		std::string identifierStr;
 	};
 
-	struct Assignment : Expression
+	struct Assignment final : Expression
 	{
 		Assignment(const Span& span, Identifier* lhs, Expression* rhs) :
 			Expression(span),
@@ -411,16 +399,15 @@ namespace flex
 		{
 		}
 
-		virtual std::string ToString() const override
-		{
-			return lhs->ToString() + " = " + rhs->ToString() + ";";
-		}
+		virtual ~Assignment();
+
+		virtual std::string ToString() const override;
 
 		Identifier* lhs;
 		Expression* rhs;
 	};
 
-	struct IntLiteral : Expression
+	struct IntLiteral final : Expression
 	{
 		IntLiteral(const Span& span, i32 value) :
 			Expression(span, TypeName::INT),
@@ -436,7 +423,7 @@ namespace flex
 		i32 value;
 	};
 
-	struct FloatLiteral : Expression
+	struct FloatLiteral final : Expression
 	{
 		FloatLiteral(const Span& span, real value) :
 			Expression(span, TypeName::FLOAT),
@@ -452,7 +439,7 @@ namespace flex
 		real value;
 	};
 
-	struct BoolLiteral : Expression
+	struct BoolLiteral final : Expression
 	{
 		BoolLiteral(const Span& span, bool value) :
 			Expression(span, TypeName::BOOL),
@@ -468,7 +455,7 @@ namespace flex
 		bool value;
 	};
 
-	struct StringLiteral : Expression
+	struct StringLiteral final : Expression
 	{
 		StringLiteral(const Span& span, const std::string& value) :
 			Expression(span, TypeName::STRING),
@@ -484,7 +471,7 @@ namespace flex
 		std::string value;
 	};
 
-	struct CharLiteral : Expression
+	struct CharLiteral final : Expression
 	{
 		CharLiteral(const Span& span, char value) :
 			Expression(span, TypeName::CHAR),
@@ -500,7 +487,7 @@ namespace flex
 		char value;
 	};
 
-	struct ListInitializer : Expression
+	struct ListInitializer final : Expression
 	{
 		ListInitializer(const Span& span, const std::vector<Expression*>& listValues) :
 			Expression(span),
@@ -508,12 +495,14 @@ namespace flex
 		{
 		}
 
+		virtual ~ListInitializer();
+
 		virtual std::string ToString() const override;
 
 		std::vector<Expression*> listValues;
 	};
 
-	struct IndexOperation : Expression
+	struct IndexOperation final : Expression
 	{
 		IndexOperation(const Span& span, const std::string& container, Expression* indexExpression) :
 			Expression(span),
@@ -522,13 +511,15 @@ namespace flex
 		{
 		}
 
+		virtual ~IndexOperation();
+
 		virtual std::string ToString() const override;
 
 		std::string container;
 		Expression* indexExpression = nullptr;
 	};
 
-	struct UnaryOperation : Expression
+	struct UnaryOperation final : Expression
 	{
 		UnaryOperation(Span span, UnaryOperatorType type, Expression* expression) :
 			Expression(span),
@@ -537,30 +528,15 @@ namespace flex
 		{
 		}
 
+		virtual ~UnaryOperation();
+
 		virtual std::string ToString() const override;
 
 		Expression* expression = nullptr;
 		UnaryOperatorType type;
 	};
 
-	struct TernaryOperation : Expression
-	{
-		TernaryOperation(Span span, Expression* condition, Expression* ifTrue, Expression* ifFalse) :
-			Expression(span),
-			condition(condition),
-			ifTrue(ifTrue),
-			ifFalse(ifFalse)
-		{
-		}
-
-		virtual std::string ToString() const override;
-
-		Expression* condition;
-		Expression* ifTrue;
-		Expression* ifFalse;
-	};
-
-	struct BinaryOperation : Expression
+	struct BinaryOperation final : Expression
 	{
 		BinaryOperation(Span span, BinaryOperatorType type, Expression* lhs, Expression* rhs) :
 			Expression(span),
@@ -570,17 +546,35 @@ namespace flex
 		{
 		}
 
-		virtual std::string ToString() const override
-		{
-			return lhs->ToString() + " " + BinaryOperatorTypeToString(type) + " " + rhs->ToString();
-		}
+		virtual ~BinaryOperation();
+
+		virtual std::string ToString() const override;
 
 		BinaryOperatorType type;
 		Expression* lhs = nullptr;
 		Expression* rhs = nullptr;
 	};
 
-	struct FunctionCall : Expression
+	struct TernaryOperation final : Expression
+	{
+		TernaryOperation(Span span, Expression* condition, Expression* ifTrue, Expression* ifFalse) :
+			Expression(span),
+			condition(condition),
+			ifTrue(ifTrue),
+			ifFalse(ifFalse)
+		{
+		}
+
+		virtual ~TernaryOperation();
+
+		virtual std::string ToString() const override;
+
+		Expression* condition;
+		Expression* ifTrue;
+		Expression* ifFalse;
+	};
+
+	struct FunctionCall final : Expression
 	{
 		FunctionCall(Span span, const std::string& target, const std::vector<Expression*>& arguments) :
 			Expression(span),
@@ -588,6 +582,8 @@ namespace flex
 			arguments(arguments)
 		{
 		}
+
+		virtual ~FunctionCall();
 
 		virtual std::string ToString() const override;
 
@@ -599,6 +595,11 @@ namespace flex
 	{
 	public:
 		Parser(Lexer* lexer, DiagnosticContainer* diagnosticContainer);
+
+		Parser(Parser&) = delete;
+		Parser(Parser&&) = delete;
+		Parser& operator=(Parser&) = delete;
+		Parser& operator=(Parser&&) = delete;
 
 		bool HasNext();
 		bool NextIs(TokenKind tokenKind);
@@ -633,6 +634,11 @@ namespace flex
 	struct AST
 	{
 		explicit AST();
+
+		AST(AST&) = delete;
+		AST(AST&&) = delete;
+		AST& operator=(AST&) = delete;
+		AST& operator=(AST&&) = delete;
 
 		void Generate(const std::string& sourceText);
 		void Destroy();
