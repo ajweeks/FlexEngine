@@ -585,44 +585,241 @@ namespace flex
 		}
 		UNIT_TEST_END;
 
-		static void RunTerminalTests()
+		UNIT_TEST(ParseTestBasic1)
 		{
 			AST* ast = new AST();
 
-			ast->Generate("\n//int abcdefghi = 115615; \n\
-				float basicBit = 55.21235f; int    aaa   =    111111  ;   //\n\
-				/* \n \
-					 blocky \n\
-					comment \n \
-				*/ \n \
-\
-				func my_function(int index, string name) -> int { \n\
-					int result = name[index]; \n\
-					return result; \n \
-				} \n \
-				int result = my_function(1, \"test\"); \
-				\
-				string str = \"long   string with \\\"lots\\\"  of fun spaces! // /* */ \"; \n\
-				bool b = abcdefghi != 115615 || 7 ^ ~33; \n\
-				int[] list = { 11, 22, 33, 44, 55 }; \n\
-				int chosen_one = list[0*1+2+1]; \n\
-				int a = (2 * 3 + 1) * 4 + 5 - 1 * 50 / 2; \n\
-				basicBit = b ? (basicBit * 3.5f + 7 / aaa) : 0.0f;\n\n");
+			std::string source = "int abcd = 1234;\n";
+			ast->Generate(source);
 
-			Print(ast->diagnosticContainer->diagnostics.empty() ? "Success\n" : "Errors present\n");
+			EXPECT(ast->diagnosticContainer->diagnostics.empty(), true);
 			for (const Diagnostic& diagnostic : ast->diagnosticContainer->diagnostics)
 			{
 				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
 			}
 
 			std::string reconstructedStr = ast->rootBlock->ToString();
-			Print("%s\n", reconstructedStr.c_str());
+			EXPECT(strcmp(reconstructedStr.c_str(), source.c_str()), 0);
 
-			Print("Complete\n");
+			EXPECT(ast->rootBlock->statements.size(), 1);
+			Declaration* decl = dynamic_cast<Declaration*>(ast->rootBlock->statements[0]);
+			EXPECT(decl != nullptr, true);
+			EXPECT((u32)decl->typeName, (u32)TypeName::INT);
+			EXPECT(strcmp(decl->identifierStr.c_str(), "abcd"), 0);
+			IntLiteral* intLit = dynamic_cast<IntLiteral*>(decl->initializer);
+			EXPECT(intLit != nullptr, true);
+			EXPECT((u32)intLit->typeName, (u32)TypeName::INT);
+			EXPECT(intLit->value, 1234);
 
 			ast->Destroy();
 			delete ast;
 		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(ParseTestBasic2)
+		{
+			AST* ast = new AST();
+
+			std::string source =
+				"bool a = true;\n"
+				"bool b = false;\n"
+				"bool result = ((a && !b) && (b || a));\n";
+			ast->Generate(source);
+
+			EXPECT(ast->diagnosticContainer->diagnostics.empty(), true);
+			for (const Diagnostic& diagnostic : ast->diagnosticContainer->diagnostics)
+			{
+				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
+			}
+
+			std::string reconstructedStr = ast->rootBlock->ToString();
+			EXPECT(strcmp(reconstructedStr.c_str(), source.c_str()), 0);
+
+			EXPECT(ast->rootBlock->statements.size(), 3);
+
+			Declaration* decl = dynamic_cast<Declaration*>(ast->rootBlock->statements[0]);
+			EXPECT(decl != nullptr, true);
+			EXPECT((u32)decl->typeName, (u32)TypeName::BOOL);
+
+			decl = dynamic_cast<Declaration*>(ast->rootBlock->statements[1]);
+			EXPECT(decl != nullptr, true);
+			EXPECT((u32)decl->typeName, (u32)TypeName::BOOL);
+
+			decl = dynamic_cast<Declaration*>(ast->rootBlock->statements[2]);
+			EXPECT(decl != nullptr, true);
+			EXPECT((u32)decl->typeName, (u32)TypeName::BOOL);
+			EXPECT(strcmp(decl->identifierStr.c_str(), "result"), 0);
+			BinaryOperation* bin0 = dynamic_cast<BinaryOperation*>(decl->initializer);
+			EXPECT(bin0 != nullptr, true);
+			EXPECT((u32)bin0->type, (u32)BinaryOperatorType::BOOLEAN_AND);
+			BinaryOperation* lhs = dynamic_cast<BinaryOperation*>(bin0->lhs);
+			BinaryOperation* rhs = dynamic_cast<BinaryOperation*>(bin0->rhs);
+			EXPECT(lhs != nullptr, true);
+			EXPECT(rhs != nullptr, true);
+			EXPECT((u32)lhs->type, (u32)BinaryOperatorType::BOOLEAN_AND);
+			EXPECT((u32)rhs->type, (u32)BinaryOperatorType::BOOLEAN_OR);
+			Identifier* a0 = dynamic_cast<Identifier*>(lhs->lhs);
+			UnaryOperation* b0Op = dynamic_cast<UnaryOperation*>(lhs->rhs);
+			EXPECT(b0Op != nullptr, true);
+			EXPECT((u32)b0Op->type, (u32)UnaryOperatorType::NOT);
+			Identifier* b0 = dynamic_cast<Identifier*>(b0Op->expression);
+			Identifier* b1 = dynamic_cast<Identifier*>(rhs->lhs);
+			Identifier* a1 = dynamic_cast<Identifier*>(rhs->rhs);
+			EXPECT(a0 != nullptr, true);
+			EXPECT(b0 != nullptr, true);
+			EXPECT(b1 != nullptr, true);
+			EXPECT(a1 != nullptr, true);
+			EXPECT(strcmp(a0->identifierStr.c_str(), "a"), 0);
+			EXPECT(strcmp(b0->identifierStr.c_str(), "b"), 0);
+			EXPECT(strcmp(b1->identifierStr.c_str(), "b"), 0);
+			EXPECT(strcmp(a1->identifierStr.c_str(), "a"), 0);
+
+			ast->Destroy();
+			delete ast;
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(ParseTestEmptyFor)
+		{
+			AST* ast = new AST();
+
+			std::string source =
+				"for (;;)\n{\n}\n";
+			ast->Generate(source);
+
+			EXPECT(ast->diagnosticContainer->diagnostics.empty(), true);
+			for (const Diagnostic& diagnostic : ast->diagnosticContainer->diagnostics)
+			{
+				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
+			}
+
+			std::string reconstructedStr = ast->rootBlock->ToString();
+			EXPECT(strcmp(reconstructedStr.c_str(), source.c_str()), 0);
+
+			EXPECT(ast->rootBlock->statements.size(), 1);
+
+			ForStatement* forStatement = dynamic_cast<ForStatement*>(ast->rootBlock->statements[0]);
+			EXPECT(forStatement != nullptr, true);
+			EXPECT(forStatement->setup == nullptr, true);
+			EXPECT(forStatement->condition == nullptr, true);
+			EXPECT(forStatement->update == nullptr, true);
+			EXPECT(forStatement->body != nullptr, true);
+			StatementBlock* body = dynamic_cast<StatementBlock*>(forStatement->body);
+			EXPECT(body != nullptr, true);
+			EXPECT(body->statements.size(), 0);
+
+			ast->Destroy();
+			delete ast;
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(ParseTestEmptyWhile)
+		{
+			AST* ast = new AST();
+
+			std::string source =
+				"while (1)\n{\n}\n";
+			ast->Generate(source);
+
+			EXPECT(ast->diagnosticContainer->diagnostics.empty(), true);
+			for (const Diagnostic& diagnostic : ast->diagnosticContainer->diagnostics)
+			{
+				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
+			}
+
+			std::string reconstructedStr = ast->rootBlock->ToString();
+			EXPECT(strcmp(reconstructedStr.c_str(), source.c_str()), 0);
+
+			EXPECT(ast->rootBlock->statements.size(), 1);
+
+			WhileStatement* whileStatement = dynamic_cast<WhileStatement*>(ast->rootBlock->statements[0]);
+			EXPECT(whileStatement != nullptr, true);
+			IntLiteral* condition = dynamic_cast<IntLiteral*>(whileStatement->condition);
+			EXPECT(condition != nullptr, true);
+			EXPECT(condition->value, 1);
+			EXPECT(whileStatement->body != nullptr, true);
+			StatementBlock* body = dynamic_cast<StatementBlock*>(whileStatement->body);
+			EXPECT(body != nullptr, true);
+			EXPECT(body->statements.size(), 0);
+
+			ast->Destroy();
+			delete ast;
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(ParseTestEmptyDoWhile)
+		{
+			AST* ast = new AST();
+
+			std::string source =
+				"do\n{\n} while (1);\n";
+			ast->Generate(source);
+
+			EXPECT(ast->diagnosticContainer->diagnostics.empty(), true);
+			for (const Diagnostic& diagnostic : ast->diagnosticContainer->diagnostics)
+			{
+				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
+			}
+
+			std::string reconstructedStr = ast->rootBlock->ToString();
+			EXPECT(strcmp(reconstructedStr.c_str(), source.c_str()), 0);
+
+			EXPECT(ast->rootBlock->statements.size(), 1);
+
+			DoWhileStatement* doWhileStatement = dynamic_cast<DoWhileStatement*>(ast->rootBlock->statements[0]);
+			EXPECT(doWhileStatement != nullptr, true);
+			IntLiteral* condition = dynamic_cast<IntLiteral*>(doWhileStatement->condition);
+			EXPECT(condition != nullptr, true);
+			EXPECT(condition->value, 1);
+			EXPECT(doWhileStatement->body != nullptr, true);
+			StatementBlock* body = dynamic_cast<StatementBlock*>(doWhileStatement->body);
+			EXPECT(body != nullptr, true);
+			EXPECT(body->statements.size(), 0);
+
+			ast->Destroy();
+			delete ast;
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(RunTerminalTests)
+		{
+			AST* ast = new AST();
+
+			ast->Generate("\n"
+				"//int abcdefghi = 115615;\n"
+				"float basicBit = 55.21235f; int    aaa   =    111111  ;   //\n"
+				"/* \n"
+				"	 blocky \n"
+				"		comment \n"
+				"*/ \n"
+				"\n"
+				"func my_function(int index, string name) -> int { \n"
+				"	int result = name[index]; \n"
+				"	return result; \n"
+				"} \n"
+				"int result = my_function(1, \"test\"); \n"
+				"\n"
+				"string str = \"long   string with \\\"lots\\\"  of fun spaces! // /* */ \"; \n"
+				"bool b = abcdefghi != 115615 || 7 ^ ~33; \n"
+				"int[] list = { 11, 22, 33, 44, 55 }; \n"
+				"int chosen_one = list[0*1+2+1]; \n"
+				"int a = (2 * 3 + 1) * 4 + 5 - 1 * 50 / 2; \n"
+				"bool baby = (1==2) && (2 >= 9) || ((9*6 - 1 < 717)); \n"
+				"basicBit = b ? (basicBit * 3.5f + 7 / aaa) : 0.0f;\n\n");
+
+			EXPECT(ast->diagnosticContainer->diagnostics.empty(), true);
+			for (const Diagnostic& diagnostic : ast->diagnosticContainer->diagnostics)
+			{
+				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
+			}
+
+			std::string reconstructedStr = ast->rootBlock->ToString();
+			//Print("%s\n", reconstructedStr.c_str());
+
+			ast->Destroy();
+			delete ast;
+		}
+		UNIT_TEST_END
 
 	public:
 		static void Run()
@@ -639,6 +836,7 @@ namespace flex
 				// Misc
 				CountSetBitsValid, PoolTests, PairTests
 				*/
+				ParseTestBasic1, ParseTestBasic2, ParseTestEmptyFor, ParseTestEmptyWhile, ParseTestEmptyDoWhile,
 				RunTerminalTests
 			};
 			Print("Running %u tests...\n", (u32)ARRAY_LENGTH(funcs));
