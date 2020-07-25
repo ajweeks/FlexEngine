@@ -789,8 +789,9 @@ namespace flex
 				"//int abcdefghi = 115615;\n"
 				"float basicBit = 55.21235f; int    aaa   =    111111  ;   //\n"
 				"/* \n"
-				"	 blocky \n"
-				"		comment \n"
+				"	 /*blocky \n"
+				"		nested comment*/ \n"
+				" // func //// int // '); DROP TABLE users \n"
 				"*/ \n"
 				"\n"
 				"func my_function(int index, string name) -> int { \n"
@@ -802,9 +803,15 @@ namespace flex
 				"string str = \"long   string with \\\"lots\\\"  of fun spaces! // /* */ \"; \n"
 				"bool b = abcdefghi != 115615 || 7 ^ ~33; \n"
 				"int[] list = { 11, 22, 33, 44, 55 }; \n"
-				"int chosen_one = list[0*1+2+1]; \n"
-				"int a = (2 * 3 + 1) * 4 + 5 - 1 * 50 / 2; \n"
+				"int chosen_one = list[0*1+2+1];;;;; \n"
+				";;;;int a = (2 * 3 + 1) * 4 + 5 - 1 * 50 / 2; \n"
 				"bool baby = (1==2) && (2 >= 9) || ((9*6 - 1 < 717)); \n"
+				"if ((1 + 1) == 2) { print(\"Calcium!\");;; } \n"
+				"elif ((3 * 3) == (8 * 8)) { print(\"Bromine? (%i)\", a); }\n"
+				"else { print(\"maganese...\"); }\n"
+				"int i = 0;\n"
+				"while (1) { print(\"%i\", i); i += 1; if (i > 100) break; print(\"keep going\"); }\n"
+				"alpha += 33; basicBit /= 9.0; basicBit *= 2.f; basicBit -= 0.01f; \n\n"
 				"basicBit = b ? (basicBit * 3.5f + 7 / aaa) : 0.0f;\n\n");
 
 			EXPECT(ast->diagnosticContainer->diagnostics.empty(), true);
@@ -814,7 +821,7 @@ namespace flex
 			}
 
 			std::string reconstructedStr = ast->rootBlock->ToString();
-			//Print("%s\n", reconstructedStr.c_str());
+			Print("%s\n", reconstructedStr.c_str());
 
 			ast->Destroy();
 			delete ast;

@@ -226,11 +226,18 @@ namespace flex
 
 		stringBuilder.Append("if (");
 		stringBuilder.Append(condition->ToString());
-		stringBuilder.Append(") {\n");
+		stringBuilder.Append(")\n");
 		stringBuilder.Append(then->ToString());
-		stringBuilder.Append("\n}");
 		if (otherwise != nullptr)
 		{
+			if (dynamic_cast<IfStatement*>(otherwise) != nullptr)
+			{
+				stringBuilder.Append("\nelif (");
+			}
+			else
+			{
+				stringBuilder.Append("\nelse\n");
+			}
 			stringBuilder.Append(otherwise->ToString());
 		}
 
@@ -412,7 +419,6 @@ namespace flex
 
 	Assignment::~Assignment()
 	{
-		delete lhs;
 		delete rhs;
 	}
 
@@ -420,8 +426,28 @@ namespace flex
 	{
 		StringBuilder stringBuilder;
 
-		stringBuilder.Append(lhs->ToString());
+		stringBuilder.Append(lhs);
 		stringBuilder.Append(" = ");
+		stringBuilder.Append(rhs->ToString());
+		stringBuilder.Append(";");
+
+		return stringBuilder.ToString();
+	}
+
+	CompoundAssignment::~CompoundAssignment()
+	{
+		delete rhs;
+	}
+
+	std::string CompoundAssignment::ToString() const
+	{
+
+		StringBuilder stringBuilder;
+
+		stringBuilder.Append(lhs);
+		stringBuilder.Append(" ");
+		stringBuilder.Append(BinaryOperatorTypeToString(operatorType));
+		stringBuilder.Append(" ");
 		stringBuilder.Append(rhs->ToString());
 		stringBuilder.Append(";");
 
@@ -566,7 +592,7 @@ namespace flex
 			}
 
 		}
-		stringBuilder.Append(")");
+		stringBuilder.Append(");");
 
 		return stringBuilder.ToString();
 	}
@@ -617,6 +643,18 @@ namespace flex
 			NextIs(TokenKind::BINARY_XOR);
 	}
 
+	bool Parser::NextIsCompoundAssignment()
+	{
+		return NextIs(TokenKind::PLUS_EQUALS) ||
+			NextIs(TokenKind::MINUS_EQUALS) ||
+			NextIs(TokenKind::STAR_EQUALS) ||
+			NextIs(TokenKind::FOR_SLASH_EQUALS) ||
+			NextIs(TokenKind::PERCENT_EQUALS) ||
+			NextIs(TokenKind::BINARY_AND_EQUALS) ||
+			NextIs(TokenKind::BINARY_OR_EQUALS) ||
+			NextIs(TokenKind::BINARY_XOR_EQUALS);
+	}
+
 	Token Parser::Eat(TokenKind tokenKind)
 	{
 		const u32 lineNumber = m_Lexer->sourceIter.lineNumber;
@@ -647,6 +685,11 @@ namespace flex
 		while (HasNext() && !NextIs(TokenKind::CLOSE_CURLY))
 		{
 			statements.push_back(NextStatement());
+
+			while (NextIs(TokenKind::SEMICOLON))
+			{
+				Eat(TokenKind::SEMICOLON);
+			}
 		}
 
 		return new StatementBlock(span.Extend(Eat(TokenKind::CLOSE_CURLY).span), statements);
@@ -660,6 +703,11 @@ namespace flex
 		while (!m_Lexer->sourceIter.EndOfFileReached())
 		{
 			statements.push_back(NextStatement());
+
+			while (NextIs(TokenKind::SEMICOLON))
+			{
+				Eat(TokenKind::SEMICOLON);
+			}
 		}
 
 		Eat(TokenKind::END_OF_FILE);
@@ -709,8 +757,6 @@ namespace flex
 				initializer = NextExpression();
 				span = span.Extend(initializer->span);
 			}
-
-			Eat(TokenKind::SEMICOLON);
 
 			return new Declaration(span, identifierToken.value, initializer, typeName);
 		}
@@ -776,11 +822,21 @@ namespace flex
 				Expression* rhs = NextExpression();
 				rhs->span = rhs->span.Extend(Eat(TokenKind::SEMICOLON).span);
 
-				return new Assignment(span.Extend(rhs->span), new Identifier(span, identifierToken.value), rhs);
+				return new Assignment(span.Extend(rhs->span), identifierToken.value, rhs);
 			}
-			//else if (NextIsCompoundAssignment())
+			else if (NextIsCompoundAssignment())
 			{
+				Token opToken = Eat(m_Current.kind);
 
+				Expression* rhs = NextExpression();
+				rhs->span = rhs->span.Extend(Eat(TokenKind::SEMICOLON).span);
+
+				return new CompoundAssignment(span.Extend(rhs->span), identifierToken.value, rhs, TokenKindToBinaryOperatorType(opToken.kind));
+			}
+			else if (NextIs(TokenKind::PLUS_PLUS) || NextIs(TokenKind::MINUS_MINUS))
+			{
+				diagnosticContainer->AddDiagnostic(m_Current.span, m_Lexer->sourceIter.lineNumber, m_Lexer->sourceIter.columnIndex, "Increment/decrement operator not supported!");
+				Eat(m_Current.kind);
 			}
 
 			return new Identifier(span, identifierToken.value);
@@ -797,6 +853,13 @@ namespace flex
 		{
 			return NextListInitializer();
 		}
+		else if (NextIs(TokenKind::PLUS_PLUS) || NextIs(TokenKind::MINUS_MINUS))
+		{
+			diagnosticContainer->AddDiagnostic(m_Current.span, m_Lexer->sourceIter.lineNumber, m_Lexer->sourceIter.columnIndex, "Increment/decrement operator not supported!");
+			Eat(m_Current.kind);
+			return nullptr;
+		}
+
 		StringBuilder diagnosticStr;
 		diagnosticStr.Append("Expected expression, but found \"");
 		diagnosticStr.Append(TokenKindToString(m_Current.kind));
@@ -911,12 +974,14 @@ namespace flex
 		else if (NextIs(TokenKind::YIELD))
 		{
 			Token yieldToken = Eat(TokenKind::YIELD);
-			Eat(TokenKind::SEMICOLON);
+
 			Expression* yieldValue = nullptr;
 			if (!NextIs(TokenKind::SEMICOLON))
 			{
 				yieldValue = NextExpression();
 			}
+			Eat(TokenKind::SEMICOLON);
+
 			return new YieldStatement(yieldToken.span.Extend(Eat(TokenKind::SEMICOLON).span), yieldValue);
 		}
 		else if (NextIs(TokenKind::RETURN))
@@ -928,7 +993,6 @@ namespace flex
 			{
 				returnValue = NextExpression();
 			}
-
 			Eat(TokenKind::SEMICOLON);
 
 			return new ReturnStatement(returnToken.span, returnValue);
@@ -940,12 +1004,21 @@ namespace flex
 		diagnosticStr.Append("\"");
 		diagnosticContainer->AddDiagnostic(m_Current.span, m_Lexer->sourceIter.lineNumber, m_Lexer->sourceIter.columnIndex, diagnosticStr.ToString());
 
+		Eat(m_Current.kind);
+
 		return nullptr;
 	}
 
-	Statement* Parser::NextIfStatement()
+	IfStatement* Parser::NextIfStatement()
 	{
-		Span span = Eat(TokenKind::IF).span;
+		if (!NextIs(TokenKind::IF) && !NextIs(TokenKind::ELIF))
+		{
+			std::string tokenKindStr(TokenKindToString(m_Current.kind));
+			diagnosticContainer->AddDiagnostic(m_Current.span, m_Lexer->sourceIter.lineNumber, m_Lexer->sourceIter.columnIndex, "Expected if or elif, instead got " + tokenKindStr);
+			return nullptr;
+		}
+
+		Span span = Eat(m_Current.kind).span;
 		Eat(TokenKind::OPEN_PAREN);
 		Expression* condition = NextExpression();
 		Eat(TokenKind::CLOSE_PAREN);
@@ -953,8 +1026,13 @@ namespace flex
 		span = span.Extend(then->span);
 
 		Statement* otherwise = nullptr;
-		if (NextIs(TokenKind::ELSE) || NextIs(TokenKind::ELIF))
+		if (NextIs(TokenKind::ELIF))
 		{
+			otherwise = NextIfStatement();
+		}
+		else if (NextIs(TokenKind::ELSE))
+		{
+			Eat(TokenKind::ELSE);
 			otherwise = NextStatement();
 			span = span.Extend(otherwise->span);
 		}
@@ -962,7 +1040,7 @@ namespace flex
 		return new IfStatement(span, condition, then, otherwise);
 	}
 
-	Statement* Parser::NextForStatement()
+	ForStatement* Parser::NextForStatement()
 	{
 		Span span = Eat(TokenKind::FOR).span;
 		Expression* setup = nullptr;
@@ -988,7 +1066,7 @@ namespace flex
 		return new ForStatement(span.Extend(body->span), setup, condition, update, body);
 	}
 
-	Statement* Parser::NextWhileStatement()
+	WhileStatement* Parser::NextWhileStatement()
 	{
 		Span span = Eat(TokenKind::WHILE).span;
 		Eat(TokenKind::OPEN_PAREN);
@@ -998,7 +1076,7 @@ namespace flex
 		return new WhileStatement(span.Extend(body->span), condition, body);
 	}
 
-	Statement* Parser::NextDoWhileStatement()
+	DoWhileStatement* Parser::NextDoWhileStatement()
 	{
 		Span span = Eat(TokenKind::DO).span;
 		Statement* body = NextStatement();

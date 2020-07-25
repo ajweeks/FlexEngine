@@ -135,6 +135,11 @@ namespace flex
 					Advance();
 					return Token(GetSpan(), TokenKind::PLUS_EQUALS);
 				}
+				else if (sourceIter.Current() == '+')
+				{
+					Advance();
+					return Token(GetSpan(), TokenKind::PLUS_PLUS);
+				}
 			}
 
 			return Token(GetSpan(), TokenKind::PLUS);
@@ -150,6 +155,11 @@ namespace flex
 				{
 					Advance();
 					return Token(GetSpan(), TokenKind::ARROW);
+				}
+				else if (sourceIter.Current() == '-')
+				{
+					Advance();
+					return Token(GetSpan(), TokenKind::MINUS_MINUS);
 				}
 			}
 
@@ -198,7 +208,7 @@ namespace flex
 				else if (sourceIter.Current() == '=')
 				{
 					Advance();
-					return Token(GetSpan(), TokenKind::BINARY_AND_ASSIGN);
+					return Token(GetSpan(), TokenKind::BINARY_AND_EQUALS);
 				}
 			}
 
@@ -214,7 +224,7 @@ namespace flex
 				else if (sourceIter.Current() == '=')
 				{
 					Advance();
-					return Token(GetSpan(), TokenKind::BINARY_OR_ASSIGN);
+					return Token(GetSpan(), TokenKind::BINARY_OR_EQUALS);
 				}
 			}
 
@@ -225,7 +235,7 @@ namespace flex
 				if (sourceIter.Current() == '=')
 				{
 					Advance();
-					return Token(GetSpan(), TokenKind::BINARY_XOR_ASSIGN);
+					return Token(GetSpan(), TokenKind::BINARY_XOR_EQUALS);
 				}
 			}
 

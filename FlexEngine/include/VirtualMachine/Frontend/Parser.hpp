@@ -51,8 +51,11 @@ namespace flex
 		MOD,
 		MOD_ASSIGN,
 		BIN_AND,
+		BIN_AND_ASSIGN,
 		BIN_OR,
+		BIN_OR_ASSIGN,
 		BIN_XOR,
+		BIN_XOR_ASSIGN,
 		EQUAL_TEST,
 		NOT_EQUAL_TEST,
 		GREATER_TEST,
@@ -79,8 +82,11 @@ namespace flex
 		"%",
 		"%=",
 		"&",
+		"&=",
 		"|",
+		"|=",
 		"^",
+		"^=",
 		"==",
 		"!=",
 		">",
@@ -392,7 +398,7 @@ namespace flex
 
 	struct Assignment final : Expression
 	{
-		Assignment(const Span& span, Identifier* lhs, Expression* rhs) :
+		Assignment(const Span& span, const std::string& lhs, Expression* rhs) :
 			Expression(span),
 			lhs(lhs),
 			rhs(rhs)
@@ -403,8 +409,27 @@ namespace flex
 
 		virtual std::string ToString() const override;
 
-		Identifier* lhs;
+		std::string lhs;
 		Expression* rhs;
+	};
+
+	struct CompoundAssignment final : Expression
+	{
+		CompoundAssignment(const Span& span, const std::string& lhs, Expression* rhs, BinaryOperatorType operatorType) :
+			Expression(span),
+			lhs(lhs),
+			rhs(rhs),
+			operatorType(operatorType)
+		{
+		}
+
+		virtual ~CompoundAssignment();
+
+		virtual std::string ToString() const override;
+
+		std::string lhs;
+		Expression* rhs;
+		BinaryOperatorType operatorType;
 	};
 
 	struct IntLiteral final : Expression
@@ -605,6 +630,7 @@ namespace flex
 		bool NextIs(TokenKind tokenKind);
 		bool NextIsTypename();
 		bool NextIsBinaryOperator();
+		bool NextIsCompoundAssignment();
 		Token Eat(TokenKind tokenKind);
 
 		StatementBlock* Parse();
@@ -615,10 +641,10 @@ namespace flex
 		UnaryOperation* NextUnary();
 		TernaryOperation* NextTernary(Expression* condition);
 		ListInitializer* NextListInitializer();
-		Statement* NextIfStatement();
-		Statement* NextForStatement();
-		Statement* NextWhileStatement();
-		Statement* NextDoWhileStatement();
+		IfStatement* NextIfStatement();
+		ForStatement* NextForStatement();
+		WhileStatement* NextWhileStatement();
+		DoWhileStatement* NextDoWhileStatement();
 		FunctionDeclaration* NextFunctionDeclaration();
 		StatementBlock* NextStatementBlock();
 		std::vector<Identifier*> NextArgumentDefinitionList();
