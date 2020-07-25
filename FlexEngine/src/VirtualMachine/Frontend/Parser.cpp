@@ -193,13 +193,22 @@ namespace flex
 	{
 		StringBuilder stringBuilder;
 
-		stringBuilder.Append("{\n");
+		// Don't print brackets for root block
+		bool bBrackets = (span.low > 0);
+
+		if (bBrackets)
+		{
+			stringBuilder.Append("{\n");
+		}
 		for (Statement* statement : statements)
 		{
 			stringBuilder.Append(statement->ToString());
 			stringBuilder.Append("\n");
 		}
-		stringBuilder.Append("}");
+		if (bBrackets)
+		{
+			stringBuilder.Append("}");
+		}
 
 		return stringBuilder.ToString();
 	}
@@ -241,14 +250,22 @@ namespace flex
 		StringBuilder stringBuilder;
 
 		stringBuilder.Append("for (");
-		stringBuilder.Append(setup->ToString());
+		if (setup != nullptr)
+		{
+			stringBuilder.Append(setup->ToString());
+		}
 		stringBuilder.Append(";");
-		stringBuilder.Append(condition->ToString());
+		if (condition != nullptr)
+		{
+			stringBuilder.Append(condition->ToString());
+		}
 		stringBuilder.Append(";");
-		stringBuilder.Append(update->ToString());
-		stringBuilder.Append(") {\n");
+		if (update != nullptr)
+		{
+			stringBuilder.Append(update->ToString());
+		}
+		stringBuilder.Append(")\n");
 		stringBuilder.Append(body->ToString());
-		stringBuilder.Append("\n}");
 
 		return stringBuilder.ToString();
 	}
@@ -265,9 +282,8 @@ namespace flex
 
 		stringBuilder.Append("while (");
 		stringBuilder.Append(condition->ToString());
-		stringBuilder.Append(") {\n");
+		stringBuilder.Append(")\n");
 		stringBuilder.Append(body->ToString());
-		stringBuilder.Append("\n}");
 
 		return stringBuilder.ToString();
 	}
@@ -282,11 +298,11 @@ namespace flex
 	{
 		StringBuilder stringBuilder;
 
-		stringBuilder.Append("do {\n");
+		stringBuilder.Append("do\n");
 		stringBuilder.Append(body->ToString());
-		stringBuilder.Append("\n} while (");
+		stringBuilder.Append(" while (");
 		stringBuilder.Append(condition->ToString());
-		stringBuilder.Append(")");
+		stringBuilder.Append(");");
 
 		return stringBuilder.ToString();
 	}
@@ -495,11 +511,13 @@ namespace flex
 	{
 		StringBuilder stringBuilder;
 
+		stringBuilder.Append("(");
 		stringBuilder.Append(lhs->ToString());
 		stringBuilder.Append(" ");
 		stringBuilder.Append(BinaryOperatorTypeToString(type));
 		stringBuilder.Append(" ");
 		stringBuilder.Append(rhs->ToString());
+		stringBuilder.Append(")");
 
 		return stringBuilder.ToString();
 	}
@@ -624,7 +642,7 @@ namespace flex
 
 	StatementBlock* Parser::NextStatementBlock()
 	{
-		Span span = m_Lexer->GetSpan();
+		Span span = Eat(TokenKind::OPEN_CURLY).span;
 		std::vector<Statement*> statements;
 		while (HasNext() && !NextIs(TokenKind::CLOSE_CURLY))
 		{
@@ -637,7 +655,7 @@ namespace flex
 	StatementBlock* Parser::Parse()
 	{
 		std::vector<Statement*> statements;
-		Span span = m_Lexer->m_CurrentSpan;
+		Span span = Span(0, 0);
 
 		while (!m_Lexer->sourceIter.EndOfFileReached())
 		{
@@ -947,12 +965,24 @@ namespace flex
 	Statement* Parser::NextForStatement()
 	{
 		Span span = Eat(TokenKind::FOR).span;
+		Expression* setup = nullptr;
+		Expression* condition = nullptr;
+		Expression* update = nullptr;
 		Eat(TokenKind::OPEN_PAREN);
-		Expression* setup = NextExpression();
+		if (!NextIs(TokenKind::SEMICOLON))
+		{
+			setup = NextExpression();
+		}
 		Eat(TokenKind::SEMICOLON);
-		Expression* condition = NextExpression();
+		if (!NextIs(TokenKind::SEMICOLON))
+		{
+			condition = NextExpression();
+		}
 		Eat(TokenKind::SEMICOLON);
-		Expression* update = NextExpression();
+		if (!NextIs(TokenKind::CLOSE_PAREN))
+		{
+			update = NextExpression();
+		}
 		Eat(TokenKind::CLOSE_PAREN);
 		Statement* body = NextStatement();
 		return new ForStatement(span.Extend(body->span), setup, condition, update, body);
@@ -988,7 +1018,6 @@ namespace flex
 		Eat(TokenKind::CLOSE_PAREN);
 		Eat(TokenKind::ARROW);
 		Token returnTypeToken = Eat(m_Current.kind);
-		Eat(TokenKind::OPEN_CURLY);
 		StatementBlock* body = NextStatementBlock();
 		return new FunctionDeclaration(span.Extend(body->span), functionNameToken.value, arguments, TokenKindToTypeName(returnTypeToken.kind), body);
 	}
