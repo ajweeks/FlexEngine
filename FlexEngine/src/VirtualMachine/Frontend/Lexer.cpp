@@ -437,6 +437,10 @@ namespace flex
 		{
 			return Token(GetSpan(), TokenKind::WHILE);
 		}
+		else if (identifier.compare("for") == 0)
+		{
+			return Token(GetSpan(), TokenKind::FOR);
+		}
 		else if (identifier.compare("break") == 0)
 		{
 			return Token(GetSpan(), TokenKind::BREAK);
