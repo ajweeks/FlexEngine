@@ -5,6 +5,7 @@
 #include "Pair.hpp"
 #include "PoolAllocator.hpp"
 
+#include "VirtualMachine/Backend/VirtualMachine.hpp"
 #include "VirtualMachine/Frontend/Parser.hpp"
 #include "VirtualMachine/Frontend/Lexer.hpp"
 
@@ -781,7 +782,7 @@ namespace flex
 		}
 		UNIT_TEST_END;
 
-		UNIT_TEST(RunTerminalTests)
+		UNIT_TEST(LexAndParseTests)
 		{
 			AST* ast = new AST();
 
@@ -826,7 +827,159 @@ namespace flex
 			ast->Destroy();
 			delete ast;
 		}
-		UNIT_TEST_END
+		UNIT_TEST_END;
+
+		UNIT_TEST(VMTestsBasic0)
+		{
+			VM* vm = new VM();
+
+			using OpCode = VM::OpCode;
+			using Value = VM::Value;
+			using ValueType = VM::ValueWrapper::Type;
+
+			std::vector<VM::Instruction> instStream;
+
+			instStream.push_back({ OpCode::ADD, { ValueType::REGISTER, Value(0) }, { ValueType::CONSTANT, Value(1) }, { ValueType::CONSTANT, Value(2) } }); // r0 = 1 + 2
+			instStream.push_back({ OpCode::MUL, { ValueType::REGISTER, Value(0) }, { ValueType::REGISTER, Value(0) }, { ValueType::CONSTANT, Value(2) } }); // r0 = r0 * 2
+			instStream.push_back({ OpCode::YIELD });
+			instStream.push_back({ OpCode::ADD, { ValueType::REGISTER, Value(1) }, { ValueType::CONSTANT, Value(12) }, { ValueType::CONSTANT, Value(20) } }); // r1 = 12 + 20
+			instStream.push_back({ OpCode::MOD, { ValueType::REGISTER, Value(1) }, { ValueType::REGISTER, Value(1) }, { ValueType::REGISTER, Value(0) } }); // r1 = r1 % r0
+			instStream.push_back({ OpCode::YIELD });
+			instStream.push_back({ OpCode::DIV, { ValueType::REGISTER, Value(0) }, { ValueType::REGISTER, Value(0) }, { ValueType::REGISTER, Value(1) } }); // r0 = r0 / r1
+			instStream.push_back({ OpCode::YIELD });
+			instStream.push_back({ OpCode::TERMINATE });
+
+			vm->GenerateFromInstStream(instStream);
+
+			vm->Execute();
+
+			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
+			for (const Diagnostic& diagnostic : vm->diagnosticContainer->diagnostics)
+			{
+				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
+			}
+
+			EXPECT(vm->registers[0].valInt, (1 + 2) * 2);
+
+			vm->Execute();
+
+			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
+			EXPECT(vm->registers[1].valInt, (12 + 20) % ((1 + 2) * 2));
+
+			vm->Execute();
+
+			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
+			EXPECT(vm->registers[0].valInt, ((1 + 2) * 2) / ((12 + 20) % ((1 + 2) * 2)));
+
+			EXPECT(vm->stack.empty(), true);
+
+			delete vm;
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(VMTestsLoop0)
+		{
+			VM* vm = new VM();
+
+			using OpCode = VM::OpCode;
+			using Value = VM::Value;
+			using ValueType = VM::ValueWrapper::Type;
+
+			std::vector<VM::Instruction> instStream;
+
+			instStream.push_back({ OpCode::MOV, { ValueType::REGISTER, Value(1) }, { ValueType::CONSTANT, Value(2) } }); // r1 = 2
+			// Loop start
+			instStream.push_back({ OpCode::MUL, { ValueType::REGISTER, Value(1) }, { ValueType::REGISTER, Value(1) }, { ValueType::CONSTANT, Value(2) } }); // r1 = r1 * 2
+			instStream.push_back({ OpCode::ADD, { ValueType::REGISTER, Value(0) }, { ValueType::REGISTER, Value(0) }, { ValueType::CONSTANT, Value(1) } }); // r0 = r0 + 1
+			instStream.push_back({ OpCode::JLT, { ValueType::REGISTER, Value(0) }, { ValueType::CONSTANT, Value(10) }, { ValueType::CONSTANT, Value(1) } }); // if r0 < 10 jump to line 1
+			// Loop end
+			instStream.push_back({ OpCode::TERMINATE });
+
+			vm->GenerateFromInstStream(instStream);
+
+			vm->Execute();
+
+			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
+			for (const Diagnostic& diagnostic : vm->diagnosticContainer->diagnostics)
+			{
+				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
+			}
+
+			EXPECT(vm->registers[0].valInt, 10);
+			EXPECT(vm->registers[1].valInt, 2048);
+
+			EXPECT(vm->stack.empty(), true);
+
+			delete vm;
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(VMTestsFunc0)
+		{
+			VM* vm = new VM();
+
+			using OpCode = VM::OpCode;
+			using Value = VM::Value;
+			using ValueType = VM::ValueWrapper::Type;
+
+			std::vector<VM::Instruction> instStream;
+
+			/*
+
+			func func0(int arg0, int arg1) -> int {
+				arg0 = arg0 * arg1;
+				arg0 = func1(arg0);
+				return arg0;
+			}
+
+			func func1(int arg0) -> int {
+				arg0 = arg0 * 2;
+				return arg0;
+			}
+
+			r0 = func0(3, 5);
+
+			*/
+
+			instStream.push_back({ OpCode::PUSH, { ValueType::CONSTANT, Value(4) } }); // return to line 4 after func
+			instStream.push_back({ OpCode::PUSH, { ValueType::CONSTANT, Value(5) } }); // arg1
+			instStream.push_back({ OpCode::PUSH, { ValueType::CONSTANT, Value(3) } }); // arg0
+			instStream.push_back({ OpCode::CALL, { ValueType::CONSTANT, Value(6) } }); // call func 0 on line 6
+			// resume point
+			instStream.push_back({ OpCode::POP, { ValueType::REGISTER, Value(0) } }); // r0 = return val
+			instStream.push_back({ OpCode::TERMINATE });
+			// func 0
+			instStream.push_back({ OpCode::POP, { ValueType::REGISTER, Value(0) } }); // r0 = arg0
+			instStream.push_back({ OpCode::POP, { ValueType::REGISTER, Value(1) } }); // r1 = arg1
+			instStream.push_back({ OpCode::MUL, { ValueType::REGISTER, Value(0) }, { ValueType::REGISTER, Value(0) }, { ValueType::REGISTER, Value(1) } }); // r0 = r0 * r1
+			instStream.push_back({ OpCode::PUSH, { ValueType::CONSTANT, Value(12) } }); // return to line 12 after func
+			instStream.push_back({ OpCode::PUSH, { ValueType::REGISTER, Value(0) } }); // arg0
+			instStream.push_back({ OpCode::CALL, { ValueType::CONSTANT, Value(14) } }); // call func 1 on line 14
+			// resume point
+			instStream.push_back({ OpCode::POP, { ValueType::REGISTER, Value(0) } }); // r0 = return val
+			instStream.push_back({ OpCode::RETURN, { ValueType::REGISTER, Value(0) } }); // return r0
+			// func 1
+			instStream.push_back({ OpCode::POP, { ValueType::REGISTER, Value(0) } }); // r0 = arg0
+			instStream.push_back({ OpCode::MUL, { ValueType::REGISTER, Value(0) }, { ValueType::REGISTER, Value(0) }, { ValueType::CONSTANT, Value(2) } }); // r0 = r0 * 2
+			instStream.push_back({ OpCode::RETURN, { ValueType::REGISTER, Value(0) } }); // return r0
+
+			vm->GenerateFromInstStream(instStream);
+
+			vm->Execute();
+
+			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
+			for (const Diagnostic& diagnostic : vm->diagnosticContainer->diagnostics)
+			{
+				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
+			}
+
+			EXPECT(vm->registers[0].valInt, (5 * 3) * 2);
+
+			EXPECT(vm->stack.empty(), true);
+
+			delete vm;
+		}
+		UNIT_TEST_END;
 
 	public:
 		static void Run()
@@ -843,8 +996,9 @@ namespace flex
 				// Misc
 				CountSetBitsValid, PoolTests, PairTests
 				*/
-				ParseTestBasic1, ParseTestBasic2, ParseTestEmptyFor, ParseTestEmptyWhile, ParseTestEmptyDoWhile,
-				RunTerminalTests
+				//ParseTestBasic1, ParseTestBasic2, ParseTestEmptyFor, ParseTestEmptyWhile, ParseTestEmptyDoWhile,
+				//LexAndParseTests,
+				VMTestsBasic0, VMTestsLoop0, VMTestsFunc0,
 			};
 			Print("Running %u tests...\n", (u32)ARRAY_LENGTH(funcs));
 			u32 failedTestCount = 0;
