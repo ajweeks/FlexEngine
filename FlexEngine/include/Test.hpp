@@ -973,11 +973,46 @@ namespace flex
 				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
 			}
 
-			EXPECT(vm->registers[0].valInt, (5 * 3) * 2);
+			EXPECT(vm->registers[0].valInt, (3 * 5) * 2);
 
 			EXPECT(vm->stack.empty(), true);
 
 			delete vm;
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(VMTestsBytecodeGenFromAST0)
+		{
+			AST* ast = new AST();
+
+			ast->Generate("\n"
+				"func func0(int arg0, int arg1) -> int {\n"
+				"	return func1(arg0 * arg1); \n"
+				"}\n"
+				"\n"
+				"func func1(int arg0) -> int {\n"
+				"    return arg0 * 2; \n"
+				"}\n"
+				"\n"
+				"r0 = func0(3, 5);\n\n");
+
+			VM* vm = new VM();
+			vm->GenerateFromAST(ast);
+			vm->Execute();
+
+			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
+			for (const Diagnostic& diagnostic : vm->diagnosticContainer->diagnostics)
+			{
+				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
+			}
+
+			EXPECT(vm->registers[0].valInt, (3 * 5) * 2);
+
+			EXPECT(vm->stack.empty(), true);
+
+			delete vm;
+			ast->Destroy();
+			delete ast;
 		}
 		UNIT_TEST_END;
 
@@ -998,7 +1033,8 @@ namespace flex
 				*/
 				//ParseTestBasic1, ParseTestBasic2, ParseTestEmptyFor, ParseTestEmptyWhile, ParseTestEmptyDoWhile,
 				//LexAndParseTests,
-				VMTestsBasic0, VMTestsLoop0, VMTestsFunc0,
+				//VMTestsBasic0, VMTestsLoop0, VMTestsFunc0,
+				VMTestsBytecodeGenFromAST0,
 			};
 			Print("Running %u tests...\n", (u32)ARRAY_LENGTH(funcs));
 			u32 failedTestCount = 0;

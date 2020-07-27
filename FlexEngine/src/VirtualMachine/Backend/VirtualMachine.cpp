@@ -4,6 +4,7 @@
 
 #include "Helpers.hpp"
 #include "VirtualMachine/Diagnostics.hpp"
+#include "VirtualMachine/Frontend/Parser.hpp"
 
 namespace flex
 {
@@ -311,6 +312,12 @@ namespace flex
 
 	void VM::Execute()
 	{
+		if (instructions.empty())
+		{
+			PrintError("Attempted to execute VM without any instructions present\n");
+			return;
+		}
+
 		u32 loopCount = 0;
 		bool bBreak = false;
 		while (!bTerminated && !bBreak)

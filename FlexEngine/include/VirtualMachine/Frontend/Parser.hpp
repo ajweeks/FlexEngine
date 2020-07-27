@@ -9,7 +9,10 @@
 namespace flex
 {
 	struct Lexer;
+	struct Declaration;
+	struct Identifier;
 	enum class TokenKind;
+	class Parser;
 
 	enum class UnaryOperatorType
 	{
@@ -104,6 +107,7 @@ namespace flex
 	const char* BinaryOperatorTypeToString(BinaryOperatorType opType);
 
 	bool IsCompoundAssignment(BinaryOperatorType type);
+	BinaryOperatorType GetNonCompoundType(BinaryOperatorType type);
 
 	BinaryOperatorType TokenKindToBinaryOperatorType(TokenKind tokenKind);
 
@@ -163,9 +167,42 @@ namespace flex
 	TypeName ValueTypeToTypeName(ValueType valueType);
 	ValueType TypeNameToValueType(TypeName typeName);
 
+	enum class StatementType
+	{
+		EMPTY,
+		STATEMENT_BLOCK,
+		IF,
+		FOR,
+		WHILE,
+		DO_WHILE,
+		FUNC_DECL,
+		BREAK,
+		YIELD,
+		RETURN,
+		VARIABLE_DECL,
+		IDENTIFIER,
+		ASSIGNMENT,
+		COMPOUND_ASSIGNMENT,
+		INT_LIT,
+		FLOAT_LIT,
+		BOOL_LIT,
+		STRING_LIT,
+		CHAR_LIT,
+		LIST_INITIALIZER,
+		INDEX_OPERATION,
+		UNARY_OPERATION,
+		BINARY_OPERATION,
+		TERNARY_OPERATION,
+		FUNC_CALL,
+
+		_NONE
+	};
+
+	bool CanBeReduced(StatementType statementType);
+
 	struct Statement
 	{
-		explicit Statement(const Span& span);
+		Statement(const Span& span, StatementType statementType);
 
 		virtual ~Statement()
 		{
@@ -173,23 +210,26 @@ namespace flex
 
 		virtual std::string ToString() const = 0;
 
+		virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements);
+
 		Span span;
+		StatementType statementType = StatementType::_NONE;
 	};
 
 	struct Expression : Statement
 	{
-		Expression(Span span, TypeName typeName) :
-			Statement(span),
+		Expression(Span span, TypeName typeName, StatementType statementType) :
+			Statement(span, statementType),
 			typeName(typeName)
 		{
 		}
 
-		virtual ~Expression()
+		Expression(Span span, StatementType statementType) :
+			Statement(span, statementType)
 		{
 		}
 
-		Expression(Span span) :
-			Statement(span)
+		virtual ~Expression()
 		{
 		}
 
@@ -199,7 +239,7 @@ namespace flex
 	struct EmptyStatement final : public Statement
 	{
 		EmptyStatement(const Span& span) :
-			Statement(span)
+			Statement(span, StatementType::EMPTY)
 		{
 		}
 
@@ -215,6 +255,7 @@ namespace flex
 		virtual ~StatementBlock();
 
 		virtual std::string ToString() const override;
+		virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
 
 		std::vector<Statement*> statements;
 	};
@@ -222,7 +263,7 @@ namespace flex
 	struct IfStatement final : public Statement
 	{
 		IfStatement(const Span& span, Expression* condition, Statement* then, Statement* otherwise) :
-			Statement(span),
+			Statement(span, StatementType::IF),
 			condition(condition),
 			then(then),
 			otherwise(otherwise)
@@ -232,6 +273,7 @@ namespace flex
 		virtual ~IfStatement();
 
 		virtual std::string ToString() const override;
+		virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
 
 		Expression* condition = nullptr;
 		Statement* then = nullptr;
@@ -241,7 +283,7 @@ namespace flex
 	struct ForStatement final : public Statement
 	{
 		ForStatement(const Span& span, Expression* setup, Expression* condition, Expression* update, Statement* body) :
-			Statement(span),
+			Statement(span, StatementType::FOR),
 			setup(setup),
 			condition(condition),
 			update(update),
@@ -252,6 +294,7 @@ namespace flex
 		virtual ~ForStatement();
 
 		virtual std::string ToString() const override;
+		virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
 
 		Expression* setup = nullptr;
 		Expression* condition = nullptr;
@@ -262,7 +305,7 @@ namespace flex
 	struct WhileStatement final : public Statement
 	{
 		WhileStatement(const Span& span, Expression* condition, Statement* body) :
-			Statement(span),
+			Statement(span, StatementType::WHILE),
 			condition(condition),
 			body(body)
 		{
@@ -271,6 +314,7 @@ namespace flex
 		virtual ~WhileStatement();
 
 		virtual std::string ToString() const override;
+		virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
 
 		Expression* condition = nullptr;
 		Statement* body = nullptr;
@@ -279,7 +323,7 @@ namespace flex
 	struct DoWhileStatement final : public Statement
 	{
 		DoWhileStatement(const Span& span, Expression* condition, Statement* body) :
-			Statement(span),
+			Statement(span, StatementType::DO_WHILE),
 			condition(condition),
 			body(body)
 		{
@@ -288,6 +332,7 @@ namespace flex
 		virtual ~DoWhileStatement();
 
 		virtual std::string ToString() const override;
+		virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
 
 		Expression* condition = nullptr;
 		Statement* body = nullptr;
@@ -296,7 +341,7 @@ namespace flex
 	struct FunctionDeclaration final : Statement
 	{
 		FunctionDeclaration(Span span, const std::string& name, const std::vector<struct Identifier*>& arguments, TypeName returnType, StatementBlock* body) :
-			Statement(span),
+			Statement(span, StatementType::FUNC_DECL),
 			name(name),
 			returnType(returnType),
 			arguments(arguments),
@@ -307,6 +352,7 @@ namespace flex
 		virtual ~FunctionDeclaration();
 
 		virtual std::string ToString() const override;
+		virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
 
 		std::string name;
 		TypeName returnType;
@@ -317,7 +363,7 @@ namespace flex
 	struct BreakStatement final : Statement
 	{
 		BreakStatement(Span span) :
-			Statement(span)
+			Statement(span, StatementType::BREAK)
 		{
 		}
 
@@ -330,7 +376,7 @@ namespace flex
 	struct YieldStatement final : Statement
 	{
 		YieldStatement(Span span, Expression* yieldValue) :
-			Statement(span),
+			Statement(span, StatementType::YIELD),
 			yieldValue(yieldValue)
 		{
 		}
@@ -338,6 +384,7 @@ namespace flex
 		virtual ~YieldStatement();
 
 		virtual std::string ToString() const override;
+		virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
 
 		Expression* yieldValue = nullptr;
 	};
@@ -345,7 +392,7 @@ namespace flex
 	struct ReturnStatement final : Statement
 	{
 		ReturnStatement(Span span, Expression* returnValue) :
-			Statement(span),
+			Statement(span, StatementType::RETURN),
 			returnValue(returnValue)
 		{
 		}
@@ -353,6 +400,7 @@ namespace flex
 		virtual ~ReturnStatement();
 
 		virtual std::string ToString() const override;
+		virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
 
 		Expression* returnValue = nullptr;
 	};
@@ -360,7 +408,7 @@ namespace flex
 	struct Declaration final : Expression
 	{
 		Declaration(const Span& span, const std::string& identifierStr, Expression* initializer, TypeName typeName) :
-			Expression(span, typeName),
+			Expression(span, typeName, StatementType::VARIABLE_DECL),
 			identifierStr(identifierStr),
 			initializer(initializer)
 		{
@@ -369,6 +417,7 @@ namespace flex
 		virtual ~Declaration();
 
 		virtual std::string ToString() const override;
+		virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
 
 		std::string identifierStr;
 		Expression* initializer = nullptr;
@@ -377,13 +426,13 @@ namespace flex
 	struct Identifier final : Expression
 	{
 		Identifier(const Span& span, const std::string& identifierStr, TypeName typeName) :
-			Expression(span, typeName),
+			Expression(span, typeName, StatementType::IDENTIFIER),
 			identifierStr(identifierStr)
 		{
 		}
 
 		Identifier(const Span& span, const std::string& identifierStr) :
-			Expression(span),
+			Expression(span, StatementType::IDENTIFIER),
 			identifierStr(identifierStr)
 		{
 		}
@@ -399,7 +448,7 @@ namespace flex
 	struct Assignment final : Expression
 	{
 		Assignment(const Span& span, const std::string& lhs, Expression* rhs) :
-			Expression(span),
+			Expression(span, StatementType::ASSIGNMENT),
 			lhs(lhs),
 			rhs(rhs)
 		{
@@ -408,6 +457,7 @@ namespace flex
 		virtual ~Assignment();
 
 		virtual std::string ToString() const override;
+		virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
 
 		std::string lhs;
 		Expression* rhs;
@@ -416,7 +466,7 @@ namespace flex
 	struct CompoundAssignment final : Expression
 	{
 		CompoundAssignment(const Span& span, const std::string& lhs, Expression* rhs, BinaryOperatorType operatorType) :
-			Expression(span),
+			Expression(span, StatementType::COMPOUND_ASSIGNMENT),
 			lhs(lhs),
 			rhs(rhs),
 			operatorType(operatorType)
@@ -426,6 +476,7 @@ namespace flex
 		virtual ~CompoundAssignment();
 
 		virtual std::string ToString() const override;
+		virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
 
 		std::string lhs;
 		Expression* rhs;
@@ -435,7 +486,7 @@ namespace flex
 	struct IntLiteral final : Expression
 	{
 		IntLiteral(const Span& span, i32 value) :
-			Expression(span, TypeName::INT),
+			Expression(span, TypeName::INT, StatementType::INT_LIT),
 			value(value)
 		{
 		}
@@ -451,7 +502,7 @@ namespace flex
 	struct FloatLiteral final : Expression
 	{
 		FloatLiteral(const Span& span, real value) :
-			Expression(span, TypeName::FLOAT),
+			Expression(span, TypeName::FLOAT, StatementType::FLOAT_LIT),
 			value(value)
 		{
 		}
@@ -467,7 +518,7 @@ namespace flex
 	struct BoolLiteral final : Expression
 	{
 		BoolLiteral(const Span& span, bool value) :
-			Expression(span, TypeName::BOOL),
+			Expression(span, TypeName::BOOL, StatementType::BOOL_LIT),
 			value(value)
 		{
 		}
@@ -483,7 +534,7 @@ namespace flex
 	struct StringLiteral final : Expression
 	{
 		StringLiteral(const Span& span, const std::string& value) :
-			Expression(span, TypeName::STRING),
+			Expression(span, TypeName::STRING, StatementType::STRING_LIT),
 			value(value)
 		{
 		}
@@ -499,7 +550,7 @@ namespace flex
 	struct CharLiteral final : Expression
 	{
 		CharLiteral(const Span& span, char value) :
-			Expression(span, TypeName::CHAR),
+			Expression(span, TypeName::CHAR, StatementType::CHAR_LIT),
 			value(value)
 		{
 		}
@@ -515,7 +566,7 @@ namespace flex
 	struct ListInitializer final : Expression
 	{
 		ListInitializer(const Span& span, const std::vector<Expression*>& listValues) :
-			Expression(span),
+			Expression(span, StatementType::LIST_INITIALIZER),
 			listValues(listValues)
 		{
 		}
@@ -523,6 +574,7 @@ namespace flex
 		virtual ~ListInitializer();
 
 		virtual std::string ToString() const override;
+		virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
 
 		std::vector<Expression*> listValues;
 	};
@@ -530,7 +582,7 @@ namespace flex
 	struct IndexOperation final : Expression
 	{
 		IndexOperation(const Span& span, const std::string& container, Expression* indexExpression) :
-			Expression(span),
+			Expression(span, StatementType::INDEX_OPERATION),
 			container(container),
 			indexExpression(indexExpression)
 		{
@@ -539,6 +591,7 @@ namespace flex
 		virtual ~IndexOperation();
 
 		virtual std::string ToString() const override;
+		virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
 
 		std::string container;
 		Expression* indexExpression = nullptr;
@@ -547,7 +600,7 @@ namespace flex
 	struct UnaryOperation final : Expression
 	{
 		UnaryOperation(Span span, UnaryOperatorType type, Expression* expression) :
-			Expression(span),
+			Expression(span, StatementType::UNARY_OPERATION),
 			expression(expression),
 			type(type)
 		{
@@ -556,6 +609,7 @@ namespace flex
 		virtual ~UnaryOperation();
 
 		virtual std::string ToString() const override;
+		virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
 
 		Expression* expression = nullptr;
 		UnaryOperatorType type;
@@ -564,7 +618,7 @@ namespace flex
 	struct BinaryOperation final : Expression
 	{
 		BinaryOperation(Span span, BinaryOperatorType type, Expression* lhs, Expression* rhs) :
-			Expression(span),
+			Expression(span, StatementType::BINARY_OPERATION),
 			type(type),
 			lhs(lhs),
 			rhs(rhs)
@@ -574,6 +628,7 @@ namespace flex
 		virtual ~BinaryOperation();
 
 		virtual std::string ToString() const override;
+		virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
 
 		BinaryOperatorType type;
 		Expression* lhs = nullptr;
@@ -583,7 +638,7 @@ namespace flex
 	struct TernaryOperation final : Expression
 	{
 		TernaryOperation(Span span, Expression* condition, Expression* ifTrue, Expression* ifFalse) :
-			Expression(span),
+			Expression(span, StatementType::TERNARY_OPERATION),
 			condition(condition),
 			ifTrue(ifTrue),
 			ifFalse(ifFalse)
@@ -593,6 +648,7 @@ namespace flex
 		virtual ~TernaryOperation();
 
 		virtual std::string ToString() const override;
+		virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
 
 		Expression* condition;
 		Expression* ifTrue;
@@ -602,7 +658,7 @@ namespace flex
 	struct FunctionCall final : Expression
 	{
 		FunctionCall(Span span, const std::string& target, const std::vector<Expression*>& arguments) :
-			Expression(span),
+			Expression(span, StatementType::FUNC_CALL),
 			target(target),
 			arguments(arguments)
 		{
@@ -611,6 +667,7 @@ namespace flex
 		virtual ~FunctionCall();
 
 		virtual std::string ToString() const override;
+		virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
 
 		std::string target;
 		std::vector<Expression*> arguments;
@@ -632,6 +689,8 @@ namespace flex
 		bool NextIsBinaryOperator();
 		bool NextIsCompoundAssignment();
 		Token Eat(TokenKind tokenKind);
+
+		std::string NextTempIdentifier();
 
 		StatementBlock* Parse();
 		Statement* NextStatement();
@@ -655,6 +714,8 @@ namespace flex
 
 		Lexer* m_Lexer = nullptr;
 		DiagnosticContainer* diagnosticContainer = nullptr;
+
+		u32 m_TempIdentIdx = 0;
 	};
 
 	struct AST

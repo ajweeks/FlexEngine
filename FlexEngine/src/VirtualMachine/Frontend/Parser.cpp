@@ -7,6 +7,8 @@
 
 namespace flex
 {
+	static Identifier* g_InvalidIdentifier = (Identifier*)0xFFFFFFFFFFFFFFFF;
+
 	const char* UnaryOperatorTypeToString(UnaryOperatorType opType)
 	{
 		return g_UnaryOperatorTypeStrings[(u32)opType];
@@ -38,10 +40,31 @@ namespace flex
 		case BinaryOperatorType::MUL_ASSIGN:
 		case BinaryOperatorType::DIV_ASSIGN:
 		case BinaryOperatorType::MOD_ASSIGN:
+		case BinaryOperatorType::BIN_AND_ASSIGN:
+		case BinaryOperatorType::BIN_OR_ASSIGN:
+		case BinaryOperatorType::BIN_XOR_ASSIGN:
 			return true;
 		}
 
 		return false;
+	}
+
+	BinaryOperatorType GetNonCompoundType(BinaryOperatorType type)
+	{
+
+		switch (type)
+		{
+		case BinaryOperatorType::ADD_ASSIGN:		return BinaryOperatorType::ADD;
+		case BinaryOperatorType::SUB_ASSIGN:		return BinaryOperatorType::SUB;
+		case BinaryOperatorType::MUL_ASSIGN:		return BinaryOperatorType::MUL;
+		case BinaryOperatorType::DIV_ASSIGN:		return BinaryOperatorType::DIV;
+		case BinaryOperatorType::MOD_ASSIGN:		return BinaryOperatorType::MOD;
+		case BinaryOperatorType::BIN_AND_ASSIGN:	return BinaryOperatorType::BIN_AND;
+		case BinaryOperatorType::BIN_OR_ASSIGN:		return BinaryOperatorType::BIN_OR;
+		case BinaryOperatorType::BIN_XOR_ASSIGN:	return BinaryOperatorType::BIN_XOR;
+		default: return BinaryOperatorType::_NONE;
+		}
+
 	}
 
 	BinaryOperatorType TokenKindToBinaryOperatorType(TokenKind tokenKind)
@@ -60,8 +83,11 @@ namespace flex
 		case TokenKind::PERCENT:			return BinaryOperatorType::MOD;
 		case TokenKind::PERCENT_EQUALS:		return BinaryOperatorType::MOD_ASSIGN;
 		case TokenKind::BINARY_AND:			return BinaryOperatorType::BIN_AND;
+		case TokenKind::BINARY_AND_EQUALS:	return BinaryOperatorType::BIN_AND_ASSIGN;
 		case TokenKind::BINARY_OR:			return BinaryOperatorType::BIN_OR;
+		case TokenKind::BINARY_OR_EQUALS:	return BinaryOperatorType::BIN_OR_ASSIGN;
 		case TokenKind::BINARY_XOR:			return BinaryOperatorType::BIN_XOR;
+		case TokenKind::BINARY_XOR_EQUALS:	return BinaryOperatorType::BIN_XOR_ASSIGN;
 		case TokenKind::EQUAL_EQUAL:		return BinaryOperatorType::EQUAL_TEST;
 		case TokenKind::NOT_EQUAL:			return BinaryOperatorType::NOT_EQUAL_TEST;
 		case TokenKind::GREATER:			return BinaryOperatorType::GREATER_TEST;
@@ -170,13 +196,30 @@ namespace flex
 		}
 	}
 
-	Statement::Statement(const Span& span) :
-		span(span)
+	bool CanBeReduced(StatementType statementType)
+	{
+		return statementType == StatementType::UNARY_OPERATION ||
+			statementType == StatementType::BINARY_OPERATION ||
+			statementType == StatementType::TERNARY_OPERATION ||
+			statementType == StatementType::FUNC_CALL ||
+			statementType == StatementType::INDEX_OPERATION;
+	}
+
+	Statement::Statement(const Span& span, StatementType statementType) :
+		span(span),
+		statementType(statementType)
 	{
 	}
 
+	Identifier* Statement::RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements)
+	{
+		UNREFERENCED_PARAMETER(parser);
+		UNREFERENCED_PARAMETER(tmpStatements);
+		return nullptr;
+	}
+
 	StatementBlock::StatementBlock(const Span& span, const std::vector<Statement*>& statements) :
-		Statement(span),
+		Statement(span, StatementType::STATEMENT_BLOCK),
 		statements(statements)
 	{
 	}
@@ -213,6 +256,41 @@ namespace flex
 		return stringBuilder.ToString();
 	}
 
+	Identifier* StatementBlock::RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements)
+	{
+		for (u32 i = 0; i < (u32)statements.size(); /* */)
+		{
+			Identifier* tmpIdent = statements[i]->RewriteCompoundStatements(parser, tmpStatements);
+
+			if (tmpIdent != nullptr)
+			{
+				if (tmpIdent == g_InvalidIdentifier)
+				{
+					delete statements[i];
+					statements.erase(statements.begin() + i);
+					// ++i? --i?
+				}
+				else
+				{
+					statements[i] = tmpIdent;
+				}
+			}
+
+			if (tmpStatements.empty())
+			{
+				++i;
+			}
+			else
+			{
+				statements.insert(statements.begin() + i, tmpStatements.begin(), tmpStatements.end());
+				i += (u32)statements.size();
+				tmpStatements.clear();
+			}
+		}
+
+		return nullptr;
+	}
+
 	IfStatement::~IfStatement()
 	{
 		delete condition;
@@ -242,6 +320,30 @@ namespace flex
 		}
 
 		return stringBuilder.ToString();
+	}
+
+	Identifier* IfStatement::RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements)
+	{
+		Identifier* newCondition = condition->RewriteCompoundStatements(parser, tmpStatements);
+		if (newCondition != nullptr)
+		{
+			condition = newCondition;
+		}
+
+		Identifier* newThen = then->RewriteCompoundStatements(parser, tmpStatements);
+		if (newThen != nullptr)
+		{
+			then = newThen;
+
+		}
+
+		Identifier* newOtherwise = otherwise->RewriteCompoundStatements(parser, tmpStatements);
+		if (newOtherwise != nullptr)
+		{
+			otherwise = newOtherwise;
+		}
+
+		return nullptr;
 	}
 
 	ForStatement::~ForStatement()
@@ -277,6 +379,35 @@ namespace flex
 		return stringBuilder.ToString();
 	}
 
+	Identifier* ForStatement::RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements)
+	{
+		Identifier* newSetup = setup->RewriteCompoundStatements(parser, tmpStatements);
+		if (newSetup != nullptr)
+		{
+			setup = newSetup;
+		}
+
+		Identifier* newCondition = condition->RewriteCompoundStatements(parser, tmpStatements);
+		if (newCondition != nullptr)
+		{
+			condition = newCondition;
+		}
+
+		Identifier* newUpdate = update->RewriteCompoundStatements(parser, tmpStatements);
+		if (newUpdate != nullptr)
+		{
+			update = newUpdate;
+		}
+
+		Identifier* newBody = body->RewriteCompoundStatements(parser, tmpStatements);
+		if (newBody != nullptr)
+		{
+			body = newBody;
+		}
+
+		return nullptr;
+	}
+
 	WhileStatement::~WhileStatement()
 	{
 		delete condition;
@@ -293,6 +424,23 @@ namespace flex
 		stringBuilder.Append(body->ToString());
 
 		return stringBuilder.ToString();
+	}
+
+	Identifier* WhileStatement::RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements)
+	{
+		Identifier* conditionTempIdent = condition->RewriteCompoundStatements(parser, tmpStatements);
+		if (conditionTempIdent != nullptr)
+		{
+			condition = conditionTempIdent;
+		}
+
+		Identifier* bodyTempIdent = body->RewriteCompoundStatements(parser, tmpStatements);
+		if (bodyTempIdent != nullptr)
+		{
+			body = bodyTempIdent;
+		}
+
+		return nullptr;
 	}
 
 	DoWhileStatement::~DoWhileStatement()
@@ -312,6 +460,23 @@ namespace flex
 		stringBuilder.Append(");");
 
 		return stringBuilder.ToString();
+	}
+
+	Identifier* DoWhileStatement::RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements)
+	{
+		Identifier* conditionTempIdent = condition->RewriteCompoundStatements(parser, tmpStatements);
+		if (conditionTempIdent != nullptr)
+		{
+			condition = conditionTempIdent;
+		}
+
+		Identifier* bodyTempIdent = body->RewriteCompoundStatements(parser, tmpStatements);
+		if (bodyTempIdent != nullptr)
+		{
+			body = bodyTempIdent;
+		}
+
+		return nullptr;
 	}
 
 	FunctionDeclaration::~FunctionDeclaration()
@@ -349,6 +514,12 @@ namespace flex
 		return stringBuilder.ToString();
 	}
 
+	Identifier* FunctionDeclaration::RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements)
+	{
+		body->RewriteCompoundStatements(parser, tmpStatements);
+		return nullptr;
+	}
+
 	YieldStatement::~YieldStatement()
 	{
 		delete yieldValue;
@@ -371,6 +542,20 @@ namespace flex
 		return stringBuilder.ToString();
 	}
 
+	Identifier* YieldStatement::RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements)
+	{
+		if (yieldValue != nullptr)
+		{
+			Identifier* yieldValueTempIdent = yieldValue->RewriteCompoundStatements(parser, tmpStatements);
+			if (yieldValueTempIdent != nullptr)
+			{
+				yieldValue = yieldValueTempIdent;
+			}
+		}
+
+		return nullptr;
+	}
+
 	ReturnStatement::~ReturnStatement()
 	{
 		delete returnValue;
@@ -391,6 +576,20 @@ namespace flex
 		stringBuilder.Append(";");
 
 		return stringBuilder.ToString();
+	}
+
+	Identifier* ReturnStatement::RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements)
+	{
+		if (returnValue != nullptr)
+		{
+			Identifier* returnValueTempIdent = returnValue->RewriteCompoundStatements(parser, tmpStatements);
+			if (returnValueTempIdent != nullptr)
+			{
+				returnValue = returnValueTempIdent;
+			}
+		}
+
+		return nullptr;
 	}
 
 	Declaration::~Declaration()
@@ -417,6 +616,17 @@ namespace flex
 		return stringBuilder.ToString();
 	}
 
+	Identifier* Declaration::RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements)
+	{
+		Identifier* initializerTempIdent = initializer->RewriteCompoundStatements(parser, tmpStatements);
+		if (initializerTempIdent != nullptr)
+		{
+			initializer = initializerTempIdent;
+		}
+
+		return nullptr;
+	}
+
 	Assignment::~Assignment()
 	{
 		delete rhs;
@@ -432,6 +642,17 @@ namespace flex
 		stringBuilder.Append(";");
 
 		return stringBuilder.ToString();
+	}
+
+	Identifier* Assignment::RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements)
+	{
+		Identifier* rhsTempIdent = rhs->RewriteCompoundStatements(parser, tmpStatements);
+		if (rhsTempIdent != nullptr)
+		{
+			rhs = rhsTempIdent;
+		}
+
+		return nullptr;
 	}
 
 	CompoundAssignment::~CompoundAssignment()
@@ -452,6 +673,38 @@ namespace flex
 		stringBuilder.Append(";");
 
 		return stringBuilder.ToString();
+	}
+
+	Identifier* CompoundAssignment::RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements)
+	{
+		assert(IsCompoundAssignment(operatorType));
+
+		Identifier* rhsTempIdent = rhs->RewriteCompoundStatements(parser, tmpStatements);
+		if (rhsTempIdent != nullptr)
+		{
+			rhs = rhsTempIdent;
+		}
+
+		Span newSpan(span.low, span.high);
+		newSpan.source = Span::Source::GENERATED;
+
+		// e.g.
+		// a += b
+		//
+		// becomes:
+		//
+		// int tmp = a + b;
+		// a = tmp;
+
+		BinaryOperation* simpleBinOp = new BinaryOperation(newSpan, GetNonCompoundType(operatorType), new Identifier(newSpan, lhs), rhs);
+		Declaration* tempResult = new Declaration(span, parser->NextTempIdentifier(), simpleBinOp, typeName);
+
+		tmpStatements.push_back(tempResult);
+
+		Assignment* newAssignment = new Assignment(span, lhs, new Identifier(span, tempResult->identifierStr));
+		tmpStatements.push_back(newAssignment);
+
+		return g_InvalidIdentifier;
 	}
 
 	ListInitializer::~ListInitializer()
@@ -480,6 +733,20 @@ namespace flex
 		return stringBuilder.ToString();
 	}
 
+	Identifier* ListInitializer::RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements)
+	{
+		for (u32 i = 0; i < (u32)listValues.size(); ++i)
+		{
+			Identifier* listValueTempIdent = listValues[i]->RewriteCompoundStatements(parser, tmpStatements);
+			if (listValueTempIdent != nullptr)
+			{
+				listValues[i] = listValueTempIdent;
+			}
+		}
+
+		return nullptr;
+	}
+
 	IndexOperation::~IndexOperation()
 	{
 		delete indexExpression;
@@ -493,6 +760,20 @@ namespace flex
 		stringBuilder.Append(indexExpression->ToString());
 		stringBuilder.Append("]");
 		return stringBuilder.ToString();
+	}
+
+	Identifier* IndexOperation::RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements)
+	{
+		Identifier* indexExpressionTempIdent = indexExpression->RewriteCompoundStatements(parser, tmpStatements);
+		if (indexExpressionTempIdent != nullptr)
+		{
+			indexExpression = indexExpressionTempIdent;
+		}
+
+		Declaration* tmpDecl = new Declaration(span, parser->NextTempIdentifier(), this, typeName);
+		tmpStatements.push_back(tmpDecl);
+
+		return new Identifier(span, tmpDecl->identifierStr);
 	}
 
 	UnaryOperation::~UnaryOperation()
@@ -527,6 +808,23 @@ namespace flex
 		return stringBuilder.ToString();
 	}
 
+	Identifier* UnaryOperation::RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements)
+	{
+		Span newSpan(span.low, span.high);
+		newSpan.source = Span::Source::GENERATED;
+
+		Identifier* expressionTempIdent = expression->RewriteCompoundStatements(parser, tmpStatements);
+		if (expressionTempIdent != nullptr)
+		{
+			expression = expressionTempIdent;
+		}
+
+		Declaration* tmpDecl = new Declaration(span, parser->NextTempIdentifier(), this, typeName);
+		tmpStatements.push_back(tmpDecl);
+
+		return new Identifier(span, tmpDecl->identifierStr);
+	}
+
 	BinaryOperation::~BinaryOperation()
 	{
 		delete lhs;
@@ -548,6 +846,29 @@ namespace flex
 		return stringBuilder.ToString();
 	}
 
+	Identifier* BinaryOperation::RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements)
+	{
+		Span newSpan(span.low, span.high);
+		newSpan.source = Span::Source::GENERATED;
+
+		Identifier* lhsTempIdent = lhs->RewriteCompoundStatements(parser, tmpStatements);
+		if (lhsTempIdent != nullptr)
+		{
+			lhs = lhsTempIdent;
+		}
+
+		Identifier* rhsTempIdent = rhs->RewriteCompoundStatements(parser, tmpStatements);
+		if (rhsTempIdent != nullptr)
+		{
+			rhs = lhsTempIdent;
+		}
+
+		Declaration* tmpDecl = new Declaration(span, parser->NextTempIdentifier(), this, typeName);
+		tmpStatements.push_back(tmpDecl);
+
+		return new Identifier(span, tmpDecl->identifierStr);
+	}
+
 	TernaryOperation::~TernaryOperation()
 	{
 		delete condition;
@@ -566,6 +887,35 @@ namespace flex
 		stringBuilder.Append(ifFalse->ToString());
 
 		return stringBuilder.ToString();
+	}
+
+	Identifier* TernaryOperation::RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements)
+	{
+		Span newSpan(span.low, span.high);
+		newSpan.source = Span::Source::GENERATED;
+
+		Identifier* conditionTempIdent = condition->RewriteCompoundStatements(parser, tmpStatements);
+		if (conditionTempIdent != nullptr)
+		{
+			condition = conditionTempIdent;
+		}
+
+		Identifier* ifTrueTempIdent = ifTrue->RewriteCompoundStatements(parser, tmpStatements);
+		if (ifTrueTempIdent != nullptr)
+		{
+			ifTrue = ifTrueTempIdent;
+		}
+
+		Identifier* ifFalseTempIdent = ifFalse->RewriteCompoundStatements(parser, tmpStatements);
+		if (ifFalseTempIdent != nullptr)
+		{
+			ifFalse = ifFalseTempIdent;
+		}
+
+		Declaration* tmpDecl = new Declaration(span, parser->NextTempIdentifier(), this, typeName);
+		tmpStatements.push_back(tmpDecl);
+
+		return new Identifier(span, tmpDecl->identifierStr);
 	}
 
 	FunctionCall::~FunctionCall()
@@ -592,9 +942,28 @@ namespace flex
 			}
 
 		}
-		stringBuilder.Append(");");
+		stringBuilder.Append(")");
 
 		return stringBuilder.ToString();
+	}
+
+	Identifier* FunctionCall::RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements)
+	{
+		for (u32 i = 0; i < (u32)arguments.size(); ++i)
+		{
+			Identifier* argTempIdent = arguments[i]->RewriteCompoundStatements(parser, tmpStatements);
+			if (argTempIdent != nullptr)
+			{
+				arguments[i] = argTempIdent;
+			}
+		}
+
+		// TODO: Determine called function's return type to know if we need to store the result or not.
+
+		Declaration* tmpDecl = new Declaration(span, parser->NextTempIdentifier(), this, typeName);
+		tmpStatements.push_back(tmpDecl);
+
+		return new Identifier(span, tmpDecl->identifierStr);
 	}
 
 	Parser::Parser(Lexer* lexer, DiagnosticContainer* diagnosticContainer) :
@@ -676,6 +1045,11 @@ namespace flex
 		diagnosticContainer->AddDiagnostic(m_Current.span, lineNumber, columnIndex, diagnosticStr.ToString());
 
 		return g_EmptyToken;
+	}
+
+	std::string Parser::NextTempIdentifier()
+	{
+		return "__tmp" + IntToString(m_TempIdentIdx++);
 	}
 
 	StatementBlock* Parser::NextStatementBlock()

@@ -277,6 +277,7 @@ namespace flex
 		using FuncAddress = i32;
 		std::map<FuncAddress, FuncPtr*> ExternalFuncTable;
 
+		void GenerateFromAST(AST* ast);
 		void GenerateFromInstStream(const std::vector<Instruction>& inInstructions);
 		void Execute();
 

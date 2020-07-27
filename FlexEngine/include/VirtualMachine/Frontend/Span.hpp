@@ -9,6 +9,14 @@ namespace flex
 {
 	struct Span
 	{
+		enum Source
+		{
+			INPUT,
+			GENERATED,
+
+			_NONE
+		};
+
 		Span(u32 low, u32 high) :
 			low(low),
 			high(high)
@@ -16,9 +24,9 @@ namespace flex
 			assert(low <= high);
 		}
 
-		std::string ToString(const std::string& source)
+		std::string ToString(const std::string& inSource)
 		{
-			return source.substr(low, high - low);
+			return inSource.substr(low, high - low);
 		}
 
 		Span Clip()
@@ -43,5 +51,6 @@ namespace flex
 
 		i32 low;
 		i32 high;
+		Source source = Source::INPUT;
 	};
 } // namespace flex
