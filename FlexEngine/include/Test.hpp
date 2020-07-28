@@ -994,7 +994,9 @@ namespace flex
 				"    return arg0 * 2; \n"
 				"}\n"
 				"\n"
-				"r0 = func0(3, 5);\n\n");
+				"int r0 = func0(3, 5);\n"
+				"r0 += 10 * 7;\n"
+				"r0 += func0(1, 1);\n\n");
 
 			VM* vm = new VM();
 			vm->GenerateFromAST(ast);

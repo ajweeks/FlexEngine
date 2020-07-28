@@ -293,10 +293,30 @@ namespace flex
 	VM::VM() :
 		diagnosticContainer(new DiagnosticContainer())
 	{
+	}
 
 	VM::~VM()
 	{
 		delete diagnosticContainer;
+	}
+
+	void VM::GenerateFromAST(AST* ast)
+	{
+		std::string s = ast->rootBlock->ToString();
+		Print("%s\n", s.c_str());
+		std::vector<Statement*> emptyList;
+		ast->rootBlock->RewriteCompoundStatements(ast->parser, emptyList);
+		s = ast->rootBlock->ToString();
+		Print("\n---\n\n%s\n", s.c_str());
+
+		for (u32 i = 0; i < (u32)ast->rootBlock->statements.size(); ++i)
+		{
+			Statement* statement = ast->rootBlock->statements[i];
+
+			//ValueWrapper val0(ValueWrapper::Type::CONSTANT, Value(0)), val1, val2;
+			//Instruction inst(OpCode::ADD, val0, val1, val2);
+			//instructions.push_back(inst);
+		}
 	}
 
 	void VM::GenerateFromInstStream(const std::vector<Instruction>& inInstructions)

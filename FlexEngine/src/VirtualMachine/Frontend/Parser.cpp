@@ -268,7 +268,6 @@ namespace flex
 				{
 					delete statements[i];
 					statements.erase(statements.begin() + i);
-					// ++i? --i?
 				}
 				else
 				{
@@ -283,7 +282,7 @@ namespace flex
 			else
 			{
 				statements.insert(statements.begin() + i, tmpStatements.begin(), tmpStatements.end());
-				i += (u32)statements.size();
+				i += (u32)tmpStatements.size();
 				tmpStatements.clear();
 			}
 		}
@@ -704,6 +703,9 @@ namespace flex
 		Assignment* newAssignment = new Assignment(span, lhs, new Identifier(span, tempResult->identifierStr));
 		tmpStatements.push_back(newAssignment);
 
+		// Clear out members to prepare for our deletion
+		lhs = "";
+		rhs = nullptr;
 		return g_InvalidIdentifier;
 	}
 
