@@ -1,8 +1,10 @@
 #include "stdafx.hpp"
 
-#include "StringBuilder.hpp"
-#include "VirtualMachine/Frontend/Lexer.hpp"
 #include "VirtualMachine/Frontend/Parser.hpp"
+
+#include "StringBuilder.hpp"
+#include "VirtualMachine/Backend/VariableContainer.hpp"
+#include "VirtualMachine/Frontend/Lexer.hpp"
 #include "VirtualMachine/Frontend/Token.hpp"
 
 namespace flex
@@ -31,9 +33,9 @@ namespace flex
 		return g_BinaryOperatorTypeStrings[(u32)opType];
 	}
 
-	bool IsCompoundAssignment(BinaryOperatorType type)
+	bool IsCompoundAssignment(BinaryOperatorType operatorType)
 	{
-		switch (type)
+		switch (operatorType)
 		{
 		case BinaryOperatorType::ADD_ASSIGN:
 		case BinaryOperatorType::SUB_ASSIGN:
@@ -49,10 +51,10 @@ namespace flex
 		return false;
 	}
 
-	BinaryOperatorType GetNonCompoundType(BinaryOperatorType type)
+	BinaryOperatorType GetNonCompoundType(BinaryOperatorType operatorType)
 	{
 
-		switch (type)
+		switch (operatorType)
 		{
 		case BinaryOperatorType::ADD_ASSIGN:		return BinaryOperatorType::ADD;
 		case BinaryOperatorType::SUB_ASSIGN:		return BinaryOperatorType::SUB;
@@ -143,6 +145,18 @@ namespace flex
 		}
 	}
 
+	bool BinaryOperatorTypeIsTest(BinaryOperatorType operatorType)
+	{
+		return operatorType == BinaryOperatorType::EQUAL_TEST ||
+			operatorType == BinaryOperatorType::NOT_EQUAL_TEST ||
+			operatorType == BinaryOperatorType::GREATER_TEST ||
+			operatorType == BinaryOperatorType::GREATER_EQUAL_TEST ||
+			operatorType == BinaryOperatorType::LESS_TEST ||
+			operatorType == BinaryOperatorType::LESS_EQUAL_TEST ||
+			operatorType == BinaryOperatorType::BOOLEAN_AND ||
+			operatorType == BinaryOperatorType::BOOLEAN_OR;
+	}
+
 	std::string TypeNameToString(TypeName typeName)
 	{
 		return g_TypeNameStrings[(u32)typeName];
@@ -205,6 +219,15 @@ namespace flex
 			statementType == StatementType::INDEX_OPERATION;
 	}
 
+	bool IsLiteral(StatementType statementType)
+	{
+		return statementType == StatementType::INT_LIT ||
+			statementType == StatementType::FLOAT_LIT ||
+			statementType == StatementType::BOOL_LIT ||
+			statementType == StatementType::STRING_LIT ||
+			statementType == StatementType::CHAR_LIT;
+	}
+
 	Statement::Statement(const Span& span, StatementType statementType) :
 		span(span),
 		statementType(statementType)
@@ -216,6 +239,12 @@ namespace flex
 		UNREFERENCED_PARAMETER(parser);
 		UNREFERENCED_PARAMETER(tmpStatements);
 		return nullptr;
+	}
+
+	void Statement::ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer)
+	{
+		UNREFERENCED_PARAMETER(varContainer);
+		UNREFERENCED_PARAMETER(diagnosticContainer);
 	}
 
 	StatementBlock::StatementBlock(const Span& span, const std::vector<Statement*>& statements) :
@@ -290,6 +319,32 @@ namespace flex
 		return nullptr;
 	}
 
+	void StatementBlock::ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer)
+	{
+		varContainer->PushFrame();
+
+		bool bPrevWriteFlagSet = varContainer->GetWriteFlag();
+
+		do
+		{
+			varContainer->ClearVarsInFrame();
+			varContainer->ClearWriteFlag();
+
+			for (u32 i = 0; i < (u32)statements.size(); ++i)
+			{
+				statements[i]->ResolveTypesAndLifetimes(varContainer, diagnosticContainer);
+			}
+
+		} while (varContainer->GetWriteFlag());
+
+		if (bPrevWriteFlagSet)
+		{
+			varContainer->SetWriteFlag();
+		}
+
+		varContainer->PopFrame();
+	}
+
 	IfStatement::~IfStatement()
 	{
 		delete condition;
@@ -336,13 +391,36 @@ namespace flex
 
 		}
 
-		Identifier* newOtherwise = otherwise->RewriteCompoundStatements(parser, tmpStatements);
-		if (newOtherwise != nullptr)
+		if (otherwise != nullptr)
 		{
-			otherwise = newOtherwise;
+			Identifier* newOtherwise = otherwise->RewriteCompoundStatements(parser, tmpStatements);
+			if (newOtherwise != nullptr)
+			{
+				otherwise = newOtherwise;
+			}
 		}
 
 		return nullptr;
+	}
+
+	void IfStatement::ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer)
+	{
+		varContainer->PushFrame();
+
+		condition->ResolveTypesAndLifetimes(varContainer, diagnosticContainer);
+		if (condition->typeName != TypeName::BOOL)
+		{
+			diagnosticContainer->AddDiagnostic(condition->span, 0, 0, "Condition statement must evaluate to a boolean value (not " + std::string(TypeNameToString(condition->typeName)) + ")");
+		}
+
+		then->ResolveTypesAndLifetimes(varContainer, diagnosticContainer);
+
+		if (otherwise != nullptr)
+		{
+			otherwise->ResolveTypesAndLifetimes(varContainer, diagnosticContainer);
+		}
+
+		varContainer->PopFrame();
 	}
 
 	ForStatement::~ForStatement()
@@ -407,6 +485,23 @@ namespace flex
 		return nullptr;
 	}
 
+	void ForStatement::ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer)
+	{
+		varContainer->PushFrame();
+
+		setup->ResolveTypesAndLifetimes(varContainer, diagnosticContainer);
+		condition->ResolveTypesAndLifetimes(varContainer, diagnosticContainer);
+		if (condition->typeName != TypeName::BOOL)
+		{
+			diagnosticContainer->AddDiagnostic(condition->span, 0, 0, "Condition statement must evaluate to a boolean value (not " + std::string(TypeNameToString(condition->typeName)) + ")");
+		}
+
+		update->ResolveTypesAndLifetimes(varContainer, diagnosticContainer);
+		body->ResolveTypesAndLifetimes(varContainer, diagnosticContainer);
+
+		varContainer->PopFrame();
+	}
+
 	WhileStatement::~WhileStatement()
 	{
 		delete condition;
@@ -440,6 +535,21 @@ namespace flex
 		}
 
 		return nullptr;
+	}
+
+	void WhileStatement::ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer)
+	{
+		varContainer->PushFrame();
+
+		condition->ResolveTypesAndLifetimes(varContainer, diagnosticContainer);
+		if (condition->typeName != TypeName::BOOL)
+		{
+			diagnosticContainer->AddDiagnostic(condition->span, 0, 0, "Condition statement must evaluate to a boolean value (not " + std::string(TypeNameToString(condition->typeName)) + ")");
+		}
+
+		body->ResolveTypesAndLifetimes(varContainer, diagnosticContainer);
+
+		varContainer->PopFrame();
 	}
 
 	DoWhileStatement::~DoWhileStatement()
@@ -478,6 +588,21 @@ namespace flex
 		return nullptr;
 	}
 
+	void DoWhileStatement::ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer)
+	{
+		varContainer->PushFrame();
+
+		condition->ResolveTypesAndLifetimes(varContainer, diagnosticContainer);
+		if (condition->typeName != TypeName::BOOL)
+		{
+			diagnosticContainer->AddDiagnostic(condition->span, 0, 0, "Condition statement must evaluate to a boolean value (not " + std::string(TypeNameToString(condition->typeName)) + ")");
+		}
+
+		body->ResolveTypesAndLifetimes(varContainer, diagnosticContainer);
+
+		varContainer->PopFrame();
+	}
+
 	FunctionDeclaration::~FunctionDeclaration()
 	{
 		for (u32 i = 0; i < (u32)arguments.size(); ++i)
@@ -497,8 +622,6 @@ namespace flex
 		stringBuilder.Append("(");
 		for (u32 i = 0; i < (u32)arguments.size(); ++i)
 		{
-			stringBuilder.Append(TypeNameToString(arguments[i]->typeName));
-			stringBuilder.Append(" ");
 			stringBuilder.Append(arguments[i]->ToString());
 			if (i < (u32)arguments.size() - 1)
 			{
@@ -517,6 +640,22 @@ namespace flex
 	{
 		body->RewriteCompoundStatements(parser, tmpStatements);
 		return nullptr;
+	}
+
+	void FunctionDeclaration::ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer)
+	{
+		varContainer->DeclareFunction(this);
+
+		varContainer->PushFrame();
+
+		for (u32 i = 0; i < (u32)arguments.size(); ++i)
+		{
+			arguments[i]->ResolveTypesAndLifetimes(varContainer, diagnosticContainer);
+		}
+
+		body->ResolveTypesAndLifetimes(varContainer, diagnosticContainer);
+
+		varContainer->PopFrame();
 	}
 
 	YieldStatement::~YieldStatement()
@@ -555,6 +694,19 @@ namespace flex
 		return nullptr;
 	}
 
+	void YieldStatement::ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer)
+	{
+		if (yieldValue != nullptr)
+		{
+			yieldValue->ResolveTypesAndLifetimes(varContainer, diagnosticContainer);
+
+			if (yieldValue->typeName != TypeName::_NONE)
+			{
+				diagnosticContainer->AddDiagnostic(yieldValue->span, 0, 0, "Yield value must be non-void");
+			}
+		}
+	}
+
 	ReturnStatement::~ReturnStatement()
 	{
 		delete returnValue;
@@ -591,6 +743,19 @@ namespace flex
 		return nullptr;
 	}
 
+	void ReturnStatement::ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer)
+	{
+		if (returnValue != nullptr)
+		{
+			returnValue->ResolveTypesAndLifetimes(varContainer, diagnosticContainer);
+
+			if (returnValue->typeName == TypeName::_NONE)
+			{
+				diagnosticContainer->AddDiagnostic(returnValue->span, 0, 0, "Return value must be non-void");
+			}
+		}
+	}
+
 	Declaration::~Declaration()
 	{
 		delete initializer;
@@ -604,26 +769,79 @@ namespace flex
 		stringBuilder.Append(" ");
 		stringBuilder.Append(identifierStr);
 
-		if (initializer != nullptr)
+		if (!bIsFunctionArgDefinition)
 		{
 			stringBuilder.Append(" = ");
 			stringBuilder.Append(initializer->ToString());
+			stringBuilder.Append(";");
 		}
-
-		stringBuilder.Append(";");
 
 		return stringBuilder.ToString();
 	}
 
 	Identifier* Declaration::RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements)
 	{
-		Identifier* initializerTempIdent = initializer->RewriteCompoundStatements(parser, tmpStatements);
-		if (initializerTempIdent != nullptr)
+		if (!bIsFunctionArgDefinition)
 		{
-			initializer = initializerTempIdent;
+			Identifier* initializerTempIdent = initializer->RewriteCompoundStatements(parser, tmpStatements);
+			if (initializerTempIdent != nullptr)
+			{
+				initializer = initializerTempIdent;
+			}
 		}
 
 		return nullptr;
+	}
+
+	void Declaration::ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer)
+	{
+		TypeName testTypeName;
+		if (varContainer->GetTypeName(identifierStr, testTypeName))
+		{
+			if (testTypeName != typeName)
+			{
+				std::string diagnosticStr = "Multiple definitions found of '" + identifierStr + "' with different types (" + std::string(TypeNameToString(typeName)) + " vs. " + std::string(TypeNameToString(testTypeName)) + ")";
+				diagnosticContainer->AddDiagnostic(initializer->span, 0, 0, diagnosticStr);
+			}
+			else
+			{
+				std::string diagnosticStr = "Multiple definitions found of '" + identifierStr;
+				diagnosticContainer->AddDiagnostic(initializer->span, 0, 0, diagnosticStr);
+			}
+
+			return;
+		}
+
+		varContainer->DeclareVariable(this);
+
+		if (!bIsFunctionArgDefinition)
+		{
+			initializer->ResolveTypesAndLifetimes(varContainer, diagnosticContainer);
+
+			if (!varContainer->SetVariableType(identifierStr, initializer->typeName))
+			{
+				assert(false);
+				//std::string diagnosticStr = "Mismatched types (" + std::string(TypeNameToString(initializer->typeName)) + " vs. " + std::string(TypeNameToString(varTypeName)) + ")";
+				//diagnosticContainer->AddDiagnostic(initializer->span, 0, 0, diagnosticStr);
+			}
+		}
+	}
+
+	void Identifier::ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer)
+	{
+		TypeName identTypeName;
+		if (varContainer->GetTypeName(identifierStr, identTypeName))
+		{
+			if (typeName != identTypeName)
+			{
+				typeName = identTypeName;
+				varContainer->SetWriteFlag();
+			}
+		}
+		else
+		{
+			diagnosticContainer->AddDiagnostic(span, 0, 0, "Identifier not found");
+		}
 	}
 
 	Assignment::~Assignment()
@@ -652,6 +870,11 @@ namespace flex
 		}
 
 		return nullptr;
+	}
+
+	void Assignment::ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer)
+	{
+		rhs->ResolveTypesAndLifetimes(varContainer, diagnosticContainer);
 	}
 
 	CompoundAssignment::~CompoundAssignment()
@@ -709,6 +932,14 @@ namespace flex
 		return g_InvalidIdentifier;
 	}
 
+	void CompoundAssignment::ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer)
+	{
+		UNREFERENCED_PARAMETER(varContainer);
+		UNREFERENCED_PARAMETER(diagnosticContainer);
+		// Type propagation should happen after complex types are eliminated (in RewriteCompoundStatement calls)
+		assert(false);
+	}
+
 	ListInitializer::~ListInitializer()
 	{
 		for (u32 i = 0; i < (u32)listValues.size(); ++i)
@@ -749,6 +980,14 @@ namespace flex
 		return nullptr;
 	}
 
+	void ListInitializer::ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer)
+	{
+		for (u32 i = 0; i < (u32)listValues.size(); ++i)
+		{
+			listValues[i]->ResolveTypesAndLifetimes(varContainer, diagnosticContainer);
+		}
+	}
+
 	IndexOperation::~IndexOperation()
 	{
 		delete indexExpression;
@@ -778,6 +1017,11 @@ namespace flex
 		return new Identifier(span, tmpDecl->identifierStr);
 	}
 
+	void IndexOperation::ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer)
+	{
+		indexExpression->ResolveTypesAndLifetimes(varContainer, diagnosticContainer);
+	}
+
 	UnaryOperation::~UnaryOperation()
 	{
 		delete expression;
@@ -787,7 +1031,7 @@ namespace flex
 	{
 		StringBuilder stringBuilder;
 
-		switch (type)
+		switch (operatorType)
 		{
 		case UnaryOperatorType::PLUS:
 			stringBuilder.Append('+');
@@ -827,6 +1071,11 @@ namespace flex
 		return new Identifier(span, tmpDecl->identifierStr);
 	}
 
+	void UnaryOperation::ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer)
+	{
+		expression->ResolveTypesAndLifetimes(varContainer, diagnosticContainer);
+	}
+
 	BinaryOperation::~BinaryOperation()
 	{
 		delete lhs;
@@ -840,7 +1089,7 @@ namespace flex
 		stringBuilder.Append("(");
 		stringBuilder.Append(lhs->ToString());
 		stringBuilder.Append(" ");
-		stringBuilder.Append(BinaryOperatorTypeToString(type));
+		stringBuilder.Append(BinaryOperatorTypeToString(operatorType));
 		stringBuilder.Append(" ");
 		stringBuilder.Append(rhs->ToString());
 		stringBuilder.Append(")");
@@ -862,13 +1111,39 @@ namespace flex
 		Identifier* rhsTempIdent = rhs->RewriteCompoundStatements(parser, tmpStatements);
 		if (rhsTempIdent != nullptr)
 		{
-			rhs = lhsTempIdent;
+			rhs = rhsTempIdent;
 		}
 
 		Declaration* tmpDecl = new Declaration(span, parser->NextTempIdentifier(), this, typeName);
 		tmpStatements.push_back(tmpDecl);
 
 		return new Identifier(span, tmpDecl->identifierStr);
+	}
+
+	void BinaryOperation::ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer)
+	{
+		lhs->ResolveTypesAndLifetimes(varContainer, diagnosticContainer);
+		rhs->ResolveTypesAndLifetimes(varContainer, diagnosticContainer);
+		if (lhs->typeName != rhs->typeName)
+		{
+
+			std::string diagnosticStr = "Mismatched types (" + std::string(TypeNameToString(lhs->typeName)) + " vs. " + std::string(TypeNameToString(rhs->typeName)) + ")";
+			diagnosticContainer->AddDiagnostic(lhs->span.Extend(rhs->span), 0, 0, diagnosticStr);
+		}
+		else
+		{
+			TypeName targetTypeName = lhs->typeName;
+			if (BinaryOperatorTypeIsTest(operatorType))
+			{
+				targetTypeName = TypeName::BOOL;
+			}
+
+			if (typeName != targetTypeName)
+			{
+				typeName = targetTypeName;
+				varContainer->SetWriteFlag();
+			}
+		}
 	}
 
 	TernaryOperation::~TernaryOperation()
@@ -920,6 +1195,27 @@ namespace flex
 		return new Identifier(span, tmpDecl->identifierStr);
 	}
 
+	void TernaryOperation::ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer)
+	{
+		condition->ResolveTypesAndLifetimes(varContainer, diagnosticContainer);
+		ifTrue->ResolveTypesAndLifetimes(varContainer, diagnosticContainer);
+		ifFalse->ResolveTypesAndLifetimes(varContainer, diagnosticContainer);
+
+		if (ifTrue->typeName != ifFalse->typeName)
+		{
+			std::string diagnosticStr = "Mismatched types (" + std::string(TypeNameToString(ifTrue->typeName)) + " vs. " + std::string(TypeNameToString(ifFalse->typeName)) + ")";
+			diagnosticContainer->AddDiagnostic(ifTrue->span.Extend(ifFalse->span), 0, 0, diagnosticStr);
+		}
+		else
+		{
+			if (typeName != ifTrue->typeName)
+			{
+				typeName = ifTrue->typeName;
+				varContainer->SetWriteFlag();
+			}
+		}
+	}
+
 	FunctionCall::~FunctionCall()
 	{
 		for (u32 i = 0; i < (u32)arguments.size(); ++i)
@@ -966,6 +1262,32 @@ namespace flex
 		tmpStatements.push_back(tmpDecl);
 
 		return new Identifier(span, tmpDecl->identifierStr);
+	}
+
+	void FunctionCall::ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer)
+	{
+		for (u32 i = 0; i < (u32)arguments.size(); ++i)
+		{
+			arguments[i]->ResolveTypesAndLifetimes(varContainer, diagnosticContainer);
+		}
+
+		TypeName funcReturnValue;
+		if (varContainer->GetTypeName(target, funcReturnValue))
+		{
+			if (typeName != funcReturnValue)
+			{
+				typeName = funcReturnValue;
+				varContainer->SetWriteFlag();
+			}
+		}
+		else
+		{
+			if (varContainer->IsFinalPass())
+			{
+				// Only log diagnostic if previous passes didn't find this type
+				diagnosticContainer->AddDiagnostic(span, 0, 0, "Expected return type from function");
+			}
+		}
 	}
 
 	Parser::Parser(Lexer* lexer, DiagnosticContainer* diagnosticContainer) :
@@ -1125,14 +1447,9 @@ namespace flex
 
 			Token identifierToken = Eat(TokenKind::IDENTIFIER);
 
-			Expression* initializer = nullptr;
-
-			if (NextIs(TokenKind::EQUALS))
-			{
-				Eat(TokenKind::EQUALS);
-				initializer = NextExpression();
-				span = span.Extend(initializer->span);
-			}
+			Eat(TokenKind::EQUALS);
+			Expression* initializer = NextExpression();
+			span = span.Extend(initializer->span);
 
 			return new Declaration(span, identifierToken.value, initializer, typeName);
 		}
@@ -1468,7 +1785,7 @@ namespace flex
 		Span span = Eat(TokenKind::FUNC).span;
 		Token functionNameToken = Eat(TokenKind::IDENTIFIER);
 		Eat(TokenKind::OPEN_PAREN);
-		std::vector<Identifier*> arguments = NextArgumentDefinitionList();
+		std::vector<Declaration*> arguments = NextArgumentDefinitionList();
 		Eat(TokenKind::CLOSE_PAREN);
 		Eat(TokenKind::ARROW);
 		Token returnTypeToken = Eat(m_Current.kind);
@@ -1476,24 +1793,27 @@ namespace flex
 		return new FunctionDeclaration(span.Extend(body->span), functionNameToken.value, arguments, TokenKindToTypeName(returnTypeToken.kind), body);
 	}
 
-	std::vector<Identifier*> Parser::NextArgumentDefinitionList()
+	std::vector<Declaration*> Parser::NextArgumentDefinitionList()
 	{
-		std::vector<Identifier*> result;
+		std::vector<Declaration*> result;
 
-		while (!NextIs(TokenKind::CLOSE_PAREN))
+		if (!NextIs(TokenKind::CLOSE_PAREN))
 		{
-			Token typeToken = Eat(m_Current.kind);
-			Span span = typeToken.span;
-			Token identifier = Eat(TokenKind::IDENTIFIER);
-
-			result.push_back(new Identifier(span.Extend(identifier.span), identifier.value, TokenKindToTypeName(typeToken.kind)));
-
-			if (!NextIs(TokenKind::COMMA))
+			while (true)
 			{
-				break;
-			}
+				Token typeToken = Eat(m_Current.kind);
+				Span span = typeToken.span;
+				Token identifier = Eat(TokenKind::IDENTIFIER);
 
-			Eat(TokenKind::COMMA);
+				result.push_back(new Declaration(span.Extend(identifier.span), identifier.value, nullptr, TokenKindToTypeName(typeToken.kind), true));
+
+				if (!NextIs(TokenKind::COMMA))
+				{
+					break;
+				}
+
+				Eat(TokenKind::COMMA);
+			}
 		}
 
 		return result;
@@ -1503,16 +1823,19 @@ namespace flex
 	{
 		std::vector<Expression*> result;
 
-		while (true)
+		if (!NextIs(TokenKind::CLOSE_PAREN))
 		{
-			result.push_back(NextExpression());
-
-			if (!NextIs(TokenKind::COMMA))
+			while (true)
 			{
-				break;
-			}
+				result.push_back(NextExpression());
 
-			Eat(TokenKind::COMMA);
+				if (!NextIs(TokenKind::COMMA))
+				{
+					break;
+				}
+
+				Eat(TokenKind::COMMA);
+			}
 		}
 
 		return result;

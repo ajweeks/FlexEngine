@@ -652,17 +652,17 @@ namespace flex
 			EXPECT(strcmp(decl->identifierStr.c_str(), "result"), 0);
 			BinaryOperation* bin0 = dynamic_cast<BinaryOperation*>(decl->initializer);
 			EXPECT(bin0 != nullptr, true);
-			EXPECT((u32)bin0->type, (u32)BinaryOperatorType::BOOLEAN_AND);
+			EXPECT((u32)bin0->operatorType, (u32)BinaryOperatorType::BOOLEAN_AND);
 			BinaryOperation* lhs = dynamic_cast<BinaryOperation*>(bin0->lhs);
 			BinaryOperation* rhs = dynamic_cast<BinaryOperation*>(bin0->rhs);
 			EXPECT(lhs != nullptr, true);
 			EXPECT(rhs != nullptr, true);
-			EXPECT((u32)lhs->type, (u32)BinaryOperatorType::BOOLEAN_AND);
-			EXPECT((u32)rhs->type, (u32)BinaryOperatorType::BOOLEAN_OR);
+			EXPECT((u32)lhs->operatorType, (u32)BinaryOperatorType::BOOLEAN_AND);
+			EXPECT((u32)rhs->operatorType, (u32)BinaryOperatorType::BOOLEAN_OR);
 			Identifier* a0 = dynamic_cast<Identifier*>(lhs->lhs);
 			UnaryOperation* b0Op = dynamic_cast<UnaryOperation*>(lhs->rhs);
 			EXPECT(b0Op != nullptr, true);
-			EXPECT((u32)b0Op->type, (u32)UnaryOperatorType::NOT);
+			EXPECT((u32)b0Op->operatorType, (u32)UnaryOperatorType::NOT);
 			Identifier* b0 = dynamic_cast<Identifier*>(b0Op->expression);
 			Identifier* b1 = dynamic_cast<Identifier*>(rhs->lhs);
 			Identifier* a1 = dynamic_cast<Identifier*>(rhs->rhs);
@@ -833,11 +833,78 @@ namespace flex
 		{
 			VM* vm = new VM();
 
-			using OpCode = VM::OpCode;
-			using Value = VM::Value;
-			using ValueType = VM::ValueWrapper::Type;
+			using ValueType = ValueWrapper::Type;
 
 			std::vector<VM::Instruction> instStream;
+
+			instStream.push_back({ OpCode::ADD, { ValueType::REGISTER, Value(0) }, { ValueType::CONSTANT, Value(1) }, { ValueType::CONSTANT, Value(2) } }); // r0 = 1 + 2
+			instStream.push_back({ OpCode::MUL, { ValueType::REGISTER, Value(0) }, { ValueType::REGISTER, Value(0) }, { ValueType::CONSTANT, Value(2) } }); // r0 = r0 * 2
+			instStream.push_back({ OpCode::YIELD });
+			instStream.push_back({ OpCode::ADD, { ValueType::REGISTER, Value(1) }, { ValueType::CONSTANT, Value(12) }, { ValueType::CONSTANT, Value(20) } }); // r1 = 12 + 20
+			instStream.push_back({ OpCode::MOD, { ValueType::REGISTER, Value(1) }, { ValueType::REGISTER, Value(1) }, { ValueType::REGISTER, Value(0) } }); // r1 = r1 % r0
+			instStream.push_back({ OpCode::YIELD });
+			instStream.push_back({ OpCode::DIV, { ValueType::REGISTER, Value(0) }, { ValueType::REGISTER, Value(0) }, { ValueType::REGISTER, Value(1) } }); // r0 = r0 / r1
+			instStream.push_back({ OpCode::YIELD });
+			instStream.push_back({ OpCode::TERMINATE });
+
+			vm->GenerateFromInstStream(instStream);
+
+			vm->Execute();
+
+			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
+			for (const Diagnostic& diagnostic : vm->diagnosticContainer->diagnostics)
+			{
+				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
+			}
+
+			EXPECT(vm->registers[0].valInt, (1 + 2) * 2);
+
+			vm->Execute();
+
+			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
+			EXPECT(vm->registers[1].valInt, (12 + 20) % ((1 + 2) * 2));
+
+			vm->Execute();
+
+			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
+			EXPECT(vm->registers[0].valInt, ((1 + 2) * 2) / ((12 + 20) % ((1 + 2) * 2)));
+
+			EXPECT(vm->stack.empty(), true);
+
+			delete vm;
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(VMTestsBasic1)
+		{
+			VM* vm = new VM();
+
+			using ValueType = ValueWrapper::Type;
+
+			std::vector<VM::Instruction> instStream;
+
+
+			/*
+
+			int a = 10;
+			int b = 13;
+			bool b = (a > b) && (a != 0);
+			print("b: %s", b ? "true" : "false");
+
+			  |
+			  v
+
+			mov r0 10
+			mov r1 13
+			gt  r2 a b
+			cne r3 a #0
+			and r0 r2 r3
+			...
+			push r0
+			call print
+			...
+
+			*/
 
 			instStream.push_back({ OpCode::ADD, { ValueType::REGISTER, Value(0) }, { ValueType::CONSTANT, Value(1) }, { ValueType::CONSTANT, Value(2) } }); // r0 = 1 + 2
 			instStream.push_back({ OpCode::MUL, { ValueType::REGISTER, Value(0) }, { ValueType::REGISTER, Value(0) }, { ValueType::CONSTANT, Value(2) } }); // r0 = r0 * 2
@@ -881,9 +948,7 @@ namespace flex
 		{
 			VM* vm = new VM();
 
-			using OpCode = VM::OpCode;
-			using Value = VM::Value;
-			using ValueType = VM::ValueWrapper::Type;
+			using ValueType = ValueWrapper::Type;
 
 			std::vector<VM::Instruction> instStream;
 
@@ -891,7 +956,8 @@ namespace flex
 			// Loop start
 			instStream.push_back({ OpCode::MUL, { ValueType::REGISTER, Value(1) }, { ValueType::REGISTER, Value(1) }, { ValueType::CONSTANT, Value(2) } }); // r1 = r1 * 2
 			instStream.push_back({ OpCode::ADD, { ValueType::REGISTER, Value(0) }, { ValueType::REGISTER, Value(0) }, { ValueType::CONSTANT, Value(1) } }); // r0 = r0 + 1
-			instStream.push_back({ OpCode::JLT, { ValueType::REGISTER, Value(0) }, { ValueType::CONSTANT, Value(10) }, { ValueType::CONSTANT, Value(1) } }); // if r0 < 10 jump to line 1
+			instStream.push_back({ OpCode::CMP, { ValueType::REGISTER, Value(0) }, { ValueType::CONSTANT, Value(10) } }); // ro = r0 - 10
+			instStream.push_back({ OpCode::JLT, { ValueType::CONSTANT, Value(1) } }); // if r0 < 10 jump to line 1
 			// Loop end
 			instStream.push_back({ OpCode::TERMINATE });
 
@@ -918,9 +984,7 @@ namespace flex
 		{
 			VM* vm = new VM();
 
-			using OpCode = VM::OpCode;
-			using Value = VM::Value;
-			using ValueType = VM::ValueWrapper::Type;
+			using ValueType = ValueWrapper::Type;
 
 			std::vector<VM::Instruction> instStream;
 
@@ -986,17 +1050,8 @@ namespace flex
 			AST* ast = new AST();
 
 			ast->Generate("\n"
-				"func func0(int arg0, int arg1) -> int {\n"
-				"	return func1(arg0 * arg1); \n"
-				"}\n"
-				"\n"
-				"func func1(int arg0) -> int {\n"
-				"    return arg0 * 2; \n"
-				"}\n"
-				"\n"
-				"int r0 = func0(3, 5);\n"
-				"r0 += 10 * 7;\n"
-				"r0 += func0(1, 1);\n\n");
+				"func foo() -> int { return 2 * 7 + 9 - 6; }"
+				"int bar = foo() * foo() + foo(); \n");
 
 			VM* vm = new VM();
 			vm->GenerateFromAST(ast);
@@ -1008,9 +1063,108 @@ namespace flex
 				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
 			}
 
-			EXPECT(vm->registers[0].valInt, (3 * 5) * 2);
+			i32 foo = 2 * 7 + 9 - 6; // 17
+			EXPECT(vm->registers[8].valInt, foo * foo + foo); // 306
+			EXPECT(vm->stack.empty(), true);
+
+			delete vm;
+			ast->Destroy();
+			delete ast;
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(VMTestsBytecodeGenFromAST1)
+		{
+			AST* ast = new AST();
+
+			ast->Generate("\n"
+				"func foo() -> float { return 2.00 * 7.F + 9.0f - 6.; }"
+				"float bar = foo() * foo() + foo(); \n");
+
+			VM* vm = new VM();
+			vm->GenerateFromAST(ast);
+			vm->Execute();
+
+			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
+			for (const Diagnostic& diagnostic : vm->diagnosticContainer->diagnostics)
+			{
+				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
+			}
+
+			real foo = 2.0f * 7.0f + 9.0f - 6.0f; // 17.0f
+			EXPECT(vm->registers[8].valFloat, foo * foo + foo); // 306.0f
+			EXPECT(vm->stack.empty(), true);
+
+			delete vm;
+			ast->Destroy();
+			delete ast;
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(VMTestsBytecodeGenFromAST2)
+		{
+			AST* ast = new AST();
+
+			ast->Generate("\n"
+				"{{int a = func0(99,100); \n"
+				"\n"
+				"func func1(int arg0) -> int { \n"
+				"    return func2(arg0 * 2); \n"
+				"} \n"
+				"func func0(int arg0, int arg1) -> int { \n"
+				"	return func1(arg0 * arg1); \n"
+				"} \n"
+				"\n"
+				"func func2(int arg0) -> int { \n"
+				"    return arg0 * 4; \n"
+				"}\n"
+				"\n"
+				"float p = 10.0; \n"
+				"int r0 = func0(3, 5); \n"
+				"r0 += 10 * 7; \n"
+				"r0 += func0(1, 1); \n"
+				"int val = factorial(5); \n"
+				"func factorial(int aa) -> int { \n"
+				"    if (aa <= 1) return 1; \n"
+				"    return aa * factorial(aa - 1); \n"
+				"} \n"
+				"}}\n");
+
+			VM* vm = new VM();
+			vm->GenerateFromAST(ast);
+
+			if (vm->diagnosticContainer->diagnostics.empty())
+			{
+				vm->Execute();
+			}
+
+			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
+			for (const Diagnostic& diagnostic : vm->diagnosticContainer->diagnostics)
+			{
+				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
+			}
 
 			EXPECT(vm->stack.empty(), true);
+
+			delete vm;
+			ast->Destroy();
+			delete ast;
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(VMTestsUnreachableVar0)
+		{
+			AST* ast = new AST();
+
+			ast->Generate("\n"
+				"{int a = 10}; \n"
+				"int b = a;    \n");
+
+			VM* vm = new VM();
+			vm->GenerateFromAST(ast);
+			vm->Execute();
+
+			EXPECT(vm->diagnosticContainer->diagnostics.size(), 1);
 
 			delete vm;
 			ast->Destroy();
@@ -1036,7 +1190,8 @@ namespace flex
 				//ParseTestBasic1, ParseTestBasic2, ParseTestEmptyFor, ParseTestEmptyWhile, ParseTestEmptyDoWhile,
 				//LexAndParseTests,
 				//VMTestsBasic0, VMTestsLoop0, VMTestsFunc0,
-				VMTestsBytecodeGenFromAST0,
+				VMTestsBytecodeGenFromAST0, VMTestsBytecodeGenFromAST1, //VMTestsBytecodeGenFromAST2,
+				//VMTestsUnreachableVar0
 			};
 			Print("Running %u tests...\n", (u32)ARRAY_LENGTH(funcs));
 			u32 failedTestCount = 0;

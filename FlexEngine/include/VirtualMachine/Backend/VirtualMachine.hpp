@@ -2,16 +2,93 @@
 
 #include <stack>
 
+#include "VirtualMachine/Backend/Value.hpp"
+
 namespace flex
 {
 	struct DiagnosticContainer;
 	struct AST;
+	struct Statement;
+	struct Expression;
+	struct Declaration;
+	struct FunctionCall;
+	enum class TypeName;
+	enum class BinaryOperatorType;
+
+	enum class OpCode
+	{
+		MOV,
+		ADD,
+		SUB,
+		MUL,
+		DIV,
+		MOD,
+		AND,
+		OR,
+		XOR,
+		CALL,
+		PUSH,
+		POP,
+		JMP,
+		CMP,
+		JEQ,
+		JNE,
+		JLT,
+		JLE,
+		JGT,
+		JGE,
+		YIELD,
+		RETURN,
+		TERMINATE,
+
+		_NONE
+	};
+
+	static const char* s_OpCodeStrings[] =
+	{
+		"mov",
+		"add",
+		"sub",
+		"mul",
+		"div",
+		"mod",
+		"and",
+		"or",
+		"xor",
+		"call",
+		"push",
+		"pop",
+		"jmp",
+		"cmp",
+		"jeq",
+		"jne",
+		"jlt",
+		"jle",
+		"jgt",
+		"jge",
+		"yield",
+		"return",
+		"terminate",
+
+		"NONE"
+	};
+
+	static_assert(ARRAY_LENGTH(s_OpCodeStrings) == ((size_t)OpCode::_NONE + 1), "Length of s_OpCodeStrings must match length of OpCode enum");
+
+	const char* OpCodeToString(OpCode opCode);
+
+	OpCode BinaryOperatorTypeToOpCode(BinaryOperatorType operatorType);
+	OpCode BinaryOpToJumpCode(BinaryOperatorType operatorType);
 
 	class VM
 	{
 	public:
 		VM();
 		~VM();
+
+		// _ Syntax rules _
+		// Vars must be declared (with type) and given an initial value prior to usage
+		// Functions are global and can be called prior to definition
 
 		// _ Calling convention _
 		// Caller pushes registers onto stack
@@ -26,139 +103,23 @@ namespace flex
 		// Caller pops return value off stack (if non-void func)
 		// Caller pops registers off stack
 
-		static const i32 REGISTER_COUNT = 16;
+		static const i32 REGISTER_COUNT = 64;
 		static const u32 MEMORY_POOL_SIZE = 32768;
 
-		struct Value
-		{
-			enum class Type
-			{
-				INT,
-				FLOAT,
-				BOOL,
-				STRING,
-				CHAR,
+		//template<typename Ret, typename... Ts>
+		//struct FuncPtr
+		//{
+		//	typedef Ret(*PtrType)(Ts...);
 
-				_NONE
-			};
+		//	FuncPtr(PtrType ptr) : ptr(ptr) {}
 
-			Value() :
-				type(Type::_NONE),
-				valInt(0)
-			{}
+		//	Ret operator()()
+		//	{
+		//		return ptr();
+		//	}
 
-			Value(i32 val) :
-				type(Type::INT),
-				valInt(val)
-			{}
-
-			Value(real val) :
-				type(Type::FLOAT),
-				valFloat(val)
-			{}
-
-			Value(bool val) :
-				type(Type::BOOL),
-				valBool(val)
-			{}
-
-			Value(char* val) :
-				type(Type::STRING),
-				valStr(val)
-			{}
-
-			Value(char val) :
-				type(Type::CHAR),
-				valChar(val)
-			{}
-
-			Value(const Value& other)
-			{
-				if (type == Type::_NONE)
-				{
-					type = other.type;
-				}
-				else
-				{
-					assert(type == other.type);
-				}
-
-				valInt = other.valInt;
-			}
-
-			Value(const Value&& other)
-			{
-				if (type == Type::_NONE)
-				{
-					type = other.type;
-				}
-				else
-				{
-					assert(type == other.type);
-				}
-
-				valInt = other.valInt;
-			}
-
-			std::string ToString() const;
-
-			Value& operator=(const Value& other);
-			Value& operator=(const Value&& other);
-			Value& operator+(const Value& other);
-			Value& operator-(const Value& other);
-			Value& operator*(const Value& other);
-			Value& operator/(const Value& other);
-			Value& operator%(const Value& other);
-			bool operator<(const Value& other);
-			bool operator<=(const Value& other);
-			bool operator>(const Value& other);
-			bool operator>=(const Value& other);
-			bool operator==(const Value& other);
-			bool operator!=(const Value& other);
-
-			Type type = Type::_NONE;
-			union
-			{
-				i32 valInt;
-				real valFloat;
-				bool valBool;
-				char* valStr;
-				char valChar;
-			};
-
-		private:
-			void CheckAssignmentType(Type otherType);
-
-		};
-
-		static Value g_EmptyValue;
-
-		struct ValueWrapper
-		{
-			enum class Type
-			{
-				REGISTER,
-				CONSTANT,
-				NONE
-			};
-
-			ValueWrapper() :
-				type(Type::NONE),
-				value(g_EmptyValue)
-			{}
-
-			ValueWrapper(Type type, const Value& value) :
-				type(type),
-				value(value)
-			{}
-
-			Type type;
-			Value value;
-
-			Value& Get(VM* vm);
-			Value& GetW(VM* vm);
-			bool Valid() const;
-		};
+		//	PtrType ptr;
+		//};
 
 		struct FuncPtr
 		{
@@ -207,29 +168,6 @@ namespace flex
 			PtrType ptr;
 		};
 
-		enum class OpCode
-		{
-			MOV,
-			ADD,
-			SUB,
-			MUL,
-			DIV,
-			MOD,
-			CALL,
-			PUSH,
-			POP,
-			JMP,
-			JLT,
-			JLE,
-			JGT,
-			JGE,
-			JE,
-			JNE,
-			YIELD,
-			RETURN,
-			TERMINATE
-		};
-
 		struct Instruction
 		{
 			Instruction(OpCode opCode) :
@@ -268,14 +206,31 @@ namespace flex
 
 		i32 instructionIdx = 0;
 		std::vector<Instruction> instructions;
+
+		// Flags bitfield
+		u32 zf : 1, sf : 1;
+
 		std::array<Value, REGISTER_COUNT> registers;
 		std::stack<Value> stack;
 
 		u32* memory = nullptr;
 		bool bTerminated = false;
 
+		struct IntermediateFuncAddress
+		{
+			i32 uid;
+			i32 ip;
+		};
+
 		using FuncAddress = i32;
 		std::map<FuncAddress, FuncPtr*> ExternalFuncTable;
+
+		struct ParseState
+		{
+			std::map<std::string, i32> varToRegisterMap;
+			std::map<std::string, i32> funcNameToUIDTable;
+			std::map<i32, i32> funcUIDToAddressTable;
+		};
 
 		void GenerateFromAST(AST* ast);
 		void GenerateFromInstStream(const std::vector<Instruction>& inInstructions);
@@ -284,6 +239,10 @@ namespace flex
 		DiagnosticContainer* diagnosticContainer = nullptr;
 
 	private:
+		void GenerateInstructions(ParseState& parseState, const std::vector<Statement*>& statements);
+		ValueWrapper GetValueWrapperFromExpression(Expression* expression, ParseState& parseState);
+		i32 GenerateCallInstruction(FunctionCall* funcCall, ParseState& parseState);
+
 		void AllocateMemory();
 		void ZeroOutRegisters();
 		void ClearStack();

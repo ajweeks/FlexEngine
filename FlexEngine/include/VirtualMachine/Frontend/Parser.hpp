@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Helpers.hpp"
+#include "VirtualMachine/Backend/Value.hpp"
 #include "VirtualMachine/Diagnostics.hpp"
 #include "VirtualMachine/Frontend/Token.hpp"
 
@@ -9,6 +10,7 @@
 namespace flex
 {
 	struct Lexer;
+	struct VariableContainer;
 	struct Declaration;
 	struct Identifier;
 	enum class TokenKind;
@@ -113,6 +115,8 @@ namespace flex
 
 	i32 GetBinaryOperatorPrecedence(TokenKind tokenKind);
 
+	bool BinaryOperatorTypeIsTest(BinaryOperatorType operatorType);
+
 	enum class TypeName
 	{
 		INT,
@@ -200,6 +204,8 @@ namespace flex
 
 	bool CanBeReduced(StatementType statementType);
 
+	bool IsLiteral(StatementType statementType);
+
 	struct Statement
 	{
 		Statement(const Span& span, StatementType statementType);
@@ -211,12 +217,13 @@ namespace flex
 		virtual std::string ToString() const = 0;
 
 		virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements);
+		virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer);
 
 		Span span;
 		StatementType statementType = StatementType::_NONE;
 	};
 
-	struct Expression : Statement
+	struct Expression : public Statement
 	{
 		Expression(Span span, TypeName typeName, StatementType statementType) :
 			Statement(span, statementType),
@@ -231,6 +238,11 @@ namespace flex
 
 		virtual ~Expression()
 		{
+		}
+
+		virtual Value GetValue()
+		{
+			return Value();
 		}
 
 		TypeName typeName = TypeName::UNKNOWN;
@@ -256,6 +268,7 @@ namespace flex
 
 		virtual std::string ToString() const override;
 		virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
+		virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer) override;
 
 		std::vector<Statement*> statements;
 	};
@@ -274,6 +287,7 @@ namespace flex
 
 		virtual std::string ToString() const override;
 		virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
+		virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer) override;
 
 		Expression* condition = nullptr;
 		Statement* then = nullptr;
@@ -295,6 +309,7 @@ namespace flex
 
 		virtual std::string ToString() const override;
 		virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
+		virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer) override;
 
 		Expression* setup = nullptr;
 		Expression* condition = nullptr;
@@ -315,6 +330,7 @@ namespace flex
 
 		virtual std::string ToString() const override;
 		virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
+		virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer) override;
 
 		Expression* condition = nullptr;
 		Statement* body = nullptr;
@@ -333,14 +349,15 @@ namespace flex
 
 		virtual std::string ToString() const override;
 		virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
+		virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer) override;
 
 		Expression* condition = nullptr;
 		Statement* body = nullptr;
 	};
 
-	struct FunctionDeclaration final : Statement
+	struct FunctionDeclaration final : public Statement
 	{
-		FunctionDeclaration(Span span, const std::string& name, const std::vector<struct Identifier*>& arguments, TypeName returnType, StatementBlock* body) :
+		FunctionDeclaration(Span span, const std::string& name, const std::vector<Declaration*>& arguments, TypeName returnType, StatementBlock* body) :
 			Statement(span, StatementType::FUNC_DECL),
 			name(name),
 			returnType(returnType),
@@ -353,14 +370,15 @@ namespace flex
 
 		virtual std::string ToString() const override;
 		virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
+		virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer) override;
 
 		std::string name;
 		TypeName returnType;
-		std::vector<Identifier*> arguments;
+		std::vector<Declaration*> arguments;
 		StatementBlock* body;
 	};
 
-	struct BreakStatement final : Statement
+	struct BreakStatement final : public Statement
 	{
 		BreakStatement(Span span) :
 			Statement(span, StatementType::BREAK)
@@ -373,7 +391,7 @@ namespace flex
 		}
 	};
 
-	struct YieldStatement final : Statement
+	struct YieldStatement final : public Statement
 	{
 		YieldStatement(Span span, Expression* yieldValue) :
 			Statement(span, StatementType::YIELD),
@@ -385,11 +403,12 @@ namespace flex
 
 		virtual std::string ToString() const override;
 		virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
+		virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer) override;
 
 		Expression* yieldValue = nullptr;
 	};
 
-	struct ReturnStatement final : Statement
+	struct ReturnStatement final : public Statement
 	{
 		ReturnStatement(Span span, Expression* returnValue) :
 			Statement(span, StatementType::RETURN),
@@ -401,16 +420,18 @@ namespace flex
 
 		virtual std::string ToString() const override;
 		virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
+		virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer) override;
 
 		Expression* returnValue = nullptr;
 	};
 
-	struct Declaration final : Expression
+	struct Declaration final : public Expression
 	{
-		Declaration(const Span& span, const std::string& identifierStr, Expression* initializer, TypeName typeName) :
+		Declaration(const Span& span, const std::string& identifierStr, Expression* initializer, TypeName typeName, bool bIsFunctionArgDefinition = false) :
 			Expression(span, typeName, StatementType::VARIABLE_DECL),
 			identifierStr(identifierStr),
-			initializer(initializer)
+			initializer(initializer),
+			bIsFunctionArgDefinition(bIsFunctionArgDefinition)
 		{
 		}
 
@@ -418,12 +439,15 @@ namespace flex
 
 		virtual std::string ToString() const override;
 		virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
+		virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer) override;
 
 		std::string identifierStr;
+		// TODO: Store Assignment?
 		Expression* initializer = nullptr;
+		bool bIsFunctionArgDefinition = false; // Only needed for ToString
 	};
 
-	struct Identifier final : Expression
+	struct Identifier final : public Expression
 	{
 		Identifier(const Span& span, const std::string& identifierStr, TypeName typeName) :
 			Expression(span, typeName, StatementType::IDENTIFIER),
@@ -442,10 +466,12 @@ namespace flex
 			return identifierStr;
 		}
 
+		virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer) override;
+
 		std::string identifierStr;
 	};
 
-	struct Assignment final : Expression
+	struct Assignment final : public Expression
 	{
 		Assignment(const Span& span, const std::string& lhs, Expression* rhs) :
 			Expression(span, StatementType::ASSIGNMENT),
@@ -458,12 +484,13 @@ namespace flex
 
 		virtual std::string ToString() const override;
 		virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
+		virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer) override;
 
 		std::string lhs;
 		Expression* rhs;
 	};
 
-	struct CompoundAssignment final : Expression
+	struct CompoundAssignment final : public Expression
 	{
 		CompoundAssignment(const Span& span, const std::string& lhs, Expression* rhs, BinaryOperatorType operatorType) :
 			Expression(span, StatementType::COMPOUND_ASSIGNMENT),
@@ -477,13 +504,14 @@ namespace flex
 
 		virtual std::string ToString() const override;
 		virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
+		virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer) override;
 
 		std::string lhs;
 		Expression* rhs;
 		BinaryOperatorType operatorType;
 	};
 
-	struct IntLiteral final : Expression
+	struct IntLiteral final : public Expression
 	{
 		IntLiteral(const Span& span, i32 value) :
 			Expression(span, TypeName::INT, StatementType::INT_LIT),
@@ -496,10 +524,15 @@ namespace flex
 			return IntToString(value);
 		}
 
+		virtual Value GetValue() override
+		{
+			return Value(value);
+		}
+
 		i32 value;
 	};
 
-	struct FloatLiteral final : Expression
+	struct FloatLiteral final : public Expression
 	{
 		FloatLiteral(const Span& span, real value) :
 			Expression(span, TypeName::FLOAT, StatementType::FLOAT_LIT),
@@ -512,10 +545,15 @@ namespace flex
 			return FloatToString(value) + "f";
 		}
 
+		virtual Value GetValue() override
+		{
+			return Value(value);
+		}
+
 		real value;
 	};
 
-	struct BoolLiteral final : Expression
+	struct BoolLiteral final : public Expression
 	{
 		BoolLiteral(const Span& span, bool value) :
 			Expression(span, TypeName::BOOL, StatementType::BOOL_LIT),
@@ -528,10 +566,15 @@ namespace flex
 			return value ? "true" : "false";
 		}
 
+		virtual Value GetValue() override
+		{
+			return Value(value);
+		}
+
 		bool value;
 	};
 
-	struct StringLiteral final : Expression
+	struct StringLiteral final : public Expression
 	{
 		StringLiteral(const Span& span, const std::string& value) :
 			Expression(span, TypeName::STRING, StatementType::STRING_LIT),
@@ -544,10 +587,15 @@ namespace flex
 			return "\"" + value + "\"";
 		}
 
+		virtual Value GetValue() override
+		{
+			return Value(value.c_str());
+		}
+
 		std::string value;
 	};
 
-	struct CharLiteral final : Expression
+	struct CharLiteral final : public Expression
 	{
 		CharLiteral(const Span& span, char value) :
 			Expression(span, TypeName::CHAR, StatementType::CHAR_LIT),
@@ -560,10 +608,15 @@ namespace flex
 			return std::string(1, value);
 		}
 
+		virtual Value GetValue() override
+		{
+			return Value(value);
+		}
+
 		char value;
 	};
 
-	struct ListInitializer final : Expression
+	struct ListInitializer final : public Expression
 	{
 		ListInitializer(const Span& span, const std::vector<Expression*>& listValues) :
 			Expression(span, StatementType::LIST_INITIALIZER),
@@ -575,11 +628,12 @@ namespace flex
 
 		virtual std::string ToString() const override;
 		virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
+		virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer) override;
 
 		std::vector<Expression*> listValues;
 	};
 
-	struct IndexOperation final : Expression
+	struct IndexOperation final : public Expression
 	{
 		IndexOperation(const Span& span, const std::string& container, Expression* indexExpression) :
 			Expression(span, StatementType::INDEX_OPERATION),
@@ -592,17 +646,18 @@ namespace flex
 
 		virtual std::string ToString() const override;
 		virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
+		virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer) override;
 
 		std::string container;
 		Expression* indexExpression = nullptr;
 	};
 
-	struct UnaryOperation final : Expression
+	struct UnaryOperation final : public Expression
 	{
-		UnaryOperation(Span span, UnaryOperatorType type, Expression* expression) :
+		UnaryOperation(Span span, UnaryOperatorType operatorType, Expression* expression) :
 			Expression(span, StatementType::UNARY_OPERATION),
 			expression(expression),
-			type(type)
+			operatorType(operatorType)
 		{
 		}
 
@@ -610,16 +665,17 @@ namespace flex
 
 		virtual std::string ToString() const override;
 		virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
+		virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer) override;
 
 		Expression* expression = nullptr;
-		UnaryOperatorType type;
+		UnaryOperatorType operatorType;
 	};
 
-	struct BinaryOperation final : Expression
+	struct BinaryOperation final : public Expression
 	{
-		BinaryOperation(Span span, BinaryOperatorType type, Expression* lhs, Expression* rhs) :
+		BinaryOperation(Span span, BinaryOperatorType operatorType, Expression* lhs, Expression* rhs) :
 			Expression(span, StatementType::BINARY_OPERATION),
-			type(type),
+			operatorType(operatorType),
 			lhs(lhs),
 			rhs(rhs)
 		{
@@ -629,13 +685,14 @@ namespace flex
 
 		virtual std::string ToString() const override;
 		virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
+		virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer) override;
 
-		BinaryOperatorType type;
+		BinaryOperatorType operatorType;
 		Expression* lhs = nullptr;
 		Expression* rhs = nullptr;
 	};
 
-	struct TernaryOperation final : Expression
+	struct TernaryOperation final : public Expression
 	{
 		TernaryOperation(Span span, Expression* condition, Expression* ifTrue, Expression* ifFalse) :
 			Expression(span, StatementType::TERNARY_OPERATION),
@@ -649,13 +706,14 @@ namespace flex
 
 		virtual std::string ToString() const override;
 		virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
+		virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer) override;
 
 		Expression* condition;
 		Expression* ifTrue;
 		Expression* ifFalse;
 	};
 
-	struct FunctionCall final : Expression
+	struct FunctionCall final : public Expression
 	{
 		FunctionCall(Span span, const std::string& target, const std::vector<Expression*>& arguments) :
 			Expression(span, StatementType::FUNC_CALL),
@@ -668,6 +726,7 @@ namespace flex
 
 		virtual std::string ToString() const override;
 		virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
+		virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer) override;
 
 		std::string target;
 		std::vector<Expression*> arguments;
@@ -706,7 +765,7 @@ namespace flex
 		DoWhileStatement* NextDoWhileStatement();
 		FunctionDeclaration* NextFunctionDeclaration();
 		StatementBlock* NextStatementBlock();
-		std::vector<Identifier*> NextArgumentDefinitionList();
+		std::vector<Declaration*> NextArgumentDefinitionList();
 		std::vector<Expression*> NextArgumentList();
 
 	private:
