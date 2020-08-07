@@ -97,6 +97,7 @@ namespace flex
 				std::string val2Str = inst.val2.ToString();
 				Print("%s %s %s %s\n", OpCodeToString(inst.opCode), val0Str.c_str(), val1Str.c_str(), val2Str.c_str());
 			}
+			Print("\n");
 		}
 	}
 
@@ -381,10 +382,10 @@ namespace flex
 			{
 				const bool bVoid = !inst.val0.Valid();
 
-				i32 returnVal = 0;
+				Value returnVal;
 				if (!bVoid)
 				{
-					returnVal = inst.val0.Get(this).valInt;
+					returnVal = inst.val0.Get(this);
 				}
 				instructionIdx = stack.top().valInt;
 				stack.pop();
