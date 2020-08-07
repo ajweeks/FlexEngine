@@ -1064,7 +1064,7 @@ namespace flex
 			}
 
 			i32 foo = 2 * 7 + 9 - 6; // 17
-			EXPECT(vm->registers[8].valInt, foo * foo + foo); // 306
+			EXPECT(vm->registers[6].valInt, foo * foo + foo); // 306
 			EXPECT(vm->stack.empty(), true);
 
 			delete vm;
@@ -1092,7 +1092,7 @@ namespace flex
 			}
 
 			real foo = 2.0f * 7.0f + 9.0f - 6.0f; // 17.0f
-			EXPECT(vm->registers[8].valFloat, foo * foo + foo); // 306.0f
+			EXPECT(vm->registers[6].valFloat, foo * foo + foo); // 306.0f
 			EXPECT(vm->stack.empty(), true);
 
 			delete vm;
