@@ -79,11 +79,6 @@ namespace flex
 
 		Value& operator=(const Value& other);
 		Value& operator=(const Value&& other);
-		Value& operator+(const Value& other);
-		Value& operator-(const Value& other);
-		Value& operator*(const Value& other);
-		Value& operator/(const Value& other);
-		Value& operator%(const Value& other);
 		bool operator<(const Value& other);
 		bool operator<=(const Value& other);
 		bool operator>(const Value& other);
@@ -101,10 +96,18 @@ namespace flex
 			char valChar;
 		};
 
+		static Type CheckAssignmentType(Type lhsType, Type rhsType);
+
 	private:
 		void CheckAssignmentType(Type otherType);
 
 	};
+
+	Value operator+(const Value& lhs, const Value& rhs);
+	Value operator-(const Value& lhs, const Value& rhs);
+	Value operator*(const Value& lhs, const Value& rhs);
+	Value operator/(const Value& lhs, const Value& rhs);
+	Value operator%(const Value& lhs, const Value& rhs);
 
 	extern Value g_EmptyValue;
 

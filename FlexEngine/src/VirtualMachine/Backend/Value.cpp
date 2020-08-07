@@ -40,17 +40,18 @@ namespace flex
 		return *this;
 	}
 
-	Value& Value::operator+(const Value& other)
+	Value operator+(const Value& lhs, const Value& rhs)
 	{
-		CheckAssignmentType(other.type);
+		Value result;
+		result.type = Value::CheckAssignmentType(lhs.type, rhs.type);
 
-		switch (type)
+		switch (result.type)
 		{
-		case Type::INT:
-			valInt += other.valInt;
+		case Value::Type::INT:
+			result.valInt = lhs.valInt + rhs.valInt;
 			break;
-		case Type::FLOAT:
-			valFloat += other.valFloat;
+		case Value::Type::FLOAT:
+			result.valFloat = lhs.valFloat + rhs.valFloat;
 			break;
 		default:
 			PrintError("Attempted to add non-numeric types!\n");
@@ -58,19 +59,20 @@ namespace flex
 			break;
 		}
 
-		return *this;
+		return result;
 	}
 
-	Value& Value::operator-(const Value& other)
+	Value operator-(const Value& lhs, const Value& rhs)
 	{
-		CheckAssignmentType(other.type);
-		switch (type)
+		Value result;
+		result.type = Value::CheckAssignmentType(lhs.type, rhs.type);
+		switch (result.type)
 		{
-		case Type::INT:
-			valInt -= other.valInt;
+		case Value::Type::INT:
+			result.valInt = lhs.valInt - rhs.valInt;
 			break;
-		case Type::FLOAT:
-			valFloat -= other.valFloat;
+		case Value::Type::FLOAT:
+			result.valFloat = lhs.valFloat - rhs.valFloat;
 			break;
 		default:
 			PrintError("Attempted to subtract non-numeric types!\n");
@@ -78,19 +80,20 @@ namespace flex
 			break;
 		}
 
-		return *this;
+		return result;
 	}
 
-	Value& Value::operator*(const Value& other)
+	Value operator*(const Value& lhs, const Value& rhs)
 	{
-		CheckAssignmentType(other.type);
-		switch (type)
+		Value result;
+		result.type = Value::CheckAssignmentType(lhs.type, rhs.type);
+		switch (result.type)
 		{
-		case Type::INT:
-			valInt *= other.valInt;
+		case Value::Type::INT:
+			result.valInt = lhs.valInt * rhs.valInt;
 			break;
-		case Type::FLOAT:
-			valFloat *= other.valFloat;
+		case Value::Type::FLOAT:
+			result.valFloat = lhs.valFloat * rhs.valFloat;
 			break;
 		default:
 			PrintError("Attempted to multiply non-numeric types!\n");
@@ -98,19 +101,20 @@ namespace flex
 			break;
 		}
 
-		return *this;
+		return result;
 	}
 
-	Value& Value::operator/(const Value& other)
+	Value operator/(const Value& lhs, const Value& rhs)
 	{
-		CheckAssignmentType(other.type);
-		switch (type)
+		Value result;
+		result.type = Value::CheckAssignmentType(lhs.type, rhs.type);
+		switch (result.type)
 		{
-		case Type::INT:
-			valInt /= other.valInt;
+		case Value::Type::INT:
+			result.valInt = lhs.valInt / rhs.valInt;
 			break;
-		case Type::FLOAT:
-			valFloat /= other.valFloat;
+		case Value::Type::FLOAT:
+			result.valFloat = lhs.valFloat / rhs.valFloat;
 			break;
 		default:
 			PrintError("Attempted to divide non-numeric types!\n");
@@ -118,19 +122,20 @@ namespace flex
 			break;
 		}
 
-		return *this;
+		return result;
 	}
 
-	Value& Value::operator%(const Value& other)
+	Value operator%(const Value& lhs, const Value& rhs)
 	{
-		CheckAssignmentType(other.type);
-		switch (type)
+		Value result;
+		result.type = Value::CheckAssignmentType(lhs.type, rhs.type);
+		switch (result.type)
 		{
-		case Type::INT:
-			valInt %= other.valInt;
+		case Value::Type::INT:
+			result.valInt = lhs.valInt % rhs.valInt;
 			break;
-		case Type::FLOAT:
-			valFloat = fmod(valFloat, other.valFloat);
+		case Value::Type::FLOAT:
+			result.valFloat = fmod(lhs.valFloat, rhs.valFloat);
 			break;
 		default:
 			PrintError("Attempted to modulo non-numeric types!\n");
@@ -138,7 +143,7 @@ namespace flex
 			break;
 		}
 
-		return *this;
+		return result;
 	}
 
 	bool Value::operator<(const Value& other)
@@ -244,6 +249,19 @@ namespace flex
 		default:
 			assert(false);
 			return false;
+		}
+	}
+
+	Value::Type Value::CheckAssignmentType(Type lhsType, Type rhsType)
+	{
+		if (lhsType == Type::_NONE)
+		{
+			return rhsType;
+		}
+		else
+		{
+			assert(lhsType == rhsType);
+			return rhsType;
 		}
 	}
 
