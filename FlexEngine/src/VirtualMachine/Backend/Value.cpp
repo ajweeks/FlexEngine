@@ -22,6 +22,35 @@ namespace flex
 		}
 	}
 
+	bool Value::IsZero() const
+	{
+		switch (type)
+		{
+		case Type::INT:		return valInt == 0;
+		case Type::FLOAT:	return valFloat == 0.0f;
+		default:
+		{
+			PrintError("Value::IsZero called on non-numeric type\n");
+			return false;
+		}
+		}
+	}
+
+	bool Value::IsPositive() const
+	{
+
+		switch (type)
+		{
+		case Type::INT:		return valInt > 0;
+		case Type::FLOAT:	return valFloat > 0.0f;
+		default:
+		{
+			PrintError("Value::IsZero called on non-numeric type\n");
+			return false;
+		}
+		}
+	}
+
 	Value& Value::operator=(const Value& other)
 	{
 		CheckAssignmentType(other.type);

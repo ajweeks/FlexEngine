@@ -77,6 +77,9 @@ namespace flex
 
 		std::string ToString() const;
 
+		bool IsZero() const;
+		bool IsPositive() const;
+
 		Value& operator=(const Value& other);
 		Value& operator=(const Value&& other);
 		bool operator<(const Value& other);
