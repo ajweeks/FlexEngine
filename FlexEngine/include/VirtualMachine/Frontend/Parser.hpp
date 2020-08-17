@@ -18,7 +18,6 @@ namespace flex
 
 	enum class UnaryOperatorType
 	{
-		PLUS,
 		NEGATE,
 		NOT,
 		BIN_INVERT,
@@ -28,7 +27,6 @@ namespace flex
 
 	static const char* g_UnaryOperatorTypeStrings[] =
 	{
-		"+",
 		"-",
 		"!",
 		"~",

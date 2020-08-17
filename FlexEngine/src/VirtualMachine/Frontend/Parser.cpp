@@ -20,7 +20,6 @@ namespace flex
 	{
 		switch (tokenKind)
 		{
-		case TokenKind::PLUS:			return UnaryOperatorType::PLUS;
 		case TokenKind::MINUS:			return UnaryOperatorType::NEGATE;
 		case TokenKind::BANG:			return UnaryOperatorType::NOT;
 		case TokenKind::TILDE:			return UnaryOperatorType::BIN_INVERT;
@@ -1033,9 +1032,6 @@ namespace flex
 
 		switch (operatorType)
 		{
-		case UnaryOperatorType::PLUS:
-			stringBuilder.Append('+');
-			break;
 		case UnaryOperatorType::NEGATE:
 			stringBuilder.Append('-');
 			break;
