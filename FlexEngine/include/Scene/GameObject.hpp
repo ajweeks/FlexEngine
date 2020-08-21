@@ -20,8 +20,11 @@ namespace flex
 	class MeshComponent;
 	class BezierCurveList;
 	class TerminalCamera;
-	struct AST;
-	struct Lexer;
+
+	namespace VM
+	{
+		class VirtualMachine;
+	}
 
 	class GameObject
 	{
@@ -780,7 +783,7 @@ namespace flex
 		void ParseCode();
 		void EvaluateCode();
 
-		AST* m_AST = nullptr;
+		VM::VirtualMachine* m_VM = nullptr;
 
 		std::vector<std::string> lines;
 

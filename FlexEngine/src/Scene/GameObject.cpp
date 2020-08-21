@@ -46,8 +46,8 @@ IGNORE_WARNINGS_POP
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Time.hpp"
-#include "VirtualMachine/Frontend/Lexer.hpp"
-#include "VirtualMachine/Frontend/Parser.hpp"
+#include "VirtualMachine/Backend/VirtualMachine.hpp"
+#include "VirtualMachine/Diagnostics.hpp"
 #include "Window/Window.hpp"
 
 namespace flex
@@ -4868,7 +4868,7 @@ namespace flex
 
 		m_Transform.UpdateParentTransform();
 
-		m_AST = new AST();
+		m_VM = new VM::VirtualMachine();
 	}
 
 	void Terminal::Initialize()
@@ -4883,11 +4883,9 @@ namespace flex
 	{
 		g_InputManager->UnbindKeyEventCallback(&m_KeyEventCallback);
 
-		if (m_AST != nullptr)
+		if (m_VM != nullptr)
 		{
-			m_AST->Destroy();
-			delete m_AST;
-			m_AST = nullptr;
+			delete m_VM;
 		}
 
 		GameObject::Destroy();
@@ -4975,9 +4973,9 @@ namespace flex
 					pos.y -= lineHeight;
 				}
 
-				if (m_AST != nullptr)
+				if (m_VM != nullptr)
 				{
-					std::vector<Diagnostic> diagnostics = m_AST->diagnosticContainer->diagnostics;
+					std::vector<Diagnostic> diagnostics = m_VM->runtimeDiagnosticContainer->diagnostics;
 					if (!diagnostics.empty())
 					{
 						for (u32 i = 0; i < (u32)diagnostics.size(); ++i)
@@ -5043,7 +5041,7 @@ namespace flex
 			//}
 			//ImGui::EndChild();
 
-			if (m_AST->diagnosticContainer->diagnostics.empty())
+			if (m_VM->parseState.diagnosticContainer->diagnostics.empty())
 			{
 				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 1.0f, 0.5f, 1.0f));
 				ImGui::Text("Success");
@@ -5052,7 +5050,7 @@ namespace flex
 			else
 			{
 				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.5f, 0.5f, 1.0f));
-				for (const Diagnostic& diagnostic : m_AST->diagnosticContainer->diagnostics)
+				for (const Diagnostic& diagnostic : m_VM->parseState.diagnosticContainer->diagnostics)
 				{
 					ImGui::Text("L%d: %s", diagnostic.lineNumber + 1, diagnostic.message.c_str());
 				}
@@ -5441,7 +5439,7 @@ namespace flex
 
 	void Terminal::ParseCode()
 	{
-		assert(m_AST != nullptr);
+		assert(m_VM != nullptr);
 
 		std::string str;
 		for (const std::string& line : lines)
@@ -5450,9 +5448,7 @@ namespace flex
 			str.push_back('\n');
 		}
 
-		m_AST->Destroy();
-
-		m_AST->Generate(str);
+		m_VM->GenerateFromSource(str.c_str());
 	}
 
 	void Terminal::EvaluateCode()

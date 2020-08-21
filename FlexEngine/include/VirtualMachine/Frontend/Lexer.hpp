@@ -79,7 +79,7 @@ namespace flex
 
 	struct Lexer
 	{
-		Lexer(const std::string& sourceText, DiagnosticContainer* diagnosticContainer);
+		Lexer(const char* sourceText, DiagnosticContainer* diagnosticContainer);
 
 		Lexer(Lexer&) = delete;
 		Lexer(Lexer&&) = delete;

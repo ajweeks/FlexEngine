@@ -10,7 +10,7 @@ namespace flex
 {
 	struct Token g_EmptyToken = Token(Span(0, 0), TokenKind::_NONE, "");
 
-	Lexer::Lexer(const std::string& sourceText, DiagnosticContainer* diagnosticContainer) :
+	Lexer::Lexer(const char* sourceText, DiagnosticContainer* diagnosticContainer) :
 		m_CurrentSpan(0, 0),
 		diagnosticContainer(diagnosticContainer)
 	{

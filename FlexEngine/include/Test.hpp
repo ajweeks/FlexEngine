@@ -586,11 +586,15 @@ namespace flex
 		}
 		UNIT_TEST_END;
 
+		//
+		// Parse tests
+		//
+
 		UNIT_TEST(ParseTestBasic1)
 		{
-			AST* ast = new AST();
+			AST::AST* ast = new AST::AST();
 
-			std::string source = "int abcd = 1234;\n";
+			const char* source = "int abcd = 1234;\n";
 			ast->Generate(source);
 
 			EXPECT(ast->diagnosticContainer->diagnostics.empty(), true);
@@ -600,16 +604,16 @@ namespace flex
 			}
 
 			std::string reconstructedStr = ast->rootBlock->ToString();
-			EXPECT(strcmp(reconstructedStr.c_str(), source.c_str()), 0);
+			EXPECT(strcmp(reconstructedStr.c_str(), source), 0);
 
 			EXPECT(ast->rootBlock->statements.size(), 1);
-			Declaration* decl = dynamic_cast<Declaration*>(ast->rootBlock->statements[0]);
+			AST::Declaration* decl = dynamic_cast<AST::Declaration*>(ast->rootBlock->statements[0]);
 			EXPECT(decl != nullptr, true);
-			EXPECT((u32)decl->typeName, (u32)TypeName::INT);
+			EXPECT((u32)decl->typeName, (u32)AST::TypeName::INT);
 			EXPECT(strcmp(decl->identifierStr.c_str(), "abcd"), 0);
-			IntLiteral* intLit = dynamic_cast<IntLiteral*>(decl->initializer);
+			AST::IntLiteral* intLit = dynamic_cast<AST::IntLiteral*>(decl->initializer);
 			EXPECT(intLit != nullptr, true);
-			EXPECT((u32)intLit->typeName, (u32)TypeName::INT);
+			EXPECT((u32)intLit->typeName, (u32)AST::TypeName::INT);
 			EXPECT(intLit->value, 1234);
 
 			ast->Destroy();
@@ -619,9 +623,9 @@ namespace flex
 
 		UNIT_TEST(ParseTestBasic2)
 		{
-			AST* ast = new AST();
+			AST::AST* ast = new AST::AST();
 
-			std::string source =
+			const char* source =
 				"bool a = true;\n"
 				"bool b = false;\n"
 				"bool result = ((a && !b) && (b || a));\n";
@@ -634,38 +638,38 @@ namespace flex
 			}
 
 			std::string reconstructedStr = ast->rootBlock->ToString();
-			EXPECT(strcmp(reconstructedStr.c_str(), source.c_str()), 0);
+			EXPECT(strcmp(reconstructedStr.c_str(), source), 0);
 
 			EXPECT(ast->rootBlock->statements.size(), 3);
 
-			Declaration* decl = dynamic_cast<Declaration*>(ast->rootBlock->statements[0]);
+			AST::Declaration* decl = dynamic_cast<AST::Declaration*>(ast->rootBlock->statements[0]);
 			EXPECT(decl != nullptr, true);
-			EXPECT((u32)decl->typeName, (u32)TypeName::BOOL);
+			EXPECT((u32)decl->typeName, (u32)AST::TypeName::BOOL);
 
-			decl = dynamic_cast<Declaration*>(ast->rootBlock->statements[1]);
+			decl = dynamic_cast<AST::Declaration*>(ast->rootBlock->statements[1]);
 			EXPECT(decl != nullptr, true);
-			EXPECT((u32)decl->typeName, (u32)TypeName::BOOL);
+			EXPECT((u32)decl->typeName, (u32)AST::TypeName::BOOL);
 
-			decl = dynamic_cast<Declaration*>(ast->rootBlock->statements[2]);
+			decl = dynamic_cast<AST::Declaration*>(ast->rootBlock->statements[2]);
 			EXPECT(decl != nullptr, true);
-			EXPECT((u32)decl->typeName, (u32)TypeName::BOOL);
+			EXPECT((u32)decl->typeName, (u32)AST::TypeName::BOOL);
 			EXPECT(strcmp(decl->identifierStr.c_str(), "result"), 0);
-			BinaryOperation* bin0 = dynamic_cast<BinaryOperation*>(decl->initializer);
+			AST::BinaryOperation* bin0 = dynamic_cast<AST::BinaryOperation*>(decl->initializer);
 			EXPECT(bin0 != nullptr, true);
-			EXPECT((u32)bin0->operatorType, (u32)BinaryOperatorType::BOOLEAN_AND);
-			BinaryOperation* lhs = dynamic_cast<BinaryOperation*>(bin0->lhs);
-			BinaryOperation* rhs = dynamic_cast<BinaryOperation*>(bin0->rhs);
+			EXPECT((u32)bin0->operatorType, (u32)AST::BinaryOperatorType::BOOLEAN_AND);
+			AST::BinaryOperation* lhs = dynamic_cast<AST::BinaryOperation*>(bin0->lhs);
+			AST::BinaryOperation* rhs = dynamic_cast<AST::BinaryOperation*>(bin0->rhs);
 			EXPECT(lhs != nullptr, true);
 			EXPECT(rhs != nullptr, true);
-			EXPECT((u32)lhs->operatorType, (u32)BinaryOperatorType::BOOLEAN_AND);
-			EXPECT((u32)rhs->operatorType, (u32)BinaryOperatorType::BOOLEAN_OR);
-			Identifier* a0 = dynamic_cast<Identifier*>(lhs->lhs);
-			UnaryOperation* b0Op = dynamic_cast<UnaryOperation*>(lhs->rhs);
+			EXPECT((u32)lhs->operatorType, (u32)AST::BinaryOperatorType::BOOLEAN_AND);
+			EXPECT((u32)rhs->operatorType, (u32)AST::BinaryOperatorType::BOOLEAN_OR);
+			AST::Identifier* a0 = dynamic_cast<AST::Identifier*>(lhs->lhs);
+			AST::UnaryOperation* b0Op = dynamic_cast<AST::UnaryOperation*>(lhs->rhs);
 			EXPECT(b0Op != nullptr, true);
-			EXPECT((u32)b0Op->operatorType, (u32)UnaryOperatorType::NOT);
-			Identifier* b0 = dynamic_cast<Identifier*>(b0Op->expression);
-			Identifier* b1 = dynamic_cast<Identifier*>(rhs->lhs);
-			Identifier* a1 = dynamic_cast<Identifier*>(rhs->rhs);
+			EXPECT((u32)b0Op->operatorType, (u32)AST::UnaryOperatorType::NOT);
+			AST::Identifier* b0 = dynamic_cast<AST::Identifier*>(b0Op->expression);
+			AST::Identifier* b1 = dynamic_cast<AST::Identifier*>(rhs->lhs);
+			AST::Identifier* a1 = dynamic_cast<AST::Identifier*>(rhs->rhs);
 			EXPECT(a0 != nullptr, true);
 			EXPECT(b0 != nullptr, true);
 			EXPECT(b1 != nullptr, true);
@@ -682,9 +686,9 @@ namespace flex
 
 		UNIT_TEST(ParseTestEmptyFor)
 		{
-			AST* ast = new AST();
+			AST::AST* ast = new AST::AST();
 
-			std::string source =
+			const char* source =
 				"for (;;)\n{\n}\n";
 			ast->Generate(source);
 
@@ -695,17 +699,17 @@ namespace flex
 			}
 
 			std::string reconstructedStr = ast->rootBlock->ToString();
-			EXPECT(strcmp(reconstructedStr.c_str(), source.c_str()), 0);
+			EXPECT(strcmp(reconstructedStr.c_str(), source), 0);
 
 			EXPECT(ast->rootBlock->statements.size(), 1);
 
-			ForStatement* forStatement = dynamic_cast<ForStatement*>(ast->rootBlock->statements[0]);
+			AST::ForStatement* forStatement = dynamic_cast<AST::ForStatement*>(ast->rootBlock->statements[0]);
 			EXPECT(forStatement != nullptr, true);
 			EXPECT(forStatement->setup == nullptr, true);
 			EXPECT(forStatement->condition == nullptr, true);
 			EXPECT(forStatement->update == nullptr, true);
 			EXPECT(forStatement->body != nullptr, true);
-			StatementBlock* body = dynamic_cast<StatementBlock*>(forStatement->body);
+			AST::StatementBlock* body = dynamic_cast<AST::StatementBlock*>(forStatement->body);
 			EXPECT(body != nullptr, true);
 			EXPECT(body->statements.size(), 0);
 
@@ -716,9 +720,9 @@ namespace flex
 
 		UNIT_TEST(ParseTestEmptyWhile)
 		{
-			AST* ast = new AST();
+			AST::AST* ast = new AST::AST();
 
-			std::string source =
+			const char* source =
 				"while (1)\n{\n}\n";
 			ast->Generate(source);
 
@@ -729,17 +733,17 @@ namespace flex
 			}
 
 			std::string reconstructedStr = ast->rootBlock->ToString();
-			EXPECT(strcmp(reconstructedStr.c_str(), source.c_str()), 0);
+			EXPECT(strcmp(reconstructedStr.c_str(), source), 0);
 
 			EXPECT(ast->rootBlock->statements.size(), 1);
 
-			WhileStatement* whileStatement = dynamic_cast<WhileStatement*>(ast->rootBlock->statements[0]);
+			AST::WhileStatement* whileStatement = dynamic_cast<AST::WhileStatement*>(ast->rootBlock->statements[0]);
 			EXPECT(whileStatement != nullptr, true);
-			IntLiteral* condition = dynamic_cast<IntLiteral*>(whileStatement->condition);
+			AST::IntLiteral* condition = dynamic_cast<AST::IntLiteral*>(whileStatement->condition);
 			EXPECT(condition != nullptr, true);
 			EXPECT(condition->value, 1);
 			EXPECT(whileStatement->body != nullptr, true);
-			StatementBlock* body = dynamic_cast<StatementBlock*>(whileStatement->body);
+			AST::StatementBlock* body = dynamic_cast<AST::StatementBlock*>(whileStatement->body);
 			EXPECT(body != nullptr, true);
 			EXPECT(body->statements.size(), 0);
 
@@ -750,9 +754,9 @@ namespace flex
 
 		UNIT_TEST(ParseTestEmptyDoWhile)
 		{
-			AST* ast = new AST();
+			AST::AST* ast = new AST::AST();
 
-			std::string source =
+			const char* source =
 				"do\n{\n} while (1);\n";
 			ast->Generate(source);
 
@@ -763,17 +767,17 @@ namespace flex
 			}
 
 			std::string reconstructedStr = ast->rootBlock->ToString();
-			EXPECT(strcmp(reconstructedStr.c_str(), source.c_str()), 0);
+			EXPECT(strcmp(reconstructedStr.c_str(), source), 0);
 
 			EXPECT(ast->rootBlock->statements.size(), 1);
 
-			DoWhileStatement* doWhileStatement = dynamic_cast<DoWhileStatement*>(ast->rootBlock->statements[0]);
+			AST::DoWhileStatement* doWhileStatement = dynamic_cast<AST::DoWhileStatement*>(ast->rootBlock->statements[0]);
 			EXPECT(doWhileStatement != nullptr, true);
-			IntLiteral* condition = dynamic_cast<IntLiteral*>(doWhileStatement->condition);
+			AST::IntLiteral* condition = dynamic_cast<AST::IntLiteral*>(doWhileStatement->condition);
 			EXPECT(condition != nullptr, true);
 			EXPECT(condition->value, 1);
 			EXPECT(doWhileStatement->body != nullptr, true);
-			StatementBlock* body = dynamic_cast<StatementBlock*>(doWhileStatement->body);
+			AST::StatementBlock* body = dynamic_cast<AST::StatementBlock*>(doWhileStatement->body);
 			EXPECT(body != nullptr, true);
 			EXPECT(body->statements.size(), 0);
 
@@ -784,7 +788,7 @@ namespace flex
 
 		UNIT_TEST(LexAndParseTests)
 		{
-			AST* ast = new AST();
+			AST::AST* ast = new AST::AST();
 
 			ast->Generate("\n"
 				"//int abcdefghi = 115615;\n"
@@ -829,21 +833,26 @@ namespace flex
 		}
 		UNIT_TEST_END;
 
+		//
+		// VM tests
+		//
+
 		UNIT_TEST(VMTestsBasic0)
 		{
-			VM* vm = new VM();
+			VM::VirtualMachine* vm = new VM::VirtualMachine();
 
-			using ValueType = ValueWrapper::Type;
+			using ValueType = VM::ValueWrapper::Type;
+			using OpCode = VM::OpCode;
 
 			std::vector<VM::Instruction> instStream;
 
-			instStream.push_back({ OpCode::ADD, { ValueType::REGISTER, Value(0) }, { ValueType::CONSTANT, Value(1) }, { ValueType::CONSTANT, Value(2) } }); // r0 = 1 + 2
-			instStream.push_back({ OpCode::MUL, { ValueType::REGISTER, Value(0) }, { ValueType::REGISTER, Value(0) }, { ValueType::CONSTANT, Value(2) } }); // r0 = r0 * 2
+			instStream.push_back({ OpCode::ADD, { ValueType::REGISTER, VM::Value(0) }, { ValueType::CONSTANT, VM::Value(1) }, { ValueType::CONSTANT, VM::Value(2) } }); // r0 = 1 + 2
+			instStream.push_back({ OpCode::MUL, { ValueType::REGISTER, VM::Value(0) }, { ValueType::REGISTER, VM::Value(0) }, { ValueType::CONSTANT, VM::Value(2) } }); // r0 = r0 * 2
 			instStream.push_back({ OpCode::YIELD });
-			instStream.push_back({ OpCode::ADD, { ValueType::REGISTER, Value(1) }, { ValueType::CONSTANT, Value(12) }, { ValueType::CONSTANT, Value(20) } }); // r1 = 12 + 20
-			instStream.push_back({ OpCode::MOD, { ValueType::REGISTER, Value(1) }, { ValueType::REGISTER, Value(1) }, { ValueType::REGISTER, Value(0) } }); // r1 = r1 % r0
+			instStream.push_back({ OpCode::ADD, { ValueType::REGISTER, VM::Value(1) }, { ValueType::CONSTANT, VM::Value(12) }, { ValueType::CONSTANT, VM::Value(20) } }); // r1 = 12 + 20
+			instStream.push_back({ OpCode::MOD, { ValueType::REGISTER, VM::Value(1) }, { ValueType::REGISTER, VM::Value(1) }, { ValueType::REGISTER, VM::Value(0) } }); // r1 = r1 % r0
 			instStream.push_back({ OpCode::YIELD });
-			instStream.push_back({ OpCode::DIV, { ValueType::REGISTER, Value(0) }, { ValueType::REGISTER, Value(0) }, { ValueType::REGISTER, Value(1) } }); // r0 = r0 / r1
+			instStream.push_back({ OpCode::DIV, { ValueType::REGISTER, VM::Value(0) }, { ValueType::REGISTER, VM::Value(0) }, { ValueType::REGISTER, VM::Value(1) } }); // r0 = r0 / r1
 			instStream.push_back({ OpCode::YIELD });
 			instStream.push_back({ OpCode::TERMINATE });
 
@@ -851,8 +860,8 @@ namespace flex
 
 			vm->Execute();
 
-			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
-			for (const Diagnostic& diagnostic : vm->diagnosticContainer->diagnostics)
+			EXPECT(vm->parseState.diagnosticContainer->diagnostics.size(), 0);
+			for (const Diagnostic& diagnostic : vm->parseState.diagnosticContainer->diagnostics)
 			{
 				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
 			}
@@ -861,12 +870,12 @@ namespace flex
 
 			vm->Execute();
 
-			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
+			EXPECT(vm->parseState.diagnosticContainer->diagnostics.size(), 0);
 			EXPECT(vm->registers[1].valInt, (12 + 20) % ((1 + 2) * 2));
 
 			vm->Execute();
 
-			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
+			EXPECT(vm->parseState.diagnosticContainer->diagnostics.size(), 0);
 			EXPECT(vm->registers[0].valInt, ((1 + 2) * 2) / ((12 + 20) % ((1 + 2) * 2)));
 
 			EXPECT(vm->stack.empty(), true);
@@ -877,9 +886,10 @@ namespace flex
 
 		UNIT_TEST(VMTestsBasic1)
 		{
-			VM* vm = new VM();
+			VM::VirtualMachine* vm = new VM::VirtualMachine();
 
-			using ValueType = ValueWrapper::Type;
+			using ValueType = VM::ValueWrapper::Type;
+			using OpCode = VM::OpCode;
 
 			std::vector<VM::Instruction> instStream;
 
@@ -906,22 +916,24 @@ namespace flex
 
 			*/
 
-			instStream.push_back({ OpCode::ADD, { ValueType::REGISTER, Value(0) }, { ValueType::CONSTANT, Value(1) }, { ValueType::CONSTANT, Value(2) } }); // r0 = 1 + 2
-			instStream.push_back({ OpCode::MUL, { ValueType::REGISTER, Value(0) }, { ValueType::REGISTER, Value(0) }, { ValueType::CONSTANT, Value(2) } }); // r0 = r0 * 2
+			instStream.push_back({ OpCode::ADD, { ValueType::REGISTER, VM::Value(0) }, { ValueType::CONSTANT, VM::Value(1) }, { ValueType::CONSTANT, VM::Value(2) } }); // r0 = 1 + 2
+			instStream.push_back({ OpCode::MUL, { ValueType::REGISTER, VM::Value(0) }, { ValueType::REGISTER, VM::Value(0) }, { ValueType::CONSTANT, VM::Value(2) } }); // r0 = r0 * 2
 			instStream.push_back({ OpCode::YIELD });
-			instStream.push_back({ OpCode::ADD, { ValueType::REGISTER, Value(1) }, { ValueType::CONSTANT, Value(12) }, { ValueType::CONSTANT, Value(20) } }); // r1 = 12 + 20
-			instStream.push_back({ OpCode::MOD, { ValueType::REGISTER, Value(1) }, { ValueType::REGISTER, Value(1) }, { ValueType::REGISTER, Value(0) } }); // r1 = r1 % r0
+			instStream.push_back({ OpCode::ADD, { ValueType::REGISTER, VM::Value(1) }, { ValueType::CONSTANT, VM::Value(12) }, { ValueType::CONSTANT, VM::Value(20) } }); // r1 = 12 + 20
+			instStream.push_back({ OpCode::MOD, { ValueType::REGISTER, VM::Value(1) }, { ValueType::REGISTER, VM::Value(1) }, { ValueType::REGISTER, VM::Value(0) } }); // r1 = r1 % r0
 			instStream.push_back({ OpCode::YIELD });
-			instStream.push_back({ OpCode::DIV, { ValueType::REGISTER, Value(0) }, { ValueType::REGISTER, Value(0) }, { ValueType::REGISTER, Value(1) } }); // r0 = r0 / r1
+			instStream.push_back({ OpCode::DIV, { ValueType::REGISTER, VM::Value(0) }, { ValueType::REGISTER, VM::Value(0) }, { ValueType::REGISTER, VM::Value(1) } }); // r0 = r0 / r1
 			instStream.push_back({ OpCode::YIELD });
 			instStream.push_back({ OpCode::TERMINATE });
 
 			vm->GenerateFromInstStream(instStream);
 
+			EXPECT(vm->parseState.diagnosticContainer->diagnostics.size(), 0);
+
 			vm->Execute();
 
-			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
-			for (const Diagnostic& diagnostic : vm->diagnosticContainer->diagnostics)
+			EXPECT(vm->runtimeDiagnosticContainer->diagnostics.size(), 0);
+			for (const Diagnostic& diagnostic : vm->runtimeDiagnosticContainer->diagnostics)
 			{
 				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
 			}
@@ -930,12 +942,12 @@ namespace flex
 
 			vm->Execute();
 
-			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
+			EXPECT(vm->runtimeDiagnosticContainer->diagnostics.size(), 0);
 			EXPECT(vm->registers[1].valInt, (12 + 20) % ((1 + 2) * 2));
 
 			vm->Execute();
 
-			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
+			EXPECT(vm->runtimeDiagnosticContainer->diagnostics.size(), 0);
 			EXPECT(vm->registers[0].valInt, ((1 + 2) * 2) / ((12 + 20) % ((1 + 2) * 2)));
 
 			EXPECT(vm->stack.empty(), true);
@@ -946,27 +958,30 @@ namespace flex
 
 		UNIT_TEST(VMTestsLoop0)
 		{
-			VM* vm = new VM();
+			VM::VirtualMachine* vm = new VM::VirtualMachine();
 
-			using ValueType = ValueWrapper::Type;
+			using ValueType = VM::ValueWrapper::Type;
+			using OpCode = VM::OpCode;
 
 			std::vector<VM::Instruction> instStream;
 
-			instStream.push_back({ OpCode::MOV, { ValueType::REGISTER, Value(1) }, { ValueType::CONSTANT, Value(2) } }); // r1 = 2
+			instStream.push_back({ OpCode::MOV, { ValueType::REGISTER, VM::Value(1) }, { ValueType::CONSTANT, VM::Value(2) } }); // r1 = 2
 			// Loop start
-			instStream.push_back({ OpCode::MUL, { ValueType::REGISTER, Value(1) }, { ValueType::REGISTER, Value(1) }, { ValueType::CONSTANT, Value(2) } }); // r1 = r1 * 2
-			instStream.push_back({ OpCode::ADD, { ValueType::REGISTER, Value(0) }, { ValueType::REGISTER, Value(0) }, { ValueType::CONSTANT, Value(1) } }); // r0 = r0 + 1
-			instStream.push_back({ OpCode::CMP, { ValueType::REGISTER, Value(0) }, { ValueType::CONSTANT, Value(10) } }); // ro = r0 - 10
-			instStream.push_back({ OpCode::JLT, { ValueType::CONSTANT, Value(1) } }); // if r0 < 10 jump to line 1
+			instStream.push_back({ OpCode::MUL, { ValueType::REGISTER, VM::Value(1) }, { ValueType::REGISTER, VM::Value(1) }, { ValueType::CONSTANT, VM::Value(2) } }); // r1 = r1 * 2
+			instStream.push_back({ OpCode::ADD, { ValueType::REGISTER, VM::Value(0) }, { ValueType::REGISTER, VM::Value(0) }, { ValueType::CONSTANT, VM::Value(1) } }); // r0 = r0 + 1
+			instStream.push_back({ OpCode::CMP, { ValueType::REGISTER, VM::Value(0) }, { ValueType::CONSTANT, VM::Value(10) } }); // ro = r0 - 10
+			instStream.push_back({ OpCode::JLT, { ValueType::CONSTANT, VM::Value(1) } }); // if r0 < 10 jump to line 1
 			// Loop end
 			instStream.push_back({ OpCode::TERMINATE });
 
 			vm->GenerateFromInstStream(instStream);
 
+			EXPECT(vm->parseState.diagnosticContainer->diagnostics.size(), 0);
+
 			vm->Execute();
 
-			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
-			for (const Diagnostic& diagnostic : vm->diagnosticContainer->diagnostics)
+			EXPECT(vm->runtimeDiagnosticContainer->diagnostics.size(), 0);
+			for (const Diagnostic& diagnostic : vm->runtimeDiagnosticContainer->diagnostics)
 			{
 				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
 			}
@@ -982,9 +997,10 @@ namespace flex
 
 		UNIT_TEST(VMTestsFunc0)
 		{
-			VM* vm = new VM();
+			VM::VirtualMachine* vm = new VM::VirtualMachine();
 
-			using ValueType = ValueWrapper::Type;
+			using ValueType = VM::ValueWrapper::Type;
+			using OpCode = VM::OpCode;
 
 			std::vector<VM::Instruction> instStream;
 
@@ -1005,34 +1021,36 @@ namespace flex
 
 			*/
 
-			instStream.push_back({ OpCode::PUSH, { ValueType::CONSTANT, Value(4) } }); // return to line 4 after func
-			instStream.push_back({ OpCode::PUSH, { ValueType::CONSTANT, Value(5) } }); // arg1
-			instStream.push_back({ OpCode::PUSH, { ValueType::CONSTANT, Value(3) } }); // arg0
-			instStream.push_back({ OpCode::CALL, { ValueType::CONSTANT, Value(6) } }); // call func 0 on line 6
+			instStream.push_back({ OpCode::PUSH, { ValueType::CONSTANT, VM::Value(4) } }); // return to line 4 after func
+			instStream.push_back({ OpCode::PUSH, { ValueType::CONSTANT, VM::Value(5) } }); // arg1
+			instStream.push_back({ OpCode::PUSH, { ValueType::CONSTANT, VM::Value(3) } }); // arg0
+			instStream.push_back({ OpCode::CALL, { ValueType::CONSTANT, VM::Value(6) } }); // call func 0 on line 6
 			// resume point
-			instStream.push_back({ OpCode::POP, { ValueType::REGISTER, Value(0) } }); // r0 = return val
+			instStream.push_back({ OpCode::POP, { ValueType::REGISTER, VM::Value(0) } }); // r0 = return val
 			instStream.push_back({ OpCode::TERMINATE });
 			// func 0
-			instStream.push_back({ OpCode::POP, { ValueType::REGISTER, Value(0) } }); // r0 = arg0
-			instStream.push_back({ OpCode::POP, { ValueType::REGISTER, Value(1) } }); // r1 = arg1
-			instStream.push_back({ OpCode::MUL, { ValueType::REGISTER, Value(0) }, { ValueType::REGISTER, Value(0) }, { ValueType::REGISTER, Value(1) } }); // r0 = r0 * r1
-			instStream.push_back({ OpCode::PUSH, { ValueType::CONSTANT, Value(12) } }); // return to line 12 after func
-			instStream.push_back({ OpCode::PUSH, { ValueType::REGISTER, Value(0) } }); // arg0
-			instStream.push_back({ OpCode::CALL, { ValueType::CONSTANT, Value(14) } }); // call func 1 on line 14
+			instStream.push_back({ OpCode::POP, { ValueType::REGISTER, VM::Value(0) } }); // r0 = arg0
+			instStream.push_back({ OpCode::POP, { ValueType::REGISTER, VM::Value(1) } }); // r1 = arg1
+			instStream.push_back({ OpCode::MUL, { ValueType::REGISTER, VM::Value(0) }, { ValueType::REGISTER, VM::Value(0) }, { ValueType::REGISTER, VM::Value(1) } }); // r0 = r0 * r1
+			instStream.push_back({ OpCode::PUSH, { ValueType::CONSTANT, VM::Value(12) } }); // return to line 12 after func
+			instStream.push_back({ OpCode::PUSH, { ValueType::REGISTER, VM::Value(0) } }); // arg0
+			instStream.push_back({ OpCode::CALL, { ValueType::CONSTANT, VM::Value(14) } }); // call func 1 on line 14
 			// resume point
-			instStream.push_back({ OpCode::POP, { ValueType::REGISTER, Value(0) } }); // r0 = return val
-			instStream.push_back({ OpCode::RETURN, { ValueType::REGISTER, Value(0) } }); // return r0
+			instStream.push_back({ OpCode::POP, { ValueType::REGISTER, VM::Value(0) } }); // r0 = return val
+			instStream.push_back({ OpCode::RETURN, { ValueType::REGISTER, VM::Value(0) } }); // return r0
 			// func 1
-			instStream.push_back({ OpCode::POP, { ValueType::REGISTER, Value(0) } }); // r0 = arg0
-			instStream.push_back({ OpCode::MUL, { ValueType::REGISTER, Value(0) }, { ValueType::REGISTER, Value(0) }, { ValueType::CONSTANT, Value(2) } }); // r0 = r0 * 2
-			instStream.push_back({ OpCode::RETURN, { ValueType::REGISTER, Value(0) } }); // return r0
+			instStream.push_back({ OpCode::POP, { ValueType::REGISTER, VM::Value(0) } }); // r0 = arg0
+			instStream.push_back({ OpCode::MUL, { ValueType::REGISTER, VM::Value(0) }, { ValueType::REGISTER, VM::Value(0) }, { ValueType::CONSTANT, VM::Value(2) } }); // r0 = r0 * 2
+			instStream.push_back({ OpCode::RETURN, { ValueType::REGISTER, VM::Value(0) } }); // return r0
 
 			vm->GenerateFromInstStream(instStream);
 
+			EXPECT(vm->parseState.diagnosticContainer->diagnostics.size(), 0);
+
 			vm->Execute();
 
-			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
-			for (const Diagnostic& diagnostic : vm->diagnosticContainer->diagnostics)
+			EXPECT(vm->runtimeDiagnosticContainer->diagnostics.size(), 0);
+			for (const Diagnostic& diagnostic : vm->runtimeDiagnosticContainer->diagnostics)
 			{
 				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
 			}
@@ -1047,18 +1065,17 @@ namespace flex
 
 		UNIT_TEST(VMTestsBytecodeGenFromAST0)
 		{
-			AST* ast = new AST();
-
-			ast->Generate("\n"
+			VM::VirtualMachine* vm = new VM::VirtualMachine();
+			vm->GenerateFromSource("\n"
 				"func foo() -> int { return 2 * 7 + 9 - 6; }"
 				"int bar = foo() * foo() + foo(); \n");
 
-			VM* vm = new VM();
-			vm->GenerateFromAST(ast);
+			EXPECT(vm->parseState.diagnosticContainer->diagnostics.size(), 0);
+
 			vm->Execute();
 
-			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
-			for (const Diagnostic& diagnostic : vm->diagnosticContainer->diagnostics)
+			EXPECT(vm->runtimeDiagnosticContainer->diagnostics.size(), 0);
+			for (const Diagnostic& diagnostic : vm->runtimeDiagnosticContainer->diagnostics)
 			{
 				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
 			}
@@ -1068,25 +1085,22 @@ namespace flex
 			EXPECT(vm->stack.empty(), true);
 
 			delete vm;
-			ast->Destroy();
-			delete ast;
 		}
 		UNIT_TEST_END;
 
 		UNIT_TEST(VMTestsBytecodeGenFromAST1)
 		{
-			AST* ast = new AST();
-
-			ast->Generate("\n"
+			VM::VirtualMachine* vm = new VM::VirtualMachine();
+			vm->GenerateFromSource("\n"
 				"func foo() -> float { return 2.00 * 7.F + 9.0f - 6.; }"
 				"float bar = foo() * foo() + foo(); \n");
 
-			VM* vm = new VM();
-			vm->GenerateFromAST(ast);
+			EXPECT(vm->parseState.diagnosticContainer->diagnostics.size(), 0);
+
 			vm->Execute();
 
-			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
-			for (const Diagnostic& diagnostic : vm->diagnosticContainer->diagnostics)
+			EXPECT(vm->runtimeDiagnosticContainer->diagnostics.size(), 0);
+			for (const Diagnostic& diagnostic : vm->runtimeDiagnosticContainer->diagnostics)
 			{
 				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
 			}
@@ -1096,16 +1110,61 @@ namespace flex
 			EXPECT(vm->stack.empty(), true);
 
 			delete vm;
-			ast->Destroy();
-			delete ast;
 		}
 		UNIT_TEST_END;
 
 		UNIT_TEST(VMTestsBytecodeGenFromAST2)
 		{
-			AST* ast = new AST();
+			VM::VirtualMachine* vm = new VM::VirtualMachine();
+			vm->GenerateFromSource("\n"
+				"int[] list = [1, 2, 3, 4];"
+				"int val1 = list[1]; \n");
 
-			ast->Generate("\n"
+			EXPECT(vm->parseState.diagnosticContainer->diagnostics.size(), 0);
+
+			vm->Execute();
+
+			EXPECT(vm->runtimeDiagnosticContainer->diagnostics.size(), 0);
+			for (const Diagnostic& diagnostic : vm->runtimeDiagnosticContainer->diagnostics)
+			{
+				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
+			}
+
+			EXPECT(vm->registers[2].valInt, 2);
+			EXPECT(vm->stack.empty(), true);
+
+			delete vm;
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(VMTestsBytecodeGenFromAST3)
+		{
+			VM::VirtualMachine* vm = new VM::VirtualMachine();
+			vm->GenerateFromSource("\n"
+				"int baz = 10 * 5 + 12; \n"
+				"for (int a = 5; a < bar * baz; a += 2) { baz = 2 * baz + a; } \n");
+
+			EXPECT(vm->parseState.diagnosticContainer->diagnostics.size(), 0);
+
+			vm->Execute();
+
+			EXPECT(vm->runtimeDiagnosticContainer->diagnostics.size(), 0);
+			for (const Diagnostic& diagnostic : vm->runtimeDiagnosticContainer->diagnostics)
+			{
+				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
+			}
+
+			EXPECT(vm->registers[2].valInt, 2); // 306
+			EXPECT(vm->stack.empty(), true);
+
+			delete vm;
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(VMTestsBytecodeGenFromAST4)
+		{
+			VM::VirtualMachine* vm = new VM::VirtualMachine();
+			vm->GenerateFromSource("\n"
 				"{{int a = func0(99,100); \n"
 				"\n"
 				"func func1(int arg0) -> int { \n"
@@ -1130,16 +1189,12 @@ namespace flex
 				"} \n"
 				"}}\n");
 
-			VM* vm = new VM();
-			vm->GenerateFromAST(ast);
+			EXPECT(vm->parseState.diagnosticContainer->diagnostics.size(), 0);
 
-			if (vm->diagnosticContainer->diagnostics.empty())
-			{
-				vm->Execute();
-			}
+			vm->Execute();
 
-			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
-			for (const Diagnostic& diagnostic : vm->diagnosticContainer->diagnostics)
+			EXPECT(vm->runtimeDiagnosticContainer->diagnostics.size(), 0);
+			for (const Diagnostic& diagnostic : vm->runtimeDiagnosticContainer->diagnostics)
 			{
 				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
 			}
@@ -1147,28 +1202,132 @@ namespace flex
 			EXPECT(vm->stack.empty(), true);
 
 			delete vm;
-			ast->Destroy();
-			delete ast;
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(VMTestsNotAllPathsReturnValue0)
+		{
+			VM::VirtualMachine* vm = new VM::VirtualMachine();
+			vm->GenerateFromSource("func foo() -> int { } \n");
+
+			EXPECT(vm->parseState.diagnosticContainer->diagnostics.size(), 0);
+
+			vm->Execute();
+
+			EXPECT(vm->runtimeDiagnosticContainer->diagnostics.size() > 0, true);
+
+			delete vm;
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(VMTestsNotAllPathsReturnValue1)
+		{
+			VM::VirtualMachine* vm = new VM::VirtualMachine();
+			vm->GenerateFromSource("\n"
+				"func foo() -> int { \n"
+				"  if (1) return 1; \n"
+				"} \n");
+
+			vm->Execute();
+
+			EXPECT(vm->runtimeDiagnosticContainer->diagnostics.size() > 0, true);
+
+			delete vm;
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(VMTestsMismatchedReturnTypes0)
+		{
+			VM::VirtualMachine* vm = new VM::VirtualMachine();
+			vm->GenerateFromSource("\n"
+				"func foo() -> int { \n"
+				"  if (1 > 0) return 1; \n"
+				"  else return 12.0f; \n"
+				"} \n");
+
+			vm->Execute();
+
+			EXPECT(vm->runtimeDiagnosticContainer->diagnostics.size() > 0, true);
+
+			delete vm;
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(VMTestsMismatchedReturnTypes1)
+		{
+			VM::VirtualMachine* vm = new VM::VirtualMachine();
+			vm->GenerateFromSource("\n"
+				"func foo() -> string { \n"
+				"  if (1 > 0) return 'c'; \n"
+				"  else return \"test\"; \n"
+				"} \n");
+
+			vm->Execute();
+
+			EXPECT(vm->runtimeDiagnosticContainer->diagnostics.size() > 0, true);
+
+			delete vm;
 		}
 		UNIT_TEST_END;
 
 		UNIT_TEST(VMTestsUnreachableVar0)
 		{
-			AST* ast = new AST();
-
-			ast->Generate("\n"
+			VM::VirtualMachine* vm = new VM::VirtualMachine();
+			vm->GenerateFromSource("\n"
 				"{int a = 10}; \n"
 				"int b = a;    \n");
 
-			VM* vm = new VM();
-			vm->GenerateFromAST(ast);
 			vm->Execute();
 
-			EXPECT(vm->diagnosticContainer->diagnostics.size(), 1);
+			EXPECT(vm->runtimeDiagnosticContainer->diagnostics.size(), 1);
 
 			delete vm;
-			ast->Destroy();
-			delete ast;
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(VMTestsUnreachableVar1)
+		{
+			VM::VirtualMachine* vm = new VM::VirtualMachine();
+			vm->GenerateFromSource("\n"
+				"func foo(int a, char b) -> float { return 1.0f; } \n"
+				"float f = foo(1, 2);    \n"
+				"int c = a;    \n"
+				"char d = b;    \n");
+
+			vm->Execute();
+
+			EXPECT(vm->runtimeDiagnosticContainer->diagnostics.size(), 1);
+
+			delete vm;
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(VMTestsUinitializedVar0)
+		{
+			VM::VirtualMachine* vm = new VM::VirtualMachine();
+			vm->GenerateFromSource("\n"
+				"char d; \n");
+
+			vm->Execute();
+
+			EXPECT(vm->runtimeDiagnosticContainer->diagnostics.size(), 1);
+
+			delete vm;
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(VMTestsUinitializedVar1)
+		{
+			VM::VirtualMachine* vm = new VM::VirtualMachine();
+			vm->GenerateFromSource("\n"
+				"int a = 0; \n"
+				"for (int b; ; ) { a += 1; yield a; }\n");
+
+			vm->Execute();
+
+			EXPECT(vm->runtimeDiagnosticContainer->diagnostics.size(), 1);
+
+			delete vm;
 		}
 		UNIT_TEST_END;
 
@@ -1189,9 +1348,13 @@ namespace flex
 				*/
 				//ParseTestBasic1, ParseTestBasic2, ParseTestEmptyFor, ParseTestEmptyWhile, ParseTestEmptyDoWhile,
 				//LexAndParseTests,
-				//VMTestsBasic0, VMTestsLoop0, VMTestsFunc0,
-				VMTestsBytecodeGenFromAST0, VMTestsBytecodeGenFromAST1, //VMTestsBytecodeGenFromAST2,
-				//VMTestsUnreachableVar0
+				//VMTestsBasic0, VMTestsBasic1, VMTestsLoop0, VMTestsFunc0,
+				//VMTestsBytecodeGenFromAST0, VMTestsBytecodeGenFromAST1, VMTestsBytecodeGenFromAST2,
+				VMTestsBytecodeGenFromAST3,
+				// VMTestsBytecodeGenFromAST4,
+				// VMTestsNotAllPathsReturnValue0, VMTestsNotAllPathsReturnValue1, VMTestsMismatchedReturnTypes0, VMTestsMismatchedReturnTypes1,
+				// VMTestsUnreachableVar0, VMTestsUnreachableVar1,
+				// VMTestsUinitializedVar0, VMTestsUinitializedVar1,
 			};
 			Print("Running %u tests...\n", (u32)ARRAY_LENGTH(funcs));
 			u32 failedTestCount = 0;

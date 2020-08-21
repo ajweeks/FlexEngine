@@ -6,23 +6,23 @@
 
 namespace flex
 {
-	void VariableContainer::DeclareVariable(Declaration* declaration)
+	void VariableContainer::DeclareVariable(AST::Declaration* declaration)
 	{
 		vars[vars.size() - 1].push_back(declaration);
 	}
 
-	void VariableContainer::DeclareFunction(FunctionDeclaration* funcDeclaration)
+	void VariableContainer::DeclareFunction(AST::FunctionDeclaration* funcDeclaration)
 	{
 		funcs[funcs.size() - 1].push_back(funcDeclaration);
 	}
 
-	bool VariableContainer::GetTypeName(const std::string& identifierStr, TypeName& outTypeName)
+	bool VariableContainer::GetTypeName(const std::string& identifierStr, AST::TypeName& outTypeName)
 	{
 		assert(vars.size() == funcs.size());
 
 		for (u32 i = 0; i < (u32)vars.size(); ++i)
 		{
-			std::vector<Declaration*>& vec = vars[i];
+			std::vector<AST::Declaration*>& vec = vars[i];
 			for (u32 j = 0; j < (u32)vec.size(); ++j)
 			{
 				if (vec[j]->identifierStr.compare(identifierStr) == 0)
@@ -32,7 +32,7 @@ namespace flex
 				}
 			}
 
-			std::vector<FunctionDeclaration*>& funcDecls = funcs[i];
+			std::vector<AST::FunctionDeclaration*>& funcDecls = funcs[i];
 			for (u32 j = 0; j < (u32)funcDecls.size(); ++j)
 			{
 				if (funcDecls[j]->name.compare(identifierStr) == 0)
@@ -46,11 +46,11 @@ namespace flex
 		return false;
 	}
 
-	bool VariableContainer::SetVariableType(const std::string& identifierStr, TypeName typeName)
+	bool VariableContainer::SetVariableType(const std::string& identifierStr, AST::TypeName typeName)
 	{
 		for (u32 i = 0; i < (u32)vars.size(); ++i)
 		{
-			std::vector<Declaration*>& vec = vars[i];
+			std::vector<AST::Declaration*>& vec = vars[i];
 			for (u32 j = 0; j < (u32)vec.size(); ++j)
 			{
 				if (vec[j]->identifierStr.compare(identifierStr) == 0)
