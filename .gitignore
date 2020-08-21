@@ -41,6 +41,7 @@ AdditionalFiles/flex-cppcheck-build-dir/**
 AdditionalFiles/FlexVTune/**
 
 FlexEngine/dependencies/freetype/objs
+FlexEngine/dependencies/freetype/builds/**
 
 FlexEngine/dependencies/shaderc**
 
