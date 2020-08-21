@@ -4982,7 +4982,7 @@ namespace flex
 					{
 						for (u32 i = 0; i < (u32)diagnostics.size(); ++i)
 						{
-							Span span = diagnostics[i].span;
+							//Span span = diagnostics[i].span;
 							pos = firstLinePos;
 							pos.y -= lineHeight * diagnostics[i].lineNumber;
 							g_Renderer->DrawStringWS("!", errorColour, pos + right * (charWidth * 1.f), rot, letterSpacing, m_LetterScale);

@@ -164,7 +164,7 @@ typedef __m64 v2si;   // vector of 2 int (mmx)
 #define _PD_CONST(Name, Val)                                            \
 	static const ALIGN16_BEG double _pd_##Name[2] ALIGN16_END = { (const double)(Val), (const double)(Val) }
 #define _PD_CONST_TYPE(Name, Type, Val)                                 \
-	static const ALIGN16_BEG Type _pd_##Name[2] ALIGN16_END = { Val, Val }
+	static const ALIGN16_BEG Type _pd_##Name[2] ALIGN16_END = { (Type)Val, (Type)Val }
 
 #ifdef SSE_MATHFUN_WITH_CODE
 
