@@ -235,15 +235,15 @@ namespace flex
 
 	Identifier* Statement::RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements)
 	{
-		UNREFERENCED_PARAMETER(parser);
-		UNREFERENCED_PARAMETER(tmpStatements);
+		FLEX_UNUSED(parser);
+		FLEX_UNUSED(tmpStatements);
 		return nullptr;
 	}
 
 	void Statement::ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer)
 	{
-		UNREFERENCED_PARAMETER(varContainer);
-		UNREFERENCED_PARAMETER(diagnosticContainer);
+		FLEX_UNUSED(varContainer);
+		FLEX_UNUSED(diagnosticContainer);
 	}
 
 	StatementBlock::StatementBlock(const Span& span, const std::vector<Statement*>& statements) :
@@ -933,8 +933,8 @@ namespace flex
 
 	void CompoundAssignment::ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer)
 	{
-		UNREFERENCED_PARAMETER(varContainer);
-		UNREFERENCED_PARAMETER(diagnosticContainer);
+		FLEX_UNUSED(varContainer);
+		FLEX_UNUSED(diagnosticContainer);
 		// Type propagation should happen after complex types are eliminated (in RewriteCompoundStatement calls)
 		assert(false);
 	}
