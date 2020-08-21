@@ -18,7 +18,6 @@ python_path_linux = 'python3'
 def run_cmake(source, build, arguments = []):
 	cmakeCmd = [cmake_path, '-S', source, '-B', build]
 	cmakeCmd += arguments
-	print(cmakeCmd)
 	subprocess.check_call(cmakeCmd, stderr=subprocess.STDOUT)
 
 def run_cmake_build(path):
@@ -29,13 +28,14 @@ def run_msbuild(sln, arguments = []):
 	cmd += arguments
 	subprocess.check_call(cmd, stderr=subprocess.STDOUT, shell=True)
 
-def run_make(dir):
-	cmd = ['cd ' + dir + ';', 'make .']
+def run_make(dir, dot=True):
+	cmd = ['cd ' + dir + ';' + 'make ' + ('.' if dot else '')]
 	subprocess.check_call(cmd, stderr=subprocess.STDOUT, shell=True)
 
 def run_git(arguments = []):
-	cmd = [git_path] + arguments
-	subprocess.check_call(cmd, stderr=subprocess.STDOUT, shell=True)
+	cmd = [git_path]
+	cmd += arguments
+	subprocess.check_call(cmd, stderr=subprocess.STDOUT, shell=False)
 
 
 if len(sys.argv) != 3:
@@ -100,7 +100,7 @@ if platform == 'windows':
 	shutil.copyfile(glfw_build_path + 'src/Debug/glfw3.lib', libs_target + 'glfw3.lib')
 else:
 	print(glfw_build_path)
-	run_make(glfw_build_path)
+	run_make(glfw_build_path, False)
 	shutil.copyfile(glfw_build_path + 'src/libglfw3.a', libs_target + 'libglfw3.a')
 
 #OpenAL
@@ -130,7 +130,7 @@ if platform == 'windows':
 	shutil.copyfile(bullet_build_path + 'lib/Debug/BulletDynamics_Debug.lib', libs_target + 'BulletDynamics_Debug.lib')
 	shutil.copyfile(bullet_build_path + 'lib/Debug/LinearMath_Debug.lib', libs_target + 'LinearMath_Debug.lib')
 else:
-
+	run_make(bullet_build_path, False)
 	shutil.copyfile(bullet_build_path + 'src/BulletCollision/libBulletCollision.a', libs_target + 'libBulletCollision.a')
 	shutil.copyfile(bullet_build_path + 'src/BulletDynamics/libBulletDynamics.a', libs_target + 'libBulletDynamics.a')
 	shutil.copyfile(bullet_build_path + 'src/LinearMath/libLinearMath.a', libs_target + 'libLinearMath.a')
@@ -153,7 +153,7 @@ if platform == 'windows':
 else:
 	subprocess.check_call('cd ' + free_type_path + ';sh autogen.sh', stderr=subprocess.STDOUT, shell=True)
 	run_cmake(free_type_path, free_type_build_path, ['-DCMAKE_DISABLE_FIND_PACKAGE_HarfBuzz=ON'])
-	run_make(free_type_build_path)
+	run_make(free_type_build_path, False)
 	shutil.copyfile(free_type_build_path + 'libfreetype.a', libs_target + 'libfreetype.a')
 
 print("\n------------------------------------------\n\nBuilding Shaderc...\n\n------------------------------------------\n")
