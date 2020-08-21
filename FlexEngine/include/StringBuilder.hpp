@@ -14,6 +14,10 @@ namespace flex
 		void Append(const char* str);
 		void Append(char c);
 
+		void AppendLine(const std::string& str);
+		void AppendLine(const char* str);
+		void AppendLine(char c);
+
 		void Clear();
 
 		std::string ToString();

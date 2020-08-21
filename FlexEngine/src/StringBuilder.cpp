@@ -38,6 +38,36 @@ namespace flex
 		buffer[length++] = c;
 	}
 
+	void StringBuilder::AppendLine(const std::string& str)
+	{
+		AppendLine(str.c_str());
+	}
+
+	void StringBuilder::AppendLine(const char* str)
+	{
+		if ((length + (u32)strlen(str) + 1) >= (u32)buffer.size())
+		{
+			Resize((length + (u32)strlen(str)) * 2);
+		}
+
+		for (u32 i = 0; i < strlen(str); ++i)
+		{
+			buffer[length++] = str[i];
+		}
+		buffer[length++] = '\n';
+	}
+
+	void StringBuilder::AppendLine(char c)
+	{
+		if ((length + 2) >= (u32)buffer.size())
+		{
+			Resize((length + 2) * 2);
+		}
+
+		buffer[length++] = c;
+		buffer[length++] = '\n';
+	}
+
 	void StringBuilder::Clear()
 	{
 		buffer.clear();
