@@ -23,6 +23,7 @@ namespace flex
 	namespace VM
 	{
 		struct Value;
+		enum class OpCode;
 	}
 
 	//
@@ -90,10 +91,10 @@ namespace flex
 			Span origin;
 		};
 
-		struct BlockList
-		{
-			std::vector<Block> blocks;
-		};
+		//struct BlockList
+	//	{
+	//		std::vector<Block> blocks;
+	//	};
 
 
 		struct AssignmentUsage
@@ -114,6 +115,18 @@ namespace flex
 			//virtual bool UpdateAssignmentReferences(Assignment& from, Assignment& to) override;
 			std::string variable;
 			IR::Value* value;
+		};
+
+		struct Identifier : IR::Value
+		{
+			Identifier(const std::string& variable) :
+				Value(Value::Type::IDENTIFIER),
+				variable(variable)
+			{}
+
+			virtual std::string ToString() const override;
+
+			std::string variable;
 		};
 
 		struct Terminator : AssignmentUsage
@@ -228,6 +241,7 @@ namespace flex
 		const char* UnaryOperatorTypeToString(UnaryOperatorType opType);
 
 		UnaryOperatorType IRUnaryOperatorTypeFromASTUnaryOperatorType(AST::UnaryOperatorType opType);
+		VM::OpCode OpCodeFromUnaryOperatorType(UnaryOperatorType opType);
 
 		struct UnaryValue : IR::Value
 		{
@@ -294,6 +308,7 @@ namespace flex
 		const char* BinaryOperatorTypeToString(BinaryOperatorType opType);
 
 		BinaryOperatorType IRBinaryOperatorTypeFromASTBinaryOperatorType(AST::BinaryOperatorType opType);
+		VM::OpCode OpCodeFromBinaryOperatorType(BinaryOperatorType opType);
 
 		struct BinaryValue : IR::Value
 		{
@@ -345,12 +360,13 @@ namespace flex
 
 	} // namespace IR
 
-	struct Generator
+	struct IntermediateRepresentation
 	{
 		void GenerateFromAST(AST::AST* ast);
 		void Destroy();
 
 		IR::State state;
+		IR::Block* firstBlock = nullptr;
 
 	private:
 		//void DiscoverFuncDeclarations(const std::vector<Statement*>& statements);

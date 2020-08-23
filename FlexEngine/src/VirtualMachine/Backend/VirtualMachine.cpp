@@ -11,7 +11,7 @@ namespace flex
 {
 	namespace VM
 	{
-		void ParseState::Clear()
+		void State::Clear()
 		{
 			//varToRegisterMap.clear();
 			funcNameToBlockIndexTable.clear();
@@ -25,31 +25,31 @@ namespace flex
 			instructions.push_back(inst);
 		}
 
-		InstructionBlock& ParseState::CurrentInstructionBlock()
+		InstructionBlock& State::CurrentInstructionBlock()
 		{
 			return instructionBlocks[instructionBlocks.size() - 1];
 		}
 
-		InstructionBlock& ParseState::PushInstructionBlock()
+		InstructionBlock& State::PushInstructionBlock()
 		{
 			instructionBlocks.push_back({});
 			return instructionBlocks[instructionBlocks.size() - 1];
 		}
 
-		void ParseState::PopInstructionBlock()
+		void State::PopInstructionBlock()
 		{
 			instructionBlocks.resize(instructionBlocks.size() - 1);
 		}
 
 		VirtualMachine::VirtualMachine()
 		{
-			parseState.diagnosticContainer = new DiagnosticContainer();
+			state.diagnosticContainer = new DiagnosticContainer();
 			runtimeDiagnosticContainer = new DiagnosticContainer();
 		}
 
 		VirtualMachine::~VirtualMachine()
 		{
-			delete parseState.diagnosticContainer;
+			delete state.diagnosticContainer;
 			delete runtimeDiagnosticContainer;
 		}
 
@@ -61,59 +61,121 @@ namespace flex
 			AST::AST* ast = new AST::AST();
 			ast->Generate(source);
 
-			Generator* generator = new Generator();
-			generator->GenerateFromAST(ast);
+			IntermediateRepresentation* ir = new IntermediateRepresentation();
+			ir->GenerateFromAST(ast);
 
-			GenerateFromIR(generator);
+			GenerateFromIR(ir);
 
-			generator->Destroy();
-			delete generator;
+			ir->Destroy();
+			delete ir;
 			ast->Destroy();
 			delete ast;
 		}
 
-		void VirtualMachine::GenerateFromIR(Generator* generator)
+		ValueWrapper VirtualMachine::GetValueWrapperFromIRValue(IR::Value* value)
 		{
-			FLEX_UNUSED(generator);
+			ValueWrapper valWrapper;
 
-			/*
-
-				DiscoverFuncDeclarations(ast->rootBlock->statements, parseState);
-
-				LowerStatement(parseState, ast->rootBlock);
-
-				parseState.CurrentInstructionBlock().PushBack({ OpCode::TERMINATE });
-
-				GenerateFunctionInstructions(ast->rootBlock->statements, parseState);
-
-			*/
-
-
-			//for (u32 blockIndex = 0; blockIndex < (u32)generator->blockLists.size(); ++blockIndex)
+			if (IR::Value::IsLiteral(value->type))
 			{
-				//IR::BlockList& blockList = generator->blockLists[blockIndex];
-				//for (u32 blockOffset = 0; blockOffset < (u32)blockList.blocks.size(); ++blockOffset)
+				valWrapper = ValueWrapper(ValueWrapper::Type::CONSTANT, VM::Value(*value));
+			}
+			else
+			{
+				switch (value->type)
 				{
-					//IR::Block& block = blockList.blocks[blockOffset];
-					//OpCode opCode = IROperatorTypeToOpCode(block.operatorType);
-					//instructions.emplace_back(opCode, block.val0, block.val1, block.val2);
+				case IR::Value::Type::IDENTIFIER:
+				{
+					IR::Identifier* identifier = (IR::Identifier*)value;
+					i32 reg = state.varRegisterMap[identifier->variable];
+					valWrapper = ValueWrapper(ValueWrapper::Type::REGISTER, VM::Value(reg));
+				} break;
+				case IR::Value::Type::UNARY:
+				{
+
+				} break;
+				case IR::Value::Type::BINARY:
+				{
+					//AST::Identifier* ident = (AST::Identifier*)expression;
+					//i32 reg = state.varToRegisterMap[ident->identifierStr];
+					//valWrapper = ValueWrapper(ValueWrapper::Type::REGISTER, IR::Value(reg));
+				} break;
+				case IR::Value::Type::FUNC_CALL:
+				{
+					//AST::FunctionCall* funcCall = (AST::FunctionCall*)expression;
+					//i32 registerStored = GenerateCallInstruction(funcCall);
+					//valWrapper = ValueWrapper(ValueWrapper::Type::REGISTER, IR::Value(registerStored));
+				} break;
+				default:
+				{
+					//GenerateStatementInstructions(expression);
+				} break;
 				}
 			}
-			/*
+
+			return valWrapper;
+		}
+
+		void VirtualMachine::GenerateFromIR(IntermediateRepresentation* ir)
+		{
+			state.PushInstructionBlock();
+
+			IR::Block* block = ir->firstBlock;
+			//while (block != nullptr)
+			{
+				for (auto assignmentIter = block->assignments.begin(); assignmentIter != block->assignments.end(); ++assignmentIter)
+				{
+					IR::Assignment* assignment = *assignmentIter;
+					i32 reg = 0;
+					if (state.varRegisterMap.find(assignment->variable) == state.varRegisterMap.end())
+					{
+						state.varRegisterMap[assignment->variable] = (i32)state.varRegisterMap.size();
+					}
+					reg = state.varRegisterMap[assignment->variable];
+					ValueWrapper regVal(ValueWrapper::Type::REGISTER, Value(reg));
+
+					InstructionBlock& currentInstBlock = state.CurrentInstructionBlock();
+
+					if (assignment->value->type == IR::Value::Type::BINARY)
+					{
+						IR::BinaryValue* binaryValue = (IR::BinaryValue*)assignment->value;
+						OpCode opCode = OpCodeFromBinaryOperatorType(binaryValue->opType);
+						currentInstBlock.PushBack(Instruction(opCode, regVal, GetValueWrapperFromIRValue(binaryValue->left), GetValueWrapperFromIRValue(binaryValue->right)));
+					}
+					else if (assignment->value->type == IR::Value::Type::UNARY)
+					{
+						IR::UnaryValue* unaryValue = (IR::UnaryValue*)assignment->value;
+						OpCode opCode = OpCodeFromUnaryOperatorType(unaryValue->opType);
+						currentInstBlock.PushBack(Instruction(opCode, regVal, GetValueWrapperFromIRValue(unaryValue->operand)));
+					}
+					else
+					{
+						currentInstBlock.PushBack(Instruction(OpCode::MOV, regVal, GetValueWrapperFromIRValue(assignment->value)));
+					}
+				}
+
+				if (block->terminator != nullptr)
+				{
+					//state.CurrentInstructionBlock().PushBack(Instruction(OpCode::JMP, block->terminator));
+				}
+			}
+
+			state.CurrentInstructionBlock().PushBack({ OpCode::TERMINATE });
+
 			// Turn instruction blocks into contiguous instruction list
 			{
 				u32 instructionIndex = 0;
-				for (u32 i = 0; i < (u32)parseState.instructionBlocks.size(); ++i)
+				for (u32 i = 0; i < (u32)state.instructionBlocks.size(); ++i)
 				{
-					std::vector<Instruction>& blockInstructions = parseState.instructionBlocks[i].instructions;
-					parseState.instructionBlocks[i].startOffset = instructionIndex;
+					std::vector<Instruction>& blockInstructions = state.instructionBlocks[i].instructions;
+					state.instructionBlocks[i].startOffset = instructionIndex;
 					for (u32 j = 0; j < (u32)blockInstructions.size(); ++j)
 					{
-						instructions[instructionIndex++] = blockInstructions[j];
+						instructions.push_back(blockInstructions[j]);
+						++instructionIndex;
 					}
 				}
 			}
-			*/
 
 			// TODO: Properly
 
@@ -126,7 +188,7 @@ namespace flex
 				{
 				case OpCode::CALL:
 				{
-					i32 funcAddress = parseState.instructionBlocks[inst.val0.Get(this).valInt].startOffset;
+					i32 funcAddress = state.instructionBlocks[inst.val0.Get(this).valInt].startOffset;
 					inst.val0.value.valInt = funcAddress;
 				} break;
 				}

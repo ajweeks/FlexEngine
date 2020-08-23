@@ -2,6 +2,11 @@
 
 namespace flex
 {
+	namespace IR
+	{
+		struct Value;
+	}
+
 	namespace VM
 	{
 		class VirtualMachine;
@@ -68,6 +73,8 @@ namespace flex
 				valInt(other.valInt)
 			{
 			}
+
+			explicit Value(const IR::Value& other);
 
 			std::string ToString() const;
 

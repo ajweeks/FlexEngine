@@ -5,22 +5,15 @@
 #include "VirtualMachine/Backend/VMValue.hpp"
 #include "VirtualMachine/Backend/IR.hpp"
 
-#undef Yield
-
 namespace flex
 {
 	struct DiagnosticContainer;
 
-	namespace AST
+	namespace IR
 	{
-		struct AST;
-		enum class BinaryOperatorType;
-		enum class TypeName;
-		struct Statement;
-		struct Expression;
-		struct Declaration;
-		struct FunctionCall;
 		struct Assignment;
+		struct Value;
+		enum class OperatorType;
 	}
 
 	namespace VM
@@ -91,8 +84,8 @@ namespace flex
 
 		OpCode IROperatorTypeToOpCode(IR::OperatorType irOperatorType);
 		// TODO: Delete:
-		OpCode BinaryOperatorTypeToOpCode(AST::BinaryOperatorType operatorType);
-		OpCode BinaryOpToJumpCode(AST::BinaryOperatorType operatorType);
+		//OpCode BinaryOperatorTypeToOpCode(AST::BinaryOperatorType operatorType);
+		//OpCode BinaryOpToJumpCode(AST::BinaryOperatorType operatorType);
 
 		//template<typename Ret, typename... Ts>
 		//struct FuncPtr
@@ -208,15 +201,16 @@ namespace flex
 			i32 startOffset = -1;
 		};
 
-		struct ParseState
+		struct State
 		{
 			void Clear();
 			InstructionBlock& CurrentInstructionBlock();
 			InstructionBlock& PushInstructionBlock();
 			void PopInstructionBlock();
 
-			std::map<std::string, AST::Assignment> varUsages;
+			std::map<std::string, IR::Assignment> varUsages;
 			std::map<std::string, i32> funcNameToBlockIndexTable;
+			std::map<std::string, i32> varRegisterMap;
 			std::vector<InstructionBlock> instructionBlocks;
 
 			DiagnosticContainer* diagnosticContainer = nullptr;
@@ -246,7 +240,7 @@ namespace flex
 			// Caller pops registers off stack
 
 			void GenerateFromSource(const char* source);
-			void GenerateFromIR(Generator* generator);
+			void GenerateFromIR(IntermediateRepresentation* ir);
 			void GenerateFromInstStream(const std::vector<Instruction>& inInstructions);
 			void Execute();
 
@@ -268,7 +262,7 @@ namespace flex
 			using FuncAddress = i32;
 			std::map<FuncAddress, FuncPtr*> ExternalFuncTable;
 
-			ParseState parseState;
+			State state;
 			DiagnosticContainer* runtimeDiagnosticContainer = nullptr;
 
 		private:
@@ -280,17 +274,8 @@ namespace flex
 			i32 TranslateLocalFuncAddress(FuncAddress localFuncAddress);
 			void DispatchExternalCall(FuncAddress funcAddress);
 
+			ValueWrapper GetValueWrapperFromIRValue(IR::Value* value);
+
 		};
-
-		//void DiscoverFuncDeclarations(const std::vector<Statement*>& statements, ParseState& parseState);
-		//void GenerateFunctionInstructions(const std::vector<Statement*>& statements, ParseState& parseState);
-
-		//void GenerateStatementInstructions(ParseState& parseState, const std::vector<Statement*>& statements);
-		//ValueWrapper GetValueWrapperFromExpression(Expression* expression, ParseState& parseState);
-
-		//i32 CombineInstructionIndex(i32 instructionBlockIndex, i32 instructionIndex);
-		//void SplitInstructionIndex(i32 combined, i32& outInstructionBlockIndex, i32& outInstructionIndex);
-		//i32 GenerateCallInstruction(FunctionCall* funcCall, ParseState& parseState);
-
 	}// namespace VM
 } // namespace flex

@@ -18,7 +18,7 @@ namespace flex
 				BOOL,
 				STRING,
 				CHAR,
-				CONSTANT,
+				IDENTIFIER,
 				UNARY,
 				BINARY,
 				FUNC_CALL,

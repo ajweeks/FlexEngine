@@ -156,6 +156,11 @@ namespace flex
 			return builder.ToString();
 		}
 
+		std::string Identifier::ToString() const
+		{
+			return variable;
+		}
+
 		std::string Return::ToString() const
 		{
 			StringBuilder builder;
@@ -264,6 +269,17 @@ namespace flex
 			}
 		}
 
+		VM::OpCode OpCodeFromUnaryOperatorType(UnaryOperatorType opType)
+		{
+			switch (opType)
+			{
+			case UnaryOperatorType::NEGATE:		return VM::OpCode::SUB;
+			case UnaryOperatorType::NOT:		return VM::OpCode::SUB;
+			case UnaryOperatorType::BIN_INVERT: return VM::OpCode::INV;
+			default:							return VM::OpCode::_NONE;
+			}
+		}
+
 		const char* BinaryOperatorTypeToString(BinaryOperatorType opType)
 		{
 			return g_BinaryOperatorTypeStrings[(u32)opType];
@@ -294,9 +310,34 @@ namespace flex
 			}
 		}
 
+		VM::OpCode OpCodeFromBinaryOperatorType(BinaryOperatorType opType)
+		{
+			switch (opType)
+			{
+			case BinaryOperatorType::ASSIGN:				return VM::OpCode::MOV;
+			case BinaryOperatorType::ADD:					return VM::OpCode::ADD;
+			case BinaryOperatorType::SUB:					return VM::OpCode::SUB;
+			case BinaryOperatorType::MUL:					return VM::OpCode::MUL;
+			case BinaryOperatorType::DIV:					return VM::OpCode::DIV;
+			case BinaryOperatorType::MOD:					return VM::OpCode::MOD;
+			case BinaryOperatorType::BIN_AND:				return VM::OpCode::AND;
+			case BinaryOperatorType::BIN_OR:				return VM::OpCode::OR;
+			case BinaryOperatorType::BIN_XOR:				return VM::OpCode::XOR;
+			case BinaryOperatorType::EQUAL_TEST:			return VM::OpCode::JEQ;
+			case BinaryOperatorType::NOT_EQUAL_TEST:		return VM::OpCode::JNE;
+			case BinaryOperatorType::GREATER_TEST:			return VM::OpCode::JGT;
+			case BinaryOperatorType::GREATER_EQUAL_TEST:	return VM::OpCode::JGE;
+			case BinaryOperatorType::LESS_TEST:				return VM::OpCode::JLT;
+			case BinaryOperatorType::LESS_EQUAL_TEST:		return VM::OpCode::JLE;
+			case BinaryOperatorType::BOOLEAN_AND:			return VM::OpCode::AND; // ?
+			case BinaryOperatorType::BOOLEAN_OR:			return VM::OpCode::OR; // ?
+			default:										return VM::OpCode::_NONE;
+			}
+		}
+
 	}
 
-	void Generator::GenerateFromAST(AST::AST* ast)
+	void IntermediateRepresentation::GenerateFromAST(AST::AST* ast)
 	{
 		if (state.diagnosticContainer == nullptr)
 		{
@@ -310,8 +351,8 @@ namespace flex
 		//ast->rootBlock->RewriteCompoundStatements(ast->parser, emptyList);
 		//VariableContainer varContainer;
 		//ast->rootBlock->ResolveTypesAndLifetimes(&varContainer, ast->diagnosticContainer);
-		s = ast->rootBlock->ToString();
-		Print("\n---\n\n%s\n", s.c_str());
+		//s = ast->rootBlock->ToString();
+		//Print("\n---\n\n%s\n", s.c_str());
 
 		for (const Diagnostic& diagnostic : ast->diagnosticContainer->diagnostics)
 		{
@@ -320,22 +361,22 @@ namespace flex
 
 		state.Clear();
 
-		IR::Block& firstBlock = state.insertionBlock;
+		firstBlock = &state.insertionBlock;
 		if (ast->diagnosticContainer->diagnostics.empty())
 		{
 			LowerStatement(ast->rootBlock);
 		}
 
-		s = firstBlock.ToString();
+		s = firstBlock->ToString();
 		Print("\n---\n\n%s\n", s.c_str());
 	}
 
-	void Generator::Destroy()
+	void IntermediateRepresentation::Destroy()
 	{
 		delete state.diagnosticContainer;
 	}
 
-	void Generator::LowerStatement(AST::Statement* statement)
+	void IntermediateRepresentation::LowerStatement(AST::Statement* statement)
 	{
 		if (IsExpression(statement->statementType))
 		{
@@ -477,7 +518,7 @@ namespace flex
 		}
 	}
 
-	IR::Value* Generator::LowerExpression(AST::Expression* expression)
+	IR::Value* IntermediateRepresentation::LowerExpression(AST::Expression* expression)
 	{
 		if (IsLiteral(expression->statementType))
 		{
@@ -538,7 +579,7 @@ namespace flex
 				case IR::BinaryOperatorType::BIN_XOR:				return new IR::Constant(*lhsVal ^ *rhsVal);
 				case IR::BinaryOperatorType::EQUAL_TEST:			return new IR::Constant(IR::Value(*lhsVal == *rhsVal));
 				case IR::BinaryOperatorType::NOT_EQUAL_TEST:		return new IR::Constant(IR::Value(*lhsVal != *rhsVal));
-				case IR::BinaryOperatorType::GREATER_TEST:			return new IR::Constant(IR::Value(*lhsVal > *rhsVal));
+				case IR::BinaryOperatorType::GREATER_TEST:			return new IR::Constant(IR::Value(*lhsVal > * rhsVal));
 				case IR::BinaryOperatorType::GREATER_EQUAL_TEST:	return new IR::Constant(IR::Value(*lhsVal >= *rhsVal));
 				case IR::BinaryOperatorType::LESS_TEST:				return new IR::Constant(IR::Value(*lhsVal < *rhsVal));
 				case IR::BinaryOperatorType::LESS_EQUAL_TEST:		return new IR::Constant(IR::Value(*lhsVal <= *rhsVal));
@@ -551,6 +592,18 @@ namespace flex
 			}
 			else
 			{
+				if (!IR::Value::IsLiteral(lhsVal->type) && lhsVal->type != IR::Value::Type::IDENTIFIER)
+				{
+					std::string lhsVar = state.NextTemporary();
+					state.WriteVariableInBlock(lhsVar, lhsVal);
+					lhsVal = new IR::Identifier(lhsVar);
+				}
+				if (!IR::Value::IsLiteral(rhsVal->type) && rhsVal->type != IR::Value::Type::IDENTIFIER)
+				{
+					std::string rhsVar = state.NextTemporary();
+					state.WriteVariableInBlock(rhsVar, rhsVal);
+					rhsVal = new IR::Identifier(rhsVar);
+				}
 				return new IR::BinaryValue(irOpType, lhsVal, rhsVal);
 			}
 
@@ -586,6 +639,11 @@ namespace flex
 			}
 			return new IR::FunctionCallValue(functionCall->target, arguments);
 		}
+		case AST::StatementType::IDENTIFIER:
+		{
+			AST::Identifier* identifier = (AST::Identifier*)expression;
+			return new IR::Identifier(identifier->identifierStr);
+		} break;
 		}
 
 		return new IR::Value(IR::Value::Type::_NONE);
@@ -593,7 +651,7 @@ namespace flex
 	}
 
 	/*
-	void Generator::DiscoverFuncDeclarations(const std::vector<AST::Statement*>& statements)
+	void IntermediateRepresentation::DiscoverFuncDeclarations(const std::vector<AST::Statement*>& statements)
 	{
 		for (u32 i = 0; i < (u32)statements.size(); ++i)
 		{
@@ -615,7 +673,7 @@ namespace flex
 		}
 	}
 
-	void Generator::GenerateFunctionInstructions(const std::vector<AST::Statement*>& statements)
+	void IntermediateRepresentation::GenerateFunctionInstructions(const std::vector<AST::Statement*>& statements)
 	{
 		for (u32 i = 0; i < (u32)statements.size(); ++i)
 		{
@@ -650,7 +708,7 @@ namespace flex
 	*/
 
 	/*
-	ValueWrapper Generator::GetValueWrapperFromExpression(AST::Expression* expression)
+	ValueWrapper IntermediateRepresentation::GetValueWrapperFromExpression(AST::Expression* expression)
 	{
 		ValueWrapper valWrapper;
 
@@ -685,7 +743,7 @@ namespace flex
 	}
 	*/
 
-	i32 Generator::CombineInstructionIndex(i32 instructionBlockIndex, i32 instructionIndex)
+	i32 IntermediateRepresentation::CombineInstructionIndex(i32 instructionBlockIndex, i32 instructionIndex)
 	{
 		u32 value = ((u32)instructionBlockIndex << 16) + ((u32)instructionIndex & 0xFFFF);
 		assert((value >> 16) == (u32)instructionBlockIndex);
@@ -693,14 +751,14 @@ namespace flex
 		return static_cast<i32>(value);
 	}
 
-	void Generator::SplitInstructionIndex(i32 combined, i32& outInstructionBlockIndex, i32& outInstructionIndex)
+	void IntermediateRepresentation::SplitInstructionIndex(i32 combined, i32& outInstructionBlockIndex, i32& outInstructionIndex)
 	{
 		u32 valueUnsigned = static_cast<u32>(combined);
 		outInstructionBlockIndex = (i32)(valueUnsigned >> 16);
 		outInstructionIndex = (i32)(valueUnsigned & 0xFFFF);
 	}
 
-	i32 Generator::GenerateCallInstruction(AST::FunctionCall* funcCallstate)
+	i32 IntermediateRepresentation::GenerateCallInstruction(AST::FunctionCall* funcCallstate)
 	{
 		FLEX_UNUSED(funcCallstate);
 		/*

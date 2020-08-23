@@ -4,12 +4,20 @@
 
 #include "Helpers.hpp"
 #include "VirtualMachine/Backend/VirtualMachine.hpp"
+#include "VirtualMachine/Backend/IRValue.hpp"
 
 namespace flex
 {
 	namespace VM
 	{
 		Value g_EmptyVMValue = Value();
+
+		Value::Value(const IR::Value& other)
+		{
+			type = (Value::Type)other.type;
+			assert((i32)type < (u32)Value::Type::_NONE);
+			valInt = other.valInt;
+		}
 
 		std::string Value::ToString() const
 		{

@@ -18,8 +18,7 @@ namespace flex
 				type == Value::Type::FLOAT ||
 				type == Value::Type::BOOL ||
 				type == Value::Type::STRING ||
-				type == Value::Type::CHAR ||
-				type == Value::Type::CONSTANT;
+				type == Value::Type::CHAR;
 		}
 
 		std::string Value::ToString() const
