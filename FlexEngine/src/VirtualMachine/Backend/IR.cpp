@@ -67,6 +67,14 @@ namespace flex
 			}
 		}
 
+		void Block::AddHalt()
+		{
+			if (!Filled())
+			{
+				terminator = new Halt();
+			}
+		}
+
 		void Block::SealBlock()
 		{
 		}
@@ -159,6 +167,11 @@ namespace flex
 		std::string Identifier::ToString() const
 		{
 			return variable;
+		}
+
+		std::string Halt::ToString() const
+		{
+			return "halt";
 		}
 
 		std::string Return::ToString() const
@@ -335,497 +348,497 @@ namespace flex
 			}
 		}
 
-	}
 
-	void IntermediateRepresentation::GenerateFromAST(AST::AST* ast)
-	{
-		if (state.diagnosticContainer == nullptr)
+		void IntermediateRepresentation::GenerateFromAST(AST::AST* ast)
 		{
-			state.diagnosticContainer = new DiagnosticContainer();
-		}
-		state.Clear();
-
-		std::string s = ast->rootBlock->ToString();
-		Print("%s\n", s.c_str());
-		//std::vector<Statement*> emptyList;
-		//ast->rootBlock->RewriteCompoundStatements(ast->parser, emptyList);
-		//VariableContainer varContainer;
-		//ast->rootBlock->ResolveTypesAndLifetimes(&varContainer, ast->diagnosticContainer);
-		//s = ast->rootBlock->ToString();
-		//Print("\n---\n\n%s\n", s.c_str());
-
-		for (const Diagnostic& diagnostic : ast->diagnosticContainer->diagnostics)
-		{
-			PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
-		}
-
-		state.Clear();
-
-		firstBlock = &state.insertionBlock;
-		if (ast->diagnosticContainer->diagnostics.empty())
-		{
-			LowerStatement(ast->rootBlock);
-		}
-
-		s = firstBlock->ToString();
-		Print("\n---\n\n%s\n", s.c_str());
-	}
-
-	void IntermediateRepresentation::Destroy()
-	{
-		delete state.diagnosticContainer;
-	}
-
-	void IntermediateRepresentation::LowerStatement(AST::Statement* statement)
-	{
-		if (IsExpression(statement->statementType))
-		{
-			state.WriteVariableInBlock(state.NextTemporary(), LowerExpression((AST::Expression*)statement));
-		}
-
-		if (IsLiteral(statement->statementType))
-		{
-			//ValueWrapper val1 = ValueWrapper(ValueWrapper::Type::CONSTANT, ((AST::Expression*)statement)->GetValue());
-		}
-		else
-		{
-			switch (statement->statementType)
+			if (state.diagnosticContainer == nullptr)
 			{
-			case AST::StatementType::IDENTIFIER:
-			{
-				//AST::Identifier* identifier = (AST::Identifier*)statement;
-				//ValueWrapper val1 = GetValueWrapperFromExpression(identifier);
+				state.diagnosticContainer = new DiagnosticContainer();
+			}
+			state.Clear();
 
-				//state.InsertionBlock().AddAssignment(new Assignment(identifier->identifierStr, );
-			} break;
-			case AST::StatementType::FUNC_CALL:
-			{
-				AST::FunctionCall* funcCall = (AST::FunctionCall*)statement;
+			//std::vector<Statement*> emptyList;
+			//ast->rootBlock->RewriteCompoundStatements(ast->parser, emptyList);
+			//VariableContainer varContainer;
+			//ast->rootBlock->ResolveTypesAndLifetimes(&varContainer, ast->diagnosticContainer);
 
-				std::vector<IR::Value*> args;
-				for (u32 i = 0; i < (u32)funcCall->arguments.size(); ++i)
+			//s = ast->rootBlock->ToString();
+			//Print("\n---\n\n%s\n", s.c_str());
+			//for (const Diagnostic& diagnostic : ast->diagnosticContainer->diagnostics)
+			//{
+			//	PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
+			//}
+
+			state.Clear();
+
+			firstBlock = &state.insertionBlock;
+			if (ast->diagnosticContainer->diagnostics.empty())
+			{
+				LowerStatement(ast->rootBlock);
+				state.InsertionBlock().AddHalt();
+			}
+
+			//s = firstBlock->ToString();
+			//Print("\n---\n\n%s\n", s.c_str());
+		}
+
+		void IntermediateRepresentation::Destroy()
+		{
+			delete state.diagnosticContainer;
+		}
+
+		void IntermediateRepresentation::LowerStatement(AST::Statement* statement)
+		{
+			if (IsExpression(statement->statementType))
+			{
+				state.WriteVariableInBlock(state.NextTemporary(), LowerExpression((AST::Expression*)statement));
+			}
+
+			if (IsLiteral(statement->statementType))
+			{
+				//ValueWrapper val1 = ValueWrapper(ValueWrapper::Type::CONSTANT, ((AST::Expression*)statement)->GetValue());
+			}
+			else
+			{
+				switch (statement->statementType)
 				{
-					args.push_back(LowerExpression(funcCall->arguments[i]));
-				}
-				state.InsertionBlock().AddCall(funcCall->target, args);
-			} break;
-			case AST::StatementType::STATEMENT_BLOCK:
-			{
-				//state.PushInstructionBlock();
-				AST::StatementBlock* statementBlock = (AST::StatementBlock*)statement;
-				for (AST::Statement* innerStatement : statementBlock->statements)
+				case AST::StatementType::IDENTIFIER:
 				{
-					LowerStatement(innerStatement);
-				}
-				//state.PopInstructionBlock();
-			} break;
-			case AST::StatementType::VARIABLE_DECL:
-			{
-				//Block& insertionBlock = state.InsertionBlock();
+					//AST::Identifier* identifier = (AST::Identifier*)statement;
+					//ValueWrapper val1 = GetValueWrapperFromExpression(identifier);
 
-				AST::Declaration* decl = (AST::Declaration*)statement;
-
-				state.InsertionBlock().AddAssignment(new IR::Assignment(decl->identifierStr, LowerExpression(decl->initializer)));
-			} break;
-			case AST::StatementType::BREAK:
-			{
-				IR::Block nextBlock;
-
-				state.InsertionBlock().AddBranch(nextBlock);
-				state.InsertionBlock().SealBlock();
-
-				state.SetCurrentInstructionBlock(nextBlock);
-			}break;
-			case AST::StatementType::YIELD:
-			{
-				IR::Block nextBlock;
-
-				AST::YieldStatement* yieldStatement = (AST::YieldStatement*)statement;
-
-				state.InsertionBlock().AddYield(LowerExpression(yieldStatement->yieldValue));
-				state.InsertionBlock().SealBlock();
-
-				state.SetCurrentInstructionBlock(nextBlock);
-			}break;
-			case AST::StatementType::RETURN:
-			{
-				IR::Block nextBlock;
-
-				AST::ReturnStatement* returnStatement = (AST::ReturnStatement*)statement;
-
-				state.InsertionBlock().AddYield(LowerExpression(returnStatement->returnValue));
-				state.InsertionBlock().SealBlock();
-
-				state.SetCurrentInstructionBlock(nextBlock);
-			}break;
-			case AST::StatementType::UNARY_OPERATION:
-			{
-			}break;
-			case AST::StatementType::BINARY_OPERATION:
-			{
-				/*
-				AST::BinaryOperation* binOp = (AST::BinaryOperation*)statement;
-				OpCode binaryOpTranslation = BinaryOperatorTypeToOpCode(binOp->operatorType);
-				assert(binaryOpTranslation != OpCode::_NONE);
-
-				ValueWrapper lhsWrapper = GetValueWrapperFromExpression(binOp->lhs);
-				ValueWrapper rhsWrapper = GetValueWrapperFromExpression(binOp->rhs);
-
-				if (binaryOpTranslation == OpCode::CMP)
+					//state.InsertionBlock().AddAssignment(new Assignment(identifier->identifierStr, );
+				} break;
+				case AST::StatementType::FUNC_CALL:
 				{
-					Instruction binInst(binaryOpTranslation, lhsWrapper, rhsWrapper);
-					state.InsertionBlock().PushBack(binInst);
+					AST::FunctionCall* funcCall = (AST::FunctionCall*)statement;
 
-					OpCode jumpCode = BinaryOpToJumpCode(binOp->operatorType);
-					if (jumpCode != OpCode::_NONE)
+					std::vector<IR::Value*> args;
+					for (u32 i = 0; i < (u32)funcCall->arguments.size(); ++i)
 					{
-						i32 jumpAddress = 0;
-						Instruction jumpInst(jumpCode, ValueWrapper(ValueWrapper::Type::CONSTANT, IR::Value(jumpAddress)));
-						state.InsertionBlock().PushBack(jumpInst);
+						args.push_back(LowerExpression(funcCall->arguments[i]));
 					}
-					else
+					state.InsertionBlock().AddCall(funcCall->target, args);
+				} break;
+				case AST::StatementType::STATEMENT_BLOCK:
+				{
+					//state.PushInstructionBlock();
+					AST::StatementBlock* statementBlock = (AST::StatementBlock*)statement;
+					for (AST::Statement* innerStatement : statementBlock->statements)
 					{
-						if (binOp->operatorType == BinaryOperatorType::BOOLEAN_AND)
-						{
+						LowerStatement(innerStatement);
+					}
+					//state.PopInstructionBlock();
+				} break;
+				case AST::StatementType::VARIABLE_DECL:
+				{
+					//Block& insertionBlock = state.InsertionBlock();
 
-						}
-						else if (binOp->operatorType == BinaryOperatorType::BOOLEAN_OR)
-						{
+					AST::Declaration* decl = (AST::Declaration*)statement;
 
+					state.InsertionBlock().AddAssignment(new IR::Assignment(decl->identifierStr, LowerExpression(decl->initializer)));
+				} break;
+				case AST::StatementType::BREAK:
+				{
+					IR::Block nextBlock;
+
+					state.InsertionBlock().AddBranch(nextBlock);
+					state.InsertionBlock().SealBlock();
+
+					state.SetCurrentInstructionBlock(nextBlock);
+				}break;
+				case AST::StatementType::YIELD:
+				{
+					IR::Block nextBlock;
+
+					AST::YieldStatement* yieldStatement = (AST::YieldStatement*)statement;
+
+					state.InsertionBlock().AddYield(LowerExpression(yieldStatement->yieldValue));
+					state.InsertionBlock().SealBlock();
+
+					state.SetCurrentInstructionBlock(nextBlock);
+				}break;
+				case AST::StatementType::RETURN:
+				{
+					IR::Block nextBlock;
+
+					AST::ReturnStatement* returnStatement = (AST::ReturnStatement*)statement;
+
+					state.InsertionBlock().AddYield(LowerExpression(returnStatement->returnValue));
+					state.InsertionBlock().SealBlock();
+
+					state.SetCurrentInstructionBlock(nextBlock);
+				}break;
+				case AST::StatementType::UNARY_OPERATION:
+				{
+				}break;
+				case AST::StatementType::BINARY_OPERATION:
+				{
+					/*
+					AST::BinaryOperation* binOp = (AST::BinaryOperation*)statement;
+					OpCode binaryOpTranslation = BinaryOperatorTypeToOpCode(binOp->operatorType);
+					assert(binaryOpTranslation != OpCode::_NONE);
+
+					ValueWrapper lhsWrapper = GetValueWrapperFromExpression(binOp->lhs);
+					ValueWrapper rhsWrapper = GetValueWrapperFromExpression(binOp->rhs);
+
+					if (binaryOpTranslation == OpCode::CMP)
+					{
+						Instruction binInst(binaryOpTranslation, lhsWrapper, rhsWrapper);
+						state.InsertionBlock().PushBack(binInst);
+
+						OpCode jumpCode = BinaryOpToJumpCode(binOp->operatorType);
+						if (jumpCode != OpCode::_NONE)
+						{
+							i32 jumpAddress = 0;
+							Instruction jumpInst(jumpCode, ValueWrapper(ValueWrapper::Type::CONSTANT, IR::Value(jumpAddress)));
+							state.InsertionBlock().PushBack(jumpInst);
 						}
 						else
 						{
-							assert(false);
+							if (binOp->operatorType == BinaryOperatorType::BOOLEAN_AND)
+							{
+
+							}
+							else if (binOp->operatorType == BinaryOperatorType::BOOLEAN_OR)
+							{
+
+							}
+							else
+							{
+								assert(false);
+							}
 						}
+					}
+					else
+					{
+						Instruction binInst(binaryOpTranslation, val0, lhsWrapper, rhsWrapper);
+						state.InsertionBlock().PushBack(binInst);
+					}
+					*/
+				}break;
+				default:
+				{
+					//std::string errorMsg = "Unhandled statement type in VM::GenerateStatementInstructions: %u\n" + std::to_string((i32)statement->statementType);
+					//state.diagnosticContainer->AddDiagnostic(Span(0, 0), 0, 0, errorMsg);
+				} break;
+				}
+			}
+		}
+
+		IR::Value* IntermediateRepresentation::LowerExpression(AST::Expression* expression)
+		{
+			if (IsLiteral(expression->statementType))
+			{
+				return new IR::Constant(IR::Value(expression->GetValue()));
+			}
+
+			switch (expression->statementType)
+			{
+			case AST::StatementType::ASSIGNMENT:
+			{
+				AST::Assignment* assignment = (AST::Assignment*)expression;
+				return new IR::Assignment(assignment->lhs, LowerExpression(assignment->rhs));
+			}
+			//case StatementType::INDEX_OPERATION:
+			//	return Assignment(NextTemporary(), expression->GetValue());
+			//case StatementType::LIST_INITIALIZER:
+			//	return Assignment(NextTemporary(), expression->GetValue());
+			case AST::StatementType::UNARY_OPERATION:
+			{
+				AST::UnaryOperation* unaryOperation = (AST::UnaryOperation*)expression;
+				IR::UnaryOperatorType irOpType = IR::UnaryOperatorType::_NONE;
+				switch (unaryOperation->operatorType)
+				{
+				case AST::UnaryOperatorType::NEGATE:		irOpType = IR::UnaryOperatorType::NEGATE;
+				case AST::UnaryOperatorType::NOT:			irOpType = IR::UnaryOperatorType::NOT;
+				case AST::UnaryOperatorType::BIN_INVERT:	irOpType = IR::UnaryOperatorType::BIN_INVERT;
+				}
+
+				return new IR::UnaryValue(irOpType, LowerExpression(unaryOperation->expression));
+			}
+			case AST::StatementType::BINARY_OPERATION:
+			{
+				AST::BinaryOperation* binaryOperation = (AST::BinaryOperation*)expression;
+
+				if (binaryOperation->operatorType == AST::BinaryOperatorType::ASSIGN)
+				{
+					if (binaryOperation->lhs->statementType == AST::StatementType::IDENTIFIER)
+					{
+						AST::Identifier* lhs = (AST::Identifier*)binaryOperation->lhs;
+						// TODO: Add to usages here
+						return new IR::Assignment(lhs->identifierStr, LowerExpression(binaryOperation->rhs));
+					}
+
+					return nullptr;
+				}
+
+				IR::BinaryOperatorType irOpType = IR::IRBinaryOperatorTypeFromASTBinaryOperatorType(binaryOperation->operatorType);
+				IR::Value* lhsVal = LowerExpression(binaryOperation->lhs);
+				IR::Value* rhsVal = LowerExpression(binaryOperation->rhs);
+
+				if (IR::Value::IsLiteral(lhsVal->type) &&
+					IR::Value::IsLiteral(rhsVal->type))
+				{
+					switch (irOpType)
+					{
+					case IR::BinaryOperatorType::ADD:					return new IR::Constant(*lhsVal + *rhsVal);
+					case IR::BinaryOperatorType::SUB:					return new IR::Constant(*lhsVal - *rhsVal);
+					case IR::BinaryOperatorType::MUL:					return new IR::Constant(*lhsVal * *rhsVal);
+					case IR::BinaryOperatorType::DIV:					return new IR::Constant(*lhsVal / *rhsVal);
+					case IR::BinaryOperatorType::MOD:					return new IR::Constant(*lhsVal % *rhsVal);
+					case IR::BinaryOperatorType::BIN_AND:				return new IR::Constant(*lhsVal & *rhsVal);
+					case IR::BinaryOperatorType::BIN_OR:				return new IR::Constant(*lhsVal | *rhsVal);
+					case IR::BinaryOperatorType::BIN_XOR:				return new IR::Constant(*lhsVal ^ *rhsVal);
+					case IR::BinaryOperatorType::EQUAL_TEST:			return new IR::Constant(IR::Value(*lhsVal == *rhsVal));
+					case IR::BinaryOperatorType::NOT_EQUAL_TEST:		return new IR::Constant(IR::Value(*lhsVal != *rhsVal));
+					case IR::BinaryOperatorType::GREATER_TEST:			return new IR::Constant(IR::Value(*lhsVal > * rhsVal));
+					case IR::BinaryOperatorType::GREATER_EQUAL_TEST:	return new IR::Constant(IR::Value(*lhsVal >= *rhsVal));
+					case IR::BinaryOperatorType::LESS_TEST:				return new IR::Constant(IR::Value(*lhsVal < *rhsVal));
+					case IR::BinaryOperatorType::LESS_EQUAL_TEST:		return new IR::Constant(IR::Value(*lhsVal <= *rhsVal));
+					case IR::BinaryOperatorType::BOOLEAN_AND:			return new IR::Constant(IR::Value(*lhsVal && *rhsVal));
+					case IR::BinaryOperatorType::BOOLEAN_OR:			return new IR::Constant(IR::Value(*lhsVal || *rhsVal));
+					default:
+						assert(false);
+						return new IR::Constant(IR::Value(-1));
 					}
 				}
 				else
 				{
-					Instruction binInst(binaryOpTranslation, val0, lhsWrapper, rhsWrapper);
-					state.InsertionBlock().PushBack(binInst);
+					if (!IR::Value::IsLiteral(lhsVal->type) && lhsVal->type != IR::Value::Type::IDENTIFIER)
+					{
+						std::string lhsVar = state.NextTemporary();
+						state.WriteVariableInBlock(lhsVar, lhsVal);
+						lhsVal = new IR::Identifier(lhsVar);
+					}
+					if (!IR::Value::IsLiteral(rhsVal->type) && rhsVal->type != IR::Value::Type::IDENTIFIER)
+					{
+						std::string rhsVar = state.NextTemporary();
+						state.WriteVariableInBlock(rhsVar, rhsVal);
+						rhsVal = new IR::Identifier(rhsVar);
+					}
+					return new IR::BinaryValue(irOpType, lhsVal, rhsVal);
 				}
-				*/
-			}break;
+
+			}
 			case AST::StatementType::TERNARY_OPERATION:
 			{
-			}break;
-			default:
-			{
-				std::string errorMsg = "Unhandled statement type in VM::GenerateStatementInstructions: %u\n" + std::to_string((i32)statement->statementType);
-				state.diagnosticContainer->AddDiagnostic(Span(0, 0), 0, 0, errorMsg);
-			} break;
+				AST::TernaryOperation* ternary = (AST::TernaryOperation*)expression;
+				IR::Block ifTrueBlock(ternary->ifTrue->span);
+				IR::Block ifFalseBlock(ternary->ifFalse->span);
+				IR::Block mergeBlock(state.InsertionBlock().origin);
+
+				state.InsertionBlock().AddConditionalBranch(LowerExpression(ternary->condition), ifTrueBlock, ifFalseBlock);
+
+				state.SetCurrentInstructionBlock(ifTrueBlock);
+				LowerStatement(ternary->ifTrue);
+				state.InsertionBlock().AddBranch(mergeBlock);
+				state.InsertionBlock().SealBlock();
+
+				state.SetCurrentInstructionBlock(ifFalseBlock);
+				LowerStatement(ternary->ifFalse);
+				state.InsertionBlock().AddBranch(mergeBlock);
+				state.InsertionBlock().SealBlock();
+
+				state.SetCurrentInstructionBlock(mergeBlock);
 			}
-		}
-	}
-
-	IR::Value* IntermediateRepresentation::LowerExpression(AST::Expression* expression)
-	{
-		if (IsLiteral(expression->statementType))
-		{
-			return new IR::Constant(IR::Value(expression->GetValue()));
-		}
-
-		switch (expression->statementType)
-		{
-		case AST::StatementType::ASSIGNMENT:
-		{
-			AST::Assignment* assignment = (AST::Assignment*)expression;
-			return new IR::Assignment(assignment->lhs, LowerExpression(assignment->rhs));
-		}
-		//case StatementType::INDEX_OPERATION:
-		//	return Assignment(NextTemporary(), expression->GetValue());
-		//case StatementType::LIST_INITIALIZER:
-		//	return Assignment(NextTemporary(), expression->GetValue());
-		case AST::StatementType::UNARY_OPERATION:
-		{
-			AST::UnaryOperation* unaryOperation = (AST::UnaryOperation*)expression;
-			IR::UnaryOperatorType irOpType = IR::UnaryOperatorType::_NONE;
-			switch (unaryOperation->operatorType)
-			{
-			case AST::UnaryOperatorType::NEGATE:		irOpType = IR::UnaryOperatorType::NEGATE;
-			case AST::UnaryOperatorType::NOT:			irOpType = IR::UnaryOperatorType::NOT;
-			case AST::UnaryOperatorType::BIN_INVERT:	irOpType = IR::UnaryOperatorType::BIN_INVERT;
-			}
-
-			return new IR::UnaryValue(irOpType, LowerExpression(unaryOperation->expression));
-		}
-		case AST::StatementType::BINARY_OPERATION:
-		{
-			AST::BinaryOperation* binaryOperation = (AST::BinaryOperation*)expression;
-
-			if (binaryOperation->operatorType == AST::BinaryOperatorType::ASSIGN)
-			{
-				AST::Identifier* lhs = (AST::Identifier*)binaryOperation->lhs;
-				// TODO: Add to usages here
-				return new IR::Assignment(lhs->identifierStr, LowerExpression(binaryOperation->rhs));
-			}
-
-			IR::BinaryOperatorType irOpType = IR::IRBinaryOperatorTypeFromASTBinaryOperatorType(binaryOperation->operatorType);
-			IR::Value* lhsVal = LowerExpression(binaryOperation->lhs);
-			IR::Value* rhsVal = LowerExpression(binaryOperation->rhs);
-
-			if (IR::Value::IsLiteral(lhsVal->type) &&
-				IR::Value::IsLiteral(rhsVal->type))
-			{
-				switch (irOpType)
-				{
-				case IR::BinaryOperatorType::ADD:					return new IR::Constant(*lhsVal + *rhsVal);
-				case IR::BinaryOperatorType::SUB:					return new IR::Constant(*lhsVal - *rhsVal);
-				case IR::BinaryOperatorType::MUL:					return new IR::Constant(*lhsVal * *rhsVal);
-				case IR::BinaryOperatorType::DIV:					return new IR::Constant(*lhsVal / *rhsVal);
-				case IR::BinaryOperatorType::MOD:					return new IR::Constant(*lhsVal % *rhsVal);
-				case IR::BinaryOperatorType::BIN_AND:				return new IR::Constant(*lhsVal & *rhsVal);
-				case IR::BinaryOperatorType::BIN_OR:				return new IR::Constant(*lhsVal | *rhsVal);
-				case IR::BinaryOperatorType::BIN_XOR:				return new IR::Constant(*lhsVal ^ *rhsVal);
-				case IR::BinaryOperatorType::EQUAL_TEST:			return new IR::Constant(IR::Value(*lhsVal == *rhsVal));
-				case IR::BinaryOperatorType::NOT_EQUAL_TEST:		return new IR::Constant(IR::Value(*lhsVal != *rhsVal));
-				case IR::BinaryOperatorType::GREATER_TEST:			return new IR::Constant(IR::Value(*lhsVal > * rhsVal));
-				case IR::BinaryOperatorType::GREATER_EQUAL_TEST:	return new IR::Constant(IR::Value(*lhsVal >= *rhsVal));
-				case IR::BinaryOperatorType::LESS_TEST:				return new IR::Constant(IR::Value(*lhsVal < *rhsVal));
-				case IR::BinaryOperatorType::LESS_EQUAL_TEST:		return new IR::Constant(IR::Value(*lhsVal <= *rhsVal));
-				case IR::BinaryOperatorType::BOOLEAN_AND:			return new IR::Constant(IR::Value(*lhsVal && *rhsVal));
-				case IR::BinaryOperatorType::BOOLEAN_OR:			return new IR::Constant(IR::Value(*lhsVal || *rhsVal));
-				default:
-					assert(false);
-					return new IR::Constant(IR::Value(-1));
-				}
-			}
-			else
-			{
-				if (!IR::Value::IsLiteral(lhsVal->type) && lhsVal->type != IR::Value::Type::IDENTIFIER)
-				{
-					std::string lhsVar = state.NextTemporary();
-					state.WriteVariableInBlock(lhsVar, lhsVal);
-					lhsVal = new IR::Identifier(lhsVar);
-				}
-				if (!IR::Value::IsLiteral(rhsVal->type) && rhsVal->type != IR::Value::Type::IDENTIFIER)
-				{
-					std::string rhsVar = state.NextTemporary();
-					state.WriteVariableInBlock(rhsVar, rhsVal);
-					rhsVal = new IR::Identifier(rhsVar);
-				}
-				return new IR::BinaryValue(irOpType, lhsVal, rhsVal);
-			}
-
-		}
-		case AST::StatementType::TERNARY_OPERATION:
-		{
-			AST::TernaryOperation* ternary = (AST::TernaryOperation*)expression;
-			IR::Block ifTrueBlock(ternary->ifTrue->span);
-			IR::Block ifFalseBlock(ternary->ifFalse->span);
-			IR::Block mergeBlock(state.InsertionBlock().origin);
-
-			state.InsertionBlock().AddConditionalBranch(LowerExpression(ternary->condition), ifTrueBlock, ifFalseBlock);
-
-			state.SetCurrentInstructionBlock(ifTrueBlock);
-			LowerStatement(ternary->ifTrue);
-			state.InsertionBlock().AddBranch(mergeBlock);
-			state.InsertionBlock().SealBlock();
-
-			state.SetCurrentInstructionBlock(ifFalseBlock);
-			LowerStatement(ternary->ifFalse);
-			state.InsertionBlock().AddBranch(mergeBlock);
-			state.InsertionBlock().SealBlock();
-
-			state.SetCurrentInstructionBlock(mergeBlock);
-		}
-		case AST::StatementType::FUNC_CALL:
-		{
-			AST::FunctionCall* functionCall = (AST::FunctionCall*)expression;
-			std::vector<IR::Value*> arguments;
-			for (u32 i = 0; i < (u32)functionCall->arguments.size(); ++i)
-			{
-				arguments.push_back(LowerExpression(functionCall->arguments[i]));
-			}
-			return new IR::FunctionCallValue(functionCall->target, arguments);
-		}
-		case AST::StatementType::IDENTIFIER:
-		{
-			AST::Identifier* identifier = (AST::Identifier*)expression;
-			return new IR::Identifier(identifier->identifierStr);
-		} break;
-		}
-
-		return new IR::Value(IR::Value::Type::_NONE);
-
-	}
-
-	/*
-	void IntermediateRepresentation::DiscoverFuncDeclarations(const std::vector<AST::Statement*>& statements)
-	{
-		for (u32 i = 0; i < (u32)statements.size(); ++i)
-		{
-			AST::Statement* statement = statements[i];
-
-			switch (statement->statementType)
-			{
-			case StatementType::STATEMENT_BLOCK:
-			{
-				StatementBlock* statementBlock = (StatementBlock*)statement;
-				DiscoverFuncDeclarations(statementBlock->statements);
-			} break;
-			case StatementType::FUNC_DECL:
-			{
-				FunctionDeclaration* funcDecl = (FunctionDeclaration*)statement;
-				state.funcNameToBlockIndexTable.emplace(funcDecl->name, (i32)state.funcNameToBlockIndexTable.size());
-			}break;
-			}
-		}
-	}
-
-	void IntermediateRepresentation::GenerateFunctionInstructions(const std::vector<AST::Statement*>& statements)
-	{
-		for (u32 i = 0; i < (u32)statements.size(); ++i)
-		{
-			AST::Statement* statement = statements[i];
-
-			switch (statement->statementType)
-			{
-			case StatementType::STATEMENT_BLOCK:
-			{
-				state.PushInstructionBlock();
-				StatementBlock* statementBlock = (StatementBlock*)statement;
-				GenerateFunctionInstructions(statementBlock->statements);
-				state.PopInstructionBlock();
-			} break;
-			case StatementType::FUNC_DECL:
-			{
-				InstructionBlock& instrBlock = state.PushInstructionBlock();
-				FunctionDeclaration* funcDecl = (FunctionDeclaration*)statement;
-
-				for (u32 j = 0; j < (u32)funcDecl->arguments.size(); ++j)
-				{
-					Instruction popInst(OpCode::POP, ValueWrapper(ValueWrapper::Type::REGISTER, IR::Value((i32)j)), GetValueWrapperFromExpression(funcDecl->arguments[j]));
-					instrBlock.PushBack(popInst);
-				}
-
-				//GenerateStatementInstructions(funcDecl->body->statements);
-				state.PopInstructionBlock();
-			}break;
-			}
-		}
-	}
-	*/
-
-	/*
-	ValueWrapper IntermediateRepresentation::GetValueWrapperFromExpression(AST::Expression* expression)
-	{
-		ValueWrapper valWrapper;
-
-		if (IsLiteral(expression->statementType))
-		{
-			valWrapper = ValueWrapper(ValueWrapper::Type::CONSTANT, expression->GetValue());
-		}
-		else
-		{
-			switch (expression->statementType)
-			{
-			case AST::StatementType::IDENTIFIER:
-			{
-				//AST::Identifier* ident = (AST::Identifier*)expression;
-				//i32 reg = state.varToRegisterMap[ident->identifierStr];
-				//valWrapper = ValueWrapper(ValueWrapper::Type::REGISTER, IR::Value(reg));
-			} break;
 			case AST::StatementType::FUNC_CALL:
 			{
-				AST::FunctionCall* funcCall = (AST::FunctionCall*)expression;
-				i32 registerStored = GenerateCallInstruction(funcCall);
-				valWrapper = ValueWrapper(ValueWrapper::Type::REGISTER, IR::Value(registerStored));
-			} break;
-			default:
+				AST::FunctionCall* functionCall = (AST::FunctionCall*)expression;
+				std::vector<IR::Value*> arguments;
+				for (u32 i = 0; i < (u32)functionCall->arguments.size(); ++i)
+				{
+					arguments.push_back(LowerExpression(functionCall->arguments[i]));
+				}
+				return new IR::FunctionCallValue(functionCall->target, arguments);
+			}
+			case AST::StatementType::IDENTIFIER:
 			{
-				//GenerateStatementInstructions(expression);
+				AST::Identifier* identifier = (AST::Identifier*)expression;
+				return new IR::Identifier(identifier->identifierStr);
 			} break;
+			}
+
+			return new IR::Value(IR::Value::Type::_NONE);
+
+		}
+
+		/*
+		void IntermediateRepresentation::DiscoverFuncDeclarations(const std::vector<AST::Statement*>& statements)
+		{
+			for (u32 i = 0; i < (u32)statements.size(); ++i)
+			{
+				AST::Statement* statement = statements[i];
+
+				switch (statement->statementType)
+				{
+				case StatementType::STATEMENT_BLOCK:
+				{
+					StatementBlock* statementBlock = (StatementBlock*)statement;
+					DiscoverFuncDeclarations(statementBlock->statements);
+				} break;
+				case StatementType::FUNC_DECL:
+				{
+					FunctionDeclaration* funcDecl = (FunctionDeclaration*)statement;
+					state.funcNameToBlockIndexTable.emplace(funcDecl->name, (i32)state.funcNameToBlockIndexTable.size());
+				}break;
+				}
 			}
 		}
 
-		return valWrapper;
-	}
-	*/
-
-	i32 IntermediateRepresentation::CombineInstructionIndex(i32 instructionBlockIndex, i32 instructionIndex)
-	{
-		u32 value = ((u32)instructionBlockIndex << 16) + ((u32)instructionIndex & 0xFFFF);
-		assert((value >> 16) == (u32)instructionBlockIndex);
-		assert((value & 0xFFFF) == (u32)instructionIndex);
-		return static_cast<i32>(value);
-	}
-
-	void IntermediateRepresentation::SplitInstructionIndex(i32 combined, i32& outInstructionBlockIndex, i32& outInstructionIndex)
-	{
-		u32 valueUnsigned = static_cast<u32>(combined);
-		outInstructionBlockIndex = (i32)(valueUnsigned >> 16);
-		outInstructionIndex = (i32)(valueUnsigned & 0xFFFF);
-	}
-
-	i32 IntermediateRepresentation::GenerateCallInstruction(AST::FunctionCall* funcCallstate)
-	{
-		FLEX_UNUSED(funcCallstate);
-		/*
-		InstructionBlock& insertionBlock = state.CurrentInstructionBlock();
-
-		// Temporary identifier for the function since we
-		// don't know where it will be located in the end
-		i32 funcUID = state.funcNameToBlockIndexTable[funcCall->target];
-
-		// Push return IP
-		i32 pushInstructionIndex = -1;
+		void IntermediateRepresentation::GenerateFunctionInstructions(const std::vector<AST::Statement*>& statements)
 		{
-			// Actual IP will be patched up below
-			Instruction pushReturnIP(OpCode::PUSH, ValueWrapper(ValueWrapper::Type::CONSTANT, IR::Value(0)));
-			insertionBlock.PushBack(pushReturnIP);
-			pushInstructionIndex = (i32)insertionBlock.instructions.size();
-		}
-
-		// Push arguments in reverse order
-		for (i32 i = (i32)funcCall->arguments.size() - 1; i >= 0; --i)
-		{
-			AST::Expression* arg = funcCall->arguments[i];
-
-			ValueWrapper argVal;
-			if (IsLiteral(arg->statementType))
+			for (u32 i = 0; i < (u32)statements.size(); ++i)
 			{
-				argVal = ValueWrapper(ValueWrapper::Type::CONSTANT, arg->GetValue());
+				AST::Statement* statement = statements[i];
+
+				switch (statement->statementType)
+				{
+				case StatementType::STATEMENT_BLOCK:
+				{
+					state.PushInstructionBlock();
+					StatementBlock* statementBlock = (StatementBlock*)statement;
+					GenerateFunctionInstructions(statementBlock->statements);
+					state.PopInstructionBlock();
+				} break;
+				case StatementType::FUNC_DECL:
+				{
+					InstructionBlock& instrBlock = state.PushInstructionBlock();
+					FunctionDeclaration* funcDecl = (FunctionDeclaration*)statement;
+
+					for (u32 j = 0; j < (u32)funcDecl->arguments.size(); ++j)
+					{
+						Instruction popInst(OpCode::POP, ValueWrapper(ValueWrapper::Type::REGISTER, IR::Value((i32)j)), GetValueWrapperFromExpression(funcDecl->arguments[j]));
+						instrBlock.PushBack(popInst);
+					}
+
+					//GenerateStatementInstructions(funcDecl->body->statements);
+					state.PopInstructionBlock();
+				}break;
+				}
+			}
+		}
+		*/
+
+		/*
+		ValueWrapper IntermediateRepresentation::GetValueWrapperFromExpression(AST::Expression* expression)
+		{
+			ValueWrapper valWrapper;
+
+			if (IsLiteral(expression->statementType))
+			{
+				valWrapper = ValueWrapper(ValueWrapper::Type::CONSTANT, expression->GetValue());
 			}
 			else
 			{
-				if (arg->statementType == StatementType::IDENTIFIER)
+				switch (expression->statementType)
 				{
-					Identifier* initializerIdent = (Identifier*)arg;
-					i32 getRegister = state.varToRegisterMap[initializerIdent->identifierStr];
-					argVal = ValueWrapper(ValueWrapper::Type::REGISTER, IR::Value(getRegister));
-				}
-				else if (arg->statementType == StatementType::FUNC_CALL)
+				case AST::StatementType::IDENTIFIER:
 				{
-					FunctionCall* subFuncCall = (FunctionCall*)arg;
-					i32 registerStored = GenerateCallInstruction(subFuncCall);
-					argVal = ValueWrapper(ValueWrapper::Type::REGISTER, IR::Value(registerStored));
+					//AST::Identifier* ident = (AST::Identifier*)expression;
+					//i32 reg = state.varToRegisterMap[ident->identifierStr];
+					//valWrapper = ValueWrapper(ValueWrapper::Type::REGISTER, IR::Value(reg));
+				} break;
+				case AST::StatementType::FUNC_CALL:
+				{
+					AST::FunctionCall* funcCall = (AST::FunctionCall*)expression;
+					i32 registerStored = GenerateCallInstruction(funcCall);
+					valWrapper = ValueWrapper(ValueWrapper::Type::REGISTER, IR::Value(registerStored));
+				} break;
+				default:
+				{
+					//GenerateStatementInstructions(expression);
+				} break;
 				}
 			}
 
-			Instruction pushArg(OpCode::PUSH, argVal);
-			insertionBlock.PushBack(pushArg);
+			return valWrapper;
 		}
-
-		// Call
-		Instruction inst(OpCode::CALL, ValueWrapper(ValueWrapper::Type::CONSTANT, IR::Value(funcUID)));
-		insertionBlock.PushBack(inst);
-
-		// Resume point
-		{
-			// Patch up push call to current instruction offset
-			i32 instructionBlockIndex = (i32)state.instructionBlocks.size();
-			i32 instructionIndex = (i32)insertionBlock.instructions.size();
-			i32 value = CombineInstructionIndex(instructionBlockIndex, instructionIndex);
-			insertionBlock.instructions[pushInstructionIndex].val0.value.valInt = value;
-		}
-
-		i32 returnValueRegister = 0;
-		Instruction popReturnVal(OpCode::POP, ValueWrapper(ValueWrapper::Type::REGISTER, IR::Value(returnValueRegister)));
-		insertionBlock.PushBack(popReturnVal);
-		return returnValueRegister;
 		*/
-		return 0;
-	}
 
+		i32 IntermediateRepresentation::CombineInstructionIndex(i32 instructionBlockIndex, i32 instructionIndex)
+		{
+			u32 value = ((u32)instructionBlockIndex << 16) + ((u32)instructionIndex & 0xFFFF);
+			assert((value >> 16) == (u32)instructionBlockIndex);
+			assert((value & 0xFFFF) == (u32)instructionIndex);
+			return static_cast<i32>(value);
+		}
+
+		void IntermediateRepresentation::SplitInstructionIndex(i32 combined, i32& outInstructionBlockIndex, i32& outInstructionIndex)
+		{
+			u32 valueUnsigned = static_cast<u32>(combined);
+			outInstructionBlockIndex = (i32)(valueUnsigned >> 16);
+			outInstructionIndex = (i32)(valueUnsigned & 0xFFFF);
+		}
+
+		i32 IntermediateRepresentation::GenerateCallInstruction(AST::FunctionCall* funcCallstate)
+		{
+			FLEX_UNUSED(funcCallstate);
+			/*
+			InstructionBlock& insertionBlock = state.CurrentInstructionBlock();
+
+			// Temporary identifier for the function since we
+			// don't know where it will be located in the end
+			i32 funcUID = state.funcNameToBlockIndexTable[funcCall->target];
+
+			// Push return IP
+			i32 pushInstructionIndex = -1;
+			{
+				// Actual IP will be patched up below
+				Instruction pushReturnIP(OpCode::PUSH, ValueWrapper(ValueWrapper::Type::CONSTANT, IR::Value(0)));
+				insertionBlock.PushBack(pushReturnIP);
+				pushInstructionIndex = (i32)insertionBlock.instructions.size();
+			}
+
+			// Push arguments in reverse order
+			for (i32 i = (i32)funcCall->arguments.size() - 1; i >= 0; --i)
+			{
+				AST::Expression* arg = funcCall->arguments[i];
+
+				ValueWrapper argVal;
+				if (IsLiteral(arg->statementType))
+				{
+					argVal = ValueWrapper(ValueWrapper::Type::CONSTANT, arg->GetValue());
+				}
+				else
+				{
+					if (arg->statementType == StatementType::IDENTIFIER)
+					{
+						Identifier* initializerIdent = (Identifier*)arg;
+						i32 getRegister = state.varToRegisterMap[initializerIdent->identifierStr];
+						argVal = ValueWrapper(ValueWrapper::Type::REGISTER, IR::Value(getRegister));
+					}
+					else if (arg->statementType == StatementType::FUNC_CALL)
+					{
+						FunctionCall* subFuncCall = (FunctionCall*)arg;
+						i32 registerStored = GenerateCallInstruction(subFuncCall);
+						argVal = ValueWrapper(ValueWrapper::Type::REGISTER, IR::Value(registerStored));
+					}
+				}
+
+				Instruction pushArg(OpCode::PUSH, argVal);
+				insertionBlock.PushBack(pushArg);
+			}
+
+			// Call
+			Instruction inst(OpCode::CALL, ValueWrapper(ValueWrapper::Type::CONSTANT, IR::Value(funcUID)));
+			insertionBlock.PushBack(inst);
+
+			// Resume point
+			{
+				// Patch up push call to current instruction offset
+				i32 instructionBlockIndex = (i32)state.instructionBlocks.size();
+				i32 instructionIndex = (i32)insertionBlock.instructions.size();
+				i32 value = CombineInstructionIndex(instructionBlockIndex, instructionIndex);
+				insertionBlock.instructions[pushInstructionIndex].val0.value.valInt = value;
+			}
+
+			i32 returnValueRegister = 0;
+			Instruction popReturnVal(OpCode::POP, ValueWrapper(ValueWrapper::Type::REGISTER, IR::Value(returnValueRegister)));
+			insertionBlock.PushBack(popReturnVal);
+			return returnValueRegister;
+			*/
+			return 0;
+		}
+	} // namespace IR
 } // namespace flex

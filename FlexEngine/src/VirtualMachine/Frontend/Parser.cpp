@@ -1432,7 +1432,13 @@ namespace flex
 			std::vector<Statement*> statements;
 			while (HasNext() && !NextIs(TokenKind::CLOSE_CURLY))
 			{
-				statements.push_back(NextStatement());
+				Statement* statement = NextStatement();
+				if (statement == nullptr)
+				{
+					return nullptr;
+				}
+
+				statements.push_back(statement);
 
 				while (NextIs(TokenKind::SEMICOLON))
 				{
@@ -1450,7 +1456,13 @@ namespace flex
 
 			while (!m_Lexer->sourceIter.EndOfFileReached())
 			{
-				statements.push_back(NextStatement());
+				Statement* statement = NextStatement();
+				if (statement == nullptr)
+				{
+					return nullptr;
+				}
+
+				statements.push_back(statement);
 
 				while (NextIs(TokenKind::SEMICOLON))
 				{
@@ -1499,9 +1511,12 @@ namespace flex
 
 				Eat(TokenKind::EQUALS);
 				Expression* initializer = NextExpression();
-				span = span.Extend(initializer->span);
+				if (initializer != nullptr)
+				{
+					span = span.Extend(initializer->span);
 
-				return new Declaration(span, identifierToken.value, initializer, typeName);
+					return new Declaration(span, identifierToken.value, initializer, typeName);
+				}
 			}
 			else if (NextIs(TokenKind::OPEN_PAREN))
 			{
@@ -1563,17 +1578,22 @@ namespace flex
 				{
 					Eat(TokenKind::EQUALS);
 					Expression* rhs = NextExpression();
-					rhs->span = rhs->span.Extend(Eat(TokenKind::SEMICOLON).span);
+					if (rhs != nullptr)
+					{
+						rhs->span = rhs->span.Extend(Eat(TokenKind::SEMICOLON).span);
+						return new Assignment(span.Extend(rhs->span), identifierToken.value, rhs);
+					}
 
-					return new Assignment(span.Extend(rhs->span), identifierToken.value, rhs);
 				}
 				else if (NextIsCompoundAssignment())
 				{
 					Token opToken = Eat(m_Current.kind);
 
 					Expression* rhs = NextExpression();
-
-					return new CompoundAssignment(span.Extend(rhs->span), identifierToken.value, rhs, TokenKindToBinaryOperatorType(opToken.kind));
+					if (rhs != nullptr)
+					{
+						return new CompoundAssignment(span.Extend(rhs->span), identifierToken.value, rhs, TokenKindToBinaryOperatorType(opToken.kind));
+					}
 				}
 				else if (NextIs(TokenKind::PLUS_PLUS) || NextIs(TokenKind::MINUS_MINUS))
 				{
@@ -1615,6 +1635,11 @@ namespace flex
 		{
 			while (true)
 			{
+				if (lhs == nullptr)
+				{
+					return nullptr;
+				}
+
 				i32 precedence = GetBinaryOperatorPrecedence(m_Current.kind);
 				if (precedence < lhsPrecendence)
 				{
@@ -1624,10 +1649,18 @@ namespace flex
 				Token binaryOperator = Eat(m_Current.kind);
 
 				Expression* rhs = NextPrimary();
+				if (rhs == nullptr)
+				{
+					return nullptr;
+				}
 				i32 nextPrecedence = GetBinaryOperatorPrecedence(m_Current.kind);
 				if (precedence < nextPrecedence)
 				{
 					rhs = NextBinary(precedence + 1, rhs);
+					if (rhs == nullptr)
+					{
+						return nullptr;
+					}
 				}
 
 				lhs = new BinaryOperation(lhs->span.Extend(rhs->span), TokenKindToBinaryOperatorType(binaryOperator.kind), lhs, rhs);
@@ -1638,16 +1671,29 @@ namespace flex
 		{
 			Token unaryOperatorToken = Eat(m_Current.kind);
 			Expression* expression = NextExpression();
-			return new UnaryOperation(unaryOperatorToken.span.Extend(expression->span), TokenKindToUnaryOperatorType(unaryOperatorToken.kind), expression);
+			if (expression != nullptr)
+			{
+				return new UnaryOperation(unaryOperatorToken.span.Extend(expression->span), TokenKindToUnaryOperatorType(unaryOperatorToken.kind), expression);
+			}
+
+			return nullptr;
 		}
 
 		TernaryOperation* Parser::NextTernary(Expression* condition)
 		{
 			Eat(TokenKind::QUESTION);
 			Expression* ifTrue = NextExpression();
-			Eat(TokenKind::SINGLE_COLON);
-			Expression* ifFalse = NextExpression();
-			return new TernaryOperation(condition->span.Extend(ifFalse->span), condition, ifTrue, ifFalse);
+			if (ifTrue != nullptr)
+			{
+				Eat(TokenKind::SINGLE_COLON);
+				Expression* ifFalse = NextExpression();
+				if (ifFalse != nullptr)
+				{
+					return new TernaryOperation(condition->span.Extend(ifFalse->span), condition, ifTrue, ifFalse);
+				}
+			}
+
+			return nullptr;
 		}
 
 		ListInitializer* Parser::NextListInitializer()
@@ -1659,7 +1705,13 @@ namespace flex
 			{
 				while (true)
 				{
-					listValues.push_back(NextExpression());
+					Expression* expression = NextExpression();
+					if (expression == nullptr)
+					{
+						return nullptr;
+					}
+
+					listValues.push_back(expression);
 
 					if (NextIs(TokenKind::CLOSE_CURLY))
 					{
@@ -1763,23 +1815,39 @@ namespace flex
 			Span span = Eat(m_Current.kind).span;
 			Eat(TokenKind::OPEN_PAREN);
 			Expression* condition = NextExpression();
-			Eat(TokenKind::CLOSE_PAREN);
-			Statement* then = NextStatement();
-			span = span.Extend(then->span);
-
-			Statement* otherwise = nullptr;
-			if (NextIs(TokenKind::ELIF))
+			if (condition != nullptr)
 			{
-				otherwise = NextIfStatement();
-			}
-			else if (NextIs(TokenKind::ELSE))
-			{
-				Eat(TokenKind::ELSE);
-				otherwise = NextStatement();
-				span = span.Extend(otherwise->span);
+				Eat(TokenKind::CLOSE_PAREN);
+				Statement* then = NextStatement();
+				if (then != nullptr)
+				{
+					span = span.Extend(then->span);
+
+					Statement* otherwise = nullptr;
+					if (NextIs(TokenKind::ELIF))
+					{
+						otherwise = NextIfStatement();
+						if (otherwise == nullptr)
+						{
+							return nullptr;
+						}
+					}
+					else if (NextIs(TokenKind::ELSE))
+					{
+						Eat(TokenKind::ELSE);
+						otherwise = NextStatement();
+						if (otherwise == nullptr)
+						{
+							return nullptr;
+						}
+						span = span.Extend(otherwise->span);
+					}
+
+					return new IfStatement(span, condition, then, otherwise);
+				}
 			}
 
-			return new IfStatement(span, condition, then, otherwise);
+			return nullptr;
 		}
 
 		ForStatement* Parser::NextForStatement()
@@ -1792,20 +1860,37 @@ namespace flex
 			if (!NextIs(TokenKind::SEMICOLON))
 			{
 				setup = NextExpression();
+				if (setup == nullptr)
+				{
+					return nullptr;
+				}
 			}
 			Eat(TokenKind::SEMICOLON);
 			if (!NextIs(TokenKind::SEMICOLON))
 			{
 				condition = NextExpression();
+				if (condition == nullptr)
+				{
+					return nullptr;
+				}
 			}
 			Eat(TokenKind::SEMICOLON);
 			if (!NextIs(TokenKind::CLOSE_PAREN))
 			{
 				update = NextExpression();
+				if (update == nullptr)
+				{
+					return nullptr;
+				}
 			}
 			Eat(TokenKind::CLOSE_PAREN);
 			Statement* body = NextStatement();
-			return new ForStatement(span.Extend(body->span), setup, condition, update, body);
+			if (body != nullptr)
+			{
+				return new ForStatement(span.Extend(body->span), setup, condition, update, body);
+			}
+
+			return nullptr;
 		}
 
 		WhileStatement* Parser::NextWhileStatement()
@@ -1813,20 +1898,36 @@ namespace flex
 			Span span = Eat(TokenKind::WHILE).span;
 			Eat(TokenKind::OPEN_PAREN);
 			Expression* condition = NextExpression();
-			Eat(TokenKind::CLOSE_PAREN);
-			Statement* body = NextStatement();
-			return new WhileStatement(span.Extend(body->span), condition, body);
+			if (condition != nullptr)
+			{
+				Eat(TokenKind::CLOSE_PAREN);
+				Statement* body = NextStatement();
+				if (body != nullptr)
+				{
+					return new WhileStatement(span.Extend(body->span), condition, body);
+				}
+			}
+
+			return nullptr;
 		}
 
 		DoWhileStatement* Parser::NextDoWhileStatement()
 		{
 			Span span = Eat(TokenKind::DO).span;
 			Statement* body = NextStatement();
-			Eat(TokenKind::WHILE);
-			Eat(TokenKind::OPEN_PAREN);
-			Expression* condition = NextExpression();
-			Eat(TokenKind::CLOSE_PAREN);
-			return new DoWhileStatement(span.Extend(Eat(TokenKind::SEMICOLON).span), condition, body);
+			if (body != nullptr)
+			{
+				Eat(TokenKind::WHILE);
+				Eat(TokenKind::OPEN_PAREN);
+				Expression* condition = NextExpression();
+				if (condition != nullptr)
+				{
+					Eat(TokenKind::CLOSE_PAREN);
+					return new DoWhileStatement(span.Extend(Eat(TokenKind::SEMICOLON).span), condition, body);
+				}
+			}
+
+			return nullptr;
 		}
 
 		FunctionDeclaration* Parser::NextFunctionDeclaration()
@@ -1839,7 +1940,12 @@ namespace flex
 			Eat(TokenKind::ARROW);
 			Token returnTypeToken = Eat(m_Current.kind);
 			StatementBlock* body = NextStatementBlock();
-			return new FunctionDeclaration(span.Extend(body->span), functionNameToken.value, arguments, TokenKindToTypeName(returnTypeToken.kind), body);
+			if (body != nullptr)
+			{
+				return new FunctionDeclaration(span.Extend(body->span), functionNameToken.value, arguments, TokenKindToTypeName(returnTypeToken.kind), body);
+			}
+
+			return nullptr;
 		}
 
 		std::vector<Declaration*> Parser::NextArgumentDefinitionList()
@@ -1876,7 +1982,13 @@ namespace flex
 			{
 				while (true)
 				{
-					result.push_back(NextExpression());
+					Expression* argument = NextExpression();
+					if (argument == nullptr)
+					{
+						return {};
+					}
+
+					result.push_back(argument);
 
 					if (!NextIs(TokenKind::COMMA))
 					{

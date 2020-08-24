@@ -5041,11 +5041,50 @@ namespace flex
 			//}
 			//ImGui::EndChild();
 
-			if (m_VM->state.diagnosticContainer->diagnostics.empty())
+			DiagnosticContainer* astDiagnostics = m_VM->GetASTDiagnosticContainer();
+			DiagnosticContainer* irDiagnostics = m_VM->GetIRDiagnosticContainer();
+
+			bool bSuccess =
+				m_VM->state.diagnosticContainer->diagnostics.empty() &&
+				astDiagnostics != nullptr && astDiagnostics->diagnostics.empty() &&
+				irDiagnostics != nullptr && irDiagnostics->diagnostics.empty();
+
+			if (bSuccess)
 			{
 				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 1.0f, 0.5f, 1.0f));
 				ImGui::Text("Success");
 				ImGui::PopStyleColor();
+
+				for (u32 i = 0; i < 8; ++i)
+				{
+					const VM::Value& regVal = m_VM->registers[i];
+					if (regVal.type != VM::Value::Type::_NONE)
+					{
+						std::string regValStr = regVal.ToString();
+						ImGui::Text("r%i = %s", i, regValStr.c_str());
+					}
+				}
+
+				if (!m_VM->astStr.empty())
+				{
+					ImGui::Separator();
+					ImGui::Text("AST");
+					ImGui::Text("%s", m_VM->astStr.c_str());
+				}
+
+				if (!m_VM->irStr.empty())
+				{
+					ImGui::Separator();
+					ImGui::Text("IR");
+					ImGui::Text("%s", m_VM->irStr.c_str());
+				}
+
+				if (!m_VM->instructionStr.empty())
+				{
+					ImGui::Separator();
+					ImGui::Text("Instructions");
+					ImGui::Text("%s", m_VM->instructionStr.c_str());
+				}
 			}
 			else
 			{
@@ -5053,6 +5092,20 @@ namespace flex
 				for (const Diagnostic& diagnostic : m_VM->state.diagnosticContainer->diagnostics)
 				{
 					ImGui::Text("L%d: %s", diagnostic.lineNumber + 1, diagnostic.message.c_str());
+				}
+				if (astDiagnostics != nullptr)
+				{
+					for (const Diagnostic& diagnostic : astDiagnostics->diagnostics)
+					{
+						ImGui::Text("L%d: %s", diagnostic.lineNumber + 1, diagnostic.message.c_str());
+					}
+				}
+				if (irDiagnostics != nullptr)
+				{
+					for (const Diagnostic& diagnostic : irDiagnostics->diagnostics)
+					{
+						ImGui::Text("L%d: %s", diagnostic.lineNumber + 1, diagnostic.message.c_str());
+					}
 				}
 				ImGui::PopStyleColor();
 			}
@@ -5108,6 +5161,11 @@ namespace flex
 
 		lines = Split(str, '\n');
 
+		if (lines.empty())
+		{
+			lines.push_back("");
+		}
+
 		MoveCursorToEnd();
 	}
 
@@ -5133,6 +5191,12 @@ namespace flex
 	void Terminal::TypeChar(char c)
 	{
 		m_CursorBlinkTimer = 0.0f;
+
+		if (lines.empty())
+		{
+			lines.push_back("");
+		}
+
 		std::string& curLine = lines[cursor.y];
 
 		if (c == '\n')
@@ -5271,8 +5335,15 @@ namespace flex
 	void Terminal::MoveCursorToEnd()
 	{
 		m_CursorBlinkTimer = 0.0f;
-		cursor.y = (i32)lines.size() - 1;
-		cursor.x = (i32)lines[cursor.y].size();
+		if (!lines.empty())
+		{
+			cursor.y = (i32)lines.size() - 1;
+			cursor.x = (i32)lines[cursor.y].size();
+		}
+		else
+		{
+			cursor.x = cursor.y = 0;
+		}
 		cursorMaxX = cursor.x;
 	}
 
@@ -5453,6 +5524,7 @@ namespace flex
 
 	void Terminal::EvaluateCode()
 	{
+		m_VM->Execute();
 	}
 
 	EventReply Terminal::OnKeyEvent(KeyCode keyCode, KeyAction action, i32 modifiers)

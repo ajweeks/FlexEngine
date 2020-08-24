@@ -3,7 +3,9 @@
 #include "VirtualMachine/Backend/VirtualMachine.hpp"
 
 #include "Helpers.hpp"
+#include "StringBuilder.hpp"
 #include "VirtualMachine/Backend/VariableContainer.hpp"
+#include "VirtualMachine/Backend/IR.hpp"
 #include "VirtualMachine/Diagnostics.hpp"
 #include "VirtualMachine/Frontend/Parser.hpp"
 
@@ -13,7 +15,8 @@ namespace flex
 	{
 		void State::Clear()
 		{
-			//varToRegisterMap.clear();
+			varUsages.clear();
+			varRegisterMap.clear();
 			funcNameToBlockIndexTable.clear();
 			instructionBlocks.clear();
 
@@ -51,25 +54,44 @@ namespace flex
 		{
 			delete state.diagnosticContainer;
 			delete runtimeDiagnosticContainer;
+
+			if (m_AST != nullptr)
+			{
+				m_AST->Destroy();
+				delete m_AST;
+			}
+
+			if (m_IR != nullptr)
+			{
+				m_IR->Destroy();
+				delete m_IR;
+			}
 		}
 
 		void VirtualMachine::GenerateFromSource(const char* source)
 		{
-			Print(source);
-			Print("\n---\n");
+			astStr = "";
+			irStr = "";
+			instructionStr = "";
 
-			AST::AST* ast = new AST::AST();
-			ast->Generate(source);
+			delete m_AST;
+			m_AST = new AST::AST();
+			m_AST->Generate(source);
+			if (m_AST->rootBlock != nullptr && m_AST->diagnosticContainer->diagnostics.empty())
+			{
+				astStr = m_AST->rootBlock->ToString();
 
-			IntermediateRepresentation* ir = new IntermediateRepresentation();
-			ir->GenerateFromAST(ast);
+				delete m_IR;
+				m_IR = new IR::IntermediateRepresentation();
+				m_IR->GenerateFromAST(m_AST);
 
-			GenerateFromIR(ir);
+				if (m_IR->firstBlock != nullptr && m_IR->state.diagnosticContainer->diagnostics.empty())
+				{
+					irStr = m_IR->firstBlock->ToString();
 
-			ir->Destroy();
-			delete ir;
-			ast->Destroy();
-			delete ast;
+					GenerateFromIR(m_IR);
+				}
+			}
 		}
 
 		ValueWrapper VirtualMachine::GetValueWrapperFromIRValue(IR::Value* value)
@@ -116,8 +138,11 @@ namespace flex
 			return valWrapper;
 		}
 
-		void VirtualMachine::GenerateFromIR(IntermediateRepresentation* ir)
+		void VirtualMachine::GenerateFromIR(IR::IntermediateRepresentation* ir)
 		{
+			state.Clear();
+			instructions.clear();
+
 			state.PushInstructionBlock();
 
 			IR::Block* block = ir->firstBlock;
@@ -194,15 +219,23 @@ namespace flex
 				}
 			}
 
+			StringBuilder instructionStrBuilder;
 			for (u32 i = 0; i < (u32)instructions.size(); ++i)
 			{
 				const Instruction& inst = instructions[i];
 				std::string val0Str = inst.val0.ToString();
 				std::string val1Str = inst.val1.ToString();
 				std::string val2Str = inst.val2.ToString();
-				Print("%u  %s %s %s %s\n", i, OpCodeToString(inst.opCode), val0Str.c_str(), val1Str.c_str(), val2Str.c_str());
+				instructionStrBuilder.Append(OpCodeToString(inst.opCode));
+				instructionStrBuilder.Append("  ");
+				instructionStrBuilder.Append(val0Str.c_str());
+				instructionStrBuilder.Append(" ");
+				instructionStrBuilder.Append(val1Str.c_str());
+				instructionStrBuilder.Append(" ");
+				instructionStrBuilder.Append(val2Str.c_str());
+				instructionStrBuilder.Append("\n");
 			}
-			Print("\n");
+			instructionStr = instructionStrBuilder.ToString();
 		}
 
 		void VirtualMachine::GenerateFromInstStream(const std::vector<Instruction>& inInstructions)
@@ -360,6 +393,16 @@ namespace flex
 					bBreak = true;
 				}
 			}
+		}
+
+		DiagnosticContainer* VirtualMachine::GetASTDiagnosticContainer()
+		{
+			return m_AST ? m_AST->diagnosticContainer : nullptr;
+		}
+
+		DiagnosticContainer* VirtualMachine::GetIRDiagnosticContainer()
+		{
+			return m_IR ? m_IR->state.diagnosticContainer : nullptr;
 		}
 
 		void VirtualMachine::AllocateMemory()

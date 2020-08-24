@@ -21,7 +21,6 @@ namespace flex
 			low(low),
 			high(high)
 		{
-			assert(low <= high);
 		}
 
 		std::string ToString(const std::string& inSource)

@@ -13,7 +13,13 @@ namespace flex
 	{
 		struct Assignment;
 		struct Value;
+		struct IntermediateRepresentation;
 		enum class OperatorType;
+	}
+
+	namespace AST
+	{
+		struct AST;
 	}
 
 	namespace VM
@@ -240,9 +246,12 @@ namespace flex
 			// Caller pops registers off stack
 
 			void GenerateFromSource(const char* source);
-			void GenerateFromIR(IntermediateRepresentation* ir);
+			void GenerateFromIR(IR::IntermediateRepresentation* ir);
 			void GenerateFromInstStream(const std::vector<Instruction>& inInstructions);
 			void Execute();
+
+			DiagnosticContainer* GetASTDiagnosticContainer();
+			DiagnosticContainer* GetIRDiagnosticContainer();
 
 			static const i32 REGISTER_COUNT = 64;
 			static const u32 MEMORY_POOL_SIZE = 32768;
@@ -253,8 +262,8 @@ namespace flex
 			// Flags bitfield
 			u32 zf : 1, sf : 1;
 
-			std::array<Value, REGISTER_COUNT> registers;
-			std::stack<Value> stack;
+			std::array<VM::Value, REGISTER_COUNT> registers;
+			std::stack<VM::Value> stack;
 
 			u32* memory = nullptr;
 			bool bTerminated = false;
@@ -264,6 +273,10 @@ namespace flex
 
 			State state;
 			DiagnosticContainer* runtimeDiagnosticContainer = nullptr;
+
+			std::string astStr;
+			std::string irStr;
+			std::string instructionStr;
 
 		private:
 			void AllocateMemory();
@@ -275,6 +288,9 @@ namespace flex
 			void DispatchExternalCall(FuncAddress funcAddress);
 
 			ValueWrapper GetValueWrapperFromIRValue(IR::Value* value);
+
+			AST::AST* m_AST = nullptr;
+			IR::IntermediateRepresentation* m_IR = nullptr;
 
 		};
 	}// namespace VM

@@ -79,6 +79,7 @@ namespace flex
 			void AddYield(Value* yieldVal);
 			void AddBranch(const Block& target);
 			void AddCall(const std::string& target, const std::vector<Value*>& arguments);
+			void AddHalt();
 			void SealBlock();
 			void AddConditionalBranch(Value* condition, const Block& then, const Block& otherwise);
 
@@ -134,6 +135,14 @@ namespace flex
 			//virtual bool UpdateAssignmentReferences(Assignment& from, Assignment& to) = 0;
 
 			virtual std::string ToString() const = 0;
+		};
+
+		struct Halt : Terminator
+		{
+			Halt()
+			{}
+
+			virtual std::string ToString() const override;
 		};
 
 		struct Return : Terminator
@@ -358,28 +367,27 @@ namespace flex
 			DiagnosticContainer* diagnosticContainer = nullptr;
 		};
 
+		struct IntermediateRepresentation
+		{
+			void GenerateFromAST(AST::AST* ast);
+			void Destroy();
+
+			IR::State state;
+			IR::Block* firstBlock = nullptr;
+
+		private:
+			//void DiscoverFuncDeclarations(const std::vector<Statement*>& statements);
+			//void GenerateFunctionInstructions(const std::vector<Statement*>& statements);
+
+			void LowerStatement(AST::Statement* statement);
+			IR::Value* LowerExpression(AST::Expression* expression);
+			//ValueWrapper GetValueWrapperFromExpression(AST::Expression* expression);
+
+			i32 CombineInstructionIndex(i32 instructionBlockIndex, i32 instructionIndex);
+			void SplitInstructionIndex(i32 combined, i32& outInstructionBlockIndex, i32& outInstructionIndex);
+			i32 GenerateCallInstruction(AST::FunctionCall* funcCall);
+		};
+
 	} // namespace IR
 
-	struct IntermediateRepresentation
-	{
-		void GenerateFromAST(AST::AST* ast);
-		void Destroy();
-
-		IR::State state;
-		IR::Block* firstBlock = nullptr;
-
-	private:
-		//void DiscoverFuncDeclarations(const std::vector<Statement*>& statements);
-		//void GenerateFunctionInstructions(const std::vector<Statement*>& statements);
-
-		void LowerStatement(AST::Statement* statement);
-		IR::Value* LowerExpression(AST::Expression* expression);
-		//ValueWrapper GetValueWrapperFromExpression(AST::Expression* expression);
-
-		i32 CombineInstructionIndex(i32 instructionBlockIndex, i32 instructionIndex);
-		void SplitInstructionIndex(i32 combined, i32& outInstructionBlockIndex, i32& outInstructionIndex);
-		i32 GenerateCallInstruction(AST::FunctionCall* funcCall);
-
-
-	};
 } // namespace flex
