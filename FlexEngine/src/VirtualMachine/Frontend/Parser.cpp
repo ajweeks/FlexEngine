@@ -1523,7 +1523,7 @@ namespace flex
 				Expression* initializer = NextExpression();
 				if (initializer != nullptr)
 				{
-					span = span.Extend(initializer->span);
+					span = span.Extend(Eat(TokenKind::SEMICOLON).span);
 
 					return new Declaration(span, identifierToken.value, initializer, typeName);
 				}
