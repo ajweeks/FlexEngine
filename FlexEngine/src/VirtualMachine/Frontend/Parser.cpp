@@ -234,15 +234,15 @@ namespace flex
 			return statementType == StatementType::BREAK ||
 				statementType == StatementType::YIELD ||
 				statementType == StatementType::RETURN ||
-//				statementType == StatementType::VARIABLE_DECL ||
+				//				statementType == StatementType::VARIABLE_DECL ||
 				statementType == StatementType::IDENTIFIER ||
-//				statementType == StatementType::COMPOUND_ASSIGNMENT ||
+				//				statementType == StatementType::COMPOUND_ASSIGNMENT ||
 				statementType == StatementType::INT_LIT ||
 				statementType == StatementType::FLOAT_LIT ||
 				statementType == StatementType::BOOL_LIT ||
 				statementType == StatementType::STRING_LIT ||
 				statementType == StatementType::CHAR_LIT ||
-//				statementType == StatementType::LIST_INITIALIZER ||
+				//				statementType == StatementType::LIST_INITIALIZER ||
 				statementType == StatementType::INDEX_OPERATION ||
 				statementType == StatementType::UNARY_OPERATION ||
 				statementType == StatementType::BINARY_OPERATION ||
@@ -1435,6 +1435,11 @@ namespace flex
 				Statement* statement = NextStatement();
 				if (statement == nullptr)
 				{
+					for (u32 i = 0; i < (u32)statements.size(); ++i)
+					{
+						delete statements[i];
+					}
+
 					return nullptr;
 				}
 
@@ -1459,6 +1464,11 @@ namespace flex
 				Statement* statement = NextStatement();
 				if (statement == nullptr)
 				{
+					for (u32 i = 0; i < (u32)statements.size(); ++i)
+					{
+						delete statements[i];
+					}
+
 					return nullptr;
 				}
 
@@ -1564,7 +1574,10 @@ namespace flex
 				{
 					Eat(TokenKind::OPEN_PAREN);
 					std::vector<Expression*> argumentList = NextArgumentList();
-					return new FunctionCall(span.Extend(Eat(TokenKind::CLOSE_PAREN).span), identifierToken.value, argumentList);
+					if (argumentList.size() != 1 || argumentList[0] != nullptr)
+					{
+						return new FunctionCall(span.Extend(Eat(TokenKind::CLOSE_PAREN).span), identifierToken.value, argumentList);
+					}
 				}
 				else if (NextIs(TokenKind::OPEN_SQUARE))
 				{
@@ -1572,7 +1585,10 @@ namespace flex
 					Expression* indexExpression = NextExpression();
 					Eat(TokenKind::CLOSE_SQUARE);
 
-					return new IndexOperation(span.Extend(indexExpression->span), identifierToken.value, indexExpression);
+					if (indexExpression != nullptr)
+					{
+						return new IndexOperation(span.Extend(indexExpression->span), identifierToken.value, indexExpression);
+					}
 				}
 				else if (NextIs(TokenKind::EQUALS))
 				{
@@ -1651,14 +1667,20 @@ namespace flex
 				Expression* rhs = NextPrimary();
 				if (rhs == nullptr)
 				{
+					delete lhs;
 					return nullptr;
 				}
 				i32 nextPrecedence = GetBinaryOperatorPrecedence(m_Current.kind);
 				if (precedence < nextPrecedence)
 				{
-					rhs = NextBinary(precedence + 1, rhs);
-					if (rhs == nullptr)
+					Expression* nextRHS = NextBinary(precedence + 1, rhs);
+					if (nextRHS != nullptr)
 					{
+						rhs = nextRHS;
+					}
+					else
+					{
+						delete lhs;
 						return nullptr;
 					}
 				}
@@ -1693,6 +1715,7 @@ namespace flex
 				}
 			}
 
+			delete ifTrue;
 			return nullptr;
 		}
 
@@ -1708,6 +1731,10 @@ namespace flex
 					Expression* expression = NextExpression();
 					if (expression == nullptr)
 					{
+						for (u32 i = 0; i < (u32)listValues.size(); ++i)
+						{
+							delete listValues[i];
+						}
 						return nullptr;
 					}
 
@@ -1829,6 +1856,8 @@ namespace flex
 						otherwise = NextIfStatement();
 						if (otherwise == nullptr)
 						{
+							delete condition;
+							delete then;
 							return nullptr;
 						}
 					}
@@ -1838,6 +1867,8 @@ namespace flex
 						otherwise = NextStatement();
 						if (otherwise == nullptr)
 						{
+							delete condition;
+							delete then;
 							return nullptr;
 						}
 						span = span.Extend(otherwise->span);
@@ -1871,6 +1902,7 @@ namespace flex
 				condition = NextExpression();
 				if (condition == nullptr)
 				{
+					delete setup;
 					return nullptr;
 				}
 			}
@@ -1880,6 +1912,8 @@ namespace flex
 				update = NextExpression();
 				if (update == nullptr)
 				{
+					delete setup;
+					delete condition;
 					return nullptr;
 				}
 			}
@@ -1890,6 +1924,9 @@ namespace flex
 				return new ForStatement(span.Extend(body->span), setup, condition, update, body);
 			}
 
+			delete setup;
+			delete condition;
+			delete update;
 			return nullptr;
 		}
 
@@ -1908,6 +1945,7 @@ namespace flex
 				}
 			}
 
+			delete condition;
 			return nullptr;
 		}
 
@@ -1927,6 +1965,7 @@ namespace flex
 				}
 			}
 
+			delete body;
 			return nullptr;
 		}
 
@@ -1945,6 +1984,10 @@ namespace flex
 				return new FunctionDeclaration(span.Extend(body->span), functionNameToken.value, arguments, TokenKindToTypeName(returnTypeToken.kind), body);
 			}
 
+			for (u32 i = 0; i < (u32)arguments.size(); ++i)
+			{
+				delete arguments[i];
+			}
 			return nullptr;
 		}
 
@@ -1985,7 +2028,7 @@ namespace flex
 					Expression* argument = NextExpression();
 					if (argument == nullptr)
 					{
-						return {};
+						return { nullptr };
 					}
 
 					result.push_back(argument);
