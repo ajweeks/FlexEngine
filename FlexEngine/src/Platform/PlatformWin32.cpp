@@ -570,6 +570,8 @@ namespace flex
 			byteOffset += sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION);
 			ptr++;
 		}
+
+		free(buffer);
 	}
 
 	DirectoryWatcher::DirectoryWatcher(const std::string& directory, bool bWatchSubtree) :
