@@ -64,6 +64,9 @@ namespace flex
 				valInt(0)
 			{}
 
+			virtual ~Value()
+			{}
+
 			Value(const Value& other);
 			Value(const Value&& other);
 			explicit Value(const VM::Value& other);
@@ -76,6 +79,9 @@ namespace flex
 			bool operator>=(const Value& other);
 			bool operator==(const Value& other);
 			bool operator!=(const Value& other);
+
+			virtual void Destroy()
+			{}
 
 			virtual std::string ToString() const;
 

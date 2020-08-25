@@ -12,8 +12,30 @@ namespace flex
 {
 	namespace IR
 	{
-		void Block::AddAssignment(Assignment* assignment)
+		void Block::Destroy()
+		{
+			for (auto iter = assignments.begin(); iter != assignments.end(); ++iter)
+			{
+				Assignment* assignment = *iter;
+				if (assignment != nullptr)
+				{
+					assignment->Destroy();
+					delete assignment;
+				}
+			}
+			assignments.clear();
 
+			predecessors.clear();
+
+			if (terminator != nullptr)
+			{
+				terminator->Destroy();
+				delete terminator;
+				terminator = nullptr;
+			}
+		}
+
+		void Block::AddAssignment(Assignment* assignment)
 		{
 			assignments.push_back(assignment);
 		}
@@ -46,7 +68,7 @@ namespace flex
 			}
 		}
 
-		void Block::AddBranch(const Block& target)
+		void Block::AddBranch(Block* target)
 		{
 			if (!Filled())
 			{
@@ -79,15 +101,15 @@ namespace flex
 		{
 		}
 
-		void Block::AddConditionalBranch(IR::Value* condition, const Block& then, const Block& otherwise)
+		void Block::AddConditionalBranch(IR::Value* condition, Block* then, Block* otherwise)
 		{
 			if (!Filled())
 			{
 				// TODO: Eliminate dead branches here
 
 				ConditionalBranch* conditionalBranch = new ConditionalBranch(condition, then, otherwise);
-				conditionalBranch->then.predecessors.emplace_back(this);
-				conditionalBranch->otherwise.predecessors.emplace_back(this);
+				conditionalBranch->then->predecessors.emplace_back(this);
+				conditionalBranch->otherwise->predecessors.emplace_back(this);
 				terminator = conditionalBranch;
 			}
 		}
@@ -123,12 +145,7 @@ namespace flex
 			diagnosticContainer->diagnostics.clear();
 		}
 
-		Block& State::InsertionBlock()
-		{
-			return insertionBlock;
-		}
-
-		void State::SetCurrentInstructionBlock(Block& block)
+		void State::SetCurrentInstructionBlock(Block* block)
 		{
 			insertionBlock = block;
 		}
@@ -150,7 +167,13 @@ namespace flex
 
 		void State::WriteVariableInBlock(const std::string& variable, IR::Value* value)
 		{
-			InsertionBlock().AddAssignment(new Assignment(variable, value));
+			insertionBlock->AddAssignment(new Assignment(variable, value));
+		}
+
+		void Assignment::Destroy()
+		{
+			delete value;
+			value = nullptr;
 		}
 
 		std::string Assignment::ToString() const
@@ -174,6 +197,12 @@ namespace flex
 			return "halt";
 		}
 
+		void Return::Destroy()
+		{
+			delete returnValue;
+			returnValue = nullptr;
+		}
+
 		std::string Return::ToString() const
 		{
 			StringBuilder builder;
@@ -182,6 +211,12 @@ namespace flex
 			builder.Append(returnValue->ToString());
 
 			return builder.ToString();
+		}
+
+		void YieldReturn::Destroy()
+		{
+			delete yieldValue;
+			yieldValue = nullptr;
 		}
 
 		std::string YieldReturn::ToString() const
@@ -194,9 +229,23 @@ namespace flex
 			return builder.ToString();
 		}
 
+		void Break::Destroy()
+		{
+			target->Destroy();
+			delete target;
+			target = nullptr;
+		}
+
 		std::string Break::ToString() const
 		{
 			return "break";
+		}
+
+		void Branch::Destroy()
+		{
+			target->Destroy();
+			delete target;
+			target = nullptr;
 		}
 
 		std::string Branch::ToString() const
@@ -204,9 +253,23 @@ namespace flex
 			StringBuilder builder;
 
 			builder.Append("branch ");
-			builder.Append(target.ToString());
+			builder.Append(target->ToString());
 
 			return builder.ToString();
+		}
+
+		void ConditionalBranch::Destroy()
+		{
+			delete condition;
+			condition = nullptr;
+
+			then->Destroy();
+			delete then;
+			then = nullptr;
+
+			otherwise->Destroy();
+			delete otherwise;
+			otherwise = nullptr;
 		}
 
 		std::string ConditionalBranch::ToString() const
@@ -216,12 +279,18 @@ namespace flex
 			builder.Append("if (");
 			builder.Append(condition->ToString());
 			builder.Append(") {");
-			builder.Append(then.ToString());
+			builder.Append(then->ToString());
 			builder.Append("} else {");
-			builder.Append(otherwise.ToString());
+			builder.Append(otherwise->ToString());
 			builder.Append("}");
 
 			return builder.ToString();
+		}
+
+		void UnaryValue::Destroy()
+		{
+			delete operand;
+			operand = nullptr;
 		}
 
 		std::string UnaryValue::ToString() const
@@ -232,6 +301,14 @@ namespace flex
 			builder.Append(operand->ToString());
 
 			return builder.ToString();
+		}
+
+		void BinaryValue::Destroy()
+		{
+			delete left;
+			left = nullptr;
+			delete right;
+			right = nullptr;
 		}
 
 		std::string BinaryValue::ToString() const
@@ -245,6 +322,15 @@ namespace flex
 			builder.Append(right->ToString());
 
 			return builder.ToString();
+		}
+
+		void FunctionCallValue::Destroy()
+		{
+			for (u32 i = 0; i < (u32)arguments.size(); ++i)
+			{
+				delete arguments[i];
+			}
+			arguments.clear();
 		}
 
 		std::string FunctionCallValue::ToString() const
@@ -355,6 +441,8 @@ namespace flex
 			{
 				state.diagnosticContainer = new DiagnosticContainer();
 			}
+			delete state.insertionBlock;
+			state.insertionBlock = new Block(Span(0, 0));
 			state.Clear();
 
 			//std::vector<Statement*> emptyList;
@@ -371,11 +459,11 @@ namespace flex
 
 			state.Clear();
 
-			firstBlock = &state.insertionBlock;
+			firstBlock = state.insertionBlock;
 			if (ast->diagnosticContainer->diagnostics.empty())
 			{
 				LowerStatement(ast->rootBlock);
-				state.InsertionBlock().AddHalt();
+				state.insertionBlock->AddHalt();
 			}
 
 			//s = firstBlock->ToString();
@@ -385,6 +473,13 @@ namespace flex
 		void IntermediateRepresentation::Destroy()
 		{
 			delete state.diagnosticContainer;
+			state.diagnosticContainer = nullptr;
+			if (firstBlock != nullptr)
+			{
+				firstBlock->Destroy();
+				delete firstBlock;
+				firstBlock = nullptr;
+			}
 		}
 
 		void IntermediateRepresentation::LowerStatement(AST::Statement* statement)
@@ -407,7 +502,7 @@ namespace flex
 					//AST::Identifier* identifier = (AST::Identifier*)statement;
 					//ValueWrapper val1 = GetValueWrapperFromExpression(identifier);
 
-					//state.InsertionBlock().AddAssignment(new Assignment(identifier->identifierStr, );
+					//state.insertionBlock->AddAssignment(new Assignment(identifier->identifierStr, );
 				} break;
 				case AST::StatementType::FUNC_CALL:
 				{
@@ -418,7 +513,7 @@ namespace flex
 					{
 						args.push_back(LowerExpression(funcCall->arguments[i]));
 					}
-					state.InsertionBlock().AddCall(funcCall->target, args);
+					state.insertionBlock->AddCall(funcCall->target, args);
 				} break;
 				case AST::StatementType::STATEMENT_BLOCK:
 				{
@@ -432,40 +527,40 @@ namespace flex
 				} break;
 				case AST::StatementType::VARIABLE_DECL:
 				{
-					//Block& insertionBlock = state.InsertionBlock();
+					//Block& insertionBlock = state.insertionBlock;
 
 					AST::Declaration* decl = (AST::Declaration*)statement;
 
-					state.InsertionBlock().AddAssignment(new IR::Assignment(decl->identifierStr, LowerExpression(decl->initializer)));
+					state.insertionBlock->AddAssignment(new IR::Assignment(decl->identifierStr, LowerExpression(decl->initializer)));
 				} break;
 				case AST::StatementType::BREAK:
 				{
-					IR::Block nextBlock;
+					IR::Block* nextBlock = new IR::Block(Span(0, 0));
 
-					state.InsertionBlock().AddBranch(nextBlock);
-					state.InsertionBlock().SealBlock();
+					state.insertionBlock->AddBranch(nextBlock);
+					state.insertionBlock->SealBlock();
 
 					state.SetCurrentInstructionBlock(nextBlock);
 				}break;
 				case AST::StatementType::YIELD:
 				{
-					IR::Block nextBlock;
+					IR::Block* nextBlock = new IR::Block(Span(0, 0));
 
 					AST::YieldStatement* yieldStatement = (AST::YieldStatement*)statement;
 
-					state.InsertionBlock().AddYield(LowerExpression(yieldStatement->yieldValue));
-					state.InsertionBlock().SealBlock();
+					state.insertionBlock->AddYield(LowerExpression(yieldStatement->yieldValue));
+					state.insertionBlock->SealBlock();
 
 					state.SetCurrentInstructionBlock(nextBlock);
 				}break;
 				case AST::StatementType::RETURN:
 				{
-					IR::Block nextBlock;
+					IR::Block* nextBlock = new IR::Block(Span(0, 0));
 
 					AST::ReturnStatement* returnStatement = (AST::ReturnStatement*)statement;
 
-					state.InsertionBlock().AddYield(LowerExpression(returnStatement->returnValue));
-					state.InsertionBlock().SealBlock();
+					state.insertionBlock->AddYield(LowerExpression(returnStatement->returnValue));
+					state.insertionBlock->SealBlock();
 
 					state.SetCurrentInstructionBlock(nextBlock);
 				}break;
@@ -485,14 +580,14 @@ namespace flex
 					if (binaryOpTranslation == OpCode::CMP)
 					{
 						Instruction binInst(binaryOpTranslation, lhsWrapper, rhsWrapper);
-						state.InsertionBlock().PushBack(binInst);
+						state.insertionBlock->PushBack(binInst);
 
 						OpCode jumpCode = BinaryOpToJumpCode(binOp->operatorType);
 						if (jumpCode != OpCode::_NONE)
 						{
 							i32 jumpAddress = 0;
 							Instruction jumpInst(jumpCode, ValueWrapper(ValueWrapper::Type::CONSTANT, IR::Value(jumpAddress)));
-							state.InsertionBlock().PushBack(jumpInst);
+							state.insertionBlock->PushBack(jumpInst);
 						}
 						else
 						{
@@ -513,7 +608,7 @@ namespace flex
 					else
 					{
 						Instruction binInst(binaryOpTranslation, val0, lhsWrapper, rhsWrapper);
-						state.InsertionBlock().PushBack(binInst);
+						state.insertionBlock->PushBack(binInst);
 					}
 					*/
 				}break;
@@ -624,21 +719,21 @@ namespace flex
 			case AST::StatementType::TERNARY_OPERATION:
 			{
 				AST::TernaryOperation* ternary = (AST::TernaryOperation*)expression;
-				IR::Block ifTrueBlock(ternary->ifTrue->span);
-				IR::Block ifFalseBlock(ternary->ifFalse->span);
-				IR::Block mergeBlock(state.InsertionBlock().origin);
+				IR::Block* ifTrueBlock = new IR::Block(ternary->ifTrue->span);
+				IR::Block* ifFalseBlock = new IR::Block(ternary->ifFalse->span);
+				IR::Block* mergeBlock = new IR::Block(state.insertionBlock->origin);
 
-				state.InsertionBlock().AddConditionalBranch(LowerExpression(ternary->condition), ifTrueBlock, ifFalseBlock);
+				state.insertionBlock->AddConditionalBranch(LowerExpression(ternary->condition), ifTrueBlock, ifFalseBlock);
 
 				state.SetCurrentInstructionBlock(ifTrueBlock);
 				LowerStatement(ternary->ifTrue);
-				state.InsertionBlock().AddBranch(mergeBlock);
-				state.InsertionBlock().SealBlock();
+				state.insertionBlock->AddBranch(mergeBlock);
+				state.insertionBlock->SealBlock();
 
 				state.SetCurrentInstructionBlock(ifFalseBlock);
 				LowerStatement(ternary->ifFalse);
-				state.InsertionBlock().AddBranch(mergeBlock);
-				state.InsertionBlock().SealBlock();
+				state.insertionBlock->AddBranch(mergeBlock);
+				state.insertionBlock->SealBlock();
 
 				state.SetCurrentInstructionBlock(mergeBlock);
 			}

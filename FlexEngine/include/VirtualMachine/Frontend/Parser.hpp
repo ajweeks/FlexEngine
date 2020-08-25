@@ -784,6 +784,7 @@ namespace flex
 		struct AST
 		{
 			explicit AST();
+			~AST();
 
 			AST(AST&) = delete;
 			AST(AST&&) = delete;

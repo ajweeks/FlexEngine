@@ -74,14 +74,25 @@ namespace flex
 			irStr = "";
 			instructionStr = "";
 
-			delete m_AST;
+			if (m_AST != nullptr)
+			{
+				m_AST->Destroy();
+				delete m_AST;
+				m_AST = nullptr;
+			}
+			if (m_IR != nullptr)
+			{
+				m_IR->Destroy();
+				delete m_IR;
+				m_IR = nullptr;
+			}
+
 			m_AST = new AST::AST();
 			m_AST->Generate(source);
 			if (m_AST->rootBlock != nullptr && m_AST->diagnosticContainer->diagnostics.empty())
 			{
 				astStr = m_AST->rootBlock->ToString();
 
-				delete m_IR;
 				m_IR = new IR::IntermediateRepresentation();
 				m_IR->GenerateFromAST(m_AST);
 

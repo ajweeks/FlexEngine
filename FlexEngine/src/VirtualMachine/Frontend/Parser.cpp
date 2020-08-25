@@ -2049,6 +2049,11 @@ namespace flex
 		{
 		}
 
+		AST::~AST()
+		{
+			delete rootBlock;
+		}
+
 		void AST::Generate(const char* sourceText)
 		{
 			bValid = false;

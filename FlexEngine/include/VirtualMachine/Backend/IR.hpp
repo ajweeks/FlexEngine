@@ -2,7 +2,6 @@
 
 #include "VirtualMachine/Backend/IRValue.hpp"
 #include "VirtualMachine/Frontend/Span.hpp"
-//#include "VirtualMachine/Frontend/Parser.hpp"
 
 namespace flex
 {
@@ -71,17 +70,22 @@ namespace flex
 				origin(origin)
 			{}
 
+			~Block()
+			{}
+
+			void Destroy();
+
 			bool Filled() const { return terminator != nullptr; }
 
 			void AddAssignment(Assignment* assignment);
 			void RemovePredecessor(Block* predecessor);
 			void AddReturn(Value* returnVal);
 			void AddYield(Value* yieldVal);
-			void AddBranch(const Block& target);
+			void AddBranch(Block* target);
 			void AddCall(const std::string& target, const std::vector<Value*>& arguments);
 			void AddHalt();
 			void SealBlock();
-			void AddConditionalBranch(Value* condition, const Block& then, const Block& otherwise);
+			void AddConditionalBranch(Value* condition, Block* then, Block* otherwise);
 
 			std::string ToString() const;
 
@@ -92,17 +96,6 @@ namespace flex
 			Span origin;
 		};
 
-		//struct BlockList
-	//	{
-	//		std::vector<Block> blocks;
-	//	};
-
-
-		struct AssignmentUsage
-		{
-			//virtual bool UpdateAssignmentReferences(Assignment& from, Assignment& to) = 0;
-		};
-
 		struct Assignment : IR::Value
 		{
 			Assignment(const std::string& variable, IR::Value* value) :
@@ -110,10 +103,9 @@ namespace flex
 				value(value)
 			{}
 
+			virtual void Destroy() override;
 			virtual std::string ToString() const override;
 
-
-			//virtual bool UpdateAssignmentReferences(Assignment& from, Assignment& to) override;
 			std::string variable;
 			IR::Value* value;
 		};
@@ -130,9 +122,15 @@ namespace flex
 			std::string variable;
 		};
 
-		struct Terminator : AssignmentUsage
+		struct Terminator
 		{
-			//virtual bool UpdateAssignmentReferences(Assignment& from, Assignment& to) = 0;
+			Terminator()
+			{}
+
+			virtual ~Terminator()
+			{}
+
+			virtual void Destroy() = 0;
 
 			virtual std::string ToString() const = 0;
 		};
@@ -140,6 +138,9 @@ namespace flex
 		struct Halt : Terminator
 		{
 			Halt()
+			{}
+
+			virtual void Destroy() override
 			{}
 
 			virtual std::string ToString() const override;
@@ -151,10 +152,9 @@ namespace flex
 				returnValue(returnValue)
 			{}
 
+			virtual void Destroy() override;
+
 			virtual std::string ToString() const override;
-
-
-			//virtual bool UpdateAssignmentReferences(Assignment& from, Assignment& to) override;
 
 			IR::Value* returnValue;
 		};
@@ -165,59 +165,56 @@ namespace flex
 				yieldValue(yieldValue)
 			{}
 
+			virtual void Destroy() override;
+
 			virtual std::string ToString() const override;
 
-
-			//virtual bool UpdateAssignmentReferences(Assignment& from, Assignment& to) override;
-
-//			Block target;
+			//Block * target = nullptr;
 			IR::Value* yieldValue;
 		};
 
 		struct Break : Terminator
 		{
-			Break(const Block& target) :
+			Break(Block* target) :
 				target(target)
 			{}
 
+			virtual void Destroy() override;
+
 			virtual std::string ToString() const override;
 
-
-			//virtual bool UpdateAssignmentReferences(Assignment& from, Assignment& to) override;
-
-			Block target;
+			Block* target = nullptr;
 		};
 
 		struct Branch : Terminator
 		{
-			Branch(const Block& target) :
+			Branch(Block* target) :
 				target(target)
 			{}
 
+			virtual void Destroy() override;
+
 			virtual std::string ToString() const override;
 
-
-			//virtual bool UpdateAssignmentReferences(Assignment& from, Assignment& to) override;
-
-			Block target;
+			Block* target = nullptr;
 		};
 
 		struct ConditionalBranch : Terminator
 		{
-			//virtual bool UpdateAssignmentReferences(Assignment& from, Assignment& to) override;
-			ConditionalBranch(IR::Value* condition, const Block& then, const Block& otherwise) :
+			ConditionalBranch(IR::Value* condition, Block* then, Block* otherwise) :
 				condition(condition),
 				then(then),
 				otherwise(otherwise)
 			{
 			}
 
+			virtual void Destroy() override;
+
 			virtual std::string ToString() const override;
 
-
 			IR::Value* condition;
-			Block then;
-			Block otherwise;
+			Block* then;
+			Block* otherwise;
 		};
 
 		struct Constant : IR::Value
@@ -260,6 +257,7 @@ namespace flex
 				operand(operand)
 			{}
 
+			virtual void Destroy() override;
 			virtual std::string ToString() const override;
 
 			IR::Value* operand;
@@ -328,6 +326,7 @@ namespace flex
 				right(right)
 			{}
 
+			virtual void Destroy() override;
 			virtual std::string ToString() const override;
 
 			BinaryOperatorType opType;
@@ -343,6 +342,7 @@ namespace flex
 				arguments(arguments)
 			{}
 
+			virtual void Destroy() override;
 			virtual std::string ToString() const override;
 
 			std::string target;
@@ -352,15 +352,11 @@ namespace flex
 		struct State
 		{
 			void Clear();
-			Block& InsertionBlock();
-			void SetCurrentInstructionBlock(Block& block);
-			//BlockList& PushInstructionBlock();
-			//void PopInstructionBlock();
+			void SetCurrentInstructionBlock(Block* block);
 			std::string NextTemporary();
 			void WriteVariableInBlock(const std::string& variable, IR::Value* value);
 
-			Block insertionBlock;
-			//std::vector<BlockList> blockLists;
+			Block* insertionBlock = nullptr;
 
 			u32 tempCount = 0;
 
