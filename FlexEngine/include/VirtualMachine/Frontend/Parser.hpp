@@ -37,7 +37,7 @@ namespace flex
 			"NONE"
 		};
 
-		static_assert(ARRAY_LENGTH(g_UnaryOperatorTypeStrings) == ((size_t)UnaryOperatorType::_NONE + 1), "Length of g_UnaryOperatorTypeStrings must match number of entries in UnaryOperatorType enum");
+		static_assert(ARRAY_LENGTH(g_UnaryOperatorTypeStrings) == ((size_t)UnaryOperatorType::_NONE + 1), "Length of g_UnaryOperatorTypeStrings must match number of entries in AST::UnaryOperatorType enum");
 
 		const char* UnaryOperatorTypeToString(UnaryOperatorType opType);
 
@@ -105,7 +105,7 @@ namespace flex
 			"NONE"
 		};
 
-		static_assert(ARRAY_LENGTH(g_BinaryOperatorTypeStrings) == ((size_t)BinaryOperatorType::_NONE + 1), "Length of g_BinaryOperatorTypeStrings must match number of entries in BinaryOperatorType enum");
+		static_assert(ARRAY_LENGTH(g_BinaryOperatorTypeStrings) == ((size_t)BinaryOperatorType::_NONE + 1), "Length of g_BinaryOperatorTypeStrings must match number of entries in AST::BinaryOperatorType enum");
 
 		const char* BinaryOperatorTypeToString(BinaryOperatorType opType);
 
@@ -152,7 +152,7 @@ namespace flex
 			"NONE"
 		};
 
-		static_assert(ARRAY_LENGTH(g_TypeNameStrings) == ((size_t)TypeName::_NONE + 1), "Length of g_TypeNameStrings must match length of TypeName enum");
+		static_assert(ARRAY_LENGTH(g_TypeNameStrings) == ((size_t)TypeName::_NONE + 1), "Length of g_TypeNameStrings must match length of AST::TypeName enum");
 
 		std::string TypeNameToString(TypeName typeName);
 		TypeName TokenKindToTypeName(TokenKind tokenKind);

@@ -7,6 +7,11 @@ namespace flex
 		struct Value;
 	}
 
+	namespace AST
+	{
+		enum class TypeName;
+	}
+
 	namespace IR
 	{
 		struct Value
@@ -25,6 +30,27 @@ namespace flex
 
 				_NONE
 			};
+
+			static constexpr const char* g_TypeStrings[] =
+			{
+				"int",
+				"float",
+				"bool",
+				"string",
+				"char",
+				"idntifier",
+				"unary",
+				"binary",
+				"func call",
+
+				"NONE"
+			};
+
+			static_assert(ARRAY_LENGTH(g_TypeStrings) == ((size_t)Type::_NONE + 1), "Length of g_TypeStrings must match length of IR::Value::Type enum");
+
+			static const char* TypeToString(Type type);
+
+			static Type FromASTTypeName(AST::TypeName typeName);
 
 			static bool IsLiteral(Type type);
 
@@ -71,6 +97,12 @@ namespace flex
 			Value(const Value&& other);
 			explicit Value(const VM::Value& other);
 
+			i32 AsInt() const;
+			real AsFloat() const;
+			bool AsBool() const;
+			char* AsString() const;
+			char AsChar() const;
+
 			Value& operator=(const Value& other);
 			Value& operator=(const Value&& other);
 			bool operator<(const Value& other);
@@ -100,6 +132,9 @@ namespace flex
 			};
 
 			static Type CheckAssignmentType(Type lhsType, Type rhsType);
+
+			static bool TypesAreCoercible(Type lhsType, Type rhsType, Type& outResultType);
+			bool ConvertableTo(Type otherType) const;
 
 		private:
 			void CheckAssignmentType(Type otherType);

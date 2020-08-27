@@ -23,7 +23,7 @@ namespace flex
 		{
 		}
 
-		std::string ToString(const std::string& inSource)
+		std::string ToString(const std::string& inSource) const
 		{
 			return inSource.substr(low, high - low);
 		}
@@ -41,6 +41,11 @@ namespace flex
 		Span Grow()
 		{
 			return Span(low, high + 1);
+		}
+
+		u32 Length() const
+		{
+			return high - low;
 		}
 
 		Span Extend(const Span& other)

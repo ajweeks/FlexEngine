@@ -531,11 +531,29 @@ namespace flex
 
 					AST::Declaration* decl = (AST::Declaration*)statement;
 
-					state.insertionBlock->AddAssignment(new IR::Assignment(decl->identifierStr, LowerExpression(decl->initializer)));
+					IR::Value* initializerValue = LowerExpression(decl->initializer);
+
+					if (initializerValue->type == IR::Value::FromASTTypeName(decl->typeName))
+					{
+						state.insertionBlock->AddAssignment(new IR::Assignment(decl->identifierStr, initializerValue));
+					}
+					else
+					{
+						StringBuilder diagnosticStr;
+						diagnosticStr.Append("Mismatched types (");
+						diagnosticStr.Append(IR::Value::TypeToString(initializerValue->type));
+						diagnosticStr.Append(" & ");
+						diagnosticStr.Append(IR::Value::TypeToString(IR::Value::FromASTTypeName(decl->typeName)));
+						diagnosticStr.Append(")");
+						state.diagnosticContainer->AddDiagnostic(decl->span, 0, 0, diagnosticStr.ToString());
+					}
+
 				} break;
 				case AST::StatementType::BREAK:
 				{
-					IR::Block* nextBlock = new IR::Block(Span(0, 0));
+					AST::BreakStatement* breakStatement = (AST::BreakStatement*)statement;
+
+					IR::Block* nextBlock = new IR::Block(breakStatement->span);
 
 					state.insertionBlock->AddBranch(nextBlock);
 					state.insertionBlock->SealBlock();
@@ -544,9 +562,9 @@ namespace flex
 				}break;
 				case AST::StatementType::YIELD:
 				{
-					IR::Block* nextBlock = new IR::Block(Span(0, 0));
-
 					AST::YieldStatement* yieldStatement = (AST::YieldStatement*)statement;
+
+					IR::Block* nextBlock = new IR::Block(yieldStatement->span);
 
 					state.insertionBlock->AddYield(LowerExpression(yieldStatement->yieldValue));
 					state.insertionBlock->SealBlock();
@@ -555,9 +573,9 @@ namespace flex
 				}break;
 				case AST::StatementType::RETURN:
 				{
-					IR::Block* nextBlock = new IR::Block(Span(0, 0));
-
 					AST::ReturnStatement* returnStatement = (AST::ReturnStatement*)statement;
+
+					IR::Block* nextBlock = new IR::Block(returnStatement->span);
 
 					state.insertionBlock->AddYield(LowerExpression(returnStatement->returnValue));
 					state.insertionBlock->SealBlock();
@@ -675,27 +693,35 @@ namespace flex
 				if (IR::Value::IsLiteral(lhsVal->type) &&
 					IR::Value::IsLiteral(rhsVal->type))
 				{
-					switch (irOpType)
+					IR::Value::Type resultType;
+					if (IR::Value::TypesAreCoercible(lhsVal->type, rhsVal->type, resultType))
 					{
-					case IR::BinaryOperatorType::ADD:					return new IR::Constant(*lhsVal + *rhsVal);
-					case IR::BinaryOperatorType::SUB:					return new IR::Constant(*lhsVal - *rhsVal);
-					case IR::BinaryOperatorType::MUL:					return new IR::Constant(*lhsVal * *rhsVal);
-					case IR::BinaryOperatorType::DIV:					return new IR::Constant(*lhsVal / *rhsVal);
-					case IR::BinaryOperatorType::MOD:					return new IR::Constant(*lhsVal % *rhsVal);
-					case IR::BinaryOperatorType::BIN_AND:				return new IR::Constant(*lhsVal & *rhsVal);
-					case IR::BinaryOperatorType::BIN_OR:				return new IR::Constant(*lhsVal | *rhsVal);
-					case IR::BinaryOperatorType::BIN_XOR:				return new IR::Constant(*lhsVal ^ *rhsVal);
-					case IR::BinaryOperatorType::EQUAL_TEST:			return new IR::Constant(IR::Value(*lhsVal == *rhsVal));
-					case IR::BinaryOperatorType::NOT_EQUAL_TEST:		return new IR::Constant(IR::Value(*lhsVal != *rhsVal));
-					case IR::BinaryOperatorType::GREATER_TEST:			return new IR::Constant(IR::Value(*lhsVal > * rhsVal));
-					case IR::BinaryOperatorType::GREATER_EQUAL_TEST:	return new IR::Constant(IR::Value(*lhsVal >= *rhsVal));
-					case IR::BinaryOperatorType::LESS_TEST:				return new IR::Constant(IR::Value(*lhsVal < *rhsVal));
-					case IR::BinaryOperatorType::LESS_EQUAL_TEST:		return new IR::Constant(IR::Value(*lhsVal <= *rhsVal));
-					case IR::BinaryOperatorType::BOOLEAN_AND:			return new IR::Constant(IR::Value(*lhsVal && *rhsVal));
-					case IR::BinaryOperatorType::BOOLEAN_OR:			return new IR::Constant(IR::Value(*lhsVal || *rhsVal));
-					default:
-						assert(false);
-						return new IR::Constant(IR::Value(-1));
+						switch (irOpType)
+						{
+						case IR::BinaryOperatorType::ADD:					return new IR::Constant(*lhsVal + *rhsVal);
+						case IR::BinaryOperatorType::SUB:					return new IR::Constant(*lhsVal - *rhsVal);
+						case IR::BinaryOperatorType::MUL:					return new IR::Constant(*lhsVal * *rhsVal);
+						case IR::BinaryOperatorType::DIV:					return new IR::Constant(*lhsVal / *rhsVal);
+						case IR::BinaryOperatorType::MOD:					return new IR::Constant(*lhsVal % *rhsVal);
+						case IR::BinaryOperatorType::BIN_AND:				return new IR::Constant(*lhsVal & *rhsVal);
+						case IR::BinaryOperatorType::BIN_OR:				return new IR::Constant(*lhsVal | *rhsVal);
+						case IR::BinaryOperatorType::BIN_XOR:				return new IR::Constant(*lhsVal ^ *rhsVal);
+						case IR::BinaryOperatorType::EQUAL_TEST:			return new IR::Constant(IR::Value(*lhsVal == *rhsVal));
+						case IR::BinaryOperatorType::NOT_EQUAL_TEST:		return new IR::Constant(IR::Value(*lhsVal != *rhsVal));
+						case IR::BinaryOperatorType::GREATER_TEST:			return new IR::Constant(IR::Value(*lhsVal > * rhsVal));
+						case IR::BinaryOperatorType::GREATER_EQUAL_TEST:	return new IR::Constant(IR::Value(*lhsVal >= *rhsVal));
+						case IR::BinaryOperatorType::LESS_TEST:				return new IR::Constant(IR::Value(*lhsVal < *rhsVal));
+						case IR::BinaryOperatorType::LESS_EQUAL_TEST:		return new IR::Constant(IR::Value(*lhsVal <= *rhsVal));
+						case IR::BinaryOperatorType::BOOLEAN_AND:			return new IR::Constant(IR::Value(*lhsVal && *rhsVal));
+						case IR::BinaryOperatorType::BOOLEAN_OR:			return new IR::Constant(IR::Value(*lhsVal || *rhsVal));
+						default:
+							assert(false);
+							return new IR::Constant(IR::Value(-1));
+						}
+					}
+					else
+					{
+						state.diagnosticContainer->AddDiagnostic(binaryOperation->span, 0, 0, "Types are not coercible");
 					}
 				}
 				else
@@ -712,6 +738,14 @@ namespace flex
 						state.WriteVariableInBlock(rhsVar, rhsVal);
 						rhsVal = new IR::Identifier(rhsVar);
 					}
+
+					IR::Value::Type resultType;
+					if (!IR::Value::TypesAreCoercible(lhsVal->type, rhsVal->type, resultType))
+					{
+						state.diagnosticContainer->AddDiagnostic(binaryOperation->span, 0, 0, "Types are not coercible");
+						return nullptr;
+					}
+
 					return new IR::BinaryValue(irOpType, lhsVal, rhsVal);
 				}
 

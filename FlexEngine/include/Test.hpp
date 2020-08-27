@@ -932,8 +932,8 @@ namespace flex
 
 			vm->Execute();
 
-			EXPECT(vm->runtimeDiagnosticContainer->diagnostics.size(), 0);
-			for (const Diagnostic& diagnostic : vm->runtimeDiagnosticContainer->diagnostics)
+			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
+			for (const Diagnostic& diagnostic : vm->diagnosticContainer->diagnostics)
 			{
 				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
 			}
@@ -942,12 +942,12 @@ namespace flex
 
 			vm->Execute();
 
-			EXPECT(vm->runtimeDiagnosticContainer->diagnostics.size(), 0);
+			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
 			EXPECT(vm->registers[1].valInt, (12 + 20) % ((1 + 2) * 2));
 
 			vm->Execute();
 
-			EXPECT(vm->runtimeDiagnosticContainer->diagnostics.size(), 0);
+			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
 			EXPECT(vm->registers[0].valInt, ((1 + 2) * 2) / ((12 + 20) % ((1 + 2) * 2)));
 
 			EXPECT(vm->stack.empty(), true);
@@ -980,8 +980,8 @@ namespace flex
 
 			vm->Execute();
 
-			EXPECT(vm->runtimeDiagnosticContainer->diagnostics.size(), 0);
-			for (const Diagnostic& diagnostic : vm->runtimeDiagnosticContainer->diagnostics)
+			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
+			for (const Diagnostic& diagnostic : vm->diagnosticContainer->diagnostics)
 			{
 				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
 			}
@@ -1049,8 +1049,8 @@ namespace flex
 
 			vm->Execute();
 
-			EXPECT(vm->runtimeDiagnosticContainer->diagnostics.size(), 0);
-			for (const Diagnostic& diagnostic : vm->runtimeDiagnosticContainer->diagnostics)
+			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
+			for (const Diagnostic& diagnostic : vm->diagnosticContainer->diagnostics)
 			{
 				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
 			}
@@ -1074,8 +1074,8 @@ namespace flex
 
 			vm->Execute();
 
-			EXPECT(vm->runtimeDiagnosticContainer->diagnostics.size(), 0);
-			for (const Diagnostic& diagnostic : vm->runtimeDiagnosticContainer->diagnostics)
+			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
+			for (const Diagnostic& diagnostic : vm->diagnosticContainer->diagnostics)
 			{
 				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
 			}
@@ -1099,8 +1099,8 @@ namespace flex
 
 			vm->Execute();
 
-			EXPECT(vm->runtimeDiagnosticContainer->diagnostics.size(), 0);
-			for (const Diagnostic& diagnostic : vm->runtimeDiagnosticContainer->diagnostics)
+			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
+			for (const Diagnostic& diagnostic : vm->diagnosticContainer->diagnostics)
 			{
 				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
 			}
@@ -1124,8 +1124,8 @@ namespace flex
 
 			vm->Execute();
 
-			EXPECT(vm->runtimeDiagnosticContainer->diagnostics.size(), 0);
-			for (const Diagnostic& diagnostic : vm->runtimeDiagnosticContainer->diagnostics)
+			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
+			for (const Diagnostic& diagnostic : vm->diagnosticContainer->diagnostics)
 			{
 				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
 			}
@@ -1150,8 +1150,8 @@ namespace flex
 
 			vm->Execute();
 
-			EXPECT(vm->runtimeDiagnosticContainer->diagnostics.size(), 0);
-			for (const Diagnostic& diagnostic : vm->runtimeDiagnosticContainer->diagnostics)
+			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
+			for (const Diagnostic& diagnostic : vm->diagnosticContainer->diagnostics)
 			{
 				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
 			}
@@ -1195,8 +1195,8 @@ namespace flex
 
 			vm->Execute();
 
-			EXPECT(vm->runtimeDiagnosticContainer->diagnostics.size(), 0);
-			for (const Diagnostic& diagnostic : vm->runtimeDiagnosticContainer->diagnostics)
+			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
+			for (const Diagnostic& diagnostic : vm->diagnosticContainer->diagnostics)
 			{
 				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
 			}
@@ -1216,7 +1216,7 @@ namespace flex
 
 			vm->Execute();
 
-			EXPECT(vm->runtimeDiagnosticContainer->diagnostics.size() > 0, true);
+			EXPECT(vm->diagnosticContainer->diagnostics.size() > 0, true);
 
 			delete vm;
 		}
@@ -1232,7 +1232,7 @@ namespace flex
 
 			vm->Execute();
 
-			EXPECT(vm->runtimeDiagnosticContainer->diagnostics.size() > 0, true);
+			EXPECT(vm->diagnosticContainer->diagnostics.size() > 0, true);
 
 			delete vm;
 		}
@@ -1249,7 +1249,7 @@ namespace flex
 
 			vm->Execute();
 
-			EXPECT(vm->runtimeDiagnosticContainer->diagnostics.size() > 0, true);
+			EXPECT(vm->diagnosticContainer->diagnostics.size() > 0, true);
 
 			delete vm;
 		}
@@ -1266,7 +1266,7 @@ namespace flex
 
 			vm->Execute();
 
-			EXPECT(vm->runtimeDiagnosticContainer->diagnostics.size() > 0, true);
+			EXPECT(vm->diagnosticContainer->diagnostics.size() > 0, true);
 
 			delete vm;
 		}
@@ -1281,7 +1281,7 @@ namespace flex
 
 			vm->Execute();
 
-			EXPECT(vm->runtimeDiagnosticContainer->diagnostics.size(), 1);
+			EXPECT(vm->diagnosticContainer->diagnostics.size(), 1);
 
 			delete vm;
 		}
@@ -1298,7 +1298,7 @@ namespace flex
 
 			vm->Execute();
 
-			EXPECT(vm->runtimeDiagnosticContainer->diagnostics.size(), 1);
+			EXPECT(vm->diagnosticContainer->diagnostics.size(), 1);
 
 			delete vm;
 		}
@@ -1312,7 +1312,7 @@ namespace flex
 
 			vm->Execute();
 
-			EXPECT(vm->runtimeDiagnosticContainer->diagnostics.size(), 1);
+			EXPECT(vm->diagnosticContainer->diagnostics.size(), 1);
 
 			delete vm;
 		}
@@ -1327,7 +1327,7 @@ namespace flex
 
 			vm->Execute();
 
-			EXPECT(vm->runtimeDiagnosticContainer->diagnostics.size(), 1);
+			EXPECT(vm->diagnosticContainer->diagnostics.size(), 1);
 
 			delete vm;
 		}
