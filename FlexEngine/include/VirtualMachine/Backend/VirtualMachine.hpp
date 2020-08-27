@@ -250,8 +250,7 @@ namespace flex
 			void GenerateFromInstStream(const std::vector<Instruction>& inInstructions);
 			void Execute();
 
-			DiagnosticContainer* GetASTDiagnosticContainer();
-			DiagnosticContainer* GetIRDiagnosticContainer();
+			DiagnosticContainer* GetDiagnosticContainer();
 
 			static const i32 REGISTER_COUNT = 64;
 			static const u32 MEMORY_POOL_SIZE = 32768;
@@ -272,7 +271,7 @@ namespace flex
 			std::map<FuncAddress, FuncPtr*> ExternalFuncTable;
 
 			State state;
-			DiagnosticContainer* runtimeDiagnosticContainer = nullptr;
+			DiagnosticContainer* diagnosticContainer = nullptr;
 
 			std::string astStr;
 			std::string irStr;

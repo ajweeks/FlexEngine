@@ -4975,16 +4975,16 @@ namespace flex
 
 				if (m_VM != nullptr)
 				{
-					std::vector<Diagnostic> diagnostics = m_VM->runtimeDiagnosticContainer->diagnostics;
+					const std::vector<Diagnostic>& diagnostics = m_VM->GetDiagnosticContainer()->diagnostics;
 					if (!diagnostics.empty())
 					{
 						for (u32 i = 0; i < (u32)diagnostics.size(); ++i)
 						{
-							//Span span = diagnostics[i].span;
+							Span span = diagnostics[i].span;
 							pos = firstLinePos;
 							pos.y -= lineHeight * diagnostics[i].lineNumber;
 							g_Renderer->DrawStringWS("!", errorColour, pos + right * (charWidth * 1.f), rot, letterSpacing, m_LetterScale);
-							std::string underlineStr = std::string(diagnostics[i].columnIndex, ' ') + std::string(diagnostics[i].message.size(), '_');
+							std::string underlineStr = std::string(diagnostics[i].columnIndex, ' ') + std::string(span.Length(), '_');
 							pos.y -= lineHeight * 0.2f;
 							g_Renderer->DrawStringWS(underlineStr, errorColour, pos, rot, letterSpacing, m_LetterScale);
 						}
@@ -5041,13 +5041,7 @@ namespace flex
 			//}
 			//ImGui::EndChild();
 
-			DiagnosticContainer* astDiagnostics = m_VM->GetASTDiagnosticContainer();
-			DiagnosticContainer* irDiagnostics = m_VM->GetIRDiagnosticContainer();
-
-			bool bSuccess =
-				m_VM->state.diagnosticContainer->diagnostics.empty() &&
-				astDiagnostics != nullptr && astDiagnostics->diagnostics.empty() &&
-				irDiagnostics != nullptr && irDiagnostics->diagnostics.empty();
+			bool bSuccess = m_VM->diagnosticContainer->diagnostics.empty();
 
 			if (bSuccess)
 			{
@@ -5089,23 +5083,9 @@ namespace flex
 			else
 			{
 				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.5f, 0.5f, 1.0f));
-				for (const Diagnostic& diagnostic : m_VM->state.diagnosticContainer->diagnostics)
+				for (const Diagnostic& diagnostic : m_VM->diagnosticContainer->diagnostics)
 				{
 					ImGui::Text("L%d: %s", diagnostic.lineNumber + 1, diagnostic.message.c_str());
-				}
-				if (astDiagnostics != nullptr)
-				{
-					for (const Diagnostic& diagnostic : astDiagnostics->diagnostics)
-					{
-						ImGui::Text("L%d: %s", diagnostic.lineNumber + 1, diagnostic.message.c_str());
-					}
-				}
-				if (irDiagnostics != nullptr)
-				{
-					for (const Diagnostic& diagnostic : irDiagnostics->diagnostics)
-					{
-						ImGui::Text("L%d: %s", diagnostic.lineNumber + 1, diagnostic.message.c_str());
-					}
 				}
 				ImGui::PopStyleColor();
 			}

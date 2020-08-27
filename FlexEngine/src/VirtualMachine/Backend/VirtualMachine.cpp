@@ -47,13 +47,13 @@ namespace flex
 		VirtualMachine::VirtualMachine()
 		{
 			state.diagnosticContainer = new DiagnosticContainer();
-			runtimeDiagnosticContainer = new DiagnosticContainer();
+			diagnosticContainer = new DiagnosticContainer();
 		}
 
 		VirtualMachine::~VirtualMachine()
 		{
 			delete state.diagnosticContainer;
-			delete runtimeDiagnosticContainer;
+			delete diagnosticContainer;
 
 			if (m_AST != nullptr)
 			{
@@ -73,6 +73,7 @@ namespace flex
 			astStr = "";
 			irStr = "";
 			instructionStr = "";
+			diagnosticContainer->diagnostics.clear();
 
 			if (m_AST != nullptr)
 			{
@@ -101,6 +102,20 @@ namespace flex
 					irStr = m_IR->firstBlock->ToString();
 
 					GenerateFromIR(m_IR);
+				}
+				else
+				{
+					for (const Diagnostic& diagnostic : m_IR->state.diagnosticContainer->diagnostics)
+					{
+						diagnosticContainer->diagnostics.push_back(diagnostic);
+					}
+				}
+			}
+			else
+			{
+				for (const Diagnostic& diagnostic : m_AST->diagnosticContainer->diagnostics)
+				{
+					diagnosticContainer->diagnostics.push_back(diagnostic);
 				}
 			}
 		}
@@ -262,7 +277,7 @@ namespace flex
 
 		void VirtualMachine::Execute()
 		{
-			runtimeDiagnosticContainer->diagnostics.clear();
+			diagnosticContainer->diagnostics.clear();
 
 			if (instructions.empty())
 			{
@@ -389,7 +404,7 @@ namespace flex
 					break;
 				default:
 					std::string errorMsg = "Unhandled op code in VirtualMachine::Execute: %u\n" + std::to_string((u32)inst.opCode);
-					runtimeDiagnosticContainer->AddDiagnostic(Span(0, 0), 0, 0, errorMsg);
+					diagnosticContainer->AddDiagnostic(Span(0, 0), 0, 0, errorMsg);
 					break;
 				}
 
@@ -400,20 +415,15 @@ namespace flex
 
 				if (++loopCount > 10'000'000)
 				{
-					runtimeDiagnosticContainer->AddDiagnostic(Span(0, 0), 0, 0, "Execution loop took too long, broke out early\n");
+					diagnosticContainer->AddDiagnostic(Span(0, 0), 0, 0, "Execution loop took too long, broke out early\n");
 					bBreak = true;
 				}
 			}
 		}
 
-		DiagnosticContainer* VirtualMachine::GetASTDiagnosticContainer()
+		DiagnosticContainer* VirtualMachine::GetDiagnosticContainer()
 		{
-			return m_AST ? m_AST->diagnosticContainer : nullptr;
-		}
-
-		DiagnosticContainer* VirtualMachine::GetIRDiagnosticContainer()
-		{
-			return m_IR ? m_IR->state.diagnosticContainer : nullptr;
+			return diagnosticContainer;
 		}
 
 		void VirtualMachine::AllocateMemory()
