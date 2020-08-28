@@ -72,7 +72,8 @@ namespace flex
 		glm::vec3 up;
 		glm::vec3 right;
 
-		bool bIsGameplayCam;
+		bool bIsGameplayCam = true;
+		bool bIsFirstPerson = false;
 		bool bDEBUGCyclable = true;
 
 	protected:

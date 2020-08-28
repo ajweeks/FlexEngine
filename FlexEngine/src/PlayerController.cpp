@@ -613,8 +613,7 @@ namespace flex
 	void PlayerController::UpdateMode()
 	{
 		BaseCamera* cam = g_CameraManager->CurrentCamera();
-		FirstPersonCamera* fpCam = dynamic_cast<FirstPersonCamera*>(cam);
-		m_Mode = (fpCam == nullptr) ? Mode::THIRD_PERSON : Mode::FIRST_PERSON;
+		m_Mode = cam->bIsFirstPerson ? Mode::FIRST_PERSON : Mode::THIRD_PERSON;
 	}
 
 	EventReply PlayerController::OnActionEvent(Action action)

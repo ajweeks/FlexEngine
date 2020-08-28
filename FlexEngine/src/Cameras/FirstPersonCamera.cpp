@@ -19,6 +19,7 @@ namespace flex
 	FirstPersonCamera::FirstPersonCamera(real FOV) :
 		BaseCamera("first-person", true, FOV)
 	{
+		bIsFirstPerson = true;
 		ResetOrientation();
 		RecalculateViewProjection();
 	}
