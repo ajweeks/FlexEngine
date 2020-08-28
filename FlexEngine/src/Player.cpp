@@ -21,6 +21,7 @@ IGNORE_WARNINGS_POP
 #include "Cameras/FirstPersonCamera.hpp"
 #include "Cameras/OverheadCamera.hpp"
 #include "Cameras/TerminalCamera.hpp"
+#include "Editor.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
@@ -236,6 +237,16 @@ namespace flex
 		std::string treeNodeName = "Player " + IntToString(m_Index);
 		if (ImGui::TreeNode(treeNodeName.c_str()))
 		{
+			if (m_ObjectInteractingWith != nullptr)
+			{
+				std::string name = m_ObjectInteractingWith->GetName();
+				ImGui::Text("Object interacting with:");
+				if (ImGui::Button(name.c_str()))
+				{
+					g_Editor->SetSelectedObject(m_ObjectInteractingWith);
+				}
+			}
+
 			ImGui::Text("Pitch: %.2f", GetPitch());
 			glm::vec3 euler = glm::eulerAngles(GetTransform()->GetWorldRotation());
 			ImGui::Text("World rot: %.2f, %.2f, %.2f", euler.x, euler.y, euler.z);
