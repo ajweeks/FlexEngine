@@ -11,7 +11,7 @@ namespace flex
 {
 	namespace IR
 	{
-		Value g_EmptyIRValue = Value();
+		Value* g_EmptyIRValue = nullptr;
 
 		const char* Value::TypeToString(Type type)
 		{
@@ -46,7 +46,7 @@ namespace flex
 			{
 			case Type::INT:		return IntToString(valInt);
 			case Type::FLOAT:	return FloatToString(valFloat);
-			case Type::BOOL:	return valBool ? "true" : "false";
+			case Type::BOOL:	return IntToString(valBool);
 			case Type::STRING:	return std::string(valStr);
 			case Type::CHAR:	return std::string(1, valChar);
 			default:			return "";
@@ -126,11 +126,11 @@ namespace flex
 				// TODO: Require explicit cast
 				return (i32)valFloat;
 			case Type::BOOL:
-				return valBool ? 1 : 0;
+				return valBool;
 			case Type::CHAR:
 				return (i32)valChar;
 			default:
-				assert(false);
+				PrintError("%d: Unhandled type\n", __LINE__);
 				return -1;
 			}
 		}
@@ -144,25 +144,25 @@ namespace flex
 			case Type::FLOAT:
 				return valFloat;
 			case Type::BOOL:
-				return valBool ? 1.0f : 0.0f;
+				return (valBool != 0) ? 1.0f : 0.0f;
 			default:
-				assert(false);
+				PrintError("%d: Unhandled type\n", __LINE__);
 				return -1.0f;
 			}
 		}
 
-		bool Value::AsBool() const
+		i32 Value::AsBool() const
 		{
 			switch (type)
 			{
 			case Type::INT:
-				return valInt != 0;
+				return (valInt != 0) ? 1 : 0;
 			case Type::FLOAT:
-				return valFloat != 0.0f;
+				return (valFloat != 0.0f ? 1 : 0);
 			case Type::BOOL:
-				return valBool;
+				return (valBool != 0 ? 1 : 0);
 			default:
-				assert(false);
+				PrintError("%d: Unhandled type\n", __LINE__);
 				return false;
 			}
 		}
@@ -174,7 +174,7 @@ namespace flex
 			case Type::STRING:
 				return valStr;
 			default:
-				assert(false);
+				PrintError("%d: Unhandled type\n", __LINE__);
 				return "";
 			}
 		}
@@ -191,14 +191,14 @@ namespace flex
 			case Type::CHAR:
 				return valChar;
 			default:
-				assert(false);
+				PrintError("%d: Unhandled type\n", __LINE__);
 				return 0;
 			}
 		}
 
 		Value& Value::operator=(const Value& other)
 		{
-			CheckAssignmentType(other.type);
+			CheckAssignmentType(&other);
 
 			valInt = other.valInt;
 
@@ -209,7 +209,7 @@ namespace flex
 		{
 			if (this != &other)
 			{
-				CheckAssignmentType(other.type);
+				CheckAssignmentType(&other);
 
 				valInt = other.valInt;
 			}
@@ -219,8 +219,7 @@ namespace flex
 
 		Value operator+(const Value& lhs, const Value& rhs)
 		{
-			Value result;
-			result.type = Value::CheckAssignmentType(lhs.type, rhs.type);
+			Value result(lhs.irState, Value::CheckAssignmentType(lhs.irState, &lhs, &rhs));
 
 			switch (result.type)
 			{
@@ -232,7 +231,6 @@ namespace flex
 				break;
 			default:
 				PrintError("Attempted to add non-numeric types!\n");
-				assert(false);
 				break;
 			}
 
@@ -241,8 +239,7 @@ namespace flex
 
 		Value operator-(const Value& lhs, const Value& rhs)
 		{
-			Value result;
-			result.type = Value::CheckAssignmentType(lhs.type, rhs.type);
+			Value result(lhs.irState, Value::CheckAssignmentType(lhs.irState, &lhs, &rhs));
 			switch (result.type)
 			{
 			case Value::Type::INT:
@@ -253,7 +250,6 @@ namespace flex
 				break;
 			default:
 				PrintError("Attempted to subtract non-numeric types!\n");
-				assert(false);
 				break;
 			}
 
@@ -262,8 +258,7 @@ namespace flex
 
 		Value operator*(const Value& lhs, const Value& rhs)
 		{
-			Value result;
-			result.type = Value::CheckAssignmentType(lhs.type, rhs.type);
+			Value result(lhs.irState, Value::CheckAssignmentType(lhs.irState, &lhs, &rhs));
 			switch (result.type)
 			{
 			case Value::Type::INT:
@@ -274,7 +269,6 @@ namespace flex
 				break;
 			default:
 				PrintError("Attempted to multiply non-numeric types!\n");
-				assert(false);
 				break;
 			}
 
@@ -283,8 +277,7 @@ namespace flex
 
 		Value operator/(const Value& lhs, const Value& rhs)
 		{
-			Value result;
-			result.type = Value::CheckAssignmentType(lhs.type, rhs.type);
+			Value result(lhs.irState, Value::CheckAssignmentType(lhs.irState, &lhs, &rhs));
 			switch (result.type)
 			{
 			case Value::Type::INT:
@@ -295,7 +288,6 @@ namespace flex
 				break;
 			default:
 				PrintError("Attempted to divide non-numeric types!\n");
-				assert(false);
 				break;
 			}
 
@@ -304,8 +296,7 @@ namespace flex
 
 		Value operator%(const Value& lhs, const Value& rhs)
 		{
-			Value result;
-			result.type = Value::CheckAssignmentType(lhs.type, rhs.type);
+			Value result(lhs.irState, Value::CheckAssignmentType(lhs.irState, &lhs, &rhs));
 			switch (result.type)
 			{
 			case Value::Type::INT:
@@ -316,7 +307,6 @@ namespace flex
 				break;
 			default:
 				PrintError("Attempted to modulo non-numeric types!\n");
-				assert(false);
 				break;
 			}
 
@@ -325,8 +315,7 @@ namespace flex
 
 		Value operator^(const Value& lhs, const Value& rhs)
 		{
-			Value result;
-			result.type = Value::CheckAssignmentType(lhs.type, rhs.type);
+			Value result(lhs.irState, Value::CheckAssignmentType(lhs.irState, &lhs, &rhs));
 			switch (result.type)
 			{
 			case Value::Type::INT:
@@ -334,7 +323,6 @@ namespace flex
 				break;
 			default:
 				PrintError("Attempted to xor non-numeric types!\n");
-				assert(false);
 				break;
 			}
 
@@ -343,8 +331,7 @@ namespace flex
 
 		Value operator&(const Value& lhs, const Value& rhs)
 		{
-			Value result;
-			result.type = Value::CheckAssignmentType(lhs.type, rhs.type);
+			Value result(lhs.irState, Value::CheckAssignmentType(lhs.irState, &lhs, &rhs));
 			switch (result.type)
 			{
 			case Value::Type::INT:
@@ -354,7 +341,6 @@ namespace flex
 				result.valBool = (bool)((i32)lhs.AsBool() & (i32)rhs.AsBool());
 			default:
 				PrintError("Attempted to binary and invalid types!\n");
-				assert(false);
 				break;
 			}
 
@@ -363,8 +349,7 @@ namespace flex
 
 		Value operator&&(const Value& lhs, const Value& rhs)
 		{
-			Value result;
-			result.type = Value::CheckAssignmentType(lhs.type, rhs.type);
+			Value result(lhs.irState, Value::CheckAssignmentType(lhs.irState, &lhs, &rhs));
 			switch (result.type)
 			{
 			case Value::Type::INT:
@@ -374,7 +359,6 @@ namespace flex
 				result.valBool = (bool)((i32)lhs.AsBool() && (i32)rhs.AsBool());
 			default:
 				PrintError("Attempted to boolean and invalid types!\n");
-				assert(false);
 				break;
 			}
 
@@ -383,8 +367,7 @@ namespace flex
 
 		Value operator|(const Value& lhs, const Value& rhs)
 		{
-			Value result;
-			result.type = Value::CheckAssignmentType(lhs.type, rhs.type);
+			Value result(lhs.irState, Value::CheckAssignmentType(lhs.irState, &lhs, &rhs));
 			switch (result.type)
 			{
 			case Value::Type::INT:
@@ -394,7 +377,6 @@ namespace flex
 				result.valBool = (bool)((i32)lhs.AsBool() | (i32)rhs.AsBool());
 			default:
 				PrintError("Attempted to binary or invalid types!\n");
-				assert(false);
 				break;
 			}
 
@@ -403,8 +385,7 @@ namespace flex
 
 		Value operator||(const Value& lhs, const Value& rhs)
 		{
-			Value result;
-			result.type = Value::CheckAssignmentType(lhs.type, rhs.type);
+			Value result(lhs.irState, Value::CheckAssignmentType(lhs.irState, &lhs, &rhs));
 			switch (result.type)
 			{
 			case Value::Type::INT:
@@ -414,7 +395,6 @@ namespace flex
 				result.valBool = (bool)((i32)lhs.AsBool() || (i32)rhs.AsBool());
 			default:
 				PrintError("Attempted to boolean or invalid types!\n");
-				assert(false);
 				break;
 			}
 
@@ -434,18 +414,15 @@ namespace flex
 					return valFloat < other.AsFloat();
 				default:
 					PrintError("Attempted to compare non-numeric types!\n");
-					assert(false);
 					return false;
 				}
 			}
 
-			assert(false);
 			return false;
 		}
 
 		bool Value::operator<=(const Value& other)
 		{
-
 			if (ConvertableTo(Type::BOOL) && other.ConvertableTo(Type::BOOL))
 			{
 				type = Type::BOOL;
@@ -457,11 +434,11 @@ namespace flex
 					return valFloat <= other.AsFloat();
 				default:
 					PrintError("Attempted to compare non-numeric types!\n");
-					assert(false);
 					return false;
 				}
 			}
-			assert(false);
+
+			PrintError("Type not convertable to bool\n");
 			return false;
 		}
 
@@ -478,11 +455,11 @@ namespace flex
 					return valFloat > other.AsFloat();
 				default:
 					PrintError("Attempted to compare non-numeric types!\n");
-					assert(false);
 					return false;
 				}
 			}
-			assert(false);
+
+			PrintError("Type not convertable to bool\n");
 			return false;
 		}
 
@@ -499,17 +476,17 @@ namespace flex
 					return valFloat >= other.AsFloat();
 				default:
 					PrintError("Attempted to compare non-numeric types!\n");
-					assert(false);
 					return false;
 				}
 			}
-			assert(false);
+
+			PrintError("Type not convertable to bool\n");
 			return false;
 		}
 
 		bool Value::operator==(const Value& other)
 		{
-			CheckAssignmentType(other.type);
+			CheckAssignmentType(&other);
 			switch (type)
 			{
 			case Type::INT:
@@ -523,14 +500,14 @@ namespace flex
 			case Type::CHAR:
 				return valChar == other.AsChar();
 			default:
-				assert(false);
+				PrintError("%d: Unhandled type\n", __LINE__);
 				return false;
 			}
 		}
 
 		bool Value::operator!=(const Value& other)
 		{
-			CheckAssignmentType(other.type);
+			CheckAssignmentType(&other);
 			switch (type)
 			{
 			case Type::INT:
@@ -544,19 +521,88 @@ namespace flex
 			case Type::CHAR:
 				return valChar != other.AsChar();
 			default:
-				assert(false);
+				PrintError("%d: Unhandled type\n", __LINE__);
 				return false;
 			}
 		}
 
-		bool Value::ConvertableTo(Type otherType) const
+		bool Value::TypeAssignable(State* irState, Type lhsType, Value const* rhs)
 		{
-			// TODO: Look up types
-			if (type == Type::IDENTIFIER || type == Type::IDENTIFIER)
+			Type rhsType = irState->GetValueType(rhs);
+
+			if (lhsType == rhsType)
 			{
 				return true;
 			}
 
+			if (rhsType == Type::CAST)
+			{
+				IR::CastValue* castValue = (IR::CastValue*)rhs;
+				if (castValue->castedType == lhsType)
+				{
+					return true;
+				}
+			}
+
+			irState->diagnosticContainer->AddDiagnostic(Span(0, 0), 0, 0, "Type mismatch\n");
+			return false;
+		}
+
+		bool Value::TypesAreCoercible(State* irState, Value const * lhs, Value const* rhs, Type& outResultType)
+		{
+			Type lhsType = irState->GetValueType(lhs);
+			Type rhsType = irState->GetValueType(rhs);
+
+			if (lhsType == rhsType)
+			{
+				outResultType = lhsType;
+				return true;
+			}
+
+			if ((lhsType == Type::INT && rhsType == Type::FLOAT) ||
+				(lhsType == Type::FLOAT && rhsType == Type::INT))
+			{
+				outResultType = Type::FLOAT;
+				return true;
+			}
+
+			irState->diagnosticContainer->AddDiagnostic(Span(0, 0), 0, 0, "Type mismatch\n");
+			outResultType = Type::_NONE;
+			return false;
+		}
+
+		Value::Type Value::CheckAssignmentType(State* irState, Value const* lhs, Value const* rhs)
+		{
+			Type lhsType = irState->GetValueType(lhs);
+			Type rhsType = irState->GetValueType(rhs);
+
+			if (lhsType == Type::_NONE)
+			{
+				return rhsType;
+			}
+			else
+			{
+				Type resultType;
+				if (TypesAreCoercible(irState, lhs, rhs, resultType))
+				{
+					return resultType;
+				}
+				else
+				{
+
+					return Type::_NONE;
+				}
+			}
+		}
+
+		bool Value::ConvertableTo(Value const * other) const
+		{
+			Type otherType = irState->GetValueType(other);
+			return ConvertableTo(otherType);
+		}
+
+		bool Value::ConvertableTo(Type otherType) const
+		{
 			if (type == otherType)
 			{
 				return true;
@@ -575,66 +621,25 @@ namespace flex
 			case Type::CHAR:
 				return otherType == Type::INT;
 			default:
+				irState->diagnosticContainer->AddDiagnostic(Span(0, 0), 0, 0, "Type mismatch\n");
 				return false;
 			}
 		}
 
-		bool Value::TypesAreCoercible(Type lhsType, Type rhsType, Type& outResultType)
+		void Value::CheckAssignmentType(Value const * other)
 		{
-			// TODO: Look up types
-			if (lhsType == Type::IDENTIFIER || rhsType == Type::IDENTIFIER)
-			{
-				outResultType = Type::IDENTIFIER;
-				return true;
-			}
+			Type otherType = irState->GetValueType(other);
 
-			if (lhsType == rhsType)
-			{
-				outResultType = lhsType;
-				return true;
-			}
-
-			if ((lhsType == Type::INT && rhsType == Type::FLOAT) ||
-				(lhsType == Type::FLOAT && rhsType == Type::INT))
-			{
-				outResultType = Type::FLOAT;
-				return true;
-			}
-
-			outResultType = Type::_NONE;
-			return false;
-		}
-
-		Value::Type Value::CheckAssignmentType(Type lhsType, Type rhsType)
-		{
-			if (lhsType == Type::_NONE)
-			{
-				return rhsType;
-			}
-			else
-			{
-				Type resultType;
-				if (TypesAreCoercible(lhsType, rhsType, resultType))
-				{
-					return resultType;
-				}
-				else
-				{
-
-					return Type::_NONE;
-				}
-			}
-		}
-
-		void Value::CheckAssignmentType(Type otherType)
-		{
 			if (type == Type::_NONE)
 			{
 				type = otherType;
 			}
 			else
 			{
-				assert(type == otherType);
+				if (type != otherType)
+				{
+					irState->diagnosticContainer->AddDiagnostic(Span(0, 0), 0, 0, "Type mismatch\n");
+				}
 			}
 		}
 	} // namespace IR

@@ -66,10 +66,13 @@ namespace flex
 				m_IR->Destroy();
 				delete m_IR;
 			}
+
+			free(memory);
 		}
 
 		void VirtualMachine::GenerateFromSource(const char* source)
 		{
+			m_bCompiled = false;
 			astStr = "";
 			irStr = "";
 			instructionStr = "";
@@ -103,24 +106,22 @@ namespace flex
 
 					GenerateFromIR(m_IR);
 				}
-				else
-				{
-					for (const Diagnostic& diagnostic : m_IR->state.diagnosticContainer->diagnostics)
-					{
-						diagnosticContainer->diagnostics.push_back(diagnostic);
-					}
-				}
-			}
-			else
-			{
-				for (const Diagnostic& diagnostic : m_AST->diagnosticContainer->diagnostics)
+
+				for (const Diagnostic& diagnostic : m_IR->state.diagnosticContainer->diagnostics)
 				{
 					diagnosticContainer->diagnostics.push_back(diagnostic);
 				}
 			}
+
+			for (const Diagnostic& diagnostic : m_AST->diagnosticContainer->diagnostics)
+			{
+				diagnosticContainer->diagnostics.push_back(diagnostic);
+			}
+
+			m_bCompiled = diagnosticContainer->diagnostics.empty();
 		}
 
-		ValueWrapper VirtualMachine::GetValueWrapperFromIRValue(IR::Value* value)
+		ValueWrapper VirtualMachine::GetValueWrapperFromIRValue(IR::State& irState, IR::Value* value)
 		{
 			ValueWrapper valWrapper;
 
@@ -135,8 +136,16 @@ namespace flex
 				case IR::Value::Type::IDENTIFIER:
 				{
 					IR::Identifier* identifier = (IR::Identifier*)value;
-					i32 reg = state.varRegisterMap[identifier->variable];
-					valWrapper = ValueWrapper(ValueWrapper::Type::REGISTER, VM::Value(reg));
+					if (state.varRegisterMap.find(identifier->variable) == state.varRegisterMap.end())
+					{
+						std::string diagnosticStr = "Undeclared identifier: " + identifier->variable;
+						irState.diagnosticContainer->AddDiagnostic(Span(0, 0), 0, 0, diagnosticStr.c_str());
+					}
+					else
+					{
+						i32 reg = state.varRegisterMap[identifier->variable];
+						valWrapper = ValueWrapper(ValueWrapper::Type::REGISTER, VM::Value(reg));
+					}
 				} break;
 				case IR::Value::Type::UNARY:
 				{
@@ -154,6 +163,11 @@ namespace flex
 					//i32 registerStored = GenerateCallInstruction(funcCall);
 					//valWrapper = ValueWrapper(ValueWrapper::Type::REGISTER, IR::Value(registerStored));
 				} break;
+				case IR::Value::Type::CAST:
+				{
+					IR::CastValue* castValue = (IR::CastValue*)value;
+					return GetValueWrapperFromIRValue(irState, castValue->target);
+				} break;
 				default:
 				{
 					//GenerateStatementInstructions(expression);
@@ -164,11 +178,43 @@ namespace flex
 			return valWrapper;
 		}
 
+		IR::Value::Type VirtualMachine::FindIRType(IR::State& irState, IR::Value* irValue)
+		{
+			switch (irValue->type)
+			{
+			case IR::Value::Type::INT:
+				return IR::Value::Type::INT;
+			case IR::Value::Type::FLOAT:
+				return IR::Value::Type::FLOAT;
+			case IR::Value::Type::IDENTIFIER:
+			{
+				IR::Identifier* identifier = (IR::Identifier*)irValue;
+				auto iter = irState.variableTypes.find(identifier->variable);
+				if (iter != irState.variableTypes.end())
+				{
+					return iter->second;
+				}
+				auto iter2 = state.tmpVarTypes.find(identifier->variable);
+				if (iter2 != irState.variableTypes.end())
+				{
+					return iter2->second;
+				}
+
+				// Fallthrough
+			}
+			default:
+				irState.diagnosticContainer->AddDiagnostic(Span(0, 0), 0, 0, "Unexpected type in cast statement");
+				return IR::Value::Type::_NONE;
+			}
+
+		}
+
 		void VirtualMachine::GenerateFromIR(IR::IntermediateRepresentation* ir)
 		{
-			state.Clear();
 			instructions.clear();
+			ClearRuntimeState();
 
+			state.Clear();
 			state.PushInstructionBlock();
 
 			IR::Block* block = ir->firstBlock;
@@ -191,17 +237,60 @@ namespace flex
 					{
 						IR::BinaryValue* binaryValue = (IR::BinaryValue*)assignment->value;
 						OpCode opCode = OpCodeFromBinaryOperatorType(binaryValue->opType);
-						currentInstBlock.PushBack(Instruction(opCode, regVal, GetValueWrapperFromIRValue(binaryValue->left), GetValueWrapperFromIRValue(binaryValue->right)));
+						currentInstBlock.PushBack(Instruction(opCode, regVal, GetValueWrapperFromIRValue(ir->state, binaryValue->left), GetValueWrapperFromIRValue(ir->state, binaryValue->right)));
 					}
 					else if (assignment->value->type == IR::Value::Type::UNARY)
 					{
 						IR::UnaryValue* unaryValue = (IR::UnaryValue*)assignment->value;
 						OpCode opCode = OpCodeFromUnaryOperatorType(unaryValue->opType);
-						currentInstBlock.PushBack(Instruction(opCode, regVal, GetValueWrapperFromIRValue(unaryValue->operand)));
+						currentInstBlock.PushBack(Instruction(opCode, regVal, GetValueWrapperFromIRValue(ir->state, unaryValue->operand)));
+					}
+					else if (assignment->value->type == IR::Value::Type::CAST)
+					{
+						IR::CastValue* castValue = (IR::CastValue*)assignment->value;
+						switch (castValue->castedType)
+						{
+						case IR::Value::Type::INT:
+						{
+							IR::Value::Type irValueType = FindIRType(ir->state, castValue->target);
+							switch (irValueType)
+							{
+							case IR::Value::Type::INT:
+								// no-op
+								break;
+							case IR::Value::Type::FLOAT:
+								currentInstBlock.PushBack(Instruction(OpCode::FTI, regVal, GetValueWrapperFromIRValue(ir->state, castValue->target)));
+								break;
+							default:
+								state.diagnosticContainer->AddDiagnostic(Span(0, 0), 0, 0, "Unexpected type in cast statement");
+								break;
+							}
+						} break;
+						case IR::Value::Type::FLOAT:
+						{
+							IR::Value::Type irValueType = FindIRType(ir->state, castValue->target);
+							switch (irValueType)
+							{
+							case IR::Value::Type::INT:
+								currentInstBlock.PushBack(Instruction(OpCode::ITF, regVal, GetValueWrapperFromIRValue(ir->state, castValue->target)));
+								break;
+							case IR::Value::Type::FLOAT:
+								// no-op
+								break;
+							default:
+								state.diagnosticContainer->AddDiagnostic(Span(0, 0), 0, 0, "Unexpected type in cast statement");
+								break;
+							}
+						} break;
+						default:
+						{
+							state.diagnosticContainer->AddDiagnostic(Span(0, 0), 0, 0, "Unexpected type in cast statement");
+						} break;
+						}
 					}
 					else
 					{
-						currentInstBlock.PushBack(Instruction(OpCode::MOV, regVal, GetValueWrapperFromIRValue(assignment->value)));
+						currentInstBlock.PushBack(Instruction(OpCode::MOV, regVal, GetValueWrapperFromIRValue(ir->state, assignment->value)));
 					}
 				}
 
@@ -266,18 +355,17 @@ namespace flex
 
 		void VirtualMachine::GenerateFromInstStream(const std::vector<Instruction>& inInstructions)
 		{
+			ClearRuntimeState();
 			instructions = inInstructions;
-			AllocateMemory();
-			ZeroOutRegisters();
-			ClearStack();
-			instructionIdx = 0;
-			bTerminated = false;
-			ExternalFuncTable.clear();
+			m_bCompiled = true;
 		}
 
-		void VirtualMachine::Execute()
+		void VirtualMachine::Execute(bool bSingleStep /* = false */)
 		{
-			diagnosticContainer->diagnostics.clear();
+			if (!m_bCompiled)
+			{
+				return;
+			}
 
 			if (instructions.empty())
 			{
@@ -285,13 +373,20 @@ namespace flex
 				return;
 			}
 
+			if (!bSingleStep)
+			{
+				m_RunningState.Clear();
+
+				diagnosticContainer->diagnostics.clear();
+			}
+
 			u32 loopCount = 0;
 			bool bBreak = false;
-			while (!bTerminated && !bBreak)
+			while (!m_RunningState.terminated && !bBreak)
 			{
-				Instruction& inst = instructions[instructionIdx];
+				Instruction& inst = instructions[m_RunningState.instructionIdx];
 
-				i32 pInstIdx = instructionIdx;
+				i32 pInstIdx = m_RunningState.instructionIdx;
 				switch (inst.opCode)
 				{
 				case OpCode::MOV:
@@ -312,6 +407,34 @@ namespace flex
 				case OpCode::MOD:
 					inst.val0.GetW(this) = inst.val1.Get(this) % inst.val2.Get(this);
 					break;
+				//case OpCode::INV:
+				//case OpCode::AND:
+				//case OpCode::OR:
+				//case OpCode::XOR:
+				case OpCode::ITF:
+				{
+					Value& regVal = inst.val0.GetW(this);
+					regVal.type = Value::Type::FLOAT;
+					regVal.valFloat = inst.val1.Get(this).AsFloat();
+				} break;
+				case OpCode::FTI:
+				{
+					Value& regVal = inst.val0.GetW(this);
+					regVal.type = Value::Type::INT;
+					regVal.valInt = inst.val1.Get(this).AsInt();
+				} break;
+				case OpCode::CALL:
+				{
+					FuncAddress funcAddress = inst.val0.Get(this).valInt;
+					if (IsExternal(funcAddress))
+					{
+						DispatchExternalCall(funcAddress);
+					}
+					else
+					{
+						m_RunningState.instructionIdx = TranslateLocalFuncAddress(funcAddress);
+					}
+				} break;
 				case OpCode::PUSH:
 					stack.push(inst.val0.Get(this));
 					break;
@@ -325,60 +448,48 @@ namespace flex
 				case OpCode::CMP:
 				{
 					Value diff = inst.val0.Get(this) - inst.val1.Get(this);
-					zf = diff.IsZero();
-					sf = diff.IsPositive();
+					m_RunningState.zf = diff.IsZero();
+					m_RunningState.sf = diff.IsPositive();
 				} break;
 				case OpCode::JMP:
-					instructionIdx = inst.val0.Get(this).valInt;
+					m_RunningState.instructionIdx = inst.val0.Get(this).valInt;
 					break;
 				case OpCode::JLT:
-					if (!sf && !zf)
+					if (!m_RunningState.sf && !m_RunningState.zf)
 					{
-						instructionIdx = inst.val0.Get(this).valInt;
+						m_RunningState.instructionIdx = inst.val0.Get(this).valInt;
 					}
 					break;
 				case OpCode::JLE:
-					if (!sf || zf)
+					if (!m_RunningState.sf || m_RunningState.zf)
 					{
-						instructionIdx = inst.val0.Get(this).valInt;
+						m_RunningState.instructionIdx = inst.val0.Get(this).valInt;
 					}
 					break;
 				case OpCode::JGT:
-					if (sf && !zf)
+					if (m_RunningState.sf && !m_RunningState.zf)
 					{
-						instructionIdx = inst.val0.Get(this).valInt;
+						m_RunningState.instructionIdx = inst.val0.Get(this).valInt;
 					}
 					break;
 				case OpCode::JGE:
-					if (sf || zf)
+					if (m_RunningState.sf || m_RunningState.zf)
 					{
-						instructionIdx = inst.val0.Get(this).valInt;
+						m_RunningState.instructionIdx = inst.val0.Get(this).valInt;
 					}
 					break;
 				case OpCode::JEQ:
-					if (zf)
+					if (m_RunningState.zf)
 					{
-						instructionIdx = inst.val0.Get(this).valInt;
+						m_RunningState.instructionIdx = inst.val0.Get(this).valInt;
 					}
 					break;
 				case OpCode::JNE:
-					if (!zf)
+					if (!m_RunningState.zf)
 					{
-						instructionIdx = inst.val0.Get(this).valInt;
+						m_RunningState.instructionIdx = inst.val0.Get(this).valInt;
 					}
 					break;
-				case OpCode::CALL:
-				{
-					FuncAddress funcAddress = inst.val0.Get(this).valInt;
-					if (IsExternal(funcAddress))
-					{
-						DispatchExternalCall(funcAddress);
-					}
-					else
-					{
-						instructionIdx = TranslateLocalFuncAddress(funcAddress);
-					}
-				} break;
 				case OpCode::YIELD:
 					// TODO: Store registers/stack?
 					bBreak = true;
@@ -392,7 +503,7 @@ namespace flex
 					{
 						returnVal = inst.val0.Get(this);
 					}
-					instructionIdx = stack.top().valInt;
+					m_RunningState.instructionIdx = stack.top().valInt;
 					stack.pop();
 					if (!bVoid)
 					{
@@ -400,23 +511,29 @@ namespace flex
 					}
 				} break;
 				case OpCode::TERMINATE:
-					bTerminated = true;
+					m_RunningState.terminated = true;
 					break;
 				default:
-					std::string errorMsg = "Unhandled op code in VirtualMachine::Execute: %u\n" + std::to_string((u32)inst.opCode);
+					std::string opCodeStr(OpCodeToString(inst.opCode));
+					std::string errorMsg = "Unhandled op code in VirtualMachine::Execute: " + opCodeStr;
 					diagnosticContainer->AddDiagnostic(Span(0, 0), 0, 0, errorMsg);
 					break;
 				}
 
-				if (!bTerminated && pInstIdx == instructionIdx)
+				if (!m_RunningState.terminated && pInstIdx == m_RunningState.instructionIdx)
 				{
-					++instructionIdx;
+					++m_RunningState.instructionIdx;
 				}
 
 				if (++loopCount > 10'000'000)
 				{
 					diagnosticContainer->AddDiagnostic(Span(0, 0), 0, 0, "Execution loop took too long, broke out early\n");
-					bBreak = true;
+					m_RunningState.terminated = true;
+				}
+
+				if (bSingleStep)
+				{
+					break;
 				}
 			}
 		}
@@ -426,12 +543,34 @@ namespace flex
 			return diagnosticContainer;
 		}
 
+		bool VirtualMachine::IsExecuting() const
+		{
+			return !m_RunningState.terminated;
+		}
+
+		i32 VirtualMachine::InstructionIndex() const
+		{
+			return m_RunningState.instructionIdx;
+		}
+
+		void VirtualMachine::ClearRuntimeState()
+		{
+			m_RunningState.Clear();
+			AllocateMemory();
+			ZeroOutRegisters();
+			ClearStack();
+			ExternalFuncTable.clear();
+		}
+
 		void VirtualMachine::AllocateMemory()
 		{
-			memory = (u32*)malloc(MEMORY_POOL_SIZE);
 			if (memory == nullptr)
 			{
-				PrintError("Failed to allocate %u bytes for VM memory!\n", MEMORY_POOL_SIZE);
+				memory = (u32*)malloc(MEMORY_POOL_SIZE);
+				if (memory == nullptr)
+				{
+					PrintError("Failed to allocate %u bytes for VM memory!\n", MEMORY_POOL_SIZE);
+				}
 			}
 		}
 
@@ -439,7 +578,8 @@ namespace flex
 		{
 			for (u32 i = 0; i < REGISTER_COUNT; ++i)
 			{
-				registers[i] = g_EmptyVMValue;
+				registers[i].valInt = 0;
+				registers[i].type = VM::Value::Type::_NONE;
 			}
 		}
 
@@ -474,6 +614,7 @@ namespace flex
 			return s_OpCodeStrings[(u32)opCode];
 		}
 
+		/*
 		OpCode IROperatorTypeToOpCode(IR::OperatorType irOperatorType)
 		{
 			switch (irOperatorType)
@@ -539,5 +680,7 @@ namespace flex
 			default:											return OpCode::_NONE;
 			}
 		}
+		*/
+
 	} // namespace VM
 } // namespace flex

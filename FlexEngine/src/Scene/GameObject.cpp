@@ -3901,7 +3901,7 @@ namespace flex
 				const std::vector<GerstnerWave::WaveChunk>& waveChunks = *work->waveChunks;
 				const std::vector<GerstnerWave::WaveSamplingLOD>& waveSamplingLODs = *work->waveSamplingLODs;
 				const std::vector<GerstnerWave::WaveTessellationLOD>& waveTessellationLODs = *work->waveTessellationLODs;
-				GerstnerWave::WaveInfo const * soloWave = work->soloWave;
+				GerstnerWave::WaveInfo const* soloWave = work->soloWave;
 
 				GerstnerWave::WaveTessellationLOD const* tessellationLOD = GetTessellationLOD(waveChunks[work->chunkIdx].tessellationLODLevel, waveTessellationLODs);
 
@@ -5077,7 +5077,38 @@ namespace flex
 				{
 					ImGui::Separator();
 					ImGui::Text("Instructions");
+
+					if (m_VM->IsExecuting())
+					{
+						ImGui::SameLine();
+						if (ImGui::Button("Step"))
+						{
+							m_VM->Execute(true);
+						}
+					}
+					else
+					{
+						ImGui::SameLine();
+						if (ImGui::Button("Reset"))
+						{
+							m_VM->ClearRuntimeState();
+						}
+					}
+
+					ImVec2 cursorPos = ImGui::GetCursorPos();
 					ImGui::Text("%s", m_VM->instructionStr.c_str());
+
+					if (m_VM->IsExecuting())
+					{
+						i32 instIdx = m_VM->InstructionIndex();
+						std::string underlineStr = instIdx == 0 ? "" : std::string(instIdx, '\n');
+						underlineStr += "____________________";
+						ImGui::SetCursorPos(ImVec2(cursorPos.x, cursorPos.y + 1.0f));
+						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.35f, 0.25f, 0.7f, 1.0f));
+						ImGui::Text("%s", underlineStr.c_str());
+						ImGui::PopStyleColor();
+					}
+
 				}
 			}
 			else

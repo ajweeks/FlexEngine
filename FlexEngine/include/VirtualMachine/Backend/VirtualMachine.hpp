@@ -36,6 +36,8 @@ namespace flex
 			AND,
 			OR,
 			XOR,
+			ITF,
+			FTI,
 			CALL,
 			PUSH,
 			POP,
@@ -66,6 +68,8 @@ namespace flex
 			"and",
 			"or",
 			"xor",
+			"itf",
+			"fti",
 			"call",
 			"push",
 			"pop",
@@ -88,8 +92,8 @@ namespace flex
 
 		const char* OpCodeToString(OpCode opCode);
 
-		OpCode IROperatorTypeToOpCode(IR::OperatorType irOperatorType);
 		// TODO: Delete:
+		//OpCode IROperatorTypeToOpCode(IR::OperatorType irOperatorType);
 		//OpCode BinaryOperatorTypeToOpCode(AST::BinaryOperatorType operatorType);
 		//OpCode BinaryOpToJumpCode(AST::BinaryOperatorType operatorType);
 
@@ -217,6 +221,7 @@ namespace flex
 			std::map<std::string, IR::Assignment> varUsages;
 			std::map<std::string, i32> funcNameToBlockIndexTable;
 			std::map<std::string, i32> varRegisterMap;
+			std::map<std::string, IR::Value::Type> tmpVarTypes;
 			std::vector<InstructionBlock> instructionBlocks;
 
 			DiagnosticContainer* diagnosticContainer = nullptr;
@@ -248,24 +253,40 @@ namespace flex
 			void GenerateFromSource(const char* source);
 			void GenerateFromIR(IR::IntermediateRepresentation* ir);
 			void GenerateFromInstStream(const std::vector<Instruction>& inInstructions);
-			void Execute();
+
+			void Execute(bool bSingleStep = false);
 
 			DiagnosticContainer* GetDiagnosticContainer();
+
+			bool IsExecuting() const;
+			i32 InstructionIndex() const;
+			void ClearRuntimeState();
 
 			static const i32 REGISTER_COUNT = 64;
 			static const u32 MEMORY_POOL_SIZE = 32768;
 
-			i32 instructionIdx = 0;
-			std::vector<Instruction> instructions;
+			struct RunningState
+			{
+				void Clear()
+				{
+					instructionIdx = 0;
+					terminated = false;
+					zf = 0;
+					sf = 0;
+				}
 
-			// Flags bitfield
-			u32 zf : 1, sf : 1;
+				i32 instructionIdx = 0;
+				bool terminated = false;
+				// Flags bitfield
+				u32 zf : 1, sf : 1;
+			};
+
+			std::vector<Instruction> instructions;
 
 			std::array<VM::Value, REGISTER_COUNT> registers;
 			std::stack<VM::Value> stack;
 
 			u32* memory = nullptr;
-			bool bTerminated = false;
 
 			using FuncAddress = i32;
 			std::map<FuncAddress, FuncPtr*> ExternalFuncTable;
@@ -278,6 +299,8 @@ namespace flex
 			std::string instructionStr;
 
 		private:
+			IR::Value::Type FindIRType(IR::State& irState, IR::Value* irValue);
+
 			void AllocateMemory();
 			void ZeroOutRegisters();
 			void ClearStack();
@@ -286,10 +309,14 @@ namespace flex
 			i32 TranslateLocalFuncAddress(FuncAddress localFuncAddress);
 			void DispatchExternalCall(FuncAddress funcAddress);
 
-			ValueWrapper GetValueWrapperFromIRValue(IR::Value* value);
+			ValueWrapper GetValueWrapperFromIRValue(IR::State& irState, IR::Value* value);
 
 			AST::AST* m_AST = nullptr;
 			IR::IntermediateRepresentation* m_IR = nullptr;
+
+			RunningState m_RunningState;
+
+			bool m_bCompiled = false;
 
 		};
 	}// namespace VM

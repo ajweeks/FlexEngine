@@ -165,9 +165,54 @@ namespace flex
 			return "__tmp" + std::to_string(tempCount++);
 		}
 
+		Value::Type State::GetValueType(Value const * value)
+		{
+			switch (value->type)
+			{
+			case Value::Type::IDENTIFIER:
+			{
+				Identifier* identifier = (Identifier*)value;
+				return variableTypes[identifier->variable];
+			}
+			case Value::Type::BINARY:
+			{
+				BinaryValue* binary = (BinaryValue*)value;
+				Value::Type leftType = GetValueType(binary->left);
+				//Value::Type rightType = GetValueType(binary->right);
+				return leftType;
+			}
+			case Value::Type::FUNC_CALL:
+			{
+				FunctionCallValue* funcCall = (FunctionCallValue*)value;
+				auto iter = functionTypes.find(funcCall->target);
+				if (iter != functionTypes.end())
+				{
+					return iter->second;
+				}
+				else
+				{
+					std::string str = "Undeclared function \"" + funcCall->target + "\"\n";
+					diagnosticContainer->AddDiagnostic(Span(0, 0), 0, 0, str);
+					return Value::Type::_NONE;
+				}
+			}
+			case Value::Type::CAST:
+			{
+				CastValue* cast = (CastValue*)value;
+				return cast->castedType;
+			}
+			}
+
+			return value->type;
+		}
+
 		void State::WriteVariableInBlock(const std::string& variable, IR::Value* value)
 		{
-			insertionBlock->AddAssignment(new Assignment(variable, value));
+			insertionBlock->AddAssignment(new Assignment(this, variable, value));
+			if (variableTypes.find(variable) == variableTypes.end())
+			{
+				variableTypes[variable] = GetValueType(value);
+			}
 		}
 
 		void Assignment::Destroy()
@@ -352,6 +397,23 @@ namespace flex
 			return builder.ToString();
 		}
 
+		void CastValue::Destroy()
+		{
+			delete target;
+		}
+
+		std::string CastValue::ToString() const
+		{
+			StringBuilder builder;
+
+			builder.Append("(");
+			builder.Append(IR::Value::TypeToString(castedType));
+			builder.Append(")");
+			builder.Append(target->ToString());
+
+			return builder.ToString();
+		}
+
 		const char* UnaryOperatorTypeToString(UnaryOperatorType opType)
 		{
 			return g_UnaryOperatorTypeStrings[(u32)opType];
@@ -434,7 +496,6 @@ namespace flex
 			}
 		}
 
-
 		void IntermediateRepresentation::GenerateFromAST(AST::AST* ast)
 		{
 			if (state.diagnosticContainer == nullptr)
@@ -444,6 +505,9 @@ namespace flex
 			delete state.insertionBlock;
 			state.insertionBlock = new Block(Span(0, 0));
 			state.Clear();
+
+			delete g_EmptyIRValue;
+			g_EmptyIRValue = new Value(&state, Value::Type::_NONE);
 
 			//std::vector<Statement*> emptyList;
 			//ast->rootBlock->RewriteCompoundStatements(ast->parser, emptyList);
@@ -480,6 +544,9 @@ namespace flex
 				delete firstBlock;
 				firstBlock = nullptr;
 			}
+
+			delete g_EmptyIRValue;
+			g_EmptyIRValue = nullptr;
 		}
 
 		void IntermediateRepresentation::LowerStatement(AST::Statement* statement)
@@ -533,9 +600,10 @@ namespace flex
 
 					IR::Value* initializerValue = LowerExpression(decl->initializer);
 
-					if (initializerValue->type == IR::Value::FromASTTypeName(decl->typeName))
+					if (IR::Value::TypeAssignable(&state, IR::Value::FromASTTypeName(decl->typeName), initializerValue))
 					{
-						state.insertionBlock->AddAssignment(new IR::Assignment(decl->identifierStr, initializerValue));
+						state.variableTypes[decl->identifierStr] = initializerValue->type;
+						state.insertionBlock->AddAssignment(new IR::Assignment(&state, decl->identifierStr, initializerValue));
 					}
 					else
 					{
@@ -651,7 +719,7 @@ namespace flex
 			case AST::StatementType::ASSIGNMENT:
 			{
 				AST::Assignment* assignment = (AST::Assignment*)expression;
-				return new IR::Assignment(assignment->lhs, LowerExpression(assignment->rhs));
+				return new IR::Assignment(&state, assignment->lhs, LowerExpression(assignment->rhs));
 			}
 			//case StatementType::INDEX_OPERATION:
 			//	return Assignment(NextTemporary(), expression->GetValue());
@@ -668,7 +736,7 @@ namespace flex
 				case AST::UnaryOperatorType::BIN_INVERT:	irOpType = IR::UnaryOperatorType::BIN_INVERT;
 				}
 
-				return new IR::UnaryValue(irOpType, LowerExpression(unaryOperation->expression));
+				return new IR::UnaryValue(&state, irOpType, LowerExpression(unaryOperation->expression));
 			}
 			case AST::StatementType::BINARY_OPERATION:
 			{
@@ -680,7 +748,7 @@ namespace flex
 					{
 						AST::Identifier* lhs = (AST::Identifier*)binaryOperation->lhs;
 						// TODO: Add to usages here
-						return new IR::Assignment(lhs->identifierStr, LowerExpression(binaryOperation->rhs));
+						return new IR::Assignment(&state, lhs->identifierStr, LowerExpression(binaryOperation->rhs));
 					}
 
 					return nullptr;
@@ -694,7 +762,7 @@ namespace flex
 					IR::Value::IsLiteral(rhsVal->type))
 				{
 					IR::Value::Type resultType;
-					if (IR::Value::TypesAreCoercible(lhsVal->type, rhsVal->type, resultType))
+					if (IR::Value::TypesAreCoercible(&state, lhsVal, rhsVal, resultType))
 					{
 						switch (irOpType)
 						{
@@ -706,17 +774,17 @@ namespace flex
 						case IR::BinaryOperatorType::BIN_AND:				return new IR::Constant(*lhsVal & *rhsVal);
 						case IR::BinaryOperatorType::BIN_OR:				return new IR::Constant(*lhsVal | *rhsVal);
 						case IR::BinaryOperatorType::BIN_XOR:				return new IR::Constant(*lhsVal ^ *rhsVal);
-						case IR::BinaryOperatorType::EQUAL_TEST:			return new IR::Constant(IR::Value(*lhsVal == *rhsVal));
-						case IR::BinaryOperatorType::NOT_EQUAL_TEST:		return new IR::Constant(IR::Value(*lhsVal != *rhsVal));
-						case IR::BinaryOperatorType::GREATER_TEST:			return new IR::Constant(IR::Value(*lhsVal > * rhsVal));
-						case IR::BinaryOperatorType::GREATER_EQUAL_TEST:	return new IR::Constant(IR::Value(*lhsVal >= *rhsVal));
-						case IR::BinaryOperatorType::LESS_TEST:				return new IR::Constant(IR::Value(*lhsVal < *rhsVal));
-						case IR::BinaryOperatorType::LESS_EQUAL_TEST:		return new IR::Constant(IR::Value(*lhsVal <= *rhsVal));
-						case IR::BinaryOperatorType::BOOLEAN_AND:			return new IR::Constant(IR::Value(*lhsVal && *rhsVal));
-						case IR::BinaryOperatorType::BOOLEAN_OR:			return new IR::Constant(IR::Value(*lhsVal || *rhsVal));
+						case IR::BinaryOperatorType::EQUAL_TEST:			return new IR::Constant(IR::Value(&state, *lhsVal == *rhsVal));
+						case IR::BinaryOperatorType::NOT_EQUAL_TEST:		return new IR::Constant(IR::Value(&state, *lhsVal != *rhsVal));
+						case IR::BinaryOperatorType::GREATER_TEST:			return new IR::Constant(IR::Value(&state, *lhsVal > * rhsVal));
+						case IR::BinaryOperatorType::GREATER_EQUAL_TEST:	return new IR::Constant(IR::Value(&state, *lhsVal >= *rhsVal));
+						case IR::BinaryOperatorType::LESS_TEST:				return new IR::Constant(IR::Value(&state, *lhsVal < *rhsVal));
+						case IR::BinaryOperatorType::LESS_EQUAL_TEST:		return new IR::Constant(IR::Value(&state, *lhsVal <= *rhsVal));
+						case IR::BinaryOperatorType::BOOLEAN_AND:			return new IR::Constant(*lhsVal && *rhsVal);
+						case IR::BinaryOperatorType::BOOLEAN_OR:			return new IR::Constant(*lhsVal || *rhsVal);
 						default:
 							assert(false);
-							return new IR::Constant(IR::Value(-1));
+							return new IR::Constant(IR::Value(&state, -1));
 						}
 					}
 					else
@@ -730,23 +798,43 @@ namespace flex
 					{
 						std::string lhsVar = state.NextTemporary();
 						state.WriteVariableInBlock(lhsVar, lhsVal);
-						lhsVal = new IR::Identifier(lhsVar);
+						lhsVal = new IR::Identifier(&state, lhsVar);
 					}
 					if (!IR::Value::IsLiteral(rhsVal->type) && rhsVal->type != IR::Value::Type::IDENTIFIER)
 					{
 						std::string rhsVar = state.NextTemporary();
 						state.WriteVariableInBlock(rhsVar, rhsVal);
-						rhsVal = new IR::Identifier(rhsVar);
+						rhsVal = new IR::Identifier(&state, rhsVar);
 					}
 
 					IR::Value::Type resultType;
-					if (!IR::Value::TypesAreCoercible(lhsVal->type, rhsVal->type, resultType))
+					if (!IR::Value::TypesAreCoercible(&state, lhsVal, rhsVal, resultType))
 					{
 						state.diagnosticContainer->AddDiagnostic(binaryOperation->span, 0, 0, "Types are not coercible");
 						return nullptr;
 					}
 
-					return new IR::BinaryValue(irOpType, lhsVal, rhsVal);
+					// Add cast for implicit conversions
+					Value::Type lhsType = state.GetValueType(lhsVal);
+					Value::Type rhsType = state.GetValueType(rhsVal);
+					if (lhsType != rhsType)
+					{
+						if (lhsType != resultType)
+						{
+							std::string lhsVar = state.NextTemporary();
+							state.WriteVariableInBlock(lhsVar, new IR::CastValue(&state, resultType, lhsVal));
+							lhsVal = new IR::Identifier(&state, lhsVar);
+						}
+
+						if (rhsType != resultType)
+						{
+							std::string rhsVar = state.NextTemporary();
+							state.WriteVariableInBlock(rhsVar, new IR::CastValue(&state, resultType, rhsVal));
+							rhsVal = new IR::Identifier(&state, rhsVar);
+						}
+					}
+
+					return new IR::BinaryValue(&state, irOpType, lhsVal, rhsVal);
 				}
 
 			}
@@ -779,16 +867,23 @@ namespace flex
 				{
 					arguments.push_back(LowerExpression(functionCall->arguments[i]));
 				}
-				return new IR::FunctionCallValue(functionCall->target, arguments);
+				return new IR::FunctionCallValue(&state, functionCall->target, arguments);
 			}
 			case AST::StatementType::IDENTIFIER:
 			{
 				AST::Identifier* identifier = (AST::Identifier*)expression;
-				return new IR::Identifier(identifier->identifierStr);
+				return new IR::Identifier(&state, identifier->identifierStr);
+			} break;
+			case AST::StatementType::CAST:
+			{
+				AST::Cast* cast = (AST::Cast*)expression;
+				std::string tempIdent = state.NextTemporary();
+				state.WriteVariableInBlock(tempIdent, LowerExpression(cast->target));
+				return new IR::CastValue(&state, IR::Value::FromASTTypeName(cast->typeName), new IR::Identifier(&state, tempIdent));
 			} break;
 			}
 
-			return new IR::Value(IR::Value::Type::_NONE);
+			return new IR::Value(&state, IR::Value::Type::_NONE);
 
 		}
 

@@ -14,6 +14,8 @@ namespace flex
 
 	namespace IR
 	{
+		struct State;
+
 		struct Value
 		{
 			enum class Type
@@ -27,6 +29,7 @@ namespace flex
 				UNARY,
 				BINARY,
 				FUNC_CALL,
+				CAST,
 
 				_NONE
 			};
@@ -38,10 +41,11 @@ namespace flex
 				"bool",
 				"string",
 				"char",
-				"idntifier",
+				"identifier",
 				"unary",
 				"binary",
 				"func call",
+				"cast",
 
 				"NONE"
 			};
@@ -54,40 +58,47 @@ namespace flex
 
 			static bool IsLiteral(Type type);
 
-			Value() :
+			Value(State* irState) :
 				type(Type::_NONE),
-				valInt(0)
+				valInt(0),
+				irState(irState)
 			{}
 
-			explicit Value(i32 val) :
+			explicit Value(State* irState, i32 val) :
 				type(Type::INT),
-				valInt(val)
+				valInt(val),
+				irState(irState)
 			{}
 
-			explicit Value(real val) :
+			explicit Value(State* irState, real val) :
 				type(Type::FLOAT),
-				valFloat(val)
+				valFloat(val),
+				irState(irState)
 			{}
 
-			explicit Value(bool val) :
+			explicit Value(State* irState, bool val) :
 				type(Type::BOOL),
-				valBool(val)
+				valBool(val ? 1 : 0),
+				irState(irState)
 			{}
 
-			explicit Value(char* val) :
+			explicit Value(State* irState, char* val) :
 				type(Type::STRING),
-				valStr(val)
+				valStr(val),
+				irState(irState)
 			{}
 
-			explicit Value(char val) :
+			explicit Value(State* irState, char val) :
 				type(Type::CHAR),
-				valChar(val)
+				valChar(val),
+				irState(irState)
 			{}
 
 			// Non "POD" types
-			explicit Value(Type type) :
+			explicit Value(State* irState, Type type) :
 				type(type),
-				valInt(0)
+				valInt(0),
+				irState(irState)
 			{}
 
 			virtual ~Value()
@@ -99,7 +110,7 @@ namespace flex
 
 			i32 AsInt() const;
 			real AsFloat() const;
-			bool AsBool() const;
+			i32 AsBool() const;
 			char* AsString() const;
 			char AsChar() const;
 
@@ -126,18 +137,23 @@ namespace flex
 			{
 				i32 valInt;
 				real valFloat;
-				bool valBool;
+				i32 valBool;
 				char* valStr;
 				char valChar;
 			};
 
-			static Type CheckAssignmentType(Type lhsType, Type rhsType);
+			static Type CheckAssignmentType(State* irState, Value const* lhs, Value const* rhs);
 
-			static bool TypesAreCoercible(Type lhsType, Type rhsType, Type& outResultType);
+			static bool TypesAreCoercible(State* irState, Value const * lhs, Value const * rhs, Type& outResultType);
+			static bool TypeAssignable(State* irState, Type lhsType, Value const * rhs);
+			bool ConvertableTo(Value const * other) const;
 			bool ConvertableTo(Type otherType) const;
 
+			State* irState = nullptr;
+
 		private:
-			void CheckAssignmentType(Type otherType);
+			void CheckAssignmentType(Value const * other);
+
 
 		};
 
@@ -152,6 +168,6 @@ namespace flex
 		Value operator|(const Value& lhs, const Value& rhs);
 		Value operator||(const Value& lhs, const Value& rhs);
 
-		extern Value g_EmptyIRValue;
+		extern Value* g_EmptyIRValue;
 	}// namespace IR
 } // namespace flex

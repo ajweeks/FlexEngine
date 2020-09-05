@@ -25,7 +25,7 @@ namespace flex
 			{
 			case Type::INT:		return IntToString(valInt);
 			case Type::FLOAT:	return FloatToString(valFloat);
-			case Type::BOOL:	return valBool ? "true" : "false";
+			case Type::BOOL:	return IntToString(valBool);
 			case Type::STRING:	return std::string(valStr);
 			case Type::CHAR:	return std::string(1, valChar);
 			default:			return "";
@@ -58,6 +58,86 @@ namespace flex
 				PrintError("Value::IsZero called on non-numeric type\n");
 				return false;
 			}
+			}
+		}
+
+		i32 Value::AsInt() const
+		{
+			switch (type)
+			{
+			case Type::INT:
+				return valInt;
+			case Type::FLOAT:
+				// TODO: Require explicit cast
+				return (i32)valFloat;
+			case Type::BOOL:
+				return valBool;
+			case Type::CHAR:
+				return (i32)valChar;
+			default:
+				PrintError("Unhandled value type\n");
+				return -1;
+			}
+		}
+
+		real Value::AsFloat() const
+		{
+			switch (type)
+			{
+			case Type::INT:
+				return (real)valInt;
+			case Type::FLOAT:
+				return valFloat;
+			case Type::BOOL:
+				return (valBool != 0) ? 1.0f : 0.0f;
+			default:
+				PrintError("Unhandled value type\n");
+				return -1.0f;
+			}
+		}
+
+		i32 Value::AsBool() const
+		{
+			switch (type)
+			{
+			case Type::INT:
+				return (valInt != 0) ? 1 : 0;
+			case Type::FLOAT:
+				return (valFloat != 0.0f ? 1 : 0);
+			case Type::BOOL:
+				return (valBool != 0 ? 1 : 0);
+			default:
+				PrintError("Unhandled value type\n");
+				return false;
+			}
+		}
+
+		char* Value::AsString() const
+		{
+			switch (type)
+			{
+			case Type::STRING:
+				return valStr;
+			default:
+				PrintError("Unhandled value type\n");
+				return "";
+			}
+		}
+
+		char Value::AsChar() const
+		{
+			switch (type)
+			{
+			case Type::INT:
+				return (char)valInt;
+			case Type::FLOAT:
+				// TODO: Require explicit cast
+				return (char)valFloat;
+			case Type::CHAR:
+				return valChar;
+			default:
+				PrintError("Unhandled value type\n");
+				return 0;
 			}
 		}
 
@@ -97,7 +177,6 @@ namespace flex
 				break;
 			default:
 				PrintError("Attempted to add non-numeric types!\n");
-				assert(false);
 				break;
 			}
 
@@ -118,7 +197,6 @@ namespace flex
 				break;
 			default:
 				PrintError("Attempted to subtract non-numeric types!\n");
-				assert(false);
 				break;
 			}
 
@@ -139,7 +217,6 @@ namespace flex
 				break;
 			default:
 				PrintError("Attempted to multiply non-numeric types!\n");
-				assert(false);
 				break;
 			}
 
@@ -160,7 +237,6 @@ namespace flex
 				break;
 			default:
 				PrintError("Attempted to divide non-numeric types!\n");
-				assert(false);
 				break;
 			}
 
@@ -181,7 +257,6 @@ namespace flex
 				break;
 			default:
 				PrintError("Attempted to modulo non-numeric types!\n");
-				assert(false);
 				break;
 			}
 
@@ -199,7 +274,6 @@ namespace flex
 				break;
 			default:
 				PrintError("Attempted to xor non-numeric types!\n");
-				assert(false);
 				break;
 			}
 
@@ -216,10 +290,9 @@ namespace flex
 				result.valInt = lhs.valInt & rhs.valInt;
 				break;
 			case Value::Type::BOOL:
-				result.valBool = (bool)((i32)lhs.valBool & (i32)rhs.valBool);
+				result.valBool = (lhs.valBool & rhs.valBool);
 			default:
 				PrintError("Attempted to binary and invalid types!\n");
-				assert(false);
 				break;
 			}
 
@@ -236,10 +309,9 @@ namespace flex
 				result.valInt = lhs.valInt && rhs.valInt;
 				break;
 			case Value::Type::BOOL:
-				result.valBool = (bool)((i32)lhs.valBool && (i32)rhs.valBool);
+				result.valBool = ((lhs.valBool != 0) && (rhs.valBool != 0));
 			default:
 				PrintError("Attempted to boolean and invalid types!\n");
-				assert(false);
 				break;
 			}
 
@@ -256,10 +328,9 @@ namespace flex
 				result.valInt = lhs.valInt | rhs.valInt;
 				break;
 			case Value::Type::BOOL:
-				result.valBool = (bool)((i32)lhs.valBool | (i32)rhs.valBool);
+				result.valBool = (lhs.valBool | rhs.valBool);
 			default:
 				PrintError("Attempted to binary or invalid types!\n");
-				assert(false);
 				break;
 			}
 
@@ -276,10 +347,9 @@ namespace flex
 				result.valInt = lhs.valInt || rhs.valInt;
 				break;
 			case Value::Type::BOOL:
-				result.valBool = (bool)((i32)lhs.valBool || (i32)rhs.valBool);
+				result.valBool = ((lhs.valBool != 0) || (rhs.valBool != 0));
 			default:
 				PrintError("Attempted to boolean or invalid types!\n");
-				assert(false);
 				break;
 			}
 
@@ -297,7 +367,6 @@ namespace flex
 				return valFloat < other.valFloat;
 			default:
 				PrintError("Attempted to compare non-numeric types!\n");
-				assert(false);
 				return false;
 			}
 		}
@@ -313,7 +382,6 @@ namespace flex
 				return valFloat <= other.valFloat;
 			default:
 				PrintError("Attempted to compare non-numeric types!\n");
-				assert(false);
 				return false;
 			}
 		}
@@ -329,7 +397,6 @@ namespace flex
 				return valFloat > other.valFloat;
 			default:
 				PrintError("Attempted to compare non-numeric types!\n");
-				assert(false);
 				return false;
 			}
 		}
@@ -345,7 +412,6 @@ namespace flex
 				return valFloat >= other.valFloat;
 			default:
 				PrintError("Attempted to compare non-numeric types!\n");
-				assert(false);
 				return false;
 			}
 		}
@@ -366,7 +432,7 @@ namespace flex
 			case Type::CHAR:
 				return valChar == other.valChar;
 			default:
-				assert(false);
+				PrintError("Unhandled type\n");
 				return false;
 			}
 		}
@@ -387,7 +453,7 @@ namespace flex
 			case Type::CHAR:
 				return valChar != other.valChar;
 			default:
-				assert(false);
+				PrintError("Unhandled type\n");
 				return false;
 			}
 		}
@@ -400,7 +466,10 @@ namespace flex
 			}
 			else
 			{
-				assert(lhsType == rhsType);
+				if (lhsType != rhsType)
+				{
+					PrintError("Potentially mismatched types\n");
+				}
 				return rhsType;
 			}
 		}
@@ -413,7 +482,10 @@ namespace flex
 			}
 			else
 			{
-				assert(type == otherType);
+				if (type != otherType)
+				{
+					PrintError("Potentially mismatched types\n");
+				}
 			}
 		}
 
@@ -429,14 +501,17 @@ namespace flex
 			}
 			else
 			{
-				assert(false);
+				PrintError("Unhandled value type\n");
 				return g_EmptyVMValue;
 			}
 		}
 
 		Value& ValueWrapper::GetW(VirtualMachine* vm)
 		{
-			assert(type == Type::REGISTER);
+			if (type != Type::REGISTER)
+			{
+				PrintError("GetW can only be called on register values\n");
+			}
 			return Get(vm);
 		}
 

@@ -2,9 +2,15 @@
 	"version" : 3,
 	"name" : "Scene_terminal_test",
 	"spawn player" : true,
+	"skybox data" : 
+	{
+		"top colour" : "0.22, 0.58, 0.88, 0.00",
+		"mid colour" : "0.66, 0.86, 0.95, 0.00",
+		"btm colour" : "0.75, 0.91, 0.99, 0.00"
+	},
 	"camera" : 
 	{
-		"type" : "debug",
+		"type" : "terminal",
 		"near plane" : 0.500000,
 		"far plane" : 1000.000000,
 		"fov" : 0.785398,
@@ -15,9 +21,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-88.888, 25.466, -7.715",
-			"pitch" : -0.278025,
-			"yaw" : 0.086571
+			"position" : "-2.381, 1.602, 5.379",
+			"pitch" : -0.000467,
+			"yaw" : 1.783797
 		}
 	},
 	"objects" : 
@@ -199,20 +205,11 @@
 			},
 			"terminal" : 
 			{
-				"str" : "float roo = 1.19f;
-float bar = 9.992f;
-float b = 0.0f;
-float roobarb = roo + bar + b;
-int a = bar;
-bool t = a != 11;
-bool f = a == 11;
-bool bo = t && f;
-bool e = bo || f;
-int n = 1 * 8;
-int i =0 ;
-int aa  = 999999;
-int foo = 10;
-foo = 1 + 1 + foo * foo;"
+				"str" : "int ba = 10;
+int a = (int)(10. / 2. * 9 * ba * ba) + 2 - 12;
+//bool ab = true;
+//bool ba = false;
+//bool bab = ab && ba || ba | ab;"
 			},
 			"children" : 
 			[

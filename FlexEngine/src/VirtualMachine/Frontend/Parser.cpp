@@ -234,15 +234,12 @@ namespace flex
 			return statementType == StatementType::BREAK ||
 				statementType == StatementType::YIELD ||
 				statementType == StatementType::RETURN ||
-				//				statementType == StatementType::VARIABLE_DECL ||
 				statementType == StatementType::IDENTIFIER ||
-				//				statementType == StatementType::COMPOUND_ASSIGNMENT ||
 				statementType == StatementType::INT_LIT ||
 				statementType == StatementType::FLOAT_LIT ||
 				statementType == StatementType::BOOL_LIT ||
 				statementType == StatementType::STRING_LIT ||
 				statementType == StatementType::CHAR_LIT ||
-				//				statementType == StatementType::LIST_INITIALIZER ||
 				statementType == StatementType::INDEX_OPERATION ||
 				statementType == StatementType::UNARY_OPERATION ||
 				statementType == StatementType::BINARY_OPERATION ||
@@ -1340,6 +1337,23 @@ namespace flex
 			}
 		}
 
+		Cast::~Cast()
+		{
+			delete target;
+		}
+
+		std::string Cast::ToString() const
+		{
+			StringBuilder stringBuilder;
+
+			stringBuilder.Append("(");
+			stringBuilder.Append(TypeNameToString(typeName));
+			stringBuilder.Append(")");
+			stringBuilder.Append(target->ToString());
+
+			return stringBuilder.ToString();
+		}
+
 		Parser::Parser(Lexer* lexer, DiagnosticContainer* diagnosticContainer) :
 			m_Lexer(lexer),
 			diagnosticContainer(diagnosticContainer)
@@ -1510,6 +1524,13 @@ namespace flex
 
 				TypeName typeName = TokenKindToTypeName(typeToken.kind);
 
+				if (NextIs(TokenKind::CLOSE_PAREN))
+				{
+					span = span.Extend(Eat(TokenKind::CLOSE_PAREN).span);
+					Expression* target = NextPrimary();
+					return new Cast(span, typeName, target);
+				}
+
 				if (NextIs(TokenKind::OPEN_SQUARE))
 				{
 					Eat(TokenKind::OPEN_SQUARE);
@@ -1532,7 +1553,11 @@ namespace flex
 			{
 				Eat(TokenKind::OPEN_PAREN);
 				Expression* subexpression = NextExpression();
-				Eat(TokenKind::CLOSE_PAREN);
+				// TODO: Require matching paren
+				if (NextIs(TokenKind::CLOSE_PAREN))
+				{
+					Eat(TokenKind::CLOSE_PAREN);
+				}
 				return subexpression;
 			}
 			else if (NextIs(TokenKind::INT_LITERAL))
@@ -2078,5 +2103,5 @@ namespace flex
 			delete parser;
 			parser = nullptr;
 		}
-	} // namespace AST
+} // namespace AST
 } // namespace flex

@@ -56,6 +56,7 @@ namespace flex
 			NEGATE,
 			NOT,
 			BIN_INVERT,
+			CAST,
 
 			_NONE
 		};
@@ -98,7 +99,8 @@ namespace flex
 
 		struct Assignment : IR::Value
 		{
-			Assignment(const std::string& variable, IR::Value* value) :
+			Assignment(State* state, const std::string& variable, IR::Value* value) :
+				Value(state),
 				variable(variable),
 				value(value)
 			{}
@@ -112,8 +114,8 @@ namespace flex
 
 		struct Identifier : IR::Value
 		{
-			Identifier(const std::string& variable) :
-				Value(Value::Type::IDENTIFIER),
+			Identifier(State* state, const std::string& variable) :
+				Value(state, Value::Type::IDENTIFIER),
 				variable(variable)
 			{}
 
@@ -251,8 +253,8 @@ namespace flex
 
 		struct UnaryValue : IR::Value
 		{
-			UnaryValue(UnaryOperatorType opType, IR::Value* operand) :
-				Value(Value::Type::UNARY),
+			UnaryValue(State* state, UnaryOperatorType opType, IR::Value* operand) :
+				Value(state, Value::Type::UNARY),
 				opType(opType),
 				operand(operand)
 			{}
@@ -319,8 +321,8 @@ namespace flex
 
 		struct BinaryValue : IR::Value
 		{
-			BinaryValue(BinaryOperatorType opType, IR::Value* left, IR::Value* right) :
-				Value(Value::Type::BINARY),
+			BinaryValue(State* state, BinaryOperatorType opType, IR::Value* left, IR::Value* right) :
+				Value(state, Value::Type::BINARY),
 				opType(opType),
 				left(left),
 				right(right)
@@ -336,8 +338,8 @@ namespace flex
 
 		struct FunctionCallValue : IR::Value
 		{
-			FunctionCallValue(const std::string& target, const std::vector<IR::Value*>& arguments) :
-				Value(Value::Type::FUNC_CALL),
+			FunctionCallValue(State* state, const std::string& target, const std::vector<IR::Value*>& arguments) :
+				Value(state, Value::Type::FUNC_CALL),
 				target(target),
 				arguments(arguments)
 			{}
@@ -349,16 +351,34 @@ namespace flex
 			std::vector<IR::Value*> arguments;
 		};
 
+		struct CastValue : IR::Value
+		{
+			CastValue(State* state, Value::Type castedType, Value* target) :
+				Value(state, Value::Type::CAST),
+				castedType(castedType),
+				target(target)
+			{}
+
+			virtual void Destroy() override;
+			virtual std::string ToString() const override;
+
+			Value* target = nullptr;
+			Value::Type castedType;
+		};
+
 		struct State
 		{
 			void Clear();
 			void SetCurrentInstructionBlock(Block* block);
 			std::string NextTemporary();
 			void WriteVariableInBlock(const std::string& variable, IR::Value* value);
+			Value::Type GetValueType(Value const * value);
 
 			Block* insertionBlock = nullptr;
 
 			u32 tempCount = 0;
+			std::map<std::string, Value::Type> variableTypes;
+			std::map<std::string, Value::Type> functionTypes;
 
 			DiagnosticContainer* diagnosticContainer = nullptr;
 		};

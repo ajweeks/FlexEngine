@@ -41,7 +41,7 @@ namespace flex
 
 			explicit Value(bool val) :
 				type(Type::BOOL),
-				valBool(val)
+				valBool(val ? 1 : 0)
 			{}
 
 			explicit Value(char* val) :
@@ -78,6 +78,12 @@ namespace flex
 
 			std::string ToString() const;
 
+			i32 AsInt() const;
+			real AsFloat() const;
+			i32 AsBool() const;
+			char* AsString() const;
+			char AsChar() const;
+
 			bool IsZero() const;
 			bool IsPositive() const;
 
@@ -95,7 +101,7 @@ namespace flex
 			{
 				i32 valInt;
 				real valFloat;
-				bool valBool;
+				i32 valBool;
 				char* valStr;
 				char valChar;
 			};

@@ -199,6 +199,7 @@ namespace flex
 			BINARY_OPERATION,
 			TERNARY_OPERATION,
 			FUNC_CALL,
+			CAST,
 
 			_NONE
 		};
@@ -734,6 +735,21 @@ namespace flex
 
 			std::string target;
 			std::vector<Expression*> arguments;
+		};
+
+		struct Cast final : public Expression
+		{
+			Cast(Span span, TypeName type, Expression* target) :
+				Expression(span, type, StatementType::CAST),
+				target(target)
+			{
+			}
+
+			virtual ~Cast();
+
+			virtual std::string ToString() const override;
+
+			Expression* target = nullptr;
 		};
 
 		class Parser
