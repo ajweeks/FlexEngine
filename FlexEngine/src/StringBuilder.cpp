@@ -47,7 +47,7 @@ namespace flex
 	{
 		if ((length + (u32)strlen(str) + 1) >= (u32)buffer.size())
 		{
-			Resize((length + (u32)strlen(str)) * 2);
+			Resize((length + (u32)strlen(str) + 1) * 2);
 		}
 
 		for (u32 i = 0; i < strlen(str); ++i)
