@@ -100,9 +100,9 @@ namespace flex
 				m_IR = new IR::IntermediateRepresentation();
 				m_IR->GenerateFromAST(m_AST);
 
-				if (m_IR->firstBlock != nullptr && m_IR->state.diagnosticContainer->diagnostics.empty())
+				if (!m_IR->blocks.empty() && m_IR->state.diagnosticContainer->diagnostics.empty())
 				{
-					irStr = m_IR->firstBlock->ToString();
+					irStr = m_IR->ToString();
 
 					GenerateFromIR(m_IR);
 				}
@@ -217,9 +217,10 @@ namespace flex
 			state.Clear();
 			state.PushInstructionBlock();
 
-			IR::Block* block = ir->firstBlock;
-			//while (block != nullptr)
+			for (u32 i = 0; i < (u32)ir->blocks.size(); ++i)
 			{
+				IR::Block* block = ir->blocks[i];
+
 				for (auto assignmentIter = block->assignments.begin(); assignmentIter != block->assignments.end(); ++assignmentIter)
 				{
 					IR::Assignment* assignment = *assignmentIter;

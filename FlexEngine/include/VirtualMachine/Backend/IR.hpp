@@ -90,7 +90,7 @@ namespace flex
 
 			std::string ToString() const;
 
-			u32 index;
+			u32 index = 0;
 			std::list<Block*> predecessors;
 			std::list<Assignment*> assignments;
 			Terminator* terminator = nullptr;
@@ -109,7 +109,7 @@ namespace flex
 			virtual std::string ToString() const override;
 
 			std::string variable;
-			IR::Value* value;
+			IR::Value* value = nullptr;
 		};
 
 		struct Identifier : IR::Value
@@ -158,7 +158,7 @@ namespace flex
 
 			virtual std::string ToString() const override;
 
-			IR::Value* returnValue;
+			IR::Value* returnValue = nullptr;
 		};
 
 		struct YieldReturn : Terminator
@@ -172,7 +172,7 @@ namespace flex
 			virtual std::string ToString() const override;
 
 			//Block * target = nullptr;
-			IR::Value* yieldValue;
+			IR::Value* yieldValue = nullptr;
 		};
 
 		struct Break : Terminator
@@ -214,9 +214,9 @@ namespace flex
 
 			virtual std::string ToString() const override;
 
-			IR::Value* condition;
-			Block* then;
-			Block* otherwise;
+			IR::Value* condition = nullptr;
+			Block* then = nullptr;
+			Block* otherwise = nullptr;
 		};
 
 		struct Constant : IR::Value
@@ -262,7 +262,7 @@ namespace flex
 			virtual void Destroy() override;
 			virtual std::string ToString() const override;
 
-			IR::Value* operand;
+			IR::Value* operand = nullptr;
 			UnaryOperatorType opType;
 		};
 
@@ -332,8 +332,8 @@ namespace flex
 			virtual std::string ToString() const override;
 
 			BinaryOperatorType opType;
-			IR::Value* left;
-			IR::Value* right;
+			IR::Value* left = nullptr;
+			IR::Value* right = nullptr;
 		};
 
 		struct FunctionCallValue : IR::Value
@@ -369,12 +369,13 @@ namespace flex
 		struct State
 		{
 			void Clear();
-			void SetCurrentInstructionBlock(Block* block);
+			void PushInstructionBlock(Block* block);
 			std::string NextTemporary();
 			void WriteVariableInBlock(const std::string& variable, IR::Value* value);
 			Value::Type GetValueType(Value const * value);
 
-			Block* insertionBlock = nullptr;
+			Block* InsertionBlock();
+			std::vector<Block*> blocks;
 
 			u32 tempCount = 0;
 			std::map<std::string, Value::Type> variableTypes;
@@ -388,8 +389,10 @@ namespace flex
 			void GenerateFromAST(AST::AST* ast);
 			void Destroy();
 
-			IR::State state;
-			IR::Block* firstBlock = nullptr;
+			std::string ToString() const;
+
+			State state;
+			std::vector<Block*> blocks;
 
 		private:
 			//void DiscoverFuncDeclarations(const std::vector<Statement*>& statements);
@@ -399,11 +402,12 @@ namespace flex
 			IR::Value* LowerExpression(AST::Expression* expression);
 			//ValueWrapper GetValueWrapperFromExpression(AST::Expression* expression);
 
+			void SetBlockIndices();
+
 			i32 CombineInstructionIndex(i32 instructionBlockIndex, i32 instructionIndex);
 			void SplitInstructionIndex(i32 combined, i32& outInstructionBlockIndex, i32& outInstructionIndex);
 			i32 GenerateCallInstruction(AST::FunctionCall* funcCall);
 		};
 
 	} // namespace IR
-
 } // namespace flex
