@@ -69,7 +69,7 @@ Flex Engine uses the following open-source libraries:
  - [volk](https://github.com/zeux/volk) - Vulkan meta-loader
 
 ## License
-Flex engine is released under The MIT License. See [license.md](license.md) for details.
+Flex engine is released under The MIT License. See [license.md](LICENSE.md) for details.
 
 ## Acknowledgements
 A huge thank you must be given to the following individuals and organizations for their incredibly useful resources:
