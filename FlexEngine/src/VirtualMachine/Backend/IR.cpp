@@ -291,8 +291,6 @@ namespace flex
 
 		void Break::Destroy()
 		{
-			target->Destroy();
-			delete target;
 			target = nullptr;
 		}
 
@@ -303,8 +301,6 @@ namespace flex
 
 		void Branch::Destroy()
 		{
-			target->Destroy();
-			delete target;
 			target = nullptr;
 		}
 
@@ -323,14 +319,10 @@ namespace flex
 			delete condition;
 			condition = nullptr;
 
-			then->Destroy();
-			delete then;
 			then = nullptr;
 
 			if (otherwise != nullptr)
 			{
-				otherwise->Destroy();
-				delete otherwise;
 				otherwise = nullptr;
 			}
 		}
