@@ -9524,10 +9524,14 @@ namespace flex
 			}
 
 			// Generate graphics pipelines with correct render pass set
-			for (u32 i = 0; i < (u32)m_RenderObjects.size(); ++i)
+			for (u32 renderID = 0; renderID < (u32)m_RenderObjects.size(); ++renderID)
 			{
-				CreateDescriptorSet(i);
-				CreateGraphicsPipeline(i, false);
+				VulkanRenderObject* renderObject = GetRenderObject(renderID);
+				if (renderObject != nullptr)
+				{
+					CreateDescriptorSet(renderID);
+					CreateGraphicsPipeline(renderID, false);
+				}
 			}
 		}
 
