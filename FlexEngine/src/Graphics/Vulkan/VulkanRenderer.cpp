@@ -6346,7 +6346,12 @@ namespace flex
 			DescriptorSetCreateInfo createInfo = {};
 
 			char debugName[256];
-			snprintf(debugName, 256, "Render Object %s (render ID %u) descriptor set", renderObject->gameObject ? renderObject->gameObject->GetName().c_str() : "", renderID);
+			std::string gameObjectName = "";
+			if (renderObject->gameObject != nullptr)
+			{
+				gameObjectName = renderObject->gameObject->GetName();
+			}
+			snprintf(debugName, 256, "Render Object %s (render ID %u) descriptor set", gameObjectName.c_str(), renderID);
 			createInfo.DBG_Name = debugName;
 			createInfo.descriptorSet = &renderObject->descriptorSet;
 
