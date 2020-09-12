@@ -1,4 +1,4 @@
-#pragma once
+#include "stdafx.hpp"
 
 #include "VirtualMachine/Diagnostics.hpp"
 
