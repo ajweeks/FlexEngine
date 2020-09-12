@@ -542,6 +542,28 @@ namespace flex
 		return result;
 	}
 
+	std::vector<std::string> SplitNoStrip(const std::string& str, char delim)
+	{
+		std::vector<std::string> result;
+		size_t i = 0;
+		size_t j = 0;
+
+		size_t strLen = str.size();
+		while (i != strLen)
+		{
+			while (i != strLen && str[i] != delim)
+			{
+				++i;
+			}
+
+			result.push_back(str.substr(j, i - j));
+			++i;
+			j = i;
+		}
+
+		return result;
+	}
+
 	i32 NextNonAlphaNumeric(const std::string& str, i32 offset)
 	{
 		while (offset < (i32)str.size())

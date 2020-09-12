@@ -1,13 +1,15 @@
 #pragma once
 
+#include "Types.hpp"
 
-IGNORE_WARNINGS_PUSH
-#include <glm/gtx/compatibility.hpp> // For saturate
-IGNORE_WARNINGS_POP
-
+typedef int ImGuiInputTextFlags;
+typedef int ImGuiColorEditFlags;
+struct GLFWimage;
 
 namespace flex
 {
+	class Transform;
+
 	// TODO: Many of the functions in this file would benefit from unit tests
 
 	static const i32 DEFAULT_FLOAT_PRECISION = 2;
@@ -48,6 +50,9 @@ namespace flex
 	std::string TrimStartAndEnd(const std::string& str);
 
 	std::vector<std::string> Split(const std::string& str, char delim);
+	// Includes blank entries for subsequent delims
+	// (e.g. "\n\n\n" will return a vector of length 3, while Strip will return an empty vector)
+	std::vector<std::string> SplitNoStrip(const std::string& str, char delim);
 
 	/*
 	 * Returns the index of the first character which isn't a number
@@ -196,7 +201,7 @@ namespace flex
 	template<typename T>
 	T Saturate(T val)
 	{
-		return glm::saturate(val);
+		return glm::clamp(val, T(0), T(1));
 	}
 
 	glm::vec2 Floor(const glm::vec2& p);
