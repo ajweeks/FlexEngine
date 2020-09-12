@@ -1112,46 +1112,6 @@ namespace flex
 		return result;
 	}
 
-	CullFace StringToCullFace(const std::string& str)
-	{
-		std::string strLower(str);
-		ToLower(strLower);
-
-		if (strLower.compare("back") == 0)
-		{
-			return CullFace::BACK;
-		}
-		else if (strLower.compare("front") == 0)
-		{
-			return CullFace::FRONT;
-		}
-		else if (strLower.compare("front and back") == 0)
-		{
-			return CullFace::FRONT_AND_BACK;
-		}
-		else if (strLower.compare("none") == 0)
-		{
-			return CullFace::NONE;
-		}
-		else
-		{
-			PrintError("Unhandled cull face str: %s\n", str.c_str());
-			return CullFace::_INVALID;
-		}
-	}
-
-	std::string CullFaceToString(CullFace cullFace)
-	{
-		switch (cullFace)
-		{
-		case CullFace::BACK:			return "back";
-		case CullFace::FRONT:			return "front";
-		case CullFace::FRONT_AND_BACK:	return "front and back";
-		case CullFace::NONE:			return "none";
-		default:						return "UNHANDLED CULL FACE";
-		}
-	}
-
 	std::string& ToLower(std::string& str)
 	{
 		for (char& c : str)

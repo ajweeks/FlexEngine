@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Graphics/RendererTypes.hpp"
 
 IGNORE_WARNINGS_PUSH
 #include <glm/gtx/compatibility.hpp> // For saturate
@@ -152,9 +151,6 @@ namespace flex
 
 	glm::vec3 PasteColor3FromClipboard();
 	glm::vec4 PasteColor4FromClipboard();
-
-	CullFace StringToCullFace(const std::string& str);
-	std::string CullFaceToString(CullFace cullFace);
 
 	char* ToLower(char* str);
 	std::string& ToLower(std::string& str);

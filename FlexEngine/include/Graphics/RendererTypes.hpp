@@ -333,6 +333,9 @@ namespace flex
 		_NONE
 	};
 
+	CullFace StringToCullFace(const std::string& str);
+	std::string CullFaceToString(CullFace cullFace);
+
 	// TODO: Is setting all the members to false necessary?
 	// TODO: Straight up copy most of these with a memcpy?
 	struct MaterialCreateInfo
