@@ -80,13 +80,13 @@ namespace flex
 
 			void AddAssignment(Assignment* assignment);
 			void RemovePredecessor(Block* predecessor);
-			void AddReturn(Value* returnVal);
-			void AddYield(Value* yieldVal);
-			void AddBranch(Block* target);
+			void AddReturn(Span returnOrigin, Value* returnVal);
+			void AddYield(Span yieldOrigin, Value* yieldVal);
+			void AddBranch(Span branchOrigin, Block* target);
 			void AddCall(const std::string& target, const std::vector<Value*>& arguments);
 			void AddHalt();
 			void SealBlock();
-			void AddConditionalBranch(Value* condition, Block* then, Block* otherwise);
+			void AddConditionalBranch(Span branchOrigin, Value* condition, Block* then, Block* otherwise);
 
 			std::string ToString() const;
 
@@ -99,8 +99,8 @@ namespace flex
 
 		struct Assignment : IR::Value
 		{
-			Assignment(State* state, const std::string& variable, IR::Value* value) :
-				Value(state),
+			Assignment(State* state, Span origin, const std::string& variable, IR::Value* value) :
+				Value(origin, state),
 				variable(variable),
 				value(value)
 			{}
@@ -114,8 +114,8 @@ namespace flex
 
 		struct Identifier : IR::Value
 		{
-			Identifier(State* state, const std::string& variable) :
-				Value(state, Value::Type::IDENTIFIER),
+			Identifier(State* state, Span origin, const std::string& variable) :
+				Value(origin, state, Value::Type::IDENTIFIER),
 				variable(variable)
 			{}
 
@@ -126,7 +126,8 @@ namespace flex
 
 		struct Terminator
 		{
-			Terminator()
+			Terminator(Span origin) :
+				origin(origin)
 			{}
 
 			virtual ~Terminator()
@@ -135,12 +136,17 @@ namespace flex
 			virtual void Destroy() = 0;
 
 			virtual std::string ToString() const = 0;
+
+			Span origin;
 		};
 
 		struct Halt : Terminator
 		{
-			Halt()
-			{}
+			Halt() :
+				Terminator(Span(0, 0))
+			{
+				origin.source = Span::Source::GENERATED;
+			}
 
 			virtual void Destroy() override
 			{}
@@ -150,7 +156,8 @@ namespace flex
 
 		struct Return : Terminator
 		{
-			Return(IR::Value* returnValue) :
+			Return(IR::Value* returnValue, Span origin) :
+				Terminator(origin),
 				returnValue(returnValue)
 			{}
 
@@ -163,7 +170,8 @@ namespace flex
 
 		struct YieldReturn : Terminator
 		{
-			YieldReturn(IR::Value* yieldValue) :
+			YieldReturn(IR::Value* yieldValue, Span origin) :
+				Terminator(origin),
 				yieldValue(yieldValue)
 			{}
 
@@ -177,7 +185,8 @@ namespace flex
 
 		struct Break : Terminator
 		{
-			Break(Block* target) :
+			Break(Block* target, Span origin) :
+				Terminator(origin),
 				target(target)
 			{}
 
@@ -190,7 +199,8 @@ namespace flex
 
 		struct Branch : Terminator
 		{
-			Branch(Block* target) :
+			Branch(Block* target, Span origin) :
+				Terminator(origin),
 				target(target)
 			{}
 
@@ -203,7 +213,8 @@ namespace flex
 
 		struct ConditionalBranch : Terminator
 		{
-			ConditionalBranch(IR::Value* condition, Block* then, Block* otherwise) :
+			ConditionalBranch(IR::Value* condition, Block* then, Block* otherwise, Span origin) :
+				Terminator(origin),
 				condition(condition),
 				then(then),
 				otherwise(otherwise)
@@ -253,8 +264,8 @@ namespace flex
 
 		struct UnaryValue : IR::Value
 		{
-			UnaryValue(State* state, UnaryOperatorType opType, IR::Value* operand) :
-				Value(state, Value::Type::UNARY),
+			UnaryValue(State* state, Span origin, UnaryOperatorType opType, IR::Value* operand) :
+				Value(origin, state, Value::Type::UNARY),
 				opType(opType),
 				operand(operand)
 			{}
@@ -321,8 +332,8 @@ namespace flex
 
 		struct BinaryValue : IR::Value
 		{
-			BinaryValue(State* state, BinaryOperatorType opType, IR::Value* left, IR::Value* right) :
-				Value(state, Value::Type::BINARY),
+			BinaryValue(State* state, Span origin, BinaryOperatorType opType, IR::Value* left, IR::Value* right) :
+				Value(origin, state, Value::Type::BINARY),
 				opType(opType),
 				left(left),
 				right(right)
@@ -338,8 +349,8 @@ namespace flex
 
 		struct FunctionCallValue : IR::Value
 		{
-			FunctionCallValue(State* state, const std::string& target, const std::vector<IR::Value*>& arguments) :
-				Value(state, Value::Type::FUNC_CALL),
+			FunctionCallValue(State* state, Span origin, const std::string& target, const std::vector<IR::Value*>& arguments) :
+				Value(origin, state, Value::Type::FUNC_CALL),
 				target(target),
 				arguments(arguments)
 			{}
@@ -353,8 +364,8 @@ namespace flex
 
 		struct CastValue : IR::Value
 		{
-			CastValue(State* state, Value::Type castedType, Value* target) :
-				Value(state, Value::Type::CAST),
+			CastValue(State* state, Span origin, Value::Type castedType, Value* target) :
+				Value(origin, state, Value::Type::CAST),
 				castedType(castedType),
 				target(target)
 			{}
@@ -368,6 +379,8 @@ namespace flex
 
 		struct State
 		{
+			State();
+			void Destroy();
 			void Clear();
 			void PushInstructionBlock(Block* block);
 			std::string NextTemporary();
@@ -391,7 +404,7 @@ namespace flex
 
 			std::string ToString() const;
 
-			State state;
+			State* state = nullptr;
 			std::vector<Block*> blocks;
 
 		private:

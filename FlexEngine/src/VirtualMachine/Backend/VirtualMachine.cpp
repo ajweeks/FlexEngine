@@ -4,15 +4,26 @@
 
 #include "Helpers.hpp"
 #include "StringBuilder.hpp"
-#include "VirtualMachine/Backend/VariableContainer.hpp"
 #include "VirtualMachine/Backend/IR.hpp"
+#include "VirtualMachine/Backend/VariableContainer.hpp"
 #include "VirtualMachine/Diagnostics.hpp"
+#include "VirtualMachine/Frontend/Lexer.hpp"
 #include "VirtualMachine/Frontend/Parser.hpp"
 
 namespace flex
 {
 	namespace VM
 	{
+		State::State()
+		{
+			diagnosticContainer = new DiagnosticContainer();
+		}
+
+		void State::Destroy()
+		{
+			delete diagnosticContainer;
+		}
+
 		void State::Clear()
 		{
 			varUsages.clear();
@@ -46,13 +57,15 @@ namespace flex
 
 		VirtualMachine::VirtualMachine()
 		{
-			state.diagnosticContainer = new DiagnosticContainer();
+			state = new State();
 			diagnosticContainer = new DiagnosticContainer();
 		}
 
 		VirtualMachine::~VirtualMachine()
 		{
-			delete state.diagnosticContainer;
+			state->Destroy();
+			delete state;
+
 			delete diagnosticContainer;
 
 			if (m_AST != nullptr)
@@ -100,14 +113,14 @@ namespace flex
 				m_IR = new IR::IntermediateRepresentation();
 				m_IR->GenerateFromAST(m_AST);
 
-				if (!m_IR->blocks.empty() && m_IR->state.diagnosticContainer->diagnostics.empty())
+				if (!m_IR->blocks.empty() && m_IR->state->diagnosticContainer->diagnostics.empty())
 				{
 					irStr = m_IR->ToString();
 
 					GenerateFromIR(m_IR);
 				}
 
-				for (const Diagnostic& diagnostic : m_IR->state.diagnosticContainer->diagnostics)
+				for (const Diagnostic& diagnostic : m_IR->state->diagnosticContainer->diagnostics)
 				{
 					diagnosticContainer->diagnostics.push_back(diagnostic);
 				}
@@ -118,10 +131,12 @@ namespace flex
 				diagnosticContainer->diagnostics.push_back(diagnostic);
 			}
 
+			diagnosticContainer->ComputeLineColumnIndicesFromSource(m_AST->lexer->sourceIter.source);
+
 			m_bCompiled = diagnosticContainer->diagnostics.empty();
 		}
 
-		ValueWrapper VirtualMachine::GetValueWrapperFromIRValue(IR::State& irState, IR::Value* value)
+		ValueWrapper VirtualMachine::GetValueWrapperFromIRValue(IR::State* irState, IR::Value* value)
 		{
 			ValueWrapper valWrapper;
 
@@ -136,14 +151,14 @@ namespace flex
 				case IR::Value::Type::IDENTIFIER:
 				{
 					IR::Identifier* identifier = (IR::Identifier*)value;
-					if (state.varRegisterMap.find(identifier->variable) == state.varRegisterMap.end())
+					if (state->varRegisterMap.find(identifier->variable) == state->varRegisterMap.end())
 					{
 						std::string diagnosticStr = "Undeclared identifier: " + identifier->variable;
-						irState.diagnosticContainer->AddDiagnostic(Span(0, 0), 0, 0, diagnosticStr.c_str());
+						irState->diagnosticContainer->AddDiagnostic(value->origin, diagnosticStr.c_str());
 					}
 					else
 					{
-						i32 reg = state.varRegisterMap[identifier->variable];
+						i32 reg = state->varRegisterMap[identifier->variable];
 						valWrapper = ValueWrapper(ValueWrapper::Type::REGISTER, VM::Value(reg));
 					}
 				} break;
@@ -154,7 +169,7 @@ namespace flex
 				case IR::Value::Type::BINARY:
 				{
 					//AST::Identifier* ident = (AST::Identifier*)expression;
-					//i32 reg = state.varToRegisterMap[ident->identifierStr];
+					//i32 reg = state->varToRegisterMap[ident->identifierStr];
 					//valWrapper = ValueWrapper(ValueWrapper::Type::REGISTER, IR::Value(reg));
 				} break;
 				case IR::Value::Type::FUNC_CALL:
@@ -178,7 +193,7 @@ namespace flex
 			return valWrapper;
 		}
 
-		IR::Value::Type VirtualMachine::FindIRType(IR::State& irState, IR::Value* irValue)
+		IR::Value::Type VirtualMachine::FindIRType(IR::State* irState, IR::Value* irValue)
 		{
 			switch (irValue->type)
 			{
@@ -189,13 +204,13 @@ namespace flex
 			case IR::Value::Type::IDENTIFIER:
 			{
 				IR::Identifier* identifier = (IR::Identifier*)irValue;
-				auto iter = irState.variableTypes.find(identifier->variable);
-				if (iter != irState.variableTypes.end())
+				auto iter = irState->variableTypes.find(identifier->variable);
+				if (iter != irState->variableTypes.end())
 				{
 					return iter->second;
 				}
-				auto iter2 = state.tmpVarTypes.find(identifier->variable);
-				if (iter2 != irState.variableTypes.end())
+				auto iter2 = state->tmpVarTypes.find(identifier->variable);
+				if (iter2 != irState->variableTypes.end())
 				{
 					return iter2->second;
 				}
@@ -203,7 +218,7 @@ namespace flex
 				// Fallthrough
 			}
 			default:
-				irState.diagnosticContainer->AddDiagnostic(Span(0, 0), 0, 0, "Unexpected type in cast statement");
+				irState->diagnosticContainer->AddDiagnostic(irValue->origin, "Unexpected type in cast statement");
 				return IR::Value::Type::_NONE;
 			}
 
@@ -214,8 +229,8 @@ namespace flex
 			instructions.clear();
 			ClearRuntimeState();
 
-			state.Clear();
-			state.PushInstructionBlock();
+			state->Clear();
+			state->PushInstructionBlock();
 
 			for (u32 i = 0; i < (u32)ir->blocks.size(); ++i)
 			{
@@ -225,14 +240,14 @@ namespace flex
 				{
 					IR::Assignment* assignment = *assignmentIter;
 					i32 reg = 0;
-					if (state.varRegisterMap.find(assignment->variable) == state.varRegisterMap.end())
+					if (state->varRegisterMap.find(assignment->variable) == state->varRegisterMap.end())
 					{
-						state.varRegisterMap[assignment->variable] = (i32)state.varRegisterMap.size();
+						state->varRegisterMap[assignment->variable] = (i32)state->varRegisterMap.size();
 					}
-					reg = state.varRegisterMap[assignment->variable];
+					reg = state->varRegisterMap[assignment->variable];
 					ValueWrapper regVal(ValueWrapper::Type::REGISTER, Value(reg));
 
-					InstructionBlock& currentInstBlock = state.CurrentInstructionBlock();
+					InstructionBlock& currentInstBlock = state->CurrentInstructionBlock();
 
 					if (assignment->value->type == IR::Value::Type::BINARY)
 					{
@@ -263,7 +278,7 @@ namespace flex
 								currentInstBlock.PushBack(Instruction(OpCode::FTI, regVal, GetValueWrapperFromIRValue(ir->state, castValue->target)));
 								break;
 							default:
-								state.diagnosticContainer->AddDiagnostic(Span(0, 0), 0, 0, "Unexpected type in cast statement");
+								state->diagnosticContainer->AddDiagnostic(assignment->value->origin, "Unexpected type in cast statement");
 								break;
 							}
 						} break;
@@ -279,13 +294,13 @@ namespace flex
 								// no-op
 								break;
 							default:
-								state.diagnosticContainer->AddDiagnostic(Span(0, 0), 0, 0, "Unexpected type in cast statement");
+								state->diagnosticContainer->AddDiagnostic(assignment->value->origin, "Unexpected type in cast statement");
 								break;
 							}
 						} break;
 						default:
 						{
-							state.diagnosticContainer->AddDiagnostic(Span(0, 0), 0, 0, "Unexpected type in cast statement");
+							state->diagnosticContainer->AddDiagnostic(assignment->value->origin, "Unexpected type in cast statement");
 						} break;
 						}
 					}
@@ -297,19 +312,19 @@ namespace flex
 
 				if (block->terminator != nullptr)
 				{
-					//state.CurrentInstructionBlock().PushBack(Instruction(OpCode::JMP, block->terminator));
+					//state->CurrentInstructionBlock().PushBack(Instruction(OpCode::JMP, block->terminator));
 				}
 			}
 
-			state.CurrentInstructionBlock().PushBack({ OpCode::TERMINATE });
+			state->CurrentInstructionBlock().PushBack({ OpCode::TERMINATE });
 
 			// Turn instruction blocks into contiguous instruction list
 			{
 				u32 instructionIndex = 0;
-				for (u32 i = 0; i < (u32)state.instructionBlocks.size(); ++i)
+				for (u32 i = 0; i < (u32)state->instructionBlocks.size(); ++i)
 				{
-					std::vector<Instruction>& blockInstructions = state.instructionBlocks[i].instructions;
-					state.instructionBlocks[i].startOffset = instructionIndex;
+					std::vector<Instruction>& blockInstructions = state->instructionBlocks[i].instructions;
+					state->instructionBlocks[i].startOffset = instructionIndex;
 					for (u32 j = 0; j < (u32)blockInstructions.size(); ++j)
 					{
 						instructions.push_back(blockInstructions[j]);
@@ -329,7 +344,7 @@ namespace flex
 				{
 				case OpCode::CALL:
 				{
-					i32 funcAddress = state.instructionBlocks[inst.val0.Get(this).valInt].startOffset;
+					i32 funcAddress = state->instructionBlocks[inst.val0.Get(this).valInt].startOffset;
 					inst.val0.value.valInt = funcAddress;
 				} break;
 				}
@@ -517,7 +532,7 @@ namespace flex
 				default:
 					std::string opCodeStr(OpCodeToString(inst.opCode));
 					std::string errorMsg = "Unhandled op code in VirtualMachine::Execute: " + opCodeStr;
-					diagnosticContainer->AddDiagnostic(Span(0, 0), 0, 0, errorMsg);
+					diagnosticContainer->AddDiagnostic(Span(0, 0), errorMsg);
 					break;
 				}
 
@@ -528,7 +543,7 @@ namespace flex
 
 				if (++loopCount > 10'000'000)
 				{
-					diagnosticContainer->AddDiagnostic(Span(0, 0), 0, 0, "Execution loop took too long, broke out early\n");
+					diagnosticContainer->AddDiagnostic(Span(0, 0), "Execution loop took too long, broke out early\n");
 					m_RunningState.terminated = true;
 				}
 

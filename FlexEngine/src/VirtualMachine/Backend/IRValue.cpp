@@ -82,7 +82,8 @@ namespace flex
 			}
 		}
 
-		Value::Value(const Value& other)
+		Value::Value(const Value& other) :
+			origin(other.origin)
 		{
 			if (type == Type::_NONE)
 			{
@@ -97,12 +98,14 @@ namespace flex
 		}
 
 		Value::Value(const Value&& other) :
-			type(other.type)
+			type(other.type),
+			origin(other.origin)
 		{
 			memcpy(&valInt, &other.valInt, sizeof(void*));
 		}
 
-		Value::Value(const VM::Value& other)
+		Value::Value(const VM::Value& other) :
+			origin(Span(Span::Source::GENERATED))
 		{
 			if (other.type == VM::Value::Type::_NONE)
 			{
@@ -219,7 +222,7 @@ namespace flex
 
 		Value operator+(const Value& lhs, const Value& rhs)
 		{
-			Value result(lhs.irState, Value::CheckAssignmentType(lhs.irState, &lhs, &rhs));
+			Value result(lhs.origin.Extend(rhs.origin), lhs.irState, Value::CheckAssignmentType(lhs.irState, &lhs, &rhs));
 
 			switch (result.type)
 			{
@@ -239,7 +242,7 @@ namespace flex
 
 		Value operator-(const Value& lhs, const Value& rhs)
 		{
-			Value result(lhs.irState, Value::CheckAssignmentType(lhs.irState, &lhs, &rhs));
+			Value result(lhs.origin.Extend(rhs.origin), lhs.irState, Value::CheckAssignmentType(lhs.irState, &lhs, &rhs));
 			switch (result.type)
 			{
 			case Value::Type::INT:
@@ -258,7 +261,7 @@ namespace flex
 
 		Value operator*(const Value& lhs, const Value& rhs)
 		{
-			Value result(lhs.irState, Value::CheckAssignmentType(lhs.irState, &lhs, &rhs));
+			Value result(lhs.origin.Extend(rhs.origin), lhs.irState, Value::CheckAssignmentType(lhs.irState, &lhs, &rhs));
 			switch (result.type)
 			{
 			case Value::Type::INT:
@@ -277,7 +280,7 @@ namespace flex
 
 		Value operator/(const Value& lhs, const Value& rhs)
 		{
-			Value result(lhs.irState, Value::CheckAssignmentType(lhs.irState, &lhs, &rhs));
+			Value result(lhs.origin.Extend(rhs.origin), lhs.irState, Value::CheckAssignmentType(lhs.irState, &lhs, &rhs));
 			switch (result.type)
 			{
 			case Value::Type::INT:
@@ -296,7 +299,7 @@ namespace flex
 
 		Value operator%(const Value& lhs, const Value& rhs)
 		{
-			Value result(lhs.irState, Value::CheckAssignmentType(lhs.irState, &lhs, &rhs));
+			Value result(lhs.origin.Extend(rhs.origin), lhs.irState, Value::CheckAssignmentType(lhs.irState, &lhs, &rhs));
 			switch (result.type)
 			{
 			case Value::Type::INT:
@@ -315,7 +318,7 @@ namespace flex
 
 		Value operator^(const Value& lhs, const Value& rhs)
 		{
-			Value result(lhs.irState, Value::CheckAssignmentType(lhs.irState, &lhs, &rhs));
+			Value result(lhs.origin.Extend(rhs.origin), lhs.irState, Value::CheckAssignmentType(lhs.irState, &lhs, &rhs));
 			switch (result.type)
 			{
 			case Value::Type::INT:
@@ -331,7 +334,7 @@ namespace flex
 
 		Value operator&(const Value& lhs, const Value& rhs)
 		{
-			Value result(lhs.irState, Value::CheckAssignmentType(lhs.irState, &lhs, &rhs));
+			Value result(lhs.origin.Extend(rhs.origin), lhs.irState, Value::CheckAssignmentType(lhs.irState, &lhs, &rhs));
 			switch (result.type)
 			{
 			case Value::Type::INT:
@@ -349,7 +352,7 @@ namespace flex
 
 		Value operator&&(const Value& lhs, const Value& rhs)
 		{
-			Value result(lhs.irState, Value::CheckAssignmentType(lhs.irState, &lhs, &rhs));
+			Value result(lhs.origin.Extend(rhs.origin), lhs.irState, Value::CheckAssignmentType(lhs.irState, &lhs, &rhs));
 			switch (result.type)
 			{
 			case Value::Type::INT:
@@ -367,7 +370,7 @@ namespace flex
 
 		Value operator|(const Value& lhs, const Value& rhs)
 		{
-			Value result(lhs.irState, Value::CheckAssignmentType(lhs.irState, &lhs, &rhs));
+			Value result(lhs.origin.Extend(rhs.origin), lhs.irState, Value::CheckAssignmentType(lhs.irState, &lhs, &rhs));
 			switch (result.type)
 			{
 			case Value::Type::INT:
@@ -385,7 +388,7 @@ namespace flex
 
 		Value operator||(const Value& lhs, const Value& rhs)
 		{
-			Value result(lhs.irState, Value::CheckAssignmentType(lhs.irState, &lhs, &rhs));
+			Value result(lhs.origin.Extend(rhs.origin), lhs.irState, Value::CheckAssignmentType(lhs.irState, &lhs, &rhs));
 			switch (result.type)
 			{
 			case Value::Type::INT:
@@ -544,11 +547,11 @@ namespace flex
 				}
 			}
 
-			irState->diagnosticContainer->AddDiagnostic(Span(0, 0), 0, 0, "Type mismatch\n");
+			irState->diagnosticContainer->AddDiagnostic(rhs->origin, "Type mismatch\n");
 			return false;
 		}
 
-		bool Value::TypesAreCoercible(State* irState, Value const * lhs, Value const* rhs, Type& outResultType)
+		bool Value::TypesAreCoercible(State* irState, Value const * lhs, Value const * rhs, Type& outResultType)
 		{
 			Type lhsType = irState->GetValueType(lhs);
 			Type rhsType = irState->GetValueType(rhs);
@@ -566,7 +569,7 @@ namespace flex
 				return true;
 			}
 
-			irState->diagnosticContainer->AddDiagnostic(Span(0, 0), 0, 0, "Type mismatch\n");
+			irState->diagnosticContainer->AddDiagnostic(lhs->origin.Extend(rhs->origin), "Type mismatch\n");
 			outResultType = Type::_NONE;
 			return false;
 		}
@@ -621,7 +624,7 @@ namespace flex
 			case Type::CHAR:
 				return otherType == Type::INT;
 			default:
-				irState->diagnosticContainer->AddDiagnostic(Span(0, 0), 0, 0, "Type mismatch\n");
+				irState->diagnosticContainer->AddDiagnostic(origin, "Type mismatch\n");
 				return false;
 			}
 		}
@@ -638,7 +641,7 @@ namespace flex
 			{
 				if (type != otherType)
 				{
-					irState->diagnosticContainer->AddDiagnostic(Span(0, 0), 0, 0, "Type mismatch\n");
+					irState->diagnosticContainer->AddDiagnostic(other->origin, "Type mismatch\n");
 				}
 			}
 		}

@@ -432,7 +432,7 @@ namespace flex
 			condition->ResolveTypesAndLifetimes(varContainer, diagnosticContainer);
 			if (condition->typeName != TypeName::BOOL)
 			{
-				diagnosticContainer->AddDiagnostic(condition->span, 0, 0, "Condition statement must evaluate to a boolean value (not " + std::string(TypeNameToString(condition->typeName)) + ")");
+				diagnosticContainer->AddDiagnostic(condition->span, "Condition statement must evaluate to a boolean value (not " + std::string(TypeNameToString(condition->typeName)) + ")");
 			}
 
 			then->ResolveTypesAndLifetimes(varContainer, diagnosticContainer);
@@ -590,7 +590,7 @@ namespace flex
 			condition->ResolveTypesAndLifetimes(varContainer, diagnosticContainer);
 			if (condition->typeName != TypeName::BOOL)
 			{
-				diagnosticContainer->AddDiagnostic(condition->span, 0, 0, "Condition statement must evaluate to a boolean value (not " + std::string(TypeNameToString(condition->typeName)) + ")");
+				diagnosticContainer->AddDiagnostic(condition->span, "Condition statement must evaluate to a boolean value (not " + std::string(TypeNameToString(condition->typeName)) + ")");
 			}
 
 			body->ResolveTypesAndLifetimes(varContainer, diagnosticContainer);
@@ -644,7 +644,7 @@ namespace flex
 			condition->ResolveTypesAndLifetimes(varContainer, diagnosticContainer);
 			if (condition->typeName != TypeName::BOOL)
 			{
-				diagnosticContainer->AddDiagnostic(condition->span, 0, 0, "Condition statement must evaluate to a boolean value (not " + std::string(TypeNameToString(condition->typeName)) + ")");
+				diagnosticContainer->AddDiagnostic(condition->span, "Condition statement must evaluate to a boolean value (not " + std::string(TypeNameToString(condition->typeName)) + ")");
 			}
 
 			body->ResolveTypesAndLifetimes(varContainer, diagnosticContainer);
@@ -751,7 +751,7 @@ namespace flex
 
 				if (yieldValue->typeName != TypeName::_NONE)
 				{
-					diagnosticContainer->AddDiagnostic(yieldValue->span, 0, 0, "Yield value must be non-void");
+					diagnosticContainer->AddDiagnostic(yieldValue->span, "Yield value must be non-void");
 				}
 			}
 		}
@@ -800,7 +800,7 @@ namespace flex
 
 				if (returnValue->typeName == TypeName::_NONE)
 				{
-					diagnosticContainer->AddDiagnostic(returnValue->span, 0, 0, "Return value must be non-void");
+					diagnosticContainer->AddDiagnostic(returnValue->span, "Return value must be non-void");
 				}
 			}
 		}
@@ -850,12 +850,12 @@ namespace flex
 				if (testTypeName != typeName)
 				{
 					std::string diagnosticStr = "Multiple definitions found of '" + identifierStr + "' with different types (" + std::string(TypeNameToString(typeName)) + " vs. " + std::string(TypeNameToString(testTypeName)) + ")";
-					diagnosticContainer->AddDiagnostic(initializer->span, 0, 0, diagnosticStr);
+					diagnosticContainer->AddDiagnostic(initializer->span, diagnosticStr);
 				}
 				else
 				{
 					std::string diagnosticStr = "Multiple definitions found of '" + identifierStr;
-					diagnosticContainer->AddDiagnostic(initializer->span, 0, 0, diagnosticStr);
+					diagnosticContainer->AddDiagnostic(initializer->span, diagnosticStr);
 				}
 
 				return;
@@ -871,7 +871,7 @@ namespace flex
 				{
 					assert(false);
 					//std::string diagnosticStr = "Mismatched types (" + std::string(TypeNameToString(initializer->typeName)) + " vs. " + std::string(TypeNameToString(varTypeName)) + ")";
-					//diagnosticContainer->AddDiagnostic(initializer->span, 0, 0, diagnosticStr);
+					//diagnosticContainer->AddDiagnostic(initializer->span, diagnosticStr);
 				}
 			}
 		}
@@ -890,7 +890,7 @@ namespace flex
 			else
 			{
 				std::string diagnosticStr = "Identifier \"" + identifierStr + "\" not found";
-				diagnosticContainer->AddDiagnostic(span, 0, 0, diagnosticStr);
+				diagnosticContainer->AddDiagnostic(span, diagnosticStr);
 			}
 		}
 
@@ -1175,7 +1175,7 @@ namespace flex
 			{
 
 				std::string diagnosticStr = "Mismatched types (" + std::string(TypeNameToString(lhs->typeName)) + " vs. " + std::string(TypeNameToString(rhs->typeName)) + ")";
-				diagnosticContainer->AddDiagnostic(lhs->span.Extend(rhs->span), 0, 0, diagnosticStr);
+				diagnosticContainer->AddDiagnostic(lhs->span.Extend(rhs->span), diagnosticStr);
 			}
 			else
 			{
@@ -1251,7 +1251,7 @@ namespace flex
 			if (ifTrue->typeName != ifFalse->typeName)
 			{
 				std::string diagnosticStr = "Mismatched types (" + std::string(TypeNameToString(ifTrue->typeName)) + " vs. " + std::string(TypeNameToString(ifFalse->typeName)) + ")";
-				diagnosticContainer->AddDiagnostic(ifTrue->span.Extend(ifFalse->span), 0, 0, diagnosticStr);
+				diagnosticContainer->AddDiagnostic(ifTrue->span.Extend(ifFalse->span), diagnosticStr);
 			}
 			else
 			{
@@ -1332,7 +1332,7 @@ namespace flex
 				if (varContainer->IsFinalPass())
 				{
 					// Only log diagnostic if previous passes didn't find this type
-					diagnosticContainer->AddDiagnostic(span, 0, 0, "Expected return type from function");
+					diagnosticContainer->AddDiagnostic(span, "Expected return type from function");
 				}
 			}
 		}
@@ -1430,7 +1430,7 @@ namespace flex
 			diagnosticStr.Append("\" but found \"");
 			diagnosticStr.Append(TokenKindToString(m_Current.kind));
 			diagnosticStr.Append("\"");
-			diagnosticContainer->AddDiagnostic(m_Current.span, lineNumber, columnIndex, diagnosticStr.ToString());
+			diagnosticContainer->AddDiagnostic(m_Current.span, diagnosticStr.ToString());
 
 			return g_EmptyToken;
 		}
@@ -1638,7 +1638,7 @@ namespace flex
 				}
 				else if (NextIs(TokenKind::PLUS_PLUS) || NextIs(TokenKind::MINUS_MINUS))
 				{
-					diagnosticContainer->AddDiagnostic(m_Current.span, m_Lexer->sourceIter.lineNumber, m_Lexer->sourceIter.columnIndex, "Increment/decrement operator not supported!");
+					diagnosticContainer->AddDiagnostic(m_Current.span, "Increment/decrement operator not supported!");
 					Eat(m_Current.kind);
 				}
 
@@ -1658,7 +1658,7 @@ namespace flex
 			}
 			else if (NextIs(TokenKind::PLUS_PLUS) || NextIs(TokenKind::MINUS_MINUS))
 			{
-				diagnosticContainer->AddDiagnostic(m_Current.span, m_Lexer->sourceIter.lineNumber, m_Lexer->sourceIter.columnIndex, "Increment/decrement operator not supported!");
+				diagnosticContainer->AddDiagnostic(m_Current.span, "Increment/decrement operator not supported!");
 				Eat(m_Current.kind);
 				return nullptr;
 			}
@@ -1667,7 +1667,7 @@ namespace flex
 			diagnosticStr.Append("Expected expression, but found \"");
 			diagnosticStr.Append(TokenKindToString(m_Current.kind));
 			diagnosticStr.Append("\"");
-			diagnosticContainer->AddDiagnostic(m_Current.span, m_Lexer->sourceIter.lineNumber, m_Lexer->sourceIter.columnIndex, diagnosticStr.ToString());
+			diagnosticContainer->AddDiagnostic(m_Current.span, diagnosticStr.ToString());
 
 			return nullptr;
 		}
@@ -1848,7 +1848,7 @@ namespace flex
 			diagnosticStr.Append("Expected expression, but found \"");
 			diagnosticStr.Append(TokenKindToString(m_Current.kind));
 			diagnosticStr.Append("\"");
-			diagnosticContainer->AddDiagnostic(m_Current.span, m_Lexer->sourceIter.lineNumber, m_Lexer->sourceIter.columnIndex, diagnosticStr.ToString());
+			diagnosticContainer->AddDiagnostic(m_Current.span, diagnosticStr.ToString());
 
 			Eat(m_Current.kind);
 
@@ -1860,7 +1860,7 @@ namespace flex
 			if (!NextIs(TokenKind::IF) && !NextIs(TokenKind::ELIF))
 			{
 				std::string tokenKindStr(TokenKindToString(m_Current.kind));
-				diagnosticContainer->AddDiagnostic(m_Current.span, m_Lexer->sourceIter.lineNumber, m_Lexer->sourceIter.columnIndex, "Expected if or elif, instead got " + tokenKindStr);
+				diagnosticContainer->AddDiagnostic(m_Current.span, "Expected if or elif, instead got " + tokenKindStr);
 				return nullptr;
 			}
 

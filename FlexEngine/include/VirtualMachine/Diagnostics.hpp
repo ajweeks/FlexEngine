@@ -2,31 +2,29 @@
 
 #include "VirtualMachine/Frontend/Span.hpp"
 
-#include <vector>
-
 namespace flex
 {
 	struct Diagnostic
 	{
-		Diagnostic(Span span, u32 lineNumber, u32 columnIndex, const std::string& message) :
+		Diagnostic(Span span, const std::string& message) :
 			span(span),
-			lineNumber(lineNumber),
-			columnIndex(columnIndex),
 			message(message)
 		{
 		}
 
+		void ComputeLineColumnIndicesFromSource(const std::vector<std::string>& sourceLines);
+
 		Span span;
-		u32 lineNumber;
-		u32 columnIndex;
 		std::string message;
+		u32 lineNumber = 0;
+		u32 columnIndex = 0;
 	};
 
 	struct DiagnosticContainer
 	{
-		void AddDiagnostic(Span span, u32 lineNumber, u32 columnIndex, const std::string& message);
+		void AddDiagnostic(Span span, const std::string& message);
 		void AddDiagnostic(const Diagnostic& diagnostic);
-
+		void ComputeLineColumnIndicesFromSource(const std::string& source);
 		std::vector<Diagnostic> diagnostics;
 
 	};

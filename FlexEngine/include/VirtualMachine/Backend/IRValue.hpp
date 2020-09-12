@@ -1,5 +1,7 @@
 #pragma once
 
+#include "VirtualMachine/Frontend/Span.hpp"
+
 namespace flex
 {
 	namespace VM
@@ -58,44 +60,51 @@ namespace flex
 
 			static bool IsLiteral(Type type);
 
-			Value(State* irState) :
+			Value(Span origin, State* irState) :
+				origin(origin),
 				type(Type::_NONE),
 				valInt(0),
 				irState(irState)
 			{}
 
-			explicit Value(State* irState, i32 val) :
+			explicit Value(Span origin, State* irState, i32 val) :
+				origin(origin),
 				type(Type::INT),
 				valInt(val),
 				irState(irState)
 			{}
 
-			explicit Value(State* irState, real val) :
+			explicit Value(Span origin, State* irState, real val) :
+				origin(origin),
 				type(Type::FLOAT),
 				valFloat(val),
 				irState(irState)
 			{}
 
-			explicit Value(State* irState, bool val) :
+			explicit Value(Span origin, State* irState, bool val) :
+				origin(origin),
 				type(Type::BOOL),
 				valBool(val ? 1 : 0),
 				irState(irState)
 			{}
 
-			explicit Value(State* irState, char* val) :
+			explicit Value(Span origin, State* irState, char* val) :
+				origin(origin),
 				type(Type::STRING),
 				valStr(val),
 				irState(irState)
 			{}
 
-			explicit Value(State* irState, char val) :
+			explicit Value(Span origin, State* irState, char val) :
+				origin(origin),
 				type(Type::CHAR),
 				valChar(val),
 				irState(irState)
 			{}
 
 			// Non "POD" types
-			explicit Value(State* irState, Type type) :
+			explicit Value(Span origin, State* irState, Type type) :
+				origin(origin),
 				type(type),
 				valInt(0),
 				irState(irState)
@@ -150,6 +159,8 @@ namespace flex
 			bool ConvertableTo(Type otherType) const;
 
 			State* irState = nullptr;
+
+			Span origin;
 
 		private:
 			void CheckAssignmentType(Value const * other);

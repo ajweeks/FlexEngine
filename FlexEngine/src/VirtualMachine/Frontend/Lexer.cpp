@@ -249,13 +249,13 @@ namespace flex
 				Advance();
 				if (c1 != '\'')
 				{
-					diagnosticContainer->AddDiagnostic(GetSpan(), sourceIter.lineNumber, sourceIter.columnIndex, "Expected closing quote for char literal");
+					diagnosticContainer->AddDiagnostic(GetSpan(), "Expected closing quote for char literal");
 					return g_EmptyToken;
 				}
 				return Token(GetSpan(), TokenKind::CHAR_LITERAL, std::string(1, c0));
 			}
 
-			diagnosticContainer->AddDiagnostic(GetSpan(), sourceIter.lineNumber, sourceIter.columnIndex, "Expected closing quote for char literal");
+			diagnosticContainer->AddDiagnostic(GetSpan(), "Expected closing quote for char literal");
 			return g_EmptyToken;
 		case'\"':
 			Advance();
@@ -277,7 +277,7 @@ namespace flex
 			return Token(GetSpan(), TokenKind::HASH);
 		default:
 			Advance();
-			diagnosticContainer->AddDiagnostic(GetSpan(), sourceIter.lineNumber, sourceIter.columnIndex, "Unrecognized character encountered");
+			diagnosticContainer->AddDiagnostic(GetSpan(), "Unrecognized character encountered");
 			return g_EmptyToken;
 		}
 	}
@@ -333,7 +333,7 @@ namespace flex
 		{
 			if (IsNewLine(sourceIter.Current()))
 			{
-				diagnosticContainer->AddDiagnostic(GetSpan(), sourceIter.lineNumber, sourceIter.columnIndex, "Unexpected termination of string literal");
+				diagnosticContainer->AddDiagnostic(GetSpan(), "Unexpected termination of string literal");
 				return g_EmptyToken;
 			}
 
@@ -341,7 +341,7 @@ namespace flex
 			{
 				if (!Advance())
 				{
-					diagnosticContainer->AddDiagnostic(GetSpan(), sourceIter.lineNumber, sourceIter.columnIndex, "Unexpected trailing backslash");
+					diagnosticContainer->AddDiagnostic(GetSpan(), "Unexpected trailing backslash");
 					return g_EmptyToken;
 				}
 				switch (sourceIter.Current())
@@ -362,7 +362,7 @@ namespace flex
 					stringBuilder.Append('\"');
 					break;
 				default:
-					diagnosticContainer->AddDiagnostic(GetSpan(), sourceIter.lineNumber, sourceIter.columnIndex, "Invalid escaped character");
+					diagnosticContainer->AddDiagnostic(GetSpan(), "Invalid escaped character");
 					return g_EmptyToken;
 				}
 			}
@@ -373,7 +373,7 @@ namespace flex
 
 			if (!Advance())
 			{
-				diagnosticContainer->AddDiagnostic(GetSpan(), sourceIter.lineNumber, sourceIter.columnIndex, "Unexpected termination of string literal");
+				diagnosticContainer->AddDiagnostic(GetSpan(), "Unexpected termination of string literal");
 				return g_EmptyToken;
 			}
 		}
@@ -567,7 +567,7 @@ namespace flex
 
 					if (levelsDeep != 0)
 					{
-						diagnosticContainer->AddDiagnostic(GetSpan(), sourceIter.lineNumber, sourceIter.columnIndex, "Uneven number of block comment opens/closes");
+						diagnosticContainer->AddDiagnostic(GetSpan(), "Uneven number of block comment opens/closes");
 					}
 				}
 			}

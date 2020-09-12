@@ -3,13 +3,12 @@
 #include "Types.hpp"
 
 #include <string>
-#include <cassert>
 
 namespace flex
 {
 	struct Span
 	{
-		enum Source
+		enum class Source
 		{
 			INPUT,
 			GENERATED,
@@ -23,22 +22,29 @@ namespace flex
 		{
 		}
 
+		Span(Source source) :
+			low(0),
+			high(0),
+			source(source)
+		{
+		}
+
 		std::string ToString(const std::string& inSource) const
 		{
 			return inSource.substr(low, high - low);
 		}
 
-		Span Clip()
+		Span Clip() const
 		{
 			return Span(high, high);
 		}
 
-		Span Shrink()
+		Span Shrink() const
 		{
 			return Span(low, high - 1);
 		}
 
-		Span Grow()
+		Span Grow() const
 		{
 			return Span(low, high + 1);
 		}
@@ -48,7 +54,7 @@ namespace flex
 			return high - low;
 		}
 
-		Span Extend(const Span& other)
+		Span Extend(const Span& other) const
 		{
 			return Span(low, other.high);
 		}

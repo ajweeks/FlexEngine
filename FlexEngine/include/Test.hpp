@@ -860,8 +860,8 @@ namespace flex
 
 			vm->Execute();
 
-			EXPECT(vm->state.diagnosticContainer->diagnostics.size(), 0);
-			for (const Diagnostic& diagnostic : vm->state.diagnosticContainer->diagnostics)
+			EXPECT(vm->state->diagnosticContainer->diagnostics.size(), 0);
+			for (const Diagnostic& diagnostic : vm->state->diagnosticContainer->diagnostics)
 			{
 				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
 			}
@@ -870,12 +870,12 @@ namespace flex
 
 			vm->Execute();
 
-			EXPECT(vm->state.diagnosticContainer->diagnostics.size(), 0);
+			EXPECT(vm->state->diagnosticContainer->diagnostics.size(), 0);
 			EXPECT(vm->registers[1].valInt, (12 + 20) % ((1 + 2) * 2));
 
 			vm->Execute();
 
-			EXPECT(vm->state.diagnosticContainer->diagnostics.size(), 0);
+			EXPECT(vm->state->diagnosticContainer->diagnostics.size(), 0);
 			EXPECT(vm->registers[0].valInt, ((1 + 2) * 2) / ((12 + 20) % ((1 + 2) * 2)));
 
 			EXPECT(vm->stack.empty(), true);
@@ -928,7 +928,7 @@ namespace flex
 
 			vm->GenerateFromInstStream(instStream);
 
-			EXPECT(vm->state.diagnosticContainer->diagnostics.size(), 0);
+			EXPECT(vm->state->diagnosticContainer->diagnostics.size(), 0);
 
 			vm->Execute();
 
@@ -976,7 +976,7 @@ namespace flex
 
 			vm->GenerateFromInstStream(instStream);
 
-			EXPECT(vm->state.diagnosticContainer->diagnostics.size(), 0);
+			EXPECT(vm->state->diagnosticContainer->diagnostics.size(), 0);
 
 			vm->Execute();
 
@@ -1045,7 +1045,7 @@ namespace flex
 
 			vm->GenerateFromInstStream(instStream);
 
-			EXPECT(vm->state.diagnosticContainer->diagnostics.size(), 0);
+			EXPECT(vm->state->diagnosticContainer->diagnostics.size(), 0);
 
 			vm->Execute();
 
@@ -1070,7 +1070,7 @@ namespace flex
 				"func foo() -> int { return 2 * 7 + 9 - 6; }"
 				"int bar = foo() * foo() + foo(); \n");
 
-			EXPECT(vm->state.diagnosticContainer->diagnostics.size(), 0);
+			EXPECT(vm->state->diagnosticContainer->diagnostics.size(), 0);
 
 			vm->Execute();
 
@@ -1095,7 +1095,7 @@ namespace flex
 				"func foo() -> float { return 2.00 * 7.F + 9.0f - 6.; }"
 				"float bar = foo() * foo() + foo(); \n");
 
-			EXPECT(vm->state.diagnosticContainer->diagnostics.size(), 0);
+			EXPECT(vm->state->diagnosticContainer->diagnostics.size(), 0);
 
 			vm->Execute();
 
@@ -1120,7 +1120,7 @@ namespace flex
 				"int[] list = [1, 2, 3, 4];"
 				"int val1 = list[1]; \n");
 
-			EXPECT(vm->state.diagnosticContainer->diagnostics.size(), 0);
+			EXPECT(vm->state->diagnosticContainer->diagnostics.size(), 0);
 
 			vm->Execute();
 
@@ -1146,7 +1146,7 @@ namespace flex
 				"int baz = a * 5 - (a + 12) / b; \n"
 				"// (int a = 5; a < bar * baz; a += 2) { baz = 2 * baz + a; } \n");
 
-			EXPECT(vm->state.diagnosticContainer->diagnostics.size(), 0);
+			EXPECT(vm->state->diagnosticContainer->diagnostics.size(), 0);
 
 			vm->Execute();
 
@@ -1191,7 +1191,7 @@ namespace flex
 				"} \n"
 				"}}\n");
 
-			EXPECT(vm->state.diagnosticContainer->diagnostics.size(), 0);
+			EXPECT(vm->state->diagnosticContainer->diagnostics.size(), 0);
 
 			vm->Execute();
 
@@ -1212,7 +1212,7 @@ namespace flex
 			VM::VirtualMachine* vm = new VM::VirtualMachine();
 			vm->GenerateFromSource("func foo() -> int { } \n");
 
-			EXPECT(vm->state.diagnosticContainer->diagnostics.size(), 0);
+			EXPECT(vm->state->diagnosticContainer->diagnostics.size(), 0);
 
 			vm->Execute();
 

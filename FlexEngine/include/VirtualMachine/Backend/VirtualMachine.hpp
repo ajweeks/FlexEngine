@@ -213,7 +213,9 @@ namespace flex
 
 		struct State
 		{
+			State();
 			void Clear();
+			void Destroy();
 			InstructionBlock& CurrentInstructionBlock();
 			InstructionBlock& PushInstructionBlock();
 			void PopInstructionBlock();
@@ -291,7 +293,7 @@ namespace flex
 			using FuncAddress = i32;
 			std::map<FuncAddress, FuncPtr*> ExternalFuncTable;
 
-			State state;
+			State* state = nullptr;
 			DiagnosticContainer* diagnosticContainer = nullptr;
 
 			std::string astStr;
@@ -299,7 +301,7 @@ namespace flex
 			std::string instructionStr;
 
 		private:
-			IR::Value::Type FindIRType(IR::State& irState, IR::Value* irValue);
+			IR::Value::Type FindIRType(IR::State* irState, IR::Value* irValue);
 
 			void AllocateMemory();
 			void ZeroOutRegisters();
@@ -309,7 +311,7 @@ namespace flex
 			i32 TranslateLocalFuncAddress(FuncAddress localFuncAddress);
 			void DispatchExternalCall(FuncAddress funcAddress);
 
-			ValueWrapper GetValueWrapperFromIRValue(IR::State& irState, IR::Value* value);
+			ValueWrapper GetValueWrapperFromIRValue(IR::State* irState, IR::Value* value);
 
 			AST::AST* m_AST = nullptr;
 			IR::IntermediateRepresentation* m_IR = nullptr;
