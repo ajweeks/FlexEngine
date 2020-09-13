@@ -854,7 +854,7 @@ namespace flex
 			instStream.push_back({ OpCode::YIELD });
 			instStream.push_back({ OpCode::DIV, { ValueType::REGISTER, VM::Value(0) }, { ValueType::REGISTER, VM::Value(0) }, { ValueType::REGISTER, VM::Value(1) } }); // r0 = r0 / r1
 			instStream.push_back({ OpCode::YIELD });
-			instStream.push_back({ OpCode::TERMINATE });
+			instStream.push_back({ OpCode::HALT });
 
 			vm->GenerateFromInstStream(instStream);
 
@@ -924,7 +924,7 @@ namespace flex
 			instStream.push_back({ OpCode::YIELD });
 			instStream.push_back({ OpCode::DIV, { ValueType::REGISTER, VM::Value(0) }, { ValueType::REGISTER, VM::Value(0) }, { ValueType::REGISTER, VM::Value(1) } }); // r0 = r0 / r1
 			instStream.push_back({ OpCode::YIELD });
-			instStream.push_back({ OpCode::TERMINATE });
+			instStream.push_back({ OpCode::HALT });
 
 			vm->GenerateFromInstStream(instStream);
 
@@ -972,7 +972,7 @@ namespace flex
 			instStream.push_back({ OpCode::CMP, { ValueType::REGISTER, VM::Value(0) }, { ValueType::CONSTANT, VM::Value(10) } }); // ro = r0 - 10
 			instStream.push_back({ OpCode::JLT, { ValueType::CONSTANT, VM::Value(1) } }); // if r0 < 10 jump to line 1
 			// Loop end
-			instStream.push_back({ OpCode::TERMINATE });
+			instStream.push_back({ OpCode::HALT });
 
 			vm->GenerateFromInstStream(instStream);
 
@@ -1027,7 +1027,7 @@ namespace flex
 			instStream.push_back({ OpCode::CALL, { ValueType::CONSTANT, VM::Value(6) } }); // call func 0 on line 6
 			// resume point
 			instStream.push_back({ OpCode::POP, { ValueType::REGISTER, VM::Value(0) } }); // r0 = return val
-			instStream.push_back({ OpCode::TERMINATE });
+			instStream.push_back({ OpCode::HALT });
 			// func 0
 			instStream.push_back({ OpCode::POP, { ValueType::REGISTER, VM::Value(0) } }); // r0 = arg0
 			instStream.push_back({ OpCode::POP, { ValueType::REGISTER, VM::Value(1) } }); // r1 = arg1

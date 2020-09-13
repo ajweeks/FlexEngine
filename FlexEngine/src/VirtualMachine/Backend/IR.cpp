@@ -631,6 +631,36 @@ namespace flex
 
 					state->PushInstructionBlock(mergeBlock);
 				} break;
+				case AST::StatementType::ASSIGNMENT:
+				{
+					AST::Assignment* assignment = (AST::Assignment*)statement;
+
+					IR::Value* rhs = LowerExpression(assignment->rhs);
+
+					if (state->variableTypes.find(assignment->lhs) == state->variableTypes.end())
+					{
+						state->diagnosticContainer->AddDiagnostic(assignment->span, "Undeclared identifier \"" + assignment->lhs + "\"");
+					}
+					else
+					{
+						Value::Type lhsType = state->variableTypes[assignment->lhs];
+						if (Value::TypeAssignable(state, lhsType, rhs))
+						{
+							assert(state->variableTypes[assignment->lhs] == state->GetValueType(rhs));
+							state->InsertionBlock()->AddAssignment(new IR::Assignment(state, assignment->span, assignment->lhs, rhs));
+						}
+						else
+						{
+							StringBuilder diagnosticStr;
+							diagnosticStr.Append("Mismatched types (");
+							diagnosticStr.Append(IR::Value::TypeToString(state->GetValueType(rhs)));
+							diagnosticStr.Append(" & ");
+							diagnosticStr.Append(IR::Value::TypeToString(lhsType));
+							diagnosticStr.Append(")");
+							state->diagnosticContainer->AddDiagnostic(assignment->span, diagnosticStr.ToString());
+						}
+					}
+				} break;
 				case AST::StatementType::FUNC_DECL:
 				{
 					AST::FunctionDeclaration* funcDecl = (AST::FunctionDeclaration*)statement;

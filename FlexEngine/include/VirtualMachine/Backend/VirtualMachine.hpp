@@ -51,7 +51,7 @@ namespace flex
 			JGE,
 			YIELD,
 			RETURN,
-			TERMINATE,
+			HALT,
 
 			_NONE
 		};
@@ -66,12 +66,12 @@ namespace flex
 			"inv",
 			"mod",
 			"and",
-			"or",
+			"or ",
 			"xor",
 			"itf",
 			"fti",
-			"call",
-			"push",
+			"cal",
+			"psh",
 			"pop",
 			"cmp",
 			"jmp",
@@ -81,9 +81,9 @@ namespace flex
 			"jle",
 			"jgt",
 			"jge",
-			"yield",
-			"return",
-			"terminate",
+			"yld",
+			"rtn",
+			"hlt",
 
 			"NONE"
 		};
@@ -218,7 +218,6 @@ namespace flex
 			void Destroy();
 			InstructionBlock& CurrentInstructionBlock();
 			InstructionBlock& PushInstructionBlock();
-			void PopInstructionBlock();
 
 			std::map<std::string, IR::Assignment> varUsages;
 			std::map<std::string, i32> funcNameToBlockIndexTable;
@@ -263,6 +262,9 @@ namespace flex
 			bool IsExecuting() const;
 			i32 InstructionIndex() const;
 			void ClearRuntimeState();
+
+			bool ZeroFlagSet() const;
+			bool SignFlagSet() const;
 
 			static const i32 REGISTER_COUNT = 64;
 			static const u32 MEMORY_POOL_SIZE = 32768;

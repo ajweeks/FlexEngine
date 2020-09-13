@@ -205,8 +205,21 @@
 			},
 			"terminal" : 
 			{
-				"str" : "int ba = 10;
-int a = (int)(10. / 2. * 9 * ba * ba) + 2 - 12;
+				"str" : "//func call() -> int { return i; }
+//func call() -> void  { }
+int a = 1;
+if (a > 10 * a - 1)
+{
+  a = 2;
+//  int d = call(1);
+//  int c = 12 + d * call(100);
+//  print(c);
+}
+else
+{
+  a = 3;
+}
+int b = a;
 //bool ab = true;
 //bool ba = false;
 //bool bab = ab && ba || ba | ab;"

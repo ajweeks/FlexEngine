@@ -50,11 +50,6 @@ namespace flex
 			return instructionBlocks[instructionBlocks.size() - 1];
 		}
 
-		void State::PopInstructionBlock()
-		{
-			instructionBlocks.resize(instructionBlocks.size() - 1);
-		}
-
 		VirtualMachine::VirtualMachine()
 		{
 			state = new State();
@@ -312,11 +307,116 @@ namespace flex
 
 				if (block->terminator != nullptr)
 				{
-					//state->CurrentInstructionBlock().PushBack(Instruction(OpCode::JMP, block->terminator));
+					switch (block->terminator->type)
+					{
+					case IR::TerminatorType::RETURN:
+					{
+						InstructionBlock& currentInstBlock = state->CurrentInstructionBlock();
+
+						IR::Return* ret = (IR::Return*)block->terminator;
+
+						ValueWrapper returnVal;
+						if (ret->returnValue != nullptr)
+						{
+							returnVal = GetValueWrapperFromIRValue(ir->state, ret->returnValue);
+						}
+
+						currentInstBlock.PushBack(Instruction(OpCode::RETURN, returnVal));
+
+						state->PushInstructionBlock();
+					} break;
+					//case IR::TerminatorType::BREAK:
+					//case IR::TerminatorType::YIELD:
+					case IR::TerminatorType::BRANCH:
+					{
+						InstructionBlock& currentInstBlock = state->CurrentInstructionBlock();
+
+						IR::Branch* branch = (IR::Branch*)block->terminator;
+
+						currentInstBlock.PushBack(Instruction(OpCode::JMP, ValueWrapper(ValueWrapper::Type::CONSTANT, Value((i32)branch->target->index))));
+						state->PushInstructionBlock();
+					} break;
+					case IR::TerminatorType::CONDITIONAL_BRANCH:
+					{
+						InstructionBlock& currentInstBlock = state->CurrentInstructionBlock();
+
+						IR::ConditionalBranch* conditional = (IR::ConditionalBranch*)block->terminator;
+
+						OpCode opCode = OpCode::_NONE;
+						ValueWrapper lhsWrapper;
+						ValueWrapper rhsWrapper;
+						switch (conditional->condition->type)
+						{
+						case IR::Value::Type::BINARY:
+						{
+							IR::BinaryValue* binary = (IR::BinaryValue*)conditional->condition;
+							switch (binary->opType)
+							{
+							case IR::BinaryOperatorType::EQUAL_TEST:
+								opCode = OpCode::JEQ;
+								break;
+							case IR::BinaryOperatorType::NOT_EQUAL_TEST:
+								opCode = OpCode::JNE;
+								break;
+							case IR::BinaryOperatorType::GREATER_EQUAL_TEST:
+								opCode = OpCode::JGE;
+								break;
+							case IR::BinaryOperatorType::GREATER_TEST:
+								opCode = OpCode::JGT;
+								break;
+							case IR::BinaryOperatorType::LESS_EQUAL_TEST:
+								opCode = OpCode::JLE;
+								break;
+							case IR::BinaryOperatorType::LESS_TEST:
+								opCode = OpCode::JLT;
+								break;
+							case IR::BinaryOperatorType::BIN_AND:
+								opCode = OpCode::AND;
+								break;
+							case IR::BinaryOperatorType::BIN_OR:
+								opCode = OpCode::OR;
+								break;
+							case IR::BinaryOperatorType::BIN_XOR:
+								opCode = OpCode::XOR;
+								break;
+							case IR::BinaryOperatorType::BOOLEAN_AND:
+								opCode = OpCode::JEQ;
+								break;
+							case IR::BinaryOperatorType::BOOLEAN_OR:
+								opCode = OpCode::OR; // ?
+								break;
+							}
+
+							lhsWrapper = GetValueWrapperFromIRValue(ir->state, binary->left);
+							rhsWrapper = GetValueWrapperFromIRValue(ir->state, binary->right);
+						} break;
+						}
+
+						if (opCode != OpCode::_NONE)
+						{
+							currentInstBlock.PushBack(Instruction(OpCode::CMP, lhsWrapper, rhsWrapper));
+							currentInstBlock.PushBack(Instruction(opCode, ValueWrapper(ValueWrapper::Type::CONSTANT, Value((i32)conditional->then->index))));
+
+							if (conditional->then != nullptr)
+							{
+								currentInstBlock.PushBack(Instruction(OpCode::JMP, ValueWrapper(ValueWrapper::Type::CONSTANT, Value((i32)conditional->otherwise->index))));
+							}
+							state->PushInstructionBlock();
+						}
+						else
+						{
+							diagnosticContainer->AddDiagnostic(conditional->origin, "Invalid branch condition");
+						}
+					} break;
+					case IR::TerminatorType::HALT:
+					{
+						InstructionBlock& currentInstBlock = state->CurrentInstructionBlock();
+						currentInstBlock.PushBack(Instruction(OpCode::HALT));
+					} break;
+					}
+					//currentInstBlock.PushBack(Instruction(OpCode::JMP, block->terminator));
 				}
 			}
-
-			state->CurrentInstructionBlock().PushBack({ OpCode::TERMINATE });
 
 			// Turn instruction blocks into contiguous instruction list
 			{
@@ -342,10 +442,36 @@ namespace flex
 
 				switch (inst.opCode)
 				{
+				case OpCode::JMP:
+				case OpCode::JEQ:
+				case OpCode::JNE:
+				case OpCode::JGE:
+				case OpCode::JGT:
+				case OpCode::JLE:
+				case OpCode::JLT:
+				{
+					i32 blockIndex = inst.val0.Get(this).valInt;
+					if (blockIndex < (i32)state->instructionBlocks.size())
+					{
+						inst.val0.value.valInt = state->instructionBlocks[blockIndex].startOffset;
+					}
+					else
+					{
+						diagnosticContainer->AddDiagnostic(Span(Span::Source::GENERATED), "Invalid block index");
+					}
+				} break;
 				case OpCode::CALL:
 				{
-					i32 funcAddress = state->instructionBlocks[inst.val0.Get(this).valInt].startOffset;
-					inst.val0.value.valInt = funcAddress;
+					i32 blockIndex = inst.val0.Get(this).valInt;
+					if (blockIndex < (i32)state->instructionBlocks.size())
+					{
+						i32 funcAddress = state->instructionBlocks[blockIndex].startOffset;
+						inst.val0.value.valInt = funcAddress;
+					}
+					else
+					{
+						diagnosticContainer->AddDiagnostic(Span(Span::Source::GENERATED), "Invalid block index");
+					}
 				} break;
 				}
 			}
@@ -357,8 +483,10 @@ namespace flex
 				std::string val0Str = inst.val0.ToString();
 				std::string val1Str = inst.val1.ToString();
 				std::string val2Str = inst.val2.ToString();
-				instructionStrBuilder.Append(OpCodeToString(inst.opCode));
+				instructionStrBuilder.Append(IntToString(i, 2, ' '));
 				instructionStrBuilder.Append("  ");
+				instructionStrBuilder.Append(OpCodeToString(inst.opCode));
+				instructionStrBuilder.Append(" ");
 				instructionStrBuilder.Append(val0Str.c_str());
 				instructionStrBuilder.Append(" ");
 				instructionStrBuilder.Append(val1Str.c_str());
@@ -423,10 +551,10 @@ namespace flex
 				case OpCode::MOD:
 					inst.val0.GetW(this) = inst.val1.Get(this) % inst.val2.Get(this);
 					break;
-				//case OpCode::INV:
-				//case OpCode::AND:
-				//case OpCode::OR:
-				//case OpCode::XOR:
+					//case OpCode::INV:
+					//case OpCode::AND:
+					//case OpCode::OR:
+					//case OpCode::XOR:
 				case OpCode::ITF:
 				{
 					Value& regVal = inst.val0.GetW(this);
@@ -526,7 +654,7 @@ namespace flex
 						stack.push(returnVal);
 					}
 				} break;
-				case OpCode::TERMINATE:
+				case OpCode::HALT:
 					m_RunningState.terminated = true;
 					break;
 				default:
@@ -576,6 +704,16 @@ namespace flex
 			ZeroOutRegisters();
 			ClearStack();
 			ExternalFuncTable.clear();
+		}
+
+		bool VirtualMachine::ZeroFlagSet() const
+		{
+			return m_RunningState.zf != 0;
+		}
+
+		bool VirtualMachine::SignFlagSet() const
+		{
+			return m_RunningState.sf != 0;
 		}
 
 		void VirtualMachine::AllocateMemory()

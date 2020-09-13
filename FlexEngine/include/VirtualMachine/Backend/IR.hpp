@@ -123,10 +123,23 @@ namespace flex
 			std::string variable;
 		};
 
+		enum class TerminatorType
+		{
+			RETURN,
+			YIELD,
+			BREAK,
+			HALT,
+			BRANCH,
+			CONDITIONAL_BRANCH,
+
+			_NONE
+		};
+
 		struct Terminator
 		{
-			Terminator(Span origin) :
-				origin(origin)
+			Terminator(Span origin, TerminatorType type) :
+				origin(origin),
+				type(type)
 			{}
 
 			virtual ~Terminator()
@@ -137,12 +150,13 @@ namespace flex
 			virtual std::string ToString() const = 0;
 
 			Span origin;
+			TerminatorType type;
 		};
 
 		struct Halt : Terminator
 		{
 			Halt() :
-				Terminator(Span(0, 0))
+				Terminator(Span(0, 0), TerminatorType::HALT)
 			{
 				origin.source = Span::Source::GENERATED;
 			}
@@ -156,7 +170,7 @@ namespace flex
 		struct Return : Terminator
 		{
 			Return(IR::Value* returnValue, Span origin) :
-				Terminator(origin),
+				Terminator(origin, TerminatorType::RETURN),
 				returnValue(returnValue)
 			{}
 
@@ -170,7 +184,7 @@ namespace flex
 		struct YieldReturn : Terminator
 		{
 			YieldReturn(IR::Value* yieldValue, Span origin) :
-				Terminator(origin),
+				Terminator(origin, TerminatorType::YIELD),
 				yieldValue(yieldValue)
 			{}
 
@@ -185,7 +199,7 @@ namespace flex
 		struct Break : Terminator
 		{
 			Break(Block* target, Span origin) :
-				Terminator(origin),
+				Terminator(origin, TerminatorType::BREAK),
 				target(target)
 			{}
 
@@ -199,7 +213,7 @@ namespace flex
 		struct Branch : Terminator
 		{
 			Branch(Block* target, Span origin) :
-				Terminator(origin),
+				Terminator(origin, TerminatorType::BRANCH),
 				target(target)
 			{}
 
@@ -213,7 +227,7 @@ namespace flex
 		struct ConditionalBranch : Terminator
 		{
 			ConditionalBranch(IR::Value* condition, Block* then, Block* otherwise, Span origin) :
-				Terminator(origin),
+				Terminator(origin, TerminatorType::CONDITIONAL_BRANCH),
 				condition(condition),
 				then(then),
 				otherwise(otherwise)

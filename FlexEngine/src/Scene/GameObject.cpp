@@ -5057,7 +5057,15 @@ namespace flex
 						std::string regValStr = regVal.ToString();
 						ImGui::Text("r%i = %s", i, regValStr.c_str());
 					}
+					else
+					{
+						ImGui::NewLine();
+					}
 				}
+
+				ImGui::Text("zf: %d", m_VM->ZeroFlagSet() ? 1 : 0);
+				ImGui::SameLine();
+				ImGui::Text("sf: %d", m_VM->SignFlagSet() ? 1 : 0);
 
 				if (!m_VM->astStr.empty())
 				{
