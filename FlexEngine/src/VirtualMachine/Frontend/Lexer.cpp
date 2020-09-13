@@ -419,6 +419,10 @@ namespace flex
 		{
 			return Token(GetSpan(), TokenKind::CHAR_KEYWORD);
 		}
+		else if (identifier.compare("void") == 0)
+		{
+			return Token(GetSpan(), TokenKind::VOID_KEYWORD);
+		}
 		else if (identifier.compare("true") == 0)
 		{
 			return Token(GetSpan(), TokenKind::TRUE);

@@ -14,7 +14,6 @@ namespace flex
 		struct Expression;
 		struct Declaration;
 		struct FunctionCall;
-		enum class TypeName;
 		enum class BinaryOperatorType;
 		enum class UnaryOperatorType;
 	}

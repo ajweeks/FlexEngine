@@ -27,6 +27,7 @@ namespace flex
 			case AST::TypeName::BOOL:	return Value::Type::BOOL;
 			case AST::TypeName::STRING: return Value::Type::STRING;
 			case AST::TypeName::CHAR:	return Value::Type::CHAR;
+			case AST::TypeName::VOID:	return Value::Type::VOID;
 			default:					return Value::Type::_NONE;
 			}
 		}

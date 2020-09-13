@@ -654,17 +654,6 @@ namespace flex
 
 					//state->InsertionBlock()->AddAssignment(new Assignment(identifier->identifierStr, );
 				} break;
-				case AST::StatementType::FUNC_CALL:
-				{
-					AST::FunctionCall* funcCall = (AST::FunctionCall*)statement;
-
-					std::vector<IR::Value*> args;
-					for (u32 i = 0; i < (u32)funcCall->arguments.size(); ++i)
-					{
-						args.push_back(LowerExpression(funcCall->arguments[i]));
-					}
-					state->InsertionBlock()->AddCall(funcCall->target, args);
-				} break;
 				case AST::StatementType::STATEMENT_BLOCK:
 				{
 					//state->PushInstructionBlock();
@@ -692,7 +681,7 @@ namespace flex
 					{
 						StringBuilder diagnosticStr;
 						diagnosticStr.Append("Mismatched types (");
-						diagnosticStr.Append(IR::Value::TypeToString(initializerValue->type));
+						diagnosticStr.Append(IR::Value::TypeToString(state->GetValueType(initializerValue)));
 						diagnosticStr.Append(" & ");
 						diagnosticStr.Append(IR::Value::TypeToString(IR::Value::FromASTTypeName(decl->typeName)));
 						diagnosticStr.Append(")");
@@ -700,39 +689,6 @@ namespace flex
 					}
 
 				} break;
-				case AST::StatementType::BREAK:
-				{
-					AST::BreakStatement* breakStatement = (AST::BreakStatement*)statement;
-
-					IR::Block* nextBlock = new IR::Block(breakStatement->span);
-
-					state->InsertionBlock()->AddBranch(breakStatement->span, nextBlock);
-					state->InsertionBlock()->SealBlock();
-
-					state->PushInstructionBlock(nextBlock);
-				}break;
-				case AST::StatementType::YIELD:
-				{
-					AST::YieldStatement* yieldStatement = (AST::YieldStatement*)statement;
-
-					IR::Block* nextBlock = new IR::Block(yieldStatement->span);
-
-					state->InsertionBlock()->AddYield(yieldStatement->span, LowerExpression(yieldStatement->yieldValue));
-					state->InsertionBlock()->SealBlock();
-
-					state->PushInstructionBlock(nextBlock);
-				}break;
-				case AST::StatementType::RETURN:
-				{
-					AST::ReturnStatement* returnStatement = (AST::ReturnStatement*)statement;
-
-					IR::Block* nextBlock = new IR::Block(returnStatement->span);
-
-					state->InsertionBlock()->AddYield(returnStatement->span, LowerExpression(returnStatement->returnValue));
-					state->InsertionBlock()->SealBlock();
-
-					state->PushInstructionBlock(nextBlock);
-				}break;
 				case AST::StatementType::UNARY_OPERATION:
 				{
 				}break;
@@ -944,6 +900,8 @@ namespace flex
 				state->InsertionBlock()->SealBlock();
 
 				state->PushInstructionBlock(mergeBlock);
+
+				return nullptr;
 			}
 			case AST::StatementType::FUNC_CALL:
 			{
@@ -966,6 +924,42 @@ namespace flex
 				std::string tempIdent = state->NextTemporary();
 				state->WriteVariableInBlock(tempIdent, LowerExpression(cast->target));
 				return new IR::CastValue(state, cast->span, IR::Value::FromASTTypeName(cast->typeName), new IR::Identifier(state, cast->span, tempIdent));
+			} break;
+			case AST::StatementType::BREAK:
+			{
+				AST::BreakStatement* breakStatement = (AST::BreakStatement*)expression;
+
+				IR::Block* nextBlock = new IR::Block(breakStatement->span);
+
+				state->InsertionBlock()->AddBranch(breakStatement->span, nextBlock);
+				state->InsertionBlock()->SealBlock();
+
+				state->PushInstructionBlock(nextBlock);
+				return nullptr;
+			} break;
+			case AST::StatementType::YIELD:
+			{
+				AST::YieldStatement* yieldStatement = (AST::YieldStatement*)expression;
+
+				IR::Block* nextBlock = new IR::Block(yieldStatement->span);
+
+				state->InsertionBlock()->AddYield(yieldStatement->span, LowerExpression(yieldStatement->yieldValue));
+				state->InsertionBlock()->SealBlock();
+
+				state->PushInstructionBlock(nextBlock);
+				return nullptr;
+			} break;
+			case AST::StatementType::RETURN:
+			{
+				AST::ReturnStatement* returnStatement = (AST::ReturnStatement*)expression;
+
+				IR::Block* nextBlock = new IR::Block(returnStatement->span);
+
+				state->InsertionBlock()->AddReturn(returnStatement->span, LowerExpression(returnStatement->returnValue));
+				state->InsertionBlock()->SealBlock();
+
+				state->PushInstructionBlock(nextBlock);
+				return nullptr;
 			} break;
 			}
 

@@ -2,6 +2,8 @@
 
 #include "VirtualMachine/Frontend/Span.hpp"
 
+#undef VOID
+
 namespace flex
 {
 	namespace VM
@@ -32,6 +34,7 @@ namespace flex
 				BINARY,
 				FUNC_CALL,
 				CAST,
+				VOID,
 
 				_NONE
 			};
@@ -48,6 +51,7 @@ namespace flex
 				"binary",
 				"func call",
 				"cast",
+				"void",
 
 				"NONE"
 			};

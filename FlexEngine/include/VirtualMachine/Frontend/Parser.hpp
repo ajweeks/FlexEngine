@@ -6,6 +6,7 @@
 #include "VirtualMachine/Frontend/Token.hpp"
 
 #undef CHAR
+#undef VOID
 
 namespace flex
 {
@@ -130,6 +131,7 @@ namespace flex
 			STRING_LIST,
 			CHAR,
 			CHAR_LIST,
+			VOID,
 			UNKNOWN,
 
 			_NONE
@@ -147,6 +149,7 @@ namespace flex
 			"string[]",
 			"char",
 			"char[]",
+			"void",
 			"unknown",
 
 			"NONE"

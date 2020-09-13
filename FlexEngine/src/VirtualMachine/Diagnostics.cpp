@@ -21,6 +21,7 @@ namespace flex
             }
         }
     }
+
     void DiagnosticContainer::AddDiagnostic(Span span, const std::string& message)
     {
         AddDiagnostic(Diagnostic(span, message));

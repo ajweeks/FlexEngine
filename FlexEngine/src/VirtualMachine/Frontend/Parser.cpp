@@ -172,6 +172,7 @@ namespace flex
 			case TokenKind::BOOL_KEYWORD:	return TypeName::BOOL;
 			case TokenKind::STRING_KEYWORD:	return TypeName::STRING;
 			case TokenKind::CHAR_KEYWORD:	return TypeName::CHAR;
+			case TokenKind::VOID_KEYWORD:	return TypeName::VOID;
 			default: return TypeName::_NONE;
 			}
 		}
