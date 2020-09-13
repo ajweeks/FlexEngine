@@ -415,6 +415,8 @@ namespace flex
 			IR::Value* LowerExpression(AST::Expression* expression);
 			//ValueWrapper GetValueWrapperFromExpression(AST::Expression* expression);
 
+			void AddFunctionType(Span origin, const std::string& funcName, Value::Type returnType);
+
 			void SetBlockIndices();
 
 			i32 CombineInstructionIndex(i32 instructionBlockIndex, i32 instructionIndex);

@@ -631,6 +631,22 @@ namespace flex
 
 					state->PushInstructionBlock(mergeBlock);
 				} break;
+				case AST::StatementType::FUNC_DECL:
+				{
+					AST::FunctionDeclaration* funcDecl = (AST::FunctionDeclaration*)statement;
+
+					IR::Block* bodyBlock = new IR::Block(funcDecl->span);
+					IR::Block* mergeBlock = new IR::Block();
+
+					state->PushInstructionBlock(bodyBlock);
+					LowerStatement(funcDecl->body);
+					state->InsertionBlock()->AddBranch(Span(Span::Source::GENERATED), mergeBlock);
+					state->InsertionBlock()->SealBlock();
+
+					AddFunctionType(funcDecl->span, funcDecl->name, Value::FromASTTypeName(funcDecl->returnType));
+
+					state->PushInstructionBlock(mergeBlock);
+				} break;
 				case AST::StatementType::IDENTIFIER:
 				{
 					//AST::Identifier* identifier = (AST::Identifier*)statement;
@@ -954,7 +970,18 @@ namespace flex
 			}
 
 			return new IR::Value(expression->span, state, IR::Value::Type::_NONE);
+		}
 
+		void IntermediateRepresentation::AddFunctionType(Span origin, const std::string& funcName, Value::Type returnType)
+		{
+			auto iter = state->functionTypes.find(funcName);
+			if (iter != state->functionTypes.end())
+			{
+				state->diagnosticContainer->AddDiagnostic(origin, "Redeclaration of function \"" + funcName + "\"");
+				return;
+			}
+
+			state->functionTypes[funcName] = returnType;
 		}
 
 		void IntermediateRepresentation::SetBlockIndices()
