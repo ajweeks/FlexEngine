@@ -222,6 +222,9 @@ namespace flex
 				CastValue* cast = (CastValue*)value;
 				return cast->castedType;
 			}
+			default:
+			{
+			} break;
 			}
 
 			return value->type;

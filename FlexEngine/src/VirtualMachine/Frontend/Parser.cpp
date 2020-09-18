@@ -47,9 +47,9 @@ namespace flex
 			case BinaryOperatorType::BIN_OR_ASSIGN:
 			case BinaryOperatorType::BIN_XOR_ASSIGN:
 				return true;
+			default:
+				return false;
 			}
-
-			return false;
 		}
 
 		BinaryOperatorType GetNonCompoundType(BinaryOperatorType operatorType)
@@ -1415,9 +1415,6 @@ namespace flex
 
 		Token Parser::Eat(TokenKind tokenKind)
 		{
-			const u32 lineNumber = m_Lexer->sourceIter.lineNumber;
-			const u32 columnIndex = m_Lexer->sourceIter.columnIndex;
-
 			if (NextIs(tokenKind))
 			{
 				Token previous = m_Current;

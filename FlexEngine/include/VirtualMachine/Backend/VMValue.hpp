@@ -81,7 +81,7 @@ namespace flex
 			i32 AsInt() const;
 			real AsFloat() const;
 			i32 AsBool() const;
-			char* AsString() const;
+			const char* AsString() const;
 			char AsChar() const;
 
 			bool IsZero() const;
@@ -102,7 +102,7 @@ namespace flex
 				i32 valInt;
 				real valFloat;
 				i32 valBool;
-				char* valStr;
+				const char* valStr;
 				char valChar;
 			};
 

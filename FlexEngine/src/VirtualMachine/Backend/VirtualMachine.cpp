@@ -209,9 +209,8 @@ namespace flex
 				{
 					return iter2->second;
 				}
-
-				// Fallthrough
 			}
+			// fall through
 			default:
 				irState->diagnosticContainer->AddDiagnostic(irValue->origin, "Unexpected type in cast statement");
 				return IR::Value::Type::_NONE;

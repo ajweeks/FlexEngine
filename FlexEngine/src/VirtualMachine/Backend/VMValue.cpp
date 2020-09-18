@@ -15,7 +15,7 @@ namespace flex
 		Value::Value(const IR::Value& other)
 		{
 			type = (Value::Type)other.type;
-			assert((i32)type < (u32)Value::Type::_NONE);
+			assert((i32)type < (i32)Value::Type::_NONE);
 			valInt = other.valInt;
 		}
 
@@ -112,7 +112,7 @@ namespace flex
 			}
 		}
 
-		char* Value::AsString() const
+		const char* Value::AsString() const
 		{
 			switch (type)
 			{
@@ -291,6 +291,7 @@ namespace flex
 				break;
 			case Value::Type::BOOL:
 				result.valBool = (lhs.valBool & rhs.valBool);
+				break;
 			default:
 				PrintError("Attempted to binary and invalid types!\n");
 				break;
@@ -310,6 +311,7 @@ namespace flex
 				break;
 			case Value::Type::BOOL:
 				result.valBool = ((lhs.valBool != 0) && (rhs.valBool != 0));
+				break;
 			default:
 				PrintError("Attempted to boolean and invalid types!\n");
 				break;
@@ -329,6 +331,7 @@ namespace flex
 				break;
 			case Value::Type::BOOL:
 				result.valBool = (lhs.valBool | rhs.valBool);
+				break;
 			default:
 				PrintError("Attempted to binary or invalid types!\n");
 				break;
@@ -348,6 +351,7 @@ namespace flex
 				break;
 			case Value::Type::BOOL:
 				result.valBool = ((lhs.valBool != 0) || (rhs.valBool != 0));
+				break;
 			default:
 				PrintError("Attempted to boolean or invalid types!\n");
 				break;

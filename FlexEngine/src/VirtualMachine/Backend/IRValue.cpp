@@ -12,6 +12,7 @@ namespace flex
 	namespace IR
 	{
 		Value* g_EmptyIRValue = nullptr;
+		constexpr const char* Value::g_TypeStrings[];
 
 		const char* Value::TypeToString(Type type)
 		{
@@ -171,7 +172,7 @@ namespace flex
 			}
 		}
 
-		char* Value::AsString() const
+		const char* Value::AsString() const
 		{
 			switch (type)
 			{
@@ -343,6 +344,7 @@ namespace flex
 				break;
 			case Value::Type::BOOL:
 				result.valBool = (bool)((i32)lhs.AsBool() & (i32)rhs.AsBool());
+				break;
 			default:
 				PrintError("Attempted to binary and invalid types!\n");
 				break;
@@ -361,6 +363,7 @@ namespace flex
 				break;
 			case Value::Type::BOOL:
 				result.valBool = (bool)((i32)lhs.AsBool() && (i32)rhs.AsBool());
+				break;
 			default:
 				PrintError("Attempted to boolean and invalid types!\n");
 				break;
@@ -379,6 +382,7 @@ namespace flex
 				break;
 			case Value::Type::BOOL:
 				result.valBool = (bool)((i32)lhs.AsBool() | (i32)rhs.AsBool());
+				break;
 			default:
 				PrintError("Attempted to binary or invalid types!\n");
 				break;
@@ -397,6 +401,7 @@ namespace flex
 				break;
 			case Value::Type::BOOL:
 				result.valBool = (bool)((i32)lhs.AsBool() || (i32)rhs.AsBool());
+				break;
 			default:
 				PrintError("Attempted to boolean or invalid types!\n");
 				break;

@@ -3,6 +3,8 @@
 #include "VirtualMachine/Backend/IRValue.hpp"
 #include "VirtualMachine/Frontend/Span.hpp"
 
+#include <list>
+
 namespace flex
 {
 	struct DiagnosticContainer;

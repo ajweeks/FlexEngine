@@ -124,7 +124,7 @@ namespace flex
 			i32 AsInt() const;
 			real AsFloat() const;
 			i32 AsBool() const;
-			char* AsString() const;
+			const char* AsString() const;
 			char AsChar() const;
 
 			Value& operator=(const Value& other);
