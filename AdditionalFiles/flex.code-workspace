@@ -1,0 +1,165 @@
+{
+	"launch": {
+		// Use IntelliSense to learn about possible attributes.
+		// Hover to view descriptions of existing attributes.
+		// For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+		"version": "0.2.0",
+		"configurations": [
+			{
+				"name": "ninja build and debug",
+				"type": "cppdbg",
+				"request": "launch",
+				"program": "${workspaceRoot:FlexEngine}/bin/Debug_x64/FlexEngine/Flex",
+				"args": [],
+				"stopAtEntry": false,
+				"cwd": "${workspaceFolder:FlexEngine}/bin/Debug_x64/FlexEngine",
+				"environment": [],
+				"externalConsole": true,
+				"MIMode": "gdb",
+				"setupCommands": [
+					{
+						"description": "Enable pretty-printing for gdb",
+						"text": "-enable-pretty-printing",
+						"ignoreFailures": true
+					}
+				],
+				"preLaunchTask": "Build",
+				"miDebuggerPath": "/usr/bin/gdb",
+				"visualizerFile": "${workspaceRoot:FlexEngine}/AdditionalFiles/flex.natvis"
+			}
+		]
+	},
+	"tasks": {
+		// See https://go.microsoft.com/fwlink/?LinkId=733558
+		// for the documentation about the tasks.json format
+		"version": "2.0.0",
+		"tasks": [
+			{
+				"label": "Clean",
+				"type": "shell",
+				"command": "rm",
+				"options": {
+					"cwd": "${workspaceRoot:FlexEngine}/build"
+				},
+				"args": [
+					"-rdf",
+					"*"
+				],
+				"problemMatcher": []
+			},
+			{
+				"label": "Genie",
+				"type": "shell",
+				"command": "genie",
+				"options": {
+					"cwd": "${workspaceRoot:FlexEngine}/build"
+				},
+				"args": [
+					"--file=${workspaceRoot}/scripts/genie.lua",
+					"ninja"
+				],
+				"problemMatcher": []
+			},
+			{
+				"label": "Build",
+				"type": "shell",
+				"command": "ninja",
+				"group": {
+					"kind": "build",
+					"isDefault": true
+				},
+				"options": {
+					"cwd": "${workspaceRoot:FlexEngine}/build"
+				},
+				"args": [
+					"-Cdebug64"
+				],
+				"problemMatcher": "$gcc",
+				"dependsOn": "Genie"
+			}
+		]
+	},
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"path": "../FlexEngine/src"
+		},
+		{
+			"path": "../FlexEngine/include"
+		}
+	],
+	"settings": {
+		"C_Cpp.default.includePath": ["../FlexEngine/include", "${default}"],
+		"files.associations": {
+			"array": "cpp",
+			"string_view": "cpp",
+			"initializer_list": "cpp",
+			"utility": "cpp",
+			"*.tcc": "cpp",
+			"type_traits": "cpp",
+			"any": "cpp",
+			"atomic": "cpp",
+			"hash_map": "cpp",
+			"hash_set": "cpp",
+			"bitset": "cpp",
+			"cctype": "cpp",
+			"chrono": "cpp",
+			"cinttypes": "cpp",
+			"clocale": "cpp",
+			"cmath": "cpp",
+			"complex": "cpp",
+			"condition_variable": "cpp",
+			"csignal": "cpp",
+			"cstdarg": "cpp",
+			"cstddef": "cpp",
+			"cstdint": "cpp",
+			"cstdio": "cpp",
+			"cstdlib": "cpp",
+			"cstring": "cpp",
+			"ctime": "cpp",
+			"cwchar": "cpp",
+			"cwctype": "cpp",
+			"deque": "cpp",
+			"forward_list": "cpp",
+			"list": "cpp",
+			"unordered_map": "cpp",
+			"unordered_set": "cpp",
+			"vector": "cpp",
+			"exception": "cpp",
+			"algorithm": "cpp",
+			"functional": "cpp",
+			"iterator": "cpp",
+			"map": "cpp",
+			"memory": "cpp",
+			"memory_resource": "cpp",
+			"numeric": "cpp",
+			"optional": "cpp",
+			"random": "cpp",
+			"ratio": "cpp",
+			"set": "cpp",
+			"string": "cpp",
+			"system_error": "cpp",
+			"tuple": "cpp",
+			"fstream": "cpp",
+			"future": "cpp",
+			"iomanip": "cpp",
+			"iosfwd": "cpp",
+			"iostream": "cpp",
+			"istream": "cpp",
+			"limits": "cpp",
+			"mutex": "cpp",
+			"new": "cpp",
+			"ostream": "cpp",
+			"sstream": "cpp",
+			"stdexcept": "cpp",
+			"streambuf": "cpp",
+			"thread": "cpp",
+			"typeinfo": "cpp",
+			"variant": "cpp"
+		},
+		"workbench.editor.enablePreview": false,
+		"workbench.editor.enablePreviewFromQuickOpen": false
+	}
+}
