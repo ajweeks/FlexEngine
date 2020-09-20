@@ -252,8 +252,27 @@ namespace flex
 					else if (assignment->value->type == IR::Value::Type::UNARY)
 					{
 						IR::UnaryValue* unaryValue = (IR::UnaryValue*)assignment->value;
-						OpCode opCode = OpCodeFromUnaryOperatorType(unaryValue->opType);
-						currentInstBlock.PushBack(Instruction(opCode, regVal, GetValueWrapperFromIRValue(ir->state, unaryValue->operand)));
+
+						switch (unaryValue->opType)
+						{
+						case IR::UnaryOperatorType::NEGATE:
+						{
+							IR::Value::Type operandType = ir->state->GetValueType(unaryValue->operand);
+							ValueWrapper zeroVal = operandType == IR::Value::Type::INT ? g_ZeroIntValueWrapper : g_ZeroFloatValueWrapper;
+							currentInstBlock.PushBack(Instruction(VM::OpCode::SUB, regVal, zeroVal, GetValueWrapperFromIRValue(ir->state, unaryValue->operand)));
+						} break;
+						case IR::UnaryOperatorType::NOT:
+						{
+							ValueWrapper val = GetValueWrapperFromIRValue(ir->state, unaryValue->operand);
+							currentInstBlock.PushBack(Instruction(VM::OpCode::XOR, regVal, val, val));
+						} break;
+						case IR::UnaryOperatorType::BIN_INVERT:
+							currentInstBlock.PushBack(Instruction(VM::OpCode::INV, regVal, GetValueWrapperFromIRValue(ir->state, unaryValue->operand)));
+							break;
+						default:
+							assert(false);
+							break;
+						}
 					}
 					else if (assignment->value->type == IR::Value::Type::CAST)
 					{

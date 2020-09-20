@@ -63,6 +63,7 @@ namespace flex
 			static Type FromASTTypeName(AST::TypeName typeName);
 
 			static bool IsLiteral(Type type);
+			static bool IsNumeric(Type type);
 
 			Value(Span origin, State* irState) :
 				origin(origin),

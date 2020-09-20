@@ -144,6 +144,19 @@ namespace flex
 
 			return Token(GetSpan(), TokenKind::PLUS);
 		case '-':
+			if (sourceIter.Has(1))
+			{
+				if (IsDigit(sourceIter.Peek(1)))
+				{
+					return NextNumericLiteral();
+				}
+				else
+				{
+					Advance();
+					return Token(GetSpan(), TokenKind::MINUS);
+				}
+			}
+
 			if (Advance())
 			{
 				if (sourceIter.Current() == '=')
@@ -286,6 +299,12 @@ namespace flex
 	{
 		StringBuilder stringBuilder;
 
+		if (sourceIter.Current() == '-')
+		{
+			stringBuilder.Append('-');
+			Advance();
+		}
+
 		while (IsDigit(sourceIter.Current()))
 		{
 			stringBuilder.Append(sourceIter.Current());
@@ -399,6 +418,13 @@ namespace flex
 		}
 
 		std::string identifier = stringBuilder.ToString();
+
+		if (identifier.empty())
+		{
+			diagnosticContainer->AddDiagnostic(GetSpan(), "Expected identifier or keyword");
+			return g_EmptyToken;
+		}
+
 		if (identifier.compare("int") == 0)
 		{
 			return Token(GetSpan(), TokenKind::INT_KEYWORD);

@@ -42,6 +42,12 @@ namespace flex
 				type == Value::Type::CHAR;
 		}
 
+		bool Value::IsNumeric(Type type)
+		{
+			return type == Type::INT ||
+				type == Type::FLOAT;
+		}
+
 		std::string Value::ToString() const
 		{
 			switch (type)
@@ -553,6 +559,24 @@ namespace flex
 				}
 			}
 
+			if (rhsType == Type::UNARY)
+			{
+				IR::UnaryValue* unary = (IR::UnaryValue*)rhs;
+				//Type operandType = unary->operand->type;
+				switch (unary->opType)
+				{
+				case IR::UnaryOperatorType::NOT:
+					return lhsType == Type::BOOL;
+				case IR::UnaryOperatorType::NEGATE:
+					return lhsType == Type::INT || lhsType == Type::FLOAT;
+				case IR::UnaryOperatorType::BIN_INVERT:
+					return lhsType == Type::INT;
+				default:
+					irState->diagnosticContainer->AddDiagnostic(rhs->origin, "Unhandled unary operator type");
+					return false;
+				}
+			}
+
 			irState->diagnosticContainer->AddDiagnostic(rhs->origin, "Type mismatch\n");
 			return false;
 		}
@@ -573,6 +597,24 @@ namespace flex
 			{
 				outResultType = Type::FLOAT;
 				return true;
+			}
+
+			if (rhsType == Type::UNARY)
+			{
+				IR::UnaryValue* unary = (IR::UnaryValue*)rhs;
+				//Type operandType = unary->operand->type;
+				switch (unary->opType)
+				{
+				case IR::UnaryOperatorType::NOT:
+					return lhsType == Type::BOOL;
+				case IR::UnaryOperatorType::NEGATE:
+					return lhsType == Type::INT || lhsType == Type::FLOAT;
+				case IR::UnaryOperatorType::BIN_INVERT:
+					return lhsType == Type::INT;
+				default:
+					irState->diagnosticContainer->AddDiagnostic(rhs->origin, "Unhandled unary operator type");
+					break;
+				}
 			}
 
 			irState->diagnosticContainer->AddDiagnostic(lhs->origin.Extend(rhs->origin), "Type mismatch\n");

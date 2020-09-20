@@ -1660,6 +1660,10 @@ namespace flex
 				Eat(m_Current.kind);
 				return nullptr;
 			}
+			else if (NextIs(TokenKind::MINUS))
+			{
+				return NextUnary();
+			}
 
 			StringBuilder diagnosticStr;
 			diagnosticStr.Append("Expected expression, but found \"");

@@ -195,6 +195,37 @@ namespace flex
 				Identifier* identifier = (Identifier*)value;
 				return variableTypes[identifier->variable];
 			}
+			case Value::Type::UNARY:
+			{
+				UnaryValue* unary = (UnaryValue*)value;
+				switch (unary->opType)
+				{
+				case UnaryOperatorType::NOT:
+					if (unary->operand->type == Value::Type::BOOL)
+					{
+						return Value::Type::BOOL;
+					}
+					diagnosticContainer->AddDiagnostic(unary->origin, "Not operator can only be applied to boolean types");
+					return Value::Type::_NONE;
+				case UnaryOperatorType::NEGATE:
+					if (!IR::Value::IsLiteral(unary->operand->type) || IR::Value::IsNumeric(unary->operand->type))
+					{
+						return GetValueType(unary->operand);
+					}
+					diagnosticContainer->AddDiagnostic(unary->origin, "Negate operator can only be applied to numeric types");
+					return Value::Type::_NONE;
+				case UnaryOperatorType::BIN_INVERT:
+					if (unary->operand->type == Value::Type::INT)
+					{
+						return Value::Type::INT;
+					}
+					diagnosticContainer->AddDiagnostic(unary->origin, "Binary invert operator can only be applied to integral types");
+					return Value::Type::_NONE;
+				default:
+					diagnosticContainer->AddDiagnostic(unary->origin, "Unhandled binary operator type");
+					return Value::Type::_NONE;
+				}
+			}
 			case Value::Type::BINARY:
 			{
 				BinaryValue* binary = (BinaryValue*)value;
@@ -803,9 +834,17 @@ namespace flex
 				IR::UnaryOperatorType irOpType = IR::UnaryOperatorType::_NONE;
 				switch (unaryOperation->operatorType)
 				{
-				case AST::UnaryOperatorType::NEGATE:		irOpType = IR::UnaryOperatorType::NEGATE;
-				case AST::UnaryOperatorType::NOT:			irOpType = IR::UnaryOperatorType::NOT;
-				case AST::UnaryOperatorType::BIN_INVERT:	irOpType = IR::UnaryOperatorType::BIN_INVERT;
+				case AST::UnaryOperatorType::NEGATE:
+					irOpType = IR::UnaryOperatorType::NEGATE;
+					break;
+				case AST::UnaryOperatorType::NOT:
+					irOpType = IR::UnaryOperatorType::NOT;
+					break;
+				case AST::UnaryOperatorType::BIN_INVERT:
+					irOpType = IR::UnaryOperatorType::BIN_INVERT;
+					break;
+				default:
+					assert(false);
 				}
 
 				return new IR::UnaryValue(state, unaryOperation->span, irOpType, LowerExpression(unaryOperation->expression));
