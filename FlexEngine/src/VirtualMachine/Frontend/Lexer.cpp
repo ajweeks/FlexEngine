@@ -150,7 +150,7 @@ namespace flex
 				{
 					return NextNumericLiteral();
 				}
-				else
+				else if (IsLetter(sourceIter.Peek(1)))
 				{
 					Advance();
 					return Token(GetSpan(), TokenKind::MINUS);

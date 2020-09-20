@@ -43,6 +43,8 @@ namespace flex
 			POP,
 			CMP,
 			JMP,
+			JZ,
+			JNZ,
 			JEQ,
 			JNE,
 			JLT,
@@ -75,6 +77,8 @@ namespace flex
 			"pop",
 			"cmp",
 			"jmp",
+			"jz",
+			"jnz",
 			"jeq",
 			"jne",
 			"jlt",
@@ -91,6 +95,9 @@ namespace flex
 		static_assert(ARRAY_LENGTH(s_OpCodeStrings) == ((size_t)OpCode::_NONE + 1), "Length of s_OpCodeStrings must match length of OpCode enum");
 
 		const char* OpCodeToString(OpCode opCode);
+
+		OpCode BinaryOperatorTypeToOpCode(IR::BinaryOperatorType opType);
+		OpCode BinaryOperatorTypeToInverseOpCode(IR::BinaryOperatorType opType);
 
 		// TODO: Delete:
 		//OpCode IROperatorTypeToOpCode(IR::OperatorType irOperatorType);
@@ -206,7 +213,6 @@ namespace flex
 			void PushBack(const Instruction& inst);
 
 			std::vector<Instruction> instructions;
-			std::string name;
 
 			i32 startOffset = -1;
 		};
@@ -269,6 +275,9 @@ namespace flex
 			static const i32 REGISTER_COUNT = 64;
 			static const u32 MEMORY_POOL_SIZE = 32768;
 
+			static ValueWrapper g_ZeroIntValueWrapper;
+			static ValueWrapper g_ZeroFloatValueWrapper;
+
 			struct RunningState
 			{
 				void Clear()
@@ -308,6 +317,7 @@ namespace flex
 			void AllocateMemory();
 			void ZeroOutRegisters();
 			void ClearStack();
+			void HandleComparison(ValueWrapper& regVal, IR::IntermediateRepresentation* ir, IR::BinaryValue* binaryValue);
 
 			bool IsExternal(FuncAddress funcAddress);
 			i32 TranslateLocalFuncAddress(FuncAddress localFuncAddress);

@@ -342,6 +342,8 @@ namespace flex
 
 		const char* BinaryOperatorTypeToString(BinaryOperatorType opType);
 
+		bool IsComparisonOp(BinaryOperatorType opType);
+
 		BinaryOperatorType IRBinaryOperatorTypeFromASTBinaryOperatorType(AST::BinaryOperatorType opType);
 		VM::OpCode OpCodeFromBinaryOperatorType(BinaryOperatorType opType);
 
@@ -426,11 +428,14 @@ namespace flex
 			//void DiscoverFuncDeclarations(const std::vector<Statement*>& statements);
 			//void GenerateFunctionInstructions(const std::vector<Statement*>& statements);
 
+			void DiscoverFunctionDefinitions(AST::Statement* statement);
 			void LowerStatement(AST::Statement* statement);
 			IR::Value* LowerExpression(AST::Expression* expression);
+			void LowerFunctionDefinitions(AST::Statement* statement);
 			//ValueWrapper GetValueWrapperFromExpression(AST::Expression* expression);
 
 			void AddFunctionType(Span origin, const std::string& funcName, Value::Type returnType);
+			void CheckReturnTypesMatch(Value::Type returnType, Span origin, Block* block);
 
 			void SetBlockIndices();
 

@@ -1490,6 +1490,14 @@ namespace flex
 				{
 					Eat(TokenKind::SEMICOLON);
 				}
+
+				const i32 maxStatementCount = 100000;
+				if (statements.size() > maxStatementCount)
+				{
+					PrintError("Maximum number of statements reached (%d), aborting\n", maxStatementCount);
+					m_Lexer->diagnosticContainer->AddDiagnostic(statement->span, "Maximum number of statements reached, aborting");
+					break;
+				}
 			}
 
 			Eat(TokenKind::END_OF_FILE);
@@ -1526,6 +1534,10 @@ namespace flex
 				{
 					span = span.Extend(Eat(TokenKind::CLOSE_PAREN).span);
 					Expression* target = NextPrimary();
+					if (target->typeName == typeName)
+					{
+						return target;
+					}
 					return new Cast(span, typeName, target);
 				}
 
@@ -2105,5 +2117,5 @@ namespace flex
 			delete parser;
 			parser = nullptr;
 		}
-} // namespace AST
+	} // namespace AST
 } // namespace flex

@@ -273,10 +273,25 @@ namespace flex
 				return;
 			}
 
+			if (functionTypes.find(variable) != functionTypes.end())
+			{
+				diagnosticContainer->AddDiagnostic(value->origin, "Redefinition of name \"" + variable + "\"");
+				return;
+			}
+
 			InsertionBlock()->AddAssignment(new Assignment(this, value->origin, variable, value));
-			if (variableTypes.find(variable) == variableTypes.end())
+			auto iter = variableTypes.find(variable);
+			if (iter == variableTypes.end())
 			{
 				variableTypes[variable] = GetValueType(value);
+			}
+			else
+			{
+				if (iter->second != value->type)
+				{
+					std::string message = "Type mismatch (" + std::string(Value::TypeToString(value->type)) + " vs. " + std::string(Value::TypeToString(iter->second)) + ")";
+					diagnosticContainer->AddDiagnostic(value->origin, message);
+				}
 			}
 		}
 
@@ -318,7 +333,10 @@ namespace flex
 			StringBuilder builder;
 
 			builder.Append("return ");
-			builder.Append(returnValue->ToString());
+			if (returnValue != nullptr)
+			{
+				builder.Append(returnValue->ToString());
+			}
 
 			return builder.ToString();
 		}
@@ -509,6 +527,18 @@ namespace flex
 			return g_BinaryOperatorTypeStrings[(u32)opType];
 		}
 
+		bool IsComparisonOp(BinaryOperatorType opType)
+		{
+			return opType == BinaryOperatorType::BOOLEAN_AND ||
+				opType == BinaryOperatorType::BOOLEAN_OR ||
+				opType == BinaryOperatorType::EQUAL_TEST ||
+				opType == BinaryOperatorType::NOT_EQUAL_TEST ||
+				opType == BinaryOperatorType::GREATER_TEST ||
+				opType == BinaryOperatorType::GREATER_EQUAL_TEST ||
+				opType == BinaryOperatorType::LESS_EQUAL_TEST ||
+				opType == BinaryOperatorType::LESS_TEST;
+		}
+
 		BinaryOperatorType IRBinaryOperatorTypeFromASTBinaryOperatorType(AST::BinaryOperatorType opType)
 		{
 			switch (opType)
@@ -547,12 +577,12 @@ namespace flex
 			case BinaryOperatorType::BIN_AND:				return VM::OpCode::AND;
 			case BinaryOperatorType::BIN_OR:				return VM::OpCode::OR;
 			case BinaryOperatorType::BIN_XOR:				return VM::OpCode::XOR;
-			case BinaryOperatorType::EQUAL_TEST:			return VM::OpCode::JEQ;
-			case BinaryOperatorType::NOT_EQUAL_TEST:		return VM::OpCode::JNE;
-			case BinaryOperatorType::GREATER_TEST:			return VM::OpCode::JGT;
-			case BinaryOperatorType::GREATER_EQUAL_TEST:	return VM::OpCode::JGE;
-			case BinaryOperatorType::LESS_TEST:				return VM::OpCode::JLT;
-			case BinaryOperatorType::LESS_EQUAL_TEST:		return VM::OpCode::JLE;
+			case BinaryOperatorType::EQUAL_TEST:			return VM::OpCode::CMP;
+			case BinaryOperatorType::NOT_EQUAL_TEST:		return VM::OpCode::CMP;
+			case BinaryOperatorType::GREATER_TEST:			return VM::OpCode::CMP;
+			case BinaryOperatorType::GREATER_EQUAL_TEST:	return VM::OpCode::CMP;
+			case BinaryOperatorType::LESS_TEST:				return VM::OpCode::CMP;
+			case BinaryOperatorType::LESS_EQUAL_TEST:		return VM::OpCode::CMP;
 			case BinaryOperatorType::BOOLEAN_AND:			return VM::OpCode::AND; // ?
 			case BinaryOperatorType::BOOLEAN_OR:			return VM::OpCode::OR; // ?
 			default:										return VM::OpCode::_NONE;
@@ -587,8 +617,10 @@ namespace flex
 
 			if (ast->diagnosticContainer->diagnostics.empty())
 			{
+				DiscoverFunctionDefinitions(ast->rootBlock);
 				LowerStatement(ast->rootBlock);
 				state->InsertionBlock()->AddHalt();
+				LowerFunctionDefinitions(ast->rootBlock);
 				blocks = state->blocks;
 				SetBlockIndices();
 			}
@@ -625,6 +657,116 @@ namespace flex
 			return stringBuilder.ToString();
 		}
 
+		void IntermediateRepresentation::DiscoverFunctionDefinitions(AST::Statement* statement)
+		{
+			switch (statement->statementType)
+			{
+			case AST::StatementType::STATEMENT_BLOCK:
+			{
+				AST::StatementBlock* statementBlock = (AST::StatementBlock*)statement;
+				for (AST::Statement* innerStatement : statementBlock->statements)
+				{
+					DiscoverFunctionDefinitions(innerStatement);
+				}
+			} break;
+			case AST::StatementType::FUNC_DECL:
+			{
+				AST::FunctionDeclaration* funcDecl = (AST::FunctionDeclaration*)statement;
+
+				AddFunctionType(funcDecl->span, funcDecl->name, Value::FromASTTypeName(funcDecl->returnType));
+			} break;
+			}
+		}
+
+		void IntermediateRepresentation::CheckReturnTypesMatch(Value::Type returnType, Span origin, Block* block)
+		{
+			if (block->terminator != nullptr)
+			{
+				switch (block->terminator->type)
+				{
+				case TerminatorType::RETURN:
+				{
+					Return* returnVal = (Return*)block->terminator;
+					Value::Type returnValType = returnVal->returnValue != nullptr ? state->GetValueType(returnVal->returnValue) : Value::Type::_NONE;
+					if (returnValType != returnType)
+					{
+						std::string message = "Returned type doesn't match function's return type (" + std::string(Value::TypeToString(returnValType)) + " vs. " + std::string(Value::TypeToString(returnType)) + ")";
+						state->diagnosticContainer->AddDiagnostic(origin, message);
+					}
+				} break;
+				case TerminatorType::YIELD:
+				{
+					YieldReturn* yieldVal = (YieldReturn*)block->terminator;
+					Value::Type yieldValType = yieldVal->yieldValue != nullptr ? state->GetValueType(yieldVal->yieldValue) : Value::Type::_NONE;
+					if (yieldValType != returnType)
+					{
+						std::string message = "Yielded type doesn't match function's return type (" + std::string(Value::TypeToString(yieldValType)) + " vs. " + std::string(Value::TypeToString(returnType)) + ")";
+						state->diagnosticContainer->AddDiagnostic(origin, message);
+					}
+				} break;
+				case TerminatorType::BREAK:
+				{
+					Break* breakVal = (Break*)block->terminator;
+					CheckReturnTypesMatch(returnType, origin, breakVal->target);
+				} break;
+				case TerminatorType::BRANCH:
+				{
+					Branch* branch = (Branch*)block->terminator;
+					CheckReturnTypesMatch(returnType, origin, branch->target);
+				} break;
+				case TerminatorType::CONDITIONAL_BRANCH:
+				{
+					ConditionalBranch* branch = (ConditionalBranch*)block->terminator;
+					CheckReturnTypesMatch(returnType, origin, branch->then);
+					CheckReturnTypesMatch(returnType, origin, branch->otherwise);
+				} break;
+				}
+			}
+		}
+
+		void IntermediateRepresentation::LowerFunctionDefinitions(AST::Statement* statement)
+		{
+			switch (statement->statementType)
+			{
+			case AST::StatementType::STATEMENT_BLOCK:
+			{
+				AST::StatementBlock* statementBlock = (AST::StatementBlock*)statement;
+				for (AST::Statement* innerStatement : statementBlock->statements)
+				{
+					LowerFunctionDefinitions(innerStatement);
+				}
+			} break;
+			case AST::StatementType::FUNC_DECL:
+			{
+				AST::FunctionDeclaration* funcDecl = (AST::FunctionDeclaration*)statement;
+
+				IR::Block* bodyBlock = new IR::Block(funcDecl->span);
+
+				state->PushInstructionBlock(bodyBlock);
+				LowerStatement(funcDecl->body);
+				if (bodyBlock->terminator != nullptr)
+				{
+					CheckReturnTypesMatch(IR::Value::FromASTTypeName(funcDecl->returnType), funcDecl->span, bodyBlock);
+				}
+				else
+				{
+					if (funcDecl->returnType == AST::TypeName::VOID)
+					{
+						// Void functions get auto generated return statement
+						bodyBlock->AddReturn(Span(Span::Source::GENERATED), nullptr);
+					}
+					else
+					{
+						state->diagnosticContainer->AddDiagnostic(funcDecl->span, "Expected return statement");
+					}
+				}
+				state->InsertionBlock()->SealBlock();
+
+				assert(state->functionTypes.find(funcDecl->name) != state->functionTypes.end());
+			} break;
+			}
+		}
+
 		void IntermediateRepresentation::LowerStatement(AST::Statement* statement)
 		{
 			if (IsExpression(statement->statementType))
@@ -652,14 +794,14 @@ namespace flex
 
 					state->PushInstructionBlock(ifTrueBlock);
 					LowerStatement(ifStatement->then);
-					state->InsertionBlock()->AddBranch(Span(Span::Source::GENERATED), mergeBlock);
+					state->InsertionBlock()->AddBranch(ifStatement->span, mergeBlock);
 					state->InsertionBlock()->SealBlock();
 
 					if (ifStatement->otherwise != nullptr)
 					{
 						state->PushInstructionBlock(ifFalseBlock);
 						LowerStatement(ifStatement->otherwise);
-						state->InsertionBlock()->AddBranch(Span(Span::Source::GENERATED), mergeBlock);
+						state->InsertionBlock()->AddBranch(ifStatement->span, mergeBlock);
 						state->InsertionBlock()->SealBlock();
 					}
 
@@ -695,22 +837,6 @@ namespace flex
 						}
 					}
 				} break;
-				case AST::StatementType::FUNC_DECL:
-				{
-					AST::FunctionDeclaration* funcDecl = (AST::FunctionDeclaration*)statement;
-
-					IR::Block* bodyBlock = new IR::Block(funcDecl->span);
-					IR::Block* mergeBlock = new IR::Block();
-
-					state->PushInstructionBlock(bodyBlock);
-					LowerStatement(funcDecl->body);
-					state->InsertionBlock()->AddBranch(Span(Span::Source::GENERATED), mergeBlock);
-					state->InsertionBlock()->SealBlock();
-
-					AddFunctionType(funcDecl->span, funcDecl->name, Value::FromASTTypeName(funcDecl->returnType));
-
-					state->PushInstructionBlock(mergeBlock);
-				} break;
 				case AST::StatementType::IDENTIFIER:
 				{
 					//AST::Identifier* identifier = (AST::Identifier*)statement;
@@ -734,24 +860,37 @@ namespace flex
 
 					AST::Declaration* decl = (AST::Declaration*)statement;
 
+					if (state->variableTypes.find(decl->identifierStr) != state->variableTypes.end())
+					{
+						state->diagnosticContainer->AddDiagnostic(decl->span, "Redefinition of variable \"" + decl->identifierStr + "\"");
+						return;
+					}
+					if (state->functionTypes.find(decl->identifierStr) != state->functionTypes.end())
+					{
+						state->diagnosticContainer->AddDiagnostic(decl->span, "Redefinition of name \"" + decl->identifierStr + "\"");
+						return;
+					}
+
 					IR::Value* initializerValue = LowerExpression(decl->initializer);
 
-					if (IR::Value::TypeAssignable(state, IR::Value::FromASTTypeName(decl->typeName), initializerValue))
+					if (initializerValue != nullptr)
 					{
-						state->variableTypes[decl->identifierStr] = state->GetValueType(initializerValue);
-						state->InsertionBlock()->AddAssignment(new IR::Assignment(state, decl->span, decl->identifierStr, initializerValue));
+						if (IR::Value::TypeAssignable(state, IR::Value::FromASTTypeName(decl->typeName), initializerValue))
+						{
+							state->variableTypes[decl->identifierStr] = state->GetValueType(initializerValue);
+							state->InsertionBlock()->AddAssignment(new IR::Assignment(state, decl->span, decl->identifierStr, initializerValue));
+						}
+						else
+						{
+							StringBuilder diagnosticStr;
+							diagnosticStr.Append("Mismatched types (");
+							diagnosticStr.Append(IR::Value::TypeToString(state->GetValueType(initializerValue)));
+							diagnosticStr.Append(" & ");
+							diagnosticStr.Append(IR::Value::TypeToString(IR::Value::FromASTTypeName(decl->typeName)));
+							diagnosticStr.Append(")");
+							state->diagnosticContainer->AddDiagnostic(decl->span, diagnosticStr.ToString());
+						}
 					}
-					else
-					{
-						StringBuilder diagnosticStr;
-						diagnosticStr.Append("Mismatched types (");
-						diagnosticStr.Append(IR::Value::TypeToString(state->GetValueType(initializerValue)));
-						diagnosticStr.Append(" & ");
-						diagnosticStr.Append(IR::Value::TypeToString(IR::Value::FromASTTypeName(decl->typeName)));
-						diagnosticStr.Append(")");
-						state->diagnosticContainer->AddDiagnostic(decl->span, diagnosticStr.ToString());
-					}
-
 				} break;
 				case AST::StatementType::UNARY_OPERATION:
 				{
@@ -869,6 +1008,12 @@ namespace flex
 				IR::Value* lhsVal = LowerExpression(binaryOperation->lhs);
 				IR::Value* rhsVal = LowerExpression(binaryOperation->rhs);
 
+				if (lhsVal == nullptr ||
+					rhsVal == nullptr)
+				{
+					return nullptr;
+				}
+
 				if (IR::Value::IsLiteral(lhsVal->type) &&
 					IR::Value::IsLiteral(rhsVal->type))
 				{
@@ -909,18 +1054,61 @@ namespace flex
 				}
 				else
 				{
-					if (!IR::Value::IsLiteral(lhsVal->type) && lhsVal->type != IR::Value::Type::IDENTIFIER)
+					if (!Value::IsLiteral(lhsVal->type) && lhsVal->type != Value::Type::IDENTIFIER)
 					{
-						std::string lhsVar = state->NextTemporary();
-						state->WriteVariableInBlock(lhsVar, lhsVal);
-						lhsVal = new IR::Identifier(state, Span(Span::Source::GENERATED), lhsVar);
+						bool bSplit = true;
+						if (lhsVal->type == Value::Type::BINARY)
+						{
+							IR::BinaryValue* binaryVal = (IR::BinaryValue*)lhsVal;
+							if (IsComparisonOp(binaryVal->opType))
+							{
+								bSplit = false;
+							}
+						}
+						if (bSplit)
+						{
+							std::string lhsVar = state->NextTemporary();
+							state->WriteVariableInBlock(lhsVar, lhsVal);
+							lhsVal = new IR::Identifier(state, Span(Span::Source::GENERATED), lhsVar);
+						}
 					}
-					if (!IR::Value::IsLiteral(rhsVal->type) && rhsVal->type != IR::Value::Type::IDENTIFIER)
+					if (!Value::IsLiteral(rhsVal->type) && rhsVal->type != Value::Type::IDENTIFIER)
 					{
-						std::string rhsVar = state->NextTemporary();
-						state->WriteVariableInBlock(rhsVar, rhsVal);
-						rhsVal = new IR::Identifier(state, Span(Span::Source::GENERATED), rhsVar);
+						bool bSplit = true;
+						if (rhsVal->type == Value::Type::BINARY)
+						{
+							IR::BinaryValue* binaryVal = (IR::BinaryValue*)rhsVal;
+							if (IsComparisonOp(binaryVal->opType))
+							{
+								bSplit = false;
+							}
+						}
+						if (bSplit)
+						{
+							std::string rhsVar = state->NextTemporary();
+							state->WriteVariableInBlock(rhsVar, rhsVal);
+							rhsVal = new IR::Identifier(state, Span(Span::Source::GENERATED), rhsVar);
+						}
 					}
+
+					// Turn simple types e.g. 'a' into 'a != 0' tests
+					if (irOpType == IR::BinaryOperatorType::BOOLEAN_AND ||
+						irOpType == IR::BinaryOperatorType::BOOLEAN_OR)
+					{
+						IR::BinaryValue* binaryVal = (IR::BinaryValue*)rhsVal;
+						if (!IsComparisonOp(binaryVal->opType))
+						{
+							if (!Value::IsLiteral(lhsVal->type))
+							{
+								lhsVal = new IR::BinaryValue(state, lhsVal->origin, IR::BinaryOperatorType::NOT_EQUAL_TEST, lhsVal, new IR::Value(Span(Span::Source::GENERATED), state, 0));
+							}
+							if (!Value::IsLiteral(rhsVal->type))
+							{
+								rhsVal = new IR::BinaryValue(state, rhsVal->origin, IR::BinaryOperatorType::NOT_EQUAL_TEST, rhsVal, new IR::Value(Span(Span::Source::GENERATED), state, 0));
+							}
+						}
+					}
+
 
 					IR::Value::Type resultType;
 					if (!IR::Value::TypesAreCoercible(state, lhsVal, rhsVal, resultType))
@@ -1027,7 +1215,7 @@ namespace flex
 
 				IR::Block* nextBlock = new IR::Block(returnStatement->span);
 
-				state->InsertionBlock()->AddReturn(returnStatement->span, LowerExpression(returnStatement->returnValue));
+				state->InsertionBlock()->AddReturn(returnStatement->span, returnStatement->returnValue != nullptr ? LowerExpression(returnStatement->returnValue) : nullptr);
 				state->InsertionBlock()->SealBlock();
 
 				state->PushInstructionBlock(nextBlock);
@@ -1040,10 +1228,14 @@ namespace flex
 
 		void IntermediateRepresentation::AddFunctionType(Span origin, const std::string& funcName, Value::Type returnType)
 		{
-			auto iter = state->functionTypes.find(funcName);
-			if (iter != state->functionTypes.end())
+			if (state->functionTypes.find(funcName) != state->functionTypes.end())
 			{
-				state->diagnosticContainer->AddDiagnostic(origin, "Redeclaration of function \"" + funcName + "\"");
+				state->diagnosticContainer->AddDiagnostic(origin, "Redefinition of function \"" + funcName + "\"");
+				return;
+			}
+			if (state->variableTypes.find(funcName) != state->variableTypes.end())
+			{
+				state->diagnosticContainer->AddDiagnostic(origin, "Redefinition of name \"" + funcName + "\"");
 				return;
 			}
 

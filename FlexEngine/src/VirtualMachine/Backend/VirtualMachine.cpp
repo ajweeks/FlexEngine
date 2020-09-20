@@ -14,6 +14,9 @@ namespace flex
 {
 	namespace VM
 	{
+		ValueWrapper VirtualMachine::g_ZeroIntValueWrapper = ValueWrapper(ValueWrapper::Type::CONSTANT, Value(0));
+		ValueWrapper VirtualMachine::g_ZeroFloatValueWrapper = ValueWrapper(ValueWrapper::Type::CONSTANT, Value(0.0f));
+
 		State::State()
 		{
 			diagnosticContainer = new DiagnosticContainer();
@@ -215,7 +218,50 @@ namespace flex
 				irState->diagnosticContainer->AddDiagnostic(irValue->origin, "Unexpected type in cast statement");
 				return IR::Value::Type::_NONE;
 			}
+		}
 
+		void VirtualMachine::HandleComparison(ValueWrapper& regVal, IR::IntermediateRepresentation* ir, IR::BinaryValue* binaryValue)
+		{
+			if (binaryValue->left->type == IR::Value::Type::BINARY)
+			{
+				IR::BinaryValue* lhsBinaryValue = (IR::BinaryValue*)binaryValue->left;
+				HandleComparison(regVal, ir, lhsBinaryValue);
+			}
+
+			InstructionBlock& currentInstBlock = state->CurrentInstructionBlock();
+
+			currentInstBlock.PushBack(Instruction(OpCode::CMP, GetValueWrapperFromIRValue(ir->state, binaryValue->left), g_ZeroIntValueWrapper));
+
+			i32 trueBlock = 0;
+			i32 falseBlock = 1;
+
+			if (binaryValue->opType == IR::BinaryOperatorType::BOOLEAN_AND)
+			{
+				currentInstBlock.PushBack(Instruction(OpCode::JEQ, ValueWrapper(ValueWrapper::Type::CONSTANT, Value(falseBlock))));
+
+				currentInstBlock.PushBack(Instruction(OpCode::CMP, GetValueWrapperFromIRValue(ir->state, binaryValue->right), g_ZeroIntValueWrapper));
+
+			}
+			else if (binaryValue->opType == IR::BinaryOperatorType::BOOLEAN_OR)
+			{
+				currentInstBlock.PushBack(Instruction(OpCode::JEQ, ValueWrapper(ValueWrapper::Type::CONSTANT, Value(trueBlock))));
+
+				currentInstBlock.PushBack(Instruction(OpCode::CMP, GetValueWrapperFromIRValue(ir->state, binaryValue->right), g_ZeroIntValueWrapper));
+			}
+			else
+			{
+				currentInstBlock.PushBack(Instruction(BinaryOperatorTypeToInverseOpCode(binaryValue->opType), ValueWrapper(ValueWrapper::Type::CONSTANT, Value(falseBlock))));
+				currentInstBlock.PushBack(Instruction(OpCode::JMP, ValueWrapper(ValueWrapper::Type::CONSTANT, Value(trueBlock))));
+			}
+
+			currentInstBlock.PushBack(Instruction(OpCode::MOV, regVal));
+
+			// Move up?
+			if (binaryValue->right->type == IR::Value::Type::BINARY)
+			{
+				IR::BinaryValue* rhsBinaryValue = (IR::BinaryValue*)binaryValue->right;
+				HandleComparison(regVal, ir, rhsBinaryValue);
+			}
 		}
 
 		void VirtualMachine::GenerateFromIR(IR::IntermediateRepresentation* ir)
@@ -247,7 +293,16 @@ namespace flex
 					{
 						IR::BinaryValue* binaryValue = (IR::BinaryValue*)assignment->value;
 						OpCode opCode = OpCodeFromBinaryOperatorType(binaryValue->opType);
-						currentInstBlock.PushBack(Instruction(opCode, regVal, GetValueWrapperFromIRValue(ir->state, binaryValue->left), GetValueWrapperFromIRValue(ir->state, binaryValue->right)));
+						if (opCode == OpCode::CMP)
+						{
+							HandleComparison(regVal, ir, binaryValue);
+							currentInstBlock.PushBack(Instruction(opCode, GetValueWrapperFromIRValue(ir->state, binaryValue->left), GetValueWrapperFromIRValue(ir->state, binaryValue->right)));
+							currentInstBlock.PushBack(Instruction(OpCode::MOV, regVal));
+						}
+						else
+						{
+							currentInstBlock.PushBack(Instruction(opCode, regVal, GetValueWrapperFromIRValue(ir->state, binaryValue->left), GetValueWrapperFromIRValue(ir->state, binaryValue->right)));
+						}
 					}
 					else if (assignment->value->type == IR::Value::Type::UNARY)
 					{
@@ -363,11 +418,16 @@ namespace flex
 						OpCode opCode = OpCode::_NONE;
 						ValueWrapper lhsWrapper;
 						ValueWrapper rhsWrapper;
+						bool bHandled = false;
 						switch (conditional->condition->type)
 						{
 						case IR::Value::Type::BINARY:
 						{
 							IR::BinaryValue* binary = (IR::BinaryValue*)conditional->condition;
+
+							lhsWrapper = GetValueWrapperFromIRValue(ir->state, binary->left);
+							rhsWrapper = GetValueWrapperFromIRValue(ir->state, binary->right);
+
 							switch (binary->opType)
 							{
 							case IR::BinaryOperatorType::EQUAL_TEST:
@@ -398,32 +458,51 @@ namespace flex
 								opCode = OpCode::XOR;
 								break;
 							case IR::BinaryOperatorType::BOOLEAN_AND:
-								opCode = OpCode::JEQ;
+								currentInstBlock.PushBack(Instruction(OpCode::CMP, lhsWrapper, g_ZeroIntValueWrapper));
+								currentInstBlock.PushBack(Instruction(OpCode::JEQ, ValueWrapper(ValueWrapper::Type::CONSTANT, Value((i32)conditional->otherwise->index))));
+								currentInstBlock.PushBack(Instruction(OpCode::CMP, rhsWrapper, g_ZeroIntValueWrapper));
+								currentInstBlock.PushBack(Instruction(OpCode::JEQ, ValueWrapper(ValueWrapper::Type::CONSTANT, Value((i32)conditional->otherwise->index))));
+								currentInstBlock.PushBack(Instruction(OpCode::JMP, ValueWrapper(ValueWrapper::Type::CONSTANT, Value((i32)conditional->then->index))));
+								state->PushInstructionBlock();
+								//currentInstBlock = state->CurrentInstructionBlock();
+
+								bHandled = true;
+								opCode = OpCode::_NONE;
 								break;
 							case IR::BinaryOperatorType::BOOLEAN_OR:
-								opCode = OpCode::OR; // ?
+								currentInstBlock.PushBack(Instruction(OpCode::CMP, lhsWrapper, g_ZeroIntValueWrapper));
+								//								binary->left->type
+								currentInstBlock.PushBack(Instruction(OpCode::JEQ, ValueWrapper(ValueWrapper::Type::CONSTANT, Value((i32)conditional->otherwise->index))));
+								currentInstBlock.PushBack(Instruction(OpCode::CMP, rhsWrapper, g_ZeroIntValueWrapper));
+								currentInstBlock.PushBack(Instruction(OpCode::JEQ, ValueWrapper(ValueWrapper::Type::CONSTANT, Value((i32)conditional->otherwise->index))));
+								currentInstBlock.PushBack(Instruction(OpCode::JMP, ValueWrapper(ValueWrapper::Type::CONSTANT, Value((i32)conditional->then->index))));
+								state->PushInstructionBlock();
+								//currentInstBlock = state->CurrentInstructionBlock();
+
+								bHandled = true;
+								opCode = OpCode::_NONE;
 								break;
 							}
-
-							lhsWrapper = GetValueWrapperFromIRValue(ir->state, binary->left);
-							rhsWrapper = GetValueWrapperFromIRValue(ir->state, binary->right);
 						} break;
 						}
 
-						if (opCode != OpCode::_NONE)
+						if (!bHandled)
 						{
-							currentInstBlock.PushBack(Instruction(OpCode::CMP, lhsWrapper, rhsWrapper));
-							currentInstBlock.PushBack(Instruction(opCode, ValueWrapper(ValueWrapper::Type::CONSTANT, Value((i32)conditional->then->index))));
-
-							if (conditional->then != nullptr)
+							if (opCode != OpCode::_NONE)
 							{
-								currentInstBlock.PushBack(Instruction(OpCode::JMP, ValueWrapper(ValueWrapper::Type::CONSTANT, Value((i32)conditional->otherwise->index))));
+								currentInstBlock.PushBack(Instruction(OpCode::CMP, lhsWrapper, rhsWrapper));
+								currentInstBlock.PushBack(Instruction(opCode, ValueWrapper(ValueWrapper::Type::CONSTANT, Value((i32)conditional->then->index))));
+
+								if (conditional->then != nullptr)
+								{
+									currentInstBlock.PushBack(Instruction(OpCode::JMP, ValueWrapper(ValueWrapper::Type::CONSTANT, Value((i32)conditional->otherwise->index))));
+								}
+								state->PushInstructionBlock();
 							}
-							state->PushInstructionBlock();
-						}
-						else
-						{
-							diagnosticContainer->AddDiagnostic(conditional->origin, "Invalid branch condition");
+							else
+							{
+								diagnosticContainer->AddDiagnostic(conditional->origin, "Invalid branch condition");
+							}
 						}
 					} break;
 					case IR::TerminatorType::HALT:
@@ -616,6 +695,18 @@ namespace flex
 				case OpCode::JMP:
 					m_RunningState.instructionIdx = inst.val0.Get(this).valInt;
 					break;
+				case OpCode::JZ:
+					if (m_RunningState.zf)
+					{
+						m_RunningState.instructionIdx = inst.val0.Get(this).valInt;
+					}
+					break;
+				case OpCode::JNZ:
+					if (!m_RunningState.zf)
+					{
+						m_RunningState.instructionIdx = inst.val0.Get(this).valInt;
+					}
+					break;
 				case OpCode::JLT:
 					if (!m_RunningState.sf && !m_RunningState.zf)
 					{
@@ -784,6 +875,42 @@ namespace flex
 		const char* OpCodeToString(OpCode opCode)
 		{
 			return s_OpCodeStrings[(u32)opCode];
+		}
+
+		OpCode BinaryOperatorTypeToOpCode(IR::BinaryOperatorType opType)
+		{
+			switch (opType)
+			{
+			case IR::BinaryOperatorType::EQUAL_TEST: return OpCode::JEQ;
+			case IR::BinaryOperatorType::NOT_EQUAL_TEST: return OpCode::JNE;
+			case IR::BinaryOperatorType::GREATER_TEST: return OpCode::JGT;
+			case IR::BinaryOperatorType::GREATER_EQUAL_TEST: return OpCode::JGE;
+			case IR::BinaryOperatorType::LESS_TEST: return OpCode::JLT;
+			case IR::BinaryOperatorType::LESS_EQUAL_TEST: return OpCode::JLE;
+			default:
+			{
+
+				return OpCode::_NONE;
+			}
+			}
+		}
+
+		OpCode BinaryOperatorTypeToInverseOpCode(IR::BinaryOperatorType opType)
+		{
+			switch (opType)
+			{
+			case IR::BinaryOperatorType::EQUAL_TEST: return OpCode::JNE;
+			case IR::BinaryOperatorType::NOT_EQUAL_TEST: return OpCode::JEQ;
+			case IR::BinaryOperatorType::GREATER_TEST: return OpCode::JLE;
+			case IR::BinaryOperatorType::GREATER_EQUAL_TEST: return OpCode::JLT;
+			case IR::BinaryOperatorType::LESS_TEST: return OpCode::JGE;
+			case IR::BinaryOperatorType::LESS_EQUAL_TEST: return OpCode::JGT;
+			default:
+			{
+
+				return OpCode::_NONE;
+			}
+			}
 		}
 
 		/*

@@ -34,7 +34,7 @@ namespace flex
 
 		bool HasNext()
 		{
-			return (index + 1) < (u32)source.size();
+			return Has(1);
 		}
 
 		bool Has(u32 offset)
@@ -44,7 +44,7 @@ namespace flex
 
 		char PeekNext()
 		{
-			return source[index + 1];
+			return Peek(1);
 		}
 
 		char Peek(u32 offset)

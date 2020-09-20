@@ -205,13 +205,14 @@
 			},
 			"terminal" : 
 			{
-				"str" : "//func call() -> int { return i; }
+				"str" : "func call() -> int { return 42; }
 //func call() -> void  { }
-int a = 1;
-if (a > 10 * a - 1)
+int b = 10;
+int a = b;
+if (a && a > 0)
 {
   a = 2;
-//  int d = call(1);
+  int d = call();
 //  int c = 12 + d * call(100);
 //  print(c);
 }
@@ -220,9 +221,15 @@ else
   a = 3;
 }
 int b = a;
-//bool ab = true;
-//bool ba = false;
-//bool bab = ab && ba || ba | ab;"
+bool ab = true;
+bool ba = false;
+bool cc = ab && ba;
+//bool bab = ab && ba || ba | ab;
+for (int i = 0; i < 10; i += 1)
+{
+  a += i * 88 + 1;
+}
+int c = a;"
 			},
 			"children" : 
 			[

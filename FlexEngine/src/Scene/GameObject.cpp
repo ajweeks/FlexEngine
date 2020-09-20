@@ -5125,7 +5125,7 @@ namespace flex
 				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.5f, 0.5f, 1.0f));
 				for (const Diagnostic& diagnostic : m_VM->diagnosticContainer->diagnostics)
 				{
-					ImGui::Text("L%d: %s", diagnostic.lineNumber + 1, diagnostic.message.c_str());
+					ImGui::TextWrapped("L%d: %s", diagnostic.lineNumber + 1, diagnostic.message.c_str());
 				}
 				ImGui::PopStyleColor();
 			}
