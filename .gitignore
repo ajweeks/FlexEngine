@@ -40,6 +40,8 @@ sh.exe.stackdump
 AdditionalFiles/flex-cppcheck-build-dir/**
 AdditionalFiles/FlexVTune/**
 
+*.ngfx-gputrace*
+
 FlexEngine/dependencies/freetype/objs
 FlexEngine/dependencies/freetype/builds/**
 
