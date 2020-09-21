@@ -239,7 +239,7 @@ namespace flex
 				auto iter = functionTypes.find(funcCall->target);
 				if (iter != functionTypes.end())
 				{
-					return iter->second;
+					return iter->second.returnType;
 				}
 				else
 				{
@@ -673,7 +673,13 @@ namespace flex
 			{
 				AST::FunctionDeclaration* funcDecl = (AST::FunctionDeclaration*)statement;
 
-				AddFunctionType(funcDecl->span, funcDecl->name, Value::FromASTTypeName(funcDecl->returnType));
+				std::vector<Value::Type> argumentTypes(funcDecl->arguments.size());
+				for (u32 i = 0; i < (u32)funcDecl->arguments.size(); ++i)
+				{
+					argumentTypes[i] = Value::FromASTTypeName(funcDecl->arguments[i]->typeName);
+				}
+
+				AddFunctionType(funcDecl->span, funcDecl->name, Value::FromASTTypeName(funcDecl->returnType), argumentTypes);
 			} break;
 			}
 		}
@@ -1069,7 +1075,7 @@ namespace flex
 						{
 							std::string lhsVar = state->NextTemporary();
 							state->WriteVariableInBlock(lhsVar, lhsVal);
-							lhsVal = new IR::Identifier(state, Span(Span::Source::GENERATED), lhsVar);
+							lhsVal = new IR::Identifier(state, lhsVal->origin, lhsVar);
 						}
 					}
 					if (!Value::IsLiteral(rhsVal->type) && rhsVal->type != Value::Type::IDENTIFIER)
@@ -1087,7 +1093,7 @@ namespace flex
 						{
 							std::string rhsVar = state->NextTemporary();
 							state->WriteVariableInBlock(rhsVar, rhsVal);
-							rhsVal = new IR::Identifier(state, Span(Span::Source::GENERATED), rhsVar);
+							rhsVal = new IR::Identifier(state, rhsVal->origin, rhsVar);
 						}
 					}
 
@@ -1126,14 +1132,14 @@ namespace flex
 						{
 							std::string lhsVar = state->NextTemporary();
 							state->WriteVariableInBlock(lhsVar, new IR::CastValue(state, lhsVal->origin, resultType, lhsVal));
-							lhsVal = new IR::Identifier(state, Span(Span::Source::GENERATED), lhsVar);
+							lhsVal = new IR::Identifier(state, lhsVal->origin, lhsVar);
 						}
 
 						if (rhsType != resultType)
 						{
 							std::string rhsVar = state->NextTemporary();
 							state->WriteVariableInBlock(rhsVar, new IR::CastValue(state, rhsVal->origin, resultType, rhsVal));
-							rhsVal = new IR::Identifier(state, Span(Span::Source::GENERATED), rhsVar);
+							rhsVal = new IR::Identifier(state, rhsVal->origin, rhsVar);
 						}
 					}
 
@@ -1151,12 +1157,12 @@ namespace flex
 
 				state->PushInstructionBlock(ifTrueBlock);
 				LowerStatement(ternary->ifTrue);
-				state->InsertionBlock()->AddBranch(Span(Span::Source::GENERATED), mergeBlock);
+				state->InsertionBlock()->AddBranch(ternary->span, mergeBlock);
 				state->InsertionBlock()->SealBlock();
 
 				state->PushInstructionBlock(ifFalseBlock);
 				LowerStatement(ternary->ifFalse);
-				state->InsertionBlock()->AddBranch(Span(Span::Source::GENERATED), mergeBlock);
+				state->InsertionBlock()->AddBranch(ternary->span, mergeBlock);
 				state->InsertionBlock()->SealBlock();
 
 				state->PushInstructionBlock(mergeBlock);
@@ -1167,11 +1173,72 @@ namespace flex
 			{
 				AST::FunctionCall* functionCall = (AST::FunctionCall*)expression;
 				std::vector<IR::Value*> arguments;
-				for (u32 i = 0; i < (u32)functionCall->arguments.size(); ++i)
+				auto iter = state->functionTypes.find(functionCall->target);
+				if (iter != state->functionTypes.end())
 				{
-					arguments.push_back(LowerExpression(functionCall->arguments[i]));
+					State::FuncSig& funcSig = iter->second;
+					bool bSigMatches = functionCall->arguments.size() == funcSig.argumentTypes.size();
+
+					if (functionCall->arguments.size() == funcSig.argumentTypes.size())
+					{
+						for (u32 i = 0; i < (u32)functionCall->arguments.size(); ++i)
+						{
+							Value* argVal = LowerExpression(functionCall->arguments[i]);
+							if (!Value::IsLiteral(argVal->type))
+							{
+								std::string tempVar = state->NextTemporary();
+								state->WriteVariableInBlock(tempVar, argVal);
+								argVal = new IR::Identifier(state, functionCall->arguments[i]->span, tempVar);
+							}
+							arguments.push_back(argVal);
+						}
+
+						for (u32 i = 0; i < (u32)functionCall->arguments.size(); ++i)
+						{
+							if (state->GetValueType(arguments[i]) != funcSig.argumentTypes[i])
+							{
+								bSigMatches = false;
+								break;
+							}
+						}
+					}
+
+					if (bSigMatches)
+					{
+						return new IR::FunctionCallValue(state, functionCall->span, functionCall->target, arguments);
+					}
+					else
+					{
+						StringBuilder message;
+						message.Append("Incorrect number/type of arguments, expected:\n(");
+						for (u32 i = 0; i < (u32)funcSig.argumentTypes.size(); ++i)
+						{
+							message.Append(Value::TypeToString(funcSig.argumentTypes[i]));
+							if (i < (u32)funcSig.argumentTypes.size() - 1)
+							{
+								message.Append(", ");
+							}
+						}
+
+						message.Append(")\ngiven:\n(");
+						for (u32 i = 0; i < (u32)arguments.size(); ++i)
+						{
+							message.Append(Value::TypeToString(state->GetValueType(arguments[i])));
+							if (i < (u32)arguments.size() - 1)
+							{
+								message.Append(", ");
+							}
+						}
+						message.Append(')');
+
+						state->diagnosticContainer->AddDiagnostic(functionCall->span, message.ToString());
+					}
 				}
-				return new IR::FunctionCallValue(state, functionCall->span, functionCall->target, arguments);
+				else
+				{
+					std::string message = "Undeclared function \"" + functionCall->target + "\"";
+					state->diagnosticContainer->AddDiagnostic(functionCall->span, message);
+				}
 			}
 			case AST::StatementType::IDENTIFIER:
 			{
@@ -1226,7 +1293,7 @@ namespace flex
 			return new IR::Value(expression->span, state, IR::Value::Type::_NONE);
 		}
 
-		void IntermediateRepresentation::AddFunctionType(Span origin, const std::string& funcName, Value::Type returnType)
+		void IntermediateRepresentation::AddFunctionType(Span origin, const std::string& funcName, Value::Type returnType, const std::vector<Value::Type>& argumentTypes)
 		{
 			if (state->functionTypes.find(funcName) != state->functionTypes.end())
 			{
@@ -1239,7 +1306,7 @@ namespace flex
 				return;
 			}
 
-			state->functionTypes[funcName] = returnType;
+			state->functionTypes[funcName] = { returnType, argumentTypes };
 		}
 
 		void IntermediateRepresentation::SetBlockIndices()

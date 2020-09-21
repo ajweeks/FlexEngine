@@ -407,9 +407,15 @@ namespace flex
 			Block* InsertionBlock();
 			std::vector<Block*> blocks;
 
+			struct FuncSig
+			{
+				Value::Type returnType;
+				std::vector<Value::Type> argumentTypes;
+			};
+
 			u32 tempCount = 0;
 			std::map<std::string, Value::Type> variableTypes;
-			std::map<std::string, Value::Type> functionTypes;
+			std::map<std::string, FuncSig> functionTypes;
 
 			DiagnosticContainer* diagnosticContainer = nullptr;
 		};
@@ -434,7 +440,7 @@ namespace flex
 			void LowerFunctionDefinitions(AST::Statement* statement);
 			//ValueWrapper GetValueWrapperFromExpression(AST::Expression* expression);
 
-			void AddFunctionType(Span origin, const std::string& funcName, Value::Type returnType);
+			void AddFunctionType(Span origin, const std::string& funcName, Value::Type returnType, const std::vector<Value::Type>& argumentTypes);
 			void CheckReturnTypesMatch(Value::Type returnType, Span origin, Block* block);
 
 			void SetBlockIndices();
