@@ -4984,7 +4984,7 @@ namespace flex
 							pos = firstLinePos;
 							pos.y -= lineHeight * diagnostics[i].lineNumber;
 							g_Renderer->DrawStringWS("!", errorColour, pos + right * (charWidth * 1.f), rot, letterSpacing, m_LetterScale);
-							u32 spanLen = glm::max(60u, glm::min(0u, (u32)span.Length()));
+							u32 spanLen = glm::min(60u, glm::max(0u, (u32)span.Length()));
 							std::string underlineStr = std::string(diagnostics[i].columnIndex, ' ') + std::string(spanLen, '_');
 							pos.y -= lineHeight * 0.2f;
 							g_Renderer->DrawStringWS(underlineStr, errorColour, pos, rot, letterSpacing, m_LetterScale);
