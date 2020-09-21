@@ -139,8 +139,6 @@ namespace flex
 			case TokenKind::FOR_SLASH_EQUALS:
 			case TokenKind::PERCENT_EQUALS:
 				return 200;
-			case TokenKind::COMMA:
-				return 100;
 			default:
 				return -1;
 			}

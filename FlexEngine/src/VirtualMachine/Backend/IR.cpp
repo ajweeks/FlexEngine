@@ -188,6 +188,11 @@ namespace flex
 
 		Value::Type State::GetValueType(Value const* value)
 		{
+			if (value == nullptr)
+			{
+				return Value::Type::_NONE;
+			}
+
 			switch (value->type)
 			{
 			case Value::Type::IDENTIFIER:
@@ -1179,20 +1184,20 @@ namespace flex
 					State::FuncSig& funcSig = iter->second;
 					bool bSigMatches = functionCall->arguments.size() == funcSig.argumentTypes.size();
 
+					for (u32 i = 0; i < (u32)functionCall->arguments.size(); ++i)
+					{
+						Value* argVal = LowerExpression(functionCall->arguments[i]);
+						if (argVal != nullptr && !Value::IsLiteral(argVal->type))
+						{
+							std::string tempVar = state->NextTemporary();
+							state->WriteVariableInBlock(tempVar, argVal);
+							argVal = new IR::Identifier(state, functionCall->arguments[i]->span, tempVar);
+						}
+						arguments.push_back(argVal);
+					}
+
 					if (functionCall->arguments.size() == funcSig.argumentTypes.size())
 					{
-						for (u32 i = 0; i < (u32)functionCall->arguments.size(); ++i)
-						{
-							Value* argVal = LowerExpression(functionCall->arguments[i]);
-							if (!Value::IsLiteral(argVal->type))
-							{
-								std::string tempVar = state->NextTemporary();
-								state->WriteVariableInBlock(tempVar, argVal);
-								argVal = new IR::Identifier(state, functionCall->arguments[i]->span, tempVar);
-							}
-							arguments.push_back(argVal);
-						}
-
 						for (u32 i = 0; i < (u32)functionCall->arguments.size(); ++i)
 						{
 							if (state->GetValueType(arguments[i]) != funcSig.argumentTypes[i])
