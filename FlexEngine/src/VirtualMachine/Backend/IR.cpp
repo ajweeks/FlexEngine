@@ -1150,7 +1150,7 @@ namespace flex
 
 					return new IR::BinaryValue(state, lhsVal->origin.Extend(rhsVal->origin), irOpType, lhsVal, rhsVal);
 				}
-			}
+			} break;
 			case AST::StatementType::TERNARY_OPERATION:
 			{
 				AST::TernaryOperation* ternary = (AST::TernaryOperation*)expression;
@@ -1244,7 +1244,7 @@ namespace flex
 					std::string message = "Undeclared function \"" + functionCall->target + "\"";
 					state->diagnosticContainer->AddDiagnostic(functionCall->span, message);
 				}
-			}
+			} break;
 			case AST::StatementType::IDENTIFIER:
 			{
 				AST::Identifier* identifier = (AST::Identifier*)expression;
