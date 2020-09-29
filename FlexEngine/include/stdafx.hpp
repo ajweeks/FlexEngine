@@ -69,6 +69,8 @@
 
 #define FLEX_VERSION(major, minor, patch) (((major) << 22) | ((minor) << 12) | (patch))
 
+#define FLEX_NO_DISCARD [[nodiscard]]
+
 #if defined(__clang__)
 #define IGNORE_WARNINGS_PUSH \
 		_Pragma("clang diagnostic push") \
