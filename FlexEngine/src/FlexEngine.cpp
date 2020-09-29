@@ -1245,10 +1245,10 @@ namespace flex
 					ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackCharFilter | ImGuiInputTextFlags_CallbackCompletion | ImGuiInputTextFlags_CallbackHistory,
 					[](ImGuiInputTextCallbackData* data) { return g_EngineInstance->ImGuiConsoleInputCallback(data); }))
 				{
-					ToLower(m_CmdLineStrBuf);
+					const std::string cmdLineStrBufClean = ToLower(m_CmdLineStrBuf);
 					for (const ConsoleCommand& cmd : m_ConsoleCommands)
 					{
-						if (strcmp(m_CmdLineStrBuf, cmd.name.c_str()) == 0)
+						if (strcmp(cmdLineStrBufClean.c_str(), cmd.name.c_str()) == 0)
 						{
 							cmd.fun();
 							if (m_PreviousCmdLineEntries.empty() ||
