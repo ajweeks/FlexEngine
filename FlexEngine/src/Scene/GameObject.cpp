@@ -5203,6 +5203,8 @@ namespace flex
 			}
 		}
 
+		str = Replace(str, "\"", "\\\"");
+
 		terminalObj.fields.emplace_back("str", JSONValue(str));
 
 		parentObject.fields.emplace_back("terminal", JSONValue(terminalObj));

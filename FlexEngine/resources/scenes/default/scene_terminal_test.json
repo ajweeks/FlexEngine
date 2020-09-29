@@ -22,8 +22,8 @@
 		"transform" : 
 		{
 			"position" : "-2.381, 1.602, 5.379",
-			"pitch" : -0.000467,
-			"yaw" : 1.783797
+			"pitch" : -0.000450,
+			"yaw" : 1.783802
 		}
 	},
 	"objects" : 
@@ -206,30 +206,18 @@
 			"terminal" : 
 			{
 				"str" : "func call() -> int { return 42; }
-//func call() -> void  { }
+func call2(int a, bool b, char c, string s)
+ -> int { return a * a; }
 int b = 10;
 int a = b;
 if (a && a > 0)
 {
   a = 2;
-  int d = call();
-//  int c = 12 + d * call(100);
-//  print(c);
-}
-else
-{
-  a = 3;
-}
-int b = a;
-bool ab = true;
-bool ba = false;
-bool cc = ab && ba;
-//bool bab = ab && ba || ba | ab;
-for (int i = 0; i < 10; i += 1)
-{
-  a += i * 88 + 1;
-}
-int c = a;"
+  bool p = false;
+  int pp = (int)p;
+  a = call2(pp + 3 * 99 * a, true,
+          'c', \"21\");
+}"
 			},
 			"children" : 
 			[

@@ -1283,19 +1283,20 @@ namespace flex
 		return absolutePath;
 	}
 
+	// TODO: Test thoroughly
 	std::string Replace(const std::string& str, const std::string& pattern, const std::string& replacement)
 	{
 		std::string result(str);
 
-		auto iter = result.begin();
+		u32 i = 0;
 
-		while (iter != result.end())
+		while (i < result.length())
 		{
-			size_t findIndex = result.find(pattern.c_str(), iter - result.begin());
+			size_t findIndex = result.find(pattern.c_str(), i);
 			if (findIndex != std::string::npos)
 			{
-				result = result.replace(result.begin() + findIndex, result.begin() + findIndex + pattern.length(), replacement.begin(), replacement.end());
-				iter += pattern.length();
+				result.replace(result.begin() + findIndex, result.begin() + findIndex + pattern.length(), replacement.begin(), replacement.end());
+				i = (u32)(findIndex + replacement.length());
 			}
 			else
 			{
