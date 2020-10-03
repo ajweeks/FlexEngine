@@ -1717,11 +1717,11 @@ namespace flex
 
 				{
 					rhs = NextPrimary();
-				if (rhs == nullptr)
-				{
-					delete lhs;
-					return nullptr;
-				}
+					if (rhs == nullptr)
+					{
+						delete lhs;
+						return nullptr;
+					}
 				}
 
 				i32 nextPrecedence = GetBinaryOperatorPrecedence(m_Current.kind);

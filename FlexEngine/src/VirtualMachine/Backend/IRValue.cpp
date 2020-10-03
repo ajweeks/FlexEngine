@@ -14,7 +14,7 @@ namespace flex
 		Value* g_EmptyIRValue = nullptr;
 		constexpr const char* Value::g_TypeStrings[];
 
-		const char* Value::TypeToString(Type type)
+		const char* Value::TypeToString(Value::Type type)
 		{
 			return g_TypeStrings[(u32)type];
 		}

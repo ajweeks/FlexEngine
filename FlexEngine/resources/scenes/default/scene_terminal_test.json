@@ -21,7 +21,7 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-2.381, 1.602, 5.376",
+			"position" : "-2.381, 1.602, 5.379",
 			"pitch" : -0.000467,
 			"yaw" : 1.783797
 		}
@@ -207,11 +207,11 @@
 			{
 				"str" : "int a = 10;
 int b = 20;
-if (a > 0 && a < 10 && b == 20)
+bool bash = a > b ? true : false;
+if (a > 99 || a <= 10 && b == 20)
 {
   b = 33;
-}
-"
+}"
 			},
 			"children" : 
 			[

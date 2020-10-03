@@ -600,7 +600,7 @@ namespace flex
 			EXPECT(ast->diagnosticContainer->diagnostics.empty(), true);
 			for (const Diagnostic& diagnostic : ast->diagnosticContainer->diagnostics)
 			{
-				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
+				PrintError("L%u: %s\n", diagnostic.span.lineNumber, diagnostic.message.c_str());
 			}
 
 			std::string reconstructedStr = ast->rootBlock->ToString();
@@ -634,7 +634,7 @@ namespace flex
 			EXPECT(ast->diagnosticContainer->diagnostics.empty(), true);
 			for (const Diagnostic& diagnostic : ast->diagnosticContainer->diagnostics)
 			{
-				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
+				PrintError("L%u: %s\n", diagnostic.span.lineNumber, diagnostic.message.c_str());
 			}
 
 			std::string reconstructedStr = ast->rootBlock->ToString();
@@ -695,7 +695,7 @@ namespace flex
 			EXPECT(ast->diagnosticContainer->diagnostics.empty(), true);
 			for (const Diagnostic& diagnostic : ast->diagnosticContainer->diagnostics)
 			{
-				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
+				PrintError("L%u: %s\n", diagnostic.span.lineNumber, diagnostic.message.c_str());
 			}
 
 			std::string reconstructedStr = ast->rootBlock->ToString();
@@ -729,7 +729,7 @@ namespace flex
 			EXPECT(ast->diagnosticContainer->diagnostics.empty(), true);
 			for (const Diagnostic& diagnostic : ast->diagnosticContainer->diagnostics)
 			{
-				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
+				PrintError("L%u: %s\n", diagnostic.span.lineNumber, diagnostic.message.c_str());
 			}
 
 			std::string reconstructedStr = ast->rootBlock->ToString();
@@ -763,7 +763,7 @@ namespace flex
 			EXPECT(ast->diagnosticContainer->diagnostics.empty(), true);
 			for (const Diagnostic& diagnostic : ast->diagnosticContainer->diagnostics)
 			{
-				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
+				PrintError("L%u: %s\n", diagnostic.span.lineNumber, diagnostic.message.c_str());
 			}
 
 			std::string reconstructedStr = ast->rootBlock->ToString();
@@ -822,7 +822,7 @@ namespace flex
 			EXPECT(ast->diagnosticContainer->diagnostics.empty(), true);
 			for (const Diagnostic& diagnostic : ast->diagnosticContainer->diagnostics)
 			{
-				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
+				PrintError("L%u: %s\n", diagnostic.span.lineNumber, diagnostic.message.c_str());
 			}
 
 			std::string reconstructedStr = ast->rootBlock->ToString();
@@ -863,7 +863,7 @@ namespace flex
 			EXPECT(vm->state->diagnosticContainer->diagnostics.size(), 0);
 			for (const Diagnostic& diagnostic : vm->state->diagnosticContainer->diagnostics)
 			{
-				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
+				PrintError("L%u: %s\n", diagnostic.span.lineNumber, diagnostic.message.c_str());
 			}
 
 			EXPECT(vm->registers[0].valInt, (1 + 2) * 2);
@@ -935,7 +935,7 @@ namespace flex
 			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
 			for (const Diagnostic& diagnostic : vm->diagnosticContainer->diagnostics)
 			{
-				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
+				PrintError("L%u: %s\n", diagnostic.span.lineNumber, diagnostic.message.c_str());
 			}
 
 			EXPECT(vm->registers[0].valInt, (1 + 2) * 2);
@@ -983,7 +983,7 @@ namespace flex
 			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
 			for (const Diagnostic& diagnostic : vm->diagnosticContainer->diagnostics)
 			{
-				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
+				PrintError("L%u: %s\n", diagnostic.span.lineNumber, diagnostic.message.c_str());
 			}
 
 			EXPECT(vm->registers[0].valInt, 10);
@@ -1052,7 +1052,7 @@ namespace flex
 			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
 			for (const Diagnostic& diagnostic : vm->diagnosticContainer->diagnostics)
 			{
-				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
+				PrintError("L%u: %s\n", diagnostic.span.lineNumber, diagnostic.message.c_str());
 			}
 
 			EXPECT(vm->registers[0].valInt, (3 * 5) * 2);
@@ -1077,7 +1077,7 @@ namespace flex
 			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
 			for (const Diagnostic& diagnostic : vm->diagnosticContainer->diagnostics)
 			{
-				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
+				PrintError("L%u: %s\n", diagnostic.span.lineNumber, diagnostic.message.c_str());
 			}
 
 			i32 foo = 2 * 7 + 9 - 6; // 17
@@ -1102,7 +1102,7 @@ namespace flex
 			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
 			for (const Diagnostic& diagnostic : vm->diagnosticContainer->diagnostics)
 			{
-				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
+				PrintError("L%u: %s\n", diagnostic.span.lineNumber, diagnostic.message.c_str());
 			}
 
 			real foo = 2.0f * 7.0f + 9.0f - 6.0f; // 17.0f
@@ -1127,7 +1127,7 @@ namespace flex
 			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
 			for (const Diagnostic& diagnostic : vm->diagnosticContainer->diagnostics)
 			{
-				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
+				PrintError("L%u: %s\n", diagnostic.span.lineNumber, diagnostic.message.c_str());
 			}
 
 			EXPECT(vm->registers[2].valInt, 2);
@@ -1153,7 +1153,7 @@ namespace flex
 			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
 			for (const Diagnostic& diagnostic : vm->diagnosticContainer->diagnostics)
 			{
-				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
+				PrintError("L%u: %s\n", diagnostic.span.lineNumber, diagnostic.message.c_str());
 			}
 
 			EXPECT(vm->registers[5].valInt, 10 * 5 - (10 + 12) / (50 * 99));
@@ -1198,7 +1198,7 @@ namespace flex
 			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
 			for (const Diagnostic& diagnostic : vm->diagnosticContainer->diagnostics)
 			{
-				PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
+				PrintError("L%u: %s\n", diagnostic.span.lineNumber, diagnostic.message.c_str());
 			}
 
 			EXPECT(vm->stack.empty(), true);

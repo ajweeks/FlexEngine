@@ -4945,7 +4945,9 @@ namespace flex
 				static const glm::vec4 lineNumberColourActive(0.65f, 0.65f, 0.65f, 1.0f);
 				static const glm::vec4 textColour(0.85f, 0.81f, 0.80f, 1.0f);
 				static const glm::vec4 errorColour(0.65f, 0.12f, 0.13f, 1.0f);
+				static const glm::vec4 stepColour(0.24f, 0.65f, 0.23f, 1.0f);
 				static const glm::vec4 commentColour(0.35f, 0.35f, 0.35f, 1.0f);
+
 				glm::vec3 firstLinePos = pos;
 				for (i32 lineNumber = 0; lineNumber < (i32)lines.size(); ++lineNumber)
 				{
@@ -4964,8 +4966,7 @@ namespace flex
 						{
 							std::string codeStr = lines[lineNumber].substr(0, lineCommentIdx);
 							g_Renderer->DrawStringWS(codeStr, textColour, pos, rot, letterSpacing, m_LetterScale);
-							tPos += -right *
-								(g_Renderer->GetStringWidth(codeStr, font, letterSpacing, false) * frameBufferScale * font->metaData.size * m_LetterScale);
+							tPos += -right * (g_Renderer->GetStringWidth(codeStr, font, letterSpacing, false) * frameBufferScale * font->metaData.size * m_LetterScale);
 						}
 
 						g_Renderer->DrawStringWS(lines[lineNumber].substr(lineCommentIdx), commentColour, tPos, rot, letterSpacing, m_LetterScale);
@@ -4982,13 +4983,25 @@ namespace flex
 						{
 							const Span& span = diagnostics[i].span;
 							pos = firstLinePos;
-							pos.y -= lineHeight * diagnostics[i].lineNumber;
+							pos.y -= lineHeight * diagnostics[i].span.lineNumber;
 							g_Renderer->DrawStringWS("!", errorColour, pos + right * (charWidth * 1.f), rot, letterSpacing, m_LetterScale);
 							u32 spanLen = glm::min(60u, glm::max(0u, (u32)span.Length()));
-							std::string underlineStr = std::string(diagnostics[i].columnIndex, ' ') + std::string(spanLen, '_');
+							std::string underlineStr = std::string(diagnostics[i].span.columnIndex, ' ') + std::string(spanLen, '_');
 							pos.y -= lineHeight * 0.2f;
 							g_Renderer->DrawStringWS(underlineStr, errorColour, pos, rot, letterSpacing, m_LetterScale);
 						}
+					}
+
+					const bool bVMExecuting = m_VM->IsExecuting();
+					i32 vmLineNumber = m_VM->CurrentLineNumber();
+					if (bVMExecuting && vmLineNumber != -1)
+					{
+						pos = firstLinePos;
+						pos.y -= lineHeight * vmLineNumber;
+						u32 spanLen = glm::min(60u, glm::max(0u, (u32)lines[vmLineNumber].size()));
+						std::string underlineStr = std::string(spanLen, '_');
+						pos.y -= lineHeight * 0.2f;
+						g_Renderer->DrawStringWS(underlineStr, stepColour, pos, rot, letterSpacing, m_LetterScale);
 					}
 				}
 			}
@@ -5050,7 +5063,7 @@ namespace flex
 				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.5f, 0.5f, 1.0f));
 				for (const Diagnostic& diagnostic : m_VM->diagnosticContainer->diagnostics)
 				{
-					ImGui::TextWrapped("L%d: %s", diagnostic.lineNumber + 1, diagnostic.message.c_str());
+					ImGui::TextWrapped("L%d: %s", diagnostic.span.lineNumber + 1, diagnostic.message.c_str());
 				}
 				ImGui::PopStyleColor();
 			}
@@ -5245,7 +5258,6 @@ namespace flex
 		}
 		else
 		{
-			// TODO: Enforce screen width
 			if (cursor.x == (i32)curLine.size())
 			{
 				curLine.push_back(c);
@@ -5586,20 +5598,22 @@ namespace flex
 				}
 				if (keyCode == KeyCode::KEY_SLASH)
 				{
-					if (bCtrlDown)
+					if (bCtrlDown) // Comment line
 					{
 						i32 pCursorPosX = cursor.x;
 						cursor.x = 0;
-						if (lines[cursor.y].size() < 2)
+						std::string strippedLine = TrimLeadingWhitespace(lines[cursor.y]);
+						i32 leadingWhitespaceCount = (i32)(strippedLine.size() - lines[cursor.y].size());
+						if (strippedLine.size() < 2)
 						{
-							// TODO: Check line length
 							TypeChar('/');
 							TypeChar('/');
 							cursor.x = pCursorPosX + 2;
 						}
 						else
 						{
-							if (lines[cursor.y][0] == '/' && lines[cursor.y][1] == '/')
+							cursor.x = leadingWhitespaceCount;
+							if (strippedLine[0] == '/' && strippedLine[1] == '/')
 							{
 								DeleteCharInFront(false);
 								DeleteCharInFront(false);
@@ -5607,12 +5621,16 @@ namespace flex
 							}
 							else
 							{
-								// TODO: Check line length
+
 								TypeChar('/');
 								TypeChar('/');
 								cursor.x = pCursorPosX + 2;
 							}
 						}
+					}
+					else if (bShiftDown)
+					{
+						TypeChar(InputManager::GetShiftModifiedKeyCode('/'));
 					}
 					else
 					{

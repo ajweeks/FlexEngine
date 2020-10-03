@@ -70,13 +70,22 @@
     <DisplayString>{(const char*)&amp;(buffer[0])} (len {length}, cap {buffer.size()})</DisplayString>
   </Type>
 
-  <Type Name="flex::Value">
-    <DisplayString Condition="type == flex::Value::Type::INT">{valInt}</DisplayString>
-    <DisplayString Condition="type == flex::Value::Type::FLOAT">{valFloat}</DisplayString>
-    <DisplayString Condition="type == flex::Value::Type::BOOL">{valBool}</DisplayString>
-    <DisplayString Condition="type == flex::Value::Type::STRING">{valStr}</DisplayString>
-    <DisplayString Condition="type == flex::Value::Type::CHAR">{valChar}</DisplayString>
-    <DisplayString Condition="type == flex::Value::Type::_NONE">none</DisplayString>
+  <Type Name="flex::IR::Value">
+    <DisplayString Condition="type == flex::IR::Value::Type::INT">{valInt}</DisplayString>
+    <DisplayString Condition="type == flex::IR::Value::Type::FLOAT">{valFloat}</DisplayString>
+    <DisplayString Condition="type == flex::IR::Value::Type::BOOL">{valBool}</DisplayString>
+    <DisplayString Condition="type == flex::IR::Value::Type::STRING">{valStr}</DisplayString>
+    <DisplayString Condition="type == flex::IR::Value::Type::CHAR">{valChar}</DisplayString>
+    <DisplayString Condition="type == flex::IR::Value::Type::_NONE">none</DisplayString>
+  </Type>
+
+  <Type Name="flex::VM::Value">
+    <DisplayString Condition="type == flex::IR::Value::Type::INT">{valInt}</DisplayString>
+    <DisplayString Condition="type == flex::IR::Value::Type::FLOAT">{valFloat}</DisplayString>
+    <DisplayString Condition="type == flex::IR::Value::Type::BOOL">{valBool}</DisplayString>
+    <DisplayString Condition="type == flex::IR::Value::Type::STRING">{valStr}</DisplayString>
+    <DisplayString Condition="type == flex::IR::Value::Type::CHAR">{valChar}</DisplayString>
+    <DisplayString Condition="type == flex::IR::Value::Type::_NONE">none</DisplayString>
   </Type>
 
   <Type Name="flex::Declaration">

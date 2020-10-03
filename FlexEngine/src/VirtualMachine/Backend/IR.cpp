@@ -219,7 +219,15 @@ namespace flex
 			case Value::Type::IDENTIFIER:
 			{
 				Identifier* identifier = (Identifier*)value;
-				return variableTypes[identifier->variable];
+				auto iter = variableTypes.find(identifier->variable);
+				if (iter != variableTypes.end())
+				{
+					return variableTypes[identifier->variable];
+				}
+
+				std::string str = "Undeclared identifier \"" + identifier->variable + "\"\n";
+				diagnosticContainer->AddDiagnostic(identifier->origin, str);
+				return Value::Type::_NONE;
 			}
 			case Value::Type::UNARY:
 			{
@@ -256,7 +264,12 @@ namespace flex
 			{
 				BinaryValue* binary = (BinaryValue*)value;
 				Value::Type leftType = GetValueType(binary->left);
-				//Value::Type rightType = GetValueType(binary->right);
+				Value::Type rightType = GetValueType(binary->right);
+				if (leftType != rightType)
+				{
+					diagnosticContainer->AddDiagnostic(binary->origin, "Mismatched types in binary operation");
+					return Value::Type::_NONE;
+				}
 				return leftType;
 			}
 			case Value::Type::TERNARY:
@@ -279,12 +292,10 @@ namespace flex
 				{
 					return iter->second.returnType;
 				}
-				else
-				{
-					std::string str = "Undeclared function \"" + funcCall->target + "\"\n";
-					diagnosticContainer->AddDiagnostic(funcCall->origin, str);
-					return Value::Type::_NONE;
-				}
+
+				std::string str = "Undeclared function \"" + funcCall->target + "\"\n";
+				diagnosticContainer->AddDiagnostic(funcCall->origin, str);
+				return Value::Type::_NONE;
 			}
 			case Value::Type::CAST:
 			{
@@ -1539,5 +1550,5 @@ namespace flex
 			*/
 			return 0;
 		}
-	} // namespace IR
+} // namespace IR
 } // namespace flex

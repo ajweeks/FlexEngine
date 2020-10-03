@@ -12,13 +12,8 @@ namespace flex
 		{
 		}
 
-		void ComputeLineColumnIndicesFromSource(const std::vector<std::string>& sourceLines);
-
 		Span span;
 		std::string message;
-		// TODO: Add line number/column index end for multiline support
-		u32 lineNumber = 0;
-		u32 columnIndex = 0;
 	};
 
 	struct DiagnosticContainer

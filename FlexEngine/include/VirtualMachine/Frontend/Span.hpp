@@ -59,8 +59,29 @@ namespace flex
 			return Span(low, other.high);
 		}
 
+		void ComputeLineColumnIndicesFromSource(const std::vector<std::string>& sourceLines)
+		{
+			u32 charCount = 0;
+			for (u32 i = 0; i < (u32)sourceLines.size(); ++i)
+			{
+				u32 pCharCount = charCount;
+				charCount += (u32)sourceLines[i].length() + 1;
+				if ((u32)low >= pCharCount && (u32)low < charCount)
+				{
+					lineNumber = i;
+					columnIndex = low - pCharCount;
+					break;
+				}
+			}
+		}
+
 		i32 low;
 		i32 high;
+
+		// TODO: Add line number/column index end for multiline support
+		u32 lineNumber = 0;
+		u32 columnIndex = 0;
+
 		Source source = Source::INPUT;
 	};
 } // namespace flex

@@ -211,9 +211,10 @@ namespace flex
 
 		struct InstructionBlock
 		{
-			void PushBack(const Instruction& inst);
+			void PushBack(const Instruction& inst, Span origin);
 
 			std::vector<Instruction> instructions;
+			std::vector<Span> instructionOrigins;
 
 			i32 startOffset = -1;
 		};
@@ -268,6 +269,7 @@ namespace flex
 
 			bool IsExecuting() const;
 			i32 InstructionIndex() const;
+			i32 CurrentLineNumber() const;
 			void ClearRuntimeState();
 
 			bool ZeroFlagSet() const;
@@ -298,6 +300,7 @@ namespace flex
 			};
 
 			std::vector<Instruction> instructions;
+			std::vector<Span> instructionOrigins;
 
 			std::array<VM::Value, REGISTER_COUNT> registers;
 			std::stack<VM::Value> stack;
