@@ -5082,6 +5082,13 @@ namespace flex
 					ImGui::Text("%s", m_VM->irStr.c_str());
 				}
 
+				if (!m_VM->unpatchedInstructionStr.empty())
+				{
+					ImGui::Separator();
+					ImGui::Text("Instructions (unpatched)");
+					ImGui::Text("%s", m_VM->unpatchedInstructionStr.c_str());
+				}
+
 				if (!m_VM->instructionStr.empty())
 				{
 					ImGui::Separator();

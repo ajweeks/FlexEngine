@@ -573,25 +573,51 @@ namespace flex
 				}
 			}
 
-			StringBuilder instructionStrBuilder;
+			StringBuilder strBuilder;
+			for (u32 i = 0; i < (u32)state->instructionBlocks.size(); ++i)
+			{
+				const InstructionBlock& instBlock = state->instructionBlocks[i];
+				strBuilder.Append(IntToString(i, 1, ' '));
+				strBuilder.AppendLine(": {");
+				for (u32 j = 0; j < (u32)instBlock.instructions.size(); ++j)
+				{
+					const Instruction& inst = instBlock.instructions[j];
+					std::string val0Str = inst.val0.ToString();
+					std::string val1Str = inst.val1.ToString();
+					std::string val2Str = inst.val2.ToString();
+					strBuilder.Append("  ");
+					strBuilder.Append(OpCodeToString(inst.opCode));
+					strBuilder.Append(" ");
+					strBuilder.Append(val0Str.c_str());
+					strBuilder.Append(" ");
+					strBuilder.Append(val1Str.c_str());
+					strBuilder.Append(" ");
+					strBuilder.Append(val2Str.c_str());
+					strBuilder.Append("\n");
+				}
+				strBuilder.AppendLine("}");
+			}
+			unpatchedInstructionStr = strBuilder.ToString();
+
+			strBuilder.Clear();
 			for (u32 i = 0; i < (u32)instructions.size(); ++i)
 			{
 				const Instruction& inst = instructions[i];
 				std::string val0Str = inst.val0.ToString();
 				std::string val1Str = inst.val1.ToString();
 				std::string val2Str = inst.val2.ToString();
-				instructionStrBuilder.Append(IntToString(i, 2, ' '));
-				instructionStrBuilder.Append("  ");
-				instructionStrBuilder.Append(OpCodeToString(inst.opCode));
-				instructionStrBuilder.Append(" ");
-				instructionStrBuilder.Append(val0Str.c_str());
-				instructionStrBuilder.Append(" ");
-				instructionStrBuilder.Append(val1Str.c_str());
-				instructionStrBuilder.Append(" ");
-				instructionStrBuilder.Append(val2Str.c_str());
-				instructionStrBuilder.Append("\n");
+				strBuilder.Append(IntToString(i, 2, ' '));
+				strBuilder.Append("  ");
+				strBuilder.Append(OpCodeToString(inst.opCode));
+				strBuilder.Append(" ");
+				strBuilder.Append(val0Str.c_str());
+				strBuilder.Append(" ");
+				strBuilder.Append(val1Str.c_str());
+				strBuilder.Append(" ");
+				strBuilder.Append(val2Str.c_str());
+				strBuilder.Append("\n");
 			}
-			instructionStr = instructionStrBuilder.ToString();
+			instructionStr = strBuilder.ToString();
 		}
 
 		void VirtualMachine::GenerateFromInstStream(const std::vector<Instruction>& inInstructions)

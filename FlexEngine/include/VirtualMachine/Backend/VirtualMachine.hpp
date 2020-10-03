@@ -98,6 +98,7 @@ namespace flex
 
 		OpCode BinaryOperatorTypeToOpCode(IR::BinaryOperatorType opType);
 		OpCode BinaryOperatorTypeToInverseOpCode(IR::BinaryOperatorType opType);
+		OpCode InverseOpCode(OpCode opCode);
 
 		// TODO: Delete:
 		//OpCode IROperatorTypeToOpCode(IR::OperatorType irOperatorType);
@@ -309,6 +310,7 @@ namespace flex
 
 			std::string astStr;
 			std::string irStr;
+			std::string unpatchedInstructionStr;
 			std::string instructionStr;
 
 		private:
