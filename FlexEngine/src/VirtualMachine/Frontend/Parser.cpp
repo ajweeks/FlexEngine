@@ -132,6 +132,8 @@ namespace flex
 				return 400;
 			case TokenKind::BOOLEAN_OR:
 				return 300;
+			case TokenKind::QUESTION:
+				return 250;
 			case TokenKind::EQUALS:
 			case TokenKind::PLUS_EQUALS:
 			case TokenKind::MINUS_EQUALS:
@@ -1699,14 +1701,29 @@ namespace flex
 					return lhs;
 				}
 
+				Expression* rhs = nullptr;
+				if (m_Current.kind == TokenKind::QUESTION)
+				{
+					rhs = NextTernary(lhs);
+					if (rhs == nullptr)
+					{
+						delete lhs;
+						return nullptr;
+					}
+					return rhs;
+				}
+
 				Token binaryOperator = Eat(m_Current.kind);
 
-				Expression* rhs = NextPrimary();
+				{
+					rhs = NextPrimary();
 				if (rhs == nullptr)
 				{
 					delete lhs;
 					return nullptr;
 				}
+				}
+
 				i32 nextPrecedence = GetBinaryOperatorPrecedence(m_Current.kind);
 				if (precedence < nextPrecedence)
 				{

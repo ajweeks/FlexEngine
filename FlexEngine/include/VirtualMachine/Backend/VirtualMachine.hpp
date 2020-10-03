@@ -278,6 +278,8 @@ namespace flex
 
 			static ValueWrapper g_ZeroIntValueWrapper;
 			static ValueWrapper g_ZeroFloatValueWrapper;
+			static ValueWrapper g_OneIntValueWrapper;
+			static ValueWrapper g_OneFloatValueWrapper;
 
 			struct RunningState
 			{

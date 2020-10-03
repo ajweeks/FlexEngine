@@ -259,6 +259,18 @@ namespace flex
 				//Value::Type rightType = GetValueType(binary->right);
 				return leftType;
 			}
+			case Value::Type::TERNARY:
+			{
+				TernaryValue* ternary = (TernaryValue*)value;
+				Value::Type ifTrueType = GetValueType(ternary->ifTrue);
+				Value::Type ifFalseType = GetValueType(ternary->ifFalse);
+				if (ifTrueType != ifFalseType)
+				{
+					diagnosticContainer->AddDiagnostic(ternary->origin, "Mismatched types in ternary operation");
+					return Value::Type::_NONE;
+				}
+				return ifTrueType;
+			}
 			case Value::Type::FUNC_CALL:
 			{
 				FunctionCallValue* funcCall = (FunctionCallValue*)value;
@@ -471,6 +483,29 @@ namespace flex
 			builder.Append(BinaryOperatorTypeToString(opType));
 			builder.Append(" ");
 			builder.Append(right->ToString());
+
+			return builder.ToString();
+		}
+
+		void TernaryValue::Destroy()
+		{
+			delete condition;
+			condition = nullptr;
+			delete ifTrue;
+			ifTrue = nullptr;
+			delete ifFalse;
+			ifFalse = nullptr;
+		}
+
+		std::string TernaryValue::ToString() const
+		{
+			StringBuilder builder;
+
+			builder.Append(condition->ToString());
+			builder.Append(" ? ");
+			builder.Append(ifTrue->ToString());
+			builder.Append(" : ");
+			builder.Append(ifFalse->ToString());
 
 			return builder.ToString();
 		}
@@ -1174,25 +1209,12 @@ namespace flex
 			case AST::StatementType::TERNARY_OPERATION:
 			{
 				AST::TernaryOperation* ternary = (AST::TernaryOperation*)expression;
-				IR::Block* ifTrueBlock = new IR::Block(state, ternary->ifTrue->span);
-				IR::Block* ifFalseBlock = new IR::Block(state, ternary->ifFalse->span);
-				IR::Block* mergeBlock = new IR::Block(state, state->InsertionBlock()->origin);
 
-				state->InsertionBlock()->AddConditionalBranch(ternary->span, LowerExpression(ternary->condition), ifTrueBlock, ifFalseBlock);
+				IR::Value* condition = LowerExpression(ternary->condition);
+				IR::Value* ifTrue = LowerExpression(ternary->ifTrue);
+				IR::Value* ifFalse = LowerExpression(ternary->ifFalse);
 
-				state->PushInstructionBlock(ifTrueBlock);
-				LowerStatement(ternary->ifTrue);
-				state->InsertionBlock()->AddBranch(ternary->span, mergeBlock);
-				state->InsertionBlock()->SealBlock();
-
-				state->PushInstructionBlock(ifFalseBlock);
-				LowerStatement(ternary->ifFalse);
-				state->InsertionBlock()->AddBranch(ternary->span, mergeBlock);
-				state->InsertionBlock()->SealBlock();
-
-				state->PushInstructionBlock(mergeBlock);
-
-				return nullptr;
+				return new IR::TernaryValue(state, ternary->span, condition, ifTrue, ifFalse);
 			}
 			case AST::StatementType::FUNC_CALL:
 			{

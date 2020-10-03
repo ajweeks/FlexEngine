@@ -16,6 +16,8 @@ namespace flex
 	{
 		ValueWrapper VirtualMachine::g_ZeroIntValueWrapper = ValueWrapper(ValueWrapper::Type::CONSTANT, Value(0));
 		ValueWrapper VirtualMachine::g_ZeroFloatValueWrapper = ValueWrapper(ValueWrapper::Type::CONSTANT, Value(0.0f));
+		ValueWrapper VirtualMachine::g_OneIntValueWrapper = ValueWrapper(ValueWrapper::Type::CONSTANT, Value(1));
+		ValueWrapper VirtualMachine::g_OneFloatValueWrapper = ValueWrapper(ValueWrapper::Type::CONSTANT, Value(1.0f));
 
 		State::State()
 		{
@@ -397,22 +399,9 @@ namespace flex
 
 					InstructionBlock& currentInstBlock = state->CurrentInstructionBlock();
 
-					if (assignment->value->type == IR::Value::Type::BINARY)
-					{
-						IR::BinaryValue* binaryValue = (IR::BinaryValue*)assignment->value;
-						OpCode opCode = OpCodeFromBinaryOperatorType(binaryValue->opType);
-						if (opCode == OpCode::CMP)
+					switch (assignment->value->type)
 						{
-							HandleComparison(regVal, ir, binaryValue);
-							currentInstBlock.PushBack(Instruction(opCode, GetValueWrapperFromIRValue(ir->state, binaryValue->left), GetValueWrapperFromIRValue(ir->state, binaryValue->right)));
-							currentInstBlock.PushBack(Instruction(OpCode::MOV, regVal));
-						}
-						else
-						{
-							currentInstBlock.PushBack(Instruction(opCode, regVal, GetValueWrapperFromIRValue(ir->state, binaryValue->left), GetValueWrapperFromIRValue(ir->state, binaryValue->right)));
-						}
-					}
-					else if (assignment->value->type == IR::Value::Type::UNARY)
+					case IR::Value::Type::UNARY:
 					{
 						IR::UnaryValue* unaryValue = (IR::UnaryValue*)assignment->value;
 
@@ -436,8 +425,43 @@ namespace flex
 							assert(false);
 							break;
 						}
+					} break;
+					case IR::Value::Type::BINARY:
+					{
+						IR::BinaryValue* binaryValue = (IR::BinaryValue*)assignment->value;
+						OpCode opCode = OpCodeFromBinaryOperatorType(binaryValue->opType);
+						if (opCode == OpCode::CMP)
+						{
+							HandleComparison(regVal, ir, binaryValue);
+							currentInstBlock.PushBack(Instruction(opCode, GetValueWrapperFromIRValue(ir->state, binaryValue->left), GetValueWrapperFromIRValue(ir->state, binaryValue->right)));
+							currentInstBlock.PushBack(Instruction(OpCode::MOV, regVal));
+						}
+						else
+						{
+							currentInstBlock.PushBack(Instruction(opCode, regVal, GetValueWrapperFromIRValue(ir->state, binaryValue->left), GetValueWrapperFromIRValue(ir->state, binaryValue->right)));
 					}
-					else if (assignment->value->type == IR::Value::Type::CAST)
+					} break;
+					case IR::Value::Type::TERNARY:
+					{
+						IR::TernaryValue* ternaryValue = (IR::TernaryValue*)assignment->value;
+
+						i32 ifTrueBlockIndex = (i32)state->instructionBlocks.size() + 0;
+						i32 ifFalseBlockIndex = (i32)state->instructionBlocks.size() + 1;
+						i32 mergeBlockIndex = (i32)state->instructionBlocks.size() + 2;
+						HandleComparison(ir, ternaryValue->condition, ifTrueBlockIndex, ifFalseBlockIndex, true);
+
+						ValueWrapper mergeBlockIndexValueWrapper(ValueWrapper::Type::CONSTANT, Value(mergeBlockIndex));
+						InstructionBlock& ifTrueBlock = state->PushInstructionBlock();
+						IR::Value::Type ternaryType = ternaryValue->ifTrue->type; // TODO: Evaluate type
+						ifTrueBlock.PushBack(Instruction(OpCode::MOV, regVal, ternaryType == IR::Value::Type::FLOAT ? g_OneFloatValueWrapper : g_OneIntValueWrapper));
+						ifTrueBlock.PushBack(Instruction(OpCode::JMP, mergeBlockIndexValueWrapper));
+
+						InstructionBlock& ifFalseBlock = state->PushInstructionBlock();
+						ifFalseBlock.PushBack(Instruction(OpCode::MOV, regVal, ternaryType == IR::Value::Type::FLOAT ? g_ZeroFloatValueWrapper : g_ZeroIntValueWrapper));
+
+						state->PushInstructionBlock();
+					} break;
+					case IR::Value::Type::CAST:
 					{
 						IR::CastValue* castValue = (IR::CastValue*)assignment->value;
 						switch (castValue->castedType)
@@ -479,10 +503,11 @@ namespace flex
 							state->diagnosticContainer->AddDiagnostic(assignment->value->origin, "Unexpected type in cast statement");
 						} break;
 						}
-					}
-					else
+					} break;
+					default:
 					{
 						currentInstBlock.PushBack(Instruction(OpCode::MOV, regVal, GetValueWrapperFromIRValue(ir->state, assignment->value)));
+					} break;
 					}
 				}
 

@@ -361,6 +361,23 @@ namespace flex
 			IR::Value* right = nullptr;
 		};
 
+		struct TernaryValue : IR::Value
+		{
+			TernaryValue(State* state, Span origin, IR::Value* condition, IR::Value* ifTrue, IR::Value* ifFalse) :
+				Value(origin, state, Value::Type::TERNARY),
+				condition(condition),
+				ifTrue(ifTrue),
+				ifFalse(ifFalse)
+			{}
+
+			virtual void Destroy() override;
+			virtual std::string ToString() const override;
+
+			IR::Value* condition = nullptr;
+			IR::Value* ifTrue = nullptr;
+			IR::Value* ifFalse = nullptr;
+		};
+
 		struct FunctionCallValue : IR::Value
 		{
 			FunctionCallValue(State* state, Span origin, const std::string& target, const std::vector<IR::Value*>& arguments) :
