@@ -325,32 +325,32 @@ namespace flex
 		return Platform::OpenFileDialog(windowTitle, absoluteDirectory, outSelectedAbsFilePath, filter);
 	}
 
-	std::string StripLeadingDirectories(std::string filePath)
+	std::string StripLeadingDirectories(const std::string& filePath)
 	{
 		size_t finalSlash = filePath.rfind('/');
 		if (finalSlash != std::string::npos)
 		{
-			filePath = filePath.substr(finalSlash + 1);
+			return filePath.substr(finalSlash + 1);
 		}
 		return filePath;
 	}
 
-	std::string ExtractDirectoryString(std::string filePath)
+	std::string ExtractDirectoryString(const std::string& filePath)
 	{
 		// TODO: When no trailing slash exists check if final token is directory
 		size_t finalSlash = filePath.rfind('/');
 		if (finalSlash != std::string::npos && finalSlash != filePath.length() - 1)
 		{
-			filePath = filePath.substr(0, finalSlash + 1);
+			return filePath.substr(0, finalSlash + 1);
 		}
 		return filePath;
 	}
 
-	std::string StripFileType(std::string filePath)
+	std::string StripFileType(const std::string& filePath)
 	{
 		if (filePath.find('.') != std::string::npos)
 		{
-			filePath = Split(filePath, '.')[0];
+			return Split(filePath, '.')[0];
 		}
 		return filePath;
 	}
@@ -491,7 +491,7 @@ namespace flex
 		return true;
 	}
 
-	std::string TrimStartAndEnd(const std::string& str)
+	std::string Trim(const std::string& str)
 	{
 		if (str.empty())
 		{
@@ -499,11 +499,45 @@ namespace flex
 		}
 
 		auto iter = str.begin();
-		while (iter != str.end() - 1 && isspace(*iter))
+		auto riter = str.end() - 1;
+		while (iter != riter && isspace(*iter))
 		{
 			++iter;
 		}
 
+		while (riter != iter && isspace(*riter))
+		{
+			--riter;
+		}
+
+		return std::string(iter, riter + 1);
+	}
+
+	std::string TrimLeadingWhitespace(const std::string& str)
+	{
+		if (str.empty())
+		{
+			return str;
+		}
+
+		auto iter = str.begin();
+		auto riter = str.end() - 1;
+		while (iter != riter && isspace(*iter))
+		{
+			++iter;
+		}
+
+		return std::string(iter, str.end());
+	}
+
+	std::string TrimTrailingWhitespace(const std::string& str)
+	{
+		if (str.empty())
+		{
+			return str;
+		}
+
+		auto iter = str.begin();
 		auto riter = str.end() - 1;
 		while (riter != iter && isspace(*riter))
 		{

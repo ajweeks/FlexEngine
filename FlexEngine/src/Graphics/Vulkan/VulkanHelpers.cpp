@@ -2328,11 +2328,11 @@ namespace flex
 							size_t midPoint = line.find('=');
 							if (midPoint != std::string::npos && line.length() > 7) // Ignore degenerate lines
 							{
-								std::string filePath = TrimStartAndEnd(line.substr(0, midPoint));
+								std::string filePath = Trim(line.substr(0, midPoint));
 
 								if (filePath.length() > 0)
 								{
-									std::string storedChecksumStr = TrimStartAndEnd(line.substr(midPoint + 1));
+									std::string storedChecksumStr = Trim(line.substr(midPoint + 1));
 									u64 storedChecksum = std::stoull(storedChecksumStr);
 
 									u64 calculatedChecksum = CalculteChecksum(filePath);

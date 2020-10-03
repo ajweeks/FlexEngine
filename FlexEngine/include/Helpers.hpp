@@ -28,14 +28,14 @@ namespace flex
 	bool OpenJSONFileDialog(const std::string& windowTitle, const std::string& absoluteDirectory, std::string& outSelectedAbsFilePath);
 
 	// Removes all content before final '/' or '\'
-	FLEX_NO_DISCARD std::string StripLeadingDirectories(std::string filePath);
+	FLEX_NO_DISCARD std::string StripLeadingDirectories(const std::string& filePath);
 
 	// Removes all content after final '/' or '\'
 	// NOTE: If path describes a directory and doesn't end in a slash, final directory will be removed
-	FLEX_NO_DISCARD std::string ExtractDirectoryString(std::string filePath);
+	FLEX_NO_DISCARD std::string ExtractDirectoryString(const std::string& filePath);
 
 	// Removes all chars after first '.' occurrence
-	FLEX_NO_DISCARD std::string StripFileType(std::string filePath);
+	FLEX_NO_DISCARD std::string StripFileType(const std::string& filePath);
 
 	// Removes all chars before first '.' occurrence
 	// TODO: EZ: Test
@@ -47,7 +47,12 @@ namespace flex
 	*/
 	bool ParseWAVFile(const std::string& filePath, i32* format, u8** data, i32* size, i32* freq);
 
-	FLEX_NO_DISCARD std::string TrimStartAndEnd(const std::string& str);
+	// Strips leading and trailing whitespace
+	FLEX_NO_DISCARD std::string Trim(const std::string& str);
+
+	FLEX_NO_DISCARD std::string TrimLeadingWhitespace(const std::string& str);
+
+	FLEX_NO_DISCARD std::string TrimTrailingWhitespace(const std::string& str);
 
 	FLEX_NO_DISCARD std::vector<std::string> Split(const std::string& str, char delim);
 	// Includes blank entries for subsequent delims
