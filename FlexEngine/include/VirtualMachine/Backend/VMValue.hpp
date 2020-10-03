@@ -44,7 +44,7 @@ namespace flex
 				valBool(val ? 1 : 0)
 			{}
 
-			explicit Value(char* val) :
+			explicit Value(const char* val) :
 				type(Type::STRING),
 				valStr(val)
 			{}

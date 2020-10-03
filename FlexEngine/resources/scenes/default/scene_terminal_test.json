@@ -21,9 +21,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-2.381, 1.602, 5.379",
-			"pitch" : -0.000450,
-			"yaw" : 1.783802
+			"position" : "-2.381, 1.602, 5.376",
+			"pitch" : -0.000467,
+			"yaw" : 1.783797
 		}
 	},
 	"objects" : 
@@ -205,19 +205,13 @@
 			},
 			"terminal" : 
 			{
-				"str" : "func call() -> int { return 42; }
-func call2(int a, bool b, char c, string s)
- -> int { return a * a; }
-int b = 10;
-int a = b;
-if (a && a > 0)
+				"str" : "int a = 10;
+int b = 20;
+if (a > 0 && a < 10 && b == 20)
 {
-  a = 2;
-  bool p = false;
-  int pp = (int)p;
-  a = call2(pp + 3 * 99 * a, true,
-          'c', \"21\");
-}"
+  b = 33;
+}
+"
 			},
 			"children" : 
 			[
@@ -237,6 +231,23 @@ if (a && a > 0)
 					]
 				}
 			]
+		},
+		{
+			"name" : "Cart_00",
+			"type" : "cart",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"materials" : 
+			[
+				"pbr grey"
+			],
+			"cart info" : 
+			{
+				"track ID" : -1,
+				"dist along track" : -1.000000
+			}
 		}
 	]
 }

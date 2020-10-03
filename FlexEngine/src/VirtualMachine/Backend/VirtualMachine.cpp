@@ -166,8 +166,10 @@ namespace flex
 				} break;
 				case IR::Value::Type::BINARY:
 				{
-					//AST::Identifier* ident = (AST::Identifier*)expression;
-					//i32 reg = state->varToRegisterMap[ident->identifierStr];
+					IR::BinaryValue* binary = (IR::BinaryValue*)value;
+
+					return GetValueWrapperFromIRValue(irState, binary->left);
+					//i32 reg = state->varRegisterMap[binary->left];
 					//valWrapper = ValueWrapper(ValueWrapper::Type::REGISTER, IR::Value(reg));
 				} break;
 				case IR::Value::Type::FUNC_CALL:
@@ -264,17 +266,123 @@ namespace flex
 			}
 		}
 
+		void VirtualMachine::HandleComparison(IR::IntermediateRepresentation* ir, IR::Value* condition, i32 ifTrueBlockIndex, i32 ifFalseBlockIndex, bool bInvCondition)
+		{
+			InstructionBlock& currentInstBlock = state->CurrentInstructionBlock();
+			OpCode opCode = OpCode::_NONE;
+			bool bHandled = false;
+			switch (condition->type)
+			{
+			case IR::Value::Type::BINARY:
+			{
+				IR::BinaryValue* binary = (IR::BinaryValue*)condition;
+
+				switch (binary->opType)
+				{
+				case IR::BinaryOperatorType::EQUAL_TEST:
+					opCode = OpCode::JEQ;
+					break;
+				case IR::BinaryOperatorType::NOT_EQUAL_TEST:
+					opCode = OpCode::JNE;
+					break;
+				case IR::BinaryOperatorType::GREATER_EQUAL_TEST:
+					opCode = OpCode::JGE;
+					break;
+				case IR::BinaryOperatorType::GREATER_TEST:
+					opCode = OpCode::JGT;
+					break;
+				case IR::BinaryOperatorType::LESS_EQUAL_TEST:
+					opCode = OpCode::JLE;
+					break;
+				case IR::BinaryOperatorType::LESS_TEST:
+					opCode = OpCode::JLT;
+					break;
+				case IR::BinaryOperatorType::BIN_AND:
+					opCode = OpCode::AND;
+					break;
+				case IR::BinaryOperatorType::BIN_OR:
+					opCode = OpCode::OR;
+					break;
+				case IR::BinaryOperatorType::BIN_XOR:
+					opCode = OpCode::XOR;
+					break;
+				case IR::BinaryOperatorType::BOOLEAN_AND:
+				{
+//					IR::Block* block = new IR::Block(ir->state);
+					HandleComparison(ir, binary->left, ifTrueBlockIndex, ifFalseBlockIndex, true); // TODO: Pass flip comp=true
+//					ir->state->PushInstructionBlock(block);
+					HandleComparison(ir, binary->right, ifTrueBlockIndex, ifFalseBlockIndex, true);
+//					ir->state->PushInstructionBlock(ifTrueBlock);
+//					ir->state->PushInstructionBlock(ifFalseBlock);
+
+					//i32 thenBlockIndex = conditional->then->index;
+					//i32 otherwiseBlockIndex = conditional->otherwise != nullptr ? conditional->otherwise->index : (conditional->then->index + 1);
+
+					//currentInstBlock.PushBack(Instruction(OpCode::CMP, lhsWrapper, g_ZeroIntValueWrapper));
+					//currentInstBlock.PushBack(Instruction(OpCode::JEQ, ValueWrapper(ValueWrapper::Type::CONSTANT, Value(otherwiseBlockIndex))));
+					//currentInstBlock.PushBack(Instruction(OpCode::CMP, rhsWrapper, g_ZeroIntValueWrapper));
+					//currentInstBlock.PushBack(Instruction(OpCode::JEQ, ValueWrapper(ValueWrapper::Type::CONSTANT, Value(otherwiseBlockIndex))));
+					//currentInstBlock.PushBack(Instruction(OpCode::JMP, ValueWrapper(ValueWrapper::Type::CONSTANT, Value(thenBlockIndex))));
+					//state->PushInstructionBlock();
+					//currentInstBlock = state->CurrentInstructionBlock();
+
+					bHandled = true;
+					opCode = OpCode::_NONE;
+				} break;
+				case IR::BinaryOperatorType::BOOLEAN_OR:
+				{
+					//i32 thenBlockIndex = conditional->then->index;
+					//i32 otherwiseBlockIndex = conditional->otherwise != nullptr ? conditional->otherwise->index : (conditional->then->index + 1);
+					//
+					//currentInstBlock.PushBack(Instruction(OpCode::CMP, lhsWrapper, g_ZeroIntValueWrapper));
+					//currentInstBlock.PushBack(Instruction(OpCode::JEQ, ValueWrapper(ValueWrapper::Type::CONSTANT, Value(otherwiseBlockIndex))));
+					//currentInstBlock.PushBack(Instruction(OpCode::CMP, rhsWrapper, g_ZeroIntValueWrapper));
+					//currentInstBlock.PushBack(Instruction(OpCode::JEQ, ValueWrapper(ValueWrapper::Type::CONSTANT, Value(otherwiseBlockIndex))));
+					//currentInstBlock.PushBack(Instruction(OpCode::JMP, ValueWrapper(ValueWrapper::Type::CONSTANT, Value(thenBlockIndex))));
+					//state->PushInstructionBlock();
+					////currentInstBlock = state->CurrentInstructionBlock();
+					//
+					//bHandled = true;
+					//opCode = OpCode::_NONE;
+				} break;
+				}
+
+				if (!bHandled)
+				{
+					ValueWrapper lhsWrapper = GetValueWrapperFromIRValue(ir->state, binary->left);
+					ValueWrapper rhsWrapper = GetValueWrapperFromIRValue(ir->state, binary->right);
+
+					currentInstBlock.PushBack(Instruction(OpCode::CMP, lhsWrapper, rhsWrapper));
+					opCode = bInvCondition ? InverseOpCode(opCode) : opCode;
+					i32 jumpBlockIndex = (i32)(bInvCondition ? ifFalseBlockIndex : ifTrueBlockIndex);
+					currentInstBlock.PushBack(Instruction(opCode, ValueWrapper(ValueWrapper::Type::CONSTANT, Value(jumpBlockIndex))));
+				}
+			} break;
+			}
+
+			if (!bHandled)
+			{
+				if (opCode != OpCode::_NONE)
+				{
+				}
+				else
+				{
+					//diagnosticContainer->AddDiagnostic(conditional->origin, "Invalid condition");
+				}
+			}
+		}
+
 		void VirtualMachine::GenerateFromIR(IR::IntermediateRepresentation* ir)
 		{
 			instructions.clear();
 			ClearRuntimeState();
 
 			state->Clear();
-			state->PushInstructionBlock();
 
 			for (u32 i = 0; i < (u32)ir->blocks.size(); ++i)
 			{
 				IR::Block* block = ir->blocks[i];
+				state->PushInstructionBlock();
 
 				for (auto assignmentIter = block->assignments.begin(); assignmentIter != block->assignments.end(); ++assignmentIter)
 				{
@@ -396,7 +504,7 @@ namespace flex
 
 						currentInstBlock.PushBack(Instruction(OpCode::RETURN, returnVal));
 
-						state->PushInstructionBlock();
+						//state->PushInstructionBlock();
 					} break;
 					//case IR::TerminatorType::BREAK:
 					//case IR::TerminatorType::YIELD:
@@ -405,9 +513,8 @@ namespace flex
 						InstructionBlock& currentInstBlock = state->CurrentInstructionBlock();
 
 						IR::Branch* branch = (IR::Branch*)block->terminator;
-
 						currentInstBlock.PushBack(Instruction(OpCode::JMP, ValueWrapper(ValueWrapper::Type::CONSTANT, Value((i32)branch->target->index))));
-						state->PushInstructionBlock();
+						//state->PushInstructionBlock();
 					} break;
 					case IR::TerminatorType::CONDITIONAL_BRANCH:
 					{
@@ -415,95 +522,13 @@ namespace flex
 
 						IR::ConditionalBranch* conditional = (IR::ConditionalBranch*)block->terminator;
 
-						OpCode opCode = OpCode::_NONE;
-						ValueWrapper lhsWrapper;
-						ValueWrapper rhsWrapper;
-						bool bHandled = false;
-						switch (conditional->condition->type)
-						{
-						case IR::Value::Type::BINARY:
-						{
-							IR::BinaryValue* binary = (IR::BinaryValue*)conditional->condition;
+						i32 thenBlockIndex = conditional->then->index;
+						// TODO: +1?
+						i32 otherwiseBlockIndex = conditional->otherwise ? conditional->otherwise->index : conditional->then->index + 1;
+						HandleComparison(ir, conditional->condition, thenBlockIndex, otherwiseBlockIndex, false);
 
-							lhsWrapper = GetValueWrapperFromIRValue(ir->state, binary->left);
-							rhsWrapper = GetValueWrapperFromIRValue(ir->state, binary->right);
-
-							switch (binary->opType)
-							{
-							case IR::BinaryOperatorType::EQUAL_TEST:
-								opCode = OpCode::JEQ;
-								break;
-							case IR::BinaryOperatorType::NOT_EQUAL_TEST:
-								opCode = OpCode::JNE;
-								break;
-							case IR::BinaryOperatorType::GREATER_EQUAL_TEST:
-								opCode = OpCode::JGE;
-								break;
-							case IR::BinaryOperatorType::GREATER_TEST:
-								opCode = OpCode::JGT;
-								break;
-							case IR::BinaryOperatorType::LESS_EQUAL_TEST:
-								opCode = OpCode::JLE;
-								break;
-							case IR::BinaryOperatorType::LESS_TEST:
-								opCode = OpCode::JLT;
-								break;
-							case IR::BinaryOperatorType::BIN_AND:
-								opCode = OpCode::AND;
-								break;
-							case IR::BinaryOperatorType::BIN_OR:
-								opCode = OpCode::OR;
-								break;
-							case IR::BinaryOperatorType::BIN_XOR:
-								opCode = OpCode::XOR;
-								break;
-							case IR::BinaryOperatorType::BOOLEAN_AND:
-								currentInstBlock.PushBack(Instruction(OpCode::CMP, lhsWrapper, g_ZeroIntValueWrapper));
-								currentInstBlock.PushBack(Instruction(OpCode::JEQ, ValueWrapper(ValueWrapper::Type::CONSTANT, Value((i32)conditional->otherwise->index))));
-								currentInstBlock.PushBack(Instruction(OpCode::CMP, rhsWrapper, g_ZeroIntValueWrapper));
-								currentInstBlock.PushBack(Instruction(OpCode::JEQ, ValueWrapper(ValueWrapper::Type::CONSTANT, Value((i32)conditional->otherwise->index))));
-								currentInstBlock.PushBack(Instruction(OpCode::JMP, ValueWrapper(ValueWrapper::Type::CONSTANT, Value((i32)conditional->then->index))));
-								state->PushInstructionBlock();
-								//currentInstBlock = state->CurrentInstructionBlock();
-
-								bHandled = true;
-								opCode = OpCode::_NONE;
-								break;
-							case IR::BinaryOperatorType::BOOLEAN_OR:
-								currentInstBlock.PushBack(Instruction(OpCode::CMP, lhsWrapper, g_ZeroIntValueWrapper));
-								//								binary->left->type
-								currentInstBlock.PushBack(Instruction(OpCode::JEQ, ValueWrapper(ValueWrapper::Type::CONSTANT, Value((i32)conditional->otherwise->index))));
-								currentInstBlock.PushBack(Instruction(OpCode::CMP, rhsWrapper, g_ZeroIntValueWrapper));
-								currentInstBlock.PushBack(Instruction(OpCode::JEQ, ValueWrapper(ValueWrapper::Type::CONSTANT, Value((i32)conditional->otherwise->index))));
-								currentInstBlock.PushBack(Instruction(OpCode::JMP, ValueWrapper(ValueWrapper::Type::CONSTANT, Value((i32)conditional->then->index))));
-								state->PushInstructionBlock();
-								//currentInstBlock = state->CurrentInstructionBlock();
-
-								bHandled = true;
-								opCode = OpCode::_NONE;
-								break;
-							}
-						} break;
-						}
-
-						if (!bHandled)
-						{
-							if (opCode != OpCode::_NONE)
-							{
-								currentInstBlock.PushBack(Instruction(OpCode::CMP, lhsWrapper, rhsWrapper));
-								currentInstBlock.PushBack(Instruction(opCode, ValueWrapper(ValueWrapper::Type::CONSTANT, Value((i32)conditional->then->index))));
-
-								if (conditional->then != nullptr)
-								{
-									currentInstBlock.PushBack(Instruction(OpCode::JMP, ValueWrapper(ValueWrapper::Type::CONSTANT, Value((i32)conditional->otherwise->index))));
-								}
-								state->PushInstructionBlock();
-							}
-							else
-							{
-								diagnosticContainer->AddDiagnostic(conditional->origin, "Invalid branch condition");
-							}
-						}
+						//currentInstBlock.PushBack(Instruction(OpCode::JMP, ValueWrapper(ValueWrapper::Type::CONSTANT, Value((i32)ifFalseBlock->index))));
+						//state->PushInstructionBlock();
 					} break;
 					case IR::TerminatorType::HALT:
 					{
@@ -925,15 +950,31 @@ namespace flex
 		{
 			switch (opType)
 			{
-			case IR::BinaryOperatorType::EQUAL_TEST: return OpCode::JNE;
-			case IR::BinaryOperatorType::NOT_EQUAL_TEST: return OpCode::JEQ;
-			case IR::BinaryOperatorType::GREATER_TEST: return OpCode::JLE;
-			case IR::BinaryOperatorType::GREATER_EQUAL_TEST: return OpCode::JLT;
-			case IR::BinaryOperatorType::LESS_TEST: return OpCode::JGE;
-			case IR::BinaryOperatorType::LESS_EQUAL_TEST: return OpCode::JGT;
+			case IR::BinaryOperatorType::EQUAL_TEST:			return OpCode::JNE;
+			case IR::BinaryOperatorType::NOT_EQUAL_TEST:		return OpCode::JEQ;
+			case IR::BinaryOperatorType::GREATER_TEST:			return OpCode::JLE;
+			case IR::BinaryOperatorType::GREATER_EQUAL_TEST:	return OpCode::JLT;
+			case IR::BinaryOperatorType::LESS_TEST:				return OpCode::JGE;
+			case IR::BinaryOperatorType::LESS_EQUAL_TEST:		return OpCode::JGT;
 			default:
 			{
+				return OpCode::_NONE;
+			}
+			}
+		}
 
+		OpCode InverseOpCode(OpCode opCode)
+		{
+			switch (opCode)
+			{
+			case OpCode::JEQ: return OpCode::JNE;
+			case OpCode::JNE: return OpCode::JEQ;
+			case OpCode::JGT: return OpCode::JLE;
+			case OpCode::JGE: return OpCode::JLT;
+			case OpCode::JLT: return OpCode::JGE;
+			case OpCode::JLE: return OpCode::JGT;
+			default:
+			{
 				return OpCode::_NONE;
 			}
 			}

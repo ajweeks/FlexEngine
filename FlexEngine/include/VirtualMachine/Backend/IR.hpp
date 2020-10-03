@@ -64,13 +64,9 @@ namespace flex
 
 		struct Block
 		{
-			Block() :
-				origin(0, 0)
-			{}
+			Block(State* state);
 
-			Block(Span origin) :
-				origin(origin)
-			{}
+			Block(State* state, Span origin);
 
 			~Block()
 			{}
@@ -96,6 +92,7 @@ namespace flex
 			std::list<Assignment*> assignments;
 			Terminator* terminator = nullptr;
 			Span origin;
+			IR::State* irState = nullptr;
 		};
 
 		struct Assignment : IR::Value

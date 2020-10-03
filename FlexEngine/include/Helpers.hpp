@@ -158,8 +158,8 @@ namespace flex
 	glm::vec4 PasteColor4FromClipboard();
 
 	FLEX_NO_DISCARD char* ToLower(char* str);
-	FLEX_NO_DISCARD std::string& ToLower(std::string& str);
-	FLEX_NO_DISCARD std::string& ToUpper(std::string& str);
+	std::string& ToLower(std::string& str);
+	std::string& ToUpper(std::string& str);
 
 	bool StartsWith(const std::string& str, const std::string& start);
 	bool EndsWith(const std::string& str, const std::string& end);

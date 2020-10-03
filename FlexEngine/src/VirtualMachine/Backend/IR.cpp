@@ -12,6 +12,20 @@ namespace flex
 {
 	namespace IR
 	{
+		Block::Block(State* state) :
+			origin(0, 0),
+			irState(irState)
+		{
+			index = (u32)state->blocks.size();
+		}
+
+		Block::Block(State* state, Span origin) :
+			origin(origin),
+			irState(irState)
+		{
+			index = (u32)state->blocks.size();
+		}
+
 		void Block::Destroy()
 		{
 			for (auto iter = assignments.begin(); iter != assignments.end(); ++iter)
@@ -107,13 +121,20 @@ namespace flex
 			{
 				// TODO: Eliminate dead branches here
 
-				ConditionalBranch* conditionalBranch = new ConditionalBranch(condition, then, otherwise, branchOrigin);
-				conditionalBranch->then->predecessors.emplace_back(this);
-				if (conditionalBranch->otherwise != nullptr)
+				if (condition == nullptr || then == nullptr)
 				{
-					conditionalBranch->otherwise->predecessors.emplace_back(this);
+					irState->diagnosticContainer->AddDiagnostic(branchOrigin, "Invalid conditional branch");
 				}
-				terminator = conditionalBranch;
+				else
+				{
+					ConditionalBranch* conditionalBranch = new ConditionalBranch(condition, then, otherwise, branchOrigin);
+					conditionalBranch->then->predecessors.emplace_back(this);
+					if (conditionalBranch->otherwise != nullptr)
+					{
+						conditionalBranch->otherwise->predecessors.emplace_back(this);
+					}
+					terminator = conditionalBranch;
+				}
 			}
 		}
 
@@ -147,7 +168,7 @@ namespace flex
 		State::State()
 		{
 			diagnosticContainer = new DiagnosticContainer();
-			PushInstructionBlock(new Block(Span(0, 0)));
+			PushInstructionBlock(new Block(this, Span(0, 0)));
 		}
 
 		void State::Clear()
@@ -406,14 +427,13 @@ namespace flex
 
 			builder.Append("if (");
 			builder.Append(condition->ToString());
-			builder.Append(")\n");
-			//builder.Append(then->ToString());
-			//if (otherwise != nullptr)
-			//{
-			//	builder.Append(" else \n");
-			//	builder.Append(otherwise->ToString());
-			//}
-			//builder.Append("\n");
+			builder.Append(") ");
+			builder.Append(std::to_string(then->index));
+			if (otherwise != nullptr)
+			{
+				builder.Append(" else ");
+				builder.Append(std::to_string(otherwise->index));
+			}
 
 			return builder.ToString();
 		}
@@ -751,7 +771,7 @@ namespace flex
 			{
 				AST::FunctionDeclaration* funcDecl = (AST::FunctionDeclaration*)statement;
 
-				IR::Block* bodyBlock = new IR::Block(funcDecl->span);
+				IR::Block* bodyBlock = new IR::Block(state, funcDecl->span);
 
 				state->PushInstructionBlock(bodyBlock);
 				LowerStatement(funcDecl->body);
@@ -797,9 +817,9 @@ namespace flex
 				{
 					AST::IfStatement* ifStatement = (AST::IfStatement*)statement;
 
-					Block* ifTrueBlock = new Block(ifStatement->then->span);
-					Block* mergeBlock = new Block(state->InsertionBlock()->origin);
-					Block* ifFalseBlock = ifStatement->otherwise == nullptr ? nullptr : new Block(ifStatement->otherwise->span);
+					Block* ifTrueBlock = new Block(state, ifStatement->then->span);
+					Block* mergeBlock = new Block(state, state->InsertionBlock()->origin);
+					Block* ifFalseBlock = ifStatement->otherwise == nullptr ? nullptr : new Block(state, ifStatement->otherwise->span);
 
 					state->InsertionBlock()->AddConditionalBranch(ifStatement->span, LowerExpression(ifStatement->condition), ifTrueBlock, ifFalseBlock);
 
@@ -1154,9 +1174,9 @@ namespace flex
 			case AST::StatementType::TERNARY_OPERATION:
 			{
 				AST::TernaryOperation* ternary = (AST::TernaryOperation*)expression;
-				IR::Block* ifTrueBlock = new IR::Block(ternary->ifTrue->span);
-				IR::Block* ifFalseBlock = new IR::Block(ternary->ifFalse->span);
-				IR::Block* mergeBlock = new IR::Block(state->InsertionBlock()->origin);
+				IR::Block* ifTrueBlock = new IR::Block(state, ternary->ifTrue->span);
+				IR::Block* ifFalseBlock = new IR::Block(state, ternary->ifFalse->span);
+				IR::Block* mergeBlock = new IR::Block(state, state->InsertionBlock()->origin);
 
 				state->InsertionBlock()->AddConditionalBranch(ternary->span, LowerExpression(ternary->condition), ifTrueBlock, ifFalseBlock);
 
@@ -1208,11 +1228,7 @@ namespace flex
 						}
 					}
 
-					if (bSigMatches)
-					{
-						return new IR::FunctionCallValue(state, functionCall->span, functionCall->target, arguments);
-					}
-					else
+					if (!bSigMatches)
 					{
 						StringBuilder message;
 						message.Append("Incorrect number/type of arguments, expected:\n(");
@@ -1244,6 +1260,8 @@ namespace flex
 					std::string message = "Undeclared function \"" + functionCall->target + "\"";
 					state->diagnosticContainer->AddDiagnostic(functionCall->span, message);
 				}
+
+				return new IR::FunctionCallValue(state, functionCall->span, functionCall->target, arguments);
 			} break;
 			case AST::StatementType::IDENTIFIER:
 			{
@@ -1261,7 +1279,7 @@ namespace flex
 			{
 				AST::BreakStatement* breakStatement = (AST::BreakStatement*)expression;
 
-				IR::Block* nextBlock = new IR::Block(breakStatement->span);
+				IR::Block* nextBlock = new IR::Block(state, breakStatement->span);
 
 				state->InsertionBlock()->AddBranch(breakStatement->span, nextBlock);
 				state->InsertionBlock()->SealBlock();
@@ -1273,7 +1291,7 @@ namespace flex
 			{
 				AST::YieldStatement* yieldStatement = (AST::YieldStatement*)expression;
 
-				IR::Block* nextBlock = new IR::Block(yieldStatement->span);
+				IR::Block* nextBlock = new IR::Block(state, yieldStatement->span);
 
 				state->InsertionBlock()->AddYield(yieldStatement->span, LowerExpression(yieldStatement->yieldValue));
 				state->InsertionBlock()->SealBlock();
@@ -1285,7 +1303,7 @@ namespace flex
 			{
 				AST::ReturnStatement* returnStatement = (AST::ReturnStatement*)expression;
 
-				IR::Block* nextBlock = new IR::Block(returnStatement->span);
+				IR::Block* nextBlock = new IR::Block(state, returnStatement->span);
 
 				state->InsertionBlock()->AddReturn(returnStatement->span, returnStatement->returnValue != nullptr ? LowerExpression(returnStatement->returnValue) : nullptr);
 				state->InsertionBlock()->SealBlock();

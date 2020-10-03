@@ -320,6 +320,7 @@ namespace flex
 			void ZeroOutRegisters();
 			void ClearStack();
 			void HandleComparison(ValueWrapper& regVal, IR::IntermediateRepresentation* ir, IR::BinaryValue* binaryValue);
+			void HandleComparison(IR::IntermediateRepresentation* ir, IR::Value* condition, i32 ifTrueBlockIndex, i32 ifFalseBlockIndex, bool bInvCondition);
 
 			bool IsExternal(FuncAddress funcAddress);
 			i32 TranslateLocalFuncAddress(FuncAddress localFuncAddress);

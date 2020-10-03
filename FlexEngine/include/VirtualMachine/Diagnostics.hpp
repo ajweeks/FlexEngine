@@ -16,6 +16,7 @@ namespace flex
 
 		Span span;
 		std::string message;
+		// TODO: Add line number/column index end for multiline support
 		u32 lineNumber = 0;
 		u32 columnIndex = 0;
 	};

@@ -5044,12 +5044,24 @@ namespace flex
 
 			bool bSuccess = m_VM->diagnosticContainer->diagnostics.empty();
 
-			if (bSuccess)
+			if (!bSuccess)
+			{
+
+				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.5f, 0.5f, 1.0f));
+				for (const Diagnostic& diagnostic : m_VM->diagnosticContainer->diagnostics)
+				{
+					ImGui::TextWrapped("L%d: %s", diagnostic.lineNumber + 1, diagnostic.message.c_str());
+				}
+				ImGui::PopStyleColor();
+			}
+			else
 			{
 				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 1.0f, 0.5f, 1.0f));
 				ImGui::Text("Success");
 				ImGui::PopStyleColor();
+			}
 
+			{
 				for (u32 i = 0; i < 8; ++i)
 				{
 					const VM::Value& regVal = m_VM->registers[i];
@@ -5127,15 +5139,6 @@ namespace flex
 
 				}
 			}
-			else
-			{
-				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.5f, 0.5f, 1.0f));
-				for (const Diagnostic& diagnostic : m_VM->diagnosticContainer->diagnostics)
-				{
-					ImGui::TextWrapped("L%d: %s", diagnostic.lineNumber + 1, diagnostic.message.c_str());
-				}
-				ImGui::PopStyleColor();
-			}
 		}
 		ImGui::End();
 	}
@@ -5193,7 +5196,7 @@ namespace flex
 			lines.push_back("");
 		}
 
-		MoveCursorToEnd();
+		MoveCursorToStart();
 	}
 
 	void Terminal::SerializeUniqueFields(JSONObject& parentObject) const
