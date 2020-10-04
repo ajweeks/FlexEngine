@@ -13,15 +13,13 @@ namespace flex
 	namespace IR
 	{
 		Block::Block(State* state) :
-			origin(0, 0),
-			irState(irState)
+			origin(0, 0)
 		{
 			index = (u32)state->blocks.size();
 		}
 
 		Block::Block(State* state, Span origin) :
-			origin(origin),
-			irState(irState)
+			origin(origin)
 		{
 			index = (u32)state->blocks.size();
 		}
@@ -90,8 +88,9 @@ namespace flex
 			}
 		}
 
-		void Block::AddCall(const std::string& target, const std::vector<IR::Value*>& arguments)
+		void Block::AddCall(State* state, const std::string& target, const std::vector<IR::Value*>& arguments)
 		{
+			FLEX_UNUSED(state);
 			FLEX_UNUSED(target);
 			FLEX_UNUSED(arguments);
 			if (!Filled())
@@ -115,7 +114,7 @@ namespace flex
 		{
 		}
 
-		void Block::AddConditionalBranch(Span branchOrigin, IR::Value* condition, Block* then, Block* otherwise)
+		void Block::AddConditionalBranch(State* state, Span branchOrigin, IR::Value* condition, Block* then, Block* otherwise)
 		{
 			if (!Filled())
 			{
@@ -123,7 +122,7 @@ namespace flex
 
 				if (condition == nullptr || then == nullptr)
 				{
-					irState->diagnosticContainer->AddDiagnostic(branchOrigin, "Invalid conditional branch");
+					state->diagnosticContainer->AddDiagnostic(branchOrigin, "Invalid conditional branch");
 				}
 				else
 				{
@@ -867,7 +866,7 @@ namespace flex
 					Block* mergeBlock = new Block(state, state->InsertionBlock()->origin);
 					Block* ifFalseBlock = ifStatement->otherwise == nullptr ? nullptr : new Block(state, ifStatement->otherwise->span);
 
-					state->InsertionBlock()->AddConditionalBranch(ifStatement->span, LowerExpression(ifStatement->condition), ifTrueBlock, ifFalseBlock);
+					state->InsertionBlock()->AddConditionalBranch(state, ifStatement->span, LowerExpression(ifStatement->condition), ifTrueBlock, ifFalseBlock);
 
 					state->PushInstructionBlock(ifTrueBlock);
 					LowerStatement(ifStatement->then);

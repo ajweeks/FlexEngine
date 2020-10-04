@@ -80,10 +80,10 @@ namespace flex
 			void AddReturn(Span returnOrigin, Value* returnVal);
 			void AddYield(Span yieldOrigin, Value* yieldVal);
 			void AddBranch(Span branchOrigin, Block* target);
-			void AddCall(const std::string& target, const std::vector<Value*>& arguments);
+			void AddCall(State* state, const std::string& target, const std::vector<Value*>& arguments);
 			void AddHalt();
 			void SealBlock();
-			void AddConditionalBranch(Span branchOrigin, Value* condition, Block* then, Block* otherwise);
+			void AddConditionalBranch(State* state, Span branchOrigin, Value* condition, Block* then, Block* otherwise);
 
 			std::string ToString() const;
 
@@ -92,7 +92,6 @@ namespace flex
 			std::list<Assignment*> assignments;
 			Terminator* terminator = nullptr;
 			Span origin;
-			IR::State* irState = nullptr;
 		};
 
 		struct Assignment : IR::Value
