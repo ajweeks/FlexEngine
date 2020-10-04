@@ -5119,16 +5119,21 @@ namespace flex
 					ImGui::Separator();
 					ImGui::Text("Instructions");
 
-					if (m_VM->IsExecuting())
+					if (!m_VM->IsExecuting())
 					{
 						ImGui::SameLine();
-						if (ImGui::Button("Step"))
+						if (ImGui::Button("Start (F10)"))
 						{
 							m_VM->Execute(true);
 						}
 					}
 					else
 					{
+						ImGui::SameLine();
+						if (ImGui::Button("Step (F10)"))
+						{
+							m_VM->Execute(true);
+						}
 						ImGui::SameLine();
 						if (ImGui::Button("Reset"))
 						{

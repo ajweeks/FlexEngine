@@ -671,6 +671,15 @@ namespace flex
 				diagnosticContainer->diagnostics.clear();
 			}
 
+			if (m_RunningState.instructionIdx == -1)
+			{
+				m_RunningState.instructionIdx = 0;
+				if (bSingleStep)
+				{
+					return;
+				}
+			}
+
 			u32 loopCount = 0;
 			bool bBreak = false;
 			while (!m_RunningState.terminated && !bBreak)
@@ -839,6 +848,11 @@ namespace flex
 					break;
 				}
 			}
+
+			if (m_RunningState.terminated)
+			{
+				m_RunningState.instructionIdx = -1;
+			}
 		}
 
 		DiagnosticContainer* VirtualMachine::GetDiagnosticContainer()
@@ -848,7 +862,7 @@ namespace flex
 
 		bool VirtualMachine::IsExecuting() const
 		{
-			return !m_RunningState.terminated;
+			return m_RunningState.instructionIdx != -1;
 		}
 
 		i32 VirtualMachine::InstructionIndex() const
@@ -858,7 +872,7 @@ namespace flex
 
 		i32 flex::VM::VirtualMachine::CurrentLineNumber() const
 		{
-			if (m_RunningState.instructionIdx < (i32)instructionOrigins.size())
+			if (m_RunningState.instructionIdx != -1 && m_RunningState.instructionIdx < (i32)instructionOrigins.size())
 			{
 				return instructionOrigins[m_RunningState.instructionIdx].lineNumber;
 			}

@@ -287,13 +287,13 @@ namespace flex
 			{
 				void Clear()
 				{
-					instructionIdx = 0;
+					instructionIdx = -1;
 					terminated = false;
 					zf = 0;
 					sf = 0;
 				}
 
-				i32 instructionIdx = 0;
+				i32 instructionIdx = -1;
 				bool terminated = false;
 				// Flags bitfield
 				u32 zf : 1, sf : 1;
