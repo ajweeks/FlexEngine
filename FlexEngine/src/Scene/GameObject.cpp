@@ -5591,6 +5591,11 @@ namespace flex
 					EvaluateCode();
 					return EventReply::CONSUMED;
 				}
+				if (keyCode == KeyCode::KEY_F10)
+				{
+					m_VM->Execute(true);
+					return EventReply::CONSUMED;
+				}
 				if (keyCode == KeyCode::KEY_ESCAPE)
 				{
 					m_Camera->TransitionOut();
