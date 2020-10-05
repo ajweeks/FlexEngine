@@ -269,6 +269,10 @@ namespace flex
 					diagnosticContainer->AddDiagnostic(binary->origin, "Mismatched types in binary operation");
 					return Value::Type::_NONE;
 				}
+				if (IsComparisonOp(binary->opType))
+				{
+					return Value::Type::BOOL;
+				}
 				return leftType;
 			}
 			case Value::Type::TERNARY:
