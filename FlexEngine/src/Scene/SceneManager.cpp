@@ -13,6 +13,8 @@
 
 namespace flex
 {
+	const char* SceneManager::s_newSceneModalWindowID = "New scene";
+
 	SceneManager::SceneManager() :
 		m_SavedDirStr(RelativePathToAbsolute(SCENE_SAVED_LOCATION)),
 		m_DefaultDirStr(RelativePathToAbsolute(SCENE_DEFAULT_LOCATION))
@@ -418,8 +420,6 @@ namespace flex
 
 	void SceneManager::DrawImGuiObjects()
 	{
-		static const char* newSceneModalWindowID = "New scene";
-
 		if (ImGui::TreeNode("Scenes"))
 		{
 			if (ImGui::Button("<"))
@@ -497,7 +497,7 @@ namespace flex
 
 			if (ImGui::Button("New scene..."))
 			{
-				ImGui::OpenPopup(newSceneModalWindowID);
+				m_bOpenNewSceneWindow = true;
 			}
 
 			ImGui::SameLine();
@@ -510,14 +510,17 @@ namespace flex
 
 			ImGui::TreePop();
 		}
+	}
 
+	void SceneManager::DrawImGuiModals()
+	{
 		if (m_bOpenNewSceneWindow)
 		{
 			m_bOpenNewSceneWindow = false;
-			ImGui::OpenPopup(newSceneModalWindowID);
+			ImGui::OpenPopup(s_newSceneModalWindowID);
 		}
 
-		if (ImGui::BeginPopupModal(newSceneModalWindowID, NULL, ImGuiWindowFlags_AlwaysAutoResize))
+		if (ImGui::BeginPopupModal(s_newSceneModalWindowID, NULL, ImGuiWindowFlags_AlwaysAutoResize))
 		{
 			static std::string newSceneName = "scene_" + IntToString(GetSceneCount(), 2);
 
@@ -536,6 +539,7 @@ namespace flex
 				newSceneName = std::string(newSceneName.c_str());
 				newSceneName = MakeSceneNameUnique(newSceneName);
 				CreateNewScene(newSceneName, true);
+				g_CameraManager->SetCameraByName("debug", false);
 
 				ImGui::CloseCurrentPopup();
 			}

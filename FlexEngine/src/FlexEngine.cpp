@@ -1216,6 +1216,8 @@ namespace flex
 			ImGui::End();
 		}
 
+		g_SceneManager->DrawImGuiModals();
+
 		g_Renderer->DrawImGuiWindows();
 
 		g_Renderer->DrawAssetWindowsImGui(&m_bMaterialWindowShowing, &m_bShaderWindowShowing, &m_bTextureWindowShowing, &m_bMeshWindowShowing);

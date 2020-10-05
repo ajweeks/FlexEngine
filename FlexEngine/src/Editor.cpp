@@ -1306,6 +1306,11 @@ namespace flex
 
 	void Editor::CreateObjects()
 	{
+		if (m_TransformGizmo != nullptr)
+		{
+			return;
+		}
+
 		RenderObjectCreateInfo gizmoCreateInfo = {};
 		gizmoCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
 		gizmoCreateInfo.bDepthWriteEnable = false;

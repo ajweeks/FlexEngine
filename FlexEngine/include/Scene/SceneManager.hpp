@@ -36,6 +36,7 @@ namespace flex
 		void CreateNewScene(const std::string& name, bool bSwitchImmediately);
 
 		void DrawImGuiObjects();
+		void DrawImGuiModals();
 
 		u32 CurrentSceneIndex() const;
 		BaseScene* CurrentScene() const;
@@ -62,6 +63,8 @@ namespace flex
 		std::string m_DefaultDirStr;
 
 		bool m_bOpenNewSceneWindow = false;
+
+		static const char* s_newSceneModalWindowID;
 
 		SceneManager(const SceneManager&) = delete;
 		SceneManager& operator=(const SceneManager&) = delete;
