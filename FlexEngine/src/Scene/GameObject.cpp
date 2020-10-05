@@ -5111,7 +5111,40 @@ namespace flex
 				{
 					ImGui::Separator();
 					ImGui::Text("Instructions (unpatched)");
+					const ImVec2 preCursorPos = ImGui::GetCursorPos();
 					ImGui::Text("%s", m_VM->unpatchedInstructionStr.c_str());
+					const ImVec2 postCursorPos = ImGui::GetCursorPos();
+
+					if (m_VM->IsExecuting())
+					{
+						i32 strLineNum = 0;
+						i32 instIdx = m_VM->InstructionIndex();
+						for (i32 i = 0; i < (i32)m_VM->state->instructionBlocks.size(); ++i)
+						{
+							i32 startOffset = (i32)m_VM->state->instructionBlocks[i].startOffset;
+							i32 lineCountInBlock = (i32)m_VM->state->instructionBlocks[i].instructions.size();
+							if (instIdx >= startOffset &&
+								instIdx < (startOffset + lineCountInBlock))
+							{
+								strLineNum += (instIdx - startOffset);
+								break;
+							}
+							strLineNum += lineCountInBlock + 2; // Two additional lines for "label: {\n" & "\n}"
+						}
+
+						if (strLineNum != -1)
+						{
+							strLineNum += 1;
+							std::string underlineStr = strLineNum == 0 ? "" : std::string(strLineNum, '\n');
+							underlineStr += "____________________";
+							ImGui::SetCursorPos(ImVec2(preCursorPos.x, preCursorPos.y + 1.0f));
+							ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.35f, 0.25f, 0.7f, 1.0f));
+							ImGui::Text("%s", underlineStr.c_str());
+							ImGui::PopStyleColor();
+
+							ImGui::SetCursorPos(postCursorPos);
+						}
+					}
 				}
 
 				if (!m_VM->instructionStr.empty())
@@ -5141,20 +5174,22 @@ namespace flex
 						}
 					}
 
-					ImVec2 cursorPos = ImGui::GetCursorPos();
+					const ImVec2 preCursorPos = ImGui::GetCursorPos();
 					ImGui::Text("%s", m_VM->instructionStr.c_str());
+					const ImVec2 postCursorPos = ImGui::GetCursorPos();
 
 					if (m_VM->IsExecuting())
 					{
 						i32 instIdx = m_VM->InstructionIndex();
 						std::string underlineStr = instIdx == 0 ? "" : std::string(instIdx, '\n');
 						underlineStr += "____________________";
-						ImGui::SetCursorPos(ImVec2(cursorPos.x, cursorPos.y + 1.0f));
+						ImGui::SetCursorPos(ImVec2(preCursorPos.x, preCursorPos.y + 1.0f));
 						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.35f, 0.25f, 0.7f, 1.0f));
 						ImGui::Text("%s", underlineStr.c_str());
 						ImGui::PopStyleColor();
-					}
 
+						ImGui::SetCursorPos(postCursorPos);
+					}
 				}
 			}
 		}
