@@ -198,6 +198,7 @@ namespace flex
 		char m_CmdLineStrBuf[MAX_CHARS_CMD_LINE_STR];
 		i32 m_PreviousCmdLineIndex = -1;
 		std::vector<std::string> m_PreviousCmdLineEntries;
+		bool m_bInvalidCmdLine = false;
 		bool m_bShouldFocusKeyboardOnConsole = false;
 
 		bool m_bInstallShaderDirectoryWatch = true;

@@ -1243,15 +1243,26 @@ namespace flex
 					m_bShouldFocusKeyboardOnConsole = false;
 					ImGui::SetKeyboardFocusHere();
 				}
+				const bool bWasInvalid = m_bInvalidCmdLine;
+				if (bWasInvalid)
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
+				}
+				char cmdLineStrBufCopy[MAX_CHARS_CMD_LINE_STR];
+				memcpy(cmdLineStrBufCopy, m_CmdLineStrBuf, MAX_CHARS_CMD_LINE_STR);
 				if (ImGui::InputTextEx("", m_CmdLineStrBuf, MAX_CHARS_CMD_LINE_STR, ImVec2(consoleWindowWidth - 16.0f, consoleWindowHeight - 8.0f),
 					ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackCharFilter | ImGuiInputTextFlags_CallbackCompletion | ImGuiInputTextFlags_CallbackHistory,
 					[](ImGuiInputTextCallbackData* data) { return g_EngineInstance->ImGuiConsoleInputCallback(data); }))
 				{
+					m_bInvalidCmdLine = false;
 					const std::string cmdLineStrBufClean = ToLower(m_CmdLineStrBuf);
+					bool bMatched = false;
 					for (const ConsoleCommand& cmd : m_ConsoleCommands)
 					{
 						if (strcmp(cmdLineStrBufClean.c_str(), cmd.name.c_str()) == 0)
 						{
+							bMatched = true;
+							m_bShowingConsole = false;
 							cmd.fun();
 							if (m_PreviousCmdLineEntries.empty() ||
 								strcmp((m_PreviousCmdLineEntries.end() - 1)->c_str(), m_CmdLineStrBuf) != 0)
@@ -1262,6 +1273,19 @@ namespace flex
 							memset(m_CmdLineStrBuf, 0, MAX_CHARS_CMD_LINE_STR);
 						}
 					}
+					if (!bMatched)
+					{
+						m_bInvalidCmdLine = true;
+						m_bShouldFocusKeyboardOnConsole = true;
+					}
+				}
+				if (memcmp(cmdLineStrBufCopy, m_CmdLineStrBuf, MAX_CHARS_CMD_LINE_STR))
+				{
+					m_bInvalidCmdLine = false;
+				}
+				if (bWasInvalid)
+				{
+					ImGui::PopStyleColor();
 				}
 			}
 			ImGui::End();
@@ -1343,6 +1367,7 @@ namespace flex
 	i32 FlexEngine::ImGuiConsoleInputCallback(ImGuiInputTextCallbackData* data)
 	{
 		const i32 cmdHistCount = (i32)m_PreviousCmdLineEntries.size();
+		m_bInvalidCmdLine = false;
 
 		if (data->EventFlag == ImGuiInputTextFlags_CallbackHistory)
 		{
