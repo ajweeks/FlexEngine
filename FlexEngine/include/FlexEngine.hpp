@@ -196,6 +196,8 @@ namespace flex
 		bool m_bShowingConsole = false;
 		static const u32 MAX_CHARS_CMD_LINE_STR = 256;
 		char m_CmdLineStrBuf[MAX_CHARS_CMD_LINE_STR];
+		i32 m_SelectedCmdLineAutoCompleteIndex = -1;
+		std::vector<std::string> m_CmdAutoCompletions;
 		i32 m_PreviousCmdLineIndex = -1;
 		std::vector<std::string> m_PreviousCmdLineEntries;
 		bool m_bInvalidCmdLine = false;

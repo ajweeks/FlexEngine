@@ -1230,7 +1230,8 @@ namespace flex
 		if (m_bShowingConsole)
 		{
 			const real consoleWindowWidth = 350.0f;
-			const real consoleWindowHeight = 25.0f;
+			float fontScale = ImGui::GetIO().FontGlobalScale;
+			real consoleWindowHeight = 25.0f + m_CmdAutoCompletions.size() * 17.0f * fontScale;
 			const real consoleWindowX = (m_bMainWindowShowing && !bIsMainWindowCollapsed) ? m_ImGuiMainWindowWidth : 0.0f;
 			const real consoleWindowY = frameBufferSize.y - consoleWindowHeight;
 			ImGui::SetNextWindowPos(ImVec2(consoleWindowX, consoleWindowY), ImGuiCond_Always);
@@ -1248,10 +1249,26 @@ namespace flex
 				{
 					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
 				}
+				bool bFocusTextBox = false;
+				for (u32 i = 0; i < (u32)m_CmdAutoCompletions.size(); ++i)
+				{
+					const std::string& str = m_CmdAutoCompletions[i];
+					if (ImGui::Selectable(str.c_str(), i == (i32)m_SelectedCmdLineAutoCompleteIndex))
+					{
+						m_SelectedCmdLineAutoCompleteIndex = (i32)i;
+						strncpy(m_CmdLineStrBuf, m_CmdAutoCompletions[i].c_str(), m_CmdAutoCompletions[i].size());
+						bFocusTextBox = true;
+					}
+				}
+
 				char cmdLineStrBufCopy[MAX_CHARS_CMD_LINE_STR];
 				memcpy(cmdLineStrBufCopy, m_CmdLineStrBuf, MAX_CHARS_CMD_LINE_STR);
 				if (ImGui::InputTextEx("", m_CmdLineStrBuf, MAX_CHARS_CMD_LINE_STR, ImVec2(consoleWindowWidth - 16.0f, consoleWindowHeight - 8.0f),
-					ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackCharFilter | ImGuiInputTextFlags_CallbackCompletion | ImGuiInputTextFlags_CallbackHistory,
+					ImGuiInputTextFlags_EnterReturnsTrue |
+					ImGuiInputTextFlags_CallbackAlways |
+					ImGuiInputTextFlags_CallbackHistory |
+					ImGuiInputTextFlags_CallbackCompletion |
+					ImGuiInputTextFlags_CallbackCharFilter,
 					[](ImGuiInputTextCallbackData* data) { return g_EngineInstance->ImGuiConsoleInputCallback(data); }))
 				{
 					m_bInvalidCmdLine = false;
@@ -1262,6 +1279,7 @@ namespace flex
 						if (strcmp(cmdLineStrBufClean.c_str(), cmd.name.c_str()) == 0)
 						{
 							bMatched = true;
+							m_CmdAutoCompletions.clear();
 							m_bShowingConsole = false;
 							cmd.fun();
 							if (m_PreviousCmdLineEntries.empty() ||
@@ -1273,15 +1291,19 @@ namespace flex
 							memset(m_CmdLineStrBuf, 0, MAX_CHARS_CMD_LINE_STR);
 						}
 					}
+					if (memcmp(cmdLineStrBufCopy, m_CmdLineStrBuf, MAX_CHARS_CMD_LINE_STR))
+					{
+						m_bInvalidCmdLine = false;
+					}
 					if (!bMatched)
 					{
 						m_bInvalidCmdLine = true;
 						m_bShouldFocusKeyboardOnConsole = true;
 					}
 				}
-				if (memcmp(cmdLineStrBufCopy, m_CmdLineStrBuf, MAX_CHARS_CMD_LINE_STR))
+				if (bFocusTextBox)
 				{
-					m_bInvalidCmdLine = false;
+					ImGui::SetKeyboardFocusHere();
 				}
 				if (bWasInvalid)
 				{
@@ -1367,43 +1389,76 @@ namespace flex
 	i32 FlexEngine::ImGuiConsoleInputCallback(ImGuiInputTextCallbackData* data)
 	{
 		const i32 cmdHistCount = (i32)m_PreviousCmdLineEntries.size();
-		m_bInvalidCmdLine = false;
+		if (data->EventFlag != ImGuiInputTextFlags_CallbackAlways)
+		{
+			m_bInvalidCmdLine = false;
+		}
 
 		if (data->EventFlag == ImGuiInputTextFlags_CallbackHistory)
 		{
-			if (data->EventKey == ImGuiKey_UpArrow)
+			if (m_CmdAutoCompletions.empty())
 			{
-				if (cmdHistCount == 0)
+				if (data->EventKey == ImGuiKey_UpArrow)
 				{
-					return -1;
-				}
+					if (cmdHistCount == 0)
+					{
+						return -1;
+					}
 
-				if (m_PreviousCmdLineIndex == cmdHistCount - 1)
-				{
-					return 0;
-				}
+					if (m_PreviousCmdLineIndex == cmdHistCount - 1)
+					{
+						return 0;
+					}
 
-				data->DeleteChars(0, data->BufTextLen);
-				++m_PreviousCmdLineIndex;
-				data->InsertChars(0, m_PreviousCmdLineEntries[cmdHistCount - m_PreviousCmdLineIndex - 1].data());
-			}
-			else if (data->EventKey == ImGuiKey_DownArrow)
-			{
-				if (cmdHistCount == 0)
-				{
-					return -1;
-				}
-
-				if (m_PreviousCmdLineIndex == -1)
-				{
-					return 0;
-				}
-
-				data->DeleteChars(0, data->BufTextLen);
-				--m_PreviousCmdLineIndex;
-				if (m_PreviousCmdLineIndex != -1) // -1 leaves console cleared
-				{
+					data->DeleteChars(0, data->BufTextLen);
+					++m_PreviousCmdLineIndex;
 					data->InsertChars(0, m_PreviousCmdLineEntries[cmdHistCount - m_PreviousCmdLineIndex - 1].data());
+				}
+				else if (data->EventKey == ImGuiKey_DownArrow)
+				{
+					if (cmdHistCount == 0)
+					{
+						return -1;
+					}
+
+					if (m_PreviousCmdLineIndex == -1)
+					{
+						return 0;
+					}
+
+					data->DeleteChars(0, data->BufTextLen);
+					--m_PreviousCmdLineIndex;
+					if (m_PreviousCmdLineIndex != -1) // -1 leaves console cleared
+					{
+						data->InsertChars(0, m_PreviousCmdLineEntries[cmdHistCount - m_PreviousCmdLineIndex - 1].data());
+					}
+				}
+				return 0;
+			}
+			else // Select auto completion entry
+			{
+				if (data->EventKey == ImGuiKey_UpArrow)
+				{
+					if (m_SelectedCmdLineAutoCompleteIndex == -1)
+					{
+						m_SelectedCmdLineAutoCompleteIndex = (i32)m_CmdAutoCompletions.size() - 1;
+					}
+					else
+					{
+						--m_SelectedCmdLineAutoCompleteIndex;
+						m_SelectedCmdLineAutoCompleteIndex = glm::max(m_SelectedCmdLineAutoCompleteIndex, 0);
+					}
+				}
+				else if (data->EventKey == ImGuiKey_DownArrow)
+				{
+					if (m_SelectedCmdLineAutoCompleteIndex != -1)
+					{
+						++m_SelectedCmdLineAutoCompleteIndex;
+						if (m_SelectedCmdLineAutoCompleteIndex >= ((i32)m_CmdAutoCompletions.size()))
+						{
+							m_SelectedCmdLineAutoCompleteIndex = -1;
+						}
+					}
 				}
 			}
 		}
@@ -1411,27 +1466,89 @@ namespace flex
 		{
 			if (data->BufTextLen > 0)
 			{
+				if (m_SelectedCmdLineAutoCompleteIndex != -1)
+				{
+					const std::string& cmdStr = m_CmdAutoCompletions[m_SelectedCmdLineAutoCompleteIndex];
+					data->DeleteChars(0, data->BufTextLen);
+					data->InsertChars(0, cmdStr.data());
+				}
+				else
+				{
+					for (const ConsoleCommand& cmd : m_ConsoleCommands)
+					{
+						if (StartsWith(cmd.name, data->Buf) && strcmp(cmd.name.c_str(), data->Buf) != 0)
+						{
+							data->DeleteChars(0, data->BufTextLen);
+							data->InsertChars(0, cmd.name.data());
+							break;
+						}
+					}
+				}
+
+				m_CmdAutoCompletions.clear();
 				for (const ConsoleCommand& cmd : m_ConsoleCommands)
 				{
 					if (StartsWith(cmd.name, data->Buf))
 					{
-						data->DeleteChars(0, data->BufTextLen);
-						data->InsertChars(0, cmd.name.data());
-						break;
+						m_CmdAutoCompletions.push_back(cmd.name);
 					}
 				}
 			}
+			return 0;
 		}
-
-		if (data->EventFlag == ImGuiInputTextFlags_CallbackCharFilter)
+		else if (data->EventFlag == ImGuiInputTextFlags_CallbackCharFilter)
 		{
 			if (data->EventChar == L'`' ||
 				data->EventChar == L'~')
 			{
 				m_bShowingConsole = false;
+				m_SelectedCmdLineAutoCompleteIndex = -1;
 				return 1;
 			}
+
+			char eventChar = (char)data->EventChar;
+			char* cmdLine = strncat(m_CmdLineStrBuf, &eventChar, 1);
+
+			if (m_SelectedCmdLineAutoCompleteIndex != -1)
+			{
+				if (!StartsWith(m_CmdAutoCompletions[m_SelectedCmdLineAutoCompleteIndex], cmdLine))
+				{
+					m_SelectedCmdLineAutoCompleteIndex = -1;
+				}
+			}
+
+			m_CmdAutoCompletions.clear();
+			for (const ConsoleCommand& cmd : m_ConsoleCommands)
+			{
+				if (StartsWith(cmd.name, cmdLine))
+				{
+					m_CmdAutoCompletions.push_back(cmd.name);
+				}
+			}
 		}
+		else
+		{
+			if (m_PreviousCmdLineIndex == -1)
+			{
+				m_CmdAutoCompletions.clear();
+				if (strlen(m_CmdLineStrBuf) > 0)
+				{
+					for (const ConsoleCommand& cmd : m_ConsoleCommands)
+					{
+						if (StartsWith(cmd.name, m_CmdLineStrBuf))
+						{
+							m_CmdAutoCompletions.push_back(cmd.name);
+						}
+					}
+				}
+			}
+		}
+
+		if (m_SelectedCmdLineAutoCompleteIndex > ((i32)m_CmdAutoCompletions.size()) - 1)
+		{
+			m_SelectedCmdLineAutoCompleteIndex = -1;
+		}
+
 		return 0;
 	}
 
@@ -1763,7 +1880,7 @@ namespace flex
 		if (!ReadRenderDocSettingsFileFromDisk(dllDirPath))
 		{
 			PrintError("Unable to setup RenderDoc API - settings file missing.\n"
-						"Set path to DLL under Edit > Renderdoc DLL path\n");
+				"Set path to DLL under Edit > Renderdoc DLL path\n");
 			return;
 		}
 
