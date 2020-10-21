@@ -1253,7 +1253,7 @@ namespace flex
 				for (u32 i = 0; i < (u32)m_CmdAutoCompletions.size(); ++i)
 				{
 					const std::string& str = m_CmdAutoCompletions[i];
-					if (ImGui::Selectable(str.c_str(), i == (i32)m_SelectedCmdLineAutoCompleteIndex))
+					if (ImGui::Selectable(str.c_str(), i == (u32)m_SelectedCmdLineAutoCompleteIndex))
 					{
 						m_SelectedCmdLineAutoCompleteIndex = (i32)i;
 						strncpy(m_CmdLineStrBuf, m_CmdAutoCompletions[i].c_str(), m_CmdAutoCompletions[i].size());
