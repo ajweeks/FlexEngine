@@ -1437,6 +1437,8 @@ namespace flex
 			}
 			else // Select auto completion entry
 			{
+				m_PreviousCmdLineIndex = -1;
+
 				if (data->EventKey == ImGuiKey_UpArrow)
 				{
 					if (m_SelectedCmdLineAutoCompleteIndex == -1)
@@ -1485,6 +1487,7 @@ namespace flex
 					}
 				}
 
+				m_PreviousCmdLineIndex = -1;
 				m_CmdAutoCompletions.clear();
 				for (const ConsoleCommand& cmd : m_ConsoleCommands)
 				{
@@ -1517,6 +1520,7 @@ namespace flex
 				}
 			}
 
+			m_PreviousCmdLineIndex = -1;
 			m_CmdAutoCompletions.clear();
 			for (const ConsoleCommand& cmd : m_ConsoleCommands)
 			{
