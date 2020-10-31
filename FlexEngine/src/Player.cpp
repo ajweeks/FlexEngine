@@ -314,7 +314,7 @@ namespace flex
 			if (terminalCam == nullptr)
 			{
 				terminalCam = static_cast<TerminalCamera*>(g_CameraManager->GetCameraByName("terminal"));
-				g_CameraManager->PushCamera(terminalCam, true);
+				g_CameraManager->PushCamera(terminalCam, true, true);
 			}
 			terminalCam->SetTerminal(terminal);
 		}

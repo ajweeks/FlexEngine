@@ -152,7 +152,7 @@ namespace flex
 
 		virtual std::vector<Pair<std::string, MaterialID>> GetValidMaterialNames() const = 0;
 
-		virtual void DestroyRenderObject(RenderID renderID) = 0;
+		virtual bool DestroyRenderObject(RenderID renderID) = 0;
 
 		virtual void SetGlobalUniform(u64 uniform, void* data, u32 dataSize) = 0;
 
@@ -283,7 +283,7 @@ namespace flex
 		void LoadShaders();
 		virtual bool LoadShaderCode(ShaderID shaderID) = 0;
 		virtual void SetShaderCount(u32 shaderCount) = 0;
-		virtual void RemoveMaterial(MaterialID materialID) = 0;
+		virtual void RemoveMaterial(MaterialID materialID, bool bUpdateUsages = true) = 0;
 		virtual void FillOutGBufferFrameBufferAttachments(std::vector<Pair<std::string, void*>>& outVec) = 0;
 		virtual void RecreateShadowFrameBuffers() = 0;
 

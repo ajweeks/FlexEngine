@@ -112,12 +112,20 @@ namespace flex
 
 		m_PreviousSceneIndex = m_CurrentSceneIndex;
 
+		g_CameraManager->Destroy();
+
 		if (m_CurrentSceneIndex != InvalidID)
 		{
 			m_Scenes[m_CurrentSceneIndex]->Destroy();
 		}
 
 		m_CurrentSceneIndex = sceneIndex;
+
+		g_EngineInstance->CreateCameraInstances();
+
+		InitializeCurrentScene();
+		PostInitializeCurrentScene();
+		g_CameraManager->Initialize();
 
 		return true;
 	}
@@ -193,16 +201,8 @@ namespace flex
 	{
 		Print("Reloading current scene\n");
 
-		g_CameraManager->Destroy();
-
 		SetCurrentScene(m_CurrentSceneIndex);
 
-		g_EngineInstance->CreateCameraInstances();
-
-		InitializeCurrentScene();
-		PostInitializeCurrentScene();
-
-		g_CameraManager->Initialize();
 		g_Renderer->AddEditorString("Scene reloaded");
 	}
 
@@ -481,11 +481,7 @@ namespace flex
 						{
 							if (i != (i32)m_CurrentSceneIndex)
 							{
-								if (SetCurrentScene(i))
-								{
-									InitializeCurrentScene();
-									PostInitializeCurrentScene();
-								}
+								SetCurrentScene(i);
 							}
 						}
 
@@ -612,8 +608,6 @@ namespace flex
 				AddScene(newScene);
 				SetCurrentScene(newScene);
 
-				InitializeCurrentScene();
-				PostInitializeCurrentScene();
 				newScene->SetName(newSceneName);
 
 				CurrentScene()->SerializeToFile(true);

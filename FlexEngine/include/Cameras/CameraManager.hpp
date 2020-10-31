@@ -29,8 +29,8 @@ namespace flex
 		BaseCamera* CycleCamera(i32 deltaIndex, bool bAlignWithPrevious = true);
 		BaseCamera* SetCameraByName(const std::string& name, bool bAlignWithPrevious);
 
-		BaseCamera* PushCamera(BaseCamera* camera, bool bAlignWithPrevious);
-		BaseCamera* PushCameraByName(const std::string& name, bool bAlignWithPrevious);
+		BaseCamera* PushCamera(BaseCamera* camera, bool bAlignWithPrevious, bool bInitialize);
+		BaseCamera* PushCameraByName(const std::string& name, bool bAlignWithPrevious, bool bInitialize);
 		void PopCamera();
 
 		BaseCamera* GetCameraByName(const std::string& name);

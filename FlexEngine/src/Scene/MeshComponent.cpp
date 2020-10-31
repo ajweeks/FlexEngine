@@ -93,7 +93,10 @@ namespace flex
 
 	void MeshComponent::Destroy()
 	{
-		g_Renderer->DestroyRenderObject(renderID);
+		if (!g_Renderer->DestroyRenderObject(renderID))
+		{
+			PrintError("Failed to destroy render object of mesh component\n");
+		}
 		m_VertexBufferData.Destroy();
 		m_OwningMesh = nullptr;
 		m_bInitialized = false;

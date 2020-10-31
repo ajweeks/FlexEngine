@@ -2350,16 +2350,17 @@ namespace flex
 			return *m_Shaders[shaderID].shader;
 		}
 
-		void VulkanRenderer::DestroyRenderObject(RenderID renderID)
+		bool VulkanRenderer::DestroyRenderObject(RenderID renderID)
 		{
 			for (VulkanRenderObject* renderObject : m_RenderObjects)
 			{
 				if (renderObject && renderObject->renderID == renderID)
 				{
 					DestroyRenderObject(renderID, renderObject);
-					return;
+					return true;
 				}
 			}
+			return false;
 		}
 
 		void VulkanRenderer::SetGlobalUniform(u64 uniform, void* data, u32 dataSize)
@@ -7270,24 +7271,27 @@ namespace flex
 			//VulkanRenderer::SetFramebufferName(m_VulkanDevice, frameBuffer, "GBuffer Cubemap frame buffer");
 		}
 
-		void VulkanRenderer::RemoveMaterial(MaterialID materialID)
+		void VulkanRenderer::RemoveMaterial(MaterialID materialID, bool bUpdateUsages /* = true */)
 		{
 			assert(materialID != InvalidMaterialID);
 
 			m_Materials.erase(materialID);
 
-			for (RenderID renderID = 0; renderID < MAX_NUM_RENDER_OBJECTS; ++renderID)
+			if (bUpdateUsages)
 			{
-				VulkanRenderObject* renderObject = m_RenderObjects[renderID];
-				if (renderObject)
+				for (RenderID renderID = 0; renderID < MAX_NUM_RENDER_OBJECTS; ++renderID)
 				{
-					if (renderObject->materialID == materialID)
+					VulkanRenderObject* renderObject = m_RenderObjects[renderID];
+					if (renderObject)
 					{
-						RenderObjectCreateInfo info;
-						GetRenderObjectCreateInfo(renderID, info);
-						DestroyRenderObject(renderID, renderObject);
-						info.materialID = m_PlaceholderMaterialID;
-						InitializeRenderObject(&info);
+						if (renderObject->materialID == materialID)
+						{
+							RenderObjectCreateInfo info;
+							GetRenderObjectCreateInfo(renderID, info);
+							DestroyRenderObject(renderID, renderObject);
+							info.materialID = m_PlaceholderMaterialID;
+							InitializeRenderObject(&info);
+						}
 					}
 				}
 			}

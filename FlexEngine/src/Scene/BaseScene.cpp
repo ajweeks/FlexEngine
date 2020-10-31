@@ -147,7 +147,7 @@ namespace flex
 					{
 						if (camType.compare("terminal") == 0)
 						{
-							g_CameraManager->PushCameraByName(camType, true);
+							g_CameraManager->PushCameraByName(camType, true, false);
 
 						}
 						else

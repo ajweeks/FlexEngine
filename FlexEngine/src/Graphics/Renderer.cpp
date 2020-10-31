@@ -2299,11 +2299,11 @@ namespace flex
 			// TODO: Don't rely on material names!
 			if (FindOrCreateMaterialByName(gBufferMatName, existingGBufferQuadMatID))
 			{
-				RemoveMaterial(existingGBufferQuadMatID);
+				RemoveMaterial(existingGBufferQuadMatID, false);
 			}
 			if (FindOrCreateMaterialByName(gBufferCubeMatName, existingGBufferCubeMatID))
 			{
-				RemoveMaterial(existingGBufferCubeMatID);
+				RemoveMaterial(existingGBufferCubeMatID, false);
 			}
 
 			for (auto iter = m_PersistentObjects.begin(); iter != m_PersistentObjects.end(); ++iter)

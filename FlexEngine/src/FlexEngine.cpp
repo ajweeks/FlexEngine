@@ -226,8 +226,6 @@ namespace flex
 
 		g_CameraManager = new CameraManager();
 
-		CreateCameraInstances();
-
 		InitializeWindowAndRenderer();
 
 		AudioManager::Initialize();
@@ -1587,8 +1585,6 @@ namespace flex
 					if (!g_SceneManager->SetCurrentScene(lastOpenedSceneName, false))
 					{
 						g_SceneManager->SetNextSceneActive();
-						g_SceneManager->InitializeCurrentScene();
-						g_SceneManager->PostInitializeCurrentScene();
 					}
 				}
 
