@@ -154,6 +154,7 @@ IGNORE_WARNINGS_POP
 
 #if COMPILE_IMGUI
 IGNORE_WARNINGS_PUSH
+#define IMGUI_DEFINE_MATH_OPERATORS
 #include "imgui.h"
 
 namespace flex
@@ -164,6 +165,7 @@ namespace flex
 	extern ImVec4 g_WarningButtonActiveColor;
 }
 
+#include "ImGuiBezier.hpp"
 IGNORE_WARNINGS_POP
 #endif // COMPILE_IMGUI
 
