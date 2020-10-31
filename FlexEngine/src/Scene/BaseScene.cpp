@@ -168,6 +168,13 @@ namespace flex
 					if (cameraObj.SetFloatChecked("exposure", exposure)) cam->exposure = exposure;
 					if (cameraObj.SetFloatChecked("move speed", moveSpeed)) cam->moveSpeed = moveSpeed;
 
+					if (cameraObj.HasField("aperture"))
+					{
+						cam->aperture = cameraObj.GetFloat("aperture");
+						cam->shutterSpeed = cameraObj.GetFloat("shutter speed");
+						cam->lightSensitivity = cameraObj.GetFloat("light sensitivity");
+					}
+
 					JSONObject cameraTransform;
 					if (cameraObj.SetObjectChecked("transform", cameraTransform))
 					{
@@ -195,6 +202,8 @@ namespace flex
 						}
 						cam->yaw = camYaw;
 					}
+
+					cam->CalculateExposure();
 				}
 
 				// TODO: Only initialize materials currently present in this scene

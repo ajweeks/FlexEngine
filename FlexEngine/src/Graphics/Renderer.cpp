@@ -312,16 +312,6 @@ namespace flex
 			rootObject.SetIntChecked("shadow cascade count", m_ShadowCascadeCount);
 			rootObject.SetUIntChecked("shadow cascade base resolution", m_ShadowMapBaseResolution);
 
-			if (rootObject.HasField("aperture"))
-			{
-				// Assume all exposure control fields are present if one is
-				BaseCamera* cam = g_CameraManager->CurrentCamera();
-				cam->aperture = rootObject.GetFloat("aperture");
-				cam->shutterSpeed = rootObject.GetFloat("shutter speed");
-				cam->lightSensitivity = rootObject.GetFloat("light sensitivity");
-				cam->CalculateExposure();
-			}
-
 			// Done loading
 			m_RendererSettingsFileVersion = LATEST_RENDERER_SETTINGS_FILE_VERSION;
 		}
