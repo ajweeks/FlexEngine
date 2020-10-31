@@ -2,11 +2,11 @@
 
 namespace flex
 {
-	class BezierCurve
+	class BezierCurve3D
 	{
 	public:
-		BezierCurve();
-		BezierCurve(const glm::vec3& p0, const glm::vec3& p1, const glm::vec3& p2, const glm::vec3& p3);
+		BezierCurve3D();
+		BezierCurve3D(const glm::vec3& p0, const glm::vec3& p1, const glm::vec3& p2, const glm::vec3& p3);
 
 		void DrawDebug(bool bHighlighted, const btVector4& baseColour, const btVector4& highlightColour) const;
 
@@ -16,7 +16,7 @@ namespace flex
 
 		void CalculateLength();
 
-		static BezierCurve FromString(const std::string& str);
+		static BezierCurve3D FromString(const std::string& str);
 		std::string ToString() const;
 
 		glm::vec3 points[4];

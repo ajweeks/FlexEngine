@@ -8,7 +8,7 @@ IGNORE_WARNINGS_POP
 
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
-#include "Track/BezierCurve.hpp"
+#include "Track/BezierCurve3D.hpp"
 
 namespace flex
 {
@@ -17,7 +17,7 @@ namespace flex
 		DEBUG_GenerateRandomSeed();
 	}
 
-	BezierCurveList::BezierCurveList(const std::vector<BezierCurve>& curves) :
+	BezierCurveList::BezierCurveList(const std::vector<BezierCurve3D>& curves) :
 		curves(curves)
 	{
 		DEBUG_GenerateRandomSeed();
@@ -36,7 +36,7 @@ namespace flex
 		for (const JSONField& field : obj.fields)
 		{
 			std::string curveString = field.value.strValue;
-			curves.emplace_back(BezierCurve::FromString(curveString));
+			curves.emplace_back(BezierCurve3D::FromString(curveString));
 		}
 	}
 
@@ -173,7 +173,7 @@ namespace flex
 	{
 		JSONObject result = {};
 
-		for (const BezierCurve& curve : curves)
+		for (const BezierCurve3D& curve : curves)
 		{
 			result.fields.emplace_back("curve", JSONValue(curve.ToString()));
 		}

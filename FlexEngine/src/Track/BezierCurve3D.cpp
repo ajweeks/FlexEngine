@@ -1,19 +1,19 @@
 #include "stdafx.hpp"
 
-#include "Track/BezierCurve.hpp"
+#include "Track/BezierCurve3D.hpp"
 
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 
 namespace flex
 {
-	const btVector4 BezierCurve::s_PointColour = btVector4(0.2f, 0.2f, 0.1f, 0.25f);
+	const btVector4 BezierCurve3D::s_PointColour = btVector4(0.2f, 0.2f, 0.1f, 0.25f);
 
-	BezierCurve::BezierCurve()
+	BezierCurve3D::BezierCurve3D()
 	{
 	}
 
-	BezierCurve::BezierCurve(const glm::vec3& p0, const glm::vec3& p1, const glm::vec3& p2, const glm::vec3& p3)
+	BezierCurve3D::BezierCurve3D(const glm::vec3& p0, const glm::vec3& p1, const glm::vec3& p2, const glm::vec3& p3)
 	{
 		points[0] = p0;
 		points[1] = p1;
@@ -23,7 +23,7 @@ namespace flex
 		CalculateLength();
 	}
 
-	void BezierCurve::DrawDebug(bool bHighlighted, const btVector4& baseColour, const btVector4& highlightColour) const
+	void BezierCurve3D::DrawDebug(bool bHighlighted, const btVector4& baseColour, const btVector4& highlightColour) const
 	{
 		PhysicsDebugDrawBase* debugDrawer = g_Renderer->GetDebugDrawer();
 
@@ -51,7 +51,7 @@ namespace flex
 		}
 	}
 
-	glm::vec3 BezierCurve::GetPointOnCurve(real t) const
+	glm::vec3 BezierCurve3D::GetPointOnCurve(real t) const
 	{
 		t = Saturate(t);
 		real oneMinusT = 1.0f - t;
@@ -61,7 +61,7 @@ namespace flex
 			t * t * t * points[3];
 	}
 
-	glm::vec3 BezierCurve::GetFirstDerivativeOnCurve(real t) const
+	glm::vec3 BezierCurve3D::GetFirstDerivativeOnCurve(real t) const
 	{
 		t = Saturate(t);
 		real oneMinusT = 1.0f - t;
@@ -70,7 +70,7 @@ namespace flex
 			3.0f * t * t * (points[3] - points[2]);
 	}
 
-	void BezierCurve::CalculateLength()
+	void BezierCurve3D::CalculateLength()
 	{
 		calculatedLength = 0.0f;
 
@@ -87,11 +87,11 @@ namespace flex
 		}
 	}
 
-	BezierCurve BezierCurve::FromString(const std::string& str)
+	BezierCurve3D BezierCurve3D::FromString(const std::string& str)
 	{
 		assert(!str.empty());
 
-		BezierCurve result = {};
+		BezierCurve3D result = {};
 
 		std::vector<std::string> parts = Split(str, ',');
 		if (parts.size() != 12)
@@ -109,7 +109,7 @@ namespace flex
 		return result;
 	}
 
-	std::string BezierCurve::ToString() const
+	std::string BezierCurve3D::ToString() const
 	{
 		const i32 precision = 5;
 		const char* delim = ", ";

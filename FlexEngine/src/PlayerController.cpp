@@ -130,7 +130,7 @@ namespace flex
 
 					static const btVector4 placedCurveCol(0.5f, 0.8f, 0.3f, 0.9f);
 					static const btVector4 placingCurveCol(0.35f, 0.6f, 0.3f, 0.9f);
-					for (const BezierCurve& curve : m_Player->m_TrackPlacing.curves)
+					for (const BezierCurve3D& curve : m_Player->m_TrackPlacing.curves)
 					{
 						curve.DrawDebug(false, placedCurveCol, placedCurveCol);
 
@@ -185,7 +185,7 @@ namespace flex
 
 						static const btVector4 editedCurveCol(0.3f, 0.85f, 0.53f, 0.9f);
 						static const btVector4 editingCurveCol(0.2f, 0.8f, 0.25f, 0.9f);
-						for (const BezierCurve& curve : trackEditing->curves)
+						for (const BezierCurve3D& curve : trackEditing->curves)
 						{
 							curve.DrawDebug(false, editedCurveCol, editingCurveCol);
 						}

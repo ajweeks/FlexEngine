@@ -352,7 +352,7 @@ namespace flex
 		bool bFoundPointInRange = false;
 		for (const BezierCurveList& track : m_Tracks)
 		{
-			for (const BezierCurve& curve : track.curves)
+			for (const BezierCurve3D& curve : track.curves)
 			{
 				for (i32 i = 0; i < 4; i += (bIncludeHandles ? 1 : 3))
 				{
@@ -529,11 +529,11 @@ namespace flex
 
 		for (i32 i = 0; i < (i32)m_Tracks.size(); ++i)
 		{
-			const std::vector<BezierCurve>& curvesA = m_Tracks[i].curves;
+			const std::vector<BezierCurve3D>& curvesA = m_Tracks[i].curves;
 
 			for (i32 j = i + 1; j < (i32)m_Tracks.size(); ++j)
 			{
-				const std::vector<BezierCurve>& curvesB = m_Tracks[j].curves;
+				const std::vector<BezierCurve3D>& curvesB = m_Tracks[j].curves;
 
 				for (i32 k = 0; k < (i32)curvesA.size(); ++k)
 				{

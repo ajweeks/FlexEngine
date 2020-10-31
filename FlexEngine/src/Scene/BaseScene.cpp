@@ -29,7 +29,7 @@ IGNORE_WARNINGS_POP
 #include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
-#include "Track/BezierCurve.hpp"
+#include "Track/BezierCurve3D.hpp"
 
 namespace flex
 {

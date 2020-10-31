@@ -4,13 +4,13 @@
 
 namespace flex
 {
-	class BezierCurve;
+	class BezierCurve3D;
 
 	class BezierCurveList
 	{
 	public:
 		BezierCurveList();
-		explicit BezierCurveList(const std::vector<BezierCurve>& curves);
+		explicit BezierCurveList(const std::vector<BezierCurve3D>& curves);
 		~BezierCurveList();
 
 		void InitializeFromJSON(const JSONObject& obj);
@@ -38,7 +38,7 @@ namespace flex
 
 		JSONObject Serialize() const;
 
-		std::vector<BezierCurve> curves;
+		std::vector<BezierCurve3D> curves;
 
 	private:
 		void DEBUG_GenerateRandomSeed();

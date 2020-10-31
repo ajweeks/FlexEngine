@@ -3,7 +3,7 @@
 #include "Scene/GameObject.hpp"
 
 #include "Types.hpp" // For TrackState
-#include "Track/BezierCurve.hpp"
+#include "Track/BezierCurve3D.hpp"
 #include "Track/BezierCurveList.hpp"
 
 namespace flex
@@ -71,7 +71,7 @@ namespace flex
 
 		i32 m_CurveNodesPlaced = 0;
 		BezierCurveList m_TrackPlacing;
-		BezierCurve m_CurvePlacing;
+		BezierCurve3D m_CurvePlacing;
 		bool m_bPlacingTrack = false;
 		TrackID m_TrackEditingID = InvalidTrackID;
 		i32 m_TrackEditingCurveIdx = -1;
