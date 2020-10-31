@@ -107,7 +107,11 @@ namespace flex
 		virtual void DrawImGuiMisc();
 		virtual void DrawImGuiWindows();
 
-		virtual void UpdateVertexData(RenderID renderID, VertexBufferData const* vertexBufferData, const std::vector<u32>& indexData) = 0;
+		virtual void UpdateDynamicVertexData(RenderID renderID, VertexBufferData const* vertexBufferData, const std::vector<u32>& indexData) = 0;
+		virtual void FreeDynamicVertexData(RenderID renderID) = 0;
+		virtual void ShrinkDynamicVertexData(RenderID renderID, real minUnused = 0.0f) = 0;
+		virtual u32 GetDynamicVertexBufferSize(RenderID renderID) = 0;
+		virtual u32 GetDynamicVertexBufferUsedSize(RenderID renderID) = 0;
 
 		void DrawImGuiForGameObject(GameObject* gameObject);
 
@@ -148,7 +152,9 @@ namespace flex
 
 		virtual std::vector<Pair<std::string, MaterialID>> GetValidMaterialNames() const = 0;
 
-		virtual void DestroyRenderObject(RenderID renderID) = 0;
+		virtual bool DestroyRenderObject(RenderID renderID) = 0;
+
+		virtual void SetGlobalUniform(u64 uniform, void* data, u32 dataSize) = 0;
 
 		virtual void NewFrame() = 0;
 
@@ -170,7 +176,7 @@ namespace flex
 			real spacing,
 			real scale = 1.0f) = 0;
 
-		virtual void DrawAssetBrowserImGui(bool* bShowing) = 0;
+		virtual void DrawAssetWindowsImGui(bool* bMaterialWindowShowing, bool* bShaderWindowShowing, bool* bTextureWindowShowing, bool* bMeshWindowShowing) = 0;
 		virtual void DrawImGuiForRenderObject(RenderID renderID) = 0;
 
 		virtual void RecaptureReflectionProbe() = 0;
@@ -180,6 +186,8 @@ namespace flex
 
 		virtual ParticleSystemID AddParticleSystem(const std::string& name, ParticleSystem* system, i32 particleCount) = 0;
 		virtual bool RemoveParticleSystem(ParticleSystemID particleSystemID) = 0;
+
+		virtual void RecreateEverything() = 0;
 
 		void DrawImGuiRenderObjects();
 		void DrawImGuiSettings();
@@ -265,7 +273,6 @@ namespace flex
 
 		static const u32 MAX_PARTICLE_COUNT = 65536;
 		static const u32 PARTICLES_PER_DISPATCH = 256;
-		static const u32 SHADOW_CASCADE_RES = 4096;
 		static const u32 SSAO_NOISE_DIM = 4;
 
 		static const char* GameObjectPayloadCStr;
@@ -273,11 +280,12 @@ namespace flex
 		static const char* MeshPayloadCStr;
 
 	protected:
-		virtual void LoadShaders();
+		void LoadShaders();
 		virtual bool LoadShaderCode(ShaderID shaderID) = 0;
 		virtual void SetShaderCount(u32 shaderCount) = 0;
-		virtual void RemoveMaterial(MaterialID materialID) = 0;
+		virtual void RemoveMaterial(MaterialID materialID, bool bUpdateUsages = true) = 0;
 		virtual void FillOutGBufferFrameBufferAttachments(std::vector<Pair<std::string, void*>>& outVec) = 0;
+		virtual void RecreateShadowFrameBuffers() = 0;
 
 		// Will attempt to find pre-rendered font at specified path, and
 		// only render a new file if not present or if bForceRender is true
@@ -309,17 +317,20 @@ namespace flex
 
 		std::string PickRandomSkyboxTexture();
 
-		void UpdateTextBufferSS(std::vector<TextVertex2D>& outTextVertices);
-		void UpdateTextBufferWS(std::vector<TextVertex3D>& outTextVertices);
+		u32 UpdateTextBufferSS(std::vector<TextVertex2D>& outTextVertices);
+		u32 UpdateTextBufferWS(std::vector<TextVertex3D>& outTextVertices);
 
 		glm::vec4 GetSelectedObjectColorMultiplier() const;
 		glm::mat4 GetPostProcessingMatrix() const;
 
-		void GenerateGBufferVertexBuffer(bool bFlipV);
 		void GenerateSSAONoise(std::vector<glm::vec4>& noise);
 
 		MaterialID CreateParticleSystemSimulationMaterial(const std::string& name);
 		MaterialID CreateParticleSystemRenderingMaterial(const std::string& name);
+
+		void ParseFontFile();
+		void SetRenderedSDFFilePath(FontMetaData& metaData);
+		void SerializeFontFile();
 
 		std::vector<Shader> m_BaseShaders;
 
@@ -334,8 +345,11 @@ namespace flex
 			bool bWireframe = false;
 			bool bWriteToDepth = true;
 			bool bRenderingShadows = false;
+			bool bCalculateDynamicUBOOffset = false;
 
 			MaterialID materialIDOverride = InvalidMaterialID;
+
+			u32 dynamicUBOOffset = 0;
 
 			u64 graphicsPipelineOverride = InvalidID;
 			u64 pipelineLayoutOverride = InvalidID;
@@ -349,11 +363,11 @@ namespace flex
 			CullFace cullFace = CullFace::_INVALID;
 		};
 
-		//MaterialID m_CubemapGBufferMaterialID = InvalidMaterialID;
+		i32 m_ShadowCascadeCount = MAX_SHADOW_CASCADE_COUNT;
+		u32 m_ShadowMapBaseResolution = 4096;
 
-		// TODO: Make tweakable at runtime
-		glm::mat4 m_ShadowLightViewMats[SHADOW_CASCADE_COUNT];
-		glm::mat4 m_ShadowLightProjMats[SHADOW_CASCADE_COUNT];
+		std::vector<glm::mat4> m_ShadowLightViewMats;
+		std::vector<glm::mat4> m_ShadowLightProjMats;
 
 		// Filled every frame
 		std::vector<SpriteQuadDrawInfo> m_QueuedWSSprites;
@@ -367,10 +381,7 @@ namespace flex
 		VertexBufferData m_FullScreenTriVertexBufferData;
 		RenderID m_FullScreenTriRenderID = InvalidRenderID;
 
-		// TODO: Use full screen tri for gbuffer?
 		RenderID m_GBufferQuadRenderID = InvalidRenderID;
-		VertexBufferData m_gBufferQuadVertexBufferData;
-
 		// Any editor objects which also require a game object wrapper
 		std::vector<GameObject*> m_EditorObjects;
 
@@ -387,17 +398,30 @@ namespace flex
 
 		PostProcessSettings m_PostProcessSettings;
 
-		bool m_bDisplayBoundingVolumes = false;
-		bool m_bDisplayShadowCascadePreview = false;
-
-		bool m_bRenderGrid = true;
-
 		u32 m_FramesRendered = 0;
 
+		bool m_bPostInitialized = false;
+		bool m_bSwapChainNeedsRebuilding = false;
 		bool m_bRebatchRenderObjects = true;
+
+		bool m_bEnableWireframeOverlay = false;
+		bool m_bEnableSelectionWireframe = false;
+		bool m_bDisplayBoundingVolumes = false;
+		bool m_bDisplayShadowCascadePreview = false;
+		bool m_bRenderGrid = true;
 
 		bool m_bCaptureScreenshot = false;
 		bool m_bCaptureReflectionProbes = false;
+
+		bool m_bShowEditorMaterials = false;
+
+		bool m_bEnableTAA = true;
+		i32 m_TAASampleCount = 2;
+		bool m_bTAAStateChanged = false;
+
+		i32 m_ShaderQualityLevel = 1;
+
+		std::string m_PreviewedFont;
 
 		GameObject* m_Grid = nullptr;
 		GameObject* m_WorldOrigin = nullptr;
@@ -413,6 +437,7 @@ namespace flex
 
 		MaterialID m_ReflectionProbeMaterialID = InvalidMaterialID; // Set by the user via SetReflecionProbeMaterial
 
+		MaterialID m_GBufferMaterialID = InvalidMaterialID;
 		MaterialID m_SpriteMatSSID = InvalidMaterialID;
 		MaterialID m_SpriteMatWSID = InvalidMaterialID;
 		MaterialID m_SpriteArrMatID = InvalidMaterialID;
@@ -428,9 +453,20 @@ namespace flex
 		MaterialID m_IrradianceMaterialID = InvalidMaterialID;
 		MaterialID m_PrefilterMaterialID = InvalidMaterialID;
 		MaterialID m_BRDFMaterialID = InvalidMaterialID;
+		MaterialID m_WireframeMatID = InvalidMaterialID;
 
 		MaterialID m_ComputeSDFMatID = InvalidMaterialID;
 		MaterialID m_FullscreenBlitMatID = InvalidMaterialID;
+
+		MaterialID m_SSAOMatID = InvalidMaterialID;
+		MaterialID m_SSAOBlurMatID = InvalidMaterialID;
+		ShaderID m_SSAOShaderID = InvalidShaderID;
+		ShaderID m_SSAOBlurShaderID = InvalidShaderID;
+
+		SpecializationConstantID m_SSAOKernelSizeSpecializationID = InvalidSpecializationConstantID;
+		SpecializationConstantID m_TAASampleCountSpecializationID = InvalidSpecializationConstantID;
+		SpecializationConstantID m_ShaderQualityLevelSpecializationID = InvalidSpecializationConstantID;
+		SpecializationConstantID m_ShadowCascadeCountSpecializationID = InvalidSpecializationConstantID;
 
 		std::string m_FontImageExtension = ".png";
 
@@ -440,11 +476,40 @@ namespace flex
 		std::string m_FontsFilePathAbs;
 
 		Mesh* m_SkyBoxMesh = nullptr;
+		ShaderID m_SkyboxShaderID = InvalidShaderID;
+
+		glm::mat4 m_LastFrameViewProj;
 
 		// Contains file paths for each file with a .hdr extension in the `resources/textures/hdri/` directory
 		std::vector<std::string> m_AvailableHDRIs;
 
 		ShadowSamplingData m_ShadowSamplingData;
+
+		Material::PushConstantBlock* m_SpritePerspPushConstBlock = nullptr;
+		Material::PushConstantBlock* m_SpriteOrthoPushConstBlock = nullptr;
+		Material::PushConstantBlock* m_SpriteOrthoArrPushConstBlock = nullptr;
+
+		Material::PushConstantBlock* m_CascadedShadowMapPushConstantBlock = nullptr;
+
+		// One per deferred-rendered shader
+		ShaderBatch m_DeferredObjectBatches;
+		// One per forward-rendered shader
+		ShaderBatch m_ForwardObjectBatches;
+		ShaderBatch m_ShadowBatch;
+
+		ShaderBatch m_DepthAwareEditorObjBatches;
+		ShaderBatch m_DepthUnawareEditorObjBatches;
+
+		static const u32 NUM_GPU_TIMINGS = 64;
+		std::vector<std::array<real, NUM_GPU_TIMINGS>> m_TimestampHistograms;
+		u32 m_TimestampHistogramIndex = 0;
+
+		TextureID m_AlphaBGTextureID = InvalidTextureID;
+		TextureID m_LoadingTextureID = InvalidTextureID;
+		TextureID m_WorkTextureID = InvalidTextureID;
+
+		TextureID m_PointLightIconID = InvalidTextureID;
+		TextureID m_DirectionalLightIconID = InvalidTextureID;
 
 		SSAOGenData m_SSAOGenData;
 		SSAOBlurDataConstant m_SSAOBlurDataConstant;
@@ -456,15 +521,30 @@ namespace flex
 		bool m_bSSAOBlurEnabled = true;
 		bool m_bSSAOStateChanged = false;
 
-		bool m_bEnableTAA = true;
-		i32 m_TAASampleCount = 2;
-		bool m_bTAAStateChanged = false;
-
 		FXAAData m_FXAAData;
+
+		FT_Library m_FTLibrary;
 
 		i32 m_DebugMode = 0;
 
+		real m_TAA_ks[2];
+
+		enum DirtyFlags : u32
+		{
+			CLEAN = 0,
+			STATIC_DATA = 1 << 0,
+			DYNAMIC_DATA = 1 << 1,
+			SHADOW_DATA = 1 << 2,
+
+			MAX_VALUE = 1 << 30,
+			_NONE
+		};
+
+		u32 m_DirtyFlagBits = (u32)DirtyFlags::CLEAN;
+
 		PhysicsDebugDrawBase* m_PhysicsDebugDrawer = nullptr;
+
+		static std::array<glm::mat4, 6> s_CaptureViews;
 
 		static const i32 LATEST_RENDERER_SETTINGS_FILE_VERSION = 1;
 		i32 m_RendererSettingsFileVersion = 0;

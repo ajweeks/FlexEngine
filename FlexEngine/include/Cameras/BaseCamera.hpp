@@ -1,8 +1,5 @@
 #pragma once
 
-// TODO: Move all constants into generic, hotreloadable constants file
-#include "Graphics/RendererTypes.hpp" // For SHADOW_CASCADE_COUNT
-
 namespace flex
 {
 	class BaseCamera
@@ -75,7 +72,8 @@ namespace flex
 		glm::vec3 up;
 		glm::vec3 right;
 
-		bool bIsGameplayCam;
+		bool bIsGameplayCam = true;
+		bool bIsFirstPerson = false;
 		bool bDEBUGCyclable = true;
 
 	protected:
@@ -104,7 +102,5 @@ namespace flex
 		glm::mat4 m_View;
 		glm::mat4 m_Proj;
 		glm::mat4 m_ViewProjection;
-
-		glm::mat4 m_ShadowProjectionMats[SHADOW_CASCADE_COUNT];
 	};
 } // namespace flex

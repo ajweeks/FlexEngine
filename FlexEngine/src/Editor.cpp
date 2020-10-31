@@ -13,8 +13,10 @@ IGNORE_WARNINGS_PUSH
 #include <LinearMath/btIDebugDraw.h>
 IGNORE_WARNINGS_POP
 
+#include "Audio/AudioManager.hpp"
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
+#include "Cameras/DebugCamera.hpp"
 #include "FlexEngine.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Graphics/RendererTypes.hpp"
@@ -51,14 +53,17 @@ namespace flex
 		// Transform gizmo materials
 		{
 			MaterialCreateInfo matCreateInfo = {};
-			matCreateInfo.name = "transform";
 			matCreateInfo.shaderName = "color";
 			matCreateInfo.constAlbedo = VEC3_ONE;
 			matCreateInfo.persistent = true;
 			matCreateInfo.visibleInEditor = false;
+			matCreateInfo.name = "transform x";
 			m_TransformGizmoMatXID = g_Renderer->InitializeMaterial(&matCreateInfo);
+			matCreateInfo.name = "transform y";
 			m_TransformGizmoMatYID = g_Renderer->InitializeMaterial(&matCreateInfo);
+			matCreateInfo.name = "transform z";
 			m_TransformGizmoMatZID = g_Renderer->InitializeMaterial(&matCreateInfo);
+			matCreateInfo.name = "transform all";
 			m_TransformGizmoMatAllID = g_Renderer->InitializeMaterial(&matCreateInfo);
 		}
 
@@ -86,6 +91,7 @@ namespace flex
 		if (m_TestShape)
 		{
 			m_TestShape->Destroy();
+			delete m_TestShape;
 			m_TestShape = nullptr;
 		}
 
@@ -103,6 +109,21 @@ namespace flex
 			{
 				m_HoveringAxisIndex = -1;
 			}
+			else
+			{
+				if (m_HoveringAxisIndex != ALL_AXES_IDX)
+				{
+					Transform* gizmoTransform = m_TransformGizmo->GetTransform();
+					glm::vec3 axes[] = { gizmoTransform->GetRight(), gizmoTransform->GetUp(), gizmoTransform->GetForward() };
+					static real alpha = 0.8f;
+					static btVector4 colours[] = { btVector4(0.8f, 0.1f, 0.1f, alpha), btVector4(0.1f, 0.8f, 0.1f, alpha), btVector4(0.2f, 0.2f, 0.9f, alpha) };
+					glm::vec3 pos = gizmoTransform->GetWorldPosition();
+					glm::vec3 dir = axes[m_HoveringAxisIndex];
+					btVector3 p0 = ToBtVec3(pos + dir * 1000.0f);
+					btVector3 p1 = ToBtVec3(pos - dir * 1000.0f);
+					g_Renderer->GetDebugDrawer()->DrawLineWithAlpha(p0, p1, colours[m_HoveringAxisIndex], colours[m_HoveringAxisIndex]);
+				}
+			}
 		}
 		else
 		{
@@ -113,6 +134,20 @@ namespace flex
 				HandleGizmoHover();
 			}
 		}
+
+#if 0
+		// TEMP
+		for (u32 i = 0; i < 128; ++i)
+		{
+			real x = sin(g_SecElapsedSinceProgramStart) + i * 0.25f;
+			real z = cos(g_SecElapsedSinceProgramStart + i / 10.0f);
+			g_Renderer->GetDebugDrawer()->drawLine(
+				btVector3(x, 0, z),
+				g_Editor->GetSelectedObjects().size() > 0 ? ToBtVec3(g_Editor->GetSelectedObjectsCenter()) : btVector3(x, 10, z),
+				btVector3(sin(g_SecElapsedSinceProgramStart * 5.0f) * 0.5f + 0.5f, cos(g_SecElapsedSinceProgramStart * 2.5f) * 0.5f + 0.5f, 1.0f),
+				btVector3(1.0f, 0.0f, sin(g_SecElapsedSinceProgramStart * 5.0f) * 0.5f + 0.5f));
+		}
+#endif
 
 		FadeOutHeadOnGizmos();
 
@@ -135,6 +170,20 @@ namespace flex
 		}
 	}
 
+	void Editor::LateUpdate()
+	{
+		bool bControlDown = g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_CONTROL);
+		if (bControlDown && g_InputManager->GetKeyDown(KeyCode::KEY_N))
+		{
+			g_SceneManager->OpenNewSceneWindow();
+		}
+
+		if (g_InputManager->GetKeyPressed(KeyCode::KEY_M))
+		{
+			AudioManager::ToggleMuted();
+		}
+	}
+
 	void Editor::PreSceneChange()
 	{
 		if (m_TransformGizmo)
@@ -152,9 +201,26 @@ namespace flex
 		CreateObjects();
 	}
 
-	std::vector<GameObject*> Editor::GetSelectedObjects()
+	bool Editor::HasSelectedObject() const
 	{
-		return m_CurrentlySelectedObjects;
+		return m_CurrentlySelectedObjects.empty();
+	}
+
+	std::vector<GameObject*> Editor::GetSelectedObjects(bool bForceIncludeChildren)
+	{
+		if (bForceIncludeChildren)
+		{
+			std::vector<GameObject*> selectedObjects;
+			for (GameObject* gameObject : m_CurrentlySelectedObjects)
+			{
+				gameObject->AddSelfAndChildrenToVec(selectedObjects);
+			}
+			return selectedObjects;
+		}
+		else
+		{
+			return m_CurrentlySelectedObjects;
+		}
 	}
 
 	void Editor::SetSelectedObject(GameObject* gameObject, bool bSelectChildren /* = false */)
@@ -172,6 +238,13 @@ namespace flex
 				m_CurrentlySelectedObjects.push_back(gameObject);
 			}
 		}
+
+		CalculateSelectedObjectsCenter();
+	}
+
+	void Editor::SetSelectedObjects(const std::vector<GameObject*>& selectedObjects)
+	{
+		m_CurrentlySelectedObjects = selectedObjects;
 
 		CalculateSelectedObjectsCenter();
 	}
@@ -748,11 +821,13 @@ namespace flex
 		{
 			glm::quat dRotWS(VEC3_ZERO);
 
+#if 0
 			glm::quat lRot = transform->GetLocalRotation();
 			glm::vec3 lEuler = glm::eulerAngles(transform->GetLocalRotation());
 			glm::quat wRot = transform->GetWorldRotation();
 			Print("Local: %5.2f,%5.2f,%5.2f,%5.2f  -  L Euler: %5.2f,%5.2f,%5.2f - Wrap: %d\n", lRot.x, lRot.y, lRot.z, lRot.w, lEuler.x, lEuler.y, lEuler.z, m_RotationGizmoWrapCount);
-			//Print("Local: %5.2f,%5.2f,%5.2f,%5.2f  -  Global: %5.2f,%5.2f,%5.2f,%5.2f  -  L Euler: %5.2f,%5.2f,%5.2f\n", lRot.x, lRot.y, lRot.z, lRot.w, wRot.x, wRot.y, wRot.z, wRot.w, lEuler.x, lEuler.y, lEuler.z);
+			Print("Local: %5.2f,%5.2f,%5.2f,%5.2f  -  Global: %5.2f,%5.2f,%5.2f,%5.2f  -  L Euler: %5.2f,%5.2f,%5.2f\n", lRot.x, lRot.y, lRot.z, lRot.w, wRot.x, wRot.y, wRot.z, wRot.w, lEuler.x, lEuler.y, lEuler.z);
+#endif
 
 			if (m_DraggingAxisIndex == X_AXIS_IDX)
 			{
@@ -850,7 +925,7 @@ namespace flex
 					planeN = gizmoUp;
 				}
 				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, camForward, m_DraggingGizmoOffset, m_DraggingGizmoOffsetNeedsRecalculation, m_PreviousIntersectionPoint);
-				glm::vec3 scaleNow = -(intersectionPont - planeOrigin);
+				glm::vec3 scaleNow = (intersectionPont - planeOrigin);
 				glm::vec3 scaleVecGlobal = (scaleNow - m_DraggingGizmoScaleLast) * dragSpeed;
 				dLocalScale += glm::vec3(glm::inverse(gizmoTransform->GetWorldTransform()) * glm::vec4(scaleVecGlobal, 0.0f));
 
@@ -968,6 +1043,56 @@ namespace flex
 		return false;
 	}
 
+	void Editor::OnDragDrop(i32 count, const char** paths)
+	{
+		std::vector<GameObject*> createdObjs;
+
+		for (i32 i = 0; i < count; ++i)
+		{
+			std::string path = ReplaceBackSlashesWithForward(paths[i]);
+			bool bDir = path.find('.') == std::string::npos;
+			if (!bDir)
+			{
+				std::string fileType = ExtractFileType(path);
+				if (fileType == "glb" || fileType == "gltf")
+				{
+					BaseScene* scene = g_SceneManager->CurrentScene();
+					GameObject* newObj = new GameObject(scene->GetUniqueObjectName("New mesh ", 1), GameObjectType::OBJECT);
+
+					std::string absoluteMeshDir = RelativePathToAbsolute(MESH_DIRECTORY);
+
+					std::string fileName = path.substr(path.rfind('/') + 1);
+					if (!StartsWith(path, absoluteMeshDir))
+					{
+						std::string newPath = absoluteMeshDir + fileName;
+						Print("Copying mesh file from %s to %s\n", path.c_str(), newPath.c_str());
+						Platform::CopyFile(path, newPath);
+						path = newPath;
+					}
+
+					std::string relativeFilePath = MESH_DIRECTORY + fileName;
+					Mesh::ImportFromFile(relativeFilePath, newObj);
+					// TODO: Position object relative to mouse position & camera transform
+					scene->AddRootObject(newObj);
+					createdObjs.push_back(newObj);
+				}
+				else
+				{
+					PrintWarn("Attempted to import unhandled file type %s.\n", fileType.c_str());
+				}
+			}
+			else
+			{
+				PrintWarn("Directory imports are not currently supported.\n");
+			}
+		}
+
+		if (!createdObjs.empty())
+		{
+			SetSelectedObjects(createdObjs);
+		}
+	}
+
 	EventReply Editor::OnMouseButtonEvent(MouseButton button, KeyAction action)
 	{
 		if (button == MouseButton::LEFT)
@@ -1075,40 +1200,6 @@ namespace flex
 				return EventReply::CONSUMED;
 			}
 
-			if (keyCode == KeyCode::KEY_F && !m_CurrentlySelectedObjects.empty())
-			{
-				// Focus on selected objects
-
-				glm::vec3 minPos(FLT_MAX);
-				glm::vec3 maxPos(-FLT_MAX);
-				for (GameObject* gameObject : m_CurrentlySelectedObjects)
-				{
-					Mesh* mesh = gameObject->GetMesh();
-					if (mesh)
-					{
-						Transform* transform = gameObject->GetTransform();
-						glm::vec3 min = transform->GetWorldTransform() * glm::vec4(mesh->m_MinPoint, 1.0f);
-						glm::vec3 max = transform->GetWorldTransform() * glm::vec4(mesh->m_MaxPoint, 1.0f);
-						minPos = glm::min(minPos, min);
-						maxPos = glm::max(maxPos, max);
-					}
-				}
-
-				if (minPos.x != FLT_MAX && maxPos.x != -FLT_MAX && minPos != maxPos)
-				{
-					glm::vec3 sphereCenterWS = minPos + (maxPos - minPos) / 2.0f;
-					real sphereRadius = glm::length(maxPos - minPos) / 2.0f;
-
-					BaseCamera* cam = g_CameraManager->CurrentCamera();
-
-					glm::vec3 currentOffset = cam->position - sphereCenterWS;
-					glm::vec3 newOffset = glm::normalize(currentOffset) * sphereRadius * 2.0f;
-
-					cam->position = sphereCenterWS + newOffset;
-					cam->LookAt(sphereCenterWS);
-				}
-				return EventReply::CONSUMED;
-			}
 
 			if (bControlDown && keyCode == KeyCode::KEY_A)
 			{
@@ -1163,11 +1254,63 @@ namespace flex
 			return EventReply::CONSUMED;
 		}
 
+		// TODO: Add camera types!
+		if (action == Action::EDITOR_FOCUS_ON_SELECTION && !m_CurrentlySelectedObjects.empty() && dynamic_cast<DebugCamera*>(g_CameraManager->CurrentCamera()) != nullptr)
+		{
+			glm::vec3 minPos(FLT_MAX);
+			glm::vec3 maxPos(-FLT_MAX);
+			for (GameObject* gameObject : m_CurrentlySelectedObjects)
+			{
+				Mesh* mesh = gameObject->GetMesh();
+				if (mesh)
+				{
+					Transform* transform = gameObject->GetTransform();
+					glm::vec3 min = transform->GetWorldTransform() * glm::vec4(mesh->m_MinPoint, 1.0f);
+					glm::vec3 max = transform->GetWorldTransform() * glm::vec4(mesh->m_MaxPoint, 1.0f);
+					minPos = glm::min(minPos, min);
+					maxPos = glm::max(maxPos, max);
+				}
+			}
+
+			if (minPos.x == FLT_MAX || maxPos.x == -FLT_MAX || minPos == maxPos)
+			{
+				minPos = glm::vec3(-1.0f);
+				maxPos = glm::vec3(1.0f);
+			}
+
+			glm::vec3 sphereCenterWS = minPos + (maxPos - minPos) / 2.0f;
+			real sphereRadius = glm::length(maxPos - minPos) / 2.0f;
+
+			BaseCamera* cam = g_CameraManager->CurrentCamera();
+
+			if (sphereRadius > 0.0f)
+			{
+				glm::vec3 currentOffset = cam->position - sphereCenterWS;
+				glm::vec3 newOffset;
+				if (currentOffset != VEC3_ZERO)
+				{
+					newOffset = glm::normalize(currentOffset) * sphereRadius * 3.0f;
+				}
+				else
+				{
+					newOffset = glm::vec3(0.0f, 0.0f, sphereRadius * 3.0f);
+				}
+				cam->position = sphereCenterWS + newOffset;
+			}
+
+			cam->LookAt(m_SelectedObjectsCenterPos);
+			return EventReply::CONSUMED;
+		}
 		return EventReply::UNCONSUMED;
 	}
 
 	void Editor::CreateObjects()
 	{
+		if (m_TransformGizmo != nullptr)
+		{
+			return;
+		}
+
 		RenderObjectCreateInfo gizmoCreateInfo = {};
 		gizmoCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
 		gizmoCreateInfo.bDepthWriteEnable = false;
@@ -1175,10 +1318,16 @@ namespace flex
 		gizmoCreateInfo.bSetDynamicStates = true;
 		gizmoCreateInfo.cullFace = CullFace::BACK;
 
-		m_TestShape = new GameObject("Test Shape", GameObjectType::OBJECT);
-		Mesh* mesh = m_TestShape->SetMesh(new Mesh(m_TestShape));
-		mesh->LoadFromFile(RESOURCE("meshes/sphere.glb"), m_TransformGizmoMatXID);
-		m_TestShape->GetTransform()->Scale(0.5f);
+		if (m_TestShape == nullptr)
+		{
+			m_TestShape = new GameObject("Test Shape", GameObjectType::OBJECT);
+			Mesh* mesh = m_TestShape->SetMesh(new Mesh(m_TestShape));
+			mesh->LoadFromFile(MESH_DIRECTORY "sphere.glb", m_TransformGizmoMatXID);
+			m_TestShape->GetTransform()->Scale(0.5f);
+
+			m_TestShape->SetVisible(false);
+		}
+
 
 		m_TransformGizmo = new GameObject("Transform gizmo", GameObjectType::_NONE);
 
@@ -1188,7 +1337,7 @@ namespace flex
 
 		// Translation gizmo
 		{
-			real cylinderRadius = 0.3f;
+			real cylinderRadius = 0.35f;
 			real cylinderHeight = 1.8f;
 
 			// X Axis
@@ -1204,7 +1353,7 @@ namespace flex
 			gizmoXAxisRB->SetKinematic(true);
 			gizmoXAxisRB->SetPhysicsFlags(gizmoRBFlags);
 
-			xAxisMesh->LoadFromFile(RESOURCE_LOCATION "meshes/translation-gizmo-x.glb", m_TransformGizmoMatXID, nullptr, &gizmoCreateInfo);
+			xAxisMesh->LoadFromFile(MESH_DIRECTORY "translation-gizmo-x.glb", m_TransformGizmoMatXID, nullptr, &gizmoCreateInfo);
 
 			// Y Axis
 			GameObject* translateYAxis = new GameObject("Translation gizmo y axis", GameObjectType::_NONE);
@@ -1219,7 +1368,7 @@ namespace flex
 			gizmoYAxisRB->SetKinematic(true);
 			gizmoYAxisRB->SetPhysicsFlags(gizmoRBFlags);
 
-			yAxisMesh->LoadFromFile(RESOURCE_LOCATION "meshes/translation-gizmo-y.glb", m_TransformGizmoMatYID, nullptr, &gizmoCreateInfo);
+			yAxisMesh->LoadFromFile(MESH_DIRECTORY "translation-gizmo-y.glb", m_TransformGizmoMatYID, nullptr, &gizmoCreateInfo);
 
 			// Z Axis
 			GameObject* translateZAxis = new GameObject("Translation gizmo z axis", GameObjectType::_NONE);
@@ -1234,7 +1383,7 @@ namespace flex
 			gizmoZAxisRB->SetKinematic(true);
 			gizmoZAxisRB->SetPhysicsFlags(gizmoRBFlags);
 
-			zAxisMesh->LoadFromFile(RESOURCE_LOCATION "meshes/translation-gizmo-z.glb", m_TransformGizmoMatZID, nullptr, &gizmoCreateInfo);
+			zAxisMesh->LoadFromFile(MESH_DIRECTORY "translation-gizmo-z.glb", m_TransformGizmoMatZID, nullptr, &gizmoCreateInfo);
 
 
 			gizmoXAxisRB->SetLocalRotation(glm::quat(glm::vec3(0, 0, PI / 2.0f)));
@@ -1272,10 +1421,8 @@ namespace flex
 			gizmoXAxisRB->SetMass(0.0f);
 			gizmoXAxisRB->SetKinematic(true);
 			gizmoXAxisRB->SetPhysicsFlags(gizmoRBFlags);
-			// TODO: Get this to work (-cylinderHeight / 2.0f?)
-			gizmoXAxisRB->SetLocalPosition(glm::vec3(100.0f, 0.0f, 0.0f));
 
-			xAxisMesh->LoadFromFile(RESOURCE_LOCATION "meshes/rotation-gizmo-flat-x.glb", m_TransformGizmoMatXID, nullptr, &gizmoCreateInfo);
+			xAxisMesh->LoadFromFile(MESH_DIRECTORY "rotation-gizmo-flat-x.glb", m_TransformGizmoMatXID, nullptr, &gizmoCreateInfo);
 
 			// Y Axis
 			GameObject* rotationYAxis = new GameObject("Rotation gizmo y axis", GameObjectType::_NONE);
@@ -1290,7 +1437,7 @@ namespace flex
 			gizmoYAxisRB->SetKinematic(true);
 			gizmoYAxisRB->SetPhysicsFlags(gizmoRBFlags);
 
-			yAxisMesh->LoadFromFile(RESOURCE_LOCATION "meshes/rotation-gizmo-flat-y.glb", m_TransformGizmoMatYID, nullptr, &gizmoCreateInfo);
+			yAxisMesh->LoadFromFile(MESH_DIRECTORY "rotation-gizmo-flat-y.glb", m_TransformGizmoMatYID, nullptr, &gizmoCreateInfo);
 
 			// Z Axis
 			GameObject* rotationZAxis = new GameObject("Rotation gizmo z axis", GameObjectType::_NONE);
@@ -1305,7 +1452,7 @@ namespace flex
 			gizmoZAxisRB->SetKinematic(true);
 			gizmoZAxisRB->SetPhysicsFlags(gizmoRBFlags);
 
-			zAxisMesh->LoadFromFile(RESOURCE_LOCATION "meshes/rotation-gizmo-flat-z.glb", m_TransformGizmoMatZID, nullptr, &gizmoCreateInfo);
+			zAxisMesh->LoadFromFile(MESH_DIRECTORY "rotation-gizmo-flat-z.glb", m_TransformGizmoMatZID, nullptr, &gizmoCreateInfo);
 
 			gizmoXAxisRB->SetLocalRotation(glm::quat(glm::vec3(0, 0, PI / 2.0f)));
 			gizmoXAxisRB->SetLocalPosition(glm::vec3(-cylinderHeight, 0, 0));
@@ -1330,7 +1477,7 @@ namespace flex
 		// Scale gizmo
 		{
 			real boxScale = 0.5f;
-			real cylinderRadius = 0.3f;
+			real cylinderRadius = 0.35f;
 			real cylinderHeight = 1.8f;
 
 			// X Axis
@@ -1346,7 +1493,7 @@ namespace flex
 			gizmoXAxisRB->SetKinematic(true);
 			gizmoXAxisRB->SetPhysicsFlags(gizmoRBFlags);
 
-			xAxisMesh->LoadFromFile(RESOURCE_LOCATION "meshes/scale-gizmo-x.glb", m_TransformGizmoMatXID, nullptr, &gizmoCreateInfo);
+			xAxisMesh->LoadFromFile(MESH_DIRECTORY "scale-gizmo-x.glb", m_TransformGizmoMatXID, nullptr, &gizmoCreateInfo);
 
 			// Y Axis
 			GameObject* scaleYAxis = new GameObject("Scale gizmo y axis", GameObjectType::_NONE);
@@ -1361,7 +1508,7 @@ namespace flex
 			gizmoYAxisRB->SetKinematic(true);
 			gizmoYAxisRB->SetPhysicsFlags(gizmoRBFlags);
 
-			yAxisMesh->LoadFromFile(RESOURCE_LOCATION "meshes/scale-gizmo-y.glb", m_TransformGizmoMatYID, nullptr, &gizmoCreateInfo);
+			yAxisMesh->LoadFromFile(MESH_DIRECTORY "scale-gizmo-y.glb", m_TransformGizmoMatYID, nullptr, &gizmoCreateInfo);
 
 			// Z Axis
 			GameObject* scaleZAxis = new GameObject("Scale gizmo z axis", GameObjectType::_NONE);
@@ -1376,7 +1523,7 @@ namespace flex
 			gizmoZAxisRB->SetKinematic(true);
 			gizmoZAxisRB->SetPhysicsFlags(gizmoRBFlags);
 
-			zAxisMesh->LoadFromFile(RESOURCE_LOCATION "meshes/scale-gizmo-z.glb", m_TransformGizmoMatZID, nullptr, &gizmoCreateInfo);
+			zAxisMesh->LoadFromFile(MESH_DIRECTORY "scale-gizmo-z.glb", m_TransformGizmoMatZID, nullptr, &gizmoCreateInfo);
 
 			// Center (all axes)
 			GameObject* scaleAllAxes = new GameObject("Scale gizmo all axes", GameObjectType::_NONE);
@@ -1391,11 +1538,11 @@ namespace flex
 			gizmoAllAxesRB->SetKinematic(true);
 			gizmoAllAxesRB->SetPhysicsFlags(gizmoRBFlags);
 
-			allAxesMesh->LoadFromFile(RESOURCE_LOCATION "meshes/scale-gizmo-all.glb", m_TransformGizmoMatAllID, nullptr, &gizmoCreateInfo);
+			allAxesMesh->LoadFromFile(MESH_DIRECTORY "scale-gizmo-all.glb", m_TransformGizmoMatAllID, nullptr, &gizmoCreateInfo);
 
 
 			gizmoXAxisRB->SetLocalRotation(glm::quat(glm::vec3(0, 0, PI / 2.0f)));
-			gizmoXAxisRB->SetLocalPosition(glm::vec3(-cylinderHeight, 0, 0));
+			gizmoXAxisRB->SetLocalPosition(glm::vec3(cylinderHeight, 0, 0));
 
 			gizmoYAxisRB->SetLocalPosition(glm::vec3(0, cylinderHeight, 0));
 

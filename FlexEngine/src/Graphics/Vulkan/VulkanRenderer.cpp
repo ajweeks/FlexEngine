@@ -4,6 +4,8 @@
 #include "Graphics/Vulkan/VulkanRenderer.hpp"
 
 IGNORE_WARNINGS_PUSH
+#include <vulkan/vulkan.hpp>
+
 #include "stb_image.h"
 
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
@@ -20,12 +22,12 @@ IGNORE_WARNINGS_PUSH
 #include "imgui/imgui_impl_glfw.h"
 #include "imgui/imgui_impl_vulkan.h"
 #endif
-
 #include "BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h"
 IGNORE_WARNINGS_POP
 
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
+#include "Editor.hpp"
 #include "FlexEngine.hpp"
 #include "Graphics/BitmapFont.hpp"
 #include "Graphics/VertexAttribute.hpp"
@@ -52,11 +54,9 @@ namespace flex
 {
 	namespace vk
 	{
-		std::array<glm::mat4, 6> VulkanRenderer::s_CaptureViews;
-
-		PFN_vkDebugMarkerSetObjectNameEXT VulkanRenderer::m_vkDebugMarkerSetObjectName = nullptr;
-		PFN_vkCmdDebugMarkerBeginEXT VulkanRenderer::m_vkCmdDebugMarkerBegin = nullptr;
-		PFN_vkCmdDebugMarkerEndEXT VulkanRenderer::m_vkCmdDebugMarkerEnd = nullptr;
+		PFN_vkSetDebugUtilsObjectNameEXT VulkanRenderer::m_vkSetDebugUtilsObjectNameEXT = nullptr;
+		PFN_vkCmdBeginDebugUtilsLabelEXT VulkanRenderer::m_vkCmdBeginDebugUtilsLabelEXT = nullptr;
+		PFN_vkCmdEndDebugUtilsLabelEXT VulkanRenderer::m_vkCmdEndDebugUtilsLabelEXT = nullptr;
 
 		VulkanRenderer::VulkanRenderer() :
 			m_ClearColor({ 1.0f, 0.0f, 1.0f, 1.0f }),
@@ -73,8 +73,10 @@ namespace flex
 		{
 			Renderer::Initialize();
 
-#ifdef DEBUG
-			m_ShaderCompiler = new AsyncVulkanShaderCompiler(false);
+#if COMPILE_SHADER_COMPILER
+			m_ShaderCompiler = new VulkanShaderCompiler(false);
+			delete m_ShaderCompiler;
+			m_ShaderCompiler = nullptr;
 #endif
 
 			// TODO: Kick off texture load here (most importantly, environment maps)
@@ -105,15 +107,25 @@ namespace flex
 			SetupDebugCallback();
 			CreateSurface();
 			VkPhysicalDevice physicalDevice = PickPhysicalDevice();
-			CreateLogicalDevice(physicalDevice);
+			VulkanDevice::CreateInfo deviceCreateInfo = {};
+			deviceCreateInfo.physicalDevice = physicalDevice;
+			deviceCreateInfo.surface = m_Surface;
+			deviceCreateInfo.requiredExtensions = &m_RequiredDeviceExtensions;
+			deviceCreateInfo.optionalExtensions = &m_OptionalDeviceExtensions;
+			deviceCreateInfo.bEnableValidationLayers = m_bEnableValidationLayers;
+			deviceCreateInfo.validationLayers = &m_ValidationLayers;
+			m_VulkanDevice = new VulkanDevice(deviceCreateInfo);
 
-			FindPresentInstanceExtensions();
+			m_bDiagnosticCheckpointsEnabled = m_VulkanDevice->ExtensionEnabled(VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME);
 
-			if (m_bEnableDebugMarkers)
+			vkGetDeviceQueue(m_VulkanDevice->m_LogicalDevice, (u32)m_VulkanDevice->m_QueueFamilyIndices.graphicsFamily, 0, &m_GraphicsQueue);
+			vkGetDeviceQueue(m_VulkanDevice->m_LogicalDevice, (u32)m_VulkanDevice->m_QueueFamilyIndices.presentFamily, 0, &m_PresentQueue);
+
+			if (Contains(m_EnabledInstanceExtensions, VK_EXT_DEBUG_UTILS_EXTENSION_NAME))
 			{
-				m_vkDebugMarkerSetObjectName = reinterpret_cast<PFN_vkDebugMarkerSetObjectNameEXT>(vkGetInstanceProcAddr(m_Instance, "vkDebugMarkerSetObjectNameEXT"));
-				m_vkCmdDebugMarkerBegin = reinterpret_cast<PFN_vkCmdDebugMarkerBeginEXT>(vkGetDeviceProcAddr(m_VulkanDevice->m_LogicalDevice, "vkCmdDebugMarkerBeginEXT"));
-				m_vkCmdDebugMarkerEnd = reinterpret_cast<PFN_vkCmdDebugMarkerEndEXT>(vkGetDeviceProcAddr(m_VulkanDevice->m_LogicalDevice, "vkCmdDebugMarkerEndEXT"));
+				m_vkSetDebugUtilsObjectNameEXT = reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(vkGetInstanceProcAddr(m_Instance, "vkSetDebugUtilsObjectNameEXT"));
+				m_vkCmdBeginDebugUtilsLabelEXT = reinterpret_cast<PFN_vkCmdBeginDebugUtilsLabelEXT>(vkGetDeviceProcAddr(m_VulkanDevice->m_LogicalDevice, "vkCmdBeginDebugUtilsLabelEXT"));
+				m_vkCmdEndDebugUtilsLabelEXT = reinterpret_cast<PFN_vkCmdEndDebugUtilsLabelEXT>(vkGetDeviceProcAddr(m_VulkanDevice->m_LogicalDevice, "vkCmdEndDebugUtilsLabelEXT"));
 			}
 
 			{
@@ -223,34 +235,24 @@ namespace flex
 			m_DepthSampler = { m_VulkanDevice->m_LogicalDevice, vkDestroySampler };
 			m_NearestClampEdgeSampler = { m_VulkanDevice->m_LogicalDevice, vkDestroySampler };
 
-			m_ShadowPipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
-			m_ShadowGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
+			m_ShadowGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice };
 
-			m_FontSSPipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
-			m_FontWSPipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
+			m_FontSSGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice };
+			m_FontWSGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice };
 
-			m_FontSSGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
-			m_FontWSGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
+			m_SSAOGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice };
+			m_SSAOBlurHGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice };
+			m_SSAOBlurVGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice };
 
-			m_SSAOGraphicsPipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
-			m_SSAOBlurGraphicsPipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
+			m_WireframePipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
 
-			m_SSAOGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
-			m_SSAOBlurHGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
-			m_SSAOBlurVGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
+			m_PostProcessGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice };
+			m_TAAResolveGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice };
+			m_GammaCorrectGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice };
 
-			m_PostProcessGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
-			m_PostProcessGraphicsPipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
-			m_TAAResolveGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
-			m_TAAResolveGraphicsPipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
-			m_GammaCorrectGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
-			m_GammaCorrectGraphicsPipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
+			m_SpriteArrGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice };
 
-			m_SpriteArrGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
-			m_SpriteArrGraphicsPipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
-
-			m_BlitGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipeline };
-			m_BlitGraphicsPipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
+			m_BlitGraphicsPipeline = { m_VulkanDevice->m_LogicalDevice };
 
 			m_ParticleGraphicsPipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
 
@@ -291,7 +293,8 @@ namespace flex
 			m_SSAOBlurVFBColorAttachment0 = new FrameBufferAttachment(m_VulkanDevice, frameBufCreateInfo);
 
 			m_ShadowBufFormat = VK_FORMAT_D16_UNORM;
-			for (u32 i = 0; i < SHADOW_CASCADE_COUNT; ++i)
+			m_ShadowCascades.resize(m_ShadowCascadeCount);
+			for (i32 i = 0; i < m_ShadowCascadeCount; ++i)
 			{
 				m_ShadowCascades[i] = new Cascade(m_VulkanDevice);
 			}
@@ -316,7 +319,7 @@ namespace flex
 			CreateSwapChainFramebuffers();
 
 			PrepareCubemapFrameBuffer();
-			CreateFrameBuffers();
+			RecreateShadowFrameBuffers();
 
 			{
 				u32 blankData = 0xFFFFFFFF;
@@ -328,11 +331,11 @@ namespace flex
 				m_BlankTextureArr->CreateFromMemory(&blankData, sizeof(blankData), VK_FORMAT_R8G8B8A8_UNORM, 1);
 			}
 
-			m_AlphaBGTextureID = InitializeTextureFromFile(RESOURCE_LOCATION "textures/alpha-bg.png", 4, false, false, false);
-			m_LoadingTextureID = InitializeTextureFromFile(RESOURCE_LOCATION "textures/loading_1.png", 4, false, false, false);
-			m_WorkTextureID = InitializeTextureFromFile(RESOURCE_LOCATION "textures/work_d.jpg", 4, false, true, false);
-			m_PointLightIconID = InitializeTextureFromFile(RESOURCE_LOCATION "textures/icons/point-light-icon-256.png", 4, false, true, false);
-			m_DirectionalLightIconID = InitializeTextureFromFile(RESOURCE_LOCATION "textures/icons/directional-light-icon-256.png", 4, false, true, false);
+			m_AlphaBGTextureID = InitializeTextureFromFile(TEXTURE_LOCATION "alpha-bg.png", 4, false, false, false);
+			m_LoadingTextureID = InitializeTextureFromFile(TEXTURE_LOCATION "loading_1.png", 4, false, false, false);
+			m_WorkTextureID = InitializeTextureFromFile(TEXTURE_LOCATION "work_d.jpg", 4, false, true, false);
+			m_PointLightIconID = InitializeTextureFromFile(TEXTURE_LOCATION "icons/point-light-icon-256.png", 4, false, true, false);
+			m_DirectionalLightIconID = InitializeTextureFromFile(TEXTURE_LOCATION "icons/directional-light-icon-256.png", 4, false, true, false);
 
 			m_SpritePerspPushConstBlock = new Material::PushConstantBlock(128);
 			m_SpriteOrthoPushConstBlock = new Material::PushConstantBlock(128);
@@ -400,18 +403,6 @@ namespace flex
 
 			m_FullScreenTriVertexBuffer = new VulkanBuffer(m_VulkanDevice);
 
-			m_SSAOSpecializationMapEntry = { 0, 0, sizeof(i32) };
-			m_SSAOSpecializationInfo.mapEntryCount = 1;
-			m_SSAOSpecializationInfo.pMapEntries = &m_SSAOSpecializationMapEntry;
-			m_SSAOSpecializationInfo.pData = &m_SSAOKernelSize;
-			m_SSAOSpecializationInfo.dataSize = sizeof(i32);
-
-			m_TAASpecializationMapEntry = { 0, 0, sizeof(i32) };
-			m_TAAOSpecializationInfo.mapEntryCount = 1;
-			m_TAAOSpecializationInfo.pMapEntries = &m_TAASpecializationMapEntry;
-			m_TAAOSpecializationInfo.pData = &m_TAASampleCount;
-			m_TAAOSpecializationInfo.dataSize = sizeof(i32);
-
 			Renderer::InitializeMaterials();
 
 			VkQueryPoolCreateInfo queryPoolCreateInfo = {};
@@ -422,6 +413,8 @@ namespace flex
 
 			m_TAA_ks[0] = 2.25f; // KL
 			m_TAA_ks[1] = 100.0f; // KH
+
+			CreateDynamicVertexAndIndexBuffers();
 		}
 
 		void VulkanRenderer::PostInitialize()
@@ -516,6 +509,8 @@ namespace flex
 			CreateSSAOPipelines();
 			CreateSSAODescriptorSets();
 
+			CreateWireframeDescriptorSets();
+
 			CreateShadowResources();
 
 			m_CommandBufferManager.CreateCommandBuffers((u32)m_SwapChainImages.size());
@@ -566,7 +561,6 @@ namespace flex
 
 			CreateStaticVertexBuffers();
 			CreateStaticIndexBuffers();
-			CreateDynamicVertexAndIndexBuffers();
 
 			CreateShadowVertexBuffer();
 			CreateShadowIndexBuffer();
@@ -582,7 +576,10 @@ namespace flex
 
 			CreateSemaphores();
 
+
 			InitializeFreeType();
+			// Needs to be called prior to rendering fonts, call here just in case
+			UpdateConstantUniformBuffers();
 			LoadFonts(false);
 
 			GenerateIrradianceMaps();
@@ -591,6 +588,7 @@ namespace flex
 			CreateFullscreenBlitResources();
 			CreateComputeResources();
 
+			// TODO: Reduce calls to this to a minimum during startup
 			UpdateConstantUniformBuffers();
 
 			for (u32 i = 0; i < (u32)m_RenderObjects.size(); ++i)
@@ -609,7 +607,7 @@ namespace flex
 		{
 			Renderer::Destroy();
 
-#ifdef DEBUG
+#if COMPILE_SHADER_COMPILER
 			delete m_ShaderCompiler;
 			m_ShaderCompiler = nullptr;
 #endif
@@ -759,7 +757,7 @@ namespace flex
 			delete m_OffscreenFB1DepthAttachment;
 			m_OffscreenFB1DepthAttachment = nullptr;
 
-			for (u32 i = 0; i < SHADOW_CASCADE_COUNT; ++i)
+			for (i32 i = 0; i < m_ShadowCascadeCount; ++i)
 			{
 				delete m_ShadowCascades[i];
 			}
@@ -792,35 +790,26 @@ namespace flex
 			m_SSAOBlurHGraphicsPipeline.replace();
 			m_SSAOBlurVGraphicsPipeline.replace();
 
-			m_SSAOGraphicsPipelineLayout.replace();
-			m_SSAOBlurGraphicsPipelineLayout.replace();
+			DestroyWireframePipelines();
+			m_WireframePipelineLayout.replace();
 
 			m_ShadowGraphicsPipeline.replace();
-			m_ShadowPipelineLayout.replace();
 
-			m_FontSSPipelineLayout.replace();
 			m_FontSSGraphicsPipeline.replace();
-			m_FontWSPipelineLayout.replace();
 			m_FontWSGraphicsPipeline.replace();
 
 			m_PostProcessGraphicsPipeline.replace();
-			m_PostProcessGraphicsPipelineLayout.replace();
 			m_TAAResolveGraphicsPipeline.replace();
-			m_TAAResolveGraphicsPipelineLayout.replace();
 			m_GammaCorrectGraphicsPipeline.replace();
-			m_GammaCorrectGraphicsPipelineLayout.replace();
 
 			m_SpriteArrGraphicsPipeline.replace();
-			m_SpriteArrGraphicsPipelineLayout.replace();
 
 			m_BlitGraphicsPipeline.replace();
-			m_BlitGraphicsPipelineLayout.replace();
 
 			m_ParticleGraphicsPipelineLayout.replace();
 
 			m_ParticleSimulationComputePipelineLayout.replace();
 
-			m_gBufferQuadVertexBufferData.Destroy();
 			m_DescriptorPool.replace();
 
 			m_LinMipLinSampler.replace();
@@ -865,10 +854,10 @@ namespace flex
 
 			vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
 
-			if (m_Callback)
+			if (m_DebugUtilsMessengerCallback)
 			{
-				vkDestroyDebugReportCallbackEXT(m_Instance, m_Callback, nullptr);
-				m_Callback = VK_NULL_HANDLE;
+				vkDestroyDebugUtilsMessengerEXT(m_Instance, m_DebugUtilsMessengerCallback, nullptr);
+				m_DebugUtilsMessengerCallback = VK_NULL_HANDLE;
 			}
 
 			vkDestroyQueryPool(m_VulkanDevice->m_LogicalDevice, m_TimestampQueryPool, nullptr);
@@ -880,6 +869,8 @@ namespace flex
 
 			delete m_VulkanDevice;
 			m_VulkanDevice = nullptr;
+
+			vkDestroyInstance(m_Instance, nullptr);
 
 			glfwTerminate();
 		}
@@ -1051,7 +1042,7 @@ namespace flex
 						bool bFlipVertically = false;
 						texture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue,
 							textureInfo.relativeFilePath, channelCount, bFlipVertically, textureInfo.mipLevels > 1, textureInfo.bHDR);
-						texture->CreateFromFile(textureInfo.format);
+						texture->CreateFromFile(textureInfo.format, true);
 						texture->imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
 						AddLoadedTexture(texture);
@@ -1330,7 +1321,7 @@ namespace flex
 
 					constantBuffer->data.size = GetAlignedUBOSize(constantBuffer->data.size);
 
-					constantBuffer->data.data = static_cast<real*>(malloc(constantBuffer->data.size));
+					constantBuffer->data.data = static_cast<u8*>(malloc(constantBuffer->data.size));
 					assert(constantBuffer->data.data);
 
 					PrepareUniformBuffer(&constantBuffer->buffer, constantBuffer->data.size,
@@ -1365,7 +1356,7 @@ namespace flex
 
 				particleBuffer->data.size = GetAlignedUBOSize(MAX_PARTICLE_COUNT * sizeof(ParticleBufferData));
 
-				particleBuffer->data.data = static_cast<real*>(flex_aligned_malloc(particleBuffer->data.size, m_DynamicAlignment));
+				particleBuffer->data.data = static_cast<u8*>(flex_aligned_malloc(particleBuffer->data.size, m_DynamicAlignment));
 				// Will be copied into from staging buffer
 				PrepareUniformBuffer(&particleBuffer->buffer, particleBuffer->data.size,
 					VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -1440,8 +1431,8 @@ namespace flex
 
 				GraphicsPipelineCreateInfo createInfo = {};
 				createInfo.DBG_Name = "Sprite Array pipeline";
-				createInfo.graphicsPipeline = m_SpriteArrGraphicsPipeline.replace();
-				createInfo.pipelineLayout = &m_SpriteArrGraphicsPipelineLayout;
+				createInfo.graphicsPipeline = m_SpriteArrGraphicsPipeline.pipeline.replace();
+				createInfo.pipelineLayout = &m_SpriteArrGraphicsPipeline.layout;
 				createInfo.renderPass = *m_UIRenderPass;
 				createInfo.shaderID = spriteArrMat.material.shaderID;
 				createInfo.vertexAttributes = m_Quad3DVertexBufferData.Attributes;
@@ -1460,8 +1451,8 @@ namespace flex
 
 				GraphicsPipelineCreateInfo createInfo = {};
 				createInfo.DBG_Name = "Post Process pipeline";
-				createInfo.graphicsPipeline = m_PostProcessGraphicsPipeline.replace();
-				createInfo.pipelineLayout = m_PostProcessGraphicsPipelineLayout.replace();
+				createInfo.graphicsPipeline = m_PostProcessGraphicsPipeline.pipeline.replace();
+				createInfo.pipelineLayout = m_PostProcessGraphicsPipeline.layout.replace();
 				createInfo.renderPass = *m_PostProcessRenderPass;
 				createInfo.shaderID = postProcessMat.material.shaderID;
 				createInfo.vertexAttributes = m_FullScreenTriVertexBufferData.Attributes;
@@ -1478,8 +1469,8 @@ namespace flex
 
 				GraphicsPipelineCreateInfo createInfo = {};
 				createInfo.DBG_Name = "Gamma Correct pipeline";
-				createInfo.graphicsPipeline = m_GammaCorrectGraphicsPipeline.replace();
-				createInfo.pipelineLayout = m_GammaCorrectGraphicsPipelineLayout.replace();
+				createInfo.graphicsPipeline = m_GammaCorrectGraphicsPipeline.pipeline.replace();
+				createInfo.pipelineLayout = m_GammaCorrectGraphicsPipeline.layout.replace();
 				createInfo.renderPass = *m_GammaCorrectRenderPass;
 				createInfo.shaderID = gammaCorrectMat.material.shaderID;
 				createInfo.vertexAttributes = m_FullScreenTriVertexBufferData.Attributes;
@@ -1493,16 +1484,17 @@ namespace flex
 			// TAA Resolve pipeline
 			{
 				VulkanMaterial& taaResolveMat = m_Materials[m_TAAResolveMaterialID];
+				VulkanShader& taaResolveShader = m_Shaders[taaResolveMat.material.shaderID];
 
 				std::array<VkPushConstantRange, 1> pushConstantRanges = {};
 				pushConstantRanges[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 				pushConstantRanges[0].offset = 0;
-				pushConstantRanges[0].size = m_Shaders[taaResolveMat.material.shaderID].shader->pushConstantBlockSize;
+				pushConstantRanges[0].size = taaResolveShader.shader->pushConstantBlockSize;
 
 				GraphicsPipelineCreateInfo createInfo = {};
 				createInfo.DBG_Name = "TAA Resolve pipeline";
-				createInfo.graphicsPipeline = m_TAAResolveGraphicsPipeline.replace();
-				createInfo.pipelineLayout = m_TAAResolveGraphicsPipelineLayout.replace();
+				createInfo.graphicsPipeline = m_TAAResolveGraphicsPipeline.pipeline.replace();
+				createInfo.pipelineLayout = m_TAAResolveGraphicsPipeline.layout.replace();
 				createInfo.renderPass = *m_TAAResolveRenderPass;
 				createInfo.shaderID = taaResolveMat.material.shaderID;
 				createInfo.vertexAttributes = m_FullScreenTriVertexBufferData.Attributes;
@@ -1510,11 +1502,54 @@ namespace flex
 				createInfo.bSetDynamicStates = true;
 				createInfo.depthTestEnable = VK_FALSE;
 				createInfo.depthWriteEnable = VK_FALSE;
-				createInfo.fragSpecializationInfo = &m_TAAOSpecializationInfo;
+				createInfo.fragSpecializationInfo = taaResolveShader.fragSpecializationInfo;
 				createInfo.pushConstantRangeCount = (u32)pushConstantRanges.size();
 				createInfo.pushConstants = pushConstantRanges.data();
 				CreateGraphicsPipeline(&createInfo);
 			}
+		}
+
+		VkSpecializationInfo* VulkanRenderer::GenerateSpecializationInfo(const std::vector<SpecializationConstantCreateInfo>& entries)
+		{
+			VkSpecializationInfo* result = new VkSpecializationInfo();
+			result->mapEntryCount = (u32)entries.size();
+
+			for (const SpecializationConstantCreateInfo& entry : entries)
+			{
+				result->dataSize += entry.size;
+			}
+
+			if (result->dataSize == 0)
+			{
+				delete result;
+				return nullptr;
+			}
+
+			result->pData = malloc(result->dataSize);
+			u8* data = (u8*)result->pData;
+			for (const SpecializationConstantCreateInfo& entry : entries)
+			{
+				memcpy(data, entry.data, entry.size);
+				data += entry.size;
+			}
+			assert(data == ((u8*)result->pData + result->dataSize));
+
+			VkSpecializationMapEntry* mapEntries = (VkSpecializationMapEntry*)malloc(result->mapEntryCount * sizeof(VkSpecializationMapEntry));
+			assert(mapEntries != nullptr);
+
+			u32 offset = 0;
+			for (u32 i = 0; i < (u32)entries.size(); ++i)
+			{
+				const SpecializationConstantCreateInfo& entry = entries[i];
+				mapEntries[i].constantID = (u32)entry.constantID;
+				mapEntries[i].offset = offset;
+				mapEntries[i].size = entry.size;
+				offset += entry.size;
+			}
+
+			result->pMapEntries = mapEntries;
+
+			return result;
 		}
 
 		void VulkanRenderer::CreateFullscreenBlitResources()
@@ -1546,8 +1581,8 @@ namespace flex
 				pipelineCreateInfo.cullMode = VK_CULL_MODE_NONE;
 				pipelineCreateInfo.bEnableColorBlending = false;
 
-				pipelineCreateInfo.graphicsPipeline = m_BlitGraphicsPipeline.replace();
-				pipelineCreateInfo.pipelineLayout = m_BlitGraphicsPipelineLayout.replace();
+				pipelineCreateInfo.graphicsPipeline = m_BlitGraphicsPipeline.pipeline.replace();
+				pipelineCreateInfo.pipelineLayout = m_BlitGraphicsPipeline.layout.replace();
 				pipelineCreateInfo.shaderID = fullscreenBlitMat->material.shaderID;
 				pipelineCreateInfo.vertexAttributes = fullscreenShader->shader->vertexAttributes;
 				pipelineCreateInfo.descriptorSetLayoutIndex = fullscreenBlitMat->descriptorSetLayoutIndex;
@@ -1668,32 +1703,13 @@ namespace flex
 			// NOTE: This doesn't respect TAA jitter!
 			m_SpritePerspPushConstBlock->SetData(g_CameraManager->CurrentCamera()->GetView(), g_CameraManager->CurrentCamera()->GetProjection());
 
-#ifdef DEBUG
-			if (m_ShaderCompiler && m_ShaderCompiler->TickStatus())
-			{
-				if (m_ShaderCompiler->bSuccess)
-				{
-					OnShaderReloadSuccess();
-				}
-				else
-				{
-					PrintError("Shader recompile failed\n");
-					AddEditorString("Shader recompile failed");
-				}
-
-				m_bSwapChainNeedsRebuilding = true; // This is needed to recreate some resources for SSAO, etc.
-
-				delete m_ShaderCompiler;
-				m_ShaderCompiler = nullptr;
-			}
-#endif
-
 			if (m_bSSAOStateChanged)
 			{
 				m_bSSAOStateChanged = false;
-				// Update GBuffer in case blur or ssao entirely was toggled
-				CreateDescriptorSet(m_GBufferQuadRenderID);
+
+				// Update GBuffer pipeline in case blur or SSAO entirely was toggled
 				CreateGraphicsPipeline(m_GBufferQuadRenderID, false);
+
 				// Update SSAO pipelines in case kernel size changed
 				CreateSSAOPipelines();
 			}
@@ -1707,6 +1723,12 @@ namespace flex
 			}
 
 			m_PhysicsDebugDrawer->UpdateDebugMode();
+
+			{
+				VulkanMaterial* wireframeMat = &m_Materials[m_WireframeMatID];
+				real f = glm::clamp(sin(g_SecElapsedSinceProgramStart * 4.0f) * 0.2f + 0.55f, 0.0f, 1.0f);
+				wireframeMat->material.colorMultiplier = glm::vec4(f, f * 0.25f, f * 0.75f, 1.0f);
+			}
 
 			UpdateConstantUniformBuffers();
 
@@ -1898,30 +1920,146 @@ namespace flex
 				}
 				ImGui::End();
 			}
+
+#if COMPILE_SHADER_COMPILER
+			VulkanShaderCompiler::DisplayShaderErrorsImGui(&m_bShaderErrorWindowShowing);
+#endif
 		}
 
-		void VulkanRenderer::UpdateVertexData(RenderID renderID, VertexBufferData const* vertexBufferData, const std::vector<u32>& indexData)
+		void VulkanRenderer::UpdateDynamicVertexData(RenderID renderID, VertexBufferData const* vertexBufferData, const std::vector<u32>& indexData)
 		{
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
-			VertexIndexBufferPair* vertexIndexBufferPair = m_DynamicVertexIndexBufferPairs[m_Materials.at(renderObject->materialID).material.dynamicVertexIndexBufferIndex].second;
+
+			VulkanMaterial& mat = m_Materials.at(renderObject->materialID);
+			VertexIndexBufferPair* vertexIndexBufferPair = m_DynamicVertexIndexBufferPairs[mat.material.dynamicVertexIndexBufferIndex].second;
 			VulkanBuffer* vertexBuffer = vertexIndexBufferPair->vertexBuffer;
 			VulkanBuffer* indexBuffer = vertexIndexBufferPair->indexBuffer;
-			u32 copySize = std::min(vertexBufferData->VertexBufferSize, (u32)vertexBuffer->m_Size);
-			u32 indexCopySize = std::min((u32)(indexData.size() * sizeof(indexData[0])), (u32)indexBuffer->m_Size);
-			if (copySize < vertexBufferData->VertexBufferSize)
+
+			const u32 newIndexDataSize = (u32)indexData.size() * sizeof(u32);
+
+			if (renderObject->dynamicVertexBufferOffset == u64_max)
 			{
-				PrintError("Dynamic vertex buffer is %u bytes too small for data attempting to be copied in\n", vertexBufferData->VertexBufferSize - copySize);
+				// First upload of data
+				renderObject->dynamicVertexBufferOffset = vertexBuffer->Alloc((VkDeviceSize)vertexBufferData->VertexBufferSize, true);
+				renderObject->dynamicIndexBufferOffset = indexBuffer->Alloc((VkDeviceSize)newIndexDataSize, true);
 			}
-			// TODO: Keep mapped persistently?
-			VK_CHECK_RESULT(vertexBuffer->Map(copySize));
-			VK_CHECK_RESULT(indexBuffer->Map(indexCopySize));
-			memcpy(vertexBuffer->m_Mapped, vertexBufferData->vertexData, copySize);
+
+			u32 vertCopySize = std::min(vertexBufferData->VertexBufferSize, (u32)vertexBuffer->m_Size);
+			u32 indexCopySize = std::min(newIndexDataSize, (u32)indexBuffer->m_Size);
+			if (vertCopySize < vertexBuffer->m_Size)
+			{
+				renderObject->dynamicVertexBufferOffset = vertexBuffer->Realloc(renderObject->dynamicVertexBufferOffset, vertexBufferData->VertexBufferSize, true);
+				// TODO: Handle failed allocs
+				vertCopySize = std::min(vertexBufferData->VertexBufferSize, (u32)vertexBuffer->m_Size);
+			}
+			if (indexCopySize < indexBuffer->m_Size)
+			{
+				renderObject->dynamicIndexBufferOffset = indexBuffer->Realloc(renderObject->dynamicIndexBufferOffset, newIndexDataSize, true);
+				// TODO: Handle failed allocs
+				indexCopySize = std::min(newIndexDataSize, (u32)indexBuffer->m_Size);
+			}
+
+			VkDeviceSize vertAllocSize = vertexBuffer->SizeOf(renderObject->dynamicVertexBufferOffset);
+			VkDeviceSize indexAllocSize = indexBuffer->SizeOf(renderObject->dynamicIndexBufferOffset);
+			assert(vertAllocSize != ((VkDeviceSize)-1));
+			assert(indexAllocSize != ((VkDeviceSize)-1));
+			real vertExcess = 1.0f - (real)vertexBufferData->UsedVertexBufferSize / vertAllocSize;
+			real indexExcess = 1.0f - (real)indexCopySize / indexAllocSize;
+			if (vertExcess > 0.5f || indexExcess > 0.5f)
+			{
+				vertexBuffer->Realloc(renderObject->dynamicVertexBufferOffset, vertexBufferData->UsedVertexBufferSize, true);
+				indexBuffer->Realloc(renderObject->dynamicIndexBufferOffset, indexCopySize, true);
+				ShrinkDynamicVertexData(renderID);
+
+				vkDeviceWaitIdle(m_VulkanDevice->m_LogicalDevice);
+			}
+
+			VkDeviceSize vertOffset = renderObject->dynamicVertexBufferOffset;
+			VkDeviceSize indexOffset = renderObject->dynamicIndexBufferOffset;
+
+			assert((vertOffset + vertCopySize) <= vertexBuffer->m_Size);
+			assert((indexOffset + indexCopySize) <= indexBuffer->m_Size);
+
+			VK_CHECK_RESULT(vertexBuffer->Map(vertOffset, vertCopySize));
+			VK_CHECK_RESULT(indexBuffer->Map(indexOffset, indexCopySize));
+			memcpy(vertexBuffer->m_Mapped, vertexBufferData->vertexData, vertCopySize);
 			memcpy(indexBuffer->m_Mapped, indexData.data(), indexCopySize);
 			vertexBuffer->Unmap();
 			indexBuffer->Unmap();
-			renderObject->indexOffset = 0;
 
-			m_DirtyFlagBits |= DirtyFlags::DYNAMIC_DATA;
+
+			renderObject->vertexOffset = (u32)vertOffset;
+			renderObject->indexOffset = (u32)indexOffset;
+
+			m_DirtyFlagBits |= DirtyFlags::DYNAMIC_DATA; // TODO: Is this needed?
+		}
+
+		void VulkanRenderer::FreeDynamicVertexData(RenderID renderID)
+		{
+			VulkanRenderObject* renderObject = GetRenderObject(renderID);
+
+			if (renderObject->dynamicVertexBufferOffset != InvalidBufferID ||
+				renderObject->dynamicIndexBufferOffset != InvalidBufferID)
+			{
+				VulkanMaterial& mat = m_Materials.at(renderObject->materialID);
+				VertexIndexBufferPair* vertexIndexBufferPair = m_DynamicVertexIndexBufferPairs[mat.material.dynamicVertexIndexBufferIndex].second;
+				VulkanBuffer* vertexBuffer = vertexIndexBufferPair->vertexBuffer;
+				VulkanBuffer* indexBuffer = vertexIndexBufferPair->indexBuffer;
+
+				if (renderObject->dynamicVertexBufferOffset != InvalidBufferID)
+				{
+					vertexBuffer->Free(renderObject->dynamicVertexBufferOffset);
+					renderObject->dynamicVertexBufferOffset = InvalidBufferID;
+				}
+
+				if (renderObject->dynamicIndexBufferOffset != InvalidBufferID)
+				{
+					indexBuffer->Free(renderObject->dynamicIndexBufferOffset);
+					renderObject->dynamicIndexBufferOffset = InvalidBufferID;
+				}
+			}
+		}
+
+		void VulkanRenderer::ShrinkDynamicVertexData(RenderID renderID, real minUnused /* = 0.0f */)
+		{
+			VulkanRenderObject* renderObject = GetRenderObject(renderID);
+
+			VulkanMaterial& mat = m_Materials.at(renderObject->materialID);
+			VertexIndexBufferPair* vertexIndexBufferPair = m_DynamicVertexIndexBufferPairs[mat.material.dynamicVertexIndexBufferIndex].second;
+			VulkanBuffer* vertexBuffer = vertexIndexBufferPair->vertexBuffer;
+			VulkanBuffer* indexBuffer = vertexIndexBufferPair->indexBuffer;
+
+			if (renderObject->dynamicVertexBufferOffset != InvalidBufferID)
+			{
+				vertexBuffer->Shrink(minUnused);
+			}
+
+			if (renderObject->dynamicIndexBufferOffset != InvalidBufferID)
+			{
+				indexBuffer->Shrink(minUnused);
+			}
+		}
+
+		u32 VulkanRenderer::GetDynamicVertexBufferSize(RenderID renderID)
+		{
+			VulkanRenderObject* renderObject = GetRenderObject(renderID);
+
+			VulkanMaterial& mat = m_Materials.at(renderObject->materialID);
+			VertexIndexBufferPair* vertexIndexBufferPair = m_DynamicVertexIndexBufferPairs[mat.material.dynamicVertexIndexBufferIndex].second;
+			VulkanBuffer* vertexBuffer = vertexIndexBufferPair->vertexBuffer;
+
+			return (u32)vertexBuffer->m_Size;
+		}
+
+		u32 VulkanRenderer::GetDynamicVertexBufferUsedSize(RenderID renderID)
+		{
+			VulkanRenderObject* renderObject = GetRenderObject(renderID);
+
+			VulkanMaterial& mat = m_Materials.at(renderObject->materialID);
+			VertexIndexBufferPair* vertexIndexBufferPair = m_DynamicVertexIndexBufferPairs[mat.material.dynamicVertexIndexBufferIndex].second;
+			VulkanBuffer* vertexBuffer = vertexIndexBufferPair->vertexBuffer;
+
+			return (u32)vertexBuffer->SizeOf(renderObject->dynamicVertexBufferOffset);
 		}
 
 		void VulkanRenderer::DrawImGuiForRenderObject(RenderID renderID)
@@ -1931,14 +2069,16 @@ namespace flex
 
 		void VulkanRenderer::RecompileShaders(bool bForce)
 		{
-#ifdef DEBUG
+#if COMPILE_SHADER_COMPILER
 			if (m_ShaderCompiler == nullptr)
 			{
-				m_ShaderCompiler = new AsyncVulkanShaderCompiler(bForce);
+				m_bShaderErrorWindowShowing = true;
+				m_ShaderCompiler = new VulkanShaderCompiler(bForce);
 
 				if (m_ShaderCompiler->bSuccess)
 				{
-					OnShaderReloadSuccess();
+					AddEditorString("Shader recompile completed successfully");
+					RecreateEverything();
 				}
 				else
 				{
@@ -2122,13 +2262,14 @@ namespace flex
 				return;
 			}
 
-			MaterialID skyboxMatierialID = m_SkyBoxMesh->GetSubMeshes()[0]->GetMaterialID();
-			if (skyboxMatierialID == InvalidMaterialID)
+			MaterialID skyboxMaterialID = m_SkyBoxMesh->GetSubMeshes()[0]->GetMaterialID();
+			if (skyboxMaterialID == InvalidMaterialID)
 			{
 				PrintError("Skybox doesn't have a valid material! Irradiance textures can't be generated\n");
 				return;
 			}
-			VulkanMaterial& skyboxMaterial = m_Materials.at(skyboxMatierialID);
+			VulkanMaterial& skyboxMaterial = m_Materials.at(skyboxMaterialID);
+			m_SkyboxShaderID = skyboxMaterial.material.shaderID;
 
 			for (u32 i = 0; i < m_RenderObjects.size(); ++i)
 			{
@@ -2209,57 +2350,44 @@ namespace flex
 			return *m_Shaders[shaderID].shader;
 		}
 
-		void VulkanRenderer::DestroyRenderObject(RenderID renderID)
+		bool VulkanRenderer::DestroyRenderObject(RenderID renderID)
 		{
 			for (VulkanRenderObject* renderObject : m_RenderObjects)
 			{
 				if (renderObject && renderObject->renderID == renderID)
 				{
 					DestroyRenderObject(renderID, renderObject);
-					return;
+					return true;
 				}
 			}
+			return false;
+		}
+
+		void VulkanRenderer::SetGlobalUniform(u64 uniform, void* data, u32 dataSize)
+		{
+			auto& pair = m_GlobalUserUniforms[uniform];
+			pair.first = data;
+			pair.second = dataSize;
 		}
 
 		void VulkanRenderer::DestroyRenderObject(RenderID renderID, VulkanRenderObject* renderObject)
 		{
 			if (renderObject)
 			{
+				FreeDynamicVertexData(renderID);
+
 				if (renderObject->descriptorSet)
 				{
 					vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPool, 1, &(renderObject->descriptorSet));
 				}
-				renderObject->graphicsPipeline.replace();
-				renderObject->pipelineLayout.replace();
+				renderObject->graphicsPipeline.pipeline.replace();
+				renderObject->graphicsPipeline.layout.replace();
+
 				delete renderObject;
 				renderObject = nullptr;
 			}
 			m_RenderObjects[renderID] = nullptr;
 			m_bRebatchRenderObjects = true;
-		}
-
-		VkPhysicalDeviceFeatures VulkanRenderer::GetEnabledFeaturesForDevice(VkPhysicalDevice physicalDevice)
-		{
-			VkPhysicalDeviceFeatures enabledFeatures = {};
-
-			VkPhysicalDeviceFeatures supportedFeatures;
-			vkGetPhysicalDeviceFeatures(physicalDevice, &supportedFeatures);
-
-			if (supportedFeatures.geometryShader)
-			{
-				enabledFeatures.geometryShader = VK_TRUE;
-			}
-			else
-			{
-				PrintError("Selected GPU does not support geometry shaders!\n");
-			}
-
-			if (supportedFeatures.wideLines)
-			{
-				enabledFeatures.wideLines = VK_TRUE;
-			}
-
-			return enabledFeatures;
 		}
 
 		void VulkanRenderer::NewFrame()
@@ -2313,24 +2441,28 @@ namespace flex
 			m_CurrentFont->AddTextCache(newCache);
 		}
 
-		void VulkanRenderer::DrawAssetBrowserImGui(bool* bShowing)
+		void VulkanRenderer::DrawAssetWindowsImGui(bool* bMaterialWindowShowing, bool* bShaderWindowShowing, bool* bTextureWindowShowing, bool* bMeshWindowShowing)
 		{
-			// TODO: Consolidate with GL renderer
-			ImGui::SetNextWindowSize(ImVec2(400.0f, 350.0f), ImGuiCond_FirstUseEver);
-			if (ImGui::Begin("Asset browser", bShowing))
+			if (*bMaterialWindowShowing)
 			{
-				if (ImGui::CollapsingHeader("Materials"))
+				if (ImGui::Begin("Materials", bMaterialWindowShowing))
 				{
 					static bool bUpdateFields = true;
 					static bool bMaterialSelectionChanged = true;
 					const i32 MAX_NAME_LEN = 128;
 					static i32 selectedMaterialIndexShort = 0; // Index into shortened array
 					static MaterialID selectedMaterialID = 0;
-					while (!m_Materials.at(selectedMaterialID).material.visibleInEditor &&
-						selectedMaterialID < m_Materials.size() - 1)
+
+					// Skip by any editor materials in case m_bShowEditorMaterials was set to false while we had one selected
+					if (!m_bShowEditorMaterials)
 					{
-						++selectedMaterialID;
+						while (m_Materials.find(selectedMaterialID) == m_Materials.end() ||
+							(!m_Materials.at(selectedMaterialID).material.visibleInEditor && selectedMaterialID < m_Materials.size() - 1))
+						{
+							++selectedMaterialID;
+						}
 					}
+
 					static std::string matName = "";
 					static i32 selectedShaderIndex = 0;
 					// Texture index values of 0 represent no texture, 1 = first index into textures array and so on
@@ -2353,7 +2485,7 @@ namespace flex
 						{
 							for (u32 loadedTexIndex = 0; loadedTexIndex < m_LoadedTextures.size(); ++loadedTexIndex)
 							{
-								// TODO(AJ): Compare IDs
+								// TODO: Compare IDs
 								if (pair.second == GetLoadedTexture(loadedTexIndex))
 								{
 									selectedTextureIndices[texIndex] = loadedTexIndex;
@@ -2366,12 +2498,10 @@ namespace flex
 					{
 						bUpdateFields = false;
 
-
 						for (u32 texIndex = 0; texIndex < mat.textures.Count(); ++texIndex)
 						{
 							mat.textures.values[texIndex].second = GetLoadedTexture(selectedTextureIndices[texIndex]);
 						}
-
 
 						i32 i = 0;
 						for (VulkanTexture* texture : m_LoadedTextures)
@@ -2379,45 +2509,8 @@ namespace flex
 							std::string texturePath = texture->GetRelativeFilePath();
 							std::string textureName = StripLeadingDirectories(texturePath);
 
-							//ImGuiUpdateTextureIndexOrMaterial(bUpdateAlbedoTextureMaterial,
-							//	texturePath,
-							//	mat.material.albedoTexturePath,
-							//	texture,
-							//	i,
-							//	&albedoTextureIndex,
-							//	U_ALBEDO_SAMPLER);
-
-							//ImGuiUpdateTextureIndexOrMaterial(bUpdateMetallicTextureMaterial,
-							//	texturePath,
-							//	mat.material.metallicTexturePath,
-							//	texture,
-							//	i,
-							//	&metallicTextureIndex,
-							//	&mat.metallicTexture);
-
-							//ImGuiUpdateTextureIndexOrMaterial(bUpdateRoughessTextureMaterial,
-							//	texturePath,
-							//	mat.material.roughnessTexturePath,
-							//	texture,
-							//	i,
-							//	&roughnessTextureIndex,
-							//	&mat.roughnessTexture);
-
-							//ImGuiUpdateTextureIndexOrMaterial(bUpdateNormalTextureMaterial,
-							//	texturePath,
-							//	mat.material.normalTexturePath,
-							//	texture,
-							//	i,
-							//	&normalTextureIndex,
-							//	&mat.normalTexture);
-
 							++i;
 						}
-
-						//mat.material.enableAlbedoSampler = (albedoTextureIndex > 0);
-						//mat.material.enableMetallicSampler = (metallicTextureIndex > 0);
-						//mat.material.enableRoughnessSampler = (roughnessTextureIndex > 0);
-						//mat.material.enableNormalSampler = (normalTextureIndex > 0);
 
 						selectedShaderIndex = mat.material.shaderID;
 					}
@@ -2456,6 +2549,8 @@ namespace flex
 					ImGui::Columns(2);
 					ImGui::SetColumnWidth(0, 240.0f);
 
+					ImGui::ColorEdit3("Colour multiplier", &mat.material.colorMultiplier.x, ImGuiColorEditFlags_Float | ImGuiColorEditFlags_PickerHueWheel);
+
 					ImGui::ColorEdit3("Albedo", &mat.material.constAlbedo.x, ImGuiColorEditFlags_Float | ImGuiColorEditFlags_PickerHueWheel);
 
 					if (mat.material.enableMetallicSampler)
@@ -2479,6 +2574,10 @@ namespace flex
 					}
 
 					ImGui::DragFloat("Texture scale", &mat.material.textureScale, 0.1f);
+
+					ImGui::Checkbox("Dynamic", &mat.material.bDynamic);
+					ImGui::Checkbox("Persistent", &mat.material.persistent);
+					ImGui::Checkbox("Visible in editor", &mat.material.visibleInEditor);
 
 					ImGui::NextColumn();
 
@@ -2506,17 +2605,29 @@ namespace flex
 						textures.push_back(texture);
 					}
 
-					for (u32 texIndex = 0; texIndex < mat.textures.Count(); ++texIndex)
+					if (selectedTextureIndices.size() == mat.textures.Count())
 					{
-						// TODO: Pass in reference to mat.textures?
-						//VulkanTexture* texture = mat.textures[texIndex];
-						std::string texFieldName = mat.textures.slotNames[texIndex] + "##" + std::to_string(texIndex);
-						bUpdateFields |= DoTextureSelector(texFieldName.c_str(), textures, &selectedTextureIndices[texIndex]);
+						for (u32 texIndex = 0; texIndex < mat.textures.Count(); ++texIndex)
+						{
+							// TODO: Pass in reference to mat.textures?
+							//VulkanTexture* texture = mat.textures[texIndex];
+							std::string texFieldName = mat.textures.slotNames[texIndex] + "##" + std::to_string(texIndex);
+							bUpdateFields |= DoTextureSelector(texFieldName.c_str(), textures, &selectedTextureIndices[texIndex]);
+						}
 					}
 
 					ImGui::NewLine();
 
 					ImGui::EndColumns();
+
+					static ImGuiTextFilter materialFilter;
+					materialFilter.Draw("##material-filter");
+
+					ImGui::SameLine();
+					if (ImGui::Button("x"))
+					{
+						materialFilter.Clear();
+					}
 
 					if (ImGui::BeginChild("material list", ImVec2(0.0f, 120.0f), true))
 					{
@@ -2524,14 +2635,25 @@ namespace flex
 						for (i32 i = 0; i < (i32)m_Materials.size(); ++i)
 						{
 							auto matIter = m_Materials.find(i);
-							if (matIter == m_Materials.end() || !matIter->second.material.visibleInEditor)
+							if (matIter == m_Materials.end() || (!m_bShowEditorMaterials && !matIter->second.material.visibleInEditor))
 							{
 								continue;
 							}
 
 							VulkanMaterial& material = matIter->second;
 
+							if (!materialFilter.PassFilter(material.material.name.c_str()))
+							{
+								continue;
+							}
+
 							bool bSelected = (matShortIndex == selectedMaterialIndexShort);
+							const bool bWasMatVisibleInEditor = material.material.visibleInEditor;
+							if (!bWasMatVisibleInEditor)
+							{
+								ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+							}
+
 							if (ImGui::Selectable(material.material.name.c_str(), &bSelected))
 							{
 								if (selectedMaterialIndexShort != matShortIndex)
@@ -2543,6 +2665,15 @@ namespace flex
 								}
 							}
 
+							if (!bWasMatVisibleInEditor)
+							{
+								ImGui::PopStyleColor();
+							}
+
+							std::string renamePopupWindowStr = "Rename material##popup" + std::to_string(i);
+							static const u32 bufSize = 256;
+							static char newNameBuf[bufSize];
+							bool bOpenRename = false;
 							if (ImGui::BeginPopupContextItem())
 							{
 								if (ImGui::Button("Duplicate"))
@@ -2561,6 +2692,59 @@ namespace flex
 
 									g_SceneManager->CurrentScene()->AddMaterialID(newMaterialID);
 
+									ImGui::CloseCurrentPopup();
+								}
+								if (ImGui::Button("Rename"))
+								{
+									bOpenRename = true;
+								}
+
+								ImGui::EndPopup();
+							}
+
+							if (bOpenRename)
+							{
+								ImGui::OpenPopup(renamePopupWindowStr.c_str());
+								strcpy(newNameBuf, material.material.name.c_str());
+							}
+
+							if (ImGui::BeginPopupModal(renamePopupWindowStr.c_str(), NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize))
+							{
+								bool bRename = false;
+
+								if (ImGui::InputText("Material name", newNameBuf, bufSize, ImGuiInputTextFlags_EnterReturnsTrue))
+								{
+									bRename = true;
+									ImGui::CloseCurrentPopup();
+								}
+
+								if (ImGui::Button("Rename"))
+								{
+									bRename = true;
+									ImGui::CloseCurrentPopup();
+								}
+
+								ImGui::SameLine();
+
+								if (ImGui::Button("Cancel"))
+								{
+									ImGui::CloseCurrentPopup();
+								}
+
+								if (bRename)
+								{
+									newNameBuf[bufSize - 1] = '\0';
+									material.material.name = std::string(newNameBuf);
+									bMaterialSelectionChanged = true;
+								}
+
+								if (g_InputManager->GetKeyPressed(KeyCode::KEY_ESCAPE, true))
+								{
+									ImGui::CloseCurrentPopup();
+								}
+
+								if (g_InputManager->GetKeyPressed(KeyCode::KEY_ESCAPE, true))
+								{
 									ImGui::CloseCurrentPopup();
 								}
 
@@ -2620,7 +2804,7 @@ namespace flex
 								++i;
 							}
 						}
-						ImGui::EndChild(); // Shader list
+						ImGui::EndChild(); // Shader
 
 						if (ImGui::Button("Create new material"))
 						{
@@ -2659,56 +2843,156 @@ namespace flex
 							ImGui::CloseCurrentPopup();
 						}
 
+						if (g_InputManager->GetKeyPressed(KeyCode::KEY_ESCAPE, true))
+						{
+							ImGui::CloseCurrentPopup();
+						}
+
 						ImGui::EndPopup();
 					}
 
-					ImGui::SameLine();
-
-					ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
-					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
-					ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
-					if (ImGui::Button("Delete material"))
+					// Only non-editor materials can be deleted
+					if (mat.material.visibleInEditor)
 					{
-						g_SceneManager->CurrentScene()->RemoveMaterialID(selectedMaterialID);
-						RemoveMaterial(selectedMaterialID);
+						ImGui::SameLine();
+
+						ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
+						ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
+						ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
+						if (ImGui::Button("Delete material"))
+						{
+							g_SceneManager->CurrentScene()->RemoveMaterialID(selectedMaterialID);
+							RemoveMaterial(selectedMaterialID);
+							selectedMaterialID = 0;
+							bMaterialSelectionChanged = true;
+						}
+						ImGui::PopStyleColor();
+						ImGui::PopStyleColor();
+						ImGui::PopStyleColor();
+					}
+
+					if (ImGui::Checkbox("Show editor materials", &m_bShowEditorMaterials))
+					{
 						bMaterialSelectionChanged = true;
 					}
-					ImGui::PopStyleColor();
-					ImGui::PopStyleColor();
-					ImGui::PopStyleColor();
 				}
 
-				if (ImGui::CollapsingHeader("Textures"))
+				ImGui::End();
+			}
+
+			if (*bShaderWindowShowing)
+			{
+				if (ImGui::Begin("Shaders", bShaderWindowShowing))
 				{
+					static ImGuiTextFilter shaderFilter;
+					shaderFilter.Draw("##shader-filter");
+
+					ImGui::SameLine();
+					if (ImGui::Button("x"))
+					{
+						shaderFilter.Clear();
+					}
+
+					static u32 selectedShaderIndex = 0;
+
+					if (ImGui::BeginChild("Shader list", ImVec2(0, 120), true))
+					{
+						// TODO: Add option to generate & view shader dissasembly here
+
+						for (u32 i = 0; i < (u32)m_Shaders.size(); ++i)
+						{
+							VulkanShader& shader = m_Shaders[i];
+							if (shaderFilter.PassFilter(shader.shader->name.c_str()))
+							{
+								bool bSelected = selectedShaderIndex == i;
+								if (ImGui::Selectable(shader.shader->name.c_str(), &bSelected))
+								{
+									if (bSelected)
+									{
+										selectedShaderIndex = i;
+									}
+								}
+							}
+						}
+					}
+					ImGui::EndChild(); // Shader list
+
+#if COMPILE_SHADER_COMPILER
+					VulkanShaderCompiler::DisplayShaderErrorsImGui(nullptr);
+#endif
+
+					VulkanShader& shader = m_Shaders[selectedShaderIndex];
+
+					ImGui::Text("%s", shader.shader->name.c_str());
+
+					ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+					ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+
+					ImGui::Checkbox("Enable depth write", &shader.shader->bDepthWriteEnable);
+					ImGui::SameLine();
+					ImGui::Checkbox("Translucent", &shader.shader->bTranslucent);
+					ImGui::Checkbox("Compute", &shader.shader->bCompute);
+
+					ImGui::PopStyleColor();
+					ImGui::PopItemFlag();
+
+#if COMPILE_SHADER_COMPILER
+					if (ImGui::Button("Recompile"))
+					{
+						VulkanShaderCompiler::ClearShaderHash(shader.shader->name);
+						RecompileShaders(false);
+					}
+#endif
+				}
+
+				ImGui::End();
+			}
+
+			if (*bTextureWindowShowing)
+			{
+				if (ImGui::Begin("Textures", bTextureWindowShowing))
+				{
+					static ImGuiTextFilter textureFilter;
+					textureFilter.Draw("##texture-filter");
+
+					ImGui::SameLine();
+					if (ImGui::Button("x"))
+					{
+						textureFilter.Clear();
+					}
+
 					static i32 selectedTextureIndex = 0;
 					if (ImGui::BeginChild("texture list", ImVec2(0.0f, 120.0f), true))
 					{
 						i32 i = 0;
 						for (VulkanTexture* texture : m_LoadedTextures)
 						{
-							bool bSelected = (i == selectedTextureIndex);
 							std::string textureName = texture->GetName();
-							if (ImGui::Selectable(textureName.c_str(), &bSelected))
+							if (textureFilter.PassFilter(textureName.c_str()))
 							{
-								selectedTextureIndex = i;
-							}
-
-							if (ImGui::BeginPopupContextItem())
-							{
-								if (ImGui::Button("Reload"))
+								bool bSelected = (i == selectedTextureIndex);
+								if (ImGui::Selectable(textureName.c_str(), &bSelected))
 								{
-									texture->Reload();
-									ImGui::CloseCurrentPopup();
+									selectedTextureIndex = i;
 								}
 
-								ImGui::EndPopup();
-							}
+								if (ImGui::BeginPopupContextItem())
+								{
+									if (ImGui::Button("Reload"))
+									{
+										texture->Reload();
+										ImGui::CloseCurrentPopup();
+									}
 
-							if (ImGui::IsItemHovered())
-							{
-								DoTexturePreviewTooltip(texture);
+									ImGui::EndPopup();
+								}
+
+								if (ImGui::IsItemHovered())
+								{
+									DoTexturePreviewTooltip(texture);
+								}
+								++i;
 							}
-							++i;
 						}
 					}
 					ImGui::EndChild();
@@ -2716,7 +3000,7 @@ namespace flex
 					if (ImGui::Button("Import Texture"))
 					{
 						// TODO: Not all textures are directly in this directory! CLEANUP to make more robust
-						std::string relativeDirPath = RESOURCE_LOCATION "textures/";
+						std::string relativeDirPath = TEXTURE_LOCATION;
 						std::string absoluteDirectoryStr = RelativePathToAbsolute(relativeDirPath);
 						std::string selectedAbsFilePath;
 						if (Platform::OpenFileDialog("Import texture", absoluteDirectoryStr, selectedAbsFilePath))
@@ -2751,7 +3035,12 @@ namespace flex
 					}
 				}
 
-				if (ImGui::CollapsingHeader("Meshes"))
+				ImGui::End();
+			}
+
+			if (*bMeshWindowShowing)
+			{
+				if (ImGui::Begin("Meshes", bMeshWindowShowing))
 				{
 					static i32 selectedMeshIndex = 0;
 
@@ -2809,6 +3098,15 @@ namespace flex
 						g_SceneManager->CurrentScene()->SerializeToFile(true);
 					}
 
+					static ImGuiTextFilter meshFilter;
+					meshFilter.Draw("##mesh-filter");
+
+					ImGui::SameLine();
+					if (ImGui::Button("x"))
+					{
+						meshFilter.Clear();
+					}
+
 					if (ImGui::BeginChild("mesh list", ImVec2(0.0f, 120.0f), true))
 					{
 						i32 i = 0;
@@ -2817,53 +3115,56 @@ namespace flex
 							bool bSelected = (i == selectedMeshIndex);
 							const std::string meshFilePath = meshIter.first;
 							const std::string meshFileName = StripLeadingDirectories(meshIter.first);
-							if (ImGui::Selectable(meshFileName.c_str(), &bSelected))
+							if (meshFilter.PassFilter(meshFileName.c_str()))
 							{
-								selectedMeshIndex = i;
-							}
-
-							if (ImGui::BeginPopupContextItem())
-							{
-								if (ImGui::Button("Reload"))
+								if (ImGui::Selectable(meshFileName.c_str(), &bSelected))
 								{
-									Mesh::LoadMesh(meshIter.second->relativeFilePath);
+									selectedMeshIndex = i;
+								}
 
-									for (VulkanRenderObject* renderObject : m_RenderObjects)
+								if (ImGui::BeginPopupContextItem())
+								{
+									if (ImGui::Button("Reload"))
 									{
-										if (renderObject)
+										Mesh::LoadMesh(meshIter.second->relativeFilePath);
+
+										for (VulkanRenderObject* renderObject : m_RenderObjects)
 										{
-											Mesh* mesh = renderObject->gameObject->GetMesh();
-											if (mesh && mesh->GetRelativeFilePath().compare(meshFilePath) == 0)
+											if (renderObject)
 											{
-												mesh->Reload();
+												Mesh* mesh = renderObject->gameObject->GetMesh();
+												if (mesh && mesh->GetRelativeFilePath().compare(meshFilePath) == 0)
+												{
+													mesh->Reload();
+												}
 											}
 										}
+
+										ImGui::CloseCurrentPopup();
 									}
 
-									ImGui::CloseCurrentPopup();
+									ImGui::EndPopup();
 								}
-
-								ImGui::EndPopup();
-							}
-							else
-							{
-								if (ImGui::IsItemActive())
+								else
 								{
-									if (ImGui::BeginDragDropSource())
+									if (ImGui::IsItemActive())
 									{
-										const void* data = (void*)(meshIter.first.c_str());
-										size_t size = strlen(meshIter.first.c_str()) * sizeof(char);
+										if (ImGui::BeginDragDropSource())
+										{
+											const void* data = (void*)(meshIter.first.c_str());
+											size_t size = strlen(meshIter.first.c_str()) * sizeof(char);
 
-										ImGui::SetDragDropPayload(MeshPayloadCStr, data, size);
+											ImGui::SetDragDropPayload(MeshPayloadCStr, data, size);
 
-										ImGui::Text("%s", meshFileName.c_str());
+											ImGui::Text("%s", meshFileName.c_str());
 
-										ImGui::EndDragDropSource();
+											ImGui::EndDragDropSource();
+										}
 									}
 								}
-							}
 
-							++i;
+								++i;
+							}
 						}
 					}
 					ImGui::EndChild();
@@ -2874,7 +3175,7 @@ namespace flex
 					if (ImGui::Button("Import Mesh"))
 					{
 						// TODO: Not all models are directly in this directory! CLEANUP to make more robust
-						std::string relativeImportDirPath = RESOURCE_LOCATION "meshes/";
+						std::string relativeImportDirPath = MESH_DIRECTORY;
 						std::string absoluteImportDirectoryStr = RelativePathToAbsolute(relativeImportDirPath);
 						std::string selectedAbsFilePath;
 						if (Platform::OpenFileDialog("Import mesh", absoluteImportDirectoryStr, selectedAbsFilePath))
@@ -2947,12 +3248,17 @@ namespace flex
 							ImGui::CloseCurrentPopup();
 						}
 
+						if (g_InputManager->GetKeyPressed(KeyCode::KEY_ESCAPE, true))
+						{
+							ImGui::CloseCurrentPopup();
+						}
+
 						ImGui::EndPopup();
 					}
 				}
-			}
 
-			ImGui::End();
+				ImGui::End();
+			}
 		}
 
 		void VulkanRenderer::RecaptureReflectionProbe()
@@ -3302,7 +3608,7 @@ namespace flex
 				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 				subresourceRange);
 
-			EndDebugMarkerRegion(cmdBuf); // Generate Cubemap from HDR
+			EndDebugMarkerRegion(cmdBuf, "End Generate Cubemap from HDR");
 
 			m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
 
@@ -3567,7 +3873,7 @@ namespace flex
 				subresourceRange);
 			renderObjectMat.textures[U_IRRADIANCE_SAMPLER]->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-			EndDebugMarkerRegion(cmdBuf); // Generate Irradiance
+			EndDebugMarkerRegion(cmdBuf, "End Generate Irradiance");
 
 			m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
 
@@ -3831,7 +4137,7 @@ namespace flex
 				subresourceRange);
 			renderObjectMat.textures[U_PREFILTER_MAP]->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-			EndDebugMarkerRegion(cmdBuf); // Generate Prefiltered Cube
+			EndDebugMarkerRegion(cmdBuf, "End Generate Prefiltered Cube");
 
 			m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
 
@@ -3925,7 +4231,7 @@ namespace flex
 
 				vkCmdEndRenderPass(cmdBuf);
 
-				EndDebugMarkerRegion(cmdBuf); // Generate BRDF LUT
+				EndDebugMarkerRegion(cmdBuf, "End Generate BRDF LUT");
 
 				m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
 
@@ -3968,8 +4274,8 @@ namespace flex
 			VulkanShader* ssaoShader = &m_Shaders[ssaoMaterial->material.shaderID];
 
 			pipelineCreateInfo.DBG_Name = "SSAO pipeline";
-			pipelineCreateInfo.graphicsPipeline = m_SSAOGraphicsPipeline.replace();
-			pipelineCreateInfo.pipelineLayout = m_SSAOGraphicsPipelineLayout.replace();
+			pipelineCreateInfo.graphicsPipeline = m_SSAOGraphicsPipeline.pipeline.replace();
+			pipelineCreateInfo.pipelineLayout = m_SSAOGraphicsPipeline.layout.replace();
 			pipelineCreateInfo.shaderID = ssaoMaterial->material.shaderID;
 			pipelineCreateInfo.vertexAttributes = ssaoShader->shader->vertexAttributes;
 			pipelineCreateInfo.descriptorSetLayoutIndex = ssaoMaterial->descriptorSetLayoutIndex;
@@ -3977,15 +4283,15 @@ namespace flex
 			pipelineCreateInfo.depthWriteEnable = ssaoShader->shader->bDepthWriteEnable ? VK_TRUE : VK_FALSE;
 			pipelineCreateInfo.depthCompareOp = gBufferObject->depthCompareOp;
 			pipelineCreateInfo.renderPass = ssaoShader->renderPass;
-			pipelineCreateInfo.fragSpecializationInfo = &m_SSAOSpecializationInfo;
+			pipelineCreateInfo.fragSpecializationInfo = ssaoShader->fragSpecializationInfo;
 			CreateGraphicsPipeline(&pipelineCreateInfo);
 
 			VulkanMaterial* ssaoBlurMaterial = &m_Materials[m_SSAOBlurMatID];
 			VulkanShader* ssaoBlurShader = &m_Shaders[ssaoBlurMaterial->material.shaderID];
 
 			pipelineCreateInfo.DBG_Name = "SSAO Blur Horizontal pipeline";
-			pipelineCreateInfo.graphicsPipeline = m_SSAOBlurHGraphicsPipeline.replace();
-			pipelineCreateInfo.pipelineLayout = m_SSAOBlurGraphicsPipelineLayout.replace();
+			pipelineCreateInfo.graphicsPipeline = m_SSAOBlurHGraphicsPipeline.pipeline.replace();
+			pipelineCreateInfo.pipelineLayout = m_SSAOBlurHGraphicsPipeline.layout.replace();
 			pipelineCreateInfo.shaderID = ssaoBlurMaterial->material.shaderID;
 			pipelineCreateInfo.vertexAttributes = ssaoBlurShader->shader->vertexAttributes;
 			pipelineCreateInfo.descriptorSetLayoutIndex = ssaoBlurMaterial->descriptorSetLayoutIndex;
@@ -3995,8 +4301,8 @@ namespace flex
 			CreateGraphicsPipeline(&pipelineCreateInfo);
 
 			pipelineCreateInfo.DBG_Name = "SSAO Blur Vertcical pipeline";
-			pipelineCreateInfo.graphicsPipeline = m_SSAOBlurVGraphicsPipeline.replace();
-			pipelineCreateInfo.pipelineLayout = m_SSAOBlurGraphicsPipelineLayout.replace();
+			pipelineCreateInfo.graphicsPipeline = m_SSAOBlurVGraphicsPipeline.pipeline.replace();
+			pipelineCreateInfo.pipelineLayout = m_SSAOBlurVGraphicsPipeline.layout.replace();
 			pipelineCreateInfo.shaderID = ssaoBlurMaterial->material.shaderID;
 			pipelineCreateInfo.vertexAttributes = ssaoBlurShader->shader->vertexAttributes;
 			pipelineCreateInfo.descriptorSetLayoutIndex = ssaoBlurMaterial->descriptorSetLayoutIndex;
@@ -4051,6 +4357,70 @@ namespace flex
 			descSetCreateInfo.imageDescriptors.Add(U_SSAO_NORMAL_SAMPLER, ImageDescriptorInfo{ m_GBufferColorAttachment0->view, m_NearestClampEdgeSampler });
 			FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
 			CreateDescriptorSet(&descSetCreateInfo);
+		}
+
+		VkPipeline VulkanRenderer::CreateWireframePipeline(VertexAttributes vertexAttributes)
+		{
+			VulkanMaterial* wireframeMaterial = &m_Materials[m_WireframeMatID];
+			VulkanShader* wireframeShader = &m_Shaders[wireframeMaterial->material.shaderID];
+
+			VkPipeline pipeline = VK_NULL_HANDLE;
+
+			GraphicsPipelineCreateInfo pipelineCreateInfo = {};
+			pipelineCreateInfo.DBG_Name = "Wireframe pipeline";
+			pipelineCreateInfo.graphicsPipeline = &pipeline;
+			pipelineCreateInfo.pipelineLayout = m_WireframePipelineLayout == VK_NULL_HANDLE ? m_WireframePipelineLayout.replace() : &m_WireframePipelineLayout;
+			pipelineCreateInfo.shaderID = wireframeMaterial->material.shaderID;
+			pipelineCreateInfo.vertexAttributes = vertexAttributes;
+			pipelineCreateInfo.descriptorSetLayoutIndex = wireframeMaterial->descriptorSetLayoutIndex;
+			pipelineCreateInfo.bEnableColorBlending = wireframeShader->shader->bTranslucent;
+			pipelineCreateInfo.subpass = 0;
+			pipelineCreateInfo.cullMode = VK_CULL_MODE_NONE;
+			pipelineCreateInfo.depthCompareOp = VK_COMPARE_OP_ALWAYS;
+			pipelineCreateInfo.depthTestEnable = false;
+			pipelineCreateInfo.depthWriteEnable = wireframeShader->shader->bDepthWriteEnable ? VK_TRUE : VK_FALSE;
+			pipelineCreateInfo.renderPass = wireframeShader->renderPass;
+			CreateGraphicsPipeline(&pipelineCreateInfo);
+
+			return pipeline;
+		}
+
+		void VulkanRenderer::CreateWireframeDescriptorSets()
+		{
+			VulkanMaterial* wireframeMaterial = &m_Materials[m_WireframeMatID];
+
+			VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[wireframeMaterial->material.shaderID];
+
+			DescriptorSetCreateInfo descSetCreateInfo = {};
+			descSetCreateInfo.descriptorSet = &m_WireframeDescSet;
+			descSetCreateInfo.DBG_Name = "Wireframe descriptor set";
+			descSetCreateInfo.descriptorSetLayout = &descSetLayout;
+			descSetCreateInfo.shaderID = wireframeMaterial->material.shaderID;
+			descSetCreateInfo.uniformBufferList = &wireframeMaterial->uniformBufferList;
+			FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
+			CreateDescriptorSet(&descSetCreateInfo);
+		}
+
+		VkPipeline VulkanRenderer::GetOrCreateWireframePipeline(VertexAttributes vertexAttributes)
+		{
+			auto pipelineIter = m_WireframeGraphicsPipelines.find(vertexAttributes);
+			if (pipelineIter != m_WireframeGraphicsPipelines.end())
+			{
+				return pipelineIter->second;
+			}
+
+			VkPipeline newWireframePipeline = CreateWireframePipeline(vertexAttributes);
+			m_WireframeGraphicsPipelines[vertexAttributes] = newWireframePipeline;
+			return newWireframePipeline;
+		}
+
+		void VulkanRenderer::DestroyWireframePipelines()
+		{
+			for (auto& pipelineIter : m_WireframeGraphicsPipelines)
+			{
+				vkDestroyPipeline(m_VulkanDevice->m_LogicalDevice, pipelineIter.second, nullptr);
+			}
+			m_WireframeGraphicsPipelines.clear();
 		}
 
 		u32 VulkanRenderer::GetActiveRenderObjectCount() const
@@ -4139,6 +4509,7 @@ namespace flex
 			if (!bUsingPreRenderedTexture)
 			{
 				// Render to glyph atlas
+				Print("Rendering font %s to sdf texture...\n", fileName.c_str());
 
 				glm::vec2i textureSize(
 					std::max(std::max(maxPos[0].x, maxPos[1].x), std::max(maxPos[2].x, maxPos[3].x)),
@@ -4170,6 +4541,8 @@ namespace flex
 
 				VkCommandBuffer commandBuffer = m_CommandBufferManager.CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
 
+				BeginDebugMarkerRegion(commandBuffer, "Generate font SDF");
+
 				SetImageLayout(
 					commandBuffer,
 					fontTexColAttachment->image,
@@ -4187,8 +4560,6 @@ namespace flex
 				clearCol.color = { 0.0f, 0.0f, 0.0f, 0.0f };
 				renderPassBeginInfo.pClearValues = &clearCol;
 				vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-				BeginDebugMarkerRegion(commandBuffer, "Generate Font SDF");
 
 				VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
 				VkPipeline graphicsPipeline = VK_NULL_HANDLE;
@@ -4209,14 +4580,6 @@ namespace flex
 				pipelineCreateInfo.depthWriteEnable = VK_FALSE;
 				pipelineCreateInfo.renderPass = renderPass;
 				CreateGraphicsPipeline(&pipelineCreateInfo);
-
-				//VulkanRenderObject* gBufferRenderObject = GetRenderObject(m_GBufferQuadRenderID);
-				//VulkanMaterial* gBufferMaterial = &m_Materials.at(gBufferRenderObject->materialID);
-
-				// TODO: Remove/call only once prior to any font load
-				UpdateConstantUniformBuffers();
-
-				VulkanRenderObject* gBufferObject = GetRenderObject(m_GBufferQuadRenderID);
 
 				glm::vec2 fontTexSize((real)fontTexColAttachment->width, (real)fontTexColAttachment->height);
 
@@ -4272,6 +4635,7 @@ namespace flex
 					++dynamicOffsetIndex;
 
 					highResTex->bSamplerClampToBorder = true;
+					// TODO: Pass in command buffer?
 					highResTex->CreateFromMemory(alignedBitmap.buffer, width * height * sizeof(u8), VK_FORMAT_R8_UNORM, 1);
 
 					glm::vec2i res = glm::vec2i(metric->width - padding * 2, metric->height - padding * 2);
@@ -4301,7 +4665,7 @@ namespace flex
 					descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 					descSetCreateInfo.shaderID = computeSDFShaderID;
 					descSetCreateInfo.uniformBufferList = &computeSDFMaterial.uniformBufferList;
-					descSetCreateInfo.imageDescriptors.Add(U_ALBEDO_SAMPLER, ImageDescriptorInfo{ highResTex->imageView, m_LinMipLinSampler });
+					descSetCreateInfo.imageDescriptors.Add(U_ALBEDO_SAMPLER, ImageDescriptorInfo{ highResTex->imageView, highResTex->sampler });
 					FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
 					CreateDescriptorSet(&descSetCreateInfo);
 					descSets.push_back(descriptorSet);
@@ -4315,7 +4679,7 @@ namespace flex
 					overrides.overridenUniforms.AddUniform(U_SDF_DATA);
 					UpdateDynamicUniformBuffer(m_ComputeSDFMatID, dynamicOffsetIndex * m_DynamicAlignment, MAT4_IDENTITY, &overrides);
 
-					vkCmdDraw(commandBuffer, gBufferObject->vertexBufferData->VertexCount, 1, gBufferObject->vertexOffset, 0);
+					vkCmdDraw(commandBuffer, m_Quad3DVertexBufferData.VertexCount, 1, 0, 0);
 
 					metric->texCoord = metric->texCoord / fontTexSize;
 
@@ -4324,7 +4688,7 @@ namespace flex
 
 				vkCmdEndRenderPass(commandBuffer);
 
-				EndDebugMarkerRegion(commandBuffer); // Generate Font SDF
+				EndDebugMarkerRegion(commandBuffer, "End generate font SDF");
 
 				VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
 				SetCommandBufferName(m_VulkanDevice, commandBuffer, "Load font command buffer");
@@ -4333,6 +4697,7 @@ namespace flex
 				VkPipelineStageFlags waitStages = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 				submitInfo.pWaitDstStageMask = &waitStages;
 
+				// TODO: Allow game to progress while this completes
 				VK_CHECK_RESULT(vkQueueSubmit(m_GraphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
 				VK_CHECK_RESULT(vkQueueWaitIdle(m_GraphicsQueue));
 
@@ -4350,7 +4715,12 @@ namespace flex
 				vkDestroyFramebuffer(m_VulkanDevice->m_LogicalDevice, framebuffer, nullptr);
 
 				std::string savedSDFTextureAbsFilePath = RelativePathToAbsolute(fontMetaData.renderedTextureFilePath);
-				fontTexColAttachment->SaveToFile(savedSDFTextureAbsFilePath, ImageFormat::PNG);
+				std::string savedSDFDirectory = ExtractDirectoryString(savedSDFTextureAbsFilePath);
+				Platform::CreateDirectoryRecursive(savedSDFDirectory);
+				if (!fontTexColAttachment->SaveToFile(savedSDFTextureAbsFilePath, ImageFormat::PNG))
+				{
+					PrintError("Failed to write generated font SDF to %s\n", savedSDFTextureAbsFilePath.c_str());
+				}
 
 				fontTexColAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 			}
@@ -4358,6 +4728,110 @@ namespace flex
 			FT_Done_Face(face);
 
 			return true;
+		}
+
+		void VulkanRenderer::RecreateShadowFrameBuffers()
+		{
+			VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+
+			VkImageCreateInfo imageCreateInfo = vks::imageCreateInfo();
+			imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+			imageCreateInfo.format = m_ShadowBufFormat;
+			imageCreateInfo.extent.width = m_ShadowMapBaseResolution;
+			imageCreateInfo.extent.height = m_ShadowMapBaseResolution;
+			imageCreateInfo.extent.depth = 1;
+			imageCreateInfo.mipLevels = 1;
+			imageCreateInfo.arrayLayers = m_ShadowCascadeCount;
+			imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+			imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+			imageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+			imageCreateInfo.flags = 0;
+
+			VK_CHECK_RESULT(vkCreateImage(m_VulkanDevice->m_LogicalDevice, &imageCreateInfo, nullptr, m_ShadowImage.replace()));
+			SetImageName(m_VulkanDevice, m_ShadowImage, "Shadow cascade image");
+			VkMemoryRequirements memRequirements;
+			vkGetImageMemoryRequirements(m_VulkanDevice->m_LogicalDevice, m_ShadowImage, &memRequirements);
+			VkMemoryAllocateInfo memAlloc = vks::memoryAllocateInfo(memRequirements.size);
+			memAlloc.memoryTypeIndex = m_VulkanDevice->GetMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			VK_CHECK_RESULT(vkAllocateMemory(m_VulkanDevice->m_LogicalDevice, &memAlloc, nullptr, m_ShadowImageMemory.replace()));
+			VK_CHECK_RESULT(vkBindImageMemory(m_VulkanDevice->m_LogicalDevice, m_ShadowImage, m_ShadowImageMemory, 0));
+
+			// Full image view (for all layers)
+			VkImageViewCreateInfo fullImageView = vks::imageViewCreateInfo();
+			fullImageView.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+			fullImageView.format = m_ShadowBufFormat;
+			fullImageView.subresourceRange = {};
+			fullImageView.subresourceRange.aspectMask = aspectMask;
+			fullImageView.subresourceRange.baseMipLevel = 0;
+			fullImageView.subresourceRange.levelCount = 1; // Number of mipmap levels
+			fullImageView.subresourceRange.baseArrayLayer = 0;
+			fullImageView.subresourceRange.layerCount = m_ShadowCascadeCount;
+			fullImageView.image = m_ShadowImage;
+			fullImageView.flags = 0;
+			VK_CHECK_RESULT(vkCreateImageView(m_VulkanDevice->m_LogicalDevice, &fullImageView, nullptr, m_ShadowImageView.replace()));
+			SetImageViewName(m_VulkanDevice, m_ShadowImageView, "Shadow cascade image view (main)");
+
+			if ((i32)m_ShadowCascades.size() < m_ShadowCascadeCount)
+			{
+				i32 prevSize = (i32)m_ShadowCascades.size();
+				m_ShadowCascades.resize(m_ShadowCascadeCount);
+				for (i32 i = prevSize; i < (i32)m_ShadowCascadeCount; ++i)
+				{
+					m_ShadowCascades[i] = new Cascade(m_VulkanDevice);
+				}
+			}
+			else if ((i32)m_ShadowCascades.size() > m_ShadowCascadeCount)
+			{
+				for (i32 i = (i32)m_ShadowCascades.size() - 1; i >= (i32)m_ShadowCascadeCount; --i)
+				{
+					delete m_ShadowCascades[i];
+				}
+				m_ShadowCascades.resize(m_ShadowCascadeCount);
+				m_ShadowCascades.shrink_to_fit();
+			}
+
+			// One frame buffer & view per cascade
+			for (i32 i = 0; i < m_ShadowCascadeCount; ++i)
+			{
+				VkImageViewCreateInfo imageView = vks::imageViewCreateInfo();
+				imageView.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+				imageView.format = m_ShadowBufFormat;
+				imageView.subresourceRange = {};
+				imageView.subresourceRange.aspectMask = aspectMask;
+				imageView.subresourceRange.baseMipLevel = 0;
+				imageView.subresourceRange.levelCount = 1; // Number of mipmap levels
+				imageView.subresourceRange.baseArrayLayer = i;
+				imageView.subresourceRange.layerCount = 1;
+				imageView.image = m_ShadowImage;
+				imageView.flags = 0;
+				VK_CHECK_RESULT(vkCreateImageView(m_VulkanDevice->m_LogicalDevice, &imageView, nullptr, m_ShadowCascades[i]->imageView.replace()));
+				char imageViewName[256];
+				snprintf(imageViewName, 256, "Shadow cascade %u image view", i);
+				SetImageViewName(m_VulkanDevice, m_ShadowCascades[i]->imageView, imageViewName);
+
+				VkFramebufferCreateInfo shadowFramebufferCreateInfo = vks::framebufferCreateInfo(*m_ShadowRenderPass);
+				shadowFramebufferCreateInfo.pAttachments = &m_ShadowCascades[i]->imageView;
+				shadowFramebufferCreateInfo.attachmentCount = 1;
+				shadowFramebufferCreateInfo.width = m_ShadowMapBaseResolution;
+				shadowFramebufferCreateInfo.height = m_ShadowMapBaseResolution;
+
+				char frameBufferName[256];
+				snprintf(frameBufferName, 256, "Shadow cascade %u frame buffer", i);
+
+				m_ShadowCascades[i]->frameBuffer.Create(&shadowFramebufferCreateInfo, m_ShadowRenderPass, frameBufferName);
+
+				FrameBufferAttachment::CreateInfo attachmentCreateInfo = {};
+				attachmentCreateInfo.width = m_ShadowMapBaseResolution;
+				attachmentCreateInfo.height = m_ShadowMapBaseResolution;
+				attachmentCreateInfo.format = m_ShadowBufFormat;
+				if (m_ShadowCascades[i]->attachment == nullptr)
+				{
+					m_ShadowCascades[i]->attachment = new FrameBufferAttachment(m_VulkanDevice, attachmentCreateInfo);
+				}
+				m_ShadowCascades[i]->attachment->bOwnsResources = false;
+				m_ShadowCascades[i]->attachment->image = m_ShadowImage;
+				m_ShadowCascades[i]->attachment->view = m_ShadowCascades[i]->imageView;
+			}
 		}
 
 		void VulkanRenderer::SetShaderCount(u32 shaderCount)
@@ -4519,16 +4993,49 @@ namespace flex
 			return alignedSize;
 		}
 
-		// TODO: Unify with DrawTextWS?
-		void VulkanRenderer::DrawTextSS(VkCommandBuffer commandBuffer)
+		void VulkanRenderer::DrawText(VkCommandBuffer commandBuffer, bool bScreenSpace)
 		{
-			if (m_FontMatSSID == InvalidMaterialID)
+			MaterialID matID = bScreenSpace ? m_FontMatSSID : m_FontMatWSID;
+
+			if (matID == InvalidMaterialID)
 			{
 				return;
 			}
 
+			const VulkanMaterial& fontMaterial = m_Materials[matID];
+			const VulkanShader& fontShader = m_Shaders[fontMaterial.material.shaderID];
+
+			VulkanBuffer* fontVertexBuffer = nullptr;
+
+			// Update dynamic text buffer
+			{
+				static std::vector<TextVertex2D> textVerticesSS;
+				static std::vector<TextVertex3D> textVerticesWS;
+				u32 textVertCount = bScreenSpace ? UpdateTextBufferSS(textVerticesSS) : UpdateTextBufferWS(textVerticesWS);
+
+				u32 textBufferByteCount = (u32)(textVertCount * (bScreenSpace ? sizeof(TextVertex2D) : sizeof(TextVertex3D)));
+
+				if (textBufferByteCount > 0)
+				{
+					std::pair<u32, VertexIndexBufferPair*> vertexBufferPair = m_DynamicVertexIndexBufferPairs[GetDynamicVertexIndexBufferIndex(CalculateVertexStride(fontShader.shader->vertexAttributes))];
+					fontVertexBuffer = vertexBufferPair.second->vertexBuffer;
+					u32 copySize = std::min(textBufferByteCount, (u32)fontVertexBuffer->m_Size);
+					if (copySize < textBufferByteCount)
+					{
+						PrintError("Font vertex buffer is %u bytes too small\n", textBufferByteCount - copySize);
+					}
+					// TODO: HIDDEN BUG: Probably should have an offset into this?
+					VK_CHECK_RESULT(fontVertexBuffer->Map(copySize));
+					void* dst = bScreenSpace ? (void*)textVerticesSS.data() : (void*)textVerticesWS.data();
+					memcpy(fontVertexBuffer->m_Mapped, dst, copySize);
+					fontVertexBuffer->Unmap();
+				}
+			}
+
+			const std::vector<BitmapFont*>& fonts = bScreenSpace ? m_FontsSS : m_FontsWS;
+
 			bool bHasText = false;
-			for (BitmapFont* font : m_FontsSS)
+			for (BitmapFont* font : fonts)
 			{
 				if (font->bufferSize > 0)
 				{
@@ -4542,60 +5049,25 @@ namespace flex
 				return;
 			}
 
-			VulkanMaterial& fontMaterial = m_Materials[m_FontMatSSID];
-			VulkanShader& fontShader = m_Shaders[fontMaterial.material.shaderID];
-
-			// Update dynamic text buffer
-			{
-				std::vector<TextVertex2D> textVerticesSS;
-				UpdateTextBufferSS(textVerticesSS);
-
-				u32 SSTextBufferByteCount = (u32)(textVerticesSS.size() * sizeof(TextVertex2D));
-
-				if (SSTextBufferByteCount > 0)
-				{
-					VulkanBuffer* vertexBuffer = m_StaticVertexBuffers[fontShader.shader->staticVertexBufferIndex].second;
-					u32 copySize = std::min(SSTextBufferByteCount, (u32)vertexBuffer->m_Size);
-					if (copySize < SSTextBufferByteCount)
-					{
-						PrintError("SS Font vertex buffer is %u bytes too small\n", SSTextBufferByteCount - copySize);
-					}
-					VK_CHECK_RESULT(vertexBuffer->Map(copySize));
-					memcpy(vertexBuffer->m_Mapped, textVerticesSS.data(), copySize);
-					vertexBuffer->Unmap();
-				}
-			}
-
-			PROFILE_AUTO("DrawTextSS");
+			PROFILE_AUTO(bScreenSpace ? "DrawTextSS" : "DrawTextWS");
 
 			glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 			VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[fontMaterial.material.shaderID];
 
-			if (m_FontSSGraphicsPipeline == VK_NULL_HANDLE)
-			{
-				GraphicsPipelineCreateInfo pipelineCreateInfo = {};
-				pipelineCreateInfo.DBG_Name = "Font SS pipeline";
-				pipelineCreateInfo.graphicsPipeline = m_FontSSGraphicsPipeline.replace();
-				pipelineCreateInfo.pipelineLayout = m_FontSSPipelineLayout.replace();
-				pipelineCreateInfo.shaderID = fontMaterial.material.shaderID;
-				pipelineCreateInfo.vertexAttributes = fontShader.shader->vertexAttributes;
-				pipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
-				pipelineCreateInfo.cullMode = VK_CULL_MODE_NONE;
-				pipelineCreateInfo.descriptorSetLayoutIndex = fontMaterial.material.shaderID;
-				pipelineCreateInfo.bSetDynamicStates = true;
-				pipelineCreateInfo.bEnableColorBlending = true;
-				pipelineCreateInfo.subpass = fontShader.shader->subpass;
-				pipelineCreateInfo.depthCompareOp = VK_COMPARE_OP_ALWAYS;
-				pipelineCreateInfo.depthWriteEnable = VK_FALSE;
-				// NOTE: We ignore the font shader's render pass since we have one font shader, but
-				// two passes that fonts are rendered in (Forward pass for 3D, UI pass for 2D)
-				pipelineCreateInfo.renderPass = *m_UIRenderPass;
-				CreateGraphicsPipeline(&pipelineCreateInfo);
-			}
-			assert(m_FontSSGraphicsPipeline != VK_NULL_HANDLE);
-			assert(m_FontSSPipelineLayout != VK_NULL_HANDLE);
+			VkPipeline graphicsPipeline = bScreenSpace ? m_FontSSGraphicsPipeline.pipeline : m_FontWSGraphicsPipeline.pipeline;
 
-			vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_FontSSGraphicsPipeline);
+			if (graphicsPipeline == VK_NULL_HANDLE)
+			{
+				CreateFontGraphicsPipelines();
+				graphicsPipeline = bScreenSpace ? m_FontSSGraphicsPipeline.pipeline : m_FontWSGraphicsPipeline.pipeline;
+			}
+
+			VkPipelineLayout graphicsPipelineLayout = bScreenSpace ? m_FontSSGraphicsPipeline.layout : m_FontWSGraphicsPipeline.layout;
+
+			assert(graphicsPipeline != VK_NULL_HANDLE);
+			assert(graphicsPipelineLayout != VK_NULL_HANDLE);
+
+			vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
 			VkViewport viewport = vks::viewportFlipped((real)frameBufferSize.x, (real)frameBufferSize.y, 0.0f, 1.0f);
 			vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
@@ -4612,29 +5084,29 @@ namespace flex
 			//real scale = ((real)font->GetFontSize()) / 12.0f + sin(g_SecElapsedSinceProgramStart) * 2.0f;
 			glm::vec3 scaleVec(1.0f);
 
-			glm::mat4 transformMat = glm::scale(MAT4_IDENTITY, scaleVec) * ortho;
-
-			for (BitmapFont* font : m_FontsSS)
+			glm::mat4 transformMat = bScreenSpace ? (glm::scale(MAT4_IDENTITY, scaleVec) * ortho) : g_CameraManager->CurrentCamera()->GetViewProjection();
+			for (BitmapFont* font : fonts)
 			{
 				if (font->bufferSize > 0)
 				{
+					VulkanTexture* fontTex = font->GetTexture();
+
 					if (font->m_DescriptorSet == VK_NULL_HANDLE)
 					{
 						DescriptorSetCreateInfo info;
-						info.DBG_Name = "Font SS descriptor set";
+						info.DBG_Name = bScreenSpace ? "Font SS descriptor set" : "Font WS descriptor set";
 						info.descriptorSet = &font->m_DescriptorSet;
 						info.descriptorSetLayout = &descSetLayout;
 						info.shaderID = fontMaterial.material.shaderID;
 						info.uniformBufferList = &fontMaterial.uniformBufferList;
-						info.imageDescriptors.Add(U_ALBEDO_SAMPLER, ImageDescriptorInfo{ font->GetTexture()->imageView, m_LinMipLinSampler });
+						info.imageDescriptors.Add(U_ALBEDO_SAMPLER, ImageDescriptorInfo{ fontTex->imageView, fontTex->sampler });
 						FillOutBufferDescriptorInfos(&info.bufferDescriptors, info.uniformBufferList, info.shaderID);
 						CreateDescriptorSet(&info);
 					}
 
 					u32 dynamicOffsetIndex = 0;
-					BindDescriptorSet(&fontMaterial, dynamicOffsetIndex * m_DynamicAlignment, commandBuffer, m_FontSSPipelineLayout, font->m_DescriptorSet);
+					BindDescriptorSet(&fontMaterial, dynamicOffsetIndex * m_DynamicAlignment, commandBuffer, graphicsPipelineLayout, font->m_DescriptorSet);
 
-					VulkanTexture* fontTex = font->GetTexture();
 					glm::vec2 texSize(fontTex->width, fontTex->height);
 
 					u32 packedSoftnessOpacity = Pack2FloatToU32(font->metaData.soften, font->metaData.shadowOpacity);
@@ -4645,140 +5117,10 @@ namespace flex
 					overrides.texSize = texSize;
 					overrides.overridenUniforms.AddUniform(U_FONT_CHAR_DATA);
 					overrides.fontCharData = fontCharData;
-					UpdateDynamicUniformBuffer(m_FontMatSSID, dynamicOffsetIndex * m_DynamicAlignment, transformMat, &overrides);
+					UpdateDynamicUniformBuffer(matID, dynamicOffsetIndex * m_DynamicAlignment, transformMat, &overrides);
 
 					VkDeviceSize offsets[1] = { 0 };
-					vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_StaticVertexBuffers[fontShader.shader->staticVertexBufferIndex].second->m_Buffer, offsets);
-
-					vkCmdDraw(commandBuffer, font->bufferSize, 1, font->bufferStart, 0);
-				}
-			}
-		}
-
-		void VulkanRenderer::DrawTextWS(VkCommandBuffer commandBuffer)
-		{
-			if (m_FontMatWSID == InvalidMaterialID)
-			{
-				return;
-			}
-
-			bool bHasText = false;
-			for (BitmapFont* font : m_FontsWS)
-			{
-				if (font->bufferSize > 0)
-				{
-					bHasText = true;
-					break;
-				}
-			}
-
-			if (!bHasText)
-			{
-				return;
-			}
-
-			VulkanMaterial& fontMaterial = m_Materials[m_FontMatWSID];
-			VulkanShader& fontShader = m_Shaders[fontMaterial.material.shaderID];
-
-			// Update dynamic text buffer
-			{
-				std::vector<TextVertex3D> textVerticesWS;
-				UpdateTextBufferWS(textVerticesWS);
-
-				u32 WSTextBufferByteCount = (u32)(textVerticesWS.size() * sizeof(TextVertex3D));
-
-				if (WSTextBufferByteCount > 0)
-				{
-					//const VulkanMaterial& fontMaterial = m_Materials[m_FontMatWSID];
-					VulkanBuffer* vertexBuffer = m_StaticVertexBuffers[fontShader.shader->staticVertexBufferIndex].second;
-					u32 copySize = std::min(WSTextBufferByteCount, (u32)vertexBuffer->m_Size);
-					if (copySize < WSTextBufferByteCount)
-					{
-						PrintError("SS Font vertex buffer is %u bytes too small\n", WSTextBufferByteCount - copySize);
-					}
-					VK_CHECK_RESULT(vertexBuffer->Map(copySize));
-					memcpy(vertexBuffer->m_Mapped, textVerticesWS.data(), copySize);
-					vertexBuffer->Unmap();
-				}
-			}
-
-			PROFILE_AUTO("DrawTextWS");
-
-			glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
-
-			VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[fontMaterial.material.shaderID];
-
-			if (m_FontWSGraphicsPipeline == VK_NULL_HANDLE)
-			{
-				GraphicsPipelineCreateInfo pipelineCreateInfo = {};
-				pipelineCreateInfo.DBG_Name = "Font WS pipeline";
-				pipelineCreateInfo.graphicsPipeline = m_FontWSGraphicsPipeline.replace();
-				pipelineCreateInfo.pipelineLayout = m_FontWSPipelineLayout.replace();
-				pipelineCreateInfo.shaderID = fontMaterial.material.shaderID;
-				pipelineCreateInfo.vertexAttributes = fontShader.shader->vertexAttributes;
-				pipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
-				pipelineCreateInfo.cullMode = VK_CULL_MODE_NONE;
-				pipelineCreateInfo.descriptorSetLayoutIndex = fontMaterial.material.shaderID;
-				pipelineCreateInfo.bSetDynamicStates = true;
-				pipelineCreateInfo.bEnableColorBlending = true;
-				pipelineCreateInfo.subpass = fontShader.shader->subpass;
-				pipelineCreateInfo.depthCompareOp = VK_COMPARE_OP_GREATER_OR_EQUAL;
-				pipelineCreateInfo.depthWriteEnable = VK_TRUE;
-				// NOTE: We ignore the font shader's render pass since we have one font shader, but
-				// two passes that fonts are rendered in (Forward pass for 3D, UI pass for 2D)
-				pipelineCreateInfo.renderPass = *m_ForwardRenderPass;
-				CreateGraphicsPipeline(&pipelineCreateInfo);
-			}
-			assert(m_FontWSGraphicsPipeline != VK_NULL_HANDLE);
-			assert(m_FontWSPipelineLayout != VK_NULL_HANDLE);
-
-			vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_FontWSGraphicsPipeline);
-
-			VkViewport viewport = vks::viewportFlipped((real)frameBufferSize.x, (real)frameBufferSize.y, 0.0f, 1.0f);
-			vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
-
-			VkRect2D scissor = vks::scissor(0u, 0u, (u32)frameBufferSize.x, (u32)frameBufferSize.y);
-			vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
-
-			glm::mat4 transformMat = g_CameraManager->CurrentCamera()->GetViewProjection();
-
-			for (BitmapFont* font : m_FontsWS)
-			{
-				if (font->bufferSize > 0)
-				{
-					if (font->m_DescriptorSet == VK_NULL_HANDLE)
-					{
-						DescriptorSetCreateInfo info;
-						info.DBG_Name = "Font WS descriptor set";
-						info.descriptorSet = &font->m_DescriptorSet;
-						info.descriptorSetLayout = &descSetLayout;
-						info.shaderID = fontMaterial.material.shaderID;
-						info.uniformBufferList = &fontMaterial.uniformBufferList;
-						info.imageDescriptors.Add(U_ALBEDO_SAMPLER, ImageDescriptorInfo{ font->GetTexture()->imageView, m_LinMipLinSampler });
-						FillOutBufferDescriptorInfos(&info.bufferDescriptors, info.uniformBufferList, info.shaderID);
-						CreateDescriptorSet(&info);
-					}
-
-					u32 dynamicOffsetIndex = 0;
-					BindDescriptorSet(&fontMaterial, dynamicOffsetIndex * m_DynamicAlignment, commandBuffer, m_FontWSPipelineLayout, font->m_DescriptorSet);
-
-					VulkanTexture* fontTex = font->GetTexture();
-					glm::vec2 texSize(fontTex->width, fontTex->height);
-
-					real threshold = 0.5f;
-					glm::vec2 shadow(-0.01f, -0.008f);
-					real soften = 0.035f;
-					glm::vec4 fontCharData(threshold, shadow.x, shadow.y, soften);
-
-					UniformOverrides overrides = {};
-					overrides.overridenUniforms.AddUniform(U_TEX_SIZE);
-					overrides.texSize = texSize;
-					overrides.overridenUniforms.AddUniform(U_FONT_CHAR_DATA); // TODO: Does this data change per-object?
-					overrides.fontCharData = fontCharData;
-					UpdateDynamicUniformBuffer(m_FontMatWSID, dynamicOffsetIndex * m_DynamicAlignment, transformMat, &overrides);
-
-					VkDeviceSize offsets[1] = { 0 };
-					vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_StaticVertexBuffers[fontShader.shader->staticVertexBufferIndex].second->m_Buffer, offsets);
+					vkCmdBindVertexBuffers(commandBuffer, 0, 1, &fontVertexBuffer->m_Buffer, offsets);
 
 					vkCmdDraw(commandBuffer, font->bufferSize, 1, font->bufferStart, 0);
 				}
@@ -4895,8 +5237,8 @@ namespace flex
 
 				u32 dynamicUBOOffset = i * m_DynamicAlignment;
 
-				VkPipeline pipeline = spriteRenderObject->graphicsPipeline;
-				VkPipelineLayout pipelineLayout = spriteRenderObject->pipelineLayout;
+				VkPipeline pipeline = spriteRenderObject->graphicsPipeline.pipeline;
+				VkPipelineLayout pipelineLayout = spriteRenderObject->graphicsPipeline.layout;
 
 				Material::PushConstantBlock* pushBlock = nullptr;
 				if (drawInfo.bScreenSpace)
@@ -4909,8 +5251,8 @@ namespace flex
 
 						pushBlock = m_SpriteOrthoArrPushConstBlock;
 
-						pipeline = m_SpriteArrGraphicsPipeline;
-						pipelineLayout = m_SpriteArrGraphicsPipelineLayout;
+						pipeline = m_SpriteArrGraphicsPipeline.pipeline;
+						pipelineLayout = m_SpriteArrGraphicsPipeline.layout;
 					}
 					else
 					{
@@ -4946,32 +5288,35 @@ namespace flex
 
 		void VulkanRenderer::DrawParticles(VkCommandBuffer commandBuffer)
 		{
-			BeginDebugMarkerRegion(commandBuffer, "Particles");
-
-			for (VulkanParticleSystem* particleSystem : m_ParticleSystems)
+			if (!m_ParticleSystems.empty())
 			{
-				if (!particleSystem || !particleSystem->system->IsVisible())
+				BeginDebugMarkerRegion(commandBuffer, "Particles");
+
+				for (VulkanParticleSystem* particleSystem : m_ParticleSystems)
 				{
-					continue;
+					if (!particleSystem || !particleSystem->system->IsVisible())
+					{
+						continue;
+					}
+
+					VulkanMaterial& particleSimMat = m_Materials.at(particleSystem->system->simMaterialID);
+					VulkanMaterial& particleRenderingMat = m_Materials.at(particleSystem->system->renderingMaterialID);
+
+					u32 dynamicUBOOffset = particleSystem->ID * m_DynamicAlignment;
+					UpdateDynamicUniformBuffer(particleSystem->system->renderingMaterialID, dynamicUBOOffset, particleSystem->system->model, nullptr);
+
+					VkDeviceSize offsets[1] = { 0 };
+					vkCmdBindVertexBuffers(commandBuffer, 0, 1, &particleSimMat.uniformBufferList.Get(UniformBufferType::PARTICLE_DATA)->buffer.m_Buffer, offsets);
+
+					vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, particleSystem->graphicsPipeline);
+
+					BindDescriptorSet(&particleRenderingMat, dynamicUBOOffset, commandBuffer, m_ParticleGraphicsPipelineLayout, particleSystem->renderingDescriptorSet);
+
+					vkCmdDraw(commandBuffer, MAX_PARTICLE_COUNT, 1, 0, 0);
 				}
 
-				VulkanMaterial& particleSimMat = m_Materials.at(particleSystem->system->simMaterialID);
-				VulkanMaterial& particleRenderingMat = m_Materials.at(particleSystem->system->renderingMaterialID);
-
-				u32 dynamicUBOOffset = particleSystem->ID * m_DynamicAlignment;
-				UpdateDynamicUniformBuffer(particleSystem->system->renderingMaterialID, dynamicUBOOffset, particleSystem->system->model, nullptr);
-
-				VkDeviceSize offsets[1] = { 0 };
-				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &particleSimMat.uniformBufferList.Get(UniformBufferType::PARTICLE_DATA)->buffer.m_Buffer, offsets);
-
-				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, particleSystem->graphicsPipeline);
-
-				BindDescriptorSet(&particleRenderingMat, dynamicUBOOffset, commandBuffer, m_ParticleGraphicsPipelineLayout, particleSystem->renderingDescriptorSet);
-
-				vkCmdDraw(commandBuffer, MAX_PARTICLE_COUNT, 1, 0, 0);
+				EndDebugMarkerRegion(commandBuffer, "End Particles");
 			}
-
-			EndDebugMarkerRegion(commandBuffer); // Particles
 		}
 
 		VkDescriptorSet VulkanRenderer::GetSpriteDescriptorSet(TextureID textureID, MaterialID spriteMaterialID, u32 textureLayer)
@@ -5029,8 +5374,8 @@ namespace flex
 			pipelineCreateInfo.cullMode = VK_CULL_MODE_FRONT_BIT;
 			pipelineCreateInfo.bEnableColorBlending = false;
 
-			pipelineCreateInfo.graphicsPipeline = m_ShadowGraphicsPipeline.replace();
-			pipelineCreateInfo.pipelineLayout = m_ShadowPipelineLayout.replace();
+			pipelineCreateInfo.graphicsPipeline = m_ShadowGraphicsPipeline.pipeline.replace();
+			pipelineCreateInfo.pipelineLayout = m_ShadowGraphicsPipeline.layout.replace();
 			pipelineCreateInfo.shaderID = shadowMaterial->material.shaderID;
 			pipelineCreateInfo.vertexAttributes = shadowShader->shader->vertexAttributes;
 			pipelineCreateInfo.descriptorSetLayoutIndex = shadowMaterial->descriptorSetLayoutIndex;
@@ -5293,7 +5638,30 @@ namespace flex
 			createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 			createInfo.pApplicationInfo = &appInfo;
 
-			std::vector<const char*> extensions = GetRequiredExtensions();
+			std::vector<const char*> extensions = GetRequiredInstanceExtensions();
+
+			// Optional instance extensions
+			{
+				u32 instanceExtensionCount;
+				vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionCount, nullptr);
+
+				std::vector<VkExtensionProperties> instanceExtensions(instanceExtensionCount);
+				vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionCount, instanceExtensions.data());
+
+				for (const char* optionalExtName : m_OptionalInstanceExtensions)
+				{
+					for (VkExtensionProperties& properties : instanceExtensions)
+					{
+						if (strcmp(properties.extensionName, optionalExtName) == 0)
+						{
+							extensions.push_back(optionalExtName);
+						}
+					}
+				}
+			}
+
+			m_EnabledInstanceExtensions = extensions;
+
 			createInfo.enabledExtensionCount = (u32)extensions.size();
 			createInfo.ppEnabledExtensionNames = extensions.data();
 
@@ -5307,14 +5675,14 @@ namespace flex
 				createInfo.enabledLayerCount = 0;
 			}
 
+			// TODO: PERFORMANCE: Call on separate thread? (taking 10% of bootup time!)
 			VK_CHECK_RESULT(vkCreateInstance(&createInfo, nullptr, &m_Instance));
 
 			volkLoadInstance(m_Instance);
 
 			if (m_bEnableValidationLayers && !CheckValidationLayerSupport())
 			{
-				// TODO: Remove all exceptions
-				throw std::runtime_error("validation layers requested, but not available!");
+				PrintError("Validation layers requested, but not available!");
 			}
 		}
 
@@ -5325,15 +5693,15 @@ namespace flex
 				return;
 			}
 
-			VkDebugReportCallbackCreateInfoEXT createInfo = {};
-			createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
-			createInfo.flags =
-				VK_DEBUG_REPORT_ERROR_BIT_EXT |
-				VK_DEBUG_REPORT_WARNING_BIT_EXT |
-				VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
-			createInfo.pfnCallback = DebugCallback;
+			VkDebugUtilsMessengerCreateInfoEXT createInfo = {};
+			createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+			createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
+				VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
+			createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+			createInfo.flags = 0;
+			createInfo.pfnUserCallback = DebugCallback;
 
-			VK_CHECK_RESULT(CreateDebugReportCallbackEXT(m_Instance, &createInfo, nullptr, &m_Callback));
+			VK_CHECK_RESULT(vkCreateDebugUtilsMessengerEXT(m_Instance, &createInfo, nullptr, &m_DebugUtilsMessengerCallback));
 		}
 
 		void VulkanRenderer::CreateSurface()
@@ -5388,7 +5756,9 @@ namespace flex
 
 			if (deviceCount == 0)
 			{
-				throw std::runtime_error("Failed to find GPUs with Vulkan support!");
+				PrintError("Failed to find GPUs with Vulkan support!\n");
+				ENSURE_NO_ENTRY();
+				return VK_NULL_HANDLE;
 			}
 
 			std::vector<VkPhysicalDevice> devices(deviceCount);
@@ -5405,95 +5775,11 @@ namespace flex
 
 			if (physicalDevice == VK_NULL_HANDLE)
 			{
-				throw std::runtime_error("Failed to find a suitable GPU!");
+				PrintError("Failed to find a suitable GPU which supports all required extensions\n");
+				return VK_NULL_HANDLE;
 			}
 
 			return physicalDevice;
-		}
-
-		void VulkanRenderer::CreateLogicalDevice(VkPhysicalDevice physicalDevice)
-		{
-			VulkanQueueFamilyIndices indices = FindQueueFamilies(m_Surface, physicalDevice);
-
-			std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-			std::set<i32> uniqueQueueFamilies = { indices.graphicsFamily, indices.presentFamily };
-
-			real queuePriority = 1.0f;
-			for (i32 queueFamily : uniqueQueueFamilies)
-			{
-				VkDeviceQueueCreateInfo queueCreateInfo = {};
-				queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-				queueCreateInfo.queueFamilyIndex = (u32)queueFamily;
-				queueCreateInfo.queueCount = 1;
-				queueCreateInfo.pQueuePriorities = &queuePriority;
-				queueCreateInfos.push_back(queueCreateInfo);
-			}
-
-			VkPhysicalDeviceFeatures deviceFeatures = GetEnabledFeaturesForDevice(physicalDevice);
-
-			std::vector<const char*> deviceExtensions;
-
-			for (const char* extStr : m_RequiredDeviceExtensions)
-			{
-				deviceExtensions.push_back(extStr);
-			}
-
-			if (ExtensionSupported(VK_EXT_DEBUG_MARKER_EXTENSION_NAME))
-			{
-				deviceExtensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
-				m_bEnableDebugMarkers = true;
-			}
-
-			VkDeviceCreateInfo createInfo = {};
-			createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-
-			createInfo.pQueueCreateInfos = queueCreateInfos.data();
-			createInfo.queueCreateInfoCount = (u32)queueCreateInfos.size();
-
-			createInfo.pEnabledFeatures = &deviceFeatures;
-
-			createInfo.enabledExtensionCount = (u32)deviceExtensions.size();
-			createInfo.ppEnabledExtensionNames = deviceExtensions.data();
-
-			if (m_bEnableValidationLayers)
-			{
-				createInfo.enabledLayerCount = (u32)m_ValidationLayers.size();
-				createInfo.ppEnabledLayerNames = m_ValidationLayers.data();
-			}
-			else
-			{
-				createInfo.enabledLayerCount = 0;
-			}
-
-			m_VulkanDevice = new VulkanDevice(physicalDevice, m_Surface);
-
-			VK_CHECK_RESULT(vkCreateDevice(physicalDevice, &createInfo, nullptr, m_VulkanDevice->m_LogicalDevice.replace()));
-
-			vkGetPhysicalDeviceProperties(physicalDevice, &m_VulkanDevice->m_PhysicalDeviceProperties);
-
-			vkGetDeviceQueue(m_VulkanDevice->m_LogicalDevice, (u32)m_VulkanDevice->m_QueueFamilyIndices.graphicsFamily, 0, &m_GraphicsQueue);
-			vkGetDeviceQueue(m_VulkanDevice->m_LogicalDevice, (u32)m_VulkanDevice->m_QueueFamilyIndices.presentFamily, 0, &m_PresentQueue);
-
-			volkLoadDevice(m_VulkanDevice->m_LogicalDevice);
-		}
-
-		void VulkanRenderer::FindPresentInstanceExtensions()
-		{
-			u32 extensionCount = 0;
-			vkEnumerateInstanceExtensionProperties("VK_LAYER_LUNARG_standard_validation", &extensionCount, nullptr);
-
-			std::vector<VkExtensionProperties> availableExtensions(extensionCount);
-			vkEnumerateInstanceExtensionProperties("VK_LAYER_LUNARG_standard_validation", &extensionCount, availableExtensions.data());
-
-			for (VkExtensionProperties& prop : availableExtensions)
-			{
-				if (strcmp(prop.extensionName, "VK_EXT_debug_report") == 0)
-				{
-					bDebugUtilsExtensionPresent = true;
-				}
-
-				//Print("%s v%d\n", prop.extensionName, prop.specVersion);
-			}
 		}
 
 		void SetClipboardText(void* userData, const char* text)
@@ -5779,8 +6065,8 @@ namespace flex
 				if (pass->m_TargetColorAttachmentInitialLayouts != generatedPassLayouts.colorInitialLayouts ||
 					pass->m_TargetColorAttachmentFinalLayouts != generatedPassLayouts.colorFinalLayouts ||
 					(bWritesToDepth &&
-					(pass->m_TargetDepthAttachmentInitialLayout != generatedPassLayouts.depthInitialLayout ||
-						pass->m_TargetDepthAttachmentFinalLayout != generatedPassLayouts.depthFinalLayout)))
+						(pass->m_TargetDepthAttachmentInitialLayout != generatedPassLayouts.depthInitialLayout ||
+							pass->m_TargetDepthAttachmentFinalLayout != generatedPassLayouts.depthFinalLayout)))
 				{
 					if (bPrintResultsDetailed)
 					{
@@ -6025,19 +6311,19 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::FillOutBufferDescriptorInfos(ShaderUniformContainer<BufferDescriptorInfo>* descriptors, UniformBufferList* uniformBufferList, ShaderID shaderID)
+		void VulkanRenderer::FillOutBufferDescriptorInfos(ShaderUniformContainer<BufferDescriptorInfo>* descriptors, UniformBufferList const* uniformBufferList, ShaderID shaderID)
 		{
 			VulkanShader* shader = &m_Shaders[shaderID];
 
 			if (shader->shader->constantBufferUniforms.HasUniform(U_UNIFORM_BUFFER_CONSTANT))
 			{
-				UniformBuffer* constantBuffer = uniformBufferList->Get(UniformBufferType::STATIC);
+				UniformBuffer const* constantBuffer = uniformBufferList->Get(UniformBufferType::STATIC);
 				descriptors->Add(U_UNIFORM_BUFFER_CONSTANT, BufferDescriptorInfo{ constantBuffer->buffer.m_Buffer, constantBuffer->data.size, UniformBufferType::STATIC });
 			}
 
 			if (shader->shader->dynamicBufferUniforms.HasUniform(U_UNIFORM_BUFFER_DYNAMIC))
 			{
-				UniformBuffer* dynamicBuffer = uniformBufferList->Get(UniformBufferType::DYNAMIC);
+				UniformBuffer const* dynamicBuffer = uniformBufferList->Get(UniformBufferType::DYNAMIC);
 				// TODO: FIXME: BAD: CLEANUP:
 				const VkDeviceSize dynamicBufferSize = sizeof(VulkanUniformBufferObjectData) * m_RenderObjects.size();
 				descriptors->Add(U_UNIFORM_BUFFER_DYNAMIC, BufferDescriptorInfo{ dynamicBuffer->buffer.m_Buffer, dynamicBufferSize, UniformBufferType::DYNAMIC });
@@ -6045,7 +6331,7 @@ namespace flex
 
 			if (shader->shader->additionalBufferUniforms.HasUniform(U_PARTICLE_BUFFER))
 			{
-				UniformBuffer* particleBuffer = uniformBufferList->Get(UniformBufferType::PARTICLE_DATA);
+				UniformBuffer const* particleBuffer = uniformBufferList->Get(UniformBufferType::PARTICLE_DATA);
 				descriptors->Add(U_PARTICLE_BUFFER, BufferDescriptorInfo{ particleBuffer->buffer.m_Buffer, particleBuffer->data.size, UniformBufferType::PARTICLE_DATA });
 			}
 		}
@@ -6058,15 +6344,28 @@ namespace flex
 				return;
 			}
 
-			VulkanMaterial* material = &m_Materials.at(renderObject->materialID);
-			VulkanShader* shader = &m_Shaders[material->material.shaderID];
-
 			DescriptorSetCreateInfo createInfo = {};
 
 			char debugName[256];
-			snprintf(debugName, 256, "Render Object %s (render ID %u) descriptor set", renderObject->gameObject ? renderObject->gameObject->GetName().c_str() : "", renderID);
+			std::string gameObjectName = "";
+			if (renderObject->gameObject != nullptr)
+			{
+				gameObjectName = renderObject->gameObject->GetName();
+			}
+			snprintf(debugName, 256, "Render Object %s (render ID %u) descriptor set", gameObjectName.c_str(), renderID);
 			createInfo.DBG_Name = debugName;
 			createInfo.descriptorSet = &renderObject->descriptorSet;
+
+			CreateDescriptorSet(createInfo, renderObject->materialID);
+		}
+
+		void VulkanRenderer::CreateDescriptorSet(DescriptorSetCreateInfo& createInfo, MaterialID materialID)
+		{
+			assert(createInfo.descriptorSet != nullptr);
+
+			VulkanMaterial* material = &m_Materials.at(materialID);
+			VulkanShader* shader = &m_Shaders[material->material.shaderID];
+
 			createInfo.descriptorSetLayout = &m_DescriptorSetLayouts[material->material.shaderID];
 			createInfo.shaderID = material->material.shaderID;
 			createInfo.uniformBufferList = &material->uniformBufferList;
@@ -6077,7 +6376,7 @@ namespace flex
 				{
 					VulkanTexture* texture = pair.second;
 					assert(texture != nullptr);
-					createInfo.imageDescriptors.Add(pair.first, ImageDescriptorInfo{ texture->imageView, m_LinMipLinSampler });
+					createInfo.imageDescriptors.Add(pair.first, ImageDescriptorInfo{ texture->imageView, texture->sampler });
 				}
 			}
 
@@ -6089,7 +6388,7 @@ namespace flex
 			if (shader->shader->textureUniforms.HasUniform(U_SSAO_FINAL_SAMPLER))
 			{
 				VkImageView ssaoView = m_BlankTexture->imageView;
-				if (m_SSAOSamplingData.ssaoEnabled)
+				if (m_SSAOSamplingData.enabled)
 				{
 					if (m_bSSAOBlurEnabled)
 					{
@@ -6449,8 +6748,8 @@ namespace flex
 			char debugName[256];
 			snprintf(debugName, 256, "Render Object %s (render ID %u) graphics pipeline", renderObject->gameObject ? renderObject->gameObject->GetName().c_str() : "", renderID);
 			pipelineCreateInfo.DBG_Name = debugName;
-			pipelineCreateInfo.pipelineLayout = renderObject->pipelineLayout.replace();
-			pipelineCreateInfo.graphicsPipeline = renderObject->graphicsPipeline.replace();
+			pipelineCreateInfo.pipelineLayout = renderObject->graphicsPipeline.layout.replace();
+			pipelineCreateInfo.graphicsPipeline = renderObject->graphicsPipeline.pipeline.replace();
 			pipelineCreateInfo.shaderID = material->material.shaderID;
 			pipelineCreateInfo.vertexAttributes = shader.shader->vertexAttributes;
 			pipelineCreateInfo.topology = renderObject->topology;
@@ -6464,7 +6763,7 @@ namespace flex
 			pipelineCreateInfo.renderPass = (renderObject->renderPassOverride == RenderPassType::_NONE ? shader.renderPass : ResolveRenderPassType(renderObject->renderPassOverride));
 
 			VkPushConstantRange pushConstantRange = {};
-			if (m_Shaders[material->material.shaderID].shader->bNeedPushConstantBlock)
+			if (shader.shader->bNeedPushConstantBlock)
 			{
 				pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 				pushConstantRange.offset = 0;
@@ -6472,6 +6771,8 @@ namespace flex
 				pipelineCreateInfo.pushConstantRangeCount = 1;
 				pipelineCreateInfo.pushConstants = &pushConstantRange;
 			}
+
+			pipelineCreateInfo.fragSpecializationInfo = shader.fragSpecializationInfo;
 
 			CreateGraphicsPipeline(&pipelineCreateInfo);
 		}
@@ -6698,7 +6999,7 @@ namespace flex
 			m_GBufferCubemapDepthAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, m_GraphicsQueue, transitionCmdBuffer);
 			RegisterFramebufferAttachment(m_GBufferCubemapDepthAttachment);
 
-			EndDebugMarkerRegion(transitionCmdBuffer); // Create Depth Resources
+			EndDebugMarkerRegion(transitionCmdBuffer, "End Create Depth Resources");
 
 			EndSingleTimeCommands(m_VulkanDevice, m_GraphicsQueue, transitionCmdBuffer);
 		}
@@ -6841,9 +7142,9 @@ namespace flex
 			linMipLinSamplerCreateInfo.magFilter = VK_FILTER_LINEAR;
 			linMipLinSamplerCreateInfo.minFilter = VK_FILTER_LINEAR;
 			linMipLinSamplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-			linMipLinSamplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-			linMipLinSamplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-			linMipLinSamplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+			linMipLinSamplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+			linMipLinSamplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+			linMipLinSamplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 			linMipLinSamplerCreateInfo.mipLodBias = 0.0f;
 			linMipLinSamplerCreateInfo.minLod = 0.0f;
 			linMipLinSamplerCreateInfo.maxLod = 1.0f;
@@ -6864,95 +7165,6 @@ namespace flex
 			depthSamplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
 			VK_CHECK_RESULT(vkCreateSampler(m_VulkanDevice->m_LogicalDevice, &depthSamplerCreateInfo, nullptr, m_DepthSampler.replace()));
 			SetSamplerName(m_VulkanDevice, m_DepthSampler, "Depth sampler");
-		}
-
-		void VulkanRenderer::CreateFrameBuffers()
-		{
-			// TODO: Create in shader render pass?
-			// Shadow frame buffers
-			{
-				VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-
-				VkImageCreateInfo imageCreateInfo = vks::imageCreateInfo();
-				imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
-				imageCreateInfo.format = m_ShadowBufFormat;
-				imageCreateInfo.extent.width = SHADOW_CASCADE_RES;
-				imageCreateInfo.extent.height = SHADOW_CASCADE_RES;
-				imageCreateInfo.extent.depth = 1;
-				imageCreateInfo.mipLevels = 1;
-				imageCreateInfo.arrayLayers = SHADOW_CASCADE_COUNT;
-				imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-				imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-				imageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-				imageCreateInfo.flags = 0;
-
-				VK_CHECK_RESULT(vkCreateImage(m_VulkanDevice->m_LogicalDevice, &imageCreateInfo, nullptr, m_ShadowImage.replace()));
-				SetImageName(m_VulkanDevice, m_ShadowImage, "Shadow cascade image");
-				VkMemoryRequirements memRequirements;
-				vkGetImageMemoryRequirements(m_VulkanDevice->m_LogicalDevice, m_ShadowImage, &memRequirements);
-				VkMemoryAllocateInfo memAlloc = vks::memoryAllocateInfo(memRequirements.size);
-				memAlloc.memoryTypeIndex = m_VulkanDevice->GetMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-				VK_CHECK_RESULT(vkAllocateMemory(m_VulkanDevice->m_LogicalDevice, &memAlloc, nullptr, m_ShadowImageMemory.replace()));
-				VK_CHECK_RESULT(vkBindImageMemory(m_VulkanDevice->m_LogicalDevice, m_ShadowImage, m_ShadowImageMemory, 0));
-
-				// Full image view (for all layers)
-				VkImageViewCreateInfo fullImageView = vks::imageViewCreateInfo();
-				fullImageView.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-				fullImageView.format = m_ShadowBufFormat;
-				fullImageView.subresourceRange = {};
-				fullImageView.subresourceRange.aspectMask = aspectMask;
-				fullImageView.subresourceRange.baseMipLevel = 0;
-				fullImageView.subresourceRange.levelCount = 1; // Number of mipmap levels
-				fullImageView.subresourceRange.baseArrayLayer = 0;
-				fullImageView.subresourceRange.layerCount = SHADOW_CASCADE_COUNT;
-				fullImageView.image = m_ShadowImage;
-				fullImageView.flags = 0;
-				VK_CHECK_RESULT(vkCreateImageView(m_VulkanDevice->m_LogicalDevice, &fullImageView, nullptr, m_ShadowImageView.replace()));
-				SetImageViewName(m_VulkanDevice, m_ShadowImageView, "Shadow cascade image view (main)");
-
-				// One frame buffer & view per cascade
-				for (u32 i = 0; i < SHADOW_CASCADE_COUNT; ++i)
-				{
-					VkImageViewCreateInfo imageView = vks::imageViewCreateInfo();
-					imageView.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-					imageView.format = m_ShadowBufFormat;
-					imageView.subresourceRange = {};
-					imageView.subresourceRange.aspectMask = aspectMask;
-					imageView.subresourceRange.baseMipLevel = 0;
-					imageView.subresourceRange.levelCount = 1; // Number of mipmap levels
-					imageView.subresourceRange.baseArrayLayer = i;
-					imageView.subresourceRange.layerCount = 1;
-					imageView.image = m_ShadowImage;
-					imageView.flags = 0;
-					VK_CHECK_RESULT(vkCreateImageView(m_VulkanDevice->m_LogicalDevice, &imageView, nullptr, m_ShadowCascades[i]->imageView.replace()));
-					char imageViewName[256];
-					snprintf(imageViewName, 256, "Shadow cascade %u image view", i);
-					SetImageViewName(m_VulkanDevice, m_ShadowCascades[i]->imageView, imageViewName);
-
-					VkFramebufferCreateInfo shadowFramebufferCreateInfo = vks::framebufferCreateInfo(*m_ShadowRenderPass);
-					shadowFramebufferCreateInfo.pAttachments = &m_ShadowCascades[i]->imageView;
-					shadowFramebufferCreateInfo.attachmentCount = 1;
-					shadowFramebufferCreateInfo.width = SHADOW_CASCADE_RES;
-					shadowFramebufferCreateInfo.height = SHADOW_CASCADE_RES;
-
-					char frameBufferName[256];
-					snprintf(frameBufferName, 256, "Shadow cascade %u frame buffer", i);
-
-					m_ShadowCascades[i]->frameBuffer.Create(&shadowFramebufferCreateInfo, m_ShadowRenderPass, frameBufferName);
-
-					FrameBufferAttachment::CreateInfo attachmentCreateInfo = {};
-					attachmentCreateInfo.width = SHADOW_CASCADE_RES;
-					attachmentCreateInfo.height = SHADOW_CASCADE_RES;
-					attachmentCreateInfo.format = m_ShadowBufFormat;
-					if (m_ShadowCascades[i]->attachment == nullptr)
-					{
-						m_ShadowCascades[i]->attachment = new FrameBufferAttachment(m_VulkanDevice, attachmentCreateInfo);
-					}
-					m_ShadowCascades[i]->attachment->bOwnsResources = false;
-					m_ShadowCascades[i]->attachment->image = m_ShadowImage;
-					m_ShadowCascades[i]->attachment->view = m_ShadowCascades[i]->imageView;
-				}
-			}
 		}
 
 		// TODO: Test that this still works
@@ -7059,11 +7271,30 @@ namespace flex
 			//VulkanRenderer::SetFramebufferName(m_VulkanDevice, frameBuffer, "GBuffer Cubemap frame buffer");
 		}
 
-		void VulkanRenderer::RemoveMaterial(MaterialID materialID)
+		void VulkanRenderer::RemoveMaterial(MaterialID materialID, bool bUpdateUsages /* = true */)
 		{
 			assert(materialID != InvalidMaterialID);
 
 			m_Materials.erase(materialID);
+
+			if (bUpdateUsages)
+			{
+				for (RenderID renderID = 0; renderID < MAX_NUM_RENDER_OBJECTS; ++renderID)
+				{
+					VulkanRenderObject* renderObject = m_RenderObjects[renderID];
+					if (renderObject)
+					{
+						if (renderObject->materialID == materialID)
+						{
+							RenderObjectCreateInfo info;
+							GetRenderObjectCreateInfo(renderID, info);
+							DestroyRenderObject(renderID, renderObject);
+							info.materialID = m_PlaceholderMaterialID;
+							InitializeRenderObject(&info);
+						}
+					}
+				}
+			}
 		}
 
 		void VulkanRenderer::FillOutGBufferFrameBufferAttachments(std::vector<Pair<std::string, void*>>& outVec)
@@ -7084,6 +7315,7 @@ namespace flex
 			{
 				return renderObject &&
 					renderObject->vertexBufferData &&
+					!m_Materials[renderObject->materialID].material.bDynamic &&
 					m_Shaders[m_Materials.at(renderObject->materialID).material.shaderID].shader->staticVertexBufferIndex == staticVertexBufferIndex;
 			};
 
@@ -7270,7 +7502,8 @@ namespace flex
 			for (VulkanRenderObject* renderObject : m_RenderObjects)
 			{
 				if (renderObject &&
-					renderObject->bIndexed)
+					renderObject->bIndexed &&
+					!m_Materials[renderObject->materialID].material.bDynamic)
 				{
 					renderObject->indexOffset = (u32)indices.size();
 					indices.insert(indices.end(), renderObject->indices->begin(), renderObject->indices->end());
@@ -7387,6 +7620,53 @@ namespace flex
 			VK_CHECK_RESULT(vkCreateSemaphore(m_VulkanDevice->m_LogicalDevice, &semaphoreInfo, nullptr, m_RenderCompleteSemaphore.replace()));
 		}
 
+		void VulkanRenderer::FillOutShaderBatches(const std::vector<RenderID>& renderIDs, i32* inOutDynamicUBOOffset,
+			MaterialBatchPair& matBatchPair, MaterialBatchPair& depthAwareEditorMatBatchPair, MaterialBatchPair& depthUnawareEditorMatBatchPair,
+			MaterialID matID, bool bWriteUBOOffsets /* = true */)
+		{
+			const VulkanMaterial& material = m_Materials[matID];
+			const VulkanShader& shader = m_Shaders[material.material.shaderID];
+
+			for (u32 renderID : renderIDs)
+			{
+				VulkanRenderObject* renderObject = GetRenderObject(renderID);
+
+				if (renderObject &&
+					(VkPipeline)renderObject->graphicsPipeline.pipeline != 0 &&
+					renderObject->materialID == matID)
+				{
+					const UniformBuffer* dynamicBuffer = material.uniformBufferList.Get(UniformBufferType::DYNAMIC);
+					if (dynamicBuffer)
+					{
+						*inOutDynamicUBOOffset += RoundUp(dynamicBuffer->data.size - 1, m_DynamicAlignment);
+					}
+					if (bWriteUBOOffsets)
+					{
+						renderObject->dynamicUBOOffset = *inOutDynamicUBOOffset;
+					}
+
+					if (renderObject->gameObject->IsVisible())
+					{
+						if (renderObject->bEditorObject)
+						{
+							if (shader.shader->bDepthWriteEnable)
+							{
+								depthAwareEditorMatBatchPair.batch.objects.push_back(renderID);
+							}
+							else
+							{
+								depthUnawareEditorMatBatchPair.batch.objects.push_back(renderID);
+							}
+						}
+						else
+						{
+							matBatchPair.batch.objects.push_back(renderID);
+						}
+					}
+				}
+			}
+		}
+
 		void VulkanRenderer::BatchRenderObjects()
 		{
 			if (m_DirtyFlagBits & DirtyFlags::STATIC_DATA)
@@ -7394,11 +7674,6 @@ namespace flex
 				CreateStaticVertexBuffers();
 				CreateStaticIndexBuffers();
 			}
-			if (m_DirtyFlagBits & DirtyFlags::DYNAMIC_DATA)
-			{
-				CreateDynamicVertexAndIndexBuffers();
-			}
-
 			if (m_DirtyFlagBits & DirtyFlags::SHADOW_DATA)
 			{
 				CreateShadowVertexBuffer();
@@ -7417,6 +7692,16 @@ namespace flex
 				m_ShadowBatch.batches.clear();
 				m_DepthAwareEditorObjBatches.batches.clear();
 				m_DepthUnawareEditorObjBatches.batches.clear();
+
+				std::vector<RenderID> renderIDs;
+				renderIDs.reserve(m_RenderObjects.size());
+				for (u32 renderID = 0; renderID < (u32)m_RenderObjects.size(); ++renderID)
+				{
+					if (m_RenderObjects[renderID])
+					{
+						renderIDs.push_back(renderID);
+					}
+				}
 
 				// NOTE: Optimization options:
 				//			- Sort materials by shader ID to allow early out on second loop
@@ -7445,56 +7730,23 @@ namespace flex
 
 						i32 dynamicUBOOffset = 0;
 
-						for (auto& matPair : m_Materials)
+						for (const auto& matPair : m_Materials)
 						{
-							VulkanMaterial& material = matPair.second;
+							MaterialID matID = matPair.first;
+							const VulkanMaterial& material = matPair.second;
 
 							if (material.material.shaderID == shaderID && ((u32)material.material.bDynamic) == dynamic)
 							{
 								MaterialBatchPair matBatchPair = {};
-								matBatchPair.materialID = matPair.first;
+								matBatchPair.materialID = matID;
 
 								MaterialBatchPair depthAwareEditorMatBatchPair = {};
-								depthAwareEditorMatBatchPair.materialID = matPair.first;
+								depthAwareEditorMatBatchPair.materialID = matID;
 
 								MaterialBatchPair depthUnawareEditorMatBatchPair = {};
-								depthUnawareEditorMatBatchPair.materialID = matPair.first;
+								depthUnawareEditorMatBatchPair.materialID = matID;
 
-								for (u32 renderID = 0; renderID < m_RenderObjects.size(); ++renderID)
-								{
-									VulkanRenderObject* renderObject = GetRenderObject(renderID);
-
-									if (renderObject &&
-										(VkPipeline)renderObject->graphicsPipeline != 0 &&
-										renderObject->materialID == matPair.first)
-									{
-										UniformBuffer* dynamicBuffer = material.uniformBufferList.Get(UniformBufferType::DYNAMIC);
-										if (dynamicBuffer)
-										{
-											dynamicUBOOffset += RoundUp(dynamicBuffer->data.size, m_DynamicAlignment);
-										}
-										renderObject->dynamicUBOOffset = dynamicUBOOffset;
-
-										if (renderObject->gameObject->IsVisible())
-										{
-											if (renderObject->bEditorObject)
-											{
-												if (m_Shaders[shaderID].shader->bDepthWriteEnable)
-												{
-													depthAwareEditorMatBatchPair.batch.objects.push_back(renderID);
-												}
-												else
-												{
-													depthUnawareEditorMatBatchPair.batch.objects.push_back(renderID);
-												}
-											}
-											else
-											{
-												matBatchPair.batch.objects.push_back(renderID);
-											}
-										}
-									}
-								}
+								FillOutShaderBatches(renderIDs, &dynamicUBOOffset, matBatchPair, depthAwareEditorMatBatchPair, depthUnawareEditorMatBatchPair, matID);
 
 								if (!matBatchPair.batch.objects.empty())
 								{
@@ -7586,23 +7838,24 @@ namespace flex
 			for (const MaterialBatchPair& matBatch : shaderBatch.batch.batches)
 			{
 				MaterialID matID = matBatch.materialID;
-				if (drawCallInfo && drawCallInfo->materialIDOverride != InvalidMaterialID)
+				if (drawCallInfo && drawCallInfo->bWireframe)
+				{
+					matID = m_WireframeMatID;
+				}
+				else if (drawCallInfo && drawCallInfo->materialIDOverride != InvalidMaterialID)
 				{
 					matID = drawCallInfo->materialIDOverride;
 				}
 
 				VulkanMaterial& mat = m_Materials.at(matID);
 				VulkanShader& shader = m_Shaders[mat.material.shaderID];
-				assert(mat.material.shaderID == shaderID);
-
-				assert(mat.material.bDynamic == shaderBatch.bDynamic);
 
 				for (RenderID renderID : matBatch.batch.objects)
 				{
 					VulkanRenderObject* renderObject = GetRenderObject(renderID);
 
-					VkPipeline graphicsPipeline = renderObject->graphicsPipeline;
-					VkPipelineLayout pipelineLayout = renderObject->pipelineLayout;
+					VkPipeline graphicsPipeline = renderObject->graphicsPipeline.pipeline;
+					VkPipelineLayout pipelineLayout = renderObject->graphicsPipeline.layout;
 					VkDescriptorSet descriptorSet = renderObject->descriptorSet;
 					u32 dynamicUBOOffset = renderObject->dynamicUBOOffset;
 
@@ -7621,6 +7874,21 @@ namespace flex
 						if (drawCallInfo->bRenderingShadows)
 						{
 							dynamicUBOOffset = renderObject->dynamicShadowUBOOffset;
+						}
+						if (drawCallInfo->bWireframe)
+						{
+							VulkanMaterial* objectMaterial = &m_Materials[matBatch.materialID];
+							VulkanShader* objectShader = &m_Shaders[objectMaterial->material.shaderID];
+							graphicsPipeline = GetOrCreateWireframePipeline(objectShader->shader->vertexAttributes);
+							pipelineLayout = m_WireframePipelineLayout;
+							descriptorSet = m_WireframeDescSet;
+						}
+						if (drawCallInfo->bCalculateDynamicUBOOffset)
+						{
+							dynamicUBOOffset = drawCallInfo->dynamicUBOOffset;
+
+							const UniformBuffer* wireframeDynamicBuffer = mat.uniformBufferList.Get(UniformBufferType::DYNAMIC);
+							drawCallInfo->dynamicUBOOffset += RoundUp(wireframeDynamicBuffer->data.size - 1, m_DynamicAlignment);
 						}
 					}
 
@@ -7778,10 +8046,10 @@ namespace flex
 						}
 					}
 
-					VkViewport viewport = vks::viewportFlipped((real)SHADOW_CASCADE_RES, (real)SHADOW_CASCADE_RES, 0.0f, 1.0f);
+					VkViewport viewport = vks::viewportFlipped((real)m_ShadowCascades[0]->frameBuffer.width, (real)m_ShadowCascades[0]->frameBuffer.height, 0.0f, 1.0f);
 					vkCmdSetViewport(m_OffScreenCmdBuffer, 0, 1, &viewport);
 
-					VkRect2D shadowScissor = vks::scissor(0u, 0u, SHADOW_CASCADE_RES, SHADOW_CASCADE_RES);
+					VkRect2D shadowScissor = vks::scissor(0u, 0u, m_ShadowCascades[0]->frameBuffer.width, m_ShadowCascades[0]->frameBuffer.height);
 					vkCmdSetScissor(m_OffScreenCmdBuffer, 0, 1, &shadowScissor);
 
 					if (m_CascadedShadowMapPushConstantBlock == nullptr)
@@ -7789,14 +8057,14 @@ namespace flex
 						m_CascadedShadowMapPushConstantBlock = new Material::PushConstantBlock();
 					}
 
-					for (u32 c = 0; c < SHADOW_CASCADE_COUNT; ++c)
+					for (i32 c = 0; c < m_ShadowCascadeCount; ++c)
 					{
 						m_ShadowRenderPass->Begin_WithFrameBuffer(m_OffScreenCmdBuffer, (VkClearValue*)&depthStencilClearValue, 1, &m_ShadowCascades[c]->frameBuffer);
 
 						DrawCallInfo shadowDrawCallInfo = {};
 						shadowDrawCallInfo.materialIDOverride = m_ShadowMaterialID;
-						shadowDrawCallInfo.graphicsPipelineOverride = (u64)(VkPipeline)m_ShadowGraphicsPipeline;
-						shadowDrawCallInfo.pipelineLayoutOverride = (u64)(VkPipelineLayout)m_ShadowPipelineLayout;
+						shadowDrawCallInfo.graphicsPipelineOverride = (u64)(VkPipeline)m_ShadowGraphicsPipeline.pipeline;
+						shadowDrawCallInfo.pipelineLayoutOverride = (u64)(VkPipelineLayout)m_ShadowGraphicsPipeline.layout;
 						shadowDrawCallInfo.descriptorSetOverride = (u64)(VkDescriptorSet)m_ShadowDescriptorSet;
 						shadowDrawCallInfo.bRenderingShadows = true;
 
@@ -7812,7 +8080,7 @@ namespace flex
 						m_ShadowRenderPass->End();
 					}
 
-					EndDebugMarkerRegion(m_OffScreenCmdBuffer); // Shadow cascades
+					EndDebugMarkerRegion(m_OffScreenCmdBuffer, "End Shadow cascades");
 				}
 
 				BeginDebugMarkerRegion(m_OffScreenCmdBuffer, "Deferred");
@@ -7844,7 +8112,7 @@ namespace flex
 				// NOTE: Only needed on the first frame
 				m_GBufferDepthAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_GraphicsQueue);
 
-				EndDebugMarkerRegion(m_OffScreenCmdBuffer); // Deferred
+				EndDebugMarkerRegion(m_OffScreenCmdBuffer, "End Deferred");
 
 				//
 				// SSAO
@@ -7852,7 +8120,7 @@ namespace flex
 
 				VkDeviceSize offsets[1] = { 0 };
 
-				if (m_SSAOSamplingData.ssaoEnabled)
+				if (m_SSAOSamplingData.enabled)
 				{
 					BeginGPUTimeStamp(m_OffScreenCmdBuffer, "SSAO");
 
@@ -7862,7 +8130,7 @@ namespace flex
 
 					assert(m_SSAOShaderID != InvalidShaderID);
 
-					vkCmdBindPipeline(m_OffScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_SSAOGraphicsPipeline);
+					vkCmdBindPipeline(m_OffScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_SSAOGraphicsPipeline.pipeline);
 
 					VkViewport ssaoViewport = vks::viewportFlipped((real)m_SSAOFBColorAttachment0->width, (real)m_SSAOFBColorAttachment0->height, 0.0f, 1.0f);
 					vkCmdSetViewport(m_OffScreenCmdBuffer, 0, 1, &ssaoViewport);
@@ -7870,11 +8138,11 @@ namespace flex
 					VkRect2D ssaoScissor = vks::scissor(0u, 0u, m_SSAOFBColorAttachment0->width, m_SSAOFBColorAttachment0->height);
 					vkCmdSetScissor(m_OffScreenCmdBuffer, 0, 1, &ssaoScissor);
 
-					RenderFullscreenTri(m_OffScreenCmdBuffer, m_SSAOMatID, m_SSAOGraphicsPipelineLayout, m_SSAODescSet);
+					RenderFullscreenTri(m_OffScreenCmdBuffer, m_SSAOMatID, m_SSAOGraphicsPipeline.layout, m_SSAODescSet);
 
 					m_SSAORenderPass->End();
 
-					EndDebugMarkerRegion(m_OffScreenCmdBuffer); // SSAO
+					EndDebugMarkerRegion(m_OffScreenCmdBuffer, "End SSAO");
 
 					//
 					// SSAO blur
@@ -7889,7 +8157,7 @@ namespace flex
 
 						assert(m_SSAOBlurShaderID != InvalidShaderID);
 
-						vkCmdBindPipeline(m_OffScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_SSAOBlurHGraphicsPipeline);
+						vkCmdBindPipeline(m_OffScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_SSAOBlurHGraphicsPipeline.pipeline);
 
 						VkViewport ssaoBlurViewport = vks::viewportFlipped((real)m_SSAOBlurHFBColorAttachment0->width, (real)m_SSAOBlurHFBColorAttachment0->height, 0.0f, 1.0f);
 						vkCmdSetViewport(m_OffScreenCmdBuffer, 0, 1, &ssaoBlurViewport);
@@ -7897,7 +8165,7 @@ namespace flex
 						VkRect2D ssaoBlurScissor = vks::scissor(0u, 0u, m_SSAOBlurHFBColorAttachment0->width, m_SSAOBlurHFBColorAttachment0->height);
 						vkCmdSetScissor(m_OffScreenCmdBuffer, 0, 1, &ssaoBlurScissor);
 
-						BindDescriptorSet(&m_Materials[m_SSAOBlurMatID], 0 * m_DynamicAlignment, m_OffScreenCmdBuffer, m_SSAOBlurGraphicsPipelineLayout, m_SSAOBlurHDescSet);
+						BindDescriptorSet(&m_Materials[m_SSAOBlurMatID], 0 * m_DynamicAlignment, m_OffScreenCmdBuffer, m_SSAOBlurHGraphicsPipeline.layout, m_SSAOBlurHDescSet);
 
 						vkCmdBindVertexBuffers(m_OffScreenCmdBuffer, 0, 1, &m_FullScreenTriVertexBuffer->m_Buffer, offsets);
 
@@ -7913,9 +8181,9 @@ namespace flex
 						// Vertical pass
 						m_SSAOBlurVRenderPass->Begin(m_OffScreenCmdBuffer, (VkClearValue*)&m_ClearColor, 1);
 
-						vkCmdBindPipeline(m_OffScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_SSAOBlurVGraphicsPipeline);
+						vkCmdBindPipeline(m_OffScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_SSAOBlurVGraphicsPipeline.pipeline);
 
-						BindDescriptorSet(&m_Materials[m_SSAOBlurMatID], 1 * m_DynamicAlignment, m_OffScreenCmdBuffer, m_SSAOBlurGraphicsPipelineLayout, m_SSAOBlurVDescSet);
+						BindDescriptorSet(&m_Materials[m_SSAOBlurMatID], 1 * m_DynamicAlignment, m_OffScreenCmdBuffer, m_SSAOBlurVGraphicsPipeline.layout, m_SSAOBlurVDescSet);
 
 						overrides.bSSAOVerticalPass = true;
 						UpdateDynamicUniformBuffer(m_SSAOBlurMatID, 1 * m_DynamicAlignment, MAT4_IDENTITY, &overrides);
@@ -7924,7 +8192,7 @@ namespace flex
 
 						m_SSAOBlurVRenderPass->End();
 
-						EndDebugMarkerRegion(m_OffScreenCmdBuffer); // SSAO Blur
+						EndDebugMarkerRegion(m_OffScreenCmdBuffer, "End SSAO Blur");
 					}
 
 					EndGPUTimeStamp(m_OffScreenCmdBuffer, "SSAO");
@@ -7952,72 +8220,75 @@ namespace flex
 			SetLineWidthForCmdBuffer(commandBuffer);
 
 			// Particle simulation
-			BeginGPUTimeStamp(commandBuffer, "Simulate Particles");
-			BeginDebugMarkerRegion(commandBuffer, "Simulate Particles");
-
-			for (VulkanParticleSystem* particleSystem : m_ParticleSystems)
+			if (!m_ParticleSystems.empty())
 			{
-				if (!particleSystem || !particleSystem->system->IsVisible() || !particleSystem->system->bEnabled)
+				BeginGPUTimeStamp(commandBuffer, "Simulate Particles");
+				BeginDebugMarkerRegion(commandBuffer, "Simulate Particles");
+
+				for (VulkanParticleSystem* particleSystem : m_ParticleSystems)
 				{
-					continue;
+					if (!particleSystem || !particleSystem->system->IsVisible() || !particleSystem->system->bEnabled)
+					{
+						continue;
+					}
+
+					VulkanMaterial& particleSimMat = m_Materials.at(particleSystem->system->simMaterialID);
+
+					UniformBuffer* particleBuffer = particleSimMat.uniformBufferList.Get(UniformBufferType::PARTICLE_DATA);
+
+					VkBufferMemoryBarrier bufferBarrier = vks::bufferMemoryBarrier();
+					bufferBarrier.buffer = particleBuffer->buffer.m_Buffer;
+					bufferBarrier.size = particleBuffer->buffer.m_Size;
+					bufferBarrier.srcAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
+					bufferBarrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+					// Compute and graphics queue may have different queue families
+					// For the barrier to work across different queues, we need to set their family indices
+					bufferBarrier.srcQueueFamilyIndex = m_VulkanDevice->m_QueueFamilyIndices.graphicsFamily;
+					bufferBarrier.dstQueueFamilyIndex = m_VulkanDevice->m_QueueFamilyIndices.computeFamily;
+					vkCmdPipelineBarrier(
+						commandBuffer,
+						VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+						VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+						0,
+						0, nullptr,
+						1, &bufferBarrier,
+						0, nullptr);
+
+					vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, particleSystem->computePipeline);
+
+					u32 dynamicUBOOffset = particleSystem->ID * m_DynamicAlignment;
+
+					UniformOverrides overrides = {};
+					overrides.overridenUniforms.AddUniform(U_PARTICLE_SIM_DATA);
+					particleSystem->system->data.dt = g_DeltaTime;
+					overrides.particleSimData = &particleSystem->system->data;
+					// TODO: Only do once/on edit
+					UpdateDynamicUniformBuffer(particleSystem->system->simMaterialID, dynamicUBOOffset, MAT4_IDENTITY, &overrides);
+
+					u32 dynamicOffsets[2] = { dynamicUBOOffset, 0 };
+					vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_ParticleSimulationComputePipelineLayout, 0, 1, &particleSystem->computeDescriptorSet, ARRAY_LENGTH(dynamicOffsets), dynamicOffsets);
+
+					vkCmdDispatch(commandBuffer, MAX_PARTICLE_COUNT / PARTICLES_PER_DISPATCH, 1, 1);
+
+					// Add memory barrier to ensure that compute shader has finished writing to the buffer
+					// Without this the (rendering) vertex shader may display incomplete results (partial data from last frame)
+					bufferBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+					bufferBarrier.dstAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
+					bufferBarrier.srcQueueFamilyIndex = m_VulkanDevice->m_QueueFamilyIndices.computeFamily;
+					bufferBarrier.dstQueueFamilyIndex = m_VulkanDevice->m_QueueFamilyIndices.graphicsFamily;
+					vkCmdPipelineBarrier(
+						commandBuffer,
+						VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+						VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+						0,
+						0, nullptr,
+						1, &bufferBarrier,
+						0, nullptr);
 				}
 
-				VulkanMaterial& particleSimMat = m_Materials.at(particleSystem->system->simMaterialID);
-
-				UniformBuffer* particleBuffer = particleSimMat.uniformBufferList.Get(UniformBufferType::PARTICLE_DATA);
-
-				VkBufferMemoryBarrier bufferBarrier = vks::bufferMemoryBarrier();
-				bufferBarrier.buffer = particleBuffer->buffer.m_Buffer;
-				bufferBarrier.size = particleBuffer->buffer.m_Size;
-				bufferBarrier.srcAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
-				bufferBarrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-				// Compute and graphics queue may have different queue families
-				// For the barrier to work across different queues, we need to set their family indices
-				bufferBarrier.srcQueueFamilyIndex = m_VulkanDevice->m_QueueFamilyIndices.graphicsFamily;
-				bufferBarrier.dstQueueFamilyIndex = m_VulkanDevice->m_QueueFamilyIndices.computeFamily;
-				vkCmdPipelineBarrier(
-					commandBuffer,
-					VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
-					VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-					0,
-					0, nullptr,
-					1, &bufferBarrier,
-					0, nullptr);
-
-				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, particleSystem->computePipeline);
-
-				u32 dynamicUBOOffset = particleSystem->ID * m_DynamicAlignment;
-
-				UniformOverrides overrides = {};
-				overrides.overridenUniforms.AddUniform(U_PARTICLE_SIM_DATA);
-				particleSystem->system->data.dt = g_DeltaTime;
-				overrides.particleSimData = &particleSystem->system->data;
-				// TODO: Only do once/on edit
-				UpdateDynamicUniformBuffer(particleSystem->system->simMaterialID, dynamicUBOOffset, MAT4_IDENTITY, &overrides);
-
-				u32 dynamicOffsets[2] = { dynamicUBOOffset, 0 };
-				vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_ParticleSimulationComputePipelineLayout, 0, 1, &particleSystem->computeDescriptorSet, ARRAY_LENGTH(dynamicOffsets), dynamicOffsets);
-
-				vkCmdDispatch(commandBuffer, MAX_PARTICLE_COUNT / PARTICLES_PER_DISPATCH, 1, 1);
-
-				// Add memory barrier to ensure that compute shader has finished writing to the buffer
-				// Without this the (rendering) vertex shader may display incomplete results (partial data from last frame)
-				bufferBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-				bufferBarrier.dstAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
-				bufferBarrier.srcQueueFamilyIndex = m_VulkanDevice->m_QueueFamilyIndices.computeFamily;
-				bufferBarrier.dstQueueFamilyIndex = m_VulkanDevice->m_QueueFamilyIndices.graphicsFamily;
-				vkCmdPipelineBarrier(
-					commandBuffer,
-					VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-					VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
-					0,
-					0, nullptr,
-					1, &bufferBarrier,
-					0, nullptr);
+				EndDebugMarkerRegion(commandBuffer, "End Simulate Particles");
+				EndGPUTimeStamp(commandBuffer, "Simulate Particles");
 			}
-
-			EndDebugMarkerRegion(commandBuffer); // Simulate Particles
-			EndGPUTimeStamp(commandBuffer, "Simulate Particles");
 
 			BeginGPUTimeStamp(commandBuffer, "Forward");
 
@@ -8027,9 +8298,9 @@ namespace flex
 				VulkanRenderObject* gBufferObject = GetRenderObject(m_GBufferQuadRenderID);
 
 				RenderFullscreenTri(commandBuffer, m_DeferredCombineRenderPass, gBufferObject->materialID,
-					gBufferObject->pipelineLayout, gBufferObject->graphicsPipeline, gBufferObject->descriptorSet, true);
+					gBufferObject->graphicsPipeline.layout, gBufferObject->graphicsPipeline.pipeline, gBufferObject->descriptorSet, true);
 
-				EndDebugMarkerRegion(commandBuffer); // Shade deferred
+				EndDebugMarkerRegion(commandBuffer, "End Shade deferred");
 			}
 
 			{
@@ -8055,7 +8326,7 @@ namespace flex
 				// m_OffscreenDepthAttachment0 was copied into, now will be written to in forward pass
 				m_OffscreenFB0DepthAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, m_GraphicsQueue, commandBuffer);
 
-				EndDebugMarkerRegion(commandBuffer); // Copy depth
+				EndDebugMarkerRegion(commandBuffer, "End Copy depth");
 			}
 
 			std::array<VkClearValue, 2> clearValues = {};
@@ -8076,13 +8347,13 @@ namespace flex
 						DrawShaderBatch(shaderBatch, commandBuffer);
 					}
 
-					EndDebugMarkerRegion(commandBuffer); // Forward
+					EndDebugMarkerRegion(commandBuffer, "End Forward");
 				}
 
 				DrawParticles(commandBuffer);
 
-				bool bUsingGameplayCam = g_CameraManager->CurrentCamera()->bIsGameplayCam;
-				if (g_EngineInstance->IsRenderingEditorObjects() && !bUsingGameplayCam)
+				//bool bUsingGameplayCam = g_CameraManager->CurrentCamera()->bIsGameplayCam;
+				if (g_EngineInstance->IsRenderingEditorObjects())// && !bUsingGameplayCam)
 				{
 					BeginDebugMarkerRegion(commandBuffer, "Editor objects");
 
@@ -8091,11 +8362,163 @@ namespace flex
 						DrawShaderBatch(shaderBatch, commandBuffer);
 					}
 
-					// Selected object wireframe
-					// TODO:
+					bool bDrawSelectedObjectWireframe = !g_Editor->HasSelectedObject();
+					if (bDrawSelectedObjectWireframe || m_bEnableWireframeOverlay || m_bEnableSelectionWireframe)
+					{
+						BeginDebugMarkerRegion(commandBuffer, "Wireframe");
 
-					//glDepthMask(GL_TRUE);
-					//glClear(GL_DEPTH_BUFFER_BIT);
+						if (m_bEnableWireframeOverlay)
+						{
+							// All objects wireframe
+							ShaderBatch* batches[] = { &m_ForwardObjectBatches, &m_DeferredObjectBatches };
+							for (ShaderBatch* batch : batches)
+							{
+								for (const ShaderBatchPair& shaderBatch : batch->batches)
+								{
+									if (shaderBatch.shaderID == m_SkyboxShaderID)
+									{
+										continue;
+									}
+									for (const MaterialBatchPair& matBatch : shaderBatch.batch.batches)
+									{
+										for (RenderID renderID : matBatch.batch.objects)
+										{
+											VulkanRenderObject* renderObject = GetRenderObject(renderID);
+											UpdateDynamicUniformBuffer(renderID, nullptr, m_WireframeMatID, renderObject->dynamicUBOOffset);
+										}
+									}
+								}
+							}
+
+							DrawCallInfo wireframeDrawCallInfo = {};
+							wireframeDrawCallInfo.bWireframe = true;
+
+							for (ShaderBatch* batch : batches)
+							{
+								for (const ShaderBatchPair& shaderBatch : batch->batches)
+								{
+									if (shaderBatch.shaderID == m_SkyboxShaderID)
+									{
+										continue;
+									}
+									DrawShaderBatch(shaderBatch, commandBuffer, &wireframeDrawCallInfo);
+								}
+							}
+						}
+						else if (m_bEnableSelectionWireframe)
+						{
+							std::vector<GameObject*> selectedObjects = g_Editor->GetSelectedObjects(true);
+							std::vector<RenderID> renderIDs;
+							renderIDs.reserve(selectedObjects.size());
+
+							for (GameObject* selectedObj : selectedObjects)
+							{
+								Mesh* mesh = selectedObj->GetMesh();
+								if (mesh != nullptr)
+								{
+									std::vector<MeshComponent*> meshes = mesh->GetSubMeshes();
+									for (MeshComponent* meshComponent : meshes)
+									{
+										renderIDs.push_back(meshComponent->renderID);
+									}
+								}
+							}
+
+							ShaderBatch selectedObjectBatch = {};
+							for (u32 shaderID = 0; shaderID < m_Shaders.size(); ++shaderID)
+							{
+								for (u32 dynamic = 0; dynamic <= 1; ++dynamic)
+								{
+									ShaderBatchPair shaderBatchPair = {};
+									shaderBatchPair.shaderID = shaderID;
+									shaderBatchPair.bDynamic = (dynamic == 1);
+
+									ShaderBatchPair depthAwareEditorShaderBatchPair = {};
+									depthAwareEditorShaderBatchPair.shaderID = shaderID;
+									depthAwareEditorShaderBatchPair.bDynamic = (dynamic == 1);
+
+									ShaderBatchPair depthUnawareEditorShaderBatchPair = {};
+									depthUnawareEditorShaderBatchPair.shaderID = shaderID;
+									depthUnawareEditorShaderBatchPair.bDynamic = (dynamic == 1);
+
+									i32 inOutDynamicUBOOffset = 0;
+
+									for (const auto& matPair : m_Materials)
+									{
+										MaterialID matID = matPair.first;
+										const VulkanMaterial& material = matPair.second;
+
+										if (material.material.shaderID == shaderID && ((u32)material.material.bDynamic) == dynamic)
+										{
+											MaterialBatchPair matBatchPair = {};
+											matBatchPair.materialID = matID;
+
+											MaterialBatchPair depthAwareEditorMatBatchPair = {};
+											depthAwareEditorMatBatchPair.materialID = matID;
+
+											MaterialBatchPair depthUnawareEditorMatBatchPair = {};
+											depthUnawareEditorMatBatchPair.materialID = matID;
+
+											FillOutShaderBatches(renderIDs, &inOutDynamicUBOOffset, matBatchPair, depthAwareEditorMatBatchPair, depthUnawareEditorMatBatchPair, matID, false);
+
+											if (!matBatchPair.batch.objects.empty())
+											{
+												shaderBatchPair.batch.batches.push_back(matBatchPair);
+											}
+											if (!depthAwareEditorMatBatchPair.batch.objects.empty())
+											{
+												depthAwareEditorShaderBatchPair.batch.batches.push_back(depthAwareEditorMatBatchPair);
+											}
+											if (!depthUnawareEditorMatBatchPair.batch.objects.empty())
+											{
+												depthUnawareEditorShaderBatchPair.batch.batches.push_back(depthUnawareEditorMatBatchPair);
+											}
+										}
+									}
+
+									if (!shaderBatchPair.batch.batches.empty())
+									{
+										selectedObjectBatch.batches.push_back(shaderBatchPair);
+									}
+									if (!depthAwareEditorShaderBatchPair.batch.batches.empty())
+									{
+										selectedObjectBatch.batches.push_back(depthAwareEditorShaderBatchPair);
+									}
+									if (!depthUnawareEditorShaderBatchPair.batch.batches.empty())
+									{
+										selectedObjectBatch.batches.push_back(depthUnawareEditorShaderBatchPair);
+									}
+								}
+							}
+
+							VulkanMaterial& wireframeMaterial = m_Materials[m_WireframeMatID];
+							const UniformBuffer* wireframeDynamicBuffer = wireframeMaterial.uniformBufferList.Get(UniformBufferType::DYNAMIC);
+							u32 dynamicUBOOffset = 0;
+							for (const ShaderBatchPair& shaderBatch : selectedObjectBatch.batches)
+							{
+								for (const MaterialBatchPair& matBatchPair : shaderBatch.batch.batches)
+								{
+									for (RenderID renderID : matBatchPair.batch.objects)
+									{
+										UpdateDynamicUniformBuffer(renderID, nullptr, m_WireframeMatID, dynamicUBOOffset);
+										dynamicUBOOffset += RoundUp(wireframeDynamicBuffer->data.size - 1, m_DynamicAlignment);
+									}
+								}
+							}
+
+							DrawCallInfo wireframeDrawCallInfo = {};
+							wireframeDrawCallInfo.bWireframe = true;
+							wireframeDrawCallInfo.bCalculateDynamicUBOOffset = true;
+							wireframeDrawCallInfo.dynamicUBOOffset = 0;
+
+							for (const ShaderBatchPair& shaderBatch : selectedObjectBatch.batches)
+							{
+								DrawShaderBatch(shaderBatch, commandBuffer, &wireframeDrawCallInfo);
+							}
+						}
+
+						EndDebugMarkerRegion(commandBuffer, "End Wireframe");
+					}
 
 					// Depth unaware objects write to a cleared depth buffer so they
 					// draw on top of previous geometry but are still eclipsed by other
@@ -8106,7 +8529,7 @@ namespace flex
 						DrawShaderBatch(shaderBatch, commandBuffer);
 					}
 
-					EndDebugMarkerRegion(commandBuffer); // Editor objects
+					EndDebugMarkerRegion(commandBuffer, "End Editor objects");
 				}
 
 				{
@@ -8116,13 +8539,13 @@ namespace flex
 					DrawSpriteBatch(m_QueuedWSSprites, commandBuffer);
 					m_QueuedWSSprites.clear();
 
-					EndDebugMarkerRegion(commandBuffer); // World Space Sprites
+					EndDebugMarkerRegion(commandBuffer, "End World Space Sprites");
 					BeginDebugMarkerRegion(commandBuffer, "World Space Text");
 
 					EnqueueWorldSpaceText();
-					DrawTextWS(commandBuffer);
+					DrawText(commandBuffer, false);
 
-					EndDebugMarkerRegion(commandBuffer); // World Space Text
+					EndDebugMarkerRegion(commandBuffer, "End World Space Text");
 				}
 			}
 			m_ForwardRenderPass->End();
@@ -8136,14 +8559,12 @@ namespace flex
 
 			{
 				BeginGPUTimeStamp(commandBuffer, "Post Process");
-
 				BeginDebugMarkerRegion(commandBuffer, "Post process");
 
 				RenderFullscreenTri(commandBuffer, m_PostProcessRenderPass, m_PostProcessMatID,
-					m_PostProcessGraphicsPipelineLayout, m_PostProcessGraphicsPipeline, m_PostProcessDescriptorSet, true);
+					m_PostProcessGraphicsPipeline.layout, m_PostProcessGraphicsPipeline.pipeline, m_PostProcessDescriptorSet, true);
 
-				EndDebugMarkerRegion(commandBuffer); // Post process
-
+				EndDebugMarkerRegion(commandBuffer, "End Post process");
 				EndGPUTimeStamp(commandBuffer, "Post Process");
 			}
 
@@ -8154,9 +8575,9 @@ namespace flex
 				BeginDebugMarkerRegion(commandBuffer, "Gamma Correct");
 
 				RenderFullscreenTri(commandBuffer, m_GammaCorrectRenderPass, m_GammaCorrectMaterialID,
-					m_GammaCorrectGraphicsPipelineLayout, m_GammaCorrectGraphicsPipeline, m_GammaCorrectDescriptorSet, true);
+					m_GammaCorrectGraphicsPipeline.layout, m_GammaCorrectGraphicsPipeline.pipeline, m_GammaCorrectDescriptorSet, true);
 
-				EndDebugMarkerRegion(commandBuffer); // Gamma Correct
+				EndDebugMarkerRegion(commandBuffer, "End Gamma Correct");
 			}
 
 			if (m_bEnableTAA)
@@ -8169,12 +8590,12 @@ namespace flex
 				TAAMat.material.pushConstantBlock->SetData(m_TAA_ks, sizeof(real) * 2);
 
 				VkShaderStageFlags stages = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-				vkCmdPushConstants(commandBuffer, m_TAAResolveGraphicsPipelineLayout, stages, 0, TAAMat.material.pushConstantBlock->size, TAAMat.material.pushConstantBlock->data);
+				vkCmdPushConstants(commandBuffer, m_TAAResolveGraphicsPipeline.layout, stages, 0, TAAMat.material.pushConstantBlock->size, TAAMat.material.pushConstantBlock->data);
 
 				RenderFullscreenTri(commandBuffer, m_TAAResolveRenderPass, m_TAAResolveMaterialID,
-					m_TAAResolveGraphicsPipelineLayout, m_TAAResolveGraphicsPipeline, m_TAAResolveDescriptorSet, true);
+					m_TAAResolveGraphicsPipeline.layout, m_TAAResolveGraphicsPipeline.pipeline, m_TAAResolveDescriptorSet, true);
 
-				EndDebugMarkerRegion(commandBuffer); // TAA Resolve
+				EndDebugMarkerRegion(commandBuffer, "End TAA Resolve");
 
 				EndGPUTimeStamp(commandBuffer, "TAA");
 
@@ -8200,10 +8621,10 @@ namespace flex
 				m_UIRenderPass->m_FrameBuffer->frameBuffer = m_SwapChainFramebuffers[m_CurrentSwapChainBufferIndex]->frameBuffer;
 				m_UIRenderPass->Begin(commandBuffer, clearValues.data(), (u32)clearValues.size());
 
-				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_BlitGraphicsPipeline);
+				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_BlitGraphicsPipeline.pipeline);
 
 				// Fullscreen blit from offscreen frame buffer onto swap chain
-				RenderFullscreenTri(commandBuffer, m_FullscreenBlitMatID, m_BlitGraphicsPipelineLayout, m_FinalFullscreenBlitDescriptorSet);
+				RenderFullscreenTri(commandBuffer, m_FullscreenBlitMatID, m_BlitGraphicsPipeline.layout, m_FinalFullscreenBlitDescriptorSet);
 
 				{
 					BeginDebugMarkerRegion(commandBuffer, "Screen Space Sprites");
@@ -8214,16 +8635,16 @@ namespace flex
 					DrawSpriteBatch(m_QueuedSSArrSprites, commandBuffer);
 					m_QueuedSSArrSprites.clear();
 
-					EndDebugMarkerRegion(commandBuffer);
+					EndDebugMarkerRegion(commandBuffer, "End Screen Space Sprites");
 				}
 
 				{
 					BeginDebugMarkerRegion(commandBuffer, "Screen Space Text");
 
 					EnqueueScreenSpaceText();
-					DrawTextSS(commandBuffer);
+					DrawText(commandBuffer, true);
 
-					EndDebugMarkerRegion(commandBuffer);
+					EndDebugMarkerRegion(commandBuffer, "End Screen Space Text");
 				}
 
 				if (g_EngineInstance->IsRenderingImGui())
@@ -8232,13 +8653,13 @@ namespace flex
 
 					ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
 
-					EndDebugMarkerRegion(commandBuffer);
+					EndDebugMarkerRegion(commandBuffer, "End ImGui");
 				}
 
 				m_UIRenderPass->End();
 			}
 
-			EndDebugMarkerRegion(commandBuffer); // UI
+			EndDebugMarkerRegion(commandBuffer, "End UI");
 
 			EndGPUTimeStamp(commandBuffer, "Forward");
 
@@ -8260,7 +8681,7 @@ namespace flex
 			}
 			else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
 			{
-				throw std::runtime_error("failed to acquire swap chain image!");
+				PrintError("Failed to acquire swap chain image!");
 			}
 
 			// Offscreen rendering
@@ -8318,6 +8739,11 @@ namespace flex
 
 			// TODO: FIXME: BAD!! PLS REMOVE
 			VK_CHECK_RESULT(vkQueueWaitIdle(m_PresentQueue));
+
+			if (m_bDiagnosticCheckpointsEnabled)
+			{
+				m_CheckPointAllocator.ReleaseAll(); // TODO: Test?
+			}
 		}
 
 		void VulkanRenderer::BindDescriptorSet(const VulkanMaterial* material, u32 dynamicOffset, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet) const
@@ -8362,7 +8788,7 @@ namespace flex
 
 			CreateFrameBufferAttachments();
 			CreateRenderPasses();
-			CreateFrameBuffers();
+			RecreateShadowFrameBuffers();
 
 			for (u32 i = 0; i < m_Shaders.size(); ++i)
 			{
@@ -8383,6 +8809,8 @@ namespace flex
 
 			CreateSSAODescriptorSets();
 			CreateSSAOPipelines();
+
+			CreateWireframeDescriptorSets();
 
 			CreatePostProcessingResources();
 			CreateFullscreenBlitResources();
@@ -8427,96 +8855,138 @@ namespace flex
 			return m_FrameBufferAttachments.at(frameBufferAttachmentID);
 		}
 
-		void VulkanRenderer::SetObjectName(VulkanDevice* device, u64 object, VkDebugReportObjectTypeEXT type, const char* name)
+		void VulkanRenderer::GetCheckPointData()
 		{
-			if (name != nullptr && m_vkDebugMarkerSetObjectName != nullptr)
+			if (m_bDiagnosticCheckpointsEnabled)
 			{
-				VkDebugMarkerObjectNameInfoEXT info = {};
-				info.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT;
-				info.object = object;
+				u32 checkpointCount = 0;
+				vkGetQueueCheckpointDataNV(m_GraphicsQueue, &checkpointCount, nullptr);
+
+				std::vector<VkCheckpointDataNV> data(checkpointCount);
+				vkGetQueueCheckpointDataNV(m_GraphicsQueue, &checkpointCount, data.data());
+
+				for (u32 i = 0; i < checkpointCount; ++i)
+				{
+					DeviceDiagnosticCheckpoint* checkpoint = (DeviceDiagnosticCheckpoint*)(data[i].pCheckpointMarker);
+					if (checkpoint)
+					{
+						vkhpp::PipelineStageFlagBits flagBits = (vkhpp::PipelineStageFlagBits) data[i].stage;
+						std::string stageStr = vkhpp::to_string(flagBits);
+						PrintError("Checkpoint: %s - %s\n", stageStr.c_str(), (const char*)checkpoint->name);
+					}
+				}
+			}
+		}
+
+		void VulkanRenderer::SetObjectName(VulkanDevice* device, u64 object, VkObjectType type, const char* name)
+		{
+			if (name != nullptr && m_vkSetDebugUtilsObjectNameEXT != nullptr)
+			{
+				VkDebugUtilsObjectNameInfoEXT info = {};
+				info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+				info.objectHandle = object;
 				info.objectType = type;
 				info.pObjectName = name;
-				VK_CHECK_RESULT(m_vkDebugMarkerSetObjectName(device->m_LogicalDevice, &info));
+				VK_CHECK_RESULT(m_vkSetDebugUtilsObjectNameEXT(device->m_LogicalDevice, &info));
 			}
 		}
 
 		void VulkanRenderer::SetCommandBufferName(VulkanDevice* device, VkCommandBuffer commandBuffer, const char* name)
 		{
-			SetObjectName(device, (u64)commandBuffer, VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT, name);
+			SetObjectName(device, (u64)commandBuffer, VK_OBJECT_TYPE_COMMAND_BUFFER, name);
 		}
 
 		void VulkanRenderer::SetSwapchainName(VulkanDevice* device, VkSwapchainKHR swapchain, const char* name)
 		{
-			SetObjectName(device, (u64)swapchain, VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT, name);
+			SetObjectName(device, (u64)swapchain, VK_OBJECT_TYPE_SWAPCHAIN_KHR, name);
 		}
 
 		void VulkanRenderer::SetDescriptorSetName(VulkanDevice* device, VkDescriptorSet descSet, const char* name)
 		{
-			SetObjectName(device, (u64)descSet, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT, name);
+			SetObjectName(device, (u64)descSet, VK_OBJECT_TYPE_DESCRIPTOR_SET, name);
 		}
 
 		void VulkanRenderer::SetPipelineName(VulkanDevice* device, VkPipeline pipeline, const char* name)
 		{
-			SetObjectName(device, (u64)pipeline, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, name);
+			SetObjectName(device, (u64)pipeline, VK_OBJECT_TYPE_PIPELINE, name);
 		}
 
 		void VulkanRenderer::SetFramebufferName(VulkanDevice* device, VkFramebuffer framebuffer, const char* name)
 		{
-			SetObjectName(device, (u64)framebuffer, VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT, name);
+			SetObjectName(device, (u64)framebuffer, VK_OBJECT_TYPE_FRAMEBUFFER, name);
 		}
 
 		void VulkanRenderer::SetRenderPassName(VulkanDevice* device, VkRenderPass renderPass, const char* name)
 		{
-			SetObjectName(device, (u64)renderPass, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, name);
+			SetObjectName(device, (u64)renderPass, VK_OBJECT_TYPE_RENDER_PASS, name);
 		}
 
 		void VulkanRenderer::SetImageName(VulkanDevice* device, VkImage image, const char* name)
 		{
-			SetObjectName(device, (u64)image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, name);
+			SetObjectName(device, (u64)image, VK_OBJECT_TYPE_IMAGE, name);
 		}
 
 		void VulkanRenderer::SetImageViewName(VulkanDevice* device, VkImageView imageView, const char* name)
 		{
-			SetObjectName(device, (u64)imageView, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT, name);
+			SetObjectName(device, (u64)imageView, VK_OBJECT_TYPE_IMAGE_VIEW, name);
 		}
 
 		void VulkanRenderer::SetSamplerName(VulkanDevice* device, VkSampler sampler, const char* name)
 		{
-			SetObjectName(device, (u64)sampler, VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT, name);
+			SetObjectName(device, (u64)sampler, VK_OBJECT_TYPE_SAMPLER, name);
 		}
 
 		void VulkanRenderer::SetBufferName(VulkanDevice* device, VkBuffer buffer, const char* name)
 		{
-			SetObjectName(device, (u64)buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, name);
+			SetObjectName(device, (u64)buffer, VK_OBJECT_TYPE_BUFFER, name);
 		}
 
-		void VulkanRenderer::BeginDebugMarkerRegion(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color)
+		void VulkanRenderer::BeginDebugMarkerRegion(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color /* =  = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f) */)
 		{
 			((VulkanRenderer*)g_Renderer)->BeginDebugMarkerRegionInternal(cmdBuf, markerName, color);
 		}
 
-		void VulkanRenderer::EndDebugMarkerRegion(VkCommandBuffer cmdBuf)
+		void VulkanRenderer::EndDebugMarkerRegion(VkCommandBuffer cmdBuf, const char* markerName /* = nullptr */)
 		{
-			((VulkanRenderer*)g_Renderer)->EndDebugMarkerRegionInternal(cmdBuf);
+			((VulkanRenderer*)g_Renderer)->EndDebugMarkerRegionInternal(cmdBuf, markerName);
 		}
 
-		void VulkanRenderer::BeginDebugMarkerRegionInternal(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color)
+		void VulkanRenderer::BeginDebugMarkerRegionInternal(VkCommandBuffer cmdBuf, const char* markerName, const glm::vec4& color)
 		{
-			if (m_vkCmdDebugMarkerBegin)
+			if (m_vkCmdBeginDebugUtilsLabelEXT)
 			{
-				VkDebugMarkerMarkerInfoEXT markerInfo = {};
-				markerInfo.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
-				memcpy(markerInfo.color, &color[0], sizeof(float) * 4);
-				markerInfo.pMarkerName = markerName;
-				m_vkCmdDebugMarkerBegin(cmdBuf, &markerInfo);
+				VkDebugUtilsLabelEXT labelInfo = {};
+				labelInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
+				memcpy(labelInfo.color, &color[0], sizeof(float) * 4);
+				labelInfo.pLabelName = markerName;
+				m_vkCmdBeginDebugUtilsLabelEXT(cmdBuf, &labelInfo);
+			}
+
+			SetCheckPoint(cmdBuf, markerName);
+		}
+
+		void VulkanRenderer::EndDebugMarkerRegionInternal(VkCommandBuffer cmdBuf, const char* markerName /* = nullptr */)
+		{
+			if (m_vkCmdEndDebugUtilsLabelEXT)
+			{
+				m_vkCmdEndDebugUtilsLabelEXT(cmdBuf);
+			}
+
+			if (markerName != nullptr)
+			{
+				SetCheckPoint(cmdBuf, markerName);
 			}
 		}
 
-		void VulkanRenderer::EndDebugMarkerRegionInternal(VkCommandBuffer cmdBuf)
+		void VulkanRenderer::SetCheckPoint(VkCommandBuffer cmdBuf, const char* checkPointName)
 		{
-			if (m_vkCmdDebugMarkerEnd)
+			if (m_bDiagnosticCheckpointsEnabled)
 			{
-				m_vkCmdDebugMarkerEnd(cmdBuf);
+				DeviceDiagnosticCheckpoint* checkpointData = m_CheckPointAllocator.Alloc();
+				memset(checkpointData->name, 0, ARRAY_LENGTH(checkpointData->name));
+				strncpy(checkpointData->name, checkPointName, std::min(strlen(checkPointName), ARRAY_LENGTH(checkpointData->name) - 1));
+
+				vkCmdSetCheckpointNV(cmdBuf, checkpointData);
 			}
 		}
 
@@ -8629,7 +9099,7 @@ namespace flex
 		{
 			VulkanQueueFamilyIndices indices = FindQueueFamilies(m_Surface, device);
 
-			bool extensionsSupported = CheckDeviceExtensionSupport(device);
+			bool extensionsSupported = VulkanDevice::CheckDeviceSupportsExtensions(device, m_RequiredDeviceExtensions);
 
 			bool swapChainAdequate = false;
 			if (extensionsSupported)
@@ -8645,32 +9115,7 @@ namespace flex
 			return isSuitable;
 		}
 
-		bool VulkanRenderer::CheckDeviceExtensionSupport(VkPhysicalDevice device)
-		{
-			u32 extensionCount;
-			vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
-
-			std::vector<VkExtensionProperties> extensions(extensionCount);
-			vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, extensions.data());
-
-			m_SupportedDeviceExtenions.clear();
-			m_SupportedDeviceExtenions.reserve(extensionCount);
-			for (VkExtensionProperties& prop : extensions)
-			{
-				m_SupportedDeviceExtenions.push_back(prop.extensionName);
-			}
-
-			std::set<std::string> requiredExtensions(m_RequiredDeviceExtensions.begin(), m_RequiredDeviceExtensions.end());
-
-			for (const VkExtensionProperties& extension : extensions)
-			{
-				requiredExtensions.erase(extension.extensionName);
-			}
-
-			return requiredExtensions.empty();
-		}
-
-		std::vector<const char*> VulkanRenderer::GetRequiredExtensions() const
+		std::vector<const char*> VulkanRenderer::GetRequiredInstanceExtensions() const
 		{
 			std::vector<const char*> extensions;
 
@@ -8684,9 +9129,10 @@ namespace flex
 				extensions.push_back(glfwExtensions[i]);
 			}
 
-			if (m_bEnableValidationLayers)
+			// TODO: Mark up debug-only extensions to only be enabled in debug
+			for (u32 i = 0; i < m_RequiredInstanceExtensions.size(); ++i)
 			{
-				extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+				extensions.push_back(m_RequiredInstanceExtensions[i]);
 			}
 
 			return extensions;
@@ -8722,11 +9168,6 @@ namespace flex
 			return true;
 		}
 
-		bool VulkanRenderer::ExtensionSupported(const std::string& extStr) const
-		{
-			return (std::find(m_SupportedDeviceExtenions.begin(), m_SupportedDeviceExtenions.end(), extStr) != m_SupportedDeviceExtenions.end());
-		}
-
 		void VulkanRenderer::UpdateConstantUniformBuffers(UniformOverrides const* overridenUniforms)
 		{
 			BaseCamera* cam = g_CameraManager->CurrentCamera();
@@ -8737,8 +9178,10 @@ namespace flex
 			glm::mat4 viewProjection = cam->GetViewProjection();
 			glm::vec4 camPos = glm::vec4(cam->position, 0.0f);
 			real exposure = cam->exposure;
-			glm::vec2 m_NearFarPlanes(cam->zNear, cam->zFar);
+			glm::vec2 nearFarPlanes(cam->zNear, cam->zFar);
+			const SkyboxData& skyboxData = g_SceneManager->CurrentScene()->GetSkyboxData();
 
+			static OceanData defaultOceanData = { glm::vec4(1, 0, 0, 0), glm::vec4(0, 1, 0, 0), glm::vec4(0, 0, 1, 0), 1.0f, 3.0f, 1.0f, 1.0f, 1.0f, { } };
 			static DirLightData defaultDirLightData = { VEC3_RIGHT, 0, VEC3_ONE, 0.0f, 0, 0.0f, { 0.0f, 0.0f } };
 
 			DirLightData* dirLightData = &defaultDirLightData;
@@ -8793,6 +9236,8 @@ namespace flex
 				{ U_LAST_FRAME_VIEWPROJ, (void*)&m_LastFrameViewProj, US_LAST_FRAME_VIEWPROJ },
 				{ U_DIR_LIGHT, (void*)dirLightData, US_DIR_LIGHT },
 				{ U_POINT_LIGHTS, (void*)m_PointLights, US_POINT_LIGHTS },
+				{ U_OCEAN_DATA, (void*)&defaultOceanData, US_OCEAN_DATA },
+				{ U_SKYBOX_DATA, (void*)&skyboxData, US_SKYBOX_DATA},
 				{ U_TIME, (void*)&g_SecElapsedSinceProgramStart, US_TIME },
 				{ U_SHADOW_SAMPLING_DATA, (void*)&m_ShadowSamplingData, US_SHADOW_SAMPLING_DATA },
 				{ U_SSAO_GEN_DATA, (void*)&m_SSAOGenData, US_SSAO_GEN_DATA },
@@ -8800,8 +9245,17 @@ namespace flex
 				{ U_SSAO_SAMPLING_DATA, (void*)&m_SSAOSamplingData, US_SSAO_SAMPLING_DATA },
 				{ U_FXAA_DATA, (void*)&m_FXAAData, US_FXAA_DATA },
 				{ U_EXPOSURE, (void*)&exposure, US_EXPOSURE },
-				{ U_NEAR_FAR_PLANES, (void*)&m_NearFarPlanes, US_NEAR_FAR_PLANES },
+				{ U_NEAR_FAR_PLANES, (void*)&nearFarPlanes, US_NEAR_FAR_PLANES },
 			};
+
+			for (UniformInfo& info : uniformInfos)
+			{
+				auto iter = m_GlobalUserUniforms.find(info.uniform);
+				if (iter != m_GlobalUserUniforms.end())
+				{
+					info.dataStart = iter->second.first;
+				}
+			}
 
 			for (auto& materialPair : m_Materials)
 			{
@@ -8816,19 +9270,20 @@ namespace flex
 				}
 
 				u32 index = 0;
+				memset(constantBuffer->data.data, 0, constantBuffer->data.size);
 				for (UniformInfo& uniformInfo : uniformInfos)
 				{
 					if (constantUniforms.HasUniform(uniformInfo.uniform))
 					{
 						memcpy(constantBuffer->data.data + index, uniformInfo.dataStart, uniformInfo.copySize);
-						index += (uniformInfo.copySize / sizeof(real));
+						index += uniformInfo.copySize;
 					}
 				}
 
 				u32 size = constantBuffer->data.size;
 
 #if  DEBUG
-				u32 calculatedSize1 = index * 4;
+				u32 calculatedSize1 = index;
 				calculatedSize1 = GetAlignedUBOSize(calculatedSize1);
 				assert(calculatedSize1 == size);
 #endif
@@ -8884,7 +9339,6 @@ namespace flex
 			glm::mat4 postProcessMatrix = GetPostProcessingMatrix();
 			ParticleSimData particleSimData = {};
 
-			// TODO: Roll into array?
 			if (uniformOverrides)
 			{
 				if (uniformOverrides->overridenUniforms.HasUniform(U_VIEW_PROJECTION))
@@ -8956,7 +9410,6 @@ namespace flex
 			};
 			UniformInfo uniformInfos[] = {
 				{ U_MODEL, (void*)&model, US_MODEL },
-				// view, viewProjInv, viewProjection, projection, camPos, dirLight, pointLights should be updated in constant uniform buffer
 				{ U_COLOR_MULTIPLIER, (void*)&colorMultiplier, US_COLOR_MULTIPLIER },
 				{ U_CONST_ALBEDO, (void*)&material.material.constAlbedo, US_CONST_ALBEDO },
 				{ U_CONST_METALLIC, (void*)&material.material.constMetallic, US_CONST_METALLIC },
@@ -8983,17 +9436,15 @@ namespace flex
 			{
 				if (dynamicUniforms.HasUniform(uniformInfo.uniform))
 				{
-					// TODO: Don't store data twice? (in uniformBuffer.dynamicData.data & uniformBuffer.dynamicBuffer.m_Mapped)
 					memcpy(&dynamicBuffer->data.data[dynamicOffset + index], uniformInfo.dataStart, uniformInfo.copySize);
-					index += uniformInfo.copySize / 4;
+					index += uniformInfo.copySize;
 				}
 			}
 
-			// Aligned offset
 			u32 size = dynamicBuffer->data.size;
 
 #if  DEBUG
-			u32 calculatedSize1 = index * 4;
+			u32 calculatedSize1 = index;
 			calculatedSize1 = GetAlignedUBOSize(calculatedSize1);
 			assert(calculatedSize1 == size);
 #endif
@@ -9001,6 +9452,59 @@ namespace flex
 			u64 firstIndex = (u64)dynamicBuffer->buffer.m_Mapped;
 			u64 dest = firstIndex + dynamicOffset;
 			memcpy((void*)(dest), &dynamicBuffer->data.data[dynamicOffset], size);
+		}
+
+		void VulkanRenderer::CreateFontGraphicsPipelines()
+		{
+			if (m_FontSSGraphicsPipeline.pipeline == VK_NULL_HANDLE)
+			{
+				VulkanMaterial& fontMaterial = m_Materials[m_FontMatSSID];
+				VulkanShader& fontShader = m_Shaders[fontMaterial.material.shaderID];
+
+				GraphicsPipelineCreateInfo pipelineCreateInfo = {};
+				pipelineCreateInfo.DBG_Name = "Font SS pipeline";
+				pipelineCreateInfo.graphicsPipeline = m_FontSSGraphicsPipeline.pipeline.replace();
+				pipelineCreateInfo.pipelineLayout = m_FontSSGraphicsPipeline.layout.replace();
+				pipelineCreateInfo.shaderID = fontMaterial.material.shaderID;
+				pipelineCreateInfo.vertexAttributes = fontShader.shader->vertexAttributes;
+				pipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+				pipelineCreateInfo.cullMode = VK_CULL_MODE_NONE;
+				pipelineCreateInfo.descriptorSetLayoutIndex = fontMaterial.material.shaderID;
+				pipelineCreateInfo.bSetDynamicStates = true;
+				pipelineCreateInfo.bEnableColorBlending = true;
+				pipelineCreateInfo.subpass = fontShader.shader->subpass;
+				pipelineCreateInfo.depthCompareOp = VK_COMPARE_OP_ALWAYS;
+				pipelineCreateInfo.depthWriteEnable = VK_FALSE;
+				// NOTE: We ignore the font shader's render pass since we have one font shader, but
+				// two passes that fonts are rendered in (Forward pass for 3D, UI pass for 2D)
+				pipelineCreateInfo.renderPass = *m_UIRenderPass;
+				CreateGraphicsPipeline(&pipelineCreateInfo);
+			}
+
+			if (m_FontWSGraphicsPipeline.pipeline == VK_NULL_HANDLE)
+			{
+				VulkanMaterial& fontMaterial = m_Materials[m_FontMatWSID];
+				VulkanShader& fontShader = m_Shaders[fontMaterial.material.shaderID];
+
+				GraphicsPipelineCreateInfo pipelineCreateInfo = {};
+				pipelineCreateInfo.DBG_Name = "Font WS pipeline";
+				pipelineCreateInfo.graphicsPipeline = m_FontWSGraphicsPipeline.pipeline.replace();
+				pipelineCreateInfo.pipelineLayout = m_FontWSGraphicsPipeline.layout.replace();
+				pipelineCreateInfo.shaderID = fontMaterial.material.shaderID;
+				pipelineCreateInfo.vertexAttributes = fontShader.shader->vertexAttributes;
+				pipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+				pipelineCreateInfo.cullMode = VK_CULL_MODE_NONE;
+				pipelineCreateInfo.descriptorSetLayoutIndex = fontMaterial.material.shaderID;
+				pipelineCreateInfo.bSetDynamicStates = true;
+				pipelineCreateInfo.bEnableColorBlending = true;
+				pipelineCreateInfo.subpass = fontShader.shader->subpass;
+				pipelineCreateInfo.depthCompareOp = VK_COMPARE_OP_GREATER_OR_EQUAL;
+				pipelineCreateInfo.depthWriteEnable = VK_TRUE;
+				// NOTE: We ignore the font shader's render pass since we have one font shader, but
+				// two passes that fonts are rendered in (Forward pass for 3D, UI pass for 2D)
+				pipelineCreateInfo.renderPass = *m_ForwardRenderPass;
+				CreateGraphicsPipeline(&pipelineCreateInfo);
+			}
 		}
 
 		void VulkanRenderer::GenerateIrradianceMaps()
@@ -9024,22 +9528,47 @@ namespace flex
 			}
 
 			// Generate graphics pipelines with correct render pass set
-			for (u32 i = 0; i < (u32)m_RenderObjects.size(); ++i)
+			for (u32 renderID = 0; renderID < (u32)m_RenderObjects.size(); ++renderID)
 			{
-				CreateDescriptorSet(i);
-				CreateGraphicsPipeline(i, false);
+				VulkanRenderObject* renderObject = GetRenderObject(renderID);
+				if (renderObject != nullptr)
+				{
+					CreateDescriptorSet(renderID);
+					CreateGraphicsPipeline(renderID, false);
+				}
 			}
 		}
 
-		void VulkanRenderer::OnShaderReloadSuccess()
+		void VulkanRenderer::RecreateEverything()
 		{
-			AddEditorString("Async shader recompile completed successfully");
-
 			LoadShaders();
+
+			// Recreate specialization infos
+			{
+				ShaderID deferredCombineShaderID = InvalidShaderID;
+				GetShaderID("deferred_combine", deferredCombineShaderID);
+				VulkanShader& deferredCombineShader = m_Shaders[deferredCombineShaderID];
+				deferredCombineShader.fragSpecializationInfo = GenerateSpecializationInfo({
+						{ m_ShaderQualityLevelSpecializationID, sizeof(i32), (void*)&m_ShaderQualityLevel },
+						{ m_ShadowCascadeCountSpecializationID, sizeof(i32), (void*)&m_ShadowCascadeCount }
+					});
+
+				ShaderID taaShaderID = m_Materials[m_TAAResolveMaterialID].material.shaderID;
+				VulkanShader& taaShader = m_Shaders[taaShaderID];
+				taaShader.fragSpecializationInfo = GenerateSpecializationInfo({
+						{ m_TAASampleCountSpecializationID, sizeof(i32), (void*)&m_TAASampleCount }
+					});
+
+				ShaderID ssaoShaderID = m_Materials[m_SSAOMatID].material.shaderID;
+				VulkanShader& ssaoShader = m_Shaders[ssaoShaderID];
+				ssaoShader.fragSpecializationInfo = GenerateSpecializationInfo({
+						{m_SSAOKernelSizeSpecializationID, sizeof(i32), &m_SSAOKernelSize}
+					});
+			}
 
 			CreateFrameBufferAttachments();
 			CreateRenderPasses();
-			CreateFrameBuffers();
+			RecreateShadowFrameBuffers();
 
 			for (VulkanShader& shader : m_Shaders)
 			{
@@ -9067,6 +9596,9 @@ namespace flex
 
 			CreateSSAODescriptorSets();
 			CreateSSAOPipelines();
+
+			CreateWireframeDescriptorSets();
+			DestroyWireframePipelines();
 
 			InitializeAllParticleSystemBuffers();
 
@@ -9264,29 +9796,32 @@ namespace flex
 			return (timestamps[1] - timestamps[0]) / 1000000.0f;
 		}
 
-		VKAPI_ATTR VkBool32 VKAPI_CALL VulkanRenderer::DebugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType,
-			u64 obj, size_t location, i32 code, const char* layerPrefix, const char* msg, void* userData)
+		VKAPI_ATTR VkBool32 VKAPI_CALL VulkanRenderer::DebugCallback(
+			VkDebugUtilsMessageSeverityFlagBitsEXT           messageSeverity,
+			VkDebugUtilsMessageTypeFlagsEXT                  messageTypes,
+			const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+			void* pUserData)
 		{
-			FLEX_UNUSED(objType);
-			FLEX_UNUSED(obj);
-			FLEX_UNUSED(location);
-			FLEX_UNUSED(code);
-			FLEX_UNUSED(layerPrefix);
-			FLEX_UNUSED(userData);
+			FLEX_UNUSED(messageTypes);
+			FLEX_UNUSED(pCallbackData);
+			FLEX_UNUSED(pUserData);
 
-			std::string msgStr = Replace(msg, " | ", "\n\t");
+			std::string msgStr = Replace(pCallbackData->pMessage, " | ", "\n\t");
 
-			if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
+			if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
 			{
 				PrintError("%s\n", msgStr.c_str());
 			}
-			else if (flags & VK_DEBUG_REPORT_WARNING_BIT_EXT)
+			else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
 			{
 				PrintWarn("%s\n", msgStr.c_str());
 			}
 			else
 			{
-				Print("%s\n", msgStr.c_str());
+				if (!(messageTypes & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT))
+				{
+					Print("%s\n", msgStr.c_str());
+				}
 			}
 
 			return VK_FALSE;

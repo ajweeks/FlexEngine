@@ -175,6 +175,25 @@ namespace flex
 		MaterialID matID,
 		RenderObjectCreateInfo* optionalCreateInfo)
 	{
+		return LoadFromMemoryInternal(vertexBufferCreateInfo, indices, matID, false, 0, optionalCreateInfo);
+	}
+
+	bool Mesh::LoadFromMemoryDynamic(const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
+		const std::vector<u32>& indices,
+		MaterialID matID,
+		u32 initialMaxVertexCount,
+		RenderObjectCreateInfo* optionalCreateInfo)
+	{
+		return LoadFromMemoryInternal(vertexBufferCreateInfo, indices, matID, true, initialMaxVertexCount, optionalCreateInfo);
+	}
+
+	bool Mesh::LoadFromMemoryInternal(const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
+		const std::vector<u32>& indices,
+		MaterialID matID,
+		bool bDynamic,
+		u32 initialMaxVertexCount,
+		RenderObjectCreateInfo* optionalCreateInfo)
+	{
 		if (m_bInitialized)
 		{
 			PrintError("Attempted to load mesh after already initialized! If reloading, first call Destroy\n");
@@ -192,7 +211,17 @@ namespace flex
 			return false;
 		}
 
-		MeshComponent* meshComponent = MeshComponent::LoadFromMemory(this, vertexBufferCreateInfo, indices, matID, optionalCreateInfo);
+		MeshComponent* meshComponent = nullptr;
+
+		if (bDynamic)
+		{
+			meshComponent = MeshComponent::LoadFromMemoryDynamic(this, vertexBufferCreateInfo, indices, matID, initialMaxVertexCount, optionalCreateInfo);
+		}
+		else
+		{
+			meshComponent = MeshComponent::LoadFromMemory(this, vertexBufferCreateInfo, indices, matID, optionalCreateInfo);
+		}
+
 		if (meshComponent)
 		{
 			m_Meshes.push_back(meshComponent);
@@ -365,7 +394,7 @@ namespace flex
 		std::string meshFilePath = object.GetString("file");
 		if (!meshFilePath.empty())
 		{
-			meshFilePath = RESOURCE_LOCATION "meshes/" + meshFilePath;
+			meshFilePath = MESH_DIRECTORY + meshFilePath;
 		}
 		std::string meshPrefabName = object.GetString("prefab");
 		bool bSwapNormalYZ = object.GetBool("swapNormalYZ");
@@ -411,13 +440,27 @@ namespace flex
 		return newMesh;
 	}
 
+	Mesh* Mesh::ImportFromFile(const std::string& meshFilePath, GameObject* owner)
+	{
+		Mesh* newMesh = new Mesh(owner);
+
+		std::vector<MaterialID> materialIDs = { g_Renderer->GetPlaceholderMaterialID() };
+
+		MeshImportSettings importSettings = {};
+
+		owner->SetMesh(newMesh);
+		newMesh->LoadFromFile(meshFilePath, materialIDs, &importSettings);
+
+		return newMesh;
+	}
+
 	JSONObject Mesh::Serialize() const
 	{
 		JSONObject meshObject = {};
 
 		if (m_Type == Mesh::Type::FILE)
 		{
-			std::string prefixStr = RESOURCE_LOCATION "meshes/";
+			std::string prefixStr = MESH_DIRECTORY;
 			std::string meshFilepath = GetRelativeFilePath().substr(prefixStr.length());
 			meshObject.fields.emplace_back("file", JSONValue(meshFilepath));
 		}

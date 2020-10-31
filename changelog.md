@@ -2,6 +2,28 @@
 ### Flex Engine change log (reverse chronological order)
 
 **2020**
+_July_
+- Add mesh drag-drop import support (glb/gltf only)
+- Add support for having multiple specialization constants per stage
+- Optimize text rendering by keeping text vertex buffer resident
+- Move most generated files to FlexEngine/saved/
+
+_June_
+- Improve shader/material UI windows
+- Add mipmapping support
+- Fix font SDF rendering
+
+_May_
+- Add wireframe shader
+- Add tesselation & sampling LOD levels to water mesh
+- Make water generation infinite & vastly more optimial (utilize SIMD & multithreading)
+
+_April_
+- Fix water generation & center around camera
+- Add directory watch to auto-recompile shaders on file modification for lightning-fast iteration times
+- Add more granular shader compilation using shaderc library
+- Add basic terrain generation/streaming
+
 _March_
 - Finish implementing edior gizmos (translate, rotate, scale)
 - Finish linux port

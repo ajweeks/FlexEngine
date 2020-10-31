@@ -53,6 +53,7 @@ namespace flex
 		glm::vec2 shadowOffset;
 		real shadowOpacity = 0.5f;
 		real soften = 0.035f;
+		bool bDirty = false;
 		class BitmapFont* bitmapFont = nullptr;
 	};
 
@@ -83,6 +84,7 @@ namespace flex
 		void ClearTexture();
 
 		glm::vec2u GetTextureSize() const;
+		u32 GetTextureChannelCount() const;
 
 		// TODO: Investigate crash when this value is higher (256)
 		static const i32 CHAR_COUNT = 200;

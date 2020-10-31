@@ -76,6 +76,11 @@ namespace flex
 		return glm::vec2u(m_Texture->width, m_Texture->height);
 	}
 
+	u32 BitmapFont::GetTextureChannelCount() const
+	{
+		return m_Texture->channelCount;
+	}
+
 #if COMPILE_OPEN_GL
 	gl::GLTexture* BitmapFont::SetTexture(gl::GLTexture* newTex)
 	{

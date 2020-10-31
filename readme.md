@@ -3,7 +3,7 @@
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.md)
 <!-- [![Build status](https://ci.appveyor.com/api/projects/status/vae2k07y8a802odn?svg=true)](https://ci.appveyor.com/project/ajweeks/flexengine) -->
 
-Flex Engine is a personal game engine I began work on in February 2017. I use it as a playground for learning about real-time technniques. I try to keep [master](https://github.com/ajweeks/FlexEngine/tree/master) reasonably stable, and therefore update it infrequently. See [development](https://github.com/ajweeks/FlexEngine/tree/development) for the latest changes.
+Flex Engine is a personal game engine I began work on in February 2017. I use it as a playground for learning about real-time techniques. I try to keep [master](https://github.com/ajweeks/FlexEngine/tree/master) reasonably stable, and therefore update it infrequently. See [development](https://github.com/ajweeks/FlexEngine/tree/development) for the latest changes.
 
 #### Notable Features
 - Vulkan and OpenGL backends
@@ -69,7 +69,7 @@ Flex Engine uses the following open-source libraries:
  - [volk](https://github.com/zeux/volk) - Vulkan meta-loader
 
 ## License
-Flex engine is released under The MIT License. See [license.md](license.md) for details.
+Flex engine is released under The MIT License. See [license.md](LICENSE.md) for details.
 
 ## Acknowledgements
 A huge thank you must be given to the following individuals and organizations for their incredibly useful resources:

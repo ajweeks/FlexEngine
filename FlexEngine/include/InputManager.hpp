@@ -139,8 +139,6 @@ namespace flex
 
 		bool m_bMouseWrapped = false;
 
-		static const std::string s_InputBindingFilePath;
-
 		GamepadState m_pGamepadStates[2];
 		GamepadState m_GamepadStates[2];
 

@@ -12,7 +12,6 @@
 namespace flex
 {
 	const real InputManager::MAX_JOYSTICK_ROTATION_SPEED = 15.0f;
-	const std::string InputManager::s_InputBindingFilePath = ROOT_LOCATION "config/input-bindings.json";
 
 	void InputManager::Initialize()
 	{
@@ -1380,9 +1379,9 @@ namespace flex
 	bool InputManager::LoadInputBindingsFromFile()
 	{
 		JSONObject rootObject;
-		if (!JSONParser::ParseFromFile(s_InputBindingFilePath, rootObject))
+		if (!JSONParser::ParseFromFile(INPUT_BINDINGS_LOCATION, rootObject))
 		{
-			PrintError("Failed to load input bindings from file %s\n\terror: %s\n", s_InputBindingFilePath.c_str(), JSONParser::GetErrorString());
+			PrintError("Failed to load input bindings from file %s\n\terror: %s\n", INPUT_BINDINGS_LOCATION, JSONParser::GetErrorString());
 			return false;
 		}
 
@@ -1462,10 +1461,10 @@ namespace flex
 			rootObject.fields.emplace_back(ActionStrings[i], JSONValue(bindingObj));
 		}
 
-		std::string inputBindingsFileName = StripLeadingDirectories(s_InputBindingFilePath);
+		std::string inputBindingsFileName = StripLeadingDirectories(INPUT_BINDINGS_LOCATION);
 
 		std::string fileContents = rootObject.Print(0);
-		if (WriteFile(s_InputBindingFilePath, fileContents, false))
+		if (WriteFile(INPUT_BINDINGS_LOCATION, fileContents, false))
 		{
 			Print("Saved input bindings file to %s\n", inputBindingsFileName.c_str());
 		}

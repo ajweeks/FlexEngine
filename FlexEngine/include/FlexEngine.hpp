@@ -37,6 +37,10 @@ namespace flex
 
 		static std::string EngineVersionString();
 
+		std::string GetShaderEditorPath();
+
+		void CreateCameraInstances();
+
 		static void GenerateRayAtMousePos(btVector3& outRayStart, btVector3& outRayEnd);
 
 		// Returns the intersection point of the given ray & plane, projected on to axis
@@ -95,6 +99,8 @@ namespace flex
 		void SetupRenderDocAPI();
 		void CheckForRenderDocUIRunning();
 		bool GetLatestRenderDocCaptureFilePath(std::string& outFilePath);
+		bool ReadRenderDocSettingsFileFromDisk(std::string& dllDirPathOut);
+		void SaveRenderDocSettingsFileToDisk(const std::string& dllDir);
 #endif
 
 		void Destroy();
@@ -154,6 +160,8 @@ namespace flex
 		std::string m_RenderDocSettingsFileName;
 		std::string m_RenderDocSettingsAbsFilePath;
 
+		std::string m_ShaderEditorPath;
+
 		// Must be stored as member because ImGui will not make a copy
 		std::string m_ImGuiIniFilepathStr;
 		std::string m_ImGuiLogFilepathStr;
@@ -162,10 +170,14 @@ namespace flex
 		real m_SecondsSinceLastCommonSettingsFileSave = 0.0f;
 
 		bool m_bMainWindowShowing = true;
-		bool m_bAssetBrowserShowing = false;
+		bool m_bMaterialWindowShowing = false;
+		bool m_bShaderWindowShowing = false;
+		bool m_bTextureWindowShowing = false;
+		bool m_bMeshWindowShowing = false;
 		bool m_bDemoWindowShowing = false;
 		bool m_bInputMapperShowing = false;
 		bool m_bShowMemoryStatsWindow = false;
+		bool m_bShowCPUStatsWindow = false;
 
 		bool m_bWriteProfilerResultsToFile = false;
 
@@ -184,8 +196,11 @@ namespace flex
 		bool m_bShowingConsole = false;
 		static const u32 MAX_CHARS_CMD_LINE_STR = 256;
 		char m_CmdLineStrBuf[MAX_CHARS_CMD_LINE_STR];
+		i32 m_SelectedCmdLineAutoCompleteIndex = -1;
+		std::vector<std::string> m_CmdAutoCompletions;
 		i32 m_PreviousCmdLineIndex = -1;
 		std::vector<std::string> m_PreviousCmdLineEntries;
+		bool m_bInvalidCmdLine = false;
 		bool m_bShouldFocusKeyboardOnConsole = false;
 
 		bool m_bInstallShaderDirectoryWatch = true;

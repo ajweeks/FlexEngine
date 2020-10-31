@@ -1,9 +1,15 @@
 #pragma once
 
-#include "Graphics/RendererTypes.hpp"
+#include "Types.hpp"
+
+typedef int ImGuiInputTextFlags;
+typedef int ImGuiColorEditFlags;
+struct GLFWimage;
 
 namespace flex
 {
+	class Transform;
+
 	// TODO: Many of the functions in this file would benefit from unit tests
 
 	static const i32 DEFAULT_FLOAT_PRECISION = 2;
@@ -22,18 +28,18 @@ namespace flex
 	bool OpenJSONFileDialog(const std::string& windowTitle, const std::string& absoluteDirectory, std::string& outSelectedAbsFilePath);
 
 	// Removes all content before final '/' or '\'
-	std::string StripLeadingDirectories(std::string filePath);
+	FLEX_NO_DISCARD std::string StripLeadingDirectories(const std::string& filePath);
 
 	// Removes all content after final '/' or '\'
 	// NOTE: If path describes a directory and doesn't end in a slash, final directory will be removed
-	std::string ExtractDirectoryString(std::string filePath);
+	FLEX_NO_DISCARD std::string ExtractDirectoryString(const std::string& filePath);
 
 	// Removes all chars after first '.' occurrence
-	std::string StripFileType(std::string filePath);
+	FLEX_NO_DISCARD std::string StripFileType(const std::string& filePath);
 
 	// Removes all chars before first '.' occurrence
 	// TODO: EZ: Test
-	std::string ExtractFileType(const std::string& filePath);
+	FLEX_NO_DISCARD std::string ExtractFileType(const std::string& filePath);
 
 	/*
 	* Reads in a .wav file and fills in given values according to file contents
@@ -41,9 +47,17 @@ namespace flex
 	*/
 	bool ParseWAVFile(const std::string& filePath, i32* format, u8** data, i32* size, i32* freq);
 
-	std::string TrimStartAndEnd(const std::string& str);
+	// Strips leading and trailing whitespace
+	FLEX_NO_DISCARD std::string Trim(const std::string& str);
 
-	std::vector<std::string> Split(const std::string& str, char delim);
+	FLEX_NO_DISCARD std::string TrimLeadingWhitespace(const std::string& str);
+
+	FLEX_NO_DISCARD std::string TrimTrailingWhitespace(const std::string& str);
+
+	FLEX_NO_DISCARD std::vector<std::string> Split(const std::string& str, char delim);
+	// Includes blank entries for subsequent delims
+	// (e.g. "\n\n\n" will return a vector of length 3, while Strip will return an empty vector)
+	FLEX_NO_DISCARD std::vector<std::string> SplitNoStrip(const std::string& str, char delim);
 
 	/*
 	 * Returns the index of the first character which isn't a number
@@ -97,6 +111,8 @@ namespace flex
 
 	glm::quat ParseQuat(const std::string& quatStr);
 
+	u32 CountSetBits(u32 bits);
+
 	bool IsNanOrInf(real val);
 	bool IsNanOrInf(const glm::vec2& vec);
 	bool IsNanOrInf(const glm::vec3& vec);
@@ -107,7 +123,7 @@ namespace flex
 	u64 NextPowerOfTwo(u64 x);
 	u32 NextPowerOfTwo(u32 x);
 
-	std::string GetIncrementedPostFixedStr(const std::string& namePrefix, const std::string& defaultName);
+	FLEX_NO_DISCARD std::string GetIncrementedPostFixedStr(const std::string& namePrefix, const std::string& defaultName);
 
 	void PadEnd(std::string& str, i32 minLen, char pad);
 	void PadStart(std::string& str, i32 minLen, char pad);
@@ -146,10 +162,7 @@ namespace flex
 	glm::vec3 PasteColor3FromClipboard();
 	glm::vec4 PasteColor4FromClipboard();
 
-	CullFace StringToCullFace(const std::string& str);
-	std::string CullFaceToString(CullFace cullFace);
-
-	char* ToLower(char* str);
+	FLEX_NO_DISCARD char* ToLower(char* str);
 	std::string& ToLower(std::string& str);
 	std::string& ToUpper(std::string& str);
 
@@ -163,16 +176,19 @@ namespace flex
 	const char* GameObjectTypeToString(GameObjectType type);
 	GameObjectType StringToGameObjectType(const char* gameObjectTypeStr);
 
-	std::string ReplaceBackSlashesWithForward(std::string str);
-	std::string RelativePathToAbsolute(const std::string& relativePath);
+	FLEX_NO_DISCARD std::string ReplaceBackSlashesWithForward(std::string str);
+	FLEX_NO_DISCARD std::string RelativePathToAbsolute(const std::string& relativePath);
 
-	std::string Replace(const std::string& str, const std::string& pattern, const std::string& replacement);
+	FLEX_NO_DISCARD std::string Replace(const std::string& str, const std::string& pattern, const std::string& replacement);
+	FLEX_NO_DISCARD std::string Replace(const std::string& str, char pattern, char replacement);
 
 	// Returns random value in range [min, max)
 	i32 RandomInt(i32 min, i32 max);
 
 	// Returns random value in range [min, max)
 	real RandomFloat(real min, real max);
+
+	void ByteCountToString(char buf[], u32 bufSize, u32 bytes);
 
 	real MinComponent(const glm::vec2& vec);
 	real MinComponent(const glm::vec3& vec);
@@ -182,15 +198,15 @@ namespace flex
 	real MaxComponent(const glm::vec3& vec);
 	real MaxComponent(const glm::vec4& vec);
 
-	inline real Saturate(real val)
+	FLEX_NO_DISCARD inline real Saturate(real val)
 	{
 		return glm::clamp(val, 0.0f, 1.0f);
 	}
 
 	template<typename T>
-	T Saturate(T val)
+	FLEX_NO_DISCARD T Saturate(T val)
 	{
-		return glm::saturate(val);
+		return glm::clamp(val, T(0), T(1));
 	}
 
 	glm::vec2 Floor(const glm::vec2& p);
@@ -201,7 +217,17 @@ namespace flex
 
 	u32 GenerateUID();
 
+	template<typename T>
+	bool Contains(const std::vector<T>& vec, T val)
+	{
+		return std::find(vec.begin(), vec.end(), val) != vec.end();
+	}
+
+	bool Contains(const std::vector<const char*>& vec, const char* val);
+
 	bool Contains(const char* arr[], u32 arrLen, const char* val);
+
+	bool Contains(const std::string& str, const std::string& pattern);
 
 	template<class T>
 	const T& PickRandomFrom(const std::vector<T>& vec)
@@ -209,7 +235,7 @@ namespace flex
 		return vec[RandomInt(0, (i32)vec.size())];
 	}
 
-	i32 RoundUp(i32 val, i32 alignment);
+	FLEX_NO_DISCARD i32 RoundUp(i32 val, i32 alignment);
 
 	// Returns true if value changed
 	bool DoImGuiRotationDragFloat3(const char* label, glm::vec3& rotation, glm::vec3& outCleanedRotation);
@@ -286,5 +312,9 @@ namespace flex
 	{
 		bool InputUInt(const char* message, u32* v, u32 step = 1, u32 step_fast = 100, ImGuiInputTextFlags flags = 0);
 		bool SliderUInt(const char* label, u32* v, u32 v_min, u32 v_max, const char* format = NULL);
+		bool DragUInt(const char* label, u32* v, u32 v_min = 0, u32 v_max = 0, const char* format = "%d");
+		bool DragInt16(const char* label, i16* v, i16 v_min = 0, i16 v_max = 0, const char* format = "%d");
+		bool ColorEdit3Gamma(const char* label, real* v, ImGuiColorEditFlags flags = 0);
+		bool ColorEdit4Gamma(const char* label, real* v, ImGuiColorEditFlags flags = 0);
 	} // namespace ImGuiExt
 } // namespace flex

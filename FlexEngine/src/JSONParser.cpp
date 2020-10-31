@@ -186,7 +186,12 @@ namespace flex
 					return false;
 				}
 
-				size_t strQuoteEnd = fileContents.find('\"', strQuoteStart + 1);
+				size_t strQuoteEnd = strQuoteStart;
+				do
+				{
+					strQuoteEnd = fileContents.find('\"', strQuoteEnd + 1);
+				} while (strQuoteEnd != std::string::npos && fileContents[strQuoteEnd - 1] == '\\');
+
 				if (strQuoteEnd == std::string::npos)
 				{
 					s_ErrorStr = "Couldn't find end quote after offset " + std::to_string(*offset);
@@ -194,6 +199,7 @@ namespace flex
 				}
 
 				std::string stringValue = fileContents.substr(strQuoteStart + 1, strQuoteEnd - (strQuoteStart + 1));
+				stringValue = Replace(stringValue, "\\\"", "\"");
 				field.value = JSONValue(stringValue);
 
 				*offset = (i32)strQuoteEnd + 1;

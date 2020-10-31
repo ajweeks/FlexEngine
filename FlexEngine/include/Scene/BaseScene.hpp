@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Graphics/RendererTypes.hpp"
 #include "Managers/CartManager.hpp"
 #include "Track/TrackManager.hpp"
 
@@ -28,6 +29,9 @@ namespace flex
 		virtual void Destroy();
 		virtual void Update();
 		virtual void LateUpdate();
+
+		void DrawImGuiObjects();
+		void DoSceneContextMenu();
 
 		void BindOnGameObjectDestroyedCallback(ICallbackGameObject* callback);
 		void UnbindOnGameObjectDestroyedCallback(ICallbackGameObject* callback);
@@ -125,6 +129,8 @@ namespace flex
 
 		bool HasPlayers() const;
 
+		const SkyboxData& GetSkyboxData() const;
+
 	protected:
 		friend GameObject;
 		friend CartManager;
@@ -168,6 +174,8 @@ namespace flex
 
 		ReflectionProbe* m_ReflectionProbe = nullptr;
 
+		SkyboxData m_SkyboxData;
+
 		Player* m_Player0 = nullptr;
 		Player* m_Player1 = nullptr;
 
@@ -188,10 +196,6 @@ namespace flex
 
 		BaseScene(const BaseScene&) = delete;
 		BaseScene& operator=(const BaseScene&) = delete;
-
-		static const char* MATERIALS_FILE_PATH;
-		static const char* MESHES_FILE_PATH;
-		static const char* MESHES_DIRECTORY;
 
 	};
 } // namespace flex

@@ -42,6 +42,8 @@ namespace flex
 		glm::vec3 m_MoveVel;
 		glm::vec2 m_TurnVel; // Contains amount pitch and yaw changed last frame
 
+		glm::vec3 m_OrbitCenter;
+
 		Histogram m_DragHistory;
 	};
 } // namespace flex

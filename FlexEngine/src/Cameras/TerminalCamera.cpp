@@ -20,6 +20,7 @@ namespace flex
 		m_StartingPos(VEC3_ZERO)
 	{
 		bDEBUGCyclable = false;
+		bIsFirstPerson = true;
 	}
 
 	void TerminalCamera::Initialize()

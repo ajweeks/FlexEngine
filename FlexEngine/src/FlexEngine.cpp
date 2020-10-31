@@ -69,11 +69,10 @@ namespace flex
 
 	const u32 FlexEngine::EngineVersionMajor = 0;
 	const u32 FlexEngine::EngineVersionMinor = 8;
-	const u32 FlexEngine::EngineVersionPatch = 4;
+	const u32 FlexEngine::EngineVersionPatch = 5;
 
 	std::string FlexEngine::s_CurrentWorkingDirectory;
 	std::vector<AudioSourceID> FlexEngine::s_AudioSourceIDs;
-
 
 	// Globals declared in stdafx.hpp
 	class Window* g_Window = nullptr;
@@ -106,9 +105,10 @@ namespace flex
 		memset(m_CmdLineStrBuf, 0, MAX_CHARS_CMD_LINE_STR);
 
 		{
-			std::string configDirAbs = RelativePathToAbsolute(ROOT_LOCATION "config/");
-			m_CommonSettingsFileName = "common.json";
-			m_CommonSettingsAbsFilePath = configDirAbs + m_CommonSettingsFileName;
+			std::string configPathAbs = RelativePathToAbsolute(COMMON_CONFIG_LOCATION);
+			m_CommonSettingsAbsFilePath = configPathAbs;
+			m_CommonSettingsFileName = StripLeadingDirectories(configPathAbs);
+			std::string configDirAbs = ExtractDirectoryString(configPathAbs);
 			Platform::CreateDirectoryRecursive(configDirAbs);
 		}
 
@@ -120,9 +120,14 @@ namespace flex
 		}
 
 		{
-			std::string renderDocSettingsDirAbs = RelativePathToAbsolute(ROOT_LOCATION "config/");
+			std::string renderDocSettingsDirAbs = RelativePathToAbsolute(CONFIG_LOCATION);
 			m_RenderDocSettingsFileName = "renderdoc.json";
 			m_RenderDocSettingsAbsFilePath = renderDocSettingsDirAbs + m_RenderDocSettingsFileName;
+		}
+
+		{
+			// Default, can be overriden in common.json
+			m_ShaderEditorPath = "C:/Program Files/Sublime Text 3/sublime_text.exe";
 		}
 
 #if COMPILE_OPEN_GL
@@ -164,18 +169,18 @@ namespace flex
 		m_CompilerVersion = "Unknown";
 #endif
 
-#if DEBUG
+#ifdef DEBUG
 		const char* configStr = "Debug";
-#elif DEVELOPMENT
+#elif defined(DEVELOPMENT)
 		const char* configStr = "Development";
-#elif SHIPPING
-#if SYMBOLS
+#elif defined(SHIPPING)
+#if defined(SYMBOLS)
 		const char* configStr = "Shipping (with symbols)";
 #else
 		const char* configStr = "Shipping";
 #endif
 #else
-		assert(false);
+		static_assert(false);
 #endif
 
 #if defined(FLEX_64)
@@ -211,6 +216,8 @@ namespace flex
 
 		m_FrameTimes.resize(256);
 
+		Platform::Init();
+
 		CreateWindowAndRenderer();
 
 		g_Editor = new Editor();
@@ -218,21 +225,6 @@ namespace flex
 		g_InputManager = new InputManager();
 
 		g_CameraManager = new CameraManager();
-
-		DebugCamera* debugCamera = new DebugCamera();
-		debugCamera->position = glm::vec3(20.0f, 8.0f, -16.0f);
-		debugCamera->yaw = glm::radians(130.0f);
-		debugCamera->pitch = glm::radians(-10.0f);
-		g_CameraManager->AddCamera(debugCamera, false);
-
-		OverheadCamera* overheadCamera = new OverheadCamera();
-		g_CameraManager->AddCamera(overheadCamera, false);
-
-		FirstPersonCamera* fpCamera = new FirstPersonCamera();
-		g_CameraManager->AddCamera(fpCamera, true);
-
-		TerminalCamera* terminalCamera = new TerminalCamera();
-		g_CameraManager->AddCamera(terminalCamera, false);
 
 		InitializeWindowAndRenderer();
 
@@ -282,9 +274,9 @@ namespace flex
 
 		if (s_AudioSourceIDs.empty())
 		{
-			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(RESOURCE_LOCATION "audio/dud_dud_dud_dud.wav"));
-			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(RESOURCE_LOCATION "audio/drmapan.wav"));
-			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(RESOURCE_LOCATION "audio/blip.wav"));
+			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(SFX_LOCATION "dud_dud_dud_dud.wav"));
+			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(SFX_LOCATION "drmapan.wav"));
+			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(SFX_LOCATION "blip.wav"));
 			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 100.727f));
 			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 200.068f));
 			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 300.811f));
@@ -313,9 +305,9 @@ namespace flex
 		}
 
 		ImGuiIO& io = ImGui::GetIO();
-		m_ImGuiIniFilepathStr = ROOT_LOCATION "config/imgui.ini";
+		m_ImGuiIniFilepathStr = IMGUI_INI_LOCATION;
 		io.IniFilename = m_ImGuiIniFilepathStr.c_str();
-		m_ImGuiLogFilepathStr = ROOT_LOCATION "config/imgui.log";
+		m_ImGuiLogFilepathStr = IMGUI_LOG_LOCATION;
 		io.LogFilename = m_ImGuiLogFilepathStr.c_str();
 		io.DisplaySize = (ImVec2)g_Window->GetFrameBufferSize();
 		io.IniSavingRate = 10.0f;
@@ -619,6 +611,7 @@ namespace flex
 					}
 				}
 
+#if 0
 				btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
 				for (i32 i = 0; i < (i32)m_TestSprings.size(); ++i)
 				{
@@ -626,8 +619,11 @@ namespace flex
 					real t = (real)i / (real)m_TestSprings.size();
 					debugDrawer->drawSphere(ToBtVec3(m_TestSprings[i].pos), (1.0f - t + 0.1f) * 0.5f, btVector3(0.5f - 0.3f * t, 0.8f - 0.4f * t, 0.6f - 0.2f * t));
 				}
+#endif
 
 				g_Window->Update();
+
+				g_Editor->LateUpdate();
 
 				if (bSimulateFrame)
 				{
@@ -712,7 +708,7 @@ namespace flex
 		//io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 		io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange; // glfwSetCursor overruns buffer somewhere (currently Window::m_FrameBufferSize.y...)
 
-		std::string fontFilePath(RESOURCE_LOCATION u8"fonts/lucon.ttf");
+		std::string fontFilePath(FONT_LOCATION "lucon.ttf");
 		io.Fonts->AddFontFromFileTTF(fontFilePath.c_str(), 13);
 
 		io.FontGlobalScale = g_Monitor->contentScaleX;
@@ -856,6 +852,16 @@ namespace flex
 				ImGui::EndMenu();
 			}
 
+			const u32 buffSize = 256;
+			const char* shaderEditorPopup = "Shader editor path##popup";
+			static char shaderEditorBuf[buffSize];
+			bool bOpenShaderEditorPathPopup = false;
+
+#if COMPILE_RENDERDOC_API
+			const char* renderDocDLLEditorPopup = "Renderdoc DLL path##popup";
+			static char renderDocDLLBuf[buffSize];
+			bool bOpenRenderDocDLLPathPopup = false;
+#endif
 			if (ImGui::BeginMenu("Edit"))
 			{
 				BaseScene* scene = g_SceneManager->CurrentScene();
@@ -888,22 +894,155 @@ namespace flex
 					ImGui::EndMenu();
 				}
 
+				if (ImGui::MenuItem("Shader editor path"))
+				{
+					bOpenShaderEditorPathPopup = true;
+					memset(shaderEditorBuf, 0, buffSize);
+					strcpy(shaderEditorBuf, m_ShaderEditorPath.c_str());
+				}
+
+#if COMPILE_RENDERDOC_API
+				if (ImGui::MenuItem("Renderdoc DLL path"))
+				{
+					bOpenRenderDocDLLPathPopup = true;
+					memset(renderDocDLLBuf, 0, buffSize);
+					std::string renderDocDLLPath;
+					ReadRenderDocSettingsFileFromDisk(renderDocDLLPath);
+					strcpy(renderDocDLLBuf, renderDocDLLPath.c_str());
+				}
+#endif
+
 				ImGui::EndMenu();
 			}
+
+			if (bOpenShaderEditorPathPopup)
+			{
+				ImGui::OpenPopup(shaderEditorPopup);
+			}
+
+			ImGui::SetNextWindowSize(ImVec2(500.0f, 80.0f), ImGuiCond_Appearing);
+			if (ImGui::BeginPopupModal(shaderEditorPopup, NULL))
+			{
+				bool bUpdate = false;
+				if (ImGui::InputText("", shaderEditorBuf, buffSize, ImGuiInputTextFlags_EnterReturnsTrue))
+				{
+					bUpdate = true;
+				}
+
+				if (ImGui::Button("Cancel"))
+				{
+					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::SameLine();
+
+				if (ImGui::Button("Confirm"))
+				{
+					bUpdate = true;
+				}
+
+				if (bUpdate)
+				{
+					m_ShaderEditorPath = std::string(shaderEditorBuf);
+					SaveCommonSettingsToDisk(false);
+					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::EndPopup();
+			}
+
+#if COMPILE_RENDERDOC_API
+			static bool bInvalidDLLLocation = false;
+			if (bOpenRenderDocDLLPathPopup)
+			{
+				ImGui::OpenPopup(renderDocDLLEditorPopup);
+				bInvalidDLLLocation = false;
+			}
+
+			ImGui::SetNextWindowSize(ImVec2(500.0f, 160.0f), ImGuiCond_Appearing);
+			if (ImGui::BeginPopupModal(renderDocDLLEditorPopup, NULL))
+			{
+				bool bUpdate = false;
+				if (ImGui::InputText("", renderDocDLLBuf, buffSize, ImGuiInputTextFlags_EnterReturnsTrue))
+				{
+					bUpdate = true;
+				}
+
+				if (ImGui::Button("Cancel"))
+				{
+					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::SameLine();
+
+				if (ImGui::Button("Confirm"))
+				{
+					bUpdate = true;
+				}
+
+				if (bInvalidDLLLocation)
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.4f, 0.4f, 1.0f));
+					ImGui::TextWrapped("Invalid path - couldn't find renderdoc.dll at location provided.");
+					ImGui::PopStyleColor();
+				}
+
+				if (bUpdate)
+				{
+					bInvalidDLLLocation = false;
+					std::string dllPathRaw = std::string(renderDocDLLBuf);
+					std::string dllPathClean = dllPathRaw;
+
+					dllPathClean = ReplaceBackSlashesWithForward(dllPathClean);
+
+					if (!dllPathClean.empty() && dllPathClean.find('.') == std::string::npos && *(dllPathClean.end() - 1) != '/')
+					{
+						dllPathClean += "/";
+					}
+
+					dllPathClean = ExtractDirectoryString(dllPathClean);
+
+					if (!dllPathClean.empty() && *(dllPathClean.end() - 1) != '/')
+					{
+						dllPathClean += "/";
+					}
+
+					if (!FileExists(dllPathClean + "renderdoc.dll"))
+					{
+						bInvalidDLLLocation = true;
+					}
+
+					if (!bInvalidDLLLocation)
+					{
+						SaveRenderDocSettingsFileToDisk(dllPathClean);
+						ImGui::CloseCurrentPopup();
+					}
+				}
+
+				ImGui::EndPopup();
+			}
+#endif
 
 			if (ImGui::BeginMenu("Window"))
 			{
 				ImGui::MenuItem("Main Window", NULL, &m_bMainWindowShowing);
 				ImGui::MenuItem("GPU Timings", NULL, &g_Renderer->bGPUTimingsWindowShowing);
 				ImGui::MenuItem("Memory Stats", NULL, &m_bShowMemoryStatsWindow);
-				ImGui::MenuItem("Asset Browser", NULL, &m_bAssetBrowserShowing);
-				ImGui::MenuItem("Key Mapper", NULL, &m_bInputMapperShowing);
+				ImGui::MenuItem("CPU Stats", NULL, &m_bShowCPUStatsWindow);
 				ImGui::MenuItem("Uniform Buffers", NULL, &g_Renderer->bUniformBufferWindowShowing);
+				ImGui::Separator();
+				ImGui::MenuItem("Materials", NULL, &m_bMaterialWindowShowing);
+				ImGui::MenuItem("Shaders", NULL, &m_bShaderWindowShowing);
+				ImGui::MenuItem("Textures", NULL, &m_bTextureWindowShowing);
+				ImGui::MenuItem("Meshes", NULL, &m_bMeshWindowShowing);
+				ImGui::Separator();
+				ImGui::MenuItem("Key Mapper", NULL, &m_bInputMapperShowing);
 				ImGui::MenuItem("Font Editor", NULL, &g_Renderer->bFontWindowShowing);
 #if COMPILE_RENDERDOC_API
 				ImGui::MenuItem("Render Doc Captures", NULL, &m_bShowingRenderDocWindow);
 #endif
-				ImGui::MenuItem("Demo Window", NULL, &m_bDemoWindowShowing);
+				ImGui::Separator();
+				ImGui::MenuItem("ImGui Demo Window", NULL, &m_bDemoWindowShowing);
 
 				ImGui::EndMenu();
 			}
@@ -967,6 +1106,11 @@ namespace flex
 					}
 
 					ImGui::SliderFloat("Speed", &m_SimulationSpeed, 0.0001f, 10.0f);
+
+					if (ImGui::IsItemClicked(1))
+					{
+						m_SimulationSpeed = 1.0f;
+					}
 
 					ImGui::TreePop();
 				}
@@ -1070,12 +1214,11 @@ namespace flex
 			ImGui::End();
 		}
 
+		g_SceneManager->DrawImGuiModals();
+
 		g_Renderer->DrawImGuiWindows();
 
-		if (m_bAssetBrowserShowing)
-		{
-			g_Renderer->DrawAssetBrowserImGui(&m_bAssetBrowserShowing);
-		}
+		g_Renderer->DrawAssetWindowsImGui(&m_bMaterialWindowShowing, &m_bShaderWindowShowing, &m_bTextureWindowShowing, &m_bMeshWindowShowing);
 
 		if (m_bInputMapperShowing)
 		{
@@ -1085,7 +1228,8 @@ namespace flex
 		if (m_bShowingConsole)
 		{
 			const real consoleWindowWidth = 350.0f;
-			const real consoleWindowHeight = 25.0f;
+			float fontScale = ImGui::GetIO().FontGlobalScale;
+			real consoleWindowHeight = 25.0f + m_CmdAutoCompletions.size() * 17.0f * fontScale;
 			const real consoleWindowX = (m_bMainWindowShowing && !bIsMainWindowCollapsed) ? m_ImGuiMainWindowWidth : 0.0f;
 			const real consoleWindowY = frameBufferSize.y - consoleWindowHeight;
 			ImGui::SetNextWindowPos(ImVec2(consoleWindowX, consoleWindowY), ImGuiCond_Always);
@@ -1098,15 +1242,43 @@ namespace flex
 					m_bShouldFocusKeyboardOnConsole = false;
 					ImGui::SetKeyboardFocusHere();
 				}
+				const bool bWasInvalid = m_bInvalidCmdLine;
+				if (bWasInvalid)
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
+				}
+				bool bFocusTextBox = false;
+				for (u32 i = 0; i < (u32)m_CmdAutoCompletions.size(); ++i)
+				{
+					const std::string& str = m_CmdAutoCompletions[i];
+					if (ImGui::Selectable(str.c_str(), i == (u32)m_SelectedCmdLineAutoCompleteIndex))
+					{
+						m_SelectedCmdLineAutoCompleteIndex = (i32)i;
+						strncpy(m_CmdLineStrBuf, m_CmdAutoCompletions[i].c_str(), m_CmdAutoCompletions[i].size());
+						bFocusTextBox = true;
+					}
+				}
+
+				char cmdLineStrBufCopy[MAX_CHARS_CMD_LINE_STR];
+				memcpy(cmdLineStrBufCopy, m_CmdLineStrBuf, MAX_CHARS_CMD_LINE_STR);
 				if (ImGui::InputTextEx("", m_CmdLineStrBuf, MAX_CHARS_CMD_LINE_STR, ImVec2(consoleWindowWidth - 16.0f, consoleWindowHeight - 8.0f),
-					ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackCharFilter | ImGuiInputTextFlags_CallbackCompletion | ImGuiInputTextFlags_CallbackHistory,
+					ImGuiInputTextFlags_EnterReturnsTrue |
+					ImGuiInputTextFlags_CallbackAlways |
+					ImGuiInputTextFlags_CallbackHistory |
+					ImGuiInputTextFlags_CallbackCompletion |
+					ImGuiInputTextFlags_CallbackCharFilter,
 					[](ImGuiInputTextCallbackData* data) { return g_EngineInstance->ImGuiConsoleInputCallback(data); }))
 				{
-					ToLower(m_CmdLineStrBuf);
+					m_bInvalidCmdLine = false;
+					const std::string cmdLineStrBufClean = ToLower(m_CmdLineStrBuf);
+					bool bMatched = false;
 					for (const ConsoleCommand& cmd : m_ConsoleCommands)
 					{
-						if (strcmp(m_CmdLineStrBuf, cmd.name.c_str()) == 0)
+						if (strcmp(cmdLineStrBufClean.c_str(), cmd.name.c_str()) == 0)
 						{
+							bMatched = true;
+							m_CmdAutoCompletions.clear();
+							m_bShowingConsole = false;
 							cmd.fun();
 							if (m_PreviousCmdLineEntries.empty() ||
 								strcmp((m_PreviousCmdLineEntries.end() - 1)->c_str(), m_CmdLineStrBuf) != 0)
@@ -1117,6 +1289,23 @@ namespace flex
 							memset(m_CmdLineStrBuf, 0, MAX_CHARS_CMD_LINE_STR);
 						}
 					}
+					if (memcmp(cmdLineStrBufCopy, m_CmdLineStrBuf, MAX_CHARS_CMD_LINE_STR))
+					{
+						m_bInvalidCmdLine = false;
+					}
+					if (!bMatched)
+					{
+						m_bInvalidCmdLine = true;
+						m_bShouldFocusKeyboardOnConsole = true;
+					}
+				}
+				if (bFocusTextBox)
+				{
+					ImGui::SetKeyboardFocusHere();
+				}
+				if (bWasInvalid)
+				{
+					ImGui::PopStyleColor();
 				}
 			}
 			ImGui::End();
@@ -1179,47 +1368,97 @@ namespace flex
 			}
 			ImGui::End();
 		}
+
+		if (m_bShowCPUStatsWindow)
+		{
+			if (ImGui::Begin("CPU Stats", &m_bShowCPUStatsWindow))
+			{
+				ImGui::Text("Logical processor count: %u", Platform::cpuInfo.logicalProcessorCount);
+				ImGui::Text("Physical core count: %u", Platform::cpuInfo.physicalCoreCount);
+				ImGui::Separator();
+				ImGui::Text("L1 cache count: %u", Platform::cpuInfo.l1CacheCount);
+				ImGui::Text("L2 cache count: %u", Platform::cpuInfo.l2CacheCount);
+				ImGui::Text("L3 cache count: %u", Platform::cpuInfo.l3CacheCount);
+			}
+			ImGui::End();
+		}
 	}
 
 	i32 FlexEngine::ImGuiConsoleInputCallback(ImGuiInputTextCallbackData* data)
 	{
 		const i32 cmdHistCount = (i32)m_PreviousCmdLineEntries.size();
+		if (data->EventFlag != ImGuiInputTextFlags_CallbackAlways)
+		{
+			m_bInvalidCmdLine = false;
+		}
 
 		if (data->EventFlag == ImGuiInputTextFlags_CallbackHistory)
 		{
-			if (data->EventKey == ImGuiKey_UpArrow)
+			if (m_CmdAutoCompletions.empty())
 			{
-				if (cmdHistCount == 0)
+				if (data->EventKey == ImGuiKey_UpArrow)
 				{
-					return -1;
-				}
+					if (cmdHistCount == 0)
+					{
+						return -1;
+					}
 
-				if (m_PreviousCmdLineIndex == cmdHistCount - 1)
-				{
-					return 0;
-				}
+					if (m_PreviousCmdLineIndex == cmdHistCount - 1)
+					{
+						return 0;
+					}
 
-				data->DeleteChars(0, data->BufTextLen);
-				++m_PreviousCmdLineIndex;
-				data->InsertChars(0, m_PreviousCmdLineEntries[cmdHistCount - m_PreviousCmdLineIndex - 1].data());
-			}
-			else if (data->EventKey == ImGuiKey_DownArrow)
-			{
-				if (cmdHistCount == 0)
-				{
-					return -1;
-				}
-
-				if (m_PreviousCmdLineIndex == -1)
-				{
-					return 0;
-				}
-
-				data->DeleteChars(0, data->BufTextLen);
-				--m_PreviousCmdLineIndex;
-				if (m_PreviousCmdLineIndex != -1) // -1 leaves console cleared
-				{
+					data->DeleteChars(0, data->BufTextLen);
+					++m_PreviousCmdLineIndex;
 					data->InsertChars(0, m_PreviousCmdLineEntries[cmdHistCount - m_PreviousCmdLineIndex - 1].data());
+				}
+				else if (data->EventKey == ImGuiKey_DownArrow)
+				{
+					if (cmdHistCount == 0)
+					{
+						return -1;
+					}
+
+					if (m_PreviousCmdLineIndex == -1)
+					{
+						return 0;
+					}
+
+					data->DeleteChars(0, data->BufTextLen);
+					--m_PreviousCmdLineIndex;
+					if (m_PreviousCmdLineIndex != -1) // -1 leaves console cleared
+					{
+						data->InsertChars(0, m_PreviousCmdLineEntries[cmdHistCount - m_PreviousCmdLineIndex - 1].data());
+					}
+				}
+				return 0;
+			}
+			else // Select auto completion entry
+			{
+				m_PreviousCmdLineIndex = -1;
+
+				if (data->EventKey == ImGuiKey_UpArrow)
+				{
+					if (m_SelectedCmdLineAutoCompleteIndex == -1)
+					{
+						m_SelectedCmdLineAutoCompleteIndex = (i32)m_CmdAutoCompletions.size() - 1;
+					}
+					else
+					{
+						--m_SelectedCmdLineAutoCompleteIndex;
+						m_SelectedCmdLineAutoCompleteIndex = glm::max(m_SelectedCmdLineAutoCompleteIndex, 0);
+					}
+				}
+				else if (data->EventKey == ImGuiKey_DownArrow)
+				{
+					if (m_SelectedCmdLineAutoCompleteIndex != -1)
+					{
+						++m_SelectedCmdLineAutoCompleteIndex;
+						if (m_SelectedCmdLineAutoCompleteIndex >= ((i32)m_CmdAutoCompletions.size()))
+						{
+							m_SelectedCmdLineAutoCompleteIndex = -1;
+						}
+					}
 				}
 			}
 		}
@@ -1227,27 +1466,91 @@ namespace flex
 		{
 			if (data->BufTextLen > 0)
 			{
+				if (m_SelectedCmdLineAutoCompleteIndex != -1)
+				{
+					const std::string& cmdStr = m_CmdAutoCompletions[m_SelectedCmdLineAutoCompleteIndex];
+					data->DeleteChars(0, data->BufTextLen);
+					data->InsertChars(0, cmdStr.data());
+				}
+				else
+				{
+					for (const ConsoleCommand& cmd : m_ConsoleCommands)
+					{
+						if (StartsWith(cmd.name, data->Buf) && strcmp(cmd.name.c_str(), data->Buf) != 0)
+						{
+							data->DeleteChars(0, data->BufTextLen);
+							data->InsertChars(0, cmd.name.data());
+							break;
+						}
+					}
+				}
+
+				m_PreviousCmdLineIndex = -1;
+				m_CmdAutoCompletions.clear();
 				for (const ConsoleCommand& cmd : m_ConsoleCommands)
 				{
 					if (StartsWith(cmd.name, data->Buf))
 					{
-						data->DeleteChars(0, data->BufTextLen);
-						data->InsertChars(0, cmd.name.data());
-						break;
+						m_CmdAutoCompletions.push_back(cmd.name);
 					}
 				}
 			}
+			return 0;
 		}
-
-		if (data->EventFlag == ImGuiInputTextFlags_CallbackCharFilter)
+		else if (data->EventFlag == ImGuiInputTextFlags_CallbackCharFilter)
 		{
 			if (data->EventChar == L'`' ||
 				data->EventChar == L'~')
 			{
 				m_bShowingConsole = false;
+				m_SelectedCmdLineAutoCompleteIndex = -1;
 				return 1;
 			}
+
+			char eventChar = (char)data->EventChar;
+			char* cmdLine = strncat(m_CmdLineStrBuf, &eventChar, 1);
+
+			if (m_SelectedCmdLineAutoCompleteIndex != -1)
+			{
+				if (!StartsWith(m_CmdAutoCompletions[m_SelectedCmdLineAutoCompleteIndex], cmdLine))
+				{
+					m_SelectedCmdLineAutoCompleteIndex = -1;
+				}
+			}
+
+			m_PreviousCmdLineIndex = -1;
+			m_CmdAutoCompletions.clear();
+			for (const ConsoleCommand& cmd : m_ConsoleCommands)
+			{
+				if (StartsWith(cmd.name, cmdLine))
+				{
+					m_CmdAutoCompletions.push_back(cmd.name);
+				}
+			}
 		}
+		else
+		{
+			if (m_PreviousCmdLineIndex == -1)
+			{
+				m_CmdAutoCompletions.clear();
+				if (strlen(m_CmdLineStrBuf) > 0)
+				{
+					for (const ConsoleCommand& cmd : m_ConsoleCommands)
+					{
+						if (StartsWith(cmd.name, m_CmdLineStrBuf))
+						{
+							m_CmdAutoCompletions.push_back(cmd.name);
+						}
+					}
+				}
+			}
+		}
+
+		if (m_SelectedCmdLineAutoCompleteIndex > ((i32)m_CmdAutoCompletions.size()) - 1)
+		{
+			m_SelectedCmdLineAutoCompleteIndex = -1;
+		}
+
 		return 0;
 	}
 
@@ -1282,8 +1585,6 @@ namespace flex
 					if (!g_SceneManager->SetCurrentScene(lastOpenedSceneName, false))
 					{
 						g_SceneManager->SetNextSceneActive();
-						g_SceneManager->InitializeCurrentScene();
-						g_SceneManager->PostInitializeCurrentScene();
 					}
 				}
 
@@ -1299,7 +1600,19 @@ namespace flex
 					AudioManager::SetMasterGain(masterGain);
 				}
 
+				bool bMuted;
+				if (rootObject.SetBoolChecked("muted", bMuted))
+				{
+					AudioManager::SetMuted(bMuted);
+				}
+
 				rootObject.SetBoolChecked("install shader directory watch", m_bInstallShaderDirectoryWatch);
+
+				std::string shaderEditorPath;
+				if (rootObject.SetStringChecked("shader editor path", shaderEditorPath))
+				{
+					m_ShaderEditorPath = shaderEditorPath;
+				}
 
 				return true;
 			}
@@ -1329,10 +1642,12 @@ namespace flex
 
 		rootObject.fields.emplace_back("render imgui", JSONValue(m_bRenderImGui));
 
-		real masterGain = AudioManager::GetMasterGain();
-		rootObject.fields.emplace_back("master gain", JSONValue(masterGain));
+		rootObject.fields.emplace_back("master gain", JSONValue(AudioManager::GetMasterGain()));
+		rootObject.fields.emplace_back("muted", JSONValue(AudioManager::IsMuted()));
 
 		rootObject.fields.emplace_back("install shader directory watch", JSONValue(m_bInstallShaderDirectoryWatch));
+
+		rootObject.fields.emplace_back("shader editor path", JSONValue(m_ShaderEditorPath));
 
 		std::string fileContents = rootObject.Print(0);
 
@@ -1374,6 +1689,29 @@ namespace flex
 			IntToString(EngineVersionPatch);
 	}
 
+	std::string FlexEngine::GetShaderEditorPath()
+	{
+		return m_ShaderEditorPath;
+	}
+
+	void FlexEngine::CreateCameraInstances()
+	{
+		FirstPersonCamera* fpCamera = new FirstPersonCamera();
+		g_CameraManager->AddCamera(fpCamera, true);
+
+		DebugCamera* debugCamera = new DebugCamera();
+		debugCamera->position = glm::vec3(20.0f, 8.0f, -16.0f);
+		debugCamera->yaw = glm::radians(130.0f);
+		debugCamera->pitch = glm::radians(-10.0f);
+		g_CameraManager->AddCamera(debugCamera, false);
+
+		OverheadCamera* overheadCamera = new OverheadCamera();
+		g_CameraManager->AddCamera(overheadCamera, false);
+
+		TerminalCamera* terminalCamera = new TerminalCamera();
+		g_CameraManager->AddCamera(terminalCamera, false);
+	}
+
 	EventReply FlexEngine::OnMouseButtonEvent(MouseButton button, KeyAction action)
 	{
 		FLEX_UNUSED(button);
@@ -1411,13 +1749,6 @@ namespace flex
 			if (keyCode == KeyCode::KEY_F5)
 			{
 				m_bSimulationPaused = false;
-				m_bSimulateNextFrame = true;
-				return EventReply::CONSUMED;
-			}
-
-			if (keyCode == KeyCode::KEY_F10)
-			{
-				m_bSimulationPaused = true;
 				m_bSimulateNextFrame = true;
 				return EventReply::CONSUMED;
 			}
@@ -1508,6 +1839,16 @@ namespace flex
 			}
 		}
 
+		if (action == KeyAction::PRESS || action == KeyAction::REPEAT)
+		{
+			if (keyCode == KeyCode::KEY_F10)
+			{
+				m_bSimulationPaused = true;
+				m_bSimulateNextFrame = true;
+				return EventReply::CONSUMED;
+			}
+		}
+
 		return EventReply::UNCONSUMED;
 	}
 
@@ -1535,28 +1876,13 @@ namespace flex
 	void FlexEngine::SetupRenderDocAPI()
 	{
 		std::string dllDirPath;
-		if (FileExists(m_RenderDocSettingsAbsFilePath))
-		{
-			JSONObject rootObject;
-			if (JSONParser::ParseFromFile(m_RenderDocSettingsAbsFilePath, rootObject))
-			{
-				dllDirPath = rootObject.GetString("lib path");
-			}
-			else
-			{
-				PrintError("Failed to parse %s\n\terror: %s\n", m_RenderDocSettingsFileName.c_str(), JSONParser::GetErrorString());
-			}
-		}
 
-		if (dllDirPath.empty())
+		if (!ReadRenderDocSettingsFileFromDisk(dllDirPath))
 		{
-			PrintError("Unable to setup RenderDoc API - renderdoc settings file missing. "
-				"Please create one in the format: "
-				"\"{ \"lib path\" : \"C:/Path/To/RenderDocLibs/\" }\" "
-				"and save it at: \"%s\"\n", m_RenderDocSettingsAbsFilePath.c_str());
+			PrintError("Unable to setup RenderDoc API - settings file missing.\n"
+				"Set path to DLL under Edit > Renderdoc DLL path\n");
 			return;
 		}
-
 
 		if (!EndsWith(dllDirPath, "/"))
 		{
@@ -1637,7 +1963,32 @@ namespace flex
 
 		return false;
 	}
-#endif
+
+	bool FlexEngine::ReadRenderDocSettingsFileFromDisk(std::string& dllDirPathOut)
+	{
+		if (FileExists(m_RenderDocSettingsAbsFilePath))
+		{
+			JSONObject rootObject;
+			if (JSONParser::ParseFromFile(m_RenderDocSettingsAbsFilePath, rootObject))
+			{
+				dllDirPathOut = rootObject.GetString("lib path");
+				return true;
+			}
+			else
+			{
+				PrintError("Failed to parse %s\n\terror: %s\n", m_RenderDocSettingsFileName.c_str(), JSONParser::GetErrorString());
+			}
+		}
+		return false;
+	}
+
+	void FlexEngine::SaveRenderDocSettingsFileToDisk(const std::string& dllDir)
+	{
+		JSONObject rootObject;
+		rootObject.fields.emplace_back("lib path", JSONValue(dllDir));
+		WriteFile(m_RenderDocSettingsAbsFilePath, rootObject.Print(0), false);
+	}
+#endif // COMPILE_RENDERDOC_API
 
 	glm::vec3 FlexEngine::CalculateRayPlaneIntersectionAlongAxis(
 		const glm::vec3& axis,
@@ -1699,7 +2050,11 @@ namespace flex
 
 	bool FlexEngine::InstallShaderDirectoryWatch() const
 	{
+#if COMPILE_SHADER_COMPILER
 		return m_bInstallShaderDirectoryWatch;
+#else
+		return false;
+#endif
 	}
 
 } // namespace flex

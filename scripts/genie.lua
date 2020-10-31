@@ -106,7 +106,7 @@ configuration "x64"
 configuration {}
 
 configuration {}
-	flags { "NoIncrementalLink", "NoEditAndContinue" }
+	flags { "NoIncrementalLink", "NoEditAndContinue", "NoJMC" }
 	includedirs { path.join(SOURCE_DIR, "include") }
 
 	-- Files to include that shouldn't get warnings reported on
@@ -119,14 +119,16 @@ configuration {}
 		path.join(DEPENDENCIES_DIR, "bullet/src"),
 		path.join(DEPENDENCIES_DIR, "openAL/include"),
 		path.join(DEPENDENCIES_DIR, "freetype/include"),
-		path.join(DEPENDENCIES_DIR, "shaderc/include"),
+		path.join(DEPENDENCIES_DIR, "shaderc/libshaderc/include"),
+		path.join(DEPENDENCIES_DIR, "shaderc/libshaderc_spvc/include"),
+		path.join(DEPENDENCIES_DIR, "shaderc/libshaderc_util/include"),
 		DEPENDENCIES_DIR,
 	}
 
 	debugdir "$(OutDir)"
 configuration "vs*"
 	defines { "PLATFORM_Win", "_WINDOWS" }
-	linkoptions { "/ignore:4221" }
+	linkoptions { "/ignore:4221", "/NODEFAULTLIB:LIBCMTD" }
 configuration { "vs*", "x32" }
 	flags { "EnableSSE2" }
 	defines { "WIN32" }
@@ -148,9 +150,8 @@ project "Flex"
 	iif(os.is("windows"), platformLibraries("vs*"), platformLibraries("linux*"))
 
 	configuration "vs*"
-		flags { "Winmain"}
+		flags { "Winmain" }
 		links { "opengl32" }
-
 	configuration "linux*"
 		linkoptions {
 			-- lpthread for shaderc?
@@ -158,7 +159,8 @@ project "Flex"
 			"-ldl", -- For dlopen, etc.
 		}
 		buildoptions {
-			"-Wfatal-errors"
+			"-Wfatal-errors",
+			"-march=haswell"
 		}
 		buildoptions_cpp {
 			-- Ignored warnings:
@@ -198,6 +200,7 @@ files {
 	path.join(DEPENDENCIES_DIR, "imgui/**.h"),
 	path.join(DEPENDENCIES_DIR, "imgui/**.cpp"),
 	path.join(DEPENDENCIES_DIR, "volk/volk.h"),
+	path.join(PROJECT_DIR, "AdditionalFiles/**.natvis")
 }
 
 --Exclude the following files from the build, but keep in the project

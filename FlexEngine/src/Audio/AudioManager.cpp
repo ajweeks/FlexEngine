@@ -2,6 +2,8 @@
 
 #include "Audio/AudioManager.hpp"
 
+#include <imgui/imgui_internal.h> // For PushItemFlag
+
 #include "Helpers.hpp"
 
 namespace flex
@@ -12,6 +14,11 @@ namespace flex
 	ALCdevice* AudioManager::s_Device = nullptr;
 
 	ALuint AudioManager::s_Buffers[NUM_BUFFERS];
+
+	real AudioManager::s_MasterGain = 0.2f;
+	bool AudioManager::s_Muted = false;
+
+	AudioSourceID AudioManager::s_BeepID = InvalidAudioSourceID;
 
 	void AudioManager::Initialize()
 	{
@@ -54,11 +61,17 @@ namespace flex
 			DisplayALError("alGenBuffers", error);
 			return;
 		}
+
+		// Reserve first ID for beep to play on volume change
+		s_BeepID = AudioManager::AddAudioSource(SFX_LOCATION "wah-wah-02.wav");
+
+		SetMasterGain(s_MasterGain);
 	}
 
 	void AudioManager::Destroy()
 	{
 		ClearAllAudioSources();
+		alDeleteBuffers(NUM_BUFFERS, s_Buffers);
 		alcMakeContextCurrent(NULL);
 		alcDestroyContext(s_Context);
 		alcCloseDevice(s_Device);
@@ -140,7 +153,7 @@ namespace flex
 			//t = pow(sin(t* PI), 0.01f); // Sinusodal fade in/out
 			real y = 6.0f * t * exp(-2.0f * t) * sin(freq * t);
 			y *= 0.8f + 0.2f * cos(16.0f * t);
-			data[i] = (u8)(y * 255.0f);
+			data[i] = (u8)(y * 15.0f);
 		}
 
 		ALenum error = alGetError();
@@ -205,14 +218,13 @@ namespace flex
 
 	void AudioManager::SetMasterGain(real masterGain)
 	{
+		s_MasterGain = masterGain;
 		alListenerf(AL_GAIN, masterGain);
 	}
 
 	real AudioManager::GetMasterGain()
 	{
-		real gain;
-		alGetListenerf(AL_GAIN, &gain);
-		return gain;
+		return s_MasterGain;
 	}
 
 	void AudioManager::PlaySource(AudioSourceID sourceID, bool bForceRestart)
@@ -346,14 +358,65 @@ namespace flex
 		return (s_Sources[sourceID].state == AL_PLAYING);
 	}
 
+	void AudioManager::ToggleMuted()
+	{
+		SetMuted(!s_Muted);
+	}
+
+	void AudioManager::SetMuted(bool bMuted)
+	{
+		if (s_Muted != bMuted)
+		{
+			s_Muted = bMuted;
+
+			if (s_Muted)
+			{
+				alListenerf(AL_GAIN, 0.0f);
+			}
+			else
+			{
+				alListenerf(AL_GAIN, s_MasterGain);
+			}
+		}
+	}
+
+	bool AudioManager::IsMuted()
+	{
+		return s_Muted;
+	}
+
 	void AudioManager::DrawImGuiObjects()
 	{
 		if (ImGui::TreeNode("Audio"))
 		{
-			real gain = GetMasterGain();
+			bool bMuted = s_Muted;
+			if (ImGui::Checkbox("Muted", &bMuted))
+			{
+				ToggleMuted();
+			}
+
+			const bool bWasMuted = s_Muted;
+			if (bWasMuted)
+			{
+				ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+				ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
+			}
+
+			real gain = s_MasterGain;
 			if (ImGui::SliderFloat("Master volume", &gain, 0.0f, 1.0f))
 			{
 				SetMasterGain(gain);
+			}
+
+			if (bWasMuted)
+			{
+				ImGui::PopItemFlag();
+				ImGui::PopStyleVar();
+			}
+
+			if (ImGui::IsItemDeactivatedAfterEdit())
+			{
+				PlaySource(s_BeepID, true);
 			}
 
 			ImGui::TreePop();

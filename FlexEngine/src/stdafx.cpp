@@ -18,6 +18,7 @@ namespace flex
 #endif
 
 	bool g_bEnableLogging_Loading = false;
+	bool g_bEnableLogging_Shaders = true;
 
 #if COMPILE_IMGUI
 	ImVec4 g_WarningTextColor(1.0f, 0.25f, 0.25f, 1.0f);

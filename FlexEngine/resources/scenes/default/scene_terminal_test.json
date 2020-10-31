@@ -1,7 +1,31 @@
 {
-	"version" : 2,
+	"version" : 3,
 	"name" : "Scene_terminal_test",
 	"spawn player" : true,
+	"skybox data" : 
+	{
+		"top colour" : "0.22, 0.58, 0.88, 0.00",
+		"mid colour" : "0.66, 0.86, 0.95, 0.00",
+		"btm colour" : "0.75, 0.91, 0.99, 0.00"
+	},
+	"camera" : 
+	{
+		"type" : "terminal",
+		"near plane" : 0.500000,
+		"far plane" : 1000.000000,
+		"fov" : 0.785398,
+		"aperture" : 1.000000,
+		"shutter speed" : 0.125000,
+		"light sensitivity" : 800.000000,
+		"exposure" : 1.200000,
+		"move speed" : 18.000000,
+		"transform" : 
+		{
+			"position" : "-2.381, 1.602, 5.379",
+			"pitch" : -0.000467,
+			"yaw" : 1.783797
+		}
+	},
 	"objects" : 
 	[
 		{
@@ -14,7 +38,10 @@
 				"scale" : "100.000, 1.000, 100.000"
 			},
 			"mesh" : "unit-plane",
-			"material" : "grid",
+			"materials" : 
+			[
+				"grid"
+			],
 			"collider" : 
 			{
 				"shape" : "box",
@@ -46,7 +73,10 @@
 					"transform" : 
 					{
 					},
-					"material" : "skybox 01",
+					"materials" : 
+					[
+						"skybox 01"
+					],
 					"skybox info" : 
 					{
 					}
@@ -153,9 +183,12 @@
 			"transform" : 
 			{
 				"pos" : "-3.227, 0.600, 9.288",
-				"rot" : "-3.142, 0.213, -3.142"
+				"rot" : "3.141, 0.213, 3.141"
 			},
-			"material" : "terminal copper",
+			"materials" : 
+			[
+				"terminal copper"
+			],
 			"collider" : 
 			{
 				"shape" : "box",
@@ -172,20 +205,13 @@
 			},
 			"terminal" : 
 			{
-				"str" : "float roo = 1.19f;
-float bar = 9.992f;
-float b = 0.0f;
-float roobarb = roo + bar + b;
-int a = bar;
-bool t = a != 11;
-bool f = a == 11;
-bool bo = t && f;
-bool e = bo || f;
-int n = 1 * 8;
-int i =0 ;
-int aa  = 999999;
-int foo = 10;
-foo = 1 + 1 + foo * foo;"
+				"str" : "int a = 10;
+int b = 20;
+bool bash = a > b ? true : false;
+if (a > 99 || a <= 10 && b == 20)
+{
+  b = 33;
+}"
 			},
 			"children" : 
 			[
@@ -199,9 +225,29 @@ foo = 1 + 1 + foo * foo;"
 						"scale" : "1.760, 1.790, 1.000"
 					},
 					"mesh" : "cube",
-					"material" : "terminal display"
+					"materials" : 
+					[
+						"terminal display"
+					]
 				}
 			]
+		},
+		{
+			"name" : "Cart_00",
+			"type" : "cart",
+			"visible" : true,
+			"transform" : 
+			{
+			},
+			"materials" : 
+			[
+				"pbr grey"
+			],
+			"cart info" : 
+			{
+				"track ID" : -1,
+				"dist along track" : -1.000000
+			}
 		}
 	]
 }

@@ -54,6 +54,134 @@
   </Type>
 
   <Type Name="flex::vk::VulkanRenderObject">
-    <DisplayString>{gameObject->m_Name},{materialName}</DisplayString>
+    <DisplayString>{gameObject->m_Name}, mat ID = {materialID}, {topology}</DisplayString>
   </Type>
+
+  <Type Name="flex::SourceIter">
+    <DisplayString Condition="index &lt; source.size() - 1">{lineNumber}:{columnIndex} ({index}) - {source[index]} (peek: {(char)source[index + 1]})</DisplayString>
+    <DisplayString Condition="index == source.size() - 1">  {lineNumber}:{columnIndex} ({index}) - {source[index]}</DisplayString>
+  </Type>
+
+  <Type Name="flex::Span">
+    <DisplayString>{low}:{high} (len {high-low})</DisplayString>
+  </Type>
+
+  <Type Name="flex::StringBuilder">
+    <DisplayString>{(const char*)&amp;(buffer[0])} (len {length}, cap {buffer.size()})</DisplayString>
+  </Type>
+
+  <Type Name="flex::IR::Value">
+    <DisplayString Condition="type == flex::IR::Value::Type::INT">{valInt}</DisplayString>
+    <DisplayString Condition="type == flex::IR::Value::Type::FLOAT">{valFloat}</DisplayString>
+    <DisplayString Condition="type == flex::IR::Value::Type::BOOL">{valBool}</DisplayString>
+    <DisplayString Condition="type == flex::IR::Value::Type::STRING">{valStr}</DisplayString>
+    <DisplayString Condition="type == flex::IR::Value::Type::CHAR">{valChar}</DisplayString>
+    <DisplayString Condition="type == flex::IR::Value::Type::_NONE">none</DisplayString>
+  </Type>
+
+  <Type Name="flex::VM::Value">
+    <DisplayString Condition="type == flex::IR::Value::Type::INT">{valInt}</DisplayString>
+    <DisplayString Condition="type == flex::IR::Value::Type::FLOAT">{valFloat}</DisplayString>
+    <DisplayString Condition="type == flex::IR::Value::Type::BOOL">{valBool}</DisplayString>
+    <DisplayString Condition="type == flex::IR::Value::Type::STRING">{valStr}</DisplayString>
+    <DisplayString Condition="type == flex::IR::Value::Type::CHAR">{valChar}</DisplayString>
+    <DisplayString Condition="type == flex::IR::Value::Type::_NONE">none</DisplayString>
+  </Type>
+
+  <Type Name="flex::Declaration">
+    <DisplayString>{identifierStr,sb} = {initializer,na}</DisplayString>
+  </Type>
+
+  <Type Name="flex::StatementBlock">
+    <DisplayString>{statements,na}</DisplayString>
+  </Type>
+
+  <Type Name="flex::IfStatement">
+    <DisplayString>if ({condition,na}) \{{then,na}\} else {otherwise,na}</DisplayString>
+  </Type>
+
+  <Type Name="flex::ForStatement">
+    <DisplayString>for ({setup,na};{condition,na};{update,na})</DisplayString>
+  </Type>
+
+  <Type Name="flex::WhileStatement">
+    <DisplayString>while ({condition,na})</DisplayString>
+  </Type>
+
+  <Type Name="flex::DoWhileStatement">
+    <DisplayString>do while ({condition,na})</DisplayString>
+  </Type>
+
+  <Type Name="flex::FunctionDeclaration">
+    <DisplayString>func {name,sb}({arguments,na}) -> {returnType,en}</DisplayString>
+  </Type>
+
+  <Type Name="flex::BreakStatement">
+    <DisplayString>break</DisplayString>
+  </Type>
+
+  <Type Name="flex::YieldStatement">
+    <DisplayString>yield {yieldValue,na}</DisplayString>
+  </Type>
+
+  <Type Name="flex::ReturnStatement">
+    <DisplayString>return {returnValue,na}</DisplayString>
+  </Type>
+
+  <Type Name="flex::Identifier">
+    <DisplayString>{identifierStr,sb}</DisplayString>
+  </Type>
+
+  <Type Name="flex::Assignment">
+    <DisplayString>{lhs,sb} = {rhs,na}</DisplayString>
+  </Type>
+
+  <Type Name="flex::CompoundAssignment">
+    <DisplayString>{lhs,sb} {operatorType,en} {rhs,na}</DisplayString>
+  </Type>
+
+  <Type Name="flex::IntLiteral">
+    <DisplayString>{value}</DisplayString>
+  </Type>
+
+  <Type Name="flex::FloatLiteral">
+    <DisplayString>{value}</DisplayString>
+  </Type>
+
+  <Type Name="flex::BoolLiteral">
+    <DisplayString>{value}</DisplayString>
+  </Type>
+
+  <Type Name="flex::StringLiteral">
+    <DisplayString>{value}</DisplayString>
+  </Type>
+
+  <Type Name="flex::CharLiteral">
+    <DisplayString>{value}</DisplayString>
+  </Type>
+
+  <Type Name="flex::ListInitializer">
+    <DisplayString>{listValues}</DisplayString>
+  </Type>
+
+  <Type Name="flex::IndexOperation">
+    <DisplayString>{container}[{indexExpression,na}]</DisplayString>
+  </Type>
+
+  <Type Name="flex::UnaryOperation">
+    <DisplayString>{expression,na} {operatorType,en}</DisplayString>
+  </Type>
+
+  <Type Name="flex::BinaryOperation">
+    <DisplayString>({lhs,na} {operatorType,en} {rhs,na})</DisplayString>
+  </Type>
+
+  <Type Name="flex::TernaryOperation">
+    <DisplayString>{condition,na} ? {ifTrue,na} : {ifFalse,na}</DisplayString>
+  </Type>
+
+  <Type Name="flex::FunctionCall">
+    <DisplayString>{target}({arguments,na})</DisplayString>
+  </Type>
+
 </AutoVisualizer>

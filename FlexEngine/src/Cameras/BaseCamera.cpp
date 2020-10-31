@@ -31,7 +31,7 @@ namespace flex
 		panSpeed(60.0f),
 		dragDollySpeed(40.0f),
 		scrollDollySpeed(20.0f),
-		orbitingSpeed(0.1f),
+		orbitingSpeed(0.03f),
 		mouseRotationSpeed(0.015f),
 		gamepadRotationSpeed(2.0f),
 		moveSpeedFastMultiplier(3.5f),

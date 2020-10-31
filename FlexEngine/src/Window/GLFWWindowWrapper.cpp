@@ -3,6 +3,7 @@
 #include "Window/GLFWWindowWrapper.hpp"
 
 #include "FlexEngine.hpp"
+#include "Editor.hpp"
 #if COMPILE_OPEN_GL
 #include "Graphics/GL/GLHelpers.hpp"
 #endif
@@ -187,11 +188,11 @@ namespace flex
 		glfwFocusWindow(m_Window);
 		m_bHasFocus = true;
 
-		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION "icons/flex-logo-03_128.png", 4));
-		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION "icons/flex-logo-03_64.png", 4));
-		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION "icons/flex-logo-03_48.png", 4));
-		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION "icons/flex-logo-03_32.png", 4));
-		m_WindowIcons.push_back(LoadGLFWimage(RESOURCE_LOCATION "icons/flex-logo-03_16.png", 4));
+		m_WindowIcons.push_back(LoadGLFWimage(APP_ICON_LOCATION "flex-logo-03_128.png", 4));
+		m_WindowIcons.push_back(LoadGLFWimage(APP_ICON_LOCATION "flex-logo-03_64.png", 4));
+		m_WindowIcons.push_back(LoadGLFWimage(APP_ICON_LOCATION "flex-logo-03_48.png", 4));
+		m_WindowIcons.push_back(LoadGLFWimage(APP_ICON_LOCATION "flex-logo-03_32.png", 4));
+		m_WindowIcons.push_back(LoadGLFWimage(APP_ICON_LOCATION "flex-logo-03_16.png", 4));
 
 		if (!m_WindowIcons.empty() && m_WindowIcons[0].pixels)
 		{
@@ -253,6 +254,8 @@ namespace flex
 		glfwSetFramebufferSizeCallback(m_Window, GLFWFramebufferSizeCallback);
 		glfwSetWindowFocusCallback(m_Window, GLFWWindowFocusCallback);
 		glfwSetWindowPosCallback(m_Window, GLFWWindowPosCallback);
+		// TODO: Only enable in editor builds
+		glfwSetDropCallback(m_Window, GLFWDropCallback);
 		glfwSetJoystickCallback(GLFWJoystickCallback);
 		glfwSetMonitorCallback(GLFWMointorCallback);
 	}
@@ -585,6 +588,12 @@ namespace flex
 	{
 		Window* window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
 		window->FrameBufferSizeCallback(width, height);
+	}
+
+	void GLFWDropCallback(GLFWwindow* glfwWindow, int count, const char** paths)
+	{
+		g_Editor->OnDragDrop(count, paths);
+		glfwFocusWindow(glfwWindow);
 	}
 
 	void GLFWJoystickCallback(i32 JID, i32 event)

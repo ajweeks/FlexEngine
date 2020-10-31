@@ -28,9 +28,11 @@ namespace flex
 	{
 	public:
 		void Initialize(const VertexBufferDataCreateInfo& createInfo);
-		void InitializeDynamic(VertexAttributes attributes, u32 maxNumVerts); // Allocates enough memory for maxNumVerts with given attributes
+		void InitializeDynamic(VertexAttributes attributes, u32 initialMaxVertCount);
 		void UpdateData(const VertexBufferDataCreateInfo& createInfo);
 		void Destroy();
+
+		void Shrink(real minExcess = 0.0f);
 
 		// Copies data from this buffer into dst for each given attribute
 		// If this buffer doesn't contain a given attribute, default values will be used
@@ -41,7 +43,9 @@ namespace flex
 		bool bDynamic = false;
 		real* vertexData = nullptr;
 		u32 VertexBufferSize = 0;
+		u32 UsedVertexBufferSize = 0;
 		u32 VertexCount = 0;
+		u32 UsedVertexCount = 0;
 		u32 VertexStride = 0;
 		VertexAttributes Attributes = 0;
 	};

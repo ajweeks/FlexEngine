@@ -17,6 +17,7 @@ IGNORE_WARNINGS_PUSH
 #include <freetype/fterrors.h>
 IGNORE_WARNINGS_POP
 
+#include "Audio/AudioManager.hpp"
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "Editor.hpp"
@@ -43,9 +44,11 @@ namespace flex
 	const char* Renderer::MaterialPayloadCStr = "material";
 	const char* Renderer::MeshPayloadCStr = "mesh";
 
+	std::array<glm::mat4, 6> Renderer::s_CaptureViews;
+
 	Renderer::Renderer() :
-		m_RendererSettingsFilePathAbs(RelativePathToAbsolute(ROOT_LOCATION "config/renderer-settings.json")),
-		m_FontsFilePathAbs(RelativePathToAbsolute(ROOT_LOCATION "config/fonts.json"))
+		m_RendererSettingsFilePathAbs(RelativePathToAbsolute(RENDERER_SETTINGS_LOCATION)),
+		m_FontsFilePathAbs(RelativePathToAbsolute(FONT_DEFINITION_LOCATION))
 	{
 	}
 
@@ -55,56 +58,9 @@ namespace flex
 
 	void Renderer::Initialize()
 	{
-		if (!FileExists(m_FontsFilePathAbs))
-		{
-			PrintError("Fonts file missing!\n");
-		}
-		else
-		{
-			JSONObject fontSettings;
-			if (JSONParser::ParseFromFile(m_FontsFilePathAbs, fontSettings))
-			{
-				std::vector<JSONObject> fontObjs;
-				if (fontSettings.SetObjectArrayChecked("fonts", fontObjs))
-				{
-					static const std::string DPIStr = FloatToString(g_Monitor->DPI.x, 0) + "DPI";
+		ParseFontFile();
 
-					for (const JSONObject& fontObj : fontObjs)
-					{
-						FontMetaData fontMetaData = {};
-
-						fontObj.SetStringChecked("file path", fontMetaData.filePath);
-						fontMetaData.size = (i16)fontObj.GetInt("size");
-						fontObj.SetBoolChecked("screen space", fontMetaData.bScreenSpace);
-						fontObj.SetFloatChecked("threshold", fontMetaData.threshold);
-						fontObj.SetFloatChecked("shadow opacity", fontMetaData.shadowOpacity);
-						fontObj.SetVec2Checked("shadow offset", fontMetaData.shadowOffset);
-						fontObj.SetFloatChecked("soften", fontMetaData.soften);
-
-						if (fontMetaData.filePath.empty())
-						{
-							PrintError("Font doesn't contain file path!\n");
-							continue;
-						}
-
-						fontMetaData.renderedTextureFilePath = StripFileType(fontMetaData.filePath);
-
-						fontMetaData.renderedTextureFilePath += "-" + IntToString(fontMetaData.size, 2) + "-" + DPIStr + m_FontImageExtension;
-						fontMetaData.renderedTextureFilePath = RESOURCE_LOCATION "fonts/" + fontMetaData.renderedTextureFilePath;
-						fontMetaData.filePath = RESOURCE_LOCATION "fonts/" + fontMetaData.filePath;
-
-						std::string fontName = fontObj.GetString("name");
-						m_Fonts[fontName] = fontMetaData;
-					}
-				}
-			}
-			else
-			{
-				PrintError("Failed to parse font config file %s\n\terror: %s\n", m_FontsFilePathAbs.c_str(), JSONParser::GetErrorString());
-			}
-		}
-
-		std::string hdriPath = RESOURCE("textures/hdri/");
+		std::string hdriPath = TEXTURE_LOCATION "hdri/";
 		if (!Platform::FindFilesInDirectory(hdriPath, m_AvailableHDRIs, "hdr"))
 		{
 			PrintWarn("Unable to find hdri directory at %s\n", hdriPath.c_str());
@@ -133,10 +89,15 @@ namespace flex
 		m_SSAOBlurDataConstant.radius = 4;
 		m_SSAOBlurSamplePixelOffset = 2;
 
-		m_SSAOSamplingData.ssaoEnabled = 1;
-		m_SSAOSamplingData.ssaoPowExp = 2.0f;
+		m_SSAOSamplingData.enabled = 1;
+		m_SSAOSamplingData.powExp = 2.0f;
 
 		m_ShadowSamplingData.cascadeDepthSplits = glm::vec4(0.1f, 0.25f, 0.5f, 0.8f);
+
+		m_SSAOKernelSizeSpecializationID = 0;
+		m_TAASampleCountSpecializationID = 1;
+		m_ShaderQualityLevelSpecializationID = 2;
+		m_ShadowCascadeCountSpecializationID = 3;
 	}
 
 	void Renderer::PostInitialize()
@@ -145,7 +106,7 @@ namespace flex
 
 		if (g_EngineInstance->InstallShaderDirectoryWatch())
 		{
-			m_ShaderDirectoryWatcher = new DirectoryWatcher(RESOURCE_LOCATION "shaders/", false);
+			m_ShaderDirectoryWatcher = new DirectoryWatcher(SHADER_SOURCE_LOCATION, false);
 			if (!m_ShaderDirectoryWatcher->Installed())
 			{
 				PrintWarn("Failed to install shader directory watcher\n");
@@ -310,6 +271,9 @@ namespace flex
 		rootObject.fields.emplace_back("offset", JSONValue(VecToString(m_PostProcessSettings.offset, 3)));
 		rootObject.fields.emplace_back("saturation", JSONValue(m_PostProcessSettings.saturation));
 
+		rootObject.fields.emplace_back("shadow cascade count", JSONValue(m_ShadowCascadeCount));
+		rootObject.fields.emplace_back("shadow cascade base resolution", JSONValue((i32)m_ShadowMapBaseResolution));
+
 		BaseCamera* cam = g_CameraManager->CurrentCamera();
 		rootObject.fields.emplace_back("aperture", JSONValue(cam->aperture));
 		rootObject.fields.emplace_back("shutter speed", JSONValue(cam->shutterSpeed));
@@ -345,15 +309,8 @@ namespace flex
 			m_PostProcessSettings.offset = ParseVec3(rootObject.GetString("offset"));
 			m_PostProcessSettings.saturation = rootObject.GetFloat("saturation");
 
-			if (rootObject.HasField("aperture"))
-			{
-				// Assume all exposure control fields are present if one is
-				BaseCamera* cam = g_CameraManager->CurrentCamera();
-				cam->aperture = rootObject.GetFloat("aperture");
-				cam->shutterSpeed = rootObject.GetFloat("shutter speed");
-				cam->lightSensitivity = rootObject.GetFloat("light sensitivity");
-				cam->CalculateExposure();
-			}
+			rootObject.SetIntChecked("shadow cascade count", m_ShadowCascadeCount);
+			rootObject.SetUIntChecked("shadow cascade base resolution", m_ShadowMapBaseResolution);
 
 			// Done loading
 			m_RendererSettingsFileVersion = LATEST_RENDERER_SETTINGS_FILE_VERSION;
@@ -648,7 +605,7 @@ namespace flex
 			drawInfo.materialID = m_SpriteArrMatID;
 			drawInfo.anchor = AnchorPoint::BOTTOM_RIGHT;
 			drawInfo.scale = glm::vec3(0.2f);
-			for (u32 i = 0; i < SHADOW_CASCADE_COUNT; ++i)
+			for (u32 i = 0; i < (u32)m_ShadowCascadeCount; ++i)
 			{
 				// TODO:
 				drawInfo.textureID = 999 + i;
@@ -704,8 +661,14 @@ namespace flex
 			modifiedProj[3][2] = -modifiedProj[3][2];
 			glm::mat4 invCam = glm::inverse(modifiedProj * cam->GetView());
 
-			real lastSplitDist = 0.0;
-			for (u32 c = 0; c < SHADOW_CASCADE_COUNT; ++c)
+			if ((i32)m_ShadowLightViewMats.size() != m_ShadowCascadeCount)
+			{
+				m_ShadowLightViewMats.resize(m_ShadowCascadeCount);
+				m_ShadowLightProjMats.resize(m_ShadowCascadeCount);
+			}
+
+			real lastSplitDist = 0.0f;
+			for (u32 c = 0; c < (u32)m_ShadowCascadeCount; ++c)
 			{
 				real splitDist = depthSplits[c];
 
@@ -776,11 +739,11 @@ namespace flex
 			{
 				for (auto& fontPair : m_Fonts)
 				{
-					FontMetaData& fontMeta = fontPair.second;
-					BitmapFont* font = fontMeta.bitmapFont;
+					FontMetaData& fontMetaData = fontPair.second;
+					BitmapFont* font = fontMetaData.bitmapFont;
 
 					ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollWithMouse;
-					if (ImGui::BeginChild(fontMeta.renderedTextureFilePath.c_str(), ImVec2(0, 240), true, flags))
+					if (ImGui::BeginChild(fontMetaData.renderedTextureFilePath.c_str(), ImVec2(0, 240), true, flags))
 					{
 						ImGui::Text("%s", fontPair.first.c_str());
 						ImGui::Text("%s", font->name.c_str());
@@ -788,19 +751,26 @@ namespace flex
 						ImGui::Columns(2);
 						ImGui::SetColumnWidth(0, 350.0f);
 
-						ImGui::DragFloat("Threshold", &font->metaData.threshold, 0.001f, 0.0f, 1.0f);
-						ImGui::DragFloat2("Shadow Offset", &font->metaData.shadowOffset.x, 0.0007f);
-						ImGui::DragFloat("Shadow Opacity", &font->metaData.shadowOpacity, 0.005f, 0.0f, 0.999f);
-						ImGui::DragFloat("Soften", &font->metaData.soften, 0.001f, 0.0f, 1.0f);
+						fontMetaData.bDirty |= ImGui::DragFloat("Threshold", &fontMetaData.threshold, 0.001f, 0.0f, 1.0f);
+						fontMetaData.bDirty |= ImGui::DragFloat2("Shadow Offset", &fontMetaData.shadowOffset.x, 0.0007f);
+						fontMetaData.bDirty |= ImGui::DragFloat("Shadow Opacity", &fontMetaData.shadowOpacity, 0.005f, 0.0f, 0.999f);
+						fontMetaData.bDirty |= ImGui::DragFloat("Soften", &fontMetaData.soften, 0.001f, 0.0f, 1.0f);
+						// TODO: Store "needs bake" flag as well
+						fontMetaData.bDirty |= ImGuiExt::DragInt16("Size", &fontMetaData.size, 4, 256);
 
-						ImGui::Text("Size: %i", font->metaData.size);
+						ImGui::Text("Size: %i", fontMetaData.size);
 						ImGui::SameLine();
-						ImGui::Text("%s space", fontMeta.bScreenSpace ? "Screen" : "World");
+						ImGui::Text("%s space", fontMetaData.bScreenSpace ? "Screen" : "World");
 						glm::vec2u texSize(font->GetTextureSize());
-						ImGui::Text("Resolution: %ux%u", texSize.x, texSize.y);
+						u32 texChannelCount = font->GetTextureChannelCount();
+						const u32 bufSize = 64;
+						char texSizeBuf[bufSize];
+						ByteCountToString(texSizeBuf, bufSize, texSize.x * texSize.y * texChannelCount * sizeof(u32));
+						ImGui::Text("Resolution: %ux%u (%s)", texSize.x, texSize.y, texSizeBuf);
 						ImGui::Text("Char count: %i", font->characterCount);
 						ImGui::Text("Byte count: %i", font->bufferSize);
 						ImGui::Text("Use kerning: %s", font->bUseKerning ? "true" : "false");
+
 						// TODO: Add support to ImGui vulkan renderer for images
 						//VulkanTexture* tex = font->GetTexture();
 						//ImVec2 texSize((real)tex->width, (real)tex->height);
@@ -811,37 +781,73 @@ namespace flex
 						ImGui::NextColumn();
 						if (ImGui::Button("Re-bake"))
 						{
-							if (fontMeta.bScreenSpace)
+							if (fontMetaData.bScreenSpace)
 							{
-								auto vecIterSS = std::find(m_FontsSS.begin(), m_FontsSS.end(), fontMeta.bitmapFont);
+								auto vecIterSS = std::find(m_FontsSS.begin(), m_FontsSS.end(), fontMetaData.bitmapFont);
 								assert(vecIterSS != m_FontsSS.end());
 
 								m_FontsSS.erase(vecIterSS);
 							}
 							else
 							{
-								auto vecIterWS = std::find(m_FontsWS.begin(), m_FontsWS.end(), fontMeta.bitmapFont);
+								auto vecIterWS = std::find(m_FontsWS.begin(), m_FontsWS.end(), fontMetaData.bitmapFont);
 								assert(vecIterWS != m_FontsWS.end());
 
 								m_FontsWS.erase(vecIterWS);
 							}
 
-							delete fontMeta.bitmapFont;
-							fontMeta.bitmapFont = nullptr;
+							delete fontMetaData.bitmapFont;
+							fontMetaData.bitmapFont = nullptr;
 							font = nullptr;
 
-							LoadFont(fontMeta, true);
+							SetRenderedSDFFilePath(fontMetaData);
 
+							LoadFont(fontMetaData, true);
 						}
 						if (ImGui::Button("View SDF"))
 						{
-							std::string absDir = RelativePathToAbsolute(fontMeta.renderedTextureFilePath);
+							std::string absDir = RelativePathToAbsolute(fontMetaData.renderedTextureFilePath);
 							Platform::OpenExplorer(absDir);
 						}
-						if (ImGui::Button("Open in explorer"))
+						if (ImGui::Button("Open SDF in explorer"))
 						{
-							const std::string absDir = ExtractDirectoryString(RelativePathToAbsolute(fontMeta.renderedTextureFilePath));
+							const std::string absDir = ExtractDirectoryString(RelativePathToAbsolute(fontMetaData.renderedTextureFilePath));
 							Platform::OpenExplorer(absDir);
+						}
+						ImGui::SameLine();
+						if (ImGui::Button("Open font in explorer"))
+						{
+							const std::string absDir = ExtractDirectoryString(RelativePathToAbsolute(fontMetaData.filePath));
+							Platform::OpenExplorer(absDir);
+						}
+						bool bPreviewing = m_PreviewedFont == fontPair.first;
+						if (ImGui::Checkbox("Preview", &bPreviewing))
+						{
+							if (bPreviewing)
+							{
+								m_PreviewedFont = fontPair.first;
+							}
+							else
+							{
+								m_PreviewedFont = "";
+							}
+						}
+
+						const bool bWasDirty = fontMetaData.bDirty;
+						if (bWasDirty)
+						{
+							ImVec4 buttonCol = ImGui::GetStyle().Colors[ImGuiCol_Button];
+							ImVec4 darkButtonCol = ImVec4(buttonCol.x * 1.2f, buttonCol.y * 1.2f, buttonCol.z * 1.2f, buttonCol.w);
+							ImGui::PushStyleColor(ImGuiCol_Button, darkButtonCol);
+						}
+						if (ImGui::Button(fontMetaData.bDirty ? "Save*" : "Save"))
+						{
+							SerializeFontFile();
+							fontMetaData.bDirty = false;
+						}
+						if (bWasDirty)
+						{
+							ImGui::PopStyleColor();
 						}
 						ImGui::EndColumns();
 					}
@@ -984,6 +990,8 @@ namespace flex
 				g_Renderer->RecaptureReflectionProbe();
 			}
 
+			ImGui::Checkbox("Selection wireframe", &m_bEnableSelectionWireframe);
+
 			bool bVSyncEnabled = g_Window->GetVSyncEnabled();
 			if (ImGui::Checkbox("VSync", &bVSyncEnabled))
 			{
@@ -1022,9 +1030,29 @@ namespace flex
 				ImGui::TreePop();
 			}
 
+			if (ImGui::SliderInt("Shadow cascade count", &m_ShadowCascadeCount, 1, 4))
+			{
+				m_ShadowCascadeCount = glm::clamp(m_ShadowCascadeCount, 1, 4);
+				RecreateShadowFrameBuffers();
+			}
+
+			if (ImGuiExt::SliderUInt("Shadow cascade base resolution", &m_ShadowMapBaseResolution, 128u, 4096u))
+			{
+				m_ShadowMapBaseResolution = NextPowerOfTwo(glm::clamp(m_ShadowMapBaseResolution, 128u, 4096u));
+				RecreateShadowFrameBuffers();
+			}
+
+			if (ImGui::SliderInt("Shader quality level", &m_ShaderQualityLevel, 0, 3))
+			{
+				m_ShaderQualityLevel = glm::clamp(m_ShaderQualityLevel, 0, 3);
+				RecreateEverything();
+			}
+
 			if (ImGui::TreeNode("Debug objects"))
 			{
 				PhysicsDebuggingSettings& physicsDebuggingSettings = g_Renderer->GetPhysicsDebuggingSettings();
+
+				ImGui::Checkbox("Wireframe overlay", &m_bEnableWireframeOverlay);
 
 				bool bRenderEditorObjs = g_EngineInstance->IsRenderingEditorObjects();
 				if (ImGui::Checkbox("Editor objects", &bRenderEditorObjs))
@@ -1112,10 +1140,10 @@ namespace flex
 				m_PostProcessSettings.saturation / maxSaturation,
 				m_PostProcessSettings.saturation / maxSaturation, 1));
 
-			bool bSSAOEnabled = m_SSAOSamplingData.ssaoEnabled != 0;
+			bool bSSAOEnabled = m_SSAOSamplingData.enabled != 0;
 			if (ImGui::Checkbox("SSAO", &bSSAOEnabled))
 			{
-				m_SSAOSamplingData.ssaoEnabled = bSSAOEnabled ? 1 : 0;
+				m_SSAOSamplingData.enabled = bSSAOEnabled ? 1 : 0;
 				if (m_bSSAOBlurEnabled != bSSAOEnabled)
 				{
 					m_bSSAOBlurEnabled = bSSAOEnabled;
@@ -1130,7 +1158,7 @@ namespace flex
 				m_bSSAOStateChanged = true;
 				if (m_bSSAOBlurEnabled)
 				{
-					m_SSAOSamplingData.ssaoEnabled = 1;
+					m_SSAOSamplingData.enabled = 1;
 				}
 			}
 
@@ -1141,7 +1169,7 @@ namespace flex
 			ImGui::SliderFloat("Radius", &m_SSAOGenData.radius, 0.0001f, 15.0f);
 			ImGui::SliderInt("Blur Radius", &m_SSAOBlurDataConstant.radius, 1, 16);
 			ImGui::SliderInt("Blur Offset Count", &m_SSAOBlurSamplePixelOffset, 1, 10);
-			ImGui::SliderFloat("Pow", &m_SSAOSamplingData.ssaoPowExp, 0.1f, 10.0f);
+			ImGui::SliderFloat("Pow", &m_SSAOSamplingData.powExp, 0.1f, 10.0f);
 
 			ImGui::PopItemWidth();
 
@@ -1158,7 +1186,8 @@ namespace flex
 			ImGui::Text("Materials");
 
 			std::vector<MeshComponent*> subMeshes = mesh->GetSubMeshes();
-			for (u32 slotIndex = 0; slotIndex < subMeshes.size(); ++slotIndex)
+			bool bMatChanged = false;
+			for (u32 slotIndex = 0; !bMatChanged && slotIndex < subMeshes.size(); ++slotIndex)
 			{
 				MeshComponent* meshComponent = subMeshes[slotIndex];
 
@@ -1195,6 +1224,7 @@ namespace flex
 						{
 							meshComponent->SetMaterialID(matPair.second);
 							selectedMaterialShortIndex = matShortIndex;
+							bMatChanged = true;
 						}
 
 						++matShortIndex;
@@ -1213,6 +1243,7 @@ namespace flex
 						if (draggedMaterialID)
 						{
 							meshComponent->SetMaterialID(*draggedMaterialID);
+							bMatChanged = true;
 						}
 					}
 
@@ -1290,6 +1321,8 @@ namespace flex
 				{ "particle_sim", "", "", "", "vk_simulate_particles_comp.spv" },
 				{ "particles", "vk_particles_vert.spv", "vk_particles_frag.spv", "vk_particles_geom.spv" },
 				{ "terrain", "vk_terrain_vert.spv", "vk_terrain_frag.spv" },
+				{ "water", "vk_water_vert.spv", "vk_water_frag.spv" },
+				{ "wireframe", "vk_wireframe_vert.spv", "vk_wireframe_frag.spv", "vk_wireframe_geom.spv" },
 			};
 #endif
 
@@ -1362,6 +1395,7 @@ namespace flex
 
 			// Color
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
+			m_BaseShaders[shaderID].bDepthWriteEnable = false;
 			m_BaseShaders[shaderID].bTranslucent = true;
 			m_BaseShaders[shaderID].dynamicVertexBufferSize = 16384 * 4 * 28; // (1835008) TODO: FIXME:
 			m_BaseShaders[shaderID].vertexAttributes =
@@ -1383,7 +1417,7 @@ namespace flex
 			m_BaseShaders[shaderID].bNeedMetallicSampler = true;
 			m_BaseShaders[shaderID].bNeedRoughnessSampler = true;
 			m_BaseShaders[shaderID].bNeedNormalSampler = true;
-			m_BaseShaders[shaderID].dynamicVertexBufferSize = 1024 * 1024; // TODO;
+			m_BaseShaders[shaderID].dynamicVertexBufferSize = 10 * 1024 * 1024; // 10MB
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV |
@@ -1455,10 +1489,7 @@ namespace flex
 				(u32)VertexAttribute::POSITION;
 
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
-			//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW);
-			//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PROJECTION);
-			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_EXPOSURE);
-			//m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_TIME);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SKYBOX_DATA);
 
 			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_CUBEMAP_SAMPLER);
 			++shaderID;
@@ -1770,6 +1801,47 @@ namespace flex
 			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_ALBEDO_SAMPLER);
 			++shaderID;
 
+			// Water
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
+			m_BaseShaders[shaderID].bDepthWriteEnable = true;
+			m_BaseShaders[shaderID].bTranslucent = false;
+			m_BaseShaders[shaderID].vertexAttributes =
+				(u32)VertexAttribute::POSITION |
+				(u32)VertexAttribute::UV |
+				(u32)VertexAttribute::NORMAL |
+				(u32)VertexAttribute::TANGENT |
+				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_CAM_POS);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_PROJECTION);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_DIR_LIGHT);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_OCEAN_DATA);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_SKYBOX_DATA);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_TIME);
+
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
+
+			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_ALBEDO_SAMPLER);
+			++shaderID;
+
+			// Wireframe
+			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
+			m_BaseShaders[shaderID].bDepthWriteEnable = false;
+			m_BaseShaders[shaderID].bTranslucent = true;
+			m_BaseShaders[shaderID].vertexAttributes =
+				(u32)VertexAttribute::POSITION;
+
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
+
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_COLOR_MULTIPLIER);
+			++shaderID;
+
 			assert(shaderID == m_BaseShaders.size());
 		}
 
@@ -1892,7 +1964,7 @@ namespace flex
 						GameObject* newGameObject = new GameObject(newObjectName, GameObjectType::OBJECT);
 
 						Mesh* mesh = newGameObject->SetMesh(new Mesh(newGameObject));
-						mesh->LoadFromFile(RESOURCE_LOCATION "meshes/cube.glb", m_PlaceholderMaterialID);
+						mesh->LoadFromFile(MESH_DIRECTORY "cube.glb", m_PlaceholderMaterialID);
 
 						g_SceneManager->CurrentScene()->AddRootObject(newGameObject);
 
@@ -1925,6 +1997,11 @@ namespace flex
 			ImGui::SameLine();
 
 			if (ImGui::Button("Cancel"))
+			{
+				ImGui::CloseCurrentPopup();
+			}
+
+			if (g_InputManager->GetKeyPressed(KeyCode::KEY_ESCAPE, true))
 			{
 				ImGui::CloseCurrentPopup();
 			}
@@ -2197,12 +2274,8 @@ namespace flex
 
 	void Renderer::GenerateGBuffer()
 	{
-		if (m_gBufferQuadVertexBufferData.vertexData == nullptr)
-		{
-			GenerateGBufferVertexBuffer(g_bVulkanEnabled);
-		}
-
 		assert(m_SkyBoxMesh != nullptr);
+		assert(m_SkyboxShaderID != InvalidShaderID);
 		MaterialID skyboxMaterialID = m_SkyBoxMesh->GetSubMeshes()[0]->GetMaterialID();
 
 		const std::string gBufferMatName = "GBuffer material";
@@ -2216,11 +2289,11 @@ namespace flex
 			// TODO: Don't rely on material names!
 			if (FindOrCreateMaterialByName(gBufferMatName, existingGBufferQuadMatID))
 			{
-				RemoveMaterial(existingGBufferQuadMatID);
+				RemoveMaterial(existingGBufferQuadMatID, false);
 			}
 			if (FindOrCreateMaterialByName(gBufferCubeMatName, existingGBufferCubeMatID))
 			{
-				RemoveMaterial(existingGBufferCubeMatID);
+				RemoveMaterial(existingGBufferCubeMatID, false);
 			}
 
 			for (auto iter = m_PersistentObjects.begin(); iter != m_PersistentObjects.end(); ++iter)
@@ -2266,7 +2339,7 @@ namespace flex
 			RenderObjectCreateInfo gBufferQuadCreateInfo = {};
 			gBufferQuadCreateInfo.materialID = gBufferMatID;
 			gBufferQuadCreateInfo.gameObject = gBufferQuadGameObject;
-			gBufferQuadCreateInfo.vertexBufferData = &m_gBufferQuadVertexBufferData;
+			gBufferQuadCreateInfo.vertexBufferData = &m_FullScreenTriVertexBufferData;
 			gBufferQuadCreateInfo.cullFace = CullFace::NONE;
 			gBufferQuadCreateInfo.visibleInSceneExplorer = false;
 			gBufferQuadCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
@@ -2274,8 +2347,6 @@ namespace flex
 			gBufferQuadCreateInfo.bSetDynamicStates = true;
 
 			m_GBufferQuadRenderID = InitializeRenderObject(&gBufferQuadCreateInfo);
-
-			m_gBufferQuadVertexBufferData.DescribeShaderVariables(this, m_GBufferQuadRenderID);
 		}
 
 		// Initialize GBuffer cubemap material & mesh
@@ -2301,10 +2372,20 @@ namespace flex
 	{
 		SetFont(SID("editor-02"));
 		static const glm::vec4 color(0.95f);
-		DrawStringSS("FLEX ENGINE", color, AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -0.055f), 1.0f, 0.6f);
+		DrawStringSS("FLEX ENGINE", color, AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -0.055f), 1.5f, 0.6f);
 		if (g_EngineInstance->IsSimulationPaused())
 		{
-			DrawStringSS("PAUSED", color, AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -0.09f), 0.0f);
+			const std::vector<TextCache>& textCaches = m_CurrentFont->GetTextCaches();
+			real height = GetStringHeight(textCaches[textCaches.size() - 1], m_CurrentFont) / (real)g_Window->GetSize().y;
+			// TODO: Allow specifying text pos in different units (absolute, relative, ...)
+			DrawStringSS("PAUSED", color, AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -(height + 0.09f)), 0.0f, 0.6f);
+		}
+
+		if (AudioManager::IsMuted())
+		{
+			const std::vector<TextCache>& textCaches = m_CurrentFont->GetTextCaches();
+			real height = GetStringHeight(textCaches[textCaches.size() - 1], m_CurrentFont) / (real)g_Window->GetSize().y;
+			DrawStringSS("Muted", color, AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -(height + 0.09f)), 0.0f, 0.6f);
 		}
 
 #if 0
@@ -2322,6 +2403,12 @@ namespace flex
 			real alpha = glm::clamp(m_EditorStrSecRemaining / (m_EditorStrSecDuration * m_EditorStrFadeDurationPercent),
 				0.0f, 1.0f);
 			DrawStringSS(m_EditorMessage, glm::vec4(1.0f, 1.0f, 1.0f, alpha), AnchorPoint::CENTER, VEC2_ZERO, 3);
+		}
+
+		if (!m_PreviewedFont.empty())
+		{
+			SetFont(m_PreviewedFont);
+			DrawStringSS("Preview text... 123 -*!~? ", VEC4_ONE, AnchorPoint::CENTER, VEC2_ZERO, 3);
 		}
 	}
 
@@ -2514,30 +2601,30 @@ namespace flex
 	void Renderer::InitializeMaterials()
 	{
 		MaterialCreateInfo spriteMatSSCreateInfo = {};
-		spriteMatSSCreateInfo.name = "Sprite material";
+		spriteMatSSCreateInfo.name = "Sprite SS material";
 		spriteMatSSCreateInfo.shaderName = "sprite";
 		spriteMatSSCreateInfo.persistent = true;
-		spriteMatSSCreateInfo.visibleInEditor = true;
+		spriteMatSSCreateInfo.visibleInEditor = false;
 		spriteMatSSCreateInfo.enableAlbedoSampler = true;
-		spriteMatSSCreateInfo.bDynamic = true;
+		spriteMatSSCreateInfo.bDynamic = false;
 		m_SpriteMatSSID = InitializeMaterial(&spriteMatSSCreateInfo);
 
 		MaterialCreateInfo spriteMatWSCreateInfo = {};
-		spriteMatWSCreateInfo.name = "Sprite material";
+		spriteMatWSCreateInfo.name = "Sprite WS material";
 		spriteMatWSCreateInfo.shaderName = "sprite";
 		spriteMatWSCreateInfo.persistent = true;
-		spriteMatWSCreateInfo.visibleInEditor = true;
+		spriteMatWSCreateInfo.visibleInEditor = false;
 		spriteMatWSCreateInfo.enableAlbedoSampler = true;
-		spriteMatWSCreateInfo.bDynamic = true;
+		spriteMatWSCreateInfo.bDynamic = false;
 		m_SpriteMatWSID = InitializeMaterial(&spriteMatWSCreateInfo);
 
 		MaterialCreateInfo spriteArrMatCreateInfo = {};
 		spriteArrMatCreateInfo.name = "Sprite Texture Array material";
 		spriteArrMatCreateInfo.shaderName = "sprite_arr";
 		spriteArrMatCreateInfo.persistent = true;
-		spriteArrMatCreateInfo.visibleInEditor = true;
+		spriteArrMatCreateInfo.visibleInEditor = false;
 		spriteArrMatCreateInfo.enableAlbedoSampler = true;
-		spriteArrMatCreateInfo.bDynamic = true;
+		spriteArrMatCreateInfo.bDynamic = false;
 		m_SpriteArrMatID = InitializeMaterial(&spriteArrMatCreateInfo);
 
 		MaterialCreateInfo fontSSMatCreateInfo = {};
@@ -2545,7 +2632,7 @@ namespace flex
 		fontSSMatCreateInfo.shaderName = "font_ss";
 		fontSSMatCreateInfo.persistent = true;
 		fontSSMatCreateInfo.visibleInEditor = false;
-		fontSSMatCreateInfo.bDynamic = true;
+		fontSSMatCreateInfo.bDynamic = false;
 		m_FontMatSSID = InitializeMaterial(&fontSSMatCreateInfo);
 
 		MaterialCreateInfo fontWSMatCreateInfo = {};
@@ -2553,7 +2640,7 @@ namespace flex
 		fontWSMatCreateInfo.shaderName = "font_ws";
 		fontWSMatCreateInfo.persistent = true;
 		fontWSMatCreateInfo.visibleInEditor = false;
-		fontWSMatCreateInfo.bDynamic = true;
+		fontWSMatCreateInfo.bDynamic = false;
 		m_FontMatWSID = InitializeMaterial(&fontWSMatCreateInfo);
 
 		MaterialCreateInfo shadowMatCreateInfo = {};
@@ -2637,11 +2724,18 @@ namespace flex
 		brdfCreateInfo.visibleInEditor = false;
 		m_BRDFMaterialID = InitializeMaterial(&brdfCreateInfo);
 
+		MaterialCreateInfo wireframeCreateInfo = {};
+		wireframeCreateInfo.name = "wireframe";
+		wireframeCreateInfo.shaderName = "wireframe";
+		wireframeCreateInfo.persistent = true;
+		wireframeCreateInfo.visibleInEditor = false;
+		m_WireframeMatID = InitializeMaterial(&wireframeCreateInfo);
+
 		MaterialCreateInfo placeholderMatCreateInfo = {};
 		placeholderMatCreateInfo.name = "placeholder";
 		placeholderMatCreateInfo.shaderName = "pbr";
 		placeholderMatCreateInfo.persistent = true;
-		placeholderMatCreateInfo.visibleInEditor = true;
+		placeholderMatCreateInfo.visibleInEditor = false;
 		placeholderMatCreateInfo.constAlbedo = glm::vec3(1.0f, 0.0f, 1.0f);
 		m_PlaceholderMaterialID = InitializeMaterial(&placeholderMatCreateInfo);
 	}
@@ -2766,7 +2860,7 @@ namespace flex
 	}
 
 	// TODO: Consolidate with UpdateTextBufferWS
-	void Renderer::UpdateTextBufferSS(std::vector<TextVertex2D>& outTextVertices)
+	u32 Renderer::UpdateTextBufferSS(std::vector<TextVertex2D>& outTextVertices)
 	{
 		PROFILE_AUTO("Update Text Buffer SS");
 
@@ -2774,7 +2868,7 @@ namespace flex
 		real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
 
 		u32 charCountUpperBound = 0;
-		for (BitmapFont* font : m_FontsWS)
+		for (BitmapFont* font : m_FontsSS)
 		{
 			const std::vector<TextCache>& caches = font->GetTextCaches();
 			for (const TextCache& textCache : caches)
@@ -2782,15 +2876,16 @@ namespace flex
 				charCountUpperBound += (u32)textCache.str.length();
 			}
 		}
-		outTextVertices.reserve(charCountUpperBound);
+		outTextVertices.resize(charCountUpperBound);
 
 		const real frameBufferScale = glm::max(2.0f / (real)frameBufferSize.x, 2.0f / (real)frameBufferSize.y);
 
+		u32 charIndex = 0;
 		for (BitmapFont* font : m_FontsSS)
 		{
 			real baseTextScale = frameBufferScale * (font->metaData.size / 12.0f);
 
-			font->bufferStart = (i32)(outTextVertices.size());
+			font->bufferStart = (i32)charIndex;
 
 			const std::vector<TextCache>& textCaches = font->GetTextCaches();
 			for (const TextCache& textCache : textCaches)
@@ -2882,7 +2977,7 @@ namespace flex
 							vert.charSizePixelsCharSizeNorm = charSizePixelsCharSizeNorm;
 							vert.channel = texChannel;
 
-							outTextVertices.push_back(vert);
+							outTextVertices[charIndex++] = vert;
 
 							totalAdvanceX += metric->advanceX + textCache.xSpacing;
 						}
@@ -2900,19 +2995,21 @@ namespace flex
 				}
 			}
 
-			font->bufferSize = (i32)outTextVertices.size() - font->bufferStart;
+			font->bufferSize = (i32)charIndex - font->bufferStart;
 			font->ClearCaches();
 		}
+
+		return charIndex;
 	}
 
-	void Renderer::UpdateTextBufferWS(std::vector<TextVertex3D>& outTextVertices)
+	u32 Renderer::UpdateTextBufferWS(std::vector<TextVertex3D>& outTextVertices)
 	{
 		// TODO: Consolidate with UpdateTextBufferSS
 
 		PROFILE_AUTO("Update Text Buffer WS");
 
 		const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
-		const real frameBufferScale = glm::max(2.0f / (real)frameBufferSize.x, 2.0f / (real)frameBufferSize.y);
+		const real frameBufferScale = glm::max(1.0f / (real)frameBufferSize.x, 1.0f / (real)frameBufferSize.y);
 
 		u32 charCountUpperBound = 0;
 		for (BitmapFont* font : m_FontsWS)
@@ -2923,13 +3020,14 @@ namespace flex
 				charCountUpperBound += (u32)textCache.str.length();
 			}
 		}
-		outTextVertices.reserve(charCountUpperBound);
+		outTextVertices.resize(charCountUpperBound);
 
+		u32 charIndex = 0;
 		for (BitmapFont* font : m_FontsWS)
 		{
-			real textScale = frameBufferScale * (font->metaData.size / 12.0f);
+			real textScale = frameBufferScale * font->metaData.size;
 
-			font->bufferStart = (i32)(outTextVertices.size());
+			font->bufferStart = (i32)charIndex;
 
 			const std::vector<TextCache>& caches = font->GetTextCaches();
 			for (const TextCache& textCache : caches)
@@ -2982,7 +3080,7 @@ namespace flex
 							vert.charSizePixelsCharSizeNorm = charSizePixelsCharSizeNorm;
 							vert.channel = texChannel;
 
-							outTextVertices.push_back(vert);
+							outTextVertices[charIndex++] = vert;
 
 							totalAdvanceX += metric->advanceX + textCache.xSpacing;
 						}
@@ -3000,9 +3098,11 @@ namespace flex
 				}
 			}
 
-			font->bufferSize = (i32)outTextVertices.size() - font->bufferStart;
+			font->bufferSize = (i32)charIndex - font->bufferStart;
 			font->ClearCaches();
 		}
+
+		return charIndex;
 	}
 
 	glm::vec4 Renderer::GetSelectedObjectColorMultiplier() const
@@ -3041,29 +3141,6 @@ namespace flex
 		return contrastBrightnessSaturation;
 	}
 
-	void Renderer::GenerateGBufferVertexBuffer(bool bFlipV)
-	{
-		if (m_gBufferQuadVertexBufferData.vertexData == nullptr)
-		{
-			VertexBufferDataCreateInfo gBufferQuadVertexBufferDataCreateInfo = {};
-
-			gBufferQuadVertexBufferDataCreateInfo.positions_3D = {
-				glm::vec3(-1.0f, -1.0f, 0.0f),
-				glm::vec3(-1.0f, 3.0f,  0.0f),
-				glm::vec3(3.0f,  -1.0f, 0.0f),
-			};
-
-			gBufferQuadVertexBufferDataCreateInfo.texCoords_UV = {
-				glm::vec2(0.0f, bFlipV ? 1.0f : 0.0f),
-				glm::vec2(0.0f, bFlipV ? -1.0f : 2.0f),
-				glm::vec2(2.0f, bFlipV ? 1.0f : 0.0f),
-			};
-
-			gBufferQuadVertexBufferDataCreateInfo.attributes = (u32)VertexAttribute::POSITION | (u32)VertexAttribute::UV;
-			m_gBufferQuadVertexBufferData.Initialize(gBufferQuadVertexBufferDataCreateInfo);
-		}
-	}
-
 	void Renderer::GenerateSSAONoise(std::vector<glm::vec4>& noise)
 	{
 		noise = std::vector<glm::vec4>(SSAO_NOISE_DIM * SSAO_NOISE_DIM);
@@ -3092,6 +3169,98 @@ namespace flex
 		particleMatCreateInfo.persistent = true;
 		particleMatCreateInfo.visibleInEditor = false;
 		return InitializeMaterial(&particleMatCreateInfo);
+	}
+
+	void Renderer::ParseFontFile()
+	{
+		if (!FileExists(m_FontsFilePathAbs))
+		{
+			PrintError("Fonts file missing!\n");
+		}
+		else
+		{
+			JSONObject fontSettings;
+			if (JSONParser::ParseFromFile(m_FontsFilePathAbs, fontSettings))
+			{
+				std::vector<JSONObject> fontObjs;
+				if (fontSettings.SetObjectArrayChecked("fonts", fontObjs))
+				{
+					for (const JSONObject& fontObj : fontObjs)
+					{
+						FontMetaData fontMetaData = {};
+
+						std::string fileName;
+						fontObj.SetStringChecked("file path", fileName);
+						// TODO: Add 16 bit int support to JSON parser
+						fontMetaData.size = (i16)fontObj.GetInt("size");
+						fontObj.SetBoolChecked("screen space", fontMetaData.bScreenSpace);
+						fontObj.SetFloatChecked("threshold", fontMetaData.threshold);
+						fontObj.SetFloatChecked("shadow opacity", fontMetaData.shadowOpacity);
+						fontObj.SetVec2Checked("shadow offset", fontMetaData.shadowOffset);
+						fontObj.SetFloatChecked("soften", fontMetaData.soften);
+
+						if (fileName.empty())
+						{
+							PrintError("Font doesn't contain file name!\n");
+							continue;
+						}
+
+						fontMetaData.filePath = FONT_LOCATION + fileName;
+						SetRenderedSDFFilePath(fontMetaData);
+
+						std::string fontName = fontObj.GetString("name");
+						m_Fonts[fontName] = fontMetaData;
+					}
+				}
+			}
+			else
+			{
+				PrintError("Failed to parse font config file %s\n\terror: %s\n", m_FontsFilePathAbs.c_str(), JSONParser::GetErrorString());
+			}
+		}
+	}
+
+	void Renderer::SetRenderedSDFFilePath(FontMetaData& fontMetaData)
+	{
+		static const std::string DPIStr = FloatToString(g_Monitor->DPI.x, 0) + "DPI";
+
+		fontMetaData.renderedTextureFilePath = StripFileType(StripLeadingDirectories(fontMetaData.filePath));
+		fontMetaData.renderedTextureFilePath += "-" + IntToString(fontMetaData.size, 2) + "-" + DPIStr + m_FontImageExtension;
+		fontMetaData.renderedTextureFilePath = FONT_SDF_LOCATION + fontMetaData.renderedTextureFilePath;
+	}
+
+	void Renderer::SerializeFontFile()
+	{
+		std::vector<JSONObject> fontObjs;
+
+		for (auto& fontPair : m_Fonts)
+		{
+			FontMetaData fontMetaData = m_Fonts[fontPair.first];
+
+			JSONObject fontObj = {};
+
+			fontObj.fields.emplace_back("name", JSONValue(fontPair.first));
+			std::string relativeFilePath = StripLeadingDirectories(fontMetaData.filePath);
+			fontObj.fields.emplace_back("file path", JSONValue(relativeFilePath));
+			fontObj.fields.emplace_back("size", JSONValue((i32)fontMetaData.size));
+			fontObj.fields.emplace_back("screen space", JSONValue(fontMetaData.bScreenSpace));
+			fontObj.fields.emplace_back("threshold", JSONValue(fontMetaData.threshold, 2));
+			fontObj.fields.emplace_back("shadow opacity", JSONValue(fontMetaData.shadowOpacity, 2));
+			fontObj.fields.emplace_back("shadow offset", JSONValue(VecToString(fontMetaData.shadowOffset, 2)));
+			fontObj.fields.emplace_back("soften", JSONValue(fontMetaData.soften, 2));
+
+			fontObjs.push_back(fontObj);
+		}
+
+		JSONObject fontSettings;
+		fontSettings.fields.push_back(JSONField("fonts", JSONValue(fontObjs)));
+
+		std::string fileContents = fontSettings.Print(0);
+
+		if (!WriteFile(m_FontsFilePathAbs, fileContents, false))
+		{
+			PrintError("Failed to write font file to %s\n", m_FontsFilePathAbs.c_str());
+		}
 	}
 
 	void PhysicsDebugDrawBase::UpdateDebugMode()

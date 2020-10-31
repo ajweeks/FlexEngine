@@ -10,6 +10,7 @@ IGNORE_WARNINGS_POP
 #include "Cameras/CameraManager.hpp"
 #include "Editor.hpp"
 #include "FlexEngine.hpp"
+#include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
 #include "Scene/GameObject.hpp"
@@ -25,7 +26,8 @@ namespace flex
 		m_RollOnTurnAmount(1.5f),
 		m_MouseDragDist(0.0f),
 		m_MoveVel(0.0f),
-		m_TurnVel(0.0f)
+		m_TurnVel(0.0f),
+		m_OrbitCenter(VEC3_ZERO)
 	{
 		ResetOrientation();
 		m_DragHistory = Histogram(120);
@@ -71,6 +73,8 @@ namespace flex
 	void DebugCamera::Update()
 	{
 		BaseCamera::Update();
+		// Override value from base update
+		roll = Lerp(roll, 0.0f, rollRestorationSpeed * g_UnpausedDeltaTime);
 
 		m_DragHistory.AddElement(m_MouseDragDist.y);
 
@@ -109,8 +113,12 @@ namespace flex
 			m_bDraggingMMB = false;
 		}
 
+		if (g_InputManager->GetActionPressed(Action::EDITOR_FOCUS_ON_SELECTION))
+		{
+			m_OrbitCenter = g_Editor->GetSelectedObjectsCenter();
+		}
+
 		bool bOrbiting = false;
-		glm::vec3 orbitingCenter(0.0f);
 
 		bool bPOribiting = m_bOrbiting;
 		m_bOrbiting = g_InputManager->GetActionDown(Action::EDITOR_ORBIT) > 0;
@@ -125,7 +133,6 @@ namespace flex
 		{
 			if (m_bOrbiting)
 			{
-				orbitingCenter = g_Editor->GetSelectedObjectsCenter();
 				bOrbiting = true;
 
 				float dr = glm::dot(forward, VEC3_UP);
@@ -137,6 +144,7 @@ namespace flex
 				}
 				else
 				{
+					// TODO: Orbit faster when far from orbit center
 					targetDPos += right * (m_MouseDragDist.x * orbitingSpeed * turnSpeedMultiplier) +
 						up * (m_MouseDragDist.y * orbitingSpeed * turnSpeedMultiplier);
 				}
@@ -215,7 +223,7 @@ namespace flex
 
 		targetDPos += translation * moveSpeed * moveSpeedMultiplier * g_UnpausedDeltaTime;
 
-		real distFromCenter = glm::length(position - orbitingCenter);
+		real distFromCenter = glm::length(position - m_OrbitCenter);
 
 		m_MoveVel += targetDPos;
 
@@ -224,10 +232,10 @@ namespace flex
 
 		if (bOrbiting)
 		{
-			glm::vec3 orientationFromCenter = glm::normalize(position - orbitingCenter);
-			position = orbitingCenter + orientationFromCenter * distFromCenter;
+			glm::vec3 orientationFromCenter = glm::normalize(position - m_OrbitCenter);
+			position = m_OrbitCenter + orientationFromCenter * distFromCenter;
 
-			LookAt(orbitingCenter);
+			LookAt(m_OrbitCenter);
 		}
 
 		// TODO: Incorporate lag in frame-rate-independent way that doesn't change max vel
@@ -238,6 +246,8 @@ namespace flex
 		RecalculateViewProjection();
 
 		m_MouseDragDist = VEC2_ZERO;
+
+		g_Renderer->GetDebugDrawer()->drawSphere(ToBtVec3(m_OrbitCenter), 0.5f, btVector3(1.0f, 0.0f, 0.0f));
 	}
 
 	EventReply DebugCamera::OnMouseButtonEvent(MouseButton button, KeyAction action)

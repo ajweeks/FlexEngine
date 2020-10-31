@@ -19,7 +19,7 @@ void main()
 	ex_TexCoord = in_TexCoord;
 	vec2 adjustment = vec2(spread * 2.0) / charRes;
 	ex_TexCoord -= vec2(0.5);
-	ex_TexCoord *= (vec2(1.0) + adjustment);
+	ex_TexCoord *= vec2(1.0 + adjustment.x, -(1.0 + adjustment.y));
 	ex_TexCoord += vec2(0.5);
 	gl_Position = vec4(in_Position, 1.0);
 }

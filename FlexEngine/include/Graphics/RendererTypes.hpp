@@ -19,7 +19,7 @@ namespace flex
 	class GameObject;
 
 	static const i32 MAX_POINT_LIGHT_COUNT = 8;
-	static const i32 SHADOW_CASCADE_COUNT = 4;
+	static const i32 MAX_SHADOW_CASCADE_COUNT = 4;
 
 	// 48 bytes
 	struct DirLightData
@@ -62,11 +62,12 @@ namespace flex
 		glm::vec2 ssaoTexelOffset; // 0
 	};
 
-	// 8 bytes
+	// 16 bytes
 	struct SSAOSamplingData
 	{
-		i32 ssaoEnabled; // 0
-		real ssaoPowExp; // 4
+		i32 enabled; // 0
+		real powExp; // 4
+		real pad[2]; // 8
 	};
 
 	// 32 bytes
@@ -84,8 +85,8 @@ namespace flex
 	// 272 bytes
 	struct ShadowSamplingData
 	{
-		glm::mat4 cascadeViewProjMats[SHADOW_CASCADE_COUNT]; // 0
-		glm::vec4 cascadeDepthSplits;                       // 256
+		glm::mat4 cascadeViewProjMats[MAX_SHADOW_CASCADE_COUNT];	// 0
+		glm::vec4 cascadeDepthSplits;								// 256
 	};
 
 	struct SHCoeffs
@@ -120,6 +121,28 @@ namespace flex
 		u32 particleCount;	// 4
 	};
 
+	// 80 bytes
+	struct OceanData
+	{
+		glm::vec4 top;				// 16
+		glm::vec4 mid;				// 16
+		glm::vec4 btm;				// 16
+		real fresnelFactor;			// 4
+		real fresnelPower;			// 4
+		real skyReflectionFactor;	// 4
+		real fogFalloff;			// 4
+		real fogDensity;			// 4
+		real pad[3];				// 12
+	};
+
+	// 48 bytes
+	struct SkyboxData
+	{
+		glm::vec4 top; // 16
+		glm::vec4 mid; // 16
+		glm::vec4 btm; // 16
+	};
+
 	// Uniforms
 	const u64 U_MODEL							= (1ull << 0);	const u32 US_MODEL						= sizeof(glm::mat4);
 	const u64 U_VIEW							= (1ull << 1);	const u32 US_VIEW						= sizeof(glm::mat4);
@@ -130,7 +153,7 @@ namespace flex
 	const u64 U_BLEND_SHARPNESS					= (1ull << 6);	const u32 US_BLEND_SHARPNESS			= sizeof(real);
 	const u64 U_COLOR_MULTIPLIER				= (1ull << 7);	const u32 US_COLOR_MULTIPLIER			= sizeof(glm::vec4);
 	const u64 U_CAM_POS							= (1ull << 8);	const u32 US_CAM_POS					= sizeof(glm::vec4);
-	const u64 U_DIR_LIGHT						= (1ull << 9); const u32 US_DIR_LIGHT					= sizeof(DirLightData);
+	const u64 U_DIR_LIGHT						= (1ull << 9);  const u32 US_DIR_LIGHT					= sizeof(DirLightData);
 	const u64 U_POINT_LIGHTS					= (1ull << 10); const u32 US_POINT_LIGHTS				= sizeof(PointLightData) * MAX_POINT_LIGHT_COUNT;
 	const u64 U_ALBEDO_SAMPLER					= (1ull << 11);
 	const u64 U_CONST_ALBEDO					= (1ull << 12); const u32 US_CONST_ALBEDO				= sizeof(glm::vec4);
@@ -149,7 +172,7 @@ namespace flex
 	const u64 U_FB_0_SAMPLER					= (1ull << 25);
 	const u64 U_FB_1_SAMPLER					= (1ull << 26);
 	const u64 U_SHOW_EDGES						= (1ull << 27); const u32 US_SHOW_EDGES					= sizeof(i32);
-	const u64 U_LIGHT_VIEW_PROJS				= (1ull << 28); const u32 US_LIGHT_VIEW_PROJS			= sizeof(glm::mat4) * SHADOW_CASCADE_COUNT;
+	const u64 U_LIGHT_VIEW_PROJS				= (1ull << 28); const u32 US_LIGHT_VIEW_PROJS			= sizeof(glm::mat4) * MAX_SHADOW_CASCADE_COUNT;
 	const u64 U_HDR_EQUIRECTANGULAR_SAMPLER		= (1ull << 29);
 	const u64 U_BRDF_LUT_SAMPLER				= (1ull << 30);
 	const u64 U_PREFILTER_MAP					= (1ull << 31);
@@ -182,6 +205,8 @@ namespace flex
 	const u64 U_LAST_FRAME_VIEWPROJ				= (1ull << 58); const u32 US_LAST_FRAME_VIEWPROJ		= sizeof(glm::mat4);
 	const u64 U_PARTICLE_BUFFER					= (1ull << 59); const u32 US_PARTICLE_BUFFER			= sizeof(ParticleBufferData);
 	const u64 U_PARTICLE_SIM_DATA				= (1ull << 60); const u32 US_PARTICLE_SIM_DATA			= sizeof(ParticleSimData);
+	const u64 U_OCEAN_DATA						= (1ull << 61); const u32 US_OCEAN_DATA					= sizeof(OceanData);
+	const u64 U_SKYBOX_DATA						= (1ull << 62); const u32 US_SKYBOX_DATA				= sizeof(SkyboxData);
 	// NOTE: New uniforms must be added to Uniforms::CalculateSizeInBytes
 
 	enum class ClearFlag
@@ -307,6 +332,9 @@ namespace flex
 
 		_NONE
 	};
+
+	CullFace StringToCullFace(const std::string& str);
+	std::string CullFaceToString(CullFace cullFace);
 
 	// TODO: Is setting all the members to false necessary?
 	// TODO: Straight up copy most of these with a memcpy?
@@ -710,6 +738,65 @@ namespace flex
 		                                      // + 4
 		glm::vec4 charSizePixelsCharSizeNorm; // 48 - RG: char size in pixels, BA: char size in [0, 1] in screen space
 		i32 channel;                          // 64 - uses extra int slot
+	};
+
+	struct RenderObjectBatch
+	{
+		std::vector<RenderID> objects;
+	};
+
+	struct MaterialBatchPair
+	{
+		MaterialID materialID = InvalidMaterialID;
+		RenderObjectBatch batch;
+	};
+
+	struct MaterialBatch
+	{
+		// One per material
+		std::vector<MaterialBatchPair> batches;
+	};
+
+	struct ShaderBatchPair
+	{
+		ShaderID shaderID = InvalidShaderID;
+		bool bDynamic = false;
+		MaterialBatch batch;
+	};
+
+	struct ShaderBatch
+	{
+		// One per shader
+		std::vector<ShaderBatchPair> batches;
+	};
+
+	struct UniformOverrides
+	{
+		Uniforms overridenUniforms;
+
+		glm::mat4 projection;
+		glm::mat4 view;
+		glm::mat4 viewProjection;
+		glm::vec4 camPos;
+		glm::mat4 model;
+		glm::mat4 modelInvTranspose;
+		u32 enableAlbedoSampler;
+		u32 enableMetallicSampler;
+		u32 enableRoughnessSampler;
+		u32 enableNormalSampler;
+		u32 enableIrradianceSampler;
+		i32 texChannel;
+		glm::vec4 sdfData;
+		glm::vec4 fontCharData;
+		glm::vec2 texSize;
+		glm::vec4 colorMultiplier;
+		bool bSSAOVerticalPass;
+		ParticleSimData* particleSimData = nullptr;
+	};
+
+	struct DeviceDiagnosticCheckpoint
+	{
+		char name[48];
 	};
 
 } // namespace flex

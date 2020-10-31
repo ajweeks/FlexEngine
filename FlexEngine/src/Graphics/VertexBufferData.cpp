@@ -5,6 +5,7 @@
 
 #include "Graphics/Renderer.hpp"
 #include "Graphics/VertexAttribute.hpp"
+#include "Helpers.hpp"
 
 namespace flex
 {
@@ -20,9 +21,11 @@ namespace flex
 		{
 			VertexCount = (u32)createInfo.positions_4D.size();
 		}
+		UsedVertexCount = VertexCount;
 		Attributes = createInfo.attributes;
 		VertexStride = CalculateVertexStride(createInfo.attributes);
 		VertexBufferSize = VertexCount * VertexStride;
+		UsedVertexBufferSize = VertexBufferSize;
 
 		assert(vertexData == nullptr);
 		vertexData = (real*)malloc(VertexBufferSize);
@@ -35,31 +38,53 @@ namespace flex
 		UpdateData(createInfo);
 	}
 
-	void VertexBufferData::InitializeDynamic(VertexAttributes attributes, u32 maxNumVerts)
+	void VertexBufferData::InitializeDynamic(VertexAttributes attributes, u32 initialMaxVertCount)
 	{
 		bDynamic = true;
-		VertexCount = maxNumVerts;
+		VertexCount = initialMaxVertCount;
+		UsedVertexCount = initialMaxVertCount;
 		Attributes = attributes;
 		VertexStride = CalculateVertexStride(attributes);
 		VertexBufferSize = VertexCount * VertexStride;
+		UsedVertexBufferSize = VertexBufferSize;
 
-		assert(vertexData == nullptr);
-		vertexData = (real*)malloc(VertexBufferSize);
-		if (vertexData == nullptr)
+		if (VertexBufferSize > 0)
 		{
-			PrintError("Failed to allocate dynamic vertex buffer memory (%u bytes)\n", VertexBufferSize);
-			return;
+			assert(vertexData == nullptr);
+			vertexData = (real*)malloc(VertexBufferSize);
+			if (vertexData == nullptr)
+			{
+				PrintError("Failed to allocate dynamic vertex buffer memory (%u bytes)\n", VertexBufferSize);
+				return;
+			}
 		}
 	}
 
 	void VertexBufferData::UpdateData(const VertexBufferDataCreateInfo& createInfo)
 	{
+		u32 vertCountToUpdate = glm::max((u32)createInfo.positions_2D.size(), glm::max((u32)createInfo.positions_3D.size(), (u32)createInfo.positions_4D.size()));
+		if (vertCountToUpdate * VertexStride > VertexBufferSize)
+		{
+			VertexCount = vertCountToUpdate;
+			VertexBufferSize = VertexCount * VertexStride;
+			free(vertexData);
+			vertexData = (real*)malloc(VertexBufferSize);
+			if (vertexData == nullptr)
+			{
+				PrintError("Failed to allocate dynamic vertex buffer memory (%u bytes)\n", VertexBufferSize);
+				return;
+			}
+		}
+
+		// NOTE: We _could_ just be doing a partial update, while still using the remaining
+		// data - but that's unlikely. This assumes we always update the whole buffer.
+		UsedVertexCount = vertCountToUpdate;
+		UsedVertexBufferSize = UsedVertexCount * VertexStride;
+
 		assert(vertexData != nullptr);
-		assert(VertexCount > 0);
 
 		real* vertexDataP = vertexData;
-		u32 count = glm::min(VertexCount, glm::max((u32)createInfo.positions_2D.size(), glm::max((u32)createInfo.positions_3D.size(), (u32)createInfo.positions_4D.size())));
-		for (u32 i = 0; i < count; ++i)
+		for (u32 i = 0; i < vertCountToUpdate; ++i)
 		{
 			if (Attributes & (u32)VertexAttribute::POSITION)
 			{
@@ -82,7 +107,7 @@ namespace flex
 			if (Attributes & (u32)VertexAttribute::VELOCITY3)
 			{
 				memcpy(vertexDataP, createInfo.velocities.data() + i, sizeof(glm::vec3));
-				vertexDataP += 4;
+				vertexDataP += 3;
 			}
 
 			if (Attributes & (u32)VertexAttribute::UV)
@@ -127,8 +152,7 @@ namespace flex
 				vertexDataP += 1;
 			}
 		}
-		VertexCount = count;
-		assert(vertexDataP == vertexData + (VertexStride / sizeof(real) * count));
+		assert(vertexDataP == vertexData + (VertexStride / sizeof(real) * vertCountToUpdate));
 	}
 
 	void VertexBufferData::Destroy()
@@ -139,15 +163,43 @@ namespace flex
 			vertexData = nullptr;
 		}
 		VertexCount = 0;
+		UsedVertexCount = 0;
 		VertexBufferSize = 0;
+		UsedVertexBufferSize = 0;
 		VertexStride = 0;
 		Attributes = 0;
 	}
 
+	void VertexBufferData::Shrink(real minExcess /* = 0.0f */)
+	{
+		// Only dynamic buffers can be resized
+		assert(bDynamic);
+
+		real excess = (real)(VertexBufferSize - UsedVertexBufferSize) / VertexBufferSize;
+		if (excess >= minExcess)
+		{
+			VertexCount = UsedVertexCount;
+			VertexBufferSize = VertexCount * VertexStride;
+			real* newVertexData = (real*)malloc(VertexBufferSize);
+			if (newVertexData == nullptr)
+			{
+				PrintError("Failed to allocate dynamic vertex buffer memory (%u bytes)\n", VertexBufferSize);
+				return;
+			}
+
+			real* oldVertexData = vertexData;
+			memcpy(newVertexData, vertexData, VertexBufferSize);
+			vertexData = newVertexData;
+			free(oldVertexData);
+		}
+	}
+
 	u32 VertexBufferData::CopyInto(real* dst, VertexAttributes usingAttributes)
 	{
-		assert(vertexData != nullptr);
-		assert(VertexCount > 0);
+		if (vertexData == nullptr || VertexCount == 0)
+		{
+			return 0;
+		}
 
 		const real* initialDst = dst;
 		real* src = vertexData;

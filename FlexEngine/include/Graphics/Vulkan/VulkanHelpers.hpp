@@ -129,7 +129,7 @@ namespace flex
 
 		struct VulkanUniformBufferObjectData
 		{
-			real* data = nullptr;
+			u8* data = nullptr;
 			u32 size = 0;
 		};
 
@@ -219,7 +219,7 @@ namespace flex
 
 				real maxAnisotropy = 16.0f;
 				real minLod = 0.0f;
-				real maxLod = 0.0f;
+				real maxLod = 1.0f;
 				VkFilter magFilter = VK_FILTER_LINEAR;
 				VkFilter minFilter = VK_FILTER_LINEAR;
 				VkSamplerAddressMode samplerAddressMode = VK_SAMPLER_ADDRESS_MODE_REPEAT;
@@ -277,7 +277,7 @@ namespace flex
 			 * Creates image, image view, and sampler based on the texture at filePath
 			 * Returns size of image in bytes
 			 */
-			VkDeviceSize CreateFromFile(VkFormat inFormat);
+			VkDeviceSize CreateFromFile(VkFormat inFormat, bool bGenerateFullMipChain = false);
 
 			/*
 			 * Creates image, image view, and sampler
@@ -296,6 +296,8 @@ namespace flex
 			 * Returns the size of the image
 			 */
 			VkDeviceSize CreateCubemapFromTextures(VkFormat inFormat, const std::array<std::string, 6>& filePaths, bool bEnableTrilinearFiltering);
+
+			void GenerateMipmaps();
 
 			std::string GetRelativeFilePath() const;
 			std::string GetName() const;
@@ -441,6 +443,7 @@ namespace flex
 		struct VulkanShader
 		{
 			VulkanShader(const VDeleter<VkDevice>& device, Shader* shader);
+			~VulkanShader();
 
 			Shader* shader = nullptr;
 
@@ -450,14 +453,18 @@ namespace flex
 			VDeleter<VkShaderModule> fragShaderModule;
 			VDeleter<VkShaderModule> geomShaderModule;
 			VDeleter<VkShaderModule> computeShaderModule;
+
+			VkSpecializationInfo* fragSpecializationInfo = nullptr;
 		};
 
 #if COMPILE_SHADER_COMPILER
-		// NOTE: Not actually async at the moment! Compiling all shaders takes less than a second my machine though, so...
-		struct AsyncVulkanShaderCompiler
+		struct VulkanShaderCompiler
 		{
-			AsyncVulkanShaderCompiler();
-			AsyncVulkanShaderCompiler(bool bForceRecompile);
+			VulkanShaderCompiler(bool bForceRecompile);
+
+			static void ClearShaderHash(const std::string& shaderName);
+
+			static void DisplayShaderErrorsImGui(bool* bWindowShowing);
 
 			bool TickStatus();
 
@@ -467,9 +474,17 @@ namespace flex
 			bool bSuccess = false;
 			bool bComplete = false;
 
+			struct ShaderError
+			{
+				std::string errorStr;
+				std::string filePath;
+				u32 lineNumber;
+			};
+
+			static std::vector<ShaderError> s_ShaderErrors;
+
 		private:
-			static const char* s_ChecksumFilePath;
-			static const char* s_ShaderDirectory;
+			static std::string s_ChecksumFilePathAbs;
 			static const char* s_RecognizedShaderTypes[];
 
 			u64 CalculteChecksum(const std::string& filePath);
@@ -560,6 +575,24 @@ namespace flex
 			u32 descriptorSetLayoutIndex = 0;
 		};
 
+		struct SpecializationConstantCreateInfo
+		{
+			SpecializationConstantID constantID = InvalidSpecializationConstantID;
+			u32 size = 0;
+			void* data = nullptr;
+		};
+
+		struct GraphicsPipeline
+		{
+			GraphicsPipeline();
+			GraphicsPipeline(const VDeleter<VkDevice>& vulkanDevice);
+
+			void replace();
+
+			VDeleter<VkPipeline> pipeline;
+			VDeleter<VkPipelineLayout> layout;
+		};
+
 		struct VulkanRenderObject
 		{
 			VulkanRenderObject(const VDeleter<VkDevice>& device, RenderID renderID);
@@ -596,8 +629,10 @@ namespace flex
 			u32 dynamicUBOOffset = 0;
 			u32 dynamicShadowUBOOffset = 0;
 
-			VDeleter<VkPipelineLayout> pipelineLayout;
-			VDeleter<VkPipeline> graphicsPipeline;
+			u64 dynamicVertexBufferOffset = InvalidBufferID;
+			u64 dynamicIndexBufferOffset = InvalidBufferID;
+
+			GraphicsPipeline graphicsPipeline;
 
 			RenderPassType renderPassOverride = RenderPassType::_NONE;
 		};
@@ -655,7 +690,7 @@ namespace flex
 			VkDescriptorSet* descriptorSet = nullptr;
 			VkDescriptorSetLayout* descriptorSetLayout = nullptr;
 			ShaderID shaderID = InvalidShaderID;
-			UniformBufferList* uniformBufferList = nullptr;
+			UniformBufferList const * uniformBufferList = nullptr;
 
 			ShaderUniformContainer<BufferDescriptorInfo> bufferDescriptors;
 			ShaderUniformContainer<ImageDescriptorInfo> imageDescriptors;

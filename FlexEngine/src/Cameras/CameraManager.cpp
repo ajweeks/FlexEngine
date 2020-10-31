@@ -92,7 +92,7 @@ namespace flex
 			m_CameraStack.pop();
 		}
 
-		return PushCamera(camera, bAlignWithPrevious);
+		return PushCamera(camera, bAlignWithPrevious, true);
 	}
 
 	BaseCamera* CameraManager::CycleCamera(i32 deltaIndex, bool bAlignWithPrevious)
@@ -126,7 +126,7 @@ namespace flex
 		return SetCamera(GetCameraByName(name), bAlignWithPrevious);
 	}
 
-	BaseCamera* CameraManager::PushCamera(BaseCamera* camera, bool bAlignWithPrevious)
+	BaseCamera* CameraManager::PushCamera(BaseCamera* camera, bool bAlignWithPrevious, bool bInitialize)
 	{
 		assert(camera != nullptr);
 
@@ -146,7 +146,7 @@ namespace flex
 			AlignCameras(pActiveCam, camera);
 		}
 
-		if (m_bInitialized)
+		if (bInitialize && m_bInitialized)
 		{
 			camera->Initialize();
 			camera->OnPossess();
@@ -155,9 +155,9 @@ namespace flex
 		return camera;
 	}
 
-	BaseCamera* CameraManager::PushCameraByName(const std::string& name, bool bAlignWithPrevious)
+	BaseCamera* CameraManager::PushCameraByName(const std::string& name, bool bAlignWithPrevious, bool bInitialize)
 	{
-		return PushCamera(GetCameraByName(name), bAlignWithPrevious);
+		return PushCamera(GetCameraByName(name), bAlignWithPrevious, bInitialize);
 	}
 
 	void CameraManager::PopCamera()
@@ -245,9 +245,9 @@ namespace flex
 				currentCamera->FOV = glm::radians(camFOV);
 			}
 
-			ImGui::DragFloat("near", &currentCamera->zNear, 0.05f, -1000.0f, 1000.0f);
+			ImGui::DragFloat("near", &currentCamera->zNear, 0.05f, 0.0f, 10.0f);
 
-			ImGui::DragFloat("far", &currentCamera->zFar, 0.05f, -1000.0f, 1000.0f);
+			ImGui::DragFloat("far", &currentCamera->zFar, 0.05f, 0.0f, 10000.0f);
 
 			if (ImGui::Button("Reset orientation"))
 			{

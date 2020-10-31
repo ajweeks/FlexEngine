@@ -448,6 +448,7 @@ namespace flex
 		EDITOR_SELECT_TRANSLATE_GIZMO,
 		EDITOR_SELECT_ROTATE_GIZMO,
 		EDITOR_SELECT_SCALE_GIZMO,
+		EDITOR_FOCUS_ON_SELECTION,
 
 		EDITOR_MOD_FASTER,
 		EDITOR_MOD_SLOWER,
@@ -509,6 +510,7 @@ namespace flex
 		"Editor Select translate gizmo",
 		"Editor Select rotate gizmo",
 		"Editor Select scale gizmo",
+		"Editor Focus on selection",
 
 		"Editor Mod faster",
 		"Editor Mod slower",

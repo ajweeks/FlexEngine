@@ -15,7 +15,7 @@
 #ifdef DEBUG
 #define THOROUGH_CHECKS 1
 #define ENABLE_PROFILING 1
-#define COMPILE_RENDERDOC_API 1
+#define COMPILE_RENDERDOC_API 0
 #define COMPILE_SHADER_COMPILER 1
 #else
 #define THOROUGH_CHECKS 0
@@ -30,6 +30,8 @@
 
 #define VC_EXTRALEAN
 
+#define USE_SSE2
+
 #if COMPILE_VULKAN
 #define VULKAN_HPP_TYPESAFE_CONVERSION
 #endif
@@ -43,9 +45,18 @@
 #define BT_NO_SIMD_OPERATOR_OVERLOADS
 #define NOMINMAX
 
+#if defined(_WINDOWS)
+#define WRITE_BARRIER _WriteBarrier(); _mm_sfence()
+#elif defined(__linux__)
+#define WRITE_BARRIER __sync_synchronize()
+#define ACQUIRE_BARRIER smp_cond_load_acquire()
+#define RELEASE_BARRIER smp_cond_store_release()
+#else
+#error
+#endif
+
 #ifdef _WINDOWS
 #define GLFW_EXPOSE_NATIVE_WIN32
-// TODO(AJ): Add linux expose define?
 #endif
 
 #define FLEX_UNUSED(param) ((void)param)
@@ -57,6 +68,8 @@
 #endif
 
 #define FLEX_VERSION(major, minor, patch) (((major) << 22) | ((minor) << 12) | (patch))
+
+#define FLEX_NO_DISCARD [[nodiscard]]
 
 #if defined(__clang__)
 #define IGNORE_WARNINGS_PUSH \
@@ -77,6 +90,10 @@
 #endif
 
 #undef FORMAT_STRING
+
+#undef TRUE
+#undef FALSE
+
 #if defined(__clang__)
 #define FORMAT_STRING(n,m) __attribute__ (( format( __printf__, fmtargnumber, firstvarargnumber )))
 #elif defined(_MSC_VER)
@@ -126,7 +143,8 @@ IGNORE_WARNINGS_POP
 
 #if COMPILE_VULKAN
 IGNORE_WARNINGS_PUSH
-#define VK_USE_PLATFORM_WIN32_KHR
+#define VOLK_VULKAN_H_PATH <vulkan/vulkan.hpp>
+#define VULKAN_HPP_NAMESPACE vkhpp
 #include "volk/volk.h"
 
 #include <GLFW/glfw3.h>
@@ -149,7 +167,7 @@ namespace flex
 IGNORE_WARNINGS_POP
 #endif // COMPILE_IMGUI
 
-
+#include "Filepaths.hpp"
 #include "Physics/PhysicsTypeConversions.hpp"
 
 #ifndef btAssert
@@ -168,21 +186,26 @@ IGNORE_WARNINGS_POP
 #define Z_AXIS_IDX   2
 #define ALL_AXES_IDX 3
 
+#define TOKEN_PASTE2(x, y) x ## y
+#define TOKEN_PASTE(x, y) TOKEN_PASTE2(x, y)
+
 #if ENABLE_PROFILING
 #define PROFILE_BEGIN(blockName) Profiler::Begin(blockName);
 #define PROFILE_END(blockName) Profiler::End(blockName);
-#define PROFILE_AUTO(blockName) AutoProfilerBlock autoProfileBlock(blockName);
+#define PROFILE_AUTO(blockName) AutoProfilerBlock TOKEN_PASTE(autoProfileBlock_, __LINE__)(blockName);
 #else
 #define PROFILE_BEGIN(blockName)
 #define PROFILE_END(blockName)
 #define PROFILE_AUTO(blockName)
 #endif
 
-#ifdef _WINDOWS
+#if defined(_WINDOWS)
 #define DEBUG_BREAK() __debugbreak()
-#else
-// Linux/Max: (untested)
+#elif defined(__linux__)
+// Linux: (untested)
 #define DEBUG_BREAK() __builtin_trap()
+#else
+#error
 #endif
 
 #define ENSURE_NO_ENTRY() { PrintError("Execution entered no entry path! %s\n", __FUNCTION__); DEBUG_BREAK(); }
@@ -206,12 +229,6 @@ if (FlexEngine::s_bHasGLDebugExtension) { glPopDebugGroupKHR(); }
 #define GL_PUSH_DEBUG_GROUP(str)
 #define GL_POP_DEBUG_GROUP()
 #endif // COMPILE_OPEN_GL
-
-#define ROOT_LOCATION "../../../FlexEngine/"
-#define SAVED_LOCATION "../../../FlexEngine/saved/"
-#define RESOURCE_LOCATION "../../../FlexEngine/resources/"
-#define RESOURCE(path) "../../../FlexEngine/resources/" path
-#define RESOURCE_STR(path) "../../../FlexEngine/resources/" + path
 
 namespace flex
 {
@@ -263,6 +280,7 @@ namespace flex
 	extern std::size_t g_TrackedDeallocationCount;
 
 	extern bool g_bEnableLogging_Loading;
+	extern bool g_bEnableLogging_Shaders;
 
 	extern bool g_bOpenGLEnabled;
 	extern bool g_bVulkanEnabled;

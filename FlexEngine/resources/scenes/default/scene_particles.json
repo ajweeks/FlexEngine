@@ -1,7 +1,31 @@
 {
-	"version" : 2,
+	"version" : 3,
 	"name" : "scene_particles",
 	"spawn player" : false,
+	"skybox data" : 
+	{
+		"top colour" : "0.64, 0.88, 0.94, 0.00",
+		"mid colour" : "0.43, 0.75, 0.91, 0.00",
+		"btm colour" : "0.37, 0.37, 0.37, 0.00"
+	},
+	"camera" : 
+	{
+		"type" : "debug",
+		"near plane" : 0.500000,
+		"far plane" : 10000.000000,
+		"fov" : 0.785398,
+		"aperture" : 1.000000,
+		"shutter speed" : 0.125000,
+		"light sensitivity" : 800.000000,
+		"exposure" : 1.200000,
+		"move speed" : 18.000000,
+		"transform" : 
+		{
+			"position" : "-136.998, 27.015, -59.352",
+			"pitch" : -0.053752,
+			"yaw" : 0.893817
+		}
+	},
 	"objects" : 
 	[
 		{
@@ -11,7 +35,10 @@
 			"transform" : 
 			{
 			},
-			"material" : "skybox 01",
+			"materials" : 
+			[
+				"skybox 01"
+			],
 			"skybox info" : 
 			{
 			}
@@ -33,7 +60,10 @@
 			{
 			},
 			"mesh" : "ico-sphere",
-			"material" : "pbr chrome"
+			"materials" : 
+			[
+				"pbr chrome"
+			]
 		},
 		{
 			"name" : "Directional Light",
@@ -123,8 +153,8 @@
 				"enabled" : true,
 				"data" : 
 				{
-					"color0" : "0.37, 0.74, 0.28, -431602080.00",
-					"color1" : "0.98, 0.08, 0.08, -431602080.00",
+					"color0" : "0.00, 0.00, 0.00, 0.00",
+					"color1" : "0.00, 0.00, 0.00, 0.00",
 					"speed" : 1.667000,
 					"particle count" : 51541
 				}

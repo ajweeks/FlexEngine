@@ -37,15 +37,16 @@ namespace flex
 	std::vector<JSONObject> BaseScene::s_ParsedMeshes;
 	std::vector<JSONObject> BaseScene::s_ParsedPrefabs;
 
-	const char* BaseScene::MATERIALS_FILE_PATH = RESOURCE_LOCATION "scenes/materials.json";
-	const char* BaseScene::MESHES_FILE_PATH = RESOURCE_LOCATION "scenes/meshes.json";
-	const char* BaseScene::MESHES_DIRECTORY = RESOURCE_LOCATION "meshes/";
-
 	BaseScene::BaseScene(const std::string& fileName) :
 		m_FileName(fileName),
 		m_TrackManager(this),
 		m_CartManager(this)
 	{
+		// Default day sky
+		m_SkyboxData = {};
+		m_SkyboxData.top = glm::pow(glm::vec4(0.22f, 0.58f, 0.88f, 0.0f), glm::vec4(2.2f));
+		m_SkyboxData.mid = glm::pow(glm::vec4(0.66f, 0.86f, 0.95f, 0.0f), glm::vec4(2.2f));
+		m_SkyboxData.btm = glm::pow(glm::vec4(0.75f, 0.91f, 0.99f, 0.0f), glm::vec4(2.2f));
 	}
 
 	BaseScene::~BaseScene()
@@ -70,10 +71,10 @@ namespace flex
 			m_CartManager.Initialize();
 
 			// Use save file if exists, otherwise use default
-			//const std::string savedShortPath = "scenes/saved/" + m_FileName;
-			const std::string defaultShortPath = "scenes/default/" + m_FileName;
-			//const std::string savedPath = RESOURCE_STR(savedShortPath);
-			const std::string defaultPath = RESOURCE_STR(defaultShortPath);
+			//const std::string savedShortPath = SCENE_SAVED_LOCATION + m_FileName;
+			const std::string defaultPath = SCENE_DEFAULT_LOCATION + m_FileName;
+			const std::string defaultShortPath = StripLeadingDirectories(defaultPath);
+			//const std::string savedPath = RESOURCE_LOCATION + savedShortPath;
 			//m_bUsingSaveFile = FileExists(savedPath);
 
 			std::string shortFilePath;
@@ -120,29 +121,39 @@ namespace flex
 
 				sceneRootObject.SetBoolChecked("spawn player", m_bSpawnPlayer);
 
+				JSONObject skyboxDataObj;
+				if (sceneRootObject.SetObjectChecked("skybox data", skyboxDataObj))
+				{
+					// TODO: Add SetGammaColourChecked
+					if (skyboxDataObj.SetVec4Checked("top colour", m_SkyboxData.top))
+					{
+						m_SkyboxData.top = glm::pow(m_SkyboxData.top, glm::vec4(2.2f));
+					}
+					if (skyboxDataObj.SetVec4Checked("mid colour", m_SkyboxData.mid))
+					{
+						m_SkyboxData.mid = glm::pow(m_SkyboxData.mid, glm::vec4(2.2f));
+					}
+					if (skyboxDataObj.SetVec4Checked("btm colour", m_SkyboxData.btm))
+					{
+						m_SkyboxData.btm = glm::pow(m_SkyboxData.btm, glm::vec4(2.2f));
+					}
+				}
+
 				JSONObject cameraObj;
 				if (sceneRootObject.SetObjectChecked("camera", cameraObj))
 				{
-					std::string cameraName;
-					if (cameraObj.SetStringChecked("last camera type", cameraName))
-					{
-						if (cameraName.compare("terminal") == 0)
-						{
-							// Ensure there's a camera to pop back to after exiting the terminal
-							g_CameraManager->SetCameraByName("first-person", false);
-						}
-						g_CameraManager->PushCameraByName(cameraName, true);
-					}
-
 					std::string camType;
 					if (cameraObj.SetStringChecked("type", camType))
 					{
-						if (cameraName.compare("terminal") == 0)
+						if (camType.compare("terminal") == 0)
 						{
-							// Ensure there's a camera to pop back to after exiting the terminal
-							g_CameraManager->SetCameraByName("first-person", false);
+							g_CameraManager->PushCameraByName(camType, true, false);
+
 						}
-						g_CameraManager->SetCameraByName(camType, true);
+						else
+						{
+							g_CameraManager->SetCameraByName(camType, true);
+						}
 					}
 
 					BaseCamera* cam = g_CameraManager->CurrentCamera();
@@ -152,10 +163,17 @@ namespace flex
 					if (cameraObj.SetFloatChecked("far plane", zFar)) cam->zFar = zFar;
 					if (cameraObj.SetFloatChecked("fov", fov)) cam->FOV = fov;
 					if (cameraObj.SetFloatChecked("aperture", aperture)) cam->aperture = aperture;
-					if (cameraObj.SetFloatChecked("shutter speed", shutterSpeed)) cam->shutterSpeed= shutterSpeed;
+					if (cameraObj.SetFloatChecked("shutter speed", shutterSpeed)) cam->shutterSpeed = shutterSpeed;
 					if (cameraObj.SetFloatChecked("light sensitivity", lightSensitivity)) cam->lightSensitivity = lightSensitivity;
 					if (cameraObj.SetFloatChecked("exposure", exposure)) cam->exposure = exposure;
 					if (cameraObj.SetFloatChecked("move speed", moveSpeed)) cam->moveSpeed = moveSpeed;
+
+					if (cameraObj.HasField("aperture"))
+					{
+						cam->aperture = cameraObj.GetFloat("aperture");
+						cam->shutterSpeed = cameraObj.GetFloat("shutter speed");
+						cam->lightSensitivity = cameraObj.GetFloat("light sensitivity");
+					}
 
 					JSONObject cameraTransform;
 					if (cameraObj.SetObjectChecked("transform", cameraTransform))
@@ -184,6 +202,8 @@ namespace flex
 						}
 						cam->yaw = camYaw;
 					}
+
+					cam->CalculateExposure();
 				}
 
 				// TODO: Only initialize materials currently present in this scene
@@ -230,7 +250,7 @@ namespace flex
 					//skyboxMatCreateInfo.generatedIrradianceCubemapSize = glm::vec2(32.0f);
 					//skyboxMatCreateInfo.generatePrefilteredMap = true;
 					//skyboxMatCreateInfo.generatedPrefilteredCubemapSize = glm::vec2(128.0f);
-					//skyboxMatCreateInfo.environmentMapPath = RESOURCE_LOCATION "textures/hdri/Milkyway/Milkyway_Light.hdr";
+					//skyboxMatCreateInfo.environmentMapPath = TEXTURE_LOCATION "hdri/Milkyway/Milkyway_Light.hdr";
 					//MaterialID skyboxMatID = g_Renderer->InitializeMaterial(&skyboxMatCreateInfo);
 
 					//m_LoadedMaterials.push_back(skyboxMatID);
@@ -273,7 +293,7 @@ namespace flex
 
 				GameObject* sphere = new GameObject("sphere", GameObjectType::OBJECT);
 				Mesh* mesh = sphere->SetMesh(new Mesh(sphere));
-				mesh->LoadFromFile(RESOURCE_LOCATION "meshes/ico-sphere.glb", sphereMatID);
+				mesh->LoadFromFile(MESH_DIRECTORY "ico-sphere.glb", sphereMatID);
 				AddRootObject(sphere);
 
 				// Default directional light
@@ -432,6 +452,311 @@ namespace flex
 		}
 	}
 
+	void BaseScene::DrawImGuiObjects()
+	{
+		ImGui::Checkbox("Spawn player", &m_bSpawnPlayer);
+
+		ImGuiExt::ColorEdit3Gamma("Top", &m_SkyboxData.top.x);
+		ImGuiExt::ColorEdit3Gamma("Mid", &m_SkyboxData.mid.x);
+		ImGuiExt::ColorEdit3Gamma("Bottom", &m_SkyboxData.btm.x);
+
+		DoSceneContextMenu();
+	}
+
+	void BaseScene::DoSceneContextMenu()
+	{
+		bool bClicked = ImGui::IsMouseReleased(1) && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup);
+
+		std::string contextMenuID = "scene context menu " + m_FileName;
+		if (ImGui::BeginPopupContextItem(contextMenuID.c_str()))
+		{
+			{
+				const i32 sceneNameMaxCharCount = 256;
+
+				// We don't know the names of scene's that haven't been loaded
+				if (m_bLoaded)
+				{
+					static char newSceneName[sceneNameMaxCharCount];
+					if (bClicked)
+					{
+						strcpy(newSceneName, m_Name.c_str());
+					}
+
+					bool bRenameScene = ImGui::InputText("##rename-scene",
+						newSceneName,
+						sceneNameMaxCharCount,
+						ImGuiInputTextFlags_EnterReturnsTrue);
+
+					ImGui::SameLine();
+
+					bRenameScene |= ImGui::Button("Rename scene");
+
+					if (bRenameScene)
+					{
+						SetName(newSceneName);
+						// Don't close popup here since we will likely want to save that change
+					}
+				}
+
+				static char newSceneFileName[sceneNameMaxCharCount];
+				if (bClicked)
+				{
+					strcpy(newSceneFileName, m_FileName.c_str());
+				}
+
+				bool bRenameSceneFileName = ImGui::InputText("##rename-scene-file-name",
+					newSceneFileName,
+					sceneNameMaxCharCount,
+					ImGuiInputTextFlags_EnterReturnsTrue);
+
+				ImGui::SameLine();
+
+				bRenameSceneFileName |= ImGui::Button("Rename file");
+
+				if (bRenameSceneFileName)
+				{
+					std::string newSceneFileNameStr(newSceneFileName);
+					std::string fileDir = ExtractDirectoryString(RelativePathToAbsolute(GetDefaultRelativeFilePath()));
+					std::string newSceneFilePath = fileDir + newSceneFileNameStr;
+					bool bNameEmpty = newSceneFileNameStr.empty();
+					bool bCorrectFileType = EndsWith(newSceneFileNameStr, ".json");
+					bool bFileExists = FileExists(newSceneFilePath);
+					bool bSceneNameValid = (!bNameEmpty && bCorrectFileType && !bFileExists);
+
+					if (bSceneNameValid)
+					{
+						if (SetFileName(newSceneFileNameStr, true))
+						{
+							ImGui::CloseCurrentPopup();
+						}
+					}
+					else
+					{
+						PrintError("Attempted name scene with invalid name: %s\n", newSceneFileNameStr.c_str());
+						if (bNameEmpty)
+						{
+							PrintError("(file name is empty!)\n");
+						}
+						else if (!bCorrectFileType)
+						{
+							PrintError("(must end with \".json\"!)\n");
+						}
+						else if (bFileExists)
+						{
+							PrintError("(file already exists!)\n");
+						}
+					}
+				}
+			}
+
+			// Only allow current scene to be saved
+			if (g_SceneManager->CurrentScene() == this)
+			{
+				if (ImGui::Button("Save"))
+				{
+					SerializeToFile(false);
+
+					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::SameLine();
+
+				ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
+
+				if (ImGui::Button("Save over default"))
+				{
+					SerializeToFile(true);
+
+					ImGui::CloseCurrentPopup();
+				}
+
+				if (IsUsingSaveFile())
+				{
+					ImGui::SameLine();
+
+					if (ImGui::Button("Hard reload (deletes save file!)"))
+					{
+						Platform::DeleteFile(GetRelativeFilePath());
+						g_SceneManager->ReloadCurrentScene();
+
+						ImGui::CloseCurrentPopup();
+					}
+				}
+
+				ImGui::PopStyleColor();
+				ImGui::PopStyleColor();
+				ImGui::PopStyleColor();
+			}
+
+			static const char* duplicateScenePopupLabel = "Duplicate scene";
+			const i32 sceneNameMaxCharCount = 256;
+			static char newSceneName[sceneNameMaxCharCount];
+			static char newSceneFileName[sceneNameMaxCharCount];
+			if (ImGui::Button("Duplicate..."))
+			{
+				ImGui::OpenPopup(duplicateScenePopupLabel);
+
+				std::string newSceneNameStr = m_Name;
+				newSceneNameStr += " Copy";
+				strcpy(newSceneName, newSceneNameStr.c_str());
+
+				std::string newSceneFileNameStr = StripFileType(m_FileName);
+
+				bool bValidName = false;
+				do
+				{
+					i16 numNumericalChars = 0;
+					i32 numEndingWith = GetNumberEndingWith(newSceneFileNameStr, numNumericalChars);
+					if (numNumericalChars > 0)
+					{
+						u32 charsBeforeNum = (u32)(newSceneFileNameStr.length() - numNumericalChars);
+						newSceneFileNameStr = newSceneFileNameStr.substr(0, charsBeforeNum) +
+							IntToString(numEndingWith + 1, numNumericalChars);
+					}
+					else
+					{
+						newSceneFileNameStr += "_01";
+					}
+
+					std::string filePathFrom = RelativePathToAbsolute(GetDefaultRelativeFilePath());
+					std::string fullNewFilePath = ExtractDirectoryString(filePathFrom);
+					fullNewFilePath += newSceneFileNameStr + ".json";
+					bValidName = !FileExists(fullNewFilePath);
+				} while (!bValidName);
+
+				newSceneFileNameStr += ".json";
+
+				strcpy(newSceneFileName, newSceneFileNameStr.c_str());
+			}
+
+			bool bCloseContextMenu = false;
+			if (ImGui::BeginPopupModal(duplicateScenePopupLabel,
+				NULL,
+				ImGuiWindowFlags_AlwaysAutoResize))
+			{
+
+				bool bDuplicateScene = ImGui::InputText("Name##duplicate-scene-name",
+					newSceneName,
+					sceneNameMaxCharCount,
+					ImGuiInputTextFlags_EnterReturnsTrue);
+
+				bDuplicateScene |= ImGui::InputText("File name##duplicate-scene-file-path",
+					newSceneFileName,
+					sceneNameMaxCharCount,
+					ImGuiInputTextFlags_EnterReturnsTrue);
+
+				bDuplicateScene |= ImGui::Button("Duplicate");
+
+				bool bValidInput = true;
+
+				if (strlen(newSceneName) == 0 ||
+					strlen(newSceneFileName) == 0 ||
+					!EndsWith(newSceneFileName, ".json"))
+				{
+					bValidInput = false;
+				}
+
+				if (bDuplicateScene && bValidInput)
+				{
+					if (g_SceneManager->DuplicateScene(this, newSceneFileName, newSceneName))
+					{
+						bCloseContextMenu = true;
+					}
+				}
+
+				ImGui::SameLine();
+
+				if (ImGui::Button("Cancel"))
+				{
+					ImGui::CloseCurrentPopup();
+				}
+
+				if (g_InputManager->GetKeyPressed(KeyCode::KEY_ESCAPE, true))
+				{
+					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::EndPopup();
+			}
+
+			ImGui::SameLine();
+
+			if (ImGui::Button("Open in explorer"))
+			{
+				const std::string directory = RelativePathToAbsolute(ExtractDirectoryString(GetRelativeFilePath()));
+				Platform::OpenExplorer(directory);
+			}
+
+			ImGui::SameLine();
+
+			const char* deleteScenePopupID = "Delete scene";
+
+			ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
+
+			if (ImGui::Button("Delete scene..."))
+			{
+				ImGui::OpenPopup(deleteScenePopupID);
+			}
+
+			ImGui::PopStyleColor();
+			ImGui::PopStyleColor();
+			ImGui::PopStyleColor();
+
+			if (ImGui::BeginPopupModal(deleteScenePopupID, NULL, ImGuiWindowFlags_AlwaysAutoResize))
+			{
+				ImGui::PushStyleColor(ImGuiCol_Text, g_WarningTextColor);
+				std::string textStr = "Are you sure you want to permanently delete " + m_Name + "? (both the default & saved files)";
+				ImGui::Text("%s", textStr.c_str());
+				ImGui::PopStyleColor();
+
+				ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
+				if (ImGui::Button("Delete"))
+				{
+					g_SceneManager->DeleteScene(this);
+
+					ImGui::CloseCurrentPopup();
+
+					bCloseContextMenu = true;
+				}
+				ImGui::PopStyleColor();
+				ImGui::PopStyleColor();
+				ImGui::PopStyleColor();
+
+				ImGui::SameLine();
+
+				if (ImGui::Button("Cancel"))
+				{
+					ImGui::CloseCurrentPopup();
+				}
+
+				if (g_InputManager->GetKeyPressed(KeyCode::KEY_ESCAPE, true))
+				{
+					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::EndPopup();
+			}
+
+			if (bCloseContextMenu)
+			{
+				ImGui::CloseCurrentPopup();
+			}
+
+			if (g_InputManager->GetKeyPressed(KeyCode::KEY_ESCAPE, true))
+			{
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::EndPopup();
+		}
+	}
+
 	bool BaseScene::DestroyGameObject(GameObject* targetObject, bool bDestroyChildren)
 	{
 		for (GameObject* gameObject : m_RootObjects)
@@ -537,16 +862,16 @@ namespace flex
 	{
 		s_ParsedMeshes.clear();
 
-		if (FileExists(MESHES_FILE_PATH))
+		if (FileExists(MESHES_FILE_LOCATION))
 		{
 			if (g_bEnableLogging_Loading)
 			{
-				const std::string cleanedFilePath = StripLeadingDirectories(MESHES_FILE_PATH);
+				const std::string cleanedFilePath = StripLeadingDirectories(MESHES_FILE_LOCATION);
 				Print("Parsing meshes file at %s\n", cleanedFilePath.c_str());
 			}
 
 			JSONObject obj;
-			if (JSONParser::ParseFromFile(MESHES_FILE_PATH, obj))
+			if (JSONParser::ParseFromFile(MESHES_FILE_LOCATION, obj))
 			{
 				auto meshObjects = obj.GetObjectArray("meshes");
 				for (auto meshObject : meshObjects)
@@ -556,13 +881,13 @@ namespace flex
 			}
 			else
 			{
-				PrintError("Failed to parse mesh file: %s\n\terror: %s\n", MESHES_FILE_PATH, JSONParser::GetErrorString());
+				PrintError("Failed to parse mesh file: %s\n\terror: %s\n", MESHES_FILE_LOCATION, JSONParser::GetErrorString());
 				return;
 			}
 		}
 		else
 		{
-			PrintError("Failed to parse meshes file at %s\n", MESHES_FILE_PATH);
+			PrintError("Failed to parse meshes file at %s\n", MESHES_FILE_LOCATION);
 			return;
 		}
 
@@ -576,16 +901,16 @@ namespace flex
 	{
 		s_ParsedMaterials.clear();
 
-		if (FileExists(MATERIALS_FILE_PATH))
+		if (FileExists(MATERIALS_FILE_LOCATION))
 		{
 			if (g_bEnableLogging_Loading)
 			{
-				const std::string cleanedFilePath = StripLeadingDirectories(MATERIALS_FILE_PATH);
+				const std::string cleanedFilePath = StripLeadingDirectories(MATERIALS_FILE_LOCATION);
 				Print("Parsing materials file at %s\n", cleanedFilePath.c_str());
 			}
 
 			JSONObject obj;
-			if (JSONParser::ParseFromFile(MATERIALS_FILE_PATH, obj))
+			if (JSONParser::ParseFromFile(MATERIALS_FILE_LOCATION, obj))
 			{
 				auto materialObjects = obj.GetObjectArray("materials");
 				for (auto materialObject : materialObjects)
@@ -595,13 +920,13 @@ namespace flex
 			}
 			else
 			{
-				PrintError("Failed to parse materials file: %s\n\terror: %s\n", MATERIALS_FILE_PATH, JSONParser::GetErrorString());
+				PrintError("Failed to parse materials file: %s\n\terror: %s\n", MATERIALS_FILE_LOCATION, JSONParser::GetErrorString());
 				return;
 			}
 		}
 		else
 		{
-			PrintError("Failed to parse materials file at %s\n", MATERIALS_FILE_PATH);
+			PrintError("Failed to parse materials file at %s\n", MATERIALS_FILE_LOCATION);
 			return;
 		}
 
@@ -616,7 +941,7 @@ namespace flex
 		s_ParsedPrefabs.clear();
 
 		std::vector<std::string> foundFiles;
-		if (Platform::FindFilesInDirectory(RESOURCE_LOCATION "scenes/prefabs/", foundFiles, ".json"))
+		if (Platform::FindFilesInDirectory(PREFAB_LOCATION, foundFiles, ".json"))
 		{
 			for (const std::string& foundFilePath : foundFiles)
 			{
@@ -640,7 +965,7 @@ namespace flex
 		}
 		else
 		{
-			PrintError("Failed to find files in \"scenes/prefabs/\"!\n");
+			PrintError("Failed to find files in \"" PREFAB_LOCATION "\"!\n");
 			return;
 		}
 
@@ -666,7 +991,7 @@ namespace flex
 				std::string meshFileName = mesh->GetRelativeFilePath();
 				if (!meshFileName.empty())
 				{
-					meshFileName = meshFileName.substr(strlen(MESHES_DIRECTORY));
+					meshFileName = meshFileName.substr(strlen(MESH_DIRECTORY));
 					bool bFound = false;
 					for (JSONObject& parsedMeshObj : s_ParsedMeshes)
 					{
@@ -692,8 +1017,8 @@ namespace flex
 
 		std::string fileContents = meshesObj.Print(0);
 
-		const std::string fileName = StripLeadingDirectories(MESHES_FILE_PATH);
-		if (WriteFile(MESHES_FILE_PATH, fileContents, false))
+		const std::string fileName = StripLeadingDirectories(MESHES_FILE_LOCATION);
+		if (WriteFile(MESHES_FILE_LOCATION, fileContents, false))
 		{
 			Print("Serialized mesh file to: %s\n", fileName.c_str());
 		}
@@ -738,8 +1063,8 @@ namespace flex
 
 		std::string fileContents = materialsObj.Print(0);
 
-		const std::string fileName = StripLeadingDirectories(MATERIALS_FILE_PATH);
-		if (WriteFile(MATERIALS_FILE_PATH, fileContents, false))
+		const std::string fileName = StripLeadingDirectories(MATERIALS_FILE_LOCATION);
+		if (WriteFile(MATERIALS_FILE_LOCATION, fileContents, false))
 		{
 			Print("Serialized materials file to: %s\n", fileName.c_str());
 		}
@@ -865,6 +1190,11 @@ namespace flex
 		return m_bSpawnPlayer;
 	}
 
+	const SkyboxData& BaseScene::GetSkyboxData() const
+	{
+		return m_SkyboxData;
+	}
+
 	std::vector<MaterialID> BaseScene::RetrieveMaterialIDsFromJSON(const JSONObject& object, i32 fileVersion)
 	{
 		std::vector<MaterialID> matIDs;
@@ -961,14 +1291,19 @@ namespace flex
 		success &= SerializeMaterialFile();
 		//success &= BaseScene::SerializePrefabFile();
 
-		const std::string profileBlockName = "serialize scene to file: " + m_FileName;
-		PROFILE_BEGIN(profileBlockName);
+		PROFILE_AUTO("Serialize scene");
 
 		JSONObject rootSceneObject = {};
 
 		rootSceneObject.fields.emplace_back("version", JSONValue(m_SceneFileVersion));
 		rootSceneObject.fields.emplace_back("name", JSONValue(m_Name));
 		rootSceneObject.fields.emplace_back("spawn player", JSONValue(m_bSpawnPlayer));
+
+		JSONObject skyboxDataObj = {};
+		skyboxDataObj.fields.emplace_back("top colour", JSONValue(VecToString(glm::pow(m_SkyboxData.top, glm::vec4(1.0f / 2.2f)))));
+		skyboxDataObj.fields.emplace_back("mid colour", JSONValue(VecToString(glm::pow(m_SkyboxData.mid, glm::vec4(1.0f / 2.2f)))));
+		skyboxDataObj.fields.emplace_back("btm colour", JSONValue(VecToString(glm::pow(m_SkyboxData.btm, glm::vec4(1.0f / 2.2f)))));
+		rootSceneObject.fields.emplace_back("skybox data", JSONValue(skyboxDataObj));
 
 		{
 			JSONObject cameraObj = {};
@@ -1015,22 +1350,23 @@ namespace flex
 			rootSceneObject.fields.emplace_back("track manager", JSONValue(m_TrackManager.Serialize()));
 		}
 
+		Print("Serializing scene to %s\n", m_FileName.c_str());
+
 		std::string fileContents = rootSceneObject.Print(0);
 
-		const std::string defaultSaveFilePathShort = "scenes/default/" + m_FileName;
-		const std::string savedSaveFilePathShort = "scenes/saved/" + m_FileName;
-		const std::string defaultSaveFilePath = RESOURCE_STR(defaultSaveFilePathShort);
-		const std::string savedSaveFilePath = RESOURCE_STR(savedSaveFilePathShort);
-		std::string shortSavedFileName;
+		const std::string defaultSaveFilePath = SCENE_DEFAULT_LOCATION + m_FileName;
+		const std::string savedSaveFilePath = SCENE_SAVED_LOCATION + m_FileName;
+		std::string saveFilePath;
 		if (bSaveOverDefault)
 		{
-			shortSavedFileName = defaultSaveFilePathShort;
+			saveFilePath = defaultSaveFilePath;
 		}
 		else
 		{
-			shortSavedFileName = savedSaveFilePathShort;
+			saveFilePath = savedSaveFilePath;
 		}
-		Print("Serializing scene to %s\n", shortSavedFileName.c_str());
+
+		saveFilePath = RelativePathToAbsolute(saveFilePath);
 
 		if (bSaveOverDefault)
 		{
@@ -1043,9 +1379,7 @@ namespace flex
 		}
 
 
-		std::string savedFilePathName = RESOURCE_STR(shortSavedFileName);
-		savedFilePathName = RelativePathToAbsolute(savedFilePathName);
-		success &= WriteFile(savedFilePathName, fileContents, false);
+		success &= WriteFile(saveFilePath, fileContents, false);
 
 		if (success)
 		{
@@ -1059,17 +1393,15 @@ namespace flex
 		}
 		else
 		{
-			PrintError("Failed to open file for writing at \"%s\", Can't serialize scene\n", savedFilePathName.c_str());
+			PrintError("Failed to open file for writing at \"%s\", Can't serialize scene\n", m_FileName.c_str());
 			AudioManager::PlaySource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud));
 		}
-
-		PROFILE_END(profileBlockName);
 	}
 
 	void BaseScene::DeleteSaveFiles()
 	{
-		const std::string defaultSaveFilePath = RESOURCE("scenes/default/" + m_FileName);
-		const std::string savedSaveFilePath = RESOURCE("scenes/saved/" + m_FileName);
+		const std::string defaultSaveFilePath = SCENE_DEFAULT_LOCATION + m_FileName;
+		const std::string savedSaveFilePath = SCENE_SAVED_LOCATION + m_FileName;
 
 		bool bDefaultFileExists = FileExists(defaultSaveFilePath);
 		bool bSavedFileExists = FileExists(savedSaveFilePath);
@@ -1127,7 +1459,7 @@ namespace flex
 				if (bDestroy)
 				{
 					(*iter)->Destroy();
-					delete *iter;
+					delete* iter;
 				}
 
 				iter = m_RootObjects.erase(iter);
@@ -1151,7 +1483,7 @@ namespace flex
 		{
 			if (bDestroy)
 			{
-				delete *iter;
+				delete* iter;
 			}
 
 			iter = m_RootObjects.erase(iter);
@@ -1169,7 +1501,7 @@ namespace flex
 				if (bDestroy)
 				{
 					(*iter)->Destroy();
-					delete *iter;
+					delete* iter;
 				}
 
 				m_RootObjects.erase(iter);
@@ -1328,18 +1660,18 @@ namespace flex
 
 	std::string BaseScene::GetDefaultRelativeFilePath() const
 	{
-		return RESOURCE_LOCATION "scenes/default/" + m_FileName;
+		return SCENE_DEFAULT_LOCATION + m_FileName;
 	}
 
 	std::string BaseScene::GetRelativeFilePath() const
 	{
 		//if (m_bUsingSaveFile)
 		//{
-		//	return RESOURCE_LOCATION "scenes/saved/" + m_FileName;
+		//	return SCENE_SAVED_LOCATION + m_FileName;
 		//}
 		//else
 		//{
-		return RESOURCE_LOCATION "scenes/default/" + m_FileName;
+		return SCENE_DEFAULT_LOCATION + m_FileName;
 		//}
 	}
 
@@ -1347,11 +1679,11 @@ namespace flex
 	{
 		//if (m_bUsingSaveFile)
 		//{
-		//	return "scenes/saved/" + m_FileName;
+		//	return SCENE_SAVED_LOCATION + m_FileName;
 		//}
 		//else
 		//{
-		return "scenes/default/" + m_FileName;
+		return SCENE_DEFAULT_LOCATION + m_FileName;
 		//}
 	}
 

@@ -7,11 +7,12 @@ IGNORE_WARNINGS_PUSH
 #include "stb_image.h"
 
 #if COMPILE_SHADER_COMPILER
-#include "shaderc/spvc.hpp"
+#include "spvc/spvc.hpp"
 #include "shaderc/shaderc.hpp"
 #endif
 IGNORE_WARNINGS_POP
 
+#include "FlexEngine.hpp"
 #include "Graphics/VertexAttribute.hpp"
 #include "Graphics/VertexBufferData.hpp"
 #include "Graphics/Vulkan/VulkanCommandBufferManager.hpp"
@@ -27,11 +28,18 @@ namespace flex
 {
 	namespace vk
 	{
+#if COMPILE_SHADER_COMPILER
+		std::string VulkanShaderCompiler::s_ChecksumFilePathAbs;
+
+		const char* VulkanShaderCompiler::s_RecognizedShaderTypes[] = { "vert", "geom", "frag", "comp" };
+#endif //  COMPILE_SHADER_COMPILER
+
 		void VK_CHECK_RESULT(VkResult result)
 		{
 			if (result != VK_SUCCESS)
 			{
 				PrintError("Vulkan fatal error: %s\n", VulkanErrorString(result).c_str());
+				((VulkanRenderer*)g_Renderer)->GetCheckPointData();
 				DEBUG_BREAK();
 				assert(result == VK_SUCCESS);
 			}
@@ -686,6 +694,87 @@ namespace flex
 			return imageSize;
 		}
 
+		void VulkanTexture::GenerateMipmaps()
+		{
+			VkCommandBuffer cmdBuffer = BeginSingleTimeCommands(m_VulkanDevice);
+
+			if (imageLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+			{
+				TransitionToLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, cmdBuffer);
+			}
+
+			VkImageMemoryBarrier barrier = vks::imageMemoryBarrier();
+			barrier.image = image;
+			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			barrier.subresourceRange.baseArrayLayer = 0;
+			barrier.subresourceRange.layerCount = 1;
+			barrier.subresourceRange.levelCount = 1;
+
+			i32 mipWidth = width;
+			i32 mipHeight = height;
+
+			for (u32 i = 1; i < mipLevels; ++i)
+			{
+				i32 nextMipWidth = mipWidth > 1 ? mipWidth / 2 : 1;
+				i32 nextMipHeight = mipHeight > 1 ? mipHeight / 2 : 1;
+
+				barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+				barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+				barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+				barrier.subresourceRange.baseMipLevel = i - 1;
+
+				VkImageSubresourceLayers srcSubresource = {};
+				srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				srcSubresource.mipLevel = i - 1;
+				srcSubresource.baseArrayLayer = 0;
+				srcSubresource.layerCount = 1;
+
+				VkImageSubresourceLayers dstSubresource = {};
+				dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				dstSubresource.mipLevel = i;
+				dstSubresource.baseArrayLayer = 0;
+				dstSubresource.layerCount = 1;
+
+				VkImageBlit blitRegion = {};
+				blitRegion.srcOffsets[0] = { 0, 0, 0 };
+				blitRegion.srcOffsets[1] = { mipWidth, mipHeight, 1 };
+				blitRegion.dstOffsets[0] = { 0, 0, 0 };
+				blitRegion.dstOffsets[1] = { nextMipWidth, nextMipHeight, 1 };
+				blitRegion.srcSubresource = srcSubresource;
+				blitRegion.dstSubresource = dstSubresource;
+
+				vkCmdBlitImage(cmdBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blitRegion, VK_FILTER_LINEAR);
+
+				barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+				barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+				barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+				barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+				vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+					0, nullptr,
+					0, nullptr,
+					1, &barrier);
+
+				mipWidth = nextMipWidth;
+				mipHeight = nextMipHeight;
+			}
+
+			// Transition final mip layer
+			barrier.subresourceRange.baseMipLevel = mipLevels - 1;
+			barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+
+			vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+				0, nullptr,
+				0, nullptr,
+				1, &barrier);
+
+			EndSingleTimeCommands(m_VulkanDevice, m_GraphicsQueue, cmdBuffer);
+		}
+
 		VkDeviceSize VulkanTexture::CreateImage(VulkanDevice* device, ImageCreateInfo& createInfo)
 		{
 			assert(createInfo.width != 0);
@@ -744,9 +833,27 @@ namespace flex
 			return memRequirements.size;
 		}
 
-		VkDeviceSize VulkanTexture::CreateFromFile(VkFormat inFormat)
+		VkDeviceSize VulkanTexture::CreateFromFile(VkFormat inFormat, bool bGenerateFullMipChain /* = false */)
 		{
 			VulkanBuffer stagingBuffer(m_VulkanDevice);
+
+			if (bGenerateFullMipChain)
+			{
+				bool bFormatSupportsBlit = true;
+
+				VkFormatProperties formatProps;
+				vkGetPhysicalDeviceFormatProperties(m_VulkanDevice->m_PhysicalDevice, inFormat, &formatProps);
+				if (!(formatProps.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT))
+				{
+					bFormatSupportsBlit = false;
+				}
+
+				if (!bFormatSupportsBlit)
+				{
+					// TODO: Create mip chain manually when support doesn't exist
+					bGenerateFullMipChain = false;
+				}
+			}
 
 			// TODO: Unify hdr path with non-hdr & cubemap paths
 			if (bHDR)
@@ -771,12 +878,18 @@ namespace flex
 					return 0;
 				}
 
+				if (bGenerateFullMipChain)
+				{
+					mipLevels = ((u32)(glm::log2((real)glm::max(width, height))));
+				}
+
 				ImageCreateInfo imageCreateInfo = {};
 				imageCreateInfo.image = image.replace();
 				imageCreateInfo.imageMemory = imageMemory.replace();
 				imageCreateInfo.format = inFormat;
 				imageCreateInfo.width = (u32)width;
 				imageCreateInfo.height = (u32)height;
+				imageCreateInfo.mipLevels = mipLevels;
 				imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
 				imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
 				imageCreateInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -788,7 +901,7 @@ namespace flex
 				imageFormat = inFormat;
 				imageLayout = imageCreateInfo.initialLayout;
 
-				//u32 pixelBufSize = (VkDeviceSize)(width * height * channelCount * sizeof(real));
+				u32 pixelBufSize = (VkDeviceSize)(width * height * channelCount * sizeof(real));
 				u32 textureSize = imageSize;// (VkDeviceSize)(width * height * channelCount * sizeof(real));
 
 
@@ -796,7 +909,7 @@ namespace flex
 
 				void* data = nullptr;
 				VK_CHECK_RESULT(vkMapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory, 0, textureSize, 0, &data));
-				memcpy(data, hdrImage.pixels, (size_t)textureSize);
+				memcpy(data, hdrImage.pixels, (size_t)pixelBufSize);
 				vkUnmapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory);
 
 				hdrImage.Free();
@@ -808,7 +921,11 @@ namespace flex
 
 					TransitionToLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, cmdBuffer);
 					CopyFromBuffer(stagingBuffer.m_Buffer, width, height, cmdBuffer);
-					TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, cmdBuffer);
+					if (!bGenerateFullMipChain)
+					{
+						// If generating mipmaps we'll be blitting to and from this image
+						TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, cmdBuffer);
+					}
 
 					VulkanRenderer::EndDebugMarkerRegion(cmdBuffer);
 					EndSingleTimeCommands(m_VulkanDevice, m_GraphicsQueue, cmdBuffer);
@@ -823,7 +940,13 @@ namespace flex
 
 				SamplerCreateInfo samplerCreateInfo = {};
 				samplerCreateInfo.sampler = &sampler;
+				samplerCreateInfo.maxLod = (real)mipLevels;
 				CreateSampler(m_VulkanDevice, samplerCreateInfo);
+
+				if (bGenerateFullMipChain)
+				{
+					GenerateMipmaps();
+				}
 
 				return imageSize;
 			}
@@ -857,15 +980,21 @@ namespace flex
 					return 0;
 				}
 
+				if (bGenerateFullMipChain)
+				{
+					mipLevels = (u32)(glm::log2((real)glm::max(width, height))) + 1;
+				}
+
 				ImageCreateInfo imageCreateInfo = {};
 				imageCreateInfo.image = image.replace();
 				imageCreateInfo.imageMemory = imageMemory.replace();
 				imageCreateInfo.format = inFormat;
 				imageCreateInfo.width = (u32)width;
 				imageCreateInfo.height = (u32)height;
+				imageCreateInfo.mipLevels = mipLevels;
 				imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
 				imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-				imageCreateInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+				imageCreateInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | (bGenerateFullMipChain ? VK_IMAGE_USAGE_TRANSFER_SRC_BIT : 0);
 				imageCreateInfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 				imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
 
@@ -877,8 +1006,7 @@ namespace flex
 				u32 pixelBufSize = (VkDeviceSize)(width * height * channelCount * sizeof(unsigned char));
 				u32 textureSize = imageSize;// (VkDeviceSize)(width * height * channelCount * sizeof(unsigned char));
 
-				stagingBuffer.Create(textureSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-					VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+				stagingBuffer.Create(textureSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 				void* data = nullptr;
 				VK_CHECK_RESULT(vkMapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory, 0, textureSize, 0, &data));
@@ -894,7 +1022,11 @@ namespace flex
 
 					TransitionToLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, cmdBuffer);
 					CopyFromBuffer(stagingBuffer.m_Buffer, width, height, cmdBuffer);
-					TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, cmdBuffer);
+					if (!bGenerateFullMipChain)
+					{
+						// If generating mipmaps we'll be blitting to and from this image
+						TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, cmdBuffer);
+					}
 
 					VulkanRenderer::EndDebugMarkerRegion(cmdBuffer);
 					EndSingleTimeCommands(m_VulkanDevice, m_GraphicsQueue, cmdBuffer);
@@ -909,7 +1041,13 @@ namespace flex
 
 				SamplerCreateInfo samplerCreateInfo = {};
 				samplerCreateInfo.sampler = &sampler;
+				samplerCreateInfo.maxLod = (real)mipLevels;
 				CreateSampler(m_VulkanDevice, samplerCreateInfo);
+
+				if (bGenerateFullMipChain)
+				{
+					GenerateMipmaps();
+				}
 
 				return imageSize;
 			}
@@ -970,7 +1108,6 @@ namespace flex
 			vkGetPhysicalDeviceFormatProperties(m_VulkanDevice->m_PhysicalDevice, imageFormat, &formatProps);
 			if (!(formatProps.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT))
 			{
-				//PrintError("Device does not support blitting from optimal tiled images, using copy instead of blit!\n");
 				bSupportsBlit = false;
 			}
 
@@ -978,7 +1115,6 @@ namespace flex
 			vkGetPhysicalDeviceFormatProperties(m_VulkanDevice->m_PhysicalDevice, VK_FORMAT_R8G8B8A8_UNORM, &formatProps);
 			if (!(formatProps.linearTilingFeatures & VK_FORMAT_FEATURE_BLIT_DST_BIT))
 			{
-				//PrintError("Device does not support blitting to linear tiled images, using copy instead of blit\n!");
 				bSupportsBlit = false;
 			}
 
@@ -1555,8 +1691,7 @@ namespace flex
 
 		VulkanRenderObject::VulkanRenderObject(const VDeleter<VkDevice>& device, RenderID renderID) :
 			renderID(renderID),
-			pipelineLayout(device, vkDestroyPipelineLayout),
-			graphicsPipeline(device, vkDestroyPipeline)
+			graphicsPipeline(device)
 		{
 		}
 
@@ -1973,133 +2108,6 @@ namespace flex
 			vkFreeCommandBuffers(device->m_LogicalDevice, device->m_CommandPool, 1, &commandBuffer);
 		}
 
-		VkPrimitiveTopology TopologyModeToVkPrimitiveTopology(TopologyMode mode)
-		{
-			switch (mode)
-			{
-			case TopologyMode::POINT_LIST:		return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
-			case TopologyMode::LINE_LIST:		return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
-			case TopologyMode::LINE_STRIP:		return VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
-			case TopologyMode::TRIANGLE_LIST:	return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-			case TopologyMode::TRIANGLE_STRIP:	return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
-			case TopologyMode::TRIANGLE_FAN:	return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN;
-			case TopologyMode::LINE_LOOP:
-			{
-				PrintError("LINE_LOOP is an unsupported TopologyMode passed to TopologyModeToVkPrimitiveTopology\n");
-				return VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
-			}
-			default:
-			{
-				PrintError("Unhandled TopologyMode passed to TopologyModeToVkPrimitiveTopology: %d\n", (i32)mode);
-				return VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
-			}
-			}
-		}
-
-		VkCullModeFlagBits CullFaceToVkCullMode(CullFace cullFace)
-		{
-			switch (cullFace)
-			{
-			case CullFace::BACK:			return VK_CULL_MODE_BACK_BIT;
-			case CullFace::FRONT:			return VK_CULL_MODE_FRONT_BIT;
-			case CullFace::FRONT_AND_BACK:	return VK_CULL_MODE_FRONT_AND_BACK;
-			case CullFace::NONE:			return VK_CULL_MODE_NONE;
-			default:
-			{
-				PrintError("Unhandled CullFace passed to CullFaceToVkCullMode: %d\n", (i32)cullFace);
-				return VK_CULL_MODE_NONE;
-			}
-			}
-		}
-
-		TopologyMode VkPrimitiveTopologyToTopologyMode(VkPrimitiveTopology primitiveTopology)
-		{
-			if (primitiveTopology == VK_PRIMITIVE_TOPOLOGY_POINT_LIST)
-			{
-				return TopologyMode::POINT_LIST;
-			}
-			else if (primitiveTopology == VK_PRIMITIVE_TOPOLOGY_LINE_LIST)
-			{
-				return TopologyMode::LINE_LIST;
-			}
-			else if (primitiveTopology == VK_PRIMITIVE_TOPOLOGY_LINE_STRIP)
-			{
-				return TopologyMode::LINE_STRIP;
-			}
-			else if (primitiveTopology == VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
-			{
-				return TopologyMode::TRIANGLE_LIST;
-			}
-			else if (primitiveTopology == VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP)
-			{
-				return TopologyMode::TRIANGLE_STRIP;
-			}
-			else if (primitiveTopology == VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN)
-			{
-				return TopologyMode::TRIANGLE_FAN;
-			}
-			else
-			{
-				PrintError("Unhandled VkPrimitiveTopology passed to VkPrimitiveTopologyToTopologyMode: %d\n", (i32)primitiveTopology);
-				return TopologyMode::_NONE;
-			}
-		}
-
-		CullFace VkCullModeToCullFace(VkCullModeFlags cullMode)
-		{
-			if (cullMode == VK_CULL_MODE_BACK_BIT)
-			{
-				return CullFace::BACK;
-			}
-			else if (cullMode == VK_CULL_MODE_FRONT_BIT)
-			{
-				return CullFace::FRONT;
-			}
-			else if (cullMode == VK_CULL_MODE_FRONT_AND_BACK)
-			{
-				return CullFace::FRONT_AND_BACK;
-			}
-			else if (cullMode == VK_CULL_MODE_NONE)
-			{
-				return CullFace::NONE;
-			}
-			else
-			{
-				PrintError("Unhandled VkCullModeFlagBits passed to VkCullModeToCullFace: %d\n", (i32)cullMode);
-				return CullFace::_INVALID;
-			}
-		}
-
-
-		VkCompareOp DepthTestFuncToVkCompareOp(DepthTestFunc func)
-		{
-			switch (func)
-			{
-			case DepthTestFunc::ALWAYS:		return VK_COMPARE_OP_ALWAYS;
-			case DepthTestFunc::NEVER:		return VK_COMPARE_OP_NEVER;
-			case DepthTestFunc::LESS:		return VK_COMPARE_OP_LESS;
-			case DepthTestFunc::LEQUAL:		return VK_COMPARE_OP_LESS_OR_EQUAL;
-			case DepthTestFunc::GREATER:	return VK_COMPARE_OP_GREATER;
-			case DepthTestFunc::GEQUAL:		return VK_COMPARE_OP_GREATER_OR_EQUAL;
-			case DepthTestFunc::EQUAL:		return VK_COMPARE_OP_EQUAL;
-			case DepthTestFunc::NOTEQUAL:	return VK_COMPARE_OP_NOT_EQUAL;
-			default:						return VK_COMPARE_OP_MAX_ENUM;
-			}
-		}
-
-		VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* createInfo, const VkAllocationCallbacks* allocator, VkDebugReportCallbackEXT* callback)
-		{
-			auto func = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT");
-			if (func != nullptr)
-			{
-				return func(instance, createInfo, allocator, callback);
-			}
-			else
-			{
-				return VK_ERROR_EXTENSION_NOT_PRESENT;
-			}
-		}
-
 		FrameBufferAttachment::FrameBufferAttachment(VulkanDevice* device, const CreateInfo& createInfo) :
 			ID(GenerateUID()),
 			device(device),
@@ -2256,6 +2264,13 @@ namespace flex
 			return &frameBuffer;
 		}
 
+		VulkanCubemapGBuffer::VulkanCubemapGBuffer(u32 id, const char* name, VkFormat internalFormat) :
+			id(id),
+			name(name),
+			internalFormat(internalFormat)
+		{
+		}
+
 		VulkanShader::VulkanShader(const VDeleter<VkDevice>& device, Shader* shader) :
 			shader(shader)
 		{
@@ -2265,40 +2280,24 @@ namespace flex
 			computeShaderModule = { device, vkDestroyShaderModule };
 		}
 
-		VulkanCubemapGBuffer::VulkanCubemapGBuffer(u32 id, const char* name, VkFormat internalFormat) :
-			id(id),
-			name(name),
-			internalFormat(internalFormat)
+		VulkanShader::~VulkanShader()
 		{
-		}
-
-		std::string DeviceTypeToString(VkPhysicalDeviceType type)
-		{
-			switch (type)
+			if (fragSpecializationInfo != nullptr)
 			{
-			case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU: return "Integrated GPU";
-			case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU: return "Discrete GPU";
-			case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU: return "Virtual GPU";
-			case VK_PHYSICAL_DEVICE_TYPE_CPU: return "CPU";
-			case VK_PHYSICAL_DEVICE_TYPE_OTHER:
-			default: return  "Other";
+				free((void*)fragSpecializationInfo->pMapEntries);
+				free((void*)fragSpecializationInfo->pData);
+				delete fragSpecializationInfo;
 			}
 		}
 
 #if COMPILE_SHADER_COMPILER
+		std::vector<VulkanShaderCompiler::ShaderError> VulkanShaderCompiler::s_ShaderErrors;
 
-		const char* AsyncVulkanShaderCompiler::s_ChecksumFilePath = SAVED_LOCATION "vk-shader-checksum.dat";
-		const char* AsyncVulkanShaderCompiler::s_ShaderDirectory = RESOURCE_LOCATION "shaders/";
-
-		const char* AsyncVulkanShaderCompiler::s_RecognizedShaderTypes[] = { "vert", "geom", "frag", "comp" };
-
-		AsyncVulkanShaderCompiler::AsyncVulkanShaderCompiler()
+		VulkanShaderCompiler::VulkanShaderCompiler(bool bForceRecompile)
 		{
-		}
+			s_ChecksumFilePathAbs = RelativePathToAbsolute(SHADER_CHECKSUM_LOCATION);
 
-		AsyncVulkanShaderCompiler::AsyncVulkanShaderCompiler(bool bForceRecompile)
-		{
-			const std::string spvDirectory = RelativePathToAbsolute(RESOURCE_LOCATION "shaders/spv");
+			const std::string spvDirectory = RelativePathToAbsolute(SPV_LOCATION);
 			if (!Platform::DirectoryExists(spvDirectory))
 			{
 				Platform::CreateDirectoryRecursive(spvDirectory);
@@ -2308,17 +2307,19 @@ namespace flex
 			// Any file in the shaders directory not in this map still need to be compiled
 			std::map<std::string, u64> compiledShaders;
 
+			s_ShaderErrors.clear();
+
 			if (!bForceRecompile)
 			{
 				const char* blockName = "Calculate shader contents checksum";
 				PROFILE_AUTO(blockName);
 
-				const std::string shaderInputDirectory = RESOURCE_LOCATION "shaders";
+				const std::string shaderInputDirectory = SHADER_SOURCE_LOCATION;
 
-				if (FileExists(s_ChecksumFilePath))
+				if (FileExists(SHADER_CHECKSUM_LOCATION))
 				{
 					std::string fileContents;
-					if (ReadFile(s_ChecksumFilePath, fileContents, false))
+					if (ReadFile(SHADER_CHECKSUM_LOCATION, fileContents, false))
 					{
 						std::vector<std::string> lines = Split(fileContents, '\n');
 
@@ -2327,17 +2328,17 @@ namespace flex
 							size_t midPoint = line.find('=');
 							if (midPoint != std::string::npos && line.length() > 7) // Ignore degenerate lines
 							{
-								std::string filePath = TrimStartAndEnd(line.substr(0, midPoint));
+								std::string filePath = Trim(line.substr(0, midPoint));
 
 								if (filePath.length() > 0)
 								{
-									std::string storedChecksumStr = TrimStartAndEnd(line.substr(midPoint + 1));
+									std::string storedChecksumStr = Trim(line.substr(midPoint + 1));
 									u64 storedChecksum = std::stoull(storedChecksumStr);
 
 									u64 calculatedChecksum = CalculteChecksum(filePath);
 									if (calculatedChecksum == storedChecksum)
 									{
-										compiledShaders.emplace(RelativePathToAbsolute(filePath), calculatedChecksum);
+										compiledShaders.emplace(filePath, calculatedChecksum);
 									}
 								}
 							}
@@ -2352,7 +2353,7 @@ namespace flex
 				bSuccess = true;
 
 				std::vector<std::string> filePaths;
-				if (Platform::FindFilesInDirectory(s_ShaderDirectory, filePaths, "*"))
+				if (Platform::FindFilesInDirectory(SHADER_SOURCE_LOCATION, filePaths, "*"))
 				{
 					startTime = Time::CurrentMilliseconds();
 
@@ -2366,15 +2367,15 @@ namespace flex
 					//		const char* requesting_source,
 					//		size_t include_depth) override
 					//	{
-					//		UNREFERENCED_PARAMETER(type);
-					//		UNREFERENCED_PARAMETER(include_depth);
+					//		FLEX_UNUSED(type);
+					//		FLEX_UNUSED(include_depth);
 					//		Print("%s, requesting %s\n", requesting_source, requested_source);
 					//		shaderc_include_result* result;
 					//	}
 
 					//	virtual void ReleaseInclude(shaderc_include_result* data) override
 					//	{
-					//		UNREFERENCED_PARAMETER(data);
+					//		FLEX_UNUSED(data);
 					//	}
 					//};
 					//FlexIncluder includer;
@@ -2425,17 +2426,12 @@ namespace flex
 
 									++compiledShaderCount;
 
-									if (result.GetNumWarnings() > 0)
-									{
-										PrintWarn("%s\n", result.GetErrorMessage().c_str());
-									}
-
 									const u64 calculatedChecksum = CalculteChecksum(filePath);
 									compiledShaders.emplace(absoluteFilePath, calculatedChecksum);
 
 									std::vector<u32> spvBytes(result.begin(), result.end());
 									std::string strippedFileName = StripFileType(fileName);
-									std::string spvFilePath = RelativePathToAbsolute(RESOURCE_LOCATION "shaders/spv/") + strippedFileName + "_" + fileType + ".spv";
+									std::string spvFilePath = RelativePathToAbsolute(SPV_LOCATION) + strippedFileName + "_" + fileType + ".spv";
 									std::ofstream fileStream(spvFilePath, std::ios::out | std::ios::binary);
 									if (fileStream.is_open())
 									{
@@ -2451,7 +2447,23 @@ namespace flex
 								}
 								else
 								{
-									PrintError("%s", result.GetErrorMessage().c_str());
+									std::string errorStr = result.GetErrorMessage();
+									if (g_bEnableLogging_Shaders)
+									{
+										PrintWarn("%s\n", errorStr.c_str());
+									}
+
+									size_t colon0 = errorStr.find_first_of(':');
+									size_t colon1 = errorStr.find_first_of(':', colon0 + 1);
+
+									u32 lineNumber = 0;
+									if (colon0 != std::string::npos && colon1 != std::string::npos)
+									{
+										lineNumber = ParseInt(errorStr.substr(colon0 + 1, colon1 - colon0 - 1));
+									}
+
+									s_ShaderErrors.push_back({ errorStr, absoluteFilePath, lineNumber });
+
 									++invalidShaderCount;
 									bSuccess = false;
 									auto iter = compiledShaders.find(absoluteFilePath);
@@ -2483,7 +2495,8 @@ namespace flex
 
 					if ((compiledShaderCount > 0 || invalidShaderCount > 0) && newChecksumFileContents.length() > 0)
 					{
-						std::ofstream checksumFileStream(s_ChecksumFilePath, std::ios::out);
+						Platform::CreateDirectoryRecursive(ExtractDirectoryString(s_ChecksumFilePathAbs).c_str());
+						std::ofstream checksumFileStream(s_ChecksumFilePathAbs, std::ios::out);
 						if (checksumFileStream.is_open())
 						{
 							checksumFileStream.write(newChecksumFileContents.c_str(), newChecksumFileContents.size());
@@ -2491,7 +2504,7 @@ namespace flex
 						}
 						else
 						{
-							PrintWarn("Failed to write shader checksum file to %s\n", s_ChecksumFilePath);
+							PrintWarn("Failed to write shader checksum file to %s\n", SHADER_SOURCE_LOCATION);
 						}
 					}
 
@@ -2523,7 +2536,90 @@ namespace flex
 			}
 		}
 
-		shaderc_shader_kind AsyncVulkanShaderCompiler::FilePathToShaderKind(const std::string& fileSuffix)
+		void VulkanShaderCompiler::ClearShaderHash(const std::string& shaderName)
+		{
+			if (FileExists(SHADER_SOURCE_LOCATION))
+			{
+				std::string fileContents;
+				if (ReadFile(SHADER_SOURCE_LOCATION, fileContents, false))
+				{
+					std::string searchStr = "vk_" + shaderName + '.';
+					size_t index = 0;
+					do
+					{
+						index = fileContents.find(searchStr, index);
+						if (index != std::string::npos)
+						{
+							size_t prevNewLine = fileContents.rfind('\n', index);
+							size_t nextNewLine = fileContents.find('\n', index);
+							if (prevNewLine == std::string::npos)
+							{
+								prevNewLine = 0;
+							}
+							if (nextNewLine == std::string::npos)
+							{
+								nextNewLine = fileContents.size() - 1;
+							}
+							fileContents = fileContents.substr(0, prevNewLine + 1) + fileContents.substr(nextNewLine + 1);
+						}
+					} while (index != std::string::npos);
+
+					WriteFile(s_ChecksumFilePathAbs, fileContents, false);
+				}
+			}
+		}
+
+		void VulkanShaderCompiler::DisplayShaderErrorsImGui(bool* bWindowShowing)
+		{
+			if (!s_ShaderErrors.empty())
+			{
+				if (bWindowShowing == nullptr || *bWindowShowing)
+				{
+					ImGui::SetNextWindowSize(ImVec2(800.0f, 150.0f), ImGuiCond_Appearing);
+					if (bWindowShowing != nullptr && ImGui::Begin("Shader errors", bWindowShowing))
+					{
+						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
+						ImGui::Text(s_ShaderErrors.size() > 1 ? "%u errors" : "%u error", (u32)s_ShaderErrors.size());
+						ImGui::PopStyleColor();
+
+						ImGui::Separator();
+
+						for (const ShaderError& shaderError : s_ShaderErrors)
+						{
+							ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
+							ImGui::TextWrapped("%s", shaderError.errorStr.c_str());
+							ImGui::PopStyleColor();
+
+							std::string fileName = StripLeadingDirectories(shaderError.filePath);
+							std::string openStr = "Open " + fileName + ":" + std::to_string(shaderError.lineNumber);
+							if (ImGui::Button(openStr.c_str()))
+							{
+								std::string shaderEditorPath = g_EngineInstance->GetShaderEditorPath();
+								if (shaderEditorPath.empty())
+								{
+									Platform::OpenFileWithDefaultApplication(shaderError.filePath);
+								}
+								else
+								{
+									std::string param0 = shaderError.filePath + ":" + std::to_string(shaderError.lineNumber);
+									Platform::LaunchApplication(shaderEditorPath.c_str(), param0);
+								}
+							}
+
+							ImGui::Separator();
+						}
+
+					}
+
+					if (bWindowShowing != nullptr)
+					{
+						ImGui::End();
+					}
+				}
+			}
+		}
+
+		shaderc_shader_kind VulkanShaderCompiler::FilePathToShaderKind(const std::string& fileSuffix)
 		{
 			if (fileSuffix.compare("vert") == 0) return shaderc_vertex_shader;
 			if (fileSuffix.compare("frag") == 0) return shaderc_fragment_shader;
@@ -2533,7 +2629,7 @@ namespace flex
 			return (shaderc_shader_kind)-1;
 		}
 
-		u64 AsyncVulkanShaderCompiler::CalculteChecksum(const std::string& filePath)
+		u64 VulkanShaderCompiler::CalculteChecksum(const std::string& filePath)
 		{
 			u64 checksum = 0;
 
@@ -2557,7 +2653,7 @@ namespace flex
 			return checksum;
 		}
 
-		bool AsyncVulkanShaderCompiler::TickStatus()
+		bool VulkanShaderCompiler::TickStatus()
 		{
 			//sec now = Time::CurrentSeconds();
 			//secSinceStatusCheck += (now - lastTime);
@@ -2657,6 +2753,163 @@ namespace flex
 			graphicsPipeline(device->m_LogicalDevice, vkDestroyPipeline)
 		{
 		}
+
+		GraphicsPipeline::GraphicsPipeline()
+		{
+		}
+
+		GraphicsPipeline::GraphicsPipeline(const VDeleter<VkDevice>& vulkanDevice) :
+			pipeline(vulkanDevice, vkDestroyPipeline),
+			layout(vulkanDevice, vkDestroyPipelineLayout)
+		{
+		}
+
+		void GraphicsPipeline::replace()
+		{
+			pipeline.replace();
+			layout.replace();
+		}
+
+		VkPrimitiveTopology TopologyModeToVkPrimitiveTopology(TopologyMode mode)
+		{
+			switch (mode)
+			{
+			case TopologyMode::POINT_LIST:		return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+			case TopologyMode::LINE_LIST:		return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+			case TopologyMode::LINE_STRIP:		return VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+			case TopologyMode::TRIANGLE_LIST:	return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+			case TopologyMode::TRIANGLE_STRIP:	return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+			case TopologyMode::TRIANGLE_FAN:	return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN;
+			case TopologyMode::LINE_LOOP:
+			{
+				PrintError("LINE_LOOP is an unsupported TopologyMode passed to TopologyModeToVkPrimitiveTopology\n");
+				return VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
+			}
+			default:
+			{
+				PrintError("Unhandled TopologyMode passed to TopologyModeToVkPrimitiveTopology: %d\n", (i32)mode);
+				return VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
+			}
+			}
+		}
+
+		VkCullModeFlagBits CullFaceToVkCullMode(CullFace cullFace)
+		{
+			switch (cullFace)
+			{
+			case CullFace::BACK:			return VK_CULL_MODE_BACK_BIT;
+			case CullFace::FRONT:			return VK_CULL_MODE_FRONT_BIT;
+			case CullFace::FRONT_AND_BACK:	return VK_CULL_MODE_FRONT_AND_BACK;
+			case CullFace::NONE:			return VK_CULL_MODE_NONE;
+			default:
+			{
+				PrintError("Unhandled CullFace passed to CullFaceToVkCullMode: %d\n", (i32)cullFace);
+				return VK_CULL_MODE_NONE;
+			}
+			}
+		}
+
+		TopologyMode VkPrimitiveTopologyToTopologyMode(VkPrimitiveTopology primitiveTopology)
+		{
+			if (primitiveTopology == VK_PRIMITIVE_TOPOLOGY_POINT_LIST)
+			{
+				return TopologyMode::POINT_LIST;
+			}
+			else if (primitiveTopology == VK_PRIMITIVE_TOPOLOGY_LINE_LIST)
+			{
+				return TopologyMode::LINE_LIST;
+			}
+			else if (primitiveTopology == VK_PRIMITIVE_TOPOLOGY_LINE_STRIP)
+			{
+				return TopologyMode::LINE_STRIP;
+			}
+			else if (primitiveTopology == VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+			{
+				return TopologyMode::TRIANGLE_LIST;
+			}
+			else if (primitiveTopology == VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP)
+			{
+				return TopologyMode::TRIANGLE_STRIP;
+			}
+			else if (primitiveTopology == VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN)
+			{
+				return TopologyMode::TRIANGLE_FAN;
+			}
+			else
+			{
+				PrintError("Unhandled VkPrimitiveTopology passed to VkPrimitiveTopologyToTopologyMode: %d\n", (i32)primitiveTopology);
+				return TopologyMode::_NONE;
+			}
+		}
+
+		CullFace VkCullModeToCullFace(VkCullModeFlags cullMode)
+		{
+			if (cullMode == VK_CULL_MODE_BACK_BIT)
+			{
+				return CullFace::BACK;
+			}
+			else if (cullMode == VK_CULL_MODE_FRONT_BIT)
+			{
+				return CullFace::FRONT;
+			}
+			else if (cullMode == VK_CULL_MODE_FRONT_AND_BACK)
+			{
+				return CullFace::FRONT_AND_BACK;
+			}
+			else if (cullMode == VK_CULL_MODE_NONE)
+			{
+				return CullFace::NONE;
+			}
+			else
+			{
+				PrintError("Unhandled VkCullModeFlagBits passed to VkCullModeToCullFace: %d\n", (i32)cullMode);
+				return CullFace::_INVALID;
+			}
+		}
+
+
+		VkCompareOp DepthTestFuncToVkCompareOp(DepthTestFunc func)
+		{
+			switch (func)
+			{
+			case DepthTestFunc::ALWAYS:		return VK_COMPARE_OP_ALWAYS;
+			case DepthTestFunc::NEVER:		return VK_COMPARE_OP_NEVER;
+			case DepthTestFunc::LESS:		return VK_COMPARE_OP_LESS;
+			case DepthTestFunc::LEQUAL:		return VK_COMPARE_OP_LESS_OR_EQUAL;
+			case DepthTestFunc::GREATER:	return VK_COMPARE_OP_GREATER;
+			case DepthTestFunc::GEQUAL:		return VK_COMPARE_OP_GREATER_OR_EQUAL;
+			case DepthTestFunc::EQUAL:		return VK_COMPARE_OP_EQUAL;
+			case DepthTestFunc::NOTEQUAL:	return VK_COMPARE_OP_NOT_EQUAL;
+			default:						return VK_COMPARE_OP_MAX_ENUM;
+			}
+		}
+
+		std::string DeviceTypeToString(VkPhysicalDeviceType type)
+		{
+			switch (type)
+			{
+			case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU: return "Integrated GPU";
+			case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU: return "Discrete GPU";
+			case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU: return "Virtual GPU";
+			case VK_PHYSICAL_DEVICE_TYPE_CPU: return "CPU";
+			case VK_PHYSICAL_DEVICE_TYPE_OTHER:
+			default: return  "Other";
+			}
+		}
+
+		VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* createInfo, const VkAllocationCallbacks* allocator, VkDebugReportCallbackEXT* callback)
+		{
+			auto func = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT");
+			if (func != nullptr)
+			{
+				return func(instance, createInfo, allocator, callback);
+			}
+			else
+			{
+				return VK_ERROR_EXTENSION_NOT_PRESENT;
+			}
+		}
+
 	} // namespace vk
 } // namespace flex
 

@@ -2,12 +2,13 @@
 
 // Deferred PBR Combine
 
-#define QUALITY_LEVEL_HIGH 1
 #define NUM_POINT_LIGHTS 8
-#define NUM_CASCADES 4
 
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
+
+layout (constant_id = 2) const int QUALITY_LEVEL = 1;
+layout (constant_id = 3) const int NUM_CASCADES = 4;
 
 layout (location = 0) in vec2 ex_TexCoord;
 
@@ -23,7 +24,7 @@ struct DirectionalLight
 	float brightness;
 	int castShadows;
 	float shadowDarkness;
-	vec2 _dirLightPad;
+	vec2 _pad;
 };
 
 struct PointLight 
@@ -34,6 +35,19 @@ struct PointLight
 	float brightness;
 };
 
+struct ShadowSamplingData
+{
+	mat4 cascadeViewProjMats[NUM_CASCADES];
+	vec4 cascadeDepthSplits;
+};
+
+struct SSAOSamplingData
+{
+	int enabled; // TODO: Make specialization constant
+	float powExp;
+	vec2 _pad;
+};
+
 layout (binding = 0) uniform UBOConstant
 {
 	vec4 camPos;
@@ -41,12 +55,8 @@ layout (binding = 0) uniform UBOConstant
 	mat4 invProj;
 	DirectionalLight dirLight;
 	PointLight pointLights[NUM_POINT_LIGHTS];
-	// Cascading Shadow Map Data
-	mat4 cascadeViewProjMats[NUM_CASCADES];
-	vec4 cascadeDepthSplits;
-	// SSAO Sampling Data
-	int ssaoEnabled; // TODO: Make specialization constant
-	float ssaoPowExp;
+	ShadowSamplingData shadowSamplingData;
+	SSAOSamplingData ssaoData;
 	float zNear;
 	float zFar;
 } uboConstant;
@@ -178,14 +188,14 @@ void main()
     vec3 albedo = texture(albedoMetallicTex, ex_TexCoord).rgb;	
     float metallic = texture(albedoMetallicTex, ex_TexCoord).a;
 
-    float ssao = (uboConstant.ssaoEnabled == 1 ? texture(ssaoBuffer, ex_TexCoord).r : 1.0f);
+    float ssao = (uboConstant.ssaoData.enabled == 1 ? texture(ssaoBuffer, ex_TexCoord).r : 1.0f);
 
 	// fragColor = vec4(vec3(pow(ssao, uboConstant.ssaoPowExp)), 1); return;
 
 	uint cascadeIndex = 0;
 	for (uint i = 0; i < NUM_CASCADES; ++i)
 	{
-		if (linDepth > uboConstant.cascadeDepthSplits[i])
+		if (linDepth > uboConstant.shadowSamplingData.cascadeDepthSplits[i])
 		{
 			cascadeIndex = i + 1;
 		}
@@ -235,7 +245,7 @@ void main()
 		float dirLightShadowOpacity = 1.0;
 		if (uboConstant.dirLight.castShadows != 0)
 		{
-			vec4 transformedShadowPos = (biasMat * uboConstant.cascadeViewProjMats[cascadeIndex]) * vec4(worldPos, 1.0);
+			vec4 transformedShadowPos = (biasMat * uboConstant.shadowSamplingData.cascadeViewProjMats[cascadeIndex]) * vec4(worldPos, 1.0);
 			transformedShadowPos.y = 1.0f - transformedShadowPos.y;
 			transformedShadowPos /= transformedShadowPos.w;
 			
@@ -244,31 +254,34 @@ void main()
 				float baseBias = 0.0005;
 				float bias = max(baseBias * (1.0 - NoL), baseBias * 0.01);
 
-#if QUALITY_LEVEL_HIGH
-				int sampleRadius = 3;
-				float spread = 1.75;
-				float shadowSampleContrib = uboConstant.dirLight.shadowDarkness / ((sampleRadius*2 + 1) * (sampleRadius*2 + 1));
-				vec3 shadowMapTexelSize = 1.0 / textureSize(shadowMaps, 0);
-
-				for (int x = -sampleRadius; x <= sampleRadius; ++x)
+				if (QUALITY_LEVEL >= 1)
 				{
-					for (int y = -sampleRadius; y <= sampleRadius; ++y)
-					{
-						float shadowDepth = texture(shadowMaps, vec3(transformedShadowPos.xy + vec2(x, y) * shadowMapTexelSize.xy*spread, cascadeIndex)).r;
+					int sampleRadius = 3;
+					float spread = 1.75;
+					float shadowSampleContrib = uboConstant.dirLight.shadowDarkness / ((sampleRadius*2 + 1) * (sampleRadius*2 + 1));
+					vec3 shadowMapTexelSize = 1.0 / textureSize(shadowMaps, 0);
 
-						if (shadowDepth > transformedShadowPos.z + bias)
+					for (int x = -sampleRadius; x <= sampleRadius; ++x)
+					{
+						for (int y = -sampleRadius; y <= sampleRadius; ++y)
 						{
-							dirLightShadowOpacity -= shadowSampleContrib;
+							float shadowDepth = texture(shadowMaps, vec3(transformedShadowPos.xy + vec2(x, y) * shadowMapTexelSize.xy*spread, cascadeIndex)).r;
+
+							if (shadowDepth > transformedShadowPos.z + bias)
+							{
+								dirLightShadowOpacity -= shadowSampleContrib;
+							}
 						}
 					}
 				}
-#else
-				float shadowDepth = texture(shadowMaps, vec3(transformedShadowPos.xy, cascadeIndex)).r;
-				if (shadowDepth > transformedShadowPos.z + bias)
+				else
 				{
-					dirLightShadowOpacity = 1.0 - uboConstant.dirLight.shadowDarkness;
+					float shadowDepth = texture(shadowMaps, vec3(transformedShadowPos.xy, cascadeIndex)).r;
+					if (shadowDepth > transformedShadowPos.z + bias)
+					{
+						dirLightShadowOpacity = 1.0 - uboConstant.dirLight.shadowDarkness;
+					}
 				}
-#endif
 			}
 		}
 
@@ -301,7 +314,7 @@ void main()
 	}
 
 	// TODO: Apply SSAO to ambient term
-	vec3 color = ambient + Lo * pow(ssao, uboConstant.ssaoPowExp);
+	vec3 color = ambient + Lo * pow(ssao, uboConstant.ssaoData.powExp);
 
 	color = color / (color + vec3(1.0f)); // Reinhard tone-mapping
 	color = pow(color, vec3(1.0f / 2.2f)); // Gamma correction

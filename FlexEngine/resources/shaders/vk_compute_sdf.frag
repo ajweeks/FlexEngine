@@ -20,7 +20,7 @@ void main()
 
 	bool insideChar = texture(highResTex, ex_TexCoord).r > 0.5;
 
-	// Get closest opposite
+	// Find closest edge
 	vec2 startPos = ex_TexCoord - (vec2(spread) / charRes);
 	vec2 delta = vec2(1.0 / (spread * sampleDensity * 2.0));
 	float closest = spread;

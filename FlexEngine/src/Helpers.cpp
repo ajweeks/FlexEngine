@@ -26,6 +26,28 @@ IGNORE_WARNINGS_POP
 
 static const char* SEPARATOR_STR = ", ";
 
+#define set1_ps_hex(x) _mm_castsi128_ps(_mm_set1_epi32(x))
+
+static const __m128 _ps_1 = _mm_set1_ps(1.f);
+static const __m128 _ps_0p5 = _mm_set1_ps(0.5f);
+static const __m128 _ps_sign_mask = set1_ps_hex(0x80000000);
+
+static const __m128i _pi32_1 = _mm_set1_epi32(1);
+static const __m128i _pi32_inv1 = _mm_set1_epi32(~1);
+static const __m128i _pi32_2 = _mm_set1_epi32(2);
+static const __m128i _pi32_4 = _mm_set1_epi32(4);
+
+static const __m128 _ps_minus_cephes_DP1 = _mm_set1_ps(-0.78515625f);
+static const __m128 _ps_minus_cephes_DP2 = _mm_set1_ps(-2.4187564849853515625e-4f);
+static const __m128 _ps_minus_cephes_DP3 = _mm_set1_ps(-3.77489497744594108e-8f);
+static const __m128 _ps_sincof_p0 = _mm_set1_ps(-1.9515295891E-4f);
+static const __m128 _ps_sincof_p1 = _mm_set1_ps(8.3321608736E-3f);
+static const __m128 _ps_sincof_p2 = _mm_set1_ps(-1.6666654611E-1f);
+static const __m128 _ps_coscof_p0 = _mm_set1_ps(2.443315711809948E-005f);
+static const __m128 _ps_coscof_p1 = _mm_set1_ps(-1.388731625493765E-003f);
+static const __m128 _ps_coscof_p2 = _mm_set1_ps(4.166664568298827E-002f);
+static const __m128 _ps_cephes_FOPI = _mm_set1_ps(1.27323954473516f);
+
 namespace flex
 {
 	static const real UnitializedMemoryFloat = -431602080.0f;
@@ -303,31 +325,32 @@ namespace flex
 		return Platform::OpenFileDialog(windowTitle, absoluteDirectory, outSelectedAbsFilePath, filter);
 	}
 
-	std::string StripLeadingDirectories(std::string filePath)
+	std::string StripLeadingDirectories(const std::string& filePath)
 	{
 		size_t finalSlash = filePath.rfind('/');
 		if (finalSlash != std::string::npos)
 		{
-			filePath = filePath.substr(finalSlash + 1);
+			return filePath.substr(finalSlash + 1);
 		}
 		return filePath;
 	}
 
-	std::string ExtractDirectoryString(std::string filePath)
+	std::string ExtractDirectoryString(const std::string& filePath)
 	{
+		// TODO: When no trailing slash exists check if final token is directory
 		size_t finalSlash = filePath.rfind('/');
-		if (finalSlash != std::string::npos)
+		if (finalSlash != std::string::npos && finalSlash != filePath.length() - 1)
 		{
-			filePath = filePath.substr(0, finalSlash + 1);
+			return filePath.substr(0, finalSlash + 1);
 		}
 		return filePath;
 	}
 
-	std::string StripFileType(std::string filePath)
+	std::string StripFileType(const std::string& filePath)
 	{
 		if (filePath.find('.') != std::string::npos)
 		{
-			filePath = Split(filePath, '.')[0];
+			return Split(filePath, '.')[0];
 		}
 		return filePath;
 	}
@@ -468,7 +491,7 @@ namespace flex
 		return true;
 	}
 
-	std::string TrimStartAndEnd(const std::string& str)
+	std::string Trim(const std::string& str)
 	{
 		if (str.empty())
 		{
@@ -476,11 +499,45 @@ namespace flex
 		}
 
 		auto iter = str.begin();
-		while (iter != str.end() - 1 && isspace(*iter))
+		auto riter = str.end() - 1;
+		while (iter != riter && isspace(*iter))
 		{
 			++iter;
 		}
 
+		while (riter != iter && isspace(*riter))
+		{
+			--riter;
+		}
+
+		return std::string(iter, riter + 1);
+	}
+
+	std::string TrimLeadingWhitespace(const std::string& str)
+	{
+		if (str.empty())
+		{
+			return str;
+		}
+
+		auto iter = str.begin();
+		auto riter = str.end() - 1;
+		while (iter != riter && isspace(*iter))
+		{
+			++iter;
+		}
+
+		return std::string(iter, str.end());
+	}
+
+	std::string TrimTrailingWhitespace(const std::string& str)
+	{
+		if (str.empty())
+		{
+			return str;
+		}
+
+		auto iter = str.begin();
 		auto riter = str.end() - 1;
 		while (riter != iter && isspace(*riter))
 		{
@@ -514,6 +571,28 @@ namespace flex
 				result.push_back(str.substr(i, j - i));
 				i = j;
 			}
+		}
+
+		return result;
+	}
+
+	std::vector<std::string> SplitNoStrip(const std::string& str, char delim)
+	{
+		std::vector<std::string> result;
+		size_t i = 0;
+		size_t j = 0;
+
+		size_t strLen = str.size();
+		while (i != strLen)
+		{
+			while (i != strLen && str[i] != delim)
+			{
+				++i;
+			}
+
+			result.push_back(str.substr(j, i - j));
+			++i;
+			j = i;
 		}
 
 		return result;
@@ -749,6 +828,22 @@ namespace flex
 		result.z = (real)std::atof(parts[2].c_str());
 		result.w = (real)std::atof(parts[3].c_str());
 		return result;
+	}
+
+	u32 CountSetBits(u32 bits)
+	{
+		u32 LSHIFT = sizeof(u32*) * 8 - 1;
+		u32 bitSetCount = 0;
+		u32 bitTest = (u32)1 << LSHIFT;
+		u32 i;
+
+		for (i = 0; i <= LSHIFT; ++i)
+		{
+			bitSetCount += ((bits & bitTest) ? 1 : 0);
+			bitTest /= 2;
+		}
+
+		return bitSetCount;
 	}
 
 	bool IsNanOrInf(real val)
@@ -1073,46 +1168,6 @@ namespace flex
 		return result;
 	}
 
-	CullFace StringToCullFace(const std::string& str)
-	{
-		std::string strLower(str);
-		ToLower(strLower);
-
-		if (strLower.compare("back") == 0)
-		{
-			return CullFace::BACK;
-		}
-		else if (strLower.compare("front") == 0)
-		{
-			return CullFace::FRONT;
-		}
-		else if (strLower.compare("front and back") == 0)
-		{
-			return CullFace::FRONT_AND_BACK;
-		}
-		else if (strLower.compare("none") == 0)
-		{
-			return CullFace::NONE;
-		}
-		else
-		{
-			PrintError("Unhandled cull face str: %s\n", str.c_str());
-			return CullFace::_INVALID;
-		}
-	}
-
-	std::string CullFaceToString(CullFace cullFace)
-	{
-		switch (cullFace)
-		{
-		case CullFace::BACK:			return "back";
-		case CullFace::FRONT:			return "front";
-		case CullFace::FRONT_AND_BACK:	return "front and back";
-		case CullFace::NONE:			return "none";
-		default:						return "UNHANDLED CULL FACE";
-		}
-	}
-
 	std::string& ToLower(std::string& str)
 	{
 		for (char& c : str)
@@ -1262,7 +1317,31 @@ namespace flex
 		return absolutePath;
 	}
 
+	// TODO: Test thoroughly
 	std::string Replace(const std::string& str, const std::string& pattern, const std::string& replacement)
+	{
+		std::string result(str);
+
+		u32 i = 0;
+
+		while (i < result.length())
+		{
+			size_t findIndex = result.find(pattern.c_str(), i);
+			if (findIndex != std::string::npos)
+			{
+				result.replace(result.begin() + findIndex, result.begin() + findIndex + pattern.length(), replacement.begin(), replacement.end());
+				i = (u32)(findIndex + replacement.length());
+			}
+			else
+			{
+				break;
+			}
+		}
+
+		return result;
+	}
+
+	std::string Replace(const std::string& str, char pattern, char replacement)
 	{
 		std::string result(str);
 
@@ -1270,11 +1349,11 @@ namespace flex
 
 		while (iter != result.end())
 		{
-			size_t findIndex = result.find(pattern.c_str(), iter - result.begin());
+			size_t findIndex = result.find(pattern, iter - result.begin());
 			if (findIndex != std::string::npos)
 			{
-				result = result.replace(result.begin() + findIndex, result.begin() + findIndex + pattern.length(), replacement.begin(), replacement.end());
-				iter += pattern.length();
+				result = result.replace(result.begin() + findIndex, result.begin() + findIndex + 1, 1, replacement);
+				iter++;
 			}
 			else
 			{
@@ -1297,6 +1376,27 @@ namespace flex
 		// TODO: CLEANUP: FIXME: Don't use rand, please
 		real randN = rand() / (real)RAND_MAX;
 		return randN * (max - min) + min;
+	}
+
+	void ByteCountToString(char buf[], u32 bufSize, u32 bytes)
+	{
+		const char* suffixes[] = { "B", "KB", "MB", "GB", "TB", "PB" };
+		u32 s = 0;
+		double count = bytes;
+		while (count >= 1024 && s < 6)
+		{
+			s++;
+			count /= 1024;
+		}
+
+		if (count - floor(count) == 0.0)
+		{
+			snprintf(buf, bufSize, "%d%s", (int)count, suffixes[s]);
+		}
+		else
+		{
+			snprintf(buf, bufSize, "%.1f%s", count, suffixes[s]);
+		}
 	}
 
 	real MinComponent(const glm::vec2& vec)
@@ -1354,6 +1454,15 @@ namespace flex
 		return ++_lastUID;
 	}
 
+	bool Contains(const std::vector<const char*>& vec, const char* val)
+	{
+		for (u32 i = 0; i < (u32)vec.size(); ++i)
+		{
+			if (strcmp(vec[i], val) == 0) return true;
+		}
+		return false;
+	}
+
 	bool Contains(const char* arr[], u32 arrLen, const char* val)
 	{
 		for (u32 i = 0; i < arrLen; ++i)
@@ -1361,6 +1470,11 @@ namespace flex
 			if (strcmp(arr[i], val) == 0) return true;
 		}
 		return false;
+	}
+
+	bool Contains(const std::string& str, const std::string& pattern)
+	{
+		return str.find(pattern) != std::string::npos;
 	}
 
 	i32 RoundUp(i32 val, i32 alignment)
@@ -1480,6 +1594,57 @@ namespace flex
 		bool SliderUInt(const char* label, u32* v, u32 v_min, u32 v_max, const char* format /* = NULL */)
 		{
 			return ImGui::SliderScalar(label, ImGuiDataType_U32, v, &v_min, &v_max, format);
+		}
+
+		bool DragUInt(const char* label, u32* v, u32 v_min /* = 0 */, u32 v_max /* = 0 */, const char* format /* = "%d" */)
+		{
+			return ImGui::DragScalar(label, ImGuiDataType_U32, v, 1.0f, &v_min, &v_max, format);
+		}
+
+		bool DragInt16(const char* label, i16* v, i16 v_min /* = 0 */, i16 v_max /* = 0 */, const char* format /* = "%d" */)
+		{
+			i32 v32 = (i32)*v;
+			i32 v_min32 = (i32)v_min;
+			i32 v_max32 = (i32)v_max;
+			bool bResult = ImGui::DragScalar(label, ImGuiDataType_S32, &v32, 1.0f, &v_min32, &v_max32, format);
+
+			if (bResult)
+			{
+				*v = (i16)v32;
+			}
+
+			return bResult;
+		}
+
+		bool ColorEdit3Gamma(const char* label, real* v, ImGuiColorEditFlags flags /* = 0 */)
+		{
+			glm::vec3 vg = glm::pow(glm::vec3(v[0], v[1], v[2]), glm::vec3(1.0f/2.2f));
+			bool bResult = ImGui::ColorEdit3(label, &vg.x, flags);
+
+			if (bResult)
+			{
+				v[0] = glm::pow(vg.x, 2.2f);
+				v[1] = glm::pow(vg.y, 2.2f);
+				v[2] = glm::pow(vg.z, 2.2f);
+			}
+
+			return bResult;
+		}
+
+		bool ColorEdit4Gamma(const char* label, real* v, ImGuiColorEditFlags flags /* = 0 */)
+		{
+			glm::vec4 vg = glm::pow(glm::vec4(v[0], v[1], v[2], v[3]), glm::vec4(1.0f / 2.2f));
+			bool bResult = ImGui::ColorEdit4(label, &vg.x, flags);
+
+			if (bResult)
+			{
+				v[0] = glm::pow(vg.x, 2.2f);
+				v[1] = glm::pow(vg.y, 2.2f);
+				v[2] = glm::pow(vg.z, 2.2f);
+				v[3] = glm::pow(vg.w, 2.2f);
+			}
+
+			return bResult;
 		}
 
 	} // namespace ImGuiExt

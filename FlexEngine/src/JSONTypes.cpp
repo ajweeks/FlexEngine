@@ -79,8 +79,14 @@ namespace flex
 	}
 
 	JSONValue::JSONValue(real inFloatValue) :
+		JSONValue(inFloatValue, DEFAULT_FLOAT_PRECISION)
+	{
+	}
+
+	JSONValue::JSONValue(real inFloatValue, u32 inFloatPrecision) :
 		type(Type::FLOAT),
-		floatValue(inFloatValue)
+		floatValue(inFloatValue),
+		floatPrecision(inFloatPrecision)
 	{
 		ENSURE(!IsNanOrInf(inFloatValue));
 	}
@@ -389,10 +395,10 @@ namespace flex
 			result += '\"' + value.strValue + '\"';
 			break;
 		case JSONValue::Type::INT:
-			result += std::to_string(value.intValue);
+			result += IntToString(value.intValue);
 			break;
 		case JSONValue::Type::FLOAT:
-			result += std::to_string(value.floatValue);
+			result += FloatToString(value.floatValue, value.floatPrecision);
 			break;
 		case JSONValue::Type::BOOL:
 			result += (value.boolValue ? "true" : "false");

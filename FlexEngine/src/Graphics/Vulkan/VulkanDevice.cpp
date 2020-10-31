@@ -3,46 +3,92 @@
 
 #include "Graphics/Vulkan/VulkanDevice.hpp"
 
+#include "Graphics/Vulkan/VulkanHelpers.hpp"
+#include "Helpers.hpp"
+
 namespace flex
 {
 	namespace vk
 	{
-		VulkanDevice::VulkanDevice(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface) :
+		VulkanDevice::VulkanDevice(const CreateInfo& createInfo) :
 			m_CommandPool({ m_LogicalDevice, vkDestroyCommandPool })
 		{
-			assert(physicalDevice);
-			m_PhysicalDevice = physicalDevice;
+			assert(createInfo.physicalDevice);
+			m_PhysicalDevice = createInfo.physicalDevice;
 
-			m_QueueFamilyIndices = FindQueueFamilies(surface, m_PhysicalDevice);
+			m_QueueFamilyIndices = FindQueueFamilies(createInfo.surface, m_PhysicalDevice);
 
-			vkGetPhysicalDeviceProperties(physicalDevice, &m_PhysicalDeviceProperties);
-			vkGetPhysicalDeviceFeatures(physicalDevice, &m_PhysicalDeviceFeatures);
-			vkGetPhysicalDeviceMemoryProperties(physicalDevice, &m_MemoryProperties);
+			vkGetPhysicalDeviceProperties(m_PhysicalDevice, &m_PhysicalDeviceProperties);
+			vkGetPhysicalDeviceFeatures(m_PhysicalDevice, &m_PhysicalDeviceFeatures);
+			vkGetPhysicalDeviceMemoryProperties(m_PhysicalDevice, &m_MemoryProperties);
 
 			u32 queueFamilyCount;
-			vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
+			vkGetPhysicalDeviceQueueFamilyProperties(m_PhysicalDevice, &queueFamilyCount, nullptr);
 			assert(queueFamilyCount > 0);
 			m_QueueFamilyProperties.resize(queueFamilyCount);
-			vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, m_QueueFamilyProperties.data());
+			vkGetPhysicalDeviceQueueFamilyProperties(m_PhysicalDevice, &queueFamilyCount, m_QueueFamilyProperties.data());
 
-			u32 extensionCount = 0;
-			vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, nullptr);
-			if (extensionCount > 0)
+			m_SupportedExtensions = GetSupportedExtensionsForDevice(m_PhysicalDevice);
+
+			VulkanQueueFamilyIndices indices = FindQueueFamilies(createInfo.surface, m_PhysicalDevice);
+
+			std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+			std::set<i32> uniqueQueueFamilies = { indices.graphicsFamily, indices.presentFamily };
+
+			real queuePriority = 1.0f;
+			for (i32 queueFamily : uniqueQueueFamilies)
 			{
-				std::vector<VkExtensionProperties> extensions(extensionCount);
-				if (vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, &extensions.front()) == VK_SUCCESS)
+				VkDeviceQueueCreateInfo queueCreateInfo = {};
+				queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+				queueCreateInfo.queueFamilyIndex = (u32)queueFamily;
+				queueCreateInfo.queueCount = 1;
+				queueCreateInfo.pQueuePriorities = &queuePriority;
+				queueCreateInfos.push_back(queueCreateInfo);
+			}
+
+			m_EnabledExtensions.clear();
+
+			for (const char* extName : *createInfo.requiredExtensions)
+			{
+				m_EnabledExtensions.push_back(extName);
+			}
+
+			for (const char* extName : *createInfo.optionalExtensions)
+			{
+				if (ExtensionSupported(extName))
 				{
-					for (VkExtensionProperties& ext : extensions)
-					{
-						m_SupportedExtensions.push_back(ext.extensionName);
-					}
+					m_EnabledExtensions.push_back(extName);
 				}
 			}
-		}
 
-		VulkanDevice::operator VkDevice()
-		{
-			return m_LogicalDevice;
+			VkPhysicalDeviceFeatures deviceFeatures = GetEnabledFeatures();
+
+			VkDeviceCreateInfo deviceCreateInfo = {};
+			deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+
+			deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
+			deviceCreateInfo.queueCreateInfoCount = (u32)queueCreateInfos.size();
+
+			deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
+
+			deviceCreateInfo.enabledExtensionCount = (u32)m_EnabledExtensions.size();
+			deviceCreateInfo.ppEnabledExtensionNames = m_EnabledExtensions.data();
+
+			if (createInfo.bEnableValidationLayers)
+			{
+				deviceCreateInfo.enabledLayerCount = (u32)createInfo.validationLayers->size();
+				deviceCreateInfo.ppEnabledLayerNames = createInfo.validationLayers->data();
+			}
+			else
+			{
+				deviceCreateInfo.enabledLayerCount = 0;
+			}
+
+			VK_CHECK_RESULT(vkCreateDevice(m_PhysicalDevice, &deviceCreateInfo, nullptr, m_LogicalDevice.replace()));
+
+			vkGetPhysicalDeviceProperties(m_PhysicalDevice, &m_PhysicalDeviceProperties);
+
+			volkLoadDevice(m_LogicalDevice);
 		}
 
 		u32 VulkanDevice::GetMemoryType(u32 typeBits, VkMemoryPropertyFlags properties, VkBool32* outMemTypeFound) const
@@ -73,6 +119,84 @@ namespace flex
 				PrintError("GetMemoryType could not find specified memory type\n");
 				return 0;
 			}
+		}
+
+		VkPhysicalDeviceFeatures VulkanDevice::GetEnabledFeatures()
+		{
+			VkPhysicalDeviceFeatures enabledFeatures = {};
+
+			VkPhysicalDeviceFeatures supportedFeatures;
+			vkGetPhysicalDeviceFeatures(m_PhysicalDevice, &supportedFeatures);
+
+			if (supportedFeatures.geometryShader)
+			{
+				enabledFeatures.geometryShader = VK_TRUE;
+			}
+			else
+			{
+				PrintError("Selected device does not support geometry shaders! No fallback in place.\n");
+			}
+
+			if (supportedFeatures.wideLines)
+			{
+				enabledFeatures.wideLines = VK_TRUE;
+			}
+
+			return enabledFeatures;
+		}
+
+		bool VulkanDevice::ExtensionSupported(const char* extensionName) const
+		{
+			for (auto iter = m_SupportedExtensions.begin(); iter != m_SupportedExtensions.end(); ++iter)
+			{
+				if (strcmp(iter->extensionName, extensionName) == 0)
+				{
+					return true;
+				}
+			}
+			return false;
+		}
+
+		bool VulkanDevice::ExtensionEnabled(const char* extensionName) const
+		{
+			for (auto iter = m_EnabledExtensions.begin(); iter != m_EnabledExtensions.end(); ++iter)
+			{
+				if (strcmp(*iter, extensionName) == 0)
+				{
+					return true;
+				}
+			}
+			return false;
+		}
+
+		VulkanDevice::operator VkDevice()
+		{
+			return m_LogicalDevice;
+		}
+
+		std::vector<VkExtensionProperties> VulkanDevice::GetSupportedExtensionsForDevice(VkPhysicalDevice device)
+		{
+			u32 extensionCount;
+			vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
+
+			std::vector<VkExtensionProperties> supportedExtensions(extensionCount);
+			vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, supportedExtensions.data());
+
+			return supportedExtensions;
+		}
+
+		bool VulkanDevice::CheckDeviceSupportsExtensions(VkPhysicalDevice device, const std::vector<const char*>& inRequiredExtensions)
+		{
+			std::vector<VkExtensionProperties> supportedExtensions = GetSupportedExtensionsForDevice(device);
+
+			std::set<std::string> requiredExtensions(inRequiredExtensions.begin(), inRequiredExtensions.end());
+
+			for (const VkExtensionProperties& extension : supportedExtensions)
+			{
+				requiredExtensions.erase(extension.extensionName);
+			}
+
+			return requiredExtensions.empty();
 		}
 	} // namespace vk
 } // namespace flex

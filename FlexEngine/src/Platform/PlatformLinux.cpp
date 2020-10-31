@@ -13,21 +13,22 @@ IGNORE_WARNINGS_PUSH
 #include <sys/types.h> // For kill
 #include <sys/stat.h> // For stat
 #include <signal.h> // For kill
-#include <unistd.h> // For getcwd, unlink, getpid
+#include <unistd.h> // For getcwd, unlink, getpid, sysconf
 #include <errno.h> // For errno
 #include <dirent.h> // For readdir
+#include <sched.h> // For sched_yield
+#include <pthread.h>
 IGNORE_WARNINGS_POP
 
 #include "FlexEngine.hpp"
 #include "Helpers.hpp"
+#include "Time.hpp"
 
 #ifndef MAX_PATH
 // Match Windows behaviour
 #define MAX_PATH 260
 #endif
 
-namespace flex
-{
 // Taken from https://stackoverflow.com/a/51846880/2317956
 // These codes set the actual text to the specified color
 #define RESETTEXT  "\x1B[0m" // Set all colors back to normal.
@@ -54,6 +55,18 @@ namespace flex
 #define BOLD(x) "\x1B[1m" x RESETTEXT // Embolden text then reset it.
 #define BRIGHT(x) "\x1B[1m" x RESETTEXT // Brighten text then reset it. (Same as bold but is available for program clarity)
 #define UNDL(x) "\x1B[4m" x RESETTEXT // Underline text then reset it.
+
+namespace flex
+{
+	std::vector<pthread_t> ThreadHandles;
+	std::vector<pthread_mutex_t> mutexes;
+
+	CPUInfo Platform::cpuInfo;
+
+	void Platform::Init()
+	{
+		RetrieveCPUInfo();
+	}
 
 	void Platform::GetConsoleHandle()
 	{
@@ -164,7 +177,7 @@ namespace flex
 		}
 
 		i32 status = 0;
-		mode_t mode = S_IRUSR; // R for owner (see https://jameshfisher.com/2017/02/24/what-is-mode_t/)
+		mode_t mode = S_IRWXU; // RWX for owner (see https://jameshfisher.com/2017/02/24/what-is-mode_t/)
 		struct stat st;
 		if (stat(absoluteDirectoryPath.c_str(), &st) != 0)
 		{
@@ -182,21 +195,28 @@ namespace flex
 		return status != -1;
 	}
 
-	bool Platform::DeleteFile(const std::string& filePath, bool bPrintErrorOnFailure /* = true */)
+	void Platform::OpenExplorer(const std::string& absoluteDirectory)
 	{
-		i32 result = unlink(filePath.c_str());
-		if (!result)
+		// Linux doesn't quite have the same guaranteed idea of a "file explorer" as Windows
+		// TODO: Look into alternatives
+		FLEX_UNUSED(absoluteDirectory);
+	}
+
+	bool Platform::DirectoryExists(const std::string& absoluteDirectoryPath)
+	{
+		if (absoluteDirectoryPath.find("..") != std::string::npos)
 		{
-			return true;
-		}
-		else
-		{
-			if (bPrintErrorOnFailure)
-			{
-				PrintError("Failed to delete file %s\n", filePath.c_str());
-			}
+			PrintError("Attempted to create directory using relative path! Must specify absolute path!\n");
 			return false;
 		}
+
+		struct stat st;
+		if (stat(absoluteDirectoryPath.c_str(), &st) != 0)
+		{
+			return S_ISDIR(st.st_mode);
+		}
+
+		return false;
 	}
 
 	bool Platform::CopyFile(const std::string& filePathFrom, const std::string& filePathTo)
@@ -219,28 +239,92 @@ namespace flex
 		}
 	}
 
-	bool Platform::DirectoryExists(const std::string& absoluteDirectoryPath)
+	bool Platform::DeleteFile(const std::string& filePath, bool bPrintErrorOnFailure /* = true */)
 	{
-		if (absoluteDirectoryPath.find("..") != std::string::npos)
+		i32 result = unlink(filePath.c_str());
+		if (!result)
 		{
-			PrintError("Attempted to create directory using relative path! Must specify absolute path!\n");
+			return true;
+		}
+		else
+		{
+			if (bPrintErrorOnFailure)
+			{
+				PrintError("Failed to delete file %s\n", filePath.c_str());
+			}
+			return false;
+		}
+	}
+
+	bool Platform::FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileType)
+	{
+		std::string cleanedFileType = fileType;
+		{
+			size_t dotPos = cleanedFileType.find('.');
+			if (dotPos != std::string::npos)
+			{
+				cleanedFileType.erase(dotPos, 1);
+			}
+		}
+
+		std::string cleanedDirPath = directoryPath;
+		if (cleanedDirPath[cleanedDirPath.size() - 1] != '/')
+		{
+			cleanedDirPath += '/';
+		}
+
+		std::string cleanedDirPathWithWildCard = cleanedDirPath + '*';
+
+		struct dirent *ent;
+		DIR *dir = opendir(cleanedDirPath.c_str());
+		if (dir != NULL)
+		{
+			/* print all the files and directories within directory */
+			while ((ent = readdir(dir)) != NULL)
+			{
+				std::string fileNameStr(ent->d_name);
+				bool bFoundFileTypeMatches = false;
+				if (fileNameStr.compare(".") == 0 || fileNameStr.compare("..") == 0)
+				{
+					bFoundFileTypeMatches = false;
+				}
+				else if (cleanedFileType == "*")
+				{
+					bFoundFileTypeMatches = true;
+				}
+				else
+				{
+					size_t dotPos = fileNameStr.find('.');
+
+					if (dotPos != std::string::npos)
+					{
+						std::vector<std::string> parts = Split(fileNameStr, '.');
+						if (parts.size() > 0)
+						{
+							std::string foundFileType = parts[1];
+							if (foundFileType == cleanedFileType)
+							{
+								bFoundFileTypeMatches = true;
+							}
+						}
+					}
+				}
+
+				if (bFoundFileTypeMatches)
+				{
+					filePaths.push_back(cleanedDirPath + fileNameStr);
+				}
+			}
+			closedir(dir);
+		}
+		else
+		{
+			/* could not open directory */
+			PrintError("Error encountered while finding files in directory %s\n", cleanedDirPath.c_str());
 			return false;
 		}
 
-		struct stat st;
-		if (stat(absoluteDirectoryPath.c_str(), &st) != 0)
-		{
-			return S_ISDIR(st.st_mode);
-		}
-
-		return false;
-	}
-
-	void Platform::OpenExplorer(const std::string& absoluteDirectory)
-	{
-		// Linux doesn't quite have the same guaranteed idea of a "file explorer" as Windows
-		// TODO: Look into alternatives
-		FLEX_UNUSED(absoluteDirectory);
+		return !filePaths.empty();
 	}
 
 	bool Platform::OpenFileDialog(const std::string& windowTitle, const std::string& absoluteDirectory, std::string& outSelectedAbsFilePath, char filter[] /* = nullptr */)
@@ -278,71 +362,16 @@ namespace flex
 		return false;
 	}
 
-	bool Platform::FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileType)
+	void Platform::OpenFileWithDefaultApplication(const std::string& absoluteDirectory)
 	{
-		std::string cleanedFileType = fileType;
-		{
-			size_t dotPos = cleanedFileType.find('.');
-			if (dotPos != std::string::npos)
-			{
-				cleanedFileType.erase(dotPos, 1);
-			}
-		}
+		std::string pString = "xdg-open " + absoluteDirectory;
+		popen(pString.c_str(), "w");
+	}
 
-		std::string cleanedDirPath = directoryPath;
-		if (cleanedDirPath[cleanedDirPath.size() - 1] != '/')
-		{
-			cleanedDirPath += '/';
-		}
-
-		std::string cleanedDirPathWithWildCard = cleanedDirPath + '*';
-
-		struct dirent *ent;
-		DIR *dir = opendir(cleanedDirPath.c_str());
-		if (dir != NULL)
-		{
-			/* print all the files and directories within directory */
-			while ((ent = readdir(dir)) != NULL)
-			{
-				std::string fileNameStr(ent->d_name);
-				bool foundFileTypeMatches = false;
-				if (cleanedFileType == "*")
-				{
-					foundFileTypeMatches = true;
-				}
-				else
-				{
-					size_t dotPos = fileNameStr.find('.');
-
-					if (dotPos != std::string::npos && fileNameStr != "..")
-					{
-						std::vector<std::string> parts = Split(fileNameStr, '.');
-						if (parts.size() > 0)
-						{
-							std::string foundFileType = parts[1];
-							if (foundFileType == cleanedFileType)
-							{
-								foundFileTypeMatches = true;
-							}
-						}
-					}
-				}
-
-				if (foundFileTypeMatches)
-				{
-					filePaths.push_back(cleanedDirPath + fileNameStr);
-				}
-			}
-			closedir(dir);
-		}
-		else
-		{
-			/* could not open directory */
-			PrintError("Error encountered while finding files in directory %s\n", cleanedDirPath.c_str());
-			return false;
-		}
-
-		return !filePaths.empty();
+	void Platform::LaunchApplication(const std::string& applicationName, const std::string& param0)
+	{
+		std::string s = "./" + applicationName + " " + param0.c_str();
+		system(s.c_str());
 	}
 
 	std::string Platform::GetDateString_YMD()
@@ -380,6 +409,128 @@ namespace flex
 		}
 
 		return result.str();
+	}
+
+	u32 Platform::AtomicIncrement(volatile u32* value)
+	{
+		return __sync_fetch_and_add(value, 1);
+	}
+
+	u32 Platform::AtomicCompareExchange(volatile u32* value, u32 exchange, u32 comparand)
+	{
+		return __sync_val_compare_and_swap(value, comparand, exchange);
+	}
+
+	u32 Platform::AtomicExchange(volatile u32* value, u32 exchange)
+	{
+		u32 res = __sync_lock_test_and_set(value, exchange);
+		// __sync_lock_release(value); // TODO: ?
+		return res;
+	}
+
+	void Platform::JoinThreads()
+	{
+		for (u32 i = 0; i < (u32)ThreadHandles.size(); ++i)
+		{
+			pthread_join(ThreadHandles[i], NULL);
+		}
+		ThreadHandles.clear();
+	}
+
+	void Platform::SpawnThreads(u32 threadCount, void* (entryPoint)(void*), void* userData)
+	{
+		ThreadHandles.resize(threadCount);
+
+		for (u32 i = 0; i < (u32)ThreadHandles.size(); ++i)
+		{
+			i32 result = pthread_create(&ThreadHandles[i], 0, entryPoint, userData);
+			if (result)
+			{
+				const char* errorStr = result == EAGAIN ? "Insufficient resources" : result == EINVAL ? "Invalid settings" : result == EPERM ? "No permission to set scheduling policy requested" : "unknown";
+				PrintError("Failed to create thread, error: %s\n", errorStr);
+			}
+		}
+	}
+
+	void Platform::YieldProcessor()
+	{
+		sched_yield();
+	}
+
+	void* Platform::InitCriticalSection()
+	{
+		u32 index = mutexes.size();
+
+		for (u32 i = 0; i < (u32)mutexes.size(); ++i)
+		{
+			if (mutexes[i].__data.__owner == 0)
+			{
+				index = i;
+				break;
+			}
+		}
+
+		if (index >= (u32)mutexes.size())
+		{
+			mutexes.resize((u32)((index+1) * 1.5f));
+		}
+
+		mutexes[index] = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
+
+		return (void*)(u64)index;
+	}
+
+	void Platform::FreeCriticalSection(void* criticalSection)
+	{
+		mutexes[(u64)criticalSection] = {};
+	}
+
+	void Platform::EnterCriticalSection(void* criticalSection)
+	{
+		pthread_mutex_lock(&mutexes[(u64)criticalSection]);
+	}
+
+	void Platform::LeaveCriticalSection(void* criticalSection)
+	{
+		pthread_mutex_unlock(&mutexes[(u64)criticalSection]);
+	}
+
+	void Platform::Sleep(ms milliseconds)
+	{
+		usleep((useconds_t)Time::ConvertFormats(milliseconds, Time::Format::MILLISECOND, Time::Format::MICROSECOND));
+	}
+
+	void Platform::RetrieveCPUInfo()
+	{
+		cpuInfo = {};
+		cpuInfo.logicalProcessorCount = sysconf(_SC_NPROCESSORS_ONLN);
+		cpuInfo.physicalCoreCount = sysconf(_SC_NPROCESSORS_CONF);
+		// TODO: Store these in appropriate fields
+		cpuInfo.l1CacheCount = sysconf(_SC_LEVEL1_ICACHE_SIZE);
+		cpuInfo.l2CacheCount = sysconf(_SC_LEVEL2_CACHE_SIZE);
+		cpuInfo.l3CacheCount = sysconf(_SC_LEVEL3_CACHE_SIZE);
+	}
+
+	DirectoryWatcher::DirectoryWatcher(const std::string& directory, bool bWatchSubtree) :
+		m_Directory(directory),
+		m_bWatchSubtree(bWatchSubtree)
+	{
+		// TODO: Add support for directory watching on linux
+		m_bInstalled = false;
+	}
+
+	DirectoryWatcher::~DirectoryWatcher()
+	{
+	}
+
+	bool DirectoryWatcher::Update()
+	{
+		return false;
+	}
+
+	bool DirectoryWatcher::Installed() const
+	{
+		return m_bInstalled;
 	}
 
 } // namespace flex

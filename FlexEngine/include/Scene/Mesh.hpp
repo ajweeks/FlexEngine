@@ -50,6 +50,12 @@ namespace flex
 			MaterialID matID,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
+		bool LoadFromMemoryDynamic(const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
+			const std::vector<u32>& indices,
+			MaterialID matID,
+			u32 initialMaxVertexCount,
+			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
+
 		bool LoadPrefabShape(PrefabShape shape,
 			MaterialID materialID,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
@@ -69,6 +75,7 @@ namespace flex
 		std::vector<MaterialID> GetMaterialIDs() const;
 
 		static Mesh* ParseJSON(const JSONObject& object, GameObject* owner, const std::vector<MaterialID>& inMaterialIDs);
+		static Mesh* ImportFromFile(const std::string& meshFilePath, GameObject* owner);
 		JSONObject Serialize() const;
 
 		Type GetType() const;
@@ -90,7 +97,7 @@ namespace flex
 		static bool FindPreLoadedMesh(const std::string& relativeFilePath, LoadedMesh** loadedMesh);
 		static LoadedMesh* LoadMesh(const std::string& relativeFilePath, MeshImportSettings* importSettings = nullptr);
 
-		// First field is relative file path (e.g. RESOURCE_LOCATION "meshes/cube.glb")
+		// First field is relative file path (e.g. MESH_DIRECTORY "cube.glb")
 		static std::map<std::string, LoadedMesh*> m_LoadedMeshes;
 
 		glm::vec3 m_MinPoint;
@@ -101,8 +108,16 @@ namespace flex
 
 		std::vector<MeshComponent*> m_Meshes;
 	private:
-		void CalculateBounds();
 		static bool CheckCGLTFResult(cgltf_result result, std::string& outErrorMessage);
+
+		void CalculateBounds();
+
+		bool LoadFromMemoryInternal(const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
+			const std::vector<u32>& indices,
+			MaterialID matID,
+			bool bDynamic,
+			u32 initialMaxVertexCount,
+			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
 
 		Type m_Type = Type::_NONE;

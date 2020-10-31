@@ -197,6 +197,15 @@
 		"gamepad axis" : -1,
 		"negative" : false
 	},
+	"Editor Focus on selection" : 
+	{
+		"key code" : 23,
+		"mouse button" : -1,
+		"mouse axis" : -1,
+		"gamepad button" : -1,
+		"gamepad axis" : -1,
+		"negative" : false
+	},
 	"Editor Mod faster" : 
 	{
 		"key code" : 111,

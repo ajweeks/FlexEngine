@@ -36,6 +36,7 @@ namespace flex
 		void CreateNewScene(const std::string& name, bool bSwitchImmediately);
 
 		void DrawImGuiObjects();
+		void DrawImGuiModals();
 
 		u32 CurrentSceneIndex() const;
 		BaseScene* CurrentScene() const;
@@ -44,12 +45,15 @@ namespace flex
 		i32 GetCurrentSceneIndex() const;
 		BaseScene* GetSceneAtIndex(i32 index);
 
+		bool DuplicateScene(BaseScene* scene, const std::string& newSceneFileName, const std::string& newSceneName);
+
 		void DestroyAllScenes();
+
+		void OpenNewSceneWindow();
 
 	private:
 		std::string MakeSceneNameUnique(const std::string& originalName);
 		bool SceneFileExists(const std::string& fileName) const;
-		void DoSceneContextMenu(BaseScene* scene);
 
 		u32 m_CurrentSceneIndex = InvalidID;
 		u32 m_PreviousSceneIndex = InvalidID;
@@ -57,6 +61,10 @@ namespace flex
 
 		std::string m_SavedDirStr;
 		std::string m_DefaultDirStr;
+
+		bool m_bOpenNewSceneWindow = false;
+
+		static const char* s_newSceneModalWindowID;
 
 		SceneManager(const SceneManager&) = delete;
 		SceneManager& operator=(const SceneManager&) = delete;

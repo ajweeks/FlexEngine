@@ -145,8 +145,6 @@ namespace flex
 		glm::vec2i m_FrameBufferSize = { 0, 0 };
 		bool m_bHasFocus = false;
 
-		static std::string s_ConfigFilePath;
-
 		// Whether to move the console to an additional monitor when present
 		bool m_bMoveConsoleToOtherMonitor = true;
 		// Whether to restore the size and position from the previous session on bootup

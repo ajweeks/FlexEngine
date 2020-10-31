@@ -123,7 +123,8 @@ namespace flex
 
 		void VulkanPhysicsDebugDraw::Draw()
 		{
-			if (m_LineSegmentIndex == 0)
+			const u32 lineCount = m_LineSegmentIndex;
+			if (lineCount == 0)
 			{
 				return;
 			}
@@ -139,7 +140,7 @@ namespace flex
 				m_VertexBufferCreateInfo.colors_R32G32B32A32.clear();
 				indexBuffer.clear();
 
-				u32 numVerts = m_LineSegmentIndex * 2;
+				u32 numVerts = lineCount * 2;
 
 				if (m_VertexBufferCreateInfo.positions_3D.capacity() < numVerts)
 				{
@@ -158,7 +159,7 @@ namespace flex
 				glm::vec3* posData = m_VertexBufferCreateInfo.positions_3D.data();
 				glm::vec4* colData = m_VertexBufferCreateInfo.colors_R32G32B32A32.data();
 				u32* idxData = indexBuffer.data();
-				for (u32 li = 0; li < m_LineSegmentIndex; ++li)
+				for (u32 li = 0; li < lineCount; ++li)
 				{
 					memcpy(posData + i, m_LineSegments[li].start, sizeof(real) * 3);
 					memcpy(posData + i + 1, m_LineSegments[li].end, sizeof(real) * 3);
@@ -180,7 +181,7 @@ namespace flex
 
 				if (newHash != oldHash)
 				{
-					m_ObjectMesh->GetSubMeshes()[0]->UpdateProceduralData(m_VertexBufferCreateInfo, indexBuffer);
+					m_ObjectMesh->GetSubMeshes()[0]->UpdateDynamicVertexData(m_VertexBufferCreateInfo, indexBuffer);
 				}
 			}
 		}
@@ -202,8 +203,8 @@ namespace flex
 			m_Object->SetSerializable(false);
 			m_Object->SetVisibleInSceneExplorer(false);
 			m_ObjectMesh = m_Object->SetMesh(new Mesh(m_Object));
-			const VertexAttributes vertexAttributes = (u32)VertexAttribute::POSITION | (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
-			if (!m_ObjectMesh->CreateProcedural(256, vertexAttributes, m_MaterialID, TopologyMode::LINE_LIST, &createInfo))
+			const VertexAttributes vertexAttributes = m_Renderer->GetShader(m_Renderer->GetMaterial(m_MaterialID).shaderID).vertexAttributes;
+			if (!m_ObjectMesh->CreateProcedural(8912, vertexAttributes, m_MaterialID, TopologyMode::LINE_LIST, &createInfo))
 			{
 				PrintWarn("Vulkan physics debug renderer failed to initialize vertex buffer");
 			}

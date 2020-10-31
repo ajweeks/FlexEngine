@@ -20,8 +20,11 @@ namespace flex
 	class MeshComponent;
 	class BezierCurveList;
 	class TerminalCamera;
-	struct AST;
-	struct Tokenizer;
+
+	namespace VM
+	{
+		class VirtualMachine;
+	}
 
 	class GameObject
 	{
@@ -132,6 +135,8 @@ namespace flex
 		void AddSelfAndChildrenToVec(std::vector<GameObject*>& vec);
 		void RemoveSelfAndChildrenToVec(std::vector<GameObject*>& vec);
 
+		void SetNearbyInteractable(bool bNearbyInteractable);
+
 		// Filled if this object is a trigger
 		std::vector<GameObject*> overlappingObjects;
 
@@ -193,8 +198,6 @@ namespace flex
 
 		bool m_bLoadedFromPrefab = false;
 
-		bool m_bBeingInteractedWith = false;
-
 		bool m_bCastsShadow = true;
 
 		// Editor only
@@ -206,6 +209,8 @@ namespace flex
 		* Will point at the player we're interacting with, or the object if we're the player
 		*/
 		GameObject* m_ObjectInteractingWith = nullptr;
+
+		bool m_bNearbyInteractable = false;
 
 		i32 m_SiblingIndex = 0;
 
@@ -483,12 +488,57 @@ namespace flex
 
 	};
 
+	template<class T>
+	struct ThreadSafeArray
+	{
+		ThreadSafeArray()
+		{
+		}
+
+		explicit ThreadSafeArray<T>(u32 inSize)
+		{
+			size = inSize;
+			t = new T[inSize];
+		}
+
+		~ThreadSafeArray()
+		{
+			delete[] t;
+		}
+
+		volatile T& operator[](u32 index) volatile
+		{
+			return t[index];
+		}
+
+		const volatile T& operator[](u32 index) volatile const
+		{
+			return t[index];
+		}
+
+		u32 Size()volatile const
+		{
+			return size;
+		}
+
+		u32 size;
+		volatile T* t = nullptr;
+	};
+
+	struct ThreadData
+	{
+		void* criticalSection = nullptr;
+		volatile bool running = true;
+	};
+
 	class GerstnerWave : public GameObject
 	{
 	public:
 		explicit GerstnerWave(const std::string& name);
 
+		virtual void Initialize() override;
 		virtual void Update() override;
+		virtual void Destroy() override;
 		void AddWave();
 		void RemoveWave(i32 index);
 
@@ -496,22 +546,12 @@ namespace flex
 
 		virtual void DrawImGuiObjects() override;
 
-	protected:
-		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
-
-		void UpdateDependentVariables(i32 waveIndex);
-
-		i32 vertSideCount = 100;
-		real size = 30.0f;
-		VertexBufferDataCreateInfo bufferInfo;
-
 		struct WaveInfo
 		{
 			bool enabled = true;
-			real a = 0.35f;
-			real waveDirTheta = 0.5f;
-			real waveLen = 5.0f;
+			real a = 0.0f;
+			real waveDirTheta = 0.0f;
+			real waveLen = 1.0f;
 
 			// Non-serialized, calculated from fields above
 			real waveDirCos;
@@ -521,12 +561,163 @@ namespace flex
 			real accumOffset = 0.0f;
 		};
 
+		struct WaveTessellationLOD
+		{
+			WaveTessellationLOD(real squareDist, u32 vertCountPerAxis) :
+				squareDist(squareDist),
+				vertCountPerAxis(vertCountPerAxis)
+			{}
+
+			real squareDist;
+			u32 vertCountPerAxis;
+		};
+
+		struct WaveSamplingLOD
+		{
+			WaveSamplingLOD(real squareDist, real amplitudeCutoff) :
+				squareDist(squareDist),
+				amplitudeCutoff(amplitudeCutoff)
+			{}
+
+			real squareDist;
+			real amplitudeCutoff;
+		};
+
+		struct WaveChunk
+		{
+			WaveChunk(const glm::vec2i& index, u32 vertOffset, u32 tessellationLODLevel) :
+				index(index),
+				vertOffset(vertOffset),
+				tessellationLODLevel(tessellationLODLevel)
+			{}
+
+			glm::vec2i index;
+			u32 vertOffset;
+			u32 tessellationLODLevel;
+		};
+
+		struct WaveGenData
+		{
+			// Inputs
+			// General
+			std::vector<WaveInfo> const* waves;
+			std::vector<WaveChunk> const* waveChunks;
+			std::vector<WaveSamplingLOD> const* waveSamplingLODs;
+			std::vector<WaveTessellationLOD> const* waveTessellationLODs;
+			WaveInfo const * soloWave;
+			real size;
+			u32 chunkIdx;
+			bool bDisableLODs;
+			// Chunk-specific
+			glm::vec3* positions;
+			real blendDist;
+
+			// Intermediate values:
+			__m128* lodCutoffsAmplitudes_4 = nullptr;
+			__m128* lodNextCutoffAmplitudes_4 = nullptr;
+			__m128* lodBlendWeights_4 = nullptr;
+
+			// Outputs:
+			__m128* positionsx_4 = nullptr;
+			__m128* positionsy_4 = nullptr;
+			__m128* positionsz_4 = nullptr;
+			__m128* lodSelected_4 = nullptr;
+			__m128* uvUs_4 = nullptr;
+			__m128* uvVs_4 = nullptr;
+		};
+
+		using ThreadID = u32;
+
+		//struct Thread
+		//{
+		//	std::thread thread;
+		//	bool bInUse;
+		//};
+
+		//struct ThreadData
+		//{
+		//	WaveGenData waveGenInOut;
+		//	ThreadID threadID;
+		//};
+
+	private:
+		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+
+		void UpdateDependentVariables(i32 waveIndex);
+
+		void AllocWorkQueueEntry(u32 workQueueIndex);
+		void FreeWorkQueueEntry(u32 workQueueIndex);
+
+		void DiscoverChunks();
+		void UpdateWaveVertexData();
+
+		void UpdateWavesLinear();
+		void UpdateWavesSIMD();
+		glm::vec4 ChooseColourFromLOD(real LOD);
+		glm::vec3 QueryHeightFieldFromVerts(const glm::vec3& queryPos) const;
+		WaveChunk const * GetChunkAtPos(const glm::vec2& pos) const;
+		WaveTessellationLOD const * GetTessellationLOD(u32 lodLevel) const;
+		u32 ComputeTesellationLODLevel(const glm::vec2i& chunkIdx);
+		void UpdateNormalsForChunk(u32 chunkIdx);
+		void SortWaves();
+		void SortWaveSamplingLODs();
+		void SortWaveTessellationLODs();
+		real GetWaveAmplitudeLODCutoffForDistance(real dist) const;
+
+		real size = 30.0f;
+		real loadRadius = 35.0f;
+		real updateSpeed = 20.0f;
+		real blendDist = 10.0f;
+		bool bDisableLODs = false;
+		u32 maxChunkVertCountPerAxis = 64;
+
+		OceanData oceanData;
+
+		void* criticalSection = nullptr;
+
+		MaterialID m_WaveMaterialID;
+
+		std::vector<WaveTessellationLOD> waveTessellationLODs;
+		std::vector<WaveSamplingLOD> waveSamplingLODs;
+
+		// TODO: Rename to wave contributions?
 		std::vector<WaveInfo> waves;
+		WaveInfo const * soloWave = nullptr;
+
+		std::vector<WaveChunk> waveChunks;
+
+		bool m_bPinCenter = false;
+		glm::vec3 m_PinnedPos;
+
+		VertexBufferDataCreateInfo m_VertexBufferCreateInfo;
+		std::vector<u32> m_Indices;
 
 		GameObject* bobber = nullptr;
 		Spring<real> bobberTarget;
 
+		RollingAverage<ms> avgWaveUpdateTime;
+
+		u32 DEBUG_lastUsedVertCount = 0;
+
+		ThreadData threadUserData;
 	};
+
+	bool operator==(const GerstnerWave::WaveInfo& lhs, const GerstnerWave::WaveInfo& rhs);
+
+	// TODO: MOVE!!
+	static volatile u32 workQueueLock = 0;
+	static volatile u32 workQueueEntriesCreated = 0;
+	static volatile u32 workQueueEntriesClaimed = 0;
+	static volatile u32 workQueueEntriesCompleted = 0;
+
+#define SIMD_WAVES 1
+
+	void* ThreadUpdate(void* inData);
+
+	GerstnerWave::WaveChunk const * GetChunkAtPos(const glm::vec2& pos, const std::vector<GerstnerWave::WaveChunk>& waveChunks, real size);
+	GerstnerWave::WaveTessellationLOD const * GetTessellationLOD(u32 lodLevel, const std::vector<GerstnerWave::WaveTessellationLOD>& waveTessellationLODs);
+	u32 MapVertIndexAcrossLODs(u32 vertIndex, GerstnerWave::WaveTessellationLOD const* lod0, GerstnerWave::WaveTessellationLOD const* lod1);
 
 	class Blocks : public GameObject
 	{
@@ -548,13 +739,14 @@ namespace flex
 		virtual void Initialize() override;
 		virtual void Destroy() override;
 		virtual void Update() override;
-		virtual void DrawImGuiObjects() override;
 
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
 
 		virtual bool AllowInteractionWith(GameObject* gameObject) override;
 
 		void SetCamera(TerminalCamera* camera);
+
+		void DrawTerminalUI();
 
 	protected:
 		void TypeChar(char c);
@@ -589,13 +781,12 @@ namespace flex
 		void ParseCode();
 		void EvaluateCode();
 
-		AST* ast = nullptr;
-		Tokenizer* tokenizer = nullptr;
+		VM::VirtualMachine* m_VM = nullptr;
 
 		std::vector<std::string> lines;
 
-		real m_LineHeight = 9.0f;
-		real m_LetterScale = 0.23f;
+		real m_LineHeight = 1.0f;
+		real m_LetterScale = 0.04f;
 
 		glm::vec2i cursor;
 		// Keeps track of the cursor x to be able to position the cursor correctly
@@ -641,6 +832,7 @@ namespace flex
 
 	};
 
+	// TODO: Rename to landscape generator
 	class ChunkGenerator : public GameObject
 	{
 	public:

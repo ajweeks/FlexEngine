@@ -14,7 +14,13 @@ IGNORE_WARNINGS_PUSH
 #include <LinearMath/btIDebugDraw.h>
 #include <LinearMath/btTransform.h>
 
+#define SSE_MATHFUN_WITH_CODE
+#include "sse_mathfun.h"
+
 #include <glm/gtx/quaternion.hpp> // for rotate
+#include <glm/gtx/norm.hpp> // for distance2
+
+#include <imgui/imgui_internal.h> // For PushItemFlag
 
 #include <random>
 IGNORE_WARNINGS_POP
@@ -32,6 +38,7 @@ IGNORE_WARNINGS_POP
 #include "JSONParser.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
+#include "Platform/Platform.hpp"
 #include "Player.hpp"
 #include "Profiler.hpp"
 #include "Scene/BaseScene.hpp"
@@ -39,7 +46,8 @@ IGNORE_WARNINGS_POP
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Time.hpp"
-#include "VirtualMachine.hpp"
+#include "VirtualMachine/Backend/VirtualMachine.hpp"
+#include "VirtualMachine/Diagnostics.hpp"
 #include "Window/Window.hpp"
 
 namespace flex
@@ -52,6 +60,8 @@ namespace flex
 	AudioCue GameObject::s_SqueakySounds;
 	AudioSourceID GameObject::s_BunkSound;
 
+	static ThreadSafeArray<GerstnerWave::WaveGenData>* workQueue = nullptr;
+
 	GameObject::GameObject(const std::string& name, GameObjectType type) :
 		m_Name(name),
 		m_Type(type)
@@ -61,9 +71,9 @@ namespace flex
 
 		if (!s_SqueakySounds.IsInitialized())
 		{
-			s_SqueakySounds.Initialize(RESOURCE_LOCATION "audio/squeak00.wav", 5);
+			s_SqueakySounds.Initialize(SFX_LOCATION "squeak00.wav", 5);
 
-			s_BunkSound = AudioManager::AddAudioSource(RESOURCE_LOCATION "audio/bunk.wav");
+			s_BunkSound = AudioManager::AddAudioSource(SFX_LOCATION "bunk.wav");
 		}
 	}
 
@@ -125,7 +135,7 @@ namespace flex
 					prefabInstance->m_Transform = Transform::ParseJSON(transformObj);
 				}
 
-				prefabInstance->ParseUniqueFields(obj, scene, newGameObject->m_Mesh->GetMaterialIDs());
+				prefabInstance->ParseUniqueFields(obj, scene, prefabInstance->m_Mesh->GetMaterialIDs());
 
 				return prefabInstance;
 			}
@@ -288,7 +298,9 @@ namespace flex
 
 	void GameObject::Update()
 	{
-		if (m_ObjectInteractingWith)
+		m_bNearbyInteractable = false;
+
+		if (m_ObjectInteractingWith != nullptr)
 		{
 			// TODO: Write real fancy-lookin outline shader instead of drawing a lil cross
 			btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
@@ -462,7 +474,7 @@ namespace flex
 			if (ImGui::Button("Add mesh component"))
 			{
 				Mesh* mesh = SetMesh(new Mesh(this));
-				mesh->LoadFromFile(RESOURCE_LOCATION "meshes/cube.glb", g_Renderer->GetPlaceholderMaterialID());
+				mesh->LoadFromFile(MESH_DIRECTORY "cube.glb", g_Renderer->GetPlaceholderMaterialID());
 			}
 		}
 
@@ -867,12 +879,11 @@ namespace flex
 	void GameObject::SetInteractingWith(GameObject* gameObject)
 	{
 		m_ObjectInteractingWith = gameObject;
-		m_bBeingInteractedWith = (gameObject != nullptr);
 	}
 
 	bool GameObject::IsBeingInteractedWith() const
 	{
-		return m_bBeingInteractedWith;
+		return m_ObjectInteractingWith != nullptr;
 	}
 
 	GameObject* GameObject::GetObjectInteractingWith()
@@ -1101,8 +1112,7 @@ namespace flex
 		// TODO: Only save/read this value when editor is included in build
 		if (!IsVisibleInSceneExplorer())
 		{
-			object.fields.emplace_back("visible in scene graph",
-				JSONValue(IsVisibleInSceneExplorer()));
+			object.fields.emplace_back("visible in scene graph", JSONValue(IsVisibleInSceneExplorer()));
 		}
 
 		if (IsStatic())
@@ -1324,6 +1334,11 @@ namespace flex
 
 			child->RemoveSelfAndChildrenToVec(vec);
 		}
+	}
+
+	void GameObject::SetNearbyInteractable(bool bNearbyInteractable)
+	{
+		m_bNearbyInteractable = bNearbyInteractable;
 	}
 
 	GameObjectType GameObject::GetType() const
@@ -1999,7 +2014,7 @@ namespace flex
 			if (!m_Mesh)
 			{
 				Mesh* valveMesh = new Mesh(this);
-				valveMesh->LoadFromFile(RESOURCE_LOCATION "meshes/valve.glb", matIDs[0]);
+				valveMesh->LoadFromFile(MESH_DIRECTORY "valve.glb", matIDs[0]);
 				assert(m_Mesh == nullptr);
 				SetMesh(valveMesh);
 			}
@@ -2053,7 +2068,7 @@ namespace flex
 		// True when our rotation is changed by another object (rising block)
 		bool bRotatedByOtherObject = false;
 		real currentAbsAvgRotationSpeed = 0.0f;
-		if (m_ObjectInteractingWith)
+		if (m_ObjectInteractingWith != nullptr)
 		{
 			i32 playerIndex = static_cast<Player*>(m_ObjectInteractingWith)->GetIndex();
 
@@ -2163,7 +2178,7 @@ namespace flex
 		if (!m_Mesh)
 		{
 			Mesh* cubeMesh = new Mesh(this);
-			cubeMesh->LoadFromFile(RESOURCE_LOCATION "meshes/cube.glb", matIDs[0]);
+			cubeMesh->LoadFromFile(MESH_DIRECTORY "cube.glb", matIDs[0]);
 			SetMesh(cubeMesh);
 		}
 
@@ -2348,11 +2363,11 @@ namespace flex
 				const char* filePath;
 				if (bBroken)
 				{
-					filePath = RESOURCE("meshes/glass-window-broken.glb");
+					filePath = MESH_DIRECTORY "glass-window-broken.glb";
 				}
 				else
 				{
-					filePath = RESOURCE("meshes/glass-window-whole.glb");
+					filePath = MESH_DIRECTORY "glass-window-whole.glb";
 				}
 				windowMesh->LoadFromFile(filePath, matIDs);
 				SetMesh(windowMesh);
@@ -2426,7 +2441,7 @@ namespace flex
 		//MeshComponent* sphereMesh = new MeshComponent(this, matID);
 
 		//assert(m_MeshComponent == nullptr);
-		//sphereMesh->LoadFromFile(RESOURCE_LOCATION "meshes/sphere.glb");
+		//sphereMesh->LoadFromFile(MESH_DIRECTORY "sphere.glb");
 		//SetMeshComponent(sphereMesh);
 
 		//std::string captureName = m_Name + "_capture";
@@ -2539,6 +2554,7 @@ namespace flex
 		data.brightness = 1.0f;
 		data.castShadows = 1;
 		data.shadowDarkness = 1.0f;
+		data.pad[0] = data.pad[1] = 0;
 	}
 
 	void DirectionalLight::Initialize()
@@ -2873,7 +2889,7 @@ namespace flex
 			matID = 0;
 		}
 		Mesh* mesh = SetMesh(new Mesh(this));
-		std::string meshFilePath = std::string(RESOURCE("meshes/")) + std::string(meshName);
+		std::string meshFilePath = std::string(MESH_DIRECTORY) + std::string(meshName);
 		if (!mesh->LoadFromFile(meshFilePath, matID))
 		{
 			PrintWarn("Failed to load cart mesh!\n");
@@ -3236,7 +3252,7 @@ namespace flex
 			matID = 0;
 		}
 		Mesh* mesh = SetMesh(new Mesh(this));
-		if (!mesh->LoadFromFile(RESOURCE("meshes/mobile-liquid-box.glb"), matID))
+		if (!mesh->LoadFromFile(MESH_DIRECTORY "mobile-liquid-box.glb", matID))
 		{
 			PrintWarn("Failed to load mobile-liquid-box mesh!\n");
 		}
@@ -3279,58 +3295,959 @@ namespace flex
 	GerstnerWave::GerstnerWave(const std::string& name) :
 		GameObject(name, GameObjectType::GERSTNER_WAVE)
 	{
+		workQueue = new ThreadSafeArray<WaveGenData>(32);
+
+		// Defaults to use if not set in file
+		oceanData = {};
+		oceanData.top = glm::vec4(0.1f, 0.3f, 0.6f, 0.0f);
+		oceanData.mid = glm::vec4(0.1f, 0.2f, 0.5f, 0.0f);
+		oceanData.btm = glm::vec4(0.05f, 0.15f, 0.4f, 0.0f);
+		oceanData.fresnelFactor = 0.8f;
+		oceanData.fresnelPower = 7.0f;
+		oceanData.skyReflectionFactor = 0.8f;
+		oceanData.fogFalloff = 1.2f;
+		oceanData.fogDensity = 1.2f;
+
 		MaterialCreateInfo matCreateInfo = {};
 		matCreateInfo.name = "gerstner";
-		matCreateInfo.shaderName = "pbr";
+		matCreateInfo.shaderName = "water";
 		matCreateInfo.constAlbedo = glm::vec3(0.4f, 0.5f, 0.8f);
 		matCreateInfo.constMetallic = 0.8f;
 		matCreateInfo.constRoughness = 0.01f;
 		matCreateInfo.bDynamic = true;
+		matCreateInfo.albedoTexturePath = TEXTURE_LOCATION "wave-n-2.png";
+		matCreateInfo.enableAlbedoSampler = true;
 
-		MaterialID planeMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
-
-		Mesh* planeMesh = SetMesh(new Mesh(this));
-		planeMesh->LoadPrefabShape(PrefabShape::GERSTNER_PLANE, planeMatID);
-
-		i32 vertCount = vertSideCount * vertSideCount;
-		bufferInfo.positions_3D.resize(vertCount);
-		bufferInfo.normals.resize(vertCount);
-		bufferInfo.tangents.resize(vertCount);
-		bufferInfo.colors_R32G32B32A32.resize(vertCount);
-
-		for (i32 z = 0; z < vertSideCount; ++z)
-		{
-			for (i32 x = 0; x < vertSideCount; ++x)
-			{
-				i32 vertIdx = z * vertSideCount + x;
-
-				bufferInfo.normals[vertIdx] = glm::vec3(0.0f, 1.0f, 0.0f);
-				bufferInfo.tangents[vertIdx] = glm::vec3(1.0f, 0.0f, 0.0f);
-				bufferInfo.colors_R32G32B32A32[vertIdx] = VEC4_ONE;
-			}
-		}
-
-		for (i32 i = 0; i < (i32)waves.size(); ++i)
-		{
-			UpdateDependentVariables(i);
-		}
+		m_WaveMaterialID = g_Renderer->InitializeMaterial(&matCreateInfo);
 
 		bobberTarget = Spring<real>(0.0f);
 		bobberTarget.DR = 2.5f;
 		bobberTarget.UAF = 40.0f;
 		bobber = new GameObject("Bobber", GameObjectType::_NONE);
 		bobber->SetSerializable(false);
-		MaterialID matID = InvalidMaterialID;
-		if (!g_Renderer->FindOrCreateMaterialByName("pbr red", matID))
+		MaterialID bobberMatID = InvalidMaterialID;
+		if (!g_Renderer->FindOrCreateMaterialByName("pbr red", bobberMatID))
 		{
 			PrintError("Failed to find material for bobber!\n");
 		}
+		else
+		{
+			bobberMatID = g_Renderer->GetPlaceholderMaterialID();
+		}
 		Mesh* mesh = bobber->SetMesh(new Mesh(bobber));
-		if (!mesh->LoadFromFile(RESOURCE("meshes/sphere.glb"), matID))
+		if (!mesh->LoadFromFile(MESH_DIRECTORY "sphere.glb", bobberMatID))
 		{
 			PrintError("Failed to load bobber mesh\n");
 		}
 		g_SceneManager->CurrentScene()->AddRootObject(bobber);
+	}
+
+	void GerstnerWave::Initialize()
+	{
+		m_VertexBufferCreateInfo = {};
+		m_VertexBufferCreateInfo.attributes = g_Renderer->GetShader(g_Renderer->GetMaterial(m_WaveMaterialID).shaderID).vertexAttributes;
+
+		avgWaveUpdateTime = RollingAverage<ms>(256, SamplingType::CONSTANT);
+
+		criticalSection = Platform::InitCriticalSection();
+
+		for (u32 i = 0; i < workQueue->Size(); ++i)
+		{
+			AllocWorkQueueEntry(i);
+		}
+
+		WRITE_BARRIER;
+
+		u32 threadCount = (u32)glm::clamp(((i32)Platform::GetLogicalProcessorCount()) - 1, 1, 16);
+
+		threadUserData = {};
+		threadUserData.running = true;
+		threadUserData.criticalSection = criticalSection;
+		Platform::SpawnThreads(threadCount, &ThreadUpdate, &threadUserData);
+
+		SortWaveSamplingLODs();
+		SortWaveTessellationLODs();
+
+		DiscoverChunks();
+		UpdateWaveVertexData();
+
+		SetMesh(new Mesh(this));
+
+		m_Mesh->LoadFromMemoryDynamic(m_VertexBufferCreateInfo, m_Indices, m_WaveMaterialID, (u32)m_VertexBufferCreateInfo.positions_3D.size());
+
+		GameObject::Initialize();
+	}
+
+	void GerstnerWave::Update()
+	{
+		if (!m_bVisible)
+		{
+			return;
+		}
+
+		PROFILE_AUTO("Gerstner update");
+
+		for (WaveInfo& wave : waves)
+		{
+			if (wave.enabled)
+			{
+				wave.accumOffset += (wave.moveSpeed * g_DeltaTime);
+			}
+		}
+
+#if 0
+		for (u32 i = 0; i < (u32)waveChunks.size(); ++i)
+		{
+			const glm::vec2i& chunkIndex = waveChunks[i].index;
+			for (u32 j = 0; j < i; ++j)
+			{
+				g_Renderer->GetDebugDrawer()->drawSphere(btVector3((chunkIndex.x) * size, 8.0f + 1.5f * j, (chunkIndex.y) * size), 0.5f, btVector4(1, 1, 1, 1));
+			}
+		}
+#endif
+
+		DiscoverChunks();
+		UpdateWaveVertexData();
+
+		MeshComponent* meshComponent = m_Mesh->GetSubMeshes()[0];
+		if (!m_Indices.empty())
+		{
+			meshComponent->UpdateDynamicVertexData(m_VertexBufferCreateInfo, m_Indices);
+			g_Renderer->ShrinkDynamicVertexData(meshComponent->renderID, 0.5f);
+		}
+
+		// Bobber
+		if (!m_Indices.empty())
+		{
+			const glm::vec3 wavePos = m_Transform.GetWorldPosition();
+			glm::vec3 bobberTargetPos = QueryHeightFieldFromVerts(m_bPinCenter ? m_PinnedPos : g_CameraManager->CurrentCamera()->position);
+			bobberTarget.SetTargetPos(bobberTargetPos.y);
+			bobberTarget.Tick(g_DeltaTime);
+			const real bobberYOffset = 0.2f;
+			glm::vec3 newPos = wavePos + glm::vec3(bobberTargetPos.x, bobberTarget.pos + bobberYOffset, bobberTargetPos.z);
+			bobber->GetTransform()->SetWorldPosition(newPos);
+		}
+
+		g_Renderer->SetGlobalUniform(U_OCEAN_DATA, &oceanData, sizeof(oceanData));
+
+		GameObject::Update();
+	}
+
+	void GerstnerWave::Destroy()
+	{
+		GameObject::Destroy();
+
+		threadUserData.running = false;
+
+		Platform::JoinThreads();
+
+		for (u32 i = 0; i < workQueue->Size(); ++i)
+		{
+			FreeWorkQueueEntry(i);
+		}
+
+		delete workQueue;
+
+		Platform::FreeCriticalSection(criticalSection);
+		criticalSection = nullptr;
+	}
+
+	GerstnerWave::WaveChunk const* GerstnerWave::GetChunkAtPos(const glm::vec2& pos) const
+	{
+		return flex::GetChunkAtPos(pos, waveChunks, size);
+	}
+
+	GerstnerWave::WaveTessellationLOD const* GerstnerWave::GetTessellationLOD(u32 lodLevel) const
+	{
+		return flex::GetTessellationLOD(lodLevel, waveTessellationLODs);
+	}
+
+	u32 GerstnerWave::ComputeTesellationLODLevel(const glm::vec2i& chunkIdx)
+	{
+		if (waveTessellationLODs.empty())
+		{
+			waveTessellationLODs.emplace_back(0.0f, maxChunkVertCountPerAxis);
+		}
+
+		glm::vec3 center = m_bPinCenter ? m_PinnedPos : g_CameraManager->CurrentCamera()->position;
+		real sqrDist = glm::distance2(glm::vec2(center.x, center.z), glm::vec2(chunkIdx) * size);
+
+		for (u32 i = 0; i < (u32)waveTessellationLODs.size(); ++i)
+		{
+			if (sqrDist > waveTessellationLODs[i].squareDist)
+			{
+				return i;
+			}
+		}
+
+		return (u32)(waveTessellationLODs.size() - 1);
+	}
+
+	glm::vec3 GerstnerWave::QueryHeightFieldFromVerts(const glm::vec3& queryPos) const
+	{
+		WaveChunk const* chunk = GetChunkAtPos(queryPos);
+		if (chunk)
+		{
+			glm::vec2i chunkIdx = chunk->index;
+			WaveTessellationLOD const* tessellationLOD = GetTessellationLOD(chunk->tessellationLODLevel);
+			u32 chunkVertCountPerAxis = tessellationLOD->vertCountPerAxis;
+			const u32 vertsPerChunk = chunkVertCountPerAxis * chunkVertCountPerAxis;
+			glm::vec2 chunkMin((chunkIdx.x - 0.5f) * size, (chunkIdx.y - 0.5f) * size);
+			glm::vec2 chunkUV = Saturate(glm::vec2((queryPos.x - chunkMin.x) / size, (queryPos.z - chunkMin.y) / size));
+			u32 chunkLocalVertexIndex = (u32)(chunkUV.x * (chunkVertCountPerAxis - 1)) + ((u32)(chunkUV.y * ((real)chunkVertCountPerAxis - 1.0f)) * chunkVertCountPerAxis);
+			const u32 idxMax = vertsPerChunk - 1;
+			glm::vec3 A(m_VertexBufferCreateInfo.positions_3D[chunk->vertOffset + glm::min(chunkLocalVertexIndex + 0u, idxMax)]);
+			glm::vec3 B(m_VertexBufferCreateInfo.positions_3D[chunk->vertOffset + glm::min(chunkLocalVertexIndex + 1u, idxMax)]);
+			glm::vec3 C(m_VertexBufferCreateInfo.positions_3D[chunk->vertOffset + glm::min(chunkLocalVertexIndex + chunkVertCountPerAxis, idxMax)]);
+			glm::vec3 D(m_VertexBufferCreateInfo.positions_3D[chunk->vertOffset + glm::min(chunkLocalVertexIndex + chunkVertCountPerAxis + 1u, idxMax)]);
+			glm::vec2 vertexUV = Saturate(glm::vec2((queryPos.x - A.x) / (B.x - A.x), (queryPos.z - B.z) / (D.z - B.z)));
+			glm::vec3 result = Lerp(Lerp(A, B, vertexUV.x), Lerp(C, D, vertexUV.x), vertexUV.y);
+
+			return result;
+		}
+
+		// No chunk corresponds with query pos
+		return VEC3_ZERO;
+	}
+
+	void GerstnerWave::DiscoverChunks()
+	{
+		std::vector<WaveChunk> chunksInRadius;
+
+		glm::vec3 center = m_bPinCenter ? m_PinnedPos : g_CameraManager->CurrentCamera()->position;
+		const glm::vec2 centerXZ(center.x, center.z);
+		const glm::vec2i camChunkIdx = (glm::vec2i)(glm::vec2(center.x, center.z) / size);
+		const i32 maxChunkIdxDiff = (i32)glm::ceil(loadRadius / (real)size);
+		const real radiusSqr = loadRadius * loadRadius;
+		u32 vertOffset = 0;
+		for (i32 x = camChunkIdx.x - maxChunkIdxDiff; x < camChunkIdx.x + maxChunkIdxDiff; ++x)
+		{
+			for (i32 z = camChunkIdx.y - maxChunkIdxDiff; z < camChunkIdx.y + maxChunkIdxDiff; ++z)
+			{
+				glm::vec2 chunkCenter(x * size, z * size);
+
+				//if (g_Renderer->GetDebugDrawer() != nullptr)
+				//{
+				//	g_Renderer->GetDebugDrawer()->drawSphere(btVector3(chunkCenter.x, 1.0f, chunkCenter.y), 0.5f, btVector3(0.75f, 0.5f, 0.6f));
+				//}
+
+				if (glm::distance2(chunkCenter, centerXZ) < radiusSqr)
+				{
+					u32 lodLevel = ComputeTesellationLODLevel(glm::vec2i(x, z));
+					chunksInRadius.emplace_back(glm::vec2i(x, z), vertOffset, lodLevel);
+					vertOffset += waveTessellationLODs[lodLevel].vertCountPerAxis * waveTessellationLODs[lodLevel].vertCountPerAxis;
+				}
+			}
+		}
+
+		waveChunks = chunksInRadius;
+	}
+
+	void GerstnerWave::AllocWorkQueueEntry(u32 workQueueIndex)
+	{
+		const u32 vertCountPerChunk = maxChunkVertCountPerAxis * maxChunkVertCountPerAxis;
+		const u32 vertCountPerChunkDiv4 = vertCountPerChunk / 4;
+
+		assert((*workQueue)[workQueueIndex].positionsx_4 == nullptr);
+
+		(*workQueue)[workQueueIndex].positionsx_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
+		(*workQueue)[workQueueIndex].positionsy_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
+		(*workQueue)[workQueueIndex].positionsz_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
+		(*workQueue)[workQueueIndex].lodSelected_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
+		(*workQueue)[workQueueIndex].uvUs_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
+		(*workQueue)[workQueueIndex].uvVs_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
+
+		(*workQueue)[workQueueIndex].lodCutoffsAmplitudes_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
+		(*workQueue)[workQueueIndex].lodNextCutoffAmplitudes_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
+		(*workQueue)[workQueueIndex].lodBlendWeights_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
+	}
+
+	void GerstnerWave::FreeWorkQueueEntry(u32 workQueueIndex)
+	{
+		_mm_free((*workQueue)[workQueueIndex].positionsx_4);
+		_mm_free((*workQueue)[workQueueIndex].positionsy_4);
+		_mm_free((*workQueue)[workQueueIndex].positionsz_4);
+		_mm_free((*workQueue)[workQueueIndex].lodSelected_4);
+		_mm_free((*workQueue)[workQueueIndex].uvUs_4);
+		_mm_free((*workQueue)[workQueueIndex].uvVs_4);
+
+		_mm_free((*workQueue)[workQueueIndex].lodCutoffsAmplitudes_4);
+		_mm_free((*workQueue)[workQueueIndex].lodNextCutoffAmplitudes_4);
+		_mm_free((*workQueue)[workQueueIndex].lodBlendWeights_4);
+	}
+
+	void GerstnerWave::UpdateWaveVertexData()
+	{
+		i32 vertCount = 0;
+		i32 indexCount = 0;
+		for (u32 chunkIdx = 0; chunkIdx < (u32)waveChunks.size(); ++chunkIdx)
+		{
+			WaveChunk& waveChunk = waveChunks[chunkIdx];
+			WaveTessellationLOD const* tessellationLOD = GetTessellationLOD(waveChunk.tessellationLODLevel);
+			vertCount += tessellationLOD->vertCountPerAxis * tessellationLOD->vertCountPerAxis;
+			indexCount += 6 * (tessellationLOD->vertCountPerAxis - 1) * (tessellationLOD->vertCountPerAxis - 1);
+		}
+
+		DEBUG_lastUsedVertCount = vertCount;
+
+		// Resize & regenerate index buffer
+		if ((i32)m_Indices.size() != indexCount)
+		{
+			m_Indices.resize(indexCount);
+			i32 i = 0;
+			for (u32 chunkIdx = 0; chunkIdx < (u32)waveChunks.size(); ++chunkIdx)
+			{
+				WaveChunk& waveChunk = waveChunks[chunkIdx];
+				WaveTessellationLOD const* tessellationLOD = GetTessellationLOD(waveChunk.tessellationLODLevel);
+				for (u32 z = 0; z < tessellationLOD->vertCountPerAxis - 1; ++z)
+				{
+					for (u32 x = 0; x < tessellationLOD->vertCountPerAxis - 1; ++x)
+					{
+						u32 vertIdx = z * tessellationLOD->vertCountPerAxis + x + waveChunk.vertOffset;
+						m_Indices[i++] = vertIdx;
+						m_Indices[i++] = vertIdx + tessellationLOD->vertCountPerAxis;
+						m_Indices[i++] = vertIdx + 1;
+
+						vertIdx = vertIdx + 1 + tessellationLOD->vertCountPerAxis;
+						m_Indices[i++] = vertIdx;
+						m_Indices[i++] = vertIdx - tessellationLOD->vertCountPerAxis;
+						m_Indices[i++] = vertIdx - 1;
+					}
+				}
+			}
+		}
+
+		// Resize vertex buffers
+		if (vertCount > (i32)m_VertexBufferCreateInfo.positions_3D.size())
+		{
+			m_VertexBufferCreateInfo.positions_3D.resize(vertCount);
+			m_VertexBufferCreateInfo.texCoords_UV.resize(vertCount);
+			m_VertexBufferCreateInfo.normals.resize(vertCount);
+			m_VertexBufferCreateInfo.tangents.resize(vertCount);
+			m_VertexBufferCreateInfo.colors_R32G32B32A32.resize(vertCount);
+		}
+		else
+		{
+			// Shrink vertex buffers once they have > 50% unused space
+			real excess = (real)(m_VertexBufferCreateInfo.positions_3D.size() - vertCount) / m_VertexBufferCreateInfo.positions_3D.size();
+			if (excess > 0.5f)
+			{
+				m_VertexBufferCreateInfo.positions_3D.resize(vertCount);
+				m_VertexBufferCreateInfo.positions_3D.shrink_to_fit();
+				m_VertexBufferCreateInfo.texCoords_UV.resize(vertCount);
+				m_VertexBufferCreateInfo.texCoords_UV.shrink_to_fit();
+				m_VertexBufferCreateInfo.normals.resize(vertCount);
+				m_VertexBufferCreateInfo.normals.shrink_to_fit();
+				m_VertexBufferCreateInfo.tangents.resize(vertCount);
+				m_VertexBufferCreateInfo.tangents.shrink_to_fit();
+				m_VertexBufferCreateInfo.colors_R32G32B32A32.resize(vertCount);
+				m_VertexBufferCreateInfo.colors_R32G32B32A32.shrink_to_fit();
+			}
+		}
+
+		{
+			PROFILE_AUTO("Update waves");
+#if SIMD_WAVES
+			UpdateWavesSIMD();
+#else
+			UpdateWavesLinear();
+#endif
+		}
+		ms waveTime = Profiler::GetBlockDuration("Update waves");
+		if (avgWaveUpdateTime.currentAverage == 0.0f)
+		{
+			avgWaveUpdateTime.Reset(waveTime);
+		}
+		else
+		{
+			avgWaveUpdateTime.AddValue(waveTime);
+		}
+	}
+
+	void GerstnerWave::UpdateWavesLinear()
+	{
+		glm::vec3* positions = m_VertexBufferCreateInfo.positions_3D.data();
+
+		// TODO: Add LOD blending
+
+		for (u32 chunkIdx = 0; chunkIdx < (u32)waveChunks.size(); ++chunkIdx)
+		{
+			WaveChunk& waveChunk = waveChunks[chunkIdx];
+			WaveTessellationLOD const* tessellationLOD = GetTessellationLOD(waveChunk.tessellationLODLevel);
+
+			const glm::vec3 chunkCenter((waveChunks[chunkIdx].index.x - 0.5f) * size, 0.0f, (waveChunks[chunkIdx].index.y - 0.5f) * size);
+
+			real chunkDist = glm::distance(glm::vec3(chunkCenter.x, 0.0f, chunkCenter.y), g_CameraManager->CurrentCamera()->position);
+			real amplitudeLODCutoff = GetWaveAmplitudeLODCutoffForDistance(chunkDist);
+
+			for (u32 z = 0; z < tessellationLOD->vertCountPerAxis; ++z)
+			{
+				for (u32 x = 0; x < tessellationLOD->vertCountPerAxis; ++x)
+				{
+					const u32 vertIdx = z * tessellationLOD->vertCountPerAxis + x + waveChunk.vertOffset;
+					positions[vertIdx] = chunkCenter + glm::vec3(
+						size * ((real)x / (tessellationLOD->vertCountPerAxis - 1)),
+						0.0f,
+						size * ((real)z / (tessellationLOD->vertCountPerAxis - 1)));
+				}
+			}
+
+			for (const WaveInfo& wave : waves)
+			{
+				if (wave.a < amplitudeLODCutoff)
+				{
+					break;
+				}
+
+				if (wave.enabled)
+				{
+					const glm::vec2 waveVec = glm::vec2(wave.waveDirCos, wave.waveDirSin) * wave.waveVecMag;
+					const glm::vec2 waveVecN = glm::normalize(waveVec);
+
+					for (u32 z = 0; z < tessellationLOD->vertCountPerAxis; ++z)
+					{
+						for (u32 x = 0; x < tessellationLOD->vertCountPerAxis; ++x)
+						{
+							const u32 vertIdx = z * tessellationLOD->vertCountPerAxis + x + waveChunk.vertOffset;
+
+							real d = waveVec.x * positions[vertIdx].x + waveVec.y * positions[vertIdx].z; // Inline dot
+							real c = cos(d + wave.accumOffset);
+							real s = sin(d + wave.accumOffset);
+							positions[vertIdx] += glm::vec3(
+								-waveVecN.x * wave.a * s,
+								wave.a * c,
+								-waveVecN.y * wave.a * s);
+						}
+					}
+				}
+			}
+
+#if 0
+
+			// Ripple
+			glm::vec3 ripplePos = VEC3_ZERO;
+			real rippleAmp = 0.8f;
+			real rippleLen = 0.6f;
+			real rippleFadeOut = 12.0f;
+			for (u32 z = 0; z < tessellationLOD->vertCountPerAxis; ++z)
+			{
+				for (u32 x = 0; x < tessellationLOD->vertCountPerAxis; ++x)
+				{
+					const u32 vertIdx = z * tessellationLOD->vertCountPerAxis + x + waveChunk.vertOffset;
+
+					glm::vec3 diff = (ripplePos - positions[vertIdx]);
+					real d = glm::length(diff);
+					diff = diff / d * rippleLen;
+					real c = cos(g_SecElapsedSinceProgramStart * 1.8f - d);
+					real s = sin(g_SecElapsedSinceProgramStart * 1.5f - d);
+					real a = Lerp(0.0f, rippleAmp, 1.0f - Saturate(d / rippleFadeOut));
+					positions[vertIdx] += glm::vec3(
+						-diff.x * a * s,
+						a * c,
+						-diff.z * a * s);
+				}
+			}
+#endif
+
+			UpdateNormalsForChunk(chunkIdx);
+		}
+	}
+
+	void GerstnerWave::UpdateWavesSIMD()
+	{
+		if (waveChunks.size() > workQueue->Size())
+		{
+			for (u32 i = 0; i < workQueue->Size(); ++i)
+			{
+				// TODO: Reuse memory
+				FreeWorkQueueEntry(i);
+			}
+			delete workQueue;
+
+			u32 newSize = (u32)(waveChunks.size() * 1.2f);
+			workQueue = new ThreadSafeArray<WaveGenData>(newSize);
+			for (u32 i = 0; i < workQueue->Size(); ++i)
+			{
+				AllocWorkQueueEntry(i);
+			}
+		}
+
+		workQueueEntriesCompleted = 0;
+		workQueueEntriesCreated = 0;
+		WRITE_BARRIER;
+		workQueueEntriesClaimed = 0;
+		WRITE_BARRIER;
+
+		glm::vec3* positions = m_VertexBufferCreateInfo.positions_3D.data();
+		glm::vec2* texCoords = m_VertexBufferCreateInfo.texCoords_UV.data();
+		glm::vec4* colours = m_VertexBufferCreateInfo.colors_R32G32B32A32.data();
+
+		for (u32 chunkIdx = 0; chunkIdx < (u32)waveChunks.size(); ++chunkIdx)
+		{
+			volatile WaveGenData* waveGenData = &(*workQueue)[chunkIdx];
+
+			waveGenData->waves = &waves;
+			waveGenData->waveChunks = &waveChunks;
+			waveGenData->waveSamplingLODs = &waveSamplingLODs;
+			waveGenData->waveTessellationLODs = &waveTessellationLODs;
+			waveGenData->soloWave = soloWave;
+			waveGenData->size = size;
+			waveGenData->chunkIdx = chunkIdx;
+			waveGenData->bDisableLODs = bDisableLODs;
+			waveGenData->blendDist = blendDist;
+
+			waveGenData->positions = nullptr;
+
+			WRITE_BARRIER;
+
+			Platform::AtomicIncrement(&workQueueEntriesCreated);
+		}
+
+		// Wait for all threads to complete
+		// TODO: Call later in frame
+		while (workQueueEntriesCompleted != workQueueEntriesCreated)
+		{
+			Platform::YieldProcessor();
+		}
+
+		// Read back SIMD vars into standard format
+		for (u32 chunkIdx = 0; chunkIdx < (u32)waveChunks.size(); ++chunkIdx)
+		{
+			WaveChunk& waveChunk = waveChunks[chunkIdx];
+			WaveTessellationLOD const* tessellationLOD = GetTessellationLOD(waveChunk.tessellationLODLevel);
+
+			for (u32 z = 0; z < tessellationLOD->vertCountPerAxis; ++z)
+			{
+				for (u32 x = 0; x < tessellationLOD->vertCountPerAxis; x += 4)
+				{
+					const u32 vertIdx = z * tessellationLOD->vertCountPerAxis + x + waveChunk.vertOffset;
+					const u32 chunkLocalVertIdx = z * tessellationLOD->vertCountPerAxis + x;
+					const u32 chunkLocalVertIdxDiv4 = chunkLocalVertIdx / 4;
+
+					glm::vec4 xs, ys, zs, lodSelections, uvUs, uvVs;
+					_mm_store_ps(&xs.x, (*workQueue)[chunkIdx].positionsx_4[chunkLocalVertIdxDiv4]);
+					_mm_store_ps(&ys.x, (*workQueue)[chunkIdx].positionsy_4[chunkLocalVertIdxDiv4]);
+					_mm_store_ps(&zs.x, (*workQueue)[chunkIdx].positionsz_4[chunkLocalVertIdxDiv4]);
+					_mm_store_ps(&lodSelections.x, (*workQueue)[chunkIdx].lodSelected_4[chunkLocalVertIdxDiv4]);
+					_mm_store_ps(&uvUs.x, (*workQueue)[chunkIdx].uvUs_4[chunkLocalVertIdxDiv4]);
+					_mm_store_ps(&uvVs.x, (*workQueue)[chunkIdx].uvVs_4[chunkLocalVertIdxDiv4]);
+
+					positions[vertIdx + 0] = glm::vec3(xs.x, ys.x, zs.x);
+					positions[vertIdx + 1] = glm::vec3(xs.y, ys.y, zs.y);
+					positions[vertIdx + 2] = glm::vec3(xs.z, ys.z, zs.z);
+					positions[vertIdx + 3] = glm::vec3(xs.w, ys.w, zs.w);
+
+					texCoords[vertIdx + 0] = glm::vec2(uvUs.x, uvVs.x);
+					texCoords[vertIdx + 1] = glm::vec2(uvUs.y, uvVs.y);
+					texCoords[vertIdx + 2] = glm::vec2(uvUs.z, uvVs.z);
+					texCoords[vertIdx + 3] = glm::vec2(uvUs.w, uvVs.w);
+
+					colours[vertIdx + 0] = ChooseColourFromLOD(lodSelections.x);
+					colours[vertIdx + 1] = ChooseColourFromLOD(lodSelections.y);
+					colours[vertIdx + 2] = ChooseColourFromLOD(lodSelections.z);
+					colours[vertIdx + 3] = ChooseColourFromLOD(lodSelections.w);
+				}
+			}
+
+			UpdateNormalsForChunk(chunkIdx);
+		}
+	}
+
+	glm::vec4 GerstnerWave::ChooseColourFromLOD(real LOD)
+	{
+		static const glm::vec4 COLOURS[] = { glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f) };
+		//static const glm::vec4 COLOURS[] = { glm::vec4(0.8f, 0.4f, 0.2f, 1.0f), glm::vec4(0.1f, 0.8f, 0.3f, 1.0f), glm::vec4(0.2f, 0.4f, 0.8f, 1.0f), glm::vec4(0.5f, 0.7f, 0.5f, 1.0f) };
+		static const u32 colourCount = ARRAY_SIZE(COLOURS);
+
+		u32 lodLevel = (u32)LOD;
+		real blend = LOD - lodLevel;
+
+		return blend == 0.0f ? COLOURS[lodLevel] : (blend == 1.0f ? COLOURS[glm::clamp(lodLevel + 1, 0u, colourCount - 1)] : Lerp(COLOURS[lodLevel], COLOURS[glm::clamp(lodLevel + 1, 0u, colourCount - 1)], blend));
+	}
+
+	void* ThreadUpdate(void* inData)
+	{
+		ThreadData* threadData = (ThreadData*)inData;
+
+		while (threadData->running)
+		{
+			volatile GerstnerWave::WaveGenData* work = nullptr;
+
+			if (workQueueEntriesClaimed < workQueueEntriesCreated)
+			{
+				Platform::EnterCriticalSection(threadData->criticalSection);
+				{
+					if (workQueueEntriesClaimed < workQueueEntriesCreated)
+					{
+						work = &(*workQueue)[workQueueEntriesClaimed];
+
+						workQueueEntriesClaimed += 1;
+
+						WRITE_BARRIER;
+
+						assert(workQueueEntriesClaimed <= workQueueEntriesCreated);
+						assert(workQueueEntriesClaimed <= workQueue->Size());
+					}
+
+				}
+				Platform::LeaveCriticalSection(threadData->criticalSection);
+			}
+
+			if (work)
+			{
+				// Inputs
+				const std::vector<GerstnerWave::WaveInfo>& waves = *work->waves;
+				const std::vector<GerstnerWave::WaveChunk>& waveChunks = *work->waveChunks;
+				const std::vector<GerstnerWave::WaveSamplingLOD>& waveSamplingLODs = *work->waveSamplingLODs;
+				const std::vector<GerstnerWave::WaveTessellationLOD>& waveTessellationLODs = *work->waveTessellationLODs;
+				GerstnerWave::WaveInfo const* soloWave = work->soloWave;
+
+				GerstnerWave::WaveTessellationLOD const* tessellationLOD = GetTessellationLOD(waveChunks[work->chunkIdx].tessellationLODLevel, waveTessellationLODs);
+
+				real size = work->size;
+				i32 chunkVertCountPerAxis = tessellationLOD->vertCountPerAxis;
+				u32 chunkIdx = work->chunkIdx;
+				bool bDisableLODs = work->bDisableLODs;
+				real blendDist = work->blendDist;
+
+				__m128* lodCutoffsAmplitudes_4 = work->lodCutoffsAmplitudes_4;
+				__m128* lodNextCutoffAmplitudes_4 = work->lodNextCutoffAmplitudes_4;
+				__m128* lodBlendWeights_4 = work->lodBlendWeights_4;
+
+				// Outputs
+				__m128* positionsx_4 = work->positionsx_4;
+				__m128* positionsy_4 = work->positionsy_4;
+				__m128* positionsz_4 = work->positionsz_4;
+				__m128* lodSelected_4 = work->lodSelected_4;
+				__m128* uvUs = work->uvUs_4;
+				__m128* uvVs = work->uvVs_4;
+
+				__m128 blendDist_4 = _mm_set_ps1(blendDist);
+
+				__m128 vertCountMin1_4 = _mm_set_ps1((real)(chunkVertCountPerAxis - 1));
+				__m128 size_4 = _mm_set_ps1(size);
+
+				const glm::vec2 chunkCenter((waveChunks[chunkIdx].index.x - 0.5f) * size, (waveChunks[chunkIdx].index.y - 0.5f) * size);
+				__m128 chunkCenterX_4 = _mm_set_ps1(chunkCenter.x);
+				__m128 chunkCenterY_4 = _mm_setzero_ps();
+				__m128 chunkCenterZ_4 = _mm_set_ps1(chunkCenter.y);
+
+				// TODO: Work out max LOD in chunk
+				glm::vec3 camPos = g_CameraManager->CurrentCamera()->position;
+				__m128 camPosx_4 = _mm_set_ps1(camPos.x);
+				__m128 camPosz_4 = _mm_set_ps1(camPos.z);
+
+				__m128 zero_4 = _mm_set_ps1(0.0f);
+				__m128 one_4 = _mm_set_ps1(1.0f);
+
+				// Clear out intermediate data
+				for (i32 z = 0; z < chunkVertCountPerAxis; ++z)
+				{
+					for (i32 x = 0; x < chunkVertCountPerAxis; x += 4)
+					{
+						const i32 chunkLocalVertIdx = z * chunkVertCountPerAxis + x;
+						const i32 chunkLocalVertIdxDiv4 = chunkLocalVertIdx / 4;
+						lodCutoffsAmplitudes_4[chunkLocalVertIdxDiv4] = _mm_setzero_ps();
+						lodNextCutoffAmplitudes_4[chunkLocalVertIdxDiv4] = _mm_setzero_ps();
+						lodSelected_4[chunkLocalVertIdxDiv4] = _mm_setzero_ps();
+						lodBlendWeights_4[chunkLocalVertIdxDiv4] = one_4;
+					}
+				}
+
+				// Positions verts on flat plane
+				for (i32 z = 0; z < chunkVertCountPerAxis; ++z)
+				{
+					__m128 zIdx_4 = _mm_set_ps1((real)z);
+
+					__m128 uvV_4 = _mm_div_ps(zIdx_4, vertCountMin1_4);
+					__m128 posZ_4 = _mm_add_ps(chunkCenterZ_4, _mm_mul_ps(size_4, uvV_4));
+
+					for (i32 x = 0; x < chunkVertCountPerAxis; x += 4)
+					{
+						const i32 chunkLocalVertIdx = z * chunkVertCountPerAxis + x;
+						__m128 xIdx_4 = _mm_set_ps((real)(x + 3), (real)(x + 2), (real)(x + 1), (real)(x + 0));
+						const i32 chunkLocalVertIdxDiv4 = chunkLocalVertIdx / 4;
+						__m128 uvU_4 = _mm_div_ps(xIdx_4, vertCountMin1_4);
+						positionsx_4[chunkLocalVertIdxDiv4] = _mm_add_ps(chunkCenterX_4, _mm_mul_ps(size_4, uvU_4));
+						positionsy_4[chunkLocalVertIdxDiv4] = chunkCenterY_4;
+						positionsz_4[chunkLocalVertIdxDiv4] = posZ_4;
+
+						uvUs[chunkLocalVertIdxDiv4] = uvU_4;
+						uvVs[chunkLocalVertIdxDiv4] = uvV_4;
+
+						__m128 xr = _mm_sub_ps(positionsx_4[chunkLocalVertIdxDiv4], camPosx_4);
+						__m128 zr = _mm_sub_ps(positionsz_4[chunkLocalVertIdxDiv4], camPosz_4);
+						__m128 vertSqrDist = _mm_add_ps(_mm_mul_ps(xr, xr), _mm_mul_ps(zr, zr));
+
+						if (!bDisableLODs)
+						{
+							__m128 lodNextCutoffDistances_4 = zero_4;
+							for (u32 i = 0; i < (u32)waveSamplingLODs.size(); ++i)
+							{
+								__m128 i_4 = _mm_set_ps1((real)i);
+								__m128 waveSqrDistCutoff_4 = _mm_set_ps1(waveSamplingLODs[i].squareDist);
+								__m128 waveAmplitudeCutoff_4 = _mm_set_ps1(waveSamplingLODs[i].amplitudeCutoff);
+								__m128 mask0_4 = _mm_cmpge_ps(vertSqrDist, waveSqrDistCutoff_4);
+								__m128 eqZ = _mm_cmpeq_ps(lodCutoffsAmplitudes_4[chunkLocalVertIdxDiv4], zero_4);
+								__m128 cmpMask = _mm_blendv_ps(zero_4, mask0_4, eqZ);
+								lodCutoffsAmplitudes_4[chunkLocalVertIdxDiv4] = _mm_blendv_ps(lodCutoffsAmplitudes_4[chunkLocalVertIdxDiv4], waveAmplitudeCutoff_4, cmpMask);
+
+								bool bLastCutoff = (i == waveSamplingLODs.size() - 1);
+								lodNextCutoffDistances_4 = _mm_blendv_ps(lodNextCutoffDistances_4, _mm_set_ps1(bLastCutoff ? FLT_MAX : waveSamplingLODs[i + 1].squareDist), cmpMask);
+								lodNextCutoffAmplitudes_4[chunkLocalVertIdxDiv4] = _mm_blendv_ps(lodNextCutoffAmplitudes_4[chunkLocalVertIdxDiv4], _mm_set_ps1(bLastCutoff ? FLT_MAX : waveSamplingLODs[i + 1].amplitudeCutoff), cmpMask);
+
+								__m128 cmpMask3 = _mm_and_ps(_mm_cmpeq_ps(cmpMask, zero_4), _mm_cmpeq_ps(i_4, zero_4));
+								// Set next on verts in first LOD level
+								lodNextCutoffDistances_4 = _mm_blendv_ps(lodNextCutoffDistances_4, _mm_set_ps1(waveSamplingLODs[0].squareDist), cmpMask3);
+								lodNextCutoffAmplitudes_4[chunkLocalVertIdxDiv4] = _mm_blendv_ps(lodNextCutoffAmplitudes_4[chunkLocalVertIdxDiv4], _mm_set_ps1(waveSamplingLODs[0].amplitudeCutoff), cmpMask3);
+
+								__m128 cmp2Mask = _mm_or_ps(_mm_cmpeq_ps(lodBlendWeights_4[chunkLocalVertIdxDiv4], zero_4), _mm_cmpeq_ps(lodNextCutoffDistances_4, zero_4));
+								__m128 delta = _mm_max_ps(_mm_sub_ps(_mm_sqrt_ps(lodNextCutoffDistances_4), _mm_sqrt_ps(vertSqrDist)), zero_4);
+								// 0 at edge, 1 at blend dist inward, blend between
+								lodBlendWeights_4[chunkLocalVertIdxDiv4] = _mm_blendv_ps(_mm_min_ps(_mm_div_ps(delta, blendDist_4), one_4), lodBlendWeights_4[chunkLocalVertIdxDiv4], cmp2Mask);
+								lodSelected_4[chunkLocalVertIdxDiv4] = _mm_blendv_ps(_mm_add_ps(lodBlendWeights_4[chunkLocalVertIdxDiv4], _mm_set_ps1((real)i - 1)), lodSelected_4[chunkLocalVertIdxDiv4], cmp2Mask);
+
+								__m128 cmpMask4 = _mm_and_ps(mask0_4, _mm_cmpeq_ps(i_4, _mm_set_ps1((real)(waveSamplingLODs.size() - 1))));
+								lodSelected_4[chunkLocalVertIdxDiv4] = _mm_blendv_ps(_mm_add_ps(lodBlendWeights_4[chunkLocalVertIdxDiv4], i_4), lodSelected_4[chunkLocalVertIdxDiv4], cmpMask4);
+							}
+						}
+					}
+				}
+
+				// Modulate based on waves
+				for (const GerstnerWave::WaveInfo& wave : waves)
+				{
+					// TODO: Early out once wave amplitude isn't used by any vert in chunk
+
+					if (wave.enabled && (soloWave == nullptr || soloWave == &wave))
+					{
+						const glm::vec2 waveVec = glm::vec2(wave.waveDirCos, wave.waveDirSin) * wave.waveVecMag;
+						const glm::vec2 waveVecN = glm::normalize(waveVec);
+
+						__m128 accumOffset_4 = _mm_set_ps1(wave.accumOffset);
+						__m128 negWaveVecNX_4 = _mm_set_ps1(-waveVecN.x);
+						__m128 negWaveVecNZ_4 = _mm_set_ps1(-waveVecN.y);
+						__m128 waveA_4 = _mm_set_ps1(wave.a);
+
+						__m128 waveVecX_4 = _mm_set_ps1(waveVec.x);
+						__m128 waveVecZ_4 = _mm_set_ps1(waveVec.y);
+
+						//u32 countMinOne = chunkVertCountPerAxis - 1;
+
+						for (i32 z = 0; z < chunkVertCountPerAxis; ++z)
+						{
+							//__m128 zIdxMin_4 = _mm_set_ps1((real)z);
+							//__m128 zIdxMax_4 = _mm_set_ps1((real)(countMinOne - z));
+
+							for (i32 x = 0; x < chunkVertCountPerAxis; x += 4)
+							{
+								const i32 chunkLocalVertIdx = z * chunkVertCountPerAxis + x;
+								const i32 chunkLocalVertIdxDiv4 = chunkLocalVertIdx / 4;
+
+								/*
+								real blendFactor = glm::min(
+									glm::min(
+										bRightBlend ? glm::clamp((real)(chunkVertCountPerAxis - x - 1) / blendVertCount, 0.0f, 1.0f) : 1.0f,
+										bLeftBlend ? glm::clamp((real)x / blendVertCount, 0.0f, 1.0f) : 1.0f),
+										glm::min(
+											bForwardBlend ? glm::clamp((real)z / blendVertCount, 0.0f, 1.0f) : 1.0f,
+											bBackBlend ? glm::clamp(1.0f - (real)z / blendVertCount, 0.0f, 1.0f) : 1.0f));
+								*/
+
+								__m128 blendMask_4 = _mm_cmplt_ps(waveA_4, lodNextCutoffAmplitudes_4[chunkLocalVertIdxDiv4]);
+								__m128 blendFactor_4 = _mm_blendv_ps(
+									_mm_blendv_ps(one_4, lodBlendWeights_4[chunkLocalVertIdxDiv4], blendMask_4),
+									zero_4, _mm_cmplt_ps(waveA_4, lodCutoffsAmplitudes_4[chunkLocalVertIdxDiv4]));
+
+								/*
+									positions[vertIdx] = chunkCenter + glm::vec3(
+										size * ((real)x / (chunkVertCountPerAxis - 1)),
+										0.0f,
+										size * ((real)z / (chunkVertCountPerAxis - 1)));
+
+									real d = waveVec.x * positions[vertIdx].x + waveVec.y * positions[vertIdx].z;
+									real c = cos(d + wave.accumOffset);
+									real s = sin(d + wave.accumOffset);
+									positions[vertIdx] += glm::vec3(
+										-waveVecN.x * wave.a * s,
+										wave.a * c,
+										-waveVecN.y * wave.a * s);
+								*/
+
+
+								__m128 d = _mm_add_ps(_mm_mul_ps(positionsx_4[chunkLocalVertIdxDiv4], waveVecX_4), _mm_mul_ps(positionsz_4[chunkLocalVertIdxDiv4], waveVecZ_4));
+
+								__m128 totalAccum = _mm_add_ps(d, accumOffset_4);
+
+								__m128 c = cos_ps(totalAccum);
+								__m128 s = sin_ps(totalAccum);
+
+								__m128 as = _mm_mul_ps(waveA_4, s);
+
+								positionsx_4[chunkLocalVertIdxDiv4] = _mm_add_ps(positionsx_4[chunkLocalVertIdxDiv4], _mm_mul_ps(blendFactor_4, _mm_mul_ps(negWaveVecNX_4, as)));
+								positionsy_4[chunkLocalVertIdxDiv4] = _mm_add_ps(positionsy_4[chunkLocalVertIdxDiv4], _mm_mul_ps(blendFactor_4, _mm_mul_ps(waveA_4, c)));
+								positionsz_4[chunkLocalVertIdxDiv4] = _mm_add_ps(positionsz_4[chunkLocalVertIdxDiv4], _mm_mul_ps(blendFactor_4, _mm_mul_ps(negWaveVecNZ_4, as)));
+							}
+						}
+					}
+				}
+
+#if 0
+
+				// Ripple
+				glm::vec3 ripplePos = VEC3_ZERO;
+				real rippleAmp = 0.8f;
+				real rippleLen = 0.6f;
+				real rippleFadeOut = 12.0f;
+				for (i32 z = 0; z < chunkVertCountPerAxis; ++z)
+				{
+					for (i32 x = 0; x < chunkVertCountPerAxis; ++x)
+					{
+						const i32 vertIdx = z * chunkVertCountPerAxis + x + waveChunk->vertOffset;
+
+						glm::vec3 diff = (ripplePos - positions[vertIdx]);
+						real d = glm::length(diff);
+						diff = diff / d * rippleLen;
+						real c = cos(g_SecElapsedSinceProgramStart * 1.8f - d);
+						real s = sin(g_SecElapsedSinceProgramStart * 1.5f - d);
+						real a = Lerp(0.0f, rippleAmp, 1.0f - Saturate(d / rippleFadeOut));
+						positions[vertIdx] += glm::vec3(
+							-diff.x * a * s,
+							a * c,
+							-diff.z * a * s);
+					}
+				}
+#endif
+
+				WRITE_BARRIER;
+
+				Platform::AtomicIncrement(&workQueueEntriesCompleted);
+			}
+			else
+			{
+				Platform::Sleep(2);
+			}
+		}
+
+		return nullptr;
+	}
+
+	GerstnerWave::WaveChunk const* GetChunkAtPos(const glm::vec2& pos, const std::vector<GerstnerWave::WaveChunk>& waveChunks, real size)
+	{
+		glm::vec2i queryPosInt(ceil(pos.x / size + 0.5f), ceil(pos.y / size + 0.5f));
+		for (u32 chunkIdx = 0; chunkIdx < (u32)waveChunks.size(); ++chunkIdx)
+		{
+			if (waveChunks[chunkIdx].index == queryPosInt)
+			{
+				return &waveChunks[chunkIdx];
+			}
+		}
+
+		return nullptr;
+	}
+
+	GerstnerWave::WaveTessellationLOD const* GetTessellationLOD(u32 lodLevel, const std::vector<GerstnerWave::WaveTessellationLOD>& waveTessellationLODs)
+	{
+		if (lodLevel < (u32)waveTessellationLODs.size())
+		{
+			return &waveTessellationLODs[lodLevel];
+		}
+		return nullptr;
+	}
+
+	void GerstnerWave::UpdateNormalsForChunk(u32 chunkIdx)
+	{
+		WaveChunk const* waveChunk = &waveChunks[chunkIdx];
+		WaveTessellationLOD const* tessellationLOD = GetTessellationLOD(waveChunk->tessellationLODLevel);
+
+		glm::vec3* positions = m_VertexBufferCreateInfo.positions_3D.data();
+		glm::vec3* normals = m_VertexBufferCreateInfo.normals.data();
+		glm::vec3* tangents = m_VertexBufferCreateInfo.tangents.data();
+
+		const u32 chunkVertCountPerAxis = tessellationLOD->vertCountPerAxis;
+
+		const glm::vec2 chunkCenter((waveChunk->index.x - 0.5f) * size, (waveChunk->index.y - 0.5f) * size);
+
+		WaveChunk const* chunkLeft = GetChunkAtPos(chunkCenter - glm::vec2(size, 0.0f));
+		WaveChunk const* chunkRight = GetChunkAtPos(chunkCenter + glm::vec2(size, 0.0f));
+		WaveChunk const* chunkBack = GetChunkAtPos(chunkCenter - glm::vec2(0.0f, size));
+		WaveChunk const* chunkFor = GetChunkAtPos(chunkCenter + glm::vec2(0.0f, size));
+		WaveTessellationLOD const* LODLeft = chunkLeft ? GetTessellationLOD(chunkLeft->tessellationLODLevel) : nullptr;
+		WaveTessellationLOD const* LODRight = chunkRight ? GetTessellationLOD(chunkRight->tessellationLODLevel) : nullptr;
+		WaveTessellationLOD const* LODBack = chunkBack ? GetTessellationLOD(chunkBack->tessellationLODLevel) : nullptr;
+		WaveTessellationLOD const* LODFor = chunkFor ? GetTessellationLOD(chunkFor->tessellationLODLevel) : nullptr;
+
+		const real cellSize = size / chunkVertCountPerAxis;
+		for (u32 z = 0; z < chunkVertCountPerAxis; ++z)
+		{
+			for (u32 x = 0; x < chunkVertCountPerAxis; ++x)
+			{
+				const u32 localIdx = z * chunkVertCountPerAxis + x;
+				const u32 vertIdx = localIdx + waveChunk->vertOffset;
+
+				// glm::vec3 planePos = glm::vec3(
+					// chunkCenter.x + size * ((real)x / (chunkVertCountPerAxis - 1)),
+					// 0.0f,
+					// chunkCenter.y + size * ((real)z / (chunkVertCountPerAxis - 1)));
+
+				real left = 0.0f;
+				real right = 0.0f;
+				real back = 0.0f;
+				real forward = 0.0f;
+				if (x >= 1)
+				{
+					left = positions[vertIdx - 1].y;
+				}
+				else if (chunkLeft)
+				{
+					u32 zz = MapVertIndexAcrossLODs(z, tessellationLOD, LODLeft);
+					left = positions[(zz * LODLeft->vertCountPerAxis + LODLeft->vertCountPerAxis - 2) + chunkLeft->vertOffset].y;
+				}
+				if (x < chunkVertCountPerAxis - 1)
+				{
+					right = positions[vertIdx + 1].y;
+				}
+				else if (chunkRight)
+				{
+					u32 zz = MapVertIndexAcrossLODs(z, tessellationLOD, LODRight);
+					right = positions[(zz * LODRight->vertCountPerAxis + 1) + chunkRight->vertOffset].y;
+				}
+				if (z >= 1)
+				{
+					back = positions[vertIdx - chunkVertCountPerAxis].y;
+				}
+				else if (chunkBack)
+				{
+					u32 xx = MapVertIndexAcrossLODs(x, tessellationLOD, LODBack);
+					back = positions[(LODBack->vertCountPerAxis - 2) * LODBack->vertCountPerAxis + xx + chunkBack->vertOffset].y;
+				}
+				if (z < chunkVertCountPerAxis - 1)
+				{
+					forward = positions[vertIdx + chunkVertCountPerAxis].y;
+				}
+				else if (chunkFor)
+				{
+					u32 xx = MapVertIndexAcrossLODs(x, tessellationLOD, LODFor);
+					forward = positions[LODFor->vertCountPerAxis + xx + chunkFor->vertOffset].y;
+				}
+
+				real dX = left - right;
+				real dZ = back - forward;
+				normals[vertIdx] = glm::vec3(dX, 2.0f * cellSize, dZ);
+				tangents[vertIdx] = glm::normalize(-glm::cross(normals[vertIdx], glm::vec3(0.0f, 0.0f, 1.0f)));
+			}
+		}
+	}
+
+	u32 MapVertIndexAcrossLODs(u32 vertIndex, GerstnerWave::WaveTessellationLOD const* lod0, GerstnerWave::WaveTessellationLOD const* lod1)
+	{
+		if (lod0->vertCountPerAxis == lod1->vertCountPerAxis)
+		{
+			return vertIndex;
+		}
+
+		u32 result = (u32)((real)vertIndex / lod0->vertCountPerAxis * lod1->vertCountPerAxis);
+		return result;
 	}
 
 	GameObject* GerstnerWave::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
@@ -3344,12 +4261,68 @@ namespace flex
 	{
 		GameObject::DrawImGuiObjects();
 
+		ImGui::Text("Loaded chunks: %d", (u32)waveChunks.size());
+
 		ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.95f, 1.0f), "Gerstner");
 
-		if (ImGui::Button("+"))
 		{
-			AddWave();
+			ImVec2 p = ImGui::GetCursorScreenPos();
+
+			real width = 300.0f;
+			real height = 100.0f;
+			real minMS = 0.0f;
+			real maxMS = 40.0f;
+			p.y += glm::clamp((1.0f - avgWaveUpdateTime.currentAverage / (maxMS - minMS)), 0.0f, 1.0f) * height;
+			ImGui::GetWindowDrawList()->AddLine(p, ImVec2(p.x + width, p.y), IM_COL32(240, 220, 20, 255), 1.0f);
+
+			ImGui::PlotLines("", avgWaveUpdateTime.prevValues.data(), (u32)avgWaveUpdateTime.prevValues.size(), 0, 0, minMS, maxMS, ImVec2(width, height));
+
+			ImGui::Text("%.2fms", avgWaveUpdateTime.currentAverage);
 		}
+
+		ImGui::DragFloat("Loaded distance", &loadRadius, 0.01f);
+		if (ImGui::DragFloat("Update speed", &updateSpeed, 0.1f))
+		{
+			updateSpeed = glm::clamp(updateSpeed, 0.1f, 10000.0f);
+			for (i32 i = 0; i < (i32)waves.size(); ++i)
+			{
+				UpdateDependentVariables(i);
+			}
+		}
+
+		ImGui::SliderFloat("Blend dist", &blendDist, 0.0f, size);
+
+		if (ImGui::Checkbox("Pin center", &m_bPinCenter))
+		{
+			if (m_bPinCenter)
+			{
+				m_PinnedPos = g_CameraManager->CurrentCamera()->position;
+			}
+		}
+
+		ImGuiExt::ColorEdit3Gamma("Top", &oceanData.top.x);
+		ImGuiExt::ColorEdit3Gamma("Mid", &oceanData.mid.x);
+		ImGuiExt::ColorEdit3Gamma("Bottom", &oceanData.btm.x);
+		ImGui::SliderFloat("Fresnel factor", &oceanData.fresnelFactor, 0.0f, 1.0f);
+		ImGui::DragFloat("Fresnel power", &oceanData.fresnelPower, 0.01f, 0.0f, 75.0f);
+		ImGui::SliderFloat("Sky reflection", &oceanData.skyReflectionFactor, 0.0f, 1.0f);
+		ImGui::DragFloat("Fog falloff", &oceanData.fogFalloff, 0.01f, 0.0f, 3.0f);
+		ImGui::DragFloat("Fog density", &oceanData.fogDensity, 0.01f, 0.0f, 3.0f);
+
+		if (ImGuiExt::SliderUInt("Max chunk vert count", &maxChunkVertCountPerAxis, 4u, 256u))
+		{
+			maxChunkVertCountPerAxis = glm::clamp(maxChunkVertCountPerAxis - (maxChunkVertCountPerAxis % 4), 4u, 256u);
+		}
+
+		if (ImGui::SliderFloat("Chunk size", &size, 32.0f, 1024.0f))
+		{
+			size = glm::clamp(size, 32.0f, 1024.0f);
+		}
+
+		ImGui::Checkbox("Disable LODs", &bDisableLODs);
+
+		glm::vec3 bobberPosWS = bobber->GetTransform()->GetWorldPosition();
+		ImGui::DragFloat3("Bobber", &bobberPosWS.x);
 
 		ImGui::PushItemWidth(30.0f);
 		ImGui::DragFloat("Bobber DR", &bobberTarget.DR, 0.01f);
@@ -3357,43 +4330,231 @@ namespace flex
 		ImGui::DragFloat("UAF", &bobberTarget.UAF, 0.01f);
 		ImGui::PopItemWidth();
 
-		for (i32 i = 0; i < (i32)waves.size(); ++i)
+		// Vertex buffer size
 		{
-			std::string childName = "##wave " + IntToString(i, 2);
+			ImGui::NewLine();
 
-			std::string removeStr = "-" + childName;
-			if (ImGui::Button(removeStr.c_str()))
+			MeshComponent* meshComponent = m_Mesh->GetSubMeshes()[0];
+
 			{
-				RemoveWave(i);
-				break;
+				char byteCountStr[64];
+				ByteCountToString(byteCountStr, 64, (u32)(m_VertexBufferCreateInfo.positions_3D.size() * sizeof(glm::vec3)));
+
+				char nameBuf[256];
+				snprintf(nameBuf, 256, "CPU Vertex buffer size %s", byteCountStr);
+
+				real usage = (real)DEBUG_lastUsedVertCount / meshComponent->GetVertexBufferData()->VertexCount;
+				ImGui::ProgressBar(usage, ImVec2(0, 0), "");
+				ImGui::Text("%s", nameBuf);
 			}
 
-			ImGui::SameLine();
-
-			bool bNeedUpdate = false;
-
-			std::string enabledStr = "enabled" + childName;
-			ImGui::Checkbox(enabledStr.c_str(), &waves[i].enabled);
-
-			std::string aStr = "amplitude" + childName;
-			ImGui::DragFloat(aStr.c_str(), &waves[i].a, 0.01f);
-			std::string waveLenStr = "wave len" + childName;
-			bNeedUpdate |= ImGui::DragFloat(waveLenStr.c_str(), &waves[i].waveLen, 0.01f);
-			std::string dirStr = "dir" + childName;
-			bNeedUpdate |= ImGui::DragFloat(dirStr.c_str(), &waves[i].waveDirTheta, 0.004f);
-
-			if (bNeedUpdate)
 			{
-				UpdateDependentVariables(i);
+				u32 gpuSize = meshComponent->GetVertexBufferData()->UsedVertexBufferSize;
+				u32 usedGPUSize = g_Renderer->GetDynamicVertexBufferUsedSize(meshComponent->renderID);
+
+				char byteCountStr[64];
+				ByteCountToString(byteCountStr, 64, gpuSize);
+
+				char nameBuf[256];
+				snprintf(nameBuf, 256, "GPU Vertex buffer size %s", byteCountStr);
+
+				real usage = (real)usedGPUSize / gpuSize;
+				ImGui::ProgressBar(usage, ImVec2(0, 0), "");
+				ImGui::Text("%s", nameBuf);
 			}
 
-			ImGui::Separator();
+			ImGui::NewLine();
 		}
+
+		if (ImGui::TreeNode("Sampling LODs"))
+		{
+			static bool bNeedsSort = false;
+
+			for (i32 i = 0; i < (i32)waveSamplingLODs.size(); ++i)
+			{
+				std::string childName = "##samp " + IntToString(i, 2);
+				std::string removeStr = "-" + childName;
+				if (ImGui::Button(removeStr.c_str()))
+				{
+					waveSamplingLODs.erase(waveSamplingLODs.begin() + i);
+					bNeedsSort = true;
+					break;
+				}
+
+				ImGui::SameLine();
+
+				std::string distStr = "distance" + childName;
+				real dist = glm::sqrt(waveSamplingLODs[i].squareDist);
+				if (ImGui::DragFloat(distStr.c_str(), &dist, 1.0f, 0.0f, 10000.0f))
+				{
+					waveSamplingLODs[i].squareDist = dist * dist;
+					bNeedsSort = true;
+				}
+
+				std::string amplitudeStr = "amplitude" + childName;
+				ImGui::DragFloat(amplitudeStr.c_str(), &waveSamplingLODs[i].amplitudeCutoff, 0.0001f, 0.0f, 10.0f);
+			}
+
+			if (ImGui::Button("+"))
+			{
+				real sqrDist = waveSamplingLODs.empty() ? 100.0f : waveSamplingLODs[waveSamplingLODs.size() - 1].squareDist + 10.0f;
+				real amplitude = waveSamplingLODs.empty() ? 1.0f : waveSamplingLODs[waveSamplingLODs.size() - 1].amplitudeCutoff + 1.0f;
+				waveSamplingLODs.emplace_back(sqrDist, amplitude);
+				bNeedsSort = true;
+			}
+
+			ImGui::TreePop();
+
+			if (bNeedsSort && ImGui::IsMouseReleased(0))
+			{
+				bNeedsSort = false;
+				SortWaveSamplingLODs();
+			}
+		}
+
+		if (ImGui::TreeNode("Tessellation LODs"))
+		{
+			static bool bNeedsSort = false;
+
+			for (i32 i = 0; i < (i32)waveTessellationLODs.size(); ++i)
+			{
+				std::string childName = "##tess " + IntToString(i, 2);
+				std::string removeStr = "-" + childName;
+				if (ImGui::Button(removeStr.c_str()))
+				{
+					waveTessellationLODs.erase(waveTessellationLODs.begin() + i);
+					bNeedsSort = true;
+					break;
+				}
+
+				ImGui::SameLine();
+
+				std::string distStr = "distance" + childName;
+				real dist = glm::sqrt(waveTessellationLODs[i].squareDist);
+				if (ImGui::DragFloat(distStr.c_str(), &dist, 1.0f, 0.0f, 10000.0f))
+				{
+					waveTessellationLODs[i].squareDist = dist * dist;
+					bNeedsSort = true;
+				}
+				std::string vertCountStr = "vert count per axis" + childName;
+				if (ImGuiExt::SliderUInt(vertCountStr.c_str(), &waveTessellationLODs[i].vertCountPerAxis, 4u, maxChunkVertCountPerAxis))
+				{
+					waveTessellationLODs[i].vertCountPerAxis = glm::clamp(waveTessellationLODs[i].vertCountPerAxis - (waveTessellationLODs[i].vertCountPerAxis % 4), 4u, maxChunkVertCountPerAxis);
+				}
+			}
+
+			if (ImGui::Button("+"))
+			{
+				real sqrDist = waveTessellationLODs.empty() ? 100.0f : waveTessellationLODs[waveTessellationLODs.size() - 1].squareDist + 10.0f;
+				u32 vertCount = 16;
+				waveTessellationLODs.emplace_back(sqrDist, vertCount);
+				bNeedsSort = true;
+			}
+
+			ImGui::TreePop();
+
+			if (bNeedsSort && ImGui::IsMouseReleased(0))
+			{
+				bNeedsSort = false;
+				SortWaveTessellationLODs();
+			}
+		}
+
+		if (ImGui::TreeNode("Wave factors"))
+		{
+			for (i32 i = 0; i < (i32)waves.size(); ++i)
+			{
+				const bool bWasDisabled = soloWave != nullptr && soloWave != &waves[i];
+				if (bWasDisabled)
+				{
+					ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+					ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
+				}
+
+				std::string childName = "##wave " + IntToString(i, 2);
+
+				std::string removeStr = "-" + childName;
+				if (ImGui::Button(removeStr.c_str()))
+				{
+					RemoveWave(i);
+					break;
+				}
+
+				ImGui::SameLine();
+
+				static bool bNeedUpdate = false;
+				static bool bNeedSort = false;
+
+				std::string enabledStr = "Enabled" + childName;
+
+				ImGui::Checkbox(enabledStr.c_str(), &waves[i].enabled);
+
+				ImGui::SameLine();
+
+				bool bSolo = soloWave == &waves[i];
+				std::string soloStr = "Solo" + childName;
+				if (ImGui::Checkbox(soloStr.c_str(), &bSolo))
+				{
+					if (bSolo)
+					{
+						soloWave = &waves[i];
+					}
+					else
+					{
+						soloWave = nullptr;
+					}
+				}
+
+				std::string aStr = "amplitude" + childName;
+				bNeedUpdate |= ImGui::DragFloat(aStr.c_str(), &waves[i].a, 0.01f);
+				bNeedSort |= bNeedUpdate;
+				std::string waveLenStr = "wave len" + childName;
+				bNeedUpdate |= ImGui::DragFloat(waveLenStr.c_str(), &waves[i].waveLen, 0.01f);
+				bNeedSort |= bNeedUpdate;
+				std::string dirStr = "dir" + childName;
+				if (ImGui::DragFloat(dirStr.c_str(), &waves[i].waveDirTheta, 0.001f, 0.0f, 10.0f))
+				{
+					bNeedUpdate = true;
+					waves[i].waveDirTheta = fmod(waves[i].waveDirTheta, TWO_PI);
+				}
+
+				if (bNeedSort && ImGui::IsMouseReleased(0))
+				{
+					bNeedSort = false;
+					SortWaves();
+				}
+
+				if (bNeedUpdate)
+				{
+					bNeedUpdate = false;
+					UpdateDependentVariables(i);
+				}
+
+				if (bWasDisabled)
+				{
+					ImGui::PopItemFlag();
+					ImGui::PopStyleVar();
+				}
+
+				ImGui::Separator();
+			}
+
+			if (ImGui::Button("+"))
+			{
+				AddWave();
+			}
+
+			ImGui::TreePop();
+		}
+	}
+
+	bool operator==(const GerstnerWave::WaveInfo& lhs, const GerstnerWave::WaveInfo& rhs)
+	{
+		return memcmp(&lhs, &rhs, sizeof(GerstnerWave::WaveInfo)) == 0;
 	}
 
 	void GerstnerWave::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
-		FLEX_UNUSED(scene);
 		FLEX_UNUSED(matIDs);
 
 		JSONObject gerstnerWaveObj;
@@ -3412,7 +4573,83 @@ namespace flex
 					waves.push_back(wave);
 				}
 			}
+
+			gerstnerWaveObj.SetUIntChecked("max chunk vert count per axis", maxChunkVertCountPerAxis);
+			gerstnerWaveObj.SetFloatChecked("chunk size", size);
+			gerstnerWaveObj.SetFloatChecked("chunk load radius", loadRadius);
+			gerstnerWaveObj.SetFloatChecked("update speed", updateSpeed);
+
+			gerstnerWaveObj.SetBoolChecked("pin center", m_bPinCenter);
+			gerstnerWaveObj.SetVec3Checked("pinned center position", m_PinnedPos);
+
+			gerstnerWaveObj.SetFloatChecked("blend dist", blendDist);
+
+			std::vector<JSONField> waveSamplingLODsArrObj;
+			if (gerstnerWaveObj.SetFieldArrayChecked("wave sampling lods", waveSamplingLODsArrObj))
+			{
+				waveSamplingLODs.clear();
+				waveSamplingLODs.reserve(waveSamplingLODsArrObj.size());
+				for (u32 i = 0; i < (u32)waveSamplingLODsArrObj.size(); ++i)
+				{
+					std::string samplingPropertyList = waveSamplingLODsArrObj[i].label;
+					std::vector<std::string> strParts = Split(samplingPropertyList, ',');
+					if (strParts.size() != 2)
+					{
+						std::string sceneName = scene->GetFileName();
+						PrintError("Invalid wave sampling LOD cutoff pair (%s) in scene %s\n", samplingPropertyList.c_str(), sceneName.c_str());
+						continue;
+					}
+					// TODO: Store as array of objects
+					real dist = (real)atof(strParts[0].c_str());
+					real amplitude = (real)atof(strParts[1].c_str());
+					waveSamplingLODs.emplace_back(dist, amplitude);
+				}
+
+				SortWaveSamplingLODs();
+			}
+
+			std::vector<JSONField> waveTessellationLODsArrObj;
+			if (gerstnerWaveObj.SetFieldArrayChecked("wave tessellation lods", waveTessellationLODsArrObj))
+			{
+				waveTessellationLODs.clear();
+				waveTessellationLODs.reserve(waveTessellationLODsArrObj.size());
+				for (u32 i = 0; i < (u32)waveTessellationLODsArrObj.size(); ++i)
+				{
+					std::string tessellationPropertyList = waveTessellationLODsArrObj[i].label;
+					std::vector<std::string> strParts = Split(tessellationPropertyList, ',');
+					if (strParts.size() != 2)
+					{
+						std::string sceneName = scene->GetFileName();
+						PrintError("Invalid wave tessellation LOD cutoff pair (%s) in scene %s\n", tessellationPropertyList.c_str(), sceneName.c_str());
+						continue;
+					}
+					// TODO: Store as array of objects
+					real sqrDist = (real)atof(strParts[0].c_str());
+					u32 vertCount = (u32)atoi(strParts[1].c_str());
+					waveTessellationLODs.emplace_back(sqrDist, vertCount);
+				}
+			}
+
+			if (gerstnerWaveObj.SetVec4Checked("colour top", oceanData.top))
+			{
+				oceanData.top = glm::pow(oceanData.top, glm::vec4(2.2f));
+			}
+			if (gerstnerWaveObj.SetVec4Checked("colour mid", oceanData.mid))
+			{
+				oceanData.mid = glm::pow(oceanData.mid, glm::vec4(2.2f));
+			}
+			if (gerstnerWaveObj.SetVec4Checked("colour btm", oceanData.btm))
+			{
+				oceanData.btm = glm::pow(oceanData.btm, glm::vec4(2.2f));
+			}
+			gerstnerWaveObj.SetFloatChecked("fresnel factor", oceanData.fresnelFactor);
+			gerstnerWaveObj.SetFloatChecked("fresnel power", oceanData.fresnelPower);
+			gerstnerWaveObj.SetFloatChecked("sky reflection factor", oceanData.skyReflectionFactor);
+			gerstnerWaveObj.SetFloatChecked("fog falloff", oceanData.fogFalloff);
+			gerstnerWaveObj.SetFloatChecked("fog density", oceanData.fogDensity);
 		}
+
+		SortWaves();
 
 		// Init dependent variables
 		for (i32 i = 0; i < (i32)waves.size(); ++i)
@@ -3438,6 +4675,40 @@ namespace flex
 
 		gerstnerWaveObj.fields.emplace_back("waves", JSONValue(waveObjs));
 
+		// TODO: Add uint support
+		gerstnerWaveObj.fields.emplace_back("max chunk vert count per axis", JSONValue((i32)maxChunkVertCountPerAxis));
+		gerstnerWaveObj.fields.emplace_back("chunk size", JSONValue(size));
+		gerstnerWaveObj.fields.emplace_back("chunk load radius", JSONValue(loadRadius));
+		gerstnerWaveObj.fields.emplace_back("update speed", JSONValue(updateSpeed));
+
+		gerstnerWaveObj.fields.emplace_back("pin center", JSONValue(m_bPinCenter));
+		gerstnerWaveObj.fields.emplace_back("pinned center position", JSONValue(VecToString(m_PinnedPos)));
+
+		gerstnerWaveObj.fields.emplace_back("blend dist", JSONValue(blendDist));
+
+		std::vector<JSONField> waveSamplingLODsArrObj(waveSamplingLODs.size());
+		for (u32 i = 0; i < (u32)waveSamplingLODs.size(); ++i)
+		{
+			waveSamplingLODsArrObj[i] = JSONField(FloatToString(waveSamplingLODs[i].squareDist, 1) + "," + FloatToString(waveSamplingLODs[i].amplitudeCutoff, 6), JSONValue(0));
+		}
+		gerstnerWaveObj.fields.emplace_back("wave sampling lods", JSONValue(waveSamplingLODsArrObj));
+
+		std::vector<JSONField> waveTessellationLODsArrObj(waveTessellationLODs.size());
+		for (u32 i = 0; i < (u32)waveTessellationLODs.size(); ++i)
+		{
+			waveTessellationLODsArrObj[i] = JSONField(FloatToString(waveTessellationLODs[i].squareDist, 1) + "," + IntToString(waveTessellationLODs[i].vertCountPerAxis), JSONValue(0));
+		}
+		gerstnerWaveObj.fields.emplace_back("wave tessellation lods", JSONValue(waveTessellationLODsArrObj));
+
+		gerstnerWaveObj.fields.emplace_back("colour top", JSONValue(VecToString(glm::pow(oceanData.top, glm::vec4(1.0f / 2.2f)))));
+		gerstnerWaveObj.fields.emplace_back("colour mid", JSONValue(VecToString(glm::pow(oceanData.mid, glm::vec4(1.0f / 2.2f)))));
+		gerstnerWaveObj.fields.emplace_back("colour btm", JSONValue(VecToString(glm::pow(oceanData.btm, glm::vec4(1.0f / 2.2f)))));
+		gerstnerWaveObj.fields.emplace_back("fresnel factor", JSONValue(oceanData.fresnelFactor));
+		gerstnerWaveObj.fields.emplace_back("fresnel power", JSONValue(oceanData.fresnelPower));
+		gerstnerWaveObj.fields.emplace_back("sky reflection factor", JSONValue(oceanData.skyReflectionFactor));
+		gerstnerWaveObj.fields.emplace_back("fog falloff", JSONValue(oceanData.fogFalloff));
+		gerstnerWaveObj.fields.emplace_back("fog density", JSONValue(oceanData.fogDensity));
+
 		parentObject.fields.emplace_back("gerstner wave", JSONValue(gerstnerWaveObj));
 	}
 
@@ -3446,127 +4717,18 @@ namespace flex
 		if (waveIndex >= 0 && waveIndex < (i32)waves.size())
 		{
 			waves[waveIndex].waveVecMag = TWO_PI / waves[waveIndex].waveLen;
-			waves[waveIndex].moveSpeed = glm::sqrt(9.81f * waves[waveIndex].waveVecMag);
+			waves[waveIndex].moveSpeed = glm::sqrt(updateSpeed * waves[waveIndex].waveVecMag);
 
 			waves[waveIndex].waveDirCos = cos(waves[waveIndex].waveDirTheta);
 			waves[waveIndex].waveDirSin = sin(waves[waveIndex].waveDirTheta);
 		}
 	}
 
-	void GerstnerWave::Update()
-	{
-		PROFILE_AUTO("Gerstner update");
-
-		const glm::vec3 startPos(-size / 2.0f, 0.0f, -size / 2.0f);
-
-		std::vector<glm::vec3>& positions = bufferInfo.positions_3D;
-		std::vector<glm::vec3>& normals = bufferInfo.normals;
-		std::vector<glm::vec3>& tangents = bufferInfo.tangents;
-
-		// Clear positions and normals
-		for (i32 z = 0; z < vertSideCount; ++z)
-		{
-			for (i32 x = 0; x < vertSideCount; ++x)
-			{
-				positions[z * vertSideCount + x] = startPos + glm::vec3(
-					size * ((real)x / (vertSideCount - 1)),
-					0.0f,
-					size * ((real)z / (vertSideCount - 1)));
-				normals[z * vertSideCount + x] = VEC3_UP;
-			}
-		}
-
-		// Calculate positions
-		for (WaveInfo& wave : waves)
-		{
-			if (wave.enabled)
-			{
-				const glm::vec3 waveVec = glm::vec3(wave.waveDirCos, 0.0f, wave.waveDirSin) * wave.waveVecMag;
-				const glm::vec3 waveVecN = glm::normalize(waveVec);
-
-				wave.accumOffset += (wave.moveSpeed * g_DeltaTime);
-
-				for (i32 z = 0; z < vertSideCount; ++z)
-				{
-					for (i32 x = 0; x < vertSideCount; ++x)
-					{
-						i32 vertIdx = z * vertSideCount + x;
-
-						real d = glm::dot(waveVec, positions[vertIdx]);
-						real c = cos(d + wave.accumOffset);
-						real s = sin(d + wave.accumOffset);
-						positions[vertIdx] += glm::vec3(
-							-waveVecN.x * wave.a * s,
-							wave.a * c,
-							-waveVecN.y * wave.a * s);
-					}
-				}
-			}
-		}
-
-		// Ripple
-		glm::vec3 ripplePos = VEC3_ZERO;
-		real rippleAmp = 0.8f;
-		real rippleLen = 0.6f;
-		real rippleFadeOut = 12.0f;
-		for (i32 z = 0; z < vertSideCount; ++z)
-		{
-			for (i32 x = 0; x < vertSideCount; ++x)
-			{
-				i32 vertIdx = z * vertSideCount + x;
-
-				glm::vec3 diff = (ripplePos - positions[vertIdx]);
-				real d = glm::length(diff);
-				diff = glm::normalize(diff) * rippleLen;
-				real c = cos(g_SecElapsedSinceProgramStart * 1.8f - d);
-				real s = sin(g_SecElapsedSinceProgramStart * 1.5f - d);
-				real a = Lerp(0.0f, rippleAmp, 1.0f - Saturate(d / rippleFadeOut));
-				positions[vertIdx] += glm::vec3(
-					-diff.x * a * s,
-					a * c,
-					-diff.z * a * s);
-			}
-		}
-
-		// Calculate normals
-		for (i32 z = 1; z < vertSideCount - 1; ++z)
-		{
-			for (i32 x = 1; x < vertSideCount - 1; ++x)
-			{
-				i32 vertIdx = z * vertSideCount + x;
-				bufferInfo.tangents[vertIdx] = glm::normalize((positions[vertIdx + 1] - positions[vertIdx]) + (positions[vertIdx] - positions[vertIdx - 1]));
-				// TODO
-				//bufferInfo.normals[vertIdx] = glm::cross(bitangents[vertIdx], tangents[vertIdx]);
-			}
-		}
-
-		VertexBufferData* vertexBuffer = m_Mesh->GetSubMeshes()[0]->GetVertexBufferData();
-		bufferInfo.positions_3D = positions;
-		bufferInfo.normals = normals;
-		bufferInfo.tangents = tangents;
-		vertexBuffer->UpdateData(bufferInfo);
-		g_Renderer->UpdateVertexData(m_Mesh->GetRenderID(0), vertexBuffer, m_Mesh->GetSubMeshes()[0]->GetIndexBuffer());
-
-
-		const glm::vec3 wavePos = m_Transform.GetWorldPosition();
-		//const glm::vec3 waveScale = m_Transform.GetWorldScale();
-		glm::vec3 surfacePos = positions[positions.size() / 2 + vertSideCount / 2];
-		bobberTarget.SetTargetPos(surfacePos.y);
-		bobberTarget.Tick(g_DeltaTime);
-		real vOffset = 0.2f;
-		glm::vec3 newPos = wavePos + glm::vec3(surfacePos.x, bobberTarget.pos + vOffset, surfacePos.z);
-		bobber->GetTransform()->SetWorldPosition(newPos);
-
-		//btVector3 targetPosBT = btVector3(wavePos.x + surfacePos.x, wavePos.y + bobberTarget.targetPos, wavePos.z + surfacePos.z);
-		//g_Renderer->GetDebugDrawer()->drawSphere(targetPosBT, 1.0f, btVector3(1.0f, 0.0f, 0.1f));
-		//btVector3 posBT = btVector3(wavePos.x + surfacePos.x, wavePos.y + bobberTarget.pos, wavePos.z + surfacePos.z);
-		//g_Renderer->GetDebugDrawer()->drawSphere(posBT, 0.7f, btVector3(0.75f, 0.5f, 0.6f));
-	}
-
 	void GerstnerWave::AddWave()
 	{
 		waves.push_back({});
 		UpdateDependentVariables((u32)waves.size() - 1);
+		SortWaves();
 	}
 
 	void GerstnerWave::RemoveWave(i32 index)
@@ -3574,7 +4736,68 @@ namespace flex
 		if (index >= 0 && index < (i32)waves.size())
 		{
 			waves.erase(waves.begin() + index);
+			SortWaves();
 		}
+	}
+
+	void GerstnerWave::SortWaves()
+	{
+		WaveInfo soloWaveCopy;
+		if (soloWave)
+		{
+			soloWaveCopy = *soloWave;
+		}
+		std::sort(waves.begin(), waves.end(),
+			[](const WaveInfo& waveA, const WaveInfo& waveB)
+		{
+			return abs(waveA.a) > abs(waveB.a);
+		});
+		if (soloWave)
+		{
+			for (const WaveInfo& waveInfo : waves)
+			{
+				if (waveInfo == soloWaveCopy)
+				{
+					soloWave = &waveInfo;
+					break;
+				}
+			}
+		}
+	}
+
+	void GerstnerWave::SortWaveSamplingLODs()
+	{
+		std::sort(waveSamplingLODs.begin(), waveSamplingLODs.end(),
+			[](const WaveSamplingLOD& lodA, const WaveSamplingLOD& lodB)
+		{
+			return abs(lodA.squareDist) > abs(lodB.squareDist);
+		});
+	}
+
+	void GerstnerWave::SortWaveTessellationLODs()
+	{
+		std::sort(waveTessellationLODs.begin(), waveTessellationLODs.end(),
+			[](const WaveTessellationLOD& lodA, const WaveTessellationLOD& lodB)
+		{
+			return abs(lodA.squareDist) > abs(lodB.squareDist);
+		});
+	}
+
+	real GerstnerWave::GetWaveAmplitudeLODCutoffForDistance(real dist) const
+	{
+		if (bDisableLODs)
+		{
+			return 0.0f;
+		}
+
+		for (u32 i = 0; i < (u32)waveSamplingLODs.size(); ++i)
+		{
+			if (dist >= waveSamplingLODs[i].squareDist)
+			{
+				return waveSamplingLODs[i].amplitudeCutoff;
+			}
+		}
+		return 0.0f;
 	}
 
 	Blocks::Blocks(const std::string& name) :
@@ -3601,7 +4824,7 @@ namespace flex
 			{
 				GameObject* obj = new GameObject("block", GameObjectType::OBJECT);
 				obj->SetMesh(new Mesh(obj));
-				obj->GetMesh()->LoadFromFile(RESOURCE_LOCATION "meshes/cube.glb", PickRandomFrom(matIDs));
+				obj->GetMesh()->LoadFromFile(MESH_DIRECTORY "cube.glb", PickRandomFrom(matIDs));
 				AddChild(obj);
 				obj->GetTransform()->SetLocalScale(glm::vec3(blockSize));
 				obj->GetTransform()->SetLocalPosition(glm::vec3(
@@ -3614,6 +4837,7 @@ namespace flex
 
 	void Blocks::Update()
 	{
+		GameObject::Update();
 	}
 
 	Terminal::Terminal() :
@@ -3636,15 +4860,14 @@ namespace flex
 			matID = 0;
 		}
 		Mesh* mesh = SetMesh(new Mesh(this));
-		if (!mesh->LoadFromFile(RESOURCE("meshes/terminal-copper.glb"), matID))
+		if (!mesh->LoadFromFile(MESH_DIRECTORY "terminal-copper.glb", matID))
 		{
 			PrintWarn("Failed to load terminal mesh!\n");
 		}
 
 		m_Transform.UpdateParentTransform();
 
-		tokenizer = new Tokenizer();
-		ast = new AST(tokenizer);
+		m_VM = new VM::VirtualMachine();
 	}
 
 	void Terminal::Initialize()
@@ -3659,15 +4882,10 @@ namespace flex
 	{
 		g_InputManager->UnbindKeyEventCallback(&m_KeyEventCallback);
 
-		if (ast != nullptr)
+		if (m_VM != nullptr)
 		{
-			ast->Destroy();
-			delete ast;
-			ast = nullptr;
+			delete m_VM;
 		}
-
-		delete tokenizer;
-		tokenizer = nullptr;
 
 		GameObject::Destroy();
 	}
@@ -3700,96 +4918,278 @@ namespace flex
 			const glm::vec3 posTL = m_Transform.GetWorldPosition() +
 				right * (width / 2.0f) +
 				up * height +
-				forward * 0.992f;
+				forward * 1.05f;
+
+			const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+			const real frameBufferScale = glm::max(1.0f / (real)frameBufferSize.x, 1.0f / (real)frameBufferSize.y);
 
 			glm::vec3 pos = posTL;
 
 			const glm::quat rot = m_Transform.GetWorldRotation();
-			real charHeight = g_Renderer->GetStringHeight("W", font, false) * m_LetterScale;
-			const real lineHeight = charHeight * (m_LineHeight / 1000.0f);
-			real charWidth = g_Renderer->GetStringWidth("W", font, letterSpacing, false) / 1000.0f;
-			const real lineNoWidth = 24.0f * charWidth * m_LetterScale;
+			real charHeight = g_Renderer->GetStringHeight("W", font, false) * frameBufferScale * font->metaData.size * m_LetterScale;
+			const real lineHeight = charHeight * m_LineHeight;
+			real charWidth = g_Renderer->GetStringWidth("W", font, letterSpacing, false) * frameBufferScale * font->metaData.size * m_LetterScale;
+			const real lineNoWidth = 3.0f * charWidth;
 
 			if (bRenderCursor)
 			{
 				glm::vec3 cursorPos = pos;
-				cursorPos += (right * charWidth) + up * (cursor.y * -lineHeight);
-				std::string spaces(cursor.x, ' ');
-				g_Renderer->DrawStringWS(spaces + "|", VEC4_ONE, cursorPos, rot, letterSpacing, m_LetterScale);
+				cursorPos += (right * (charWidth * (-cursor.x + 0.5f))) + up * (cursor.y * -lineHeight);
+				g_Renderer->DrawStringWS("|", VEC4_ONE, cursorPos, rot, letterSpacing, m_LetterScale);
 			}
 
 			if (bRenderText)
 			{
-				static const glm::vec4 lineNumberColor(0.4f, 0.4f, 0.4f, 1.0f);
-				static const glm::vec4 lineNumberColorActive(0.5f, 0.5f, 0.5f, 1.0f);
-				static const glm::vec4 textColor(0.85f, 0.81f, 0.80f, 1.0f);
-				static const glm::vec4 errorColor(0.65f, 0.12f, 0.13f, 1.0f);
+				static const glm::vec4 lineNumberColour(0.4f, 0.4f, 0.4f, 1.0f);
+				static const glm::vec4 lineNumberColourActive(0.65f, 0.65f, 0.65f, 1.0f);
+				static const glm::vec4 textColour(0.85f, 0.81f, 0.80f, 1.0f);
+				static const glm::vec4 errorColour(0.65f, 0.12f, 0.13f, 1.0f);
+				static const glm::vec4 stepColour(0.24f, 0.65f, 0.23f, 1.0f);
+				static const glm::vec4 commentColour(0.35f, 0.35f, 0.35f, 1.0f);
+
 				glm::vec3 firstLinePos = pos;
 				for (i32 lineNumber = 0; lineNumber < (i32)lines.size(); ++lineNumber)
 				{
-					glm::vec4 lineNoCol = (lineNumber == cursor.y ? lineNumberColorActive : lineNumberColor);
+					std::string line = lines[lineNumber];
+					size_t lineCommentIdx = line.find("//");
+					glm::vec4 lineNoCol = (lineNumber == cursor.y ? lineNumberColourActive : lineNumberColour);
 					g_Renderer->DrawStringWS(IntToString(lineNumber + 1, 2, ' '), lineNoCol, pos + right * lineNoWidth, rot, letterSpacing, m_LetterScale);
-					g_Renderer->DrawStringWS(lines[lineNumber], textColor, pos, rot, letterSpacing, m_LetterScale);
+					if (lineCommentIdx == std::string::npos)
+					{
+						g_Renderer->DrawStringWS(lines[lineNumber], textColour, pos, rot, letterSpacing, m_LetterScale);
+					}
+					else
+					{
+						glm::vec3 tPos = pos;
+						if (lineCommentIdx > 0)
+						{
+							std::string codeStr = lines[lineNumber].substr(0, lineCommentIdx);
+							g_Renderer->DrawStringWS(codeStr, textColour, pos, rot, letterSpacing, m_LetterScale);
+							tPos += -right * (g_Renderer->GetStringWidth(codeStr, font, letterSpacing, false) * frameBufferScale * font->metaData.size * m_LetterScale);
+						}
+
+						g_Renderer->DrawStringWS(lines[lineNumber].substr(lineCommentIdx), commentColour, tPos, rot, letterSpacing, m_LetterScale);
+					}
 					pos.y -= lineHeight;
 				}
 
-				if (ast != nullptr)
+				if (m_VM != nullptr)
 				{
-					glm::vec2i lastErrorPos = ast->lastErrorTokenLocation;
-					if (lastErrorPos.x != -1)
+					const std::vector<Diagnostic>& diagnostics = m_VM->GetDiagnosticContainer()->diagnostics;
+					if (!diagnostics.empty())
+					{
+						for (u32 i = 0; i < (u32)diagnostics.size(); ++i)
+						{
+							const Span& span = diagnostics[i].span;
+							pos = firstLinePos;
+							pos.y -= lineHeight * diagnostics[i].span.lineNumber;
+							g_Renderer->DrawStringWS("!", errorColour, pos + right * (charWidth * 1.f), rot, letterSpacing, m_LetterScale);
+							u32 spanLen = glm::min(60u, glm::max(0u, (u32)span.Length()));
+							std::string underlineStr = std::string(diagnostics[i].span.columnIndex, ' ') + std::string(spanLen, '_');
+							pos.y -= lineHeight * 0.2f;
+							g_Renderer->DrawStringWS(underlineStr, errorColour, pos, rot, letterSpacing, m_LetterScale);
+						}
+					}
+
+					const bool bVMExecuting = m_VM->IsExecuting();
+					i32 vmLineNumber = m_VM->CurrentLineNumber();
+					if (bVMExecuting && vmLineNumber != -1)
 					{
 						pos = firstLinePos;
-						pos.y -= lineHeight * lastErrorPos.y;
-						g_Renderer->DrawStringWS("!", errorColor, pos + right * (charWidth * 1.7f), rot, letterSpacing, m_LetterScale);
-						std::string underlineStr = std::string(lastErrorPos.x, ' ') + std::string(ast->lastErrorTokenLen, '_');
+						pos.y -= lineHeight * vmLineNumber;
+						u32 spanLen = glm::min(60u, glm::max(0u, (u32)lines[vmLineNumber].size()));
+						std::string underlineStr = std::string(spanLen, '_');
 						pos.y -= lineHeight * 0.2f;
-						g_Renderer->DrawStringWS(underlineStr, errorColor, pos, rot, letterSpacing, m_LetterScale);
+						g_Renderer->DrawStringWS(underlineStr, stepColour, pos, rot, letterSpacing, m_LetterScale);
 					}
 				}
 			}
 		}
+
+		if (m_bNearbyInteractable)
+		{
+			const real scale = 2.0f;
+			const glm::vec3 right = m_Transform.GetRight();
+			const glm::vec3 forward = m_Transform.GetForward();
+			glm::vec3 c = m_Transform.GetWorldPosition();
+			glm::vec3 v1 = c + (right + forward) * scale;
+			glm::vec3 v2 = c + (-right + forward) * scale;
+			glm::vec3 v3 = c - (forward * scale);
+			btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
+			debugDrawer->drawTriangle(ToBtVec3(v1), ToBtVec3(v2), ToBtVec3(v3), btVector3(0.9f, 0.3f, 0.2f), 1.0f);
+			glm::vec3 o(0.0f, sin(g_SecElapsedSinceProgramStart * 2.0f) + 1.0f, 0.0f);
+			debugDrawer->drawTriangle(ToBtVec3(v1 + o), ToBtVec3(v2 + o), ToBtVec3(v3 + o), btVector3(0.9f, 0.3f, 0.2f), 1.0f);
+			o = glm::vec3(0.0f, 2.0f, 0.0f);
+			debugDrawer->drawTriangle(ToBtVec3(v1 + o), ToBtVec3(v2 + o), ToBtVec3(v3 + o), btVector3(0.9f, 0.3f, 0.2f), 1.0f);
+		}
+
+		GameObject::Update();
 	}
 
-	void Terminal::DrawImGuiObjects()
+	void Terminal::DrawTerminalUI()
 	{
-		GameObject::DrawImGuiObjects();
-
 		ImGui::Begin("Terminal");
 		{
+			ImGui::TextWrapped("Hit F5 to compile and evaluate code.");
+
+			ImGui::Separator();
+
 			//ImGui::DragFloat("Line height", &m_LineHeight, 0.01f);
 			//ImGui::DragFloat("Scale", &m_LetterScale, 0.01f);
 
-			ImGui::Text("Variables");
-			if (ImGui::BeginChild("Variables", ImVec2(0.0f, 220.0f), true))
-			{
-				for (i32 i = 0; i < tokenizer->context->variableCount; ++i)
-				{
-					const TokenContext::InstantiatedIdentifier& var = tokenizer->context->instantiatedIdentifiers[i];
-					std::string valStr = var.value->ToString();
-					const char* typeNameCStr = g_TypeNameStrings[(i32)ValueTypeToTypeName(var.value->type)];
-					ImGui::Text("%s = %s", var.name.c_str(), valStr.c_str());
-					ImGui::SameLine();
-					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
-					ImGui::Text("(%s)", typeNameCStr);
-					ImGui::PopStyleColor();
-				}
-			}
-			ImGui::EndChild();
+			//ImGui::Text("Variables");
+			//if (ImGui::BeginChild("", ImVec2(0.0f, 220.0f), true))
+			//{
+			//	for (i32 i = 0; i < lexer->context->variableCount; ++i)
+			//	{
+			//		const Context::InstantiatedIdentifier& var = lexer->context->instantiatedIdentifiers[i];
+			//		std::string valStr = var.value->ToString();
+			//		const char* typeNameCStr = g_TypeNameStrings[(i32)ValueTypeToTypeName(var.value->type)];
+			//		ImGui::Text("%s = %s", var.name.c_str(), valStr.c_str());
+			//		ImGui::SameLine();
+			//		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
+			//		ImGui::Text("(%s)", typeNameCStr);
+			//		ImGui::PopStyleColor();
+			//	}
+			//}
+			//ImGui::EndChild();
 
-			if (tokenizer->context->errors.empty())
+			bool bSuccess = m_VM->diagnosticContainer->diagnostics.empty();
+
+			if (!bSuccess)
+			{
+
+				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.5f, 0.5f, 1.0f));
+				for (const Diagnostic& diagnostic : m_VM->diagnosticContainer->diagnostics)
+				{
+					ImGui::TextWrapped("L%d: %s", diagnostic.span.lineNumber + 1, diagnostic.message.c_str());
+				}
+				ImGui::PopStyleColor();
+			}
+			else
 			{
 				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 1.0f, 0.5f, 1.0f));
 				ImGui::Text("Success");
 				ImGui::PopStyleColor();
 			}
-			else
+
 			{
-				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.5f, 0.5f, 1.0f));
-				for (const Error& e : tokenizer->context->errors)
+				for (u32 i = 0; i < 8; ++i)
 				{
-					ImGui::Text("L%d: %s", e.lineNumber + 1, e.str.c_str());
+					const VM::Value& regVal = m_VM->registers[i];
+					if (regVal.type != VM::Value::Type::_NONE)
+					{
+						std::string regValStr = regVal.ToString();
+						ImGui::Text("r%i = %s", i, regValStr.c_str());
+					}
+					else
+					{
+						ImGui::NewLine();
+					}
 				}
-				ImGui::PopStyleColor();
+
+				ImGui::Text("zf: %d", m_VM->ZeroFlagSet() ? 1 : 0);
+				ImGui::SameLine();
+				ImGui::Text("sf: %d", m_VM->SignFlagSet() ? 1 : 0);
+
+				if (!m_VM->astStr.empty())
+				{
+					ImGui::Separator();
+					ImGui::Text("AST");
+					ImGui::Text("%s", m_VM->astStr.c_str());
+				}
+
+				if (!m_VM->irStr.empty())
+				{
+					ImGui::Separator();
+					ImGui::Text("IR");
+					ImGui::Text("%s", m_VM->irStr.c_str());
+				}
+
+				if (!m_VM->unpatchedInstructionStr.empty())
+				{
+					ImGui::Separator();
+					ImGui::Text("Instructions (unpatched)");
+					const ImVec2 preCursorPos = ImGui::GetCursorPos();
+					ImGui::Text("%s", m_VM->unpatchedInstructionStr.c_str());
+					const ImVec2 postCursorPos = ImGui::GetCursorPos();
+
+					if (m_VM->IsExecuting())
+					{
+						i32 strLineNum = 0;
+						i32 instIdx = m_VM->InstructionIndex();
+						for (i32 i = 0; i < (i32)m_VM->state->instructionBlocks.size(); ++i)
+						{
+							i32 startOffset = (i32)m_VM->state->instructionBlocks[i].startOffset;
+							i32 lineCountInBlock = (i32)m_VM->state->instructionBlocks[i].instructions.size();
+							if (instIdx >= startOffset &&
+								instIdx < (startOffset + lineCountInBlock))
+							{
+								strLineNum += (instIdx - startOffset);
+								break;
+							}
+							strLineNum += lineCountInBlock + 2; // Two additional lines for "label: {\n" & "\n}"
+						}
+
+						if (strLineNum != -1)
+						{
+							strLineNum += 1;
+							std::string underlineStr = strLineNum == 0 ? "" : std::string(strLineNum, '\n');
+							underlineStr += "____________________";
+							ImGui::SetCursorPos(ImVec2(preCursorPos.x, preCursorPos.y + 1.0f));
+							ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.35f, 0.25f, 0.7f, 1.0f));
+							ImGui::Text("%s", underlineStr.c_str());
+							ImGui::PopStyleColor();
+
+							ImGui::SetCursorPos(postCursorPos);
+						}
+					}
+				}
+
+				if (!m_VM->instructionStr.empty())
+				{
+					ImGui::Separator();
+					ImGui::Text("Instructions");
+
+					if (!m_VM->IsExecuting())
+					{
+						ImGui::SameLine();
+						if (ImGui::Button("Start (F10)"))
+						{
+							m_VM->Execute(true);
+						}
+					}
+					else
+					{
+						ImGui::SameLine();
+						if (ImGui::Button("Step (F10)"))
+						{
+							m_VM->Execute(true);
+						}
+						ImGui::SameLine();
+						if (ImGui::Button("Reset"))
+						{
+							m_VM->ClearRuntimeState();
+						}
+					}
+
+					const ImVec2 preCursorPos = ImGui::GetCursorPos();
+					ImGui::Text("%s", m_VM->instructionStr.c_str());
+					const ImVec2 postCursorPos = ImGui::GetCursorPos();
+
+					if (m_VM->IsExecuting())
+					{
+						i32 instIdx = m_VM->InstructionIndex();
+						std::string underlineStr = instIdx == 0 ? "" : std::string(instIdx, '\n');
+						underlineStr += "____________________";
+						ImGui::SetCursorPos(ImVec2(preCursorPos.x, preCursorPos.y + 1.0f));
+						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.35f, 0.25f, 0.7f, 1.0f));
+						ImGui::Text("%s", underlineStr.c_str());
+						ImGui::PopStyleColor();
+
+						ImGui::SetCursorPos(postCursorPos);
+					}
+				}
 			}
 		}
 		ImGui::End();
@@ -3843,7 +5243,12 @@ namespace flex
 
 		lines = Split(str, '\n');
 
-		MoveCursorToEnd();
+		if (lines.empty())
+		{
+			lines.push_back("");
+		}
+
+		MoveCursorToStart();
 	}
 
 	void Terminal::SerializeUniqueFields(JSONObject& parentObject) const
@@ -3860,6 +5265,8 @@ namespace flex
 			}
 		}
 
+		str = Replace(str, "\"", "\\\"");
+
 		terminalObj.fields.emplace_back("str", JSONValue(str));
 
 		parentObject.fields.emplace_back("terminal", JSONValue(terminalObj));
@@ -3868,6 +5275,12 @@ namespace flex
 	void Terminal::TypeChar(char c)
 	{
 		m_CursorBlinkTimer = 0.0f;
+
+		if (lines.empty())
+		{
+			lines.push_back("");
+		}
+
 		std::string& curLine = lines[cursor.y];
 
 		if (c == '\n')
@@ -3884,7 +5297,6 @@ namespace flex
 		}
 		else
 		{
-			// TODO: Enforce screen width
 			if (cursor.x == (i32)curLine.size())
 			{
 				curLine.push_back(c);
@@ -4006,8 +5418,15 @@ namespace flex
 	void Terminal::MoveCursorToEnd()
 	{
 		m_CursorBlinkTimer = 0.0f;
-		cursor.y = (i32)lines.size() - 1;
-		cursor.x = (i32)lines[cursor.y].size();
+		if (!lines.empty())
+		{
+			cursor.y = (i32)lines.size() - 1;
+			cursor.x = (i32)lines[cursor.y].size();
+		}
+		else
+		{
+			cursor.x = cursor.y = 0;
+		}
 		cursorMaxX = cursor.x;
 	}
 
@@ -4174,8 +5593,7 @@ namespace flex
 
 	void Terminal::ParseCode()
 	{
-		assert(tokenizer != nullptr);
-		assert(ast != nullptr);
+		assert(m_VM != nullptr);
 
 		std::string str;
 		for (const std::string& line : lines)
@@ -4184,15 +5602,12 @@ namespace flex
 			str.push_back('\n');
 		}
 
-		ast->Destroy();
-
-		tokenizer->SetCodeStr(str);
-		ast->Generate();
+		m_VM->GenerateFromSource(str.c_str());
 	}
 
 	void Terminal::EvaluateCode()
 	{
-		ast->Evaluate();
+		m_VM->Execute();
 	}
 
 	EventReply Terminal::OnKeyEvent(KeyCode keyCode, KeyAction action, i32 modifiers)
@@ -4215,6 +5630,11 @@ namespace flex
 					EvaluateCode();
 					return EventReply::CONSUMED;
 				}
+				if (keyCode == KeyCode::KEY_F10)
+				{
+					m_VM->Execute(true);
+					return EventReply::CONSUMED;
+				}
 				if (keyCode == KeyCode::KEY_ESCAPE)
 				{
 					m_Camera->TransitionOut();
@@ -4222,20 +5642,22 @@ namespace flex
 				}
 				if (keyCode == KeyCode::KEY_SLASH)
 				{
-					if (bCtrlDown)
+					if (bCtrlDown) // Comment line
 					{
 						i32 pCursorPosX = cursor.x;
 						cursor.x = 0;
-						if (lines[cursor.y].size() < 2)
+						std::string strippedLine = TrimLeadingWhitespace(lines[cursor.y]);
+						i32 leadingWhitespaceCount = (i32)(strippedLine.size() - lines[cursor.y].size());
+						if (strippedLine.size() < 2)
 						{
-							// TODO: Check line length
 							TypeChar('/');
 							TypeChar('/');
 							cursor.x = pCursorPosX + 2;
 						}
 						else
 						{
-							if (lines[cursor.y][0] == '/' && lines[cursor.y][1] == '/')
+							cursor.x = leadingWhitespaceCount;
+							if (strippedLine[0] == '/' && strippedLine[1] == '/')
 							{
 								DeleteCharInFront(false);
 								DeleteCharInFront(false);
@@ -4243,12 +5665,16 @@ namespace flex
 							}
 							else
 							{
-								// TODO: Check line length
+
 								TypeChar('/');
 								TypeChar('/');
 								cursor.x = pCursorPosX + 2;
 							}
 						}
+					}
+					else if (bShiftDown)
+					{
+						TypeChar(InputManager::GetShiftModifiedKeyCode('/'));
 					}
 					else
 					{
@@ -4464,6 +5890,7 @@ namespace flex
 
 	void ParticleSystem::Update()
 	{
+		GameObject::Update();
 	}
 
 	void ParticleSystem::Destroy()
@@ -4570,6 +5997,8 @@ namespace flex
 	void ParticleSystem::UpdateModelMatrix()
 	{
 		model = glm::scale(m_Transform.GetWorldTransform(), glm::vec3(scale));
+
+		GameObject::Update();
 	}
 
 	ChunkGenerator::ChunkGenerator(const std::string& name) :
@@ -4582,8 +6011,8 @@ namespace flex
 
 	GameObject* ChunkGenerator::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
 	{
-		UNREFERENCED_PARAMETER(parent);
-		UNREFERENCED_PARAMETER(bCopyChildren);
+		FLEX_UNUSED(parent);
+		FLEX_UNUSED(bCopyChildren);
 		return nullptr;
 	}
 
@@ -4602,6 +6031,8 @@ namespace flex
 		m_Mesh->SetTypeToMemory();
 
 		GenerateGradients();
+
+		GameObject::Initialize();
 	}
 
 	void ChunkGenerator::DestroyAllChunks()
@@ -4664,7 +6095,7 @@ namespace flex
 				vertexBufferCreateInfo.positions_3D.emplace_back(vertPosWS);
 				vertexBufferCreateInfo.texCoords_UV.emplace_back(uv);
 				bool bShowEdge = (m_bHighlightGrid && (x == 0 || x == (VertCountPerChunkAxis - 1) || z == 0 || z == (VertCountPerChunkAxis - 1)));
-				glm::vec3 vertCol = (bShowEdge ? glm::vec3(0.75f) : (height <= 0.5f ? Lerp(m_LowCol, m_MidCol, glm::pow(height * 2.0f, 4.0f)) : Lerp(m_MidCol, m_HighCol, glm::pow((height - 0.5f) * 2.0f, 1.0f/5.0f))));
+				glm::vec3 vertCol = (bShowEdge ? glm::vec3(0.75f) : (height <= 0.5f ? Lerp(m_LowCol, m_MidCol, glm::pow(height * 2.0f, 4.0f)) : Lerp(m_MidCol, m_HighCol, glm::pow((height - 0.5f) * 2.0f, 1.0f / 5.0f))));
 				vertexBufferCreateInfo.colors_R32G32B32A32.emplace_back(glm::vec4(vertCol.x, vertCol.y, vertCol.z, 1.0f));
 				//vertexBufferCreateInfo.colors_R32G32B32A32.emplace_back(glm::vec4(height, height, height, 1.0f));
 				vertexBufferCreateInfo.normals.emplace_back(normal);
@@ -4691,6 +6122,7 @@ namespace flex
 		MeshComponent* meshComponent = MeshComponent::LoadFromMemory(m_Mesh, vertexBufferCreateInfo, indices, m_TerrainMatID, &renderObjectCreateInfo);
 		if (meshComponent)
 		{
+			assert(m_Meshes[chunkIndex] == nullptr);
 			m_Meshes[chunkIndex] = meshComponent;
 		}
 	}
@@ -4797,6 +6229,7 @@ namespace flex
 
 	void ChunkGenerator::PostInitialize()
 	{
+		GameObject::PostInitialize();
 	}
 
 	void ChunkGenerator::Update()
@@ -4861,8 +6294,10 @@ namespace flex
 
 				auto iter = m_Meshes.find(chunkIdx);
 				assert(iter != m_Meshes.end());
-				iter->second->Destroy();
+				MeshComponent* mesh = iter->second;
 				m_Meshes.erase(iter);
+				mesh->Destroy();
+				delete mesh;
 
 				++iterationCount;
 
@@ -4913,6 +6348,8 @@ namespace flex
 				textureScale /= 2.0f;
 			}
 		}
+
+		GameObject::Update();
 	}
 
 	void ChunkGenerator::Destroy()
@@ -4922,13 +6359,15 @@ namespace flex
 			iter->second->Destroy();
 		}
 		m_Meshes.clear();
+
+		GameObject::Destroy();
 	}
 
 	void ChunkGenerator::DrawImGuiObjects()
 	{
 		GameObject::DrawImGuiObjects();
 
-		ImGui::Text("Loaded chunks: %u (loading: %u)", m_Meshes.size(),  m_ChunksToLoad.size());
+		ImGui::Text("Loaded chunks: %u (loading: %u)", (u32)m_Meshes.size(), (u32)m_ChunksToLoad.size());
 
 		bool bRegen = false;
 
@@ -5016,8 +6455,8 @@ namespace flex
 
 	void ChunkGenerator::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
-		UNREFERENCED_PARAMETER(matIDs);
-		UNREFERENCED_PARAMETER(scene);
+		FLEX_UNUSED(matIDs);
+		FLEX_UNUSED(scene);
 
 		if (parentObject.HasField("chunk generator info"))
 		{

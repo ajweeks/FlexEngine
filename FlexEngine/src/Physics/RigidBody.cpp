@@ -298,7 +298,7 @@ namespace flex
 		glm::mat4 parentTransformMat = glm::translate(MAT4_IDENTITY, m_ParentTransform->GetWorldPosition())
 			* glm::mat4(m_ParentTransform->GetWorldRotation());
 
-		glm::mat4 childTransformMat = glm::translate(MAT4_IDENTITY, m_LocalPosition) *
+		glm::mat4 childTransformMat = glm::translate(MAT4_IDENTITY, m_LocalPosition * m_ParentTransform->GetWorldScale()) *
 			glm::mat4(m_LocalRotation);
 
 		glm::mat4 finalTransformMat = parentTransformMat * childTransformMat;

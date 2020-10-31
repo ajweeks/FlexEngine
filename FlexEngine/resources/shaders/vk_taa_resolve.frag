@@ -21,7 +21,7 @@ layout (binding = 1) uniform sampler2D in_DepthBuffer;
 layout (binding = 2) uniform sampler2D in_SceneTexture;
 layout (binding = 3) uniform sampler2D in_HistoryTexture;
 
-layout (constant_id = 0) const int TAA_SAMPLE_COUNT = 2;
+layout (constant_id = 1) const int TAA_SAMPLE_COUNT = 2;
 
 vec3 ReconstructWSPosFromDepth(vec2 uv, float depth)
 {

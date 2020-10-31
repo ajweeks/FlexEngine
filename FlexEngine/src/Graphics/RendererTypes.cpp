@@ -6,6 +6,46 @@
 
 namespace flex
 {
+	CullFace StringToCullFace(const std::string& str)
+	{
+		std::string strLower(str);
+		ToLower(strLower);
+
+		if (strLower.compare("back") == 0)
+		{
+			return CullFace::BACK;
+		}
+		else if (strLower.compare("front") == 0)
+		{
+			return CullFace::FRONT;
+		}
+		else if (strLower.compare("front and back") == 0)
+		{
+			return CullFace::FRONT_AND_BACK;
+		}
+		else if (strLower.compare("none") == 0)
+		{
+			return CullFace::NONE;
+		}
+		else
+		{
+			PrintError("Unhandled cull face str: %s\n", str.c_str());
+			return CullFace::_INVALID;
+		}
+	}
+
+	std::string CullFaceToString(CullFace cullFace)
+	{
+		switch (cullFace)
+		{
+		case CullFace::BACK:			return "back";
+		case CullFace::FRONT:			return "front";
+		case CullFace::FRONT_AND_BACK:	return "front and back";
+		case CullFace::NONE:			return "none";
+		default:						return "UNHANDLED CULL FACE";
+		}
+	}
+
 	bool Uniforms::HasUniform(u64 uniform) const
 	{
 		return (uniforms & uniform) != 0;
@@ -61,6 +101,8 @@ namespace flex
 				_u(LAST_FRAME_VIEWPROJ)
 				_u(PARTICLE_BUFFER)
 				_u(PARTICLE_SIM_DATA)
+				_u(OCEAN_DATA)
+				_u(SKYBOX_DATA)
 #undef _u
 		}
 
@@ -75,31 +117,31 @@ namespace flex
 		name(name)
 	{
 #if COMPILE_OPEN_GL
-		vertexShaderFilePath = RESOURCE_LOCATION "shaders/" + inVertexShaderFilePath;
+		vertexShaderFilePath = SHADER_SOURCE_LOCATION + inVertexShaderFilePath;
 		if (!inFragmentShaderFilePath.empty())
 		{
-			fragmentShaderFilePath = RESOURCE_LOCATION "shaders/" + inFragmentShaderFilePath;
+			fragmentShaderFilePath = SHADER_SOURCE_LOCATION + inFragmentShaderFilePath;
 		}
 		if (!inGeometryShaderFilePath.empty())
 		{
-			geometryShaderFilePath = RESOURCE_LOCATION "shaders/" + inGeometryShaderFilePath;
+			geometryShaderFilePath = SHADER_SOURCE_LOCATION + inGeometryShaderFilePath;
 		}
 #elif COMPILE_VULKAN
 		if (!inVertexShaderFilePath.empty())
 		{
-			vertexShaderFilePath = RESOURCE_LOCATION "shaders/spv/" + inVertexShaderFilePath;
+			vertexShaderFilePath = SPV_LOCATION + inVertexShaderFilePath;
 		}
 		if (!inFragmentShaderFilePath.empty())
 		{
-			fragmentShaderFilePath = RESOURCE_LOCATION "shaders/spv/" + inFragmentShaderFilePath;
+			fragmentShaderFilePath = SPV_LOCATION + inFragmentShaderFilePath;
 		}
 		if (!inGeometryShaderFilePath.empty())
 		{
-			geometryShaderFilePath = RESOURCE_LOCATION "shaders/spv/" + inGeometryShaderFilePath;
+			geometryShaderFilePath = SPV_LOCATION + inGeometryShaderFilePath;
 		}
 		if (!inComputeShaderFilePath.empty())
 		{
-			computeShaderFilePath = RESOURCE_LOCATION "shaders/spv/" + inComputeShaderFilePath;
+			computeShaderFilePath = SPV_LOCATION + inComputeShaderFilePath;
 		}
 #endif
 	}
@@ -175,7 +217,7 @@ namespace flex
 		{
 			if (material.HasField(param.name))
 			{
-				*param.path = RESOURCE_LOCATION "textures/" + material.GetString(param.name);
+				*param.path = TEXTURE_LOCATION + material.GetString(param.name);
 			}
 		}
 
@@ -249,7 +291,7 @@ namespace flex
 			materialObject.fields.emplace_back("enable normal sampler", JSONValue(enableNormalSampler));
 		}
 
-		static const std::string texturePrefixStr = RESOURCE_LOCATION "textures/";
+		static const std::string texturePrefixStr = TEXTURE_LOCATION;
 
 		if (shader.bNeedAlbedoSampler && !albedoTexturePath.empty())
 		{

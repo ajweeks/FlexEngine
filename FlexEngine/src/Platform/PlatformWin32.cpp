@@ -17,12 +17,7 @@ IGNORE_WARNINGS_POP
 #include "FlexEngine.hpp"
 #include "Helpers.hpp"
 
-namespace flex
-{
-	typedef void* HANDLE;
-	typedef unsigned short WORD;
-
-	// Taken from ntddvdeo.h:
+// Taken from ntddvdeo.h:
 #define FOREGROUND_BLUE      0x0001
 #define FOREGROUND_GREEN     0x0002
 #define FOREGROUND_RED       0x0004
@@ -32,11 +27,40 @@ namespace flex
 #define BACKGROUND_RED       0x0040
 #define BACKGROUND_INTENSITY 0x0080
 
+namespace flex
+{
+	typedef void* HANDLE;
+	typedef unsigned short WORD;
+
 	const WORD CONSOLE_COLOR_DEFAULT = 0 | FOREGROUND_INTENSITY;
 	const WORD CONSOLE_COLOR_WARNING = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY;
 	const WORD CONSOLE_COLOR_ERROR = FOREGROUND_RED | FOREGROUND_INTENSITY;
 
 	HANDLE g_ConsoleHandle;
+
+	CPUInfo Platform::cpuInfo;
+
+	struct ThreadData
+	{
+		u32 num;
+	};
+
+	struct WorkItem
+	{
+		u32 a;
+	};
+
+	struct CompletedWorkItem
+	{
+		u32 ans;
+	};
+
+	std::vector<HANDLE> ThreadHandles;
+
+	void Platform::Init()
+	{
+		RetrieveCPUInfo();
+	}
 
 	void Platform::GetConsoleHandle()
 	{
@@ -159,16 +183,47 @@ namespace flex
 			return true;
 		}
 
-		u32 pos = 0;
-		do
+		size_t pos = absoluteDirectoryPath.find_first_of('/', 0);
+		while (pos != std::string::npos)
 		{
-			pos = (u32)absoluteDirectoryPath.find_first_of('/', pos + 1);
 			CreateDirectory(absoluteDirectoryPath.substr(0, pos).c_str(), NULL);
+			pos = absoluteDirectoryPath.find_first_of('/', pos + 1);
 			// TODO: Return false on failure here
 			//GetLastError() == ERROR_ALREADY_EXISTS;
-		} while (pos != std::string::npos);
+		}
 
 		return true;
+	}
+
+	void Platform::OpenExplorer(const std::string& absoluteDirectory)
+	{
+		ShellExecute(NULL, "open", absoluteDirectory.c_str(), NULL, NULL, SW_SHOWDEFAULT);
+	}
+
+	bool Platform::DirectoryExists(const std::string& absoluteDirectoryPath)
+	{
+		if (absoluteDirectoryPath.find("..") != std::string::npos)
+		{
+			PrintError("Attempted to create directory using relative path! Must specify absolute path!\n");
+			return false;
+		}
+
+		DWORD dwAttrib = GetFileAttributes(absoluteDirectoryPath.c_str());
+
+		return (dwAttrib != INVALID_FILE_ATTRIBUTES && dwAttrib & FILE_ATTRIBUTE_DIRECTORY);
+	}
+
+	bool Platform::CopyFile(const std::string& filePathFrom, const std::string& filePathTo)
+	{
+		if (::CopyFile(filePathFrom.c_str(), filePathTo.c_str(), 0))
+		{
+			return true;
+		}
+		else
+		{
+			PrintError("Failed to copy file from \"%s\" to \"%s\"\n", filePathFrom.c_str(), filePathTo.c_str());
+			return false;
+		}
 	}
 
 	bool Platform::DeleteFile(const std::string& filePath, bool bPrintErrorOnFailure /* = true */)
@@ -185,65 +240,6 @@ namespace flex
 			}
 			return false;
 		}
-	}
-
-	bool Platform::CopyFile(const std::string& filePathFrom, const std::string& filePathTo)
-	{
-		if (::CopyFile(filePathFrom.c_str(), filePathTo.c_str(), 0))
-		{
-			return true;
-		}
-		else
-		{
-			PrintError("Failed to copy file from \"%s\" to \"%s\"\n", filePathFrom.c_str(), filePathTo.c_str());
-			return false;
-		}
-	}
-
-	bool Platform::DirectoryExists(const std::string& absoluteDirectoryPath)
-	{
-		if (absoluteDirectoryPath.find("..") != std::string::npos)
-		{
-			PrintError("Attempted to create directory using relative path! Must specify absolute path!\n");
-			return false;
-		}
-
-		DWORD dwAttrib = GetFileAttributes(absoluteDirectoryPath.c_str());
-
-		return (dwAttrib != INVALID_FILE_ATTRIBUTES && dwAttrib & FILE_ATTRIBUTE_DIRECTORY);
-	}
-
-	void Platform::OpenExplorer(const std::string& absoluteDirectory)
-	{
-		ShellExecute(NULL, "open", absoluteDirectory.c_str(), NULL, NULL, SW_SHOWDEFAULT);
-	}
-
-	bool Platform::OpenFileDialog(const std::string& windowTitle, const std::string& absoluteDirectory, std::string& outSelectedAbsFilePath, char filter[] /* = nullptr */)
-	{
-		OPENFILENAME openFileName = {};
-		openFileName.lStructSize = sizeof(OPENFILENAME);
-		openFileName.lpstrInitialDir = absoluteDirectory.c_str();
-		openFileName.nMaxFile = (filter == nullptr ? 0 : (u32)strlen(filter));
-		if (openFileName.nMaxFile && filter)
-		{
-			openFileName.lpstrFilter = filter;
-		}
-		openFileName.nFilterIndex = 0;
-		const i32 MAX_FILE_PATH_LEN = 512;
-		char fileBuf[MAX_FILE_PATH_LEN];
-		memset(fileBuf, '\0', MAX_FILE_PATH_LEN - 1);
-		openFileName.lpstrFile = fileBuf;
-		openFileName.nMaxFile = MAX_FILE_PATH_LEN;
-		openFileName.lpstrTitle = windowTitle.c_str();
-		openFileName.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
-		bool bSuccess = GetOpenFileName(&openFileName) == 1;
-
-		if (openFileName.lpstrFile)
-		{
-			outSelectedAbsFilePath = ReplaceBackSlashesWithForward(openFileName.lpstrFile);
-		}
-
-		return bSuccess;
 	}
 
 	bool Platform::FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileType)
@@ -330,6 +326,44 @@ namespace flex
 		return !filePaths.empty();
 	}
 
+	bool Platform::OpenFileDialog(const std::string& windowTitle, const std::string& absoluteDirectory, std::string& outSelectedAbsFilePath, char filter[] /* = nullptr */)
+	{
+		OPENFILENAME openFileName = {};
+		openFileName.lStructSize = sizeof(OPENFILENAME);
+		openFileName.lpstrInitialDir = absoluteDirectory.c_str();
+		openFileName.nMaxFile = (filter == nullptr ? 0 : (u32)strlen(filter));
+		if (openFileName.nMaxFile && filter)
+		{
+			openFileName.lpstrFilter = filter;
+		}
+		openFileName.nFilterIndex = 0;
+		const i32 MAX_FILE_PATH_LEN = 512;
+		char fileBuf[MAX_FILE_PATH_LEN];
+		memset(fileBuf, '\0', MAX_FILE_PATH_LEN - 1);
+		openFileName.lpstrFile = fileBuf;
+		openFileName.nMaxFile = MAX_FILE_PATH_LEN;
+		openFileName.lpstrTitle = windowTitle.c_str();
+		openFileName.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+		bool bSuccess = GetOpenFileName(&openFileName) == 1;
+
+		if (bSuccess && openFileName.lpstrFile)
+		{
+			outSelectedAbsFilePath = ReplaceBackSlashesWithForward(openFileName.lpstrFile);
+		}
+
+		return bSuccess;
+	}
+
+	void Platform::OpenFileWithDefaultApplication(const std::string& absoluteDirectory)
+	{
+		ShellExecute(0, 0, absoluteDirectory.c_str(), 0, 0, SW_SHOW);
+	}
+
+	void Platform::LaunchApplication(const std::string& applicationName, const std::string& param0)
+	{
+		ShellExecute(0, 0, applicationName.c_str(), param0.c_str(), 0, SW_SHOW);
+	}
+
 	std::string Platform::GetDateString_YMD()
 	{
 		std::stringstream result;
@@ -359,6 +393,185 @@ namespace flex
 			IntToString(time.wSecond, 2);
 
 		return result.str();
+	}
+
+	u32 Platform::AtomicIncrement(volatile u32* value)
+	{
+		return InterlockedIncrement(value);
+	}
+
+	u32 Platform::AtomicCompareExchange(volatile u32* value, u32 exchange, u32 comparand)
+	{
+		return InterlockedCompareExchange(value, exchange, comparand);
+	}
+
+	u32 Platform::AtomicExchange(volatile u32* value, u32 exchange)
+	{
+		return InterlockedExchange(value, exchange);
+	}
+
+	void Platform::JoinThreads()
+	{
+		for (u32 i = 0; i < (u32)ThreadHandles.size(); ++i)
+		{
+			WaitForSingleObject(ThreadHandles[i], INFINITE);
+		}
+		ThreadHandles.clear();
+	}
+
+	void Platform::SpawnThreads(u32 threadCount, void* (entryPoint)(void*), void* userData)
+	{
+		ThreadHandles.resize(threadCount);
+
+		for (u32 i = 0; i < (u32)ThreadHandles.size(); ++i)
+		{
+			ThreadHandles[i] = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)entryPoint, userData, 0, 0);
+		}
+	}
+
+	void Platform::YieldProcessor()
+	{
+		::YieldProcessor();
+	}
+
+	void* Platform::InitCriticalSection()
+	{
+		CRITICAL_SECTION* criticalSection = new CRITICAL_SECTION();
+		InitializeCriticalSection(criticalSection);
+		return criticalSection;
+	}
+
+	void Platform::FreeCriticalSection(void* criticalSection)
+	{
+		delete (CRITICAL_SECTION*)criticalSection;
+	}
+
+	void Platform::EnterCriticalSection(void* criticalSection)
+	{
+		::EnterCriticalSection((CRITICAL_SECTION*)criticalSection);
+	}
+
+	void Platform::LeaveCriticalSection(void* criticalSection)
+	{
+		::LeaveCriticalSection((CRITICAL_SECTION*)criticalSection);
+	}
+
+	void Platform::Sleep(ms milliseconds)
+	{
+		::Sleep((DWORD)milliseconds);
+	}
+
+	void Platform::RetrieveCPUInfo()
+	{
+		typedef BOOL(WINAPI* LPFN_GLPI)(PSYSTEM_LOGICAL_PROCESSOR_INFORMATION, PDWORD);
+
+		LPFN_GLPI glpi;
+		BOOL done = FALSE;
+		PSYSTEM_LOGICAL_PROCESSOR_INFORMATION buffer = NULL;
+		PSYSTEM_LOGICAL_PROCESSOR_INFORMATION ptr = NULL;
+
+		cpuInfo = {};
+		cpuInfo.logicalProcessorCount = 0;
+		cpuInfo.physicalCoreCount = 0;
+		cpuInfo.l1CacheCount = 0;
+		cpuInfo.l2CacheCount = 0;
+		cpuInfo.l3CacheCount = 0;
+
+		DWORD returnLength = 0;
+		DWORD numaNodeCount = 0;
+		DWORD processorPackageCount = 0;
+		DWORD byteOffset = 0;
+		PCACHE_DESCRIPTOR Cache;
+
+		glpi = (LPFN_GLPI)GetProcAddress(GetModuleHandle(TEXT("kernel32")), "GetLogicalProcessorInformation");
+		if (glpi == NULL)
+		{
+			PrintError("GetLogicalProcessorInformation is not supported.\n");
+			return;
+		}
+
+		while (!done)
+		{
+			DWORD rc = glpi(buffer, &returnLength);
+
+			if (rc == FALSE)
+			{
+				if (GetLastError() == ERROR_INSUFFICIENT_BUFFER)
+				{
+					if (buffer)
+					{
+						free(buffer);
+					}
+
+					buffer = (PSYSTEM_LOGICAL_PROCESSOR_INFORMATION)malloc(returnLength);
+
+					if (buffer == NULL)
+					{
+						PrintError("Allocation failure in GetLogicalProcessorCount\n");
+						return;
+					}
+				}
+				else
+				{
+					PrintError("Error encountered in GetLogicalProcessorCount: %d\n", GetLastError());
+					return;
+				}
+			}
+			else
+			{
+				done = TRUE;
+			}
+		}
+
+		ptr = buffer;
+
+		while (byteOffset + sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION) <= returnLength)
+		{
+			switch (ptr->Relationship)
+			{
+			case RelationNumaNode:
+				// Non-NUMA systems report a single record of this type.
+				numaNodeCount++;
+				break;
+
+			case RelationProcessorCore:
+				cpuInfo.physicalCoreCount++;
+
+				// A hyperthreaded core supplies more than one logical processor.
+				cpuInfo.logicalProcessorCount += CountSetBits((u32)ptr->ProcessorMask);
+				break;
+
+			case RelationCache:
+				// Cache data is in ptr->Cache, one CACHE_DESCRIPTOR structure for each cache.
+				Cache = &ptr->Cache;
+				if (Cache->Level == 1)
+				{
+					cpuInfo.l1CacheCount++;
+				}
+				else if (Cache->Level == 2)
+				{
+					cpuInfo.l2CacheCount++;
+				}
+				else if (Cache->Level == 3)
+				{
+					cpuInfo.l3CacheCount++;
+				}
+				break;
+
+			case RelationProcessorPackage:
+				// Logical processors share a physical package.
+				processorPackageCount++;
+				break;
+
+			default:
+				PrintError("Unsupported LOGICAL_PROCESSOR_RELATIONSHIP value.\n");
+				break;
+			}
+			byteOffset += sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION);
+			ptr++;
+		}
+
+		free(buffer);
 	}
 
 	DirectoryWatcher::DirectoryWatcher(const std::string& directory, bool bWatchSubtree) :

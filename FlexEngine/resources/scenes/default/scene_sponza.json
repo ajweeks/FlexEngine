@@ -1,7 +1,25 @@
 {
-	"version" : 2,
+	"version" : 3,
 	"name" : "Sponza",
 	"spawn player" : false,
+	"camera" : 
+	{
+		"type" : "debug",
+		"near plane" : 0.500000,
+		"far plane" : 1000.000000,
+		"fov" : 0.785398,
+		"aperture" : 1.000000,
+		"shutter speed" : 0.125000,
+		"light sensitivity" : 800.000000,
+		"exposure" : 1.200000,
+		"move speed" : 18.000000,
+		"transform" : 
+		{
+			"position" : "-88.448, 25.340, -7.676",
+			"pitch" : -0.278025,
+			"yaw" : 0.086571
+		}
+	},
 	"objects" : 
 	[
 		{
@@ -12,7 +30,12 @@
 			{
 			},
 			"mesh" : "sponza",
-			"material" : "pbr grey"
+			"materials" : 
+			[
+				"pbr grey",
+				"pbr grey",
+				"pbr grey"
+			]
 		},
 		{
 			"name" : "ground plane",
@@ -25,7 +48,10 @@
 				"scale" : "278.791, 1.000, 124.999"
 			},
 			"mesh" : "cube",
-			"material" : "pbr light grey",
+			"materials" : 
+			[
+				"pbr light grey"
+			],
 			"collider" : 
 			{
 				"shape" : "box",
@@ -47,7 +73,10 @@
 			"transform" : 
 			{
 			},
-			"material" : "skybox 01",
+			"materials" : 
+			[
+				"skybox 01"
+			],
 			"skybox info" : 
 			{
 			}
@@ -73,7 +102,10 @@
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "sphere",
-			"material" : "pbr white",
+			"materials" : 
+			[
+				"pbr white"
+			],
 			"collider" : 
 			{
 				"shape" : "sphere",
@@ -99,7 +131,10 @@
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "sphere",
-			"material" : "pbr white",
+			"materials" : 
+			[
+				"pbr white"
+			],
 			"collider" : 
 			{
 				"shape" : "sphere",
@@ -125,7 +160,10 @@
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "sphere",
-			"material" : "pbr white",
+			"materials" : 
+			[
+				"pbr white"
+			],
 			"collider" : 
 			{
 				"shape" : "sphere",
@@ -151,7 +189,10 @@
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "sphere",
-			"material" : "pbr white",
+			"materials" : 
+			[
+				"pbr white"
+			],
 			"collider" : 
 			{
 				"shape" : "sphere",
@@ -177,7 +218,10 @@
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "sphere",
-			"material" : "pbr white",
+			"materials" : 
+			[
+				"pbr white"
+			],
 			"collider" : 
 			{
 				"shape" : "sphere",
@@ -203,7 +247,10 @@
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "sphere",
-			"material" : "pbr white",
+			"materials" : 
+			[
+				"pbr white"
+			],
 			"collider" : 
 			{
 				"shape" : "sphere",
@@ -229,7 +276,10 @@
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "sphere",
-			"material" : "pbr white",
+			"materials" : 
+			[
+				"pbr white"
+			],
 			"collider" : 
 			{
 				"shape" : "sphere",
@@ -255,7 +305,10 @@
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "sphere",
-			"material" : "pbr white",
+			"materials" : 
+			[
+				"pbr white"
+			],
 			"collider" : 
 			{
 				"shape" : "sphere",
@@ -281,7 +334,10 @@
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "sphere",
-			"material" : "pbr white",
+			"materials" : 
+			[
+				"pbr white"
+			],
 			"collider" : 
 			{
 				"shape" : "sphere",
@@ -307,7 +363,10 @@
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "sphere",
-			"material" : "pbr white",
+			"materials" : 
+			[
+				"pbr white"
+			],
 			"collider" : 
 			{
 				"shape" : "sphere",
@@ -333,7 +392,10 @@
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "sphere",
-			"material" : "pbr white",
+			"materials" : 
+			[
+				"pbr white"
+			],
 			"collider" : 
 			{
 				"shape" : "sphere",
@@ -359,7 +421,10 @@
 				"scale" : "1.000, 1.000, 1.000"
 			},
 			"mesh" : "sphere",
-			"material" : "pbr white",
+			"materials" : 
+			[
+				"pbr white"
+			],
 			"collider" : 
 			{
 				"shape" : "sphere",

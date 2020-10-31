@@ -1,7 +1,31 @@
 {
-	"version" : 2,
+	"version" : 3,
 	"name" : "Scene Gerstner",
 	"spawn player" : false,
+	"skybox data" : 
+	{
+		"top colour" : "0.54, 0.75, 0.95, 0.00",
+		"mid colour" : "0.41, 0.56, 0.66, 0.00",
+		"btm colour" : "0.41, 0.56, 0.66, 0.00"
+	},
+	"camera" : 
+	{
+		"type" : "debug",
+		"near plane" : 0.500000,
+		"far plane" : 10000.000000,
+		"fov" : 0.785398,
+		"aperture" : 1.000000,
+		"shutter speed" : 0.125000,
+		"light sensitivity" : 800.000000,
+		"exposure" : 1.200000,
+		"move speed" : 18.000000,
+		"transform" : 
+		{
+			"position" : "51.588, 7.863, 59.260",
+			"pitch" : -0.044222,
+			"yaw" : -2.172696
+		}
+	},
 	"objects" : 
 	[
 		{
@@ -11,7 +35,10 @@
 			"transform" : 
 			{
 			},
-			"material" : "skybox 01",
+			"materials" : 
+			[
+				"skybox 01"
+			],
 			"skybox info" : 
 			{
 			}
@@ -32,11 +59,11 @@
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "1.601, -1.514, 3.133"
+				"rot" : "-0.002, 1.296, 1.308"
 			},
 			"directional light info" : 
 			{
-				"rotation" : "0.480, 0.520, 0.508, -0.491",
+				"rotation" : "-0.368, 0.479, 0.485, 0.632",
 				"pos" : "0.000, 15.000, 0.000",
 				"color" : "1.00, 1.00, 1.00",
 				"enabled" : true,
@@ -51,62 +78,102 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "0.000, 3.400, 0.000"
 			},
-			"material" : "gerstner",
+			"materials" : 
+			[
+				"gerstner"
+			],
 			"gerstner wave" : 
 			{
 				"waves" : 
 				[
 					{
 						"enabled" : true,
-						"amplitude" : 0.310000,
-						"waveDir" : 0.500000,
-						"waveLen" : 6.900000
+						"amplitude" : 1.400000,
+						"waveDir" : 0.384000,
+						"waveLen" : 95.839996
 					},
 					{
 						"enabled" : true,
-						"amplitude" : 0.810000,
-						"waveDir" : -0.088000,
-						"waveLen" : 23.200001
+						"amplitude" : 0.300000,
+						"waveDir" : 2.832000,
+						"waveLen" : 19.190001
 					},
 					{
 						"enabled" : true,
-						"amplitude" : 0.190000,
-						"waveDir" : 1.116000,
-						"waveLen" : 3.060000
+						"amplitude" : 0.180000,
+						"waveDir" : 0.000000,
+						"waveLen" : 20.350000
 					},
 					{
 						"enabled" : true,
-						"amplitude" : 0.140000,
-						"waveDir" : -0.336000,
-						"waveLen" : 7.000000
+						"amplitude" : 0.120000,
+						"waveDir" : 1.700000,
+						"waveLen" : 8.690000
 					},
 					{
 						"enabled" : true,
-						"amplitude" : 0.230000,
-						"waveDir" : 1.064000,
-						"waveLen" : 7.600000
+						"amplitude" : 0.090000,
+						"waveDir" : 3.120000,
+						"waveLen" : 6.730000
 					},
 					{
 						"enabled" : true,
-						"amplitude" : 0.010000,
-						"waveDir" : 0.500000,
-						"waveLen" : 0.810000
+						"amplitude" : 0.070000,
+						"waveDir" : 0.856000,
+						"waveLen" : 15.360000
 					},
 					{
 						"enabled" : true,
-						"amplitude" : 0.740000,
-						"waveDir" : 1.152000,
-						"waveLen" : 18.030001
+						"amplitude" : 0.055000,
+						"waveDir" : -1.936000,
+						"waveLen" : 2.150000
 					},
 					{
 						"enabled" : true,
-						"amplitude" : 0.190000,
-						"waveDir" : -0.664000,
-						"waveLen" : 8.130000
+						"amplitude" : 0.050000,
+						"waveDir" : 0.968000,
+						"waveLen" : 4.040000
+					},
+					{
+						"enabled" : true,
+						"amplitude" : -0.050000,
+						"waveDir" : 0.309000,
+						"waveLen" : 47.830002
+					},
+					{
+						"enabled" : true,
+						"amplitude" : 0.040000,
+						"waveDir" : -1.332000,
+						"waveLen" : 4.720000
 					}
-				]
+				],
+				"max chunk vert count per axis" : 96,
+				"chunk size" : 100.000000,
+				"chunk load radius" : 674.239990,
+				"update speed" : 19.700001,
+				"pin center" : true,
+				"pinned center position" : "4.08, 8.98, 2.91",
+				"blend dist" : 18.229000,
+				"wave sampling lods" : 
+				[
+					"35721.0,0.000000"
+				],
+				"wave tessellation lods" : 
+				[
+					"37636.0,8",
+					"14438.9,28",
+					"4116.8,52",
+					"0.0,80"
+				],
+				"colour top" : "1.00, 1.00, 1.00, 0.00",
+				"colour mid" : "1.00, 1.00, 1.00, 0.00",
+				"colour btm" : "0.01, 0.06, 0.11, 0.00",
+				"fresnel factor" : 1.000000,
+				"fresnel power" : 6.380000,
+				"sky reflection factor" : 0.177000,
+				"fog falloff" : 1.060000,
+				"fog density" : 1.350000
 			}
 		},
 		{
