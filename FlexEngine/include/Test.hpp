@@ -1337,7 +1337,6 @@ namespace flex
 		static void Run()
 		{
 			TestFunc funcs[] = {
-				/*
 				// JSON tests
 				EmptyFileIsParsed, MinimalFileIsParsed, OneFieldFileIsValid, MissingQuoteFailsToParse, ObjectParsedCorrectly,
 				FieldArrayParsedCorrectly, MissingSquareBracketFailsToParse, MissingCurlyBracketFailsToParse, LineCommentIgnored, MultipleFieldsParsedCorrectly,
@@ -1345,18 +1344,19 @@ namespace flex
 				// Math tests
 				RayPlaneIntersectionOriginValid, RayPlaneIntersectionXYValid, RayPlaneIntersectionXY2Valid, RayPlaneIntersectionXY3Valid, MinComponentValid, MaxComponentValid,
 				QuaternionsAreNearlyEqual, QuaternionsAreNotNearlyEqual,
-				// Misc
-				CountSetBitsValid, PoolTests, PairTests
-				*/
+				// Virtual Machine tests
+				// TODO: Fix up
 				//ParseTestBasic1, ParseTestBasic2, ParseTestEmptyFor, ParseTestEmptyWhile, ParseTestEmptyDoWhile,
 				//LexAndParseTests,
 				//VMTestsBasic0, VMTestsBasic1, VMTestsLoop0, VMTestsFunc0,
 				//VMTestsBytecodeGenFromAST0, VMTestsBytecodeGenFromAST1, VMTestsBytecodeGenFromAST2,
-				VMTestsBytecodeGenFromAST3,
-				// VMTestsBytecodeGenFromAST4,
-				// VMTestsNotAllPathsReturnValue0, VMTestsNotAllPathsReturnValue1, VMTestsMismatchedReturnTypes0, VMTestsMismatchedReturnTypes1,
-				// VMTestsUnreachableVar0, VMTestsUnreachableVar1,
-				// VMTestsUinitializedVar0, VMTestsUinitializedVar1,
+				//VMTestsBytecodeGenFromAST3,
+				//VMTestsBytecodeGenFromAST4,
+				//VMTestsNotAllPathsReturnValue0, VMTestsNotAllPathsReturnValue1, VMTestsMismatchedReturnTypes0, VMTestsMismatchedReturnTypes1,
+				//VMTestsUnreachableVar0, VMTestsUnreachableVar1,
+				//VMTestsUinitializedVar0, VMTestsUinitializedVar1,
+				// Misc tests
+				CountSetBitsValid, PoolTests, PairTests,
 			};
 			Print("Running %u tests...\n", (u32)ARRAY_LENGTH(funcs));
 			u32 failedTestCount = 0;
