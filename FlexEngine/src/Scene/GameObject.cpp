@@ -300,7 +300,7 @@ namespace flex
 	{
 		m_bNearbyInteractable = false;
 
-		if (m_ObjectInteractingWith)
+		if (m_ObjectInteractingWith != nullptr)
 		{
 			// TODO: Write real fancy-lookin outline shader instead of drawing a lil cross
 			btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
@@ -879,12 +879,11 @@ namespace flex
 	void GameObject::SetInteractingWith(GameObject* gameObject)
 	{
 		m_ObjectInteractingWith = gameObject;
-		m_bBeingInteractedWith = (gameObject != nullptr);
 	}
 
 	bool GameObject::IsBeingInteractedWith() const
 	{
-		return m_bBeingInteractedWith;
+		return m_ObjectInteractingWith != nullptr;
 	}
 
 	GameObject* GameObject::GetObjectInteractingWith()
@@ -2069,7 +2068,7 @@ namespace flex
 		// True when our rotation is changed by another object (rising block)
 		bool bRotatedByOtherObject = false;
 		real currentAbsAvgRotationSpeed = 0.0f;
-		if (m_ObjectInteractingWith)
+		if (m_ObjectInteractingWith != nullptr)
 		{
 			i32 playerIndex = static_cast<Player*>(m_ObjectInteractingWith)->GetIndex();
 

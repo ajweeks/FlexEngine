@@ -198,8 +198,6 @@ namespace flex
 
 		bool m_bLoadedFromPrefab = false;
 
-		bool m_bBeingInteractedWith = false;
-
 		bool m_bCastsShadow = true;
 
 		// Editor only

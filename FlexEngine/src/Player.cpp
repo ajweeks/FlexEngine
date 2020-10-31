@@ -308,7 +308,6 @@ namespace flex
 		if (terminal != nullptr)
 		{
 			m_ObjectInteractingWith = gameObject;
-			m_bBeingInteractedWith = true;
 
 			TerminalCamera* terminalCam = dynamic_cast<TerminalCamera*>(g_CameraManager->CurrentCamera());
 			if (terminalCam == nullptr)
