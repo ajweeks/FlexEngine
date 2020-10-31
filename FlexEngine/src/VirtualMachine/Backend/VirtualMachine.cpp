@@ -399,7 +399,10 @@ namespace flex
 						OpCode opCode = OpCodeFromBinaryOperatorType(binaryValue->opType);
 						if (opCode == OpCode::CMP)
 						{
-							HandleComparison(regVal, ir, binaryValue);
+							i32 ifTrueBlockIndex = (i32)state->instructionBlocks.size() + 0;
+							i32 ifFalseBlockIndex = (i32)state->instructionBlocks.size() + 1;
+							i32 mergeBlockIndex = (i32)state->instructionBlocks.size() + 2;
+							HandleComparison(ir, binaryValue, ifTrueBlockIndex, ifFalseBlockIndex, true);
 							currentInstBlock.PushBack(Instruction(opCode, GetValueWrapperFromIRValue(ir->state, binaryValue->left), GetValueWrapperFromIRValue(ir->state, binaryValue->right)), binaryValue->origin);
 							currentInstBlock.PushBack(Instruction(OpCode::MOV, regVal), binaryValue->origin);
 						}
@@ -419,12 +422,11 @@ namespace flex
 
 						ValueWrapper mergeBlockIndexValueWrapper(ValueWrapper::Type::CONSTANT, Value(mergeBlockIndex));
 						InstructionBlock& ifTrueBlock = state->PushInstructionBlock();
-						IR::Value::Type ternaryType = ternaryValue->ifTrue->type; // TODO: Evaluate type
-						ifTrueBlock.PushBack(Instruction(OpCode::MOV, regVal, ternaryType == IR::Value::Type::FLOAT ? g_OneFloatValueWrapper : g_OneIntValueWrapper), ternaryValue->origin);
+						ifTrueBlock.PushBack(Instruction(OpCode::MOV, regVal, GetValueWrapperFromIRValue(ir->state, ternaryValue->ifTrue)), ternaryValue->origin);
 						ifTrueBlock.PushBack(Instruction(OpCode::JMP, mergeBlockIndexValueWrapper), ternaryValue->origin);
 
 						InstructionBlock& ifFalseBlock = state->PushInstructionBlock();
-						ifFalseBlock.PushBack(Instruction(OpCode::MOV, regVal, ternaryType == IR::Value::Type::FLOAT ? g_ZeroFloatValueWrapper : g_ZeroIntValueWrapper), ternaryValue->origin);
+						ifFalseBlock.PushBack(Instruction(OpCode::MOV, regVal, GetValueWrapperFromIRValue(ir->state, ternaryValue->ifFalse)), ternaryValue->origin);
 
 						state->PushInstructionBlock();
 					} break;
