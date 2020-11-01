@@ -818,10 +818,7 @@ namespace flex
 			m_DepthSampler.replace();
 			m_NearestClampEdgeSampler.replace();
 
-			delete m_BlankTextureArr;
 			m_BlankTextureArr = nullptr;
-
-			delete m_BlankTexture;
 			m_BlankTexture = nullptr;
 
 			for (VulkanTexture* loadedTexture : m_LoadedTextures)
