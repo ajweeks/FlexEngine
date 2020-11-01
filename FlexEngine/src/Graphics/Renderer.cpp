@@ -448,8 +448,13 @@ namespace flex
 		EnqueueSprite(drawInfo);
 	}
 
-	void Renderer::EnqueueSprite(const SpriteQuadDrawInfo& drawInfo)
+	void Renderer::EnqueueSprite(SpriteQuadDrawInfo drawInfo)
 	{
+		if (drawInfo.textureID == InvalidTextureID)
+		{
+			drawInfo.textureID = blankTextureID;
+		}
+
 		if (drawInfo.bScreenSpace)
 		{
 			if (drawInfo.materialID != InvalidMaterialID && GetShader(GetMaterial(drawInfo.materialID).shaderID).bTextureArr)

@@ -1117,7 +1117,6 @@ namespace flex
 					info.anchor = AnchorPoint::CENTER;
 					info.pos = glm::vec3(val.x * 0.5f * bH, val.y * 0.5f * bV, 0.0f);
 					info.scale = glm::vec3(0.4f);
-					info.textureID = g_Renderer->alphaBGTextureID;
 					g_Renderer->EnqueueSprite(info);
 				}
 

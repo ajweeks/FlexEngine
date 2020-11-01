@@ -217,7 +217,7 @@ namespace flex
 
 		void EnqueueUntexturedQuad(const glm::vec2& pos, AnchorPoint anchor, const glm::vec2& size, const glm::vec4& color);
 		void EnqueueUntexturedQuadRaw(const glm::vec2& pos, const glm::vec2& size, const glm::vec4& color);
-		void EnqueueSprite(const SpriteQuadDrawInfo& drawInfo);
+		void EnqueueSprite(SpriteQuadDrawInfo drawInfo);
 
 		void ToggleRenderGrid();
 		bool IsRenderingGrid() const;
@@ -280,6 +280,8 @@ namespace flex
 		static const char* MeshPayloadCStr;
 
 		// TODO: Store in map (string name -> TextureID)
+		TextureID blankTextureID = InvalidTextureID; // 1x1 white pixel texture
+		TextureID blankTextureArrID = InvalidTextureID; // 1x1 white pixel with texture array with one layer
 		TextureID alphaBGTextureID = InvalidTextureID;
 		TextureID loadingTextureID = InvalidTextureID;
 		TextureID workTextureID = InvalidTextureID;

@@ -696,8 +696,7 @@ namespace flex
 
 	struct SpriteQuadDrawInfo
 	{
-		//RenderID spriteObjectRenderID = InvalidRenderID;
-		TextureID textureID = InvalidTextureID;
+		TextureID textureID = InvalidTextureID; // If left invalid, blankTextureID will be used
 		u32 textureLayer = 0;
 		u32 FBO = 0; // 0 for rendering to final RT
 		u32 RBO = 0; // 0 for rendering to final RT

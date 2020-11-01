@@ -325,10 +325,12 @@ namespace flex
 				u32 blankData = 0xFFFFFFFF;
 				m_BlankTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "blank", 1, 1, 1);
 				m_BlankTexture->CreateFromMemory(&blankData, sizeof(blankData), VK_FORMAT_R8G8B8A8_UNORM, 1);
+				blankTextureID = AddLoadedTexture(m_BlankTexture);
 
 				m_BlankTextureArr = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "blank_arr", 1, 1, 1);
 				m_BlankTextureArr->bIsArray = true;
 				m_BlankTextureArr->CreateFromMemory(&blankData, sizeof(blankData), VK_FORMAT_R8G8B8A8_UNORM, 1);
+				blankTextureArrID = AddLoadedTexture(m_BlankTextureArr);
 			}
 
 			alphaBGTextureID = InitializeTextureFromFile(TEXTURE_LOCATION "alpha-bg.png", 4, false, false, false);
