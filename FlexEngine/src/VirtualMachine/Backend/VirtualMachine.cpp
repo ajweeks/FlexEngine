@@ -401,7 +401,7 @@ namespace flex
 						{
 							i32 ifTrueBlockIndex = (i32)state->instructionBlocks.size() + 0;
 							i32 ifFalseBlockIndex = (i32)state->instructionBlocks.size() + 1;
-							i32 mergeBlockIndex = (i32)state->instructionBlocks.size() + 2;
+							//i32 mergeBlockIndex = (i32)state->instructionBlocks.size() + 2;
 							HandleComparison(ir, binaryValue, ifTrueBlockIndex, ifFalseBlockIndex, true);
 							currentInstBlock.PushBack(Instruction(opCode, GetValueWrapperFromIRValue(ir->state, binaryValue->left), GetValueWrapperFromIRValue(ir->state, binaryValue->right)), binaryValue->origin);
 							currentInstBlock.PushBack(Instruction(OpCode::MOV, regVal), binaryValue->origin);
