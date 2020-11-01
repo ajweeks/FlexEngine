@@ -19,6 +19,7 @@ IGNORE_WARNINGS_PUSH
 IGNORE_WARNINGS_POP
 
 #include "Audio/AudioManager.hpp"
+#include "BezierCurve2D.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "Cameras/DebugCamera.hpp"
 #include "Cameras/FirstPersonCamera.hpp"
@@ -1088,6 +1089,37 @@ namespace flex
 			if (ImGui::Begin(titleCharStr, &m_bMainWindowShowing, mainWindowFlags))
 			{
 				bIsMainWindowCollapsed = ImGui::IsWindowCollapsed();
+
+				{
+					static BezierCurve2D bez;
+					static real time = 0.0f;
+					static bool bReverse = false;
+					static bool bH = true;
+					static bool bV = true;
+					time += bReverse ? -g_DeltaTime : g_DeltaTime;
+					if (ImGui::Button("Play"))
+					{
+						if (bReverse) time = 0.0f;
+						else time = 1.0f;
+						bReverse = !bReverse;
+					}
+					time = Saturate(time);
+					ImGui::SameLine();
+					ImGui::Text("%.2f", time);
+					ImGui::SameLine();
+					ImGui::Checkbox("H", &bH);
+					ImGui::SameLine();
+					ImGui::Checkbox("V", &bV);
+					bez.DrawImGui();
+					glm::vec2 val = bez.GetPointOnCurve(time);
+					SpriteQuadDrawInfo info = {};
+					info.bScreenSpace = true;
+					info.anchor = AnchorPoint::CENTER;
+					info.pos = glm::vec3(val.x * 0.5f * bH, val.y * 0.5f * bV, 0.0f);
+					info.scale = glm::vec3(0.4f);
+					info.textureID = g_Renderer->alphaBGTextureID;
+					g_Renderer->EnqueueSprite(info);
+				}
 
 				if (ImGui::TreeNode("Simulation"))
 				{

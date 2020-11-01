@@ -331,11 +331,11 @@ namespace flex
 				m_BlankTextureArr->CreateFromMemory(&blankData, sizeof(blankData), VK_FORMAT_R8G8B8A8_UNORM, 1);
 			}
 
-			m_AlphaBGTextureID = InitializeTextureFromFile(TEXTURE_LOCATION "alpha-bg.png", 4, false, false, false);
-			m_LoadingTextureID = InitializeTextureFromFile(TEXTURE_LOCATION "loading_1.png", 4, false, false, false);
-			m_WorkTextureID = InitializeTextureFromFile(TEXTURE_LOCATION "work_d.jpg", 4, false, true, false);
-			m_PointLightIconID = InitializeTextureFromFile(TEXTURE_LOCATION "icons/point-light-icon-256.png", 4, false, true, false);
-			m_DirectionalLightIconID = InitializeTextureFromFile(TEXTURE_LOCATION "icons/directional-light-icon-256.png", 4, false, true, false);
+			alphaBGTextureID = InitializeTextureFromFile(TEXTURE_LOCATION "alpha-bg.png", 4, false, false, false);
+			loadingTextureID = InitializeTextureFromFile(TEXTURE_LOCATION "loading_1.png", 4, false, false, false);
+			workTextureID = InitializeTextureFromFile(TEXTURE_LOCATION "work_d.jpg", 4, false, true, false);
+			pointLightIconID = InitializeTextureFromFile(TEXTURE_LOCATION "icons/point-light-icon-256.png", 4, false, true, false);
+			directionalLightIconID = InitializeTextureFromFile(TEXTURE_LOCATION "icons/directional-light-icon-256.png", 4, false, true, false);
 
 			m_SpritePerspPushConstBlock = new Material::PushConstantBlock(128);
 			m_SpriteOrthoPushConstBlock = new Material::PushConstantBlock(128);
@@ -1662,7 +1662,7 @@ namespace flex
 				descSetCreateInfo.shaderID = particleRenderingMaterial->material.shaderID;
 				descSetCreateInfo.uniformBufferList = &particleRenderingMaterial->uniformBufferList;
 
-				VulkanTexture* texture = GetLoadedTexture(m_AlphaBGTextureID);
+				VulkanTexture* texture = GetLoadedTexture(alphaBGTextureID);
 				descSetCreateInfo.imageDescriptors.Add(U_ALBEDO_SAMPLER, ImageDescriptorInfo{ texture->imageView, m_LinMipLinSampler });
 
 				FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
@@ -5158,7 +5158,7 @@ namespace flex
 				{
 					if (m_PointLights[i].enabled)
 					{
-						drawInfo.textureID = m_PointLightIconID;
+						drawInfo.textureID = pointLightIconID;
 						// TODO: Sort back to front? Or clear depth and then enable depth test
 						drawInfo.pos = m_PointLights[i].pos;
 						glm::mat4 rotMat = glm::lookAt(m_PointLights[i].pos, camPos, camUp);
@@ -5171,7 +5171,7 @@ namespace flex
 
 				if (m_DirectionalLight != nullptr && m_DirectionalLight->data.enabled)
 				{
-					drawInfo.textureID = m_DirectionalLightIconID;
+					drawInfo.textureID = directionalLightIconID;
 					drawInfo.pos = m_DirectionalLight->pos;
 					glm::mat4 rotMat = glm::lookAt(camPos, m_DirectionalLight->pos, camUp);
 					drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
@@ -9716,7 +9716,7 @@ namespace flex
 				real tiling = 3.0f;
 				ImVec2 uv0(0.0f, 0.0f);
 				ImVec2 uv1(tiling * textureAspectRatio, tiling);
-				VulkanTexture* alphaBGTexture = GetLoadedTexture(m_AlphaBGTextureID);
+				VulkanTexture* alphaBGTexture = GetLoadedTexture(alphaBGTextureID);
 				ImGui::Image((void*)&alphaBGTexture->image, ImVec2(texSize * textureAspectRatio, texSize), uv0, uv1);
 			}
 

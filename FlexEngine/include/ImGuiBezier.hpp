@@ -18,7 +18,7 @@
 namespace ImGui
 {
 	template<flex::i32 steps>
-	void bezier_table(ImVec2 P[4], ImVec2 results[steps + 1])
+	void bezier_table(glm::vec2 P[4], glm::vec2 results[steps + 1])
 	{
 		static flex::real C[(steps + 1) * 4], * K = 0;
 		if (!K)
@@ -35,7 +35,7 @@ namespace ImGui
 		}
 		for (flex::u32 step = 0; step <= steps; ++step)
 		{
-			ImVec2 point = {
+			glm::vec2 point = {
 				K[step * 4 + 0] * P[0].x + K[step * 4 + 1] * P[1].x + K[step * 4 + 2] * P[2].x + K[step * 4 + 3] * P[3].x,
 				K[step * 4 + 0] * P[0].y + K[step * 4 + 1] * P[1].y + K[step * 4 + 2] * P[2].y + K[step * 4 + 3] * P[3].y
 			};
@@ -43,9 +43,9 @@ namespace ImGui
 		}
 	}
 
-	flex::real BezierValue(flex::real dt01, flex::real P[4]);
+	glm::vec2 BezierValue(flex::real dt01, flex::real* P);
 
-	flex::i32 Bezier(const char* label, flex::real P[5], bool bConstrainHandles);
+	flex::i32 Bezier(const char* label, flex::real* P, bool bConstrainHandles);
 
 	void ShowBezierDemo();
 }

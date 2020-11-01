@@ -7,16 +7,16 @@
 using real = flex::real;
 using i32 = flex::i32;
 
-real ImGui::BezierValue(real dt01, real P[4])
+glm::vec2 ImGui::BezierValue(real dt01, real* P)
 {
 	enum { STEPS = 256 };
-	ImVec2 Q[4] = { { 0, 0 }, { P[0], P[1] }, { P[2], P[3] }, { 1, 1 } };
-	ImVec2 results[STEPS + 1];
+	glm::vec2 Q[4] = { { 0, 0 }, { P[0], P[1] }, { P[2], P[3] }, { 1, 1 } };
+	glm::vec2 results[STEPS + 1];
 	bezier_table<STEPS>(Q, results);
-	return results[(i32)((dt01 < 0 ? 0 : dt01 > 1 ? 1 : dt01) * STEPS)].y;
+	return results[(i32)((dt01 < 0 ? 0 : dt01 > 1 ? 1 : dt01) * STEPS)];
 }
 
-i32 ImGui::Bezier(const char* label, real P[5], bool bConstrainHandles)
+i32 ImGui::Bezier(const char* label, real* P, bool bConstrainHandles)
 {
 	// visuals
 	enum { SMOOTHNESS = 64 }; // curve smoothness: the higher number of segments, the smoother curve
@@ -28,7 +28,7 @@ i32 ImGui::Bezier(const char* label, real P[5], bool bConstrainHandles)
 
 	// curve presets
 	static struct { const char* name; real points[4]; } presets[] = {
-		{ "Linear", 0.000f, 0.000f, 1.000f, 1.000f },
+		{ "Linear", 0.250f, 0.250f, 0.750f, 0.750f },
 
 		{ "In Sine", 0.470f, 0.000f, 0.745f, 0.715f },
 		{ "In Quad", 0.550f, 0.085f, 0.680f, 0.530f },
@@ -67,61 +67,6 @@ i32 ImGui::Bezier(const char* label, real P[5], bool bConstrainHandles)
 
 
 	// preset selector
-
-	bool bReload = false;
-	ImGui::PushID(label);
-	if (ImGui::ArrowButton("##lt", ImGuiDir_Left))
-	{
-		// ImGui::ArrowButton(ImGui::GetCurrentWindow()->GetID("##lt"), ImGuiDir_Left, ImVec2(0, 0), 0)
-		if (--P[4] >= 0)
-		{
-			bReload = true;
-		}
-		else
-		{
-			++P[4];
-		}
-	}
-	ImGui::SameLine();
-
-	if (ImGui::Button("Presets"))
-	{
-		ImGui::OpenPopup("!Presets");
-	}
-	if (ImGui::BeginPopup("!Presets"))
-	{
-		for (i32 i = 0; i < IM_ARRAYSIZE(presets); ++i)
-		{
-			if (i == 1 || i == 9 || i == 17) ImGui::Separator();
-			if (ImGui::MenuItem(presets[i].name, NULL, P[4] == i))
-			{
-				P[4] = (real)i;
-				bReload = true;
-			}
-		}
-		ImGui::EndPopup();
-	}
-	ImGui::SameLine();
-
-	if (ImGui::ArrowButton("##rt", ImGuiDir_Right))
-	{
-		// ImGui::ArrowButton(ImGui::GetCurrentWindow()->GetID("##rt"), ImGuiDir_Right, ImVec2(0, 0), 0)
-		if (++P[4] < IM_ARRAYSIZE(presets))
-		{
-			bReload = true;
-		}
-		else
-		{
-			--P[4];
-		}
-	}
-	ImGui::SameLine();
-	ImGui::PopID();
-
-	if (bReload)
-	{
-		memcpy(P, presets[(i32)P[4]].points, sizeof(real) * 4);
-	}
 
 	// bezier widget
 
@@ -171,9 +116,29 @@ i32 ImGui::Bezier(const char* label, real P[5], bool bConstrainHandles)
 			GetColorU32(ImGuiCol_TextDisabled));
 	}
 
+	bool bReload = false;
+	if (ImGui::BeginPopupContextItem(label))
+	{
+		for (i32 i = 0; i < IM_ARRAYSIZE(presets); ++i)
+		{
+			if (i == 1 || i == 9 || i == 17) ImGui::Separator();
+			if (ImGui::MenuItem(presets[i].name, NULL, P[4] == i))
+			{
+				P[4] = (real)i;
+				bReload = true;
+			}
+		}
+		ImGui::EndPopup();
+	}
+
+	if (bReload)
+	{
+		memcpy(P, presets[(i32)P[4]].points, sizeof(real) * 4);
+	}
+
 	// eval curve
-	ImVec2 Q[4] = { { 0, 0 }, { P[0], P[1] }, { P[2], P[3] }, { 1, 1 } };
-	ImVec2 results[SMOOTHNESS + 1];
+	glm::vec2 Q[4] = { { 0, 0 }, { P[0], P[1] }, { P[2], P[3] }, { 1, 1 } };
+	glm::vec2 results[SMOOTHNESS + 1];
 	bezier_table<SMOOTHNESS>(Q, results);
 
 	// control points: 2 lines and 2 circles
@@ -224,10 +189,26 @@ i32 ImGui::Bezier(const char* label, real P[5], bool bConstrainHandles)
 		}
 	}
 
+	// draw preview (cycles every 1s)
+	static clock_t epoch = clock();
+	ImVec4 white(GetStyle().Colors[ImGuiCol_Text]);
+	for (int i = 0; i < 3; ++i) {
+		double now = ((clock() - epoch) / (double)CLOCKS_PER_SEC);
+		real delta = ((int)(now * 1000) % 1000) / 1000.f; delta += i / 3.f; if (delta > 1) delta -= 1;
+		int idx = (int)(delta * SMOOTHNESS);
+		real evalx = results[idx].x; //
+		real evaly = results[idx].y; // ImGui::BezierValue( delta, P );
+		ImVec2 p0 = ImVec2(evalx, 1 - 0) * (bb.Max - bb.Min) + bb.Min;
+		ImVec2 p1 = ImVec2(0, 1 - evaly) * (bb.Max - bb.Min) + bb.Min;
+		ImVec2 p2 = ImVec2(evalx, 1 - evaly) * (bb.Max - bb.Min) + bb.Min;
+		DrawList->AddCircleFilled(p0, GRAB_RADIUS / 2, ImColor(white));
+		DrawList->AddCircleFilled(p1, GRAB_RADIUS / 2, ImColor(white));
+		DrawList->AddCircleFilled(p2, GRAB_RADIUS / 2, ImColor(white));
+	}
+
 	// draw lines and grabbers
 	real luma = IsItemActive() || IsItemHovered() ? 0.5f : 1.0f;
 	ImVec4 pink(1.00f, 0.00f, 0.75f, luma), cyan(0.00f, 0.75f, 1.00f, luma);
-	ImVec4 white(GetStyle().Colors[ImGuiCol_Text]);
 	ImVec2 p1 = ImVec2(P[0], 1 - P[1]) * (bb.Max - bb.Min) + bb.Min;
 	ImVec2 p2 = ImVec2(P[2], 1 - P[3]) * (bb.Max - bb.Min) + bb.Min;
 	DrawList->AddLine(ImVec2(bb.Min.x, bb.Max.y), p1, ImColor(white), LINE_WIDTH);

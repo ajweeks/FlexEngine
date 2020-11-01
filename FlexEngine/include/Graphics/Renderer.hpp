@@ -279,6 +279,14 @@ namespace flex
 		static const char* MaterialPayloadCStr;
 		static const char* MeshPayloadCStr;
 
+		// TODO: Store in map (string name -> TextureID)
+		TextureID alphaBGTextureID = InvalidTextureID;
+		TextureID loadingTextureID = InvalidTextureID;
+		TextureID workTextureID = InvalidTextureID;
+
+		TextureID pointLightIconID = InvalidTextureID;
+		TextureID directionalLightIconID = InvalidTextureID;
+
 	protected:
 		void LoadShaders();
 		virtual bool LoadShaderCode(ShaderID shaderID) = 0;
@@ -503,13 +511,6 @@ namespace flex
 		static const u32 NUM_GPU_TIMINGS = 64;
 		std::vector<std::array<real, NUM_GPU_TIMINGS>> m_TimestampHistograms;
 		u32 m_TimestampHistogramIndex = 0;
-
-		TextureID m_AlphaBGTextureID = InvalidTextureID;
-		TextureID m_LoadingTextureID = InvalidTextureID;
-		TextureID m_WorkTextureID = InvalidTextureID;
-
-		TextureID m_PointLightIconID = InvalidTextureID;
-		TextureID m_DirectionalLightIconID = InvalidTextureID;
 
 		SSAOGenData m_SSAOGenData;
 		SSAOBlurDataConstant m_SSAOBlurDataConstant;
