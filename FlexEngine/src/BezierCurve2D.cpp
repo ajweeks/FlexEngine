@@ -2,7 +2,6 @@
 
 #include "BezierCurve2D.hpp"
 
-#include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 
 namespace flex

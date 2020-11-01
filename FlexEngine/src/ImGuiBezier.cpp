@@ -16,15 +16,14 @@ glm::vec2 ImGui::BezierValue(real dt01, real* P)
 	return results[(i32)((dt01 < 0 ? 0 : dt01 > 1 ? 1 : dt01) * STEPS)];
 }
 
-i32 ImGui::Bezier(const char* label, real* P, bool bConstrainHandles)
+// areaWidth in pixels. 0 for adaptive size (will use max avail width)
+i32 ImGui::Bezier(const char* label, real* P, bool bConstrainHandles, i32 areaWidth /* = 128 */)
 {
-	// visuals
-	enum { SMOOTHNESS = 64 }; // curve smoothness: the higher number of segments, the smoother curve
-	enum { CURVE_WIDTH = 4 }; // main curved line width
-	enum { LINE_WIDTH = 1 }; // handlers: small lines width
-	enum { GRAB_RADIUS = 8 }; // handlers: circle radius
-	enum { GRAB_BORDER = 2 }; // handlers: circle border width
-	enum { AREA_WIDTH = 128 }; // area width in pixels. 0 for adaptive size (will use max avail width)
+	const i32 SMOOTHNESS = 64; // curve smoothness: the higher number of segments, the smoother curve
+	const i32 CURVE_WIDTH = 4; // main curved line width
+	const i32 LINE_WIDTH = 1; // handles: small lines width
+	const i32 GRAB_RADIUS = 8; // handles: circle radius
+	const i32 GRAB_BORDER = 2; // handle: circle border width
 
 	// curve presets
 	static struct { const char* name; real points[4]; } presets[] = {
@@ -85,12 +84,12 @@ i32 ImGui::Bezier(const char* label, real* P, bool bConstrainHandles)
 
 	// prepare canvas
 	const real avail = GetContentRegionAvailWidth();
-	const real dim = AREA_WIDTH > 0 ? AREA_WIDTH : avail;
+	const real dim = areaWidth > 0 ? areaWidth : avail;
 	ImVec2 Canvas(dim, dim);
 
 	ImRect bb(Window->DC.CursorPos, Window->DC.CursorPos + Canvas);
 	ItemSize(bb);
-	if (!ItemAdd(bb, NULL))
+	if (!ItemAdd(bb, 0))
 	{
 		return changed;
 	}
