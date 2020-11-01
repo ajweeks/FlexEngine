@@ -164,7 +164,7 @@ project "Flex"
 		}
 		buildoptions_cpp {
 			-- Ignored warnings:
-			"-Wno-reorder", "-Wno-unused-parameter"
+			"-Wno-reorder", "-Wno-unused-parameter", "-Wno-switch"
 		}
 		buildoptions_c {
 			-- no-reorder isn't valid in c
