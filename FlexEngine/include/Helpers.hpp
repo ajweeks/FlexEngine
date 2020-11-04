@@ -27,6 +27,12 @@ namespace flex
 
 	bool OpenJSONFileDialog(const std::string& windowTitle, const std::string& absoluteDirectory, std::string& outSelectedAbsFilePath);
 
+	/*
+	* Reads in a .wav file and fills in given values according to file contents
+	* Returns true if reading and parsing succeeded
+	*/
+	bool ParseWAVFile(const std::string& filePath, i32* format, u8** data, i32* size, i32* freq);
+
 	// Removes all content before final '/' or '\'
 	FLEX_NO_DISCARD std::string StripLeadingDirectories(const std::string& filePath);
 
@@ -38,14 +44,7 @@ namespace flex
 	FLEX_NO_DISCARD std::string StripFileType(const std::string& filePath);
 
 	// Removes all chars before first '.' occurrence
-	// TODO: EZ: Test
 	FLEX_NO_DISCARD std::string ExtractFileType(const std::string& filePath);
-
-	/*
-	* Reads in a .wav file and fills in given values according to file contents
-	* Returns true if reading and parsing succeeded
-	*/
-	bool ParseWAVFile(const std::string& filePath, i32* format, u8** data, i32* size, i32* freq);
 
 	// Strips leading and trailing whitespace
 	FLEX_NO_DISCARD std::string Trim(const std::string& str);
@@ -177,7 +176,7 @@ namespace flex
 	GameObjectType StringToGameObjectType(const char* gameObjectTypeStr);
 
 	FLEX_NO_DISCARD std::string ReplaceBackSlashesWithForward(std::string str);
-	FLEX_NO_DISCARD std::string RelativePathToAbsolute(const std::string& relativePath);
+	FLEX_NO_DISCARD std::string RelativePathToAbsolute(std::string relativePath);
 
 	FLEX_NO_DISCARD std::string Replace(const std::string& str, const std::string& pattern, const std::string& replacement);
 	FLEX_NO_DISCARD std::string Replace(const std::string& str, char pattern, char replacement);
@@ -228,6 +227,8 @@ namespace flex
 	bool Contains(const char* arr[], u32 arrLen, const char* val);
 
 	bool Contains(const std::string& str, const std::string& pattern);
+
+	bool Contains(const std::string& str, char pattern);
 
 	template<class T>
 	const T& PickRandomFrom(const std::vector<T>& vec)

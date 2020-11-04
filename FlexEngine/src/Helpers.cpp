@@ -325,46 +325,6 @@ namespace flex
 		return Platform::OpenFileDialog(windowTitle, absoluteDirectory, outSelectedAbsFilePath, filter);
 	}
 
-	std::string StripLeadingDirectories(const std::string& filePath)
-	{
-		size_t finalSlash = filePath.rfind('/');
-		if (finalSlash != std::string::npos)
-		{
-			return filePath.substr(finalSlash + 1);
-		}
-		return filePath;
-	}
-
-	std::string ExtractDirectoryString(const std::string& filePath)
-	{
-		// TODO: When no trailing slash exists check if final token is directory
-		size_t finalSlash = filePath.rfind('/');
-		if (finalSlash != std::string::npos && finalSlash != filePath.length() - 1)
-		{
-			return filePath.substr(0, finalSlash + 1);
-		}
-		return filePath;
-	}
-
-	std::string StripFileType(const std::string& filePath)
-	{
-		if (filePath.find('.') != std::string::npos)
-		{
-			return Split(filePath, '.')[0];
-		}
-		return filePath;
-	}
-
-	std::string ExtractFileType(const std::string& filePath)
-	{
-		const size_t dotPos = filePath.find_last_of('.');
-		if (dotPos != std::string::npos)
-		{
-			return filePath.substr(dotPos + 1);
-		}
-		return "";
-	}
-
 	bool ParseWAVFile(const std::string& filePath, i32* format, u8** data, i32* size, i32* freq)
 	{
 		std::vector<char> dataArray;
@@ -491,6 +451,63 @@ namespace flex
 		return true;
 	}
 
+	std::string StripLeadingDirectories(const std::string& filePath)
+	{
+		size_t finalSlash = filePath.rfind('/');
+		if (finalSlash == std::string::npos)
+		{
+			finalSlash = filePath.rfind('\\');
+		}
+
+		if (finalSlash != std::string::npos)
+		{
+			return filePath.substr(finalSlash + 1);
+		}
+		return filePath;
+	}
+
+	std::string ExtractDirectoryString(const std::string& filePath)
+	{
+		// TODO: When no trailing slash exists check if final token is directory
+		size_t finalSlash = filePath.rfind('/');
+		if (finalSlash == std::string::npos)
+		{
+			finalSlash = filePath.rfind('\\');
+		}
+
+		if (finalSlash != std::string::npos)
+		{
+			if (finalSlash == filePath.length() - 1)
+			{
+				return filePath;
+			}
+			else
+			{
+				return filePath.substr(0, finalSlash + 1);
+			}
+		}
+		return "";
+	}
+
+	std::string StripFileType(const std::string& filePath)
+	{
+		if (filePath.find('.') != std::string::npos)
+		{
+			return Split(filePath, '.')[0];
+		}
+		return filePath;
+	}
+
+	std::string ExtractFileType(const std::string& filePath)
+	{
+		const size_t dotPos = filePath.find_last_of('.');
+		if (dotPos != std::string::npos)
+		{
+			return filePath.substr(dotPos + 1);
+		}
+		return "";
+	}
+
 	std::string Trim(const std::string& str)
 	{
 		if (str.empty())
@@ -553,7 +570,7 @@ namespace flex
 		size_t i = 0;
 
 		size_t strLen = str.size();
-		while (i != strLen)
+		while (i < strLen)
 		{
 			while (i != strLen && str[i] == delim)
 			{
@@ -583,7 +600,7 @@ namespace flex
 		size_t j = 0;
 
 		size_t strLen = str.size();
-		while (i != strLen)
+		while (i < strLen)
 		{
 			while (i != strLen && str[i] != delim)
 			{
@@ -1280,8 +1297,15 @@ namespace flex
 		return str;
 	}
 
-	std::string RelativePathToAbsolute(const std::string& relativePath)
+	std::string RelativePathToAbsolute(std::string relativePath)
 	{
+		// TODO: Compile out of release?
+		if (Contains(relativePath, '\\'))
+		{
+			PrintWarn("RelativePathToAbsolute was given path containing backslashes");
+			relativePath = ReplaceBackSlashesWithForward(relativePath);
+		}
+
 		if (relativePath.find(':') != std::string::npos)
 		{
 			// File must already be absolute if it contains a drive character
@@ -1475,6 +1499,18 @@ namespace flex
 	bool Contains(const std::string& str, const std::string& pattern)
 	{
 		return str.find(pattern) != std::string::npos;
+	}
+
+	bool Contains(const std::string& str, char pattern)
+	{
+		for (char c : str)
+		{
+			if (c == pattern)
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 
 	i32 RoundUp(i32 val, i32 alignment)

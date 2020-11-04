@@ -1333,6 +1333,262 @@ namespace flex
 		}
 		UNIT_TEST_END;
 
+		//
+		// Helper tests
+		//
+
+		UNIT_TEST(HelpersDirectories0)
+		{
+			const std::string str = "";
+			std::string resultStrip = StripLeadingDirectories(str);
+			std::string resultExtract = ExtractDirectoryString(str);
+			EXPECT(resultStrip.c_str(), "");
+			EXPECT(resultExtract.c_str(), "");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersDirectories1)
+		{
+			const std::string str = "C:\\test\\directory\\path_to_file\\sorcerers_stone.txt";
+			std::string resultStrip = StripLeadingDirectories(str);
+			std::string resultExtract = ExtractDirectoryString(str);
+			EXPECT(resultStrip.c_str(), "sorcerers_stone.txt");
+			EXPECT(resultExtract.c_str(), "C:\\test\\directory\\path_to_file\\");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersDirectories2)
+		{
+			const std::string str = "RelativePaths/Are/Fun/Too/";
+			std::string resultStrip = StripLeadingDirectories(str);
+			std::string resultExtract = ExtractDirectoryString(str);
+			EXPECT(resultStrip.c_str(), "");
+			EXPECT(resultExtract.c_str(), "RelativePaths/Are/Fun/Too/");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersDirectories3)
+		{
+			const std::string str = "nebula.exif";
+			std::string resultStrip = StripLeadingDirectories(str);
+			std::string resultExtract = ExtractDirectoryString(str);
+			EXPECT(resultStrip.c_str(), "nebula.exif");
+			EXPECT(resultExtract.c_str(), "");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersFileType0)
+		{
+			const std::string str = "";
+			std::string resultStrip = StripFileType(str);
+			std::string resultExtract = ExtractFileType(str);
+			EXPECT(resultStrip.c_str(), "");
+			EXPECT(resultExtract.c_str(), "");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersFileType1)
+		{
+			const std::string str = "uber_dense.glb";
+			std::string resultStrip = StripFileType(str);
+			std::string resultExtract = ExtractFileType(str);
+			EXPECT(resultStrip.c_str(), "uber_dense");
+			EXPECT(resultExtract.c_str(), "glb");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersFileType2)
+		{
+			const std::string str = "E:\\Users\\path_to_file\\ducks.db";
+			std::string resultStrip = StripFileType(str);
+			std::string resultExtract = ExtractFileType(str);
+			EXPECT(resultStrip.c_str(), "E:\\Users\\path_to_file\\ducks");
+			EXPECT(resultExtract.c_str(), "db");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersFileType3)
+		{
+			const std::string str = "asset.flex";
+			std::string resultStrip = StripFileType(str);
+			std::string resultExtract = ExtractFileType(str);
+			EXPECT(resultStrip.c_str(), "asset");
+			EXPECT(resultExtract.c_str(), "flex");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersTrim0)
+		{
+			const std::string str = "";
+			std::string resultTrim = Trim(str);
+			std::string resultLeading = TrimLeadingWhitespace(str);
+			std::string resultTrailing = TrimTrailingWhitespace(str);
+			EXPECT(resultTrim.c_str(), "");
+			EXPECT(resultLeading.c_str(), "");
+			EXPECT(resultTrailing.c_str(), "");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersTrim1)
+		{
+			const std::string str = "C:\\Program Files\\Ubuntu\\chmod.sh  ";
+			std::string resultTrim = Trim(str);
+			std::string resultLeading = TrimLeadingWhitespace(str);
+			std::string resultTrailing = TrimTrailingWhitespace(str);
+			EXPECT(resultTrim.c_str(), "C:\\Program Files\\Ubuntu\\chmod.sh");
+			EXPECT(resultLeading.c_str(), "C:\\Program Files\\Ubuntu\\chmod.sh  ");
+			EXPECT(resultTrailing.c_str(), "C:\\Program Files\\Ubuntu\\chmod.sh");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersTrim2)
+		{
+			const std::string str = " _______  ";
+			std::string resultTrim = Trim(str);
+			std::string resultLeading = TrimLeadingWhitespace(str);
+			std::string resultTrailing = TrimTrailingWhitespace(str);
+			EXPECT(resultTrim.c_str(), "_______");
+			EXPECT(resultLeading.c_str(), "_______  ");
+			EXPECT(resultTrailing.c_str(), " _______");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersTrim3)
+		{
+			const std::string str = " Edwards, Roger";
+			std::string resultTrim = Trim(str);
+			std::string resultLeading = TrimLeadingWhitespace(str);
+			std::string resultTrailing = TrimTrailingWhitespace(str);
+			EXPECT(resultTrim.c_str(), "Edwards, Roger");
+			EXPECT(resultLeading.c_str(), "Edwards, Roger");
+			EXPECT(resultTrailing.c_str(), " Edwards, Roger");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersSplit0)
+		{
+			const std::string str = "";
+			std::vector<std::string> result = Split(str, ',');
+			EXPECT((u32)result.size(), 0u);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersSplit1)
+		{
+			const std::string str = "Item1, Item2,Item3,Item4";
+			std::vector<std::string> result = Split(str, ',');
+			EXPECT((u32)result.size(), 4u);
+			EXPECT(result[0].c_str(), "Item1");
+			EXPECT(result[1].c_str(), " Item2");
+			EXPECT(result[2].c_str(), "Item3");
+			EXPECT(result[3].c_str(), "Item4");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersSplit2)
+		{
+			const std::string str = "teriyaki-potato-kimchi-kayak-Cambodia";
+			std::vector<std::string> result = Split(str, '-');
+			EXPECT((u32)result.size(), 5u);
+			EXPECT(result[0].c_str(), "teriyaki");
+			EXPECT(result[1].c_str(), "potato");
+			EXPECT(result[2].c_str(), "kimchi");
+			EXPECT(result[3].c_str(), "kayak");
+			EXPECT(result[4].c_str(), "Cambodia");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersSplit3)
+		{
+			const std::string str = "18.901 3007 290.1 19029.0 1001 456.43";
+			std::vector<std::string> result = Split(str, ' ');
+			EXPECT((u32)result.size(), 6u);
+			EXPECT(result[0].c_str(), "18.901");
+			EXPECT(result[1].c_str(), "3007");
+			EXPECT(result[2].c_str(), "290.1");
+			EXPECT(result[3].c_str(), "19029.0");
+			EXPECT(result[4].c_str(), "1001");
+			EXPECT(result[5].c_str(), "456.43");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersSplit4)
+		{
+			const std::string str = "line0\n\nline1\nline2";
+			std::vector<std::string> result = Split(str, '\n');
+			EXPECT((u32)result.size(), 3u);
+			EXPECT(result[0].c_str(), "line0");
+			EXPECT(result[1].c_str(), "line1");
+			EXPECT(result[2].c_str(), "line2");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersSplitNoStrip0)
+		{
+			const std::string str = "";
+			std::vector<std::string> result = SplitNoStrip(str, '\n');
+			EXPECT((u32)result.size(), 0u);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersSplitNoStrip1)
+		{
+			const std::string str = "\n\n\n";
+			std::vector<std::string> result = SplitNoStrip(str, '\n');
+			EXPECT((u32)result.size(), 3u);
+			EXPECT(result[0].c_str(), "");
+			EXPECT(result[1].c_str(), "");
+			EXPECT(result[2].c_str(), "");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersSplitNoStrip2)
+		{
+			const std::string str = "alpha\n\nbeta\ncharlie";
+			std::vector<std::string> result = SplitNoStrip(str, '\n');
+			EXPECT((u32)result.size(), 4u);
+			EXPECT(result[0].c_str(), "alpha");
+			EXPECT(result[1].c_str(), "");
+			EXPECT(result[2].c_str(), "beta");
+			EXPECT(result[3].c_str(), "charlie");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersNextNonAlphaNumeric0)
+		{
+			const std::string str = "";
+			i32 result = NextNonAlphaNumeric(str, 0);
+			EXPECT(result, -1);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersNextNonAlphaNumeric1)
+		{
+			const std::string str = "alpha99numeric but spaces aren't!";
+			i32 result = NextNonAlphaNumeric(str, 0);
+			EXPECT(result, 14);
+			result = NextNonAlphaNumeric(str, result + 1);
+			EXPECT(result, 18);
+			result = NextNonAlphaNumeric(str, result + 1);
+			EXPECT(result, 25);
+			result = NextNonAlphaNumeric(str, result + 1);
+			EXPECT(result, 30);
+			result = NextNonAlphaNumeric(str, result + 1);
+			EXPECT(result, 32);
+			result = NextNonAlphaNumeric(str, result + 1);
+			EXPECT(result, -1);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersNextNonAlphaNumeric2)
+		{
+			const std::string str = "/dracula/beats.wav";
+			i32 result = NextNonAlphaNumeric(str, 0);
+			EXPECT(result, 0);
+		}
+		UNIT_TEST_END;
+
+
 	public:
 		static void Run()
 		{
@@ -1355,6 +1611,13 @@ namespace flex
 				//VMTestsNotAllPathsReturnValue0, VMTestsNotAllPathsReturnValue1, VMTestsMismatchedReturnTypes0, VMTestsMismatchedReturnTypes1,
 				//VMTestsUnreachableVar0, VMTestsUnreachableVar1,
 				//VMTestsUinitializedVar0, VMTestsUinitializedVar1,
+				// Helper tests
+				HelpersDirectories0, HelpersDirectories1, HelpersDirectories2, HelpersDirectories3,
+				HelpersFileType0, HelpersFileType1, HelpersFileType2, HelpersFileType3,
+				HelpersTrim0, HelpersTrim1, HelpersTrim2, HelpersTrim3,
+				HelpersSplit0, HelpersSplit1, HelpersSplit2, HelpersSplit3, HelpersSplit4,
+				HelpersSplitNoStrip0, HelpersSplitNoStrip1, HelpersSplitNoStrip2,
+				HelpersNextNonAlphaNumeric0, HelpersNextNonAlphaNumeric1, HelpersNextNonAlphaNumeric2,
 				// Misc tests
 				CountSetBitsValid, PoolTests, PairTests,
 			};
