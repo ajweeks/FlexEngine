@@ -112,10 +112,10 @@ namespace flex
 
 		m_PreviousSceneIndex = m_CurrentSceneIndex;
 
-		g_CameraManager->Destroy();
-
 		if (m_CurrentSceneIndex != InvalidID)
 		{
+			g_CameraManager->Destroy();
+
 			m_Scenes[m_CurrentSceneIndex]->Destroy();
 		}
 

@@ -266,8 +266,6 @@ namespace flex
 
 		g_InputManager->Initialize();
 
-		g_CameraManager->Initialize();
-
 		g_InputManager->BindMouseButtonCallback(&m_MouseButtonCallback, 99);
 		g_InputManager->BindKeyEventCallback(&m_KeyEventCallback, 10);
 		g_InputManager->BindActionCallback(&m_ActionCallback, 10);
