@@ -5,7 +5,7 @@
 
 layout (location = 0) in vec3 ex_TexCoord;
 
-layout (location = 0) out vec4 fragmentColor;
+layout (location = 0) out vec4 fragmentColour;
 
 struct SkyboxData
 {
@@ -48,7 +48,7 @@ void main()
 	float w1 = bw;
 	float w2 = h > 0 ? 0.0 : 1.0;
 
-	fragmentColor = vec4(clamp(
+	fragmentColour = vec4(clamp(
 		mix(
 			mix(uboConstant.skyboxData.colourTop.xyz, uboConstant.skyboxData.colourMid.xyz, w0),
 			mix(uboConstant.skyboxData.colourMid.xyz, uboConstant.skyboxData.colourBtm.xyz, w1), w2),

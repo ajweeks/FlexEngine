@@ -30,8 +30,8 @@ IGNORE_WARNINGS_POP
 #endif
 
 // Taken from https://stackoverflow.com/a/51846880/2317956
-// These codes set the actual text to the specified color
-#define RESETTEXT  "\x1B[0m" // Set all colors back to normal.
+// These codes set the actual text to the specified colour
+#define RESETTEXT  "\x1B[0m" // Set all colours back to normal.
 #define FOREBLK  "\x1B[30m" // Black
 #define FORERED  "\x1B[31m" // Red
 #define FOREGRN  "\x1B[32m" // Green
@@ -42,7 +42,7 @@ IGNORE_WARNINGS_POP
 #define FOREWHT  "\x1B[37m" // White
 
 /* BACKGROUND */
-// These codes set the background color behind the text.
+// These codes set the background colour behind the text.
 #define BACKBLK "\x1B[40m"
 #define BACKRED "\x1B[41m"
 #define BACKGRN "\x1B[42m"
@@ -72,7 +72,7 @@ namespace flex
 	{
 	}
 
-	void Platform::SetConsoleTextColor(ConsoleColour colour)
+	void Platform::SetConsoleTextColour(ConsoleColour colour)
 	{
 #if ENABLE_CONSOLE_COLOURS
 		static const char* const w_colours[] = { FOREWHT, FOREYEL, FORERED };

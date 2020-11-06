@@ -2550,7 +2550,7 @@ namespace flex
 	{
 		data.enabled = m_bVisible ? 1 : 0;
 		data.dir = VEC3_RIGHT;
-		data.color = VEC3_ONE;
+		data.colour = VEC3_ONE;
 		data.brightness = 1.0f;
 		data.castShadows = 1;
 		data.shadowDarkness = 1.0f;
@@ -2605,7 +2605,7 @@ namespace flex
 		}
 
 		ImGui::SameLine();
-		ImGui::ColorEdit4("Color ", &data.color.r, colorEditFlags);
+		ImGui::ColorEdit4("Colour ", &data.colour.r, colorEditFlags);
 		ImGui::SliderFloat("Brightness", &data.brightness, 0.0f, 15.0f);
 
 		ImGui::Spacing();
@@ -2674,7 +2674,7 @@ namespace flex
 				pos = m_Transform.GetWorldPosition();
 			}
 
-			directionalLightObj.SetVec3Checked("color", data.color);
+			directionalLightObj.SetVec3Checked("colour", data.colour);
 
 			directionalLightObj.SetFloatChecked("brightness", data.brightness);
 
@@ -2702,8 +2702,8 @@ namespace flex
 		std::string posStr = VecToString(m_Transform.GetLocalPosition(), 3);
 		dirLightObj.fields.emplace_back("pos", JSONValue(posStr));
 
-		std::string colorStr = VecToString(data.color, 2);
-		dirLightObj.fields.emplace_back("color", JSONValue(colorStr));
+		std::string colourStr = VecToString(data.colour, 2);
+		dirLightObj.fields.emplace_back("colour", JSONValue(colourStr));
 
 		dirLightObj.fields.emplace_back("enabled", JSONValue(m_bVisible != 0));
 		dirLightObj.fields.emplace_back("brightness", JSONValue(data.brightness));
@@ -2718,7 +2718,7 @@ namespace flex
 	{
 		return other.m_Transform.GetLocalRotation() == m_Transform.GetLocalRotation() &&
 			other.data.dir == data.dir &&
-			other.data.color == data.color &&
+			other.data.colour == data.colour &&
 			other.m_bVisible == m_bVisible &&
 			other.data.brightness == data.brightness;
 	}
@@ -2739,7 +2739,7 @@ namespace flex
 	{
 		data.enabled = 1;
 		data.pos = VEC4_ZERO;
-		data.color = VEC4_ONE;
+		data.colour = VEC4_ONE;
 		data.brightness = 500.0f;
 	}
 
@@ -2787,7 +2787,7 @@ namespace flex
 				}
 
 				ImGui::SameLine();
-				bEditedPointLightData |= ImGui::ColorEdit4("Color ", &data.color.r, colorEditFlags);
+				bEditedPointLightData |= ImGui::ColorEdit4("Colour ", &data.colour.r, colorEditFlags);
 				bEditedPointLightData |= ImGui::SliderFloat("Brightness", &data.brightness, 0.0f, 1000.0f);
 
 				if (bEditedPointLightData)
@@ -2845,7 +2845,7 @@ namespace flex
 			m_Transform.SetLocalPosition(pos);
 			data.pos = pos;
 
-			pointLightObj.SetVec3Checked("color", data.color);
+			pointLightObj.SetVec3Checked("colour", data.colour);
 
 			pointLightObj.SetFloatChecked("brightness", data.brightness);
 
@@ -2864,8 +2864,8 @@ namespace flex
 		std::string posStr = VecToString(m_Transform.GetLocalPosition(), 3);
 		pointLightObj.fields.emplace_back("pos", JSONValue(posStr));
 
-		std::string colorStr = VecToString(data.color, 2);
-		pointLightObj.fields.emplace_back("color", JSONValue(colorStr));
+		std::string colourStr = VecToString(data.colour, 2);
+		pointLightObj.fields.emplace_back("colour", JSONValue(colourStr));
 
 		pointLightObj.fields.emplace_back("enabled", JSONValue(m_bVisible != 0));
 		pointLightObj.fields.emplace_back("brightness", JSONValue(data.brightness));
@@ -2876,7 +2876,7 @@ namespace flex
 	bool PointLight::operator==(const PointLight& other)
 	{
 		return other.data.pos == data.pos &&
-			other.data.color == data.color &&
+			other.data.colour == data.colour &&
 			other.data.enabled == data.enabled &&
 			other.data.brightness == data.brightness;
 	}
@@ -3636,7 +3636,7 @@ namespace flex
 			m_VertexBufferCreateInfo.texCoords_UV.resize(vertCount);
 			m_VertexBufferCreateInfo.normals.resize(vertCount);
 			m_VertexBufferCreateInfo.tangents.resize(vertCount);
-			m_VertexBufferCreateInfo.colors_R32G32B32A32.resize(vertCount);
+			m_VertexBufferCreateInfo.colours_R32G32B32A32.resize(vertCount);
 		}
 		else
 		{
@@ -3652,8 +3652,8 @@ namespace flex
 				m_VertexBufferCreateInfo.normals.shrink_to_fit();
 				m_VertexBufferCreateInfo.tangents.resize(vertCount);
 				m_VertexBufferCreateInfo.tangents.shrink_to_fit();
-				m_VertexBufferCreateInfo.colors_R32G32B32A32.resize(vertCount);
-				m_VertexBufferCreateInfo.colors_R32G32B32A32.shrink_to_fit();
+				m_VertexBufferCreateInfo.colours_R32G32B32A32.resize(vertCount);
+				m_VertexBufferCreateInfo.colours_R32G32B32A32.shrink_to_fit();
 			}
 		}
 
@@ -3792,7 +3792,7 @@ namespace flex
 
 		glm::vec3* positions = m_VertexBufferCreateInfo.positions_3D.data();
 		glm::vec2* texCoords = m_VertexBufferCreateInfo.texCoords_UV.data();
-		glm::vec4* colours = m_VertexBufferCreateInfo.colors_R32G32B32A32.data();
+		glm::vec4* colours = m_VertexBufferCreateInfo.colours_R32G32B32A32.data();
 
 		for (u32 chunkIdx = 0; chunkIdx < (u32)waveChunks.size(); ++chunkIdx)
 		{
@@ -5917,8 +5917,8 @@ namespace flex
 
 		CopyGenericFields(newParticleSystem, parent, bCopyChildren);
 
-		newParticleSystem->data.color0 = data.color0;
-		newParticleSystem->data.color1 = data.color1;
+		newParticleSystem->data.colour0 = data.colour0;
+		newParticleSystem->data.colour1 = data.colour1;
 		newParticleSystem->data.speed = data.speed;
 		newParticleSystem->data.particleCount = data.particleCount;
 		newParticleSystem->bEnabled = true;
@@ -5943,8 +5943,8 @@ namespace flex
 
 		JSONObject systemDataObj = particleSystemObj.GetObject("data");
 		data = {};
-		systemDataObj.SetVec4Checked("color0", data.color0);
-		systemDataObj.SetVec4Checked("color1", data.color1);
+		systemDataObj.SetVec4Checked("colour0", data.colour0);
+		systemDataObj.SetVec4Checked("colour1", data.colour1);
 		systemDataObj.SetFloatChecked("speed", data.speed);
 		i32 particleCount;
 		if (systemDataObj.SetIntChecked("particle count", particleCount))
@@ -5965,8 +5965,8 @@ namespace flex
 
 
 		JSONObject systemDataObj = {};
-		systemDataObj.fields.emplace_back("color0", JSONValue(VecToString(data.color0, 2)));
-		systemDataObj.fields.emplace_back("color1", JSONValue(VecToString(data.color1, 2)));
+		systemDataObj.fields.emplace_back("colour0", JSONValue(VecToString(data.colour0, 2)));
+		systemDataObj.fields.emplace_back("colour1", JSONValue(VecToString(data.colour1, 2)));
 		systemDataObj.fields.emplace_back("speed", JSONValue(data.speed));
 		systemDataObj.fields.emplace_back("particle count", JSONValue((i32)data.particleCount));
 		particleSystemObj.fields.emplace_back("data", JSONValue(systemDataObj));
@@ -5989,9 +5989,9 @@ namespace flex
 
 		ImGui::Checkbox("Enabled", &bEnabled);
 
-		ImGui::ColorEdit4("Color 0", &data.color0.r, colorEditFlags);
+		ImGui::ColorEdit4("Colour 0", &data.colour0.r, colorEditFlags);
 		ImGui::SameLine();
-		ImGui::ColorEdit4("Color 1", &data.color1.r, colorEditFlags);
+		ImGui::ColorEdit4("Colour 1", &data.colour1.r, colorEditFlags);
 		ImGui::SliderFloat("Speed", &data.speed, -10.0f, 10.0f);
 		i32 particleCount = (i32)data.particleCount;
 		if (ImGui::SliderInt("Particle count", &particleCount, 0, Renderer::MAX_PARTICLE_COUNT))
@@ -6079,7 +6079,7 @@ namespace flex
 		vertexBufferCreateInfo.attributes = g_Renderer->GetShader(shaderID).vertexAttributes;
 		vertexBufferCreateInfo.positions_3D.reserve(vertexCount);
 		vertexBufferCreateInfo.texCoords_UV.reserve(vertexCount);
-		vertexBufferCreateInfo.colors_R32G32B32A32.reserve(vertexCount);
+		vertexBufferCreateInfo.colours_R32G32B32A32.reserve(vertexCount);
 		vertexBufferCreateInfo.normals.reserve(vertexCount);
 
 		std::vector<u32> indices(indexCount);
@@ -6108,7 +6108,7 @@ namespace flex
 				vertexBufferCreateInfo.texCoords_UV.emplace_back(uv);
 				bool bShowEdge = (m_bHighlightGrid && (x == 0 || x == (VertCountPerChunkAxis - 1) || z == 0 || z == (VertCountPerChunkAxis - 1)));
 				glm::vec3 vertCol = (bShowEdge ? glm::vec3(0.75f) : (height <= 0.5f ? Lerp(m_LowCol, m_MidCol, glm::pow(height * 2.0f, 4.0f)) : Lerp(m_MidCol, m_HighCol, glm::pow((height - 0.5f) * 2.0f, 1.0f / 5.0f))));
-				vertexBufferCreateInfo.colors_R32G32B32A32.emplace_back(glm::vec4(vertCol.x, vertCol.y, vertCol.z, 1.0f));
+				vertexBufferCreateInfo.colours_R32G32B32A32.emplace_back(glm::vec4(vertCol.x, vertCol.y, vertCol.z, 1.0f));
 				//vertexBufferCreateInfo.colors_R32G32B32A32.emplace_back(glm::vec4(height, height, height, 1.0f));
 				vertexBufferCreateInfo.normals.emplace_back(normal);
 			}

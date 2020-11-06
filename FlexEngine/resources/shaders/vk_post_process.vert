@@ -2,7 +2,7 @@
 
 layout (binding = 0) uniform UBODynamic
 {
-	vec4 colorMultiplier;
+	vec4 colourMultiplier;
 	mat4 contrastBrightnessSaturation;
 } uboDynamic;
 

@@ -13,14 +13,14 @@ layout (location = 0) out vec3 ex_WorldPosition;
 struct DirectionalLight 
 {
 	vec4 direction;
-	vec4 color;
+	vec4 colour;
 	bool enabled;
 };
 
 struct PointLight 
 {
 	vec4 position;
-	vec4 color;
+	vec4 colour;
 	bool enabled;
 };
 #define NUMBER_POINT_LIGHTS 4

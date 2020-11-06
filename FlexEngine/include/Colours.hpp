@@ -6,7 +6,7 @@ IGNORE_WARNINGS_POP
 
 namespace flex
 {
-	struct Color
+	struct Colour
 	{
 		static const glm::vec4 RED;
 		static const glm::vec4 GREEN;

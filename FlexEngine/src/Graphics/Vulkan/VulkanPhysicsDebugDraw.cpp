@@ -35,7 +35,7 @@ namespace flex
 			if (!m_Renderer->FindOrCreateMaterialByName(debugMatName, m_MaterialID))
 			{
 				MaterialCreateInfo debugMatCreateInfo = {};
-				debugMatCreateInfo.shaderName = "color";
+				debugMatCreateInfo.shaderName = "colour";
 				debugMatCreateInfo.name = debugMatName;
 				debugMatCreateInfo.persistent = true;
 				debugMatCreateInfo.visibleInEditor = true;
@@ -77,16 +77,16 @@ namespace flex
 			return m_DebugMode;
 		}
 
-		void VulkanPhysicsDebugDraw::drawLine(const btVector3& from, const btVector3& to, const btVector3& color)
+		void VulkanPhysicsDebugDraw::drawLine(const btVector3& from, const btVector3& to, const btVector3& colour)
 		{
-			drawLine(from, to, color, color);
+			drawLine(from, to, colour, colour);
 		}
 
-		void VulkanPhysicsDebugDraw::drawLine(const btVector3& from, const btVector3& to, const btVector3& colorFrom, const btVector3& colorTo)
+		void VulkanPhysicsDebugDraw::drawLine(const btVector3& from, const btVector3& to, const btVector3& colourFrom, const btVector3& colourTo)
 		{
 			if (m_LineSegmentIndex < MAX_NUM_LINE_SEGMENTS)
 			{
-				m_LineSegments[m_LineSegmentIndex++] = { from, to, colorFrom, colorTo };
+				m_LineSegments[m_LineSegmentIndex++] = { from, to, colourFrom, colourTo };
 			}
 			else
 			{
@@ -94,25 +94,25 @@ namespace flex
 			}
 		}
 
-		void VulkanPhysicsDebugDraw::drawContactPoint(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector3& color)
+		void VulkanPhysicsDebugDraw::drawContactPoint(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector3& colour)
 		{
 			FLEX_UNUSED(PointOnB);
 			FLEX_UNUSED(normalOnB);
 			FLEX_UNUSED(distance);
 			FLEX_UNUSED(lifeTime);
-			FLEX_UNUSED(color);
+			FLEX_UNUSED(colour);
 		}
 
-		void VulkanPhysicsDebugDraw::DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& color)
+		void VulkanPhysicsDebugDraw::DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& colour)
 		{
-			DrawLineWithAlpha(from, to, color, color);
+			DrawLineWithAlpha(from, to, colour, colour);
 		}
 
-		void VulkanPhysicsDebugDraw::DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& colorFrom, const btVector4& colorTo)
+		void VulkanPhysicsDebugDraw::DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& colourFrom, const btVector4& colourTo)
 		{
 			if (m_LineSegmentIndex < MAX_NUM_LINE_SEGMENTS)
 			{
-				m_LineSegments[m_LineSegmentIndex++] = { from, to, colorFrom, colorTo };
+				m_LineSegments[m_LineSegmentIndex++] = { from, to, colourFrom, colourTo };
 			}
 			else
 			{
@@ -137,7 +137,7 @@ namespace flex
 				PROFILE_END("Hash vertex buffer");
 
 				m_VertexBufferCreateInfo.positions_3D.clear();
-				m_VertexBufferCreateInfo.colors_R32G32B32A32.clear();
+				m_VertexBufferCreateInfo.colours_R32G32B32A32.clear();
 				indexBuffer.clear();
 
 				u32 numVerts = lineCount * 2;
@@ -145,27 +145,27 @@ namespace flex
 				if (m_VertexBufferCreateInfo.positions_3D.capacity() < numVerts)
 				{
 					m_VertexBufferCreateInfo.positions_3D.resize(numVerts * 2);
-					m_VertexBufferCreateInfo.colors_R32G32B32A32.resize(numVerts * 2);
+					m_VertexBufferCreateInfo.colours_R32G32B32A32.resize(numVerts * 2);
 					indexBuffer.resize(numVerts * 2);
 				}
 				else
 				{
 					m_VertexBufferCreateInfo.positions_3D.resize(numVerts);
-					m_VertexBufferCreateInfo.colors_R32G32B32A32.resize(numVerts);
+					m_VertexBufferCreateInfo.colours_R32G32B32A32.resize(numVerts);
 					indexBuffer.resize(numVerts);
 				}
 
 				i32 i = 0;
 				glm::vec3* posData = m_VertexBufferCreateInfo.positions_3D.data();
-				glm::vec4* colData = m_VertexBufferCreateInfo.colors_R32G32B32A32.data();
+				glm::vec4* colData = m_VertexBufferCreateInfo.colours_R32G32B32A32.data();
 				u32* idxData = indexBuffer.data();
 				for (u32 li = 0; li < lineCount; ++li)
 				{
 					memcpy(posData + i, m_LineSegments[li].start, sizeof(real) * 3);
 					memcpy(posData + i + 1, m_LineSegments[li].end, sizeof(real) * 3);
 
-					memcpy(colData + i, m_LineSegments[li].colorFrom, sizeof(real) * 4);
-					memcpy(colData + i + 1, m_LineSegments[li].colorTo, sizeof(real) * 4);
+					memcpy(colData + i, m_LineSegments[li].colourFrom, sizeof(real) * 4);
+					memcpy(colData + i + 1, m_LineSegments[li].colourTo, sizeof(real) * 4);
 
 					u32 idx0 = li * 2;
 					u32 idx1 = li * 2 + 1;

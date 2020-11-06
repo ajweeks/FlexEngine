@@ -749,7 +749,7 @@
 					{
 						"rotation" : "-0.099, 0.336, 0.265, 0.898",
 						"pos" : "0.000, 15.000, 0.000",
-						"color" : "1.00, 1.00, 1.00",
+						"colour" : "1.00, 1.00, 1.00",
 						"enabled" : true,
 						"brightness" : 4.063000,
 						"cast shadows" : true,
@@ -802,7 +802,7 @@
 					"point light info" : 
 					{
 						"pos" : "-22.547, 9.283, -11.692",
-						"color" : "1.00, 1.00, 1.00",
+						"colour" : "1.00, 1.00, 1.00",
 						"enabled" : true,
 						"brightness" : 812.500000
 					}
@@ -818,7 +818,7 @@
 					"point light info" : 
 					{
 						"pos" : "-14.163, 6.757, 14.795",
-						"color" : "0.97, 0.97, 0.70",
+						"colour" : "0.97, 0.97, 0.70",
 						"enabled" : true,
 						"brightness" : 145.832993
 					}
@@ -834,7 +834,7 @@
 					"point light info" : 
 					{
 						"pos" : "3.100, 4.737, -25.251",
-						"color" : "1.00, 1.00, 1.00",
+						"colour" : "1.00, 1.00, 1.00",
 						"enabled" : true,
 						"brightness" : 270.936005
 					}
@@ -850,7 +850,7 @@
 					"point light info" : 
 					{
 						"pos" : "10.065, 7.522, 14.100",
-						"color" : "0.60, 0.67, 1.00",
+						"colour" : "0.60, 0.67, 1.00",
 						"enabled" : true,
 						"brightness" : 723.958008
 					}

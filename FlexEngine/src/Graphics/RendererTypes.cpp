@@ -69,7 +69,7 @@ namespace flex
 				_u(PROJECTION)
 				_u(PROJECTION_INV)
 				_u(BLEND_SHARPNESS)
-				_u(COLOR_MULTIPLIER)
+				_u(COLOUR_MULTIPLIER)
 				_u(CAM_POS)
 				_u(DIR_LIGHT)
 				_u(POINT_LIGHTS)
@@ -185,7 +185,7 @@ namespace flex
 				enableBRDFLUT == other.enableBRDFLUT &&
 				renderToCubemap == other.renderToCubemap &&
 				generateReflectionProbeMaps == other.generateReflectionProbeMaps &&
-				colorMultiplier == other.colorMultiplier &&
+				colourMultiplier == other.colourMultiplier &&
 				textureScale == other.textureScale
 				);
 
@@ -243,7 +243,7 @@ namespace flex
 		material.SetVec2Checked("generated irradiance cubemap size", createInfoOut.generatedIrradianceCubemapSize);
 		material.SetVec2Checked("generated prefiltered map size", createInfoOut.generatedPrefilteredCubemapSize);
 		material.SetVec2Checked("generated cubemap size", createInfoOut.generatedCubemapSize);
-		material.SetVec4Checked("color multiplier", createInfoOut.colorMultiplier);
+		material.SetVec4Checked("colour multiplier", createInfoOut.colourMultiplier);
 		material.SetVec3Checked("const albedo", createInfoOut.constAlbedo);
 		material.SetFloatChecked("const metallic", createInfoOut.constMetallic);
 		material.SetFloatChecked("const roughness", createInfoOut.constRoughness);

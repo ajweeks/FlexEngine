@@ -7,21 +7,21 @@
 
 layout (location = 0) in vec3 ex_WorldPosition;
 
-layout (location = 0) out vec4 fragColor;
+layout (location = 0) out vec4 fragColour;
 
 const float PI = 3.14159265359;
 
 struct DirectionalLight 
 {
 	vec4 direction;
-	vec4 color;
+	vec4 colour;
 	bool enabled;
 };
 
 struct PointLight 
 {
 	vec4 position;
-	vec4 color;
+	vec4 colour;
 	bool enabled;
 };
 #define NUMBER_POINT_LIGHTS 4
@@ -107,7 +107,7 @@ void main()
 	vec3 V = normalize(uboConstant.camPos.xyz - worldPos);
 	vec3 R = reflect(-V, N);
 
-	// If diaelectric, F0 should be 0.04, if metal it should be the albedo color
+	// If diaelectric, F0 should be 0.04, if metal it should be the albedo colour
 	vec3 F0 = vec3(0.04);
 	F0 = mix(F0, albedo, metallic);
 
@@ -121,7 +121,7 @@ void main()
 
 		float distance = length(uboConstant.pointLights[i].position.xyz - worldPos);
 		float attenuation = 1.0 / (distance * distance);
-		vec3 radiance = uboConstant.pointLights[i].color.rgb * attenuation;
+		vec3 radiance = uboConstant.pointLights[i].colour.rgb * attenuation;
 		
 		// Cook-Torrance BRDF
 		float NDF = DistributionGGX(N, H, roughness);
@@ -154,9 +154,9 @@ void main()
 
 		// Specular ambient term (IBL)
 		const float MAX_REFLECTION_LOAD = 5.0;
-		vec3 prefilteredColor = textureLod(prefilterMap, R, roughness * MAX_REFLECTION_LOAD).rgb;
+		vec3 prefilteredColour = textureLod(prefilterMap, R, roughness * MAX_REFLECTION_LOAD).rgb;
 		vec2 brdf = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
-		vec3 specular = prefilteredColor * (F * brdf.x + brdf.y);
+		vec3 specular = prefilteredColour * (F * brdf.x + brdf.y);
 
 	    ambient = (kD * diffuse + specular) * ao;
 	}
@@ -165,25 +165,25 @@ void main()
 		ambient = vec3(0.03) * albedo * ao;
 	}
 
-	vec3 color = ambient + Lo;
+	vec3 colour = ambient + Lo;
 
-	color = color / (color + vec3(1.0f)); // Reinhard tone-mapping
-	color = pow(color, vec3(1.0f / 2.2f)); // Gamma correction
+	colour = colour / (colour + vec3(1.0f)); // Reinhard tone-mapping
+	colour = pow(colour, vec3(1.0f / 2.2f)); // Gamma correction
 
-	fragColor = vec4(color, 1.0);
+	fragColour = vec4(colour, 1.0);
 
 	// Visualize normal map:
-	//fragColor = vec4(texture(normalSampler, ex_TexCoord).xyz, 1); return;
+	//fragColour = vec4(texture(normalSampler, ex_TexCoord).xyz, 1); return;
 
 	// Visualize normals:
-	//fragColor = vec4(N, 1); return;
+	//fragColour = vec4(N, 1); return;
 
 	// Visualize tangents:
-	//fragColor = vec4(vec3(ex_TBN[0]), 1); return;
+	//fragColour = vec4(vec3(ex_TBN[0]), 1); return;
 
 	// Visualize texCoords:
-	//fragColor = vec4(ex_TexCoord, 0, 1); return;
+	//fragColour = vec4(ex_TexCoord, 0, 1); return;
 
 	// Visualize metallic:
-	//fragColor = vec4(metallic, metallic, metallic, 1); return;
+	//fragColour = vec4(metallic, metallic, metallic, 1); return;
 }

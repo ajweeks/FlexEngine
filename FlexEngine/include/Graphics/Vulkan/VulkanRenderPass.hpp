@@ -29,19 +29,19 @@ namespace flex
 
 			void Register(
 				const char* passName,
-				const std::vector<FrameBufferAttachmentID>& targtColorAttachmentIDs,
+				const std::vector<FrameBufferAttachmentID>& targtColourAttachmentIDs,
 				FrameBufferAttachmentID targtDepthAttachmentID,
 				const std::vector<FrameBufferAttachmentID>& sampledAttachmentIDs);
 
-			void RegisterForColorAndDepth(
+			void RegisterForColourAndDepth(
 				const char* passName,
-				FrameBufferAttachmentID targetColorAttachmentID,
+				FrameBufferAttachmentID targetColourAttachmentID,
 				FrameBufferAttachmentID targetDepthAttachmentID,
 				const std::vector<FrameBufferAttachmentID>& sampledAttachmentIDs);
 
-			void RegisterForMultiColorAndDepth(
+			void RegisterForMultiColourAndDepth(
 				const char* passName,
-				const std::vector<FrameBufferAttachmentID>& targetColorAttachmentIDs,
+				const std::vector<FrameBufferAttachmentID>& targetColourAttachmentIDs,
 				FrameBufferAttachmentID targetDepthAttachmentID,
 				const std::vector<FrameBufferAttachmentID>& sampledAttachmentIDs);
 
@@ -50,9 +50,9 @@ namespace flex
 				FrameBufferAttachmentID targetDepthAttachmentID,
 				const std::vector<FrameBufferAttachmentID>& sampledAttachmentIDs);
 
-			void RegisterForColorOnly(
+			void RegisterForColourOnly(
 				const char* passName,
-				FrameBufferAttachmentID targetColorAttachmentID,
+				FrameBufferAttachmentID targetColourAttachmentID,
 				const std::vector<FrameBufferAttachmentID>& sampledAttachmentIDs);
 
 			// This function should ideally not need to be called, instead register render passes in
@@ -89,16 +89,16 @@ namespace flex
 			VulkanDevice* m_VulkanDevice = nullptr;
 
 			bool m_bRegistered = false;
-			std::vector<VkImageLayout> m_TargetColorAttachmentInitialLayouts;
-			std::vector<VkImageLayout> m_TargetColorAttachmentFinalLayouts;
+			std::vector<VkImageLayout> m_TargetColourAttachmentInitialLayouts;
+			std::vector<VkImageLayout> m_TargetColourAttachmentFinalLayouts;
 			VkImageLayout m_TargetDepthAttachmentInitialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 			VkImageLayout m_TargetDepthAttachmentFinalLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-			std::vector<FrameBufferAttachmentID> m_TargetColorAttachmentIDs;
+			std::vector<FrameBufferAttachmentID> m_TargetColourAttachmentIDs;
 			FrameBufferAttachmentID m_TargetDepthAttachmentID = InvalidFrameBufferAttachmentID;
 			std::vector<FrameBufferAttachmentID> m_SampledAttachmentIDs;
 
-			VkFormat m_ColorAttachmentFormat = VK_FORMAT_UNDEFINED;
+			VkFormat m_ColourAttachmentFormat = VK_FORMAT_UNDEFINED;
 			VkFormat m_DepthAttachmentFormat = VK_FORMAT_UNDEFINED;
 
 			VDeleter<VkRenderPass> m_RenderPass;

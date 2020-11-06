@@ -24,7 +24,7 @@ namespace flex
 	const real Profiler::s_ScrollSpeed = 0.4f;
 	Profiler::DisplayedFrameOptions Profiler::s_DisplayedFrameOptions;
 
-	glm::vec4 Profiler::blockColors[] = {
+	glm::vec4 Profiler::blockColours[] = {
 		glm::vec4(0.43f, 0.48f, 0.58f, 0.8f), // Pale dark blue
 		glm::vec4(0.50f, 0.58f, 0.31f, 0.8f), // Pale green
 		glm::vec4(0.45f, 0.33f, 0.82f, 0.8f), // Royal purple
@@ -363,7 +363,7 @@ namespace flex
 
 		real blockHeight = (frameSizeHalf.y / ((real)blockCount + 2));
 
-		i32 colorIndex = 0;
+		i32 colourIndex = 0;
 		for (i32 i = 0; i < blockCount; ++i)
 		{
 			Timing& timing = s_DisplayedFrameTimings[i];
@@ -375,7 +375,7 @@ namespace flex
 			glm::vec2 blockCenterNorm(blockLeftX + halfBlockWidth, blockCenterY);
 			glm::vec2 blockScaleNorm(halfBlockWidth, blockHeight);
 
-			g_Renderer->EnqueueUntexturedQuadRaw(blockCenterNorm, blockScaleNorm, blockColors[colorIndex]);
+			g_Renderer->EnqueueUntexturedQuadRaw(blockCenterNorm, blockScaleNorm, blockColours[colourIndex]);
 
 			bool bMouseHoveredOverBlock = g_InputManager->IsMouseHoveringRect(blockCenterNorm, blockScaleNorm);
 			if (bMouseHoveredOverBlock)
@@ -408,8 +408,8 @@ namespace flex
 										 true);
 			}
 
-			++colorIndex;
-			colorIndex %= ARRAY_LENGTH(blockColors);
+			++colourIndex;
+			colourIndex %= ARRAY_LENGTH(blockColours);
 		}
 	}
 

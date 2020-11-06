@@ -116,15 +116,15 @@ namespace flex
 				vertexDataP += 2;
 			}
 
-			if (Attributes & (u32)VertexAttribute::COLOR_R8G8B8A8_UNORM)
+			if (Attributes & (u32)VertexAttribute::COLOUR_R8G8B8A8_UNORM)
 			{
-				memcpy(vertexDataP, createInfo.colors_R8G8B8A8.data() + i, sizeof(i32));
+				memcpy(vertexDataP, createInfo.colours_R8G8B8A8.data() + i, sizeof(i32));
 				vertexDataP += 1;
 			}
 
-			if (Attributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)
+			if (Attributes & (u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT)
 			{
-				memcpy(vertexDataP, createInfo.colors_R32G32B32A32.data() + i, sizeof(glm::vec4));
+				memcpy(vertexDataP, createInfo.colours_R32G32B32A32.data() + i, sizeof(glm::vec4));
 				vertexDataP += 4;
 			}
 
@@ -270,28 +270,28 @@ namespace flex
 				dst += 2;
 			}
 
-			if (usingAttributes & (u32)VertexAttribute::COLOR_R8G8B8A8_UNORM)
+			if (usingAttributes & (u32)VertexAttribute::COLOUR_R8G8B8A8_UNORM)
 			{
-				if (Attributes & (u32)VertexAttribute::COLOR_R8G8B8A8_UNORM)
+				if (Attributes & (u32)VertexAttribute::COLOUR_R8G8B8A8_UNORM)
 				{
 					memcpy(dst, src, sizeof(i32));
 				}
 				else
 				{
-					memcpy(dst, &COLOR32U_WHITE, sizeof(i32));
+					memcpy(dst, &COLOUR32U_WHITE, sizeof(i32));
 				}
 				dst += 1;
 			}
 
-			if (usingAttributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)
+			if (usingAttributes & (u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT)
 			{
-				if (Attributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)
+				if (Attributes & (u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT)
 				{
 					memcpy(dst, src, sizeof(glm::vec4));
 				}
 				else
 				{
-					memcpy(dst, &COLOR128F_WHITE, sizeof(glm::vec4));
+					memcpy(dst, &COLOUR128F_WHITE, sizeof(glm::vec4));
 				}
 				dst += 4;
 			}
@@ -382,8 +382,8 @@ namespace flex
 		for (const glm::vec4& pos : info.positions_4D) result += (u32)(pos.x + pos.y + pos.z + pos.w);
 		for (const glm::vec3& v : info.velocities) result += (u32)(v.x + v.y + v.z);
 		for (const glm::vec2& uv : info.texCoords_UV) result += (u32)(uv.x + uv.y);
-		for (i32 i : info.colors_R8G8B8A8) result += (u32)(i);
-		for (const glm::vec4& col : info.colors_R32G32B32A32) result += (u32)(col.x + col.y + col.z + col.w);
+		for (i32 i : info.colours_R8G8B8A8) result += (u32)(i);
+		for (const glm::vec4& col : info.colours_R32G32B32A32) result += (u32)(col.x + col.y + col.z + col.w);
 		for (const glm::vec3& pos : info.tangents) result += (u32)(pos.x + pos.y + pos.z);
 		for (const glm::vec3& pos : info.normals) result += (u32)(pos.x + pos.y + pos.z);
 

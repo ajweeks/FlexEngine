@@ -12,7 +12,7 @@ layout (constant_id = 3) const int NUM_CASCADES = 4;
 
 layout (location = 0) in vec2 ex_TexCoord;
 
-layout (location = 0) out vec4 fragColor;
+layout (location = 0) out vec4 fragColour;
 
 const float PI = 3.14159265359;
 
@@ -20,7 +20,7 @@ struct DirectionalLight
 {
 	vec3 direction;
 	int enabled;
-	vec3 color;
+	vec3 colour;
 	float brightness;
 	int castShadows;
 	float shadowDarkness;
@@ -31,7 +31,7 @@ struct PointLight
 {
 	vec3 position;
 	int enabled;
-	vec3 color;
+	vec3 colour;
 	float brightness;
 };
 
@@ -183,14 +183,14 @@ void main()
     float invDist = 1.0f/(uboConstant.zFar-uboConstant.zNear);
 
 	float linDepth = (viewPos.z-uboConstant.zNear)*invDist;
-	// fragColor = vec4(vec3(linDepth), 1); return;
+	// fragColour = vec4(vec3(linDepth), 1); return;
 
     vec3 albedo = texture(albedoMetallicTex, ex_TexCoord).rgb;	
     float metallic = texture(albedoMetallicTex, ex_TexCoord).a;
 
     float ssao = (uboConstant.ssaoData.enabled == 1 ? texture(ssaoBuffer, ex_TexCoord).r : 1.0f);
 
-	// fragColor = vec4(vec3(pow(ssao, uboConstant.ssaoPowExp)), 1); return;
+	// fragColour = vec4(vec3(pow(ssao, uboConstant.ssaoPowExp)), 1); return;
 
 	uint cascadeIndex = 0;
 	for (uint i = 0; i < NUM_CASCADES; ++i)
@@ -206,7 +206,7 @@ void main()
 
 	float NoV = max(dot(N, V), 0.0);
 
-	// If diaelectric, F0 should be 0.04, if metal it should be the albedo color
+	// If diaelectric, F0 should be 0.04, if metal it should be the albedo colour
 	vec3 F0 = vec3(0.04);
 	F0 = mix(F0, albedo, metallic);
 
@@ -230,7 +230,7 @@ void main()
 		// Pretend point lights have a radius of 1cm to avoid division by 0
 		float attenuation = 1.0 / max((distance * distance), 0.001);
 		vec3 L = normalize(uboConstant.pointLights[i].position - worldPos);
-		vec3 radiance = uboConstant.pointLights[i].color.rgb * attenuation * uboConstant.pointLights[i].brightness;
+		vec3 radiance = uboConstant.pointLights[i].colour.rgb * attenuation * uboConstant.pointLights[i].brightness;
 		float NoL = max(dot(N, L), 0.0);
 
 		Lo += DoLighting(radiance, N, V, L, NoV, NoL, roughness, metallic, F0, albedo);
@@ -239,7 +239,7 @@ void main()
 	if (uboConstant.dirLight.enabled != 0)
 	{
 		vec3 L = normalize(uboConstant.dirLight.direction);
-		vec3 radiance = uboConstant.dirLight.color.rgb * uboConstant.dirLight.brightness;
+		vec3 radiance = uboConstant.dirLight.colour.rgb * uboConstant.dirLight.brightness;
 		float NoL = max(dot(N, L), 0.0);
 
 		float dirLightShadowOpacity = 1.0;
@@ -302,9 +302,9 @@ void main()
 
 		// Specular ambient term (IBL)
 		const float MAX_REFLECTION_LOAD = 5.0;
-		vec3 prefilteredColor = textureLod(prefilterMap, R, roughness * MAX_REFLECTION_LOAD).rgb;
+		vec3 prefilteredColour = textureLod(prefilterMap, R, roughness * MAX_REFLECTION_LOAD).rgb;
 		vec2 brdf = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
-		vec3 specular = prefilteredColor * (F * brdf.x + brdf.y);
+		vec3 specular = prefilteredColour * (F * brdf.x + brdf.y);
 
 	    ambient = (kD * diffuse + specular);
 	}
@@ -314,35 +314,35 @@ void main()
 	}
 
 	// TODO: Apply SSAO to ambient term
-	vec3 color = ambient + Lo * pow(ssao, uboConstant.ssaoData.powExp);
+	vec3 colour = ambient + Lo * pow(ssao, uboConstant.ssaoData.powExp);
 
-	color = color / (color + vec3(1.0f)); // Reinhard tone-mapping
-	color = pow(color, vec3(1.0f / 2.2f)); // Gamma correction
+	colour = colour / (colour + vec3(1.0f)); // Reinhard tone-mapping
+	colour = pow(colour, vec3(1.0f / 2.2f)); // Gamma correction
 
-	fragColor = vec4(color, 1.0);
+	fragColour = vec4(colour, 1.0);
 
 #if 0
 	switch (cascadeIndex)
 	{
-		case 0: fragColor *= vec4(0.85f, 0.4f, 0.3f, 0.0f); return;
-		case 1: fragColor *= vec4(0.2f, 1.0f, 1.0f, 0.0f); return;
-		case 2: fragColor *= vec4(1.0f, 1.0f, 0.2f, 0.0f); return;
-		case 3: fragColor *= vec4(0.4f, 0.8f, 0.2f, 0.0f); return;
-		default: fragColor = vec4(1.0f, 0.0f, 1.0f, 0.0f); return;
+		case 0: fragColour *= vec4(0.85f, 0.4f, 0.3f, 0.0f); return;
+		case 1: fragColour *= vec4(0.2f, 1.0f, 1.0f, 0.0f); return;
+		case 2: fragColour *= vec4(1.0f, 1.0f, 0.2f, 0.0f); return;
+		case 3: fragColour *= vec4(0.4f, 0.8f, 0.2f, 0.0f); return;
+		default: fragColour = vec4(1.0f, 0.0f, 1.0f, 0.0f); return;
 	}
 #endif
 
-	// fragColor = vec4(F, 1);
+	// fragColour = vec4(F, 1);
 
 	// Visualize world pos:
-	// fragColor = vec4(worldPos*0.1, 1); return;
+	// fragColour = vec4(worldPos*0.1, 1); return;
 
 	// Visualize normals:
-	// fragColor = vec4(N*0.5+0.5, 1); return;
+	// fragColour = vec4(N*0.5+0.5, 1); return;
 
 	// Visualize screen coords:
-	//fragColor = vec4(ex_TexCoord, 0, 1); return;
+	//fragColour = vec4(ex_TexCoord, 0, 1); return;
 
 	// Visualize metallic:
-	//fragColor = vec4(metallic, metallic, metallic, 1); return;
+	//fragColour = vec4(metallic, metallic, metallic, 1); return;
 }

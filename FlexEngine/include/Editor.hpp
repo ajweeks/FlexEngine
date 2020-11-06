@@ -69,7 +69,7 @@ namespace flex
 		void CreateObjects();
 		void FadeOutHeadOnGizmos();
 
-		btVector3 GetAxisColor(i32 axisIndex) const;
+		btVector3 GetAxisColour(i32 axisIndex) const;
 
 		// Parent of translation, rotation, and scale gizmo objects
 		GameObject* m_TransformGizmo = nullptr;

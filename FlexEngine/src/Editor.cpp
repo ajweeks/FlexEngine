@@ -53,7 +53,7 @@ namespace flex
 		// Transform gizmo materials
 		{
 			MaterialCreateInfo matCreateInfo = {};
-			matCreateInfo.shaderName = "color";
+			matCreateInfo.shaderName = "colour";
 			matCreateInfo.constAlbedo = VEC3_ONE;
 			matCreateInfo.persistent = true;
 			matCreateInfo.visibleInEditor = false;
@@ -518,7 +518,7 @@ namespace flex
 		glm::vec4 white(1.0f);
 
 		static const real gizmoHoverMultiplier = 0.6f;
-		static const glm::vec4 hoverColor(gizmoHoverMultiplier, gizmoHoverMultiplier, gizmoHoverMultiplier, 1.0f);
+		static const glm::vec4 hoverColour(gizmoHoverMultiplier, gizmoHoverMultiplier, gizmoHoverMultiplier, 1.0f);
 
 		if (pickedTransformGizmo)
 		{
@@ -529,65 +529,65 @@ namespace flex
 			{
 				std::vector<GameObject*> translationAxes = m_TranslationGizmo->GetChildren();
 
-				if (pickedTransformGizmo == translationAxes[X_AXIS_IDX] && xMat.colorMultiplier.a > alphaThreshold)
+				if (pickedTransformGizmo == translationAxes[X_AXIS_IDX] && xMat.colourMultiplier.a > alphaThreshold)
 				{
 					m_HoveringAxisIndex = X_AXIS_IDX;
-					xMat.colorMultiplier = hoverColor;
+					xMat.colourMultiplier = hoverColour;
 				}
-				else if (pickedTransformGizmo == translationAxes[Y_AXIS_IDX] && yMat.colorMultiplier.a > alphaThreshold)
+				else if (pickedTransformGizmo == translationAxes[Y_AXIS_IDX] && yMat.colourMultiplier.a > alphaThreshold)
 				{
 					m_HoveringAxisIndex = Y_AXIS_IDX;
-					yMat.colorMultiplier = hoverColor;
+					yMat.colourMultiplier = hoverColour;
 				}
-				else if (pickedTransformGizmo == translationAxes[Z_AXIS_IDX] && zMat.colorMultiplier.a > alphaThreshold)
+				else if (pickedTransformGizmo == translationAxes[Z_AXIS_IDX] && zMat.colourMultiplier.a > alphaThreshold)
 				{
 					m_HoveringAxisIndex = Z_AXIS_IDX;
-					zMat.colorMultiplier = hoverColor;
+					zMat.colourMultiplier = hoverColour;
 				}
 			} break;
 			case TransformState::ROTATE:
 			{
 				std::vector<GameObject*> rotationAxes = m_RotationGizmo->GetChildren();
 
-				if (pickedTransformGizmo == rotationAxes[X_AXIS_IDX] && xMat.colorMultiplier.a > alphaThreshold)
+				if (pickedTransformGizmo == rotationAxes[X_AXIS_IDX] && xMat.colourMultiplier.a > alphaThreshold)
 				{
 					m_HoveringAxisIndex = X_AXIS_IDX;
-					xMat.colorMultiplier = hoverColor;
+					xMat.colourMultiplier = hoverColour;
 				}
-				else if (pickedTransformGizmo == rotationAxes[Y_AXIS_IDX] && yMat.colorMultiplier.a > alphaThreshold)
+				else if (pickedTransformGizmo == rotationAxes[Y_AXIS_IDX] && yMat.colourMultiplier.a > alphaThreshold)
 				{
 					m_HoveringAxisIndex = Y_AXIS_IDX;
-					yMat.colorMultiplier = hoverColor;
+					yMat.colourMultiplier = hoverColour;
 				}
-				else if (pickedTransformGizmo == rotationAxes[Z_AXIS_IDX] && zMat.colorMultiplier.a > alphaThreshold)
+				else if (pickedTransformGizmo == rotationAxes[Z_AXIS_IDX] && zMat.colourMultiplier.a > alphaThreshold)
 				{
 					m_HoveringAxisIndex = Z_AXIS_IDX;
-					zMat.colorMultiplier = hoverColor;
+					zMat.colourMultiplier = hoverColour;
 				}
 			} break;
 			case TransformState::SCALE:
 			{
 				std::vector<GameObject*> scaleAxes = m_ScaleGizmo->GetChildren();
 
-				if (pickedTransformGizmo == scaleAxes[X_AXIS_IDX] && xMat.colorMultiplier.a > alphaThreshold)
+				if (pickedTransformGizmo == scaleAxes[X_AXIS_IDX] && xMat.colourMultiplier.a > alphaThreshold)
 				{
 					m_HoveringAxisIndex = X_AXIS_IDX;
-					xMat.colorMultiplier = hoverColor;
+					xMat.colourMultiplier = hoverColour;
 				}
-				else if (pickedTransformGizmo == scaleAxes[Y_AXIS_IDX] && yMat.colorMultiplier.a > alphaThreshold)
+				else if (pickedTransformGizmo == scaleAxes[Y_AXIS_IDX] && yMat.colourMultiplier.a > alphaThreshold)
 				{
 					m_HoveringAxisIndex = Y_AXIS_IDX;
-					yMat.colorMultiplier = hoverColor;
+					yMat.colourMultiplier = hoverColour;
 				}
-				else if (pickedTransformGizmo == scaleAxes[Z_AXIS_IDX] && zMat.colorMultiplier.a > alphaThreshold)
+				else if (pickedTransformGizmo == scaleAxes[Z_AXIS_IDX] && zMat.colourMultiplier.a > alphaThreshold)
 				{
 					m_HoveringAxisIndex = Z_AXIS_IDX;
-					zMat.colorMultiplier = hoverColor;
+					zMat.colourMultiplier = hoverColour;
 				}
-				else if (pickedTransformGizmo == scaleAxes[ALL_AXES_IDX] && allMat.colorMultiplier.a > alphaThreshold)
+				else if (pickedTransformGizmo == scaleAxes[ALL_AXES_IDX] && allMat.colourMultiplier.a > alphaThreshold)
 				{
 					m_HoveringAxisIndex = ALL_AXES_IDX;
-					allMat.colorMultiplier = hoverColor;
+					allMat.colourMultiplier = hoverColour;
 				}
 			} break;
 			default:
@@ -603,19 +603,19 @@ namespace flex
 
 		if (m_DraggingAxisIndex != X_AXIS_IDX && m_HoveringAxisIndex != X_AXIS_IDX)
 		{
-			xMat.colorMultiplier = white;
+			xMat.colourMultiplier = white;
 		}
 		if (m_DraggingAxisIndex != Y_AXIS_IDX && m_HoveringAxisIndex != Y_AXIS_IDX)
 		{
-			yMat.colorMultiplier = white;
+			yMat.colourMultiplier = white;
 		}
 		if (m_DraggingAxisIndex != Z_AXIS_IDX && m_HoveringAxisIndex != Z_AXIS_IDX)
 		{
-			zMat.colorMultiplier = white;
+			zMat.colourMultiplier = white;
 		}
 		if (m_DraggingAxisIndex != ALL_AXES_IDX && m_HoveringAxisIndex != ALL_AXES_IDX)
 		{
-			allMat.colorMultiplier = white;
+			allMat.colourMultiplier = white;
 		}
 
 		return m_HoveringAxisIndex != -1;
@@ -632,7 +632,7 @@ namespace flex
 		m_SelectedObjectDragStartRot = m_TransformGizmo->GetTransform()->GetWorldRotation();
 
 		real gizmoSelectedMultiplier = 0.4f;
-		glm::vec4 selectedColor(gizmoSelectedMultiplier, gizmoSelectedMultiplier, gizmoSelectedMultiplier, 1.0f);
+		glm::vec4 selectedColour(gizmoSelectedMultiplier, gizmoSelectedMultiplier, gizmoSelectedMultiplier, 1.0f);
 
 		Material& xMat = g_Renderer->GetMaterial(m_TransformGizmoMatXID);
 		Material& yMat = g_Renderer->GetMaterial(m_TransformGizmoMatYID);
@@ -645,15 +645,15 @@ namespace flex
 		{
 			if (m_HoveringAxisIndex == X_AXIS_IDX)
 			{
-				xMat.colorMultiplier = selectedColor;
+				xMat.colourMultiplier = selectedColour;
 			}
 			else if (m_HoveringAxisIndex == Y_AXIS_IDX)
 			{
-				yMat.colorMultiplier = selectedColor;
+				yMat.colourMultiplier = selectedColour;
 			}
 			else if (m_HoveringAxisIndex == Z_AXIS_IDX)
 			{
-				zMat.colorMultiplier = selectedColor;
+				zMat.colourMultiplier = selectedColour;
 			}
 			m_DraggingGizmoOffsetNeedsRecalculation = true;
 		} break;
@@ -663,34 +663,34 @@ namespace flex
 
 			if (m_HoveringAxisIndex == X_AXIS_IDX)
 			{
-				xMat.colorMultiplier = selectedColor;
+				xMat.colourMultiplier = selectedColour;
 			}
 			else if (m_HoveringAxisIndex == Y_AXIS_IDX)
 			{
-				yMat.colorMultiplier = selectedColor;
+				yMat.colourMultiplier = selectedColour;
 			}
 			else if (m_HoveringAxisIndex == Z_AXIS_IDX)
 			{
-				zMat.colorMultiplier = selectedColor;
+				zMat.colourMultiplier = selectedColour;
 			}
 		} break;
 		case TransformState::SCALE:
 		{
 			if (m_HoveringAxisIndex == X_AXIS_IDX)
 			{
-				xMat.colorMultiplier = selectedColor;
+				xMat.colourMultiplier = selectedColour;
 			}
 			else if (m_HoveringAxisIndex == Y_AXIS_IDX)
 			{
-				yMat.colorMultiplier = selectedColor;
+				yMat.colourMultiplier = selectedColour;
 			}
 			else if (m_HoveringAxisIndex == Z_AXIS_IDX)
 			{
-				zMat.colorMultiplier = selectedColor;
+				zMat.colourMultiplier = selectedColour;
 			}
 			else if (m_HoveringAxisIndex == ALL_AXES_IDX)
 			{
-				allMat.colorMultiplier = selectedColor;
+				allMat.colourMultiplier = selectedColour;
 			}
 		} break;
 		default:
@@ -1588,27 +1588,27 @@ namespace flex
 			real power = 0.05f;
 			if (camViewXAlignment <= threshold)
 			{
-				xMat.colorMultiplier.a = Lerp(1.0f, 0.0f, glm::pow((threshold - camViewXAlignment) / threshold, power));
+				xMat.colourMultiplier.a = Lerp(1.0f, 0.0f, glm::pow((threshold - camViewXAlignment) / threshold, power));
 			}
 			else
 			{
-				xMat.colorMultiplier.a = 1.0f;
+				xMat.colourMultiplier.a = 1.0f;
 			}
 			if (camViewYAlignment <= threshold)
 			{
-				yMat.colorMultiplier.a = Lerp(1.0f, 0.0f, glm::pow((threshold - camViewYAlignment) / threshold, power));
+				yMat.colourMultiplier.a = Lerp(1.0f, 0.0f, glm::pow((threshold - camViewYAlignment) / threshold, power));
 			}
 			else
 			{
-				yMat.colorMultiplier.a = 1.0f;
+				yMat.colourMultiplier.a = 1.0f;
 			}
 			if (camViewZAlignment <= threshold)
 			{
-				zMat.colorMultiplier.a = Lerp(1.0f, 0.0f, glm::pow((threshold - camViewZAlignment) / threshold, power));
+				zMat.colourMultiplier.a = Lerp(1.0f, 0.0f, glm::pow((threshold - camViewZAlignment) / threshold, power));
 			}
 			else
 			{
-				zMat.colorMultiplier.a = 1.0f;
+				zMat.colourMultiplier.a = 1.0f;
 			}
 		}
 		else
@@ -1618,32 +1618,32 @@ namespace flex
 			real power = m_CurrentTransformGizmoState == TransformState::ROTATE ? 0.5f : 0.2f;
 			if (camViewXAlignment >= threshold)
 			{
-				xMat.colorMultiplier.a = Lerp(1.0f, 0.0f, glm::pow((camViewXAlignment - threshold) / (1.0f - threshold), power));
+				xMat.colourMultiplier.a = Lerp(1.0f, 0.0f, glm::pow((camViewXAlignment - threshold) / (1.0f - threshold), power));
 			}
 			else
 			{
-				xMat.colorMultiplier.a = 1.0f;
+				xMat.colourMultiplier.a = 1.0f;
 			}
 			if (camViewYAlignment >= threshold)
 			{
-				yMat.colorMultiplier.a = Lerp(1.0f, 0.0f, glm::pow((camViewYAlignment - threshold) / (1.0f - threshold), power));
+				yMat.colourMultiplier.a = Lerp(1.0f, 0.0f, glm::pow((camViewYAlignment - threshold) / (1.0f - threshold), power));
 			}
 			else
 			{
-				yMat.colorMultiplier.a = 1.0f;
+				yMat.colourMultiplier.a = 1.0f;
 			}
 			if (camViewZAlignment >= threshold)
 			{
-				zMat.colorMultiplier.a = Lerp(1.0f, 0.0f, glm::pow((camViewZAlignment - threshold) / (1.0f - threshold), power));
+				zMat.colourMultiplier.a = Lerp(1.0f, 0.0f, glm::pow((camViewZAlignment - threshold) / (1.0f - threshold), power));
 			}
 			else
 			{
-				zMat.colorMultiplier.a = 1.0f;
+				zMat.colourMultiplier.a = 1.0f;
 			}
 		}
 	}
 
-	btVector3 Editor::GetAxisColor(i32 axisIndex) const
+	btVector3 Editor::GetAxisColour(i32 axisIndex) const
 	{
 		return axisIndex == X_AXIS_IDX ? btVector3(1.0f, 0.0f, 0.0f) : axisIndex == Y_AXIS_IDX ? btVector3(0.0f, 1.0f, 0.0f) : btVector3(0.1f, 0.1f, 1.0f);
 	}

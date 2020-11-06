@@ -122,7 +122,7 @@ namespace flex
 		static const real GRID_LINE_SPACING;
 		static const u32 GRID_LINE_COUNT;
 
-		static glm::vec4 m_DefaultColor_4;
+		static glm::vec4 m_DefaultColour_4;
 		static glm::vec3 m_DefaultPosition;
 		static glm::vec3 m_DefaultTangent;
 		static glm::vec3 m_DefaultNormal;

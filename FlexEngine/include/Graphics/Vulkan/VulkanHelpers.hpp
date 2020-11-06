@@ -399,7 +399,7 @@ namespace flex
 		void CreateAttachment(VulkanDevice* device, FrameBufferAttachment* frameBufferAttachment, const char* DBG_ImageName = nullptr, const char* DBG_ImageViewName = nullptr);
 
 		template<class T>
-		void CopyPixels(const T* srcData, T* dstData, u32 dstOffset, u32 width, u32 height, u32 channelCount, u32 pitch, bool bColorSwizzle);
+		void CopyPixels(const T* srcData, T* dstData, u32 dstOffset, u32 width, u32 height, u32 channelCount, u32 pitch, bool bColourSwizzle);
 
 		VkBool32 GetSupportedDepthFormat(VkPhysicalDevice physicalDevice, VkFormat* depthFormat);
 
@@ -654,8 +654,8 @@ namespace flex
 			u32 descriptorSetLayoutIndex = 0;
 
 			bool bSetDynamicStates = false;
-			bool bEnableColorBlending = false;
-			bool bEnableAdditiveColorBlending = false;
+			bool bEnableColourBlending = false;
+			bool bEnableAdditiveColourBlending = false;
 
 			VkBool32 depthTestEnable = VK_TRUE;
 			VkBool32 depthWriteEnable = VK_TRUE;

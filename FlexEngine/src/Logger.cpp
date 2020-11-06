@@ -53,7 +53,7 @@ namespace flex
 			return;
 		}
 
-		Platform::SetConsoleTextColor(Platform::ConsoleColour::DEFAULT);
+		Platform::SetConsoleTextColour(Platform::ConsoleColour::DEFAULT);
 
 		va_list argList;
 		va_start(argList, str);
@@ -70,7 +70,7 @@ namespace flex
 			return;
 		}
 
-		Platform::SetConsoleTextColor(Platform::ConsoleColour::WARNING);
+		Platform::SetConsoleTextColour(Platform::ConsoleColour::WARNING);
 
 		va_list argList;
 		va_start(argList, str);
@@ -87,7 +87,7 @@ namespace flex
 			return;
 		}
 
-		Platform::SetConsoleTextColor(Platform::ConsoleColour::ERROR);
+		Platform::SetConsoleTextColour(Platform::ConsoleColour::ERROR);
 
 		va_list argList;
 		va_start(argList, str);
@@ -114,7 +114,7 @@ namespace flex
 			return;
 		}
 
-		Platform::SetConsoleTextColor(Platform::ConsoleColour::DEFAULT);
+		Platform::SetConsoleTextColour(Platform::ConsoleColour::DEFAULT);
 
 		if (strlen(str) == 0)
 		{

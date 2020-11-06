@@ -16,12 +16,12 @@ layout (binding = 1) uniform sampler2D in_Texture;
 
 layout (location = 0) in vec2 ex_TexCoord;
 
-layout (location = 0) out vec4 out_Color;
+layout (location = 0) out vec4 out_Colour;
 
 // https://developer.download.nvidia.com/assets/gamedev/files/sdk/11/FXAA_WhitePaper.pdf
 void main()
 {
-	vec3 color = texture(in_Texture, ex_TexCoord).rgb;
+	vec3 colour = texture(in_Texture, ex_TexCoord).rgb;
 
 	vec3 rgbNW = textureOffset(in_Texture, ex_TexCoord, ivec2(-1, 1)).rgb;
 	vec3 rgbNE = textureOffset(in_Texture, ex_TexCoord, ivec2(1, 1)).rgb;
@@ -35,7 +35,7 @@ void main()
 	float lumaNE = dot(rgbNE, toLuma);
 	float lumaSW = dot(rgbSW, toLuma);
 	float lumaSE = dot(rgbSE, toLuma);
-	float lumaM = dot(color, toLuma);
+	float lumaM = dot(colour, toLuma);
 
 	float lumaMin = min(lumaM, min(min(lumaNE, lumaNW), min(lumaSW, lumaSE)));
 	float lumaMax = max(lumaM, max(max(lumaNE, lumaNW), max(lumaSW, lumaSE)));
@@ -43,7 +43,7 @@ void main()
 	// Only apply AA to high contrast regions
 	if ((lumaMax - lumaMin) < max(uboConstant.lumaThresholdMin, lumaMax * uboConstant.lumaThresholdMax))
 	{
-		out_Color = vec4(color, 1);
+		out_Colour = vec4(colour, 1);
 		return;
 	}
 
@@ -74,15 +74,15 @@ void main()
 
 	if (lumaFourTap < lumaMin || lumaFourTap > lumaMax)
 	{
-		out_Color = vec4(rgbTwoTap, 1.0);
+		out_Colour = vec4(rgbTwoTap, 1.0);
 	}
 	else
 	{
-		out_Color = vec4(rgbFourTap, 1.0);
+		out_Colour = vec4(rgbFourTap, 1.0);
 	}
 
 	if (uboConstant.bDEBUGShowEdges != 0)
 	{
-		out_Color.r = 1.0;
+		out_Colour.r = 1.0;
 	}
 }

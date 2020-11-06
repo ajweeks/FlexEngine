@@ -177,14 +177,14 @@ i32 ImGui::Bezier(const char* label, real* P, bool bConstrainHandles, i32 areaWi
 
 	// draw curve
 	{
-		ImColor color(GetStyle().Colors[ImGuiCol_PlotLines]);
+		ImColor colour(GetStyle().Colors[ImGuiCol_PlotLines]);
 		for (i32 i = 0; i < SMOOTHNESS; ++i)
 		{
 			ImVec2 p = { results[i + 0].x, 1 - results[i + 0].y };
 			ImVec2 q = { results[i + 1].x, 1 - results[i + 1].y };
 			ImVec2 r(p.x * (bb.Max.x - bb.Min.x) + bb.Min.x, p.y * (bb.Max.y - bb.Min.y) + bb.Min.y);
 			ImVec2 s(q.x * (bb.Max.x - bb.Min.x) + bb.Min.x, q.y * (bb.Max.y - bb.Min.y) + bb.Min.y);
-			DrawList->AddLine(r, s, color, CURVE_WIDTH);
+			DrawList->AddLine(r, s, colour, CURVE_WIDTH);
 		}
 	}
 

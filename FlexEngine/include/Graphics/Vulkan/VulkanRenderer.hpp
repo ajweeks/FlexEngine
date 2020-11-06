@@ -60,7 +60,7 @@ namespace flex
 			virtual void ReloadSkybox(bool bRandomizeTexture) override;
 
 			virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) override;
-			virtual void SetClearColor(real r, real g, real b) override;
+			virtual void SetClearColour(real r, real g, real b) override;
 
 			virtual void OnWindowSizeChanged(i32 width, i32 height) override;
 
@@ -97,14 +97,14 @@ namespace flex
 			virtual PhysicsDebugDrawBase* GetDebugDrawer() override;
 
 			virtual void DrawStringSS(const std::string& str,
-				const glm::vec4& color,
+				const glm::vec4& colour,
 				AnchorPoint anchor,
 				const glm::vec2& pos, // Positional offset from anchor
 				real spacing,
 				real scale = 1.0f) override;
 
 			virtual void DrawStringWS(const std::string& str,
-				const glm::vec4& color,
+				const glm::vec4& colour,
 				const glm::vec3& pos,
 				const glm::quat& rot,
 				real spacing,
@@ -138,7 +138,7 @@ namespace flex
 			static void SetSamplerName(VulkanDevice* device, VkSampler sampler, const char* name);
 			static void SetBufferName(VulkanDevice* device, VkBuffer buffer, const char* name);
 
-			static void BeginDebugMarkerRegion(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f));
+			static void BeginDebugMarkerRegion(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 colour = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f));
 			static void EndDebugMarkerRegion(VkCommandBuffer cmdBuf, const char* markerName = nullptr); // markerName optional, useful for device check-pointing though
 
 			static PFN_vkSetDebugUtilsObjectNameEXT m_vkSetDebugUtilsObjectNameEXT;
@@ -275,7 +275,7 @@ namespace flex
 			void BindDescriptorSet(const VulkanMaterial* material, u32 dynamicOffsetOffset, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet) const;
 			void RecreateSwapChain();
 
-			void BeginDebugMarkerRegionInternal(VkCommandBuffer cmdBuf, const char* markerName, const glm::vec4& color);
+			void BeginDebugMarkerRegionInternal(VkCommandBuffer cmdBuf, const char* markerName, const glm::vec4& colour);
 			void EndDebugMarkerRegionInternal(VkCommandBuffer cmdBuf, const char* markerName);
 
 			void SetCheckPoint(VkCommandBuffer cmdBuf, const char* checkPointName);
@@ -367,8 +367,8 @@ namespace flex
 			VulkanTexture* m_BRDFTexture = nullptr;
 			bool bRenderedBRDFLUT = false;
 
-			FrameBufferAttachment* m_GBufferColorAttachment0 = nullptr;
-			FrameBufferAttachment* m_GBufferColorAttachment1 = nullptr;
+			FrameBufferAttachment* m_GBufferColourAttachment0 = nullptr;
+			FrameBufferAttachment* m_GBufferColourAttachment1 = nullptr;
 			FrameBufferAttachment* m_GBufferDepthAttachment = nullptr;
 
 			VDeleter<VkSampler> m_LinMipLinSampler;
@@ -376,8 +376,8 @@ namespace flex
 			VDeleter<VkSampler> m_NearestClampEdgeSampler;
 
 			VkFormat m_OffscreenFrameBufferFormat = VK_FORMAT_UNDEFINED;
-			FrameBufferAttachment* m_OffscreenFB0ColorAttachment0 = nullptr;
-			FrameBufferAttachment* m_OffscreenFB1ColorAttachment0 = nullptr;
+			FrameBufferAttachment* m_OffscreenFB0ColourAttachment0 = nullptr;
+			FrameBufferAttachment* m_OffscreenFB1ColourAttachment0 = nullptr;
 
 			FrameBufferAttachment* m_OffscreenFB0DepthAttachment = nullptr;
 			FrameBufferAttachment* m_OffscreenFB1DepthAttachment = nullptr;
@@ -389,12 +389,12 @@ namespace flex
 			VkDescriptorSet m_TAAResolveDescriptorSet = VK_NULL_HANDLE;
 			VkDescriptorSet m_FinalFullscreenBlitDescriptorSet = VK_NULL_HANDLE;
 
-			FrameBufferAttachment* m_SSAOFBColorAttachment0 = nullptr;
-			FrameBufferAttachment* m_SSAOBlurHFBColorAttachment0 = nullptr;
-			FrameBufferAttachment* m_SSAOBlurVFBColorAttachment0 = nullptr;
+			FrameBufferAttachment* m_SSAOFBColourAttachment0 = nullptr;
+			FrameBufferAttachment* m_SSAOBlurHFBColourAttachment0 = nullptr;
+			FrameBufferAttachment* m_SSAOBlurVFBColourAttachment0 = nullptr;
 
-			FrameBufferAttachment* m_GBufferCubemapColorAttachment0 = nullptr;
-			FrameBufferAttachment* m_GBufferCubemapColorAttachment1 = nullptr;
+			FrameBufferAttachment* m_GBufferCubemapColourAttachment0 = nullptr;
+			FrameBufferAttachment* m_GBufferCubemapColourAttachment1 = nullptr;
 			FrameBufferAttachment* m_GBufferCubemapDepthAttachment = nullptr;
 
 			VDeleter<VkImage> m_ShadowImage;
@@ -557,7 +557,7 @@ namespace flex
 			VkCommandBuffer m_OffScreenCmdBuffer = VK_NULL_HANDLE;
 			VkSemaphore m_OffscreenSemaphore = VK_NULL_HANDLE;
 
-			VkClearColorValue m_ClearColor;
+			VkClearColorValue m_ClearColour;
 
 			u32 m_CurrentSwapChainBufferIndex = 0;
 
@@ -581,7 +581,7 @@ namespace flex
 			struct VulkanShaderCompiler* m_ShaderCompiler = nullptr;
 #endif
 
-			const FrameBufferAttachmentID SWAP_CHAIN_COLOR_ATTACHMENT_ID = 11000;
+			const FrameBufferAttachmentID SWAP_CHAIN_COLOUR_ATTACHMENT_ID = 11000;
 			const FrameBufferAttachmentID SWAP_CHAIN_DEPTH_ATTACHMENT_ID = 11001;
 			const FrameBufferAttachmentID SHADOW_CASCADE_DEPTH_ATTACHMENT_ID = 22001;
 

@@ -69,7 +69,7 @@ namespace flex
 		m_PointLights = (PointLightData*)malloc(MAX_POINT_LIGHT_COUNT * sizeof(PointLightData));
 		for (i32 i = 0; i < MAX_POINT_LIGHT_COUNT; ++i)
 		{
-			m_PointLights[i].color = VEC3_NEG_ONE;
+			m_PointLights[i].colour = VEC3_NEG_ONE;
 			m_PointLights[i].enabled = 0;
 		}
 
@@ -412,7 +412,7 @@ namespace flex
 	void Renderer::EnqueueUntexturedQuad(const glm::vec2& pos,
 		AnchorPoint anchor,
 		const glm::vec2& size,
-		const glm::vec4& color)
+		const glm::vec4& colour)
 	{
 		SpriteQuadDrawInfo drawInfo = {};
 
@@ -422,7 +422,7 @@ namespace flex
 		drawInfo.bReadDepth = false;
 		drawInfo.bWriteDepth = false;
 		drawInfo.anchor = anchor;
-		drawInfo.color = color;
+		drawInfo.colour = colour;
 		drawInfo.pos = glm::vec3(pos.x, pos.y, 1.0f);
 		drawInfo.bEnableAlbedoSampler = false;
 
@@ -431,7 +431,7 @@ namespace flex
 
 	void Renderer::EnqueueUntexturedQuadRaw(const glm::vec2& pos,
 		const glm::vec2& size,
-		const glm::vec4& color)
+		const glm::vec4& colour)
 	{
 		SpriteQuadDrawInfo drawInfo = {};
 
@@ -441,7 +441,7 @@ namespace flex
 		drawInfo.bReadDepth = false;
 		drawInfo.bWriteDepth = false;
 		drawInfo.bRaw = true;
-		drawInfo.color = color;
+		drawInfo.colour = colour;
 		drawInfo.pos = glm::vec3(pos.x, pos.y, 1.0f);
 		drawInfo.bEnableAlbedoSampler = false;
 
@@ -520,9 +520,9 @@ namespace flex
 
 	void Renderer::RemovePointLight(PointLightID ID)
 	{
-		if (m_PointLights[ID].color.x != -1.0f)
+		if (m_PointLights[ID].colour.x != -1.0f)
 		{
-			m_PointLights[ID].color = VEC4_NEG_ONE;
+			m_PointLights[ID].colour = VEC4_NEG_ONE;
 			m_PointLights[ID].enabled = 0;
 			m_NumPointLightsEnabled--;
 			assert(m_NumPointLightsEnabled >= 0);
@@ -533,7 +533,7 @@ namespace flex
 	{
 		for (i32 i = 0; i < m_NumPointLightsEnabled; ++i)
 		{
-			m_PointLights[i].color = VEC4_NEG_ONE;
+			m_PointLights[i].colour = VEC4_NEG_ONE;
 			m_PointLights[i].enabled = 0;
 		}
 		m_NumPointLightsEnabled = 0;
@@ -1276,7 +1276,7 @@ namespace flex
 			m_BaseShaders = {
 				{ "deferred_combine", "deferred_combine.vert", "deferred_combine.frag" },
 				//{ "deferred_combine_cubemap", "deferred_combine_cubemap.vert", "deferred_combine_cubemap.frag" },
-				{ "color", "color.vert", "color.frag" },
+				{ "colour", "colour.vert", "colour.frag" },
 				{ "pbr", "pbr.vert", "pbr.frag" },
 				{ "pbr_ws", "pbr_ws.vert", "pbr_ws.frag" },
 				{ "skybox", "skybox.vert", "skybox.frag" },
@@ -1302,7 +1302,7 @@ namespace flex
 			m_BaseShaders = {
 				{ "deferred_combine", "vk_deferred_combine_vert.spv", "vk_deferred_combine_frag.spv" },
 				//{ "deferred_combine_cubemap", "vk_deferred_combine_cubemap_vert.spv", "vk_deferred_combine_cubemap_frag.spv" },
-				{ "color", "vk_color_vert.spv","vk_color_frag.spv" },
+				{ "colour", "vk_colour_vert.spv","vk_colour_frag.spv" },
 				{ "pbr", "vk_pbr_vert.spv", "vk_pbr_frag.spv" },
 				{ "pbr_ws", "vk_pbr_ws_vert.spv", "vk_pbr_ws_frag.spv" },
 				{ "skybox", "vk_skybox_vert.spv", "vk_skybox_frag.spv" },
@@ -1398,21 +1398,21 @@ namespace flex
 			//m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_IRRADIANCE_SAMPLER);
 			//++shaderID;
 
-			// Color
+			// Colour
 			m_BaseShaders[shaderID].renderPassType = RenderPassType::FORWARD;
 			m_BaseShaders[shaderID].bDepthWriteEnable = false;
 			m_BaseShaders[shaderID].bTranslucent = true;
 			m_BaseShaders[shaderID].dynamicVertexBufferSize = 16384 * 4 * 28; // (1835008) TODO: FIXME:
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION |
-				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+				(u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT;
 
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
 
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
-			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_COLOR_MULTIPLIER);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_COLOUR_MULTIPLIER);
 			++shaderID;
 
 			// PBR
@@ -1426,7 +1426,7 @@ namespace flex
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV |
-				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
+				(u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT |
 				(u32)VertexAttribute::NORMAL |
 				(u32)VertexAttribute::TANGENT;
 
@@ -1552,7 +1552,7 @@ namespace flex
 
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
-			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_COLOR_MULTIPLIER);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_COLOUR_MULTIPLIER);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_ALBEDO_SAMPLER);
 
 			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_ALBEDO_SAMPLER);
@@ -1571,7 +1571,7 @@ namespace flex
 
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
-			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_COLOR_MULTIPLIER);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_COLOUR_MULTIPLIER);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_ALBEDO_SAMPLER);
 
 			m_BaseShaders[shaderID].textureUniforms.AddUniform(U_ALBEDO_SAMPLER);
@@ -1584,7 +1584,7 @@ namespace flex
 				(u32)VertexAttribute::UV;
 
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
-			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_COLOR_MULTIPLIER);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_COLOUR_MULTIPLIER);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_ENABLE_ALBEDO_SAMPLER);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_POST_PROCESS_MAT);
 
@@ -1629,7 +1629,7 @@ namespace flex
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION2 |
 				(u32)VertexAttribute::UV |
-				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
+				(u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT |
 				(u32)VertexAttribute::EXTRA_VEC4 |
 				(u32)VertexAttribute::EXTRA_INT;
 
@@ -1648,7 +1648,7 @@ namespace flex
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV |
-				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
+				(u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT |
 				(u32)VertexAttribute::TANGENT |
 				(u32)VertexAttribute::EXTRA_VEC4 |
 				(u32)VertexAttribute::EXTRA_INT;
@@ -1773,7 +1773,7 @@ namespace flex
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::VELOCITY3 |
-				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
+				(u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT |
 				(u32)VertexAttribute::EXTRA_VEC4;
 
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
@@ -1793,7 +1793,7 @@ namespace flex
 			m_BaseShaders[shaderID].vertexAttributes =
 				(u32)VertexAttribute::POSITION |
 				(u32)VertexAttribute::UV |
-				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT |
+				(u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT |
 				(u32)VertexAttribute::NORMAL;
 
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
@@ -1815,7 +1815,7 @@ namespace flex
 				(u32)VertexAttribute::UV |
 				(u32)VertexAttribute::NORMAL |
 				(u32)VertexAttribute::TANGENT |
-				(u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+				(u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT;
 
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
 			m_BaseShaders[shaderID].constantBufferUniforms.AddUniform(U_CAM_POS);
@@ -1844,7 +1844,7 @@ namespace flex
 
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
 			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_MODEL);
-			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_COLOR_MULTIPLIER);
+			m_BaseShaders[shaderID].dynamicBufferUniforms.AddUniform(U_COLOUR_MULTIPLIER);
 			++shaderID;
 
 			assert(shaderID == m_BaseShaders.size());
@@ -2376,21 +2376,21 @@ namespace flex
 	void Renderer::EnqueueScreenSpaceText()
 	{
 		SetFont(SID("editor-02"));
-		static const glm::vec4 color(0.95f);
-		DrawStringSS("FLEX ENGINE", color, AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -0.055f), 1.5f, 0.6f);
+		static const glm::vec4 colour(0.95f);
+		DrawStringSS("FLEX ENGINE", colour, AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -0.055f), 1.5f, 0.6f);
 		if (g_EngineInstance->IsSimulationPaused())
 		{
 			const std::vector<TextCache>& textCaches = m_CurrentFont->GetTextCaches();
 			real height = GetStringHeight(textCaches[textCaches.size() - 1], m_CurrentFont) / (real)g_Window->GetSize().y;
 			// TODO: Allow specifying text pos in different units (absolute, relative, ...)
-			DrawStringSS("PAUSED", color, AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -(height + 0.09f)), 0.0f, 0.6f);
+			DrawStringSS("PAUSED", colour, AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -(height + 0.09f)), 0.0f, 0.6f);
 		}
 
 		if (AudioManager::IsMuted())
 		{
 			const std::vector<TextCache>& textCaches = m_CurrentFont->GetTextCaches();
 			real height = GetStringHeight(textCaches[textCaches.size() - 1], m_CurrentFont) / (real)g_Window->GetSize().y;
-			DrawStringSS("Muted", color, AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -(height + 0.09f)), 0.0f, 0.6f);
+			DrawStringSS("Muted", colour, AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -(height + 0.09f)), 0.0f, 0.6f);
 		}
 
 #if 0
@@ -2671,10 +2671,10 @@ namespace flex
 
 		MaterialCreateInfo selectedObjectMatCreateInfo = {};
 		selectedObjectMatCreateInfo.name = "Selected Object";
-		selectedObjectMatCreateInfo.shaderName = "color";
+		selectedObjectMatCreateInfo.shaderName = "colour";
 		selectedObjectMatCreateInfo.persistent = true;
 		selectedObjectMatCreateInfo.visibleInEditor = false;
-		selectedObjectMatCreateInfo.colorMultiplier = VEC4_ONE;
+		selectedObjectMatCreateInfo.colourMultiplier = VEC4_ONE;
 		m_SelectedObjectMatID = InitializeMaterial(&selectedObjectMatCreateInfo);
 
 		MaterialCreateInfo taaMatCreateInfo = {};
@@ -2682,7 +2682,7 @@ namespace flex
 		taaMatCreateInfo.shaderName = "taa_resolve";
 		taaMatCreateInfo.persistent = true;
 		taaMatCreateInfo.visibleInEditor = false;
-		taaMatCreateInfo.colorMultiplier = VEC4_ONE;
+		taaMatCreateInfo.colourMultiplier = VEC4_ONE;
 		m_TAAResolveMaterialID = InitializeMaterial(&taaMatCreateInfo);
 
 		MaterialCreateInfo gammaCorrectMatCreateInfo = {};
@@ -2690,7 +2690,7 @@ namespace flex
 		gammaCorrectMatCreateInfo.shaderName = "gamma_correct";
 		gammaCorrectMatCreateInfo.persistent = true;
 		gammaCorrectMatCreateInfo.visibleInEditor = false;
-		gammaCorrectMatCreateInfo.colorMultiplier = VEC4_ONE;
+		gammaCorrectMatCreateInfo.colourMultiplier = VEC4_ONE;
 		m_GammaCorrectMaterialID = InitializeMaterial(&gammaCorrectMatCreateInfo);
 
 		MaterialCreateInfo fullscreenBlitMatCreateInfo = {};
@@ -2978,7 +2978,7 @@ namespace flex
 							TextVertex2D vert = {};
 							vert.pos = glm::vec2(basePos + pos);
 							vert.uv = metric->texCoord;
-							vert.color = textCache.color;
+							vert.colour = textCache.colour;
 							vert.charSizePixelsCharSizeNorm = charSizePixelsCharSizeNorm;
 							vert.channel = texChannel;
 
@@ -3080,7 +3080,7 @@ namespace flex
 							TextVertex3D vert = {};
 							vert.pos = pos;
 							vert.uv = metric->texCoord;
-							vert.color = textCache.color;
+							vert.colour = textCache.colour;
 							vert.tangent = tangent;
 							vert.charSizePixelsCharSizeNorm = charSizePixelsCharSizeNorm;
 							vert.channel = texChannel;
@@ -3110,12 +3110,12 @@ namespace flex
 		return charIndex;
 	}
 
-	glm::vec4 Renderer::GetSelectedObjectColorMultiplier() const
+	glm::vec4 Renderer::GetSelectedObjectColourMultiplier() const
 	{
-		static const glm::vec4 color0 = { 0.95f, 0.95f, 0.95f, 0.4f };
-		static const glm::vec4 color1 = { 0.85f, 0.15f, 0.85f, 0.4f };
+		static const glm::vec4 colour0 = { 0.95f, 0.95f, 0.95f, 0.4f };
+		static const glm::vec4 colour1 = { 0.85f, 0.15f, 0.85f, 0.4f };
 		static const real pulseSpeed = 8.0f;
-		return Lerp(color0, color1, sin(g_SecElapsedSinceProgramStart * pulseSpeed) * 0.5f + 0.5f);
+		return Lerp(colour0, colour1, sin(g_SecElapsedSinceProgramStart * pulseSpeed) * 0.5f + 0.5f);
 	}
 
 	glm::mat4 Renderer::GetPostProcessingMatrix() const

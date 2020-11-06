@@ -81,7 +81,7 @@ namespace flex
 
 		static DisplayedFrameOptions s_DisplayedFrameOptions;
 
-		static glm::vec4 blockColors[];
+		static glm::vec4 blockColours[];
 
 	};
 } // namespace flex

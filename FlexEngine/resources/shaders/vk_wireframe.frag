@@ -11,12 +11,12 @@ layout (binding = 1) uniform UBODynamic
 	vec4 colour;
 } uboDynamic;
 
-layout (location = 0) out vec4 fragColor;
+layout (location = 0) out vec4 fragColour;
 
 void main()
 {
     vec3 bary = vec3(inputs.barycentrics.x, inputs.barycentrics.y, 1.0 - inputs.barycentrics.x - inputs.barycentrics.y);
     vec3 delta = fwidth(bary);
     vec3 edgeDist = smoothstep(vec3(0), delta*0.9,bary);
-    fragColor = vec4(uboDynamic.colour.rgb, 1.0-min(edgeDist.x, min(edgeDist.y, edgeDist.z)));
+    fragColour = vec4(uboDynamic.colour.rgb, 1.0-min(edgeDist.x, min(edgeDist.y, edgeDist.z)));
 }

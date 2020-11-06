@@ -159,10 +159,10 @@ IGNORE_WARNINGS_PUSH
 
 namespace flex
 {
-	extern ImVec4 g_WarningTextColor;
-	extern ImVec4 g_WarningButtonColor;
-	extern ImVec4 g_WarningButtonHoveredColor;
-	extern ImVec4 g_WarningButtonActiveColor;
+	extern ImVec4 g_WarningTextColour;
+	extern ImVec4 g_WarningButtonColour;
+	extern ImVec4 g_WarningButtonHoveredColour;
+	extern ImVec4 g_WarningButtonActiveColour;
 }
 
 #include "ImGuiBezier.hpp"
@@ -252,10 +252,10 @@ namespace flex
 	extern glm::quat QUAT_IDENTITY;
 	extern glm::mat4 MAT4_IDENTITY;
 	extern glm::mat4 MAT4_ZERO;
-	extern u32 COLOR32U_WHITE;
-	extern u32 COLOR32U_BLACK;
-	extern glm::vec4 COLOR128F_WHITE;
-	extern glm::vec4 COLOR128F_BLACK;
+	extern u32 COLOUR32U_WHITE;
+	extern u32 COLOUR32U_BLACK;
+	extern glm::vec4 COLOUR128F_WHITE;
+	extern glm::vec4 COLOUR128F_BLACK;
 
 	extern std::string EMPTY_STRING;
 

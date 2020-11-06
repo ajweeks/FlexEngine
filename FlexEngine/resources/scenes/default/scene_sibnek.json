@@ -89,7 +89,7 @@
 			"point light info" : 
 			{
 				"pos" : "31.500, 18.434, 0.000",
-				"color" : "1.00, 1.00, 1.00",
+				"colour" : "1.00, 1.00, 1.00",
 				"enabled" : true,
 				"brightness" : 885.416992
 			}
@@ -105,7 +105,7 @@
 			"point light info" : 
 			{
 				"pos" : "-42.000, 15.400, 0.000",
-				"color" : "1.00, 1.00, 1.00",
+				"colour" : "1.00, 1.00, 1.00",
 				"enabled" : true,
 				"brightness" : 640.625000
 			}

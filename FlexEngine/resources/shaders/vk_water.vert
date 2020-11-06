@@ -18,7 +18,7 @@ struct DirectionalLight
 {
 	vec3 direction;
 	int enabled;
-	vec3 color;
+	vec3 colour;
 	float brightness;
 	int castShadows;
 	float shadowDarkness;

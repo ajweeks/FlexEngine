@@ -1,6 +1,6 @@
 #version 450
 
-layout (location = 0) out float fragColor;
+layout (location = 0) out float fragColour;
 
 layout (location = 0) in vec2 ex_TexCoord;
 
@@ -36,7 +36,7 @@ void main()
 	
 	if (depth == 0.0f)
 	{
-		fragColor = 1.0f;
+		fragColour = 1.0f;
 		return;
 	}
 
@@ -85,5 +85,5 @@ void main()
 	}
 	occlusion = 1.0 - (occlusion / float(max(sampleCount,1)));
 	
-	fragColor = occlusion;
+	fragColour = occlusion;
 }

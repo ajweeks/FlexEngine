@@ -28,11 +28,11 @@ namespace flex
 		{
 			stride += sizeof(glm::vec2);
 		}
-		if (vertexAttributes & (u32)VertexAttribute::COLOR_R8G8B8A8_UNORM)
+		if (vertexAttributes & (u32)VertexAttribute::COLOUR_R8G8B8A8_UNORM)
 		{
 			stride += sizeof(i32);
 		}
-		if (vertexAttributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)
+		if (vertexAttributes & (u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT)
 		{
 			stride += sizeof(glm::vec4);
 		}

@@ -377,7 +377,7 @@ namespace flex
 		g_InputManager = nullptr;
 
 
-		// Reset console color to default
+		// Reset console colour to default
 		Print("\n");
 	}
 

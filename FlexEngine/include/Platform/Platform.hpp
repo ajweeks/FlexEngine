@@ -28,7 +28,7 @@ namespace flex
 		static void Init();
 
 		static void GetConsoleHandle();
-		static void SetConsoleTextColor(ConsoleColour colour);
+		static void SetConsoleTextColour(ConsoleColour colour);
 
 		static bool IsProcessRunning(u32 PID);
 		static u32 GetCurrentProcessID();

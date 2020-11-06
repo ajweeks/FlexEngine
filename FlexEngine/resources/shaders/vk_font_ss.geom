@@ -6,7 +6,7 @@ layout(triangle_strip, max_vertices = 4) out;
 layout (location = 0) in VSO
 {
     vec2 position;
-    vec4 color;
+    vec4 colour;
     vec2 texCoord;
     vec2 charSizePixels;
     vec2 charSizeNorm;
@@ -15,7 +15,7 @@ layout (location = 0) in VSO
 
 layout (location = 0) out GSO
 {
-	vec4 color;
+	vec4 colour;
 	vec2 texCoord;
 	flat int channel;
 } outputs;
@@ -39,25 +39,25 @@ void main()
 	
 	outputs.channel = inputs[0].channel;
 	gl_Position = uboDynamic.model * vec4(pos.x, pos.y - charSizeNorm.y, 0, 1);
-	outputs.color = inputs[0].color;
+	outputs.colour = inputs[0].colour;
 	outputs.texCoord = uv + vec2(0, normUV.y);
 	EmitVertex();
 	
 	outputs.channel = inputs[0].channel;
 	gl_Position = uboDynamic.model * vec4(pos.x + charSizeNorm.x, pos.y - charSizeNorm.y, 0, 1);
-	outputs.color = inputs[0].color;
+	outputs.colour = inputs[0].colour;
 	outputs.texCoord = uv + normUV;
 	EmitVertex();
 	
 	outputs.channel = inputs[0].channel;
 	gl_Position = uboDynamic.model * vec4(pos.x, pos.y, 0, 1);
-	outputs.color = inputs[0].color;
+	outputs.colour = inputs[0].colour;
 	outputs.texCoord = uv;
 	EmitVertex();
 	
 	outputs.channel = inputs[0].channel;
 	gl_Position = uboDynamic.model * vec4(pos.x + charSizeNorm.x, pos.y, 0, 1);
-	outputs.color = inputs[0].color;
+	outputs.colour = inputs[0].colour;
 	outputs.texCoord = uv + vec2(normUV.x, 0);
 	EmitVertex();
 	

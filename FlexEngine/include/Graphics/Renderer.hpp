@@ -33,8 +33,8 @@ namespace flex
 	public:
 		virtual void Initialize() = 0;
 		virtual void Destroy() = 0;
-		virtual void DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& color) = 0;
-		virtual void DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& colorFrom, const btVector4& colorTo) = 0;
+		virtual void DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& colour) = 0;
+		virtual void DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& colourFrom, const btVector4& colourTo) = 0;
 
 		virtual void OnPostSceneChange() = 0;
 
@@ -54,22 +54,22 @@ namespace flex
 			{
 				memcpy(start, vStart.m_floats, sizeof(real) * 3);
 				memcpy(end, vEnd.m_floats, sizeof(real) * 3);
-				memcpy(colorFrom, vColFrom.m_floats, sizeof(real) * 3);
-				memcpy(colorTo, vColTo.m_floats, sizeof(real) * 3);
-				colorFrom[3] = 1.0f;
-				colorTo[3] = 1.0f;
+				memcpy(colourFrom, vColFrom.m_floats, sizeof(real) * 3);
+				memcpy(colourTo, vColTo.m_floats, sizeof(real) * 3);
+				colourFrom[3] = 1.0f;
+				colourTo[3] = 1.0f;
 			}
 			LineSegment(const btVector3& vStart, const btVector3& vEnd, const btVector4& vColFrom, const btVector3& vColTo)
 			{
 				memcpy(start, vStart.m_floats, sizeof(real) * 3);
 				memcpy(end, vEnd.m_floats, sizeof(real) * 3);
-				memcpy(colorFrom, vColFrom.m_floats, sizeof(real) * 4);
-				memcpy(colorTo, vColTo.m_floats, sizeof(real) * 4);
+				memcpy(colourFrom, vColFrom.m_floats, sizeof(real) * 4);
+				memcpy(colourTo, vColTo.m_floats, sizeof(real) * 4);
 			}
 			real start[3];
 			real end[3];
-			real colorFrom[4];
-			real colorTo[4];
+			real colourFrom[4];
+			real colourTo[4];
 		};
 
 		static const u32 MAX_NUM_LINE_SEGMENTS = 65536;
@@ -100,7 +100,7 @@ namespace flex
 		virtual void ClearMaterials(bool bDestroyPersistentMats = false) = 0;
 
 		virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) = 0;
-		virtual void SetClearColor(real r, real g, real b) = 0;
+		virtual void SetClearColour(real r, real g, real b) = 0;
 
 		virtual void Update();
 		virtual void Draw() = 0;
@@ -163,14 +163,14 @@ namespace flex
 		virtual PhysicsDebugDrawBase* GetDebugDrawer() = 0;
 
 		virtual void DrawStringSS(const std::string& str,
-			const glm::vec4& color,
+			const glm::vec4& colour,
 			AnchorPoint anchor,
 			const glm::vec2& pos,
 			real spacing,
 			real scale = 1.0f) = 0;
 
 		virtual void DrawStringWS(const std::string& str,
-			const glm::vec4& color,
+			const glm::vec4& colour,
 			const glm::vec3& pos,
 			const glm::quat& rot,
 			real spacing,
@@ -215,8 +215,8 @@ namespace flex
 			glm::vec2& posOut,
 			glm::vec2& scaleOut);
 
-		void EnqueueUntexturedQuad(const glm::vec2& pos, AnchorPoint anchor, const glm::vec2& size, const glm::vec4& color);
-		void EnqueueUntexturedQuadRaw(const glm::vec2& pos, const glm::vec2& size, const glm::vec4& color);
+		void EnqueueUntexturedQuad(const glm::vec2& pos, AnchorPoint anchor, const glm::vec2& size, const glm::vec4& colour);
+		void EnqueueUntexturedQuadRaw(const glm::vec2& pos, const glm::vec2& size, const glm::vec4& colour);
 		void EnqueueSprite(SpriteQuadDrawInfo drawInfo);
 
 		void ToggleRenderGrid();
@@ -330,7 +330,7 @@ namespace flex
 		u32 UpdateTextBufferSS(std::vector<TextVertex2D>& outTextVertices);
 		u32 UpdateTextBufferWS(std::vector<TextVertex3D>& outTextVertices);
 
-		glm::vec4 GetSelectedObjectColorMultiplier() const;
+		glm::vec4 GetSelectedObjectColourMultiplier() const;
 		glm::mat4 GetPostProcessingMatrix() const;
 
 		void GenerateSSAONoise(std::vector<glm::vec4>& noise);

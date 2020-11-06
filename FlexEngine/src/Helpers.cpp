@@ -189,12 +189,12 @@ namespace flex
 
 	// Screen-space constructor
 	TextCache::TextCache(const std::string& str, AnchorPoint anchor, const glm::vec2& pos,
-		const glm::vec4& color, real xSpacing, real scale) :
+		const glm::vec4& colour, real xSpacing, real scale) :
 		str(str),
 		anchor(anchor),
 		pos(pos.x, pos.y, -1.0f),
 		rot(QUAT_IDENTITY),
-		color(color),
+		colour(colour),
 		xSpacing(xSpacing),
 		scale(scale)
 	{
@@ -202,12 +202,12 @@ namespace flex
 
 	// World-space constructor
 	TextCache::TextCache(const std::string& str, const glm::vec3& pos, const glm::quat& rot,
-		const glm::vec4& color, real xSpacing, real scale) :
+		const glm::vec4& colour, real xSpacing, real scale) :
 		str(str),
 		anchor(AnchorPoint::_NONE),
 		pos(pos),
 		rot(rot),
-		color(color),
+		colour(colour),
 		xSpacing(xSpacing),
 		scale(scale)
 	{
@@ -1092,7 +1092,7 @@ namespace flex
 
 	void CopyVec3ToClipboard(const glm::vec3& vec)
 	{
-		CopyColorToClipboard(glm::vec4(vec, 1.0f));
+		CopyColourToClipboard(glm::vec4(vec, 1.0f));
 	}
 
 	void CopyVec4ToClipboard(const glm::vec4& vec)
@@ -1105,12 +1105,12 @@ namespace flex
 		ImGui::LogFinish();
 	}
 
-	void CopyColorToClipboard(const glm::vec3& col)
+	void CopyColourToClipboard(const glm::vec3& col)
 	{
 		CopyVec4ToClipboard(glm::vec4(col, 1.0f));
 	}
 
-	void CopyColorToClipboard(const glm::vec4& col)
+	void CopyColourToClipboard(const glm::vec4& col)
 	{
 		CopyVec4ToClipboard(col);
 	}
@@ -1152,14 +1152,13 @@ namespace flex
 		return true;
 	}
 
-	glm::vec3 PasteColor3FromClipboard()
+	glm::vec3 PasteColour3FromClipboard()
 	{
-		glm::vec4 color4 = PasteColor4FromClipboard();
-
-		return glm::vec3(color4);
+		glm::vec4 colour4 = PasteColour4FromClipboard();
+		return glm::vec3(colour4);
 	}
 
-	glm::vec4 PasteColor4FromClipboard()
+	glm::vec4 PasteColour4FromClipboard()
 	{
 		const std::string clipboardContents = ImGui::GetClipboardText();
 
@@ -1171,7 +1170,7 @@ namespace flex
 			comma2 == std::string::npos ||
 			comma3 == std::string::npos)
 		{
-			// Clipboard doesn't contain correctly formatted color!
+			// Clipboard doesn't contain correctly formatted colour!
 			return VEC4_ZERO;
 		}
 

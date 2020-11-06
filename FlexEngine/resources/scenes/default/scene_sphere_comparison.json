@@ -415,7 +415,7 @@
 			{
 				"rotation" : "-0.220, -0.184, -0.285, 0.915",
 				"pos" : "0.000, 32.400, 0.000",
-				"color" : "1.00, 1.00, 1.00",
+				"colour" : "1.00, 1.00, 1.00",
 				"enabled" : true,
 				"brightness" : 0.391000,
 				"cast shadows" : false,
@@ -433,7 +433,7 @@
 			"point light info" : 
 			{
 				"pos" : "32.752, 13.554, -20.837",
-				"color" : "1.00, 1.00, 1.00",
+				"colour" : "1.00, 1.00, 1.00",
 				"enabled" : true,
 				"brightness" : 500.000000
 			}
@@ -449,7 +449,7 @@
 			"point light info" : 
 			{
 				"pos" : "31.325, 13.227, 29.397",
-				"color" : "1.00, 1.00, 1.00",
+				"colour" : "1.00, 1.00, 1.00",
 				"enabled" : true,
 				"brightness" : 500.000000
 			}

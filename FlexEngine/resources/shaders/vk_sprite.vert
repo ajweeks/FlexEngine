@@ -10,7 +10,7 @@ layout (push_constant) uniform PushConstants
 layout (binding = 0) uniform UBODynamic
 {
 	mat4 model;
-	vec4 colorMultiplier;
+	vec4 colourMultiplier;
 	bool enableAlbedoSampler;
 } uboDynamic;
 

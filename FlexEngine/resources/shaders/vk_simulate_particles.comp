@@ -4,8 +4,8 @@
 
 layout (binding = 0) uniform UBODynamic
 {
-	vec4 color0;
-	vec4 color1;
+	vec4 colour0;
+	vec4 colour1;
 	float dt;
 	float speed;
 	uint particleCount;
@@ -53,7 +53,7 @@ void main()
 
 	pos += vel * uboDynamic.dt;
 
-	col = mix(uboDynamic.color0, uboDynamic.color1, clamp(pow(length(vel)*0.03, 5.0), 0, 1));
+	col = mix(uboDynamic.colour0, uboDynamic.colour1, clamp(pow(length(vel)*0.03, 5.0), 0, 1));
 
 	particles[index].data[0] = pos[0];
 	particles[index].data[1] = pos[1];

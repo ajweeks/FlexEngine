@@ -2,7 +2,7 @@
 
 layout (location = 0) in vec2 ex_TexCoord;
 
-layout (location = 0) out vec4 out_Color;
+layout (location = 0) out vec4 out_Colour;
 
 layout (binding = 0) uniform UBOConstant
 {
@@ -33,7 +33,7 @@ vec3 ReconstructWSPosFromDepth(vec2 uv, float depth)
 	return (uboConstant.invView * vec4(posNDC, 1)).xyz;
 }
 
-// vec4 DetectEdges_Color(vec2 uv)
+// vec4 DetectEdges_Colour(vec2 uv)
 // {
 // 	// TODO: Define elsewhere
 // 	const float PIXEL_SIZE = 0.01f;
@@ -88,13 +88,13 @@ void main()
 #if 0
 	if ((nonLinearDepth < 1e-7 && nonLinearDepthP > 1e-7))
 	{
-		out_Color = vec4(1.0, 0.0, 0.0, 1.0);
+		out_Colour = vec4(1.0, 0.0, 0.0, 1.0);
 		return;
 	}
 
 	if ((nonLinearDepth > 1e-7 && nonLinearDepthP < 1e-7))
 	{
-		out_Color = vec4(0.0, 1.0, 0.0, 1.0);
+		out_Colour = vec4(0.0, 1.0, 0.0, 1.0);
 		return;
 	}
 #endif
@@ -115,20 +115,20 @@ void main()
 
 	// vec3 wk = abs((cTL+cTR+cBL+cBR)*0.25-sceneCol);
 
-	out_Color = vec4(mix(historyCol, sceneCol, alpha), 1.0);
+	out_Colour = vec4(mix(historyCol, sceneCol, alpha), 1.0);
 	
 	// vec3 w = clamp(1.0/(mix(vec3(pushConstants.kl), vec3(pushConstants.kh), wk)), 0.0, 1.0);
-	// out_Color = vec4(mix(clamp(historyCol, cMin, cMax), sceneCol, w), 1.0);
-	//out_Color = vec4(w, 1.0);
+	// out_Colour = vec4(mix(clamp(historyCol, cMin, cMax), sceneCol, w), 1.0);
+	//out_Colour = vec4(w, 1.0);
 	
-	//out_Color = vec4(mix(clamp(historyCol, cMin, cMax), sceneCol, alpha), 1.0);
-	// out_Color = vec4(vec3(alpha), 1.0);
+	//out_Colour = vec4(mix(clamp(historyCol, cMin, cMax), sceneCol, alpha), 1.0);
+	// out_Colour = vec4(vec3(alpha), 1.0);
 	
 	// float range = (1.0 - initialWeight);
-	// out_Color = mix(out_Color, vec4(1.0, 0.0, 0.0, 1.0), (alpha - initialWeight) / range);
+	// out_Colour = mix(out_Colour, vec4(1.0, 0.0, 0.0, 1.0), (alpha - initialWeight) / range);
 
 	// vec3 diff = abs(newSceneCol - sceneCol);
-	// out_Color = mix(out_Color, vec4(1.0, 0.0, 0.0, 1.0), diff.x+diff.y+diff.z);
+	// out_Colour = mix(out_Colour, vec4(1.0, 0.0, 0.0, 1.0), diff.x+diff.y+diff.z);
 
-	// out_Color = mix(out_Color, vec4(1, 0, 0, 1), clamp(length(w), 0, 1));
+	// out_Colour = mix(out_Colour, vec4(1, 0, 0, 1), clamp(length(w), 0, 1));
 }

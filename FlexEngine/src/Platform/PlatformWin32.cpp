@@ -32,9 +32,9 @@ namespace flex
 	typedef void* HANDLE;
 	typedef unsigned short WORD;
 
-	const WORD CONSOLE_COLOR_DEFAULT = 0 | FOREGROUND_INTENSITY;
-	const WORD CONSOLE_COLOR_WARNING = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY;
-	const WORD CONSOLE_COLOR_ERROR = FOREGROUND_RED | FOREGROUND_INTENSITY;
+	const WORD CONSOLE_COLOUR_DEFAULT = 0 | FOREGROUND_INTENSITY;
+	const WORD CONSOLE_COLOUR_WARNING = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY;
+	const WORD CONSOLE_COLOUR_ERROR = FOREGROUND_RED | FOREGROUND_INTENSITY;
 
 	HANDLE g_ConsoleHandle;
 
@@ -65,13 +65,13 @@ namespace flex
 	void Platform::GetConsoleHandle()
 	{
 		g_ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
-		SetConsoleTextAttribute(g_ConsoleHandle, CONSOLE_COLOR_DEFAULT);
+		SetConsoleTextAttribute(g_ConsoleHandle, CONSOLE_COLOUR_DEFAULT);
 	}
 
-	void Platform::SetConsoleTextColor(ConsoleColour colour)
+	void Platform::SetConsoleTextColour(ConsoleColour colour)
 	{
 #if ENABLE_CONSOLE_COLOURS
-		static WORD w_colours[] = { CONSOLE_COLOR_DEFAULT, CONSOLE_COLOR_WARNING, CONSOLE_COLOR_ERROR };
+		static WORD w_colours[] = { CONSOLE_COLOUR_DEFAULT, CONSOLE_COLOUR_WARNING, CONSOLE_COLOUR_ERROR };
 
 		SetConsoleTextAttribute(g_ConsoleHandle, w_colours[(u32)colour]);
 #else

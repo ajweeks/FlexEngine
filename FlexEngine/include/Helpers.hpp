@@ -152,14 +152,14 @@ namespace flex
 	void CopyVec3ToClipboard(const glm::vec3& vec);
 	void CopyVec4ToClipboard(const glm::vec4& vec);
 
-	void CopyColorToClipboard(const glm::vec3& col);
-	void CopyColorToClipboard(const glm::vec4& col);
+	void CopyColourToClipboard(const glm::vec3& col);
+	void CopyColourToClipboard(const glm::vec4& col);
 
 	void CopyTransformToClipboard(Transform* transform);
 	bool PasteTransformFromClipboard(Transform* transform);
 
-	glm::vec3 PasteColor3FromClipboard();
-	glm::vec4 PasteColor4FromClipboard();
+	glm::vec3 PasteColour3FromClipboard();
+	glm::vec4 PasteColour4FromClipboard();
 
 	FLEX_NO_DISCARD char* ToLower(char* str);
 	std::string& ToLower(std::string& str);
@@ -295,7 +295,7 @@ namespace flex
 		AnchorPoint anchor;
 		glm::vec3 pos;
 		glm::quat rot;
-		glm::vec4 color;
+		glm::vec4 colour;
 		real xSpacing;
 		real scale;
 

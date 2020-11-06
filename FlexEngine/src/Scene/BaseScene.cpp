@@ -561,9 +561,9 @@ namespace flex
 
 				ImGui::SameLine();
 
-				ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
-				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
-				ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
+				ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColour);
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColour);
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColour);
 
 				if (ImGui::Button("Save over default"))
 				{
@@ -693,9 +693,9 @@ namespace flex
 
 			const char* deleteScenePopupID = "Delete scene";
 
-			ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
-			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
-			ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
+			ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColour);
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColour);
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColour);
 
 			if (ImGui::Button("Delete scene..."))
 			{
@@ -708,14 +708,14 @@ namespace flex
 
 			if (ImGui::BeginPopupModal(deleteScenePopupID, NULL, ImGuiWindowFlags_AlwaysAutoResize))
 			{
-				ImGui::PushStyleColor(ImGuiCol_Text, g_WarningTextColor);
+				ImGui::PushStyleColor(ImGuiCol_Text, g_WarningTextColour);
 				std::string textStr = "Are you sure you want to permanently delete " + m_Name + "? (both the default & saved files)";
 				ImGui::Text("%s", textStr.c_str());
 				ImGui::PopStyleColor();
 
-				ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColor);
-				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColor);
-				ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColor);
+				ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColour);
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColour);
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColour);
 				if (ImGui::Button("Delete"))
 				{
 					g_SceneManager->DeleteScene(this);

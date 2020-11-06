@@ -3,7 +3,7 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
-layout (location = 0) out vec4 FragColor;
+layout (location = 0) out vec4 FragColour;
 
 layout (location = 0) in vec3 ex_SampleDirection;
 
@@ -39,5 +39,5 @@ void main()
 	}
 	irradiance = PI * irradiance * (1.0 / nrSamples);
   
-    FragColor = vec4(irradiance, 1.0);
+    FragColour = vec4(irradiance, 1.0);
 }

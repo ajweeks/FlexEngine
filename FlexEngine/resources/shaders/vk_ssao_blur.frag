@@ -1,6 +1,6 @@
 #version 450
 
-layout (location = 0) out float out_Color;
+layout (location = 0) out float out_Colour;
 
 layout (location = 0) in vec2 ex_TexCoord;
 
@@ -37,5 +37,5 @@ void main()
 			++sampleCount;
 		}
 	}
-	out_Color = clamp(sum / float(sampleCount), 0.0f, 1.0f);
+	out_Colour = clamp(sum / float(sampleCount), 0.0f, 1.0f);
 }

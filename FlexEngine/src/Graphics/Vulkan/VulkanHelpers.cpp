@@ -120,7 +120,7 @@ namespace flex
 				++location;
 			}
 
-			if (vertexAttributes & (u32)VertexAttribute::COLOR_R8G8B8A8_UNORM)
+			if (vertexAttributes & (u32)VertexAttribute::COLOUR_R8G8B8A8_UNORM)
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -133,7 +133,7 @@ namespace flex
 				++location;
 			}
 
-			if (vertexAttributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)
+			if (vertexAttributes & (u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT)
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -1132,7 +1132,7 @@ namespace flex
 				VkImage dstImage;
 				VkImageCreateInfo createInfo = vks::imageCreateInfo();
 				createInfo.imageType = VK_IMAGE_TYPE_2D;
-				// Note that vkCmdBlitImage (if supported) will also do format conversions if the swapchain color format would differ
+				// Note that vkCmdBlitImage (if supported) will also do format conversions if the swapchain colour format would differ
 				createInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
 				createInfo.extent.width = width;
 				createInfo.extent.height = height;
@@ -1240,15 +1240,15 @@ namespace flex
 				const u8* data;
 				vkMapMemory(m_VulkanDevice->m_LogicalDevice, dstImageMemory, 0, VK_WHOLE_SIZE, 0, (void**)&data);
 
-				bool bColorSwizzle = false;
+				bool bColourSwizzle = false;
 				// Check if source is BGR
 				if (!bSupportsBlit)
 				{
 					std::vector<VkFormat> formatsBGR = { VK_FORMAT_B8G8R8A8_SRGB, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_B8G8R8A8_SNORM, VK_FORMAT_B8G8R8A8_UINT, VK_FORMAT_B8G8R8A8_SINT };
-					bColorSwizzle = (std::find(formatsBGR.begin(), formatsBGR.end(), imageFormat) != formatsBGR.end());
+					bColourSwizzle = (std::find(formatsBGR.begin(), formatsBGR.end(), imageFormat) != formatsBGR.end());
 				}
 
-				CopyPixels(data, u8Data, (u32)subResourceLayout.offset, width, height, channelCount, (u32)subResourceLayout.rowPitch, bColorSwizzle);
+				CopyPixels(data, u8Data, (u32)subResourceLayout.offset, width, height, channelCount, (u32)subResourceLayout.rowPitch, bColourSwizzle);
 
 				bResult = SaveImage(absoluteFilePath, saveFormat, width, height, channelCount, u8Data, bFlipVertically);
 
@@ -1774,8 +1774,8 @@ namespace flex
 				break;
 
 			case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-				// Image is a color attachment
-				// Make sure any writes to the color buffer have been finished
+				// Image is a colour attachment
+				// Make sure any writes to the colour buffer have been finished
 				imageMemoryBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 				break;
 
@@ -1824,8 +1824,8 @@ namespace flex
 				break;
 
 			case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-				// Image will be used as a color attachment
-				// Make sure any writes to the color buffer have been finished
+				// Image will be used as a colour attachment
+				// Make sure any writes to the colour buffer have been finished
 				imageMemoryBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 				break;
 
@@ -1937,7 +1937,7 @@ namespace flex
 
 			if (aspectMask == 0)
 			{
-				// NOTE: Assuming color here, if depth texture is needed without DEPTH_STENCIL_ATTACHMENT_BIT more robust solution is required
+				// NOTE: Assuming colour here, if depth texture is needed without DEPTH_STENCIL_ATTACHMENT_BIT more robust solution is required
 				aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 			}
 
@@ -2013,12 +2013,12 @@ namespace flex
 		}
 
 		template<class T>
-		void CopyPixels(const T* srcData, T* dstData, u32 dstOffset, u32 width, u32 height, u32 channelCount, u32 pitch, bool bColorSwizzle)
+		void CopyPixels(const T* srcData, T* dstData, u32 dstOffset, u32 width, u32 height, u32 channelCount, u32 pitch, bool bColourSwizzle)
 		{
 			dstData += dstOffset;
 
 			i32 swizzle[4];
-			if (bColorSwizzle)
+			if (bColourSwizzle)
 			{
 				swizzle[0] = 2;
 				swizzle[1] = 1;
@@ -2640,7 +2640,7 @@ namespace flex
 			if (bGoodStart && bGoodEnd)
 			{
 				std::string fileContents;
-				if (ReadFile(filePath, fileContents, false))
+				if (FileExists(filePath) && ReadFile(filePath, fileContents, false))
 				{
 					u64 i = 1;
 					for (char c : fileContents)

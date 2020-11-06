@@ -16,7 +16,7 @@ IGNORE_WARNINGS_POP
 
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
-#include "Colors.hpp"
+#include "Colours.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "Scene/GameObject.hpp"
@@ -27,7 +27,7 @@ namespace flex
 	const real MeshComponent::GRID_LINE_SPACING = 1.0f;
 	const u32 MeshComponent::GRID_LINE_COUNT = 151; // Keep odd to align with origin
 
-	glm::vec4 MeshComponent::m_DefaultColor_4(1.0f, 1.0f, 1.0f, 1.0f);
+	glm::vec4 MeshComponent::m_DefaultColour_4(1.0f, 1.0f, 1.0f, 1.0f);
 	glm::vec3 MeshComponent::m_DefaultPosition(0.0f, 0.0f, 0.0f);
 	glm::vec3 MeshComponent::m_DefaultTangent(1.0f, 0.0f, 0.0f);
 	glm::vec3 MeshComponent::m_DefaultNormal(0.0f, 1.0f, 0.0f);
@@ -205,8 +205,8 @@ namespace flex
 			if (newMeshComponent->m_RequiredAttributes & (u32)VertexAttribute::POSITION2) vertexBufferDataCreateInfo.positions_2D.resize(vertexBufferDataCreateInfo.positions_2D.size() + vertCount);
 			if (newMeshComponent->m_RequiredAttributes & (u32)VertexAttribute::NORMAL) vertexBufferDataCreateInfo.normals.resize(vertexBufferDataCreateInfo.normals.size() + vertCount);
 			if (newMeshComponent->m_RequiredAttributes & (u32)VertexAttribute::TANGENT) vertexBufferDataCreateInfo.tangents.resize(vertexBufferDataCreateInfo.tangents.size() + vertCount);
-			if (newMeshComponent->m_RequiredAttributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT) vertexBufferDataCreateInfo.colors_R32G32B32A32.resize(vertexBufferDataCreateInfo.colors_R32G32B32A32.size() + vertCount);
-			if (newMeshComponent->m_RequiredAttributes & (u32)VertexAttribute::COLOR_R8G8B8A8_UNORM) vertexBufferDataCreateInfo.colors_R8G8B8A8.resize(vertexBufferDataCreateInfo.colors_R8G8B8A8.size() + vertCount);
+			if (newMeshComponent->m_RequiredAttributes & (u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT) vertexBufferDataCreateInfo.colours_R32G32B32A32.resize(vertexBufferDataCreateInfo.colours_R32G32B32A32.size() + vertCount);
+			if (newMeshComponent->m_RequiredAttributes & (u32)VertexAttribute::COLOUR_R8G8B8A8_UNORM) vertexBufferDataCreateInfo.colours_R8G8B8A8.resize(vertexBufferDataCreateInfo.colours_R8G8B8A8.size() + vertCount);
 			if (newMeshComponent->m_RequiredAttributes & (u32)VertexAttribute::UV) vertexBufferDataCreateInfo.texCoords_UV.resize(vertexBufferDataCreateInfo.texCoords_UV.size() + vertCount);
 			if (newMeshComponent->m_RequiredAttributes & (u32)VertexAttribute::EXTRA_VEC4) vertexBufferDataCreateInfo.extraVec4s.resize(vertexBufferDataCreateInfo.extraVec4s.size() + vertCount);
 			if (newMeshComponent->m_RequiredAttributes & (u32)VertexAttribute::EXTRA_INT) vertexBufferDataCreateInfo.extraInts.resize(vertexBufferDataCreateInfo.extraInts.size() + vertCount);
@@ -272,14 +272,14 @@ namespace flex
 				}
 			}
 
-			// Color
-			if (newMeshComponent->m_RequiredAttributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)
+			// Colour
+			if (newMeshComponent->m_RequiredAttributes & (u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT)
 			{
-				vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+				vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT;
 
 				if (colAttribIndex == -1)
 				{
-					vertexBufferDataCreateInfo.colors_R32G32B32A32[vi] = m_DefaultColor_4;
+					vertexBufferDataCreateInfo.colours_R32G32B32A32[vi] = m_DefaultColour_4;
 				}
 				else
 				{
@@ -290,7 +290,7 @@ namespace flex
 
 					glm::vec4 col;
 					cgltf_accessor_read_float(colAccessor, vi, &col.x, 4);
-					vertexBufferDataCreateInfo.colors_R32G32B32A32[vi] = col;
+					vertexBufferDataCreateInfo.colours_R32G32B32A32[vi] = col;
 				}
 			}
 
@@ -659,15 +659,15 @@ namespace flex
 		case PrefabShape::GRID:
 		{
 			const real lineMaxOpacity = 0.5f;
-			glm::vec4 lineColor = Color::GRAY;
-			lineColor.a = lineMaxOpacity;
+			glm::vec4 lineColour = Colour::GRAY;
+			lineColour.a = lineMaxOpacity;
 
 			const size_t vertexCount = GRID_LINE_COUNT * 2 * 4; // 4 verts per line (to allow for fading) *------**------*
 			vertexBufferDataCreateInfo.positions_3D.reserve(vertexCount);
-			vertexBufferDataCreateInfo.colors_R32G32B32A32.reserve(vertexCount);
+			vertexBufferDataCreateInfo.colours_R32G32B32A32.reserve(vertexCount);
 
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
-			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT;
 
 			real halfWidth = (GRID_LINE_SPACING * (GRID_LINE_COUNT - 1)) / 2.0f;
 
@@ -681,14 +681,14 @@ namespace flex
 				vertexBufferDataCreateInfo.positions_3D.emplace_back(i * GRID_LINE_SPACING - halfWidth, 0.0f, halfWidth);
 
 				real opacityCenter = glm::pow(1.0f - glm::abs((i / (real)GRID_LINE_COUNT) - 0.5f) * 2.0f, 5.0f);
-				glm::vec4 colorCenter = lineColor;
-				colorCenter.a = opacityCenter;
-				glm::vec4 colorEnds = colorCenter;
-				colorEnds.a = 0.0f;
-				vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorEnds);
-				vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorCenter);
-				vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorCenter);
-				vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorEnds);
+				glm::vec4 colourCenter = lineColour;
+				colourCenter.a = opacityCenter;
+				glm::vec4 colourEnds = colourCenter;
+				colourEnds.a = 0.0f;
+				vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(colourEnds);
+				vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(colourCenter);
+				vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(colourCenter);
+				vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(colourEnds);
 			}
 
 			// Vertical lines
@@ -700,33 +700,33 @@ namespace flex
 				vertexBufferDataCreateInfo.positions_3D.emplace_back(halfWidth, 0.0f, i * GRID_LINE_SPACING - halfWidth);
 
 				real opacityCenter = glm::pow(1.0f - glm::abs((i / (real)GRID_LINE_COUNT) - 0.5f) * 2.0f, 5.0f);
-				glm::vec4 colorCenter = lineColor;
-				colorCenter.a = opacityCenter;
-				glm::vec4 colorEnds = colorCenter;
-				colorEnds.a = 0.0f;
-				vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorEnds);
-				vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorCenter);
-				vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorCenter);
-				vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorEnds);
+				glm::vec4 colourCenter = lineColour;
+				colourCenter.a = opacityCenter;
+				glm::vec4 colourEnds = colourCenter;
+				colourEnds.a = 0.0f;
+				vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(colourEnds);
+				vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(colourCenter);
+				vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(colourCenter);
+				vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(colourEnds);
 			}
 
 			// Make sure we didn't allocate too much data
 			assert(vertexBufferDataCreateInfo.positions_3D.capacity() == vertexBufferDataCreateInfo.positions_3D.size());
-			assert(vertexBufferDataCreateInfo.colors_R32G32B32A32.capacity() == vertexBufferDataCreateInfo.colors_R32G32B32A32.size());
+			assert(vertexBufferDataCreateInfo.colours_R32G32B32A32.capacity() == vertexBufferDataCreateInfo.colours_R32G32B32A32.size());
 
 			topologyMode = TopologyMode::LINE_LIST;
 		} break;
 		case PrefabShape::WORLD_AXIS_GROUND:
 		{
-			glm::vec4 centerLineColorX = Color::RED;
-			glm::vec4 centerLineColorZ = Color::BLUE;
+			glm::vec4 centerLineColourX = Colour::RED;
+			glm::vec4 centerLineColourZ = Colour::BLUE;
 
 			const size_t vertexCount = 4 * 2; // 4 verts per line (to allow for fading) *------**------*
 			vertexBufferDataCreateInfo.positions_3D.reserve(vertexCount);
-			vertexBufferDataCreateInfo.colors_R32G32B32A32.reserve(vertexCount);
+			vertexBufferDataCreateInfo.colours_R32G32B32A32.reserve(vertexCount);
 
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
-			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT;
 
 			real halfWidth = (GRID_LINE_SPACING * (GRID_LINE_COUNT - 1)); // extend longer than normal grid lines
 
@@ -736,32 +736,32 @@ namespace flex
 			vertexBufferDataCreateInfo.positions_3D.emplace_back(0.0f, 0.0f, halfWidth);
 
 			real opacityCenter = 1.0f;
-			glm::vec4 colorCenter = centerLineColorZ;
-			colorCenter.a = opacityCenter;
-			glm::vec4 colorEnds = colorCenter;
-			colorEnds.a = 0.0f;
-			vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorEnds);
-			vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorCenter);
-			vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorCenter);
-			vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorEnds);
+			glm::vec4 colourCenter = centerLineColourZ;
+			colourCenter.a = opacityCenter;
+			glm::vec4 colourEnds = colourCenter;
+			colourEnds.a = 0.0f;
+			vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(colourEnds);
+			vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(colourCenter);
+			vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(colourCenter);
+			vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(colourEnds);
 
 			vertexBufferDataCreateInfo.positions_3D.emplace_back(-halfWidth, 0.0f, 0.0f);
 			vertexBufferDataCreateInfo.positions_3D.emplace_back(0.0f, 0.0f, 0.0f);
 			vertexBufferDataCreateInfo.positions_3D.emplace_back(0.0f, 0.0f, 0.0f);
 			vertexBufferDataCreateInfo.positions_3D.emplace_back(halfWidth, 0.0f, 0.0f);
 
-			colorCenter = centerLineColorX;
-			colorCenter.a = opacityCenter;
-			colorEnds = colorCenter;
-			colorEnds.a = 0.0f;
-			vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorEnds);
-			vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorCenter);
-			vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorCenter);
-			vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorEnds);
+			colourCenter = centerLineColourX;
+			colourCenter.a = opacityCenter;
+			colourEnds = colourCenter;
+			colourEnds.a = 0.0f;
+			vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(colourEnds);
+			vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(colourCenter);
+			vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(colourCenter);
+			vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(colourEnds);
 
 			// Make sure we didn't allocate too much data
 			assert(vertexBufferDataCreateInfo.positions_3D.capacity() == vertexBufferDataCreateInfo.positions_3D.size());
-			assert(vertexBufferDataCreateInfo.colors_R32G32B32A32.capacity() == vertexBufferDataCreateInfo.colors_R32G32B32A32.size());
+			assert(vertexBufferDataCreateInfo.colours_R32G32B32A32.capacity() == vertexBufferDataCreateInfo.colours_R32G32B32A32.size());
 
 			topologyMode = TopologyMode::LINE_LIST;
 		} break;
@@ -803,7 +803,7 @@ namespace flex
 			};
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::TANGENT;
 
-			vertexBufferDataCreateInfo.colors_R32G32B32A32 =
+			vertexBufferDataCreateInfo.colours_R32G32B32A32 =
 			{
 				{ 1.0f, 1.0f, 1.0f, 1.0f },
 				{ 1.0f, 1.0f, 1.0f, 1.0f },
@@ -813,7 +813,7 @@ namespace flex
 				{ 1.0f, 1.0f, 1.0f, 1.0f },
 				{ 1.0f, 1.0f, 1.0f, 1.0f },
 			};
-			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT;
 
 			vertexBufferDataCreateInfo.texCoords_UV =
 			{
@@ -832,12 +832,12 @@ namespace flex
 			// Vertices
 			glm::vec3 v1(0.0f, 1.0f, 0.0f); // Top vertex
 			vertexBufferDataCreateInfo.positions_3D.push_back(v1);
-			vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(Color::RED);
+			vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(Colour::RED);
 			vertexBufferDataCreateInfo.texCoords_UV.emplace_back(0.0f, 0.0f);
 			vertexBufferDataCreateInfo.normals.emplace_back(0.0f, 1.0f, 0.0f);
 
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
-			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT;
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::UV;
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::NORMAL;
 
@@ -855,11 +855,11 @@ namespace flex
 					real sinA = sin(azimuth);
 					real cosA = cos(azimuth);
 					glm::vec3 point(sinP * cosA, cosP, sinP * sinA);
-					const glm::vec4 color =
-						(i % 2 == 0 ? j % 2 == 0 ? Color::ORANGE : Color::PURPLE : j % 2 == 0 ? Color::WHITE : Color::YELLOW);
+					const glm::vec4 colour =
+						(i % 2 == 0 ? j % 2 == 0 ? Colour::ORANGE : Colour::PURPLE : j % 2 == 0 ? Colour::WHITE : Colour::YELLOW);
 
 					vertexBufferDataCreateInfo.positions_3D.push_back(point);
-					vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(color);
+					vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(colour);
 					vertexBufferDataCreateInfo.texCoords_UV.emplace_back(0.0f, 0.0f);
 					vertexBufferDataCreateInfo.normals.emplace_back(1.0f, 0.0f, 0.0f);
 				}
@@ -867,7 +867,7 @@ namespace flex
 
 			glm::vec3 vF(0.0f, -1.0f, 0.0f); // Bottom vertex
 			vertexBufferDataCreateInfo.positions_3D.push_back(vF);
-			vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(Color::YELLOW);
+			vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(Colour::YELLOW);
 			vertexBufferDataCreateInfo.texCoords_UV.emplace_back(0.0f, 0.0f);
 			vertexBufferDataCreateInfo.normals.emplace_back(0.0f, -1.0f, 0.0f);
 

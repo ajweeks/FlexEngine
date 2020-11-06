@@ -26,7 +26,7 @@ namespace flex
 	{
 		glm::vec3 dir;       // 0
 		i32 enabled;         // 12
-		glm::vec3 color;     // 16
+		glm::vec3 colour;     // 16
 		real brightness;     // 28
 		i32 castShadows;     // 32
 		real shadowDarkness; // 36
@@ -38,7 +38,7 @@ namespace flex
 	{
 		glm::vec3 pos;   // 0
 		i32 enabled;     // 12
-		glm::vec3 color; // 16
+		glm::vec3 colour; // 16
 		real brightness; // 28
 	};
 
@@ -105,7 +105,7 @@ namespace flex
 	struct ParticleBufferData
 	{
 		glm::vec3 pos;		// 12
-		glm::vec4 color;	// 16
+		glm::vec4 colour;	// 16
 		glm::vec3 vel;		// 12
 		glm::vec4 extraVec4;// 16
 	};
@@ -114,8 +114,8 @@ namespace flex
 	// 44 bytes
 	struct ParticleSimData
 	{
-		glm::vec4 color0;	// 16
-		glm::vec4 color1;	// 16
+		glm::vec4 colour0;	// 16
+		glm::vec4 colour1;	// 16
 		real dt;			// 4
 		real speed;			// 4
 		u32 particleCount;	// 4
@@ -151,7 +151,7 @@ namespace flex
 	const u64 U_PROJECTION						= (1ull << 4);	const u32 US_PROJECTION					= sizeof(glm::mat4);
 	const u64 U_PROJECTION_INV					= (1ull << 5);	const u32 US_PROJECTION_INV				= sizeof(glm::mat4);
 	const u64 U_BLEND_SHARPNESS					= (1ull << 6);	const u32 US_BLEND_SHARPNESS			= sizeof(real);
-	const u64 U_COLOR_MULTIPLIER				= (1ull << 7);	const u32 US_COLOR_MULTIPLIER			= sizeof(glm::vec4);
+	const u64 U_COLOUR_MULTIPLIER				= (1ull << 7);	const u32 US_COLOUR_MULTIPLIER			= sizeof(glm::vec4);
 	const u64 U_CAM_POS							= (1ull << 8);	const u32 US_CAM_POS					= sizeof(glm::vec4);
 	const u64 U_DIR_LIGHT						= (1ull << 9);  const u32 US_DIR_LIGHT					= sizeof(DirLightData);
 	const u64 U_POINT_LIGHTS					= (1ull << 10); const u32 US_POINT_LIGHTS				= sizeof(PointLightData) * MAX_POINT_LIGHT_COUNT;
@@ -211,7 +211,7 @@ namespace flex
 
 	enum class ClearFlag
 	{
-		COLOR = (1 << 0),
+		COLOUR = (1 << 0),
 		DEPTH = (1 << 1),
 		STENCIL = (1 << 2),
 
@@ -349,7 +349,7 @@ namespace flex
 		std::string roughnessTexturePath = "";
 		std::string hdrEquirectangularTexturePath = "";
 
-		glm::vec4 colorMultiplier = { 1.0f, 1.0f, 1.0f, 1.0f };
+		glm::vec4 colourMultiplier = { 1.0f, 1.0f, 1.0f, 1.0f };
 		std::vector<Pair<std::string, void*>> sampledFrameBuffers; // Pairs of frame buffer names (as seen in shader) and IDs
 		glm::vec2 generatedIrradianceCubemapSize = { 0.0f, 0.0f };
 		MaterialID irradianceSamplerMatID = InvalidMaterialID; // The id of the material who has an irradiance sampler object (generateIrradianceSampler must be false)
@@ -445,7 +445,7 @@ namespace flex
 		glm::vec2 irradianceSamplerSize = { 0, 0 };
 		std::string environmentMapPath = "";
 		glm::vec2 prefilteredMapSize = { 0, 0 };
-		glm::vec4 colorMultiplier = { 1, 1, 1, 1 };
+		glm::vec4 colourMultiplier = { 1, 1, 1, 1 };
 
 		bool enableNormalSampler = false;
 
@@ -705,7 +705,7 @@ namespace flex
 		glm::quat rotation = QUAT_IDENTITY;
 		glm::vec3 scale = VEC3_ONE;
 		AnchorPoint anchor = AnchorPoint::TOP_LEFT;
-		glm::vec4 color = VEC4_ONE;
+		glm::vec4 colour = VEC4_ONE;
 
 		bool bScreenSpace = true;
 		bool bReadDepth = true;
@@ -721,7 +721,7 @@ namespace flex
 	{
 		glm::vec2 pos;                        // 0
 		glm::vec2 uv;                         // 8
-		glm::vec4 color;                      // 16
+		glm::vec4 colour;                      // 16
 		glm::vec4 charSizePixelsCharSizeNorm; // 32 - RG: char size in pixels, BA: char size in [0, 1] in screen space
 		i32 channel;                          // 48 - Uses extra int slot
 	};
@@ -732,7 +732,7 @@ namespace flex
 		glm::vec3 pos;                        // 0
 		                                      // + 4
 		glm::vec2 uv;                         // 16
-		glm::vec4 color;                      // 24
+		glm::vec4 colour;                      // 24
 		glm::vec3 tangent;                    // 32
 		                                      // + 4
 		glm::vec4 charSizePixelsCharSizeNorm; // 48 - RG: char size in pixels, BA: char size in [0, 1] in screen space
@@ -788,7 +788,7 @@ namespace flex
 		glm::vec4 sdfData;
 		glm::vec4 fontCharData;
 		glm::vec2 texSize;
-		glm::vec4 colorMultiplier;
+		glm::vec4 colourMultiplier;
 		bool bSSAOVerticalPass;
 		ParticleSimData* particleSimData = nullptr;
 	};

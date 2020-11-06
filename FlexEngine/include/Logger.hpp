@@ -19,7 +19,7 @@ namespace flex
 	void ClearLogFile();
 	void SaveLogBufferToFile();
 
-	void SetConsoleTextColor(u64 color);
+	void SetConsoleTextColour(u64 colour);
 
 	// Max number of characters allowed in a single message
 	static const int MAX_CHARS = 1024;

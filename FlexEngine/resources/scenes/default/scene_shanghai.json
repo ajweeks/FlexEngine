@@ -72,7 +72,7 @@
 			{
 				"rotation" : "-0.407, 0.100, 0.882, 0.217",
 				"pos" : "0.000, 15.000, 0.000",
-				"color" : "0.92, 0.92, 0.62",
+				"colour" : "0.92, 0.92, 0.62",
 				"enabled" : true,
 				"brightness" : 1.172000,
 				"cast shadows" : true,
@@ -302,7 +302,7 @@
 			"point light info" : 
 			{
 				"pos" : "-106.600, 22.600, 159.700",
-				"color" : "0.79, 0.80, 0.81",
+				"colour" : "0.79, 0.80, 0.81",
 				"enabled" : true,
 				"brightness" : 239.582993
 			}

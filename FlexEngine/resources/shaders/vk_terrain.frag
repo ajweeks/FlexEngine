@@ -10,17 +10,17 @@ layout (binding = 0) uniform UBOConstant
 } uboConstant;
 
 layout (location = 0) in vec2 ex_TexCoord;
-layout (location = 1) in vec4 ex_Color;
+layout (location = 1) in vec4 ex_Colour;
 layout (location = 2) in vec3 ex_NormalWS;
 layout (location = 3) in vec3 ex_PositionWS;
 
 layout (binding = 0) uniform sampler2D albedoSampler;
 
-layout (location = 0) out vec4 fragmentColor;
+layout (location = 0) out vec4 fragmentColour;
 
 void main() 
 {
-	vec3 albedo = ex_Color.rgb * texture(albedoSampler, ex_TexCoord).rgb;
+	vec3 albedo = ex_Colour.rgb * texture(albedoSampler, ex_TexCoord).rgb;
 	vec3 N = normalize(ex_NormalWS);
 
 	mat4 invView = inverse(uboConstant.view);
@@ -30,5 +30,5 @@ void main()
 
 	dist = smoothstep(dist, 0.0, 0.1);
 
-	fragmentColor = vec4(mix(ex_Color.rgb, vec3(0), pow(dist, 0.2)), 1.0);
+	fragmentColour = vec4(mix(ex_Colour.rgb, vec3(0), pow(dist, 0.2)), 1.0);
 }

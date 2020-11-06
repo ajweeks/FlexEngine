@@ -103,7 +103,7 @@
 			{
 				"rotation" : "-0.060, 0.101, 0.506, 0.855",
 				"pos" : "0.000, 15.000, 0.000",
-				"color" : "0.99, 1.00, 0.86",
+				"colour" : "0.99, 1.00, 0.86",
 				"enabled" : true,
 				"brightness" : 4.531000,
 				"cast shadows" : true,

@@ -5,7 +5,7 @@
 
 layout (location = 0) in vec3 ex_SampleDirection;
 
-layout (location = 0) out vec4 FragColor;
+layout (location = 0) out vec4 FragColour;
 
 layout (binding = 0) uniform UBODynamic
 {
@@ -78,7 +78,7 @@ void main()
     // TODO: Move sample count to push constant?
 	const uint SAMPLE_COUNT = 2048u;
 	float totalWeight = 0.0;
-	vec3 prefilteredColor = vec3(0.0);
+	vec3 prefilteredColour = vec3(0.0);
 	for (uint i = 0u; i < SAMPLE_COUNT; ++i)
 	{
 	    vec2 Xi = Hammersley(i, SAMPLE_COUNT); 
@@ -101,12 +101,12 @@ void main()
 
             float mipLevel = uboDynamic.constRoughness == 0.0 ? 0.0 : 0.5 * log2(saSample / saTexel); 
 
-			prefilteredColor += textureLod(cubemapSampler, L, mipLevel).rgb * NdotL;
+			prefilteredColour += textureLod(cubemapSampler, L, mipLevel).rgb * NdotL;
 			totalWeight += NdotL;
 		}
 	}
 
-	prefilteredColor /= totalWeight;
+	prefilteredColour /= totalWeight;
 
-	FragColor = vec4(prefilteredColor, 1.0);
+	FragColour = vec4(prefilteredColour, 1.0);
 }

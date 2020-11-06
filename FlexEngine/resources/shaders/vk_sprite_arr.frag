@@ -10,7 +10,7 @@ layout (push_constant) uniform PushConstants
 layout (binding = 0) uniform UBODynamic
 {
 	mat4 model;
-	vec4 colorMultiplier;
+	vec4 colourMultiplier;
 	bool enableAlbedoSampler;
 } uboDynamic;
 
@@ -18,17 +18,17 @@ layout (binding = 1) uniform sampler2DArray in_Texture;
 
 layout (location = 0) in vec2 ex_TexCoord;
 
-layout (location = 0) out vec4 out_Color;
+layout (location = 0) out vec4 out_Colour;
 
 void main()
 {
 	if (uboDynamic.enableAlbedoSampler)
 	{
-		out_Color = uboDynamic.colorMultiplier * 
+		out_Colour = uboDynamic.colourMultiplier * 
 			texture(in_Texture, vec3(ex_TexCoord.x, 1-ex_TexCoord.y, pushConstants.textureLayer));
 	}
 	else
 	{
-		out_Color = uboDynamic.colorMultiplier;
+		out_Colour = uboDynamic.colourMultiplier;
 	}
 }
