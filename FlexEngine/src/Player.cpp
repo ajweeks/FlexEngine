@@ -22,6 +22,7 @@ IGNORE_WARNINGS_POP
 #include "Cameras/OverheadCamera.hpp"
 #include "Cameras/TerminalCamera.hpp"
 #include "Editor.hpp"
+#include "FlexEngine.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
@@ -182,7 +183,10 @@ namespace flex
 			Terminal* terminal = dynamic_cast<Terminal*>(m_ObjectInteractingWith);
 			if (terminal != nullptr)
 			{
-				terminal->DrawTerminalUI();
+				if (g_EngineInstance->IsRenderingImGui())
+				{
+					terminal->DrawTerminalUI();
+				}
 			}
 		}
 
