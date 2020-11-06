@@ -2574,6 +2574,18 @@ namespace flex
 		GameObject::Destroy();
 	}
 
+	void DirectionalLight::Update()
+	{
+		glm::vec3 offsets[] = { -m_Transform.GetUp(), m_Transform.GetUp(), -m_Transform.GetForward(), m_Transform.GetForward(), VEC3_ZERO };
+		for (const glm::vec3& offset : offsets)
+		{
+			btVector3 lightPos = ToBtVec3(pos + offset);
+			btVector3 lineEnd = ToBtVec3(pos - data.dir * 2.0f + offset);
+			btVector3 lineColour = ToBtVec3(data.colour);
+			g_Renderer->GetDebugDrawer()->drawLine(lightPos, lineEnd, lineColour);
+		}
+	}
+
 	void DirectionalLight::DrawImGuiObjects()
 	{
 		GameObject::DrawImGuiObjects();
