@@ -267,6 +267,7 @@ namespace flex
 
 	extern class InputManager* g_InputManager;
 	extern class Renderer* g_Renderer;
+	extern class PluggablesSystem* g_PluggablesSystem;
 	extern class FlexEngine* g_EngineInstance;
 	extern class Editor* g_Editor;
 	extern class SceneManager* g_SceneManager;

@@ -4,6 +4,7 @@
 
 #include "VirtualMachine/Backend/VMValue.hpp"
 #include "VirtualMachine/Backend/IR.hpp"
+#include "Scene/GameObject.hpp" // For Terminal::MAX_OUTPUT_COUNT
 
 namespace flex
 {
@@ -303,6 +304,7 @@ namespace flex
 			std::vector<Span> instructionOrigins;
 
 			std::array<VM::Value, REGISTER_COUNT> registers;
+			std::array<VM::Value, Terminal::MAX_OUTPUT_COUNT> terminalOutputs;
 			std::stack<VM::Value> stack;
 
 			u32* memory = nullptr;
@@ -318,11 +320,16 @@ namespace flex
 			std::string unpatchedInstructionStr;
 			std::string instructionStr;
 
+			static bool IsTerminalOutputVar(const std::string& varName);
+			// Returns -1, or terminal output var index if valid name
+			static i32 GetTerminalOutputVar(const std::string& varName);
+
 		private:
 			IR::Value::Type FindIRType(IR::State* irState, IR::Value* irValue);
 
 			void AllocateMemory();
 			void ZeroOutRegisters();
+			void ZeroOutTerminalOutputs();
 			void ClearStack();
 			void HandleComparison(ValueWrapper& regVal, IR::IntermediateRepresentation* ir, IR::BinaryValue* binaryValue);
 			void HandleComparison(IR::IntermediateRepresentation* ir, IR::Value* condition, i32 ifTrueBlockIndex, i32 ifFalseBlockIndex, bool bInvCondition);

@@ -4,6 +4,7 @@
 
 #include "StringBuilder.hpp"
 #include "VirtualMachine/Backend/VariableContainer.hpp"
+#include "VirtualMachine/Backend/VirtualMachine.hpp"
 #include "VirtualMachine/Frontend/Lexer.hpp"
 #include "VirtualMachine/Frontend/Token.hpp"
 
@@ -1556,6 +1557,13 @@ namespace flex
 				{
 					//span = span.Extend(Eat(TokenKind::SEMICOLON).span);
 
+					if (VM::VirtualMachine::IsTerminalOutputVar(identifierToken.value))
+					{
+						diagnosticContainer->AddDiagnostic(span, "Cannot overwrite system variable");
+						delete initializer;
+						return nullptr;
+					}
+
 					return new Declaration(span, identifierToken.value, initializer, typeName);
 				}
 			}
@@ -2056,6 +2064,13 @@ namespace flex
 					Token typeToken = Eat(m_Current.kind);
 					Span span = typeToken.span;
 					Token identifier = Eat(TokenKind::IDENTIFIER);
+
+					if (VM::VirtualMachine::IsTerminalOutputVar(identifier.value))
+					{
+						diagnosticContainer->AddDiagnostic(span, "Cannot overwrite system variable");
+						// TODO: Memory leak - delete list of previous results
+						return {};
+					}
 
 					result.push_back(new Declaration(span.Extend(identifier.span), identifier.value, nullptr, TokenKindToTypeName(typeToken.kind), true));
 

@@ -140,6 +140,9 @@ namespace flex
 		// Filled if this object is a trigger
 		std::vector<GameObject*> overlappingObjects;
 
+		// Signal that connected objects get sent
+		i32 signalSend = -1;
+
 	protected:
 		friend BaseScene;
 
@@ -267,6 +270,7 @@ namespace flex
 
 		virtual void Initialize() override;
 		virtual void Destroy() override;
+		virtual void Update() override;
 		virtual void DrawImGuiObjects() override;
 		virtual void SetVisible(bool bVisible, bool bEffectChildren /* = true */) override;
 		virtual void OnTransformChanged() override;
@@ -731,6 +735,36 @@ namespace flex
 
 	};
 
+	// Connects terminals to other things to transmit information
+	class Wire
+	{
+	public:
+		Wire();
+
+		GameObject* gameObject0 = nullptr;
+		GameObject* gameObject1 = nullptr;
+	};
+
+	class PluggablesSystem
+	{
+	public:
+		void Initialize();
+		void Destroy();
+
+		void Update();
+
+		i32 GetReceivedSignal(GameObject* gameObject);
+
+		Wire* AddPluggable(GameObject* gameObject, GameObject* objPluggedInto);
+		bool RemovePluggable(GameObject* gameObject);
+
+		std::vector<Wire*> wires;
+
+		// TODO: Serialization (requires ObjectIDs)
+		// TODO: Use WirePool
+
+	};
+
 	class Terminal : public GameObject
 	{
 	public:
@@ -738,6 +772,7 @@ namespace flex
 		explicit Terminal(const std::string& name);
 
 		virtual void Initialize() override;
+		virtual void PostInitialize() override;
 		virtual void Destroy() override;
 		virtual void Update() override;
 
@@ -748,6 +783,10 @@ namespace flex
 		void SetCamera(TerminalCamera* camera);
 
 		void DrawTerminalUI();
+
+		static const i32 MAX_OUTPUT_COUNT = 4;
+
+		std::vector<Wire*> wireSlots;
 
 	protected:
 		void TypeChar(char c);

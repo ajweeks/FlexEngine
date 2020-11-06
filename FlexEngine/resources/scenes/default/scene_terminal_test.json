@@ -10,7 +10,7 @@
 	},
 	"camera" : 
 	{
-		"type" : "debug",
+		"type" : "first-person",
 		"near plane" : 0.500000,
 		"far plane" : 1000.000000,
 		"fov" : 0.785398,
@@ -21,9 +21,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "20.993, 29.011, -6.866",
-			"pitch" : -0.541343,
-			"yaw" : -3.447926
+			"position" : "-1.111, 2.030, -3.490",
+			"pitch" : 0.000000,
+			"yaw" : 1.638920
 		}
 	},
 	"objects" : 
@@ -97,15 +97,15 @@
 					"transform" : 
 					{
 						"pos" : "0.000, 15.000, 0.000",
-						"rot" : "3.042, -0.194, 1.813"
+						"rot" : "-2.877, 0.890, 2.206"
 					},
 					"directional light info" : 
 					{
-						"rotation" : "0.616, 0.780, 0.099, -0.046",
+						"rotation" : "0.454, 0.773, -0.299, 0.327",
 						"pos" : "0.000, 15.000, 0.000",
 						"colour" : "1.00, 1.00, 1.00",
 						"enabled" : true,
-						"brightness" : 5.000000,
+						"brightness" : 0.703000,
 						"cast shadows" : true,
 						"shadow darkness" : 1.000000
 					}
@@ -113,64 +113,64 @@
 				{
 					"name" : "PointLight_03",
 					"type" : "point light",
-					"visible" : true,
+					"visible" : false,
 					"transform" : 
 					{
-						"pos" : "-20.073, 4.952, 20.109"
+						"pos" : "-9.308, 4.952, 10.521"
 					},
 					"point light info" : 
 					{
-						"pos" : "-20.073, 4.952, 20.109",
+						"pos" : "-9.308, 4.952, 10.521",
 						"colour" : "0.49, 0.78, 0.91",
-						"enabled" : true,
-						"brightness" : 182.266006
+						"enabled" : false,
+						"brightness" : 1000.000000
 					}
 				},
 				{
 					"name" : "PointLight_02",
 					"type" : "point light",
-					"visible" : true,
+					"visible" : false,
 					"transform" : 
 					{
-						"pos" : "-5.788, 8.328, 24.110"
+						"pos" : "1.197, 1.980, 16.280"
 					},
 					"point light info" : 
 					{
-						"pos" : "-5.788, 8.328, 24.110",
+						"pos" : "1.197, 1.980, 16.280",
 						"colour" : "0.94, 0.80, 0.57",
-						"enabled" : true,
-						"brightness" : 500.000000
+						"enabled" : false,
+						"brightness" : 760.416992
 					}
 				},
 				{
 					"name" : "PointLight_01",
 					"type" : "point light",
-					"visible" : true,
+					"visible" : false,
 					"transform" : 
 					{
-						"pos" : "10.562, 12.777, -4.604"
+						"pos" : "10.384, 3.624, 7.767"
 					},
 					"point light info" : 
 					{
-						"pos" : "10.562, 12.777, -4.604",
+						"pos" : "10.384, 3.624, 7.767",
 						"colour" : "1.00, 1.00, 1.00",
-						"enabled" : true,
+						"enabled" : false,
 						"brightness" : 500.000000
 					}
 				},
 				{
 					"name" : "PointLight_00",
 					"type" : "point light",
-					"visible" : true,
+					"visible" : false,
 					"transform" : 
 					{
-						"pos" : "-11.401, 11.826, 4.532"
+						"pos" : "-12.184, 4.730, -1.502"
 					},
 					"point light info" : 
 					{
-						"pos" : "-11.401, 11.826, 4.532",
+						"pos" : "-12.184, 4.730, -1.502",
 						"colour" : "1.00, 1.00, 1.00",
-						"enabled" : true,
+						"enabled" : false,
 						"brightness" : 827.585999
 					}
 				}
@@ -205,13 +205,7 @@
 			},
 			"terminal" : 
 			{
-				"str" : "int a = 10;
-int b = 20;
-bool bash = a > b ? true : false;
-if (a > 99 || a <= 10 && b == 20)
-{
-  b = 33;
-}"
+				"str" : ""
 			},
 			"children" : 
 			[
@@ -235,7 +229,7 @@ if (a > 99 || a <= 10 && b == 20)
 		{
 			"name" : "Cart_00",
 			"type" : "cart",
-			"visible" : true,
+			"visible" : false,
 			"transform" : 
 			{
 			},
@@ -248,6 +242,55 @@ if (a > 99 || a <= 10 && b == 20)
 				"track ID" : -1,
 				"dist along track" : -1.000000
 			}
+		},
+		{
+			"name" : "moka",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "-20.859, 0.688, 25.622",
+				"rot" : "0.000, -1.070, 0.000",
+				"scale" : "11.430, 11.430, 11.430"
+			},
+			"mesh" : "moka",
+			"materials" : 
+			[
+				"pbr grey",
+				"black plastic"
+			]
+		},
+		{
+			"name" : "dragon",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "12.137, 1.942, 27.655",
+				"rot" : "0.000, -1.059, 0.000",
+				"scale" : "3.450, 3.450, 3.450"
+			},
+			"mesh" : "dragon_mid",
+			"materials" : 
+			[
+				"pbr red"
+			]
+		},
+		{
+			"name" : "New_Object_00",
+			"type" : "object",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "12.025, 0.979, 27.633",
+				"rot" : "0.000, 0.630, 0.000",
+				"scale" : "4.500, 2.000, 2.330"
+			},
+			"mesh" : "cube",
+			"materials" : 
+			[
+				"pbr white"
+			]
 		}
 	]
 }

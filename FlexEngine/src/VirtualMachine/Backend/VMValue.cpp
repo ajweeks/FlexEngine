@@ -503,6 +503,10 @@ namespace flex
 			{
 				return value;
 			}
+			else if (type == Type::TERMINAL_OUTPUT)
+			{
+				return vm->terminalOutputs[value.valInt];
+			}
 			else
 			{
 				PrintError("Unhandled value type\n");
@@ -512,9 +516,9 @@ namespace flex
 
 		Value& ValueWrapper::GetW(VirtualMachine* vm)
 		{
-			if (type != Type::REGISTER)
+			if (type != Type::REGISTER && type != Type::TERMINAL_OUTPUT)
 			{
-				PrintError("GetW can only be called on register values\n");
+				PrintError("GetW can only be called on register or terminal output values\n");
 			}
 			return Get(vm);
 		}

@@ -79,6 +79,7 @@ namespace flex
 	class CameraManager* g_CameraManager = nullptr;
 	class InputManager* g_InputManager = nullptr;
 	class Renderer* g_Renderer = nullptr;
+	class PluggablesSystem* g_PluggablesSystem = nullptr;
 	class FlexEngine* g_EngineInstance = nullptr;
 	class Editor* g_Editor = nullptr;
 	class SceneManager* g_SceneManager = nullptr;
@@ -247,6 +248,9 @@ namespace flex
 
 		g_Editor->Initialize();
 
+		g_PluggablesSystem = new PluggablesSystem();
+		g_PluggablesSystem->Initialize();
+
 		BaseScene::ParseFoundMeshFiles();
 		BaseScene::ParseFoundMaterialFiles();
 		BaseScene::ParseFoundPrefabFiles();
@@ -261,6 +265,7 @@ namespace flex
 
 		g_SceneManager->InitializeCurrentScene();
 		g_Renderer->PostInitialize();
+
 		g_SceneManager->PostInitializeCurrentScene();
 		g_Editor->PostInitialize();
 
@@ -350,6 +355,7 @@ namespace flex
 		g_Window->SaveToConfig();
 
 		g_Editor->Destroy();
+		g_PluggablesSystem->Destroy();
 		g_SceneManager->DestroyAllScenes();
 		g_CameraManager->Destroy();
 		g_PhysicsManager->Destroy();
@@ -357,6 +363,9 @@ namespace flex
 		MeshComponent::DestroyAllLoadedMeshes();
 
 		AudioManager::Destroy();
+
+		delete g_PluggablesSystem;
+		g_PluggablesSystem = nullptr;
 
 		delete g_SceneManager;
 		g_SceneManager = nullptr;
@@ -625,6 +634,8 @@ namespace flex
 
 				if (bSimulateFrame)
 				{
+					g_PluggablesSystem->Update();
+
 					g_SceneManager->CurrentScene()->LateUpdate();
 				}
 

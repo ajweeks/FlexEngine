@@ -132,6 +132,7 @@ namespace flex
 			{
 				REGISTER,
 				CONSTANT,
+				TERMINAL_OUTPUT,
 				NONE
 			};
 

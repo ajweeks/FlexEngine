@@ -2576,13 +2576,23 @@ namespace flex
 
 	void DirectionalLight::Update()
 	{
-		glm::vec3 offsets[] = { -m_Transform.GetUp(), m_Transform.GetUp(), -m_Transform.GetForward(), m_Transform.GetForward(), VEC3_ZERO };
-		for (const glm::vec3& offset : offsets)
+		i32 receivedSignal = g_PluggablesSystem->GetReceivedSignal(this);
+		if (receivedSignal != -1)
 		{
-			btVector3 lightPos = ToBtVec3(pos + offset);
-			btVector3 lineEnd = ToBtVec3(pos - data.dir * 2.0f + offset);
-			btVector3 lineColour = ToBtVec3(data.colour);
-			g_Renderer->GetDebugDrawer()->drawLine(lightPos, lineEnd, lineColour);
+			m_bVisible = receivedSignal == 1;
+			data.enabled = m_bVisible ? 1 : 0;
+		}
+
+		if (data.enabled)
+		{
+			glm::vec3 offsets[] = { -m_Transform.GetUp(), m_Transform.GetUp(), -m_Transform.GetForward(), m_Transform.GetForward(), VEC3_ZERO };
+			for (const glm::vec3& offset : offsets)
+			{
+				btVector3 lightPos = ToBtVec3(pos + offset);
+				btVector3 lineEnd = ToBtVec3(pos - data.dir * 2.0f + offset);
+				btVector3 lineColour = ToBtVec3(data.colour);
+				g_Renderer->GetDebugDrawer()->drawLine(lightPos, lineEnd, lineColour);
+			}
 		}
 	}
 
@@ -2759,6 +2769,17 @@ namespace flex
 		GameObject::Destroy();
 	}
 
+	void PointLight::Update()
+	{
+		i32 receivedSignal = g_PluggablesSystem->GetReceivedSignal(this);
+		if (receivedSignal != -1)
+		{
+			m_bVisible = receivedSignal == 1;
+			data.enabled = m_bVisible ? 1 : 0;
+			g_Renderer->UpdatePointLightData(ID, &data);
+		}
+	}
+
 	void PointLight::DrawImGuiObjects()
 	{
 		GameObject::DrawImGuiObjects();
@@ -2778,12 +2799,10 @@ namespace flex
 
 			if (!bRemovedPointLight)
 			{
-				bool bEnabled = (data.enabled == 1);
-				if (ImGui::Checkbox("Enabled", &bEnabled))
+				if (ImGui::Checkbox("Enabled", &m_bVisible))
 				{
 					bEditedPointLightData = true;
-					data.enabled = bEnabled ? 1 : 0;
-					m_bVisible = bEnabled;
+					data.enabled = m_bVisible ? 1 : 0;
 				}
 
 				ImGui::SameLine();
@@ -4852,6 +4871,88 @@ namespace flex
 		GameObject::Update();
 	}
 
+	void PluggablesSystem::Initialize()
+	{
+	}
+
+	void PluggablesSystem::Destroy()
+	{
+		for (Wire* wire : wires)
+		{
+			delete wire;
+		}
+		wires.clear();
+	}
+
+	void PluggablesSystem::Update()
+	{
+	}
+
+	i32 PluggablesSystem::GetReceivedSignal(GameObject* gameObject)
+	{
+		i32 result = -1;
+		for (Wire* wire : wires)
+		{
+			if (wire->gameObject0 == gameObject)
+			{
+				if (wire->gameObject1)
+				{
+					result = glm::max(result, wire->gameObject1->signalSend);
+				}
+			}
+			else if (wire->gameObject1 == gameObject)
+			{
+				if (wire->gameObject0)
+				{
+					result = glm::max(result, wire->gameObject0->signalSend);
+				}
+			}
+		}
+		return result;
+	}
+
+	Wire* PluggablesSystem::AddPluggable(GameObject* gameObject, GameObject* objPluggedInto)
+	{
+		Wire* newWire = new Wire();
+		newWire->gameObject0 = gameObject;
+		newWire->gameObject1 = objPluggedInto;
+		wires.push_back(newWire);
+		return newWire;
+	}
+
+	bool PluggablesSystem::RemovePluggable(GameObject* gameObject)
+	{
+		for (auto iter = wires.begin(); iter != wires.end(); ++iter)
+		{
+			Wire* wire = *iter;
+			if (wire->gameObject0 == gameObject)
+			{
+				wire->gameObject0 = nullptr;
+				if (wire->gameObject1 == nullptr)
+				{
+					delete wire;
+					wires.erase(iter);
+				}
+				return true;
+			}
+			if (wire->gameObject1 == gameObject)
+			{
+				wire->gameObject1 = nullptr;
+				if (wire->gameObject0 == nullptr)
+				{
+					delete wire;
+					wires.erase(iter);
+				}
+				return true;
+			}
+		}
+		return false;
+	}
+
+	Wire::Wire()
+	{
+	}
+
 	Terminal::Terminal() :
 		Terminal(g_SceneManager->CurrentScene()->GetUniqueObjectName("Terminal_", 2))
 	{
@@ -4888,6 +4989,19 @@ namespace flex
 		ParseCode();
 
 		GameObject::Initialize();
+	}
+
+	void Terminal::PostInitialize()
+	{
+		std::vector<GameObject*> objs = g_SceneManager->CurrentScene()->GetAllObjects();
+		for (GameObject* obj : objs)
+		{
+			PointLight* pointLight = dynamic_cast<PointLight*>(obj);
+			if (pointLight != nullptr)
+			{
+				g_PluggablesSystem->AddPluggable(this, obj);
+			}
+		}
 	}
 
 	void Terminal::Destroy()
@@ -5035,6 +5149,22 @@ namespace flex
 			debugDrawer->drawTriangle(ToBtVec3(v1 + o), ToBtVec3(v2 + o), ToBtVec3(v3 + o), btVector3(0.9f, 0.3f, 0.2f), 1.0f);
 		}
 
+		if (m_VM != nullptr)
+		{
+			if (m_VM->IsExecuting())
+			{
+				signalSend = m_VM->terminalOutputs[0].valInt;
+			}
+			else
+			{
+				signalSend = -1;
+			}
+		}
+		else
+		{
+			signalSend = -1;
+		}
+
 		GameObject::Update();
 	}
 
@@ -5093,6 +5223,20 @@ namespace flex
 					{
 						std::string regValStr = regVal.ToString();
 						ImGui::Text("r%i = %s", i, regValStr.c_str());
+					}
+					else
+					{
+						ImGui::NewLine();
+					}
+				}
+
+				for (u32 i = 0; i < Terminal::MAX_OUTPUT_COUNT; ++i)
+				{
+					const VM::Value& terminalVal = m_VM->terminalOutputs[i];
+					if (terminalVal.type != VM::Value::Type::_NONE)
+					{
+						std::string terminalValStr = terminalVal.ToString();
+						ImGui::Text("out_%i = %s", i, terminalValStr.c_str());
 					}
 					else
 					{

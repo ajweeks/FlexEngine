@@ -223,7 +223,6 @@ namespace flex
 				{
 					return variableTypes[identifier->variable];
 				}
-
 				std::string str = "Undeclared identifier \"" + identifier->variable + "\"\n";
 				diagnosticContainer->AddDiagnostic(identifier->origin, str);
 				return Value::Type::_NONE;
@@ -688,6 +687,15 @@ namespace flex
 			//{
 			//	PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
 			//}
+
+			{
+				char buffer[256];
+				for (i32 terminalIndex = 0; terminalIndex < Terminal::MAX_OUTPUT_COUNT; ++terminalIndex)
+				{
+					sprintf_s(buffer, 256, "out_%d", terminalIndex);
+					state->variableTypes[std::string(buffer)] = Value::Type::INT;
+				}
+			}
 
 			if (ast->diagnosticContainer->diagnostics.empty())
 			{
