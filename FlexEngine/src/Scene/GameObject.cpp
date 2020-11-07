@@ -337,18 +337,21 @@ namespace flex
 
 	void GameObject::DrawImGuiObjects()
 	{
-		//GLRenderObject* renderObject = nullptr;
-		std::string objectID = "##";
-		//if (m_RenderID != InvalidRenderID)
-		//{
-		//	//renderObject = GetRenderObject(m_RenderID);
-		//	objectID += std::to_string(renderObject->renderID);
+		if (!IsVisibleInSceneExplorer())
+		{
+			return;
+		}
 
-		//	if (!gameObject->IsVisibleInSceneExplorer())
-		//	{
-		//		return;
-		//	}
-		//}
+		ImGui::PushID(this);
+
+		DrawImGuiForSelfInternal();
+
+		ImGui::PopID();
+	}
+
+	void GameObject::DrawImGuiForSelfInternal()
+	{
+		// ImGui::PushID will have already been called, making names not need to be quailfied for uniqueness
 
 		ImGui::Text("%s : %s", m_Name.c_str(), GameObjectTypeStrings[(i32)m_Type]);
 
@@ -358,7 +361,7 @@ namespace flex
 			return;
 		}
 
-		const std::string objectVisibleLabel("Visible" + objectID + m_Name);
+		const std::string objectVisibleLabel("Visible");
 		bool bVisible = m_bVisible;
 		if (ImGui::Checkbox(objectVisibleLabel.c_str(), &bVisible))
 		{
@@ -1821,7 +1824,7 @@ namespace flex
 		}
 	}
 
-	bool GameObject::IsVisibleInSceneExplorer(bool bIncludingChildren) const
+	bool GameObject::IsVisibleInSceneExplorer(bool bIncludingChildren /* = false */) const
 	{
 		if (m_bVisibleInSceneExplorer)
 		{

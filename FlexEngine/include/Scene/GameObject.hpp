@@ -228,6 +228,8 @@ namespace flex
 		static AudioSourceID s_BunkSound;
 		static AudioCue s_SqueakySounds;
 
+		private:
+			void DrawImGuiForSelfInternal();
 	};
 
 	// Child classes

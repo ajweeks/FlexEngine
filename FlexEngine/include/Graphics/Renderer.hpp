@@ -189,7 +189,8 @@ namespace flex
 
 		virtual void RecreateEverything() = 0;
 
-		void DrawImGuiRenderObjects();
+		void DrawImGuiForSelectedObjects();
+		void DrawImGuiForRenderObjectsList();
 		void DrawImGuiSettings();
 
 		real GetStringWidth(const std::string& str, BitmapFont* font, real letterSpacing, bool bNormalized) const;
@@ -557,6 +558,8 @@ namespace flex
 	private:
 		Renderer& operator=(const Renderer&) = delete;
 		Renderer(const Renderer&) = delete;
+
+		bool DrawImGuiGameObjectNameAndChildrenInternal(GameObject* gameObject);
 
 	};
 } // namespace flex

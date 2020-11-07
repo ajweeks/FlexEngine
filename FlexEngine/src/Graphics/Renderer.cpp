@@ -868,7 +868,7 @@ namespace flex
 		}
 	}
 
-	void Renderer::DrawImGuiRenderObjects()
+	void Renderer::DrawImGuiForSelectedObjects()
 	{
 		ImGui::NewLine();
 
@@ -886,7 +886,10 @@ namespace flex
 		}
 
 		ImGui::EndChild();
+	}
 
+	void Renderer::DrawImGuiForRenderObjectsList()
+	{
 		ImGui::NewLine();
 
 		ImGui::Text("Game Objects");
@@ -2022,10 +2025,22 @@ namespace flex
 			return false;
 		}
 
+		ImGui::PushID(gameObject);
+
+		bool result = DrawImGuiGameObjectNameAndChildrenInternal(gameObject);
+
+		ImGui::PopID();
+
+		return result;
+	}
+
+	bool Renderer::DrawImGuiGameObjectNameAndChildrenInternal(GameObject* gameObject)
+	{
+		// ImGui::PushID will have been called so ImGui calls in this function don't need to be qualified to be unique
+
 		bool bParentChildTreeDirty = false;
 
 		std::string objectName = gameObject->GetName();
-		std::string objectID = "##" + objectName; // TODO: Add unique ID here to prevent ImGui conflicts
 
 		const std::vector<GameObject*>& gameObjectChildren = gameObject->GetChildren();
 		bool bHasChildren = !gameObjectChildren.empty();
@@ -2049,11 +2064,10 @@ namespace flex
 		}
 		bool bSelected = g_Editor->IsObjectSelected(gameObject);
 
-		bool visible = gameObject->IsVisible();
-		const std::string objectVisibleLabel(objectID + "-visible");
-		if (ImGui::Checkbox(objectVisibleLabel.c_str(), &visible))
+		bool bVisible = gameObject->IsVisible();
+		if (ImGui::Checkbox("##visible", &bVisible))
 		{
-			gameObject->SetVisible(visible);
+			gameObject->SetVisible(bVisible);
 		}
 		ImGui::SameLine();
 
@@ -2067,7 +2081,7 @@ namespace flex
 			node_flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
 		}
 
-		bool node_open = ImGui::TreeNodeEx((void*)gameObject, node_flags, "%s", objectName.c_str());
+		bool bNodeOpen = ImGui::TreeNodeEx((void*)gameObject, node_flags, "%s", objectName.c_str());
 
 		bool bGameObjectDeletedOrDuplicated = gameObject->DoImGuiContextMenu(false);
 		if (bGameObjectDeletedOrDuplicated || gameObject == nullptr)
@@ -2250,7 +2264,7 @@ namespace flex
 			}
 		}
 
-		if (node_open && bHasChildren)
+		if (bNodeOpen && bHasChildren)
 		{
 			if (!bParentChildTreeDirty && gameObject)
 			{

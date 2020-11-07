@@ -1190,7 +1190,8 @@ namespace flex
 					g_Editor->SetTransformState(TransformState::SCALE);
 				}
 
-				g_Renderer->DrawImGuiRenderObjects();
+				g_Renderer->DrawImGuiForSelectedObjects();
+				g_Renderer->DrawImGuiForRenderObjectsList();
 
 				ImGui::Spacing();
 				ImGui::Spacing();
