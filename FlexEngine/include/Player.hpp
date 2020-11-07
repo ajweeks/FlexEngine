@@ -15,7 +15,7 @@ namespace flex
 	class Player : public GameObject
 	{
 	public:
-		Player(i32 index, const glm::vec3& initialPos = VEC3_ZERO);
+		Player(i32 index);
 
 		virtual void Initialize() override;
 		virtual void PostInitialize() override;

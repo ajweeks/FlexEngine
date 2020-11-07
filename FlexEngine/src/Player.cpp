@@ -34,12 +34,11 @@ IGNORE_WARNINGS_POP
 
 namespace flex
 {
-	Player::Player(i32 index, const glm::vec3& initialPos /* = VEC3_ZERO */) :
+	Player::Player(i32 index) :
 		GameObject("Player " + std::to_string(index), GameObjectType::PLAYER),
 		m_Index(index),
 		m_TrackPlacementReticlePos(0.0f, -1.95f, 3.5f)
 	{
-		m_Transform.SetWorldPosition(initialPos);
 	}
 
 	void Player::Initialize()
