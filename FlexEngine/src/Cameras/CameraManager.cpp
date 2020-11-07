@@ -123,12 +123,23 @@ namespace flex
 
 	BaseCamera* CameraManager::SetCameraByName(const std::string& name, bool bAlignWithPrevious)
 	{
-		return SetCamera(GetCameraByName(name), bAlignWithPrevious);
+		BaseCamera* cam = GetCameraByName(name);
+		if (cam == nullptr)
+		{
+			std::string errorStr = "Attempted to set camera with invalid name: " + name + "\n";
+			PrintError("%s", errorStr.c_str());
+			return nullptr;
+		}
+		return SetCamera(cam, bAlignWithPrevious);
 	}
 
 	BaseCamera* CameraManager::PushCamera(BaseCamera* camera, bool bAlignWithPrevious, bool bInitialize)
 	{
-		assert(camera != nullptr);
+		if (camera == nullptr)
+		{
+			PrintError("Attempted to push null camera\n");
+			return nullptr;
+		}
 
 		BaseCamera* pActiveCam = nullptr;
 		if (!m_CameraStack.empty())
@@ -157,7 +168,14 @@ namespace flex
 
 	BaseCamera* CameraManager::PushCameraByName(const std::string& name, bool bAlignWithPrevious, bool bInitialize)
 	{
-		return PushCamera(GetCameraByName(name), bAlignWithPrevious, bInitialize);
+		BaseCamera* cam = GetCameraByName(name);
+		if (cam == nullptr)
+		{
+			std::string errorStr = "Attempted to push camera with invalid name: " + name + "\n";
+			PrintError("%s", errorStr.c_str());
+			return nullptr;
+		}
+		return PushCamera(cam, bAlignWithPrevious, bInitialize);
 	}
 
 	void CameraManager::PopCamera()
