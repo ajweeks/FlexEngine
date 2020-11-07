@@ -700,11 +700,14 @@ namespace flex
 			if (ast->diagnosticContainer->diagnostics.empty())
 			{
 				DiscoverFunctionDefinitions(ast->rootBlock);
-				LowerStatement(ast->rootBlock);
-				state->InsertionBlock()->AddHalt();
-				LowerFunctionDefinitions(ast->rootBlock);
-				blocks = state->blocks;
-				SetBlockIndices();
+				if (state->diagnosticContainer->diagnostics.empty())
+				{
+					LowerStatement(ast->rootBlock);
+					state->InsertionBlock()->AddHalt();
+					LowerFunctionDefinitions(ast->rootBlock);
+					blocks = state->blocks;
+					SetBlockIndices();
+				}
 			}
 
 			//s = firstBlock->ToString();
@@ -849,8 +852,6 @@ namespace flex
 					}
 				}
 				state->InsertionBlock()->SealBlock();
-
-				assert(state->functionTypes.find(funcDecl->name) != state->functionTypes.end());
 			} break;
 			}
 		}
@@ -1360,20 +1361,21 @@ namespace flex
 			return new IR::Value(expression->span, state, IR::Value::Type::_NONE);
 		}
 
-		void IntermediateRepresentation::AddFunctionType(Span origin, const std::string& funcName, Value::Type returnType, const std::vector<Value::Type>& argumentTypes)
+		bool IntermediateRepresentation::AddFunctionType(Span origin, const std::string& funcName, Value::Type returnType, const std::vector<Value::Type>& argumentTypes)
 		{
 			if (state->functionTypes.find(funcName) != state->functionTypes.end())
 			{
 				state->diagnosticContainer->AddDiagnostic(origin, "Redefinition of function \"" + funcName + "\"");
-				return;
+				return false;
 			}
 			if (state->variableTypes.find(funcName) != state->variableTypes.end())
 			{
 				state->diagnosticContainer->AddDiagnostic(origin, "Redefinition of name \"" + funcName + "\"");
-				return;
+				return false;
 			}
 
 			state->functionTypes[funcName] = { returnType, argumentTypes };
+			return true;
 		}
 
 		void IntermediateRepresentation::SetBlockIndices()

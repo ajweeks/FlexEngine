@@ -1765,6 +1765,11 @@ namespace flex
 
 		TernaryOperation* Parser::NextTernary(Expression* condition)
 		{
+			if (condition == nullptr)
+			{
+				return nullptr;
+			}
+
 			Eat(TokenKind::QUESTION);
 			Expression* ifTrue = NextExpression();
 			if (ifTrue != nullptr)

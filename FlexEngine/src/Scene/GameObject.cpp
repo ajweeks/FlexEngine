@@ -762,6 +762,21 @@ namespace flex
 				rb->GetRigidBodyInternal()->setUserPointer(this);
 			}
 		}
+
+		if (ImGui::TreeNode("Signals"))
+		{
+			for (u32 i = 0; i < (u32)wireConnections.size(); ++i)
+			{
+				if (i < (i32)outputSignals.size())
+				{
+					ImGui::Text("%u: %i", i, outputSignals[i]);
+				}
+
+				ImGui::SameLine();
+				ImGui::Text("(%s <-> %s)", wireConnections[i]->gameObject0->m_Name.c_str(), wireConnections[i]->gameObject1->m_Name.c_str());
+			}
+			ImGui::TreePop();
+		}
 	}
 
 	bool GameObject::DoImGuiContextMenu(bool bActive)
@@ -1342,6 +1357,17 @@ namespace flex
 	void GameObject::SetNearbyInteractable(bool bNearbyInteractable)
 	{
 		m_bNearbyInteractable = bNearbyInteractable;
+	}
+
+	void GameObject::OnConnectionMade(Wire* wire)
+	{
+		wireConnections.push_back(wire);
+		outputSignals.resize(wireConnections.size(), -1);
+	}
+
+	void GameObject::OnConnectionBroke(Wire* wire)
+	{
+		UNREFERENCED_PARAMETER(wire);
 	}
 
 	GameObjectType GameObject::GetType() const
@@ -4925,12 +4951,14 @@ namespace flex
 		return result;
 	}
 
-	Wire* PluggablesSystem::AddPluggable(GameObject* gameObject, GameObject* objPluggedInto)
+	Wire* PluggablesSystem::AddPluggable(GameObject* gameObject0, GameObject* gameObject1)
 	{
 		Wire* newWire = new Wire();
-		newWire->gameObject0 = gameObject;
-		newWire->gameObject1 = objPluggedInto;
+		newWire->gameObject0 = gameObject0;
+		newWire->gameObject1 = gameObject1;
 		wires.push_back(newWire);
+		gameObject0->OnConnectionMade(newWire);
+		gameObject1->OnConnectionMade(newWire);
 		return newWire;
 	}
 
@@ -4941,6 +4969,7 @@ namespace flex
 			Wire* wire = *iter;
 			if (wire->gameObject0 == gameObject)
 			{
+				wire->gameObject0->OnConnectionBroke(wire);
 				wire->gameObject0 = nullptr;
 				if (wire->gameObject1 == nullptr)
 				{
@@ -4951,6 +4980,7 @@ namespace flex
 			}
 			if (wire->gameObject1 == gameObject)
 			{
+				wire->gameObject1->OnConnectionBroke(wire);
 				wire->gameObject1 = nullptr;
 				if (wire->gameObject0 == nullptr)
 				{
@@ -5163,20 +5193,24 @@ namespace flex
 			debugDrawer->drawTriangle(ToBtVec3(v1 + o), ToBtVec3(v2 + o), ToBtVec3(v3 + o), btVector3(0.9f, 0.3f, 0.2f), 1.0f);
 		}
 
-		if (m_VM != nullptr)
+		u32 outputCount = glm::min((u32)m_VM->terminalOutputs.size(), (u32)outputSignals.size());
+		if (m_VM != nullptr && m_VM->IsExecuting())
 		{
-			if (m_VM->IsExecuting())
+			for (u32 i = 0; i < outputCount; ++i)
 			{
-				SetOutputSignal(0, m_VM->terminalOutputs[0].valInt);
+				SetOutputSignal(i, m_VM->terminalOutputs[i].valInt);
 			}
-			else
+			for (u32 i = outputCount; i < (u32)outputSignals.size(); ++i)
 			{
-				SetOutputSignal(0, -1);
+				SetOutputSignal(i, -1);
 			}
 		}
 		else
 		{
-			SetOutputSignal(0, -1);
+			for (u32 i = 0; i < (u32)outputSignals.size(); ++i)
+			{
+				SetOutputSignal(i, -1);
+			}
 		}
 
 		GameObject::Update();
@@ -5262,6 +5296,10 @@ namespace flex
 				ImGui::SameLine();
 				ImGui::Text("sf: %d", m_VM->SignFlagSet() ? 1 : 0);
 
+				ImGui::Text("Inst index: %d", m_VM->m_RunningState.instructionIdx);
+				ImGui::SameLine();
+				ImGui::Text("%s", m_VM->m_RunningState.terminated ? "terminated" : "");
+
 				if (!m_VM->astStr.empty())
 				{
 					ImGui::Separator();
@@ -5287,6 +5325,7 @@ namespace flex
 					if (m_VM->IsExecuting())
 					{
 						i32 strLineNum = 0;
+						bool bFound = false;
 						i32 instIdx = m_VM->InstructionIndex();
 						for (i32 i = 0; i < (i32)m_VM->state->instructionBlocks.size(); ++i)
 						{
@@ -5295,13 +5334,14 @@ namespace flex
 							if (instIdx >= startOffset &&
 								instIdx < (startOffset + lineCountInBlock))
 							{
+								bFound = true;
 								strLineNum += (instIdx - startOffset);
 								break;
 							}
 							strLineNum += lineCountInBlock + 2; // Two additional lines for "label: {\n" & "\n}"
 						}
 
-						if (strLineNum != -1)
+						if (bFound)
 						{
 							strLineNum += 1;
 							std::string underlineStr = strLineNum == 0 ? "" : std::string(strLineNum, '\n');

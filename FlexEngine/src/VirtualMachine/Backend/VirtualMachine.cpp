@@ -715,6 +715,7 @@ namespace flex
 			if (m_RunningState.instructionIdx == -1)
 			{
 				m_RunningState.instructionIdx = 0;
+				m_RunningState.terminated = false;
 				if (bSingleStep)
 				{
 					return;
@@ -965,8 +966,8 @@ namespace flex
 		{
 			for (u32 i = 0; i < Terminal::MAX_OUTPUT_COUNT; ++i)
 			{
-				terminalOutputs[i].valInt = 0;
-				terminalOutputs[i].type = VM::Value::Type::_NONE;
+				terminalOutputs[i].valInt = -1;
+				terminalOutputs[i].type = VM::Value::Type::INT;
 			}
 		}
 

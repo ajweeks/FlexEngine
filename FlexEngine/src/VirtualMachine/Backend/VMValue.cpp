@@ -534,6 +534,10 @@ namespace flex
 			{
 				return "r" + value.ToString();
 			}
+			else if (type == Type::TERMINAL_OUTPUT)
+			{
+				return "out_" + value.ToString();
+			}
 			else
 			{
 				return value.ToString();

@@ -324,6 +324,8 @@ namespace flex
 			// Returns -1, or terminal output var index if valid name
 			static i32 GetTerminalOutputVar(const std::string& varName);
 
+			RunningState m_RunningState;
+
 		private:
 			IR::Value::Type FindIRType(IR::State* irState, IR::Value* irValue);
 
@@ -343,7 +345,6 @@ namespace flex
 			AST::AST* m_AST = nullptr;
 			IR::IntermediateRepresentation* m_IR = nullptr;
 
-			RunningState m_RunningState;
 
 			bool m_bCompiled = false;
 

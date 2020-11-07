@@ -16,10 +16,11 @@ class btCollisionShape;
 namespace flex
 {
 	class BaseScene;
+	class BezierCurveList;
 	class Mesh;
 	class MeshComponent;
-	class BezierCurveList;
 	class TerminalCamera;
+	class Wire;
 
 	namespace VM
 	{
@@ -137,11 +138,16 @@ namespace flex
 
 		void SetNearbyInteractable(bool bNearbyInteractable);
 
+		void OnConnectionMade(Wire* wire);
+		void OnConnectionBroke(Wire* wire);
+
 		// Filled if this object is a trigger
 		std::vector<GameObject*> overlappingObjects;
 
 		// Signals that connected objects get sent
 		std::vector<i32> outputSignals;
+		// Wires that this object is connected to
+		std::vector<Wire*> wireConnections;
 
 	protected:
 		friend BaseScene;
@@ -761,7 +767,7 @@ namespace flex
 
 		i32 GetReceivedSignal(GameObject* gameObject);
 
-		Wire* AddPluggable(GameObject* gameObject, GameObject* objPluggedInto);
+		Wire* AddPluggable(GameObject* gameObject0, GameObject* gameObject1);
 		bool RemovePluggable(GameObject* gameObject);
 
 		std::vector<Wire*> wires;
