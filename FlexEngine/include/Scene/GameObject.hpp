@@ -140,8 +140,8 @@ namespace flex
 		// Filled if this object is a trigger
 		std::vector<GameObject*> overlappingObjects;
 
-		// Signal that connected objects get sent
-		i32 signalSend = -1;
+		// Signals that connected objects get sent
+		std::vector<i32> outputSignals;
 
 	protected:
 		friend BaseScene;
@@ -152,6 +152,8 @@ namespace flex
 		virtual void SerializeUniqueFields(JSONObject& parentObject) const;
 
 		void CopyGenericFields(GameObject* newGameObject, GameObject* parent, bool bCopyChildren);
+
+		void SetOutputSignal(i32 slotIdx, i32 value);
 
 		// Returns a string containing our name with a "_xx" post-fix where xx is the next highest index or 00
 
@@ -745,6 +747,8 @@ namespace flex
 
 		GameObject* gameObject0 = nullptr;
 		GameObject* gameObject1 = nullptr;
+		i32 gameObject0SlotIdx = 0;
+		i32 gameObject1SlotIdx = 0;
 	};
 
 	class PluggablesSystem

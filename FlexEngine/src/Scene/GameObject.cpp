@@ -1474,6 +1474,15 @@ namespace flex
 		}
 	}
 
+	void GameObject::SetOutputSignal(i32 slotIdx, i32 value)
+	{
+		if (slotIdx >= (i32)outputSignals.size())
+		{
+			outputSignals.resize(slotIdx + 1);
+		}
+		outputSignals[slotIdx] = value;
+	}
+
 	GameObject* GameObject::GetParent()
 	{
 		return m_Parent;
@@ -4900,14 +4909,16 @@ namespace flex
 			{
 				if (wire->gameObject1)
 				{
-					result = glm::max(result, wire->gameObject1->signalSend);
+					i32 sendSignal = wire->gameObject1SlotIdx < (i32)wire->gameObject1->outputSignals.size() ? wire->gameObject1->outputSignals[wire->gameObject1SlotIdx] : -1;
+					result = glm::max(result, sendSignal);
 				}
 			}
 			else if (wire->gameObject1 == gameObject)
 			{
 				if (wire->gameObject0)
 				{
-					result = glm::max(result, wire->gameObject0->signalSend);
+					i32 sendSignal = wire->gameObject0SlotIdx < (i32)wire->gameObject0->outputSignals.size() ? wire->gameObject0->outputSignals[wire->gameObject0SlotIdx] : -1;
+					result = glm::max(result, sendSignal);
 				}
 			}
 		}
@@ -5156,16 +5167,16 @@ namespace flex
 		{
 			if (m_VM->IsExecuting())
 			{
-				signalSend = m_VM->terminalOutputs[0].valInt;
+				SetOutputSignal(0, m_VM->terminalOutputs[0].valInt);
 			}
 			else
 			{
-				signalSend = -1;
+				SetOutputSignal(0, -1);
 			}
 		}
 		else
 		{
-			signalSend = -1;
+			SetOutputSignal(0, -1);
 		}
 
 		GameObject::Update();
