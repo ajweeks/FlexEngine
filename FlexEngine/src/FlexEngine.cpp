@@ -263,10 +263,8 @@ namespace flex
 		ImGui::CreateContext();
 		SetupImGuiStyles();
 
-		g_SceneManager->InitializeCurrentScene();
 		g_Renderer->PostInitialize();
 
-		g_SceneManager->PostInitializeCurrentScene();
 		g_Editor->PostInitialize();
 
 		g_InputManager->Initialize();
