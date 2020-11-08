@@ -86,6 +86,7 @@ namespace flex
 	//template<bool> struct StaticAssert;
 	//template<> struct StaticAssert<true> {};
 
+	// TODO: Make string-only (use SID) so it can be data-driven and modified in editor
 	enum class GameObjectType
 	{
 		OBJECT,
@@ -105,6 +106,7 @@ namespace flex
 		BLOCKS,
 		PARTICLE_SYSTEM,
 		CHUNK_GENERATOR,
+		WIRE,
 
 		_NONE
 	};
@@ -128,6 +130,7 @@ namespace flex
 		"blocks",
 		"particle system",
 		"chunk generator",
+		"wire",
 
 		"NONE"
 	};

@@ -746,17 +746,24 @@ namespace flex
 	};
 
 	// Connects terminals to other things to transmit information
-	class Wire
+	class Wire : public GameObject
 	{
 	public:
-		Wire();
+		Wire(const std::string& name);
+
+		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
 
 		GameObject* gameObject0 = nullptr;
 		GameObject* gameObject1 = nullptr;
 		i32 gameObject0SlotIdx = 0;
 		i32 gameObject1SlotIdx = 0;
+
+		glm::vec3 startPoint;
+		glm::vec3 endPoint;
 	};
 
+	// TODO: Add scene base class
 	class PluggablesSystem
 	{
 	public:
@@ -767,7 +774,7 @@ namespace flex
 
 		i32 GetReceivedSignal(GameObject* gameObject);
 
-		Wire* AddPluggable(GameObject* gameObject0, GameObject* gameObject1);
+		Wire* AddWire(GameObject* gameObject0 = nullptr, GameObject* gameObject1 = nullptr);
 		bool RemovePluggable(GameObject* gameObject);
 
 		std::vector<Wire*> wires;

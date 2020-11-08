@@ -169,6 +169,16 @@
 		"invert mouse axis" : false,
 		"invert gamepad axis" : false
 	},
+	"Toggle holding item" : 
+	{
+		"key code" : 0,
+		"mouse button" : -1,
+		"mouse axis" : -1,
+		"gamepad button" : 3,
+		"gamepad axis" : -1,
+		"invert mouse axis" : false,
+		"invert gamepad axis" : false
+	},
 	"Take screenshot" : 
 	{
 		"key code" : 103,

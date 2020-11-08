@@ -21,9 +21,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-0.000, 2.030, 0.001",
+			"position" : "6.047, 2.030, 5.810",
 			"pitch" : 0.000000,
-			"yaw" : 1.570967
+			"yaw" : 1.570807
 		}
 	},
 	"objects" : 
@@ -292,6 +292,22 @@ float b = randFloat();"
 			[
 				"pbr white"
 			]
+		},
+		{
+			"name" : "wire_000",
+			"type" : "wire",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "7.047, 1.280, 10.810"
+			},
+			"wire" : 
+			{
+				"startPoint" : "6.05, 1.28, 10.81",
+				"endPoint" : "8.05, 1.28, 10.81",
+				"gameObject0SlotIdx" : 0,
+				"gameObject1SlotIdx" : 0
+			}
 		}
 	]
 }

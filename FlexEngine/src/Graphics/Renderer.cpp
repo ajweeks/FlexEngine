@@ -1993,6 +1993,15 @@ namespace flex
 
 						g_Editor->SetSelectedObject(chunkGenerator);
 					} break;
+					case GameObjectType::WIRE:
+					{
+						Wire* newWire = g_PluggablesSystem->AddWire();
+
+						newWire->Initialize();
+						newWire->PostInitialize();
+
+						g_SceneManager->CurrentScene()->AddRootObject(newWire);
+					} break;
 					default:
 						PrintWarn("Unhandled game object type %s\n", GameObjectTypeStrings[(i32)m_NewObjectImGuiSelectedType]);
 						break;

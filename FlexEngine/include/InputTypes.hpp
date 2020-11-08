@@ -454,6 +454,9 @@ namespace flex
 		ENTER_TRACK_EDIT_MODE,
 		COMPLETE_TRACK,
 
+		// Inventory
+		TOGGLE_ITEM_HOLDING,
+
 		// Misc
 		TAKE_SCREENSHOT,
 
@@ -515,6 +518,10 @@ namespace flex
 		"Enter track edit mode",
 		"Complete track",
 
+		// Inventory
+		"Toggle holding item",
+
+		// Misc
 		"Take screenshot",
 
 		// Editor

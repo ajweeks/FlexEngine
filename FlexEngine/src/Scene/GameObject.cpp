@@ -202,6 +202,10 @@ namespace flex
 		{
 			newGameObject = new ChunkGenerator(objectName);
 		} break;
+		case GameObjectType::WIRE:
+		{
+			newGameObject = g_PluggablesSystem->AddWire();
+		} break;
 		case GameObjectType::OBJECT: // Fall through
 		case GameObjectType::_NONE:
 			newGameObject = new GameObject(objectName, gameObjectType);
@@ -4915,15 +4919,81 @@ namespace flex
 
 	void PluggablesSystem::Destroy()
 	{
-		for (Wire* wire : wires)
-		{
-			delete wire;
-		}
 		wires.clear();
 	}
 
 	void PluggablesSystem::Update()
 	{
+		PhysicsDebugDrawBase* debugDrawer = g_Renderer->GetDebugDrawer();
+		btVector3 wireColOn(sin(g_SecElapsedSinceProgramStart * 3.5f) * 0.4f + 0.6f, 0.2f, 0.2f);
+		static const btVector3 wireColOff(0.2f, 0.2f, 0.2f);
+		static const real defaultWireLength = 2.0f;
+		for (Wire* wire : wires)
+		{
+			if (wire->GetObjectInteractingWith() != nullptr)
+			{
+				GameObject* interacting = wire->GetObjectInteractingWith();
+				Transform* interactingTransform = interacting->GetTransform();
+				glm::vec3 interactingWorldPos = interactingTransform->GetWorldPosition();
+				glm::vec3 wireHoldingOffset = interactingTransform->GetForward() * 5.0f + interactingTransform->GetUp() * -0.75f;
+				if (wire->gameObject0 != nullptr && wire->gameObject1 != nullptr)
+				{
+					wire->startPoint = wire->gameObject0->GetTransform()->GetWorldPosition();
+					wire->endPoint = wire->gameObject1->GetTransform()->GetWorldPosition();
+				}
+				else if (wire->gameObject0 != nullptr)
+				{
+					wire->startPoint = wire->gameObject0->GetTransform()->GetWorldPosition();
+
+					wire->endPoint = interactingWorldPos + wireHoldingOffset + interactingTransform->GetRight() * defaultWireLength;
+				}
+				else if (wire->gameObject1 != nullptr)
+				{
+					wire->startPoint = interactingWorldPos + wireHoldingOffset;
+
+					wire->endPoint = wire->gameObject1->GetTransform()->GetWorldPosition();
+				}
+				else
+				{
+					wire->startPoint = interactingWorldPos + wireHoldingOffset;
+					wire->endPoint = wire->startPoint + interactingTransform->GetRight() * defaultWireLength;
+				}
+			}
+			else
+			{
+				if (wire->gameObject0 != nullptr)
+				{
+					wire->startPoint = wire->gameObject0->GetTransform()->GetWorldPosition();
+				}
+				else
+				{
+					if (wire->gameObject1 != nullptr)
+					{
+						wire->endPoint = wire->gameObject1->GetTransform()->GetWorldPosition();
+					}
+				}
+				if (wire->gameObject1 != nullptr)
+				{
+					wire->endPoint = wire->gameObject1->GetTransform()->GetWorldPosition();
+				}
+				else
+				{
+					if (wire->gameObject0 != nullptr)
+					{
+						wire->endPoint = wire->startPoint + defaultWireLength;
+					}
+				}
+			}
+
+			wire->GetTransform()->SetWorldPosition(wire->startPoint + (wire->endPoint - wire->startPoint) / 2.0f);
+
+			bool bWireOn0 = wire->gameObject0 != nullptr && (wire->gameObject0->outputSignals[wire->gameObject0SlotIdx] != -1);
+			bool bWireOn1 = wire->gameObject1 != nullptr && (wire->gameObject1->outputSignals[wire->gameObject1SlotIdx] != -1);
+			btVector3 wireCol = (bWireOn0 || bWireOn1) ? wireColOn : wireColOff;
+			debugDrawer->drawLine(ToBtVec3(wire->startPoint), ToBtVec3(wire->endPoint), wireCol, wireCol);
+			debugDrawer->drawSphere(ToBtVec3(wire->startPoint), 0.2f, wireColOff);
+			debugDrawer->drawSphere(ToBtVec3(wire->endPoint), 0.2f, wireColOff);
+		}
 	}
 
 	i32 PluggablesSystem::GetReceivedSignal(GameObject* gameObject)
@@ -4951,14 +5021,21 @@ namespace flex
 		return result;
 	}
 
-	Wire* PluggablesSystem::AddPluggable(GameObject* gameObject0, GameObject* gameObject1)
+	Wire* PluggablesSystem::AddWire(GameObject* gameObject0 /* = nullptr */, GameObject* gameObject1 /* = nullptr */)
 	{
-		Wire* newWire = new Wire();
+		Wire* newWire = new Wire(g_SceneManager->CurrentScene()->GetUniqueObjectName("wire_", 3));
 		newWire->gameObject0 = gameObject0;
 		newWire->gameObject1 = gameObject1;
 		wires.push_back(newWire);
-		gameObject0->OnConnectionMade(newWire);
-		gameObject1->OnConnectionMade(newWire);
+		if (gameObject0)
+		{
+			gameObject0->OnConnectionMade(newWire);
+		}
+		if (gameObject1)
+		{
+			gameObject1->OnConnectionMade(newWire);
+		}
+
 		return newWire;
 	}
 
@@ -4993,8 +5070,39 @@ namespace flex
 		return false;
 	}
 
-	Wire::Wire()
+	Wire::Wire(const std::string& name) :
+		GameObject(name, GameObjectType::WIRE)
 	{
+		m_bInteractable = true;
+		startPoint = glm::vec3(-1.0f, 1.0f, 0.0f);
+		endPoint = glm::vec3(1.0f, 1.0f, 0.0f);
+	}
+
+	void Wire::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	{
+		UNREFERENCED_PARAMETER(scene);
+		UNREFERENCED_PARAMETER(matIDs);
+
+		JSONObject obj = parentObject.GetObject("wire");
+		obj.SetVec3Checked("startPoint", startPoint);
+		obj.SetVec3Checked("endPoint", endPoint);
+		obj.SetIntChecked("gameObject0SlotIdx", gameObject0SlotIdx);
+		obj.SetIntChecked("gameObject1SlotIdx", gameObject1SlotIdx);
+
+	}
+
+	void Wire::SerializeUniqueFields(JSONObject& parentObject) const
+	{
+		JSONObject terminalObj = {};
+
+		terminalObj.fields.emplace_back("startPoint", JSONValue(VecToString(startPoint)));
+		terminalObj.fields.emplace_back("endPoint", JSONValue(VecToString(endPoint)));
+		terminalObj.fields.emplace_back("gameObject0SlotIdx", JSONValue(gameObject0SlotIdx));
+		terminalObj.fields.emplace_back("gameObject1SlotIdx", JSONValue(gameObject1SlotIdx));
+
+		// TODO: Serialize connected object refernces once ObjectIDs are in
+
+		parentObject.fields.emplace_back("wire", JSONValue(terminalObj));
 	}
 
 	Terminal::Terminal() :
@@ -5043,7 +5151,7 @@ namespace flex
 			PointLight* pointLight = dynamic_cast<PointLight*>(obj);
 			if (pointLight != nullptr)
 			{
-				g_PluggablesSystem->AddPluggable(this, obj);
+				//g_PluggablesSystem->AddWire(this, obj);
 			}
 		}
 	}

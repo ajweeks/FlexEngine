@@ -268,7 +268,17 @@ namespace flex
 			ImGui::Indent();
 			for (GameObject* gameObject : m_Inventory)
 			{
+				if (gameObject == m_HeldItem)
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.9f, 0.3f, 1.0f));
+				}
+
 				ImGui::Text("%s", gameObject->GetName().c_str());
+
+				if (gameObject == m_HeldItem)
+				{
+					ImGui::PopStyleColor();
+				}
 			}
 			ImGui::Unindent();
 
@@ -303,7 +313,10 @@ namespace flex
 				terminalCam->SetTerminal(nullptr);
 				GameObject::SetInteractingWith(gameObject);
 			}
-
+			else
+			{
+				GameObject::SetInteractingWith(gameObject);
+			}
 			return;
 		}
 
@@ -319,6 +332,10 @@ namespace flex
 				g_CameraManager->PushCamera(terminalCam, true, true);
 			}
 			terminalCam->SetTerminal(terminal);
+		}
+		else
+		{
+			GameObject::SetInteractingWith(gameObject);
 		}
 	}
 

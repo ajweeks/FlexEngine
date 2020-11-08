@@ -92,6 +92,7 @@ namespace flex
 		TrackState m_TrackState;
 
 		std::vector<GameObject*> m_Inventory;
+		GameObject* m_HeldItem = nullptr;
 
 		const real m_TurnToFaceDownTrackInvSpeed = 25.0f;
 		const real m_FlipTrackDirInvSpeed = 45.0f;

@@ -10,6 +10,7 @@
 #include "InputManager.hpp"
 #include "Platform/Platform.hpp"
 #include "Scene/BaseScene.hpp"
+#include "Scene/GameObject.hpp"
 
 namespace flex
 {
@@ -115,6 +116,7 @@ namespace flex
 		if (m_CurrentSceneIndex != InvalidID)
 		{
 			g_CameraManager->Destroy();
+			g_PluggablesSystem->Destroy();
 
 			m_Scenes[m_CurrentSceneIndex]->Destroy();
 		}

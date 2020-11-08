@@ -410,6 +410,13 @@ namespace flex
 
 		m_Player->UpdateIsGrounded();
 
+		bool bInteractingWithTerminal = false;
+		{
+			GameObject* objInteractingWith = m_Player->GetObjectInteractingWith();
+			Terminal* terminal = dynamic_cast<Terminal*>(objInteractingWith);
+			bInteractingWithTerminal = (terminal != nullptr);
+		}
+
 		if (m_Player->m_bPossessed)
 		{
 			if (m_Player->m_TrackRidingID != InvalidTrackID)
@@ -442,10 +449,13 @@ namespace flex
 				m_Player->m_pDTrackMovement = m_Player->m_DistAlongTrack - pDist;
 				pCurveDir = newCurveDir;
 			}
-			else if (!m_Player->GetObjectInteractingWith())
+			else
 			{
-				force += ToBtVec3(transform->GetRight()) * m_MoveAcceleration * moveLR;
-				force += ToBtVec3(transform->GetForward()) * m_MoveAcceleration * moveFB;
+				if (!bInteractingWithTerminal)
+				{
+					force += ToBtVec3(transform->GetRight()) * m_MoveAcceleration * moveLR;
+					force += ToBtVec3(transform->GetForward()) * m_MoveAcceleration * moveFB;
+				}
 			}
 		}
 
@@ -486,10 +496,11 @@ namespace flex
 		}
 
 		if (m_Player->m_bPossessed &&
-			!m_Player->IsBeingInteractedWith() &&
+			!bInteractingWithTerminal &&
 			m_Player->m_TrackRidingID == InvalidTrackID)
 		{
 			real lookH = lookLR;
+			// TODO: Remove: will never be hit
 			if (m_Player->IsRidingTrack())
 			{
 				lookH += -g_InputManager->GetActionAxisValue(Action::MOVE_LEFT) + g_InputManager->GetActionAxisValue(Action::MOVE_RIGHT);
@@ -648,6 +659,22 @@ namespace flex
 					m_bAttemptCompleteTrack = true;
 					return EventReply::CONSUMED;
 				}
+			}
+
+			if (action == Action::TOGGLE_ITEM_HOLDING)
+			{
+				if (m_Player->m_HeldItem == nullptr)
+				{
+					if (!m_Player->m_Inventory.empty())
+					{
+						m_Player->m_HeldItem = m_Player->m_Inventory[0];
+					}
+				}
+				else
+				{
+					m_Player->m_HeldItem = nullptr;
+				}
+				return EventReply::CONSUMED;
 			}
 
 			if (action == Action::TOGGLE_TABLET)
