@@ -902,27 +902,30 @@ namespace flex
 
 					IR::Value* rhs = LowerExpression(assignment->rhs);
 
-					if (state->variableTypes.find(assignment->lhs) == state->variableTypes.end())
+					if (rhs != nullptr)
 					{
-						state->diagnosticContainer->AddDiagnostic(assignment->span, "Undeclared identifier \"" + assignment->lhs + "\"");
-					}
-					else
-					{
-						Value::Type lhsType = state->variableTypes[assignment->lhs];
-						if (Value::TypeAssignable(state, lhsType, rhs))
+						if (state->variableTypes.find(assignment->lhs) == state->variableTypes.end())
 						{
-							assert(state->variableTypes[assignment->lhs] == state->GetValueType(rhs));
-							state->InsertionBlock()->AddAssignment(new IR::Assignment(state, assignment->span, assignment->lhs, rhs));
+							state->diagnosticContainer->AddDiagnostic(assignment->span, "Undeclared identifier \"" + assignment->lhs + "\"");
 						}
 						else
 						{
-							StringBuilder diagnosticStr;
-							diagnosticStr.Append("Mismatched types (");
-							diagnosticStr.Append(IR::Value::TypeToString(state->GetValueType(rhs)));
-							diagnosticStr.Append(" & ");
-							diagnosticStr.Append(IR::Value::TypeToString(lhsType));
-							diagnosticStr.Append(")");
-							state->diagnosticContainer->AddDiagnostic(assignment->span, diagnosticStr.ToString());
+							Value::Type lhsType = state->variableTypes[assignment->lhs];
+							if (Value::TypeAssignable(state, lhsType, rhs))
+							{
+								assert(state->variableTypes[assignment->lhs] == state->GetValueType(rhs));
+								state->InsertionBlock()->AddAssignment(new IR::Assignment(state, assignment->span, assignment->lhs, rhs));
+							}
+							else
+							{
+								StringBuilder diagnosticStr;
+								diagnosticStr.Append("Mismatched types (");
+								diagnosticStr.Append(IR::Value::TypeToString(state->GetValueType(rhs)));
+								diagnosticStr.Append(" & ");
+								diagnosticStr.Append(IR::Value::TypeToString(lhsType));
+								diagnosticStr.Append(")");
+								state->diagnosticContainer->AddDiagnostic(assignment->span, diagnosticStr.ToString());
+							}
 						}
 					}
 				} break;
@@ -1050,7 +1053,11 @@ namespace flex
 			case AST::StatementType::ASSIGNMENT:
 			{
 				AST::Assignment* assignment = (AST::Assignment*)expression;
-				return new IR::Assignment(state, assignment->span, assignment->lhs, LowerExpression(assignment->rhs));
+				IR::Value* loweredRHS = LowerExpression(assignment->rhs);
+				if (loweredRHS != nullptr)
+				{
+					return new IR::Assignment(state, assignment->span, assignment->lhs, loweredRHS);
+				}
 			}
 			//case StatementType::INDEX_OPERATION:
 			//	return Assignment(NextTemporary(), expression->GetValue());
@@ -1075,7 +1082,11 @@ namespace flex
 					assert(false);
 				}
 
-				return new IR::UnaryValue(state, unaryOperation->span, irOpType, LowerExpression(unaryOperation->expression));
+				IR::Value* loweredExpr = LowerExpression(unaryOperation->expression);
+				if (loweredExpr != nullptr)
+				{
+					return new IR::UnaryValue(state, unaryOperation->span, irOpType, loweredExpr);
+				}
 			}
 			case AST::StatementType::BINARY_OPERATION:
 			{
@@ -1086,8 +1097,12 @@ namespace flex
 					if (binaryOperation->lhs->statementType == AST::StatementType::IDENTIFIER)
 					{
 						AST::Identifier* lhs = (AST::Identifier*)binaryOperation->lhs;
-						// TODO: Add to usages here
-						return new IR::Assignment(state, lhs->span, lhs->identifierStr, LowerExpression(binaryOperation->rhs));
+						IR::Value* loweredRHS = LowerExpression(binaryOperation->rhs);
+						if (loweredRHS != nullptr)
+						{
+							// TODO: Add to usages here
+							return new IR::Assignment(state, lhs->span, lhs->identifierStr, loweredRHS);
+						}
 					}
 
 					return nullptr;
@@ -1237,7 +1252,10 @@ namespace flex
 				IR::Value* ifTrue = LowerExpression(ternary->ifTrue);
 				IR::Value* ifFalse = LowerExpression(ternary->ifFalse);
 
-				return new IR::TernaryValue(state, ternary->span, condition, ifTrue, ifFalse);
+				if (condition != nullptr && ifTrue != nullptr && ifFalse != nullptr)
+				{
+					return new IR::TernaryValue(state, ternary->span, condition, ifTrue, ifFalse);
+				}
 			}
 			case AST::StatementType::FUNC_CALL:
 			{
@@ -1317,8 +1335,12 @@ namespace flex
 			{
 				AST::Cast* cast = (AST::Cast*)expression;
 				std::string tempIdent = state->NextTemporary();
-				state->WriteVariableInBlock(tempIdent, LowerExpression(cast->target));
-				return new IR::CastValue(state, cast->span, IR::Value::FromASTTypeName(cast->typeName), new IR::Identifier(state, cast->span, tempIdent));
+				IR::Value* loweredVal = LowerExpression(cast->target);
+				if (loweredVal != nullptr)
+				{
+					state->WriteVariableInBlock(tempIdent, loweredVal);
+					return new IR::CastValue(state, cast->span, IR::Value::FromASTTypeName(cast->typeName), new IR::Identifier(state, cast->span, tempIdent));
+				}
 			} break;
 			case AST::StatementType::BREAK:
 			{
