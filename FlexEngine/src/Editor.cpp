@@ -151,7 +151,7 @@ namespace flex
 
 		FadeOutHeadOnGizmos();
 
-		if (!m_CurrentlySelectedObjects.empty())
+		if (!m_CurrentlySelectedObjects.empty() && !g_CameraManager->CurrentCamera()->bIsGameplayCam)
 		{
 			m_TransformGizmo->SetVisible(true);
 			UpdateGizmoVisibility();
