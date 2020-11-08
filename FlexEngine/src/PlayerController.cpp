@@ -64,10 +64,9 @@ namespace flex
 
 		btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
 
-		const real moveLR = g_InputManager->GetActionAxisValue(Action::MOVE_LEFT) + g_InputManager->GetActionAxisValue(Action::MOVE_RIGHT);
-		const real moveFB = g_InputManager->GetActionAxisValue(Action::MOVE_FORWARD) + g_InputManager->GetActionAxisValue(Action::MOVE_BACKWARD);
-		const real lookLR = g_InputManager->GetActionAxisValue(Action::LOOK_LEFT) + g_InputManager->GetActionAxisValue(Action::LOOK_RIGHT);
-		//const real lookUD = g_InputManager->GetActionAxisValue(Action::LOOK_UP) + g_InputManager->GetActionAxisValue(Action::LOOK_DOWN);
+		const real moveLR = -g_InputManager->GetActionAxisValue(Action::MOVE_LEFT) + g_InputManager->GetActionAxisValue(Action::MOVE_RIGHT);
+		const real moveFB = -g_InputManager->GetActionAxisValue(Action::MOVE_BACKWARD) + g_InputManager->GetActionAxisValue(Action::MOVE_FORWARD);
+		const real lookLR = -g_InputManager->GetActionAxisValue(Action::LOOK_LEFT) + g_InputManager->GetActionAxisValue(Action::LOOK_RIGHT);
 
 		if (m_Player->m_bPossessed)
 		{
@@ -199,6 +198,8 @@ namespace flex
 					debugDrawer->drawCylinder(0.6f, 0.001f, 1, cylinderTransform, m_Player->m_TrackEditingID == InvalidTrackID ? ringColEditing : ringColEditingActive);
 					debugDrawer->drawCylinder(1.1f, 0.001f, 1, cylinderTransform, m_Player->m_TrackEditingID == InvalidTrackID ? ringColEditing : ringColEditingActive);
 				}
+
+				// TODO: Allow player to (dis)connect pluggables together
 
 				GameObject* nearestInteractable = nullptr;
 				if (m_Player->m_ObjectInteractingWith == nullptr)
@@ -491,12 +492,12 @@ namespace flex
 			real lookH = lookLR;
 			if (m_Player->IsRidingTrack())
 			{
-				lookH += g_InputManager->GetActionAxisValue(Action::MOVE_LEFT) + g_InputManager->GetActionAxisValue(Action::MOVE_RIGHT);
+				lookH += -g_InputManager->GetActionAxisValue(Action::MOVE_LEFT) + g_InputManager->GetActionAxisValue(Action::MOVE_RIGHT);
 			}
 			real lookV = 0.0f;
 			if (m_Mode == Mode::FIRST_PERSON)
 			{
-				lookV = g_InputManager->GetActionAxisValue(Action::LOOK_DOWN) + g_InputManager->GetActionAxisValue(Action::LOOK_UP);
+				lookV = -g_InputManager->GetActionAxisValue(Action::LOOK_UP) + g_InputManager->GetActionAxisValue(Action::LOOK_DOWN);
 			}
 
 			glm::quat rot = transform->GetLocalRotation();
@@ -545,7 +546,7 @@ namespace flex
 		LookDirection desiredDir = LookDirection::CENTER;
 
 		const real moveLR = g_InputManager->GetActionAxisValue(Action::MOVE_LEFT) + g_InputManager->GetActionAxisValue(Action::MOVE_RIGHT);
-		const real lookLR = g_InputManager->GetActionAxisValue(Action::LOOK_LEFT) + g_InputManager->GetActionAxisValue(Action::LOOK_RIGHT);
+		const real lookLR = -g_InputManager->GetActionAxisValue(Action::LOOK_LEFT) + g_InputManager->GetActionAxisValue(Action::LOOK_RIGHT);
 
 		if (lookLR > 0.5f)
 		{

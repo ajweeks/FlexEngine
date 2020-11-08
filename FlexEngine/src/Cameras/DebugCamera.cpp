@@ -86,8 +86,8 @@ namespace flex
 		const real moveSpeedMultiplier = bModFaster ? moveSpeedFastMultiplier : bModSlower ? moveSpeedSlowMultiplier : 1.0f;
 		const real turnSpeedMultiplier = bModFaster ? turnSpeedFastMultiplier : bModSlower ? turnSpeedSlowMultiplier : 1.0f;
 
-		real lookH = g_InputManager->GetActionAxisValue(Action::DBG_CAM_LOOK_LEFT) + g_InputManager->GetActionAxisValue(Action::DBG_CAM_LOOK_RIGHT);
-		real lookV = g_InputManager->GetActionAxisValue(Action::DBG_CAM_LOOK_DOWN) + g_InputManager->GetActionAxisValue(Action::DBG_CAM_LOOK_UP);
+		real lookH = -g_InputManager->GetActionAxisValue(Action::DBG_CAM_LOOK_LEFT) + g_InputManager->GetActionAxisValue(Action::DBG_CAM_LOOK_RIGHT);
+		real lookV = -g_InputManager->GetActionAxisValue(Action::DBG_CAM_LOOK_UP) + g_InputManager->GetActionAxisValue(Action::DBG_CAM_LOOK_DOWN);
 		real yawO = -lookH * gamepadRotationSpeed * turnSpeedMultiplier * g_UnpausedDeltaTime;
 		// Horizontal FOV is roughly twice as wide as vertical
 		real pitchO = lookV * 0.6f * gamepadRotationSpeed * turnSpeedMultiplier * g_UnpausedDeltaTime;
@@ -173,12 +173,12 @@ namespace flex
 		real moveB = g_InputManager->GetActionAxisValue(Action::DBG_CAM_MOVE_BACKWARD);
 		if (moveB != 0.0f)
 		{
-			translation += forward * moveB;
+			translation += -forward * moveB;
 		}
 		real moveL = g_InputManager->GetActionAxisValue(Action::DBG_CAM_MOVE_LEFT);
 		if (moveL != 0.0f)
 		{
-			translation += -right * moveL;
+			translation += right * moveL;
 		}
 		real moveR = g_InputManager->GetActionAxisValue(Action::DBG_CAM_MOVE_RIGHT);
 		if (moveR != 0.0f)
@@ -193,7 +193,7 @@ namespace flex
 		real moveD = g_InputManager->GetActionAxisValue(Action::DBG_CAM_MOVE_DOWN);
 		if (moveD != 0.0f)
 		{
-			translation += up * moveD;
+			translation += -up * moveD;
 		}
 
 		if (m_bDraggingMMB)

@@ -94,6 +94,32 @@ namespace flex
 		Print("\n");
 #endif
 
+#if 0 // Log gamepad states
+		bool bNonZeroGamepadAxis = false;
+		for (u32 i = 0; i < (i32)GamepadAxis::COUNT; ++i)
+		{
+			if (GetGamepadAxisValue(0, (GamepadAxis)i) != 0.0f)
+			{
+				bNonZeroGamepadAxis = true;
+				break;
+			}
+		}
+		if (bNonZeroGamepadAxis)
+		{
+			Print("gamepad buttons:\n");
+			for (u32 i = 0; i < (i32)GamepadButton::COUNT; ++i)
+			{
+				Print("%s: %i\n", GamepadButtonStrings[i], IsGamepadButtonDown(0, (GamepadButton)i) ? 1 : 0);
+			}
+			Print("gamepad axes:\n");
+			for (u32 i = 0; i < (i32)GamepadAxis::COUNT; ++i)
+			{
+				Print("%s: %0.2f\n", GamepadAxisStrings[i], GetGamepadAxisValue(0, (GamepadAxis)i));
+			}
+			Print("\n");
+		}
+#endif
+
 		// Mouse buttons
 		for (u32 i = 0; i < MOUSE_BUTTON_COUNT; ++i)
 		{
@@ -192,7 +218,6 @@ namespace flex
 		}
 
 		// Invert Y (0 at bottom, 1 at top)
-		// TODO: Make option for player
 		m_GamepadStates[gamepadIndex].axes[1] = -m_GamepadStates[gamepadIndex].axes[1];
 		m_GamepadStates[gamepadIndex].axes[3] = -m_GamepadStates[gamepadIndex].axes[3];
 
@@ -415,49 +440,34 @@ namespace flex
 		{
 			if (GetKeyDown(binding.keyCode) > 0)
 			{
-				if (binding.bNegative)
-				{
-					return -1.0f;
-				}
-				else
-				{
-					return 1.0f;
-				}
+				return 1.0f;
 			}
 		}
 		if (binding.mouseButton != MouseButton::_NONE)
 		{
 			if (IsMouseButtonDown(binding.mouseButton))
 			{
-				if (binding.bNegative)
-				{
-					return -1.0f;
-				}
-				else
-				{
-					return 1.0f;
-				}
+				return 1.0f;
 			}
 		}
 		if (binding.gamepadButton != GamepadButton::_NONE)
 		{
 			if (IsGamepadButtonDown(gamepadIndex, binding.gamepadButton))
 			{
-				if (binding.bNegative)
-				{
-					return -1.0f;
-				}
-				else
-				{
-					return 1.0f;
-				}
+				return 1.0f;
 			}
 		}
 		if (binding.gamepadAxis != GamepadAxis::_NONE)
 		{
 			real axisValue = GetGamepadAxisValue(gamepadIndex, binding.gamepadAxis);
-			if ((binding.bNegative && axisValue > 0.0f) ||
-				(!binding.bNegative && axisValue < 0.0f))
+			if (binding.bInvertGamepadAxis && IsGamepadAxisInvertable(binding.gamepadAxis))
+			{
+				axisValue = -axisValue;
+			}
+
+			axisValue = glm::max(axisValue, 0.0f);
+
+			if (axisValue > 0.0f)
 			{
 				return axisValue;
 			}
@@ -466,28 +476,47 @@ namespace flex
 		{
 			if (m_ScrollYOffset != 0.0f)
 			{
-				if (binding.bNegative)
-				{
-					return -m_ScrollYOffset;
-				}
-				else
-				{
-					return m_ScrollYOffset;
-				}
+				return -m_ScrollYOffset;
 			}
 		}
 		else if (binding.mouseAxis == MouseAxis::SCROLL_X)
 		{
 			if (m_ScrollXOffset != 0.0f)
 			{
-				if (binding.bNegative)
-				{
-					return m_ScrollXOffset;
-				}
-				else
-				{
-					return -m_ScrollXOffset;
-				}
+				return m_ScrollXOffset;
+			}
+		}
+		else if (binding.mouseAxis == MouseAxis::X)
+		{
+			real mouseMovementX = GetMouseMovement(false).x;
+
+			if (binding.bInvertMouseAxis)
+			{
+				mouseMovementX = -mouseMovementX;
+			}
+
+			mouseMovementX = glm::max(mouseMovementX, 0.0f);
+
+			if (mouseMovementX != 0.0f)
+			{
+				// TODO: Expose multiplier to user/make better
+				return mouseMovementX * 1.0f;
+			}
+		}
+		else if (binding.mouseAxis == MouseAxis::Y)
+		{
+			real mouseMovementY = GetMouseMovement(false).y;
+			if (binding.bInvertMouseAxis)
+			{
+				mouseMovementY = -mouseMovementY;
+			}
+
+			mouseMovementY = glm::max(mouseMovementY, 0.0f);
+
+			if (mouseMovementY != 0.0f)
+			{
+				// TODO: Expose multiplier to user/make better
+				return mouseMovementY * 1.0f;
 			}
 		}
 
@@ -576,8 +605,16 @@ namespace flex
 	{
 		assert(gamepadIndex == 0 || gamepadIndex == 1);
 
-		return (m_GamepadStates[gamepadIndex].axes[(i32)axis] >= threshold &&
-			m_pGamepadStates[gamepadIndex].axes[(i32)axis] < threshold);
+		if (threshold >= 0.0f)
+		{
+			return (m_GamepadStates[gamepadIndex].axes[(i32)axis] >= threshold &&
+				m_pGamepadStates[gamepadIndex].axes[(i32)axis] < threshold);
+		}
+		else
+		{
+			return (m_GamepadStates[gamepadIndex].axes[(i32)axis] <= threshold &&
+				m_pGamepadStates[gamepadIndex].axes[(i32)axis] > threshold);
+		}
 	}
 
 	void InputManager::CursorPosCallback(double x, double y)
@@ -901,9 +938,9 @@ namespace flex
 		}
 	}
 
-	glm::vec2 InputManager::GetMouseMovement() const
+	glm::vec2 InputManager::GetMouseMovement(bool bIgnoreImGui /* = false */) const
 	{
-		if (ImGui::GetIO().WantCaptureMouse)
+		if (!bIgnoreImGui && ImGui::GetIO().WantCaptureMouse)
 		{
 			return VEC2_ZERO;
 		}
@@ -942,9 +979,9 @@ namespace flex
 		return false;
 	}
 
-	bool InputManager::IsMouseButtonDown(MouseButton mouseButton) const
+	bool InputManager::IsMouseButtonDown(MouseButton mouseButton, bool bIgnoreImGui /* = false */) const
 	{
-		if (ImGui::GetIO().WantCaptureMouse)
+		if (!bIgnoreImGui && ImGui::GetIO().WantCaptureMouse)
 		{
 			return false;
 		}
@@ -954,9 +991,9 @@ namespace flex
 		return (m_MouseButtonStates & (1 << (i32)mouseButton)) != 0;
 	}
 
-	bool InputManager::IsMouseButtonPressed(MouseButton mouseButton) const
+	bool InputManager::IsMouseButtonPressed(MouseButton mouseButton, bool bIgnoreImGui /* = false */) const
 	{
-		if (ImGui::GetIO().WantCaptureMouse)
+		if (!bIgnoreImGui && ImGui::GetIO().WantCaptureMouse)
 		{
 			return false;
 		}
@@ -966,9 +1003,9 @@ namespace flex
 		return (m_MouseButtonsPressed & (1 << (i32)mouseButton)) != 0;
 	}
 
-	bool InputManager::IsMouseButtonReleased(MouseButton mouseButton) const
+	bool InputManager::IsMouseButtonReleased(MouseButton mouseButton, bool bIgnoreImGui /* = false */) const
 	{
-		if (ImGui::GetIO().WantCaptureMouse)
+		if (!bIgnoreImGui && ImGui::GetIO().WantCaptureMouse)
 		{
 			return false;
 		}
@@ -978,9 +1015,9 @@ namespace flex
 		return (m_MouseButtonsReleased & (1 << (i32)mouseButton)) != 0;
 	}
 
-	real InputManager::GetVerticalScrollDistance() const
+	real InputManager::GetVerticalScrollDistance(bool bIgnoreImGui /* = false */) const
 	{
-		if (ImGui::GetIO().WantCaptureMouse)
+		if (!bIgnoreImGui && ImGui::GetIO().WantCaptureMouse)
 		{
 			return 0.0f;
 		}
@@ -988,9 +1025,24 @@ namespace flex
 		return m_ScrollYOffset;
 	}
 
+	real InputManager::GetHorizontalScrollDistance(bool bIgnoreImGui /* = false */) const
+	{
+		if (!bIgnoreImGui && ImGui::GetIO().WantCaptureMouse)
+		{
+			return 0.0f;
+		}
+
+		return m_ScrollXOffset;
+	}
+
 	void InputManager::ClearVerticalScrollDistance()
 	{
 		m_ScrollYOffset = 0;
+	}
+
+	void InputManager::ClearHorizontalScrollDistance()
+	{
+		m_ScrollXOffset = 0;
 	}
 
 	bool InputManager::IsMouseHoveringRect(const glm::vec2& posNorm, const glm::vec2& sizeNorm)
@@ -1275,19 +1327,34 @@ namespace flex
 	{
 		if (ImGui::Begin("Key Mapper", bOpen))
 		{
-			if (ImGui::Button("Save"))
+			const bool bInputBindingsWereDirty = m_bInputBindingsDirty;
+			if (bInputBindingsWereDirty)
+			{
+				// TODO: Add col var to ImGui style for highlighted buttons etc.
+				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.6f, 0.1f, 1.0f));
+			}
+			if (ImGui::Button(m_bInputBindingsDirty ? "Save*" : "Save "))
 			{
 				SaveInputBindingsToFile();
+			}
+			if (bInputBindingsWereDirty)
+			{
+				ImGui::PopStyleColor();
+
+				ImGui::SameLine();
+
+				if (ImGui::Button("Cancel"))
+				{
+					LoadInputBindingsFromFile();
+				}
 			}
 
 			ImGui::SameLine();
 
-			if (ImGui::Button("Load"))
-			{
-				LoadInputBindingsFromFile();
-			}
+			ImGui::Text("Ctrl click to unset value");
 
-			const i32 numCols = 4;
+			// TODO: Use new Tables API in ImGui 1.80 once stable
+			const i32 numCols = 6;
 			ImGui::Columns(numCols);
 
 			ImGui::SetColumnWidth(-1, 250);
@@ -1299,55 +1366,320 @@ namespace flex
 			ImGui::NextColumn();
 
 			ImGui::SetColumnWidth(-1, 150);
-			ImGui::Text("Mouse");
+			ImGui::Text("Mouse button");
 			ImGui::NextColumn();
 
 			ImGui::SetColumnWidth(-1, 150);
-			ImGui::Text("Gamepad");
+			ImGui::Text("Mouse axis");
+			ImGui::NextColumn();
+
+			ImGui::SetColumnWidth(-1, 150);
+			ImGui::Text("Gamepad button");
+			ImGui::NextColumn();
+
+			ImGui::SetColumnWidth(-1, 150);
+			ImGui::Text("Gamepad axis");
 			ImGui::NextColumn();
 
 			ImGui::Separator();
 			ImGui::Separator();
+
+			bool bOpenInputEditorModal = false;
+			static i32 inputBindingIndexToEdit = -1;
+			static InputType inputBindingTypeToEdit = InputType::_NONE;
+			static bool bMouseReleasedAfterButtonClick = false;
+
+			static const char* emptyButtonStr = "Unset";
+
+			bool bCtrlDown = GetKeyDown(KeyCode::KEY_LEFT_CONTROL, true) != 0 || GetKeyDown(KeyCode::KEY_RIGHT_CONTROL, true) != 0;
 
 			for (i32 i = 0; i < (i32)Action::_NONE; ++i)
 			{
 				const InputBinding& binding = m_InputBindings[i];
+
+				ImGui::PushID(i);
 
 				ImGui::Columns(numCols);
 
 				ImGui::Text("%s", ActionStrings[i]);
 				ImGui::NextColumn();
 
-				if (binding.keyCode != KeyCode::_NONE)
+				// Keyboard
+				ImGui::PushID("keyboard");
+				if (ImGui::Button(binding.keyCode != KeyCode::_NONE ? KeyCodeStrings[(u32)binding.keyCode] : emptyButtonStr))
 				{
-					ImGui::Text("%s", KeyCodeStrings[(u32)binding.keyCode]);
+					if (bCtrlDown)
+					{
+						if (m_InputBindings[i].keyCode != KeyCode::_NONE)
+						{
+							m_InputBindings[i].keyCode = KeyCode::_NONE;
+							m_bInputBindingsDirty = true;
+						}
+					}
+					else
+					{
+						bOpenInputEditorModal = true;
+						inputBindingIndexToEdit = i;
+						inputBindingTypeToEdit = InputType::KEYBOARD;
+					}
 				}
+				ImGui::PopID();
+
 				ImGui::NextColumn();
 
-				if (binding.mouseButton != MouseButton::_NONE)
+				// Mouse button
+				ImGui::PushID("mouse button");
+				if (ImGui::Button(binding.mouseButton != MouseButton::_NONE ? MouseButtonStrings[(u32)binding.mouseButton] : emptyButtonStr))
 				{
-					ImGui::Text("%s", MouseButtonStrings[(u32)binding.mouseButton]);
+					if (bCtrlDown)
+					{
+						if (m_InputBindings[i].mouseButton != MouseButton::_NONE)
+						{
+							m_InputBindings[i].mouseButton = MouseButton::_NONE;
+							m_bInputBindingsDirty = true;
+						}
+					}
+					else
+					{
+						bOpenInputEditorModal = true;
+						inputBindingIndexToEdit = i;
+						inputBindingTypeToEdit = InputType::MOUSE_BUTTON;
+					}
+				}
+				ImGui::PopID();
+
+				ImGui::NextColumn();
+
+				// Mouse axis
+				ImGui::PushID("mouse axis");
+				if (ImGui::Button(binding.mouseAxis != MouseAxis::_NONE ? MouseAxisStrings[(u32)binding.mouseAxis] : emptyButtonStr))
+				{
+					if (bCtrlDown)
+					{
+						if (m_InputBindings[i].mouseAxis != MouseAxis::_NONE)
+						{
+							m_InputBindings[i].mouseAxis = MouseAxis::_NONE;
+							m_bInputBindingsDirty = true;
+						}
+					}
+					else
+					{
+						bOpenInputEditorModal = true;
+						inputBindingIndexToEdit = i;
+						inputBindingTypeToEdit = InputType::MOUSE_AXIS;
+					}
 				}
 				if (binding.mouseAxis != MouseAxis::_NONE)
 				{
-					ImGui::Text("%s", MouseAxisStrings[(u32)binding.mouseAxis]);
+					ImGui::SameLine();
+					if (ImGui::Checkbox("invert", &m_InputBindings[i].bInvertMouseAxis))
+					{
+						m_bInputBindingsDirty = true;
+					}
 				}
+				ImGui::PopID();
+
 				ImGui::NextColumn();
 
-				if (binding.gamepadButton != GamepadButton::_NONE)
+				// Gamepad button
+				ImGui::PushID("gamepad button");
+				if (ImGui::Button(binding.gamepadButton != GamepadButton::_NONE ? GamepadButtonStrings[(u32)binding.gamepadButton] : emptyButtonStr))
 				{
-					ImGui::Text("%s", GamepadButtonStrings[(u32)binding.gamepadButton]);
+					if (bCtrlDown)
+					{
+						if (m_InputBindings[i].gamepadButton != GamepadButton::_NONE)
+						{
+							m_InputBindings[i].gamepadButton = GamepadButton::_NONE;
+							m_bInputBindingsDirty = true;
+						}
+					}
+					else
+					{
+						bOpenInputEditorModal = true;
+						inputBindingIndexToEdit = i;
+						inputBindingTypeToEdit = InputType::GAMEPAD_BUTTON;
+					}
 				}
-				if (binding.gamepadAxis != GamepadAxis::_NONE)
+				ImGui::PopID();
+
+				ImGui::NextColumn();
+
+				// Gamepad axis
+				ImGui::PushID("gamepad axis");
+				if (ImGui::Button(binding.gamepadAxis != GamepadAxis::_NONE ? GamepadAxisStrings[(i32)binding.gamepadAxis] : emptyButtonStr))
 				{
-					ImGui::Text("%s", GamepadAxisStrings[(i32)binding.gamepadAxis]);
+					if (bCtrlDown)
+					{
+						if (m_InputBindings[i].gamepadAxis != GamepadAxis::_NONE)
+						{
+							m_InputBindings[i].gamepadAxis = GamepadAxis::_NONE;
+							m_bInputBindingsDirty = true;
+						}
+					}
+					else
+					{
+						bOpenInputEditorModal = true;
+						inputBindingIndexToEdit = i;
+						inputBindingTypeToEdit = InputType::GAMEPAD_AXIS;
+					}
 				}
+				if (IsGamepadAxisInvertable(binding.gamepadAxis))
+				{
+					ImGui::SameLine();
+					if (ImGui::Checkbox("invert", &m_InputBindings[i].bInvertGamepadAxis))
+					{
+						m_bInputBindingsDirty = true;
+					}
+				}
+				ImGui::PopID();
+
 				ImGui::NextColumn();
 
 				if (i != (i32)Action::_NONE - 1)
 				{
 					ImGui::Separator();
 				}
+
+				ImGui::PopID();
+			}
+
+			static InputBinding newBinding;
+			const char* editKeybindingPopupName = "Edit keybinding";
+			if (bOpenInputEditorModal)
+			{
+				newBinding = m_InputBindings[inputBindingIndexToEdit];
+				bMouseReleasedAfterButtonClick = false;
+				ImGui::OpenPopup(editKeybindingPopupName);
+			}
+
+			if (!IsMouseButtonDown(MouseButton::LEFT, true))
+			{
+				bMouseReleasedAfterButtonClick = true;
+			}
+
+			if (ImGui::BeginPopupModal(editKeybindingPopupName))
+			{
+				bool bInputReceived = false;
+
+				if (GetKeyPressed(KeyCode::KEY_ESCAPE, true))
+				{
+					ImGui::CloseCurrentPopup();
+				}
+				else
+				{
+					switch (inputBindingTypeToEdit)
+					{
+					case InputType::KEYBOARD:
+					{
+						const InputBinding& prevInputBinding = m_InputBindings[inputBindingIndexToEdit];
+						ImGui::Text("Previous: %s", KeyCodeStrings[(i32)prevInputBinding.keyCode]);
+						ImGui::Text("Press any key to assign a new binding... (esc to cancel)");
+						for (i32 i = 0; i < (i32)KeyCode::_NONE; ++i)
+						{
+							if (GetKeyPressed((KeyCode)i, true))
+							{
+								newBinding.keyCode = (KeyCode)i;
+								bInputReceived = true;
+							}
+						}
+					} break;
+					case InputType::MOUSE_BUTTON:
+					{
+						const InputBinding& prevInputBinding = m_InputBindings[inputBindingIndexToEdit];
+						ImGui::Text("Previous: %s", MouseButtonStrings[(i32)prevInputBinding.mouseButton]);
+						ImGui::Text("Click any button to assign a new binding... (esc to cancel)");
+						if (bMouseReleasedAfterButtonClick)
+						{
+							for (i32 i = 0; i < (i32)MouseButton::COUNT; ++i)
+							{
+								if (IsMouseButtonDown((MouseButton)i, true))
+								{
+									newBinding.mouseButton = (MouseButton)i;
+									bInputReceived = true;
+								}
+							}
+						}
+					} break;
+					case InputType::MOUSE_AXIS:
+					{
+						const InputBinding& prevInputBinding = m_InputBindings[inputBindingIndexToEdit];
+						ImGui::Text("Previous: %s", MouseAxisStrings[(i32)prevInputBinding.mouseAxis]);
+						ImGui::Text("Input axis to assign a new binding... (esc to cancel)");
+						glm::vec2 mouseMovement = GetMouseMovement(true);
+						const real mouseMoveThreshold = 7.0f;
+						if (GetVerticalScrollDistance(true) != 0.0f)
+						{
+							newBinding.mouseAxis = MouseAxis::SCROLL_Y;
+							bInputReceived = true;
+						}
+						else if (GetHorizontalScrollDistance(true) != 0.0f)
+						{
+							newBinding.mouseAxis = MouseAxis::SCROLL_X;
+							bInputReceived = true;
+						}
+						else if (abs(mouseMovement.x) > mouseMoveThreshold)
+						{
+							newBinding.mouseAxis = MouseAxis::X;
+							bInputReceived = true;
+						}
+						else if (abs(mouseMovement.y) > mouseMoveThreshold)
+						{
+							newBinding.mouseAxis = MouseAxis::Y;
+							bInputReceived = true;
+						}
+					} break;
+					case InputType::GAMEPAD_BUTTON:
+					{
+						const InputBinding& prevInputBinding = m_InputBindings[inputBindingIndexToEdit];
+						ImGui::Text("Previous: %s", GamepadButtonStrings[(i32)prevInputBinding.gamepadButton]);
+						ImGui::Text("Click any button to assign a new binding... (esc to cancel)");
+
+						for (i32 i = 0; i < (i32)GamepadButton::COUNT; ++i)
+						{
+							if (IsGamepadButtonPressed(0, (GamepadButton)i))
+							{
+								newBinding.gamepadButton = (GamepadButton)i;
+								bInputReceived = true;
+							}
+						}
+					} break;
+					case InputType::GAMEPAD_AXIS:
+					{
+						const InputBinding& prevInputBinding = m_InputBindings[inputBindingIndexToEdit];
+						ImGui::Text("Previous: %s", GamepadAxisStrings[(i32)prevInputBinding.gamepadAxis]);
+						ImGui::Text("Input axis to assign a new binding... (esc to cancel)");
+
+						for (i32 i = 0; i < (i32)GamepadAxis::COUNT; ++i)
+						{
+							if (HasGamepadAxisValueJustPassedThreshold(0, (GamepadAxis)i, 0.5f))
+							{
+								newBinding.gamepadAxis = (GamepadAxis)i;
+								bInputReceived = true;
+							}
+							else if (HasGamepadAxisValueJustPassedThreshold(0, (GamepadAxis)i, -0.5f))
+							{
+								newBinding.gamepadAxis = (GamepadAxis)i;
+								bInputReceived = true;
+							}
+						}
+					} break;
+					default:
+					{
+						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
+						ImGui::Text("Invalid input type!\n");
+						ImGui::PopStyleColor();
+					} break;
+					}
+
+					if (bInputReceived)
+					{
+						m_bInputBindingsDirty = true;
+						m_InputBindings[inputBindingIndexToEdit] = newBinding;
+						ImGui::CloseCurrentPopup();
+					}
+				}
+
+				ImGui::EndPopup();
 			}
 		}
 
@@ -1383,6 +1715,12 @@ namespace flex
 		{
 			PrintError("Failed to load input bindings from file %s\n\terror: %s\n", INPUT_BINDINGS_LOCATION, JSONParser::GetErrorString());
 			return false;
+		}
+
+		// Clear out all bindings to clear ones that aren't in the file being loaded
+		for (i32 i = 0; i < (i32)Action::_NONE; ++i)
+		{
+			m_InputBindings[i] = {};
 		}
 
 		bool bFileComplete = true;
@@ -1429,9 +1767,12 @@ namespace flex
 					m_InputBindings[i].gamepadAxis = (GamepadAxis)gamepadAxis;
 				}
 
-				m_InputBindings[i].bNegative = child.GetBool("negative");
+				child.SetBoolChecked("invert mouse axis", m_InputBindings[i].bInvertMouseAxis);
+				child.SetBoolChecked("invert gamepad axis", m_InputBindings[i].bInvertGamepadAxis);
 			}
 		}
+
+		m_bInputBindingsDirty = false;
 
 		return bFileComplete;
 	}
@@ -1456,7 +1797,8 @@ namespace flex
 			bindingObj.fields.emplace_back("gamepad button", JSONValue(gamepadButton));
 			i32 gamepadAxis = binding.gamepadAxis == GamepadAxis::_NONE ? -1 : (i32)binding.gamepadAxis;
 			bindingObj.fields.emplace_back("gamepad axis", JSONValue(gamepadAxis));
-			bindingObj.fields.emplace_back("negative", JSONValue(binding.bNegative));
+			bindingObj.fields.emplace_back("invert mouse axis", JSONValue(binding.bInvertMouseAxis));
+			bindingObj.fields.emplace_back("invert gamepad axis", JSONValue(binding.bInvertGamepadAxis));
 
 			rootObject.fields.emplace_back(ActionStrings[i], JSONValue(bindingObj));
 		}
@@ -1467,6 +1809,7 @@ namespace flex
 		if (WriteFile(INPUT_BINDINGS_LOCATION, fileContents, false))
 		{
 			Print("Saved input bindings file to %s\n", inputBindingsFileName.c_str());
+			m_bInputBindingsDirty = false;
 		}
 		else
 		{
@@ -1511,6 +1854,11 @@ namespace flex
 		}
 
 		return Action::_NONE;
+	}
+
+	bool InputManager::IsGamepadAxisInvertable(GamepadAxis gamepadAxis)
+	{
+		return (i32)gamepadAxis < (i32)GamepadAxis::LEFT_TRIGGER;
 	}
 
 	char InputManager::GetShiftModifiedKeyCode(char c)

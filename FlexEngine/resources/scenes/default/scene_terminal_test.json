@@ -21,9 +21,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-1.111, 2.030, -3.490",
+			"position" : "-0.000, 2.030, 0.001",
 			"pitch" : 0.000000,
-			"yaw" : 1.638920
+			"yaw" : 1.570967
 		}
 	},
 	"objects" : 
@@ -34,7 +34,7 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "0.000, 0.030, 0.000",
+				"pos" : "-2.400, 0.030, 0.000",
 				"scale" : "100.000, 1.000, 100.000"
 			},
 			"mesh" : "unit-plane",
@@ -97,7 +97,7 @@
 					"transform" : 
 					{
 						"pos" : "0.000, 15.000, 0.000",
-						"rot" : "-2.877, 0.890, 2.206"
+						"rot" : "-2.876, 0.890, 2.207"
 					},
 					"directional light info" : 
 					{
@@ -113,7 +113,7 @@
 				{
 					"name" : "PointLight_03",
 					"type" : "point light",
-					"visible" : false,
+					"visible" : true,
 					"transform" : 
 					{
 						"pos" : "-9.308, 4.952, 10.521"
@@ -122,14 +122,14 @@
 					{
 						"pos" : "-9.308, 4.952, 10.521",
 						"colour" : "0.49, 0.78, 0.91",
-						"enabled" : false,
+						"enabled" : true,
 						"brightness" : 1000.000000
 					}
 				},
 				{
 					"name" : "PointLight_02",
 					"type" : "point light",
-					"visible" : false,
+					"visible" : true,
 					"transform" : 
 					{
 						"pos" : "1.197, 1.980, 16.280"
@@ -138,14 +138,14 @@
 					{
 						"pos" : "1.197, 1.980, 16.280",
 						"colour" : "0.94, 0.80, 0.57",
-						"enabled" : false,
+						"enabled" : true,
 						"brightness" : 760.416992
 					}
 				},
 				{
 					"name" : "PointLight_01",
 					"type" : "point light",
-					"visible" : false,
+					"visible" : true,
 					"transform" : 
 					{
 						"pos" : "10.384, 3.624, 7.767"
@@ -154,14 +154,14 @@
 					{
 						"pos" : "10.384, 3.624, 7.767",
 						"colour" : "1.00, 1.00, 1.00",
-						"enabled" : false,
+						"enabled" : true,
 						"brightness" : 500.000000
 					}
 				},
 				{
 					"name" : "PointLight_00",
 					"type" : "point light",
-					"visible" : false,
+					"visible" : true,
 					"transform" : 
 					{
 						"pos" : "-12.184, 4.730, -1.502"
@@ -170,7 +170,7 @@
 					{
 						"pos" : "-12.184, 4.730, -1.502",
 						"colour" : "1.00, 1.00, 1.00",
-						"enabled" : false,
+						"enabled" : true,
 						"brightness" : 827.585999
 					}
 				}
@@ -205,7 +205,8 @@
 			},
 			"terminal" : 
 			{
-				"str" : ""
+				"str" : "float a = randFloat();
+float b = randFloat();"
 			},
 			"children" : 
 			[

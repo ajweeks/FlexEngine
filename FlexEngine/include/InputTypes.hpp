@@ -148,6 +148,8 @@ namespace flex
 		KEY_RIGHT_SUPER,
 		KEY_MENU,
 
+		COUNT,
+
 		_NONE
 	};
 
@@ -275,6 +277,8 @@ namespace flex
 		"R Super",
 		"Menu",
 
+		"Count",
+
 		"NONE"
 	};
 
@@ -282,14 +286,14 @@ namespace flex
 
 	enum class InputModifier
 	{
-		SHIFT		= (1 << 0),
-		CONTROL		= (1 << 1),
-		ALT			= (1 << 2),
-		SUPER		= (1 << 3),
-		CAPS_LOCK	= (1 << 4),
-		NUM_LOCK	= (1 << 5),
+		SHIFT = (1 << 0),
+		CONTROL = (1 << 1),
+		ALT = (1 << 2),
+		SUPER = (1 << 3),
+		CAPS_LOCK = (1 << 4),
+		NUM_LOCK = (1 << 5),
 
-		_NONE		= 0,
+		_NONE = 0,
 	};
 
 	enum class MouseButton
@@ -302,6 +306,7 @@ namespace flex
 		MOUSE_BUTTON_6,
 		MOUSE_BUTTON_7,
 		MOUSE_BUTTON_8,
+		COUNT,
 
 		LEFT = MOUSE_BUTTON_1,
 		RIGHT = MOUSE_BUTTON_2,
@@ -324,7 +329,7 @@ namespace flex
 		"NONE"
 	};
 
-	static_assert(ARRAY_LENGTH(MouseButtonStrings) == (u32)MouseButton::_NONE + 1, "MouseButtonStrings length must match MouseButton enum");
+	static_assert(ARRAY_LENGTH(MouseButtonStrings) == (u32)MouseButton::COUNT + 1, "MouseButtonStrings length must match MouseButton enum");
 
 	enum class GamepadButton
 	{
@@ -343,6 +348,8 @@ namespace flex
 		D_PAD_RIGHT = 12,
 		D_PAD_DOWN = 13,
 		D_PAD_LEFT = 14,
+
+		COUNT,
 
 		_NONE
 	};
@@ -366,6 +373,8 @@ namespace flex
 		"Pad Down",
 		"Pad Left",
 
+		"COUNT",
+
 		"NONE"
 	};
 
@@ -380,6 +389,8 @@ namespace flex
 		LEFT_TRIGGER = 4,
 		RIGHT_TRIGGER = 5,
 
+		COUNT,
+
 		_NONE
 	};
 
@@ -391,6 +402,8 @@ namespace flex
 		"R Stick Y",
 		"L Trigger",
 		"R Trigger",
+
+		"COUNT",
 
 		"NONE"
 	};
@@ -441,6 +454,7 @@ namespace flex
 		ENTER_TRACK_EDIT_MODE,
 		COMPLETE_TRACK,
 
+		// Misc
 		TAKE_SCREENSHOT,
 
 		// Editor
@@ -449,10 +463,8 @@ namespace flex
 		EDITOR_SELECT_ROTATE_GIZMO,
 		EDITOR_SELECT_SCALE_GIZMO,
 		EDITOR_FOCUS_ON_SELECTION,
-
 		EDITOR_MOD_FASTER,
 		EDITOR_MOD_SLOWER,
-
 		EDITOR_ORBIT,
 
 		// Debug
@@ -544,6 +556,30 @@ namespace flex
 
 	static_assert(ARRAY_LENGTH(ActionStrings) == (u32)Action::_NONE + 1, "ActionStrings length must match Action enum");
 
+	enum class InputType
+	{
+		KEYBOARD,
+		MOUSE_BUTTON,
+		MOUSE_AXIS,
+		GAMEPAD_BUTTON,
+		GAMEPAD_AXIS,
+
+		_NONE
+	};
+
+	static const char* InputTypeStrings[] =
+	{
+		"Keyboard",
+		"Mouse button",
+		"Mouse axis",
+		"Gamepad button",
+		"Gamepad axis",
+
+		"None"
+	};
+
+	static_assert(ARRAY_LENGTH(InputTypeStrings) == (u32)InputType::_NONE + 1, "InputTypeStrings length must match InputType enum");
+
 	struct InputBinding
 	{
 		KeyCode keyCode = KeyCode::_NONE;
@@ -551,7 +587,8 @@ namespace flex
 		MouseAxis mouseAxis = MouseAxis::_NONE;
 		GamepadButton gamepadButton = GamepadButton::_NONE;
 		GamepadAxis gamepadAxis = GamepadAxis::_NONE;
-		bool bNegative = false;
+		bool bInvertMouseAxis = false;
+		bool bInvertGamepadAxis = false;
 	};
 
 	struct Key

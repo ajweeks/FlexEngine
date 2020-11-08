@@ -86,6 +86,7 @@ namespace flex
 					}
 					// TODO: HACK: Add proper input consumption code
 					g_InputManager->ClearVerticalScrollDistance();
+					g_InputManager->ClearHorizontalScrollDistance();
 				}
 
 				real hDragDist = g_InputManager->GetMouseDragDistance(MouseButton::LEFT).x;

@@ -66,14 +66,17 @@ namespace flex
 		void SetMousePosition(glm::vec2 mousePos, bool bUpdatePreviousPos = true);
 		glm::vec2 GetMousePosition() const;
 		void ClearMouseMovement();
-		glm::vec2 GetMouseMovement() const;
+		// Returns distance mouse has moved since last frame
+		glm::vec2 GetMouseMovement(bool bIgnoreImGui = false) const;
 		void ClearMouseButton(MouseButton mouseButton);
 		bool IsAnyMouseButtonDown(bool bIgnoreImGui = false) const;
-		bool IsMouseButtonDown(MouseButton mouseButton) const;
-		bool IsMouseButtonPressed(MouseButton mouseButton) const;
-		bool IsMouseButtonReleased(MouseButton mouseButton) const;
-		real GetVerticalScrollDistance() const;
+		bool IsMouseButtonDown(MouseButton mouseButton, bool bIgnoreImGui = false) const;
+		bool IsMouseButtonPressed(MouseButton mouseButton, bool bIgnoreImGui = false) const;
+		bool IsMouseButtonReleased(MouseButton mouseButton, bool bIgnoreImGui = false) const;
+		real GetVerticalScrollDistance(bool bIgnoreImGui = false) const;
+		real GetHorizontalScrollDistance(bool bIgnoreImGui = false) const;
 		void ClearVerticalScrollDistance();
+		void ClearHorizontalScrollDistance();
 
 		// posNorm: normalized position of center of the rect [-1, 1] (y = 1 at top of screen)
 		// sizeNorm: normalized size of the rect [0, 1]
@@ -115,6 +118,8 @@ namespace flex
 		Action GetActionFromMouseButton(MouseButton button);
 		Action GetActionFromGamepadButton(GamepadButton button);
 
+		static bool IsGamepadAxisInvertable(GamepadAxis gamepadAxis);
+
 		static const i32 GAMEPAD_BUTTON_COUNT = (i32)GamepadButton::_NONE;
 		static const i32 MOUSE_BUTTON_COUNT = (i32)MouseButton::_NONE;
 		static const real MAX_JOYSTICK_ROTATION_SPEED;
@@ -138,6 +143,7 @@ namespace flex
 		real m_ScrollYOffset = 0;
 
 		bool m_bMouseWrapped = false;
+		bool m_bInputBindingsDirty = false;
 
 		GamepadState m_pGamepadStates[2];
 		GamepadState m_GamepadStates[2];
