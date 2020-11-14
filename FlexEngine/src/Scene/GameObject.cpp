@@ -7364,6 +7364,16 @@ namespace flex
 					real stiffness = constraintObj.GetFloat("stiffness");
 					Constraint::Type type = (Constraint::Type)constraintObj.GetInt("type");
 
+					// Check for duplicates
+					for (u32 j = 0; j < i; ++j)
+					{
+						if (constraints[j]->pointIndices[0] == index0 &&
+							constraints[j]->pointIndices[1] == index1)
+						{
+							PrintWarn("Duplicate PBD constraint found! (point indices %u & %u)\n", index0, index1);
+						}
+					}
+
 					switch (type)
 					{
 					case Constraint::Type::DISTANCE:
