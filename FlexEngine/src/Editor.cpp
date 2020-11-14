@@ -203,7 +203,7 @@ namespace flex
 
 	bool Editor::HasSelectedObject() const
 	{
-		return m_CurrentlySelectedObjects.empty();
+		return !m_CurrentlySelectedObjects.empty();
 	}
 
 	std::vector<GameObject*> Editor::GetSelectedObjects(bool bForceIncludeChildren)
