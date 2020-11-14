@@ -336,6 +336,19 @@ namespace flex
 	CullFace StringToCullFace(const std::string& str);
 	std::string CullFaceToString(CullFace cullFace);
 
+	enum RenderBatchDirtyFlag : u32
+	{
+		CLEAN = 0,
+		STATIC_DATA = 1 << 0,
+		DYNAMIC_DATA = 1 << 1,
+		SHADOW_DATA = 1 << 2,
+
+		MAX_VALUE = 1 << 30,
+		_NONE
+	};
+
+	using RenderBatchDirtyFlags = u32;
+
 	// TODO: Is setting all the members to false necessary?
 	// TODO: Straight up copy most of these with a memcpy?
 	struct MaterialCreateInfo
@@ -797,5 +810,4 @@ namespace flex
 	{
 		char name[48];
 	};
-
 } // namespace flex

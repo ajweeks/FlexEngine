@@ -599,6 +599,12 @@ namespace flex
 		return m_TAASampleCount;
 	}
 
+	void Renderer::SetDirtyFlags(RenderBatchDirtyFlags flags)
+	{
+		m_DirtyFlagBits |= flags;
+		m_bRebatchRenderObjects = true;
+	}
+
 	void Renderer::EnqueueScreenSpaceSprites()
 	{
 		if (m_bDisplayShadowCascadePreview)
@@ -1260,6 +1266,12 @@ namespace flex
 			}
 
 			mesh->DrawImGui();
+
+			bool bCastsShadow = gameObject->CastsShadow();
+			if (ImGui::Checkbox("Casts shadow", &bCastsShadow))
+			{
+				gameObject->SetCastsShadow(bCastsShadow);
+			}
 		}
 	}
 

@@ -268,6 +268,8 @@ namespace flex
 
 		i32 GetTAASampleCount() const;
 
+		void SetDirtyFlags(RenderBatchDirtyFlags flags);
+
 		bool bFontWindowShowing = false;
 		bool bUniformBufferWindowShowing = false;
 		bool bGPUTimingsWindowShowing = false;
@@ -413,7 +415,7 @@ namespace flex
 
 		bool m_bPostInitialized = false;
 		bool m_bSwapChainNeedsRebuilding = false;
-		bool m_bRebatchRenderObjects = true;
+		bool m_bRebatchRenderObjects = true; // TODO: Replace with simply checking dirty flags
 
 		bool m_bEnableWireframeOverlay = false;
 		bool m_bEnableSelectionWireframe = false;
@@ -533,18 +535,7 @@ namespace flex
 
 		real m_TAA_ks[2];
 
-		enum DirtyFlags : u32
-		{
-			CLEAN = 0,
-			STATIC_DATA = 1 << 0,
-			DYNAMIC_DATA = 1 << 1,
-			SHADOW_DATA = 1 << 2,
-
-			MAX_VALUE = 1 << 30,
-			_NONE
-		};
-
-		u32 m_DirtyFlagBits = (u32)DirtyFlags::CLEAN;
+		RenderBatchDirtyFlags m_DirtyFlagBits = (RenderBatchDirtyFlags)RenderBatchDirtyFlag::CLEAN;
 
 		PhysicsDebugDrawBase* m_PhysicsDebugDrawer = nullptr;
 

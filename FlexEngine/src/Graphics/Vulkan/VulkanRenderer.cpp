@@ -1246,16 +1246,16 @@ namespace flex
 
 			if (renderObject->vertexBufferData->bDynamic)
 			{
-				m_DirtyFlagBits |= DirtyFlags::DYNAMIC_DATA;
+				m_DirtyFlagBits |= RenderBatchDirtyFlag::DYNAMIC_DATA;
 			}
 			else
 			{
-				m_DirtyFlagBits |= DirtyFlags::STATIC_DATA;
+				m_DirtyFlagBits |= RenderBatchDirtyFlag::STATIC_DATA;
 			}
 
 			if (renderObject->gameObject->CastsShadow())
 			{
-				m_DirtyFlagBits |= DirtyFlags::SHADOW_DATA;
+				m_DirtyFlagBits |= RenderBatchDirtyFlag::SHADOW_DATA;
 			}
 
 			return renderID;
@@ -1990,7 +1990,7 @@ namespace flex
 			renderObject->vertexOffset = (u32)vertOffset;
 			renderObject->indexOffset = (u32)indexOffset;
 
-			m_DirtyFlagBits |= DirtyFlags::DYNAMIC_DATA; // TODO: Is this needed?
+			m_DirtyFlagBits |= RenderBatchDirtyFlag::DYNAMIC_DATA; // TODO: Is this needed?
 		}
 
 		void VulkanRenderer::FreeDynamicVertexData(RenderID renderID)
@@ -7666,18 +7666,18 @@ namespace flex
 
 		void VulkanRenderer::BatchRenderObjects()
 		{
-			if (m_DirtyFlagBits & DirtyFlags::STATIC_DATA)
+			if (m_DirtyFlagBits & RenderBatchDirtyFlag::STATIC_DATA)
 			{
 				CreateStaticVertexBuffers();
 				CreateStaticIndexBuffers();
 			}
-			if (m_DirtyFlagBits & DirtyFlags::SHADOW_DATA)
+			if (m_DirtyFlagBits & RenderBatchDirtyFlag::SHADOW_DATA)
 			{
 				CreateShadowVertexBuffer();
 				CreateShadowIndexBuffer();
 			}
 
-			m_DirtyFlagBits = DirtyFlags::CLEAN;
+			m_DirtyFlagBits = RenderBatchDirtyFlag::CLEAN;
 
 			const char* blockName = "BatchRenderObjects";
 			u32 renderObjBatchCount = 0;

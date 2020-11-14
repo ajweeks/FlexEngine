@@ -1134,6 +1134,8 @@ namespace flex
 			SetStatic(bStatic);
 		}
 
+		obj.SetBoolChecked("casts shadow", m_bCastsShadow);
+
 		if (obj.HasField("children"))
 		{
 			std::vector<JSONObject> children = obj.GetObjectArray("children");
@@ -1189,6 +1191,8 @@ namespace flex
 		{
 			object.fields.emplace_back("static", JSONValue(true));
 		}
+
+		object.fields.emplace_back("casts shadow", JSONValue(m_bCastsShadow));
 
 		object.fields.push_back(m_Transform.Serialize());
 
@@ -2061,6 +2065,7 @@ namespace flex
 	void GameObject::SetCastsShadow(bool bCastsShadow)
 	{
 		m_bCastsShadow = bCastsShadow;
+		g_Renderer->SetDirtyFlags(RenderBatchDirtyFlag::SHADOW_DATA);
 	}
 
 	void GameObject::OnOverlapBegin(GameObject* other)
