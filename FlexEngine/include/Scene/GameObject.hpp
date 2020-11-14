@@ -1083,10 +1083,13 @@ namespace flex
 		bool m_bSingleStep = false;
 
 		ms m_LastUpdateTime;
+		sec m_AccumulatedSec = 0.0f;
 
 		std::vector<Point*> points;
 		std::vector<Constraint*> constraints;
 		std::vector<glm::vec3> predictedPositions;
+
+		std::vector<glm::vec3> initialPositions;
 
 	};
 

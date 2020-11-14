@@ -7198,6 +7198,10 @@ namespace flex
 
 			m_bSingleStep = false;
 
+			real w = sin(m_AccumulatedSec * 2.5f) * 3.0f;
+			points[0]->pos = glm::vec3(w, -4.0f, 0.0f);
+			points[6]->pos = glm::vec3(w, -4.0f, 2.0f);
+
 			u32 iterationCount = glm::min((u32)(elapsed / TIMESTEP), 100u);
 
 			for (u32 updateIteration = 0; updateIteration < iterationCount; ++updateIteration)
@@ -7304,6 +7308,7 @@ namespace flex
 			}
 
 			m_LastUpdateTime += iterationCount * TIMESTEP;
+			m_AccumulatedSec += (iterationCount * TIMESTEP) / 1000.0f;
 		}
 
 		Draw();
@@ -7338,6 +7343,7 @@ namespace flex
 			if (pbdObject.SetObjectArrayChecked("points", pointsArr))
 			{
 				points.resize(pointsArr.size());
+				initialPositions.resize(pointsArr.size());
 
 				u32 i = 0;
 				for (JSONObject& pointObj : pointsArr)
@@ -7346,6 +7352,7 @@ namespace flex
 					glm::vec3 vel = VEC3_ZERO;
 					real invMass = pointObj.GetFloat("inverse mass");
 					points[i] = new Point(pos, vel, invMass);
+					initialPositions[i] = points[i]->pos;
 
 					i++;
 				}
@@ -7466,6 +7473,16 @@ namespace flex
 		}
 
 		ImGui::SameLine();
+
+		if (ImGui::Button("Reset"))
+		{
+			u32 i = 0;
+			for (Point* point : points)
+			{
+				point->pos = initialPositions[i++];
+				point->vel = VEC3_ZERO;
+			}
+		}
 
 		if (ImGui::Button("Single Step"))
 		{
