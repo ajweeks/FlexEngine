@@ -187,6 +187,32 @@ namespace flex
 		return result;
 	}
 
+	std::string UIntToString(u32 i, u16 minChars, char pad)
+	{
+		std::string result = std::to_string(i);
+
+		if (i < 0)
+		{
+			if (result.length() < minChars)
+			{
+				result = "-" + std::string(minChars - result.length(), pad) + result;
+			}
+			else
+			{
+				result = "-" + result;
+			}
+		}
+		else
+		{
+			if (result.length() < minChars)
+			{
+				result = std::string(minChars - result.length(), pad) + result;
+			}
+		}
+
+		return result;
+	}
+
 	// Screen-space constructor
 	TextCache::TextCache(const std::string& str, AnchorPoint anchor, const glm::vec2& pos,
 		const glm::vec4& colour, real xSpacing, real scale) :

@@ -272,7 +272,7 @@ namespace flex
 		rootObject.fields.emplace_back("saturation", JSONValue(m_PostProcessSettings.saturation));
 
 		rootObject.fields.emplace_back("shadow cascade count", JSONValue(m_ShadowCascadeCount));
-		rootObject.fields.emplace_back("shadow cascade base resolution", JSONValue((i32)m_ShadowMapBaseResolution));
+		rootObject.fields.emplace_back("shadow cascade base resolution", JSONValue(m_ShadowMapBaseResolution));
 
 		BaseCamera* cam = g_CameraManager->CurrentCamera();
 		rootObject.fields.emplace_back("aperture", JSONValue(cam->aperture));
@@ -2038,6 +2038,16 @@ namespace flex
 							g_SceneManager->CurrentScene()->AddRootObject(socket);
 						}
 					} break;
+					case GameObjectType::PBD:
+					{
+						PBD* pbd = new PBD();
+						g_SceneManager->CurrentScene()->AddRootObject(pbd);
+
+						pbd->Initialize();
+						pbd->PostInitialize();
+
+						g_Editor->SetSelectedObject(pbd);
+					} break;
 					default:
 						PrintWarn("Unhandled game object type %s\n", GameObjectTypeStrings[(i32)m_NewObjectImGuiSelectedType]);
 						break;
@@ -3255,7 +3265,6 @@ namespace flex
 
 						std::string fileName;
 						fontObj.SetStringChecked("file path", fileName);
-						// TODO: Add 16 bit int support to JSON parser
 						fontMetaData.size = (i16)fontObj.GetInt("size");
 						fontObj.SetBoolChecked("screen space", fontMetaData.bScreenSpace);
 						fontObj.SetFloatChecked("threshold", fontMetaData.threshold);

@@ -33,6 +33,7 @@ namespace flex
 		/* Sets value to the result of GetString(label) if that field is present */
 		bool SetIntChecked(const std::string& label, i32& value) const;
 
+		u32 GetUInt(const std::string& label) const;
 		bool SetUIntChecked(const std::string& label, u32& value) const;
 
 		real GetFloat(const std::string& label) const;
@@ -71,6 +72,7 @@ namespace flex
 		{
 			STRING,
 			INT,
+			UINT,
 			FLOAT,
 			BOOL,
 			OBJECT,
@@ -88,6 +90,7 @@ namespace flex
 		explicit JSONValue(const std::string& inStrValue);
 		explicit JSONValue(const char* inStrValue);
 		explicit JSONValue(i32 inIntValue);
+		explicit JSONValue(u32 inUIntValue);
 		explicit JSONValue(real inFloatValue);
 		explicit JSONValue(real inFloatValue, u32 precision);
 		explicit JSONValue(bool inBoolValue);
@@ -99,6 +102,7 @@ namespace flex
 		union
 		{
 			i32 intValue = 0;
+			u32 uintValue;
 			real floatValue;
 			bool boolValue;
 		};

@@ -128,6 +128,7 @@ namespace flex
 	void PadStart(std::string& str, i32 minLen, char pad);
 	// String will be padded to be at least minChars long (excluding a leading '-' for negative numbers)
 	std::string IntToString(i32 i, u16 minChars = 0, char pad = '0');
+	std::string UIntToString(u32 i, u16 minChars = 0, char pad = '0');
 
 	std::string FloatToString(real f, i32 precision = DEFAULT_FLOAT_PRECISION);
 

@@ -948,8 +948,8 @@ namespace flex
 
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
 
-		virtual void Initialize();
-		virtual void PostInitialize();
+		virtual void Initialize() override;
+		virtual void PostInitialize() override;
 		virtual void Update() override;
 		virtual void Destroy() override;
 
@@ -1004,6 +1004,89 @@ namespace flex
 		std::vector<TextureID> m_TableTextureIDs;
 
 		i32 m_IsolateOctave = -1;
+
+	};
+
+	struct Point
+	{
+		Point(glm::vec3 pos, glm::vec3 vel, real invMass) :
+			pos(pos),
+			vel(vel),
+			invMass(invMass)
+		{}
+
+		glm::vec3 pos;
+		glm::vec3 vel;
+		real invMass = 0.0f;
+	};
+
+	struct Constraint
+	{
+		enum class EqualityType
+		{
+			EQUALITY,
+			INEQUALITY,
+
+			_NONE
+		};
+
+		enum class Type
+		{
+			DISTANCE,
+
+			_NONE
+		};
+
+		Constraint(i32 index0, i32 index1, real stiffness, EqualityType equalityType, Type type) :
+			stiffness(stiffness),
+			equalityType(equalityType),
+			type(type)
+		{
+			pointIndices[0] = index0;
+			pointIndices[1] = index1;
+		}
+
+		i32 pointIndices[2];
+		real stiffness;
+		EqualityType equalityType;
+		Type type;
+	};
+
+	struct DistanceConstraint : public Constraint
+	{
+		DistanceConstraint(i32 index0, i32 index1, real stiffness, real targetDistance);
+
+		real targetDistance;
+	};
+
+	class PBD : public GameObject
+	{
+	public:
+		PBD();
+
+		virtual void Initialize() override;
+		virtual void Destroy() override;
+		virtual void Update() override;
+
+		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+
+		virtual void DrawImGuiObjects() override;
+
+		static ms TIMESTEP;
+
+	private:
+		void Draw();
+
+		u32 m_SolverIterationCount;
+		bool m_bPaused = false;
+		bool m_bSingleStep = false;
+
+		ms m_LastUpdateTime;
+
+		std::vector<Point*> points;
+		std::vector<Constraint*> constraints;
+		std::vector<glm::vec3> predictedPositions;
 
 	};
 

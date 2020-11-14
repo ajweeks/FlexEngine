@@ -60,6 +60,8 @@ namespace flex
 	AudioCue GameObject::s_SqueakySounds;
 	AudioSourceID GameObject::s_BunkSound;
 
+	ms PBD::TIMESTEP = 1000.0f / 60.0f;
+
 	static ThreadSafeArray<GerstnerWave::WaveGenData>* workQueue = nullptr;
 
 	GameObject::GameObject(const std::string& name, GameObjectType type) :
@@ -209,6 +211,10 @@ namespace flex
 		case GameObjectType::SOCKET:
 		{
 			newGameObject = g_PluggablesSystem->AddSocket(objectName);
+		} break;
+		case GameObjectType::PBD:
+		{
+			newGameObject = new PBD();
 		} break;
 		case GameObjectType::OBJECT: // Fall through
 		case GameObjectType::_NONE:
@@ -3297,7 +3303,7 @@ namespace flex
 	{
 		JSONObject cartInfo = {};
 
-		cartInfo.fields.emplace_back("track ID", JSONValue((i32)currentTrackID));
+		cartInfo.fields.emplace_back("track ID", JSONValue(currentTrackID));
 		cartInfo.fields.emplace_back("dist along track", JSONValue(distAlongTrack));
 
 		parentObject.fields.emplace_back("cart info", JSONValue(cartInfo));
@@ -3403,7 +3409,7 @@ namespace flex
 	{
 		JSONObject cartInfo = {};
 
-		cartInfo.fields.emplace_back("track ID", JSONValue((i32)currentTrackID));
+		cartInfo.fields.emplace_back("track ID", JSONValue(currentTrackID));
 		cartInfo.fields.emplace_back("dist along track", JSONValue(distAlongTrack));
 
 		cartInfo.fields.emplace_back("move direction", JSONValue(moveDirection));
@@ -4851,7 +4857,7 @@ namespace flex
 		gerstnerWaveObj.fields.emplace_back("waves", JSONValue(waveObjs));
 
 		// TODO: Add uint support
-		gerstnerWaveObj.fields.emplace_back("max chunk vert count per axis", JSONValue((i32)maxChunkVertCountPerAxis));
+		gerstnerWaveObj.fields.emplace_back("max chunk vert count per axis", JSONValue(maxChunkVertCountPerAxis));
 		gerstnerWaveObj.fields.emplace_back("chunk size", JSONValue(size));
 		gerstnerWaveObj.fields.emplace_back("chunk load radius", JSONValue(loadRadius));
 		gerstnerWaveObj.fields.emplace_back("update speed", JSONValue(updateSpeed));
@@ -6592,7 +6598,7 @@ namespace flex
 		systemDataObj.fields.emplace_back("colour0", JSONValue(VecToString(data.colour0, 2)));
 		systemDataObj.fields.emplace_back("colour1", JSONValue(VecToString(data.colour1, 2)));
 		systemDataObj.fields.emplace_back("speed", JSONValue(data.speed));
-		systemDataObj.fields.emplace_back("particle count", JSONValue((i32)data.particleCount));
+		systemDataObj.fields.emplace_back("particle count", JSONValue(data.particleCount));
 		particleSystemObj.fields.emplace_back("data", JSONValue(systemDataObj));
 
 		parentObject.fields.emplace_back("particle system info", JSONValue(particleSystemObj));
@@ -7123,15 +7129,15 @@ namespace flex
 	{
 		JSONObject chunkGenInfo = {};
 
-		chunkGenInfo.fields.emplace_back("vert count per chunk axis", JSONValue((i32)VertCountPerChunkAxis));
+		chunkGenInfo.fields.emplace_back("vert count per chunk axis", JSONValue(VertCountPerChunkAxis));
 		chunkGenInfo.fields.emplace_back("chunk size", JSONValue(ChunkSize));
 		chunkGenInfo.fields.emplace_back("max height", JSONValue(MaxHeight));
 		chunkGenInfo.fields.emplace_back("use manual seed", JSONValue(m_UseManualSeed));
-		chunkGenInfo.fields.emplace_back("manual seed", JSONValue((i32)m_ManualSeed));
+		chunkGenInfo.fields.emplace_back("manual seed", JSONValue(m_ManualSeed));
 
 		chunkGenInfo.fields.emplace_back("loaded chunk radius", JSONValue(m_LoadedChunkRadius));
 
-		chunkGenInfo.fields.emplace_back("base table width", JSONValue((i32)m_BasePerlinTableWidth));
+		chunkGenInfo.fields.emplace_back("base table width", JSONValue(m_BasePerlinTableWidth));
 
 		chunkGenInfo.fields.emplace_back("low colour", JSONValue(VecToString(m_LowCol)));
 		chunkGenInfo.fields.emplace_back("mid colour", JSONValue(VecToString(m_MidCol)));
@@ -7139,11 +7145,323 @@ namespace flex
 
 		chunkGenInfo.fields.emplace_back("base octave", JSONValue(m_BaseOctave));
 		chunkGenInfo.fields.emplace_back("octave scale", JSONValue(m_OctaveScale));
-		chunkGenInfo.fields.emplace_back("num octaves", JSONValue((i32)m_NumOctaves));
+		chunkGenInfo.fields.emplace_back("num octaves", JSONValue(m_NumOctaves));
 
 		chunkGenInfo.fields.emplace_back("pin center", JSONValue(m_bPinCenter));
 		chunkGenInfo.fields.emplace_back("pinned center", JSONValue(VecToString(m_PinnedPos)));
 
 		parentObject.fields.emplace_back("chunk generator info", JSONValue(chunkGenInfo));
+	}
+
+	DistanceConstraint::DistanceConstraint(i32 index0, i32 index1, real stiffness, real targetDistance) :
+		Constraint(index0, index1, stiffness, Constraint::EqualityType::EQUALITY, Constraint::Type::DISTANCE),
+		targetDistance(targetDistance)
+	{
+	}
+
+	PBD::PBD() :
+		GameObject("PBD", GameObjectType::PBD),
+		m_SolverIterationCount(4) // Default, gets overridden in ParseUniqueFields
+	{
+	}
+
+	void PBD::Initialize()
+	{
+		m_LastUpdateTime = Time::CurrentMilliseconds();
+	}
+
+	void PBD::Destroy()
+	{
+		points.clear();
+		predictedPositions.clear();
+
+		for (Constraint* constraint : constraints)
+		{
+			delete constraint;
+		}
+		constraints.clear();
+	}
+
+	void PBD::Update()
+	{
+		GameObject::Update();
+
+		if (!m_bPaused || m_bSingleStep)
+		{
+			ms now = Time::CurrentMilliseconds();
+			ms elapsed = now - m_LastUpdateTime;
+
+			if (m_bSingleStep)
+			{
+				elapsed = TIMESTEP;
+			}
+
+			m_bSingleStep = false;
+
+			u32 iterationCount = glm::min((u32)(elapsed / TIMESTEP), 100u);
+
+			for (u32 updateIteration = 0; updateIteration < iterationCount; ++updateIteration)
+			{
+				const sec dt = TIMESTEP / 1000.0f;
+
+				std::vector<Constraint*> collisionConstraints;
+
+				predictedPositions.resize(points.size());
+
+
+				glm::vec3 globalExternalForces = glm::vec3(0.0f, -9.81f, 0.0f); // Just gravity for now
+
+				// Apply external forces
+				for (Point* point : points)
+				{
+					point->vel += (dt * point->invMass) * globalExternalForces;
+				}
+
+				// Damp velocities
+				for (Point* point : points)
+				{
+					point->vel *= 0.99f;
+				}
+
+				// Explicit Euler step
+				{
+					u32 i = 0;
+					for (Point* point : points)
+					{
+						// Predict next position
+						predictedPositions[i++] = point->pos + point->vel * dt;
+					}
+				}
+
+				// Generate collision constraints
+				// Skip for now
+
+				// Project constraints (update predicted positions)
+				for (u32 iteration = 0; iteration < m_SolverIterationCount; ++iteration)
+				{
+					std::vector<Constraint*> constraintLists[] = { constraints, collisionConstraints };
+					for (std::vector<Constraint*>& constraintList : constraintLists)
+					{
+						for (Constraint* constraint : constraintList)
+						{
+							switch (constraint->type)
+							{
+							case Constraint::Type::DISTANCE:
+							{
+								DistanceConstraint* distanceConstraint = (DistanceConstraint*)constraint;
+								Point* point0 = points[distanceConstraint->pointIndices[0]];
+								Point* point1 = points[distanceConstraint->pointIndices[1]];
+								glm::vec3 pos0 = predictedPositions[distanceConstraint->pointIndices[0]];
+								glm::vec3 pos1 = predictedPositions[distanceConstraint->pointIndices[1]];
+
+								if (point0->invMass == 0.0f && point1->invMass == 0.0f)
+								{
+									PrintError("Invalid constraint: between two objects each with inverse masses of 0\n");
+									return;
+								}
+
+								real k = distanceConstraint->stiffness;
+								// Make stiffness scale linearly with iteration count
+								real kPrime = 1.0f - glm::pow(1.0f - k, 1.0f / m_SolverIterationCount);
+
+								glm::vec3 posDiff = pos1 - pos0;
+								real posDiffDist = glm::length(posDiff);
+								glm::vec3 posDiffN = posDiff / posDiffDist;
+								real gradient = posDiffDist - distanceConstraint->targetDistance;
+								glm::vec3 dp0 = ((point0->invMass / (point0->invMass + point1->invMass)) * gradient * kPrime) * posDiffN;
+								glm::vec3 dp1 = ((point1->invMass / (point0->invMass + point1->invMass)) * gradient * kPrime) * -posDiffN;
+
+								predictedPositions[distanceConstraint->pointIndices[0]] += dp0;
+								predictedPositions[distanceConstraint->pointIndices[1]] += dp1;
+							} break;
+							default:
+							{
+								PrintError("Unhandled constraint type\n");
+							} break;
+							}
+						}
+					}
+				}
+
+				// Integrate
+				{
+					u32 i = 0;
+					for (Point* point : points)
+					{
+						point->vel = (predictedPositions[i] - point->pos) / dt;
+						point->pos = predictedPositions[i++];
+					}
+				}
+
+				// Update velocities (friction, restitution)
+				// Skip for now
+
+
+				for (Constraint* collisionConstraint : collisionConstraints)
+				{
+					delete collisionConstraint;
+				}
+			}
+
+			m_LastUpdateTime += iterationCount * TIMESTEP;
+		}
+
+		Draw();
+	}
+
+	void PBD::Draw()
+	{
+		PhysicsDebugDrawBase* debugDrawer = g_Renderer->GetDebugDrawer();
+		for (Point* point : points)
+		{
+			debugDrawer->drawSphere(ToBtVec3(point->pos), 0.1f, btVector3(0.8f, 0.2f, 0.1f));
+		}
+
+		for (Constraint* constraint : constraints)
+		{
+			debugDrawer->drawLine(ToBtVec3(points[constraint->pointIndices[0]]->pos), ToBtVec3(points[constraint->pointIndices[1]]->pos),
+				btVector3(0.5f, 0.4f, 0.1f), btVector3(0.5f, 0.4f, 0.1f));
+		}
+	}
+
+	void PBD::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	{
+		UNREFERENCED_PARAMETER(matIDs);
+		UNREFERENCED_PARAMETER(scene);
+
+		JSONObject pbdObject;
+		if (parentObject.SetObjectChecked("pbd", pbdObject))
+		{
+			pbdObject.SetUIntChecked("solver iteration count", m_SolverIterationCount);
+
+			std::vector<JSONObject> pointsArr;
+			if (pbdObject.SetObjectArrayChecked("points", pointsArr))
+			{
+				points.resize(pointsArr.size());
+
+				u32 i = 0;
+				for (JSONObject& pointObj : pointsArr)
+				{
+					glm::vec3 pos = pointObj.GetVec3("position");
+					glm::vec3 vel = VEC3_ZERO;
+					real invMass = pointObj.GetFloat("inverse mass");
+					points[i] = new Point(pos, vel, invMass);
+
+					i++;
+				}
+			}
+
+			std::vector<JSONObject> constraintsArr;
+			if (pbdObject.SetObjectArrayChecked("constraints", constraintsArr))
+			{
+				constraints.resize(constraintsArr.size());
+
+				u32 i = 0;
+				for (JSONObject& constraintObj : constraintsArr)
+				{
+					u32 index0 = constraintObj.GetUInt("index 0");
+					u32 index1 = constraintObj.GetUInt("index 1");
+					real stiffness = constraintObj.GetFloat("stiffness");
+					Constraint::Type type = (Constraint::Type)constraintObj.GetInt("type");
+
+					switch (type)
+					{
+					case Constraint::Type::DISTANCE:
+					{
+						JSONObject distanceConstraintObj = constraintObj.GetObject("distance constraint");
+
+						real targetDistance = distanceConstraintObj.GetFloat("target distance");
+
+						constraints[i] = new DistanceConstraint(index0, index1, stiffness, targetDistance);
+					} break;
+					default:
+					{
+						PrintError("Unhandled constraint type in PBD::ParseUniqueFields\n");
+						constraints[i] = nullptr;
+					} break;
+					}
+
+					i++;
+				}
+			}
+		}
+	}
+
+	void PBD::SerializeUniqueFields(JSONObject& parentObject) const
+	{
+		JSONObject pbdObject = JSONObject();
+
+		pbdObject.fields.emplace_back("solver iteration count", JSONValue(m_SolverIterationCount));
+
+		std::vector<JSONObject> pointsArr(points.size());
+		{
+			u32 i = 0;
+			for (const Point* point : points)
+			{
+				pointsArr[i] = JSONObject();
+				pointsArr[i].fields.emplace_back("position", JSONValue(VecToString(point->pos)));
+				pointsArr[i].fields.emplace_back("inverse mass", JSONValue(point->invMass));
+
+				i++;
+			}
+		}
+		pbdObject.fields.emplace_back("points", JSONValue(pointsArr));
+
+		std::vector<JSONObject> constraintsArr(constraints.size());
+		{
+			u32 i = 0;
+			for (const Constraint* constraint : constraints)
+			{
+				constraintsArr[i] = JSONObject();
+				constraintsArr[i].fields.emplace_back("index 0", JSONValue(constraint->pointIndices[0]));
+				constraintsArr[i].fields.emplace_back("index 1", JSONValue(constraint->pointIndices[1]));
+				constraintsArr[i].fields.emplace_back("stiffness", JSONValue(constraint->stiffness));
+				constraintsArr[i].fields.emplace_back("type", JSONValue((i32)constraint->type));
+
+				switch (constraint->type)
+				{
+				case Constraint::Type::DISTANCE:
+				{
+					DistanceConstraint* distanceConstraint = (DistanceConstraint*)constraint;
+
+					JSONObject distanceConstraintObj = JSONObject();
+
+					distanceConstraintObj.fields.emplace_back("target distance", JSONValue(distanceConstraint->targetDistance));
+
+					constraintsArr[i].fields.emplace_back("distance constraint", JSONValue(distanceConstraintObj));
+				} break;
+				default:
+				{
+					PrintError("Unhandled type in PBD::SerializeUniqueFields\n");
+				} break;
+				}
+
+				i++;
+			}
+		}
+		pbdObject.fields.emplace_back("constraints", JSONValue(constraintsArr));
+
+		parentObject.fields.emplace_back("pbd", JSONValue(pbdObject));
+	}
+
+	void PBD::DrawImGuiObjects()
+	{
+		GameObject::DrawImGuiObjects();
+
+		ImGuiExt::SliderUInt("Solver iteration count", &m_SolverIterationCount, 1, 60);
+
+		if (ImGui::Checkbox("Paused", &m_bPaused))
+		{
+			m_LastUpdateTime = Time::CurrentMilliseconds();
+		}
+
+		ImGui::SameLine();
+
+		if (ImGui::Button("Single Step"))
+		{
+			m_bSingleStep = true;
+			m_bPaused = true;
+			m_LastUpdateTime = Time::CurrentMilliseconds();
+		}
 	}
 } // namespace flex
