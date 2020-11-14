@@ -21,9 +21,9 @@
 		"move speed" : 18.582001,
 		"transform" : 
 		{
-			"position" : "-0.024, 5.825, -5.733",
-			"pitch" : -0.415025,
-			"yaw" : 1.124599
+			"position" : "2.506, 7.733, -8.920",
+			"pitch" : -0.490195,
+			"yaw" : 1.903885
 		}
 	},
 	"objects" : 
@@ -32,6 +32,7 @@
 			"name" : "Skybox",
 			"type" : "skybox",
 			"visible" : true,
+			"casts shadow" : false,
 			"transform" : 
 			{
 			},
@@ -47,6 +48,7 @@
 			"name" : "Reflection Probe 01",
 			"type" : "reflection probe",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 8.000, 0.000"
@@ -56,6 +58,7 @@
 			"name" : "sphere",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 			},
@@ -69,14 +72,15 @@
 			"name" : "Directional Light",
 			"type" : "directional light",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "1.194, -0.973, -2.523"
+				"rot" : "1.964, -0.623, 0.887"
 			},
 			"directional light info" : 
 			{
-				"rotation" : "-0.217, -0.591, -0.616, 0.473",
+				"rotation" : "0.788, 0.186, 0.457, 0.368",
 				"pos" : "0.000, 15.000, 0.000",
 				"colour" : "1.00, 1.00, 1.00",
 				"enabled" : true,
@@ -89,6 +93,7 @@
 			"name" : "moka",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 3.012, 0.000",
@@ -99,6 +104,21 @@
 			[
 				"pbr chrome",
 				"black plastic"
+			]
+		},
+		{
+			"name" : "New_Object_00",
+			"type" : "object",
+			"visible" : true,
+			"casts shadow" : true,
+			"transform" : 
+			{
+				"scale" : "41.000, 0.300, 35.660"
+			},
+			"mesh" : "cube",
+			"materials" : 
+			[
+				"pbr grey"
 			]
 		}
 	]

@@ -27,6 +27,11 @@ namespace flex
 			high(0),
 			source(source)
 		{
+			if (source == Source::GENERATED)
+			{
+				low = -1;
+				high = -1;
+			}
 		}
 
 		std::string ToString(const std::string& inSource) const

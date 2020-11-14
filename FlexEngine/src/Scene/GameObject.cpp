@@ -313,7 +313,7 @@ namespace flex
 		{
 			btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
 			btVector3 pos = ToBtVec3(m_NearbyInteractable->GetTransform()->GetWorldPosition());
-			real pulse = sin(g_SecElapsedSinceProgramStart * 8.0f);
+			//real pulse = sin(g_SecElapsedSinceProgramStart * 8.0f);
 			//debugDrawer->drawSphere(pos, pulse * 0.1f + 0.35f, btVector3(0.1f, pulse * 0.5f + 0.7f, 0.1f));
 			debugDrawer->drawLine(pos + btVector3(-1, 0.1f, 0), pos + btVector3(1, 0.1f, 0), btVector3(0.1f, 0.95f, 0.1f));
 			debugDrawer->drawLine(pos + btVector3(0, 0.1f, -1), pos + btVector3(0, 0.1f, 1), btVector3(0.1f, 0.95f, 0.1f));
