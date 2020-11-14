@@ -369,6 +369,7 @@ namespace flex
 		void VirtualMachine::GenerateFromIR(IR::IntermediateRepresentation* ir)
 		{
 			instructions.clear();
+			instructionOrigins.clear();
 			ClearRuntimeState();
 
 			state->Clear();
