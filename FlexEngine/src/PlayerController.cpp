@@ -212,6 +212,7 @@ namespace flex
 						// List of objects sorted by sqr dist (closest to farthest)
 						std::list<Pair<GameObject*, real>> nearbyInteractables;
 
+						// TODO: Move to All.variables
 						real maxDistSqr = 7.0f * 7.0f;
 						const glm::vec3 pos = m_Player->m_Transform.GetWorldPosition();
 						for (GameObject* obj : allInteractableObjects)
@@ -236,7 +237,6 @@ namespace flex
 									{
 										nearbyInteractables.emplace_back(obj, dist2);
 									}
-									break;
 								}
 							}
 						}
@@ -249,7 +249,7 @@ namespace flex
 								if (nearbyInteractable->AllowInteractionWith(m_Player))
 								{
 									nearestInteractable = nearbyInteractable;
-									nearestInteractable->SetNearbyInteractable(true);
+									nearestInteractable->SetNearbyInteractable(m_Player);
 									break;
 								}
 							}
@@ -273,6 +273,15 @@ namespace flex
 							nearestInteractable->SetInteractingWith(m_Player);
 							m_Player->SetInteractingWith(nearestInteractable);
 							m_bAttemptInteract = false;
+						}
+						else if (m_Player->m_HeldItem != nullptr)
+						{
+							if (m_Player->m_HeldItem->GetType() == GameObjectType::WIRE)
+							{
+								Wire* wire = (Wire*)m_Player->m_HeldItem;
+								wire->SetInteractingWith(nullptr);
+							}
+							m_Player->m_HeldItem = nullptr;
 						}
 					}
 				}

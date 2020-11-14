@@ -21,9 +21,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "6.047, 2.030, 5.810",
-			"pitch" : 0.000000,
-			"yaw" : 1.570807
+			"position" : "2.869, 1.347, -2.855",
+			"pitch" : -0.070911,
+			"yaw" : 2.160092
 		}
 	},
 	"objects" : 
@@ -34,7 +34,7 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-2.400, 0.030, 0.000",
+				"pos" : "-2.400, -0.653, 0.000",
 				"scale" : "100.000, 1.000, 100.000"
 			},
 			"mesh" : "unit-plane",
@@ -116,15 +116,30 @@
 					"visible" : true,
 					"transform" : 
 					{
-						"pos" : "-9.308, 4.952, 10.521"
+						"pos" : "-9.843, 0.708, 12.554"
 					},
 					"point light info" : 
 					{
-						"pos" : "-9.308, 4.952, 10.521",
+						"pos" : "-9.843, 0.708, 12.554",
 						"colour" : "0.49, 0.78, 0.91",
 						"enabled" : true,
 						"brightness" : 1000.000000
-					}
+					},
+					"children" : 
+					[
+						{
+							"name" : "socket_005",
+							"type" : "socket",
+							"visible" : true,
+							"transform" : 
+							{
+							},
+							"socket" : 
+							{
+								"slotIdx" : 0
+							}
+						}
+					]
 				},
 				{
 					"name" : "PointLight_02",
@@ -132,15 +147,30 @@
 					"visible" : true,
 					"transform" : 
 					{
-						"pos" : "1.197, 1.980, 16.280"
+						"pos" : "16.636, 7.943, -3.520"
 					},
 					"point light info" : 
 					{
-						"pos" : "1.197, 1.980, 16.280",
+						"pos" : "16.636, 7.943, -3.520",
 						"colour" : "0.94, 0.80, 0.57",
 						"enabled" : true,
 						"brightness" : 760.416992
-					}
+					},
+					"children" : 
+					[
+						{
+							"name" : "socket_004",
+							"type" : "socket",
+							"visible" : true,
+							"transform" : 
+							{
+							},
+							"socket" : 
+							{
+								"slotIdx" : 0
+							}
+						}
+					]
 				},
 				{
 					"name" : "PointLight_01",
@@ -148,15 +178,30 @@
 					"visible" : true,
 					"transform" : 
 					{
-						"pos" : "10.384, 3.624, 7.767"
+						"pos" : "-1.775, 0.938, 16.134"
 					},
 					"point light info" : 
 					{
-						"pos" : "10.384, 3.624, 7.767",
+						"pos" : "-1.775, 0.938, 16.134",
 						"colour" : "1.00, 1.00, 1.00",
 						"enabled" : true,
 						"brightness" : 500.000000
-					}
+					},
+					"children" : 
+					[
+						{
+							"name" : "socket_006",
+							"type" : "socket",
+							"visible" : true,
+							"transform" : 
+							{
+							},
+							"socket" : 
+							{
+								"slotIdx" : 0
+							}
+						}
+					]
 				},
 				{
 					"name" : "PointLight_00",
@@ -164,15 +209,30 @@
 					"visible" : true,
 					"transform" : 
 					{
-						"pos" : "-12.184, 4.730, -1.502"
+						"pos" : "9.063, 4.930, 29.718"
 					},
 					"point light info" : 
 					{
-						"pos" : "-12.184, 4.730, -1.502",
+						"pos" : "9.063, 4.930, 29.718",
 						"colour" : "1.00, 1.00, 1.00",
 						"enabled" : true,
 						"brightness" : 827.585999
-					}
+					},
+					"children" : 
+					[
+						{
+							"name" : "socket_007",
+							"type" : "socket",
+							"visible" : true,
+							"transform" : 
+							{
+							},
+							"socket" : 
+							{
+								"slotIdx" : 0
+							}
+						}
+					]
 				}
 			]
 		},
@@ -182,11 +242,12 @@
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-3.227, 0.600, 9.288",
-				"rot" : "3.141, 0.213, 3.141"
+				"pos" : "-3.227, 0.000, 9.288",
+				"rot" : "3.141, 0.567, 3.141"
 			},
 			"materials" : 
 			[
+				"terminal copper",
 				"terminal copper"
 			],
 			"collider" : 
@@ -205,8 +266,7 @@
 			},
 			"terminal" : 
 			{
-				"str" : "float a = randFloat();
-float b = randFloat();"
+				"str" : "out_0 = 0;"
 			},
 			"children" : 
 			[
@@ -224,6 +284,62 @@ float b = randFloat();"
 					[
 						"terminal display"
 					]
+				},
+				{
+					"name" : "socket_000",
+					"type" : "socket",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "-0.755, -0.362, -1.168",
+						"rot" : "3.141, 0.000, 3.141"
+					},
+					"socket" : 
+					{
+						"slotIdx" : 0
+					}
+				},
+				{
+					"name" : "socket_001",
+					"type" : "socket",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "-0.247, -0.409, -1.168",
+						"rot" : "3.141, 0.000, 3.141"
+					},
+					"socket" : 
+					{
+						"slotIdx" : 0
+					}
+				},
+				{
+					"name" : "socket_002",
+					"type" : "socket",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "0.279, -0.409, -1.168",
+						"rot" : "3.141, 0.000, 3.141"
+					},
+					"socket" : 
+					{
+						"slotIdx" : 0
+					}
+				},
+				{
+					"name" : "socket_003",
+					"type" : "socket",
+					"visible" : true,
+					"transform" : 
+					{
+						"pos" : "0.802, -0.409, -1.168",
+						"rot" : "3.141, 0.000, 3.141"
+					},
+					"socket" : 
+					{
+						"slotIdx" : 0
+					}
 				}
 			]
 		},
@@ -299,14 +415,26 @@ float b = randFloat();"
 			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "7.047, 1.280, 10.810"
+				"pos" : "1.785, 0.600, 8.670"
 			},
 			"wire" : 
 			{
-				"startPoint" : "6.05, 1.28, 10.81",
-				"endPoint" : "8.05, 1.28, 10.81",
-				"gameObject0SlotIdx" : 0,
-				"gameObject1SlotIdx" : 0
+				"startPoint" : "1.06, 0.60, 7.98",
+				"endPoint" : "2.51, 0.60, 9.36"
+			}
+		},
+		{
+			"name" : "wire_001",
+			"type" : "wire",
+			"visible" : true,
+			"transform" : 
+			{
+				"pos" : "-8.394, 0.597, 6.917"
+			},
+			"wire" : 
+			{
+				"startPoint" : "-9.23, 0.60, 6.36",
+				"endPoint" : "-7.56, 0.60, 7.47"
 			}
 		}
 	]

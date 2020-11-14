@@ -2002,6 +2002,30 @@ namespace flex
 
 						g_SceneManager->CurrentScene()->AddRootObject(newWire);
 					} break;
+					case GameObjectType::SOCKET:
+					{
+						GameObject* parent = nullptr;
+						u32 socketIndex = 0;
+						if (g_Editor->HasSelectedObject())
+						{
+							parent = g_Editor->GetSelectedObjects(false)[0];
+							socketIndex = (u32)parent->sockets.size();
+						}
+						std::string socketName = g_SceneManager->CurrentScene()->GetUniqueObjectName("socket_", 3);
+						Socket* socket = g_PluggablesSystem->AddSocket(socketName, socketIndex);
+
+						socket->Initialize();
+						socket->PostInitialize();
+
+						if (parent)
+						{
+							parent->AddChild(socket);
+						}
+						else
+						{
+							g_SceneManager->CurrentScene()->AddRootObject(socket);
+						}
+					} break;
 					default:
 						PrintWarn("Unhandled game object type %s\n", GameObjectTypeStrings[(i32)m_NewObjectImGuiSelectedType]);
 						break;

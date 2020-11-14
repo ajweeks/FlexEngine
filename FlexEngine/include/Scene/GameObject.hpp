@@ -19,6 +19,7 @@ namespace flex
 	class BezierCurveList;
 	class Mesh;
 	class MeshComponent;
+	class Socket;
 	class TerminalCamera;
 	class Wire;
 
@@ -78,6 +79,25 @@ namespace flex
 		GameObject* AddChild(GameObject* child);
 		bool RemoveChild(GameObject* child);
 		const std::vector<GameObject*>& GetChildren() const;
+		u32 GetChildCountOfType(GameObjectType objType, bool bRecurse);
+
+		template<class T>
+		void GetChildrenOfType(GameObjectType objType, bool bRecurse, std::vector<T*>& children)
+		{
+			if (m_Type == objType)
+			{
+				children.push_back((T*)this);
+			}
+
+			if (bRecurse)
+			{
+				for (GameObject* child : m_Children)
+				{
+					child->GetChildrenOfType(objType, bRecurse, children);
+				}
+			}
+		}
+
 
 		bool HasChild(GameObject* child, bool bCheckChildrensChildren);
 
@@ -136,18 +156,14 @@ namespace flex
 		void AddSelfAndChildrenToVec(std::vector<GameObject*>& vec);
 		void RemoveSelfAndChildrenToVec(std::vector<GameObject*>& vec);
 
-		void SetNearbyInteractable(bool bNearbyInteractable);
-
-		void OnConnectionMade(Wire* wire);
-		void OnConnectionBroke(Wire* wire);
+		void SetNearbyInteractable(GameObject* nearbyInteractable);
 
 		// Filled if this object is a trigger
 		std::vector<GameObject*> overlappingObjects;
 
 		// Signals that connected objects get sent
 		std::vector<i32> outputSignals;
-		// Wires that this object is connected to
-		std::vector<Wire*> wireConnections;
+		std::vector<Socket*> sockets;
 
 	protected:
 		friend BaseScene;
@@ -221,7 +237,7 @@ namespace flex
 		*/
 		GameObject* m_ObjectInteractingWith = nullptr;
 
-		bool m_bNearbyInteractable = false;
+		GameObject* m_NearbyInteractable = nullptr;
 
 		i32 m_SiblingIndex = 0;
 
@@ -236,8 +252,9 @@ namespace flex
 		static AudioSourceID s_BunkSound;
 		static AudioCue s_SqueakySounds;
 
-		private:
-			void DrawImGuiForSelfInternal();
+	private:
+		void DrawImGuiForSelfInternal();
+
 	};
 
 	// Child classes
@@ -619,7 +636,7 @@ namespace flex
 			std::vector<WaveChunk> const* waveChunks;
 			std::vector<WaveSamplingLOD> const* waveSamplingLODs;
 			std::vector<WaveTessellationLOD> const* waveTessellationLODs;
-			WaveInfo const * soloWave;
+			WaveInfo const* soloWave;
 			real size;
 			u32 chunkIdx;
 			bool bDisableLODs;
@@ -671,8 +688,8 @@ namespace flex
 		void UpdateWavesSIMD();
 		glm::vec4 ChooseColourFromLOD(real LOD);
 		glm::vec3 QueryHeightFieldFromVerts(const glm::vec3& queryPos) const;
-		WaveChunk const * GetChunkAtPos(const glm::vec2& pos) const;
-		WaveTessellationLOD const * GetTessellationLOD(u32 lodLevel) const;
+		WaveChunk const* GetChunkAtPos(const glm::vec2& pos) const;
+		WaveTessellationLOD const* GetTessellationLOD(u32 lodLevel) const;
 		u32 ComputeTesellationLODLevel(const glm::vec2i& chunkIdx);
 		void UpdateNormalsForChunk(u32 chunkIdx);
 		void SortWaves();
@@ -698,7 +715,7 @@ namespace flex
 
 		// TODO: Rename to wave contributions?
 		std::vector<WaveInfo> waves;
-		WaveInfo const * soloWave = nullptr;
+		WaveInfo const* soloWave = nullptr;
 
 		std::vector<WaveChunk> waveChunks;
 
@@ -730,8 +747,8 @@ namespace flex
 
 	void* ThreadUpdate(void* inData);
 
-	GerstnerWave::WaveChunk const * GetChunkAtPos(const glm::vec2& pos, const std::vector<GerstnerWave::WaveChunk>& waveChunks, real size);
-	GerstnerWave::WaveTessellationLOD const * GetTessellationLOD(u32 lodLevel, const std::vector<GerstnerWave::WaveTessellationLOD>& waveTessellationLODs);
+	GerstnerWave::WaveChunk const* GetChunkAtPos(const glm::vec2& pos, const std::vector<GerstnerWave::WaveChunk>& waveChunks, real size);
+	GerstnerWave::WaveTessellationLOD const* GetTessellationLOD(u32 lodLevel, const std::vector<GerstnerWave::WaveTessellationLOD>& waveTessellationLODs);
 	u32 MapVertIndexAcrossLODs(u32 vertIndex, GerstnerWave::WaveTessellationLOD const* lod0, GerstnerWave::WaveTessellationLOD const* lod1);
 
 	class Blocks : public GameObject
@@ -751,16 +768,41 @@ namespace flex
 	public:
 		Wire(const std::string& name);
 
+		virtual void Destroy() override;
+
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
 		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
 
-		GameObject* gameObject0 = nullptr;
-		GameObject* gameObject1 = nullptr;
-		i32 gameObject0SlotIdx = 0;
-		i32 gameObject1SlotIdx = 0;
+		void PlugIn(Socket* socket);
+		void Unplug(Socket* socket);
+
+		virtual bool AllowInteractionWith(GameObject* gameObject) override;
+		virtual void SetInteractingWith(GameObject* gameObject) override;
+
+		Socket* socket0 = nullptr;
+		Socket* socket1 = nullptr;
 
 		glm::vec3 startPoint;
 		glm::vec3 endPoint;
+	};
+
+	// Connect wires to objects
+	class Socket : public GameObject
+	{
+	public:
+		Socket(const std::string& name);
+
+		virtual void Destroy() override;
+
+		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+
+		virtual bool AllowInteractionWith(GameObject* gameObject) override;
+		virtual void SetInteractingWith(GameObject* gameObject) override;
+
+		GameObject* parent = nullptr;
+		Wire* connectedWire = nullptr;
+		i32 slotIdx = 0;
 	};
 
 	// TODO: Add scene base class
@@ -772,12 +814,19 @@ namespace flex
 
 		void Update();
 
-		i32 GetReceivedSignal(GameObject* gameObject);
+		i32 GetReceivedSignal(Socket* socket);
 
-		Wire* AddWire(GameObject* gameObject0 = nullptr, GameObject* gameObject1 = nullptr);
-		bool RemovePluggable(GameObject* gameObject);
+		Wire* AddWire(Socket* socket0 = nullptr, Socket* socket1 = nullptr);
+		bool DestroySocket(Socket* socket);
+		bool DestroyWire(Wire* wire);
+
+		Socket* AddSocket(const std::string& name, i32 slotIdx = 0, Wire* connectedWire = nullptr);
 
 		std::vector<Wire*> wires;
+		std::vector<Socket*> sockets;
+
+	private:
+		bool RemoveSocket(Socket* socket);
 
 		// TODO: Serialization (requires ObjectIDs)
 		// TODO: Use WirePool

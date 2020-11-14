@@ -206,6 +206,10 @@ namespace flex
 		{
 			newGameObject = g_PluggablesSystem->AddWire();
 		} break;
+		case GameObjectType::SOCKET:
+		{
+			newGameObject = g_PluggablesSystem->AddSocket(objectName);
+		} break;
 		case GameObjectType::OBJECT: // Fall through
 		case GameObjectType::_NONE:
 			newGameObject = new GameObject(objectName, gameObjectType);
@@ -263,6 +267,9 @@ namespace flex
 		}
 
 		m_Transform.UpdateParentTransform();
+
+		GetChildrenOfType(GameObjectType::SOCKET, false, sockets);
+		outputSignals.resize((u32)sockets.size());
 	}
 
 	void GameObject::Destroy()
@@ -302,9 +309,16 @@ namespace flex
 
 	void GameObject::Update()
 	{
-		m_bNearbyInteractable = false;
-
-		if (m_ObjectInteractingWith != nullptr)
+		if (m_NearbyInteractable != nullptr)
+		{
+			btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
+			btVector3 pos = ToBtVec3(m_NearbyInteractable->GetTransform()->GetWorldPosition());
+			real pulse = sin(g_SecElapsedSinceProgramStart * 8.0f);
+			//debugDrawer->drawSphere(pos, pulse * 0.1f + 0.35f, btVector3(0.1f, pulse * 0.5f + 0.7f, 0.1f));
+			debugDrawer->drawLine(pos + btVector3(-1, 0.1f, 0), pos + btVector3(1, 0.1f, 0), btVector3(0.1f, 0.95f, 0.1f));
+			debugDrawer->drawLine(pos + btVector3(0, 0.1f, -1), pos + btVector3(0, 0.1f, 1), btVector3(0.1f, 0.95f, 0.1f));
+		}
+		else if (m_ObjectInteractingWith != nullptr)
 		{
 			// TODO: Write real fancy-lookin outline shader instead of drawing a lil cross
 			btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
@@ -319,6 +333,9 @@ namespace flex
 			debugDrawer->drawLine(pos + btVector3(-1, 0.1f, 0), pos + btVector3(1, 0.1f, 0), btVector3(0.95f, 0.95f, 0.1f));
 			debugDrawer->drawLine(pos + btVector3(0, 0.1f, -1), pos + btVector3(0, 0.1f, 1), btVector3(0.95f, 0.95f, 0.1f));
 		}
+
+		// Clear every frame
+		m_NearbyInteractable = nullptr;
 
 		if (m_RigidBody)
 		{
@@ -491,266 +508,269 @@ namespace flex
 
 			btRigidBody* rbInternal = m_RigidBody->GetRigidBodyInternal();
 
-			ImGui::Text("Rigid body");
-
-			if (ImGui::BeginPopupContextItem("rb context menu"))
+			if (ImGui::TreeNode("Rigid body"))
 			{
-				if (ImGui::Button("Remove rigid body"))
+				if (ImGui::BeginPopupContextItem("rb context menu"))
 				{
-					RemoveRigidBody();
-				}
-
-				ImGui::EndPopup();
-			}
-
-			if (m_RigidBody != nullptr)
-			{
-				bool bRBStatic = m_RigidBody->IsStatic();
-				if (ImGui::Checkbox("Static##rb", &bRBStatic))
-				{
-					m_RigidBody->SetStatic(bRBStatic);
-				}
-
-				bool bKinematic = m_RigidBody->IsKinematic();
-				if (ImGui::Checkbox("Kinematic", &bKinematic))
-				{
-					m_RigidBody->SetKinematic(bKinematic);
-				}
-
-				ImGui::PushItemWidth(80.0f);
-				{
-					i32 group = m_RigidBody->GetGroup();
-					if (ImGui::InputInt("Group", &group, 1, 16))
+					if (ImGui::Button("Remove rigid body"))
 					{
-						group = glm::clamp(group, -1, 16);
-						m_RigidBody->SetGroup(group);
+						RemoveRigidBody();
 					}
 
-					ImGui::SameLine();
+					ImGui::EndPopup();
+				}
 
-					i32 mask = m_RigidBody->GetMask();
-					if (ImGui::InputInt("Mask", &mask, 1, 16))
+				if (m_RigidBody != nullptr)
+				{
+					bool bRBStatic = m_RigidBody->IsStatic();
+					if (ImGui::Checkbox("Static##rb", &bRBStatic))
 					{
-						mask = glm::clamp(mask, -1, 16);
-						m_RigidBody->SetMask(mask);
+						m_RigidBody->SetStatic(bRBStatic);
 					}
-				}
-				ImGui::PopItemWidth();
 
-				// TODO: Array of buttons for each category
-				i32 flags = m_RigidBody->GetPhysicsFlags();
-				if (ImGui::SliderInt("Flags", &flags, 0, 16))
-				{
-					m_RigidBody->SetPhysicsFlags(flags);
-				}
-
-				real mass = m_RigidBody->GetMass();
-				if (ImGui::SliderFloat("Mass", &mass, 0.0f, 1000.0f))
-				{
-					m_RigidBody->SetMass(mass);
-				}
-
-				real friction = m_RigidBody->GetFriction();
-				if (ImGui::SliderFloat("Friction", &friction, 0.0f, 1.0f))
-				{
-					m_RigidBody->SetFriction(friction);
-				}
-
-				ImGui::Spacing();
-
-				btCollisionShape* shape = m_RigidBody->GetRigidBodyInternal()->getCollisionShape();
-				std::string shapeTypeStr = CollisionShapeTypeToString(shape->getShapeType());
-
-				if (ImGui::BeginCombo("Shape", shapeTypeStr.c_str()))
-				{
-					i32 selectedColliderShape = -1;
-					for (i32 i = 0; i < (i32)ARRAY_LENGTH(g_CollisionTypes); ++i)
+					bool bKinematic = m_RigidBody->IsKinematic();
+					if (ImGui::Checkbox("Kinematic", &bKinematic))
 					{
-						if (g_CollisionTypes[i] == shape->getShapeType())
+						m_RigidBody->SetKinematic(bKinematic);
+					}
+
+					ImGui::PushItemWidth(80.0f);
+					{
+						i32 group = m_RigidBody->GetGroup();
+						if (ImGui::InputInt("Group", &group, 1, 16))
 						{
-							selectedColliderShape = i;
-							break;
+							group = glm::clamp(group, -1, 16);
+							m_RigidBody->SetGroup(group);
+						}
+
+						ImGui::SameLine();
+
+						i32 mask = m_RigidBody->GetMask();
+						if (ImGui::InputInt("Mask", &mask, 1, 16))
+						{
+							mask = glm::clamp(mask, -1, 16);
+							m_RigidBody->SetMask(mask);
 						}
 					}
+					ImGui::PopItemWidth();
 
-					if (selectedColliderShape == -1)
+					// TODO: Array of buttons for each category
+					i32 flags = m_RigidBody->GetPhysicsFlags();
+					if (ImGui::SliderInt("Flags", &flags, 0, 16))
 					{
-						PrintError("Failed to find collider shape in array!\n");
+						m_RigidBody->SetPhysicsFlags(flags);
 					}
-					else
+
+					real mass = m_RigidBody->GetMass();
+					if (ImGui::SliderFloat("Mass", &mass, 0.0f, 1000.0f))
 					{
+						m_RigidBody->SetMass(mass);
+					}
+
+					real friction = m_RigidBody->GetFriction();
+					if (ImGui::SliderFloat("Friction", &friction, 0.0f, 1.0f))
+					{
+						m_RigidBody->SetFriction(friction);
+					}
+
+					ImGui::Spacing();
+
+					btCollisionShape* shape = m_RigidBody->GetRigidBodyInternal()->getCollisionShape();
+					std::string shapeTypeStr = CollisionShapeTypeToString(shape->getShapeType());
+
+					if (ImGui::BeginCombo("Shape", shapeTypeStr.c_str()))
+					{
+						i32 selectedColliderShape = -1;
 						for (i32 i = 0; i < (i32)ARRAY_LENGTH(g_CollisionTypes); ++i)
 						{
-							bool bSelected = (i == selectedColliderShape);
-							const char* colliderShapeName = g_CollisionTypeStrs[i];
-							if (ImGui::Selectable(colliderShapeName, &bSelected))
+							if (g_CollisionTypes[i] == shape->getShapeType())
 							{
-								if (selectedColliderShape != i)
-								{
-									selectedColliderShape = i;
+								selectedColliderShape = i;
+								break;
+							}
+						}
 
-									BroadphaseNativeTypes collisionShapeType = g_CollisionTypes[selectedColliderShape];
-									switch (collisionShapeType)
+						if (selectedColliderShape == -1)
+						{
+							PrintError("Failed to find collider shape in array!\n");
+						}
+						else
+						{
+							for (i32 i = 0; i < (i32)ARRAY_LENGTH(g_CollisionTypes); ++i)
+							{
+								bool bSelected = (i == selectedColliderShape);
+								const char* colliderShapeName = g_CollisionTypeStrs[i];
+								if (ImGui::Selectable(colliderShapeName, &bSelected))
+								{
+									if (selectedColliderShape != i)
 									{
-									case BOX_SHAPE_PROXYTYPE:
-									{
-										btBoxShape* newShape = new btBoxShape(btVector3(1.0f, 1.0f, 1.0f));
-										SetCollisionShape(newShape);
-									} break;
-									case SPHERE_SHAPE_PROXYTYPE:
-									{
-										btSphereShape* newShape = new btSphereShape(1.0f);
-										SetCollisionShape(newShape);
-									} break;
-									case CAPSULE_SHAPE_PROXYTYPE:
-									{
-										btCapsuleShapeZ* newShape = new btCapsuleShapeZ(1.0f, 1.0f);
-										SetCollisionShape(newShape);
-									} break;
-									case CYLINDER_SHAPE_PROXYTYPE:
-									{
-										btCylinderShape* newShape = new btCylinderShape(btVector3(1.0f, 1.0f, 1.0f));
-										SetCollisionShape(newShape);
-									} break;
-									case CONE_SHAPE_PROXYTYPE:
-									{
-										btConeShape* newShape = new btConeShape(1.0f, 1.0f);
-										SetCollisionShape(newShape);
-									} break;
-									default:
-									{
-										PrintError("Unhandled BroadphaseNativeType in GameObject::DrawImGuiObjects: %d\n", (i32)collisionShapeType);
-									} break;
+										selectedColliderShape = i;
+
+										BroadphaseNativeTypes collisionShapeType = g_CollisionTypes[selectedColliderShape];
+										switch (collisionShapeType)
+										{
+										case BOX_SHAPE_PROXYTYPE:
+										{
+											btBoxShape* newShape = new btBoxShape(btVector3(1.0f, 1.0f, 1.0f));
+											SetCollisionShape(newShape);
+										} break;
+										case SPHERE_SHAPE_PROXYTYPE:
+										{
+											btSphereShape* newShape = new btSphereShape(1.0f);
+											SetCollisionShape(newShape);
+										} break;
+										case CAPSULE_SHAPE_PROXYTYPE:
+										{
+											btCapsuleShapeZ* newShape = new btCapsuleShapeZ(1.0f, 1.0f);
+											SetCollisionShape(newShape);
+										} break;
+										case CYLINDER_SHAPE_PROXYTYPE:
+										{
+											btCylinderShape* newShape = new btCylinderShape(btVector3(1.0f, 1.0f, 1.0f));
+											SetCollisionShape(newShape);
+										} break;
+										case CONE_SHAPE_PROXYTYPE:
+										{
+											btConeShape* newShape = new btConeShape(1.0f, 1.0f);
+											SetCollisionShape(newShape);
+										} break;
+										default:
+										{
+											PrintError("Unhandled BroadphaseNativeType in GameObject::DrawImGuiObjects: %d\n", (i32)collisionShapeType);
+										} break;
+										}
 									}
 								}
 							}
 						}
+
+						ImGui::EndCombo();
 					}
 
-					ImGui::EndCombo();
-				}
-
-				glm::vec3 scale = m_Transform.GetWorldScale();
-				switch (shape->getShapeType())
-				{
-				case BOX_SHAPE_PROXYTYPE:
-				{
-					btBoxShape* boxShape = static_cast<btBoxShape*>(shape);
-					btVector3 halfExtents = boxShape->getHalfExtentsWithMargin();
-					glm::vec3 halfExtentsG = ToVec3(halfExtents);
-					halfExtentsG /= scale;
-
-					real maxExtent = 1000.0f;
-					if (ImGui::DragFloat3("Half extents", &halfExtentsG.x, 0.1f, 0.0f, maxExtent))
+					glm::vec3 scale = m_Transform.GetWorldScale();
+					switch (shape->getShapeType())
 					{
-						halfExtents = ToBtVec3(halfExtentsG);
-						btBoxShape* newShape = new btBoxShape(halfExtents);
-						SetCollisionShape(newShape);
-					}
-				} break;
-				case SPHERE_SHAPE_PROXYTYPE:
-				{
-					btSphereShape* sphereShape = static_cast<btSphereShape*>(shape);
-					real radius = sphereShape->getRadius();
-					radius /= scale.x;
-
-					real maxExtent = 1000.0f;
-					if (ImGui::DragFloat("radius", &radius, 0.1f, 0.0f, maxExtent))
+					case BOX_SHAPE_PROXYTYPE:
 					{
-						btSphereShape* newShape = new btSphereShape(radius);
-						SetCollisionShape(newShape);
-					}
-				} break;
-				case CAPSULE_SHAPE_PROXYTYPE:
-				{
-					btCapsuleShapeZ* capsuleShape = static_cast<btCapsuleShapeZ*>(shape);
-					real radius = capsuleShape->getRadius();
-					real halfHeight = capsuleShape->getHalfHeight();
-					radius /= scale.x;
-					halfHeight /= scale.x;
+						btBoxShape* boxShape = static_cast<btBoxShape*>(shape);
+						btVector3 halfExtents = boxShape->getHalfExtentsWithMargin();
+						glm::vec3 halfExtentsG = ToVec3(halfExtents);
+						halfExtentsG /= scale;
 
-					real maxExtent = 1000.0f;
-					bool bUpdateShape = ImGui::DragFloat("radius", &radius, 0.1f, 0.0f, maxExtent);
-					bUpdateShape |= ImGui::DragFloat("height", &halfHeight, 0.1f, 0.0f, maxExtent);
-
-					if (bUpdateShape)
+						real maxExtent = 1000.0f;
+						if (ImGui::DragFloat3("Half extents", &halfExtentsG.x, 0.1f, 0.0f, maxExtent))
+						{
+							halfExtents = ToBtVec3(halfExtentsG);
+							btBoxShape* newShape = new btBoxShape(halfExtents);
+							SetCollisionShape(newShape);
+						}
+					} break;
+					case SPHERE_SHAPE_PROXYTYPE:
 					{
-						btCapsuleShapeZ* newShape = new btCapsuleShapeZ(radius, halfHeight * 2.0f);
-						SetCollisionShape(newShape);
-					}
-				} break;
-				case CYLINDER_SHAPE_PROXYTYPE:
-				{
-					btCylinderShape* cylinderShape = static_cast<btCylinderShape*>(shape);
-					btVector3 halfExtents = cylinderShape->getHalfExtentsWithMargin();
-					glm::vec3 halfExtentsG = ToVec3(halfExtents);
-					halfExtentsG /= scale;
+						btSphereShape* sphereShape = static_cast<btSphereShape*>(shape);
+						real radius = sphereShape->getRadius();
+						radius /= scale.x;
 
-					real maxExtent = 1000.0f;
-					if (ImGui::DragFloat3("Half extents", &halfExtentsG.x, 0.1f, 0.0f, maxExtent))
+						real maxExtent = 1000.0f;
+						if (ImGui::DragFloat("radius", &radius, 0.1f, 0.0f, maxExtent))
+						{
+							btSphereShape* newShape = new btSphereShape(radius);
+							SetCollisionShape(newShape);
+						}
+					} break;
+					case CAPSULE_SHAPE_PROXYTYPE:
 					{
-						halfExtents = ToBtVec3(halfExtentsG);
-						btCylinderShape* newShape = new btCylinderShape(halfExtents);
-						SetCollisionShape(newShape);
+						btCapsuleShapeZ* capsuleShape = static_cast<btCapsuleShapeZ*>(shape);
+						real radius = capsuleShape->getRadius();
+						real halfHeight = capsuleShape->getHalfHeight();
+						radius /= scale.x;
+						halfHeight /= scale.x;
+
+						real maxExtent = 1000.0f;
+						bool bUpdateShape = ImGui::DragFloat("radius", &radius, 0.1f, 0.0f, maxExtent);
+						bUpdateShape |= ImGui::DragFloat("height", &halfHeight, 0.1f, 0.0f, maxExtent);
+
+						if (bUpdateShape)
+						{
+							btCapsuleShapeZ* newShape = new btCapsuleShapeZ(radius, halfHeight * 2.0f);
+							SetCollisionShape(newShape);
+						}
+					} break;
+					case CYLINDER_SHAPE_PROXYTYPE:
+					{
+						btCylinderShape* cylinderShape = static_cast<btCylinderShape*>(shape);
+						btVector3 halfExtents = cylinderShape->getHalfExtentsWithMargin();
+						glm::vec3 halfExtentsG = ToVec3(halfExtents);
+						halfExtentsG /= scale;
+
+						real maxExtent = 1000.0f;
+						if (ImGui::DragFloat3("Half extents", &halfExtentsG.x, 0.1f, 0.0f, maxExtent))
+						{
+							halfExtents = ToBtVec3(halfExtentsG);
+							btCylinderShape* newShape = new btCylinderShape(halfExtents);
+							SetCollisionShape(newShape);
+						}
+					} break;
+					default:
+					{
+						PrintWarn("Unhandled shape type in GameObject::DrawImGuiObjects\n");
+					} break;
 					}
-				} break;
-				default:
-				{
-					PrintWarn("Unhandled shape type in GameObject::DrawImGuiObjects\n");
-				} break;
+
+					glm::vec3 localOffsetPos = m_RigidBody->GetLocalPosition();
+					if (ImGui::DragFloat3("Pos offset", &localOffsetPos.x, 0.05f))
+					{
+						m_RigidBody->SetLocalPosition(localOffsetPos);
+					}
+					if (ImGui::IsItemClicked(1))
+					{
+						m_RigidBody->SetLocalPosition(VEC3_ZERO);
+					}
+
+					glm::vec3 localOffsetRotEuler = glm::degrees(glm::eulerAngles(m_RigidBody->GetLocalRotation()));
+					glm::vec3 cleanedRot;
+					if (DoImGuiRotationDragFloat3("Rot offset", localOffsetRotEuler, cleanedRot))
+					{
+						m_RigidBody->SetLocalRotation(glm::quat(glm::radians(cleanedRot)));
+					}
+
+					ImGui::Spacing();
+
+					glm::vec3 linearVel = ToVec3(m_RigidBody->GetRigidBodyInternal()->getLinearVelocity());
+					if (ImGui::DragFloat3("linear vel", &linearVel.x, 0.05f))
+					{
+						rbInternal->setLinearVelocity(ToBtVec3(linearVel));
+					}
+					if (ImGui::IsItemClicked(1))
+					{
+						rbInternal->setLinearVelocity(btVector3(0.0f, 0.0f, 0.0f));
+					}
+
+					glm::vec3 angularVel = ToVec3(m_RigidBody->GetRigidBodyInternal()->getAngularVelocity());
+					if (ImGui::DragFloat3("angular vel", &angularVel.x, 0.05f))
+					{
+						rbInternal->setAngularVelocity(ToBtVec3(angularVel));
+					}
+					if (ImGui::IsItemClicked(1))
+					{
+						rbInternal->setAngularVelocity(btVector3(0.0f, 0.0f, 0.0f));
+					}
+
+
+					//glm::vec3 localOffsetScale = m_RigidBody->GetLocalScale();
+					//if (ImGui::DragFloat3("Scale offset", &localOffsetScale.x, 0.01f))
+					//{
+					//	real epsilon = 0.001f;
+					//	localOffsetScale.x = glm::max(localOffsetScale.x, epsilon);
+					//	localOffsetScale.y = glm::max(localOffsetScale.y, epsilon);
+					//	localOffsetScale.z = glm::max(localOffsetScale.z, epsilon);
+
+					//	m_RigidBody->SetLocalScale(localOffsetScale);
+					//}
+
 				}
 
-				glm::vec3 localOffsetPos = m_RigidBody->GetLocalPosition();
-				if (ImGui::DragFloat3("Pos offset", &localOffsetPos.x, 0.05f))
-				{
-					m_RigidBody->SetLocalPosition(localOffsetPos);
-				}
-				if (ImGui::IsItemClicked(1))
-				{
-					m_RigidBody->SetLocalPosition(VEC3_ZERO);
-				}
-
-				glm::vec3 localOffsetRotEuler = glm::degrees(glm::eulerAngles(m_RigidBody->GetLocalRotation()));
-				glm::vec3 cleanedRot;
-				if (DoImGuiRotationDragFloat3("Rot offset", localOffsetRotEuler, cleanedRot))
-				{
-					m_RigidBody->SetLocalRotation(glm::quat(glm::radians(cleanedRot)));
-				}
-
-				ImGui::Spacing();
-
-				glm::vec3 linearVel = ToVec3(m_RigidBody->GetRigidBodyInternal()->getLinearVelocity());
-				if (ImGui::DragFloat3("linear vel", &linearVel.x, 0.05f))
-				{
-					rbInternal->setLinearVelocity(ToBtVec3(linearVel));
-				}
-				if (ImGui::IsItemClicked(1))
-				{
-					rbInternal->setLinearVelocity(btVector3(0.0f, 0.0f, 0.0f));
-				}
-
-				glm::vec3 angularVel = ToVec3(m_RigidBody->GetRigidBodyInternal()->getAngularVelocity());
-				if (ImGui::DragFloat3("angular vel", &angularVel.x, 0.05f))
-				{
-					rbInternal->setAngularVelocity(ToBtVec3(angularVel));
-				}
-				if (ImGui::IsItemClicked(1))
-				{
-					rbInternal->setAngularVelocity(btVector3(0.0f, 0.0f, 0.0f));
-				}
-
-
-				//glm::vec3 localOffsetScale = m_RigidBody->GetLocalScale();
-				//if (ImGui::DragFloat3("Scale offset", &localOffsetScale.x, 0.01f))
-				//{
-				//	real epsilon = 0.001f;
-				//	localOffsetScale.x = glm::max(localOffsetScale.x, epsilon);
-				//	localOffsetScale.y = glm::max(localOffsetScale.y, epsilon);
-				//	localOffsetScale.z = glm::max(localOffsetScale.z, epsilon);
-
-				//	m_RigidBody->SetLocalScale(localOffsetScale);
-				//}
-
+				ImGui::TreePop();
 			}
 		}
 		else
@@ -767,20 +787,48 @@ namespace flex
 			}
 		}
 
-		if (ImGui::TreeNode("Signals"))
 		{
-			for (u32 i = 0; i < (u32)wireConnections.size(); ++i)
+			bool bTreeOpen = ImGui::TreeNode("Sockets");
+			ImGui::SameLine();
+			ImGui::Text("(%i)", (i32)sockets.size());
+
+			if (bTreeOpen)
 			{
-				if (i < (i32)outputSignals.size())
+				for (u32 i = 0; i < (u32)sockets.size(); ++i)
 				{
 					ImGui::Text("%u: %i", i, outputSignals[i]);
 				}
-
-				ImGui::SameLine();
-				ImGui::Text("(%s <-> %s)", wireConnections[i]->gameObject0->m_Name.c_str(), wireConnections[i]->gameObject1->m_Name.c_str());
+				ImGui::TreePop();
 			}
-			ImGui::TreePop();
 		}
+
+		ImGui::Text("Interactable: %s", m_bInteractable ? "true" : "false");
+		ImGui::Text("Serializable: %s", m_bSerializable ? "true" : "false");
+
+		ImGui::Text("Trigger: %s", m_bTrigger ? "true" : "false"); // TODO: Make checkbox
+
+		std::string objectInteractingWithName;
+		if (m_ObjectInteractingWith != nullptr)
+		{
+			objectInteractingWithName = m_ObjectInteractingWith->GetName();
+		}
+		ImGui::Text("ObjectInteractingWith: %s", objectInteractingWithName.c_str());
+
+		std::string nearbyInteractibleName;
+		if (m_NearbyInteractable != nullptr)
+		{
+			nearbyInteractibleName = m_NearbyInteractable->GetName();
+		}
+		ImGui::Text("NearbyInteractible: %s", nearbyInteractibleName.c_str());
+		ImGui::Text("Sibling index: %i", m_SiblingIndex);
+
+		std::string parentName;
+		if (m_Parent != nullptr)
+		{
+			parentName = m_Parent->GetName();
+		}
+		ImGui::Text("Parent: %s", parentName.c_str());
+		ImGui::Text("Num children: %u", m_Children.size());
 	}
 
 	bool GameObject::DoImGuiContextMenu(bool bActive)
@@ -1358,21 +1406,21 @@ namespace flex
 		}
 	}
 
-	void GameObject::SetNearbyInteractable(bool bNearbyInteractable)
+	void GameObject::SetNearbyInteractable(GameObject* nearbyInteractable)
 	{
-		m_bNearbyInteractable = bNearbyInteractable;
+		m_NearbyInteractable = nearbyInteractable;
 	}
 
-	void GameObject::OnConnectionMade(Wire* wire)
-	{
-		wireConnections.push_back(wire);
-		outputSignals.resize(wireConnections.size(), -1);
-	}
-
-	void GameObject::OnConnectionBroke(Wire* wire)
-	{
-		UNREFERENCED_PARAMETER(wire);
-	}
+	//void GameObject::OnConnectionMade(Wire* wire)
+	//{
+	//	wireConnections.push_back(wire);
+	//	outputSignals.resize(wireConnections.size(), -1);
+	//}
+	//
+	//void GameObject::OnConnectionBroke(Wire* wire)
+	//{
+	//	UNREFERENCED_PARAMETER(wire);
+	//}
 
 	GameObjectType GameObject::GetType() const
 	{
@@ -1614,6 +1662,15 @@ namespace flex
 			childTransform->SetWorldTransform(childWorldTransform);
 		}
 
+		if (child->GetType() == GameObjectType::SOCKET)
+		{
+			Socket* socket = (Socket*)child;
+			socket->slotIdx = (i32)sockets.size();
+			sockets.push_back(socket);
+			socket->parent = this;
+			outputSignals.resize(sockets.size(), -1);
+		}
+
 		g_SceneManager->CurrentScene()->UpdateRootObjectSiblingIndices();
 
 		return child;
@@ -1639,6 +1696,16 @@ namespace flex
 				g_SceneManager->CurrentScene()->UpdateRootObjectSiblingIndices();
 
 				m_Children.erase(iter);
+
+				//if (m_Type != GameObjectType::TERMINAL)
+				//{
+				//	u32 socketCount = GetChildCountOfType(GameObjectType::SOCKET, false);
+				//	if (socketCount == 0)
+				//	{
+				//		m_bInteractable = false;
+				//	}
+				//}
+
 				return true;
 			}
 		}
@@ -1649,6 +1716,26 @@ namespace flex
 	const std::vector<GameObject*>& GameObject::GetChildren() const
 	{
 		return m_Children;
+	}
+
+	u32 GameObject::GetChildCountOfType(GameObjectType objType, bool bRecurse)
+	{
+		u32 count = 0;
+
+		if (m_Type == objType)
+		{
+			++count;
+		}
+
+		if (bRecurse)
+		{
+			for (GameObject* child : m_Children)
+			{
+				count += child->GetChildCountOfType(objType, bRecurse);
+			}
+		}
+
+		return count;
 	}
 
 	bool GameObject::HasChild(GameObject* child, bool bCheckChildrensChildren)
@@ -2618,24 +2705,29 @@ namespace flex
 
 	void DirectionalLight::Update()
 	{
-		i32 receivedSignal = g_PluggablesSystem->GetReceivedSignal(this);
-		if (receivedSignal != -1)
+		if (sockets.size() >= 1)
 		{
-			m_bVisible = receivedSignal == 1;
-			data.enabled = m_bVisible ? 1 : 0;
-		}
-
-		if (data.enabled)
-		{
-			glm::vec3 offsets[] = { -m_Transform.GetUp(), m_Transform.GetUp(), -m_Transform.GetForward(), m_Transform.GetForward(), VEC3_ZERO };
-			for (const glm::vec3& offset : offsets)
+			i32 receivedSignal = g_PluggablesSystem->GetReceivedSignal(sockets[0]);
+			if (receivedSignal != -1)
 			{
-				btVector3 lightPos = ToBtVec3(pos + offset);
-				btVector3 lineEnd = ToBtVec3(pos - data.dir * 2.0f + offset);
-				btVector3 lineColour = ToBtVec3(data.colour);
-				g_Renderer->GetDebugDrawer()->drawLine(lightPos, lineEnd, lineColour);
+				m_bVisible = receivedSignal == 1;
+				data.enabled = m_bVisible ? 1 : 0;
+			}
+
+			if (data.enabled)
+			{
+				glm::vec3 offsets[] = { -m_Transform.GetUp(), m_Transform.GetUp(), -m_Transform.GetForward(), m_Transform.GetForward(), VEC3_ZERO };
+				for (const glm::vec3& offset : offsets)
+				{
+					btVector3 lightPos = ToBtVec3(pos + offset);
+					btVector3 lineEnd = ToBtVec3(pos - data.dir * 2.0f + offset);
+					btVector3 lineColour = ToBtVec3(data.colour);
+					g_Renderer->GetDebugDrawer()->drawLine(lightPos, lineEnd, lineColour);
+				}
 			}
 		}
+
+		GameObject::Update();
 	}
 
 	void DirectionalLight::DrawImGuiObjects()
@@ -2813,13 +2905,18 @@ namespace flex
 
 	void PointLight::Update()
 	{
-		i32 receivedSignal = g_PluggablesSystem->GetReceivedSignal(this);
-		if (receivedSignal != -1)
+		if (sockets.size() >= 1)
 		{
-			m_bVisible = receivedSignal == 1;
-			data.enabled = m_bVisible ? 1 : 0;
-			g_Renderer->UpdatePointLightData(ID, &data);
+			i32 receivedSignal = g_PluggablesSystem->GetReceivedSignal(sockets[0]);
+			if (receivedSignal != -1)
+			{
+				m_bVisible = receivedSignal == 1;
+				data.enabled = m_bVisible ? 1 : 0;
+				g_Renderer->UpdatePointLightData(ID, &data);
+			}
 		}
+
+		GameObject::Update();
 	}
 
 	void PointLight::DrawImGuiObjects()
@@ -4926,7 +5023,7 @@ namespace flex
 	{
 		PhysicsDebugDrawBase* debugDrawer = g_Renderer->GetDebugDrawer();
 		btVector3 wireColOn(sin(g_SecElapsedSinceProgramStart * 3.5f) * 0.4f + 0.6f, 0.2f, 0.2f);
-		static const btVector3 wireColOff(0.2f, 0.2f, 0.2f);
+		static const btVector3 wireColOff(0.9f, 0.9f, 0.9f);
 		static const real defaultWireLength = 2.0f;
 		for (Wire* wire : wires)
 		{
@@ -4936,22 +5033,22 @@ namespace flex
 				Transform* interactingTransform = interacting->GetTransform();
 				glm::vec3 interactingWorldPos = interactingTransform->GetWorldPosition();
 				glm::vec3 wireHoldingOffset = interactingTransform->GetForward() * 5.0f + interactingTransform->GetUp() * -0.75f;
-				if (wire->gameObject0 != nullptr && wire->gameObject1 != nullptr)
+				if (wire->socket0 != nullptr && wire->socket1 != nullptr)
 				{
-					wire->startPoint = wire->gameObject0->GetTransform()->GetWorldPosition();
-					wire->endPoint = wire->gameObject1->GetTransform()->GetWorldPosition();
+					wire->startPoint = wire->socket0->GetTransform()->GetWorldPosition();
+					wire->endPoint = wire->socket1->GetTransform()->GetWorldPosition();
 				}
-				else if (wire->gameObject0 != nullptr)
+				else if (wire->socket0 != nullptr)
 				{
-					wire->startPoint = wire->gameObject0->GetTransform()->GetWorldPosition();
+					wire->startPoint = wire->socket0->GetTransform()->GetWorldPosition();
 
 					wire->endPoint = interactingWorldPos + wireHoldingOffset + interactingTransform->GetRight() * defaultWireLength;
 				}
-				else if (wire->gameObject1 != nullptr)
+				else if (wire->socket1 != nullptr)
 				{
 					wire->startPoint = interactingWorldPos + wireHoldingOffset;
 
-					wire->endPoint = wire->gameObject1->GetTransform()->GetWorldPosition();
+					wire->endPoint = wire->socket1->GetTransform()->GetWorldPosition();
 				}
 				else
 				{
@@ -4961,24 +5058,24 @@ namespace flex
 			}
 			else
 			{
-				if (wire->gameObject0 != nullptr)
+				if (wire->socket0 != nullptr)
 				{
-					wire->startPoint = wire->gameObject0->GetTransform()->GetWorldPosition();
+					wire->startPoint = wire->socket0->GetTransform()->GetWorldPosition();
 				}
 				else
 				{
-					if (wire->gameObject1 != nullptr)
+					if (wire->socket1 != nullptr)
 					{
-						wire->endPoint = wire->gameObject1->GetTransform()->GetWorldPosition();
+						wire->endPoint = wire->socket1->GetTransform()->GetWorldPosition();
 					}
 				}
-				if (wire->gameObject1 != nullptr)
+				if (wire->socket1 != nullptr)
 				{
-					wire->endPoint = wire->gameObject1->GetTransform()->GetWorldPosition();
+					wire->endPoint = wire->socket1->GetTransform()->GetWorldPosition();
 				}
 				else
 				{
-					if (wire->gameObject0 != nullptr)
+					if (wire->socket0 != nullptr)
 					{
 						wire->endPoint = wire->startPoint + defaultWireLength;
 					}
@@ -4987,8 +5084,8 @@ namespace flex
 
 			wire->GetTransform()->SetWorldPosition(wire->startPoint + (wire->endPoint - wire->startPoint) / 2.0f);
 
-			bool bWireOn0 = wire->gameObject0 != nullptr && (wire->gameObject0->outputSignals[wire->gameObject0SlotIdx] != -1);
-			bool bWireOn1 = wire->gameObject1 != nullptr && (wire->gameObject1->outputSignals[wire->gameObject1SlotIdx] != -1);
+			bool bWireOn0 = wire->socket0 != nullptr && (wire->socket0->parent->outputSignals[wire->socket0->slotIdx] != -1);
+			bool bWireOn1 = wire->socket1 != nullptr && (wire->socket1->parent->outputSignals[wire->socket1->slotIdx] != -1);
 			btVector3 wireCol = (bWireOn0 || bWireOn1) ? wireColOn : wireColOff;
 			debugDrawer->drawLine(ToBtVec3(wire->startPoint), ToBtVec3(wire->endPoint), wireCol, wireCol);
 			debugDrawer->drawSphere(ToBtVec3(wire->startPoint), 0.2f, wireColOff);
@@ -4996,24 +5093,24 @@ namespace flex
 		}
 	}
 
-	i32 PluggablesSystem::GetReceivedSignal(GameObject* gameObject)
+	i32 PluggablesSystem::GetReceivedSignal(Socket* socket)
 	{
 		i32 result = -1;
 		for (Wire* wire : wires)
 		{
-			if (wire->gameObject0 == gameObject)
+			if (wire->socket0 == socket)
 			{
-				if (wire->gameObject1)
+				if (wire->socket1)
 				{
-					i32 sendSignal = wire->gameObject1SlotIdx < (i32)wire->gameObject1->outputSignals.size() ? wire->gameObject1->outputSignals[wire->gameObject1SlotIdx] : -1;
+					i32 sendSignal = wire->socket1->parent->outputSignals[wire->socket1->slotIdx];
 					result = glm::max(result, sendSignal);
 				}
 			}
-			else if (wire->gameObject1 == gameObject)
+			else if (wire->socket1 == socket)
 			{
-				if (wire->gameObject0)
+				if (wire->socket0)
 				{
-					i32 sendSignal = wire->gameObject0SlotIdx < (i32)wire->gameObject0->outputSignals.size() ? wire->gameObject0->outputSignals[wire->gameObject0SlotIdx] : -1;
+					i32 sendSignal = wire->socket0->parent->outputSignals[wire->socket0->slotIdx];
 					result = glm::max(result, sendSignal);
 				}
 			}
@@ -5021,53 +5118,110 @@ namespace flex
 		return result;
 	}
 
-	Wire* PluggablesSystem::AddWire(GameObject* gameObject0 /* = nullptr */, GameObject* gameObject1 /* = nullptr */)
+	Wire* PluggablesSystem::AddWire(Socket* socket0 /* = nullptr */, Socket* socket1 /* = nullptr */)
 	{
 		Wire* newWire = new Wire(g_SceneManager->CurrentScene()->GetUniqueObjectName("wire_", 3));
-		newWire->gameObject0 = gameObject0;
-		newWire->gameObject1 = gameObject1;
+		newWire->socket0 = socket0;
+		newWire->socket1 = socket1;
 		wires.push_back(newWire);
-		if (gameObject0)
+		if (socket0)
 		{
-			gameObject0->OnConnectionMade(newWire);
+			//socket0->OnConnectionMade(newWire);
 		}
-		if (gameObject1)
+		if (socket1)
 		{
-			gameObject1->OnConnectionMade(newWire);
+			//socket1->OnConnectionMade(newWire);
 		}
 
 		return newWire;
 	}
 
-	bool PluggablesSystem::RemovePluggable(GameObject* gameObject)
+	bool PluggablesSystem::DestroySocket(Socket* socket)
 	{
 		for (auto iter = wires.begin(); iter != wires.end(); ++iter)
 		{
 			Wire* wire = *iter;
-			if (wire->gameObject0 == gameObject)
+			if (wire->socket0 == socket)
 			{
-				wire->gameObject0->OnConnectionBroke(wire);
-				wire->gameObject0 = nullptr;
-				if (wire->gameObject1 == nullptr)
+				//wire->socket0->OnConnectionBroke(wire);
+				RemoveSocket(wire->socket0);
+				wire->socket0 = nullptr;
+				if (wire->socket1 == nullptr)
 				{
-					delete wire;
+					g_SceneManager->CurrentScene()->DestroyGameObject(wire, true);
 					wires.erase(iter);
 				}
 				return true;
 			}
-			if (wire->gameObject1 == gameObject)
+			if (wire->socket1 == socket)
 			{
-				wire->gameObject1->OnConnectionBroke(wire);
-				wire->gameObject1 = nullptr;
-				if (wire->gameObject0 == nullptr)
+				//wire->socket1->OnConnectionBroke(wire);
+				RemoveSocket(wire->socket1);
+				wire->socket1 = nullptr;
+				if (wire->socket0 == nullptr)
 				{
-					delete wire;
+					g_SceneManager->CurrentScene()->DestroyGameObject(wire, true);
 					wires.erase(iter);
 				}
 				return true;
 			}
 		}
 		return false;
+	}
+
+	bool PluggablesSystem::RemoveSocket(Socket* socket)
+	{
+		for (auto iter = sockets.begin(); iter != sockets.end(); ++iter)
+		{
+			if (*iter == socket)
+			{
+				sockets.erase(iter);
+				return true;
+			}
+		}
+		return false;
+	}
+
+	bool PluggablesSystem::DestroyWire(Wire* wire)
+	{
+		for (auto iter = wires.begin(); iter != wires.end(); ++iter)
+		{
+			if (*iter == wire)
+			{
+				BaseScene* scene = g_SceneManager->CurrentScene();
+				if (wire->socket0 != nullptr)
+				{
+					RemoveSocket(wire->socket0);
+					scene->DestroyGameObject(wire->socket0, true);
+				}
+				if (wire->socket1 != nullptr)
+				{
+					RemoveSocket(wire->socket1);
+					scene->DestroyGameObject(wire->socket1, true);
+				}
+				scene->DestroyGameObject(wire, true);
+
+				wires.erase(iter);
+
+				return true;
+			}
+		}
+		return false;
+	}
+
+
+	Socket* PluggablesSystem::AddSocket(const std::string& name, i32 slotIdx /* = 0 */, Wire* connectedWire /* = nullptr */)
+	{
+		Socket* newSocket = new Socket(name);
+		newSocket->slotIdx = slotIdx;
+		newSocket->connectedWire = connectedWire;
+		sockets.push_back(newSocket);
+		//if (socket1)
+		{
+			//socket1->OnConnectionMade(newWire);
+		}
+
+		return newSocket;
 	}
 
 	Wire::Wire(const std::string& name) :
@@ -5078,6 +5232,11 @@ namespace flex
 		endPoint = glm::vec3(1.0f, 1.0f, 0.0f);
 	}
 
+	void Wire::Destroy()
+	{
+		g_PluggablesSystem->DestroyWire(this);
+	}
+
 	void Wire::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		UNREFERENCED_PARAMETER(scene);
@@ -5086,23 +5245,174 @@ namespace flex
 		JSONObject obj = parentObject.GetObject("wire");
 		obj.SetVec3Checked("startPoint", startPoint);
 		obj.SetVec3Checked("endPoint", endPoint);
-		obj.SetIntChecked("gameObject0SlotIdx", gameObject0SlotIdx);
-		obj.SetIntChecked("gameObject1SlotIdx", gameObject1SlotIdx);
-
 	}
 
 	void Wire::SerializeUniqueFields(JSONObject& parentObject) const
 	{
-		JSONObject terminalObj = {};
+		JSONObject obj = {};
 
-		terminalObj.fields.emplace_back("startPoint", JSONValue(VecToString(startPoint)));
-		terminalObj.fields.emplace_back("endPoint", JSONValue(VecToString(endPoint)));
-		terminalObj.fields.emplace_back("gameObject0SlotIdx", JSONValue(gameObject0SlotIdx));
-		terminalObj.fields.emplace_back("gameObject1SlotIdx", JSONValue(gameObject1SlotIdx));
+		obj.fields.emplace_back("startPoint", JSONValue(VecToString(startPoint)));
+		obj.fields.emplace_back("endPoint", JSONValue(VecToString(endPoint)));
 
-		// TODO: Serialize connected object refernces once ObjectIDs are in
+		parentObject.fields.emplace_back("wire", JSONValue(obj));
+	}
 
-		parentObject.fields.emplace_back("wire", JSONValue(terminalObj));
+	void Wire::PlugIn(Socket* socket)
+	{
+		if (socket0 == nullptr)
+		{
+			socket0 = socket;
+		}
+		else if (socket1 == nullptr)
+		{
+			socket1 = socket;
+		}
+		else
+		{
+			PrintError("Attempted to plug in to full socket!\n");
+		}
+	}
+
+	void Wire::Unplug(Socket* socket)
+	{
+		if (socket == socket0)
+		{
+			socket0 = nullptr;
+		}
+		else if (socket == socket1)
+		{
+			socket1 = nullptr;
+		}
+		else
+		{
+			PrintError("Attempted to unplug socket that wasn't connected to wire\n");
+		}
+	}
+
+	bool Wire::AllowInteractionWith(GameObject* gameObject)
+	{
+		switch (gameObject->GetType())
+		{
+		case GameObjectType::SOCKET:
+		{
+			return true;
+		} break;
+		}
+
+		return (socket0 == nullptr && socket1 == nullptr);
+	}
+
+	void Wire::SetInteractingWith(GameObject* gameObject)
+	{
+		GameObject::SetInteractingWith(gameObject);
+	}
+
+	Socket::Socket(const std::string& name) :
+		GameObject(name, GameObjectType::SOCKET)
+	{
+		m_bInteractable = true;
+	}
+
+	void Socket::Destroy()
+	{
+		g_PluggablesSystem->DestroySocket(this);
+	}
+
+	void Socket::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	{
+		UNREFERENCED_PARAMETER(scene);
+		UNREFERENCED_PARAMETER(matIDs);
+
+		JSONObject obj = parentObject.GetObject("socket");
+		obj.SetIntChecked("slotIdx", slotIdx);
+
+		// TODO: Serialize parent & wire reference once ObjectIDs are in
+
+	}
+
+	void Socket::SerializeUniqueFields(JSONObject& parentObject) const
+	{
+		JSONObject obj = {};
+
+		obj.fields.emplace_back("slotIdx", JSONValue(slotIdx));
+
+		// TODO: Serialize parent & wire reference once ObjectIDs are in
+
+		parentObject.fields.emplace_back("socket", JSONValue(obj));
+	}
+
+	bool Socket::AllowInteractionWith(GameObject* gameObject)
+	{
+		switch (gameObject->GetType())
+		{
+		case GameObjectType::PLAYER:
+		{
+			Player* player = (Player*)gameObject;
+			if (player->m_HeldItem != nullptr)
+			{
+				return (player->m_HeldItem->GetType() == GameObjectType::WIRE);
+			}
+			else
+			{
+				return (connectedWire != nullptr);
+			}
+		} break;
+		}
+
+		return true;
+	}
+
+	void Socket::SetInteractingWith(GameObject* gameObject)
+	{
+		if (gameObject == nullptr)
+		{
+			if (connectedWire != nullptr)
+			{
+				connectedWire->Unplug(this);
+				connectedWire = nullptr;
+			}
+			return;
+		}
+
+		switch (gameObject->GetType())
+		{
+		case GameObjectType::PLAYER:
+		{
+			Player* player = (Player*)gameObject;
+			if (player->m_HeldItem != nullptr)
+			{
+				if (player->m_HeldItem->GetType() == GameObjectType::WIRE)
+				{
+					Wire* wire = (Wire*)player->m_HeldItem;
+					if (connectedWire == nullptr)
+					{
+						connectedWire = wire;
+						wire->PlugIn(this);
+					}
+					else
+					{
+						wire->Unplug(this);
+						connectedWire = nullptr;
+					}
+				}
+
+			}
+			else
+			{
+				if (connectedWire != nullptr)
+				{
+					connectedWire->Unplug(this);
+					connectedWire->SetInteractingWith(player);
+					player->m_HeldItem = connectedWire;
+					connectedWire = nullptr;
+				}
+			}
+		} break;
+		default:
+		{
+			GameObject::SetInteractingWith(gameObject);
+		} break;
+		}
 	}
 
 	Terminal::Terminal() :
@@ -5284,7 +5594,7 @@ namespace flex
 			}
 		}
 
-		if (m_bNearbyInteractable)
+		if (m_NearbyInteractable != nullptr)
 		{
 			const real scale = 2.0f;
 			const glm::vec3 right = m_Transform.GetRight();
@@ -5529,17 +5839,20 @@ namespace flex
 			return true;
 		}
 
-		Player* player = dynamic_cast<Player*>(gameObject);
-		if (player != nullptr)
+		if (gameObject->GetType() == GameObjectType::PLAYER)
 		{
-			Transform* playerTransform = player->GetTransform();
-			glm::vec3 dPos = m_Transform.GetWorldPosition() - playerTransform->GetWorldPosition();
-			real FoP = glm::dot(m_Transform.GetForward(), glm::normalize(dPos));
-			real FoF = glm::dot(m_Transform.GetForward(), playerTransform->GetForward());
-			// Ensure player is looking our direction and in front of us
-			if (FoF < -0.15f && FoP < -0.35f)
+			Player* player = static_cast<Player*>(gameObject);
+			if (player->m_HeldItem == nullptr)
 			{
-				return true;
+				Transform* playerTransform = player->GetTransform();
+				glm::vec3 dPos = m_Transform.GetWorldPosition() - playerTransform->GetWorldPosition();
+				real FoP = glm::dot(m_Transform.GetForward(), glm::normalize(dPos));
+				real FoF = glm::dot(m_Transform.GetForward(), playerTransform->GetForward());
+				// Ensure player is looking our direction and in front of us
+				if (FoF < -0.15f && FoP < -0.35f)
+				{
+					return true;
+				}
 			}
 		}
 

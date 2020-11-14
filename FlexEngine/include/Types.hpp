@@ -107,6 +107,7 @@ namespace flex
 		PARTICLE_SYSTEM,
 		CHUNK_GENERATOR,
 		WIRE,
+		SOCKET,
 
 		_NONE
 	};
@@ -131,6 +132,7 @@ namespace flex
 		"particle system",
 		"chunk generator",
 		"wire",
+		"socket",
 
 		"NONE"
 	};

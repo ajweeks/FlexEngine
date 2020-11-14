@@ -264,6 +264,8 @@ namespace flex
 				ImGui::Unindent();
 			}
 
+			ImGui::Text("Held item: %s", m_HeldItem != nullptr ? m_HeldItem->GetName().c_str() : "");
+
 			ImGui::Text("Inventory:");
 			ImGui::Indent();
 			for (GameObject* gameObject : m_Inventory)
@@ -306,23 +308,26 @@ namespace flex
 	{
 		if (gameObject == nullptr)
 		{
-			Terminal* terminalWasInteractingWith = dynamic_cast<Terminal*>(m_ObjectInteractingWith);
-			if (terminalWasInteractingWith != nullptr)
+			GameObjectType objType = m_ObjectInteractingWith->GetType();
+			switch (objType)
+			{
+			case GameObjectType::TERMINAL:
 			{
 				TerminalCamera* terminalCam = static_cast<TerminalCamera*>(g_CameraManager->CurrentCamera());
 				terminalCam->SetTerminal(nullptr);
-				GameObject::SetInteractingWith(gameObject);
+			} break;
 			}
-			else
-			{
-				GameObject::SetInteractingWith(gameObject);
-			}
+
+			GameObject::SetInteractingWith(gameObject);
 			return;
 		}
 
-		Terminal* terminal = dynamic_cast<Terminal*>(gameObject);
-		if (terminal != nullptr)
+		GameObjectType objType = gameObject->GetType();
+		switch (objType)
 		{
+		case GameObjectType::TERMINAL:
+		{
+			Terminal* terminal = static_cast<Terminal*>(gameObject);
 			m_ObjectInteractingWith = gameObject;
 
 			TerminalCamera* terminalCam = dynamic_cast<TerminalCamera*>(g_CameraManager->CurrentCamera());
@@ -332,10 +337,38 @@ namespace flex
 				g_CameraManager->PushCamera(terminalCam, true, true);
 			}
 			terminalCam->SetTerminal(terminal);
-		}
-		else
+		} break;
+		case GameObjectType::WIRE:
+		{
+			Wire* wire = static_cast<Wire*>(gameObject);
+
+			m_HeldItem = wire;
+		} break;
+		case GameObjectType::SOCKET:
+		{
+			Socket* socket = static_cast<Socket*>(gameObject);
+
+			if (m_HeldItem != nullptr && m_HeldItem->GetType() == GameObjectType::WIRE)
+			{
+				Wire* wire = (Wire*)m_HeldItem;
+				if (wire->socket0 != nullptr && wire->socket1 != nullptr)
+				{
+					wire->SetInteractingWith(nullptr);
+					m_HeldItem = nullptr;
+				}
+			}
+			else
+			{
+				if (socket->connectedWire != nullptr)
+				{
+					m_HeldItem = socket->connectedWire;
+				}
+			}
+		} break;
+		default:
 		{
 			GameObject::SetInteractingWith(gameObject);
+		} break;
 		}
 	}
 
