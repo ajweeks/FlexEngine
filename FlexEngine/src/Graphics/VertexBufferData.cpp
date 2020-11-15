@@ -170,7 +170,7 @@ namespace flex
 		Attributes = 0;
 	}
 
-	void VertexBufferData::Shrink(real minExcess /* = 0.0f */)
+	void VertexBufferData::ShrinkIfExcessGreaterThan(real minExcess /* = 0.0f */)
 	{
 		// Only dynamic buffers can be resized
 		assert(bDynamic);
@@ -377,17 +377,18 @@ namespace flex
 
 		// TODO: Test
 		// TODO: Use smarter hash
-		for (const glm::vec2& pos : info.positions_2D) result += (u32)(pos.x + pos.y);
-		for (const glm::vec3& pos : info.positions_3D) result += (u32)(pos.x + pos.y + pos.z);
-		for (const glm::vec4& pos : info.positions_4D) result += (u32)(pos.x + pos.y + pos.z + pos.w);
-		for (const glm::vec3& v : info.velocities) result += (u32)(v.x + v.y + v.z);
-		for (const glm::vec2& uv : info.texCoords_UV) result += (u32)(uv.x + uv.y);
+		const real scale = 1000.0f; // Inverse of how much a quantity needs to change by to compute a different hash
+		for (const glm::vec2& pos : info.positions_2D) result += (u32)((pos.x + pos.y) * scale);
+		for (const glm::vec3& pos : info.positions_3D) result += (u32)((pos.x + pos.y + pos.z) * scale);
+		for (const glm::vec4& pos : info.positions_4D) result += (u32)((pos.x + pos.y + pos.z + pos.w) * scale);
+		for (const glm::vec3& v : info.velocities) result += (u32)((v.x + v.y + v.z));
+		for (const glm::vec2& uv : info.texCoords_UV) result += (u32)((uv.x + uv.y) * scale);
 		for (i32 i : info.colours_R8G8B8A8) result += (u32)(i);
-		for (const glm::vec4& col : info.colours_R32G32B32A32) result += (u32)(col.x + col.y + col.z + col.w);
-		for (const glm::vec3& pos : info.tangents) result += (u32)(pos.x + pos.y + pos.z);
-		for (const glm::vec3& pos : info.normals) result += (u32)(pos.x + pos.y + pos.z);
+		for (const glm::vec4& col : info.colours_R32G32B32A32) result += (u32)((col.x + col.y + col.z + col.w) * scale);
+		for (const glm::vec3& tangent : info.tangents) result += (u32)((tangent.x + tangent.y + tangent.z) * scale);
+		for (const glm::vec3& normal : info.normals) result += (u32)((normal.x + normal.y + normal.z) * scale);
 
-		for (const glm::vec4& v : info.extraVec4s) result += (u32)(v.x + v.y + v.z + v.w);
+		for (const glm::vec4& v : info.extraVec4s) result += (u32)((v.x + v.y + v.z + v.w) * scale);
 		for (i32 i : info.extraInts) result += (u32)(i);
 
 		return result;

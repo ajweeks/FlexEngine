@@ -42,7 +42,8 @@ namespace flex
 			void Shrink(real minUnused = 0.0f);
 			// TODO: Add defragment helper
 
-			VkDeviceSize SizeOf(VkDeviceSize offset);
+			// Returns size of allocation, or (VkDeviceSize)-1 if not found
+			VkDeviceSize GetAllocationSize(VkDeviceSize offset) const;
 
 			VulkanDevice* m_Device = nullptr;
 			VDeleter<VkBuffer> m_Buffer;

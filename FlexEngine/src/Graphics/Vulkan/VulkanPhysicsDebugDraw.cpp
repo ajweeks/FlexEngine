@@ -142,11 +142,12 @@ namespace flex
 
 				u32 numVerts = lineCount * 2;
 
-				if (m_VertexBufferCreateInfo.positions_3D.capacity() < numVerts)
+				if (m_VertexBufferCreateInfo.positions_3D.capacity() < numVerts && !m_VertexBufferCreateInfo.positions_3D.empty())
 				{
-					m_VertexBufferCreateInfo.positions_3D.resize(numVerts * 2);
-					m_VertexBufferCreateInfo.colours_R32G32B32A32.resize(numVerts * 2);
-					indexBuffer.resize(numVerts * 2);
+					u32 newVertCount = numVerts * 2;
+					m_VertexBufferCreateInfo.positions_3D.resize(newVertCount);
+					m_VertexBufferCreateInfo.colours_R32G32B32A32.resize(newVertCount);
+					indexBuffer.resize(newVertCount);
 				}
 				else
 				{

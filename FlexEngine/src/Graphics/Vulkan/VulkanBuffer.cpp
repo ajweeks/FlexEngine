@@ -219,19 +219,6 @@ namespace flex
 			}
 		}
 
-		VkDeviceSize VulkanBuffer::SizeOf(VkDeviceSize offset)
-		{
-			for (u32 i = 0; i < (u32)allocations.size(); ++i)
-			{
-				if (allocations[i].offset == offset)
-				{
-					return allocations[i].size;
-				}
-			}
-
-			return (VkDeviceSize)-1;
-		}
-
 		void VulkanBuffer::UpdateAllocationSize(VkDeviceSize offset, VkDeviceSize newSize)
 		{
 			for (u32 i = 0; i < (u32)allocations.size(); ++i)
@@ -242,6 +229,19 @@ namespace flex
 					break;
 				}
 			}
+		}
+
+		VkDeviceSize VulkanBuffer::GetAllocationSize(VkDeviceSize offset) const
+		{
+			for (u32 i = 0; i < (u32)allocations.size(); ++i)
+			{
+				if (allocations[i].offset == offset)
+				{
+					return allocations[i].size;
+				}
+			}
+
+			return (VkDeviceSize)-1;
 		}
 	} // namespace vk
 } // namespace flex

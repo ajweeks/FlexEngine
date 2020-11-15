@@ -1936,53 +1936,56 @@ namespace flex
 
 			const u32 newIndexDataSize = (u32)indexData.size() * sizeof(u32);
 
+			// Initial allocation
 			if (renderObject->dynamicVertexBufferOffset == u64_max)
 			{
-				// First upload of data
 				renderObject->dynamicVertexBufferOffset = vertexBuffer->Alloc((VkDeviceSize)vertexBufferData->VertexBufferSize, true);
 				renderObject->dynamicIndexBufferOffset = indexBuffer->Alloc((VkDeviceSize)newIndexDataSize, true);
 			}
 
-			u32 vertCopySize = std::min(vertexBufferData->VertexBufferSize, (u32)vertexBuffer->m_Size);
-			u32 indexCopySize = std::min(newIndexDataSize, (u32)indexBuffer->m_Size);
-			if (vertCopySize < vertexBuffer->m_Size)
+			VkDeviceSize vertSubBufferSize = vertexBuffer->GetAllocationSize(renderObject->dynamicVertexBufferOffset);
+			VkDeviceSize indexSubBufferSize = indexBuffer->GetAllocationSize(renderObject->dynamicIndexBufferOffset);
+			assert(vertSubBufferSize != (VkDeviceSize)-1);
+			assert(indexSubBufferSize != (VkDeviceSize)-1);
+
+			// Resize when growing
+			if (vertexBufferData->VertexBufferSize > vertSubBufferSize)
 			{
 				renderObject->dynamicVertexBufferOffset = vertexBuffer->Realloc(renderObject->dynamicVertexBufferOffset, vertexBufferData->VertexBufferSize, true);
-				// TODO: Handle failed allocs
-				vertCopySize = std::min(vertexBufferData->VertexBufferSize, (u32)vertexBuffer->m_Size);
-			}
-			if (indexCopySize < indexBuffer->m_Size)
-			{
-				renderObject->dynamicIndexBufferOffset = indexBuffer->Realloc(renderObject->dynamicIndexBufferOffset, newIndexDataSize, true);
-				// TODO: Handle failed allocs
-				indexCopySize = std::min(newIndexDataSize, (u32)indexBuffer->m_Size);
+				vertSubBufferSize = vertexBuffer->GetAllocationSize(renderObject->dynamicVertexBufferOffset);
+				assert(vertSubBufferSize != ((VkDeviceSize)-1));
 			}
 
-			VkDeviceSize vertAllocSize = vertexBuffer->SizeOf(renderObject->dynamicVertexBufferOffset);
-			VkDeviceSize indexAllocSize = indexBuffer->SizeOf(renderObject->dynamicIndexBufferOffset);
-			assert(vertAllocSize != ((VkDeviceSize)-1));
-			assert(indexAllocSize != ((VkDeviceSize)-1));
-			real vertExcess = 1.0f - (real)vertexBufferData->UsedVertexBufferSize / vertAllocSize;
-			real indexExcess = 1.0f - (real)indexCopySize / indexAllocSize;
+			if (newIndexDataSize > (u32)indexSubBufferSize)
+			{
+				renderObject->dynamicIndexBufferOffset = indexBuffer->Realloc(renderObject->dynamicIndexBufferOffset, newIndexDataSize, true);
+				indexSubBufferSize = indexBuffer->GetAllocationSize(renderObject->dynamicIndexBufferOffset);
+				assert(indexSubBufferSize != ((VkDeviceSize)-1));
+			}
+
+			// Shrink
+			real vertExcess = 1.0f - (real)vertexBufferData->UsedVertexBufferSize / vertSubBufferSize;
+			real indexExcess = 1.0f - (real)indexSubBufferSize / indexSubBufferSize;
 			if (vertExcess > 0.5f || indexExcess > 0.5f)
 			{
 				vertexBuffer->Realloc(renderObject->dynamicVertexBufferOffset, vertexBufferData->UsedVertexBufferSize, true);
-				indexBuffer->Realloc(renderObject->dynamicIndexBufferOffset, indexCopySize, true);
+				indexBuffer->Realloc(renderObject->dynamicIndexBufferOffset, indexSubBufferSize, true);
 				ShrinkDynamicVertexData(renderID);
 
+				// TODO: Jikes, fix me?
 				vkDeviceWaitIdle(m_VulkanDevice->m_LogicalDevice);
 			}
 
 			VkDeviceSize vertOffset = renderObject->dynamicVertexBufferOffset;
 			VkDeviceSize indexOffset = renderObject->dynamicIndexBufferOffset;
 
-			assert((vertOffset + vertCopySize) <= vertexBuffer->m_Size);
-			assert((indexOffset + indexCopySize) <= indexBuffer->m_Size);
+			assert((vertOffset + vertSubBufferSize) <= vertexBuffer->m_Size);
+			assert((indexOffset + indexSubBufferSize) <= indexBuffer->m_Size);
 
-			VK_CHECK_RESULT(vertexBuffer->Map(vertOffset, vertCopySize));
-			VK_CHECK_RESULT(indexBuffer->Map(indexOffset, indexCopySize));
-			memcpy(vertexBuffer->m_Mapped, vertexBufferData->vertexData, vertCopySize);
-			memcpy(indexBuffer->m_Mapped, indexData.data(), indexCopySize);
+			VK_CHECK_RESULT(vertexBuffer->Map(vertOffset, vertSubBufferSize));
+			VK_CHECK_RESULT(indexBuffer->Map(indexOffset, indexSubBufferSize));
+			memcpy(vertexBuffer->m_Mapped, vertexBufferData->vertexData, vertSubBufferSize);
+			memcpy(indexBuffer->m_Mapped, indexData.data(), indexSubBufferSize);
 			vertexBuffer->Unmap();
 			indexBuffer->Unmap();
 
@@ -2058,7 +2061,7 @@ namespace flex
 			VertexIndexBufferPair* vertexIndexBufferPair = m_DynamicVertexIndexBufferPairs[mat.material.dynamicVertexIndexBufferIndex].second;
 			VulkanBuffer* vertexBuffer = vertexIndexBufferPair->vertexBuffer;
 
-			return (u32)vertexBuffer->SizeOf(renderObject->dynamicVertexBufferOffset);
+			return (u32)vertexBuffer->GetAllocationSize(renderObject->dynamicVertexBufferOffset);
 		}
 
 		void VulkanRenderer::DrawImGuiForRenderObject(RenderID renderID)
@@ -7931,11 +7934,11 @@ namespace flex
 						if (drawCallInfo == nullptr ||
 							!drawCallInfo->bRenderingShadows)
 						{
-							vkCmdDraw(commandBuffer, renderObject->vertexBufferData->VertexCount, 1, renderObject->vertexOffset, 0);
+							vkCmdDraw(commandBuffer, renderObject->vertexBufferData->UsedVertexCount, 1, renderObject->vertexOffset, 0);
 						}
 						else
 						{
-							vkCmdDraw(commandBuffer, renderObject->vertexBufferData->VertexCount, 1, renderObject->shadowVertexOffset, 0);
+							vkCmdDraw(commandBuffer, renderObject->vertexBufferData->UsedVertexCount, 1, renderObject->shadowVertexOffset, 0);
 						}
 					}
 				}

@@ -86,7 +86,7 @@ namespace flex
 	void MeshComponent::UpdateDynamicVertexData(const VertexBufferDataCreateInfo& newData, const std::vector<u32>& indexData)
 	{
 		m_VertexBufferData.UpdateData(newData);
-		m_VertexBufferData.Shrink(0.5f);
+		m_VertexBufferData.ShrinkIfExcessGreaterThan(0.5f);
 		m_Indices = indexData;
 		g_Renderer->UpdateDynamicVertexData(renderID, &m_VertexBufferData, indexData);
 	}
