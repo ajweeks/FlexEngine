@@ -7371,8 +7371,8 @@ namespace flex
 				u32 i = 0;
 				for (JSONObject& constraintObj : constraintsArr)
 				{
-					u32 index0 = constraintObj.GetUInt("index 0");
-					u32 index1 = constraintObj.GetUInt("index 1");
+					i32 index0 = constraintObj.GetInt("index 0");
+					i32 index1 = constraintObj.GetInt("index 1");
 					real stiffness = constraintObj.GetFloat("stiffness");
 					Constraint::Type type = (Constraint::Type)constraintObj.GetInt("type");
 
