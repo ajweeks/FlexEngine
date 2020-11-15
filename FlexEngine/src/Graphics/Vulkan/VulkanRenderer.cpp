@@ -1700,7 +1700,8 @@ namespace flex
 			Renderer::Update();
 
 			// NOTE: This doesn't respect TAA jitter!
-			m_SpritePerspPushConstBlock->SetData(g_CameraManager->CurrentCamera()->GetView(), g_CameraManager->CurrentCamera()->GetProjection());
+			BaseCamera* cam = g_CameraManager->CurrentCamera();
+			m_SpritePerspPushConstBlock->SetData(cam->GetView(), cam->GetProjection());
 
 			if (m_bSSAOStateChanged)
 			{
@@ -1752,7 +1753,7 @@ namespace flex
 				m_TimestampQueryNames.clear();
 			}
 
-			m_LastFrameViewProj = g_CameraManager->CurrentCamera()->GetViewProjection();
+			m_LastFrameViewProj = cam->GetViewProjection();
 		}
 
 		void VulkanRenderer::Draw()
@@ -9327,9 +9328,10 @@ namespace flex
 				return; // There are no dynamic uniforms to update
 			}
 
-			glm::mat4 projection = g_CameraManager->CurrentCamera()->GetProjection();
-			glm::mat4 view = g_CameraManager->CurrentCamera()->GetView();
-			glm::mat4 viewProj = projection * view;
+			BaseCamera* cam = g_CameraManager->CurrentCamera();
+			glm::mat4 projection = cam->GetProjection();
+			glm::mat4 view = cam->GetView();
+			glm::mat4 viewProj = cam->GetViewProjection();
 			glm::vec4 colourMultiplier = material.material.colourMultiplier;
 			u32 enableAlbedoSampler = material.material.enableAlbedoSampler;
 			u32 enableMetallicSampler = material.material.enableMetallicSampler;

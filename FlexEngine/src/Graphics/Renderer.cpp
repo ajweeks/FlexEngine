@@ -3195,6 +3195,8 @@ namespace flex
 
 	glm::mat4 Renderer::GetPostProcessingMatrix() const
 	{
+		// TODO: OPTIMIZATION: Cache result
+
 		glm::mat4 contrastBrightnessSaturation;
 		real sat = m_PostProcessSettings.saturation;
 		glm::vec3 brightness = m_PostProcessSettings.brightness;
