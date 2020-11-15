@@ -1109,22 +1109,27 @@ namespace flex
 
 	std::string BaseScene::GetUniqueObjectName(const std::string& prefix, i16 digits)
 	{
-		std::string result = prefix;
+		const std::vector<GameObject*> allObjects = GetAllObjects();
 
-		i32 existingCount = 0;
-		std::vector<GameObject*> allObjects = GetAllObjects();
-		for (GameObject* gameObject : allObjects)
+		i32 newIndex = 0;
+		bool bNameTaken = true;
+		while (bNameTaken)
 		{
-			std::string s = gameObject->GetName();
-			if (StartsWith(s, prefix))
+			bNameTaken = false;
+			std::string suffix = IntToString(newIndex, digits);
+			std::string name = prefix + suffix;
+			for (const GameObject* gameObject : allObjects)
 			{
-				existingCount++;
+				if (gameObject->GetName() == name)
+				{
+					bNameTaken = true;
+					++newIndex;
+					break;
+				}
 			}
 		}
 
-		result += IntToString(existingCount, digits);
-
-		return result;
+		return prefix + IntToString(newIndex, digits);
 	}
 
 	void BaseScene::DestroyObjectAtEndOfFrame(GameObject* obj)
