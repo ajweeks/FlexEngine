@@ -999,6 +999,12 @@ namespace flex
 				g_Renderer->LoadSettingsFromDisk();
 			}
 
+			bool bShowGrid = g_Editor->IsShowingGrid();
+			if (ImGui::Checkbox("Show grid", &bShowGrid))
+			{
+				g_Editor->SetShowGrid(bShowGrid);
+			}
+
 			if (ImGui::Button("Recapture reflection probe"))
 			{
 				g_Renderer->RecaptureReflectionProbe();
