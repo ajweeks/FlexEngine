@@ -7186,6 +7186,8 @@ namespace flex
 	{
 		GameObject::Update();
 
+		PROFILE_BEGIN("PBD Update");
+
 		if (!m_bPaused || m_bSingleStep)
 		{
 			ms now = Time::CurrentMilliseconds();
@@ -7310,6 +7312,9 @@ namespace flex
 			m_LastUpdateTime += iterationCount * TIMESTEP;
 			m_AccumulatedSec += (iterationCount * TIMESTEP) / 1000.0f;
 		}
+
+		PROFILE_END("PBD Update");
+		m_UpdateDuration = Profiler::GetBlockDuration("PBD Update");
 
 		Draw();
 	}
@@ -7490,5 +7495,8 @@ namespace flex
 			m_bPaused = true;
 			m_LastUpdateTime = Time::CurrentMilliseconds();
 		}
+
+		ImGui::Text("%.2fms", m_UpdateDuration);
+
 	}
 } // namespace flex
