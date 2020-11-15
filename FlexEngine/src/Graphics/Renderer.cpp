@@ -2046,7 +2046,7 @@ namespace flex
 					} break;
 					case GameObjectType::SOFT_BODY:
 					{
-						SoftBody* softBody = new SoftBody();
+						SoftBody* softBody = new SoftBody(newObjectName);
 						g_SceneManager->CurrentScene()->AddRootObject(softBody);
 
 						softBody->Initialize();

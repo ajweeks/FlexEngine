@@ -215,7 +215,7 @@ namespace flex
 		} break;
 		case GameObjectType::SOFT_BODY:
 		{
-			newGameObject = new SoftBody();
+			newGameObject = new SoftBody(objectName);
 		} break;
 		case GameObjectType::OBJECT: // Fall through
 		case GameObjectType::_NONE:
@@ -7160,10 +7160,58 @@ namespace flex
 	{
 	}
 
-	SoftBody::SoftBody() :
-		GameObject("SoftBody", GameObjectType::SOFT_BODY),
+	SoftBody::SoftBody(const std::string& name) :
+		GameObject(name, GameObjectType::SOFT_BODY),
 		m_SolverIterationCount(4) // Default, gets overridden in ParseUniqueFields
 	{
+	}
+
+	GameObject* SoftBody::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
+	{
+		size_t underscore = m_Name.find('_');
+		std::string namePrefix = underscore == std::string::npos ? m_Name : m_Name.substr(0, underscore + 1);
+		SoftBody* newSoftBody = new SoftBody(g_SceneManager->CurrentScene()->GetUniqueObjectName(namePrefix, 3));
+
+		CopyGenericFields(newSoftBody, parent, bCopyChildren);
+
+		newSoftBody->points.resize(points.size());
+		newSoftBody->constraints.resize(constraints.size());
+		newSoftBody->initialPositions.resize(initialPositions.size());
+
+		glm::vec3 deltaPos = m_Transform.GetWorldPosition() - initialPositions[0];
+		for (u32 i = 0; i < (u32)initialPositions.size(); ++i)
+		{
+			newSoftBody->initialPositions[i] = initialPositions[i] + deltaPos;
+		}
+
+		for (u32 i = 0; i < (u32)points.size(); ++i)
+		{
+			newSoftBody->points[i] = new Point(initialPositions[i], VEC3_ZERO, points[i]->invMass);
+		}
+
+		for (u32 i = 0; i < (u32)constraints.size(); ++i)
+		{
+			switch (constraints[i]->type)
+			{
+			case Constraint::Type::DISTANCE:
+			{
+				DistanceConstraint* distanceConstraint = (DistanceConstraint*)constraints[i];
+				newSoftBody->constraints[i] = new DistanceConstraint(constraints[i]->pointIndices[0], constraints[i]->pointIndices[1], constraints[i]->stiffness, distanceConstraint->targetDistance);
+			} break;
+			default:
+			{
+				PrintError("Unhandled constraint type in SoftBody::CopySelfAndAddToScene\n");
+			} break;
+			}
+		}
+
+		newSoftBody->m_SolverIterationCount = m_SolverIterationCount;
+
+		newSoftBody->m_bRender = m_bRender;
+
+		newSoftBody->GetTransform()->SetWorldPosition(newSoftBody->points[0]->pos);
+
+		return newSoftBody;
 	}
 
 	void SoftBody::Initialize()
@@ -7174,7 +7222,6 @@ namespace flex
 	void SoftBody::Destroy()
 	{
 		points.clear();
-		predictedPositions.clear();
 
 		for (Constraint* constraint : constraints)
 		{
@@ -7187,7 +7234,7 @@ namespace flex
 	{
 		GameObject::Update();
 
-		PROFILE_BEGIN("SoftBody Update");
+		//PROFILE_BEGIN("SoftBody Update");
 
 		if (!m_bPaused || m_bSingleStep)
 		{
@@ -7201,17 +7248,20 @@ namespace flex
 
 			m_bSingleStep = false;
 
-			points[0]->pos = m_Transform.GetWorldPosition();
+			if (m_bRender)
+			{
+				points[0]->pos = m_Transform.GetWorldPosition();
+			}
 
 			u32 fixedUpdateCount = glm::min((u32)(elapsed / FIXED_UPDATE_TIMESTEP), MAX_UPDATE_COUNT);
+
+			std::vector<glm::vec3> predictedPositions(points.size());
 
 			for (u32 updateIteration = 0; updateIteration < fixedUpdateCount; ++updateIteration)
 			{
 				const sec dt = FIXED_UPDATE_TIMESTEP / 1000.0f;
 
 				std::vector<Constraint*> collisionConstraints;
-
-				predictedPositions.resize(points.size());
 
 				glm::vec3 globalExternalForces = glm::vec3(0.0f, -9.81f, 0.0f); // Just gravity for now
 
@@ -7311,12 +7361,15 @@ namespace flex
 			m_AccumulatedSec += (fixedUpdateCount * FIXED_UPDATE_TIMESTEP) / 1000.0f;
 		}
 
-		PROFILE_END("SoftBody Update");
-		m_UpdateDuration = Profiler::GetBlockDuration("SoftBody Update");
+		//PROFILE_END("SoftBody Update");
+		//m_UpdateDuration = Profiler::GetBlockDuration("SoftBody Update");
 
-		m_Transform.SetWorldPosition(points[0]->pos);
+		if (m_bRender)
+		{
+			m_Transform.SetWorldPosition(points[0]->pos);
 
-		Draw();
+			Draw();
+		}
 	}
 
 	void SoftBody::Draw()
@@ -7502,5 +7555,13 @@ namespace flex
 
 		ImGui::Text("%.2fms", m_UpdateDuration);
 
+		if (ImGui::Checkbox("Render", &m_bRender))
+		{
+			std::vector<SoftBody*> softBodies = g_SceneManager->CurrentScene()->GetObjectsOfType<SoftBody>();
+			for (SoftBody* softBody : softBodies)
+			{
+				softBody->m_bRender = m_bRender;
+			}
+		}
 	}
 } // namespace flex

@@ -1062,7 +1062,9 @@ namespace flex
 	class SoftBody : public GameObject
 	{
 	public:
-		SoftBody();
+		SoftBody(const std::string& name);
+
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
 
 		virtual void Initialize() override;
 		virtual void Destroy() override;
@@ -1082,6 +1084,7 @@ namespace flex
 		u32 m_SolverIterationCount;
 		bool m_bPaused = false;
 		bool m_bSingleStep = false;
+		bool m_bRender = true;
 
 		ms m_LastUpdateTime;
 		sec m_AccumulatedSec = 0.0f;
@@ -1089,7 +1092,6 @@ namespace flex
 
 		std::vector<Point*> points;
 		std::vector<Constraint*> constraints;
-		std::vector<glm::vec3> predictedPositions;
 
 		std::vector<glm::vec3> initialPositions;
 
