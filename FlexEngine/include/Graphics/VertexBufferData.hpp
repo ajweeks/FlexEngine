@@ -32,7 +32,7 @@ namespace flex
 		void UpdateData(const VertexBufferDataCreateInfo& createInfo);
 		void Destroy();
 
-		void Shrink(real minExcess = 0.0f);
+		void ShrinkIfExcessGreaterThan(real minExcess = 0.0f);
 
 		// Copies data from this buffer into dst for each given attribute
 		// If this buffer doesn't contain a given attribute, default values will be used
