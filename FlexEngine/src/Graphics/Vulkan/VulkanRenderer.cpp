@@ -1968,8 +1968,14 @@ namespace flex
 			real indexExcess = 1.0f - (real)indexSubBufferSize / indexSubBufferSize;
 			if (vertExcess > 0.5f || indexExcess > 0.5f)
 			{
-				vertexBuffer->Realloc(renderObject->dynamicVertexBufferOffset, vertexBufferData->UsedVertexBufferSize, true);
-				indexBuffer->Realloc(renderObject->dynamicIndexBufferOffset, indexSubBufferSize, true);
+				renderObject->dynamicVertexBufferOffset = vertexBuffer->Realloc(renderObject->dynamicVertexBufferOffset, vertexBufferData->UsedVertexBufferSize, true);
+				vertSubBufferSize = vertexBuffer->GetAllocationSize(renderObject->dynamicVertexBufferOffset);
+				assert(vertSubBufferSize != ((VkDeviceSize)-1));
+
+				renderObject->dynamicIndexBufferOffset = indexBuffer->Realloc(renderObject->dynamicIndexBufferOffset, indexSubBufferSize, true);
+				indexSubBufferSize = indexBuffer->GetAllocationSize(renderObject->dynamicIndexBufferOffset);
+				assert(indexSubBufferSize != ((VkDeviceSize)-1));
+
 				ShrinkDynamicVertexData(renderID);
 
 				// TODO: Jikes, fix me?
