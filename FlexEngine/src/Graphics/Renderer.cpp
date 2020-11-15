@@ -2038,15 +2038,15 @@ namespace flex
 							g_SceneManager->CurrentScene()->AddRootObject(socket);
 						}
 					} break;
-					case GameObjectType::PBD:
+					case GameObjectType::SOFT_BODY:
 					{
-						PBD* pbd = new PBD();
-						g_SceneManager->CurrentScene()->AddRootObject(pbd);
+						SoftBody* softBody = new SoftBody();
+						g_SceneManager->CurrentScene()->AddRootObject(softBody);
 
-						pbd->Initialize();
-						pbd->PostInitialize();
+						softBody->Initialize();
+						softBody->PostInitialize();
 
-						g_Editor->SetSelectedObject(pbd);
+						g_Editor->SetSelectedObject(softBody);
 					} break;
 					default:
 						PrintWarn("Unhandled game object type %s\n", GameObjectTypeStrings[(i32)m_NewObjectImGuiSelectedType]);

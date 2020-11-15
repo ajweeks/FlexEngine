@@ -108,7 +108,7 @@ namespace flex
 		CHUNK_GENERATOR,
 		WIRE,
 		SOCKET,
-		PBD,
+		SOFT_BODY,
 
 		// NOTE: New entries need to also be added to GameObjectTypeStrings below, Renderer::DoCreateGameObjectButton, and GameObject::CreateObjectFromJSON
 
@@ -136,7 +136,7 @@ namespace flex
 		"chunk generator",
 		"wire",
 		"socket",
-		"pbd",
+		"soft body",
 
 		"NONE"
 	};

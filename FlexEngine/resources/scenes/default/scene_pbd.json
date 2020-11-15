@@ -66,14 +66,14 @@
 			}
 		},
 		{
-			"name" : "PBD",
-			"type" : "pbd",
+			"name" : "SoftBody",
+			"type" : "soft body",
 			"visible" : true,
 			"casts shadow" : true,
 			"transform" : 
 			{
 			},
-			"pbd" : 
+			"soft body" : 
 			{
 				"solver iteration count" : 32,
 				"points" : 

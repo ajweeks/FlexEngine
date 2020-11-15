@@ -60,7 +60,7 @@ namespace flex
 	AudioCue GameObject::s_SqueakySounds;
 	AudioSourceID GameObject::s_BunkSound;
 
-	ms PBD::TIMESTEP = 1000.0f / 60.0f;
+	ms SoftBody::TIMESTEP = 1000.0f / 60.0f;
 
 	static ThreadSafeArray<GerstnerWave::WaveGenData>* workQueue = nullptr;
 
@@ -212,9 +212,9 @@ namespace flex
 		{
 			newGameObject = g_PluggablesSystem->AddSocket(objectName);
 		} break;
-		case GameObjectType::PBD:
+		case GameObjectType::SOFT_BODY:
 		{
-			newGameObject = new PBD();
+			newGameObject = new SoftBody();
 		} break;
 		case GameObjectType::OBJECT: // Fall through
 		case GameObjectType::_NONE:
@@ -7159,18 +7159,18 @@ namespace flex
 	{
 	}
 
-	PBD::PBD() :
-		GameObject("PBD", GameObjectType::PBD),
+	SoftBody::SoftBody() :
+		GameObject("SoftBody", GameObjectType::SOFT_BODY),
 		m_SolverIterationCount(4) // Default, gets overridden in ParseUniqueFields
 	{
 	}
 
-	void PBD::Initialize()
+	void SoftBody::Initialize()
 	{
 		m_LastUpdateTime = Time::CurrentMilliseconds();
 	}
 
-	void PBD::Destroy()
+	void SoftBody::Destroy()
 	{
 		points.clear();
 		predictedPositions.clear();
@@ -7182,11 +7182,11 @@ namespace flex
 		constraints.clear();
 	}
 
-	void PBD::Update()
+	void SoftBody::Update()
 	{
 		GameObject::Update();
 
-		PROFILE_BEGIN("PBD Update");
+		PROFILE_BEGIN("SoftBody Update");
 
 		if (!m_bPaused || m_bSingleStep)
 		{
@@ -7313,13 +7313,13 @@ namespace flex
 			m_AccumulatedSec += (iterationCount * TIMESTEP) / 1000.0f;
 		}
 
-		PROFILE_END("PBD Update");
-		m_UpdateDuration = Profiler::GetBlockDuration("PBD Update");
+		PROFILE_END("SoftBody Update");
+		m_UpdateDuration = Profiler::GetBlockDuration("SoftBody Update");
 
 		Draw();
 	}
 
-	void PBD::Draw()
+	void SoftBody::Draw()
 	{
 		PhysicsDebugDrawBase* debugDrawer = g_Renderer->GetDebugDrawer();
 		for (Point* point : points)
@@ -7334,18 +7334,18 @@ namespace flex
 		}
 	}
 
-	void PBD::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void SoftBody::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		UNREFERENCED_PARAMETER(matIDs);
 		UNREFERENCED_PARAMETER(scene);
 
-		JSONObject pbdObject;
-		if (parentObject.SetObjectChecked("pbd", pbdObject))
+		JSONObject softBodyObject;
+		if (parentObject.SetObjectChecked("soft body", softBodyObject))
 		{
-			pbdObject.SetUIntChecked("solver iteration count", m_SolverIterationCount);
+			softBodyObject.SetUIntChecked("solver iteration count", m_SolverIterationCount);
 
 			std::vector<JSONObject> pointsArr;
-			if (pbdObject.SetObjectArrayChecked("points", pointsArr))
+			if (softBodyObject.SetObjectArrayChecked("points", pointsArr))
 			{
 				points.resize(pointsArr.size());
 				initialPositions.resize(pointsArr.size());
@@ -7364,7 +7364,7 @@ namespace flex
 			}
 
 			std::vector<JSONObject> constraintsArr;
-			if (pbdObject.SetObjectArrayChecked("constraints", constraintsArr))
+			if (softBodyObject.SetObjectArrayChecked("constraints", constraintsArr))
 			{
 				constraints.resize(constraintsArr.size());
 
@@ -7382,7 +7382,7 @@ namespace flex
 						if (constraints[j]->pointIndices[0] == index0 &&
 							constraints[j]->pointIndices[1] == index1)
 						{
-							PrintWarn("Duplicate PBD constraint found! (point indices %u & %u)\n", index0, index1);
+							PrintWarn("Duplicate SoftBody constraint found! (point indices %u & %u)\n", index0, index1);
 						}
 					}
 
@@ -7398,7 +7398,7 @@ namespace flex
 					} break;
 					default:
 					{
-						PrintError("Unhandled constraint type in PBD::ParseUniqueFields\n");
+						PrintError("Unhandled constraint type in SoftBody::ParseUniqueFields\n");
 						constraints[i] = nullptr;
 					} break;
 					}
@@ -7409,11 +7409,11 @@ namespace flex
 		}
 	}
 
-	void PBD::SerializeUniqueFields(JSONObject& parentObject) const
+	void SoftBody::SerializeUniqueFields(JSONObject& parentObject) const
 	{
-		JSONObject pbdObject = JSONObject();
+		JSONObject softBodyObject = JSONObject();
 
-		pbdObject.fields.emplace_back("solver iteration count", JSONValue(m_SolverIterationCount));
+		softBodyObject.fields.emplace_back("solver iteration count", JSONValue(m_SolverIterationCount));
 
 		std::vector<JSONObject> pointsArr(points.size());
 		{
@@ -7427,7 +7427,7 @@ namespace flex
 				i++;
 			}
 		}
-		pbdObject.fields.emplace_back("points", JSONValue(pointsArr));
+		softBodyObject.fields.emplace_back("points", JSONValue(pointsArr));
 
 		std::vector<JSONObject> constraintsArr(constraints.size());
 		{
@@ -7454,19 +7454,19 @@ namespace flex
 				} break;
 				default:
 				{
-					PrintError("Unhandled type in PBD::SerializeUniqueFields\n");
+					PrintError("Unhandled type in SoftBody::SerializeUniqueFields\n");
 				} break;
 				}
 
 				i++;
 			}
 		}
-		pbdObject.fields.emplace_back("constraints", JSONValue(constraintsArr));
+		softBodyObject.fields.emplace_back("constraints", JSONValue(constraintsArr));
 
-		parentObject.fields.emplace_back("pbd", JSONValue(pbdObject));
+		parentObject.fields.emplace_back("soft body", JSONValue(softBodyObject));
 	}
 
-	void PBD::DrawImGuiObjects()
+	void SoftBody::DrawImGuiObjects()
 	{
 		GameObject::DrawImGuiObjects();
 

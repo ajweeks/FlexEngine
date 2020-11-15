@@ -1059,10 +1059,10 @@ namespace flex
 		real targetDistance;
 	};
 
-	class PBD : public GameObject
+	class SoftBody : public GameObject
 	{
 	public:
-		PBD();
+		SoftBody();
 
 		virtual void Initialize() override;
 		virtual void Destroy() override;
