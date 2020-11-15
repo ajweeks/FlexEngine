@@ -1073,7 +1073,8 @@ namespace flex
 
 		virtual void DrawImGuiObjects() override;
 
-		static ms TIMESTEP;
+		static ms FIXED_UPDATE_TIMESTEP;
+		static u32 MAX_UPDATE_COUNT; // Max fixed update steps that can be taken in one frame
 
 	private:
 		void Draw();

@@ -60,7 +60,8 @@ namespace flex
 	AudioCue GameObject::s_SqueakySounds;
 	AudioSourceID GameObject::s_BunkSound;
 
-	ms SoftBody::TIMESTEP = 1000.0f / 60.0f;
+	ms SoftBody::FIXED_UPDATE_TIMESTEP = 1000.0f / 60.0f;
+	u32 SoftBody::MAX_UPDATE_COUNT = 100;
 
 	static ThreadSafeArray<GerstnerWave::WaveGenData>* workQueue = nullptr;
 
@@ -7195,25 +7196,22 @@ namespace flex
 
 			if (m_bSingleStep)
 			{
-				elapsed = TIMESTEP;
+				elapsed = FIXED_UPDATE_TIMESTEP;
 			}
 
 			m_bSingleStep = false;
 
-			real w = sin(m_AccumulatedSec * 2.5f) * 3.0f;
-			points[0]->pos = glm::vec3(w, -4.0f, 0.0f);
-			points[6]->pos = glm::vec3(w, -4.0f, 2.0f);
+			points[0]->pos = m_Transform.GetWorldPosition();
 
-			u32 iterationCount = glm::min((u32)(elapsed / TIMESTEP), 100u);
+			u32 fixedUpdateCount = glm::min((u32)(elapsed / FIXED_UPDATE_TIMESTEP), MAX_UPDATE_COUNT);
 
-			for (u32 updateIteration = 0; updateIteration < iterationCount; ++updateIteration)
+			for (u32 updateIteration = 0; updateIteration < fixedUpdateCount; ++updateIteration)
 			{
-				const sec dt = TIMESTEP / 1000.0f;
+				const sec dt = FIXED_UPDATE_TIMESTEP / 1000.0f;
 
 				std::vector<Constraint*> collisionConstraints;
 
 				predictedPositions.resize(points.size());
-
 
 				glm::vec3 globalExternalForces = glm::vec3(0.0f, -9.81f, 0.0f); // Just gravity for now
 
@@ -7309,12 +7307,14 @@ namespace flex
 				}
 			}
 
-			m_LastUpdateTime += iterationCount * TIMESTEP;
-			m_AccumulatedSec += (iterationCount * TIMESTEP) / 1000.0f;
+			m_LastUpdateTime += fixedUpdateCount * FIXED_UPDATE_TIMESTEP;
+			m_AccumulatedSec += (fixedUpdateCount * FIXED_UPDATE_TIMESTEP) / 1000.0f;
 		}
 
 		PROFILE_END("SoftBody Update");
 		m_UpdateDuration = Profiler::GetBlockDuration("SoftBody Update");
+
+		m_Transform.SetWorldPosition(points[0]->pos);
 
 		Draw();
 	}
@@ -7361,6 +7361,8 @@ namespace flex
 
 					i++;
 				}
+
+				m_Transform.SetWorldPosition(points[0]->pos);
 			}
 
 			std::vector<JSONObject> constraintsArr;
@@ -7487,6 +7489,8 @@ namespace flex
 				point->pos = initialPositions[i++];
 				point->vel = VEC3_ZERO;
 			}
+
+			m_Transform.SetWorldPosition(points[0]->pos);
 		}
 
 		if (ImGui::Button("Single Step"))
