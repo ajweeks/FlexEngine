@@ -1089,6 +1089,7 @@ namespace flex
 		ms m_LastUpdateTime;
 		sec m_AccumulatedSec = 0.0f;
 		ms m_UpdateDuration = 0.0f;
+		real m_Damping = 0.99f;
 
 		std::vector<Point*> points;
 		std::vector<Constraint*> constraints;

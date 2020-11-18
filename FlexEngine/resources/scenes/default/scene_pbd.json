@@ -21,9 +21,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-0.073, 4.674, -18.394",
-			"pitch" : -0.038237,
-			"yaw" : 1.642357
+			"position" : "-17.040, 20.461, 7.793",
+			"pitch" : -0.467439,
+			"yaw" : -0.867308
 		}
 	},
 	"objects" : 
@@ -66,472 +66,5165 @@
 			}
 		},
 		{
-			"name" : "SoftBody",
-			"type" : "soft body",
+			"name" : "Soft Bodies",
+			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
 			"transform" : 
 			{
-				"pos" : "-0.048, 5.740, 0.000"
+				"pos" : "-1.159, 3.097, 0.000"
 			},
-			"soft body" : 
-			{
-				"solver iteration count" : 32,
-				"points" : 
-				[
+			"children" : 
+			[
+				{
+					"name" : "SoftBody_000",
+					"type" : "soft body",
+					"visible" : true,
+					"casts shadow" : true,
+					"transform" : 
 					{
-						"position" : "-0.05, 5.74, 0.00",
-						"inverse mass" : 0.000000
+						"pos" : "-3.020, 10.700, 0.000"
 					},
+					"soft body" : 
 					{
-						"position" : "1.28, 5.68, 1.49",
-						"inverse mass" : 1.000000
-					},
-					{
-						"position" : "-0.12, 7.73, 0.13",
-						"inverse mass" : 1.000000
-					},
-					{
-						"position" : "1.21, 7.68, 1.63",
-						"inverse mass" : 1.000000
-					},
-					{
-						"position" : "-0.20, 9.72, 0.26",
-						"inverse mass" : 1.000000
-					},
-					{
-						"position" : "1.14, 9.67, 1.75",
-						"inverse mass" : 1.000000
-					},
-					{
-						"position" : "1.44, 5.87, -1.33",
-						"inverse mass" : 1.000000
-					},
-					{
-						"position" : "2.77, 5.82, 0.16",
-						"inverse mass" : 1.000000
-					},
-					{
-						"position" : "1.37, 7.87, -1.20",
-						"inverse mass" : 1.000000
-					},
-					{
-						"position" : "2.70, 7.82, 0.29",
-						"inverse mass" : 1.000000
-					},
-					{
-						"position" : "1.29, 9.86, -1.07",
-						"inverse mass" : 1.000000
-					},
-					{
-						"position" : "2.62, 9.81, 0.42",
-						"inverse mass" : 1.000000
+						"solver iteration count" : 32,
+						"points" : 
+						[
+							{
+								"position" : "-4.18, 13.80, 0.00",
+								"inverse mass" : 0.000000
+							},
+							{
+								"position" : "-2.87, 12.38, 0.48",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-4.97, 13.73, 1.86",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-4.02, 11.94, 2.04",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-4.56, 13.83, -0.09",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-3.10, 12.48, 0.26",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-5.50, 12.35, -0.49",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-3.97, 11.06, -0.61",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-5.70, 11.89, 1.50",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-4.59, 10.25, 1.11",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-5.82, 12.28, -0.44",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-4.20, 11.09, -0.69",
+								"inverse mass" : 1.000000
+							}
+						],
+						"constraints" : 
+						[
+							{
+								"index 0" : 0,
+								"index 1" : 1,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 3,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 3,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 2,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 3,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 4,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 6,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 5,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 5,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 5,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 6,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 8,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 7,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 6,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 6,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 8,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 9,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 10,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 8,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 5,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 6,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 5,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 2,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 4,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 7,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 9,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 6,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 5,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							}
+						]
 					}
-				],
-				"constraints" : 
-				[
+				},
+				{
+					"name" : "SoftBody_001",
+					"type" : "soft body",
+					"visible" : true,
+					"casts shadow" : true,
+					"transform" : 
 					{
-						"index 0" : 0,
-						"index 1" : 1,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.000000
-						}
+						"pos" : "-3.020, 10.700, -4.280"
 					},
+					"soft body" : 
 					{
-						"index 0" : 2,
-						"index 1" : 3,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.000000
-						}
-					},
-					{
-						"index 0" : 1,
-						"index 1" : 3,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.000000
-						}
-					},
-					{
-						"index 0" : 0,
-						"index 1" : 2,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.000000
-						}
-					},
-					{
-						"index 0" : 0,
-						"index 1" : 3,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.828427
-						}
-					},
-					{
-						"index 0" : 2,
-						"index 1" : 4,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.000000
-						}
-					},
-					{
-						"index 0" : 0,
-						"index 1" : 6,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.000000
-						}
-					},
-					{
-						"index 0" : 3,
-						"index 1" : 5,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.000000
-						}
-					},
-					{
-						"index 0" : 4,
-						"index 1" : 5,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.000000
-						}
-					},
-					{
-						"index 0" : 2,
-						"index 1" : 5,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.828427
-						}
-					},
-					{
-						"index 0" : 6,
-						"index 1" : 7,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.000000
-						}
-					},
-					{
-						"index 0" : 8,
-						"index 1" : 9,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.000000
-						}
-					},
-					{
-						"index 0" : 7,
-						"index 1" : 9,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.000000
-						}
-					},
-					{
-						"index 0" : 6,
-						"index 1" : 8,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.000000
-						}
-					},
-					{
-						"index 0" : 6,
-						"index 1" : 9,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.828427
-						}
-					},
-					{
-						"index 0" : 8,
-						"index 1" : 10,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.000000
-						}
-					},
-					{
-						"index 0" : 9,
-						"index 1" : 11,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.000000
-						}
-					},
-					{
-						"index 0" : 10,
-						"index 1" : 11,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.000000
-						}
-					},
-					{
-						"index 0" : 8,
-						"index 1" : 11,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.828427
-						}
-					},
-					{
-						"index 0" : 1,
-						"index 1" : 7,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.000000
-						}
-					},
-					{
-						"index 0" : 2,
-						"index 1" : 8,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.000000
-						}
-					},
-					{
-						"index 0" : 3,
-						"index 1" : 9,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.000000
-						}
-					},
-					{
-						"index 0" : 4,
-						"index 1" : 10,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.000000
-						}
-					},
-					{
-						"index 0" : 5,
-						"index 1" : 11,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.000000
-						}
-					},
-					{
-						"index 0" : 0,
-						"index 1" : 8,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.828427
-						}
-					},
-					{
-						"index 0" : 2,
-						"index 1" : 10,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.828427
-						}
-					},
-					{
-						"index 0" : 1,
-						"index 1" : 9,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.828427
-						}
-					},
-					{
-						"index 0" : 3,
-						"index 1" : 11,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.828427
-						}
-					},
-					{
-						"index 0" : 0,
-						"index 1" : 7,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.828427
-						}
-					},
-					{
-						"index 0" : 1,
-						"index 1" : 6,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.828427
-						}
-					},
-					{
-						"index 0" : 4,
-						"index 1" : 11,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.828427
-						}
-					},
-					{
-						"index 0" : 5,
-						"index 1" : 10,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.828427
-						}
-					},
-					{
-						"index 0" : 1,
-						"index 1" : 2,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.828427
-						}
-					},
-					{
-						"index 0" : 3,
-						"index 1" : 4,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.828427
-						}
-					},
-					{
-						"index 0" : 7,
-						"index 1" : 8,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.828427
-						}
-					},
-					{
-						"index 0" : 9,
-						"index 1" : 10,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.828427
-						}
-					},
-					{
-						"index 0" : 3,
-						"index 1" : 7,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.828427
-						}
-					},
-					{
-						"index 0" : 2,
-						"index 1" : 6,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.828427
-						}
-					},
-					{
-						"index 0" : 5,
-						"index 1" : 9,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.828427
-						}
-					},
-					{
-						"index 0" : 4,
-						"index 1" : 8,
-						"stiffness" : 0.800000,
-						"type" : 0,
-						"distance constraint" : 
-						{
-							"target distance" : 2.828427
-						}
+						"solver iteration count" : 32,
+						"points" : 
+						[
+							{
+								"position" : "-4.18, 13.80, -4.28",
+								"inverse mass" : 0.000000
+							},
+							{
+								"position" : "-3.47, 13.60, -2.42",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-3.70, 11.88, -4.65",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-2.98, 11.70, -2.79",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-3.20, 9.96, -5.01",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-2.50, 9.80, -3.14",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-2.36, 14.36, -4.91",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-1.66, 14.19, -3.05",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-1.89, 12.45, -5.27",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-1.17, 12.28, -3.41",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-1.39, 10.55, -5.63",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-0.69, 10.37, -3.77",
+								"inverse mass" : 1.000000
+							}
+						],
+						"constraints" : 
+						[
+							{
+								"index 0" : 0,
+								"index 1" : 1,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 3,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 3,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 2,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 3,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 4,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 6,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 5,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 5,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 5,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 6,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 8,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 7,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 6,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 6,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 8,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 9,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 10,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 8,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 5,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 6,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 5,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 2,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 4,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 7,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 9,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 6,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 5,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							}
+						]
 					}
-				]
-			}
+				},
+				{
+					"name" : "SoftBody_002",
+					"type" : "soft body",
+					"visible" : true,
+					"casts shadow" : true,
+					"transform" : 
+					{
+						"pos" : "-2.990, 9.443, -8.080"
+					},
+					"soft body" : 
+					{
+						"solver iteration count" : 32,
+						"points" : 
+						[
+							{
+								"position" : "-4.15, 12.54, -8.08",
+								"inverse mass" : 0.000000
+							},
+							{
+								"position" : "-3.38, 14.05, -7.02",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-5.99, 13.09, -7.54",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-5.23, 14.60, -6.48",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-7.84, 13.63, -7.00",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-7.08, 15.15, -5.94",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-4.26, 13.72, -9.69",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-3.50, 15.24, -8.63",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-6.11, 14.27, -9.15",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-5.35, 15.78, -8.09",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-7.96, 14.82, -8.61",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-7.19, 16.33, -7.55",
+								"inverse mass" : 1.000000
+							}
+						],
+						"constraints" : 
+						[
+							{
+								"index 0" : 0,
+								"index 1" : 1,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 3,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 3,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 2,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 3,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 4,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 6,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 5,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 5,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 5,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 6,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 8,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 7,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 6,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 6,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 8,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 9,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 10,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 8,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 5,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 6,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 5,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 2,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 4,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 7,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 9,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 6,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 5,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							}
+						]
+					}
+				},
+				{
+					"name" : "SoftBody_003",
+					"type" : "soft body",
+					"visible" : true,
+					"casts shadow" : true,
+					"transform" : 
+					{
+						"pos" : "-3.020, 10.700, -11.340"
+					},
+					"soft body" : 
+					{
+						"solver iteration count" : 32,
+						"points" : 
+						[
+							{
+								"position" : "-4.18, 13.80, -11.34",
+								"inverse mass" : 0.000000
+							},
+							{
+								"position" : "-5.24, 14.65, -12.81",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-3.23, 15.53, -11.01",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-4.15, 16.33, -12.60",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-4.17, 13.79, -11.34",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-5.23, 14.65, -12.81",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-5.59, 14.31, -10.02",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-6.54, 15.34, -11.45",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-4.54, 15.95, -9.55",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-5.36, 16.91, -11.11",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-5.58, 14.31, -10.02",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-6.54, 15.33, -11.45",
+								"inverse mass" : 1.000000
+							}
+						],
+						"constraints" : 
+						[
+							{
+								"index 0" : 0,
+								"index 1" : 1,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 3,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 3,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 2,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 3,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 4,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 6,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 5,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 5,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 5,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 6,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 8,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 7,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 6,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 6,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 8,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 9,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 10,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 8,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 5,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 6,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 5,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 2,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 4,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 7,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 9,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 6,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 5,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							}
+						]
+					}
+				},
+				{
+					"name" : "SoftBody_004",
+					"type" : "soft body",
+					"visible" : true,
+					"casts shadow" : true,
+					"transform" : 
+					{
+						"pos" : "-3.020, 10.700, -15.660"
+					},
+					"soft body" : 
+					{
+						"solver iteration count" : 32,
+						"points" : 
+						[
+							{
+								"position" : "-4.18, 13.80, -15.66",
+								"inverse mass" : 0.000000
+							},
+							{
+								"position" : "-5.09, 14.57, -13.99",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-2.47, 13.99, -14.40",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-3.79, 13.29, -12.97",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-4.28, 15.02, -15.06",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-4.99, 13.10, -14.69",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-3.66, 15.73, -16.12",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-3.43, 15.87, -14.03",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-1.71, 14.97, -16.05",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-2.39, 14.04, -14.31",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-3.55, 14.27, -16.85",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-3.20, 12.62, -15.63",
+								"inverse mass" : 1.000000
+							}
+						],
+						"constraints" : 
+						[
+							{
+								"index 0" : 0,
+								"index 1" : 1,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 3,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 3,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 2,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 3,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 4,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 6,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 5,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 5,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 5,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 6,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 8,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 7,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 6,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 6,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 8,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 9,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 10,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 8,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 5,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 6,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 5,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 2,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 4,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 7,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 9,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 6,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 5,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							}
+						]
+					}
+				},
+				{
+					"name" : "SoftBody_005",
+					"type" : "soft body",
+					"visible" : true,
+					"casts shadow" : true,
+					"transform" : 
+					{
+						"pos" : "-3.020, 10.700, -20.510"
+					},
+					"soft body" : 
+					{
+						"solver iteration count" : 32,
+						"points" : 
+						[
+							{
+								"position" : "-4.18, 13.80, -20.51",
+								"inverse mass" : 0.000000
+							},
+							{
+								"position" : "-5.44, 15.16, -19.78",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-3.71, 15.03, -22.01",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-4.96, 16.40, -21.27",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-3.23, 16.26, -23.50",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-4.48, 17.63, -22.78",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-5.66, 13.02, -21.61",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-6.92, 14.39, -20.89",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-5.18, 14.25, -23.11",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-6.44, 15.63, -22.38",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-4.70, 15.49, -24.61",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-5.96, 16.86, -23.88",
+								"inverse mass" : 1.000000
+							}
+						],
+						"constraints" : 
+						[
+							{
+								"index 0" : 0,
+								"index 1" : 1,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 3,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 3,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 2,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 3,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 4,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 6,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 5,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 5,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 5,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 6,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 8,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 7,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 6,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 6,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 8,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 9,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 10,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 8,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 5,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 6,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 5,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 2,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 4,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 7,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 9,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 6,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 5,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							}
+						]
+					}
+				},
+				{
+					"name" : "SoftBody_006",
+					"type" : "soft body",
+					"visible" : true,
+					"casts shadow" : true,
+					"transform" : 
+					{
+						"pos" : "-3.020, 10.700, -24.420"
+					},
+					"soft body" : 
+					{
+						"solver iteration count" : 32,
+						"points" : 
+						[
+							{
+								"position" : "-4.18, 13.80, -24.42",
+								"inverse mass" : 0.000000
+							},
+							{
+								"position" : "-3.34, 12.36, -23.30",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-5.45, 12.44, -25.16",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-4.71, 11.05, -23.93",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-4.17, 13.78, -24.39",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-3.33, 12.34, -23.28",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-5.47, 14.18, -22.93",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-4.52, 12.86, -21.77",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-6.67, 12.72, -23.60",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-5.83, 11.43, -22.32",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-5.46, 14.17, -22.92",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-4.53, 12.84, -21.75",
+								"inverse mass" : 1.000000
+							}
+						],
+						"constraints" : 
+						[
+							{
+								"index 0" : 0,
+								"index 1" : 1,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 3,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 3,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 2,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 3,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 4,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 6,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 5,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 5,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 5,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 6,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 8,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 7,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 6,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 6,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 8,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 9,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 10,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 8,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 5,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 6,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 5,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 2,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 4,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 7,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 9,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 6,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 5,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							}
+						]
+					}
+				},
+				{
+					"name" : "SoftBody_011",
+					"type" : "soft body",
+					"visible" : true,
+					"casts shadow" : true,
+					"transform" : 
+					{
+						"pos" : "0.920, 10.700, -3.680"
+					},
+					"soft body" : 
+					{
+						"solver iteration count" : 32,
+						"points" : 
+						[
+							{
+								"position" : "-0.24, 13.80, -3.68",
+								"inverse mass" : 0.000000
+							},
+							{
+								"position" : "-2.03, 13.65, -4.59",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-0.02, 11.81, -3.88",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-1.77, 11.66, -4.82",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-0.29, 13.79, -3.84",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-2.11, 13.60, -4.67",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-1.12, 13.56, -1.91",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-2.89, 13.32, -2.82",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-0.79, 11.61, -2.04",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-2.53, 11.36, -2.99",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-1.10, 13.61, -2.03",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-2.90, 13.33, -2.85",
+								"inverse mass" : 1.000000
+							}
+						],
+						"constraints" : 
+						[
+							{
+								"index 0" : 0,
+								"index 1" : 1,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 3,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 3,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 2,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 3,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 4,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 6,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 5,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 5,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 5,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 6,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 8,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 7,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 6,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 6,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 8,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 9,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 10,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 8,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 5,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 6,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 5,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 2,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 4,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 7,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 9,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 6,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 5,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							}
+						]
+					}
+				},
+				{
+					"name" : "SoftBody_012",
+					"type" : "soft body",
+					"visible" : true,
+					"casts shadow" : true,
+					"transform" : 
+					{
+						"pos" : "0.660, 10.700, -26.240"
+					},
+					"soft body" : 
+					{
+						"solver iteration count" : 32,
+						"points" : 
+						[
+							{
+								"position" : "-0.50, 13.80, -26.24",
+								"inverse mass" : 0.000000
+							},
+							{
+								"position" : "-1.04, 12.27, -27.50",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "0.40, 12.34, -25.20",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "0.67, 11.30, -26.93",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-1.07, 13.34, -26.34",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-1.31, 11.58, -27.36",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-2.15, 13.28, -25.14",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-1.86, 11.37, -25.84",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-0.88, 12.71, -23.65",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "0.06, 11.49, -24.99",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-2.43, 12.62, -24.99",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-1.74, 10.77, -25.53",
+								"inverse mass" : 1.000000
+							}
+						],
+						"constraints" : 
+						[
+							{
+								"index 0" : 0,
+								"index 1" : 1,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 3,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 3,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 2,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 3,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 4,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 6,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 5,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 5,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 5,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 6,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 8,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 7,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 6,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 6,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 8,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 9,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 10,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 8,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 5,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 6,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 5,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 2,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 4,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 7,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 9,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 6,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 5,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							}
+						]
+					}
+				},
+				{
+					"name" : "SoftBody_013",
+					"type" : "soft body",
+					"visible" : true,
+					"casts shadow" : true,
+					"transform" : 
+					{
+						"pos" : "1.240, 10.700, -10.550"
+					},
+					"soft body" : 
+					{
+						"solver iteration count" : 32,
+						"points" : 
+						[
+							{
+								"position" : "0.08, 13.80, -10.55",
+								"inverse mass" : 0.000000
+							},
+							{
+								"position" : "-0.36, 14.96, -8.98",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-1.48, 12.61, -10.11",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-1.84, 13.71, -8.48",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "0.09, 13.77, -10.56",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-0.35, 14.94, -8.99",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-1.09, 14.92, -11.72",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-1.63, 16.00, -10.12",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-2.62, 13.67, -11.38",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-3.07, 14.68, -9.71",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-1.09, 14.91, -11.72",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-1.61, 15.99, -10.13",
+								"inverse mass" : 1.000000
+							}
+						],
+						"constraints" : 
+						[
+							{
+								"index 0" : 0,
+								"index 1" : 1,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 3,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 3,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 2,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 3,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 4,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 6,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 5,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 5,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 5,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 6,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 8,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 7,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 6,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 6,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 8,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 9,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 10,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 8,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 5,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 6,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 5,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 2,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 4,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 7,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 9,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 6,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 5,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							}
+						]
+					}
+				},
+				{
+					"name" : "SoftBody_014",
+					"type" : "soft body",
+					"visible" : true,
+					"casts shadow" : true,
+					"transform" : 
+					{
+						"pos" : "1.240, 10.700, -17.180"
+					},
+					"soft body" : 
+					{
+						"solver iteration count" : 32,
+						"points" : 
+						[
+							{
+								"position" : "0.08, 13.80, -17.18",
+								"inverse mass" : 0.000000
+							},
+							{
+								"position" : "0.17, 14.39, -15.27",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-1.90, 14.03, -17.17",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-1.82, 14.63, -15.26",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-3.89, 14.26, -17.16",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-3.81, 14.86, -15.26",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "0.30, 15.69, -17.79",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "0.38, 16.29, -15.88",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-1.68, 15.92, -17.78",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-1.60, 16.52, -15.87",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-3.67, 16.15, -17.77",
+								"inverse mass" : 1.000000
+							},
+							{
+								"position" : "-3.59, 16.75, -15.86",
+								"inverse mass" : 1.000000
+							}
+						],
+						"constraints" : 
+						[
+							{
+								"index 0" : 0,
+								"index 1" : 1,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 3,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 3,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 2,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 3,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 4,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 6,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 5,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 5,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 5,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 6,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 8,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 7,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 6,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 6,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 8,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 9,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 10,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 8,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 5,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.000000
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 0,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 6,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 11,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 5,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 1,
+								"index 1" : 2,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 4,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 7,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 9,
+								"index 1" : 10,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 3,
+								"index 1" : 7,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 2,
+								"index 1" : 6,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 5,
+								"index 1" : 9,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							},
+							{
+								"index 0" : 4,
+								"index 1" : 8,
+								"stiffness" : 0.800000,
+								"type" : 0,
+								"distance constraint" : 
+								{
+									"target distance" : 2.828427
+								}
+							}
+						]
+					}
+				}
+			]
 		}
 	]
 }

@@ -61,7 +61,7 @@ namespace flex
 	AudioSourceID GameObject::s_BunkSound;
 
 	ms SoftBody::FIXED_UPDATE_TIMESTEP = 1000.0f / 60.0f;
-	u32 SoftBody::MAX_UPDATE_COUNT = 100;
+	u32 SoftBody::MAX_UPDATE_COUNT = 20;
 
 	static ThreadSafeArray<GerstnerWave::WaveGenData>* workQueue = nullptr;
 
@@ -7274,7 +7274,7 @@ namespace flex
 				// Damp velocities
 				for (Point* point : points)
 				{
-					point->vel *= 0.99f;
+					point->vel *= m_Damping;
 				}
 
 				// Explicit Euler step
@@ -7561,6 +7561,15 @@ namespace flex
 			for (SoftBody* softBody : softBodies)
 			{
 				softBody->m_bRender = m_bRender;
+			}
+		}
+
+		if (ImGui::SliderFloat("Damping", &m_Damping, 0.0f, 1.0f))
+		{
+			std::vector<SoftBody*> softBodies = g_SceneManager->CurrentScene()->GetObjectsOfType<SoftBody>();
+			for (SoftBody* softBody : softBodies)
+			{
+				softBody->m_Damping = m_Damping;
 			}
 		}
 	}
