@@ -173,6 +173,8 @@ void main()
 {
     vec3 N = texture(normalRoughnessTex, ex_TexCoord).rgb;
     N = mat3(uboConstant.invView) * N; // view space -> world space
+    //  TODO: Compile out as variant
+    if (!gl_FrontFacing) N *= -1.0;
     float roughness = texture(normalRoughnessTex, ex_TexCoord).a;
 
     float depth = texture(depthBuffer, ex_TexCoord).r;

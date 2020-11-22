@@ -205,6 +205,7 @@ namespace flex
 		real* src = vertexData;
 		for (u32 i = 0; i < VertexCount; ++i)
 		{
+			real* vertSrc = src;
 			if (usingAttributes & (u32)VertexAttribute::POSITION)
 			{
 				if (Attributes & (u32)VertexAttribute::POSITION)
@@ -216,6 +217,11 @@ namespace flex
 					memcpy(dst, &VEC3_ZERO, sizeof(glm::vec3));
 				}
 				dst += 3;
+			}
+
+			if (Attributes & (u32)VertexAttribute::POSITION)
+			{
+				src += 3;
 			}
 
 			if (usingAttributes & (u32)VertexAttribute::POSITION2)
@@ -231,6 +237,11 @@ namespace flex
 				dst += 2;
 			}
 
+			if (Attributes & (u32)VertexAttribute::POSITION2)
+			{
+				src += 2;
+			}
+
 			if (usingAttributes & (u32)VertexAttribute::POSITION4)
 			{
 				if (Attributes & (u32)VertexAttribute::POSITION4)
@@ -242,6 +253,11 @@ namespace flex
 					memcpy(dst, &VEC4_ZERO, sizeof(glm::vec4));
 				}
 				dst += 4;
+			}
+
+			if (Attributes & (u32)VertexAttribute::POSITION4)
+			{
+				src += 4;
 			}
 
 			if (usingAttributes & (u32)VertexAttribute::VELOCITY3)
@@ -257,6 +273,11 @@ namespace flex
 				dst += 3;
 			}
 
+			if (Attributes & (u32)VertexAttribute::VELOCITY3)
+			{
+				src += 3;
+			}
+
 			if (usingAttributes & (u32)VertexAttribute::UV)
 			{
 				if (Attributes & (u32)VertexAttribute::UV)
@@ -268,6 +289,11 @@ namespace flex
 					memcpy(dst, &VEC2_ZERO, sizeof(glm::vec2));
 				}
 				dst += 2;
+			}
+
+			if (Attributes & (u32)VertexAttribute::UV)
+			{
+				src += 2;
 			}
 
 			if (usingAttributes & (u32)VertexAttribute::COLOUR_R8G8B8A8_UNORM)
@@ -283,6 +309,11 @@ namespace flex
 				dst += 1;
 			}
 
+			if (Attributes & (u32)VertexAttribute::COLOUR_R8G8B8A8_UNORM)
+			{
+				src += 1;
+			}
+
 			if (usingAttributes & (u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT)
 			{
 				if (Attributes & (u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT)
@@ -294,6 +325,11 @@ namespace flex
 					memcpy(dst, &COLOUR128F_WHITE, sizeof(glm::vec4));
 				}
 				dst += 4;
+			}
+
+			if (Attributes & (u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT)
+			{
+				src += 4;
 			}
 
 			if (usingAttributes & (u32)VertexAttribute::NORMAL)
@@ -309,6 +345,11 @@ namespace flex
 				dst += 3;
 			}
 
+			if (Attributes & (u32)VertexAttribute::NORMAL)
+			{
+				src += 3;
+			}
+
 			if (usingAttributes & (u32)VertexAttribute::TANGENT)
 			{
 				if (Attributes & (u32)VertexAttribute::TANGENT)
@@ -322,6 +363,11 @@ namespace flex
 				dst += 3;
 			}
 
+			if (Attributes & (u32)VertexAttribute::TANGENT)
+			{
+				src += 3;
+			}
+
 			if (usingAttributes & (u32)VertexAttribute::EXTRA_VEC4)
 			{
 				if (Attributes & (u32)VertexAttribute::EXTRA_VEC4)
@@ -333,6 +379,11 @@ namespace flex
 					memcpy(dst, &VEC4_ZERO, sizeof(glm::vec4));
 				}
 				dst += 4;
+			}
+
+			if (Attributes & (u32)VertexAttribute::EXTRA_VEC4)
+			{
+				src += 4;
 			}
 
 			if (usingAttributes & (u32)VertexAttribute::EXTRA_INT)
@@ -349,7 +400,12 @@ namespace flex
 				dst += 1;
 			}
 
-			src += VertexStride / sizeof(real);
+			if (Attributes & (u32)VertexAttribute::EXTRA_INT)
+			{
+				src += 1;
+			}
+
+			assert(src == (vertSrc + VertexStride / sizeof(real)));
 		}
 		u32 bytesCopied = (u32)(dst - initialDst) * sizeof(real);
 		return bytesCopied;
@@ -368,6 +424,64 @@ namespace flex
 					(i32)VertexStride, currentLocation);
 				currentLocation += s_VertexTypes[i].size;
 			}
+		}
+	}
+
+	void VertexBufferData::ResizeForPresentAttributes(VertexBufferDataCreateInfo& createInfo, u32 vertCount)
+	{
+		if (createInfo.attributes & (u32)VertexAttribute::POSITION)
+		{
+			createInfo.positions_3D.resize(vertCount, VEC3_ZERO);
+		}
+
+		if (createInfo.attributes & (u32)VertexAttribute::POSITION2)
+		{
+			createInfo.positions_2D.resize(vertCount, VEC2_ZERO);
+		}
+
+		if (createInfo.attributes & (u32)VertexAttribute::POSITION4)
+		{
+			createInfo.positions_4D.resize(vertCount, VEC4_ZERO);
+		}
+
+		if (createInfo.attributes & (u32)VertexAttribute::VELOCITY3)
+		{
+			createInfo.velocities.resize(vertCount, VEC3_ZERO);
+		}
+
+		if (createInfo.attributes & (u32)VertexAttribute::UV)
+		{
+			createInfo.texCoords_UV.resize(vertCount, VEC2_ZERO);
+		}
+
+		if (createInfo.attributes & (u32)VertexAttribute::COLOUR_R8G8B8A8_UNORM)
+		{
+			createInfo.colours_R8G8B8A8.resize(vertCount, COLOUR32U_WHITE);
+		}
+
+		if (createInfo.attributes & (u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT)
+		{
+			createInfo.colours_R32G32B32A32.resize(vertCount, COLOUR128F_WHITE);
+		}
+
+		if (createInfo.attributes & (u32)VertexAttribute::NORMAL)
+		{
+			createInfo.normals.resize(vertCount, VEC3_UP);
+		}
+
+		if (createInfo.attributes & (u32)VertexAttribute::TANGENT)
+		{
+			createInfo.tangents.resize(vertCount, VEC3_RIGHT);
+		}
+
+		if (createInfo.attributes & (u32)VertexAttribute::EXTRA_VEC4)
+		{
+			createInfo.extraVec4s.resize(vertCount, VEC4_ZERO);
+		}
+
+		if (createInfo.attributes & (u32)VertexAttribute::EXTRA_INT)
+		{
+			createInfo.extraInts.resize(vertCount, 0);
 		}
 	}
 

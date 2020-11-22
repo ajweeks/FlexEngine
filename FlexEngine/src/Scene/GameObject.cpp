@@ -1483,7 +1483,7 @@ namespace flex
 			{
 				std::string filePath = m_Mesh->GetRelativeFilePath();
 				MeshImportSettings importSettings = m_Mesh->GetImportSettings();
-				newMesh->LoadFromFile(filePath, matIDs, &importSettings, createInfoPtr);
+				newMesh->LoadFromFile(filePath, matIDs, false, &importSettings, createInfoPtr);
 			}
 			else
 			{
@@ -7178,7 +7178,7 @@ namespace flex
 		newSoftBody->constraints.resize(constraints.size());
 		newSoftBody->initialPositions.resize(initialPositions.size());
 
-		glm::vec3 deltaPos = m_Transform.GetWorldPosition() - initialPositions[0];
+		glm::vec3 deltaPos = m_Transform.GetWorldPosition() - initialPositions[m_DragPointIndex];
 		for (u32 i = 0; i < (u32)initialPositions.size(); ++i)
 		{
 			newSoftBody->initialPositions[i] = initialPositions[i] + deltaPos;
@@ -7207,9 +7207,9 @@ namespace flex
 
 		newSoftBody->m_SolverIterationCount = m_SolverIterationCount;
 
-		newSoftBody->m_bRender = m_bRender;
+		newSoftBody->m_bRenderWireframe = m_bRenderWireframe;
 
-		newSoftBody->GetTransform()->SetWorldPosition(newSoftBody->points[0]->pos);
+		newSoftBody->GetTransform()->SetWorldPosition(newSoftBody->points[m_DragPointIndex]->pos);
 
 		return newSoftBody;
 	}
@@ -7221,6 +7221,10 @@ namespace flex
 
 	void SoftBody::Destroy()
 	{
+		for (Point* point : points)
+		{
+			delete point;
+		}
 		points.clear();
 
 		for (Constraint* constraint : constraints)
@@ -7228,6 +7232,13 @@ namespace flex
 			delete constraint;
 		}
 		constraints.clear();
+
+		if (m_Mesh != nullptr)
+		{
+			m_Mesh->Destroy();
+			m_Mesh = nullptr;
+			m_MeshComponent = nullptr;
+		}
 	}
 
 	void SoftBody::Update()
@@ -7248,10 +7259,7 @@ namespace flex
 
 			m_bSingleStep = false;
 
-			if (m_bRender)
-			{
-				points[0]->pos = m_Transform.GetWorldPosition();
-			}
+			points[m_DragPointIndex]->pos = m_Transform.GetWorldPosition();
 
 			u32 fixedUpdateCount = glm::min((u32)(elapsed / FIXED_UPDATE_TIMESTEP), MAX_UPDATE_COUNT);
 
@@ -7263,7 +7271,7 @@ namespace flex
 
 				std::vector<Constraint*> collisionConstraints;
 
-				glm::vec3 globalExternalForces = glm::vec3(0.0f, -9.81f, 0.0f); // Just gravity for now
+				glm::vec3 globalExternalForces = glm::vec3(0.0f, -50.81f, 0.0f); // Just gravity for now
 
 				// Apply external forces
 				for (Point* point : points)
@@ -7361,13 +7369,38 @@ namespace flex
 			m_AccumulatedSec += (fixedUpdateCount * FIXED_UPDATE_TIMESTEP) / 1000.0f;
 		}
 
+		if (m_MeshComponent != nullptr)
+		{
+			if (m_MeshVertexBufferCreateInfo.positions_3D.size() != points.size())
+			{
+				m_MeshVertexBufferCreateInfo.positions_3D.resize(points.size());
+			}
+			glm::vec3 worldPos = m_Transform.GetWorldPosition();
+			for (u32 i = 0; i < (u32)points.size(); ++i)
+			{
+				m_MeshVertexBufferCreateInfo.positions_3D[i] = points[i]->pos - worldPos;
+			}
+
+			std::vector<u32> indices = m_MeshComponent->GetIndexBuffer();
+			MeshComponent::CalculateTangents(m_MeshVertexBufferCreateInfo, indices);
+
+			//for (u32 i = 0; i <(u32)m_MeshVertexBufferCreateInfo.normals.size(); ++i)
+			//{
+			//	glm::mat4 worldMat = glm::mat4(m_Transform.GetLocalRotation()) * glm::scale(MAT4_IDENTITY, m_Transform.GetWorldScale());
+			//	m_MeshVertexBufferCreateInfo.normals[i] = (glm::vec3)(worldMat * glm::vec4(m_MeshVertexBufferCreateInfo.normals[i], 1.0f));
+			//	m_MeshVertexBufferCreateInfo.tangents[i] = (glm::vec3)(worldMat * glm::vec4(m_MeshVertexBufferCreateInfo.tangents[i], 1.0f));
+			//}
+
+			m_MeshComponent->UpdateDynamicVertexData(m_MeshVertexBufferCreateInfo, indices);
+		}
+
 		//PROFILE_END("SoftBody Update");
 		//m_UpdateDuration = Profiler::GetBlockDuration("SoftBody Update");
 
-		if (m_bRender)
-		{
-			m_Transform.SetWorldPosition(points[0]->pos);
+		m_Transform.SetWorldPosition(points[m_DragPointIndex]->pos);
 
+		if (m_bRenderWireframe)
+		{
 			Draw();
 		}
 	}
@@ -7384,6 +7417,130 @@ namespace flex
 		{
 			debugDrawer->drawLine(ToBtVec3(points[constraint->pointIndices[0]]->pos), ToBtVec3(points[constraint->pointIndices[1]]->pos),
 				btVector3(0.5f, 0.4f, 0.1f), btVector3(0.5f, 0.4f, 0.1f));
+		}
+	}
+
+	u32 SoftBody::AddUniqueDistanceConstraint(i32 index0, i32 index1, u32 atIndex, real stiffness)
+	{
+		for (Constraint* constraint : constraints)
+		{
+			if (constraint != nullptr &&
+				((constraint->pointIndices[0] == index0 && constraint->pointIndices[1] == index1) ||
+				(constraint->pointIndices[1] == index0 && constraint->pointIndices[1] == index1)))
+			{
+				return atIndex != u32_max ? atIndex : (u32)constraints.size();
+			}
+		}
+
+		if (atIndex != u32_max)
+		{
+			if (atIndex >= (u32)constraints.size())
+			{
+				constraints.resize(atIndex + 1);
+			}
+
+			constraints[atIndex] = new DistanceConstraint(index0, index1, stiffness, glm::distance(points[index0]->pos, points[index1]->pos));
+			return atIndex + 1;
+		}
+		else
+		{
+			constraints.push_back(new DistanceConstraint(index0, index1, stiffness, glm::distance(points[index0]->pos, points[index1]->pos)));
+			return (u32)constraints.size();
+		}
+	}
+
+	void SoftBody::LoadFromMesh()
+	{
+		if (m_Mesh != nullptr)
+		{
+			m_Mesh->Destroy();
+			delete m_Mesh;
+			m_MeshComponent = nullptr;
+		}
+
+		if (m_MeshMaterialID == InvalidMaterialID)
+		{
+			MaterialCreateInfo matCreateInfo = {};
+			matCreateInfo.name = "Soft Body Material";
+			matCreateInfo.shaderName = "pbr";
+			matCreateInfo.bDynamic = true;
+			matCreateInfo.constRoughness = 0.95f;
+
+			m_MeshMaterialID = g_Renderer->InitializeMaterial(&matCreateInfo);
+		}
+
+		m_Mesh = new Mesh(this);
+		RenderObjectCreateInfo renderObjectCreateInfo = {};
+		renderObjectCreateInfo.cullFace = CullFace::NONE;
+		if (!m_Mesh->LoadFromFile(m_CurrentMeshFilePath, m_MeshMaterialID, true, nullptr, &renderObjectCreateInfo))
+		{
+			PrintError("Failed to load mesh\n");
+			m_Mesh->Destroy();
+			delete m_Mesh;
+			m_Mesh = nullptr;
+		}
+		else
+		{
+			m_MeshVertexBufferCreateInfo = {};
+			m_MeshVertexBufferCreateInfo.attributes = g_Renderer->GetShader(g_Renderer->GetMaterial(m_MeshMaterialID).shaderID).vertexAttributes;
+
+			std::vector<MeshComponent*> meshes = m_Mesh->GetSubMeshes();
+			m_MeshComponent = meshes[0];
+			VertexBufferData* vertexBufferData = m_MeshComponent->GetVertexBufferData();
+			std::vector<u32> indexData = m_MeshComponent->GetIndexBuffer();
+			std::vector<glm::vec3> posData(vertexBufferData->VertexCount);
+			std::vector<glm::vec2> uvData(vertexBufferData->VertexCount);
+			VertexBufferData::ResizeForPresentAttributes(m_MeshVertexBufferCreateInfo, vertexBufferData->VertexCount);
+			bool bCopySuccess = vertexBufferData->CopyInto((real*)posData.data(), (VertexAttributes)VertexAttribute::POSITION) == (posData.size() * sizeof(glm::vec3));
+			bCopySuccess = bCopySuccess && vertexBufferData->CopyInto((real*)uvData.data(), (VertexAttributes)VertexAttribute::UV) == (uvData.size() * sizeof(glm::vec2));
+			if (!bCopySuccess)
+			{
+				PrintError("Something bad happened in soft body mesh conversion\n");
+			}
+			else
+			{
+				for (Point* point : points)
+				{
+					delete point;
+				}
+				points.clear();
+
+				for (Constraint* constraint : constraints)
+				{
+					delete constraint;
+				}
+				constraints.clear();
+
+				points.resize(vertexBufferData->VertexCount);
+				initialPositions.resize(vertexBufferData->VertexCount);
+				m_DragPointIndex = 0;
+				glm::vec3 smallestPos(99999.0f);
+				for (u32 i = 0; i < (u32)posData.size(); ++i)
+				{
+					glm::vec3 pos = posData[i];
+					if (pos.x < smallestPos.x || (pos.x == smallestPos.x && pos.z < smallestPos.z))
+					{
+						m_DragPointIndex = i;
+						smallestPos = pos;
+					}
+					initialPositions[i] = pos;
+
+					m_MeshVertexBufferCreateInfo.texCoords_UV[i] = uvData[i];
+					points[i] = new Point(pos, VEC3_ZERO, 1.0f);
+				}
+
+				constraints.resize(indexData.size() / 3);
+				u32 constraintIndex = 0;
+				for (u32 i = 0; i < (u32)indexData.size() - 1; i += 3)
+				{
+					constraintIndex = AddUniqueDistanceConstraint(indexData[i + 0], indexData[i + 1], constraintIndex, 0.8f);
+					constraintIndex = AddUniqueDistanceConstraint(indexData[i + 1], indexData[i + 2], constraintIndex, 0.8f);
+					constraintIndex = AddUniqueDistanceConstraint(indexData[i + 2], indexData[i + 0], constraintIndex, 0.8f);
+				}
+
+				points[m_DragPointIndex]->invMass = 0.0f;
+				g_Renderer->SetDirtyFlags(RenderBatchDirtyFlag::DYNAMIC_DATA);
+			}
 		}
 	}
 
@@ -7414,8 +7571,6 @@ namespace flex
 
 					i++;
 				}
-
-				m_Transform.SetWorldPosition(points[0]->pos);
 			}
 
 			std::vector<JSONObject> constraintsArr;
@@ -7430,6 +7585,7 @@ namespace flex
 					i32 index1 = constraintObj.GetInt("index 1");
 					real stiffness = constraintObj.GetFloat("stiffness");
 					Constraint::Type type = (Constraint::Type)constraintObj.GetInt("type");
+					constraintObj.SetUIntChecked("dragging point index", m_DragPointIndex);
 
 					// Check for duplicates
 					for (u32 j = 0; j < i; ++j)
@@ -7461,6 +7617,32 @@ namespace flex
 					i++;
 				}
 			}
+
+			if (softBodyObject.HasField("mesh file path"))
+			{
+				m_CurrentMeshFilePath = softBodyObject.GetString("mesh file path");
+				m_CurrentMeshFileName = StripLeadingDirectories(m_CurrentMeshFilePath);
+				for (i32 i = 0; i < (i32)Mesh::s_DiscoveredMeshes.size(); ++i)
+				{
+					if (Mesh::s_DiscoveredMeshes[i] == m_CurrentMeshFilePath)
+					{
+						m_SelectedMeshIndex = i;
+						break;
+					}
+				}
+				if (m_SelectedMeshIndex == -1)
+				{
+					m_CurrentMeshFilePath = "";
+					m_CurrentMeshFileName = "";
+					PrintWarn("SoftBody's previously saved mesh (%s) might have been moved or renamed, clearing field.\n", m_CurrentMeshFileName.c_str());
+				}
+				else
+				{
+					LoadFromMesh();
+				}
+			}
+
+			softBodyObject.SetBoolChecked("render wireframe", m_bRenderWireframe);
 		}
 	}
 
@@ -7473,10 +7655,11 @@ namespace flex
 		std::vector<JSONObject> pointsArr(points.size());
 		{
 			u32 i = 0;
+			glm::vec3 parentPos = m_Transform.GetWorldPosition();
 			for (const Point* point : points)
 			{
 				pointsArr[i] = JSONObject();
-				pointsArr[i].fields.emplace_back("position", JSONValue(VecToString(point->pos)));
+				pointsArr[i].fields.emplace_back("position", JSONValue(VecToString(point->pos - parentPos)));
 				pointsArr[i].fields.emplace_back("inverse mass", JSONValue(point->invMass));
 
 				i++;
@@ -7494,6 +7677,7 @@ namespace flex
 				constraintsArr[i].fields.emplace_back("index 1", JSONValue(constraint->pointIndices[1]));
 				constraintsArr[i].fields.emplace_back("stiffness", JSONValue(constraint->stiffness));
 				constraintsArr[i].fields.emplace_back("type", JSONValue((i32)constraint->type));
+				constraintsArr[i].fields.emplace_back("dragging point index", JSONValue(m_DragPointIndex));
 
 				switch (constraint->type)
 				{
@@ -7517,6 +7701,13 @@ namespace flex
 			}
 		}
 		softBodyObject.fields.emplace_back("constraints", JSONValue(constraintsArr));
+
+		if (m_SelectedMeshIndex != -1)
+		{
+			softBodyObject.fields.emplace_back("mesh file path", JSONValue(m_CurrentMeshFilePath));
+		}
+
+		softBodyObject.fields.emplace_back("render wireframe", JSONValue(m_bRenderWireframe));
 
 		parentObject.fields.emplace_back("soft body", JSONValue(softBodyObject));
 	}
@@ -7543,7 +7734,7 @@ namespace flex
 				point->vel = VEC3_ZERO;
 			}
 
-			m_Transform.SetWorldPosition(points[0]->pos);
+			m_Transform.SetWorldPosition(points[m_DragPointIndex]->pos);
 		}
 
 		if (ImGui::Button("Single Step"))
@@ -7555,12 +7746,12 @@ namespace flex
 
 		ImGui::Text("%.2fms", m_UpdateDuration);
 
-		if (ImGui::Checkbox("Render", &m_bRender))
+		if (ImGui::Checkbox("Render", &m_bRenderWireframe))
 		{
 			std::vector<SoftBody*> softBodies = g_SceneManager->CurrentScene()->GetObjectsOfType<SoftBody>();
 			for (SoftBody* softBody : softBodies)
 			{
-				softBody->m_bRender = m_bRender;
+				softBody->m_bRenderWireframe = m_bRenderWireframe;
 			}
 		}
 
@@ -7570,6 +7761,40 @@ namespace flex
 			for (SoftBody* softBody : softBodies)
 			{
 				softBody->m_Damping = m_Damping;
+			}
+		}
+
+		if (ImGui::BeginCombo("##meshcombo", m_CurrentMeshFileName.c_str()))
+		{
+			for (i32 i = 0; i < (i32) Mesh::s_DiscoveredMeshes.size(); ++i)
+			{
+				ImGui::PushID(i);
+				const std::string& meshFilePath = Mesh::s_DiscoveredMeshes[i];
+				bool bSelected = (i == m_SelectedMeshIndex);
+				const std::string meshFileNameShort = StripLeadingDirectories(meshFilePath);
+				if (ImGui::Selectable(meshFileNameShort.c_str(), &bSelected))
+				{
+					if (m_SelectedMeshIndex != i)
+					{
+						m_SelectedMeshIndex = i;
+						m_CurrentMeshFilePath = meshFilePath;
+						m_CurrentMeshFileName = meshFileNameShort;
+					}
+				}
+
+				ImGui::PopID();
+			}
+
+			ImGui::EndCombo();
+		}
+
+		if (m_SelectedMeshIndex != -1)
+		{
+			ImGui::SameLine();
+
+			if (ImGui::Button("Load mesh"))
+			{
+				LoadFromMesh();
 			}
 		}
 	}

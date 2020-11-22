@@ -169,6 +169,8 @@ namespace flex
 IGNORE_WARNINGS_POP
 #endif // COMPILE_IMGUI
 
+#include <mikktspace.h>
+
 #include "Filepaths.hpp"
 #include "Physics/PhysicsTypeConversions.hpp"
 

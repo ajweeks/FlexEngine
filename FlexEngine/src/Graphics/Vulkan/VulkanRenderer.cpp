@@ -3053,58 +3053,51 @@ namespace flex
 				{
 					static i32 selectedMeshIndex = 0;
 
-					std::string selectedMeshRelativeFilePath;
+					std::string selectedMeshRelativeFilePath = Mesh::s_DiscoveredMeshes[selectedMeshIndex];
 					LoadedMesh* selectedMesh = nullptr;
-					i32 meshIdx = 0;
-					for (const auto& meshPair : Mesh::m_LoadedMeshes)
+					auto iter = Mesh::s_LoadedMeshes.find(selectedMeshRelativeFilePath);
+
+					if (iter != Mesh::s_LoadedMeshes.end())
 					{
-						if (meshIdx == selectedMeshIndex)
+						ImGui::Text("Import settings");
+
+						ImGui::Columns(2, "import settings columns", false);
+						ImGui::Separator();
+						ImGui::Checkbox("Flip U", &selectedMesh->importSettings.bFlipU); ImGui::NextColumn();
+						ImGui::Checkbox("Flip V", &selectedMesh->importSettings.bFlipV); ImGui::NextColumn();
+						ImGui::Checkbox("Swap Normal YZ", &selectedMesh->importSettings.bSwapNormalYZ); ImGui::NextColumn();
+						ImGui::Checkbox("Flip Normal Z", &selectedMesh->importSettings.bFlipNormalZ); ImGui::NextColumn();
+						ImGui::Columns(1);
+
+						if (ImGui::Button("Re-import"))
 						{
-							selectedMesh = meshPair.second;
-							selectedMeshRelativeFilePath = meshPair.first;
-							break;
-						}
-						++meshIdx;
-					}
-
-					ImGui::Text("Import settings");
-
-					ImGui::Columns(2, "import settings columns", false);
-					ImGui::Separator();
-					ImGui::Checkbox("Flip U", &selectedMesh->importSettings.bFlipU); ImGui::NextColumn();
-					ImGui::Checkbox("Flip V", &selectedMesh->importSettings.bFlipV); ImGui::NextColumn();
-					ImGui::Checkbox("Swap Normal YZ", &selectedMesh->importSettings.bSwapNormalYZ); ImGui::NextColumn();
-					ImGui::Checkbox("Flip Normal Z", &selectedMesh->importSettings.bFlipNormalZ); ImGui::NextColumn();
-					ImGui::Columns(1);
-
-					if (ImGui::Button("Re-import"))
-					{
-						for (VulkanRenderObject* renderObject : m_RenderObjects)
-						{
-							if (renderObject != nullptr)
+							for (VulkanRenderObject* renderObject : m_RenderObjects)
 							{
-								GameObject* owningGameObject = renderObject->gameObject;
-								if (owningGameObject)
+								if (renderObject != nullptr)
 								{
-									Mesh* mesh = owningGameObject->GetMesh();
-									if (mesh && mesh->GetRelativeFilePath().compare(selectedMeshRelativeFilePath) == 0)
+									GameObject* owningGameObject = renderObject->gameObject;
+									if (owningGameObject)
 									{
-										MeshImportSettings importSettings = selectedMesh->importSettings;
+										Mesh* mesh = owningGameObject->GetMesh();
+										if (mesh && mesh->GetRelativeFilePath().compare(selectedMeshRelativeFilePath) == 0)
+										{
+											MeshImportSettings importSettings = selectedMesh->importSettings;
 
-										mesh->Destroy();
-										mesh->SetOwner(owningGameObject);
-										mesh->LoadFromFile(selectedMeshRelativeFilePath, mesh->GetMaterialIDs(), &importSettings);
+											mesh->Destroy();
+											mesh->SetOwner(owningGameObject);
+											mesh->LoadFromFile(selectedMeshRelativeFilePath, mesh->GetMaterialIDs(), &importSettings);
+										}
 									}
 								}
 							}
 						}
-					}
 
-					ImGui::SameLine();
+						ImGui::SameLine();
 
-					if (ImGui::Button("Save"))
-					{
-						g_SceneManager->CurrentScene()->SerializeToFile(true);
+						if (ImGui::Button("Save"))
+						{
+							g_SceneManager->CurrentScene()->SerializeToFile(true);
+						}
 					}
 
 					static ImGuiTextFilter meshFilter;
@@ -3118,12 +3111,11 @@ namespace flex
 
 					if (ImGui::BeginChild("mesh list", ImVec2(0.0f, 120.0f), true))
 					{
-						i32 i = 0;
-						for (const auto& meshIter : Mesh::m_LoadedMeshes)
+						for (i32 i = 0; i < (i32)Mesh::s_DiscoveredMeshes.size(); ++i)
 						{
+							const std::string& meshFilePath = Mesh::s_DiscoveredMeshes[i];
 							bool bSelected = (i == selectedMeshIndex);
-							const std::string meshFilePath = meshIter.first;
-							const std::string meshFileName = StripLeadingDirectories(meshIter.first);
+							const std::string meshFileName = StripLeadingDirectories(meshFilePath);
 							if (meshFilter.PassFilter(meshFileName.c_str()))
 							{
 								if (ImGui::Selectable(meshFileName.c_str(), &bSelected))
@@ -3133,23 +3125,49 @@ namespace flex
 
 								if (ImGui::BeginPopupContextItem())
 								{
-									if (ImGui::Button("Reload"))
-									{
-										Mesh::LoadMesh(meshIter.second->relativeFilePath);
+									bool bLoaded = Mesh::s_LoadedMeshes.find(selectedMeshRelativeFilePath) != Mesh::s_LoadedMeshes.end();
 
-										for (VulkanRenderObject* renderObject : m_RenderObjects)
+									if (bLoaded)
+									{
+										if (ImGui::Button("Reload"))
 										{
-											if (renderObject)
+											Mesh::LoadMesh(meshFilePath);
+
+											for (VulkanRenderObject* renderObject : m_RenderObjects)
 											{
-												Mesh* mesh = renderObject->gameObject->GetMesh();
-												if (mesh && mesh->GetRelativeFilePath().compare(meshFilePath) == 0)
+												if (renderObject)
 												{
-													mesh->Reload();
+													Mesh* mesh = renderObject->gameObject->GetMesh();
+													if (mesh && mesh->GetRelativeFilePath().compare(meshFilePath) == 0)
+													{
+														mesh->Reload();
+													}
 												}
 											}
-										}
 
-										ImGui::CloseCurrentPopup();
+											ImGui::CloseCurrentPopup();
+										}
+									}
+									else
+									{
+										if (ImGui::Button("Load"))
+										{
+											Mesh::LoadMesh(meshFilePath);
+
+											for (VulkanRenderObject* renderObject : m_RenderObjects)
+											{
+												if (renderObject)
+												{
+													Mesh* mesh = renderObject->gameObject->GetMesh();
+													if (mesh && mesh->GetRelativeFilePath().compare(meshFilePath) == 0)
+													{
+														mesh->Reload();
+													}
+												}
+											}
+
+											ImGui::CloseCurrentPopup();
+										}
 									}
 
 									ImGui::EndPopup();
@@ -3160,8 +3178,8 @@ namespace flex
 									{
 										if (ImGui::BeginDragDropSource())
 										{
-											const void* data = (void*)(meshIter.first.c_str());
-											size_t size = strlen(meshIter.first.c_str()) * sizeof(char);
+											const void* data = (void*)(meshFilePath.c_str());
+											size_t size = strlen(meshFilePath.c_str()) * sizeof(char);
 
 											ImGui::SetDragDropPayload(MeshPayloadCStr, data, size);
 
@@ -3171,8 +3189,6 @@ namespace flex
 										}
 									}
 								}
-
-								++i;
 							}
 						}
 					}
@@ -3204,7 +3220,7 @@ namespace flex
 								std::string selectedRelativeFilePath = relativeImportDirPath + fileNameAndExtension;
 
 								bool bMeshAlreadyImported = false;
-								for (const auto& meshPair : Mesh::m_LoadedMeshes)
+								for (const auto& meshPair : Mesh::s_LoadedMeshes)
 								{
 									if (meshPair.first.compare(selectedRelativeFilePath) == 0)
 									{
@@ -3225,7 +3241,7 @@ namespace flex
 									if (Mesh::FindPreLoadedMesh(selectedRelativeFilePath, &existingMesh))
 									{
 										i32 j = 0;
-										for (const auto& meshPair : Mesh::m_LoadedMeshes)
+										for (const auto& meshPair : Mesh::s_LoadedMeshes)
 										{
 											if (meshPair.first.compare(selectedRelativeFilePath) == 0)
 											{

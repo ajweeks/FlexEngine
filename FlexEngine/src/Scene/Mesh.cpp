@@ -5,12 +5,14 @@
 #include "Scene/LoadedMesh.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
+#include "Platform/Platform.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/MeshComponent.hpp"
 
 namespace flex
 {
-	std::map<std::string, LoadedMesh*> Mesh::m_LoadedMeshes;
+	std::map<std::string, LoadedMesh*> Mesh::s_LoadedMeshes;
+	std::vector<std::string> Mesh::s_DiscoveredMeshes;
 
 	Mesh::Mesh(GameObject* owner) :
 		m_OwningGameObject(owner),
@@ -73,16 +75,20 @@ namespace flex
 		g_Renderer->RenderObjectStateChanged();
 	}
 
-	bool Mesh::LoadFromFile(const std::string& relativeFilePath,
+	bool Mesh::LoadFromFile(
+		const std::string& relativeFilePath,
 		MaterialID materialID,
+		bool bDynamic /* = false */,
 		MeshImportSettings* importSettings /* = nullptr */,
 		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
 	{
-		return LoadFromFile(relativeFilePath, std::vector<MaterialID>({ materialID }), importSettings, optionalCreateInfo);
+		return LoadFromFile(relativeFilePath, std::vector<MaterialID>({ materialID }), bDynamic, importSettings, optionalCreateInfo);
 	}
 
-	bool Mesh::LoadFromFile(const std::string& relativeFilePath,
+	bool Mesh::LoadFromFile(
+		const std::string& relativeFilePath,
 		const std::vector<MaterialID>& inMaterialIDs,
+		bool bDynamic /* = false */,
 		MeshImportSettings* importSettings /* = nullptr */,
 		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
 	{
@@ -154,8 +160,16 @@ namespace flex
 			for (i32 j = 0; j < (i32)mesh->primitives_count; ++j)
 			{
 				MaterialID matID = materialIDs.size() > 1 ? materialIDs[j] : materialIDs.size() == 1 ? materialIDs[0] : g_Renderer->GetPlaceholderMaterialID();
-				MeshComponent* meshComponent = MeshComponent::LoadFromCGLTF(this, &mesh->primitives[j], matID, importSettings, optionalCreateInfo);
-				if (meshComponent)
+				MeshComponent* meshComponent;
+				if (bDynamic)
+				{
+					meshComponent = MeshComponent::LoadFromCGLTFDynamic(this, &mesh->primitives[j], matID, u32_max, importSettings, optionalCreateInfo);
+				}
+				else
+				{
+					meshComponent = MeshComponent::LoadFromCGLTF(this, &mesh->primitives[j], matID, importSettings, optionalCreateInfo);
+				}
+				if (meshComponent != nullptr)
 				{
 					m_Meshes.push_back(meshComponent);
 				}
@@ -254,10 +268,25 @@ namespace flex
 		return m_Meshes[0]->CreateProcedural(initialMaxVertCount, attributes, topologyMode, optionalCreateInfo);
 	}
 
+	void Mesh::DiscoverMeshes()
+	{
+		std::vector<std::string> filePaths;
+		if (Platform::FindFilesInDirectory(MESH_DIRECTORY, filePaths, "*"))
+		{
+			for (const std::string& filePath : filePaths)
+			{
+				if (!Contains(s_DiscoveredMeshes, filePath))
+				{
+					s_DiscoveredMeshes.push_back(filePath);
+				}
+			}
+		}
+	}
+
 	bool Mesh::FindPreLoadedMesh(const std::string& relativeFilePath, LoadedMesh** loadedMesh)
 	{
-		auto iter = m_LoadedMeshes.find(relativeFilePath);
-		if (iter == m_LoadedMeshes.end())
+		auto iter = s_LoadedMeshes.find(relativeFilePath);
+		if (iter == s_LoadedMeshes.end())
 		{
 			return false;
 		}
@@ -287,8 +316,8 @@ namespace flex
 		LoadedMesh* mesh = nullptr;
 		bool bNewMesh = true;
 		{
-			auto existingIter = Mesh::m_LoadedMeshes.find(relativeFilePath);
-			if (existingIter == Mesh::m_LoadedMeshes.end())
+			auto existingIter = Mesh::s_LoadedMeshes.find(relativeFilePath);
+			if (existingIter == Mesh::s_LoadedMeshes.end())
 			{
 				if (g_bEnableLogging_Loading)
 				{
@@ -318,10 +347,10 @@ namespace flex
 		auto cleanup = [&](const std::string& errorMessage)
 		{
 			Print("%s", errorMessage.c_str());
-			auto existingIter = Mesh::m_LoadedMeshes.find(relativeFilePath);
-			if (existingIter != Mesh::m_LoadedMeshes.end())
+			auto existingIter = Mesh::s_LoadedMeshes.find(relativeFilePath);
+			if (existingIter != Mesh::s_LoadedMeshes.end())
 			{
-				Mesh::m_LoadedMeshes.erase(existingIter);
+				Mesh::s_LoadedMeshes.erase(existingIter);
 			}
 			delete mesh;
 		};
@@ -352,14 +381,13 @@ namespace flex
 			cleanup("Failed to validate gltf/glb file at " + relativeFilePath + " with error:\n\t" + outErrorMessage + "\n");
 			return nullptr;
 		}
-
 		else
 		{
 			mesh->data = data;
 
 			if (bNewMesh)
 			{
-				m_LoadedMeshes.emplace(relativeFilePath, mesh);
+				s_LoadedMeshes.emplace(relativeFilePath, mesh);
 			}
 		}
 
@@ -537,7 +565,7 @@ namespace flex
 			i32 selectedMeshIndex = 0;
 			std::string currentMeshFileName = "NONE";
 			i32 i = 0;
-			for (auto iter : m_LoadedMeshes)
+			for (auto iter : s_LoadedMeshes)
 			{
 				const std::string meshFileName = StripLeadingDirectories(iter.first);
 				if (m_FileName.compare(meshFileName) == 0)
@@ -553,7 +581,7 @@ namespace flex
 			{
 				i = 0;
 
-				for (auto meshPair : m_LoadedMeshes)
+				for (auto meshPair : s_LoadedMeshes)
 				{
 					bool bSelected = (i == selectedMeshIndex);
 					const std::string meshFileName = StripLeadingDirectories(meshPair.first);
@@ -593,8 +621,8 @@ namespace flex
 				if (payload && payload->Data)
 				{
 					std::string draggedMeshFileName((const char*)payload->Data, payload->DataSize);
-					auto meshIter = m_LoadedMeshes.find(draggedMeshFileName);
-					if (meshIter != m_LoadedMeshes.end())
+					auto meshIter = s_LoadedMeshes.find(draggedMeshFileName);
+					if (meshIter != s_LoadedMeshes.end())
 					{
 						std::string newMeshFilePath = meshIter->first;
 

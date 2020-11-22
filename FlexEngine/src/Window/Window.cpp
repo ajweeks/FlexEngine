@@ -84,7 +84,6 @@ namespace flex
 
 	std::string Window::GenerateWindowTitle()
 	{
-		ImGuiIO& io = ImGui::GetIO();
 		std::string result = m_TitleString;
 		result += " | " + g_SceneManager->CurrentScene()->GetName();
 		if (m_bShowMSInWindowTitle)

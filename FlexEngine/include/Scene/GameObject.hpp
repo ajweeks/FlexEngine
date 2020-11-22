@@ -1081,20 +1081,38 @@ namespace flex
 	private:
 		void Draw();
 
+		// Add new constraint between index0 & index1 if one doesn't already exist.
+		// Returns new constraint count
+		u32 AddUniqueDistanceConstraint(i32 index0, i32 index1, u32 atIndex, real stiffness);
+
+		void LoadFromMesh();
+
 		u32 m_SolverIterationCount;
 		bool m_bPaused = false;
 		bool m_bSingleStep = false;
-		bool m_bRender = true;
+		bool m_bRenderWireframe = true;
 
 		ms m_LastUpdateTime;
 		sec m_AccumulatedSec = 0.0f;
 		ms m_UpdateDuration = 0.0f;
 		real m_Damping = 0.99f;
 
+		u32 m_DragPointIndex = 0;
 		std::vector<Point*> points;
 		std::vector<Constraint*> constraints;
 
 		std::vector<glm::vec3> initialPositions;
+
+		Mesh* m_Mesh = nullptr;
+		MeshComponent* m_MeshComponent = nullptr;
+		VertexBufferDataCreateInfo m_MeshVertexBufferCreateInfo;
+		MaterialID m_MeshMaterialID = InvalidMaterialID;
+		//std::vector<
+
+		std::string m_CurrentMeshFilePath;
+		// Editor only
+		i32 m_SelectedMeshIndex = -1;
+		std::string m_CurrentMeshFileName;
 
 	};
 
