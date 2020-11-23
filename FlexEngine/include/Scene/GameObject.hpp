@@ -1096,6 +1096,7 @@ namespace flex
 		sec m_AccumulatedSec = 0.0f;
 		ms m_UpdateDuration = 0.0f;
 		real m_Damping = 0.99f;
+		real m_Stiffness = 0.8f;
 
 		u32 m_DragPointIndex = 0;
 		std::vector<Point*> points;

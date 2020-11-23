@@ -7207,7 +7207,21 @@ namespace flex
 
 		newSoftBody->m_SolverIterationCount = m_SolverIterationCount;
 
+		if (m_Mesh != nullptr)
+		{
+			newSoftBody->m_CurrentMeshFileName = m_CurrentMeshFileName;
+			newSoftBody->m_CurrentMeshFilePath = m_CurrentMeshFilePath;
+			newSoftBody->m_SelectedMeshIndex = m_SelectedMeshIndex;
+			newSoftBody->LoadFromMesh();
+		}
+
+		newSoftBody->m_DragPointIndex = m_DragPointIndex;
+
 		newSoftBody->m_bRenderWireframe = m_bRenderWireframe;
+
+		newSoftBody->m_Damping = m_Damping;
+
+		newSoftBody->m_Stiffness = m_Stiffness;
 
 		newSoftBody->GetTransform()->SetWorldPosition(newSoftBody->points[m_DragPointIndex]->pos);
 
@@ -7643,6 +7657,8 @@ namespace flex
 			}
 
 			softBodyObject.SetBoolChecked("render wireframe", m_bRenderWireframe);
+			softBodyObject.SetFloatChecked("damping", m_Damping);
+			softBodyObject.SetFloatChecked("stiffness", m_Stiffness);
 		}
 	}
 
@@ -7708,6 +7724,8 @@ namespace flex
 		}
 
 		softBodyObject.fields.emplace_back("render wireframe", JSONValue(m_bRenderWireframe));
+		softBodyObject.fields.emplace_back("damping", JSONValue(m_Damping));
+		softBodyObject.fields.emplace_back("stiffness", JSONValue(m_Stiffness));
 
 		parentObject.fields.emplace_back("soft body", JSONValue(softBodyObject));
 	}
@@ -7746,7 +7764,7 @@ namespace flex
 
 		ImGui::Text("%.2fms", m_UpdateDuration);
 
-		if (ImGui::Checkbox("Render", &m_bRenderWireframe))
+		if (ImGui::Checkbox("Render wireframe", &m_bRenderWireframe))
 		{
 			std::vector<SoftBody*> softBodies = g_SceneManager->CurrentScene()->GetObjectsOfType<SoftBody>();
 			for (SoftBody* softBody : softBodies)
@@ -7761,6 +7779,18 @@ namespace flex
 			for (SoftBody* softBody : softBodies)
 			{
 				softBody->m_Damping = m_Damping;
+			}
+		}
+
+		if (ImGui::SliderFloat("Stiffness", &m_Stiffness, 0.0f, 1.0f))
+		{
+			std::vector<SoftBody*> softBodies = g_SceneManager->CurrentScene()->GetObjectsOfType<SoftBody>();
+			for (SoftBody* softBody : softBodies)
+			{
+				for (Constraint* constraint : softBody->constraints)
+				{
+					constraint->stiffness = m_Stiffness;
+				}
 			}
 		}
 
