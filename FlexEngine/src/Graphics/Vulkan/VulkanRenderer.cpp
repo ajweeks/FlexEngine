@@ -1983,22 +1983,22 @@ namespace flex
 				vkDeviceWaitIdle(m_VulkanDevice->m_LogicalDevice);
 			}
 
-			VkDeviceSize vertOffset = renderObject->dynamicVertexBufferOffset;
-			VkDeviceSize indexOffset = renderObject->dynamicIndexBufferOffset;
+			VkDeviceSize vertOffsetBytes = renderObject->dynamicVertexBufferOffset;
+			VkDeviceSize indexOffsetBytes = renderObject->dynamicIndexBufferOffset;
 
-			assert((vertOffset + vertSubBufferSize) <= vertexBuffer->m_Size);
-			assert((indexOffset + indexSubBufferSize) <= indexBuffer->m_Size);
+			assert((vertOffsetBytes + vertSubBufferSize) <= vertexBuffer->m_Size);
+			assert((indexOffsetBytes + indexSubBufferSize) <= indexBuffer->m_Size);
 
-			VK_CHECK_RESULT(vertexBuffer->Map(vertOffset, vertSubBufferSize));
-			VK_CHECK_RESULT(indexBuffer->Map(indexOffset, indexSubBufferSize));
+			VK_CHECK_RESULT(vertexBuffer->Map(vertOffsetBytes, vertSubBufferSize));
+			VK_CHECK_RESULT(indexBuffer->Map(indexOffsetBytes, indexSubBufferSize));
 			memcpy(vertexBuffer->m_Mapped, vertexBufferData->vertexData, vertSubBufferSize);
 			memcpy(indexBuffer->m_Mapped, indexData.data(), indexSubBufferSize);
 			vertexBuffer->Unmap();
 			indexBuffer->Unmap();
 
 
-			renderObject->vertexOffset = (u32)vertOffset;
-			renderObject->indexOffset = (u32)indexOffset;
+			renderObject->vertexOffset = (u32)(vertOffsetBytes / vertexBufferData->VertexStride);
+			renderObject->indexOffset = (u32)(indexOffsetBytes / sizeof(u32));
 
 			m_DirtyFlagBits |= RenderBatchDirtyFlag::DYNAMIC_DATA; // TODO: Is this needed?
 		}
