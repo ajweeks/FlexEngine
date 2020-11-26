@@ -1929,6 +1929,11 @@ namespace flex
 		{
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
 
+			if (!renderObject->bIndexed)	
+			{
+				PrintWarn("Dynamic render object not set to indexed! This workflow is not supported, was the index buffer empty being this object was created?\n");
+			}
+
 			VulkanMaterial& mat = m_Materials.at(renderObject->materialID);
 			VertexIndexBufferPair* vertexIndexBufferPair = m_DynamicVertexIndexBufferPairs[mat.material.dynamicVertexIndexBufferIndex].second;
 			VulkanBuffer* vertexBuffer = vertexIndexBufferPair->vertexBuffer;
