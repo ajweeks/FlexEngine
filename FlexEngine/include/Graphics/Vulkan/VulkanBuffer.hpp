@@ -33,9 +33,9 @@ namespace flex
 
 			// Reserves size bytes in buffer and returns offset to that range, returns (VkDeviceSize)-1 if bCanResize is false and allocation won't fit, or if resize failed
 			// TODO: Add tests
-			VkDeviceSize Alloc(VkDeviceSize size, bool bCanResize);
+			FLEX_NO_DISCARD VkDeviceSize Alloc(VkDeviceSize size, bool bCanResize);
 			// TODO: Add tests
-			VkDeviceSize Realloc(VkDeviceSize offset, VkDeviceSize size, bool bCanResize);
+			FLEX_NO_DISCARD VkDeviceSize Realloc(VkDeviceSize offset, VkDeviceSize size, bool bCanResize);
 			// TODO: Add tests
 			void Free(VkDeviceSize offset);
 			// TODO: Add tests
@@ -43,7 +43,7 @@ namespace flex
 			// TODO: Add defragment helper
 
 			// Returns size of allocation, or (VkDeviceSize)-1 if not found
-			VkDeviceSize GetAllocationSize(VkDeviceSize offset) const;
+			FLEX_NO_DISCARD VkDeviceSize GetAllocationSize(VkDeviceSize offset) const;
 
 			VulkanDevice* m_Device = nullptr;
 			VDeleter<VkBuffer> m_Buffer;
