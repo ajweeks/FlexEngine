@@ -93,9 +93,12 @@ namespace flex
 
 	void MeshComponent::Destroy()
 	{
-		if (!g_Renderer->DestroyRenderObject(renderID))
+		if (renderID != InvalidRenderID)
 		{
-			PrintError("Failed to destroy render object of mesh component\n");
+			if (!g_Renderer->DestroyRenderObject(renderID))
+			{
+				PrintError("Failed to destroy render object of mesh component\n");
+			}
 		}
 		m_VertexBufferData.Destroy();
 		m_OwningMesh = nullptr;
@@ -363,21 +366,24 @@ namespace flex
 			newMeshComponent->CopyInOptionalCreateInfo(renderObjectCreateInfo, *optionalCreateInfo);
 		}
 
-		renderObjectCreateInfo.gameObject = owningMesh->GetOwningGameObject();
+		renderObjectCreateInfo.gameObject = (owningMesh != nullptr ? owningMesh->GetOwningGameObject() : nullptr);
 		renderObjectCreateInfo.vertexBufferData = &newMeshComponent->m_VertexBufferData;
 		renderObjectCreateInfo.indices = &newMeshComponent->m_Indices;
 		renderObjectCreateInfo.materialID = materialID;
 
-		if (newMeshComponent->renderID != InvalidRenderID)
+		if (importSettings == nullptr || !importSettings->bDontCreateRenderObject)
 		{
-			g_Renderer->DestroyRenderObject(newMeshComponent->renderID);
+			if (newMeshComponent->renderID != InvalidRenderID)
+			{
+				g_Renderer->DestroyRenderObject(newMeshComponent->renderID);
+			}
+
+			newMeshComponent->renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
+
+			g_Renderer->SetTopologyMode(newMeshComponent->renderID, TopologyMode::TRIANGLE_LIST);
+
+			newMeshComponent->m_VertexBufferData.DescribeShaderVariables(g_Renderer, newMeshComponent->renderID);
 		}
-
-		newMeshComponent->renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
-
-		g_Renderer->SetTopologyMode(newMeshComponent->renderID, TopologyMode::TRIANGLE_LIST);
-
-		newMeshComponent->m_VertexBufferData.DescribeShaderVariables(g_Renderer, newMeshComponent->renderID);
 
 		newMeshComponent->m_bInitialized = true;
 
@@ -410,7 +416,7 @@ namespace flex
 		bool bDynamic,
 		u32 initialMaxDynamicVertexCount,
 		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
-		{
+	{
 		MeshComponent* newMeshComponent = new MeshComponent(owningMesh, materialID);
 
 		newMeshComponent->CalculateBoundingSphereRadius(vertexBufferCreateInfo.positions_3D);
@@ -431,11 +437,12 @@ namespace flex
 			newMeshComponent->CopyInOptionalCreateInfo(renderObjectCreateInfo, *optionalCreateInfo);
 		}
 
-		renderObjectCreateInfo.gameObject = owningMesh->GetOwningGameObject();
+		renderObjectCreateInfo.gameObject = (owningMesh != nullptr ? owningMesh->GetOwningGameObject() : nullptr);
 		renderObjectCreateInfo.vertexBufferData = &newMeshComponent->m_VertexBufferData;
 		renderObjectCreateInfo.indices = &newMeshComponent->m_Indices;
 		renderObjectCreateInfo.materialID = materialID;
 
+		// NOTE: There is no way to disable render object creation in this function currently
 		if (newMeshComponent->renderID != InvalidRenderID)
 		{
 			g_Renderer->DestroyRenderObject(newMeshComponent->renderID);

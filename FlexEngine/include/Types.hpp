@@ -108,6 +108,7 @@ namespace flex
 		TERRAIN_GENERATOR,
 		WIRE,
 		SOCKET,
+		SPRING,
 
 		_NONE
 	};
@@ -133,6 +134,7 @@ namespace flex
 		"terrain",
 		"wire",
 		"socket",
+		"spring",
 
 		"NONE"
 	};
@@ -222,6 +224,7 @@ namespace flex
 		bool bFlipNormalZ = false;
 		/* Whether or not to swap Y and Z components of all normals (converts from Y-up to Z-up) */
 		bool bSwapNormalYZ = false;
+		bool bDontCreateRenderObject = false;
 	};
 
 } // namespace flex

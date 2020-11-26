@@ -94,6 +94,8 @@ namespace flex
 
 		GameObject* GetOwningGameObject() const;
 
+		static LoadedMesh* GetLoadedMesh(const std::string& relativeFilePath, MeshImportSettings* importSettings = nullptr);
+
 		static bool FindPreLoadedMesh(const std::string& relativeFilePath, LoadedMesh** loadedMesh);
 		static LoadedMesh* LoadMesh(const std::string& relativeFilePath, MeshImportSettings* importSettings = nullptr);
 

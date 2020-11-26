@@ -42,6 +42,7 @@ IGNORE_WARNINGS_POP
 #include "Player.hpp"
 #include "Profiler.hpp"
 #include "Scene/BaseScene.hpp"
+#include "Scene/LoadedMesh.hpp"
 #include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
@@ -61,6 +62,9 @@ namespace flex
 	AudioSourceID GameObject::s_BunkSound;
 
 	static ThreadSafeArray<GerstnerWave::WaveGenData>* workQueue = nullptr;
+
+	const char* SpringObject::s_ExtendedMeshFilePath = MESH_DIRECTORY "spring-extended.glb";
+	const char* SpringObject::s_ContractedMeshFilePath = MESH_DIRECTORY "spring-contracted.glb";
 
 	GameObject::GameObject(const std::string& name, GameObjectType type) :
 		m_Name(name),
@@ -209,6 +213,10 @@ namespace flex
 		case GameObjectType::SOCKET:
 		{
 			newGameObject = g_PluggablesSystem->AddSocket(objectName);
+		} break;
+		case GameObjectType::SPRING:
+		{
+			newGameObject = new SpringObject(objectName);
 		} break;
 		case GameObjectType::OBJECT: // Fall through
 		case GameObjectType::_NONE:
@@ -7119,8 +7127,8 @@ namespace flex
 			chunkGenInfo.SetFloatChecked("octave scale", m_OctaveScale);
 			chunkGenInfo.SetUIntChecked("num octaves", m_NumOctaves);
 
-			chunkGenInfo.SetBoolChecked("pin center", m_bPinCenter);
-			chunkGenInfo.SetVec3Checked("pinned center", m_PinnedPos);
+chunkGenInfo.SetBoolChecked("pin center", m_bPinCenter);
+chunkGenInfo.SetVec3Checked("pinned center", m_PinnedPos);
 		}
 	}
 
@@ -7150,5 +7158,96 @@ namespace flex
 		chunkGenInfo.fields.emplace_back("pinned center", JSONValue(VecToString(m_PinnedPos)));
 
 		parentObject.fields.emplace_back("chunk generator info", JSONValue(chunkGenInfo));
+	}
+
+	SpringObject::SpringObject(const std::string& name) :
+		GameObject(name, GameObjectType::SPRING)
+	{
+	}
+
+	void SpringObject::Initialize()
+	{
+		MaterialCreateInfo matCreateInfo = {};
+		matCreateInfo.name = "Spring";
+		matCreateInfo.shaderName = "pbr";
+		matCreateInfo.constAlbedo = glm::vec3(0.8f, 0.05f, 0.04f);
+		matCreateInfo.constRoughness = 1.0f;
+		matCreateInfo.constMetallic = 0.0f;
+		matCreateInfo.enableIrradianceSampler = false;
+		matCreateInfo.bDynamic = true;
+
+		MaterialID springMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
+
+		{
+			MeshImportSettings meshImportSettings = {};
+			meshImportSettings.bDontCreateRenderObject = true;
+
+			LoadedMesh* extendedMesh = Mesh::LoadMesh(s_ExtendedMeshFilePath, &meshImportSettings);
+			cgltf_mesh* extendedMeshCGLTF = &(extendedMesh->data->meshes[0]);
+			m_ExtendedMesh = MeshComponent::LoadFromCGLTF(nullptr, &extendedMeshCGLTF->primitives[0], springMatID, &meshImportSettings);
+
+			LoadedMesh* contractedMesh = Mesh::LoadMesh(s_ContractedMeshFilePath, &meshImportSettings);
+			cgltf_mesh* contractedMeshCGLTF = &(contractedMesh->data->meshes[0]);
+			m_ContractedMesh = MeshComponent::LoadFromCGLTF(nullptr, &contractedMeshCGLTF->primitives[0], springMatID, &meshImportSettings);
+		}
+
+		VertexBufferData* extendedVertBufferData = m_ExtendedMesh->GetVertexBufferData();
+		VertexBufferData* contractedVertBufferData = m_ContractedMesh->GetVertexBufferData();
+		u32 vertCount = extendedVertBufferData->VertexCount;
+
+		m_DynamicVertexBufferCreateInfo = {};
+		m_DynamicVertexBufferCreateInfo.attributes = extendedVertBufferData->Attributes;
+
+		m_Mesh = new Mesh(this);
+		m_Indices = m_ExtendedMesh->GetIndexBuffer();
+		m_Mesh->LoadFromMemoryDynamic(m_DynamicVertexBufferCreateInfo, m_Indices, springMatID, vertCount);
+
+		m_DynamicVertexBufferCreateInfo.positions_3D.resize(vertCount);
+		m_DynamicVertexBufferCreateInfo.texCoords_UV.resize(vertCount);
+		m_DynamicVertexBufferCreateInfo.colours_R32G32B32A32.resize(vertCount);
+		m_DynamicVertexBufferCreateInfo.normals.resize(vertCount);
+		m_DynamicVertexBufferCreateInfo.tangents.resize(vertCount);
+
+		extendedPositions.resize(vertCount);
+		contractedPositions.resize(vertCount);
+		extendedVertBufferData->CopyInto((real*)extendedPositions.data(), (VertexAttributes)VertexAttribute::POSITION);
+		contractedVertBufferData->CopyInto((real*)contractedPositions.data(), (VertexAttributes)VertexAttribute::POSITION);
+	}
+
+	void SpringObject::PostInitialize()
+	{
+	}
+
+	void SpringObject::Update()
+	{
+		real t = sin(g_SecElapsedSinceProgramStart * 2.0f) * 0.5f + 0.5f;
+
+		VertexBufferData* extendedVertBufferData = m_ExtendedMesh->GetVertexBufferData();
+		//extendedVertBufferData->CopyInto((real*)m_DynamicVertexBufferCreateInfo.positions_3D.data(), (VertexAttributes)VertexAttribute::POSITION);
+
+		for (u32 i = 0; i < (u32)m_DynamicVertexBufferCreateInfo.positions_3D.size(); ++i)
+		{
+			m_DynamicVertexBufferCreateInfo.positions_3D[i] = Lerp(extendedPositions[i], contractedPositions[i], t);
+		}
+
+		extendedVertBufferData->CopyInto((real*)m_DynamicVertexBufferCreateInfo.texCoords_UV.data(), (VertexAttributes)VertexAttribute::UV);
+		extendedVertBufferData->CopyInto((real*)m_DynamicVertexBufferCreateInfo.colours_R32G32B32A32.data(), (VertexAttributes)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT);
+		extendedVertBufferData->CopyInto((real*)m_DynamicVertexBufferCreateInfo.normals.data(), (VertexAttributes)VertexAttribute::NORMAL);
+		extendedVertBufferData->CopyInto((real*)m_DynamicVertexBufferCreateInfo.tangents.data(), (VertexAttributes)VertexAttribute::TANGENT);
+
+		m_Mesh->GetSubMeshes()[0]->UpdateDynamicVertexData(m_DynamicVertexBufferCreateInfo, m_Indices);
+	}
+
+	void SpringObject::Destroy()
+	{
+		m_ExtendedMesh->Destroy();
+		delete m_ExtendedMesh;
+
+		m_ContractedMesh->Destroy();
+		delete m_ContractedMesh;
+	}
+
+	void SpringObject::DrawImGuiObjects()
+	{
 	}
 } // namespace flex

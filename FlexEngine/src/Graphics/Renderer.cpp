@@ -1977,6 +1977,7 @@ namespace flex
 
 				if (!newObjectName.empty())
 				{
+					// TODO: Switch to a data-based factory/reflection system to get rid of all this!!
 					switch (m_NewObjectImGuiSelectedType)
 					{
 					case GameObjectType::OBJECT:
@@ -2037,6 +2038,15 @@ namespace flex
 						{
 							g_SceneManager->CurrentScene()->AddRootObject(socket);
 						}
+					} break;
+					case GameObjectType::SPRING:
+					{
+						SpringObject* newObject = new SpringObject(newObjectName);
+
+						newObject->Initialize();
+						newObject->PostInitialize();
+
+						g_SceneManager->CurrentScene()->AddRootObject(newObject);
 					} break;
 					default:
 						PrintWarn("Unhandled game object type %s\n", GameObjectTypeStrings[(i32)m_NewObjectImGuiSelectedType]);

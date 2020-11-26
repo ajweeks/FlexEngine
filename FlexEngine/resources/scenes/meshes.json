@@ -140,7 +140,8 @@
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,
-			"flipV" : false
+			"flipV" : false,
+			"dont create render object" : false
 		},
 		{
 			"file" : "cart-empty.glb",

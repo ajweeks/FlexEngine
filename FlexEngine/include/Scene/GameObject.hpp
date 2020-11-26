@@ -947,8 +947,8 @@ namespace flex
 
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
 
-		virtual void Initialize();
-		virtual void PostInitialize();
+		virtual void Initialize() override;
+		virtual void PostInitialize() override;
 		virtual void Update() override;
 		virtual void Destroy() override;
 
@@ -1003,6 +1003,40 @@ namespace flex
 		std::vector<TextureID> m_TableTextureIDs;
 
 		i32 m_IsolateOctave = -1;
+
+	};
+
+	class SpringObject : public GameObject
+	{
+	public:
+		explicit SpringObject(const std::string& name);
+
+		//virtual SpringObject* CopySelfAndAddToScene(SpringObject* parent, bool bCopyChildren) override;
+
+		virtual void Initialize() override;
+		virtual void PostInitialize() override;
+		virtual void Update() override;
+		virtual void Destroy() override;
+
+		virtual void DrawImGuiObjects() override;
+
+		//virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
+		//virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+
+
+	private:
+
+		static const char* s_ExtendedMeshFilePath;
+		static const char* s_ContractedMeshFilePath;
+
+		MeshComponent* m_ExtendedMesh = nullptr;
+		MeshComponent* m_ContractedMesh = nullptr;
+
+		VertexBufferDataCreateInfo m_DynamicVertexBufferCreateInfo;
+		std::vector<u32> m_Indices;
+
+		std::vector<glm::vec3> extendedPositions;
+		std::vector<glm::vec3> contractedPositions;
 
 	};
 
