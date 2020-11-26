@@ -2,6 +2,12 @@
 	"version" : 3,
 	"name" : "scene_terrain_test",
 	"spawn player" : false,
+	"skybox data" : 
+	{
+		"top colour" : "0.22, 0.58, 0.88, 0.00",
+		"mid colour" : "0.66, 0.86, 0.95, 0.00",
+		"btm colour" : "0.75, 0.91, 0.99, 0.00"
+	},
 	"camera" : 
 	{
 		"type" : "debug",
@@ -15,9 +21,9 @@
 		"move speed" : 514.398987,
 		"transform" : 
 		{
-			"position" : "-783.311, 833.233, 1749.117",
-			"pitch" : -0.160273,
-			"yaw" : -13.722377
+			"position" : "-1155.422, 1405.902, -6612.721",
+			"pitch" : -0.207854,
+			"yaw" : -24.787687
 		}
 	},
 	"objects" : 
@@ -26,6 +32,7 @@
 			"name" : "Skybox",
 			"type" : "skybox",
 			"visible" : true,
+			"casts shadow" : false,
 			"transform" : 
 			{
 			},
@@ -41,6 +48,7 @@
 			"name" : "Reflection Probe 01",
 			"type" : "reflection probe",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 8.000, 0.000"
@@ -50,6 +58,7 @@
 			"name" : "Directional Light",
 			"type" : "directional light",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
@@ -67,9 +76,10 @@
 			}
 		},
 		{
-			"name" : "Chunk Generator",
-			"type" : "chunk generator",
+			"name" : "Terrain",
+			"type" : "terrain",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 			},
@@ -78,12 +88,12 @@
 			],
 			"chunk generator info" : 
 			{
-				"vert count per chunk axis" : 64,
-				"chunk size" : 768.000000,
+				"vert count per chunk axis" : 16,
+				"chunk size" : 1024.000000,
 				"max height" : 768.000000,
 				"use manual seed" : true,
-				"manual seed" : 1234123,
-				"loaded chunk radius" : 4181.337891,
+				"manual seed" : 1234124,
+				"loaded chunk radius" : 6376.041992,
 				"base table width" : 32,
 				"low colour" : "0.20, 0.30, 0.45",
 				"mid colour" : "0.45, 0.55, 0.25",
@@ -92,13 +102,14 @@
 				"octave scale" : 151.438004,
 				"num octaves" : 5,
 				"pin center" : true,
-				"pinned center" : "1064.91, 629.24, 142.91"
+				"pinned center" : "-1155.42, 1405.90, -6612.72"
 			}
 		},
 		{
 			"name" : "cube",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "190.176, 0.000, 158.723",

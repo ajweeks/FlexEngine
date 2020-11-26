@@ -105,7 +105,7 @@ namespace flex
 		GERSTNER_WAVE,
 		BLOCKS,
 		PARTICLE_SYSTEM,
-		CHUNK_GENERATOR,
+		TERRAIN_GENERATOR,
 		WIRE,
 		SOCKET,
 
@@ -130,7 +130,7 @@ namespace flex
 		"gerstner wave",
 		"blocks",
 		"particle system",
-		"chunk generator",
+		"terrain",
 		"wire",
 		"socket",
 

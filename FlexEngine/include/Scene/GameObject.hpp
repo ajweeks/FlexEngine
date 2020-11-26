@@ -940,11 +940,10 @@ namespace flex
 
 	};
 
-	// TODO: Rename to landscape generator
-	class ChunkGenerator : public GameObject
+	class TerrainGenerator : public GameObject
 	{
 	public:
-		explicit ChunkGenerator(const std::string& name);
+		explicit TerrainGenerator(const std::string& name);
 
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
 
@@ -958,7 +957,7 @@ namespace flex
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
 		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
 
-		u32 VertCountPerChunkAxis = 32;
+		u32 VertCountPerChunkAxis = 8;
 		real ChunkSize = 16.0f;
 		real MaxHeight = 3.0f;
 

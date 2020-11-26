@@ -1994,16 +1994,16 @@ namespace flex
 						g_Editor->SetSelectedObject(newGameObject);
 
 					} break;
-					case GameObjectType::CHUNK_GENERATOR:
+					case GameObjectType::TERRAIN_GENERATOR:
 					{
-						ChunkGenerator* chunkGenerator = new ChunkGenerator(newObjectName);
+						TerrainGenerator* terrainGenerator = new TerrainGenerator(newObjectName);
 
-						g_SceneManager->CurrentScene()->AddRootObject(chunkGenerator);
+						g_SceneManager->CurrentScene()->AddRootObject(terrainGenerator);
 
-						chunkGenerator->Initialize();
-						chunkGenerator->PostInitialize();
+						terrainGenerator->Initialize();
+						terrainGenerator->PostInitialize();
 
-						g_Editor->SetSelectedObject(chunkGenerator);
+						g_Editor->SetSelectedObject(terrainGenerator);
 					} break;
 					case GameObjectType::WIRE:
 					{

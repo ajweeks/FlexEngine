@@ -198,9 +198,9 @@ namespace flex
 		{
 			newGameObject = new ParticleSystem(objectName);
 		} break;
-		case GameObjectType::CHUNK_GENERATOR:
+		case GameObjectType::TERRAIN_GENERATOR:
 		{
-			newGameObject = new ChunkGenerator(objectName);
+			newGameObject = new TerrainGenerator(objectName);
 		} break;
 		case GameObjectType::WIRE:
 		{
@@ -6637,22 +6637,22 @@ namespace flex
 		GameObject::Update();
 	}
 
-	ChunkGenerator::ChunkGenerator(const std::string& name) :
-		GameObject(name, GameObjectType::CHUNK_GENERATOR),
+	TerrainGenerator::TerrainGenerator(const std::string& name) :
+		GameObject(name, GameObjectType::TERRAIN_GENERATOR),
 		m_LowCol(0.2f, 0.3f, 0.45f),
 		m_MidCol(0.45f, 0.55f, 0.25f),
 		m_HighCol(0.65f, 0.67f, 0.69f)
 	{
 	}
 
-	GameObject* ChunkGenerator::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
+	GameObject* TerrainGenerator::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
 	{
 		FLEX_UNUSED(parent);
 		FLEX_UNUSED(bCopyChildren);
 		return nullptr;
 	}
 
-	void ChunkGenerator::Initialize()
+	void TerrainGenerator::Initialize()
 	{
 		MaterialCreateInfo matCreateInfo = {};
 		matCreateInfo.name = "Terrain";
@@ -6671,7 +6671,7 @@ namespace flex
 		GameObject::Initialize();
 	}
 
-	void ChunkGenerator::DestroyAllChunks()
+	void TerrainGenerator::DestroyAllChunks()
 	{
 		for (auto iter = m_Meshes.begin(); iter != m_Meshes.end(); ++iter)
 		{
@@ -6680,7 +6680,7 @@ namespace flex
 		m_Meshes.clear();
 	}
 
-	void ChunkGenerator::GenerateChunk(const glm::ivec2& chunkIndex)
+	void TerrainGenerator::GenerateChunk(const glm::ivec2& chunkIndex)
 	{
 		PROFILE_AUTO("Generate terrain chunk");
 
@@ -6699,7 +6699,12 @@ namespace flex
 		const u32 triCount = ((VertCountPerChunkAxis - 1) * (VertCountPerChunkAxis - 1)) * 2;
 		const u32 indexCount = triCount * 3;
 
-		VertexBufferDataCreateInfo vertexBufferCreateInfo = {};
+		static VertexBufferDataCreateInfo vertexBufferCreateInfo = {};
+		vertexBufferCreateInfo.positions_3D.clear();
+		vertexBufferCreateInfo.texCoords_UV.clear();
+		vertexBufferCreateInfo.colours_R32G32B32A32.clear();
+		vertexBufferCreateInfo.normals.clear();
+
 		vertexBufferCreateInfo.attributes = g_Renderer->GetShader(shaderID).vertexAttributes;
 		vertexBufferCreateInfo.positions_3D.reserve(vertexCount);
 		vertexBufferCreateInfo.texCoords_UV.reserve(vertexCount);
@@ -6763,7 +6768,7 @@ namespace flex
 		}
 	}
 
-	void ChunkGenerator::GenerateGradients()
+	void TerrainGenerator::GenerateGradients()
 	{
 		PROFILE_AUTO("Generate terrain chunk gradient tables");
 
@@ -6811,7 +6816,7 @@ namespace flex
 	// TODO: Create SoA style SampleTerrain which fills out a buffer iteratively, sampling each octave in turn
 
 	// Returns a value in [0, 1]
-	real ChunkGenerator::SampleTerrain(const glm::vec2& pos)
+	real TerrainGenerator::SampleTerrain(const glm::vec2& pos)
 	{
 		real result = 0.0f;
 		real octave = m_BaseOctave;
@@ -6834,7 +6839,7 @@ namespace flex
 	}
 
 	// Returns a value in [-1, 1]
-	real ChunkGenerator::SampleNoise(const glm::vec2& pos, real octave, u32 octaveIdx)
+	real TerrainGenerator::SampleNoise(const glm::vec2& pos, real octave, u32 octaveIdx)
 	{
 		const glm::vec2 scaledPos = pos / octave;
 		glm::vec2 posi = glm::vec2(std::floor(scaledPos.x), std::floor(scaledPos.y));
@@ -6863,12 +6868,12 @@ namespace flex
 		return val;
 	}
 
-	void ChunkGenerator::PostInitialize()
+	void TerrainGenerator::PostInitialize()
 	{
 		GameObject::PostInitialize();
 	}
 
-	void ChunkGenerator::Update()
+	void TerrainGenerator::Update()
 	{
 		std::vector<glm::vec2i> chunksInRadius(m_Meshes.size()); // Likely to be same size as m_LoadedChunks
 
@@ -6938,7 +6943,7 @@ namespace flex
 				++iterationCount;
 
 				ns now = Time::CurrentNanoseconds();
-				if ((now - start) > m_CreationBudgetPerFrame)
+				if ((now - start) > m_DeletionBudgetPerFrame)
 				{
 					break;
 				}
@@ -6988,7 +6993,7 @@ namespace flex
 		GameObject::Update();
 	}
 
-	void ChunkGenerator::Destroy()
+	void TerrainGenerator::Destroy()
 	{
 		for (auto iter = m_Meshes.begin(); iter != m_Meshes.end(); ++iter)
 		{
@@ -6999,7 +7004,7 @@ namespace flex
 		GameObject::Destroy();
 	}
 
-	void ChunkGenerator::DrawImGuiObjects()
+	void TerrainGenerator::DrawImGuiObjects()
 	{
 		GameObject::DrawImGuiObjects();
 
@@ -7089,7 +7094,7 @@ namespace flex
 		ImGui::SliderFloat("View radius", &m_LoadedChunkRadius, 0.01f, 8192.0f);
 	}
 
-	void ChunkGenerator::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void TerrainGenerator::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		FLEX_UNUSED(matIDs);
 		FLEX_UNUSED(scene);
@@ -7119,7 +7124,7 @@ namespace flex
 		}
 	}
 
-	void ChunkGenerator::SerializeUniqueFields(JSONObject& parentObject) const
+	void TerrainGenerator::SerializeUniqueFields(JSONObject& parentObject) const
 	{
 		JSONObject chunkGenInfo = {};
 
