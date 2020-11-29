@@ -52,6 +52,13 @@ namespace flex
 			MeshImportSettings* importSettings = nullptr,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
+		static MeshComponent* LoadFromCGLTFDynamic(Mesh* owningMesh,
+			cgltf_primitive* primitive,
+			MaterialID materialID,
+			u32 initialMaxVertexCount = u32_max,
+			MeshImportSettings* importSettings = nullptr,
+			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
+
 		static MeshComponent* LoadFromMemory(Mesh* owningMesh,
 			const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
 			const std::vector<u32>& indices,
@@ -84,6 +91,8 @@ namespace flex
 		static PrefabShape StringToPrefabShape(const std::string& prefabName);
 		static std::string PrefabShapeToString(PrefabShape shape);
 
+		static bool CalculateTangents(VertexBufferDataCreateInfo& createInfo, const std::vector<u32>& indices);
+
 		PrefabShape GetShape() const;
 		Mesh* GetOwner();
 
@@ -110,14 +119,22 @@ namespace flex
 			MaterialID materialID,
 			bool bDyanmic,
 			u32 initialMaxDynamicVertexCount,
-			RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */);
+			RenderObjectCreateInfo* optionalCreateInfo);
+
+		static MeshComponent* LoadFromCGLTFInternal(Mesh* owningMesh,
+			cgltf_primitive* primitive,
+			MaterialID materialID,
+			bool bDynamic,
+			u32 initialMaxDynamicVertexCount,
+			MeshImportSettings* importSettings,
+			RenderObjectCreateInfo* optionalCreateInfo);
 
 		real CalculateBoundingSphereScale() const;
-		bool CalculateTangents(VertexBufferDataCreateInfo& createInfo, bool bMissingTexCoords);
 
 		void CalculateBoundingSphereRadius(const std::vector<glm::vec3>& positions);
 
 		void CopyInOptionalCreateInfo(RenderObjectCreateInfo& createInfo, const RenderObjectCreateInfo& overrides);
+
 
 		static const real GRID_LINE_SPACING;
 		static const u32 GRID_LINE_COUNT;

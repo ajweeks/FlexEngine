@@ -72,7 +72,7 @@ namespace flex
 			real colourTo[4];
 		};
 
-		static const u32 MAX_NUM_LINE_SEGMENTS = 65536;
+		static const u32 MAX_NUM_LINE_SEGMENTS = 1'048'576;
 		u32 m_LineSegmentIndex = 0;
 		LineSegment m_LineSegments[MAX_NUM_LINE_SEGMENTS];
 

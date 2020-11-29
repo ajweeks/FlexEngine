@@ -84,16 +84,15 @@ namespace flex
 
 	std::string Window::GenerateWindowTitle()
 	{
-		ImGuiIO& io = ImGui::GetIO();
 		std::string result = m_TitleString;
 		result += " | " + g_SceneManager->CurrentScene()->GetName();
 		if (m_bShowMSInWindowTitle)
 		{
-			result += " | " + FloatToString(g_DeltaTime, 2) + "ms";
+			result += " | " + FloatToString(g_DeltaTime * 1000.0f, 2) + "ms";
 		}
 		if (m_bShowFPSInWindowTitle)
 		{
-			result += " : " + FloatToString(io.Framerate, 0) + " FPS "; // Use ImGui's more stable FPS rolling average
+			result += " - " + FloatToString(1.0f / g_DeltaTime, 0) + " FPS ";
 		}
 
 

@@ -39,6 +39,7 @@ IGNORE_WARNINGS_POP
 #include "Profiler.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
+#include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Time.hpp"
@@ -250,6 +251,8 @@ namespace flex
 
 		g_PluggablesSystem = new PluggablesSystem();
 		g_PluggablesSystem->Initialize();
+
+		Mesh::DiscoverMeshes();
 
 		BaseScene::ParseFoundMeshFiles();
 		BaseScene::ParseFoundMaterialFiles();

@@ -47,7 +47,14 @@ namespace flex
 				}
 				else
 				{
-					return Type::INT;
+					if (isNegation)
+					{
+						return Type::INT;
+					}
+					else
+					{
+						return Type::UINT;
+					}
 				}
 			}
 		} return Type::UNINITIALIZED;
@@ -76,6 +83,12 @@ namespace flex
 		intValue(inIntValue)
 	{
 		ENSURE(!IsNanOrInf((real)inIntValue));
+	}
+
+	JSONValue::JSONValue(u32 inUIntValue) :
+		type(Type::UINT),
+		uintValue(inUIntValue)
+	{
 	}
 
 	JSONValue::JSONValue(real inFloatValue) :
@@ -243,13 +256,29 @@ namespace flex
 		return false;
 	}
 
+	u32 JSONObject::GetUInt(const std::string& label) const
+	{
+		for (const JSONField& field : fields)
+		{
+			if (field.label == label)
+			{
+				if (field.value.uintValue != 0)
+				{
+					ENSURE(!IsNanOrInf((real)field.value.uintValue));
+					return field.value.uintValue;
+				}
+				ENSURE(!IsNanOrInf(field.value.floatValue));
+				return (u32)field.value.floatValue;
+			}
+		}
+		return 0;
+	}
+
 	bool JSONObject::SetUIntChecked(const std::string& label, u32& value) const
 	{
 		if (HasField(label))
 		{
-			i32 iValue = GetInt(label);
-			value = (u32)iValue;
-			assert((i32)value == iValue); // Lost precision in uint storage! Implement uint serialization!
+			value = GetUInt(label);
 			return true;
 		}
 		return false;
@@ -396,6 +425,9 @@ namespace flex
 			break;
 		case JSONValue::Type::INT:
 			result += IntToString(value.intValue);
+			break;
+		case JSONValue::Type::UINT:
+			result += UIntToString(value.uintValue);
 			break;
 		case JSONValue::Type::FLOAT:
 			result += FloatToString(value.floatValue, value.floatPrecision);

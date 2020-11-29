@@ -36,12 +36,14 @@ namespace flex
 		bool LoadFromFile(
 			const std::string& relativeFilePath,
 			MaterialID materialID,
+			bool bDynamic = false,
 			MeshImportSettings* importSettings = nullptr,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
 		bool LoadFromFile(
 			const std::string& relativeFilePath,
 			const std::vector<MaterialID>& inMaterialIDs,
+			bool bDynamic = false,
 			MeshImportSettings* importSettings = nullptr,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
@@ -96,11 +98,13 @@ namespace flex
 
 		static LoadedMesh* GetLoadedMesh(const std::string& relativeFilePath, MeshImportSettings* importSettings = nullptr);
 
+		static void DiscoverMeshes();
 		static bool FindPreLoadedMesh(const std::string& relativeFilePath, LoadedMesh** loadedMesh);
 		static LoadedMesh* LoadMesh(const std::string& relativeFilePath, MeshImportSettings* importSettings = nullptr);
 
 		// First field is relative file path (e.g. MESH_DIRECTORY "cube.glb")
-		static std::map<std::string, LoadedMesh*> m_LoadedMeshes;
+		static std::map<std::string, LoadedMesh*> s_LoadedMeshes;
+		static std::vector<std::string> s_DiscoveredMeshes;
 
 		glm::vec3 m_MinPoint;
 		glm::vec3 m_MaxPoint;

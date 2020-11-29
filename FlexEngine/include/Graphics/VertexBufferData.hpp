@@ -36,9 +36,12 @@ namespace flex
 
 		// Copies data from this buffer into dst for each given attribute
 		// If this buffer doesn't contain a given attribute, default values will be used
+		// Returns bytes copied
 		u32 CopyInto(real* dst, VertexAttributes usingAttributes);
 
 		void DescribeShaderVariables(Renderer* renderer, RenderID renderID);
+
+		static void ResizeForPresentAttributes(VertexBufferDataCreateInfo& createInfo, u32 vertCount);
 
 		bool bDynamic = false;
 		real* vertexData = nullptr;

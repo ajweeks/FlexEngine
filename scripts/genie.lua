@@ -197,6 +197,7 @@ files {
 	path.join(SOURCE_DIR, "include/**.h"),
 	path.join(SOURCE_DIR, "include/**.hpp"),
 	path.join(SOURCE_DIR, "src/**.cpp"),
+	path.join(SOURCE_DIR, "src/**.c"),
 	path.join(DEPENDENCIES_DIR, "imgui/**.h"),
 	path.join(DEPENDENCIES_DIR, "imgui/**.cpp"),
 	path.join(DEPENDENCIES_DIR, "volk/volk.h"),

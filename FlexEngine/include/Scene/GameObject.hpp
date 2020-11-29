@@ -1044,6 +1044,140 @@ namespace flex
 		std::vector<glm::vec3> contractedPositions;
 		std::vector<glm::vec3> contractedNormals;
 		std::vector<glm::vec3> contractedTangents;
+	};
+
+	struct Point
+	{
+		Point(glm::vec3 pos, glm::vec3 vel, real invMass) :
+			pos(pos),
+			vel(vel),
+			invMass(invMass)
+		{}
+
+		glm::vec3 pos;
+		glm::vec3 vel;
+		real invMass = 0.0f;
+	};
+
+	struct Constraint
+	{
+		enum class EqualityType
+		{
+			EQUALITY,
+			INEQUALITY,
+
+			_NONE
+		};
+
+		enum class Type
+		{
+			DISTANCE,
+			BENDING,
+
+			_NONE
+		};
+
+		Constraint(real stiffness, EqualityType equalityType, Type type) :
+			stiffness(stiffness),
+			equalityType(equalityType),
+			type(type)
+		{
+		}
+
+		real stiffness;
+		EqualityType equalityType;
+		Type type;
+	};
+
+	struct DistanceConstraint : public Constraint
+	{
+		DistanceConstraint(i32 pointIndex0, i32 pointIndex1, real stiffness, real targetDistance);
+
+		real targetDistance;
+		i32 pointIndices[2];
+	};
+
+	struct BendingConstraint : public Constraint
+	{
+		BendingConstraint(i32 pointIndex0, i32 pointIndex1, i32 pointIndex2, i32 pointIndex3, real stiffness, real targetPhi);
+
+		real targetPhi;
+		i32 pointIndices[4];
+	};
+
+	struct Triangle
+	{
+		Triangle();
+		Triangle(i32 pointIndex0, i32 pointIndex1, i32 pointIndex2);
+
+		i32 pointIndices[3];
+	};
+
+	class SoftBody : public GameObject
+	{
+	public:
+		SoftBody(const std::string& name);
+
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
+
+		virtual void Initialize() override;
+		virtual void Destroy() override;
+		virtual void Update() override;
+
+		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+
+		virtual void DrawImGuiObjects() override;
+
+		static ms FIXED_UPDATE_TIMESTEP;
+		static u32 MAX_UPDATE_COUNT; // Max fixed update steps that can be taken in one frame
+
+	private:
+		void Draw();
+
+		// Add new constraint between index0 & index1 if one doesn't already exist.
+		// Returns new constraint count
+		u32 AddUniqueDistanceConstraint(i32 index0, i32 index1, u32 atIndex, real stiffness);
+		u32 AddUniqueBendingConstraint(i32 index0, i32 index1, i32 index2, i32 index3, u32 atIndex, real stiffness);
+
+		void LoadFromMesh();
+
+		// Outside vert is vert not on shared edge
+		bool GetTriangleSharingEdge(const std::vector<u32>& indexData, i32 edgeIndex0, i32 edgeIndex1, const Triangle& originalTri, Triangle& outTri, i32& outOutsideVertIndex);
+
+		u32 m_SolverIterationCount;
+		bool m_bPaused = false;
+		bool m_bSingleStep = false;
+		bool m_bRenderWireframe = true;
+
+		ms m_LastUpdateTime;
+		sec m_AccumulatedSec = 0.0f;
+		ms m_UpdateDuration = 0.0f;
+		real m_Damping = 0.99f;
+		real m_Stiffness = 0.8f;
+		real m_BendingStiffness = 0.1f;
+
+		u32 m_DragPointIndex = 0;
+		std::vector<Point*> points;
+		// TODO: Split constraint types into separate containers
+		std::vector<Constraint*> constraints;
+		std::vector<Triangle*> triangles;
+
+		i32 m_ShownBendingIndex = 0;
+		i32 m_FirstBendingConstraintIndex = 0;
+
+		std::vector<glm::vec3> initialPositions;
+
+		Mesh* m_Mesh = nullptr;
+		MeshComponent* m_MeshComponent = nullptr;
+		VertexBufferDataCreateInfo m_MeshVertexBufferCreateInfo;
+		MaterialID m_MeshMaterialID = InvalidMaterialID;
+		//std::vector<
+
+		std::string m_CurrentMeshFilePath;
+		// Editor only
+		i32 m_SelectedMeshIndex = -1;
+		std::string m_CurrentMeshFileName;
 
 	};
 

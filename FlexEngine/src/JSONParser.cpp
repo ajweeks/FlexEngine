@@ -227,6 +227,29 @@ namespace flex
 
 				*offset = (i32)nextNonAlphaNumeric;
 			} break;
+			case JSONValue::Type::UINT:
+			{
+				size_t intStart = quoteEnd + 2;
+				size_t nextNonAlphaNumeric = NextNonAlphaNumeric(fileContents, (i32)intStart + 1);
+				size_t intCharCount = nextNonAlphaNumeric - intStart;
+				std::string uintStr = fileContents.substr(intStart, intCharCount);
+				u32 uintValue = 0;
+				if (!uintStr.empty())
+				{
+					if (uintStr == "nan" || uintStr == "-nan")
+					{
+						PrintWarn("Found NaN in json string, replacing with 0\n");
+						uintValue = 0;
+					}
+					else
+					{
+						uintValue = (u32)stoul(uintStr);
+					}
+				}
+				field.value = JSONValue(uintValue);
+
+				*offset = (i32)nextNonAlphaNumeric;
+			} break;
 			case JSONValue::Type::FLOAT:
 			{
 				size_t floatStart = quoteEnd + 2;

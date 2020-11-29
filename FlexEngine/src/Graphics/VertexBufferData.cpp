@@ -427,6 +427,64 @@ namespace flex
 		}
 	}
 
+	void VertexBufferData::ResizeForPresentAttributes(VertexBufferDataCreateInfo& createInfo, u32 vertCount)
+	{
+		if (createInfo.attributes & (u32)VertexAttribute::POSITION)
+		{
+			createInfo.positions_3D.resize(vertCount, VEC3_ZERO);
+		}
+
+		if (createInfo.attributes & (u32)VertexAttribute::POSITION2)
+		{
+			createInfo.positions_2D.resize(vertCount, VEC2_ZERO);
+		}
+
+		if (createInfo.attributes & (u32)VertexAttribute::POSITION4)
+		{
+			createInfo.positions_4D.resize(vertCount, VEC4_ZERO);
+		}
+
+		if (createInfo.attributes & (u32)VertexAttribute::VELOCITY3)
+		{
+			createInfo.velocities.resize(vertCount, VEC3_ZERO);
+		}
+
+		if (createInfo.attributes & (u32)VertexAttribute::UV)
+		{
+			createInfo.texCoords_UV.resize(vertCount, VEC2_ZERO);
+		}
+
+		if (createInfo.attributes & (u32)VertexAttribute::COLOUR_R8G8B8A8_UNORM)
+		{
+			createInfo.colours_R8G8B8A8.resize(vertCount, COLOUR32U_WHITE);
+		}
+
+		if (createInfo.attributes & (u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT)
+		{
+			createInfo.colours_R32G32B32A32.resize(vertCount, COLOUR128F_WHITE);
+		}
+
+		if (createInfo.attributes & (u32)VertexAttribute::NORMAL)
+		{
+			createInfo.normals.resize(vertCount, VEC3_UP);
+		}
+
+		if (createInfo.attributes & (u32)VertexAttribute::TANGENT)
+		{
+			createInfo.tangents.resize(vertCount, VEC3_RIGHT);
+		}
+
+		if (createInfo.attributes & (u32)VertexAttribute::EXTRA_VEC4)
+		{
+			createInfo.extraVec4s.resize(vertCount, VEC4_ZERO);
+		}
+
+		if (createInfo.attributes & (u32)VertexAttribute::EXTRA_INT)
+		{
+			createInfo.extraInts.resize(vertCount, 0);
+		}
+	}
+
 	u32 HashVertexBufferDataCreateInfo(const VertexBufferDataCreateInfo& info)
 	{
 		u32 result = (u32)info.attributes;

@@ -55,12 +55,12 @@ namespace flex
 
 	void MeshComponent::DestroyAllLoadedMeshes()
 	{
-		for (auto& loadedMeshPair : Mesh::m_LoadedMeshes)
+		for (auto& loadedMeshPair : Mesh::s_LoadedMeshes)
 		{
 			cgltf_free(loadedMeshPair.second->data);
 			delete loadedMeshPair.second;
 		}
-		Mesh::m_LoadedMeshes.clear();
+		Mesh::s_LoadedMeshes.clear();
 	}
 
 	void MeshComponent::PostInitialize()
@@ -124,6 +124,27 @@ namespace flex
 		MaterialID materialID,
 		MeshImportSettings* importSettings /* = nullptr */,
 		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
+	{
+		return LoadFromCGLTFInternal(owningMesh, primitive, materialID, false, 0, importSettings, optionalCreateInfo);
+	}
+
+	MeshComponent* MeshComponent::LoadFromCGLTFDynamic(Mesh* owningMesh,
+		cgltf_primitive* primitive,
+		MaterialID materialID,
+		u32 initialMaxVertexCount /* = u32_max */,
+		MeshImportSettings* importSettings /* = nullptr */,
+		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
+	{
+		return LoadFromCGLTFInternal(owningMesh, primitive, materialID, true, initialMaxVertexCount, importSettings, optionalCreateInfo);
+	}
+
+	MeshComponent* MeshComponent::LoadFromCGLTFInternal(Mesh* owningMesh,
+		cgltf_primitive* primitive,
+		MaterialID materialID,
+		bool bDynamic,
+		u32 initialMaxDynamicVertexCount,
+		MeshImportSettings* importSettings,
+		RenderObjectCreateInfo* optionalCreateInfo)
 	{
 		if (primitive->indices == nullptr)
 		{
@@ -349,7 +370,7 @@ namespace flex
 
 		if (bCalculateTangents)
 		{
-			if (!newMeshComponent->CalculateTangents(vertexBufferDataCreateInfo, bMissingTexCoords))
+			if (!MeshComponent::CalculateTangents(vertexBufferDataCreateInfo, newMeshComponent->m_Indices))
 			{
 				PrintWarn("Failed to calculate tangents for mesh!\n");
 			}
@@ -357,7 +378,19 @@ namespace flex
 
 		newMeshComponent->CalculateBoundingSphereRadius(vertexBufferDataCreateInfo.positions_3D);
 
-		newMeshComponent->m_VertexBufferData.Initialize(vertexBufferDataCreateInfo);
+		if (bDynamic)
+		{
+			if (initialMaxDynamicVertexCount == u32_max)
+			{
+				initialMaxDynamicVertexCount = vertCount;
+			}
+			newMeshComponent->m_VertexBufferData.InitializeDynamic(vertexBufferDataCreateInfo.attributes, initialMaxDynamicVertexCount);
+			newMeshComponent->m_VertexBufferData.UpdateData(vertexBufferDataCreateInfo);
+		}
+		else
+		{
+			newMeshComponent->m_VertexBufferData.Initialize(vertexBufferDataCreateInfo);
+		}
 
 		RenderObjectCreateInfo renderObjectCreateInfo = {};
 
@@ -390,6 +423,15 @@ namespace flex
 		return newMeshComponent;
 	}
 
+	MeshComponent* MeshComponent::LoadFromMemory(Mesh* owningMesh,
+		const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
+		const std::vector<u32>& indices,
+		MaterialID materialID,
+		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
+	{
+		return LoadFromMemoryInternal(owningMesh, vertexBufferCreateInfo, indices, materialID, false, 0, optionalCreateInfo);
+	}
+
 	MeshComponent* MeshComponent::LoadFromMemoryDynamic(Mesh* owningMesh,
 		const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
 		const std::vector<u32>& indices,
@@ -398,15 +440,6 @@ namespace flex
 		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
 	{
 		return LoadFromMemoryInternal(owningMesh, vertexBufferCreateInfo, indices, materialID, true, initialMaxVertexCount, optionalCreateInfo);
-	}
-
-	MeshComponent* MeshComponent::LoadFromMemory(Mesh* owningMesh,
-		const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
-		const std::vector<u32>& indices,
-		MaterialID materialID,
-		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
-	{
-		return LoadFromMemoryInternal(owningMesh, vertexBufferCreateInfo, indices, materialID, false, 0, optionalCreateInfo);
 	}
 
 	MeshComponent* MeshComponent::LoadFromMemoryInternal(Mesh* owningMesh,
@@ -1185,7 +1218,7 @@ namespace flex
 		return sphereScale;
 	}
 
-	bool MeshComponent::CalculateTangents(VertexBufferDataCreateInfo& createInfo, bool bMissingTexCoords)
+	bool MeshComponent::CalculateTangents(VertexBufferDataCreateInfo& createInfo, const std::vector<u32>& indices)
 	{
 		if (createInfo.normals.empty())
 		{
@@ -1197,55 +1230,114 @@ namespace flex
 			PrintError("Can't calculate tangents for mesh which contains no position data!\n");
 			return false;
 		}
-
-		if (!bMissingTexCoords)
+		if (createInfo.texCoords_UV.empty())
 		{
-			for (u32 i = 0; i < createInfo.positions_3D.size() - 2; i += 3)
-			{
-				glm::vec3 p0 = createInfo.positions_3D[i + 0];
-				glm::vec3 p1 = createInfo.positions_3D[i + 1];
-				glm::vec3 p2 = createInfo.positions_3D[i + 2];
-
-				glm::vec2 uv0 = createInfo.texCoords_UV[i + 0];
-				glm::vec2 uv1 = createInfo.texCoords_UV[i + 1];
-				glm::vec2 uv2 = createInfo.texCoords_UV[i + 2];
-
-				glm::vec3 dPos0 = p1 - p0;
-				glm::vec3 dPos1 = p2 - p0;
-
-				glm::vec2 dUV0 = uv1 - uv0;
-				glm::vec2 dUV1 = uv2 - uv0;
-
-				real r = 1.0f / (dUV1.x * dUV0.y - dUV1.y * dUV0.x);
-				glm::vec3 tangent = glm::normalize((dPos0 * dUV0.y - dPos1 * dUV1.y) * r);
-				//glm::vec3 bitangent = (dPos1 * dUV1.x - dPos0 * dUV0.x) * r;
-
-				createInfo.tangents[i + 0] = tangent;
-				createInfo.tangents[i + 1] = tangent;
-				createInfo.tangents[i + 2] = tangent;
-			}
-		}
-		else
-		{
-			for (u32 i = 0; i < createInfo.positions_3D.size() - 2; i += 3)
-			{
-				glm::vec3 p0 = createInfo.positions_3D[i + 0];
-				glm::vec3 p1 = createInfo.positions_3D[i + 1];
-				glm::vec3 p2 = createInfo.positions_3D[i + 2];
-
-				glm::vec3 dPos0 = p1 - p0;
-				glm::vec3 dPos1 = p2 - p0;
-
-				glm::vec3 tangent = glm::normalize(dPos0 - dPos1);
-				//glm::vec3 bitangent = (dPos1 * dUV1.x - dPos0 * dUV0.x) * r;
-
-				createInfo.tangents[i + 0] = tangent;
-				createInfo.tangents[i + 1] = tangent;
-				createInfo.tangents[i + 2] = tangent;
-			}
+			PrintError("Can't calculate tangents for mesh which contains no texcoord data!\n");
+			return false;
 		}
 
-		return true;
+		for (u32 i = 0; i < indices.size() - 2; i += 3)
+		{
+			i32 index0 = indices[i + 0];
+			i32 index1 = indices[i + 1];
+			i32 index2 = indices[i + 2];
+
+			glm::vec3 p0 = createInfo.positions_3D[index0];
+			glm::vec3 p1 = createInfo.positions_3D[index1];
+			glm::vec3 p2 = createInfo.positions_3D[index2];
+
+			glm::vec3 dPos0 = p1 - p0;
+			glm::vec3 dPos1 = p2 - p0;
+
+			glm::vec3 normal = glm::normalize(glm::cross(dPos0, dPos1));
+
+			createInfo.normals[index0] = normal;
+			createInfo.normals[index1] = normal;
+			createInfo.normals[index2] = normal;
+		}
+
+		struct MikkTUserData
+		{
+			VertexBufferDataCreateInfo* createInfo;
+			std::vector<u32> const * indices;
+		};
+
+		SMikkTSpaceInterface mikkTinterface = {};
+		mikkTinterface.m_getNumFaces = [](const SMikkTSpaceContext* pContext) -> int
+		{
+			MikkTUserData* userData = (MikkTUserData*)pContext->m_pUserData;
+			return (int)(userData->indices->size() / 3);
+		};
+
+		// Returns the number of vertices on face number iFace
+		// iFace is a number in the range {0, 1, ..., getNumFaces()-1}
+		mikkTinterface.m_getNumVerticesOfFace = [](const SMikkTSpaceContext* pContext, const int iFace) -> int
+		{
+			FLEX_UNUSED(pContext);
+			FLEX_UNUSED(iFace);
+			return 3;
+		};
+
+		// returns the position/normal/texcoord of the referenced face of vertex number iVert.
+		// iVert is in the range {0,1,2} for triangles and {0,1,2,3} for quads.
+		mikkTinterface.m_getPosition = [](const SMikkTSpaceContext* pContext, float fvPosOut[], const int iFace, const int iVert)
+		{
+			MikkTUserData* userData = (MikkTUserData*)pContext->m_pUserData;
+			*((glm::vec3*)fvPosOut) = userData->createInfo->positions_3D[userData->indices->at(iFace * 3 + iVert)];
+		};
+		mikkTinterface.m_getNormal = [](const SMikkTSpaceContext* pContext, float fvNormOut[], const int iFace, const int iVert)
+		{
+			MikkTUserData* userData = (MikkTUserData*)pContext->m_pUserData;
+			*((glm::vec3*)fvNormOut) = userData->createInfo->normals[userData->indices->at(iFace * 3 + iVert)];
+		};
+		mikkTinterface.m_getTexCoord = [](const SMikkTSpaceContext* pContext, float fvTexcOut[], const int iFace, const int iVert)
+		{
+			MikkTUserData* userData = (MikkTUserData*)pContext->m_pUserData;
+			*((glm::vec2*)fvTexcOut) = userData->createInfo->texCoords_UV[userData->indices->at(iFace * 3 + iVert)];
+		};
+
+		// either (or both) of the two setTSpace callbacks can be set.
+		// The call-back m_setTSpaceBasic() is sufficient for basic normal mapping.
+
+		// This function is used to return the tangent and fSign to the application.
+		// fvTangent is a unit length vector.
+		// For normal maps it is sufficient to use the following simplified version of the bitangent which is generated at pixel/vertex level.
+		// bitangent = fSign * cross(vN, tangent);
+		// Note that the results are returned unindexed. It is possible to generate a new index list
+		// But averaging/overwriting tangent spaces by using an already existing index list WILL produce INCRORRECT results.
+		// DO NOT! use an already existing index list.
+		mikkTinterface.m_setTSpaceBasic = [](const SMikkTSpaceContext* pContext, const float fvTangent[], const float fSign, const int iFace, const int iVert)
+		{
+			FLEX_UNUSED(fSign);
+			MikkTUserData* userData = (MikkTUserData*)pContext->m_pUserData;
+			userData->createInfo->tangents[userData->indices->at(iFace * 3 + iVert)] = *((glm::vec3*)fvTangent);
+		};
+
+		// This function is used to return tangent space results to the application.
+		// fvTangent and fvBiTangent are unit length vectors and fMagS and fMagT are their
+		// true magnitudes which can be used for relief mapping effects.
+		// fvBiTangent is the "real" bitangent and thus may not be perpendicular to fvTangent.
+		// However, both are perpendicular to the vertex normal.
+		// For normal maps it is sufficient to use the following simplified version of the bitangent which is generated at pixel/vertex level.
+		// fSign = bIsOrientationPreserving ? 1.0f : (-1.0f);
+		// bitangent = fSign * cross(vN, tangent);
+		// Note that the results are returned unindexed. It is possible to generate a new index list
+		// But averaging/overwriting tangent spaces by using an already existing index list WILL produce INCRORRECT results.
+		// DO NOT! use an already existing index list.
+		//mikkTinterface.m_setTSpace = [](const SMikkTSpaceContext* pContext, const float fvTangent[], const float fvBiTangent[], const float fMagS, const float fMagT,
+		//	const tbool bIsOrientationPreserving, const int iFace, const int iVert)
+		//{
+		//
+		//};
+
+		MikkTUserData userData = { &createInfo, &indices };
+
+		SMikkTSpaceContext context = {};
+		context.m_pInterface = &mikkTinterface;
+		context.m_pUserData = (void*)&userData;
+		int result = genTangSpaceDefault(&context);
+
+		return result != 0;
 	}
 
 	void MeshComponent::CalculateBoundingSphereRadius(const std::vector<glm::vec3>& positions)

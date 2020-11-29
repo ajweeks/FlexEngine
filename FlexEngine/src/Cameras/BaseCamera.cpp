@@ -128,7 +128,11 @@ namespace flex
 		forward = glm::normalize(Lerp(forward, targetForward, speed));
 
 #if THOROUGH_CHECKS
-		ENSURE(!IsNanOrInf(forward));
+		if (IsNanOrInf(forward))
+		{
+			PrintError("Forward vector was NaN or Inf!\n");
+			forward = VEC3_FORWARD;
+		}
 #endif
 
 		CalculateYawAndPitchFromForward();
@@ -182,8 +186,16 @@ namespace flex
 		roll = 0.0f;
 
 #if THOROUGH_CHECKS
-		ENSURE(!IsNanOrInf(pitch));
-		ENSURE(!IsNanOrInf(yaw));
+		if (!IsNanOrInf(pitch))
+		{
+			PrintError("Pitch was NaN or Inf!\n");
+			pitch = 0.0f;
+		}
+		if (!IsNanOrInf(yaw))
+		{
+			PrintError("Yaw was NaN or Inf!\n");
+			yaw = 0.0f;
+		}
 #endif
 	}
 

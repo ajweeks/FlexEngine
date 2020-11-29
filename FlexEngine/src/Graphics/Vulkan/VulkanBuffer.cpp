@@ -71,6 +71,11 @@ namespace flex
 			}
 		}
 
+		void VulkanBuffer::Reset()
+		{
+			allocations.clear();
+		}
+
 		VkDeviceSize VulkanBuffer::Alloc(VkDeviceSize size, bool bCanResize)
 		{
 			Unmap();

@@ -53,6 +53,9 @@ namespace flex
 
 		void OnDragDrop(i32 count, const char** paths);
 
+		bool IsShowingGrid() const;
+		void SetShowGrid(bool bShowGrid);
+
 	private:
 		EventReply OnMouseButtonEvent(MouseButton button, KeyAction action);
 		MouseButtonCallback<Editor> m_MouseButtonCallback;
@@ -79,6 +82,8 @@ namespace flex
 		GameObject* m_ScaleGizmo = nullptr;
 
 		GameObject* m_TestShape = nullptr;
+
+		GameObject* m_GridObject = nullptr;
 
 		MaterialID m_TransformGizmoMatXID = InvalidMaterialID;
 		MaterialID m_TransformGizmoMatYID = InvalidMaterialID;
@@ -109,6 +114,8 @@ namespace flex
 		glm::vec3 m_PlaneN;
 		glm::vec3 m_AxisOfRotation;
 		bool m_bLastDotPos = false;
+
+		bool m_bShowGrid = false;
 
 		// TODO: EZ: Define these in config file
 		real m_ScaleDragSpeed = 0.05f;

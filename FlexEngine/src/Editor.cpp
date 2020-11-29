@@ -29,6 +29,7 @@ IGNORE_WARNINGS_POP
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/Mesh.hpp"
+#include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
 
 namespace flex
@@ -82,10 +83,18 @@ namespace flex
 	{
 		SelectNone();
 
-		if (m_TransformGizmo)
+		if (m_TransformGizmo != nullptr)
 		{
 			m_TransformGizmo->Destroy();
 			delete m_TransformGizmo;
+			m_TransformGizmo = nullptr;
+		}
+
+		if (m_GridObject != nullptr)
+		{
+			m_GridObject->Destroy();
+			delete m_GridObject;
+			m_GridObject = nullptr;
 		}
 
 		if (m_TestShape)
@@ -191,6 +200,13 @@ namespace flex
 			m_TransformGizmo->Destroy();
 			delete m_TransformGizmo;
 			m_TransformGizmo = nullptr;
+		}
+
+		if (m_GridObject)
+		{
+			m_GridObject->Destroy();
+			delete m_GridObject;
+			m_GridObject = nullptr;
 		}
 
 		SelectNone();
@@ -1093,6 +1109,17 @@ namespace flex
 		}
 	}
 
+	bool Editor::IsShowingGrid() const
+	{
+		return m_bShowGrid;
+	}
+
+	void Editor::SetShowGrid(bool bShowGrid)
+	{
+		m_bShowGrid = bShowGrid;
+		m_GridObject->SetVisible(bShowGrid);
+	}
+
 	EventReply Editor::OnMouseButtonEvent(MouseButton button, KeyAction action)
 	{
 		if (button == MouseButton::LEFT)
@@ -1328,6 +1355,14 @@ namespace flex
 			m_TestShape->SetVisible(false);
 		}
 
+		m_GridObject = new GameObject("Grid", GameObjectType::OBJECT);
+		Mesh* gridMesh = m_GridObject->SetMesh(new Mesh(m_GridObject));
+		RenderObjectCreateInfo gridCreateInfo = {};
+		gridCreateInfo.bEditorObject = true;
+		gridMesh->LoadPrefabShape(PrefabShape::GRID, m_TransformGizmoMatAllID, &gridCreateInfo);
+		m_GridObject->Initialize();
+		m_GridObject->PostInitialize();
+		m_GridObject->SetVisible(m_bShowGrid);
 
 		m_TransformGizmo = new GameObject("Transform gizmo", GameObjectType::_NONE);
 
@@ -1353,7 +1388,7 @@ namespace flex
 			gizmoXAxisRB->SetKinematic(true);
 			gizmoXAxisRB->SetPhysicsFlags(gizmoRBFlags);
 
-			xAxisMesh->LoadFromFile(MESH_DIRECTORY "translation-gizmo-x.glb", m_TransformGizmoMatXID, nullptr, &gizmoCreateInfo);
+			xAxisMesh->LoadFromFile(MESH_DIRECTORY "translation-gizmo-x.glb", m_TransformGizmoMatXID, false, nullptr, &gizmoCreateInfo);
 
 			// Y Axis
 			GameObject* translateYAxis = new GameObject("Translation gizmo y axis", GameObjectType::_NONE);
@@ -1368,7 +1403,7 @@ namespace flex
 			gizmoYAxisRB->SetKinematic(true);
 			gizmoYAxisRB->SetPhysicsFlags(gizmoRBFlags);
 
-			yAxisMesh->LoadFromFile(MESH_DIRECTORY "translation-gizmo-y.glb", m_TransformGizmoMatYID, nullptr, &gizmoCreateInfo);
+			yAxisMesh->LoadFromFile(MESH_DIRECTORY "translation-gizmo-y.glb", m_TransformGizmoMatYID, false, nullptr, &gizmoCreateInfo);
 
 			// Z Axis
 			GameObject* translateZAxis = new GameObject("Translation gizmo z axis", GameObjectType::_NONE);
@@ -1383,7 +1418,7 @@ namespace flex
 			gizmoZAxisRB->SetKinematic(true);
 			gizmoZAxisRB->SetPhysicsFlags(gizmoRBFlags);
 
-			zAxisMesh->LoadFromFile(MESH_DIRECTORY "translation-gizmo-z.glb", m_TransformGizmoMatZID, nullptr, &gizmoCreateInfo);
+			zAxisMesh->LoadFromFile(MESH_DIRECTORY "translation-gizmo-z.glb", m_TransformGizmoMatZID, false, nullptr, &gizmoCreateInfo);
 
 
 			gizmoXAxisRB->SetLocalRotation(glm::quat(glm::vec3(0, 0, PI / 2.0f)));
@@ -1422,7 +1457,7 @@ namespace flex
 			gizmoXAxisRB->SetKinematic(true);
 			gizmoXAxisRB->SetPhysicsFlags(gizmoRBFlags);
 
-			xAxisMesh->LoadFromFile(MESH_DIRECTORY "rotation-gizmo-flat-x.glb", m_TransformGizmoMatXID, nullptr, &gizmoCreateInfo);
+			xAxisMesh->LoadFromFile(MESH_DIRECTORY "rotation-gizmo-flat-x.glb", m_TransformGizmoMatXID, false, nullptr, &gizmoCreateInfo);
 
 			// Y Axis
 			GameObject* rotationYAxis = new GameObject("Rotation gizmo y axis", GameObjectType::_NONE);
@@ -1437,7 +1472,7 @@ namespace flex
 			gizmoYAxisRB->SetKinematic(true);
 			gizmoYAxisRB->SetPhysicsFlags(gizmoRBFlags);
 
-			yAxisMesh->LoadFromFile(MESH_DIRECTORY "rotation-gizmo-flat-y.glb", m_TransformGizmoMatYID, nullptr, &gizmoCreateInfo);
+			yAxisMesh->LoadFromFile(MESH_DIRECTORY "rotation-gizmo-flat-y.glb", m_TransformGizmoMatYID, false, nullptr, &gizmoCreateInfo);
 
 			// Z Axis
 			GameObject* rotationZAxis = new GameObject("Rotation gizmo z axis", GameObjectType::_NONE);
@@ -1452,7 +1487,7 @@ namespace flex
 			gizmoZAxisRB->SetKinematic(true);
 			gizmoZAxisRB->SetPhysicsFlags(gizmoRBFlags);
 
-			zAxisMesh->LoadFromFile(MESH_DIRECTORY "rotation-gizmo-flat-z.glb", m_TransformGizmoMatZID, nullptr, &gizmoCreateInfo);
+			zAxisMesh->LoadFromFile(MESH_DIRECTORY "rotation-gizmo-flat-z.glb", m_TransformGizmoMatZID, false, nullptr, &gizmoCreateInfo);
 
 			gizmoXAxisRB->SetLocalRotation(glm::quat(glm::vec3(0, 0, PI / 2.0f)));
 			gizmoXAxisRB->SetLocalPosition(glm::vec3(-cylinderHeight, 0, 0));
@@ -1493,7 +1528,7 @@ namespace flex
 			gizmoXAxisRB->SetKinematic(true);
 			gizmoXAxisRB->SetPhysicsFlags(gizmoRBFlags);
 
-			xAxisMesh->LoadFromFile(MESH_DIRECTORY "scale-gizmo-x.glb", m_TransformGizmoMatXID, nullptr, &gizmoCreateInfo);
+			xAxisMesh->LoadFromFile(MESH_DIRECTORY "scale-gizmo-x.glb", m_TransformGizmoMatXID, false, nullptr, &gizmoCreateInfo);
 
 			// Y Axis
 			GameObject* scaleYAxis = new GameObject("Scale gizmo y axis", GameObjectType::_NONE);
@@ -1508,7 +1543,7 @@ namespace flex
 			gizmoYAxisRB->SetKinematic(true);
 			gizmoYAxisRB->SetPhysicsFlags(gizmoRBFlags);
 
-			yAxisMesh->LoadFromFile(MESH_DIRECTORY "scale-gizmo-y.glb", m_TransformGizmoMatYID, nullptr, &gizmoCreateInfo);
+			yAxisMesh->LoadFromFile(MESH_DIRECTORY "scale-gizmo-y.glb", m_TransformGizmoMatYID, false, nullptr, &gizmoCreateInfo);
 
 			// Z Axis
 			GameObject* scaleZAxis = new GameObject("Scale gizmo z axis", GameObjectType::_NONE);
@@ -1523,7 +1558,7 @@ namespace flex
 			gizmoZAxisRB->SetKinematic(true);
 			gizmoZAxisRB->SetPhysicsFlags(gizmoRBFlags);
 
-			zAxisMesh->LoadFromFile(MESH_DIRECTORY "scale-gizmo-z.glb", m_TransformGizmoMatZID, nullptr, &gizmoCreateInfo);
+			zAxisMesh->LoadFromFile(MESH_DIRECTORY "scale-gizmo-z.glb", m_TransformGizmoMatZID, false, nullptr, &gizmoCreateInfo);
 
 			// Center (all axes)
 			GameObject* scaleAllAxes = new GameObject("Scale gizmo all axes", GameObjectType::_NONE);
@@ -1538,7 +1573,7 @@ namespace flex
 			gizmoAllAxesRB->SetKinematic(true);
 			gizmoAllAxesRB->SetPhysicsFlags(gizmoRBFlags);
 
-			allAxesMesh->LoadFromFile(MESH_DIRECTORY "scale-gizmo-all.glb", m_TransformGizmoMatAllID, nullptr, &gizmoCreateInfo);
+			allAxesMesh->LoadFromFile(MESH_DIRECTORY "scale-gizmo-all.glb", m_TransformGizmoMatAllID, false, nullptr, &gizmoCreateInfo);
 
 
 			gizmoXAxisRB->SetLocalRotation(glm::quat(glm::vec3(0, 0, PI / 2.0f)));

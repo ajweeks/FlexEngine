@@ -62,6 +62,9 @@ namespace flex
 	AudioCue GameObject::s_SqueakySounds;
 	AudioSourceID GameObject::s_BunkSound;
 
+	ms SoftBody::FIXED_UPDATE_TIMESTEP = 1000.0f / 60.0f;
+	u32 SoftBody::MAX_UPDATE_COUNT = 20;
+
 	static ThreadSafeArray<GerstnerWave::WaveGenData>* workQueue = nullptr;
 
 	const char* SpringObject::s_ExtendedMeshFilePath = MESH_DIRECTORY "spring-extended.glb";
@@ -218,6 +221,10 @@ namespace flex
 		case GameObjectType::SPRING:
 		{
 			newGameObject = new SpringObject(objectName);
+		} break;
+		case GameObjectType::SOFT_BODY:
+		{
+			newGameObject = new SoftBody(objectName);
 		} break;
 		case GameObjectType::OBJECT: // Fall through
 		case GameObjectType::_NONE:
@@ -1485,7 +1492,7 @@ namespace flex
 			{
 				std::string filePath = m_Mesh->GetRelativeFilePath();
 				MeshImportSettings importSettings = m_Mesh->GetImportSettings();
-				newMesh->LoadFromFile(filePath, matIDs, &importSettings, createInfoPtr);
+				newMesh->LoadFromFile(filePath, matIDs, false, &importSettings, createInfoPtr);
 			}
 			else
 			{
@@ -3306,7 +3313,7 @@ namespace flex
 	{
 		JSONObject cartInfo = {};
 
-		cartInfo.fields.emplace_back("track ID", JSONValue((i32)currentTrackID));
+		cartInfo.fields.emplace_back("track ID", JSONValue(currentTrackID));
 		cartInfo.fields.emplace_back("dist along track", JSONValue(distAlongTrack));
 
 		parentObject.fields.emplace_back("cart info", JSONValue(cartInfo));
@@ -3412,7 +3419,7 @@ namespace flex
 	{
 		JSONObject cartInfo = {};
 
-		cartInfo.fields.emplace_back("track ID", JSONValue((i32)currentTrackID));
+		cartInfo.fields.emplace_back("track ID", JSONValue(currentTrackID));
 		cartInfo.fields.emplace_back("dist along track", JSONValue(distAlongTrack));
 
 		cartInfo.fields.emplace_back("move direction", JSONValue(moveDirection));
@@ -4860,7 +4867,7 @@ namespace flex
 		gerstnerWaveObj.fields.emplace_back("waves", JSONValue(waveObjs));
 
 		// TODO: Add uint support
-		gerstnerWaveObj.fields.emplace_back("max chunk vert count per axis", JSONValue((i32)maxChunkVertCountPerAxis));
+		gerstnerWaveObj.fields.emplace_back("max chunk vert count per axis", JSONValue(maxChunkVertCountPerAxis));
 		gerstnerWaveObj.fields.emplace_back("chunk size", JSONValue(size));
 		gerstnerWaveObj.fields.emplace_back("chunk load radius", JSONValue(loadRadius));
 		gerstnerWaveObj.fields.emplace_back("update speed", JSONValue(updateSpeed));
@@ -6601,7 +6608,7 @@ namespace flex
 		systemDataObj.fields.emplace_back("colour0", JSONValue(VecToString(data.colour0, 2)));
 		systemDataObj.fields.emplace_back("colour1", JSONValue(VecToString(data.colour1, 2)));
 		systemDataObj.fields.emplace_back("speed", JSONValue(data.speed));
-		systemDataObj.fields.emplace_back("particle count", JSONValue((i32)data.particleCount));
+		systemDataObj.fields.emplace_back("particle count", JSONValue(data.particleCount));
 		particleSystemObj.fields.emplace_back("data", JSONValue(systemDataObj));
 
 		parentObject.fields.emplace_back("particle system info", JSONValue(particleSystemObj));
@@ -7137,15 +7144,15 @@ namespace flex
 	{
 		JSONObject chunkGenInfo = {};
 
-		chunkGenInfo.fields.emplace_back("vert count per chunk axis", JSONValue((i32)VertCountPerChunkAxis));
+		chunkGenInfo.fields.emplace_back("vert count per chunk axis", JSONValue(VertCountPerChunkAxis));
 		chunkGenInfo.fields.emplace_back("chunk size", JSONValue(ChunkSize));
 		chunkGenInfo.fields.emplace_back("max height", JSONValue(MaxHeight));
 		chunkGenInfo.fields.emplace_back("use manual seed", JSONValue(m_UseManualSeed));
-		chunkGenInfo.fields.emplace_back("manual seed", JSONValue((i32)m_ManualSeed));
+		chunkGenInfo.fields.emplace_back("manual seed", JSONValue(m_ManualSeed));
 
 		chunkGenInfo.fields.emplace_back("loaded chunk radius", JSONValue(m_LoadedChunkRadius));
 
-		chunkGenInfo.fields.emplace_back("base table width", JSONValue((i32)m_BasePerlinTableWidth));
+		chunkGenInfo.fields.emplace_back("base table width", JSONValue(m_BasePerlinTableWidth));
 
 		chunkGenInfo.fields.emplace_back("low colour", JSONValue(VecToString(m_LowCol)));
 		chunkGenInfo.fields.emplace_back("mid colour", JSONValue(VecToString(m_MidCol)));
@@ -7153,7 +7160,7 @@ namespace flex
 
 		chunkGenInfo.fields.emplace_back("base octave", JSONValue(m_BaseOctave));
 		chunkGenInfo.fields.emplace_back("octave scale", JSONValue(m_OctaveScale));
-		chunkGenInfo.fields.emplace_back("num octaves", JSONValue((i32)m_NumOctaves));
+		chunkGenInfo.fields.emplace_back("num octaves", JSONValue(m_NumOctaves));
 
 		chunkGenInfo.fields.emplace_back("pin center", JSONValue(m_bPinCenter));
 		chunkGenInfo.fields.emplace_back("pinned center", JSONValue(VecToString(m_PinnedPos)));
@@ -7292,5 +7299,1012 @@ namespace flex
 	void SpringObject::DrawImGuiObjects()
 	{
 		GameObject::DrawImGuiObjects();
+	}
+
+	DistanceConstraint::DistanceConstraint(i32 pointIndex0, i32 pointIndex1, real stiffness, real targetDistance) :
+		Constraint(stiffness, Constraint::EqualityType::EQUALITY, Constraint::Type::DISTANCE),
+		targetDistance(targetDistance)
+	{
+		pointIndices[0] = pointIndex0;
+		pointIndices[1] = pointIndex1;
+	}
+
+	BendingConstraint::BendingConstraint(i32 pointIndex0, i32 pointIndex1, i32 pointIndex2, i32 pointIndex3, real stiffness, real targetPhi) :
+		Constraint(stiffness, Constraint::EqualityType::EQUALITY, Constraint::Type::BENDING),
+		targetPhi(targetPhi)
+	{
+		pointIndices[0] = pointIndex0;
+		pointIndices[1] = pointIndex1;
+		pointIndices[2] = pointIndex2;
+		pointIndices[3] = pointIndex3;
+	}
+
+	Triangle::Triangle()
+	{
+		pointIndices[0] = 0;
+		pointIndices[1] = 0;
+		pointIndices[2] = 0;
+	}
+
+	Triangle::Triangle(i32 pointIndex0, i32 pointIndex1, i32 pointIndex2)
+	{
+		pointIndices[0] = pointIndex0;
+		pointIndices[1] = pointIndex1;
+		pointIndices[2] = pointIndex2;
+	}
+
+	SoftBody::SoftBody(const std::string& name) :
+		GameObject(name, GameObjectType::SOFT_BODY),
+		m_SolverIterationCount(4) // Default, gets overridden in ParseUniqueFields
+	{
+	}
+
+	GameObject* SoftBody::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
+	{
+		size_t underscore = m_Name.find('_');
+		std::string namePrefix = underscore == std::string::npos ? m_Name : m_Name.substr(0, underscore + 1);
+		SoftBody* newSoftBody = new SoftBody(g_SceneManager->CurrentScene()->GetUniqueObjectName(namePrefix, 3));
+
+		CopyGenericFields(newSoftBody, parent, bCopyChildren);
+
+		newSoftBody->points.resize(points.size());
+		newSoftBody->constraints.resize(constraints.size());
+		newSoftBody->initialPositions.resize(initialPositions.size());
+
+		glm::vec3 deltaPos = m_Transform.GetWorldPosition() - initialPositions[m_DragPointIndex];
+		for (u32 i = 0; i < (u32)initialPositions.size(); ++i)
+		{
+			newSoftBody->initialPositions[i] = initialPositions[i] + deltaPos;
+		}
+
+		for (u32 i = 0; i < (u32)points.size(); ++i)
+		{
+			newSoftBody->points[i] = new Point(initialPositions[i], VEC3_ZERO, points[i]->invMass);
+		}
+
+		for (u32 i = 0; i < (u32)constraints.size(); ++i)
+		{
+			switch (constraints[i]->type)
+			{
+			case Constraint::Type::DISTANCE:
+			{
+				DistanceConstraint* distanceConstraint = (DistanceConstraint*)constraints[i];
+				newSoftBody->constraints[i] = new DistanceConstraint(distanceConstraint->pointIndices[0], distanceConstraint->pointIndices[1], constraints[i]->stiffness, distanceConstraint->targetDistance);
+			} break;
+			case Constraint::Type::BENDING:
+			{
+				BendingConstraint* bendingConstraint = (BendingConstraint*)constraints[i];
+				newSoftBody->constraints[i] = new BendingConstraint(
+					bendingConstraint->pointIndices[0],
+					bendingConstraint->pointIndices[1],
+					bendingConstraint->pointIndices[2],
+					bendingConstraint->pointIndices[3],
+					constraints[i]->stiffness, bendingConstraint->targetPhi);
+			} break;
+			default:
+			{
+				PrintError("Unhandled constraint type in SoftBody::CopySelfAndAddToScene\n");
+			} break;
+			}
+		}
+
+		newSoftBody->m_SolverIterationCount = m_SolverIterationCount;
+		newSoftBody->m_bRenderWireframe = m_bRenderWireframe;
+		newSoftBody->m_Damping = m_Damping;
+		newSoftBody->m_Stiffness = m_Stiffness;
+		newSoftBody->m_BendingStiffness = m_BendingStiffness;
+
+		if (m_Mesh != nullptr)
+		{
+			newSoftBody->m_CurrentMeshFileName = m_CurrentMeshFileName;
+			newSoftBody->m_CurrentMeshFilePath = m_CurrentMeshFilePath;
+			newSoftBody->m_SelectedMeshIndex = m_SelectedMeshIndex;
+			newSoftBody->LoadFromMesh();
+		}
+
+		newSoftBody->GetTransform()->SetWorldPosition(newSoftBody->points[m_DragPointIndex]->pos);
+
+		return newSoftBody;
+	}
+
+	void SoftBody::Initialize()
+	{
+		m_LastUpdateTime = Time::CurrentMilliseconds();
+	}
+
+	void SoftBody::Destroy()
+	{
+		for (Point* point : points)
+		{
+			delete point;
+		}
+		points.clear();
+
+		for (Constraint* constraint : constraints)
+		{
+			delete constraint;
+		}
+		constraints.clear();
+
+		for (Triangle* triangle : triangles)
+		{
+			delete triangle;
+		}
+		triangles.clear();
+
+		if (m_Mesh != nullptr)
+		{
+			m_Mesh->Destroy();
+			m_Mesh = nullptr;
+			m_MeshComponent = nullptr;
+		}
+	}
+
+	void SoftBody::Update()
+	{
+		GameObject::Update();
+
+		//PROFILE_BEGIN("SoftBody Update");
+
+		if (!m_bPaused || m_bSingleStep)
+		{
+			ms now = Time::CurrentMilliseconds();
+			ms elapsed = now - m_LastUpdateTime;
+
+			if (m_bSingleStep)
+			{
+				elapsed = FIXED_UPDATE_TIMESTEP;
+			}
+
+			m_bSingleStep = false;
+
+			points[m_DragPointIndex]->pos = m_Transform.GetWorldPosition();
+
+			u32 fixedUpdateCount = glm::min((u32)(elapsed / FIXED_UPDATE_TIMESTEP), MAX_UPDATE_COUNT);
+
+			std::vector<glm::vec3> predictedPositions(points.size());
+
+			for (u32 updateIteration = 0; updateIteration < fixedUpdateCount; ++updateIteration)
+			{
+				const sec dt = FIXED_UPDATE_TIMESTEP / 1000.0f;
+
+				std::vector<Constraint*> collisionConstraints;
+
+				glm::vec3 globalExternalForces = glm::vec3(0.0f, -50.81f, 0.0f); // Just gravity for now
+
+				// Apply external forces
+				for (Point* point : points)
+				{
+					point->vel += (dt * point->invMass) * globalExternalForces;
+				}
+
+				// Damp velocities
+				for (Point* point : points)
+				{
+					point->vel *= m_Damping;
+				}
+
+				// Explicit Euler step
+				{
+					u32 i = 0;
+					for (Point* point : points)
+					{
+						// Predict next position
+						predictedPositions[i++] = point->pos + point->vel * dt;
+					}
+				}
+
+				// Generate collision constraints
+				for (u32 i = 0; i < (u32)points.size(); ++i)
+				{
+					glm::vec3 deltaPos = predictedPositions[i] - points[i]->pos;
+
+
+				}
+
+
+				// Project constraints (update predicted positions)
+				for (u32 iteration = 0; iteration < m_SolverIterationCount; ++iteration)
+				{
+					std::vector<Constraint*> constraintLists[] = { constraints, collisionConstraints };
+					for (std::vector<Constraint*>& constraintList : constraintLists)
+					{
+						for (Constraint* constraint : constraintList)
+						{
+							switch (constraint->type)
+							{
+							case Constraint::Type::DISTANCE:
+							{
+								DistanceConstraint* distanceConstraint = (DistanceConstraint*)constraint;
+								Point* point0 = points[distanceConstraint->pointIndices[0]];
+								Point* point1 = points[distanceConstraint->pointIndices[1]];
+
+								if (point0->invMass == 0.0f && point1->invMass == 0.0f)
+								{
+									continue;
+								}
+
+								glm::vec3 pos0 = predictedPositions[distanceConstraint->pointIndices[0]];
+								glm::vec3 pos1 = predictedPositions[distanceConstraint->pointIndices[1]];
+
+								real k = distanceConstraint->stiffness;
+								// Make stiffness scale linearly with iteration count
+								real kPrime = 1.0f - glm::pow(1.0f - k, 1.0f / m_SolverIterationCount);
+
+								glm::vec3 posDiff = pos1 - pos0;
+								real posDiffDist = glm::length(posDiff);
+								glm::vec3 posDiffN = posDiff / posDiffDist;
+								real gradient = posDiffDist - distanceConstraint->targetDistance;
+								glm::vec3 dp0 = ((point0->invMass / (point0->invMass + point1->invMass)) * gradient * kPrime) * posDiffN;
+								glm::vec3 dp1 = ((point1->invMass / (point0->invMass + point1->invMass)) * gradient * kPrime) * -posDiffN;
+
+								predictedPositions[distanceConstraint->pointIndices[0]] += dp0;
+								predictedPositions[distanceConstraint->pointIndices[1]] += dp1;
+							} break;
+							case Constraint::Type::BENDING:
+							{
+								// Points must be in the following order: (describing adjacent triangles)
+								//     1
+								//      *
+								//     /|\
+								//    / | \
+								// 2 /  |  \ 3
+								//  *   |   *
+								//   \  |  /
+								//    \ | /
+								//     \|/
+								//      *
+								//     0
+
+								BendingConstraint* bendingConstraint = (BendingConstraint*)constraint;
+								// NOTE: Differing notation used here than in [Muller06] ([0,3] rather than [1,4])
+								Point* point0 = points[bendingConstraint->pointIndices[0]];
+								Point* point1 = points[bendingConstraint->pointIndices[1]];
+								Point* point2 = points[bendingConstraint->pointIndices[2]];
+								Point* point3 = points[bendingConstraint->pointIndices[3]];
+
+								glm::vec3 pos0 = VEC3_ZERO;
+								glm::vec3 pos1 = point1->pos - point0->pos;
+								glm::vec3 pos2 = point2->pos - point0->pos;
+								glm::vec3 pos3 = point3->pos - point0->pos;
+
+								glm::vec3 normal0 = glm::normalize(glm::cross(pos1 - pos0, pos2 - pos0));
+								glm::vec3 normal1 = glm::normalize(glm::cross(pos1 - pos0, pos3 - pos0));
+
+								real d = glm::dot(normal0, normal1);
+								real phi = glm::acos(d) - bendingConstraint->targetPhi;
+
+								glm::vec3 q2 = (glm::cross(pos1, normal1) + glm::cross(normal0, pos1) * d) / glm::length(glm::cross(pos1, pos2));
+								glm::vec3 q3 = (glm::cross(pos1, normal0) + glm::cross(normal1, pos1) * d) / glm::length(glm::cross(pos1, pos3));
+								glm::vec3 q1 = -(glm::cross(pos2, normal1) + glm::cross(normal0, pos2) * d) / glm::length(glm::cross(pos1, pos2)) -
+									(glm::cross(pos3, normal0) + glm::cross(normal1, pos3) * d) / glm::length(glm::cross(pos1, pos3));
+								glm::vec3 q0 = -q1 - q2 - q3;
+								real q0Sqlen = glm::dot(q0, q0);
+								real q1Sqlen = glm::dot(q1, q1);
+								real q2Sqlen = glm::dot(q2, q2);
+								real q3Sqlen = glm::dot(q3, q3);
+								real qSum = q0Sqlen + q1Sqlen + q2Sqlen + q3Sqlen;
+
+								if (IsNanOrInf(q0) || IsNanOrInf(q1) || IsNanOrInf(q2) || IsNanOrInf(q3))
+								{
+									continue;
+								}
+
+								real invMassSum = point0->invMass + point1->invMass + point2->invMass + point3->invMass;
+
+								real denom = (invMassSum * qSum);
+								if (abs(denom) <= 0.0001f)
+								{
+									continue;
+								}
+								real deltaPBase = glm::sqrt(1.0f - d * d) * phi;
+								if (glm::dot(glm::cross(normal0, normal1), pos3 - pos1) > 0.0f)
+								{
+									deltaPBase *= -1.0f;
+								}
+
+								glm::vec3 deltaP0 = -(point0->invMass * deltaPBase) / denom * q0;
+								glm::vec3 deltaP1 = -(point1->invMass * deltaPBase) / denom * q1;
+								glm::vec3 deltaP2 = -(point2->invMass * deltaPBase) / denom * q2;
+								glm::vec3 deltaP3 = -(point3->invMass * deltaPBase) / denom * q3;
+
+								real k = bendingConstraint->stiffness;
+								// Make stiffness scale linearly with iteration count
+								real kPrime = 1.0f - glm::pow(1.0f - k, 1.0f / m_SolverIterationCount);
+
+								//Print("%.2f, %.2f\n", d, phi);
+								//Print("%.2f, %.2f, %.2f, %.2f\n", q0.x, q1.x, q2.x, q3.x);
+								//Print("%.2f, %.2f, %.2f\n", deltaP0.x, deltaP0.y, deltaP0.z);
+								//Print("%.2f, %.2f, %.2f\n", deltaP1.x, deltaP1.y, deltaP1.z);
+								//Print("%.2f, %.2f, %.2f\n", deltaP2.x, deltaP2.y, deltaP2.z);
+								//Print("%.2f, %.2f, %.2f\n", deltaP3.x, deltaP3.y, deltaP3.z);
+								//Print("\n");
+
+								predictedPositions[bendingConstraint->pointIndices[0]] += deltaP0 * kPrime;
+								predictedPositions[bendingConstraint->pointIndices[1]] += deltaP1 * kPrime;
+								predictedPositions[bendingConstraint->pointIndices[2]] += deltaP2 * kPrime;
+								predictedPositions[bendingConstraint->pointIndices[3]] += deltaP3 * kPrime;
+							} break;
+							default:
+							{
+								PrintError("Unhandled constraint type\n");
+							} break;
+							}
+						}
+					}
+				}
+
+				// Integrate
+				{
+					u32 i = 0;
+					for (Point* point : points)
+					{
+						point->vel = (predictedPositions[i] - point->pos) / dt;
+						point->pos = predictedPositions[i++];
+					}
+				}
+
+				// Update velocities (friction, restitution)
+				// Skip for now
+
+
+				for (Constraint* collisionConstraint : collisionConstraints)
+				{
+					delete collisionConstraint;
+				}
+			}
+
+			m_LastUpdateTime += fixedUpdateCount * FIXED_UPDATE_TIMESTEP;
+			m_AccumulatedSec += (fixedUpdateCount * FIXED_UPDATE_TIMESTEP) / 1000.0f;
+		}
+
+		if (m_MeshComponent != nullptr)
+		{
+			if (m_MeshVertexBufferCreateInfo.positions_3D.size() != points.size())
+			{
+				m_MeshVertexBufferCreateInfo.positions_3D.resize(points.size());
+			}
+			glm::vec3 worldPos = m_Transform.GetWorldPosition();
+			for (u32 i = 0; i < (u32)points.size(); ++i)
+			{
+				m_MeshVertexBufferCreateInfo.positions_3D[i] = points[i]->pos - worldPos;
+			}
+
+			std::vector<u32> indices = m_MeshComponent->GetIndexBuffer();
+			MeshComponent::CalculateTangents(m_MeshVertexBufferCreateInfo, indices);
+
+			//for (u32 i = 0; i <(u32)m_MeshVertexBufferCreateInfo.normals.size(); ++i)
+			//{
+			//	glm::mat4 worldMat = glm::mat4(m_Transform.GetLocalRotation()) * glm::scale(MAT4_IDENTITY, m_Transform.GetWorldScale());
+			//	m_MeshVertexBufferCreateInfo.normals[i] = (glm::vec3)(worldMat * glm::vec4(m_MeshVertexBufferCreateInfo.normals[i], 1.0f));
+			//	m_MeshVertexBufferCreateInfo.tangents[i] = (glm::vec3)(worldMat * glm::vec4(m_MeshVertexBufferCreateInfo.tangents[i], 1.0f));
+			//}
+
+			m_MeshComponent->UpdateDynamicVertexData(m_MeshVertexBufferCreateInfo, indices);
+		}
+
+		//PROFILE_END("SoftBody Update");
+		//m_UpdateDuration = Profiler::GetBlockDuration("SoftBody Update");
+
+		m_Transform.SetWorldPosition(points[m_DragPointIndex]->pos);
+
+		if (m_bRenderWireframe)
+		{
+			Draw();
+		}
+	}
+
+	void SoftBody::Draw()
+	{
+		PhysicsDebugDrawBase* debugDrawer = g_Renderer->GetDebugDrawer();
+		for (Point* point : points)
+		{
+			debugDrawer->drawSphere(ToBtVec3(point->pos), 0.1f, btVector3(0.8f, 0.2f, 0.1f));
+		}
+
+		for (u32 i = 0; i < (u32)constraints.size(); ++i)
+		{
+			Constraint* constraint = constraints[i];
+
+			switch (constraint->type)
+			{
+			case Constraint::Type::DISTANCE:
+			{
+				//DistanceConstraint* distanceConstraint = (DistanceConstraint*)constraint;
+				//debugDrawer->drawLine(ToBtVec3(points[distanceConstraint->pointIndices[0]]->pos), ToBtVec3(points[distanceConstraint->pointIndices[1]]->pos),
+				//	btVector3(0.5f, 0.4f, 0.1f), btVector3(0.5f, 0.4f, 0.1f));
+			} break;
+			case Constraint::Type::BENDING:
+			{
+				BendingConstraint* bendingConstraint = (BendingConstraint*)constraint;
+
+				if (i == (u32)m_ShownBendingIndex)
+				{
+					Point* point0 = points[bendingConstraint->pointIndices[0]];
+					Point* point1 = points[bendingConstraint->pointIndices[1]];
+					Point* point2 = points[bendingConstraint->pointIndices[2]];
+					Point* point3 = points[bendingConstraint->pointIndices[3]];
+
+					glm::vec3 normal0 = glm::normalize(glm::cross(point1->pos - point0->pos, point2->pos - point0->pos));
+					glm::vec3 normal1 = glm::normalize(glm::cross(point1->pos - point0->pos, point3->pos - point0->pos));
+
+					btVector3 col = btVector3(0.1f, 0.9f, 0.1f);
+					btVector3 colN = btVector3(0.9f, 0.1f, 0.1f);
+					real f = 0.01f;
+
+					debugDrawer->drawLine(ToBtVec3(points[bendingConstraint->pointIndices[0]]->pos + normal0 * f), ToBtVec3(points[bendingConstraint->pointIndices[1]]->pos + normal0 * f), col, col);
+					debugDrawer->drawLine(ToBtVec3(points[bendingConstraint->pointIndices[1]]->pos + normal0 * f), ToBtVec3(points[bendingConstraint->pointIndices[2]]->pos + normal0 * f), col, col);
+					debugDrawer->drawLine(ToBtVec3(points[bendingConstraint->pointIndices[2]]->pos + normal0 * f), ToBtVec3(points[bendingConstraint->pointIndices[0]]->pos + normal0 * f), col, col);
+					debugDrawer->drawLine(ToBtVec3(points[bendingConstraint->pointIndices[0]]->pos + normal1 * f), ToBtVec3(points[bendingConstraint->pointIndices[1]]->pos + normal1 * f), col, col);
+					debugDrawer->drawLine(ToBtVec3(points[bendingConstraint->pointIndices[0]]->pos + normal1 * f), ToBtVec3(points[bendingConstraint->pointIndices[3]]->pos + normal1 * f), col, col);
+					debugDrawer->drawLine(ToBtVec3(points[bendingConstraint->pointIndices[3]]->pos + normal1 * f), ToBtVec3(points[bendingConstraint->pointIndices[1]]->pos + normal1 * f), col, col);
+
+					glm::vec3 tri0Mid = (points[bendingConstraint->pointIndices[0]]->pos + points[bendingConstraint->pointIndices[1]]->pos + points[bendingConstraint->pointIndices[2]]->pos) / 3.0f;
+					glm::vec3 tri1Mid = (points[bendingConstraint->pointIndices[0]]->pos + points[bendingConstraint->pointIndices[1]]->pos + points[bendingConstraint->pointIndices[3]]->pos) / 3.0f;
+
+					debugDrawer->drawLine(ToBtVec3(tri0Mid), ToBtVec3(tri0Mid + normal0 * 1.0f), colN, colN);
+					debugDrawer->drawLine(ToBtVec3(tri1Mid), ToBtVec3(tri1Mid + normal1 * 1.0f), colN, colN);
+				}
+			} break;
+			}
+		}
+	}
+
+	u32 SoftBody::AddUniqueDistanceConstraint(i32 index0, i32 index1, u32 atIndex, real stiffness)
+	{
+		for (Constraint* constraint : constraints)
+		{
+			if (constraint != nullptr &&
+				constraint->type == Constraint::Type::DISTANCE)
+			{
+				DistanceConstraint* distanceConstraint = (DistanceConstraint*)constraint;
+				if (((distanceConstraint->pointIndices[0] == index0 && distanceConstraint->pointIndices[1] == index1) ||
+					(distanceConstraint->pointIndices[1] == index0 && distanceConstraint->pointIndices[1] == index1)))
+				{
+					return atIndex != u32_max ? atIndex : (u32)constraints.size();
+				}
+			}
+		}
+
+		if (atIndex != u32_max)
+		{
+			if (atIndex >= (u32)constraints.size())
+			{
+				constraints.resize(atIndex + 1);
+			}
+
+			constraints[atIndex] = new DistanceConstraint(index0, index1, stiffness, glm::distance(points[index0]->pos, points[index1]->pos));
+			return atIndex + 1;
+		}
+		else
+		{
+			constraints.push_back(new DistanceConstraint(index0, index1, stiffness, glm::distance(points[index0]->pos, points[index1]->pos)));
+			return (u32)constraints.size();
+		}
+	}
+
+	u32 SoftBody::AddUniqueBendingConstraint(i32 index0, i32 index1, i32 index2, i32 index3, u32 atIndex, real stiffness)
+	{
+		for (Constraint* constraint : constraints)
+		{
+			if (constraint != nullptr &&
+				constraint->type == Constraint::Type::BENDING)
+			{
+				BendingConstraint* bendingConstraint = (BendingConstraint*)constraint;
+				if ((bendingConstraint->pointIndices[0] == index0 && bendingConstraint->pointIndices[1] == index1) &&
+					(bendingConstraint->pointIndices[2] == index2 && bendingConstraint->pointIndices[3] == index3))
+				{
+					return atIndex != u32_max ? atIndex : (u32)constraints.size();
+				}
+			}
+		}
+
+		glm::vec3 normal0 = glm::normalize(glm::cross(points[index1]->pos - points[index0]->pos, points[index2]->pos - points[index0]->pos));
+		glm::vec3 normal1 = glm::normalize(glm::cross(points[index1]->pos - points[index0]->pos, points[index3]->pos - points[index0]->pos));
+
+		real initialPhi = glm::acos(glm::dot(normal0, normal1));
+
+		if (atIndex != u32_max)
+		{
+			if (atIndex >= (u32)constraints.size())
+			{
+				constraints.resize(atIndex + 1);
+			}
+
+			constraints[atIndex] = new BendingConstraint(index0, index1, index2, index3, stiffness, initialPhi);
+			return atIndex + 1;
+		}
+		else
+		{
+			constraints.push_back(new BendingConstraint(index0, index1, index2, index3, stiffness, initialPhi));
+			return (u32)constraints.size();
+		}
+	}
+
+	void SoftBody::LoadFromMesh()
+	{
+		if (m_Mesh != nullptr)
+		{
+			m_Mesh->Destroy();
+			delete m_Mesh;
+			m_MeshComponent = nullptr;
+		}
+
+		if (m_MeshMaterialID == InvalidMaterialID)
+		{
+			MaterialCreateInfo matCreateInfo = {};
+			matCreateInfo.name = "Soft Body Material";
+			matCreateInfo.shaderName = "pbr";
+			matCreateInfo.bDynamic = true;
+			matCreateInfo.constRoughness = 0.95f;
+
+			m_MeshMaterialID = g_Renderer->InitializeMaterial(&matCreateInfo);
+		}
+
+		m_Mesh = new Mesh(this);
+		RenderObjectCreateInfo renderObjectCreateInfo = {};
+		renderObjectCreateInfo.cullFace = CullFace::NONE;
+		if (!m_Mesh->LoadFromFile(m_CurrentMeshFilePath, m_MeshMaterialID, true, nullptr, &renderObjectCreateInfo))
+		{
+			PrintError("Failed to load mesh\n");
+			m_Mesh->Destroy();
+			delete m_Mesh;
+			m_Mesh = nullptr;
+		}
+		else
+		{
+			m_MeshVertexBufferCreateInfo = {};
+			m_MeshVertexBufferCreateInfo.attributes = g_Renderer->GetShader(g_Renderer->GetMaterial(m_MeshMaterialID).shaderID).vertexAttributes;
+
+			std::vector<MeshComponent*> meshes = m_Mesh->GetSubMeshes();
+			m_MeshComponent = meshes[0];
+			VertexBufferData* vertexBufferData = m_MeshComponent->GetVertexBufferData();
+			std::vector<u32> indexData = m_MeshComponent->GetIndexBuffer();
+			std::vector<glm::vec3> posData(vertexBufferData->VertexCount);
+			std::vector<glm::vec2> uvData(vertexBufferData->VertexCount);
+			VertexBufferData::ResizeForPresentAttributes(m_MeshVertexBufferCreateInfo, vertexBufferData->VertexCount);
+			bool bCopySuccess = vertexBufferData->CopyInto((real*)posData.data(), (VertexAttributes)VertexAttribute::POSITION) == (posData.size() * sizeof(glm::vec3));
+			bCopySuccess = bCopySuccess && vertexBufferData->CopyInto((real*)uvData.data(), (VertexAttributes)VertexAttribute::UV) == (uvData.size() * sizeof(glm::vec2));
+			if (!bCopySuccess)
+			{
+				PrintError("Something bad happened in soft body mesh conversion\n");
+			}
+			else
+			{
+				for (Point* point : points)
+				{
+					delete point;
+				}
+				points.clear();
+
+				for (Constraint* constraint : constraints)
+				{
+					delete constraint;
+				}
+				triangles.clear();
+
+				for (Triangle* triangle : triangles)
+				{
+					delete triangle;
+				}
+				triangles.clear();
+
+				points.resize(vertexBufferData->VertexCount);
+				initialPositions.resize(vertexBufferData->VertexCount);
+				m_DragPointIndex = 0;
+				glm::vec3 smallestPos(99999.0f);
+				for (u32 i = 0; i < (u32)posData.size(); ++i)
+				{
+					glm::vec3 pos = posData[i];
+					if (pos.x < smallestPos.x || (pos.x == smallestPos.x && pos.z < smallestPos.z))
+					{
+						m_DragPointIndex = i;
+						smallestPos = pos;
+					}
+					initialPositions[i] = pos;
+
+					m_MeshVertexBufferCreateInfo.texCoords_UV[i] = uvData[i];
+					points[i] = new Point(pos, VEC3_ZERO, 1.0f);
+				}
+
+				triangles.resize(indexData.size() / 3);
+				for (u32 i = 0; i < (u32)triangles.size(); ++i)
+				{
+					triangles[i] = new Triangle(indexData[i * 3], indexData[i * 3 + 1], indexData[i * 3 + 2]);
+				}
+
+				constraints.resize(indexData.size() / 3);
+				u32 constraintIndex = 0;
+				for (u32 i = 0; i < (u32)indexData.size() - 1; i += 3)
+				{
+					constraintIndex = AddUniqueDistanceConstraint(indexData[i + 0], indexData[i + 1], constraintIndex, 0.995f);
+					constraintIndex = AddUniqueDistanceConstraint(indexData[i + 1], indexData[i + 2], constraintIndex, 0.995f);
+					constraintIndex = AddUniqueDistanceConstraint(indexData[i + 2], indexData[i + 0], constraintIndex, 0.995f);
+				}
+
+				m_FirstBendingConstraintIndex = (i32)constraints.size();
+				m_ShownBendingIndex = m_FirstBendingConstraintIndex;
+
+				for (u32 i = 0; i < (u32)indexData.size() - 1; i += 3)
+				{
+					i32 index0 = indexData[i + 0];
+					i32 index1 = indexData[i + 1];
+					i32 index2 = indexData[i + 2];
+
+					Triangle tri{ index0, index1, index2 };
+
+					// edge0 = 0 -> 1, edge1 = 1 -> 2, edge2 = 2 -> 0
+					Triangle sharedTri;
+					i32 outOutsideVertIndex;
+					if (GetTriangleSharingEdge(indexData, index0, index1, tri, sharedTri, outOutsideVertIndex))
+					{
+						i32 index3 = sharedTri.pointIndices[outOutsideVertIndex];
+						constraintIndex = AddUniqueBendingConstraint(index0, index1, index2, index3, constraintIndex, 0.995f);
+					}
+					if (GetTriangleSharingEdge(indexData, index1, index2, tri, sharedTri, outOutsideVertIndex))
+					{
+						i32 index3 = sharedTri.pointIndices[outOutsideVertIndex];
+						constraintIndex = AddUniqueBendingConstraint(index1, index2, index0, index3, constraintIndex, 0.995f);
+					}
+					if (GetTriangleSharingEdge(indexData, index2, index0, tri, sharedTri, outOutsideVertIndex))
+					{
+						i32 index3 = sharedTri.pointIndices[outOutsideVertIndex];
+						constraintIndex = AddUniqueBendingConstraint(index2, index0, index1, index3, constraintIndex, 0.995f);
+					}
+				}
+
+
+				points[m_DragPointIndex]->invMass = 0.0f;
+				g_Renderer->SetDirtyFlags(RenderBatchDirtyFlag::DYNAMIC_DATA);
+			}
+		}
+	}
+
+	bool SoftBody::GetTriangleSharingEdge(const std::vector<u32>& indexData, i32 edgeIndex0, i32 edgeIndex1, const Triangle& originalTri, Triangle& outTri, i32& outOutsideVertIndex)
+	{
+		outOutsideVertIndex = -1;
+
+		for (u32 i = 0; i < (u32)indexData.size() - 1; i += 3)
+		{
+			i32 index0 = indexData[i + 0];
+			i32 index1 = indexData[i + 1];
+			i32 index2 = indexData[i + 2];
+
+			if (memcmp(originalTri.pointIndices, &indexData[i], sizeof(i32) * 3) == 0)
+			{
+				// Skip original tri
+				continue;
+			}
+
+			if (index0 == edgeIndex0 && (index1 == edgeIndex1 || index2 == edgeIndex1))
+			{
+				outOutsideVertIndex = (index1 == edgeIndex1) ? 2 : 1;
+			}
+			if (index1 == edgeIndex0 && (index0 == edgeIndex1 || index2 == edgeIndex1))
+			{
+				outOutsideVertIndex = (index0 == edgeIndex1) ? 2 : 0;
+			}
+			if (index2 == edgeIndex0 && (index0 == edgeIndex1 || index1 == edgeIndex1))
+			{
+				outOutsideVertIndex = (index0 == edgeIndex1) ? 1 : 0;
+			}
+			if (outOutsideVertIndex != -1)
+			{
+				outTri.pointIndices[0] = index0;
+				outTri.pointIndices[1] = index1;
+				outTri.pointIndices[2] = index2;
+				return true;
+			}
+		}
+		return false;
+	}
+
+	void SoftBody::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	{
+		UNREFERENCED_PARAMETER(matIDs);
+		UNREFERENCED_PARAMETER(scene);
+
+		JSONObject softBodyObject;
+		if (parentObject.SetObjectChecked("soft body", softBodyObject))
+		{
+			softBodyObject.SetUIntChecked("solver iteration count", m_SolverIterationCount);
+
+			std::vector<JSONObject> pointsArr;
+			if (softBodyObject.SetObjectArrayChecked("points", pointsArr))
+			{
+				points.resize(pointsArr.size());
+				initialPositions.resize(pointsArr.size());
+
+				u32 i = 0;
+				for (JSONObject& pointObj : pointsArr)
+				{
+					glm::vec3 pos = pointObj.GetVec3("position");
+					glm::vec3 vel = VEC3_ZERO;
+					real invMass = pointObj.GetFloat("inverse mass");
+					points[i] = new Point(pos, vel, invMass);
+					initialPositions[i] = points[i]->pos;
+
+					i++;
+				}
+			}
+
+			std::vector<JSONObject> constraintsArr;
+			if (softBodyObject.SetObjectArrayChecked("constraints", constraintsArr))
+			{
+				constraints.resize(constraintsArr.size());
+
+				u32 i = 0;
+				for (JSONObject& constraintObj : constraintsArr)
+				{
+					real stiffness = constraintObj.GetFloat("stiffness");
+					Constraint::Type type = (Constraint::Type)constraintObj.GetInt("type");
+					constraintObj.SetUIntChecked("dragging point index", m_DragPointIndex);
+
+					switch (type)
+					{
+					case Constraint::Type::DISTANCE:
+					{
+						JSONObject distanceConstraintObj = constraintObj.GetObject("distance constraint");
+
+						i32 index0 = distanceConstraintObj.GetInt("index 0");
+						i32 index1 = distanceConstraintObj.GetInt("index 1");
+						real targetDistance = distanceConstraintObj.GetFloat("target distance");
+
+						constraints[i] = new DistanceConstraint(index0, index1, stiffness, targetDistance);
+					} break;
+					case Constraint::Type::BENDING:
+					{
+						JSONObject bendingConstraintObj = constraintObj.GetObject("bending constraint");
+
+						i32 index0 = bendingConstraintObj.GetInt("index 0");
+						i32 index1 = bendingConstraintObj.GetInt("index 1");
+						i32 index2 = bendingConstraintObj.GetInt("index 2");
+						i32 index3 = bendingConstraintObj.GetInt("index 3");
+						real targetPhi = bendingConstraintObj.GetFloat("target phi");
+
+						constraints[i] = new BendingConstraint(index0, index1, index2, index3, stiffness, targetPhi);
+					} break;
+					default:
+					{
+						PrintError("Unhandled constraint type in SoftBody::ParseUniqueFields\n");
+						constraints[i] = nullptr;
+					} break;
+					}
+
+					i++;
+				}
+			}
+
+			if (softBodyObject.HasField("mesh file path"))
+			{
+				m_CurrentMeshFilePath = softBodyObject.GetString("mesh file path");
+				m_CurrentMeshFileName = StripLeadingDirectories(m_CurrentMeshFilePath);
+				for (i32 i = 0; i < (i32)Mesh::s_DiscoveredMeshes.size(); ++i)
+				{
+					if (Mesh::s_DiscoveredMeshes[i] == m_CurrentMeshFilePath)
+					{
+						m_SelectedMeshIndex = i;
+						break;
+					}
+				}
+				if (m_SelectedMeshIndex == -1)
+				{
+					m_CurrentMeshFilePath = "";
+					m_CurrentMeshFileName = "";
+					PrintWarn("SoftBody's previously saved mesh (%s) might have been moved or renamed, clearing field.\n", m_CurrentMeshFileName.c_str());
+				}
+				else
+				{
+					LoadFromMesh();
+				}
+			}
+
+			softBodyObject.SetBoolChecked("render wireframe", m_bRenderWireframe);
+			softBodyObject.SetFloatChecked("damping", m_Damping);
+			softBodyObject.SetFloatChecked("stiffness", m_Stiffness);
+			softBodyObject.SetFloatChecked("bending stiffness", m_BendingStiffness);
+		}
+	}
+
+	void SoftBody::SerializeUniqueFields(JSONObject& parentObject) const
+	{
+		JSONObject softBodyObject = JSONObject();
+
+		softBodyObject.fields.emplace_back("solver iteration count", JSONValue(m_SolverIterationCount));
+
+		std::vector<JSONObject> pointsArr(points.size());
+		{
+			u32 i = 0;
+			glm::vec3 parentPos = m_Transform.GetWorldPosition();
+			for (const Point* point : points)
+			{
+				pointsArr[i] = JSONObject();
+				pointsArr[i].fields.emplace_back("position", JSONValue(VecToString(point->pos - parentPos)));
+				pointsArr[i].fields.emplace_back("inverse mass", JSONValue(point->invMass));
+
+				i++;
+			}
+		}
+		softBodyObject.fields.emplace_back("points", JSONValue(pointsArr));
+
+		std::vector<JSONObject> constraintsArr(constraints.size());
+		{
+			u32 i = 0;
+			for (const Constraint* constraint : constraints)
+			{
+				constraintsArr[i] = JSONObject();
+				constraintsArr[i].fields.emplace_back("stiffness", JSONValue(constraint->stiffness));
+				constraintsArr[i].fields.emplace_back("type", JSONValue((i32)constraint->type));
+				constraintsArr[i].fields.emplace_back("dragging point index", JSONValue(m_DragPointIndex));
+
+				switch (constraint->type)
+				{
+				case Constraint::Type::DISTANCE:
+				{
+					DistanceConstraint* distanceConstraint = (DistanceConstraint*)constraint;
+
+					JSONObject distanceConstraintObj = JSONObject();
+
+					distanceConstraintObj.fields.emplace_back("index 0", JSONValue(distanceConstraint->pointIndices[0]));
+					distanceConstraintObj.fields.emplace_back("index 1", JSONValue(distanceConstraint->pointIndices[1]));
+					distanceConstraintObj.fields.emplace_back("target distance", JSONValue(distanceConstraint->targetDistance));
+
+					constraintsArr[i].fields.emplace_back("distance constraint", JSONValue(distanceConstraintObj));
+				} break;
+				case Constraint::Type::BENDING:
+				{
+					BendingConstraint* bendingConstraint = (BendingConstraint*)constraint;
+
+					JSONObject bendingConstraintObj = JSONObject();
+
+					bendingConstraintObj.fields.emplace_back("index 0", JSONValue(bendingConstraint->pointIndices[0]));
+					bendingConstraintObj.fields.emplace_back("index 1", JSONValue(bendingConstraint->pointIndices[1]));
+					bendingConstraintObj.fields.emplace_back("index 2", JSONValue(bendingConstraint->pointIndices[2]));
+					bendingConstraintObj.fields.emplace_back("index 3", JSONValue(bendingConstraint->pointIndices[3]));
+					bendingConstraintObj.fields.emplace_back("target phi", JSONValue(bendingConstraint->targetPhi));
+
+					constraintsArr[i].fields.emplace_back("bending constraint", JSONValue(bendingConstraintObj));
+				} break;
+				default:
+				{
+					PrintError("Unhandled type in SoftBody::SerializeUniqueFields\n");
+				} break;
+				}
+
+				i++;
+			}
+		}
+		softBodyObject.fields.emplace_back("constraints", JSONValue(constraintsArr));
+
+		if (m_SelectedMeshIndex != -1)
+		{
+			softBodyObject.fields.emplace_back("mesh file path", JSONValue(m_CurrentMeshFilePath));
+		}
+
+		softBodyObject.fields.emplace_back("render wireframe", JSONValue(m_bRenderWireframe));
+		softBodyObject.fields.emplace_back("damping", JSONValue(m_Damping));
+		softBodyObject.fields.emplace_back("stiffness", JSONValue(m_Stiffness));
+		softBodyObject.fields.emplace_back("bending stiffness", JSONValue(m_BendingStiffness));
+
+		parentObject.fields.emplace_back("soft body", JSONValue(softBodyObject));
+	}
+
+	void SoftBody::DrawImGuiObjects()
+	{
+		GameObject::DrawImGuiObjects();
+
+		ImGuiExt::SliderUInt("Solver iteration count", &m_SolverIterationCount, 1, 60);
+
+		if (ImGui::Checkbox("Paused", &m_bPaused))
+		{
+			m_LastUpdateTime = Time::CurrentMilliseconds();
+		}
+
+		ImGui::SameLine();
+
+		if (ImGui::Button("Reset"))
+		{
+			u32 i = 0;
+			for (Point* point : points)
+			{
+				point->pos = initialPositions[i++];
+				point->vel = VEC3_ZERO;
+			}
+
+			m_Transform.SetWorldPosition(points[m_DragPointIndex]->pos);
+		}
+
+		if (ImGui::Button("Single Step"))
+		{
+			m_bSingleStep = true;
+			m_bPaused = true;
+			m_LastUpdateTime = Time::CurrentMilliseconds();
+		}
+
+		ImGui::Text("%.2fms", m_UpdateDuration);
+
+		if (ImGui::Checkbox("Render wireframe", &m_bRenderWireframe))
+		{
+			std::vector<SoftBody*> softBodies = g_SceneManager->CurrentScene()->GetObjectsOfType<SoftBody>();
+			for (SoftBody* softBody : softBodies)
+			{
+				softBody->m_bRenderWireframe = m_bRenderWireframe;
+			}
+		}
+
+		if (ImGui::SliderFloat("Damping", &m_Damping, 0.0f, 1.0f))
+		{
+			std::vector<SoftBody*> softBodies = g_SceneManager->CurrentScene()->GetObjectsOfType<SoftBody>();
+			for (SoftBody* softBody : softBodies)
+			{
+				softBody->m_Damping = m_Damping;
+			}
+		}
+
+		if (ImGui::SliderFloat("Stiffness", &m_Stiffness, 0.0f, 1.0f))
+		{
+			std::vector<SoftBody*> softBodies = g_SceneManager->CurrentScene()->GetObjectsOfType<SoftBody>();
+			for (SoftBody* softBody : softBodies)
+			{
+				for (Constraint* constraint : softBody->constraints)
+				{
+					if (constraint->type == Constraint::Type::DISTANCE)
+					{
+						constraint->stiffness = m_Stiffness;
+					}
+				}
+			}
+		}
+
+		if (ImGui::SliderFloat("Bending stiffness", &m_BendingStiffness, 0.0f, 1.0f))
+		{
+			std::vector<SoftBody*> softBodies = g_SceneManager->CurrentScene()->GetObjectsOfType<SoftBody>();
+			for (SoftBody* softBody : softBodies)
+			{
+				for (Constraint* constraint : softBody->constraints)
+				{
+					if (constraint->type == Constraint::Type::BENDING)
+					{
+						constraint->stiffness = m_BendingStiffness;
+					}
+				}
+			}
+		}
+
+		if (ImGui::BeginCombo("##meshcombo", m_CurrentMeshFileName.c_str()))
+		{
+			for (i32 i = 0; i < (i32)Mesh::s_DiscoveredMeshes.size(); ++i)
+			{
+				ImGui::PushID(i);
+				const std::string& meshFilePath = Mesh::s_DiscoveredMeshes[i];
+				bool bSelected = (i == m_SelectedMeshIndex);
+				const std::string meshFileNameShort = StripLeadingDirectories(meshFilePath);
+				if (ImGui::Selectable(meshFileNameShort.c_str(), &bSelected))
+				{
+					if (m_SelectedMeshIndex != i)
+					{
+						m_SelectedMeshIndex = i;
+						m_CurrentMeshFilePath = meshFilePath;
+						m_CurrentMeshFileName = meshFileNameShort;
+					}
+				}
+
+				ImGui::PopID();
+			}
+
+			ImGui::EndCombo();
+		}
+
+		ImGui::InputInt("Selected bending constraint", &m_ShownBendingIndex);
+
+		if (m_SelectedMeshIndex != -1)
+		{
+			ImGui::SameLine();
+
+			if (ImGui::Button("Load mesh"))
+			{
+				LoadFromMesh();
+			}
+		}
 	}
 } // namespace flex
