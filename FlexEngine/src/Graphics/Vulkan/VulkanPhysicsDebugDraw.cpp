@@ -200,9 +200,12 @@ namespace flex
 			createInfo.materialID = m_MaterialID;
 			createInfo.bEditorObject = true;
 			createInfo.bDepthWriteEnable = false;
+			createInfo.bIndexed = true;
+			createInfo.indices = &indexBuffer;
 			m_Object = new GameObject("Vk Physics Debug Draw", GameObjectType::_NONE);
 			m_Object->SetSerializable(false);
 			m_Object->SetVisibleInSceneExplorer(false);
+			m_Object->SetCastsShadow(false);
 			m_ObjectMesh = m_Object->SetMesh(new Mesh(m_Object));
 			const VertexAttributes vertexAttributes = m_Renderer->GetShader(m_Renderer->GetMaterial(m_MaterialID).shaderID).vertexAttributes;
 			if (!m_ObjectMesh->CreateProcedural(8912, vertexAttributes, m_MaterialID, TopologyMode::LINE_LIST, &createInfo))
@@ -210,6 +213,8 @@ namespace flex
 				PrintWarn("Vulkan physics debug renderer failed to initialize vertex buffer");
 			}
 			g_SceneManager->CurrentScene()->AddRootObject(m_Object);
+
+			m_ObjectMesh->GetSubMeshes()[0]->UpdateDynamicVertexData(m_VertexBufferCreateInfo, indexBuffer);
 		}
 	} // namespace vk
 } // namespace flex

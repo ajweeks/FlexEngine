@@ -107,20 +107,7 @@ namespace flex
 		m_BoundingSphereRadius = 0;
 		m_BoundingSphereCenterPoint = VEC3_ZERO;
 
-		LoadedMesh* loadedMesh = nullptr;
-		if (FindPreLoadedMesh(relativeFilePath, &loadedMesh))
-		{
-			// If no import settings have been passed in, grab any from the cached mesh
-			if (importSettings == nullptr)
-			{
-				importSettings = &loadedMesh->importSettings;
-			}
-		}
-		else
-		{
-			// Mesh hasn't been loaded before, load it now
-			loadedMesh = LoadMesh(relativeFilePath, importSettings);
-		}
+		LoadedMesh* loadedMesh = GetLoadedMesh(relativeFilePath, importSettings);
 
 		if (loadedMesh == nullptr)
 		{
@@ -429,6 +416,8 @@ namespace flex
 		bool bFlipNormalZ = object.GetBool("flipNormalZ");
 		bool bFlipU = object.GetBool("flipU");
 		bool bFlipV = object.GetBool("flipV");
+		bool bDontCreateRenderObject = false;
+		object.SetBoolChecked("dont create render object", bDontCreateRenderObject);
 
 		std::vector<MaterialID> materialIDs = inMaterialIDs;
 
@@ -447,6 +436,7 @@ namespace flex
 			importSettings.bFlipV = bFlipV;
 			importSettings.bFlipNormalZ = bFlipNormalZ;
 			importSettings.bSwapNormalYZ = bSwapNormalYZ;
+			importSettings.bDontCreateRenderObject = bDontCreateRenderObject;
 
 			owner->SetMesh(newMesh);
 			newMesh->LoadFromFile(meshFilePath, materialIDs, &importSettings);
@@ -507,6 +497,7 @@ namespace flex
 		meshObject.fields.emplace_back("flipNormalZ", JSONValue(importSettings.bFlipNormalZ));
 		meshObject.fields.emplace_back("flipU", JSONValue(importSettings.bFlipU));
 		meshObject.fields.emplace_back("flipV", JSONValue(importSettings.bFlipV));
+		meshObject.fields.emplace_back("dont create render object", JSONValue(importSettings.bDontCreateRenderObject));
 
 		return meshObject;
 	}
@@ -547,6 +538,25 @@ namespace flex
 	GameObject* Mesh::GetOwningGameObject() const
 	{
 		return m_OwningGameObject;
+	}
+
+	LoadedMesh* Mesh::GetLoadedMesh(const std::string& relativeFilePath, MeshImportSettings* importSettings)
+	{
+		LoadedMesh* result = nullptr;
+		if (FindPreLoadedMesh(relativeFilePath, &result))
+		{
+			// If no import settings have been passed in, grab any from the cached mesh
+			if (importSettings == nullptr)
+			{
+				importSettings = &result->importSettings;
+			}
+		}
+		else
+		{
+			// Mesh hasn't been loaded before, load it now
+			result = LoadMesh(relativeFilePath, importSettings);
+		}
+		return result;
 	}
 
 	void Mesh::SetOwner(GameObject* owner)

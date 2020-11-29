@@ -105,9 +105,10 @@ namespace flex
 		GERSTNER_WAVE,
 		BLOCKS,
 		PARTICLE_SYSTEM,
-		CHUNK_GENERATOR,
+		TERRAIN_GENERATOR,
 		WIRE,
 		SOCKET,
+		SPRING,
 		SOFT_BODY,
 
 		// NOTE: New entries need to also be added to GameObjectTypeStrings below, Renderer::DoCreateGameObjectButton, and GameObject::CreateObjectFromJSON
@@ -133,9 +134,10 @@ namespace flex
 		"gerstner wave",
 		"blocks",
 		"particle system",
-		"chunk generator",
+		"terrain",
 		"wire",
 		"socket",
+		"spring",
 		"soft body",
 
 		"NONE"
@@ -226,6 +228,7 @@ namespace flex
 		bool bFlipNormalZ = false;
 		/* Whether or not to swap Y and Z components of all normals (converts from Y-up to Z-up) */
 		bool bSwapNormalYZ = false;
+		bool bDontCreateRenderObject = false;
 	};
 
 } // namespace flex

@@ -19,6 +19,7 @@ IGNORE_WARNINGS_PUSH
 
 #include <glm/gtx/quaternion.hpp> // for rotate
 #include <glm/gtx/norm.hpp> // for distance2
+#include <glm/gtx/vector_angle.hpp> // for angle
 
 #include <imgui/imgui_internal.h> // For PushItemFlag
 
@@ -42,6 +43,7 @@ IGNORE_WARNINGS_POP
 #include "Player.hpp"
 #include "Profiler.hpp"
 #include "Scene/BaseScene.hpp"
+#include "Scene/LoadedMesh.hpp"
 #include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
@@ -64,6 +66,9 @@ namespace flex
 	u32 SoftBody::MAX_UPDATE_COUNT = 20;
 
 	static ThreadSafeArray<GerstnerWave::WaveGenData>* workQueue = nullptr;
+
+	const char* SpringObject::s_ExtendedMeshFilePath = MESH_DIRECTORY "spring-extended.glb";
+	const char* SpringObject::s_ContractedMeshFilePath = MESH_DIRECTORY "spring-contracted.glb";
 
 	GameObject::GameObject(const std::string& name, GameObjectType type) :
 		m_Name(name),
@@ -201,9 +206,9 @@ namespace flex
 		{
 			newGameObject = new ParticleSystem(objectName);
 		} break;
-		case GameObjectType::CHUNK_GENERATOR:
+		case GameObjectType::TERRAIN_GENERATOR:
 		{
-			newGameObject = new ChunkGenerator(objectName);
+			newGameObject = new TerrainGenerator(objectName);
 		} break;
 		case GameObjectType::WIRE:
 		{
@@ -212,6 +217,10 @@ namespace flex
 		case GameObjectType::SOCKET:
 		{
 			newGameObject = g_PluggablesSystem->AddSocket(objectName);
+		} break;
+		case GameObjectType::SPRING:
+		{
+			newGameObject = new SpringObject(objectName);
 		} break;
 		case GameObjectType::SOFT_BODY:
 		{
@@ -6644,22 +6653,22 @@ namespace flex
 		GameObject::Update();
 	}
 
-	ChunkGenerator::ChunkGenerator(const std::string& name) :
-		GameObject(name, GameObjectType::CHUNK_GENERATOR),
+	TerrainGenerator::TerrainGenerator(const std::string& name) :
+		GameObject(name, GameObjectType::TERRAIN_GENERATOR),
 		m_LowCol(0.2f, 0.3f, 0.45f),
 		m_MidCol(0.45f, 0.55f, 0.25f),
 		m_HighCol(0.65f, 0.67f, 0.69f)
 	{
 	}
 
-	GameObject* ChunkGenerator::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
+	GameObject* TerrainGenerator::CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren)
 	{
 		FLEX_UNUSED(parent);
 		FLEX_UNUSED(bCopyChildren);
 		return nullptr;
 	}
 
-	void ChunkGenerator::Initialize()
+	void TerrainGenerator::Initialize()
 	{
 		MaterialCreateInfo matCreateInfo = {};
 		matCreateInfo.name = "Terrain";
@@ -6678,7 +6687,7 @@ namespace flex
 		GameObject::Initialize();
 	}
 
-	void ChunkGenerator::DestroyAllChunks()
+	void TerrainGenerator::DestroyAllChunks()
 	{
 		for (auto iter = m_Meshes.begin(); iter != m_Meshes.end(); ++iter)
 		{
@@ -6687,7 +6696,7 @@ namespace flex
 		m_Meshes.clear();
 	}
 
-	void ChunkGenerator::GenerateChunk(const glm::ivec2& chunkIndex)
+	void TerrainGenerator::GenerateChunk(const glm::ivec2& chunkIndex)
 	{
 		PROFILE_AUTO("Generate terrain chunk");
 
@@ -6706,7 +6715,12 @@ namespace flex
 		const u32 triCount = ((VertCountPerChunkAxis - 1) * (VertCountPerChunkAxis - 1)) * 2;
 		const u32 indexCount = triCount * 3;
 
-		VertexBufferDataCreateInfo vertexBufferCreateInfo = {};
+		static VertexBufferDataCreateInfo vertexBufferCreateInfo = {};
+		vertexBufferCreateInfo.positions_3D.clear();
+		vertexBufferCreateInfo.texCoords_UV.clear();
+		vertexBufferCreateInfo.colours_R32G32B32A32.clear();
+		vertexBufferCreateInfo.normals.clear();
+
 		vertexBufferCreateInfo.attributes = g_Renderer->GetShader(shaderID).vertexAttributes;
 		vertexBufferCreateInfo.positions_3D.reserve(vertexCount);
 		vertexBufferCreateInfo.texCoords_UV.reserve(vertexCount);
@@ -6770,7 +6784,7 @@ namespace flex
 		}
 	}
 
-	void ChunkGenerator::GenerateGradients()
+	void TerrainGenerator::GenerateGradients()
 	{
 		PROFILE_AUTO("Generate terrain chunk gradient tables");
 
@@ -6818,7 +6832,7 @@ namespace flex
 	// TODO: Create SoA style SampleTerrain which fills out a buffer iteratively, sampling each octave in turn
 
 	// Returns a value in [0, 1]
-	real ChunkGenerator::SampleTerrain(const glm::vec2& pos)
+	real TerrainGenerator::SampleTerrain(const glm::vec2& pos)
 	{
 		real result = 0.0f;
 		real octave = m_BaseOctave;
@@ -6841,7 +6855,7 @@ namespace flex
 	}
 
 	// Returns a value in [-1, 1]
-	real ChunkGenerator::SampleNoise(const glm::vec2& pos, real octave, u32 octaveIdx)
+	real TerrainGenerator::SampleNoise(const glm::vec2& pos, real octave, u32 octaveIdx)
 	{
 		const glm::vec2 scaledPos = pos / octave;
 		glm::vec2 posi = glm::vec2(std::floor(scaledPos.x), std::floor(scaledPos.y));
@@ -6870,12 +6884,12 @@ namespace flex
 		return val;
 	}
 
-	void ChunkGenerator::PostInitialize()
+	void TerrainGenerator::PostInitialize()
 	{
 		GameObject::PostInitialize();
 	}
 
-	void ChunkGenerator::Update()
+	void TerrainGenerator::Update()
 	{
 		std::vector<glm::vec2i> chunksInRadius(m_Meshes.size()); // Likely to be same size as m_LoadedChunks
 
@@ -6945,7 +6959,7 @@ namespace flex
 				++iterationCount;
 
 				ns now = Time::CurrentNanoseconds();
-				if ((now - start) > m_CreationBudgetPerFrame)
+				if ((now - start) > m_DeletionBudgetPerFrame)
 				{
 					break;
 				}
@@ -6995,7 +7009,7 @@ namespace flex
 		GameObject::Update();
 	}
 
-	void ChunkGenerator::Destroy()
+	void TerrainGenerator::Destroy()
 	{
 		for (auto iter = m_Meshes.begin(); iter != m_Meshes.end(); ++iter)
 		{
@@ -7006,7 +7020,7 @@ namespace flex
 		GameObject::Destroy();
 	}
 
-	void ChunkGenerator::DrawImGuiObjects()
+	void TerrainGenerator::DrawImGuiObjects()
 	{
 		GameObject::DrawImGuiObjects();
 
@@ -7096,7 +7110,7 @@ namespace flex
 		ImGui::SliderFloat("View radius", &m_LoadedChunkRadius, 0.01f, 8192.0f);
 	}
 
-	void ChunkGenerator::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void TerrainGenerator::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		FLEX_UNUSED(matIDs);
 		FLEX_UNUSED(scene);
@@ -7126,7 +7140,7 @@ namespace flex
 		}
 	}
 
-	void ChunkGenerator::SerializeUniqueFields(JSONObject& parentObject) const
+	void TerrainGenerator::SerializeUniqueFields(JSONObject& parentObject) const
 	{
 		JSONObject chunkGenInfo = {};
 
@@ -7152,6 +7166,139 @@ namespace flex
 		chunkGenInfo.fields.emplace_back("pinned center", JSONValue(VecToString(m_PinnedPos)));
 
 		parentObject.fields.emplace_back("chunk generator info", JSONValue(chunkGenInfo));
+	}
+
+	SpringObject::SpringObject(const std::string& name) :
+		GameObject(name, GameObjectType::SPRING)
+	{
+	}
+
+	void SpringObject::Initialize()
+	{
+		MaterialCreateInfo matCreateInfo = {};
+		matCreateInfo.name = "Spring";
+		matCreateInfo.shaderName = "pbr";
+		matCreateInfo.constAlbedo = glm::vec3(0.8f, 0.05f, 0.04f);
+		matCreateInfo.constRoughness = 1.0f;
+		matCreateInfo.constMetallic = 0.0f;
+		matCreateInfo.enableIrradianceSampler = false;
+		matCreateInfo.bDynamic = true;
+
+		MaterialID springMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
+
+		{
+			MeshImportSettings meshImportSettings = {};
+			meshImportSettings.bDontCreateRenderObject = true;
+
+			LoadedMesh* extendedMesh = Mesh::LoadMesh(s_ExtendedMeshFilePath, &meshImportSettings);
+			cgltf_mesh* extendedMeshCGLTF = &(extendedMesh->data->meshes[0]);
+			m_ExtendedMesh = MeshComponent::LoadFromCGLTF(nullptr, &extendedMeshCGLTF->primitives[0], springMatID, &meshImportSettings);
+
+			LoadedMesh* contractedMesh = Mesh::LoadMesh(s_ContractedMeshFilePath, &meshImportSettings);
+			cgltf_mesh* contractedMeshCGLTF = &(contractedMesh->data->meshes[0]);
+			m_ContractedMesh = MeshComponent::LoadFromCGLTF(nullptr, &contractedMeshCGLTF->primitives[0], springMatID, &meshImportSettings);
+		}
+
+		VertexBufferData* extendedVertBufferData = m_ExtendedMesh->GetVertexBufferData();
+		VertexBufferData* contractedVertBufferData = m_ContractedMesh->GetVertexBufferData();
+		u32 vertCount = extendedVertBufferData->VertexCount;
+
+		m_DynamicVertexBufferCreateInfo = {};
+		m_DynamicVertexBufferCreateInfo.attributes = extendedVertBufferData->Attributes;
+
+		m_Mesh = new Mesh(this);
+		m_Indices = m_ExtendedMesh->GetIndexBuffer();
+		m_Mesh->LoadFromMemoryDynamic(m_DynamicVertexBufferCreateInfo, m_Indices, springMatID, vertCount);
+
+		m_DynamicVertexBufferCreateInfo.positions_3D.resize(vertCount);
+		m_DynamicVertexBufferCreateInfo.texCoords_UV.resize(vertCount);
+		m_DynamicVertexBufferCreateInfo.colours_R32G32B32A32.resize(vertCount);
+		m_DynamicVertexBufferCreateInfo.normals.resize(vertCount);
+		m_DynamicVertexBufferCreateInfo.tangents.resize(vertCount);
+
+		extendedPositions.resize(vertCount);
+		extendedNormals.resize(vertCount);
+		extendedTangents.resize(vertCount);
+
+		contractedPositions.resize(vertCount);
+		contractedNormals.resize(vertCount);
+		contractedTangents.resize(vertCount);
+
+		extendedVertBufferData->CopyInto((real*)extendedPositions.data(), (VertexAttributes)VertexAttribute::POSITION);
+		extendedVertBufferData->CopyInto((real*)extendedNormals.data(), (VertexAttributes)VertexAttribute::NORMAL);
+		extendedVertBufferData->CopyInto((real*)extendedTangents.data(), (VertexAttributes)VertexAttribute::TANGENT);
+
+		contractedVertBufferData->CopyInto((real*)contractedPositions.data(), (VertexAttributes)VertexAttribute::POSITION);
+		contractedVertBufferData->CopyInto((real*)contractedNormals.data(), (VertexAttributes)VertexAttribute::NORMAL);
+		contractedVertBufferData->CopyInto((real*)contractedTangents.data(), (VertexAttributes)VertexAttribute::TANGENT);
+
+		// Unchanging attributes, just copy extended data in once
+		extendedVertBufferData->CopyInto((real*)m_DynamicVertexBufferCreateInfo.texCoords_UV.data(), (VertexAttributes)VertexAttribute::UV);
+		extendedVertBufferData->CopyInto((real*)m_DynamicVertexBufferCreateInfo.colours_R32G32B32A32.data(), (VertexAttributes)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT);
+
+		m_Target = new GameObject("Spring target", GameObjectType::OBJECT);
+		m_Target->SetSerializable(false);
+		g_SceneManager->CurrentScene()->AddRootObject(m_Target);
+
+		m_Target->GetTransform()->SetWorldPosition(m_Transform.GetWorldPosition() + m_Transform.GetUp() * m_MinLength);
+
+		GameObject::Initialize();
+	}
+
+	void SpringObject::PostInitialize()
+	{
+		GameObject::PostInitialize();
+	}
+
+	void SpringObject::Update()
+	{
+		glm::vec3 rootPos = m_Transform.GetWorldPosition();
+		glm::vec3 targetPos = m_Target->GetTransform()->GetWorldPosition();
+		real delta = (glm::dot(targetPos - rootPos, m_Transform.GetUp()) - m_MinLength) / (m_MaxLength - m_MinLength);
+		real t = glm::clamp(delta, 0.0f, 1.0f);
+
+		for (u32 i = 0; i < (u32)m_DynamicVertexBufferCreateInfo.positions_3D.size(); ++i)
+		{
+			m_DynamicVertexBufferCreateInfo.positions_3D[i] = Lerp(contractedPositions[i], extendedPositions[i], t);
+			m_DynamicVertexBufferCreateInfo.normals[i] = Lerp(contractedNormals[i], extendedNormals[i], t);
+			m_DynamicVertexBufferCreateInfo.tangents[i] = Lerp(contractedTangents[i], extendedTangents[i], t);
+		}
+
+		m_Mesh->GetSubMeshes()[0]->UpdateDynamicVertexData(m_DynamicVertexBufferCreateInfo, m_Indices);
+
+		glm::vec3 lookDir = rootPos - targetPos;
+		real lookLen = glm::length(lookDir);
+		glm::vec3 lookDirNorm = lookDir / lookLen;
+		if (lookLen > 0.0001f)
+		{
+			static glm::quat offsetQuat = glm::quat(glm::vec3(PI_DIV_TWO, PI, 0.0f));
+			//g_Renderer->GetDebugDrawer()->drawLine(ToBtVec3(rootPos), ToBtVec3(rootPos + lookDirNorm), btVector3(1.0f, 0.0f, 0.0f), btVector3(1.0f, 0.0f, 0.0f));
+			glm::vec3 up = glm::abs(glm::angle(lookDirNorm, VEC3_UP)) < 0.01f ? VEC3_FORWARD : VEC3_UP;
+			glm::quat targetRot = glm::quatLookAt(lookDirNorm, up) * offsetQuat;
+			if (!glm::any(glm::isnan(targetRot)))
+			{
+				glm::quat finalRot = glm::slerp(m_Transform.GetWorldRotation(), targetRot, g_DeltaTime * 100.0f);
+				m_Transform.SetWorldRotation(finalRot);
+			}
+		}
+
+		GameObject::Update();
+	}
+
+	void SpringObject::Destroy()
+	{
+		m_ExtendedMesh->Destroy();
+		delete m_ExtendedMesh;
+
+		m_ContractedMesh->Destroy();
+		delete m_ContractedMesh;
+
+		GameObject::Destroy();
+	}
+
+	void SpringObject::DrawImGuiObjects()
+	{
+		GameObject::DrawImGuiObjects();
 	}
 
 	DistanceConstraint::DistanceConstraint(i32 pointIndex0, i32 pointIndex1, real stiffness, real targetDistance) :

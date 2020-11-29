@@ -1230,10 +1230,12 @@ namespace flex
 			renderObject->bSetDynamicStates = createInfo->bSetDynamicStates;
 			renderObject->renderPassOverride = createInfo->renderPassOverride;
 
-			if (createInfo->indices != nullptr &&
-				!createInfo->indices->empty())
+			if (createInfo->indices != nullptr)
 			{
 				renderObject->indices = createInfo->indices;
+			}
+			if ((renderObject->indices != nullptr && !renderObject->indices->empty()) || createInfo->bIndexed)
+			{
 				renderObject->bIndexed = true;
 			}
 
@@ -1929,6 +1931,11 @@ namespace flex
 		void VulkanRenderer::UpdateDynamicVertexData(RenderID renderID, VertexBufferData const* vertexBufferData, const std::vector<u32>& indexData)
 		{
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
+
+			if (!renderObject->bIndexed)
+			{
+				PrintWarn("Dynamic render object not set to indexed! This workflow is not supported, was the index buffer empty being this object was created?\n");
+			}
 
 			VulkanMaterial& mat = m_Materials.at(renderObject->materialID);
 			VertexIndexBufferPair* vertexIndexBufferPair = m_DynamicVertexIndexBufferPairs[mat.material.dynamicVertexIndexBufferIndex].second;
@@ -7549,7 +7556,9 @@ namespace flex
 			for (VulkanRenderObject* renderObject : m_RenderObjects)
 			{
 				if (renderObject &&
-					renderObject->bIndexed)
+					renderObject->bIndexed &&
+					renderObject->gameObject->CastsShadow() &&
+					renderObject->gameObject->IsVisible())
 				{
 					renderObject->shadowIndexOffset = (u32)indices.size();
 					indices.insert(indices.end(), renderObject->indices->begin(), renderObject->indices->end());

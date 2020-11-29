@@ -940,11 +940,10 @@ namespace flex
 
 	};
 
-	// TODO: Rename to landscape generator
-	class ChunkGenerator : public GameObject
+	class TerrainGenerator : public GameObject
 	{
 	public:
-		explicit ChunkGenerator(const std::string& name);
+		explicit TerrainGenerator(const std::string& name);
 
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
 
@@ -958,7 +957,7 @@ namespace flex
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
 		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
 
-		u32 VertCountPerChunkAxis = 32;
+		u32 VertCountPerChunkAxis = 8;
 		real ChunkSize = 16.0f;
 		real MaxHeight = 3.0f;
 
@@ -1005,6 +1004,46 @@ namespace flex
 
 		i32 m_IsolateOctave = -1;
 
+	};
+
+	class SpringObject : public GameObject
+	{
+	public:
+		explicit SpringObject(const std::string& name);
+
+		//virtual SpringObject* CopySelfAndAddToScene(SpringObject* parent, bool bCopyChildren) override;
+
+		virtual void Initialize() override;
+		virtual void PostInitialize() override;
+		virtual void Update() override;
+		virtual void Destroy() override;
+
+		virtual void DrawImGuiObjects() override;
+
+		//virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
+		//virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+
+
+	private:
+		static const char* s_ExtendedMeshFilePath;
+		static const char* s_ContractedMeshFilePath;
+
+		MeshComponent* m_ExtendedMesh = nullptr;
+		MeshComponent* m_ContractedMesh = nullptr;
+
+		VertexBufferDataCreateInfo m_DynamicVertexBufferCreateInfo;
+		std::vector<u32> m_Indices;
+
+		GameObject* m_Target = nullptr;
+		real m_MinLength = 5.0f;
+		real m_MaxLength = 10.0f;
+
+		std::vector<glm::vec3> extendedPositions;
+		std::vector<glm::vec3> extendedNormals;
+		std::vector<glm::vec3> extendedTangents;
+		std::vector<glm::vec3> contractedPositions;
+		std::vector<glm::vec3> contractedNormals;
+		std::vector<glm::vec3> contractedTangents;
 	};
 
 	struct Point
