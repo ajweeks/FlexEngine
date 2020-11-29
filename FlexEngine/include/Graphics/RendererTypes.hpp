@@ -641,6 +641,7 @@ namespace flex
 		bool bDepthTestEnable = true;
 		bool bEditorObject = false;
 		bool bSetDynamicStates = false;
+		bool bIndexed = false;
 	};
 
 	struct Uniforms

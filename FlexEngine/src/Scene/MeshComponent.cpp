@@ -1296,6 +1296,7 @@ namespace flex
 		createInfo.bDepthWriteEnable = overrides.bDepthWriteEnable;
 		createInfo.bEditorObject = overrides.bEditorObject;
 		createInfo.bSetDynamicStates = overrides.bSetDynamicStates;
+		createInfo.bIndexed = overrides.bIndexed;
 
 		if (overrides.vertexBufferData != nullptr)
 		{
@@ -1303,7 +1304,7 @@ namespace flex
 		}
 		if (overrides.indices != nullptr)
 		{
-			PrintWarn("Attempted to override indices! Ignoring passed in data\n");
+			m_Indices = *overrides.indices;
 		}
 	}
 } // namespace flex
