@@ -7186,6 +7186,16 @@ namespace flex
 
 		MaterialID springMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
 
+		matCreateInfo = {};
+		matCreateInfo.name = "Bobber";
+		matCreateInfo.shaderName = "pbr";
+		matCreateInfo.constAlbedo = glm::vec3(0.2f, 0.2f, 0.24f);
+		matCreateInfo.constRoughness = 0.0f;
+		matCreateInfo.constMetallic = 1.0f;
+		matCreateInfo.enableIrradianceSampler = false;
+
+		MaterialID bobberMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
+
 		{
 			MeshImportSettings meshImportSettings = {};
 			meshImportSettings.bDontCreateRenderObject = true;
@@ -7236,11 +7246,39 @@ namespace flex
 		extendedVertBufferData->CopyInto((real*)m_DynamicVertexBufferCreateInfo.texCoords_UV.data(), (VertexAttributes)VertexAttribute::UV);
 		extendedVertBufferData->CopyInto((real*)m_DynamicVertexBufferCreateInfo.colours_R32G32B32A32.data(), (VertexAttributes)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT);
 
-		m_Target = new GameObject("Spring target", GameObjectType::OBJECT);
-		m_Target->SetSerializable(false);
-		g_SceneManager->CurrentScene()->AddRootObject(m_Target);
+		glm::vec3 initialTargetPos = m_Transform.GetWorldPosition() + m_Transform.GetUp() * m_MinLength;
+		//m_Target->GetTransform()->SetWorldPosition(initialTargetPos);
 
-		m_Target->GetTransform()->SetWorldPosition(m_Transform.GetWorldPosition() + m_Transform.GetUp() * m_MinLength);
+		if (m_bSimulateTarget)
+		{
+			m_SpringSim = new SoftBody("Spring sim");
+			m_SpringSim->points = std::vector<Point*>{ new Point(VEC3_ZERO, VEC3_ZERO, 0.0f), new Point(initialTargetPos, VEC3_ZERO, 1.0f) };
+			m_SpringSim->SetSerializable(false);
+			real stiffness = 0.02f;
+			m_SpringSim->SetStiffness(stiffness);
+			m_SpringSim->SetDamping(0.999f);
+			m_SpringSim->AddUniqueDistanceConstraint(0, 1, 0, stiffness);
+			g_SceneManager->CurrentScene()->AddRootObject(m_SpringSim);
+			m_SpringSim->Initialize();
+			m_SpringSim->PostInitialize();
+
+			m_Bobber = new GameObject("Spring bobber", GameObjectType::OBJECT);
+			m_Bobber->SetSerializable(false);
+			Mesh* bobberMesh = m_Bobber->SetMesh(new Mesh(m_Bobber));
+			bobberMesh->LoadFromFile(MESH_DIRECTORY "sphere.glb", bobberMatID);
+			g_SceneManager->CurrentScene()->AddRootObject(m_Bobber);
+			m_Bobber->Initialize();
+			m_Bobber->PostInitialize();
+		}
+		else
+		{
+			m_Target = new GameObject("Spring target", GameObjectType::OBJECT);
+			m_Target->SetSerializable(false);
+			m_Target->GetTransform()->SetWorldPosition(initialTargetPos);
+			g_SceneManager->CurrentScene()->AddRootObject(m_Target);
+			m_Target->Initialize();
+			m_Target->PostInitialize();
+		}
 
 		GameObject::Initialize();
 	}
@@ -7253,7 +7291,18 @@ namespace flex
 	void SpringObject::Update()
 	{
 		glm::vec3 rootPos = m_Transform.GetWorldPosition();
-		glm::vec3 targetPos = m_Target->GetTransform()->GetWorldPosition();
+		glm::vec3 targetPos;
+		if (m_bSimulateTarget)
+		{
+			m_SpringSim->GetTransform()->SetWorldPosition(rootPos);
+			targetPos = m_SpringSim->points[1]->pos;
+			m_Bobber->GetTransform()->SetWorldPosition(targetPos);
+		}
+		else
+		{
+			targetPos = m_Target->GetTransform()->GetWorldPosition();
+		}
+
 		real delta = (glm::dot(targetPos - rootPos, m_Transform.GetUp()) - m_MinLength) / (m_MaxLength - m_MinLength);
 		real t = glm::clamp(delta, 0.0f, 1.0f);
 
@@ -7263,7 +7312,6 @@ namespace flex
 			m_DynamicVertexBufferCreateInfo.normals[i] = Lerp(contractedNormals[i], extendedNormals[i], t);
 			m_DynamicVertexBufferCreateInfo.tangents[i] = Lerp(contractedTangents[i], extendedTangents[i], t);
 		}
-
 		m_Mesh->GetSubMeshes()[0]->UpdateDynamicVertexData(m_DynamicVertexBufferCreateInfo, m_Indices);
 
 		glm::vec3 lookDir = rootPos - targetPos;
@@ -7470,7 +7518,7 @@ namespace flex
 
 				std::vector<Constraint*> collisionConstraints;
 
-				glm::vec3 globalExternalForces = glm::vec3(0.0f, -50.81f, 0.0f); // Just gravity for now
+				glm::vec3 globalExternalForces = glm::vec3(0.0f, -9.81f, 0.0f); // Just gravity for now
 
 				// Apply external forces
 				for (Point* point : points)
@@ -8306,5 +8354,15 @@ namespace flex
 				LoadFromMesh();
 			}
 		}
+	}
+
+	void SoftBody::SetStiffness(real stiffness)
+	{
+		m_Stiffness = stiffness;
+	}
+
+	void SoftBody::SetDamping(real damping)
+	{
+		m_Damping = damping;
 	}
 } // namespace flex

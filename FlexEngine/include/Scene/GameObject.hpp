@@ -22,6 +22,7 @@ namespace flex
 	class Socket;
 	class TerminalCamera;
 	class Wire;
+	class SoftBody;
 
 	namespace VM
 	{
@@ -1038,6 +1039,11 @@ namespace flex
 		real m_MinLength = 5.0f;
 		real m_MaxLength = 10.0f;
 
+		bool m_bSimulateTarget = false;
+		SoftBody* m_SpringSim = nullptr;
+
+		GameObject* m_Bobber = nullptr;
+
 		std::vector<glm::vec3> extendedPositions;
 		std::vector<glm::vec3> extendedNormals;
 		std::vector<glm::vec3> extendedTangents;
@@ -1129,16 +1135,25 @@ namespace flex
 
 		virtual void DrawImGuiObjects() override;
 
-		static ms FIXED_UPDATE_TIMESTEP;
-		static u32 MAX_UPDATE_COUNT; // Max fixed update steps that can be taken in one frame
-
-	private:
-		void Draw();
+		void SetStiffness(real stiffness);
+		void SetDamping(real damping);
 
 		// Add new constraint between index0 & index1 if one doesn't already exist.
 		// Returns new constraint count
 		u32 AddUniqueDistanceConstraint(i32 index0, i32 index1, u32 atIndex, real stiffness);
 		u32 AddUniqueBendingConstraint(i32 index0, i32 index1, i32 index2, i32 index3, u32 atIndex, real stiffness);
+
+		static ms FIXED_UPDATE_TIMESTEP;
+		static u32 MAX_UPDATE_COUNT; // Max fixed update steps that can be taken in one frame
+
+		std::vector<Point*> points;
+		// TODO: Split constraint types into separate containers
+		std::vector<Constraint*> constraints;
+		std::vector<Triangle*> triangles;
+
+	private:
+		void Draw();
+
 
 		void LoadFromMesh();
 
@@ -1158,10 +1173,6 @@ namespace flex
 		real m_BendingStiffness = 0.1f;
 
 		u32 m_DragPointIndex = 0;
-		std::vector<Point*> points;
-		// TODO: Split constraint types into separate containers
-		std::vector<Constraint*> constraints;
-		std::vector<Triangle*> triangles;
 
 		i32 m_ShownBendingIndex = 0;
 		i32 m_FirstBendingConstraintIndex = 0;
@@ -1172,7 +1183,6 @@ namespace flex
 		MeshComponent* m_MeshComponent = nullptr;
 		VertexBufferDataCreateInfo m_MeshVertexBufferCreateInfo;
 		MaterialID m_MeshMaterialID = InvalidMaterialID;
-		//std::vector<
 
 		std::string m_CurrentMeshFilePath;
 		// Editor only
