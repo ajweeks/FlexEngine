@@ -21,9 +21,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "13.345, 5.852, -10.883",
-			"pitch" : -0.250510,
-			"yaw" : 2.486059
+			"position" : "48.055, 11.349, -7.223",
+			"pitch" : -0.229422,
+			"yaw" : 2.992407
 		}
 	},
 	"objects" : 
@@ -82,6 +82,7 @@
 			"casts shadow" : true,
 			"transform" : 
 			{
+				"rot" : "0.084, 0.000, -0.000"
 			},
 			"materials" : 
 			[

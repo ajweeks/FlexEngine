@@ -19,6 +19,7 @@ IGNORE_WARNINGS_PUSH
 
 #include <glm/gtx/quaternion.hpp> // for rotate
 #include <glm/gtx/norm.hpp> // for distance2
+#include <glm/gtx/vector_angle.hpp> // for angle
 
 #include <imgui/imgui_internal.h> // For PushItemFlag
 
@@ -7127,8 +7128,8 @@ namespace flex
 			chunkGenInfo.SetFloatChecked("octave scale", m_OctaveScale);
 			chunkGenInfo.SetUIntChecked("num octaves", m_NumOctaves);
 
-chunkGenInfo.SetBoolChecked("pin center", m_bPinCenter);
-chunkGenInfo.SetVec3Checked("pinned center", m_PinnedPos);
+			chunkGenInfo.SetBoolChecked("pin center", m_bPinCenter);
+			chunkGenInfo.SetVec3Checked("pinned center", m_PinnedPos);
 		}
 	}
 
@@ -7209,33 +7210,72 @@ chunkGenInfo.SetVec3Checked("pinned center", m_PinnedPos);
 		m_DynamicVertexBufferCreateInfo.tangents.resize(vertCount);
 
 		extendedPositions.resize(vertCount);
+		extendedNormals.resize(vertCount);
+		extendedTangents.resize(vertCount);
+
 		contractedPositions.resize(vertCount);
+		contractedNormals.resize(vertCount);
+		contractedTangents.resize(vertCount);
+
 		extendedVertBufferData->CopyInto((real*)extendedPositions.data(), (VertexAttributes)VertexAttribute::POSITION);
+		extendedVertBufferData->CopyInto((real*)extendedNormals.data(), (VertexAttributes)VertexAttribute::NORMAL);
+		extendedVertBufferData->CopyInto((real*)extendedTangents.data(), (VertexAttributes)VertexAttribute::TANGENT);
+
 		contractedVertBufferData->CopyInto((real*)contractedPositions.data(), (VertexAttributes)VertexAttribute::POSITION);
+		contractedVertBufferData->CopyInto((real*)contractedNormals.data(), (VertexAttributes)VertexAttribute::NORMAL);
+		contractedVertBufferData->CopyInto((real*)contractedTangents.data(), (VertexAttributes)VertexAttribute::TANGENT);
+
+		// Unchanging attributes, just copy extended data in once
+		extendedVertBufferData->CopyInto((real*)m_DynamicVertexBufferCreateInfo.texCoords_UV.data(), (VertexAttributes)VertexAttribute::UV);
+		extendedVertBufferData->CopyInto((real*)m_DynamicVertexBufferCreateInfo.colours_R32G32B32A32.data(), (VertexAttributes)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT);
+
+		m_Target = new GameObject("Spring target", GameObjectType::OBJECT);
+		m_Target->SetSerializable(false);
+		g_SceneManager->CurrentScene()->AddRootObject(m_Target);
+
+		m_Target->GetTransform()->SetWorldPosition(m_Transform.GetWorldPosition() + m_Transform.GetUp() * m_MinLength);
+
+		GameObject::Initialize();
 	}
 
 	void SpringObject::PostInitialize()
 	{
+		GameObject::PostInitialize();
 	}
 
 	void SpringObject::Update()
 	{
-		real t = sin(g_SecElapsedSinceProgramStart * 2.0f) * 0.5f + 0.5f;
-
-		VertexBufferData* extendedVertBufferData = m_ExtendedMesh->GetVertexBufferData();
-		//extendedVertBufferData->CopyInto((real*)m_DynamicVertexBufferCreateInfo.positions_3D.data(), (VertexAttributes)VertexAttribute::POSITION);
+		glm::vec3 rootPos = m_Transform.GetWorldPosition();
+		glm::vec3 targetPos = m_Target->GetTransform()->GetWorldPosition();
+		real delta = (glm::dot(targetPos - rootPos, m_Transform.GetUp()) - m_MinLength) / (m_MaxLength - m_MinLength);
+		real t = glm::clamp(delta, 0.0f, 1.0f);
 
 		for (u32 i = 0; i < (u32)m_DynamicVertexBufferCreateInfo.positions_3D.size(); ++i)
 		{
-			m_DynamicVertexBufferCreateInfo.positions_3D[i] = Lerp(extendedPositions[i], contractedPositions[i], t);
+			m_DynamicVertexBufferCreateInfo.positions_3D[i] = Lerp(contractedPositions[i], extendedPositions[i], t);
+			m_DynamicVertexBufferCreateInfo.normals[i] = Lerp(contractedNormals[i], extendedNormals[i], t);
+			m_DynamicVertexBufferCreateInfo.tangents[i] = Lerp(contractedTangents[i], extendedTangents[i], t);
 		}
 
-		extendedVertBufferData->CopyInto((real*)m_DynamicVertexBufferCreateInfo.texCoords_UV.data(), (VertexAttributes)VertexAttribute::UV);
-		extendedVertBufferData->CopyInto((real*)m_DynamicVertexBufferCreateInfo.colours_R32G32B32A32.data(), (VertexAttributes)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT);
-		extendedVertBufferData->CopyInto((real*)m_DynamicVertexBufferCreateInfo.normals.data(), (VertexAttributes)VertexAttribute::NORMAL);
-		extendedVertBufferData->CopyInto((real*)m_DynamicVertexBufferCreateInfo.tangents.data(), (VertexAttributes)VertexAttribute::TANGENT);
-
 		m_Mesh->GetSubMeshes()[0]->UpdateDynamicVertexData(m_DynamicVertexBufferCreateInfo, m_Indices);
+
+		glm::vec3 lookDir = rootPos - targetPos;
+		real lookLen = glm::length(lookDir);
+		glm::vec3 lookDirNorm = lookDir / lookLen;
+		if (lookLen > 0.0001f)
+		{
+			static glm::quat offsetQuat = glm::quat(glm::vec3(PI_DIV_TWO, PI, 0.0f));
+			//g_Renderer->GetDebugDrawer()->drawLine(ToBtVec3(rootPos), ToBtVec3(rootPos + lookDirNorm), btVector3(1.0f, 0.0f, 0.0f), btVector3(1.0f, 0.0f, 0.0f));
+			glm::vec3 up = glm::abs(glm::angle(lookDirNorm, VEC3_UP)) < 0.01f ? VEC3_FORWARD : VEC3_UP;
+			glm::quat targetRot = glm::quatLookAt(lookDirNorm, up) * offsetQuat;
+			if (!glm::any(glm::isnan(targetRot)))
+			{
+				glm::quat finalRot = glm::slerp(m_Transform.GetWorldRotation(), targetRot, g_DeltaTime * 100.0f);
+				m_Transform.SetWorldRotation(finalRot);
+			}
+		}
+
+		GameObject::Update();
 	}
 
 	void SpringObject::Destroy()
@@ -7245,9 +7285,12 @@ chunkGenInfo.SetVec3Checked("pinned center", m_PinnedPos);
 
 		m_ContractedMesh->Destroy();
 		delete m_ContractedMesh;
+
+		GameObject::Destroy();
 	}
 
 	void SpringObject::DrawImGuiObjects()
 	{
+		GameObject::DrawImGuiObjects();
 	}
 } // namespace flex

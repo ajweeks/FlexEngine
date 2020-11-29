@@ -1025,7 +1025,6 @@ namespace flex
 
 
 	private:
-
 		static const char* s_ExtendedMeshFilePath;
 		static const char* s_ContractedMeshFilePath;
 
@@ -1035,8 +1034,16 @@ namespace flex
 		VertexBufferDataCreateInfo m_DynamicVertexBufferCreateInfo;
 		std::vector<u32> m_Indices;
 
+		GameObject* m_Target = nullptr;
+		real m_MinLength = 5.0f;
+		real m_MaxLength = 10.0f;
+
 		std::vector<glm::vec3> extendedPositions;
+		std::vector<glm::vec3> extendedNormals;
+		std::vector<glm::vec3> extendedTangents;
 		std::vector<glm::vec3> contractedPositions;
+		std::vector<glm::vec3> contractedNormals;
+		std::vector<glm::vec3> contractedTangents;
 
 	};
 
