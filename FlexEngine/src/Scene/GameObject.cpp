@@ -7426,6 +7426,12 @@ namespace flex
 		}
 		constraints.clear();
 
+		for (Triangle* triangle : triangles)
+		{
+			delete triangle;
+		}
+		triangles.clear();
+
 		if (m_Mesh != nullptr)
 		{
 			m_Mesh->Destroy();

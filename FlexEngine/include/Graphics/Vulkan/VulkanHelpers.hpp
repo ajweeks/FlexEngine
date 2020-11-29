@@ -162,7 +162,7 @@ namespace flex
 			{}
 
 			void Destroy();
-			void Empty();
+			void Clear();
 
 			VulkanBuffer* vertexBuffer = nullptr;
 			VulkanBuffer* indexBuffer = nullptr;

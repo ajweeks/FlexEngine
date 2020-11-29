@@ -31,6 +31,8 @@ namespace flex
 			VkResult Map(VkDeviceSize offset, VkDeviceSize size);
 			void Unmap();
 
+			void Reset();
+
 			// Reserves size bytes in buffer and returns offset to that range, returns (VkDeviceSize)-1 if bCanResize is false and allocation won't fit, or if resize failed
 			// TODO: Add tests
 			FLEX_NO_DISCARD VkDeviceSize Alloc(VkDeviceSize size, bool bCanResize);

@@ -2186,7 +2186,7 @@ namespace flex
 
 			for (auto& pair : m_DynamicVertexIndexBufferPairs)
 			{
-				pair.second->Empty();
+				pair.second->Clear();
 			}
 		}
 

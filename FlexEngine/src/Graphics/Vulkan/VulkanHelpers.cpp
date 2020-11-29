@@ -224,23 +224,31 @@ namespace flex
 
 		void VertexIndexBufferPair::Destroy()
 		{
-			delete vertexBuffer;
-			vertexBuffer = nullptr;
-			delete indexBuffer;
-			indexBuffer = nullptr;
-			vertexCount = 0;
-			indexCount = 0;
-		}
-
-		void VertexIndexBufferPair::Empty()
-		{
 			if (vertexBuffer != nullptr)
 			{
 				vertexBuffer->Destroy();
+				delete vertexBuffer;
+				vertexBuffer = nullptr;
 			}
 			if (indexBuffer != nullptr)
 			{
 				indexBuffer->Destroy();
+				delete indexBuffer;
+				indexBuffer = nullptr;
+			}
+			vertexCount = 0;
+			indexCount = 0;
+		}
+
+		void VertexIndexBufferPair::Clear()
+		{
+			if (vertexBuffer != nullptr)
+			{
+				vertexBuffer->Reset();
+			}
+			if (indexBuffer != nullptr)
+			{
+				indexBuffer->Reset();
 			}
 			vertexCount = 0;
 			indexCount = 0;
