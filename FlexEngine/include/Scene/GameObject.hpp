@@ -1039,7 +1039,7 @@ namespace flex
 		real m_MinLength = 5.0f;
 		real m_MaxLength = 10.0f;
 
-		bool m_bSimulateTarget = false;
+		bool m_bSimulateTarget = true;
 		SoftBody* m_SpringSim = nullptr;
 
 		GameObject* m_Bobber = nullptr;
@@ -1062,7 +1062,7 @@ namespace flex
 
 		glm::vec3 pos;
 		glm::vec3 vel;
-		real invMass = 0.0f;
+		real invMass;
 	};
 
 	struct Constraint
@@ -1165,8 +1165,7 @@ namespace flex
 		bool m_bSingleStep = false;
 		bool m_bRenderWireframe = true;
 
-		ms m_LastUpdateTime;
-		sec m_AccumulatedSec = 0.0f;
+		ms m_MSToSim = 0.0f;
 		ms m_UpdateDuration = 0.0f;
 		real m_Damping = 0.99f;
 		real m_Stiffness = 0.8f;

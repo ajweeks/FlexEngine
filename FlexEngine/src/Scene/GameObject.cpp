@@ -62,7 +62,7 @@ namespace flex
 	AudioCue GameObject::s_SqueakySounds;
 	AudioSourceID GameObject::s_BunkSound;
 
-	ms SoftBody::FIXED_UPDATE_TIMESTEP = 1000.0f / 60.0f;
+	ms SoftBody::FIXED_UPDATE_TIMESTEP = 1000.0f / 120.0f;
 	u32 SoftBody::MAX_UPDATE_COUNT = 20;
 
 	static ThreadSafeArray<GerstnerWave::WaveGenData>* workQueue = nullptr;
@@ -7252,7 +7252,7 @@ namespace flex
 		if (m_bSimulateTarget)
 		{
 			m_SpringSim = new SoftBody("Spring sim");
-			m_SpringSim->points = std::vector<Point*>{ new Point(VEC3_ZERO, VEC3_ZERO, 0.0f), new Point(initialTargetPos, VEC3_ZERO, 1.0f) };
+			m_SpringSim->points = std::vector<Point*>{ new Point(VEC3_ZERO, VEC3_ZERO, 0.0f), new Point(initialTargetPos, VEC3_ZERO, 1.0f/20.0f) };
 			m_SpringSim->SetSerializable(false);
 			real stiffness = 0.02f;
 			m_SpringSim->SetStiffness(stiffness);
@@ -7457,7 +7457,7 @@ namespace flex
 
 	void SoftBody::Initialize()
 	{
-		m_LastUpdateTime = Time::CurrentMilliseconds();
+		m_MSToSim = 0.0f;
 	}
 
 	void SoftBody::Destroy()
@@ -7496,19 +7496,20 @@ namespace flex
 
 		if (!m_bPaused || m_bSingleStep)
 		{
-			ms now = Time::CurrentMilliseconds();
-			ms elapsed = now - m_LastUpdateTime;
-
 			if (m_bSingleStep)
 			{
-				elapsed = FIXED_UPDATE_TIMESTEP;
+				m_MSToSim = FIXED_UPDATE_TIMESTEP;
+			}
+			else
+			{
+				m_MSToSim += g_DeltaTime * 1000.0f;
 			}
 
 			m_bSingleStep = false;
 
 			points[m_DragPointIndex]->pos = m_Transform.GetWorldPosition();
 
-			u32 fixedUpdateCount = glm::min((u32)(elapsed / FIXED_UPDATE_TIMESTEP), MAX_UPDATE_COUNT);
+			u32 fixedUpdateCount = glm::min((u32)(m_MSToSim / FIXED_UPDATE_TIMESTEP), MAX_UPDATE_COUNT);
 
 			std::vector<glm::vec3> predictedPositions(points.size());
 
@@ -7523,7 +7524,10 @@ namespace flex
 				// Apply external forces
 				for (Point* point : points)
 				{
-					point->vel += (dt * point->invMass) * globalExternalForces;
+					if (point->invMass != 0.0f)
+					{
+						point->vel += (dt / point->invMass) * globalExternalForces;
+					}
 				}
 
 				// Damp velocities
@@ -7702,8 +7706,8 @@ namespace flex
 				}
 			}
 
-			m_LastUpdateTime += fixedUpdateCount * FIXED_UPDATE_TIMESTEP;
-			m_AccumulatedSec += (fixedUpdateCount * FIXED_UPDATE_TIMESTEP) / 1000.0f;
+
+			m_MSToSim -= fixedUpdateCount * FIXED_UPDATE_TIMESTEP;
 		}
 
 		if (m_MeshComponent != nullptr)
@@ -8243,11 +8247,6 @@ namespace flex
 
 		ImGuiExt::SliderUInt("Solver iteration count", &m_SolverIterationCount, 1, 60);
 
-		if (ImGui::Checkbox("Paused", &m_bPaused))
-		{
-			m_LastUpdateTime = Time::CurrentMilliseconds();
-		}
-
 		ImGui::SameLine();
 
 		if (ImGui::Button("Reset"))
@@ -8266,7 +8265,6 @@ namespace flex
 		{
 			m_bSingleStep = true;
 			m_bPaused = true;
-			m_LastUpdateTime = Time::CurrentMilliseconds();
 		}
 
 		ImGui::Text("%.2fms", m_UpdateDuration);
