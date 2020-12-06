@@ -111,6 +111,7 @@ configuration {}
 
 	-- Files to include that shouldn't get warnings reported on
 	systemincludedirs {
+		path.join(SOURCE_DIR, "include/ThirdParty"),
 		path.join(DEPENDENCIES_DIR, "glfw/include"),
 		path.join(DEPENDENCIES_DIR, "glm"),
 		path.join(DEPENDENCIES_DIR, "stb"),
