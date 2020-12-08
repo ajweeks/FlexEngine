@@ -186,12 +186,12 @@ namespace flex
 		roll = 0.0f;
 
 #if THOROUGH_CHECKS
-		if (!IsNanOrInf(pitch))
+		if (IsNanOrInf(pitch))
 		{
 			PrintError("Pitch was NaN or Inf!\n");
 			pitch = 0.0f;
 		}
-		if (!IsNanOrInf(yaw))
+		if (IsNanOrInf(yaw))
 		{
 			PrintError("Yaw was NaN or Inf!\n");
 			yaw = 0.0f;
