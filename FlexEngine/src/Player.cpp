@@ -179,13 +179,33 @@ namespace flex
 
 		if (m_ObjectInteractingWith != nullptr)
 		{
-			Terminal* terminal = dynamic_cast<Terminal*>(m_ObjectInteractingWith);
-			if (terminal != nullptr)
+			GameObjectType interactingWithType = m_ObjectInteractingWith->GetType();
+			switch (interactingWithType)
+			{
+			case GameObjectType::TERMINAL:
 			{
 				if (g_EngineInstance->IsRenderingImGui())
 				{
+					Terminal* terminal = static_cast<Terminal*>(m_ObjectInteractingWith);
 					terminal->DrawTerminalUI();
 				}
+			} break;
+			case GameObjectType::VEHICLE:
+			{
+				Vehicle* vehicle = static_cast<Vehicle*>(m_ObjectInteractingWith);
+
+				const glm::vec3 posOffset = glm::vec3(0.0f, 3.0f, 0.0f);
+
+				m_Transform.SetWorldPosition(vehicle->GetTransform()->GetWorldPosition() + posOffset);
+
+
+				//BaseCamera* currentCamera = g_CameraManager->CurrentCamera();
+				//OverheadCamera* overheadCamera = dynamic_cast<OverheadCamera*>(currentCamera);
+				//if (overheadCamera != nullptr)
+				//{
+				//	overheadCamera->;
+				//}
+			} break;
 			}
 		}
 
@@ -295,10 +315,11 @@ namespace flex
 			return true;
 		}
 
-		Terminal* terminal = dynamic_cast<Terminal*>(gameObject);
-		if (terminal != nullptr)
+		GameObjectType objType = gameObject->GetType();
+		switch (objType)
 		{
-			return true;
+		case GameObjectType::TERMINAL: return true;
+		case GameObjectType::VEHICLE: return true;
 		}
 
 		return false;
@@ -364,6 +385,12 @@ namespace flex
 					m_HeldItem = socket->connectedWire;
 				}
 			}
+		} break;
+		case GameObjectType::VEHICLE:
+		{
+			Vehicle* vehicle = static_cast<Vehicle*>(gameObject);
+
+			m_ObjectInteractingWith = vehicle;
 		} break;
 		default:
 		{

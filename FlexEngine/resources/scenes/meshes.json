@@ -15,7 +15,8 @@
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,
-			"flipV" : false
+			"flipV" : false,
+			"dont create render object" : false
 		},
 		{
 			"file" : "cone.glb",
@@ -127,7 +128,8 @@
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,
-			"flipV" : false
+			"flipV" : false,
+			"dont create render object" : false
 		},
 		{
 			"file" : "sphere.glb",
@@ -339,7 +341,8 @@
 			"swapNormalYZ" : false,
 			"flipNormalZ" : false,
 			"flipU" : false,
-			"flipV" : false
+			"flipV" : false,
+			"dont create render object" : false
 		},
 		{
 			"file" : "case-01.glb",
@@ -368,6 +371,14 @@
 			"flipNormalZ" : false,
 			"flipU" : false,
 			"flipV" : false
+		},
+		{
+			"file" : "chassis.glb",
+			"swapNormalYZ" : false,
+			"flipNormalZ" : false,
+			"flipU" : false,
+			"flipV" : false,
+			"dont create render object" : false
 		}
 	]
 }

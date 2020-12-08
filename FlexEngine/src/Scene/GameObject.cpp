@@ -226,6 +226,10 @@ namespace flex
 		{
 			newGameObject = new SoftBody(objectName);
 		} break;
+		case GameObjectType::VEHICLE:
+		{
+			newGameObject = new Vehicle(objectName);
+		} break;
 		case GameObjectType::OBJECT: // Fall through
 		case GameObjectType::_NONE:
 			newGameObject = new GameObject(objectName, gameObjectType);
@@ -779,6 +783,7 @@ namespace flex
 						rbInternal->setAngularVelocity(btVector3(0.0f, 0.0f, 0.0f));
 					}
 
+					ImGui::Text("Activation state: %i", rbInternal->getActivationState());
 
 					//glm::vec3 localOffsetScale = m_RigidBody->GetLocalScale();
 					//if (ImGui::DragFloat3("Scale offset", &localOffsetScale.x, 0.01f))
@@ -8429,5 +8434,106 @@ namespace flex
 	void SoftBody::SetDamping(real damping)
 	{
 		m_Damping = damping;
+	}
+
+	Vehicle::Vehicle(const std::string& name) :
+		GameObject(name, GameObjectType::VEHICLE)
+	{
+		m_bInteractable = true;
+	}
+
+	void Vehicle::Initialize()
+	{
+		GameObject::Initialize();
+	}
+
+	void Vehicle::Destroy()
+	{
+		GameObject::Destroy();
+	}
+
+	void Vehicle::Update()
+	{
+		GameObject::Update();
+
+		if (m_RigidBody != nullptr)
+		{
+			btRigidBody* rb = m_RigidBody->GetRigidBodyInternal();
+
+			const real moveAccel = 10.0f;
+			const real turnAccel = 3.0f;
+
+			btVector3 force = btVector3(0.0f, 0.0f, 0.0f);
+			btVector3 torque = btVector3(0.0f, 0.0f, 0.0f);
+
+			if (g_InputManager->GetKeyDown(KeyCode::KEY_UP))
+			{
+				force += ToBtVec3(m_Transform.GetForward()) * moveAccel;
+			}
+			if (g_InputManager->GetKeyDown(KeyCode::KEY_DOWN))
+			{
+				force += ToBtVec3(-m_Transform.GetForward()) * moveAccel;
+			}
+			if (g_InputManager->GetKeyDown(KeyCode::KEY_LEFT))
+			{
+				torque += btVector3(0.0f, -turnAccel, 0.0f);
+			}
+			if (g_InputManager->GetKeyDown(KeyCode::KEY_RIGHT))
+			{
+				torque += btVector3(0.0f, turnAccel, 0.0f);
+			}
+
+			rb->applyCentralForce(force);
+			rb->applyTorque(torque);
+		}
+	}
+
+	void Vehicle::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	{
+		UNREFERENCED_PARAMETER(scene);
+
+		JSONObject vehicleObj;
+		if (parentObject.SetObjectChecked("vehicle", vehicleObj))
+		{
+			m_ChassisMeshFilePath = vehicleObj.GetString("chassis mesh file path");
+			Mesh* mesh = SetMesh(new Mesh(this));
+			mesh->LoadFromFile(m_ChassisMeshFilePath, matIDs);
+
+			for (i32 i = 0; i < (i32)Mesh::s_DiscoveredMeshes.size(); ++i)
+			{
+				if (Mesh::s_DiscoveredMeshes[i] == m_ChassisMeshFilePath)
+				{
+					m_SelectedMeshIndex = i;
+					break;
+				}
+			}
+
+		}
+	}
+
+	void Vehicle::SerializeUniqueFields(JSONObject& parentObject) const
+	{
+		JSONObject vehicleObj = JSONObject();
+
+		vehicleObj.fields.emplace_back("chassis mesh file path", JSONValue(m_ChassisMeshFilePath));
+
+		parentObject.fields.emplace_back("vehicle", JSONValue(vehicleObj));
+	}
+
+	void Vehicle::DrawImGuiObjects()
+	{
+		GameObject::DrawImGuiObjects();
+
+		static ImGuiTextFilter meshFilter;
+		meshFilter.Draw("##mesh-filter");
+
+		ImGui::SameLine();
+		if (ImGui::Button("x"))
+		{
+			meshFilter.Clear();
+		}
+
+		g_Renderer->DoMeshList(&m_SelectedMeshIndex, &meshFilter);
+		m_ChassisMeshFilePath = Mesh::s_DiscoveredMeshes[m_SelectedMeshIndex];
 	}
 } // namespace flex

@@ -2064,6 +2064,16 @@ namespace flex
 
 						g_Editor->SetSelectedObject(softBody);
 					} break;
+					case GameObjectType::VEHICLE:
+					{
+						Vehicle* vehicle = new Vehicle(newObjectName);
+						g_SceneManager->CurrentScene()->AddRootObject(vehicle);
+
+						vehicle->Initialize();
+						vehicle->PostInitialize();
+
+						g_Editor->SetSelectedObject(vehicle);
+					} break;
 					default:
 						PrintWarn("Unhandled game object type %s\n", GameObjectTypeStrings[(i32)m_NewObjectImGuiSelectedType]);
 						break;
@@ -3352,6 +3362,76 @@ namespace flex
 		{
 			PrintError("Failed to write font file to %s\n", m_FontsFilePathAbs.c_str());
 		}
+	}
+
+	void Renderer::DoMeshList(i32* selectedMeshIndex, ImGuiTextFilter* meshFilter)
+	{
+		std::string selectedMeshRelativeFilePath = Mesh::s_DiscoveredMeshes[*selectedMeshIndex];
+
+		if (ImGui::BeginChild("mesh list", ImVec2(0.0f, 120.0f), true))
+		{
+			for (i32 i = 0; i < (i32)Mesh::s_DiscoveredMeshes.size(); ++i)
+			{
+				const std::string& meshFilePath = Mesh::s_DiscoveredMeshes[i];
+				bool bSelected = (i == *selectedMeshIndex);
+				const std::string meshFileName = StripLeadingDirectories(meshFilePath);
+				if (meshFilter->PassFilter(meshFileName.c_str()))
+				{
+					if (ImGui::Selectable(meshFileName.c_str(), &bSelected))
+					{
+						*selectedMeshIndex = i;
+					}
+
+					if (ImGui::BeginPopupContextItem())
+					{
+						bool bLoaded = Mesh::s_LoadedMeshes.find(selectedMeshRelativeFilePath) != Mesh::s_LoadedMeshes.end();
+
+						if (bLoaded)
+						{
+							if (ImGui::Button("Reload"))
+							{
+								Mesh::LoadMesh(meshFilePath);
+
+								ReloadObjectsWithMesh(meshFilePath);
+
+								ImGui::CloseCurrentPopup();
+							}
+						}
+						else
+						{
+							if (ImGui::Button("Load"))
+							{
+								Mesh::LoadMesh(meshFilePath);
+
+								ReloadObjectsWithMesh(meshFilePath);
+
+								ImGui::CloseCurrentPopup();
+							}
+						}
+
+						ImGui::EndPopup();
+					}
+					else
+					{
+						if (ImGui::IsItemActive())
+						{
+							if (ImGui::BeginDragDropSource())
+							{
+								const void* data = (void*)(meshFilePath.c_str());
+								size_t size = strlen(meshFilePath.c_str()) * sizeof(char);
+
+								ImGui::SetDragDropPayload(MeshPayloadCStr, data, size);
+
+								ImGui::Text("%s", meshFileName.c_str());
+
+								ImGui::EndDragDropSource();
+							}
+						}
+					}
+				}
+			}
+		}
+		ImGui::EndChild();
 	}
 
 	void PhysicsDebugDrawBase::UpdateDebugMode()

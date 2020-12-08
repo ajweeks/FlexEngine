@@ -189,6 +189,8 @@ namespace flex
 
 		virtual void RecreateEverything() = 0;
 
+		virtual void ReloadObjectsWithMesh(const std::string& meshFilePath) = 0;
+
 		void DrawImGuiForSelectedObjects();
 		void DrawImGuiForRenderObjectsList();
 		void DrawImGuiSettings();
@@ -247,6 +249,8 @@ namespace flex
 		// Draws the given string in the center of the screen for a short period of time
 		// Passing an empty string will immediately clear the current string
 		void AddEditorString(const std::string& str);
+
+		void DoMeshList(i32* selectedMeshIndex, ImGuiTextFilter* meshFilter);
 
 		struct PostProcessSettings
 		{

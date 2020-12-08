@@ -110,6 +110,7 @@ namespace flex
 		SOCKET,
 		SPRING,
 		SOFT_BODY,
+		VEHICLE,
 
 		// NOTE: New entries need to also be added to GameObjectTypeStrings below, Renderer::DoCreateGameObjectButton, and GameObject::CreateObjectFromJSON
 
@@ -139,6 +140,7 @@ namespace flex
 		"socket",
 		"spring",
 		"soft body",
+		"vehicle",
 
 		"NONE"
 	};

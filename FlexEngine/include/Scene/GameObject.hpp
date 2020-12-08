@@ -1204,4 +1204,26 @@ namespace flex
 
 	};
 
+	class Vehicle : public GameObject
+	{
+	public:
+		Vehicle(const std::string& name);
+
+		//virtual GameObject* CopySelfAndAddToScene(GameObject* parent, CopyFlags copyFlags) override;
+
+		virtual void Initialize() override;
+		virtual void Destroy() override;
+		virtual void Update() override;
+
+		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+
+		virtual void DrawImGuiObjects() override;
+
+	private:
+		std::string m_ChassisMeshFilePath;
+		i32 m_SelectedMeshIndex = 0;
+
+	};
+
 } // namespace flex

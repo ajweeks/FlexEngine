@@ -3116,90 +3116,7 @@ namespace flex
 						meshFilter.Clear();
 					}
 
-					if (ImGui::BeginChild("mesh list", ImVec2(0.0f, 120.0f), true))
-					{
-						for (i32 i = 0; i < (i32)Mesh::s_DiscoveredMeshes.size(); ++i)
-						{
-							const std::string& meshFilePath = Mesh::s_DiscoveredMeshes[i];
-							bool bSelected = (i == selectedMeshIndex);
-							const std::string meshFileName = StripLeadingDirectories(meshFilePath);
-							if (meshFilter.PassFilter(meshFileName.c_str()))
-							{
-								if (ImGui::Selectable(meshFileName.c_str(), &bSelected))
-								{
-									selectedMeshIndex = i;
-								}
-
-								if (ImGui::BeginPopupContextItem())
-								{
-									bool bLoaded = Mesh::s_LoadedMeshes.find(selectedMeshRelativeFilePath) != Mesh::s_LoadedMeshes.end();
-
-									if (bLoaded)
-									{
-										if (ImGui::Button("Reload"))
-										{
-											Mesh::LoadMesh(meshFilePath);
-
-											for (VulkanRenderObject* renderObject : m_RenderObjects)
-											{
-												if (renderObject)
-												{
-													Mesh* mesh = renderObject->gameObject->GetMesh();
-													if (mesh && mesh->GetRelativeFilePath().compare(meshFilePath) == 0)
-													{
-														mesh->Reload();
-													}
-												}
-											}
-
-											ImGui::CloseCurrentPopup();
-										}
-									}
-									else
-									{
-										if (ImGui::Button("Load"))
-										{
-											Mesh::LoadMesh(meshFilePath);
-
-											for (VulkanRenderObject* renderObject : m_RenderObjects)
-											{
-												if (renderObject)
-												{
-													Mesh* mesh = renderObject->gameObject->GetMesh();
-													if (mesh && mesh->GetRelativeFilePath().compare(meshFilePath) == 0)
-													{
-														mesh->Reload();
-													}
-												}
-											}
-
-											ImGui::CloseCurrentPopup();
-										}
-									}
-
-									ImGui::EndPopup();
-								}
-								else
-								{
-									if (ImGui::IsItemActive())
-									{
-										if (ImGui::BeginDragDropSource())
-										{
-											const void* data = (void*)(meshFilePath.c_str());
-											size_t size = strlen(meshFilePath.c_str()) * sizeof(char);
-
-											ImGui::SetDragDropPayload(MeshPayloadCStr, data, size);
-
-											ImGui::Text("%s", meshFileName.c_str());
-
-											ImGui::EndDragDropSource();
-										}
-									}
-								}
-							}
-						}
-					}
-					ImGui::EndChild();
+					DoMeshList(&selectedMeshIndex, &meshFilter);
 
 					static bool bShowErrorDialogue = false;
 					static std::string errorMessage;
@@ -3290,6 +3207,21 @@ namespace flex
 				}
 
 				ImGui::End();
+			}
+		}
+
+		void VulkanRenderer::ReloadObjectsWithMesh(const std::string& meshFilePath)
+		{
+			for (VulkanRenderObject* renderObject : m_RenderObjects)
+			{
+				if (renderObject)
+				{
+					Mesh* mesh = renderObject->gameObject->GetMesh();
+					if (mesh && mesh->GetRelativeFilePath().compare(meshFilePath) == 0)
+					{
+						mesh->Reload();
+					}
+				}
 			}
 		}
 

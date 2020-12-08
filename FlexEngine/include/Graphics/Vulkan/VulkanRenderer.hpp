@@ -116,10 +116,12 @@ namespace flex
 			virtual void RecaptureReflectionProbe() override;
 			virtual void RenderObjectStateChanged() override;
 
-			virtual void RecreateEverything() override;
-
 			virtual ParticleSystemID AddParticleSystem(const std::string& name, ParticleSystem* system, i32 particleCount) override;
 			virtual bool RemoveParticleSystem(ParticleSystemID particleSystemID) override;
+
+			virtual void RecreateEverything() override;
+
+			virtual void ReloadObjectsWithMesh(const std::string& meshFilePath) override;
 
 			void RegisterFramebufferAttachment(FrameBufferAttachment* frameBufferAttachment);
 			FrameBufferAttachment* GetFrameBufferAttachment(FrameBufferAttachmentID frameBufferAttachmentID) const;
