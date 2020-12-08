@@ -262,7 +262,7 @@ namespace flex
 		{
 			for (const std::string& filePath : filePaths)
 			{
-				if (!Contains(s_DiscoveredMeshes, filePath))
+				if (MeshFileNameConforms(filePath) && !Contains(s_DiscoveredMeshes, filePath))
 				{
 					s_DiscoveredMeshes.push_back(filePath);
 				}
@@ -379,6 +379,11 @@ namespace flex
 		}
 
 		return mesh;
+	}
+
+	bool Mesh::MeshFileNameConforms(const std::string& fileName)
+	{
+		return EndsWith(fileName, "glb") || EndsWith(fileName, "gltf");
 	}
 
 	bool Mesh::CheckCGLTFResult(cgltf_result result, std::string& outErrorMessage)
@@ -643,19 +648,10 @@ namespace flex
 				if (payload && payload->Data)
 				{
 					std::string draggedMeshFileName((const char*)payload->Data, payload->DataSize);
-					auto meshIter = s_LoadedMeshes.find(draggedMeshFileName);
-					if (meshIter != s_LoadedMeshes.end())
-					{
-						std::string newMeshFilePath = meshIter->first;
-
-						if (m_RelativeFilePath.compare(newMeshFilePath) != 0)
-						{
-							GameObject* owner = m_OwningGameObject;
-							Destroy();
-							m_OwningGameObject = owner;
-							LoadFromFile(newMeshFilePath, GetMaterialIDs(), &m_ImportSettings);
-						}
-					}
+					GameObject* owner = m_OwningGameObject;
+					Destroy();
+					m_OwningGameObject = owner;
+					LoadFromFile(draggedMeshFileName, GetMaterialIDs(), &m_ImportSettings);
 				}
 				ImGui::EndDragDropTarget();
 			}
