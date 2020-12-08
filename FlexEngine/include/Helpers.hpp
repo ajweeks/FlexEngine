@@ -231,6 +231,18 @@ namespace flex
 
 	bool Contains(const std::string& str, char pattern);
 
+	template<typename T>
+	i32 IndexOf(const std::vector<T>& vec, T val)
+	{
+		for (i32 i = 0; i < (i32)vec.size(); ++i)
+		{
+			if (vec[i] == val) {
+				return i;
+			}
+		}
+		return -1;
+	}
+
 	template<class T>
 	const T& PickRandomFrom(const std::vector<T>& vec)
 	{
