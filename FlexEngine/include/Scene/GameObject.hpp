@@ -35,9 +35,19 @@ namespace flex
 		GameObject(const std::string& name, GameObjectType type);
 		virtual ~GameObject();
 
+		enum CopyFlags
+		{
+			CHILDREN = (1 << 0),
+			MESH = (1 << 1),
+			RIGIDBODY = (1 << 2),
+
+			ALL = 0xFFFFFFFF,
+			_NONE = 0,
+		};
+
 		// Returns a new game object which is a direct copy of this object, parented to parent
 		// If parent == nullptr then new object will have same parent as this object
-		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren);
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, CopyFlags copyFlags);
 
 		static GameObject* CreateObjectFromJSON(const JSONObject& obj, BaseScene* scene, i32 fileVersion);
 
@@ -78,9 +88,13 @@ namespace flex
 		GameObject* GetRootParent();
 
 		GameObject* AddChild(GameObject* child);
-		bool RemoveChild(GameObject* child);
+		GameObject* AddChildImmediate(GameObject* child);
+		bool RemoveChildImmediate(GameObject* child);
 		const std::vector<GameObject*>& GetChildren() const;
 		u32 GetChildCountOfType(GameObjectType objType, bool bRecurse);
+
+		GameObject* AddSibling(GameObject* child);
+		GameObject* AddSiblingImmediate(GameObject* child);
 
 		template<class T>
 		void GetChildrenOfType(GameObjectType objType, bool bRecurse, std::vector<T*>& children)
@@ -174,7 +188,7 @@ namespace flex
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs);
 		virtual void SerializeUniqueFields(JSONObject& parentObject) const;
 
-		void CopyGenericFields(GameObject* newGameObject, GameObject* parent, bool bCopyChildren);
+		void CopyGenericFields(GameObject* newGameObject, GameObject* parent, CopyFlags copyFlags);
 
 		void SetOutputSignal(i32 slotIdx, i32 value);
 
@@ -321,7 +335,7 @@ namespace flex
 	public:
 		explicit Valve(const std::string& name);
 
-		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, CopyFlags copyFlags) override;
 
 		virtual void PostInitialize() override;
 		virtual void Update() override;
@@ -354,7 +368,7 @@ namespace flex
 	public:
 		explicit RisingBlock(const std::string& name);
 
-		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, CopyFlags copyFlags) override;
 
 		virtual void Initialize() override;
 		virtual void PostInitialize() override;
@@ -384,7 +398,7 @@ namespace flex
 	public:
 		explicit GlassPane(const std::string& name);
 
-		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, CopyFlags copyFlags) override;
 
 		bool bBroken = false;
 
@@ -399,7 +413,7 @@ namespace flex
 	public:
 		explicit ReflectionProbe(const std::string& name);
 
-		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, CopyFlags copyFlags) override;
 
 		virtual void PostInitialize() override;
 
@@ -416,7 +430,7 @@ namespace flex
 	public:
 		explicit Skybox(const std::string& name);
 
-		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, CopyFlags copyFlags) override;
 
 		void ProcedurallyInitialize(MaterialID matID);
 
@@ -435,7 +449,7 @@ namespace flex
 		Cart(CartID cartID, GameObjectType type = GameObjectType::CART);
 		Cart(CartID cartID, const std::string& name, GameObjectType type = GameObjectType::CART, const char* meshName = emptyCartMeshName);
 
-		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, CopyFlags copyFlags) override;
 
 		virtual void DrawImGuiObjects() override;
 		virtual real GetDrivePower() const;
@@ -481,7 +495,7 @@ namespace flex
 		explicit EngineCart(CartID cartID);
 		EngineCart(CartID cartID, const std::string& name);
 
-		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, CopyFlags copyFlags) override;
 
 		virtual void Update() override;
 		virtual void DrawImGuiObjects() override;
@@ -508,7 +522,7 @@ namespace flex
 		MobileLiquidBox();
 		explicit MobileLiquidBox(const std::string& name);
 
-		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, CopyFlags copyFlags) override;
 
 		virtual void DrawImGuiObjects() override;
 
@@ -575,7 +589,7 @@ namespace flex
 		void AddWave();
 		void RemoveWave(i32 index);
 
-		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, CopyFlags copyFlags) override;
 
 		virtual void DrawImGuiObjects() override;
 
@@ -845,7 +859,7 @@ namespace flex
 		virtual void Destroy() override;
 		virtual void Update() override;
 
-		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, CopyFlags copyFlags) override;
 
 		virtual bool AllowInteractionWith(GameObject* gameObject) override;
 
@@ -916,7 +930,7 @@ namespace flex
 	public:
 		explicit ParticleSystem(const std::string& name);
 
-		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, CopyFlags copyFlags) override;
 
 		virtual void Update() override;
 		virtual void Destroy() override;
@@ -946,7 +960,7 @@ namespace flex
 	public:
 		explicit TerrainGenerator(const std::string& name);
 
-		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, CopyFlags copyFlags) override;
 
 		virtual void Initialize() override;
 		virtual void PostInitialize() override;
@@ -1012,7 +1026,7 @@ namespace flex
 	public:
 		explicit SpringObject(const std::string& name);
 
-		//virtual SpringObject* CopySelfAndAddToScene(SpringObject* parent, bool bCopyChildren) override;
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, CopyFlags copyFlags) override;
 
 		virtual void Initialize() override;
 		virtual void PostInitialize() override;
@@ -1124,7 +1138,7 @@ namespace flex
 	public:
 		SoftBody(const std::string& name);
 
-		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, bool bCopyChildren) override;
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent, CopyFlags copyFlags) override;
 
 		virtual void Initialize() override;
 		virtual void Destroy() override;

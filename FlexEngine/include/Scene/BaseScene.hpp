@@ -63,9 +63,18 @@ namespace flex
 		void GetInteractableObjects(std::vector<GameObject*>& interactableObjects);
 
 		GameObject* AddRootObject(GameObject* gameObject);
+		GameObject* AddRootObjectImmediate(GameObject* gameObject);
+		GameObject* AddChildObject(GameObject* parent, GameObject* gameObject);
 		void RemoveRootObject(GameObject* gameObject, bool bDestroy);
+		void RemoveRootObjectImmediate(GameObject* gameObject, bool bDestroy);
 		void RemoveAllRootObjects(bool bDestroy);
+		void RemoveAllRootObjectsImmediate(bool bDestroy);
 		bool RemoveObject(GameObject* gameObject, bool bDestroy);
+		bool RemoveObjectImmediate(GameObject* gameObject, bool bDestroy);
+		void RemoveObjects(const std::vector<GameObject*>& gameObjects, bool bDestroy);
+		void RemoveObjectsImmediate(const std::vector<GameObject*>& gameObjects, bool bDestroy);
+		std::vector<GameObject*>::const_iterator RemoveObjectImmediate(std::vector<GameObject*>::const_iterator objectIter, bool bDestroy);
+
 
 		std::vector<MaterialID> GetMaterialIDs();
 		void AddMaterialID(MaterialID newMaterialID);
@@ -75,10 +84,6 @@ namespace flex
 		GameObject* FirstObjectWithTag(const std::string& tag);
 
 		Player* GetPlayer(i32 index);
-
-		// Deletes and removes targetObject if exists in scene
-		// Returns true if targetObject was found
-		bool DestroyGameObject(GameObject* targetObject, bool bDestroyChildren);
 
 		bool IsLoaded() const;
 
@@ -119,11 +124,6 @@ namespace flex
 		// Returns 'prefix' with a number appended representing
 		// how many other objects with that prefix are in the scene
 		std::string GetUniqueObjectName(const std::string& prefix, i16 digits);
-
-		void DestroyObjectAtEndOfFrame(GameObject* obj);
-		void DestroyObjectsAtEndOfFrame(const std::vector<GameObject*>& objs);
-		void AddObjectAtEndOFFrame(GameObject* obj);
-		void AddObjectsAtEndOFFrame(const std::vector<GameObject*>& objs);
 
 		i32 GetSceneFileVersion() const;
 
@@ -182,10 +182,12 @@ namespace flex
 		TrackManager m_TrackManager;
 		CartManager m_CartManager;
 
-		std::vector<GameObject*> m_ObjectsToAddAtEndOfFrame;
-		std::vector<GameObject*> m_ObjectsToDestroyAtEndOfFrame;
-
 		std::vector<ICallbackGameObject*> m_OnGameObjectDestroyedCallbacks;
+
+		std::vector<GameObject*> m_PendingAddObjects;
+		std::vector<Pair<GameObject*, GameObject*>> m_PendingAddChildObjects;
+		std::vector<GameObject*> m_PendingDeleteObjects;
+		std::vector<GameObject*> m_PendingDestroyObjects;
 
 	private:
 		/*

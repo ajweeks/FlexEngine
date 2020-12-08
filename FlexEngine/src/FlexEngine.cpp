@@ -897,7 +897,7 @@ namespace flex
 					if (ImGui::MenuItem("Mobile liquid box"))
 					{
 						MobileLiquidBox* box = new MobileLiquidBox();
-						scene->AddObjectAtEndOFFrame(box);
+						scene->AddRootObject(box);
 						player->AddToInventory(box);
 					}
 

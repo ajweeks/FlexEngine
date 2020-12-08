@@ -21,9 +21,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "48.055, 11.349, -7.223",
-			"pitch" : -0.229422,
-			"yaw" : 2.992407
+			"position" : "40.858, 12.908, -15.996",
+			"pitch" : -0.018938,
+			"yaw" : 2.780094
 		}
 	},
 	"objects" : 
@@ -76,17 +76,76 @@
 			}
 		},
 		{
-			"name" : "Spring",
-			"type" : "spring",
+			"name" : "Springs",
+			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
 			"transform" : 
 			{
-				"rot" : "0.084, 0.000, -0.000"
+				"pos" : "0.000, 4.451, 9.899"
 			},
-			"materials" : 
+			"children" : 
 			[
-				"Spring"
+				{
+					"name" : "Spring",
+					"type" : "spring",
+					"visible" : true,
+					"casts shadow" : true,
+					"transform" : 
+					{
+						"pos" : "12.000, -0.062, 0.090",
+						"rot" : "-3.141, -0.000, -0.000"
+					},
+					"materials" : 
+					[
+						"Spring"
+					]
+				},
+				{
+					"name" : "Spring2",
+					"type" : "spring",
+					"visible" : true,
+					"casts shadow" : true,
+					"transform" : 
+					{
+						"pos" : "4.700, 3.100, 4.400",
+						"rot" : "-3.141, -0.000, 0.000"
+					},
+					"materials" : 
+					[
+						"Spring"
+					]
+				},
+				{
+					"name" : "Spring3",
+					"type" : "spring",
+					"visible" : true,
+					"casts shadow" : true,
+					"transform" : 
+					{
+						"pos" : "-2.600, 0.300, 0.300",
+						"rot" : "-1.777, -0.000, -3.142"
+					},
+					"materials" : 
+					[
+						"Spring"
+					]
+				},
+				{
+					"name" : "Spring4",
+					"type" : "spring",
+					"visible" : true,
+					"casts shadow" : true,
+					"transform" : 
+					{
+						"pos" : "-7.200, -4.000, 6.400",
+						"rot" : "3.140, 0.000, 0.000"
+					},
+					"materials" : 
+					[
+						"Spring"
+					]
+				}
 			]
 		}
 	]

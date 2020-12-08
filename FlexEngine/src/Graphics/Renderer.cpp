@@ -928,7 +928,7 @@ namespace flex
 						if ((bRootObject || bRootSibling) &&
 							draggedGameObject->GetParent())
 						{
-							draggedGameObject->GetParent()->RemoveChild(draggedGameObject);
+							draggedGameObject->GetParent()->RemoveChildImmediate(draggedGameObject);
 							g_SceneManager->CurrentScene()->AddRootObject(draggedGameObject);
 						}
 					}
@@ -2322,7 +2322,7 @@ namespace flex
 								}
 								else
 								{
-									g_SceneManager->CurrentScene()->RemoveRootObject(draggedGameObject, false);
+									g_SceneManager->CurrentScene()->RemoveRootObjectImmediate(draggedGameObject, false);
 									gameObject->AddChild(draggedGameObject);
 									bParentChildTreeDirty = true;
 								}

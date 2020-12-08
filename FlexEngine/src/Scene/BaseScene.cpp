@@ -222,7 +222,7 @@ namespace flex
 				{
 					GameObject* rootObj = GameObject::CreateObjectFromJSON(rootObjectJSON, this, m_SceneFileVersion);
 					rootObj->GetTransform()->UpdateParentTransform();
-					AddRootObject(rootObj);
+					AddRootObjectImmediate(rootObj);
 				}
 
 				if (sceneRootObject.HasField("track manager"))
@@ -262,7 +262,7 @@ namespace flex
 					Skybox* skybox = new Skybox("Skybox");
 					skybox->ProcedurallyInitialize(skyboxMatID);
 
-					AddRootObject(skybox);
+					AddRootObjectImmediate(skybox);
 				}
 
 				MaterialID sphereMatID = InvalidMaterialID;
@@ -288,13 +288,13 @@ namespace flex
 					reflectionProbe->ParseJSON(emptyObj, this, sphereMatID);
 					reflectionProbe->GetTransform()->SetLocalPosition(glm::vec3(0.0f, 8.0f, 0.0f));
 
-					AddRootObject(reflectionProbe);
+					AddRootObjectImmediate(reflectionProbe);
 				}
 
 				GameObject* sphere = new GameObject("sphere", GameObjectType::OBJECT);
 				Mesh* mesh = sphere->SetMesh(new Mesh(sphere));
 				mesh->LoadFromFile(MESH_DIRECTORY "ico-sphere.glb", sphereMatID);
-				AddRootObject(sphere);
+				AddRootObjectImmediate(sphere);
 
 				// Default directional light
 				DirectionalLight* dirLight = new DirectionalLight();
@@ -310,10 +310,10 @@ namespace flex
 			{
 				m_Player0 = new Player(0);
 				m_Player0->GetTransform()->SetWorldPosition(glm::vec3(0.0f, 2.0f, 0.0f));
-				AddRootObject(m_Player0);
+				AddRootObjectImmediate(m_Player0);
 
 				//m_Player1 = new Player(1);
-				//AddRootObject(m_Player1);
+				//AddRootObjectImmediate(m_Player1);
 			}
 
 			for (GameObject* rootObject : m_RootObjects)
@@ -417,37 +417,48 @@ namespace flex
 
 	void BaseScene::LateUpdate()
 	{
-		if (!m_ObjectsToDestroyAtEndOfFrame.empty())
+		if (!m_PendingDeleteObjects.empty())
 		{
-			for (GameObject* gameObject : m_ObjectsToDestroyAtEndOfFrame)
+			auto iter = m_PendingDeleteObjects.cbegin();
+			while (iter != m_PendingDeleteObjects.cend())
 			{
-				if (!DestroyGameObject(gameObject, true))
-				{
-					PrintWarn("Attempted to remove game object from scene which doesn't exist! %s\n", gameObject->GetName().c_str());
-				}
+				iter = RemoveObjectImmediate(iter, false);
 			}
-			m_ObjectsToDestroyAtEndOfFrame.clear();
+			m_PendingDeleteObjects.clear();
 			UpdateRootObjectSiblingIndices();
 			g_Renderer->RenderObjectStateChanged();
 		}
 
-		if (!m_ObjectsToAddAtEndOfFrame.empty())
+		if (!m_PendingDestroyObjects.empty())
 		{
-			for (GameObject* gameObject : m_ObjectsToAddAtEndOfFrame)
+			auto iter = m_PendingDestroyObjects.cbegin();
+			while (iter != m_PendingDestroyObjects.cend())
 			{
-#if THOROUGH_CHECKS
-				if (std::find(m_RootObjects.begin(), m_RootObjects.end(), gameObject) != m_RootObjects.end())
-				{
-					PrintWarn("Attempted to add root object multiple times!\n");
-					continue;
-				}
-#endif
-
-				m_RootObjects.push_back(gameObject);
-				gameObject->Initialize();
-				gameObject->PostInitialize();
+				iter = RemoveObjectImmediate(iter, true);
 			}
-			m_ObjectsToAddAtEndOfFrame.clear();
+			m_PendingDestroyObjects.clear();
+			UpdateRootObjectSiblingIndices();
+			g_Renderer->RenderObjectStateChanged();
+		}
+
+		if (!m_PendingAddObjects.empty())
+		{
+			for (GameObject*& object : m_PendingAddObjects)
+			{
+				AddRootObjectImmediate(object);
+			}
+			m_PendingAddObjects.clear();
+			UpdateRootObjectSiblingIndices();
+			g_Renderer->RenderObjectStateChanged();
+		}
+
+		if (!m_PendingAddChildObjects.empty())
+		{
+			for (const Pair<GameObject*, GameObject*>& objectPair : m_PendingAddChildObjects)
+			{
+				objectPair.first->AddChildImmediate(objectPair.second);
+			}
+			m_PendingAddChildObjects.clear();
 			UpdateRootObjectSiblingIndices();
 			g_Renderer->RenderObjectStateChanged();
 		}
@@ -758,20 +769,6 @@ namespace flex
 		}
 	}
 
-	bool BaseScene::DestroyGameObject(GameObject* targetObject, bool bDestroyChildren)
-	{
-		for (GameObject* gameObject : m_RootObjects)
-		{
-			if (DestroyGameObjectRecursive(gameObject, targetObject, bDestroyChildren))
-			{
-				UpdateRootObjectSiblingIndices();
-				g_Renderer->RenderObjectStateChanged();
-				return true;
-			}
-		}
-		return false;
-	}
-
 	bool BaseScene::IsLoaded() const
 	{
 		return m_bLoaded;
@@ -792,7 +789,7 @@ namespace flex
 			GameObject* targetParent = targetObject->m_Parent;
 			if (targetObject->m_Parent)
 			{
-				targetParent->RemoveChild(targetObject);
+				targetParent->RemoveChildImmediate(targetObject);
 			}
 			else
 			{
@@ -1132,60 +1129,6 @@ namespace flex
 		return prefix + IntToString(newIndex, digits);
 	}
 
-	void BaseScene::DestroyObjectAtEndOfFrame(GameObject* obj)
-	{
-#if DEBUG
-		auto iter = std::find(m_ObjectsToDestroyAtEndOfFrame.begin(), m_ObjectsToDestroyAtEndOfFrame.end(), obj);
-		if (iter != m_ObjectsToDestroyAtEndOfFrame.end())
-		{
-			PrintWarn("Attempted to flag object to be removed at end of frame more than once! %s\n", obj->GetName().c_str());
-		}
-#endif
-		m_ObjectsToDestroyAtEndOfFrame.push_back(obj);
-	}
-
-	void BaseScene::DestroyObjectsAtEndOfFrame(const std::vector<GameObject*>& objs)
-	{
-#if DEBUG
-		for (auto o : objs)
-		{
-			auto iter = std::find(m_ObjectsToDestroyAtEndOfFrame.begin(), m_ObjectsToDestroyAtEndOfFrame.end(), o);
-			if (iter != m_ObjectsToDestroyAtEndOfFrame.end())
-			{
-				PrintWarn("Attempted to flag object to be removed at end of frame more than once! %s\n", o->GetName().c_str());
-			}
-		}
-#endif
-		m_ObjectsToDestroyAtEndOfFrame.insert(m_ObjectsToDestroyAtEndOfFrame.end(), objs.begin(), objs.end());
-	}
-
-	void BaseScene::AddObjectAtEndOFFrame(GameObject* obj)
-	{
-#if DEBUG
-		auto iter = std::find(m_ObjectsToAddAtEndOfFrame.begin(), m_ObjectsToAddAtEndOfFrame.end(), obj);
-		if (iter != m_ObjectsToAddAtEndOfFrame.end())
-		{
-			PrintWarn("Attempted to flag object to be added at end of frame more than once! %s\n", obj->GetName().c_str());
-		}
-#endif
-		m_ObjectsToAddAtEndOfFrame.push_back(obj);
-	}
-
-	void BaseScene::AddObjectsAtEndOFFrame(const std::vector<GameObject*>& objs)
-	{
-#if DEBUG
-		for (auto o : objs)
-		{
-			auto iter = std::find(m_ObjectsToAddAtEndOfFrame.begin(), m_ObjectsToAddAtEndOfFrame.end(), o);
-			if (iter != m_ObjectsToAddAtEndOfFrame.end())
-			{
-				PrintWarn("Attempted to flag object to be added at end of frame more than once! %s\n", o->GetName().c_str());
-			}
-		}
-#endif
-		m_ObjectsToAddAtEndOfFrame.insert(m_ObjectsToAddAtEndOfFrame.end(), objs.begin(), objs.end());
-	}
-
 	i32 BaseScene::GetSceneFileVersion() const
 	{
 		return m_SceneFileVersion;
@@ -1438,6 +1381,36 @@ namespace flex
 			return nullptr;
 		}
 
+		m_PendingAddObjects.push_back(gameObject);
+
+		return gameObject;
+	}
+
+	GameObject* BaseScene::AddChildObject(GameObject* parent, GameObject* gameObject)
+	{
+		if (!gameObject)
+		{
+			return gameObject;
+		}
+
+		if (parent == gameObject)
+		{
+			PrintError("Attempted to add self as child on %s\n", gameObject->GetName().c_str());
+			return gameObject;
+		}
+
+		m_PendingAddChildObjects.emplace_back(parent, gameObject);
+
+		return gameObject;
+	}
+
+	GameObject* BaseScene::AddRootObjectImmediate(GameObject* gameObject)
+	{
+		if (!gameObject)
+		{
+			return nullptr;
+		}
+
 		for (GameObject* rootObject : m_RootObjects)
 		{
 			if (rootObject == gameObject)
@@ -1456,6 +1429,18 @@ namespace flex
 	}
 
 	void BaseScene::RemoveRootObject(GameObject* gameObject, bool bDestroy)
+	{
+		if (bDestroy)
+		{
+			m_PendingDestroyObjects.push_back(gameObject);
+		}
+		else
+		{
+			m_PendingDeleteObjects.push_back(gameObject);
+		}
+	}
+
+	void BaseScene::RemoveRootObjectImmediate(GameObject* gameObject, bool bDestroy)
 	{
 		auto iter = m_RootObjects.begin();
 		while (iter != m_RootObjects.end())
@@ -1484,6 +1469,21 @@ namespace flex
 
 	void BaseScene::RemoveAllRootObjects(bool bDestroy)
 	{
+		for (auto iter = m_RootObjects.begin(); iter != m_RootObjects.end(); ++iter)
+		{
+			if (bDestroy)
+			{
+				m_PendingDestroyObjects.push_back(*iter);
+			}
+			else
+			{
+				m_PendingDeleteObjects.push_back(*iter);
+			}
+		}
+	}
+
+	void BaseScene::RemoveAllRootObjectsImmediate(bool bDestroy)
+	{
 		auto iter = m_RootObjects.begin();
 		while (iter != m_RootObjects.end())
 		{
@@ -1500,6 +1500,63 @@ namespace flex
 
 	bool BaseScene::RemoveObject(GameObject* gameObject, bool bDestroy)
 	{
+		if (Contains(m_RootObjects, gameObject))
+		{
+			if (bDestroy)
+			{
+				if (!Contains(m_PendingDestroyObjects, gameObject))
+				{
+					m_PendingDestroyObjects.push_back(gameObject);
+				}
+			}
+			else
+			{
+				if (!Contains(m_PendingDeleteObjects, gameObject))
+				{
+					m_PendingDeleteObjects.push_back(gameObject);
+				}
+			}
+			return true;
+		}
+
+		return false;
+	}
+
+	std::vector<GameObject*>::const_iterator BaseScene::RemoveObjectImmediate(std::vector<GameObject*>::const_iterator objectIter, bool bDestroy)
+	{
+		GameObject* rootObject = *objectIter;
+
+		const bool bRootObject = rootObject->GetParent() != nullptr;
+
+		auto childIter = rootObject->m_Children.cbegin();
+		while (childIter != rootObject->m_Children.cend())
+		{
+			childIter = RemoveObjectImmediate(childIter, bDestroy);
+		}
+
+		if (bDestroy)
+		{
+			rootObject->Destroy();
+			delete* objectIter;
+		}
+		else
+		{
+			rootObject->DetachFromParent();
+		}
+
+		if (bRootObject)
+		{
+			std::vector<GameObject*>::const_iterator result = m_RootObjects.erase(objectIter);
+			return result;
+		}
+		else
+		{
+			return objectIter;
+		}
+	}
+
+	bool BaseScene::RemoveObjectImmediate(GameObject* gameObject, bool bDestroy)
+	{
 		for (auto iter = m_RootObjects.begin(); iter != m_RootObjects.end(); ++iter)
 		{
 			if (*iter == gameObject)
@@ -1515,9 +1572,9 @@ namespace flex
 				return true;
 			}
 
-			for (auto childIter = (*iter)->m_Children.begin(); childIter != (*iter)->m_Children.end(); ++childIter)
+			for (auto childIter = (*iter)->m_Children.cbegin(); childIter != (*iter)->m_Children.cend(); ++childIter)
 			{
-				if (RemoveObject(*childIter, bDestroy))
+				if (RemoveObjectImmediate(*childIter, bDestroy))
 				{
 					return true;
 				}
@@ -1525,6 +1582,26 @@ namespace flex
 		}
 
 		return false;
+	}
+
+	void BaseScene::RemoveObjects(const std::vector<GameObject*>& gameObjects, bool bDestroy)
+	{
+		if (bDestroy)
+		{
+			m_PendingDestroyObjects.insert(m_PendingDeleteObjects.end(), gameObjects.begin(), gameObjects.end());
+		}
+		else
+		{
+			m_PendingDeleteObjects.insert(m_PendingDeleteObjects.end(), gameObjects.begin(), gameObjects.end());
+		}
+	}
+
+	void BaseScene::RemoveObjectsImmediate(const std::vector<GameObject*>& gameObjects, bool bDestroy)
+	{
+		for (GameObject* gameObject : gameObjects)
+		{
+			RemoveObjectImmediate(gameObject, bDestroy);
+		}
 	}
 
 	std::vector<MaterialID> BaseScene::GetMaterialIDs()

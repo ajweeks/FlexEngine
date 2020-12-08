@@ -733,7 +733,7 @@ namespace flex
 			if (action == Action::DBG_ADD_LIQUID_BOX_TO_INV)
 			{
 				MobileLiquidBox* box = new MobileLiquidBox();
-				g_SceneManager->CurrentScene()->AddObjectAtEndOFFrame(box);
+				g_SceneManager->CurrentScene()->AddRootObject(box);
 				box->SetVisible(false);
 				m_Player->m_Inventory.push_back(box);
 				return EventReply::CONSUMED;

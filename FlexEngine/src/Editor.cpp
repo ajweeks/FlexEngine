@@ -1199,7 +1199,7 @@ namespace flex
 			{
 				if (!m_CurrentlySelectedObjects.empty())
 				{
-					g_SceneManager->CurrentScene()->DestroyObjectsAtEndOfFrame(m_CurrentlySelectedObjects);
+					g_SceneManager->CurrentScene()->RemoveObjectsImmediate(m_CurrentlySelectedObjects, true);
 
 					SelectNone();
 					return EventReply::CONSUMED;
@@ -1214,7 +1214,7 @@ namespace flex
 
 					for (GameObject* gameObject : m_CurrentlySelectedObjects)
 					{
-						GameObject* duplicatedObject = gameObject->CopySelfAndAddToScene(nullptr, true);
+						GameObject* duplicatedObject = gameObject->CopySelfAndAddToScene(nullptr, GameObject::CopyFlags::CHILDREN);
 
 						duplicatedObject->AddSelfAndChildrenToVec(newSelectedGameObjects);
 					}
@@ -1432,11 +1432,11 @@ namespace flex
 
 			m_TranslationGizmo = new GameObject("Translation gizmo", GameObjectType::_NONE);
 
-			m_TranslationGizmo->AddChild(translateXAxis);
-			m_TranslationGizmo->AddChild(translateYAxis);
-			m_TranslationGizmo->AddChild(translateZAxis);
+			m_TranslationGizmo->AddChildImmediate(translateXAxis);
+			m_TranslationGizmo->AddChildImmediate(translateYAxis);
+			m_TranslationGizmo->AddChildImmediate(translateZAxis);
 
-			m_TransformGizmo->AddChild(m_TranslationGizmo);
+			m_TransformGizmo->AddChildImmediate(m_TranslationGizmo);
 		}
 
 		// Rotation gizmo
@@ -1500,11 +1500,11 @@ namespace flex
 
 			m_RotationGizmo = new GameObject("Rotation gizmo", GameObjectType::_NONE);
 
-			m_RotationGizmo->AddChild(rotationXAxis);
-			m_RotationGizmo->AddChild(rotationYAxis);
-			m_RotationGizmo->AddChild(rotationZAxis);
+			m_RotationGizmo->AddChildImmediate(rotationXAxis);
+			m_RotationGizmo->AddChildImmediate(rotationYAxis);
+			m_RotationGizmo->AddChildImmediate(rotationZAxis);
 
-			m_TransformGizmo->AddChild(m_RotationGizmo);
+			m_TransformGizmo->AddChildImmediate(m_RotationGizmo);
 
 			m_RotationGizmo->SetVisible(false);
 		}
@@ -1587,12 +1587,12 @@ namespace flex
 
 			m_ScaleGizmo = new GameObject("Scale gizmo", GameObjectType::_NONE);
 
-			m_ScaleGizmo->AddChild(scaleXAxis);
-			m_ScaleGizmo->AddChild(scaleYAxis);
-			m_ScaleGizmo->AddChild(scaleZAxis);
-			m_ScaleGizmo->AddChild(scaleAllAxes);
+			m_ScaleGizmo->AddChildImmediate(scaleXAxis);
+			m_ScaleGizmo->AddChildImmediate(scaleYAxis);
+			m_ScaleGizmo->AddChildImmediate(scaleZAxis);
+			m_ScaleGizmo->AddChildImmediate(scaleAllAxes);
 
-			m_TransformGizmo->AddChild(m_ScaleGizmo);
+			m_TransformGizmo->AddChildImmediate(m_ScaleGizmo);
 
 			m_ScaleGizmo->SetVisible(false);
 		}

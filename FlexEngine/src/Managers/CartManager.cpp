@@ -342,7 +342,7 @@ namespace flex
 		CartID cartID = (CartID)m_Carts.size();
 		Cart* newCart = new Cart(cartID, name);
 		m_Carts.push_back(newCart);
-		g_SceneManager->CurrentScene()->AddObjectAtEndOFFrame(newCart);
+		g_SceneManager->CurrentScene()->AddRootObject(newCart);
 		return cartID;
 	}
 
@@ -352,7 +352,7 @@ namespace flex
 		CartID cartID = (CartID)m_Carts.size();
 		EngineCart* newCart = new EngineCart(cartID, name);
 		m_Carts.push_back(newCart);
-		g_SceneManager->CurrentScene()->AddObjectAtEndOFFrame(newCart);
+		g_SceneManager->CurrentScene()->AddRootObject(newCart);
 		return cartID;
 	}
 
