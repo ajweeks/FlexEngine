@@ -371,7 +371,7 @@
 	},
 	"DBG CAM Look up" : 
 	{
-		"key code" : 59,
+		"key code" : 58,
 		"mouse button" : -1,
 		"mouse axis" : -1,
 		"gamepad button" : -1,
@@ -381,7 +381,7 @@
 	},
 	"DBG CAM Look down" : 
 	{
-		"key code" : 58,
+		"key code" : 59,
 		"mouse button" : -1,
 		"mouse axis" : -1,
 		"gamepad button" : -1,
