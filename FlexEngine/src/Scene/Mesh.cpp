@@ -566,7 +566,27 @@ namespace flex
 
 	void Mesh::DrawImGui()
 	{
+		const char* meshContextMenuStr = "mesh context menu";
+		auto contextMenuCheck = [meshContextMenuStr]()
+		{
+			if (ImGui::IsMouseReleased(1) && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
+			{
+				ImGui::OpenPopup(meshContextMenuStr);
+			}
+		};
+
 		ImGui::Text("Mesh");
+
+		contextMenuCheck();
+
+		ImGui::SameLine();
+
+		bool bDeleteSelf = false;
+
+		if (ImGui::Button("Remove"))
+		{
+			bDeleteSelf = true;
+		}
 
 		switch (m_Type)
 		{
@@ -614,15 +634,7 @@ namespace flex
 				ImGui::EndCombo();
 			}
 
-			if (ImGui::BeginPopupContextItem("mesh context menu"))
-			{
-				if (ImGui::Button("Remove mesh"))
-				{
-					m_OwningGameObject->SetMesh(nullptr);
-				}
-
-				ImGui::EndPopup();
-			}
+			contextMenuCheck();
 
 			if (ImGui::BeginDragDropTarget())
 			{
@@ -671,6 +683,8 @@ namespace flex
 					}
 				}
 
+				contextMenuCheck();
+
 				ImGui::EndCombo();
 			}
 		} break;
@@ -679,6 +693,7 @@ namespace flex
 			MeshComponent* meshComponent = GetSubMeshes()[0];
 			ImGui::Text("Procedural mesh");
 			ImGui::Text("Vertex count: %u", meshComponent->GetVertexBufferData()->VertexCount);
+			contextMenuCheck();
 		} break;
 		case Mesh::Type::MEMORY:
 		{
@@ -688,6 +703,22 @@ namespace flex
 			PrintError("Unhandled Mesh::Type in Renderer::DrawImGuiForGameObject: %d\n", (i32)m_Type);
 			assert(false);
 		} break;
+		}
+
+		if (ImGui::BeginPopup(meshContextMenuStr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings))
+		{
+			if (ImGui::Button("Remove mesh"))
+			{
+				bDeleteSelf = true;
+			}
+
+			ImGui::EndPopup();
+		}
+
+		if (bDeleteSelf)
+		{
+			m_OwningGameObject->SetMesh(nullptr);
+			// We are now deleted!
 		}
 	}
 
