@@ -56,6 +56,10 @@ namespace flex
 		bool IsShowingGrid() const;
 		void SetShowGrid(bool bShowGrid);
 
+		void DrawImGuiWindows();
+
+		static const char* GameObjectPayloadCStr;
+
 	private:
 		EventReply OnMouseButtonEvent(MouseButton button, KeyAction action);
 		MouseButtonCallback<Editor> m_MouseButtonCallback;
@@ -133,5 +137,6 @@ namespace flex
 		glm::quat m_SelectedObjectRotation;
 
 		bool m_bWantRenameActiveElement = false;
+
 	};
 } // namespace flex

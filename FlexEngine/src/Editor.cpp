@@ -34,6 +34,8 @@ IGNORE_WARNINGS_POP
 
 namespace flex
 {
+	const char* Editor::GameObjectPayloadCStr = "gameobject";
+
 	Editor::Editor() :
 		m_MouseButtonCallback(this, &Editor::OnMouseButtonEvent),
 		m_MouseMovedCallback(this, &Editor::OnMouseMovedEvent),

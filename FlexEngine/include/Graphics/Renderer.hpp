@@ -6,6 +6,7 @@ IGNORE_WARNINGS_POP
 
 #include "Physics/PhysicsDebuggingSettings.hpp"
 #include "RendererTypes.hpp"
+#include "BitmapFont.hpp"
 #include "VertexBufferData.hpp"
 
 class btIDebugDraw;
@@ -16,7 +17,6 @@ typedef struct FT_FaceRec_* FT_Face;
 
 namespace flex
 {
-	class BitmapFont;
 	class DirectionalLight;
 	class DirectoryWatcher;
 	class GameObject;
@@ -25,8 +25,6 @@ namespace flex
 	class ParticleSystem;
 	class PointLight;
 	struct TextCache;
-	struct FontMetaData;
-	struct FontMetric;
 
 	class PhysicsDebugDrawBase : public btIDebugDraw
 	{
@@ -104,7 +102,6 @@ namespace flex
 
 		virtual void Update();
 		virtual void Draw() = 0;
-		virtual void DrawImGuiMisc();
 		virtual void DrawImGuiWindows();
 
 		virtual void UpdateDynamicVertexData(RenderID renderID, VertexBufferData const* vertexBufferData, const std::vector<u32>& indexData) = 0;
@@ -191,8 +188,6 @@ namespace flex
 
 		virtual void ReloadObjectsWithMesh(const std::string& meshFilePath) = 0;
 
-		void DrawImGuiForSelectedObjects();
-		void DrawImGuiForRenderObjectsList();
 		void DrawImGuiSettings();
 
 		real GetStringWidth(const std::string& str, BitmapFont* font, real letterSpacing, bool bNormalized) const;
@@ -282,7 +277,6 @@ namespace flex
 		static const u32 PARTICLES_PER_DISPATCH = 256;
 		static const u32 SSAO_NOISE_DIM = 4;
 
-		static const char* GameObjectPayloadCStr;
 		static const char* MaterialPayloadCStr;
 		static const char* MeshPayloadCStr;
 
@@ -444,8 +438,6 @@ namespace flex
 		GameObject* m_WorldOrigin = nullptr;
 		MaterialID m_GridMaterialID = InvalidMaterialID;
 		MaterialID m_WorldAxisMaterialID = InvalidMaterialID;
-
-		GameObjectType m_NewObjectImGuiSelectedType = GameObjectType::OBJECT;
 
 		sec m_EditorStrSecRemaining = 0.0f;
 		sec m_EditorStrSecDuration = 1.5f;

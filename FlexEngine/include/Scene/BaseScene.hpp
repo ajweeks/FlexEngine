@@ -131,6 +131,13 @@ namespace flex
 
 		const SkyboxData& GetSkyboxData() const;
 
+		void DrawImGuiForSelectedObjects();
+		void DrawImGuiForRenderObjectsList();
+
+		void DoCreateGameObjectButton(const char* buttonName, const char* popupName);
+		bool DrawImGuiGameObjectNameAndChildren(GameObject* gameObject);
+		bool DrawImGuiGameObjectNameAndChildrenInternal(GameObject* gameObject);
+
 	protected:
 		friend GameObject;
 		friend CartManager;
@@ -198,6 +205,8 @@ namespace flex
 
 		BaseScene(const BaseScene&) = delete;
 		BaseScene& operator=(const BaseScene&) = delete;
+
+		GameObjectType m_NewObjectImGuiSelectedType = GameObjectType::OBJECT;
 
 	};
 } // namespace flex

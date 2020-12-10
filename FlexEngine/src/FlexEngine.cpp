@@ -1191,8 +1191,10 @@ namespace flex
 					g_Editor->SetTransformState(TransformState::SCALE);
 				}
 
-				g_Renderer->DrawImGuiForSelectedObjects();
-				g_Renderer->DrawImGuiForRenderObjectsList();
+				BaseScene* currentScene = g_SceneManager->CurrentScene();
+
+				currentScene->DrawImGuiForSelectedObjects();
+				currentScene->DrawImGuiForRenderObjectsList();
 
 				ImGui::Spacing();
 				ImGui::Spacing();
@@ -1200,10 +1202,9 @@ namespace flex
 
 				ImGui::Text("Debugging");
 
-				g_SceneManager->CurrentScene()->GetTrackManager()->DrawImGuiObjects();
-				g_SceneManager->CurrentScene()->GetCartManager()->DrawImGuiObjects();
+				currentScene->GetTrackManager()->DrawImGuiObjects();
+				currentScene->GetCartManager()->DrawImGuiObjects();
 				g_CameraManager->CurrentCamera()->DrawImGuiObjects();
-				g_Renderer->DrawImGuiMisc();
 
 				if (ImGui::TreeNode("Spring"))
 				{
