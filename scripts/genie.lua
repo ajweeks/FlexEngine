@@ -154,12 +154,12 @@ project "Flex"
 		flags { "Winmain" }
 		links { "opengl32" }
 		buildoptions_cpp {
-			"/w14263" -- 'function' : member function does not override any base class virtual member function
-			"/w14264" -- 'virtual_function' : no override available for virtual member function from base 'class'; function is hidden
-			"/w14265" -- 'class' : class has virtual functions, but destructor is not virtual
-			"/w14266" -- 'function' : no override available for virtual member function from base 'type'; function is hidden
-			"/w15031" -- #pragma warning(pop): likely mismatch, popping warning state pushed in different file
-			"/w15032" -- detected #pragma warning(push) with no corresponding #pragma warning(pop)
+			"/w14263", -- 'function' : member function does not override any base class virtual member function
+			"/w14264", -- 'virtual_function' : no override available for virtual member function from base 'class'; function is hidden
+			"/w14265", -- 'class' : class has virtual functions, but destructor is not virtual
+			"/w14266", -- 'function' : no override available for virtual member function from base 'type'; function is hidden
+			"/w15031", -- #pragma warning(pop): likely mismatch, popping warning state pushed in different file
+			"/w15032", -- detected #pragma warning(push) with no corresponding #pragma warning(pop)
 		}
 	configuration "linux*"
 		linkoptions {
