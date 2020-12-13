@@ -26,6 +26,7 @@ IGNORE_WARNINGS_POP
 #include "PlayerController.hpp"
 #include "Profiler.hpp"
 #include "Platform/Platform.hpp"
+#include "ResourceManager.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
@@ -214,7 +215,7 @@ namespace flex
 					Material::ParseJSONObject(materialObj, matCreateInfo);
 
 					MaterialID matID = g_Renderer->InitializeMaterial(&matCreateInfo);
-					m_LoadedMaterials.push_back(matID);
+					g_ResourceManager->AddMaterialID(matID);
 				}
 
 				// This holds all the objects in the scene which do not have a parent
@@ -240,22 +241,6 @@ namespace flex
 
 				// Skybox
 				{
-					//MaterialCreateInfo skyboxMatCreateInfo = {};
-					//skyboxMatCreateInfo.name = "Skybox";
-					//skyboxMatCreateInfo.shaderName = "skybox";
-					//skyboxMatCreateInfo.generateHDRCubemapSampler = true;
-					//skyboxMatCreateInfo.enableCubemapSampler = true;
-					//skyboxMatCreateInfo.enableCubemapTrilinearFiltering = true;
-					//skyboxMatCreateInfo.generatedCubemapSize = glm::vec2(512.0f);
-					//skyboxMatCreateInfo.generateIrradianceSampler = true;
-					//skyboxMatCreateInfo.generatedIrradianceCubemapSize = glm::vec2(32.0f);
-					//skyboxMatCreateInfo.generatePrefilteredMap = true;
-					//skyboxMatCreateInfo.generatedPrefilteredCubemapSize = glm::vec2(128.0f);
-					//skyboxMatCreateInfo.environmentMapPath = TEXTURE_LOCATION "hdri/Milkyway/Milkyway_Light.hdr";
-					//MaterialID skyboxMatID = g_Renderer->InitializeMaterial(&skyboxMatCreateInfo);
-
-					//m_LoadedMaterials.push_back(skyboxMatID);
-
 					MaterialID skyboxMatID = InvalidMaterialID;
 					g_Renderer->FindOrCreateMaterialByName("skybox 01", skyboxMatID);
 					assert(skyboxMatID != InvalidMaterialID);
@@ -271,18 +256,9 @@ namespace flex
 
 				assert(sphereMatID != InvalidMaterialID);
 
+#if 0
 				// Reflection probe
 				{
-					//MaterialCreateInfo reflectionProbeMatCreateInfo = {};
-					//reflectionProbeMatCreateInfo.name = "Reflection Probe";
-					//reflectionProbeMatCreateInfo.shaderName = "pbr";
-					//reflectionProbeMatCreateInfo.constAlbedo = glm::vec4(0.8f, 0.8f, 0.8f, 1.0f);
-					//reflectionProbeMatCreateInfo.constMetallic = 1.0f;
-					//reflectionProbeMatCreateInfo.constRoughness = 0.0f;
-					//MaterialID sphereMatID = g_Renderer->InitializeMaterial(&reflectionProbeMatCreateInfo);
-
-					//m_LoadedMaterials.push_back(sphereMatID);
-
 					ReflectionProbe* reflectionProbe = new ReflectionProbe("Reflection Probe 01");
 
 					JSONObject emptyObj = {};
@@ -291,6 +267,7 @@ namespace flex
 
 					AddRootObjectImmediate(reflectionProbe);
 				}
+#endif
 
 				GameObject* sphere = new GameObject("sphere", GameObjectType::OBJECT);
 				Mesh* mesh = sphere->SetMesh(new Mesh(sphere));
@@ -363,9 +340,6 @@ namespace flex
 		m_TrackManager.Destroy();
 		m_CartManager.Destroy();
 
-		m_LoadedMaterials.clear();
-
-		g_Renderer->ClearMaterials();
 		g_Renderer->SetSkyboxMesh(nullptr);
 		g_Renderer->RemoveDirectionalLight();
 		g_Renderer->RemoveAllPointLights();
@@ -842,21 +816,6 @@ namespace flex
 		return false;
 	}
 
-	i32 BaseScene::GetMaterialArrayIndex(const Material& material)
-	{
-		i32 materialArrayIndex = -1;
-		for (u32 j = 0; j < m_LoadedMaterials.size(); ++j)
-		{
-			Material& loadedMat = g_Renderer->GetMaterial(m_LoadedMaterials[j]);
-			if (loadedMat.Equals(material))
-			{
-				materialArrayIndex = (i32)j;
-				break;
-			}
-		}
-		return materialArrayIndex;
-	}
-
 	void BaseScene::ParseFoundMeshFiles()
 	{
 		s_ParsedMeshes.clear();
@@ -1037,16 +996,16 @@ namespace flex
 		materialsObj.fields.emplace_back("version", JSONValue(m_MaterialsFileVersion));
 
 		// Overwrite all materials in current scene in case any values were tweaked
-		std::vector<MaterialID> currentSceneMatIDs = g_SceneManager->CurrentScene()->GetMaterialIDs();
+		std::vector<MaterialID> currentSceneMatIDs = g_ResourceManager->GetMaterialIDs();
 		for (MaterialID matID : currentSceneMatIDs)
 		{
 			bool bExistsInFile = false;
-			Material& mat = g_Renderer->GetMaterial(matID);
+			Material* material = g_Renderer->GetMaterial(matID);
 			for (JSONObject& parsedMatObj : s_ParsedMaterials)
 			{
-				if (parsedMatObj.GetString("name").compare(mat.name) == 0)
+				if (parsedMatObj.GetString("name").compare(material->name) == 0)
 				{
-					parsedMatObj = mat.Serialize();
+					parsedMatObj = material->Serialize();
 					bExistsInFile = true;
 					break;
 				}
@@ -1054,7 +1013,7 @@ namespace flex
 
 			if (!bExistsInFile)
 			{
-				s_ParsedMaterials.push_back(mat.Serialize());
+				s_ParsedMaterials.push_back(material->Serialize());
 			}
 		}
 
@@ -1711,86 +1670,6 @@ namespace flex
 		return bParentChildTreeDirty;
 	}
 
-	std::vector<MaterialID> BaseScene::RetrieveMaterialIDsFromJSON(const JSONObject& object, i32 fileVersion)
-	{
-		std::vector<MaterialID> matIDs;
-		if (fileVersion >= 3)
-		{
-			std::vector<JSONField> materialNames;
-			if (object.SetFieldArrayChecked("materials", materialNames))
-			{
-				for (const JSONField& materialNameField : materialNames)
-				{
-					std::string materialName = materialNameField.label;
-					if (!materialName.empty())
-					{
-						MaterialID materialID = InvalidMaterialID;
-						for (MaterialID loadedMatID : m_LoadedMaterials)
-						{
-							Material& material = g_Renderer->GetMaterial(loadedMatID);
-							if (material.name.compare(materialName) == 0)
-							{
-								materialID = loadedMatID;
-								break;
-							}
-						}
-						if (materialID == InvalidMaterialID)
-						{
-							if (materialName.compare("placeholder") == 0)
-							{
-								materialID = g_Renderer->GetPlaceholderMaterialID();
-							}
-						}
-						if (materialID != InvalidMaterialID)
-						{
-							matIDs.push_back(materialID);
-						}
-					}
-					else
-					{
-						PrintError("Invalid material name for object %s: %s\n", object.GetString("name").c_str(), materialName.c_str());
-					}
-				}
-			}
-		}
-		else // fileVersion < 3
-		{
-			MaterialID matID = InvalidMaterialID;
-			std::string materialName;
-			if (object.SetStringChecked("material", materialName))
-			{
-				if (!materialName.empty())
-				{
-					for (MaterialID loadedMatID : m_LoadedMaterials)
-					{
-						Material& mat = g_Renderer->GetMaterial(loadedMatID);
-						if (mat.name.compare(materialName) == 0)
-						{
-							matID = loadedMatID;
-							break;
-						}
-					}
-					if (matID == InvalidMaterialID)
-					{
-						if (materialName.compare("placeholder") == 0)
-						{
-							matID = g_Renderer->GetPlaceholderMaterialID();
-						}
-					}
-				}
-				else
-				{
-					matID = InvalidMaterialID;
-					PrintError("Invalid material name for object %s: %s\n",
-						object.GetString("name").c_str(), materialName.c_str());
-				}
-			}
-			matIDs.push_back(matID);
-		}
-
-		return matIDs;
-	}
-
 	void BaseScene::UpdateRootObjectSiblingIndices()
 	{
 		for (i32 i = 0; i < (i32)m_RootObjects.size(); ++i)
@@ -2168,42 +2047,6 @@ namespace flex
 		for (GameObject* gameObject : gameObjects)
 		{
 			RemoveObjectImmediate(gameObject, bDestroy);
-		}
-	}
-
-	std::vector<MaterialID> BaseScene::GetMaterialIDs()
-	{
-		return m_LoadedMaterials;
-	}
-
-	void BaseScene::AddMaterialID(MaterialID newMaterialID)
-	{
-		m_LoadedMaterials.push_back(newMaterialID);
-	}
-
-	void BaseScene::RemoveMaterialID(MaterialID materialID)
-	{
-		auto iter = m_LoadedMaterials.begin();
-		while (iter != m_LoadedMaterials.end())
-		{
-			Material& material = g_Renderer->GetMaterial(*iter);
-			MaterialID matID;
-			if (g_Renderer->FindOrCreateMaterialByName(material.name, matID))
-			{
-				if (matID == materialID)
-				{
-					// TODO: Find all objects which use this material and give them new mats
-					iter = m_LoadedMaterials.erase(iter);
-				}
-				else
-				{
-					++iter;
-				}
-			}
-			else
-			{
-				++iter;
-			}
 		}
 	}
 

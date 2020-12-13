@@ -2,18 +2,17 @@
 
 #include "Scene/Mesh.hpp"
 
-#include "Scene/LoadedMesh.hpp"
+#include "Editor.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "Platform/Platform.hpp"
+#include "ResourceManager.hpp"
 #include "Scene/GameObject.hpp"
+#include "Scene/LoadedMesh.hpp"
 #include "Scene/MeshComponent.hpp"
 
 namespace flex
 {
-	std::map<std::string, LoadedMesh*> Mesh::s_LoadedMeshes;
-	std::vector<std::string> Mesh::s_DiscoveredMeshes;
-
 	Mesh::Mesh(GameObject* owner) :
 		m_OwningGameObject(owner),
 		m_MinPoint(VEC3_ZERO),
@@ -107,7 +106,7 @@ namespace flex
 		m_BoundingSphereRadius = 0;
 		m_BoundingSphereCenterPoint = VEC3_ZERO;
 
-		LoadedMesh* loadedMesh = GetLoadedMesh(relativeFilePath, importSettings);
+		LoadedMesh* loadedMesh = g_ResourceManager->FindOrLoadMesh(relativeFilePath, importSettings);
 
 		if (loadedMesh == nullptr)
 		{
@@ -255,35 +254,6 @@ namespace flex
 		return m_Meshes[0]->CreateProcedural(initialMaxVertCount, attributes, topologyMode, optionalCreateInfo);
 	}
 
-	void Mesh::DiscoverMeshes()
-	{
-		std::vector<std::string> filePaths;
-		if (Platform::FindFilesInDirectory(MESH_DIRECTORY, filePaths, "*"))
-		{
-			for (const std::string& filePath : filePaths)
-			{
-				if (MeshFileNameConforms(filePath) && !Contains(s_DiscoveredMeshes, filePath))
-				{
-					s_DiscoveredMeshes.push_back(filePath);
-				}
-			}
-		}
-	}
-
-	bool Mesh::FindPreLoadedMesh(const std::string& relativeFilePath, LoadedMesh** loadedMesh)
-	{
-		auto iter = s_LoadedMeshes.find(relativeFilePath);
-		if (iter == s_LoadedMeshes.end())
-		{
-			return false;
-		}
-		else
-		{
-			*loadedMesh = iter->second;
-			return true;
-		}
-	}
-
 	LoadedMesh* Mesh::LoadMesh(const std::string& relativeFilePath, MeshImportSettings* importSettings /* = nullptr */)
 	{
 		if (relativeFilePath.find(':') != std::string::npos)
@@ -303,8 +273,8 @@ namespace flex
 		LoadedMesh* mesh = nullptr;
 		bool bNewMesh = true;
 		{
-			auto existingIter = Mesh::s_LoadedMeshes.find(relativeFilePath);
-			if (existingIter == Mesh::s_LoadedMeshes.end())
+			auto existingIter = g_ResourceManager->loadedMeshes.find(relativeFilePath);
+			if (existingIter == g_ResourceManager->loadedMeshes.end())
 			{
 				if (g_bEnableLogging_Loading)
 				{
@@ -334,10 +304,10 @@ namespace flex
 		auto cleanup = [&](const std::string& errorMessage)
 		{
 			Print("%s", errorMessage.c_str());
-			auto existingIter = Mesh::s_LoadedMeshes.find(relativeFilePath);
-			if (existingIter != Mesh::s_LoadedMeshes.end())
+			auto existingIter = g_ResourceManager->loadedMeshes.find(relativeFilePath);
+			if (existingIter != g_ResourceManager->loadedMeshes.end())
 			{
-				Mesh::s_LoadedMeshes.erase(existingIter);
+				g_ResourceManager->loadedMeshes.erase(existingIter);
 			}
 			delete mesh;
 		};
@@ -374,16 +344,11 @@ namespace flex
 
 			if (bNewMesh)
 			{
-				s_LoadedMeshes.emplace(relativeFilePath, mesh);
+				g_ResourceManager->loadedMeshes.emplace(relativeFilePath, mesh);
 			}
 		}
 
 		return mesh;
-	}
-
-	bool Mesh::MeshFileNameConforms(const std::string& fileName)
-	{
-		return EndsWith(fileName, "glb") || EndsWith(fileName, "gltf");
 	}
 
 	bool Mesh::CheckCGLTFResult(cgltf_result result, std::string& outErrorMessage)
@@ -545,25 +510,6 @@ namespace flex
 		return m_OwningGameObject;
 	}
 
-	LoadedMesh* Mesh::GetLoadedMesh(const std::string& relativeFilePath, MeshImportSettings* importSettings)
-	{
-		LoadedMesh* result = nullptr;
-		if (FindPreLoadedMesh(relativeFilePath, &result))
-		{
-			// If no import settings have been passed in, grab any from the cached mesh
-			if (importSettings == nullptr)
-			{
-				importSettings = &result->importSettings;
-			}
-		}
-		else
-		{
-			// Mesh hasn't been loaded before, load it now
-			result = LoadMesh(relativeFilePath, importSettings);
-		}
-		return result;
-	}
-
 	void Mesh::SetOwner(GameObject* owner)
 	{
 		m_OwningGameObject = owner;
@@ -600,7 +546,7 @@ namespace flex
 			i32 selectedMeshIndex = 0;
 			std::string currentMeshFileName = "NONE";
 			i32 i = 0;
-			for (auto iter : s_LoadedMeshes)
+			for (auto iter : g_ResourceManager->loadedMeshes)
 			{
 				const std::string meshFileName = StripLeadingDirectories(iter.first);
 				if (m_FileName.compare(meshFileName) == 0)
@@ -616,7 +562,7 @@ namespace flex
 			{
 				i = 0;
 
-				for (auto meshPair : s_LoadedMeshes)
+				for (auto meshPair : g_ResourceManager->loadedMeshes)
 				{
 					bool bSelected = (i == selectedMeshIndex);
 					const std::string meshFileName = StripLeadingDirectories(meshPair.first);
@@ -643,7 +589,7 @@ namespace flex
 
 			if (ImGui::BeginDragDropTarget())
 			{
-				const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(Renderer::MeshPayloadCStr);
+				const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(Editor::MeshPayloadCStr);
 
 				if (payload && payload->Data)
 				{

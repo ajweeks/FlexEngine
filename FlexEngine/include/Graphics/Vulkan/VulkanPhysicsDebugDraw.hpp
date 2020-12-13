@@ -43,6 +43,8 @@ namespace flex
 
 			void CreateDebugObject();
 
+			void Clear();
+
 			VulkanRenderer* m_Renderer = nullptr;
 
 			MaterialID m_MaterialID = InvalidMaterialID;

@@ -42,6 +42,7 @@ IGNORE_WARNINGS_POP
 #include "Platform/Platform.hpp"
 #include "Player.hpp"
 #include "Profiler.hpp"
+#include "ResourceManager.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/LoadedMesh.hpp"
 #include "Scene/Mesh.hpp"
@@ -1003,7 +1004,7 @@ namespace flex
 		}
 		else
 		{
-			matIDs = scene->RetrieveMaterialIDsFromJSON(obj, fileVersion);
+			matIDs = g_ResourceManager->RetrieveMaterialIDsFromJSON(obj, fileVersion);
 		}
 
 		if (matIDs.empty())
@@ -1245,8 +1246,8 @@ namespace flex
 
 				if (matID != InvalidMaterialID)
 				{
-					const Material& material = g_Renderer->GetMaterial(matID);
-					std::string materialName = material.name;
+					Material* material = g_Renderer->GetMaterial(matID);
+					std::string materialName = material->name;
 					if (materialName.empty())
 					{
 						PrintWarn("Game object contains material with empty material name!\n");
@@ -3590,7 +3591,7 @@ namespace flex
 	void GerstnerWave::Initialize()
 	{
 		m_VertexBufferCreateInfo = {};
-		m_VertexBufferCreateInfo.attributes = g_Renderer->GetShader(g_Renderer->GetMaterial(m_WaveMaterialID).shaderID).vertexAttributes;
+		m_VertexBufferCreateInfo.attributes = g_Renderer->GetShader(g_Renderer->GetMaterial(m_WaveMaterialID)->shaderID)->vertexAttributes;
 
 		avgWaveUpdateTime = RollingAverage<ms>(256, SamplingType::CONSTANT);
 
@@ -6768,7 +6769,7 @@ namespace flex
 			}
 		}
 
-		ShaderID shaderID = g_Renderer->GetMaterial(m_TerrainMatID).shaderID;
+		ShaderID shaderID = g_Renderer->GetMaterial(m_TerrainMatID)->shaderID;
 
 		const u32 vertexCount = VertCountPerChunkAxis * VertCountPerChunkAxis;
 		const u32 triCount = ((VertCountPerChunkAxis - 1) * (VertCountPerChunkAxis - 1)) * 2;
@@ -6780,7 +6781,7 @@ namespace flex
 		vertexBufferCreateInfo.colours_R32G32B32A32.clear();
 		vertexBufferCreateInfo.normals.clear();
 
-		vertexBufferCreateInfo.attributes = g_Renderer->GetShader(shaderID).vertexAttributes;
+		vertexBufferCreateInfo.attributes = g_Renderer->GetShader(shaderID)->vertexAttributes;
 		vertexBufferCreateInfo.positions_3D.reserve(vertexCount);
 		vertexBufferCreateInfo.texCoords_UV.reserve(vertexCount);
 		vertexBufferCreateInfo.colours_R32G32B32A32.reserve(vertexCount);
@@ -6872,9 +6873,10 @@ namespace flex
 
 		for (u32 i = 0; i < m_TableTextureIDs.size(); ++i)
 		{
-			g_Renderer->DestroyTexture(m_TableTextureIDs[i]);
+			g_ResourceManager->RemoveLoadedTexture(m_TableTextureIDs[i], true);
 		}
 		m_TableTextureIDs.resize(m_RandomTables.size());
+
 		for (u32 i = 0; i < m_TableTextureIDs.size(); ++i)
 		{
 			const u32 tableWidth = (u32)glm::sqrt(m_RandomTables[i].size());
@@ -7978,7 +7980,7 @@ namespace flex
 		else
 		{
 			m_MeshVertexBufferCreateInfo = {};
-			m_MeshVertexBufferCreateInfo.attributes = g_Renderer->GetShader(g_Renderer->GetMaterial(m_MeshMaterialID).shaderID).vertexAttributes;
+			m_MeshVertexBufferCreateInfo.attributes = g_Renderer->GetShader(g_Renderer->GetMaterial(m_MeshMaterialID)->shaderID)->vertexAttributes;
 
 			std::vector<MeshComponent*> meshes = m_Mesh->GetSubMeshes();
 			m_MeshComponent = meshes[0];
@@ -8203,9 +8205,9 @@ namespace flex
 			{
 				m_CurrentMeshFilePath = softBodyObject.GetString("mesh file path");
 				m_CurrentMeshFileName = StripLeadingDirectories(m_CurrentMeshFilePath);
-				for (i32 i = 0; i < (i32)Mesh::s_DiscoveredMeshes.size(); ++i)
+				for (i32 i = 0; i < (i32)g_ResourceManager->discoveredMeshes.size(); ++i)
 				{
-					if (Mesh::s_DiscoveredMeshes[i] == m_CurrentMeshFilePath)
+					if (g_ResourceManager->discoveredMeshes[i] == m_CurrentMeshFilePath)
 					{
 						m_SelectedMeshIndex = i;
 						break;
@@ -8391,10 +8393,10 @@ namespace flex
 
 		if (ImGui::BeginCombo("##meshcombo", m_CurrentMeshFileName.c_str()))
 		{
-			for (i32 i = 0; i < (i32)Mesh::s_DiscoveredMeshes.size(); ++i)
+			for (i32 i = 0; i < (i32)g_ResourceManager->discoveredMeshes.size(); ++i)
 			{
 				ImGui::PushID(i);
-				const std::string& meshFilePath = Mesh::s_DiscoveredMeshes[i];
+				const std::string& meshFilePath = g_ResourceManager->discoveredMeshes[i];
 				bool bSelected = (i == m_SelectedMeshIndex);
 				const std::string meshFileNameShort = StripLeadingDirectories(meshFilePath);
 				if (ImGui::Selectable(meshFileNameShort.c_str(), &bSelected))
@@ -8499,9 +8501,9 @@ namespace flex
 			Mesh* mesh = SetMesh(new Mesh(this));
 			mesh->LoadFromFile(m_ChassisMeshFilePath, matIDs);
 
-			for (i32 i = 0; i < (i32)Mesh::s_DiscoveredMeshes.size(); ++i)
+			for (i32 i = 0; i < (i32)g_ResourceManager->discoveredMeshes.size(); ++i)
 			{
-				if (Mesh::s_DiscoveredMeshes[i] == m_ChassisMeshFilePath)
+				if (g_ResourceManager->discoveredMeshes[i] == m_ChassisMeshFilePath)
 				{
 					m_SelectedMeshIndex = i;
 					break;
@@ -8533,7 +8535,7 @@ namespace flex
 			meshFilter.Clear();
 		}
 
-		g_Renderer->DoMeshList(&m_SelectedMeshIndex, &meshFilter);
-		m_ChassisMeshFilePath = Mesh::s_DiscoveredMeshes[m_SelectedMeshIndex];
+		g_ResourceManager->DrawImGuiMeshList(&m_SelectedMeshIndex, &meshFilter);
+		m_ChassisMeshFilePath = g_ResourceManager->discoveredMeshes[m_SelectedMeshIndex];
 	}
 } // namespace flex

@@ -177,7 +177,7 @@ namespace flex
 					if (result == VK_SUCCESS)
 					{
 						// TODO: Copy previous contents in to new buffer?
-						UpdateAllocationSize(offset, newSize);
+						UpdateAllocationSize(offset, m_Size);
 						return offset;
 					}
 					else

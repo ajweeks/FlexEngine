@@ -409,6 +409,96 @@ namespace flex
 		bool visibleInEditor = true;
 	};
 
+	struct Texture
+	{
+		Texture();
+		Texture(const std::string& name, u32 width, u32 height, u32 channelCount);
+		Texture(const std::string& relativeFilePath, u32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR);
+		Texture(const std::array<std::string, 6>& relativeCubemapFilePaths, u32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR);
+
+		virtual ~Texture() {}
+
+		// TODO: Add Reload
+
+		u32 width = 0;
+		u32 height = 0;
+		u32 channelCount = 0;
+		std::string name;
+		std::string relativeFilePath;
+		std::string fileName;
+		std::array<std::string, 6> relativeCubemapFilePaths;
+		u32 mipLevels = 1;
+		bool bFlipVertically = false;
+		bool bGenerateMipMaps = false;
+		bool bHDR = false;
+		bool bIsArray = false;
+		bool bSamplerClampToBorder = false;
+	};
+
+	template<typename T>
+	struct ShaderUniformContainer
+	{
+		using iter = typename std::vector<Pair<u64, T>>::iterator;
+
+		void Add(u64 uniform, const T value, std::string slotName = "")
+		{
+			for (auto value_iter = values.begin(); value_iter != values.end(); ++value_iter)
+			{
+				if (value_iter->first == uniform)
+				{
+					value_iter->second = value;
+					slotNames[value_iter - values.begin()] = slotName;
+					return;
+				}
+			}
+
+			values.emplace_back(uniform, value);
+			slotNames.emplace_back(slotName);
+		}
+
+		u32 Count()
+		{
+			return (u32)values.size();
+		}
+
+		iter begin()
+		{
+			return values.begin();
+		}
+
+		iter end()
+		{
+			return values.end();
+		}
+
+		bool Contains(u64 uniform)
+		{
+			for (auto& pair : values)
+			{
+				if (pair.first == uniform)
+				{
+					return true;
+				}
+			}
+			return false;
+		}
+
+		T operator[](u64 uniform)
+		{
+			for (auto& pair : values)
+			{
+				if (pair.first == uniform)
+				{
+					return pair.second;
+				}
+			}
+			return nullptr;
+		}
+
+		std::vector<Pair<u64, T>> values;
+		std::vector<std::string> slotNames;
+	};
+
 	struct Material
 	{
 		struct PushConstantBlock;
@@ -423,7 +513,7 @@ namespace flex
 			}
 		}
 
-		~Material()
+		virtual ~Material()
 		{
 			if (pushConstantBlock)
 			{
@@ -498,6 +588,8 @@ namespace flex
 
 		glm::vec4 fontCharData;
 		glm::vec2 texSize;
+
+		ShaderUniformContainer<Texture*> textures;
 
 		struct PushConstantBlock
 		{
@@ -653,13 +745,25 @@ namespace flex
 		u32 CalculateSizeInBytes() const;
 	};
 
+	struct ShaderInfo
+	{
+		std::string name;
+		std::string inVertexShaderFilePath;
+		std::string inFragmentShaderFilePath;
+		std::string inGeometryShaderFilePath;
+		std::string inComputeShaderFilePath;
+	};
+
 	struct Shader
 	{
+		Shader(const ShaderInfo& shaderInfo);
 		Shader(const std::string& name,
 			const std::string& inVertexShaderFilePath,
 			const std::string& inFragmentShaderFilePath = "",
 			const std::string& inGeometryShaderFilePath = "",
 			const std::string& inComputeShaderFilePath = "");
+
+		virtual ~Shader() {};
 
 		std::string name = "";
 

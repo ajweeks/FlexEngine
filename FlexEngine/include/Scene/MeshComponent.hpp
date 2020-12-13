@@ -86,8 +86,6 @@ namespace flex
 
 		bool IsInitialized() const;
 
-		static void DestroyAllLoadedMeshes();
-
 		static PrefabShape StringToPrefabShape(const std::string& prefabName);
 		static std::string PrefabShapeToString(PrefabShape shape);
 

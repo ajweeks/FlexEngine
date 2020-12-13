@@ -96,17 +96,7 @@ namespace flex
 
 		GameObject* GetOwningGameObject() const;
 
-		static LoadedMesh* GetLoadedMesh(const std::string& relativeFilePath, MeshImportSettings* importSettings = nullptr);
-
-		static void DiscoverMeshes();
-		static bool FindPreLoadedMesh(const std::string& relativeFilePath, LoadedMesh** loadedMesh);
 		static LoadedMesh* LoadMesh(const std::string& relativeFilePath, MeshImportSettings* importSettings = nullptr);
-
-		static bool MeshFileNameConforms(const std::string& fileName);
-
-		// First field is relative file path (e.g. MESH_DIRECTORY "cube.glb")
-		static std::map<std::string, LoadedMesh*> s_LoadedMeshes;
-		static std::vector<std::string> s_DiscoveredMeshes;
 
 		glm::vec3 m_MinPoint;
 		glm::vec3 m_MaxPoint;

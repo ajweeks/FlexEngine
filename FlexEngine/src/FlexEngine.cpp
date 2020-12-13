@@ -37,6 +37,7 @@ IGNORE_WARNINGS_POP
 #include "Player.hpp"
 #include "PlayerController.hpp"
 #include "Profiler.hpp"
+#include "ResourceManager.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/Mesh.hpp"
@@ -86,6 +87,7 @@ namespace flex
 	class SceneManager* g_SceneManager = nullptr;
 	struct Monitor* g_Monitor = nullptr;
 	class PhysicsManager* g_PhysicsManager = nullptr;
+	class ResourceManager* g_ResourceManager = nullptr;
 
 	sec g_SecElapsedSinceProgramStart = 0;
 	sec g_DeltaTime = 0;
@@ -222,6 +224,9 @@ namespace flex
 
 		CreateWindowAndRenderer();
 
+		g_ResourceManager = new ResourceManager();
+		g_ResourceManager->Initialize();
+
 		g_Editor = new Editor();
 
 		g_InputManager = new InputManager();
@@ -252,7 +257,7 @@ namespace flex
 		g_PluggablesSystem = new PluggablesSystem();
 		g_PluggablesSystem->Initialize();
 
-		Mesh::DiscoverMeshes();
+		g_ResourceManager->DiscoverMeshes();
 
 		BaseScene::ParseFoundMeshFiles();
 		BaseScene::ParseFoundMaterialFiles();
@@ -321,13 +326,12 @@ namespace flex
 		m_ConsoleCommands.emplace_back("reload.scene", []() { g_SceneManager->ReloadCurrentScene(); });
 		m_ConsoleCommands.emplace_back("reload.scene.hard", []()
 		{
-			MeshComponent::DestroyAllLoadedMeshes();
+			g_ResourceManager->DestroyAllLoadedMeshes();
 			g_SceneManager->ReloadCurrentScene();
 		});
 		m_ConsoleCommands.emplace_back("reload.shaders", []() { g_Renderer->RecompileShaders(false); });
 		m_ConsoleCommands.emplace_back("reload.shaders.force", []() { g_Renderer->RecompileShaders(true); });
-		m_ConsoleCommands.emplace_back("reload.fontsdfs", []() { g_Renderer->LoadFonts(true); });
-		m_ConsoleCommands.emplace_back("reload.skybox", []() { g_Renderer->ReloadSkybox(true); });
+		m_ConsoleCommands.emplace_back("reload.fontsdfs", []() { g_ResourceManager->LoadFonts(true); });
 		m_ConsoleCommands.emplace_back("select.all", []() { g_Editor->SelectAll(); });
 		m_ConsoleCommands.emplace_back("select.none", []() { g_Editor->SelectNone(); });
 	}
@@ -360,8 +364,9 @@ namespace flex
 		g_SceneManager->DestroyAllScenes();
 		g_CameraManager->Destroy();
 		g_PhysicsManager->Destroy();
+		g_ResourceManager->Destroy();
 		DestroyWindowAndRenderer();
-		MeshComponent::DestroyAllLoadedMeshes();
+		g_ResourceManager->DestroyAllLoadedMeshes();
 
 		AudioManager::Destroy();
 
@@ -373,6 +378,9 @@ namespace flex
 
 		delete g_PhysicsManager;
 		g_PhysicsManager = nullptr;
+
+		delete g_ResourceManager;
+		g_ResourceManager = nullptr;
 
 		delete g_CameraManager;
 		g_CameraManager = nullptr;
@@ -814,7 +822,7 @@ namespace flex
 
 					if (ImGui::MenuItem("Scene (hard: reload all meshes)"))
 					{
-						MeshComponent::DestroyAllLoadedMeshes();
+						g_ResourceManager->DestroyAllLoadedMeshes();
 						g_SceneManager->ReloadCurrentScene();
 					}
 
@@ -830,7 +838,7 @@ namespace flex
 
 					if (ImGui::MenuItem("Font textures (render SDFs)"))
 					{
-						g_Renderer->LoadFonts(true);
+						g_ResourceManager->LoadFonts(true);
 					}
 
 					BaseScene* currentScene = g_SceneManager->CurrentScene();
@@ -844,11 +852,6 @@ namespace flex
 						{
 							currentScene->GetPlayer(1)->GetController()->ResetTransformAndVelocities();
 						}
-					}
-
-					if (ImGui::MenuItem("Skybox (randomize)"))
-					{
-						g_Renderer->ReloadSkybox(true);
 					}
 
 					ImGui::EndMenu();
@@ -1035,24 +1038,24 @@ namespace flex
 
 			if (ImGui::BeginMenu("Window"))
 			{
-				ImGui::MenuItem("Main Window", NULL, &m_bMainWindowShowing);
-				ImGui::MenuItem("GPU Timings", NULL, &g_Renderer->bGPUTimingsWindowShowing);
-				ImGui::MenuItem("Memory Stats", NULL, &m_bShowMemoryStatsWindow);
-				ImGui::MenuItem("CPU Stats", NULL, &m_bShowCPUStatsWindow);
-				ImGui::MenuItem("Uniform Buffers", NULL, &g_Renderer->bUniformBufferWindowShowing);
+				ImGui::MenuItem("Main Window", nullptr, &m_bMainWindowShowing);
+				ImGui::MenuItem("GPU Timings", nullptr, &g_Renderer->bGPUTimingsWindowShowing);
+				ImGui::MenuItem("Memory Stats", nullptr, &m_bShowMemoryStatsWindow);
+				ImGui::MenuItem("CPU Stats", nullptr, &m_bShowCPUStatsWindow);
+				ImGui::MenuItem("Uniform Buffers", nullptr, &g_Renderer->bUniformBufferWindowShowing);
 				ImGui::Separator();
-				ImGui::MenuItem("Materials", NULL, &m_bMaterialWindowShowing);
-				ImGui::MenuItem("Shaders", NULL, &m_bShaderWindowShowing);
-				ImGui::MenuItem("Textures", NULL, &m_bTextureWindowShowing);
-				ImGui::MenuItem("Meshes", NULL, &m_bMeshWindowShowing);
+				ImGui::MenuItem("Materials", nullptr, &g_ResourceManager->bMaterialWindowShowing);
+				ImGui::MenuItem("Shaders", nullptr, &g_ResourceManager->bShaderWindowShowing);
+				ImGui::MenuItem("Textures", nullptr, &g_ResourceManager->bTextureWindowShowing);
+				ImGui::MenuItem("Meshes", nullptr, &g_ResourceManager->bMeshWindowShowing);
 				ImGui::Separator();
-				ImGui::MenuItem("Key Mapper", NULL, &m_bInputMapperShowing);
-				ImGui::MenuItem("Font Editor", NULL, &g_Renderer->bFontWindowShowing);
+				ImGui::MenuItem("Key Mapper", nullptr, &m_bInputMapperShowing);
+				ImGui::MenuItem("Font Editor", nullptr, &g_ResourceManager->bFontWindowShowing);
 #if COMPILE_RENDERDOC_API
-				ImGui::MenuItem("Render Doc Captures", NULL, &m_bShowingRenderDocWindow);
+				ImGui::MenuItem("Render Doc Captures", nullptr, &m_bShowingRenderDocWindow);
 #endif
 				ImGui::Separator();
-				ImGui::MenuItem("ImGui Demo Window", NULL, &m_bDemoWindowShowing);
+				ImGui::MenuItem("ImGui Demo Window", nullptr, &m_bDemoWindowShowing);
 
 				ImGui::EndMenu();
 			}
@@ -1060,7 +1063,7 @@ namespace flex
 			if (ImGui::BeginMenu("View"))
 			{
 				bool bPreviewShadows = g_Renderer->GetDisplayShadowCascadePreview();
-				if (ImGui::MenuItem("Shadow cascades", NULL, &bPreviewShadows))
+				if (ImGui::MenuItem("Shadow cascades", nullptr, &bPreviewShadows))
 				{
 					g_Renderer->SetDisplayShadowCascadePreview(bPreviewShadows);
 				}
@@ -1230,7 +1233,7 @@ namespace flex
 
 		g_Renderer->DrawImGuiWindows();
 
-		g_Renderer->DrawAssetWindowsImGui(&m_bMaterialWindowShowing, &m_bShaderWindowShowing, &m_bTextureWindowShowing, &m_bMeshWindowShowing);
+		g_ResourceManager->DrawImGuiWindows();
 
 		if (m_bInputMapperShowing)
 		{

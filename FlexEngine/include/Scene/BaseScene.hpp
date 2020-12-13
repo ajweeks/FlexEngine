@@ -76,11 +76,6 @@ namespace flex
 		std::vector<GameObject*>::const_iterator RemoveObjectImmediate(std::vector<GameObject*>::const_iterator objectIter, bool bDestroy);
 
 
-		std::vector<MaterialID> GetMaterialIDs();
-		void AddMaterialID(MaterialID newMaterialID);
-		void RemoveMaterialID(MaterialID materialID);
-
-		/* Returns the first found game object with tag, or nullptr if none exist */
 		GameObject* FirstObjectWithTag(const std::string& tag);
 
 		Player* GetPlayer(i32 index);
@@ -134,8 +129,10 @@ namespace flex
 		void DrawImGuiForSelectedObjects();
 		void DrawImGuiForRenderObjectsList();
 
+		// If the object gets deleted this frame *gameObjectRef gets set to nullptr
 		void DoCreateGameObjectButton(const char* buttonName, const char* popupName);
 		bool DrawImGuiGameObjectNameAndChildren(GameObject* gameObject);
+		// Returns true if the parent-child tree changed during this call
 		bool DrawImGuiGameObjectNameAndChildrenInternal(GameObject* gameObject);
 
 	protected:
@@ -146,10 +143,6 @@ namespace flex
 		// Recursively finds targetObject in currentObject's children
 		// Returns true if targetObject was found and deleted
 		bool DestroyGameObjectRecursive(GameObject* currentObject, GameObject* targetObject, bool bDestroyChildren);
-
-		i32 GetMaterialArrayIndex(const Material& material);
-
-		std::vector<MaterialID> RetrieveMaterialIDsFromJSON(const JSONObject& object, i32 fileVersion);
 
 		void UpdateRootObjectSiblingIndices();
 
@@ -162,22 +155,16 @@ namespace flex
 		static const i32 LATEST_MESHES_FILE_VERSION = 1;
 		i32 m_MeshesFileVersion = 1;
 
-		PhysicsWorld* m_PhysicsWorld = nullptr;
-
 		std::string m_Name;
 		std::string m_FileName;
+
+		PhysicsWorld* m_PhysicsWorld = nullptr;
 
 		std::vector<GameObject*> m_RootObjects;
 
 		bool m_bInitialized = false;
 		bool m_bLoaded = false;
 		bool m_bSpawnPlayer = false;
-
-		/*
-		* Stores all unique initialized materials we've created
-		* A "material array index" is used to index into this array
-		*/
-		std::vector<MaterialID> m_LoadedMaterials;
 
 		ReflectionProbe* m_ReflectionProbe = nullptr;
 

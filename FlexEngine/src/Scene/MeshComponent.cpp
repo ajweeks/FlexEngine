@@ -53,16 +53,6 @@ namespace flex
 	{
 	}
 
-	void MeshComponent::DestroyAllLoadedMeshes()
-	{
-		for (auto& loadedMeshPair : Mesh::s_LoadedMeshes)
-		{
-			cgltf_free(loadedMeshPair.second->data);
-			delete loadedMeshPair.second;
-		}
-		Mesh::s_LoadedMeshes.clear();
-	}
-
 	void MeshComponent::PostInitialize()
 	{
 		g_Renderer->PostInitializeRenderObject(renderID);
@@ -114,9 +104,9 @@ namespace flex
 	{
 		assert(matID != InvalidMaterialID);
 
-		Material& mat = g_Renderer->GetMaterial(matID);
-		Shader& shader = g_Renderer->GetShader(mat.shaderID);
-		m_RequiredAttributes = shader.vertexAttributes;
+		Material* mat = g_Renderer->GetMaterial(matID);
+		Shader* shader = g_Renderer->GetShader(mat->shaderID);
+		m_RequiredAttributes = shader->vertexAttributes;
 	}
 
 	MeshComponent* MeshComponent::LoadFromCGLTF(Mesh* owningMesh,
@@ -1236,6 +1226,39 @@ namespace flex
 			return false;
 		}
 
+#if 1
+		for (u32 i = 0; i < createInfo.positions_3D.size() - 2; i += 3)
+		{
+			glm::vec3 p0 = createInfo.positions_3D[i + 0];
+			glm::vec3 p1 = createInfo.positions_3D[i + 1];
+			glm::vec3 p2 = createInfo.positions_3D[i + 2];
+
+			glm::vec2 uv0 = createInfo.texCoords_UV[i + 0];
+			glm::vec2 uv1 = createInfo.texCoords_UV[i + 1];
+			glm::vec2 uv2 = createInfo.texCoords_UV[i + 2];
+
+
+
+			glm::vec3 dPos0 = p1 - p0;
+			glm::vec3 dPos1 = p2 - p0;
+
+
+			glm::vec2 dUV0 = uv1 - uv0;
+			glm::vec2 dUV1 = uv2 - uv0;
+
+			real r = 1.0f / (dUV1.x * dUV0.y - dUV1.y * dUV0.x);
+			glm::vec3 tangent = glm::normalize((dPos0 * dUV0.y - dPos1 * dUV1.y) * r);
+			//glm::vec3 bitangent = (dPos1 * dUV1.x - dPos0 * dUV0.x) * r;
+
+			createInfo.tangents[i + 0] = tangent;
+			createInfo.tangents[i + 1] = tangent;
+			createInfo.tangents[i + 2] = tangent;
+		}
+
+		return true;
+
+#else
+
 		for (u32 i = 0; i < indices.size() - 2; i += 3)
 		{
 			i32 index0 = indices[i + 0];
@@ -1338,6 +1361,7 @@ namespace flex
 		int result = genTangSpaceDefault(&context);
 
 		return result != 0;
+#endif
 	}
 
 	void MeshComponent::CalculateBoundingSphereRadius(const std::vector<glm::vec3>& positions)

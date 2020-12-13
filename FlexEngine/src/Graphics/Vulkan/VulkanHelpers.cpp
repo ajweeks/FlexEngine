@@ -256,14 +256,11 @@ namespace flex
 
 		VulkanTexture::VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue,
 			const std::string& name, u32 width, u32 height, u32 channelCount) :
+			Texture(name, width, height, channelCount),
 			image(device->m_LogicalDevice, vkDestroyImage),
 			imageMemory(device->m_LogicalDevice, vkFreeMemory),
 			imageView(device->m_LogicalDevice, vkDestroyImageView),
 			sampler(device->m_LogicalDevice, vkDestroySampler),
-			width(width),
-			height(height),
-			channelCount(channelCount),
-			name(name),
 			m_VulkanDevice(device),
 			m_GraphicsQueue(graphicsQueue)
 		{
@@ -272,16 +269,11 @@ namespace flex
 		VulkanTexture::VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue,
 			const std::string& relativeFilePath, u32 channelCount, bool bFlipVertically,
 			bool bGenerateMipMaps, bool bHDR) :
+			Texture(relativeFilePath, channelCount, bFlipVertically, bGenerateMipMaps, bHDR),
 			image(device->m_LogicalDevice, vkDestroyImage),
 			imageMemory(device->m_LogicalDevice, vkFreeMemory),
 			imageView(device->m_LogicalDevice, vkDestroyImageView),
 			sampler(device->m_LogicalDevice, vkDestroySampler),
-			channelCount(channelCount),
-			relativeFilePath(relativeFilePath),
-			fileName(StripLeadingDirectories(relativeFilePath)),
-			bFlipVertically(bFlipVertically),
-			bGenerateMipMaps(bGenerateMipMaps),
-			bHDR(bHDR),
 			m_VulkanDevice(device),
 			m_GraphicsQueue(graphicsQueue)
 		{
@@ -290,33 +282,14 @@ namespace flex
 		VulkanTexture::VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue,
 			const std::array<std::string, 6>& relativeCubemapFilePaths, u32 channelCount, bool bFlipVertically,
 			bool bGenerateMipMaps, bool bHDR) :
+			Texture(relativeCubemapFilePaths, channelCount, bFlipVertically, bGenerateMipMaps, bHDR),
 			image(device->m_LogicalDevice, vkDestroyImage),
 			imageMemory(device->m_LogicalDevice, vkFreeMemory),
 			imageView(device->m_LogicalDevice, vkDestroyImageView),
 			sampler(device->m_LogicalDevice, vkDestroySampler),
-			channelCount(channelCount),
-			relativeCubemapFilePaths(relativeCubemapFilePaths),
-			bFlipVertically(bFlipVertically),
-			bGenerateMipMaps(bGenerateMipMaps),
-			bHDR(bHDR),
 			m_VulkanDevice(device),
 			m_GraphicsQueue(graphicsQueue)
 		{
-		}
-
-		void VulkanTexture::Reload()
-		{
-			// TODO: Implement
-		}
-
-		std::string VulkanTexture::GetRelativeFilePath() const
-		{
-			return relativeFilePath;
-		}
-
-		std::string VulkanTexture::GetName() const
-		{
-			return name;
 		}
 
 		u32 VulkanTexture::CreateFromMemory(void* buffer, u32 bufferSize, VkFormat inFormat, i32 inMipLevels, VkFilter filter /* = VK_FILTER_LINEAR */, i32 layerCount /* = 1 */)
@@ -2279,8 +2252,8 @@ namespace flex
 		{
 		}
 
-		VulkanShader::VulkanShader(const VDeleter<VkDevice>& device, Shader* shader) :
-			shader(shader)
+		VulkanShader::VulkanShader(const VDeleter<VkDevice>& device, ShaderInfo shaderInfo) :
+			Shader(shaderInfo)
 		{
 			vertShaderModule = { device, vkDestroyShaderModule };
 			fragShaderModule = { device, vkDestroyShaderModule };
@@ -2577,52 +2550,56 @@ namespace flex
 			}
 		}
 
-		void VulkanShaderCompiler::DisplayShaderErrorsImGui(bool* bWindowShowing)
+		void VulkanShaderCompiler::DrawImGuiShaderErrorsWindow(bool* bWindowShowing)
 		{
 			if (!s_ShaderErrors.empty())
 			{
 				if (bWindowShowing == nullptr || *bWindowShowing)
 				{
 					ImGui::SetNextWindowSize(ImVec2(800.0f, 150.0f), ImGuiCond_Appearing);
-					if (bWindowShowing != nullptr && ImGui::Begin("Shader errors", bWindowShowing))
+					if (ImGui::Begin("Shader errors", bWindowShowing))
 					{
-						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
-						ImGui::Text(s_ShaderErrors.size() > 1 ? "%u errors" : "%u error", (u32)s_ShaderErrors.size());
-						ImGui::PopStyleColor();
+						DrawImGuiShaderErrors();
+					}
 
-						ImGui::Separator();
+					ImGui::End();
+				}
+			}
+		}
 
-						for (const ShaderError& shaderError : s_ShaderErrors)
+		void VulkanShaderCompiler::DrawImGuiShaderErrors()
+		{
+			if (!s_ShaderErrors.empty())
+			{
+				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
+				ImGui::Text(s_ShaderErrors.size() > 1 ? "%u errors" : "%u error", (u32)s_ShaderErrors.size());
+				ImGui::PopStyleColor();
+
+				ImGui::Separator();
+
+				for (const ShaderError& shaderError : s_ShaderErrors)
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
+					ImGui::TextWrapped("%s", shaderError.errorStr.c_str());
+					ImGui::PopStyleColor();
+
+					std::string fileName = StripLeadingDirectories(shaderError.filePath);
+					std::string openStr = "Open " + fileName + ":" + std::to_string(shaderError.lineNumber);
+					if (ImGui::Button(openStr.c_str()))
+					{
+						std::string shaderEditorPath = g_EngineInstance->GetShaderEditorPath();
+						if (shaderEditorPath.empty())
 						{
-							ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
-							ImGui::TextWrapped("%s", shaderError.errorStr.c_str());
-							ImGui::PopStyleColor();
-
-							std::string fileName = StripLeadingDirectories(shaderError.filePath);
-							std::string openStr = "Open " + fileName + ":" + std::to_string(shaderError.lineNumber);
-							if (ImGui::Button(openStr.c_str()))
-							{
-								std::string shaderEditorPath = g_EngineInstance->GetShaderEditorPath();
-								if (shaderEditorPath.empty())
-								{
-									Platform::OpenFileWithDefaultApplication(shaderError.filePath);
-								}
-								else
-								{
-									std::string param0 = shaderError.filePath + ":" + std::to_string(shaderError.lineNumber);
-									Platform::LaunchApplication(shaderEditorPath.c_str(), param0);
-								}
-							}
-
-							ImGui::Separator();
+							Platform::OpenFileWithDefaultApplication(shaderError.filePath);
 						}
-
+						else
+						{
+							std::string param0 = shaderError.filePath + ":" + std::to_string(shaderError.lineNumber);
+							Platform::LaunchApplication(shaderEditorPath.c_str(), param0);
+						}
 					}
 
-					if (bWindowShowing != nullptr)
-					{
-						ImGui::End();
-					}
+					ImGui::Separator();
 				}
 			}
 		}

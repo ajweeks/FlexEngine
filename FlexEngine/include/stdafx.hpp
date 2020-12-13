@@ -275,6 +275,7 @@ namespace flex
 	extern class SceneManager* g_SceneManager;
 	extern struct Monitor* g_Monitor;
 	extern class PhysicsManager* g_PhysicsManager;
+	extern class ResourceManager* g_ResourceManager;
 
 	extern sec g_SecElapsedSinceProgramStart;
 	extern sec g_DeltaTime;

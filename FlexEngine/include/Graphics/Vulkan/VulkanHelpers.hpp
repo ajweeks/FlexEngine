@@ -171,11 +171,14 @@ namespace flex
 			bool bUseStagingBuffer = true; // Set to false for vertex buffers that need to be updated very frequently (e.g. ImGui vertex buffer)
 		};
 
-		struct VulkanTexture
+		struct VulkanTexture : Texture
 		{
+			// TODO: Be like VulkanMaterial/VulkanShader and keep base class as member? Or convert them to inherit
 			VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue, const std::string& name, u32 width, u32 height, u32 channelCount);
 			VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue, const std::string& relativeFilePath, u32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR);
 			VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue, const std::array<std::string, 6>& relativeCubemapFilePaths, u32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR);
+
+			virtual ~VulkanTexture() {}
 
 			struct ImageCreateInfo
 			{
@@ -299,10 +302,6 @@ namespace flex
 
 			void GenerateMipmaps();
 
-			std::string GetRelativeFilePath() const;
-			std::string GetName() const;
-			void Reload();
-
 			VkFormat CalculateFormat();
 
 			VDeleter<VkImage> image;
@@ -311,19 +310,6 @@ namespace flex
 			// TODO: CLEANUP: Don't store sampler per texture, pool together all unique samplers in VulkanRenderer
 			VDeleter<VkSampler> sampler;
 
-			u32 width = 0;
-			u32 height = 0;
-			u32 channelCount = 0;
-			std::string name;
-			std::string relativeFilePath;
-			std::string fileName;
-			std::array<std::string, 6> relativeCubemapFilePaths;
-			u32 mipLevels = 1;
-			bool bFlipVertically = false;
-			bool bGenerateMipMaps = false;
-			bool bHDR = false;
-			bool bIsArray = false;
-			bool bSamplerClampToBorder = false;
 
 			VkImageLayout imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 			VkFormat imageFormat = VK_FORMAT_UNDEFINED;
@@ -440,12 +426,10 @@ namespace flex
 			std::vector<UniformBuffer> uniformBufferList;
 		};
 
-		struct VulkanShader
+		struct VulkanShader : public Shader
 		{
-			VulkanShader(const VDeleter<VkDevice>& device, Shader* shader);
-			~VulkanShader();
-
-			Shader* shader = nullptr;
+			VulkanShader(const VDeleter<VkDevice>& device, ShaderInfo shaderInfo);
+			virtual ~VulkanShader();
 
 			VkRenderPass renderPass = VK_NULL_HANDLE;
 
@@ -464,7 +448,8 @@ namespace flex
 
 			static void ClearShaderHash(const std::string& shaderName);
 
-			static void DisplayShaderErrorsImGui(bool* bWindowShowing);
+			static void DrawImGuiShaderErrorsWindow(bool* bWindowShowing);
+			static void DrawImGuiShaderErrors();
 
 			bool TickStatus();
 
@@ -493,78 +478,13 @@ namespace flex
 		};
 #endif // COMPILE_SHADER_COMPILER
 
-		template<typename T>
-		struct ShaderUniformContainer
+		struct VulkanMaterial : public Material
 		{
-			using iter = typename std::vector<Pair<u64, T>>::iterator;
-
-			void Add(u64 uniform, const T value, std::string slotName = "")
-			{
-				for (auto value_iter = values.begin(); value_iter != values.end(); ++value_iter)
-				{
-					if (value_iter->first == uniform)
-					{
-						value_iter->second = value;
-						slotNames[value_iter - values.begin()] = slotName;
-						return;
-					}
-				}
-
-				values.emplace_back(uniform, value);
-				slotNames.emplace_back(slotName);
-			}
-
-			u32 Count()
-			{
-				return (u32)values.size();
-			}
-
-			iter begin()
-			{
-				return values.begin();
-			}
-
-			iter end()
-			{
-				return values.end();
-			}
-
-			bool Contains(u64 uniform)
-			{
-				for (auto& pair : values)
-				{
-					if (pair.first == uniform)
-					{
-						return true;
-					}
-				}
-				return false;
-			}
-
-			T operator[](u64 uniform)
-			{
-				for (auto& pair : values)
-				{
-					if (pair.first == uniform)
-					{
-						return pair.second;
-					}
-				}
-				return nullptr;
-			}
-
-			std::vector<Pair<u64, T>> values;
-			std::vector<std::string> slotNames;
-		};
-
-		struct VulkanMaterial
-		{
-			Material material; // More info is stored in the generic material struct
+			virtual ~VulkanMaterial() {};
 
 			// TODO: OPTIMIZE: MEMORY: Only store dynamic buffers here, store constant buffers in shader/globally
 			UniformBufferList uniformBufferList;
 
-			ShaderUniformContainer<VulkanTexture*> textures;
 			VkFramebuffer hdrCubemapFramebuffer = VK_NULL_HANDLE;
 
 			u32 cubemapSamplerID = 0;

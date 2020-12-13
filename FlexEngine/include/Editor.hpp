@@ -58,6 +58,9 @@ namespace flex
 
 		void DrawImGuiWindows();
 
+		// ImGui payload identifiers
+		static const char* MaterialPayloadCStr;
+		static const char* MeshPayloadCStr;
 		static const char* GameObjectPayloadCStr;
 
 	private:

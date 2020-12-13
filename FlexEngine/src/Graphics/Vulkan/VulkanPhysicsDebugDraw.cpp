@@ -52,6 +52,7 @@ namespace flex
 
 		void VulkanPhysicsDebugDraw::OnPostSceneChange()
 		{
+			Clear();
 			CreateDebugObject();
 		}
 
@@ -207,7 +208,7 @@ namespace flex
 			m_Object->SetVisibleInSceneExplorer(false);
 			m_Object->SetCastsShadow(false);
 			m_ObjectMesh = m_Object->SetMesh(new Mesh(m_Object));
-			const VertexAttributes vertexAttributes = m_Renderer->GetShader(m_Renderer->GetMaterial(m_MaterialID).shaderID).vertexAttributes;
+			const VertexAttributes vertexAttributes = m_Renderer->GetShader(m_Renderer->GetMaterial(m_MaterialID)->shaderID)->vertexAttributes;
 			if (!m_ObjectMesh->CreateProcedural(8912, vertexAttributes, m_MaterialID, TopologyMode::LINE_LIST, &createInfo))
 			{
 				PrintWarn("Vulkan physics debug renderer failed to initialize vertex buffer");
@@ -215,6 +216,13 @@ namespace flex
 			g_SceneManager->CurrentScene()->AddRootObject(m_Object);
 
 			m_ObjectMesh->GetSubMeshes()[0]->UpdateDynamicVertexData(m_VertexBufferCreateInfo, indexBuffer);
+		}
+
+		void VulkanPhysicsDebugDraw::Clear()
+		{
+			m_VertexBufferCreateInfo.positions_3D.clear();
+			m_VertexBufferCreateInfo.colours_R32G32B32A32.clear();
+			indexBuffer.clear();
 		}
 	} // namespace vk
 } // namespace flex

@@ -7,6 +7,7 @@
 #include <map>
 
 #include "Callbacks/InputCallbacks.hpp"
+#include "Pair.hpp"
 #include "PoolAllocator.hpp"
 #include "VDeleter.hpp"
 #include "VulkanCommandBufferManager.hpp"
@@ -40,9 +41,10 @@ namespace flex
 			virtual TextureID InitializeTextureFromMemory(void* data, u32 size, VkFormat inFormat, const std::string& name, u32 width, u32 height, u32 channelCount, VkFilter inFilter) override;
 			virtual RenderID InitializeRenderObject(const RenderObjectCreateInfo* createInfo) override;
 			virtual void PostInitializeRenderObject(RenderID renderID) override;
-			virtual void DestroyTexture(TextureID textureID) override;
+			virtual void OnTextureDestroyed(TextureID textureID) override;
 
-			virtual void ClearMaterials(bool bDestroyPersistentMats = false) override;
+			virtual void RemoveMaterial(MaterialID materialID) override;
+			virtual void ReplaceMaterialsOnObjects(MaterialID oldMatID, MaterialID newMatID) override;
 
 			virtual void Update() override;
 			virtual void Draw() override;
@@ -54,10 +56,15 @@ namespace flex
 			virtual u32 GetDynamicVertexBufferSize(RenderID renderID) override;
 			virtual u32 GetDynamicVertexBufferUsedSize(RenderID renderID) override;
 
-			virtual void RecompileShaders(bool bForce) override;
-			virtual void LoadFonts(bool bForceRender) override;
+			virtual bool DrawImGuiShadersDropdown(i32* selectedShaderIndex, Shader** outSelectedShader = nullptr);
+			virtual bool DrawImGuiShadersList(i32* selectedShaderIndex, bool bShowFilter, Shader** outSelectedShader = nullptr) override;
+			virtual bool DrawImGuiTextureSelector(const char* label, const std::vector<Texture*>& textures, i32* selectedIndex) override;
+			virtual void DrawImGuiShaderErrors() override;
+			virtual void DrawImGuiTexture(TextureID textureID, real texSize, ImVec2 uv0 = ImVec2(0, 0), ImVec2 uv1 = ImVec2(1, 1)) override;
+			virtual void DrawImGuiTexture(Texture* texture, real texSize, ImVec2 uv0 = ImVec2(0, 0), ImVec2 uv1 = ImVec2(1, 1)) override;
 
-			virtual void ReloadSkybox(bool bRandomizeTexture) override;
+			virtual void ClearShaderHash(const std::string& shaderName) override;
+			virtual void RecompileShaders(bool bForce) override;
 
 			virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) override;
 			virtual void SetClearColour(real r, real g, real b) override;
@@ -79,11 +86,6 @@ namespace flex
 			virtual void SetSkyboxMesh(Mesh* skyboxMesh) override;
 			virtual void SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID) override;
 
-			virtual Material& GetMaterial(MaterialID materialID) override;
-			virtual Shader& GetShader(ShaderID shaderID) override;
-
-			virtual bool GetShaderID(const std::string& shaderName, ShaderID& shaderID) override;
-			virtual bool FindOrCreateMaterialByName(const std::string& materialName, MaterialID& materialID) override;
 			virtual MaterialID GetRenderObjectMaterialID(RenderID renderID) override;
 
 			virtual std::vector<Pair<std::string, MaterialID>> GetValidMaterialNames() const override;
@@ -110,11 +112,10 @@ namespace flex
 				real spacing,
 				real scale = 1.0f) override;
 
-			virtual void DrawAssetWindowsImGui(bool* bMaterialWindowShowing, bool* bShaderWindowShowing, bool* bTextureWindowShowing, bool* bMeshWindowShowing) override;
-			virtual void DrawImGuiForRenderObject(RenderID renderID) override;
-
 			virtual void RecaptureReflectionProbe() override;
+
 			virtual void RenderObjectStateChanged() override;
+			virtual void RecreateRenderObjectsWithMesh(const std::string& relativeMeshFilePath, MeshImportSettings* meshImportSettings) override;
 
 			virtual ParticleSystemID AddParticleSystem(const std::string& name, ParticleSystem* system, i32 particleCount) override;
 			virtual bool RemoveParticleSystem(ParticleSystemID particleSystemID) override;
@@ -122,6 +123,8 @@ namespace flex
 			virtual void RecreateEverything() override;
 
 			virtual void ReloadObjectsWithMesh(const std::string& meshFilePath) override;
+
+			virtual bool LoadFont(FontMetaData& fontMetaData, bool bForceRender) override;
 
 			void RegisterFramebufferAttachment(FrameBufferAttachment* frameBufferAttachment);
 			FrameBufferAttachment* GetFrameBufferAttachment(FrameBufferAttachmentID frameBufferAttachmentID) const;
@@ -148,13 +151,10 @@ namespace flex
 			static PFN_vkCmdEndDebugUtilsLabelEXT m_vkCmdEndDebugUtilsLabelEXT;
 
 		protected:
+			virtual void InitializeShaders(const std::vector<ShaderInfo>& shaderInfos) override;
 			virtual bool LoadShaderCode(ShaderID shaderID) override;
-			virtual void SetShaderCount(u32 shaderCount) override;
-			virtual void RemoveMaterial(MaterialID materialID, bool bUpdateUsages = true) override;
 			virtual void FillOutGBufferFrameBufferAttachments(std::vector<Pair<std::string, void*>>& outVec) override;
 			virtual void RecreateShadowFrameBuffers() override;
-
-			virtual bool LoadFont(FontMetaData& fontMetaData, bool bForceRender) override;
 
 			virtual void EnqueueScreenSpaceSprites() override;
 			virtual void EnqueueWorldSpaceSprites() override;
@@ -185,7 +185,6 @@ namespace flex
 			VkPipeline GetOrCreateWireframePipeline(VertexAttributes vertexAttributes);
 			void DestroyWireframePipelines();
 
-			MaterialID GetNextAvailableMaterialID() const;
 			RenderID GetNextAvailableRenderID() const;
 			ParticleSystemID GetNextAvailableParticleSystemID() const;
 
@@ -222,10 +221,6 @@ namespace flex
 			VkSpecializationInfo* GenerateSpecializationInfo(const std::vector<SpecializationConstantCreateInfo>& entries);
 			void CreateComputeResources();
 			void CreateParticleSystemResources(VulkanParticleSystem* particleSystem);
-
-			// Returns a pointer into m_LoadedTextures if a texture has been loaded from that file path, otherwise returns nullptr
-			VulkanTexture* GetLoadedTexture(const std::string& filePath);
-			bool RemoveLoadedTexture(VulkanTexture* texture, bool bDestroy);
 
 			void CreateStaticVertexBuffers();
 			void CreateDynamicVertexAndIndexBuffers();
@@ -302,8 +297,6 @@ namespace flex
 
 			void SetLineWidthForCmdBuffer(VkCommandBuffer cmdBuffer, real requestedWidth = 3.0f);
 
-			// Returns true if object was duplicated
-			bool DoTextureSelector(const char* label, const std::vector<VulkanTexture*>& textures, i32* selectedIndex);
 			void ImGuiUpdateTextureIndexOrMaterial(bool bUpdateTextureMaterial,
 				const std::string& texturePath,
 				std::string& matTexturePath,
@@ -311,7 +304,6 @@ namespace flex
 				i32 i,
 				i32* textureIndex,
 				VulkanTexture** textureToUpdate);
-			void DoTexturePreviewTooltip(VulkanTexture* texture);
 
 			void BeginGPUTimeStamp(VkCommandBuffer commandBuffer, const std::string& name);
 			void EndGPUTimeStamp(VkCommandBuffer commandBuffer, const std::string& name);
@@ -356,13 +348,8 @@ namespace flex
 			u32 GetStaticVertexIndexBufferIndex(u32 stride);
 			u32 GetDynamicVertexIndexBufferIndex(u32 stride);
 
-			TextureID GetNextAvailableTextureID();
-			TextureID AddLoadedTexture(VulkanTexture* texture);
-			VulkanTexture* GetLoadedTexture(TextureID textureID);
-
 			const u32 MAX_NUM_RENDER_OBJECTS = 4096; // TODO: Not this?
 			std::vector<VulkanRenderObject*> m_RenderObjects;
-			std::map<MaterialID, VulkanMaterial> m_Materials;
 
 			glm::vec2i m_CubemapFramebufferSize;
 			glm::vec2i m_BRDFSize;
@@ -526,15 +513,13 @@ namespace flex
 
 			VDeleter<VkPipelineLayout> m_ParticleSimulationComputePipelineLayout;
 
+			// TODO: Make RenderAPI-agnostic and move to resource manager
 			std::vector<VulkanParticleSystem*> m_ParticleSystems;
 
 			VDeleter<VkDescriptorPool> m_DescriptorPool;
 			std::vector<VkDescriptorSetLayout> m_DescriptorSetLayouts;
 
 			VulkanCommandBufferManager m_CommandBufferManager;
-			std::vector<VulkanShader> m_Shaders;
-
-			std::vector<VulkanTexture*> m_LoadedTextures;
 
 			VulkanTexture* m_BlankTexture = nullptr;
 			VulkanTexture* m_BlankTextureArr = nullptr;
