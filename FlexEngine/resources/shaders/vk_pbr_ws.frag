@@ -85,7 +85,8 @@ void main()
 	}
 
 	float metallic = uboDynamic.enableMetallicSampler ? texture(metallicSampler, ex_TexCoord).r : uboDynamic.constMetallic;
-	float roughness = uboDynamic.enableRoughnessSampler ? texture(roughnessSampler, ex_TexCoord).r : uboDynamic.constRoughness;
+	float roughnessAlpha = clamp((albedo.x-0.025)/(0.001), 0.0, 1.0);
+	float roughness = uboDynamic.enableRoughnessSampler ? texture(roughnessSampler, ex_TexCoord).r : mix(uboDynamic.constRoughness, 0.04, roughnessAlpha);
 
 	N = normalize(mat3(uboConstant.view) * N);
 
