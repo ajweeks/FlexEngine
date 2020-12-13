@@ -512,9 +512,11 @@ namespace flex
 
 	void SceneManager::DrawImGuiModals()
 	{
+		bool bFocusNameTextBox = false;
 		if (m_bOpenNewSceneWindow)
 		{
 			m_bOpenNewSceneWindow = false;
+			bFocusNameTextBox = true;
 			ImGui::OpenPopup(s_newSceneModalWindowID);
 		}
 
@@ -524,6 +526,10 @@ namespace flex
 
 			const size_t maxStrLen = 256;
 			newSceneName.resize(maxStrLen);
+			if (bFocusNameTextBox)
+			{
+				ImGui::SetKeyboardFocusHere();
+			}
 			bool bCreate = ImGui::InputText("Scene name",
 				(char*)newSceneName.data(),
 				maxStrLen,
