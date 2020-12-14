@@ -69,7 +69,7 @@ namespace flex
 		void RemoveRootObjectImmediate(GameObject* gameObject, bool bDestroy);
 		void RemoveAllRootObjects(bool bDestroy);
 		void RemoveAllRootObjectsImmediate(bool bDestroy);
-		bool RemoveObject(GameObject* gameObject, bool bDestroy);
+		void RemoveObject(GameObject* gameObject, bool bDestroy);
 		bool RemoveObjectImmediate(GameObject* gameObject, bool bDestroy);
 		void RemoveObjects(const std::vector<GameObject*>& gameObjects, bool bDestroy);
 		void RemoveObjectsImmediate(const std::vector<GameObject*>& gameObjects, bool bDestroy);

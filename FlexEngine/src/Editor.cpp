@@ -1205,7 +1205,7 @@ namespace flex
 			{
 				if (!m_CurrentlySelectedObjects.empty())
 				{
-					g_SceneManager->CurrentScene()->RemoveObjectsImmediate(m_CurrentlySelectedObjects, true);
+					g_SceneManager->CurrentScene()->RemoveObjects(m_CurrentlySelectedObjects, true);
 
 					SelectNone();
 					return EventReply::CONSUMED;

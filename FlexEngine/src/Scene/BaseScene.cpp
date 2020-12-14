@@ -1944,28 +1944,22 @@ namespace flex
 		g_Renderer->RenderObjectStateChanged();
 	}
 
-	bool BaseScene::RemoveObject(GameObject* gameObject, bool bDestroy)
+	void BaseScene::RemoveObject(GameObject* gameObject, bool bDestroy)
 	{
-		if (Contains(m_RootObjects, gameObject))
+		if (bDestroy)
 		{
-			if (bDestroy)
+			if (!Contains(m_PendingDestroyObjects, gameObject))
 			{
-				if (!Contains(m_PendingDestroyObjects, gameObject))
-				{
-					m_PendingDestroyObjects.push_back(gameObject);
-				}
+				m_PendingDestroyObjects.push_back(gameObject);
 			}
-			else
-			{
-				if (!Contains(m_PendingDeleteObjects, gameObject))
-				{
-					m_PendingDeleteObjects.push_back(gameObject);
-				}
-			}
-			return true;
 		}
-
-		return false;
+		else
+		{
+			if (!Contains(m_PendingDeleteObjects, gameObject))
+			{
+				m_PendingDeleteObjects.push_back(gameObject);
+			}
+		}
 	}
 
 	std::vector<GameObject*>::const_iterator BaseScene::RemoveObjectImmediate(std::vector<GameObject*>::const_iterator objectIter, bool bDestroy)
