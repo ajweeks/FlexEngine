@@ -2662,6 +2662,18 @@ namespace flex
 		return InitializeMaterial(&particleMatCreateInfo);
 	}
 
+	void PhysicsDebugDrawBase::flushLines()
+	{
+		Draw();
+	}
+
+	void PhysicsDebugDrawBase::DrawAxes(const btVector3& origin, const btQuaternion& orientation, real scale)
+	{
+		drawLine(origin, origin + quatRotate(orientation, btVector3(scale, 0.0f, 0.0f)), btVector3(0.9f, 0.1f, 0.1f));
+		drawLine(origin, origin + quatRotate(orientation, btVector3(0.0f, scale, 0.0f)), btVector3(0.1f, 0.9f, 0.1f));
+		drawLine(origin, origin + quatRotate(orientation, btVector3(0.0f, 0.0f, scale)), btVector3(0.1f, 0.1f, 0.9f));
+	}
+
 	void PhysicsDebugDrawBase::UpdateDebugMode()
 	{
 		const PhysicsDebuggingSettings& settings = g_Renderer->GetPhysicsDebuggingSettings();
@@ -2690,10 +2702,4 @@ namespace flex
 	{
 		m_LineSegmentIndex = 0;
 	}
-
-	void PhysicsDebugDrawBase::flushLines()
-	{
-		Draw();
-	}
-
 } // namespace flex

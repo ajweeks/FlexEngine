@@ -1054,6 +1054,8 @@ namespace flex
 		real m_MinLength = 5.0f;
 		real m_MaxLength = 10.0f;
 
+		GameObject* m_OriginTransform = nullptr;
+
 		bool m_bSimulateTarget = true;
 		SoftBody* m_SpringSim = nullptr;
 

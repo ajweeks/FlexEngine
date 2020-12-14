@@ -922,14 +922,8 @@ namespace flex
 
 			if (ImGui::Button("Delete"))
 			{
-				if (g_SceneManager->CurrentScene()->RemoveObject(this, true))
-				{
-					bDeletedOrDuplicated = true;
-				}
-				else
-				{
-					PrintWarn("Failed to delete game object: %s\n", m_Name.c_str());
-				}
+				g_SceneManager->CurrentScene()->RemoveObject(this, true);
+				bDeletedOrDuplicated = true;
 			}
 
 			ImGui::EndPopup();
@@ -7285,6 +7279,16 @@ namespace flex
 			m_ContractedMesh = MeshComponent::LoadFromCGLTF(nullptr, &contractedMeshCGLTF->primitives[0], springMatID, &meshImportSettings);
 		}
 
+		if (m_bSimulateTarget)
+		{
+			m_OriginTransform = new GameObject("Spring origin", GameObjectType::OBJECT);
+			m_OriginTransform->SetSerializable(false);
+			m_OriginTransform->SetVisibleInSceneExplorer(false);
+			AddChild(m_OriginTransform);
+			m_OriginTransform->Initialize();
+			m_OriginTransform->PostInitialize();
+		}
+
 		VertexBufferData* extendedVertBufferData = m_ExtendedMesh->GetVertexBufferData();
 		VertexBufferData* contractedVertBufferData = m_ContractedMesh->GetVertexBufferData();
 		u32 vertCount = extendedVertBufferData->VertexCount;
@@ -7292,7 +7296,7 @@ namespace flex
 		m_DynamicVertexBufferCreateInfo = {};
 		m_DynamicVertexBufferCreateInfo.attributes = extendedVertBufferData->Attributes;
 
-		m_Mesh = new Mesh(this);
+		m_Mesh = new Mesh(m_OriginTransform);
 		m_Indices = m_ExtendedMesh->GetIndexBuffer();
 		m_Mesh->LoadFromMemoryDynamic(m_DynamicVertexBufferCreateInfo, m_Indices, springMatID, vertCount);
 
@@ -7330,19 +7334,21 @@ namespace flex
 			m_SpringSim = new SoftBody("Spring sim");
 			m_SpringSim->points = std::vector<Point*>{ new Point(VEC3_ZERO, VEC3_ZERO, 0.0f), new Point(initialTargetPos, VEC3_ZERO, 1.0f/20.0f) };
 			m_SpringSim->SetSerializable(false);
+			m_SpringSim->SetVisibleInSceneExplorer(false);
 			real stiffness = 0.02f;
 			m_SpringSim->SetStiffness(stiffness);
 			m_SpringSim->SetDamping(0.999f);
 			m_SpringSim->AddUniqueDistanceConstraint(0, 1, 0, stiffness);
-			AddSibling(m_SpringSim);
+			AddChild(m_SpringSim);
 			m_SpringSim->Initialize();
 			m_SpringSim->PostInitialize();
 
 			m_Bobber = new GameObject("Spring bobber", GameObjectType::OBJECT);
 			m_Bobber->SetSerializable(false);
+			m_Bobber->SetVisibleInSceneExplorer(false);
 			Mesh* bobberMesh = m_Bobber->SetMesh(new Mesh(m_Bobber));
 			bobberMesh->LoadFromFile(MESH_DIRECTORY "sphere.glb", bobberMatID);
-			AddSibling(m_Bobber);
+			AddChild(m_Bobber);
 			m_Bobber->Initialize();
 			m_Bobber->PostInitialize();
 		}
@@ -7366,7 +7372,8 @@ namespace flex
 
 	void SpringObject::Update()
 	{
-		glm::vec3 rootPos = m_Transform.GetWorldPosition();
+		Transform* originTransform = m_OriginTransform->GetTransform();
+		glm::vec3 rootPos = originTransform->GetWorldPosition();
 		glm::vec3 targetPos;
 		if (m_bSimulateTarget)
 		{
@@ -7379,7 +7386,7 @@ namespace flex
 			targetPos = m_Target->GetTransform()->GetWorldPosition();
 		}
 
-		real delta = (glm::dot(targetPos - rootPos, m_Transform.GetUp()) - m_MinLength) / (m_MaxLength - m_MinLength);
+		real delta = (glm::dot(targetPos - rootPos, originTransform->GetUp()) - m_MinLength) / (m_MaxLength - m_MinLength);
 		real t = glm::clamp(delta, 0.0f, 1.0f);
 
 		for (u32 i = 0; i < (u32)m_DynamicVertexBufferCreateInfo.positions_3D.size(); ++i)
@@ -7401,12 +7408,14 @@ namespace flex
 			glm::quat targetRot = glm::quatLookAt(lookDirNorm, up) * offsetQuat;
 			if (!glm::any(glm::isnan(targetRot)))
 			{
-				glm::quat finalRot = glm::slerp(m_Transform.GetWorldRotation(), targetRot, g_DeltaTime * 100.0f);
-				m_Transform.SetWorldRotation(finalRot);
+				glm::quat finalRot = glm::slerp(originTransform->GetWorldRotation(), targetRot, g_DeltaTime * 100.0f);
+				originTransform->SetWorldRotation(finalRot);
 			}
 		}
 
 		GameObject::Update();
+
+		g_Renderer->GetDebugDrawer()->DrawAxes(ToBtVec3(originTransform->GetWorldPosition()), ToBtQuaternion(originTransform->GetWorldRotation()), 2.0f);
 	}
 
 	void SpringObject::Destroy()
@@ -7417,12 +7426,30 @@ namespace flex
 		m_ContractedMesh->Destroy();
 		delete m_ContractedMesh;
 
+		g_SceneManager->CurrentScene()->RemoveObject(m_SpringSim, true);
+		m_SpringSim = nullptr;
+		g_SceneManager->CurrentScene()->RemoveObject(m_Bobber, true);
+		m_Bobber = nullptr;
+
 		GameObject::Destroy();
 	}
 
 	void SpringObject::DrawImGuiObjects()
 	{
 		GameObject::DrawImGuiObjects();
+
+		ImGui::Spacing();
+		ImGui::Text("Spring");
+		m_SpringSim->DrawImGuiObjects();
+
+		ImGui::Spacing();
+		ImGui::Text("Bobber");
+		m_Bobber->DrawImGuiObjects();
+
+		ImGui::Spacing();
+		ImGui::Text("Origin");
+		m_Bobber->DrawImGuiObjects();
+
 	}
 
 	DistanceConstraint::DistanceConstraint(i32 pointIndex0, i32 pointIndex1, real stiffness, real targetDistance) :

@@ -36,10 +36,12 @@ namespace flex
 
 		virtual void OnPostSceneChange() = 0;
 
+		virtual void flushLines() override;
+
+		void DrawAxes(const btVector3& origin, const btQuaternion& orientation, real scale);
+
 		void UpdateDebugMode();
 		void ClearLines();
-
-		virtual void flushLines() override;
 
 	protected:
 		virtual void Draw() = 0;
