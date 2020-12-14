@@ -90,7 +90,7 @@ namespace flex
 	{
 	}
 
-	GameObject* GameObject::CopySelfAndAddToScene(GameObject* parent, CopyFlags copyFlags)
+	GameObject* GameObject::CopySelfAndAddToScene(GameObject* parent /* = nullptr */, CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
 		GameObject* newGameObject = new GameObject(GetIncrementedPostFixedStr(m_Name, s_DefaultNewGameObjectName), m_Type);
 
@@ -912,7 +912,7 @@ namespace flex
 				ImGui::CloseCurrentPopup();
 			}
 
-			if (DoDuplicateGameObjectButton("Duplicate..."))
+			if (DrawImGuiDuplicateGameObjectButton())
 			{
 				ImGui::CloseCurrentPopup();
 				bDeletedOrDuplicated = true;
@@ -938,11 +938,11 @@ namespace flex
 		return bDeletedOrDuplicated;
 	}
 
-	bool GameObject::DoDuplicateGameObjectButton(const char* buttonName)
+	bool GameObject::DrawImGuiDuplicateGameObjectButton()
 	{
-		if (ImGui::Button(buttonName))
+		if (ImGui::Button("Duplicate..."))
 		{
-			GameObject* newGameObject = CopySelfAndAddToScene(nullptr, CopyFlags::ALL);
+			GameObject* newGameObject = CopySelfAndAddToScene();
 
 			g_Editor->SetSelectedObject(newGameObject);
 
@@ -1460,7 +1460,7 @@ namespace flex
 		return m_Type;
 	}
 
-	void GameObject::CopyGenericFields(GameObject* newGameObject, GameObject* parent, CopyFlags copyFlags)
+	void GameObject::CopyGenericFields(GameObject* newGameObject, GameObject* parent /* = nullptr */, CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
 		RenderObjectCreateInfo* createInfoPtr = nullptr;
 		std::vector<MaterialID> matIDs;
@@ -1578,9 +1578,12 @@ namespace flex
 		{
 			for (GameObject* child : m_Children)
 			{
-				std::string newChildName = child->GetName();
-				GameObject* newChild = child->CopySelfAndAddToScene(newGameObject, copyFlags);
-				newGameObject->AddChild(newChild);
+				if (child->IsSerializable())
+				{
+					std::string newChildName = child->GetName();
+					GameObject* newChild = child->CopySelfAndAddToScene(newGameObject, copyFlags);
+					newGameObject->AddChild(newChild);
+				}
 			}
 		}
 	}
@@ -2182,7 +2185,7 @@ namespace flex
 	{
 	}
 
-	GameObject* Valve::CopySelfAndAddToScene(GameObject* parent, CopyFlags copyFlags)
+	GameObject* Valve::CopySelfAndAddToScene(GameObject* parent /* = nullptr */, CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
 		Valve* newGameObject = new Valve(GetIncrementedPostFixedStr(m_Name, s_DefaultNewGameObjectName));
 
@@ -2364,7 +2367,7 @@ namespace flex
 	{
 	}
 
-	GameObject* RisingBlock::CopySelfAndAddToScene(GameObject* parent, CopyFlags copyFlags)
+	GameObject* RisingBlock::CopySelfAndAddToScene(GameObject* parent /* = nullptr */, CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
 		RisingBlock* newGameObject = new RisingBlock(GetIncrementedPostFixedStr(m_Name, s_DefaultNewGameObjectName));
 
@@ -2541,7 +2544,7 @@ namespace flex
 	{
 	}
 
-	GameObject* GlassPane::CopySelfAndAddToScene(GameObject* parent, CopyFlags copyFlags)
+	GameObject* GlassPane::CopySelfAndAddToScene(GameObject* parent /* = nullptr */, CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
 		GlassPane* newGameObject = new GlassPane(GetIncrementedPostFixedStr(m_Name, s_DefaultNewGameObjectName));
 
@@ -2602,7 +2605,7 @@ namespace flex
 	{
 	}
 
-	GameObject* ReflectionProbe::CopySelfAndAddToScene(GameObject* parent, CopyFlags copyFlags)
+	GameObject* ReflectionProbe::CopySelfAndAddToScene(GameObject* parent /* = nullptr */, CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
 		ReflectionProbe* newGameObject = new ReflectionProbe(GetIncrementedPostFixedStr(m_Name, s_DefaultNewGameObjectName));
 
@@ -2689,7 +2692,7 @@ namespace flex
 		SetCastsShadow(false);
 	}
 
-	GameObject* Skybox::CopySelfAndAddToScene(GameObject* parent, CopyFlags copyFlags)
+	GameObject* Skybox::CopySelfAndAddToScene(GameObject* parent /* = nullptr */, CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
 		Skybox* newGameObject = new Skybox(GetIncrementedPostFixedStr(m_Name, s_DefaultNewGameObjectName));
 
@@ -3144,7 +3147,7 @@ namespace flex
 		m_TSpringToCartAhead.DR = 1.0f;
 	}
 
-	GameObject* Cart::CopySelfAndAddToScene(GameObject* parent, CopyFlags copyFlags)
+	GameObject* Cart::CopySelfAndAddToScene(GameObject* parent /* = nullptr */, CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
 		// TODO: FIXME: Get newly generated cart ID! & move allocation into cart manager
 		Cart* newGameObject = new Cart(cartID);
@@ -3384,7 +3387,7 @@ namespace flex
 	{
 	}
 
-	GameObject* EngineCart::CopySelfAndAddToScene(GameObject* parent, CopyFlags copyFlags)
+	GameObject* EngineCart::CopySelfAndAddToScene(GameObject* parent /* = nullptr */, CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
 		// TODO: FIXME: Get newly generated cart ID! & move allocation into cart manager
 		EngineCart* newGameObject = new EngineCart(cartID);
@@ -3504,7 +3507,7 @@ namespace flex
 		}
 	}
 
-	GameObject* MobileLiquidBox::CopySelfAndAddToScene(GameObject* parent, CopyFlags copyFlags)
+	GameObject* MobileLiquidBox::CopySelfAndAddToScene(GameObject* parent /* = nullptr */, CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
 		GameObject* newGameObject = new MobileLiquidBox();
 
@@ -4496,7 +4499,7 @@ namespace flex
 		return result;
 	}
 
-	GameObject* GerstnerWave::CopySelfAndAddToScene(GameObject* parent, CopyFlags copyFlags)
+	GameObject* GerstnerWave::CopySelfAndAddToScene(GameObject* parent /* = nullptr */, CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
 		GerstnerWave* newGameObject = new GerstnerWave(GetIncrementedPostFixedStr(m_Name, "Gerstner Wave"));
 		CopyGenericFields(newGameObject, parent, copyFlags);
@@ -5903,7 +5906,7 @@ namespace flex
 		ImGui::End();
 	}
 
-	GameObject* Terminal::CopySelfAndAddToScene(GameObject* parent, CopyFlags copyFlags)
+	GameObject* Terminal::CopySelfAndAddToScene(GameObject* parent /* = nullptr */, CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
 		GameObject* newGameObject = new Terminal();
 
@@ -6610,7 +6613,7 @@ namespace flex
 		GameObject::Destroy();
 	}
 
-	GameObject* ParticleSystem::CopySelfAndAddToScene(GameObject* parent, CopyFlags copyFlags)
+	GameObject* ParticleSystem::CopySelfAndAddToScene(GameObject* parent /* = nullptr */, CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
 		ParticleSystem* newParticleSystem = new ParticleSystem(GetIncrementedPostFixedStr(m_Name, "Particle System"));
 
@@ -6720,7 +6723,7 @@ namespace flex
 	{
 	}
 
-	GameObject* TerrainGenerator::CopySelfAndAddToScene(GameObject* parent, CopyFlags copyFlags)
+	GameObject* TerrainGenerator::CopySelfAndAddToScene(GameObject* parent /* = nullptr */, CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
 		// TODO:
 		FLEX_UNUSED(parent);
@@ -7234,10 +7237,11 @@ namespace flex
 	{
 	}
 
-	GameObject* SpringObject::CopySelfAndAddToScene(GameObject* parent, CopyFlags copyFlags)
+	GameObject* SpringObject::CopySelfAndAddToScene(GameObject* parent /* = nullptr */, CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
 		SpringObject* newObject = new SpringObject(GetIncrementedPostFixedStr(m_Name, "Spring Object"));
 
+		// Ensure mesh & rigid body isn't copied
 		copyFlags = (CopyFlags)(copyFlags & ~CopyFlags::MESH);
 		copyFlags = (CopyFlags)(copyFlags & ~CopyFlags::RIGIDBODY);
 		CopyGenericFields(newObject, parent, copyFlags);
@@ -7459,7 +7463,7 @@ namespace flex
 	{
 	}
 
-	GameObject* SoftBody::CopySelfAndAddToScene(GameObject* parent, CopyFlags copyFlags)
+	GameObject* SoftBody::CopySelfAndAddToScene(GameObject* parent /* = nullptr */, CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
 		size_t underscore = m_Name.find('_');
 		std::string namePrefix = underscore == std::string::npos ? m_Name : m_Name.substr(0, underscore + 1);

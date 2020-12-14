@@ -1220,7 +1220,7 @@ namespace flex
 
 					for (GameObject* gameObject : m_CurrentlySelectedObjects)
 					{
-						GameObject* duplicatedObject = gameObject->CopySelfAndAddToScene(nullptr, GameObject::CopyFlags::CHILDREN);
+						GameObject* duplicatedObject = gameObject->CopySelfAndAddToScene();
 
 						duplicatedObject->AddSelfAndChildrenToVec(newSelectedGameObjects);
 					}
