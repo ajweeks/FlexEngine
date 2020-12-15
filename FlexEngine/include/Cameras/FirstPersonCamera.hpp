@@ -10,7 +10,7 @@ namespace flex
 	{
 	public:
 		explicit FirstPersonCamera(real FOV = glm::radians(45.0f));
-		~FirstPersonCamera();
+		virtual ~FirstPersonCamera();
 
 		virtual void Initialize() override;
 		virtual void OnSceneChanged() override;

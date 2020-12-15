@@ -294,26 +294,32 @@ namespace flex
 				{
 					m_bAttemptPlaceItemFromInventory = false;
 
-					GameObject* obj = m_Player->m_Inventory[0];
+					GameObject* gameObject = m_Player->m_Inventory[0];
 					bool bPlaced = false;
 
-					if (EngineCart* engineCart = dynamic_cast<EngineCart*>(obj))
+					switch (gameObject->GetType())
 					{
-						TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
-						glm::vec3 samplePos = m_Player->m_Transform.GetWorldPosition() + m_Player->m_Transform.GetForward() * 1.5f;
-						real rangeThreshold = 4.0f;
-						real distAlongNearestTrack;
-						TrackID nearestTrackID = trackManager->GetTrackInRangeID(samplePos, rangeThreshold, &distAlongNearestTrack);
+					case GameObjectType::ENGINE_CART:
+					{
+						EngineCart* engineCart = static_cast<EngineCart*>(gameObject);
 
-						if (nearestTrackID != InvalidTrackID)
-						{
-							bPlaced = true;
-							engineCart->OnTrackMount(nearestTrackID, distAlongNearestTrack);
-							engineCart->SetVisible(true);
-						}
-					}
-					else if (Cart* cart = dynamic_cast<Cart*>(obj))
+							TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
+							glm::vec3 samplePos = m_Player->m_Transform.GetWorldPosition() + m_Player->m_Transform.GetForward() * 1.5f;
+							real rangeThreshold = 4.0f;
+							real distAlongNearestTrack;
+							TrackID nearestTrackID = trackManager->GetTrackInRangeID(samplePos, rangeThreshold, &distAlongNearestTrack);
+
+							if (nearestTrackID != InvalidTrackID)
+							{
+								bPlaced = true;
+								engineCart->OnTrackMount(nearestTrackID, distAlongNearestTrack);
+								engineCart->SetVisible(true);
+							}
+					} break;
+					case GameObjectType::CART:
 					{
+						Cart* cart = static_cast<Cart*>(gameObject);
+
 						TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
 						glm::vec3 samplePos = m_Player->m_Transform.GetWorldPosition() + m_Player->m_Transform.GetForward() * 1.5f;
 						real rangeThreshold = 4.0f;
@@ -326,10 +332,12 @@ namespace flex
 							cart->OnTrackMount(nearestTrackID, distAlongNearestTrack);
 							cart->SetVisible(true);
 						}
-					}
-					else if (MobileLiquidBox* box = dynamic_cast<MobileLiquidBox*>(obj))
+					} break;
+					case GameObjectType::MOBILE_LIQUID_BOX:
 					{
-						std::vector<Cart*> carts = g_SceneManager->CurrentScene()->GetObjectsOfType<Cart>();
+						MobileLiquidBox* mobileLiquidBox = static_cast<MobileLiquidBox*>(gameObject);
+
+						std::vector<Cart*> carts = g_SceneManager->CurrentScene()->GetObjectsOfType<Cart>(GameObjectType::CART);
 						glm::vec3 playerPos = m_Player->m_Transform.GetWorldPosition();
 						real threshold = 8.0f;
 						real closestCartDist = threshold;
@@ -346,21 +354,22 @@ namespace flex
 
 						if (closestCartIdx != -1)
 						{
-							if (box->GetParent() == nullptr)
+							if (mobileLiquidBox->GetParent() == nullptr)
 							{
-								g_SceneManager->CurrentScene()->RemoveRootObject(box, false);
+								g_SceneManager->CurrentScene()->RemoveRootObject(mobileLiquidBox, false);
 							}
 
 							bPlaced = true;
 
-							carts[closestCartIdx]->AddChild(box);
-							box->GetTransform()->SetLocalPosition(glm::vec3(0.0f, 1.5f, 0.0f));
-							box->SetVisible(true);
+							carts[closestCartIdx]->AddChild(mobileLiquidBox);
+							mobileLiquidBox->GetTransform()->SetLocalPosition(glm::vec3(0.0f, 1.5f, 0.0f));
+							mobileLiquidBox->SetVisible(true);
 						}
-					}
-					else
+					} break;
+					default:
 					{
-						PrintWarn("Unhandled object in inventory attempted to be placed! %s\n", obj->GetName().c_str());
+						PrintWarn("Unhandled object in inventory attempted to be placed! %s\n", gameObject->GetName().c_str());
+					} break;
 					}
 
 					if (bPlaced)
@@ -422,8 +431,7 @@ namespace flex
 		bool bInteractingWithTerminal = false;
 		{
 			GameObject* objInteractingWith = m_Player->GetObjectInteractingWith();
-			Terminal* terminal = dynamic_cast<Terminal*>(objInteractingWith);
-			bInteractingWithTerminal = (terminal != nullptr);
+			bInteractingWithTerminal = (objInteractingWith != nullptr) && (objInteractingWith->GetType() == GameObjectType::TERMINAL);
 		}
 
 		if (m_Player->m_bPossessed)

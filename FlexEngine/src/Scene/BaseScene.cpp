@@ -1965,7 +1965,7 @@ namespace flex
 	{
 		if (bDestroy)
 		{
-			m_PendingDestroyObjects.insert(m_PendingDestroyObjects.end(), );
+			m_PendingDestroyObjects.insert(m_PendingDestroyObjects.end(), gameObjects.begin(), gameObjects.end());
 		}
 		else
 		{

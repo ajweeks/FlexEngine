@@ -20,7 +20,7 @@ IGNORE_WARNINGS_POP
 namespace flex
 {
 	DebugCamera::DebugCamera(real FOV) :
-		BaseCamera("debug", false, FOV),
+		BaseCamera("debug", CameraType::DEBUG_CAM, false, FOV),
 		mouseButtonCallback(this, &DebugCamera::OnMouseButtonEvent),
 		mouseMovedCallback(this, &DebugCamera::OnMouseMovedEvent),
 		m_RollOnTurnAmount(1.5f),

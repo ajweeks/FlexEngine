@@ -18,8 +18,9 @@ IGNORE_WARNINGS_POP
 
 namespace flex
 {
-	BaseCamera::BaseCamera(const std::string& cameraName, bool bIsGameplayCam, real FOV, real zNear, real zFar) :
+	BaseCamera::BaseCamera(const std::string& cameraName, CameraType type, bool bIsGameplayCam, real FOV, real zNear, real zFar) :
 		bIsGameplayCam(bIsGameplayCam),
+		type(type),
 		m_Name(cameraName),
 		m_View(MAT4_ZERO),
 		m_Proj(MAT4_ZERO),

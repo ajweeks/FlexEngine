@@ -1287,8 +1287,8 @@ namespace flex
 			return EventReply::CONSUMED;
 		}
 
-		// TODO: Add camera types!
-		if (action == Action::EDITOR_FOCUS_ON_SELECTION && !m_CurrentlySelectedObjects.empty() && dynamic_cast<DebugCamera*>(g_CameraManager->CurrentCamera()) != nullptr)
+		CameraType currentCameraType = g_CameraManager->CurrentCamera()->type;
+		if (action == Action::EDITOR_FOCUS_ON_SELECTION && !m_CurrentlySelectedObjects.empty() && currentCameraType == CameraType::DEBUG_CAM)
 		{
 			glm::vec3 minPos(FLT_MAX);
 			glm::vec3 maxPos(-FLT_MAX);

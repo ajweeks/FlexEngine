@@ -11,7 +11,7 @@ namespace flex
 	{
 	public:
 		explicit DebugCamera(real FOV = glm::radians(45.0f));
-		~DebugCamera();
+		virtual ~DebugCamera();
 
 		virtual void Initialize() override;
 		virtual void Update() override;

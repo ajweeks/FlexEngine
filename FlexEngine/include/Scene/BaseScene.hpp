@@ -95,16 +95,16 @@ namespace flex
 		std::vector<GameObject*> GetAllObjects();
 
 		template<class T>
-		std::vector<T*> GetObjectsOfType()
+		std::vector<T*> GetObjectsOfType(GameObjectType type)
 		{
-			std::vector<GameObject*> objs = GetAllObjects();
+			std::vector<GameObject*> gameObjects = GetAllObjects();
 			std::vector<T*> result;
 
-			for (GameObject* obj : objs)
+			for (GameObject* gameObject : gameObjects)
 			{
-				if (dynamic_cast<T*>(obj) != nullptr)
+				if (gameObject->GetType() == type)
 				{
-					result.push_back((T*)obj);
+					result.push_back((T*)gameObject);
 				}
 			}
 

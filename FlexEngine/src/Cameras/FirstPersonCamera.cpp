@@ -17,9 +17,10 @@ IGNORE_WARNINGS_POP
 namespace flex
 {
 	FirstPersonCamera::FirstPersonCamera(real FOV) :
-		BaseCamera("first-person", true, FOV)
+		BaseCamera("first-person", CameraType::FIRST_PERSON, true, FOV)
 	{
 		bIsFirstPerson = true;
+		bPossessPlayer = true;
 		ResetOrientation();
 		RecalculateViewProjection();
 	}

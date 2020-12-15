@@ -430,8 +430,9 @@ namespace flex
 	{
 		// TODO: Update chains properly!?
 
-		if (Cart* cart = dynamic_cast<Cart*>(gameObject))
+		if (gameObject->GetType() == GameObjectType::CART)
 		{
+			Cart* cart = (Cart*)gameObject;
 			for (i32 i = 0; i < (i32)m_CartChains.size(); ++i)
 			{
 				if (m_CartChains[i].chainID != InvalidCartChainID &&

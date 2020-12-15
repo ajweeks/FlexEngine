@@ -5531,15 +5531,15 @@ namespace flex
 
 	void Terminal::PostInitialize()
 	{
-		std::vector<GameObject*> objs = g_SceneManager->CurrentScene()->GetAllObjects();
-		for (GameObject* obj : objs)
-		{
-			PointLight* pointLight = dynamic_cast<PointLight*>(obj);
-			if (pointLight != nullptr)
-			{
-				//g_PluggablesSystem->AddWire(this, obj);
-			}
-		}
+		//std::vector<GameObject*> gameObjects = g_SceneManager->CurrentScene()->GetAllObjects();
+		//for (GameObject* gameObject : gameObjects)
+		//{
+		//	if (gameObject->GetType() == GameObjectType::POINT_LIGHT)
+		//	{
+		//		PointLight* pointLight = static_cast<PointLight*>(obj);
+		//		g_PluggablesSystem->AddWire(this, obj);
+		//	}
+		//}
 	}
 
 	void Terminal::Destroy()
@@ -8376,7 +8376,7 @@ namespace flex
 
 		if (ImGui::Checkbox("Render wireframe", &m_bRenderWireframe))
 		{
-			std::vector<SoftBody*> softBodies = g_SceneManager->CurrentScene()->GetObjectsOfType<SoftBody>();
+			std::vector<SoftBody*> softBodies = g_SceneManager->CurrentScene()->GetObjectsOfType<SoftBody>(GameObjectType::SOFT_BODY);
 			for (SoftBody* softBody : softBodies)
 			{
 				softBody->m_bRenderWireframe = m_bRenderWireframe;
@@ -8385,7 +8385,7 @@ namespace flex
 
 		if (ImGui::SliderFloat("Damping", &m_Damping, 0.0f, 1.0f))
 		{
-			std::vector<SoftBody*> softBodies = g_SceneManager->CurrentScene()->GetObjectsOfType<SoftBody>();
+			std::vector<SoftBody*> softBodies = g_SceneManager->CurrentScene()->GetObjectsOfType<SoftBody>(GameObjectType::SOFT_BODY);
 			for (SoftBody* softBody : softBodies)
 			{
 				softBody->m_Damping = m_Damping;
@@ -8394,7 +8394,7 @@ namespace flex
 
 		if (ImGui::SliderFloat("Stiffness", &m_Stiffness, 0.0f, 1.0f))
 		{
-			std::vector<SoftBody*> softBodies = g_SceneManager->CurrentScene()->GetObjectsOfType<SoftBody>();
+			std::vector<SoftBody*> softBodies = g_SceneManager->CurrentScene()->GetObjectsOfType<SoftBody>(GameObjectType::SOFT_BODY);
 			for (SoftBody* softBody : softBodies)
 			{
 				for (Constraint* constraint : softBody->constraints)
@@ -8409,7 +8409,7 @@ namespace flex
 
 		if (ImGui::SliderFloat("Bending stiffness", &m_BendingStiffness, 0.0f, 1.0f))
 		{
-			std::vector<SoftBody*> softBodies = g_SceneManager->CurrentScene()->GetObjectsOfType<SoftBody>();
+			std::vector<SoftBody*> softBodies = g_SceneManager->CurrentScene()->GetObjectsOfType<SoftBody>(GameObjectType::SOFT_BODY);
 			for (SoftBody* softBody : softBodies)
 			{
 				for (Constraint* constraint : softBody->constraints)

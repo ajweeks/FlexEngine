@@ -197,14 +197,6 @@ namespace flex
 				const glm::vec3 posOffset = glm::vec3(0.0f, 3.0f, 0.0f);
 
 				m_Transform.SetWorldPosition(vehicle->GetTransform()->GetWorldPosition() + posOffset);
-
-
-				//BaseCamera* currentCamera = g_CameraManager->CurrentCamera();
-				//OverheadCamera* overheadCamera = dynamic_cast<OverheadCamera*>(currentCamera);
-				//if (overheadCamera != nullptr)
-				//{
-				//	overheadCamera->;
-				//}
 			} break;
 			}
 		}
@@ -334,7 +326,9 @@ namespace flex
 			{
 			case GameObjectType::TERMINAL:
 			{
-				TerminalCamera* terminalCam = static_cast<TerminalCamera*>(g_CameraManager->CurrentCamera());
+				BaseCamera* cam = g_CameraManager->CurrentCamera();
+				assert(cam->type == CameraType::TERMINAL);
+				TerminalCamera* terminalCam = static_cast<TerminalCamera*>(cam);
 				terminalCam->SetTerminal(nullptr);
 			} break;
 			}
@@ -351,8 +345,13 @@ namespace flex
 			Terminal* terminal = static_cast<Terminal*>(gameObject);
 			m_ObjectInteractingWith = gameObject;
 
-			TerminalCamera* terminalCam = dynamic_cast<TerminalCamera*>(g_CameraManager->CurrentCamera());
-			if (terminalCam == nullptr)
+			BaseCamera* cam = g_CameraManager->CurrentCamera();
+			TerminalCamera* terminalCam = nullptr;
+			if (cam->type == CameraType::TERMINAL)
+			{
+				terminalCam = static_cast<TerminalCamera*>(cam);
+			}
+			else
 			{
 				terminalCam = static_cast<TerminalCamera*>(g_CameraManager->GetCameraByName("terminal"));
 				g_CameraManager->PushCamera(terminalCam, true, true);
@@ -420,15 +419,8 @@ namespace flex
 	{
 		m_bPossessed = false;
 
-		// TODO: Implement more robust solution
 		BaseCamera* cam = g_CameraManager->CurrentCamera();
-		FirstPersonCamera* fpCam = dynamic_cast<FirstPersonCamera*>(cam);
-		OverheadCamera* ohCam = dynamic_cast<OverheadCamera*>(cam);
-		if (fpCam != nullptr || ohCam != nullptr)
-		{
-			m_bPossessed = true;
-		}
-
+		m_bPossessed = cam->bPossessPlayer;
 		m_Controller->UpdateMode();
 	}
 

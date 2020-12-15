@@ -21,8 +21,9 @@ IGNORE_WARNINGS_POP
 namespace flex
 {
 	OverheadCamera::OverheadCamera(real FOV) :
-		BaseCamera("overhead", true, FOV)
+		BaseCamera("overhead", CameraType::OVERHEAD, true, FOV)
 	{
+		bPossessPlayer = true;
 		ResetValues();
 	}
 
