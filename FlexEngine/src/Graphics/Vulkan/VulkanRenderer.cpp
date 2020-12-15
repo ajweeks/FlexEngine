@@ -1966,7 +1966,7 @@ namespace flex
 
 			// Shrink
 			real vertExcess = 1.0f - (real)vertexBufferData->UsedVertexBufferSize / vertSubBufferSize;
-			real indexExcess = 1.0f - (real)indexSubBufferSize / indexSubBufferSize;
+			real indexExcess = 1.0f - (real)newIndexDataSize / indexSubBufferSize;
 			if (vertExcess > 0.5f || indexExcess > 0.5f)
 			{
 				renderObject->dynamicVertexBufferOffset = vertexBuffer->Realloc(renderObject->dynamicVertexBufferOffset, vertexBufferData->UsedVertexBufferSize, true);
