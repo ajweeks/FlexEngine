@@ -340,6 +340,13 @@ namespace flex
 		m_TrackManager.Destroy();
 		m_CartManager.Destroy();
 
+		m_PendingDestroyObjects.clear();
+		m_PendingDeleteObjects.clear();
+		m_PendingAddObjects.clear();
+		m_PendingAddChildObjects.clear();
+
+		m_OnGameObjectDestroyedCallbacks.clear();
+
 		g_Renderer->SetSkyboxMesh(nullptr);
 		g_Renderer->RemoveDirectionalLight();
 		g_Renderer->RemoveAllPointLights();
@@ -394,10 +401,9 @@ namespace flex
 	{
 		if (!m_PendingDeleteObjects.empty())
 		{
-			auto iter = m_PendingDeleteObjects.cbegin();
-			while (iter != m_PendingDeleteObjects.cend())
+			for (GameObject* object : m_PendingDeleteObjects)
 			{
-				iter = RemoveObjectImmediate(iter, false);
+				RemoveObjectImmediate(object, false);
 			}
 			m_PendingDeleteObjects.clear();
 			UpdateRootObjectSiblingIndices();
@@ -406,10 +412,9 @@ namespace flex
 
 		if (!m_PendingDestroyObjects.empty())
 		{
-			auto iter = m_PendingDestroyObjects.cbegin();
-			while (iter != m_PendingDestroyObjects.cend())
+			for (GameObject* object : m_PendingDestroyObjects)
 			{
-				iter = RemoveObjectImmediate(iter, true);
+				RemoveObjectImmediate(object, true);
 			}
 			m_PendingDestroyObjects.clear();
 			UpdateRootObjectSiblingIndices();
@@ -418,7 +423,7 @@ namespace flex
 
 		if (!m_PendingAddObjects.empty())
 		{
-			for (GameObject*& object : m_PendingAddObjects)
+			for (GameObject* object : m_PendingAddObjects)
 			{
 				AddRootObjectImmediate(object);
 			}
@@ -747,73 +752,6 @@ namespace flex
 	bool BaseScene::IsLoaded() const
 	{
 		return m_bLoaded;
-	}
-
-	bool BaseScene::DestroyGameObjectRecursive(GameObject* currentObject,
-		GameObject* targetObject,
-		bool bDestroyChildren)
-	{
-		if (currentObject == targetObject)
-		{
-			for (auto callback : m_OnGameObjectDestroyedCallbacks)
-			{
-				callback->Execute(targetObject);
-			}
-
-			// Target's parent pointer will be cleared upon removing from parent, cache it before that happens
-			GameObject* targetParent = targetObject->m_Parent;
-			if (targetObject->m_Parent)
-			{
-				targetParent->RemoveChildImmediate(targetObject);
-			}
-			else
-			{
-				auto iter = Find(m_RootObjects, targetObject);
-				if (iter != m_RootObjects.end())
-				{
-					m_RootObjects.erase(iter);
-				}
-			}
-
-			// Set children's parents
-			if (!bDestroyChildren)
-			{
-				for (GameObject* childObject : targetObject->m_Children)
-				{
-					if (targetParent)
-					{
-						targetParent->AddChild(childObject);
-					}
-					else
-					{
-						AddRootObject(childObject);
-					}
-				}
-			}
-
-			// If children are still in m_Children array when
-			// targetObject is destroyed they will also be destroyed
-			if (!bDestroyChildren)
-			{
-				targetObject->m_Children.clear();
-			}
-
-			targetObject->Destroy();
-
-			delete targetObject;
-
-			return true;
-		}
-
-		for (GameObject* childObject : currentObject->m_Children)
-		{
-			if (DestroyGameObjectRecursive(childObject, targetObject, bDestroyChildren))
-			{
-				return true;
-			}
-		}
-
-		return false;
 	}
 
 	void BaseScene::ParseFoundMeshFiles()
@@ -1158,7 +1096,7 @@ namespace flex
 						if ((bRootObject || bRootSibling) &&
 							draggedGameObject->GetParent())
 						{
-							draggedGameObject->GetParent()->RemoveChildImmediate(draggedGameObject);
+							draggedGameObject->GetParent()->RemoveChildImmediate(draggedGameObject, false);
 							g_SceneManager->CurrentScene()->AddRootObject(draggedGameObject);
 						}
 					}
@@ -1962,73 +1900,72 @@ namespace flex
 		}
 	}
 
-	std::vector<GameObject*>::const_iterator BaseScene::RemoveObjectImmediate(std::vector<GameObject*>::const_iterator objectIter, bool bDestroy)
+	void BaseScene::RemoveObjectImmediate(GameObject* gameObject, bool bDestroy)
 	{
-		GameObject* rootObject = *objectIter;
+		const bool bRootObject = (gameObject->GetParent() == nullptr);
 
-		const bool bRootObject = rootObject->GetParent() != nullptr;
+		RemoveObjectImmediateRecursive(gameObject, bDestroy);
 
-		auto childIter = rootObject->m_Children.cbegin();
-		while (childIter != rootObject->m_Children.cend())
+		if (bRootObject)
 		{
-			childIter = RemoveObjectImmediate(childIter, bDestroy);
+			auto iter = m_RootObjects.begin();
+			while (iter != m_RootObjects.end())
+			{
+				if (*iter == gameObject)
+				{
+					m_RootObjects.erase(iter);
+					break;
+				}
+				++iter;
+			}
+		}
+		else
+		{
+			if (!bDestroy)
+			{
+				gameObject->GetParent()->RemoveChildImmediate(gameObject, bDestroy);
+			}
+		}
+	}
+
+	void BaseScene::RemoveObjectImmediateRecursive(GameObject* gameObject, bool bDestroy)
+	{
+		const bool bRootObject = (gameObject->GetParent() == nullptr);
+
+		if (bDestroy)
+		{
+			while (!gameObject->m_Children.empty())
+			{
+				// gameObject->m_Children will shrink by one for each call since bDestroy will ensure children are detached from us
+				RemoveObjectImmediateRecursive(gameObject->m_Children[gameObject->m_Children.size() - 1], bDestroy);
+			}
+		}
+		else
+		{
+			auto childIter = gameObject->m_Children.begin();
+			while (childIter != gameObject->m_Children.end())
+			{
+				RemoveObjectImmediateRecursive(*childIter, bDestroy);
+				childIter = gameObject->m_Children.erase(childIter);
+			}
 		}
 
 		if (bDestroy)
 		{
-			rootObject->Destroy();
-			delete* objectIter;
+			gameObject->Destroy();
+			delete gameObject;
 		}
 		else
 		{
-			rootObject->DetachFromParent();
+			gameObject->DetachFromParent();
 		}
-
-		if (bRootObject)
-		{
-			std::vector<GameObject*>::const_iterator result = m_RootObjects.erase(objectIter);
-			return result;
-		}
-		else
-		{
-			return objectIter;
-		}
-	}
-
-	bool BaseScene::RemoveObjectImmediate(GameObject* gameObject, bool bDestroy)
-	{
-		for (auto iter = m_RootObjects.begin(); iter != m_RootObjects.end(); ++iter)
-		{
-			if (*iter == gameObject)
-			{
-				if (bDestroy)
-				{
-					(*iter)->Destroy();
-					delete* iter;
-				}
-
-				m_RootObjects.erase(iter);
-				UpdateRootObjectSiblingIndices();
-				return true;
-			}
-
-			for (auto childIter = (*iter)->m_Children.cbegin(); childIter != (*iter)->m_Children.cend(); ++childIter)
-			{
-				if (RemoveObjectImmediate(*childIter, bDestroy))
-				{
-					return true;
-				}
-			}
-		}
-
-		return false;
 	}
 
 	void BaseScene::RemoveObjects(const std::vector<GameObject*>& gameObjects, bool bDestroy)
 	{
 		if (bDestroy)
 		{
-			m_PendingDestroyObjects.insert(m_PendingDeleteObjects.end(), gameObjects.begin(), gameObjects.end());
+			m_PendingDestroyObjects.insert(m_PendingDestroyObjects.end(), );
 		}
 		else
 		{

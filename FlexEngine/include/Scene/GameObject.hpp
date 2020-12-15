@@ -90,7 +90,7 @@ namespace flex
 
 		GameObject* AddChild(GameObject* child);
 		GameObject* AddChildImmediate(GameObject* child);
-		bool RemoveChildImmediate(GameObject* child);
+		bool RemoveChildImmediate(GameObject* child, bool bDestroy);
 		const std::vector<GameObject*>& GetChildren() const;
 		u32 GetChildCountOfType(GameObjectType objType, bool bRecurse);
 
@@ -1030,7 +1030,6 @@ namespace flex
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL) override;
 
 		virtual void Initialize() override;
-		virtual void PostInitialize() override;
 		virtual void Update() override;
 		virtual void Destroy() override;
 
@@ -1056,9 +1055,9 @@ namespace flex
 
 		GameObject* m_OriginTransform = nullptr;
 
+		// We manage these objects ourselves rather than adding them to the scene
 		bool m_bSimulateTarget = true;
 		SoftBody* m_SpringSim = nullptr;
-
 		GameObject* m_Bobber = nullptr;
 
 		std::vector<glm::vec3> extendedPositions;

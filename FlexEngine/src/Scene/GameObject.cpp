@@ -1600,7 +1600,7 @@ namespace flex
 	{
 		if (m_Parent)
 		{
-			m_Parent->RemoveChildImmediate(this);
+			m_Parent->RemoveChildImmediate(this, false);
 		}
 	}
 
@@ -1722,7 +1722,7 @@ namespace flex
 		return child;
 	}
 
-	bool GameObject::RemoveChildImmediate(GameObject* child)
+	bool GameObject::RemoveChildImmediate(GameObject* child, bool bDestroy)
 	{
 		if (!child)
 		{
@@ -1733,24 +1733,23 @@ namespace flex
 		{
 			if (*iter == child)
 			{
-				glm::mat4 childWorldTransform = child->GetTransform()->GetWorldTransform();
+				if (bDestroy)
+				{
+					child->Destroy();
+					delete child;
+				}
+				else
+				{
+					glm::mat4 childWorldTransform = child->GetTransform()->GetWorldTransform();
 
-				child->SetParent(nullptr);
+					child->SetParent(nullptr);
 
-				child->GetTransform()->SetWorldTransform(childWorldTransform);
+					child->GetTransform()->SetWorldTransform(childWorldTransform);
+				}
 
 				g_SceneManager->CurrentScene()->UpdateRootObjectSiblingIndices();
 
 				m_Children.erase(iter);
-
-				//if (m_Type != GameObjectType::TERMINAL)
-				//{
-				//	u32 socketCount = GetChildCountOfType(GameObjectType::SOCKET, false);
-				//	if (socketCount == 0)
-				//	{
-				//		m_bInteractable = false;
-				//	}
-				//}
 
 				return true;
 			}
@@ -7332,14 +7331,13 @@ namespace flex
 		if (m_bSimulateTarget)
 		{
 			m_SpringSim = new SoftBody("Spring sim");
-			m_SpringSim->points = std::vector<Point*>{ new Point(VEC3_ZERO, VEC3_ZERO, 0.0f), new Point(initialTargetPos, VEC3_ZERO, 1.0f/20.0f) };
+			m_SpringSim->points = std::vector<Point*>{ new Point(VEC3_ZERO, VEC3_ZERO, 0.0f), new Point(initialTargetPos, VEC3_ZERO, 1.0f / 20.0f) };
 			m_SpringSim->SetSerializable(false);
 			m_SpringSim->SetVisibleInSceneExplorer(false);
 			real stiffness = 0.02f;
 			m_SpringSim->SetStiffness(stiffness);
 			m_SpringSim->SetDamping(0.999f);
 			m_SpringSim->AddUniqueDistanceConstraint(0, 1, 0, stiffness);
-			AddChild(m_SpringSim);
 			m_SpringSim->Initialize();
 			m_SpringSim->PostInitialize();
 
@@ -7348,7 +7346,6 @@ namespace flex
 			m_Bobber->SetVisibleInSceneExplorer(false);
 			Mesh* bobberMesh = m_Bobber->SetMesh(new Mesh(m_Bobber));
 			bobberMesh->LoadFromFile(MESH_DIRECTORY "sphere.glb", bobberMatID);
-			AddChild(m_Bobber);
 			m_Bobber->Initialize();
 			m_Bobber->PostInitialize();
 		}
@@ -7363,11 +7360,6 @@ namespace flex
 		}
 
 		GameObject::Initialize();
-	}
-
-	void SpringObject::PostInitialize()
-	{
-		GameObject::PostInitialize();
 	}
 
 	void SpringObject::Update()
@@ -7416,6 +7408,9 @@ namespace flex
 		GameObject::Update();
 
 		g_Renderer->GetDebugDrawer()->DrawAxes(ToBtVec3(originTransform->GetWorldPosition()), ToBtQuaternion(originTransform->GetWorldRotation()), 2.0f);
+
+		m_SpringSim->Update();
+		m_Bobber->Update();
 	}
 
 	void SpringObject::Destroy()
@@ -7426,10 +7421,15 @@ namespace flex
 		m_ContractedMesh->Destroy();
 		delete m_ContractedMesh;
 
-		g_SceneManager->CurrentScene()->RemoveObject(m_SpringSim, true);
+		m_SpringSim->Destroy();
+		delete m_SpringSim;
 		m_SpringSim = nullptr;
-		g_SceneManager->CurrentScene()->RemoveObject(m_Bobber, true);
+
+		m_Bobber->Destroy();
+		delete m_Bobber;
 		m_Bobber = nullptr;
+
+
 
 		GameObject::Destroy();
 	}

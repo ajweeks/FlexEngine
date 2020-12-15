@@ -70,11 +70,9 @@ namespace flex
 		void RemoveAllRootObjects(bool bDestroy);
 		void RemoveAllRootObjectsImmediate(bool bDestroy);
 		void RemoveObject(GameObject* gameObject, bool bDestroy);
-		bool RemoveObjectImmediate(GameObject* gameObject, bool bDestroy);
+		void RemoveObjectImmediate(GameObject* gameObject, bool bDestroy);
 		void RemoveObjects(const std::vector<GameObject*>& gameObjects, bool bDestroy);
 		void RemoveObjectsImmediate(const std::vector<GameObject*>& gameObjects, bool bDestroy);
-		std::vector<GameObject*>::const_iterator RemoveObjectImmediate(std::vector<GameObject*>::const_iterator objectIter, bool bDestroy);
-
 
 		GameObject* FirstObjectWithTag(const std::string& tag);
 
@@ -140,9 +138,7 @@ namespace flex
 		friend CartManager;
 		friend SceneManager;
 
-		// Recursively finds targetObject in currentObject's children
-		// Returns true if targetObject was found and deleted
-		bool DestroyGameObjectRecursive(GameObject* currentObject, GameObject* targetObject, bool bDestroyChildren);
+		void RemoveObjectImmediateRecursive(GameObject* gameObject, bool bDestroy);
 
 		void UpdateRootObjectSiblingIndices();
 
