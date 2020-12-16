@@ -2785,17 +2785,26 @@ namespace flex
 				m_bVisible = receivedSignal == 1;
 				data.enabled = m_bVisible ? 1 : 0;
 			}
+		}
 
-			if (data.enabled)
+		if (data.enabled)
+		{
+			PhysicsDebugDrawBase* debugDrawer = g_Renderer->GetDebugDrawer();
+
+			glm::vec3 forward = m_Transform.GetForward();
+			glm::vec3 right = m_Transform.GetRight();
+			glm::vec3 up = m_Transform.GetUp();
+			real lineLength = 2.0f;
+			real spacing = 0.75f;
+			glm::vec3 scaledForward = forward * lineLength;
+			glm::vec3 offsets[] = { -up, up, -right, right, VEC3_ZERO };
+			btVector3 lineColour = ToBtVec3(data.colour);
+			for (const glm::vec3& offset : offsets)
 			{
-				glm::vec3 offsets[] = { -m_Transform.GetUp(), m_Transform.GetUp(), -m_Transform.GetForward(), m_Transform.GetForward(), VEC3_ZERO };
-				for (const glm::vec3& offset : offsets)
-				{
-					btVector3 lightPos = ToBtVec3(pos + offset);
-					btVector3 lineEnd = ToBtVec3(pos - data.dir * 2.0f + offset);
-					btVector3 lineColour = ToBtVec3(data.colour);
-					g_Renderer->GetDebugDrawer()->drawLine(lightPos, lineEnd, lineColour);
-				}
+				glm::vec3 basePos = pos + offset * spacing;
+				btVector3 lightPos = ToBtVec3(basePos);
+				btVector3 lineEnd = ToBtVec3(basePos + scaledForward);
+				debugDrawer->drawLine(lightPos, lineEnd, lineColour);
 			}
 		}
 
@@ -2844,7 +2853,7 @@ namespace flex
 	void DirectionalLight::OnTransformChanged()
 	{
 		pos = m_Transform.GetLocalPosition();
-		data.dir = glm::rotate(m_Transform.GetWorldRotation(), VEC3_RIGHT);
+		data.dir = glm::rotate(m_Transform.GetWorldRotation(), -VEC3_FORWARD);
 	}
 
 	void DirectionalLight::SetPos(const glm::vec3& newPos)
