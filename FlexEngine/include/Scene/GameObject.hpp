@@ -1035,8 +1035,8 @@ namespace flex
 
 		virtual void DrawImGuiObjects() override;
 
-		//virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		//virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
 
 
 	private:
@@ -1052,6 +1052,7 @@ namespace flex
 		GameObject* m_Target = nullptr;
 		real m_MinLength = 5.0f;
 		real m_MaxLength = 10.0f;
+		glm::vec3 m_TargetPos = VEC3_ZERO;
 
 		GameObject* m_OriginTransform = nullptr;
 

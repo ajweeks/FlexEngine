@@ -1492,7 +1492,7 @@ namespace flex
 			Mesh::Type prefabType = m_Mesh->GetType();
 			if (prefabType == Mesh::Type::PREFAB)
 			{
-				PrefabShape shape = m_Mesh->GetSubMeshes()[0]->GetShape();
+				PrefabShape shape = m_Mesh->GetSubMesh(0)->GetShape();
 				newMesh->LoadPrefabShape(shape, matIDs[0], createInfoPtr);
 			}
 			else if (prefabType == Mesh::Type::FILE)
@@ -3651,7 +3651,7 @@ namespace flex
 		DiscoverChunks();
 		UpdateWaveVertexData();
 
-		MeshComponent* meshComponent = m_Mesh->GetSubMeshes()[0];
+		MeshComponent* meshComponent = m_Mesh->GetSubMesh(0);
 		if (!m_Indices.empty())
 		{
 			meshComponent->UpdateDynamicVertexData(m_VertexBufferCreateInfo, m_Indices);
@@ -4576,7 +4576,7 @@ namespace flex
 		{
 			ImGui::NewLine();
 
-			MeshComponent* meshComponent = m_Mesh->GetSubMeshes()[0];
+			MeshComponent* meshComponent = m_Mesh->GetSubMesh(0);
 
 			{
 				char byteCountStr[64];
@@ -7325,13 +7325,23 @@ namespace flex
 		extendedVertBufferData->CopyInto((real*)m_DynamicVertexBufferCreateInfo.texCoords_UV.data(), (VertexAttributes)VertexAttribute::UV);
 		extendedVertBufferData->CopyInto((real*)m_DynamicVertexBufferCreateInfo.colours_R32G32B32A32.data(), (VertexAttributes)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT);
 
-		glm::vec3 initialTargetPos = m_Transform.GetWorldPosition() + m_Transform.GetUp() * m_MinLength;
+		glm::vec3 initialRootPos = m_Transform.GetWorldPosition();
+		glm::vec3 initialTargetPos;
+		if (m_TargetPos == VEC3_ZERO)
+		{
+			initialTargetPos = initialRootPos + m_Transform.GetUp() * m_MinLength;
+		}
+		else
+		{
+			initialTargetPos = m_TargetPos;
+		}
+
 		//m_Target->GetTransform()->SetWorldPosition(initialTargetPos);
 
 		if (m_bSimulateTarget)
 		{
 			m_SpringSim = new SoftBody("Spring sim");
-			m_SpringSim->points = std::vector<Point*>{ new Point(VEC3_ZERO, VEC3_ZERO, 0.0f), new Point(initialTargetPos, VEC3_ZERO, 1.0f / 20.0f) };
+			m_SpringSim->points = std::vector<Point*>{ new Point(initialRootPos, VEC3_ZERO, 0.0f), new Point(initialTargetPos, VEC3_ZERO, 1.0f / 20.0f) };
 			m_SpringSim->SetSerializable(false);
 			m_SpringSim->SetVisibleInSceneExplorer(false);
 			real stiffness = 0.02f;
@@ -7387,7 +7397,7 @@ namespace flex
 			m_DynamicVertexBufferCreateInfo.normals[i] = Lerp(contractedNormals[i], extendedNormals[i], t);
 			m_DynamicVertexBufferCreateInfo.tangents[i] = Lerp(contractedTangents[i], extendedTangents[i], t);
 		}
-		m_Mesh->GetSubMeshes()[0]->UpdateDynamicVertexData(m_DynamicVertexBufferCreateInfo, m_Indices);
+		m_Mesh->GetSubMesh(0)->UpdateDynamicVertexData(m_DynamicVertexBufferCreateInfo, m_Indices);
 
 		glm::vec3 lookDir = rootPos - targetPos;
 		real lookLen = glm::length(lookDir);
@@ -7429,8 +7439,6 @@ namespace flex
 		delete m_Bobber;
 		m_Bobber = nullptr;
 
-
-
 		GameObject::Destroy();
 	}
 
@@ -7450,6 +7458,27 @@ namespace flex
 		ImGui::Text("Origin");
 		m_Bobber->DrawImGuiObjects();
 
+	}
+
+	void SpringObject::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	{
+		FLEX_UNUSED(scene);
+		FLEX_UNUSED(matIDs);
+
+		JSONObject springObj;
+		if (parentObject.SetObjectChecked("spring", springObj))
+		{
+			m_TargetPos = springObj.GetVec3("end point");
+		}
+	}
+
+	void SpringObject::SerializeUniqueFields(JSONObject& parentObject) const
+	{
+		JSONObject springObj = {};
+
+		springObj.fields.emplace_back("end point", JSONValue(VecToString(m_SpringSim->points[1]->pos)));
+
+		parentObject.fields.emplace_back("spring", JSONValue(springObj));
 	}
 
 	DistanceConstraint::DistanceConstraint(i32 pointIndex0, i32 pointIndex1, real stiffness, real targetDistance) :
@@ -8013,8 +8042,7 @@ namespace flex
 			m_MeshVertexBufferCreateInfo = {};
 			m_MeshVertexBufferCreateInfo.attributes = g_Renderer->GetShader(g_Renderer->GetMaterial(m_MeshMaterialID)->shaderID)->vertexAttributes;
 
-			std::vector<MeshComponent*> meshes = m_Mesh->GetSubMeshes();
-			m_MeshComponent = meshes[0];
+			m_MeshComponent = m_Mesh->GetSubMesh(0);
 			VertexBufferData* vertexBufferData = m_MeshComponent->GetVertexBufferData();
 			std::vector<u32> indexData = m_MeshComponent->GetIndexBuffer();
 			std::vector<glm::vec3> posData(vertexBufferData->VertexCount);

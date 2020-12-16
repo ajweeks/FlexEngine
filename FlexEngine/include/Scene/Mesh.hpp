@@ -93,6 +93,7 @@ namespace flex
 
 		MeshComponent* GetSubMeshWithRenderID(RenderID renderID) const;
 		std::vector<MeshComponent*> GetSubMeshes() const;
+		MeshComponent* GetSubMesh(u32 index) const;
 
 		GameObject* GetOwningGameObject() const;
 

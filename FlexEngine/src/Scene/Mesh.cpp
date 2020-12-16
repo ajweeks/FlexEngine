@@ -505,6 +505,11 @@ namespace flex
 		return m_Meshes;
 	}
 
+	MeshComponent* Mesh::GetSubMesh(u32 index) const
+	{
+		return m_Meshes[index];
+	}
+
 	GameObject* Mesh::GetOwningGameObject() const
 	{
 		return m_OwningGameObject;
