@@ -6,6 +6,7 @@ namespace flex
 {
 	sec Time::CurrentSeconds()
 	{
+		// TODO: Replace
 		return (sec)glfwGetTime();
 	}
 

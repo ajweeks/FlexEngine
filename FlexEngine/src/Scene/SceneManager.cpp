@@ -129,6 +129,8 @@ namespace flex
 		PostInitializeCurrentScene();
 		g_CameraManager->Initialize();
 
+		g_EngineInstance->SetFramesToFakeDT(3);
+
 		return true;
 	}
 

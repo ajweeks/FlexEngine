@@ -41,6 +41,8 @@ namespace flex
 
 		void CreateCameraInstances();
 
+		void SetFramesToFakeDT(i32 frameCount);
+
 		static void GenerateRayAtMousePos(btVector3& outRayStart, btVector3& outRayEnd);
 
 		// Returns the intersection point of the given ray & plane, projected on to axis
@@ -64,6 +66,7 @@ namespace flex
 		// TODO: Figure out how to make this not cause a memory leak!
 		static std::string s_CurrentWorkingDirectory;
 
+		// TODO: Move to text file
 		enum class SoundEffect
 		{
 			dud_dud_dud_dud,
@@ -131,7 +134,7 @@ namespace flex
 		bool m_bRenderEditorObjects = true;
 		bool m_bUpdateProfilerFrame = false;
 
-		const sec m_MinDT = 0.0001f;
+		const sec m_MinDT = 1.0f / 360.0f;
 		const sec m_MaxDT = 1.0f;
 
 		bool m_bSimulationPaused = false;
@@ -222,6 +225,12 @@ namespace flex
 		i32 m_RenderDocAutoCaptureFrameOffset = -1;
 		i32 m_RenderDocAutoCaptureFrameCount = -1;
 #endif
+
+		// When non-zero we should override g_DeltaTime
+		// Used when doing expensive operations (like scene loading)
+		// to prevent massive dt values messing systems up
+		i32 m_FramesToFakeDT = 3;
+		sec m_FakeDT = 1.0f / 60.0f;
 
 		sec SecSinceLogSave = 0.0f;
 		sec LogSaveRate = 5.0f;

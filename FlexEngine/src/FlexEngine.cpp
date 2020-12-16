@@ -500,8 +500,16 @@ namespace flex
 
 			g_Window->PollEvents();
 
-			const sec frameEndTime = now;
-			const sec secondsElapsed = frameEndTime - frameStartTime;
+			sec frameEndTime = now;
+
+			if (m_FramesToFakeDT > 0)
+			{
+				--m_FramesToFakeDT;
+				// Pretend this frame started m_FakeDT seconds ago to prevent spike
+				frameStartTime = frameEndTime - m_FakeDT;
+			}
+
+			sec secondsElapsed = frameEndTime - frameStartTime;
 			frameStartTime = frameEndTime;
 
 
@@ -1695,6 +1703,11 @@ namespace flex
 		{
 			PrintWarn("Failed to write bootup times file: %s\n", m_BootupTimesAbsFilePath.c_str());
 		}
+	}
+
+	void FlexEngine::SetFramesToFakeDT(i32 frameCount)
+	{
+		m_FramesToFakeDT = frameCount;
 	}
 
 	std::string FlexEngine::EngineVersionString()
