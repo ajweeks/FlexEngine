@@ -83,6 +83,13 @@ namespace flex
 	static constexpr auto InvalidSpecializationConstantID = (SpecializationConstantID)u32_max;
 	static constexpr auto InvalidID = u32_max;
 
+	static constexpr i32 GUIDInLength = 6;
+	static constexpr i32 GUIDLength = 8;
+	struct GUID
+	{
+		char data[GUIDLength];
+	};
+
 	//template<bool> struct StaticAssert;
 	//template<> struct StaticAssert<true> {};
 

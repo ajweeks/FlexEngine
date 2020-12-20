@@ -411,6 +411,32 @@ namespace flex
 		return result.str();
 	}
 
+	u64 Platform::GetUSSinceEpoch()
+	{
+		struct timeval tv;
+
+		gettimeofday(&tv, NULL);
+
+		u64 result = tv.tv_usec;
+
+		// Convert from micro seconds (10^-6) to milliseconds (10^-3)
+		//result /= 1000;
+
+		// Adds the seconds (10^0) after converting them to milliseconds (10^-3)
+		//result += (tv.tv_sec * 1000);
+
+		// Adds the seconds (10^0)
+		result += (tv.tv_sec * 1000000);
+
+		return ret;
+	}
+
+	u64 Platform::RotateLeftU64(u64 val, i32 shift)
+	{
+		// TODO: Test
+		return _rotl(val, shift);  // gcc, icc, msvc.  Intel-defined.
+	}
+
 	u32 Platform::AtomicIncrement(volatile u32* value)
 	{
 		return __sync_fetch_and_add(value, 1);

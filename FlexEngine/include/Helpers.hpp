@@ -188,6 +188,12 @@ namespace flex
 	// Returns random value in range [min, max)
 	real RandomFloat(real min, real max);
 
+	bool Base64Encode(const u8* src, char* dst, size_t len);
+	bool Base64Decode(const void* src, u8* dst, const size_t len);
+
+	GUID NextGUID();
+	std::string GUIDToString(const GUID& guid);
+
 	void ByteCountToString(char buf[], u32 bufSize, u32 bytes);
 
 	real MinComponent(const glm::vec2& vec);

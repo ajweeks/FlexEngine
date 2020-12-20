@@ -17,6 +17,7 @@ IGNORE_WARNINGS_POP
 #include "Graphics/Renderer.hpp" // For MAX_TEXTURE_DIM
 #include "Platform/Platform.hpp"
 #include "Transform.hpp"
+#include "Time.hpp"
 
 // Taken from "AL/al.h":
 #define AL_FORMAT_MONO8                           0x1100
@@ -47,6 +48,17 @@ static const __m128 _ps_coscof_p0 = _mm_set1_ps(2.443315711809948E-005f);
 static const __m128 _ps_coscof_p1 = _mm_set1_ps(-1.388731625493765E-003f);
 static const __m128 _ps_coscof_p2 = _mm_set1_ps(4.166664568298827E-002f);
 static const __m128 _ps_cephes_FOPI = _mm_set1_ps(1.27323954473516f);
+
+static const unsigned char base64_table[65] =
+"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+static const int B64index[256] = { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+	0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+	0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 62, 63, 62, 62, 63, 52, 53, 54, 55,
+	56, 57, 58, 59, 60, 61,  0,  0,  0,  0,  0,  0,  0,  0,  1,  2,  3,  4,  5,  6,
+	7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,  0,
+	0,  0,  0, 63,  0, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+	41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51 };
 
 namespace flex
 {
@@ -1427,6 +1439,104 @@ namespace flex
 		return randN * (max - min) + min;
 	}
 
+	bool Base64Encode(const u8* src, char* dst, size_t len)
+	{
+		u8* out;
+		u8* pos;
+		const u8* end;
+		const u8* in;
+
+		size_t olen = 4 * ((len + 2) / 3); // 3-byte blocks to 4-byte
+
+		if (olen < len)
+		{
+			// Integer overflow
+			return false;
+		}
+
+		out = (u8*)dst;
+
+		end = src + len;
+		in = src;
+		pos = out;
+		while (end - in >= 3)
+		{
+			*pos++ = base64_table[in[0] >> 2];
+			*pos++ = base64_table[((in[0] & 0x03) << 4) | (in[1] >> 4)];
+			*pos++ = base64_table[((in[1] & 0x0f) << 2) | (in[2] >> 6)];
+			*pos++ = base64_table[in[2] & 0x3f];
+			in += 3;
+		}
+
+		if (end - in)
+		{
+			*pos++ = base64_table[in[0] >> 2];
+			if (end - in == 1)
+			{
+				*pos++ = base64_table[(in[0] & 0x03) << 4];
+				*pos++ = '=';
+			}
+			else
+			{
+				*pos++ = base64_table[((in[0] & 0x03) << 4) | (in[1] >> 4)];
+				*pos++ = base64_table[(in[1] & 0x0f) << 2];
+			}
+			*pos++ = '=';
+		}
+
+		return true;
+	}
+
+	bool Base64Decode(const void* src, u8* dst, const size_t len)
+	{
+		u8* p = (u8*)src;
+		int pad = len > 0 && (len % 4 || p[len - 1] == '=');
+		const size_t L = ((len + 3) / 4 - pad) * 4;
+
+		//u32 len = (L / 4 * 3 + pad, '\0');
+
+		u32 j = 0;
+		for (size_t i = 0; i < L; i += 4)
+		{
+			int n = B64index[p[i]] << 18 | B64index[p[i + 1]] << 12 | B64index[p[i + 2]] << 6 | B64index[p[i + 3]];
+			dst[j++] = (u8)(n >> 16);
+			dst[j++] = (u8)(n >> 8 & 0xFF);
+			dst[j++] = (u8)(n & 0xFF);
+		}
+
+		if (pad)
+		{
+			int n = B64index[p[L]] << 18 | B64index[p[L + 1]] << 12;
+			dst[j++] = (u8)(n >> 16);
+
+			if (len > L + 2 && p[L + 2] != '=')
+			{
+				n |= B64index[p[L + 2]] << 6;
+				dst[j++] = ((u8)(n >> 8 & 0xFF));
+			}
+		}
+
+		return true;
+	}
+
+	GUID NextGUID()
+	{
+		// TODO: Compute likelihood of collision with 8 digits
+		static u64 counter = 0;
+		counter++;
+		// TODO: Is this real bad? Or just not great?
+		u64 now = Platform::GetUSSinceEpoch() + counter;
+		now = Platform::RotateLeftU64(now, (i32)(now % 63));
+		GUID result;
+		Base64Encode((const u8*)&now, result.data, GUIDInLength);
+		return result;
+	}
+
+	std::string GUIDToString(const GUID& guid)
+	{
+		return std::string(guid.data, guid.data + GUIDLength);
+	}
+
 	void ByteCountToString(char buf[], u32 bufSize, u32 bytes)
 	{
 		const char* suffixes[] = { "B", "KB", "MB", "GB", "TB", "PB" };
@@ -1679,7 +1789,7 @@ namespace flex
 
 		bool ColorEdit3Gamma(const char* label, real* v, ImGuiColorEditFlags flags /* = 0 */)
 		{
-			glm::vec3 vg = glm::pow(glm::vec3(v[0], v[1], v[2]), glm::vec3(1.0f/2.2f));
+			glm::vec3 vg = glm::pow(glm::vec3(v[0], v[1], v[2]), glm::vec3(1.0f / 2.2f));
 			bool bResult = ImGui::ColorEdit3(label, &vg.x, flags);
 
 			if (bResult)

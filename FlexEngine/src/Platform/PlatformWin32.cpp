@@ -395,6 +395,36 @@ namespace flex
 		return result.str();
 	}
 
+	u64 Platform::GetUSSinceEpoch()
+	{
+		FILETIME ft;
+		LARGE_INTEGER li;
+
+		// Get the amount of 100 nano seconds intervals elapsed since January 1, 1601 (UTC) and
+		// copy it to a LARGE_INTEGER structure.
+		GetSystemTimeAsFileTime(&ft);
+		li.LowPart = ft.dwLowDateTime;
+		li.HighPart = ft.dwHighDateTime;
+
+		u64 result = li.QuadPart;
+
+		// Convert from file time to UNIX epoch time
+		result -= 116444736000000000LL;
+
+		// Convert from 100 nano second (10^-7) intervals to 1 millisecond (10^-3) intervals
+		//result /= 10000;
+
+		// Convert from 100 nano second (10^-7) intervals to 1 microsecond (10^-6) intervals
+		result /= 10;
+
+		return result;
+	}
+
+	u64 Platform::RotateLeftU64(u64 val, i32 shift)
+	{
+		return RotateLeft64(val, shift);
+	}
+
 	u32 Platform::AtomicIncrement(volatile u32* value)
 	{
 		return InterlockedIncrement(value);
