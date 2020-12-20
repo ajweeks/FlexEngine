@@ -29,6 +29,18 @@ namespace flex
 		class VirtualMachine;
 	}
 
+	struct PrefabInfo
+	{
+		std::string name;
+		GameObjectType type;
+		std::string prefabType;
+		bool bPrefab;
+		bool bVisible;
+		Transform transform;
+
+		JSONObject sourceData;
+	};
+
 	class GameObject
 	{
 	public:
@@ -50,6 +62,9 @@ namespace flex
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL);
 
 		static GameObject* CreateObjectFromJSON(const JSONObject& obj, BaseScene* scene, i32 fileVersion);
+		static GameObject* CreateObjectFromPrefabInfo(const PrefabInfo& prefabInfo, BaseScene* scene, i32 fileVersion);
+
+		static GameObject* CreateObjectOfType(GameObjectType gameObjectType, const std::string& objectName);
 
 		virtual void Initialize();
 		virtual void PostInitialize();
@@ -65,6 +80,8 @@ namespace flex
 
 		virtual void OnTransformChanged();
 
+		virtual void ParseJSON(const JSONObject& obj, BaseScene* scene, i32 fileVersion, MaterialID overriddenMatID = InvalidMaterialID);
+
 		virtual bool AllowInteractionWith(GameObject* gameObject);
 		virtual void SetInteractingWith(GameObject* gameObject);
 		bool IsBeingInteractedWith() const;
@@ -74,7 +91,6 @@ namespace flex
 		GameObject* GetObjectInteractingWith();
 
 		JSONObject Serialize(const BaseScene* scene) const;
-		void ParseJSON(const JSONObject& obj, BaseScene* scene, i32 fileVersion, MaterialID overriddenMatID = InvalidMaterialID);
 
 		void RemoveRigidBody();
 
@@ -186,6 +202,9 @@ namespace flex
 
 		static const char* s_DefaultNewGameObjectName;
 
+		static AudioCue s_SqueakySounds;
+		static AudioSourceID s_BunkSound;
+
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs);
 		virtual void SerializeUniqueFields(JSONObject& parentObject) const;
 
@@ -264,9 +283,6 @@ namespace flex
 		std::vector<GameObject*> m_Children;
 
 		Mesh* m_Mesh = nullptr;
-
-		static AudioSourceID s_BunkSound;
-		static AudioCue s_SqueakySounds;
 
 	private:
 		void DrawImGuiForSelfInternal();
@@ -1038,10 +1054,16 @@ namespace flex
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
 		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
 
+		virtual void ParseJSON(const JSONObject& obj, BaseScene* scene, i32 fileVersion, MaterialID overriddenMatID = InvalidMaterialID) override;
 
 	private:
+		static void CreateMaterials();
+
 		static const char* s_ExtendedMeshFilePath;
 		static const char* s_ContractedMeshFilePath;
+
+		static MaterialID s_SpringMatID;
+		static MaterialID s_BobberMatID;
 
 		MeshComponent* m_ExtendedMesh = nullptr;
 		MeshComponent* m_ContractedMesh = nullptr;

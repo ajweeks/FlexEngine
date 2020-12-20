@@ -46,17 +46,17 @@ namespace flex
 		* be enforced (filled with default value if not present in mesh)
 		*/
 		void SetRequiredAttributesFromMaterialID(MaterialID matID);
+
 		static MeshComponent* LoadFromCGLTF(Mesh* owningMesh,
 			cgltf_primitive* primitive,
 			MaterialID materialID,
-			MeshImportSettings* importSettings = nullptr,
-			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
+			RenderObjectCreateInfo* optionalCreateInfo = nullptr,
+			bool bCreateRenderObject = true);
 
 		static MeshComponent* LoadFromCGLTFDynamic(Mesh* owningMesh,
 			cgltf_primitive* primitive,
 			MaterialID materialID,
 			u32 initialMaxVertexCount = u32_max,
-			MeshImportSettings* importSettings = nullptr,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
 		static MeshComponent* LoadFromMemory(Mesh* owningMesh,
@@ -124,8 +124,8 @@ namespace flex
 			MaterialID materialID,
 			bool bDynamic,
 			u32 initialMaxDynamicVertexCount,
-			MeshImportSettings* importSettings,
-			RenderObjectCreateInfo* optionalCreateInfo);
+			RenderObjectCreateInfo* optionalCreateInfo,
+			bool bCreateRenderObject);
 
 		real CalculateBoundingSphereScale() const;
 

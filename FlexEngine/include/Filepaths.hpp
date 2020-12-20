@@ -19,10 +19,9 @@ namespace flex
 
 #define SCENE_DEFAULT_LOCATION		RESOURCE_LOCATION "scenes/default/"
 #define SCENE_SAVED_LOCATION		RESOURCE_LOCATION "scenes/saved/"
-#define PREFAB_LOCATION				RESOURCE_LOCATION "scenes/prefabs/"
+#define PREFAB_DIRECTORY			RESOURCE_LOCATION "scenes/prefabs/"
 
 #define MESH_DIRECTORY				RESOURCE_LOCATION "meshes/"
-#define MESHES_FILE_LOCATION		RESOURCE_LOCATION "scenes/meshes.json"
 #define MATERIALS_FILE_LOCATION		RESOURCE_LOCATION "scenes/materials.json"
 
 #define TEXTURE_LOCATION			RESOURCE_LOCATION "textures/"

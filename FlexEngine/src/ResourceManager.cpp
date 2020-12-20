@@ -21,8 +21,10 @@ IGNORE_WARNINGS_POP
 #include "JSONParser.hpp"
 #include "Platform/Platform.hpp"
 #include "Profiler.hpp"
+#include "Scene/GameObject.hpp"
 #include "Scene/LoadedMesh.hpp"
 #include "Scene/Mesh.hpp"
+#include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Window/Monitor.hpp"
@@ -46,8 +48,6 @@ namespace flex
 
 	void ResourceManager::Destroy()
 	{
-		m_LoadedMaterials.clear();
-
 		for (BitmapFont* font : fontsScreenSpace)
 		{
 			delete font;
@@ -77,122 +77,6 @@ namespace flex
 		loadedMeshes.clear();
 	}
 
-	void ResourceManager::AddMaterialID(MaterialID newMaterialID)
-	{
-		m_LoadedMaterials.push_back(newMaterialID);
-	}
-
-	void ResourceManager::RemoveMaterialID(MaterialID materialID)
-	{
-		auto iter = m_LoadedMaterials.begin();
-		while (iter != m_LoadedMaterials.end())
-		{
-			Material* material = g_Renderer->GetMaterial(*iter);
-			MaterialID matID;
-			if (g_Renderer->FindOrCreateMaterialByName(material->name, matID))
-			{
-				if (matID == materialID)
-				{
-					// TODO: Find all objects which use this material and give them new mats
-					iter = m_LoadedMaterials.erase(iter);
-				}
-				else
-				{
-					++iter;
-				}
-			}
-			else
-			{
-				++iter;
-			}
-		}
-	}
-
-	std::vector<MaterialID> ResourceManager::GetMaterialIDs()
-	{
-		return m_LoadedMaterials;
-	}
-
-	std::vector<MaterialID> ResourceManager::RetrieveMaterialIDsFromJSON(const JSONObject& object, i32 fileVersion)
-	{
-		std::vector<MaterialID> matIDs;
-		if (fileVersion >= 3)
-		{
-			std::vector<JSONField> materialNames;
-			if (object.SetFieldArrayChecked("materials", materialNames))
-			{
-				for (const JSONField& materialNameField : materialNames)
-				{
-					std::string materialName = materialNameField.label;
-					if (!materialName.empty())
-					{
-						MaterialID materialID = InvalidMaterialID;
-						for (MaterialID loadedMatID : m_LoadedMaterials)
-						{
-							Material* material = g_Renderer->GetMaterial(loadedMatID);
-							if (material->name.compare(materialName) == 0)
-							{
-								materialID = loadedMatID;
-								break;
-							}
-						}
-						if (materialID == InvalidMaterialID)
-						{
-							if (materialName.compare("placeholder") == 0)
-							{
-								materialID = g_Renderer->GetPlaceholderMaterialID();
-							}
-						}
-						if (materialID != InvalidMaterialID)
-						{
-							matIDs.push_back(materialID);
-						}
-					}
-					else
-					{
-						PrintError("Invalid material name for object %s: %s\n", object.GetString("name").c_str(), materialName.c_str());
-					}
-				}
-			}
-		}
-		else // fileVersion < 3
-		{
-			MaterialID matID = InvalidMaterialID;
-			std::string materialName;
-			if (object.SetStringChecked("material", materialName))
-			{
-				if (!materialName.empty())
-				{
-					for (MaterialID loadedMatID : m_LoadedMaterials)
-					{
-						Material* material = g_Renderer->GetMaterial(loadedMatID);
-						if (material->name.compare(materialName) == 0)
-						{
-							matID = loadedMatID;
-							break;
-						}
-					}
-					if (matID == InvalidMaterialID)
-					{
-						if (materialName.compare("placeholder") == 0)
-						{
-							matID = g_Renderer->GetPlaceholderMaterialID();
-						}
-					}
-				}
-				else
-				{
-					matID = InvalidMaterialID;
-					PrintError("Invalid material name for object %s: %s\n",
-						object.GetString("name").c_str(), materialName.c_str());
-				}
-			}
-			matIDs.push_back(matID);
-		}
-
-		return matIDs;
-	}
-
 	bool ResourceManager::FindPreLoadedMesh(const std::string& relativeFilePath, LoadedMesh** loadedMesh)
 	{
 		auto iter = loadedMeshes.find(relativeFilePath);
@@ -207,23 +91,20 @@ namespace flex
 		}
 	}
 
-	LoadedMesh* ResourceManager::FindOrLoadMesh(const std::string& relativeFilePath, MeshImportSettings* importSettings)
+	LoadedMesh* ResourceManager::FindOrLoadMesh(const std::string& relativeFilePath)
 	{
 		LoadedMesh* result = nullptr;
-		if (FindPreLoadedMesh(relativeFilePath, &result))
-		{
-			// If no import settings have been passed in, grab any from the cached mesh
-			if (importSettings == nullptr)
-			{
-				importSettings = &result->importSettings;
-			}
-		}
-		else
+		if (!FindPreLoadedMesh(relativeFilePath, &result))
 		{
 			// Mesh hasn't been loaded before, load it now
-			result = Mesh::LoadMesh(relativeFilePath, importSettings);
+			result = Mesh::LoadMesh(relativeFilePath);
 		}
 		return result;
+	}
+
+	bool ResourceManager::MeshFileNameConforms(const std::string& fileName)
+	{
+		return EndsWith(fileName, "glb") || EndsWith(fileName, "gltf");
 	}
 
 	void ResourceManager::DiscoverMeshes()
@@ -233,17 +114,68 @@ namespace flex
 		{
 			for (const std::string& filePath : filePaths)
 			{
-				if (MeshFileNameConforms(filePath) && !Contains(g_ResourceManager->discoveredMeshes, filePath))
+				std::string fileName = StripLeadingDirectories(filePath);
+				if (MeshFileNameConforms(filePath) && !Contains(discoveredMeshes, fileName))
 				{
-					g_ResourceManager->discoveredMeshes.push_back(filePath);
+					// TODO: Support storing meshes in child directories
+					discoveredMeshes.push_back(fileName);
 				}
 			}
 		}
 	}
 
-	bool ResourceManager::MeshFileNameConforms(const std::string& fileName)
+	void ResourceManager::DiscoverPrefabs()
 	{
-		return EndsWith(fileName, "glb") || EndsWith(fileName, "gltf");
+		parsedPrefabInfos.clear();
+
+		std::vector<std::string> foundFiles;
+		if (Platform::FindFilesInDirectory(PREFAB_DIRECTORY, foundFiles, ".json"))
+		{
+			for (const std::string& foundFilePath : foundFiles)
+			{
+				if (g_bEnableLogging_Loading)
+				{
+					const std::string fileName = StripLeadingDirectories(foundFilePath);
+					Print("Parsing prefab: %s\n", fileName.c_str());
+				}
+
+				JSONObject prefabObject;
+				if (JSONParser::ParseFromFile(foundFilePath, prefabObject))
+				{
+					PrefabInfo prefabInfo = {};
+
+					prefabInfo.name = prefabObject.GetString("name");
+					prefabInfo.prefabType = prefabObject.GetString("prefab type");
+
+					prefabInfo.bVisible = prefabObject.GetBool("visible");
+
+					JSONObject transformObj;
+					if (prefabObject.SetObjectChecked("transform", transformObj))
+					{
+						prefabInfo.transform = Transform::ParseJSON(transformObj);
+					}
+
+					prefabInfo.sourceData = prefabObject;
+
+					parsedPrefabInfos.push_back(prefabInfo);
+				}
+				else
+				{
+					PrintError("Failed to parse prefab file: %s, error: %s\n", foundFilePath.c_str(), JSONParser::GetErrorString());
+					return;
+				}
+			}
+		}
+		else
+		{
+			PrintError("Failed to find files in \"" PREFAB_DIRECTORY "\"!\n");
+			return;
+		}
+
+		if (g_bEnableLogging_Loading)
+		{
+			Print("Parsed %u prefabs\n", (u32)parsedPrefabInfos.size());
+		}
 	}
 
 	void ResourceManager::ParseFontFile()
@@ -325,6 +257,161 @@ namespace flex
 		if (!WriteFile(m_FontsFilePathAbs, fileContents, false))
 		{
 			PrintError("Failed to write font file to %s\n", m_FontsFilePathAbs.c_str());
+		}
+	}
+
+	void ResourceManager::ParseMaterialsFile()
+	{
+		parsedMaterialInfos.clear();
+
+		if (FileExists(MATERIALS_FILE_LOCATION))
+		{
+			if (g_bEnableLogging_Loading)
+			{
+				const std::string cleanedFilePath = StripLeadingDirectories(MATERIALS_FILE_LOCATION);
+				Print("Parsing materials file at %s\n", cleanedFilePath.c_str());
+			}
+
+			JSONObject obj;
+			if (JSONParser::ParseFromFile(MATERIALS_FILE_LOCATION, obj))
+			{
+				std::vector<JSONObject> materialObjects = obj.GetObjectArray("materials");
+				for (const JSONObject& materialObject : materialObjects)
+				{
+					MaterialCreateInfo matCreateInfo = {};
+					Material::ParseJSONObject(materialObject, matCreateInfo);
+
+					parsedMaterialInfos.push_back(matCreateInfo);
+
+					g_Renderer->InitializeMaterial(&matCreateInfo);
+				}
+			}
+			else
+			{
+				PrintError("Failed to parse materials file: %s\n\terror: %s\n", MATERIALS_FILE_LOCATION, JSONParser::GetErrorString());
+				return;
+			}
+		}
+		else
+		{
+			PrintError("Failed to parse materials file at %s\n", MATERIALS_FILE_LOCATION);
+			return;
+		}
+
+		if (g_bEnableLogging_Loading)
+		{
+			Print("Parsed %u materials\n", (u32)parsedMaterialInfos.size());
+		}
+	}
+
+	bool ResourceManager::SerializeMaterialFile() const
+	{
+		JSONObject materialsObj = {};
+
+		materialsObj.fields.emplace_back("version", JSONValue(BaseScene::LATEST_MATERIALS_FILE_VERSION));
+
+		// Overwrite all materials in current scene in case any values were tweaked
+		std::vector<JSONObject> materialJSONObjects = g_Renderer->SerializeAllMaterialsToJSON();
+
+		materialsObj.fields.emplace_back("materials", JSONValue(materialJSONObjects));
+
+		std::string fileContents = materialsObj.Print(0);
+
+		const std::string fileName = StripLeadingDirectories(MATERIALS_FILE_LOCATION);
+		if (WriteFile(MATERIALS_FILE_LOCATION, fileContents, false))
+		{
+			Print("Serialized materials file to: %s\n", fileName.c_str());
+		}
+		else
+		{
+			PrintWarn("Failed to serialize materials file to: %s\n", fileName.c_str());
+			return false;
+		}
+
+		return true;
+	}
+
+	JSONField ResourceManager::SerializeMesh(Mesh* mesh)
+	{
+		JSONField meshObject = {};
+
+		switch (mesh->GetType())
+		{
+		case Mesh::Type::FILE:
+		{
+			std::string prefixStr = MESH_DIRECTORY;
+			std::string meshFilepath = mesh->GetRelativeFilePath().substr(prefixStr.length());
+			meshObject = JSONField("mesh", JSONValue(meshFilepath));
+		} break;
+		case Mesh::Type::PREFAB:
+		{
+			std::string prefabShapeStr = MeshComponent::PrefabShapeToString(mesh->GetSubMesh(0)->GetShape());
+			meshObject = JSONField("prefab", JSONValue(prefabShapeStr));
+		} break;
+		default:
+		{
+			PrintError("Unhandled mesh prefab type when attempting to serialize scene!\n");
+		} break;
+		}
+
+		return meshObject;
+	}
+
+	void ResourceManager::ParseMeshJSON(GameObject* parent, const JSONObject& meshObj, const std::vector<MaterialID>& materialIDs)
+	{
+		std::string meshFilePath;
+		if (meshObj.SetStringChecked("mesh", meshFilePath))
+		{
+			i32 sceneVersion = g_SceneManager->CurrentScene()->GetSceneFileVersion();
+			if (sceneVersion >= 4)
+			{
+				meshFilePath = MESH_DIRECTORY + meshFilePath;
+			}
+			else
+			{
+				// "file" field stored mesh name without extension in versions <= 3, try to guess it
+				bool bMatched = false;
+				for (const std::string& path : discoveredMeshes)
+				{
+					std::string discoveredMeshName = StripFileType(path);
+					if (discoveredMeshName.compare(meshFilePath) == 0)
+					{
+						meshFilePath = MESH_DIRECTORY + path;
+						bMatched = true;
+						break;
+					}
+				}
+
+				if (!bMatched)
+				{
+					std::string glbFilePath = MESH_DIRECTORY + meshFilePath + ".glb";
+					std::string gltfFilePath = MESH_DIRECTORY + meshFilePath + ".gltf";
+					if (FileExists(glbFilePath))
+					{
+						meshFilePath = glbFilePath;
+					}
+					else if (FileExists(glbFilePath))
+					{
+						meshFilePath = gltfFilePath;
+					}
+				}
+
+				if (!FileExists(meshFilePath))
+				{
+					PrintError("Failed to upgrade scene file, unable to find path of mesh with name %s\n", meshFilePath.c_str());
+					return;
+				}
+			}
+
+			Mesh::ImportFromFile(meshFilePath, parent, materialIDs);
+			return;
+		}
+
+		std::string prefabName;
+		if (meshObj.SetStringChecked("prefab", prefabName))
+		{
+			Mesh::ImportFromPrefab(prefabName, parent, materialIDs);
+			return;
 		}
 	}
 
@@ -598,17 +685,43 @@ namespace flex
 		return textureID;
 	}
 
+	MaterialCreateInfo* ResourceManager::GetMaterialInfo(const std::string& materialName)
+	{
+		for (MaterialCreateInfo& parsedMatInfo : parsedMaterialInfos)
+		{
+			if (parsedMatInfo.name.compare(materialName) == 0)
+			{
+				return &parsedMatInfo;
+			}
+		}
+
+		return nullptr;
+	}
+
+	PrefabInfo* ResourceManager::GetPrefabInfo(const std::string& prefabName)
+	{
+		for (PrefabInfo& prefabInfo : parsedPrefabInfos)
+		{
+			if (prefabInfo.name.compare(prefabName) == 0)
+			{
+				return &prefabInfo;
+			}
+		}
+
+		return nullptr;
+	}
+
 	void ResourceManager::DrawImGuiMeshList(i32* selectedMeshIndex, ImGuiTextFilter* meshFilter)
 	{
-		std::string selectedMeshRelativeFilePath = g_ResourceManager->discoveredMeshes[*selectedMeshIndex];
+		std::string selectedMeshRelativeFilePath = discoveredMeshes[*selectedMeshIndex];
 
 		if (ImGui::BeginChild("mesh list", ImVec2(0.0f, 120.0f), true))
 		{
 			for (i32 i = 0; i < (i32)discoveredMeshes.size(); ++i)
 			{
-				const std::string& meshFilePath = discoveredMeshes[i];
+				const std::string& meshFileName = discoveredMeshes[i];
+				std::string meshFilePath = MESH_DIRECTORY + meshFileName;
 				bool bSelected = (i == *selectedMeshIndex);
-				const std::string meshFileName = StripLeadingDirectories(meshFilePath);
 				if (meshFilter->PassFilter(meshFileName.c_str()))
 				{
 					if (ImGui::Selectable(meshFileName.c_str(), &bSelected))
@@ -831,8 +944,9 @@ namespace flex
 
 				if (bMaterialSelectionChanged)
 				{
-					bUpdateFields = true; // ?
 					bMaterialSelectionChanged = false;
+
+					//bUpdateFields = true; // ?
 
 					matName = material->name;
 					matName.resize(MAX_NAME_LEN);
@@ -840,12 +954,12 @@ namespace flex
 					selectedTextureIndices.resize(material->textures.Count());
 
 					i32 texIndex = 0;
-					for (auto& pair : material->textures)
+					for (ShaderUniformContainer<Texture*>::TexPair& pair : material->textures)
 					{
 						for (u32 loadedTexIndex = 0; loadedTexIndex < loadedTextures.size(); ++loadedTexIndex)
 						{
 							// TODO: Compare IDs
-							if (pair.second == GetLoadedTexture(loadedTexIndex))
+							if (pair.object == loadedTextures[loadedTexIndex])
 							{
 								selectedTextureIndices[texIndex] = loadedTexIndex;
 							}
@@ -860,7 +974,7 @@ namespace flex
 
 					for (u32 texIndex = 0; texIndex < material->textures.Count(); ++texIndex)
 					{
-						material->textures.values[texIndex].second = GetLoadedTexture(selectedTextureIndices[texIndex]);
+						material->textures.values[texIndex].object = GetLoadedTexture(selectedTextureIndices[texIndex]);
 					}
 
 					i32 i = 0;
@@ -873,6 +987,8 @@ namespace flex
 					}
 
 					selectedShaderIndex = material->shaderID;
+
+					g_Renderer->RenderObjectMaterialChanged(selectedMaterialID);
 				}
 
 				ImGui::PushItemWidth(160.0f);
@@ -1023,9 +1139,7 @@ namespace flex
 							MaterialCreateInfo createInfo = {};
 							createInfo.name = newMaterialName;
 							createInfo.shaderName = newMatShader->name;
-							MaterialID newMaterialID = g_Renderer->InitializeMaterial(&createInfo);
-
-							g_ResourceManager->AddMaterialID(newMaterialID);
+							g_Renderer->InitializeMaterial(&createInfo);
 
 							ImGui::CloseCurrentPopup();
 						}
@@ -1210,25 +1324,17 @@ namespace flex
 			{
 				static i32 selectedMeshIndex = 0;
 
-				std::string selectedMeshRelativeFilePath = g_ResourceManager->discoveredMeshes[selectedMeshIndex];
+				std::string selectedMeshRelativeFilePath = discoveredMeshes[selectedMeshIndex];
 				LoadedMesh* selectedMesh = nullptr;
-				auto iter = g_ResourceManager->loadedMeshes.find(selectedMeshRelativeFilePath);
+				auto iter = loadedMeshes.find(selectedMeshRelativeFilePath);
 
-				if (iter != g_ResourceManager->loadedMeshes.end() && selectedMesh != nullptr)
+				if (iter != loadedMeshes.end() && selectedMesh != nullptr)
 				{
-					ImGui::Text("Import settings");
-
-					ImGui::Columns(2, "import settings columns", false);
-					ImGui::Separator();
-					ImGui::Checkbox("Flip U", &selectedMesh->importSettings.bFlipU); ImGui::NextColumn();
-					ImGui::Checkbox("Flip V", &selectedMesh->importSettings.bFlipV); ImGui::NextColumn();
-					ImGui::Checkbox("Swap Normal YZ", &selectedMesh->importSettings.bSwapNormalYZ); ImGui::NextColumn();
-					ImGui::Checkbox("Flip Normal Z", &selectedMesh->importSettings.bFlipNormalZ); ImGui::NextColumn();
 					ImGui::Columns(1);
 
 					if (ImGui::Button("Re-import"))
 					{
-						g_Renderer->RecreateRenderObjectsWithMesh(selectedMeshRelativeFilePath, &selectedMesh->importSettings);
+						g_Renderer->RecreateRenderObjectsWithMesh(selectedMeshRelativeFilePath);
 					}
 
 					ImGui::SameLine();
@@ -1276,7 +1382,7 @@ namespace flex
 							std::string selectedRelativeFilePath = relativeImportDirPath + fileNameAndExtension;
 
 							bool bMeshAlreadyImported = false;
-							for (const auto& meshPair : g_ResourceManager->loadedMeshes)
+							for (const auto& meshPair : loadedMeshes)
 							{
 								if (meshPair.first.compare(selectedRelativeFilePath) == 0)
 								{
@@ -1297,7 +1403,7 @@ namespace flex
 								if (FindPreLoadedMesh(selectedRelativeFilePath, &existingMesh))
 								{
 									i32 j = 0;
-									for (const auto& meshPair : g_ResourceManager->loadedMeshes)
+									for (const auto& meshPair : loadedMeshes)
 									{
 										if (meshPair.first.compare(selectedRelativeFilePath) == 0)
 										{

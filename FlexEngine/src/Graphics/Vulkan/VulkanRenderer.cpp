@@ -480,6 +480,7 @@ namespace flex
 					ssaoMatCreateInfo.shaderName = "ssao";
 					ssaoMatCreateInfo.persistent = true;
 					ssaoMatCreateInfo.visibleInEditor = false;
+					ssaoMatCreateInfo.bSerializable = false;
 					m_SSAOMatID = InitializeMaterial(&ssaoMatCreateInfo);
 				}
 				assert(m_SSAOMatID != InvalidMaterialID);
@@ -492,6 +493,7 @@ namespace flex
 					ssaoBlurMatCreateInfo.shaderName = "ssao_blur";
 					ssaoBlurMatCreateInfo.persistent = true;
 					ssaoBlurMatCreateInfo.visibleInEditor = false;
+					ssaoBlurMatCreateInfo.bSerializable = false;
 					m_SSAOBlurMatID = InitializeMaterial(&ssaoBlurMatCreateInfo);
 				}
 				assert(m_SSAOBlurMatID != InvalidMaterialID);
@@ -901,6 +903,7 @@ namespace flex
 
 			material->dynamicVertexIndexBufferIndex = GetDynamicVertexIndexBufferIndex(CalculateVertexStride(shader->vertexAttributes));
 			material->bDynamic = createInfo->bDynamic;
+			material->bSerializable = createInfo->bSerializable;
 
 			if (shader->constantBufferUniforms.HasUniform(U_UNIFORM_BUFFER_CONSTANT))
 			{
@@ -1272,17 +1275,6 @@ namespace flex
 			{
 				m_SpriteDescSets.erase(spriteDescSetIter);
 			}
-		}
-
-		void VulkanRenderer::RemoveMaterial(MaterialID materialID)
-		{
-			assert(materialID != InvalidMaterialID);
-
-			Material* material = m_Materials[materialID];
-			delete material;
-			m_Materials.erase(materialID);
-
-			g_ResourceManager->RemoveMaterialID(materialID);
 		}
 
 		void VulkanRenderer::ReplaceMaterialsOnObjects(MaterialID oldMatID, MaterialID newMatID)
@@ -2389,7 +2381,7 @@ namespace flex
 				return;
 			}
 
-			MaterialID skyboxMaterialID = m_SkyBoxMesh->GetSubMeshes()[0]->GetMaterialID();
+			MaterialID skyboxMaterialID = m_SkyBoxMesh->GetSubMesh(0)->GetMaterialID();
 			if (skyboxMaterialID == InvalidMaterialID)
 			{
 				PrintError("Skybox doesn't have a valid Material! Irradiance textures can't be generated\n");
@@ -2578,13 +2570,25 @@ namespace flex
 			// UNIMPLEMENTED
 		}
 
+		void VulkanRenderer::RenderObjectMaterialChanged(MaterialID materialID)
+		{
+			for (u32 i = 0; i < (u32)m_RenderObjects.size(); ++i)
+			{
+				if (m_RenderObjects[i] != nullptr && m_RenderObjects[i]->materialID == materialID)
+				{
+					CreateDescriptorSet(i);
+					CreateGraphicsPipeline(i, true);
+				}
+			}
+		}
+
 		void VulkanRenderer::RenderObjectStateChanged()
 		{
 			// TODO: Ignore object visibility changes
 			m_bRebatchRenderObjects = true;
 		}
 
-		void VulkanRenderer::RecreateRenderObjectsWithMesh(const std::string& relativeMeshFilePath, MeshImportSettings* meshImportSettings)
+		void VulkanRenderer::RecreateRenderObjectsWithMesh(const std::string& relativeMeshFilePath)
 		{
 			for (VulkanRenderObject* renderObject : m_RenderObjects)
 			{
@@ -2598,7 +2602,7 @@ namespace flex
 						{
 							mesh->Destroy();
 							mesh->SetOwner(owningGameObject);
-							mesh->LoadFromFile(relativeMeshFilePath, mesh->GetMaterialIDs(), false, meshImportSettings);
+							mesh->LoadFromFile(relativeMeshFilePath, mesh->GetMaterialIDs(), false);
 						}
 					}
 				}
@@ -2673,26 +2677,27 @@ namespace flex
 				return;
 			}
 
-			VulkanRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetSubMeshes()[0]->renderID);
-			VulkanMaterial* skyboxMat = (VulkanMaterial*)m_Materials.at(renderObject->materialID);
+			VulkanRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetSubMesh(0)->renderID);
+			VulkanMaterial* skyboxMat = (VulkanMaterial*)m_Materials.at(skyboxRenderObject->materialID);
 			VulkanMaterial* renderObjectMat = (VulkanMaterial*)m_Materials.at(renderObject->materialID);
 
-			MaterialCreateInfo equirectangularToCubeMatCreateInfo = {};
-			equirectangularToCubeMatCreateInfo.name = "equirectangular to Cube";
-			equirectangularToCubeMatCreateInfo.shaderName = "equirectangular_to_cube";
-			equirectangularToCubeMatCreateInfo.enableHDREquirectangularSampler = true;
-			equirectangularToCubeMatCreateInfo.generateHDREquirectangularSampler = true;
-			equirectangularToCubeMatCreateInfo.hdrEquirectangularTexturePath = environmentMapPath;
-			equirectangularToCubeMatCreateInfo.persistent = true;
-			equirectangularToCubeMatCreateInfo.visibleInEditor = false;
+			MaterialCreateInfo matCreateInfo = {};
+			matCreateInfo.name = "equirectangular to Cube";
+			matCreateInfo.shaderName = "equirectangular_to_cube";
+			matCreateInfo.enableHDREquirectangularSampler = true;
+			matCreateInfo.generateHDREquirectangularSampler = true;
+			matCreateInfo.hdrEquirectangularTexturePath = environmentMapPath;
+			matCreateInfo.persistent = true;
+			matCreateInfo.visibleInEditor = false;
+			matCreateInfo.bSerializable = false;
 
 			bool bRandomizeSkybox = true;
 			if (bRandomizeSkybox && !m_AvailableHDRIs.empty())
 			{
-				equirectangularToCubeMatCreateInfo.hdrEquirectangularTexturePath = PickRandomSkyboxTexture();
+				matCreateInfo.hdrEquirectangularTexturePath = PickRandomSkyboxTexture();
 			}
 
-			MaterialID equirectangularToCubeMatID = InitializeMaterial(&equirectangularToCubeMatCreateInfo);
+			MaterialID equirectangularToCubeMatID = InitializeMaterial(&matCreateInfo);
 			VulkanMaterial* equirectangularToCubeMat = (VulkanMaterial*)m_Materials.at(equirectangularToCubeMatID);
 
 			const VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
@@ -2965,7 +2970,7 @@ namespace flex
 				return;
 			}
 
-			VulkanRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetSubMeshes()[0]->renderID);
+			VulkanRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetSubMesh(0)->renderID);
 			VulkanMaterial* skyboxMat = (VulkanMaterial*)m_Materials.at(skyboxRenderObject->materialID);
 			VulkanMaterial* renderObjectMat = (VulkanMaterial*)m_Materials.at(renderObject->materialID);
 
@@ -3233,7 +3238,7 @@ namespace flex
 				return;
 			}
 
-			VulkanRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetSubMeshes()[0]->renderID);
+			VulkanRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetSubMesh(0)->renderID);
 			VulkanMaterial* skyboxMat = (VulkanMaterial*)m_Materials.at(skyboxRenderObject->materialID);
 			VulkanMaterial* renderObjectMat = (VulkanMaterial*)m_Materials.at(renderObject->materialID);
 
@@ -5684,11 +5689,11 @@ namespace flex
 
 			for (const auto& texturePair : material->textures)
 			{
-				if (shader->textureUniforms.HasUniform(texturePair.first))
+				if (shader->textureUniforms.HasUniform(texturePair.uniformID))
 				{
-					VulkanTexture* texture = (VulkanTexture*)texturePair.second;
+					VulkanTexture* texture = (VulkanTexture*)texturePair.object;
 					assert(texture != nullptr);
-					createInfo.imageDescriptors.Add(texturePair.first, ImageDescriptorInfo{ texture->imageView, texture->sampler });
+					createInfo.imageDescriptors.Add(texturePair.uniformID, ImageDescriptorInfo{ texture->imageView, texture->sampler });
 				}
 			}
 
@@ -5757,14 +5762,15 @@ namespace flex
 			u32 i = 0;
 			for (auto& pair : createInfo->bufferDescriptors)
 			{
-				const u64 uniform = pair.first;
-				assert((pair.second.type == UniformBufferType::DYNAMIC && dynamicBufferUniforms.HasUniform(uniform)) ||
-					(pair.second.type == UniformBufferType::PARTICLE_DATA && additionalBufferUniforms.HasUniform(uniform)) ||
-					(pair.second.type == UniformBufferType::STATIC && constantBufferUniforms.HasUniform(uniform)));
-				assert(pair.second.buffer != VK_NULL_HANDLE);
+				const u64 uniformID = pair.uniformID;
+				const BufferDescriptorInfo& bufferDescInfo = pair.object;
+				assert((bufferDescInfo.type == UniformBufferType::DYNAMIC && dynamicBufferUniforms.HasUniform(uniformID)) ||
+					(bufferDescInfo.type == UniformBufferType::PARTICLE_DATA && additionalBufferUniforms.HasUniform(uniformID)) ||
+					(bufferDescInfo.type == UniformBufferType::STATIC && constantBufferUniforms.HasUniform(uniformID)));
+				assert(bufferDescInfo.buffer != VK_NULL_HANDLE);
 
 				VkDescriptorType type;
-				switch (pair.second.type)
+				switch (bufferDescInfo.type)
 				{
 				case UniformBufferType::STATIC:
 					type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -5782,8 +5788,8 @@ namespace flex
 				}
 
 				VkDescriptorBufferInfo& bufferInfo = bufferInfos[i];
-				bufferInfo.buffer = pair.second.buffer;
-				bufferInfo.range = pair.second.bufferSize;
+				bufferInfo.buffer = pair.object.buffer;
+				bufferInfo.range = pair.object.bufferSize;
 				writeDescriptorSets.push_back(vks::writeDescriptorSet(*createInfo->descriptorSet, type, binding, &bufferInfo));
 
 				++binding;
@@ -5794,17 +5800,18 @@ namespace flex
 			i = 0;
 			for (auto& pair : createInfo->imageDescriptors)
 			{
-				const u64 uniform = pair.first;
-				assert(textureUniforms.HasUniform(uniform));
+				const u64 uniformID = pair.uniformID;
+				assert(textureUniforms.HasUniform(uniformID));
+				const ImageDescriptorInfo& imageDescInfo = pair.object;
 
 				VkDescriptorImageInfo& imageInfo = imageInfos[i];
 				imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-				if (pair.second.imageView != VK_NULL_HANDLE)
+				if (imageDescInfo.imageView != VK_NULL_HANDLE)
 				{
-					imageInfo.imageView = pair.second.imageView;
-					if (pair.second.imageSampler != VK_NULL_HANDLE)
+					imageInfo.imageView = imageDescInfo.imageView;
+					if (imageDescInfo.imageSampler != VK_NULL_HANDLE)
 					{
-						imageInfo.sampler = pair.second.imageSampler;
+						imageInfo.sampler = imageDescInfo.imageSampler;
 					}
 					else
 					{

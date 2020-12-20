@@ -56,20 +56,23 @@ IGNORE_WARNINGS_POP
 namespace flex
 {
 	const char* GameObject::s_DefaultNewGameObjectName = "New_Game_Object_00";
+	AudioCue GameObject::s_SqueakySounds;
+	AudioSourceID GameObject::s_BunkSound;
 
 	const char* Cart::emptyCartMeshName = "cart-empty.glb";
 	const char* EngineCart::engineMeshName = "cart-engine.glb";
 
-	AudioCue GameObject::s_SqueakySounds;
-	AudioSourceID GameObject::s_BunkSound;
-
 	ms SoftBody::FIXED_UPDATE_TIMESTEP = 1000.0f / 120.0f;
 	u32 SoftBody::MAX_UPDATE_COUNT = 20;
 
-	static ThreadSafeArray<GerstnerWave::WaveGenData>* workQueue = nullptr;
-
 	const char* SpringObject::s_ExtendedMeshFilePath = MESH_DIRECTORY "spring-extended.glb";
 	const char* SpringObject::s_ContractedMeshFilePath = MESH_DIRECTORY "spring-contracted.glb";
+	MaterialID SpringObject::s_SpringMatID = InvalidMaterialID;
+	MaterialID SpringObject::s_BobberMatID = InvalidMaterialID;
+
+
+	static ThreadSafeArray<GerstnerWave::WaveGenData>* workQueue = nullptr;
+
 
 	GameObject::GameObject(const std::string& name, GameObjectType type) :
 		m_Name(name),
@@ -104,141 +107,25 @@ namespace flex
 		GameObject* newGameObject = nullptr;
 
 		std::string gameObjectTypeStr = obj.GetString("type");
+		std::string objectName = obj.GetString("name");
 
 		if (gameObjectTypeStr.compare("prefab") == 0)
 		{
-			std::string prefabTypeStr = obj.GetString("prefab type");
-			JSONObject* prefab = nullptr;
-
-			for (JSONObject& parsedPrefab : scene->s_ParsedPrefabs)
+			PrefabInfo* prefabInfo = g_ResourceManager->GetPrefabInfo(objectName);
+			if (prefabInfo != nullptr)
 			{
-				if (parsedPrefab.GetString("name").compare(prefabTypeStr) == 0)
-				{
-					prefab = &parsedPrefab;
-				}
-			}
-
-			if (prefab == nullptr)
-			{
-				PrintError("Invalid prefab type: %s\n", prefabTypeStr.c_str());
-
-				return nullptr;
+				return CreateObjectFromPrefabInfo(*prefabInfo, scene, fileVersion);
 			}
 			else
 			{
-				std::string name = obj.GetString("name");
-
-				GameObject* prefabInstance = GameObject::CreateObjectFromJSON(*prefab, scene, fileVersion);
-				prefabInstance->m_bLoadedFromPrefab = true;
-				prefabInstance->m_PrefabName = prefabInstance->m_Name;
-
-				prefabInstance->m_Name = name;
-
-				bool bVisible = true;
-				obj.SetBoolChecked("visible", bVisible);
-				prefabInstance->SetVisible(bVisible, false);
-
-				JSONObject transformObj;
-				if (obj.SetObjectChecked("transform", transformObj))
-				{
-					prefabInstance->m_Transform = Transform::ParseJSON(transformObj);
-				}
-
-				prefabInstance->ParseUniqueFields(obj, scene, prefabInstance->m_Mesh->GetMaterialIDs());
-
-				return prefabInstance;
+				PrintError("Invalid prefab type: %s\n", objectName.c_str());
+				return nullptr;
 			}
 		}
 
 		GameObjectType gameObjectType = StringToGameObjectType(gameObjectTypeStr.c_str());
 
-		std::string objectName = obj.GetString("name");
-
-		// TODO: Use managers here to spawn objects!
-		switch (gameObjectType)
-		{
-		case GameObjectType::PLAYER:
-			PrintError("Player was serialized to scene file!\n");
-			break;
-		case GameObjectType::SKYBOX:
-			newGameObject = new Skybox(objectName);
-			break;
-		case GameObjectType::REFLECTION_PROBE:
-			newGameObject = new ReflectionProbe(objectName);
-			break;
-		case GameObjectType::VALVE:
-			newGameObject = new Valve(objectName);
-			break;
-		case GameObjectType::RISING_BLOCK:
-			newGameObject = new RisingBlock(objectName);
-			break;
-		case GameObjectType::GLASS_PANE:
-			newGameObject = new GlassPane(objectName);
-			break;
-		case GameObjectType::POINT_LIGHT:
-			newGameObject = new PointLight(objectName);
-			break;
-		case GameObjectType::DIRECTIONAL_LIGHT:
-			newGameObject = new DirectionalLight(objectName);
-			break;
-		case GameObjectType::CART:
-		{
-			CartManager* cartManager = g_SceneManager->CurrentScene()->GetCartManager();
-			CartID newCartID = cartManager->CreateCart(objectName);
-			newGameObject = cartManager->GetCart(newCartID);
-		} break;
-		case GameObjectType::MOBILE_LIQUID_BOX:
-		{
-			newGameObject = new MobileLiquidBox(objectName);
-		} break;
-		case GameObjectType::TERMINAL:
-		{
-			newGameObject = new Terminal(objectName);
-		} break;
-		case GameObjectType::GERSTNER_WAVE:
-		{
-			newGameObject = new GerstnerWave(objectName);
-		} break;
-		case GameObjectType::BLOCKS:
-		{
-			newGameObject = new Blocks(objectName);
-		} break;
-		case GameObjectType::PARTICLE_SYSTEM:
-		{
-			newGameObject = new ParticleSystem(objectName);
-		} break;
-		case GameObjectType::TERRAIN_GENERATOR:
-		{
-			newGameObject = new TerrainGenerator(objectName);
-		} break;
-		case GameObjectType::WIRE:
-		{
-			newGameObject = g_PluggablesSystem->AddWire();
-		} break;
-		case GameObjectType::SOCKET:
-		{
-			newGameObject = g_PluggablesSystem->AddSocket(objectName);
-		} break;
-		case GameObjectType::SPRING:
-		{
-			newGameObject = new SpringObject(objectName);
-		} break;
-		case GameObjectType::SOFT_BODY:
-		{
-			newGameObject = new SoftBody(objectName);
-		} break;
-		case GameObjectType::VEHICLE:
-		{
-			newGameObject = new Vehicle(objectName);
-		} break;
-		case GameObjectType::OBJECT: // Fall through
-		case GameObjectType::_NONE:
-			newGameObject = new GameObject(objectName, gameObjectType);
-			break;
-		default:
-			PrintError("Unhandled game object type in CreateGameObjectFromJSON\n");
-			ENSURE_NO_ENTRY();
-		}
+		newGameObject = CreateObjectOfType(gameObjectType, objectName);
 
 		if (newGameObject != nullptr)
 		{
@@ -246,6 +133,65 @@ namespace flex
 		}
 
 		return newGameObject;
+	}
+
+	GameObject* GameObject::CreateObjectFromPrefabInfo(const PrefabInfo& prefabInfo, BaseScene* scene, i32 fileVersion)
+	{
+		FLEX_UNUSED(fileVersion);
+
+		GameObject* prefabInstance = CreateObjectOfType(prefabInfo.type, prefabInfo.name);
+		prefabInstance->m_bLoadedFromPrefab = true;
+		prefabInstance->m_PrefabName = prefabInstance->m_Name;
+		prefabInstance->SetVisible(prefabInfo.bVisible, false);
+		prefabInstance->m_Transform = prefabInfo.transform;
+
+		prefabInstance->ParseUniqueFields(prefabInfo.sourceData, scene, prefabInstance->m_Mesh->GetMaterialIDs());
+
+		return prefabInstance;
+	}
+
+	GameObject* GameObject::CreateObjectOfType(GameObjectType gameObjectType, const std::string& objectName)
+	{
+		// TODO: Use managers here to spawn objects!
+		switch (gameObjectType)
+		{
+		case GameObjectType::PLAYER:
+		{
+			PrintError("Player was serialized to scene file!\n");
+		}break;
+		case GameObjectType::SKYBOX: return new Skybox(objectName);
+		case GameObjectType::REFLECTION_PROBE: return new ReflectionProbe(objectName);
+		case GameObjectType::VALVE: return new Valve(objectName);
+		case GameObjectType::RISING_BLOCK: return new RisingBlock(objectName);
+		case GameObjectType::GLASS_PANE: return new GlassPane(objectName);
+		case GameObjectType::POINT_LIGHT: return new PointLight(objectName);
+		case GameObjectType::DIRECTIONAL_LIGHT: return new DirectionalLight(objectName);
+		case GameObjectType::CART:
+		{
+			// TODO: Make one line
+			CartManager* cartManager = g_SceneManager->CurrentScene()->GetCartManager();
+			CartID newCartID = cartManager->CreateCart(objectName);
+			return cartManager->GetCart(newCartID);
+		}
+		case GameObjectType::MOBILE_LIQUID_BOX: return new MobileLiquidBox(objectName);
+		case GameObjectType::TERMINAL: return new Terminal(objectName);
+		case GameObjectType::GERSTNER_WAVE: return new GerstnerWave(objectName);
+		case GameObjectType::BLOCKS: return new Blocks(objectName);
+		case GameObjectType::PARTICLE_SYSTEM: return new ParticleSystem(objectName);
+		case GameObjectType::TERRAIN_GENERATOR: return new TerrainGenerator(objectName);
+		case GameObjectType::WIRE: return g_PluggablesSystem->AddWire();
+		case GameObjectType::SOCKET: return g_PluggablesSystem->AddSocket(objectName);
+		case GameObjectType::SPRING: return new SpringObject(objectName);
+		case GameObjectType::SOFT_BODY: return new SoftBody(objectName);
+		case GameObjectType::VEHICLE: return new Vehicle(objectName);
+		case GameObjectType::OBJECT: // Fall through
+		case GameObjectType::_NONE: return new GameObject(objectName, gameObjectType);
+		default:
+			PrintError("Unhandled game object type in CreateGameObjectFromJSON\n");
+			ENSURE_NO_ENTRY();
+		}
+
+		return nullptr;
 	}
 
 	void GameObject::Initialize()
@@ -998,7 +944,7 @@ namespace flex
 		}
 		else
 		{
-			matIDs = g_ResourceManager->RetrieveMaterialIDsFromJSON(obj, fileVersion);
+			matIDs = Material::ParseMaterialArrayJSON(obj, fileVersion);
 		}
 
 		if (matIDs.empty())
@@ -1012,27 +958,7 @@ namespace flex
 			m_Transform = Transform::ParseJSON(transformObj);
 		}
 
-		std::string meshName;
-		if (obj.SetStringChecked("mesh", meshName))
-		{
-			bool bFound = false;
-			for (const JSONObject& parsedMeshObj : BaseScene::s_ParsedMeshes)
-			{
-				std::string fileName = StripFileType(StripLeadingDirectories(parsedMeshObj.GetString("file")));
-
-				if (fileName.compare(meshName) == 0)
-				{
-					Mesh::ParseJSON(parsedMeshObj, this, matIDs);
-					bFound = true;
-					break;
-				}
-			}
-
-			if (!bFound)
-			{
-				PrintWarn("Failed to find mesh with name %s in BaseScene::s_ParsedMeshes\n", meshName.c_str());
-			}
-		}
+		g_ResourceManager->ParseMeshJSON(this, obj, matIDs);
 
 		bool bColliderContainsOffset = false;
 
@@ -1187,8 +1113,8 @@ namespace flex
 
 		// Non-basic objects shouldn't serialize certain fields which are constant across all instances
 		// TODO: Save out overridden prefab fields
-		bool bIsBasicObject = (m_Type == GameObjectType::OBJECT ||
-			m_Type == GameObjectType::_NONE);
+		// TODO: Remove this var in place of new member m_bSerializeMesh
+		bool bIsBasicObject = (m_Type == GameObjectType::OBJECT || m_Type == GameObjectType::_NONE);
 
 
 		object.fields.emplace_back("name", JSONValue(m_Name));
@@ -1223,8 +1149,7 @@ namespace flex
 			bIsBasicObject &&
 			!m_bLoadedFromPrefab)
 		{
-			const std::string meshName = StripFileType(StripLeadingDirectories(m_Mesh->GetRelativeFilePath()));
-			object.fields.emplace_back("mesh", JSONValue(meshName));
+			object.fields.emplace_back(g_ResourceManager->SerializeMesh(m_Mesh));
 		}
 
 		if (m_Mesh)
@@ -1241,19 +1166,25 @@ namespace flex
 				if (matID != InvalidMaterialID)
 				{
 					Material* material = g_Renderer->GetMaterial(matID);
-					std::string materialName = material->name;
-					if (materialName.empty())
+					if (material->bSerializable)
 					{
-						PrintWarn("Game object contains material with empty material name!\n");
-					}
-					else
-					{
-						materialFields.emplace_back(materialName, JSONValue(""));
+						std::string materialName = material->name;
+						if (!materialName.empty())
+						{
+							materialFields.emplace_back(materialName, JSONValue(""));
+						}
+						else
+						{
+							PrintWarn("Game object contains material with empty material name!\n");
+						}
 					}
 				}
 			}
 
-			object.fields.emplace_back("materials", JSONValue(materialFields));
+			if (!materialFields.empty())
+			{
+				object.fields.emplace_back("materials", JSONValue(materialFields));
+			}
 		}
 
 		btCollisionShape* collisionShape = GetCollisionShape();
@@ -1498,8 +1429,7 @@ namespace flex
 			else if (prefabType == Mesh::Type::FILE)
 			{
 				std::string filePath = m_Mesh->GetRelativeFilePath();
-				MeshImportSettings importSettings = m_Mesh->GetImportSettings();
-				newMesh->LoadFromFile(filePath, matIDs, false, &importSettings, createInfoPtr);
+				newMesh->LoadFromFile(filePath, matIDs, false, createInfoPtr);
 			}
 			else
 			{
@@ -3568,6 +3498,7 @@ namespace flex
 		matCreateInfo.bDynamic = true;
 		matCreateInfo.albedoTexturePath = TEXTURE_LOCATION "wave-n-2.png";
 		matCreateInfo.enableAlbedoSampler = true;
+		matCreateInfo.bSerializable = false;
 
 		m_WaveMaterialID = g_Renderer->InitializeMaterial(&matCreateInfo);
 
@@ -5055,13 +4986,14 @@ namespace flex
 		GameObject(name, GameObjectType::BLOCKS)
 	{
 		MaterialCreateInfo matCreateInfo = {};
-		matCreateInfo.name = "block";
 		matCreateInfo.shaderName = "pbr";
 		matCreateInfo.constMetallic = 0.0f;
+		matCreateInfo.bSerializable = false;
 
 		std::vector<MaterialID> matIDs;
 		for (i32 i = 0; i < 10; ++i)
 		{
+			matCreateInfo.name = "block " + IntToString(i, 2);
 			matCreateInfo.constAlbedo = glm::vec3(RandomFloat(0.3f, 0.6f), RandomFloat(0.4f, 0.8f), RandomFloat(0.4f, 0.7f));
 			matCreateInfo.constRoughness = RandomFloat(0.0f, 1.0f);
 			matIDs.push_back(g_Renderer->InitializeMaterial(&matCreateInfo));
@@ -6742,6 +6674,7 @@ namespace flex
 		matCreateInfo.constRoughness = 1.0f;
 		matCreateInfo.constMetallic = 0.0f;
 		matCreateInfo.enableIrradianceSampler = false;
+		matCreateInfo.bSerializable = false;
 		m_TerrainMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
 
 		m_Mesh = new Mesh(this);
@@ -7253,38 +7186,19 @@ namespace flex
 
 	void SpringObject::Initialize()
 	{
-		MaterialCreateInfo matCreateInfo = {};
-		matCreateInfo.name = "Spring";
-		matCreateInfo.shaderName = "pbr";
-		matCreateInfo.constAlbedo = glm::vec3(0.8f, 0.05f, 0.04f);
-		matCreateInfo.constRoughness = 1.0f;
-		matCreateInfo.constMetallic = 0.0f;
-		matCreateInfo.enableIrradianceSampler = false;
-		matCreateInfo.bDynamic = true;
-
-		MaterialID springMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
-
-		matCreateInfo = {};
-		matCreateInfo.name = "Bobber";
-		matCreateInfo.shaderName = "pbr";
-		matCreateInfo.constAlbedo = glm::vec3(0.2f, 0.2f, 0.24f);
-		matCreateInfo.constRoughness = 0.0f;
-		matCreateInfo.constMetallic = 1.0f;
-		matCreateInfo.enableIrradianceSampler = false;
-
-		MaterialID bobberMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
+		if (s_SpringMatID == InvalidMaterialID)
+		{
+			CreateMaterials();
+		}
 
 		{
-			MeshImportSettings meshImportSettings = {};
-			meshImportSettings.bDontCreateRenderObject = true;
-
-			LoadedMesh* extendedMesh = Mesh::LoadMesh(s_ExtendedMeshFilePath, &meshImportSettings);
+			LoadedMesh* extendedMesh = Mesh::LoadMesh(s_ExtendedMeshFilePath);
 			cgltf_mesh* extendedMeshCGLTF = &(extendedMesh->data->meshes[0]);
-			m_ExtendedMesh = MeshComponent::LoadFromCGLTF(nullptr, &extendedMeshCGLTF->primitives[0], springMatID, &meshImportSettings);
+			m_ExtendedMesh = MeshComponent::LoadFromCGLTF(nullptr, &extendedMeshCGLTF->primitives[0], s_SpringMatID, nullptr, false);
 
-			LoadedMesh* contractedMesh = Mesh::LoadMesh(s_ContractedMeshFilePath, &meshImportSettings);
+			LoadedMesh* contractedMesh = Mesh::LoadMesh(s_ContractedMeshFilePath);
 			cgltf_mesh* contractedMeshCGLTF = &(contractedMesh->data->meshes[0]);
-			m_ContractedMesh = MeshComponent::LoadFromCGLTF(nullptr, &contractedMeshCGLTF->primitives[0], springMatID, &meshImportSettings);
+			m_ContractedMesh = MeshComponent::LoadFromCGLTF(nullptr, &contractedMeshCGLTF->primitives[0], s_SpringMatID, nullptr, false);
 		}
 
 		if (m_bSimulateTarget)
@@ -7306,7 +7220,7 @@ namespace flex
 
 		m_Mesh = new Mesh(m_OriginTransform);
 		m_Indices = m_ExtendedMesh->GetIndexBuffer();
-		m_Mesh->LoadFromMemoryDynamic(m_DynamicVertexBufferCreateInfo, m_Indices, springMatID, vertCount);
+		m_Mesh->LoadFromMemoryDynamic(m_DynamicVertexBufferCreateInfo, m_Indices, s_SpringMatID, vertCount);
 
 		m_DynamicVertexBufferCreateInfo.positions_3D.resize(vertCount);
 		m_DynamicVertexBufferCreateInfo.texCoords_UV.resize(vertCount);
@@ -7364,7 +7278,7 @@ namespace flex
 			m_Bobber->SetSerializable(false);
 			m_Bobber->SetVisibleInSceneExplorer(false);
 			Mesh* bobberMesh = m_Bobber->SetMesh(new Mesh(m_Bobber));
-			bobberMesh->LoadFromFile(MESH_DIRECTORY "sphere.glb", bobberMatID);
+			bobberMesh->LoadFromFile(MESH_DIRECTORY "sphere.glb", s_BobberMatID);
 			m_Bobber->Initialize();
 			m_Bobber->PostInitialize();
 		}
@@ -7488,6 +7402,40 @@ namespace flex
 		springObj.fields.emplace_back("end point", JSONValue(VecToString(m_SpringSim->points[1]->pos)));
 
 		parentObject.fields.emplace_back("spring", JSONValue(springObj));
+	}
+
+	void SpringObject::ParseJSON(const JSONObject& obj, BaseScene* scene, i32 fileVersion, MaterialID overriddenMatID /* = InvalidMaterialID */)
+	{
+		if (s_SpringMatID == InvalidMaterialID)
+		{
+			CreateMaterials();
+		}
+
+		GameObject::ParseJSON(obj, scene, fileVersion, overriddenMatID);
+	}
+
+	void SpringObject::CreateMaterials()
+	{
+		MaterialCreateInfo matCreateInfo = {};
+		matCreateInfo.name = "Spring";
+		matCreateInfo.shaderName = "pbr";
+		matCreateInfo.constAlbedo = glm::vec3(0.8f, 0.05f, 0.04f);
+		matCreateInfo.constRoughness = 1.0f;
+		matCreateInfo.constMetallic = 0.0f;
+		matCreateInfo.enableIrradianceSampler = false;
+		matCreateInfo.bDynamic = true;
+		matCreateInfo.bSerializable = false;
+		s_SpringMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
+
+		matCreateInfo = {};
+		matCreateInfo.name = "Bobber";
+		matCreateInfo.shaderName = "pbr";
+		matCreateInfo.constAlbedo = glm::vec3(0.2f, 0.2f, 0.24f);
+		matCreateInfo.constRoughness = 0.0f;
+		matCreateInfo.constMetallic = 1.0f;
+		matCreateInfo.enableIrradianceSampler = false;
+		matCreateInfo.bSerializable = false;
+		s_BobberMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
 	}
 
 	DistanceConstraint::DistanceConstraint(i32 pointIndex0, i32 pointIndex1, real stiffness, real targetDistance) :
@@ -8032,6 +7980,7 @@ namespace flex
 			matCreateInfo.shaderName = "pbr";
 			matCreateInfo.bDynamic = true;
 			matCreateInfo.constRoughness = 0.95f;
+			matCreateInfo.bSerializable = false;
 
 			m_MeshMaterialID = g_Renderer->InitializeMaterial(&matCreateInfo);
 		}
@@ -8039,7 +7988,7 @@ namespace flex
 		m_Mesh = new Mesh(this);
 		RenderObjectCreateInfo renderObjectCreateInfo = {};
 		renderObjectCreateInfo.cullFace = CullFace::NONE;
-		if (!m_Mesh->LoadFromFile(m_CurrentMeshFilePath, m_MeshMaterialID, true, nullptr, &renderObjectCreateInfo))
+		if (!m_Mesh->LoadFromFile(m_CurrentMeshFilePath, m_MeshMaterialID, true, &renderObjectCreateInfo))
 		{
 			PrintError("Failed to load mesh\n");
 			m_Mesh->Destroy();

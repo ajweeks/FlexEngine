@@ -30,6 +30,9 @@ namespace flex
 		virtual void Update();
 		virtual void LateUpdate();
 
+		bool LoadFromFile(const std::string& filePath);
+		void CreateBlank(const std::string& filePath);
+
 		void DrawImGuiObjects();
 		void DoSceneContextMenu();
 
@@ -80,18 +83,6 @@ namespace flex
 
 		bool IsLoaded() const;
 
-		static void ParseFoundMeshFiles();
-		static void ParseFoundMaterialFiles();
-		static void ParseFoundPrefabFiles();
-
-		static std::vector<JSONObject> s_ParsedMaterials;
-		static std::vector<JSONObject> s_ParsedMeshes;
-		static std::vector<JSONObject> s_ParsedPrefabs;
-
-		bool SerializeMeshFile() const;
-		bool SerializeMaterialFile() const;
-		bool SerializePrefabFile() const;
-
 		std::vector<GameObject*> GetAllObjects();
 
 		template<class T>
@@ -133,6 +124,10 @@ namespace flex
 		// Returns true if the parent-child tree changed during this call
 		bool DrawImGuiGameObjectNameAndChildrenInternal(GameObject* gameObject);
 
+		static const i32 LATEST_SCENE_FILE_VERSION = 4;
+		static const i32 LATEST_MATERIALS_FILE_VERSION = 1;
+		static const i32 LATEST_MESHES_FILE_VERSION = 1;
+
 	protected:
 		friend GameObject;
 		friend CartManager;
@@ -142,13 +137,8 @@ namespace flex
 
 		void UpdateRootObjectSiblingIndices();
 
-		static const i32 LATEST_SCENE_FILE_VERSION = 3;
 		i32 m_SceneFileVersion = 1;
-
-		static const i32 LATEST_MATERIALS_FILE_VERSION = 1;
 		i32 m_MaterialsFileVersion = 1;
-
-		static const i32 LATEST_MESHES_FILE_VERSION = 1;
 		i32 m_MeshesFileVersion = 1;
 
 		std::string m_Name;
@@ -174,10 +164,10 @@ namespace flex
 
 		std::vector<ICallbackGameObject*> m_OnGameObjectDestroyedCallbacks;
 
-		std::vector<GameObject*> m_PendingAddObjects;
-		std::vector<Pair<GameObject*, GameObject*>> m_PendingAddChildObjects;
-		std::vector<GameObject*> m_PendingDeleteObjects;
-		std::vector<GameObject*> m_PendingDestroyObjects;
+		std::vector<GameObject*> m_PendingAddObjects; // Objects to add as root objects at LateUpdate
+		std::vector<Pair<GameObject*, GameObject*>> m_PendingAddChildObjects; // Objects to add to parents at LateUpdate
+		std::vector<GameObject*> m_PendingRemoveObjects; // Objects to remove but not destroy at LateUpdate this frame
+		std::vector<GameObject*> m_PendingDestroyObjects; // Objects to destroy at LateUpdate this frame
 
 	private:
 		/*

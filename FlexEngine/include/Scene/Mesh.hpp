@@ -37,14 +37,12 @@ namespace flex
 			const std::string& relativeFilePath,
 			MaterialID materialID,
 			bool bDynamic = false,
-			MeshImportSettings* importSettings = nullptr,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
 		bool LoadFromFile(
 			const std::string& relativeFilePath,
 			const std::vector<MaterialID>& inMaterialIDs,
 			bool bDynamic = false,
-			MeshImportSettings* importSettings = nullptr,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
 		bool LoadFromMemory(const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
@@ -76,9 +74,9 @@ namespace flex
 
 		std::vector<MaterialID> GetMaterialIDs() const;
 
-		static Mesh* ParseJSON(const JSONObject& object, GameObject* owner, const std::vector<MaterialID>& inMaterialIDs);
 		static Mesh* ImportFromFile(const std::string& meshFilePath, GameObject* owner);
-		JSONObject Serialize() const;
+		static Mesh* ImportFromFile(const std::string& meshFilePath, GameObject* owner, const std::vector<MaterialID>& materialIDs);
+		static Mesh* ImportFromPrefab(const std::string& prefabName, GameObject* owner, const std::vector<MaterialID>& materialIDs);
 
 		Type GetType() const;
 		u32 GetSubmeshCount() const;
@@ -89,15 +87,13 @@ namespace flex
 		std::string GetRelativeFilePath() const;
 		std::string GetFileName() const;
 
-		MeshImportSettings GetImportSettings() const;
-
 		MeshComponent* GetSubMeshWithRenderID(RenderID renderID) const;
 		std::vector<MeshComponent*> GetSubMeshes() const;
 		MeshComponent* GetSubMesh(u32 index) const;
 
 		GameObject* GetOwningGameObject() const;
 
-		static LoadedMesh* LoadMesh(const std::string& relativeFilePath, MeshImportSettings* importSettings = nullptr);
+		static LoadedMesh* LoadMesh(const std::string& relativeFilePath);
 
 		glm::vec3 m_MinPoint;
 		glm::vec3 m_MaxPoint;
@@ -123,9 +119,6 @@ namespace flex
 
 		std::string m_RelativeFilePath;
 		std::string m_FileName;
-
-		// Saved so we can reload meshes and serialize contents to file
-		MeshImportSettings m_ImportSettings = {};
 
 		bool m_bInitialized = false;
 

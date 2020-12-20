@@ -7,12 +7,17 @@ typedef struct FT_FaceRec_* FT_Face;
 
 namespace flex
 {
+	struct JSONField;
 	struct JSONObject;
 	struct LoadedMesh;
 	struct FontMetaData;
 	class BitmapFont;
 	struct FontMetric;
 	struct Texture;
+	class Mesh;
+	struct MeshInfo;
+	struct MaterialCreateInfo;
+	struct PrefabInfo;
 
 	class ResourceManager
 	{
@@ -24,20 +29,24 @@ namespace flex
 		void Destroy();
 		void DestroyAllLoadedMeshes();
 
-		void RemoveMaterialID(MaterialID materialID);
-		void AddMaterialID(MaterialID newMaterialID);
-		std::vector<MaterialID> GetMaterialIDs();
-		std::vector<MaterialID> RetrieveMaterialIDsFromJSON(const JSONObject& object, i32 fileVersion);
-
 		// Returns true if found and *loadedMesh was set
 		bool FindPreLoadedMesh(const std::string& relativeFilePath, LoadedMesh** loadedMesh);
-		LoadedMesh* FindOrLoadMesh(const std::string& relativeFilePath, MeshImportSettings* importSettings = nullptr);
-		void DiscoverMeshes();
+		LoadedMesh* FindOrLoadMesh(const std::string& relativeFilePath);
 
 		bool MeshFileNameConforms(const std::string& fileName);
 
+		void DiscoverMeshes();
+		void DiscoverPrefabs();
+
+		void ParseMeshJSON(GameObject* parent, const JSONObject& meshObj, const std::vector<MaterialID>& materialIDs);
+
 		void ParseFontFile();
 		void SerializeFontFile();
+
+		void ParseMaterialsFile();
+		bool SerializeMaterialFile() const;
+
+		JSONField SerializeMesh(Mesh* mesh);
 
 		void SetRenderedSDFFilePath(FontMetaData& metaData);
 
@@ -62,9 +71,8 @@ namespace flex
 		TextureID GetNextAvailableTextureID();
 		TextureID AddLoadedTexture(Texture* texture);
 
-		// Relative file path (e.g. MESH_DIRECTORY "cube.glb") -> LoadedMesh
-		std::map<std::string, LoadedMesh*> loadedMeshes;
-		std::vector<std::string> discoveredMeshes;
+		MaterialCreateInfo* GetMaterialInfo(const std::string& materialName);
+		PrefabInfo* GetPrefabInfo(const std::string& prefabName);
 
 		// ImGui window flags
 		bool bFontWindowShowing = false;
@@ -82,17 +90,17 @@ namespace flex
 
 		std::vector<Texture*> loadedTextures;
 
+		std::vector<MaterialCreateInfo> parsedMaterialInfos;
+		std::vector<PrefabInfo> parsedPrefabInfos;
+
+		// Relative file path (e.g. MESH_DIRECTORY "cube.glb") -> LoadedMesh
+		std::map<std::string, LoadedMesh*> loadedMeshes;
+		std::vector<std::string> discoveredMeshes;
+
 	private:
 
 		std::string m_FontsFilePathAbs;
 		std::string m_FontImageExtension = ".png";
-
-		/*
-		* Stores all unique initialized materials
-		* A "material array index" is used to index into this array
-		*/
-		// TODO: Unify with Renderer::m_Materials somehow
-		std::vector<MaterialID> m_LoadedMaterials;
 
 	};
 } // namespace flex

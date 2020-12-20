@@ -97,7 +97,6 @@ namespace flex
 		virtual void PostInitializeRenderObject(RenderID renderID) = 0; // Only call when creating objects after calling PostInitialize()
 		virtual void OnTextureDestroyed(TextureID textureID) = 0;
 
-		virtual void RemoveMaterial(MaterialID materialID) = 0;
 		virtual void ReplaceMaterialsOnObjects(MaterialID oldMatID, MaterialID newMatID) = 0;
 
 		virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) = 0;
@@ -156,7 +155,7 @@ namespace flex
 
 		virtual void NewFrame() = 0;
 
-		virtual void SetReflectionProbeMaterial(MaterialID reflectionProbeMaterialID);
+		virtual void RenderObjectMaterialChanged(MaterialID materialID) = 0;
 
 		virtual PhysicsDebugDrawBase* GetDebugDrawer() = 0;
 
@@ -180,7 +179,7 @@ namespace flex
 		virtual void RenderObjectStateChanged() = 0;
 
 		// TODO: Use MeshID
-		virtual void RecreateRenderObjectsWithMesh(const std::string& relativeMeshFilePath, MeshImportSettings* meshImportSettings) = 0;
+		virtual void RecreateRenderObjectsWithMesh(const std::string& relativeMeshFilePath) = 0;
 
 		virtual ParticleSystemID AddParticleSystem(const std::string& name, ParticleSystem* system, i32 particleCount) = 0;
 		virtual bool RemoveParticleSystem(ParticleSystemID particleSystemID) = 0;
@@ -193,6 +192,8 @@ namespace flex
 		// only render a new file if not present or if bForceRender is true
 		// Returns true if succeeded
 		virtual bool LoadFont(FontMetaData& fontMetaData, bool bForceRender) = 0;
+
+		void SetReflectionProbeMaterial(MaterialID reflectionProbeMaterialID);
 
 		// Returns true when the selected material has changed
 		bool DrawImGuiMaterialList(i32* selectedMaterialIndexShort, MaterialID* selectedMaterialID, bool bShowEditorMaterials);
@@ -209,6 +210,8 @@ namespace flex
 
 		void SaveSettingsToDisk(bool bAddEditorStr = true);
 		void LoadSettingsFromDisk();
+
+		MaterialID GetMaterialID(const std::string& materialName);
 
 		// Pos should lie in range [-1, 1], with y increasing upward
 		// Output pos lies in range [0, 1], with y increasing downward,
@@ -257,7 +260,8 @@ namespace flex
 		void AddEditorString(const std::string& str);
 
 		i32 GetMaterialCount();
-		Material* GetMaterial(MaterialID matID);
+		Material* GetMaterial(MaterialID materialID);
+		void RemoveMaterial(MaterialID materialID);
 		Shader* GetShader(ShaderID shaderID);
 		MaterialID GetNextAvailableMaterialID() const;
 
@@ -288,6 +292,8 @@ namespace flex
 		i32 GetTAASampleCount() const;
 
 		void SetDirtyFlags(RenderBatchDirtyFlags flags);
+
+		std::vector<JSONObject> SerializeAllMaterialsToJSON();
 
 		bool bUniformBufferWindowShowing = false;
 		bool bGPUTimingsWindowShowing = false;

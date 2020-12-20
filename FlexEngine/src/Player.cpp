@@ -56,6 +56,7 @@ namespace flex
 		matCreateInfo.constAlbedo = glm::vec3(0.89f, 0.93f, 0.98f);
 		matCreateInfo.constMetallic = 0.0f;
 		matCreateInfo.constRoughness = 0.98f;
+		matCreateInfo.bSerializable = false;
 		MaterialID matID = g_Renderer->InitializeMaterial(&matCreateInfo);
 
 		RigidBody* rigidBody = new RigidBody();
@@ -84,6 +85,7 @@ namespace flex
 			mapTabletMatCreateInfo.constAlbedo = glm::vec3(0.34f, 0.38f, 0.39f);
 			mapTabletMatCreateInfo.constMetallic = 1.0f;
 			mapTabletMatCreateInfo.constRoughness = 0.24f;
+			mapTabletMatCreateInfo.bSerializable = false;
 			MaterialID mapTabletMatID = g_Renderer->InitializeMaterial(&mapTabletMatCreateInfo);
 
 			m_MapTabletHolder = new GameObject("Map tablet", GameObjectType::_NONE);

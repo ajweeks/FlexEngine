@@ -404,6 +404,7 @@ namespace flex
 		bool generateReflectionProbeMaps = false;
 
 		bool bDynamic = false; // True if vertex data is uploaded to the GPU often
+		bool bSerializable = true;
 
 		bool persistent = false;
 		bool visibleInEditor = true;
@@ -435,24 +436,36 @@ namespace flex
 		bool bSamplerClampToBorder = false;
 	};
 
-	template<typename T>
+	template<typename UniformType>
 	struct ShaderUniformContainer
 	{
-		using iter = typename std::vector<Pair<u64, T>>::iterator;
+		struct TexPair
+		{
+			TexPair(u64 uniformID, UniformType object) :
+				uniformID(uniformID),
+				object(object)
+			{}
 
-		void Add(u64 uniform, const T value, std::string slotName = "")
+			u64 uniformID;
+			UniformType object;
+		};
+
+		using iter = typename std::vector<TexPair>::iterator;
+		using const_iter = typename std::vector<TexPair>::const_iterator;
+
+		void Add(u64 uniformID, const UniformType object, std::string slotName = "")
 		{
 			for (auto value_iter = values.begin(); value_iter != values.end(); ++value_iter)
 			{
-				if (value_iter->first == uniform)
+				if (value_iter->uniformID == uniformID)
 				{
-					value_iter->second = value;
+					value_iter->object = object;
 					slotNames[value_iter - values.begin()] = slotName;
 					return;
 				}
 			}
 
-			values.emplace_back(uniform, value);
+			values.emplace_back(uniformID, object);
 			slotNames.emplace_back(slotName);
 		}
 
@@ -471,11 +484,21 @@ namespace flex
 			return values.end();
 		}
 
-		bool Contains(u64 uniform)
+		const_iter cbegin()
 		{
-			for (auto& pair : values)
+			return values.cbegin();
+		}
+
+		const_iter cend()
+		{
+			return values.cend();
+		}
+
+		bool Contains(u64 uniformID) const
+		{
+			for (const auto& pair : values)
 			{
-				if (pair.first == uniform)
+				if (pair.uniformID == uniformID)
 				{
 					return true;
 				}
@@ -483,19 +506,19 @@ namespace flex
 			return false;
 		}
 
-		T operator[](u64 uniform)
+		UniformType operator[](u64 uniformID)
 		{
-			for (auto& pair : values)
+			for (const auto& pair : values)
 			{
-				if (pair.first == uniform)
+				if (pair.uniformID == uniformID)
 				{
-					return pair.second;
+					return pair.object;
 				}
 			}
 			return nullptr;
 		}
 
-		std::vector<Pair<u64, T>> values;
+		std::vector<TexPair> values;
 		std::vector<std::string> slotNames;
 	};
 
@@ -526,6 +549,8 @@ namespace flex
 
 		static void ParseJSONObject(const JSONObject& material, MaterialCreateInfo& createInfoOut);
 		JSONObject Serialize() const;
+
+		static std::vector<MaterialID> ParseMaterialArrayJSON(const JSONObject& object, i32 fileVersion);
 
 		std::string name = "";
 		ShaderID shaderID = InvalidShaderID;
@@ -579,6 +604,8 @@ namespace flex
 
 		bool persistent = false;
 		bool visibleInEditor = false;
+
+		bool bSerializable = true;
 
 		bool bDynamic = false;
 		u32 dynamicVertexIndexBufferIndex = 0;

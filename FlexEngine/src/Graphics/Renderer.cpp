@@ -219,7 +219,6 @@ namespace flex
 			delete m_PhysicsDebugDrawer;
 			m_PhysicsDebugDrawer = nullptr;
 		}
-
 	}
 
 	void Renderer::SetReflectionProbeMaterial(MaterialID reflectionProbeMaterialID)
@@ -314,6 +313,20 @@ namespace flex
 		{
 			PrintError("Failed to parse renderer settings file %s\n\terror: %s\n", m_RendererSettingsFilePathAbs.c_str(), JSONParser::GetErrorString());
 		}
+	}
+
+	MaterialID Renderer::GetMaterialID(const std::string& materialName)
+	{
+		for (auto& matPair : m_Materials)
+		{
+			Material* material = matPair.second;
+			if (material->name.compare(materialName) == 0)
+			{
+				return matPair.first;
+			}
+		}
+
+		return InvalidMaterialID;
 	}
 
 	void Renderer::TransformRectToScreenSpace(const glm::vec2& pos,
@@ -582,6 +595,16 @@ namespace flex
 		return m_Materials.at(materialID);
 	}
 
+	void Renderer::RemoveMaterial(MaterialID materialID)
+	{
+		auto iter = m_Materials.find(materialID);
+		if (iter != m_Materials.end())
+		{
+			delete iter->second;
+			m_Materials.erase(iter);
+		}
+	}
+
 	Shader* Renderer::GetShader(ShaderID shaderID)
 	{
 		return m_Shaders[shaderID];
@@ -633,19 +656,11 @@ namespace flex
 			}
 		}
 
-		for (const auto& materialObj : BaseScene::s_ParsedMaterials)
+		MaterialCreateInfo* matCreateInfo = g_ResourceManager->GetMaterialInfo(materialName);
+		if (matCreateInfo != nullptr)
 		{
-			if (materialObj.GetString("name").compare(materialName) == 0)
-			{
-				// Material exists in library, but hasn't been initialized yet
-				MaterialCreateInfo matCreateInfo = {};
-				Material::ParseJSONObject(materialObj, matCreateInfo);
-
-				materialID = InitializeMaterial(&matCreateInfo);
-				g_ResourceManager->AddMaterialID(materialID);
-
-				return true;
-			}
+			materialID = InitializeMaterial(matCreateInfo);
+			return true;
 		}
 
 		return false;
@@ -700,6 +715,23 @@ namespace flex
 	{
 		m_DirtyFlagBits |= flags;
 		m_bRebatchRenderObjects = true;
+	}
+
+	std::vector<JSONObject> Renderer::SerializeAllMaterialsToJSON()
+	{
+		std::vector<JSONObject> result;
+
+		result.reserve(m_Materials.size());
+		for (auto& matPair : m_Materials)
+		{
+			Material* material = matPair.second;
+			if (material->bSerializable)
+			{
+				result.emplace_back(material->Serialize());
+			}
+		}
+
+		return result;
 	}
 
 	void Renderer::EnqueueScreenSpaceSprites()
@@ -839,9 +871,12 @@ namespace flex
 			i32 matShortIndex = 0;
 			for (i32 i = 0; i < (i32)m_Materials.size(); ++i)
 			{
+				ImGui::PushID(i);
+
 				auto matIter = m_Materials.find(i);
 				if (matIter == m_Materials.end() || (!bShowEditorMaterials && !matIter->second->visibleInEditor))
 				{
+					ImGui::PopID();
 					continue;
 				}
 
@@ -849,6 +884,7 @@ namespace flex
 
 				if (!materialFilter.PassFilter(material->name.c_str()))
 				{
+					ImGui::PopID();
 					continue;
 				}
 
@@ -890,9 +926,7 @@ namespace flex
 						createInfo.constMetallic = material->constMetallic;
 						createInfo.colourMultiplier = material->colourMultiplier;
 						// TODO: Copy other fields
-						MaterialID newMaterialID = InitializeMaterial(&createInfo);
-
-						g_ResourceManager->AddMaterialID(newMaterialID);
+						InitializeMaterial(&createInfo);
 
 						ImGui::CloseCurrentPopup();
 					}
@@ -970,6 +1004,8 @@ namespace flex
 				}
 
 				++matShortIndex;
+
+				ImGui::PopID();
 			}
 		}
 		ImGui::EndChild(); // Material list
@@ -1723,7 +1759,7 @@ namespace flex
 	{
 		assert(m_SkyBoxMesh != nullptr);
 		assert(m_SkyboxShaderID != InvalidShaderID);
-		MaterialID skyboxMaterialID = m_SkyBoxMesh->GetSubMeshes()[0]->GetMaterialID();
+		MaterialID skyboxMaterialID = m_SkyBoxMesh->GetSubMesh(0)->GetMaterialID();
 
 		const std::string gBufferMatName = "GBuffer material";
 		const std::string gBufferCubeMatName = "GBuffer cubemap material";
@@ -1774,6 +1810,7 @@ namespace flex
 			gBufferMaterialCreateInfo.renderToCubemap = false;
 			gBufferMaterialCreateInfo.persistent = true;
 			gBufferMaterialCreateInfo.visibleInEditor = false;
+			gBufferMaterialCreateInfo.bSerializable = false;
 			FillOutGBufferFrameBufferAttachments(gBufferMaterialCreateInfo.sampledFrameBuffers);
 
 			MaterialID gBufferMatID = InitializeMaterial(&gBufferMaterialCreateInfo);
@@ -1883,6 +1920,7 @@ namespace flex
 		spriteMatSSCreateInfo.visibleInEditor = false;
 		spriteMatSSCreateInfo.enableAlbedoSampler = true;
 		spriteMatSSCreateInfo.bDynamic = false;
+		spriteMatSSCreateInfo.bSerializable = false;
 		m_SpriteMatSSID = InitializeMaterial(&spriteMatSSCreateInfo);
 
 		MaterialCreateInfo spriteMatWSCreateInfo = {};
@@ -1892,6 +1930,7 @@ namespace flex
 		spriteMatWSCreateInfo.visibleInEditor = false;
 		spriteMatWSCreateInfo.enableAlbedoSampler = true;
 		spriteMatWSCreateInfo.bDynamic = false;
+		spriteMatWSCreateInfo.bSerializable = false;
 		m_SpriteMatWSID = InitializeMaterial(&spriteMatWSCreateInfo);
 
 		MaterialCreateInfo spriteArrMatCreateInfo = {};
@@ -1901,6 +1940,7 @@ namespace flex
 		spriteArrMatCreateInfo.visibleInEditor = false;
 		spriteArrMatCreateInfo.enableAlbedoSampler = true;
 		spriteArrMatCreateInfo.bDynamic = false;
+		spriteArrMatCreateInfo.bSerializable = false;
 		m_SpriteArrMatID = InitializeMaterial(&spriteArrMatCreateInfo);
 
 		MaterialCreateInfo fontSSMatCreateInfo = {};
@@ -1909,6 +1949,7 @@ namespace flex
 		fontSSMatCreateInfo.persistent = true;
 		fontSSMatCreateInfo.visibleInEditor = false;
 		fontSSMatCreateInfo.bDynamic = false;
+		fontSSMatCreateInfo.bSerializable = false;
 		m_FontMatSSID = InitializeMaterial(&fontSSMatCreateInfo);
 
 		MaterialCreateInfo fontWSMatCreateInfo = {};
@@ -1917,6 +1958,7 @@ namespace flex
 		fontWSMatCreateInfo.persistent = true;
 		fontWSMatCreateInfo.visibleInEditor = false;
 		fontWSMatCreateInfo.bDynamic = false;
+		fontWSMatCreateInfo.bSerializable = false;
 		m_FontMatWSID = InitializeMaterial(&fontWSMatCreateInfo);
 
 		MaterialCreateInfo shadowMatCreateInfo = {};
@@ -1924,6 +1966,7 @@ namespace flex
 		shadowMatCreateInfo.shaderName = "shadow";
 		shadowMatCreateInfo.persistent = true;
 		shadowMatCreateInfo.visibleInEditor = false;
+		shadowMatCreateInfo.bSerializable = false;
 		m_ShadowMaterialID = InitializeMaterial(&shadowMatCreateInfo);
 
 		MaterialCreateInfo postProcessMatCreateInfo = {};
@@ -1931,6 +1974,7 @@ namespace flex
 		postProcessMatCreateInfo.shaderName = "post_process";
 		postProcessMatCreateInfo.persistent = true;
 		postProcessMatCreateInfo.visibleInEditor = false;
+		postProcessMatCreateInfo.bSerializable = false;
 		m_PostProcessMatID = InitializeMaterial(&postProcessMatCreateInfo);
 
 		MaterialCreateInfo postFXAAMatCreateInfo = {};
@@ -1938,6 +1982,7 @@ namespace flex
 		postFXAAMatCreateInfo.shaderName = "post_fxaa";
 		postFXAAMatCreateInfo.persistent = true;
 		postFXAAMatCreateInfo.visibleInEditor = false;
+		postFXAAMatCreateInfo.bSerializable = false;
 		m_PostFXAAMatID = InitializeMaterial(&postFXAAMatCreateInfo);
 
 		MaterialCreateInfo selectedObjectMatCreateInfo = {};
@@ -1946,6 +1991,7 @@ namespace flex
 		selectedObjectMatCreateInfo.persistent = true;
 		selectedObjectMatCreateInfo.visibleInEditor = false;
 		selectedObjectMatCreateInfo.colourMultiplier = VEC4_ONE;
+		selectedObjectMatCreateInfo.bSerializable = false;
 		m_SelectedObjectMatID = InitializeMaterial(&selectedObjectMatCreateInfo);
 
 		MaterialCreateInfo taaMatCreateInfo = {};
@@ -1954,6 +2000,7 @@ namespace flex
 		taaMatCreateInfo.persistent = true;
 		taaMatCreateInfo.visibleInEditor = false;
 		taaMatCreateInfo.colourMultiplier = VEC4_ONE;
+		taaMatCreateInfo.bSerializable = false;
 		m_TAAResolveMaterialID = InitializeMaterial(&taaMatCreateInfo);
 
 		MaterialCreateInfo gammaCorrectMatCreateInfo = {};
@@ -1962,6 +2009,7 @@ namespace flex
 		gammaCorrectMatCreateInfo.persistent = true;
 		gammaCorrectMatCreateInfo.visibleInEditor = false;
 		gammaCorrectMatCreateInfo.colourMultiplier = VEC4_ONE;
+		gammaCorrectMatCreateInfo.bSerializable = false;
 		m_GammaCorrectMaterialID = InitializeMaterial(&gammaCorrectMatCreateInfo);
 
 		MaterialCreateInfo fullscreenBlitMatCreateInfo = {};
@@ -1970,6 +2018,7 @@ namespace flex
 		fullscreenBlitMatCreateInfo.persistent = true;
 		fullscreenBlitMatCreateInfo.visibleInEditor = false;
 		fullscreenBlitMatCreateInfo.enableAlbedoSampler = true;
+		fullscreenBlitMatCreateInfo.bSerializable = false;
 		m_FullscreenBlitMatID = InitializeMaterial(&fullscreenBlitMatCreateInfo);
 
 		MaterialCreateInfo computeSDFMatCreateInfo = {};
@@ -1977,6 +2026,7 @@ namespace flex
 		computeSDFMatCreateInfo.shaderName = "compute_sdf";
 		computeSDFMatCreateInfo.persistent = true;
 		computeSDFMatCreateInfo.visibleInEditor = false;
+		computeSDFMatCreateInfo.bSerializable = false;
 		m_ComputeSDFMatID = InitializeMaterial(&computeSDFMatCreateInfo);
 
 		MaterialCreateInfo irradianceCreateInfo = {};
@@ -1984,6 +2034,7 @@ namespace flex
 		irradianceCreateInfo.shaderName = "irradiance";
 		irradianceCreateInfo.persistent = true;
 		irradianceCreateInfo.visibleInEditor = false;
+		irradianceCreateInfo.bSerializable = false;
 		m_IrradianceMaterialID = InitializeMaterial(&irradianceCreateInfo);
 
 		MaterialCreateInfo prefilterCreateInfo = {};
@@ -1991,6 +2042,7 @@ namespace flex
 		prefilterCreateInfo.shaderName = "prefilter";
 		prefilterCreateInfo.persistent = true;
 		prefilterCreateInfo.visibleInEditor = false;
+		prefilterCreateInfo.bSerializable = false;
 		m_PrefilterMaterialID = InitializeMaterial(&prefilterCreateInfo);
 
 		MaterialCreateInfo brdfCreateInfo = {};
@@ -1998,6 +2050,7 @@ namespace flex
 		brdfCreateInfo.shaderName = "brdf";
 		brdfCreateInfo.persistent = true;
 		brdfCreateInfo.visibleInEditor = false;
+		brdfCreateInfo.bSerializable = false;
 		m_BRDFMaterialID = InitializeMaterial(&brdfCreateInfo);
 
 		MaterialCreateInfo wireframeCreateInfo = {};
@@ -2005,6 +2058,7 @@ namespace flex
 		wireframeCreateInfo.shaderName = "wireframe";
 		wireframeCreateInfo.persistent = true;
 		wireframeCreateInfo.visibleInEditor = false;
+		wireframeCreateInfo.bSerializable = false;
 		m_WireframeMatID = InitializeMaterial(&wireframeCreateInfo);
 
 		MaterialCreateInfo placeholderMatCreateInfo = {};
@@ -2013,6 +2067,7 @@ namespace flex
 		placeholderMatCreateInfo.persistent = true;
 		placeholderMatCreateInfo.visibleInEditor = false;
 		placeholderMatCreateInfo.constAlbedo = glm::vec3(1.0f, 0.0f, 1.0f);
+		placeholderMatCreateInfo.bSerializable = false;
 		m_PlaceholderMaterialID = InitializeMaterial(&placeholderMatCreateInfo);
 	}
 
@@ -2649,6 +2704,7 @@ namespace flex
 		particleSimMatCreateInfo.shaderName = "particle_sim";
 		particleSimMatCreateInfo.persistent = true;
 		particleSimMatCreateInfo.visibleInEditor = false;
+		particleSimMatCreateInfo.bSerializable = false;
 		return InitializeMaterial(&particleSimMatCreateInfo);
 	}
 
@@ -2659,6 +2715,7 @@ namespace flex
 		particleMatCreateInfo.shaderName = "particles";
 		particleMatCreateInfo.persistent = true;
 		particleMatCreateInfo.visibleInEditor = false;
+		particleMatCreateInfo.bSerializable = false;
 		return InitializeMaterial(&particleMatCreateInfo);
 	}
 

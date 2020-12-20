@@ -11,7 +11,6 @@ namespace flex
 	struct LoadedMesh
 	{
 		std::string relativeFilePath;
-		MeshImportSettings importSettings;
 		cgltf_data* data = nullptr;
 	};
 } // namespace flex

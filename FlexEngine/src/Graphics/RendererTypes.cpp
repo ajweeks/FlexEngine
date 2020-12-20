@@ -260,6 +260,75 @@ namespace flex
 		material.SetFloatChecked("texture scale", createInfoOut.textureScale);
 	}
 
+	std::vector<MaterialID> Material::ParseMaterialArrayJSON(const JSONObject& object, i32 fileVersion)
+	{
+		std::vector<MaterialID> matIDs;
+		if (fileVersion >= 3)
+		{
+			std::vector<JSONField> materialNames;
+			if (object.SetFieldArrayChecked("materials", materialNames))
+			{
+				for (const JSONField& materialNameField : materialNames)
+				{
+					std::string materialName = materialNameField.label;
+					bool bSuccess = false;
+					if (!materialName.empty())
+					{
+						MaterialID materialID = g_Renderer->GetMaterialID(materialName);
+
+						if (materialID == InvalidMaterialID)
+						{
+							if (materialName.compare("placeholder") == 0)
+							{
+								materialID = g_Renderer->GetPlaceholderMaterialID();
+							}
+						}
+
+						if (materialID != InvalidMaterialID)
+						{
+							bSuccess = true;
+						}
+
+						matIDs.push_back(materialID);
+					}
+
+					if (!bSuccess)
+					{
+						PrintError("Invalid material name for object %s: %s\n", object.GetString("name").c_str(), materialName.c_str());
+					}
+				}
+			}
+		}
+		else // fileVersion < 3
+		{
+			MaterialID materialID = InvalidMaterialID;
+			std::string materialName;
+			if (object.SetStringChecked("material", materialName))
+			{
+				if (!materialName.empty())
+				{
+					materialID = g_Renderer->GetMaterialID(materialName);
+					if (materialID == InvalidMaterialID)
+					{
+						if (materialName.compare("placeholder") == 0)
+						{
+							materialID = g_Renderer->GetPlaceholderMaterialID();
+						}
+					}
+				}
+
+				if (materialID == InvalidMaterialID)
+				{
+					PrintError("Invalid material name for object %s: %s\n", object.GetString("name").c_str(), materialName.c_str());
+				}
+			}
+
+			matIDs.push_back(materialID);
+		}
+
+		return matIDs;
+	}
+
 	JSONObject Material::Serialize() const
 	{
 		JSONObject materialObject = {};

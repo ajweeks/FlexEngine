@@ -40,6 +40,7 @@ namespace flex
 				debugMatCreateInfo.persistent = true;
 				debugMatCreateInfo.visibleInEditor = true;
 				debugMatCreateInfo.bDynamic = true;
+				debugMatCreateInfo.bSerializable = false;
 				m_MaterialID = g_Renderer->InitializeMaterial(&debugMatCreateInfo);
 			}
 
@@ -183,7 +184,7 @@ namespace flex
 
 				if (newHash != oldHash)
 				{
-					m_ObjectMesh->GetSubMeshes()[0]->UpdateDynamicVertexData(m_VertexBufferCreateInfo, indexBuffer);
+					m_ObjectMesh->GetSubMesh(0)->UpdateDynamicVertexData(m_VertexBufferCreateInfo, indexBuffer);
 				}
 			}
 		}
@@ -215,7 +216,7 @@ namespace flex
 			}
 			g_SceneManager->CurrentScene()->AddRootObject(m_Object);
 
-			m_ObjectMesh->GetSubMeshes()[0]->UpdateDynamicVertexData(m_VertexBufferCreateInfo, indexBuffer);
+			m_ObjectMesh->GetSubMesh(0)->UpdateDynamicVertexData(m_VertexBufferCreateInfo, indexBuffer);
 		}
 
 		void VulkanPhysicsDebugDraw::Clear()

@@ -219,18 +219,4 @@ namespace flex
 
 		_NONE
 	};
-
-	struct MeshImportSettings
-	{
-		/* Whether or not to invert the horizontal texture coordinate */
-		bool bFlipU = false;
-		/* Whether or not to invert the vertical texture coordinate */
-		bool bFlipV = false;
-		/* Whether or not to invert the Z component (up) of all normals */
-		bool bFlipNormalZ = false;
-		/* Whether or not to swap Y and Z components of all normals (converts from Y-up to Z-up) */
-		bool bSwapNormalYZ = false;
-		bool bDontCreateRenderObject = false;
-	};
-
 } // namespace flex

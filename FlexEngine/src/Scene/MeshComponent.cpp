@@ -112,20 +112,19 @@ namespace flex
 	MeshComponent* MeshComponent::LoadFromCGLTF(Mesh* owningMesh,
 		cgltf_primitive* primitive,
 		MaterialID materialID,
-		MeshImportSettings* importSettings /* = nullptr */,
-		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
+		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */,
+		bool bCreateRenderObject /* = true */)
 	{
-		return LoadFromCGLTFInternal(owningMesh, primitive, materialID, false, 0, importSettings, optionalCreateInfo);
+		return LoadFromCGLTFInternal(owningMesh, primitive, materialID, false, 0, optionalCreateInfo, bCreateRenderObject);
 	}
 
 	MeshComponent* MeshComponent::LoadFromCGLTFDynamic(Mesh* owningMesh,
 		cgltf_primitive* primitive,
 		MaterialID materialID,
 		u32 initialMaxVertexCount /* = u32_max */,
-		MeshImportSettings* importSettings /* = nullptr */,
 		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
 	{
-		return LoadFromCGLTFInternal(owningMesh, primitive, materialID, true, initialMaxVertexCount, importSettings, optionalCreateInfo);
+		return LoadFromCGLTFInternal(owningMesh, primitive, materialID, true, initialMaxVertexCount, optionalCreateInfo, true);
 	}
 
 	MeshComponent* MeshComponent::LoadFromCGLTFInternal(Mesh* owningMesh,
@@ -133,8 +132,8 @@ namespace flex
 		MaterialID materialID,
 		bool bDynamic,
 		u32 initialMaxDynamicVertexCount,
-		MeshImportSettings* importSettings,
-		RenderObjectCreateInfo* optionalCreateInfo)
+		RenderObjectCreateInfo* optionalCreateInfo,
+		bool bCreateRenderObject)
 	{
 		if (primitive->indices == nullptr)
 		{
@@ -252,14 +251,6 @@ namespace flex
 
 					glm::vec3 norm;
 					cgltf_accessor_read_float(normAccessor, vi, &norm.x, 3);
-					if (importSettings && importSettings->bSwapNormalYZ)
-					{
-						std::swap(norm.y, norm.z);
-					}
-					if (importSettings && importSettings->bFlipNormalZ)
-					{
-						norm.z = -norm.z;
-					}
 					vertexBufferDataCreateInfo.normals[vi] = norm;
 				}
 			}
@@ -328,14 +319,6 @@ namespace flex
 					cgltf_accessor_read_float(uvAccessor, vi, &uv0.x, 2);
 
 					uv0 *= newMeshComponent->m_UVScale;
-					if (importSettings && importSettings->bFlipU)
-					{
-						uv0.x = 1.0f - uv0.x;
-					}
-					if (importSettings && importSettings->bFlipV)
-					{
-						uv0.y = 1.0f - uv0.y;
-					}
 					vertexBufferDataCreateInfo.texCoords_UV[vi] = uv0;
 				}
 			}
@@ -394,7 +377,7 @@ namespace flex
 		renderObjectCreateInfo.indices = &newMeshComponent->m_Indices;
 		renderObjectCreateInfo.materialID = materialID;
 
-		if (importSettings == nullptr || !importSettings->bDontCreateRenderObject)
+		if (bCreateRenderObject)
 		{
 			if (newMeshComponent->renderID != InvalidRenderID)
 			{
@@ -1210,6 +1193,9 @@ namespace flex
 
 	bool MeshComponent::CalculateTangents(VertexBufferDataCreateInfo& createInfo, const std::vector<u32>& indices)
 	{
+		// TODO:
+		FLEX_UNUSED(indices);
+
 		if (createInfo.normals.empty())
 		{
 			PrintError("Can't calculate tangents for mesh which contains no normal data!\n");

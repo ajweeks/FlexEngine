@@ -43,7 +43,6 @@ namespace flex
 			virtual void PostInitializeRenderObject(RenderID renderID) override;
 			virtual void OnTextureDestroyed(TextureID textureID) override;
 
-			virtual void RemoveMaterial(MaterialID materialID) override;
 			virtual void ReplaceMaterialsOnObjects(MaterialID oldMatID, MaterialID newMatID) override;
 
 			virtual void Update() override;
@@ -114,8 +113,10 @@ namespace flex
 
 			virtual void RecaptureReflectionProbe() override;
 
+			virtual void RenderObjectMaterialChanged(MaterialID materialID) override;
+
 			virtual void RenderObjectStateChanged() override;
-			virtual void RecreateRenderObjectsWithMesh(const std::string& relativeMeshFilePath, MeshImportSettings* meshImportSettings) override;
+			virtual void RecreateRenderObjectsWithMesh(const std::string& relativeMeshFilePath) override;
 
 			virtual ParticleSystemID AddParticleSystem(const std::string& name, ParticleSystem* system, i32 particleCount) override;
 			virtual bool RemoveParticleSystem(ParticleSystemID particleSystemID) override;
@@ -201,7 +202,7 @@ namespace flex
 			void CreateRenderPasses();
 			void CalculateAutoLayoutTransitions();
 
-			void FillOutBufferDescriptorInfos(ShaderUniformContainer<BufferDescriptorInfo>* descriptors, UniformBufferList const * uniformBufferList, ShaderID shaderID);
+			void FillOutBufferDescriptorInfos(ShaderUniformContainer<BufferDescriptorInfo>* descriptors, UniformBufferList const* uniformBufferList, ShaderID shaderID);
 			void CreateDescriptorSet(RenderID renderID);
 			void CreateDescriptorSet(DescriptorSetCreateInfo& createInfo, MaterialID materialID);
 			void CreateDescriptorSet(DescriptorSetCreateInfo* createInfo);
