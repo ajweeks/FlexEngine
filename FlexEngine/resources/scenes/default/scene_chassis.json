@@ -1,5 +1,5 @@
 {
-	"version" : 3,
+	"version" : 4,
 	"name" : "scene_chassis",
 	"spawn player" : true,
 	"skybox data" : 
@@ -21,9 +21,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-13.276, 30.293, -42.597",
-			"pitch" : -0.784084,
-			"yaw" : 1.517195
+			"position" : "-0.000, 20.249, -18.000",
+			"pitch" : -0.785395,
+			"yaw" : 1.570796
 		}
 	},
 	"objects" : 
@@ -54,7 +54,7 @@
 			{
 				"scale" : "313.930, 0.500, 311.130"
 			},
-			"mesh" : "cube",
+			"mesh" : "cube.glb",
 			"materials" : 
 			[
 				"cross hatch"
@@ -101,8 +101,8 @@
 			"casts shadow" : true,
 			"transform" : 
 			{
-				"pos" : "-12.272, 1.271, -15.961",
-				"rot" : "3.131, 0.207, -3.142",
+				"pos" : "-12.271, 1.349, -15.968",
+				"rot" : "3.141, 0.207, -3.142",
 				"scale" : "0.999, 1.000, 1.010"
 			},
 			"materials" : 

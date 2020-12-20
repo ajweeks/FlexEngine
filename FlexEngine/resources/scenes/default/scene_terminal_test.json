@@ -1,5 +1,5 @@
 {
-	"version" : 3,
+	"version" : 4,
 	"name" : "Scene_terminal_test",
 	"spawn player" : true,
 	"skybox data" : 
@@ -21,9 +21,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "2.869, 1.347, -2.855",
-			"pitch" : -0.070911,
-			"yaw" : 2.160092
+			"position" : "0.000, 1.347, 0.000",
+			"pitch" : 0.000000,
+			"yaw" : 1.570796
 		}
 	},
 	"objects" : 
@@ -32,12 +32,13 @@
 			"name" : "ground plane",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "-2.400, -0.653, 0.000",
 				"scale" : "100.000, 1.000, 100.000"
 			},
-			"mesh" : "unit-plane",
+			"mesh" : "unit-plane.glb",
 			"materials" : 
 			[
 				"grid"
@@ -61,6 +62,7 @@
 			"name" : "Lighting",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 			},
@@ -70,6 +72,7 @@
 					"name" : "Skybox",
 					"type" : "skybox",
 					"visible" : true,
+					"casts shadow" : false,
 					"transform" : 
 					{
 					},
@@ -85,6 +88,7 @@
 					"name" : "Reflection Probe 01",
 					"type" : "reflection probe",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "-2.045, 14.562, 0.000"
@@ -94,6 +98,7 @@
 					"name" : "Directional Light",
 					"type" : "directional light",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "0.000, 15.000, 0.000",
@@ -114,6 +119,7 @@
 					"name" : "PointLight_03",
 					"type" : "point light",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "-9.843, 0.708, 12.554"
@@ -131,6 +137,7 @@
 							"name" : "socket_005",
 							"type" : "socket",
 							"visible" : true,
+							"casts shadow" : true,
 							"transform" : 
 							{
 							},
@@ -145,6 +152,7 @@
 					"name" : "PointLight_02",
 					"type" : "point light",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "16.636, 7.943, -3.520"
@@ -162,6 +170,7 @@
 							"name" : "socket_004",
 							"type" : "socket",
 							"visible" : true,
+							"casts shadow" : true,
 							"transform" : 
 							{
 							},
@@ -176,6 +185,7 @@
 					"name" : "PointLight_01",
 					"type" : "point light",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "-1.775, 0.938, 16.134"
@@ -193,6 +203,7 @@
 							"name" : "socket_006",
 							"type" : "socket",
 							"visible" : true,
+							"casts shadow" : true,
 							"transform" : 
 							{
 							},
@@ -207,6 +218,7 @@
 					"name" : "PointLight_00",
 					"type" : "point light",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "9.063, 4.930, 29.718"
@@ -224,6 +236,7 @@
 							"name" : "socket_007",
 							"type" : "socket",
 							"visible" : true,
+							"casts shadow" : true,
 							"transform" : 
 							{
 							},
@@ -240,6 +253,7 @@
 			"name" : "Copper Terminal 01",
 			"type" : "terminal",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "-3.227, 0.000, 9.288",
@@ -274,12 +288,13 @@
 					"name" : "screen",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "0.000, 0.933, 0.484",
 						"scale" : "1.760, 1.790, 1.000"
 					},
-					"mesh" : "cube",
+					"mesh" : "cube.glb",
 					"materials" : 
 					[
 						"terminal display"
@@ -289,6 +304,7 @@
 					"name" : "socket_000",
 					"type" : "socket",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "-0.755, -0.362, -1.168",
@@ -303,6 +319,7 @@
 					"name" : "socket_001",
 					"type" : "socket",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "-0.247, -0.409, -1.168",
@@ -310,13 +327,14 @@
 					},
 					"socket" : 
 					{
-						"slotIdx" : 0
+						"slotIdx" : 1
 					}
 				},
 				{
 					"name" : "socket_002",
 					"type" : "socket",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "0.279, -0.409, -1.168",
@@ -324,13 +342,14 @@
 					},
 					"socket" : 
 					{
-						"slotIdx" : 0
+						"slotIdx" : 2
 					}
 				},
 				{
 					"name" : "socket_003",
 					"type" : "socket",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "0.802, -0.409, -1.168",
@@ -338,7 +357,7 @@
 					},
 					"socket" : 
 					{
-						"slotIdx" : 0
+						"slotIdx" : 3
 					}
 				}
 			]
@@ -347,6 +366,7 @@
 			"name" : "Cart_00",
 			"type" : "cart",
 			"visible" : false,
+			"casts shadow" : true,
 			"transform" : 
 			{
 			},
@@ -356,7 +376,7 @@
 			],
 			"cart info" : 
 			{
-				"track ID" : -1,
+				"track ID" : 4294967295,
 				"dist along track" : -1.000000
 			}
 		},
@@ -364,13 +384,14 @@
 			"name" : "moka",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "-20.859, 0.688, 25.622",
 				"rot" : "0.000, -1.070, 0.000",
 				"scale" : "11.430, 11.430, 11.430"
 			},
-			"mesh" : "moka",
+			"mesh" : "moka.glb",
 			"materials" : 
 			[
 				"pbr grey",
@@ -381,13 +402,14 @@
 			"name" : "dragon",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "12.137, 1.942, 27.655",
 				"rot" : "0.000, -1.059, 0.000",
 				"scale" : "3.450, 3.450, 3.450"
 			},
-			"mesh" : "dragon_mid",
+			"mesh" : "dragon_mid.glb",
 			"materials" : 
 			[
 				"pbr red"
@@ -397,13 +419,14 @@
 			"name" : "New_Object_00",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "12.025, 0.979, 27.633",
 				"rot" : "0.000, 0.630, 0.000",
 				"scale" : "4.500, 2.000, 2.330"
 			},
-			"mesh" : "cube",
+			"mesh" : "cube.glb",
 			"materials" : 
 			[
 				"pbr white"
@@ -413,6 +436,7 @@
 			"name" : "wire_000",
 			"type" : "wire",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "1.785, 0.600, 8.670"
@@ -427,9 +451,10 @@
 			"name" : "wire_001",
 			"type" : "wire",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
-				"pos" : "-8.394, 0.597, 6.917"
+				"pos" : "-8.395, 0.600, 6.915"
 			},
 			"wire" : 
 			{

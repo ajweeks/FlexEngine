@@ -1,7 +1,13 @@
 {
-	"version" : 3,
+	"version" : 4,
 	"name" : "scene_prop_test",
 	"spawn player" : false,
+	"skybox data" : 
+	{
+		"top colour" : "0.22, 0.58, 0.88, 0.00",
+		"mid colour" : "0.66, 0.86, 0.95, 0.00",
+		"btm colour" : "0.75, 0.91, 0.99, 0.00"
+	},
 	"camera" : 
 	{
 		"type" : "debug",
@@ -15,9 +21,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-151.534, 29.158, -65.345",
-			"pitch" : -0.174895,
-			"yaw" : 0.536819
+			"position" : "-41.982, 22.687, 15.926",
+			"pitch" : -0.358686,
+			"yaw" : -0.392971
 		}
 	},
 	"objects" : 
@@ -26,6 +32,7 @@
 			"name" : "Skybox",
 			"type" : "skybox",
 			"visible" : true,
+			"casts shadow" : false,
 			"transform" : 
 			{
 			},
@@ -41,6 +48,7 @@
 			"name" : "Reflection Probe 01",
 			"type" : "reflection probe",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 8.000, 0.000"
@@ -50,14 +58,15 @@
 			"name" : "Directional Light",
 			"type" : "directional light",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "-0.001, 0.365, 0.824"
+				"rot" : "0.949, 0.365, 0.824"
 			},
 			"directional light info" : 
 			{
-				"rotation" : "-0.073, 0.166, 0.394, 0.901",
+				"rotation" : "0.347, 0.328, 0.274, 0.835",
 				"pos" : "0.000, 15.000, 0.000",
 				"colour" : "1.00, 1.00, 1.00",
 				"enabled" : true,
@@ -70,12 +79,13 @@
 			"name" : "ground plane",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 0.000, 0.178",
 				"scale" : "100.000, 0.100, 100.000"
 			},
-			"mesh" : "cube",
+			"mesh" : "cube.glb",
 			"materials" : 
 			[
 				"grid"
@@ -98,12 +108,13 @@
 			"name" : "case",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "-5.900, 0.641, 4.600",
 				"rot" : "0.000, -0.555, 0.000"
 			},
-			"mesh" : "case-01",
+			"mesh" : "case-01.glb",
 			"materials" : 
 			[
 				"gold",
@@ -115,12 +126,14 @@
 			"name" : "battery cell",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
-				"pos" : "-2.305, 1.100, 2.117",
-				"rot" : "0.525, -0.000, 1.571"
+				"pos" : "-2.305, 1.100, 2.116",
+				"rot" : "0.525, -0.000, 1.571",
+				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "battery_cell",
+			"mesh" : "battery_cell.glb",
 			"materials" : 
 			[
 				"pbr light grey"
@@ -143,13 +156,14 @@
 			"name" : "battery cell2",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
-				"pos" : "1.305, 2.100, 6.614",
+				"pos" : "1.306, 2.100, 6.616",
 				"rot" : "-1.571, -0.472, 3.142",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "battery_cell",
+			"mesh" : "battery_cell.glb",
 			"materials" : 
 			[
 				"pbr light grey"
@@ -172,13 +186,14 @@
 			"name" : "battery cell3",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
-				"pos" : "1.698, 1.100, 2.877",
+				"pos" : "1.698, 1.100, 2.880",
 				"rot" : "-0.000, 0.592, 3.142",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "battery_cell",
+			"mesh" : "battery_cell.glb",
 			"materials" : 
 			[
 				"pbr light grey"
@@ -201,13 +216,14 @@
 			"name" : "battery cell4",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
-				"pos" : "6.122, 1.100, 0.226",
-				"rot" : "0.007, -0.000, -1.571",
+				"pos" : "6.121, 1.100, 0.228",
+				"rot" : "0.007, 0.000, -1.571",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "battery_cell",
+			"mesh" : "battery_cell.glb",
 			"materials" : 
 			[
 				"pbr light grey"
@@ -230,13 +246,14 @@
 			"name" : "battery cell5",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
-				"pos" : "6.497, 2.754, -2.962",
-				"rot" : "-1.598, 0.009, -1.071",
+				"pos" : "6.447, 2.562, -2.902",
+				"rot" : "-1.598, 0.009, -1.004",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "battery_cell",
+			"mesh" : "battery_cell.glb",
 			"materials" : 
 			[
 				"pbr light grey"
@@ -259,13 +276,14 @@
 			"name" : "battery cell2",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
-				"pos" : "-1.905, 1.100, -3.020",
-				"rot" : "3.142, 0.791, 3.142",
+				"pos" : "-1.904, 1.100, -3.023",
+				"rot" : "-3.142, 0.791, -3.142",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "battery_cell",
+			"mesh" : "battery_cell.glb",
 			"materials" : 
 			[
 				"pbr light grey"
@@ -288,13 +306,14 @@
 			"name" : "battery cell3",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "1.223, 1.100, -1.834",
-				"rot" : "0.004, -0.000, -1.571",
+				"rot" : "0.004, 0.000, -1.571",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "battery_cell",
+			"mesh" : "battery_cell.glb",
 			"materials" : 
 			[
 				"pbr light grey"
@@ -317,13 +336,14 @@
 			"name" : "battery cell4",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
-				"pos" : "3.615, 1.100, -1.631",
-				"rot" : "-0.000, 0.031, -0.000",
+				"pos" : "3.411, 1.100, -1.592",
+				"rot" : "0.000, 0.032, 0.000",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "battery_cell",
+			"mesh" : "battery_cell.glb",
 			"materials" : 
 			[
 				"pbr light grey"
@@ -346,13 +366,14 @@
 			"name" : "battery cell5",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
-				"pos" : "8.396, 1.100, -2.369",
-				"rot" : "0.000, 0.018, 0.000",
+				"pos" : "8.592, 1.100, -2.341",
+				"rot" : "-0.000, 0.016, -0.000",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "battery_cell",
+			"mesh" : "battery_cell.glb",
 			"materials" : 
 			[
 				"pbr light grey"
@@ -375,13 +396,14 @@
 			"name" : "greenhouse",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "14.800, 0.000, -20.844",
 				"rot" : "3.141, 0.159, 3.141",
 				"scale" : "3.000, 3.000, 3.000"
 			},
-			"mesh" : "greenhouse",
+			"mesh" : "greenhouse.glb",
 			"materials" : 
 			[
 				"wood",

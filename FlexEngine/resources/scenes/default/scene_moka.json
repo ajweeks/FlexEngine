@@ -1,5 +1,5 @@
 {
-	"version" : 3,
+	"version" : 4,
 	"name" : "scene_moka",
 	"spawn player" : false,
 	"skybox data" : 
@@ -62,7 +62,7 @@
 			"transform" : 
 			{
 			},
-			"mesh" : "ico-sphere",
+			"mesh" : "ico-sphere.glb",
 			"materials" : 
 			[
 				"pbr chrome"
@@ -99,7 +99,7 @@
 				"pos" : "0.000, 3.012, 0.000",
 				"scale" : "28.200, 28.200, 28.200"
 			},
-			"mesh" : "moka",
+			"mesh" : "moka.glb",
 			"materials" : 
 			[
 				"pbr chrome",
@@ -115,7 +115,7 @@
 			{
 				"scale" : "41.000, 0.300, 35.660"
 			},
-			"mesh" : "cube",
+			"mesh" : "cube.glb",
 			"materials" : 
 			[
 				"pbr grey"

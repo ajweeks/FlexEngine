@@ -1,7 +1,13 @@
 {
-	"version" : 3,
+	"version" : 4,
 	"name" : "scene_shanghai",
 	"spawn player" : false,
+	"skybox data" : 
+	{
+		"top colour" : "0.22, 0.58, 0.88, 0.00",
+		"mid colour" : "0.66, 0.86, 0.95, 0.00",
+		"btm colour" : "0.75, 0.91, 0.99, 0.00"
+	},
 	"camera" : 
 	{
 		"type" : "debug",
@@ -26,6 +32,7 @@
 			"name" : "Skybox",
 			"type" : "skybox",
 			"visible" : true,
+			"casts shadow" : false,
 			"transform" : 
 			{
 			},
@@ -41,6 +48,7 @@
 			"name" : "Reflection Probe 01",
 			"type" : "reflection probe",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 8.000, 0.000"
@@ -50,10 +58,11 @@
 			"name" : "sphere",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 			},
-			"mesh" : "ico-sphere",
+			"mesh" : "ico-sphere.glb",
 			"materials" : 
 			[
 				"pbr chrome"
@@ -63,6 +72,7 @@
 			"name" : "Directional Light",
 			"type" : "directional light",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
@@ -83,10 +93,11 @@
 			"name" : "bridge",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 			},
-			"mesh" : "shanghai_bridge_1",
+			"mesh" : "shanghai_bridge_1.glb",
 			"materials" : 
 			[
 				"shanghai"
@@ -96,11 +107,12 @@
 			"name" : "ground",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, -1.600, 4.100"
 			},
-			"mesh" : "shanghai_ground",
+			"mesh" : "shanghai_ground.glb",
 			"materials" : 
 			[
 				"shanghai 6"
@@ -110,10 +122,11 @@
 			"name" : "river",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 			},
-			"mesh" : "shanghai_river",
+			"mesh" : "shanghai_river.glb",
 			"materials" : 
 			[
 				"shanghai 3"
@@ -123,10 +136,11 @@
 			"name" : "boat",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 			},
-			"mesh" : "shanghai_boat",
+			"mesh" : "shanghai_boat.glb",
 			"materials" : 
 			[
 				"shanghai 2"
@@ -136,10 +150,11 @@
 			"name" : "build1",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 			},
-			"mesh" : "shanghai_build_1",
+			"mesh" : "shanghai_build_1.glb",
 			"materials" : 
 			[
 				"shanghai 5"
@@ -149,10 +164,11 @@
 			"name" : "build2",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 			},
-			"mesh" : "shanghai_build_2",
+			"mesh" : "shanghai_build_2.glb",
 			"materials" : 
 			[
 				"shanghai 4"
@@ -162,10 +178,11 @@
 			"name" : "river bed",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 			},
-			"mesh" : "shanghai_river_bed",
+			"mesh" : "shanghai_river_bed.glb",
 			"materials" : 
 			[
 				"shanghai 6"
@@ -175,10 +192,11 @@
 			"name" : "tables",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 			},
-			"mesh" : "shanghai_tables",
+			"mesh" : "shanghai_tables.glb",
 			"materials" : 
 			[
 				"shanghai 7"
@@ -188,10 +206,11 @@
 			"name" : "misc1",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 			},
-			"mesh" : "shanghai_misc_1",
+			"mesh" : "shanghai_misc_1.glb",
 			"materials" : 
 			[
 				"shanghai 6"
@@ -201,10 +220,11 @@
 			"name" : "misc2",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 			},
-			"mesh" : "shanghai_misc_2",
+			"mesh" : "shanghai_misc_2.glb",
 			"materials" : 
 			[
 				"shanghai 6"
@@ -214,10 +234,11 @@
 			"name" : "veg1",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 			},
-			"mesh" : "shanghai_veg_1",
+			"mesh" : "shanghai_veg_1.glb",
 			"materials" : 
 			[
 				"shanghai 5"
@@ -227,10 +248,11 @@
 			"name" : "benches",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 			},
-			"mesh" : "shanghai_benches",
+			"mesh" : "shanghai_benches.glb",
 			"materials" : 
 			[
 				"shanghai 7"
@@ -240,10 +262,11 @@
 			"name" : "misc3",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 			},
-			"mesh" : "shanghai_misc_3",
+			"mesh" : "shanghai_misc_3.glb",
 			"materials" : 
 			[
 				"shanghai 6"
@@ -253,10 +276,11 @@
 			"name" : "misc4",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 			},
-			"mesh" : "shanghai_misc_4",
+			"mesh" : "shanghai_misc_4.glb",
 			"materials" : 
 			[
 				"shanghai 6"
@@ -266,10 +290,11 @@
 			"name" : "build3",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 			},
-			"mesh" : "shanghai_build_3",
+			"mesh" : "shanghai_build_3.glb",
 			"materials" : 
 			[
 				"shanghai 7"
@@ -279,13 +304,14 @@
 			"name" : "dragon",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "-88.200, -2.500, 144.400",
 				"rot" : "0.000, -1.138, 0.000",
 				"scale" : "30.000, 30.000, 30.000"
 			},
-			"mesh" : "dragon_mid",
+			"mesh" : "dragon_mid.glb",
 			"materials" : 
 			[
 				"shanghai 2"
@@ -295,6 +321,7 @@
 			"name" : "PointLight_00",
 			"type" : "point light",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "-106.600, 22.600, 159.700"
@@ -311,16 +338,15 @@
 			"name" : "New_Object_00",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 5.469, 0.000"
 			},
-			"mesh" : "donut",
+			"mesh" : "donut.glb",
 			"materials" : 
 			[
-				"New Material 02",
-				"placeholder",
-				"placeholder"
+				"New Material 02"
 			],
 			"collider" : 
 			{
@@ -340,16 +366,15 @@
 			"name" : "New_Object_01",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "-4.131, 5.469, 0.000"
 			},
-			"mesh" : "donut",
+			"mesh" : "donut.glb",
 			"materials" : 
 			[
-				"New Material 02",
-				"placeholder",
-				"placeholder"
+				"New Material 02"
 			],
 			"collider" : 
 			{
@@ -369,16 +394,15 @@
 			"name" : "New_Object_02",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "-4.131, 5.469, 4.469"
 			},
-			"mesh" : "donut",
+			"mesh" : "donut.glb",
 			"materials" : 
 			[
-				"New Material 02",
-				"placeholder",
-				"placeholder"
+				"New Material 02"
 			],
 			"collider" : 
 			{

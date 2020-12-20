@@ -1,7 +1,13 @@
 {
-	"version" : 3,
+	"version" : 4,
 	"name" : "scene_sibnek",
 	"spawn player" : false,
+	"skybox data" : 
+	{
+		"top colour" : "0.22, 0.58, 0.88, 0.00",
+		"mid colour" : "0.66, 0.86, 0.95, 0.00",
+		"btm colour" : "0.75, 0.91, 0.99, 0.00"
+	},
 	"camera" : 
 	{
 		"type" : "debug",
@@ -15,9 +21,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-152.222, 29.300, -65.754",
-			"pitch" : -0.174895,
-			"yaw" : 0.536819
+			"position" : "-48.938, 26.033, -1.304",
+			"pitch" : 0.599027,
+			"yaw" : 1.292045
 		}
 	},
 	"objects" : 
@@ -26,6 +32,7 @@
 			"name" : "Skybox",
 			"type" : "skybox",
 			"visible" : true,
+			"casts shadow" : false,
 			"transform" : 
 			{
 			},
@@ -41,6 +48,7 @@
 			"name" : "Reflection Probe 01",
 			"type" : "reflection probe",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 8.000, 0.000"
@@ -50,37 +58,39 @@
 			"name" : "sibnek",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 45.000, 0.000",
 				"scale" : "3.000, 3.000, 3.000"
 			},
-			"mesh" : "sibnek",
+			"mesh" : "sibnek.glb",
 			"materials" : 
 			[
-				"pbr chrome",
-				"pbr chrome",
-				"pbr chrome",
-				"pbr chrome",
-				"pbr chrome",
-				"pbr chrome",
-				"pbr chrome",
-				"pbr chrome",
-				"pbr chrome",
-				"pbr chrome",
-				"pbr chrome",
-				"pbr chrome",
-				"pbr chrome",
-				"pbr chrome",
-				"pbr chrome",
-				"pbr chrome",
-				"pbr chrome"
+				"grid",
+				"pbr blue",
+				"grid",
+				"grid",
+				"grid",
+				"grid",
+				"grid",
+				"grid",
+				"grid",
+				"grid",
+				"grid",
+				"grid",
+				"grid",
+				"grid",
+				"grid",
+				"grid",
+				"grid"
 			]
 		},
 		{
 			"name" : "PointLight_00",
 			"type" : "point light",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "31.500, 18.434, 0.000",
@@ -98,6 +108,7 @@
 			"name" : "PointLight_01",
 			"type" : "point light",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "-42.000, 15.400, 0.000"

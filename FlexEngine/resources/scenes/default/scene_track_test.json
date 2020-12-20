@@ -1,5 +1,5 @@
 {
-	"version" : 3,
+	"version" : 4,
 	"name" : "Scene_track_test",
 	"spawn player" : true,
 	"skybox data" : 
@@ -32,6 +32,7 @@
 			"name" : "Environment",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, -0.110, 0.000"
@@ -42,11 +43,12 @@
 					"name" : "Earth",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "-24.200, 2.945, -2.024"
 					},
-					"mesh" : "earth",
+					"mesh" : "earth.glb",
 					"materials" : 
 					[
 						"grid"
@@ -69,12 +71,13 @@
 					"name" : "New_Object_03",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "-41.846, 1.915, -2.111",
 						"scale" : "5.413, 4.346, 7.675"
 					},
-					"mesh" : "cube",
+					"mesh" : "cube.glb",
 					"materials" : 
 					[
 						"grid"
@@ -97,12 +100,13 @@
 					"name" : "New_Object_10",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "-57.097, 2.696, -2.283",
 						"scale" : "6.565, 6.070, 10.043"
 					},
-					"mesh" : "cube",
+					"mesh" : "cube.glb",
 					"materials" : 
 					[
 						"grid"
@@ -125,12 +129,13 @@
 					"name" : "New_Object_14",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "-26.550, 2.795, -26.856",
 						"scale" : "4.010, 7.861, 10.030"
 					},
-					"mesh" : "cube",
+					"mesh" : "cube.glb",
 					"materials" : 
 					[
 						"grid"
@@ -153,12 +158,13 @@
 					"name" : "New_Object_04",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "-41.947, 2.595, 22.977",
 						"scale" : "4.021, 10.791, 5.011"
 					},
-					"mesh" : "cube",
+					"mesh" : "cube.glb",
 					"materials" : 
 					[
 						"grid"
@@ -181,12 +187,13 @@
 					"name" : "New_Object_05",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "-31.359, 2.595, 23.019",
 						"scale" : "4.010, 5.325, 10.017"
 					},
-					"mesh" : "cube",
+					"mesh" : "cube.glb",
 					"materials" : 
 					[
 						"grid"
@@ -209,12 +216,13 @@
 					"name" : "New_Object_06",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "-31.452, 2.502, 46.210",
 						"scale" : "4.012, 4.688, 8.645"
 					},
-					"mesh" : "cube",
+					"mesh" : "cube.glb",
 					"materials" : 
 					[
 						"grid"
@@ -237,12 +245,13 @@
 					"name" : "New_Object_07",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "-44.331, 2.502, 46.158",
 						"scale" : "4.020, 6.085, 5.405"
 					},
-					"mesh" : "cube",
+					"mesh" : "cube.glb",
 					"materials" : 
 					[
 						"grid"
@@ -265,12 +274,13 @@
 					"name" : "New_Object_08",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "-57.290, 3.004, 46.106",
 						"scale" : "5.051, 6.080, 6.178"
 					},
-					"mesh" : "cube",
+					"mesh" : "cube.glb",
 					"materials" : 
 					[
 						"grid"
@@ -293,12 +303,13 @@
 					"name" : "New_Object_09",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "-57.198, 2.595, 22.893",
 						"scale" : "4.010, 9.869, 10.042"
 					},
-					"mesh" : "cube",
+					"mesh" : "cube.glb",
 					"materials" : 
 					[
 						"grid"
@@ -321,12 +332,13 @@
 					"name" : "New_Object_11",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "-56.998, 2.795, -26.978",
 						"scale" : "8.866, 6.070, 10.059"
 					},
-					"mesh" : "cube",
+					"mesh" : "cube.glb",
 					"materials" : 
 					[
 						"grid"
@@ -349,12 +361,13 @@
 					"name" : "New_Object_12",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "-41.523, 2.795, -26.916",
 						"scale" : "4.010, 12.723, 10.054"
 					},
-					"mesh" : "cube",
+					"mesh" : "cube.glb",
 					"materials" : 
 					[
 						"grid"
@@ -377,12 +390,13 @@
 					"name" : "New_Object_01",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "-10.859, 2.026, -25.011",
 						"scale" : "6.000, 4.940, 7.000"
 					},
-					"mesh" : "cube",
+					"mesh" : "cube.glb",
 					"materials" : 
 					[
 						"grid"
@@ -405,12 +419,13 @@
 					"name" : "New_Object_00",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "-9.881, 2.947, 11.166",
 						"scale" : "3.998, 6.050, 3.029"
 					},
-					"mesh" : "cube",
+					"mesh" : "cube.glb",
 					"materials" : 
 					[
 						"grid"
@@ -433,11 +448,12 @@
 					"name" : "ground plane",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"scale" : "150.000, 1.000, 150.000"
 					},
-					"mesh" : "unit-plane",
+					"mesh" : "unit-plane.glb",
 					"materials" : 
 					[
 						"grid"
@@ -461,12 +477,13 @@
 					"name" : "cloud box",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "0.441, 11.126, -4.611",
 						"scale" : "6.000, 4.940, 6.050"
 					},
-					"mesh" : "cube",
+					"mesh" : "cube.glb",
 					"materials" : 
 					[
 						"clouds"
@@ -489,12 +506,13 @@
 					"name" : "noise box",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "0.441, 11.126, -11.511",
 						"scale" : "6.000, 4.940, 5.660"
 					},
-					"mesh" : "cube",
+					"mesh" : "cube.glb",
 					"materials" : 
 					[
 						"noise"
@@ -517,12 +535,13 @@
 					"name" : "cerebus box",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "0.441, 4.626, -4.611",
 						"scale" : "6.000, 4.940, 6.050"
 					},
-					"mesh" : "cube",
+					"mesh" : "cube.glb",
 					"materials" : 
 					[
 						"cerberus"
@@ -545,12 +564,13 @@
 					"name" : "grid box",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "0.441, 4.626, -11.611",
 						"scale" : "6.000, 4.940, 5.510"
 					},
-					"mesh" : "cube",
+					"mesh" : "cube.glb",
 					"materials" : 
 					[
 						"grid"
@@ -573,12 +593,13 @@
 					"name" : "capsule",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "2.941, 7.826, -8.064",
 						"scale" : "1.370, 0.800, 1.090"
 					},
-					"mesh" : "capsule",
+					"mesh" : "capsule.glb",
 					"materials" : 
 					[
 						"grid"
@@ -601,12 +622,13 @@
 					"name" : "striped box",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "-15.359, 12.926, -7.211",
 						"scale" : "3.460, 1.140, 27.570"
 					},
-					"mesh" : "cube",
+					"mesh" : "cube.glb",
 					"materials" : 
 					[
 						"stripes"
@@ -629,12 +651,13 @@
 					"name" : "striped box2",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "-19.459, 12.926, -9.011",
 						"scale" : "3.460, 1.140, 27.570"
 					},
-					"mesh" : "cube",
+					"mesh" : "cube.glb",
 					"materials" : 
 					[
 						"stripes"
@@ -657,12 +680,13 @@
 					"name" : "striped box3",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "-23.859, 12.926, -6.611",
 						"scale" : "3.460, 1.140, 27.570"
 					},
-					"mesh" : "cube",
+					"mesh" : "cube.glb",
 					"materials" : 
 					[
 						"stripes"
@@ -685,12 +709,13 @@
 					"name" : "striped box4",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "-28.059, 12.926, -9.911",
 						"scale" : "3.460, 1.140, 27.570"
 					},
-					"mesh" : "cube",
+					"mesh" : "cube.glb",
 					"materials" : 
 					[
 						"stripes"
@@ -713,11 +738,12 @@
 					"name" : "reshelfector",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "3.841, 0.000, -35.611"
 					},
-					"mesh" : "reshelfector",
+					"mesh" : "reshelfector.glb",
 					"materials" : 
 					[
 						"cross hatch",
@@ -731,6 +757,7 @@
 			"name" : "Lighting",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 			},
@@ -740,6 +767,7 @@
 					"name" : "Directional Light",
 					"type" : "directional light",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "0.000, 15.000, 0.000",
@@ -760,6 +788,7 @@
 					"name" : "Skybox 1",
 					"type" : "skybox",
 					"visible" : true,
+					"casts shadow" : false,
 					"transform" : 
 					{
 					},
@@ -775,6 +804,7 @@
 					"name" : "Reflection Probe 01",
 					"type" : "reflection probe",
 					"visible" : false,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "-8.434, 7.266, 0.000"
@@ -785,6 +815,7 @@
 							"name" : "New_Game_Object_00",
 							"type" : "NONE",
 							"visible" : true,
+							"casts shadow" : true,
 							"transform" : 
 							{
 							}
@@ -795,6 +826,7 @@
 					"name" : "PointLight_03",
 					"type" : "point light",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "-22.547, 9.283, -11.692"
@@ -811,6 +843,7 @@
 					"name" : "PointLight_00",
 					"type" : "point light",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "-14.163, 6.757, 14.795"
@@ -827,6 +860,7 @@
 					"name" : "PointLight_01",
 					"type" : "point light",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "3.100, 4.737, -25.251"
@@ -843,6 +877,7 @@
 					"name" : "PointLight_02",
 					"type" : "point light",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "10.065, 7.522, 14.100"
@@ -859,6 +894,7 @@
 					"name" : "Reflection Probe 02",
 					"type" : "reflection probe",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "-8.434, 7.266, 0.000"
@@ -869,6 +905,7 @@
 							"name" : "New_Game_Object_00",
 							"type" : "NONE",
 							"visible" : true,
+							"casts shadow" : true,
 							"transform" : 
 							{
 							}
@@ -881,6 +918,7 @@
 			"name" : "New_Game_Object_00",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 			},
@@ -890,6 +928,7 @@
 					"name" : "Reflection Probe 02",
 					"type" : "reflection probe",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "-8.434, 7.266, 0.000"
@@ -900,6 +939,7 @@
 							"name" : "New_Game_Object_00",
 							"type" : "NONE",
 							"visible" : true,
+							"casts shadow" : true,
 							"transform" : 
 							{
 							}

@@ -1,7 +1,13 @@
 {
-	"version" : 3,
+	"version" : 4,
 	"name" : "Cornell Scene",
 	"spawn player" : false,
+	"skybox data" : 
+	{
+		"top colour" : "0.22, 0.58, 0.88, 0.00",
+		"mid colour" : "0.66, 0.86, 0.95, 0.00",
+		"btm colour" : "0.75, 0.91, 0.99, 0.00"
+	},
 	"camera" : 
 	{
 		"type" : "debug",
@@ -26,6 +32,7 @@
 			"name" : "Skybox",
 			"type" : "skybox",
 			"visible" : true,
+			"casts shadow" : false,
 			"transform" : 
 			{
 			},
@@ -41,6 +48,7 @@
 			"name" : "Reflection Probe 01",
 			"type" : "reflection probe",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 18.600, 0.000"
@@ -50,13 +58,14 @@
 			"name" : "Cornell Box",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "-28.690, 0.000, -0.001",
 				"rot" : "0.000, 1.570, 0.000",
 				"scale" : "19.999, 20.000, 19.999"
 			},
-			"mesh" : "cornell-box",
+			"mesh" : "cornell-box.glb",
 			"materials" : 
 			[
 				"cornell",
@@ -71,12 +80,13 @@
 			"name" : "Sphere 01",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "6.849, 5.205, -12.373",
 				"scale" : "3.000, 3.000, 3.000"
 			},
-			"mesh" : "sphere",
+			"mesh" : "sphere.glb",
 			"materials" : 
 			[
 				"pbr red"
@@ -86,12 +96,13 @@
 			"name" : "Sphere 02",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "-0.269, 8.073, -9.520",
 				"scale" : "5.000, 5.000, 5.000"
 			},
-			"mesh" : "sphere",
+			"mesh" : "sphere.glb",
 			"materials" : 
 			[
 				"pbr white"
@@ -101,13 +112,14 @@
 			"name" : "mori knob",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "-12.514, 0.000, 12.608",
 				"rot" : "0.000, -1.435, 0.000",
 				"scale" : "5.000, 5.000, 5.000"
 			},
-			"mesh" : "mori-knob",
+			"mesh" : "mori-knob.glb",
 			"materials" : 
 			[
 				"pbr blue",
@@ -118,13 +130,14 @@
 			"name" : "Cerberus",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "7.800, 5.420, 16.700",
 				"rot" : "0.000, 0.351, 0.716",
 				"scale" : "20.000, 20.000, 20.000"
 			},
-			"mesh" : "cerberus",
+			"mesh" : "cerberus.glb",
 			"materials" : 
 			[
 				"cerberus"
@@ -134,13 +147,14 @@
 			"name" : "Baby cornell",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "-27.380, 20.111, 0.025",
 				"rot" : "0.000, 1.570, 0.000",
 				"scale" : "3.000, 3.000, 3.000"
 			},
-			"mesh" : "cornell-box",
+			"mesh" : "cornell-box.glb",
 			"materials" : 
 			[
 				"cornell",
@@ -155,13 +169,14 @@
 			"name" : "Valve",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "19.958, -0.000, 16.185",
 				"rot" : "0.000, 1.284, 0.000",
 				"scale" : "5.000, 5.000, 5.000"
 			},
-			"mesh" : "valve",
+			"mesh" : "valve.glb",
 			"materials" : 
 			[
 				"pbr cyan"
@@ -185,11 +200,12 @@
 			"name" : "ground plane",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"scale" : "50.520, 1.000, 50.320"
 			},
-			"mesh" : "cube",
+			"mesh" : "cube.glb",
 			"materials" : 
 			[
 				"pbr chrome"
@@ -212,6 +228,7 @@
 			"name" : "Directional Light",
 			"type" : "directional light",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
@@ -232,6 +249,7 @@
 			"name" : "PointLight_00",
 			"type" : "point light",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "9.000, 26.800, 26.900"

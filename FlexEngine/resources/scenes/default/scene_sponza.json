@@ -1,7 +1,13 @@
 {
-	"version" : 3,
+	"version" : 4,
 	"name" : "Sponza",
 	"spawn player" : false,
+	"skybox data" : 
+	{
+		"top colour" : "0.22, 0.58, 0.88, 0.00",
+		"mid colour" : "0.66, 0.86, 0.95, 0.00",
+		"btm colour" : "0.75, 0.91, 0.99, 0.00"
+	},
 	"camera" : 
 	{
 		"type" : "debug",
@@ -15,9 +21,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-88.448, 25.340, -7.676",
-			"pitch" : -0.278025,
-			"yaw" : 0.086571
+			"position" : "-89.304, 15.125, -1.982",
+			"pitch" : -0.029565,
+			"yaw" : 0.004956
 		}
 	},
 	"objects" : 
@@ -26,10 +32,11 @@
 			"name" : "Sponza",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 			},
-			"mesh" : "sponza",
+			"mesh" : "sponza.glb",
 			"materials" : 
 			[
 				"pbr grey",
@@ -42,12 +49,13 @@
 			"type" : "object",
 			"visible" : true,
 			"static" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, -0.620, 0.000",
 				"scale" : "278.791, 1.000, 124.999"
 			},
-			"mesh" : "cube",
+			"mesh" : "cube.glb",
 			"materials" : 
 			[
 				"pbr light grey"
@@ -70,6 +78,7 @@
 			"name" : "Skybox",
 			"type" : "skybox",
 			"visible" : true,
+			"casts shadow" : false,
 			"transform" : 
 			{
 			},
@@ -85,6 +94,7 @@
 			"name" : "Reflection Probe 01",
 			"type" : "reflection probe",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "3.100, 16.485, 4.048",
@@ -95,13 +105,14 @@
 			"name" : "ball 01",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "19.371, 0.880, 3.061",
 				"rot" : "-2.609, -0.357, 2.060",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "sphere",
+			"mesh" : "sphere.glb",
 			"materials" : 
 			[
 				"pbr white"
@@ -124,13 +135,14 @@
 			"name" : "ball 02",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "17.204, 0.880, 1.965",
 				"rot" : "2.160, 1.322, -0.901",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "sphere",
+			"mesh" : "sphere.glb",
 			"materials" : 
 			[
 				"pbr white"
@@ -153,13 +165,14 @@
 			"name" : "ball 03",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "5.550, 0.880, 4.970",
 				"rot" : "1.515, -0.501, 2.018",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "sphere",
+			"mesh" : "sphere.glb",
 			"materials" : 
 			[
 				"pbr white"
@@ -182,13 +195,14 @@
 			"name" : "ball 04",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "22.376, 0.880, 3.644",
 				"rot" : "-0.306, 0.200, -2.293",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "sphere",
+			"mesh" : "sphere.glb",
 			"materials" : 
 			[
 				"pbr white"
@@ -211,13 +225,14 @@
 			"name" : "ball 05",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "19.973, 0.880, 7.250",
 				"rot" : "-0.603, -0.837, 1.248",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "sphere",
+			"mesh" : "sphere.glb",
 			"materials" : 
 			[
 				"pbr white"
@@ -240,13 +255,14 @@
 			"name" : "ball 06",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "12.110, 0.880, 6.697",
 				"rot" : "1.123, 0.340, 0.059",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "sphere",
+			"mesh" : "sphere.glb",
 			"materials" : 
 			[
 				"pbr white"
@@ -269,13 +285,14 @@
 			"name" : "ball 07",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "8.651, 0.880, 6.760",
 				"rot" : "0.925, -0.167, 0.971",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "sphere",
+			"mesh" : "sphere.glb",
 			"materials" : 
 			[
 				"pbr white"
@@ -298,13 +315,14 @@
 			"name" : "ball 08",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "4.079, 0.880, 6.864",
 				"rot" : "-0.025, -0.204, 1.902",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "sphere",
+			"mesh" : "sphere.glb",
 			"materials" : 
 			[
 				"pbr white"
@@ -327,13 +345,14 @@
 			"name" : "ball 09",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "1.907, 0.880, 6.837",
 				"rot" : "0.400, -0.328, 1.562",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "sphere",
+			"mesh" : "sphere.glb",
 			"materials" : 
 			[
 				"pbr white"
@@ -356,13 +375,14 @@
 			"name" : "ball 10",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "-4.476, 0.880, 6.762",
 				"rot" : "-0.348, 0.162, 2.416",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "sphere",
+			"mesh" : "sphere.glb",
 			"materials" : 
 			[
 				"pbr white"
@@ -385,13 +405,14 @@
 			"name" : "ball 11",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "-8.656, 0.880, 6.809",
 				"rot" : "-0.339, 0.094, 2.342",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "sphere",
+			"mesh" : "sphere.glb",
 			"materials" : 
 			[
 				"pbr white"
@@ -414,13 +435,14 @@
 			"name" : "ball 12",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "-10.750, 0.880, 6.819",
 				"rot" : "-0.388, 0.155, 2.431",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "sphere",
+			"mesh" : "sphere.glb",
 			"materials" : 
 			[
 				"pbr white"
@@ -443,6 +465,7 @@
 			"name" : "Directional Light",
 			"type" : "directional light",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "26.928, -70.728, -18.870",

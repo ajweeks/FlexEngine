@@ -1,7 +1,13 @@
 {
-	"version" : 3,
+	"version" : 4,
 	"name" : "Cerberus Scene",
 	"spawn player" : false,
+	"skybox data" : 
+	{
+		"top colour" : "0.22, 0.58, 0.88, 0.00",
+		"mid colour" : "0.66, 0.86, 0.95, 0.00",
+		"btm colour" : "0.75, 0.91, 0.99, 0.00"
+	},
 	"camera" : 
 	{
 		"type" : "debug",
@@ -15,9 +21,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-88.191, 25.266, -7.654",
-			"pitch" : -0.278025,
-			"yaw" : 0.086571
+			"position" : "-33.099, 9.124, 3.486",
+			"pitch" : -0.079180,
+			"yaw" : 0.121123
 		}
 	},
 	"objects" : 
@@ -26,12 +32,13 @@
 			"name" : "Cerberus",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 7.800, -5.900",
 				"scale" : "20.000, 20.000, 20.000"
 			},
-			"mesh" : "cerberus",
+			"mesh" : "cerberus.glb",
 			"materials" : 
 			[
 				"cerberus"
@@ -41,6 +48,7 @@
 			"name" : "Skybox",
 			"type" : "skybox",
 			"visible" : true,
+			"casts shadow" : false,
 			"transform" : 
 			{
 			},
@@ -56,6 +64,7 @@
 			"name" : "Reflection Probe 01",
 			"type" : "reflection probe",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "3.100, 18.920, 1.978",

@@ -1,7 +1,13 @@
 {
-	"version" : 3,
+	"version" : 4,
 	"name" : "scene_02",
 	"spawn player" : false,
+	"skybox data" : 
+	{
+		"top colour" : "0.22, 0.58, 0.88, 0.00",
+		"mid colour" : "0.66, 0.86, 0.95, 0.00",
+		"btm colour" : "0.75, 0.91, 0.99, 0.00"
+	},
 	"camera" : 
 	{
 		"type" : "debug",
@@ -15,9 +21,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-88.649, 25.397, -7.694",
-			"pitch" : -0.278025,
-			"yaw" : 0.086571
+			"position" : "-6.641, 44.750, 9.699",
+			"pitch" : -0.491837,
+			"yaw" : -2.708280
 		}
 	},
 	"objects" : 
@@ -27,11 +33,12 @@
 			"type" : "object",
 			"visible" : true,
 			"static" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"scale" : "3.000, 3.000, 3.000"
 			},
-			"mesh" : "street-03",
+			"mesh" : "street-03.glb",
 			"materials" : 
 			[
 				"pbr grey"
@@ -42,12 +49,13 @@
 			"type" : "object",
 			"visible" : true,
 			"static" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, -0.020, 0.000",
 				"scale" : "500.000, 1.000, 500.000"
 			},
-			"mesh" : "cube",
+			"mesh" : "cube.glb",
 			"materials" : 
 			[
 				"pbr grey"
@@ -70,6 +78,7 @@
 			"name" : "Skybox",
 			"type" : "skybox",
 			"visible" : true,
+			"casts shadow" : false,
 			"transform" : 
 			{
 			},
@@ -85,6 +94,7 @@
 			"name" : "Reflection Probe 01",
 			"type" : "reflection probe",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "-7.300, 8.600, 8.500"
@@ -94,6 +104,7 @@
 			"name" : "Directional Light",
 			"type" : "directional light",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",

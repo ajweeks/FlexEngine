@@ -1,18 +1,46 @@
 {
-	"version" : 2,
+	"version" : 4,
 	"name" : "scene_depth_test",
 	"spawn player" : false,
+	"skybox data" : 
+	{
+		"top colour" : "0.22, 0.58, 0.88, 0.00",
+		"mid colour" : "0.66, 0.86, 0.95, 0.00",
+		"btm colour" : "0.75, 0.91, 0.99, 0.00"
+	},
+	"camera" : 
+	{
+		"type" : "first-person",
+		"near plane" : 0.500000,
+		"far plane" : 1000.000000,
+		"fov" : 0.785398,
+		"aperture" : 1.000000,
+		"shutter speed" : 0.125000,
+		"light sensitivity" : 800.000000,
+		"exposure" : 1.200000,
+		"move speed" : 18.000000,
+		"transform" : 
+		{
+			"position" : "0.000, 0.000, 0.000",
+			"pitch" : 0.000000,
+			"yaw" : 3.141593
+		}
+	},
 	"objects" : 
 	[
 		{
 			"name" : "Skybox",
 			"type" : "skybox",
 			"visible" : true,
+			"casts shadow" : false,
 			"transform" : 
 			{
 				"rot" : "0.000, 0.030, 0.160"
 			},
-			"material" : "skybox 01",
+			"materials" : 
+			[
+				"skybox 01"
+			],
 			"skybox info" : 
 			{
 				"rot" : "0.00, 0.03, 0.16"
@@ -22,6 +50,7 @@
 			"name" : "Reflection Probe 01",
 			"type" : "reflection probe",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 8.000, 0.000"
@@ -31,10 +60,11 @@
 			"name" : "Directional Light",
 			"type" : "directional light",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "1.195, -0.973, -2.522"
+				"rot" : "1.194, -0.973, -2.523"
 			},
 			"directional light info" : 
 			{
@@ -51,45 +81,45 @@
 			"name" : "block_1",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "5.500, 0.000, -1.000"
 			},
-			"mesh" : "cube",
-			"material" : "placeholder"
+			"mesh" : "cube.glb"
 		},
 		{
 			"name" : "block_2",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "10.500, 0.000, -2.000"
 			},
-			"mesh" : "cube",
-			"material" : "placeholder"
+			"mesh" : "cube.glb"
 		},
 		{
 			"name" : "block_3",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "15.500, 0.000, -3.000"
 			},
-			"mesh" : "cube",
-			"material" : "placeholder"
+			"mesh" : "cube.glb"
 		},
 		{
 			"name" : "block_4",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "20.500, 0.000, -4.000"
 			},
-			"mesh" : "cube",
-			"material" : "placeholder"
+			"mesh" : "cube.glb"
 		}
 	]
 }

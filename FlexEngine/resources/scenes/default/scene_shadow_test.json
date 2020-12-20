@@ -1,5 +1,5 @@
 {
-	"version" : 3,
+	"version" : 4,
 	"name" : "scene_shadow_test",
 	"spawn player" : true,
 	"skybox data" : 
@@ -21,9 +21,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "26.412, 17.410, -24.589",
-			"pitch" : -0.169735,
-			"yaw" : 2.425033
+			"position" : "-22.531, 11.706, -29.638",
+			"pitch" : -0.180863,
+			"yaw" : -5.409176
 		}
 	},
 	"objects" : 
@@ -32,12 +32,13 @@
 			"name" : "tablet",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.107, 3.500, -12.000",
 				"scale" : "1.500, 1.500, 1.500"
 			},
-			"mesh" : "cone",
+			"mesh" : "cone.glb",
 			"materials" : 
 			[
 				"pbr red"
@@ -47,32 +48,30 @@
 			"name" : "Lighting",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 			},
-			"mesh" : "cube",
-			"materials" : 
-			[
-				"placeholder"
-			],
+			"mesh" : "cube.glb",
 			"children" : 
 			[
 				{
 					"name" : "Directional Light",
 					"type" : "directional light",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "-2.509, 15.629, 5.470",
-						"rot" : "0.853, -0.515, 2.609"
+						"rot" : "-1.898, -0.249, -2.136"
 					},
 					"directional light info" : 
 					{
-						"rotation" : "0.329, 0.325, 0.877, 0.130",
+						"rotation" : "-0.452, 0.672, -0.555, 0.190",
 						"pos" : "-2.509, 15.629, 5.470",
-						"colour" : "1.00, 1.00, 1.00",
+						"colour" : "0.99, 1.00, 0.92",
 						"enabled" : true,
-						"brightness" : 2.344000,
+						"brightness" : 2.365000,
 						"cast shadows" : true,
 						"shadow darkness" : 1.000000
 					}
@@ -81,6 +80,7 @@
 					"name" : "PointLight_07",
 					"type" : "point light",
 					"visible" : false,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "0.200, 3.800, 11.300"
@@ -97,6 +97,7 @@
 					"name" : "PointLight_00",
 					"type" : "point light",
 					"visible" : false,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "-6.100, 8.000, -11.900"
@@ -113,6 +114,7 @@
 					"name" : "PointLight_01",
 					"type" : "point light",
 					"visible" : false,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "-7.900, 3.393, 4.800"
@@ -129,6 +131,7 @@
 					"name" : "PointLight_02",
 					"type" : "point light",
 					"visible" : false,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "-9.400, 8.100, 26.600"
@@ -145,6 +148,7 @@
 					"name" : "PointLight_03",
 					"type" : "point light",
 					"visible" : false,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "23.200, 11.800, 17.500"
@@ -161,6 +165,7 @@
 					"name" : "PointLight_04",
 					"type" : "point light",
 					"visible" : false,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "-23.100, 3.700, -13.200"
@@ -177,6 +182,7 @@
 					"name" : "PointLight_05",
 					"type" : "point light",
 					"visible" : false,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "-17.000, 11.800, 3.300"
@@ -193,6 +199,7 @@
 					"name" : "PointLight_06",
 					"type" : "point light",
 					"visible" : false,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "11.100, 1.700, -19.600"
@@ -209,6 +216,7 @@
 					"name" : "Reflection Probe 01",
 					"type" : "reflection probe",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "0.000, 15.600, 0.000"
@@ -220,27 +228,25 @@
 			"name" : "Env",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 			},
-			"mesh" : "cube",
-			"materials" : 
-			[
-				"placeholder"
-			],
+			"mesh" : "cube.glb",
 			"children" : 
 			[
 				{
 					"name" : "Wall 04",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "9.481, 2.794, 6.157",
 						"rot" : "0.000, -0.251, 0.000",
 						"scale" : "1.000, 5.360, 5.350"
 					},
-					"mesh" : "cube",
+					"mesh" : "cube.glb",
 					"materials" : 
 					[
 						"pbr white"
@@ -263,13 +269,14 @@
 					"name" : "Wall 01",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "14.989, 2.794, 0.000",
 						"rot" : "0.000, -0.300, 0.000",
 						"scale" : "1.000, 5.360, 5.350"
 					},
-					"mesh" : "cube",
+					"mesh" : "cube.glb",
 					"materials" : 
 					[
 						"sphere 02"
@@ -292,12 +299,13 @@
 					"name" : "Wall 02",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "13.112, 2.794, 1.351",
 						"scale" : "1.000, 5.360, 5.350"
 					},
-					"mesh" : "cube",
+					"mesh" : "cube.glb",
 					"materials" : 
 					[
 						"sphere 01"
@@ -320,13 +328,14 @@
 					"name" : "Wall 03",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "11.452, 2.794, 3.254",
 						"rot" : "0.000, -0.145, 0.000",
 						"scale" : "1.000, 5.360, 5.350"
 					},
-					"mesh" : "cube",
+					"mesh" : "cube.glb",
 					"materials" : 
 					[
 						"pbr red"
@@ -349,12 +358,13 @@
 					"name" : "ground plane",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "-0.600, -0.379, 1.200",
 						"scale" : "60.000, 1.000, 60.000"
 					},
-					"mesh" : "cube",
+					"mesh" : "cube.glb",
 					"materials" : 
 					[
 						"grid"
@@ -377,12 +387,13 @@
 					"name" : "New_Game_Object_02",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "0.000, -2.179, 60.000",
 						"scale" : "60.000, 1.000, 60.000"
 					},
-					"mesh" : "cube",
+					"mesh" : "cube.glb",
 					"materials" : 
 					[
 						"grid"
@@ -405,12 +416,13 @@
 					"name" : "New_Game_Object_03",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "0.000, -2.179, -60.000",
 						"scale" : "60.000, 1.000, 60.000"
 					},
-					"mesh" : "cube",
+					"mesh" : "cube.glb",
 					"materials" : 
 					[
 						"grid"
@@ -433,12 +445,13 @@
 					"name" : "New_Game_Object_00",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "-60.427, -2.179, 1.200",
 						"scale" : "60.000, 1.000, 60.000"
 					},
-					"mesh" : "cube",
+					"mesh" : "cube.glb",
 					"materials" : 
 					[
 						"grid"
@@ -461,12 +474,13 @@
 					"name" : "New_Game_Object_01",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "60.000, -2.179, 1.200",
 						"scale" : "60.000, 1.000, 60.000"
 					},
-					"mesh" : "cube",
+					"mesh" : "cube.glb",
 					"materials" : 
 					[
 						"grid"
@@ -489,12 +503,13 @@
 					"name" : "Wall 03",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "13.112, 2.794, 1.351",
 						"scale" : "1.000, 5.360, 5.350"
 					},
-					"mesh" : "cube",
+					"mesh" : "cube.glb",
 					"materials" : 
 					[
 						"sphere 01"
@@ -517,12 +532,13 @@
 					"name" : "New_Game_Object_02",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "2.800, 4.100, 23.270",
 						"scale" : "1.500, 1.500, 1.500"
 					},
-					"mesh" : "sphere",
+					"mesh" : "sphere.glb",
 					"materials" : 
 					[
 						"pbr white"
@@ -532,12 +548,13 @@
 					"name" : "New_Game_Object_01",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "10.200, 4.100, -7.300",
 						"scale" : "1.500, 1.500, 1.500"
 					},
-					"mesh" : "sphere",
+					"mesh" : "sphere.glb",
 					"materials" : 
 					[
 						"pbr white"
@@ -547,12 +564,13 @@
 					"name" : "New_Game_Object_02",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "2.800, 4.100, -17.700",
 						"scale" : "1.500, 1.500, 1.500"
 					},
-					"mesh" : "sphere",
+					"mesh" : "sphere.glb",
 					"materials" : 
 					[
 						"pbr white"
@@ -562,12 +580,13 @@
 					"name" : "New_Game_Object_03",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "2.600, 4.100, 13.870",
 						"scale" : "1.500, 1.500, 1.500"
 					},
-					"mesh" : "sphere",
+					"mesh" : "sphere.glb",
 					"materials" : 
 					[
 						"pbr white"
@@ -577,12 +596,13 @@
 					"name" : "New_Game_Object_00",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "6.300, 4.400, 18.570",
 						"scale" : "1.500, 1.500, 1.500"
 					},
-					"mesh" : "sphere",
+					"mesh" : "sphere.glb",
 					"materials" : 
 					[
 						"pbr white"
@@ -592,12 +612,13 @@
 					"name" : "New_Game_Object_01",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "-0.500, 7.863, 13.291",
 						"scale" : "1.500, 1.500, 1.500"
 					},
-					"mesh" : "sphere",
+					"mesh" : "sphere.glb",
 					"materials" : 
 					[
 						"pbr white"
@@ -607,12 +628,13 @@
 					"name" : "bawl",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "11.039, 1.025, 8.384",
 						"scale" : "1.500, 1.500, 1.500"
 					},
-					"mesh" : "sphere",
+					"mesh" : "sphere.glb",
 					"materials" : 
 					[
 						"pbr white"
@@ -622,12 +644,13 @@
 					"name" : "che",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "-13.833, 1.350, -7.597",
 						"rot" : "-3.141, -0.239, -3.141"
 					},
-					"mesh" : "che",
+					"mesh" : "che.glb",
 					"materials" : 
 					[
 						"pbr chrome",
@@ -641,13 +664,14 @@
 					"name" : "Cylinder",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "3.330, 4.569, 1.150",
 						"rot" : "-3.141, 1.271, -3.141",
 						"scale" : "1.000, 1.370, 1.000"
 					},
-					"mesh" : "cylinder",
+					"mesh" : "cylinder.glb",
 					"materials" : 
 					[
 						"pbr white"
@@ -670,6 +694,7 @@
 					"name" : "Skybox",
 					"type" : "skybox",
 					"visible" : true,
+					"casts shadow" : false,
 					"transform" : 
 					{
 					},
@@ -681,24 +706,6 @@
 					{
 					}
 				}
-			]
-		},
-		{
-			"name" : "New_Object_00",
-			"type" : "object",
-			"visible" : true,
-			"transform" : 
-			{
-				"pos" : "0.000, 9.233, 0.000"
-			},
-			"mesh" : "che",
-			"materials" : 
-			[
-				"pbr grey",
-				"pbr blue",
-				"pbr light grey",
-				"pbr white",
-				"glass"
 			]
 		}
 	]

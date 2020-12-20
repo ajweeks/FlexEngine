@@ -1,7 +1,13 @@
 {
-	"version" : 3,
+	"version" : 4,
 	"name" : "scene_donut",
 	"spawn player" : false,
+	"skybox data" : 
+	{
+		"top colour" : "0.22, 0.58, 0.88, 0.00",
+		"mid colour" : "0.66, 0.86, 0.95, 0.00",
+		"btm colour" : "0.75, 0.91, 0.99, 0.00"
+	},
 	"camera" : 
 	{
 		"type" : "debug",
@@ -26,6 +32,7 @@
 			"name" : "Skybox",
 			"type" : "skybox",
 			"visible" : true,
+			"casts shadow" : false,
 			"transform" : 
 			{
 			},
@@ -41,6 +48,7 @@
 			"name" : "Reflection Probe 01",
 			"type" : "reflection probe",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 8.000, 0.000"
@@ -50,12 +58,13 @@
 			"name" : "donut",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "2.622, -0.304, -1.214",
 				"rot" : "0.699, 1.534, 0.495"
 			},
-			"mesh" : "donut",
+			"mesh" : "donut.glb",
 			"materials" : 
 			[
 				"donut_sprinkle",
@@ -68,12 +77,13 @@
 					"name" : "donut2",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "13.047, -2.297, -13.776",
 						"rot" : "1.330, 1.045, 2.346"
 					},
-					"mesh" : "donut",
+					"mesh" : "donut.glb",
 					"materials" : 
 					[
 						"donut_sprinkle",
@@ -86,12 +96,13 @@
 							"name" : "donut3",
 							"type" : "object",
 							"visible" : true,
+							"casts shadow" : true,
 							"transform" : 
 							{
 								"pos" : "-3.094, 11.297, 8.041",
 								"rot" : "0.556, 1.343, 0.690"
 							},
-							"mesh" : "donut",
+							"mesh" : "donut.glb",
 							"materials" : 
 							[
 								"donut_sprinkle",
@@ -107,6 +118,7 @@
 			"name" : "Directional Light",
 			"type" : "directional light",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
