@@ -43,12 +43,12 @@ namespace flex
 
 	void Player::Initialize()
 	{
-		m_SoundPlaceTrackNodeID = AudioManager::AddAudioSource(SFX_LOCATION "click-02.wav");
-		m_SoundPlaceFinalTrackNodeID = AudioManager::AddAudioSource(SFX_LOCATION "jingle-single-01.wav");
-		m_SoundTrackAttachID = AudioManager::AddAudioSource(SFX_LOCATION "crunch-13.wav");
-		m_SoundTrackDetachID = AudioManager::AddAudioSource(SFX_LOCATION "schluck-02.wav");
-		m_SoundTrackSwitchDirID = AudioManager::AddAudioSource(SFX_LOCATION "whistle-01.wav");
-		//m_SoundTrackAttachID = AudioManager::AddAudioSource(SFX_LOCATION "schluck-07.wav");
+		m_SoundPlaceTrackNodeID = AudioManager::AddAudioSource(SFX_DIRECTORY "click-02.wav");
+		m_SoundPlaceFinalTrackNodeID = AudioManager::AddAudioSource(SFX_DIRECTORY "jingle-single-01.wav");
+		m_SoundTrackAttachID = AudioManager::AddAudioSource(SFX_DIRECTORY "crunch-13.wav");
+		m_SoundTrackDetachID = AudioManager::AddAudioSource(SFX_DIRECTORY "schluck-02.wav");
+		m_SoundTrackSwitchDirID = AudioManager::AddAudioSource(SFX_DIRECTORY "whistle-01.wav");
+		//m_SoundTrackAttachID = AudioManager::AddAudioSource(SFX_DIRECTORY "schluck-07.wav");
 
 		MaterialCreateInfo matCreateInfo = {};
 		matCreateInfo.name = "Player " + std::to_string(m_Index) + " material";
@@ -109,7 +109,7 @@ namespace flex
 			m_MapTablet->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(-glm::radians(80.0f), glm::radians(13.3f), -glm::radians(86.0f))));
 		}
 
-		m_CrosshairTextureID = g_Renderer->InitializeTextureFromFile(TEXTURE_LOCATION "cross-hair-01.png", 4, false, false, false);
+		m_CrosshairTextureID = g_Renderer->InitializeTextureFromFile(TEXTURE_DIRECTORY "cross-hair-01.png", 4, false, false, false);
 
 		GameObject::Initialize();
 	}

@@ -211,7 +211,7 @@ namespace flex
 							continue;
 						}
 
-						metaData.filePath = FONT_LOCATION + fileName;
+						metaData.filePath = FONT_DIRECTORY + fileName;
 						SetRenderedSDFFilePath(metaData);
 
 						std::string fontName = fontObj.GetString("name");
@@ -421,7 +421,7 @@ namespace flex
 
 		metaData.renderedTextureFilePath = StripFileType(StripLeadingDirectories(metaData.filePath));
 		metaData.renderedTextureFilePath += "-" + IntToString(metaData.size, 2) + "-" + DPIStr + m_FontImageExtension;
-		metaData.renderedTextureFilePath = FONT_SDF_LOCATION + metaData.renderedTextureFilePath;
+		metaData.renderedTextureFilePath = FONT_SDF_DIRECTORY + metaData.renderedTextureFilePath;
 	}
 
 	bool ResourceManager::LoadFontMetrics(const std::vector<char>& fileMemory,
@@ -1281,7 +1281,7 @@ namespace flex
 				if (ImGui::Button("Import Texture"))
 				{
 					// TODO: Not all textures are directly in this directory! CLEANUP to make more robust
-					std::string relativeDirPath = TEXTURE_LOCATION;
+					std::string relativeDirPath = TEXTURE_DIRECTORY;
 					std::string absoluteDirectoryStr = RelativePathToAbsolute(relativeDirPath);
 					std::string selectedAbsFilePath;
 					if (Platform::OpenFileDialog("Import texture", absoluteDirectoryStr, selectedAbsFilePath))

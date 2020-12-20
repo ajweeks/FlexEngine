@@ -47,7 +47,7 @@ namespace flex
 
 	void Renderer::Initialize()
 	{
-		std::string hdriPath = TEXTURE_LOCATION "hdri/";
+		std::string hdriPath = TEXTURE_DIRECTORY "hdri/";
 		if (!Platform::FindFilesInDirectory(hdriPath, m_AvailableHDRIs, "hdr"))
 		{
 			PrintWarn("Unable to find hdri directory at %s\n", hdriPath.c_str());
@@ -93,7 +93,7 @@ namespace flex
 
 		if (g_EngineInstance->InstallShaderDirectoryWatch())
 		{
-			m_ShaderDirectoryWatcher = new DirectoryWatcher(SHADER_SOURCE_LOCATION, false);
+			m_ShaderDirectoryWatcher = new DirectoryWatcher(SHADER_SOURCE_DIRECTORY, false);
 			if (!m_ShaderDirectoryWatcher->Installed())
 			{
 				PrintWarn("Failed to install shader directory watcher\n");

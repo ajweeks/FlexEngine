@@ -124,7 +124,7 @@ namespace flex
 		}
 
 		{
-			std::string renderDocSettingsDirAbs = RelativePathToAbsolute(CONFIG_LOCATION);
+			std::string renderDocSettingsDirAbs = RelativePathToAbsolute(CONFIG_DIRECTORY);
 			m_RenderDocSettingsFileName = "renderdoc.json";
 			m_RenderDocSettingsAbsFilePath = renderDocSettingsDirAbs + m_RenderDocSettingsFileName;
 		}
@@ -282,9 +282,9 @@ namespace flex
 
 		if (s_AudioSourceIDs.empty())
 		{
-			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(SFX_LOCATION "dud_dud_dud_dud.wav"));
-			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(SFX_LOCATION "drmapan.wav"));
-			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(SFX_LOCATION "blip.wav"));
+			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(SFX_DIRECTORY "dud_dud_dud_dud.wav"));
+			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(SFX_DIRECTORY "drmapan.wav"));
+			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(SFX_DIRECTORY "blip.wav"));
 			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 100.727f));
 			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 200.068f));
 			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 300.811f));
@@ -733,7 +733,7 @@ namespace flex
 		//io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 		io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange; // glfwSetCursor overruns buffer somewhere (currently Window::m_FrameBufferSize.y...)
 
-		std::string fontFilePath(FONT_LOCATION "lucon.ttf");
+		std::string fontFilePath(FONT_DIRECTORY "lucon.ttf");
 		io.Fonts->AddFontFromFileTTF(fontFilePath.c_str(), 13);
 
 		io.FontGlobalScale = g_Monitor->contentScaleX;

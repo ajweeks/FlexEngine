@@ -126,31 +126,31 @@ namespace flex
 		name(name)
 	{
 #if COMPILE_OPEN_GL
-		vertexShaderFilePath = SHADER_SOURCE_LOCATION + inVertexShaderFilePath;
+		vertexShaderFilePath = SHADER_SOURCE_DIRECTORY + inVertexShaderFilePath;
 		if (!inFragmentShaderFilePath.empty())
 		{
-			fragmentShaderFilePath = SHADER_SOURCE_LOCATION + inFragmentShaderFilePath;
+			fragmentShaderFilePath = SHADER_SOURCE_DIRECTORY + inFragmentShaderFilePath;
 		}
 		if (!inGeometryShaderFilePath.empty())
 		{
-			geometryShaderFilePath = SHADER_SOURCE_LOCATION + inGeometryShaderFilePath;
+			geometryShaderFilePath = SHADER_SOURCE_DIRECTORY + inGeometryShaderFilePath;
 		}
 #elif COMPILE_VULKAN
 		if (!inVertexShaderFilePath.empty())
 		{
-			vertexShaderFilePath = SPV_LOCATION + inVertexShaderFilePath;
+			vertexShaderFilePath = SPV_DIRECTORY + inVertexShaderFilePath;
 		}
 		if (!inFragmentShaderFilePath.empty())
 		{
-			fragmentShaderFilePath = SPV_LOCATION + inFragmentShaderFilePath;
+			fragmentShaderFilePath = SPV_DIRECTORY + inFragmentShaderFilePath;
 		}
 		if (!inGeometryShaderFilePath.empty())
 		{
-			geometryShaderFilePath = SPV_LOCATION + inGeometryShaderFilePath;
+			geometryShaderFilePath = SPV_DIRECTORY + inGeometryShaderFilePath;
 		}
 		if (!inComputeShaderFilePath.empty())
 		{
-			computeShaderFilePath = SPV_LOCATION + inComputeShaderFilePath;
+			computeShaderFilePath = SPV_DIRECTORY + inComputeShaderFilePath;
 		}
 #endif
 	}
@@ -226,7 +226,7 @@ namespace flex
 		{
 			if (material.HasField(param.name))
 			{
-				*param.path = TEXTURE_LOCATION + material.GetString(param.name);
+				*param.path = TEXTURE_DIRECTORY + material.GetString(param.name);
 			}
 		}
 
@@ -369,7 +369,7 @@ namespace flex
 			materialObject.fields.emplace_back("enable normal sampler", JSONValue(enableNormalSampler));
 		}
 
-		static const std::string texturePrefixStr = TEXTURE_LOCATION;
+		static const std::string texturePrefixStr = TEXTURE_DIRECTORY;
 
 		if (shader->bNeedAlbedoSampler && !albedoTexturePath.empty())
 		{

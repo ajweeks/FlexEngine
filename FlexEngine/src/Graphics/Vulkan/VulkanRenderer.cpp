@@ -334,11 +334,11 @@ namespace flex
 				blankTextureArrID = g_ResourceManager->AddLoadedTexture(m_BlankTextureArr);
 			}
 
-			alphaBGTextureID = InitializeTextureFromFile(TEXTURE_LOCATION "alpha-bg.png", 4, false, false, false);
-			loadingTextureID = InitializeTextureFromFile(TEXTURE_LOCATION "loading_1.png", 4, false, false, false);
-			workTextureID = InitializeTextureFromFile(TEXTURE_LOCATION "work_d.jpg", 4, false, true, false);
-			pointLightIconID = InitializeTextureFromFile(TEXTURE_LOCATION "icons/point-light-icon-256.png", 4, false, true, false);
-			directionalLightIconID = InitializeTextureFromFile(TEXTURE_LOCATION "icons/directional-light-icon-256.png", 4, false, true, false);
+			alphaBGTextureID = InitializeTextureFromFile(TEXTURE_DIRECTORY "alpha-bg.png", 4, false, false, false);
+			loadingTextureID = InitializeTextureFromFile(TEXTURE_DIRECTORY "loading_1.png", 4, false, false, false);
+			workTextureID = InitializeTextureFromFile(TEXTURE_DIRECTORY "work_d.jpg", 4, false, true, false);
+			pointLightIconID = InitializeTextureFromFile(TEXTURE_DIRECTORY "icons/point-light-icon-256.png", 4, false, true, false);
+			directionalLightIconID = InitializeTextureFromFile(TEXTURE_DIRECTORY "icons/directional-light-icon-256.png", 4, false, true, false);
 
 			m_SpritePerspPushConstBlock = new Material::PushConstantBlock(128);
 			m_SpriteOrthoPushConstBlock = new Material::PushConstantBlock(128);

@@ -17,8 +17,8 @@ namespace flex
 	const char* SceneManager::s_newSceneModalWindowID = "New scene";
 
 	SceneManager::SceneManager() :
-		m_SavedDirStr(RelativePathToAbsolute(SCENE_SAVED_LOCATION)),
-		m_DefaultDirStr(RelativePathToAbsolute(SCENE_DEFAULT_LOCATION))
+		m_SavedDirStr(RelativePathToAbsolute(SCENE_SAVED_DIRECTORY)),
+		m_DefaultDirStr(RelativePathToAbsolute(SCENE_DEFAULT_DIRECTORY))
 	{
 		if (!Platform::DirectoryExists(m_SavedDirStr))
 		{

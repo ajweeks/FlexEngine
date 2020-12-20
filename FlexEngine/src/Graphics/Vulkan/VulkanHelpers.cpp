@@ -2278,7 +2278,7 @@ namespace flex
 		{
 			s_ChecksumFilePathAbs = RelativePathToAbsolute(SHADER_CHECKSUM_LOCATION);
 
-			const std::string spvDirectory = RelativePathToAbsolute(SPV_LOCATION);
+			const std::string spvDirectory = RelativePathToAbsolute(SPV_DIRECTORY);
 			if (!Platform::DirectoryExists(spvDirectory))
 			{
 				Platform::CreateDirectoryRecursive(spvDirectory);
@@ -2295,7 +2295,7 @@ namespace flex
 				const char* blockName = "Calculate shader contents checksum";
 				PROFILE_AUTO(blockName);
 
-				const std::string shaderInputDirectory = SHADER_SOURCE_LOCATION;
+				const std::string shaderInputDirectory = SHADER_SOURCE_DIRECTORY;
 
 				if (FileExists(SHADER_CHECKSUM_LOCATION))
 				{
@@ -2334,7 +2334,7 @@ namespace flex
 				bSuccess = true;
 
 				std::vector<std::string> filePaths;
-				if (Platform::FindFilesInDirectory(SHADER_SOURCE_LOCATION, filePaths, "*"))
+				if (Platform::FindFilesInDirectory(SHADER_SOURCE_DIRECTORY, filePaths, "*"))
 				{
 					startTime = Time::CurrentMilliseconds();
 
@@ -2412,7 +2412,7 @@ namespace flex
 
 									std::vector<u32> spvBytes(result.begin(), result.end());
 									std::string strippedFileName = StripFileType(fileName);
-									std::string spvFilePath = RelativePathToAbsolute(SPV_LOCATION) + strippedFileName + "_" + fileType + ".spv";
+									std::string spvFilePath = RelativePathToAbsolute(SPV_DIRECTORY) + strippedFileName + "_" + fileType + ".spv";
 									std::ofstream fileStream(spvFilePath, std::ios::out | std::ios::binary);
 									if (fileStream.is_open())
 									{
@@ -2485,7 +2485,7 @@ namespace flex
 						}
 						else
 						{
-							PrintWarn("Failed to write shader checksum file to %s\n", SHADER_SOURCE_LOCATION);
+							PrintWarn("Failed to write shader checksum file to %s\n", SHADER_SOURCE_DIRECTORY);
 						}
 					}
 
@@ -2519,10 +2519,10 @@ namespace flex
 
 		void VulkanShaderCompiler::ClearShaderHash(const std::string& shaderName)
 		{
-			if (FileExists(SHADER_SOURCE_LOCATION))
+			if (FileExists(SHADER_SOURCE_DIRECTORY))
 			{
 				std::string fileContents;
-				if (ReadFile(SHADER_SOURCE_LOCATION, fileContents, false))
+				if (ReadFile(SHADER_SOURCE_DIRECTORY, fileContents, false))
 				{
 					std::string searchStr = "vk_" + shaderName + '.';
 					size_t index = 0;

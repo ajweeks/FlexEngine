@@ -83,9 +83,9 @@ namespace flex
 
 		if (!s_SqueakySounds.IsInitialized())
 		{
-			s_SqueakySounds.Initialize(SFX_LOCATION "squeak00.wav", 5);
+			s_SqueakySounds.Initialize(SFX_DIRECTORY "squeak00.wav", 5);
 
-			s_BunkSound = AudioManager::AddAudioSource(SFX_LOCATION "bunk.wav");
+			s_BunkSound = AudioManager::AddAudioSource(SFX_DIRECTORY "bunk.wav");
 		}
 	}
 
@@ -3496,7 +3496,7 @@ namespace flex
 		matCreateInfo.constMetallic = 0.8f;
 		matCreateInfo.constRoughness = 0.01f;
 		matCreateInfo.bDynamic = true;
-		matCreateInfo.albedoTexturePath = TEXTURE_LOCATION "wave-n-2.png";
+		matCreateInfo.albedoTexturePath = TEXTURE_DIRECTORY "wave-n-2.png";
 		matCreateInfo.enableAlbedoSampler = true;
 		matCreateInfo.bSerializable = false;
 

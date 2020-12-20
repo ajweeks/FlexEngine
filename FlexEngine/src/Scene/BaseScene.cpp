@@ -68,7 +68,7 @@ namespace flex
 
 			m_CartManager.Initialize();
 
-			const std::string filePath = SCENE_DEFAULT_LOCATION + m_FileName;
+			const std::string filePath = SCENE_DEFAULT_DIRECTORY + m_FileName;
 
 			if (FileExists(filePath))
 			{
@@ -1441,8 +1441,8 @@ namespace flex
 
 		std::string fileContents = rootSceneObject.Print(0);
 
-		const std::string defaultSaveFilePath = SCENE_DEFAULT_LOCATION + m_FileName;
-		const std::string savedSaveFilePath = SCENE_SAVED_LOCATION + m_FileName;
+		const std::string defaultSaveFilePath = SCENE_DEFAULT_DIRECTORY + m_FileName;
+		const std::string savedSaveFilePath = SCENE_SAVED_DIRECTORY + m_FileName;
 		std::string saveFilePath;
 		if (bSaveOverDefault)
 		{
@@ -1487,8 +1487,8 @@ namespace flex
 
 	void BaseScene::DeleteSaveFiles()
 	{
-		const std::string defaultSaveFilePath = SCENE_DEFAULT_LOCATION + m_FileName;
-		const std::string savedSaveFilePath = SCENE_SAVED_LOCATION + m_FileName;
+		const std::string defaultSaveFilePath = SCENE_DEFAULT_DIRECTORY + m_FileName;
+		const std::string savedSaveFilePath = SCENE_SAVED_DIRECTORY + m_FileName;
 
 		bool bDefaultFileExists = FileExists(defaultSaveFilePath);
 		bool bSavedFileExists = FileExists(savedSaveFilePath);
@@ -1838,18 +1838,18 @@ namespace flex
 
 	std::string BaseScene::GetDefaultRelativeFilePath() const
 	{
-		return SCENE_DEFAULT_LOCATION + m_FileName;
+		return SCENE_DEFAULT_DIRECTORY + m_FileName;
 	}
 
 	std::string BaseScene::GetRelativeFilePath() const
 	{
 		//if (m_bUsingSaveFile)
 		//{
-		//	return SCENE_SAVED_LOCATION + m_FileName;
+		//	return SCENE_SAVED_DIRECTORY + m_FileName;
 		//}
 		//else
 		//{
-		return SCENE_DEFAULT_LOCATION + m_FileName;
+		return SCENE_DEFAULT_DIRECTORY + m_FileName;
 		//}
 	}
 
@@ -1857,11 +1857,11 @@ namespace flex
 	{
 		//if (m_bUsingSaveFile)
 		//{
-		//	return SCENE_SAVED_LOCATION + m_FileName;
+		//	return SCENE_SAVED_DIRECTORY + m_FileName;
 		//}
 		//else
 		//{
-		return SCENE_DEFAULT_LOCATION + m_FileName;
+		return SCENE_DEFAULT_DIRECTORY + m_FileName;
 		//}
 	}
 
