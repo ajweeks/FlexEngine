@@ -336,23 +336,21 @@ namespace flex
 		PROFILE_END("Cart manager update");
 	}
 
-	CartID CartManager::CreateCart(const std::string& name)
+	CartID CartManager::CreateCart(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */)
 	{
 		// TODO: Use custom memory allocator
 		CartID cartID = (CartID)m_Carts.size();
-		Cart* newCart = new Cart(cartID, name);
+		Cart* newCart = new Cart(cartID, name, gameObjectID);
 		m_Carts.push_back(newCart);
-		g_SceneManager->CurrentScene()->AddRootObject(newCart);
 		return cartID;
 	}
 
-	CartID CartManager::CreateEngineCart(const std::string& name)
+	CartID CartManager::CreateEngineCart(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */)
 	{
 		// TODO: Use custom memory allocator
 		CartID cartID = (CartID)m_Carts.size();
-		EngineCart* newCart = new EngineCart(cartID, name);
+		EngineCart* newCart = new EngineCart(cartID, name, gameObjectID);
 		m_Carts.push_back(newCart);
-		g_SceneManager->CurrentScene()->AddRootObject(newCart);
 		return cartID;
 	}
 

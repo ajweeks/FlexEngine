@@ -9,6 +9,7 @@ struct GLFWimage;
 namespace flex
 {
 	class Transform;
+	struct GUID;
 
 	// TODO: Many of the functions in this file would benefit from unit tests
 
@@ -188,11 +189,9 @@ namespace flex
 	// Returns random value in range [min, max)
 	real RandomFloat(real min, real max);
 
+	// TODO: Add tests! Unused!
 	bool Base64Encode(const u8* src, char* dst, size_t len);
 	bool Base64Decode(const void* src, u8* dst, const size_t len);
-
-	GUID NextGUID();
-	std::string GUIDToString(const GUID& guid);
 
 	void ByteCountToString(char buf[], u32 bufSize, u32 bytes);
 
@@ -328,6 +327,84 @@ namespace flex
 	{
 		bool operator()(const glm::vec2i& lhs, const glm::vec2i& rhs) const;
 	};
+
+	// TODO: Move to separate file
+	template<class T>
+	struct ThreadSafeArray
+	{
+		ThreadSafeArray()
+		{
+		}
+
+		explicit ThreadSafeArray<T>(u32 inSize)
+		{
+			size = inSize;
+			t = new T[inSize];
+		}
+
+		~ThreadSafeArray()
+		{
+			delete[] t;
+		}
+
+		volatile T& operator[](u32 index) volatile
+		{
+			return t[index];
+		}
+
+		const volatile T& operator[](u32 index) volatile const
+		{
+			return t[index];
+		}
+
+		u32 Size()volatile const
+		{
+			return size;
+		}
+
+		u32 size;
+		volatile T* t = nullptr;
+	};
+
+	struct ThreadData
+	{
+		void* criticalSection = nullptr;
+		volatile bool running = true;
+	};
+
+	static constexpr i32 GUIDInLength = 12;
+	static constexpr i32 GUIDLength = 16;
+	struct GUID
+	{
+		GUID();
+
+		GUID(const GUID& other);
+		GUID(const GUID&& other);
+		GUID& operator=(const GUID& other);
+		GUID& operator=(const GUID&& other);
+
+		bool operator!=(const GUID& rhs) const;
+		bool operator==(const GUID& rhs) const;
+		bool operator<(const GUID& rhs) const;
+
+		static GUID FromPlatformGUID(
+			unsigned long inData1,
+			unsigned short inData2,
+			unsigned short inData3,
+			unsigned char  inData4[8]);
+
+		static GUID FromString(const std::string& str);
+
+		std::string ToString() const;
+
+		u64 Data1; // Stores least significant quad word
+		u64 Data2; // Stores most significant quad word
+	};
+
+	typedef GUID GameObjectID;
+
+	extern const GUID InvalidGUID;
+	extern const GUID InvalidGameObjectID;
 
 	namespace ImGuiExt
 	{

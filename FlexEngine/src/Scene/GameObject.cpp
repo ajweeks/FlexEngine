@@ -73,11 +73,19 @@ namespace flex
 
 	static ThreadSafeArray<GerstnerWave::WaveGenData>* workQueue = nullptr;
 
-
-	GameObject::GameObject(const std::string& name, GameObjectType type) :
+	GameObject::GameObject(const std::string& name, GameObjectType type, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
 		m_Name(name),
 		m_Type(type)
 	{
+		if (gameObjectID != InvalidGameObjectID)
+		{
+			ID = gameObjectID;
+		}
+		else
+		{
+			ID = Platform::GenerateGUID();
+		}
+
 		m_Transform.SetAsIdentity();
 		m_Transform.SetGameObject(this);
 
@@ -109,12 +117,22 @@ namespace flex
 		std::string gameObjectTypeStr = obj.GetString("type");
 		std::string objectName = obj.GetString("name");
 
+		GameObjectID gameObjectID;
+		if (fileVersion >= 5)
+		{
+			gameObjectID = obj.GetGUID("id");
+		}
+		else
+		{
+			gameObjectID = InvalidGameObjectID;
+		}
+
 		if (gameObjectTypeStr.compare("prefab") == 0)
 		{
 			PrefabInfo* prefabInfo = g_ResourceManager->GetPrefabInfo(objectName);
 			if (prefabInfo != nullptr)
 			{
-				return CreateObjectFromPrefabInfo(*prefabInfo, scene, fileVersion);
+				return CreateObjectFromPrefabInfo(*prefabInfo, scene, fileVersion, gameObjectID);
 			}
 			else
 			{
@@ -125,7 +143,7 @@ namespace flex
 
 		GameObjectType gameObjectType = StringToGameObjectType(gameObjectTypeStr.c_str());
 
-		newGameObject = CreateObjectOfType(gameObjectType, objectName);
+		newGameObject = CreateObjectOfType(gameObjectType, objectName, gameObjectID);
 
 		if (newGameObject != nullptr)
 		{
@@ -135,11 +153,11 @@ namespace flex
 		return newGameObject;
 	}
 
-	GameObject* GameObject::CreateObjectFromPrefabInfo(const PrefabInfo& prefabInfo, BaseScene* scene, i32 fileVersion)
+	GameObject* GameObject::CreateObjectFromPrefabInfo(const PrefabInfo& prefabInfo, BaseScene* scene, i32 fileVersion, GameObjectID gameObjectID /* = InvalidGameObjectID */)
 	{
 		FLEX_UNUSED(fileVersion);
 
-		GameObject* prefabInstance = CreateObjectOfType(prefabInfo.type, prefabInfo.name);
+		GameObject* prefabInstance = CreateObjectOfType(prefabInfo.type, prefabInfo.name, gameObjectID);
 		prefabInstance->m_bLoadedFromPrefab = true;
 		prefabInstance->m_PrefabName = prefabInstance->m_Name;
 		prefabInstance->SetVisible(prefabInfo.bVisible, false);
@@ -150,7 +168,7 @@ namespace flex
 		return prefabInstance;
 	}
 
-	GameObject* GameObject::CreateObjectOfType(GameObjectType gameObjectType, const std::string& objectName)
+	GameObject* GameObject::CreateObjectOfType(GameObjectType gameObjectType, const std::string& objectName, GameObjectID objectID /* = InvalidGameObjectID */)
 	{
 		// TODO: Use managers here to spawn objects!
 		switch (gameObjectType)
@@ -159,33 +177,33 @@ namespace flex
 		{
 			PrintError("Player was serialized to scene file!\n");
 		}break;
-		case GameObjectType::SKYBOX: return new Skybox(objectName);
-		case GameObjectType::REFLECTION_PROBE: return new ReflectionProbe(objectName);
-		case GameObjectType::VALVE: return new Valve(objectName);
-		case GameObjectType::RISING_BLOCK: return new RisingBlock(objectName);
-		case GameObjectType::GLASS_PANE: return new GlassPane(objectName);
-		case GameObjectType::POINT_LIGHT: return new PointLight(objectName);
-		case GameObjectType::DIRECTIONAL_LIGHT: return new DirectionalLight(objectName);
+		case GameObjectType::SKYBOX: return new Skybox(objectName, objectID);
+		case GameObjectType::REFLECTION_PROBE: return new ReflectionProbe(objectName, objectID);
+		case GameObjectType::VALVE: return new Valve(objectName, objectID);
+		case GameObjectType::RISING_BLOCK: return new RisingBlock(objectName, objectID);
+		case GameObjectType::GLASS_PANE: return new GlassPane(objectName, objectID);
+		case GameObjectType::POINT_LIGHT: return new PointLight(objectName, objectID);
+		case GameObjectType::DIRECTIONAL_LIGHT: return new DirectionalLight(objectName, objectID);
 		case GameObjectType::CART:
 		{
 			// TODO: Make one line
 			CartManager* cartManager = g_SceneManager->CurrentScene()->GetCartManager();
-			CartID newCartID = cartManager->CreateCart(objectName);
+			CartID newCartID = cartManager->CreateCart(objectName, objectID);
 			return cartManager->GetCart(newCartID);
 		}
-		case GameObjectType::MOBILE_LIQUID_BOX: return new MobileLiquidBox(objectName);
-		case GameObjectType::TERMINAL: return new Terminal(objectName);
-		case GameObjectType::GERSTNER_WAVE: return new GerstnerWave(objectName);
-		case GameObjectType::BLOCKS: return new Blocks(objectName);
-		case GameObjectType::PARTICLE_SYSTEM: return new ParticleSystem(objectName);
-		case GameObjectType::TERRAIN_GENERATOR: return new TerrainGenerator(objectName);
-		case GameObjectType::WIRE: return g_PluggablesSystem->AddWire();
-		case GameObjectType::SOCKET: return g_PluggablesSystem->AddSocket(objectName);
-		case GameObjectType::SPRING: return new SpringObject(objectName);
-		case GameObjectType::SOFT_BODY: return new SoftBody(objectName);
-		case GameObjectType::VEHICLE: return new Vehicle(objectName);
+		case GameObjectType::MOBILE_LIQUID_BOX: return new MobileLiquidBox(objectName, objectID);
+		case GameObjectType::TERMINAL: return new Terminal(objectName, objectID);
+		case GameObjectType::GERSTNER_WAVE: return new GerstnerWave(objectName, objectID);
+		case GameObjectType::BLOCKS: return new Blocks(objectName, objectID);
+		case GameObjectType::PARTICLE_SYSTEM: return new ParticleSystem(objectName, objectID);
+		case GameObjectType::TERRAIN_GENERATOR: return new TerrainGenerator(objectName, objectID);
+		case GameObjectType::WIRE: return g_PluggablesSystem->AddWire(objectID);
+		case GameObjectType::SOCKET: return g_PluggablesSystem->AddSocket(objectName, objectID);
+		case GameObjectType::SPRING: return new SpringObject(objectName, objectID);
+		case GameObjectType::SOFT_BODY: return new SoftBody(objectName, objectID);
+		case GameObjectType::VEHICLE: return new Vehicle(objectName, objectID);
 		case GameObjectType::OBJECT: // Fall through
-		case GameObjectType::_NONE: return new GameObject(objectName, gameObjectType);
+		case GameObjectType::_NONE: return new GameObject(objectName, gameObjectType, objectID);
 		default:
 			PrintError("Unhandled game object type in CreateGameObjectFromJSON\n");
 			ENSURE_NO_ENTRY();
@@ -1119,6 +1137,9 @@ namespace flex
 
 		object.fields.emplace_back("name", JSONValue(m_Name));
 
+		// Added in v5
+		object.fields.emplace_back("id", JSONValue(ID));
+
 		if (m_bLoadedFromPrefab)
 		{
 			object.fields.emplace_back("type", JSONValue(std::string("prefab")));
@@ -1584,7 +1605,7 @@ namespace flex
 
 	GameObject* GameObject::AddChild(GameObject* child)
 	{
-		if (!child)
+		if (child == nullptr)
 		{
 			return nullptr;
 		}
@@ -1600,7 +1621,7 @@ namespace flex
 
 	GameObject* GameObject::AddChildImmediate(GameObject* child)
 	{
-		if (!child)
+		if (child == nullptr)
 		{
 			return nullptr;
 		}
@@ -1652,16 +1673,22 @@ namespace flex
 		return child;
 	}
 
+	bool GameObject::RemoveChildImmediate(GameObjectID childID, bool bDestroy)
+	{
+		GameObject* child = g_SceneManager->CurrentScene()->GetGameObject(childID);
+		return RemoveChildImmediate(child, bDestroy);
+	}
+
 	bool GameObject::RemoveChildImmediate(GameObject* child, bool bDestroy)
 	{
-		if (!child)
+		if (child == nullptr)
 		{
 			return false;
 		}
 
 		for (auto iter = m_Children.begin(); iter != m_Children.end(); ++iter)
 		{
-			if (*iter == child)
+			if ((*iter)->ID == child->ID)
 			{
 				if (bDestroy)
 				{
@@ -2103,8 +2130,8 @@ namespace flex
 		}
 	}
 
-	Valve::Valve(const std::string& name) :
-		GameObject(name, GameObjectType::VALVE)
+	Valve::Valve(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+		GameObject(name, GameObjectType::VALVE, gameObjectID)
 	{
 	}
 
@@ -2285,8 +2312,8 @@ namespace flex
 		GameObject::Update();
 	}
 
-	RisingBlock::RisingBlock(const std::string& name) :
-		GameObject(name, GameObjectType::RISING_BLOCK)
+	RisingBlock::RisingBlock(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+		GameObject(name, GameObjectType::RISING_BLOCK, gameObjectID)
 	{
 	}
 
@@ -2462,8 +2489,8 @@ namespace flex
 		GameObject::Update();
 	}
 
-	GlassPane::GlassPane(const std::string& name) :
-		GameObject(name, GameObjectType::GLASS_PANE)
+	GlassPane::GlassPane(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+		GameObject(name, GameObjectType::GLASS_PANE, gameObjectID)
 	{
 	}
 
@@ -2523,8 +2550,8 @@ namespace flex
 		parentObject.fields.emplace_back("window info", JSONValue(windowInfo));
 	}
 
-	ReflectionProbe::ReflectionProbe(const std::string& name) :
-		GameObject(name, GameObjectType::REFLECTION_PROBE)
+	ReflectionProbe::ReflectionProbe(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+		GameObject(name, GameObjectType::REFLECTION_PROBE, gameObjectID)
 	{
 	}
 
@@ -2609,8 +2636,8 @@ namespace flex
 		g_Renderer->SetReflectionProbeMaterial(captureMatID);
 	}
 
-	Skybox::Skybox(const std::string& name) :
-		GameObject(name, GameObjectType::SKYBOX)
+	Skybox::Skybox(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+		GameObject(name, GameObjectType::SKYBOX, gameObjectID)
 	{
 		SetCastsShadow(false);
 	}
@@ -2676,8 +2703,8 @@ namespace flex
 	{
 	}
 
-	DirectionalLight::DirectionalLight(const std::string& name) :
-		GameObject(name, GameObjectType::DIRECTIONAL_LIGHT)
+	DirectionalLight::DirectionalLight(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+		GameObject(name, GameObjectType::DIRECTIONAL_LIGHT, gameObjectID)
 	{
 		data.enabled = m_bVisible ? 1 : 0;
 		data.dir = VEC3_RIGHT;
@@ -2889,8 +2916,8 @@ namespace flex
 	{
 	}
 
-	PointLight::PointLight(const std::string& name) :
-		GameObject(name, GameObjectType::POINT_LIGHT)
+	PointLight::PointLight(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+		GameObject(name, GameObjectType::POINT_LIGHT, gameObjectID)
 	{
 		data.enabled = 1;
 		data.pos = VEC4_ZERO;
@@ -2900,7 +2927,7 @@ namespace flex
 
 	void PointLight::Initialize()
 	{
-		ID = g_Renderer->RegisterPointLight(&data);
+		pointLightID = g_Renderer->RegisterPointLight(&data);
 
 		m_Transform.updateParentOnStateChange = true;
 
@@ -2909,7 +2936,7 @@ namespace flex
 
 	void PointLight::Destroy()
 	{
-		g_Renderer->RemovePointLight(ID);
+		g_Renderer->RemovePointLight(pointLightID);
 
 		GameObject::Destroy();
 	}
@@ -2923,7 +2950,7 @@ namespace flex
 			{
 				m_bVisible = receivedSignal == 1;
 				data.enabled = m_bVisible ? 1 : 0;
-				g_Renderer->UpdatePointLightData(ID, &data);
+				g_Renderer->UpdatePointLightData(pointLightID, &data);
 			}
 		}
 
@@ -2934,7 +2961,7 @@ namespace flex
 	{
 		GameObject::DrawImGuiObjects();
 
-		if (ID != InvalidPointLightID)
+		if (pointLightID != InvalidPointLightID)
 		{
 			static const ImGuiColorEditFlags colorEditFlags =
 				ImGuiColorEditFlags_NoInputs |
@@ -2961,7 +2988,7 @@ namespace flex
 
 				if (bEditedPointLightData)
 				{
-					g_Renderer->UpdatePointLightData(ID, &data);
+					g_Renderer->UpdatePointLightData(pointLightID, &data);
 				}
 			}
 		}
@@ -2971,18 +2998,18 @@ namespace flex
 	{
 		data.enabled = (bVisible ? 1 : 0);
 		GameObject::SetVisible(bVisible, bEffectChildren);
-		if (ID != InvalidPointLightID)
+		if (pointLightID != InvalidPointLightID)
 		{
-			g_Renderer->UpdatePointLightData(ID, &data);
+			g_Renderer->UpdatePointLightData(pointLightID, &data);
 		}
 	}
 
 	void PointLight::OnTransformChanged()
 	{
 		data.pos = m_Transform.GetLocalPosition();
-		if (ID != InvalidPointLightID)
+		if (pointLightID != InvalidPointLightID)
 		{
-			g_Renderer->UpdatePointLightData(ID, &data);
+			g_Renderer->UpdatePointLightData(pointLightID, &data);
 		}
 	}
 
@@ -2990,9 +3017,9 @@ namespace flex
 	{
 		m_Transform.SetLocalPosition(pos);
 		data.pos = pos;
-		if (ID != InvalidPointLightID)
+		if (pointLightID != InvalidPointLightID)
 		{
-			g_Renderer->UpdatePointLightData(ID, &data);
+			g_Renderer->UpdatePointLightData(pointLightID, &data);
 		}
 	}
 
@@ -3050,16 +3077,17 @@ namespace flex
 			other.data.brightness == data.brightness;
 	}
 
-	Cart::Cart(CartID cartID, GameObjectType type /* = GameObjectType::CART */) :
-		Cart(cartID, g_SceneManager->CurrentScene()->GetUniqueObjectName("Cart_", 4), type)
+	Cart::Cart(CartID cartID) :
+		Cart(cartID, g_SceneManager->CurrentScene()->GetUniqueObjectName("Cart_", 4))
 	{
 	}
 
 	Cart::Cart(CartID cartID,
 		const std::string& name,
+		GameObjectID gameObjectID /* = InvalidGameObjectID */,
 		GameObjectType type /* = GameObjectType::CART */,
-		const char* meshName /* = "emptyCartMeshName" */) :
-		GameObject(name, type),
+		const char* meshName /* = emptyCartMeshName */) :
+		GameObject(name, type, gameObjectID),
 		cartID(cartID)
 	{
 		MaterialID matID;
@@ -3314,8 +3342,8 @@ namespace flex
 	{
 	}
 
-	EngineCart::EngineCart(CartID cartID, const std::string& name) :
-		Cart(cartID, name, GameObjectType::ENGINE_CART, engineMeshName)
+	EngineCart::EngineCart(CartID cartID, const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+		Cart(cartID, name, gameObjectID, GameObjectType::ENGINE_CART, engineMeshName)
 	{
 	}
 
@@ -3419,12 +3447,12 @@ namespace flex
 	}
 
 	MobileLiquidBox::MobileLiquidBox() :
-		MobileLiquidBox(g_SceneManager->CurrentScene()->GetUniqueObjectName("MobileLiquidBox_", 4))
+		MobileLiquidBox(g_SceneManager->CurrentScene()->GetUniqueObjectName("MobileLiquidBox_", 4), InvalidGameObjectID)
 	{
 	}
 
-	MobileLiquidBox::MobileLiquidBox(const std::string& name) :
-		GameObject(name, GameObjectType::MOBILE_LIQUID_BOX)
+	MobileLiquidBox::MobileLiquidBox(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+		GameObject(name, GameObjectType::MOBILE_LIQUID_BOX, gameObjectID)
 	{
 		MaterialID matID;
 		if (!g_Renderer->FindOrCreateMaterialByName("pbr white", matID))
@@ -3473,8 +3501,8 @@ namespace flex
 		FLEX_UNUSED(parentObject);
 	}
 
-	GerstnerWave::GerstnerWave(const std::string& name) :
-		GameObject(name, GameObjectType::GERSTNER_WAVE)
+	GerstnerWave::GerstnerWave(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+		GameObject(name, GameObjectType::GERSTNER_WAVE, gameObjectID)
 	{
 		workQueue = new ThreadSafeArray<WaveGenData>(32);
 
@@ -4982,8 +5010,8 @@ namespace flex
 		return 0.0f;
 	}
 
-	Blocks::Blocks(const std::string& name) :
-		GameObject(name, GameObjectType::BLOCKS)
+	Blocks::Blocks(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+		GameObject(name, GameObjectType::BLOCKS, gameObjectID)
 	{
 		MaterialCreateInfo matCreateInfo = {};
 		matCreateInfo.shaderName = "pbr";
@@ -5131,9 +5159,9 @@ namespace flex
 		return result;
 	}
 
-	Wire* PluggablesSystem::AddWire(Socket* socket0 /* = nullptr */, Socket* socket1 /* = nullptr */)
+	Wire* PluggablesSystem::AddWire(GameObjectID gameObjectID, Socket* socket0 /* = nullptr */, Socket* socket1 /* = nullptr */)
 	{
-		Wire* newWire = new Wire(g_SceneManager->CurrentScene()->GetUniqueObjectName("wire_", 3));
+		Wire* newWire = new Wire(g_SceneManager->CurrentScene()->GetUniqueObjectName("wire_", 3), gameObjectID);
 		newWire->socket0 = socket0;
 		newWire->socket1 = socket1;
 		wires.push_back(newWire);
@@ -5223,9 +5251,9 @@ namespace flex
 	}
 
 
-	Socket* PluggablesSystem::AddSocket(const std::string& name, i32 slotIdx /* = 0 */, Wire* connectedWire /* = nullptr */)
+	Socket* PluggablesSystem::AddSocket(const std::string& name, GameObjectID gameObjectID, i32 slotIdx /* = 0 */, Wire* connectedWire /* = nullptr */)
 	{
-		Socket* newSocket = new Socket(name);
+		Socket* newSocket = new Socket(name, gameObjectID);
 		newSocket->slotIdx = slotIdx;
 		newSocket->connectedWire = connectedWire;
 		sockets.push_back(newSocket);
@@ -5237,8 +5265,8 @@ namespace flex
 		return newSocket;
 	}
 
-	Wire::Wire(const std::string& name) :
-		GameObject(name, GameObjectType::WIRE)
+	Wire::Wire(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+		GameObject(name, GameObjectType::WIRE, gameObjectID)
 	{
 		m_bInteractable = true;
 		startPoint = glm::vec3(-1.0f, 1.0f, 0.0f);
@@ -5322,8 +5350,8 @@ namespace flex
 		GameObject::SetInteractingWith(gameObject);
 	}
 
-	Socket::Socket(const std::string& name) :
-		GameObject(name, GameObjectType::SOCKET)
+	Socket::Socket(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+		GameObject(name, GameObjectType::SOCKET, gameObjectID)
 	{
 		m_bInteractable = true;
 	}
@@ -5433,12 +5461,12 @@ namespace flex
 	}
 
 	Terminal::Terminal() :
-		Terminal(g_SceneManager->CurrentScene()->GetUniqueObjectName("Terminal_", 2))
+		Terminal(g_SceneManager->CurrentScene()->GetUniqueObjectName("Terminal_", 2), InvalidGameObjectID)
 	{
 	}
 
-	Terminal::Terminal(const std::string& name) :
-		GameObject(name, GameObjectType::TERMINAL),
+	Terminal::Terminal(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+		GameObject(name, GameObjectType::TERMINAL, gameObjectID),
 		m_KeyEventCallback(this, &Terminal::OnKeyEvent),
 		cursor(0, 0)
 	{
@@ -6530,8 +6558,8 @@ namespace flex
 		return EventReply::UNCONSUMED;
 	}
 
-	ParticleSystem::ParticleSystem(const std::string& name) :
-		GameObject(name, GameObjectType::PARTICLE_SYSTEM)
+	ParticleSystem::ParticleSystem(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+		GameObject(name, GameObjectType::PARTICLE_SYSTEM, gameObjectID)
 	{
 		m_Transform.updateParentOnStateChange = true;
 	}
@@ -6543,7 +6571,7 @@ namespace flex
 
 	void ParticleSystem::Destroy()
 	{
-		g_Renderer->RemoveParticleSystem(ID);
+		g_Renderer->RemoveParticleSystem(particleSystemID);
 		GameObject::Destroy();
 	}
 
@@ -6588,7 +6616,7 @@ namespace flex
 			data.particleCount = particleCount;
 		}
 
-		ID = g_Renderer->AddParticleSystem(m_Name, this, particleCount);
+		particleSystemID = g_Renderer->AddParticleSystem(m_Name, this, particleCount);
 	}
 
 	void ParticleSystem::SerializeUniqueFields(JSONObject& parentObject) const
@@ -6649,8 +6677,8 @@ namespace flex
 		GameObject::Update();
 	}
 
-	TerrainGenerator::TerrainGenerator(const std::string& name) :
-		GameObject(name, GameObjectType::TERRAIN_GENERATOR),
+	TerrainGenerator::TerrainGenerator(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+		GameObject(name, GameObjectType::TERRAIN_GENERATOR, gameObjectID),
 		m_LowCol(0.2f, 0.3f, 0.45f),
 		m_MidCol(0.45f, 0.55f, 0.25f),
 		m_HighCol(0.65f, 0.67f, 0.69f)
@@ -7167,8 +7195,8 @@ namespace flex
 		parentObject.fields.emplace_back("chunk generator info", JSONValue(chunkGenInfo));
 	}
 
-	SpringObject::SpringObject(const std::string& name) :
-		GameObject(name, GameObjectType::SPRING)
+	SpringObject::SpringObject(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+		GameObject(name, GameObjectType::SPRING, gameObjectID)
 	{
 	}
 
@@ -7470,8 +7498,8 @@ namespace flex
 		pointIndices[2] = pointIndex2;
 	}
 
-	SoftBody::SoftBody(const std::string& name) :
-		GameObject(name, GameObjectType::SOFT_BODY),
+	SoftBody::SoftBody(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+		GameObject(name, GameObjectType::SOFT_BODY, gameObjectID),
 		m_SolverIterationCount(4) // Default, gets overridden in ParseUniqueFields
 	{
 	}
@@ -8455,8 +8483,8 @@ namespace flex
 		m_Damping = damping;
 	}
 
-	Vehicle::Vehicle(const std::string& name) :
-		GameObject(name, GameObjectType::VEHICLE)
+	Vehicle::Vehicle(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+		GameObject(name, GameObjectType::VEHICLE, gameObjectID)
 	{
 		m_bInteractable = true;
 	}

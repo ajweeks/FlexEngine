@@ -128,6 +128,12 @@ namespace flex
 	{
 	}
 
+	JSONValue::JSONValue(const GUID& inGUIDValue) :
+		type(Type::STRING),
+		strValue(inGUIDValue.ToString())
+	{
+	}
+
 	bool JSONObject::HasField(const std::string& label) const
 	{
 		for (const JSONField& field : fields)
@@ -154,6 +160,7 @@ namespace flex
 
 	bool JSONObject::SetStringChecked(const std::string& label, std::string& value) const
 	{
+		// TODO: PERFORMANCE: Return index of found item to avoid duplicate looping
 		if (HasField(label))
 		{
 			value = GetString(label);
@@ -331,6 +338,28 @@ namespace flex
 		if (HasField(label))
 		{
 			value = GetBool(label);
+			return true;
+		}
+		return false;
+	}
+
+	GUID JSONObject::GetGUID(const std::string& label) const
+	{
+		for (const JSONField& field : fields)
+		{
+			if (field.label == label)
+			{
+				return GUID::FromString(field.value.strValue);
+			}
+		}
+		return InvalidGUID;
+	}
+
+	bool JSONObject::SetGUIDChecked(const std::string& label, GUID& value) const
+	{
+		if (HasField(label))
+		{
+			value = GetGUID(label);
 			return true;
 		}
 		return false;

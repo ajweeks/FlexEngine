@@ -12,6 +12,8 @@ IGNORE_WARNINGS_PUSH
 
 #include <direct.h> // For _getcwd
 #include <stdio.h> // For gcvt, fopen
+
+#include <Rpc.h> // For UuidCreate
 IGNORE_WARNINGS_POP
 
 #include "FlexEngine.hpp"
@@ -39,21 +41,6 @@ namespace flex
 	HANDLE g_ConsoleHandle;
 
 	CPUInfo Platform::cpuInfo;
-
-	struct ThreadData
-	{
-		u32 num;
-	};
-
-	struct WorkItem
-	{
-		u32 a;
-	};
-
-	struct CompletedWorkItem
-	{
-		u32 ans;
-	};
 
 	std::vector<HANDLE> ThreadHandles;
 
@@ -417,6 +404,17 @@ namespace flex
 		// Convert from 100 nano second (10^-7) intervals to 1 microsecond (10^-6) intervals
 		result /= 10;
 
+		return result;
+	}
+
+	GameObjectID Platform::GenerateGUID()
+	{
+		static_assert(sizeof(GameObjectID) == sizeof(::UUID), "GameObjectID has invalid length");
+
+		GameObjectID result;
+		::UUID winGuid;
+		::UuidCreate(&winGuid);
+		memcpy(&result.Data1, &winGuid.Data1, sizeof(GameObjectID));
 		return result;
 	}
 

@@ -23,6 +23,7 @@ int main(int argc, char *argv[])
 	// Notify user if heap is corrupt
 	HeapSetInformation(NULL, HeapEnableTerminationOnCorruption, NULL, 0);
 
+	// TODO: Somehow redirect output to console
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 	//_CrtSetBreakAlloc(47947);
 #endif

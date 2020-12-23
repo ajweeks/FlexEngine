@@ -41,6 +41,7 @@ namespace flex
 	using VariableID = u32;
 	using ParticleSystemID = u32;
 
+
 	using ThreadHandle = u64;
 
 	using SpecializationConstantID = u32;
@@ -83,12 +84,6 @@ namespace flex
 	static constexpr auto InvalidSpecializationConstantID = (SpecializationConstantID)u32_max;
 	static constexpr auto InvalidID = u32_max;
 
-	static constexpr i32 GUIDInLength = 6;
-	static constexpr i32 GUIDLength = 8;
-	struct GUID
-	{
-		char data[GUIDLength];
-	};
 
 	//template<bool> struct StaticAssert;
 	//template<> struct StaticAssert<true> {};

@@ -52,6 +52,8 @@ static const __m128 _ps_cephes_FOPI = _mm_set1_ps(1.27323954473516f);
 static const unsigned char base64_table[65] =
 "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
+static const unsigned char hex_table[17] = "0123456789ABCDEF";
+
 static const int B64index[256] = { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
 	0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
 	0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 62, 63, 62, 62, 63, 52, 53, 54, 55,
@@ -63,6 +65,9 @@ static const int B64index[256] = { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
 namespace flex
 {
 	static const real UnitializedMemoryFloat = -431602080.0f;
+
+	const GUID InvalidGameObjectID = {};
+	const GUID InvalidGUID = {};
 
 	static u32 _lastUID = 0;
 
@@ -1519,24 +1524,6 @@ namespace flex
 		return true;
 	}
 
-	GUID NextGUID()
-	{
-		// TODO: Compute likelihood of collision with 8 digits
-		static u64 counter = 0;
-		counter++;
-		// TODO: Is this real bad? Or just not great?
-		u64 now = Platform::GetUSSinceEpoch() + counter;
-		now = Platform::RotateLeftU64(now, (i32)(now % 63));
-		GUID result;
-		Base64Encode((const u8*)&now, result.data, GUIDInLength);
-		return result;
-	}
-
-	std::string GUIDToString(const GUID& guid)
-	{
-		return std::string(guid.data, guid.data + GUIDLength);
-	}
-
 	void ByteCountToString(char buf[], u32 bufSize, u32 bytes)
 	{
 		const char* suffixes[] = { "B", "KB", "MB", "GB", "TB", "PB" };
@@ -1755,6 +1742,148 @@ namespace flex
 		return (lhs.y < rhs.y ? true : lhs.y > rhs.y ? false : lhs.x < rhs.x);
 	}
 
+	GUID::GUID()
+	{
+		Data1 = 0;
+		Data2 = 0;
+	}
+
+	GUID::GUID(const GUID& other)
+	{
+		Data1 = other.Data1;
+		Data2 = other.Data2;
+	}
+
+	GUID::GUID(const GUID&& other)
+	{
+		Data1 = other.Data1;
+		Data2 = other.Data2;
+	}
+
+	GUID& GUID::operator=(const GUID& other)
+	{
+		if (&other != this)
+		{
+			Data1 = other.Data1;
+			Data2 = other.Data2;
+		}
+		return *this;
+	}
+
+	GUID& GUID::operator=(const GUID&& other)
+	{
+		if (&other != this)
+		{
+			Data1 = other.Data1;
+			Data2 = other.Data2;
+		}
+		return *this;
+	}
+
+	bool GUID::operator!=(const GUID& rhs) const
+	{
+		return !(*this == rhs);
+	}
+
+	bool GUID::operator==(const GUID& rhs) const
+	{
+		return Data1 == rhs.Data1 && Data2 == rhs.Data2;
+	}
+
+	bool GUID::operator<(const GUID& rhs) const
+	{
+		// TODO: double check
+		return Data1 < rhs.Data1 || (Data1 == rhs.Data1 && Data2 < rhs.Data2);
+	}
+
+	GUID GUID::FromPlatformGUID(unsigned long inData1, unsigned short inData2, unsigned short inData3, unsigned char inData4[8])
+	{
+		GUID result;
+
+		result.Data1 = (u64)inData1 << 32 | (u64)inData2 << 16 | inData3;
+		result.Data2 = (u64)inData4[0] << 24 | (u64)inData4[1] << 16 | (u64)inData4[2] << 8 | inData4[3];
+
+		return result;
+	}
+
+	inline u8 ToHex(u8 dec)
+	{
+		return hex_table[dec];
+	}
+
+	inline u8 FromHex(char hex)
+	{
+		if (hex <= '9')
+		{
+			return (u8)(hex - '0');
+		}
+
+		return 10 + (u8)(hex - 'A');
+	}
+
+	std::string GUID::ToString() const
+	{
+		char buffer[32 + 1];
+		// Write to buffer in reverse order (least significant to most significant)
+		char* bufferPtr = buffer + 31;
+		u64 data = Data1;
+		for (u32 i = 0; i < 8; ++i)
+		{
+			u8 d = data & 0xFF;       // Lowest byte of data
+			u8 msb = ToHex(d >> 4);   // Higher nibble
+			u8 lsb = ToHex(d & 0x0F); // Lower nibble
+			data >>= 8; // /= 256
+			*bufferPtr-- = lsb;
+			*bufferPtr-- = msb;
+		}
+
+		data = Data2;
+		for (u32 i = 0; i < 8; ++i)
+		{
+			u8 d = data & 0xFF;		  // Lowest byte of data
+			u8 msb = ToHex(d >> 4);	  // Higher nibble
+			u8 lsb = ToHex(d & 0x0F); // Lower nibble
+			data >>= 8; // /= 256
+			*bufferPtr-- = lsb;
+			*bufferPtr-- = msb;
+		}
+
+		buffer[32] = 0; // Null terminator
+
+		return std::string(buffer);
+	}
+
+	GUID GUID::FromString(const std::string& str)
+	{
+		assert(str.length() == 32);
+
+		GUID result = {};
+
+		const char* buffer = str.data();
+		// Read from string in reverse order (least significant to most significant)
+		for (u32 i = 16; i >= 9; --i)
+		{
+			char msb = buffer[(i - 1) * 2];
+			char lsb = buffer[(i - 1) * 2 + 1];
+
+			u8 val = FromHex(msb) << 4 | FromHex(lsb);
+
+			result.Data1 |= (u64)val << ((16 - i) * 8);
+		}
+
+		for (u32 i = 8; i >= 1; --i)
+		{
+			char msb = buffer[(i - 1) * 2];
+			char lsb = buffer[(i - 1) * 2 + 1];
+
+			u8 val = FromHex(msb) << 4 | FromHex(lsb);
+
+			result.Data2 |= (u64)val << ((8 - i) * 8);
+		}
+
+		return result;
+	}
+
 	namespace ImGuiExt
 	{
 		bool InputUInt(const char* message, u32* v, u32 step /* = 1 */, u32 step_fast /* = 100 */, ImGuiInputTextFlags flags /* = 0 */)
@@ -1818,6 +1947,7 @@ namespace flex
 			return bResult;
 		}
 
-	} // namespace ImGuiExt
+	}
+	// namespace ImGuiExt
 } // namespace flex
 

@@ -6,9 +6,7 @@ namespace flex
 	class Pair
 	{
 	public:
-		Pair<T1, T2>()
-		{
-		}
+		Pair<T1, T2>() = default;
 
 		Pair<T1, T2>(const T1& t1, const T2& t2) :
 			first(t1), second(t2)
@@ -44,5 +42,4 @@ namespace flex
 		T1 first;
 		T2 second;
 	};
-
 } // namespace flex

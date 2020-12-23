@@ -44,7 +44,7 @@ namespace flex
 	class GameObject
 	{
 	public:
-		GameObject(const std::string& name, GameObjectType type);
+		GameObject(const std::string& name, GameObjectType type, GameObjectID gameObjectID = InvalidGameObjectID);
 		virtual ~GameObject();
 
 		enum CopyFlags : u32
@@ -62,9 +62,9 @@ namespace flex
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL);
 
 		static GameObject* CreateObjectFromJSON(const JSONObject& obj, BaseScene* scene, i32 fileVersion);
-		static GameObject* CreateObjectFromPrefabInfo(const PrefabInfo& prefabInfo, BaseScene* scene, i32 fileVersion);
+		static GameObject* CreateObjectFromPrefabInfo(const PrefabInfo& prefabInfo, BaseScene* scene, i32 fileVersion, GameObjectID gameObjectID = InvalidGameObjectID);
 
-		static GameObject* CreateObjectOfType(GameObjectType gameObjectType, const std::string& objectName);
+		static GameObject* CreateObjectOfType(GameObjectType gameObjectType, const std::string& objectName, GameObjectID gameObjectID = InvalidGameObjectID);
 
 		virtual void Initialize();
 		virtual void PostInitialize();
@@ -106,6 +106,7 @@ namespace flex
 
 		GameObject* AddChild(GameObject* child);
 		GameObject* AddChildImmediate(GameObject* child);
+		bool RemoveChildImmediate(GameObjectID childID, bool bDestroy);
 		bool RemoveChildImmediate(GameObject* child, bool bDestroy);
 		const std::vector<GameObject*>& GetChildren() const;
 		u32 GetChildCountOfType(GameObjectType objType, bool bRecurse);
@@ -196,6 +197,8 @@ namespace flex
 		// Signals that connected objects get sent
 		std::vector<i32> outputSignals;
 		std::vector<Socket*> sockets;
+
+		GameObjectID ID;
 
 	protected:
 		friend BaseScene;
@@ -291,11 +294,11 @@ namespace flex
 
 	// Child classes
 
-	class DirectionalLight : public GameObject
+	class DirectionalLight final : public GameObject
 	{
 	public:
 		DirectionalLight();
-		explicit DirectionalLight(const std::string& name);
+		explicit DirectionalLight(const std::string& name, GameObjectID gameObjectID = InvalidGameObjectID);
 
 		virtual void Initialize() override;
 		virtual void Destroy() override;
@@ -321,11 +324,11 @@ namespace flex
 		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
 	};
 
-	class PointLight : public GameObject
+	class PointLight final : public GameObject
 	{
 	public:
 		explicit PointLight(BaseScene* scene);
-		explicit PointLight(const std::string& name);
+		explicit PointLight(const std::string& name, GameObjectID gameObjectID = InvalidGameObjectID);
 
 		virtual void Initialize() override;
 		virtual void Destroy() override;
@@ -340,17 +343,17 @@ namespace flex
 		glm::vec3 GetPos() const;
 
 		PointLightData data;
-		PointLightID ID = InvalidPointLightID;
+		PointLightID pointLightID = InvalidPointLightID;
 
 	protected:
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
 		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
 	};
 
-	class Valve : public GameObject
+	class Valve final : public GameObject
 	{
 	public:
-		explicit Valve(const std::string& name);
+		explicit Valve(const std::string& name, GameObjectID gameObjectID = InvalidGameObjectID);
 
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL) override;
 
@@ -380,10 +383,10 @@ namespace flex
 
 	};
 
-	class RisingBlock : public GameObject
+	class RisingBlock final : public GameObject
 	{
 	public:
-		explicit RisingBlock(const std::string& name);
+		explicit RisingBlock(const std::string& name, GameObjectID gameObjectID = InvalidGameObjectID);
 
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL) override;
 
@@ -410,10 +413,10 @@ namespace flex
 
 	};
 
-	class GlassPane : public GameObject
+	class GlassPane final : public GameObject
 	{
 	public:
-		explicit GlassPane(const std::string& name);
+		explicit GlassPane(const std::string& name, GameObjectID gameObjectID = InvalidGameObjectID);
 
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL) override;
 
@@ -425,10 +428,10 @@ namespace flex
 
 	};
 
-	class ReflectionProbe : public GameObject
+	class ReflectionProbe final : public GameObject
 	{
 	public:
-		explicit ReflectionProbe(const std::string& name);
+		explicit ReflectionProbe(const std::string& name, GameObjectID gameObjectID = InvalidGameObjectID);
 
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL) override;
 
@@ -442,10 +445,10 @@ namespace flex
 
 	};
 
-	class Skybox : public GameObject
+	class Skybox final : public GameObject
 	{
 	public:
-		explicit Skybox(const std::string& name);
+		explicit Skybox(const std::string& name, GameObjectID gameObjectID = InvalidGameObjectID);
 
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL) override;
 
@@ -463,8 +466,12 @@ namespace flex
 	class Cart : public GameObject
 	{
 	public:
-		Cart(CartID cartID, GameObjectType type = GameObjectType::CART);
-		Cart(CartID cartID, const std::string& name, GameObjectType type = GameObjectType::CART, const char* meshName = emptyCartMeshName);
+		Cart(CartID cartID);
+		Cart(CartID cartID,
+			const std::string& name,
+			GameObjectID gameObjectID = InvalidGameObjectID,
+			GameObjectType type = GameObjectType::CART,
+			const char* meshName = emptyCartMeshName);
 
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL) override;
 
@@ -510,7 +517,7 @@ namespace flex
 	{
 	public:
 		explicit EngineCart(CartID cartID);
-		EngineCart(CartID cartID, const std::string& name);
+		EngineCart(CartID cartID, const std::string& name, GameObjectID gameObjectID = InvalidGameObjectID);
 
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL) override;
 
@@ -533,11 +540,11 @@ namespace flex
 
 	};
 
-	class MobileLiquidBox : public GameObject
+	class MobileLiquidBox final : public GameObject
 	{
 	public:
 		MobileLiquidBox();
-		explicit MobileLiquidBox(const std::string& name);
+		explicit MobileLiquidBox(const std::string& name, GameObjectID gameObjectID = InvalidGameObjectID);
 
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL) override;
 
@@ -552,53 +559,10 @@ namespace flex
 
 	};
 
-	template<class T>
-	struct ThreadSafeArray
-	{
-		ThreadSafeArray()
-		{
-		}
-
-		explicit ThreadSafeArray<T>(u32 inSize)
-		{
-			size = inSize;
-			t = new T[inSize];
-		}
-
-		~ThreadSafeArray()
-		{
-			delete[] t;
-		}
-
-		volatile T& operator[](u32 index) volatile
-		{
-			return t[index];
-		}
-
-		const volatile T& operator[](u32 index) volatile const
-		{
-			return t[index];
-		}
-
-		u32 Size()volatile const
-		{
-			return size;
-		}
-
-		u32 size;
-		volatile T* t = nullptr;
-	};
-
-	struct ThreadData
-	{
-		void* criticalSection = nullptr;
-		volatile bool running = true;
-	};
-
-	class GerstnerWave : public GameObject
+	class GerstnerWave final : public GameObject
 	{
 	public:
-		explicit GerstnerWave(const std::string& name);
+		explicit GerstnerWave(const std::string& name, GameObjectID gameObjectID = InvalidGameObjectID);
 
 		virtual void Initialize() override;
 		virtual void Update() override;
@@ -783,10 +747,10 @@ namespace flex
 	GerstnerWave::WaveTessellationLOD const* GetTessellationLOD(u32 lodLevel, const std::vector<GerstnerWave::WaveTessellationLOD>& waveTessellationLODs);
 	u32 MapVertIndexAcrossLODs(u32 vertIndex, GerstnerWave::WaveTessellationLOD const* lod0, GerstnerWave::WaveTessellationLOD const* lod1);
 
-	class Blocks : public GameObject
+	class Blocks final : public GameObject
 	{
 	public:
-		explicit Blocks(const std::string& name);
+		explicit Blocks(const std::string& name, GameObjectID gameObjectID = InvalidGameObjectID);
 
 		virtual void Update() override;
 
@@ -795,10 +759,10 @@ namespace flex
 	};
 
 	// Connects terminals to other things to transmit information
-	class Wire : public GameObject
+	class Wire final : public GameObject
 	{
 	public:
-		Wire(const std::string& name);
+		Wire(const std::string& name, GameObjectID gameObjectID = InvalidGameObjectID);
 
 		virtual void Destroy() override;
 
@@ -819,10 +783,10 @@ namespace flex
 	};
 
 	// Connect wires to objects
-	class Socket : public GameObject
+	class Socket final : public GameObject
 	{
 	public:
-		Socket(const std::string& name);
+		Socket(const std::string& name, GameObjectID gameObjectID = InvalidGameObjectID);
 
 		virtual void Destroy() override;
 
@@ -848,11 +812,11 @@ namespace flex
 
 		i32 GetReceivedSignal(Socket* socket);
 
-		Wire* AddWire(Socket* socket0 = nullptr, Socket* socket1 = nullptr);
+		Wire* AddWire(GameObjectID gameObjectID, Socket* socket0 = nullptr, Socket* socket1 = nullptr);
 		bool DestroySocket(Socket* socket);
 		bool DestroyWire(Wire* wire);
 
-		Socket* AddSocket(const std::string& name, i32 slotIdx = 0, Wire* connectedWire = nullptr);
+		Socket* AddSocket(const std::string& name, GameObjectID gameObjectID, i32 slotIdx = 0, Wire* connectedWire = nullptr);
 
 		std::vector<Wire*> wires;
 		std::vector<Socket*> sockets;
@@ -865,11 +829,11 @@ namespace flex
 
 	};
 
-	class Terminal : public GameObject
+	class Terminal final : public GameObject
 	{
 	public:
 		Terminal();
-		explicit Terminal(const std::string& name);
+		explicit Terminal(const std::string& name, GameObjectID gameObjectID = InvalidGameObjectID);
 
 		virtual void Initialize() override;
 		virtual void PostInitialize() override;
@@ -942,10 +906,10 @@ namespace flex
 
 	};
 
-	class ParticleSystem : public GameObject
+	class ParticleSystem final : public GameObject
 	{
 	public:
-		explicit ParticleSystem(const std::string& name);
+		explicit ParticleSystem(const std::string& name, GameObjectID gameObjectID = InvalidGameObjectID);
 
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL) override;
 
@@ -965,17 +929,17 @@ namespace flex
 		bool bEnabled;
 		MaterialID simMaterialID = InvalidMaterialID;
 		MaterialID renderingMaterialID = InvalidMaterialID;
-		ParticleSystemID ID = InvalidParticleSystemID;
+		ParticleSystemID particleSystemID = InvalidParticleSystemID;
 
 	private:
 		void UpdateModelMatrix();
 
 	};
 
-	class TerrainGenerator : public GameObject
+	class TerrainGenerator final : public GameObject
 	{
 	public:
-		explicit TerrainGenerator(const std::string& name);
+		explicit TerrainGenerator(const std::string& name, GameObjectID gameObjectID = InvalidGameObjectID);
 
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL) override;
 
@@ -1038,10 +1002,10 @@ namespace flex
 
 	};
 
-	class SpringObject : public GameObject
+	class SpringObject final : public GameObject
 	{
 	public:
-		explicit SpringObject(const std::string& name);
+		SpringObject(const std::string& name, GameObjectID gameObjectID = InvalidGameObjectID);
 
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL) override;
 
@@ -1158,10 +1122,10 @@ namespace flex
 		i32 pointIndices[3];
 	};
 
-	class SoftBody : public GameObject
+	class SoftBody final : public GameObject
 	{
 	public:
-		SoftBody(const std::string& name);
+		SoftBody(const std::string& name, GameObjectID gameObjectID = InvalidGameObjectID);
 
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL) override;
 
@@ -1229,10 +1193,10 @@ namespace flex
 
 	};
 
-	class Vehicle : public GameObject
+	class Vehicle final : public GameObject
 	{
 	public:
-		Vehicle(const std::string& name);
+		Vehicle(const std::string& name, GameObjectID gameObjectID = InvalidGameObjectID);
 
 		//virtual GameObject* CopySelfAndAddToScene(GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL) override;
 

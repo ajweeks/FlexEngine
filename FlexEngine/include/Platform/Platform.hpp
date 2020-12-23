@@ -13,6 +13,9 @@ namespace flex
 		u32 l3CacheCount;
 	};
 
+	struct GUID;
+	typedef GUID GameObjectID;
+
 	class Platform
 	{
 	public:
@@ -79,6 +82,7 @@ namespace flex
 		static void Sleep(ms milliseconds);
 
 		static u64 GetUSSinceEpoch();
+		static GameObjectID GenerateGUID();
 
 		static u64 RotateLeftU64(u64 val, i32 shift);
 

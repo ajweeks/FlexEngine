@@ -186,7 +186,10 @@ project "Flex"
 	-- Windows
 		-- Common
 		configuration "vs*"
-			links { "opengl32", "glfw3", "OpenAL32" }
+			links {
+				"opengl32", "glfw3", "OpenAL32",
+				"Rpcrt4" -- For UuidCreate
+			}
 		-- Debug-only
 		configuration { "vs*", "Debug" }
 			links { "BulletCollision_Debug", "BulletDynamics_Debug", "LinearMath_Debug", "freetype", "shaderc_combined" }

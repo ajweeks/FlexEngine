@@ -356,7 +356,7 @@ namespace flex
 						{
 							if (mobileLiquidBox->GetParent() == nullptr)
 							{
-								g_SceneManager->CurrentScene()->RemoveRootObject(mobileLiquidBox, false);
+								g_SceneManager->CurrentScene()->RemoveRootObject(mobileLiquidBox->ID, false);
 							}
 
 							bPlaced = true;

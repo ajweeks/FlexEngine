@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
   <Type Name="flex::GameObject">
-    <DisplayString>{m_Name}</DisplayString>
+    <DisplayString>{m_Name}, ID: {ID.data,[flex::GUIDLength]sb}</DisplayString>
   </Type>
 
   <Type Name="flex::JSONObject">

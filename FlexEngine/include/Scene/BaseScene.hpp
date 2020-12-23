@@ -16,6 +16,8 @@ namespace flex
 	struct JSONField;
 	struct Material;
 	class ICallbackGameObject;
+	struct GUID;
+	using GameObjectID = GUID;
 
 	class BaseScene
 	{
@@ -67,14 +69,20 @@ namespace flex
 
 		GameObject* AddRootObject(GameObject* gameObject);
 		GameObject* AddRootObjectImmediate(GameObject* gameObject);
-		GameObject* AddChildObject(GameObject* parent, GameObject* gameObject);
+		GameObject* AddChildObject(GameObject* parent, GameObject* child);
+		void RemoveRootObject(GameObjectID gameObjectID, bool bDestroy);
 		void RemoveRootObject(GameObject* gameObject, bool bDestroy);
+		void RemoveRootObjectImmediate(GameObjectID gameObjectID, bool bDestroy);
 		void RemoveRootObjectImmediate(GameObject* gameObject, bool bDestroy);
 		void RemoveAllRootObjects(bool bDestroy);
 		void RemoveAllRootObjectsImmediate(bool bDestroy);
+		void RemoveObject(GameObjectID gameObjectID, bool bDestroy);
 		void RemoveObject(GameObject* gameObject, bool bDestroy);
+		void RemoveObjectImmediate(GameObjectID gameObjectID, bool bDestroy);
 		void RemoveObjectImmediate(GameObject* gameObject, bool bDestroy);
+		void RemoveObjects(const std::vector<GameObjectID>& gameObjects, bool bDestroy);
 		void RemoveObjects(const std::vector<GameObject*>& gameObjects, bool bDestroy);
+		void RemoveObjectsImmediate(const std::vector<GameObjectID>& gameObjects, bool bDestroy);
 		void RemoveObjectsImmediate(const std::vector<GameObject*>& gameObjects, bool bDestroy);
 
 		GameObject* FirstObjectWithTag(const std::string& tag);
@@ -124,7 +132,9 @@ namespace flex
 		// Returns true if the parent-child tree changed during this call
 		bool DrawImGuiGameObjectNameAndChildrenInternal(GameObject* gameObject);
 
-		static const i32 LATEST_SCENE_FILE_VERSION = 4;
+		GameObject* GetGameObject(GameObjectID gameObjectID);
+
+		static const i32 LATEST_SCENE_FILE_VERSION = 5;
 		static const i32 LATEST_MATERIALS_FILE_VERSION = 1;
 		static const i32 LATEST_MESHES_FILE_VERSION = 1;
 
@@ -133,7 +143,7 @@ namespace flex
 		friend CartManager;
 		friend SceneManager;
 
-		void RemoveObjectImmediateRecursive(GameObject* gameObject, bool bDestroy);
+		void RemoveObjectImmediateRecursive(GameObjectID gameObjectID, bool bDestroy);
 
 		void UpdateRootObjectSiblingIndices();
 
@@ -146,11 +156,13 @@ namespace flex
 
 		PhysicsWorld* m_PhysicsWorld = nullptr;
 
+		std::map<GameObjectID, GameObject*> m_GameObjectLUT;
 		std::vector<GameObject*> m_RootObjects;
 
 		bool m_bInitialized = false;
 		bool m_bLoaded = false;
 		bool m_bSpawnPlayer = false;
+		GUID m_PlayerGUIDs[2];
 
 		ReflectionProbe* m_ReflectionProbe = nullptr;
 
@@ -166,8 +178,8 @@ namespace flex
 
 		std::vector<GameObject*> m_PendingAddObjects; // Objects to add as root objects at LateUpdate
 		std::vector<Pair<GameObject*, GameObject*>> m_PendingAddChildObjects; // Objects to add to parents at LateUpdate
-		std::vector<GameObject*> m_PendingRemoveObjects; // Objects to remove but not destroy at LateUpdate this frame
-		std::vector<GameObject*> m_PendingDestroyObjects; // Objects to destroy at LateUpdate this frame
+		std::vector<GameObjectID> m_PendingRemoveObjects; // Objects to remove but not destroy at LateUpdate this frame
+		std::vector<GameObjectID> m_PendingDestroyObjects; // Objects to destroy at LateUpdate this frame
 
 	private:
 		/*
