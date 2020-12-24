@@ -3814,7 +3814,7 @@ namespace flex
 			{
 				if (FileExists(fontMetaData.renderedTextureFilePath))
 				{
-					VulkanTexture* fontTex = newFont->SetTexture(new VulkanTexture(m_VulkanDevice,
+					VulkanTexture* fontTex = (VulkanTexture*)newFont->SetTexture(new VulkanTexture(m_VulkanDevice,
 						m_GraphicsQueue, fontMetaData.renderedTextureFilePath, 4, false, false, false));
 					fontTex->name = textureName;
 
@@ -3864,7 +3864,7 @@ namespace flex
 					std::max(std::max(maxPos[0].x, maxPos[1].x), std::max(maxPos[2].x, maxPos[3].x)),
 					std::max(std::max(maxPos[0].y, maxPos[1].y), std::max(maxPos[2].y, maxPos[3].y)));
 
-				VulkanTexture* fontTexColAttachment = newFont->SetTexture(new VulkanTexture(m_VulkanDevice, m_GraphicsQueue,
+				VulkanTexture* fontTexColAttachment = (VulkanTexture*)newFont->SetTexture(new VulkanTexture(m_VulkanDevice, m_GraphicsQueue,
 					textureName, textureSize.x, textureSize.y, 4));
 				fontTexColAttachment->name = textureName;
 				fontTexColAttachment->CreateEmpty(fontTexFormat, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
@@ -4445,13 +4445,13 @@ namespace flex
 			{
 				if (font->bufferSize > 0)
 				{
-					VulkanTexture* fontTex = font->GetTexture();
+					VulkanTexture* fontTex = (VulkanTexture*)font->GetTexture();
 
-					if (font->m_DescriptorSet == VK_NULL_HANDLE)
+					if ((VkDescriptorSet)font->userData == VK_NULL_HANDLE)
 					{
 						DescriptorSetCreateInfo info;
 						info.DBG_Name = bScreenSpace ? "Font SS descriptor set" : "Font WS descriptor set";
-						info.descriptorSet = &font->m_DescriptorSet;
+						info.descriptorSet = (VkDescriptorSet*)&font->userData;
 						info.descriptorSetLayout = &descSetLayout;
 						info.shaderID = fontMaterial->shaderID;
 						info.uniformBufferList = &fontMaterial->uniformBufferList;
@@ -4461,7 +4461,7 @@ namespace flex
 					}
 
 					u32 dynamicOffsetIndex = 0;
-					BindDescriptorSet(fontMaterial, dynamicOffsetIndex * m_DynamicAlignment, commandBuffer, graphicsPipelineLayout, font->m_DescriptorSet);
+					BindDescriptorSet(fontMaterial, dynamicOffsetIndex * m_DynamicAlignment, commandBuffer, graphicsPipelineLayout, (VkDescriptorSet)font->userData);
 
 					glm::vec2 texSize(fontTex->width, fontTex->height);
 
@@ -8041,12 +8041,12 @@ namespace flex
 			// Force font descriptor sets to be regenerated
 			for (BitmapFont* font : g_ResourceManager->fontsScreenSpace)
 			{
-				font->m_DescriptorSet = VK_NULL_HANDLE;
+				*(VkDescriptorSet*)&font->userData = VK_NULL_HANDLE;
 			}
 
 			for (BitmapFont* font : g_ResourceManager->fontsWorldSpace)
 			{
-				font->m_DescriptorSet = VK_NULL_HANDLE;
+				*(VkDescriptorSet*)&font->userData = VK_NULL_HANDLE;
 			}
 
 			CreateSwapChainFramebuffers();

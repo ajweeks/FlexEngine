@@ -2,26 +2,9 @@
 
 #include "Helpers.hpp"
 
-#if COMPILE_VULKAN
-IGNORE_WARNINGS_PUSH
-#include "volk/volk.h"
-IGNORE_WARNINGS_POP
-#endif
-
 namespace flex
 {
-#if COMPILE_OPEN_GL
-	namespace gl
-	{
-		class GLRenderer;
-		struct GLTexture;
-	}
-#elif COMPILE_VULKAN
-	namespace vk
-	{
-		struct VulkanTexture;
-	}
-#endif
+	struct Texture;
 
 	struct FontMetric
 	{
@@ -72,15 +55,12 @@ namespace flex
 		void AddTextCache(TextCache& newCache);
 		void ClearCaches();
 
-#if COMPILE_OPEN_GL
-		gl::GLTexture* SetTexture(gl::GLTexture* newTex);
-		gl::GLTexture* GetTexture();
-#elif COMPILE_VULKAN
-		vk::VulkanTexture* SetTexture(vk::VulkanTexture* newTex);
-		vk::VulkanTexture* GetTexture();
-		// TODO: Remove all platform specific code from file
-		VkDescriptorSet m_DescriptorSet = VK_NULL_HANDLE;
-#endif
+		Texture* SetTexture(Texture* newTex);
+		Texture* GetTexture();
+
+		// Graphics API-defined data (descriptor set in Vulkan)
+		u64 userData = 0;
+
 		void ClearTexture();
 
 		glm::vec2u GetTextureSize() const;
@@ -101,11 +81,6 @@ namespace flex
 		FontMetric m_CharTable[CHAR_COUNT];
 		std::vector<TextCache> m_TextCaches;
 
-#if COMPILE_OPEN_GL
-		gl::GLTexture* m_Texture = nullptr;
-#elif COMPILE_VULKAN
-		vk::VulkanTexture* m_Texture = nullptr;
-#endif
-
+		Texture* m_Texture = nullptr;
 	};
 } // namespace flex
