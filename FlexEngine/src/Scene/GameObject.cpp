@@ -70,6 +70,11 @@ namespace flex
 	MaterialID SpringObject::s_SpringMatID = InvalidMaterialID;
 	MaterialID SpringObject::s_BobberMatID = InvalidMaterialID;
 
+	static volatile u32 workQueueEntriesCreated = 0;
+	static volatile u32 workQueueEntriesClaimed = 0;
+	static volatile u32 workQueueEntriesCompleted = 0;
+
+#define SIMD_WAVES 1
 
 	static ThreadSafeArray<GerstnerWave::WaveGenData>* workQueue = nullptr;
 
@@ -3524,6 +3529,7 @@ namespace flex
 		matCreateInfo.constMetallic = 0.8f;
 		matCreateInfo.constRoughness = 0.01f;
 		matCreateInfo.bDynamic = true;
+		// TODO: Define material in material editor
 		matCreateInfo.albedoTexturePath = TEXTURE_DIRECTORY "wave-n-2.png";
 		matCreateInfo.enableAlbedoSampler = true;
 		matCreateInfo.bSerializable = false;
@@ -3597,11 +3603,11 @@ namespace flex
 
 		PROFILE_AUTO("Gerstner update");
 
-		for (WaveInfo& wave : waves)
+		for (WaveInfo& waveInfo : waveContributions)
 		{
-			if (wave.enabled)
+			if (waveInfo.enabled)
 			{
-				wave.accumOffset += (wave.moveSpeed * g_DeltaTime);
+				waveInfo.accumOffset += (waveInfo.moveSpeed * g_DeltaTime);
 			}
 		}
 
@@ -3902,16 +3908,16 @@ namespace flex
 				}
 			}
 
-			for (const WaveInfo& wave : waves)
+			for (const WaveInfo& waveInfo : waveContributions)
 			{
-				if (wave.a < amplitudeLODCutoff)
+				if (waveInfo.a < amplitudeLODCutoff)
 				{
 					break;
 				}
 
-				if (wave.enabled)
+				if (waveInfo.enabled)
 				{
-					const glm::vec2 waveVec = glm::vec2(wave.waveDirCos, wave.waveDirSin) * wave.waveVecMag;
+					const glm::vec2 waveVec = glm::vec2(waveInfo.waveDirCos, waveInfo.waveDirSin) * waveInfo.waveVecMag;
 					const glm::vec2 waveVecN = glm::normalize(waveVec);
 
 					for (u32 z = 0; z < tessellationLOD->vertCountPerAxis; ++z)
@@ -3921,12 +3927,12 @@ namespace flex
 							const u32 vertIdx = z * tessellationLOD->vertCountPerAxis + x + waveChunk.vertOffset;
 
 							real d = waveVec.x * positions[vertIdx].x + waveVec.y * positions[vertIdx].z; // Inline dot
-							real c = cos(d + wave.accumOffset);
-							real s = sin(d + wave.accumOffset);
+							real c = cos(d + waveInfo.accumOffset);
+							real s = sin(d + waveInfo.accumOffset);
 							positions[vertIdx] += glm::vec3(
-								-waveVecN.x * wave.a * s,
-								wave.a * c,
-								-waveVecN.y * wave.a * s);
+								-waveVecN.x * waveInfo.a * s,
+								waveInfo.a * c,
+								-waveVecN.y * waveInfo.a * s);
 						}
 					}
 				}
@@ -3996,7 +4002,7 @@ namespace flex
 		{
 			volatile WaveGenData* waveGenData = &(*workQueue)[chunkIdx];
 
-			waveGenData->waves = &waves;
+			waveGenData->waveContributions = &waveContributions;
 			waveGenData->waveChunks = &waveChunks;
 			waveGenData->waveSamplingLODs = &waveSamplingLODs;
 			waveGenData->waveTessellationLODs = &waveTessellationLODs;
@@ -4106,7 +4112,7 @@ namespace flex
 			if (work)
 			{
 				// Inputs
-				const std::vector<GerstnerWave::WaveInfo>& waves = *work->waves;
+				const std::vector<GerstnerWave::WaveInfo>& waveContributions = *work->waveContributions;
 				const std::vector<GerstnerWave::WaveChunk>& waveChunks = *work->waveChunks;
 				const std::vector<GerstnerWave::WaveSamplingLOD>& waveSamplingLODs = *work->waveSamplingLODs;
 				const std::vector<GerstnerWave::WaveTessellationLOD>& waveTessellationLODs = *work->waveTessellationLODs;
@@ -4225,19 +4231,19 @@ namespace flex
 				}
 
 				// Modulate based on waves
-				for (const GerstnerWave::WaveInfo& wave : waves)
+				for (const GerstnerWave::WaveInfo& waveInfo : waveContributions)
 				{
 					// TODO: Early out once wave amplitude isn't used by any vert in chunk
 
-					if (wave.enabled && (soloWave == nullptr || soloWave == &wave))
+					if (waveInfo.enabled && (soloWave == nullptr || soloWave == &waveInfo))
 					{
-						const glm::vec2 waveVec = glm::vec2(wave.waveDirCos, wave.waveDirSin) * wave.waveVecMag;
+						const glm::vec2 waveVec = glm::vec2(waveInfo.waveDirCos, waveInfo.waveDirSin) * waveInfo.waveVecMag;
 						const glm::vec2 waveVecN = glm::normalize(waveVec);
 
-						__m128 accumOffset_4 = _mm_set_ps1(wave.accumOffset);
+						__m128 accumOffset_4 = _mm_set_ps1(waveInfo.accumOffset);
 						__m128 negWaveVecNX_4 = _mm_set_ps1(-waveVecN.x);
 						__m128 negWaveVecNZ_4 = _mm_set_ps1(-waveVecN.y);
-						__m128 waveA_4 = _mm_set_ps1(wave.a);
+						__m128 waveA_4 = _mm_set_ps1(waveInfo.a);
 
 						__m128 waveVecX_4 = _mm_set_ps1(waveVec.x);
 						__m128 waveVecZ_4 = _mm_set_ps1(waveVec.y);
@@ -4276,12 +4282,12 @@ namespace flex
 										size * ((real)z / (chunkVertCountPerAxis - 1)));
 
 									real d = waveVec.x * positions[vertIdx].x + waveVec.y * positions[vertIdx].z;
-									real c = cos(d + wave.accumOffset);
-									real s = sin(d + wave.accumOffset);
+									real c = cos(d + waveInfo.accumOffset);
+									real s = sin(d + waveInfo.accumOffset);
 									positions[vertIdx] += glm::vec3(
-										-waveVecN.x * wave.a * s,
-										wave.a * c,
-										-waveVecN.y * wave.a * s);
+										-waveVecN.x * waveInfo.a * s,
+										waveInfo.a * c,
+										-waveVecN.y * waveInfo.a * s);
 								*/
 
 
@@ -4494,7 +4500,7 @@ namespace flex
 		if (ImGui::DragFloat("Update speed", &updateSpeed, 0.1f))
 		{
 			updateSpeed = glm::clamp(updateSpeed, 0.1f, 10000.0f);
-			for (i32 i = 0; i < (i32)waves.size(); ++i)
+			for (i32 i = 0; i < (i32)waveContributions.size(); ++i)
 			{
 				UpdateDependentVariables(i);
 			}
@@ -4672,9 +4678,9 @@ namespace flex
 
 		if (ImGui::TreeNode("Wave factors"))
 		{
-			for (i32 i = 0; i < (i32)waves.size(); ++i)
+			for (i32 i = 0; i < (i32)waveContributions.size(); ++i)
 			{
-				const bool bWasDisabled = soloWave != nullptr && soloWave != &waves[i];
+				const bool bWasDisabled = soloWave != nullptr && soloWave != &waveContributions[i];
 				if (bWasDisabled)
 				{
 					ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
@@ -4697,17 +4703,17 @@ namespace flex
 
 				std::string enabledStr = "Enabled" + childName;
 
-				ImGui::Checkbox(enabledStr.c_str(), &waves[i].enabled);
+				ImGui::Checkbox(enabledStr.c_str(), &waveContributions[i].enabled);
 
 				ImGui::SameLine();
 
-				bool bSolo = soloWave == &waves[i];
+				bool bSolo = soloWave == &waveContributions[i];
 				std::string soloStr = "Solo" + childName;
 				if (ImGui::Checkbox(soloStr.c_str(), &bSolo))
 				{
 					if (bSolo)
 					{
-						soloWave = &waves[i];
+						soloWave = &waveContributions[i];
 					}
 					else
 					{
@@ -4716,16 +4722,16 @@ namespace flex
 				}
 
 				std::string aStr = "amplitude" + childName;
-				bNeedUpdate |= ImGui::DragFloat(aStr.c_str(), &waves[i].a, 0.01f);
+				bNeedUpdate |= ImGui::DragFloat(aStr.c_str(), &waveContributions[i].a, 0.01f);
 				bNeedSort |= bNeedUpdate;
 				std::string waveLenStr = "wave len" + childName;
-				bNeedUpdate |= ImGui::DragFloat(waveLenStr.c_str(), &waves[i].waveLen, 0.01f);
+				bNeedUpdate |= ImGui::DragFloat(waveLenStr.c_str(), &waveContributions[i].waveLen, 0.01f);
 				bNeedSort |= bNeedUpdate;
 				std::string dirStr = "dir" + childName;
-				if (ImGui::DragFloat(dirStr.c_str(), &waves[i].waveDirTheta, 0.001f, 0.0f, 10.0f))
+				if (ImGui::DragFloat(dirStr.c_str(), &waveContributions[i].waveDirTheta, 0.001f, 0.0f, 10.0f))
 				{
 					bNeedUpdate = true;
-					waves[i].waveDirTheta = fmod(waves[i].waveDirTheta, TWO_PI);
+					waveContributions[i].waveDirTheta = fmod(waveContributions[i].waveDirTheta, TWO_PI);
 				}
 
 				if (bNeedSort && ImGui::IsMouseReleased(0))
@@ -4775,12 +4781,12 @@ namespace flex
 			{
 				for (const JSONObject& waveObj : waveObjs)
 				{
-					WaveInfo wave = {};
-					wave.enabled = waveObj.GetBool("enabled");
-					wave.a = waveObj.GetFloat("amplitude");
-					wave.waveDirTheta = waveObj.GetFloat("waveDir");
-					wave.waveLen = waveObj.GetFloat("waveLen");
-					waves.push_back(wave);
+					WaveInfo waveInfo = {};
+					waveInfo.enabled = waveObj.GetBool("enabled");
+					waveInfo.a = waveObj.GetFloat("amplitude");
+					waveInfo.waveDirTheta = waveObj.GetFloat("waveDir");
+					waveInfo.waveLen = waveObj.GetFloat("waveLen");
+					waveContributions.push_back(waveInfo);
 				}
 			}
 
@@ -4862,7 +4868,7 @@ namespace flex
 		SortWaves();
 
 		// Init dependent variables
-		for (i32 i = 0; i < (i32)waves.size(); ++i)
+		for (i32 i = 0; i < (i32)waveContributions.size(); ++i)
 		{
 			UpdateDependentVariables(i);
 		}
@@ -4873,14 +4879,14 @@ namespace flex
 		JSONObject gerstnerWaveObj = {};
 
 		std::vector<JSONObject> waveObjs;
-		waveObjs.resize(waves.size());
-		for (i32 i = 0; i < (i32)waves.size(); ++i)
+		waveObjs.resize(waveContributions.size());
+		for (i32 i = 0; i < (i32)waveContributions.size(); ++i)
 		{
 			JSONObject& waveObj = waveObjs[i];
-			waveObj.fields.emplace_back("enabled", JSONValue(waves[i].enabled));
-			waveObj.fields.emplace_back("amplitude", JSONValue(waves[i].a));
-			waveObj.fields.emplace_back("waveDir", JSONValue(waves[i].waveDirTheta));
-			waveObj.fields.emplace_back("waveLen", JSONValue(waves[i].waveLen));
+			waveObj.fields.emplace_back("enabled", JSONValue(waveContributions[i].enabled));
+			waveObj.fields.emplace_back("amplitude", JSONValue(waveContributions[i].a));
+			waveObj.fields.emplace_back("waveDir", JSONValue(waveContributions[i].waveDirTheta));
+			waveObj.fields.emplace_back("waveLen", JSONValue(waveContributions[i].waveLen));
 		}
 
 		gerstnerWaveObj.fields.emplace_back("waves", JSONValue(waveObjs));
@@ -4924,28 +4930,28 @@ namespace flex
 
 	void GerstnerWave::UpdateDependentVariables(i32 waveIndex)
 	{
-		if (waveIndex >= 0 && waveIndex < (i32)waves.size())
+		if (waveIndex >= 0 && waveIndex < (i32)waveContributions.size())
 		{
-			waves[waveIndex].waveVecMag = TWO_PI / waves[waveIndex].waveLen;
-			waves[waveIndex].moveSpeed = glm::sqrt(updateSpeed * waves[waveIndex].waveVecMag);
+			waveContributions[waveIndex].waveVecMag = TWO_PI / waveContributions[waveIndex].waveLen;
+			waveContributions[waveIndex].moveSpeed = glm::sqrt(updateSpeed * waveContributions[waveIndex].waveVecMag);
 
-			waves[waveIndex].waveDirCos = cos(waves[waveIndex].waveDirTheta);
-			waves[waveIndex].waveDirSin = sin(waves[waveIndex].waveDirTheta);
+			waveContributions[waveIndex].waveDirCos = cos(waveContributions[waveIndex].waveDirTheta);
+			waveContributions[waveIndex].waveDirSin = sin(waveContributions[waveIndex].waveDirTheta);
 		}
 	}
 
 	void GerstnerWave::AddWave()
 	{
-		waves.push_back({});
-		UpdateDependentVariables((u32)waves.size() - 1);
+		waveContributions.push_back({});
+		UpdateDependentVariables((u32)waveContributions.size() - 1);
 		SortWaves();
 	}
 
 	void GerstnerWave::RemoveWave(i32 index)
 	{
-		if (index >= 0 && index < (i32)waves.size())
+		if (index >= 0 && index < (i32)waveContributions.size())
 		{
-			waves.erase(waves.begin() + index);
+			waveContributions.erase(waveContributions.begin() + index);
 			SortWaves();
 		}
 	}
@@ -4957,14 +4963,14 @@ namespace flex
 		{
 			soloWaveCopy = *soloWave;
 		}
-		std::sort(waves.begin(), waves.end(),
+		std::sort(waveContributions.begin(), waveContributions.end(),
 			[](const WaveInfo& waveA, const WaveInfo& waveB)
 		{
 			return abs(waveA.a) > abs(waveB.a);
 		});
 		if (soloWave)
 		{
-			for (const WaveInfo& waveInfo : waves)
+			for (const WaveInfo& waveInfo : waveContributions)
 			{
 				if (waveInfo == soloWaveCopy)
 				{

@@ -19,8 +19,6 @@ namespace flex
 			real zNear = 0.5f, real zFar = 1000.0f);
 		virtual ~BaseCamera();
 
-		// TODO: Add camera type enum
-
 		virtual void Initialize();
 		virtual void Update();
 		virtual void Destroy();

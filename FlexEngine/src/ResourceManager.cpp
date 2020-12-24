@@ -498,7 +498,6 @@ namespace flex
 			metric->character = (wchar_t)c;
 
 			u32 glyphIndex = FT_Get_Char_Index(face, c);
-			// TODO: Is this correct?
 			if (glyphIndex == 0)
 			{
 				continue;
@@ -1063,14 +1062,6 @@ namespace flex
 					}
 				};
 
-				// TODO: Replace with loadedTextures
-				std::vector<Texture*> textures;
-				textures.reserve(loadedTextures.size());
-				for (Texture* texture : loadedTextures)
-				{
-					textures.push_back(texture);
-				}
-
 				if (selectedTextureIndices.size() == material->textures.Count())
 				{
 					for (u32 texIndex = 0; texIndex < material->textures.Count(); ++texIndex)
@@ -1078,7 +1069,7 @@ namespace flex
 						// TODO: Pass in reference to material->textures?
 						//Texture* texture = material->textures[texIndex];
 						std::string texFieldName = material->textures.slotNames[texIndex] + "##" + std::to_string(texIndex);
-						bUpdateFields |= g_Renderer->DrawImGuiTextureSelector(texFieldName.c_str(), textures, &selectedTextureIndices[texIndex]);
+						bUpdateFields |= g_Renderer->DrawImGuiTextureSelector(texFieldName.c_str(), loadedTextures, &selectedTextureIndices[texIndex]);
 					}
 				}
 

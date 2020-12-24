@@ -628,7 +628,7 @@ namespace flex
 		{
 			// Inputs
 			// General
-			std::vector<WaveInfo> const* waves;
+			std::vector<WaveInfo> const* waveContributions;
 			std::vector<WaveChunk> const* waveChunks;
 			std::vector<WaveSamplingLOD> const* waveSamplingLODs;
 			std::vector<WaveTessellationLOD> const* waveTessellationLODs;
@@ -709,8 +709,7 @@ namespace flex
 		std::vector<WaveTessellationLOD> waveTessellationLODs;
 		std::vector<WaveSamplingLOD> waveSamplingLODs;
 
-		// TODO: Rename to wave contributions?
-		std::vector<WaveInfo> waves;
+		std::vector<WaveInfo> waveContributions;
 		WaveInfo const* soloWave = nullptr;
 
 		std::vector<WaveChunk> waveChunks;
@@ -732,14 +731,6 @@ namespace flex
 	};
 
 	bool operator==(const GerstnerWave::WaveInfo& lhs, const GerstnerWave::WaveInfo& rhs);
-
-	// TODO: MOVE!!
-	static volatile u32 workQueueLock = 0;
-	static volatile u32 workQueueEntriesCreated = 0;
-	static volatile u32 workQueueEntriesClaimed = 0;
-	static volatile u32 workQueueEntriesCompleted = 0;
-
-#define SIMD_WAVES 1
 
 	void* ThreadUpdate(void* inData);
 

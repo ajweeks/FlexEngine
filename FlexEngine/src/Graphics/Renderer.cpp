@@ -1053,9 +1053,6 @@ namespace flex
 
 				MaterialID matID = GetRenderObjectMaterialID(meshComponent->renderID);
 
-				// TODO: What is this??
-				//DrawImGuiForRenderObject(meshComponent->renderID);
-
 				std::vector<Pair<std::string, MaterialID>> validMaterialNames = GetValidMaterialNames();
 
 				i32 selectedMaterialShortIndex = 0;

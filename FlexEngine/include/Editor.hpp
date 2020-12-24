@@ -56,8 +56,6 @@ namespace flex
 		bool IsShowingGrid() const;
 		void SetShowGrid(bool bShowGrid);
 
-		void DrawImGuiWindows();
-
 		// ImGui payload identifiers
 		static const char* MaterialPayloadCStr;
 		static const char* MeshPayloadCStr;
