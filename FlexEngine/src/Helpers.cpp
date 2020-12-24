@@ -1782,7 +1782,7 @@ namespace flex
 
 	bool GUID::operator!=(const GUID& rhs) const
 	{
-		return !(*this == rhs);
+		return Data1 != rhs.Data1 && Data2 != rhs.Data2;
 	}
 
 	bool GUID::operator==(const GUID& rhs) const
@@ -1792,8 +1792,12 @@ namespace flex
 
 	bool GUID::operator<(const GUID& rhs) const
 	{
-		// TODO: double check
-		return Data1 < rhs.Data1 || (Data1 == rhs.Data1 && Data2 < rhs.Data2);
+		return Data2 < rhs.Data2 || (Data2 == rhs.Data2 && Data1 < rhs.Data1);
+	}
+
+	bool GUID::operator>(const GUID& rhs) const
+	{
+		return Data2 > rhs.Data2 || (Data2 == rhs.Data2 && Data1 > rhs.Data1);
 	}
 
 	GUID GUID::FromPlatformGUID(unsigned long inData1, unsigned short inData2, unsigned short inData3, unsigned char inData4[8])
@@ -1855,11 +1859,26 @@ namespace flex
 
 	GUID GUID::FromString(const std::string& str)
 	{
-		assert(str.length() == 32);
+		if (str.length() != 32)
+		{
+			return InvalidGUID;
+		}
+
+		const char* buffer = str.data();
+
+#if DEBUG
+		for (u32 i = 0; i < 32; ++i)
+		{
+			if (!((buffer[i] >= '0' && buffer[i] <= '9') ||
+				(buffer[i] >= 'A' && buffer[i] <= 'F')))
+			{
+				return InvalidGUID;
+			}
+		}
+#endif
 
 		GUID result = {};
 
-		const char* buffer = str.data();
 		// Read from string in reverse order (least significant to most significant)
 		for (u32 i = 16; i >= 9; --i)
 		{

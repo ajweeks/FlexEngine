@@ -386,6 +386,7 @@ namespace flex
 		bool operator!=(const GUID& rhs) const;
 		bool operator==(const GUID& rhs) const;
 		bool operator<(const GUID& rhs) const;
+		bool operator>(const GUID& rhs) const;
 
 		static GUID FromPlatformGUID(
 			unsigned long inData1,

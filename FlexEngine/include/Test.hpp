@@ -516,6 +516,10 @@ namespace flex
 		}
 		UNIT_TEST_END;
 
+		//
+		// Misc tests
+		//
+
 		UNIT_TEST(CountSetBitsValid)
 		{
 			EXPECT(CountSetBits(0b00000000), 0);
@@ -527,10 +531,6 @@ namespace flex
 			EXPECT(CountSetBits(0b1111111111111111), 16);
 		}
 		UNIT_TEST_END;
-
-		//
-		// Pool tests
-		//
 
 		UNIT_TEST(PoolTests)
 		{
@@ -554,10 +554,6 @@ namespace flex
 			EXPECT(pool.MemoryUsed(), 0);
 		}
 		UNIT_TEST_END;
-
-		//
-		// Pair tests
-		//
 
 		UNIT_TEST(PairTests)
 		{
@@ -1588,6 +1584,120 @@ namespace flex
 		}
 		UNIT_TEST_END;
 
+		//
+		// GUID Tests
+		//
+
+		UNIT_TEST(GUIDGeneration0)
+		{
+			GUID a = GUID::FromString("69CB35807A080CA94986D8D301C70BE7");
+			GUID a2;
+			a2.Data1 = 5298160412427488231;
+			a2.Data2 = 7623245620174130345;
+			GUID c = GUID::FromString("3C40C6CCE0DAA3914AAD5DBE31B94281");
+
+			EXPECT(a != InvalidGUID, true);
+			EXPECT(a2 != InvalidGUID, true);
+			EXPECT(c != InvalidGUID, true);
+
+			EXPECT(a == a2, true);
+			EXPECT(a.Data1 == a2.Data1, true);
+			EXPECT(a.Data2 == a2.Data2, true);
+			EXPECT(a != c, true);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(GUIDGeneration1)
+		{
+			std::string inputStr = "6E63A06A6FD9D39C4608AF519EFB8A2E";
+			GUID a = GUID::FromString(inputStr);
+			std::string generatedStr = a.ToString();
+			EXPECT(inputStr.compare(generatedStr), 0); // Round trip
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(GUIDGeneration2)
+		{
+			std::string inputStr = "6E63A06A6FD9D39C4608AF519EFB8A2E";
+			GUID a = GUID::FromString(inputStr);
+			EXPECT(a.Data1, 5046476147563137582);
+			EXPECT(a.Data2, 7954377745869951900);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(GUIDGeneration3)
+		{
+			GUID a;
+			a.Data1 = 5046476147563137582;
+			a.Data2 = 7954377745869951900;
+			std::string generatedStr = a.ToString();
+			EXPECT(generatedStr.compare("6E63A06A6FD9D39C4608AF519EFB8A2E"), 0);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(InvalidGUID0)
+		{
+			GUID a = GUID::FromString("invalid-guid-length");
+			EXPECT(a == InvalidGUID, true);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(InvalidGUID1)
+		{
+			// Only caught in DEBUG
+			GUID a = GUID::FromString("invalid-content-but-right-length");
+			EXPECT(a == InvalidGUID, true);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(GUIDLessThan0)
+		{
+			GUID a;
+			a.Data1 = 1;
+			a.Data2 = 0;
+			GUID b;
+			b.Data1 = 2;
+			b.Data2 = 0;
+			EXPECT(a < b, true);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(GUIDNotLessThan0)
+		{
+			GUID a;
+			a.Data1 = 2;
+			a.Data2 = 0;
+			GUID b;
+			b.Data1 = 1;
+			b.Data2 = 0;
+			EXPECT(a > b, true);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(GUIDLessThan1)
+		{
+			GUID a;
+			a.Data1 = 1;
+			a.Data2 = 0;
+			GUID b;
+			b.Data1 = 1;
+			b.Data2 = 1;
+			EXPECT(a < b, true);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(GUIDNotLessThan1)
+		{
+			GUID a;
+			a.Data1 = 0;
+			a.Data2 = 1;
+			GUID b;
+			b.Data1 = 2;
+			b.Data2 = 0;
+			EXPECT(a > b, true);
+		}
+		UNIT_TEST_END;
+
 
 	public:
 		static void Run()
@@ -1611,6 +1721,8 @@ namespace flex
 				//VMTestsNotAllPathsReturnValue0, VMTestsNotAllPathsReturnValue1, VMTestsMismatchedReturnTypes0, VMTestsMismatchedReturnTypes1,
 				//VMTestsUnreachableVar0, VMTestsUnreachableVar1,
 				//VMTestsUinitializedVar0, VMTestsUinitializedVar1,
+				// Misc tests
+				CountSetBitsValid, PoolTests, PairTests,
 				// Helper tests
 				HelpersDirectories0, HelpersDirectories1, HelpersDirectories2, HelpersDirectories3,
 				HelpersFileType0, HelpersFileType1, HelpersFileType2, HelpersFileType3,
@@ -1618,8 +1730,9 @@ namespace flex
 				HelpersSplit0, HelpersSplit1, HelpersSplit2, HelpersSplit3, HelpersSplit4,
 				HelpersSplitNoStrip0, HelpersSplitNoStrip1, HelpersSplitNoStrip2,
 				HelpersNextNonAlphaNumeric0, HelpersNextNonAlphaNumeric1, HelpersNextNonAlphaNumeric2,
-				// Misc tests
-				CountSetBitsValid, PoolTests, PairTests,
+				// GUID tests
+				GUIDGeneration0, GUIDGeneration1, GUIDGeneration2, GUIDGeneration3, InvalidGUID1, InvalidGUID1,
+				GUIDLessThan0, GUIDNotLessThan0, GUIDLessThan1, GUIDNotLessThan1
 			};
 			Print("Running %u tests...\n", (u32)ARRAY_LENGTH(funcs));
 			u32 failedTestCount = 0;
