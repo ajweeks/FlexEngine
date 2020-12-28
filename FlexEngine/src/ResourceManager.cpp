@@ -196,6 +196,7 @@ namespace flex
 					{
 						FontMetaData metaData = {};
 
+						fontObj.SetStringChecked("name", metaData.name);
 						std::string fileName;
 						fontObj.SetStringChecked("file path", fileName);
 						metaData.size = (i16)fontObj.GetInt("size");
@@ -215,7 +216,8 @@ namespace flex
 						SetRenderedSDFFilePath(metaData);
 
 						std::string fontName = fontObj.GetString("name");
-						fontMetaData[fontName] = metaData;
+						StringID fontNameID = Hash(fontName.c_str());
+						fontMetaData[fontNameID] = metaData;
 					}
 				}
 			}
@@ -236,7 +238,7 @@ namespace flex
 
 			JSONObject fontObj = {};
 
-			fontObj.fields.emplace_back("name", JSONValue(fontPair.first));
+			fontObj.fields.emplace_back("name", JSONValue(metaData.name));
 			std::string relativeFilePath = StripLeadingDirectories(metaData.filePath);
 			fontObj.fields.emplace_back("file path", JSONValue(relativeFilePath));
 			fontObj.fields.emplace_back("size", JSONValue((i32)metaData.size));
@@ -794,7 +796,6 @@ namespace flex
 					ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollWithMouse;
 					if (ImGui::BeginChild(metaData.renderedTextureFilePath.c_str(), ImVec2(0, 240), true, flags))
 					{
-						ImGui::Text("%s", fontPair.first.c_str());
 						ImGui::Text("%s", font->name.c_str());
 
 						ImGui::Columns(2);
@@ -878,7 +879,7 @@ namespace flex
 							}
 							else
 							{
-								g_Renderer->previewedFont = "";
+								g_Renderer->previewedFont = InvalidStringID;
 							}
 						}
 

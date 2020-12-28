@@ -254,7 +254,7 @@ namespace flex
 
 		i32 GetFramesRenderedCount() const;
 
-		BitmapFont* SetFont(std::string fontID);
+		BitmapFont* SetFont(StringID fontID);
 		// Draws the given string in the center of the screen for a short period of time
 		// Passing an empty string will immediately clear the current string
 		void AddEditorString(const std::string& str);
@@ -312,7 +312,7 @@ namespace flex
 		TextureID pointLightIconID = InvalidTextureID;
 		TextureID directionalLightIconID = InvalidTextureID;
 
-		std::string previewedFont;
+		StringID previewedFont = InvalidStringID;
 
 	protected:
 		void LoadShaders();

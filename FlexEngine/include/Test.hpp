@@ -1585,7 +1585,7 @@ namespace flex
 		UNIT_TEST_END;
 
 		//
-		// GUID Tests
+		// GUID tests
 		//
 
 		UNIT_TEST(GUIDGeneration0)
@@ -1698,6 +1698,42 @@ namespace flex
 		}
 		UNIT_TEST_END;
 
+		//
+		// Hash tests
+		//
+
+		UNIT_TEST(HashesDeterministic)
+		{
+			u64 result1 = Hash("test");
+			u64 result2 = Hash("test");
+			EXPECT(result1, result2);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HashEmpty)
+		{
+			u64 result0 = Hash("");
+			u64 result1 = Hash(" ");
+			EXPECT(result0 != 0, true);
+			EXPECT(result0 != result1, true);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HashCompare0)
+		{
+			u64 result0 = Hash("benign");
+			u64 result1 = Hash("blueberry");
+			u64 result2 = Hash("bargaining");
+			u64 result3 = Hash("basket weaver");
+			EXPECT(result0 != result1, true);
+			EXPECT(result0 != result2, true);
+			EXPECT(result0 != result3, true);
+			EXPECT(result1 != result2, true);
+			EXPECT(result1 != result3, true);
+			EXPECT(result2 != result3, true);
+		}
+		UNIT_TEST_END;
+
 
 	public:
 		static void Run()
@@ -1732,7 +1768,9 @@ namespace flex
 				HelpersNextNonAlphaNumeric0, HelpersNextNonAlphaNumeric1, HelpersNextNonAlphaNumeric2,
 				// GUID tests
 				GUIDGeneration0, GUIDGeneration1, GUIDGeneration2, GUIDGeneration3, InvalidGUID1, InvalidGUID1,
-				GUIDLessThan0, GUIDNotLessThan0, GUIDLessThan1, GUIDNotLessThan1
+				GUIDLessThan0, GUIDNotLessThan0, GUIDLessThan1, GUIDNotLessThan1,
+				// Hash tests
+				HashesDeterministic, HashEmpty, HashCompare0
 			};
 			Print("Running %u tests...\n", (u32)ARRAY_LENGTH(funcs));
 			u32 failedTestCount = 0;

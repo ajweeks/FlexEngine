@@ -28,6 +28,7 @@ namespace flex
 
 	struct FontMetaData
 	{
+		std::string name;
 		std::string filePath;
 		std::string renderedTextureFilePath;
 		i16 size = 0;

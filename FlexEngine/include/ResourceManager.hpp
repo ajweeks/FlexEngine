@@ -83,7 +83,7 @@ namespace flex
 
 		bool bShowEditorMaterials = false;
 
-		std::map<std::string, FontMetaData> fontMetaData;
+		std::map<StringID, FontMetaData> fontMetaData;
 		// TODO: Separate fonts from font buffers
 		std::vector<BitmapFont*> fontsScreenSpace;
 		std::vector<BitmapFont*> fontsWorldSpace;

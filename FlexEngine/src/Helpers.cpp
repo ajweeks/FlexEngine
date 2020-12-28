@@ -1600,6 +1600,25 @@ namespace flex
 		return ++_lastUID;
 	}
 
+	// FNV-1a Hash http://isthe.com/chongo/tech/comp/fnv/
+	u64 Hash(const char* str)
+	{
+		const u64 prime = 1099511628211;
+		const u64 offset = 14695981039346656037;
+
+		u64 result = offset;
+
+		const char* p = str;
+		while (*p != 0)
+		{
+			char c = *p++;
+			result = result ^ c;
+			result = result * prime;
+		}
+
+		return result;
+	}
+
 	bool Contains(const std::vector<const char*>& vec, const char* val)
 	{
 		for (u32 i = 0; i < (u32)vec.size(); ++i)

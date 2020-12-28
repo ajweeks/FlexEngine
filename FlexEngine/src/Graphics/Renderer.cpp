@@ -571,7 +571,7 @@ namespace flex
 		return m_FramesRendered;
 	}
 
-	BitmapFont* Renderer::SetFont(std::string fontID)
+	BitmapFont* Renderer::SetFont(StringID fontID)
 	{
 		m_CurrentFont = g_ResourceManager->fontMetaData[fontID].bitmapFont;
 		return m_CurrentFont;
@@ -1886,7 +1886,7 @@ namespace flex
 			DrawStringSS(m_EditorMessage, glm::vec4(1.0f, 1.0f, 1.0f, alpha), AnchorPoint::CENTER, VEC2_ZERO, 3);
 		}
 
-		if (!previewedFont.empty())
+		if (previewedFont != InvalidStringID)
 		{
 			SetFont(previewedFont);
 			DrawStringSS("Preview text... 123 -*!~? ", VEC4_ONE, AnchorPoint::CENTER, VEC2_ZERO, 3);

@@ -220,7 +220,11 @@ namespace flex
 	glm::vec3 Floor(const glm::vec3& p);
 	glm::vec3 Fract(const glm::vec3& p);
 
+	// Returns monotonically increasing ID with each call (for a
+	// globally-unique value use Platform::GenerateGUID instead)
 	u32 GenerateUID();
+
+	u64 Hash(const char* str);
 
 	template<typename T>
 	bool Contains(const std::vector<T>& vec, T val)

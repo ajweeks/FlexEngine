@@ -41,6 +41,7 @@ namespace flex
 	using VariableID = u32;
 	using ParticleSystemID = u32;
 
+	using StringID = u64;
 
 	using ThreadHandle = u64;
 
@@ -82,6 +83,7 @@ namespace flex
 	static constexpr auto InvalidThreadHandle = ((ThreadHandle)u64_max);
 	static constexpr auto InvalidBufferID = u64_max;
 	static constexpr auto InvalidSpecializationConstantID = (SpecializationConstantID)u32_max;
+	static constexpr auto InvalidStringID = (StringID)u64_max;
 	static constexpr auto InvalidID = u32_max;
 
 

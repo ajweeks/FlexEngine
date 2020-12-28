@@ -238,8 +238,7 @@ if (FlexEngine::s_bHasGLDebugExtension) { glPopDebugGroupKHR(); }
 
 namespace flex
 {
-	// TODO: Calculate string hash here
-#define SID(str) (str)
+#define SID(str) Hash(str)
 
 	extern glm::vec3 VEC3_RIGHT;
 	extern glm::vec3 VEC3_UP;
