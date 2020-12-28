@@ -43,7 +43,6 @@ namespace flex
 
 	void ResourceManager::Initialize()
 	{
-		ParseFontFile();
 	}
 
 	void ResourceManager::Destroy()
