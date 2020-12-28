@@ -236,10 +236,10 @@ if (FlexEngine::s_bHasGLDebugExtension) { glPopDebugGroupKHR(); }
 #define GL_POP_DEBUG_GROUP()
 #endif // COMPILE_OPEN_GL
 
-namespace flex
-{
 #define SID(str) Hash(str)
 
+namespace flex
+{
 	extern glm::vec3 VEC3_RIGHT;
 	extern glm::vec3 VEC3_UP;
 	extern glm::vec3 VEC3_FORWARD;

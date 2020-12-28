@@ -216,6 +216,11 @@ namespace flex
 
 						std::string fontName = fontObj.GetString("name");
 						StringID fontNameID = Hash(fontName.c_str());
+						if (fontMetaData.find(fontNameID) != fontMetaData.end())
+						{
+							// TODO: Handle collision
+							PrintError("Hash collision detected in font meta data for %s : %llu\n", fontName.c_str(), fontNameID);
+						}
 						fontMetaData[fontNameID] = metaData;
 					}
 				}
