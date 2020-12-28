@@ -25,7 +25,7 @@ namespace flex
 		struct VulkanBuffer;
 		struct VulkanDevice;
 
-		class VulkanRenderer : public Renderer
+		class VulkanRenderer final : public Renderer
 		{
 		public:
 			VulkanRenderer();

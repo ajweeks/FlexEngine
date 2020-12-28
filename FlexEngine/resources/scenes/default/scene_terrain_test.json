@@ -1,5 +1,5 @@
 {
-	"version" : 4,
+	"version" : 5,
 	"name" : "scene_terrain_test",
 	"spawn player" : false,
 	"skybox data" : 
@@ -30,6 +30,7 @@
 	[
 		{
 			"name" : "Skybox",
+			"id" : "7336F9FE6DDF8E9742B01481AEFD83E1",
 			"type" : "skybox",
 			"visible" : true,
 			"casts shadow" : false,
@@ -46,6 +47,7 @@
 		},
 		{
 			"name" : "Reflection Probe 01",
+			"id" : "A63DF4AA4D639FB447EB4F5073F7FB1B",
 			"type" : "reflection probe",
 			"visible" : true,
 			"casts shadow" : true,
@@ -56,6 +58,7 @@
 		},
 		{
 			"name" : "Directional Light",
+			"id" : "D38F03C3DEDF55A8459E5F7BFBAFB069",
 			"type" : "directional light",
 			"visible" : true,
 			"casts shadow" : true,
@@ -77,6 +80,7 @@
 		},
 		{
 			"name" : "Terrain",
+			"id" : "D747202C0AE085AF4FF5E4A4815437FA",
 			"type" : "terrain",
 			"visible" : true,
 			"casts shadow" : true,
@@ -104,6 +108,7 @@
 		},
 		{
 			"name" : "cube",
+			"id" : "FBBD8A10B6C4E5B942E87958914E03AA",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,

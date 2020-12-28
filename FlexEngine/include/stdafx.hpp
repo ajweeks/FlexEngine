@@ -94,6 +94,8 @@
 #undef TRUE
 #undef FALSE
 
+// Markup variadic arguments. n = index of format string, m = index of first variadic ar
+// Indices are 1-based due to implicit this param
 #if defined(__clang__)
 #define FORMAT_STRING(n,m) __attribute__ (( format( __printf__, fmtargnumber, firstvarargnumber )))
 #elif defined(_MSC_VER)

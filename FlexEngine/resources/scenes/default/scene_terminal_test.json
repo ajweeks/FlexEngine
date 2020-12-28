@@ -1,7 +1,8 @@
 {
-	"version" : 4,
+	"version" : 5,
 	"name" : "Scene_terminal_test",
 	"spawn player" : true,
+	"player 0 guid" : "6E63A06A6FD9D39C4608AF519EFB8A2E",
 	"skybox data" : 
 	{
 		"top colour" : "0.22, 0.58, 0.88, 0.00",
@@ -21,7 +22,7 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "0.000, 1.347, 0.000",
+			"position" : "0.000, 1.347, -0.185",
 			"pitch" : 0.000000,
 			"yaw" : 1.570796
 		}
@@ -30,6 +31,7 @@
 	[
 		{
 			"name" : "ground plane",
+			"id" : "69CB35807A080CA94986D8D301C70BE7",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -60,6 +62,7 @@
 		},
 		{
 			"name" : "Lighting",
+			"id" : "33BF534E4C5D72AC4A02E827589D0CDE",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -70,6 +73,7 @@
 			[
 				{
 					"name" : "Skybox",
+					"id" : "3C40C6CCE0DAA3914AAD5DBE31B94281",
 					"type" : "skybox",
 					"visible" : true,
 					"casts shadow" : false,
@@ -86,6 +90,7 @@
 				},
 				{
 					"name" : "Reflection Probe 01",
+					"id" : "267350C0434E709B4F2FA545E179963F",
 					"type" : "reflection probe",
 					"visible" : true,
 					"casts shadow" : true,
@@ -96,6 +101,7 @@
 				},
 				{
 					"name" : "Directional Light",
+					"id" : "421EA4A9C639B98D43992BC7ED65034E",
 					"type" : "directional light",
 					"visible" : true,
 					"casts shadow" : true,
@@ -117,6 +123,7 @@
 				},
 				{
 					"name" : "PointLight_03",
+					"id" : "771EB1387823558F480559B985C3469D",
 					"type" : "point light",
 					"visible" : true,
 					"casts shadow" : true,
@@ -135,6 +142,7 @@
 					[
 						{
 							"name" : "socket_005",
+							"id" : "D2B4586102FEFE87433539B90CB0227C",
 							"type" : "socket",
 							"visible" : true,
 							"casts shadow" : true,
@@ -150,6 +158,7 @@
 				},
 				{
 					"name" : "PointLight_02",
+					"id" : "B375AD1A5B18AC8C43966EBC3D651201",
 					"type" : "point light",
 					"visible" : true,
 					"casts shadow" : true,
@@ -168,6 +177,7 @@
 					[
 						{
 							"name" : "socket_004",
+							"id" : "564F997157E832B04E56B9B3C26BF4BB",
 							"type" : "socket",
 							"visible" : true,
 							"casts shadow" : true,
@@ -183,6 +193,7 @@
 				},
 				{
 					"name" : "PointLight_01",
+					"id" : "9F360CCEC1A5FF8B43FDE22F4E649704",
 					"type" : "point light",
 					"visible" : true,
 					"casts shadow" : true,
@@ -201,6 +212,7 @@
 					[
 						{
 							"name" : "socket_006",
+							"id" : "4994B353AAEF349A4E6367F48BFA9C0B",
 							"type" : "socket",
 							"visible" : true,
 							"casts shadow" : true,
@@ -216,6 +228,7 @@
 				},
 				{
 					"name" : "PointLight_00",
+					"id" : "A922EFB2AA76D2A247E45EA150321530",
 					"type" : "point light",
 					"visible" : true,
 					"casts shadow" : true,
@@ -234,6 +247,7 @@
 					[
 						{
 							"name" : "socket_007",
+							"id" : "4F5DC2E885C2578B4D6E126053D6F3CE",
 							"type" : "socket",
 							"visible" : true,
 							"casts shadow" : true,
@@ -251,6 +265,7 @@
 		},
 		{
 			"name" : "Copper Terminal 01",
+			"id" : "422AC6316779F682468EBD8FF46A9979",
 			"type" : "terminal",
 			"visible" : true,
 			"casts shadow" : true,
@@ -286,6 +301,7 @@
 			[
 				{
 					"name" : "screen",
+					"id" : "291AEF87F82FDB8649C261B1C1A356AD",
 					"type" : "object",
 					"visible" : true,
 					"casts shadow" : true,
@@ -302,6 +318,7 @@
 				},
 				{
 					"name" : "socket_000",
+					"id" : "2E9E794CEB4608A048825843EF994F7B",
 					"type" : "socket",
 					"visible" : true,
 					"casts shadow" : true,
@@ -317,6 +334,7 @@
 				},
 				{
 					"name" : "socket_001",
+					"id" : "D9DFC1D0A521AEBF4338BF926808D6F2",
 					"type" : "socket",
 					"visible" : true,
 					"casts shadow" : true,
@@ -332,6 +350,7 @@
 				},
 				{
 					"name" : "socket_002",
+					"id" : "0FA7C44D69B1B9B5479723F2EB967753",
 					"type" : "socket",
 					"visible" : true,
 					"casts shadow" : true,
@@ -347,6 +366,7 @@
 				},
 				{
 					"name" : "socket_003",
+					"id" : "E70FF3A9CE23B4B74863F255F2ABC173",
 					"type" : "socket",
 					"visible" : true,
 					"casts shadow" : true,
@@ -364,6 +384,7 @@
 		},
 		{
 			"name" : "Cart_00",
+			"id" : "EA025375D92D69A7497FD89137C6D5D3",
 			"type" : "cart",
 			"visible" : false,
 			"casts shadow" : true,
@@ -382,6 +403,7 @@
 		},
 		{
 			"name" : "moka",
+			"id" : "ECA2903A8E1C42A749F15519C5EF09D9",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -400,6 +422,7 @@
 		},
 		{
 			"name" : "dragon",
+			"id" : "F93A579D7BBDF2A74D51FD2783BB0473",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -417,6 +440,7 @@
 		},
 		{
 			"name" : "New_Object_00",
+			"id" : "3214B079039EE582499DBB446FEE87CB",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -434,6 +458,7 @@
 		},
 		{
 			"name" : "wire_000",
+			"id" : "00A9E8171F66588340AE41238924C246",
 			"type" : "wire",
 			"visible" : true,
 			"casts shadow" : true,
@@ -449,6 +474,7 @@
 		},
 		{
 			"name" : "wire_001",
+			"id" : "6C4EE368841B3F9B478C3823B8666D93",
 			"type" : "wire",
 			"visible" : true,
 			"casts shadow" : true,

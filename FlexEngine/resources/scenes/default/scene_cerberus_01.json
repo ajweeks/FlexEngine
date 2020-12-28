@@ -1,5 +1,5 @@
 {
-	"version" : 4,
+	"version" : 5,
 	"name" : "Cerberus Scene",
 	"spawn player" : false,
 	"skybox data" : 
@@ -30,6 +30,7 @@
 	[
 		{
 			"name" : "Cerberus",
+			"id" : "C417A01C363097A646195AFA309EA645",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -46,6 +47,7 @@
 		},
 		{
 			"name" : "Skybox",
+			"id" : "CAAF535C1C1605A24E7588B29ECB689C",
 			"type" : "skybox",
 			"visible" : true,
 			"casts shadow" : false,
@@ -62,6 +64,7 @@
 		},
 		{
 			"name" : "Reflection Probe 01",
+			"id" : "68814E7182BDE89E40124F19E49EDF44",
 			"type" : "reflection probe",
 			"visible" : true,
 			"casts shadow" : true,

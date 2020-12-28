@@ -394,12 +394,6 @@ namespace flex
 		// Fills out buffer with this GUID's value in uppercase base 16 with a null terminator
 		void ToString(char buffer[33]) const;
 
-		static GUID FromPlatformGUID(
-			unsigned long inData1,
-			unsigned short inData2,
-			unsigned short inData3,
-			unsigned char  inData4[8]);
-
 		static GUID FromString(const std::string& str);
 
 		u64 Data1; // Stores least significant quad word

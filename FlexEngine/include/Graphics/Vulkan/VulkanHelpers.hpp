@@ -426,7 +426,7 @@ namespace flex
 			std::vector<UniformBuffer> uniformBufferList;
 		};
 
-		struct VulkanShader : public Shader
+		struct VulkanShader final : public Shader
 		{
 			VulkanShader(const VDeleter<VkDevice>& device, ShaderInfo shaderInfo);
 			virtual ~VulkanShader();
@@ -478,7 +478,7 @@ namespace flex
 		};
 #endif // COMPILE_SHADER_COMPILER
 
-		struct VulkanMaterial : public Material
+		struct VulkanMaterial final : public Material
 		{
 			virtual ~VulkanMaterial() {};
 

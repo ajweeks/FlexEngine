@@ -1,5 +1,5 @@
 {
-	"version" : 4,
+	"version" : 5,
 	"name" : "scene_02",
 	"spawn player" : false,
 	"skybox data" : 
@@ -21,15 +21,16 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-6.641, 44.750, 9.699",
-			"pitch" : -0.491837,
-			"yaw" : -2.708280
+			"position" : "54.319, 14.188, 3.772",
+			"pitch" : -0.254908,
+			"yaw" : -3.072265
 		}
 	},
 	"objects" : 
 	[
 		{
 			"name" : "Street",
+			"id" : "9251D190D97BF6894F81A161E5E10438",
 			"type" : "object",
 			"visible" : true,
 			"static" : true,
@@ -46,6 +47,7 @@
 		},
 		{
 			"name" : "ground plane",
+			"id" : "F62E8D955A50DBB741F9D231C7996282",
 			"type" : "object",
 			"visible" : true,
 			"static" : true,
@@ -76,6 +78,7 @@
 		},
 		{
 			"name" : "Skybox",
+			"id" : "D166C3BD4BE0A387457EA847FC73660D",
 			"type" : "skybox",
 			"visible" : true,
 			"casts shadow" : false,
@@ -92,6 +95,7 @@
 		},
 		{
 			"name" : "Reflection Probe 01",
+			"id" : "4D015E9E90D0EE994B3F7AA3BEB69D38",
 			"type" : "reflection probe",
 			"visible" : true,
 			"casts shadow" : true,
@@ -102,6 +106,7 @@
 		},
 		{
 			"name" : "Directional Light",
+			"id" : "650748CD43725E8147CA3E38E7914ECE",
 			"type" : "directional light",
 			"visible" : true,
 			"casts shadow" : true,

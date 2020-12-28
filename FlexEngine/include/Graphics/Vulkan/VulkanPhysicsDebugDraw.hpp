@@ -16,7 +16,7 @@ namespace flex
 	{
 		class VulkanRenderer;
 
-		class VulkanPhysicsDebugDraw : public PhysicsDebugDrawBase
+		class VulkanPhysicsDebugDraw final : public PhysicsDebugDrawBase
 		{
 		public:
 			VulkanPhysicsDebugDraw();
