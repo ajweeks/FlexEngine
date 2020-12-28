@@ -388,6 +388,12 @@ namespace flex
 		bool operator<(const GUID& rhs) const;
 		bool operator>(const GUID& rhs) const;
 
+		bool IsValid() const;
+
+		std::string ToString() const;
+		// Fills out buffer with this GUID's value in uppercase base 16 with a null terminator
+		void ToString(char buffer[33]) const;
+
 		static GUID FromPlatformGUID(
 			unsigned long inData1,
 			unsigned short inData2,
@@ -396,13 +402,11 @@ namespace flex
 
 		static GUID FromString(const std::string& str);
 
-		std::string ToString() const;
-
 		u64 Data1; // Stores least significant quad word
 		u64 Data2; // Stores most significant quad word
 	};
 
-	typedef GUID GameObjectID;
+	using GameObjectID = GUID;
 
 	extern const GUID InvalidGUID;
 	extern const GUID InvalidGameObjectID;

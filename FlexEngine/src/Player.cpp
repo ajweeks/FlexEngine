@@ -122,7 +122,7 @@ namespace flex
 		GameObject::PostInitialize();
 	}
 
-	void Player::Destroy()
+	void Player::Destroy(bool bDetachFromParent /* = true */)
 	{
 		if (m_Controller)
 		{
@@ -136,7 +136,7 @@ namespace flex
 		AudioManager::DestroyAudioSource(m_SoundTrackDetachID);
 		AudioManager::DestroyAudioSource(m_SoundTrackSwitchDirID);
 
-		GameObject::Destroy();
+		GameObject::Destroy(bDetachFromParent);
 	}
 
 	void Player::Update()
@@ -373,7 +373,7 @@ namespace flex
 			if (m_HeldItem != nullptr && m_HeldItem->GetType() == GameObjectType::WIRE)
 			{
 				Wire* wire = (Wire*)m_HeldItem;
-				if (wire->socket0 != nullptr && wire->socket1 != nullptr)
+				if (wire->socket0ID.IsValid() && wire->socket1ID.IsValid())
 				{
 					wire->SetInteractingWith(nullptr);
 					m_HeldItem = nullptr;

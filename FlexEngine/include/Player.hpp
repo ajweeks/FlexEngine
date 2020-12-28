@@ -20,7 +20,7 @@ namespace flex
 		virtual void Initialize() override;
 		virtual void PostInitialize() override;
 		virtual void Update() override;
-		virtual void Destroy() override;
+		virtual void Destroy(bool bDetachFromParent = true) override;
 		virtual void DrawImGuiObjects() override;
 		virtual bool AllowInteractionWith(GameObject* gameObject) override;
 		virtual void SetInteractingWith(GameObject* gameObject) override;

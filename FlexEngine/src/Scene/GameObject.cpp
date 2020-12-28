@@ -78,11 +78,11 @@ namespace flex
 
 	static ThreadSafeArray<GerstnerWave::WaveGenData>* workQueue = nullptr;
 
-	GameObject::GameObject(const std::string& name, GameObjectType type, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+	GameObject::GameObject(const std::string& name, GameObjectType type, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		m_Name(name),
 		m_Type(type)
 	{
-		if (gameObjectID != InvalidGameObjectID)
+		if (gameObjectID.IsValid())
 		{
 			ID = gameObjectID;
 		}
@@ -158,7 +158,7 @@ namespace flex
 		return newGameObject;
 	}
 
-	GameObject* GameObject::CreateObjectFromPrefabInfo(const PrefabInfo& prefabInfo, BaseScene* scene, i32 fileVersion, GameObjectID gameObjectID /* = InvalidGameObjectID */)
+	GameObject* GameObject::CreateObjectFromPrefabInfo(const PrefabInfo& prefabInfo, BaseScene* scene, i32 fileVersion, const GameObjectID& gameObjectID /* = InvalidGameObjectID */)
 	{
 		FLEX_UNUSED(fileVersion);
 
@@ -173,7 +173,7 @@ namespace flex
 		return prefabInstance;
 	}
 
-	GameObject* GameObject::CreateObjectOfType(GameObjectType gameObjectType, const std::string& objectName, GameObjectID objectID /* = InvalidGameObjectID */)
+	GameObject* GameObject::CreateObjectOfType(GameObjectType gameObjectType, const std::string& objectName, const GameObjectID& gameObjectID /* = InvalidGameObjectID */)
 	{
 		// TODO: Use managers here to spawn objects!
 		switch (gameObjectType)
@@ -182,33 +182,33 @@ namespace flex
 		{
 			PrintError("Player was serialized to scene file!\n");
 		}break;
-		case GameObjectType::SKYBOX: return new Skybox(objectName, objectID);
-		case GameObjectType::REFLECTION_PROBE: return new ReflectionProbe(objectName, objectID);
-		case GameObjectType::VALVE: return new Valve(objectName, objectID);
-		case GameObjectType::RISING_BLOCK: return new RisingBlock(objectName, objectID);
-		case GameObjectType::GLASS_PANE: return new GlassPane(objectName, objectID);
-		case GameObjectType::POINT_LIGHT: return new PointLight(objectName, objectID);
-		case GameObjectType::DIRECTIONAL_LIGHT: return new DirectionalLight(objectName, objectID);
+		case GameObjectType::SKYBOX: return new Skybox(objectName, gameObjectID);
+		case GameObjectType::REFLECTION_PROBE: return new ReflectionProbe(objectName, gameObjectID);
+		case GameObjectType::VALVE: return new Valve(objectName, gameObjectID);
+		case GameObjectType::RISING_BLOCK: return new RisingBlock(objectName, gameObjectID);
+		case GameObjectType::GLASS_PANE: return new GlassPane(objectName, gameObjectID);
+		case GameObjectType::POINT_LIGHT: return new PointLight(objectName, gameObjectID);
+		case GameObjectType::DIRECTIONAL_LIGHT: return new DirectionalLight(objectName, gameObjectID);
 		case GameObjectType::CART:
 		{
 			// TODO: Make one line
 			CartManager* cartManager = g_SceneManager->CurrentScene()->GetCartManager();
-			CartID newCartID = cartManager->CreateCart(objectName, objectID);
+			CartID newCartID = cartManager->CreateCart(objectName, gameObjectID);
 			return cartManager->GetCart(newCartID);
 		}
-		case GameObjectType::MOBILE_LIQUID_BOX: return new MobileLiquidBox(objectName, objectID);
-		case GameObjectType::TERMINAL: return new Terminal(objectName, objectID);
-		case GameObjectType::GERSTNER_WAVE: return new GerstnerWave(objectName, objectID);
-		case GameObjectType::BLOCKS: return new Blocks(objectName, objectID);
-		case GameObjectType::PARTICLE_SYSTEM: return new ParticleSystem(objectName, objectID);
-		case GameObjectType::TERRAIN_GENERATOR: return new TerrainGenerator(objectName, objectID);
-		case GameObjectType::WIRE: return g_PluggablesSystem->AddWire(objectID);
-		case GameObjectType::SOCKET: return g_PluggablesSystem->AddSocket(objectName, objectID);
-		case GameObjectType::SPRING: return new SpringObject(objectName, objectID);
-		case GameObjectType::SOFT_BODY: return new SoftBody(objectName, objectID);
-		case GameObjectType::VEHICLE: return new Vehicle(objectName, objectID);
+		case GameObjectType::MOBILE_LIQUID_BOX: return new MobileLiquidBox(objectName, gameObjectID);
+		case GameObjectType::TERMINAL: return new Terminal(objectName, gameObjectID);
+		case GameObjectType::GERSTNER_WAVE: return new GerstnerWave(objectName, gameObjectID);
+		case GameObjectType::BLOCKS: return new Blocks(objectName, gameObjectID);
+		case GameObjectType::PARTICLE_SYSTEM: return new ParticleSystem(objectName, gameObjectID);
+		case GameObjectType::TERRAIN_GENERATOR: return new TerrainGenerator(objectName, gameObjectID);
+		case GameObjectType::WIRE: return g_PluggablesSystem->AddWire(gameObjectID);
+		case GameObjectType::SOCKET: return g_PluggablesSystem->AddSocket(objectName, gameObjectID);
+		case GameObjectType::SPRING: return new SpringObject(objectName, gameObjectID);
+		case GameObjectType::SOFT_BODY: return new SoftBody(objectName, gameObjectID);
+		case GameObjectType::VEHICLE: return new Vehicle(objectName, gameObjectID);
 		case GameObjectType::OBJECT: // Fall through
-		case GameObjectType::_NONE: return new GameObject(objectName, gameObjectType, objectID);
+		case GameObjectType::_NONE: return new GameObject(objectName, gameObjectType, gameObjectID);
 		default:
 			PrintError("Unhandled game object type in CreateGameObjectFromJSON\n");
 			ENSURE_NO_ENTRY();
@@ -262,9 +262,12 @@ namespace flex
 		outputSignals.resize((u32)sockets.size());
 	}
 
-	void GameObject::Destroy()
+	void GameObject::Destroy(bool bDetachFromParent /* = true */)
 	{
-		DetachFromParent();
+		if (bDetachFromParent)
+		{
+			DetachFromParent();
+		}
 
 		// Handle m_Children being modified during loop (from call to DetachFromParent)
 		while (!m_Children.empty())
@@ -377,6 +380,17 @@ namespace flex
 		{
 			// Early return if object was just deleted
 			return;
+		}
+
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::BeginTooltip();
+
+			char buffer[33];
+			ID.ToString(buffer);
+			ImGui::Text("%s", buffer);
+
+			ImGui::EndTooltip();
 		}
 
 		const std::string objectVisibleLabel("Visible");
@@ -833,8 +847,10 @@ namespace flex
 	{
 		bool bDeletedOrDuplicated = false;
 
-		// TODO: Prevent name collisions
-		std::string contextMenuIDStr = "context window game object " + m_Name;
+		ImGui::PushID(&ID.Data1);
+		ImGui::PushID(&ID.Data2);
+
+		const char* contextMenuID = "game object context window";
 		static std::string newObjectName = m_Name;
 		const size_t maxStrLen = 256;
 
@@ -843,7 +859,7 @@ namespace flex
 
 		if (bActive && g_Editor->GetWantRenameActiveElement())
 		{
-			ImGui::OpenPopup(contextMenuIDStr.c_str());
+			ImGui::OpenPopup(contextMenuID);
 			g_Editor->ClearWantRenameActiveElement();
 			bRefreshNameField = true;
 		}
@@ -853,7 +869,7 @@ namespace flex
 			newObjectName.resize(maxStrLen);
 		}
 
-		if (ImGui::BeginPopupContextItem(contextMenuIDStr.c_str()))
+		if (ImGui::BeginPopupContextItem(contextMenuID))
 		{
 			if (ImGui::IsWindowAppearing())
 			{
@@ -881,6 +897,32 @@ namespace flex
 				ImGui::CloseCurrentPopup();
 			}
 
+			char buffer[33];
+			ID.ToString(buffer);
+			char data0Buffer[17];
+			char data1Buffer[17];
+			memcpy(data0Buffer, buffer, 16);
+			data0Buffer[16] = 0;
+			memcpy(data1Buffer, buffer + 16, 16);
+			data1Buffer[16] = 0;
+			ImGui::Text("GUID: %s-%s", data0Buffer, data1Buffer);
+
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::BeginTooltip();
+
+				ImGui::Text("Data1, Data2: %llu, %llu", ID.Data1, ID.Data2);
+
+				ImGui::EndTooltip();
+			}
+
+			ImGui::SameLine();
+
+			if (ImGui::Button("Copy"))
+			{
+				g_Window->SetClipboardText(buffer);
+			}
+
 			if (DrawImGuiDuplicateGameObjectButton())
 			{
 				ImGui::CloseCurrentPopup();
@@ -897,6 +939,9 @@ namespace flex
 
 			ImGui::EndPopup();
 		}
+
+		ImGui::PopID(); // ID.Data1
+		ImGui::PopID(); // ID.Data2
 
 		return bDeletedOrDuplicated;
 	}
@@ -2135,7 +2180,7 @@ namespace flex
 		}
 	}
 
-	Valve::Valve(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+	Valve::Valve(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, GameObjectType::VALVE, gameObjectID)
 	{
 	}
@@ -2317,7 +2362,7 @@ namespace flex
 		GameObject::Update();
 	}
 
-	RisingBlock::RisingBlock(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+	RisingBlock::RisingBlock(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, GameObjectType::RISING_BLOCK, gameObjectID)
 	{
 	}
@@ -2494,7 +2539,7 @@ namespace flex
 		GameObject::Update();
 	}
 
-	GlassPane::GlassPane(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+	GlassPane::GlassPane(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, GameObjectType::GLASS_PANE, gameObjectID)
 	{
 	}
@@ -2555,7 +2600,7 @@ namespace flex
 		parentObject.fields.emplace_back("window info", JSONValue(windowInfo));
 	}
 
-	ReflectionProbe::ReflectionProbe(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+	ReflectionProbe::ReflectionProbe(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, GameObjectType::REFLECTION_PROBE, gameObjectID)
 	{
 	}
@@ -2641,7 +2686,7 @@ namespace flex
 		g_Renderer->SetReflectionProbeMaterial(captureMatID);
 	}
 
-	Skybox::Skybox(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+	Skybox::Skybox(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, GameObjectType::SKYBOX, gameObjectID)
 	{
 		SetCastsShadow(false);
@@ -2708,7 +2753,7 @@ namespace flex
 	{
 	}
 
-	DirectionalLight::DirectionalLight(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+	DirectionalLight::DirectionalLight(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, GameObjectType::DIRECTIONAL_LIGHT, gameObjectID)
 	{
 		data.enabled = m_bVisible ? 1 : 0;
@@ -2730,11 +2775,11 @@ namespace flex
 		GameObject::Initialize();
 	}
 
-	void DirectionalLight::Destroy()
+	void DirectionalLight::Destroy(bool bDetachFromParent /* = true */)
 	{
 		g_Renderer->RemoveDirectionalLight();
 
-		GameObject::Destroy();
+		GameObject::Destroy(bDetachFromParent);
 	}
 
 	void DirectionalLight::Update()
@@ -2921,7 +2966,7 @@ namespace flex
 	{
 	}
 
-	PointLight::PointLight(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+	PointLight::PointLight(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, GameObjectType::POINT_LIGHT, gameObjectID)
 	{
 		data.enabled = 1;
@@ -2939,11 +2984,11 @@ namespace flex
 		GameObject::Initialize();
 	}
 
-	void PointLight::Destroy()
+	void PointLight::Destroy(bool bDetachFromParent /* = true */)
 	{
 		g_Renderer->RemovePointLight(pointLightID);
 
-		GameObject::Destroy();
+		GameObject::Destroy(bDetachFromParent);
 	}
 
 	void PointLight::Update()
@@ -3089,7 +3134,7 @@ namespace flex
 
 	Cart::Cart(CartID cartID,
 		const std::string& name,
-		GameObjectID gameObjectID /* = InvalidGameObjectID */,
+		const GameObjectID& gameObjectID /* = InvalidGameObjectID */,
 		GameObjectType type /* = GameObjectType::CART */,
 		const char* meshName /* = emptyCartMeshName */) :
 		GameObject(name, type, gameObjectID),
@@ -3347,7 +3392,7 @@ namespace flex
 	{
 	}
 
-	EngineCart::EngineCart(CartID cartID, const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+	EngineCart::EngineCart(CartID cartID, const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		Cart(cartID, name, gameObjectID, GameObjectType::ENGINE_CART, engineMeshName)
 	{
 	}
@@ -3456,7 +3501,7 @@ namespace flex
 	{
 	}
 
-	MobileLiquidBox::MobileLiquidBox(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+	MobileLiquidBox::MobileLiquidBox(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, GameObjectType::MOBILE_LIQUID_BOX, gameObjectID)
 	{
 		MaterialID matID;
@@ -3506,7 +3551,7 @@ namespace flex
 		FLEX_UNUSED(parentObject);
 	}
 
-	GerstnerWave::GerstnerWave(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+	GerstnerWave::GerstnerWave(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, GameObjectType::GERSTNER_WAVE, gameObjectID)
 	{
 		workQueue = new ThreadSafeArray<WaveGenData>(32);
@@ -3649,7 +3694,7 @@ namespace flex
 		GameObject::Update();
 	}
 
-	void GerstnerWave::Destroy()
+	void GerstnerWave::Destroy(bool bDetachFromParent /* = true */)
 	{
 		threadUserData.running = false;
 
@@ -3665,7 +3710,7 @@ namespace flex
 		Platform::FreeCriticalSection(criticalSection);
 		criticalSection = nullptr;
 
-		GameObject::Destroy();
+		GameObject::Destroy(bDetachFromParent);
 	}
 
 	GerstnerWave::WaveChunk const* GerstnerWave::GetChunkAtPos(const glm::vec2& pos) const
@@ -5016,7 +5061,7 @@ namespace flex
 		return 0.0f;
 	}
 
-	Blocks::Blocks(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+	Blocks::Blocks(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, GameObjectType::BLOCKS, gameObjectID)
 	{
 		MaterialCreateInfo matCreateInfo = {};
@@ -5074,28 +5119,39 @@ namespace flex
 		static const real defaultWireLength = 2.0f;
 		for (Wire* wire : wires)
 		{
+			Socket* socket0 = nullptr;
+			Socket* socket1 = nullptr;
+
+			if (wire->socket0ID.IsValid())
+			{
+				socket0 = (Socket*)g_SceneManager->CurrentScene()->GetGameObject(wire->socket0ID);
+			}
+
+			if (wire->socket1ID.IsValid())
+			{
+				socket1 = (Socket*)g_SceneManager->CurrentScene()->GetGameObject(wire->socket1ID);
+			}
+
 			if (wire->GetObjectInteractingWith() != nullptr)
 			{
 				GameObject* interacting = wire->GetObjectInteractingWith();
 				Transform* interactingTransform = interacting->GetTransform();
 				glm::vec3 interactingWorldPos = interactingTransform->GetWorldPosition();
 				glm::vec3 wireHoldingOffset = interactingTransform->GetForward() * 5.0f + interactingTransform->GetUp() * -0.75f;
-				if (wire->socket0 != nullptr && wire->socket1 != nullptr)
+				if (socket0 != nullptr && socket1 != nullptr)
 				{
-					wire->startPoint = wire->socket0->GetTransform()->GetWorldPosition();
-					wire->endPoint = wire->socket1->GetTransform()->GetWorldPosition();
+					wire->startPoint = socket0->GetTransform()->GetWorldPosition();
+					wire->endPoint = socket1->GetTransform()->GetWorldPosition();
 				}
-				else if (wire->socket0 != nullptr)
+				else if (socket0 != nullptr)
 				{
-					wire->startPoint = wire->socket0->GetTransform()->GetWorldPosition();
-
+					wire->startPoint = socket0->GetTransform()->GetWorldPosition();
 					wire->endPoint = interactingWorldPos + wireHoldingOffset + interactingTransform->GetRight() * defaultWireLength;
 				}
-				else if (wire->socket1 != nullptr)
+				else if (socket1 != nullptr)
 				{
 					wire->startPoint = interactingWorldPos + wireHoldingOffset;
-
-					wire->endPoint = wire->socket1->GetTransform()->GetWorldPosition();
+					wire->endPoint = socket1->GetTransform()->GetWorldPosition();
 				}
 				else
 				{
@@ -5105,24 +5161,24 @@ namespace flex
 			}
 			else
 			{
-				if (wire->socket0 != nullptr)
+				if (socket0 != nullptr)
 				{
-					wire->startPoint = wire->socket0->GetTransform()->GetWorldPosition();
+					wire->startPoint = socket0->GetTransform()->GetWorldPosition();
 				}
 				else
 				{
-					if (wire->socket1 != nullptr)
+					if (socket1 != nullptr)
 					{
-						wire->endPoint = wire->socket1->GetTransform()->GetWorldPosition();
+						wire->endPoint = socket1->GetTransform()->GetWorldPosition();
 					}
 				}
-				if (wire->socket1 != nullptr)
+				if (socket1 != nullptr)
 				{
-					wire->endPoint = wire->socket1->GetTransform()->GetWorldPosition();
+					wire->endPoint = socket1->GetTransform()->GetWorldPosition();
 				}
 				else
 				{
-					if (wire->socket0 != nullptr)
+					if (socket0 != nullptr)
 					{
 						wire->endPoint = wire->startPoint + defaultWireLength;
 					}
@@ -5131,8 +5187,8 @@ namespace flex
 
 			wire->GetTransform()->SetWorldPosition(wire->startPoint + (wire->endPoint - wire->startPoint) / 2.0f);
 
-			bool bWireOn0 = wire->socket0 != nullptr && (wire->socket0->parent->outputSignals[wire->socket0->slotIdx] != -1);
-			bool bWireOn1 = wire->socket1 != nullptr && (wire->socket1->parent->outputSignals[wire->socket1->slotIdx] != -1);
+			bool bWireOn0 = socket0 != nullptr && (socket0->parent->outputSignals[socket0->slotIdx] != -1);
+			bool bWireOn1 = socket1 != nullptr && (socket1->parent->outputSignals[socket1->slotIdx] != -1);
 			btVector3 wireCol = (bWireOn0 || bWireOn1) ? wireColOn : wireColOff;
 			debugDrawer->drawLine(ToBtVec3(wire->startPoint), ToBtVec3(wire->endPoint), wireCol, wireCol);
 			debugDrawer->drawSphere(ToBtVec3(wire->startPoint), 0.2f, wireColOff);
@@ -5145,19 +5201,21 @@ namespace flex
 		i32 result = -1;
 		for (Wire* wire : wires)
 		{
-			if (wire->socket0 == socket)
+			if (wire->socket0ID == socket->ID)
 			{
-				if (wire->socket1)
+				if (wire->socket1ID.IsValid())
 				{
-					i32 sendSignal = wire->socket1->parent->outputSignals[wire->socket1->slotIdx];
+					Socket* socket1 = (Socket*)g_SceneManager->CurrentScene()->GetGameObject(wire->socket1ID);
+					i32 sendSignal = socket1->parent->outputSignals[socket1->slotIdx];
 					result = glm::max(result, sendSignal);
 				}
 			}
-			else if (wire->socket1 == socket)
+			else if (wire->socket1ID == socket->ID)
 			{
-				if (wire->socket0)
+				if (wire->socket0ID.IsValid())
 				{
-					i32 sendSignal = wire->socket0->parent->outputSignals[wire->socket0->slotIdx];
+					Socket* socket0 = (Socket*)g_SceneManager->CurrentScene()->GetGameObject(wire->socket0ID);
+					i32 sendSignal = socket0->parent->outputSignals[socket0->slotIdx];
 					result = glm::max(result, sendSignal);
 				}
 			}
@@ -5165,11 +5223,11 @@ namespace flex
 		return result;
 	}
 
-	Wire* PluggablesSystem::AddWire(GameObjectID gameObjectID, Socket* socket0 /* = nullptr */, Socket* socket1 /* = nullptr */)
+	Wire* PluggablesSystem::AddWire(const GameObjectID& gameObjectID, Socket* socket0 /* = nullptr */, Socket* socket1 /* = nullptr */)
 	{
 		Wire* newWire = new Wire(g_SceneManager->CurrentScene()->GetUniqueObjectName("wire_", 3), gameObjectID);
-		newWire->socket0 = socket0;
-		newWire->socket1 = socket1;
+		newWire->socket0ID = (socket0 == nullptr ? InvalidGameObjectID : socket0->ID);
+		newWire->socket1ID = (socket1 == nullptr ? InvalidGameObjectID : socket1->ID);
 		wires.push_back(newWire);
 		if (socket0)
 		{
@@ -5185,27 +5243,28 @@ namespace flex
 
 	bool PluggablesSystem::DestroySocket(Socket* socket)
 	{
+		// Try to find wire that owns this socket
 		for (auto iter = wires.begin(); iter != wires.end(); ++iter)
 		{
 			Wire* wire = *iter;
-			if (wire->socket0 == socket)
+			if (wire->socket0ID == socket->ID)
 			{
 				//wire->socket0->OnConnectionBroke(wire);
-				RemoveSocket(wire->socket0);
-				wire->socket0 = nullptr;
-				if (wire->socket1 == nullptr)
+				RemoveSocket(wire->socket0ID);
+				wire->socket0ID = InvalidGameObjectID;
+				if (!wire->socket1ID.IsValid())
 				{
 					g_SceneManager->CurrentScene()->RemoveObject(wire, true);
 					wires.erase(iter);
 				}
 				return true;
 			}
-			if (wire->socket1 == socket)
+			if (wire->socket1ID == socket->ID)
 			{
 				//wire->socket1->OnConnectionBroke(wire);
-				RemoveSocket(wire->socket1);
-				wire->socket1 = nullptr;
-				if (wire->socket0 == nullptr)
+				RemoveSocket(wire->socket1ID);
+				wire->socket1ID = InvalidGameObjectID;
+				if (!wire->socket0ID.IsValid())
 				{
 					g_SceneManager->CurrentScene()->RemoveObject(wire, true);
 					wires.erase(iter);
@@ -5213,14 +5272,15 @@ namespace flex
 				return true;
 			}
 		}
-		return false;
+
+		return RemoveSocket(socket->ID);
 	}
 
-	bool PluggablesSystem::RemoveSocket(Socket* socket)
+	bool PluggablesSystem::RemoveSocket(const GameObjectID& socketID)
 	{
 		for (auto iter = sockets.begin(); iter != sockets.end(); ++iter)
 		{
-			if (*iter == socket)
+			if ((*iter)->ID == socketID)
 			{
 				sockets.erase(iter);
 				return true;
@@ -5233,18 +5293,18 @@ namespace flex
 	{
 		for (auto iter = wires.begin(); iter != wires.end(); ++iter)
 		{
-			if (*iter == wire)
+			if ((*iter)->ID == wire->ID)
 			{
 				BaseScene* scene = g_SceneManager->CurrentScene();
-				if (wire->socket0 != nullptr)
+				if (wire->socket0ID.IsValid())
 				{
-					RemoveSocket(wire->socket0);
-					scene->RemoveObject(wire->socket0, true);
+					RemoveSocket(wire->socket0ID);
+					scene->RemoveObject(wire->socket0ID, true);
 				}
-				if (wire->socket1 != nullptr)
+				if (wire->socket1ID.IsValid())
 				{
-					RemoveSocket(wire->socket1);
-					scene->RemoveObject(wire->socket1, true);
+					RemoveSocket(wire->socket1ID);
+					scene->RemoveObject(wire->socket1ID, true);
 				}
 				scene->RemoveObject(wire, true);
 
@@ -5257,21 +5317,17 @@ namespace flex
 	}
 
 
-	Socket* PluggablesSystem::AddSocket(const std::string& name, GameObjectID gameObjectID, i32 slotIdx /* = 0 */, Wire* connectedWire /* = nullptr */)
+	Socket* PluggablesSystem::AddSocket(const std::string& name, const GameObjectID& gameObjectID, i32 slotIdx /* = 0 */, Wire* connectedWire /* = nullptr */)
 	{
 		Socket* newSocket = new Socket(name, gameObjectID);
 		newSocket->slotIdx = slotIdx;
 		newSocket->connectedWire = connectedWire;
 		sockets.push_back(newSocket);
-		//if (socket1)
-		{
-			//socket1->OnConnectionMade(newWire);
-		}
 
 		return newSocket;
 	}
 
-	Wire::Wire(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+	Wire::Wire(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, GameObjectType::WIRE, gameObjectID)
 	{
 		m_bInteractable = true;
@@ -5279,11 +5335,11 @@ namespace flex
 		endPoint = glm::vec3(1.0f, 1.0f, 0.0f);
 	}
 
-	void Wire::Destroy()
+	void Wire::Destroy(bool bDetachFromParent /* = true */)
 	{
 		g_PluggablesSystem->DestroyWire(this);
 
-		GameObject::Destroy();
+		GameObject::Destroy(bDetachFromParent);
 	}
 
 	void Wire::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
@@ -5308,13 +5364,13 @@ namespace flex
 
 	void Wire::PlugIn(Socket* socket)
 	{
-		if (socket0 == nullptr)
+		if (!socket0ID.IsValid())
 		{
-			socket0 = socket;
+			socket0ID = socket->ID;
 		}
-		else if (socket1 == nullptr)
+		else if (!socket1ID.IsValid())
 		{
-			socket1 = socket;
+			socket1ID = socket->ID;
 		}
 		else
 		{
@@ -5324,13 +5380,13 @@ namespace flex
 
 	void Wire::Unplug(Socket* socket)
 	{
-		if (socket == socket0)
+		if (socket0ID == socket->ID)
 		{
-			socket0 = nullptr;
+			socket0ID = InvalidGameObjectID;
 		}
-		else if (socket == socket1)
+		else if (socket1ID == socket->ID)
 		{
-			socket1 = nullptr;
+			socket1ID = InvalidGameObjectID;
 		}
 		else
 		{
@@ -5348,7 +5404,7 @@ namespace flex
 		} break;
 		}
 
-		return (socket0 == nullptr && socket1 == nullptr);
+		return (!socket0ID.IsValid() && !socket1ID.IsValid());
 	}
 
 	void Wire::SetInteractingWith(GameObject* gameObject)
@@ -5356,17 +5412,17 @@ namespace flex
 		GameObject::SetInteractingWith(gameObject);
 	}
 
-	Socket::Socket(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+	Socket::Socket(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, GameObjectType::SOCKET, gameObjectID)
 	{
 		m_bInteractable = true;
 	}
 
-	void Socket::Destroy()
+	void Socket::Destroy(bool bDetachFromParent /* = true */)
 	{
 		g_PluggablesSystem->DestroySocket(this);
 
-		GameObject::Destroy();
+		GameObject::Destroy(bDetachFromParent);
 	}
 
 	void Socket::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
@@ -5471,7 +5527,7 @@ namespace flex
 	{
 	}
 
-	Terminal::Terminal(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+	Terminal::Terminal(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, GameObjectType::TERMINAL, gameObjectID),
 		m_KeyEventCallback(this, &Terminal::OnKeyEvent),
 		cursor(0, 0)
@@ -5517,7 +5573,7 @@ namespace flex
 		//}
 	}
 
-	void Terminal::Destroy()
+	void Terminal::Destroy(bool bDetachFromParent /* = true */)
 	{
 		g_InputManager->UnbindKeyEventCallback(&m_KeyEventCallback);
 
@@ -5526,7 +5582,7 @@ namespace flex
 			delete m_VM;
 		}
 
-		GameObject::Destroy();
+		GameObject::Destroy(bDetachFromParent);
 	}
 
 	void Terminal::Update()
@@ -6564,7 +6620,7 @@ namespace flex
 		return EventReply::UNCONSUMED;
 	}
 
-	ParticleSystem::ParticleSystem(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+	ParticleSystem::ParticleSystem(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, GameObjectType::PARTICLE_SYSTEM, gameObjectID)
 	{
 		m_Transform.updateParentOnStateChange = true;
@@ -6575,10 +6631,10 @@ namespace flex
 		GameObject::Update();
 	}
 
-	void ParticleSystem::Destroy()
+	void ParticleSystem::Destroy(bool bDetachFromParent /* = true */)
 	{
 		g_Renderer->RemoveParticleSystem(particleSystemID);
-		GameObject::Destroy();
+		GameObject::Destroy(bDetachFromParent);
 	}
 
 	GameObject* ParticleSystem::CopySelfAndAddToScene(GameObject* parent /* = nullptr */, CopyFlags copyFlags /* = CopyFlags::ALL */)
@@ -6683,7 +6739,7 @@ namespace flex
 		GameObject::Update();
 	}
 
-	TerrainGenerator::TerrainGenerator(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+	TerrainGenerator::TerrainGenerator(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, GameObjectType::TERRAIN_GENERATOR, gameObjectID),
 		m_LowCol(0.2f, 0.3f, 0.45f),
 		m_MidCol(0.45f, 0.55f, 0.25f),
@@ -7042,7 +7098,7 @@ namespace flex
 		GameObject::Update();
 	}
 
-	void TerrainGenerator::Destroy()
+	void TerrainGenerator::Destroy(bool bDetachFromParent /* = true */)
 	{
 		for (auto iter = m_Meshes.begin(); iter != m_Meshes.end(); ++iter)
 		{
@@ -7050,7 +7106,7 @@ namespace flex
 		}
 		m_Meshes.clear();
 
-		GameObject::Destroy();
+		GameObject::Destroy(bDetachFromParent);
 	}
 
 	void TerrainGenerator::DrawImGuiObjects()
@@ -7201,7 +7257,7 @@ namespace flex
 		parentObject.fields.emplace_back("chunk generator info", JSONValue(chunkGenInfo));
 	}
 
-	SpringObject::SpringObject(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+	SpringObject::SpringObject(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, GameObjectType::SPRING, gameObjectID)
 	{
 	}
@@ -7380,7 +7436,7 @@ namespace flex
 		m_Bobber->Update();
 	}
 
-	void SpringObject::Destroy()
+	void SpringObject::Destroy(bool bDetachFromParent /* = true */)
 	{
 		m_ExtendedMesh->Destroy();
 		delete m_ExtendedMesh;
@@ -7396,7 +7452,7 @@ namespace flex
 		delete m_Bobber;
 		m_Bobber = nullptr;
 
-		GameObject::Destroy();
+		GameObject::Destroy(bDetachFromParent);
 	}
 
 	void SpringObject::DrawImGuiObjects()
@@ -7504,7 +7560,7 @@ namespace flex
 		pointIndices[2] = pointIndex2;
 	}
 
-	SoftBody::SoftBody(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+	SoftBody::SoftBody(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, GameObjectType::SOFT_BODY, gameObjectID),
 		m_SolverIterationCount(4) // Default, gets overridden in ParseUniqueFields
 	{
@@ -7583,7 +7639,7 @@ namespace flex
 		m_MSToSim = 0.0f;
 	}
 
-	void SoftBody::Destroy()
+	void SoftBody::Destroy(bool bDetachFromParent /* = true */)
 	{
 		for (Point* point : points)
 		{
@@ -7610,7 +7666,7 @@ namespace flex
 			m_MeshComponent = nullptr;
 		}
 
-		GameObject::Destroy();
+		GameObject::Destroy(bDetachFromParent);
 	}
 
 	void SoftBody::Update()
@@ -8489,7 +8545,7 @@ namespace flex
 		m_Damping = damping;
 	}
 
-	Vehicle::Vehicle(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+	Vehicle::Vehicle(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, GameObjectType::VEHICLE, gameObjectID)
 	{
 		m_bInteractable = true;
@@ -8500,9 +8556,9 @@ namespace flex
 		GameObject::Initialize();
 	}
 
-	void Vehicle::Destroy()
+	void Vehicle::Destroy(bool bDetachFromParent /* = true */)
 	{
-		GameObject::Destroy();
+		GameObject::Destroy(bDetachFromParent);
 	}
 
 	void Vehicle::Update()

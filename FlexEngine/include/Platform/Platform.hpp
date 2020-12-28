@@ -14,7 +14,7 @@ namespace flex
 	};
 
 	struct GUID;
-	typedef GUID GameObjectID;
+	using GameObjectID = GUID;
 
 	class Platform
 	{

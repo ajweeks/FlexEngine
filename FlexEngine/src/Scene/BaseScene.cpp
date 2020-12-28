@@ -1374,9 +1374,14 @@ namespace flex
 		return bParentChildTreeDirty;
 	}
 
-	GameObject* BaseScene::GetGameObject(GameObjectID gameObjectID)
+	GameObject* BaseScene::GetGameObject(const GameObjectID& gameObjectID)
 	{
-		return m_GameObjectLUT[gameObjectID];
+		auto iter = m_GameObjectLUT.find(gameObjectID);
+		if (iter == m_GameObjectLUT.end())
+		{
+			return nullptr;
+		}
+		return iter->second;
 	}
 
 	void BaseScene::UpdateRootObjectSiblingIndices()
@@ -1564,14 +1569,7 @@ namespace flex
 			}
 		}
 
-		assert(m_GameObjectLUT.find(gameObject->ID) == m_GameObjectLUT.end());
-		m_GameObjectLUT[gameObject->ID] = gameObject;
-
-		for (GameObject* child : gameObject->m_Children)
-		{
-			assert(m_GameObjectLUT.find(child->ID) == m_GameObjectLUT.end());
-			m_GameObjectLUT[child->ID] = child;
-		}
+		RegisterGameObject(gameObject);
 
 		gameObject->SetParent(nullptr);
 
@@ -1581,6 +1579,17 @@ namespace flex
 		g_Renderer->RenderObjectStateChanged();
 
 		return gameObject;
+	}
+
+	void BaseScene::RegisterGameObject(GameObject* gameObject)
+	{
+		assert(m_GameObjectLUT.find(gameObject->ID) == m_GameObjectLUT.end());
+		m_GameObjectLUT[gameObject->ID] = gameObject;
+
+		for (GameObject* child : gameObject->m_Children)
+		{
+			RegisterGameObject(child);
+		}
 	}
 
 	GameObject* BaseScene::AddChildObject(GameObject* parent, GameObject* child)
@@ -1601,7 +1610,7 @@ namespace flex
 		return child;
 	}
 
-	void BaseScene::RemoveRootObject(GameObjectID gameObjectID, bool bDestroy)
+	void BaseScene::RemoveRootObject(const GameObjectID& gameObjectID, bool bDestroy)
 	{
 		if (bDestroy)
 		{
@@ -1625,7 +1634,7 @@ namespace flex
 		}
 	}
 
-	void BaseScene::RemoveRootObjectImmediate(GameObjectID gameObjectID, bool bDestroy)
+	void BaseScene::RemoveRootObjectImmediate(const GameObjectID& gameObjectID, bool bDestroy)
 	{
 		auto iter = m_RootObjects.begin();
 		while (iter != m_RootObjects.end())
@@ -1698,7 +1707,7 @@ namespace flex
 		g_Renderer->RenderObjectStateChanged();
 	}
 
-	void BaseScene::RemoveObject(GameObjectID gameObjectID, bool bDestroy)
+	void BaseScene::RemoveObject(const GameObjectID& gameObjectID, bool bDestroy)
 	{
 		if (bDestroy)
 		{
@@ -1721,9 +1730,15 @@ namespace flex
 		RemoveObject(gameObject->ID, bDestroy);
 	}
 
-	void BaseScene::RemoveObjectImmediate(GameObjectID gameObjectID, bool bDestroy)
+	void BaseScene::RemoveObjectImmediate(const GameObjectID& gameObjectID, bool bDestroy)
 	{
-		GameObject* gameObject = m_GameObjectLUT[gameObjectID];
+		GameObject* gameObject = GetGameObject(gameObjectID);
+		if (gameObject == nullptr)
+		{
+			std::string idStr = gameObjectID.ToString();
+			PrintError("Invalid game object ID: %s\n", idStr.c_str());
+			return;
+		}
 
 		const bool bRootObject = (gameObject->GetParent() == nullptr);
 
@@ -1756,9 +1771,15 @@ namespace flex
 		RemoveObjectImmediate(gameObject->ID, bDestroy);
 	}
 
-	void BaseScene::RemoveObjectImmediateRecursive(GameObjectID gameObjectID, bool bDestroy)
+	void BaseScene::RemoveObjectImmediateRecursive(const GameObjectID& gameObjectID, bool bDestroy)
 	{
-		GameObject* gameObject = m_GameObjectLUT[gameObjectID];
+		GameObject* gameObject = GetGameObject(gameObjectID);
+		if (gameObject == nullptr)
+		{
+			std::string idStr = gameObjectID.ToString();
+			PrintError("Invalid game object ID: %s\n", idStr.c_str());
+			return;
+		}
 
 		const bool bRootObject = (gameObject->GetParent() == nullptr);
 
@@ -1783,7 +1804,7 @@ namespace flex
 
 		if (bDestroy)
 		{
-			gameObject->Destroy();
+			gameObject->Destroy(false);
 			delete gameObject;
 		}
 		else

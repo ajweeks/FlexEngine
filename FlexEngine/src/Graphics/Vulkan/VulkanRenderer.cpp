@@ -5099,12 +5099,6 @@ namespace flex
 			return physicalDevice;
 		}
 
-		void SetClipboardText(void* userData, const char* text)
-		{
-			GLFWWindowWrapper* glfwWindow = static_cast<GLFWWindowWrapper*>(userData);
-			glfwWindow->SetClipboardText(text);
-		}
-
 		void VulkanRenderer::CreateSwapChain()
 		{
 			m_bSwapChainNeedsRebuilding = false;

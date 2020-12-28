@@ -1787,6 +1787,7 @@ namespace flex
 
 	bool GUID::operator==(const GUID& rhs) const
 	{
+		// TODO: Compare perf of this with memcmp
 		return Data1 == rhs.Data1 && Data2 == rhs.Data2;
 	}
 
@@ -1800,14 +1801,9 @@ namespace flex
 		return Data2 > rhs.Data2 || (Data2 == rhs.Data2 && Data1 > rhs.Data1);
 	}
 
-	GUID GUID::FromPlatformGUID(unsigned long inData1, unsigned short inData2, unsigned short inData3, unsigned char inData4[8])
+	bool GUID::IsValid() const
 	{
-		GUID result;
-
-		result.Data1 = (u64)inData1 << 32 | (u64)inData2 << 16 | inData3;
-		result.Data2 = (u64)inData4[0] << 24 | (u64)inData4[1] << 16 | (u64)inData4[2] << 8 | inData4[3];
-
-		return result;
+		return memcmp(&Data1, &InvalidGameObjectID.Data1, GUIDLength) != 0;
 	}
 
 	inline u8 ToHex(u8 dec)
@@ -1827,7 +1823,15 @@ namespace flex
 
 	std::string GUID::ToString() const
 	{
-		char buffer[32 + 1];
+		char buffer[33];
+
+		ToString(buffer);
+
+		return std::string(buffer);
+	}
+
+	void GUID::ToString(char buffer[33]) const
+	{
 		// Write to buffer in reverse order (least significant to most significant)
 		char* bufferPtr = buffer + 31;
 		u64 data = Data1;
@@ -1853,8 +1857,6 @@ namespace flex
 		}
 
 		buffer[32] = 0; // Null terminator
-
-		return std::string(buffer);
 	}
 
 	GUID GUID::FromString(const std::string& str)

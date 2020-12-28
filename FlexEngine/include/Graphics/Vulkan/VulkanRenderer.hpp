@@ -576,9 +576,6 @@ namespace flex
 			VulkanRenderer(const VulkanRenderer&) = delete;
 			VulkanRenderer& operator=(const VulkanRenderer&) = delete;
 		};
-
-		void SetClipboardText(void* userData, const char* text);
-		const char* GetClipboardText(void* userData);
 	} // namespace vk
 } // namespace flex
 

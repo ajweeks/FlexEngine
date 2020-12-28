@@ -70,15 +70,15 @@ namespace flex
 		GameObject* AddRootObject(GameObject* gameObject);
 		GameObject* AddRootObjectImmediate(GameObject* gameObject);
 		GameObject* AddChildObject(GameObject* parent, GameObject* child);
-		void RemoveRootObject(GameObjectID gameObjectID, bool bDestroy);
+		void RemoveRootObject(const GameObjectID& gameObjectID, bool bDestroy);
 		void RemoveRootObject(GameObject* gameObject, bool bDestroy);
-		void RemoveRootObjectImmediate(GameObjectID gameObjectID, bool bDestroy);
+		void RemoveRootObjectImmediate(const GameObjectID& gameObjectID, bool bDestroy);
 		void RemoveRootObjectImmediate(GameObject* gameObject, bool bDestroy);
 		void RemoveAllRootObjects(bool bDestroy);
 		void RemoveAllRootObjectsImmediate(bool bDestroy);
-		void RemoveObject(GameObjectID gameObjectID, bool bDestroy);
+		void RemoveObject(const GameObjectID& gameObjectID, bool bDestroy);
 		void RemoveObject(GameObject* gameObject, bool bDestroy);
-		void RemoveObjectImmediate(GameObjectID gameObjectID, bool bDestroy);
+		void RemoveObjectImmediate(const GameObjectID& gameObjectID, bool bDestroy);
 		void RemoveObjectImmediate(GameObject* gameObject, bool bDestroy);
 		void RemoveObjects(const std::vector<GameObjectID>& gameObjects, bool bDestroy);
 		void RemoveObjects(const std::vector<GameObject*>& gameObjects, bool bDestroy);
@@ -132,7 +132,7 @@ namespace flex
 		// Returns true if the parent-child tree changed during this call
 		bool DrawImGuiGameObjectNameAndChildrenInternal(GameObject* gameObject);
 
-		GameObject* GetGameObject(GameObjectID gameObjectID);
+		GameObject* GetGameObject(const GameObjectID& gameObjectID);
 
 		static const i32 LATEST_SCENE_FILE_VERSION = 5;
 		static const i32 LATEST_MATERIALS_FILE_VERSION = 1;
@@ -143,9 +143,10 @@ namespace flex
 		friend CartManager;
 		friend SceneManager;
 
-		void RemoveObjectImmediateRecursive(GameObjectID gameObjectID, bool bDestroy);
+		void RemoveObjectImmediateRecursive(const GameObjectID& gameObjectID, bool bDestroy);
 
 		void UpdateRootObjectSiblingIndices();
+		void RegisterGameObject(GameObject* gameObject);
 
 		i32 m_SceneFileVersion = 1;
 		i32 m_MaterialsFileVersion = 1;

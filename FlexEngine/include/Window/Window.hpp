@@ -102,10 +102,14 @@ namespace flex
 
 		virtual glm::vec2 GetMousePosition() = 0;
 
-		bool IsMaximized() const;
 		virtual void Maximize() = 0;
-		bool IsIconified() const;
 		virtual void Iconify() = 0;
+
+		virtual const char* GetClipboardText() = 0;
+		virtual void SetClipboardText(const char* text) = 0;
+
+		bool IsMaximized() const;
+		bool IsIconified() const;
 
 		bool InitFromConfig();
 		void SaveToConfig();
