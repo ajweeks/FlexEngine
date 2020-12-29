@@ -19,7 +19,7 @@ namespace flex
 
 #define SCENE_DEFAULT_DIRECTORY		RESOURCE_LOCATION "scenes/default/"
 #define SCENE_SAVED_DIRECTORY		RESOURCE_LOCATION "scenes/saved/"
-#define PREFAB_DIRECTORY			RESOURCE_LOCATION "scenes/prefabs/"
+#define PREFAB_DIRECTORY			RESOURCE_LOCATION "prefabs/"
 
 #define GAME_OBJECT_TYPES_LOCATION	RESOURCE_LOCATION "GameObjectTypes.txt"
 
