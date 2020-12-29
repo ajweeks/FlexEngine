@@ -332,6 +332,8 @@ namespace flex
 		explicit PointLight(BaseScene* scene);
 		explicit PointLight(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
 
+		virtual GameObject* CopySelfAndAddToScene(GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL) override;
+
 		virtual void Initialize() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
 		virtual void Update() override;

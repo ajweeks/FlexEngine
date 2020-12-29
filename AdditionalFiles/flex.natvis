@@ -6,7 +6,8 @@
 
   <Type Name="flex::JSONObject">
     <!-- Ugly as heck but it works -->
-    <DisplayString>{{size = {fields._Mypair._Myval2._Mylast - fields._Mypair._Myval2._Myfirst} }}</DisplayString>
+    <DisplayString Condition="fields._Mypair._Myval2._Myfirst != fields._Mypair._Myval2._Mylast">{fields[0]} {{size = {fields._Mypair._Myval2._Mylast - fields._Mypair._Myval2._Myfirst} }}</DisplayString>
+    <DisplayString Condition="fields._Mypair._Myval2._Myfirst == fields._Mypair._Myval2._Mylast">Empty {{size = {fields._Mypair._Myval2._Mylast - fields._Mypair._Myval2._Myfirst} }}</DisplayString>
     <Expand>
       <ArrayItems>
         <Size>fields._Mypair._Myval2._Mylast - fields._Mypair._Myval2._Myfirst</Size>

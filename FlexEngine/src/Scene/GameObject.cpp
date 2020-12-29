@@ -2984,6 +2984,24 @@ namespace flex
 		data.brightness = 500.0f;
 	}
 
+	GameObject* PointLight::CopySelfAndAddToScene(GameObject* parent, CopyFlags copyFlags)
+	{
+		if (g_Renderer->GetNumPointLights() >= MAX_POINT_LIGHT_COUNT)
+		{
+			PrintError("Failed to duplicate point light, max number already in scene (%i)\n", MAX_POINT_LIGHT_COUNT);
+			return nullptr;
+		}
+
+		PointLight* newGameObject = new PointLight(g_SceneManager->CurrentScene()->GetUniqueObjectName("PointLight_", 2));
+
+		memcpy(&newGameObject->data, &data, sizeof(PointLightData));
+		// newGameObject->pointLightID will be filled out in Initialize
+
+		CopyGenericFields(newGameObject, parent, copyFlags);
+
+		return newGameObject;
+	}
+
 	void PointLight::Initialize()
 	{
 		pointLightID = g_Renderer->RegisterPointLight(&data);

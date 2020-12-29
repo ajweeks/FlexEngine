@@ -4510,7 +4510,7 @@ namespace flex
 
 				glm::vec3 camPos = cam->position;
 				glm::vec3 camUp = cam->up;
-				for (i32 i = 0; i < m_NumPointLightsEnabled; ++i)
+				for (i32 i = 0; i < MAX_POINT_LIGHT_COUNT; ++i)
 				{
 					if (m_PointLights[i].enabled)
 					{

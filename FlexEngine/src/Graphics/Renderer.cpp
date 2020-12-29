@@ -505,7 +505,19 @@ namespace flex
 	{
 		if (m_NumPointLightsEnabled < MAX_POINT_LIGHT_COUNT)
 		{
-			PointLightID newPointLightID = (PointLightID)m_NumPointLightsEnabled;
+			PointLightID newPointLightID = InvalidPointLightID;
+
+			for (i32 i = 0; i < MAX_POINT_LIGHT_COUNT; ++i)
+			{
+				PointLightData* data = m_PointLights + i;
+				if (data->colour.x == -1.0f)
+				{
+					newPointLightID = (PointLightID)i;
+					break;
+				}
+			}
+			assert(newPointLightID != InvalidPointLightID);
+
 			memcpy(m_PointLights + newPointLightID, pointLightData, sizeof(PointLightData));
 			m_NumPointLightsEnabled++;
 			return newPointLightID;
@@ -539,7 +551,7 @@ namespace flex
 
 	void Renderer::RemoveAllPointLights()
 	{
-		for (i32 i = 0; i < m_NumPointLightsEnabled; ++i)
+		for (i32 i = 0; i < MAX_POINT_LIGHT_COUNT; ++i)
 		{
 			m_PointLights[i].colour = VEC4_NEG_ONE;
 			m_PointLights[i].enabled = 0;
